@@ -120,7 +120,7 @@ if that fails, try:
     - A `.vsix` file will appear in the `bin/` directory.
 4. **Install** the `.vsix` manually if desired:
     ```bash
-    code --install-extension bin/roo-code-4.0.0.vsix
+    code --install-extension bin/kilo-code-4.0.0.vsix
     ```
 5. **Start the webview (Vite/React app with HMR)**:
     ```bash
@@ -158,4 +158,4 @@ We love community contributions! Here’s how to get involved:
 
 ---
 
-**Enjoy Kilo Code!** Whether you keep it on a short leash or let it roam autonomously, we can’t wait to see what you build. If you have questions or feature ideas, drop by our [Reddit community](https://www.reddit.com/r/kilocode/) or [Discord](). Happy coding!
+**Enjoy Kilo Code!** Whether you keep it on a short leash or let it roam autonomously, we can’t wait to see what you build. If you have questions or feature ideas, drop by our [Reddit community](https://www.reddit.com/r/kilocode/) or [Discord](https://discord.gg/QZ9vjPj9e). Happy coding!
