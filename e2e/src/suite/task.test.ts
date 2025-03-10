@@ -1,6 +1,6 @@
 import * as assert from "assert"
 
-suite("Roo Code Task", () => {
+suite("Kilo Code Task", () => {
 	test("Should handle prompt and response correctly", async function () {
 		const timeout = 30000
 		const interval = 1000
@@ -32,7 +32,7 @@ suite("Roo Code Task", () => {
 		while (Date.now() - startTime < timeout) {
 			const messages = globalThis.provider.messages
 
-			if (messages.some(({ type, text }) => type === "say" && text?.includes("My name is Roo"))) {
+			if (messages.some(({ type, text }) => type === "say" && text?.includes("My name is Kilo Code"))) {
 				break
 			}
 
@@ -44,8 +44,10 @@ suite("Roo Code Task", () => {
 		}
 
 		assert.ok(
-			globalThis.provider.messages.some(({ type, text }) => type === "say" && text?.includes("My name is Roo")),
-			"Did not receive expected response containing 'My name is Roo'",
+			globalThis.provider.messages.some(
+				({ type, text }) => type === "say" && text?.includes("My name is Kilo Code"),
+			),
+			"Did not receive expected response containing 'My name is Kilo Code'",
 		)
 	})
 })
