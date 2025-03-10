@@ -71,7 +71,6 @@ import { McpHub } from "../services/mcp/McpHub"
 import crypto from "crypto"
 import { insertGroups } from "./diff/insert-groups"
 import { OutputBuilder } from "../integrations/terminal/OutputBuilder"
-import { telemetryService } from "../services/telemetry/TelemetryService"
 
 const cwd =
 	vscode.workspace.workspaceFolders?.map((folder) => folder.uri.fsPath).at(0) ?? path.join(os.homedir(), "Desktop") // may or may not exist but fs checking existence would immediately ask for permission which would be bad UX, need to come up with a better solution
@@ -190,12 +189,6 @@ export class Cline {
 		this.diffViewProvider = new DiffViewProvider(cwd)
 		this.enableCheckpoints = enableCheckpoints
 		this.checkpointStorage = checkpointStorage
-
-		if (historyItem) {
-			telemetryService.captureTaskRestarted(this.taskId)
-		} else {
-			telemetryService.captureTaskCreated(this.taskId)
-		}
 
 		// Initialize diffStrategy based on current state
 		this.updateDiffStrategy(
@@ -1466,10 +1459,6 @@ export class Cline {
 
 				if (block.name !== "browser_action") {
 					await this.browserSession.closeBrowser()
-				}
-
-				if (!block.partial) {
-					telemetryService.captureToolUsage(this.taskId, block.name)
 				}
 
 				// Validate tool use before execution
@@ -2956,7 +2945,6 @@ export class Cline {
 									if (lastMessage && lastMessage.ask !== "command") {
 										// havent sent a command message yet so first send completion_result then command
 										await this.say("completion_result", result, undefined, false)
-										telemetryService.captureTaskCompleted(this.taskId)
 									}
 
 									// complete command message
@@ -2974,7 +2962,6 @@ export class Cline {
 									commandResult = execCommandResult
 								} else {
 									await this.say("completion_result", result, undefined, false)
-									telemetryService.captureTaskCompleted(this.taskId)
 								}
 
 								if (this.isSubTask) {
@@ -3144,7 +3131,6 @@ export class Cline {
 		userContent.push({ type: "text", text: environmentDetails })
 
 		await this.addToApiConversationHistory({ role: "user", content: userContent })
-		telemetryService.captureConversationMessage(this.taskId, "user")
 
 		// since we sent off a placeholder api_req_started message to update the webview while waiting to actually start the API request (to load potential details for example), we need to update the text of that message
 		const lastApiReqIndex = findLastIndex(this.clineMessages, (m) => m.say === "api_req_started")
@@ -3346,7 +3332,6 @@ export class Cline {
 					role: "assistant",
 					content: [{ type: "text", text: assistantMessage }],
 				})
-				telemetryService.captureConversationMessage(this.taskId, "assistant")
 
 				// NOTE: this comment is here for future reference - this was a workaround for userMessageContent not getting set to true. It was due to it not recursively calling for partial blocks when didRejectTool, so it would get stuck waiting for a partial block to complete before it could continue.
 				// in case the content blocks finished
@@ -3798,8 +3783,6 @@ export class Cline {
 			return
 		}
 
-		telemetryService.captureCheckpointDiffed(this.taskId)
-
 		if (!previousCommitHash && mode === "checkpoint") {
 			const previousCheckpoint = this.clineMessages
 				.filter(({ say }) => say === "checkpoint_saved")
@@ -3851,8 +3834,6 @@ export class Cline {
 			return
 		}
 
-		telemetryService.captureCheckpointCreated(this.taskId)
-
 		// Start the checkpoint process in the background.
 		service.saveCheckpoint(`Task: ${this.taskId}, Time: ${Date.now()}`).catch((err) => {
 			console.error("[Cline#checkpointSave] caught unexpected error, disabling checkpoints", err)
@@ -3883,8 +3864,6 @@ export class Cline {
 
 		try {
 			await service.restoreCheckpoint(commitHash)
-
-			telemetryService.captureCheckpointRestored(this.taskId)
 
 			await this.providerRef.deref()?.postMessageToWebview({ type: "currentCheckpointUpdated", text: commitHash })
 

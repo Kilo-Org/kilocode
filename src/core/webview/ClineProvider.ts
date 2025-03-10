@@ -53,8 +53,6 @@ import { Cline, ClineOptions } from "../Cline"
 import { openMention } from "../mentions"
 import { getNonce } from "./getNonce"
 import { getUri } from "./getUri"
-import { telemetryService } from "../../services/telemetry/TelemetryService"
-import { TelemetrySetting } from "../../shared/TelemetrySetting"
 
 /**
  * https://github.com/microsoft/vscode-webview-ui-toolkit-samples/blob/main/default/weather-webview/src/providers/WeatherViewProvider.ts
@@ -84,9 +82,6 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 		this.outputChannel.appendLine("ClineProvider instantiated")
 		this.contextProxy = new ContextProxy(context)
 		ClineProvider.activeInstances.add(this)
-
-		// Register this provider with the telemetry service to enable it to add properties like mode and provider
-		telemetryService.setProvider(this)
 
 		this.workspaceTracker = new WorkspaceTracker(this)
 		this.configManager = new ConfigManager(this.context)
@@ -930,13 +925,6 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 									`Error list api configuration: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
 								),
 							)
-
-						// If user already opted in to telemetry, enable telemetry service
-						this.getStateToPostToWebview().then((state) => {
-							const { telemetrySetting } = state
-							const isOptedIn = telemetrySetting === "enabled"
-							telemetryService.updateTelemetryState(isOptedIn)
-						})
 
 						this.isViewLaunched = true
 						break
@@ -1799,15 +1787,6 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 							})
 						}
 						break
-
-					case "telemetrySetting": {
-						const telemetrySetting = message.text as TelemetrySetting
-						await this.updateGlobalState("telemetrySetting", telemetrySetting)
-						const isOptedIn = telemetrySetting === "enabled"
-						telemetryService.updateTelemetryState(isOptedIn)
-						await this.postStateToWebview()
-						break
-					}
 				}
 			},
 			null,
@@ -1867,12 +1846,6 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 	 * @param newMode The mode to switch to
 	 */
 	public async handleModeSwitch(newMode: Mode) {
-		// Capture mode switch telemetry event
-		const currentTaskId = this.getCurrentCline()?.taskId
-		if (currentTaskId) {
-			telemetryService.captureModeSwitch(currentTaskId, newMode)
-		}
-
 		await this.updateGlobalState("mode", newMode)
 
 		// Load the saved API config for the new mode if it exists
@@ -2211,10 +2184,8 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 			experiments,
 			maxOpenTabsContext,
 			browserToolEnabled,
-			telemetrySetting,
 			showRooIgnoredFiles,
 		} = await this.getState()
-		const telemetryKey = process.env.POSTHOG_API_KEY
 		const machineId = vscode.env.machineId
 
 		const allowedCommands = vscode.workspace.getConfiguration("roo-cline").get<string[]>("allowedCommands") || []
@@ -2244,8 +2215,7 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 			diffEnabled: diffEnabled ?? true,
 			enableCheckpoints: enableCheckpoints ?? true,
 			checkpointStorage: checkpointStorage ?? "task",
-			shouldShowAnnouncement:
-				telemetrySetting !== "unset" && lastShownAnnouncementId !== this.latestAnnouncementId,
+			shouldShowAnnouncement: lastShownAnnouncementId !== this.latestAnnouncementId,
 			allowedCommands,
 			soundVolume: soundVolume ?? 0.5,
 			browserViewportSize: browserViewportSize ?? "900x600",
@@ -2272,8 +2242,6 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 			maxOpenTabsContext: maxOpenTabsContext ?? 20,
 			cwd,
 			browserToolEnabled: browserToolEnabled ?? true,
-			telemetrySetting,
-			telemetryKey,
 			machineId,
 			showRooIgnoredFiles: showRooIgnoredFiles ?? true,
 		}
@@ -2455,7 +2423,6 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 			maxOpenTabsContext: stateValues.maxOpenTabsContext ?? 20,
 			openRouterUseMiddleOutTransform: stateValues.openRouterUseMiddleOutTransform ?? true,
 			browserToolEnabled: stateValues.browserToolEnabled ?? true,
-			telemetrySetting: stateValues.telemetrySetting || "unset",
 			showRooIgnoredFiles: stateValues.showRooIgnoredFiles ?? true,
 		}
 	}
@@ -2534,48 +2501,5 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 	// Add public getter
 	public getMcpHub(): McpHub | undefined {
 		return this.mcpHub
-	}
-
-	/**
-	 * Returns properties to be included in every telemetry event
-	 * This method is called by the telemetry service to get context information
-	 * like the current mode, API provider, etc.
-	 */
-	public async getTelemetryProperties(): Promise<Record<string, any>> {
-		const { mode, apiConfiguration } = await this.getState()
-		const appVersion = this.context.extension?.packageJSON?.version
-		const vscodeVersion = vscode.version
-		const platform = process.platform
-
-		const properties: Record<string, any> = {
-			vscodeVersion,
-			platform,
-		}
-
-		// Add extension version
-		if (appVersion) {
-			properties.appVersion = appVersion
-		}
-
-		// Add current mode
-		if (mode) {
-			properties.mode = mode
-		}
-
-		// Add API provider
-		if (apiConfiguration?.apiProvider) {
-			properties.apiProvider = apiConfiguration.apiProvider
-		}
-
-		// Add model ID if available
-		const currentCline = this.getCurrentCline()
-		if (currentCline?.api) {
-			const { id: modelId } = currentCline.api.getModel()
-			if (modelId) {
-				properties.modelId = modelId
-			}
-		}
-
-		return properties
 	}
 }

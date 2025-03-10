@@ -8,7 +8,6 @@ import { Mode, CustomModePrompts, ModeConfig } from "./modes"
 import { CustomSupportPrompts } from "./support-prompt"
 import { ExperimentId } from "./experiments"
 import { CheckpointStorage } from "./checkpoints"
-import { TelemetrySetting } from "./TelemetrySetting"
 
 export interface LanguageModelChatSelector {
 	vendor?: string
@@ -139,8 +138,6 @@ export interface ExtensionState {
 	toolRequirements?: Record<string, boolean> // Map of tool names to their requirements (e.g. {"apply_diff": true} if diffEnabled)
 	maxOpenTabsContext: number // Maximum number of VSCode open tabs to include in context (0-500)
 	cwd?: string // Current working directory
-	telemetrySetting: TelemetrySetting
-	telemetryKey?: string
 	machineId?: string
 	showRooIgnoredFiles: boolean // Whether to show .rooignore'd files in listings
 }

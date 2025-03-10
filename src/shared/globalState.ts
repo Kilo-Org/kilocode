@@ -98,7 +98,6 @@ export const GLOBAL_STATE_KEYS = [
 	"browserToolEnabled",
 	"lmStudioSpeculativeDecodingEnabled",
 	"lmStudioDraftModelId",
-	"telemetrySetting",
 	"showRooIgnoredFiles",
 ] as const
 

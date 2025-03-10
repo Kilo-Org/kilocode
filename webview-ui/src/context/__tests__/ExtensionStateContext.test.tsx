@@ -118,7 +118,6 @@ describe("mergeExtensionState", () => {
 			customModes: [],
 			maxOpenTabsContext: 20,
 			apiConfiguration: { providerId: "openrouter" } as ApiConfiguration,
-			telemetrySetting: "unset",
 			showRooIgnoredFiles: true,
 		}
 

@@ -5,7 +5,6 @@ import { CheckCheck, SquareMousePointer, Webhook, GitBranch, Bell, Cog, FlaskCon
 import { ApiConfiguration } from "../../../../src/shared/api"
 import { ExperimentId } from "../../../../src/shared/experiments"
 import { TERMINAL_OUTPUT_LIMIT } from "../../../../src/shared/terminal"
-import { TelemetrySetting } from "../../../../src/shared/TelemetrySetting"
 
 import { vscode } from "@/utils/vscode"
 import { ExtensionStateContextType, useExtensionState } from "@/context/ExtensionStateContext"
@@ -32,7 +31,6 @@ import { BrowserSettings } from "./BrowserSettings"
 import { CheckpointSettings } from "./CheckpointSettings"
 import { NotificationSettings } from "./NotificationSettings"
 import { AdvancedSettings } from "./AdvancedSettings"
-import { SettingsFooter } from "./SettingsFooter"
 import { Section } from "./Section"
 import { ExperimentalSettings } from "./ExperimentalSettings"
 
@@ -46,7 +44,7 @@ type SettingsViewProps = {
 
 const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone }, ref) => {
 	const extensionState = useExtensionState()
-	const { currentApiConfigName, listApiConfigMeta, uriScheme, version } = extensionState
+	const { currentApiConfigName, listApiConfigMeta, uriScheme } = extensionState
 
 	const [isDiscardDialogShow, setDiscardDialogShow] = useState(false)
 	const [isChangeDetected, setChangeDetected] = useState(false)
@@ -81,7 +79,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone },
 		screenshotQuality,
 		soundEnabled,
 		soundVolume,
-		telemetrySetting,
 		terminalOutputLimit,
 		writeDelayMs,
 		showRooIgnoredFiles,
@@ -143,19 +140,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone },
 		})
 	}, [])
 
-	const setTelemetrySetting = useCallback((setting: TelemetrySetting) => {
-		setCachedState((prevState) => {
-			if (prevState.telemetrySetting === setting) {
-				return prevState
-			}
-			setChangeDetected(true)
-			return {
-				...prevState,
-				telemetrySetting: setting,
-			}
-		})
-	}, [])
-
 	const isSettingValid = !errorMessage
 
 	const handleSubmit = () => {
@@ -188,7 +172,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone },
 			vscode.postMessage({ type: "alwaysAllowModeSwitch", bool: alwaysAllowModeSwitch })
 			vscode.postMessage({ type: "alwaysAllowSubtasks", bool: alwaysAllowSubtasks })
 			vscode.postMessage({ type: "upsertApiConfiguration", text: currentApiConfigName, apiConfiguration })
-			vscode.postMessage({ type: "telemetrySetting", text: telemetrySetting })
 			setChangeDetected(false)
 		}
 	}
@@ -408,12 +391,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone },
 						experiments={experiments}
 					/>
 				</div>
-
-				<SettingsFooter
-					version={version}
-					telemetrySetting={telemetrySetting}
-					setTelemetrySetting={setTelemetrySetting}
-				/>
 			</TabContent>
 
 			<AlertDialog open={isDiscardDialogShow} onOpenChange={setDiscardDialogShow}>
