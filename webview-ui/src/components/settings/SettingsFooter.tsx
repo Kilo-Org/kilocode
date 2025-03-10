@@ -17,8 +17,8 @@ export const SettingsFooter = ({ version, className, ...props }: SettingsFooterP
 				github.com/RooVetGit/Roo-Code
 			</VSCodeLink>{" "}
 			or join{" "}
-			<VSCodeLink href="https://www.reddit.com/r/RooCode/" style={{ display: "inline" }}>
-				reddit.com/r/RooCode
+			<VSCodeLink href="https://www.reddit.com/r/KiloCode/" style={{ display: "inline" }}>
+				reddit.com/r/KiloCode
 			</VSCodeLink>
 		</p>
 		<p className="italic">Kilo Code v{version}</p>

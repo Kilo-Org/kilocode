@@ -91,7 +91,7 @@ export abstract class ShadowCheckpointService extends EventEmitter {
 			await git.init()
 			await git.addConfig("core.worktree", this.workspaceDir) // Sets the working tree to the current workspace.
 			await git.addConfig("commit.gpgSign", "false") // Disable commit signing for shadow repo.
-			await git.addConfig("user.name", "Roo Code")
+			await git.addConfig("user.name", "Kilo Code")
 			await git.addConfig("user.email", "noreply@example.com")
 			await this.writeExcludeFile()
 			await this.stageAll(git)

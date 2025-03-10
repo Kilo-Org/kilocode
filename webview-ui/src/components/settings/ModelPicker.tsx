@@ -104,7 +104,7 @@ export const ModelPicker = ({
 				<VSCodeLink href={serviceUrl} className="text-sm">
 					{serviceName}
 				</VSCodeLink>
-				. If you're unsure which model to choose, Roo Code works best with{" "}
+				. If you're unsure which model to choose, Kilo Code works best with{" "}
 				<VSCodeLink onClick={() => onSelect(defaultModelId)} className="text-sm">
 					{defaultModelId}.
 				</VSCodeLink>

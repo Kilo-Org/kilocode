@@ -1,16 +1,16 @@
 <div align="center">
   <h2>Join the Kilo Code Community</h2>
   <p>Connect with developers, contribute ideas, and stay ahead with the latest AI-powered coding tools.</p>
-  
-  <a href="https://discord.gg/QZ9vjPj9e" target="_blank"><img src="https://img.shields.io/badge/Join%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join Discord"></a>
-  <a href="https://www.reddit.com/r/kilocode/" target="_blank"><img src="https://img.shields.io/badge/Join%20Reddit-FF4500?style=for-the-badge&logo=reddit&logoColor=white" alt="Join Reddit"></a>
-  
+
+<a href="https://discord.gg/QZ9vjPj9e" target="_blank"><img src="https://img.shields.io/badge/Join%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join Discord"></a>
+<a href="https://www.reddit.com/r/kilocode/" target="_blank"><img src="https://img.shields.io/badge/Join%20Reddit-FF4500?style=for-the-badge&logo=reddit&logoColor=white" alt="Join Reddit"></a>
+
 </div>
 <br>
 <br>
 
 <div align="center">
-<h1>Kilo Code (prev. Kilo Code, Cline)</h1>
+<h1>Kilo Code (prev. Roo Code, Cline)</h1>
 
 <a href="https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code" target="_blank"><img src="https://img.shields.io/badge/Download%20on%20VS%20Marketplace-blue?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="Download on VS Marketplace"></a>
 <a href="https://github.com/Kilo-Org/kilocode/discussions/categories/feature-requests?discussions_q=is%3Aopen+category%3A%22Feature+Requests%22+sort%3Atop" target="_blank"><img src="https://img.shields.io/badge/Feature%20Requests-yellow?style=for-the-badge" alt="Feature Requests"></a>
@@ -92,7 +92,7 @@ Make Kilo Code work your way with:
 ### Community
 
 - **Discord:** [Join our Discord server](https://discord.gg/QZ9vjPj9e) for real-time help and discussions
-- **Reddit:** [Visit our subreddit](https://www.reddit.com/r/RooCode) to share experiences and tips
+- **Reddit:** [Visit our subreddit](https://www.reddit.com/r/KiloCode) to share experiences and tips
 - **GitHub:** Report [issues](https://github.com/Kilo-Org/kilocode/issues) or request [features](https://github.com/Kilo-Org/kilocode/discussions/categories/feature-requests?discussions_q=is%3Aopen+category%3A%22Feature+Requests%22+sort%3Atop)
 
 ---
@@ -148,7 +148,7 @@ We love community contributions! Here’s how to get involved:
 1. **Check Issues & Requests**: See [open issues](https://github.com/Kilo-Org/kilocode/issues) or [feature requests](https://github.com/Kilo-Org/kilocode/discussions/categories/feature-requests).
 2. **Fork & branch** off `main`.
 3. **Submit a Pull Request** once your feature or fix is ready.
-4. **Join** our [Reddit community](https://www.reddit.com/r/RooCode/) and [Discord](https://discord.gg/QZ9vjPj9e) for feedback, tips, and announcements.
+4. **Join** our [Reddit community](https://www.reddit.com/r/KiloCode/) and [Discord](https://discord.gg/QZ9vjPj9e) for feedback, tips, and announcements.
 
 ---
 

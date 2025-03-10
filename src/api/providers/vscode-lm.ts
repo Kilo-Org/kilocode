@@ -66,7 +66,7 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 			this.dispose()
 
 			throw new Error(
-				`Roo Code <Language Model API>: Failed to initialize handler: ${error instanceof Error ? error.message : "Unknown error"}`,
+				`Kilo Code <Language Model API>: Failed to initialize handler: ${error instanceof Error ? error.message : "Unknown error"}`,
 			)
 		}
 	}
@@ -116,7 +116,7 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 			}
 		} catch (error) {
 			const errorMessage = error instanceof Error ? error.message : "Unknown error"
-			throw new Error(`Roo Code <Language Model API>: Failed to select model: ${errorMessage}`)
+			throw new Error(`Kilo Code <Language Model API>: Failed to select model: ${errorMessage}`)
 		}
 	}
 
@@ -176,18 +176,18 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 	private async internalCountTokens(text: string | vscode.LanguageModelChatMessage): Promise<number> {
 		// Check for required dependencies
 		if (!this.client) {
-			console.warn("Roo Code <Language Model API>: No client available for token counting")
+			console.warn("Kilo Code <Language Model API>: No client available for token counting")
 			return 0
 		}
 
 		if (!this.currentRequestCancellation) {
-			console.warn("Roo Code <Language Model API>: No cancellation token available for token counting")
+			console.warn("Kilo Code <Language Model API>: No cancellation token available for token counting")
 			return 0
 		}
 
 		// Validate input
 		if (!text) {
-			console.debug("Roo Code <Language Model API>: Empty text provided for token counting")
+			console.debug("Kilo Code <Language Model API>: Empty text provided for token counting")
 			return 0
 		}
 
@@ -200,23 +200,23 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 			} else if (text instanceof vscode.LanguageModelChatMessage) {
 				// For chat messages, ensure we have content
 				if (!text.content || (Array.isArray(text.content) && text.content.length === 0)) {
-					console.debug("Roo Code <Language Model API>: Empty chat message content")
+					console.debug("Kilo Code <Language Model API>: Empty chat message content")
 					return 0
 				}
 				tokenCount = await this.client.countTokens(text, this.currentRequestCancellation.token)
 			} else {
-				console.warn("Roo Code <Language Model API>: Invalid input type for token counting")
+				console.warn("Kilo Code <Language Model API>: Invalid input type for token counting")
 				return 0
 			}
 
 			// Validate the result
 			if (typeof tokenCount !== "number") {
-				console.warn("Roo Code <Language Model API>: Non-numeric token count received:", tokenCount)
+				console.warn("Kilo Code <Language Model API>: Non-numeric token count received:", tokenCount)
 				return 0
 			}
 
 			if (tokenCount < 0) {
-				console.warn("Roo Code <Language Model API>: Negative token count received:", tokenCount)
+				console.warn("Kilo Code <Language Model API>: Negative token count received:", tokenCount)
 				return 0
 			}
 
@@ -224,12 +224,12 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 		} catch (error) {
 			// Handle specific error types
 			if (error instanceof vscode.CancellationError) {
-				console.debug("Roo Code <Language Model API>: Token counting cancelled by user")
+				console.debug("Kilo Code <Language Model API>: Token counting cancelled by user")
 				return 0
 			}
 
 			const errorMessage = error instanceof Error ? error.message : "Unknown error"
-			console.warn("Roo Code <Language Model API>: Token counting failed:", errorMessage)
+			console.warn("Kilo Code <Language Model API>: Token counting failed:", errorMessage)
 
 			// Log additional error details if available
 			if (error instanceof Error && error.stack) {
@@ -261,7 +261,7 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 
 	private async getClient(): Promise<vscode.LanguageModelChat> {
 		if (!this.client) {
-			console.debug("Roo Code <Language Model API>: Getting client with options:", {
+			console.debug("Kilo Code <Language Model API>: Getting client with options:", {
 				vsCodeLmModelSelector: this.options.vsCodeLmModelSelector,
 				hasOptions: !!this.options,
 				selectorKeys: this.options.vsCodeLmModelSelector ? Object.keys(this.options.vsCodeLmModelSelector) : [],
@@ -270,12 +270,12 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 			try {
 				// Use default empty selector if none provided to get all available models
 				const selector = this.options?.vsCodeLmModelSelector || {}
-				console.debug("Roo Code <Language Model API>: Creating client with selector:", selector)
+				console.debug("Kilo Code <Language Model API>: Creating client with selector:", selector)
 				this.client = await this.createClient(selector)
 			} catch (error) {
 				const message = error instanceof Error ? error.message : "Unknown error"
-				console.error("Roo Code <Language Model API>: Client creation failed:", message)
-				throw new Error(`Roo Code <Language Model API>: Failed to create client: ${message}`)
+				console.error("Kilo Code <Language Model API>: Client creation failed:", message)
+				throw new Error(`Kilo Code <Language Model API>: Failed to create client: ${message}`)
 			}
 		}
 
@@ -377,7 +377,7 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 		try {
 			// Create the response stream with minimal required options
 			const requestOptions: vscode.LanguageModelChatRequestOptions = {
-				justification: `Roo Code would like to use '${client.name}' from '${client.vendor}', Click 'Allow' to proceed.`,
+				justification: `Kilo Code would like to use '${client.name}' from '${client.vendor}', Click 'Allow' to proceed.`,
 			}
 
 			// Note: Tool support is currently provided by the VSCode Language Model API directly
@@ -394,7 +394,7 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 				if (chunk instanceof vscode.LanguageModelTextPart) {
 					// Validate text part value
 					if (typeof chunk.value !== "string") {
-						console.warn("Roo Code <Language Model API>: Invalid text part value received:", chunk.value)
+						console.warn("Kilo Code <Language Model API>: Invalid text part value received:", chunk.value)
 						continue
 					}
 
@@ -407,18 +407,18 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 					try {
 						// Validate tool call parameters
 						if (!chunk.name || typeof chunk.name !== "string") {
-							console.warn("Roo Code <Language Model API>: Invalid tool name received:", chunk.name)
+							console.warn("Kilo Code <Language Model API>: Invalid tool name received:", chunk.name)
 							continue
 						}
 
 						if (!chunk.callId || typeof chunk.callId !== "string") {
-							console.warn("Roo Code <Language Model API>: Invalid tool callId received:", chunk.callId)
+							console.warn("Kilo Code <Language Model API>: Invalid tool callId received:", chunk.callId)
 							continue
 						}
 
 						// Ensure input is a valid object
 						if (!chunk.input || typeof chunk.input !== "object") {
-							console.warn("Roo Code <Language Model API>: Invalid tool input received:", chunk.input)
+							console.warn("Kilo Code <Language Model API>: Invalid tool input received:", chunk.input)
 							continue
 						}
 
@@ -434,7 +434,7 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 						accumulatedText += toolCallText
 
 						// Log tool call for debugging
-						console.debug("Roo Code <Language Model API>: Processing tool call:", {
+						console.debug("Kilo Code <Language Model API>: Processing tool call:", {
 							name: chunk.name,
 							callId: chunk.callId,
 							inputSize: JSON.stringify(chunk.input).length,
@@ -445,12 +445,12 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 							text: toolCallText,
 						}
 					} catch (error) {
-						console.error("Roo Code <Language Model API>: Failed to process tool call:", error)
+						console.error("Kilo Code <Language Model API>: Failed to process tool call:", error)
 						// Continue processing other chunks even if one fails
 						continue
 					}
 				} else {
-					console.warn("Roo Code <Language Model API>: Unknown chunk type received:", chunk)
+					console.warn("Kilo Code <Language Model API>: Unknown chunk type received:", chunk)
 				}
 			}
 
@@ -468,11 +468,11 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 			this.ensureCleanState()
 
 			if (error instanceof vscode.CancellationError) {
-				throw new Error("Roo Code <Language Model API>: Request cancelled by user")
+				throw new Error("Kilo Code <Language Model API>: Request cancelled by user")
 			}
 
 			if (error instanceof Error) {
-				console.error("Roo Code <Language Model API>: Stream error details:", {
+				console.error("Kilo Code <Language Model API>: Stream error details:", {
 					message: error.message,
 					stack: error.stack,
 					name: error.name,
@@ -483,13 +483,13 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 			} else if (typeof error === "object" && error !== null) {
 				// Handle error-like objects
 				const errorDetails = JSON.stringify(error, null, 2)
-				console.error("Roo Code <Language Model API>: Stream error object:", errorDetails)
-				throw new Error(`Roo Code <Language Model API>: Response stream error: ${errorDetails}`)
+				console.error("Kilo Code <Language Model API>: Stream error object:", errorDetails)
+				throw new Error(`Kilo Code <Language Model API>: Response stream error: ${errorDetails}`)
 			} else {
 				// Fallback for unknown error types
 				const errorMessage = String(error)
-				console.error("Roo Code <Language Model API>: Unknown stream error:", errorMessage)
-				throw new Error(`Roo Code <Language Model API>: Response stream error: ${errorMessage}`)
+				console.error("Kilo Code <Language Model API>: Unknown stream error:", errorMessage)
+				throw new Error(`Kilo Code <Language Model API>: Response stream error: ${errorMessage}`)
 			}
 		}
 	}
@@ -509,7 +509,7 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 			// Log any missing properties for debugging
 			for (const [prop, value] of Object.entries(requiredProps)) {
 				if (!value && value !== 0) {
-					console.warn(`Roo Code <Language Model API>: Client missing ${prop} property`)
+					console.warn(`Kilo Code <Language Model API>: Client missing ${prop} property`)
 				}
 			}
 
@@ -540,7 +540,7 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 			? stringifyVsCodeLmModelSelector(this.options.vsCodeLmModelSelector)
 			: "vscode-lm"
 
-		console.debug("Roo Code <Language Model API>: No client available, using fallback model info")
+		console.debug("Kilo Code <Language Model API>: No client available, using fallback model info")
 
 		return {
 			id: fallbackId,

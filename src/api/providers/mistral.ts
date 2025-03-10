@@ -34,7 +34,7 @@ export class MistralHandler extends BaseProvider implements SingleCompletionHand
 		}
 
 		const baseUrl = this.getBaseUrl()
-		console.debug(`[Roo Code] MistralHandler using baseUrl: ${baseUrl}`)
+		console.debug(`[Kilo Code] MistralHandler using baseUrl: ${baseUrl}`)
 		this.client = new Mistral({
 			serverURL: baseUrl,
 			apiKey: this.options.mistralApiKey,
@@ -43,7 +43,7 @@ export class MistralHandler extends BaseProvider implements SingleCompletionHand
 
 	private getBaseUrl(): string {
 		const modelId = this.options.apiModelId ?? mistralDefaultModelId
-		console.debug(`[Roo Code] MistralHandler using modelId: ${modelId}`)
+		console.debug(`[Kilo Code] MistralHandler using modelId: ${modelId}`)
 		if (modelId?.startsWith("codestral-")) {
 			return this.options.mistralCodestralUrl || "https://codestral.mistral.ai"
 		}

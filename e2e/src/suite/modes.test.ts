@@ -1,6 +1,6 @@
 import * as assert from "assert"
 
-suite("Roo Code Modes", () => {
+suite("Kilo Code Modes", () => {
 	test("Should handle switching modes correctly", async function () {
 		const timeout = 30000
 		const interval = 1000

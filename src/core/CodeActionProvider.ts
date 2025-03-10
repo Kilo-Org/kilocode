@@ -2,11 +2,11 @@ import * as vscode from "vscode"
 import { EditorUtils } from "./EditorUtils"
 
 export const ACTION_NAMES = {
-	EXPLAIN: "Roo Code: Explain Code",
-	FIX: "Roo Code: Fix Code",
-	FIX_LOGIC: "Roo Code: Fix Logic",
-	IMPROVE: "Roo Code: Improve Code",
-	ADD_TO_CONTEXT: "Roo Code: Add to Context",
+	EXPLAIN: "Kilo Code: Explain Code",
+	FIX: "Kilo Code: Fix Code",
+	FIX_LOGIC: "Kilo Code: Fix Logic",
+	IMPROVE: "Kilo Code: Improve Code",
+	ADD_TO_CONTEXT: "Kilo Code: Add to Context",
 } as const
 
 export const COMMAND_IDS = {

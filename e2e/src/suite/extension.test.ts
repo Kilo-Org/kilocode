@@ -1,7 +1,7 @@
 import * as assert from "assert"
 import * as vscode from "vscode"
 
-suite("Roo Code Extension", () => {
+suite("Kilo Code Extension", () => {
 	test("OPENROUTER_API_KEY environment variable is set", () => {
 		if (!process.env.OPENROUTER_API_KEY) {
 			assert.fail("OPENROUTER_API_KEY environment variable is not set")
