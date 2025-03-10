@@ -53,79 +53,79 @@
 		"viewsContainers": {
 			"activitybar": [
 				{
-					"id": "roo-cline-ActivityBar",
+					"id": "kilo-code-ActivityBar",
 					"title": "Kilo Code",
 					"icon": "$(rocket)"
 				}
 			]
 		},
 		"views": {
-			"roo-cline-ActivityBar": [
+			"kilo-code-ActivityBar": [
 				{
 					"type": "webview",
-					"id": "roo-cline.SidebarProvider",
+					"id": "kilo-code.SidebarProvider",
 					"name": ""
 				}
 			]
 		},
 		"commands": [
 			{
-				"command": "roo-cline.plusButtonClicked",
+				"command": "kilo-code.plusButtonClicked",
 				"title": "New Task",
 				"icon": "$(add)"
 			},
 			{
-				"command": "roo-cline.mcpButtonClicked",
+				"command": "kilo-code.mcpButtonClicked",
 				"title": "MCP Servers",
 				"icon": "$(server)"
 			},
 			{
-				"command": "roo-cline.promptsButtonClicked",
+				"command": "kilo-code.promptsButtonClicked",
 				"title": "Prompts",
 				"icon": "$(notebook)"
 			},
 			{
-				"command": "roo-cline.historyButtonClicked",
+				"command": "kilo-code.historyButtonClicked",
 				"title": "History",
 				"icon": "$(history)"
 			},
 			{
-				"command": "roo-cline.popoutButtonClicked",
+				"command": "kilo-code.popoutButtonClicked",
 				"title": "Open in Editor",
 				"icon": "$(link-external)"
 			},
 			{
-				"command": "roo-cline.settingsButtonClicked",
+				"command": "kilo-code.settingsButtonClicked",
 				"title": "Settings",
 				"icon": "$(settings-gear)"
 			},
 			{
-				"command": "roo-cline.helpButtonClicked",
+				"command": "kilo-code.helpButtonClicked",
 				"title": "Documentation",
 				"icon": "$(question)"
 			},
 			{
-				"command": "roo-cline.openInNewTab",
+				"command": "kilo-code.openInNewTab",
 				"title": "Open In New Tab",
 				"category": "Kilo Code"
 			},
 			{
-				"command": "roo-cline.explainCode",
+				"command": "kilo-code.explainCode",
 				"title": "Kilo Code: Explain Code",
 				"category": "Kilo Code"
 			},
 			{
-				"command": "roo-cline.fixCode",
+				"command": "kilo-code.fixCode",
 				"title": "Kilo Code: Fix Code",
 				"category": "Kilo Code"
 			},
 			{
-				"command": "roo-cline.improveCode",
+				"command": "kilo-code.improveCode",
 				"title": "Kilo Code: Improve Code",
 				"category": "Kilo Code"
 			},
 			{
-				"command": "roo-cline.addToContext",
+				"command": "kilo-code.addToContext",
 				"title": "Kilo Code: Add To Context",
 				"category": "Kilo Code"
 			}
@@ -133,61 +133,61 @@
 		"menus": {
 			"editor/context": [
 				{
-					"command": "roo-cline.explainCode",
+					"command": "kilo-code.explainCode",
 					"when": "editorHasSelection",
 					"group": "Kilo Code@1"
 				},
 				{
-					"command": "roo-cline.fixCode",
+					"command": "kilo-code.fixCode",
 					"when": "editorHasSelection",
 					"group": "Kilo Code@2"
 				},
 				{
-					"command": "roo-cline.improveCode",
+					"command": "kilo-code.improveCode",
 					"when": "editorHasSelection",
 					"group": "Kilo Code@3"
 				},
 				{
-					"command": "roo-cline.addToContext",
+					"command": "kilo-code.addToContext",
 					"when": "editorHasSelection",
 					"group": "Kilo Code@4"
 				}
 			],
 			"view/title": [
 				{
-					"command": "roo-cline.plusButtonClicked",
+					"command": "kilo-code.plusButtonClicked",
 					"group": "navigation@1",
-					"when": "view == roo-cline.SidebarProvider"
+					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "roo-cline.promptsButtonClicked",
+					"command": "kilo-code.promptsButtonClicked",
 					"group": "navigation@2",
-					"when": "view == roo-cline.SidebarProvider"
+					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "roo-cline.mcpButtonClicked",
+					"command": "kilo-code.mcpButtonClicked",
 					"group": "navigation@3",
-					"when": "view == roo-cline.SidebarProvider"
+					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "roo-cline.historyButtonClicked",
+					"command": "kilo-code.historyButtonClicked",
 					"group": "navigation@4",
-					"when": "view == roo-cline.SidebarProvider"
+					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "roo-cline.popoutButtonClicked",
+					"command": "kilo-code.popoutButtonClicked",
 					"group": "navigation@5",
-					"when": "view == roo-cline.SidebarProvider"
+					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "roo-cline.settingsButtonClicked",
+					"command": "kilo-code.settingsButtonClicked",
 					"group": "navigation@6",
-					"when": "view == roo-cline.SidebarProvider"
+					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "roo-cline.helpButtonClicked",
+					"command": "kilo-code.helpButtonClicked",
 					"group": "navigation@7",
-					"when": "view == roo-cline.SidebarProvider"
+					"when": "view == kilo-code.SidebarProvider"
 				}
 			]
 		},

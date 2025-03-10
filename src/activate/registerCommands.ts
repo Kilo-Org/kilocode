@@ -47,7 +47,7 @@ export const registerCommands = (options: RegisterCommandOptions) => {
 	// Human Relay Dialog Command
 	context.subscriptions.push(
 		vscode.commands.registerCommand(
-			"roo-cline.showHumanRelayDialog",
+			"kilo-code.showHumanRelayDialog",
 			(params: { requestId: string; promptText: string }) => {
 				if (getPanel()) {
 					getPanel()?.webview.postMessage({
@@ -63,27 +63,27 @@ export const registerCommands = (options: RegisterCommandOptions) => {
 
 const getCommandsMap = ({ context, outputChannel, provider }: RegisterCommandOptions) => {
 	return {
-		"roo-cline.plusButtonClicked": async () => {
+		"kilo-code.plusButtonClicked": async () => {
 			await provider.removeClineFromStack()
 			await provider.postStateToWebview()
 			await provider.postMessageToWebview({ type: "action", action: "chatButtonClicked" })
 		},
-		"roo-cline.mcpButtonClicked": () => {
+		"kilo-code.mcpButtonClicked": () => {
 			provider.postMessageToWebview({ type: "action", action: "mcpButtonClicked" })
 		},
-		"roo-cline.promptsButtonClicked": () => {
+		"kilo-code.promptsButtonClicked": () => {
 			provider.postMessageToWebview({ type: "action", action: "promptsButtonClicked" })
 		},
-		"roo-cline.popoutButtonClicked": () => openClineInNewTab({ context, outputChannel }),
-		"roo-cline.openInNewTab": () => openClineInNewTab({ context, outputChannel }),
-		"roo-cline.settingsButtonClicked": () => {
+		"kilo-code.popoutButtonClicked": () => openClineInNewTab({ context, outputChannel }),
+		"kilo-code.openInNewTab": () => openClineInNewTab({ context, outputChannel }),
+		"kilo-code.settingsButtonClicked": () => {
 			provider.postMessageToWebview({ type: "action", action: "settingsButtonClicked" })
 		},
-		"roo-cline.historyButtonClicked": () => {
+		"kilo-code.historyButtonClicked": () => {
 			provider.postMessageToWebview({ type: "action", action: "historyButtonClicked" })
 		},
-		"roo-cline.helpButtonClicked": () => {
-			vscode.env.openExternal(vscode.Uri.parse("https://docs.roocode.com"))
+		"kilo-code.helpButtonClicked": () => {
+			vscode.env.openExternal(vscode.Uri.parse("https://docs.kilocode.ai"))
 		},
 	}
 }

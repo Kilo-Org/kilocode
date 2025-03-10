@@ -14,15 +14,15 @@ suite("Kilo Code Extension", () => {
 		const startTime = Date.now()
 
 		const expectedCommands = [
-			"roo-cline.plusButtonClicked",
-			"roo-cline.mcpButtonClicked",
-			"roo-cline.historyButtonClicked",
-			"roo-cline.popoutButtonClicked",
-			"roo-cline.settingsButtonClicked",
-			"roo-cline.openInNewTab",
-			"roo-cline.explainCode",
-			"roo-cline.fixCode",
-			"roo-cline.improveCode",
+			"kilo-code.plusButtonClicked",
+			"kilo-code.mcpButtonClicked",
+			"kilo-code.historyButtonClicked",
+			"kilo-code.popoutButtonClicked",
+			"kilo-code.settingsButtonClicked",
+			"kilo-code.openInNewTab",
+			"kilo-code.explainCode",
+			"kilo-code.fixCode",
+			"kilo-code.improveCode",
 		]
 
 		while (Date.now() - startTime < timeout) {

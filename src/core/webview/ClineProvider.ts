@@ -60,8 +60,8 @@ import { getUri } from "./getUri"
  */
 
 export class ClineProvider implements vscode.WebviewViewProvider {
-	public static readonly sideBarId = "roo-cline.SidebarProvider" // used in package.json as the view's id. This value cannot be changed due to how vscode caches views based on their id, and updating the id would break existing instances of the extension.
-	public static readonly tabPanelId = "roo-cline.TabPanelProvider"
+	public static readonly sideBarId = "kilo-code.SidebarProvider" // used in package.json as the view's id. This value cannot be changed due to how vscode caches views based on their id, and updating the id would break existing instances of the extension.
+	public static readonly tabPanelId = "kilo-code.TabPanelProvider"
 	private static activeInstances: Set<ClineProvider> = new Set()
 	private disposables: vscode.Disposable[] = []
 	private view?: vscode.WebviewView | vscode.WebviewPanel
@@ -279,7 +279,7 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 
 		// If no visible provider, try to show the sidebar view
 		if (!visibleProvider) {
-			await vscode.commands.executeCommand("roo-cline.SidebarProvider.focus")
+			await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
 			// Wait briefly for the view to become visible
 			await delay(100)
 			visibleProvider = ClineProvider.getVisibleInstance()
@@ -1136,7 +1136,7 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 						await this.context.globalState.update("allowedCommands", message.commands)
 						// Also update workspace settings
 						await vscode.workspace
-							.getConfiguration("roo-cline")
+							.getConfiguration("kiloCode")
 							.update("allowedCommands", message.commands, vscode.ConfigurationTarget.Global)
 						break
 					case "openMcpSettings": {
@@ -1771,7 +1771,7 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 						break
 					case "humanRelayResponse":
 						if (message.requestId && message.text) {
-							vscode.commands.executeCommand("roo-cline.handleHumanRelayResponse", {
+							vscode.commands.executeCommand("kilo-code.handleHumanRelayResponse", {
 								requestId: message.requestId,
 								text: message.text,
 								cancelled: false,
@@ -1781,7 +1781,7 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 
 					case "humanRelayCancel":
 						if (message.requestId) {
-							vscode.commands.executeCommand("roo-cline.handleHumanRelayResponse", {
+							vscode.commands.executeCommand("kilo-code.handleHumanRelayResponse", {
 								requestId: message.requestId,
 								cancelled: true,
 							})
@@ -2188,7 +2188,7 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 		} = await this.getState()
 		const machineId = vscode.env.machineId
 
-		const allowedCommands = vscode.workspace.getConfiguration("roo-cline").get<string[]>("allowedCommands") || []
+		const allowedCommands = vscode.workspace.getConfiguration("kiloCode").get<string[]>("allowedCommands") || []
 
 		const cwd = vscode.workspace.workspaceFolders?.map((folder) => folder.uri.fsPath).at(0) || ""
 

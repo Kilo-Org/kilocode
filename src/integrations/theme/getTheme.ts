@@ -141,5 +141,5 @@ export function mergeJson(
 }
 
 function getExtensionUri(): vscode.Uri {
-	return vscode.extensions.getExtension("rooveterinaryinc.roo-cline")!.extensionUri
+	return vscode.extensions.getExtension("kilocode.Kilo-Code")!.extensionUri
 }
