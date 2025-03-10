@@ -49,7 +49,7 @@ const Announcement = ({ version, hideAnnouncement }: AnnouncementProps) => {
 			<p style={{ margin: "10px 0px 0px" }}>
 				Get more details and discuss in{" "}
 				<VSCodeLink
-					href="hhttps://discord.gg/QZ9vjPj9e"
+					href="https://discord.gg/QZ9vjPj9e"
 					onClick={(e) => {
 						e.preventDefault()
 						window.postMessage(
