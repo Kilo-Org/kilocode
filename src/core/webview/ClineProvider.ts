@@ -2215,7 +2215,7 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 			diffEnabled: diffEnabled ?? true,
 			enableCheckpoints: enableCheckpoints ?? true,
 			checkpointStorage: checkpointStorage ?? "task",
-			shouldShowAnnouncement: lastShownAnnouncementId !== this.latestAnnouncementId,
+			shouldShowAnnouncement: false,
 			allowedCommands,
 			soundVolume: soundVolume ?? 0.5,
 			browserViewportSize: browserViewportSize ?? "900x600",
