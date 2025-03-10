@@ -148,7 +148,7 @@ We love community contributions! Here’s how to get involved:
 1. **Check Issues & Requests**: See [open issues](https://github.com/Kilo-Org/kilocode/issues) or [feature requests](https://github.com/Kilo-Org/kilocode/discussions/categories/feature-requests).
 2. **Fork & branch** off `main`.
 3. **Submit a Pull Request** once your feature or fix is ready.
-4. **Join** our [Reddit community](https://www.reddit.com/r/RooCode/) and [Discord](https://roocode.com/discord) for feedback, tips, and announcements.
+4. **Join** our [Reddit community](https://www.reddit.com/r/RooCode/) and [Discord](https://discord.gg/QZ9vjPj9e) for feedback, tips, and announcements.
 
 ---
 
