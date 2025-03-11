@@ -115,7 +115,7 @@ const mockPostMessage = (state: any) => {
 	)
 }
 
-const renderSettingsView = () => {
+const renderSettingsView = (initialState = {}) => {
 	const onDone = jest.fn()
 	render(
 		<ExtensionStateContextProvider>
@@ -123,7 +123,7 @@ const renderSettingsView = () => {
 		</ExtensionStateContextProvider>,
 	)
 	// Hydrate initial state
-	mockPostMessage({})
+	mockPostMessage(initialState)
 	return { onDone }
 }
 
@@ -343,6 +343,61 @@ describe("SettingsView - Allowed Commands", () => {
 			expect.objectContaining({
 				type: "allowedCommands",
 				commands: ["npm test"],
+			}),
+		)
+	})
+})
+
+describe("SettingsView - Auto Approve Settings", () => {
+	it("initializes with read and write operations auto-approved by default", () => {
+		renderSettingsView({
+			alwaysAllowReadOnly: true,
+			alwaysAllowWrite: true,
+		})
+
+		const readCheckbox = screen.getByRole("checkbox", {
+			name: /Always approve read-only operations/i,
+		})
+		expect(readCheckbox).toBeChecked()
+
+		const writeCheckbox = screen.getByRole("checkbox", {
+			name: /Always approve write operations/i,
+		})
+		expect(writeCheckbox).toBeChecked()
+	})
+
+	it("allows unchecking read and write operations and sends message to VSCode", () => {
+		renderSettingsView({
+			alwaysAllowReadOnly: true,
+			alwaysAllowWrite: true,
+		})
+
+		const readCheckbox = screen.getByRole("checkbox", {
+			name: /Always approve read-only operations/i,
+		})
+		const writeCheckbox = screen.getByRole("checkbox", {
+			name: /Always approve write operations/i,
+		})
+
+		// Uncheck the checkboxes
+		fireEvent.click(readCheckbox)
+		fireEvent.click(writeCheckbox)
+
+		// Click Save to save settings
+		const saveButton = screen.getByText("Save")
+		fireEvent.click(saveButton)
+
+		// Verify message sent to VSCode
+		expect(vscode.postMessage).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "alwaysAllowReadOnly",
+				bool: false,
+			}),
+		)
+		expect(vscode.postMessage).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "alwaysAllowWrite",
+				bool: false,
 			}),
 		)
 	})
