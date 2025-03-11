@@ -949,11 +949,11 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 						await this.updateCustomInstructions(message.text)
 						break
 					case "alwaysAllowReadOnly":
-						await this.updateGlobalState("alwaysAllowReadOnly", message.bool ?? undefined)
+						await this.updateGlobalState("alwaysAllowReadOnly", message.bool ?? true)
 						await this.postStateToWebview()
 						break
 					case "alwaysAllowWrite":
-						await this.updateGlobalState("alwaysAllowWrite", message.bool ?? undefined)
+						await this.updateGlobalState("alwaysAllowWrite", message.bool ?? true)
 						await this.postStateToWebview()
 						break
 					case "alwaysAllowExecute":
@@ -1471,7 +1471,7 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 						await this.postStateToWebview()
 						break
 					case "autoApprovalEnabled":
-						await this.updateGlobalState("autoApprovalEnabled", message.bool ?? false)
+						await this.updateGlobalState("autoApprovalEnabled", message.bool ?? true)
 						await this.postStateToWebview()
 						break
 					case "enhancePrompt":
@@ -2196,8 +2196,8 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 			version: this.context.extension?.packageJSON?.version ?? "",
 			apiConfiguration,
 			customInstructions,
-			alwaysAllowReadOnly: alwaysAllowReadOnly ?? false,
-			alwaysAllowWrite: alwaysAllowWrite ?? false,
+			alwaysAllowReadOnly: alwaysAllowReadOnly ?? true,
+			alwaysAllowWrite: alwaysAllowWrite ?? true,
 			alwaysAllowExecute: alwaysAllowExecute ?? false,
 			alwaysAllowBrowser: alwaysAllowBrowser ?? false,
 			alwaysAllowMcp: alwaysAllowMcp ?? false,
@@ -2235,7 +2235,7 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 			customModePrompts: customModePrompts ?? {},
 			customSupportPrompts: customSupportPrompts ?? {},
 			enhancementApiConfigId,
-			autoApprovalEnabled: autoApprovalEnabled ?? false,
+			autoApprovalEnabled: autoApprovalEnabled ?? true,
 			customModes: await this.customModesManager.getCustomModes(),
 			experiments: experiments ?? experimentDefault,
 			mcpServers: this.mcpHub?.getAllServers() ?? [],
@@ -2355,8 +2355,8 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 			apiConfiguration,
 			lastShownAnnouncementId: stateValues.lastShownAnnouncementId,
 			customInstructions: stateValues.customInstructions,
-			alwaysAllowReadOnly: stateValues.alwaysAllowReadOnly ?? false,
-			alwaysAllowWrite: stateValues.alwaysAllowWrite ?? false,
+			alwaysAllowReadOnly: stateValues.alwaysAllowReadOnly ?? true,
+			alwaysAllowWrite: stateValues.alwaysAllowWrite ?? true,
 			alwaysAllowExecute: stateValues.alwaysAllowExecute ?? false,
 			alwaysAllowBrowser: stateValues.alwaysAllowBrowser ?? false,
 			alwaysAllowMcp: stateValues.alwaysAllowMcp ?? false,
@@ -2418,7 +2418,7 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 			customSupportPrompts: stateValues.customSupportPrompts ?? {},
 			enhancementApiConfigId: stateValues.enhancementApiConfigId,
 			experiments: stateValues.experiments ?? experimentDefault,
-			autoApprovalEnabled: stateValues.autoApprovalEnabled ?? false,
+			autoApprovalEnabled: stateValues.autoApprovalEnabled ?? true,
 			customModes,
 			maxOpenTabsContext: stateValues.maxOpenTabsContext ?? 20,
 			openRouterUseMiddleOutTransform: stateValues.openRouterUseMiddleOutTransform ?? true,
