@@ -20,6 +20,7 @@ import { ApiStream } from "./transform/stream"
 import { UnboundHandler } from "./providers/unbound"
 import { RequestyHandler } from "./providers/requesty"
 import { HumanRelayHandler } from "./providers/human-relay"
+import { KiloCodeHandler } from "./providers/kilocode"
 
 export interface SingleCompletionHandler {
 	completePrompt(prompt: string): Promise<string>
@@ -43,6 +44,8 @@ export interface ApiHandler {
 export function buildApiHandler(configuration: ApiConfiguration): ApiHandler {
 	const { apiProvider, ...options } = configuration
 	switch (apiProvider) {
+		case "kilocode":
+			return new KiloCodeHandler(options)
 		case "anthropic":
 			return new AnthropicHandler(options)
 		case "glama":

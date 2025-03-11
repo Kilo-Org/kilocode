@@ -17,6 +17,7 @@ export type ApiProvider =
 	| "unbound"
 	| "requesty"
 	| "human-relay"
+	| "kilocode"
 
 export interface ApiHandlerOptions {
 	apiModelId?: string

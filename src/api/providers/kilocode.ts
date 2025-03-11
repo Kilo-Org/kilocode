@@ -1,19 +1,13 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import { Stream as AnthropicStream } from "@anthropic-ai/sdk/streaming"
 import { CacheControlEphemeral } from "@anthropic-ai/sdk/resources"
-import {
-	anthropicDefaultModelId,
-	AnthropicModelId,
-	anthropicModels,
-	ApiHandlerOptions,
-	ModelInfo,
-} from "../../shared/api"
+import { anthropicDefaultModelId, anthropicModels, ApiHandlerOptions, ModelInfo } from "../../shared/api"
 import { ApiStream } from "../transform/stream"
 import { BaseProvider } from "./base-provider"
 import { ANTHROPIC_DEFAULT_MAX_TOKENS } from "./constants"
 import { SingleCompletionHandler, getModelParams } from "../index"
 
-export class AnthropicHandler extends BaseProvider implements SingleCompletionHandler {
+export class KiloCodeHandler extends BaseProvider implements SingleCompletionHandler {
 	private options: ApiHandlerOptions
 	private client: Anthropic
 
@@ -75,10 +69,10 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 
 				const betas = []
 
-				// Check for the thinking-128k variant first
-				if (virtualId === "claude-3-7-sonnet-20250219:thinking") {
-					betas.push("output-128k-2025-02-19")
-				}
+				// // Check for the thinking-128k variant first
+				// if (virtualId === "claude-3-7-sonnet-20250219:thinking") {
+				// 	betas.push("output-128k-2025-02-19")
+				// }
 
 				// Then check for models that support prompt caching
 				switch (modelId) {
