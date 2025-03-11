@@ -618,6 +618,30 @@ describe("ClineProvider", () => {
 		expect(state.alwaysApproveResubmit).toBe(false)
 	})
 
+	test("autoApprovalEnabled defaults to true", async () => {
+		// Mock globalState.get to return undefined for autoApprovalEnabled
+		;(mockContext.globalState.get as jest.Mock).mockReturnValue(undefined)
+
+		const state = await provider.getState()
+		expect(state.autoApprovalEnabled).toBe(true)
+	})
+
+	test("alwaysAllowReadOnly defaults to true", async () => {
+		// Mock globalState.get to return undefined for alwaysAllowReadOnly
+		;(mockContext.globalState.get as jest.Mock).mockReturnValue(undefined)
+
+		const state = await provider.getState()
+		expect(state.alwaysAllowReadOnly).toBe(true)
+	})
+
+	test("alwaysAllowWrite defaults to true", async () => {
+		// Mock globalState.get to return undefined for alwaysAllowWrite
+		;(mockContext.globalState.get as jest.Mock).mockReturnValue(undefined)
+
+		const state = await provider.getState()
+		expect(state.alwaysAllowWrite).toBe(true)
+	})
+
 	test("loads saved API config when switching modes", async () => {
 		await provider.resolveWebviewView(mockWebviewView)
 		const messageHandler = (mockWebviewView.webview.onDidReceiveMessage as jest.Mock).mock.calls[0][0]

@@ -9,13 +9,24 @@ import { ApiConfiguration } from "../../../../src/shared/api"
 
 // Test component that consumes the context
 const TestComponent = () => {
-	const { allowedCommands, setAllowedCommands, soundEnabled, showRooIgnoredFiles, setShowRooIgnoredFiles } =
-		useExtensionState()
+	const {
+		allowedCommands,
+		setAllowedCommands,
+		soundEnabled,
+		showRooIgnoredFiles,
+		setShowRooIgnoredFiles,
+		autoApprovalEnabled,
+		alwaysAllowReadOnly,
+		alwaysAllowWrite,
+	} = useExtensionState()
 	return (
 		<div>
 			<div data-testid="allowed-commands">{JSON.stringify(allowedCommands)}</div>
 			<div data-testid="sound-enabled">{JSON.stringify(soundEnabled)}</div>
 			<div data-testid="show-rooignored-files">{JSON.stringify(showRooIgnoredFiles)}</div>
+			<div data-testid="auto-approval-enabled">{JSON.stringify(autoApprovalEnabled)}</div>
+			<div data-testid="always-allow-read-only">{JSON.stringify(alwaysAllowReadOnly)}</div>
+			<div data-testid="always-allow-write">{JSON.stringify(alwaysAllowWrite)}</div>
 			<button data-testid="update-button" onClick={() => setAllowedCommands(["npm install", "git status"])}>
 				Update Commands
 			</button>
@@ -55,6 +66,36 @@ describe("ExtensionStateContext", () => {
 		)
 
 		expect(JSON.parse(screen.getByTestId("show-rooignored-files").textContent!)).toBe(true)
+	})
+
+	it("initializes with autoApprovalEnabled set to true", () => {
+		render(
+			<ExtensionStateContextProvider>
+				<TestComponent />
+			</ExtensionStateContextProvider>,
+		)
+
+		expect(JSON.parse(screen.getByTestId("auto-approval-enabled").textContent!)).toBe(true)
+	})
+
+	it("initializes with alwaysAllowReadOnly set to true", () => {
+		render(
+			<ExtensionStateContextProvider>
+				<TestComponent />
+			</ExtensionStateContextProvider>,
+		)
+
+		expect(JSON.parse(screen.getByTestId("always-allow-read-only").textContent!)).toBe(true)
+	})
+
+	it("initializes with alwaysAllowWrite set to true", () => {
+		render(
+			<ExtensionStateContextProvider>
+				<TestComponent />
+			</ExtensionStateContextProvider>,
+		)
+
+		expect(JSON.parse(screen.getByTestId("always-allow-write").textContent!)).toBe(true)
 	})
 
 	it("updates showRooIgnoredFiles through setShowRooIgnoredFiles", () => {
