@@ -33,6 +33,7 @@ import { NotificationSettings } from "./NotificationSettings"
 import { AdvancedSettings } from "./AdvancedSettings"
 import { Section } from "./Section"
 import { ExperimentalSettings } from "./ExperimentalSettings"
+import { SettingsFooter } from "./SettingsFooter"
 
 export interface SettingsViewRef {
 	checkUnsaveChanges: (then: () => void) => void
@@ -391,6 +392,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone },
 						experiments={experiments}
 					/>
 				</div>
+				<SettingsFooter version={extensionState.version} />
 			</TabContent>
 
 			<AlertDialog open={isDiscardDialogShow} onOpenChange={setDiscardDialogShow}>
