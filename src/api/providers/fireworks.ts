@@ -1,6 +1,6 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
-import { ApiHandler } from "../"
+import { ApiHandler, SingleCompletionHandler } from "../"
 import {
 	ApiHandlerOptions,
 	FireworksModelId,
@@ -13,7 +13,7 @@ import { convertToOpenAiMessages } from "../transform/openai-format"
 import { ApiStream } from "../transform/stream"
 import { BaseProvider } from "./base-provider"
 
-export class FireworksHandler extends BaseProvider implements ApiHandler {
+export class FireworksHandler extends BaseProvider implements ApiHandler, SingleCompletionHandler {
 	private options: ApiHandlerOptions
 	private client: OpenAI
 	private baseUrl: string = "https://api.fireworks.ai/inference/v1"
@@ -182,5 +182,39 @@ export class FireworksHandler extends BaseProvider implements ApiHandler {
 
 	override async countTokens(content: Array<Anthropic.Messages.ContentBlockParam>): Promise<number> {
 		return super.countTokens(content)
+	}
+
+	async completePrompt(prompt: string): Promise<string> {
+		try {
+			const model = this.getModel()
+
+			if (!this.options.fireworksApiKey) {
+				throw new Error("Fireworks API key is required but was not provided")
+			}
+
+			// Special handling for DeepSeek models
+			const isDeepSeek = model.id.includes("deepseek")
+
+			// Prepare request parameters
+			const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
+				model: model.id,
+				messages: [{ role: "user", content: prompt }],
+				max_tokens: model.info.maxTokens || 4096,
+				temperature: isDeepSeek ? 0.7 : 0.6, // DeepSeek works better with slightly higher temperature
+				top_p: 1,
+				presence_penalty: 0,
+				frequency_penalty: 0,
+			}
+
+			// Send the request
+			const response = await this.client.chat.completions.create(requestOptions)
+
+			return response.choices[0]?.message?.content || ""
+		} catch (error) {
+			if (error instanceof Error) {
+				throw new Error(`Fireworks completion error: ${error.message}`)
+			}
+			throw error
+		}
 	}
 }
