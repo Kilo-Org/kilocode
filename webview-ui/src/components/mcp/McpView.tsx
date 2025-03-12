@@ -52,12 +52,12 @@ const McpView = ({ onDone }: McpViewProps) => {
 						Model Context Protocol
 					</VSCodeLink>{" "}
 					enables communication with locally running MCP servers that provide additional tools and resources
-					to extend Roo's capabilities. You can use{" "}
+					to extend Kilo Code's capabilities. You can use{" "}
 					<VSCodeLink href="https://github.com/modelcontextprotocol/servers" style={{ display: "inline" }}>
 						community-made servers
 					</VSCodeLink>{" "}
-					or ask Roo to create new tools specific to your workflow (e.g., "add a tool that gets the latest npm
-					docs").
+					or ask Kilo Code to create new tools specific to your workflow (e.g., "add a tool that gets the
+					latest npm docs").
 				</div>
 
 				<McpEnabledToggle />
@@ -79,9 +79,9 @@ const McpView = ({ onDone }: McpViewProps) => {
 									marginTop: "5px",
 									color: "var(--vscode-descriptionForeground)",
 								}}>
-								When enabled, Roo can help you create new MCP servers via commands like "add a new tool
-								to...". If you don't need to create MCP servers you can disable this to reduce Roo's
-								token usage.
+								When enabled, Kilo Code can help you create new MCP servers via commands like "add a new
+								tool to...". If you don't need to create MCP servers you can disable this to reduce Kilo
+								Code's token usage.
 							</p>
 						</div>
 

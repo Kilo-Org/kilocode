@@ -35,7 +35,7 @@ export const NotificationSettings = ({
 						<span className="font-medium">Enable sound effects</span>
 					</VSCodeCheckbox>
 					<p className="text-vscode-descriptionForeground text-sm mt-0">
-						When enabled, Roo will play sound effects for notifications and events.
+						When enabled, Kilo Code will play sound effects for notifications and events.
 					</p>
 					{soundEnabled && (
 						<div

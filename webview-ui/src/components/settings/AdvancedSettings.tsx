@@ -131,7 +131,7 @@ export const AdvancedSettings = ({
 						<span className="font-medium">Enable editing through diffs</span>
 					</VSCodeCheckbox>
 					<p className="text-vscode-descriptionForeground text-sm mt-0">
-						When enabled, Roo will be able to edit files more quickly and will automatically reject
+						When enabled, Kilo Code will be able to edit files more quickly and will automatically reject
 						truncated full-file writes. Works best with the latest Claude 3.7 Sonnet model.
 					</p>
 					{diffEnabled && (

@@ -2585,7 +2585,7 @@ export class Cline {
 										this.consecutiveMistakeCount++
 										await this.say(
 											"error",
-											`Roo tried to use ${tool_name} with an invalid JSON argument. Retrying...`,
+											`Kilo Code tried to use ${tool_name} with an invalid JSON argument. Retrying...`,
 										)
 										pushToolResult(
 											formatResponse.toolError(

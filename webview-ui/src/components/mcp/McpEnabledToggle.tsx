@@ -24,8 +24,8 @@ const McpEnabledToggle = () => {
 					marginTop: "5px",
 					color: "var(--vscode-descriptionForeground)",
 				}}>
-				When enabled, Roo will be able to interact with MCP servers for advanced functionality. If you're not
-				using MCP, you can disable this to reduce Roo's token usage.
+				When enabled, Kilo Code will be able to interact with MCP servers for advanced functionality. If you're
+				not using MCP, you can disable this to reduce Kilo Code's token usage.
 			</p>
 		</div>
 	)

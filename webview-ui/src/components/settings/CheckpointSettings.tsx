@@ -39,8 +39,8 @@ export const CheckpointSettings = ({
 						<span className="font-medium">Enable automatic checkpoints</span>
 					</VSCodeCheckbox>
 					<p className="text-vscode-descriptionForeground text-sm mt-0">
-						When enabled, Roo will automatically create checkpoints during task execution, making it easy to
-						review changes or revert to earlier states.
+						When enabled, Kilo Code will automatically create checkpoints during task execution, making it
+						easy to review changes or revert to earlier states.
 					</p>
 				</div>
 			</Section>

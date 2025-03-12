@@ -2052,6 +2052,8 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 
 		await this.postStateToWebview()
 
+		vscode.window.showInformationMessage("Kilo Code successfully configured!")
+
 		if (this.getCurrentCline()) {
 			this.getCurrentCline()!.api = buildApiHandler({
 				apiProvider: kilocode,
