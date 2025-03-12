@@ -1320,7 +1320,7 @@ export function getOpenRouterAuthUrl(uriScheme?: string) {
 }
 
 export function getKiloCodeBackendAuthUrl(uriScheme?: string) {
-	return `https://kilocode-backend-uc7g.vercel.app/auth/signin?source=vscode`
+	return `https://kilocode.ai/auth/signin?source=vscode`
 }
 
 export function normalizeApiConfiguration(apiConfiguration?: ApiConfiguration) {
