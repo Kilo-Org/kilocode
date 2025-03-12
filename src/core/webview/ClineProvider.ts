@@ -2044,7 +2044,6 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 	async handleKiloCodeCallback(token: string) {
 		const kilocode: ApiProvider = "kilocode"
 
-		await this.storeSecret("kilocodeToken", token)
 		await this.contextProxy.setValues({
 			apiProvider: kilocode,
 			kilocodeToken: token,
