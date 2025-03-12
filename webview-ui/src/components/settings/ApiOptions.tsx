@@ -56,7 +56,7 @@ const modelsByProvider: Record<string, Record<string, ModelInfo>> = {
 }
 
 const providers = [
-	{ value: "kilocode", label: "KiloCode" },
+	{ value: "kilocode", label: "Kilo Code" },
 	{ value: "openrouter", label: "OpenRouter" },
 	{ value: "anthropic", label: "Anthropic" },
 	{ value: "gemini", label: "Google Gemini" },
