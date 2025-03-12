@@ -13,11 +13,6 @@ export const SECRET_KEYS = [
 	"mistralApiKey",
 	"unboundApiKey",
 	"requestyApiKey",
-	"liteLlmApiKey",
-	"authToken",
-	"authNonce",
-	"asksageApiKey",
-	"xaiApiKey",
 	"fireworksApiKey",
 	"kilocodeToken",
 ] as const
