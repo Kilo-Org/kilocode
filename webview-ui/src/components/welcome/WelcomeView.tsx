@@ -19,13 +19,7 @@ const WelcomeView = () => {
 	return (
 		<Tab>
 			<TabContent className="flex flex-col gap-5">
-				<h2 className="m-0 p-0">Hi, I'm Roo!</h2>
-				<div>
-					I can do all kinds of tasks thanks to the latest breakthroughs in agentic coding capabilities and
-					access to tools that let me create & edit files, explore complex projects, use the browser, and
-					execute terminal commands (with your permission, of course). I can even use MCP to create new tools
-					and extend my own capabilities.
-				</div>
+				<h2 className="m-0 p-0">Hi, welcome to Kilo Code!</h2>
 				<Alert className="font-bold text-sm">To get started, this extension needs an API provider.</Alert>
 				<ApiOptions
 					fromWelcomeView

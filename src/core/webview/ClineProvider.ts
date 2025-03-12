@@ -2041,6 +2041,26 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 		// await this.postMessageToWebview({ type: "action", action: "settingsButtonClicked" }) // bad ux if user is on welcome
 	}
 
+	async handleKiloCodeCallback(token: string) {
+		const kilocode: ApiProvider = "kilocode"
+
+		await this.contextProxy.setValues({
+			apiProvider: kilocode,
+			kilocodeToken: token,
+		})
+
+		await this.postStateToWebview()
+
+		vscode.window.showInformationMessage("Kilo Code successfully configured!")
+
+		if (this.getCurrentCline()) {
+			this.getCurrentCline()!.api = buildApiHandler({
+				apiProvider: kilocode,
+				kilocodeToken: token,
+			})
+		}
+	}
+
 	// Task history
 
 	async getTaskWithId(id: string): Promise<{
@@ -2314,7 +2334,7 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 			idx = idx + 1
 		})
 
-		SECRET_KEYS.forEach((key, index) => {
+		SECRET_KEYS.forEach((key) => {
 			secretValues[key] = valuePromises[idx]
 			idx = idx + 1
 		})
@@ -2322,25 +2342,13 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 		let customModes = valuePromises[idx] as ModeConfig[] | undefined
 
 		// Determine apiProvider with the same logic as before
-		let apiProvider: ApiProvider
-		if (stateValues.apiProvider) {
-			apiProvider = stateValues.apiProvider
-		} else {
-			// Either new user or legacy user that doesn't have the apiProvider stored in state
-			// (If they're using OpenRouter or Bedrock, then apiProvider state will exist)
-			if (secretValues.apiKey) {
-				apiProvider = "anthropic"
-			} else {
-				// New users should default to openrouter
-				apiProvider = "openrouter"
-			}
-		}
+		let apiProvider: ApiProvider = stateValues.apiProvider
 
 		// Build the apiConfiguration object combining state values and secrets
 		// Using the dynamic approach with API_CONFIG_KEYS
 		const apiConfiguration: ApiConfiguration = {
 			// Dynamically add all API-related keys from stateValues
-			...Object.fromEntries(API_CONFIG_KEYS.map((key) => [key, stateValues[key]])),
+			...(Object.fromEntries(API_CONFIG_KEYS.map((key) => [key, stateValues[key]])) as ApiConfiguration),
 			// Add all secrets
 			...secretValues,
 		}

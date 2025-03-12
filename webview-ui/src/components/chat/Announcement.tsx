@@ -49,11 +49,11 @@ const Announcement = ({ version, hideAnnouncement }: AnnouncementProps) => {
 			<p style={{ margin: "10px 0px 0px" }}>
 				Get more details and discuss in{" "}
 				<VSCodeLink
-					href="https://discord.gg/QZ9vjPj9e"
+					href="https://discord.gg/fxrhCFGhkP"
 					onClick={(e) => {
 						e.preventDefault()
 						window.postMessage(
-							{ type: "action", action: "openExternal", data: { url: "https://discord.gg/QZ9vjPj9e" } },
+							{ type: "action", action: "openExternal", data: { url: "https://discord.gg/fxrhCFGhkP" } },
 							"*",
 						)
 					}}>

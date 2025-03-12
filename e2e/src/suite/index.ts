@@ -39,7 +39,7 @@ export async function run(): Promise<void> {
 
 		globalThis.provider = globalThis.api.sidebarProvider
 
-		await globalThis.provider.updateGlobalState("apiProvider", "openrouter")
+		await globalThis.provider.updateGlobalState("apiProvider", "kilocode")
 		await globalThis.provider.updateGlobalState("openRouterModelId", "anthropic/claude-3.5-sonnet")
 
 		await globalThis.provider.storeSecret(

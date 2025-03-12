@@ -54,7 +54,7 @@ export const AutoApproveSettings = ({
 
 	return (
 		<div {...props}>
-			<SectionHeader description="Allow Roo to automatically perform operations without requiring approval. Enable these settings only if you fully trust the AI and understand the associated security risks.">
+			<SectionHeader description="Allow Kilo Code to automatically perform operations without requiring approval. Enable these settings only if you fully trust the AI and understand the associated security risks.">
 				<div className="flex items-center gap-2">
 					<CheckCheck className="w-4" />
 					<div>Auto-Approve</div>
@@ -69,8 +69,8 @@ export const AutoApproveSettings = ({
 						<span className="font-medium">Always approve read-only operations</span>
 					</VSCodeCheckbox>
 					<p className="text-vscode-descriptionForeground text-sm mt-0">
-						When enabled, Roo will automatically view directory contents and read files without requiring
-						you to click the Approve button.
+						When enabled, Kilo Code will automatically view directory contents and read files without
+						requiring you to click the Approve button.
 					</p>
 				</div>
 

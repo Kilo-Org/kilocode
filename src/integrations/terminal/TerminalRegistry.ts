@@ -20,7 +20,7 @@ export class TerminalRegistry {
 		const terminal = vscode.window.createTerminal({
 			cwd,
 			name: "Kilo Code",
-			iconPath: new vscode.ThemeIcon("rocket"),
+			iconPath: new vscode.ThemeIcon("kilo"),
 			env: {
 				PAGER: "cat",
 

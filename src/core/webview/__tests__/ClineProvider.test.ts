@@ -419,7 +419,7 @@ describe("ClineProvider", () => {
 			taskHistory: [],
 			shouldShowAnnouncement: false,
 			apiConfiguration: {
-				apiProvider: "openrouter",
+				apiProvider: "kilocode",
 			},
 			customInstructions: undefined,
 			alwaysAllowReadOnly: false,

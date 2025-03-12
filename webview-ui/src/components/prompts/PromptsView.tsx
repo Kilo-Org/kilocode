@@ -511,7 +511,7 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 							</PopoverContent>
 						</Popover>
 						<p className="text-xs mt-1.5 text-vscode-descriptionForeground">
-							Select the language that Roo should use for communication.
+							Select the language that Kilo Code should use for communication.
 						</p>
 					</div>
 
@@ -620,7 +620,7 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 					</div>
 
 					<div className="text-sm text-vscode-descriptionForeground mb-3">
-						Hit the + to create a new custom mode, or just ask Roo in chat to create one for you!
+						Hit the + to create a new custom mode, or just ask Kilo Code in chat to create one for you!
 					</div>
 
 					<div className="flex gap-2 items-center mb-3 flex-wrap py-1">
@@ -702,8 +702,8 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 							)}
 						</div>
 						<div className="text-sm text-vscode-descriptionForeground mb-2">
-							Define Roo's expertise and personality for this mode. This description shapes how Roo
-							presents itself and approaches tasks.
+							Define Kilo Code's expertise and personality for this mode. This description shapes how Kilo
+							Code presents itself and approaches tasks.
 						</div>
 						<VSCodeTextArea
 							value={(() => {
@@ -1048,10 +1048,10 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 								marginTop: "5px",
 								color: "var(--vscode-descriptionForeground)",
 							}}>
-							When enabled, Roo allows you to create custom modes using prompts like ‘Make me a custom
-							mode that…’. Disabling this reduces your system prompt by about 700 tokens when this feature
-							isn’t needed. When disabled you can still manually create custom modes using the + button
-							above or by editing the related config JSON.
+							When enabled, Kilo Code allows you to create custom modes using prompts like ‘Make me a
+							custom mode that…’. Disabling this reduces your system prompt by about 700 tokens when this
+							feature isn’t needed. When disabled you can still manually create custom modes using the +
+							button above or by editing the related config JSON.
 						</p>
 					</div>
 				</div>
@@ -1338,7 +1338,7 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 										color: "var(--vscode-descriptionForeground)",
 										marginBottom: "8px",
 									}}>
-									Define Roo's expertise and personality for this mode.
+									Define Kilo Code's expertise and personality for this mode.
 								</div>
 								<VSCodeTextArea
 									value={newModeRoleDefinition}

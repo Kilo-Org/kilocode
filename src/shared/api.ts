@@ -25,6 +25,7 @@ export interface ApiHandlerOptions {
 	apiKey?: string // anthropic
 	anthropicBaseUrl?: string
 	vsCodeLmModelSelector?: vscode.LanguageModelChatSelector
+	kilocodeToken?: string
 	glamaModelId?: string
 	glamaModelInfo?: ModelInfo
 	glamaApiKey?: string
