@@ -18,6 +18,7 @@ export type ApiProvider =
 	| "requesty"
 	| "human-relay"
 	| "kilocode"
+	| "fireworks"
 
 export interface ApiHandlerOptions {
 	apiModelId?: string
@@ -74,6 +75,7 @@ export interface ApiHandlerOptions {
 	modelTemperature?: number | null
 	modelMaxTokens?: number
 	modelMaxThinkingTokens?: number
+	fireworksApiKey?: string
 }
 
 export type ApiConfiguration = ApiHandlerOptions & {
@@ -911,3 +913,23 @@ export const unboundDefaultModelInfo: ModelInfo = {
 	cacheWritesPrice: 3.75,
 	cacheReadsPrice: 0.3,
 }
+
+// Fireworks
+// https://fireworks.ai/models
+
+export const fireworksModels = {
+	"accounts/fireworks/models/deepseek-r1": {
+		maxTokens: 8000,
+		contextWindow: 160000,
+		supportsImages: false,
+		supportsPromptCache: true,
+		inputPrice: 3.0,
+		outputPrice: 8.0,
+		cacheWritesPrice: 3.0,
+		cacheReadsPrice: 0.75,
+		description: "DeepSeek Reasoner model via Fireworks.ai",
+	},
+} as const satisfies Record<string, ModelInfo>
+
+export type FireworksModelId = keyof typeof fireworksModels
+export const fireworksDefaultModelId: FireworksModelId = "accounts/fireworks/models/deepseek-r1"

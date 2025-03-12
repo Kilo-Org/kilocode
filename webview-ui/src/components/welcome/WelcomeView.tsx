@@ -1,29 +1,20 @@
-import { useCallback, useState } from "react"
+import { useState } from "react"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 
 import { useExtensionState } from "../../context/ExtensionStateContext"
-import { validateApiConfiguration } from "../../utils/validate"
 import { vscode } from "../../utils/vscode"
 import ApiOptions from "../settings/ApiOptions"
 import { Tab, TabContent } from "../common/Tab"
 import { Alert } from "../common/Alert"
 
 const WelcomeView = () => {
-	const { apiConfiguration, currentApiConfigName, setApiConfiguration, uriScheme } = useExtensionState()
+	const { apiConfiguration, setApiConfiguration, uriScheme } = useExtensionState()
 
 	const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined)
 
-	const handleSubmit = useCallback(() => {
-		const error = validateApiConfiguration(apiConfiguration)
-
-		if (error) {
-			setErrorMessage(error)
-			return
-		}
-
-		setErrorMessage(undefined)
-		vscode.postMessage({ type: "upsertApiConfiguration", text: currentApiConfigName, apiConfiguration })
-	}, [apiConfiguration, currentApiConfigName])
+	const handleSubmit = () => {
+		vscode.postMessage({ type: "apiConfiguration", apiConfiguration })
+	}
 
 	return (
 		<Tab>

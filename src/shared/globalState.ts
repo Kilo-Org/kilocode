@@ -13,6 +13,12 @@ export const SECRET_KEYS = [
 	"mistralApiKey",
 	"unboundApiKey",
 	"requestyApiKey",
+	"liteLlmApiKey",
+	"authToken",
+	"authNonce",
+	"asksageApiKey",
+	"xaiApiKey",
+	"fireworksApiKey",
 ] as const
 
 // Derive the type from the array - creates a union of string literals
