@@ -1370,7 +1370,7 @@ export function getKiloCodeBackendAuthUrl(uriScheme?: string) {
 	return `https://kilocode.ai/auth/signin?source=vscode`
 }
 
-export function normalizeApiConfiguration(apiConfiguration?: ApiConfiguration): ApiConfiguration {
+export function normalizeApiConfiguration(apiConfiguration?: ApiConfiguration) {
 	const provider = apiConfiguration?.apiProvider || "anthropic"
 	const modelId = apiConfiguration?.apiModelId
 

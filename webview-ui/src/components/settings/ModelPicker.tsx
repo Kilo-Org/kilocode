@@ -1,28 +1,20 @@
 import { useMemo, useState, useCallback, useEffect, useRef } from "react"
 import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
-
 import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem } from "@/components/ui/combobox"
-
 import { ApiConfiguration, ModelInfo } from "../../../../src/shared/api"
-
 import { normalizeApiConfiguration } from "./ApiOptions"
 import { ThinkingBudget } from "./ThinkingBudget"
 import { ModelInfoView } from "./ModelInfoView"
 
-type ExtractType<T> = NonNullable<
-	{ [K in keyof ApiConfiguration]: Required<ApiConfiguration>[K] extends T ? K : never }[keyof ApiConfiguration]
->
-
-type ModelIdKeys = NonNullable<
-	{ [K in keyof ApiConfiguration]: K extends `${string}ModelId` ? K : never }[keyof ApiConfiguration]
->
+type ModelInfoKey = string
+type ModelIdKey = string
 
 interface ModelPickerProps {
 	defaultModelId: string
 	defaultModelInfo?: ModelInfo
 	models: Record<string, ModelInfo> | null
-	modelIdKey: ModelIdKeys
-	modelInfoKey: ExtractType<ModelInfo>
+	modelIdKey: ModelIdKey
+	modelInfoKey: ModelInfoKey
 	serviceName: string
 	serviceUrl: string
 	apiConfiguration: ApiConfiguration
@@ -42,34 +34,27 @@ export const ModelPicker = ({
 }: ModelPickerProps) => {
 	const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
 	const isInitialized = useRef(false)
-
 	const modelIds = useMemo(() => Object.keys(models ?? {}).sort((a, b) => a.localeCompare(b)), [models])
-
 	const { selectedModelId, selectedModelInfo } = useMemo(
 		() => normalizeApiConfiguration(apiConfiguration),
 		[apiConfiguration],
 	)
-
 	const onSelect = useCallback(
 		(modelId: string) => {
 			const modelInfo = models?.[modelId]
-			setApiConfigurationField(modelIdKey, modelId)
-			setApiConfigurationField(modelInfoKey, modelInfo ?? defaultModelInfo)
+			setApiConfigurationField(modelIdKey as any, modelId)
+			setApiConfigurationField(modelInfoKey as any, modelInfo ?? defaultModelInfo)
 		},
 		[modelIdKey, modelInfoKey, models, setApiConfigurationField, defaultModelInfo],
 	)
-
-	const inputValue = apiConfiguration[modelIdKey]
-
+	const inputValue = apiConfiguration[modelIdKey as keyof ApiConfiguration] as string | undefined
 	useEffect(() => {
 		if (!inputValue && !isInitialized.current) {
 			const initialValue = modelIds.includes(selectedModelId) ? selectedModelId : defaultModelId
-			setApiConfigurationField(modelIdKey, initialValue)
+			setApiConfigurationField(modelIdKey as any, initialValue)
 		}
-
 		isInitialized.current = true
 	}, [inputValue, modelIds, setApiConfigurationField, modelIdKey, selectedModelId, defaultModelId])
-
 	return (
 		<>
 			<div>
