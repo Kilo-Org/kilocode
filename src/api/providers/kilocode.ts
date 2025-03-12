@@ -15,7 +15,7 @@ export class KiloCodeHandler extends BaseProvider implements SingleCompletionHan
 		super()
 		this.options = options
 		this.client = new Anthropic({
-			apiKey: this.options.apiKey,
+			authToken: this.options.kilocodeToken,
 			baseURL: this.options.anthropicBaseUrl || undefined,
 		})
 	}
