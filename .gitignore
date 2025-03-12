@@ -4,6 +4,8 @@ out-*
 node_modules
 coverage/
 
+.idea
+
 .DS_Store
 
 # Builds
