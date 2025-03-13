@@ -284,9 +284,11 @@ const ApiOptions = ({
 					<div style={{ marginTop: "0px" }} className="text-sm text-vscode-descriptionForeground -mt-2">
 						Uses Claude 3.7 Sonnet. You get $15 for free.
 					</div>
-					<VSCodeButtonLink variant="secondary" href={getKiloCodeBackendAuthUrl()}>
-						Log in at Kilo Code
-					</VSCodeButtonLink>
+					{apiConfiguration.kilocodeToken ? null : (
+						<VSCodeButtonLink variant="secondary" href={getKiloCodeBackendAuthUrl()}>
+							Log in at Kilo Code
+						</VSCodeButtonLink>
+					)}
 				</>
 			)}
 
