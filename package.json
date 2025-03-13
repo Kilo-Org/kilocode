@@ -1,9 +1,9 @@
 {
-	"name": "kilocode",
+	"name": "kilo-code",
 	"displayName": "Kilo Code",
 	"description": "A whole dev team of AI agents in your editor.",
 	"publisher": "kilocode",
-	"version": "4.1.0",
+	"version": "4.2.2",
 	"icon": "assets/icons/kilo.png",
 	"galleryBanner": {
 		"color": "#617A91",

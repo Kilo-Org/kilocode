@@ -21,6 +21,7 @@ Kilo Code is an agentic AI coding assistant extension for VS Code. It helps you 
 - [Documentation](https://kilocode.ai)
 - [Discord](https://discord.gg/fxrhCFGhkP)
 - [Reddit](https://www.reddit.com/r/kilocode/)
+- [Blog](https://blog.kilocode.ai/)
 
 ## Local Setup & Development
 

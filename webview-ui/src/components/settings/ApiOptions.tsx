@@ -59,7 +59,7 @@ const modelsByProvider: Record<string, Record<string, ModelInfo>> = {
 }
 
 const providers = [
-	{ value: "kilocode", label: "KiloCode" },
+	{ value: "kilocode", label: "Kilo Code" },
 	{ value: "openrouter", label: "OpenRouter" },
 	{ value: "anthropic", label: "Anthropic" },
 	{ value: "gemini", label: "Google Gemini" },
@@ -285,6 +285,9 @@ const ApiOptions = ({
 
 			{selectedProvider === "kilocode" && (
 				<>
+					<div style={{ marginTop: "0px" }} className="text-sm text-vscode-descriptionForeground -mt-2">
+						Uses Claude 3.7 Sonnet. You get $15 for free.
+					</div>
 					<VSCodeButtonLink variant="secondary" href={getKiloCodeBackendAuthUrl()}>
 						Log in at Kilo Code
 					</VSCodeButtonLink>
