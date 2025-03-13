@@ -77,6 +77,8 @@ export interface ApiHandlerOptions {
 	modelMaxTokens?: number
 	modelMaxThinkingTokens?: number
 	fireworksApiKey?: string
+	fireworksModelId?: string
+	fireworksModelInfo?: ModelInfo
 }
 
 export type ApiConfiguration = ApiHandlerOptions & {
@@ -130,6 +132,8 @@ export const API_CONFIG_KEYS: GlobalStateKey[] = [
 	"modelTemperature",
 	"modelMaxTokens",
 	"modelMaxThinkingTokens",
+	"fireworksModelId",
+	"fireworksModelInfo",
 ]
 
 // Models
@@ -917,18 +921,25 @@ export const unboundDefaultModelInfo: ModelInfo = {
 
 // Fireworks
 // https://fireworks.ai/models
+// TODO: Add support for all Fireworks models, currently only supports DeepSeek's serverless models
 
 export const fireworksModels = {
 	"accounts/fireworks/models/deepseek-r1": {
-		maxTokens: 8000,
+		maxTokens: 16384,
 		contextWindow: 160000,
 		supportsImages: false,
 		supportsPromptCache: true,
 		inputPrice: 3.0,
 		outputPrice: 8.0,
-		cacheWritesPrice: 3.0,
-		cacheReadsPrice: 0.75,
-		description: "DeepSeek Reasoner model via Fireworks.ai",
+	},
+
+	"accounts/fireworks/models/deepseek-v3": {
+		maxTokens: 16384,
+		contextWindow: 128_000,
+		supportsImages: false,
+		supportsPromptCache: true,
+		inputPrice: 0.9,
+		outputPrice: 0.9,
 	},
 } as const satisfies Record<string, ModelInfo>
 

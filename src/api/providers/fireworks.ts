@@ -174,9 +174,11 @@ export class FireworksHandler extends BaseProvider implements ApiHandler, Single
 	}
 
 	getModel(): { id: FireworksModelId; info: ModelInfo } {
+		const modelId =
+			((this.options.apiModelId || this.options.fireworksModelId) as FireworksModelId) || fireworksDefaultModelId
 		return {
-			id: fireworksDefaultModelId,
-			info: fireworksModels[fireworksDefaultModelId],
+			id: modelId,
+			info: fireworksModels[modelId] || fireworksModels[fireworksDefaultModelId],
 		}
 	}
 

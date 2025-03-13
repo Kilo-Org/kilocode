@@ -1301,20 +1301,6 @@ const ApiOptions = ({
 				/>
 			)}
 
-			{selectedProvider === "fireworks" && (
-				<ModelPicker
-					apiConfiguration={apiConfiguration}
-					setApiConfigurationField={setApiConfigurationField}
-					defaultModelId={fireworksDefaultModelId}
-					defaultModelInfo={fireworksModels[fireworksDefaultModelId]}
-					models={fireworksModels}
-					modelInfoKey="fireworksModelInfo"
-					modelIdKey="fireworksModelId"
-					serviceName="Fireworks"
-					serviceUrl="https://fireworks.ai"
-				/>
-			)}
-
 			{selectedProviderModelOptions.length > 0 && (
 				<>
 					<div className="dropdown-container">
