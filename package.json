@@ -6,7 +6,7 @@
 	"version": "4.2.2",
 	"icon": "assets/icons/kilo.png",
 	"galleryBanner": {
-		"color": "#617A91",
+		"color": "#000000",
 		"theme": "dark"
 	},
 	"engines": {
