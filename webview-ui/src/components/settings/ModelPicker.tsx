@@ -6,15 +6,20 @@ import { normalizeApiConfiguration } from "./ApiOptions"
 import { ThinkingBudget } from "./ThinkingBudget"
 import { ModelInfoView } from "./ModelInfoView"
 
-type ModelInfoKey = string
-type ModelIdKey = string
+type ExtractType<T> = NonNullable<
+	{ [K in keyof ApiConfiguration]: Required<ApiConfiguration>[K] extends T ? K : never }[keyof ApiConfiguration]
+>
+
+type ModelIdKeys = NonNullable<
+	{ [K in keyof ApiConfiguration]: K extends `${string}ModelId` ? K : never }[keyof ApiConfiguration]
+>
 
 interface ModelPickerProps {
 	defaultModelId: string
 	defaultModelInfo?: ModelInfo
 	models: Record<string, ModelInfo> | null
-	modelIdKey: ModelIdKey
-	modelInfoKey: ModelInfoKey
+	modelIdKey: ModelIdKeys
+	modelInfoKey: ExtractType<ModelInfo>
 	serviceName: string
 	serviceUrl: string
 	apiConfiguration: ApiConfiguration
@@ -42,12 +47,12 @@ export const ModelPicker = ({
 	const onSelect = useCallback(
 		(modelId: string) => {
 			const modelInfo = models?.[modelId]
-			setApiConfigurationField(modelIdKey as any, modelId)
-			setApiConfigurationField(modelInfoKey as any, modelInfo ?? defaultModelInfo)
+			setApiConfigurationField(modelIdKey, modelId)
+			setApiConfigurationField(modelInfoKey, modelInfo ?? defaultModelInfo)
 		},
 		[modelIdKey, modelInfoKey, models, setApiConfigurationField, defaultModelInfo],
 	)
-	const inputValue = apiConfiguration[modelIdKey as keyof ApiConfiguration] as string | undefined
+	const inputValue = apiConfiguration[modelIdKey]
 	useEffect(() => {
 		if (!inputValue && !isInitialized.current) {
 			const initialValue = modelIds.includes(selectedModelId) ? selectedModelId : defaultModelId
