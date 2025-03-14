@@ -43,7 +43,7 @@ import { VSCodeButtonLink } from "../common/VSCodeButtonLink"
 import { ModelInfoView } from "./ModelInfoView"
 import { ModelPicker } from "./ModelPicker"
 import { TemperatureControl } from "./TemperatureControl"
-import { validateApiConfiguration, validateModelId } from "@/utils/validate"
+import { validateApiConfiguration, validateModelId, validateBedrockArn } from "@/utils/validate"
 import { ApiErrorMessage } from "./ApiErrorMessage"
 import { ThinkingBudget } from "./ThinkingBudget"
 
@@ -121,6 +121,9 @@ const ApiOptions = ({
 	const [anthropicBaseUrlSelected, setAnthropicBaseUrlSelected] = useState(!!apiConfiguration?.anthropicBaseUrl)
 	const [azureApiVersionSelected, setAzureApiVersionSelected] = useState(!!apiConfiguration?.azureApiVersion)
 	const [openRouterBaseUrlSelected, setOpenRouterBaseUrlSelected] = useState(!!apiConfiguration?.openRouterBaseUrl)
+	const [googleGeminiBaseUrlSelected, setGoogleGeminiBaseUrlSelected] = useState(
+		!!apiConfiguration?.googleGeminiBaseUrl,
+	)
 	const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
 
 	const noTransform = <T,>(value: T) => value
@@ -288,9 +291,11 @@ const ApiOptions = ({
 					<div style={{ marginTop: "0px" }} className="text-sm text-vscode-descriptionForeground -mt-2">
 						Uses Claude 3.7 Sonnet. You get $15 for free.
 					</div>
-					<VSCodeButtonLink variant="secondary" href={getKiloCodeBackendAuthUrl()}>
-						Log in at Kilo Code
-					</VSCodeButtonLink>
+					{apiConfiguration.kilocodeToken ? null : (
+						<VSCodeButtonLink variant="secondary" href={getKiloCodeBackendAuthUrl()}>
+							Log in at Kilo Code
+						</VSCodeButtonLink>
+					)}
 				</>
 			)}
 
@@ -662,6 +667,28 @@ const ApiOptions = ({
 							Get Gemini API Key
 						</VSCodeButtonLink>
 					)}
+					<div>
+						<Checkbox
+							checked={googleGeminiBaseUrlSelected}
+							onChange={(checked: boolean) => {
+								setGoogleGeminiBaseUrlSelected(checked)
+
+								if (!checked) {
+									setApiConfigurationField("googleGeminiBaseUrl", "")
+								}
+							}}>
+							Use custom base URL
+						</Checkbox>
+						{googleGeminiBaseUrlSelected && (
+							<VSCodeTextField
+								value={apiConfiguration?.googleGeminiBaseUrl || ""}
+								type="url"
+								onInput={handleInputChange("googleGeminiBaseUrl")}
+								placeholder="https://generativelanguage.googleapis.com"
+								className="w-full mt-1"
+							/>
+						)}
+					</div>
 				</>
 			)}
 
@@ -835,7 +862,7 @@ const ApiOptions = ({
 									style={{ fontSize: "12px" }}
 								/>
 							</div>
-							<div className="text-sm text-vscode-descriptionForeground">
+							<div className="text-sm text-vscode-descriptionForeground pt-1">
 								Is this model capable of processing and understanding images?
 							</div>
 						</div>
@@ -858,8 +885,31 @@ const ApiOptions = ({
 									style={{ fontSize: "12px" }}
 								/>
 							</div>
-							<div className="text-sm text-vscode-descriptionForeground [pt">
+							<div className="text-sm text-vscode-descriptionForeground pt-1">
 								Is this model capable of interacting with a browser? (e.g. Claude 3.7 Sonnet).
+							</div>
+						</div>
+
+						<div>
+							<div className="flex items-center gap-1">
+								<Checkbox
+									checked={apiConfiguration?.openAiCustomModelInfo?.supportsPromptCache ?? false}
+									onChange={handleInputChange("openAiCustomModelInfo", (checked) => {
+										return {
+											...(apiConfiguration?.openAiCustomModelInfo || openAiModelInfoSaneDefaults),
+											supportsPromptCache: checked,
+										}
+									})}>
+									<span className="font-medium">Prompt Caching</span>
+								</Checkbox>
+								<i
+									className="codicon codicon-info text-vscode-descriptionForeground"
+									title="Enable if the model supports prompt caching. This can improve performance and reduce costs."
+									style={{ fontSize: "12px" }}
+								/>
+							</div>
+							<div className="text-sm text-vscode-descriptionForeground pt-1">
+								Is this model capable of caching prompts?
 							</div>
 						</div>
 
@@ -948,6 +998,93 @@ const ApiOptions = ({
 								</div>
 							</VSCodeTextField>
 						</div>
+
+						{apiConfiguration?.openAiCustomModelInfo?.supportsPromptCache && (
+							<>
+								<div>
+									<VSCodeTextField
+										value={
+											apiConfiguration?.openAiCustomModelInfo?.cacheReadsPrice?.toString() ?? "0"
+										}
+										type="text"
+										style={{
+											borderColor: (() => {
+												const value = apiConfiguration?.openAiCustomModelInfo?.cacheReadsPrice
+
+												if (!value && value !== 0) {
+													return "var(--vscode-input-border)"
+												}
+
+												return value >= 0
+													? "var(--vscode-charts-green)"
+													: "var(--vscode-errorForeground)"
+											})(),
+										}}
+										onChange={handleInputChange("openAiCustomModelInfo", (e) => {
+											const value = (e.target as HTMLInputElement).value
+											const parsed = parseFloat(value)
+
+											return {
+												...(apiConfiguration?.openAiCustomModelInfo ??
+													openAiModelInfoSaneDefaults),
+												cacheReadsPrice: isNaN(parsed) ? 0 : parsed,
+											}
+										})}
+										placeholder="e.g. 0.0001"
+										className="w-full">
+										<div className="flex items-center gap-1">
+											<span className="font-medium">Cache Reads Price</span>
+											<i
+												className="codicon codicon-info text-vscode-descriptionForeground"
+												title="Cost per million tokens for reading from the cache. This is the price charged when a cached response is retrieved."
+												style={{ fontSize: "12px" }}
+											/>
+										</div>
+									</VSCodeTextField>
+								</div>
+								<div>
+									<VSCodeTextField
+										value={
+											apiConfiguration?.openAiCustomModelInfo?.cacheWritesPrice?.toString() ?? "0"
+										}
+										type="text"
+										style={{
+											borderColor: (() => {
+												const value = apiConfiguration?.openAiCustomModelInfo?.cacheWritesPrice
+
+												if (!value && value !== 0) {
+													return "var(--vscode-input-border)"
+												}
+
+												return value >= 0
+													? "var(--vscode-charts-green)"
+													: "var(--vscode-errorForeground)"
+											})(),
+										}}
+										onChange={handleInputChange("openAiCustomModelInfo", (e) => {
+											const value = (e.target as HTMLInputElement).value
+											const parsed = parseFloat(value)
+
+											return {
+												...(apiConfiguration?.openAiCustomModelInfo ??
+													openAiModelInfoSaneDefaults),
+												cacheWritesPrice: isNaN(parsed) ? 0 : parsed,
+											}
+										})}
+										placeholder="e.g. 0.00005"
+										className="w-full">
+										<div className="flex items-center gap-1">
+											<span className="font-medium">Cache Writes Price</span>
+											<i
+												className="codicon codicon-info text-vscode-descriptionForeground"
+												title="Cost per million tokens for writing to the cache. This is the price charged when a prompt is cached for the first time."
+												style={{ fontSize: "12px" }}
+											/>
+										</div>
+									</VSCodeTextField>
+								</div>
+							</>
+						)}
 
 						<Button
 							variant="secondary"
@@ -1312,14 +1449,82 @@ const ApiOptions = ({
 						</label>
 						<Dropdown
 							id="model-id"
-							value={selectedModelId}
+							value={selectedModelId === "custom-arn" ? "custom-arn" : selectedModelId}
 							onChange={(value) => {
-								setApiConfigurationField("apiModelId", typeof value == "string" ? value : value?.value)
+								const modelValue = typeof value == "string" ? value : value?.value
+								setApiConfigurationField("apiModelId", modelValue)
+
+								// Clear custom ARN if not using custom ARN option
+								if (modelValue !== "custom-arn" && selectedProvider === "bedrock") {
+									setApiConfigurationField("awsCustomArn", "")
+								}
 							}}
-							options={selectedProviderModelOptions}
+							options={[
+								...selectedProviderModelOptions,
+								...(selectedProvider === "bedrock"
+									? [{ value: "custom-arn", label: "Use custom ARN..." }]
+									: []),
+							]}
 							className="w-full"
 						/>
 					</div>
+
+					{selectedProvider === "bedrock" && selectedModelId === "custom-arn" && (
+						<>
+							<VSCodeTextField
+								value={apiConfiguration?.awsCustomArn || ""}
+								onInput={(e) => {
+									const value = (e.target as HTMLInputElement).value
+									setApiConfigurationField("awsCustomArn", value)
+								}}
+								placeholder="Enter ARN (e.g. arn:aws:bedrock:us-east-1:123456789012:foundation-model/my-model)"
+								className="w-full">
+								<span className="font-medium">Custom ARN</span>
+							</VSCodeTextField>
+							<div className="text-sm text-vscode-descriptionForeground -mt-2">
+								Enter a valid AWS Bedrock ARN for the model you want to use. Format examples:
+								<ul className="list-disc pl-5 mt-1">
+									<li>
+										arn:aws:bedrock:us-east-1:123456789012:foundation-model/anthropic.claude-3-sonnet-20240229-v1:0
+									</li>
+									<li>
+										arn:aws:bedrock:us-west-2:123456789012:provisioned-model/my-provisioned-model
+									</li>
+									<li>
+										arn:aws:bedrock:us-east-1:123456789012:default-prompt-router/anthropic.claude:1
+									</li>
+								</ul>
+								Make sure the region in the ARN matches your selected AWS Region above.
+							</div>
+							{apiConfiguration?.awsCustomArn &&
+								(() => {
+									const validation = validateBedrockArn(
+										apiConfiguration.awsCustomArn,
+										apiConfiguration.awsRegion,
+									)
+
+									if (!validation.isValid) {
+										return (
+											<div className="text-sm text-vscode-errorForeground mt-2">
+												{validation.errorMessage ||
+													"Invalid ARN format. Please check the examples above."}
+											</div>
+										)
+									}
+
+									if (validation.errorMessage) {
+										return (
+											<div className="text-sm text-vscode-errorForeground mt-2">
+												{validation.errorMessage}
+											</div>
+										)
+									}
+
+									return null
+								})()}
+							=======
+						</>
+					)}
 					<ModelInfoView
 						selectedModelId={selectedModelId}
 						modelInfo={selectedModelInfo}
@@ -1382,6 +1587,19 @@ export function normalizeApiConfiguration(apiConfiguration?: ApiConfiguration) {
 		case "anthropic":
 			return getProviderData(anthropicModels, anthropicDefaultModelId)
 		case "bedrock":
+			// Special case for custom ARN
+			if (modelId === "custom-arn") {
+				return {
+					selectedProvider: provider,
+					selectedModelId: "custom-arn",
+					selectedModelInfo: {
+						maxTokens: 5000,
+						contextWindow: 128_000,
+						supportsPromptCache: false,
+						supportsImages: true,
+					},
+				}
+			}
 			return getProviderData(bedrockModels, bedrockDefaultModelId)
 		case "vertex":
 			return getProviderData(vertexModels, vertexDefaultModelId)

@@ -1,10 +1,18 @@
 import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react"
 import { Button as VSCodeButton } from "vscrui"
-import { CheckCheck, SquareMousePointer, Webhook, GitBranch, Bell, Cog, FlaskConical } from "lucide-react"
+import {
+	CheckCheck,
+	SquareMousePointer,
+	Webhook,
+	GitBranch,
+	Bell,
+	Cog,
+	FlaskConical,
+	AlertTriangle,
+} from "lucide-react"
 
-import { ApiConfiguration } from "../../../../src/shared/api"
 import { ExperimentId } from "../../../../src/shared/experiments"
-import { TERMINAL_OUTPUT_LIMIT } from "../../../../src/shared/terminal"
+import { ApiConfiguration } from "../../../../src/shared/api"
 
 import { vscode } from "@/utils/vscode"
 import { ExtensionStateContextType, useExtensionState } from "@/context/ExtensionStateContext"
@@ -77,12 +85,14 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone },
 		mcpEnabled,
 		rateLimitSeconds,
 		requestDelaySeconds,
+		remoteBrowserHost,
 		screenshotQuality,
 		soundEnabled,
 		soundVolume,
-		terminalOutputLimit,
+		terminalOutputLineLimit,
 		writeDelayMs,
 		showRooIgnoredFiles,
+		remoteBrowserEnabled,
 	} = cachedState
 
 	// Make sure apiConfiguration is initialized and managed by SettingsView.
@@ -158,10 +168,12 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone },
 			vscode.postMessage({ type: "enableCheckpoints", bool: enableCheckpoints })
 			vscode.postMessage({ type: "checkpointStorage", text: checkpointStorage })
 			vscode.postMessage({ type: "browserViewportSize", text: browserViewportSize })
+			vscode.postMessage({ type: "remoteBrowserHost", text: remoteBrowserHost })
+			vscode.postMessage({ type: "remoteBrowserEnabled", bool: remoteBrowserEnabled })
 			vscode.postMessage({ type: "fuzzyMatchThreshold", value: fuzzyMatchThreshold ?? 1.0 })
 			vscode.postMessage({ type: "writeDelayMs", value: writeDelayMs })
 			vscode.postMessage({ type: "screenshotQuality", value: screenshotQuality ?? 75 })
-			vscode.postMessage({ type: "terminalOutputLimit", value: terminalOutputLimit ?? TERMINAL_OUTPUT_LIMIT })
+			vscode.postMessage({ type: "terminalOutputLineLimit", value: terminalOutputLineLimit ?? 500 })
 			vscode.postMessage({ type: "mcpEnabled", bool: mcpEnabled })
 			vscode.postMessage({ type: "alwaysApproveResubmit", bool: alwaysApproveResubmit })
 			vscode.postMessage({ type: "requestDelaySeconds", value: requestDelaySeconds })
@@ -351,6 +363,8 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone },
 						browserToolEnabled={browserToolEnabled}
 						browserViewportSize={browserViewportSize}
 						screenshotQuality={screenshotQuality}
+						remoteBrowserHost={remoteBrowserHost}
+						remoteBrowserEnabled={remoteBrowserEnabled}
 						setCachedStateField={setCachedStateField}
 					/>
 				</div>
@@ -374,7 +388,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone },
 				<div ref={advancedRef}>
 					<AdvancedSettings
 						rateLimitSeconds={rateLimitSeconds}
-						terminalOutputLimit={terminalOutputLimit}
+						terminalOutputLineLimit={terminalOutputLineLimit}
 						maxOpenTabsContext={maxOpenTabsContext}
 						diffEnabled={diffEnabled}
 						fuzzyMatchThreshold={fuzzyMatchThreshold}
@@ -398,15 +412,17 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone },
 			<AlertDialog open={isDiscardDialogShow} onOpenChange={setDiscardDialogShow}>
 				<AlertDialogContent>
 					<AlertDialogHeader>
-						<AlertDialogTitle>Unsaved changes</AlertDialogTitle>
-						<AlertDialogDescription>
-							<span className={`codicon codicon-warning align-middle mr-1`} />
-							Do you want to discard changes and continue?
-						</AlertDialogDescription>
+						<AlertDialogTitle>
+							<AlertTriangle className="w-5 h-5 text-yellow-500" />
+							Unsaved Changes
+						</AlertDialogTitle>
+						<AlertDialogDescription>Do you want to discard changes and continue?</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
-						<AlertDialogAction onClick={() => onConfirmDialogResult(true)}>Yes</AlertDialogAction>
-						<AlertDialogCancel onClick={() => onConfirmDialogResult(false)}>No</AlertDialogCancel>
+						<AlertDialogCancel onClick={() => onConfirmDialogResult(false)}>Cancel</AlertDialogCancel>
+						<AlertDialogAction onClick={() => onConfirmDialogResult(true)}>
+							Discard changes
+						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>

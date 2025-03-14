@@ -36,7 +36,7 @@ Kilo Code is an agentic AI coding assistant extension for VS Code. It helps you 
 
 if that fails, try:
 `bash
-    npm run install:ci
+    npm run install:all
     `
 
 3. **Build** the extension:

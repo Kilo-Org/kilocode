@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useEvent } from "react-use"
-
 import { ExtensionMessage } from "../../src/shared/ExtensionMessage"
-import { ShowHumanRelayDialogMessage } from "../../src/shared/ExtensionMessage"
+import TranslationProvider from "./i18n/TranslationContext"
 
 import { vscode } from "./utils/vscode"
 import { ExtensionStateContextProvider, useExtensionState } from "./context/ExtensionStateContext"
@@ -62,14 +61,10 @@ const App = () => {
 					switchTab(newTab)
 				}
 			}
-			const mes: ShowHumanRelayDialogMessage = message as ShowHumanRelayDialogMessage
-			// Processing displays human relay dialog messages
-			if (mes.type === "showHumanRelayDialog" && mes.requestId && mes.promptText) {
-				setHumanRelayDialogState({
-					isOpen: true,
-					requestId: mes.requestId,
-					promptText: mes.promptText,
-				})
+
+			if (message.type === "showHumanRelayDialog" && message.requestId && message.promptText) {
+				const { requestId, promptText } = message
+				setHumanRelayDialogState({ isOpen: true, requestId, promptText })
 			}
 		},
 		[switchTab],
@@ -85,9 +80,7 @@ const App = () => {
 	}, [shouldShowAnnouncement])
 
 	// Tell the extension that we are ready to receive messages.
-	useEffect(() => {
-		vscode.postMessage({ type: "webviewDidLaunch" })
-	}, [])
+	useEffect(() => vscode.postMessage({ type: "webviewDidLaunch" }), [])
 
 	if (!didHydrateState) {
 		return null
@@ -123,7 +116,9 @@ const App = () => {
 
 const AppWithProviders = () => (
 	<ExtensionStateContextProvider>
-		<App />
+		<TranslationProvider>
+			<App />
+		</TranslationProvider>
 	</ExtensionStateContextProvider>
 )
 

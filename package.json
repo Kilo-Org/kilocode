@@ -3,11 +3,11 @@
 	"displayName": "Kilo Code",
 	"description": "A whole dev team of AI agents in your editor.",
 	"publisher": "kilocode",
-	"version": "4.2.2",
+	"version": "4.3.0",
 	"icon": "assets/icons/kilo.png",
 	"galleryBanner": {
-		"color": "#617A91",
-		"theme": "dark"
+		"color": "#FFFFFF",
+		"theme": "light"
 	},
 	"engines": {
 		"vscode": "^1.84.0"
@@ -128,6 +128,31 @@
 				"command": "kilo-code.addToContext",
 				"title": "Kilo Code: Add To Context",
 				"category": "Kilo Code"
+			},
+			{
+				"command": "kilo-code.terminalAddToContext",
+				"title": "Kilo Code: Add Terminal Content to Context",
+				"category": "Terminal"
+			},
+			{
+				"command": "kilo-code.terminalFixCommand",
+				"title": "Kilo Code: Fix This Command",
+				"category": "Terminal"
+			},
+			{
+				"command": "kilo-code.terminalExplainCommand",
+				"title": "Kilo Code: Explain This Command",
+				"category": "Terminal"
+			},
+			{
+				"command": "kilo-code.terminalFixCommandInCurrentTask",
+				"title": "Kilo Code: Fix This Command (Current Task)",
+				"category": "Terminal"
+			},
+			{
+				"command": "kilo-code.terminalExplainCommandInCurrentTask",
+				"title": "Kilo Code: Explain This Command (Current Task)",
+				"category": "Terminal"
 			}
 		],
 		"menus": {
@@ -151,6 +176,28 @@
 					"command": "kilo-code.addToContext",
 					"when": "editorHasSelection",
 					"group": "Kilo Code@4"
+				}
+			],
+			"terminal/context": [
+				{
+					"command": "kilo-code.terminalAddToContext",
+					"group": "Kilo Code@1"
+				},
+				{
+					"command": "kilo-code.terminalFixCommand",
+					"group": "Kilo Code@2"
+				},
+				{
+					"command": "kilo-code.terminalExplainCommand",
+					"group": "Kilo Code@3"
+				},
+				{
+					"command": "kilo-code.terminalFixCommandInCurrentTask",
+					"group": "Kilo Code@5"
+				},
+				{
+					"command": "kilo-code.terminalExplainCommandInCurrentTask",
+					"group": "Kilo Code@6"
 				}
 			],
 			"view/title": [
@@ -230,8 +277,8 @@
 		"build": "npm run build:webview && npm run vsix",
 		"build:webview": "cd webview-ui && npm run build",
 		"compile": "tsc -p . --outDir out && node esbuild.js",
-		"install:all": "npm-run-all -p install-*",
-		"install:ci": "npm install npm-run-all && npm run install:all",
+		"install:all": "npm install npm-run-all && npm run install:_all",
+		"install:_all": "npm-run-all -p install-*",
 		"install-extension": "npm install",
 		"install-webview-ui": "cd webview-ui && npm install",
 		"install-e2e": "cd e2e && npm install",
@@ -246,7 +293,9 @@
 		"package": "npm run build:webview && npm run check-types && npm run lint && node esbuild.js --production",
 		"pretest": "npm run compile",
 		"dev": "cd webview-ui && npm run dev",
-		"test": "jest && cd webview-ui && npm run test",
+		"test": "npm-run-all -p test:*",
+		"test:extension": "jest",
+		"test:webview": "cd webview-ui && npm run test",
 		"prepare": "husky",
 		"publish:marketplace": "vsce publish && ovsx publish",
 		"publish": "npm run build && changeset publish && npm install --package-lock-only",
@@ -258,7 +307,8 @@
 		"watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
 		"watch-tests": "tsc -p . -w --outDir out",
 		"changeset": "changeset",
-		"knip": "knip --include files"
+		"knip": "knip --include files",
+		"update-contributors": "node scripts/update-contributors.js"
 	},
 	"dependencies": {
 		"@anthropic-ai/bedrock-sdk": "^0.10.2",

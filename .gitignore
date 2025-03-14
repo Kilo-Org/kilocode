@@ -24,7 +24,9 @@ docs/_site/
 
 # Dotenv
 .env
-.env.integration
+.env.*
+!.env.*.sample
+
 
 #Local lint config
 .eslintrc.local.json
