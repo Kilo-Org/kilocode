@@ -131,7 +131,7 @@ export class FireworksHandler extends BaseProvider implements ApiHandler, Single
 				}
 			}
 		} catch (error: any) {
-			// Handle specific error cases with user-friendly messages
+			// Other Providers provide these instructions in their JSON errors, but Fireworks doesn't, so we do it here
 			if (error.status === 401) {
 				yield {
 					type: "text",
