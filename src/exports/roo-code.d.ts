@@ -133,6 +133,7 @@ export type SecretKey =
 	| "unboundApiKey"
 	| "requestyApiKey"
 	| "kilocodeToken"
+	| "fireworksApiKey"
 
 export type GlobalStateKey =
 	| "apiProvider"
@@ -217,6 +218,8 @@ export type GlobalStateKey =
 	| "lmStudioDraftModelId"
 	| "showRooIgnoredFiles"
 	| "remoteBrowserEnabled"
+	| "fireworksModelId"
+	| "fireworksModelInfo"
 
 export type ConfigurationKey = GlobalStateKey | SecretKey
 
