@@ -1,7 +1,10 @@
 import { useMemo, useState, useCallback, useEffect, useRef } from "react"
 import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
+
 import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem } from "@/components/ui/combobox"
+
 import { ApiConfiguration, ModelInfo } from "../../../../src/shared/api"
+
 import { normalizeApiConfiguration } from "./ApiOptions"
 import { ThinkingBudget } from "./ThinkingBudget"
 import { ModelInfoView } from "./ModelInfoView"
@@ -39,11 +42,14 @@ export const ModelPicker = ({
 }: ModelPickerProps) => {
 	const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
 	const isInitialized = useRef(false)
+
 	const modelIds = useMemo(() => Object.keys(models ?? {}).sort((a, b) => a.localeCompare(b)), [models])
+
 	const { selectedModelId, selectedModelInfo } = useMemo(
 		() => normalizeApiConfiguration(apiConfiguration),
 		[apiConfiguration],
 	)
+
 	const onSelect = useCallback(
 		(modelId: string) => {
 			const modelInfo = models?.[modelId]
@@ -52,14 +58,18 @@ export const ModelPicker = ({
 		},
 		[modelIdKey, modelInfoKey, models, setApiConfigurationField, defaultModelInfo],
 	)
+
 	const inputValue = apiConfiguration[modelIdKey]
+
 	useEffect(() => {
 		if (!inputValue && !isInitialized.current) {
 			const initialValue = modelIds.includes(selectedModelId) ? selectedModelId : defaultModelId
-			setApiConfigurationField(modelIdKey as any, initialValue)
+			setApiConfigurationField(modelIdKey, initialValue)
 		}
+
 		isInitialized.current = true
 	}, [inputValue, modelIds, setApiConfigurationField, modelIdKey, selectedModelId, defaultModelId])
+
 	return (
 		<>
 			<div>
