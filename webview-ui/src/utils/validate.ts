@@ -76,6 +76,11 @@ export function validateApiConfiguration(apiConfiguration?: ApiConfiguration): s
 				return "You must provide a valid model selector."
 			}
 			break
+		case "fireworks":
+			if (!apiConfiguration.fireworksApiKey) {
+				return "You must provide a valid API key or choose a different provider."
+			}
+			break
 	}
 
 	return undefined

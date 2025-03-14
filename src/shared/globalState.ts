@@ -26,6 +26,7 @@ export const SECRET_KEYS = [
 	"mistralApiKey",
 	"unboundApiKey",
 	"requestyApiKey",
+	"fireworksApiKey",
 	"kilocodeToken",
 ] as const
 
@@ -115,6 +116,9 @@ export const GLOBAL_STATE_KEYS = [
 	"lmStudioSpeculativeDecodingEnabled",
 	"lmStudioDraftModelId",
 	"showRooIgnoredFiles",
+	"kilocodeToken",
+	"fireworksModelId",
+	"fireworksModelInfo",
 	"remoteBrowserEnabled",
 ] as const
 

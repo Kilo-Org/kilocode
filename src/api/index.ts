@@ -21,6 +21,7 @@ import { UnboundHandler } from "./providers/unbound"
 import { RequestyHandler } from "./providers/requesty"
 import { HumanRelayHandler } from "./providers/human-relay"
 import { KiloCodeHandler } from "./providers/kilocode"
+import { FireworksHandler } from "./providers/fireworks"
 
 export interface SingleCompletionHandler {
 	completePrompt(prompt: string): Promise<string>
@@ -78,6 +79,8 @@ export function buildApiHandler(configuration: ApiConfiguration): ApiHandler {
 			return new RequestyHandler(options)
 		case "human-relay":
 			return new HumanRelayHandler(options)
+		case "fireworks":
+			return new FireworksHandler(options)
 		default:
 			return new AnthropicHandler(options)
 	}

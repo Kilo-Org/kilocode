@@ -33,6 +33,8 @@ import {
 	unboundDefaultModelInfo,
 	requestyDefaultModelId,
 	requestyDefaultModelInfo,
+	fireworksDefaultModelId,
+	fireworksModels,
 } from "../../../../src/shared/api"
 import { ExtensionMessage } from "../../../../src/shared/ExtensionMessage"
 
@@ -53,6 +55,7 @@ const modelsByProvider: Record<string, Record<string, ModelInfo>> = {
 	"openai-native": openAiNativeModels,
 	deepseek: deepSeekModels,
 	mistral: mistralModels,
+	fireworks: fireworksModels,
 }
 
 const providers = [
@@ -73,6 +76,7 @@ const providers = [
 	{ value: "unbound", label: "Unbound" },
 	{ value: "requesty", label: "Requesty" },
 	{ value: "human-relay", label: "Human Relay" },
+	{ value: "fireworks", label: "Fireworks" },
 ]
 
 interface ApiOptionsProps {
@@ -1350,6 +1354,35 @@ const ApiOptions = ({
 				</>
 			)}
 
+			{selectedProvider === "fireworks" && (
+				<div>
+					<VSCodeTextField
+						value={apiConfiguration?.fireworksApiKey || ""}
+						style={{ width: "100%" }}
+						type="password"
+						onInput={handleInputChange("fireworksApiKey")}
+						placeholder="Enter API Key...">
+						<span style={{ fontWeight: 500 }}>Fireworks API Key</span>
+					</VSCodeTextField>
+					<p
+						style={{
+							fontSize: "12px",
+							marginTop: 3,
+							color: "var(--vscode-descriptionForeground)",
+						}}>
+						This key is stored locally and only used to make API requests from this extension.
+						{!apiConfiguration?.fireworksApiKey && (
+							<>
+								<br />
+								<br />
+								Get your API key from{" "}
+								<VSCodeLink href="https://fireworks.ai/account/api-keys">Fireworks</VSCodeLink>.
+							</>
+						)}
+					</p>
+				</div>
+			)}
+
 			{/* Model Pickers */}
 
 			{selectedProvider === "openrouter" && (
@@ -1631,6 +1664,8 @@ export function normalizeApiConfiguration(apiConfiguration?: ApiConfiguration) {
 					supportsImages: false, // VSCode LM API currently doesn't support images.
 				},
 			}
+		case "fireworks":
+			return getProviderData(fireworksModels, fireworksDefaultModelId)
 		default:
 			return getProviderData(anthropicModels, anthropicDefaultModelId)
 	}
