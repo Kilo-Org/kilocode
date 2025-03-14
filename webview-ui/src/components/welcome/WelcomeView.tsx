@@ -8,7 +8,7 @@ import { Tab, TabContent } from "../common/Tab"
 import { validateApiConfiguration } from "../../utils/validate"
 
 const WelcomeView = () => {
-	const { apiConfiguration, setApiConfiguration, uriScheme } = useExtensionState()
+	const { apiConfiguration, currentApiConfigName, setApiConfiguration, uriScheme } = useExtensionState()
 
 	const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined)
 
@@ -18,9 +18,12 @@ const WelcomeView = () => {
 			setErrorMessage(error)
 			return
 		}
-		vscode.postMessage({ type: "apiConfiguration", apiConfiguration })
-	}, [apiConfiguration, setErrorMessage])
+		setErrorMessage(undefined)
 
+		vscode.postMessage({ type: "upsertApiConfiguration", text: currentApiConfigName, apiConfiguration })
+	}, [apiConfiguration, currentApiConfigName])
+
+	console.log()
 	return (
 		<Tab>
 			<TabContent className="flex flex-col gap-5">
