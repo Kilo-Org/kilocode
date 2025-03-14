@@ -23,11 +23,16 @@ import { HumanRelayHandler } from "./providers/human-relay"
 import { KiloCodeHandler } from "./providers/kilocode"
 
 export interface SingleCompletionHandler {
-	completePrompt(prompt: string): Promise<string>
+	completePrompt(prompt: string, taskId?: string, checkpointNumber?: number): Promise<string>
 }
 
 export interface ApiHandler {
-	createMessage(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): ApiStream
+	createMessage(
+		systemPrompt: string,
+		messages: Anthropic.Messages.MessageParam[],
+		taskId?: string,
+		checkpointNumber?: number,
+	): ApiStream
 	getModel(): { id: string; info: ModelInfo }
 
 	/**

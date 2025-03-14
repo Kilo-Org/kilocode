@@ -20,18 +20,61 @@ export class KiloCodeHandler extends BaseProvider implements SingleCompletionHan
 		})
 	}
 
-	async *createMessage(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): ApiStream {
+	private getIdempotencyKey(taskId: string, checkpointNumber: number): string {
+		// Create a deterministic idempotency key based on task_id and checkpoint number
+		return `${taskId}-${checkpointNumber}`
+	}
+
+	async *createMessage(
+		systemPrompt: string,
+		messages: Anthropic.Messages.MessageParam[],
+		taskId?: string,
+		checkpointNumber?: number,
+	): ApiStream {
 		let stream: AnthropicStream<Anthropic.Messages.RawMessageStreamEvent>
 		const cacheControl: CacheControlEphemeral = { type: "ephemeral" }
-		let { id: modelId, maxTokens, thinking, temperature, virtualId } = this.getModel()
+		const { id: modelId, maxTokens, thinking, temperature, virtualId } = this.getModel()
 
-		const userMsgIndices = messages.reduce(
-			(acc, msg, index) => (msg.role === "user" ? [...acc, index] : acc),
-			[] as number[],
-		)
+		// Use a for loop instead of reduce with spread to avoid linting error
+		const userMsgIndices: number[] = []
+		for (let i = 0; i < messages.length; i++) {
+			if (messages[i].role === "user") {
+				userMsgIndices.push(i)
+			}
+		}
 
 		const lastUserMsgIndex = userMsgIndices[userMsgIndices.length - 1] ?? -1
 		const secondLastMsgUserIndex = userMsgIndices[userMsgIndices.length - 2] ?? -1
+
+		// Prepare request options with headers
+		const requestOptions: { headers: Record<string, string> } = (() => {
+			const betas: string[] = []
+
+			// Check for models that support prompt caching
+			switch (modelId) {
+				case "claude-3-7-sonnet-20250219":
+				case "claude-3-5-sonnet-20241022":
+				case "claude-3-5-haiku-20241022":
+				case "claude-3-opus-20240229":
+				case "claude-3-haiku-20240307":
+					betas.push("prompt-caching-2024-07-31")
+					break
+			}
+
+			const headers: Record<string, string> = {}
+
+			// Add beta features if any
+			if (betas.length > 0) {
+				headers["anthropic-beta"] = betas.join(",")
+			}
+
+			// Add idempotency key if task_id and checkpoint number are provided
+			if (taskId && checkpointNumber !== undefined) {
+				headers["idempotency-key"] = this.getIdempotencyKey(taskId, checkpointNumber)
+			}
+
+			return { headers }
+		})()
 
 		stream = await this.client.messages.create(
 			{
@@ -62,38 +105,12 @@ export class KiloCodeHandler extends BaseProvider implements SingleCompletionHan
 				// tools: tools,
 				stream: true,
 			},
-			(() => {
-				// prompt caching: https://x.com/alexalbert__/status/1823751995901272068
-				// https://github.com/anthropics/anthropic-sdk-typescript?tab=readme-ov-file#default-headers
-				// https://github.com/anthropics/anthropic-sdk-typescript/commit/c920b77fc67bd839bfeb6716ceab9d7c9bbe7393
-
-				const betas = []
-
-				// // Check for the thinking-128k variant first
-				// if (virtualId === "claude-3-7-sonnet-20250219:thinking") {
-				// 	betas.push("output-128k-2025-02-19")
-				// }
-
-				// Then check for models that support prompt caching
-				switch (modelId) {
-					case "claude-3-7-sonnet-20250219":
-					case "claude-3-5-sonnet-20241022":
-					case "claude-3-5-haiku-20241022":
-					case "claude-3-opus-20240229":
-					case "claude-3-haiku-20240307":
-						betas.push("prompt-caching-2024-07-31")
-						return {
-							headers: { "anthropic-beta": betas.join(",") },
-						}
-					default:
-						return undefined
-				}
-			})(),
+			requestOptions,
 		)
 
 		for await (const chunk of stream) {
 			switch (chunk.type) {
-				case "message_start":
+				case "message_start": {
 					// Tells us cache reads/writes/input/output.
 					const usage = chunk.message.usage
 
@@ -106,6 +123,7 @@ export class KiloCodeHandler extends BaseProvider implements SingleCompletionHan
 					}
 
 					break
+				}
 				case "message_delta":
 					// Tells us stop_reason, stop_sequence, and output tokens
 					// along the way and at the end of the message.
@@ -174,17 +192,30 @@ export class KiloCodeHandler extends BaseProvider implements SingleCompletionHan
 		}
 	}
 
-	async completePrompt(prompt: string) {
-		let { id: modelId, temperature } = this.getModel()
+	async completePrompt(prompt: string, taskId?: string, checkpointNumber?: number) {
+		const { id: modelId, temperature } = this.getModel()
 
-		const message = await this.client.messages.create({
-			model: modelId,
-			max_tokens: ANTHROPIC_DEFAULT_MAX_TOKENS,
-			thinking: undefined,
-			temperature,
-			messages: [{ role: "user", content: prompt }],
-			stream: false,
-		})
+		// Prepare request options with headers
+		const requestOptions: { headers: Record<string, string> } = {
+			headers: {},
+		}
+
+		// Add idempotency key if task_id and checkpoint number are provided
+		if (taskId && checkpointNumber !== undefined) {
+			requestOptions.headers["idempotency-key"] = this.getIdempotencyKey(taskId, checkpointNumber)
+		}
+
+		const message = await this.client.messages.create(
+			{
+				model: modelId,
+				max_tokens: ANTHROPIC_DEFAULT_MAX_TOKENS,
+				thinking: undefined,
+				temperature,
+				messages: [{ role: "user", content: prompt }],
+				stream: false,
+			},
+			requestOptions,
+		)
 
 		const content = message.content.find(({ type }) => type === "text")
 		return content?.type === "text" ? content.text : ""

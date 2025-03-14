@@ -14,7 +14,12 @@ const TOKEN_FUDGE_FACTOR = 1.5
 export abstract class BaseProvider implements ApiHandler {
 	// Cache the Tiktoken encoder instance since it's stateless
 	private encoder: Tiktoken | null = null
-	abstract createMessage(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): ApiStream
+	abstract createMessage(
+		systemPrompt: string,
+		messages: Anthropic.Messages.MessageParam[],
+		taskId?: string,
+		checkpointNumber?: number,
+	): ApiStream
 	abstract getModel(): { id: string; info: ModelInfo }
 
 	/**

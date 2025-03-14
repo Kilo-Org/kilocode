@@ -1559,6 +1559,10 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 										},
 										customSupportPrompts,
 									),
+									this.getCurrentCline()?.taskId,
+									this.getCurrentCline()?.clineMessages.filter(
+										({ say }) => say === "checkpoint_saved",
+									).length,
 								)
 
 								await this.postMessageToWebview({
