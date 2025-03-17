@@ -42,7 +42,7 @@ describe("RooIgnoreController Security Tests", () => {
 		mockFileExists = fileExistsAtPath as jest.MockedFunction<typeof fileExistsAtPath>
 		mockReadFile = fs.readFile as jest.MockedFunction<typeof fs.readFile>
 
-		// By default, setup .rooignore to exist with some patterns
+		// By default, setup .kilocodeignore to exist with some patterns
 		mockFileExists.mockResolvedValue(true)
 		mockReadFile.mockResolvedValue("node_modules\n.git\nsecrets/**\n*.log\nprivate/")
 

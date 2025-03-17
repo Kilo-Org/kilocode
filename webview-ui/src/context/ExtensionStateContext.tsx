@@ -143,7 +143,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		maxOpenTabsContext: 20,
 		cwd: "",
 		browserToolEnabled: true,
-		showRooIgnoredFiles: true, // Default to showing .rooignore'd files with lock symbol (current behavior)
+		showRooIgnoredFiles: true, // Default to showing .kilocodeignore'd files with lock symbol (current behavior)
 	})
 
 	const [didHydrateState, setDidHydrateState] = useState(false)
