@@ -148,7 +148,7 @@ export interface ExtensionState {
 	maxOpenTabsContext: number // Maximum number of VSCode open tabs to include in context (0-500)
 	cwd?: string // Current working directory
 	machineId?: string
-	showRooIgnoredFiles: boolean // Whether to show .rooignore'd files in listings
+	showRooIgnoredFiles: boolean // Whether to show .kilocodeignore'd files in listings
 }
 
 export type { ClineMessage, ClineAsk, ClineSay }

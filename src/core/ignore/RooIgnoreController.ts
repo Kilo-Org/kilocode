@@ -9,7 +9,7 @@ export const LOCK_TEXT_SYMBOL = "\u{1F512}"
 /**
  * Controls LLM access to files by enforcing ignore patterns.
  * Designed to be instantiated once in Cline.ts and passed to file manipulation services.
- * Uses the 'ignore' library to support standard .gitignore syntax in .rooignore files.
+ * Uses the 'ignore' library to support standard .gitignore syntax in .kilocodeignore files.
  */
 export class RooIgnoreController {
 	private cwd: string
@@ -21,7 +21,7 @@ export class RooIgnoreController {
 		this.cwd = cwd
 		this.ignoreInstance = ignore()
 		this.rooIgnoreContent = undefined
-		// Set up file watcher for .rooignore
+		// Set up file watcher for .kilocodeignore
 		this.setupFileWatcher()
 	}
 
@@ -34,10 +34,10 @@ export class RooIgnoreController {
 	}
 
 	/**
-	 * Set up the file watcher for .rooignore changes
+	 * Set up the file watcher for .kilocodeignore changes
 	 */
 	private setupFileWatcher(): void {
-		const rooignorePattern = new vscode.RelativePattern(this.cwd, ".rooignore")
+		const rooignorePattern = new vscode.RelativePattern(this.cwd, ".kilocodeignore")
 		const fileWatcher = vscode.workspace.createFileSystemWatcher(rooignorePattern)
 
 		// Watch for changes and updates
@@ -58,24 +58,24 @@ export class RooIgnoreController {
 	}
 
 	/**
-	 * Load custom patterns from .rooignore if it exists
+	 * Load custom patterns from .kilocodeignore if it exists
 	 */
 	private async loadRooIgnore(): Promise<void> {
 		try {
 			// Reset ignore instance to prevent duplicate patterns
 			this.ignoreInstance = ignore()
-			const ignorePath = path.join(this.cwd, ".rooignore")
+			const ignorePath = path.join(this.cwd, ".kilocodeignore")
 			if (await fileExistsAtPath(ignorePath)) {
 				const content = await fs.readFile(ignorePath, "utf8")
 				this.rooIgnoreContent = content
 				this.ignoreInstance.add(content)
-				this.ignoreInstance.add(".rooignore")
+				this.ignoreInstance.add(".kilocodeignore")
 			} else {
 				this.rooIgnoreContent = undefined
 			}
 		} catch (error) {
 			// Should never happen: reading file failed even though it exists
-			console.error("Unexpected error loading .rooignore:", error)
+			console.error("Unexpected error loading .kilocodeignore:", error)
 		}
 	}
 
@@ -85,7 +85,7 @@ export class RooIgnoreController {
 	 * @returns true if file is accessible, false if ignored
 	 */
 	validateAccess(filePath: string): boolean {
-		// Always allow access if .rooignore does not exist
+		// Always allow access if .kilocodeignore does not exist
 		if (!this.rooIgnoreContent) {
 			return true
 		}
@@ -109,7 +109,7 @@ export class RooIgnoreController {
 	 * @returns path of file that is being accessed if it is being accessed, undefined if command is allowed
 	 */
 	validateCommand(command: string): string | undefined {
-		// Always allow if no .rooignore exists
+		// Always allow if no .kilocodeignore exists
 		if (!this.rooIgnoreContent) {
 			return undefined
 		}
@@ -188,14 +188,14 @@ export class RooIgnoreController {
 	}
 
 	/**
-	 * Get formatted instructions about the .rooignore file for the LLM
-	 * @returns Formatted instructions or undefined if .rooignore doesn't exist
+	 * Get formatted instructions about the .kilocodeignore file for the LLM
+	 * @returns Formatted instructions or undefined if .kilocodeignore doesn't exist
 	 */
 	getInstructions(): string | undefined {
 		if (!this.rooIgnoreContent) {
 			return undefined
 		}
 
-		return `# .rooignore\n\n(The following is provided by a root-level .rooignore file where the user has specified files and directories that should not be accessed. When using list_files, you'll notice a ${LOCK_TEXT_SYMBOL} next to files that are blocked. Attempting to access the file's contents e.g. through read_file will result in an error.)\n\n${this.rooIgnoreContent}\n.rooignore`
+		return `# .kilocodeignore\n\n(The following is provided by a root-level .kilocodeignore file where the user has specified files and directories that should not be  accessed. When using list_files, you'll notice a ${LOCK_TEXT_SYMBOL} next to files that are blocked. Attempting to access the file's contents e.g. through read_file will result in an error.)\n\n${this.rooIgnoreContent}\n.kilocodeignore`
 	}
 }

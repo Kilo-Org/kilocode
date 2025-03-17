@@ -210,11 +210,11 @@ export const AdvancedSettings = ({
 						onChange={(e: any) => {
 							setCachedStateField("showRooIgnoredFiles", e.target.checked)
 						}}>
-						<span className="font-medium">Show .rooignore'd files in lists and searches</span>
+						<span className="font-medium">Show .kilocodeignore'd files in lists and searches</span>
 					</VSCodeCheckbox>
 					<p className="text-vscode-descriptionForeground text-sm mt-0">
-						When enabled, files matching patterns in .rooignore will be shown in lists with a lock symbol.
-						When disabled, these files will be completely hidden from file lists and searches.
+						When enabled, files matching patterns in .kilocodeignore will be shown in lists with a lock
+						symbol. When disabled, these files will be completely hidden from file lists and searches.
 					</p>
 				</div>
 			</Section>
