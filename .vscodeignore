@@ -24,7 +24,7 @@ demo.gif
 .gitattributes
 .prettierignore
 .clinerules*
-.roomodes
+.kilocodemodes
 cline_docs/**
 coverage/**
 

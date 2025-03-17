@@ -456,7 +456,7 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 												e.preventDefault() // Prevent blur
 												vscode.postMessage({
 													type: "openFile",
-													text: "./.roomodes",
+													text: "./.kilocodemodes",
 													values: {
 														create: true,
 														content: JSON.stringify({ customModes: [] }, null, 2),
@@ -465,7 +465,7 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 												setShowConfigMenu(false)
 											}}
 											onClick={(e) => e.preventDefault()}>
-											Edit Project Modes (.roomodes)
+											Edit Project Modes (.kilocodemodes)
 										</div>
 									</div>
 								)}
@@ -1225,7 +1225,7 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 										</div>
 									</VSCodeRadio>
 									<VSCodeRadio value="project">
-										Project-specific (.roomodes)
+										Project-specific (.kilocodemodes)
 										<div className="text-xs text-vscode-descriptionForeground mt-0.5">
 											Only available in this workspace, takes precedence over global
 										</div>
