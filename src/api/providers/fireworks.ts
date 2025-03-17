@@ -170,12 +170,7 @@ export class FireworksHandler extends BaseProvider implements ApiHandler, Single
 					type: "text",
 					text:
 						`ERROR: ${error.message || "Failed to communicate with Fireworks API"}\n\n` +
-						"This could be due to:\n" +
-						"- Network connectivity issues\n" +
-						"- Fireworks API service disruption\n" +
-						"- An issue with the extension\n\n" +
-						"Please check your internet connection and try again later.\n" +
-						"You can also check the Fireworks status page: https://status.fireworks.ai",
+						"Please, check https://docs.fireworks.ai/troubleshooting/status_error_codes for more information.",
 				}
 			}
 		}
