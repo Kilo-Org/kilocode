@@ -1104,13 +1104,6 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 					{showAnnouncement && <Announcement version={version} hideAnnouncement={hideAnnouncement} />}
 					<div style={{ padding: "0 20px", flexShrink: 0 }}>
 						<h2>{t("chat:greeting")}</h2>
-						<p>
-							Thanks to the latest breakthroughs in agentic coding capabilities, I can handle complex
-							software development tasks step-by-step. With tools that let me create & edit files, explore
-							complex projects, use the browser, and execute terminal commands (after you grant
-							permission), I can assist you in ways that go beyond code completion or tech support. I can
-							even use MCP to create new tools and extend my own capabilities.
-						</p>
 					</div>
 					{taskHistory.length > 0 && <HistoryPreview showHistoryView={showHistoryView} />}
 				</div>
