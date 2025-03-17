@@ -464,10 +464,9 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 		startNewTask()
 	}, [startNewTask])
 
-	const normalized = useMemo(() => {
+	const { selectedModelInfo } = useMemo(() => {
 		return normalizeApiConfiguration(apiConfiguration)
 	}, [apiConfiguration])
-	const selectedModelInfo = normalized.selectedModelInfo
 
 	const selectImages = useCallback(() => {
 		vscode.postMessage({ type: "selectImages" })
