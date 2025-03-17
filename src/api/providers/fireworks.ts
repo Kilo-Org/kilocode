@@ -157,6 +157,14 @@ export class FireworksHandler extends BaseProvider implements ApiHandler, Single
 						"This might be due to invalid parameters or a prompt that's too large.\n" +
 						"Please try again with a shorter prompt or different parameters.",
 				}
+			} else if (error.status === 403) {
+				yield {
+					type: "text",
+					text:
+						"ERROR: Forbidden request to Fireworks API.\n\n" +
+						"The model name may be incorrect, or the model does not exist.\n" +
+						"This error is also returned to avoid leaking information about model availability.\n",
+				}
 			} else {
 				yield {
 					type: "text",
