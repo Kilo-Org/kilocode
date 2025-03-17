@@ -60,6 +60,7 @@ const modelsByProvider: Record<string, Record<string, ModelInfo>> = {
 
 const providers = [
 	{ value: "kilocode", label: "Kilo Code" },
+	{ value: "fireworks", label: "Fireworks" },
 	{ value: "openrouter", label: "OpenRouter" },
 	{ value: "anthropic", label: "Anthropic" },
 	{ value: "gemini", label: "Google Gemini" },
@@ -76,7 +77,6 @@ const providers = [
 	{ value: "unbound", label: "Unbound" },
 	{ value: "requesty", label: "Requesty" },
 	{ value: "human-relay", label: "Human Relay" },
-	{ value: "fireworks", label: "Fireworks" },
 ]
 
 interface ApiOptionsProps {
@@ -297,6 +297,35 @@ const ApiOptions = ({
 						</VSCodeButtonLink>
 					)}
 				</>
+			)}
+
+			{selectedProvider === "fireworks" && (
+				<div>
+					<VSCodeTextField
+						value={apiConfiguration?.fireworksApiKey || ""}
+						style={{ width: "100%" }}
+						type="password"
+						onInput={handleInputChange("fireworksApiKey")}
+						placeholder="Enter API Key...">
+						<span style={{ fontWeight: 500 }}>Fireworks API Key</span>
+					</VSCodeTextField>
+					<p
+						style={{
+							fontSize: "12px",
+							marginTop: 3,
+							color: "var(--vscode-descriptionForeground)",
+						}}>
+						This key is stored locally and only used to make API requests from this extension.
+						{!apiConfiguration?.fireworksApiKey && (
+							<>
+								<br />
+								<br />
+								Get your API key from{" "}
+								<VSCodeLink href="https://fireworks.ai/account/api-keys">Fireworks</VSCodeLink>.
+							</>
+						)}
+					</p>
+				</div>
 			)}
 
 			{selectedProvider === "openrouter" && (
@@ -1352,35 +1381,6 @@ const ApiOptions = ({
 						copy the AI's reply back to the dialog box and click the confirm button.
 					</div>
 				</>
-			)}
-
-			{selectedProvider === "fireworks" && (
-				<div>
-					<VSCodeTextField
-						value={apiConfiguration?.fireworksApiKey || ""}
-						style={{ width: "100%" }}
-						type="password"
-						onInput={handleInputChange("fireworksApiKey")}
-						placeholder="Enter API Key...">
-						<span style={{ fontWeight: 500 }}>Fireworks API Key</span>
-					</VSCodeTextField>
-					<p
-						style={{
-							fontSize: "12px",
-							marginTop: 3,
-							color: "var(--vscode-descriptionForeground)",
-						}}>
-						This key is stored locally and only used to make API requests from this extension.
-						{!apiConfiguration?.fireworksApiKey && (
-							<>
-								<br />
-								<br />
-								Get your API key from{" "}
-								<VSCodeLink href="https://fireworks.ai/account/api-keys">Fireworks</VSCodeLink>.
-							</>
-						)}
-					</p>
-				</div>
 			)}
 
 			{/* Model Pickers */}
