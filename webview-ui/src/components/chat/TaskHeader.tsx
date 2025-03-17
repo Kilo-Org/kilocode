@@ -41,8 +41,7 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 	onClose,
 }) => {
 	const { apiConfiguration, currentTaskItem } = useExtensionState()
-	const normalized = useMemo(() => normalizeApiConfiguration(apiConfiguration), [apiConfiguration])
-	const selectedModelInfo = normalized.selectedModelInfo
+	const { selectedModelInfo } = useMemo(() => normalizeApiConfiguration(apiConfiguration), [apiConfiguration])
 	const [isTaskExpanded, setIsTaskExpanded] = useState(true)
 	const [isTextExpanded, setIsTextExpanded] = useState(false)
 	const [showSeeMore, setShowSeeMore] = useState(false)
