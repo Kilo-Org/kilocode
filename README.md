@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code" target="_blank" rel="noopener noreferrer">
-    <img width="120" src="https://kilocode.ai/kilo-v1.svg" alt="Vite logo">
+    <img width="120" src="https://kilocode.ai/kilo-v1.svg" alt="Kilo Code logo">
   </a>
   
 </p>
@@ -12,16 +12,11 @@
   
   <a href="https://www.reddit.com/r/kilocode/" target="_blank"><img src="https://img.shields.io/badge/Join%20Reddit-FF4500?style=for-the-badge&logo=reddit&logoColor=white" alt="Join Reddit"></a>
     <a href="https://discord.gg/fxrhCFGhkP" target="_blank"><img src="https://img.shields.io/badge/Join%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join Discord"></a>
-
-  
-    
-
 </div>
 
 
 <div align="center">
   <h1>Kilo Code</h1>
-
 </div>
 <br/>
 
