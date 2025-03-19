@@ -52,12 +52,6 @@ Kilo Code has a free tier with $15 worth of Claude 3.7 Sonnet tokens. We'll give
     ```bash
     npm run install:all
     ```
-
-if that fails, try:
-`bash
-    npm run install:all
-    `
-
 3. **Build** the extension:
     ```bash
     npm run build
