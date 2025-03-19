@@ -39,7 +39,7 @@ export function activate(context: vscode.ExtensionContext) {
 	extensionContext = context
 	outputChannel = vscode.window.createOutputChannel("Kilo-Code")
 	context.subscriptions.push(outputChannel)
-	outputChannel.appendLine("Kilo-Code extension activated")
+	outputChannel.appendLine("Kilo Code extension activated")
 
 	// Initialize terminal shell execution handlers.
 	TerminalRegistry.initialize()
@@ -60,18 +60,14 @@ export function activate(context: vscode.ExtensionContext) {
 		}),
 	)
 
-	// Check if this is the first installation
-	const firstInstallCompleted = context.globalState.get("firstInstallCompleted")
-
-	if (firstInstallCompleted === undefined) {
+	if (!context.globalState.get("firstInstallCompleted")) {
 		// This is the first installation, open the sidebar
-		outputChannel.appendLine("First installation detected, opening Kilo-Code sidebar")
+		outputChannel.appendLine("First installation detected, opening Kilo Code sidebar")
 		// Use Promise.resolve to ensure we have a proper Promise with catch method
 		Promise.resolve(vscode.commands.executeCommand("kilo-code.SidebarProvider.focus"))
 			.then(() => {
 				// Set the flag to prevent this from happening again
 				context.globalState.update("firstInstallCompleted", true)
-				outputChannel.appendLine("First installation flag set")
 			})
 			.catch((error: Error) => {
 				outputChannel.appendLine(`Error opening sidebar: ${error.message}`)
@@ -124,7 +120,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 // This method is called when your extension is deactivated
 export async function deactivate() {
-	outputChannel.appendLine("Kilo-Code extension deactivated")
+	outputChannel.appendLine("Kilo Code extension deactivated")
 	// Clean up MCP server manager
 	await McpServerManager.cleanup(extensionContext)
 
