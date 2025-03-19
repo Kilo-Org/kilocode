@@ -1,8 +1,8 @@
 <p align="center">
   <a href="https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code" target="_blank" rel="noopener noreferrer">
-    <img width="120" src="assets/icons/Logo Outline - Black.png" alt="Kilo Code logo">
+    <img width="120" src="assets/icons/logo-outline-black.png" alt="Kilo Code logo">
   </a>
-  
+
 </p>
 <div align="center">
 
