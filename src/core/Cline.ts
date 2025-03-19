@@ -1182,7 +1182,11 @@ export class Cline extends EventEmitter<ClineEvents> {
 			}
 			return { role, content }
 		})
-		const stream = this.api.createMessage(systemPrompt, cleanConversationHistory)
+		// Get the current checkpoint number for idempotency key generation
+		const checkpointNumber = this.clineMessages.filter(({ say }) => say === "checkpoint_saved").length
+
+		// Pass task_id and checkpoint number to the API for idempotency key generation
+		const stream = this.api.createMessage(systemPrompt, cleanConversationHistory, this.taskId, checkpointNumber)
 		const iterator = stream[Symbol.asyncIterator]()
 
 		try {

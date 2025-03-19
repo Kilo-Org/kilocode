@@ -20,7 +20,7 @@ describe("enhancePrompt", () => {
 
 		// Mock the API handler with a completePrompt method
 		;(buildApiHandler as jest.Mock).mockReturnValue({
-			completePrompt: jest.fn().mockResolvedValue("Enhanced prompt"),
+			completePrompt: jest.fn((prompt, taskId, checkpointNumber) => Promise.resolve("Enhanced prompt")),
 			createMessage: jest.fn(),
 			getModel: jest.fn().mockReturnValue({
 				id: "test-model",
@@ -38,7 +38,7 @@ describe("enhancePrompt", () => {
 
 		expect(result).toBe("Enhanced prompt")
 		const handler = buildApiHandler(mockApiConfig)
-		expect((handler as any).completePrompt).toHaveBeenCalledWith(`Test prompt`)
+		expect((handler as any).completePrompt).toHaveBeenCalledWith(`Test prompt`, undefined, undefined)
 	})
 
 	it("enhances prompt using custom enhancement prompt when provided", async () => {
@@ -60,7 +60,11 @@ describe("enhancePrompt", () => {
 
 		expect(result).toBe("Enhanced prompt")
 		const handler = buildApiHandler(mockApiConfig)
-		expect((handler as any).completePrompt).toHaveBeenCalledWith(`${customEnhancePrompt}\n\nTest prompt`)
+		expect((handler as any).completePrompt).toHaveBeenCalledWith(
+			`${customEnhancePrompt}\n\nTest prompt`,
+			undefined,
+			undefined,
+		)
 	})
 
 	it("throws error for empty prompt input", async () => {
@@ -101,7 +105,7 @@ describe("enhancePrompt", () => {
 
 		// Mock successful enhancement
 		;(buildApiHandler as jest.Mock).mockReturnValue({
-			completePrompt: jest.fn().mockResolvedValue("Enhanced prompt"),
+			completePrompt: jest.fn((prompt, taskId, checkpointNumber) => Promise.resolve("Enhanced prompt")),
 			createMessage: jest.fn(),
 			getModel: jest.fn().mockReturnValue({
 				id: "test-model",
@@ -121,7 +125,7 @@ describe("enhancePrompt", () => {
 
 	it("propagates API errors", async () => {
 		;(buildApiHandler as jest.Mock).mockReturnValue({
-			completePrompt: jest.fn().mockRejectedValue(new Error("API Error")),
+			completePrompt: jest.fn((prompt, taskId, checkpointNumber) => Promise.reject(new Error("API Error"))),
 			createMessage: jest.fn(),
 			getModel: jest.fn().mockReturnValue({
 				id: "test-model",
