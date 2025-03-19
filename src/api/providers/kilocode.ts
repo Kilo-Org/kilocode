@@ -175,6 +175,9 @@ export class KiloCodeHandler extends BaseProvider implements SingleCompletionHan
 						"If you need any help please check http://kilocode.ai to reach out to us",
 				}
 			}
+
+			// Rethrow so that Cline class can break off API attempts
+			throw error
 		}
 	}
 
