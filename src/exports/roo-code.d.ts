@@ -220,6 +220,7 @@ export type GlobalStateKey =
 	| "remoteBrowserEnabled"
 	| "fireworksModelId"
 	| "fireworksModelInfo"
+	| "firstInstallCompleted" // Flag to track if the extension has been opened after installation
 
 export type ConfigurationKey = GlobalStateKey | SecretKey
 

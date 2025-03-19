@@ -119,6 +119,7 @@ export const GLOBAL_STATE_KEYS = [
 	"fireworksModelId",
 	"fireworksModelInfo",
 	"remoteBrowserEnabled",
+	"firstInstallCompleted", // Flag to track if the extension has been opened after installation
 ] as const
 
 type CheckGlobalStateKeysExhaustiveness =
