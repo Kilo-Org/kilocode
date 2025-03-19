@@ -35,7 +35,7 @@ let extensionContext: vscode.ExtensionContext
 
 // This method is called when your extension is activated.
 // Your extension is activated the very first time the command is executed.
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
 	extensionContext = context
 	outputChannel = vscode.window.createOutputChannel("Kilo-Code")
 	context.subscriptions.push(outputChannel)
@@ -61,17 +61,13 @@ export function activate(context: vscode.ExtensionContext) {
 	)
 
 	if (!context.globalState.get("firstInstallCompleted")) {
-		// This is the first installation, open the sidebar
-		outputChannel.appendLine("First installation detected, opening Kilo Code sidebar")
-		// Use Promise.resolve to ensure we have a proper Promise with catch method
-		Promise.resolve(vscode.commands.executeCommand("kilo-code.SidebarProvider.focus"))
-			.then(() => {
-				// Set the flag to prevent this from happening again
-				context.globalState.update("firstInstallCompleted", true)
-			})
-			.catch((error: Error) => {
-				outputChannel.appendLine(`Error opening sidebar: ${error.message}`)
-			})
+		outputChannel.appendLine("First installation detected, opening Kilo Code sidebar!")
+		try {
+			await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
+			context.globalState.update("firstInstallCompleted", true)
+		} catch (error) {
+			outputChannel.appendLine(`Error opening sidebar: ${error.message}`)
+		}
 	}
 
 	registerCommands({ context, outputChannel, provider })
