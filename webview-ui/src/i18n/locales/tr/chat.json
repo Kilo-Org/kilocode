@@ -63,7 +63,6 @@
 		"tooltip": "Mevcut işlemi iptal et"
 	},
 	"scrollToBottom": "Sohbetin altına kaydır",
-	"aboutMe": "Ajansal kodlama yeteneklerindeki son atılımlar sayesinde, karmaşık yazılım geliştirme görevlerini adım adım ele alabilirim. Dosya oluşturma ve düzenleme, karmaşık projeleri keşfetme, tarayıcıyı kullanma ve terminal komutlarını çalıştırma (izin verdikten sonra) olanağı sağlayan araçlarla, kod tamamlama veya teknik desteğin ötesinde size yardımcı olabilirim. Hatta yeni araçlar oluşturmak ve kendi yeteneklerimi genişletmek için MCP'yi bile kullanabilirim.",
 	"selectMode": "Etkileşim modunu seçin",
 	"selectApiConfig": "API yapılandırmasını seçin",
 	"enhancePrompt": "Ek bağlamla istemi geliştir",

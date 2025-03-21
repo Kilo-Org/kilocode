@@ -63,7 +63,6 @@
 		"tooltip": "Hủy thao tác hiện tại"
 	},
 	"scrollToBottom": "Cuộn xuống cuối cuộc trò chuyện",
-	"aboutMe": "Nhờ những đột phá mới nhất trong khả năng lập trình tác nhân, tôi có thể xử lý các nhiệm vụ phát triển phần mềm phức tạp từng bước một. Với các công cụ cho phép tôi tạo và chỉnh sửa tệp, khám phá các dự án phức tạp, sử dụng trình duyệt và thực thi lệnh terminal (sau khi bạn cấp quyền), tôi có thể hỗ trợ bạn theo cách vượt xa việc hoàn thành mã hoặc hỗ trợ kỹ thuật. Tôi thậm chí có thể sử dụng MCP để tạo các công cụ mới và mở rộng khả năng của mình.",
 	"selectMode": "Chọn chế độ tương tác",
 	"selectApiConfig": "Chọn cấu hình API",
 	"enhancePrompt": "Nâng cao yêu cầu với ngữ cảnh bổ sung",
