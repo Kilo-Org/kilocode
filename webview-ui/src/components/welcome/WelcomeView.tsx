@@ -26,7 +26,6 @@ const WelcomeView = () => {
 		vscode.postMessage({ type: "upsertApiConfiguration", text: currentApiConfigName, apiConfiguration })
 	}, [apiConfiguration, currentApiConfigName])
 
-	console.log()
 	return (
 		<Tab>
 			<TabContent className="flex flex-col gap-5">
@@ -42,7 +41,7 @@ const WelcomeView = () => {
 			</TabContent>
 			<div className="sticky bottom-0 bg-vscode-sideBar-background p-5">
 				<div className="flex flex-col gap-1">
-					{apiConfiguration?.apiProvider === "kilocode" ? null : (
+					{!apiConfiguration?.apiProvider || apiConfiguration?.apiProvider === "kilocode" ? null : (
 						<VSCodeButton onClick={handleSubmit}>{t("welcome:start")}</VSCodeButton>
 					)}
 					{errorMessage && <div className="text-vscode-errorForeground">{errorMessage}</div>}

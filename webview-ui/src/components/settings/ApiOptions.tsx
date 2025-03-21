@@ -126,8 +126,6 @@ const ApiOptions = ({
 		[apiConfiguration],
 	)
 
-	console.log("WTF", selectedProvider)
-
 	// Debounced refresh model updates, only executed 250ms after the user
 	// stops typing.
 	useDebounce(
