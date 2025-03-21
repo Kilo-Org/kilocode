@@ -1615,7 +1615,7 @@ export function getKiloCodeBackendAuthUrl() {
 }
 
 export function normalizeApiConfiguration(apiConfiguration?: ApiConfiguration) {
-	const provider = apiConfiguration?.apiProvider ?? PROVIDERS[0].value
+	const provider = apiConfiguration?.apiProvider ?? "kilocode"
 	const modelId = apiConfiguration?.apiModelId
 
 	const getProviderData = (models: Record<string, ModelInfo>, defaultId: string) => {
