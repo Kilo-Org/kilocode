@@ -15,8 +15,10 @@ body:
           label: Which API Provider are you using?
           multiple: false
           options:
+              - Kilo Code
               - OpenRouter
               - Anthropic
+              - Fireworks
               - Google Gemini
               - DeepSeek
               - OpenAI

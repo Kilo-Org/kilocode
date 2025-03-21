@@ -22,9 +22,9 @@ export const MODELS_BY_PROVIDER: Partial<Record<ApiProvider, Record<string, Mode
 
 export const PROVIDERS = [
 	{ value: "kilocode", label: "Kilo Code" },
-	{ value: "fireworks", label: "Fireworks" },
 	{ value: "openrouter", label: "OpenRouter" },
 	{ value: "anthropic", label: "Anthropic" },
+	{ value: "fireworks", label: "Fireworks" },
 	{ value: "gemini", label: "Google Gemini" },
 	{ value: "deepseek", label: "DeepSeek" },
 	{ value: "openai-native", label: "OpenAI" },
