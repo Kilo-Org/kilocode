@@ -63,7 +63,6 @@
 		"tooltip": "Anuluj bieżącą operację"
 	},
 	"scrollToBottom": "Przewiń do dołu czatu",
-	"aboutMe": "Dzięki najnowszym przełomom w zdolnościach kodowania agentowego, mogę krok po kroku obsługiwać złożone zadania związane z tworzeniem oprogramowania. Dzięki narzędziom, które pozwalają mi tworzyć i edytować pliki, eksplorować złożone projekty, korzystać z przeglądarki i wykonywać polecenia terminala (po udzieleniu zgody), mogę pomagać w sposób wykraczający poza uzupełnianie kodu czy wsparcie techniczne. Mogę nawet używać MCP do tworzenia nowych narzędzi i rozszerzania własnych możliwości.",
 	"selectMode": "Wybierz tryb interakcji",
 	"selectApiConfig": "Wybierz konfigurację API",
 	"enhancePrompt": "Ulepsz podpowiedź dodatkowym kontekstem",
