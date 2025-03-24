@@ -960,41 +960,26 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							} codicon codicon-references`}
 							title="Add Context (@)"
 							onClick={() => {
-								if (!textAreaDisabled && textAreaRef.current) {
-									// Focus on the text area
-									textAreaRef.current.focus()
+								if (textAreaDisabled || !textAreaRef.current) return
 
-									// Get current cursor position
-									const cursorPos = textAreaRef.current.selectionStart
+								textAreaRef.current.focus()
 
-									// Insert @ at the cursor position
-									const newValue =
-										inputValue.substring(0, cursorPos) + "@" + inputValue.substring(cursorPos)
+								// Not React state here but direct field ref because state does not update quick enough when clicking multiple times fast
+								const cursorPosition = textAreaRef.current.selectionStart
 
-									// Update input value
-									setInputValue(newValue)
+								const newValue =
+									inputValue.charAt(cursorPosition - 1) !== "@"
+										? `${inputValue.slice(0, cursorPosition)}@${inputValue.slice(cursorPosition)}`
+										: inputValue
 
-									// Set cursor position after the @ symbol
-									const newCursorPos = cursorPos + 1
-									setCursorPosition(newCursorPos)
+								setInputValue(newValue)
 
-									// Explicitly trigger the context menu
-									setShowContextMenu(true)
-									setSearchQuery("") // Empty query to show all options
-									setSelectedMenuIndex(3) // Set to "File" option by default
+								const newCursorPos = cursorPosition + 1
+								setCursorPosition(newCursorPos)
 
-									// Ensure cursor is positioned correctly
-									setTimeout(() => {
-										if (textAreaRef.current) {
-											textAreaRef.current.selectionStart = newCursorPos
-											textAreaRef.current.selectionEnd = newCursorPos
-
-											// Create and dispatch an input event to trigger event handlers
-											const inputEvent = new Event("input", { bubbles: true })
-											textAreaRef.current.dispatchEvent(inputEvent)
-										}
-									}, 0)
-								}
+								setShowContextMenu(true)
+								setSearchQuery("") // Empty search query explicitly to show all options
+								setSelectedMenuIndex(4) // Set to "File" option by default
 							}}
 							style={{ fontSize: 16.5 }}
 						/>
