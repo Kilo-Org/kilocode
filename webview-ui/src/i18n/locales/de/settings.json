@@ -29,7 +29,8 @@
 		"advanced": "Erweitert",
 		"experimental": "Experimentelle Funktionen",
 		"language": "Sprache",
-		"about": "Über Kilo Code"
+		"about": "Über Kilo Code",
+		"mcp": "MCP-Server"
 	},
 	"autoApprove": {
 		"description": "Erlaubt Kilo Code, Operationen automatisch ohne Genehmigung durchzuführen. Aktiviere diese Einstellungen nur, wenn du der KI vollständig vertraust und die damit verbundenen Sicherheitsrisiken verstehst.",

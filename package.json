@@ -232,28 +232,23 @@
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "kilo-code.mcpButtonClicked",
+					"command": "kilo-code.historyButtonClicked",
 					"group": "navigation@3",
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "kilo-code.historyButtonClicked",
+					"command": "kilo-code.popoutButtonClicked",
 					"group": "navigation@4",
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "kilo-code.popoutButtonClicked",
+					"command": "kilo-code.settingsButtonClicked",
 					"group": "navigation@5",
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "kilo-code.settingsButtonClicked",
-					"group": "navigation@6",
-					"when": "view == kilo-code.SidebarProvider"
-				},
-				{
 					"command": "kilo-code.helpButtonClicked",
-					"group": "navigation@7",
+					"group": "navigation@6",
 					"when": "view == kilo-code.SidebarProvider"
 				}
 			]
@@ -434,5 +429,6 @@
 		"webview-ui/**/*.{ts,tsx}": [
 			"npx eslint -c webview-ui/.eslintrc.json --max-warnings=0 --fix"
 		]
-	}
+	},
+	"packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

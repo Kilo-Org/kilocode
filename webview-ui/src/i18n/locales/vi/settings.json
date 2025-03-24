@@ -29,7 +29,8 @@
 		"advanced": "Nâng cao",
 		"experimental": "Tính năng thử nghiệm",
 		"language": "Ngôn ngữ",
-		"about": "Về Kilo Code"
+		"about": "Về Kilo Code",
+		"mcp": "Máy chủ MCP"
 	},
 	"autoApprove": {
 		"description": "Cho phép Kilo Code tự động thực hiện các hoạt động mà không cần phê duyệt. Chỉ bật những cài đặt này nếu bạn hoàn toàn tin tưởng AI và hiểu rõ các rủi ro bảo mật liên quan.",

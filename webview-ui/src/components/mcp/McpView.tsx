@@ -7,24 +7,154 @@ import {
 	VSCodePanelTab,
 	VSCodePanelView,
 } from "@vscode/webview-ui-toolkit/react"
+import { Server } from "lucide-react"
 
 import { McpServer } from "../../../../src/shared/mcp"
 
 import { vscode } from "@/utils/vscode"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui"
 
-import { useExtensionState } from "../../context/ExtensionStateContext"
+import { ExtensionStateContextType, useExtensionState } from "../../context/ExtensionStateContext"
 import { useAppTranslation } from "../../i18n/TranslationContext"
 import { Trans } from "react-i18next"
+import { SectionHeader } from "../settings/SectionHeader"
+import { Section } from "../settings/Section"
 import { Tab, TabContent, TabHeader } from "../common/Tab"
 import McpToolRow from "./McpToolRow"
 import McpResourceRow from "./McpResourceRow"
 import McpEnabledToggle from "./McpEnabledToggle"
+import { SetCachedStateField } from "../settings/types"
 
+// Original standalone view props
 type McpViewProps = {
 	onDone: () => void
 }
 
+// New props for settings integration
+interface McpSettingsProps {
+	mcpEnabled: boolean
+	mcpServers: McpServer[]
+	alwaysAllowMcp?: boolean
+	enableMcpServerCreation: boolean
+	setCachedStateField: SetCachedStateField<keyof ExtensionStateContextType>
+}
+
+// Shared content component
+interface McpViewContentProps {
+	mcpEnabled: boolean
+	mcpServers: McpServer[]
+	alwaysAllowMcp?: boolean
+	enableMcpServerCreation: boolean
+	setEnableMcpServerCreation?: (value: boolean) => void
+	setCachedStateField?: SetCachedStateField<keyof ExtensionStateContextType>
+}
+
+const McpViewContent = ({
+	mcpEnabled,
+	mcpServers: servers,
+	alwaysAllowMcp,
+	enableMcpServerCreation,
+	setEnableMcpServerCreation,
+	setCachedStateField,
+}: McpViewContentProps) => {
+	const { t } = useAppTranslation()
+
+	const handleEnableMcpChange = (e: any) => {
+		if (setCachedStateField) {
+			setCachedStateField("mcpEnabled", e.target.checked)
+		} else {
+			vscode.postMessage({ type: "mcpEnabled", bool: e.target.checked })
+		}
+	}
+
+	const handleEnableMcpServerCreationChange = (e: any) => {
+		if (setCachedStateField) {
+			setCachedStateField("enableMcpServerCreation", e.target.checked)
+		} else if (setEnableMcpServerCreation) {
+			setEnableMcpServerCreation(e.target.checked)
+			vscode.postMessage({ type: "enableMcpServerCreation", bool: e.target.checked })
+		}
+	}
+
+	return (
+		<>
+			<div
+				style={{
+					color: "var(--vscode-foreground)",
+					fontSize: "13px",
+					marginBottom: "10px",
+					marginTop: "5px",
+				}}>
+				<Trans i18nKey="mcp:description">
+					<VSCodeLink href="https://github.com/modelcontextprotocol" style={{ display: "inline" }}>
+						Model Context Protocol
+					</VSCodeLink>
+					<VSCodeLink href="https://github.com/modelcontextprotocol/servers" style={{ display: "inline" }}>
+						community-made servers
+					</VSCodeLink>
+				</Trans>
+			</div>
+
+			<div style={{ marginBottom: "20px" }}>
+				<VSCodeCheckbox checked={mcpEnabled} onChange={handleEnableMcpChange}>
+					<span style={{ fontWeight: "500" }}>{t("mcp:enable.title")}</span>
+				</VSCodeCheckbox>
+				<p
+					style={{
+						fontSize: "12px",
+						marginTop: "5px",
+						color: "var(--vscode-descriptionForeground)",
+					}}>
+					{t("mcp:enable.description")}
+				</p>
+			</div>
+
+			{mcpEnabled && (
+				<>
+					<div style={{ marginBottom: 15 }}>
+						<VSCodeCheckbox
+							checked={enableMcpServerCreation}
+							onChange={handleEnableMcpServerCreationChange}>
+							<span style={{ fontWeight: "500" }}>{t("mcp:enableServerCreation.title")}</span>
+						</VSCodeCheckbox>
+						<p
+							style={{
+								fontSize: "12px",
+								marginTop: "5px",
+								color: "var(--vscode-descriptionForeground)",
+							}}>
+							{t("mcp:enableServerCreation.description")}
+						</p>
+					</div>
+
+					{/* Server List */}
+					{servers.length > 0 && (
+						<div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+							{servers.map((server) => (
+								<ServerRow key={server.name} server={server} alwaysAllowMcp={alwaysAllowMcp} />
+							))}
+						</div>
+					)}
+
+					{/* Edit Settings Button */}
+					<div style={{ marginTop: "10px", width: "100%" }}>
+						<VSCodeButton
+							appearance="secondary"
+							style={{ width: "100%" }}
+							onClick={() => {
+								vscode.postMessage({ type: "openMcpSettings" })
+							}}>
+							<span className="codicon codicon-edit" style={{ marginRight: "6px" }}></span>
+							{t("mcp:editSettings")}
+						</VSCodeButton>
+					</div>
+				</>
+			)}
+		</>
+	)
+}
+
+// Original standalone view component
 const McpView = ({ onDone }: McpViewProps) => {
 	const {
 		mcpServers: servers,
@@ -108,8 +238,47 @@ const McpView = ({ onDone }: McpViewProps) => {
 						</div>
 					</>
 				)}
+				<McpViewContent
+					mcpEnabled={mcpEnabled}
+					mcpServers={servers}
+					alwaysAllowMcp={alwaysAllowMcp}
+					enableMcpServerCreation={enableMcpServerCreation}
+					setEnableMcpServerCreation={setEnableMcpServerCreation}
+				/>
 			</TabContent>
 		</Tab>
+	)
+}
+
+// New component for settings integration
+export const McpSettings = ({
+	mcpEnabled,
+	mcpServers: servers,
+	alwaysAllowMcp,
+	enableMcpServerCreation,
+	setCachedStateField,
+}: McpSettingsProps) => {
+	const { t } = useAppTranslation()
+
+	return (
+		<>
+			<SectionHeader>
+				<div className="flex items-center gap-2">
+					<Server className="w-4" />
+					<div>{t("mcp:title")}</div>
+				</div>
+			</SectionHeader>
+
+			<Section>
+				<McpViewContent
+					mcpEnabled={mcpEnabled}
+					mcpServers={servers}
+					alwaysAllowMcp={alwaysAllowMcp}
+					enableMcpServerCreation={enableMcpServerCreation}
+					setCachedStateField={setCachedStateField}
+				/>
+			</Section>
+		</>
 	)
 }
 

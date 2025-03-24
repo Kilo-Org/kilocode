@@ -29,7 +29,8 @@
 		"advanced": "進階",
 		"experimental": "實驗性功能",
 		"language": "語言",
-		"about": "關於 Kilo Code"
+		"about": "關於 Kilo Code",
+		"mcp": "MCP 伺服器"
 	},
 	"autoApprove": {
 		"description": "允許 Kilo Code 自動執行操作而無需核准。僅在您完全信任 AI 並理解相關安全風險的情況下啟用這些設定。",
