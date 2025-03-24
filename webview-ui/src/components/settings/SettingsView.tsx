@@ -14,6 +14,7 @@ import {
 	AlertTriangle,
 	Globe,
 	Info,
+	Server,
 	LucideIcon,
 } from "lucide-react"
 import { CaretSortIcon } from "@radix-ui/react-icons"
@@ -71,6 +72,7 @@ const sectionNames = [
 	"advanced",
 	"experimental",
 	"language",
+	"mcp",
 	"about",
 ] as const
 
@@ -78,9 +80,10 @@ type SectionName = (typeof sectionNames)[number]
 
 type SettingsViewProps = {
 	onDone: () => void
+	onOpenMcp: () => void
 }
 
-const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone }, ref) => {
+const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, onOpenMcp }, ref) => {
 	const { t } = useAppTranslation()
 
 	const extensionState = useExtensionState()
@@ -273,6 +276,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone },
 	const experimentalRef = useRef<HTMLDivElement>(null)
 	const languageRef = useRef<HTMLDivElement>(null)
 	const aboutRef = useRef<HTMLDivElement>(null)
+	const mcpRef = useRef<HTMLDivElement>(null)
 
 	const sections: { id: SectionName; icon: LucideIcon; ref: React.RefObject<HTMLDivElement> }[] = useMemo(
 		() => [
@@ -286,6 +290,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone },
 			{ id: "advanced", icon: Cog, ref: advancedRef },
 			{ id: "experimental", icon: FlaskConical, ref: experimentalRef },
 			{ id: "language", icon: Globe, ref: languageRef },
+			{ id: "mcp", icon: Server, ref: mcpRef },
 			{ id: "about", icon: Info, ref: aboutRef },
 		],
 		[
@@ -316,7 +321,12 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone },
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align="start" side="bottom">
 							{sections.map(({ id, icon: Icon, ref }) => (
-								<DropdownMenuItem key={id} onClick={() => scrollToSection(ref)}>
+								<DropdownMenuItem
+									key={id}
+									onClick={() => {
+										if (id === "mcp") return checkUnsaveChanges(onOpenMcp)
+										scrollToSection(ref)
+									}}>
 									<Icon />
 									<span>{t(`settings:sections.${id}`)}</span>
 								</DropdownMenuItem>

@@ -232,28 +232,23 @@
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "kilo-code.mcpButtonClicked",
+					"command": "kilo-code.historyButtonClicked",
 					"group": "navigation@3",
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "kilo-code.historyButtonClicked",
+					"command": "kilo-code.popoutButtonClicked",
 					"group": "navigation@4",
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "kilo-code.popoutButtonClicked",
+					"command": "kilo-code.settingsButtonClicked",
 					"group": "navigation@5",
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "kilo-code.settingsButtonClicked",
-					"group": "navigation@6",
-					"when": "view == kilo-code.SidebarProvider"
-				},
-				{
 					"command": "kilo-code.helpButtonClicked",
-					"group": "navigation@7",
+					"group": "navigation@6",
 					"when": "view == kilo-code.SidebarProvider"
 				}
 			]

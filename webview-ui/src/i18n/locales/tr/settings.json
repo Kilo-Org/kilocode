@@ -29,7 +29,8 @@
 		"advanced": "Gelişmiş",
 		"experimental": "Deneysel Özellikler",
 		"language": "Dil",
-		"about": "Kilo Code Hakkında"
+		"about": "Kilo Code Hakkında",
+		"mcp": "MCP Sunucuları"
 	},
 	"autoApprove": {
 		"description": "Kilo Code'nun onay gerektirmeden otomatik olarak işlemler gerçekleştirmesine izin verin. Bu ayarları yalnızca yapay zekaya tamamen güveniyorsanız ve ilgili güvenlik risklerini anlıyorsanız etkinleştirin.",

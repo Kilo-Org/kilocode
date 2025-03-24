@@ -29,7 +29,8 @@
 		"advanced": "Advanced",
 		"experimental": "Experimental Features",
 		"language": "Language",
-		"about": "About Kilo Code"
+		"about": "About Kilo Code",
+		"mcp": "MCP Servers"
 	},
 	"autoApprove": {
 		"description": "Allow Kilo Code to automatically perform operations without requiring approval. Enable these settings only if you fully trust the AI and understand the associated security risks.",

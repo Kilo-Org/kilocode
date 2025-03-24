@@ -29,7 +29,8 @@
 		"advanced": "고급",
 		"experimental": "실험적 기능",
 		"language": "언어",
-		"about": "Kilo Code 정보"
+		"about": "Kilo Code 정보",
+		"mcp": "MCP 서버"
 	},
 	"autoApprove": {
 		"description": "Kilo Code가 승인 없이 자동으로 작업을 수행할 수 있도록 허용합니다. AI를 완전히 신뢰하고 관련 보안 위험을 이해하는 경우에만 이러한 설정을 활성화하세요.",
