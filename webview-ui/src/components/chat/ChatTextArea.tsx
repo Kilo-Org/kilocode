@@ -953,6 +953,52 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 								/>
 							)}
 						</div>
+
+						<span
+							className={`input-icon-button ${
+								textAreaDisabled ? "disabled" : ""
+							} codicon codicon-references`}
+							title="Add Context (@)"
+							onClick={() => {
+								if (!textAreaDisabled && textAreaRef.current) {
+									// Focus on the text area
+									textAreaRef.current.focus()
+
+									// Get current cursor position
+									const cursorPos = textAreaRef.current.selectionStart
+
+									// Insert @ at the cursor position
+									const newValue =
+										inputValue.substring(0, cursorPos) + "@" + inputValue.substring(cursorPos)
+
+									// Update input value
+									setInputValue(newValue)
+
+									// Set cursor position after the @ symbol
+									const newCursorPos = cursorPos + 1
+									setCursorPosition(newCursorPos)
+
+									// Explicitly trigger the context menu
+									setShowContextMenu(true)
+									setSearchQuery("") // Empty query to show all options
+									setSelectedMenuIndex(3) // Set to "File" option by default
+
+									// Ensure cursor is positioned correctly
+									setTimeout(() => {
+										if (textAreaRef.current) {
+											textAreaRef.current.selectionStart = newCursorPos
+											textAreaRef.current.selectionEnd = newCursorPos
+
+											// Create and dispatch an input event to trigger event handlers
+											const inputEvent = new Event("input", { bubbles: true })
+											textAreaRef.current.dispatchEvent(inputEvent)
+										}
+									}, 0)
+								}
+							}}
+							style={{ fontSize: 16.5 }}
+						/>
+
 						<span
 							className={`input-icon-button ${
 								shouldDisableImages ? "disabled" : ""
@@ -961,6 +1007,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							onClick={() => !shouldDisableImages && onSelectImages()}
 							style={{ fontSize: 16.5 }}
 						/>
+
 						<span
 							className={`input-icon-button ${textAreaDisabled ? "disabled" : ""} codicon codicon-send`}
 							title={t("chat:sendMessage")}
