@@ -1,136 +1,121 @@
 name: Code QA Kilo Code
 
 on:
-    workflow_dispatch:
-    push:
-        branches: [main]
-    pull_request:
-        types: [opened, reopened, ready_for_review, synchronize]
-        branches: [main]
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, reopened, ready_for_review, synchronize]
+    branches: [main]
 
 env:
-    NODE_VERSION: 20.18.1
+  NODE_VERSION: 20.18.1
 
 jobs:
-    compile:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: ${{ env.NODE_VERSION }}
-                  cache: "npm"
-            - name: Install dependencies
-              run: npm run install:all
-            - name: Compile
-              run: npm run compile
-            - name: Check types
-              run: npm run check-types
-            - name: Lint
-              run: npm run lint
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm run install:all
+      - name: Compile
+        run: npm run compile
+      - name: Check types
+        run: npm run check-types
+      - name: Lint
+        run: npm run lint
 
-    check-translations:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: "18"
-                  cache: "npm"
-            - name: Install dependencies
-              run: npm run install:all
-            - name: Verify all translations are complete
-              run: node scripts/find-missing-translations.js
+  check-translations:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm run install:all
+      - name: Verify all translations are complete
+        run: node scripts/find-missing-translations.js
 
-        # knip:
-        #   runs-on: ubuntu-latest
-        #   steps:
-        #     - name: Checkout code
-        #       uses: actions/checkout@v4
-        #     - name: Setup Node.js
-        #       uses: actions/setup-node@v4
-        #       with:
-        #         node-version: '18'
-        #         cache: 'npm'
-        #     - name: Install dependencies
-        #       run: npm run install:all
-        #     - name: Run knip checks
-        #       run: npm run knip
+  test-extension:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm run install:all
+      - name: Run unit tests
+        run: npx jest --silent
 
-    test-extension:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: ${{ env.NODE_VERSION }}
-                  cache: "npm"
-            - name: Install dependencies
-              run: npm run install:all
-            - name: Run unit tests
-              run: npx jest --silent
+  test-webview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm run install:all
+      - name: Run unit tests
+        working-directory: webview-ui
+        run: npx jest --silent
 
-        test-webview:
-            runs-on: ubuntu-latest
-            steps:
-                - name: Checkout code
-                  uses: actions/checkout@v4
-                - name: Setup Node.js
-                  uses: actions/setup-node@v4
-                  with:
-                      node-version: "18"
-                      cache: "npm"
-                - name: Install dependencies
-                  run: npm run install:all
-                - name: Run unit tests
-                  working-directory: webview-ui
-                  run: npx jest --silent
+  unit-test:
+    needs: [test-extension, test-webview]
+    runs-on: ubuntu-latest
+    steps:
+      - name: NO-OP
+        run: echo "All unit tests passed."
 
-        unit-test:
-            needs: [test-extension, test-webview]
-            runs-on: ubuntu-latest
-            steps:
-                - name: NO-OP
-                  run: echo "All unit tests passed."
+  check-openrouter-api-key:
+    runs-on: ubuntu-latest
+    outputs:
+      exists: ${{ steps.openrouter-api-key-check.outputs.defined }}
+    steps:
+      - name: Check if OpenRouter API key exists
+        id: openrouter-api-key-check
+        shell: bash
+        run: |
+          if [ "${{ secrets.OPENROUTER_API_KEY }}" != '' ]; then
+            echo "defined=true" >> $GITHUB_OUTPUT;
+          else
+            echo "defined=false" >> $GITHUB_OUTPUT;
+          fi
 
-        check-openrouter-api-key:
-            runs-on: ubuntu-latest
-            outputs:
-                exists: ${{ steps.openrouter-api-key-check.outputs.defined }}
-            steps:
-                - name: Check if OpenRouter API key exists
-                  id: openrouter-api-key-check
-                  shell: bash
-                  run: |
-                      if [ "${{ secrets.OPENROUTER_API_KEY }}" != '' ]; then
-                        echo "defined=true" >> $GITHUB_OUTPUT;
-                      else
-                        echo "defined=false" >> $GITHUB_OUTPUT;
-                      fi
-
-    integration-test:
-        runs-on: ubuntu-latest
-        needs: [check-openrouter-api-key]
-        if: needs.check-openrouter-api-key.outputs.exists == 'true'
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: ${{ env.NODE_VERSION }}
-                  cache: "npm"
-            - name: Install dependencies
-              run: npm run install:all
-            - name: Create .env.local file
-              working-directory: e2e
-              run: echo "OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}" > .env.local
-            - name: Run integration tests
-              working-directory: e2e
-              run: xvfb-run -a npm run ci
+  integration-test:
+    runs-on: ubuntu-latest
+    needs: [check-openrouter-api-key]
+    if: needs.check-openrouter-api-key.outputs.exists == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm run install:all
+      - name: Create .env.local file
+        working-directory: e2e
+        run: echo "OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}" > .env.local
+      - name: Run integration tests
+        working-directory: e2e
+        run: xvfb-run -a npm run ci
