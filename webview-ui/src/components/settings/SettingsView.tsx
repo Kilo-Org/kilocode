@@ -15,6 +15,7 @@ import {
 	Globe,
 	Info,
 	LucideIcon,
+	Server,
 } from "lucide-react"
 import { CaretSortIcon } from "@radix-ui/react-icons"
 
@@ -55,6 +56,7 @@ import { ExperimentalSettings } from "./ExperimentalSettings"
 import { LanguageSettings } from "./LanguageSettings"
 import { About } from "./About"
 import { Section } from "./Section"
+import { McpSettings } from "../mcp/McpView"
 
 export interface SettingsViewRef {
 	checkUnsaveChanges: (then: () => void) => void
@@ -68,6 +70,7 @@ const sectionNames = [
 	"notifications",
 	"contextManagement",
 	"terminal",
+	"mcp",
 	"advanced",
 	"experimental",
 	"language",
@@ -269,6 +272,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone },
 	const notificationsRef = useRef<HTMLDivElement>(null)
 	const contextManagementRef = useRef<HTMLDivElement>(null)
 	const terminalRef = useRef<HTMLDivElement>(null)
+	const mcpRef = useRef<HTMLDivElement>(null)
 	const advancedRef = useRef<HTMLDivElement>(null)
 	const experimentalRef = useRef<HTMLDivElement>(null)
 	const languageRef = useRef<HTMLDivElement>(null)
@@ -283,6 +287,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone },
 			{ id: "notifications", icon: Bell, ref: notificationsRef },
 			{ id: "contextManagement", icon: Database, ref: contextManagementRef },
 			{ id: "terminal", icon: SquareTerminal, ref: terminalRef },
+			{ id: "mcp", icon: Server, ref: mcpRef },
 			{ id: "advanced", icon: Cog, ref: advancedRef },
 			{ id: "experimental", icon: FlaskConical, ref: experimentalRef },
 			{ id: "language", icon: Globe, ref: languageRef },
@@ -456,6 +461,16 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone },
 					<TerminalSettings
 						terminalOutputLineLimit={terminalOutputLineLimit}
 						terminalShellIntegrationTimeout={terminalShellIntegrationTimeout}
+						setCachedStateField={setCachedStateField}
+					/>
+				</div>
+
+				<div ref={mcpRef}>
+					<McpSettings
+						mcpEnabled={mcpEnabled}
+						mcpServers={cachedState.mcpServers || []}
+						alwaysAllowMcp={alwaysAllowMcp}
+						enableMcpServerCreation={cachedState.enableMcpServerCreation || false}
 						setCachedStateField={setCachedStateField}
 					/>
 				</div>
