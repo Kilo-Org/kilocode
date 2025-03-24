@@ -960,26 +960,13 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							} codicon codicon-references`}
 							title="Add Context (@)"
 							onClick={() => {
-								if (textAreaDisabled || !textAreaRef.current) return
-
-								textAreaRef.current.focus()
-
-								// Not React state here but direct field ref because state does not update quick enough when clicking multiple times fast
-								const cursorPosition = textAreaRef.current.selectionStart
-
-								const newValue =
-									inputValue.charAt(cursorPosition - 1) !== "@"
-										? `${inputValue.slice(0, cursorPosition)}@${inputValue.slice(cursorPosition)}`
-										: inputValue
-
-								setInputValue(newValue)
-
-								const newCursorPos = cursorPosition + 1
-								setCursorPosition(newCursorPos)
+								if (textAreaDisabled || !textAreaRef.current || showContextMenu) return
 
 								setShowContextMenu(true)
-								setSearchQuery("") // Empty search query explicitly to show all options
-								setSelectedMenuIndex(4) // Set to "File" option by default
+								// Empty search query explicitly to show all options
+								// and set to "File" option by default
+								setSearchQuery("")
+								setSelectedMenuIndex(4)
 							}}
 							style={{ fontSize: 16.5 }}
 						/>
