@@ -1,6 +1,7 @@
 import React, { forwardRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { useEvent } from "react-use"
 import DynamicTextArea from "react-textarea-autosize"
+import { Paperclip } from "lucide-react"
 
 import { mentionRegex, mentionRegexGlobal } from "../../../../src/shared/context-mentions"
 import { WebviewMessage } from "../../../../src/shared/WebviewMessage"
@@ -953,6 +954,24 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 								/>
 							)}
 						</div>
+
+						<span
+							className={`input-icon-button ${textAreaDisabled ? "disabled" : ""}`}
+							title="Add Context (@)"
+							onClick={() => {
+								if (textAreaDisabled || !textAreaRef.current || showContextMenu) return
+
+								textAreaRef.current.focus()
+
+								setInputValue(`${inputValue} @`)
+								setShowContextMenu(true)
+								// Empty search query explicitly to show all options
+								// and set to "File" option by default
+								setSearchQuery("")
+								setSelectedMenuIndex(4)
+							}}>
+							<Paperclip size={16.5} />
+						</span>
 						<span
 							className={`input-icon-button ${
 								shouldDisableImages ? "disabled" : ""
