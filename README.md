@@ -28,6 +28,7 @@ Kilo Code has a free tier with $15 worth of Claude 3.7 Sonnet tokens. We'll give
 - [Discord](https://discord.gg/fxrhCFGhkP) (join community)
 - [Reddit](https://www.reddit.com/r/kilocode/) (start discussing)
 - [Substack](https://blog.kilocode.ai/) (blog)
+- [Product Hunt](https://www.producthunt.com/products/kilocode) (vote)
 
 ## Key Features
 
