@@ -10,7 +10,10 @@ const BottomControls: React.FC<BottomControlsProps> = (props) => {
 	const { t } = useAppTranslation()
 
 	const startNewTask = () => {
+		// switches to new chat in chat view
 		vscode.postMessage({ type: "clearTask" })
+		// switches to new chat in all other views
+		window.postMessage({ type: "action", action: "chatButtonClicked" }, "*")
 	}
 
 	return (
