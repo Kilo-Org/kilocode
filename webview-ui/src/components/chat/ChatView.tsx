@@ -26,6 +26,7 @@ import ChatRow from "./ChatRow"
 import ChatTextArea from "./ChatTextArea"
 import TaskHeader from "./TaskHeader"
 import AutoApproveMenu from "./AutoApproveMenu"
+import BottomControls from "./BottomControls"
 import { AudioType } from "../../../../src/shared/WebviewMessage"
 import { validateCommand } from "../../utils/command-validation"
 import { getAllModes } from "../../../../src/shared/modes"
@@ -1306,7 +1307,7 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 				setMode={setMode}
 				modeShortcutText={modeShortcutText}
 			/>
-
+			<BottomControls />
 			<div id="roo-portal" />
 		</div>
 	)
