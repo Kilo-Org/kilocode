@@ -85,7 +85,7 @@ jest.mock("@vscode/webview-ui-toolkit/react", () => ({
 	VSCodeRadioGroup: ({ children, value, onChange }: any) => <div onChange={onChange}>{children}</div>,
 }))
 
-// Mock Slider component
+// Mock UI components
 jest.mock("@/components/ui", () => ({
 	...jest.requireActual("@/components/ui"),
 	Slider: ({ value, onValueChange, "data-testid": dataTestId }: any) => (
@@ -95,6 +95,14 @@ jest.mock("@/components/ui", () => ({
 			onChange={(e) => onValueChange([parseFloat(e.target.value)])}
 			data-testid={dataTestId}
 		/>
+	),
+	DropdownMenu: ({ children }: any) => <div data-testid="dropdown-menu">{children}</div>,
+	DropdownMenuTrigger: ({ children }: any) => <div data-testid="dropdown-menu-trigger">{children}</div>,
+	DropdownMenuContent: ({ children }: any) => <div data-testid="dropdown-menu-content">{children}</div>,
+	DropdownMenuItem: ({ children, onClick }: any) => (
+		<div data-testid="dropdown-menu-item" onClick={onClick}>
+			{children}
+		</div>
 	),
 }))
 
@@ -460,5 +468,28 @@ describe("SettingsView - Auto Approve Settings", () => {
 				bool: false,
 			}),
 		)
+	})
+})
+
+describe("SettingsView - MCP Settings", () => {
+	beforeEach(() => {
+		jest.clearAllMocks()
+	})
+
+	it("calls onOpenMcp when selecting MCP from dropdown menu", async () => {
+		const { onOpenMcp } = renderSettingsView()
+
+		const dropdownTrigger = screen.getByTestId("dropdown-menu-trigger")
+		fireEvent.click(dropdownTrigger)
+
+		// Find the MCP menu item (contains Server icon)
+		const mcpMenuItem = screen.getAllByTestId("dropdown-menu-item").find((item) => {
+			return item.textContent?.includes("Server")
+		})
+
+		expect(mcpMenuItem).toBeTruthy()
+		if (mcpMenuItem) fireEvent.click(mcpMenuItem)
+
+		expect(onOpenMcp).toHaveBeenCalled()
 	})
 })
