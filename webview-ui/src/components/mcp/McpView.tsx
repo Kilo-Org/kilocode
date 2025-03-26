@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
 	VSCodeButton,
 	VSCodeCheckbox,
@@ -11,6 +11,7 @@ import {
 import { McpServer } from "../../../../src/shared/mcp"
 
 import { vscode } from "@/utils/vscode"
+import { ensureBodyPointerEventsRestored } from "@/utils/fixPointerEvents"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui"
 
 import { useExtensionState } from "../../context/ExtensionStateContext"
@@ -34,6 +35,10 @@ const McpView = ({ onDone }: McpViewProps) => {
 		setEnableMcpServerCreation,
 	} = useExtensionState()
 	const { t } = useAppTranslation()
+
+	useEffect(() => {
+		ensureBodyPointerEventsRestored()
+	}, [])
 
 	return (
 		<Tab>
