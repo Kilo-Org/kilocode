@@ -147,15 +147,20 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone },
 		setChangeDetected(false)
 	}, [currentApiConfigName, extensionState, isChangeDetected])
 
-	// Temporary way of making sure that the Settings view displays the logout button properly when receiving the kilocodeToken
-	// from the backend
+	// kilocode_change
+	// Temporary way of making sure that the Settings view updates its local state properly when receiving
+	// api keys from providers that support url callbacks. This whole Settings View needs proper with this local state thing later
 	useEffect(() => {
-		if (extensionState.apiConfiguration?.kilocodeToken) {
-			setCachedState((prevCachedState) => ({ ...prevCachedState, ...extensionState }))
-			setChangeDetected(false)
-		}
+		setCachedState((prevCachedState) => ({ ...prevCachedState, ...extensionState }))
+		setChangeDetected(false)
+		// }
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [extensionState.apiConfiguration?.kilocodeToken])
+	}, [
+		extensionState.apiConfiguration?.kilocodeToken,
+		extensionState.apiConfiguration?.openRouterApiKey,
+		extensionState.apiConfiguration?.glamaApiKey,
+		extensionState.apiConfiguration?.requestyApiKey,
+	])
 
 	const setCachedStateField: SetCachedStateField<keyof ExtensionStateContextType> = useCallback((field, value) => {
 		setCachedState((prevState) => {
