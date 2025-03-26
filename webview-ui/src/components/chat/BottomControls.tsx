@@ -2,11 +2,7 @@ import React from "react"
 import { vscode } from "../../utils/vscode"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 
-interface BottomControlsProps {
-	// Add any props you might need here
-}
-
-const BottomControls: React.FC<BottomControlsProps> = (props) => {
+const BottomControls: React.FC = () => {
 	const { t } = useAppTranslation()
 
 	const startNewTask = () => {
