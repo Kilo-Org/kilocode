@@ -8,6 +8,13 @@
 		"million_suffix": "लाख",
 		"billion_suffix": "अरब"
 	},
+	"feedback": {
+		"title": "प्रतिक्रिया",
+		"description": "हम आपकी प्रतिक्रिया सुनना चाहेंगे या आपके द्वारा अनुभव की जा रही किसी भी समस्या में मदद करना चाहेंगे।",
+		"githubIssues": "GitHub पर समस्या की रिपोर्ट करें",
+		"githubDiscussions": "GitHub चर्चाओं में शामिल हों",
+		"discord": "हमारे Discord समुदाय में शामिल हों"
+	},
 	"welcome": "स्वागत है, {{name}}! आपके पास {{count}} सूचनाएँ हैं।",
 	"items": {
 		"zero": "कोई आइटम नहीं",

@@ -8,6 +8,13 @@
 		"million_suffix": "m",
 		"billion_suffix": "b"
 	},
+	"feedback": {
+		"title": "Feedback",
+		"description": "We'd love to hear your feedback or help with any issues you're experiencing.",
+		"githubIssues": "Report an issue on GitHub",
+		"githubDiscussions": "Join GitHub discussions",
+		"discord": "Join our Discord community"
+	},
 	"welcome": "Welcome, {{name}}! You have {{count}} notifications.",
 	"items": {
 		"zero": "No items",

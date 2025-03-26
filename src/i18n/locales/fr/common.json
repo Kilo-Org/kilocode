@@ -8,6 +8,13 @@
 		"million_suffix": "M",
 		"billion_suffix": "Md"
 	},
+	"feedback": {
+		"title": "Retour d'information",
+		"description": "Nous aimerions recevoir vos commentaires ou vous aider avec tout problème que vous rencontrez.",
+		"githubIssues": "Signaler un problème sur GitHub",
+		"githubDiscussions": "Rejoindre les discussions GitHub",
+		"discord": "Rejoindre notre communauté Discord"
+	},
 	"welcome": "Bienvenue, {{name}} ! Vous avez {{count}} notification(s).",
 	"items": {
 		"zero": "Aucun élément",

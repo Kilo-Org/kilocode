@@ -8,6 +8,13 @@
 		"million_suffix": "M",
 		"billion_suffix": "Mr"
 	},
+	"feedback": {
+		"title": "Geri Bildirim",
+		"description": "Geri bildirimlerinizi duymak veya yaşadığınız sorunlarda size yardımcı olmak isteriz.",
+		"githubIssues": "GitHub'da bir sorun bildirin",
+		"githubDiscussions": "GitHub tartışmalarına katılın",
+		"discord": "Discord topluluğumuza katılın"
+	},
 	"welcome": "Hoş geldiniz, {{name}}! {{count}} bildiriminiz var.",
 	"items": {
 		"zero": "Öğe yok",

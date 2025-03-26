@@ -8,6 +8,13 @@
 		"million_suffix": "百万",
 		"billion_suffix": "十億"
 	},
+	"feedback": {
+		"title": "フィードバック",
+		"description": "あなたのフィードバックをお聞かせいただくか、あなたが経験している問題についてお手伝いします。",
+		"githubIssues": "GitHubで問題を報告する",
+		"githubDiscussions": "GitHubのディスカッションに参加する",
+		"discord": "Discordコミュニティに参加する"
+	},
 	"welcome": "ようこそ、{{name}}さん！{{count}}件の通知があります。",
 	"items": {
 		"zero": "アイテムなし",

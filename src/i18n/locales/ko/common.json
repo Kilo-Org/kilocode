@@ -8,6 +8,13 @@
 		"million_suffix": "백만",
 		"billion_suffix": "십억"
 	},
+	"feedback": {
+		"title": "피드백",
+		"description": "귀하의 피드백을 듣거나 경험하고 있는 문제에 대해 도움을 드리고 싶습니다.",
+		"githubIssues": "GitHub에서 문제 보고하기",
+		"githubDiscussions": "GitHub 토론에 참여하기",
+		"discord": "Discord 커뮤니티에 참여하기"
+	},
 	"welcome": "안녕하세요, {{name}}님! {{count}}개의 알림이 있습니다.",
 	"items": {
 		"zero": "항목 없음",

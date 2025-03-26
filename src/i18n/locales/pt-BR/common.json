@@ -8,6 +8,13 @@
 		"million_suffix": "mi",
 		"billion_suffix": "bi"
 	},
+	"feedback": {
+		"title": "Feedback",
+		"description": "Gostaríamos de ouvir seu feedback ou ajudar com quaisquer problemas que você esteja enfrentando.",
+		"githubIssues": "Reportar um problema no GitHub",
+		"githubDiscussions": "Participar das discussões no GitHub",
+		"discord": "Junte-se à nossa comunidade no Discord"
+	},
 	"welcome": "Bem-vindo(a), {{name}}! Você tem {{count}} notificações.",
 	"items": {
 		"zero": "Nenhum item",

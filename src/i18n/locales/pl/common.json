@@ -8,6 +8,13 @@
 		"million_suffix": "mln",
 		"billion_suffix": "mld"
 	},
+	"feedback": {
+		"title": "Opinie",
+		"description": "Chcielibyśmy usłyszeć Twoje opinie lub pomóc Ci z problemami, których doświadczasz.",
+		"githubIssues": "Zgłoś problem na GitHubie",
+		"githubDiscussions": "Dołącz do dyskusji na GitHubie",
+		"discord": "Dołącz do naszej społeczności Discord"
+	},
 	"welcome": "Witaj, {{name}}! Masz {{count}} powiadomień.",
 	"items": {
 		"zero": "Brak elementów",

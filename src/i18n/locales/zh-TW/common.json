@@ -8,6 +8,13 @@
 		"million_suffix": "百萬",
 		"billion_suffix": "十億"
 	},
+	"feedback": {
+		"title": "反饋",
+		"description": "我們很樂意聽取您的反饋或幫助您解決遇到的任何問題。",
+		"githubIssues": "在GitHub上報告問題",
+		"githubDiscussions": "加入GitHub討論",
+		"discord": "加入我們的Discord社區"
+	},
 	"welcome": "歡迎，{{name}}！您有 {{count}} 條通知。",
 	"items": {
 		"zero": "沒有項目",
