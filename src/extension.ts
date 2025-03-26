@@ -44,7 +44,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	outputChannel.appendLine("Kilo Code extension activated")
 
 	// Initialize i18n for internationalization support
-	initializeI18n(context.globalState.get("language") ?? formatLanguage(vscode.env.language))
+	initializeI18n(context.globalState.get("language") ?? "en-US")
 
 	// Initialize terminal shell execution handlers.
 	TerminalRegistry.initialize()
@@ -57,7 +57,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		context.globalState.update("allowedCommands", defaultCommands)
 	}
 
-	const provider = new ClineProvider(context, outputChannel, "sidebar")
+	const provider = new ClineProvider(context, outputChannel, "editor")
 
 	context.subscriptions.push(
 		vscode.window.registerWebviewViewProvider(ClineProvider.sideBarId, provider, {
