@@ -3,5 +3,12 @@
 		"thousand_suffix": "k",
 		"million_suffix": "M",
 		"billion_suffix": "MM"
+	},
+	"feedback": {
+		"title": "Comentarios",
+		"description": "Nos encantaría escuchar tus comentarios o ayudarte con cualquier problema que estés experimentando.",
+		"githubIssues": "Reportar un problema en GitHub",
+		"githubDiscussions": "Unirse a las discusiones de GitHub",
+		"discord": "Únete a nuestra comunidad de Discord"
 	}
 }

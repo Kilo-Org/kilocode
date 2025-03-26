@@ -3,5 +3,12 @@
 		"thousand_suffix": "B",
 		"million_suffix": "Mn",
 		"billion_suffix": "Mr"
+	},
+	"feedback": {
+		"title": "Geri Bildirim",
+		"description": "Geri bildirimlerinizi duymak veya yaşadığınız sorunlarda size yardımcı olmak isteriz.",
+		"githubIssues": "GitHub'da bir sorun bildirin",
+		"githubDiscussions": "GitHub tartışmalarına katılın",
+		"discord": "Discord topluluğumuza katılın"
 	}
 }

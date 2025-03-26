@@ -3,5 +3,12 @@
 		"thousand_suffix": "千",
 		"million_suffix": "百万",
 		"billion_suffix": "十亿"
+	},
+	"feedback": {
+		"title": "反馈",
+		"description": "我们很乐意听取您的反馈或帮助您解决遇到的任何问题。",
+		"githubIssues": "在GitHub上报告问题",
+		"githubDiscussions": "加入GitHub讨论",
+		"discord": "加入我们的Discord社区"
 	}
 }

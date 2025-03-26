@@ -3,5 +3,12 @@
 		"thousand_suffix": "k",
 		"million_suffix": "M",
 		"billion_suffix": "B"
+	},
+	"feedback": {
+		"title": "フィードバック",
+		"description": "あなたのフィードバックをお聞かせいただくか、あなたが経験している問題についてお手伝いします。",
+		"githubIssues": "GitHubで問題を報告する",
+		"githubDiscussions": "GitHubのディスカッションに参加する",
+		"discord": "Discordコミュニティに参加する"
 	}
 }

@@ -12,6 +12,10 @@ const BottomControls: React.FC = () => {
 		window.postMessage({ type: "action", action: "chatButtonClicked" }, "*")
 	}
 
+	const showFeedbackOptions = () => {
+		vscode.postMessage({ type: "showFeedbackOptions" })
+	}
+
 	return (
 		<div className="flex flex-row items-center justify-between w-auto h-[30px] mx-3.5 mb-1">
 			{/* Left group */}
@@ -30,7 +34,14 @@ const BottomControls: React.FC = () => {
 				</button>
 			</div>
 			{/* Right group */}
-			<div className="flex items-center">{/* TODO: add feedback button (out of scope for this PR) */}</div>
+			<div className="flex items-center">
+				<button
+					className="vscode-button flex items-center gap-1.5 p-0.75 rounded-sm text-vscode-button-secondaryForeground cursor-pointer hover:bg-vscode-button-secondaryHoverBackground"
+					title={t("common:feedback.title")}
+					onClick={showFeedbackOptions}>
+					<span className="codicon codicon-feedback text-sm"></span>
+				</button>
+			</div>
 		</div>
 	)
 }
