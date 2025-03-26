@@ -175,48 +175,48 @@
 			},
 			{
 				"command": "kilo-code.explainCode",
-				"title": "Kilo Code: Explain Code",
+				"title": "Explain Code",
 				"category": "Kilo Code"
 			},
 			{
 				"command": "kilo-code.fixCode",
-				"title": "Kilo Code: Fix Code",
+				"title": "Fix Code",
 				"category": "Kilo Code"
 			},
 			{
 				"command": "kilo-code.improveCode",
-				"title": "Kilo Code: Improve Code",
+				"title": "Improve Code",
 				"category": "Kilo Code"
 			},
 			{
 				"command": "kilo-code.addToContext",
-				"title": "Kilo Code: Add To Context",
+				"title": "Add To Context",
 				"category": "Kilo Code"
 			},
 			{
 				"command": "kilo-code.terminalAddToContext",
-				"title": "Kilo Code: Add Terminal Content to Context",
-				"category": "Terminal"
+				"title": "Add Terminal Content to Context",
+				"category": "Kilo Code"
 			},
 			{
 				"command": "kilo-code.terminalFixCommand",
-				"title": "Kilo Code: Fix This Command",
-				"category": "Terminal"
+				"title": "Fix This Command",
+				"category": "Kilo Code"
 			},
 			{
 				"command": "kilo-code.terminalExplainCommand",
-				"title": "Kilo Code: Explain This Command",
-				"category": "Terminal"
+				"title": "Explain This Command",
+				"category": "Kilo Code"
 			},
 			{
 				"command": "kilo-code.terminalFixCommandInCurrentTask",
-				"title": "Kilo Code: Fix This Command (Current Task)",
-				"category": "Terminal"
+				"title": "Fix This Command (Current Task)",
+				"category": "Kilo Code"
 			},
 			{
 				"command": "kilo-code.terminalExplainCommandInCurrentTask",
-				"title": "Kilo Code: Explain This Command (Current Task)",
-				"category": "Terminal"
+				"title": "Explain This Command (Current Task)",
+				"category": "Kilo Code"
 			}
 		],
 		"menus": {
