@@ -222,34 +222,19 @@
 			],
 			"view/title": [
 				{
-					"command": "kilo-code.plusButtonClicked",
-					"group": "navigation@1",
-					"when": "view == kilo-code.SidebarProvider"
-				},
-				{
-					"command": "kilo-code.promptsButtonClicked",
-					"group": "navigation@2",
-					"when": "view == kilo-code.SidebarProvider"
-				},
-				{
-					"command": "kilo-code.historyButtonClicked",
-					"group": "navigation@3",
-					"when": "view == kilo-code.SidebarProvider"
-				},
-				{
 					"command": "kilo-code.popoutButtonClicked",
 					"group": "navigation@4",
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
 					"command": "kilo-code.settingsButtonClicked",
-					"group": "navigation@5",
+					"group": "navigation@1",
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
 					"command": "kilo-code.helpButtonClicked",
 					"group": "navigation@6",
-					"when": "view == kilo-code.SidebarProvider"
+					"when": "false && view == kilo-code.SidebarProvider"
 				}
 			]
 		},

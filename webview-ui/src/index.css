@@ -72,6 +72,8 @@
 	--color-vscode-button-background: var(--vscode-button-background);
 	--color-vscode-button-secondaryForeground: var(--vscode-button-secondaryForeground);
 	--color-vscode-button-secondaryBackground: var(--vscode-button-secondaryBackground);
+	--color-vscode-button-hoverBackground: var(--vscode-button-hoverBackground);
+	--color-vscode-button-secondaryHoverBackground: var(--vscode-button-secondaryHoverBackground);
 
 	--color-vscode-dropdown-foreground: var(--vscode-dropdown-foreground);
 	--color-vscode-dropdown-background: var(--vscode-dropdown-background);
