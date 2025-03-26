@@ -52,6 +52,58 @@
 	],
 	"main": "./dist/extension.js",
 	"contributes": {
+		"walkthroughs": [
+			{
+				"id": "kiloCodeWalkthrough",
+				"title": "5 things Kilo Code can do for you",
+				"description": "You now have a personal AI code assistant that can do the following:",
+				"steps": [
+					{
+						"id": "welcome",
+						"title": "Create code for you",
+						"description": "Example: Ask it to create a Hacker News clone in any language. Watch it generate the code, create the files and run the final version for you.",
+						"media": {
+							"markdown": "walkthrough/step1.md"
+						}
+					},
+					{
+						"id": "getting-started",
+						"title": "Understand your codebase",
+						"description": "Confused about how a feature works? Just activate 'Ask mode' and ask any questions about your existing files.",
+						"media": {
+							"markdown": "walkthrough/step2.md"
+						},
+						"content": {
+							"path": "walkthrough/step2.md"
+						}
+					},
+					{
+						"id": "modes",
+						"title": "Debug code for you",
+						"description": "Kilo Code can automatically analyze your file and make it runnable again.",
+						"media": {
+							"markdown": "walkthrough/step3.md"
+						}
+					},
+					{
+						"id": "code-actions",
+						"title": "Plan your logic before jumping into code",
+						"description": "Kilo Code can be as your software architect, guiding you through a clear structure.",
+						"media": {
+							"markdown": "walkthrough/step4.md"
+						}
+					},
+					{
+						"id": "advanced-features",
+						"title": "...and much more",
+						"description": "Here's a bunch of other cool stuff you can do with Kilo code:",
+						"media": {
+							"markdown": "walkthrough/step5.md"
+						}
+					}
+				]
+			}
+		],
 		"submenus": [
 			{
 				"id": "kilo-code.contextMenu",
