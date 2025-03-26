@@ -44,7 +44,7 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 	const { t } = useTranslation()
 	const { apiConfiguration, currentTaskItem } = useExtensionState()
 	const { selectedModelInfo } = useMemo(() => normalizeApiConfiguration(apiConfiguration), [apiConfiguration])
-	const [isTaskExpanded, setIsTaskExpanded] = useState(true)
+	const [isTaskExpanded, setIsTaskExpanded] = useState(false) // kilocode_change: Do not expand by default
 	const [isTextExpanded, setIsTextExpanded] = useState(false)
 	const [showSeeMore, setShowSeeMore] = useState(false)
 	const textContainerRef = useRef<HTMLDivElement>(null)
@@ -65,7 +65,7 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 	function without triggering re-renders or effect re-runs. This approach
 	ensures that our event listener always has access to the most current state
 	while minimizing performance overhead and potential memory leaks from
-	multiple listener registrations. 
+	multiple listener registrations.
 
 	Sources
 	- https://usehooks-ts.com/react-hook/use-event-listener
@@ -74,7 +74,7 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 	- https://stackoverflow.com/questions/55565444/how-to-register-event-with-useeffect-hooks
 
 	Before:
-	
+
 	const updateMaxHeight = useCallback(() => {
 		if (isExpanded && textContainerRef.current) {
 			const maxHeight = window.innerHeight * (3 / 5)
@@ -153,6 +153,7 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 						alignItems: "center",
 					}}>
 					<div
+						data-testid="toggle-task-header"
 						style={{
 							display: "flex",
 							alignItems: "center",

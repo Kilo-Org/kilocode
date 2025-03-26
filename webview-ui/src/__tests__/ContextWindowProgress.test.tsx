@@ -1,5 +1,5 @@
 import React from "react"
-import { render, screen } from "@testing-library/react"
+import { render, screen, fireEvent } from "@testing-library/react"
 import "@testing-library/jest-dom"
 import TaskHeader from "../components/chat/TaskHeader"
 
@@ -57,6 +57,13 @@ describe("ContextWindowProgress", () => {
 		return render(<TaskHeader {...defaultProps} {...props} />)
 	}
 
+	// kilocode_change
+	const expandTaskHeader = () => {
+		const taskHeader = screen.getByTestId("toggle-task-header")
+
+		fireEvent.click(taskHeader)
+	}
+
 	beforeEach(() => {
 		jest.clearAllMocks()
 	})
@@ -67,7 +74,10 @@ describe("ContextWindowProgress", () => {
 			contextWindow: 4000,
 		})
 
-		// Check for basic elements
+		// kilocode_change
+		expandTaskHeader()
+
+		// Now check for basic elements
 		expect(screen.getByTestId("context-window-label")).toBeInTheDocument()
 		expect(screen.getByTestId("context-tokens-count")).toHaveTextContent("1000") // contextTokens
 		// The actual context window might be different than what we pass in
@@ -81,6 +91,9 @@ describe("ContextWindowProgress", () => {
 			contextWindow: 0,
 		})
 
+		// kilocode_change
+		expandTaskHeader()
+
 		// In the current implementation, the component is still displayed with zero values
 		// rather than being hidden completely
 		expect(screen.getByTestId("context-window-label")).toBeInTheDocument()
@@ -92,6 +105,9 @@ describe("ContextWindowProgress", () => {
 			contextTokens: -100, // Should be treated as 0
 			contextWindow: 4000,
 		})
+
+		// kilocode_change
+		expandTaskHeader()
 
 		// Should show 0 instead of -100
 		expect(screen.getByTestId("context-tokens-count")).toHaveTextContent("0")
@@ -107,6 +123,10 @@ describe("ContextWindowProgress", () => {
 			contextTokens,
 			contextWindow,
 		})
+
+		// kilocode_change
+		expandTaskHeader()
+
 		// Instead of checking the title attribute, verify the data-test-id
 		// which identifies the element containing info about the percentage of tokens used
 		const tokenUsageDiv = screen.getByTestId("context-tokens-used")
