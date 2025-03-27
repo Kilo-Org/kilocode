@@ -7,6 +7,7 @@ import {
 	toolUseNames,
 	ToolUseName,
 } from "."
+import { decodeSelectedXmlEntities } from "../../utils/xml"
 
 export function parseAssistantMessage(assistantMessage: string) {
 	let contentBlocks: AssistantMessageContent[] = []
@@ -28,7 +29,15 @@ export function parseAssistantMessage(assistantMessage: string) {
 			const paramClosingTag = `</${currentParamName}>`
 			if (currentParamValue.endsWith(paramClosingTag)) {
 				// end of param value
-				currentToolUse.params[currentParamName] = currentParamValue.slice(0, -paramClosingTag.length).trim()
+				let paramValue = currentParamValue.slice(0, -paramClosingTag.length).trim()
+
+				if (currentToolUse.name === "execute_command" && currentParamName === "command") {
+					// Some models XML encode ampersands in the <command></command> tag, some don't
+					// to minimize chances of unintended consequences, we only XML decode &amp; for now
+					paramValue = decodeSelectedXmlEntities(paramValue, ["&"])
+				}
+
+				currentToolUse.params[currentParamName] = paramValue
 				currentParamName = undefined
 				continue
 			} else {
