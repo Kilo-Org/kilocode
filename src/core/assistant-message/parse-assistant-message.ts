@@ -34,7 +34,8 @@ export function parseAssistantMessage(assistantMessage: string) {
 					// Some models XML encode ampersands in the <command></command> tag, some don't
 					// to minimize chances of unintended consequences, we only XML decode &amp; for now
 					// NOTE(emn): this is a hacky workaround to an empirically observed problem.
-					//We know it's not a perfect solution and in corner cases can make things worse, but let's try this for now. 
+					// We know it's not a perfect solution and in corner cases can make things worse, but let's try this for now. 
+					// kilocode_change
 					paramValue = paramValue.replaceAll("&amp;", "&")
 				}
 
