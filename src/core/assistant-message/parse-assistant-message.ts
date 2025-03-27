@@ -7,7 +7,6 @@ import {
 	toolUseNames,
 	ToolUseName,
 } from "."
-import { decodeSelectedXmlEntities } from "../../utils/xml"
 
 export function parseAssistantMessage(assistantMessage: string) {
 	let contentBlocks: AssistantMessageContent[] = []
@@ -34,7 +33,7 @@ export function parseAssistantMessage(assistantMessage: string) {
 				if (currentToolUse.name === "execute_command" && currentParamName === "command") {
 					// Some models XML encode ampersands in the <command></command> tag, some don't
 					// to minimize chances of unintended consequences, we only XML decode &amp; for now
-					paramValue = paramValue.replaceAll("&amp;", "&");
+					paramValue = paramValue.replaceAll("&amp;", "&")
 				}
 
 				currentToolUse.params[currentParamName] = paramValue
