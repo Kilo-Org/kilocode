@@ -34,7 +34,7 @@ export function parseAssistantMessage(assistantMessage: string) {
 				if (currentToolUse.name === "execute_command" && currentParamName === "command") {
 					// Some models XML encode ampersands in the <command></command> tag, some don't
 					// to minimize chances of unintended consequences, we only XML decode &amp; for now
-					paramValue = decodeSelectedXmlEntities(paramValue, ["&"])
+					paramValue = paramValue.replaceAll("&amp;", "&");
 				}
 
 				currentToolUse.params[currentParamName] = paramValue
