@@ -180,6 +180,12 @@ export class KiloCodeHandler extends BaseProvider implements SingleCompletionHan
 						"Kilo Code has a free tier with $15 worth of Claude 3.7 Sonnet tokens.\n" +
 						"We'll give out more free tokens if you leave useful feedback.",
 				}
+			}
+			if (error.status === 402) {
+				yield {
+					type: "text",
+					text: "Go to https://kilocode.ai/profile to purchase more credits.",
+				}
 			} else {
 				yield {
 					type: "text",
