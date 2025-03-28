@@ -1,8 +1,7 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import { BetaThinkingConfigParam } from "@anthropic-ai/sdk/resources/beta"
-import axios, { AxiosRequestConfig } from "axios"
+import axios from "axios"
 import OpenAI from "openai"
-import delay from "delay"
 
 import { ApiHandlerOptions, ModelInfo, openRouterDefaultModelId, openRouterDefaultModelInfo } from "../../shared/api"
 import { parseApiPrice } from "../../utils/cost"
@@ -210,10 +209,12 @@ function makeOpenRouterErrorReadable(error: any) {
 			const parsedJson = JSON.parse(error.error.metadata?.raw)
 			retryAfter = parsedJson?.error?.details.map((detail: any) => detail.retryDelay).filter((r: any) => r)[0]
 		} catch (e) {}
-		const descDelay = retryAfter ? "in " + retryAfter : "later"
-		return `Rate limit exceeded, try again ${descDelay}:\n${error}`
+		if (retryAfter) {
+			return `Rate limit exceeded, try again in ${retryAfter}.`
+		}
+		return `Rate limit exceeded, try again later.\n${error?.message || error}`
 	}
-	return `OpenRouter API Error: ${error}`
+	return `OpenRouter API Error: ${error?.message || error}`
 }
 
 export async function getOpenRouterModels(options?: ApiHandlerOptions) {
