@@ -1,8 +1,7 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import { BetaThinkingConfigParam } from "@anthropic-ai/sdk/resources/beta"
-import axios, { AxiosRequestConfig } from "axios"
+import axios from "axios"
 import OpenAI from "openai"
-import delay from "delay"
 
 import { ApiHandlerOptions, ModelInfo, openRouterDefaultModelId, openRouterDefaultModelInfo } from "../../shared/api"
 import { parseApiPrice } from "../../utils/cost"
@@ -114,33 +113,36 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			// This way, the transforms field will only be included in the parameters when openRouterUseMiddleOutTransform is true.
 			...((this.options.openRouterUseMiddleOutTransform ?? true) && { transforms: ["middle-out"] }),
 		}
-
 		const stream = await this.client.chat.completions.create(completionParams)
 
 		let lastUsage
+		try {
+			for await (const chunk of stream) {
+				// OpenRouter returns an error object instead of the OpenAI SDK throwing an error.
+				if ("error" in chunk) {
+					const error = chunk.error as { message?: string; code?: number }
+					console.error(`OpenRouter API Error: ${error?.code} - ${error?.message}`)
+					throw new Error(`OpenRouter API Error ${error?.code}: ${error?.message}`)
+				}
 
-		for await (const chunk of stream as unknown as AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>) {
-			// OpenRouter returns an error object instead of the OpenAI SDK throwing an error.
-			if ("error" in chunk) {
-				const error = chunk.error as { message?: string; code?: number }
-				console.error(`OpenRouter API Error: ${error?.code} - ${error?.message}`)
-				throw new Error(`OpenRouter API Error ${error?.code}: ${error?.message}`)
+				const delta = chunk.choices[0]?.delta
+
+				if ("reasoning" in delta && delta.reasoning) {
+					yield { type: "reasoning", text: delta.reasoning } as ApiStreamChunk
+				}
+
+				if (delta?.content) {
+					fullResponseText += delta.content
+					yield { type: "text", text: delta.content } as ApiStreamChunk
+				}
+
+				if (chunk.usage) {
+					lastUsage = chunk.usage
+				}
 			}
-
-			const delta = chunk.choices[0]?.delta
-
-			if ("reasoning" in delta && delta.reasoning) {
-				yield { type: "reasoning", text: delta.reasoning } as ApiStreamChunk
-			}
-
-			if (delta?.content) {
-				fullResponseText += delta.content
-				yield { type: "text", text: delta.content } as ApiStreamChunk
-			}
-
-			if (chunk.usage) {
-				lastUsage = chunk.usage
-			}
+		} catch (error) {
+			let errorMessage = makeOpenRouterErrorReadable(error)
+			throw new Error(errorMessage)
 		}
 
 		if (lastUsage) {
@@ -198,6 +200,21 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		const completion = response as OpenAI.Chat.ChatCompletion
 		return completion.choices[0]?.message?.content || ""
 	}
+}
+
+function makeOpenRouterErrorReadable(error: any) {
+	if (error?.code === 429) {
+		let retryAfter
+		try {
+			const parsedJson = JSON.parse(error.error.metadata?.raw)
+			retryAfter = parsedJson?.error?.details.map((detail: any) => detail.retryDelay).filter((r: any) => r)[0]
+		} catch (e) {}
+		if (retryAfter) {
+			return `Rate limit exceeded, try again in ${retryAfter}.`
+		}
+		return `Rate limit exceeded, try again later.\n${error?.message || error}`
+	}
+	return `OpenRouter API Error: ${error?.message || error}`
 }
 
 export async function getOpenRouterModels(options?: ApiHandlerOptions) {
