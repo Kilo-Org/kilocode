@@ -11,7 +11,7 @@ import ChatView from "./components/chat/ChatView"
 import HistoryView from "./components/history/HistoryView"
 import SettingsView, { SettingsViewRef } from "./components/settings/SettingsView"
 import WelcomeView from "./components/welcome/WelcomeView"
-import McpView from "./components/mcp/McpView"
+import McpView from "./components/kilocodeMcp/McpView"
 import PromptsView from "./components/prompts/PromptsView"
 import { HumanRelayDialog } from "./components/human-relay/HumanRelayDialog"
 import BottomControls from "./components/chat/BottomControls"
@@ -95,10 +95,10 @@ const App = () => {
 	) : (
 		<>
 			{tab === "prompts" && <PromptsView onDone={() => switchTab("chat")} />}
-			{tab === "mcp" && <McpView onDone={() => switchTab("settings")} />}
+			{tab === "mcp" && <McpView onDone={() => switchTab("chat")} />}
 			{tab === "history" && <HistoryView onDone={() => switchTab("chat")} />}
 			{tab === "settings" && (
-				<SettingsView ref={settingsRef} onDone={() => setTab("chat")} onOpenMcp={() => setTab("mcp")} />
+				<SettingsView ref={settingsRef} onDone={() => setTab("settings")} onOpenMcp={() => setTab("mcp")} />
 			)}
 			<ChatView
 				isHidden={tab !== "chat"}
