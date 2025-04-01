@@ -253,7 +253,7 @@ export class Cline extends EventEmitter<ClineEvents> {
 	}
 
 	get cwd() {
-		return getWorkspacePath(path.join(os.homedir(), "Desktop"))
+		return getWorkspacePath(path.join(os.homedir(), "Documents")) // kilocode_change: use Documents instead of Desktop as default
 	}
 
 	// Add method to update diffStrategy.

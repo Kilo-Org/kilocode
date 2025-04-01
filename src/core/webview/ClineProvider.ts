@@ -2295,7 +2295,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			// macOS: ~/Documents/Kilo-Code/MCP
 			mcpServersDir = path.join(os.homedir(), "Documents", "Kilo-Code", "MCP")
 		} else {
-			// Linux: ~/.local/share/Cline/MCP
+			// Linux: ~/.local/share/Kilo-Code/MCP
 			mcpServersDir = path.join(os.homedir(), ".local", "share", "Kilo-Code", "MCP")
 		}
 
