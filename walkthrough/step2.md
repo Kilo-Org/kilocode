@@ -1,5 +1,7 @@
-# How to get started
+# Ask mode
 
-  <img src="images/askui.png" alt="Learn about GitLens Community vs Pro" />
+  <img src="images/askui.png" alt="Ask Mode" />
 
-Switch to "Ask" mode and ask a question about your code. Kilo Code will analyze your entire codebase and provide a detailed answer.
+Have a question about your code? Switch to Ask mode and type it out. Kilo Code will scan your codebase and give you a clear, accurate explanation.
+
+Tip: Reference specific files or functions for more precise answers.
