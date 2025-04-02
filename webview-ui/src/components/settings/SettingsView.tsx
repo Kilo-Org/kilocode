@@ -18,6 +18,8 @@ import {
 	LucideIcon,
 } from "lucide-react"
 import { CaretSortIcon } from "@radix-ui/react-icons"
+// kilocode_change
+import { ensureBodyPointerEventsRestored } from "@/utils/fixPointerEvents"
 
 import { ExperimentId } from "../../../../src/shared/experiments"
 import { ApiConfiguration } from "../../../../src/shared/api"
@@ -92,6 +94,12 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, o
 	const [isDiscardDialogShow, setDiscardDialogShow] = useState(false)
 	const [isChangeDetected, setChangeDetected] = useState(false)
 	const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined)
+
+	// kilocode_change begin
+	useEffect(() => {
+		ensureBodyPointerEventsRestored()
+	}, [isDiscardDialogShow])
+	// kilocode_change end
 
 	const prevApiConfigName = useRef(currentApiConfigName)
 	const confirmDialogHandler = useRef<() => void>()
