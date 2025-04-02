@@ -8,7 +8,6 @@ import { ANTHROPIC_DEFAULT_MAX_TOKENS } from "./constants"
 import { ApiHandler, SingleCompletionHandler, getModelParams } from "../index"
 import { OpenRouterHandler } from "./openrouter"
 
-// KiloCodeHandler
 export class KiloCodeHandler extends BaseProvider implements ApiHandler {
 	private handler: ApiHandler
 
