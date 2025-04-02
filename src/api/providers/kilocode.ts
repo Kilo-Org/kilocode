@@ -6,8 +6,29 @@ import { ApiStream } from "../transform/stream"
 import { BaseProvider } from "./base-provider"
 import { ANTHROPIC_DEFAULT_MAX_TOKENS } from "./constants"
 import { SingleCompletionHandler, getModelParams } from "../index"
+import { OpenRouterHandler } from "./openrouter"
 
+// KiloCodeHandler
 export class KiloCodeHandler extends BaseProvider implements SingleCompletionHandler {
+	constructor(options: ApiHandlerOptions) {
+		super()
+		const handler = options.kilocodeProvider || "anthropic"
+		if (handler === "anthropic") {
+			return new KiloCodeAnthropicHandler(options)
+		} else if (handler === "openrouter") {
+			const openrouterOptions = {
+				...options,
+				openRouterBaseUrl: "https://kilocode.ai/api/openrouter/",
+				openRouterApiKey: options.kilocodeToken,
+			}
+
+			return new OpenRouterHandler(openrouterOptions)
+		}
+		throw new Error("Invalid KiloCode provider")
+	}
+}
+
+export class KiloCodeAnthropicHandler extends BaseProvider implements SingleCompletionHandler {
 	private options: ApiHandlerOptions
 	private client: Anthropic
 	private baseURL: string = "https://kilocode.ai"
