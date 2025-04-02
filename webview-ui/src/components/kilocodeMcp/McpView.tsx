@@ -22,6 +22,7 @@ import McpResourceRow from "./McpResourceRow"
 import McpToolRow from "./McpToolRow"
 import DangerButton from "../common/DangerButton"
 import { useAppTranslation } from "../../i18n/TranslationContext"
+import { Trans } from "react-i18next"
 
 type McpViewProps = {
 	onDone: () => void
@@ -94,20 +95,18 @@ const McpView = ({ onDone }: McpViewProps) => {
 									marginTop: "5px",
 								}}>
 								The{" "}
-								<VSCodeLink
-									href="https://github.com/modelcontextprotocol"
-									style={{ display: "inline" }}>
-									Model Context Protocol
-								</VSCodeLink>{" "}
-								enables communication with locally running MCP servers that provide additional tools and
-								resources to extend Kilo Code's capabilities. You can use{" "}
-								<VSCodeLink
-									href="https://github.com/modelcontextprotocol/servers"
-									style={{ display: "inline" }}>
-									community-made servers
-								</VSCodeLink>{" "}
-								or ask Kilo Code to create new tools specific to your workflow (e.g., "add a tool that
-								gets the latest npm docs").{" "}
+								<Trans i18nKey="mcp:description">
+									<VSCodeLink
+										href="https://github.com/modelcontextprotocol"
+										style={{ display: "inline" }}>
+										Model Context Protocol
+									</VSCodeLink>
+									<VSCodeLink
+										href="https://github.com/modelcontextprotocol/servers"
+										style={{ display: "inline" }}>
+										community-made servers
+									</VSCodeLink>
+								</Trans>
 							</div>
 
 							{servers.length > 0 ? (
