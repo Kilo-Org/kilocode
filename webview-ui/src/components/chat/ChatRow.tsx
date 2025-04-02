@@ -788,10 +788,12 @@ export const ChatRowContent = ({
 									<br />
 									Please update VSCode (<code>CMD/CTRL + Shift + P</code> → "Update") and make sure
 									you're using a supported shell: zsh, bash, fish, or PowerShell (
-									<code>CMD/CTRL + Shift + P</code> → "Terminal: Select Default Profile").{" "}
+									<code>CMD/CTRL + Shift + P</code> → "Terminal: Select Default Profile"). //
+									kilocode_change
 									<a
 										href="http://docs.roocode.com/troubleshooting/shell-integration/"
-										style={{ color: "inherit", textDecoration: "underline" }}>
+										// kilocode_change: do not display until we have actual docs
+										style={{ color: "inherit", textDecoration: "underline", display: "none" }}>
 										{t("chat:shellIntegration.troubleshooting")}
 									</a>
 								</div>
