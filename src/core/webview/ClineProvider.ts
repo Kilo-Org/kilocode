@@ -2086,7 +2086,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 						break
 					}
 
-					case "silentlyRefreshMcpMarketplace": {
+					case "silentlyRefreshMcpMarketplace": { // kilocode_change
 						await this.silentlyRefreshMcpMarketplace()
 						break
 					}
