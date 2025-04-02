@@ -6,10 +6,10 @@ Click the stars icon to make your prompt clearer and more complete. Kilo Code wi
 
 Mention files or folders in your prompt. Kilo Code will use them to better understand and respond to your request.
 
-Click mode switcher in the text area or use @ to add context.
+Click the paperclip in the text area or use @ to add context.
 
 # Add custom modes
 
 Go beyond the default modes by creating your own. Tailor them to your workflow with specific instructions or focus areas.
 
-Click the paperclip in the text area or use / to switch modes.
+Click mode switcher in the text area or use / to switch modes.
