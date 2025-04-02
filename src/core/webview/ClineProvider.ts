@@ -1245,7 +1245,8 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 						}
 
 						const workspaceFolder = vscode.workspace.workspaceFolders[0]
-						const rooDir = path.join(workspaceFolder.uri.fsPath, ".roo")
+						// kilocode_change
+						const rooDir = path.join(workspaceFolder.uri.fsPath, ".kilocode")
 						const mcpPath = path.join(rooDir, "mcp.json")
 
 						try {
@@ -2074,22 +2075,24 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 						}
 						break
 
-					case "fetchMcpMarketplace": { // kilocode_change
+					// kilocode_change
+					case "fetchMcpMarketplace": {
 						await this.fetchMcpMarketplace(message.bool)
 						break
 					}
 
-					case "downloadMcp": { // kilocode_change
+					case "downloadMcp": {
 						if (message.mcpId) {
 							await this.downloadMcp(message.mcpId)
 						}
 						break
 					}
 
-					case "silentlyRefreshMcpMarketplace": { // kilocode_change
+					case "silentlyRefreshMcpMarketplace": {
 						await this.silentlyRefreshMcpMarketplace()
 						break
 					}
+					// end kilocode_change
 				}
 			},
 			null,

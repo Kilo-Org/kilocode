@@ -873,7 +873,8 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 
 													vscode.postMessage({
 														type: "openFile",
-														text: `./.roo/system-prompt-${currentMode.slug}`,
+														// kilocode_change
+														text: `./.kilocode/system-prompt-${currentMode.slug}`,
 														values: {
 															create: true,
 															content: "",

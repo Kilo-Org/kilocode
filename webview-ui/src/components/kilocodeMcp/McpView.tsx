@@ -21,6 +21,7 @@ import McpMarketplaceView from "./marketplace/McpMarketplaceView"
 import McpResourceRow from "./McpResourceRow"
 import McpToolRow from "./McpToolRow"
 import DangerButton from "../common/DangerButton"
+import { useAppTranslation } from "../../i18n/TranslationContext"
 
 type McpViewProps = {
 	onDone: () => void
@@ -29,6 +30,7 @@ type McpViewProps = {
 const McpView = ({ onDone }: McpViewProps) => {
 	const { mcpServers: servers } = useExtensionState()
 	const [activeTab, setActiveTab] = useState("marketplace")
+	const { t } = useAppTranslation()
 
 	const handleTabChange = (tab: string) => {
 		setActiveTab(tab)
@@ -98,19 +100,14 @@ const McpView = ({ onDone }: McpViewProps) => {
 									Model Context Protocol
 								</VSCodeLink>{" "}
 								enables communication with locally running MCP servers that provide additional tools and
-								resources to extend Cline's capabilities. You can use{" "}
+								resources to extend Kilo Code's capabilities. You can use{" "}
 								<VSCodeLink
 									href="https://github.com/modelcontextprotocol/servers"
 									style={{ display: "inline" }}>
 									community-made servers
 								</VSCodeLink>{" "}
-								or ask Cline to create new tools specific to your workflow (e.g., "add a tool that gets
-								the latest npm docs").{" "}
-								<VSCodeLink
-									href="https://x.com/sdrzn/status/1867271665086074969"
-									style={{ display: "inline" }}>
-									See a demo here.
-								</VSCodeLink>
+								or ask Kilo Code to create new tools specific to your workflow (e.g., "add a tool that
+								gets the latest npm docs").{" "}
 							</div>
 
 							{servers.length > 0 ? (
@@ -139,30 +136,26 @@ const McpView = ({ onDone }: McpViewProps) => {
 								</div>
 							)}
 
-							{/* Settings Section */}
-							<div style={{ marginBottom: "20px", marginTop: 10 }}>
+							{/* Edit Settings Buttons */}
+							<div style={{ marginTop: "10px", width: "100%", display: "flex", gap: "10px" }}>
 								<VSCodeButton
 									appearance="secondary"
-									style={{ width: "100%", marginBottom: "5px" }}
+									style={{ flex: 1 }}
 									onClick={() => {
 										vscode.postMessage({ type: "openMcpSettings" })
 									}}>
-									<span className="codicon codicon-server" style={{ marginRight: "6px" }}></span>
-									Configure MCP Servers
+									<span className="codicon codicon-edit" style={{ marginRight: "6px" }}></span>
+									{t("mcp:editGlobalMCP")}
 								</VSCodeButton>
-								{/* TODO: what to do with this? */}
-								<div style={{ textAlign: "center" }}>
-									<VSCodeLink
-										onClick={() => {
-											vscode.postMessage({
-												type: "openExtensionSettings",
-												text: "kilo-code.mcp",
-											})
-										}}
-										style={{ fontSize: "12px" }}>
-										Advanced MCP Settings
-									</VSCodeLink>
-								</div>
+								<VSCodeButton
+									appearance="secondary"
+									style={{ flex: 1 }}
+									onClick={() => {
+										vscode.postMessage({ type: "openProjectMcpSettings" })
+									}}>
+									<span className="codicon codicon-edit" style={{ marginRight: "6px" }}></span>
+									{t("mcp:editProjectMCP")}
+								</VSCodeButton>
 							</div>
 						</div>
 					)}

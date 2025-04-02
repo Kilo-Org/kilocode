@@ -2032,7 +2032,8 @@ describe("Project MCP Settings", () => {
 
 		// Verify directory was created
 		expect(fs.mkdir).toHaveBeenCalledWith(
-			expect.stringContaining(".roo"),
+			// kilocode_change
+			expect.stringContaining(".kilocode"),
 			expect.objectContaining({ recursive: true }),
 		)
 
@@ -2075,7 +2076,8 @@ describe("Project MCP Settings", () => {
 
 		// Verify error message was shown
 		expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-			expect.stringContaining("Failed to create or open .roo/mcp.json"),
+			// kilocode_change
+			expect.stringContaining("Failed to create or open .kilocode/mcp.json"),
 		)
 	})
 })

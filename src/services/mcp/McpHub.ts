@@ -386,7 +386,8 @@ export class McpHub {
 		}
 
 		const workspaceFolder = vscode.workspace.workspaceFolders[0]
-		const projectMcpDir = path.join(workspaceFolder.uri.fsPath, ".roo")
+		// kilocode_change
+		const projectMcpDir = path.join(workspaceFolder.uri.fsPath, ".kilocode")
 		const projectMcpPath = path.join(projectMcpDir, "mcp.json")
 
 		try {
