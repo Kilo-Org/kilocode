@@ -378,7 +378,7 @@
 		"useCustomModel": "Utilitzar personalitzat: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "Si teniu qualsevol pregunta o comentari, no dubteu a obrir un issue a <githubLink>github.com/Kilo-Org/kilocode</githubLink> o unir-vos a <redditLink>reddit.com/r/kilocode</redditLink> o <discordLink>discord.gg/fxrhCFGhkP</discordLink>",
+		"feedback": "Si teniu qualsevol pregunta o comentari, no dubteu a obrir un issue a <githubLink>github.com/Kilo-Org/kilocode</githubLink> o unir-vos a <redditLink>reddit.com/r/kilocode</redditLink> o <discordLink>discord.gg/Ja6BkfyTzJ</discordLink>",
 		"version": "Kilo Code v{{version}}",
 		"telemetry": {
 			"label": "Permetre informes anònims d'errors i ús",

@@ -378,7 +378,7 @@
 		"useCustomModel": "Usar personalizado: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "Se tiver alguma dúvida ou feedback, sinta-se à vontade para abrir um problema em <githubLink>github.com/Kilo-Org/kilocode</githubLink> ou juntar-se a <redditLink>reddit.com/r/kilocode</redditLink> ou <discordLink>discord.gg/fxrhCFGhkP</discordLink>",
+		"feedback": "Se tiver alguma dúvida ou feedback, sinta-se à vontade para abrir um problema em <githubLink>github.com/Kilo-Org/kilocode</githubLink> ou juntar-se a <redditLink>reddit.com/r/kilocode</redditLink> ou <discordLink>discord.gg/Ja6BkfyTzJ</discordLink>",
 		"version": "Kilo Code v{{version}}",
 		"telemetry": {
 			"label": "Permitir relatórios anônimos de erros e uso",
