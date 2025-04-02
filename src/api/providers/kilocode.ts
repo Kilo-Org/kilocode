@@ -9,9 +9,9 @@ import { SingleCompletionHandler, getModelParams } from "../index"
 import { OpenRouterHandler } from "./openrouter"
 
 // KiloCodeHandler
-export class KiloCodeHandler extends BaseProvider implements SingleCompletionHandler {
+export class KiloCodeHandler {
 	constructor(options: ApiHandlerOptions) {
-		super()
+		// super()
 		const handler = options.kilocodeProvider || "anthropic"
 		if (handler === "anthropic") {
 			return new KiloCodeAnthropicHandler(options)
