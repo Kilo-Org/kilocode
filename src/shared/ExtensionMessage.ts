@@ -13,6 +13,7 @@ import {
 	ClineMessage,
 } from "../schemas"
 import { McpServer } from "./mcp"
+import { McpMarketplaceCatalog, McpDownloadResponse } from "./kilocode/mcp"
 import { GitCommit } from "../utils/git"
 import { Mode } from "./modes"
 
@@ -68,6 +69,8 @@ export interface ExtensionMessage {
 		| "maxReadFileLine"
 		| "fileSearchResults"
 		| "toggleApiConfigPin"
+		| "mcpMarketplaceCatalog" // kilocode_change
+		| "mcpDownloadDetails" // kilocode_change
 	text?: string
 	action?:
 		| "chatButtonClicked"
@@ -110,6 +113,8 @@ export interface ExtensionMessage {
 		label?: string
 	}>
 	error?: string
+	mcpMarketplaceCatalog?: McpMarketplaceCatalog // kilocode_change
+	mcpDownloadDetails?: McpDownloadResponse // kilocode_change
 }
 
 export type ExtensionState = Pick<

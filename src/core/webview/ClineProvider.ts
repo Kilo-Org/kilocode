@@ -79,6 +79,9 @@ import { getNonce } from "./getNonce"
 import { getUri } from "./getUri"
 import { getWorkspacePath } from "../../utils/path"
 
+import { McpDownloadResponse, McpMarketplaceCatalog } from "../../shared/kilocode/mcp" //kilocode_change
+import { McpServer } from "../../shared/mcp" // kilocode_change
+
 /**
  * https://github.com/microsoft/vscode-webview-ui-toolkit-samples/blob/main/default/weather-webview/src/providers/WeatherViewProvider.ts
  * https://github.com/KumarVariable/vscode-extension-sidebar-html/blob/master/src/customSidebarViewProvider.ts
@@ -621,7 +624,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			"default-src 'none'",
 			`font-src ${webview.cspSource}`,
 			`style-src ${webview.cspSource} 'unsafe-inline' https://* http://${localServerUrl} http://0.0.0.0:${localPort}`,
-			`img-src ${webview.cspSource} data:`,
+			`img-src ${webview.cspSource} data: https://*.googleapis.com`, // kilocode_change: add https://*.googleapis.com
 			`script-src 'unsafe-eval' ${webview.cspSource} https://* https://*.posthog.com http://${localServerUrl} http://0.0.0.0:${localPort} 'nonce-${nonce}'`,
 			`connect-src https://* https://*.posthog.com ws://${localServerUrl} ws://0.0.0.0:${localPort} http://${localServerUrl} http://0.0.0.0:${localPort}`,
 		]
@@ -2070,6 +2073,23 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 							})
 						}
 						break
+
+					case "fetchMcpMarketplace": { // kilocode_change
+						await this.fetchMcpMarketplace(message.bool)
+						break
+					}
+
+					case "downloadMcp": { // kilocode_change
+						if (message.mcpId) {
+							await this.downloadMcp(message.mcpId)
+						}
+						break
+					}
+
+					case "silentlyRefreshMcpMarketplace": { // kilocode_change
+						await this.silentlyRefreshMcpMarketplace()
+						break
+					}
 				}
 			},
 			null,
@@ -2275,7 +2295,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			// macOS: ~/Documents/Kilo-Code/MCP
 			mcpServersDir = path.join(os.homedir(), "Documents", "Kilo-Code", "MCP")
 		} else {
-			// Linux: ~/.local/share/Cline/MCP
+			// Linux: ~/.local/share/Kilo-Code/MCP
 			mcpServersDir = path.join(os.homedir(), ".local", "share", "Kilo-Code", "MCP")
 		}
 
@@ -2849,4 +2869,175 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 	public getMcpHub(): McpHub | undefined {
 		return this.mcpHub
 	}
+
+	// kilocode_change:
+	// MCP Marketplace
+
+	private async fetchMcpMarketplaceFromApi(silent: boolean = false): Promise<McpMarketplaceCatalog | undefined> {
+		try {
+			const response = await axios.get("https://api.cline.bot/v1/mcp/marketplace", {
+				headers: {
+					"Content-Type": "application/json",
+				},
+			})
+
+			if (!response.data) {
+				throw new Error("Invalid response from MCP marketplace API")
+			}
+
+			const catalog: McpMarketplaceCatalog = {
+				items: (response.data || []).map((item: any) => ({
+					...item,
+					githubStars: item.githubStars ?? 0,
+					downloadCount: item.downloadCount ?? 0,
+					tags: item.tags ?? [],
+				})),
+			}
+
+			await this.updateGlobalState("mcpMarketplaceCatalog", catalog)
+			return catalog
+		} catch (error) {
+			console.error("Failed to fetch MCP marketplace:", error)
+			if (!silent) {
+				const errorMessage = error instanceof Error ? error.message : "Failed to fetch MCP marketplace"
+				await this.postMessageToWebview({
+					type: "mcpMarketplaceCatalog",
+					error: errorMessage,
+				})
+				vscode.window.showErrorMessage(errorMessage)
+			}
+			return undefined
+		}
+	}
+
+	async silentlyRefreshMcpMarketplace() {
+		try {
+			const catalog = await this.fetchMcpMarketplaceFromApi(true)
+			if (catalog) {
+				await this.postMessageToWebview({
+					type: "mcpMarketplaceCatalog",
+					mcpMarketplaceCatalog: catalog,
+				})
+			}
+		} catch (error) {
+			console.error("Failed to silently refresh MCP marketplace:", error)
+		}
+	}
+
+	private async fetchMcpMarketplace(forceRefresh: boolean = false) {
+		try {
+			// Check if we have cached data
+			const cachedCatalog = (await this.getGlobalState("mcpMarketplaceCatalog")) as
+				| McpMarketplaceCatalog
+				| undefined
+			if (!forceRefresh && cachedCatalog?.items) {
+				await this.postMessageToWebview({
+					type: "mcpMarketplaceCatalog",
+					mcpMarketplaceCatalog: cachedCatalog,
+				})
+				return
+			}
+
+			const catalog = await this.fetchMcpMarketplaceFromApi(false)
+			if (catalog) {
+				await this.postMessageToWebview({
+					type: "mcpMarketplaceCatalog",
+					mcpMarketplaceCatalog: catalog,
+				})
+			}
+		} catch (error) {
+			console.error("Failed to handle cached MCP marketplace:", error)
+			const errorMessage = error instanceof Error ? error.message : "Failed to handle cached MCP marketplace"
+			await this.postMessageToWebview({
+				type: "mcpMarketplaceCatalog",
+				error: errorMessage,
+			})
+			vscode.window.showErrorMessage(errorMessage)
+		}
+	}
+
+	private async downloadMcp(mcpId: string) {
+		try {
+			// First check if we already have this MCP server installed
+			const servers = this.mcpHub?.getServers() || []
+			const isInstalled = servers.some((server: McpServer) => server.name === mcpId)
+
+			if (isInstalled) {
+				throw new Error("This MCP server is already installed")
+			}
+
+			// Fetch server details from marketplace
+			const response = await axios.post<McpDownloadResponse>(
+				"https://api.cline.bot/v1/mcp/download",
+				{ mcpId },
+				{
+					headers: { "Content-Type": "application/json" },
+					timeout: 10000,
+				},
+			)
+
+			if (!response.data) {
+				throw new Error("Invalid response from MCP marketplace API")
+			}
+
+			console.log("[downloadMcp] Response from download API", { response })
+
+			const mcpDetails = response.data
+
+			// Validate required fields
+			if (!mcpDetails.githubUrl) {
+				throw new Error("Missing GitHub URL in MCP download response")
+			}
+			if (!mcpDetails.readmeContent) {
+				throw new Error("Missing README content in MCP download response")
+			}
+
+			// Send details to webview
+			await this.postMessageToWebview({
+				type: "mcpDownloadDetails",
+				mcpDownloadDetails: mcpDetails,
+			})
+
+			// Create task with context from README and added guidelines for MCP server installation
+			const task = `Set up the MCP server from ${mcpDetails.githubUrl} while adhering to these MCP server installation rules:
+- Use "${mcpDetails.mcpId}" as the server name in ${GlobalFileNames.mcpSettings}.
+- Create the directory for the new MCP server before starting installation.
+- Use commands aligned with the user's shell and operating system best practices.
+- The following README may contain instructions that conflict with the user's OS, in which case proceed thoughtfully.
+- Once installed, demonstrate the server's capabilities by using one of its tools.
+Here is the project's README to help you get started:\n\n${mcpDetails.readmeContent}\n${mcpDetails.llmsInstallationContent}`
+
+			// Initialize task and show chat view
+			await this.initClineWithTask(task)
+			await this.postMessageToWebview({
+				type: "action",
+				action: "chatButtonClicked",
+			})
+		} catch (error) {
+			console.error("Failed to download MCP:", error)
+			let errorMessage = "Failed to download MCP"
+
+			if (axios.isAxiosError(error)) {
+				if (error.code === "ECONNABORTED") {
+					errorMessage = "Request timed out. Please try again."
+				} else if (error.response?.status === 404) {
+					errorMessage = "MCP server not found in marketplace."
+				} else if (error.response?.status === 500) {
+					errorMessage = "Internal server error. Please try again later."
+				} else if (!error.response && error.request) {
+					errorMessage = "Network error. Please check your internet connection."
+				}
+			} else if (error instanceof Error) {
+				errorMessage = error.message
+			}
+
+			// Show error in both notification and marketplace UI
+			vscode.window.showErrorMessage(errorMessage)
+			await this.postMessageToWebview({
+				type: "mcpDownloadDetails",
+				error: errorMessage,
+			})
+		}
+	}
+	// end kilocode_change
 }

@@ -5,6 +5,7 @@
 import { z } from "zod"
 
 import { Equals, Keys, AssertEqual } from "../utils/type-fu"
+import { McpState } from "../shared/kilocode/mcp"
 
 /**
  * ProviderName
@@ -639,7 +640,7 @@ export const GLOBAL_SETTINGS_KEYS = Object.keys(globalSettingsRecord) as Keys<Gl
  * RooCodeSettings
  */
 
-export type RooCodeSettings = GlobalSettings & ProviderSettings
+export type RooCodeSettings = GlobalSettings & ProviderSettings & McpState // kilocode_change: add McpState
 
 /**
  * SecretState

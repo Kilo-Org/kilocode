@@ -1,11 +1,15 @@
-# Enhance your prompt
+# Improve your prompt
 
-  <img src="images/hn-clone-django.gif" width="200" alt="Learn about GitLens Community vs Pro" />
+Click the stars icon to make your prompt clearer and more complete. Kilo Code will rewrite it to get better results.
 
-# Add files/other context to your prompt
+# Add files or folders for context
 
-  <img src="images/context.gif" width="200" alt="Learn about GitLens Community vs Pro" />
+Mention files or folders in your prompt. Kilo Code will use them to better understand and respond to your request.
+
+Click the paperclip in the text area or use @ to add context.
 
 # Add custom modes
 
-  <img src="images/custom_modes.gif" width="200" alt="Learn about GitLens Community vs Pro" />
+Go beyond the default modes by creating your own. Tailor them to your workflow with specific instructions or focus areas.
+
+Click mode switcher in the text area or use / to switch modes.

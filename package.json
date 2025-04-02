@@ -55,13 +55,13 @@
 		"walkthroughs": [
 			{
 				"id": "kiloCodeWalkthrough",
-				"title": "5 things Kilo Code can do for you",
-				"description": "You now have a personal AI code assistant that can do the following:",
+				"title": "5 ways Kilo Code helps you code",
+				"description": "You now have a personal AI coding assistant.",
 				"steps": [
 					{
 						"id": "welcome",
-						"title": "Create code for you",
-						"description": "Example: Ask it to create a Hacker News clone in any language. Watch it generate the code, create the files and run the final version for you.",
+						"title": "Write code for you",
+						"description": "Describe what you want to build. Kilo Code will write it from scratch, generate the files, and run them for you.",
 						"media": {
 							"markdown": "walkthrough/step1.md"
 						}
@@ -69,7 +69,7 @@
 					{
 						"id": "getting-started",
 						"title": "Understand your codebase",
-						"description": "Confused about how a feature works? Just activate 'Ask mode' and ask any questions about your existing files.",
+						"description": "Need clarity on how something works? Ask Kilo Code about any part of your files and get a clear explanation.",
 						"media": {
 							"markdown": "walkthrough/step2.md"
 						},
@@ -79,24 +79,24 @@
 					},
 					{
 						"id": "modes",
-						"title": "Debug code for you",
-						"description": "Kilo Code can automatically analyze your file and make it runnable again.",
+						"title": "Get things working again",
+						"description": "Stuck on an error? Kilo Code can find the issue, fix it, and get your code running.",
 						"media": {
 							"markdown": "walkthrough/step3.md"
 						}
 					},
 					{
 						"id": "code-actions",
-						"title": "Plan your logic before jumping into code",
-						"description": "Kilo Code can be as your software architect, guiding you through a clear structure.",
+						"title": "Plan your logic",
+						"description": "Not sure where to start? Map out your logic and structure before writing a single line of code.",
 						"media": {
 							"markdown": "walkthrough/step4.md"
 						}
 					},
 					{
 						"id": "advanced-features",
-						"title": "...and much more",
-						"description": "Here's a bunch of other cool stuff you can do with Kilo code:",
+						"title": "And more",
+						"description": "Improve your prompt, add context, or create your own custom modes.",
 						"media": {
 							"markdown": "walkthrough/step5.md"
 						}
