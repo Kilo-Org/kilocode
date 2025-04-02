@@ -2074,12 +2074,12 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 						}
 						break
 
-					case "fetchMcpMarketplace": {
+					case "fetchMcpMarketplace": { // kilocode_change
 						await this.fetchMcpMarketplace(message.bool)
 						break
 					}
 
-					case "downloadMcp": {
+					case "downloadMcp": { // kilocode_change
 						if (message.mcpId) {
 							await this.downloadMcp(message.mcpId)
 						}
