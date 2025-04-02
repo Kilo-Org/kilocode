@@ -5,26 +5,46 @@ import { anthropicDefaultModelId, anthropicModels, ApiHandlerOptions, ModelInfo 
 import { ApiStream } from "../transform/stream"
 import { BaseProvider } from "./base-provider"
 import { ANTHROPIC_DEFAULT_MAX_TOKENS } from "./constants"
-import { SingleCompletionHandler, getModelParams } from "../index"
+import { ApiHandler, SingleCompletionHandler, getModelParams } from "../index"
 import { OpenRouterHandler } from "./openrouter"
 
 // KiloCodeHandler
-export class KiloCodeHandler {
+export class KiloCodeHandler extends BaseProvider implements ApiHandler {
+	private handler: ApiHandler
+
 	constructor(options: ApiHandlerOptions) {
-		// super()
-		const handler = options.kilocodeProvider || "anthropic"
-		if (handler === "anthropic") {
-			return new KiloCodeAnthropicHandler(options)
-		} else if (handler === "openrouter") {
+		super()
+		const handlerType = options.kilocodeProvider || "anthropic"
+		if (handlerType === "anthropic") {
+			this.handler = new KiloCodeAnthropicHandler(options)
+		} else if (handlerType === "openrouter") {
 			const openrouterOptions = {
 				...options,
 				openRouterBaseUrl: "https://kilocode.ai/api/openrouter/",
 				openRouterApiKey: options.kilocodeToken,
 			}
 
-			return new OpenRouterHandler(openrouterOptions)
+			this.handler = new OpenRouterHandler(openrouterOptions)
+		} else {
+			throw new Error("Invalid KiloCode provider")
 		}
-		throw new Error("Invalid KiloCode provider")
+	}
+
+	createMessage(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): ApiStream {
+		return this.handler.createMessage(systemPrompt, messages)
+	}
+
+	getModel(): { id: string; info: ModelInfo } {
+		return this.handler.getModel()
+	}
+
+	override countTokens(content: Array<Anthropic.Messages.ContentBlockParam>): Promise<number> {
+		if (this.handler.countTokens) {
+			return this.handler.countTokens(content)
+		} else {
+			// Fallback to the base provider's implementation
+			return super.countTokens(content)
+		}
 	}
 }
 
