@@ -8,8 +8,8 @@ import { ANTHROPIC_DEFAULT_MAX_TOKENS } from "./constants"
 import { ApiHandler, SingleCompletionHandler, getModelParams } from "../index"
 import { OpenRouterHandler } from "./openrouter"
 
-export class KiloCodeHandler extends BaseProvider implements ApiHandler {
-	private handler: ApiHandler
+export class KiloCodeHandler extends BaseProvider implements SingleCompletionHandler {
+	private handler: BaseProvider & SingleCompletionHandler
 
 	constructor(options: ApiHandlerOptions) {
 		super()
@@ -29,8 +29,8 @@ export class KiloCodeHandler extends BaseProvider implements ApiHandler {
 		}
 	}
 
-	createMessage(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): ApiStream {
-		return this.handler.createMessage(systemPrompt, messages)
+	async *createMessage(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): ApiStream {
+		yield* this.handler.createMessage(systemPrompt, messages)
 	}
 
 	getModel(): { id: string; info: ModelInfo } {
@@ -44,6 +44,10 @@ export class KiloCodeHandler extends BaseProvider implements ApiHandler {
 			// Fallback to the base provider's implementation
 			return super.countTokens(content)
 		}
+	}
+
+	async completePrompt(prompt: string) {
+		return this.handler.completePrompt(prompt)
 	}
 }
 
