@@ -1,4 +1,8 @@
 /* Custom codicon classes */
+
+/**
+ * Fixes: https://github.com/microsoft/vscode-codicons/issues/286
+ */
 .codicon-attach::before {
 	content: "";
 	display: inline-block;
