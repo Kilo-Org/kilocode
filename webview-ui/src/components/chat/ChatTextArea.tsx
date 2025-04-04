@@ -1,7 +1,6 @@
 import React, { forwardRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { useEvent } from "react-use"
 import DynamicTextArea from "react-textarea-autosize"
-import { Paperclip } from "lucide-react"
 
 import { mentionRegex, mentionRegexGlobal } from "../../../../src/shared/context-mentions"
 import { WebviewMessage } from "../../../../src/shared/WebviewMessage"
@@ -1090,11 +1089,12 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							isLoading={isEnhancingPrompt}
 							onClick={handleEnhancePrompt}
 						/>
-						<span
-							className={`input-icon-button ${textAreaDisabled ? "disabled" : ""}`}
+						<IconButton
+							iconClass="codicon-attach"
 							title="Add Context (@)"
+							disabled={textAreaDisabled || showContextMenu}
 							onClick={() => {
-								if (textAreaDisabled || !textAreaRef.current || showContextMenu) return
+								if (textAreaDisabled || showContextMenu || !textAreaRef.current) return
 
 								textAreaRef.current.focus()
 
@@ -1104,9 +1104,8 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 								// and set to "File" option by default
 								setSearchQuery("")
 								setSelectedMenuIndex(4)
-							}}>
-							<Paperclip size={16.5} />
-						</span>
+							}}
+						/>
 						<IconButton
 							iconClass="codicon-device-camera"
 							title={t("chat:addImages")}
