@@ -63,6 +63,7 @@ export class KiloCodeAnthropicHandler extends BaseProvider implements SingleComp
 		this.client = new Anthropic({
 			authToken: this.options.kilocodeToken,
 			baseURL: `${this.baseURL}/api/claude/`,
+			apiKey: null, //ignore anthropic apiKey, even if set in env vars - it's not valid for KiloCode anyhow
 		})
 	}
 
