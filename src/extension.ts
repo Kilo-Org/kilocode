@@ -55,7 +55,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	TerminalRegistry.initialize()
 
 	// Get default commands from configuration.
-	const defaultCommands = vscode.workspace.getConfiguration("kiloCode").get<string[]>("allowedCommands") || []
+	const defaultCommands = vscode.workspace.getConfiguration("kilo-code").get<string[]>("allowedCommands") || []
 
 	// Initialize global state if not already set.
 	if (!context.globalState.get("allowedCommands")) {

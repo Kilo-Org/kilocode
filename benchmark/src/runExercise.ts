@@ -67,7 +67,7 @@ export async function run() {
 	})
 
 	await vscode.workspace
-		.getConfiguration("kiloCode")
+		.getConfiguration("kilo-code")
 		.update("allowedCommands", ["*"], vscode.ConfigurationTarget.Global)
 
 	await sleep(2_000)

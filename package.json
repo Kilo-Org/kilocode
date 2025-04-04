@@ -303,7 +303,7 @@
 		"configuration": {
 			"title": "Kilo Code",
 			"properties": {
-				"kiloCode.allowedCommands": {
+				"kilo-code.allowedCommands": {
 					"type": "array",
 					"items": {
 						"type": "string"
@@ -318,7 +318,7 @@
 					],
 					"description": "Commands that can be auto-executed when 'Always approve execute operations' is enabled"
 				},
-				"kiloCode.vsCodeLmModelSelector": {
+				"kilo-code.vsCodeLmModelSelector": {
 					"type": "object",
 					"properties": {
 						"vendor": {
@@ -332,7 +332,7 @@
 					},
 					"description": "Settings for VSCode Language Model API"
 				},
-				"kiloCode.customStoragePath": {
+				"kilo-code.customStoragePath": {
 					"type": "string",
 					"default": "",
 					"description": "Custom storage path. Leave empty to use the default location. Supports absolute paths (e.g. 'D:\\KiloCodeStorage')"

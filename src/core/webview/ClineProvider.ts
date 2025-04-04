@@ -1228,7 +1228,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 						await this.context.globalState.update("allowedCommands", message.commands)
 						// Also update workspace settings
 						await vscode.workspace
-							.getConfiguration("kiloCode")
+							.getConfiguration("kilo-code")
 							.update("allowedCommands", message.commands, vscode.ConfigurationTarget.Global)
 						break
 					case "openMcpSettings": {
