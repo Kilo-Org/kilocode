@@ -277,7 +277,7 @@
 		},
 		"rooignore": {
 			"label": "Show .kilocodeignore'd files in lists and searches",
-			"description": "When enabled, files matching patterns in .kiloignore will be shown in lists with a lock symbol. When disabled, these files will be completely hidden from file lists and searches."
+			"description": "When enabled, files matching patterns in .kilocodeignore will be shown in lists with a lock symbol. When disabled, these files will be completely hidden from file lists and searches."
 		},
 		"maxReadFile": {
 			"label": "File read auto-truncate threshold",
