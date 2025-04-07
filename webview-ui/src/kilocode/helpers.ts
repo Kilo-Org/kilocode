@@ -1,10 +1,11 @@
 import { vscode } from "../utils/vscode"
+import debounce from "debounce"
 
-export function showSystemNotification(message: string) {
+export const showSystemNotification = debounce((message: string) => {
 	vscode.postMessage({
 		type: "showSystemNotification",
 		notificationOptions: {
 			message,
 		},
 	})
-}
+})
