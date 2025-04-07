@@ -130,6 +130,7 @@ export interface WebviewMessage {
 		| "silentlyRefreshMcpMarketplace" // kilocode_change
 		| "fetchLatestMcpServersFromHub" // kilocode_change
 		| "downloadMcp" // kilocode_change
+		| "showSystemNotification" // kilocode_change
 	text?: string
 	disabled?: boolean
 	askResponse?: ClineAskResponse
@@ -139,6 +140,13 @@ export interface WebviewMessage {
 	value?: number
 	commands?: string[]
 	audioType?: AudioType
+	// kilocode_change begin
+	notificationOptions?: {
+		title?: string
+		subtitle?: string
+		message: string
+	}
+	// kilocode_change end
 	serverName?: string
 	toolName?: string
 	alwaysAllow?: boolean

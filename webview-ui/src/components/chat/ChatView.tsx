@@ -32,6 +32,7 @@ import { validateCommand } from "../../utils/command-validation"
 import { getAllModes } from "../../../../src/shared/modes"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import removeMd from "remove-markdown"
+import { showSystemNotification } from "@/kilocode/helpers" // kilocode_change
 
 interface ChatViewProps {
 	isHidden: boolean
@@ -150,6 +151,7 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 						case "tool":
 							if (!isAutoApproved(lastMessage)) {
 								playSound("notification")
+								showSystemNotification("Tool request waiting for approval") // kilocode_change
 							}
 							setTextAreaDisabled(isPartial)
 							setClineAsk("tool")
@@ -175,6 +177,7 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 						case "browser_action_launch":
 							if (!isAutoApproved(lastMessage)) {
 								playSound("notification")
+								showSystemNotification("Browser action waiting for approval") // kilocode_change
 							}
 							setTextAreaDisabled(isPartial)
 							setClineAsk("browser_action_launch")
@@ -185,6 +188,7 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 						case "command":
 							if (!isAutoApproved(lastMessage)) {
 								playSound("notification")
+								showSystemNotification("Command waiting for approval") // kilocode_change
 							}
 							setTextAreaDisabled(isPartial)
 							setClineAsk("command")
