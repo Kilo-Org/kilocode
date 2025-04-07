@@ -236,5 +236,10 @@
 			"scrollUp": "Przewiń w górę",
 			"close": "Zamknij przeglądarkę"
 		}
+	},
+	"notifications": {
+		"toolRequest": "Żądanie narzędzia oczekuje na zatwierdzenie",
+		"browserAction": "Akcja przeglądarki oczekuje na zatwierdzenie",
+		"command": "Polecenie oczekuje na zatwierdzenie"
 	}
 }

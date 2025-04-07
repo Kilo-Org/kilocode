@@ -236,5 +236,10 @@
 			"scrollUp": "Scorri verso l'alto",
 			"close": "Chiudi browser"
 		}
+	},
+	"notifications": {
+		"toolRequest": "Richiesta strumento in attesa di approvazione",
+		"browserAction": "Azione browser in attesa di approvazione",
+		"command": "Comando in attesa di approvazione"
 	}
 }

@@ -236,5 +236,10 @@
 			"scrollUp": "Nach oben scrollen",
 			"close": "Browser schließen"
 		}
+	},
+	"notifications": {
+		"toolRequest": "Tool-Anfrage wartet auf Genehmigung",
+		"browserAction": "Browser-Aktion wartet auf Genehmigung",
+		"command": "Befehl wartet auf Genehmigung"
 	}
 }

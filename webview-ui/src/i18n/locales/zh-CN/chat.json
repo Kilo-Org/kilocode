@@ -236,5 +236,10 @@
 			"scrollUp": "向上滚动",
 			"close": "关闭浏览器"
 		}
+	},
+	"notifications": {
+		"toolRequest": "工具请求等待批准",
+		"browserAction": "浏览器操作等待批准",
+		"command": "命令等待批准"
 	}
 }

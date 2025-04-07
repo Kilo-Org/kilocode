@@ -236,5 +236,10 @@
 			"scrollUp": "上にスクロール",
 			"close": "ブラウザを閉じる"
 		}
+	},
+	"notifications": {
+		"toolRequest": "ツールリクエストが承認待ち",
+		"browserAction": "ブラウザアクションが承認待ち",
+		"command": "コマンドが承認待ち"
 	}
 }

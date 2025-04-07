@@ -151,7 +151,7 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 						case "tool":
 							if (!isAutoApproved(lastMessage)) {
 								playSound("notification")
-								showSystemNotification("Tool request waiting for approval") // kilocode_change
+								showSystemNotification(t("chat:notifications.toolRequest")) // kilocode_change
 							}
 							setTextAreaDisabled(isPartial)
 							setClineAsk("tool")
@@ -177,7 +177,7 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 						case "browser_action_launch":
 							if (!isAutoApproved(lastMessage)) {
 								playSound("notification")
-								showSystemNotification("Browser action waiting for approval") // kilocode_change
+								showSystemNotification(t("chat:notifications.browserAction")) // kilocode_change
 							}
 							setTextAreaDisabled(isPartial)
 							setClineAsk("browser_action_launch")
@@ -188,7 +188,7 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 						case "command":
 							if (!isAutoApproved(lastMessage)) {
 								playSound("notification")
-								showSystemNotification("Command waiting for approval") // kilocode_change
+								showSystemNotification(t("chat:notifications.command")) // kilocode_change
 							}
 							setTextAreaDisabled(isPartial)
 							setClineAsk("command")
