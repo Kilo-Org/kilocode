@@ -227,6 +227,19 @@
 				"command": "kilo-code.setCustomStoragePath",
 				"title": "Set Custom Storage Path",
 				"category": "Kilo Code"
+			},
+			{
+				"command": "kilo-code.focusChatInput",
+				"title": "Focus Chat Input",
+				"category": "Kilo Code"
+			}
+		],
+		"keybindings": [
+			{
+				"command": "kilo-code.focusChatInput",
+				"key": "ctrl+shift+i",
+				"mac": "cmd+shift+i",
+				"when": "editorTextFocus || terminalFocus || viewFocus"
 			}
 		],
 		"menus": {

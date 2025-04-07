@@ -114,6 +114,27 @@ const getCommandsMap = ({ context, outputChannel, provider }: RegisterCommandOpt
 			const { promptForCustomStoragePath } = await import("../shared/storagePathManager")
 			await promptForCustomStoragePath()
 		},
+		// kilocode_change begin
+		"kilo-code.focusChatInput": async () => {
+			let visibleProvider = getVisibleProviderOrLog(outputChannel)
+
+			if (!visibleProvider) {
+				await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
+				await delay(100)
+
+				visibleProvider = getVisibleProviderOrLog(outputChannel)
+
+				// If still no visible provider, try opening in a new tab
+				if (!visibleProvider) {
+					const tabProvider = await openClineInNewTab({ context, outputChannel })
+					await delay(100)
+					visibleProvider = tabProvider
+				}
+			}
+
+			visibleProvider?.postMessageToWebview({ type: "action", action: "focusChatInput" })
+		},
+		// kilocode_change end
 	}
 }
 
