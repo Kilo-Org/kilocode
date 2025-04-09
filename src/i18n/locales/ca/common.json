@@ -1,7 +1,7 @@
 {
 	"input": {
 		"task_prompt": "Què vols que faci Kilo Code?",
-		"task_placeholder": "Escriu la teva tasca aquí"
+		"task_placeholder": "Construeix, cerca, pregunta alguna cosa"
 	},
 	"extension": {
 		"name": "Kilo Code",

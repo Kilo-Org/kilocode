@@ -95,6 +95,6 @@
 	},
 	"input": {
 		"task_prompt": "Was soll Kilo Code tun?",
-		"task_placeholder": "Gib deine Aufgabe hier ein"
+		"task_placeholder": "Erstellen, finden, etwas fragen"
 	}
 }

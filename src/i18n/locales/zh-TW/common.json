@@ -95,6 +95,6 @@
 	},
 	"input": {
 		"task_prompt": "讓Kilo Code做什麼？",
-		"task_placeholder": "在這裡輸入任務"
+		"task_placeholder": "構建、查找、詢問"
 	}
 }

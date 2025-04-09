@@ -95,6 +95,6 @@
 	},
 	"input": {
 		"task_prompt": "让Kilo Code做什么？",
-		"task_placeholder": "在这里输入任务"
+		"task_placeholder": "构建、查找、询问"
 	}
 }

@@ -95,6 +95,6 @@
 	},
 	"input": {
 		"task_prompt": "Kilo Code에게 무엇을 시킬까요?",
-		"task_placeholder": "여기에 작업을 입력하세요"
+		"task_placeholder": "구축, 찾기, 질문하기"
 	}
 }

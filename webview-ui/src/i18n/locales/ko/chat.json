@@ -71,7 +71,7 @@
 	"addImages": "메시지에 이미지 추가",
 	"sendMessage": "메시지 보내기",
 	"typeMessage": "메시지 입력...",
-	"typeTask": "여기에 작업 입력...",
+	"typeTask": "구축, 찾기, 질문하기",
 	"addContext": "컨텍스트 추가는 @, 모드 전환은 /",
 	"dragFiles": "파일을 드래그하려면 shift 키 누르기",
 	"dragFilesImages": "파일/이미지를 드래그하려면 shift 키 누르기",

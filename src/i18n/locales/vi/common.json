@@ -95,6 +95,6 @@
 	},
 	"input": {
 		"task_prompt": "Bạn muốn Kilo Code làm gì?",
-		"task_placeholder": "Nhập nhiệm vụ của bạn ở đây"
+		"task_placeholder": "Xây dựng, tìm kiếm, hỏi điều gì đó"
 	}
 }

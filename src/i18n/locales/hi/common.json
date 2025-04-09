@@ -95,6 +95,6 @@
 	},
 	"input": {
 		"task_prompt": "Kilo Code को क्या करना है?",
-		"task_placeholder": "अपना कार्य यहाँ लिखें"
+		"task_placeholder": "निर्माण करें, खोजें, कुछ पूछें"
 	}
 }

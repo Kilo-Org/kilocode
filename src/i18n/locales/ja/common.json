@@ -95,6 +95,6 @@
 	},
 	"input": {
 		"task_prompt": "Kilo Codeにどんなことをさせますか？",
-		"task_placeholder": "タスクをここに入力してください"
+		"task_placeholder": "構築、検索、質問する"
 	}
 }
