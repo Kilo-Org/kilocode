@@ -895,6 +895,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 									"flex-none flex-grow",
 									"z-[2]",
 									"scrollbar-none",
+									"pb-10", // kilocode_change
 								)}
 								onScroll={() => updateHighlights()}
 							/>
@@ -944,7 +945,16 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					/>
 				)}
 
-				<div className={cn("flex", "justify-between", "items-center", "mt-auto", "pt-0.5")}>
+				<div
+					// kilocode_change start
+					style={{
+						marginTop: "-44px",
+						zIndex: 2,
+						paddingLeft: "10px",
+						paddingRight: "10px",
+					}}
+					// kilocode_change end
+					className={cn("flex", "justify-between", "items-center", "mt-auto", "pt-0.5")}>
 					<div className={cn("flex", "items-center", "gap-1", "min-w-0")}>
 						{/* Mode selector - fixed width */}
 						<div className="shrink-0">
@@ -1086,13 +1096,14 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 								}}
 							/>
 						</div>
-					</div>
 
-					{/* Model display */}
-					<div className="flex items-center mx-2">
-						<span className="text-xs text-vscode-descriptionForeground opacity-70">
-							{selectedProvider}:{selectedModelId}
-						</span>
+						{/* kilocode_change begin: Model display */}
+						<div className="flex items-center mx-2">
+							<span className="text-xs text-vscode-descriptionForeground opacity-70">
+								{selectedProvider}:{selectedModelId}
+							</span>
+						</div>
+						{/* kilocode_change end */}
 					</div>
 
 					{/* Right side - action buttons */}
