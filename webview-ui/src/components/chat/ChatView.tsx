@@ -1235,6 +1235,7 @@ const ChatView = (
 			{!task && (
 				<AutoApproveMenu
 					style={{
+						display: "none", // kilo_code change
 						marginBottom: -2,
 						flex: "0 1 auto", // flex-grow: 0, flex-shrink: 1, flex-basis: auto
 						minHeight: 0,
