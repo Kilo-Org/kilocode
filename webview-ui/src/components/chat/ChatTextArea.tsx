@@ -989,7 +989,8 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 									vscode.postMessage({ type: "mode", text: value })
 								}}
 								shortcutText={modeShortcutText}
-								triggerClassName="w-full"
+								// kilocode_change: add different border and background colors
+								triggerClassName="w-full bg-[#1e1e1e] border-[#333333] hover:bg-[#2d2d2d]"
 							/>
 						</div>
 
@@ -1054,7 +1055,8 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 									}
 								}}
 								contentClassName="max-h-[300px] overflow-y-auto"
-								triggerClassName="w-full text-ellipsis overflow-hidden"
+								// kilocode_change: add different border and background colors
+								triggerClassName="w-full text-ellipsis overflow-hidden bg-[#1e1e1e] border-[#333333] hover:bg-[#2d2d2d]"
 								itemClassName="group"
 								renderItem={({ type, value, label, pinned }) => {
 									if (type !== DropdownOptionType.ITEM) {
