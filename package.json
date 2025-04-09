@@ -118,8 +118,15 @@
 			"activitybar": [
 				{
 					"id": "kilo-code-ActivityBar",
-					"title": "Kilo Code",
-					"icon": "assets/icons/kilo.png"
+					"title": "Kilo Code (⇧⌘I)",
+					"icon": "assets/icons/kilo.png",
+					"when": "isMac"
+				},
+				{
+					"id": "kilo-code-ActivityBar",
+					"title": "Kilo Code (shift-ctrl-I)",
+					"icon": "assets/icons/kilo.png",
+					"when": "!isMac"
 				}
 			]
 		},
