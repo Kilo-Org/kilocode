@@ -727,7 +727,8 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			}
 		})
 
-		const placeholderBottomText = `\n(${t("chat:addContext")}${shouldDisableImages ? `, ${t("chat:dragFiles")}` : `, ${t("chat:dragFilesImages")}`})`
+		// kilocode_change
+		// const placeholderBottomText = `\n(${t("chat:addContext")}${shouldDisableImages ? `, ${t("chat:dragFiles")}` : `, ${t("chat:dragFilesImages")}`})`
 
 		return (
 			<div
@@ -924,7 +925,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 										"ease-in-out",
 										textAreaDisabled ? "opacity-35" : "opacity-70",
 									)}>
-									{placeholderBottomText}
+									{/* kilocode_change {placeholderBottomText} */}
 								</div>
 							)}
 						</div>
