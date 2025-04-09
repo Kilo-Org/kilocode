@@ -1105,6 +1105,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							}}
 						/>
 						<IconButton
+							className="hidden" // kilocode_change
 							iconClass="codicon-device-camera"
 							title={t("chat:addImages")}
 							disabled={shouldDisableImages}
