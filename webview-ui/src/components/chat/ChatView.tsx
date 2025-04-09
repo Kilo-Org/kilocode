@@ -1272,7 +1272,7 @@ const ChatView = (
 							initialTopMostItemIndex={groupedMessages.length - 1}
 						/>
 					</div>
-					<AutoApproveMenu />
+					{/* kilocode_change: hide <AutoApproveMenu /> */}
 					{showScrollToBottom ? (
 						<div
 							style={{
