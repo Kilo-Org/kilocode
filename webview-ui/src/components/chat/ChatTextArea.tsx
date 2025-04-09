@@ -89,9 +89,9 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		}, [listApiConfigMeta, currentApiConfigName])
 
 		// kilocode_change start
-		const modelId = useMemo(() => {
-			const { selectedModelId } = normalizeApiConfiguration(apiConfiguration)
-			return selectedModelId
+		const { selectedModelId, selectedProvider } = useMemo(() => {
+			const { selectedModelId, selectedProvider } = normalizeApiConfiguration(apiConfiguration)
+			return { selectedModelId, selectedProvider }
 		}, [apiConfiguration])
 		// kilocode_change end
 
@@ -1089,7 +1089,9 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 					{/* Model display */}
 					<div className="flex items-center mx-2">
-						<span className="text-xs text-vscode-descriptionForeground opacity-70">{modelId}</span>
+						<span className="text-xs text-vscode-descriptionForeground opacity-70">
+							{selectedProvider}:{selectedModelId}
+						</span>
 					</div>
 
 					{/* Right side - action buttons */}
