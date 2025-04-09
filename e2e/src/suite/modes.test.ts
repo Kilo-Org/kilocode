@@ -1,9 +1,11 @@
 import * as assert from "assert"
 
-import { getCompletion, getMessage, sleep, waitForCompletion, waitUntilAborted } from "./utils"
+import type { ClineMessage } from "../../../src/exports/roo-code"
+
+import { waitUntilCompleted } from "./utils"
 
 suite("Kilo Code Modes", () => {
-	test("Should handle switching modes correctly", async function () {
+	test("Should handle switching modes correctly", async () => {
 		const api = globalThis.api
 
 		/**
@@ -11,34 +13,33 @@ suite("Kilo Code Modes", () => {
 		 */
 
 		const switchModesPrompt =
-			"For each mode (Code, Architect, Ask) respond with the mode name and what it specializes in after switching to that mode. " +
-			"Do not start with the current mode."
+			"For each mode (Architect, Ask, Debug) respond with the mode name and what it specializes in after switching to that mode."
 
-		await api.setConfiguration({ mode: "Code", alwaysAllowModeSwitch: true, autoApprovalEnabled: true })
-		const switchModesTaskId = await api.startNewTask(switchModesPrompt)
-		await waitForCompletion({ api, taskId: switchModesTaskId, timeout: 60_000 })
+		let messages: ClineMessage[] = []
 
-		/**
-		 * Grade the response.
-		 */
+		const modeSwitches: string[] = []
 
-		const gradePrompt =
-			`Given this prompt: ${switchModesPrompt} grade the response from 1 to 10 in the format of "Grade: (1-10)": ` +
-			api
-				.getMessages(switchModesTaskId)
-				.filter(({ type }) => type === "say")
-				.map(({ text }) => text ?? "")
-				.join("\n")
+		api.on("taskModeSwitched", (_taskId, mode) => {
+			console.log("taskModeSwitched", mode)
+			modeSwitches.push(mode)
+		})
 
-		await api.setConfiguration({ mode: "Ask" })
-		const gradeTaskId = await api.startNewTask(gradePrompt)
-		await waitForCompletion({ api, taskId: gradeTaskId, timeout: 60_000 })
+		api.on("message", ({ message }) => {
+			if (message.type === "say" && message.partial === false) {
+				messages.push(message)
+			}
+		})
 
-		const completion = getCompletion({ api, taskId: gradeTaskId })
-		const match = completion?.text?.match(/Grade: (\d+)/)
-		const score = parseInt(match?.[1] ?? "0")
-		assert.ok(score >= 7 && score <= 10, `Grade must be between 7 and 10 - ${completion?.text}`)
+		const switchModesTaskId = await api.startNewTask({
+			configuration: { mode: "code", alwaysAllowModeSwitch: true, autoApprovalEnabled: true },
+			text: switchModesPrompt,
+		})
 
+		await waitUntilCompleted({ api, taskId: switchModesTaskId })
 		await api.cancelCurrentTask()
+
+		assert.ok(modeSwitches.includes("architect"))
+		assert.ok(modeSwitches.includes("ask"))
+		assert.ok(modeSwitches.includes("debug"))
 	})
 })

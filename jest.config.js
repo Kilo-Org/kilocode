@@ -19,6 +19,12 @@ module.exports = {
 		],
 	},
 	testMatch: ["**/__tests__/**/*.test.ts"],
+	// Platform-specific test configuration
+	testPathIgnorePatterns: [
+		// Skip platform-specific tests based on environment
+		...(process.platform === "win32" ? [".*\\.bash\\.test\\.ts$"] : [".*\\.cmd\\.test\\.ts$"]),
+		// PowerShell tests are conditionally skipped in the test files themselves using the setupFilesAfterEnv
+	],
 	moduleNameMapper: {
 		"^vscode$": "<rootDir>/src/__mocks__/vscode.js",
 		"@modelcontextprotocol/sdk$": "<rootDir>/src/__mocks__/@modelcontextprotocol/sdk/index.js",
@@ -31,12 +37,14 @@ module.exports = {
 		"^default-shell$": "<rootDir>/src/__mocks__/default-shell.js",
 		"^os-name$": "<rootDir>/src/__mocks__/os-name.js",
 		"^strip-bom$": "<rootDir>/src/__mocks__/strip-bom.js",
+		"^execa$": "<rootDir>/src/__mocks__/execa.js",
 	},
 	transformIgnorePatterns: [
-		"node_modules/(?!(@modelcontextprotocol|delay|p-wait-for|globby|serialize-error|strip-ansi|default-shell|os-name|strip-bom)/)",
+		"node_modules/(?!(@modelcontextprotocol|delay|p-wait-for|globby|serialize-error|strip-ansi|default-shell|os-name|strip-bom|execa)/)",
 	],
 	roots: ["<rootDir>/src", "<rootDir>/webview-ui/src"],
 	modulePathIgnorePatterns: [".vscode-test"],
 	reporters: [["jest-simple-dot-reporter", {}]],
 	setupFiles: ["<rootDir>/src/__mocks__/jest.setup.ts"],
+	setupFilesAfterEnv: ["<rootDir>/src/integrations/terminal/__tests__/setupTerminalTests.ts"],
 }

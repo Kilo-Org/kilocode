@@ -3,7 +3,7 @@
 	"displayName": "Kilo Code",
 	"description": "A whole dev team of AI agents in your editor.",
 	"publisher": "kilocode",
-	"version": "4.8.0",
+	"version": "4.11.0",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -55,13 +55,13 @@
 		"walkthroughs": [
 			{
 				"id": "kiloCodeWalkthrough",
-				"title": "5 things Kilo Code can do for you",
-				"description": "You now have a personal AI code assistant that can do the following:",
+				"title": "5 ways Kilo Code helps you code",
+				"description": "You now have a personal AI coding assistant.",
 				"steps": [
 					{
 						"id": "welcome",
-						"title": "Create code for you",
-						"description": "Example: Ask it to create a Hacker News clone in any language. Watch it generate the code, create the files and run the final version for you.",
+						"title": "Write code for you",
+						"description": "Describe what you want to build. Kilo Code will write it from scratch, generate the files, and run them for you.",
 						"media": {
 							"markdown": "walkthrough/step1.md"
 						}
@@ -69,7 +69,7 @@
 					{
 						"id": "getting-started",
 						"title": "Understand your codebase",
-						"description": "Confused about how a feature works? Just activate 'Ask mode' and ask any questions about your existing files.",
+						"description": "Need clarity on how something works? Ask Kilo Code about any part of your files and get a clear explanation.",
 						"media": {
 							"markdown": "walkthrough/step2.md"
 						},
@@ -79,24 +79,24 @@
 					},
 					{
 						"id": "modes",
-						"title": "Debug code for you",
-						"description": "Kilo Code can automatically analyze your file and make it runnable again.",
+						"title": "Get things working again",
+						"description": "Stuck on an error? Kilo Code can find the issue, fix it, and get your code running.",
 						"media": {
 							"markdown": "walkthrough/step3.md"
 						}
 					},
 					{
 						"id": "code-actions",
-						"title": "Plan your logic before jumping into code",
-						"description": "Kilo Code can be as your software architect, guiding you through a clear structure.",
+						"title": "Plan your logic",
+						"description": "Not sure where to start? Map out your logic and structure before writing a single line of code.",
 						"media": {
 							"markdown": "walkthrough/step4.md"
 						}
 					},
 					{
 						"id": "advanced-features",
-						"title": "...and much more",
-						"description": "Here's a bunch of other cool stuff you can do with Kilo code:",
+						"title": "And more",
+						"description": "Improve your prompt, add context, or create your own custom modes.",
 						"media": {
 							"markdown": "walkthrough/step5.md"
 						}
@@ -118,8 +118,15 @@
 			"activitybar": [
 				{
 					"id": "kilo-code-ActivityBar",
-					"title": "Kilo Code",
-					"icon": "assets/icons/kilo.png"
+					"title": "Kilo Code (⇧⌘I)",
+					"icon": "assets/icons/kilo.png",
+					"when": "isMac"
+				},
+				{
+					"id": "kilo-code-ActivityBar",
+					"title": "Kilo Code (shift-ctrl-I)",
+					"icon": "assets/icons/kilo.png",
+					"when": "!isMac"
 				}
 			]
 		},
@@ -227,6 +234,19 @@
 				"command": "kilo-code.setCustomStoragePath",
 				"title": "Set Custom Storage Path",
 				"category": "Kilo Code"
+			},
+			{
+				"command": "kilo-code.focusChatInput",
+				"title": "Focus Chat Input",
+				"category": "Kilo Code"
+			}
+		],
+		"keybindings": [
+			{
+				"command": "kilo-code.focusChatInput",
+				"key": "ctrl+shift+i",
+				"mac": "cmd+shift+i",
+				"when": "editorTextFocus || terminalFocus || viewFocus"
 			}
 		],
 		"menus": {
@@ -298,12 +318,49 @@
 					"group": "navigation@6",
 					"when": "false && view == kilo-code.SidebarProvider"
 				}
+			],
+			"editor/title": [
+				{
+					"command": "kilo-code.plusButtonClicked",
+					"group": "navigation@1",
+					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
+				},
+				{
+					"command": "kilo-code.promptsButtonClicked",
+					"group": "navigation@2",
+					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
+				},
+				{
+					"command": "kilo-code.mcpButtonClicked",
+					"group": "navigation@3",
+					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
+				},
+				{
+					"command": "kilo-code.historyButtonClicked",
+					"group": "navigation@4",
+					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
+				},
+				{
+					"command": "kilo-code.popoutButtonClicked",
+					"group": "navigation@5",
+					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
+				},
+				{
+					"command": "kilo-code.settingsButtonClicked",
+					"group": "navigation@6",
+					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
+				},
+				{
+					"command": "kilo-code.helpButtonClicked",
+					"group": "navigation@7",
+					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
+				}
 			]
 		},
 		"configuration": {
 			"title": "Kilo Code",
 			"properties": {
-				"kiloCode.allowedCommands": {
+				"kilo-code.allowedCommands": {
 					"type": "array",
 					"items": {
 						"type": "string"
@@ -318,7 +375,7 @@
 					],
 					"description": "Commands that can be auto-executed when 'Always approve execute operations' is enabled"
 				},
-				"kiloCode.vsCodeLmModelSelector": {
+				"kilo-code.vsCodeLmModelSelector": {
 					"type": "object",
 					"properties": {
 						"vendor": {
@@ -332,7 +389,7 @@
 					},
 					"description": "Settings for VSCode Language Model API"
 				},
-				"kiloCode.customStoragePath": {
+				"kilo-code.customStoragePath": {
 					"type": "string",
 					"default": "",
 					"description": "Custom storage path. Leave empty to use the default location. Supports absolute paths (e.g. 'D:\\KiloCodeStorage')"
@@ -345,26 +402,22 @@
 		"build:webview": "cd webview-ui && npm run build",
 		"build:esbuild": "node esbuild.js --production",
 		"compile": "tsc -p . --outDir out && node esbuild.js",
-		"install:all": "npm install npm-run-all && npm run install:_all",
-		"install:_all": "npm-run-all -p install-*",
+		"install:all": "npm install npm-run-all && npm-run-all -l -p install-*",
 		"install-extension": "npm install",
 		"install-webview": "cd webview-ui && npm install",
 		"install-e2e": "cd e2e && npm install",
-		"install-benchmark": "cd benchmark && npm install",
-		"lint": "npm-run-all -p lint:*",
+		"lint": "npm-run-all -l -p lint:*",
 		"lint:extension": "eslint src --ext ts",
 		"lint:webview": "cd webview-ui && npm run lint",
 		"lint:e2e": "cd e2e && npm run lint",
-		"lint:benchmark": "cd benchmark && npm run lint",
-		"check-types": "npm-run-all -p check-types:*",
+		"check-types": "npm-run-all -l -p check-types:*",
 		"check-types:extension": "tsc --noEmit",
 		"check-types:webview": "cd webview-ui && npm run check-types",
 		"check-types:e2e": "cd e2e && npm run check-types",
-		"check-types:benchmark": "cd benchmark && npm run check-types",
-		"package": "npm-run-all -p build:webview build:esbuild check-types lint",
+		"package": "npm-run-all -l -p build:webview build:esbuild check-types lint",
 		"pretest": "npm run compile",
 		"dev": "cd webview-ui && npm run dev",
-		"test": "npm-run-all -p test:*",
+		"test": "node scripts/run-tests.js",
 		"test:extension": "jest",
 		"test:webview": "cd webview-ui && npm run test",
 		"prepare": "husky",
@@ -373,17 +426,19 @@
 		"version-packages": "changeset version && npm install --package-lock-only",
 		"vscode:prepublish": "npm run package",
 		"vsix": "rimraf bin && mkdirp bin && npx vsce package --out bin",
-		"watch": "npm-run-all -p watch:*",
+		"watch": "npm-run-all -l -p watch:*",
 		"watch:esbuild": "node esbuild.js --watch",
 		"watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
 		"watch-tests": "tsc -p . -w --outDir out",
 		"changeset": "changeset",
 		"knip": "knip --include files",
-		"clean": "npm-run-all -p clean:*",
+		"clean": "npm-run-all -l -p clean:*",
 		"clean:extension": "rimraf bin dist out",
 		"clean:webview": "cd webview-ui && npm run clean",
 		"clean:e2e": "cd e2e && npm run clean",
-		"clean:benchmark": "cd benchmark && npm run clean",
+		"vscode-test": "npm-run-all -l -p vscode-test:*",
+		"vscode-test:extension": "tsc -p . --outDir out && node esbuild.js",
+		"vscode-test:webview": "cd webview-ui && npm run build",
 		"update-contributors": "node scripts/update-contributors.js",
 		"generate-types": "tsx scripts/generate-types.mts"
 	},
@@ -391,7 +446,7 @@
 		"@anthropic-ai/bedrock-sdk": "^0.10.2",
 		"@anthropic-ai/sdk": "^0.37.0",
 		"@anthropic-ai/vertex-sdk": "^0.7.0",
-		"@aws-sdk/client-bedrock-runtime": "^3.706.0",
+		"@aws-sdk/client-bedrock-runtime": "^3.779.0",
 		"@google-cloud/vertexai": "^1.9.3",
 		"@google/generative-ai": "^0.18.0",
 		"@mistralai/mistralai": "^1.3.6",
@@ -421,6 +476,7 @@
 		"js-tiktoken": "^1.0.19",
 		"mammoth": "^1.8.0",
 		"monaco-vscode-textmate-theme-converter": "^0.1.7",
+		"node-ipc": "^12.0.0",
 		"openai": "^4.78.1",
 		"os-name": "^6.0.0",
 		"p-wait-for": "^5.0.2",
@@ -454,9 +510,11 @@
 		"@types/glob": "^8.1.0",
 		"@types/jest": "^29.5.14",
 		"@types/node": "20.x",
+		"@types/node-ipc": "^9.2.3",
 		"@types/string-similarity": "^4.0.2",
 		"@typescript-eslint/eslint-plugin": "^7.14.1",
 		"@typescript-eslint/parser": "^7.11.0",
+		"@vscode/vsce": "^3.3.2",
 		"esbuild": "^0.24.0",
 		"eslint": "^8.57.0",
 		"execa": "^9.5.2",

@@ -132,6 +132,9 @@
 		"awsSessionToken": "AWS Sitzungstoken",
 		"awsRegion": "AWS Region",
 		"awsCrossRegion": "Regionsübergreifende Inferenz verwenden",
+		"enablePromptCaching": "Prompt-Caching aktivieren",
+		"enablePromptCachingTitle": "Prompt-Caching aktivieren, um die Leistung zu verbessern und Kosten für unterstützte Modelle zu reduzieren.",
+		"cacheUsageNote": "Hinweis: Wenn Sie keine Cache-Nutzung sehen, versuchen Sie ein anderes Modell auszuwählen und dann Ihr gewünschtes Modell erneut auszuwählen.",
 		"vscodeLmModel": "Sprachmodell",
 		"vscodeLmWarning": "Hinweis: Dies ist eine sehr experimentelle Integration und die Anbieterunterstützung variiert. Wenn Sie einen Fehler über ein nicht unterstütztes Modell erhalten, liegt das Problem auf Anbieterseite.",
 		"googleCloudSetup": {
@@ -378,7 +381,7 @@
 		"useCustomModel": "Benutzerdefiniert verwenden: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "Wenn du Fragen oder Feedback hast, kannst du gerne ein Issue auf <githubLink>github.com/Kilo-Org/kilocode</githubLink> öffnen oder <redditLink>reddit.com/r/kilocode</redditLink> oder <discordLink>discord.gg/fxrhCFGhkP</discordLink> beitreten",
+		"feedback": "Wenn du Fragen oder Feedback hast, kannst du gerne ein Issue auf <githubLink>github.com/Kilo-Org/kilocode</githubLink> öffnen oder <redditLink>reddit.com/r/kilocode</redditLink> oder <discordLink>discord.gg/Ja6BkfyTzJ</discordLink> beitreten",
 		"version": "Kilo Code v{{version}}",
 		"telemetry": {
 			"label": "Anonyme Fehler- und Nutzungsberichte zulassen",

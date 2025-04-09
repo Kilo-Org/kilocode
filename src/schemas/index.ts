@@ -5,6 +5,7 @@
 import { z } from "zod"
 
 import { Equals, Keys, AssertEqual } from "../utils/type-fu"
+import { McpState } from "../shared/kilocode/mcp"
 
 /**
  * ProviderName
@@ -115,6 +116,9 @@ export const modelInfoSchema = z.object({
 	description: z.string().optional(),
 	reasoningEffort: z.enum(["low", "medium", "high"]).optional(),
 	thinking: z.boolean().optional(),
+	minTokensPerCachePoint: z.number().optional(),
+	maxCachePoints: z.number().optional(),
+	cachableFields: z.array(z.string()).optional(),
 })
 
 export type ModelInfo = z.infer<typeof modelInfoSchema>
@@ -277,12 +281,7 @@ export type CustomSupportPrompts = z.infer<typeof customSupportPromptsSchema>
  * ExperimentId
  */
 
-export const experimentIds = [
-	"search_and_replace",
-	"experimentalDiffStrategy",
-	"insert_content",
-	"powerSteering",
-] as const
+export const experimentIds = ["search_and_replace", "insert_content", "powerSteering"] as const
 
 export const experimentIdsSchema = z.enum(experimentIds)
 
@@ -294,7 +293,6 @@ export type ExperimentId = z.infer<typeof experimentIdsSchema>
 
 const experimentsSchema = z.object({
 	search_and_replace: z.boolean(),
-	experimentalDiffStrategy: z.boolean(),
 	insert_content: z.boolean(),
 	powerSteering: z.boolean(),
 })
@@ -395,6 +393,7 @@ export const providerSettingsSchema = z.object({
 	fakeAi: z.unknown().optional(),
 	// kilocode_change
 	kilocodeToken: z.string().optional(),
+	kilocodeProvider: z.string().optional(),
 	fireworksModelId: z.string().optional(),
 	fireworksApiKey: z.string().optional(),
 })
@@ -482,6 +481,7 @@ const providerSettingsRecord: ProviderSettingsRecord = {
 	// Fake AI
 	fakeAi: undefined,
 	// kilocode_change
+	kilocodeProvider: undefined,
 	kilocodeToken: undefined,
 	fireworksModelId: undefined,
 	fireworksApiKey: undefined,
@@ -637,7 +637,9 @@ export const GLOBAL_SETTINGS_KEYS = Object.keys(globalSettingsRecord) as Keys<Gl
  * RooCodeSettings
  */
 
-export type RooCodeSettings = GlobalSettings & ProviderSettings
+export const rooCodeSettingsSchema = providerSettingsSchema.merge(globalSettingsSchema)
+
+export type RooCodeSettings = GlobalSettings & ProviderSettings & McpState // kilocode_change: add McpState
 
 /**
  * SecretState
@@ -803,6 +805,46 @@ export const tokenUsageSchema = z.object({
 export type TokenUsage = z.infer<typeof tokenUsageSchema>
 
 /**
+ * RooCodeEvent
+ */
+
+export enum RooCodeEventName {
+	Message = "message",
+	TaskCreated = "taskCreated",
+	TaskStarted = "taskStarted",
+	TaskModeSwitched = "taskModeSwitched",
+	TaskPaused = "taskPaused",
+	TaskUnpaused = "taskUnpaused",
+	TaskAskResponded = "taskAskResponded",
+	TaskAborted = "taskAborted",
+	TaskSpawned = "taskSpawned",
+	TaskCompleted = "taskCompleted",
+	TaskTokenUsageUpdated = "taskTokenUsageUpdated",
+}
+
+export const rooCodeEventsSchema = z.object({
+	[RooCodeEventName.Message]: z.tuple([
+		z.object({
+			taskId: z.string(),
+			action: z.union([z.literal("created"), z.literal("updated")]),
+			message: clineMessageSchema,
+		}),
+	]),
+	[RooCodeEventName.TaskCreated]: z.tuple([z.string()]),
+	[RooCodeEventName.TaskStarted]: z.tuple([z.string()]),
+	[RooCodeEventName.TaskModeSwitched]: z.tuple([z.string(), z.string()]),
+	[RooCodeEventName.TaskPaused]: z.tuple([z.string()]),
+	[RooCodeEventName.TaskUnpaused]: z.tuple([z.string()]),
+	[RooCodeEventName.TaskAskResponded]: z.tuple([z.string()]),
+	[RooCodeEventName.TaskAborted]: z.tuple([z.string()]),
+	[RooCodeEventName.TaskSpawned]: z.tuple([z.string(), z.string()]),
+	[RooCodeEventName.TaskCompleted]: z.tuple([z.string(), tokenUsageSchema]),
+	[RooCodeEventName.TaskTokenUsageUpdated]: z.tuple([z.string(), tokenUsageSchema]),
+})
+
+export type RooCodeEvents = z.infer<typeof rooCodeEventsSchema>
+
+/**
  * TypeDefinition
  */
 
@@ -816,6 +858,7 @@ export const typeDefinitions: TypeDefinition[] = [
 	{ schema: globalSettingsSchema, identifier: "GlobalSettings" },
 	{ schema: clineMessageSchema, identifier: "ClineMessage" },
 	{ schema: tokenUsageSchema, identifier: "TokenUsage" },
+	{ schema: rooCodeEventsSchema, identifier: "RooCodeEvents" },
 ]
 
 // Also export as default for ESM compatibility

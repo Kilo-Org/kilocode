@@ -21,13 +21,13 @@ const BottomControls: React.FC = () => {
 			{/* Left group */}
 			<div className="flex items-center gap-1">
 				<button
-					className="vscode-button flex items-center gap-1.5 p-0.75 rounded-sm text-vscode-button-secondaryForeground cursor-pointer hover:bg-vscode-button-secondaryHoverBackground"
+					className="vscode-button flex items-center gap-1.5 p-0.75 rounded-sm text-vscode-foreground cursor-pointer hover:bg-vscode-list-hoverBackground"
 					title={t("chat:startNewTask.title")}
 					onClick={startNewTask}>
 					<span className="codicon codicon-add text-sm"></span>
 				</button>
 				<button
-					className="vscode-button flex items-center gap-1.5 p-0.75 rounded-sm text-vscode-button-secondaryForeground cursor-pointer hover:bg-vscode-button-secondaryHoverBackground"
+					className="vscode-button flex items-center gap-1.5 p-0.75 rounded-sm text-vscode-foreground cursor-pointer hover:bg-vscode-list-hoverBackground"
 					title={t("chat:history.title")}
 					onClick={() => window.postMessage({ type: "action", action: "historyButtonClicked" }, "*")}>
 					<span className="codicon codicon-history text-sm"></span>
@@ -36,7 +36,7 @@ const BottomControls: React.FC = () => {
 			{/* Right group */}
 			<div className="flex items-center">
 				<button
-					className="vscode-button flex items-center gap-1.5 p-0.75 rounded-sm text-vscode-button-secondaryForeground cursor-pointer hover:bg-vscode-button-secondaryHoverBackground"
+					className="vscode-button flex items-center gap-1.5 p-0.75 rounded-sm text-vscode-foreground cursor-pointer hover:bg-vscode-list-hoverBackground"
 					title={t("common:feedback.title")}
 					onClick={showFeedbackOptions}>
 					<span className="codicon codicon-feedback text-sm"></span>

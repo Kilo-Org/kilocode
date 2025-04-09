@@ -55,7 +55,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	TerminalRegistry.initialize()
 
 	// Get default commands from configuration.
-	const defaultCommands = vscode.workspace.getConfiguration("kiloCode").get<string[]>("allowedCommands") || []
+	const defaultCommands = vscode.workspace.getConfiguration("kilo-code").get<string[]>("allowedCommands") || []
 
 	// Initialize global state if not already set.
 	if (!context.globalState.get("allowedCommands")) {
@@ -132,7 +132,9 @@ export async function activate(context: vscode.ExtensionContext) {
 	vscode.commands.executeCommand("kilo-code.activationCompleted")
 
 	// Implements the `RooCodeAPI` interface.
-	return new API(outputChannel, provider)
+	const socketPath = process.env.ROO_CODE_IPC_SOCKET_PATH
+	const enableLogging = typeof socketPath === "string"
+	return new API(outputChannel, provider, socketPath, enableLogging)
 }
 
 // This method is called when your extension is deactivated

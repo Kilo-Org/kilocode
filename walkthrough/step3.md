@@ -1,5 +1,7 @@
-# How to get started
+# Debug mode
 
-  <img src="images/unknown_error_stripe_rb.png" alt="Learn about GitLens Community vs Pro" />
+  <img src="images/unknown_error_stripe_rb.png" alt="Fixing an Unknown Error" />
 
-Switch to "Debug" mode and simply ask a question. Kilo Code will analyze your the file (or files), modify them for you, and help you get up and running again.
+Running into errors? Switch to Debug mode and describe the problem. Kilo Code will analyze the code, find the issue, and apply a fix.
+
+You can paste error messages or point to a file. Kilo Code will take it from there.

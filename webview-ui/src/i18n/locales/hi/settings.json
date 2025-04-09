@@ -132,6 +132,9 @@
 		"awsSessionToken": "AWS सत्र टोकन",
 		"awsRegion": "AWS क्षेत्र",
 		"awsCrossRegion": "क्रॉस-क्षेत्र अनुमान का उपयोग करें",
+		"enablePromptCaching": "प्रॉम्प्ट कैशिंग सक्षम करें",
+		"enablePromptCachingTitle": "समर्थित मॉडल के लिए प्रदर्शन में सुधार और लागत को कम करने के लिए प्रॉम्प्ट कैशिंग सक्षम करें।",
+		"cacheUsageNote": "नोट: यदि आप कैश उपयोग नहीं देखते हैं, तो एक अलग मॉडल चुनने का प्रयास करें और फिर अपने वांछित मॉडल को पुनः चुनें।",
 		"vscodeLmModel": "भाषा मॉडल",
 		"vscodeLmWarning": "नोट: यह एक बहुत ही प्रायोगिक एकीकरण है और प्रदाता समर्थन भिन्न होगा। यदि आपको किसी मॉडल के समर्थित न होने की त्रुटि मिलती है, तो यह प्रदाता की ओर से एक समस्या है।",
 		"googleCloudSetup": {
@@ -378,7 +381,7 @@
 		"useCustomModel": "कस्टम उपयोग करें: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "यदि आपके कोई प्रश्न या प्रतिक्रिया है, तो <githubLink>github.com/Kilo-Org/kilocode</githubLink> पर एक मुद्दा खोलने या <redditLink>reddit.com/r/kilocode</redditLink> या <discordLink>discord.gg/fxrhCFGhkP</discordLink> में शामिल होने में संकोच न करें",
+		"feedback": "यदि आपके कोई प्रश्न या प्रतिक्रिया है, तो <githubLink>github.com/Kilo-Org/kilocode</githubLink> पर एक मुद्दा खोलने या <redditLink>reddit.com/r/kilocode</redditLink> या <discordLink>discord.gg/Ja6BkfyTzJ</discordLink> में शामिल होने में संकोच न करें",
 		"version": "Kilo Code v{{version}}",
 		"telemetry": {
 			"label": "गुमनाम त्रुटि और उपयोग रिपोर्टिंग की अनुमति दें",

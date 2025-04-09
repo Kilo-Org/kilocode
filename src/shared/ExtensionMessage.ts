@@ -13,6 +13,7 @@ import {
 	ClineMessage,
 } from "../schemas"
 import { McpServer } from "./mcp"
+import { McpMarketplaceCatalog, McpDownloadResponse } from "./kilocode/mcp"
 import { GitCommit } from "../utils/git"
 import { Mode } from "./modes"
 
@@ -68,6 +69,8 @@ export interface ExtensionMessage {
 		| "maxReadFileLine"
 		| "fileSearchResults"
 		| "toggleApiConfigPin"
+		| "mcpMarketplaceCatalog" // kilocode_change
+		| "mcpDownloadDetails" // kilocode_change
 	text?: string
 	action?:
 		| "chatButtonClicked"
@@ -76,6 +79,7 @@ export interface ExtensionMessage {
 		| "historyButtonClicked"
 		| "promptsButtonClicked"
 		| "didBecomeVisible"
+		| "focusChatInput" // kilocode_change
 	invoke?: "newChat" | "sendMessage" | "primaryButtonClick" | "secondaryButtonClick" | "setChatBoxMessage"
 	state?: ExtensionState
 	images?: string[]
@@ -110,6 +114,8 @@ export interface ExtensionMessage {
 		label?: string
 	}>
 	error?: string
+	mcpMarketplaceCatalog?: McpMarketplaceCatalog // kilocode_change
+	mcpDownloadDetails?: McpDownloadResponse // kilocode_change
 }
 
 export type ExtensionState = Pick<
@@ -167,7 +173,6 @@ export type ExtensionState = Pick<
 	| "enhancementApiConfigId"
 > & {
 	version: string
-	osInfo: string
 	clineMessages: ClineMessage[]
 	currentTaskItem?: HistoryItem
 	apiConfiguration?: ApiConfiguration

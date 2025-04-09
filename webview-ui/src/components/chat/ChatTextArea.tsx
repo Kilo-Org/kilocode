@@ -1,7 +1,6 @@
 import React, { forwardRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { useEvent } from "react-use"
 import DynamicTextArea from "react-textarea-autosize"
-import { Paperclip } from "lucide-react"
 
 import { mentionRegex, mentionRegexGlobal } from "../../../../src/shared/context-mentions"
 import { WebviewMessage } from "../../../../src/shared/WebviewMessage"
@@ -33,6 +32,7 @@ interface ChatTextAreaProps {
 	inputValue: string
 	setInputValue: (value: string) => void
 	textAreaDisabled: boolean
+	selectApiConfigDisabled: boolean
 	placeholderText: string
 	selectedImages: string[]
 	setSelectedImages: React.Dispatch<React.SetStateAction<string[]>>
@@ -51,6 +51,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			inputValue,
 			setInputValue,
 			textAreaDisabled,
+			selectApiConfigDisabled,
 			placeholderText,
 			selectedImages,
 			setSelectedImages,
@@ -72,7 +73,6 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			listApiConfigMeta,
 			customModes,
 			cwd,
-			osInfo,
 			pinnedApiConfigs,
 			togglePinnedApiConfig,
 		} = useExtensionState()
@@ -189,7 +189,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					.filter((tab) => tab.path)
 					.map((tab) => ({
 						type: ContextMenuOptionType.OpenedFile,
-						value: tab.path,
+						value: "/" + tab.path,
 					})),
 				...filePaths
 					.map((file) => "/" + file)
@@ -309,7 +309,6 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 								queryItems,
 								fileSearchResults,
 								getAllModes(customModes),
-								osInfo,
 							)
 							const optionsLength = options.length
 
@@ -346,7 +345,6 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							queryItems,
 							fileSearchResults,
 							getAllModes(customModes),
-							osInfo,
 						)[selectedMenuIndex]
 						if (
 							selectedOption &&
@@ -402,20 +400,19 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				}
 			},
 			[
-				showContextMenu,
-				selectedMenuIndex,
-				searchQuery,
-				selectedType,
-				queryItems,
-				fileSearchResults,
-				customModes,
-				osInfo,
-				handleMentionSelect,
 				onSend,
+				showContextMenu,
+				searchQuery,
+				selectedMenuIndex,
+				handleMentionSelect,
+				selectedType,
 				inputValue,
 				cursorPosition,
-				justDeletedSpaceAfterMention,
 				setInputValue,
+				justDeletedSpaceAfterMention,
+				queryItems,
+				customModes,
+				fileSearchResults,
 			],
 		)
 
@@ -629,7 +626,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						for (let i = 0; i < lines.length; i++) {
 							const line = lines[i]
 							// Convert each path to a mention-friendly format
-							const mentionText = convertToMentionPath(line, cwd, osInfo)
+							const mentionText = convertToMentionPath(line, cwd)
 							newValue += mentionText
 							totalLength += mentionText.length
 
@@ -696,15 +693,16 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				}
 			},
 			[
-				textAreaDisabled,
-				inputValue,
 				cursorPosition,
-				setInputValue,
 				cwd,
-				osInfo,
+				inputValue,
+				setInputValue,
+				setCursorPosition,
+				setIntendedCursorPosition,
+				textAreaDisabled,
 				shouldDisableImages,
-				t,
 				setSelectedImages,
+				t,
 			],
 		)
 
@@ -790,7 +788,6 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 									modes={getAllModes(customModes)}
 									loading={searchLoading}
 									dynamicSearchResults={fileSearchResults}
-									os={osInfo}
 								/>
 							</div>
 						)}
@@ -980,7 +977,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						<div className={cn("flex-1", "min-w-0", "overflow-hidden")}>
 							<SelectDropdown
 								value={currentConfigId}
-								disabled={textAreaDisabled}
+								disabled={selectApiConfigDisabled}
 								title={t("chat:selectApiConfig")}
 								placeholder={displayName} // Always show the current name
 								options={[
@@ -1090,11 +1087,12 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							isLoading={isEnhancingPrompt}
 							onClick={handleEnhancePrompt}
 						/>
-						<span
-							className={`input-icon-button ${textAreaDisabled ? "disabled" : ""}`}
+						<IconButton
+							iconClass="codicon-attach"
 							title="Add Context (@)"
+							disabled={textAreaDisabled || showContextMenu}
 							onClick={() => {
-								if (textAreaDisabled || !textAreaRef.current || showContextMenu) return
+								if (textAreaDisabled || showContextMenu || !textAreaRef.current) return
 
 								textAreaRef.current.focus()
 
@@ -1104,9 +1102,8 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 								// and set to "File" option by default
 								setSearchQuery("")
 								setSelectedMenuIndex(4)
-							}}>
-							<Paperclip size={16.5} />
-						</span>
+							}}
+						/>
 						<IconButton
 							iconClass="codicon-device-camera"
 							title={t("chat:addImages")}

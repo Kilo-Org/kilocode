@@ -1,5 +1,7 @@
-# How to get started
+# Architect mode
 
-  <img src="images/design_patterns.png" alt="Learn about GitLens Community vs Pro" />
+<img src="images/design_patterns.png" alt="design patterns" />
 
-Switch to 'Architect' mode and ask any software architecture question about any part of your project's codebase.
+Need to plan before writing code? Switch to Architect mode and ask high-level questions about structure, patterns, or logic.
+
+Use it to break down features, map out components, or design how everything should work before diving in.

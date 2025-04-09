@@ -6,6 +6,7 @@ import { vscode } from "../utils/vscode"
 import { convertTextMateToHljs } from "../utils/textMateToHljs"
 import { findLastIndex } from "../../../src/shared/array"
 import { McpServer } from "../../../src/shared/mcp"
+import { McpMarketplaceCatalog } from "../../../src/shared/kilocode/mcp"
 import { checkExistKey } from "../../../src/shared/checkExistApiConfig"
 import { Mode, CustomModePrompts, defaultModeSlug, defaultPrompts, ModeConfig } from "../../../src/shared/modes"
 import { CustomSupportPrompts } from "../../../src/shared/support-prompt"
@@ -16,6 +17,7 @@ export interface ExtensionStateContextType extends ExtensionState {
 	showWelcome: boolean
 	theme: any
 	mcpServers: McpServer[]
+	mcpMarketplaceCatalog: McpMarketplaceCatalog // kilocode_change
 	currentCheckpoint?: string
 	filePaths: string[]
 	openedTabs: Array<{ label: string; isActive: boolean; path?: string }>
@@ -76,6 +78,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setMaxWorkspaceFiles: (value: number) => void
 	remoteBrowserEnabled?: boolean
 	setRemoteBrowserEnabled: (value: boolean) => void
+	awsUsePromptCache?: boolean
+	setAwsUsePromptCache: (value: boolean) => void
 	maxReadFileLine: number
 	setMaxReadFileLine: (value: number) => void
 	machineId?: string
@@ -116,7 +120,6 @@ export const mergeExtensionState = (prevState: ExtensionState, newState: Extensi
 export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 	const [state, setState] = useState<ExtensionState>({
 		version: "",
-		osInfo: "",
 		clineMessages: [],
 		taskHistory: [],
 		shouldShowAnnouncement: false,
@@ -172,6 +175,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 	const [openedTabs, setOpenedTabs] = useState<Array<{ label: string; isActive: boolean; path?: string }>>([])
 
 	const [mcpServers, setMcpServers] = useState<McpServer[]>([])
+	const [mcpMarketplaceCatalog, setMcpMarketplaceCatalog] = useState<McpMarketplaceCatalog>({ items: [] }) // kilocode_change
 	const [currentCheckpoint, setCurrentCheckpoint] = useState<string>()
 
 	const setListApiConfigMeta = useCallback(
@@ -221,6 +225,14 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 					setMcpServers(message.mcpServers ?? [])
 					break
 				}
+				// kilocode_change
+				case "mcpMarketplaceCatalog": {
+					if (message.mcpMarketplaceCatalog) {
+						setMcpMarketplaceCatalog(message.mcpMarketplaceCatalog)
+					}
+					break
+				}
+				// end kilocode_change
 				case "currentCheckpointUpdated": {
 					setCurrentCheckpoint(message.text)
 					break
@@ -246,6 +258,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		showWelcome,
 		theme,
 		mcpServers,
+		mcpMarketplaceCatalog, // kilocode_change
 		currentCheckpoint,
 		filePaths,
 		openedTabs,
@@ -313,6 +326,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setBrowserToolEnabled: (value) => setState((prevState) => ({ ...prevState, browserToolEnabled: value })),
 		setShowRooIgnoredFiles: (value) => setState((prevState) => ({ ...prevState, showRooIgnoredFiles: value })),
 		setRemoteBrowserEnabled: (value) => setState((prevState) => ({ ...prevState, remoteBrowserEnabled: value })),
+		setAwsUsePromptCache: (value) => setState((prevState) => ({ ...prevState, awsUsePromptCache: value })),
 		setMaxReadFileLine: (value) => setState((prevState) => ({ ...prevState, maxReadFileLine: value })),
 		setPinnedApiConfigs: (value) => setState((prevState) => ({ ...prevState, pinnedApiConfigs: value })),
 		togglePinnedApiConfig: (configId) =>

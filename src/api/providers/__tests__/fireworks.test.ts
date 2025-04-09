@@ -569,7 +569,7 @@ describe("FireworksHandler", () => {
 			expect(mockCreate).toHaveBeenCalledWith(
 				expect.objectContaining({
 					max_tokens: expect.any(Number),
-					temperature: 0.7,
+					temperature: 0.6,
 					top_p: 1,
 					presence_penalty: 0,
 					frequency_penalty: 0,
@@ -632,8 +632,8 @@ describe("FireworksHandler", () => {
 			const model = handler.getModel()
 			expect(model.id).toBe(fireworksDefaultModelId)
 			expect(model.info).toBeDefined()
-			expect(model.info.contextWindow).toBe(160000)
-			expect(model.info.supportsImages).toBe(false)
+			expect(model.info.contextWindow).toBe(1000000)
+			expect(model.info.supportsImages).toBe(true)
 		})
 
 		it("should return info for explicitly specified model", () => {

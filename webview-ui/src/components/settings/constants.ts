@@ -5,6 +5,7 @@ import {
 	bedrockModels,
 	deepSeekModels,
 	geminiModels,
+	fireworksModels, // kilocode_change
 	mistralModels,
 	openAiNativeModels,
 	vertexModels,
@@ -15,6 +16,7 @@ export const MODELS_BY_PROVIDER: Partial<Record<ApiProvider, Record<string, Mode
 	bedrock: bedrockModels,
 	deepseek: deepSeekModels,
 	gemini: geminiModels,
+	fireworks: fireworksModels, // kilocode_change
 	mistral: mistralModels,
 	"openai-native": openAiNativeModels,
 	vertex: vertexModels,
@@ -24,7 +26,7 @@ export const PROVIDERS = [
 	{ value: "kilocode", label: "Kilo Code" },
 	{ value: "openrouter", label: "OpenRouter" },
 	{ value: "anthropic", label: "Anthropic" },
-	{ value: "fireworks", label: "Fireworks" },
+	{ value: "fireworks", label: "Fireworks" }, // kilocode_change
 	{ value: "gemini", label: "Google Gemini" },
 	{ value: "deepseek", label: "DeepSeek" },
 	{ value: "openai-native", label: "OpenAI" },
@@ -39,24 +41,6 @@ export const PROVIDERS = [
 	{ value: "unbound", label: "Unbound" },
 	{ value: "requesty", label: "Requesty" },
 	{ value: "human-relay", label: "Human Relay" },
-]
-
-export const AWS_REGIONS = [
-	{ value: "us-east-1", label: "us-east-1" },
-	{ value: "us-east-2", label: "us-east-2" },
-	{ value: "us-west-2", label: "us-west-2" },
-	{ value: "ap-south-1", label: "ap-south-1" },
-	{ value: "ap-northeast-1", label: "ap-northeast-1" },
-	{ value: "ap-northeast-2", label: "ap-northeast-2" },
-	{ value: "ap-southeast-1", label: "ap-southeast-1" },
-	{ value: "ap-southeast-2", label: "ap-southeast-2" },
-	{ value: "ca-central-1", label: "ca-central-1" },
-	{ value: "eu-central-1", label: "eu-central-1" },
-	{ value: "eu-west-1", label: "eu-west-1" },
-	{ value: "eu-west-2", label: "eu-west-2" },
-	{ value: "eu-west-3", label: "eu-west-3" },
-	{ value: "sa-east-1", label: "sa-east-1" },
-	{ value: "us-gov-west-1", label: "us-gov-west-1" },
 ]
 
 export const VERTEX_REGIONS = [

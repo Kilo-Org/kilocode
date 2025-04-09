@@ -1,11 +1,15 @@
-# How to get started
+# Code mode
 
-  <img src="images/hn-nextjs.png" width='200' alt="Learn about GitLens Community vs Pro" />
+Describe what you want to build in the text area and press ⮐ Enter.
 
-Just type your prompt and press 'Enter', or click the arrow button.
+<img src="images/hn-nextjs.png" width='200' alt="Prompting Kilo Code to Build a Hacker News clone in Next.js" />
 
-Kilo Code has 4 different "modes" you can use to not just code, but debug, ask for explanations and architect your code.
+The more context you give, the better the result. Include things like your tech stack, key features, or file names.
 
-Continue reading to see more examples on how to use those modes.
+_Example: Create a Hacker News clone in Next.js_
 
- <img src="images/modes.gif" width='200' alt="Learn about GitLens Community vs Pro" />
+Kilo Code will write the code, generate the files, and run the project for you.
+
+## Kilo Code has many Modes ...
+
+<img src="images/modes.gif" width='200' alt="Kilo Code modes" />

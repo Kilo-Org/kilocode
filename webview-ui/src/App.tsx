@@ -11,7 +11,7 @@ import ChatView from "./components/chat/ChatView"
 import HistoryView from "./components/history/HistoryView"
 import SettingsView, { SettingsViewRef } from "./components/settings/SettingsView"
 import WelcomeView from "./components/welcome/WelcomeView"
-import McpView from "./components/mcp/McpView"
+import McpView from "./components/kilocodeMcp/McpView"
 import PromptsView from "./components/prompts/PromptsView"
 import { HumanRelayDialog } from "./components/human-relay/HumanRelayDialog"
 import BottomControls from "./components/chat/BottomControls"
@@ -43,6 +43,7 @@ const App = () => {
 	})
 
 	const settingsRef = useRef<SettingsViewRef>(null)
+	const chatViewRef = useRef<{ focusInput: () => void }>(null) // kilocode_change
 
 	const switchTab = useCallback((newTab: Tab) => {
 		if (settingsRef.current?.checkUnsaveChanges) {
@@ -57,6 +58,16 @@ const App = () => {
 			const message: ExtensionMessage = e.data
 
 			if (message.type === "action" && message.action) {
+				// kilocode_change begin
+				if (message.action === "focusChatInput") {
+					if (tab !== "chat") {
+						switchTab("chat")
+					}
+					chatViewRef.current?.focusInput()
+					return
+				}
+				// kilocode_change end
+
 				const newTab = tabsByMessageAction[message.action]
 
 				if (newTab) {
@@ -69,7 +80,8 @@ const App = () => {
 				setHumanRelayDialogState({ isOpen: true, requestId, promptText })
 			}
 		},
-		[switchTab],
+		// kilocode_change: add tab
+		[tab, switchTab],
 	)
 
 	useEvent("message", onMessage)
@@ -101,6 +113,7 @@ const App = () => {
 				<SettingsView ref={settingsRef} onDone={() => setTab("chat")} onOpenMcp={() => setTab("mcp")} />
 			)}
 			<ChatView
+				ref={chatViewRef}
 				isHidden={tab !== "chat"}
 				showAnnouncement={showAnnouncement}
 				hideAnnouncement={() => setShowAnnouncement(false)}

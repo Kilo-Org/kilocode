@@ -38,6 +38,11 @@ export interface WebviewMessage {
 		| "deleteTaskWithId"
 		| "exportTaskWithId"
 		| "importSettings"
+		| "toggleToolAutoApprove"
+		| "openExtensionSettings"
+		| "openInBrowser"
+		| "fetchOpenGraphData"
+		| "checkIsImageUrl"
 		| "exportSettings"
 		| "resetState"
 		| "requestOllamaModels"
@@ -121,6 +126,11 @@ export interface WebviewMessage {
 		| "searchFiles"
 		| "showFeedbackOptions" // kilocode_change
 		| "toggleApiConfigPin"
+		| "fetchMcpMarketplace" // kilocode_change
+		| "silentlyRefreshMcpMarketplace" // kilocode_change
+		| "fetchLatestMcpServersFromHub" // kilocode_change
+		| "downloadMcp" // kilocode_change
+		| "showSystemNotification" // kilocode_change
 	text?: string
 	disabled?: boolean
 	askResponse?: ClineAskResponse
@@ -130,6 +140,13 @@ export interface WebviewMessage {
 	value?: number
 	commands?: string[]
 	audioType?: AudioType
+	// kilocode_change begin
+	notificationOptions?: {
+		title?: string
+		subtitle?: string
+		message: string
+	}
+	// kilocode_change end
 	serverName?: string
 	toolName?: string
 	alwaysAllow?: boolean
@@ -146,6 +163,10 @@ export interface WebviewMessage {
 	source?: "global" | "project"
 	requestId?: string
 	ids?: string[]
+	mcpId?: string
+	toolNames?: string[]
+	url?: string
+	autoApprove?: boolean
 }
 
 export const checkoutDiffPayloadSchema = z.object({

@@ -5,9 +5,53 @@ import { anthropicDefaultModelId, anthropicModels, ApiHandlerOptions, ModelInfo 
 import { ApiStream } from "../transform/stream"
 import { BaseProvider } from "./base-provider"
 import { ANTHROPIC_DEFAULT_MAX_TOKENS } from "./constants"
-import { SingleCompletionHandler, getModelParams } from "../index"
+import { ApiHandler, SingleCompletionHandler, getModelParams } from "../index"
+import { OpenRouterHandler } from "./openrouter"
 
 export class KiloCodeHandler extends BaseProvider implements SingleCompletionHandler {
+	private handler: BaseProvider & SingleCompletionHandler
+
+	constructor(options: ApiHandlerOptions) {
+		super()
+		const handlerType = options.kilocodeProvider || "anthropic"
+		if (handlerType === "anthropic") {
+			this.handler = new KiloCodeAnthropicHandler(options)
+		} else if (handlerType === "openrouter") {
+			const openrouterOptions = {
+				...options,
+				openRouterBaseUrl: "https://kilocode.ai/api/openrouter/",
+				openRouterApiKey: options.kilocodeToken,
+			}
+
+			this.handler = new OpenRouterHandler(openrouterOptions)
+		} else {
+			throw new Error("Invalid KiloCode provider")
+		}
+	}
+
+	async *createMessage(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): ApiStream {
+		yield* this.handler.createMessage(systemPrompt, messages)
+	}
+
+	getModel(): { id: string; info: ModelInfo } {
+		return this.handler.getModel()
+	}
+
+	override countTokens(content: Array<Anthropic.Messages.ContentBlockParam>): Promise<number> {
+		if (this.handler.countTokens) {
+			return this.handler.countTokens(content)
+		} else {
+			// Fallback to the base provider's implementation
+			return super.countTokens(content)
+		}
+	}
+
+	async completePrompt(prompt: string) {
+		return this.handler.completePrompt(prompt)
+	}
+}
+
+export class KiloCodeAnthropicHandler extends BaseProvider implements SingleCompletionHandler {
 	private options: ApiHandlerOptions
 	private client: Anthropic
 	private baseURL: string = "https://kilocode.ai"
@@ -19,6 +63,7 @@ export class KiloCodeHandler extends BaseProvider implements SingleCompletionHan
 		this.client = new Anthropic({
 			authToken: this.options.kilocodeToken,
 			baseURL: `${this.baseURL}/api/claude/`,
+			apiKey: null, //ignore anthropic apiKey, even if set in env vars - it's not valid for KiloCode anyhow
 		})
 	}
 

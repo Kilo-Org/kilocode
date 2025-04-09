@@ -1,23 +1,12 @@
 import { EventEmitter } from "events"
 
-import type { ProviderSettings, GlobalSettings, ClineMessage, TokenUsage } from "./types"
+import type { ProviderSettings, GlobalSettings, ClineMessage, TokenUsage, RooCodeEvents } from "./types"
+export type { RooCodeSettings, ProviderSettings, GlobalSettings, ClineMessage, TokenUsage, RooCodeEvents }
+
+import { RooCodeEventName } from "../schemas"
+export type { RooCodeEventName }
 
 type RooCodeSettings = GlobalSettings & ProviderSettings
-
-export type { RooCodeSettings, ProviderSettings, GlobalSettings, ClineMessage, TokenUsage }
-
-export interface RooCodeEvents {
-	message: [{ taskId: string; action: "created" | "updated"; message: ClineMessage }]
-	taskCreated: [taskId: string]
-	taskStarted: [taskId: string]
-	taskPaused: [taskId: string]
-	taskUnpaused: [taskId: string]
-	taskAskResponded: [taskId: string]
-	taskAborted: [taskId: string]
-	taskSpawned: [taskId: string, childTaskId: string]
-	taskCompleted: [taskId: string, usage: TokenUsage]
-	taskTokenUsageUpdated: [taskId: string, usage: TokenUsage]
-}
 
 export interface RooCodeAPI extends EventEmitter<RooCodeEvents> {
 	/**
@@ -26,7 +15,17 @@ export interface RooCodeAPI extends EventEmitter<RooCodeEvents> {
 	 * @param images Optional array of image data URIs (e.g., "data:image/webp;base64,...").
 	 * @returns The ID of the new task.
 	 */
-	startNewTask(task?: string, images?: string[]): Promise<string>
+	startNewTask({
+		configuration,
+		text,
+		images,
+		newTab,
+	}: {
+		configuration?: RooCodeSettings
+		text?: string
+		images?: string[]
+		newTab?: boolean
+	}): Promise<string>
 
 	/**
 	 * Returns the current task stack.
@@ -68,47 +67,46 @@ export interface RooCodeAPI extends EventEmitter<RooCodeEvents> {
 	getConfiguration(): RooCodeSettings
 
 	/**
-	 * Returns the value of a configuration key.
-	 * @param key The key of the configuration value to return.
-	 * @returns The value of the configuration key.
-	 */
-	getConfigurationValue<K extends keyof RooCodeSettings>(key: K): RooCodeSettings[K]
-
-	/**
 	 * Sets the configuration for the current task.
 	 * @param values An object containing key-value pairs to set.
 	 */
 	setConfiguration(values: RooCodeSettings): Promise<void>
 
 	/**
-	 * Sets the value of a configuration key.
-	 * @param key The key of the configuration value to set.
-	 * @param value The value to set.
+	 * Creates a new API configuration profile
+	 * @param name The name of the profile
+	 * @returns The ID of the created profile
 	 */
-	setConfigurationValue<K extends keyof RooCodeSettings>(key: K, value: RooCodeSettings[K]): Promise<void>
+	createProfile(name: string): Promise<string>
+
+	/**
+	 * Returns a list of all configured profile names
+	 * @returns Array of profile names
+	 */
+	getProfiles(): string[]
+
+	/**
+	 * Changes the active API configuration profile
+	 * @param name The name of the profile to activate
+	 * @throws Error if the profile does not exist
+	 */
+	setActiveProfile(name: string): Promise<void>
+
+	/**
+	 * Returns the name of the currently active profile
+	 * @returns The profile name, or undefined if no profile is active
+	 */
+	getActiveProfile(): string | undefined
+
+	/**
+	 * Deletes a profile by name
+	 * @param name The name of the profile to delete
+	 * @throws Error if the profile does not exist
+	 */
+	deleteProfile(name: string): Promise<void>
 
 	/**
 	 * Returns true if the API is ready to use.
 	 */
 	isReady(): boolean
-
-	/**
-	 * Returns the messages for a given task.
-	 * @param taskId The ID of the task.
-	 * @returns An array of ClineMessage objects.
-	 */
-	getMessages(taskId: string): ClineMessage[]
-
-	/**
-	 * Returns the token usage for a given task.
-	 * @param taskId The ID of the task.
-	 * @returns A TokenUsage object.
-	 */
-	getTokenUsage(taskId: string): TokenUsage
-
-	/**
-	 * Logs a message to the output channel.
-	 * @param message The message to log.
-	 */
-	log(message: string): void
 }

@@ -28,18 +28,57 @@ describe("MultiSearchReplaceDiffStrategy", () => {
 			expect(strategy["validateMarkerSequencing"](diff).success).toBe(true)
 		})
 
+		it("validates multiple correct marker sequences with line numbers", () => {
+			const diff =
+				"<<<<<<< SEARCH\n" +
+				":start_line:10\n" +
+				":end_line:11\n" +
+				"-------\n" +
+				"content1\n" +
+				"=======\n" +
+				"new1\n" +
+				">>>>>>> REPLACE\n\n" +
+				"<<<<<<< SEARCH\n" +
+				":start_line:10\n" +
+				":end_line:11\n" +
+				"-------\n" +
+				"content2\n" +
+				"=======\n" +
+				"new2\n" +
+				">>>>>>> REPLACE"
+			expect(strategy["validateMarkerSequencing"](diff).success).toBe(true)
+		})
+
 		it("detects separator before search", () => {
 			const diff = "=======\n" + "content\n" + ">>>>>>> REPLACE"
 			const result = strategy["validateMarkerSequencing"](diff)
 			expect(result.success).toBe(false)
 			expect(result.error).toContain("'=======' found in your diff content")
+			expect(result.error).toContain("Diff block is malformed")
 		})
 
-		it("detects replace before separator", () => {
+		it("detects missing separator", () => {
 			const diff = "<<<<<<< SEARCH\n" + "content\n" + ">>>>>>> REPLACE"
 			const result = strategy["validateMarkerSequencing"](diff)
 			expect(result.success).toBe(false)
 			expect(result.error).toContain("'>>>>>>> REPLACE' found in your diff content")
+			expect(result.error).toContain("Diff block is malformed")
+		})
+
+		it("detects two separators", () => {
+			const diff = "<<<<<<< SEARCH\n" + "content\n" + "=======\n" + "=======\n" + ">>>>>>> REPLACE"
+			const result = strategy["validateMarkerSequencing"](diff)
+			expect(result.success).toBe(false)
+			expect(result.error).toContain("'=======' found in your diff content")
+			expect(result.error).toContain("When removing merge conflict markers")
+		})
+
+		it("detects replace before separator (merge conflict message)", () => {
+			const diff = "<<<<<<< SEARCH\n" + "content\n" + ">>>>>>>"
+			const result = strategy["validateMarkerSequencing"](diff)
+			expect(result.success).toBe(false)
+			expect(result.error).toContain("'>>>>>>>' found in your diff content")
+			expect(result.error).toContain("When removing merge conflict markers")
 		})
 
 		it("detects incomplete sequence", () => {
@@ -73,6 +112,54 @@ function hello() {
 				expect(result.success).toBe(true)
 				if (result.success) {
 					expect(result.content).toBe('function hello() {\n    console.log("hello world")\n}\n')
+				}
+			})
+
+			it("should replace matching content in multiple blocks", async () => {
+				const originalContent = 'function hello() {\n    console.log("hello")\n}\n'
+				const diffContent = `test.ts
+<<<<<<< SEARCH
+function hello() {
+=======
+function helloWorld() {
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+    console.log("hello")
+=======
+    console.log("hello world")
+>>>>>>> REPLACE`
+
+				const result = await strategy.applyDiff(originalContent, diffContent)
+				expect(result.success).toBe(true)
+				if (result.success) {
+					expect(result.content).toBe('function helloWorld() {\n    console.log("hello world")\n}\n')
+				}
+			})
+
+			it("should replace matching content in multiple blocks with line numbers", async () => {
+				const originalContent = 'function hello() {\n    console.log("hello")\n}\n'
+				const diffContent = `test.ts
+<<<<<<< SEARCH
+:start_line:1
+:end_line:1
+-------
+function hello() {
+=======
+function helloWorld() {
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+:start_line:2
+:end_line:2
+-------
+    console.log("hello")
+=======
+    console.log("hello world")
+>>>>>>> REPLACE`
+
+				const result = await strategy.applyDiff(originalContent, diffContent)
+				expect(result.success).toBe(true)
+				if (result.success) {
+					expect(result.content).toBe('function helloWorld() {\n    console.log("hello world")\n}\n')
 				}
 			})
 
@@ -1349,6 +1436,25 @@ function five() {
 					expect(result.success).toBe(true)
 				})
 
+				it("handles escaping of markers with custom suffixes", async () => {
+					const originalContent = "before\n<<<<<<< HEAD\nmiddle\n>>>>>>> feature-branch\nafter\n"
+					const diffContent =
+						"<<<<<<< SEARCH\n" +
+						"before\n" +
+						"\\<<<<<<< HEAD\n" +
+						"middle\n" +
+						"\\>>>>>>> feature-branch\n" +
+						"after\n" +
+						"=======\n" +
+						"replaced content\n" +
+						">>>>>>> REPLACE"
+					const result = await strategy.applyDiff(originalContent, diffContent)
+					expect(result.success).toBe(true)
+					if (result.success) {
+						expect(result.content).toBe("replaced content\n")
+					}
+				})
+
 				it("detects separator when expecting replace", () => {
 					const diff = "<<<<<<< SEARCH\n" + "content\n" + "=======\n" + "new content\n" + "======="
 					const result = strategy["validateMarkerSequencing"](diff)
@@ -1484,6 +1590,23 @@ function five() {
     }
     return true;
 }`)
+				}
+			})
+
+			it("should delete a line when search block has line number prefix and replace is empty", async () => {
+				const originalContent = "line 1\nline to delete\nline 3"
+				const diffContent = `
+<<<<<<< SEARCH
+:start_line:2
+:end_line:2
+-------
+2 | line to delete
+=======
+>>>>>>> REPLACE`
+				const result = await strategy.applyDiff(originalContent, diffContent)
+				expect(result.success).toBe(true)
+				if (result.success) {
+					expect(result.content).toBe("line 1\nline 3")
 				}
 			})
 		})
