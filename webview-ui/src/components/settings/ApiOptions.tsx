@@ -276,6 +276,14 @@ const ApiOptions = ({
 		}
 	}
 
+	// kilocode_change start
+	const kilocodeDescriptions = {
+		claude37: "Claude 3.7 Sonnet is Anthropic's most capable model for reasoning, coding, and multimodal tasks.",
+		gemini25: "Gemini 2.5 Pro is Google's most capable model for reasoning, coding, and multimodal tasks.",
+		quasar: "Quasar Alpha is a cloaked model through OpenRouter provided to the community to gather feedback.",
+	}
+	// kilocode_change end
+
 	return (
 		<div className="flex flex-col gap-3">
 			<div className="flex flex-col gap-1 relative">
@@ -339,9 +347,7 @@ const ApiOptions = ({
 							</SelectContent>
 						</Select>
 						<div className="text-sm text-vscode-descriptionForeground mt-1">
-							{apiConfiguration?.kilocodeModel === "gemini25"
-								? "Gemini 2.5 Pro is Google's most capable model for reasoning, coding, and multimodal tasks."
-								: "Claude 3.7 Sonnet is Anthropic's most capable model for reasoning, coding, and multimodal tasks."}
+							{kilocodeDescriptions[apiConfiguration?.kilocodeModel ?? "claude37"]}
 						</div>
 					</div>
 
