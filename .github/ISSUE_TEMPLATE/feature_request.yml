@@ -1,0 +1,22 @@
+name: Feature Request
+description: Submit a feature request
+labels: ["feature"]
+body:
+    - type: markdown
+      attributes:
+        value: |
+            * We welcome any ideas or feature requests! It is helpful if you can explain exactly why the feature would be useful.
+            * There are usually some outstanding feature requests in the [existing issues list](https://github.com/Kilo-Org/kilocode/issues), feel free to add comments to them.
+    - type: textarea
+      id: summary
+      attributes:
+        label: Proposal Summary
+        description: |
+            In a few sentences, provide a clear, high-level description of the feature request
+      validations:
+        required: true
+    - type: textarea
+      id: additional-context
+      attributes:
+          label: Additional context
+          description: Add any other context about the problem here, such as screenshots or related issues.
