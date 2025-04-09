@@ -20,6 +20,7 @@ import {
 } from "@/utils/context-mentions"
 import { convertToMentionPath } from "@/utils/path-mentions"
 import { SelectDropdown, DropdownOptionType, Button } from "@/components/ui"
+import { normalizeApiConfiguration } from "../settings/ApiOptions" // kilocode_change
 
 import Thumbnails from "../common/Thumbnails"
 import { MAX_IMAGES_PER_MESSAGE } from "./ChatView"
@@ -75,6 +76,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			cwd,
 			pinnedApiConfigs,
 			togglePinnedApiConfig,
+			apiConfiguration, // kilocode_change
 		} = useExtensionState()
 
 		// Find the ID and display text for the currently selected API configuration
@@ -85,6 +87,13 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				displayName: currentApiConfigName || "", // Use the name directly for display
 			}
 		}, [listApiConfigMeta, currentApiConfigName])
+
+		// kilocode_change start
+		const modelId = useMemo(() => {
+			const { selectedModelId } = normalizeApiConfiguration(apiConfiguration)
+			return selectedModelId
+		}, [apiConfiguration])
+		// kilocode_change end
 
 		const [gitCommits, setGitCommits] = useState<any[]>([])
 		const [showDropdown, setShowDropdown] = useState(false)
@@ -1076,6 +1085,11 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 								}}
 							/>
 						</div>
+					</div>
+
+					{/* Model display */}
+					<div className="flex items-center mx-2">
+						<span className="text-xs text-vscode-descriptionForeground opacity-70">{modelId}</span>
 					</div>
 
 					{/* Right side - action buttons */}
