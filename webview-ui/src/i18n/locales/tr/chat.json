@@ -236,5 +236,10 @@
 			"scrollUp": "Yukarı kaydır",
 			"close": "Tarayıcıyı kapat"
 		}
+	},
+	"notifications": {
+		"toolRequest": "Araç isteği onay bekliyor",
+		"browserAction": "Tarayıcı işlemi onay bekliyor",
+		"command": "Komut onay bekliyor"
 	}
 }

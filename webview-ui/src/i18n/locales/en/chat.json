@@ -236,5 +236,10 @@
 			"scrollUp": "Scroll up",
 			"close": "Close browser"
 		}
+	},
+	"notifications": {
+		"toolRequest": "Tool request waiting for approval",
+		"browserAction": "Browser action waiting for approval",
+		"command": "Command waiting for approval"
 	}
 }

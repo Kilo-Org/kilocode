@@ -934,7 +934,25 @@ export const fireworksModels = {
 		inputPrice: 0.9,
 		outputPrice: 0.9,
 	},
+
+	"accounts/fireworks/models/llama4-scout-instruct-basic": {
+		maxTokens: 16_384,
+		contextWindow: 128_000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		inputPrice: 0.15,
+		outputPrice: 0.6,
+	},
+
+	"accounts/fireworks/models/llama4-maverick-instruct-basic": {
+		maxTokens: 16_384,
+		contextWindow: 1_000_000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		inputPrice: 0.22,
+		outputPrice: 0.88,
+	},
 } as const satisfies Record<string, ModelInfo>
 
 export type FireworksModelId = keyof typeof fireworksModels
-export const fireworksDefaultModelId: FireworksModelId = "accounts/fireworks/models/deepseek-r1"
+export const fireworksDefaultModelId: FireworksModelId = "accounts/fireworks/models/llama4-maverick-instruct-basic"

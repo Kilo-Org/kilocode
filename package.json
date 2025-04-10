@@ -3,7 +3,7 @@
 	"displayName": "Kilo Code",
 	"description": "A whole dev team of AI agents in your editor.",
 	"publisher": "kilocode",
-	"version": "4.10.0",
+	"version": "4.12.1",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -118,8 +118,15 @@
 			"activitybar": [
 				{
 					"id": "kilo-code-ActivityBar",
-					"title": "Kilo Code",
-					"icon": "assets/icons/kilo.png"
+					"title": "Kilo Code (⇧⌘I)",
+					"icon": "assets/icons/kilo.png",
+					"when": "isMac"
+				},
+				{
+					"id": "kilo-code-ActivityBar",
+					"title": "Kilo Code (shift-ctrl-I)",
+					"icon": "assets/icons/kilo.png",
+					"when": "!isMac"
 				}
 			]
 		},
@@ -227,6 +234,19 @@
 				"command": "kilo-code.setCustomStoragePath",
 				"title": "Set Custom Storage Path",
 				"category": "Kilo Code"
+			},
+			{
+				"command": "kilo-code.focusChatInput",
+				"title": "Focus Chat Input",
+				"category": "Kilo Code"
+			}
+		],
+		"keybindings": [
+			{
+				"command": "kilo-code.focusChatInput",
+				"key": "ctrl+shift+i",
+				"mac": "cmd+shift+i",
+				"when": "editorTextFocus || terminalFocus || viewFocus"
 			}
 		],
 		"menus": {

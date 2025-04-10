@@ -236,5 +236,10 @@
 			"scrollUp": "Desplazar hacia arriba",
 			"close": "Cerrar navegador"
 		}
+	},
+	"notifications": {
+		"toolRequest": "Solicitud de herramienta esperando aprobación",
+		"browserAction": "Acción del navegador esperando aprobación",
+		"command": "Comando esperando aprobación"
 	}
 }

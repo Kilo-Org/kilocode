@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-    - name: Idea/Feature Request
+    - name: Idea Request
       url: https://github.com/Kilo-Org/kilocode/discussions/categories/ideas
-      about: Share and vote on feature requests for Kilo Code
+      about: Share and vote on ideas around the future of Kilo Code
     - name: Leave a Review
-      url: https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code&ssr=false#review-details
+      url: https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code&s s ssr=false#review-details
       about: Enjoying Kilo Code? Leave a review here!

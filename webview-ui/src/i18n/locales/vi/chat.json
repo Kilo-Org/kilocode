@@ -236,5 +236,10 @@
 			"scrollUp": "Cuộn lên",
 			"close": "Đóng trình duyệt"
 		}
+	},
+	"notifications": {
+		"toolRequest": "Yêu cầu công cụ đang chờ phê duyệt",
+		"browserAction": "Hành động trình duyệt đang chờ phê duyệt",
+		"command": "Lệnh đang chờ phê duyệt"
 	}
 }

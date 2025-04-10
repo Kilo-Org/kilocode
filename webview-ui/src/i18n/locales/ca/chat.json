@@ -236,5 +236,10 @@
 			"scrollUp": "Desplaçar amunt",
 			"close": "Tancar navegador"
 		}
+	},
+	"notifications": {
+		"toolRequest": "Sol·licitud d'eina esperant aprovació",
+		"browserAction": "Acció del navegador esperant aprovació",
+		"command": "Ordre esperant aprovació"
 	}
 }

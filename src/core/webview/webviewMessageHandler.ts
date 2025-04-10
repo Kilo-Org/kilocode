@@ -22,6 +22,7 @@ import { searchWorkspaceFiles } from "../../services/search/file-search"
 import { fileExistsAtPath } from "../../utils/fs"
 import { playSound, setSoundEnabled, setSoundVolume } from "../../utils/sound"
 import { playTts, setTtsEnabled, setTtsSpeed, stopTts } from "../../utils/tts"
+import { showSystemNotification } from "../../integrations/notifications" // kilocode_change
 import { singleCompletionHandler } from "../../utils/single-completion-handler"
 import { searchCommits } from "../../utils/git"
 import { exportSettings, importSettings } from "../config/importExport"
@@ -607,6 +608,13 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 				playSound(soundPath)
 			}
 			break
+		// kilocode_change begin
+		case "showSystemNotification":
+			if (message.notificationOptions) {
+				showSystemNotification(message.notificationOptions)
+			}
+			break
+		// kilocode_change end
 		case "soundEnabled":
 			const soundEnabled = message.bool ?? true
 			await provider.updateGlobalState("soundEnabled", soundEnabled)

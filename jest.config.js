@@ -37,9 +37,10 @@ module.exports = {
 		"^default-shell$": "<rootDir>/src/__mocks__/default-shell.js",
 		"^os-name$": "<rootDir>/src/__mocks__/os-name.js",
 		"^strip-bom$": "<rootDir>/src/__mocks__/strip-bom.js",
+		"^execa$": "<rootDir>/src/__mocks__/execa.js",
 	},
 	transformIgnorePatterns: [
-		"node_modules/(?!(@modelcontextprotocol|delay|p-wait-for|globby|serialize-error|strip-ansi|default-shell|os-name|strip-bom)/)",
+		"node_modules/(?!(@modelcontextprotocol|delay|p-wait-for|globby|serialize-error|strip-ansi|default-shell|os-name|strip-bom|execa)/)",
 	],
 	roots: ["<rootDir>/src", "<rootDir>/webview-ui/src"],
 	modulePathIgnorePatterns: [".vscode-test"],

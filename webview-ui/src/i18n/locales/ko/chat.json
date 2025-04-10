@@ -236,5 +236,10 @@
 			"scrollUp": "위로 스크롤",
 			"close": "브라우저 닫기"
 		}
+	},
+	"notifications": {
+		"toolRequest": "도구 요청 승인 대기 중",
+		"browserAction": "브라우저 작업 승인 대기 중",
+		"command": "명령 승인 대기 중"
 	}
 }
