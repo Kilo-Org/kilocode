@@ -6,7 +6,7 @@
 </p>
 <div align="center">
 
-<a href="https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code" target="_blank"><img src="https://img.shields.io/badge/Get%20%2415%20of%20free%20tokens%20for%20Claude%203.7-green?style=for-the-badge&logo=claude&logoColor=white" alt="Get $15 of Claude 3.7 tokens for free"></a>
+<a href="https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code" target="_blank"><img src="https://img.shields.io/badge/Get%20%2415%20of%20free%20tokens%20for%20Claude%203.7-green?style=for-the-badge&logo=claude&logoColor=white" alt="Get $20 of Claude 3.7 tokens for free"></a>
 <a href="https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code" target="_blank"><img src="https://img.shields.io/badge/Download%20on%20VS%20Code%20Marketplace-blue?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="Download on VS Code Marketplace"></a>
 
 <a href="https://www.reddit.com/r/kilocode/" target="_blank"><img src="https://img.shields.io/badge/Join%20Reddit-FF4500?style=for-the-badge&logo=reddit&logoColor=white" alt="Join Reddit"></a>
@@ -22,7 +22,7 @@
 
 Kilo Code is an open-source AI agent extension for Visual Studio Code. It helps you write code more efficiently by generating code, automating tasks, and providing suggestions.
 
-Kilo Code has a free tier with $15 worth of Claude 3.7 Sonnet tokens. We'll give out more free tokens if you leave useful feedback.
+Kilo Code has a free tier with $20 worth of Claude 3.7 Sonnet tokens. We'll give out more free tokens if you leave useful feedback.
 
 - [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code) (download)
 - [Home page](https://kilocode.ai) (learn more)
@@ -41,7 +41,7 @@ Kilo Code has a free tier with $15 worth of Claude 3.7 Sonnet tokens. We'll give
 ## Get Started in 2 Minutes
 
 1.  Install the Kilo Code extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code).
-2.  Log in with your Google Account to get $15 in free Claude 3.7 Sonnet credits.
+2.  Log in with your Google Account to get $20 in free Claude 3.7 Sonnet credits.
 3.  Start coding!
 
 ## Local Setup & Development
