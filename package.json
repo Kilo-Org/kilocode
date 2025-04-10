@@ -118,13 +118,13 @@
 			"activitybar": [
 				{
 					"id": "kilo-code-ActivityBar",
-					"title": "Kilo Code (⇧⌘I)",
+					"title": "Kilo Code (⇧⌘A)",
 					"icon": "assets/icons/kilo.png",
 					"when": "isMac"
 				},
 				{
 					"id": "kilo-code-ActivityBar",
-					"title": "Kilo Code (shift-ctrl-I)",
+					"title": "Kilo Code (shift-ctrl-A)",
 					"icon": "assets/icons/kilo.png",
 					"when": "!isMac"
 				}
@@ -244,8 +244,8 @@
 		"keybindings": [
 			{
 				"command": "kilo-code.focusChatInput",
-				"key": "ctrl+shift+i",
-				"mac": "cmd+shift+i",
+				"key": "ctrl+shift+a",
+				"mac": "cmd+shift+a",
 				"when": "editorTextFocus || terminalFocus || viewFocus"
 			}
 		],
