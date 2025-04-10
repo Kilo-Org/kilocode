@@ -18,13 +18,12 @@ export class CustomOpenRouterHandler extends OpenRouterHandler {
 	override getModel() {
 		console.log("CustomOpenRouterHandler getModel called")
 
-		// Default values from OpenRouter
-		let id = openRouterDefaultModelId
-		let info = openRouterDefaultModelInfo
+		let id
+		let info
 		let defaultTemperature = 0
 		let topP = undefined
 
-		const selectedModel = this.options.kilocodeModel
+		const selectedModel = this.options.kilocodeModel ?? "claude37"
 
 		// TODO: use the models that have been fetched from openrouter.
 		// for now we are using the hardcoded models
@@ -55,6 +54,8 @@ export class CustomOpenRouterHandler extends OpenRouterHandler {
 				outputPrice: 10,
 				description: "Gemini 2.5 Pro via OpenRouter",
 			}
+		} else {
+			throw new Error(`Unsupported model: ${selectedModel}`)
 		}
 
 		return {
