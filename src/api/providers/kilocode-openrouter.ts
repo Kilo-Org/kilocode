@@ -16,8 +16,6 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 	 * Override the getModel function to provide custom model information
 	 */
 	override getModel() {
-		console.log("CustomOpenRouterHandler getModel called")
-
 		let id
 		let info
 		let defaultTemperature = 0
