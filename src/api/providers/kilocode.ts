@@ -259,7 +259,7 @@ export class KiloCodeAnthropicHandler extends BaseProvider implements SingleComp
 					text:
 						"ERROR: Not logged in to Kilo Code.\n\n" +
 						"Please log in to Kilo Code from the extension settings.\n" +
-						"Kilo Code has a free tier with $15 worth of Claude 3.7 Sonnet tokens.\n" +
+						"Kilo Code has a free tier with $20 worth of Claude 3.7 Sonnet tokens.\n" +
 						"We'll give out more free tokens if you leave useful feedback.",
 				}
 			}

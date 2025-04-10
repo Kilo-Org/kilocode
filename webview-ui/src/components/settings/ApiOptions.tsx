@@ -327,7 +327,7 @@ const ApiOptions = ({
 			{selectedProvider === "kilocode" && (
 				<>
 					<div style={{ marginTop: "0px" }} className="text-sm text-vscode-descriptionForeground -mt-2">
-						You get $15 for free. Choose between Claude and Gemini 2.5 models.
+						You get $20 for free. Choose between Claude and Gemini 2.5 models.
 					</div>
 
 					<div>
