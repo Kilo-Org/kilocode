@@ -381,7 +381,7 @@
 		"useCustomModel": "कस्टम उपयोग करें: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "यदि आपके कोई प्रश्न या प्रतिक्रिया है, तो <githubLink>github.com/Kilo-Org/kilocode</githubLink> पर एक मुद्दा खोलने या <redditLink>reddit.com/r/kilocode</redditLink> या <discordLink>discord.gg/Ja6BkfyTzJ</discordLink> में शामिल होने में संकोच न करें",
+		"feedback": "यदि आपके कोई प्रश्न या प्रतिक्रिया है, तो <githubLink>github.com/Kilo-Org/kilocode</githubLink> पर एक मुद्दा खोलने या <redditLink>reddit.com/r/kilocode</redditLink> या <discordLink>kilocode.ai/discord</discordLink> में शामिल होने में संकोच न करें",
 		"version": "Kilo Code v{{version}}",
 		"telemetry": {
 			"label": "गुमनाम त्रुटि और उपयोग रिपोर्टिंग की अनुमति दें",
