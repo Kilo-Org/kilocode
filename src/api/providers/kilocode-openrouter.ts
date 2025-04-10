@@ -7,7 +7,7 @@ import { OpenRouterHandler } from "./openrouter"
  * A custom OpenRouter handler that overrides the getModel function
  * to provide custom model information.
  */
-export class CustomOpenRouterHandler extends OpenRouterHandler {
+export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 	constructor(options: ApiHandlerOptions) {
 		super(options)
 	}
@@ -53,6 +53,19 @@ export class CustomOpenRouterHandler extends OpenRouterHandler {
 				inputPrice: 1.25,
 				outputPrice: 10,
 				description: "Gemini 2.5 Pro via OpenRouter",
+			}
+		} else if (selectedModel === "quasar") {
+			id = "openrouter/quasar-alpha"
+			info = {
+				maxTokens: 32_000,
+				contextWindow: 1_000_000,
+				supportsImages: true,
+				supportsComputerUse: true,
+				supportsPromptCache: true,
+				inputPrice: 0,
+				outputPrice: 0,
+				description:
+					"This is a cloaked model provided to the community to gather feedback. It's a powerful, all-purpose model supporting long-context tasks, including code generation. All prompts and completions for this model are logged by the provider as well as OpenRouter.",
 			}
 		} else {
 			throw new Error(`Unsupported model: ${selectedModel}`)
