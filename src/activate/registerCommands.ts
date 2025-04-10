@@ -3,6 +3,18 @@ import delay from "delay"
 
 import { ClineProvider } from "../core/webview/ClineProvider"
 
+/**
+ * Helper to get the visible ClineProvider instance or log if not found.
+ */
+export function getVisibleProviderOrLog(outputChannel: vscode.OutputChannel): ClineProvider | undefined {
+	const visibleProvider = ClineProvider.getVisibleInstance()
+	if (!visibleProvider) {
+		outputChannel.appendLine("Cannot find any visible Cline instances.")
+		return undefined
+	}
+	return visibleProvider
+}
+
 import { registerHumanRelayCallback, unregisterHumanRelayCallback, handleHumanRelayResponse } from "./humanRelay"
 import { handleNewTask } from "./handleTask"
 
@@ -52,26 +64,36 @@ const getCommandsMap = ({ context, outputChannel, provider }: RegisterCommandOpt
 	return {
 		"kilo-code.activationCompleted": () => {},
 		"kilo-code.plusButtonClicked": async () => {
-			await provider.removeClineFromStack()
-			await provider.postStateToWebview()
-			await provider.postMessageToWebview({ type: "action", action: "chatButtonClicked" })
+			const visibleProvider = getVisibleProviderOrLog(outputChannel)
+			if (!visibleProvider) return
+			await visibleProvider.removeClineFromStack()
+			await visibleProvider.postStateToWebview()
+			await visibleProvider.postMessageToWebview({ type: "action", action: "chatButtonClicked" })
 		},
 		"kilo-code.mcpButtonClicked": () => {
-			provider.postMessageToWebview({ type: "action", action: "mcpButtonClicked" })
+			const visibleProvider = getVisibleProviderOrLog(outputChannel)
+			if (!visibleProvider) return
+			visibleProvider.postMessageToWebview({ type: "action", action: "mcpButtonClicked" })
 		},
 		"kilo-code.promptsButtonClicked": () => {
-			provider.postMessageToWebview({ type: "action", action: "promptsButtonClicked" })
+			const visibleProvider = getVisibleProviderOrLog(outputChannel)
+			if (!visibleProvider) return
+			visibleProvider.postMessageToWebview({ type: "action", action: "promptsButtonClicked" })
 		},
 		"kilo-code.popoutButtonClicked": () => openClineInNewTab({ context, outputChannel }),
 		"kilo-code.openInNewTab": () => openClineInNewTab({ context, outputChannel }),
 		"kilo-code.settingsButtonClicked": () => {
-			provider.postMessageToWebview({ type: "action", action: "settingsButtonClicked" })
+			const visibleProvider = getVisibleProviderOrLog(outputChannel)
+			if (!visibleProvider) return
+			visibleProvider.postMessageToWebview({ type: "action", action: "settingsButtonClicked" })
 		},
 		"kilo-code.historyButtonClicked": () => {
-			provider.postMessageToWebview({ type: "action", action: "historyButtonClicked" })
+			const visibleProvider = getVisibleProviderOrLog(outputChannel)
+			if (!visibleProvider) return
+			visibleProvider.postMessageToWebview({ type: "action", action: "historyButtonClicked" })
 		},
 		"kilo-code.helpButtonClicked": () => {
-			vscode.env.openExternal(vscode.Uri.parse("https://docs.kilocode.ai"))
+			vscode.env.openExternal(vscode.Uri.parse("https://kilocode.ai"))
 		},
 		"kilo-code.showHumanRelayDialog": (params: { requestId: string; promptText: string }) => {
 			const panel = getPanel()
@@ -92,12 +114,31 @@ const getCommandsMap = ({ context, outputChannel, provider }: RegisterCommandOpt
 			const { promptForCustomStoragePath } = await import("../shared/storagePathManager")
 			await promptForCustomStoragePath()
 		},
+		// kilocode_change begin
+		"kilo-code.focusChatInput": async () => {
+			let visibleProvider = getVisibleProviderOrLog(outputChannel)
+
+			if (!visibleProvider) {
+				await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
+				await delay(100)
+
+				visibleProvider = getVisibleProviderOrLog(outputChannel)
+
+				// If still no visible provider, try opening in a new tab
+				if (!visibleProvider) {
+					const tabProvider = await openClineInNewTab({ context, outputChannel })
+					await delay(100)
+					visibleProvider = tabProvider
+				}
+			}
+
+			visibleProvider?.postMessageToWebview({ type: "action", action: "focusChatInput" })
+		},
+		// kilocode_change end
 	}
 }
 
-const openClineInNewTab = async ({ context, outputChannel }: Omit<RegisterCommandOptions, "provider">) => {
-	outputChannel.appendLine("Opening Kilo Code in new tab")
-
+export const openClineInNewTab = async ({ context, outputChannel }: Omit<RegisterCommandOptions, "provider">) => {
 	// (This example uses webviewProvider activation event which is necessary to
 	// deserialize cached webview, but since we use retainContextWhenHidden, we
 	// don't need to use that event).
@@ -141,4 +182,6 @@ const openClineInNewTab = async ({ context, outputChannel }: Omit<RegisterComman
 	// Lock the editor group so clicking on files doesn't open them over the panel.
 	await delay(100)
 	await vscode.commands.executeCommand("workbench.action.lockEditorGroup")
+
+	return tabProvider
 }

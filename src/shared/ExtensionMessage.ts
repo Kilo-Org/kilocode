@@ -79,6 +79,7 @@ export interface ExtensionMessage {
 		| "historyButtonClicked"
 		| "promptsButtonClicked"
 		| "didBecomeVisible"
+		| "focusChatInput" // kilocode_change
 	invoke?: "newChat" | "sendMessage" | "primaryButtonClick" | "secondaryButtonClick" | "setChatBoxMessage"
 	state?: ExtensionState
 	images?: string[]
@@ -172,7 +173,6 @@ export type ExtensionState = Pick<
 	| "enhancementApiConfigId"
 > & {
 	version: string
-	osInfo: string
 	clineMessages: ClineMessage[]
 	currentTaskItem?: HistoryItem
 	apiConfiguration?: ApiConfiguration

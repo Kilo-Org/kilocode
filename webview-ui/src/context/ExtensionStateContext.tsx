@@ -78,6 +78,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setMaxWorkspaceFiles: (value: number) => void
 	remoteBrowserEnabled?: boolean
 	setRemoteBrowserEnabled: (value: boolean) => void
+	awsUsePromptCache?: boolean
+	setAwsUsePromptCache: (value: boolean) => void
 	maxReadFileLine: number
 	setMaxReadFileLine: (value: number) => void
 	machineId?: string
@@ -118,7 +120,6 @@ export const mergeExtensionState = (prevState: ExtensionState, newState: Extensi
 export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 	const [state, setState] = useState<ExtensionState>({
 		version: "",
-		osInfo: "",
 		clineMessages: [],
 		taskHistory: [],
 		shouldShowAnnouncement: false,
@@ -325,6 +326,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setBrowserToolEnabled: (value) => setState((prevState) => ({ ...prevState, browserToolEnabled: value })),
 		setShowRooIgnoredFiles: (value) => setState((prevState) => ({ ...prevState, showRooIgnoredFiles: value })),
 		setRemoteBrowserEnabled: (value) => setState((prevState) => ({ ...prevState, remoteBrowserEnabled: value })),
+		setAwsUsePromptCache: (value) => setState((prevState) => ({ ...prevState, awsUsePromptCache: value })),
 		setMaxReadFileLine: (value) => setState((prevState) => ({ ...prevState, maxReadFileLine: value })),
 		setPinnedApiConfigs: (value) => setState((prevState) => ({ ...prevState, pinnedApiConfigs: value })),
 		togglePinnedApiConfig: (configId) =>

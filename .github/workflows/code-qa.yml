@@ -47,7 +47,10 @@ jobs:
         run: node scripts/find-missing-translations.js
 
   test-extension:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -58,11 +61,16 @@ jobs:
           cache: 'npm'
       - name: Install dependencies
         run: npm run install:all
+      - name: Compile (to build and copy WASM files)
+        run: npm run compile
       - name: Run unit tests
         run: npx jest --silent
 
   test-webview:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

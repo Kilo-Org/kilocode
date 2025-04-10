@@ -113,11 +113,14 @@ export const bedrockModels = {
 		contextWindow: 300_000,
 		supportsImages: true,
 		supportsComputerUse: false,
-		supportsPromptCache: false,
+		supportsPromptCache: true,
 		inputPrice: 0.8,
 		outputPrice: 3.2,
 		cacheWritesPrice: 0.8, // per million tokens
 		cacheReadsPrice: 0.2, // per million tokens
+		minTokensPerCachePoint: 1,
+		maxCachePoints: 1,
+		cachableFields: ["system"],
 	},
 	"amazon.nova-pro-latency-optimized-v1:0": {
 		maxTokens: 5000,
@@ -136,22 +139,28 @@ export const bedrockModels = {
 		contextWindow: 300_000,
 		supportsImages: true,
 		supportsComputerUse: false,
-		supportsPromptCache: false,
+		supportsPromptCache: true,
 		inputPrice: 0.06,
 		outputPrice: 0.24,
 		cacheWritesPrice: 0.06, // per million tokens
 		cacheReadsPrice: 0.015, // per million tokens
+		minTokensPerCachePoint: 1,
+		maxCachePoints: 1,
+		cachableFields: ["system"],
 	},
 	"amazon.nova-micro-v1:0": {
 		maxTokens: 5000,
 		contextWindow: 128_000,
 		supportsImages: false,
 		supportsComputerUse: false,
-		supportsPromptCache: false,
+		supportsPromptCache: true,
 		inputPrice: 0.035,
 		outputPrice: 0.14,
 		cacheWritesPrice: 0.035, // per million tokens
 		cacheReadsPrice: 0.00875, // per million tokens
+		minTokensPerCachePoint: 1,
+		maxCachePoints: 1,
+		cachableFields: ["system"],
 	},
 	"anthropic.claude-3-7-sonnet-20250219-v1:0": {
 		maxTokens: 8192,
@@ -163,27 +172,36 @@ export const bedrockModels = {
 		outputPrice: 15.0,
 		cacheWritesPrice: 3.75,
 		cacheReadsPrice: 0.3,
+		minTokensPerCachePoint: 1024,
+		maxCachePoints: 4,
+		cachableFields: ["system", "messages", "tools"],
 	},
 	"anthropic.claude-3-5-sonnet-20241022-v2:0": {
 		maxTokens: 8192,
 		contextWindow: 200_000,
 		supportsImages: true,
 		supportsComputerUse: true,
-		supportsPromptCache: false,
+		supportsPromptCache: true,
 		inputPrice: 3.0,
 		outputPrice: 15.0,
 		cacheWritesPrice: 3.75,
 		cacheReadsPrice: 0.3,
+		minTokensPerCachePoint: 1024,
+		maxCachePoints: 4,
+		cachableFields: ["system", "messages", "tools"],
 	},
 	"anthropic.claude-3-5-haiku-20241022-v1:0": {
 		maxTokens: 8192,
 		contextWindow: 200_000,
 		supportsImages: false,
-		supportsPromptCache: false,
+		supportsPromptCache: true,
 		inputPrice: 0.8,
 		outputPrice: 4.0,
 		cacheWritesPrice: 1.0,
 		cacheReadsPrice: 0.08,
+		minTokensPerCachePoint: 2048,
+		maxCachePoints: 4,
+		cachableFields: ["system", "messages", "tools"],
 	},
 	"anthropic.claude-3-5-sonnet-20240620-v1:0": {
 		maxTokens: 8192,
@@ -916,7 +934,25 @@ export const fireworksModels = {
 		inputPrice: 0.9,
 		outputPrice: 0.9,
 	},
+
+	"accounts/fireworks/models/llama4-scout-instruct-basic": {
+		maxTokens: 16_384,
+		contextWindow: 128_000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		inputPrice: 0.15,
+		outputPrice: 0.6,
+	},
+
+	"accounts/fireworks/models/llama4-maverick-instruct-basic": {
+		maxTokens: 16_384,
+		contextWindow: 1_000_000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		inputPrice: 0.22,
+		outputPrice: 0.88,
+	},
 } as const satisfies Record<string, ModelInfo>
 
 export type FireworksModelId = keyof typeof fireworksModels
-export const fireworksDefaultModelId: FireworksModelId = "accounts/fireworks/models/deepseek-r1"
+export const fireworksDefaultModelId: FireworksModelId = "accounts/fireworks/models/llama4-maverick-instruct-basic"

@@ -14,9 +14,10 @@
 		"out/**",
 		"bin/**",
 		"e2e/**",
-		"benchmark/**",
+		"evals/**",
 		"src/activate/**",
 		"src/exports/**",
+		"src/schemas/ipc.ts",
 		"src/extension.ts",
 		"scripts/**"
 	],

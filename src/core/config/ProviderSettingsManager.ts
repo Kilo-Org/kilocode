@@ -39,7 +39,7 @@ export class ProviderSettingsManager {
 		this.initialize().catch(console.error)
 	}
 
-	private generateId() {
+	public generateId() {
 		return Math.random().toString(36).substring(2, 15)
 	}
 

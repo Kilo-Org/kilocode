@@ -501,8 +501,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, o
 						diffEnabled={diffEnabled}
 						fuzzyMatchThreshold={fuzzyMatchThreshold}
 						setCachedStateField={setCachedStateField}
-						setExperimentEnabled={setExperimentEnabled}
-						experiments={experiments}
 					/>
 				</div>
 

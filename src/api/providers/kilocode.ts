@@ -17,19 +17,25 @@ import { CustomOpenRouterHandler } from "./kilocode-openrouter"
 
 export class KiloCodeHandler extends BaseProvider implements SingleCompletionHandler {
 	private handler: BaseProvider & SingleCompletionHandler
+	private options: ApiHandlerOptions
 
 	constructor(options: ApiHandlerOptions) {
 		super()
+		this.options = options
 		const modelType = options.kilocodeModel || "claude37"
 
 		if (modelType === "claude37") {
 			this.handler = new KiloCodeAnthropicHandler(options)
-		} else if (modelType === "gemini25") {
+		} else if (modelType === "gemini25" || modelType === "quasar") {
+			// Determine the correct OpenRouter model ID based on the selected KiloCode model type
+
 			const openrouterOptions = {
 				...options,
 				// openRouterBaseUrl: "https://kilocode.ai/api/openrouter/",
 				openRouterBaseUrl: "http://localhost:3000/api/openrouter/",
 				openRouterApiKey: options.kilocodeToken,
+				// Explicitly set the model ID for the OpenRouter handler
+				openRouterModelId: targetOpenRouterModelId,
 			}
 
 			this.handler = new CustomOpenRouterHandler(openrouterOptions)
@@ -43,16 +49,21 @@ export class KiloCodeHandler extends BaseProvider implements SingleCompletionHan
 	}
 
 	getModel(): { id: string; info: ModelInfo } {
-		console.log("KiloCodeHandler getModel")
-
-		if (this.handler instanceof OpenRouterHandler || this.handler instanceof CustomOpenRouterHandler) {
-			console.log("KiloCodeHandler getModel OpenRouterHandler or CustomOpenRouterHandler")
-			// For CustomOpenRouterHandler, let it handle the model settings
-			if (this.handler instanceof CustomOpenRouterHandler) {
-				return this.handler.getModel()
+		if (this.handler instanceof CustomOpenRouterHandler) {
+			// Check if it's gemini or quasar
+			if (this.options.kilocodeModel === "quasar") {
+				return {
+					id: "openrouter/quasar-alpha",
+					info: {
+						maxTokens: 32_000,
+						contextWindow: 1_000_000,
+						supportsImages: true,
+						supportsComputerUse: true,
+						supportsPromptCache: false,
+					},
+				}
 			}
-
-			// For regular OpenRouterHandler, return hardcoded gemini settings
+			// return hardcoded gemini settings
 			return {
 				id: "google/gemini-2.5-pro-preview-03-25",
 				info: {
@@ -95,6 +106,7 @@ export class KiloCodeAnthropicHandler extends BaseProvider implements SingleComp
 		this.client = new Anthropic({
 			authToken: this.options.kilocodeToken,
 			baseURL: `${this.baseURL}/api/claude/`,
+			apiKey: null, //ignore anthropic apiKey, even if set in env vars - it's not valid for KiloCode anyhow
 		})
 	}
 
@@ -277,8 +289,9 @@ export class KiloCodeAnthropicHandler extends BaseProvider implements SingleComp
 	}
 
 	getModel() {
-		// Always use the default model, ignoring any user-provided model ID
-		const id = anthropicDefaultModelId
+		// This handler is specifically for the 'claude37' KiloCode model type,
+		// which maps to the standard Anthropic default model.
+		const id = anthropicDefaultModelId // Currently 'claude-3-7-sonnet-20250219'
 		const info: ModelInfo = anthropicModels[id]
 
 		// Track the original model ID for special variant handling

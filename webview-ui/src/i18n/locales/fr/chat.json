@@ -210,16 +210,10 @@
 		"copyToInput": "Copier vers l'entrée (ou Shift + clic)"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code 3.11 est sortie",
-		"description": "Roo Code 3.11 apporte des améliorations significatives de performance et de nouvelles fonctionnalités !",
-		"whatsNew": "Quoi de neuf",
-		"feature1": "Éditions rapides : Les modifications s'appliquent maintenant beaucoup plus vite. Moins d'attente, plus de codage.",
-		"feature2": "Soldes des clés API : Visualisez vos soldes OpenRouter et Requesty dans les paramètres.",
-		"feature3": "Configuration MCP au niveau du projet : Vous pouvez maintenant la configurer par projet/espace de travail.",
-		"feature4": "Support Gemini amélioré : Nouvelles tentatives plus intelligentes, échappement corrigé, ajouté au fournisseur Vertex.",
-		"feature5": "Importation/Exportation des paramètres : Sauvegardez ou partagez facilement votre configuration entre différentes installations.",
-		"hideButton": "Masquer l'annonce",
-		"detailsDiscussLinks": "Obtenez plus de détails et participez aux discussions sur <discordLink>Discord</discordLink> et <redditLink>Reddit</redditLink> 🚀"
+		"title": "Faites-en plus avec les Tâches Boomerang 🪃",
+		"description": "Divisez le travail en sous-tâches, chacune s'exécutant dans un mode spécialisé, comme code, architect, debug ou un mode personnalisé.",
+		"learnMore": "En savoir plus →",
+		"hideButton": "Masquer l'annonce"
 	},
 	"browser": {
 		"rooWantsToUse": "Kilo Code veut utiliser le navigateur :",
@@ -242,5 +236,10 @@
 			"scrollUp": "Défiler vers le haut",
 			"close": "Fermer le navigateur"
 		}
+	},
+	"notifications": {
+		"toolRequest": "Demande d'outil en attente d'approbation",
+		"browserAction": "Action du navigateur en attente d'approbation",
+		"command": "Commande en attente d'approbation"
 	}
 }

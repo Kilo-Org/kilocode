@@ -48,8 +48,8 @@ import {
 	OPENROUTER_DEFAULT_PROVIDER_NAME,
 } from "@/components/ui/hooks/useOpenRouterModelProviders"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSeparator, Button } from "@/components/ui"
-
-import { MODELS_BY_PROVIDER, PROVIDERS, AWS_REGIONS, VERTEX_REGIONS } from "./constants"
+import { MODELS_BY_PROVIDER, PROVIDERS, VERTEX_REGIONS } from "./constants"
+import { AWS_REGIONS } from "../../../../src/shared/aws_regions"
 import { VSCodeButtonLink } from "../common/VSCodeButtonLink"
 import { ModelInfoView } from "./ModelInfoView"
 import { ModelPicker } from "./ModelPicker"
@@ -276,6 +276,14 @@ const ApiOptions = ({
 		}
 	}
 
+	// kilocode_change start
+	const kilocodeDescriptions = {
+		claude37: "Claude 3.7 Sonnet is Anthropic's most capable model for reasoning, coding, and multimodal tasks.",
+		gemini25: "Gemini 2.5 Pro is Google's most capable model for reasoning, coding, and multimodal tasks.",
+		quasar: "Quasar Alpha is a cloaked model through OpenRouter provided to the community to gather feedback.",
+	}
+	// kilocode_change end
+
 	return (
 		<div className="flex flex-col gap-3">
 			<div className="flex flex-col gap-1 relative">
@@ -327,7 +335,7 @@ const ApiOptions = ({
 						<Select
 							value={apiConfiguration?.kilocodeModel || "claude37"}
 							onValueChange={(value) =>
-								setApiConfigurationField("kilocodeModel", value as "claude37" | "gemini25")
+								setApiConfigurationField("kilocodeModel", value as "claude37" | "gemini25" | "quasar")
 							}>
 							<SelectTrigger className="w-full">
 								<SelectValue placeholder="Select provider" />
@@ -335,12 +343,11 @@ const ApiOptions = ({
 							<SelectContent>
 								<SelectItem value="claude37">Claude 3.7 Sonnet</SelectItem>
 								<SelectItem value="gemini25">Gemini 2.5 Pro</SelectItem>
+								<SelectItem value="quasar">Quasar Alpha</SelectItem>
 							</SelectContent>
 						</Select>
 						<div className="text-sm text-vscode-descriptionForeground mt-1">
-							{apiConfiguration?.kilocodeModel === "gemini25"
-								? "Gemini 2.5 Pro is Google's most capable model for reasoning, coding, and multimodal tasks."
-								: "Claude 3.7 Sonnet is Anthropic's most capable model for reasoning, coding, and multimodal tasks."}
+							{kilocodeDescriptions[apiConfiguration?.kilocodeModel ?? "claude37"]}
 						</div>
 					</div>
 
@@ -698,6 +705,25 @@ const ApiOptions = ({
 						onChange={handleInputChange("awsUseCrossRegionInference", noTransform)}>
 						{t("settings:providers.awsCrossRegion")}
 					</Checkbox>
+					{selectedModelInfo?.supportsPromptCache && (
+						<Checkbox
+							checked={apiConfiguration?.awsUsePromptCache || false}
+							onChange={handleInputChange("awsUsePromptCache", noTransform)}>
+							<div className="flex items-center gap-1">
+								<span>{t("settings:providers.enablePromptCaching")}</span>
+								<i
+									className="codicon codicon-info text-vscode-descriptionForeground"
+									title={t("settings:providers.enablePromptCachingTitle")}
+									style={{ fontSize: "12px" }}
+								/>
+							</div>
+						</Checkbox>
+					)}
+					<div>
+						<div className="text-sm text-vscode-descriptionForeground ml-6 mt-1">
+							{t("settings:providers.cacheUsageNote")}
+						</div>
+					</div>
 				</>
 			)}
 
@@ -1637,7 +1663,7 @@ const ApiOptions = ({
 								{t("settings:providers.awsCustomArnUse")}
 								<ul className="list-disc pl-5 mt-1">
 									<li>
-										arn:aws:bedrock:us-east-1:123456789012:foundation-model/anthropic.claude-3-sonnet-20240229-v1:0
+										arn:aws:bedrock:eu-west-1:123456789012:inference-profile/eu.anthropic.claude-3-7-sonnet-20250219-v1:0
 									</li>
 									<li>
 										arn:aws:bedrock:us-west-2:123456789012:provisioned-model/my-provisioned-model

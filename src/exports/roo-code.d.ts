@@ -42,6 +42,9 @@ type ProviderSettings = {
 				description?: string | undefined
 				reasoningEffort?: ("low" | "medium" | "high") | undefined
 				thinking?: boolean | undefined
+				minTokensPerCachePoint?: number | undefined
+				maxCachePoints?: number | undefined
+				cachableFields?: string[] | undefined
 		  } | null)
 		| undefined
 	glamaApiKey?: string | undefined
@@ -61,6 +64,9 @@ type ProviderSettings = {
 				description?: string | undefined
 				reasoningEffort?: ("low" | "medium" | "high") | undefined
 				thinking?: boolean | undefined
+				minTokensPerCachePoint?: number | undefined
+				maxCachePoints?: number | undefined
+				cachableFields?: string[] | undefined
 		  } | null)
 		| undefined
 	openRouterBaseUrl?: string | undefined
@@ -98,6 +104,9 @@ type ProviderSettings = {
 				description?: string | undefined
 				reasoningEffort?: ("low" | "medium" | "high") | undefined
 				thinking?: boolean | undefined
+				minTokensPerCachePoint?: number | undefined
+				maxCachePoints?: number | undefined
+				cachableFields?: string[] | undefined
 		  } | null)
 		| undefined
 	openAiUseAzure?: boolean | undefined
@@ -140,6 +149,9 @@ type ProviderSettings = {
 				description?: string | undefined
 				reasoningEffort?: ("low" | "medium" | "high") | undefined
 				thinking?: boolean | undefined
+				minTokensPerCachePoint?: number | undefined
+				maxCachePoints?: number | undefined
+				cachableFields?: string[] | undefined
 		  } | null)
 		| undefined
 	requestyApiKey?: string | undefined
@@ -158,6 +170,9 @@ type ProviderSettings = {
 				description?: string | undefined
 				reasoningEffort?: ("low" | "medium" | "high") | undefined
 				thinking?: boolean | undefined
+				minTokensPerCachePoint?: number | undefined
+				maxCachePoints?: number | undefined
+				cachableFields?: string[] | undefined
 		  } | null)
 		| undefined
 	modelTemperature?: (number | null) | undefined
@@ -166,7 +181,7 @@ type ProviderSettings = {
 	includeMaxTokens?: boolean | undefined
 	fakeAi?: unknown | undefined
 	kilocodeToken?: string | undefined
-	kilocodeModel?: ("claude37" | "gemini25") | undefined
+	kilocodeModel?: ("claude37" | "gemini25" | "quasar") | undefined
 	fireworksModelId?: string | undefined
 	fireworksApiKey?: string | undefined
 }
@@ -261,7 +276,6 @@ type GlobalSettings = {
 	experiments?:
 		| {
 				search_and_replace: boolean
-				experimentalDiffStrategy: boolean
 				insert_content: boolean
 				powerSteering: boolean
 		  }
@@ -405,26 +419,127 @@ type TokenUsage = {
 	contextTokens: number
 }
 
-type RooCodeSettings = GlobalSettings & ProviderSettings
-
-interface RooCodeEvents {
+type RooCodeEvents = {
 	message: [
 		{
 			taskId: string
 			action: "created" | "updated"
-			message: ClineMessage
+			message: {
+				ts: number
+				type: "ask" | "say"
+				ask?:
+					| (
+							| "followup"
+							| "command"
+							| "command_output"
+							| "completion_result"
+							| "tool"
+							| "api_req_failed"
+							| "resume_task"
+							| "resume_completed_task"
+							| "mistake_limit_reached"
+							| "browser_action_launch"
+							| "use_mcp_server"
+							| "finishTask"
+					  )
+					| undefined
+				say?:
+					| (
+							| "task"
+							| "error"
+							| "api_req_started"
+							| "api_req_finished"
+							| "api_req_retried"
+							| "api_req_retry_delayed"
+							| "api_req_deleted"
+							| "text"
+							| "reasoning"
+							| "completion_result"
+							| "user_feedback"
+							| "user_feedback_diff"
+							| "command_output"
+							| "tool"
+							| "shell_integration_warning"
+							| "browser_action"
+							| "browser_action_result"
+							| "command"
+							| "mcp_server_request_started"
+							| "mcp_server_response"
+							| "new_task_started"
+							| "new_task"
+							| "checkpoint_saved"
+							| "rooignore_error"
+					  )
+					| undefined
+				text?: string | undefined
+				images?: string[] | undefined
+				partial?: boolean | undefined
+				reasoning?: string | undefined
+				conversationHistoryIndex?: number | undefined
+				checkpoint?:
+					| {
+							[x: string]: unknown
+					  }
+					| undefined
+				progressStatus?:
+					| {
+							icon?: string | undefined
+							text?: string | undefined
+					  }
+					| undefined
+			}
 		},
 	]
-	taskCreated: [taskId: string]
-	taskStarted: [taskId: string]
-	taskPaused: [taskId: string]
-	taskUnpaused: [taskId: string]
-	taskAskResponded: [taskId: string]
-	taskAborted: [taskId: string]
-	taskSpawned: [taskId: string, childTaskId: string]
-	taskCompleted: [taskId: string, usage: TokenUsage]
-	taskTokenUsageUpdated: [taskId: string, usage: TokenUsage]
+	taskCreated: [string]
+	taskStarted: [string]
+	taskModeSwitched: [string, string]
+	taskPaused: [string]
+	taskUnpaused: [string]
+	taskAskResponded: [string]
+	taskAborted: [string]
+	taskSpawned: [string, string]
+	taskCompleted: [
+		string,
+		{
+			totalTokensIn: number
+			totalTokensOut: number
+			totalCacheWrites?: number | undefined
+			totalCacheReads?: number | undefined
+			totalCost: number
+			contextTokens: number
+		},
+	]
+	taskTokenUsageUpdated: [
+		string,
+		{
+			totalTokensIn: number
+			totalTokensOut: number
+			totalCacheWrites?: number | undefined
+			totalCacheReads?: number | undefined
+			totalCost: number
+			contextTokens: number
+		},
+	]
 }
+
+/**
+ * RooCodeEvent
+ */
+declare enum RooCodeEventName {
+	Message = "message",
+	TaskCreated = "taskCreated",
+	TaskStarted = "taskStarted",
+	TaskModeSwitched = "taskModeSwitched",
+	TaskPaused = "taskPaused",
+	TaskUnpaused = "taskUnpaused",
+	TaskAskResponded = "taskAskResponded",
+	TaskAborted = "taskAborted",
+	TaskSpawned = "taskSpawned",
+	TaskCompleted = "taskCompleted",
+	TaskTokenUsageUpdated = "taskTokenUsageUpdated",
+}
+
+type RooCodeSettings = GlobalSettings & ProviderSettings
 interface RooCodeAPI extends EventEmitter<RooCodeEvents> {
 	/**
 	 * Starts a new task with an optional initial message and images.
@@ -432,7 +547,17 @@ interface RooCodeAPI extends EventEmitter<RooCodeEvents> {
 	 * @param images Optional array of image data URIs (e.g., "data:image/webp;base64,...").
 	 * @returns The ID of the new task.
 	 */
-	startNewTask(task?: string, images?: string[]): Promise<string>
+	startNewTask({
+		configuration,
+		text,
+		images,
+		newTab,
+	}: {
+		configuration?: RooCodeSettings
+		text?: string
+		images?: string[]
+		newTab?: boolean
+	}): Promise<string>
 	/**
 	 * Returns the current task stack.
 	 * @returns An array of task IDs.
@@ -466,43 +591,51 @@ interface RooCodeAPI extends EventEmitter<RooCodeEvents> {
 	 */
 	getConfiguration(): RooCodeSettings
 	/**
-	 * Returns the value of a configuration key.
-	 * @param key The key of the configuration value to return.
-	 * @returns The value of the configuration key.
-	 */
-	getConfigurationValue<K extends keyof RooCodeSettings>(key: K): RooCodeSettings[K]
-	/**
 	 * Sets the configuration for the current task.
 	 * @param values An object containing key-value pairs to set.
 	 */
 	setConfiguration(values: RooCodeSettings): Promise<void>
 	/**
-	 * Sets the value of a configuration key.
-	 * @param key The key of the configuration value to set.
-	 * @param value The value to set.
+	 * Creates a new API configuration profile
+	 * @param name The name of the profile
+	 * @returns The ID of the created profile
 	 */
-	setConfigurationValue<K extends keyof RooCodeSettings>(key: K, value: RooCodeSettings[K]): Promise<void>
+	createProfile(name: string): Promise<string>
+	/**
+	 * Returns a list of all configured profile names
+	 * @returns Array of profile names
+	 */
+	getProfiles(): string[]
+	/**
+	 * Changes the active API configuration profile
+	 * @param name The name of the profile to activate
+	 * @throws Error if the profile does not exist
+	 */
+	setActiveProfile(name: string): Promise<void>
+	/**
+	 * Returns the name of the currently active profile
+	 * @returns The profile name, or undefined if no profile is active
+	 */
+	getActiveProfile(): string | undefined
+	/**
+	 * Deletes a profile by name
+	 * @param name The name of the profile to delete
+	 * @throws Error if the profile does not exist
+	 */
+	deleteProfile(name: string): Promise<void>
 	/**
 	 * Returns true if the API is ready to use.
 	 */
 	isReady(): boolean
-	/**
-	 * Returns the messages for a given task.
-	 * @param taskId The ID of the task.
-	 * @returns An array of ClineMessage objects.
-	 */
-	getMessages(taskId: string): ClineMessage[]
-	/**
-	 * Returns the token usage for a given task.
-	 * @param taskId The ID of the task.
-	 * @returns A TokenUsage object.
-	 */
-	getTokenUsage(taskId: string): TokenUsage
-	/**
-	 * Logs a message to the output channel.
-	 * @param message The message to log.
-	 */
-	log(message: string): void
 }
 
-export type { ClineMessage, GlobalSettings, ProviderSettings, RooCodeAPI, RooCodeEvents, RooCodeSettings, TokenUsage }
+export {
+	type ClineMessage,
+	type GlobalSettings,
+	type ProviderSettings,
+	type RooCodeAPI,
+	RooCodeEventName,
+	type RooCodeEvents,
+	type RooCodeSettings,
+	type TokenUsage,
+}

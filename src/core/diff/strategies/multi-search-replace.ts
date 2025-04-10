@@ -143,9 +143,9 @@ Only use a single line of '=======' between search and replacement content, beca
 
 	private unescapeMarkers(content: string): string {
 		return content
-			.replace(/^\\<<<<<<< SEARCH/gm, "<<<<<<< SEARCH")
+			.replace(/^\\<<<<<<</gm, "<<<<<<<")
 			.replace(/^\\=======/gm, "=======")
-			.replace(/^\\>>>>>>> REPLACE/gm, ">>>>>>> REPLACE")
+			.replace(/^\\>>>>>>>/gm, ">>>>>>>")
 			.replace(/^\\-------/gm, "-------")
 			.replace(/^\\:end_line:/gm, ":end_line:")
 			.replace(/^\\:start_line:/gm, ":start_line:")
@@ -162,8 +162,10 @@ Only use a single line of '=======' between search and replacement content, beca
 		const SEARCH = "<<<<<<< SEARCH"
 		const SEP = "======="
 		const REPLACE = ">>>>>>> REPLACE"
+		const SEARCH_PREFIX = "<<<<<<<"
+		const REPLACE_PREFIX = ">>>>>>>"
 
-		const reportError = (found: string, expected: string) => ({
+		const reportMergeConflictError = (found: string, expected: string) => ({
 			success: false,
 			error:
 				`ERROR: Special marker '${found}' found in your diff content at line ${state.line}:\n` +
@@ -187,27 +189,62 @@ Only use a single line of '=======' between search and replacement content, beca
 				`\\${REPLACE}\n`,
 		})
 
+		const reportInvalidDiffError = (found: string, expected: string) => ({
+			success: false,
+			error:
+				`ERROR: Diff block is malformed: marker '${found}' found in your diff content at line ${state.line}. Expected: ${expected}\n` +
+				"\n" +
+				"CORRECT FORMAT:\n\n" +
+				"<<<<<<< SEARCH\n" +
+				":start_line: (required) The line number of original content where the search block starts.\n" +
+				":end_line: (required) The line number of original content  where the search block ends.\n" +
+				"-------\n" +
+				"[exact content to find including whitespace]\n" +
+				"=======\n" +
+				"[new content to replace with]\n" +
+				">>>>>>> REPLACE\n",
+		})
+
+		const lines = diffContent.split("\n")
+		const searchCount = lines.filter((l) => l.trim() === SEARCH).length
+		const sepCount = lines.filter((l) => l.trim() === SEP).length
+		const replaceCount = lines.filter((l) => l.trim() === REPLACE).length
+
+		const likelyBadStructure = searchCount !== replaceCount || sepCount < searchCount
+
 		for (const line of diffContent.split("\n")) {
 			state.line++
 			const marker = line.trim()
 
 			switch (state.current) {
 				case State.START:
-					if (marker === SEP) return reportError(SEP, SEARCH)
-					if (marker === REPLACE) return reportError(REPLACE, SEARCH)
+					if (marker === SEP)
+						return likelyBadStructure
+							? reportInvalidDiffError(SEP, SEARCH)
+							: reportMergeConflictError(SEP, SEARCH)
+					if (marker === REPLACE) return reportInvalidDiffError(REPLACE, SEARCH)
+					if (marker.startsWith(REPLACE_PREFIX)) return reportMergeConflictError(marker, SEARCH)
 					if (marker === SEARCH) state.current = State.AFTER_SEARCH
+					else if (marker.startsWith(SEARCH_PREFIX)) return reportMergeConflictError(marker, SEARCH)
 					break
 
 				case State.AFTER_SEARCH:
-					if (marker === SEARCH) return reportError(SEARCH, SEP)
-					if (marker === REPLACE) return reportError(REPLACE, SEP)
+					if (marker === SEARCH) return reportInvalidDiffError(SEARCH, SEP)
+					if (marker.startsWith(SEARCH_PREFIX)) return reportMergeConflictError(marker, SEARCH)
+					if (marker === REPLACE) return reportInvalidDiffError(REPLACE, SEP)
+					if (marker.startsWith(REPLACE_PREFIX)) return reportMergeConflictError(marker, SEARCH)
 					if (marker === SEP) state.current = State.AFTER_SEPARATOR
 					break
 
 				case State.AFTER_SEPARATOR:
-					if (marker === SEARCH) return reportError(SEARCH, REPLACE)
-					if (marker === SEP) return reportError(SEP, REPLACE)
+					if (marker === SEARCH) return reportInvalidDiffError(SEARCH, REPLACE)
+					if (marker.startsWith(SEARCH_PREFIX)) return reportMergeConflictError(marker, REPLACE)
+					if (marker === SEP)
+						return likelyBadStructure
+							? reportInvalidDiffError(SEP, REPLACE)
+							: reportMergeConflictError(SEP, REPLACE)
 					if (marker === REPLACE) state.current = State.START
+					else if (marker.startsWith(REPLACE_PREFIX)) return reportMergeConflictError(marker, REPLACE)
 					break
 			}
 		}
@@ -301,7 +338,10 @@ Only use a single line of '=======' between search and replacement content, beca
 			replaceContent = this.unescapeMarkers(replaceContent)
 
 			// Strip line numbers from search and replace content if every line starts with a line number
-			if (everyLineHasLineNumbers(searchContent) && everyLineHasLineNumbers(replaceContent)) {
+			if (
+				(everyLineHasLineNumbers(searchContent) && everyLineHasLineNumbers(replaceContent)) ||
+				(everyLineHasLineNumbers(searchContent) && replaceContent.trim() === "")
+			) {
 				searchContent = stripLineNumbers(searchContent)
 				replaceContent = stripLineNumbers(replaceContent)
 			}
