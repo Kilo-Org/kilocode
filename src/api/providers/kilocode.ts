@@ -1,12 +1,19 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import { Stream as AnthropicStream } from "@anthropic-ai/sdk/streaming"
 import { CacheControlEphemeral } from "@anthropic-ai/sdk/resources"
-import { anthropicDefaultModelId, anthropicModels, ApiHandlerOptions, ModelInfo } from "../../shared/api"
+import {
+	anthropicDefaultModelId,
+	anthropicModels,
+	ApiHandlerOptions,
+	ModelInfo,
+	openRouterDefaultModelInfo,
+} from "../../shared/api"
 import { ApiStream } from "../transform/stream"
 import { BaseProvider } from "./base-provider"
 import { ANTHROPIC_DEFAULT_MAX_TOKENS } from "./constants"
 import { SingleCompletionHandler, getModelParams } from "../index"
 import { OpenRouterHandler } from "./openrouter"
+import { CustomOpenRouterHandler } from "./kilocode-openrouter"
 
 export class KiloCodeHandler extends BaseProvider implements SingleCompletionHandler {
 	private handler: BaseProvider & SingleCompletionHandler
@@ -20,11 +27,12 @@ export class KiloCodeHandler extends BaseProvider implements SingleCompletionHan
 		} else if (modelType === "gemini25") {
 			const openrouterOptions = {
 				...options,
-				openRouterBaseUrl: "https://kilocode.ai/api/openrouter/",
+				// openRouterBaseUrl: "https://kilocode.ai/api/openrouter/",
+				openRouterBaseUrl: "http://localhost:3000/api/openrouter/",
 				openRouterApiKey: options.kilocodeToken,
 			}
 
-			this.handler = new OpenRouterHandler(openrouterOptions)
+			this.handler = new CustomOpenRouterHandler(openrouterOptions)
 		} else {
 			throw new Error("Invalid KiloCode provider")
 		}
@@ -35,8 +43,16 @@ export class KiloCodeHandler extends BaseProvider implements SingleCompletionHan
 	}
 
 	getModel(): { id: string; info: ModelInfo } {
-		if (this.handler instanceof OpenRouterHandler) {
-			// return hardcoded gemini settings
+		console.log("KiloCodeHandler getModel")
+
+		if (this.handler instanceof OpenRouterHandler || this.handler instanceof CustomOpenRouterHandler) {
+			console.log("KiloCodeHandler getModel OpenRouterHandler or CustomOpenRouterHandler")
+			// For CustomOpenRouterHandler, let it handle the model settings
+			if (this.handler instanceof CustomOpenRouterHandler) {
+				return this.handler.getModel()
+			}
+
+			// For regular OpenRouterHandler, return hardcoded gemini settings
 			return {
 				id: "google/gemini-2.5-pro-preview-03-25",
 				info: {
