@@ -51,8 +51,8 @@ export class CustomOpenRouterHandler extends OpenRouterHandler {
 				supportsImages: true,
 				supportsComputerUse: true,
 				supportsPromptCache: true,
-				inputPrice: 0.5, // Example price, adjust as needed
-				outputPrice: 1.5, // Example price, adjust as needed
+				inputPrice: 1.25,
+				outputPrice: 10,
 				description: "Gemini 2.5 Pro via OpenRouter",
 			}
 		}
