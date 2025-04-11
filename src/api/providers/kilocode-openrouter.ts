@@ -1,6 +1,5 @@
 import { getModelParams } from ".."
-import { ApiHandlerOptions, openRouterDefaultModelId, openRouterDefaultModelInfo } from "../../shared/api"
-import { DEEP_SEEK_DEFAULT_TEMPERATURE } from "./constants"
+import { ApiHandlerOptions } from "../../shared/api"
 import { OpenRouterHandler } from "./openrouter"
 
 /**
