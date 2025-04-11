@@ -234,7 +234,17 @@ export interface ClineSayTool {
 }
 
 // Must keep in sync with system prompt.
-export const browserActions = ["launch", "click", "hover", "type", "scroll_down", "scroll_up", "close"] as const
+export const browserActions = [
+	"launch",
+	"click",
+	"hover",
+	"type",
+	"scroll_down",
+	"scroll_up",
+	// kilocode_change
+	"execute_js",
+	"close",
+] as const
 
 export type BrowserAction = (typeof browserActions)[number]
 
@@ -249,6 +259,8 @@ export type BrowserActionResult = {
 	logs?: string
 	currentUrl?: string
 	currentMousePosition?: string
+	// kilocode_change
+	evaluationResult?: any
 }
 
 export interface ClineAskUseMcpServer {

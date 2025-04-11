@@ -4,7 +4,8 @@ export function getBrowserActionDescription(args: ToolArgs): string | undefined 
 	if (!args.supportsComputerUse) {
 		return undefined
 	}
-	return `## browser_action
+	return (
+		`## browser_action
 Description: Request to interact with a Puppeteer-controlled browser. Every action, except \`close\`, will be responded to with a screenshot of the browser's current state, along with any new console logs. You may only perform one browser action per message, and wait for the user's response including a screenshot and logs to determine the next action.
 - The sequence of actions **must always start with** launching the browser at a URL, and **must always end with** closing the browser. If you need to visit a new URL that is not possible to navigate to from the current webpage, you must first close the browser, then launch again at the new URL.
 - While the browser is active, only the \`browser_action\` tool can be used. No other tools should be called during this time. You may proceed to use other tools only after closing the browser. For example if you run into an error and need to fix a file, you must close the browser, then use other tools to make the necessary changes, then re-launch the browser to verify the result.
@@ -21,7 +22,13 @@ Parameters:
     * type: Type a string of text on the keyboard. You might use this after clicking on a text field to input text.
         - Use with the \`text\` parameter to provide the string to type.
     * scroll_down: Scroll down the page by one page height.
-    * scroll_up: Scroll up the page by one page height.
+    * scroll_up: Scroll up the page by one page height.` +
+		// kilocode_change
+		`
+    * execute_js: Execute JavaScript code in the browser context.
+        - Use with the \`text\` parameter to provide the JavaScript code to execute.
+        - Returns the result of the JavaScript evaluation directly in the response.
+        - Useful for extracting data from the page or modifying the page's content.
     * close: Close the Puppeteer-controlled browser instance. This **must always be the final browser action**.
         - Example: \`<action>close</action>\`
 - url: (optional) Use this for providing the URL for the \`launch\` action.
@@ -49,4 +56,5 @@ Example: Requesting to click on the element at coordinates 450,300
 <action>click</action>
 <coordinate>450,300</coordinate>
 </browser_action>`
+	)
 }
