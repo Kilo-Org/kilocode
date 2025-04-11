@@ -43,8 +43,6 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 	): AsyncGenerator<ApiStreamChunk> {
 		let { id: modelId, maxTokens, thinking, temperature, topP } = this.getModel()
 
-		console.log("used modelId", modelId)
-
 		// Convert Anthropic messages to OpenAI format.
 		let openAiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
 			{ role: "system", content: systemPrompt },
@@ -162,7 +160,6 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 	}
 
 	override getModel() {
-		console.log("openrouter getModel called")
 		const modelId = this.options.openRouterModelId
 		const modelInfo = this.options.openRouterModelInfo
 

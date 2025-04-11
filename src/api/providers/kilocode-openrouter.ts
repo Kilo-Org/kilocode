@@ -20,7 +20,7 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 		let defaultTemperature = 0
 		let topP = undefined
 
-		const selectedModel = this.options.kilocodeModel ?? "claude37"
+		const selectedModel = this.options.kilocodeModel ?? "gemini25"
 
 		// TODO: use the models that have been fetched from openrouter.
 		// for now we are using the hardcoded models
