@@ -1,7 +1,8 @@
 import { OpenAiHandler, OpenAiHandlerOptions } from "./openai"
 import { deepSeekModels, deepSeekDefaultModelId, ModelInfo } from "../../shared/api"
 import { ApiStreamUsageChunk } from "../transform/stream" // Import for type
-import { getModelParams } from "../index"
+
+import { getModelParams } from "../getModelParams"
 
 export class DeepSeekHandler extends OpenAiHandler {
 	constructor(options: OpenAiHandlerOptions) {

@@ -2,8 +2,8 @@
 
 import { BetaThinkingConfigParam } from "@anthropic-ai/sdk/resources/beta/messages/index.mjs"
 
-import { getModelParams } from "../index"
 import { ANTHROPIC_DEFAULT_MAX_TOKENS } from "../providers/constants"
+import { getModelParams } from "../getModelParams"
 
 describe("getModelParams", () => {
 	it("should return default values when no custom values are provided", () => {

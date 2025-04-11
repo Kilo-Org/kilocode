@@ -1,6 +1,6 @@
-import { getModelParams } from ".."
 import { ApiHandlerOptions } from "../../shared/api"
 import { OpenRouterHandler } from "./openrouter"
+import { getModelParams } from "../getModelParams"
 
 /**
  * A custom OpenRouter handler that overrides the getModel function

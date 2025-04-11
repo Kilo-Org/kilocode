@@ -10,9 +10,10 @@ import { ApiStreamChunk, ApiStreamUsageChunk } from "../transform/stream"
 import { convertToR1Format } from "../transform/r1-format"
 
 import { DEEP_SEEK_DEFAULT_TEMPERATURE } from "./constants"
-import { getModelParams, SingleCompletionHandler } from ".."
+import { SingleCompletionHandler } from ".."
 import { BaseProvider } from "./base-provider"
 import { defaultHeaders } from "./openai"
+import { getModelParams } from "../getModelParams"
 
 const OPENROUTER_DEFAULT_PROVIDER_NAME = "[default]"
 
