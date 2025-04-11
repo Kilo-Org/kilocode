@@ -1347,11 +1347,6 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			break
 		}
 		// end kilocode_change
-
-		case "showFeedbackOptions":
-			// Open feedback options in a new browser window
-			vscode.env.openExternal(vscode.Uri.parse("https://github.com/Kilo-Org/kilocode/issues/new/choose"))
-			break
 	}
 }
 

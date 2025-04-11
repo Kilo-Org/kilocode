@@ -3,7 +3,7 @@
 	"displayName": "Kilo Code",
 	"description": "A whole dev team of AI agents in your editor.",
 	"publisher": "kilocode",
-	"version": "4.14.0",
+	"version": "4.14.1",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
