@@ -287,7 +287,6 @@ const ApiOptions = ({
 	const kilocodeDescriptions = {
 		claude37: "Claude 3.7 Sonnet is Anthropic's most capable model for reasoning, coding, and multimodal tasks.",
 		gemini25: "Gemini 2.5 Pro is Google's most capable model for reasoning, coding, and multimodal tasks.",
-		quasar: "Quasar Alpha is a cloaked model through OpenRouter provided to the community to gather feedback.",
 	}
 	// kilocode_change end
 
@@ -342,7 +341,7 @@ const ApiOptions = ({
 						<Select
 							value={apiConfiguration?.kilocodeModel || "claude37"}
 							onValueChange={(value) =>
-								setApiConfigurationField("kilocodeModel", value as "claude37" | "gemini25" | "quasar")
+								setApiConfigurationField("kilocodeModel", value as "claude37" | "gemini25")
 							}>
 							<SelectTrigger className="w-full">
 								<SelectValue placeholder="Select provider" />
@@ -350,7 +349,6 @@ const ApiOptions = ({
 							<SelectContent>
 								<SelectItem value="claude37">Claude 3.7 Sonnet</SelectItem>
 								<SelectItem value="gemini25">Gemini 2.5 Pro</SelectItem>
-								<SelectItem value="quasar">Quasar Alpha</SelectItem>
 							</SelectContent>
 						</Select>
 						<div className="text-sm text-vscode-descriptionForeground mt-1">

@@ -20,7 +20,7 @@ export class KiloCodeHandler extends BaseProvider implements SingleCompletionHan
 
 		if (modelType === "claude37") {
 			this.handler = new KiloCodeAnthropicHandler(options)
-		} else if (modelType === "gemini25" || modelType === "quasar") {
+		} else if (modelType === "gemini25") {
 			// Determine the correct OpenRouter model ID based on the selected KiloCode model type
 
 			const openrouterOptions = {
@@ -42,20 +42,9 @@ export class KiloCodeHandler extends BaseProvider implements SingleCompletionHan
 
 	getModel(): { id: string; info: ModelInfo } {
 		if (this.handler instanceof KilocodeOpenrouterHandler) {
-			// Check if it's gemini or quasar
-			if (this.options.kilocodeModel === "quasar") {
-				return {
-					id: "openrouter/quasar-alpha",
-					info: {
-						maxTokens: 32_000,
-						contextWindow: 1_000_000,
-						supportsImages: true,
-						supportsComputerUse: true,
-						supportsPromptCache: false,
-					},
-				}
-			}
 			// return hardcoded gemini settings
+			// We used to support quasar, this will now fall back on google gemini since it does not exist anymore so we leave this in for a while now
+			// TODO: keeping this stuff hardcoded like this in here is bad practice and unmaintainable. Leavint this TODO comment here so we come up with something maintainable ASAP
 			return {
 				id: "google/gemini-2.5-pro-preview-03-25",
 				info: {
