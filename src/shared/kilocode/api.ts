@@ -9,4 +9,12 @@ export const kilocodeOpenrouterModels = {
 		outputPrice: 10,
 		description: "Gemini 2.5 Pro via OpenRouter",
 	},
+	"openai/gpt-4.1": {
+		maxTokens: 32_768,
+		contextWindow: 1_047_576,
+		supportsImages: true,
+		supportsPromptCache: true,
+		inputPrice: 2,
+		outputPrice: 8,
+	},
 }
