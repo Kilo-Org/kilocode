@@ -39,6 +39,7 @@ import {
 	fireworksModels,
 	ApiProvider,
 } from "../../../../src/shared/api"
+import { kilocodeOpenrouterModels } from "../../../../src/shared/kilocode/api" // kilocode_change
 import { ExtensionMessage } from "../../../../src/shared/ExtensionMessage"
 
 import { vscode } from "@/utils/vscode"
@@ -1876,6 +1877,19 @@ export function normalizeApiConfiguration(apiConfiguration?: ApiConfiguration) {
 			}
 		case "fireworks":
 			return getProviderData(fireworksModels, fireworksDefaultModelId)
+		// begin kilocode_change
+		case "kilocode":
+			// TODO: in line with kilocode-openrouter provider use hardcoded for now but info needs to be fetched later
+			return {
+				selectedProvider: provider,
+				selectedModelId:
+					apiConfiguration?.kilocodeModel === "gemini25" ? "Gemini 2.5 Pro" : "Claude 3.7 Sonnet",
+				selectedModelInfo:
+					apiConfiguration?.kilocodeModel === "gemini25"
+						? kilocodeOpenrouterModels["google/gemini-2.5-pro-preview-03-25"]
+						: anthropicModels["claude-3-7-sonnet-20250219"],
+			}
+		// end kilocode_change
 		default:
 			return getProviderData(anthropicModels, anthropicDefaultModelId)
 	}
