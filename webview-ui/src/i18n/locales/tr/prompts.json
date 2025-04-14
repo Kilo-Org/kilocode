@@ -36,7 +36,7 @@
 		"title": "Moda özgü özel talimatlar (isteğe bağlı)",
 		"resetToDefault": "Varsayılana sıfırla",
 		"description": "{{modeName}} modu için özel davranış yönergeleri ekleyin.",
-		"loadFromFile": "{{mode}} moduna özgü özel talimatlar ayrıca çalışma alanınızdaki <span>.kilocode/rules-{{slug}}/</span> klasöründen yüklenebilir (.kilocoderules-{{slug}} kullanımdan kaldırılmıştır ve yakında çalışmayı durduracaktır)."
+		"loadFromFile": "{{mode}} moduna özgü özel talimatlar ayrıca çalışma alanınızdaki <span>.kilocode/rules/</span> klasöründen yüklenebilir (.kilocoderules-{{slug}} kullanımdan kaldırılmıştır ve yakında çalışmayı durduracaktır)."
 	},
 	"globalCustomInstructions": {
 		"title": "Tüm Modlar için Özel Talimatlar",

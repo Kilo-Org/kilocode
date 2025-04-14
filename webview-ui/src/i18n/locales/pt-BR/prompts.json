@@ -36,7 +36,7 @@
 		"title": "Instruções personalizadas específicas do modo (opcional)",
 		"resetToDefault": "Restaurar para padrão",
 		"description": "Adicione diretrizes comportamentais específicas para o modo {{modeName}}.",
-		"loadFromFile": "Instruções personalizadas específicas para o modo {{modeName}} também podem ser carregadas da pasta <span>.kilocode/rules-{{modeSlug}}/</span> no seu espaço de trabalho (.kilocoderules-{{modeSlug}} está obsoleto e deixará de funcionar em breve)."
+		"loadFromFile": "Instruções personalizadas específicas para o modo {{modeName}} também podem ser carregadas da pasta <span>.kilocode/rules/</span> no seu espaço de trabalho (.kilocoderules-{{modeSlug}} está obsoleto e deixará de funcionar em breve)."
 	},
 	"globalCustomInstructions": {
 		"title": "Instruções personalizadas para todos os modos",

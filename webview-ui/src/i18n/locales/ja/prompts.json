@@ -36,7 +36,7 @@
 		"title": "モード固有のカスタム指示（オプション）",
 		"resetToDefault": "デフォルトにリセット",
 		"description": "{{modeName}}モードに特化した行動ガイドラインを追加します。",
-		"loadFromFile": "{{mode}}モード固有のカスタム指示は、ワークスペースの<span>.kilocode/rules-{{slug}}/</span>フォルダからも読み込めます（.kilocoderules-{{slug}}は非推奨であり、まもなく機能しなくなります）。"
+		"loadFromFile": "{{mode}}モード固有のカスタム指示は、ワークスペースの<span>.kilocode/rules/</span>フォルダからも読み込めます（.kilocoderules-{{slug}}は非推奨であり、まもなく機能しなくなります）。"
 	},
 	"globalCustomInstructions": {
 		"title": "すべてのモードのカスタム指示",

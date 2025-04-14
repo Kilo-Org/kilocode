@@ -36,7 +36,7 @@
 		"title": "模式专属规则（可选）",
 		"resetToDefault": "重置为默认值",
 		"description": "{{modeName}}模式的专属规则",
-		"loadFromFile": "支持从<span>.kilocode/rules-{{slug}}/</span>目录读取配置（.kilocoderules-{{slug}}已弃用并将很快停止工作）。"
+		"loadFromFile": "支持从<span>.kilocode/rules/</span>目录读取配置（.kilocoderules-{{slug}}已弃用并将很快停止工作）。"
 	},
 	"globalCustomInstructions": {
 		"title": "所有模式的自定义指令",

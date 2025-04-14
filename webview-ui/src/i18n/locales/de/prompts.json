@@ -36,7 +36,7 @@
 		"title": "Modusspezifische benutzerdefinierte Anweisungen (optional)",
 		"resetToDefault": "Auf Standardwerte zurücksetzen",
 		"description": "Fügen Sie verhaltensspezifische Richtlinien für den Modus {{modeName}} hinzu.",
-		"loadFromFile": "Benutzerdefinierte Anweisungen für den Modus {{mode}} können auch aus dem Ordner <span>.kilocode/rules-{{slug}}/</span> in deinem Arbeitsbereich geladen werden (.kilocoderules-{{slug}} ist veraltet und wird bald nicht mehr funktionieren)."
+		"loadFromFile": "Benutzerdefinierte Anweisungen für den Modus {{mode}} können auch aus dem Ordner <span>.kilocode/rules/</span> in deinem Arbeitsbereich geladen werden (.kilocoderules-{{slug}} ist veraltet und wird bald nicht mehr funktionieren)."
 	},
 	"globalCustomInstructions": {
 		"title": "Benutzerdefinierte Anweisungen für alle Modi",

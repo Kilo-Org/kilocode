@@ -36,7 +36,7 @@
 		"title": "Instruccions personalitzades específiques del mode (opcional)",
 		"resetToDefault": "Restablir a valors predeterminats",
 		"description": "Afegiu directrius de comportament específiques per al mode {{modeName}}.",
-		"loadFromFile": "Les instruccions personalitzades específiques per al mode {{mode}} també es poden carregar des de la carpeta <span>.kilo-code/rules-{{slug}}/</span> al vostre espai de treball (.kilocoderules-{{slug}} estan obsolets i deixaran de funcionar aviat)."
+		"loadFromFile": "Les instruccions personalitzades específiques per al mode {{mode}} també es poden carregar des de la carpeta <span>.kilocode/rules/</span> al vostre espai de treball (.kilocoderules-{{slug}} estan obsolets i deixaran de funcionar aviat)."
 	},
 	"globalCustomInstructions": {
 		"title": "Instruccions personalitzades per a tots els modes",

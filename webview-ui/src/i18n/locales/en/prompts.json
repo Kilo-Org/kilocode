@@ -36,7 +36,7 @@
 		"title": "Mode-specific Custom Instructions (optional)",
 		"resetToDefault": "Reset to default",
 		"description": "Add behavioral guidelines specific to {{modeName}} mode.",
-		"loadFromFile": "Custom instructions specific to {{mode}} mode can also be loaded from the <span>.kilocode/rules-{{slug}}/</span> folder in your workspace (.kilocoderules-{{slug}} is deprecated and will stop working soon)."
+		"loadFromFile": "Custom instructions specific to {{mode}} mode can also be loaded from the <span>.kilocode/rules/</span> folder in your workspace (.kilocoderules-{{slug}} is deprecated and will stop working soon)."
 	},
 	"globalCustomInstructions": {
 		"title": "Custom Instructions for All Modes",

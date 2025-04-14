@@ -36,7 +36,7 @@
 		"title": "Niestandardowe instrukcje dla trybu (opcjonalne)",
 		"resetToDefault": "Przywróć domyślne",
 		"description": "Dodaj wytyczne dotyczące zachowania specyficzne dla trybu {{modeName}}.",
-		"loadFromFile": "Niestandardowe instrukcje dla trybu {{modeName}} mogą być również ładowane z folderu <span>.kilocode/rules-{{modeSlug}}/</span> w Twoim obszarze roboczym (.kilocoderules-{{modeSlug}} jest przestarzały i wkrótce przestanie działać)."
+		"loadFromFile": "Niestandardowe instrukcje dla trybu {{modeName}} mogą być również ładowane z folderu <span>.kilocode/rules/</span> w Twoim obszarze roboczym (.kilocoderules-{{modeSlug}} jest przestarzały i wkrótce przestanie działać)."
 	},
 	"globalCustomInstructions": {
 		"title": "Niestandardowe instrukcje dla wszystkich trybów",

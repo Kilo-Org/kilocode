@@ -36,7 +36,7 @@
 		"title": "Hướng dẫn tùy chỉnh dành riêng cho chế độ (tùy chọn)",
 		"resetToDefault": "Đặt lại về mặc định",
 		"description": "Thêm hướng dẫn hành vi dành riêng cho chế độ {{modeName}}.",
-		"loadFromFile": "Hướng dẫn tùy chỉnh dành riêng cho chế độ {{modeName}} cũng có thể được tải từ thư mục <span>.kilocode/rules-{{modeSlug}}/</span> trong không gian làm việc của bạn (.kilocoderules-{{modeSlug}} đã lỗi thời và sẽ sớm ngừng hoạt động)."
+		"loadFromFile": "Hướng dẫn tùy chỉnh dành riêng cho chế độ {{modeName}} cũng có thể được tải từ thư mục <span>.kilocode/rules/</span> trong không gian làm việc của bạn (.kilocoderules-{{modeSlug}} đã lỗi thời và sẽ sớm ngừng hoạt động)."
 	},
 	"globalCustomInstructions": {
 		"title": "Hướng dẫn tùy chỉnh cho tất cả các chế độ",

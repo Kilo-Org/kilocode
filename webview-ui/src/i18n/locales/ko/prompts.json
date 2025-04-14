@@ -36,7 +36,7 @@
 		"title": "모드별 사용자 지정 지침 (선택 사항)",
 		"resetToDefault": "기본값으로 재설정",
 		"description": "{{modeName}} 모드에 대한 특정 행동 지침을 추가하세요.",
-		"loadFromFile": "{{mode}} 모드에 대한 사용자 지정 지침은 작업 공간의 <span>.kilocode/rules-{{slug}}/</span> 폴더에서도 로드할 수 있습니다(.kilocoderules-{{slug}}는 더 이상 사용되지 않으며 곧 작동을 중단합니다)."
+		"loadFromFile": "{{mode}} 모드에 대한 사용자 지정 지침은 작업 공간의 <span>.kilocode/rules/</span> 폴더에서도 로드할 수 있습니다(.kilocoderules-{{slug}}는 더 이상 사용되지 않으며 곧 작동을 중단합니다)."
 	},
 	"globalCustomInstructions": {
 		"title": "모든 모드에 대한 사용자 지정 지침",

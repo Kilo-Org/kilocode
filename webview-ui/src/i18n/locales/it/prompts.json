@@ -36,7 +36,7 @@
 		"title": "Istruzioni personalizzate specifiche per la modalità (opzionale)",
 		"resetToDefault": "Ripristina predefiniti",
 		"description": "Aggiungi linee guida comportamentali specifiche per la modalità {{modeName}}.",
-		"loadFromFile": "Le istruzioni personalizzate specifiche per la modalità {{mode}} possono essere caricate anche dalla cartella <span>.kilocode/rules-{{slug}}/</span> nel tuo spazio di lavoro (.kilocoderules-{{slug}} è obsoleto e smetterà di funzionare presto)."
+		"loadFromFile": "Le istruzioni personalizzate specifiche per la modalità {{mode}} possono essere caricate anche dalla cartella <span>.kilocode/rules/</span> nel tuo spazio di lavoro (.kilocoderules-{{slug}} è obsoleto e smetterà di funzionare presto)."
 	},
 	"globalCustomInstructions": {
 		"title": "Istruzioni personalizzate per tutte le modalità",
