@@ -1105,7 +1105,9 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						</div>
 
 						{/* kilocode_change begin: Model display */}
-						<div className="flex items-center mx-2 overflow-hidden">
+						<div
+							className="flex items-center mx-2 overflow-hidden"
+							title={`${selectedProvider}:${selectedModelId}`}>
 							<span className="text-xs text-vscode-descriptionForeground opacity-70 truncate">
 								{selectedProvider}:{selectedModelId}
 							</span>
