@@ -80,6 +80,10 @@
 			"allowedCommandsDescription": "当\"自动批准命令行操作\"启用时可以自动执行的命令前缀。添加 * 以允许所有命令（谨慎使用）。",
 			"commandPlaceholder": "输入命令前缀（例如 'git '）",
 			"addButton": "添加"
+		},
+		"showMenu": {
+			"label": "在聊天视图中显示自动批准菜单",
+			"description": "启用后，自动批准菜单将显示在聊天视图底部，方便快速访问自动批准设置"
 		}
 	},
 	"providers": {

@@ -243,6 +243,7 @@ describe("mergeExtensionState", () => {
 			showRooIgnoredFiles: true,
 			renderContext: "sidebar",
 			maxReadFileLine: 500,
+			showAutoApproveMenu: false,
 		}
 
 		const prevState: ExtensionState = {

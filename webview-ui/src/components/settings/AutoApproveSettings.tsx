@@ -24,6 +24,7 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	alwaysAllowSubtasks?: boolean
 	alwaysAllowExecute?: boolean
 	allowedCommands?: string[]
+	showAutoApproveMenu?: boolean // kilocode_change
 	setCachedStateField: SetCachedStateField<
 		| "alwaysAllowReadOnly"
 		| "alwaysAllowReadOnlyOutsideWorkspace"
@@ -38,6 +39,7 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 		| "alwaysAllowSubtasks"
 		| "alwaysAllowExecute"
 		| "allowedCommands"
+		| "showAutoApproveMenu" // kilocode_change
 	>
 }
 
@@ -55,6 +57,7 @@ export const AutoApproveSettings = ({
 	alwaysAllowSubtasks,
 	alwaysAllowExecute,
 	allowedCommands,
+	showAutoApproveMenu, // kilocode_change
 	setCachedStateField,
 	className,
 	...props
@@ -82,6 +85,20 @@ export const AutoApproveSettings = ({
 			</SectionHeader>
 
 			<Section>
+				{/* kilocode_change start */}
+				<div>
+					<VSCodeCheckbox
+						checked={showAutoApproveMenu}
+						onChange={(e: any) => setCachedStateField("showAutoApproveMenu", e.target.checked)}
+						data-testid="show-auto-approve-menu-checkbox">
+						<span className="font-medium">{t("settings:autoApprove.showMenu.label")}</span>
+					</VSCodeCheckbox>
+					<div className="text-vscode-descriptionForeground text-sm mt-1">
+						{t("settings:autoApprove.showMenu.description")}
+					</div>
+				</div>
+				{/* kilocode_change end */}
+
 				<div>
 					<VSCodeCheckbox
 						checked={alwaysAllowReadOnly}

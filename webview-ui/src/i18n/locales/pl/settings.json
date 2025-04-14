@@ -80,6 +80,10 @@
 			"allowedCommandsDescription": "Prefiksy poleceń, które mogą być automatycznie wykonywane, gdy \"Zawsze zatwierdzaj operacje wykonania\" jest włączone. Dodaj * aby zezwolić na wszystkie polecenia (używaj z ostrożnością).",
 			"commandPlaceholder": "Wprowadź prefiks polecenia (np. 'git ')",
 			"addButton": "Dodaj"
+		},
+		"showMenu": {
+			"label": "Pokaż menu automatycznego zatwierdzania w widoku czatu",
+			"description": "Gdy włączone, menu automatycznego zatwierdzania będzie wyświetlane na dole widoku czatu, umożliwiając szybki dostęp do ustawień automatycznego zatwierdzania"
 		}
 	},
 	"providers": {

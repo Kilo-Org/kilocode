@@ -1234,6 +1234,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			browserToolEnabled,
 			showRooIgnoredFiles,
 			language,
+			showAutoApproveMenu, // kilocode_change
 			maxReadFileLine,
 		} = await this.getState()
 
@@ -1302,6 +1303,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			browserToolEnabled: browserToolEnabled ?? true,
 			machineId,
 			showRooIgnoredFiles: showRooIgnoredFiles ?? true,
+			showAutoApproveMenu: showAutoApproveMenu ?? false, // kilocode_change
 			language,
 			renderContext: this.renderContext,
 			maxReadFileLine: maxReadFileLine ?? 500,
@@ -1385,6 +1387,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			openRouterUseMiddleOutTransform: stateValues.openRouterUseMiddleOutTransform ?? true,
 			browserToolEnabled: stateValues.browserToolEnabled ?? true,
 			showRooIgnoredFiles: stateValues.showRooIgnoredFiles ?? true,
+			showAutoApproveMenu: stateValues.showAutoApproveMenu ?? false, // kilocode_change
 			maxReadFileLine: stateValues.maxReadFileLine ?? 500,
 		}
 	}

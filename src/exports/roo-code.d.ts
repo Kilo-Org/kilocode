@@ -258,6 +258,7 @@ type GlobalSettings = {
 	allowedCommands?: string[] | undefined
 	browserToolEnabled?: boolean | undefined
 	browserViewportSize?: string | undefined
+	showAutoApproveMenu?: boolean | undefined
 	screenshotQuality?: number | undefined
 	remoteBrowserEnabled?: boolean | undefined
 	remoteBrowserHost?: string | undefined

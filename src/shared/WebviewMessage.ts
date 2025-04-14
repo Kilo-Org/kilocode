@@ -130,6 +130,7 @@ export interface WebviewMessage {
 		| "fetchLatestMcpServersFromHub" // kilocode_change
 		| "downloadMcp" // kilocode_change
 		| "showSystemNotification" // kilocode_change
+		| "showAutoApproveMenu" // kilocode_change
 	text?: string
 	disabled?: boolean
 	askResponse?: ClineAskResponse

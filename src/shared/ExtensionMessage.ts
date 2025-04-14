@@ -142,6 +142,7 @@ export type ExtensionState = Pick<
 	| "allowedCommands"
 	| "browserToolEnabled"
 	| "browserViewportSize"
+	| "showAutoApproveMenu" // kilocode_change
 	| "screenshotQuality"
 	| "remoteBrowserEnabled"
 	| "remoteBrowserHost"
@@ -189,6 +190,7 @@ export type ExtensionState = Pick<
 	maxWorkspaceFiles: number // Maximum number of files to include in current working directory details (0-500)
 	showRooIgnoredFiles: boolean // Whether to show .kilocodeignore'd files in listings
 	maxReadFileLine: number // Maximum number of lines to read from a file before truncating
+	showAutoApproveMenu: boolean // kilocode_change: Whether to show the auto-approve menu in the chat view
 
 	experiments: Record<ExperimentId, boolean> // Map of experiment IDs to their enabled state
 

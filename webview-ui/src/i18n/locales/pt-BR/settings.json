@@ -80,6 +80,10 @@
 			"allowedCommandsDescription": "Prefixos de comando que podem ser auto-executados quando \"Aprovar sempre operações de execução\" está ativado. Adicione * para permitir todos os comandos (use com cautela).",
 			"commandPlaceholder": "Digite o prefixo do comando (ex. 'git ')",
 			"addButton": "Adicionar"
+		},
+		"showMenu": {
+			"label": "Mostrar menu de aprovação automática na visualização de chat",
+			"description": "Quando ativado, o menu de aprovação automática será exibido na parte inferior da visualização de chat, permitindo acesso rápido às configurações de aprovação automática"
 		}
 	},
 	"providers": {

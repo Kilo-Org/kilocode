@@ -80,6 +80,10 @@
 			"allowedCommandsDescription": "Prefixos de comandes que poden ser executats automàticament quan \"Aprovar sempre operacions d'execució\" està habilitat. Afegeix * per permetre totes les comandes (usar amb precaució).",
 			"commandPlaceholder": "Introduïu prefix de comanda (ex. 'git ')",
 			"addButton": "Afegir"
+		},
+		"showMenu": {
+			"label": "Mostrar menú d'aprovació automàtica a la vista de xat",
+			"description": "Quan està habilitat, el menú d'aprovació automàtica es mostrarà a la part inferior de la vista de xat, permetent un accés ràpid a la configuració d'aprovació automàtica"
 		}
 	},
 	"providers": {

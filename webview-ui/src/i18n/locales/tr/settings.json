@@ -80,6 +80,10 @@
 			"allowedCommandsDescription": "\"Yürütme işlemlerini her zaman onayla\" etkinleştirildiğinde otomatik olarak yürütülebilen komut önekleri. Tüm komutlara izin vermek için * ekleyin (dikkatli kullanın).",
 			"commandPlaceholder": "Komut öneki girin (örn. 'git ')",
 			"addButton": "Ekle"
+		},
+		"showMenu": {
+			"label": "Sohbet görünümünde otomatik onay menüsünü göster",
+			"description": "Etkinleştirildiğinde, otomatik onay menüsü sohbet görünümünün alt kısmında gösterilecek, otomatik onay ayarlarına hızlı erişim sağlayacaktır"
 		}
 	},
 	"providers": {

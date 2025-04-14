@@ -423,6 +423,7 @@ describe("ClineProvider", () => {
 			showRooIgnoredFiles: true,
 			renderContext: "sidebar",
 			maxReadFileLine: 500,
+			showAutoApproveMenu: false, // kilocode_change
 		}
 
 		const message: ExtensionMessage = {

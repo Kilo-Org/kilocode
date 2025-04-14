@@ -80,6 +80,10 @@
 			"allowedCommandsDescription": "Tiền tố lệnh có thể được tự động thực thi khi \"Luôn phê duyệt các hoạt động thực thi\" được bật. Thêm * để cho phép tất cả các lệnh (sử dụng cẩn thận).",
 			"commandPlaceholder": "Nhập tiền tố lệnh (ví dụ: 'git ')",
 			"addButton": "Thêm"
+		},
+		"showMenu": {
+			"label": "Hiển thị menu tự động phê duyệt trong giao diện trò chuyện",
+			"description": "Khi được bật, menu tự động phê duyệt sẽ hiển thị ở phần dưới của giao diện trò chuyện, cho phép truy cập nhanh vào cài đặt tự động phê duyệt"
 		}
 	},
 	"providers": {

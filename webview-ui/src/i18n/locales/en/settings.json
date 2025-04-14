@@ -80,6 +80,10 @@
 			"allowedCommandsDescription": "Command prefixes that can be auto-executed when \"Always approve execute operations\" is enabled. Add * to allow all commands (use with caution).",
 			"commandPlaceholder": "Enter command prefix (e.g., 'git ')",
 			"addButton": "Add"
+		},
+		"showMenu": {
+			"label": "Show auto-approve menu in chat view",
+			"description": "When enabled, the auto-approve menu will be displayed at the bottom of the chat view, allowing quick access to auto-approve settings"
 		}
 	},
 	"providers": {

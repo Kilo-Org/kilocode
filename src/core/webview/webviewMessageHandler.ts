@@ -920,6 +920,12 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			await updateGlobalState("maxReadFileLine", message.value)
 			await provider.postStateToWebview()
 			break
+		// kilocode_change start
+		case "showAutoApproveMenu":
+			await updateGlobalState("showAutoApproveMenu", message.bool ?? true)
+			await provider.postStateToWebview()
+			break
+		// kilocode_change end
 		case "toggleApiConfigPin":
 			if (message.text) {
 				const currentPinned = getGlobalState("pinnedApiConfigs") ?? {}

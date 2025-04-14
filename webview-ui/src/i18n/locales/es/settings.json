@@ -80,6 +80,10 @@
 			"allowedCommandsDescription": "Prefijos de comandos que pueden ser ejecutados automáticamente cuando \"Aprobar siempre operaciones de ejecución\" está habilitado. Añade * para permitir todos los comandos (usar con precaución).",
 			"commandPlaceholder": "Ingrese prefijo de comando (ej. 'git ')",
 			"addButton": "Añadir"
+		},
+		"showMenu": {
+			"label": "Mostrar menú de aprobación automática en la vista de chat",
+			"description": "Cuando está habilitado, el menú de aprobación automática se mostrará en la parte inferior de la vista de chat, permitiendo un acceso rápido a la configuración de aprobación automática"
 		}
 	},
 	"providers": {

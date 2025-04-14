@@ -80,6 +80,10 @@
 			"allowedCommandsDescription": "Préfixes de commandes qui peuvent être auto-exécutés lorsque \"Toujours approuver les opérations d'exécution\" est activé. Ajoutez * pour autoriser toutes les commandes (à utiliser avec précaution).",
 			"commandPlaceholder": "Entrez le préfixe de commande (ex. 'git ')",
 			"addButton": "Ajouter"
+		},
+		"showMenu": {
+			"label": "Afficher le menu d'approbation automatique dans la vue de chat",
+			"description": "Lorsque cette option est activée, le menu d'approbation automatique sera affiché en bas de la vue de chat, permettant un accès rapide aux paramètres d'approbation automatique"
 		}
 	},
 	"providers": {

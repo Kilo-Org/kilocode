@@ -80,6 +80,10 @@
 			"allowedCommandsDescription": "Befehlspräfixe, die automatisch ausgeführt werden können, wenn 'Ausführungsoperationen immer genehmigen' aktiviert ist. Fügen Sie * hinzu, um alle Befehle zu erlauben (mit Vorsicht verwenden).",
 			"commandPlaceholder": "Befehlspräfix eingeben (z.B. 'git ')",
 			"addButton": "Hinzufügen"
+		},
+		"showMenu": {
+			"label": "Auto-Genehmigungs-Menü in der Chat-Ansicht anzeigen",
+			"description": "Wenn aktiviert, wird das Auto-Genehmigungs-Menü am unteren Rand der Chat-Ansicht angezeigt, was einen schnellen Zugriff auf die Auto-Genehmigungs-Einstellungen ermöglicht"
 		}
 	},
 	"providers": {

@@ -71,6 +71,7 @@ const ChatView = (
 		setMode,
 		autoApprovalEnabled,
 		alwaysAllowModeSwitch,
+		showAutoApproveMenu, // kilocode_change
 		alwaysAllowSubtasks,
 		customModes,
 	} = useExtensionState()
@@ -1242,10 +1243,10 @@ const ChatView = (
 			//    This ensures it takes its natural height when there's space
 			//    but becomes scrollable when the viewport is too small
 			*/}
-			{!task && (
+			{/* kilocode_change: added settings toggle for this */}
+			{!task && showAutoApproveMenu && (
 				<AutoApproveMenu
 					style={{
-						display: "none", // kilo_code change
 						marginBottom: -2,
 						flex: "0 1 auto", // flex-grow: 0, flex-shrink: 1, flex-basis: auto
 						minHeight: 0,
@@ -1282,7 +1283,8 @@ const ChatView = (
 							initialTopMostItemIndex={groupedMessages.length - 1}
 						/>
 					</div>
-					{/* kilocode_change: hide <AutoApproveMenu /> */}
+					{/* kilocode_change: added settings toggle for this */}
+					{showAutoApproveMenu && <AutoApproveMenu />}
 					{showScrollToBottom ? (
 						<div
 							style={{
