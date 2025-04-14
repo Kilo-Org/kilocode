@@ -12,6 +12,9 @@
 		"export": "导出任务历史",
 		"delete": "删除任务（Shift + 点击跳过确认）"
 	},
+	"history": {
+		"title": "历史"
+	},
 	"unpin": "取消置顶",
 	"pin": "置顶",
 	"tokenProgress": {

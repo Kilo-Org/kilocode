@@ -12,6 +12,9 @@
 		"export": "Eksportuj historię zadań",
 		"delete": "Usuń zadanie (Shift + Kliknięcie, aby pominąć potwierdzenie)"
 	},
+	"history": {
+		"title": "Historia"
+	},
 	"unpin": "Odepnij",
 	"pin": "Przypnij",
 	"tokenProgress": {

@@ -12,6 +12,9 @@
 		"export": "Aufgabenverlauf exportieren",
 		"delete": "Aufgabe löschen (Shift + Klick zum Überspringen der Bestätigung)"
 	},
+	"history": {
+		"title": "Verlauf"
+	},
 	"unpin": "Lösen von oben",
 	"pin": "Anheften",
 	"tokenProgress": {

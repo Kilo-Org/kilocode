@@ -12,6 +12,9 @@
 		"export": "Exporter l'historique des tâches",
 		"delete": "Supprimer la tâche (Shift + Clic pour ignorer la confirmation)"
 	},
+	"history": {
+		"title": "Historique"
+	},
 	"unpin": "Désépingler",
 	"pin": "Épingler",
 	"tokenProgress": {

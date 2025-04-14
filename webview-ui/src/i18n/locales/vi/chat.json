@@ -12,6 +12,9 @@
 		"export": "Xuất lịch sử nhiệm vụ",
 		"delete": "Xóa nhiệm vụ (Shift + Click để bỏ qua xác nhận)"
 	},
+	"history": {
+		"title": "Lịch Sử"
+	},
 	"unpin": "Bỏ ghim khỏi đầu",
 	"pin": "Ghim lên đầu",
 	"tokenProgress": {

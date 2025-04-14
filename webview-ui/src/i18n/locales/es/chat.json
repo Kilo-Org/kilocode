@@ -12,6 +12,9 @@
 		"export": "Exportar historial de tareas",
 		"delete": "Eliminar tarea (Shift + Clic para omitir confirmación)"
 	},
+	"history": {
+		"title": "Historial"
+	},
 	"unpin": "Desfijar",
 	"pin": "Fijar",
 	"retry": {

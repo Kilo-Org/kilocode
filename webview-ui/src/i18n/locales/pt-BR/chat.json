@@ -12,6 +12,9 @@
 		"export": "Exportar histórico de tarefas",
 		"delete": "Excluir tarefa (Shift + Clique para pular confirmação)"
 	},
+	"history": {
+		"title": "Histórico"
+	},
 	"unpin": "Desfixar",
 	"pin": "Fixar",
 	"tokenProgress": {

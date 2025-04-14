@@ -12,6 +12,9 @@
 		"export": "작업 기록 내보내기",
 		"delete": "작업 삭제 (Shift + 클릭으로 확인 생략)"
 	},
+	"history": {
+		"title": "기록"
+	},
 	"unpin": "고정 해제하기",
 	"pin": "고정하기",
 	"tokenProgress": {

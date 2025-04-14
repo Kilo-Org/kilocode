@@ -12,6 +12,9 @@
 		"export": "Görev geçmişini dışa aktar",
 		"delete": "Görevi sil (Onayı atlamak için Shift + Tıkla)"
 	},
+	"history": {
+		"title": "Geçmiş"
+	},
 	"unpin": "Sabitlemeyi iptal et",
 	"pin": "Sabitle",
 	"tokenProgress": {

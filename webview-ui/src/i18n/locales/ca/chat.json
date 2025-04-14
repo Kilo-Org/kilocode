@@ -12,6 +12,9 @@
 		"export": "Exportar historial de tasques",
 		"delete": "Eliminar tasca (Shift + Clic per ometre confirmació)"
 	},
+	"history": {
+		"title": "Historial"
+	},
 	"unpin": "Desfixar",
 	"pin": "Fixar",
 	"tokenProgress": {

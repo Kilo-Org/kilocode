@@ -12,6 +12,9 @@
 		"export": "Esporta cronologia attività",
 		"delete": "Elimina attività (Shift + Clic per saltare la conferma)"
 	},
+	"history": {
+		"title": "Cronologia"
+	},
 	"unpin": "Rilascia",
 	"pin": "Fissa",
 	"tokenProgress": {

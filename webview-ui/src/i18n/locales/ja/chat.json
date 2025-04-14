@@ -12,6 +12,9 @@
 		"export": "タスク履歴をエクスポート",
 		"delete": "タスクを削除（Shift + クリックで確認をスキップ）"
 	},
+	"history": {
+		"title": "履歴"
+	},
 	"unpin": "ピン留めを解除",
 	"pin": "ピン留め",
 	"tokenProgress": {
