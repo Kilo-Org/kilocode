@@ -913,7 +913,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			await fs.mkdir(mcpServersDir, { recursive: true })
 		} catch (error) {
 			// Fallback to a relative path if directory creation fails
-			return path.join(os.homedir(), ".kilo-code", "mcp")
+			return path.join(os.homedir(), ".kilocode", "mcp")
 		}
 		return mcpServersDir
 	}

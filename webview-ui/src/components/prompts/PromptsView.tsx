@@ -798,7 +798,7 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 												// Open or create an empty file
 												vscode.postMessage({
 													type: "openFile",
-													text: `./.roo/rules-${currentMode.slug}/rules.md`,
+													text: `./.kilocode/rules-${currentMode.slug}/rules.md`,
 													values: {
 														create: true,
 														content: "",
@@ -936,7 +936,7 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 										onClick={() =>
 											vscode.postMessage({
 												type: "openFile",
-												text: "./.roo/rules/rules.md",
+												text: "./.kilocode/rules/rules.md",
 												values: {
 													create: true,
 													content: "",

@@ -41,7 +41,7 @@
 	"globalCustomInstructions": {
 		"title": "Custom Instructions for All Modes",
 		"description": "These instructions apply to all modes. They provide a base set of behaviors that can be enhanced by mode-specific instructions below.\nIf you would like Kilo Code to think and speak in a different language than your editor display language ({{language}}), you can specify it here.",
-		"loadFromFile": "Instructions can also be loaded from the <span>.kilo-code/rules/</span> folder in your workspace (.kilocoderules is deprecated and will stop working soon)."
+		"loadFromFile": "Instructions can also be loaded from the <span>.kilocode/rules/</span> folder in your workspace (.kilocoderules is deprecated and will stop working soon)."
 	},
 	"systemPrompt": {
 		"preview": "Preview System Prompt",
@@ -100,7 +100,7 @@
 	},
 	"advancedSystemPrompt": {
 		"title": "Advanced: Override System Prompt",
-		"description": "You can completely replace the system prompt for this mode (aside from the role definition and custom instructions) by creating a file at <span>.kilo-code/system-prompt-{{slug}}</span> in your workspace. This is a very advanced feature that bypasses built-in safeguards and consistency checks (especially around tool usage), so be careful!"
+		"description": "You can completely replace the system prompt for this mode (aside from the role definition and custom instructions) by creating a file at <span>.kilocode/system-prompt-{{slug}}</span> in your workspace. This is a very advanced feature that bypasses built-in safeguards and consistency checks (especially around tool usage), so be careful!"
 	},
 	"createModeDialog": {
 		"title": "Create New Mode",

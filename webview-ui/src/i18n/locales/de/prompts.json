@@ -41,7 +41,7 @@
 	"globalCustomInstructions": {
 		"title": "Benutzerdefinierte Anweisungen für alle Modi",
 		"description": "Diese Anweisungen gelten für alle Modi. Sie bieten einen grundlegenden Satz von Verhaltensweisen, die durch modusspezifische Anweisungen unten erweitert werden können.\nWenn du möchtest, dass Kilo Code in einer anderen Sprache als deiner Editor-Anzeigesprache ({{language}}) denkt und spricht, kannst du das hier angeben.",
-		"loadFromFile": "Anweisungen können auch aus dem Ordner <span>.kilo-code/rules/</span> in deinem Arbeitsbereich geladen werden (.kilocoderules sind veraltet und werden bald nicht mehr funktionieren)."
+		"loadFromFile": "Anweisungen können auch aus dem Ordner <span>.kilocode/rules/</span> in deinem Arbeitsbereich geladen werden (.kilocoderules sind veraltet und werden bald nicht mehr funktionieren)."
 	},
 	"systemPrompt": {
 		"preview": "System-Prompt Vorschau",
@@ -100,7 +100,7 @@
 	},
 	"advancedSystemPrompt": {
 		"title": "Erweitert: System-Prompt überschreiben",
-		"description": "Du kannst den System-Prompt für diesen Modus vollständig ersetzen (abgesehen von der Rollendefinition und benutzerdefinierten Anweisungen), indem du eine Datei unter <span>.kilo-code/system-prompt-{{slug}}</span> in deinem Arbeitsbereich erstellst. Dies ist eine sehr fortgeschrittene Funktion, die eingebaute Schutzmaßnahmen und Konsistenzprüfungen umgeht (besonders bei der Werkzeugnutzung), also sei vorsichtig!"
+		"description": "Du kannst den System-Prompt für diesen Modus vollständig ersetzen (abgesehen von der Rollendefinition und benutzerdefinierten Anweisungen), indem du eine Datei unter <span>.kilocode/system-prompt-{{slug}}</span> in deinem Arbeitsbereich erstellst. Dies ist eine sehr fortgeschrittene Funktion, die eingebaute Schutzmaßnahmen und Konsistenzprüfungen umgeht (besonders bei der Werkzeugnutzung), also sei vorsichtig!"
 	},
 	"createModeDialog": {
 		"title": "Neuen Modus erstellen",

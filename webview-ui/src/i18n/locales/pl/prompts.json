@@ -41,7 +41,7 @@
 	"globalCustomInstructions": {
 		"title": "Niestandardowe instrukcje dla wszystkich trybów",
 		"description": "Te instrukcje dotyczą wszystkich trybów. Zapewniają podstawowy zestaw zachowań, które mogą być rozszerzone przez instrukcje specyficzne dla trybów poniżej.\nJeśli chcesz, aby Kilo Code myślał i mówił w języku innym niż język wyświetlania Twojego edytora ({{language}}), możesz to określić tutaj.",
-		"loadFromFile": "Instrukcje mogą być również ładowane z folderu <span>.kilo-code/rules/</span> w Twoim obszarze roboczym (.kilocoderules jest przestarzały i wkrótce przestanie działać)."
+		"loadFromFile": "Instrukcje mogą być również ładowane z folderu <span>.kilocode/rules/</span> w Twoim obszarze roboczym (.kilocoderules jest przestarzały i wkrótce przestanie działać)."
 	},
 	"systemPrompt": {
 		"preview": "Podgląd podpowiedzi systemowej",
@@ -100,7 +100,7 @@
 	},
 	"advancedSystemPrompt": {
 		"title": "Zaawansowane: Zastąp podpowiedź systemową",
-		"description": "Możesz całkowicie zastąpić podpowiedź systemową dla tego trybu (oprócz definicji roli i niestandardowych instrukcji) poprzez utworzenie pliku w .kilo-code/system-prompt-{{modeSlug}} w swoim obszarze roboczym. Jest to bardzo zaawansowana funkcja, która omija wbudowane zabezpieczenia i kontrole spójności (szczególnie wokół używania narzędzi), więc bądź ostrożny!"
+		"description": "Możesz całkowicie zastąpić podpowiedź systemową dla tego trybu (oprócz definicji roli i niestandardowych instrukcji) poprzez utworzenie pliku w .kilocode/system-prompt-{{modeSlug}} w swoim obszarze roboczym. Jest to bardzo zaawansowana funkcja, która omija wbudowane zabezpieczenia i kontrole spójności (szczególnie wokół używania narzędzi), więc bądź ostrożny!"
 	},
 	"createModeDialog": {
 		"title": "Utwórz nowy tryb",

@@ -41,7 +41,7 @@
 	"globalCustomInstructions": {
 		"title": "Instruções personalizadas para todos os modos",
 		"description": "Estas instruções se aplicam a todos os modos. Elas fornecem um conjunto base de comportamentos que podem ser aprimorados por instruções específicas do modo abaixo.\nSe você desejar que o Kilo Code pense e fale em um idioma diferente do idioma de exibição do seu editor ({{language}}), você pode especificá-lo aqui.",
-		"loadFromFile": "As instruções também podem ser carregadas da pasta <span>.kilo-code/rules/</span> no seu espaço de trabalho (.kilocoderules está obsoleto e deixará de funcionar em breve)."
+		"loadFromFile": "As instruções também podem ser carregadas da pasta <span>.kilocode/rules/</span> no seu espaço de trabalho (.kilocoderules está obsoleto e deixará de funcionar em breve)."
 	},
 	"systemPrompt": {
 		"preview": "Visualizar prompt do sistema",
@@ -100,7 +100,7 @@
 	},
 	"advancedSystemPrompt": {
 		"title": "Avançado: Substituir prompt do sistema",
-		"description": "Você pode substituir completamente o prompt do sistema para este modo (além da definição de função e instruções personalizadas) criando um arquivo em .kilo-code/system-prompt-{{modeSlug}} no seu espaço de trabalho. Esta é uma funcionalidade muito avançada que contorna as salvaguardas integradas e verificações de consistência (especialmente em torno do uso de ferramentas), então tenha cuidado!"
+		"description": "Você pode substituir completamente o prompt do sistema para este modo (além da definição de função e instruções personalizadas) criando um arquivo em .kilocode/system-prompt-{{modeSlug}} no seu espaço de trabalho. Esta é uma funcionalidade muito avançada que contorna as salvaguardas integradas e verificações de consistência (especialmente em torno do uso de ferramentas), então tenha cuidado!"
 	},
 	"createModeDialog": {
 		"title": "Criar novo modo",

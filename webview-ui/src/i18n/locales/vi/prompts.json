@@ -41,7 +41,7 @@
 	"globalCustomInstructions": {
 		"title": "Hướng dẫn tùy chỉnh cho tất cả các chế độ",
 		"description": "Những hướng dẫn này áp dụng cho tất cả các chế độ. Chúng cung cấp một bộ hành vi cơ bản có thể được nâng cao bởi hướng dẫn dành riêng cho chế độ bên dưới.\nNếu bạn muốn Kilo Code suy nghĩ và nói bằng ngôn ngữ khác với ngôn ngữ hiển thị trình soạn thảo của bạn ({{language}}), bạn có thể chỉ định ở đây.",
-		"loadFromFile": "Hướng dẫn cũng có thể được tải từ thư mục <span>.kilo-code/rules/</span> trong không gian làm việc của bạn (.kilocoderules đã lỗi thời và sẽ sớm ngừng hoạt động)."
+		"loadFromFile": "Hướng dẫn cũng có thể được tải từ thư mục <span>.kilocode/rules/</span> trong không gian làm việc của bạn (.kilocoderules đã lỗi thời và sẽ sớm ngừng hoạt động)."
 	},
 	"systemPrompt": {
 		"preview": "Xem trước lời nhắc hệ thống",
@@ -100,7 +100,7 @@
 	},
 	"advancedSystemPrompt": {
 		"title": "Nâng cao: Ghi đè lời nhắc hệ thống",
-		"description": "Bạn có thể hoàn toàn thay thế lời nhắc hệ thống cho chế độ này (ngoài định nghĩa vai trò và hướng dẫn tùy chỉnh) bằng cách tạo một tệp tại .kilo-code/system-prompt-{{modeSlug}} trong không gian làm việc của bạn. Đây là một tính năng rất nâng cao bỏ qua các biện pháp bảo vệ và kiểm tra nhất quán tích hợp sẵn (đặc biệt là xung quanh việc sử dụng công cụ), vì vậy hãy cẩn thận!"
+		"description": "Bạn có thể hoàn toàn thay thế lời nhắc hệ thống cho chế độ này (ngoài định nghĩa vai trò và hướng dẫn tùy chỉnh) bằng cách tạo một tệp tại .kilocode/system-prompt-{{modeSlug}} trong không gian làm việc của bạn. Đây là một tính năng rất nâng cao bỏ qua các biện pháp bảo vệ và kiểm tra nhất quán tích hợp sẵn (đặc biệt là xung quanh việc sử dụng công cụ), vì vậy hãy cẩn thận!"
 	},
 	"createModeDialog": {
 		"title": "Tạo chế độ mới",

@@ -41,7 +41,7 @@
 	"globalCustomInstructions": {
 		"title": "すべてのモードのカスタム指示",
 		"description": "これらの指示はすべてのモードに適用されます。モード固有の指示で強化できる基本的な動作セットを提供します。\nKilo Codeにエディタの表示言語({{language}})とは異なる言語で考えたり話したりさせたい場合は、ここで指定できます。",
-		"loadFromFile": "指示はワークスペースの<span>.kilo-code/rules/</span>フォルダからも読み込めます（.kilocoderules は非推奨であり、まもなく機能しなくなります）。"
+		"loadFromFile": "指示はワークスペースの<span>.kilocode/rules/</span>フォルダからも読み込めます（.kilocoderules は非推奨であり、まもなく機能しなくなります）。"
 	},
 	"systemPrompt": {
 		"preview": "システムプロンプトのプレビュー",
@@ -100,7 +100,7 @@
 	},
 	"advancedSystemPrompt": {
 		"title": "詳細設定：システムプロンプトの上書き",
-		"description": "ワークスペースの<span>.kilo-code/system-prompt-{{slug}}</span>にファイルを作成することで、このモードのシステムプロンプト（役割定義とカスタム指示以外）を完全に置き換えることができます。これは組み込みの安全対策と一貫性チェック（特にツールの使用に関して）をバイパスする非常に高度な機能なので、注意して使用してください！"
+		"description": "ワークスペースの<span>.kilocode/system-prompt-{{slug}}</span>にファイルを作成することで、このモードのシステムプロンプト（役割定義とカスタム指示以外）を完全に置き換えることができます。これは組み込みの安全対策と一貫性チェック（特にツールの使用に関して）をバイパスする非常に高度な機能なので、注意して使用してください！"
 	},
 	"createModeDialog": {
 		"title": "新しいモードを作成",
