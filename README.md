@@ -33,10 +33,10 @@ Kilo Code has a free tier with $20 worth of Claude 3.7 Sonnet tokens. We'll give
 
 ## Key Features
 
-- **AI-Powered Code Generation:** Generate code from natural language descriptions.
-- **Automated Refactoring:** Refactor and improve existing code.
-- **Intelligent Code Completion:** Get smart suggestions as you type.
+- **Code Generation:** Generate code using natural language.
 - **Task Automation:** Automate repetitive coding tasks.
+- **Automated Refactoring:**: Refactor and improve existing code.
+- **MCP Servers**: Use MCP servers to extend the agent capabilities.
 
 ## Get Started in 2 Minutes
 
