@@ -1,0 +1,8 @@
+{
+	"welcome": {
+		"greeting": "Kilo Code 可以為你做什麼？",
+		"introText": "我已經在最快的 AI 模型上受過訓練，準備以極快的速度為你產生程式碼！",
+		"ctaButton": "免費試用 Kilo Code",
+		"manualModeButton": "使用你自己的 API 金鑰"
+	}
+}

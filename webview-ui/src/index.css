@@ -394,13 +394,3 @@ input[cmdk-input]:focus {
 .custom-markdown > pre {
 	background-color: transparent !important;
 }
-
-/* === VSCodeButtonLink theme-dependent text color and background === */
-body.vscode-dark .vscode {
-	color: black !important;
-	background: white !important;
-}
-body.vscode-light .vscode {
-	color: white !important;
-	background: black !important;
-}

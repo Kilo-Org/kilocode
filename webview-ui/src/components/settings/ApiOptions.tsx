@@ -7,6 +7,7 @@ import { LanguageModelChatSelector } from "vscode"
 import { Checkbox } from "vscrui"
 import { VSCodeLink, VSCodeRadio, VSCodeRadioGroup, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 import { ExternalLinkIcon } from "@radix-ui/react-icons"
+import { getKiloCodeBackendAuthUrl } from "../kilocode/helpers" // kilocode_change
 
 import {
 	ApiConfiguration,
@@ -69,6 +70,7 @@ interface ApiOptionsProps {
 	fromWelcomeView?: boolean
 	errorMessage: string | undefined
 	setErrorMessage: React.Dispatch<React.SetStateAction<string | undefined>>
+	hideKiloCodeButton?: boolean // kilocode_change
 }
 
 const ApiOptions = ({
@@ -78,6 +80,7 @@ const ApiOptions = ({
 	fromWelcomeView,
 	errorMessage,
 	setErrorMessage,
+	hideKiloCodeButton = false,
 }: ApiOptionsProps) => {
 	const { t } = useAppTranslation()
 
@@ -366,29 +369,32 @@ const ApiOptions = ({
 						</div>
 					</div>
 
-					{apiConfiguration.kilocodeToken ? (
-						<div>
-							<Button
-								variant="secondary"
-								onClick={async () => {
-									setApiConfigurationField("kilocodeToken", "")
+					{/* kilocode_change start */}
+					{!hideKiloCodeButton &&
+						(apiConfiguration.kilocodeToken ? (
+							<div>
+								<Button
+									variant="secondary"
+									onClick={async () => {
+										setApiConfigurationField("kilocodeToken", "")
 
-									vscode.postMessage({
-										type: "upsertApiConfiguration",
-										apiConfiguration: {
-											...apiConfiguration,
-											kilocodeToken: "",
-										},
-									})
-								}}>
-								Log out from Kilo Code
-							</Button>
-						</div>
-					) : (
-						<VSCodeButtonLink variant="secondary" href={getKiloCodeBackendAuthUrl(uriScheme)}>
-							Log in at Kilo Code
-						</VSCodeButtonLink>
-					)}
+										vscode.postMessage({
+											type: "upsertApiConfiguration",
+											apiConfiguration: {
+												...apiConfiguration,
+												kilocodeToken: "",
+											},
+										})
+									}}>
+									Log out from Kilo Code
+								</Button>
+							</div>
+						) : (
+							<VSCodeButtonLink variant="secondary" href={getKiloCodeBackendAuthUrl(uriScheme)}>
+								Log in at Kilo Code
+							</VSCodeButtonLink>
+						))}
+					{/* kilocode_change end */}
 				</>
 			)}
 
@@ -1789,10 +1795,6 @@ const ApiOptions = ({
 			)}
 		</div>
 	)
-}
-
-export function getKiloCodeBackendAuthUrl(uriScheme?: string) {
-	return `https://kilocode.ai/auth/signin?source=${uriScheme || "vscode"}`
 }
 
 export function normalizeApiConfiguration(apiConfiguration?: ApiConfiguration) {

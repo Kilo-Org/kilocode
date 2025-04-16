@@ -1,0 +1,8 @@
+{
+	"welcome": {
+		"greeting": "Què pot fer Kilo Code per tu?",
+		"introText": "He estat entrenat amb els models d'IA més ràpids disponibles i estic preparat per generar codi per a tu a velocitat de vertigen!",
+		"ctaButton": "Prova Kilo Code gratuïtament",
+		"manualModeButton": "Utilitza la teva pròpia clau API"
+	}
+}

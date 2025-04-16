@@ -1,0 +1,8 @@
+{
+	"welcome": {
+		"greeting": "Was kann Kilo Code für Sie tun?",
+		"introText": "Ich wurde mit den schnellsten verfügbaren KI-Modellen trainiert und bin bereit, für Sie blitzschnell Code zu generieren!",
+		"ctaButton": "Kilo Code kostenlos ausprobieren",
+		"manualModeButton": "Eigener API-Schlüssel verwenden"
+	}
+}

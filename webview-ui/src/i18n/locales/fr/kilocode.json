@@ -1,0 +1,8 @@
+{
+	"welcome": {
+		"greeting": "Que peut faire Kilo Code pour vous ?",
+		"introText": "J'ai été formé sur les modèles d'IA les plus rapides disponibles et je suis prêt à générer du code pour vous à une vitesse fulgurante !",
+		"ctaButton": "Essayez Kilo Code gratuitement",
+		"manualModeButton": "Utilisez votre propre clé API"
+	}
+}

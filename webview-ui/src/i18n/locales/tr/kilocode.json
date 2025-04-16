@@ -1,0 +1,8 @@
+{
+	"welcome": {
+		"greeting": "Kilo Code sizin için ne yapabilir?",
+		"introText": "En hızlı mevcut yapay zeka modelleriyle eğitildim ve sizin için ışık hızında kod üretmeye hazırım!",
+		"ctaButton": "Kilo Code'u ücretsiz deneyin",
+		"manualModeButton": "Kendi API anahtarınızı kullanın"
+	}
+}
