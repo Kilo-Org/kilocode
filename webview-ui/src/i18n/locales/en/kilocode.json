@@ -1,0 +1,22 @@
+{
+	"welcome": {
+		"greeting": "What can Kilo Code do for you?",
+		"introText": "I've been trained on the fastest AI models available and I am ready to generate code for you at warp speed!",
+		"ctaButton": "Try Kilo Code for free"
+	},
+	"notice": "To get started, this extension needs an API provider.",
+	"start": "Let's go!",
+	"chooseProvider": "Choose an API provider to get started:",
+	"routers": {
+		"requesty": {
+			"description": "Your optimized LLM router",
+			"incentive": "$1 free credit"
+		},
+		"openrouter": {
+			"description": "A unified interface for LLMs"
+		}
+	},
+	"startRouter": "Express Setup Through a Router",
+	"startCustom": "Bring Your Own API Key",
+	"or": "or"
+}
