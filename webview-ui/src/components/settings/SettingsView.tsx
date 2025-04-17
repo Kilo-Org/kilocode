@@ -98,16 +98,25 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, o
 	const [isChangeDetected, setChangeDetected] = useState(false)
 	const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined)
 
-	// kilocode_change begin
-	useEffect(() => {
-		ensureBodyPointerEventsRestored()
-	}, [isDiscardDialogShow])
-	// kilocode_change end
-
 	const prevApiConfigName = useRef(currentApiConfigName)
 	const confirmDialogHandler = useRef<() => void>()
 
 	const [cachedState, setCachedState] = useState(extensionState)
+
+	// kilocode_change begin
+	useEffect(() => {
+		ensureBodyPointerEventsRestored()
+	}, [isDiscardDialogShow])
+
+	useEffect(() => {
+		if (JSON.stringify(cachedState) === JSON.stringify(extensionState)) {
+			setChangeDetected(false)
+		} else {
+			setChangeDetected(true)
+		}
+	}, [cachedState, extensionState])
+
+	// kilocode_change end
 
 	const {
 		alwaysAllowReadOnly,
@@ -299,11 +308,18 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, o
 
 	useImperativeHandle(ref, () => ({ checkUnsaveChanges }), [checkUnsaveChanges])
 
-	const onConfirmDialogResult = useCallback((confirm: boolean) => {
-		if (confirm) {
-			confirmDialogHandler.current?.()
-		}
-	}, [])
+	// kilocode_change start
+	const onConfirmDialogResult = useCallback(
+		(confirm: boolean) => {
+			if (confirm) {
+				setCachedState(extensionState)
+				setChangeDetected(false)
+				setTimeout(() => confirmDialogHandler.current?.(), 0)
+			}
+		},
+		[setCachedState, setChangeDetected, extensionState],
+	)
+	// kilocode_change end
 
 	const providersRef = useRef<HTMLDivElement>(null)
 	const autoApproveRef = useRef<HTMLDivElement>(null)
