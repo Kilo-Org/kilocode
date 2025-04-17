@@ -18,7 +18,7 @@ export class KiloCodeHandler extends BaseProvider implements SingleCompletionHan
 		this.options = options
 		const modelType = options.kilocodeModel || "claude37"
 
-		const openrouterModels = ["gemini25", "gpt41"]
+		const openrouterModels = ["gemini25", "gpt41", "gemini25flashpreview"]
 
 		if (modelType === "claude37") {
 			this.handler = new KiloCodeAnthropicHandler(options)
