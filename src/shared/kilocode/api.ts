@@ -17,4 +17,12 @@ export const kilocodeOpenrouterModels = {
 		inputPrice: 2,
 		outputPrice: 8,
 	},
+	"google/gemini-2.5-flash-preview": {
+		maxTokens: 65_536,
+		contextWindow: 1_048_576,
+		supportsImages: true,
+		supportsPromptCache: false,
+		inputPrice: 0.15,
+		outputPrice: 0.6,
+	},
 }

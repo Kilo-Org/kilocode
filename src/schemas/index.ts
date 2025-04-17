@@ -409,7 +409,7 @@ export const providerSettingsSchema = z.object({
 	fakeAi: z.unknown().optional(),
 	// kilocode_change
 	kilocodeToken: z.string().optional(),
-	kilocodeModel: z.enum(["claude37", "gemini25", "gpt41"]).optional(),
+	kilocodeModel: z.enum(["claude37", "gemini25", "gpt41", "gemini25flashpreview"]).optional(),
 	fireworksModelId: z.string().optional(),
 	fireworksApiKey: z.string().optional(),
 })

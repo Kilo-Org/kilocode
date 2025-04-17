@@ -299,6 +299,8 @@ const ApiOptions = ({
 		claude37: "Claude 3.7 Sonnet is Anthropic's most capable model for reasoning, coding, and multimodal tasks.",
 		gemini25: "Gemini 2.5 Pro is Google's most capable model for reasoning, coding, and multimodal tasks.",
 		gpt41: "GPT-4.1 is OpenAI's most capable model for reasoning, coding, and multimodal tasks.",
+		gemini25flashpreview:
+			"Gemini 2.5 Flash Preview is Google's most capable model for reasoning, coding, and multimodal tasks.",
 	}
 	// kilocode_change end
 
@@ -361,6 +363,7 @@ const ApiOptions = ({
 							<SelectContent>
 								<SelectItem value="claude37">Claude 3.7 Sonnet</SelectItem>
 								<SelectItem value="gemini25">Gemini 2.5 Pro</SelectItem>
+								<SelectItem value="gemini25flashpreview">Gemini 2.5 Flash Preview</SelectItem>
 								<SelectItem value="gpt41">GPT 4.1</SelectItem>
 							</SelectContent>
 						</Select>
@@ -1904,12 +1907,14 @@ export function normalizeApiConfiguration(apiConfiguration?: ApiConfiguration) {
 			// TODO: in line with kilocode-openrouter provider use hardcoded for now but info needs to be fetched later
 			const displayModelId = {
 				gemini25: "Gemini 2.5 Pro",
+				gemini25flashpreview: "Gemini 2.5 Flash Preview",
 				claude37: "Claude 3.7 Sonnet",
 				gpt41: "GPT 4.1",
 			}
 
 			const displayConfigs = {
 				gemini25: kilocodeOpenrouterModels["google/gemini-2.5-pro-preview-03-25"],
+				gemini25flashpreview: kilocodeOpenrouterModels["google/gemini-2.5-flash-preview"],
 				claude37: anthropicModels["claude-3-7-sonnet-20250219"],
 				gpt41: kilocodeOpenrouterModels["openai/gpt-4.1"],
 			}

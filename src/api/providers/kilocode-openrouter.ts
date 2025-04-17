@@ -33,6 +33,9 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 		} else if (selectedModel === "gpt41") {
 			id = "openai/gpt-4.1"
 			info = kilocodeOpenrouterModels["openai/gpt-4.1"]
+		} else if (selectedModel === "gemini25flashpreview") {
+			id = "google/gemini-2.5-flash-preview"
+			info = kilocodeOpenrouterModels["google/gemini-2.5-flash-preview"]
 		} else {
 			throw new Error(`Unsupported model: ${selectedModel}`)
 		}
