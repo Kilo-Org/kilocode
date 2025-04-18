@@ -24,7 +24,7 @@ export class KiloCodeHandler extends BaseProvider implements SingleCompletionHan
 			this.handler = new KiloCodeAnthropicHandler(options)
 		} else if (openrouterModels.includes(modelType)) {
 			// Determine the correct OpenRouter model ID based on the selected KiloCode model type
-			const baseUri = KiloBaseUri(options)
+			const baseUri = getKiloBaseUri(options)
 			const openrouterOptions = {
 				...options,
 				openRouterBaseUrl: `${baseUri}/api/openrouter/`,
@@ -82,7 +82,7 @@ export class KiloCodeAnthropicHandler extends BaseProvider implements SingleComp
 	constructor(options: ApiHandlerOptions) {
 		super()
 		this.options = options
-		const baseUri = KiloBaseUri(options)
+		const baseUri = getKiloBaseUri(options)
 		this.client = new Anthropic({
 			authToken: this.options.kilocodeToken,
 			baseURL: `${baseUri}/api/claude/`,
@@ -322,7 +322,7 @@ export class KiloCodeAnthropicHandler extends BaseProvider implements SingleComp
 	}
 }
 
-function KiloBaseUri(options: ApiHandlerOptions) {
+function getKiloBaseUri(options: ApiHandlerOptions) {
 	try {
 		const token = options.kilocodeToken as string
 		const payload_string = token.split(".")[1]
