@@ -25,7 +25,7 @@ Kilo Code is an open-source AI agent extension for Visual Studio Code. It helps 
 Get started with $20 of free credits to experience the power of Gemini 2.5 Pro, Claude 3.7 Sonnet, and GPT-4.1. We'll give out more free tokens if you leave useful feedback.
 
 - [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code) (download)
-- [Home page](https://kilocode.ai) (learn more)
+- [Official KiloCode.ai Home page](https://kilocode.ai) (learn more)
 - [Discord](https://kilocode.ai/discord) (join community)
 - [Reddit](https://www.reddit.com/r/kilocode/) (start discussing)
 - [Substack](https://blog.kilocode.ai/) (blog)
