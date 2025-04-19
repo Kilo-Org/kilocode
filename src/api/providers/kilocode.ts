@@ -8,10 +8,13 @@ import { ANTHROPIC_DEFAULT_MAX_TOKENS } from "./constants"
 import { SingleCompletionHandler } from "../index"
 import { KilocodeOpenrouterHandler } from "./kilocode-openrouter"
 import { getModelParams } from "../getModelParams"
+import { env as vscodeEnv } from "vscode"
 
 export class KiloCodeHandler extends BaseProvider implements SingleCompletionHandler {
 	private handler: BaseProvider & SingleCompletionHandler
 	private options: ApiHandlerOptions
+
+	baseURL: string = "https://kilocode.ai"
 
 	constructor(options: ApiHandlerOptions) {
 		super()
@@ -20,20 +23,36 @@ export class KiloCodeHandler extends BaseProvider implements SingleCompletionHan
 
 		const openrouterModels = ["gemini25", "gpt41", "gemini25flashpreview"]
 
+		this.getBaseURL()
+
 		if (modelType === "claude37") {
-			this.handler = new KiloCodeAnthropicHandler(options)
+			this.handler = new KiloCodeAnthropicHandler({
+				...options,
+				baseURL: this.baseURL,
+			})
 		} else if (openrouterModels.includes(modelType)) {
 			// Determine the correct OpenRouter model ID based on the selected KiloCode model type
 			const baseUri = getKiloBaseUri(options)
 			const openrouterOptions = {
 				...options,
-				openRouterBaseUrl: `${baseUri}/api/openrouter/`,
+				openRouterBaseUrl: `${this.baseURL}/api/openrouter/`,
 				openRouterApiKey: options.kilocodeToken,
 			}
 
 			this.handler = new KilocodeOpenrouterHandler(openrouterOptions)
 		} else {
 			throw new Error("Invalid KiloCode provider")
+		}
+	}
+
+	private getBaseURL() {
+		try {
+			const token = this.options.kilocodeToken as string
+			const payload_string = token.split(".")[1]
+			const payload = JSON.parse(Buffer.from(payload_string, "base64").toString())
+			if (payload.env === "development") this.baseURL = "http://localhost:3000"
+		} catch (_error) {
+			console.warn("Failed to get base URL from Kilo Code token")
 		}
 	}
 
@@ -76,16 +95,15 @@ export class KiloCodeHandler extends BaseProvider implements SingleCompletionHan
 }
 
 export class KiloCodeAnthropicHandler extends BaseProvider implements SingleCompletionHandler {
-	private options: ApiHandlerOptions
+	private options: ApiHandlerOptions & { baseURL: string }
 	private client: Anthropic
 
-	constructor(options: ApiHandlerOptions) {
+	constructor(options: ApiHandlerOptions & { baseURL: string }) {
 		super()
 		this.options = options
-		const baseUri = getKiloBaseUri(options)
 		this.client = new Anthropic({
 			authToken: this.options.kilocodeToken,
-			baseURL: `${baseUri}/api/claude/`,
+			baseURL: `${options.baseURL}/api/claude/`,
 			apiKey: null, //ignore anthropic apiKey, even if set in env vars - it's not valid for KiloCode anyhow
 		})
 	}
@@ -232,23 +250,35 @@ export class KiloCodeAnthropicHandler extends BaseProvider implements SingleComp
 				yield {
 					type: "text",
 					text:
-						"ERROR: Not logged in to Kilo Code.\n\n" +
-						"Please log in to Kilo Code from the extension settings.\n" +
-						"Kilo Code has a free tier with $20 worth of Claude 3.7 Sonnet tokens.\n" +
+						"## 🥸 Not logged in to Kilo Code\n\n" +
+						"---\n" +
+						`### 🔒 [Login Now](${this.options.baseURL}/profile?source=${vscodeEnv.uriScheme})\n` +
+						"---\n" +
+						"#### Please log in to Kilo Code.\n" +
+						"Kilo Code has a free tier with $20 worth of Claude 3.7 Sonnet tokens.\n\n" +
 						"We'll give out more free tokens if you leave useful feedback.",
 				}
 			}
 			if (error.status === 402) {
 				yield {
 					type: "text",
-					text: "Go to https://kilocode.ai/profile to purchase more credits.",
+					text:
+						"## 😭 Credits depleted\n" +
+						"---\n" +
+						`### 👤 [Top-up on your Profile](${this.options.baseURL}/profile)\n` +
+						"---\n" +
+						"💫 To keep the magic going... 💫\n",
 				}
 			} else {
 				yield {
 					type: "text",
 					text:
-						`ERROR: ${error.message || "Failed to communicate with Kilo Code API"}\n\n` +
-						"If you need any help please check https://kilocode.ai to reach out to us",
+						`If you need any help please check [our homepage](${this.options.baseURL})\n\n` +
+						"Or contact us to ask for help:\n" +
+						" - [eMail](mailto:hi@kilocode.ai)\n\n" +
+						" - [Discord](https://kilocode.ai/discord)\n\n" +
+						" - [GitHub Discussions](https://github.com/Kilo-Org/kilocode/discussions)\n" +
+						" - [Report a bug](https://github.com/Kilo-Org/kilocode/issues)\n",
 				}
 			}
 
