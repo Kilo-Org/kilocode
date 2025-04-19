@@ -44,6 +44,6 @@ Get started with $20 of free credits to experience the power of Gemini 2.5 Pro, 
 2.  Log in with your Google Account to get $20 in free Claude 3.7 Sonnet credits.
 3.  Start coding!
 
-## Local Setup & Development
+## Development
 
-See [DEVELOPMENT.md](/DEVELOPMENT.md)
+For details on building and developing the extension, see [DEVELOPMENT.md](/DEVELOPMENT.md)
