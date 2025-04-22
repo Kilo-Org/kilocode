@@ -1,5 +1,6 @@
 {
 	"greeting": "Hi, I'm Kilo Code!",
+	"introduction": "<strong>Kilo Code is the premiere autonomous coding agent.</strong> Get ready to architect, code, debug, and boost your productivity like you've never seen before. To continue, Kilo Code requires an API key.",
 	"notice": "To get started, this extension needs an API provider.",
 	"start": "Let's go!",
 	"chooseProvider": "Choose an API provider to get started:",

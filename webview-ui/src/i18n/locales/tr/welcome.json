@@ -1,6 +1,6 @@
 {
 	"greeting": "Merhaba, ben Kilo Code!",
-	"introduction": "Ajan tabanlı kodlama yeteneklerindeki son gelişmeler ve dosya oluşturma ve düzenleme, karmaşık projeleri keşfetme, tarayıcı kullanma ve terminal komutları çalıştırma (tabii ki senin izninle) gibi işlemleri yapmamı sağlayan araçlara erişim sayesinde her türlü görevi gerçekleştirebilirim. Hatta MCP'yi kullanarak yeni araçlar oluşturabilir ve kendi yeteneklerimi genişletebilirim.",
+	"introduction": "<strong>Kilo Code, önde gelen otonom kodlama aracıdır.</strong> Daha önce hiç görmediğin şekilde mimari tasarım yapmaya, kod yazmaya, hata ayıklamaya ve üretkenliğini artırmaya hazırlan. Devam etmek için Kilo Code'un bir API anahtarına ihtiyacı var.",
 	"notice": "Başlamak için bu eklentinin bir API sağlayıcısına ihtiyacı var.",
 	"start": "Hadi başlayalım!",
 	"chooseProvider": "Başlamak için bir API sağlayıcısı seç:",

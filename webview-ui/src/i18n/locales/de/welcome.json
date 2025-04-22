@@ -1,5 +1,6 @@
 {
 	"greeting": "Hallo, ich bin Kilo Code!",
+	"introduction": "<strong>Kilo Code ist der führende autonome Coding-Agent.</strong> Mach dich bereit, zu architektieren, zu coden, zu debuggen und deine Produktivität wie nie zuvor zu steigern. Um fortzufahren, benötigt Kilo Code einen API-Schlüssel.",
 	"notice": "Um loszulegen, benötigt diese Erweiterung einen API-Anbieter.",
 	"start": "Los geht's!",
 	"chooseProvider": "Wähle einen API-Anbieter, um zu beginnen:",

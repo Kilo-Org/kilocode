@@ -80,7 +80,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 
 	public isViewLaunched = false
 	public settingsImportedAt?: number
-	public readonly latestAnnouncementId = "apr-16-2025-3-12" // update for v3.12.0 announcement
+	public readonly latestAnnouncementId = "apr-18-2025-3-13" // Update for v3.13.0 announcement
 	public readonly contextProxy: ContextProxy
 	public readonly providerSettingsManager: ProviderSettingsManager
 	public readonly customModesManager: CustomModesManager
@@ -1229,7 +1229,6 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			showRooIgnoredFiles,
 			language,
 			showAutoApproveMenu, // kilocode_change
-			showGreeting,
 			maxReadFileLine,
 		} = await this.getState()
 
@@ -1308,7 +1307,6 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			renderContext: this.renderContext,
 			maxReadFileLine: maxReadFileLine ?? 500,
 			settingsImportedAt: this.settingsImportedAt,
-			showGreeting: showGreeting ?? true, // Ensure showGreeting is included in the returned state
 		}
 	}
 
@@ -1396,7 +1394,6 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			showRooIgnoredFiles: stateValues.showRooIgnoredFiles ?? true,
 			showAutoApproveMenu: stateValues.showAutoApproveMenu ?? false, // kilocode_change
 			maxReadFileLine: stateValues.maxReadFileLine ?? 500,
-			showGreeting: stateValues.showGreeting ?? true, // Ensure showGreeting is returned by getState
 		}
 	}
 

@@ -14,7 +14,6 @@ import {
 	Info,
 	Server,
 	LucideIcon,
-	Monitor,
 } from "lucide-react"
 import { CaretSortIcon } from "@radix-ui/react-icons"
 // kilocode_change
@@ -49,7 +48,6 @@ import ApiOptions from "./ApiOptions"
 import { AutoApproveSettings } from "./AutoApproveSettings"
 import { BrowserSettings } from "./BrowserSettings"
 import { CheckpointSettings } from "./CheckpointSettings"
-import { InterfaceSettings } from "./InterfaceSettings"
 import { NotificationSettings } from "./NotificationSettings"
 import { ContextManagementSettings } from "./ContextManagementSettings"
 import { TerminalSettings } from "./TerminalSettings"
@@ -67,7 +65,6 @@ const sectionNames = [
 	"autoApprove",
 	"browser",
 	"checkpoints",
-	"interface",
 	"notifications",
 	"contextManagement",
 	"terminal",
@@ -106,11 +103,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, o
 	}, [isDiscardDialogShow])
 
 	useEffect(() => {
-		if (JSON.stringify(cachedState) === JSON.stringify(extensionState)) {
-			setChangeDetected(false)
-		} else {
-			setChangeDetected(true)
-		}
+		setChangeDetected(JSON.stringify(cachedState) !== JSON.stringify(extensionState))
 	}, [cachedState, extensionState])
 
 	// kilocode_change end
@@ -157,7 +150,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, o
 		remoteBrowserEnabled,
 		maxReadFileLine,
 		showAutoApproveMenu, // kilocode_change
-		showGreeting,
 	} = cachedState
 
 	// Make sure apiConfiguration is initialized and managed by SettingsView.
@@ -284,7 +276,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, o
 			vscode.postMessage({ type: "alwaysAllowModeSwitch", bool: alwaysAllowModeSwitch })
 			vscode.postMessage({ type: "alwaysAllowSubtasks", bool: alwaysAllowSubtasks })
 			vscode.postMessage({ type: "upsertApiConfiguration", text: currentApiConfigName, apiConfiguration })
-			vscode.postMessage({ type: "showGreeting", bool: showGreeting })
 			setChangeDetected(false)
 		}
 	}
@@ -320,7 +311,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, o
 	const autoApproveRef = useRef<HTMLDivElement>(null)
 	const browserRef = useRef<HTMLDivElement>(null)
 	const checkpointsRef = useRef<HTMLDivElement>(null)
-	const interfaceRef = useRef<HTMLDivElement>(null)
 	const notificationsRef = useRef<HTMLDivElement>(null)
 	const contextManagementRef = useRef<HTMLDivElement>(null)
 	const terminalRef = useRef<HTMLDivElement>(null)
@@ -335,7 +325,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, o
 			{ id: "autoApprove", icon: CheckCheck, ref: autoApproveRef },
 			{ id: "browser", icon: SquareMousePointer, ref: browserRef },
 			{ id: "checkpoints", icon: GitBranch, ref: checkpointsRef },
-			{ id: "interface", icon: Monitor, ref: interfaceRef },
 			{ id: "notifications", icon: Bell, ref: notificationsRef },
 			{ id: "contextManagement", icon: Database, ref: contextManagementRef },
 			{ id: "terminal", icon: SquareTerminal, ref: terminalRef },
@@ -349,7 +338,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, o
 			autoApproveRef,
 			browserRef,
 			checkpointsRef,
-			interfaceRef,
 			notificationsRef,
 			contextManagementRef,
 			terminalRef,
@@ -504,10 +492,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, o
 						enableCheckpoints={enableCheckpoints}
 						setCachedStateField={setCachedStateField}
 					/>
-				</div>
-
-				<div ref={interfaceRef}>
-					<InterfaceSettings showGreeting={showGreeting} setCachedStateField={setCachedStateField} />
 				</div>
 
 				<div ref={notificationsRef}>

@@ -30,7 +30,8 @@
 		"experimental": "Funcions experimentals",
 		"language": "Idioma",
 		"about": "Sobre Kilo Code",
-		"interface": "Interfície"
+		"interface": "Interfície",
+		"mcp": "Servidors MCP"
 	},
 	"autoApprove": {
 		"description": "Permet que Kilo Code realitzi operacions automàticament sense requerir aprovació. Activeu aquesta configuració només si confieu plenament en la IA i enteneu els riscos de seguretat associats.",
@@ -483,11 +484,5 @@
 	"labels": {
 		"customArn": "ARN personalitzat",
 		"useCustomArn": "Utilitza ARN personalitzat..."
-	},
-	"interface": {
-		"showgreeting": {
-			"label": "Mostrar missatge de benvinguda",
-			"description": "Quan està activat, Kilo Code mostrarà un missatge de benvinguda i introducció."
-		}
 	}
 }

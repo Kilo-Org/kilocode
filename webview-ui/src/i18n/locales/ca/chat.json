@@ -68,6 +68,7 @@
 		"tooltip": "Cancel·la l'operació actual"
 	},
 	"scrollToBottom": "Desplaça't al final del xat",
+	"onboarding": "<strong>La vostra llista de tasques en aquest espai de treball està buida.</strong> Comença escrivint una tasca a continuació. No esteu segur per on començar? Més informació sobre què pot fer Kilo Code per tu a <DocsLink>la documentació</DocsLink>.",
 	"selectMode": "Selecciona el mode d'interacció",
 	"selectApiConfig": "Selecciona la configuració de l'API",
 	"enhancePrompt": "Millora la sol·licitud amb context addicional",
@@ -183,12 +184,12 @@
 		"copyToInput": "Copiar a l'entrada (o Shift + clic)"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code 3.12 publicat",
-		"description": "Roo Code 3.12 porta noves funcionalitats i millores basades en els teus comentaris.",
+		"title": "🎉 Roo Code 3.13 publicat",
+		"description": "Roo Code 3.13 porta noves funcionalitats i millores basades en els teus comentaris.",
 		"whatsNew": "Novetats",
-		"feature1": "<bold>Suport per a Grok</bold>: Afegit el proveïdor xAI i opcions d'esforç de raonament per a Grok a OpenRouter",
-		"feature2": "<bold>Millores en l'edició de diferències</bold>: Configuració per perfil i millor normalització de cadenes per reduir errors",
-		"feature3": "<bold>Millores en els punts de control</bold>: Punts de control més ràpids i fiables",
+		"feature1": "<bold>Gemini 2.5 Flash Thinking</bold>: Ara pots utilitzar la variant thinking de Gemini 2.5 Flash i especificar un pressupost de tokens per a thinking",
+		"feature2": "<bold>Millores d'interfície</bold>: La capçalera de tasques, la vista de xat, la previsualització d'historial i la vista de benvinguda han estat visualment millorades",
+		"feature3": "<bold>Correccions d'errors</bold>: Edicions de diferències més fiables i més",
 		"hideButton": "Amagar anunci",
 		"detailsDiscussLinks": "Obtingues més detalls i participa a <discordLink>Discord</discordLink> i <redditLink>Reddit</redditLink> 🚀"
 	},
