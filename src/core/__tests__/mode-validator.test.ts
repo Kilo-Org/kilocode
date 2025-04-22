@@ -1,5 +1,7 @@
+// npx jest src/core/__tests__/mode-validator.test.ts
+
 import { isToolAllowedForMode, getModeConfig, modes, ModeConfig } from "../../shared/modes"
-import { TOOL_GROUPS } from "../../shared/tool-groups"
+import { TOOL_GROUPS } from "../../shared/tools"
 import { validateToolUse } from "../mode-validator"
 
 const [codeMode, architectMode, askMode] = modes.map((mode) => mode.slug)

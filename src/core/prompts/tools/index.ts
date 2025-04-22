@@ -1,7 +1,14 @@
+import { ToolName } from "../../../schemas"
+import { TOOL_GROUPS, ALWAYS_AVAILABLE_TOOLS, DiffStrategy } from "../../../shared/tools"
+import { McpHub } from "../../../services/mcp/McpHub"
+import { Mode, ModeConfig, getModeConfig, isToolAllowedForMode, getGroupName } from "../../../shared/modes"
+
+import { ToolArgs } from "./types"
 import { getExecuteCommandDescription } from "./execute-command"
 import { getReadFileDescription } from "./read-file"
 import { getFetchInstructionsDescription } from "./fetch-instructions"
 import { getWriteToFileDescription } from "./write-to-file"
+import { getAppendToFileDescription } from "./append-to-file"
 import { getSearchFilesDescription } from "./search-files"
 import { getListFilesDescription } from "./list-files"
 import { getInsertContentDescription } from "./insert-content"
@@ -14,11 +21,6 @@ import { getUseMcpToolDescription } from "./use-mcp-tool"
 import { getAccessMcpResourceDescription } from "./access-mcp-resource"
 import { getSwitchModeDescription } from "./switch-mode"
 import { getNewTaskDescription } from "./new-task"
-import { DiffStrategy } from "../../diff/DiffStrategy"
-import { McpHub } from "../../../services/mcp/McpHub"
-import { Mode, ModeConfig, getModeConfig, isToolAllowedForMode, getGroupName } from "../../../shared/modes"
-import { ToolName, TOOL_GROUPS, ALWAYS_AVAILABLE_TOOLS } from "../../../shared/tool-groups"
-import { ToolArgs } from "./types"
 
 // Map of tool names to their description functions
 const toolDescriptionMap: Record<string, (args: ToolArgs) => string | undefined> = {
@@ -26,6 +28,7 @@ const toolDescriptionMap: Record<string, (args: ToolArgs) => string | undefined>
 	read_file: (args) => getReadFileDescription(args),
 	fetch_instructions: () => getFetchInstructionsDescription(),
 	write_to_file: (args) => getWriteToFileDescription(args),
+	append_to_file: (args) => getAppendToFileDescription(args),
 	search_files: (args) => getSearchFilesDescription(args),
 	list_files: (args) => getListFilesDescription(args),
 	list_code_definition_names: (args) => getListCodeDefinitionNamesDescription(args),
@@ -69,7 +72,16 @@ export function getToolDescriptionsForMode(
 		const toolGroup = TOOL_GROUPS[groupName]
 		if (toolGroup) {
 			toolGroup.tools.forEach((tool) => {
-				if (isToolAllowedForMode(tool as ToolName, mode, customModes ?? [], experiments ?? {})) {
+				if (
+					isToolAllowedForMode(
+						tool as ToolName,
+						mode,
+						customModes ?? [],
+						undefined,
+						undefined,
+						experiments ?? {},
+					)
+				) {
 					tools.add(tool)
 				}
 			})
@@ -101,6 +113,7 @@ export {
 	getReadFileDescription,
 	getFetchInstructionsDescription,
 	getWriteToFileDescription,
+	getAppendToFileDescription,
 	getSearchFilesDescription,
 	getListFilesDescription,
 	getListCodeDefinitionNamesDescription,

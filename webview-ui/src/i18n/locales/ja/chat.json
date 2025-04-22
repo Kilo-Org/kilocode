@@ -1,5 +1,5 @@
 {
-	"greeting": "Kilo Codeにお手伝いできることはありますか？",
+	"greeting": "Kilo Code は何をお手伝いできますか？",
 	"task": {
 		"title": "タスク",
 		"seeMore": "もっと見る",
@@ -68,6 +68,7 @@
 		"tooltip": "現在の操作をキャンセル"
 	},
 	"scrollToBottom": "チャットの最下部にスクロール",
+	"onboarding": "<strong>このワークスペースのタスクリストは空です。</strong> 下にタスクを入力して始めましょう。どう始めればいいかわからない場合は、<DocsLink>ドキュメント</DocsLink>でKilo Codeができることについて詳しく読むことができます。",
 	"selectMode": "対話モードを選択",
 	"selectApiConfig": "API設定を選択",
 	"enhancePrompt": "追加コンテキストでプロンプトを強化",
@@ -183,12 +184,12 @@
 		"copyToInput": "入力欄にコピー（またはShift + クリック）"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code 3.12 リリース",
-		"description": "Roo Code 3.12は新機能とあなたのフィードバックに基づく改善をもたらします。",
+		"title": "🎉 Roo Code 3.13 リリース",
+		"description": "Roo Code 3.13は新機能とあなたのフィードバックに基づく改善をもたらします。",
 		"whatsNew": "新機能",
-		"feature1": "<bold>Grokサポート</bold>: xAIプロバイダーが追加され、OpenRouterでGrokの推論努力オプションが利用可能に",
-		"feature2": "<bold>差分編集の改善</bold>: プロファイルごとの設定と、エラー削減のための文字列正規化の改善",
-		"feature3": "<bold>チェックポイントの強化</bold>: より高速で信頼性の高いチェックポイント",
+		"feature1": "<bold>Gemini 2.5 Flash Thinking</bold>: Gemini 2.5 Flashのthinkingバリアントを使用し、thinking用のトークン予算を指定できるようになりました",
+		"feature2": "<bold>UI改善</bold>: タスクヘッダー、チャットビュー、履歴プレビュー、ウェルカムビューが視覚的に強化されました",
+		"feature3": "<bold>バグ修正</bold>: より信頼性の高い差分編集など",
 		"hideButton": "通知を非表示",
 		"detailsDiscussLinks": "詳細は<discordLink>Discord</discordLink>と<redditLink>Reddit</redditLink>でご確認・ディスカッションください 🚀"
 	},
