@@ -303,13 +303,23 @@
 			],
 			"view/title": [
 				{
-					"command": "kilo-code.popoutButtonClicked",
-					"group": "navigation@4",
+					"command": "kilo-code.plusButtonClicked",
+					"group": "navigation@1",
+					"when": "view == kilo-code.SidebarProvider"
+				},
+				{
+					"command": "kilo-code.historyButtonClicked",
+					"group": "navigation@2",
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
 					"command": "kilo-code.settingsButtonClicked",
-					"group": "navigation@1",
+					"group": "navigation@3",
+					"when": "view == kilo-code.SidebarProvider"
+				},
+				{
+					"command": "kilo-code.popoutButtonClicked",
+					"group": "navigation@4",
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
