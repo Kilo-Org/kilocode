@@ -106,11 +106,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, o
 	}, [isDiscardDialogShow])
 
 	useEffect(() => {
-		if (JSON.stringify(cachedState) === JSON.stringify(extensionState)) {
-			setChangeDetected(false)
-		} else {
-			setChangeDetected(true)
-		}
+		setChangeDetected(JSON.stringify(cachedState) !== JSON.stringify(extensionState))
 	}, [cachedState, extensionState])
 
 	// kilocode_change end
