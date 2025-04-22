@@ -999,7 +999,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 						{/* kilocode_change: fixed width */}
 						{/* API configuration selector - fixed width */}
-						<div className={cn("overflow-hidden")}>
+						<div className={cn("shrink-0", "w-[70px]", "overflow-hidden")}>
 							<SelectDropdown
 								value={currentConfigId}
 								disabled={selectApiConfigDisabled}
