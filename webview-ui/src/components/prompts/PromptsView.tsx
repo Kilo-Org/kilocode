@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react"
+import BottomControls from "../chat/BottomControls" // kilocode_change
 import { Button } from "@/components/ui/button"
 import {
 	VSCodeTextArea,
@@ -1423,6 +1424,8 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 					</div>
 				</div>
 			)}
+			{/* kilocode_change */}
+			<BottomControls />
 		</Tab>
 	)
 }
