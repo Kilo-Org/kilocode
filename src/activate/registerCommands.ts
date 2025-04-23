@@ -3,7 +3,7 @@ import delay from "delay"
 
 import { ClineProvider } from "../core/webview/ClineProvider"
 import { t } from "../i18n" // kilocode_change
-import { importSettings, exportSettings } from "../core/config/importExport"
+import { importSettings, exportSettings } from "../core/config/importExport" // kilocode_change
 /**
  * Helper to get the visible ClineProvider instance or log if not found.
  */
