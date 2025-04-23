@@ -10,5 +10,8 @@
 		"githubIssues": "Zgłoś problem na GitHubie",
 		"githubDiscussions": "Dołącz do dyskusji na GitHubie",
 		"discord": "Dołącz do naszej społeczności Discord"
+	},
+	"ui": {
+		"search_placeholder": "Szukaj..."
 	}
 }

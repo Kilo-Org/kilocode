@@ -6,7 +6,7 @@
 </p>
 <div align="center">
 
-<a href="https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code" target="_blank"><img src="https://img.shields.io/badge/Get%20%2420%20of%20free%20tokens%20for%20Claude%203.7-green?style=for-the-badge&logo=claude&logoColor=white" alt="Get $20 of Claude 3.7 tokens for free"></a>
+<a href="https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code" target="_blank"><img src="https://img.shields.io/badge/Get%20%2420%20of%20free%20tokens-green?style=for-the-badge&logo=claude&logoColor=white" alt="Get $20 of tokens for free"></a>
 <a href="https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code" target="_blank"><img src="https://img.shields.io/badge/Download%20on%20VS%20Code%20Marketplace-blue?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="Download on VS Code Marketplace"></a>
 
 <a href="https://www.reddit.com/r/kilocode/" target="_blank"><img src="https://img.shields.io/badge/Join%20Reddit-FF4500?style=for-the-badge&logo=reddit&logoColor=white" alt="Join Reddit"></a>
@@ -25,11 +25,15 @@ Kilo Code is an open-source AI agent extension for Visual Studio Code. It helps 
 Get started with $20 of free credits to experience the power of Gemini 2.5 Pro, Claude 3.7 Sonnet, and GPT-4.1. We'll give out more free tokens if you leave useful feedback.
 
 - [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code) (download)
-- [Home page](https://kilocode.ai) (learn more)
+- [Official KiloCode.ai Home page](https://kilocode.ai) (learn more)
 - [Discord](https://kilocode.ai/discord) (join community)
 - [Reddit](https://www.reddit.com/r/kilocode/) (start discussing)
 - [Substack](https://blog.kilocode.ai/) (blog)
 - [Product Hunt](https://www.producthunt.com/products/kilocode) (vote)
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Kilo-Org/kilocode/refs/heads/main/kilo.gif" width="100%" />
+</p>
 
 ## Key Features
 
@@ -44,30 +48,6 @@ Get started with $20 of free credits to experience the power of Gemini 2.5 Pro, 
 2.  Log in with your Google Account to get $20 in free Claude 3.7 Sonnet credits.
 3.  Start coding!
 
-## Local Setup & Development
+## Development
 
-1. **Clone** the repo:
-    ```bash
-    git clone https://github.com/Kilo-Org/kilocode.git
-    ```
-2. **Install dependencies**:
-    ```bash
-    npm run install:all
-    ```
-3. **Build** the extension:
-    ```bash
-    npm run build
-    ```
-    - A `.vsix` file will appear in the `bin/` directory.
-4. **Install** the `.vsix` manually if desired:
-    ```bash
-    code --install-extension bin/kilo-code-4.0.0.vsix
-    ```
-5. **Start the webview (Vite/React app with HMR)**:
-    ```bash
-    npm run dev
-    ```
-6. **Debug**:
-    - Press `F5` (or **Run** → **Start Debugging**) in VSCode to open a new session with Kilo Code loaded.
-
-Changes to the webview will appear immediately. Changes to the core extension will require a restart of the extension host.
+For details on building and developing the extension, see [DEVELOPMENT.md](/DEVELOPMENT.md)

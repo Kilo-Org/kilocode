@@ -30,7 +30,8 @@
 		"experimental": "実験的機能",
 		"language": "言語",
 		"about": "Kilo Codeについて",
-		"interface": "インターフェース"
+		"interface": "インターフェース",
+		"mcp": "MCPサーバー"
 	},
 	"autoApprove": {
 		"description": "Kilo Codeが承認なしで自動的に操作を実行できるようにします。AIを完全に信頼し、関連するセキュリティリスクを理解している場合にのみ、これらの設定を有効にしてください。",
@@ -132,6 +133,8 @@
 		"getMistralApiKey": "Mistral / Codestral APIキーを取得",
 		"codestralBaseUrl": "Codestral ベースURL（オプション）",
 		"codestralBaseUrlDesc": "Codestralモデルの代替URLを設定します。",
+		"xaiApiKey": "xAI APIキー",
+		"getXaiApiKey": "xAI APIキーを取得",
 		"awsCredentials": "AWS認証情報",
 		"awsProfile": "AWSプロファイル",
 		"awsProfileName": "AWSプロファイル名",
@@ -229,6 +232,12 @@
 		"rateLimitSeconds": {
 			"label": "レート制限",
 			"description": "APIリクエスト間の最小時間。"
+		},
+		"reasoningEffort": {
+			"label": "モデル推論の労力",
+			"high": "高",
+			"medium": "中",
+			"low": "低"
 		}
 	},
 	"browser": {
@@ -475,11 +484,5 @@
 	"labels": {
 		"customArn": "カスタム ARN",
 		"useCustomArn": "カスタム ARN を使用..."
-	},
-	"interface": {
-		"showgreeting": {
-			"label": "ようこそメッセージを表示",
-			"description": "有効にすると、Rooはようこそメッセージと紹介を表示します。"
-		}
 	}
 }

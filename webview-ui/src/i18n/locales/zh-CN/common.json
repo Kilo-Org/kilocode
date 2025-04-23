@@ -10,5 +10,8 @@
 		"githubIssues": "在GitHub上报告问题",
 		"githubDiscussions": "加入GitHub讨论",
 		"discord": "加入我们的Discord社区"
+	},
+	"ui": {
+		"search_placeholder": "搜索..."
 	}
 }

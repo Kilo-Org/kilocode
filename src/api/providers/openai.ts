@@ -15,16 +15,9 @@ import { convertToSimpleMessages } from "../transform/simple-format"
 import { ApiStream, ApiStreamUsageChunk } from "../transform/stream"
 import { BaseProvider } from "./base-provider"
 import { XmlMatcher } from "../../utils/xml-matcher"
-import { DEEP_SEEK_DEFAULT_TEMPERATURE } from "./constants"
-
-export const defaultHeaders = {
-	"HTTP-Referer": "https://kilocode.ai",
-	"X-Title": "Kilo Code",
-}
+import { DEEP_SEEK_DEFAULT_TEMPERATURE, DEFAULT_HEADERS, AZURE_AI_INFERENCE_PATH } from "./constants"
 
 export interface OpenAiHandlerOptions extends ApiHandlerOptions {}
-
-const AZURE_AI_INFERENCE_PATH = "/models/chat/completions"
 
 export class OpenAiHandler extends BaseProvider implements SingleCompletionHandler {
 	protected options: OpenAiHandlerOptions
@@ -45,7 +38,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			this.client = new OpenAI({
 				baseURL,
 				apiKey,
-				defaultHeaders,
+				defaultHeaders: DEFAULT_HEADERS,
 				defaultQuery: { "api-version": this.options.azureApiVersion || "2024-05-01-preview" },
 			})
 		} else if (isAzureOpenAi) {
@@ -56,7 +49,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				apiKey,
 				apiVersion: this.options.azureApiVersion || azureOpenAiDefaultApiVersion,
 				defaultHeaders: {
-					...defaultHeaders,
+					...DEFAULT_HEADERS,
 					...(this.options.openAiHostHeader ? { Host: this.options.openAiHostHeader } : {}),
 				},
 			})
@@ -65,7 +58,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				baseURL,
 				apiKey,
 				defaultHeaders: {
-					...defaultHeaders,
+					...DEFAULT_HEADERS,
 					...(this.options.openAiHostHeader ? { Host: this.options.openAiHostHeader } : {}),
 				},
 			})
@@ -82,6 +75,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 		const urlHost = this._getUrlHost(modelUrl)
 		const deepseekReasoner = modelId.includes("deepseek-reasoner") || enabledR1Format
 		const ark = modelUrl.includes(".volces.com")
+
 		if (modelId.startsWith("o3-mini")) {
 			yield* this.handleO3FamilyMessage(modelId, systemPrompt, messages)
 			return
@@ -94,6 +88,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			}
 
 			let convertedMessages
+
 			if (deepseekReasoner) {
 				convertedMessages = convertToR1Format([{ role: "user", content: systemPrompt }, ...messages])
 			} else if (ark || enabledLegacyFormat) {
@@ -112,16 +107,20 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 						],
 					}
 				}
+
 				convertedMessages = [systemMessage, ...convertToOpenAiMessages(messages)]
+
 				if (modelInfo.supportsPromptCache) {
 					// Note: the following logic is copied from openrouter:
 					// Add cache_control to the last two user messages
 					// (note: this works because we only ever add one user message at a time, but if we added multiple we'd need to mark the user message before the last assistant message)
 					const lastTwoUserMessages = convertedMessages.filter((msg) => msg.role === "user").slice(-2)
+
 					lastTwoUserMessages.forEach((msg) => {
 						if (typeof msg.content === "string") {
 							msg.content = [{ type: "text", text: msg.content }]
 						}
+
 						if (Array.isArray(msg.content)) {
 							// NOTE: this is fine since env details will always be added at the end. but if it weren't there, and the user added a image_url type message, it would pop a text part before it and then move it after to the end.
 							let lastTextPart = msg.content.filter((part) => part.type === "text").pop()
@@ -130,6 +129,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 								lastTextPart = { type: "text", text: "..." }
 								msg.content.push(lastTextPart)
 							}
+
 							// @ts-ignore-next-line
 							lastTextPart["cache_control"] = { type: "ephemeral" }
 						}
@@ -145,7 +145,9 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				messages: convertedMessages,
 				stream: true as const,
 				...(isGrokXAI ? {} : { stream_options: { include_usage: true } }),
+				reasoning_effort: this.getModel().info.reasoningEffort,
 			}
+
 			if (this.options.includeMaxTokens) {
 				requestOptions.max_tokens = modelInfo.maxTokens
 			}
@@ -185,6 +187,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 					lastUsage = chunk.usage
 				}
 			}
+
 			for (const chunk of matcher.final()) {
 				yield chunk
 			}
@@ -217,6 +220,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				type: "text",
 				text: response.choices[0]?.message.content || "",
 			}
+
 			yield this.processUsageMetrics(response.usage, modelInfo)
 		}
 	}
@@ -241,6 +245,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 	async completePrompt(prompt: string): Promise<string> {
 		try {
 			const isAzureAiInference = this._isAzureAiInference(this.options.openAiBaseUrl)
+
 			const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
 				model: this.getModel().id,
 				messages: [{ role: "user", content: prompt }],
@@ -250,11 +255,13 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				requestOptions,
 				isAzureAiInference ? { path: AZURE_AI_INFERENCE_PATH } : {},
 			)
+
 			return response.choices[0]?.message.content || ""
 		} catch (error) {
 			if (error instanceof Error) {
 				throw new Error(`OpenAI completion error: ${error.message}`)
 			}
+
 			throw error
 		}
 	}
@@ -333,6 +340,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			}
 		}
 	}
+
 	private _getUrlHost(baseUrl?: string): string {
 		try {
 			return new URL(baseUrl ?? "").host

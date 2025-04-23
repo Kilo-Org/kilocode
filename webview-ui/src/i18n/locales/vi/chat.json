@@ -7,7 +7,7 @@
 		"tokens": "Tokens:",
 		"cache": "Bộ nhớ đệm:",
 		"apiCost": "Chi phí API:",
-		"contextWindow": "Cửa sổ ngữ cảnh:",
+		"contextWindow": "Chiều dài bối cảnh:",
 		"closeAndStart": "Đóng nhiệm vụ và bắt đầu nhiệm vụ mới",
 		"export": "Xuất lịch sử nhiệm vụ",
 		"delete": "Xóa nhiệm vụ (Shift + Click để bỏ qua xác nhận)"
@@ -68,6 +68,7 @@
 		"tooltip": "Hủy thao tác hiện tại"
 	},
 	"scrollToBottom": "Cuộn xuống cuối cuộc trò chuyện",
+	"onboarding": "<strong>Danh sách nhiệm vụ của bạn trong không gian làm việc này trống.</strong> Bắt đầu bằng cách nhập nhiệm vụ bên dưới. Bạn không chắc chắn nên bắt đầu như thế nào? Đọc thêm về những gì Kilo Code có thể làm cho bạn trong <DocsLink>tài liệu</DocsLink>.",
 	"selectMode": "Chọn chế độ tương tác",
 	"selectApiConfig": "Chọn cấu hình API",
 	"enhancePrompt": "Nâng cao yêu cầu với ngữ cảnh bổ sung",
@@ -173,41 +174,7 @@
 	"autoApprove": {
 		"title": "Tự động phê duyệt:",
 		"none": "Không",
-		"description": "Tự động phê duyệt cho phép Kilo Code thực hiện hành động mà không cần xin phép. Chỉ bật cho các hành động bạn hoàn toàn tin tưởng. Cấu hình chi tiết hơn có sẵn trong <settingsLink>Cài đặt</settingsLink>.",
-		"actions": {
-			"readFiles": {
-				"label": "Đọc",
-				"description": "Cho phép truy cập để đọc bất kỳ tệp nào trên máy tính của bạn."
-			},
-			"editFiles": {
-				"label": "Chỉnh sửa",
-				"description": "Cho phép chỉnh sửa bất kỳ tệp nào trên máy tính của bạn."
-			},
-			"executeCommands": {
-				"label": "Lệnh",
-				"description": "Cho phép thực thi lệnh terminal đã được phê duyệt. Bạn có thể cấu hình điều này trong bảng cài đặt."
-			},
-			"useBrowser": {
-				"label": "Trình duyệt",
-				"description": "Cho phép khả năng khởi chạy và tương tác với bất kỳ trang web nào trong trình duyệt không giao diện."
-			},
-			"useMcp": {
-				"label": "MCP",
-				"description": "Cho phép sử dụng máy chủ MCP đã cấu hình có thể sửa đổi hệ thống tệp hoặc tương tác với API."
-			},
-			"switchModes": {
-				"label": "Chế độ",
-				"description": "Cho phép tự động chuyển đổi giữa các chế độ khác nhau mà không cần phê duyệt."
-			},
-			"subtasks": {
-				"label": "Nhiệm vụ phụ",
-				"description": "Cho phép tạo và hoàn thành các nhiệm vụ phụ mà không cần phê duyệt."
-			},
-			"retryRequests": {
-				"label": "Thử lại",
-				"description": "Tự động thử lại các yêu cầu API thất bại khi nhà cung cấp trả về phản hồi lỗi."
-			}
-		}
+		"description": "Tự động phê duyệt cho phép Kilo Code thực hiện hành động mà không cần xin phép. Chỉ bật cho các hành động bạn hoàn toàn tin tưởng. Cấu hình chi tiết hơn có sẵn trong <settingsLink>Cài đặt</settingsLink>."
 	},
 	"reasoning": {
 		"thinking": "Đang suy nghĩ",
@@ -217,10 +184,14 @@
 		"copyToInput": "Sao chép vào ô nhập liệu (hoặc Shift + nhấp chuột)"
 	},
 	"announcement": {
-		"title": "Làm được nhiều hơn với Nhiệm vụ Boomerang 🪃",
-		"description": "Chia công việc thành các nhiệm vụ con, mỗi nhiệm vụ chạy trong một chế độ chuyên biệt như code, architect, debug, hoặc chế độ tùy chỉnh.",
-		"learnMore": "Tìm hiểu thêm →",
-		"hideButton": "Ẩn thông báo"
+		"title": "🎉 Roo Code 3.13 Đã phát hành",
+		"description": "Roo Code 3.13 mang đến các tính năng và cải tiến mới dựa trên phản hồi của bạn.",
+		"whatsNew": "Có gì mới",
+		"feature1": "<bold>Gemini 2.5 Flash Thinking</bold>: Bây giờ bạn có thể sử dụng biến thể thinking của Gemini 2.5 Flash và chỉ định ngân sách token cho thinking",
+		"feature2": "<bold>Cải tiến giao diện người dùng</bold>: Tiêu đề nhiệm vụ, giao diện trò chuyện, xem trước lịch sử và màn hình chào mừng đã được nâng cấp về mặt hình ảnh",
+		"feature3": "<bold>Sửa lỗi</bold>: Chỉnh sửa khác biệt đáng tin cậy hơn và nhiều cải tiến khác",
+		"hideButton": "Ẩn thông báo",
+		"detailsDiscussLinks": "Nhận thêm chi tiết và thảo luận tại <discordLink>Discord</discordLink> và <redditLink>Reddit</redditLink> 🚀"
 	},
 	"browser": {
 		"rooWantsToUse": "Kilo Code muốn sử dụng trình duyệt:",

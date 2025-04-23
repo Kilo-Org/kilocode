@@ -12,11 +12,25 @@
  * @returns A mention-friendly path
  */
 export function convertToMentionPath(path: string, cwd?: string): string {
-	const normalizedPath = path.replace(/\\/g, "/")
+	// Strip file:// protocol if present
+	let pathWithoutProtocol = path.startsWith("file://") ? path.substring(7) : path
+
+	try {
+		pathWithoutProtocol = decodeURIComponent(pathWithoutProtocol)
+		// Fix: Remove leading slash for Windows paths like /d:/...
+		if (pathWithoutProtocol.startsWith("/") && pathWithoutProtocol[2] === ":") {
+			pathWithoutProtocol = pathWithoutProtocol.substring(1)
+		}
+	} catch (e) {
+		// Log error if decoding fails, but continue with the potentially problematic path
+		console.error("Error decoding URI component in convertToMentionPath:", e, pathWithoutProtocol)
+	}
+
+	const normalizedPath = pathWithoutProtocol.replace(/\\/g, "/")
 	let normalizedCwd = cwd ? cwd.replace(/\\/g, "/") : ""
 
 	if (!normalizedCwd) {
-		return path
+		return pathWithoutProtocol
 	}
 
 	// Remove trailing slash from cwd if it exists
@@ -34,5 +48,5 @@ export function convertToMentionPath(path: string, cwd?: string): string {
 		return "@" + (relativePath.startsWith("/") ? relativePath : "/" + relativePath)
 	}
 
-	return path
+	return pathWithoutProtocol
 }

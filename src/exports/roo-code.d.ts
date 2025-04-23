@@ -22,6 +22,7 @@ type ProviderSettings = {
 				| "requesty"
 				| "human-relay"
 				| "fake-ai"
+				| "xai"
 		  )
 		| undefined
 	apiModelId?: string | undefined
@@ -32,6 +33,7 @@ type ProviderSettings = {
 	glamaModelInfo?:
 		| ({
 				maxTokens?: (number | null) | undefined
+				maxThinkingTokens?: (number | null) | undefined
 				contextWindow: number
 				supportsImages?: boolean | undefined
 				supportsComputerUse?: boolean | undefined
@@ -54,6 +56,7 @@ type ProviderSettings = {
 	openRouterModelInfo?:
 		| ({
 				maxTokens?: (number | null) | undefined
+				maxThinkingTokens?: (number | null) | undefined
 				contextWindow: number
 				supportsImages?: boolean | undefined
 				supportsComputerUse?: boolean | undefined
@@ -96,6 +99,7 @@ type ProviderSettings = {
 	openAiCustomModelInfo?:
 		| ({
 				maxTokens?: (number | null) | undefined
+				maxThinkingTokens?: (number | null) | undefined
 				contextWindow: number
 				supportsImages?: boolean | undefined
 				supportsComputerUse?: boolean | undefined
@@ -141,6 +145,7 @@ type ProviderSettings = {
 	unboundModelInfo?:
 		| ({
 				maxTokens?: (number | null) | undefined
+				maxThinkingTokens?: (number | null) | undefined
 				contextWindow: number
 				supportsImages?: boolean | undefined
 				supportsComputerUse?: boolean | undefined
@@ -162,6 +167,7 @@ type ProviderSettings = {
 	requestyModelInfo?:
 		| ({
 				maxTokens?: (number | null) | undefined
+				maxThinkingTokens?: (number | null) | undefined
 				contextWindow: number
 				supportsImages?: boolean | undefined
 				supportsComputerUse?: boolean | undefined
@@ -178,12 +184,15 @@ type ProviderSettings = {
 				cachableFields?: string[] | undefined
 		  } | null)
 		| undefined
+	xaiApiKey?: string | undefined
 	modelMaxTokens?: number | undefined
 	modelMaxThinkingTokens?: number | undefined
 	includeMaxTokens?: boolean | undefined
 	modelTemperature?: (number | null) | undefined
 	reasoningEffort?: ("low" | "medium" | "high") | undefined
 	rateLimitSeconds?: number | undefined
+	diffEnabled?: boolean | undefined
+	fuzzyMatchThreshold?: number | undefined
 	fakeAi?: unknown | undefined
 	kilocodeToken?: string | undefined
 	kilocodeModel?: ("claude37" | "gemini25" | "gpt41" | "gemini25flashpreview") | undefined
@@ -218,6 +227,7 @@ type GlobalSettings = {
 							| "requesty"
 							| "human-relay"
 							| "fake-ai"
+							| "xai"
 					  )
 					| undefined
 		  }[]
@@ -266,8 +276,6 @@ type GlobalSettings = {
 	remoteBrowserHost?: string | undefined
 	cachedChromeHostUrl?: string | undefined
 	enableCheckpoints?: boolean | undefined
-	checkpointStorage?: ("task" | "workspace") | undefined
-	showGreeting?: boolean | undefined
 	ttsEnabled?: boolean | undefined
 	ttsSpeed?: number | undefined
 	soundEnabled?: boolean | undefined
@@ -527,6 +535,12 @@ type RooCodeEvents = {
 			totalCacheReads?: number | undefined
 			totalCost: number
 			contextTokens: number
+		},
+		{
+			[x: string]: {
+				attempts: number
+				failures: number
+			}
 		},
 	]
 	taskTokenUsageUpdated: [

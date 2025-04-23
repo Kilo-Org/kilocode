@@ -7,7 +7,7 @@
 		"tokens": "Tokens:",
 		"cache": "Caché:",
 		"apiCost": "Costo de API:",
-		"contextWindow": "Ventana de contexto:",
+		"contextWindow": "Longitud del contexto:",
 		"closeAndStart": "Cerrar tarea e iniciar una nueva",
 		"export": "Exportar historial de tareas",
 		"delete": "Eliminar tarea (Shift + Clic para omitir confirmación)"
@@ -68,6 +68,7 @@
 		"tooltip": "Cancelar la operación actual"
 	},
 	"scrollToBottom": "Desplazarse al final del chat",
+	"onboarding": "<strong>Tu lista de tareas en este espacio de trabajo está vacía.</strong> Comienza escribiendo una tarea abajo. ¿No estás seguro cómo empezar? Lee más sobre lo que Kilo Code puede hacer por ti en <DocsLink>la documentación</DocsLink>.",
 	"selectMode": "Seleccionar modo de interacción",
 	"selectApiConfig": "Seleccionar configuración de API",
 	"enhancePrompt": "Mejorar el mensaje con contexto adicional",
@@ -173,41 +174,7 @@
 	"autoApprove": {
 		"title": "Auto-aprobar:",
 		"none": "Ninguno",
-		"description": "Auto-aprobar permite a Kilo Code realizar acciones sin pedir permiso. Habilita solo para acciones en las que confíes plenamente. Configuración más detallada disponible en <settingsLink>Configuración</settingsLink>.",
-		"actions": {
-			"readFiles": {
-				"label": "Lectura",
-				"description": "Permite acceso para leer cualquier archivo en tu computadora."
-			},
-			"editFiles": {
-				"label": "Edición",
-				"description": "Permite la modificación de cualquier archivo en tu computadora."
-			},
-			"executeCommands": {
-				"label": "Comandos",
-				"description": "Permite la ejecución de comandos de terminal aprobados. Puedes configurar esto en el panel de configuración."
-			},
-			"useBrowser": {
-				"label": "Navegador",
-				"description": "Permite la capacidad de iniciar e interactuar con cualquier sitio web en un navegador sin interfaz."
-			},
-			"useMcp": {
-				"label": "MCP",
-				"description": "Permite el uso de servidores MCP configurados que pueden modificar el sistema de archivos o interactuar con APIs."
-			},
-			"switchModes": {
-				"label": "Modos",
-				"description": "Permite el cambio automático entre diferentes modos sin requerir aprobación."
-			},
-			"subtasks": {
-				"label": "Subtareas",
-				"description": "Permite la creación y finalización de subtareas sin requerir aprobación."
-			},
-			"retryRequests": {
-				"label": "Reintentos",
-				"description": "Reintenta automáticamente las solicitudes API fallidas cuando el proveedor devuelve una respuesta de error."
-			}
-		}
+		"description": "Auto-aprobar permite a Kilo Code realizar acciones sin pedir permiso. Habilita solo para acciones en las que confíes plenamente. Configuración más detallada disponible en <settingsLink>Configuración</settingsLink>."
 	},
 	"reasoning": {
 		"thinking": "Pensando",
@@ -217,10 +184,14 @@
 		"copyToInput": "Copiar a la entrada (o Shift + clic)"
 	},
 	"announcement": {
-		"title": "Haz más con Tareas Boomerang 🪃",
-		"description": "Divide el trabajo en subtareas, cada una ejecutándose en un modo especializado, como code, architect, debug o un modo personalizado.",
-		"learnMore": "Saber más →",
-		"hideButton": "Ocultar anuncio"
+		"title": "🎉 Roo Code 3.13 publicado",
+		"description": "Roo Code 3.13 trae nuevas funcionalidades y mejoras basadas en tus comentarios.",
+		"whatsNew": "Novedades",
+		"feature1": "<bold>Gemini 2.5 Flash Thinking</bold>: Ahora puedes usar la variante thinking de Gemini 2.5 Flash y especificar un presupuesto de tokens para thinking",
+		"feature2": "<bold>Mejoras en la interfaz</bold>: El encabezado de tareas, la vista de chat, la vista previa del historial y la vista de bienvenida han sido mejorados visualmente",
+		"feature3": "<bold>Correcciones de errores</bold>: Ediciones de diferencias más confiables y más",
+		"hideButton": "Ocultar anuncio",
+		"detailsDiscussLinks": "Obtén más detalles y participa en <discordLink>Discord</discordLink> y <redditLink>Reddit</redditLink> 🚀"
 	},
 	"browser": {
 		"rooWantsToUse": "Kilo Code quiere usar el navegador:",

@@ -98,6 +98,34 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		const [gitCommits, setGitCommits] = useState<any[]>([])
 		const [showDropdown, setShowDropdown] = useState(false)
 		const [fileSearchResults, setFileSearchResults] = useState<SearchResult[]>([])
+
+		// kilocode_change begin: remove button from chat when it gets to small
+		const [containerWidth, setContainerWidth] = useState<number>(300) // Default to a value larger than our threshold
+
+		const containerRef = useRef<HTMLDivElement>(null)
+		const actionButtonsRef = useRef<HTMLDivElement>(null)
+
+		useEffect(() => {
+			if (!containerRef.current) return
+
+			// Check if ResizeObserver is available (it won't be in test environment)
+			if (typeof ResizeObserver === "undefined") return
+
+			const resizeObserver = new ResizeObserver((entries) => {
+				for (const entry of entries) {
+					const width = entry.contentRect.width
+					setContainerWidth(width)
+				}
+			})
+
+			resizeObserver.observe(containerRef.current)
+
+			return () => {
+				resizeObserver.disconnect()
+			}
+		}, [])
+		// kilocode_change end
+
 		const [searchLoading, setSearchLoading] = useState(false)
 		const [searchRequestId, setSearchRequestId] = useState<string>("")
 
@@ -314,6 +342,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							const direction = event.key === "ArrowUp" ? -1 : 1
 							const options = getContextMenuOptions(
 								searchQuery,
+								inputValue,
 								selectedType,
 								queryItems,
 								fileSearchResults,
@@ -350,6 +379,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						event.preventDefault()
 						const selectedOption = getContextMenuOptions(
 							searchQuery,
+							inputValue,
 							selectedType,
 							queryItems,
 							fileSearchResults,
@@ -621,7 +651,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				e.preventDefault()
 				setIsDraggingOver(false)
 
-				const text = e.dataTransfer.getData("text")
+				const text = e.dataTransfer.getData("application/vnd.code.uri-list")
 				if (text) {
 					// Split text on newlines to handle multiple files
 					const lines = text.split(/\r?\n/).filter((line) => line.trim() !== "")
@@ -790,6 +820,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 								<ContextMenu
 									onSelect={handleMentionSelect}
 									searchQuery={searchQuery}
+									inputValue={inputValue}
 									onMouseDown={handleMenuMouseDown}
 									selectedIndex={selectedMenuIndex}
 									setSelectedIndex={setSelectedMenuIndex}
@@ -895,7 +926,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 									"flex-none flex-grow",
 									"z-[2]",
 									"scrollbar-none",
-									"pb-10", // kilocode_change
+									"pb-16", // Increased padding to prevent overlap with control bar
 								)}
 								onScroll={() => updateHighlights()}
 							/>
@@ -933,17 +964,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					</div>
 				</div>
 
-				{selectedImages.length > 0 && (
-					<Thumbnails
-						images={selectedImages}
-						setImages={setSelectedImages}
-						style={{
-							left: "16px",
-							zIndex: 2,
-							marginBottom: 0,
-						}}
-					/>
-				)}
+				{/* kilocode_change move thumbnails to bottom */}
 
 				<div
 					// kilocode_change start
@@ -953,6 +974,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						paddingLeft: "10px",
 						paddingRight: "10px",
 					}}
+					ref={containerRef}
 					// kilocode_change end
 					className={cn("flex", "justify-between", "items-center", "mt-auto", "pt-0.5")}>
 					<div className={cn("flex", "items-center", "gap-1", "min-w-0")}>
@@ -996,7 +1018,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 						{/* kilocode_change: fixed width */}
 						{/* API configuration selector - fixed width */}
-						<div className={cn("shrink-0", "w-[70px]", "overflow-hidden")}>
+						<div className={cn("shrink-0", "w-[70px]")}>
 							<SelectDropdown
 								value={currentConfigId}
 								disabled={selectApiConfigDisabled}
@@ -1116,7 +1138,10 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					</div>
 
 					{/* Right side - action buttons */}
-					<div className={cn("flex", "items-center", "gap-0.5", "shrink-0")}>
+					<div
+						className={cn("flex", "items-center", "gap-0.5", "shrink-0", { hidden: containerWidth < 235 })}
+						// kilocode_change: add ref
+						ref={actionButtonsRef}>
 						<IconButton
 							iconClass={isEnhancingPrompt ? "codicon-loading" : "codicon-sparkle"}
 							title={t("chat:enhancePrompt")}
@@ -1156,6 +1181,19 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						/>
 					</div>
 				</div>
+
+				{selectedImages.length > 0 && (
+					<Thumbnails
+						images={selectedImages}
+						setImages={setSelectedImages}
+						style={{
+							left: "16px",
+							zIndex: 2,
+							marginTop: "14px", // kilocode_change
+							marginBottom: 0,
+						}}
+					/>
+				)}
 			</div>
 		)
 	},

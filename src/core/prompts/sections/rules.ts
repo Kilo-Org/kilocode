@@ -1,4 +1,4 @@
-import { DiffStrategy } from "../../diff/DiffStrategy"
+import { DiffStrategy } from "../../../shared/tools"
 
 function getEditingInstructions(diffStrategy?: DiffStrategy, experiments?: Record<string, boolean>): string {
 	const instructions: string[] = []
@@ -13,6 +13,9 @@ function getEditingInstructions(diffStrategy?: DiffStrategy, experiments?: Recor
 	} else {
 		availableTools.push("write_to_file (for creating new files or complete file rewrites)")
 	}
+
+	availableTools.push("append_to_file (for appending content to the end of files)")
+
 	if (experiments?.["insert_content"]) {
 		availableTools.push("insert_content (for adding lines to existing files)")
 	}
@@ -22,7 +25,10 @@ function getEditingInstructions(diffStrategy?: DiffStrategy, experiments?: Recor
 
 	// Base editing instruction mentioning all available tools
 	if (availableTools.length > 1) {
-		instructions.push(`- For editing files, you have access to these tools: ${availableTools.join(", ")}.`)
+		instructions.push(
+			`- For editing files, you have access to these tools: ${availableTools.join(", ")}.`,
+			"- The append_to_file tool adds content to the end of files, such as appending new log entries or adding new data records. This tool will always add the content at the end of the file.",
+		)
 	}
 
 	// Additional details for experimental features

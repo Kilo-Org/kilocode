@@ -8,14 +8,12 @@ import {
 	Bell,
 	Database,
 	SquareTerminal,
-	Cog,
 	FlaskConical,
 	AlertTriangle,
 	Globe,
 	Info,
 	Server,
 	LucideIcon,
-	Monitor,
 } from "lucide-react"
 import { CaretSortIcon } from "@radix-ui/react-icons"
 // kilocode_change
@@ -50,11 +48,9 @@ import ApiOptions from "./ApiOptions"
 import { AutoApproveSettings } from "./AutoApproveSettings"
 import { BrowserSettings } from "./BrowserSettings"
 import { CheckpointSettings } from "./CheckpointSettings"
-import { InterfaceSettings } from "./InterfaceSettings"
 import { NotificationSettings } from "./NotificationSettings"
 import { ContextManagementSettings } from "./ContextManagementSettings"
 import { TerminalSettings } from "./TerminalSettings"
-import { AdvancedSettings } from "./AdvancedSettings"
 import { ExperimentalSettings } from "./ExperimentalSettings"
 import { LanguageSettings } from "./LanguageSettings"
 import { About } from "./About"
@@ -69,11 +65,9 @@ const sectionNames = [
 	"autoApprove",
 	"browser",
 	"checkpoints",
-	"interface",
 	"notifications",
 	"contextManagement",
 	"terminal",
-	"advanced",
 	"experimental",
 	"language",
 	"mcp",
@@ -109,11 +103,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, o
 	}, [isDiscardDialogShow])
 
 	useEffect(() => {
-		if (JSON.stringify(cachedState) === JSON.stringify(extensionState)) {
-			setChangeDetected(false)
-		} else {
-			setChangeDetected(true)
-		}
+		setChangeDetected(JSON.stringify(cachedState) !== JSON.stringify(extensionState))
 	}, [cachedState, extensionState])
 
 	// kilocode_change end
@@ -134,7 +124,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, o
 		browserToolEnabled,
 		browserViewportSize,
 		enableCheckpoints,
-		checkpointStorage,
 		diffEnabled,
 		experiments,
 		fuzzyMatchThreshold,
@@ -161,7 +150,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, o
 		remoteBrowserEnabled,
 		maxReadFileLine,
 		showAutoApproveMenu, // kilocode_change
-		showGreeting,
 	} = cachedState
 
 	// Make sure apiConfiguration is initialized and managed by SettingsView.
@@ -261,7 +249,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, o
 			vscode.postMessage({ type: "soundVolume", value: soundVolume })
 			vscode.postMessage({ type: "diffEnabled", bool: diffEnabled })
 			vscode.postMessage({ type: "enableCheckpoints", bool: enableCheckpoints })
-			vscode.postMessage({ type: "checkpointStorage", text: checkpointStorage })
 			vscode.postMessage({ type: "browserViewportSize", text: browserViewportSize })
 			vscode.postMessage({ type: "remoteBrowserHost", text: remoteBrowserHost })
 			vscode.postMessage({ type: "remoteBrowserEnabled", bool: remoteBrowserEnabled })
@@ -289,7 +276,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, o
 			vscode.postMessage({ type: "alwaysAllowModeSwitch", bool: alwaysAllowModeSwitch })
 			vscode.postMessage({ type: "alwaysAllowSubtasks", bool: alwaysAllowSubtasks })
 			vscode.postMessage({ type: "upsertApiConfiguration", text: currentApiConfigName, apiConfiguration })
-			vscode.postMessage({ type: "showGreeting", bool: showGreeting })
 			setChangeDetected(false)
 		}
 	}
@@ -325,11 +311,9 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, o
 	const autoApproveRef = useRef<HTMLDivElement>(null)
 	const browserRef = useRef<HTMLDivElement>(null)
 	const checkpointsRef = useRef<HTMLDivElement>(null)
-	const interfaceRef = useRef<HTMLDivElement>(null)
 	const notificationsRef = useRef<HTMLDivElement>(null)
 	const contextManagementRef = useRef<HTMLDivElement>(null)
 	const terminalRef = useRef<HTMLDivElement>(null)
-	const advancedRef = useRef<HTMLDivElement>(null)
 	const experimentalRef = useRef<HTMLDivElement>(null)
 	const languageRef = useRef<HTMLDivElement>(null)
 	const aboutRef = useRef<HTMLDivElement>(null)
@@ -341,11 +325,9 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, o
 			{ id: "autoApprove", icon: CheckCheck, ref: autoApproveRef },
 			{ id: "browser", icon: SquareMousePointer, ref: browserRef },
 			{ id: "checkpoints", icon: GitBranch, ref: checkpointsRef },
-			{ id: "interface", icon: Monitor, ref: interfaceRef },
 			{ id: "notifications", icon: Bell, ref: notificationsRef },
 			{ id: "contextManagement", icon: Database, ref: contextManagementRef },
 			{ id: "terminal", icon: SquareTerminal, ref: terminalRef },
-			{ id: "advanced", icon: Cog, ref: advancedRef },
 			{ id: "experimental", icon: FlaskConical, ref: experimentalRef },
 			{ id: "language", icon: Globe, ref: languageRef },
 			{ id: "mcp", icon: Server, ref: mcpRef },
@@ -356,11 +338,9 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, o
 			autoApproveRef,
 			browserRef,
 			checkpointsRef,
-			interfaceRef,
 			notificationsRef,
 			contextManagementRef,
 			terminalRef,
-			advancedRef,
 			experimentalRef,
 		],
 	)
@@ -510,13 +490,8 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, o
 				<div ref={checkpointsRef}>
 					<CheckpointSettings
 						enableCheckpoints={enableCheckpoints}
-						checkpointStorage={checkpointStorage}
 						setCachedStateField={setCachedStateField}
 					/>
-				</div>
-
-				<div ref={interfaceRef}>
-					<InterfaceSettings showGreeting={showGreeting} setCachedStateField={setCachedStateField} />
 				</div>
 
 				<div ref={notificationsRef}>
@@ -549,14 +524,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, o
 						terminalZshOhMy={terminalZshOhMy}
 						terminalZshP10k={terminalZshP10k}
 						terminalZdotdir={terminalZdotdir}
-						setCachedStateField={setCachedStateField}
-					/>
-				</div>
-
-				<div ref={advancedRef}>
-					<AdvancedSettings
-						diffEnabled={diffEnabled}
-						fuzzyMatchThreshold={fuzzyMatchThreshold}
 						setCachedStateField={setCachedStateField}
 					/>
 				</div>

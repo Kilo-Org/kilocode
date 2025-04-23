@@ -68,6 +68,7 @@
 		"tooltip": "Anuluj bieżącą operację"
 	},
 	"scrollToBottom": "Przewiń do dołu czatu",
+	"onboarding": "<strong>Twoja lista zadań w tym obszarze roboczym jest pusta.</strong> Zacznij od wpisania zadania poniżej. Nie wiesz, jak zacząć? Przeczytaj więcej o tym, co Kilo Code może dla Ciebie zrobić w <DocsLink>dokumentacji</DocsLink>.",
 	"selectMode": "Wybierz tryb interakcji",
 	"selectApiConfig": "Wybierz konfigurację API",
 	"enhancePrompt": "Ulepsz podpowiedź dodatkowym kontekstem",
@@ -173,41 +174,7 @@
 	"autoApprove": {
 		"title": "Automatyczne zatwierdzanie:",
 		"none": "Brak",
-		"description": "Automatyczne zatwierdzanie pozwala Kilo Code wykonywać działania bez pytania o pozwolenie. Włącz tylko dla działań, którym w pełni ufasz. Bardziej szczegółowa konfiguracja dostępna w <settingsLink>Ustawieniach</settingsLink>.",
-		"actions": {
-			"readFiles": {
-				"label": "Odczyt",
-				"description": "Pozwala na dostęp do odczytu dowolnego pliku na Twoim komputerze."
-			},
-			"editFiles": {
-				"label": "Edycja",
-				"description": "Pozwala na modyfikację dowolnych plików na Twoim komputerze."
-			},
-			"executeCommands": {
-				"label": "Polecenia",
-				"description": "Pozwala na wykonywanie zatwierdzonych poleceń terminala. Możesz to skonfigurować w panelu ustawień."
-			},
-			"useBrowser": {
-				"label": "Przeglądarka",
-				"description": "Pozwala na uruchamianie i interakcję z dowolną stroną internetową w przeglądarce bezinterfejsowej."
-			},
-			"useMcp": {
-				"label": "MCP",
-				"description": "Pozwala na korzystanie ze skonfigurowanych serwerów MCP, które mogą modyfikować system plików lub wchodzić w interakcje z API."
-			},
-			"switchModes": {
-				"label": "Tryby",
-				"description": "Pozwala na automatyczne przełączanie między różnymi trybami bez wymagania zatwierdzenia."
-			},
-			"subtasks": {
-				"label": "Podzadania",
-				"description": "Pozwala na tworzenie i kończenie podzadań bez wymagania zatwierdzenia."
-			},
-			"retryRequests": {
-				"label": "Ponowienia",
-				"description": "Automatycznie ponawia nieudane zapytania API, gdy dostawca zwraca odpowiedź z błędem."
-			}
-		}
+		"description": "Automatyczne zatwierdzanie pozwala Kilo Code wykonywać działania bez pytania o pozwolenie. Włącz tylko dla działań, którym w pełni ufasz. Bardziej szczegółowa konfiguracja dostępna w <settingsLink>Ustawieniach</settingsLink>."
 	},
 	"reasoning": {
 		"thinking": "Myślenie",
@@ -217,10 +184,14 @@
 		"copyToInput": "Kopiuj do pola wprowadzania (lub Shift + kliknięcie)"
 	},
 	"announcement": {
-		"title": "Zrób więcej z Zadaniami Bumerang 🪃",
-		"description": "Podziel pracę na podzadania, każde działające w wyspecjalizowanym trybie, takim jak code, architect, debug lub trybie niestandardowym.",
-		"learnMore": "Dowiedz się więcej →",
-		"hideButton": "Ukryj ogłoszenie"
+		"title": "🎉 Roo Code 3.13 wydany",
+		"description": "Roo Code 3.13 przynosi nowe funkcje i ulepszenia na podstawie Twoich opinii.",
+		"whatsNew": "Co nowego",
+		"feature1": "<bold>Gemini 2.5 Flash Thinking</bold>: Teraz możesz używać wariantu thinking Gemini 2.5 Flash i określać budżet tokenów dla thinking",
+		"feature2": "<bold>Ulepszenia UI</bold>: Nagłówek zadania, widok czatu, podgląd historii i widok powitalny zostały wizualnie ulepszone",
+		"feature3": "<bold>Poprawki błędów</bold>: Bardziej niezawodne edycje różnic i więcej",
+		"hideButton": "Ukryj ogłoszenie",
+		"detailsDiscussLinks": "Uzyskaj więcej szczegółów i dołącz do dyskusji na <discordLink>Discord</discordLink> i <redditLink>Reddit</redditLink> 🚀"
 	},
 	"browser": {
 		"rooWantsToUse": "Kilo Code chce użyć przeglądarki:",

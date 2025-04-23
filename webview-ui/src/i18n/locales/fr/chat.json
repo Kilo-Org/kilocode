@@ -7,7 +7,7 @@
 		"tokens": "Tokens :",
 		"cache": "Cache :",
 		"apiCost": "Coût API :",
-		"contextWindow": "Fenêtre de contexte :",
+		"contextWindow": "Durée du contexte :",
 		"closeAndStart": "Fermer la tâche et en commencer une nouvelle",
 		"export": "Exporter l'historique des tâches",
 		"delete": "Supprimer la tâche (Shift + Clic pour ignorer la confirmation)"
@@ -68,6 +68,7 @@
 		"tooltip": "Annuler l'opération actuelle"
 	},
 	"scrollToBottom": "Défiler jusqu'au bas du chat",
+	"onboarding": "<strong>Votre liste de tâches dans cet espace de travail est vide.</strong> Commencez par saisir une tâche ci-dessous. Vous ne savez pas par où commencer ? En savoir plus sur ce que Kilo Code peut faire pour vous dans <DocsLink>la documentation</DocsLink>.",
 	"selectMode": "Sélectionner le mode d'interaction",
 	"selectApiConfig": "Sélectionner la configuration API",
 	"enhancePrompt": "Améliorer la requête avec un contexte supplémentaire",
@@ -173,41 +174,7 @@
 	"autoApprove": {
 		"title": "Auto-approbation :",
 		"none": "Aucune",
-		"description": "L'auto-approbation permet à Kilo Code d'effectuer des actions sans demander d'autorisation. Activez-la uniquement pour les actions auxquelles vous faites entièrement confiance. Configuration plus détaillée disponible dans les <settingsLink>Paramètres</settingsLink>.",
-		"actions": {
-			"readFiles": {
-				"label": "Lecture",
-				"description": "Permet l'accès en lecture à n'importe quel fichier sur votre ordinateur."
-			},
-			"editFiles": {
-				"label": "Édition",
-				"description": "Permet la modification de n'importe quel fichier sur votre ordinateur."
-			},
-			"executeCommands": {
-				"label": "Commandes",
-				"description": "Permet l'exécution de commandes de terminal approuvées. Vous pouvez configurer cela dans le panneau des paramètres."
-			},
-			"useBrowser": {
-				"label": "Navigateur",
-				"description": "Permet de lancer et d'interagir avec n'importe quel site web dans un navigateur sans interface."
-			},
-			"useMcp": {
-				"label": "MCP",
-				"description": "Permet l'utilisation de serveurs MCP configurés qui peuvent modifier le système de fichiers ou interagir avec des APIs."
-			},
-			"switchModes": {
-				"label": "Modes",
-				"description": "Permet le changement automatique entre différents modes sans nécessiter d'approbation."
-			},
-			"subtasks": {
-				"label": "Sous-tâches",
-				"description": "Permet la création et l'achèvement de sous-tâches sans nécessiter d'approbation."
-			},
-			"retryRequests": {
-				"label": "Réessais",
-				"description": "Réessaie automatiquement les requêtes API échouées lorsque le fournisseur renvoie une réponse d'erreur."
-			}
-		}
+		"description": "L'auto-approbation permet à Kilo Code d'effectuer des actions sans demander d'autorisation. Activez-la uniquement pour les actions auxquelles vous faites entièrement confiance. Configuration plus détaillée disponible dans les <settingsLink>Paramètres</settingsLink>."
 	},
 	"reasoning": {
 		"thinking": "Réflexion",
@@ -217,10 +184,14 @@
 		"copyToInput": "Copier vers l'entrée (ou Shift + clic)"
 	},
 	"announcement": {
-		"title": "Faites-en plus avec les Tâches Boomerang 🪃",
-		"description": "Divisez le travail en sous-tâches, chacune s'exécutant dans un mode spécialisé, comme code, architect, debug ou un mode personnalisé.",
-		"learnMore": "En savoir plus →",
-		"hideButton": "Masquer l'annonce"
+		"title": "🎉 Roo Code 3.13 est sortie",
+		"description": "Roo Code 3.13 apporte de nouvelles fonctionnalités et améliorations basées sur vos retours.",
+		"whatsNew": "Quoi de neuf",
+		"feature1": "<bold>Gemini 2.5 Flash Thinking</bold> : Tu peux maintenant utiliser la variante thinking de Gemini 2.5 Flash et spécifier un budget de tokens pour thinking",
+		"feature2": "<bold>Améliorations de l'interface</bold> : L'en-tête des tâches, la vue de chat, l'aperçu de l'historique et la vue d'accueil ont été visuellement améliorés",
+		"feature3": "<bold>Corrections de bugs</bold> : Éditions de différences plus fiables et plus",
+		"hideButton": "Masquer l'annonce",
+		"detailsDiscussLinks": "Obtenez plus de détails et participez aux discussions sur <discordLink>Discord</discordLink> et <redditLink>Reddit</redditLink> 🚀"
 	},
 	"browser": {
 		"rooWantsToUse": "Kilo Code veut utiliser le navigateur :",

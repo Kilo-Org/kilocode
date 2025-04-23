@@ -36,8 +36,10 @@ import {
 	unboundDefaultModelInfo,
 	requestyDefaultModelId,
 	requestyDefaultModelInfo,
-	fireworksDefaultModelId,
-	fireworksModels,
+	fireworksDefaultModelId, // kilocode_change
+	fireworksModels, // kilocode_change
+	xaiDefaultModelId,
+	xaiModels,
 	ApiProvider,
 } from "../../../../src/shared/api"
 import { kilocodeOpenrouterModels } from "../../../../src/shared/kilocode/api" // kilocode_change
@@ -50,18 +52,20 @@ import {
 	OPENROUTER_DEFAULT_PROVIDER_NAME,
 } from "@/components/ui/hooks/useOpenRouterModelProviders"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSeparator, Button } from "@/components/ui"
-import { MODELS_BY_PROVIDER, PROVIDERS, VERTEX_REGIONS } from "./constants"
+import { MODELS_BY_PROVIDER, PROVIDERS, VERTEX_REGIONS, REASONING_MODELS } from "./constants"
 import { AWS_REGIONS } from "../../../../src/shared/aws_regions"
 import { VSCodeButtonLink } from "../common/VSCodeButtonLink"
 import { ModelInfoView } from "./ModelInfoView"
 import { ModelPicker } from "./ModelPicker"
 import { TemperatureControl } from "./TemperatureControl"
 import { RateLimitSecondsControl } from "./RateLimitSecondsControl"
+import { DiffSettingsControl } from "./DiffSettingsControl"
 import { ApiErrorMessage } from "./ApiErrorMessage"
 import { ThinkingBudget } from "./ThinkingBudget"
 import { R1FormatSetting } from "./R1FormatSetting"
 import { OpenRouterBalanceDisplay } from "./OpenRouterBalanceDisplay"
 import { RequestyBalanceDisplay } from "./RequestyBalanceDisplay"
+import { ReasoningEffort } from "./ReasoningEffort"
 
 interface ApiOptionsProps {
 	uriScheme: string | undefined
@@ -264,7 +268,7 @@ const ApiOptions = ({
 	)
 
 	// Base URL for provider documentation
-	const DOC_BASE_URL = "https://docs.roocode.com/providers"
+	const DOC_BASE_URL = "https://kilocode.ai/docs/providers"
 
 	// Custom URL path mappings for providers with different slugs
 	const providerUrlSlugs: Record<string, string> = {
@@ -1546,6 +1550,27 @@ const ApiOptions = ({
 				</>
 			)}
 
+			{selectedProvider === "xai" && (
+				<>
+					<VSCodeTextField
+						value={apiConfiguration?.xaiApiKey || ""}
+						type="password"
+						onInput={handleInputChange("xaiApiKey")}
+						placeholder={t("settings:placeholders.apiKey")}
+						className="w-full">
+						<label className="block font-medium mb-1">{t("settings:providers.xaiApiKey")}</label>
+					</VSCodeTextField>
+					<div className="text-sm text-vscode-descriptionForeground -mt-2">
+						{t("settings:providers.apiKeyStorageNotice")}
+					</div>
+					{!apiConfiguration?.xaiApiKey && (
+						<VSCodeButtonLink href="https://api.x.ai/docs" appearance="secondary">
+							{t("settings:providers.getXaiApiKey")}
+						</VSCodeButtonLink>
+					)}
+				</>
+			)}
+
 			{selectedProvider === "unbound" && (
 				<>
 					<VSCodeTextField
@@ -1768,12 +1793,14 @@ const ApiOptions = ({
 								})()}
 						</>
 					)}
+
 					<ModelInfoView
 						selectedModelId={selectedModelId}
 						modelInfo={selectedModelInfo}
 						isDescriptionExpanded={isDescriptionExpanded}
 						setIsDescriptionExpanded={setIsDescriptionExpanded}
 					/>
+
 					<ThinkingBudget
 						key={`${selectedProvider}-${selectedModelId}`}
 						apiConfiguration={apiConfiguration}
@@ -1783,8 +1810,20 @@ const ApiOptions = ({
 				</>
 			)}
 
+			{REASONING_MODELS.has(selectedModelId) && (
+				<ReasoningEffort
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+				/>
+			)}
+
 			{!fromWelcomeView && (
 				<>
+					<DiffSettingsControl
+						diffEnabled={apiConfiguration.diffEnabled}
+						fuzzyMatchThreshold={apiConfiguration.fuzzyMatchThreshold}
+						onChange={(field, value) => setApiConfigurationField(field, value)}
+					/>
 					<TemperatureControl
 						value={apiConfiguration?.modelTemperature}
 						onChange={handleInputChange("modelTemperature", noTransform)}
@@ -1822,6 +1861,8 @@ export function normalizeApiConfiguration(apiConfiguration?: ApiConfiguration) {
 	switch (provider) {
 		case "anthropic":
 			return getProviderData(anthropicModels, anthropicDefaultModelId)
+		case "xai":
+			return getProviderData(xaiModels, xaiDefaultModelId)
 		case "bedrock":
 			// Special case for custom ARN
 			if (modelId === "custom-arn") {

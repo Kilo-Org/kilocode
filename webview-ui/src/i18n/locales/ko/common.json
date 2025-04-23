@@ -10,5 +10,8 @@
 		"githubIssues": "GitHub에서 문제 보고하기",
 		"githubDiscussions": "GitHub 토론에 참여하기",
 		"discord": "Discord 커뮤니티에 참여하기"
+	},
+	"ui": {
+		"search_placeholder": "검색..."
 	}
 }

@@ -74,7 +74,6 @@ export interface WebviewMessage {
 		| "soundVolume"
 		| "diffEnabled"
 		| "enableCheckpoints"
-		| "checkpointStorage"
 		| "browserViewportSize"
 		| "screenshotQuality"
 		| "remoteBrowserHost"
@@ -142,7 +141,6 @@ export interface WebviewMessage {
 		| "downloadMcp" // kilocode_change
 		| "showSystemNotification" // kilocode_change
 		| "showAutoApproveMenu" // kilocode_change
-		| "showGreeting"
 	text?: string
 	disabled?: boolean
 	askResponse?: ClineAskResponse

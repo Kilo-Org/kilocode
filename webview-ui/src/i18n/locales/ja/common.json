@@ -10,5 +10,8 @@
 		"githubIssues": "GitHubで問題を報告する",
 		"githubDiscussions": "GitHubのディスカッションに参加する",
 		"discord": "Discordコミュニティに参加する"
+	},
+	"ui": {
+		"search_placeholder": "検索..."
 	}
 }

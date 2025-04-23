@@ -135,6 +135,11 @@ const getCommandsMap = ({ context, outputChannel, provider }: RegisterCommandOpt
 			visibleProvider?.postMessageToWebview({ type: "action", action: "focusChatInput" })
 		},
 		// kilocode_change end
+		"kilo-code.acceptInput": () => {
+			const visibleProvider = getVisibleProviderOrLog(outputChannel)
+			if (!visibleProvider) return
+			visibleProvider.postMessageToWebview({ type: "acceptInput" })
+		},
 	}
 }
 

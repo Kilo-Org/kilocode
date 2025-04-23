@@ -30,7 +30,8 @@
 		"experimental": "實驗性功能",
 		"language": "語言",
 		"about": "關於 Kilo Code",
-		"interface": "介面"
+		"interface": "介面",
+		"mcp": "MCP 伺服器"
 	},
 	"autoApprove": {
 		"description": "允許 Kilo Code 無需核准即執行操作。僅在您完全信任 AI 並了解相關安全風險時啟用這些設定。",
@@ -132,6 +133,8 @@
 		"getMistralApiKey": "取得 Mistral/Codestral API 金鑰",
 		"codestralBaseUrl": "Codestral 基礎 URL（選用）",
 		"codestralBaseUrlDesc": "設定 Codestral 模型的替代 URL。",
+		"xaiApiKey": "xAI API 金鑰",
+		"getXaiApiKey": "取得 xAI API 金鑰",
 		"awsCredentials": "AWS 認證",
 		"awsProfile": "AWS Profile",
 		"awsProfileName": "AWS Profile 名稱",
@@ -229,6 +232,12 @@
 		"rateLimitSeconds": {
 			"label": "速率限制",
 			"description": "API 請求間的最短時間"
+		},
+		"reasoningEffort": {
+			"label": "模型推理強度",
+			"high": "高",
+			"medium": "中",
+			"low": "低"
 		}
 	},
 	"browser": {
@@ -474,11 +483,5 @@
 	"labels": {
 		"customArn": "自訂 ARN",
 		"useCustomArn": "使用自訂 ARN..."
-	},
-	"interface": {
-		"showgreeting": {
-			"label": "顯示歡迎訊息",
-			"description": "啟用後，Roo 將顯示歡迎訊息與介紹。"
-		}
 	}
 }

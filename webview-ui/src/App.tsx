@@ -7,7 +7,7 @@ import TranslationProvider from "./i18n/TranslationContext"
 
 import { vscode } from "./utils/vscode"
 import { ExtensionStateContextProvider, useExtensionState } from "./context/ExtensionStateContext"
-import ChatView from "./components/chat/ChatView"
+import ChatView, { ChatViewRef } from "./components/chat/ChatView"
 import HistoryView from "./components/history/HistoryView"
 import SettingsView, { SettingsViewRef } from "./components/settings/SettingsView"
 import WelcomeView from "./components/kilocode/Welcome/WelcomeView" // kilocode_change
@@ -43,7 +43,7 @@ const App = () => {
 	})
 
 	const settingsRef = useRef<SettingsViewRef>(null)
-	const chatViewRef = useRef<{ focusInput: () => void }>(null) // kilocode_change
+	const chatViewRef = useRef<ChatViewRef & { focusInput: () => void }>(null) // kilocode_change
 
 	const switchTab = useCallback((newTab: Tab) => {
 		setCurrentSection(undefined)
@@ -85,6 +85,10 @@ const App = () => {
 				const { requestId, promptText } = message
 				setHumanRelayDialogState({ isOpen: true, requestId, promptText })
 			}
+
+			if (message.type === "acceptInput") {
+				chatViewRef.current?.acceptInput()
+			}
 		},
 		// kilocode_change: add tab
 		[tab, switchTab],
@@ -113,7 +117,7 @@ const App = () => {
 	) : (
 		<>
 			{tab === "prompts" && <PromptsView onDone={() => switchTab("chat")} />}
-			{tab === "mcp" && <McpView onDone={() => switchTab("settings")} />}
+			{tab === "mcp" && <McpView onDone={() => switchTab("chat")} />}
 			{tab === "history" && <HistoryView onDone={() => switchTab("chat")} />}
 			{tab === "settings" && (
 				<SettingsView
@@ -138,8 +142,9 @@ const App = () => {
 				onSubmit={(requestId, text) => vscode.postMessage({ type: "humanRelayResponse", requestId, text })}
 				onCancel={(requestId) => vscode.postMessage({ type: "humanRelayCancel", requestId })}
 			/>
-			{/* Chat view contains its own bottom controls */}
-			{tab !== "chat" && (
+			{/* kilocode_change */}
+			{/* Chat view and prompts view contain their own bottom controls */}
+			{!["chat", "prompts"].includes(tab) && (
 				<div className="fixed inset-0 top-auto">
 					<BottomControls />
 				</div>

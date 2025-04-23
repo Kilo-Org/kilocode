@@ -1,12 +1,7 @@
-import {
-	AssistantMessageContent,
-	TextContent,
-	ToolUse,
-	ToolParamName,
-	toolParamNames,
-	toolUseNames,
-	ToolUseName,
-} from "."
+import { TextContent, ToolUse, ToolParamName, toolParamNames } from "../../shared/tools"
+import { toolNames, ToolName } from "../../schemas"
+
+export type AssistantMessageContent = TextContent | ToolUse
 
 export function parseAssistantMessage(assistantMessage: string) {
 	let contentBlocks: AssistantMessageContent[] = []
@@ -34,7 +29,7 @@ export function parseAssistantMessage(assistantMessage: string) {
 					// Some models XML encode ampersands in the <command></command> tag, some don't
 					// to minimize chances of unintended consequences, we only XML decode &amp; for now
 					// NOTE(emn): this is a hacky workaround to an empirically observed problem.
-					// We know it's not a perfect solution and in corner cases can make things worse, but let's try this for now. 
+					// We know it's not a perfect solution and in corner cases can make things worse, but let's try this for now.
 					// kilocode_change
 					paramValue = paramValue.replaceAll("&amp;", "&")
 				}
@@ -95,13 +90,13 @@ export function parseAssistantMessage(assistantMessage: string) {
 		// no currentToolUse
 
 		let didStartToolUse = false
-		const possibleToolUseOpeningTags = toolUseNames.map((name) => `<${name}>`)
+		const possibleToolUseOpeningTags = toolNames.map((name) => `<${name}>`)
 		for (const toolUseOpeningTag of possibleToolUseOpeningTags) {
 			if (accumulator.endsWith(toolUseOpeningTag)) {
 				// start of a new tool use
 				currentToolUse = {
 					type: "tool_use",
-					name: toolUseOpeningTag.slice(1, -1) as ToolUseName,
+					name: toolUseOpeningTag.slice(1, -1) as ToolName,
 					params: {},
 					partial: true,
 				}

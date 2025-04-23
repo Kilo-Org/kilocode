@@ -185,7 +185,7 @@ describe("App", () => {
 		expect(screen.queryByTestId("settings-view")).not.toBeInTheDocument()
 	})
 
-	it.each(["history", "prompts"])("returns to chat view when clicking done in %s view", async (view) => {
+	it.each(["history", "prompts", "mcp"])("returns to chat view when clicking done in %s view", async (view) => {
 		render(<AppWithProviders />)
 
 		act(() => {
@@ -200,24 +200,6 @@ describe("App", () => {
 
 		const chatView = screen.getByTestId("chat-view")
 		expect(chatView.getAttribute("data-hidden")).toBe("false")
-		expect(screen.queryByTestId(`${view}-view`)).not.toBeInTheDocument()
-	})
-
-	it.each(["mcp"])("returns to settings view when clicking done in %s view", async (view) => {
-		render(<AppWithProviders />)
-
-		act(() => {
-			triggerMessage(`${view}ButtonClicked`)
-		})
-
-		const viewElement = await screen.findByTestId(`${view}-view`)
-
-		act(() => {
-			viewElement.click()
-		})
-
-		const settingsView = screen.getByTestId("settings-view")
-		expect(settingsView).toBeInTheDocument()
 		expect(screen.queryByTestId(`${view}-view`)).not.toBeInTheDocument()
 	})
 })

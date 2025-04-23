@@ -68,6 +68,7 @@
 		"tooltip": "Cancel·la l'operació actual"
 	},
 	"scrollToBottom": "Desplaça't al final del xat",
+	"onboarding": "<strong>La vostra llista de tasques en aquest espai de treball està buida.</strong> Comença escrivint una tasca a continuació. No esteu segur per on començar? Més informació sobre què pot fer Kilo Code per tu a <DocsLink>la documentació</DocsLink>.",
 	"selectMode": "Selecciona el mode d'interacció",
 	"selectApiConfig": "Selecciona la configuració de l'API",
 	"enhancePrompt": "Millora la sol·licitud amb context addicional",
@@ -173,41 +174,7 @@
 	"autoApprove": {
 		"title": "Aprovació automàtica:",
 		"none": "Cap",
-		"description": "L'aprovació automàtica permet a Kilo Code realitzar accions sense demanar permís. Activa-la només per a accions en les que confies plenament. Configuració més detallada disponible a la <settingsLink>Configuració</settingsLink>.",
-		"actions": {
-			"readFiles": {
-				"label": "Llegir",
-				"description": "Permet l'accés per llegir qualsevol fitxer al teu ordinador."
-			},
-			"editFiles": {
-				"label": "Editar",
-				"description": "Permet la modificació de qualsevol fitxer al teu ordinador."
-			},
-			"executeCommands": {
-				"label": "Ordres",
-				"description": "Permet l'execució d'ordres de terminal aprovades. Pots configurar-ho al panell de configuració."
-			},
-			"useBrowser": {
-				"label": "Navegador",
-				"description": "Permet la capacitat d'iniciar i interactuar amb qualsevol lloc web en un navegador headless."
-			},
-			"useMcp": {
-				"label": "MCP",
-				"description": "Permet l'ús de servidors MCP configurats que poden modificar el sistema de fitxers o interactuar amb APIs."
-			},
-			"switchModes": {
-				"label": "Modes",
-				"description": "Permet el canvi automàtic entre diferents modes sense requerir aprovació."
-			},
-			"subtasks": {
-				"label": "Subtasques",
-				"description": "Permet la creació i finalització de subtasques sense requerir aprovació."
-			},
-			"retryRequests": {
-				"label": "Reintents",
-				"description": "Reintenta automàticament les sol·licituds API fallides quan el proveïdor retorna una resposta d'error."
-			}
-		}
+		"description": "L'aprovació automàtica permet a Kilo Code realitzar accions sense demanar permís. Activa-la només per a accions en les que confies plenament. Configuració més detallada disponible a la <settingsLink>Configuració</settingsLink>."
 	},
 	"reasoning": {
 		"thinking": "Pensant",
@@ -217,10 +184,14 @@
 		"copyToInput": "Copiar a l'entrada (o Shift + clic)"
 	},
 	"announcement": {
-		"title": "Fes més amb Tasques Boomerang 🪃",
-		"description": "Divideix la feina en subtasques, cadascuna executant-se en un mode especialitzat, com code, architect, debug o un mode personalitzat.",
-		"learnMore": "Saber-ne més →",
-		"hideButton": "Amagar anunci"
+		"title": "🎉 Roo Code 3.13 publicat",
+		"description": "Roo Code 3.13 porta noves funcionalitats i millores basades en els teus comentaris.",
+		"whatsNew": "Novetats",
+		"feature1": "<bold>Gemini 2.5 Flash Thinking</bold>: Ara pots utilitzar la variant thinking de Gemini 2.5 Flash i especificar un pressupost de tokens per a thinking",
+		"feature2": "<bold>Millores d'interfície</bold>: La capçalera de tasques, la vista de xat, la previsualització d'historial i la vista de benvinguda han estat visualment millorades",
+		"feature3": "<bold>Correccions d'errors</bold>: Edicions de diferències més fiables i més",
+		"hideButton": "Amagar anunci",
+		"detailsDiscussLinks": "Obtingues més detalls i participa a <discordLink>Discord</discordLink> i <redditLink>Reddit</redditLink> 🚀"
 	},
 	"browser": {
 		"rooWantsToUse": "Kilo Code vol utilitzar el navegador:",

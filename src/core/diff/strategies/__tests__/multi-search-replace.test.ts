@@ -159,6 +159,25 @@ function helloWorld() {
 				}
 			})
 
+			it("should replace matching content when end_line is passed in", async () => {
+				const originalContent = 'function hello() {\n    console.log("hello")\n}\n'
+				const diffContent = `test.ts
+<<<<<<< SEARCH
+:start_line:1
+:end_line:1
+-------
+function hello() {
+=======
+function helloWorld() {
+>>>>>>> REPLACE`
+
+				const result = await strategy.applyDiff(originalContent, diffContent)
+				expect(result.success).toBe(true)
+				if (result.success) {
+					expect(result.content).toBe('function helloWorld() {\n    console.log("hello")\n}\n')
+				}
+			})
+
 			it("should match content with different surrounding whitespace", async () => {
 				const originalContent = "\nfunction example() {\n    return 42;\n}\n\n"
 				const diffContent = `test.ts
@@ -1708,6 +1727,27 @@ function sum(a, b) {
 			expect(result.success).toBe(true)
 			if (result.success) {
 				expect(result.content).toBe("function sum(a, b) {\n    return a + b + 1;\n}")
+			}
+		})
+
+		it("should match content with smart quotes", async () => {
+			const originalContent =
+				"**Enjoy Roo Code!** Whether you keep it on a short leash or let it roam autonomously, we can’t wait to see what you build. If you have questions or feature ideas, drop by our [Reddit community](https://www.reddit.com/r/RooCode/) or [Discord](https://discord.gg/roocode). Happy coding!"
+			const diffContent = `test.ts
+<<<<<<< SEARCH
+**Enjoy Roo Code!** Whether you keep it on a short leash or let it roam autonomously, we can’t wait to see what you build. If you have questions or feature ideas, drop by our [Reddit community](https://www.reddit.com/r/RooCode/) or [Discord](https://discord.gg/roocode). Happy coding!
+=======
+**Enjoy Roo Code!** Whether you keep it on a short leash or let it roam autonomously, we can't wait to see what you build. If you have questions or feature ideas, drop by our [Reddit community](https://www.reddit.com/r/RooCode/) or [Discord](https://discord.gg/roocode). Happy coding!
+
+You're still here?
+>>>>>>> REPLACE`
+
+			const result = await strategy.applyDiff(originalContent, diffContent)
+			expect(result.success).toBe(true)
+			if (result.success) {
+				expect(result.content).toBe(
+					"**Enjoy Roo Code!** Whether you keep it on a short leash or let it roam autonomously, we can't wait to see what you build. If you have questions or feature ideas, drop by our [Reddit community](https://www.reddit.com/r/RooCode/) or [Discord](https://discord.gg/roocode). Happy coding!\n\nYou're still here?",
+				)
 			}
 		})
 

@@ -30,7 +30,8 @@
 		"experimental": "प्रायोगिक सुविधाएँ",
 		"language": "भाषा",
 		"about": "Kilo Code के बारे में",
-		"interface": "इंटरफ़ेस"
+		"interface": "इंटरफ़ेस",
+		"mcp": "MCP सर्वर"
 	},
 	"autoApprove": {
 		"description": "Kilo Code को अनुमोदन की आवश्यकता के बिना स्वचालित रूप से ऑपरेशन करने की अनुमति दें। इन सेटिंग्स को केवल तभी सक्षम करें जब आप AI पर पूरी तरह से भरोसा करते हों और संबंधित सुरक्षा जोखिमों को समझते हों।",
@@ -132,6 +133,8 @@
 		"getMistralApiKey": "Mistral / Codestral API कुंजी प्राप्त करें",
 		"codestralBaseUrl": "Codestral बेस URL (वैकल्पिक)",
 		"codestralBaseUrlDesc": "Codestral मॉडल के लिए वैकल्पिक URL सेट करें।",
+		"xaiApiKey": "xAI API कुंजी",
+		"getXaiApiKey": "xAI API कुंजी प्राप्त करें",
 		"awsCredentials": "AWS क्रेडेंशियल्स",
 		"awsProfile": "AWS प्रोफाइल",
 		"awsProfileName": "AWS प्रोफाइल नाम",
@@ -229,6 +232,12 @@
 		"rateLimitSeconds": {
 			"label": "दर सीमा",
 			"description": "API अनुरोधों के बीच न्यूनतम समय।"
+		},
+		"reasoningEffort": {
+			"label": "मॉडल तर्क प्रयास",
+			"high": "उच्च",
+			"medium": "मध्यम",
+			"low": "निम्न"
 		}
 	},
 	"browser": {
@@ -475,11 +484,5 @@
 	"labels": {
 		"customArn": "कस्टम ARN",
 		"useCustomArn": "कस्टम ARN का उपयोग करें..."
-	},
-	"interface": {
-		"showgreeting": {
-			"label": "स्वागत संदेश दिखाएँ",
-			"description": "जब सक्षम किया जाता है, तो Kilo Code एक स्वागत संदेश और परिचय प्रदर्शित करेगा।"
-		}
 	}
 }

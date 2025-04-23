@@ -21,6 +21,7 @@ import { HumanRelayHandler } from "./providers/human-relay"
 import { KiloCodeHandler } from "./providers/kilocode"
 import { FireworksHandler } from "./providers/fireworks"
 import { FakeAIHandler } from "./providers/fake-ai"
+import { XAIHandler } from "./providers/xai"
 
 export interface SingleCompletionHandler {
 	completePrompt(prompt: string): Promise<string>
@@ -82,9 +83,11 @@ export function buildApiHandler(configuration: ApiConfiguration): ApiHandler {
 			return new FireworksHandler(options)
 		case "fake-ai":
 			return new FakeAIHandler(options)
+		case "xai":
+			return new XAIHandler(options)
 		default:
 			return new AnthropicHandler(options)
 	}
 }
 
-// kilocode_change: moved getModelParams to ./getModelParams.ts
+// kilocode_change: moved getModelParams to ./getModelParams.ts because of circular dependencys

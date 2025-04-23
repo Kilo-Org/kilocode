@@ -14,6 +14,7 @@
 	"command.terminal.explainCommand.title": "Bu Komutu Açıkla",
 	"command.terminal.fixCommandInCurrentTask.title": "Bu Komutu Düzelt (Mevcut Görev)",
 	"command.terminal.explainCommandInCurrentTask.title": "Bu Komutu Açıkla (Mevcut Görev)",
+	"command.acceptInput.title": "Girişi/Öneriyi Kabul Et",
 	"views.activitybar.title": "Kilo Code",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",

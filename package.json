@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.16.1",
+	"version": "4.16.2",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -172,32 +172,32 @@
 			{
 				"command": "kilo-code.openInNewTab",
 				"title": "%command.openInNewTab.title%",
-				"category": "%extension.displayName%"
+				"category": "%configuration.title%"
 			},
 			{
 				"command": "kilo-code.explainCode",
 				"title": "%command.explainCode.title%",
-				"category": "%extension.displayName%"
+				"category": "%configuration.title%"
 			},
 			{
 				"command": "kilo-code.fixCode",
 				"title": "%command.fixCode.title%",
-				"category": "%extension.displayName%"
+				"category": "%configuration.title%"
 			},
 			{
 				"command": "kilo-code.improveCode",
 				"title": "%command.improveCode.title%",
-				"category": "%extension.displayName%"
+				"category": "%configuration.title%"
 			},
 			{
 				"command": "kilo-code.addToContext",
 				"title": "%command.addToContext.title%",
-				"category": "%extension.displayName%"
+				"category": "%configuration.title%"
 			},
 			{
 				"command": "kilo-code.newTask",
 				"title": "%command.newTask.title%",
-				"category": "%extension.displayName%"
+				"category": "%configuration.title%"
 			},
 			{
 				"command": "kilo-code.terminalAddToContext",
@@ -227,12 +227,17 @@
 			{
 				"command": "kilo-code.setCustomStoragePath",
 				"title": "%command.setCustomStoragePath.title%",
-				"category": "%extension.displayName%"
+				"category": "%configuration.title%"
 			},
 			{
 				"command": "kilo-code.focusChatInput",
 				"title": "%command.focusInput.title%",
-				"category": "%extension.displayName%"
+				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.acceptInput",
+				"title": "%command.acceptInput.title%",
+				"category": "%configuration.title%"
 			}
 		],
 		"keybindings": [
@@ -298,13 +303,28 @@
 			],
 			"view/title": [
 				{
-					"command": "kilo-code.popoutButtonClicked",
-					"group": "navigation@4",
+					"command": "kilo-code.plusButtonClicked",
+					"group": "navigation@1",
+					"when": "view == kilo-code.SidebarProvider"
+				},
+				{
+					"command": "kilo-code.historyButtonClicked",
+					"group": "navigation@2",
+					"when": "view == kilo-code.SidebarProvider"
+				},
+				{
+					"command": "kilo-code.mcpButtonClicked",
+					"group": "navigation@3",
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
 					"command": "kilo-code.settingsButtonClicked",
-					"group": "navigation@1",
+					"group": "navigation@4",
+					"when": "view == kilo-code.SidebarProvider"
+				},
+				{
+					"command": "kilo-code.popoutButtonClicked",
+					"group": "navigation@5",
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
@@ -325,28 +345,23 @@
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
 				},
 				{
-					"command": "kilo-code.mcpButtonClicked",
+					"command": "kilo-code.historyButtonClicked",
 					"group": "navigation@3",
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
 				},
 				{
-					"command": "kilo-code.historyButtonClicked",
+					"command": "kilo-code.popoutButtonClicked",
 					"group": "navigation@4",
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
 				},
 				{
-					"command": "kilo-code.popoutButtonClicked",
+					"command": "kilo-code.settingsButtonClicked",
 					"group": "navigation@5",
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
 				},
 				{
-					"command": "kilo-code.settingsButtonClicked",
-					"group": "navigation@6",
-					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
-				},
-				{
 					"command": "kilo-code.helpButtonClicked",
-					"group": "navigation@7",
+					"group": "navigation@6",
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
 				}
 			]
@@ -412,7 +427,7 @@
 		"pretest": "npm run compile",
 		"dev": "cd webview-ui && npm run dev",
 		"test": "node scripts/run-tests.js",
-		"test:extension": "jest",
+		"test:extension": "jest -w=40%",
 		"test:webview": "cd webview-ui && npm run test",
 		"prepare": "husky",
 		"publish:marketplace": "vsce publish && ovsx publish",
@@ -442,7 +457,7 @@
 		"@anthropic-ai/vertex-sdk": "^0.7.0",
 		"@aws-sdk/client-bedrock-runtime": "^3.779.0",
 		"@google-cloud/vertexai": "^1.9.3",
-		"@google/generative-ai": "^0.18.0",
+		"@google/genai": "^0.9.0",
 		"@mistralai/mistralai": "^1.3.6",
 		"@modelcontextprotocol/sdk": "^1.7.0",
 		"@types/clone-deep": "^4.0.4",

@@ -7,7 +7,7 @@
 		"tokens": "Tokenlar:",
 		"cache": "Önbellek:",
 		"apiCost": "API Maliyeti:",
-		"contextWindow": "Bağlam Penceresi:",
+		"contextWindow": "Bağlam Uzunluğu:",
 		"closeAndStart": "Görevi kapat ve yeni bir görev başlat",
 		"export": "Görev geçmişini dışa aktar",
 		"delete": "Görevi sil (Onayı atlamak için Shift + Tıkla)"
@@ -68,6 +68,7 @@
 		"tooltip": "Mevcut işlemi iptal et"
 	},
 	"scrollToBottom": "Sohbetin altına kaydır",
+	"onboarding": "<strong>Bu çalışma alanındaki görev listeniz boş.</strong> Aşağıya bir görev yazarak başlayın. Nasıl başlayacağınızdan emin değil misiniz? Kilo Code'un sizin için neler yapabileceği hakkında daha fazla bilgiyi <DocsLink>belgelerde</DocsLink> okuyun.",
 	"selectMode": "Etkileşim modunu seçin",
 	"selectApiConfig": "API yapılandırmasını seçin",
 	"enhancePrompt": "Ek bağlamla istemi geliştir",
@@ -173,41 +174,7 @@
 	"autoApprove": {
 		"title": "Otomatik-onay:",
 		"none": "Hiçbiri",
-		"description": "Otomatik onay, Kilo Code'un izin istemeden işlemler gerçekleştirmesine olanak tanır. Yalnızca tamamen güvendiğiniz eylemler için etkinleştirin. Daha detaylı yapılandırma <settingsLink>Ayarlar</settingsLink>'da mevcuttur.",
-		"actions": {
-			"readFiles": {
-				"label": "Okuma",
-				"description": "Bilgisayarınızdaki herhangi bir dosyayı okuma erişimine izin verir."
-			},
-			"editFiles": {
-				"label": "Yazma",
-				"description": "Bilgisayarınızdaki herhangi bir dosyanın değiştirilmesine izin verir."
-			},
-			"executeCommands": {
-				"label": "Komutlar",
-				"description": "Onaylanmış terminal komutlarının çalıştırılmasına izin verir. Bunu ayarlar panelinde yapılandırabilirsiniz."
-			},
-			"useBrowser": {
-				"label": "Tarayıcı",
-				"description": "Grafiksel arayüz olmayan bir tarayıcıda herhangi bir web sitesini başlatma ve etkileşim kurma yeteneğine izin verir."
-			},
-			"useMcp": {
-				"label": "MCP",
-				"description": "Dosya sistemini değiştirebilen veya API'lerle etkileşime girebilen yapılandırılmış MCP sunucularının kullanımına izin verir."
-			},
-			"switchModes": {
-				"label": "Modlar",
-				"description": "Onay gerektirmeden farklı modlar arasında otomatik geçişe izin verir."
-			},
-			"subtasks": {
-				"label": "Alt Görevler",
-				"description": "Onay gerektirmeden alt görevlerin oluşturulmasına ve tamamlanmasına izin verir."
-			},
-			"retryRequests": {
-				"label": "Yeniden Denemeler",
-				"description": "Sağlayıcı bir hata yanıtı döndürdüğünde başarısız API isteklerini otomatik olarak yeniden dener."
-			}
-		}
+		"description": "Otomatik onay, Kilo Code'un izin istemeden işlemler gerçekleştirmesine olanak tanır. Yalnızca tamamen güvendiğiniz eylemler için etkinleştirin. Daha detaylı yapılandırma <settingsLink>Ayarlar</settingsLink>'da mevcuttur."
 	},
 	"reasoning": {
 		"thinking": "Düşünüyor",
@@ -217,10 +184,14 @@
 		"copyToInput": "Giriş alanına kopyala (veya Shift + tıklama)"
 	},
 	"announcement": {
-		"title": "Bumerang Görevleriyle Daha Fazlasını Yapın 🪃",
-		"description": "İşi alt görevlere bölerek, her birini code, architect, debug veya özel mod gibi özelleştirilmiş bir modda çalıştırın.",
-		"learnMore": "Daha fazla bilgi →",
-		"hideButton": "Duyuruyu gizle"
+		"title": "🎉 Roo Code 3.13 Yayınlandı",
+		"description": "Roo Code 3.13 geri bildirimlerinize dayalı yeni özellikler ve iyileştirmeler getiriyor.",
+		"whatsNew": "Yenilikler",
+		"feature1": "<bold>Gemini 2.5 Flash Thinking</bold>: Artık Gemini 2.5 Flash'ın thinking varyantını kullanabilir ve thinking için token bütçesi belirleyebilirsiniz",
+		"feature2": "<bold>UI İyileştirmeleri</bold>: Görev başlığı, sohbet görünümü, geçmiş önizlemesi ve karşılama ekranı görsel olarak yükseltildi",
+		"feature3": "<bold>Hata Düzeltmeleri</bold>: Daha güvenilir fark düzenlemeleri ve daha fazlası",
+		"hideButton": "Duyuruyu gizle",
+		"detailsDiscussLinks": "<discordLink>Discord</discordLink> ve <redditLink>Reddit</redditLink> üzerinde daha fazla ayrıntı edinin ve tartışmalara katılın 🚀"
 	},
 	"browser": {
 		"rooWantsToUse": "Kilo Code tarayıcıyı kullanmak istiyor:",

@@ -7,7 +7,7 @@
 		"tokens": "Tokens:",
 		"cache": "Cache:",
 		"apiCost": "API Cost:",
-		"contextWindow": "Context Window:",
+		"contextWindow": "Context Length:",
 		"closeAndStart": "Close task and start a new one",
 		"export": "Export task history",
 		"delete": "Delete Task (Shift + Click to skip confirmation)"
@@ -68,6 +68,7 @@
 		"tooltip": "Cancel the current operation"
 	},
 	"scrollToBottom": "Scroll to bottom of chat",
+	"onboarding": "<strong>Your task list in this workspace is empty.</strong> Start by typing in a task below. Not sure how to begin? Read more about what Kilo Code can do for you in <DocsLink>the docs</DocsLink>.",
 	"selectMode": "Select mode for interaction",
 	"selectApiConfig": "Select API configuration",
 	"enhancePrompt": "Enhance prompt with additional context",
@@ -173,47 +174,17 @@
 	"autoApprove": {
 		"title": "Auto-approve:",
 		"none": "None",
-		"description": "Auto-approve allows Kilo Code Code to perform actions without asking for permission. Only enable for actions you fully trust. More detailed configuration available in <settingsLink>Settings</settingsLink>.",
-		"actions": {
-			"readFiles": {
-				"label": "Read",
-				"description": "Allows access to read any file on your computer."
-			},
-			"editFiles": {
-				"label": "Edit",
-				"description": "Allows modification of any files on your computer."
-			},
-			"executeCommands": {
-				"label": "Commands",
-				"description": "Allows execution of approved terminal commands. You can configure this in the settings panel."
-			},
-			"useBrowser": {
-				"label": "Browser",
-				"description": "Allows ability to launch and interact with any website in a headless browser."
-			},
-			"useMcp": {
-				"label": "MCP",
-				"description": "Allows use of configured MCP servers which may modify filesystem or interact with APIs."
-			},
-			"switchModes": {
-				"label": "Modes",
-				"description": "Allows automatic switching between different modes without requiring approval."
-			},
-			"subtasks": {
-				"label": "Subtasks",
-				"description": "Allow creation and completion of subtasks without requiring approval."
-			},
-			"retryRequests": {
-				"label": "Retries",
-				"description": "Automatically retry failed API requests when the provider returns an error response."
-			}
-		}
+		"description": "Auto-approve allows Kilo Code to perform actions without asking for permission. Only enable for actions you fully trust. More detailed configuration available in <settingsLink>Settings</settingsLink>."
 	},
 	"announcement": {
-		"title": "Do more with Boomerang Tasks 🪃",
-		"description": "Split work into subtasks with each running in a specialized mode such as code, architect, debug, or a custom mode.",
-		"learnMore": "Learn more →",
-		"hideButton": "Hide announcement"
+		"title": "🎉 Roo Code 3.13 Released",
+		"description": "Roo Code 3.13 brings new features and improvements based on your feedback.",
+		"whatsNew": "What's New",
+		"feature1": "<bold>Gemini 2.5 Flash Thinking</bold>: You can now use the thinking variant of Gemini 2.5 Flash and specify a thinking token budget",
+		"feature2": "<bold>UI Improvements</bold>: The task header, chat view, history preview, and welcome view have been visually upgraded",
+		"feature3": "<bold>Bug Fixes</bold>: More reliable diff edits & more",
+		"hideButton": "Hide announcement",
+		"detailsDiscussLinks": "Get more details and discuss in <discordLink>Discord</discordLink> and <redditLink>Reddit</redditLink> 🚀"
 	},
 	"reasoning": {
 		"thinking": "Thinking",

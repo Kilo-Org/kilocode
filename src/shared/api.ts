@@ -1,4 +1,7 @@
 import { ModelInfo, ProviderName, ProviderSettings } from "../schemas"
+import { REASONING_MODELS } from "../api/providers/constants"
+
+export { REASONING_MODELS }
 
 export type { ModelInfo, ProviderName as ApiProvider }
 
@@ -77,6 +80,7 @@ export const anthropicModels = {
 		cacheReadsPrice: 0.03,
 	},
 } as const satisfies Record<string, ModelInfo> // as const assertion makes the object deeply readonly
+
 // Amazon Bedrock
 // https://docs.aws.amazon.com/bedrock/latest/userguide/conversation-inference.html
 export interface MessageContent {
@@ -473,8 +477,8 @@ export const openRouterDefaultModelInfo: ModelInfo = {
 export type VertexModelId = keyof typeof vertexModels
 export const vertexDefaultModelId: VertexModelId = "claude-3-7-sonnet@20250219"
 export const vertexModels = {
-	"gemini-2.0-flash-001": {
-		maxTokens: 8192,
+	"gemini-2.5-flash-preview-04-17": {
+		maxTokens: 65_535,
 		contextWindow: 1_048_576,
 		supportsImages: true,
 		supportsPromptCache: false,
@@ -504,6 +508,14 @@ export const vertexModels = {
 		supportsPromptCache: false,
 		inputPrice: 0,
 		outputPrice: 0,
+	},
+	"gemini-2.0-flash-001": {
+		maxTokens: 8192,
+		contextWindow: 1_048_576,
+		supportsImages: true,
+		supportsPromptCache: false,
+		inputPrice: 0.15,
+		outputPrice: 0.6,
 	},
 	"gemini-2.0-flash-lite-001": {
 		maxTokens: 8192,
@@ -628,8 +640,27 @@ export const openAiModelInfoSaneDefaults: ModelInfo = {
 export type GeminiModelId = keyof typeof geminiModels
 export const geminiDefaultModelId: GeminiModelId = "gemini-2.0-flash-001"
 export const geminiModels = {
+	"gemini-2.5-flash-preview-04-17:thinking": {
+		maxTokens: 65_535,
+		contextWindow: 1_048_576,
+		supportsImages: true,
+		supportsPromptCache: false,
+		inputPrice: 0.15,
+		outputPrice: 3.5,
+		thinking: true,
+		maxThinkingTokens: 24_576,
+	},
+	"gemini-2.5-flash-preview-04-17": {
+		maxTokens: 65_535,
+		contextWindow: 1_048_576,
+		supportsImages: true,
+		supportsPromptCache: false,
+		inputPrice: 0.15,
+		outputPrice: 0.6,
+		thinking: false,
+	},
 	"gemini-2.5-pro-exp-03-25": {
-		maxTokens: 65_536,
+		maxTokens: 65_535,
 		contextWindow: 1_048_576,
 		supportsImages: true,
 		supportsPromptCache: false,
@@ -773,6 +804,66 @@ export const openAiNativeModels = {
 		inputPrice: 0.1,
 		outputPrice: 0.4,
 		cacheReadsPrice: 0.025,
+	},
+	o3: {
+		maxTokens: 100_000,
+		contextWindow: 200_000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		inputPrice: 10.0,
+		outputPrice: 40.0,
+		cacheReadsPrice: 2.5,
+		reasoningEffort: "medium",
+	},
+	"o3-high": {
+		maxTokens: 100_000,
+		contextWindow: 200_000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		inputPrice: 10.0,
+		outputPrice: 40.0,
+		cacheReadsPrice: 2.5,
+		reasoningEffort: "high",
+	},
+	"o3-low": {
+		maxTokens: 100_000,
+		contextWindow: 200_000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		inputPrice: 10.0,
+		outputPrice: 40.0,
+		cacheReadsPrice: 2.5,
+		reasoningEffort: "low",
+	},
+	"o4-mini": {
+		maxTokens: 100_000,
+		contextWindow: 200_000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		inputPrice: 1.1,
+		outputPrice: 4.4,
+		cacheReadsPrice: 0.275,
+		reasoningEffort: "medium",
+	},
+	"o4-mini-high": {
+		maxTokens: 100_000,
+		contextWindow: 200_000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		inputPrice: 1.1,
+		outputPrice: 4.4,
+		cacheReadsPrice: 0.275,
+		reasoningEffort: "high",
+	},
+	"o4-mini-low": {
+		maxTokens: 100_000,
+		contextWindow: 200_000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		inputPrice: 1.1,
+		outputPrice: 4.4,
+		cacheReadsPrice: 0.275,
+		reasoningEffort: "low",
 	},
 	"o3-mini": {
 		maxTokens: 100_000,
@@ -950,6 +1041,7 @@ export const mistralModels = {
 } as const satisfies Record<string, ModelInfo>
 
 // Unbound Security
+// https://www.unboundsecurity.ai/ai-gateway
 export const unboundDefaultModelId = "anthropic/claude-3-5-sonnet-20241022"
 export const unboundDefaultModelInfo: ModelInfo = {
 	maxTokens: 8192,
@@ -1006,3 +1098,118 @@ export const fireworksModels = {
 
 export type FireworksModelId = keyof typeof fireworksModels
 export const fireworksDefaultModelId: FireworksModelId = "accounts/fireworks/models/llama4-maverick-instruct-basic"
+
+// xAI
+// https://docs.x.ai/docs/api-reference
+export type XAIModelId = keyof typeof xaiModels
+export const xaiDefaultModelId: XAIModelId = "grok-3-beta"
+export const xaiModels = {
+	"grok-3-beta": {
+		maxTokens: 8192,
+		contextWindow: 131072,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 3.0,
+		outputPrice: 15.0,
+		description: "xAI's Grok-3 beta model with 131K context window",
+	},
+	"grok-3-fast-beta": {
+		maxTokens: 8192,
+		contextWindow: 131072,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 5.0,
+		outputPrice: 25.0,
+		description: "xAI's Grok-3 fast beta model with 131K context window",
+	},
+	"grok-3-mini-beta": {
+		maxTokens: 8192,
+		contextWindow: 131072,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0.3,
+		outputPrice: 0.5,
+		description: "xAI's Grok-3 mini beta model with 131K context window",
+	},
+	"grok-3-mini-fast-beta": {
+		maxTokens: 8192,
+		contextWindow: 131072,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0.6,
+		outputPrice: 4.0,
+		description: "xAI's Grok-3 mini fast beta model with 131K context window",
+	},
+	"grok-2-latest": {
+		maxTokens: 8192,
+		contextWindow: 131072,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 2.0,
+		outputPrice: 10.0,
+		description: "xAI's Grok-2 model - latest version with 131K context window",
+	},
+	"grok-2": {
+		maxTokens: 8192,
+		contextWindow: 131072,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 2.0,
+		outputPrice: 10.0,
+		description: "xAI's Grok-2 model with 131K context window",
+	},
+	"grok-2-1212": {
+		maxTokens: 8192,
+		contextWindow: 131072,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 2.0,
+		outputPrice: 10.0,
+		description: "xAI's Grok-2 model (version 1212) with 131K context window",
+	},
+	"grok-2-vision-latest": {
+		maxTokens: 8192,
+		contextWindow: 32768,
+		supportsImages: true,
+		supportsPromptCache: false,
+		inputPrice: 2.0,
+		outputPrice: 10.0,
+		description: "xAI's Grok-2 Vision model - latest version with image support and 32K context window",
+	},
+	"grok-2-vision": {
+		maxTokens: 8192,
+		contextWindow: 32768,
+		supportsImages: true,
+		supportsPromptCache: false,
+		inputPrice: 2.0,
+		outputPrice: 10.0,
+		description: "xAI's Grok-2 Vision model with image support and 32K context window",
+	},
+	"grok-2-vision-1212": {
+		maxTokens: 8192,
+		contextWindow: 32768,
+		supportsImages: true,
+		supportsPromptCache: false,
+		inputPrice: 2.0,
+		outputPrice: 10.0,
+		description: "xAI's Grok-2 Vision model (version 1212) with image support and 32K context window",
+	},
+	"grok-vision-beta": {
+		maxTokens: 8192,
+		contextWindow: 8192,
+		supportsImages: true,
+		supportsPromptCache: false,
+		inputPrice: 5.0,
+		outputPrice: 15.0,
+		description: "xAI's Grok Vision Beta model with image support and 8K context window",
+	},
+	"grok-beta": {
+		maxTokens: 8192,
+		contextWindow: 131072,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 5.0,
+		outputPrice: 15.0,
+		description: "xAI's Grok Beta model (legacy) with 131K context window",
+	},
+} as const satisfies Record<string, ModelInfo>

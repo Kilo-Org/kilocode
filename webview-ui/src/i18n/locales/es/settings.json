@@ -30,7 +30,8 @@
 		"experimental": "Funciones experimentales",
 		"language": "Idioma",
 		"about": "Acerca de Kilo Code",
-		"interface": "Interfaz"
+		"interface": "Interfaz",
+		"mcp": "Servidores MCP"
 	},
 	"autoApprove": {
 		"description": "Permitir que Kilo Code realice operaciones automáticamente sin requerir aprobación. Habilite esta configuración solo si confía plenamente en la IA y comprende los riesgos de seguridad asociados.",
@@ -132,6 +133,8 @@
 		"getMistralApiKey": "Obtener clave API de Mistral / Codestral",
 		"codestralBaseUrl": "URL base de Codestral (Opcional)",
 		"codestralBaseUrlDesc": "Establecer una URL alternativa para el modelo Codestral.",
+		"xaiApiKey": "Clave API de xAI",
+		"getXaiApiKey": "Obtener clave API de xAI",
 		"awsCredentials": "Credenciales de AWS",
 		"awsProfile": "Perfil de AWS",
 		"awsProfileName": "Nombre del perfil de AWS",
@@ -229,6 +232,12 @@
 		"rateLimitSeconds": {
 			"label": "Límite de tasa",
 			"description": "Tiempo mínimo entre solicitudes de API."
+		},
+		"reasoningEffort": {
+			"label": "Esfuerzo de razonamiento del modelo",
+			"high": "Alto",
+			"medium": "Medio",
+			"low": "Bajo"
 		}
 	},
 	"browser": {
@@ -475,11 +484,5 @@
 	"labels": {
 		"customArn": "ARN personalizado",
 		"useCustomArn": "Usar ARN personalizado..."
-	},
-	"interface": {
-		"showgreeting": {
-			"label": "Mostrar mensaje de bienvenida",
-			"description": "Cuando está habilitado, Roo mostrará un mensaje de bienvenida e introducción."
-		}
 	}
 }

@@ -30,7 +30,8 @@
 		"experimental": "Funcions experimentals",
 		"language": "Idioma",
 		"about": "Sobre Kilo Code",
-		"interface": "Interfície"
+		"interface": "Interfície",
+		"mcp": "Servidors MCP"
 	},
 	"autoApprove": {
 		"description": "Permet que Kilo Code realitzi operacions automàticament sense requerir aprovació. Activeu aquesta configuració només si confieu plenament en la IA i enteneu els riscos de seguretat associats.",
@@ -132,6 +133,8 @@
 		"getMistralApiKey": "Obtenir clau API de Mistral / Codestral",
 		"codestralBaseUrl": "URL base de Codestral (opcional)",
 		"codestralBaseUrlDesc": "Establir una URL alternativa per al model Codestral.",
+		"xaiApiKey": "Clau API de xAI",
+		"getXaiApiKey": "Obtenir clau API de xAI",
 		"awsCredentials": "Credencials d'AWS",
 		"awsProfile": "Perfil d'AWS",
 		"awsProfileName": "Nom del perfil d'AWS",
@@ -229,6 +232,12 @@
 		"rateLimitSeconds": {
 			"label": "Límit de freqüència",
 			"description": "Temps mínim entre sol·licituds d'API."
+		},
+		"reasoningEffort": {
+			"label": "Esforç de raonament del model",
+			"high": "Alt",
+			"medium": "Mitjà",
+			"low": "Baix"
 		}
 	},
 	"browser": {
@@ -475,11 +484,5 @@
 	"labels": {
 		"customArn": "ARN personalitzat",
 		"useCustomArn": "Utilitza ARN personalitzat..."
-	},
-	"interface": {
-		"showgreeting": {
-			"label": "Mostrar missatge de benvinguda",
-			"description": "Quan està activat, Kilo Code mostrarà un missatge de benvinguda i introducció."
-		}
 	}
 }

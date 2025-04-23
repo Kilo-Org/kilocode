@@ -68,6 +68,7 @@
 		"tooltip": "Aktuelle Operation abbrechen"
 	},
 	"scrollToBottom": "Zum Chat-Ende scrollen",
+	"onboarding": "<strong>Deine Aufgabenliste in diesem Arbeitsbereich ist leer.</strong> Beginne mit der Eingabe einer Aufgabe unten. Du bist dir nicht sicher, wie du anfangen sollst? Lies mehr darüber, was Kilo Code für dich tun kann, in <DocsLink>den Dokumenten</DocsLink>.",
 	"selectMode": "Interaktionsmodus auswählen",
 	"selectApiConfig": "API-Konfiguration auswählen",
 	"enhancePrompt": "Prompt mit zusätzlichem Kontext verbessern",
@@ -173,41 +174,7 @@
 	"autoApprove": {
 		"title": "Automatische Genehmigung:",
 		"none": "Keine",
-		"description": "Automatische Genehmigung erlaubt Kilo Code, Aktionen ohne Nachfrage auszuführen. Aktiviere dies nur für Aktionen, denen du vollständig vertraust. Detailliertere Konfiguration verfügbar in den <settingsLink>Einstellungen</settingsLink>.",
-		"actions": {
-			"readFiles": {
-				"label": "Lesen",
-				"description": "Erlaubt Zugriff zum Lesen jeder Datei auf deinem Computer."
-			},
-			"editFiles": {
-				"label": "Bearbeiten",
-				"description": "Erlaubt die Änderung jeder Datei auf deinem Computer."
-			},
-			"executeCommands": {
-				"label": "Befehle",
-				"description": "Erlaubt die Ausführung genehmigter Terminal-Befehle. Du kannst dies im Einstellungsfenster konfigurieren."
-			},
-			"useBrowser": {
-				"label": "Browser",
-				"description": "Erlaubt die Fähigkeit, jede Website in einem Headless-Browser zu starten und mit ihr zu interagieren."
-			},
-			"useMcp": {
-				"label": "MCP",
-				"description": "Erlaubt die Verwendung konfigurierter MCP-Server, die das Dateisystem ändern oder mit APIs interagieren können."
-			},
-			"switchModes": {
-				"label": "Modi",
-				"description": "Erlaubt automatischen Wechsel zwischen verschiedenen Modi ohne erforderliche Genehmigung."
-			},
-			"subtasks": {
-				"label": "Teilaufgaben",
-				"description": "Erlaubt die Erstellung und den Abschluss von Teilaufgaben ohne erforderliche Genehmigung."
-			},
-			"retryRequests": {
-				"label": "Wiederholungen",
-				"description": "Wiederholt automatisch fehlgeschlagene API-Anfragen, wenn der Anbieter eine Fehlermeldung zurückgibt."
-			}
-		}
+		"description": "Automatische Genehmigung erlaubt Kilo Code, Aktionen ohne Nachfrage auszuführen. Aktiviere dies nur für Aktionen, denen du vollständig vertraust. Detailliertere Konfiguration verfügbar in den <settingsLink>Einstellungen</settingsLink>."
 	},
 	"reasoning": {
 		"thinking": "Denke nach",
@@ -217,10 +184,14 @@
 		"copyToInput": "In Eingabefeld kopieren (oder Shift + Klick)"
 	},
 	"announcement": {
-		"title": "Mach mehr mit Boomerang Tasks 🪃",
-		"description": "Teile deine Arbeit in Unteraufgaben auf, die jeweils in einem spezialisierten Modus laufen, wie code, architect, debug oder einem benutzerdefinierten Modus.",
-		"learnMore": "Mehr erfahren →",
-		"hideButton": "Ankündigung ausblenden"
+		"title": "🎉 Roo Code 3.13 veröffentlicht",
+		"description": "Roo Code 3.13 bringt neue Funktionen und Verbesserungen basierend auf deinem Feedback.",
+		"whatsNew": "Was ist neu",
+		"feature1": "<bold>Gemini 2.5 Flash Thinking</bold>: Du kannst jetzt die Thinking-Variante von Gemini 2.5 Flash verwenden und ein Thinking-Token-Budget festlegen",
+		"feature2": "<bold>UI-Verbesserungen</bold>: Die Aufgabenüberschrift, Chat-Ansicht, Verlaufsvorschau und Willkommensansicht wurden visuell verbessert",
+		"feature3": "<bold>Fehlerbehebungen</bold>: Zuverlässigere Diff-Bearbeitungen & mehr",
+		"hideButton": "Ankündigung ausblenden",
+		"detailsDiscussLinks": "Erhalte mehr Details und diskutiere auf <discordLink>Discord</discordLink> und <redditLink>Reddit</redditLink> 🚀"
 	},
 	"browser": {
 		"rooWantsToUse": "Kilo Code möchte den Browser verwenden:",

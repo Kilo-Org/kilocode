@@ -10,5 +10,8 @@
 		"githubIssues": "GitHub'da bir sorun bildirin",
 		"githubDiscussions": "GitHub tartışmalarına katılın",
 		"discord": "Discord topluluğumuza katılın"
+	},
+	"ui": {
+		"search_placeholder": "Ara..."
 	}
 }

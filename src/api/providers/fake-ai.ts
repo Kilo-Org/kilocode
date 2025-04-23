@@ -1,5 +1,5 @@
 import { Anthropic } from "@anthropic-ai/sdk"
-import { ApiHandler, SingleCompletionHandler } from ".."
+import { ApiHandler, SingleCompletionHandler } from "../index"
 import { ApiHandlerOptions, ModelInfo } from "../../shared/api"
 import { ApiStream } from "../transform/stream"
 

@@ -1,5 +1,5 @@
 {
-	"greeting": "Kilo Code 可以為您做些什麼？",
+	"greeting": "Kilo Code 能為您做什麼？",
 	"task": {
 		"title": "工作",
 		"seeMore": "顯示更多",
@@ -7,7 +7,7 @@
 		"tokens": "Tokens:",
 		"cache": "快取：",
 		"apiCost": "API 費用：",
-		"contextWindow": "上下文視窗：",
+		"contextWindow": "上下文長度：",
 		"closeAndStart": "關閉現有工作並開始一項新的工作",
 		"export": "匯出工作紀錄",
 		"delete": "刪除工作（按住 Shift 並點選可跳過確認）"
@@ -68,7 +68,7 @@
 		"tooltip": "取消目前操作"
 	},
 	"scrollToBottom": "捲動至對話框底部",
-	"aboutMe": "由於程式代理功能的最新突破，我能夠逐步處理複雜的軟體開發工作。透過允許我建立和編輯檔案、探索複雜專案、使用瀏覽器和執行終端機命令（在您授權後）的工具，我可以以超越程式碼補全或技術支援的方式協助您。我甚至可以使用 MCP 建立新工具並擴展自己的能力。",
+	"onboarding": "<strong>您在此工作區中的工作清單是空的。</strong> 請在下方輸入工作以開始。 不確定如何開始？ 在 <DocsLink>說明文件</DocsLink> 中閱讀更多關於 Kilo Code 能為您做什麼的資訊。",
 	"selectMode": "選擇互動模式",
 	"selectApiConfig": "選擇 API 設定",
 	"enhancePrompt": "使用額外內容增強提示",
@@ -174,41 +174,7 @@
 	"autoApprove": {
 		"title": "自動核准：",
 		"none": "無",
-		"description": "自動核准讓 Kilo Code 可以在無需徵求您同意的情況下執行動作。請僅對您完全信任的動作啟用此功能。您可以在<settingsLink>設定</settingsLink>中進行更詳細的調整。",
-		"actions": {
-			"readFiles": {
-				"label": "讀取",
-				"description": "允許存取電腦上的任何檔案。"
-			},
-			"editFiles": {
-				"label": "編輯",
-				"description": "允許修改電腦上的任何檔案。"
-			},
-			"executeCommands": {
-				"label": "命令",
-				"description": "允許執行已核准的終端機命令。您可以在設定面板中調整此設定。"
-			},
-			"useBrowser": {
-				"label": "瀏覽器",
-				"description": "允許在無介面瀏覽器中啟動並與任何網站互動。"
-			},
-			"useMcp": {
-				"label": "MCP",
-				"description": "允許使用已設定的 MCP 伺服器，這些伺服器可能會修改檔案系統或與 API 進行互動。"
-			},
-			"switchModes": {
-				"label": "模式",
-				"description": "允許在不需要核准的情況下自動切換不同模式。"
-			},
-			"subtasks": {
-				"label": "子工作",
-				"description": "允許在不需要核准的情況下建立和完成子工作。"
-			},
-			"retryRequests": {
-				"label": "重試",
-				"description": "當服務提供者回傳錯誤回應時自動重試失敗的 API 請求。"
-			}
-		}
+		"description": "自動核准讓 Kilo Code 可以在無需徵求您同意的情況下執行動作。請僅對您完全信任的動作啟用此功能。您可以在<settingsLink>設定</settingsLink>中進行更詳細的調整。"
 	},
 	"reasoning": {
 		"thinking": "思考中",
@@ -218,10 +184,14 @@
 		"copyToInput": "複製到輸入框（或按住 Shift 並點選）"
 	},
 	"announcement": {
-		"title": "使用迴旋鏢任務完成更多工作 🪃",
-		"description": "將工作拆分成子任務，每個子任務在專門的模式中執行，如 code、architect、debug 或自訂模式。",
-		"learnMore": "了解更多 →",
-		"hideButton": "隱藏公告"
+		"title": "🎉 Roo Code 3.13 已發布",
+		"description": "Roo Code 3.13 帶來基於您意見回饋的新功能與改進。",
+		"whatsNew": "新功能",
+		"feature1": "<bold>Gemini 2.5 Flash Thinking</bold>: 現在可以使用 Gemini 2.5 Flash 的 thinking 變體並指定 thinking Token 預算",
+		"feature2": "<bold>UI 改進</bold>: 工作標題、對話視圖、歷史預覽和歡迎視圖已進行視覺升級",
+		"feature3": "<bold>錯誤修復</bold>: 更可靠的差異編輯等功能",
+		"hideButton": "隱藏公告",
+		"detailsDiscussLinks": "在 <discordLink>Discord</discordLink> 和 <redditLink>Reddit</redditLink> 取得更多詳細資訊並參與討論 🚀"
 	},
 	"browser": {
 		"rooWantsToUse": "Kilo Code 想要使用瀏覽器：",

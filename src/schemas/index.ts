@@ -32,6 +32,7 @@ export const providerNames = [
 	"requesty",
 	"human-relay",
 	"fake-ai",
+	"xai",
 ] as const
 
 export const providerNamesSchema = z.enum(providerNames)
@@ -47,19 +48,6 @@ export const toolGroups = ["read", "edit", "browser", "command", "mcp", "modes"]
 export const toolGroupsSchema = z.enum(toolGroups)
 
 export type ToolGroup = z.infer<typeof toolGroupsSchema>
-
-/**
- * CheckpointStorage
- */
-
-export const checkpointStorages = ["task", "workspace"] as const
-
-export const checkpointStoragesSchema = z.enum(checkpointStorages)
-
-export type CheckpointStorage = z.infer<typeof checkpointStoragesSchema>
-
-export const isCheckpointStorage = (value: string): value is CheckpointStorage =>
-	checkpointStorages.includes(value as CheckpointStorage)
 
 /**
  * Language
@@ -115,6 +103,7 @@ export type ReasoningEffort = z.infer<typeof reasoningEffortsSchema>
 
 export const modelInfoSchema = z.object({
 	maxTokens: z.number().nullish(),
+	maxThinkingTokens: z.number().nullish(),
 	contextWindow: z.number(),
 	supportsImages: z.boolean().optional(),
 	supportsComputerUse: z.boolean().optional(),
@@ -397,6 +386,8 @@ export const providerSettingsSchema = z.object({
 	requestyApiKey: z.string().optional(),
 	requestyModelId: z.string().optional(),
 	requestyModelInfo: modelInfoSchema.nullish(),
+	// X.AI (Grok)
+	xaiApiKey: z.string().optional(),
 	// Claude 3.7 Sonnet Thinking
 	modelMaxTokens: z.number().optional(),
 	modelMaxThinkingTokens: z.number().optional(),
@@ -405,6 +396,8 @@ export const providerSettingsSchema = z.object({
 	modelTemperature: z.number().nullish(),
 	reasoningEffort: reasoningEffortsSchema.optional(),
 	rateLimitSeconds: z.number().optional(),
+	diffEnabled: z.boolean().optional(),
+	fuzzyMatchThreshold: z.number().optional(),
 	// Fake AI
 	fakeAi: z.unknown().optional(),
 	// kilocode_change
@@ -499,13 +492,18 @@ const providerSettingsRecord: ProviderSettingsRecord = {
 	modelTemperature: undefined,
 	reasoningEffort: undefined,
 	rateLimitSeconds: undefined,
+	diffEnabled: undefined,
+	fuzzyMatchThreshold: undefined,
 	// Fake AI
 	fakeAi: undefined,
-	// kilocode_change
+	// kilocode_change start
 	kilocodeToken: undefined,
 	kilocodeModel: undefined,
 	fireworksModelId: undefined,
 	fireworksApiKey: undefined,
+	// kilocode_change end
+	// X.AI (Grok)
+	xaiApiKey: undefined,
 }
 
 export const PROVIDER_SETTINGS_KEYS = Object.keys(providerSettingsRecord) as Keys<ProviderSettings>[]
@@ -547,9 +545,6 @@ export const globalSettingsSchema = z.object({
 	cachedChromeHostUrl: z.string().optional(),
 
 	enableCheckpoints: z.boolean().optional(),
-	checkpointStorage: checkpointStoragesSchema.optional(),
-
-	showGreeting: z.boolean().optional(),
 
 	ttsEnabled: z.boolean().optional(),
 	ttsSpeed: z.number().optional(),
@@ -626,9 +621,6 @@ const globalSettingsRecord: GlobalSettingsRecord = {
 	remoteBrowserHost: undefined,
 
 	enableCheckpoints: undefined,
-	checkpointStorage: undefined,
-
-	showGreeting: undefined,
 
 	ttsEnabled: undefined,
 	ttsSpeed: undefined,
@@ -699,8 +691,9 @@ export type SecretState = Pick<
 	| "mistralApiKey"
 	| "unboundApiKey"
 	| "requestyApiKey"
-	| "kilocodeToken"
-	| "fireworksApiKey"
+	| "kilocodeToken" // kilocode_change
+	| "fireworksApiKey" // kilocode_change
+	| "xaiApiKey"
 >
 
 type SecretStateRecord = Record<Keys<SecretState>, undefined>
@@ -719,8 +712,9 @@ const secretStateRecord: SecretStateRecord = {
 	mistralApiKey: undefined,
 	unboundApiKey: undefined,
 	requestyApiKey: undefined,
-	kilocodeToken: undefined,
-	fireworksApiKey: undefined,
+	kilocodeToken: undefined, // kilocode_change
+	fireworksApiKey: undefined, // kilocode_change
+	xaiApiKey: undefined,
 }
 
 export const SECRET_STATE_KEYS = Object.keys(secretStateRecord) as Keys<SecretState>[]
@@ -846,6 +840,45 @@ export const tokenUsageSchema = z.object({
 
 export type TokenUsage = z.infer<typeof tokenUsageSchema>
 
+export const toolNames = [
+	"execute_command",
+	"read_file",
+	"write_to_file",
+	"append_to_file",
+	"apply_diff",
+	"insert_content",
+	"search_and_replace",
+	"search_files",
+	"list_files",
+	"list_code_definition_names",
+	"browser_action",
+	"use_mcp_tool",
+	"access_mcp_resource",
+	"ask_followup_question",
+	"attempt_completion",
+	"switch_mode",
+	"new_task",
+	"fetch_instructions",
+] as const
+
+export const toolNamesSchema = z.enum(toolNames)
+
+export type ToolName = z.infer<typeof toolNamesSchema>
+
+/**
+ * ToolUsage
+ */
+
+export const toolUsageSchema = z.record(
+	toolNamesSchema,
+	z.object({
+		attempts: z.number(),
+		failures: z.number(),
+	}),
+)
+
+export type ToolUsage = z.infer<typeof toolUsageSchema>
+
 /**
  * RooCodeEvent
  */
@@ -880,7 +913,7 @@ export const rooCodeEventsSchema = z.object({
 	[RooCodeEventName.TaskAskResponded]: z.tuple([z.string()]),
 	[RooCodeEventName.TaskAborted]: z.tuple([z.string()]),
 	[RooCodeEventName.TaskSpawned]: z.tuple([z.string(), z.string()]),
-	[RooCodeEventName.TaskCompleted]: z.tuple([z.string(), tokenUsageSchema]),
+	[RooCodeEventName.TaskCompleted]: z.tuple([z.string(), tokenUsageSchema, toolUsageSchema]),
 	[RooCodeEventName.TaskTokenUsageUpdated]: z.tuple([z.string(), tokenUsageSchema]),
 })
 

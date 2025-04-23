@@ -9,7 +9,11 @@ import {
 	mistralModels,
 	openAiNativeModels,
 	vertexModels,
+	xaiModels,
+	REASONING_MODELS,
 } from "../../../../src/shared/api"
+
+export { REASONING_MODELS }
 
 export const MODELS_BY_PROVIDER: Partial<Record<ApiProvider, Record<string, ModelInfo>>> = {
 	anthropic: anthropicModels,
@@ -20,6 +24,7 @@ export const MODELS_BY_PROVIDER: Partial<Record<ApiProvider, Record<string, Mode
 	mistral: mistralModels,
 	"openai-native": openAiNativeModels,
 	vertex: vertexModels,
+	xai: xaiModels,
 }
 
 export const PROVIDERS = [
@@ -41,6 +46,7 @@ export const PROVIDERS = [
 	{ value: "unbound", label: "Unbound" },
 	{ value: "requesty", label: "Requesty" },
 	{ value: "human-relay", label: "Human Relay" },
+	{ value: "xai", label: "xAI" },
 ]
 
 export const VERTEX_REGIONS = [

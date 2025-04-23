@@ -24,11 +24,10 @@ export class KiloCodeHandler extends BaseProvider implements SingleCompletionHan
 			this.handler = new KiloCodeAnthropicHandler(options)
 		} else if (openrouterModels.includes(modelType)) {
 			// Determine the correct OpenRouter model ID based on the selected KiloCode model type
-
+			const baseUri = getKiloBaseUri(options)
 			const openrouterOptions = {
 				...options,
-				// openRouterBaseUrl: "https://kilocode.ai/api/openrouter/",
-				openRouterBaseUrl: "http://localhost:3000/api/openrouter/",
+				openRouterBaseUrl: `${baseUri}/api/openrouter/`,
 				openRouterApiKey: options.kilocodeToken,
 			}
 
@@ -79,29 +78,16 @@ export class KiloCodeHandler extends BaseProvider implements SingleCompletionHan
 export class KiloCodeAnthropicHandler extends BaseProvider implements SingleCompletionHandler {
 	private options: ApiHandlerOptions
 	private client: Anthropic
-	private baseURL: string = "https://kilocode.ai"
-	// private baseURL: string = "https://localhost:3000"
 
 	constructor(options: ApiHandlerOptions) {
 		super()
 		this.options = options
-		this.getBaseURL()
+		const baseUri = getKiloBaseUri(options)
 		this.client = new Anthropic({
 			authToken: this.options.kilocodeToken,
-			baseURL: `${this.baseURL}/api/claude/`,
+			baseURL: `${baseUri}/api/claude/`,
 			apiKey: null, //ignore anthropic apiKey, even if set in env vars - it's not valid for KiloCode anyhow
 		})
-	}
-
-	private getBaseURL() {
-		try {
-			const token = this.options.kilocodeToken as string
-			const payload_string = token.split(".")[1]
-			const payload = JSON.parse(Buffer.from(payload_string, "base64").toString())
-			if (payload.env === "development") this.baseURL = "http://localhost:3000"
-		} catch (_error) {
-			console.warn("Failed to get base URL from Kilo Code token")
-		}
 	}
 
 	async *createMessage(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): ApiStream {
@@ -253,33 +239,10 @@ export class KiloCodeAnthropicHandler extends BaseProvider implements SingleComp
 				}
 			}
 			if (error.status === 402) {
-				console.log(" \n\n:: Kilo Code payment error", error)
-				// Extract balance from error if available
-				let balance = "-0.00"
-				try {
-					if (error.response?.data?.balance) {
-						balance = parseFloat(error.response.data.balance).toFixed(2)
-					}
-				} catch (e) {
-					console.warn("Failed to parse balance from error response", e)
-				}
-
-				// First yield a text message for backward compatibility
 				yield {
 					type: "text",
-					text: "You have reached your Kilo Code usage limit. Please purchase more credits.",
+					text: "Go to https://kilocode.ai/profile to purchase more credits.",
 				}
-
-				// Then throw a special error that will be caught by the Cline class
-				// and displayed as a modal dialog
-				const paymentError = new Error("Payment required")
-				paymentError.name = "PaymentRequiredError"
-				// Add custom properties to the error
-				;(paymentError as any).isKiloCodePaymentError = true
-				;(paymentError as any).balance = balance
-				;(paymentError as any).buyCreditsUrl = "https://kilocode.ai/profile"
-
-				throw paymentError
 			} else {
 				yield {
 					type: "text",
@@ -357,4 +320,17 @@ export class KiloCodeAnthropicHandler extends BaseProvider implements SingleComp
 			return super.countTokens(content)
 		}
 	}
+}
+
+function getKiloBaseUri(options: ApiHandlerOptions) {
+	try {
+		const token = options.kilocodeToken as string
+		const payload_string = token.split(".")[1]
+		const payload = JSON.parse(Buffer.from(payload_string, "base64").toString())
+		//note: this is UNTRUSTED, so we need to make sure we're OK with this being manipulated by an attacker; e.g. we should not read uri's from the JWT directly.
+		if (payload.env === "development") return "http://localhost:3000"
+	} catch (_error) {
+		console.warn("Failed to get base URL from Kilo Code token")
+	}
+	return "https://kilocode.ai"
 }

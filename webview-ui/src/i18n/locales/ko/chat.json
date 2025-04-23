@@ -1,5 +1,5 @@
 {
-	"greeting": "Kilo Code가 어떻게 도와드릴까요?",
+	"greeting": "Kilo Code가 당신을 위해 무엇을 할 수 있을까요?",
 	"task": {
 		"title": "작업",
 		"seeMore": "더 보기",
@@ -68,6 +68,7 @@
 		"tooltip": "현재 작업 취소"
 	},
 	"scrollToBottom": "채팅 하단으로 스크롤",
+	"onboarding": "<strong>이 작업 공간의 작업 목록이 비어 있습니다.</strong> 아래에 작업을 입력하여 시작하세요. 어떻게 시작해야 할지 모르겠나요? Kilo Code가 무엇을 할 수 있는지 <DocsLink>문서</DocsLink>에서 자세히 알아보세요.",
 	"selectMode": "상호작용 모드 선택",
 	"selectApiConfig": "API 구성 선택",
 	"enhancePrompt": "추가 컨텍스트로 프롬프트 향상",
@@ -173,41 +174,7 @@
 	"autoApprove": {
 		"title": "자동 승인:",
 		"none": "없음",
-		"description": "자동 승인을 사용하면 Kilo Code가 권한을 요청하지 않고 작업을 수행할 수 있습니다. 완전히 신뢰할 수 있는 작업에만 활성화하세요. 더 자세한 구성은 <settingsLink>설정</settingsLink>에서 사용할 수 있습니다.",
-		"actions": {
-			"readFiles": {
-				"label": "읽기",
-				"description": "컴퓨터의 모든 파일을 읽을 수 있는 액세스 권한을 허용합니다."
-			},
-			"editFiles": {
-				"label": "편집",
-				"description": "컴퓨터의 모든 파일을 수정할 수 있는 권한을 허용합니다."
-			},
-			"executeCommands": {
-				"label": "명령",
-				"description": "승인된 터미널 명령 실행을 허용합니다. 설정 패널에서 구성할 수 있습니다."
-			},
-			"useBrowser": {
-				"label": "브라우저",
-				"description": "헤드리스 브라우저에서 모든 웹사이트를 실행하고 상호작용할 수 있는 기능을 허용합니다."
-			},
-			"useMcp": {
-				"label": "MCP",
-				"description": "파일 시스템을 수정하거나 API와 상호작용할 수 있는 구성된 MCP 서버 사용을 허용합니다."
-			},
-			"switchModes": {
-				"label": "모드",
-				"description": "승인 없이 다른 모드 간 자동 전환을 허용합니다."
-			},
-			"subtasks": {
-				"label": "하위 작업",
-				"description": "승인 없이 하위 작업 생성 및 완료를 허용합니다."
-			},
-			"retryRequests": {
-				"label": "재시도",
-				"description": "제공자가 오류 응답을 반환할 때 실패한 API 요청을 자동으로 재시도합니다."
-			}
-		}
+		"description": "자동 승인을 사용하면 Kilo Code가 권한을 요청하지 않고 작업을 수행할 수 있습니다. 완전히 신뢰할 수 있는 작업에만 활성화하세요. 더 자세한 구성은 <settingsLink>설정</settingsLink>에서 사용할 수 있습니다."
 	},
 	"reasoning": {
 		"thinking": "생각 중",
@@ -217,10 +184,14 @@
 		"copyToInput": "입력창에 복사 (또는 Shift + 클릭)"
 	},
 	"announcement": {
-		"title": "부메랑 태스크로 더 많은 작업 수행 🪃",
-		"description": "작업을 하위 태스크로 분할하여 각각 code, architect, debug 또는 사용자 정의 모드와 같은 전문 모드에서 실행하세요.",
-		"learnMore": "더 알아보기 →",
-		"hideButton": "공지 숨기기"
+		"title": "🎉 Roo Code 3.13 출시",
+		"description": "Roo Code 3.13는 사용자 피드백을 기반으로 새로운 기능과 개선사항을 제공합니다.",
+		"whatsNew": "새로운 기능",
+		"feature1": "<bold>Gemini 2.5 Flash Thinking</bold>: 이제 Gemini 2.5 Flash의 thinking 변형을 사용하고 thinking 토큰 예산을 지정할 수 있습니다",
+		"feature2": "<bold>UI 개선</bold>: 작업 헤더, 채팅 뷰, 기록 미리보기 및 환영 뷰가 시각적으로 업그레이드되었습니다",
+		"feature3": "<bold>버그 수정</bold>: 더 안정적인 차이점 편집 등",
+		"hideButton": "공지 숨기기",
+		"detailsDiscussLinks": "<discordLink>Discord</discordLink>와 <redditLink>Reddit</redditLink>에서 더 자세한 정보를 확인하고 논의하세요 🚀"
 	},
 	"browser": {
 		"rooWantsToUse": "Kilo Code가 브라우저를 사용하고 싶어합니다:",
