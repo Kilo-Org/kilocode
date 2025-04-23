@@ -159,6 +159,7 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 							MozUserSelect: "none",
 							msUserSelect: "none",
 							flexGrow: 1,
+							minWidth: 0, // This allows the div to shrink below its content size
 						}}
 						onClick={() => setIsTaskExpanded(!isTaskExpanded)}>
 						<div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
@@ -171,6 +172,7 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 								overflow: "hidden",
 								textOverflow: "ellipsis",
 								flexGrow: 1,
+								minWidth: 0, // This allows the div to shrink below its content size
 							}}>
 							<span style={{ fontWeight: "bold" }}>
 								{t("chat:task.title")}
@@ -376,7 +378,7 @@ const TaskActions = ({ item }: { item: HistoryItem | undefined }) => {
 	const { t } = useTranslation()
 
 	return (
-		<div className="flex flex-row gap-1 flex-wrap flex-shrink-0">
+		<div className="flex flex-row gap-1 flex-wrap">
 			<Button
 				variant="ghost"
 				size="sm"

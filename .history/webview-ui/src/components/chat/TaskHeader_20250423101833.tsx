@@ -159,6 +159,7 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 							MozUserSelect: "none",
 							msUserSelect: "none",
 							flexGrow: 1,
+							minWidth: 0, // This allows the div to shrink below its content size
 						}}
 						onClick={() => setIsTaskExpanded(!isTaskExpanded)}>
 						<div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
@@ -171,6 +172,7 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 								overflow: "hidden",
 								textOverflow: "ellipsis",
 								flexGrow: 1,
+								minWidth: 0, // This allows the div to shrink below its content size
 							}}>
 							<span style={{ fontWeight: "bold" }}>
 								{t("chat:task.title")}
@@ -333,7 +335,7 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 							)}
 
 							{isCostAvailable && (
-								<div className="flex items-center gap-1 flex-wrap">
+								<div className="flex justify-between items-center h-[20px] flex-wrap">
 									<div className="flex items-center gap-1">
 										<span className="font-bold">{t("chat:task.apiCost")}</span>
 										<span>${totalCost?.toFixed(4)}</span>
@@ -376,7 +378,7 @@ const TaskActions = ({ item }: { item: HistoryItem | undefined }) => {
 	const { t } = useTranslation()
 
 	return (
-		<div className="flex flex-row gap-1 flex-wrap flex-shrink-0">
+		<div className="flex flex-row gap-1 flex-wrap">
 			<Button
 				variant="ghost"
 				size="sm"
@@ -388,6 +390,7 @@ const TaskActions = ({ item }: { item: HistoryItem | undefined }) => {
 				<>
 					<Button
 						variant="ghost"
+						size="sm"
 						title={t("chat:task.delete")}
 						onClick={(e) => {
 							e.stopPropagation()
@@ -397,10 +400,11 @@ const TaskActions = ({ item }: { item: HistoryItem | undefined }) => {
 							} else {
 								setDeleteTaskId(item.id)
 							}
-						}}
-						className="flex items-center gap-1 flex-wrap">
-						<span className="codicon codicon-trash" />
-						{!!item?.size && item.size > 0 && prettyBytes(item.size)}
+						}}>
+						<div className="flex items-center gap-1 flex-wrap">
+							<span className="codicon codicon-trash" />
+							{prettyBytes(item.size)}
+						</div>
 					</Button>
 					{deleteTaskId && (
 						<DeleteTaskDialog

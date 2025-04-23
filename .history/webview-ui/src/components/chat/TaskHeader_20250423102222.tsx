@@ -376,7 +376,7 @@ const TaskActions = ({ item }: { item: HistoryItem | undefined }) => {
 	const { t } = useTranslation()
 
 	return (
-		<div className="flex flex-row gap-1 flex-wrap flex-shrink-0">
+		<div className="flex flex-row gap-1 flex-wrap">
 			<Button
 				variant="ghost"
 				size="sm"
