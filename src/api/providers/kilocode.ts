@@ -27,8 +27,8 @@ export class KiloCodeHandler extends BaseProvider implements SingleCompletionHan
 
 			const openrouterOptions = {
 				...options,
-				openRouterBaseUrl: "https://kilocode.ai/api/openrouter/",
-				// openRouterBaseUrl: "http://localhost:3000/api/openrouter/",
+				// openRouterBaseUrl: "https://kilocode.ai/api/openrouter/",
+				openRouterBaseUrl: "http://localhost:3000/api/openrouter/",
 				openRouterApiKey: options.kilocodeToken,
 			}
 
@@ -253,10 +253,33 @@ export class KiloCodeAnthropicHandler extends BaseProvider implements SingleComp
 				}
 			}
 			if (error.status === 402) {
+				console.log(" \n\n:: Kilo Code payment error", error)
+				// Extract balance from error if available
+				let balance = "-0.00"
+				try {
+					if (error.response?.data?.balance) {
+						balance = parseFloat(error.response.data.balance).toFixed(2)
+					}
+				} catch (e) {
+					console.warn("Failed to parse balance from error response", e)
+				}
+
+				// First yield a text message for backward compatibility
 				yield {
 					type: "text",
-					text: "Go to https://kilocode.ai/profile to purchase more credits.",
+					text: "You have reached your Kilo Code usage limit. Please purchase more credits.",
 				}
+
+				// Then throw a special error that will be caught by the Cline class
+				// and displayed as a modal dialog
+				const paymentError = new Error("Payment required")
+				paymentError.name = "PaymentRequiredError"
+				// Add custom properties to the error
+				;(paymentError as any).isKiloCodePaymentError = true
+				;(paymentError as any).balance = balance
+				;(paymentError as any).buyCreditsUrl = "https://kilocode.ai/profile"
+
+				throw paymentError
 			} else {
 				yield {
 					type: "text",

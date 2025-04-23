@@ -1235,8 +1235,45 @@ export class Cline extends EventEmitter<ClineEvents> {
 			yield firstChunk.value
 			this.isWaitingForFirstChunk = false
 		} catch (error) {
-			// note that this api_req_failed ask is unique in that we only present this option if the api hasn't streamed any content yet (ie it fails on the first chunk due), as it would allow them to hit a retry button. However if the api failed mid-stream, it could be in any arbitrary state where some tools may have executed, so that error is handled differently and requires cancelling the task entirely.
-			if (alwaysApproveResubmit) {
+			console.log("\n\n[attemptApiRequest] error", error)
+			// Check for payment required error from KiloCode provider
+			if ((error as any).isKiloCodePaymentError) {
+				// Get balance from error
+				const balance = (error as any).balance || "-0.00"
+				const buyCreditsUrl = (error as any).buyCreditsUrl || "https://kilocode.ai/profile"
+
+				// Show a specific dialog for payment required
+				const { response } = await this.ask(
+					"payment_required_prompt", // New ask type for the specific UI
+					JSON.stringify({
+						// Pass structured data to the webview
+						title: "Low power!",
+						message: "You have reached your Kilo Code usage limit.",
+						balance: balance,
+						buyCreditsUrl: buyCreditsUrl,
+					}),
+				)
+
+				if (response === "buy_credits_clicked") {
+					// User clicked "Buy Credits"
+					vscode.env.openExternal(vscode.Uri.parse(buyCreditsUrl))
+					// We should probably abort the current attempt after opening the URL,
+					// as the user needs to complete the purchase.
+					// Rethrowing the original error might achieve this, depending on outer handlers.
+					throw error // Rethrow to signal failure upwards
+				} else if (response === "retry_clicked") {
+					// User clicked "Retry". The loop in recursivelyMakeClineRequests should handle the retry.
+					// No specific action needed here, just let the loop continue.
+					// We might need to yield a specific value or throw a specific error
+					// if the outer loop doesn't automatically retry on this path.
+					// For now, assume the loop handles it.
+				} else {
+					// Handle other responses or cancellations if necessary
+					// If the user cancels the dialog, we should probably abort.
+					throw error // Rethrow to signal failure upwards
+				}
+				// Removed incorrect closing brace and comments from lines 1274-1276
+			} else if (alwaysApproveResubmit) {
 				let errorMsg
 
 				if (error.error?.metadata?.raw) {

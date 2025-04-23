@@ -1236,9 +1236,74 @@ export const ChatRowContent = ({
 							/>
 						</>
 					)
+				case "payment_required_prompt": {
+					console.log("\n\n\nPayment required prompt received:", message.text)
+					// Inserted block starts here
+					let data = { title: "Error", message: "Payment required.", balance: "-?.??", buyCreditsUrl: "#" }
+					try {
+						data = JSON.parse(message.text || "{}")
+					} catch (e) {
+						console.error("Failed to parse payment_required_prompt data:", e)
+					}
+					// Define styles used within this case block
+					const headerStyle: React.CSSProperties = {
+						display: "flex",
+						alignItems: "center",
+						gap: "10px",
+						marginBottom: "10px",
+					}
+					const pStyle: React.CSSProperties = {
+						margin: 0,
+						whiteSpace: "pre-wrap",
+						wordBreak: "break-word",
+						overflowWrap: "anywhere",
+					}
+					const errorColor = "var(--vscode-errorForeground)"
+
+					return (
+						<>
+							<div style={headerStyle}>
+								<span
+									className="codicon codicon-error"
+									style={{ color: errorColor, marginBottom: "-1.5px" }}></span>
+								<span style={{ color: errorColor, fontWeight: "bold" }}>{data.title}</span>
+							</div>
+							<p style={pStyle}>{data.message}</p>
+							<p style={{ ...pStyle, marginTop: "10px", color: "var(--vscode-descriptionForeground)" }}>
+								{t("chat:paymentRequired.balance", { balance: data.balance })}
+							</p>
+							<div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
+								<VSCodeButton
+									onClick={() => {
+										vscode.postMessage({
+											type: "askResponse",
+											askResponse: "buy_credits_clicked",
+											text: message.text, // Pass original data back if needed
+										})
+									}}>
+									<span className="codicon codicon-credit-card" style={{ marginRight: "5px" }}></span>
+									{t("chat:paymentRequired.buyCredits")}
+								</VSCodeButton>
+								<VSCodeButton
+									appearance="secondary"
+									onClick={() => {
+										vscode.postMessage({
+											type: "askResponse",
+											askResponse: "retry_clicked",
+											text: message.text, // Pass original data back if needed
+										})
+									}}>
+									<span className="codicon codicon-refresh" style={{ marginRight: "5px" }}></span>
+									{t("chat:paymentRequired.retry")}
+								</VSCodeButton>
+							</div>
+						</>
+					)
+				} // Inserted block ends here
 				default:
 					return null
 			}
+		// Removed extra closing brace
 	}
 }
 
