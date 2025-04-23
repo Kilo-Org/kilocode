@@ -197,7 +197,6 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 				}
 				case "theme": {
 					if (message.text) {
-						console.log("Received theme update:", message.text); // Add this log
 						setTheme(convertTextMateToHljs(JSON.parse(message.text)))
 					}
 					break
