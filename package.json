@@ -140,6 +140,16 @@
 				"icon": "$(add)"
 			},
 			{
+				"command": "kilo-code.importSettings",
+				"title": "Import Settings",
+				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.exportSettings",
+				"title": "Export Settings",
+				"category": "%configuration.title%"
+			},
+			{
 				"command": "kilo-code.mcpButtonClicked",
 				"title": "%command.mcpServers.title%",
 				"icon": "$(server)"
