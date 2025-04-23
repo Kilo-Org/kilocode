@@ -969,7 +969,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				<div
 					// kilocode_change start
 					style={{
-						// marginTop: "-44px", // Removed to prevent overlap with image thumbnails
+						marginTop: "-44px",
 						zIndex: 2,
 						paddingLeft: "10px",
 						paddingRight: "10px",
@@ -1018,7 +1018,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 						{/* kilocode_change: fixed width */}
 						{/* API configuration selector - fixed width */}
-						<div className={cn("overflow-hidden")}>
+						<div className={cn("shrink-0", "w-[70px]")}>
 							<SelectDropdown
 								value={currentConfigId}
 								disabled={selectApiConfigDisabled}
