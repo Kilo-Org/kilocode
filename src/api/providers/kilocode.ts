@@ -42,22 +42,6 @@ export class KiloCodeHandler extends BaseProvider implements SingleCompletionHan
 	}
 
 	getModel(): { id: string; info: ModelInfo } {
-		if (this.handler instanceof KilocodeOpenrouterHandler) {
-			// return hardcoded gemini settings
-			// We used to support quasar, this will now fall back on google gemini since it does not exist anymore so we leave this in for a while now
-			// TODO: keeping this stuff hardcoded like this in here is bad practice and unmaintainable. Leavint this TODO comment here so we come up with something maintainable ASAP
-			return {
-				id: "google/gemini-2.5-pro-preview-03-25",
-				info: {
-					maxTokens: 8192,
-					contextWindow: 1_000_000,
-					supportsImages: true,
-					supportsComputerUse: true,
-					supportsPromptCache: true,
-				},
-			}
-		}
-
 		return this.handler.getModel()
 	}
 
