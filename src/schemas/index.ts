@@ -933,6 +933,7 @@ export const clineAsks = [
 	"use_mcp_server",
 	"payment_required_prompt", // kilocode_change: Added for the low credits dialog
 	"report_bug", // kilocode_change
+	"condense", // kilocode_change: pull in /smol from Cline
 ] as const
 
 export const clineAskSchema = z.enum(clineAsks)

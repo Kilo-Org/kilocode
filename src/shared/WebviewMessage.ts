@@ -29,6 +29,7 @@ export interface WebviewMessage {
 		| "alwaysAllowExecute"
 		| "webviewDidLaunch"
 		| "newTask"
+		| "condense"
 		| "askResponse"
 		| "terminalOperation"
 		| "clearTask"

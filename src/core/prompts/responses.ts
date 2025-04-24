@@ -4,6 +4,15 @@ import * as diff from "diff"
 import { RooIgnoreController, LOCK_TEXT_SYMBOL } from "../ignore/RooIgnoreController"
 
 export const formatResponse = {
+	duplicateFileReadNotice: () =>
+		`[[NOTE] This file read has been removed to save space in the context window. Refer to the latest file read for the most up to date version of this file.]`,
+
+	contextTruncationNotice: () =>
+		`[NOTE] Some previous conversation history with the user has been removed to maintain optimal context window length. The initial user task and the most recent exchanges have been retained for continuity, while intermediate conversation history has been removed. Please keep this in mind as you continue assisting the user.`,
+
+	condense: () =>
+		`The user has accepted the condensed conversation summary you generated. This summary covers important details of the historical conversation with the user which has been truncated.\n<explicit_instructions type="condense_response">It's crucial that you respond by ONLY asking the user what you should work on next. You should NOT take any initiative or make any assumptions about continuing with work. For example you should NOT suggest file changes or attempt to read any files.\nWhen asking the user what you should work on next, you can reference information in the summary which was just generated. However, you should NOT reference information outside of what's contained in the summary for this response. Keep this response CONCISE.</explicit_instructions>`,
+
 	toolDenied: () => `The user denied this operation.`,
 
 	toolDeniedWithFeedback: (feedback?: string) =>
@@ -24,9 +33,9 @@ ${toolUseInstructionsReminder}
 
 # Next Steps
 
-If you have completed the user's task, use the attempt_completion tool. 
-If you require additional information from the user, use the ask_followup_question tool. 
-Otherwise, if you have not completed the task and do not need additional information, then proceed with the next step of the task. 
+If you have completed the user's task, use the attempt_completion tool.
+If you require additional information from the user, use the ask_followup_question tool.
+Otherwise, if you have not completed the task and do not need additional information, then proceed with the next step of the task.
 (This is an automated message, so do not respond to it conversationally.)`,
 
 	tooManyMistakes: (feedback?: string) =>
