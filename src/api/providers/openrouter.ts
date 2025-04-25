@@ -124,7 +124,14 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			...((this.options.openRouterUseMiddleOutTransform ?? true) && { transforms: ["middle-out"] }),
 			...(reasoningEffort && { reasoning: { effort: reasoningEffort } }),
 		}
-		const stream = await this.client.chat.completions.create(completionParams)
+		let stream
+		try {
+			stream = await this.client.chat.completions.create(completionParams)
+		} catch (error) {
+			// Set a flag on the error to indicate that it's a KiloCode payment error
+			error.isKiloCodePaymentError = true
+			throw error
+		}
 
 		let lastUsage
 		try {
