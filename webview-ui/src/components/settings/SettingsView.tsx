@@ -167,13 +167,12 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, o
 		setChangeDetected(false)
 	}, [currentApiConfigName, extensionState, isChangeDetected])
 
-	// kilocode_change
+	// kilocode_change start
 	// Temporary way of making sure that the Settings view updates its local state properly when receiving
 	// api keys from providers that support url callbacks. This whole Settings View needs proper with this local state thing later
 	useEffect(() => {
 		setCachedState((prevCachedState) => ({ ...prevCachedState, ...extensionState }))
 		setChangeDetected(false)
-		// }
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [
 		extensionState.apiConfiguration?.kilocodeToken,
@@ -181,6 +180,15 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, o
 		extensionState.apiConfiguration?.glamaApiKey,
 		extensionState.apiConfiguration?.requestyApiKey,
 	])
+
+	useEffect(() => {
+		// Only update if we're not already detecting changes
+		// This prevents overwriting user changes that haven't been saved yet
+		if (!isChangeDetected) {
+			setCachedState(extensionState)
+		}
+	}, [extensionState, isChangeDetected])
+	// kilocode_change end
 
 	// Bust the cache when settings are imported.
 	useEffect(() => {
@@ -276,6 +284,9 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, o
 			vscode.postMessage({ type: "alwaysAllowModeSwitch", bool: alwaysAllowModeSwitch })
 			vscode.postMessage({ type: "alwaysAllowSubtasks", bool: alwaysAllowSubtasks })
 			vscode.postMessage({ type: "upsertApiConfiguration", text: currentApiConfigName, apiConfiguration })
+
+			// Update cachedState to match the current state to prevent isChangeDetected from being set back to true
+			setCachedState((prevState) => ({ ...prevState, ...extensionState }))
 			setChangeDetected(false)
 		}
 	}
