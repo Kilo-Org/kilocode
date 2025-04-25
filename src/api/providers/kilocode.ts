@@ -212,7 +212,6 @@ export class KiloCodeAnthropicHandler extends BaseProvider implements SingleComp
 				}
 			}
 		} catch (error: any) {
-			console.log("Error in KiloCode API call", error)
 			// this eror handling doesnt seem to be used?
 			if (error.status === 401) {
 				yield {

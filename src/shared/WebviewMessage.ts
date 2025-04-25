@@ -6,8 +6,8 @@ export type ClineAskResponse =
 	| "yesButtonClicked"
 	| "noButtonClicked"
 	| "messageResponse"
-	| "buy_credits_clicked" // Added for payment required dialog
-	| "retry_clicked" // Added for payment required dialog
+	| "buy_credits_clicked" // kilocode_change: Added for payment required dialog
+	| "retry_clicked" // kilocode_change: Added for payment required dialog
 
 export type PromptMode = Mode | "enhance"
 

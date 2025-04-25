@@ -1077,10 +1077,8 @@ export class Cline extends EventEmitter<ClineEvents> {
 			yield firstChunk.value
 			this.isWaitingForFirstChunk = false
 		} catch (error) {
-			console.log("\n\n[attemptApiRequest] error", error)
 			// Check for payment required error from KiloCode provider
 			if ((error as any).isKiloCodePaymentError) {
-				// Get balance from error
 				const balance = (error as any).balance || "-0.00"
 				const buyCreditsUrl = (error as any).buyCreditsUrl || "https://kilocode.ai/profile"
 

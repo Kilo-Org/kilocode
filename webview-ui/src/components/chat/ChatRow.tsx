@@ -1186,16 +1186,14 @@ export const ChatRowContent = ({
 							/>
 						</>
 					)
+				// kilocode_change begin
 				case "payment_required_prompt": {
-					console.log("\n\n\nPayment required prompt received:", message.text)
-					// Inserted block starts here
 					let data = { title: "Error", message: "Payment required.", balance: "-?.??", buyCreditsUrl: "#" }
 					try {
 						data = JSON.parse(message.text || "{}")
 					} catch (e) {
 						console.error("Failed to parse payment_required_prompt data:", e)
 					}
-					// Define styles used within this case block
 					const headerStyle: React.CSSProperties = {
 						display: "flex",
 						alignItems: "center",
@@ -1249,11 +1247,10 @@ export const ChatRowContent = ({
 							</div>
 						</>
 					)
-				} // Inserted block ends here
+				} // kilocode_change end
 				default:
 					return null
 			}
-		// Removed extra closing brace
 	}
 }
 

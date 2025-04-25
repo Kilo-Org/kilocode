@@ -752,7 +752,7 @@ export const clineAsks = [
 	"browser_action_launch",
 	"use_mcp_server",
 	"finishTask",
-	"payment_required_prompt", // Added for the low credits dialog
+	"payment_required_prompt", // kilocode_change: Added for the low credits dialog
 ] as const
 
 export const clineAskSchema = z.enum(clineAsks)
