@@ -130,6 +130,8 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		} catch (error) {
 			// Set a flag on the error to indicate that it's a KiloCode payment error
 			error.isKiloCodePaymentError = true
+			// TODO: 402 response can have balance
+			// error.balance = ??
 			throw error
 		}
 
