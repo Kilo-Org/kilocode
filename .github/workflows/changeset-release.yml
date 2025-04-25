@@ -135,7 +135,7 @@ jobs:
               if: ${{ !contains(github.event.pull_request.labels.*.name, 'changelog-ready') }}
               uses: actions/github-script@v7
               with:
-                  github-token: ${{ secrets.CROSS_REPO_ACCESS_TOKEN }}
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
                   script: |
                       await github.rest.issues.addLabels({
                         owner: context.repo.owner,

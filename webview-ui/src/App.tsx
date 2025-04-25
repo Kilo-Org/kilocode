@@ -117,7 +117,7 @@ const App = () => {
 	) : (
 		<>
 			{tab === "prompts" && <PromptsView onDone={() => switchTab("chat")} />}
-			{tab === "mcp" && <McpView onDone={() => switchTab("settings")} />}
+			{tab === "mcp" && <McpView onDone={() => switchTab("chat")} />}
 			{tab === "history" && <HistoryView onDone={() => switchTab("chat")} />}
 			{tab === "settings" && (
 				<SettingsView
@@ -142,8 +142,9 @@ const App = () => {
 				onSubmit={(requestId, text) => vscode.postMessage({ type: "humanRelayResponse", requestId, text })}
 				onCancel={(requestId) => vscode.postMessage({ type: "humanRelayCancel", requestId })}
 			/>
-			{/* Chat view contains its own bottom controls */}
-			{tab !== "chat" && (
+			{/* kilocode_change */}
+			{/* Chat view and prompts view contain their own bottom controls */}
+			{!["chat", "prompts"].includes(tab) && (
 				<div className="fixed inset-0 top-auto">
 					<BottomControls />
 				</div>

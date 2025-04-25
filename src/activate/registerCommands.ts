@@ -2,7 +2,8 @@ import * as vscode from "vscode"
 import delay from "delay"
 
 import { ClineProvider } from "../core/webview/ClineProvider"
-
+import { t } from "../i18n" // kilocode_change
+import { importSettings, exportSettings } from "../core/config/importExport" // kilocode_change
 /**
  * Helper to get the visible ClineProvider instance or log if not found.
  */
@@ -140,6 +141,32 @@ const getCommandsMap = ({ context, outputChannel, provider }: RegisterCommandOpt
 			if (!visibleProvider) return
 			visibleProvider.postMessageToWebview({ type: "acceptInput" })
 		},
+		// kilocode_change start
+		"kilo-code.importSettings": async () => {
+			const visibleProvider = getVisibleProviderOrLog(outputChannel)
+			if (!visibleProvider) return
+
+			const { success } = await importSettings({
+				providerSettingsManager: visibleProvider.providerSettingsManager,
+				contextProxy: visibleProvider.contextProxy,
+			})
+
+			if (success) {
+				visibleProvider.settingsImportedAt = Date.now()
+				await visibleProvider.postStateToWebview()
+				await vscode.window.showInformationMessage(t("kilocode:info.settings_imported"))
+			}
+		},
+		"kilo-code.exportSettings": async () => {
+			const visibleProvider = getVisibleProviderOrLog(outputChannel)
+			if (!visibleProvider) return
+
+			await exportSettings({
+				providerSettingsManager: visibleProvider.providerSettingsManager,
+				contextProxy: visibleProvider.contextProxy,
+			})
+		},
+		// kilocode_change end
 	}
 }
 
