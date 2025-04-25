@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react"
+import BottomControls from "../chat/BottomControls" // kilocode_change
 import { Button } from "@/components/ui/button"
 import {
 	VSCodeTextArea,
@@ -9,6 +10,7 @@ import {
 	VSCodeRadioGroup,
 	VSCodeRadio,
 } from "@vscode/webview-ui-toolkit/react"
+
 import { useExtensionState } from "../../context/ExtensionStateContext"
 import {
 	Mode,
@@ -22,7 +24,7 @@ import {
 import { modeConfigSchema } from "../../../../src/schemas"
 import { supportPrompt, SupportPromptType } from "../../../../src/shared/support-prompt"
 
-import { TOOL_GROUPS, ToolGroup } from "../../../../src/shared/tool-groups"
+import { TOOL_GROUPS, ToolGroup } from "../../../../src/shared/tools"
 import { vscode } from "../../utils/vscode"
 import { Tab, TabContent, TabHeader } from "../common/Tab"
 import i18next from "i18next"
@@ -1422,6 +1424,8 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 					</div>
 				</div>
 			)}
+			{/* kilocode_change */}
+			<BottomControls />
 		</Tab>
 	)
 }

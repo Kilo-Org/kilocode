@@ -19,6 +19,7 @@ import { getApiMetrics } from "../../../../src/shared/getApiMetrics"
 import { useExtensionState } from "../../context/ExtensionStateContext"
 import { vscode } from "../../utils/vscode"
 import HistoryPreview from "../history/HistoryPreview"
+// import RooHero from "../welcome/RooHero" kilocode_change
 import { normalizeApiConfiguration } from "../settings/ApiOptions"
 import Announcement from "./Announcement"
 import BrowserSessionRow from "./BrowserSessionRow"
@@ -79,7 +80,6 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		showAutoApproveMenu, // kilocode_change
 		alwaysAllowSubtasks,
 		customModes,
-		showGreeting,
 	} = useExtensionState()
 
 	//const task = messages.length > 0 ? (messages[0].say === "task" ? messages[0] : undefined) : undefined) : undefined
@@ -1233,11 +1233,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						paddingBottom: "10px",
 					}}>
 					{showAnnouncement && <Announcement version={version} hideAnnouncement={hideAnnouncement} />}
-					{showGreeting === true && (
-						<div style={{ padding: "0 20px", flexShrink: 0 }}>
-							<h2>{t("chat:greeting")}</h2>
-						</div>
-					)}
+
+					{/* <RooHero /> kilocode_change: disable */}
 					{taskHistory.length > 0 && <HistoryPreview showHistoryView={showHistoryView} />}
 				</div>
 			)}

@@ -1,6 +1,5 @@
 import { Cline } from "../Cline"
-import { ToolUse } from "../assistant-message"
-import { AskApproval, HandleError, PushToolResult, RemoveClosingTag } from "./types"
+import { ToolUse, AskApproval, HandleError, PushToolResult, RemoveClosingTag } from "../../shared/tools"
 import { formatResponse } from "../prompts/responses"
 import { parseXml } from "../../utils/xml"
 
@@ -14,6 +13,7 @@ export async function askFollowupQuestionTool(
 ) {
 	const question: string | undefined = block.params.question
 	const follow_up: string | undefined = block.params.follow_up
+
 	try {
 		if (block.partial) {
 			await cline.ask("followup", removeClosingTag("question", question), block.partial).catch(() => {})
@@ -21,13 +21,12 @@ export async function askFollowupQuestionTool(
 		} else {
 			if (!question) {
 				cline.consecutiveMistakeCount++
+				cline.recordToolError("ask_followup_question")
 				pushToolResult(await cline.sayAndCreateMissingParamError("ask_followup_question", "question"))
 				return
 			}
 
-			type Suggest = {
-				answer: string
-			}
+			type Suggest = { answer: string }
 
 			let follow_up_json = {
 				question,
@@ -40,11 +39,10 @@ export async function askFollowupQuestionTool(
 				}
 
 				try {
-					parsedSuggest = parseXml(follow_up, ["suggest"]) as {
-						suggest: Suggest[] | Suggest
-					}
+					parsedSuggest = parseXml(follow_up, ["suggest"]) as { suggest: Suggest[] | Suggest }
 				} catch (error) {
 					cline.consecutiveMistakeCount++
+					cline.recordToolError("ask_followup_question")
 					await cline.say("error", `Failed to parse operations: ${error.message}`)
 					pushToolResult(formatResponse.toolError("Invalid operations xml format"))
 					return
@@ -58,10 +56,10 @@ export async function askFollowupQuestionTool(
 			}
 
 			cline.consecutiveMistakeCount = 0
-
 			const { text, images } = await cline.ask("followup", JSON.stringify(follow_up_json), false)
 			await cline.say("user_feedback", text ?? "", images)
 			pushToolResult(formatResponse.toolResult(`<answer>\n${text}\n</answer>`, images))
+
 			return
 		}
 	} catch (error) {

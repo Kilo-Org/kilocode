@@ -24,6 +24,7 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 
 		const apiKeyFieldName =
 			this.options.anthropicBaseUrl && this.options.anthropicUseAuthToken ? "authToken" : "apiKey"
+
 		this.client = new Anthropic({
 			baseURL: this.options.anthropicBaseUrl || undefined,
 			[apiKeyFieldName]: this.options.apiKey,
@@ -218,10 +219,10 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 	}
 
 	async completePrompt(prompt: string) {
-		let { id: modelId, temperature } = this.getModel()
+		let { id: model, temperature } = this.getModel()
 
 		const message = await this.client.messages.create({
-			model: modelId,
+			model,
 			max_tokens: ANTHROPIC_DEFAULT_MAX_TOKENS,
 			thinking: undefined,
 			temperature,
@@ -242,16 +243,11 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 	override async countTokens(content: Array<Anthropic.Messages.ContentBlockParam>): Promise<number> {
 		try {
 			// Use the current model
-			const actualModelId = this.getModel().id
+			const { id: model } = this.getModel()
 
 			const response = await this.client.messages.countTokens({
-				model: actualModelId,
-				messages: [
-					{
-						role: "user",
-						content: content,
-					},
-				],
+				model,
+				messages: [{ role: "user", content: content }],
 			})
 
 			return response.input_tokens

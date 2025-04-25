@@ -30,7 +30,8 @@
 		"experimental": "Deneysel Özellikler",
 		"language": "Dil",
 		"about": "Kilo Code Hakkında",
-		"interface": "Arayüz"
+		"interface": "Arayüz",
+		"mcp": "MCP Sunucuları"
 	},
 	"autoApprove": {
 		"description": "Kilo Code'nun onay gerektirmeden otomatik olarak işlemler gerçekleştirmesine izin verin. Bu ayarları yalnızca yapay zekaya tamamen güveniyorsanız ve ilgili güvenlik risklerini anlıyorsanız etkinleştirin.",
@@ -483,11 +484,5 @@
 	"labels": {
 		"customArn": "Özel ARN",
 		"useCustomArn": "Özel ARN kullan..."
-	},
-	"interface": {
-		"showgreeting": {
-			"label": "Karşılama mesajını göster",
-			"description": "Etkinleştirildiğinde, Roo bir karşılama mesajı ve tanıtım gösterecektir."
-		}
 	}
 }

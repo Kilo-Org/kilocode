@@ -37,10 +37,10 @@ import { getLmStudioModels } from "../../api/providers/lmstudio"
 import { openMention } from "../mentions"
 import { getWorkspacePath } from "../../utils/path"
 import { Mode, defaultModeSlug, getModeBySlug, getGroupName } from "../../shared/modes"
-import { getDiffStrategy } from "../diff/DiffStrategy"
 import { SYSTEM_PROMPT } from "../prompts/system"
 import { buildApiHandler } from "../../api"
 import { GlobalState } from "../../schemas"
+import { MultiSearchReplaceDiffStrategy } from "../diff/strategies/multi-search-replace"
 
 export const webviewMessageHandler = async (provider: ClineProvider, message: WebviewMessage) => {
 	// Utility functions provided for concise get/update of global state via contextProxy API.
@@ -642,11 +642,6 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 		case "diffEnabled":
 			const diffEnabled = message.bool ?? true
 			await updateGlobalState("diffEnabled", diffEnabled)
-			await provider.postStateToWebview()
-			break
-		case "showGreeting":
-			const showGreeting = message.bool ?? true
-			await updateGlobalState("showGreeting", showGreeting)
 			await provider.postStateToWebview()
 			break
 		case "enableCheckpoints":
@@ -1412,12 +1407,7 @@ const generateSystemPrompt = async (provider: ClineProvider, message: WebviewMes
 		language,
 	} = await provider.getState()
 
-	// Create diffStrategy based on current model and settings.
-	const diffStrategy = getDiffStrategy({
-		model: apiConfiguration.apiModelId || apiConfiguration.openRouterModelId || "",
-		experiments,
-		fuzzyMatchThreshold,
-	})
+	const diffStrategy = new MultiSearchReplaceDiffStrategy(fuzzyMatchThreshold)
 
 	const cwd = provider.cwd
 

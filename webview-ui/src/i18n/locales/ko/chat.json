@@ -1,5 +1,5 @@
 {
-	"greeting": "Kilo Code가 어떻게 도와드릴까요?",
+	"greeting": "Kilo Code가 당신을 위해 무엇을 할 수 있을까요?",
 	"task": {
 		"title": "작업",
 		"seeMore": "더 보기",
@@ -68,6 +68,7 @@
 		"tooltip": "현재 작업 취소"
 	},
 	"scrollToBottom": "채팅 하단으로 스크롤",
+	"onboarding": "<strong>이 작업 공간의 작업 목록이 비어 있습니다.</strong> 아래에 작업을 입력하여 시작하세요. 어떻게 시작해야 할지 모르겠나요? Kilo Code가 무엇을 할 수 있는지 <DocsLink>문서</DocsLink>에서 자세히 알아보세요.",
 	"selectMode": "상호작용 모드 선택",
 	"selectApiConfig": "API 구성 선택",
 	"enhancePrompt": "추가 컨텍스트로 프롬프트 향상",
@@ -183,12 +184,12 @@
 		"copyToInput": "입력창에 복사 (또는 Shift + 클릭)"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code 3.12 출시",
-		"description": "Roo Code 3.12는 사용자 피드백을 기반으로 새로운 기능과 개선사항을 제공합니다.",
+		"title": "🎉 Roo Code 3.13 출시",
+		"description": "Roo Code 3.13는 사용자 피드백을 기반으로 새로운 기능과 개선사항을 제공합니다.",
 		"whatsNew": "새로운 기능",
-		"feature1": "<bold>Grok 지원</bold>: xAI 제공업체 추가 및 OpenRouter에서 Grok 추론 노력 옵션 제공",
-		"feature2": "<bold>차이점 편집 개선</bold>: 프로필별 구성 및 오류 감소를 위한 문자열 정규화 개선",
-		"feature3": "<bold>체크포인트 향상</bold>: 더 빠르고 안정적인 체크포인트",
+		"feature1": "<bold>Gemini 2.5 Flash Thinking</bold>: 이제 Gemini 2.5 Flash의 thinking 변형을 사용하고 thinking 토큰 예산을 지정할 수 있습니다",
+		"feature2": "<bold>UI 개선</bold>: 작업 헤더, 채팅 뷰, 기록 미리보기 및 환영 뷰가 시각적으로 업그레이드되었습니다",
+		"feature3": "<bold>버그 수정</bold>: 더 안정적인 차이점 편집 등",
 		"hideButton": "공지 숨기기",
 		"detailsDiscussLinks": "<discordLink>Discord</discordLink>와 <redditLink>Reddit</redditLink>에서 더 자세한 정보를 확인하고 논의하세요 🚀"
 	},

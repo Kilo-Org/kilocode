@@ -1,5 +1,6 @@
 {
 	"greeting": "Olá, eu sou o Kilo Code!",
+	"introduction": "<strong>Kilo Code é o principal agente de codificação autônomo.</strong> Prepare-se para arquitetar, codificar, depurar e aumentar sua produtividade como nunca antes. Para continuar, o Kilo Code necessita de uma chave API.",
 	"notice": "Para começar, esta extensão precisa de um provedor de API.",
 	"start": "Vamos lá!",
 	"chooseProvider": "Escolha um provedor de API para começar:",

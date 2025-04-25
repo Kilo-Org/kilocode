@@ -7,7 +7,7 @@
 		"tokens": "Token 用量:",
 		"cache": "缓存:",
 		"apiCost": "API 费用:",
-		"contextWindow": "上下文窗口:",
+		"contextWindow": "上下文长度：",
 		"closeAndStart": "关闭任务并开始新任务",
 		"export": "导出任务历史",
 		"delete": "删除任务（Shift + 点击跳过确认）"
@@ -68,7 +68,7 @@
 		"tooltip": "取消当前操作"
 	},
 	"scrollToBottom": "滚动到聊天底部",
-	"aboutMe": "基于最新的AI编程技术，我可以逐步处理复杂软件开发任务。支持创建编辑文件、分析复杂项目、浏览器操作及运行终端命令，不仅能提供代码补全和基础答疑，还能完成更高阶的开发协助。通过MCP系统，我甚至可以自己制作新工具，持续提升解决问题的能力。",
+	"onboarding": "<strong>此工作区中的任务列表为空。</strong> 请在下方输入任务开始。 不确定如何开始？ 在 <DocsLink>文档</DocsLink> 中阅读更多关于 Kilo Code 可以为您做什么的信息。",
 	"selectMode": "选择交互模式",
 	"selectApiConfig": "选择API配置",
 	"enhancePrompt": "增强提示词",
@@ -184,12 +184,12 @@
 		"copyToInput": "复制到输入框（或按住Shift点击）"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code 3.12 已发布",
-		"description": "Roo Code 3.12 带来基于您反馈的新功能和改进。",
+		"title": "🎉 Roo Code 3.13 已发布",
+		"description": "Roo Code 3.13 带来基于您反馈的新功能和改进。",
 		"whatsNew": "新特性",
-		"feature1": "<bold>Grok 支持</bold>: 添加 xAI 提供商并在 OpenRouter 上提供 Grok 推理强度选项",
-		"feature2": "<bold>差异编辑改进</bold>: 支持按配置文件设置和改进字符串规范化以减少错误",
-		"feature3": "<bold>检查点增强</bold>: 更快速可靠的检查点功能",
+		"feature1": "<bold>Gemini 2.5 Flash Thinking</bold>: 现在可以使用 Gemini 2.5 Flash 的 thinking 变体并指定 thinking Token 预算",
+		"feature2": "<bold>UI 改进</bold>: 任务标题、聊天视图、历史预览和欢迎视图已进行视觉升级",
+		"feature3": "<bold>错误修复</bold>: 更可靠的差异编辑等功能",
 		"hideButton": "隐藏公告",
 		"detailsDiscussLinks": "在 <discordLink>Discord</discordLink> 和 <redditLink>Reddit</redditLink> 获取更多详情并参与讨论 🚀"
 	},

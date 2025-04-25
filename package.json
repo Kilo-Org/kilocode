@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.16.2",
+	"version": "4.17.0",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -138,6 +138,16 @@
 				"command": "kilo-code.plusButtonClicked",
 				"title": "%command.newTask.title%",
 				"icon": "$(add)"
+			},
+			{
+				"command": "kilo-code.importSettings",
+				"title": "Import Settings",
+				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.exportSettings",
+				"title": "Export Settings",
+				"category": "%configuration.title%"
 			},
 			{
 				"command": "kilo-code.mcpButtonClicked",
@@ -303,13 +313,28 @@
 			],
 			"view/title": [
 				{
-					"command": "kilo-code.popoutButtonClicked",
-					"group": "navigation@4",
+					"command": "kilo-code.plusButtonClicked",
+					"group": "navigation@1",
+					"when": "view == kilo-code.SidebarProvider"
+				},
+				{
+					"command": "kilo-code.historyButtonClicked",
+					"group": "navigation@2",
+					"when": "view == kilo-code.SidebarProvider"
+				},
+				{
+					"command": "kilo-code.mcpButtonClicked",
+					"group": "navigation@3",
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
 					"command": "kilo-code.settingsButtonClicked",
-					"group": "navigation@1",
+					"group": "navigation@4",
+					"when": "view == kilo-code.SidebarProvider"
+				},
+				{
+					"command": "kilo-code.popoutButtonClicked",
+					"group": "navigation@5",
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
@@ -330,28 +355,23 @@
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
 				},
 				{
-					"command": "kilo-code.mcpButtonClicked",
+					"command": "kilo-code.historyButtonClicked",
 					"group": "navigation@3",
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
 				},
 				{
-					"command": "kilo-code.historyButtonClicked",
+					"command": "kilo-code.popoutButtonClicked",
 					"group": "navigation@4",
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
 				},
 				{
-					"command": "kilo-code.popoutButtonClicked",
+					"command": "kilo-code.settingsButtonClicked",
 					"group": "navigation@5",
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
 				},
 				{
-					"command": "kilo-code.settingsButtonClicked",
-					"group": "navigation@6",
-					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
-				},
-				{
 					"command": "kilo-code.helpButtonClicked",
-					"group": "navigation@7",
+					"group": "navigation@6",
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
 				}
 			]
@@ -447,7 +467,7 @@
 		"@anthropic-ai/vertex-sdk": "^0.7.0",
 		"@aws-sdk/client-bedrock-runtime": "^3.779.0",
 		"@google-cloud/vertexai": "^1.9.3",
-		"@google/generative-ai": "^0.18.0",
+		"@google/genai": "^0.9.0",
 		"@mistralai/mistralai": "^1.3.6",
 		"@modelcontextprotocol/sdk": "^1.7.0",
 		"@types/clone-deep": "^4.0.4",

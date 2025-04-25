@@ -30,7 +30,8 @@
 		"experimental": "Funkcje eksperymentalne",
 		"language": "Język",
 		"about": "O Kilo Code",
-		"interface": "Interfejs"
+		"interface": "Interfejs",
+		"mcp": "Serwery MCP"
 	},
 	"autoApprove": {
 		"description": "Pozwól Kilo Code na automatyczne wykonywanie operacji bez wymagania zatwierdzenia. Włącz te ustawienia tylko jeśli w pełni ufasz AI i rozumiesz związane z tym zagrożenia bezpieczeństwa.",
@@ -483,11 +484,5 @@
 	"labels": {
 		"customArn": "Niestandardowy ARN",
 		"useCustomArn": "Użyj niestandardowego ARN..."
-	},
-	"interface": {
-		"showgreeting": {
-			"label": "Pokaż wiadomość powitalną",
-			"description": "Gdy włączone, Roo wyświetli wiadomość powitalną i wprowadzenie."
-		}
 	}
 }

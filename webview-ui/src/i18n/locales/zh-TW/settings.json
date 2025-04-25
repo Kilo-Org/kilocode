@@ -30,7 +30,8 @@
 		"experimental": "實驗性功能",
 		"language": "語言",
 		"about": "關於 Kilo Code",
-		"interface": "介面"
+		"interface": "介面",
+		"mcp": "MCP 伺服器"
 	},
 	"autoApprove": {
 		"description": "允許 Kilo Code 無需核准即執行操作。僅在您完全信任 AI 並了解相關安全風險時啟用這些設定。",
@@ -482,11 +483,5 @@
 	"labels": {
 		"customArn": "自訂 ARN",
 		"useCustomArn": "使用自訂 ARN..."
-	},
-	"interface": {
-		"showgreeting": {
-			"label": "顯示歡迎訊息",
-			"description": "啟用後，Roo 將顯示歡迎訊息與介紹。"
-		}
 	}
 }
