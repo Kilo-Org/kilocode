@@ -21,6 +21,7 @@ import {
 import { convertToMentionPath } from "@/utils/path-mentions"
 import { SelectDropdown, DropdownOptionType, Button } from "@/components/ui"
 import { normalizeApiConfiguration } from "../settings/ApiOptions" // kilocode_change
+import { useVSCodeTheme } from "@/kilocode/hooks/useVSCodeTheme" // kilocode_change
 
 import Thumbnails from "../common/Thumbnails"
 import { MAX_IMAGES_PER_MESSAGE } from "./ChatView"
@@ -78,6 +79,8 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			togglePinnedApiConfig,
 			apiConfiguration, // kilocode_change
 		} = useExtensionState()
+
+		const currentTheme = useVSCodeTheme() // kilocode_change
 
 		// Find the ID and display text for the currently selected API configuration
 		const { currentConfigId, displayName } = useMemo(() => {
@@ -1011,8 +1014,12 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 									vscode.postMessage({ type: "mode", text: value })
 								}}
 								shortcutText={modeShortcutText}
-								// kilocode_change: add different border and background colors
-								triggerClassName="w-full bg-[#1e1e1e] border-[#333333] hover:bg-[#2d2d2d]"
+								triggerClassName={cn("w-full", {
+									"bg-[#1e1e1e] border-[#333333] hover:bg-[#2d2d2d]":
+										currentTheme === "vscode-dark" || currentTheme === "vscode-high-contrast",
+									"bg-[var(--vscode-input-background)] border-[var(--vscode-input-border)] hover:bg-[var(--vscode-input-hoverBackground)]":
+										currentTheme === "vscode-light",
+								})}
 							/>
 						</div>
 
@@ -1083,7 +1090,12 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 								}}
 								contentClassName="max-h-[300px] overflow-y-auto"
 								// kilocode_change: add different border and background colors
-								triggerClassName="w-full text-ellipsis overflow-hidden bg-[#1e1e1e] border-[#333333] hover:bg-[#2d2d2d]"
+								triggerClassName={cn("w-full text-ellipsis overflow-hidden", {
+									"bg-[#1e1e1e] border-[#333333] hover:bg-[#2d2d2d]":
+										currentTheme === "vscode-dark" || currentTheme === "vscode-high-contrast",
+									"bg-[var(--vscode-input-background)] border-[var(--vscode-input-border)] hover:bg-[var(--vscode-input-hoverBackground)]":
+										currentTheme === "vscode-light",
+								})}
 								itemClassName="group"
 								renderItem={({ type, value, label, pinned }) => {
 									if (type !== DropdownOptionType.ITEM) {
