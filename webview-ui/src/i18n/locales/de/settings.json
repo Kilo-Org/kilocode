@@ -393,7 +393,7 @@
 	},
 	"promptCaching": {
 		"label": "Prompt-Caching aktivieren",
-		"description": "Wenn aktiviert, wird Roo dieses Modell mit aktiviertem Prompt-Caching verwenden, um Kosten zu reduzieren."
+		"description": "Wenn aktiviert, wird Kilo Code dieses Modell mit aktiviertem Prompt-Caching verwenden, um Kosten zu reduzieren."
 	},
 	"temperature": {
 		"useCustom": "Benutzerdefinierte Temperatur verwenden",

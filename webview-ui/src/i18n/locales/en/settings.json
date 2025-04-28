@@ -393,7 +393,7 @@
 	},
 	"promptCaching": {
 		"label": "Enable prompt caching",
-		"description": "When enabled, Roo will use this model with prompt caching turned on in order to reduce costs."
+		"description": "When enabled, Kilo Code will use this model with prompt caching turned on in order to reduce costs."
 	},
 	"temperature": {
 		"useCustom": "Use custom temperature",
