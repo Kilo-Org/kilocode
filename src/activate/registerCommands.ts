@@ -2,7 +2,8 @@ import * as vscode from "vscode"
 import delay from "delay"
 
 import { ClineProvider } from "../core/webview/ClineProvider"
-
+import { t } from "../i18n" // kilocode_change
+import { importSettings, exportSettings } from "../core/config/importExport" // kilocode_change
 /**
  * Helper to get the visible ClineProvider instance or log if not found.
  */
@@ -116,23 +117,26 @@ const getCommandsMap = ({ context, outputChannel, provider }: RegisterCommandOpt
 		},
 		// kilocode_change begin
 		"kilo-code.focusChatInput": async () => {
-			let visibleProvider = getVisibleProviderOrLog(outputChannel)
-
-			if (!visibleProvider) {
+			try {
 				await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
 				await delay(100)
 
-				visibleProvider = getVisibleProviderOrLog(outputChannel)
+				let visibleProvider = getVisibleProviderOrLog(outputChannel)
 
-				// If still no visible provider, try opening in a new tab
 				if (!visibleProvider) {
+					// If still no visible provider, try opening in a new tab
 					const tabProvider = await openClineInNewTab({ context, outputChannel })
 					await delay(100)
 					visibleProvider = tabProvider
 				}
-			}
 
-			visibleProvider?.postMessageToWebview({ type: "action", action: "focusChatInput" })
+				visibleProvider?.postMessageToWebview({
+					type: "action",
+					action: "focusChatInput",
+				})
+			} catch (error) {
+				outputChannel.appendLine(`Error in focusChatInput: ${error}`)
+			}
 		},
 		// kilocode_change end
 		"kilo-code.acceptInput": () => {
@@ -140,6 +144,32 @@ const getCommandsMap = ({ context, outputChannel, provider }: RegisterCommandOpt
 			if (!visibleProvider) return
 			visibleProvider.postMessageToWebview({ type: "acceptInput" })
 		},
+		// kilocode_change start
+		"kilo-code.importSettings": async () => {
+			const visibleProvider = getVisibleProviderOrLog(outputChannel)
+			if (!visibleProvider) return
+
+			const { success } = await importSettings({
+				providerSettingsManager: visibleProvider.providerSettingsManager,
+				contextProxy: visibleProvider.contextProxy,
+			})
+
+			if (success) {
+				visibleProvider.settingsImportedAt = Date.now()
+				await visibleProvider.postStateToWebview()
+				await vscode.window.showInformationMessage(t("kilocode:info.settings_imported"))
+			}
+		},
+		"kilo-code.exportSettings": async () => {
+			const visibleProvider = getVisibleProviderOrLog(outputChannel)
+			if (!visibleProvider) return
+
+			await exportSettings({
+				providerSettingsManager: visibleProvider.providerSettingsManager,
+				contextProxy: visibleProvider.contextProxy,
+			})
+		},
+		// kilocode_change end
 	}
 }
 

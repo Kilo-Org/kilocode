@@ -114,8 +114,30 @@ export async function writeToFileTool(
 			if (!predictedLineCount) {
 				cline.consecutiveMistakeCount++
 				cline.recordToolError("write_to_file")
-				pushToolResult(await cline.sayAndCreateMissingParamError("write_to_file", "line_count"))
-				await cline.diffViewProvider.reset()
+
+				// Calculate the actual number of lines in the content
+				const actualLineCount = newContent.split("\n").length
+
+				// Check if this is a new file or existing file
+				const isNewFile = !fileExists
+
+				// Check if diffStrategy is enabled
+				const diffStrategyEnabled = !!cline.diffStrategy
+
+				// Use more specific error message for line_count that provides guidance based on the situation
+				await cline.say(
+					"error",
+					`Roo tried to use write_to_file${
+						relPath ? ` for '${relPath.toPosix()}'` : ""
+					} but the required parameter 'line_count' was missing or truncated after ${actualLineCount} lines of content were written. Retrying...`,
+				)
+
+				pushToolResult(
+					formatResponse.toolError(
+						formatResponse.lineCountTruncationError(actualLineCount, isNewFile, diffStrategyEnabled),
+					),
+				)
+				await cline.diffViewProvider.revertChanges()
 				return
 			}
 
@@ -212,7 +234,7 @@ export async function writeToFileTool(
 						)}\n</final_file_content>\n\n` +
 						`Please note:\n` +
 						`1. You do not need to re-write the file with these changes, as they have already been applied.\n` +
-						`2. Proceed with the task using cline updated file content as the new baseline.\n` +
+						`2. Proceed with the task using this updated file content as the new baseline.\n` +
 						`3. If the user's edits have addressed part of the task or changed the requirements, adjust your approach accordingly.` +
 						`${newProblemsMessage}`,
 				)

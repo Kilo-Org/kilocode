@@ -123,7 +123,12 @@
 		"didRead": "Kilo Code leu este arquivo:",
 		"wantsToEdit": "Kilo Code quer editar este arquivo:",
 		"wantsToEditOutsideWorkspace": "Kilo Code quer editar este arquivo fora do espaço de trabalho:",
-		"wantsToCreate": "Kilo Code quer criar um novo arquivo:"
+		"wantsToCreate": "Kilo Code quer criar um novo arquivo:",
+		"wantsToSearchReplace": "Kilo Code quer realizar busca e substituição neste arquivo:",
+		"didSearchReplace": "Kilo Code realizou busca e substituição neste arquivo:",
+		"wantsToInsert": "Kilo Code quer inserir conteúdo neste arquivo:",
+		"wantsToInsertWithLineNumber": "Kilo Code quer inserir conteúdo neste arquivo na linha {{lineNumber}}:",
+		"wantsToInsertAtEnd": "Kilo Code quer adicionar conteúdo ao final deste arquivo:"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code quer visualizar os arquivos de nível superior neste diretório:",
@@ -184,12 +189,12 @@
 		"copyToInput": "Copiar para entrada (ou Shift + clique)"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code 3.13 Lançado",
-		"description": "Roo Code 3.13 traz novos recursos e melhorias baseados no seu feedback.",
+		"title": "🎉 Roo Code 3.14 Lançado",
+		"description": "Roo Code 3.14 traz novos recursos e melhorias baseados no seu feedback.",
 		"whatsNew": "O que há de novo",
-		"feature1": "<bold>Gemini 2.5 Flash Thinking</bold>: Agora você pode usar a variante thinking do Gemini 2.5 Flash e especificar um orçamento de tokens para thinking",
-		"feature2": "<bold>Melhorias na UI</bold>: O cabeçalho de tarefas, visualização de chat, pré-visualização do histórico e tela de boas-vindas foram visualmente aprimorados",
-		"feature3": "<bold>Correções de bugs</bold>: Edições de diferenças mais confiáveis e mais",
+		"feature1": "<bold>Ferramentas de edição aprimoradas</bold>: As ferramentas <code>search_and_replace</code> e <code>insert_content</code> foram aprimoradas e não são mais experimentais",
+		"feature2": "<bold>Correções no apply_diff</bold>: Continuamos trabalhando para melhorar a ferramenta <code>apply_diff</code>",
+		"feature3": "<bold>Toneladas de outras melhorias</bold>: Inúmeras correções e aprimoramentos em toda a extensão",
 		"hideButton": "Ocultar anúncio",
 		"detailsDiscussLinks": "Obtenha mais detalhes e participe da discussão no <discordLink>Discord</discordLink> e <redditLink>Reddit</redditLink> 🚀"
 	},
@@ -215,9 +220,5 @@
 			"close": "Fechar navegador"
 		}
 	},
-	"notifications": {
-		"toolRequest": "Solicitação de ferramenta aguardando aprovação",
-		"browserAction": "Ação do navegador aguardando aprovação",
-		"command": "Comando aguardando aprovação"
-	}
+	"systemPromptWarning": "AVISO: Substituição personalizada de instrução do sistema ativa. Isso pode comprometer gravemente a funcionalidade e causar comportamento imprevisível."
 }

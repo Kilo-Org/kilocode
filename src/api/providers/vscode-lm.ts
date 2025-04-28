@@ -2,7 +2,6 @@ import { Anthropic } from "@anthropic-ai/sdk"
 import * as vscode from "vscode"
 
 import { SingleCompletionHandler } from "../"
-import { calculateApiCostAnthropic } from "../../utils/cost"
 import { ApiStream } from "../transform/stream"
 import { convertToVsCodeLmMessages } from "../transform/vscode-lm-format"
 import { SELECTOR_SEPARATOR, stringifyVsCodeLmModelSelector } from "../../shared/vsCodeSelectorUtils"
@@ -61,6 +60,7 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 					}
 				}
 			})
+			this.initializeClient()
 		} catch (error) {
 			// Ensure cleanup if constructor fails
 			this.dispose()
@@ -70,7 +70,30 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 			)
 		}
 	}
-
+	/**
+	 * Initializes the VS Code Language Model client.
+	 * This method is called during the constructor to set up the client.
+	 * This useful when the client is not created yet and call getModel() before the client is created.
+	 * @returns Promise<void>
+	 * @throws Error when client initialization fails
+	 */
+	async initializeClient(): Promise<void> {
+		try {
+			// Check if the client is already initialized
+			if (this.client) {
+				console.debug("Roo Code <Language Model API>: Client already initialized")
+				return
+			}
+			// Create a new client instance
+			this.client = await this.createClient(this.options.vsCodeLmModelSelector || {})
+			console.debug("Roo Code <Language Model API>: Client initialized successfully")
+		} catch (error) {
+			// Handle errors during client initialization
+			const errorMessage = error instanceof Error ? error.message : "Unknown error"
+			console.error("Roo Code <Language Model API>: Client initialization failed:", errorMessage)
+			throw new Error(`Roo Code <Language Model API>: Failed to initialize client: ${errorMessage}`)
+		}
+	}
 	/**
 	 * Creates a language model chat client based on the provided selector.
 	 *
@@ -420,7 +443,6 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 				type: "usage",
 				inputTokens: totalInputTokens,
 				outputTokens: totalOutputTokens,
-				totalCost: calculateApiCostAnthropic(this.getModel().info, totalInputTokens, totalOutputTokens),
 			}
 		} catch (error: unknown) {
 			this.ensureCleanState()

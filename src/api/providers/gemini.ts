@@ -1,42 +1,133 @@
 import type { Anthropic } from "@anthropic-ai/sdk"
 import {
 	GoogleGenAI,
-	ThinkingConfig,
 	type GenerateContentResponseUsageMetadata,
 	type GenerateContentParameters,
+	type Content,
+	CreateCachedContentConfig,
 } from "@google/genai"
+import NodeCache from "node-cache"
 
 import { SingleCompletionHandler } from "../"
 import type { ApiHandlerOptions, GeminiModelId, ModelInfo } from "../../shared/api"
 import { geminiDefaultModelId, geminiModels } from "../../shared/api"
-import { convertAnthropicContentToGemini, convertAnthropicMessageToGemini } from "../transform/gemini-format"
+import {
+	convertAnthropicContentToGemini,
+	convertAnthropicMessageToGemini,
+	getMessagesLength,
+} from "../transform/gemini-format"
 import type { ApiStream } from "../transform/stream"
 import { BaseProvider } from "./base-provider"
 
+const CACHE_TTL = 5
+
+const CONTEXT_CACHE_TOKEN_MINIMUM = 4096
+
+type CacheEntry = {
+	key: string
+	count: number
+}
+
 export class GeminiHandler extends BaseProvider implements SingleCompletionHandler {
 	protected options: ApiHandlerOptions
+
 	private client: GoogleGenAI
+	private contentCaches: NodeCache
+	private isCacheBusy = false
 
 	constructor(options: ApiHandlerOptions) {
 		super()
 		this.options = options
 		this.client = new GoogleGenAI({ apiKey: options.geminiApiKey ?? "not-provided" })
+		this.contentCaches = new NodeCache({ stdTTL: 5 * 60, checkperiod: 5 * 60 })
 	}
 
-	async *createMessage(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): ApiStream {
-		const { id: model, thinkingConfig, maxOutputTokens } = this.getModel()
+	async *createMessage(
+		systemInstruction: string,
+		messages: Anthropic.Messages.MessageParam[],
+		cacheKey?: string,
+	): ApiStream {
+		const { id: model, thinkingConfig, maxOutputTokens, info } = this.getModel()
+
+		const contents = messages.map(convertAnthropicMessageToGemini)
+		const contentsLength = systemInstruction.length + getMessagesLength(contents)
+
+		let uncachedContent: Content[] | undefined = undefined
+		let cachedContent: string | undefined = undefined
+
+		// The minimum input token count for context caching is 4,096.
+		// For a basic approximation we assume 4 characters per token.
+		// We can use tiktoken eventually to get a more accurat token count.
+		// https://ai.google.dev/gemini-api/docs/caching?lang=node
+		// https://ai.google.dev/gemini-api/docs/tokens?lang=node
+		const isCacheAvailable =
+			info.supportsPromptCache &&
+			this.options.promptCachingEnabled &&
+			cacheKey &&
+			contentsLength > 4 * CONTEXT_CACHE_TOKEN_MINIMUM
+
+		let cacheWrite = false
+
+		if (isCacheAvailable) {
+			const cacheEntry = this.contentCaches.get<CacheEntry>(cacheKey)
+
+			if (cacheEntry) {
+				uncachedContent = contents.slice(cacheEntry.count, contents.length)
+				cachedContent = cacheEntry.key
+				console.log(
+					`[GeminiHandler] using ${cacheEntry.count} cached messages (${cacheEntry.key}) and ${uncachedContent.length} uncached messages`,
+				)
+			}
+
+			if (!this.isCacheBusy) {
+				this.isCacheBusy = true
+				const timestamp = Date.now()
+
+				this.client.caches
+					.create({
+						model,
+						config: {
+							contents,
+							systemInstruction,
+							ttl: `${CACHE_TTL * 60}s`,
+							httpOptions: { timeout: 120_000 },
+						},
+					})
+					.then((result) => {
+						const { name, usageMetadata } = result
+
+						if (name) {
+							this.contentCaches.set<CacheEntry>(cacheKey, { key: name, count: contents.length })
+							console.log(
+								`[GeminiHandler] cached ${contents.length} messages (${usageMetadata?.totalTokenCount ?? "-"} tokens) in ${Date.now() - timestamp}ms`,
+							)
+						}
+					})
+					.catch((error) => {
+						console.error(`[GeminiHandler] caches.create error`, error)
+					})
+					.finally(() => {
+						this.isCacheBusy = false
+					})
+
+				cacheWrite = true
+			}
+		}
+
+		const isCacheUsed = !!cachedContent
 
 		const params: GenerateContentParameters = {
 			model,
-			contents: messages.map(convertAnthropicMessageToGemini),
+			contents: uncachedContent ?? contents,
 			config: {
+				cachedContent,
+				systemInstruction: isCacheUsed ? undefined : systemInstruction,
 				httpOptions: this.options.googleGeminiBaseUrl
 					? { baseUrl: this.options.googleGeminiBaseUrl }
 					: undefined,
 				thinkingConfig,
 				maxOutputTokens,
 				temperature: this.options.modelTemperature ?? 0,
-				systemInstruction: systemPrompt,
 			},
 		}
 
@@ -55,46 +146,57 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 		}
 
 		if (lastUsageMetadata) {
+			const inputTokens = lastUsageMetadata.promptTokenCount ?? 0
+			const outputTokens = lastUsageMetadata.candidatesTokenCount ?? 0
+			const cacheWriteTokens = cacheWrite ? inputTokens : undefined
+			const cacheReadTokens = lastUsageMetadata.cachedContentTokenCount
+			const reasoningTokens = lastUsageMetadata.thoughtsTokenCount
+
 			yield {
 				type: "usage",
-				inputTokens: lastUsageMetadata.promptTokenCount ?? 0,
-				outputTokens: lastUsageMetadata.candidatesTokenCount ?? 0,
+				inputTokens,
+				outputTokens,
+				cacheWriteTokens,
+				cacheReadTokens,
+				reasoningTokens,
+				totalCost: this.calculateCost({
+					info,
+					inputTokens,
+					outputTokens,
+					cacheWriteTokens,
+					cacheReadTokens,
+				}),
 			}
 		}
 	}
 
-	override getModel(): {
-		id: GeminiModelId
-		info: ModelInfo
-		thinkingConfig?: ThinkingConfig
-		maxOutputTokens?: number
-	} {
+	override getModel() {
 		let id = this.options.apiModelId ? (this.options.apiModelId as GeminiModelId) : geminiDefaultModelId
 		let info: ModelInfo = geminiModels[id]
-		let thinkingConfig: ThinkingConfig | undefined = undefined
-		let maxOutputTokens: number | undefined = undefined
 
-		const thinkingSuffix = ":thinking"
+		if (id?.endsWith(":thinking")) {
+			id = id.slice(0, -":thinking".length) as GeminiModelId
 
-		if (id?.endsWith(thinkingSuffix)) {
-			id = id.slice(0, -thinkingSuffix.length) as GeminiModelId
-			info = geminiModels[id]
+			if (geminiModels[id]) {
+				info = geminiModels[id]
 
-			thinkingConfig = this.options.modelMaxThinkingTokens
-				? { thinkingBudget: this.options.modelMaxThinkingTokens }
-				: undefined
-
-			maxOutputTokens = this.options.modelMaxTokens ?? info.maxTokens ?? undefined
+				return {
+					id,
+					info,
+					thinkingConfig: this.options.modelMaxThinkingTokens
+						? { thinkingBudget: this.options.modelMaxThinkingTokens }
+						: undefined,
+					maxOutputTokens: this.options.modelMaxTokens ?? info.maxTokens ?? undefined,
+				}
+			}
 		}
 
 		if (!info) {
 			id = geminiDefaultModelId
 			info = geminiModels[geminiDefaultModelId]
-			thinkingConfig = undefined
-			maxOutputTokens = undefined
 		}
 
-		return { id, info, thinkingConfig, maxOutputTokens }
+		return { id, info }
 	}
 
 	async completePrompt(prompt: string): Promise<string> {
@@ -141,5 +243,69 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 			console.warn("Gemini token counting failed, using fallback", error)
 			return super.countTokens(content)
 		}
+	}
+
+	public calculateCost({
+		info,
+		inputTokens,
+		outputTokens,
+		cacheWriteTokens = 0,
+		cacheReadTokens = 0,
+	}: {
+		info: ModelInfo
+		inputTokens: number
+		outputTokens: number
+		cacheWriteTokens?: number
+		cacheReadTokens?: number
+	}) {
+		if (!info.inputPrice || !info.outputPrice || !info.cacheWritesPrice || !info.cacheReadsPrice) {
+			return undefined
+		}
+
+		let inputPrice = info.inputPrice
+		let outputPrice = info.outputPrice
+		let cacheWritesPrice = info.cacheWritesPrice
+		let cacheReadsPrice = info.cacheReadsPrice
+
+		// If there's tiered pricing then adjust the input and output token prices
+		// based on the input tokens used.
+		if (info.tiers) {
+			const tier = info.tiers.find((tier) => inputTokens <= tier.contextWindow)
+
+			if (tier) {
+				inputPrice = tier.inputPrice ?? inputPrice
+				outputPrice = tier.outputPrice ?? outputPrice
+				cacheWritesPrice = tier.cacheWritesPrice ?? cacheWritesPrice
+				cacheReadsPrice = tier.cacheReadsPrice ?? cacheReadsPrice
+			}
+		}
+
+		// Subtract the cached input tokens from the total input tokens.
+		const uncachedInputTokens = inputTokens - cacheReadTokens
+
+		let cacheWriteCost =
+			cacheWriteTokens > 0 ? cacheWritesPrice * (cacheWriteTokens / 1_000_000) * (CACHE_TTL / 60) : 0
+		let cacheReadCost = cacheReadTokens > 0 ? cacheReadsPrice * (cacheReadTokens / 1_000_000) : 0
+
+		const inputTokensCost = inputPrice * (uncachedInputTokens / 1_000_000)
+		const outputTokensCost = outputPrice * (outputTokens / 1_000_000)
+		const totalCost = inputTokensCost + outputTokensCost + cacheWriteCost + cacheReadCost
+
+		const trace: Record<string, { price: number; tokens: number; cost: number }> = {
+			input: { price: inputPrice, tokens: uncachedInputTokens, cost: inputTokensCost },
+			output: { price: outputPrice, tokens: outputTokens, cost: outputTokensCost },
+		}
+
+		if (cacheWriteTokens > 0) {
+			trace.cacheWrite = { price: cacheWritesPrice, tokens: cacheWriteTokens, cost: cacheWriteCost }
+		}
+
+		if (cacheReadTokens > 0) {
+			trace.cacheRead = { price: cacheReadsPrice, tokens: cacheReadTokens, cost: cacheReadCost }
+		}
+
+		// console.log(`[GeminiHandler] calculateCost -> ${totalCost}`, trace)
+
+		return totalCost
 	}
 }

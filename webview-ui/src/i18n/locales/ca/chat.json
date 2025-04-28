@@ -123,7 +123,12 @@
 		"didRead": "Kilo Code ha llegit aquest fitxer:",
 		"wantsToEdit": "Kilo Code vol editar aquest fitxer:",
 		"wantsToEditOutsideWorkspace": "Kilo Code vol editar aquest fitxer fora de l'espai de treball:",
-		"wantsToCreate": "Kilo Code vol crear un nou fitxer:"
+		"wantsToCreate": "Kilo Code vol crear un nou fitxer:",
+		"wantsToSearchReplace": "Kilo Code vol realitzar cerca i substitució en aquest fitxer:",
+		"didSearchReplace": "Kilo Code ha realitzat cerca i substitució en aquest fitxer:",
+		"wantsToInsert": "Kilo Code vol inserir contingut en aquest fitxer:",
+		"wantsToInsertWithLineNumber": "Kilo Code vol inserir contingut a la línia {{lineNumber}} d'aquest fitxer:",
+		"wantsToInsertAtEnd": "Kilo Code vol afegir contingut al final d'aquest fitxer:"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code vol veure els fitxers de nivell superior en aquest directori:",
@@ -184,12 +189,12 @@
 		"copyToInput": "Copiar a l'entrada (o Shift + clic)"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code 3.13 publicat",
-		"description": "Roo Code 3.13 porta noves funcionalitats i millores basades en els teus comentaris.",
+		"title": "🎉 Roo Code 3.14 publicat",
+		"description": "Roo Code 3.14 porta noves funcionalitats i millores basades en els teus comentaris.",
 		"whatsNew": "Novetats",
-		"feature1": "<bold>Gemini 2.5 Flash Thinking</bold>: Ara pots utilitzar la variant thinking de Gemini 2.5 Flash i especificar un pressupost de tokens per a thinking",
-		"feature2": "<bold>Millores d'interfície</bold>: La capçalera de tasques, la vista de xat, la previsualització d'historial i la vista de benvinguda han estat visualment millorades",
-		"feature3": "<bold>Correccions d'errors</bold>: Edicions de diferències més fiables i més",
+		"feature1": "<bold>Eines d'edició millorades</bold>: Les eines <code>search_and_replace</code> i <code>insert_content</code> han estat millorades i ja no són experimentals",
+		"feature2": "<bold>Millores a apply_diff</bold>: Continuem treballant per millorar l'eina <code>apply_diff</code>",
+		"feature3": "<bold>Moltes altres millores</bold>: Nombroses correccions i optimitzacions a tota l'extensió",
 		"hideButton": "Amagar anunci",
 		"detailsDiscussLinks": "Obtingues més detalls i participa a <discordLink>Discord</discordLink> i <redditLink>Reddit</redditLink> 🚀"
 	},
@@ -215,9 +220,5 @@
 			"close": "Tancar navegador"
 		}
 	},
-	"notifications": {
-		"toolRequest": "Sol·licitud d'eina esperant aprovació",
-		"browserAction": "Acció del navegador esperant aprovació",
-		"command": "Ordre esperant aprovació"
-	}
+	"systemPromptWarning": "ADVERTÈNCIA: S'ha activat una substitució personalitzada d'instruccions del sistema. Això pot trencar greument la funcionalitat i causar un comportament impredictible."
 }

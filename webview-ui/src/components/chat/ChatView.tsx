@@ -4,37 +4,42 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRe
 import { useDeepCompareEffect, useEvent, useMount } from "react-use"
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso"
 import styled from "styled-components"
+import removeMd from "remove-markdown"
+import { Trans } from "react-i18next"
+
 import {
 	ClineAsk,
 	ClineMessage,
 	ClineSayBrowserAction,
 	ClineSayTool,
 	ExtensionMessage,
-} from "../../../../src/shared/ExtensionMessage"
-import { McpServer, McpTool } from "../../../../src/shared/mcp"
-import { findLast } from "../../../../src/shared/array"
-import { combineApiRequests } from "../../../../src/shared/combineApiRequests"
-import { combineCommandSequences } from "../../../../src/shared/combineCommandSequences"
-import { getApiMetrics } from "../../../../src/shared/getApiMetrics"
-import { useExtensionState } from "../../context/ExtensionStateContext"
-import { vscode } from "../../utils/vscode"
+} from "@roo/shared/ExtensionMessage"
+import { McpServer, McpTool } from "@roo/shared/mcp"
+import { findLast } from "@roo/shared/array"
+import { combineApiRequests } from "@roo/shared/combineApiRequests"
+import { combineCommandSequences } from "@roo/shared/combineCommandSequences"
+import { getApiMetrics } from "@roo/shared/getApiMetrics"
+import { AudioType } from "@roo/shared/WebviewMessage"
+import { getAllModes } from "@roo/shared/modes"
+
+import { useExtensionState } from "@src/context/ExtensionStateContext"
+import { vscode } from "@src/utils/vscode"
+import { normalizeApiConfiguration } from "@src/utils/normalizeApiConfiguration"
+import { validateCommand } from "@src/utils/command-validation"
+import { useAppTranslation } from "@src/i18n/TranslationContext"
+
 import HistoryPreview from "../history/HistoryPreview"
-// import RooHero from "../welcome/RooHero" kilocode_change
-import { normalizeApiConfiguration } from "../settings/ApiOptions"
+// import RooHero from "../welcome/RooHero" // kilocode_change
+
 import Announcement from "./Announcement"
 import BrowserSessionRow from "./BrowserSessionRow"
 import ChatRow from "./ChatRow"
 import ChatTextArea from "./ChatTextArea"
 import TaskHeader from "./TaskHeader"
 import AutoApproveMenu from "./AutoApproveMenu"
-import BottomControls from "./BottomControls"
-import { AudioType } from "../../../../src/shared/WebviewMessage"
-import { validateCommand } from "../../utils/command-validation"
-import { getAllModes } from "../../../../src/shared/modes"
-import { useAppTranslation } from "@/i18n/TranslationContext"
-import removeMd from "remove-markdown"
+import BottomControls from "./BottomControls" // kilocode_change
+import SystemPromptWarning from "./SystemPromptWarning"
 import { showSystemNotification } from "@/kilocode/helpers" // kilocode_change
-import { Trans } from "react-i18next"
 
 interface ChatViewProps {
 	isHidden: boolean
@@ -80,6 +85,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		showAutoApproveMenu, // kilocode_change
 		alwaysAllowSubtasks,
 		customModes,
+		hasSystemPromptOverride,
 	} = useExtensionState()
 
 	//const task = messages.length > 0 ? (messages[0].say === "task" ? messages[0] : undefined) : undefined) : undefined
@@ -171,6 +177,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 								case "editedExistingFile":
 								case "appliedDiff":
 								case "newFileCreated":
+								case "insertContent":
 									setPrimaryButtonText(t("chat:save.title"))
 									setSecondaryButtonText(t("chat:reject.title"))
 									break
@@ -591,8 +598,13 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				case "api_req_deleted": // aggregated api_req metrics from deleted messages
 					return false
 				case "api_req_retry_delayed":
-					// Only show the retry message if it's the last message
-					return message === modifiedMessages.at(-1)
+					// Only show the retry message if it's the last message or the last messages is api_req_retry_delayed+resume_task
+					const last1 = modifiedMessages.at(-1)
+					const last2 = modifiedMessages.at(-2)
+					if (last1?.ask === "resume_task" && last2 === message) {
+						return true
+					}
+					return message === last1
 				case "text":
 					// Sometimes cline returns an empty text message, we don't want to render these. (We also use a say text for user messages, so in case they just sent images we still render that)
 					if ((message.text ?? "") === "" && (message.images?.length ?? 0) === 0) {
@@ -630,7 +642,13 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				return true
 			}
 			const tool = JSON.parse(message.text)
-			return ["editedExistingFile", "appliedDiff", "newFileCreated"].includes(tool.tool)
+			return [
+				"editedExistingFile",
+				"appliedDiff",
+				"newFileCreated",
+				"searchAndReplace",
+				"insertContent",
+			].includes(tool.tool)
 		}
 		return false
 	}, [])
@@ -1214,6 +1232,13 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						contextTokens={apiMetrics.contextTokens}
 						onClose={handleTaskCloseButtonClick}
 					/>
+
+					{/* System prompt override warning */}
+					{hasSystemPromptOverride && (
+						<div className="px-3">
+							<SystemPromptWarning />
+						</div>
+					)}
 
 					{/* Checkpoint warning message */}
 					{showCheckpointWarning && (

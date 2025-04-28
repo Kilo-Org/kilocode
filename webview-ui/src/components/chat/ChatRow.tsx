@@ -6,18 +6,13 @@ import { VSCodeBadge, VSCodeButton, VSCodeProgressRing } from "@vscode/webview-u
 
 import { Button } from "@/components/ui"
 
-import { useCopyToClipboard } from "../../utils/clipboard"
-import { safeJsonParse } from "../../utils/json"
-import {
-	ClineApiReqInfo,
-	ClineAskUseMcpServer,
-	ClineMessage,
-	ClineSayTool,
-} from "../../../../src/shared/ExtensionMessage"
-import { COMMAND_OUTPUT_STRING } from "../../../../src/shared/combineCommandSequences"
-import { useExtensionState } from "../../context/ExtensionStateContext"
-import { findMatchingResourceOrTemplate } from "../../utils/mcp"
-import { vscode } from "../../utils/vscode"
+import { useCopyToClipboard } from "@src/utils/clipboard"
+import { safeJsonParse } from "@src/utils/json"
+import { ClineApiReqInfo, ClineAskUseMcpServer, ClineMessage, ClineSayTool } from "@roo/shared/ExtensionMessage"
+import { COMMAND_OUTPUT_STRING } from "@roo/shared/combineCommandSequences"
+import { useExtensionState } from "@src/context/ExtensionStateContext"
+import { findMatchingResourceOrTemplate } from "@src/utils/mcp"
+import { vscode } from "@src/utils/vscode"
 import CodeAccordian, { removeLeadingNonAlphanumeric } from "../common/CodeAccordian"
 import CodeBlock, { CODE_BLOCK_BG_COLOR } from "../common/CodeBlock"
 import CommandOutputViewer from "../common/CommandOutputViewer"
@@ -26,7 +21,7 @@ import { ReasoningBlock } from "./ReasoningBlock"
 import Thumbnails from "../common/Thumbnails"
 import McpResourceRow from "../mcp/McpResourceRow"
 import McpToolRow from "../mcp/McpToolRow"
-import { highlightMentions } from "./TaskHeader"
+import { Mention } from "./Mention"
 import { CheckpointSaved } from "./checkpoints/CheckpointSaved"
 import { FollowUpSuggest } from "./FollowUpSuggest"
 
@@ -288,6 +283,52 @@ export const ChatRowContent = ({
 								{tool.isOutsideWorkspace
 									? t("chat:fileOperations.wantsToEditOutsideWorkspace")
 									: t("chat:fileOperations.wantsToEdit")}
+							</span>
+						</div>
+						<CodeAccordian
+							progressStatus={message.progressStatus}
+							isLoading={message.partial}
+							diff={tool.diff!}
+							path={tool.path!}
+							isExpanded={isExpanded}
+							onToggleExpand={onToggleExpand}
+						/>
+					</>
+				)
+			case "insertContent":
+				return (
+					<>
+						<div style={headerStyle}>
+							{toolIcon("insert")}
+							<span style={{ fontWeight: "bold" }}>
+								{tool.isOutsideWorkspace
+									? t("chat:fileOperations.wantsToEditOutsideWorkspace")
+									: tool.lineNumber === 0
+										? t("chat:fileOperations.wantsToInsertAtEnd")
+										: t("chat:fileOperations.wantsToInsertWithLineNumber", {
+												lineNumber: tool.lineNumber,
+											})}
+							</span>
+						</div>
+						<CodeAccordian
+							progressStatus={message.progressStatus}
+							isLoading={message.partial}
+							diff={tool.diff!}
+							path={tool.path!}
+							isExpanded={isExpanded}
+							onToggleExpand={onToggleExpand}
+						/>
+					</>
+				)
+			case "searchAndReplace":
+				return (
+					<>
+						<div style={headerStyle}>
+							{toolIcon("replace")}
+							<span style={{ fontWeight: "bold" }}>
+								{message.type === "ask"
+									? t("chat:fileOperations.wantsToSearchReplace")
+									: t("chat:fileOperations.didSearchReplace")}
 							</span>
 						</div>
 						<CodeAccordian
@@ -831,7 +872,9 @@ export const ChatRowContent = ({
 					return (
 						<div className="bg-vscode-editor-background border rounded-xs p-1 overflow-hidden whitespace-pre-wrap word-break-break-word overflow-wrap-anywhere">
 							<div className="flex justify-between gap-2">
-								<div className="flex-grow px-2 py-1">{highlightMentions(message.text)}</div>
+								<div className="flex-grow px-2 py-1">
+									<Mention text={message.text} withShadow />
+								</div>
 								<Button
 									variant="ghost"
 									size="icon"
@@ -1141,6 +1184,7 @@ export const ChatRowContent = ({
 													language="json"
 													isExpanded={true}
 													onToggleExpand={onToggleExpand}
+													forceWrap={true}
 												/>
 											</div>
 										)}

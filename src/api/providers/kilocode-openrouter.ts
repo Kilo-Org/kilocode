@@ -1,4 +1,4 @@
-import { ApiHandlerOptions } from "../../shared/api"
+import { ApiHandlerOptions, PROMPT_CACHING_MODELS, OPTIONAL_PROMPT_CACHING_MODELS } from "../../shared/api"
 import { OpenRouterHandler } from "./openrouter"
 import { getModelParams } from "../getModelParams"
 import { kilocodeOpenrouterModels } from "../../shared/kilocode/api"
@@ -45,6 +45,10 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 			info,
 			...getModelParams({ options: this.options, model: info, defaultTemperature }),
 			topP,
+			promptCache: {
+				supported: PROMPT_CACHING_MODELS.has(id),
+				optional: OPTIONAL_PROMPT_CACHING_MODELS.has(id),
+			},
 		}
 	}
 }

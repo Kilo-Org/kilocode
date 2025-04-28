@@ -123,7 +123,12 @@
 		"didRead": "Kilo Code đã đọc tệp này:",
 		"wantsToEdit": "Kilo Code muốn chỉnh sửa tệp này:",
 		"wantsToEditOutsideWorkspace": "Kilo Code muốn chỉnh sửa tệp này bên ngoài không gian làm việc:",
-		"wantsToCreate": "Kilo Code muốn tạo một tệp mới:"
+		"wantsToCreate": "Kilo Code muốn tạo một tệp mới:",
+		"wantsToSearchReplace": "Kilo Code muốn thực hiện tìm kiếm và thay thế trong tệp này:",
+		"didSearchReplace": "Kilo Code đã thực hiện tìm kiếm và thay thế trong tệp này:",
+		"wantsToInsert": "Kilo Code muốn chèn nội dung vào tệp này:",
+		"wantsToInsertWithLineNumber": "Kilo Code muốn chèn nội dung vào dòng {{lineNumber}} của tệp này:",
+		"wantsToInsertAtEnd": "Kilo Code muốn thêm nội dung vào cuối tệp này:"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code muốn xem các tệp cấp cao nhất trong thư mục này:",
@@ -184,12 +189,12 @@
 		"copyToInput": "Sao chép vào ô nhập liệu (hoặc Shift + nhấp chuột)"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code 3.13 Đã phát hành",
-		"description": "Roo Code 3.13 mang đến các tính năng và cải tiến mới dựa trên phản hồi của bạn.",
+		"title": "🎉 Roo Code 3.14 Đã phát hành",
+		"description": "Roo Code 3.14 mang đến các tính năng và cải tiến mới dựa trên phản hồi của bạn.",
 		"whatsNew": "Có gì mới",
-		"feature1": "<bold>Gemini 2.5 Flash Thinking</bold>: Bây giờ bạn có thể sử dụng biến thể thinking của Gemini 2.5 Flash và chỉ định ngân sách token cho thinking",
-		"feature2": "<bold>Cải tiến giao diện người dùng</bold>: Tiêu đề nhiệm vụ, giao diện trò chuyện, xem trước lịch sử và màn hình chào mừng đã được nâng cấp về mặt hình ảnh",
-		"feature3": "<bold>Sửa lỗi</bold>: Chỉnh sửa khác biệt đáng tin cậy hơn và nhiều cải tiến khác",
+		"feature1": "<bold>Công cụ chỉnh sửa được cải thiện</bold>: Các công cụ <code>search_and_replace</code> và <code>insert_content</code> đã được cải thiện và chuyển từ trạng thái thử nghiệm thành chính thức",
+		"feature2": "<bold>Sửa lỗi apply_diff</bold>: Chúng tôi tiếp tục cải thiện công cụ <code>apply_diff</code>",
+		"feature3": "<bold>Rất nhiều cải tiến khác</bold>: Vô số sửa lỗi và cải tiến trong toàn bộ tiện ích mở rộng",
 		"hideButton": "Ẩn thông báo",
 		"detailsDiscussLinks": "Nhận thêm chi tiết và thảo luận tại <discordLink>Discord</discordLink> và <redditLink>Reddit</redditLink> 🚀"
 	},
@@ -215,9 +220,5 @@
 			"close": "Đóng trình duyệt"
 		}
 	},
-	"notifications": {
-		"toolRequest": "Yêu cầu công cụ đang chờ phê duyệt",
-		"browserAction": "Hành động trình duyệt đang chờ phê duyệt",
-		"command": "Lệnh đang chờ phê duyệt"
-	}
+	"systemPromptWarning": "CẢNH BÁO: Đã kích hoạt ghi đè lệnh nhắc hệ thống tùy chỉnh. Điều này có thể phá vỡ nghiêm trọng chức năng và gây ra hành vi không thể dự đoán."
 }

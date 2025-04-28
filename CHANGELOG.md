@@ -1,5 +1,30 @@
 # kilo-code
 
+## 4.18.0
+
+### Minor Changes
+
+- Include changes from Roo Code v3.14.2
+
+### Patch Changes
+
+- Fix settingview appearing not to save when hitting save button
+- Fix dark buttons on light vscode themes (thanks @Aikiboy123)
+
+## 4.17.0
+
+### Minor Changes
+
+- Improve UI for new tasks, history and MCP servers
+- Add commands for importing and exporting settings
+- Include changes from Roo Code v3.13.2
+
+### Patch Changes
+
+- Fix chat window buttons overlapping on small sizes (thanks @Aikiboy123)
+- Fix feedback button overlapping create mode button in prompts view
+- Fix image thumbnails after pasting image (thanks @Aikiboy123)
+
 ## [4.16.2]
 
 - Include Roo Code v3.12.3 changes

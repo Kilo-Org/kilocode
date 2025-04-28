@@ -123,7 +123,12 @@
 		"didRead": "Kilo Code ha letto questo file:",
 		"wantsToEdit": "Kilo Code vuole modificare questo file:",
 		"wantsToEditOutsideWorkspace": "Kilo Code vuole modificare questo file al di fuori dell'area di lavoro:",
-		"wantsToCreate": "Kilo Code vuole creare un nuovo file:"
+		"wantsToCreate": "Kilo Code vuole creare un nuovo file:",
+		"wantsToSearchReplace": "Kilo Code vuole eseguire ricerca e sostituzione in questo file:",
+		"didSearchReplace": "Kilo Code ha eseguito ricerca e sostituzione in questo file:",
+		"wantsToInsert": "Kilo Code vuole inserire contenuto in questo file:",
+		"wantsToInsertWithLineNumber": "Kilo Code vuole inserire contenuto in questo file alla riga {{lineNumber}}:",
+		"wantsToInsertAtEnd": "Kilo Code vuole aggiungere contenuto alla fine di questo file:"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code vuole visualizzare i file di primo livello in questa directory:",
@@ -184,12 +189,12 @@
 		"copyToInput": "Copia nell'input (o Shift + clic)"
 	},
 	"announcement": {
-		"title": "🎉 Rilasciato Roo Code 3.13",
-		"description": "Roo Code 3.13 porta nuove funzionalità e miglioramenti basati sui tuoi feedback.",
+		"title": "🎉 Rilasciato Roo Code 3.14",
+		"description": "Roo Code 3.14 porta nuove funzionalità e miglioramenti basati sui tuoi feedback.",
 		"whatsNew": "Novità",
-		"feature1": "<bold>Gemini 2.5 Flash Thinking</bold>: Ora puoi utilizzare la variante thinking di Gemini 2.5 Flash e specificare un budget di token per thinking",
-		"feature2": "<bold>Miglioramenti dell'interfaccia</bold>: L'intestazione delle attività, la vista chat, l'anteprima della cronologia e la vista di benvenuto sono stati migliorati visivamente",
-		"feature3": "<bold>Correzioni di bug</bold>: Editing delle differenze più affidabile e altro",
+		"feature1": "<bold>Strumenti di modifica migliorati</bold>: Gli strumenti <code>search_and_replace</code> e <code>insert_content</code> sono stati migliorati e non sono più sperimentali",
+		"feature2": "<bold>Correzioni per apply_diff</bold>: Continuiamo a lavorare per migliorare lo strumento <code>apply_diff</code>",
+		"feature3": "<bold>Tantissimi altri miglioramenti</bold>: Numerose correzioni e ottimizzazioni in tutta l'estensione",
 		"hideButton": "Nascondi annuncio",
 		"detailsDiscussLinks": "Ottieni maggiori dettagli e partecipa alle discussioni su <discordLink>Discord</discordLink> e <redditLink>Reddit</redditLink> 🚀"
 	},
@@ -215,9 +220,5 @@
 			"close": "Chiudi browser"
 		}
 	},
-	"notifications": {
-		"toolRequest": "Richiesta strumento in attesa di approvazione",
-		"browserAction": "Azione browser in attesa di approvazione",
-		"command": "Comando in attesa di approvazione"
-	}
+	"systemPromptWarning": "ATTENZIONE: Sovrascrittura personalizzata delle istruzioni di sistema attiva. Questo può compromettere gravemente le funzionalità e causare comportamenti imprevedibili."
 }
