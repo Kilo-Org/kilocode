@@ -24,6 +24,7 @@ import McpToolRow from "../mcp/McpToolRow"
 import { Mention } from "./Mention"
 import { CheckpointSaved } from "./checkpoints/CheckpointSaved"
 import { FollowUpSuggest } from "./FollowUpSuggest"
+import { RetryIconButton } from "../kilocode/common/RetryIconButton"
 
 interface ChatRowProps {
 	message: ClineMessage
@@ -1250,46 +1251,48 @@ export const ChatRowContent = ({
 						wordBreak: "break-word",
 						overflowWrap: "anywhere",
 					}
-					const errorColor = "var(--vscode-errorForeground)"
 
 					return (
 						<>
 							<div style={headerStyle}>
-								<span
-									className="codicon codicon-error"
-									style={{ color: errorColor, marginBottom: "-1.5px" }}></span>
-								<span style={{ color: errorColor, fontWeight: "bold" }}>{data.title}</span>
+								<span className="text-blue-400" style={{ marginBottom: "-1.5px" }}>
+									$
+								</span>
+								<span style={{ fontWeight: "bold" }}>{data.title}</span>
 							</div>
 							<p style={pStyle}>{data.message}</p>
-							<p style={{ ...pStyle, marginTop: "10px", color: "var(--vscode-descriptionForeground)" }}>
-								{t("chat:paymentRequired.balance", { balance: data.balance })}
-							</p>
-							<div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
+							<div
+								className="bg-vscode-panel-border flex flex-col gap-3"
+								style={{
+									borderRadius: "4px",
+									display: "flex",
+									marginTop: "15px",
+									padding: "14px 16px 22px",
+									justifyContent: "center",
+								}}>
+								<div className="flex justify-between items-center">
+									<span>Your Kilo Code balance is low</span>
+									<RetryIconButton
+										onClick={() => {
+											vscode.postMessage({
+												type: "askResponse",
+												askResponse: "retry_clicked",
+												text: message.text, // Pass original data back if needed
+											})
+										}}
+									/>
+								</div>
 								<VSCodeButton
+									style={{ width: "100%", padding: "6px", borderRadius: "4px" }}
 									onClick={(e) => {
 										e.preventDefault()
 
 										vscode.postMessage({
 											type: "openInBrowser",
 											url: data.buyCreditsUrl,
-											// askResponse: "buy_credits_clicked",
-											// text: message.text, // Pass original data back if needed
 										})
 									}}>
-									<span className="codicon codicon-credit-card" style={{ marginRight: "5px" }}></span>
-									{t("chat:paymentRequired.buyCredits")}
-								</VSCodeButton>
-								<VSCodeButton
-									appearance="secondary"
-									onClick={() => {
-										vscode.postMessage({
-											type: "askResponse",
-											askResponse: "retry_clicked",
-											text: message.text, // Pass original data back if needed
-										})
-									}}>
-									<span className="codicon codicon-refresh" style={{ marginRight: "5px" }}></span>
-									{t("chat:paymentRequired.retry")}
+									Add Credit
 								</VSCodeButton>
 							</div>
 						</>

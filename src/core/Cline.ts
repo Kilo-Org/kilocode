@@ -1068,8 +1068,8 @@ export class Cline extends EventEmitter<ClineEvents> {
 				const { response } = await this.ask(
 					"payment_required_prompt",
 					JSON.stringify({
-						title: "Low power!",
-						message: "You have reached your Kilo Code usage limit.",
+						title: "Low Credit Warning!",
+						message: "Check to see if you can top up with  free credits or purchase some more!",
 						balance: balance,
 						buyCreditsUrl: buyCreditsUrl,
 					}),
