@@ -20,7 +20,7 @@ import {
 } from "@src/utils/context-mentions"
 import { convertToMentionPath } from "@/utils/path-mentions"
 import { SelectDropdown, DropdownOptionType, Button } from "@/components/ui"
-import { normalizeApiConfiguration } from "../settings/ApiOptions" // kilocode_change
+import { normalizeApiConfiguration } from "@/utils/normalizeApiConfiguration" // kilocode_change
 import { useVSCodeTheme } from "@/kilocode/hooks/useVSCodeTheme" // kilocode_change
 
 import Thumbnails from "../common/Thumbnails"
