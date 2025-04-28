@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "您编辑器中的完整AI开发团队。"
+		"description": "用于规划、构建和修复代码的开源 AI 编码助手。"
 	},
 	"number_format": {
 		"thousand_suffix": "k",

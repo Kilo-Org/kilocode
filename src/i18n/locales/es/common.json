@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "Un equipo completo de desarrolladores con IA en tu editor."
+		"description": "Asistente de codificación de IA de código abierto para planificar, crear y corregir código."
 	},
 	"number_format": {
 		"thousand_suffix": "k",

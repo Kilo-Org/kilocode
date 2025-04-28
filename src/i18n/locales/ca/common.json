@@ -1,7 +1,7 @@
 {
 	"input": {
 		"task_prompt": "Què vols que faci Kilo Code?",
-		"task_placeholder": "Construeix, cerca, pregunta alguna cosa"
+		"task_placeholder": "Assistent de codificació de IA de codi obert per planificar, crear i corregir codi."
 	},
 	"extension": {
 		"name": "Kilo Code",
