@@ -24,7 +24,7 @@ import McpToolRow from "../mcp/McpToolRow"
 import { Mention } from "./Mention"
 import { CheckpointSaved } from "./checkpoints/CheckpointSaved"
 import { FollowUpSuggest } from "./FollowUpSuggest"
-import { RetryIconButton } from "../kilocode/common/RetryIconButton"
+import { LowCreditWarning } from "../kilocode/chat/LowCreditWarning" // kilocode_change
 
 interface ChatRowProps {
 	message: ClineMessage
@@ -1233,70 +1233,7 @@ export const ChatRowContent = ({
 					)
 				// kilocode_change begin
 				case "payment_required_prompt": {
-					let data = { title: "Error", message: "Payment required.", balance: "-?.??", buyCreditsUrl: "#" }
-					try {
-						data = JSON.parse(message.text || "{}")
-					} catch (e) {
-						console.error("Failed to parse payment_required_prompt data:", e)
-					}
-					const headerStyle: React.CSSProperties = {
-						display: "flex",
-						alignItems: "center",
-						gap: "10px",
-						marginBottom: "10px",
-					}
-					const pStyle: React.CSSProperties = {
-						margin: 0,
-						whiteSpace: "pre-wrap",
-						wordBreak: "break-word",
-						overflowWrap: "anywhere",
-					}
-
-					return (
-						<>
-							<div style={headerStyle}>
-								<span className="text-blue-400" style={{ marginBottom: "-1.5px" }}>
-									$
-								</span>
-								<span style={{ fontWeight: "bold" }}>{data.title}</span>
-							</div>
-							<p style={pStyle}>{data.message}</p>
-							<div
-								className="bg-vscode-panel-border flex flex-col gap-3"
-								style={{
-									borderRadius: "4px",
-									display: "flex",
-									marginTop: "15px",
-									padding: "14px 16px 22px",
-									justifyContent: "center",
-								}}>
-								<div className="flex justify-between items-center">
-									<span>Your Kilo Code balance is low</span>
-									<RetryIconButton
-										onClick={() => {
-											vscode.postMessage({
-												type: "askResponse",
-												askResponse: "retry_clicked",
-												text: message.text, // Pass original data back if needed
-											})
-										}}
-									/>
-								</div>
-								<VSCodeButton
-									style={{ width: "100%", padding: "6px", borderRadius: "4px" }}
-									onClick={(e) => {
-										e.preventDefault()
-
-										vscode.postMessage({
-											type: "openInBrowser",
-											url: data.buyCreditsUrl,
-										})
-									}}>
-									Add Credit
-								</VSCodeButton>
-							</div>
-						</>
-					)
+					return <LowCreditWarning message={message} />
 				} // kilocode_change end
 				default:
 					return null
