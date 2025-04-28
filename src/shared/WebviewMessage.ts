@@ -2,12 +2,7 @@ import { z } from "zod"
 import { ApiConfiguration, ApiProvider } from "./api"
 import { Mode, PromptComponent, ModeConfig } from "./modes"
 
-export type ClineAskResponse =
-	| "yesButtonClicked"
-	| "noButtonClicked"
-	| "messageResponse"
-	| "buy_credits_clicked" // kilocode_change: Added for payment required dialog
-	| "retry_clicked" // kilocode_change: Added for payment required dialog
+export type ClineAskResponse = "yesButtonClicked" | "noButtonClicked" | "messageResponse" | "retry_clicked" // kilocode_change: Added for payment required dialog
 
 export type PromptMode = Mode | "enhance"
 
