@@ -317,6 +317,5 @@ function getKiloBaseUri(options: ApiHandlerOptions) {
 	} catch (_error) {
 		console.warn("Failed to get base URL from Kilo Code token")
 	}
-	return "http://localhost:3000"
-	// return "https://kilocode.ai"
+	return "https://kilocode.ai"
 }
