@@ -4,5 +4,9 @@
 		"introText": "我经过了最快的 AI 模型训练，已准备好以极快的速度为你生成代码！",
 		"ctaButton": "免费试用 Kilo Code",
 		"manualModeButton": "使用你自己的 API 密钥"
+	},
+	"lowCreditWarning": {
+		"addCredit": "添加额度",
+		"lowBalance": "你的 Kilo Code 余额不足"
 	}
 }

@@ -1,5 +1,9 @@
 {
 	"info": {
 		"settings_imported": "설정을 성공적으로 가져왔습니다."
+	},
+	"lowCreditWarning": {
+		"title": "크레딧 부족 경고!",
+		"message": "무료 크레딧으로 충전하거나 추가 구매가 가능한지 확인하세요!"
 	}
 }

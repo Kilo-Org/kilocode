@@ -4,5 +4,9 @@
 		"introText": "He estat entrenat amb els models d'IA més ràpids disponibles i estic preparat per generar codi per a tu a velocitat de vertigen!",
 		"ctaButton": "Prova Kilo Code gratuïtament",
 		"manualModeButton": "Utilitza la teva pròpia clau API"
+	},
+	"lowCreditWarning": {
+		"addCredit": "Afegir crèdit",
+		"lowBalance": "El teu saldo de Kilo Code és baix"
 	}
 }

@@ -4,5 +4,9 @@
 		"introText": "¡He sido entrenado con los modelos de IA más rápidos disponibles y estoy listo para generar código para ti a la velocidad de la luz!",
 		"ctaButton": "Prueba Kilo Code gratis",
 		"manualModeButton": "Usa tu propia clave API"
+	},
+	"lowCreditWarning": {
+		"addCredit": "Añadir Crédito",
+		"lowBalance": "Tu saldo de Kilo Code es bajo"
 	}
 }

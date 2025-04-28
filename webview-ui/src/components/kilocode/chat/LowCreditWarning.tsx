@@ -3,6 +3,7 @@ import { vscode } from "@src/utils/vscode"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import { RetryIconButton } from "../common/RetryIconButton"
 import styled from "styled-components"
+import { useTranslation } from "react-i18next"
 
 type LowCreditWarningProps = {
 	message: ClineMessage
@@ -23,6 +24,7 @@ const Description = styled.div`
 `
 
 export const LowCreditWarning = ({ message }: LowCreditWarningProps) => {
+	const { t } = useTranslation()
 	let data = { title: "Error", message: "Payment required.", balance: "-?.??", buyCreditsUrl: "" }
 
 	try {
@@ -51,7 +53,7 @@ export const LowCreditWarning = ({ message }: LowCreditWarningProps) => {
 					justifyContent: "center",
 				}}>
 				<div className="flex justify-between items-center">
-					<span>Your Kilo Code balance is low</span>
+					{t("kilocode:lowCreditWarning.lowBalance")}
 					<RetryIconButton
 						onClick={() => {
 							vscode.postMessage({
@@ -72,7 +74,7 @@ export const LowCreditWarning = ({ message }: LowCreditWarningProps) => {
 							url: data.buyCreditsUrl,
 						})
 					}}>
-					Add Credit
+					{t("kilocode:lowCreditWarning.addCredit")}
 				</VSCodeButton>
 			</div>
 		</>

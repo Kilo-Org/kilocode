@@ -4,5 +4,9 @@
 		"introText": "I've been trained on the fastest AI models available and I am ready to generate code for you at warp speed!",
 		"ctaButton": "Try Kilo Code for free",
 		"manualModeButton": "Use your own API key"
+	},
+	"lowCreditWarning": {
+		"addCredit": "Add Credit",
+		"lowBalance": "Your Kilo Code balance is low"
 	}
 }

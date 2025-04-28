@@ -4,5 +4,9 @@
 		"introText": "저는 가장 빠른 AI 모델로 학습되었으며, 번개처럼 빠르게 코드를 생성할 준비가 되어 있습니다!",
 		"ctaButton": "Kilo Code 무료로 사용해보기",
 		"manualModeButton": "내 API 키 사용하기"
+	},
+	"lowCreditWarning": {
+		"addCredit": "크레딧 추가",
+		"lowBalance": "Kilo Code 잔액이 부족합니다"
 	}
 }

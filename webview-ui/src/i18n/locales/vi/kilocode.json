@@ -4,5 +4,9 @@
 		"introText": "Tôi đã được đào tạo trên các mô hình AI nhanh nhất hiện có và sẵn sàng tạo mã cho bạn với tốc độ cực nhanh!",
 		"ctaButton": "Dùng thử Kilo Code miễn phí",
 		"manualModeButton": "Sử dụng khóa API của riêng bạn"
+	},
+	"lowCreditWarning": {
+		"addCredit": "Thêm tín dụng",
+		"lowBalance": "Số dư Kilo Code của bạn thấp"
 	}
 }

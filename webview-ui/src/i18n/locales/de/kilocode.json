@@ -4,5 +4,9 @@
 		"introText": "Ich wurde mit den schnellsten verfügbaren KI-Modellen trainiert und bin bereit, für Sie blitzschnell Code zu generieren!",
 		"ctaButton": "Kilo Code kostenlos ausprobieren",
 		"manualModeButton": "Eigener API-Schlüssel verwenden"
+	},
+	"lowCreditWarning": {
+		"addCredit": "Guthaben hinzufügen",
+		"lowBalance": "Ihr Kilo Code Guthaben ist niedrig"
 	}
 }

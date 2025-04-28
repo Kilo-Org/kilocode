@@ -1,5 +1,9 @@
 {
 	"info": {
 		"settings_imported": "Configurações importadas com sucesso."
+	},
+	"lowCreditWarning": {
+		"title": "Aviso de Crédito Baixo!",
+		"message": "Verifique se você pode recarregar com créditos gratuitos ou comprar mais!"
 	}
 }

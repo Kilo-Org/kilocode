@@ -17,6 +17,8 @@ import { TokenUsage, ToolUsage, ToolName } from "../schemas"
 import { ApiHandler, buildApiHandler } from "../api"
 import { ApiStream } from "../api/transform/stream"
 
+import { t } from "../i18n" // kilocode_change
+
 // shared
 import { ApiConfiguration } from "../shared/api"
 import { findLastIndex } from "../shared/array"
@@ -1060,6 +1062,7 @@ export class Cline extends EventEmitter<ClineEvents> {
 			yield firstChunk.value
 			this.isWaitingForFirstChunk = false
 		} catch (error) {
+			// kilocode_change start
 			// Check for payment required error from KiloCode provider
 			if ((error as any).status === 402 && apiConfiguration?.apiProvider === "kilocode") {
 				const balance = (error as any).balance ?? "0.00"
@@ -1068,8 +1071,8 @@ export class Cline extends EventEmitter<ClineEvents> {
 				const { response } = await this.ask(
 					"payment_required_prompt",
 					JSON.stringify({
-						title: "Low Credit Warning!",
-						message: "Check to see if you can top up with  free credits or purchase some more!",
+						title: t("kilocode:lowCreditWarning.title"),
+						message: t("kilocode:lowCreditWarning.message"),
 						balance: balance,
 						buyCreditsUrl: buyCreditsUrl,
 					}),
@@ -1084,6 +1087,7 @@ export class Cline extends EventEmitter<ClineEvents> {
 				}
 				// Removed incorrect closing brace and comments from lines 1274-1276
 			} else if (alwaysApproveResubmit) {
+				// kilocode_change end
 				let errorMsg
 
 				if (error.error?.metadata?.raw) {

@@ -4,5 +4,9 @@
 		"introText": "私は利用可能な最速のAIモデルでトレーニングされており、あなたのために超高速でコードを生成する準備ができています！",
 		"ctaButton": "Kilo Codeを無料で試す",
 		"manualModeButton": "自分のAPIキーを使う"
+	},
+	"lowCreditWarning": {
+		"addCredit": "クレジットを追加",
+		"lowBalance": "Kilo Codeの残高が少なくなっています"
 	}
 }

@@ -1,5 +1,9 @@
 {
 	"info": {
 		"settings_imported": "設定匯入成功。"
+	},
+	"lowCreditWarning": {
+		"title": "餘額不足警告！",
+		"message": "請檢查是否可以充值免費額度或購買更多額度！"
 	}
 }
