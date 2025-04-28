@@ -1061,15 +1061,13 @@ export class Cline extends EventEmitter<ClineEvents> {
 			this.isWaitingForFirstChunk = false
 		} catch (error) {
 			// Check for payment required error from KiloCode provider
-			if ((error as any).isKiloCodePaymentError) {
-				const balance = (error as any).balance || "-0.00"
-				const buyCreditsUrl = (error as any).buyCreditsUrl || "https://kilocode.ai/profile"
+			if ((error as any).status === 402 && apiConfiguration?.apiProvider === "kilocode") {
+				const balance = (error as any).balance ?? "0.00"
+				const buyCreditsUrl = (error as any).buyCreditsUrl ?? "https://kilocode.ai/profile"
 
-				// Show a specific dialog for payment required
 				const { response } = await this.ask(
-					"payment_required_prompt", // New ask type for the specific UI
+					"payment_required_prompt",
 					JSON.stringify({
-						// Pass structured data to the webview
 						title: "Low power!",
 						message: "You have reached your Kilo Code usage limit.",
 						balance: balance,
@@ -1077,19 +1075,8 @@ export class Cline extends EventEmitter<ClineEvents> {
 					}),
 				)
 
-				if (response === "buy_credits_clicked") {
-					// User clicked "Buy Credits"
-					vscode.env.openExternal(vscode.Uri.parse(buyCreditsUrl))
-					// We should probably abort the current attempt after opening the URL,
-					// as the user needs to complete the purchase.
-					// Rethrowing the original error might achieve this, depending on outer handlers.
-					throw error // Rethrow to signal failure upwards
-				} else if (response === "retry_clicked") {
-					// User clicked "Retry". The loop in recursivelyMakeClineRequests should handle the retry.
-					// No specific action needed here, just let the loop continue.
-					// We might need to yield a specific value or throw a specific error
-					// if the outer loop doesn't automatically retry on this path.
-					// For now, assume the loop handles it.
+				if (response === "retry_clicked") {
+					yield* this.attemptApiRequest(previousApiReqIndex, retryAttempt + 1)
 				} else {
 					// Handle other responses or cancellations if necessary
 					// If the user cancels the dialog, we should probably abort.

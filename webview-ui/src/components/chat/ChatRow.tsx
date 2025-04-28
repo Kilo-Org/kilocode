@@ -1266,11 +1266,14 @@ export const ChatRowContent = ({
 							</p>
 							<div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
 								<VSCodeButton
-									onClick={() => {
+									onClick={(e) => {
+										e.preventDefault()
+
 										vscode.postMessage({
-											type: "askResponse",
-											askResponse: "buy_credits_clicked",
-											text: message.text, // Pass original data back if needed
+											type: "openInBrowser",
+											url: data.buyCreditsUrl,
+											// askResponse: "buy_credits_clicked",
+											// text: message.text, // Pass original data back if needed
 										})
 									}}>
 									<span className="codicon codicon-credit-card" style={{ marginRight: "5px" }}></span>
