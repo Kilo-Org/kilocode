@@ -36,6 +36,9 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 		} else if (selectedModel === "gemini25flashpreview") {
 			id = "google/gemini-2.5-flash-preview"
 			info = kilocodeOpenrouterModels["google/gemini-2.5-flash-preview"]
+		} else if (selectedModel === "claude37") {
+			id = "anthropic/claude-3.7-sonnet"
+			info = kilocodeOpenrouterModels["anthropic/claude-3.7-sonnet"]
 		} else {
 			throw new Error(`Unsupported model: ${selectedModel}`)
 		}
