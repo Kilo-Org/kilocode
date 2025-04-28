@@ -393,7 +393,7 @@
 	},
 	"promptCaching": {
 		"label": "Activer la mise en cache des prompts",
-		"description": "Lorsque cette option est activée, Roo utilisera ce modèle avec la mise en cache des prompts activée afin de réduire les coûts."
+		"description": "Lorsque cette option est activée, Kilo Code utilisera ce modèle avec la mise en cache des prompts activée afin de réduire les coûts."
 	},
 	"temperature": {
 		"useCustom": "Utiliser une température personnalisée",

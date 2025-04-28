@@ -393,7 +393,7 @@
 	},
 	"promptCaching": {
 		"label": "Włącz buforowanie podpowiedzi",
-		"description": "Po włączeniu, Roo będzie używać tego modelu z włączonym buforowaniem promptów w celu zmniejszenia kosztów."
+		"description": "Po włączeniu, Kilo Code będzie używać tego modelu z włączonym buforowaniem promptów w celu zmniejszenia kosztów."
 	},
 	"temperature": {
 		"useCustom": "Użyj niestandardowej temperatury",
