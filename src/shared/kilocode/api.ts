@@ -1,3 +1,5 @@
+import { ModelInfo } from "../api"
+
 export const kilocodeOpenrouterModels = {
 	"google/gemini-2.5-pro-preview-03-25": {
 		maxTokens: 65_536,
@@ -8,6 +10,7 @@ export const kilocodeOpenrouterModels = {
 		inputPrice: 1.25,
 		outputPrice: 10,
 		description: "Gemini 2.5 Pro via OpenRouter",
+		isPromptCacheOptional: true,
 	},
 	"openai/gpt-4.1": {
 		maxTokens: 32_768,
@@ -24,5 +27,6 @@ export const kilocodeOpenrouterModels = {
 		supportsPromptCache: false,
 		inputPrice: 0.15,
 		outputPrice: 0.6,
+		isPromptCacheOptional: true,
 	},
-}
+} as const satisfies Record<string, ModelInfo>

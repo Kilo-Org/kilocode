@@ -163,6 +163,7 @@ export type ExtensionState = Pick<
 	| "terminalZshOhMy"
 	| "terminalZshP10k"
 	| "terminalZdotdir"
+	| "terminalCompressProgressBar"
 	| "diffEnabled"
 	| "fuzzyMatchThreshold"
 	// | "experiments" // Optional in GlobalSettings, required here.
@@ -227,6 +228,8 @@ export interface ClineSayTool {
 		| "switchMode"
 		| "newTask"
 		| "finishTask"
+		| "searchAndReplace"
+		| "insertContent"
 	path?: string
 	diff?: string
 	content?: string
@@ -235,6 +238,13 @@ export interface ClineSayTool {
 	mode?: string
 	reason?: string
 	isOutsideWorkspace?: boolean
+	search?: string
+	replace?: string
+	useRegex?: boolean
+	ignoreCase?: boolean
+	startLine?: number
+	endLine?: number
+	lineNumber?: number
 }
 
 // Must keep in sync with system prompt.

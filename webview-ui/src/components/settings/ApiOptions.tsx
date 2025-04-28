@@ -1,7 +1,7 @@
 import React, { memo, useCallback, useEffect, useMemo, useState } from "react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { Trans } from "react-i18next"
-import { getRequestyAuthUrl, getOpenRouterAuthUrl, getGlamaAuthUrl } from "../../oauth/urls"
+import { getRequestyAuthUrl, getOpenRouterAuthUrl, getGlamaAuthUrl } from "@src/oauth/urls"
 import { useDebounce, useEvent } from "react-use"
 import { LanguageModelChatSelector } from "vscode"
 import { Checkbox } from "vscrui"
@@ -12,60 +12,54 @@ import { getKiloCodeBackendAuthUrl } from "../kilocode/helpers" // kilocode_chan
 import {
 	ApiConfiguration,
 	ModelInfo,
-	anthropicDefaultModelId,
-	anthropicModels,
 	azureOpenAiDefaultApiVersion,
-	bedrockDefaultModelId,
-	bedrockModels,
-	deepSeekDefaultModelId,
-	deepSeekModels,
-	geminiDefaultModelId,
-	geminiModels,
 	glamaDefaultModelId,
 	glamaDefaultModelInfo,
 	mistralDefaultModelId,
-	mistralModels,
 	openAiModelInfoSaneDefaults,
-	openAiNativeDefaultModelId,
-	openAiNativeModels,
 	openRouterDefaultModelId,
 	openRouterDefaultModelInfo,
-	vertexDefaultModelId,
-	vertexModels,
 	unboundDefaultModelId,
 	unboundDefaultModelInfo,
 	requestyDefaultModelId,
 	requestyDefaultModelInfo,
-	fireworksDefaultModelId, // kilocode_change
-	fireworksModels, // kilocode_change
-	xaiDefaultModelId,
-	xaiModels,
 	ApiProvider,
 } from "../../../../src/shared/api"
-import { kilocodeOpenrouterModels } from "../../../../src/shared/kilocode/api" // kilocode_change
-import { ExtensionMessage } from "../../../../src/shared/ExtensionMessage"
+import { ExtensionMessage } from "@roo/shared/ExtensionMessage"
+import { AWS_REGIONS } from "@roo/shared/aws_regions"
 
-import { vscode } from "@/utils/vscode"
-import { validateApiConfiguration, validateModelId, validateBedrockArn } from "@/utils/validate"
+import { vscode } from "@src/utils/vscode"
+import { validateApiConfiguration, validateModelId, validateBedrockArn } from "@src/utils/validate"
+import { normalizeApiConfiguration } from "@src/utils/normalizeApiConfiguration"
 import {
 	useOpenRouterModelProviders,
 	OPENROUTER_DEFAULT_PROVIDER_NAME,
-} from "@/components/ui/hooks/useOpenRouterModelProviders"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSeparator, Button } from "@/components/ui"
-import { MODELS_BY_PROVIDER, PROVIDERS, VERTEX_REGIONS, REASONING_MODELS } from "./constants"
-import { AWS_REGIONS } from "../../../../src/shared/aws_regions"
+} from "@src/components/ui/hooks/useOpenRouterModelProviders"
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+	Button,
+	SelectSeparator,
+} from "@src/components/ui"
+
 import { VSCodeButtonLink } from "../common/VSCodeButtonLink"
+
+import { MODELS_BY_PROVIDER, PROVIDERS, VERTEX_REGIONS, REASONING_MODELS } from "./constants"
 import { ModelInfoView } from "./ModelInfoView"
 import { ModelPicker } from "./ModelPicker"
-import { TemperatureControl } from "./TemperatureControl"
-import { RateLimitSecondsControl } from "./RateLimitSecondsControl"
-import { DiffSettingsControl } from "./DiffSettingsControl"
 import { ApiErrorMessage } from "./ApiErrorMessage"
 import { ThinkingBudget } from "./ThinkingBudget"
 import { R1FormatSetting } from "./R1FormatSetting"
 import { OpenRouterBalanceDisplay } from "./OpenRouterBalanceDisplay"
 import { RequestyBalanceDisplay } from "./RequestyBalanceDisplay"
 import { ReasoningEffort } from "./ReasoningEffort"
+import { PromptCachingControl } from "./PromptCachingControl"
+import { DiffSettingsControl } from "./DiffSettingsControl"
+import { TemperatureControl } from "./TemperatureControl"
+import { RateLimitSecondsControl } from "./RateLimitSecondsControl"
 
 interface ApiOptionsProps {
 	uriScheme: string | undefined
@@ -285,6 +279,7 @@ const ApiOptions = ({
 	// Helper function to get the documentation URL and name for the currently selected provider
 	const getSelectedProviderDocUrl = (): { url: string; name: string } | undefined => {
 		const displayName = getProviderDisplayName(selectedProvider)
+
 		if (!displayName) {
 			return undefined
 		}
@@ -308,6 +303,49 @@ const ApiOptions = ({
 	}
 	// kilocode_change end
 
+	const onApiProviderChange = useCallback(
+		(value: ApiProvider) => {
+			// It would be much easier to have a single attribute that stores
+			// the modelId, but we have a separate attribute for each of
+			// OpenRouter, Glama, Unbound, and Requesty.
+			// If you switch to one of these providers and the corresponding
+			// modelId is not set then you immediately end up in an error state.
+			// To address that we set the modelId to the default value for th
+			// provider if it's not already set.
+			switch (value) {
+				case "openrouter":
+					if (!apiConfiguration.openRouterModelId) {
+						setApiConfigurationField("openRouterModelId", openRouterDefaultModelId)
+					}
+					break
+				case "glama":
+					if (!apiConfiguration.glamaModelId) {
+						setApiConfigurationField("glamaModelId", glamaDefaultModelId)
+					}
+					break
+				case "unbound":
+					if (!apiConfiguration.unboundModelId) {
+						setApiConfigurationField("unboundModelId", unboundDefaultModelId)
+					}
+					break
+				case "requesty":
+					if (!apiConfiguration.requestyModelId) {
+						setApiConfigurationField("requestyModelId", requestyDefaultModelId)
+					}
+					break
+			}
+
+			setApiConfigurationField("apiProvider", value)
+		},
+		[
+			setApiConfigurationField,
+			apiConfiguration.openRouterModelId,
+			apiConfiguration.glamaModelId,
+			apiConfiguration.unboundModelId,
+			apiConfiguration.requestyModelId,
+		],
+	)
+
 	return (
 		<div className="flex flex-col gap-3">
 			<div className="flex flex-col gap-1 relative">
@@ -327,9 +365,7 @@ const ApiOptions = ({
 						</div>
 					)}
 				</div>
-				<Select
-					value={selectedProvider}
-					onValueChange={(value) => setApiConfigurationField("apiProvider", value as ApiProvider)}>
+				<Select value={selectedProvider} onValueChange={(value) => onApiProviderChange(value as ApiProvider)}>
 					<SelectTrigger className="w-full">
 						<SelectValue placeholder={t("settings:common.select")} />
 					</SelectTrigger>
@@ -339,6 +375,7 @@ const ApiOptions = ({
 								<SelectItem key={value} value={value}>
 									{label}
 								</SelectItem>
+								{/*  kilocode_change */}
 								{i === 0 ? <SelectSeparator /> : null}
 							</>
 						))}
@@ -1795,6 +1832,7 @@ const ApiOptions = ({
 					)}
 
 					<ModelInfoView
+						apiProvider={selectedProvider}
 						selectedModelId={selectedModelId}
 						modelInfo={selectedModelInfo}
 						isDescriptionExpanded={isDescriptionExpanded}
@@ -1817,6 +1855,15 @@ const ApiOptions = ({
 				/>
 			)}
 
+			{selectedModelInfo.supportsPromptCache &&
+				"isPromptCacheOptional" in selectedModelInfo && // kilocode_change
+				selectedModelInfo.isPromptCacheOptional && (
+					<PromptCachingControl
+						apiConfiguration={apiConfiguration}
+						setApiConfigurationField={setApiConfigurationField}
+					/>
+				)}
+
 			{!fromWelcomeView && (
 				<>
 					<DiffSettingsControl
@@ -1825,7 +1872,7 @@ const ApiOptions = ({
 						onChange={(field, value) => setApiConfigurationField(field, value)}
 					/>
 					<TemperatureControl
-						value={apiConfiguration?.modelTemperature}
+						value={apiConfiguration.modelTemperature}
 						onChange={handleInputChange("modelTemperature", noTransform)}
 						maxValue={2}
 					/>
@@ -1837,137 +1884,6 @@ const ApiOptions = ({
 			)}
 		</div>
 	)
-}
-
-export function normalizeApiConfiguration(apiConfiguration?: ApiConfiguration) {
-	const provider = apiConfiguration?.apiProvider ?? "kilocode"
-	const modelId = apiConfiguration?.apiModelId
-
-	const getProviderData = (models: Record<string, ModelInfo>, defaultId: string) => {
-		let selectedModelId: string
-		let selectedModelInfo: ModelInfo
-
-		if (modelId && modelId in models) {
-			selectedModelId = modelId
-			selectedModelInfo = models[modelId]
-		} else {
-			selectedModelId = defaultId
-			selectedModelInfo = models[defaultId]
-		}
-
-		return { selectedProvider: provider, selectedModelId, selectedModelInfo }
-	}
-
-	switch (provider) {
-		case "anthropic":
-			return getProviderData(anthropicModels, anthropicDefaultModelId)
-		case "xai":
-			return getProviderData(xaiModels, xaiDefaultModelId)
-		case "bedrock":
-			// Special case for custom ARN
-			if (modelId === "custom-arn") {
-				return {
-					selectedProvider: provider,
-					selectedModelId: "custom-arn",
-					selectedModelInfo: {
-						maxTokens: 5000,
-						contextWindow: 128_000,
-						supportsPromptCache: false,
-						supportsImages: true,
-					},
-				}
-			}
-			return getProviderData(bedrockModels, bedrockDefaultModelId)
-		case "vertex":
-			return getProviderData(vertexModels, vertexDefaultModelId)
-		case "gemini":
-			return getProviderData(geminiModels, geminiDefaultModelId)
-		case "deepseek":
-			return getProviderData(deepSeekModels, deepSeekDefaultModelId)
-		case "openai-native":
-			return getProviderData(openAiNativeModels, openAiNativeDefaultModelId)
-		case "mistral":
-			return getProviderData(mistralModels, mistralDefaultModelId)
-		case "openrouter":
-			return {
-				selectedProvider: provider,
-				selectedModelId: apiConfiguration?.openRouterModelId || openRouterDefaultModelId,
-				selectedModelInfo: apiConfiguration?.openRouterModelInfo || openRouterDefaultModelInfo,
-			}
-		case "glama":
-			return {
-				selectedProvider: provider,
-				selectedModelId: apiConfiguration?.glamaModelId || glamaDefaultModelId,
-				selectedModelInfo: apiConfiguration?.glamaModelInfo || glamaDefaultModelInfo,
-			}
-		case "unbound":
-			return {
-				selectedProvider: provider,
-				selectedModelId: apiConfiguration?.unboundModelId || unboundDefaultModelId,
-				selectedModelInfo: apiConfiguration?.unboundModelInfo || unboundDefaultModelInfo,
-			}
-		case "requesty":
-			return {
-				selectedProvider: provider,
-				selectedModelId: apiConfiguration?.requestyModelId || requestyDefaultModelId,
-				selectedModelInfo: apiConfiguration?.requestyModelInfo || requestyDefaultModelInfo,
-			}
-		case "openai":
-			return {
-				selectedProvider: provider,
-				selectedModelId: apiConfiguration?.openAiModelId || "",
-				selectedModelInfo: apiConfiguration?.openAiCustomModelInfo || openAiModelInfoSaneDefaults,
-			}
-		case "ollama":
-			return {
-				selectedProvider: provider,
-				selectedModelId: apiConfiguration?.ollamaModelId || "",
-				selectedModelInfo: openAiModelInfoSaneDefaults,
-			}
-		case "lmstudio":
-			return {
-				selectedProvider: provider,
-				selectedModelId: apiConfiguration?.lmStudioModelId || "",
-				selectedModelInfo: openAiModelInfoSaneDefaults,
-			}
-		case "vscode-lm":
-			return {
-				selectedProvider: provider,
-				selectedModelId: apiConfiguration?.vsCodeLmModelSelector
-					? `${apiConfiguration.vsCodeLmModelSelector.vendor}/${apiConfiguration.vsCodeLmModelSelector.family}`
-					: "",
-				selectedModelInfo: {
-					...openAiModelInfoSaneDefaults,
-					supportsImages: false, // VSCode LM API currently doesn't support images.
-				},
-			}
-		case "fireworks":
-			return getProviderData(fireworksModels, fireworksDefaultModelId)
-		// begin kilocode_change
-		case "kilocode":
-			// TODO: in line with kilocode-openrouter provider use hardcoded for now but info needs to be fetched later
-			const displayModelId = {
-				gemini25: "Gemini 2.5 Pro",
-				gemini25flashpreview: "Gemini 2.5 Flash Preview",
-				claude37: "Claude 3.7 Sonnet",
-				gpt41: "GPT 4.1",
-			}
-
-			const displayConfigs = {
-				gemini25: kilocodeOpenrouterModels["google/gemini-2.5-pro-preview-03-25"],
-				gemini25flashpreview: kilocodeOpenrouterModels["google/gemini-2.5-flash-preview"],
-				claude37: anthropicModels["claude-3-7-sonnet-20250219"],
-				gpt41: kilocodeOpenrouterModels["openai/gpt-4.1"],
-			}
-			return {
-				selectedProvider: provider,
-				selectedModelId: displayModelId[apiConfiguration?.kilocodeModel ?? "claude37"],
-				selectedModelInfo: displayConfigs[apiConfiguration?.kilocodeModel ?? "claude37"],
-			}
-		// end kilocode_change
-		default:
-			return getProviderData(anthropicModels, anthropicDefaultModelId)
-	}
 }
 
 export default memo(ApiOptions)

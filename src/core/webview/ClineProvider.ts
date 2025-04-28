@@ -49,6 +49,7 @@ import { ACTION_NAMES } from "../CodeActionProvider"
 import { Cline, ClineOptions } from "../Cline"
 import { getNonce } from "./getNonce"
 import { getUri } from "./getUri"
+import { getSystemPromptFilePath } from "../prompts/sections/custom-system-prompt"
 import { getWorkspacePath } from "../../utils/path"
 import { webviewMessageHandler } from "./webviewMessageHandler"
 import { WebviewMessage } from "../../shared/WebviewMessage"
@@ -80,7 +81,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 
 	public isViewLaunched = false
 	public settingsImportedAt?: number
-	public readonly latestAnnouncementId = "apr-18-2025-3-13" // Update for v3.13.0 announcement
+	public readonly latestAnnouncementId = "apr-23-2025-3-14" // Update for v3.14.0 announcement
 	public readonly contextProxy: ContextProxy
 	public readonly providerSettingsManager: ProviderSettingsManager
 	public readonly customModesManager: CustomModesManager
@@ -614,6 +615,13 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			"codicon.css",
 		])
 
+		const materialIconsUri = getUri(webview, this.contextProxy.extensionUri, [
+			"node_modules",
+			"vscode-material-icons",
+			"generated",
+			"icons",
+		])
+
 		const imagesUri = getUri(webview, this.contextProxy.extensionUri, ["assets", "images"])
 
 		const file = "src/index.tsx"
@@ -649,6 +657,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 					<link href="${codiconsUri}" rel="stylesheet" />
 					<script nonce="${nonce}">
 						window.IMAGES_BASE_URI = "${imagesUri}"
+						window.MATERIAL_ICONS_BASE_URI = "${materialIconsUri}"
 					</script>
 					<title>Kilo Code</title>
 				</head>
@@ -698,6 +707,14 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			"codicon.css",
 		])
 
+		// The material icons from the React build output
+		const materialIconsUri = getUri(webview, this.contextProxy.extensionUri, [
+			"node_modules",
+			"vscode-material-icons",
+			"generated",
+			"icons",
+		])
+
 		const imagesUri = getUri(webview, this.contextProxy.extensionUri, ["assets", "images"])
 
 		// const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, "assets", "main.js"))
@@ -735,6 +752,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			<link href="${codiconsUri}" rel="stylesheet" />
 			<script nonce="${nonce}">
 				window.IMAGES_BASE_URI = "${imagesUri}"
+				window.MATERIAL_ICONS_BASE_URI = "${materialIconsUri}"
 			</script>
             <title>Kilo Code</title>
           </head>
@@ -1174,6 +1192,14 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		this.postMessageToWebview({ type: "state", state })
 	}
 
+	/**
+	 * Checks if there is a file-based system prompt override for the given mode
+	 */
+	async hasFileBasedSystemPromptOverride(mode: Mode): Promise<boolean> {
+		const promptFilePath = getSystemPromptFilePath(this.cwd, mode)
+		return await fileExistsAtPath(promptFilePath)
+	}
+
 	async getStateToPostToWebview() {
 		const {
 			apiConfiguration,
@@ -1230,11 +1256,16 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			language,
 			showAutoApproveMenu, // kilocode_change
 			maxReadFileLine,
+			terminalCompressProgressBar,
 		} = await this.getState()
 
 		const machineId = vscode.env.machineId
 		const allowedCommands = vscode.workspace.getConfiguration("kilo-code").get<string[]>("allowedCommands") || []
 		const cwd = this.cwd
+
+		// Check if there's a system prompt override for the current mode
+		const currentMode = mode ?? defaultModeSlug
+		const hasSystemPromptOverride = await this.hasFileBasedSystemPromptOverride(currentMode)
 
 		return {
 			version: this.context.extension?.packageJSON?.version ?? "",
@@ -1303,10 +1334,12 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			machineId,
 			showRooIgnoredFiles: showRooIgnoredFiles ?? true,
 			showAutoApproveMenu: showAutoApproveMenu ?? false, // kilocode_change
-			language,
+			language, // kilocode_change
 			renderContext: this.renderContext,
 			maxReadFileLine: maxReadFileLine ?? 500,
 			settingsImportedAt: this.settingsImportedAt,
+			terminalCompressProgressBar: terminalCompressProgressBar ?? true,
+			hasSystemPromptOverride,
 		}
 	}
 
@@ -1371,6 +1404,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			terminalZshOhMy: stateValues.terminalZshOhMy ?? false,
 			terminalZshP10k: stateValues.terminalZshP10k ?? false,
 			terminalZdotdir: stateValues.terminalZdotdir ?? false,
+			terminalCompressProgressBar: stateValues.terminalCompressProgressBar ?? true,
 			mode: stateValues.mode ?? defaultModeSlug,
 			language: stateValues.language ?? formatLanguage(vscode.env.language),
 			mcpEnabled: stateValues.mcpEnabled ?? true,

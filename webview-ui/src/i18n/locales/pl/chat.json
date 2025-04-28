@@ -123,7 +123,12 @@
 		"didRead": "Kilo Code przeczytał ten plik:",
 		"wantsToEdit": "Kilo Code chce edytować ten plik:",
 		"wantsToEditOutsideWorkspace": "Kilo Code chce edytować ten plik poza obszarem roboczym:",
-		"wantsToCreate": "Kilo Code chce utworzyć nowy plik:"
+		"wantsToCreate": "Kilo Code chce utworzyć nowy plik:",
+		"wantsToSearchReplace": "Kilo Code chce wykonać wyszukiwanie i zamianę w tym pliku:",
+		"didSearchReplace": "Kilo Code wykonał wyszukiwanie i zamianę w tym pliku:",
+		"wantsToInsert": "Kilo Code chce wstawić zawartość do tego pliku:",
+		"wantsToInsertWithLineNumber": "Kilo Code chce wstawić zawartość do tego pliku w linii {{lineNumber}}:",
+		"wantsToInsertAtEnd": "Kilo Code chce dodać zawartość na końcu tego pliku:"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code chce zobaczyć pliki najwyższego poziomu w tym katalogu:",
@@ -184,12 +189,12 @@
 		"copyToInput": "Kopiuj do pola wprowadzania (lub Shift + kliknięcie)"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code 3.13 wydany",
-		"description": "Roo Code 3.13 przynosi nowe funkcje i ulepszenia na podstawie Twoich opinii.",
+		"title": "🎉 Roo Code 3.14 wydany",
+		"description": "Roo Code 3.14 przynosi nowe funkcje i ulepszenia na podstawie Twoich opinii.",
 		"whatsNew": "Co nowego",
-		"feature1": "<bold>Gemini 2.5 Flash Thinking</bold>: Teraz możesz używać wariantu thinking Gemini 2.5 Flash i określać budżet tokenów dla thinking",
-		"feature2": "<bold>Ulepszenia UI</bold>: Nagłówek zadania, widok czatu, podgląd historii i widok powitalny zostały wizualnie ulepszone",
-		"feature3": "<bold>Poprawki błędów</bold>: Bardziej niezawodne edycje różnic i więcej",
+		"feature1": "<bold>Ulepszone narzędzia edycji</bold>: Narzędzia <code>search_and_replace</code> i <code>insert_content</code> zostały ulepszone i nie są już eksperymentalne",
+		"feature2": "<bold>Poprawki apply_diff</bold>: Kontynuujemy pracę nad ulepszaniem narzędzia <code>apply_diff</code>",
+		"feature3": "<bold>Mnóstwo innych ulepszeń</bold>: Liczne poprawki i usprawnienia w całym rozszerzeniu",
 		"hideButton": "Ukryj ogłoszenie",
 		"detailsDiscussLinks": "Uzyskaj więcej szczegółów i dołącz do dyskusji na <discordLink>Discord</discordLink> i <redditLink>Reddit</redditLink> 🚀"
 	},
@@ -215,9 +220,5 @@
 			"close": "Zamknij przeglądarkę"
 		}
 	},
-	"notifications": {
-		"toolRequest": "Żądanie narzędzia oczekuje na zatwierdzenie",
-		"browserAction": "Akcja przeglądarki oczekuje na zatwierdzenie",
-		"command": "Polecenie oczekuje na zatwierdzenie"
-	}
+	"systemPromptWarning": "OSTRZEŻENIE: Aktywne niestandardowe zastąpienie instrukcji systemowych. Może to poważnie zakłócić funkcjonalność i powodować nieprzewidywalne zachowanie."
 }

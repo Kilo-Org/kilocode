@@ -117,23 +117,26 @@ const getCommandsMap = ({ context, outputChannel, provider }: RegisterCommandOpt
 		},
 		// kilocode_change begin
 		"kilo-code.focusChatInput": async () => {
-			let visibleProvider = getVisibleProviderOrLog(outputChannel)
-
-			if (!visibleProvider) {
+			try {
 				await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
 				await delay(100)
 
-				visibleProvider = getVisibleProviderOrLog(outputChannel)
+				let visibleProvider = getVisibleProviderOrLog(outputChannel)
 
-				// If still no visible provider, try opening in a new tab
 				if (!visibleProvider) {
+					// If still no visible provider, try opening in a new tab
 					const tabProvider = await openClineInNewTab({ context, outputChannel })
 					await delay(100)
 					visibleProvider = tabProvider
 				}
-			}
 
-			visibleProvider?.postMessageToWebview({ type: "action", action: "focusChatInput" })
+				visibleProvider?.postMessageToWebview({
+					type: "action",
+					action: "focusChatInput",
+				})
+			} catch (error) {
+				outputChannel.appendLine(`Error in focusChatInput: ${error}`)
+			}
 		},
 		// kilocode_change end
 		"kilo-code.acceptInput": () => {

@@ -2,10 +2,10 @@ import React, { forwardRef, useCallback, useEffect, useLayoutEffect, useMemo, us
 import { useEvent } from "react-use"
 import DynamicTextArea from "react-textarea-autosize"
 
-import { mentionRegex, mentionRegexGlobal } from "../../../../src/shared/context-mentions"
-import { WebviewMessage } from "../../../../src/shared/WebviewMessage"
-import { Mode, getAllModes } from "../../../../src/shared/modes"
-import { ExtensionMessage } from "../../../../src/shared/ExtensionMessage"
+import { mentionRegex, mentionRegexGlobal } from "@roo/shared/context-mentions"
+import { WebviewMessage } from "@roo/shared/WebviewMessage"
+import { Mode, getAllModes } from "@roo/shared/modes"
+import { ExtensionMessage } from "@roo/shared/ExtensionMessage"
 
 import { vscode } from "@/utils/vscode"
 import { useExtensionState } from "@/context/ExtensionStateContext"
@@ -17,7 +17,7 @@ import {
 	removeMention,
 	shouldShowContextMenu,
 	SearchResult,
-} from "@/utils/context-mentions"
+} from "@src/utils/context-mentions"
 import { convertToMentionPath } from "@/utils/path-mentions"
 import { SelectDropdown, DropdownOptionType, Button } from "@/components/ui"
 import { normalizeApiConfiguration } from "../settings/ApiOptions" // kilocode_change
@@ -654,7 +654,10 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				e.preventDefault()
 				setIsDraggingOver(false)
 
-				const text = e.dataTransfer.getData("application/vnd.code.uri-list")
+				const textFieldList = e.dataTransfer.getData("text")
+				const textUriList = e.dataTransfer.getData("application/vnd.code.uri-list")
+				// When textFieldList is empty, it may attempt to use textUriList obtained from drag-and-drop tabs; if not empty, it will use textFieldList.
+				const text = textFieldList || textUriList
 				if (text) {
 					// Split text on newlines to handle multiple files
 					const lines = text.split(/\r?\n/).filter((line) => line.trim() !== "")

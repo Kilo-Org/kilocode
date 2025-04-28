@@ -1,16 +1,17 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react"
 import { useEvent } from "react-use"
-import { ApiConfigMeta, ExtensionMessage, ExtensionState } from "../../../src/shared/ExtensionMessage"
-import { ApiConfiguration } from "../../../src/shared/api"
-import { vscode } from "../utils/vscode"
-import { convertTextMateToHljs } from "../utils/textMateToHljs"
-import { findLastIndex } from "../../../src/shared/array"
-import { McpServer } from "../../../src/shared/mcp"
-import { McpMarketplaceCatalog } from "../../../src/shared/kilocode/mcp"
-import { checkExistKey } from "../../../src/shared/checkExistApiConfig"
-import { Mode, CustomModePrompts, defaultModeSlug, defaultPrompts, ModeConfig } from "../../../src/shared/modes"
-import { CustomSupportPrompts } from "../../../src/shared/support-prompt"
-import { experimentDefault, ExperimentId } from "../../../src/shared/experiments"
+
+import { ApiConfigMeta, ExtensionMessage, ExtensionState } from "@roo/shared/ExtensionMessage"
+import { ApiConfiguration } from "@roo/shared/api"
+import { vscode } from "@src/utils/vscode"
+import { convertTextMateToHljs } from "@src/utils/textMateToHljs"
+import { findLastIndex } from "@roo/shared/array"
+import { McpServer } from "@roo/shared/mcp"
+import { checkExistKey } from "@roo/shared/checkExistApiConfig"
+import { Mode, CustomModePrompts, defaultModeSlug, defaultPrompts, ModeConfig } from "@roo/shared/modes"
+import { CustomSupportPrompts } from "@roo/shared/support-prompt"
+import { experimentDefault, ExperimentId } from "@roo/shared/experiments"
+import { McpMarketplaceCatalog } from "../../../src/shared/kilocode/mcp" // kilocode_change
 
 export interface ExtensionStateContextType extends ExtensionState {
 	didHydrateState: boolean
@@ -18,6 +19,7 @@ export interface ExtensionStateContextType extends ExtensionState {
 	theme: any
 	mcpServers: McpServer[]
 	mcpMarketplaceCatalog: McpMarketplaceCatalog // kilocode_change
+	hasSystemPromptOverride?: boolean
 	currentCheckpoint?: string
 	filePaths: string[]
 	openedTabs: Array<{ label: string; isActive: boolean; path?: string }>
@@ -87,6 +89,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	pinnedApiConfigs?: Record<string, boolean>
 	setPinnedApiConfigs: (value: Record<string, boolean>) => void
 	togglePinnedApiConfig: (configName: string) => void
+	terminalCompressProgressBar?: boolean
+	setTerminalCompressProgressBar: (value: boolean) => void
 }
 
 export const ExtensionStateContext = createContext<ExtensionStateContextType | undefined>(undefined)
@@ -169,6 +173,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		terminalZshOhMy: false, // Default Oh My Zsh integration setting
 		terminalZshP10k: false, // Default Powerlevel10k integration setting
 		terminalZdotdir: false, // Default ZDOTDIR handling setting
+		terminalCompressProgressBar: true, // Default to compress progress bar output
 	})
 
 	const [didHydrateState, setDidHydrateState] = useState(false)
@@ -332,6 +337,8 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setAwsUsePromptCache: (value) => setState((prevState) => ({ ...prevState, awsUsePromptCache: value })),
 		setMaxReadFileLine: (value) => setState((prevState) => ({ ...prevState, maxReadFileLine: value })),
 		setPinnedApiConfigs: (value) => setState((prevState) => ({ ...prevState, pinnedApiConfigs: value })),
+		setTerminalCompressProgressBar: (value) =>
+			setState((prevState) => ({ ...prevState, terminalCompressProgressBar: value })),
 		togglePinnedApiConfig: (configId) =>
 			setState((prevState) => {
 				const currentPinned = prevState.pinnedApiConfigs || {}

@@ -65,6 +65,7 @@ export const languages = [
 	"ko",
 	"pl",
 	"pt-BR",
+	"ru",
 	"tr",
 	"vi",
 	"zh-CN",
@@ -108,6 +109,7 @@ export const modelInfoSchema = z.object({
 	supportsImages: z.boolean().optional(),
 	supportsComputerUse: z.boolean().optional(),
 	supportsPromptCache: z.boolean(),
+	isPromptCacheOptional: z.boolean().optional(),
 	inputPrice: z.number().optional(),
 	outputPrice: z.number().optional(),
 	cacheWritesPrice: z.number().optional(),
@@ -118,6 +120,17 @@ export const modelInfoSchema = z.object({
 	minTokensPerCachePoint: z.number().optional(),
 	maxCachePoints: z.number().optional(),
 	cachableFields: z.array(z.string()).optional(),
+	tiers: z
+		.array(
+			z.object({
+				contextWindow: z.number(),
+				inputPrice: z.number().optional(),
+				outputPrice: z.number().optional(),
+				cacheWritesPrice: z.number().optional(),
+				cacheReadsPrice: z.number().optional(),
+			}),
+		)
+		.optional(),
 })
 
 export type ModelInfo = z.infer<typeof modelInfoSchema>
@@ -281,7 +294,7 @@ export type CustomSupportPrompts = z.infer<typeof customSupportPromptsSchema>
  * ExperimentId
  */
 
-export const experimentIds = ["search_and_replace", "insert_content", "powerSteering"] as const
+export const experimentIds = ["powerSteering"] as const
 
 export const experimentIdsSchema = z.enum(experimentIds)
 
@@ -292,8 +305,6 @@ export type ExperimentId = z.infer<typeof experimentIdsSchema>
  */
 
 const experimentsSchema = z.object({
-	search_and_replace: z.boolean(),
-	insert_content: z.boolean(),
 	powerSteering: z.boolean(),
 })
 
@@ -393,11 +404,12 @@ export const providerSettingsSchema = z.object({
 	modelMaxThinkingTokens: z.number().optional(),
 	// Generic
 	includeMaxTokens: z.boolean().optional(),
-	modelTemperature: z.number().nullish(),
 	reasoningEffort: reasoningEffortsSchema.optional(),
-	rateLimitSeconds: z.number().optional(),
+	promptCachingEnabled: z.boolean().optional(),
 	diffEnabled: z.boolean().optional(),
 	fuzzyMatchThreshold: z.number().optional(),
+	modelTemperature: z.number().nullish(),
+	rateLimitSeconds: z.number().optional(),
 	// Fake AI
 	fakeAi: z.unknown().optional(),
 	// kilocode_change
@@ -489,11 +501,12 @@ const providerSettingsRecord: ProviderSettingsRecord = {
 	modelMaxThinkingTokens: undefined,
 	// Generic
 	includeMaxTokens: undefined,
-	modelTemperature: undefined,
 	reasoningEffort: undefined,
-	rateLimitSeconds: undefined,
+	promptCachingEnabled: undefined,
 	diffEnabled: undefined,
 	fuzzyMatchThreshold: undefined,
+	modelTemperature: undefined,
+	rateLimitSeconds: undefined,
 	// Fake AI
 	fakeAi: undefined,
 	// kilocode_change start
@@ -564,6 +577,7 @@ export const globalSettingsSchema = z.object({
 	terminalZshOhMy: z.boolean().optional(),
 	terminalZshP10k: z.boolean().optional(),
 	terminalZdotdir: z.boolean().optional(),
+	terminalCompressProgressBar: z.boolean().optional(),
 
 	rateLimitSeconds: z.number().optional(),
 	diffEnabled: z.boolean().optional(),
@@ -640,6 +654,7 @@ const globalSettingsRecord: GlobalSettingsRecord = {
 	terminalZshOhMy: undefined,
 	terminalZshP10k: undefined,
 	terminalZdotdir: undefined,
+	terminalCompressProgressBar: undefined,
 
 	rateLimitSeconds: undefined,
 	diffEnabled: undefined,
@@ -843,7 +858,6 @@ export const toolNames = [
 	"execute_command",
 	"read_file",
 	"write_to_file",
-	"append_to_file",
 	"apply_diff",
 	"insert_content",
 	"search_and_replace",
@@ -894,6 +908,7 @@ export enum RooCodeEventName {
 	TaskSpawned = "taskSpawned",
 	TaskCompleted = "taskCompleted",
 	TaskTokenUsageUpdated = "taskTokenUsageUpdated",
+	TaskToolFailed = "taskToolFailed",
 }
 
 export const rooCodeEventsSchema = z.object({
@@ -914,6 +929,7 @@ export const rooCodeEventsSchema = z.object({
 	[RooCodeEventName.TaskSpawned]: z.tuple([z.string(), z.string()]),
 	[RooCodeEventName.TaskCompleted]: z.tuple([z.string(), tokenUsageSchema, toolUsageSchema]),
 	[RooCodeEventName.TaskTokenUsageUpdated]: z.tuple([z.string(), tokenUsageSchema]),
+	[RooCodeEventName.TaskToolFailed]: z.tuple([z.string(), toolNamesSchema, z.string()]),
 })
 
 export type RooCodeEvents = z.infer<typeof rooCodeEventsSchema>

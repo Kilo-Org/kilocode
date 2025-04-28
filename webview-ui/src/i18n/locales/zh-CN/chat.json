@@ -123,7 +123,12 @@
 		"didRead": "已读取文件:",
 		"wantsToEdit": "需要编辑文件:",
 		"wantsToEditOutsideWorkspace": "需要编辑外部文件:",
-		"wantsToCreate": "需要新建文件:"
+		"wantsToCreate": "需要新建文件:",
+		"wantsToSearchReplace": "需要在此文件中搜索和替换:",
+		"didSearchReplace": "已完成搜索和替换:",
+		"wantsToInsert": "需要在此文件中插入内容:",
+		"wantsToInsertWithLineNumber": "需要在第 {{lineNumber}} 行插入内容:",
+		"wantsToInsertAtEnd": "需要在文件末尾添加内容:"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "需要查看目录文件列表:",
@@ -184,12 +189,12 @@
 		"copyToInput": "复制到输入框（或按住Shift点击）"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code 3.13 已发布",
-		"description": "Roo Code 3.13 带来基于您反馈的新功能和改进。",
+		"title": "🎉 Roo Code 3.14 已发布",
+		"description": "Roo Code 3.14 带来基于您反馈的新功能和改进。",
 		"whatsNew": "新特性",
-		"feature1": "<bold>Gemini 2.5 Flash Thinking</bold>: 现在可以使用 Gemini 2.5 Flash 的 thinking 变体并指定 thinking Token 预算",
-		"feature2": "<bold>UI 改进</bold>: 任务标题、聊天视图、历史预览和欢迎视图已进行视觉升级",
-		"feature3": "<bold>错误修复</bold>: 更可靠的差异编辑等功能",
+		"feature1": "<bold>编辑工具增强</bold>: <code>search_and_replace</code> 和 <code>insert_content</code> 工具已得到改进，并从实验性状态毕业",
+		"feature2": "<bold>差异更新修复</bold>: 我们持续改进 <code>apply_diff</code> 工具",
+		"feature3": "<bold>海量其他改进</bold>: 扩展中众多的修复和增强功能",
 		"hideButton": "隐藏公告",
 		"detailsDiscussLinks": "在 <discordLink>Discord</discordLink> 和 <redditLink>Reddit</redditLink> 获取更多详情并参与讨论 🚀"
 	},
@@ -215,9 +220,5 @@
 			"close": "关闭浏览器"
 		}
 	},
-	"notifications": {
-		"toolRequest": "工具请求等待批准",
-		"browserAction": "浏览器操作等待批准",
-		"command": "命令等待批准"
-	}
+	"systemPromptWarning": "警告：自定义系统提示词覆盖已激活。这可能严重破坏功能并导致不可预测的行为。"
 }

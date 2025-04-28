@@ -1,5 +1,16 @@
 # kilo-code
 
+## 4.18.0
+
+### Minor Changes
+
+- Include changes from Roo Code v3.14.2
+
+### Patch Changes
+
+- Fix settingview appearing not to save when hitting save button
+- Fix dark buttons on light vscode themes (thanks @Aikiboy123)
+
 ## 4.17.0
 
 ### Minor Changes

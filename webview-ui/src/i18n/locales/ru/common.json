@@ -1,0 +1,17 @@
+{
+	"number_format": {
+		"thousand_suffix": "тыс",
+		"million_suffix": "млн",
+		"billion_suffix": "млрд"
+	},
+	"feedback": {
+		"title": "Обратная связь",
+		"description": "Мы будем рады услышать ваши отзывы или помочь с любыми проблемами, которые у вас возникают.",
+		"githubIssues": "Сообщить о проблеме на GitHub",
+		"githubDiscussions": "Присоединиться к обсуждениям на GitHub",
+		"discord": "Присоединиться к нашему сообществу в Discord"
+	},
+	"ui": {
+		"search_placeholder": "Поиск..."
+	}
+}

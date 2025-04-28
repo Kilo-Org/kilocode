@@ -92,6 +92,7 @@ export interface WebviewMessage {
 		| "terminalZshOhMy"
 		| "terminalZshP10k"
 		| "terminalZdotdir"
+		| "terminalCompressProgressBar"
 		| "mcpEnabled"
 		| "enableMcpServerCreation"
 		| "searchCommits"
@@ -151,6 +152,10 @@ export interface WebviewMessage {
 		subtitle?: string
 		message: string
 	}
+	mcpId?: string
+	toolNames?: string[]
+	url?: string
+	autoApprove?: boolean
 	// kilocode_change end
 	serverName?: string
 	toolName?: string
@@ -168,10 +173,7 @@ export interface WebviewMessage {
 	source?: "global" | "project"
 	requestId?: string
 	ids?: string[]
-	mcpId?: string
-	toolNames?: string[]
-	url?: string
-	autoApprove?: boolean
+	hasSystemPromptOverride?: boolean
 }
 
 export const checkoutDiffPayloadSchema = z.object({

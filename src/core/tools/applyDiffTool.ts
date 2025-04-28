@@ -41,6 +41,10 @@ export async function applyDiffTool(
 				toolProgressStatus = cline.diffStrategy.getProgressStatus(block)
 			}
 
+			if (toolProgressStatus && Object.keys(toolProgressStatus).length === 0) {
+				return
+			}
+
 			const partialMessage = JSON.stringify(sharedMessageProps)
 			await cline.ask("tool", partialMessage, block.partial, toolProgressStatus).catch(() => {})
 			return
@@ -95,7 +99,6 @@ export async function applyDiffTool(
 
 			if (!diffResult.success) {
 				cline.consecutiveMistakeCount++
-				cline.recordToolError("apply_diff")
 				const currentCount = (cline.consecutiveMistakeCountForApplyDiff.get(relPath) || 0) + 1
 				cline.consecutiveMistakeCountForApplyDiff.set(relPath, currentCount)
 				let formattedError = ""
@@ -125,6 +128,8 @@ export async function applyDiffTool(
 				if (currentCount >= 2) {
 					await cline.say("diff_error", formattedError)
 				}
+
+				cline.recordToolError("apply_diff", formattedError)
 
 				pushToolResult(formattedError)
 				return
@@ -191,7 +196,7 @@ export async function applyDiffTool(
 						)}\n</final_file_content>\n\n` +
 						`Please note:\n` +
 						`1. You do not need to re-write the file with these changes, as they have already been applied.\n` +
-						`2. Proceed with the task using cline updated file content as the new baseline.\n` +
+						`2. Proceed with the task using this updated file content as the new baseline.\n` +
 						`3. If the user's edits have addressed part of the task or changed the requirements, adjust your approach accordingly.` +
 						`${newProblemsMessage}`,
 				)

@@ -12,7 +12,7 @@ import { GlobalFileNames } from "../../shared/globalFileNames"
 
 import { checkoutDiffPayloadSchema, checkoutRestorePayloadSchema, WebviewMessage } from "../../shared/WebviewMessage"
 import { checkExistKey } from "../../shared/checkExistApiConfig"
-import { EXPERIMENT_IDS, experimentDefault, ExperimentId } from "../../shared/experiments"
+import { experimentDefault } from "../../shared/experiments"
 import { Terminal } from "../../integrations/terminal/Terminal"
 import { openFile, openImage } from "../../integrations/misc/open-file"
 import { selectImages } from "../../integrations/misc/process-images"
@@ -26,7 +26,7 @@ import { showSystemNotification } from "../../integrations/notifications" // kil
 import { singleCompletionHandler } from "../../utils/single-completion-handler"
 import { searchCommits } from "../../utils/git"
 import { exportSettings, importSettings } from "../config/importExport"
-import { getOpenRouterModels } from "../../api/providers/openrouter"
+import { getOpenRouterModels } from "../../api/providers/fetchers/openrouter"
 import { getGlamaModels } from "../../api/providers/glama"
 import { getUnboundModels } from "../../api/providers/unbound"
 import { getRequestyModels } from "../../api/providers/requesty"
@@ -84,6 +84,7 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			// if we hadn't retrieved the latest at this point
 			// (see normalizeApiConfiguration > openrouter).
 			const { apiConfiguration: currentApiConfig } = await provider.getState()
+
 			getOpenRouterModels(currentApiConfig).then(async (openRouterModels) => {
 				if (Object.keys(openRouterModels).length > 0) {
 					await provider.writeModelsToCache(GlobalFileNames.openRouterModels, openRouterModels)
@@ -100,6 +101,7 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 							"openRouterModelInfo",
 							openRouterModels[apiConfiguration.openRouterModelId],
 						)
+
 						await provider.postStateToWebview()
 					}
 				}
@@ -148,20 +150,6 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			provider.readModelsFromCache(GlobalFileNames.requestyModels).then((requestyModels) => {
 				if (requestyModels) {
 					provider.postMessageToWebview({ type: "requestyModels", requestyModels })
-				}
-			})
-
-			getRequestyModels().then(async (requestyModels) => {
-				if (Object.keys(requestyModels).length > 0) {
-					await provider.writeModelsToCache(GlobalFileNames.requestyModels, requestyModels)
-					await provider.postMessageToWebview({ type: "requestyModels", requestyModels })
-
-					const { apiConfiguration } = await provider.getState()
-
-					if (apiConfiguration.requestyModelId) {
-						await updateGlobalState("requestyModelInfo", requestyModels[apiConfiguration.requestyModelId])
-						await provider.postStateToWebview()
-					}
 				}
 			})
 
@@ -405,7 +393,7 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 
 			break
 		case "refreshRequestyModels":
-			const requestyModels = await getRequestyModels()
+			const requestyModels = await getRequestyModels(message.values?.apiKey)
 
 			if (Object.keys(requestyModels).length > 0) {
 				await provider.writeModelsToCache(GlobalFileNames.requestyModels, requestyModels)
@@ -769,6 +757,13 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			await provider.postStateToWebview()
 			if (message.bool !== undefined) {
 				Terminal.setTerminalZdotdir(message.bool)
+			}
+			break
+		case "terminalCompressProgressBar":
+			await updateGlobalState("terminalCompressProgressBar", message.bool)
+			await provider.postStateToWebview()
+			if (message.bool !== undefined) {
+				Terminal.setCompressProgressBar(message.bool)
 			}
 			break
 		case "mode":

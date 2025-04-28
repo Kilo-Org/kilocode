@@ -123,7 +123,12 @@
 		"didRead": "Kilo Code가 이 파일을 읽었습니다:",
 		"wantsToEdit": "Kilo Code가 이 파일을 편집하고 싶어합니다:",
 		"wantsToEditOutsideWorkspace": "Kilo Code가 워크스페이스 외부의 이 파일을 편집하고 싶어합니다:",
-		"wantsToCreate": "Kilo Code가 새 파일을 만들고 싶어합니다:"
+		"wantsToCreate": "Kilo Code가 새 파일을 만들고 싶어합니다:",
+		"wantsToSearchReplace": "Kilo Code가 이 파일에서 검색 및 바꾸기를 수행하고 싶어합니다:",
+		"didSearchReplace": "Kilo Code가 이 파일에서 검색 및 바꾸기를 수행했습니다:",
+		"wantsToInsert": "Kilo Code가 이 파일에 내용을 삽입하고 싶어합니다:",
+		"wantsToInsertWithLineNumber": "Kilo Code가 이 파일의 {{lineNumber}}번 줄에 내용을 삽입하고 싶어합니다:",
+		"wantsToInsertAtEnd": "Kilo Code가 이 파일의 끝에 내용을 추가하고 싶어합니다:"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code가 이 디렉토리의 최상위 파일을 보고 싶어합니다:",
@@ -184,12 +189,12 @@
 		"copyToInput": "입력창에 복사 (또는 Shift + 클릭)"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code 3.13 출시",
-		"description": "Roo Code 3.13는 사용자 피드백을 기반으로 새로운 기능과 개선사항을 제공합니다.",
+		"title": "🎉 Roo Code 3.14 출시",
+		"description": "Roo Code 3.14는 사용자 피드백을 기반으로 새로운 기능과 개선사항을 제공합니다.",
 		"whatsNew": "새로운 기능",
-		"feature1": "<bold>Gemini 2.5 Flash Thinking</bold>: 이제 Gemini 2.5 Flash의 thinking 변형을 사용하고 thinking 토큰 예산을 지정할 수 있습니다",
-		"feature2": "<bold>UI 개선</bold>: 작업 헤더, 채팅 뷰, 기록 미리보기 및 환영 뷰가 시각적으로 업그레이드되었습니다",
-		"feature3": "<bold>버그 수정</bold>: 더 안정적인 차이점 편집 등",
+		"feature1": "<bold>개선된 편집 도구</bold>: <code>search_and_replace</code>와 <code>insert_content</code> 도구가 개선되어 실험 상태에서 정식 기능으로 전환되었습니다",
+		"feature2": "<bold>apply_diff 수정</bold>: <code>apply_diff</code> 도구를 지속적으로 개선하고 있습니다",
+		"feature3": "<bold>수많은 기타 개선사항</bold>: 확장 프로그램 전체에 걸친 다양한 수정 및 향상된 기능",
 		"hideButton": "공지 숨기기",
 		"detailsDiscussLinks": "<discordLink>Discord</discordLink>와 <redditLink>Reddit</redditLink>에서 더 자세한 정보를 확인하고 논의하세요 🚀"
 	},
@@ -215,9 +220,5 @@
 			"close": "브라우저 닫기"
 		}
 	},
-	"notifications": {
-		"toolRequest": "도구 요청 승인 대기 중",
-		"browserAction": "브라우저 작업 승인 대기 중",
-		"command": "명령 승인 대기 중"
-	}
+	"systemPromptWarning": "경고: 사용자 정의 시스템 프롬프트 재정의가 활성화되었습니다. 이로 인해 기능이 심각하게 손상되고 예측할 수 없는 동작이 발생할 수 있습니다."
 }

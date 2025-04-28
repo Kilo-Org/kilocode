@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react"
+import React from "react"
 import { vscode } from "../../utils/vscode"
 import DOMPurify from "dompurify"
 import { getSafeHostname, formatUrlForOpening, checkIfImageUrl } from "./McpRichUtil"
@@ -200,6 +200,7 @@ class ImagePreview extends React.Component<
 					)}
 					{/* Hidden image that we'll use to detect load/error events */}
 					{/\.svg(\?.*)?$/i.test(url) ? (
+						// eslint-disable-next-line jsx-a11y/alt-text
 						<object
 							type="image/svg+xml"
 							data={DOMPurify.sanitize(url)}
@@ -285,6 +286,7 @@ class ImagePreview extends React.Component<
 						/>
 					</object>
 				) : (
+					// eslint-disable-next-line jsx-a11y/img-redundant-alt
 					<img
 						src={DOMPurify.sanitize(url)}
 						alt={`Image from ${getSafeHostname(url)}`}

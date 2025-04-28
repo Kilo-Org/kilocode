@@ -316,6 +316,10 @@
 			"label": "Terminal kabuk entegrasyonu zaman aşımı",
 			"description": "Komutları yürütmeden önce kabuk entegrasyonunun başlatılması için beklenecek maksimum süre. Kabuk başlatma süresi uzun olan kullanıcılar için, terminalde \"Shell Integration Unavailable\" hatalarını görürseniz bu değerin artırılması gerekebilir."
 		},
+		"compressProgressBar": {
+			"label": "İlerleme çubuğu çıktısını sıkıştır",
+			"description": "Etkinleştirildiğinde, satır başı karakteri (\\r) içeren terminal çıktısını işleyerek gerçek bir terminalin içeriği nasıl göstereceğini simüle eder. Bu, ilerleme çubuğunun ara durumlarını kaldırır, yalnızca son durumu korur ve daha alakalı bilgiler için bağlam alanından tasarruf sağlar."
+		},
 		"zdotdir": {
 			"label": "ZDOTDIR işlemeyi etkinleştir",
 			"description": "Etkinleştirildiğinde, zsh kabuğu entegrasyonunu düzgün şekilde işlemek için ZDOTDIR için geçici bir dizin oluşturur. Bu, zsh yapılandırmanızı korurken VSCode kabuk entegrasyonunun zsh ile düzgün çalışmasını sağlar. (deneysel)"
@@ -386,6 +390,10 @@
 			"name": "Deneysel çoklu blok diff aracını kullan",
 			"description": "Etkinleştirildiğinde, Kilo Code çoklu blok diff aracını kullanacaktır. Bu, tek bir istekte dosyadaki birden fazla kod bloğunu güncellemeye çalışacaktır."
 		}
+	},
+	"promptCaching": {
+		"label": "Prompt önbelleğini etkinleştir",
+		"description": "Etkinleştirildiğinde, Roo maliyetleri azaltmak için prompt önbelleği açık olan bu modeli kullanacaktır."
 	},
 	"temperature": {
 		"useCustom": "Özel sıcaklık kullan",

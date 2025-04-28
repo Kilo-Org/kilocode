@@ -10,10 +10,9 @@ import {
 	openAiNativeModels,
 	vertexModels,
 	xaiModels,
-	REASONING_MODELS,
-} from "../../../../src/shared/api"
+} from "@roo/shared/api"
 
-export { REASONING_MODELS }
+export { REASONING_MODELS, PROMPT_CACHING_MODELS } from "@roo/shared/api"
 
 export const MODELS_BY_PROVIDER: Partial<Record<ApiProvider, Record<string, ModelInfo>>> = {
 	anthropic: anthropicModels,

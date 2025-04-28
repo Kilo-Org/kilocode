@@ -1,4 +1,4 @@
-import { ApiConfiguration, ModelInfo } from "../../../src/shared/api"
+import { ApiConfiguration, ModelInfo } from "@roo/shared/api"
 import i18next from "i18next"
 
 export function validateApiConfiguration(apiConfiguration?: ApiConfiguration): string | undefined {
@@ -94,7 +94,7 @@ export function validateApiConfiguration(apiConfiguration?: ApiConfiguration): s
  */
 export function validateBedrockArn(arn: string, region?: string) {
 	// Validate ARN format
-	const arnRegex = /^arn:aws:bedrock:([^:]+):([^:]*):(?:([^/]+)\/([\w.\-:]+)|([^/]+))$/
+	const arnRegex = /^arn:aws:(?:bedrock|sagemaker):([^:]+):([^:]*):(?:([^/]+)\/([\w.\-:]+)|([^/]+))$/
 	const match = arn.match(arnRegex)
 
 	if (!match) {
