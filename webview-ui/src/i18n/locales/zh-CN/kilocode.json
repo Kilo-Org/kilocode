@@ -8,5 +8,10 @@
 	"lowCreditWarning": {
 		"addCredit": "添加额度",
 		"lowBalance": "你的 Kilo Code 余额不足"
+	},
+	"notifications": {
+		"toolRequest": "工具请求等待批准",
+		"browserAction": "浏览器操作等待批准",
+		"command": "命令等待批准"
 	}
 }

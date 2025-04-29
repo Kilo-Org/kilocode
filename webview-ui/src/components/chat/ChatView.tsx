@@ -181,7 +181,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						case "tool":
 							if (!isAutoApproved(lastMessage)) {
 								playSound("notification")
-								showSystemNotification(t("chat:notifications.toolRequest")) // kilocode_change
+								showSystemNotification(t("kilocode:notifications.toolRequest")) // kilocode_change
 							}
 							setTextAreaDisabled(isPartial)
 							setClineAsk("tool")
@@ -208,7 +208,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						case "browser_action_launch":
 							if (!isAutoApproved(lastMessage)) {
 								playSound("notification")
-								showSystemNotification(t("chat:notifications.browserAction")) // kilocode_change
+								showSystemNotification(t("kilocode:notifications.browserAction")) // kilocode_change
 							}
 							setTextAreaDisabled(isPartial)
 							setClineAsk("browser_action_launch")
@@ -219,7 +219,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						case "command":
 							if (!isAutoApproved(lastMessage)) {
 								playSound("notification")
-								showSystemNotification(t("chat:notifications.command")) // kilocode_change
+								showSystemNotification(t("kilocode:notifications.command")) // kilocode_change
 							}
 							setTextAreaDisabled(isPartial)
 							setClineAsk("command")

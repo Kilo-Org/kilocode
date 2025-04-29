@@ -8,5 +8,10 @@
 	"lowCreditWarning": {
 		"addCredit": "Guthaben hinzufügen",
 		"lowBalance": "Ihr Kilo Code Guthaben ist niedrig"
+	},
+	"notifications": {
+		"toolRequest": "Werkzeuganfrage wartet auf Genehmigung",
+		"browserAction": "Browseraktion wartet auf Genehmigung",
+		"command": "Befehl wartet auf Genehmigung"
 	}
 }

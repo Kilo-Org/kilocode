@@ -8,5 +8,10 @@
 	"lowCreditWarning": {
 		"addCredit": "クレジットを追加",
 		"lowBalance": "Kilo Codeの残高が少なくなっています"
+	},
+	"notifications": {
+		"toolRequest": "ツールのリクエストが承認待ちです",
+		"browserAction": "ブラウザのアクションが承認待ちです",
+		"command": "コマンドが承認待ちです"
 	}
 }

@@ -8,5 +8,10 @@
 	"lowCreditWarning": {
 		"addCredit": "Aggiungi credito",
 		"lowBalance": "Il tuo saldo Kilo Code è basso"
+	},
+	"notifications": {
+		"toolRequest": "Richiesta strumento in attesa di approvazione",
+		"browserAction": "Azione del browser in attesa di approvazione",
+		"command": "Comando in attesa di approvazione"
 	}
 }
