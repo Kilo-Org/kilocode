@@ -1,6 +1,6 @@
 {
 	"extension.displayName": "Roo Code (ранее Roo Cline)",
-	"extension.description": "Целая команда ИИ-разработчиков в вашем редакторе.",
+	"extension.description": "Помощник по программированию на основе искусственного интеллекта с открытым исходным кодом для планирования, создания и исправления кода.",
 	"views.contextMenu.label": "Roo Code",
 	"views.terminalMenu.label": "Roo Code",
 	"views.activitybar.title": "Roo Code",
