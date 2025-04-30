@@ -338,7 +338,7 @@
 		},
 		"zshOhMy": {
 			"label": "Włącz integrację Oh My Zsh",
-			"description": "Po włączeniu ustawia ITERM_SHELL_INTEGRATION_INSTALLED=Yes, aby włączyć funkcje integracji powłoki Oh My Zsh. (eksperymentalne)"
+			"description": "Po włączeniu ustawia ITERM_SHELL_INTEGRATION_INSTALLED=Yes, aby włączyć funkcje integracji powłoki Oh My Zsh. To ustawienie może wymagać ponownego uruchomienia IDE, aby zostało zastosowane. (eksperymentalne)"
 		},
 		"zshP10k": {
 			"label": "Włącz integrację Powerlevel10k",

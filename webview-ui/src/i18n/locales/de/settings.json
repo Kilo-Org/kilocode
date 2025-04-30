@@ -338,7 +338,7 @@
 		},
 		"zshOhMy": {
 			"label": "Oh My Zsh-Integration aktivieren",
-			"description": "Wenn aktiviert, wird ITERM_SHELL_INTEGRATION_INSTALLED=Yes gesetzt, um die Shell-Integrationsfunktionen von Oh My Zsh zu aktivieren. (experimentell)"
+			"description": "Wenn aktiviert, wird ITERM_SHELL_INTEGRATION_INSTALLED=Yes gesetzt, um die Shell-Integrationsfunktionen von Oh My Zsh zu aktivieren. Diese Einstellung erfordert möglicherweise einen Neustart der IDE, um wirksam zu werden. (experimentell)"
 		},
 		"zshP10k": {
 			"label": "Powerlevel10k-Integration aktivieren",
