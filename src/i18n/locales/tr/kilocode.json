@@ -1,5 +1,9 @@
 {
 	"info": {
 		"settings_imported": "Ayarlar başarıyla içe aktarıldı."
+	},
+	"lowCreditWarning": {
+		"title": "Düşük Kredi Uyarısı!",
+		"message": "Ücretsiz kredilerle yükleme yapabilir veya daha fazla satın alabilir misiniz kontrol edin!"
 	}
 }

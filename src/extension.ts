@@ -15,6 +15,7 @@ try {
 import "./utils/path" // Necessary to have access to String.prototype.toPosix.
 
 import { initializeI18n } from "./i18n"
+import { ContextProxy } from "./core/config/ContextProxy"
 import { ClineProvider } from "./core/webview/ClineProvider"
 import { CodeActionProvider } from "./core/CodeActionProvider"
 import { DIFF_VIEW_URI_SCHEME } from "./integrations/editor/DiffViewProvider"
@@ -24,7 +25,6 @@ import { API } from "./exports/api"
 import { migrateSettings } from "./utils/migrateSettings"
 
 import { handleUri, registerCommands, registerCodeActions, registerTerminalActions } from "./activate"
-import { formatLanguage } from "./shared/language"
 
 /**
  * Built using https://github.com/microsoft/vscode-webview-ui-toolkit
@@ -62,7 +62,8 @@ export async function activate(context: vscode.ExtensionContext) {
 		context.globalState.update("allowedCommands", defaultCommands)
 	}
 
-	const provider = new ClineProvider(context, outputChannel, "sidebar")
+	const contextProxy = await ContextProxy.getInstance(context)
+	const provider = new ClineProvider(context, outputChannel, "sidebar", contextProxy)
 
 	context.subscriptions.push(
 		vscode.window.registerWebviewViewProvider(ClineProvider.sideBarId, provider, {
@@ -128,7 +129,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	registerCodeActions(context)
 	registerTerminalActions(context)
 
-	// Allows other extensions to activate once Roo is ready.
+	// Allows other extensions to activate once Kilo Code is ready.
 	vscode.commands.executeCommand("kilo-code.activationCompleted")
 
 	// Implements the `RooCodeAPI` interface.

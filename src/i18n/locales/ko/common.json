@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "에디터 내에서 동작하는 AI 개발팀 전체입니다."
+		"description": "코드를 계획, 빌드, 수정하기 위한 오픈소스 AI 코딩 도우미입니다."
 	},
 	"number_format": {
 		"thousand_suffix": "k",

@@ -17,7 +17,7 @@ const WelcomeView = () => {
 	const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined)
 
 	const handleSubmit = useCallback(() => {
-		const error = validateApiConfiguration(apiConfiguration)
+		const error = apiConfiguration ? validateApiConfiguration(apiConfiguration) : undefined
 
 		if (error) {
 			setErrorMessage(error)
@@ -38,6 +38,7 @@ const WelcomeView = () => {
 		<Tab>
 			<TabContent className="flex flex-col gap-5">
 				<RooHero />
+				<h2 className="mx-auto">{t("chat:greeting")}</h2>
 
 				<div className="outline rounded p-4">
 					<Trans i18nKey="welcome:introduction" />

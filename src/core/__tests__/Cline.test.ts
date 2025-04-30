@@ -11,6 +11,7 @@ import { Cline } from "../Cline"
 import { ClineProvider } from "../webview/ClineProvider"
 import { ApiConfiguration, ModelInfo } from "../../shared/api"
 import { ApiStreamChunk } from "../../api/transform/stream"
+import { ContextProxy } from "../config/ContextProxy"
 
 // Mock RooIgnoreController
 jest.mock("../ignore/RooIgnoreController")
@@ -190,19 +191,19 @@ describe("Cline", () => {
 
 					return undefined
 				}),
-				update: jest.fn().mockImplementation((key, value) => Promise.resolve()),
+				update: jest.fn().mockImplementation((_key, _value) => Promise.resolve()),
 				keys: jest.fn().mockReturnValue([]),
 			},
 			globalStorageUri: storageUri,
 			workspaceState: {
-				get: jest.fn().mockImplementation((key) => undefined),
-				update: jest.fn().mockImplementation((key, value) => Promise.resolve()),
+				get: jest.fn().mockImplementation((_key) => undefined),
+				update: jest.fn().mockImplementation((_key, _value) => Promise.resolve()),
 				keys: jest.fn().mockReturnValue([]),
 			},
 			secrets: {
-				get: jest.fn().mockImplementation((key) => Promise.resolve(undefined)),
-				store: jest.fn().mockImplementation((key, value) => Promise.resolve()),
-				delete: jest.fn().mockImplementation((key) => Promise.resolve()),
+				get: jest.fn().mockImplementation((_key) => Promise.resolve(undefined)),
+				store: jest.fn().mockImplementation((_key, _value) => Promise.resolve()),
+				delete: jest.fn().mockImplementation((_key) => Promise.resolve()),
 			},
 			extensionUri: {
 				fsPath: "/mock/extension/path",
@@ -225,7 +226,12 @@ describe("Cline", () => {
 		}
 
 		// Setup mock provider with output channel
-		mockProvider = new ClineProvider(mockExtensionContext, mockOutputChannel) as jest.Mocked<ClineProvider>
+		mockProvider = new ClineProvider(
+			mockExtensionContext,
+			mockOutputChannel,
+			"sidebar",
+			new ContextProxy(mockExtensionContext),
+		) as jest.Mocked<ClineProvider>
 
 		// Setup mock API configuration
 		mockApiConfig = {
@@ -379,7 +385,7 @@ describe("Cline", () => {
 				// Mock the method with a stable implementation
 				jest.spyOn(Cline.prototype, "getEnvironmentDetails").mockImplementation(
 					// Use 'any' type to allow for dynamic test properties
-					async function (this: any, verbose: boolean = false): Promise<string> {
+					async function (this: any, _verbose: boolean = false): Promise<string> {
 						// Use test-specific mock if available
 						if (this._mockGetEnvironmentDetails) {
 							return this._mockGetEnvironmentDetails()

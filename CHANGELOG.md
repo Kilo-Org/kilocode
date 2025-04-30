@@ -1,5 +1,22 @@
 # kilo-code
 
+## 4.19.1
+
+### Patch Changes
+
+- Fix translations for system notifications
+- Include changes from Roo Code v3.14.3
+
+## 4.19.0
+
+### Minor Changes
+
+- Add easier way to add Kilo Code credit when balance is low
+
+### Patch Changes
+
+- Small UI improvements for dark themes
+
 ## 4.18.0
 
 ### Minor Changes

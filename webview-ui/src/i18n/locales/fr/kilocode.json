@@ -4,5 +4,14 @@
 		"introText": "J'ai été formé sur les modèles d'IA les plus rapides disponibles et je suis prêt à générer du code pour vous à une vitesse fulgurante !",
 		"ctaButton": "Essayez Kilo Code gratuitement",
 		"manualModeButton": "Utilisez votre propre clé API"
+	},
+	"lowCreditWarning": {
+		"addCredit": "Ajouter du crédit",
+		"lowBalance": "Votre solde Kilo Code est bas"
+	},
+	"notifications": {
+		"toolRequest": "Demande d'outil en attente d'approbation",
+		"browserAction": "Action du navigateur en attente d'approbation",
+		"command": "Commande en attente d'approbation"
 	}
 }

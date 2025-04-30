@@ -1,6 +1,6 @@
 {
 	"extension.displayName": "Kilo Code",
-	"extension.description": "에디터에서 작동하는 AI 에이전트 개발팀.",
+	"extension.description": "코드를 계획, 빌드, 수정하기 위한 오픈소스 AI 코딩 도우미입니다.",
 	"command.newTask.title": "새 작업",
 	"command.explainCode.title": "코드 설명",
 	"command.fixCode.title": "코드 수정",

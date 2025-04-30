@@ -31,6 +31,12 @@ const mockConvertToMentionPath = pathMentions.convertToMentionPath as jest.Mock
 // Mock ExtensionStateContext
 jest.mock("@src/context/ExtensionStateContext")
 
+jest.mock("@src/components/ui/hooks/useSelectedModel", () => ({
+	useSelectedModel: jest.fn(() => ({
+		id: "mock-model-id",
+		provider: "mock-provider",
+	})),
+}))
 // Custom query function to get the enhance prompt button
 const getEnhancePromptButton = () => {
 	return screen.getByRole("button", {
@@ -360,7 +366,7 @@ describe("ChatTextArea", () => {
 			const outsidePath = "/Users/other/project/file.js"
 
 			// Mock the convertToMentionPath function to return the original path for paths outside cwd
-			mockConvertToMentionPath.mockImplementationOnce((path, cwd) => {
+			mockConvertToMentionPath.mockImplementationOnce((path, _cwd) => {
 				return path // Return original path for this test
 			})
 

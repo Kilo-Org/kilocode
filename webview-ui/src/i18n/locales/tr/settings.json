@@ -393,7 +393,7 @@
 	},
 	"promptCaching": {
 		"label": "Prompt önbelleğini etkinleştir",
-		"description": "Etkinleştirildiğinde, Roo maliyetleri azaltmak için prompt önbelleği açık olan bu modeli kullanacaktır."
+		"description": "Etkinleştirildiğinde, Kilo Code maliyetleri azaltmak için prompt önbelleği açık olan bu modeli kullanacaktır."
 	},
 	"temperature": {
 		"useCustom": "Özel sıcaklık kullan",

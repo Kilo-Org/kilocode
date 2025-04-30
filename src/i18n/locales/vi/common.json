@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "Toàn bộ đội ngũ phát triển AI trong trình soạn thảo của bạn."
+		"description": "Trợ lý mã hóa AI nguồn mở để lập kế hoạch, xây dựng và sửa mã."
 	},
 	"number_format": {
 		"thousand_suffix": "k",

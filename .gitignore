@@ -37,3 +37,6 @@ logs
 
 # Vite development
 .vite-port
+
+# kilocode_change
+.history/

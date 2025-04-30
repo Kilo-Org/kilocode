@@ -393,7 +393,7 @@
 	},
 	"promptCaching": {
 		"label": "Abilita cache dei prompt",
-		"description": "Quando abilitato, Roo utilizzerà questo modello con la cache dei prompt attivata per ridurre i costi."
+		"description": "Quando abilitato, Kilo Code utilizzerà questo modello con la cache dei prompt attivata per ridurre i costi."
 	},
 	"temperature": {
 		"useCustom": "Usa temperatura personalizzata",

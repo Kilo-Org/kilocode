@@ -1,5 +1,9 @@
 {
 	"info": {
 		"settings_imported": "Settings imported successfully."
+	},
+	"lowCreditWarning": {
+		"title": "Low Credit Warning!",
+		"message": "Check to see if you can top up with free credits or purchase some more!"
 	}
 }

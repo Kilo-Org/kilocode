@@ -393,7 +393,7 @@
 	},
 	"promptCaching": {
 		"label": "Bật bộ nhớ đệm prompt",
-		"description": "Khi được bật, Roo sẽ sử dụng mô hình này với bộ nhớ đệm prompt được bật để giảm chi phí."
+		"description": "Khi được bật, Kilo Code sẽ sử dụng mô hình này với bộ nhớ đệm prompt được bật để giảm chi phí."
 	},
 	"temperature": {
 		"useCustom": "Sử dụng nhiệt độ tùy chỉnh",

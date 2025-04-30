@@ -50,7 +50,7 @@ export class TerminalRegistry {
 						terminalInfo.setActiveStream(stream)
 					} else {
 						console.error(
-							"[TerminalRegistry] Shell execution started, but not from a Roo-registered terminal:",
+							"[TerminalRegistry] Shell execution started, but not from a Kilo Code-registered terminal:",
 							e,
 						)
 					}
@@ -74,7 +74,7 @@ export class TerminalRegistry {
 
 					if (!terminalInfo) {
 						console.error(
-							"[TerminalRegistry] Shell execution ended, but not from a Roo-registered terminal:",
+							"[TerminalRegistry] Shell execution ended, but not from a Kilo Code-registered terminal:",
 							e,
 						)
 						return

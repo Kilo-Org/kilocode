@@ -127,7 +127,7 @@ export async function writeToFileTool(
 				// Use more specific error message for line_count that provides guidance based on the situation
 				await cline.say(
 					"error",
-					`Roo tried to use write_to_file${
+					`Kilo Code tried to use write_to_file${
 						relPath ? ` for '${relPath.toPosix()}'` : ""
 					} but the required parameter 'line_count' was missing or truncated after ${actualLineCount} lines of content were written. Retrying...`,
 				)

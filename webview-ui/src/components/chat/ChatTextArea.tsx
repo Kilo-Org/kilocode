@@ -20,7 +20,8 @@ import {
 } from "@src/utils/context-mentions"
 import { convertToMentionPath } from "@/utils/path-mentions"
 import { SelectDropdown, DropdownOptionType, Button } from "@/components/ui"
-import { normalizeApiConfiguration } from "@/utils/normalizeApiConfiguration" // kilocode_change
+// import { normalizeApiConfiguration } from "@/utils/normalizeApiConfiguration" // kilocode_change
+import { useVSCodeTheme } from "@/kilocode/hooks/useVSCodeTheme" // kilocode_change
 
 import Thumbnails from "../common/Thumbnails"
 import { MAX_IMAGES_PER_MESSAGE } from "./ChatView"
@@ -28,6 +29,8 @@ import ContextMenu from "./ContextMenu"
 import { VolumeX, Pin, Check } from "lucide-react"
 import { IconButton } from "./IconButton"
 import { cn } from "@/lib/utils"
+
+import { useSelectedModel } from "../ui/hooks/useSelectedModel"
 
 interface ChatTextAreaProps {
 	inputValue: string
@@ -79,6 +82,8 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			apiConfiguration, // kilocode_change
 		} = useExtensionState()
 
+		const currentTheme = useVSCodeTheme() // kilocode_change
+
 		// Find the ID and display text for the currently selected API configuration
 		const { currentConfigId, displayName } = useMemo(() => {
 			const currentConfig = listApiConfigMeta?.find((config) => config.name === currentApiConfigName)
@@ -89,10 +94,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		}, [listApiConfigMeta, currentApiConfigName])
 
 		// kilocode_change start
-		const { selectedModelId, selectedProvider } = useMemo(() => {
-			const { selectedModelId, selectedProvider } = normalizeApiConfiguration(apiConfiguration)
-			return { selectedModelId, selectedProvider }
-		}, [apiConfiguration])
+		const { id: selectedModelId, provider: selectedProvider } = useSelectedModel(apiConfiguration)
 		// kilocode_change end
 
 		const [gitCommits, setGitCommits] = useState<any[]>([])
@@ -131,7 +133,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 		// Close dropdown when clicking outside.
 		useEffect(() => {
-			const handleClickOutside = (event: MouseEvent) => {
+			const handleClickOutside = (_event: MouseEvent) => {
 				if (showDropdown) {
 					setShowDropdown(false)
 				}
@@ -1014,8 +1016,12 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 									vscode.postMessage({ type: "mode", text: value })
 								}}
 								shortcutText={modeShortcutText}
-								// Use VS Code theme variables for styling
-								triggerClassName="w-full bg-vscode-input-background border-vscode-input-border hover:bg-vscode-list-hoverBackground"
+								triggerClassName={cn("w-full", {
+									"bg-[#1e1e1e] border-[#333333] hover:bg-[#2d2d2d]":
+										currentTheme === "vscode-dark" || currentTheme === "vscode-high-contrast",
+									"bg-[var(--vscode-input-background)] border-[var(--vscode-input-border)] hover:bg-[var(--vscode-input-hoverBackground)]":
+										currentTheme === "vscode-light",
+								})}
 							/>
 						</div>
 
@@ -1085,8 +1091,13 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 									}
 								}}
 								contentClassName="max-h-[300px] overflow-y-auto"
-								// Use VS Code theme variables for styling
-								triggerClassName="w-full text-ellipsis overflow-hidden bg-vscode-input-background border-vscode-input-border hover:bg-vscode-list-hoverBackground"
+								// kilocode_change: add different border and background colors
+								triggerClassName={cn("w-full text-ellipsis overflow-hidden", {
+									"bg-[#1e1e1e] border-[#333333] hover:bg-[#2d2d2d]":
+										currentTheme === "vscode-dark" || currentTheme === "vscode-high-contrast",
+									"bg-[var(--vscode-input-background)] border-[var(--vscode-input-border)] hover:bg-[var(--vscode-input-hoverBackground)]":
+										currentTheme === "vscode-light",
+								})}
 								itemClassName="group"
 								renderItem={({ type, value, label, pinned }) => {
 									if (type !== DropdownOptionType.ITEM) {

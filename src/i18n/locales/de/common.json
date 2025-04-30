@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "Ein komplettes Entwicklerteam mit KI in deinem Editor."
+		"description": "Open-Source-KI-Codierungsassistent zum Planen, Erstellen und Korrigieren von Code."
 	},
 	"number_format": {
 		"thousand_suffix": "k",

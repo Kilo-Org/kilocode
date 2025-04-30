@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "Düzenleyicinizde tam bir AI geliştirici ekibi."
+		"description": "Kod planlama, oluşturma ve düzeltme için açık kaynaklı yapay zeka kodlama asistanı."
 	},
 	"number_format": {
 		"thousand_suffix": "k",

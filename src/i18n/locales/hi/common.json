@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "आपके एडिटर में AI डेवलपर्स की पूरी टीम।"
+		"description": "कोड की योजना बनाने, निर्माण करने और उसे ठीक करने के लिए ओपन सोर्स एआई कोडिंग सहायक।"
 	},
 	"number_format": {
 		"thousand_suffix": "k",

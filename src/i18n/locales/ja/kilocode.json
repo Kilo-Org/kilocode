@@ -1,5 +1,9 @@
 {
 	"info": {
 		"settings_imported": "設定のインポートに成功しました。"
+	},
+	"lowCreditWarning": {
+		"title": "クレジット残高警告！",
+		"message": "無料クレジットでチャージするか、追加購入できるか確認してください！"
 	}
 }

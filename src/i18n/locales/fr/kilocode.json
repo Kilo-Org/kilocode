@@ -1,5 +1,9 @@
 {
 	"info": {
 		"settings_imported": "Paramètres importés avec succès."
+	},
+	"lowCreditWarning": {
+		"title": "Avertissement de Crédit Faible !",
+		"message": "Vérifiez si vous pouvez recharger avec des crédits gratuits ou en acheter davantage !"
 	}
 }

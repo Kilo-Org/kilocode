@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "Cały zespół programistów AI w Twoim edytorze."
+		"description": "Asystent kodowania AI o otwartym kodzie źródłowym do planowania, tworzenia i naprawiania kodu."
 	},
 	"number_format": {
 		"thousand_suffix": "k",

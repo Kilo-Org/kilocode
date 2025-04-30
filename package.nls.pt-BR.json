@@ -1,6 +1,6 @@
 {
 	"extension.displayName": "Kilo Code",
-	"extension.description": "Uma equipe completa de desenvolvimento de agentes de IA no seu editor.",
+	"extension.description": "Assistente de codificação de IA de código aberto para planejamento, construção e correção de código.",
 	"command.newTask.title": "Nova Tarefa",
 	"command.explainCode.title": "Explicar Código",
 	"command.fixCode.title": "Corrigir Código",

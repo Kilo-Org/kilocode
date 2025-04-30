@@ -48,7 +48,10 @@ export async function useMcpToolTool(
 				} catch (error) {
 					cline.consecutiveMistakeCount++
 					cline.recordToolError("use_mcp_tool")
-					await cline.say("error", `Roo tried to use ${tool_name} with an invalid JSON argument. Retrying...`)
+					await cline.say(
+						"error",
+						`Kilo Code tried to use ${tool_name} with an invalid JSON argument. Retrying...`,
+					)
 
 					pushToolResult(
 						formatResponse.toolError(formatResponse.invalidMcpToolArgumentError(server_name, tool_name)),
@@ -90,6 +93,7 @@ export async function useMcpToolTool(
 								return item.text
 							}
 							if (item.type === "resource") {
+								// eslint-disable-next-line @typescript-eslint/no-unused-vars
 								const { blob, ...rest } = item.resource
 								return JSON.stringify(rest, null, 2)
 							}
