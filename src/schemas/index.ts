@@ -103,6 +103,7 @@ export type ReasoningEffort = z.infer<typeof reasoningEffortsSchema>
  */
 
 export const modelInfoSchema = z.object({
+	preferredIndex: z.number().optional(), // kilocode_change
 	maxTokens: z.number().nullish(),
 	maxThinkingTokens: z.number().nullish(),
 	contextWindow: z.number(),

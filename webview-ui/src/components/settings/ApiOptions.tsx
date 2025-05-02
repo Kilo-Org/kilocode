@@ -345,7 +345,7 @@ const ApiOptions = ({
 					</div>
 
 					<div>
-						<label className="block font-medium mb-1">Provider Type</label>
+						<label className="block font-medium mb-1">Model</label>
 						<Select
 							value={apiConfiguration?.kilocodeModel || "claude37"}
 							onValueChange={(value) =>

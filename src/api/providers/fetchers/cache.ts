@@ -59,6 +59,10 @@ export const getModels = async (router: RouterName): Promise<ModelRecord> => {
 		case "unbound":
 			models = await getUnboundModels()
 			break
+		case "kilocode-openrouter":
+			// models = await getOpenRouterModels("kilocode-openrouter")
+			models = await getOpenRouterModels({ openRouterBaseUrl: "https://api.kilocode.ai/api/openrouter" })
+			break
 	}
 
 	if (Object.keys(models).length > 0) {

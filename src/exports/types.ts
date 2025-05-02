@@ -59,6 +59,7 @@ type ProviderSettings = {
 	openAiModelId?: string | undefined
 	openAiCustomModelInfo?:
 		| ({
+				preferredIndex?: number | undefined
 				maxTokens?: (number | null) | undefined
 				maxThinkingTokens?: (number | null) | undefined
 				contextWindow: number
