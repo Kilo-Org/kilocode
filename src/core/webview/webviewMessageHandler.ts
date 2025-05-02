@@ -288,6 +288,7 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 					requesty: requestyModels,
 					glama: glamaModels,
 					unbound: unboundModels,
+					"kilocode-openrouter": openRouterModels,
 				},
 			})
 			break
