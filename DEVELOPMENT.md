@@ -1,25 +1,169 @@
-1. **Clone** the repo:
+# Kilo Code Development Guide
+
+Welcome to the Kilo Code development guide! This document will help you set up your development environment and understand how to work with the codebase. Whether you're fixing bugs, adding features, or just exploring the code, this guide will get you started.
+
+## Prerequisites
+
+Before you begin, make sure you have the following installed:
+
+1. **Git** - For version control
+2. **Node.js** (LTS version recommended) and npm
+3. **Visual Studio Code** - Our recommended IDE for development
+
+## Getting Started
+
+### Installation
+
+1. **Clone the repository**:
+
     ```bash
     git clone https://github.com/Kilo-Org/kilocode.git
+    cd kilocode
     ```
+
 2. **Install dependencies**:
+
     ```bash
     npm run install:all
     ```
-3. **Build** the extension:
-    ```bash
-    npm run build
-    ```
-    - A `.vsix` file will appear in the `bin/` directory.
-4. **Install** the `.vsix` manually if desired:
-    ```bash
-    code --install-extension bin/kilo-code-4.0.0.vsix
-    ```
-5. **Start the webview (Vite/React app with HMR)**:
-    ```bash
-    npm run dev
-    ```
-6. **Debug**:
-    - Press `F5` (or **Run** → **Start Debugging**) in VSCode to open a new session with Kilo Code loaded.
 
-Changes to the webview will appear immediately. Changes to the core extension will require a restart of the extension host.
+    This command will install dependencies for the main extension, webview UI, and e2e tests.
+
+3. **Install required VSCode extension**:
+    - [ESBuild Problem Matchers](https://marketplace.visualstudio.com/items/?itemName=connor4312.esbuild-problem-matchers) - Helps with build error reporting
+
+### Project Structure
+
+The project is organized into several key directories:
+
+- **`src/`** - Core extension code
+    - **`core/`** - Core functionality and tools
+    - **`services/`** - Service implementations
+- **`webview-ui/`** - Frontend UI code
+- **`e2e/`** - End-to-end tests
+- **`scripts/`** - Utility scripts
+- **`assets/`** - Static assets like images and icons
+
+## Development Workflow
+
+### Running the Extension
+
+To run the extension in development mode:
+
+1. Press `F5` (or select **Run** → **Start Debugging**) in VSCode
+2. This will open a new VSCode window with Kilo Code loaded
+
+### Hot Reloading
+
+- **Webview UI changes**: Changes to the webview UI will appear immediately without restarting
+- **Core extension changes**: Changes to the core extension code require a restart of the extension host
+
+> **Important**: When making changes to the core extension, you need to:
+>
+> 1. Stop the debugging process
+> 2. Kill any npm tasks running in the background (see screenshot below)
+> 3. Start debugging again
+
+<img width="600" alt="Stopping background tasks" src="https://github.com/user-attachments/assets/466fb76e-664d-4066-a3f2-0df4d57dd9a4" />
+
+### Building the Extension
+
+To build a production-ready `.vsix` file:
+
+```bash
+npm run build
+```
+
+This will:
+
+1. Build the webview UI
+2. Compile TypeScript
+3. Bundle the extension
+4. Create a `.vsix` file in the `bin/` directory
+
+### Installing the Built Extension
+
+To install your built extension:
+
+```bash
+code --install-extension bin/kilo-code-[version].vsix
+```
+
+Replace `[version]` with the current version number.
+
+## Testing
+
+Kilo Code uses several types of tests to ensure quality:
+
+### Unit Tests
+
+Run unit tests with:
+
+```bash
+npm test
+```
+
+This runs both extension and webview tests.
+
+To run specific test suites:
+
+```bash
+npm run test:extension  # Run only extension tests
+npm run test:webview    # Run only webview tests
+```
+
+### End-to-End Tests
+
+E2E tests verify the extension works correctly within VSCode:
+
+1. Create a `.env.local` file in the root with required API keys:
+
+    ```
+    OPENROUTER_API_KEY=sk-or-v1-...
+    ```
+
+2. Run the integration tests:
+    ```bash
+    npm run test:integration
+    ```
+
+For more details on E2E tests, see [e2e/VSCODE_INTEGRATION_TESTS.md](e2e/VSCODE_INTEGRATION_TESTS.md).
+
+## Linting and Type Checking
+
+Ensure your code meets our quality standards:
+
+```bash
+npm run lint          # Run ESLint
+npm run check-types   # Run TypeScript type checking
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Extension not loading**: Check the VSCode Developer Tools (Help > Toggle Developer Tools) for errors
+2. **Webview not updating**: Try reloading the window (Developer: Reload Window)
+3. **Build errors**: Make sure all dependencies are installed with `npm run install:all`
+
+### Debugging Tips
+
+- Use `console.log()` statements in your code for debugging
+- Check the Output panel in VSCode (View > Output) and select "Kilo Code" from the dropdown
+- For webview issues, use the browser developer tools in the webview (right-click > Inspect Element)
+
+## Contributing
+
+We welcome contributions to Kilo Code! Here's how you can help:
+
+1. **Find an issue** to work on or create a new one
+2. **Fork the repository** and create a branch for your feature or fix
+3. **Make your changes** following our code style
+4. **Write tests** for your changes
+5. **Submit a pull request** with a clear description of the changes
+
+## Community
+
+Your contributions are welcome! For questions or ideas, please join our Discord server: https://discord.gg/Ja6BkfyTzJ
+
+We look forward to your contributions and feedback!
