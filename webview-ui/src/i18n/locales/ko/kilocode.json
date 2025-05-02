@@ -8,5 +8,10 @@
 	"lowCreditWarning": {
 		"addCredit": "크레딧 추가",
 		"lowBalance": "Kilo Code 잔액이 부족합니다"
+	},
+	"notifications": {
+		"toolRequest": "도구 요청 승인 대기 중",
+		"browserAction": "브라우저 작업 승인 대기 중",
+		"command": "명령 승인 대기 중"
 	}
 }

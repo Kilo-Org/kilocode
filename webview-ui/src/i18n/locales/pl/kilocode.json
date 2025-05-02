@@ -8,5 +8,10 @@
 	"lowCreditWarning": {
 		"addCredit": "Dodaj kredyt",
 		"lowBalance": "Twój stan konta Kilo Code jest niski"
+	},
+	"notifications": {
+		"toolRequest": "Żądanie narzędzia oczekuje na zatwierdzenie",
+		"browserAction": "Akcja przeglądarki oczekuje na zatwierdzenie",
+		"command": "Polecenie oczekuje na zatwierdzenie"
 	}
 }

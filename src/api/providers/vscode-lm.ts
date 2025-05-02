@@ -81,17 +81,17 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 		try {
 			// Check if the client is already initialized
 			if (this.client) {
-				console.debug("Roo Code <Language Model API>: Client already initialized")
+				console.debug("Kilo Code <Language Model API>: Client already initialized")
 				return
 			}
 			// Create a new client instance
 			this.client = await this.createClient(this.options.vsCodeLmModelSelector || {})
-			console.debug("Roo Code <Language Model API>: Client initialized successfully")
+			console.debug("Kilo Code <Language Model API>: Client initialized successfully")
 		} catch (error) {
 			// Handle errors during client initialization
 			const errorMessage = error instanceof Error ? error.message : "Unknown error"
-			console.error("Roo Code <Language Model API>: Client initialization failed:", errorMessage)
-			throw new Error(`Roo Code <Language Model API>: Failed to initialize client: ${errorMessage}`)
+			console.error("Kilo Code <Language Model API>: Client initialization failed:", errorMessage)
+			throw new Error(`Kilo Code <Language Model API>: Failed to initialize client: ${errorMessage}`)
 		}
 	}
 	/**
@@ -122,7 +122,7 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 				family: "lm",
 				version: "1.0",
 				maxInputTokens: 8192,
-				sendRequest: async (messages, options, token) => {
+				sendRequest: async (_messages, _options, _token) => {
 					// Provide a minimal implementation
 					return {
 						stream: (async function* () {

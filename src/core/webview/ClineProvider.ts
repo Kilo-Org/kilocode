@@ -15,20 +15,16 @@ import { setPanel } from "../../activate/registerCommands"
 import {
 	ApiConfiguration,
 	ApiProvider,
-	ModelInfo,
 	requestyDefaultModelId,
-	requestyDefaultModelInfo,
 	openRouterDefaultModelId,
-	openRouterDefaultModelInfo,
 	glamaDefaultModelId,
-	glamaDefaultModelInfo,
 } from "../../shared/api"
 import { findLast } from "../../shared/array"
 import { supportPrompt } from "../../shared/support-prompt"
 import { GlobalFileNames } from "../../shared/globalFileNames"
 import { HistoryItem } from "../../shared/HistoryItem"
 import { ExtensionMessage } from "../../shared/ExtensionMessage"
-import { Mode, PromptComponent, defaultModeSlug, getModeBySlug, getGroupName } from "../../shared/modes"
+import { Mode, PromptComponent, defaultModeSlug } from "../../shared/modes"
 import { experimentDefault } from "../../shared/experiments"
 import { formatLanguage } from "../../shared/language"
 import { Terminal, TERMINAL_SHELL_INTEGRATION_TIMEOUT } from "../../integrations/terminal/Terminal"
@@ -82,7 +78,6 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 	public isViewLaunched = false
 	public settingsImportedAt?: number
 	public readonly latestAnnouncementId = "apr-23-2025-3-14" // Update for v3.14.0 announcement
-	public readonly contextProxy: ContextProxy
 	public readonly providerSettingsManager: ProviderSettingsManager
 	public readonly customModesManager: CustomModesManager
 
@@ -90,11 +85,11 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		readonly context: vscode.ExtensionContext,
 		private readonly outputChannel: vscode.OutputChannel,
 		private readonly renderContext: "sidebar" | "editor" = "sidebar",
+		public readonly contextProxy: ContextProxy,
 	) {
 		super()
 
 		this.log("ClineProvider instantiated")
-		this.contextProxy = new ContextProxy(context)
 		ClineProvider.activeInstances.add(this)
 
 		this._workspaceTracker = new WorkspaceTracker(this)
@@ -931,29 +926,6 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		return getSettingsDirectoryPath(globalStoragePath)
 	}
 
-	private async ensureCacheDirectoryExists() {
-		const { getCacheDirectoryPath } = await import("../../shared/storagePathManager")
-		const globalStoragePath = this.contextProxy.globalStorageUri.fsPath
-		return getCacheDirectoryPath(globalStoragePath)
-	}
-
-	async writeModelsToCache<T>(filename: string, data: T) {
-		const cacheDir = await this.ensureCacheDirectoryExists()
-		await fs.writeFile(path.join(cacheDir, filename), JSON.stringify(data))
-	}
-
-	async readModelsFromCache(filename: string): Promise<Record<string, ModelInfo> | undefined> {
-		const filePath = path.join(await this.ensureCacheDirectoryExists(), filename)
-		const fileExists = await fileExistsAtPath(filePath)
-
-		if (fileExists) {
-			const fileContents = await fs.readFile(filePath, "utf8")
-			return JSON.parse(fileContents)
-		}
-
-		return undefined
-	}
-
 	// OpenRouter
 
 	async handleOpenRouterCallback(code: string) {
@@ -982,7 +954,6 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			apiProvider: "openrouter",
 			openRouterApiKey: apiKey,
 			openRouterModelId: apiConfiguration?.openRouterModelId || openRouterDefaultModelId,
-			openRouterModelInfo: apiConfiguration?.openRouterModelInfo || openRouterDefaultModelInfo,
 		}
 
 		await this.upsertApiConfiguration(currentApiConfigName, newConfiguration)
@@ -1013,7 +984,6 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			apiProvider: "glama",
 			glamaApiKey: apiKey,
 			glamaModelId: apiConfiguration?.glamaModelId || glamaDefaultModelId,
-			glamaModelInfo: apiConfiguration?.glamaModelInfo || glamaDefaultModelInfo,
 		}
 
 		await this.upsertApiConfiguration(currentApiConfigName, newConfiguration)
@@ -1029,7 +999,6 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			apiProvider: "requesty",
 			requestyApiKey: code,
 			requestyModelId: apiConfiguration?.requestyModelId || requestyDefaultModelId,
-			requestyModelInfo: apiConfiguration?.requestyModelInfo || requestyDefaultModelInfo,
 		}
 
 		await this.upsertApiConfiguration(currentApiConfigName, newConfiguration)
@@ -1203,7 +1172,6 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 	async getStateToPostToWebview() {
 		const {
 			apiConfiguration,
-			lastShownAnnouncementId,
 			customInstructions,
 			alwaysAllowReadOnly,
 			alwaysAllowReadOnlyOutsideWorkspace,
@@ -1257,6 +1225,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			showAutoApproveMenu, // kilocode_change
 			maxReadFileLine,
 			terminalCompressProgressBar,
+			historyPreviewCollapsed,
 		} = await this.getState()
 
 		const machineId = vscode.env.machineId
@@ -1340,6 +1309,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			settingsImportedAt: this.settingsImportedAt,
 			terminalCompressProgressBar: terminalCompressProgressBar ?? true,
 			hasSystemPromptOverride,
+			historyPreviewCollapsed: historyPreviewCollapsed ?? false,
 		}
 	}
 
@@ -1428,6 +1398,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			showRooIgnoredFiles: stateValues.showRooIgnoredFiles ?? true,
 			showAutoApproveMenu: stateValues.showAutoApproveMenu ?? false, // kilocode_change
 			maxReadFileLine: stateValues.maxReadFileLine ?? 500,
+			historyPreviewCollapsed: stateValues.historyPreviewCollapsed ?? false,
 		}
 	}
 

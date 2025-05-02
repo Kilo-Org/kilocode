@@ -4,10 +4,12 @@ import OpenAI from "openai"
 
 import {
 	ApiHandlerOptions,
+	ModelRecord,
 	openRouterDefaultModelId,
 	openRouterDefaultModelInfo,
 	PROMPT_CACHING_MODELS,
 	OPTIONAL_PROMPT_CACHING_MODELS,
+	REASONING_MODELS,
 } from "../../shared/api"
 import { convertToOpenAiMessages } from "../transform/openai-format"
 import { ApiStreamChunk } from "../transform/stream"
@@ -18,6 +20,7 @@ import { DEFAULT_HEADERS, DEEP_SEEK_DEFAULT_TEMPERATURE } from "./constants"
 import { getModelParams } from "../getModelParams"
 
 import { BaseProvider } from "./base-provider"
+import { getModels } from "./fetchers/cache"
 
 const OPENROUTER_DEFAULT_PROVIDER_NAME = "[default]"
 
@@ -53,6 +56,7 @@ interface CompletionUsage {
 export class OpenRouterHandler extends BaseProvider implements SingleCompletionHandler {
 	protected options: ApiHandlerOptions
 	private client: OpenAI
+	protected models: ModelRecord = {}
 
 	constructor(options: ApiHandlerOptions) {
 		super()
@@ -68,7 +72,15 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		systemPrompt: string,
 		messages: Anthropic.Messages.MessageParam[],
 	): AsyncGenerator<ApiStreamChunk> {
-		let { id: modelId, maxTokens, thinking, temperature, topP, reasoningEffort, promptCache } = this.getModel()
+		let {
+			id: modelId,
+			maxTokens,
+			thinking,
+			temperature,
+			topP,
+			reasoningEffort,
+			promptCache,
+		} = await this.fetchModel()
 
 		// Convert Anthropic messages to OpenAI format.
 		let openAiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
@@ -122,8 +134,6 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		}
 
 		// https://openrouter.ai/docs/transforms
-		let fullResponseText = ""
-
 		const completionParams: OpenRouterChatCompletionParams = {
 			model: modelId,
 			max_tokens: maxTokens,
@@ -140,7 +150,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 				}),
 			// This way, the transforms field will only be included in the parameters when openRouterUseMiddleOutTransform is true.
 			...((this.options.openRouterUseMiddleOutTransform ?? true) && { transforms: ["middle-out"] }),
-			...(reasoningEffort && { reasoning: { effort: reasoningEffort } }),
+			...(REASONING_MODELS.has(modelId) && reasoningEffort && { reasoning: { effort: reasoningEffort } }),
 		}
 		let stream
 		stream = await this.client.chat.completions.create(completionParams)
@@ -163,7 +173,6 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 				}
 
 				if (delta?.content) {
-					fullResponseText += delta.content
 					yield { type: "text", text: delta.content }
 				}
 
@@ -190,22 +199,27 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		}
 	}
 
-	override getModel() {
-		const modelId = this.options.openRouterModelId
-		const modelInfo = this.options.openRouterModelInfo
+	public async fetchModel() {
+		this.models = await getModels("openrouter")
+		return this.getModel()
+	}
 
-		let id = modelId ?? openRouterDefaultModelId
-		const info = modelInfo ?? openRouterDefaultModelInfo
-		const isDeepSeekR1 = id.startsWith("deepseek/deepseek-r1") || modelId === "perplexity/sonar-reasoning"
-		const defaultTemperature = isDeepSeekR1 ? DEEP_SEEK_DEFAULT_TEMPERATURE : 0
-		const topP = isDeepSeekR1 ? 0.95 : undefined
+	override getModel() {
+		const id = this.options.openRouterModelId ?? openRouterDefaultModelId
+		const info = this.models[id] ?? openRouterDefaultModelInfo
+
+		const isDeepSeekR1 = id.startsWith("deepseek/deepseek-r1") || id === "perplexity/sonar-reasoning"
 
 		return {
 			id,
 			info,
 			// maxTokens, thinking, temperature, reasoningEffort
-			...getModelParams({ options: this.options, model: info, defaultTemperature }),
-			topP,
+			...getModelParams({
+				options: this.options,
+				model: info,
+				defaultTemperature: isDeepSeekR1 ? DEEP_SEEK_DEFAULT_TEMPERATURE : 0,
+			}),
+			topP: isDeepSeekR1 ? 0.95 : undefined,
 			promptCache: {
 				supported: PROMPT_CACHING_MODELS.has(id),
 				optional: OPTIONAL_PROMPT_CACHING_MODELS.has(id),
@@ -214,7 +228,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 	}
 
 	async completePrompt(prompt: string) {
-		let { id: modelId, maxTokens, thinking, temperature } = this.getModel()
+		let { id: modelId, maxTokens, thinking, temperature } = await this.fetchModel()
 
 		const completionParams: OpenRouterChatCompletionParams = {
 			model: modelId,

@@ -1,6 +1,6 @@
 {
 	"extension.displayName": "Kilo Code",
-	"extension.description": "Một đội ngũ phát triển các tác nhân AI hoàn chỉnh trong trình soạn thảo của bạn.",
+	"extension.description": "Trợ lý mã hóa AI nguồn mở để lập kế hoạch, xây dựng và sửa mã.",
 	"command.newTask.title": "Tác Vụ Mới",
 	"command.explainCode.title": "Giải Thích Mã",
 	"command.fixCode.title": "Sửa Mã",

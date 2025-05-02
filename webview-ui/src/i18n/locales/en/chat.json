@@ -68,7 +68,26 @@
 		"tooltip": "Cancel the current operation"
 	},
 	"scrollToBottom": "Scroll to bottom of chat",
-	"onboarding": "<strong>Your task list in this workspace is empty.</strong> Start by typing in a task below. Not sure how to begin? Read more about what Kilo Code can do for you in <DocsLink>the docs</DocsLink>.",
+	"about": "Generate, refactor, and debug code with AI assistance.<br />Check out our <DocsLink>documentation</DocsLink> to learn more.",
+	"onboarding": "Your task list in this workspace is empty.",
+	"rooTips": {
+		"boomerangTasks": {
+			"title": "Boomerang Tasks",
+			"description": "Split tasks into smaller, manageable parts"
+		},
+		"stickyModels": {
+			"title": "Sticky Models",
+			"description": "Each mode remembers your last used model"
+		},
+		"tools": {
+			"title": "Tools",
+			"description": "Allow the AI to solve problems by browsing the web, running commands, and more"
+		},
+		"customizableModes": {
+			"title": "Customizable Modes",
+			"description": "Specialized personas with their own behaviors and assigned models"
+		}
+	},
 	"selectMode": "Select mode for interaction",
 	"selectApiConfig": "Select API configuration",
 	"enhancePrompt": "Enhance prompt with additional context",

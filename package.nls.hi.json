@@ -1,6 +1,6 @@
 {
 	"extension.displayName": "Kilo Code",
-	"extension.description": "आपके एडिटर में एआई एजेंट्स की पूरी डेवलपमेंट टीम।",
+	"extension.description": "कोड की योजना बनाने, निर्माण करने और उसे ठीक करने के लिए ओपन सोर्स एआई कोडिंग सहायक।",
 	"command.newTask.title": "नया कार्य",
 	"command.explainCode.title": "कोड समझाएं",
 	"command.fixCode.title": "कोड ठीक करें",

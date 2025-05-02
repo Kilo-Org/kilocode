@@ -20,7 +20,7 @@ import {
 } from "@src/utils/context-mentions"
 import { convertToMentionPath } from "@/utils/path-mentions"
 import { SelectDropdown, DropdownOptionType, Button } from "@/components/ui"
-import { normalizeApiConfiguration } from "@/utils/normalizeApiConfiguration" // kilocode_change
+// import { normalizeApiConfiguration } from "@/utils/normalizeApiConfiguration" // kilocode_change
 import { useVSCodeTheme } from "@/kilocode/hooks/useVSCodeTheme" // kilocode_change
 
 import Thumbnails from "../common/Thumbnails"
@@ -29,6 +29,19 @@ import ContextMenu from "./ContextMenu"
 import { VolumeX, Pin, Check } from "lucide-react"
 import { IconButton } from "./IconButton"
 import { cn } from "@/lib/utils"
+
+import { useSelectedModel } from "../ui/hooks/useSelectedModel"
+
+// kilocode_change start: pull slash commands from Cline
+import SlashCommandMenu from "@/components/chat/SlashCommandMenu"
+import {
+	SlashCommand,
+	shouldShowSlashCommandsMenu,
+	getMatchingSlashCommands,
+	insertSlashCommand,
+	validateSlashCommand,
+} from "@/utils/slash-commands"
+// kilocode_change end
 
 interface ChatTextAreaProps {
 	inputValue: string
@@ -92,10 +105,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		}, [listApiConfigMeta, currentApiConfigName])
 
 		// kilocode_change start
-		const { selectedModelId, selectedProvider } = useMemo(() => {
-			const { selectedModelId, selectedProvider } = normalizeApiConfiguration(apiConfiguration)
-			return { selectedModelId, selectedProvider }
-		}, [apiConfiguration])
+		const { id: selectedModelId, provider: selectedProvider } = useSelectedModel(apiConfiguration)
 		// kilocode_change end
 
 		const [gitCommits, setGitCommits] = useState<any[]>([])
@@ -134,7 +144,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 		// Close dropdown when clicking outside.
 		useEffect(() => {
-			const handleClickOutside = (event: MouseEvent) => {
+			const handleClickOutside = (_event: MouseEvent) => {
 				if (showDropdown) {
 					setShowDropdown(false)
 				}
@@ -177,6 +187,12 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		}, [setInputValue, searchRequestId])
 
 		const [isDraggingOver, setIsDraggingOver] = useState(false)
+		// kilocode_change start: pull slash commands from Cline
+		const [showSlashCommandsMenu, setShowSlashCommandsMenu] = useState(false)
+		const [selectedSlashCommandsIndex, setSelectedSlashCommandsIndex] = useState(0)
+		const [slashCommandsQuery, setSlashCommandsQuery] = useState("")
+		const slashCommandsMenuContainerRef = useRef<HTMLDivElement>(null)
+		// kilocode_end
 		const [textAreaBaseHeight, setTextAreaBaseHeight] = useState<number | undefined>(undefined)
 		const [showContextMenu, setShowContextMenu] = useState(false)
 		const [cursorPosition, setCursorPosition] = useState(0)
@@ -330,8 +346,66 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			[setInputValue, cursorPosition],
 		)
 
+		// kilocode_change start: pull slash commands from Cline
+		const handleSlashCommandsSelect = useCallback(
+			(command: SlashCommand) => {
+				setShowSlashCommandsMenu(false)
+
+				if (textAreaRef.current) {
+					const { newValue, commandIndex } = insertSlashCommand(textAreaRef.current.value, command.name)
+					const newCursorPosition = newValue.indexOf(" ", commandIndex + 1 + command.name.length) + 1
+
+					setInputValue(newValue)
+					setCursorPosition(newCursorPosition)
+					setIntendedCursorPosition(newCursorPosition)
+
+					setTimeout(() => {
+						if (textAreaRef.current) {
+							textAreaRef.current.blur()
+							textAreaRef.current.focus()
+						}
+					}, 0)
+				}
+			},
+			[setInputValue],
+		)
+		// kilocode_change end
+
 		const handleKeyDown = useCallback(
 			(event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+				// kilocode_change start: pull slash commands from Cline
+				if (showSlashCommandsMenu) {
+					if (event.key === "Escape") {
+						setShowSlashCommandsMenu(false)
+						return
+					}
+
+					if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+						event.preventDefault()
+						setSelectedSlashCommandsIndex((prevIndex) => {
+							const direction = event.key === "ArrowUp" ? -1 : 1
+							const commands = getMatchingSlashCommands(slashCommandsQuery)
+
+							if (commands.length === 0) {
+								return prevIndex
+							}
+
+							const newIndex = (prevIndex + direction + commands.length) % commands.length
+							return newIndex
+						})
+						return
+					}
+
+					if ((event.key === "Enter" || event.key === "Tab") && selectedSlashCommandsIndex !== -1) {
+						event.preventDefault()
+						const commands = getMatchingSlashCommands(slashCommandsQuery)
+						if (commands.length > 0) {
+							handleSlashCommandsSelect(commands[selectedSlashCommandsIndex])
+						}
+						return
+					}
+				}
+				// kilocode_change end
 				if (showContextMenu) {
 					if (event.key === "Escape") {
 						setSelectedType(null)
@@ -442,19 +516,23 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				}
 			},
 			[
-				onSend,
+				showSlashCommandsMenu,
 				showContextMenu,
-				searchQuery,
+				selectedSlashCommandsIndex,
+				slashCommandsQuery,
+				handleSlashCommandsSelect,
 				selectedMenuIndex,
-				handleMentionSelect,
-				selectedType,
+				searchQuery,
 				inputValue,
-				cursorPosition,
-				setInputValue,
-				justDeletedSpaceAfterMention,
+				selectedType,
 				queryItems,
-				customModes,
 				fileSearchResults,
+				customModes,
+				handleMentionSelect,
+				onSend,
+				cursorPosition,
+				justDeletedSpaceAfterMention,
+				setInputValue,
 			],
 		)
 
@@ -473,9 +551,33 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				const newCursorPosition = e.target.selectionStart
 				setInputValue(newValue)
 				setCursorPosition(newCursorPosition)
-				const showMenu = shouldShowContextMenu(newValue, newCursorPosition)
+				// kilocode_change start: pull slash commands from Cline
+				let showMenu = shouldShowContextMenu(newValue, newCursorPosition)
+				const showSlashCommandsMenu = shouldShowSlashCommandsMenu(newValue, newCursorPosition)
+
+				// we do not allow both menus to be shown at the same time
+				// the slash commands menu has precedence bc its a narrower component
+				if (showSlashCommandsMenu) {
+					showMenu = false
+				}
+
+				setShowSlashCommandsMenu(showSlashCommandsMenu)
+				// kilocode_change end
 
 				setShowContextMenu(showMenu)
+
+				// kilocode_change start: pull slash commands from Cline
+				if (showSlashCommandsMenu) {
+					const slashIndex = newValue.indexOf("/")
+					const query = newValue.slice(slashIndex + 1, newCursorPosition)
+					setSlashCommandsQuery(query)
+					setSelectedSlashCommandsIndex(0)
+				} else {
+					setSlashCommandsQuery("")
+					setSelectedSlashCommandsIndex(0)
+				}
+				// kilocode_change end
+
 				if (showMenu) {
 					if (newValue.startsWith("/")) {
 						// Handle slash command
@@ -536,6 +638,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			// Only hide the context menu if the user didn't click on it.
 			if (!isMouseDownOnMenu) {
 				setShowContextMenu(false)
+				setShowSlashCommandsMenu(false) // kilocode_change: pull slash commands from Cline
 			}
 
 			setIsFocused(false)
@@ -619,13 +722,37 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		const updateHighlights = useCallback(() => {
 			if (!textAreaRef.current || !highlightLayerRef.current) return
 
-			const text = textAreaRef.current.value
+			// kilocode_change start: pull slash commands from Cline
+			let processedText = textAreaRef.current.value
 
-			highlightLayerRef.current.innerHTML = text
+			processedText = processedText
 				.replace(/\n$/, "\n\n")
 				.replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[c] || c)
 				.replace(mentionRegexGlobal, '<mark class="mention-context-textarea-highlight">$&</mark>')
 
+			// check for highlighting /slash-commands
+			if (/^\s*\//.test(processedText)) {
+				const slashIndex = processedText.indexOf("/")
+
+				// end of command is end of text or first whitespace
+				const spaceIndex = processedText.indexOf(" ", slashIndex)
+				const endIndex = spaceIndex > -1 ? spaceIndex : processedText.length
+
+				// extract and validate the exact command text
+				const commandText = processedText.substring(slashIndex + 1, endIndex)
+				const isValidCommand = validateSlashCommand(commandText)
+
+				if (isValidCommand) {
+					const fullCommand = processedText.substring(slashIndex, endIndex) // includes slash
+
+					const highlighted = `<mark class="slash-command-match-textarea-highlight">${fullCommand}</mark>`
+					processedText =
+						processedText.substring(0, slashIndex) + highlighted + processedText.substring(endIndex)
+				}
+			}
+			// kilocode_change end
+
+			highlightLayerRef.current.innerHTML = processedText
 			highlightLayerRef.current.scrollTop = textAreaRef.current.scrollTop
 			highlightLayerRef.current.scrollLeft = textAreaRef.current.scrollLeft
 		}, [])
@@ -810,6 +937,19 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 								setIsDraggingOver(false)
 							}
 						}}>
+						{/* kilocode_change start: pull slash commands from Cline */}
+						{showSlashCommandsMenu && (
+							<div ref={slashCommandsMenuContainerRef}>
+								<SlashCommandMenu
+									onSelect={handleSlashCommandsSelect}
+									selectedIndex={selectedSlashCommandsIndex}
+									setSelectedIndex={setSelectedSlashCommandsIndex}
+									onMouseDown={handleMenuMouseDown}
+									query={slashCommandsQuery}
+								/>
+							</div>
+						)}
+						{/* kilocode_change end */}
 						{showContextMenu && (
 							<div
 								ref={contextMenuContainerRef}

@@ -1,8 +1,9 @@
-import { memo, useMemo, useRef, useState } from "react"
+import { memo, useRef, useState } from "react"
 import { useWindowSize } from "react-use"
 import { useTranslation } from "react-i18next"
 import { VSCodeBadge } from "@vscode/webview-ui-toolkit/react"
 import { CloudUpload, CloudDownload } from "lucide-react"
+import { validateSlashCommand } from "@/utils/slash-commands"
 
 import { ClineMessage } from "@roo/shared/ExtensionMessage"
 
@@ -11,15 +12,17 @@ import { formatLargeNumber } from "@src/utils/format"
 import { cn } from "@src/lib/utils"
 import { Button } from "@src/components/ui"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
-import { normalizeApiConfiguration } from "@src/utils/normalizeApiConfiguration"
+import { useSelectedModel } from "@/components/ui/hooks/useSelectedModel"
 
 import Thumbnails from "../common/Thumbnails"
 
 import { TaskActions } from "./TaskActions"
 import { ContextWindowProgress } from "./ContextWindowProgress"
-import { Mention } from "./Mention"
+import { mentionRegexGlobal } from "@roo/shared/context-mentions"
 
-interface TaskHeaderProps {
+import { vscode } from "@/utils/vscode" // kilocode_change: pull slash commands from Cline
+
+export interface TaskHeaderProps {
 	task: ClineMessage
 	tokensIn: number
 	tokensOut: number
@@ -44,12 +47,12 @@ const TaskHeader = ({
 }: TaskHeaderProps) => {
 	const { t } = useTranslation()
 	const { apiConfiguration, currentTaskItem } = useExtensionState()
-	const { selectedModelInfo } = useMemo(() => normalizeApiConfiguration(apiConfiguration), [apiConfiguration])
-	const [isTaskExpanded, setIsTaskExpanded] = useState(false) // kilocode_change: Do not expand by default
+	const { info: model } = useSelectedModel(apiConfiguration)
+	const [isTaskExpanded, setIsTaskExpanded] = useState(false)
 
 	const textContainerRef = useRef<HTMLDivElement>(null)
 	const textRef = useRef<HTMLDivElement>(null)
-	const contextWindow = selectedModelInfo?.contextWindow || 1
+	const contextWindow = model?.contextWindow || 1
 
 	const { width: windowWidth } = useWindowSize()
 
@@ -74,10 +77,9 @@ const TaskHeader = ({
 								{t("chat:task.title")}
 								{!isTaskExpanded && ":"}
 							</span>
+							{/* kilocode_change: pull slash commands from Cline */}
 							{!isTaskExpanded && (
-								<span className="ml-1">
-									<Mention text={task.text} />
-								</span>
+								<span style={{ marginLeft: 4 }}>{highlightText(task.text, false)}</span>
 							)}
 						</div>
 					</div>
@@ -96,7 +98,7 @@ const TaskHeader = ({
 						<ContextWindowProgress
 							contextWindow={contextWindow}
 							contextTokens={contextTokens || 0}
-							maxTokens={getMaxTokensForModel(selectedModelInfo, apiConfiguration)}
+							maxTokens={getMaxTokensForModel(model, apiConfiguration)}
 						/>
 						{!!totalCost && <VSCodeBadge>${totalCost.toFixed(2)}</VSCodeBadge>}
 					</div>
@@ -115,7 +117,8 @@ const TaskHeader = ({
 									WebkitLineClamp: "unset",
 									WebkitBoxOrient: "vertical",
 								}}>
-								<Mention text={task.text} />
+								{/* kilocode_change: pull slash commands from Cline */}
+								{highlightText(task.text, false)}
 							</div>
 						</div>
 						{task.images && task.images.length > 0 && <Thumbnails images={task.images} />}
@@ -132,7 +135,7 @@ const TaskHeader = ({
 									<ContextWindowProgress
 										contextWindow={contextWindow}
 										contextTokens={contextTokens || 0}
-										maxTokens={getMaxTokensForModel(selectedModelInfo, apiConfiguration)}
+										maxTokens={getMaxTokensForModel(model, apiConfiguration)}
 									/>
 								</div>
 							)}
@@ -191,5 +194,93 @@ const TaskHeader = ({
 		</div>
 	)
 }
+
+// kilocode_change start: pull slash commands from Cline
+
+/**
+ * Highlights slash-command in this text if it exists
+ */
+const highlightSlashCommands = (text: string, withShadow = true) => {
+	const match = text.match(/^\s*\/([a-zA-Z0-9_-]+)(\s*|$)/)
+	if (!match) {
+		return text
+	}
+
+	const commandName = match[1]
+	const validationResult = validateSlashCommand(commandName)
+
+	if (!validationResult || validationResult !== "full") {
+		return text
+	}
+
+	const commandEndIndex = match[0].length
+	const beforeCommand = text.substring(0, text.indexOf("/"))
+	const afterCommand = match[2] + text.substring(commandEndIndex)
+
+	return [
+		beforeCommand,
+		<span
+			key="slashCommand"
+			className={withShadow ? "mention-context-highlight-with-shadow" : "mention-context-highlight"}>
+			/{commandName}
+		</span>,
+		afterCommand,
+	]
+}
+
+/**
+ * Highlights & formats all mentions inside this text
+ */
+export const highlightMentions = (text: string, withShadow = true) => {
+	const parts = text.split(mentionRegexGlobal)
+
+	return parts.map((part, index) => {
+		if (index % 2 === 0) {
+			// This is regular text
+			return part
+		} else {
+			// This is a mention
+			return (
+				<span
+					key={index}
+					className={withShadow ? "mention-context-highlight-with-shadow" : "mention-context-highlight"}
+					style={{ cursor: "pointer" }}
+					onClick={() => vscode.postMessage({ type: "openMention", text: part })}>
+					@{part}
+				</span>
+			)
+		}
+	})
+}
+
+/**
+ * Handles parsing both mentions and slash-commands
+ */
+export const highlightText = (text?: string, withShadow = true) => {
+	if (!text) {
+		return text
+	}
+
+	const resultWithSlashHighlighting = highlightSlashCommands(text, withShadow)
+
+	if (resultWithSlashHighlighting === text) {
+		// no highlighting done
+		return highlightMentions(resultWithSlashHighlighting, withShadow)
+	}
+
+	if (Array.isArray(resultWithSlashHighlighting) && resultWithSlashHighlighting.length === 3) {
+		const [beforeCommand, commandElement, afterCommand] = resultWithSlashHighlighting as [
+			string,
+			JSX.Element,
+			string,
+		]
+
+		return [beforeCommand, commandElement, ...highlightMentions(afterCommand, withShadow)]
+	}
+
+	return [text]
+}
+
+// kilocode_change start: pull slash commands from Cline
 
 export default memo(TaskHeader)

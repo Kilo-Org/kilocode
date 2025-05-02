@@ -19,8 +19,8 @@ interface ContextMenuProps {
 	selectedType: ContextMenuOptionType | null
 	queryItems: ContextMenuQueryItem[]
 	modes?: ModeConfig[]
-	loading?: boolean // New loading prop
-	dynamicSearchResults?: SearchResult[] // New dynamic search results prop
+	loading?: boolean
+	dynamicSearchResults?: SearchResult[]
 }
 
 const ContextMenu: React.FC<ContextMenuProps> = ({
@@ -33,7 +33,6 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 	selectedType,
 	queryItems,
 	modes,
-	loading = false,
 	dynamicSearchResults = [],
 }) => {
 	const [materialIconsBaseUri, setMaterialIconsBaseUri] = useState("")

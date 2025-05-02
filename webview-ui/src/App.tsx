@@ -132,7 +132,6 @@ const App = () => {
 				isHidden={tab !== "chat"}
 				showAnnouncement={showAnnouncement}
 				hideAnnouncement={() => setShowAnnouncement(false)}
-				showHistoryView={() => switchTab("history")}
 			/>
 			<HumanRelayDialog
 				isOpen={humanRelayDialogState.isOpen}

@@ -8,5 +8,10 @@
 	"lowCreditWarning": {
 		"addCredit": "क्रेडिट जोड़ें",
 		"lowBalance": "आपका Kilo Code बैलेंस कम है"
+	},
+	"notifications": {
+		"toolRequest": "उपकरण अनुरोध अनुमोदन की प्रतीक्षा कर रहा है",
+		"browserAction": "ब्राउज़र कार्रवाई अनुमोदन की प्रतीक्षा कर रही है",
+		"command": "कमांड अनुमोदन की प्रतीक्षा कर रहा है"
 	}
 }

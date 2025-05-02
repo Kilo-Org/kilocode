@@ -1,5 +1,6 @@
 import { z } from "zod"
-import { ApiConfiguration, ApiProvider } from "./api"
+
+import { ApiConfiguration } from "./api"
 import { Mode, PromptComponent, ModeConfig } from "./modes"
 
 export type ClineAskResponse = "yesButtonClicked" | "noButtonClicked" | "messageResponse" | "retry_clicked" // kilocode_change: Added for payment required dialog
@@ -45,17 +46,15 @@ export interface WebviewMessage {
 		| "checkIsImageUrl"
 		| "exportSettings"
 		| "resetState"
+		| "requestRouterModels"
+		| "requestOpenAiModels"
 		| "requestOllamaModels"
 		| "requestLmStudioModels"
+		| "requestVsCodeLmModels"
 		| "openImage"
 		| "openFile"
 		| "openMention"
 		| "cancelTask"
-		| "refreshOpenRouterModels"
-		| "refreshGlamaModels"
-		| "refreshUnboundModels"
-		| "refreshRequestyModels"
-		| "refreshOpenAiModels"
 		| "alwaysAllowBrowser"
 		| "alwaysAllowMcp"
 		| "alwaysAllowModeSwitch"
@@ -99,7 +98,6 @@ export interface WebviewMessage {
 		| "alwaysApproveResubmit"
 		| "requestDelaySeconds"
 		| "setApiConfigPassword"
-		| "requestVsCodeLmModels"
 		| "mode"
 		| "updatePrompt"
 		| "updateSupportPrompt"
@@ -129,6 +127,7 @@ export interface WebviewMessage {
 		| "language"
 		| "maxReadFileLine"
 		| "searchFiles"
+		| "setHistoryPreviewCollapsed"
 		| "showFeedbackOptions" // kilocode_change
 		| "toggleApiConfigPin"
 		| "fetchMcpMarketplace" // kilocode_change
@@ -174,6 +173,7 @@ export interface WebviewMessage {
 	requestId?: string
 	ids?: string[]
 	hasSystemPromptOverride?: boolean
+	historyPreviewCollapsed?: boolean
 }
 
 export const checkoutDiffPayloadSchema = z.object({

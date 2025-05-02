@@ -405,3 +405,12 @@ input[cmdk-input]:focus {
 .codicon[class*="codicon-"] {
 	text-rendering: geometricPrecision !important;
 }
+
+/* kilocode_change begin pull slash commands from Cline */
+.slash-command-match-textarea-highlight {
+	background-color: color-mix(in srgb, var(--vscode-focusBorder) 30%, transparent);
+	border-radius: 3px;
+	box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--vscode-focusBorder) 30%, transparent);
+	color: transparent;
+}
+/* kilocode_change end */

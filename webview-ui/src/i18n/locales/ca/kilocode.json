@@ -8,5 +8,10 @@
 	"lowCreditWarning": {
 		"addCredit": "Afegir crèdit",
 		"lowBalance": "El teu saldo de Kilo Code és baix"
+	},
+	"notifications": {
+		"toolRequest": "Sol·licitud d'eina pendent d'aprovació",
+		"browserAction": "Acció del navegador pendent d'aprovació",
+		"command": "Ordre pendent d'aprovació"
 	}
 }

@@ -8,5 +8,10 @@
 	"lowCreditWarning": {
 		"addCredit": "Thêm tín dụng",
 		"lowBalance": "Số dư Kilo Code của bạn thấp"
+	},
+	"notifications": {
+		"toolRequest": "Yêu cầu công cụ đang chờ phê duyệt",
+		"browserAction": "Hành động trình duyệt đang chờ phê duyệt",
+		"command": "Lệnh đang chờ phê duyệt"
 	}
 }

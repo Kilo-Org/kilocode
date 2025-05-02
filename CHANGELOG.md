@@ -1,5 +1,12 @@
 # kilo-code
 
+## 4.19.1
+
+### Patch Changes
+
+- Fix translations for system notifications
+- Include changes from Roo Code v3.14.3
+
 ## 4.19.0
 
 ### Minor Changes
