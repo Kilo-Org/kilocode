@@ -351,6 +351,17 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			(command: SlashCommand) => {
 				setShowSlashCommandsMenu(false)
 
+				// Handle mode switching commands
+				const modeSwitchCommands = ["code", "architect", "ask", "debug", "orchestrator", "translate", "test"]
+				if (modeSwitchCommands.includes(command.name)) {
+					// Switch to the selected mode
+					setMode(command.name as Mode)
+					setInputValue("")
+					vscode.postMessage({ type: "mode", text: command.name })
+					return
+				}
+
+				// Handle other slash commands (like newtask)
 				if (textAreaRef.current) {
 					const { newValue, commandIndex } = insertSlashCommand(textAreaRef.current.value, command.name)
 					const newCursorPosition = newValue.indexOf(" ", commandIndex + 1 + command.name.length) + 1
@@ -367,7 +378,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					}, 0)
 				}
 			},
-			[setInputValue],
+			[setInputValue, setMode],
 		)
 		// kilocode_change end
 

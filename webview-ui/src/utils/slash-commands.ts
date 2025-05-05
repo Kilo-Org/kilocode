@@ -8,6 +8,34 @@ export const SUPPORTED_SLASH_COMMANDS: SlashCommand[] = [
 		name: "newtask",
 		description: "Create a new task with context from the current task",
 	},
+	{
+		name: "code",
+		description: "Switch to Code mode",
+	},
+	{
+		name: "architect",
+		description: "Switch to Architect mode",
+	},
+	{
+		name: "ask",
+		description: "Switch to Ask mode",
+	},
+	{
+		name: "debug",
+		description: "Switch to Debug mode",
+	},
+	{
+		name: "orchestrator",
+		description: "Switch to Orchestrator mode",
+	},
+	{
+		name: "translate",
+		description: "Switch to Translate mode",
+	},
+	{
+		name: "test",
+		description: "Switch to Test mode",
+	},
 ]
 
 // Regex for detecting slash commands in text
