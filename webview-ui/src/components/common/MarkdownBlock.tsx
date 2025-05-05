@@ -103,8 +103,8 @@ const StyledMarkdown = styled.div`
 		overflow-wrap: anywhere;
 	}
 
-	/* Target only Dark High Contrast theme using the data attribute VS Code adds to the body */
-	body[data-vscode-theme-kind="vscode-high-contrast"] & code:not(pre > code) {
+	/* Target only high-contrast theme(s) using the data attribute VS Code adds to the body */
+	body[data-vscode-theme-kind*="high-contrast"] & code:not(pre > code) {
 		color: var(
 			--vscode-editorInlayHint-foreground,
 			var(--vscode-symbolIcon-stringForeground, var(--vscode-charts-orange, #e9a700))
@@ -160,7 +160,7 @@ const StyledPre = styled.pre<{ theme: any }>`
 
 	${(props) =>
 		Object.keys(props.theme)
-			.map((key, index) => {
+			.map((key) => {
 				return `
       & ${key} {
         color: ${props.theme[key]};
@@ -195,7 +195,7 @@ const MarkdownBlock = memo(({ markdown }: MarkdownBlockProps) => {
 		],
 		rehypeReactOptions: {
 			components: {
-				pre: ({ node, children, ...preProps }: any) => {
+				pre: ({ _node, children, ...preProps }: any) => {
 					if (Array.isArray(children) && children.length === 1 && React.isValidElement(children[0])) {
 						const child = children[0] as React.ReactElement<{ className?: string }>
 						if (child.props?.className?.includes("language-mermaid")) {
