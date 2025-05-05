@@ -154,18 +154,18 @@ npm run check-types   # Run TypeScript type checking
 
 This project uses [Husky](https://typicode.github.io/husky/) to manage Git hooks, which automate certain checks before commits and pushes. The hooks are located in the `.husky/` directory.
 
-### Pre-commit Hook (`.husky/pre-commit`)
+### Pre-commit Hook
 
-Before a commit is finalized, this hook runs:
+Before a commit is finalized, the `.husky/pre-commit` hook runs:
 
 1.  **Branch Check**: Prevents committing directly to the `main` branch.
 2.  **Type Generation**: Runs `npm run generate-types`.
 3.  **Type File Check**: Ensures that any changes made to `src/exports/roo-code.d.ts` by the type generation are staged.
 4.  **Linting**: Runs `lint-staged` to lint and format staged files.
 
-### Pre-push Hook (`.husky/pre-push`)
+### Pre-push Hook
 
-Before changes are pushed to the remote repository, this hook runs:
+Before changes are pushed to the remote repository, the `.husky/pre-push` hook runs:
 
 1.  **Branch Check**: Prevents pushing directly to the `main` branch.
 2.  **Compilation**: Runs `npm run compile` to ensure the project builds successfully.
