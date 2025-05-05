@@ -7,7 +7,7 @@ Welcome to the Kilo Code development guide! This document will help you set up y
 Before you begin, make sure you have the following installed:
 
 1. **Git** - For version control
-2. **Node.js** (LTS version recommended) and npm
+2. **Node.js** (version [v20.18.1](https://github.com/Kilo-Org/kilocode/blob/main/.nvmrc) or higher recommended) and npm
 3. **Visual Studio Code** - Our recommended IDE for development
 
 ## Getting Started
@@ -29,8 +29,15 @@ Before you begin, make sure you have the following installed:
 
     This command will install dependencies for the main extension, webview UI, and e2e tests.
 
-3. **Install required VSCode extension**:
-    - [ESBuild Problem Matchers](https://marketplace.visualstudio.com/items/?itemName=connor4312.esbuild-problem-matchers) - Helps with build error reporting
+3. **Install VSCode Extensions**:
+    - **Required**: [ESBuild Problem Matchers](https://marketplace.visualstudio.com/items?itemName=connor4312.esbuild-problem-matchers) - Helps display build errors correctly.
+
+While not strictly necessary for running the extension, these extensions are recommended for development:
+
+- [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) - Integrates ESLint into VS Code.
+- [Prettier - Code formatter](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) - Integrates Prettier into VS Code.
+
+The full list of recommended extensions is [here](https://github.com/Kilo-Org/kilocode/blob/main/.vscode/extensions.json)
 
 ### Project Structure
 
@@ -150,17 +157,18 @@ npm run check-types   # Run TypeScript type checking
 
 - Use `console.log()` statements in your code for debugging
 - Check the Output panel in VSCode (View > Output) and select "Kilo Code" from the dropdown
-- For webview issues, use the browser developer tools in the webview (right-click > Inspect Element)
+- For webview issues, use the browser developer tools in the webview (right-click > "Inspect Element")
 
 ## Contributing
 
 We welcome contributions to Kilo Code! Here's how you can help:
 
-1. **Find an issue** to work on or create a new one
-2. **Fork the repository** and create a branch for your feature or fix
-3. **Make your changes** following our code style
-4. **Write tests** for your changes
-5. **Submit a pull request** with a clear description of the changes
+1. **Report an issue** using [GitHub Issues](https://github.com/Kilo-Org/kilocode/issues)
+2. **Find an issue** and submit a Pull Request with your fix
+3. **Write tests** to improve Code Coverage
+4. **Improve Documentation** at [kilocode.ai/docs](https://kilocode.ai/docs)
+5. **Suggest a new feature** using [GitHub Discussions](https://github.com/Kilo-Org/kilocode/discussions/categories/ideas)!
+6. Want to **implement something new**? Awesome! We'd be glad to support you on [Discord](https://discord.gg/Ja6BkfyTzJ)!
 
 ## Community
 
