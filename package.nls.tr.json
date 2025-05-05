@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code",
+	"extension.displayName": "Kilo Code (superset of Cline+Roo)",
 	"extension.description": "Kod planlama, oluşturma ve düzeltme için açık kaynaklı yapay zeka kodlama asistanı.",
 	"command.newTask.title": "Yeni Görev",
 	"command.explainCode.title": "Kodu Açıkla",

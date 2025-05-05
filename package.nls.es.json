@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code",
+	"extension.displayName": "Kilo Code (superset of Cline+Roo)",
 	"extension.description": "Asistente de codificación de IA de código abierto para planificar, crear y corregir código.",
 	"command.newTask.title": "Nueva Tarea",
 	"command.explainCode.title": "Explicar Código",

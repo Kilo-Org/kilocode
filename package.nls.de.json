@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code",
+	"extension.displayName": "Kilo Code (superset of Cline+Roo)",
 	"extension.description": "Open-Source-KI-Codierungsassistent zum Planen, Erstellen und Korrigieren von Code.",
 	"command.newTask.title": "Neue Aufgabe",
 	"command.explainCode.title": "Code Erklären",

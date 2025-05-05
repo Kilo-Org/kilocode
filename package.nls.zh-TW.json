@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code",
+	"extension.displayName": "Kilo Code (superset of Cline+Roo)",
 	"extension.description": "用於規劃、建置和修復程式碼的開源 AI 編碼助理。",
 	"command.newTask.title": "新建任務",
 	"command.explainCode.title": "解釋程式碼",

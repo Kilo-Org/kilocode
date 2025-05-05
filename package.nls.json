@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code",
+	"extension.displayName": "Kilo Code (superset of Cline+Roo)",
 	"extension.description": "Open Source AI coding assistant for planning, building, and fixing code.",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",
