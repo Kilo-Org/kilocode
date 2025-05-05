@@ -14,12 +14,17 @@ Before you begin, make sure you have the following installed:
 
 ### Installation
 
-1. **Clone the repository**:
+1. **Fork and Clone the Repository**:
 
-    ```bash
-    git clone https://github.com/Kilo-Org/kilocode.git
-    cd kilocode
-    ```
+    - **Fork the Repository**:
+        - Visit the [Kilo Code GitHub repository](https://github.com/Kilo-Org/kilocode)
+        - Click the "Fork" button in the top-right corner to create your own copy.
+    - **Clone Your Fork**:
+        ```bash
+        git clone https://github.com/[YOUR-USERNAME]/kilocode.git
+        cd kilocode
+        ```
+        Replace `[YOUR-USERNAME]` with your actual GitHub username.
 
 2. **Install dependencies**:
 
