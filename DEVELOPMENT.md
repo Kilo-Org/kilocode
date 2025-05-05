@@ -145,6 +145,29 @@ npm run lint          # Run ESLint
 npm run check-types   # Run TypeScript type checking
 ```
 
+## Git Hooks
+
+This project uses [Husky](https://typicode.github.io/husky/) to manage Git hooks, which automate certain checks before commits and pushes. The hooks are located in the `.husky/` directory.
+
+### Pre-commit Hook (`.husky/pre-commit`)
+
+Before a commit is finalized, this hook runs:
+
+1.  **Branch Check**: Prevents committing directly to the `main` branch.
+2.  **Type Generation**: Runs `npm run generate-types`.
+3.  **Type File Check**: Ensures that any changes made to `src/exports/roo-code.d.ts` by the type generation are staged.
+4.  **Linting**: Runs `lint-staged` to lint and format staged files.
+
+### Pre-push Hook (`.husky/pre-push`)
+
+Before changes are pushed to the remote repository, this hook runs:
+
+1.  **Branch Check**: Prevents pushing directly to the `main` branch.
+2.  **Compilation**: Runs `npm run compile` to ensure the project builds successfully.
+3.  **Changeset Check**: Checks if a changeset file exists in `.changeset/` and reminds you to create one using `npm run changeset` if necessary.
+
+These hooks help maintain code quality and consistency. If you encounter issues with commits or pushes, check the output from these hooks for error messages.
+
 ## Troubleshooting
 
 ### Common Issues
