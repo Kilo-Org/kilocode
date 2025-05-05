@@ -13,7 +13,7 @@
     - A `.vsix` file will appear in the `bin/` directory.
 4. **Install** the `.vsix` manually if desired:
     ```bash
-    code --install-extension bin/kilo-code-4.0.0.vsix
+    code --install-extension "$(ls -1v bin/kilo-code-*.vsix | tail -n1)"
     ```
 5. **Start the webview (Vite/React app with HMR)**:
     ```bash
