@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code (feature-merge of Cline+Roo)",
+	"extension.displayName": "Kilo Code AI Agent (feature-merge of Cline + Roo)",
 	"extension.description": "Assistent de codificació de IA de codi obert per planificar, crear i corregir codi.",
 	"command.newTask.title": "Nova Tasca",
 	"command.explainCode.title": "Explicar Codi",
