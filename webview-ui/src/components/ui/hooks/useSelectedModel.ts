@@ -26,7 +26,6 @@ import {
 	glamaDefaultModelId,
 	unboundDefaultModelId,
 } from "@roo/shared/api"
-import { kilocodeOpenrouterModels } from "@roo/shared/kilocode/api"
 import { useRouterModels } from "./useRouterModels"
 
 export const useSelectedModel = (apiConfiguration?: ApiConfiguration) => {
@@ -134,14 +133,35 @@ function getSelectedModelInfo({
 
 		// kilocode_change begin
 		case "kilocode":
-			const displayConfigs = {
-				gemini25: kilocodeOpenrouterModels["google/gemini-2.5-pro-preview-03-25"],
-				gemini25flashpreview: kilocodeOpenrouterModels["google/gemini-2.5-flash-preview"],
-				claude37: anthropicModels["claude-3-7-sonnet-20250219"],
-				gpt41: kilocodeOpenrouterModels["openai/gpt-4.1"],
+			// Use the fetched models from routerModels
+			if (routerModels?.["kilocode-openrouter"] && apiConfiguration?.kilocodeModel) {
+				// Find the model in the fetched models
+				const modelEntries = Object.entries(routerModels["kilocode-openrouter"])
+
+				// Try to find a model with a matching ID or name
+				for (const [modelId, modelInfo] of modelEntries) {
+					if (modelId.toLowerCase().includes(apiConfiguration.kilocodeModel.toLowerCase())) {
+						return modelInfo
+					}
+				}
+
+				// If no match found, use the first model with the right preferredIndex
+				const sortedModels = modelEntries.sort(([, a], [, b]) => {
+					if (a.preferredIndex !== undefined && b.preferredIndex !== undefined) {
+						return a.preferredIndex - b.preferredIndex
+					}
+					if (a.preferredIndex !== undefined) return -1
+					if (b.preferredIndex !== undefined) return 1
+					return 0
+				})
+
+				if (sortedModels.length > 0) {
+					return sortedModels[0][1]
+				}
 			}
 
-			return displayConfigs[apiConfiguration?.kilocodeModel ?? "claude37"]
+			// Fallback to anthropic model if no match found
+			return anthropicModels["claude-3-7-sonnet-20250219"]
 		// kilocode_change end
 		default:
 			return anthropicModels[id as keyof typeof anthropicModels] ?? anthropicModels[anthropicDefaultModelId]

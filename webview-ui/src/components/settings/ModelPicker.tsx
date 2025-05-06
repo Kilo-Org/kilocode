@@ -26,7 +26,7 @@ import { ModelInfoView } from "./ModelInfoView"
 
 type ModelIdKey = keyof Pick<
 	ProviderSettings,
-	"glamaModelId" | "openRouterModelId" | "unboundModelId" | "requestyModelId" | "openAiModelId"
+	"glamaModelId" | "openRouterModelId" | "unboundModelId" | "requestyModelId" | "openAiModelId" | "kilocodeModel"
 >
 
 interface ModelPickerProps {
@@ -54,7 +54,26 @@ export const ModelPicker = ({
 	const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
 	const isInitialized = useRef(false)
 	const searchInputRef = useRef<HTMLInputElement>(null)
-	const modelIds = useMemo(() => Object.keys(models ?? {}).sort((a, b) => a.localeCompare(b)), [models])
+	const modelIds = useMemo(() => {
+		if (!models) return []
+
+		// Sort models by preferredIndex first, then alphabetically
+		return Object.entries(models)
+			.sort(([keyA, modelA], [keyB, modelB]) => {
+				// If both models have preferredIndex, sort by that
+				if (modelA.preferredIndex !== undefined && modelB.preferredIndex !== undefined) {
+					return modelA.preferredIndex - modelB.preferredIndex
+				}
+
+				// If only one model has preferredIndex, it comes first
+				if (modelA.preferredIndex !== undefined) return -1
+				if (modelB.preferredIndex !== undefined) return 1
+
+				// Otherwise sort alphabetically
+				return keyA.localeCompare(keyB)
+			})
+			.map(([key]) => key)
+	}, [models])
 
 	const { id: selectedModelId, info: selectedModelInfo } = useSelectedModel(apiConfiguration)
 

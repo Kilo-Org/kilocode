@@ -60,8 +60,23 @@ export const getModels = async (router: RouterName): Promise<ModelRecord> => {
 			models = await getUnboundModels()
 			break
 		case "kilocode-openrouter":
-			// models = await getOpenRouterModels("kilocode-openrouter")
-			models = await getOpenRouterModels({ openRouterBaseUrl: "https://api.kilocode.ai/api/openrouter" })
+			// models = await getOpenRouterModels({ openRouterBaseUrl: "https://kilocode.ai/api/openrouter" })
+			const kilocodeToken = ContextProxy.instance.getProviderSettings().kilocodeToken
+			if (!kilocodeToken) {
+				console.error("Kilocode token is not set")
+			}
+
+			console.log("Kilocode token is set", kilocodeToken)
+
+			const options: any = {
+				openRouterBaseUrl: "http://localhost:3000/api/openrouter",
+			}
+
+			if (kilocodeToken) {
+				options.headers = { Authorization: `Bearer ${kilocodeToken}` }
+			}
+
+			models = await getOpenRouterModels(options)
 			break
 	}
 

@@ -128,7 +128,7 @@ type ProviderSettings = {
 	rateLimitSeconds?: number | undefined
 	fakeAi?: unknown | undefined
 	kilocodeToken?: string | undefined
-	kilocodeModel?: ("claude37" | "gemini25" | "gpt41" | "gemini25flashpreview") | undefined
+	kilocodeModel?: string | undefined
 	fireworksModelId?: string | undefined
 	fireworksApiKey?: string | undefined
 }

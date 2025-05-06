@@ -14,12 +14,11 @@ import { getModels } from "./fetchers/cache"
  * to provide custom model information and fetches models from the KiloCode OpenRouter endpoint.
  */
 export class KilocodeOpenrouterHandler extends OpenRouterHandler {
-	private fetchedModels: Record<string, ModelInfo & { preferred?: boolean }> = {}
-	private modelsFetched = false
+	protected override models: ModelRecord = {}
 
 	constructor(options: ApiHandlerOptions) {
 		const baseUri = getKiloBaseUri(options)
-		const options = {
+		options = {
 			...options,
 			openRouterBaseUrl: `${baseUri}/api/openrouter/`,
 			openRouterApiKey: options.kilocodeToken,
@@ -48,11 +47,15 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 			claude37: "anthropic/claude-3.7-sonnet",
 		}
 
-		id = modelMapping[selectedModel] || modelMapping["gemini25"]
+		// check if the selected model is in the mapping
+		id = modelMapping[selectedModel as keyof typeof modelMapping]
+		if (Object.keys(modelMapping).includes(selectedModel)) {
+			id = modelMapping[selectedModel as keyof typeof modelMapping]
+		}
 
 		// Only use fetched models
-		if (this.modelsFetched && Object.keys(this.fetchedModels).length > 0 && this.fetchedModels[id]) {
-			info = this.fetchedModels[id]
+		if (Object.keys(this.models).length > 0 && this.models[id]) {
+			info = this.models[id]
 		} else {
 			throw new Error(`Unsupported model: ${selectedModel}`)
 		}
