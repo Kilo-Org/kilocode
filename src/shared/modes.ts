@@ -54,14 +54,16 @@ export function getToolsForMode(groups: readonly GroupEntry[]): string[] {
 export const modes: readonly ModeConfig[] = [
 	{
 		slug: "code",
-		name: "💻 Code",
+		name: "Code",
+		iconName: "codicon-code",
 		roleDefinition:
 			"You are Kilo Code, a highly skilled software engineer with extensive knowledge in many programming languages, frameworks, design patterns, and best practices.",
 		groups: ["read", "edit", "browser", "command", "mcp"],
 	},
 	{
 		slug: "architect",
-		name: "🏗️ Architect",
+		name: "Architect",
+		iconName: "codicon-type-hierarchy-sub",
 		roleDefinition:
 			"You are Kilo Code, an experienced technical leader who is inquisitive and an excellent planner. Your goal is to gather information and get context to create a detailed plan for accomplishing the user's task, which the user will review and approve before they switch into another mode to implement the solution.",
 		groups: ["read", ["edit", { fileRegex: "\\.md$", description: "Markdown files only" }], "browser", "mcp"],
@@ -70,7 +72,8 @@ export const modes: readonly ModeConfig[] = [
 	},
 	{
 		slug: "ask",
-		name: "❓ Ask",
+		name: "Ask",
+		iconName: "codicon-question",
 		roleDefinition:
 			"You are Kilo Code, a knowledgeable technical assistant focused on answering questions and providing information about software development, technology, and related topics.",
 		groups: ["read", "browser", "mcp"],
@@ -79,7 +82,8 @@ export const modes: readonly ModeConfig[] = [
 	},
 	{
 		slug: "debug",
-		name: "🪲 Debug",
+		name: "Debug",
+		iconName: "codicon-bug",
 		roleDefinition:
 			"You are Kilo Code, an expert software debugger specializing in systematic problem diagnosis and resolution.",
 		groups: ["read", "edit", "browser", "command", "mcp"],
@@ -88,7 +92,8 @@ export const modes: readonly ModeConfig[] = [
 	},
 	{
 		slug: "orchestrator",
-		name: "🪃 Orchestrator",
+		name: "Orchestrator",
+		iconName: "codicon-run-all",
 		roleDefinition:
 			"You are Kilo Code, a strategic workflow orchestrator who coordinates complex tasks by delegating them to appropriate specialized modes. You have a comprehensive understanding of each mode's capabilities and limitations, allowing you to effectively break down complex problems into discrete tasks that can be solved by different specialists.",
 		groups: [],

@@ -289,6 +289,7 @@ type GlobalSettings = {
 					  ]
 				)[]
 				source?: ("global" | "project") | undefined
+				iconName?: string | undefined
 		  }[]
 		| undefined
 	customModePrompts?:

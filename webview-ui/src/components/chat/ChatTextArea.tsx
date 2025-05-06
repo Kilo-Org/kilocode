@@ -1150,6 +1150,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 									...getAllModes(customModes).map((mode) => ({
 										value: mode.slug,
 										label: mode.name,
+										codicon: mode.iconName,
 										type: DropdownOptionType.ITEM,
 									})),
 									{
