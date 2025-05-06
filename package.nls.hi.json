@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code (superset of Cline+Roo)",
+	"extension.displayName": "Kilo Code (feature-merge of Cline+Roo)",
 	"extension.description": "कोड की योजना बनाने, निर्माण करने और उसे ठीक करने के लिए ओपन सोर्स एआई कोडिंग सहायक।",
 	"command.newTask.title": "नया कार्य",
 	"command.explainCode.title": "कोड समझाएं",

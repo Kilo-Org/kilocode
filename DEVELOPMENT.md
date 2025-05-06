@@ -98,7 +98,7 @@ This will:
 To install your built extension:
 
 ```bash
-code --install-extension bin/kilo-code-[version].vsix
+code --install-extension "$(ls -1v bin/kilo-code-*.vsix | tail -n1)"
 ```
 
 Replace `[version]` with the current version number.

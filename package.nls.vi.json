@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code (superset of Cline+Roo)",
+	"extension.displayName": "Kilo Code (feature-merge of Cline+Roo)",
 	"extension.description": "Trợ lý mã hóa AI nguồn mở để lập kế hoạch, xây dựng và sửa mã.",
 	"command.newTask.title": "Tác Vụ Mới",
 	"command.explainCode.title": "Giải Thích Mã",
