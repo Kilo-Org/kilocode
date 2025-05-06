@@ -7,6 +7,7 @@ interface SlashCommandMenuProps {
 	setSelectedIndex: (index: number) => void
 	onMouseDown: () => void
 	query: string
+	customModes?: any[]
 }
 
 const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({
@@ -15,6 +16,7 @@ const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({
 	setSelectedIndex,
 	onMouseDown,
 	query,
+	customModes,
 }) => {
 	const menuRef = useRef<HTMLDivElement>(null)
 
@@ -43,7 +45,7 @@ const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({
 	}, [selectedIndex])
 
 	// Filter commands based on query
-	const filteredCommands = getMatchingSlashCommands(query)
+	const filteredCommands = getMatchingSlashCommands(query, customModes)
 
 	return (
 		<div

@@ -352,7 +352,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				setShowSlashCommandsMenu(false)
 
 				// Handle mode switching commands
-				const modeSwitchCommands = ["code", "architect", "ask", "debug", "orchestrator", "translate", "test"]
+				const modeSwitchCommands = getAllModes(customModes).map((mode) => mode.slug)
 				if (modeSwitchCommands.includes(command.name)) {
 					// Switch to the selected mode
 					setMode(command.name as Mode)
@@ -378,7 +378,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					}, 0)
 				}
 			},
-			[setInputValue, setMode],
+			[setInputValue, setMode, customModes],
 		)
 		// kilocode_change end
 
@@ -395,7 +395,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						event.preventDefault()
 						setSelectedSlashCommandsIndex((prevIndex) => {
 							const direction = event.key === "ArrowUp" ? -1 : 1
-							const commands = getMatchingSlashCommands(slashCommandsQuery)
+							const commands = getMatchingSlashCommands(slashCommandsQuery, customModes)
 
 							if (commands.length === 0) {
 								return prevIndex
@@ -409,7 +409,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 					if ((event.key === "Enter" || event.key === "Tab") && selectedSlashCommandsIndex !== -1) {
 						event.preventDefault()
-						const commands = getMatchingSlashCommands(slashCommandsQuery)
+						const commands = getMatchingSlashCommands(slashCommandsQuery, customModes)
 						if (commands.length > 0) {
 							handleSlashCommandsSelect(commands[selectedSlashCommandsIndex])
 						}
@@ -751,7 +751,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 				// extract and validate the exact command text
 				const commandText = processedText.substring(slashIndex + 1, endIndex)
-				const isValidCommand = validateSlashCommand(commandText)
+				const isValidCommand = validateSlashCommand(commandText, customModes)
 
 				if (isValidCommand) {
 					const fullCommand = processedText.substring(slashIndex, endIndex) // includes slash
@@ -766,7 +766,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			highlightLayerRef.current.innerHTML = processedText
 			highlightLayerRef.current.scrollTop = textAreaRef.current.scrollTop
 			highlightLayerRef.current.scrollLeft = textAreaRef.current.scrollLeft
-		}, [])
+		}, [customModes])
 
 		useLayoutEffect(() => {
 			updateHighlights()
@@ -957,6 +957,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 									setSelectedIndex={setSelectedSlashCommandsIndex}
 									onMouseDown={handleMenuMouseDown}
 									query={slashCommandsQuery}
+									customModes={customModes}
 								/>
 							</div>
 						)}
