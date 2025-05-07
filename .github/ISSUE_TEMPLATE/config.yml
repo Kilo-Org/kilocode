@@ -11,3 +11,4 @@ contact_links:
       about: Enjoying Kilo Code? Leave a review here!
     - name: 5. Blank Issue
       url: https://github.com/Kilo-Org/kilocode/issues/new
+      about: Empty issue text (try to use one of the other options instead).
