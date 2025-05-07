@@ -1,9 +1,13 @@
 import { Anthropic } from "@anthropic-ai/sdk"
-import { ApiHandlerOptions, ModelInfo } from "../../shared/api"
+import { Stream as AnthropicStream } from "@anthropic-ai/sdk/streaming"
+import { CacheControlEphemeral } from "@anthropic-ai/sdk/resources"
+import { anthropicDefaultModelId, anthropicModels, ApiHandlerOptions, ModelInfo } from "../../shared/api"
 import { ApiStream } from "../transform/stream"
 import { BaseProvider } from "./base-provider"
 import { SingleCompletionHandler } from "../index"
 import { KilocodeOpenrouterHandler } from "./kilocode-openrouter"
+import { getModelParams } from "../getModelParams"
+import { ANTHROPIC_DEFAULT_MAX_TOKENS } from "./constants"
 
 export class KiloCodeHandler extends BaseProvider implements SingleCompletionHandler {
 	private handler: BaseProvider & SingleCompletionHandler
@@ -73,7 +77,7 @@ export class KiloCodeAnthropicHandler extends BaseProvider implements SingleComp
 	async *createMessage(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): ApiStream {
 		let stream: AnthropicStream<Anthropic.Messages.RawMessageStreamEvent>
 		const cacheControl: CacheControlEphemeral = { type: "ephemeral" }
-		let { id: modelId, maxTokens, thinking, temperature, virtualId } = this.getModel()
+		let { id: modelId, maxTokens, thinking, temperature } = this.getModel()
 
 		const userMsgIndices = messages.reduce(
 			(acc, msg, index) => (msg.role === "user" ? [...acc, index] : acc),
