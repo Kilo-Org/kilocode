@@ -1,7 +1,7 @@
 import { ExtensionContext } from "vscode"
-import { z, ZodError } from "zod"
+import { z } from "zod"
 
-import { providerSettingsSchema, ApiConfigMeta, ProviderSettings } from "../../schemas"
+import { providerSettingsSchema, ApiConfigMeta } from "../../schemas"
 import { Mode, modes } from "../../shared/modes"
 
 const providerSettingsWithIdSchema = providerSettingsSchema.extend({ id: z.string().optional() })
@@ -16,6 +16,7 @@ export const providerProfilesSchema = z.object({
 		.object({
 			rateLimitSecondsMigrated: z.boolean().optional(),
 			diffSettingsMigrated: z.boolean().optional(),
+			openAiHeadersMigrated: z.boolean().optional(),
 		})
 		.optional(),
 })
@@ -37,6 +38,7 @@ export class ProviderSettingsManager {
 		migrations: {
 			rateLimitSecondsMigrated: true, // Mark as migrated on fresh installs
 			diffSettingsMigrated: true, // Mark as migrated on fresh installs
+			openAiHeadersMigrated: true, // Mark as migrated on fresh installs
 		},
 	}
 
@@ -77,7 +79,7 @@ export class ProviderSettingsManager {
 				let isDirty = false
 
 				// Ensure all configs have IDs.
-				for (const [name, apiConfig] of Object.entries(providerProfiles.apiConfigs)) {
+				for (const [_name, apiConfig] of Object.entries(providerProfiles.apiConfigs)) {
 					if (!apiConfig.id) {
 						apiConfig.id = this.generateId()
 						isDirty = true
@@ -89,6 +91,7 @@ export class ProviderSettingsManager {
 					providerProfiles.migrations = {
 						rateLimitSecondsMigrated: false,
 						diffSettingsMigrated: false,
+						openAiHeadersMigrated: false,
 					} // Initialize with default values
 					isDirty = true
 				}
@@ -102,6 +105,12 @@ export class ProviderSettingsManager {
 				if (!providerProfiles.migrations.diffSettingsMigrated) {
 					await this.migrateDiffSettings(providerProfiles)
 					providerProfiles.migrations.diffSettingsMigrated = true
+					isDirty = true
+				}
+
+				if (!providerProfiles.migrations.openAiHeadersMigrated) {
+					await this.migrateOpenAiHeaders(providerProfiles)
+					providerProfiles.migrations.openAiHeadersMigrated = true
 					isDirty = true
 				}
 
@@ -129,7 +138,7 @@ export class ProviderSettingsManager {
 				rateLimitSeconds = 0
 			}
 
-			for (const [name, apiConfig] of Object.entries(providerProfiles.apiConfigs)) {
+			for (const [_name, apiConfig] of Object.entries(providerProfiles.apiConfigs)) {
 				if (apiConfig.rateLimitSeconds === undefined) {
 					apiConfig.rateLimitSeconds = rateLimitSeconds
 				}
@@ -161,7 +170,7 @@ export class ProviderSettingsManager {
 				fuzzyMatchThreshold = 1.0
 			}
 
-			for (const [name, apiConfig] of Object.entries(providerProfiles.apiConfigs)) {
+			for (const [_name, apiConfig] of Object.entries(providerProfiles.apiConfigs)) {
 				if (apiConfig.diffEnabled === undefined) {
 					apiConfig.diffEnabled = diffEnabled
 				}
@@ -171,6 +180,30 @@ export class ProviderSettingsManager {
 			}
 		} catch (error) {
 			console.error(`[MigrateDiffSettings] Failed to migrate diff settings:`, error)
+		}
+	}
+
+	private async migrateOpenAiHeaders(providerProfiles: ProviderProfiles) {
+		try {
+			for (const [_name, apiConfig] of Object.entries(providerProfiles.apiConfigs)) {
+				// Use type assertion to access the deprecated property safely
+				const configAny = apiConfig as any
+
+				// Check if openAiHostHeader exists but openAiHeaders doesn't
+				if (
+					configAny.openAiHostHeader &&
+					(!apiConfig.openAiHeaders || Object.keys(apiConfig.openAiHeaders || {}).length === 0)
+				) {
+					// Create the headers object with the Host value
+					apiConfig.openAiHeaders = { Host: configAny.openAiHostHeader }
+
+					// Delete the old property to prevent re-migration
+					// This prevents the header from reappearing after deletion
+					configAny.openAiHostHeader = undefined
+				}
+			}
+		} catch (error) {
+			console.error(`[MigrateOpenAiHeaders] Failed to migrate OpenAI headers:`, error)
 		}
 	}
 

@@ -1,5 +1,12 @@
 # kilo-code
 
+## 4.20.1
+
+### Patch Changes
+
+- Use the phrase feature-merge instead of superset in displayName and README
+- Fix "Some text unreadable in Light high contrast theme" issue
+
 ## [4.20.0]
 
 - Include slash commands from Cline, include /newtask command

@@ -55,6 +55,10 @@
 		"title": "Çalışırken Devam Et",
 		"tooltip": "Uyarılara rağmen devam et"
 	},
+	"killCommand": {
+		"title": "Komutu Durdur",
+		"tooltip": "Mevcut komutu durdur"
+	},
 	"resumeTask": {
 		"title": "Göreve Devam Et",
 		"tooltip": "Mevcut göreve devam et"
@@ -89,6 +93,7 @@
 		}
 	},
 	"selectMode": "Etkileşim modunu seçin",
+	"selectApiConfig": "API yapılandırmasını seçin",
 	"enhancePrompt": "Ek bağlamla istemi geliştir",
 	"addImages": "Mesaja resim ekle",
 	"sendMessage": "Mesaj gönder",
@@ -184,13 +189,6 @@
 		"hasQuestion": "Kilo Code'nun bir sorusu var:"
 	},
 	"taskCompleted": "Görev Tamamlandı",
-	"shellIntegration": {
-		"unavailable": "Kabuk Entegrasyonu Kullanılamıyor",
-		"troubleshooting": "Hala sorun mu yaşıyorsunuz? Kabuk entegrasyonu belgelerine göz atmak için buraya tıklayın.",
-		"checkSettings": "Ayarlar sayfasındaki terminal geçici çözümlerini kontrol et",
-		"updateVSCode": "VSCode'u güncelle",
-		"supportedShell": "Desteklenen bir kabuk kullandığından emin ol: zsh, bash, fish veya PowerShell"
-	},
 	"powershell": {
 		"issues": "Windows PowerShell ile ilgili sorunlar yaşıyor gibi görünüyorsunuz, lütfen şu konuya bakın"
 	},
@@ -207,12 +205,12 @@
 		"copyToInput": "Giriş alanına kopyala (veya Shift + tıklama)"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code 3.14 Yayınlandı",
-		"description": "Roo Code 3.14 geri bildirimlerinize dayalı yeni özellikler ve iyileştirmeler getiriyor.",
+		"title": "🎉 Roo Code 3.15 Yayınlandı",
+		"description": "Roo Code 3.15 geri bildirimlerinize dayalı yeni özellikler ve iyileştirmeler getiriyor.",
 		"whatsNew": "Yenilikler",
-		"feature1": "<bold>Geliştirilmiş Düzenleme Araçları</bold>: <code>search_and_replace</code> ve <code>insert_content</code> araçları iyileştirildi ve deneysel statüsünden çıkarıldı",
-		"feature2": "<bold>Apply_diff İyileştirmeleri</bold>: <code>apply_diff</code> aracını geliştirmeye devam ediyoruz",
-		"feature3": "<bold>Çok Sayıda Diğer İyileştirme</bold>: Eklenti genelinde sayısız düzeltme ve geliştirme",
+		"feature1": "<bold>Vertex için İstem Önbelleği</bold>: Vertex AI için istem önbelleği desteği eklendi, yanıt sürelerini iyileştiriyor ve API maliyetlerini azaltıyor",
+		"feature2": "<bold>Terminal Yedek Mekanizması</bold>: VSCode terminal kabuk entegrasyonu başarısız olduğunda devreye giren yedek mekanizma uygulandı",
+		"feature3": "<bold>Geliştirilmiş Kod Parçacıkları</bold>: Sohbet arayüzünde kod parçacıklarının görüntülenmesi ve etkileşimi iyileştirildi",
 		"hideButton": "Duyuruyu gizle",
 		"detailsDiscussLinks": "<discordLink>Discord</discordLink> ve <redditLink>Reddit</redditLink> üzerinde daha fazla ayrıntı edinin ve tartışmalara katılın 🚀"
 	},
@@ -239,5 +237,9 @@
 		}
 	},
 	"systemPromptWarning": "UYARI: Özel sistem komut geçersiz kılma aktif. Bu işlevselliği ciddi şekilde bozabilir ve öngörülemeyen davranışlara neden olabilir.",
-	"selectApiConfig": "API yapılandırmasını seçin"
+	"shellIntegration": {
+		"title": "Komut Çalıştırma Uyarısı",
+		"description": "Komutunuz VSCode terminal kabuk entegrasyonu olmadan çalıştırılıyor. Bu uyarıyı gizlemek için <settingsLink>Roo Code ayarları</settingsLink>'nın <strong>Terminal</strong> bölümünden kabuk entegrasyonunu devre dışı bırakabilir veya aşağıdaki bağlantıyı kullanarak VSCode terminal entegrasyonu sorunlarını giderebilirsiniz.",
+		"troubleshooting": "Kabuk entegrasyonu belgelerini görmek için buraya tıklayın."
+	}
 }

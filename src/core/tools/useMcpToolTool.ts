@@ -93,8 +93,7 @@ export async function useMcpToolTool(
 								return item.text
 							}
 							if (item.type === "resource") {
-								// eslint-disable-next-line @typescript-eslint/no-unused-vars
-								const { blob, ...rest } = item.resource
+								const { blob: _, ...rest } = item.resource
 								return JSON.stringify(rest, null, 2)
 							}
 							return ""

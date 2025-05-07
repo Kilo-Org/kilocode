@@ -182,6 +182,16 @@ export class ContextProxy {
 		// If a value is not present in the new configuration, then it is assumed
 		// that the setting's value should be `undefined` and therefore we
 		// need to remove it from the state cache if it exists.
+
+		// Ensure openAiHeaders is always an object even when empty
+		// This is critical for proper serialization/deserialization through IPC
+		if (values.openAiHeaders !== undefined) {
+			// Check if it's empty or null
+			if (!values.openAiHeaders || Object.keys(values.openAiHeaders).length === 0) {
+				values.openAiHeaders = {}
+			}
+		}
+
 		await this.setValues({
 			...PROVIDER_SETTINGS_KEYS.filter((key) => !isSecretStateKey(key))
 				.filter((key) => !!this.stateCache[key])
@@ -220,6 +230,10 @@ export class ContextProxy {
 	public async export(): Promise<GlobalSettings | undefined> {
 		try {
 			const globalSettings = globalSettingsExportSchema.parse(this.getValues())
+
+			// Exports should only contain global settings, so this skips project custom modes (those exist in the .roomode folder)
+			globalSettings.customModes = globalSettings.customModes?.filter((mode) => mode.source === "global")
+
 			return Object.fromEntries(Object.entries(globalSettings).filter(([_, value]) => value !== undefined))
 		} catch (error) {
 			return undefined

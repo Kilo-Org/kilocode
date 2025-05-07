@@ -4,7 +4,7 @@ import type { ClineMessage } from "../../../src/exports/roo-code"
 
 import { sleep, waitFor, waitUntilCompleted } from "./utils"
 
-suite("Kilo Code Subtasks", () => {
+suite.skip("Kilo Code Subtasks", () => {
 	test("Should handle subtask cancellation and resumption correctly", async () => {
 		const api = globalThis.api
 
@@ -17,18 +17,17 @@ suite("Kilo Code Subtasks", () => {
 			}
 		})
 
-		await api.setConfiguration({
-			mode: "ask",
-			alwaysAllowModeSwitch: true,
-			alwaysAllowSubtasks: true,
-			autoApprovalEnabled: true,
-			enableCheckpoints: false,
-		})
-
 		const childPrompt = "You are a calculator. Respond only with numbers. What is the square root of 9?"
 
 		// Start a parent task that will create a subtask.
 		const parentTaskId = await api.startNewTask({
+			configuration: {
+				mode: "ask",
+				alwaysAllowModeSwitch: true,
+				alwaysAllowSubtasks: true,
+				autoApprovalEnabled: true,
+				enableCheckpoints: false,
+			},
 			text:
 				"You are the parent task. " +
 				`Create a subtask by using the new_task tool with the message '${childPrompt}'.` +

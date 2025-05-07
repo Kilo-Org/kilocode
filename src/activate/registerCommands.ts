@@ -68,31 +68,51 @@ const getCommandsMap = ({ context, outputChannel }: RegisterCommandOptions) => {
 		"kilo-code.activationCompleted": () => {},
 		"kilo-code.plusButtonClicked": async () => {
 			const visibleProvider = getVisibleProviderOrLog(outputChannel)
-			if (!visibleProvider) return
+
+			if (!visibleProvider) {
+				return
+			}
+
 			await visibleProvider.removeClineFromStack()
 			await visibleProvider.postStateToWebview()
 			await visibleProvider.postMessageToWebview({ type: "action", action: "chatButtonClicked" })
 		},
 		"kilo-code.mcpButtonClicked": () => {
 			const visibleProvider = getVisibleProviderOrLog(outputChannel)
-			if (!visibleProvider) return
+
+			if (!visibleProvider) {
+				return
+			}
+
 			visibleProvider.postMessageToWebview({ type: "action", action: "mcpButtonClicked" })
 		},
 		"kilo-code.promptsButtonClicked": () => {
 			const visibleProvider = getVisibleProviderOrLog(outputChannel)
-			if (!visibleProvider) return
+
+			if (!visibleProvider) {
+				return
+			}
+
 			visibleProvider.postMessageToWebview({ type: "action", action: "promptsButtonClicked" })
 		},
 		"kilo-code.popoutButtonClicked": () => openClineInNewTab({ context, outputChannel }),
 		"kilo-code.openInNewTab": () => openClineInNewTab({ context, outputChannel }),
 		"kilo-code.settingsButtonClicked": () => {
 			const visibleProvider = getVisibleProviderOrLog(outputChannel)
-			if (!visibleProvider) return
+
+			if (!visibleProvider) {
+				return
+			}
+
 			visibleProvider.postMessageToWebview({ type: "action", action: "settingsButtonClicked" })
 		},
 		"kilo-code.historyButtonClicked": () => {
 			const visibleProvider = getVisibleProviderOrLog(outputChannel)
-			if (!visibleProvider) return
+
+			if (!visibleProvider) {
+				return
+			}
+
 			visibleProvider.postMessageToWebview({ type: "action", action: "historyButtonClicked" })
 		},
 		"kilo-code.helpButtonClicked": () => {
@@ -143,7 +163,11 @@ const getCommandsMap = ({ context, outputChannel }: RegisterCommandOptions) => {
 		// kilocode_change end
 		"kilo-code.acceptInput": () => {
 			const visibleProvider = getVisibleProviderOrLog(outputChannel)
-			if (!visibleProvider) return
+
+			if (!visibleProvider) {
+				return
+			}
+
 			visibleProvider.postMessageToWebview({ type: "acceptInput" })
 		},
 		// kilocode_change start
@@ -154,6 +178,7 @@ const getCommandsMap = ({ context, outputChannel }: RegisterCommandOptions) => {
 			const { success } = await importSettings({
 				providerSettingsManager: visibleProvider.providerSettingsManager,
 				contextProxy: visibleProvider.contextProxy,
+				customModesManager: visibleProvider.customModesManager,
 			})
 
 			if (success) {

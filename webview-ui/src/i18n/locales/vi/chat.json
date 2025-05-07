@@ -55,6 +55,10 @@
 		"title": "Tiếp tục trong khi chạy",
 		"tooltip": "Tiếp tục bất chấp cảnh báo"
 	},
+	"killCommand": {
+		"title": "Dừng lệnh",
+		"tooltip": "Dừng lệnh hiện tại"
+	},
 	"resumeTask": {
 		"title": "Tiếp tục nhiệm vụ",
 		"tooltip": "Tiếp tục nhiệm vụ hiện tại"
@@ -89,6 +93,7 @@
 		}
 	},
 	"selectMode": "Chọn chế độ tương tác",
+	"selectApiConfig": "Chọn cấu hình API",
 	"enhancePrompt": "Nâng cao yêu cầu với ngữ cảnh bổ sung",
 	"addImages": "Thêm hình ảnh vào tin nhắn",
 	"sendMessage": "Gửi tin nhắn",
@@ -184,13 +189,6 @@
 		"hasQuestion": "Kilo Code có một câu hỏi:"
 	},
 	"taskCompleted": "Nhiệm vụ hoàn thành",
-	"shellIntegration": {
-		"unavailable": "Tích hợp shell không khả dụng",
-		"troubleshooting": "Vẫn gặp vấn đề? Nhấp vào đây để xem tài liệu tích hợp shell.",
-		"checkSettings": "Kiểm tra các giải pháp thay thế cho terminal trong trang cài đặt",
-		"updateVSCode": "Cập nhật VSCode",
-		"supportedShell": "Đảm bảo bạn đang sử dụng shell được hỗ trợ: zsh, bash, fish hoặc PowerShell"
-	},
 	"powershell": {
 		"issues": "Có vẻ như bạn đang gặp vấn đề với Windows PowerShell, vui lòng xem"
 	},
@@ -207,12 +205,12 @@
 		"copyToInput": "Sao chép vào ô nhập liệu (hoặc Shift + nhấp chuột)"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code 3.14 Đã phát hành",
-		"description": "Roo Code 3.14 mang đến các tính năng và cải tiến mới dựa trên phản hồi của bạn.",
+		"title": "🎉 Roo Code 3.15 Đã phát hành",
+		"description": "Roo Code 3.15 mang đến các tính năng và cải tiến mới dựa trên phản hồi của bạn.",
 		"whatsNew": "Có gì mới",
-		"feature1": "<bold>Công cụ chỉnh sửa được cải thiện</bold>: Các công cụ <code>search_and_replace</code> và <code>insert_content</code> đã được cải thiện và chuyển từ trạng thái thử nghiệm thành chính thức",
-		"feature2": "<bold>Sửa lỗi apply_diff</bold>: Chúng tôi tiếp tục cải thiện công cụ <code>apply_diff</code>",
-		"feature3": "<bold>Rất nhiều cải tiến khác</bold>: Vô số sửa lỗi và cải tiến trong toàn bộ tiện ích mở rộng",
+		"feature1": "<bold>Bộ nhớ đệm lời nhắc cho Vertex</bold>: Đã thêm hỗ trợ bộ nhớ đệm lời nhắc cho Vertex AI, cải thiện thời gian phản hồi và giảm chi phí API",
+		"feature2": "<bold>Cơ chế dự phòng cho Terminal</bold>: Đã triển khai cơ chế dự phòng khi tích hợp shell terminal VSCode gặp sự cố",
+		"feature3": "<bold>Cải thiện đoạn mã</bold>: Nâng cao hiển thị và tương tác với đoạn mã trong giao diện trò chuyện",
 		"hideButton": "Ẩn thông báo",
 		"detailsDiscussLinks": "Nhận thêm chi tiết và thảo luận tại <discordLink>Discord</discordLink> và <redditLink>Reddit</redditLink> 🚀"
 	},
@@ -239,5 +237,9 @@
 		}
 	},
 	"systemPromptWarning": "CẢNH BÁO: Đã kích hoạt ghi đè lệnh nhắc hệ thống tùy chỉnh. Điều này có thể phá vỡ nghiêm trọng chức năng và gây ra hành vi không thể dự đoán.",
-	"selectApiConfig": "Chọn cấu hình API"
+	"shellIntegration": {
+		"title": "Cảnh báo thực thi lệnh",
+		"description": "Lệnh của bạn đang được thực thi mà không có tích hợp shell terminal VSCode. Để ẩn cảnh báo này, bạn có thể vô hiệu hóa tích hợp shell trong phần <strong>Terminal</strong> của <settingsLink>cài đặt Roo Code</settingsLink> hoặc khắc phục sự cố tích hợp terminal VSCode bằng liên kết bên dưới.",
+		"troubleshooting": "Nhấp vào đây để xem tài liệu tích hợp shell."
+	}
 }

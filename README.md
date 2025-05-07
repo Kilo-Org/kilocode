@@ -15,7 +15,7 @@
 
 # 🚀 Kilo Code
 
-> Open-source VS Code AI agent. Superset of [Roo Code](https://github.com/RooVetGit/Roo-Code) and [Cline](https://github.com/cline/cline).
+> Open-source VS Code AI agent. Merged features from [Roo Code](https://github.com/RooVetGit/Roo-Code) and [Cline](https://github.com/cline/cline).
 
 - ✨ Generate code from natural language
 - ✅ Checks its own work
@@ -48,7 +48,7 @@
 
 ## Difference between Roo Code and Cline
 
-We're doing our best to combine the best of both worlds. Kilo Code is a superset of both Roo Code and Cline. It has the best features of both, and we're working on making it even better. 
+We're doing our best to combine the best of both worlds. Kilo Code is a feature-merge of both Roo Code and Cline. It has the best features of both, and we're working on making it even better!
 
 No need to fiddle with API keys, Kilo Code ships with the latest AI models plugged in, including Claude 3.7 Sonnet and Gemini 2.5 Pro.
 

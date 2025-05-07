@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react"
-import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
+import { VSCodeButton, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { validateApiConfiguration } from "@src/utils/validate"
 import { vscode } from "@src/utils/vscode"
@@ -114,11 +114,20 @@ const WelcomeView = () => {
 			</TabContent>
 			<div className="sticky bottom-0 bg-vscode-sideBar-background p-5">
 				<div className="flex flex-col gap-1">
-					{!apiConfiguration?.apiProvider || apiConfiguration?.apiProvider === "kilocode" ? null : (
-						<VSCodeButton onClick={handleSubmit} appearance="primary">
-							{t("welcome:start")}
-						</VSCodeButton>
-					)}
+					<div className="flex justify-end">
+						<VSCodeLink
+							href="#"
+							onClick={(e) => {
+								e.preventDefault()
+								vscode.postMessage({ type: "importSettings" })
+							}}
+							className="text-sm">
+							{t("welcome:importSettings")}
+						</VSCodeLink>
+					</div>
+					<VSCodeButton onClick={handleSubmit} appearance="primary">
+						{t("welcome:start")}
+					</VSCodeButton>
 					{errorMessage && <div className="text-vscode-errorForeground">{errorMessage}</div>}
 				</div>
 			</div>

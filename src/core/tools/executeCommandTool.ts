@@ -4,12 +4,15 @@ import * as path from "path"
 import delay from "delay"
 
 import { Cline } from "../Cline"
+import { CommandExecutionStatus } from "../../schemas"
 import { ToolUse, AskApproval, HandleError, PushToolResult, RemoveClosingTag, ToolResponse } from "../../shared/tools"
 import { formatResponse } from "../prompts/responses"
 import { unescapeHtmlEntities } from "../../utils/text-normalization"
-import { ExitCodeDetails, TerminalProcess } from "../../integrations/terminal/TerminalProcess"
-import { Terminal } from "../../integrations/terminal/Terminal"
+import { ExitCodeDetails, RooTerminalCallbacks, RooTerminalProcess } from "../../integrations/terminal/types"
 import { TerminalRegistry } from "../../integrations/terminal/TerminalRegistry"
+import { Terminal } from "../../integrations/terminal/Terminal"
+
+class ShellIntegrationError extends Error {}
 
 export async function executeCommandTool(
 	cline: Cline,
@@ -51,13 +54,47 @@ export async function executeCommandTool(
 				return
 			}
 
-			const [userRejected, result] = await executeCommand(cline, command, customCwd)
+			const executionId = cline.lastMessageTs?.toString() ?? Date.now().toString()
+			const clineProvider = await cline.providerRef.deref()
+			const clineProviderState = await clineProvider?.getState()
+			const { terminalOutputLineLimit = 500, terminalShellIntegrationDisabled = false } = clineProviderState ?? {}
 
-			if (userRejected) {
-				cline.didRejectTool = true
+			const options: ExecuteCommandOptions = {
+				executionId,
+				command,
+				customCwd,
+				terminalShellIntegrationDisabled,
+				terminalOutputLineLimit,
 			}
 
-			pushToolResult(result)
+			try {
+				const [rejected, result] = await executeCommand(cline, options)
+
+				if (rejected) {
+					cline.didRejectTool = true
+				}
+
+				pushToolResult(result)
+			} catch (error: unknown) {
+				const status: CommandExecutionStatus = { executionId, status: "fallback" }
+				clineProvider?.postMessageToWebview({ type: "commandExecutionStatus", text: JSON.stringify(status) })
+				await cline.say("shell_integration_warning")
+
+				if (error instanceof ShellIntegrationError) {
+					const [rejected, result] = await executeCommand(cline, {
+						...options,
+						terminalShellIntegrationDisabled: true,
+					})
+
+					if (rejected) {
+						cline.didRejectTool = true
+					}
+
+					pushToolResult(result)
+				} else {
+					pushToolResult(`Command failed to execute in terminal due to a shell integration error.`)
+				}
+			}
 
 			return
 		}
@@ -67,10 +104,23 @@ export async function executeCommandTool(
 	}
 }
 
+export type ExecuteCommandOptions = {
+	executionId: string
+	command: string
+	customCwd?: string
+	terminalShellIntegrationDisabled?: boolean
+	terminalOutputLineLimit?: number
+}
+
 export async function executeCommand(
 	cline: Cline,
-	command: string,
-	customCwd?: string,
+	{
+		executionId,
+		command,
+		customCwd,
+		terminalShellIntegrationDisabled = false,
+		terminalOutputLineLimit = 500,
+	}: ExecuteCommandOptions,
 ): Promise<[boolean, ToolResponse]> {
 	let workingDir: string
 
@@ -82,112 +132,114 @@ export async function executeCommand(
 		workingDir = path.resolve(cline.cwd, customCwd)
 	}
 
-	// Check if directory exists
 	try {
 		await fs.access(workingDir)
 	} catch (error) {
 		return [false, `Working directory '${workingDir}' does not exist.`]
 	}
 
-	const terminalInfo = await TerminalRegistry.getOrCreateTerminal(workingDir, !!customCwd, cline.taskId)
-
-	// Update the working directory in case the terminal we asked for has
-	// a different working directory so that the model will know where the
-	// command actually executed:
-	workingDir = terminalInfo.getCurrentWorkingDirectory()
-
-	const workingDirInfo = workingDir ? ` from '${workingDir.toPosix()}'` : ""
-	terminalInfo.terminal.show() // weird visual bug when creating new terminals (even manually) where there's an empty space at the top.
-	let userFeedback: { text?: string; images?: string[] } | undefined
-	let didContinue = false
+	let message: { text?: string; images?: string[] } | undefined
+	let runInBackground = false
 	let completed = false
 	let result: string = ""
 	let exitDetails: ExitCodeDetails | undefined
-	const { terminalOutputLineLimit = 500 } = (await cline.providerRef.deref()?.getState()) ?? {}
+	let shellIntegrationError: string | undefined
 
-	const sendCommandOutput = async (line: string, terminalProcess: TerminalProcess): Promise<void> => {
-		try {
-			const { response, text, images } = await cline.ask("command_output", line)
-			if (response === "yesButtonClicked") {
-				// proceed while running
-			} else {
-				userFeedback = { text, images }
+	const terminalProvider = terminalShellIntegrationDisabled ? "execa" : "vscode"
+	const clineProvider = await cline.providerRef.deref()
+
+	const callbacks: RooTerminalCallbacks = {
+		onLine: async (output: string, process: RooTerminalProcess) => {
+			const status: CommandExecutionStatus = { executionId, status: "output", output }
+			clineProvider?.postMessageToWebview({ type: "commandExecutionStatus", text: JSON.stringify(status) })
+
+			if (runInBackground) {
+				return
 			}
-			didContinue = true
-			terminalProcess.continue() // continue past the await
-		} catch {
-			// This can only happen if this ask promise was ignored, so ignore this error
+
+			try {
+				const { response, text, images } = await cline.ask("command_output", "")
+				runInBackground = true
+
+				if (response === "messageResponse") {
+					message = { text, images }
+					process.continue()
+				}
+			} catch (_error) {}
+		},
+		onCompleted: (output: string | undefined) => {
+			result = Terminal.compressTerminalOutput(output ?? "", terminalOutputLineLimit)
+			cline.say("command_output", result)
+			completed = true
+		},
+		onShellExecutionStarted: (pid: number | undefined) => {
+			console.log(`[executeCommand] onShellExecutionStarted: ${pid}`)
+			const status: CommandExecutionStatus = { executionId, status: "started", pid, command }
+			clineProvider?.postMessageToWebview({ type: "commandExecutionStatus", text: JSON.stringify(status) })
+		},
+		onShellExecutionComplete: (details: ExitCodeDetails) => {
+			const status: CommandExecutionStatus = { executionId, status: "exited", exitCode: details.exitCode }
+			clineProvider?.postMessageToWebview({ type: "commandExecutionStatus", text: JSON.stringify(status) })
+			exitDetails = details
+		},
+	}
+
+	if (terminalProvider === "vscode") {
+		callbacks.onNoShellIntegration = async (error: string) => {
+			shellIntegrationError = error
 		}
 	}
 
-	const process = terminalInfo.runCommand(command, {
-		onLine: (line, process) => {
-			if (!didContinue) {
-				sendCommandOutput(Terminal.compressTerminalOutput(line, terminalOutputLineLimit), process)
-			} else {
-				cline.say("command_output", Terminal.compressTerminalOutput(line, terminalOutputLineLimit))
-			}
-		},
-		onCompleted: (output) => {
-			result = output ?? ""
-			completed = true
-		},
-		onShellExecutionComplete: (details) => {
-			exitDetails = details
-		},
-		onNoShellIntegration: async (message) => {
-			await cline.say("shell_integration_warning", message)
-		},
-	})
+	const terminal = await TerminalRegistry.getOrCreateTerminal(workingDir, !!customCwd, cline.taskId, terminalProvider)
+
+	if (terminal instanceof Terminal) {
+		terminal.terminal.show()
+
+		// Update the working directory in case the terminal we asked for has
+		// a different working directory so that the model will know where the
+		// command actually executed.
+		workingDir = terminal.getCurrentWorkingDirectory()
+	}
+
+	const process = terminal.runCommand(command, callbacks)
+	cline.terminalProcess = process
 
 	await process
+	cline.terminalProcess = undefined
 
-	// Wait for a short delay to ensure all messages are sent to the webview
+	if (shellIntegrationError) {
+		throw new ShellIntegrationError(shellIntegrationError)
+	}
+
+	// Wait for a short delay to ensure all messages are sent to the webview.
 	// This delay allows time for non-awaited promises to be created and
 	// for their associated messages to be sent to the webview, maintaining
 	// the correct order of messages (although the webview is smart about
-	// grouping command_output messages despite any gaps anyways)
+	// grouping command_output messages despite any gaps anyways).
 	await delay(50)
 
-	result = Terminal.compressTerminalOutput(result, terminalOutputLineLimit)
-
-	// keep in case we need it to troubleshoot user issues, but this should be removed in the future
-	// if everything looks good:
-	console.debug(
-		"[execute_command status]",
-		JSON.stringify(
-			{
-				completed,
-				userFeedback,
-				hasResult: result.length > 0,
-				exitDetails,
-				terminalId: terminalInfo.id,
-				workingDir: workingDirInfo,
-				isTerminalBusy: terminalInfo.busy,
-			},
-			null,
-			2,
-		),
-	)
-
-	if (userFeedback) {
-		await cline.say("user_feedback", userFeedback.text, userFeedback.images)
+	if (message) {
+		const { text, images } = message
+		await cline.say("user_feedback", text, images)
 
 		return [
 			true,
 			formatResponse.toolResult(
-				`Command is still running in terminal ${terminalInfo.id}${workingDirInfo}.${
-					result.length > 0 ? `\nHere's the output so far:\n${result}` : ""
-				}\n\nThe user provided the following feedback:\n<feedback>\n${userFeedback.text}\n</feedback>`,
-				userFeedback.images,
+				[
+					`Command is still running in terminal from '${terminal.getCurrentWorkingDirectory().toPosix()}'.`,
+					result.length > 0 ? `Here's the output so far:\n${result}\n` : "\n",
+					`The user provided the following feedback:`,
+					`<feedback>\n${text}\n</feedback>`,
+				].join("\n"),
+				images,
 			),
 		]
-	} else if (completed) {
+	} else if (completed || exitDetails) {
 		let exitStatus: string = ""
 
 		if (exitDetails !== undefined) {
-			if (exitDetails.signal) {
-				exitStatus = `Process terminated by signal ${exitDetails.signal} (${exitDetails.signalName})`
+			if (exitDetails.signalName) {
+				exitStatus = `Process terminated by signal ${exitDetails.signalName}`
 
 				if (exitDetails.coreDumpPossible) {
 					exitStatus += " - core dump possible"
@@ -207,21 +259,22 @@ export async function executeCommand(
 			exitStatus = `Exit code: <undefined, notify user>`
 		}
 
-		let workingDirInfo: string = workingDir ? ` within working directory '${workingDir.toPosix()}'` : ""
-		const newWorkingDir = terminalInfo.getCurrentWorkingDirectory()
+		let workingDirInfo = ` within working directory '${workingDir.toPosix()}'`
+		const newWorkingDir = terminal.getCurrentWorkingDirectory()
 
 		if (newWorkingDir !== workingDir) {
 			workingDirInfo += `\nNOTICE: Your command changed the working directory for this terminal to '${newWorkingDir.toPosix()}' so you MUST adjust future commands accordingly because they will be executed in this directory`
 		}
 
-		const outputInfo = `\nOutput:\n${result}`
-		return [false, `Command executed in terminal ${terminalInfo.id}${workingDirInfo}. ${exitStatus}${outputInfo}`]
+		return [false, `Command executed in terminal ${workingDirInfo}. ${exitStatus}\nOutput:\n${result}`]
 	} else {
 		return [
 			false,
-			`Command is still running in terminal ${terminalInfo.id}${workingDirInfo}.${
-				result.length > 0 ? `\nHere's the output so far:\n${result}` : ""
-			}\n\nYou will be updated on the terminal status and new output in the future.`,
+			[
+				`Command is still running in terminal ${workingDir ? ` from '${workingDir.toPosix()}'` : ""}.`,
+				result.length > 0 ? `Here's the output so far:\n${result}\n` : "\n",
+				"You will be updated on the terminal status and new output in the future.",
+			].join("\n"),
 		]
 	}
 }

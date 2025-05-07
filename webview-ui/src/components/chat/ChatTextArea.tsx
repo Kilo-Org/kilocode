@@ -2,7 +2,7 @@ import React, { forwardRef, useCallback, useEffect, useLayoutEffect, useMemo, us
 import { useEvent } from "react-use"
 import DynamicTextArea from "react-textarea-autosize"
 
-import { mentionRegex, mentionRegexGlobal } from "@roo/shared/context-mentions"
+import { mentionRegex, mentionRegexGlobal, unescapeSpaces } from "@roo/shared/context-mentions"
 import { WebviewMessage } from "@roo/shared/WebviewMessage"
 import { Mode, getAllModes } from "@roo/shared/modes"
 import { ExtensionMessage } from "@roo/shared/ExtensionMessage"
@@ -144,11 +144,12 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 		// Close dropdown when clicking outside.
 		useEffect(() => {
-			const handleClickOutside = (_event: MouseEvent) => {
+			const handleClickOutside = () => {
 				if (showDropdown) {
 					setShowDropdown(false)
 				}
 			}
+
 			document.addEventListener("mousedown", handleClickOutside)
 			return () => document.removeEventListener("mousedown", handleClickOutside)
 		}, [showDropdown])
@@ -622,7 +623,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 								// Send message to extension to search files
 								vscode.postMessage({
 									type: "searchFiles",
-									query: query,
+									query: unescapeSpaces(query),
 									requestId: reqId,
 								})
 							}, 200) // 200ms debounce
@@ -1072,9 +1073,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 										: "bg-vscode-input-background",
 									"transition-background-color duration-150 ease-in-out",
 									"will-change-background-color",
-									"h-[100px]",
-									"[@media(min-width:150px)]:min-h-[80px]",
-									"[@media(min-width:425px)]:min-h-[60px]",
+									"min-h-[90px]",
 									"box-border",
 									"rounded",
 									"resize-none",

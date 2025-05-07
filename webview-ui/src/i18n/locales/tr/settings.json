@@ -4,7 +4,9 @@
 		"done": "Tamamlandı",
 		"cancel": "İptal",
 		"reset": "Sıfırla",
-		"select": "Seç"
+		"select": "Seç",
+		"add": "Başlık Ekle",
+		"remove": "Kaldır"
 	},
 	"header": {
 		"title": "Ayarlar",
@@ -116,6 +118,10 @@
 		"useCustomBaseUrl": "Özel temel URL kullan",
 		"useHostHeader": "Özel Host başlığı kullan",
 		"useLegacyFormat": "Eski OpenAI API formatını kullan",
+		"customHeaders": "Özel Başlıklar",
+		"headerName": "Başlık adı",
+		"headerValue": "Başlık değeri",
+		"noCustomHeaders": "Tanımlanmış özel başlık yok. Eklemek için + düğmesine tıklayın.",
 		"requestyApiKey": "Requesty API Anahtarı",
 		"getRequestyApiKey": "Requesty API Anahtarı Al",
 		"openRouterTransformsText": "İstem ve mesaj zincirlerini bağlam boyutuna sıkıştır (<a>OpenRouter Dönüşümleri</a>)",
@@ -238,7 +244,8 @@
 			"high": "Yüksek",
 			"medium": "Orta",
 			"low": "Düşük"
-		}
+		},
+		"setReasoningLevel": "Akıl Yürütme Çabasını Etkinleştir"
 	},
 	"browser": {
 		"enable": {
@@ -316,6 +323,10 @@
 			"label": "Terminal kabuk entegrasyonu zaman aşımı",
 			"description": "Komutları yürütmeden önce kabuk entegrasyonunun başlatılması için beklenecek maksimum süre. Kabuk başlatma süresi uzun olan kullanıcılar için, terminalde \"Shell Integration Unavailable\" hatalarını görürseniz bu değerin artırılması gerekebilir."
 		},
+		"shellIntegrationDisabled": {
+			"label": "Terminal kabuk entegrasyonunu devre dışı bırak",
+			"description": "Terminal komutları düzgün çalışmıyorsa veya 'Shell Integration Unavailable' hataları görüyorsanız bunu etkinleştirin. Bu, bazı gelişmiş terminal özelliklerini atlayarak komutları çalıştırmak için daha basit bir yöntem kullanır."
+		},
 		"compressProgressBar": {
 			"label": "İlerleme çubuğu çıktısını sıkıştır",
 			"description": "Etkinleştirildiğinde, satır başı karakteri (\\r) içeren terminal çıktısını işleyerek gerçek bir terminalin içeriği nasıl göstereceğini simüle eder. Bu, ilerleme çubuğunun ara durumlarını kaldırır, yalnızca son durumu korur ve daha alakalı bilgiler için bağlam alanından tasarruf sağlar."
@@ -338,7 +349,7 @@
 		},
 		"zshOhMy": {
 			"label": "Oh My Zsh entegrasyonunu etkinleştir",
-			"description": "Etkinleştirildiğinde, Oh My Zsh kabuk entegrasyon özelliklerini etkinleştirmek için ITERM_SHELL_INTEGRATION_INSTALLED=Yes ayarlar. (deneysel)"
+			"description": "Etkinleştirildiğinde, Oh My Zsh kabuk entegrasyon özelliklerini etkinleştirmek için ITERM_SHELL_INTEGRATION_INSTALLED=Yes ayarlar. Bu ayarın uygulanması IDE'nin yeniden başlatılmasını gerektirebilir. (deneysel)"
 		},
 		"zshP10k": {
 			"label": "Powerlevel10k entegrasyonunu etkinleştir",

@@ -4,7 +4,9 @@
 		"done": "Fertig",
 		"cancel": "Abbrechen",
 		"reset": "Zurücksetzen",
-		"select": "Auswählen"
+		"select": "Auswählen",
+		"add": "Header hinzufügen",
+		"remove": "Entfernen"
 	},
 	"header": {
 		"title": "Einstellungen",
@@ -116,6 +118,10 @@
 		"useCustomBaseUrl": "Benutzerdefinierte Basis-URL verwenden",
 		"useHostHeader": "Benutzerdefinierten Host-Header verwenden",
 		"useLegacyFormat": "Altes OpenAI API-Format verwenden",
+		"customHeaders": "Benutzerdefinierte Headers",
+		"headerName": "Header-Name",
+		"headerValue": "Header-Wert",
+		"noCustomHeaders": "Keine benutzerdefinierten Headers definiert. Klicke auf die + Schaltfläche, um einen hinzuzufügen.",
 		"requestyApiKey": "Requesty API-Schlüssel",
 		"getRequestyApiKey": "Requesty API-Schlüssel erhalten",
 		"openRouterTransformsText": "Prompts und Nachrichtenketten auf Kontextgröße komprimieren (<a>OpenRouter Transformationen</a>)",
@@ -238,7 +244,8 @@
 			"high": "Hoch",
 			"medium": "Mittel",
 			"low": "Niedrig"
-		}
+		},
+		"setReasoningLevel": "Denkaufwand aktivieren"
 	},
 	"browser": {
 		"enable": {
@@ -316,6 +323,10 @@
 			"label": "Terminal-Shell-Integrationszeit-Limit",
 			"description": "Maximale Wartezeit für die Shell-Integration, bevor Befehle ausgeführt werden. Für Benutzer mit langen Shell-Startzeiten musst du diesen Wert möglicherweise erhöhen, wenn du Fehler vom Typ \"Shell Integration Unavailable\" im Terminal siehst."
 		},
+		"shellIntegrationDisabled": {
+			"label": "Terminal-Shell-Integration deaktivieren",
+			"description": "Aktiviere dies, wenn Terminalbefehle nicht korrekt funktionieren oder du Fehler wie 'Shell Integration Unavailable' siehst. Dies verwendet eine einfachere Methode zur Ausführung von Befehlen und umgeht einige erweiterte Terminalfunktionen."
+		},
 		"compressProgressBar": {
 			"label": "Fortschrittsbalken-Ausgabe komprimieren",
 			"description": "Wenn aktiviert, verarbeitet diese Option Terminal-Ausgaben mit Wagenrücklaufzeichen (\\r), um zu simulieren, wie ein echtes Terminal Inhalte anzeigen würde. Dies entfernt Zwischenzustände von Fortschrittsbalken und behält nur den Endzustand bei, wodurch Kontextraum für relevantere Informationen gespart wird."
@@ -338,7 +349,7 @@
 		},
 		"zshOhMy": {
 			"label": "Oh My Zsh-Integration aktivieren",
-			"description": "Wenn aktiviert, wird ITERM_SHELL_INTEGRATION_INSTALLED=Yes gesetzt, um die Shell-Integrationsfunktionen von Oh My Zsh zu aktivieren. (experimentell)"
+			"description": "Wenn aktiviert, wird ITERM_SHELL_INTEGRATION_INSTALLED=Yes gesetzt, um die Shell-Integrationsfunktionen von Oh My Zsh zu aktivieren. Das Anwenden dieser Einstellung erfordert möglicherweise einen Neustart der IDE. (experimentell)"
 		},
 		"zshP10k": {
 			"label": "Powerlevel10k-Integration aktivieren",

@@ -15,5 +15,14 @@
 	},
 	"startRouter": "라우터를 통한 빠른 설정",
 	"startCustom": "직접 API 키 사용하기",
-	"or": "또는"
+	"telemetry": {
+		"title": "Kilo Code 개선에 도움 주세요",
+		"anonymousTelemetry": "버그 수정 및 확장 기능 개선을 위해 익명의 오류 및 사용 데이터를 보내주세요. 코드, 프롬프트 또는 개인 정보는 절대 전송되지 않습니다.",
+		"changeSettings": "<settingsLink>설정</settingsLink> 하단에서 언제든지 변경할 수 있습니다",
+		"settings": "설정",
+		"allow": "허용",
+		"deny": "거부"
+	},
+	"or": "또는",
+	"importSettings": "설정 가져오기"
 }
