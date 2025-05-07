@@ -4,11 +4,12 @@ type: "Bug"
 body:
     - type: textarea
       attributes:
-          label: Description
+          label: Add a description (be as detailed as possible)
           description: |
-            Please specify the app version you're using (e.g. v3.3.1)
-            Which API Provider are you using? (e.g. Kilo, OpenRouter, Anthropic)
-            Which Model are you using? (e.g. Claude 3.7 Sonnet)
+            Which app version are you using (e.g. v3.3.1)?
+            Which API Provider are you using (e.g. Kilo, OpenRouter, Anthropic)?
+            Which Model are you using (e.g. Claude 3.7 Sonnet)?
             Steps to reproduce?
-            Relevant API REQUEST output?
+            Relevant API request output?
             Additional context?
+            Screenshots?
