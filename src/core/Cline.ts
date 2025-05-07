@@ -91,6 +91,8 @@ import { ClineProvider } from "./webview/ClineProvider"
 import { validateToolUse } from "./mode-validator"
 import { MultiSearchReplaceDiffStrategy } from "./diff/strategies/multi-search-replace"
 import { readApiMessages, saveApiMessages, readTaskMessages, saveTaskMessages, taskMetadata } from "./task-persistence"
+import { OpenRouterHandler } from "../api/providers/openrouter"
+import { KilocodeOpenrouterHandler } from "../api/providers/kilocode-openrouter"
 
 type UserContent = Array<Anthropic.Messages.ContentBlockParam>
 
@@ -2160,6 +2162,11 @@ export class Cline extends EventEmitter<ClineEvents> {
 
 		// Add context tokens information
 		const { contextTokens, totalCost } = getApiMetrics(this.clineMessages)
+		// kilocode_change
+		if (this.api instanceof OpenRouterHandler || this.api instanceof KilocodeOpenrouterHandler) {
+			const api = this.api as OpenRouterHandler
+			await api.fetchModel()
+		}
 		const modelInfo = this.api.getModel().info
 		const contextWindow = modelInfo.contextWindow
 		const contextPercentage =

@@ -24,6 +24,8 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 			openRouterApiKey: options.kilocodeToken,
 		}
 
+		// fetch models from KiloCode OpenRouter endpoint
+
 		super(options)
 	}
 
@@ -47,8 +49,11 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 			claude37: "anthropic/claude-3.7-sonnet",
 		}
 
-		// check if the selected model is in the mapping
-		id = modelMapping[selectedModel as keyof typeof modelMapping]
+		// log if this.models is empty
+		console.warn("[KilocodeOpenrouterHandler.getModel] this.models is empty", Object.keys(this.models).length)
+
+		// check if the selected model is in the mapping for backwards compatibility
+		id = selectedModel
 		if (Object.keys(modelMapping).includes(selectedModel)) {
 			id = modelMapping[selectedModel as keyof typeof modelMapping]
 		}
@@ -73,8 +78,13 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 	}
 
 	public override async fetchModel() {
-		const models = await getModels("kilocode-openrouter")
-		this.models = await this.sortModels(models)
+		const modelsFromCache = await getModels("kilocode-openrouter")
+		console.log(
+			"[KilocodeOpenrouterHandler.fetchModel] Models received from getModels:",
+			JSON.stringify(modelsFromCache),
+		)
+		this.models = await this.sortModels(modelsFromCache)
+		console.log("[KilocodeOpenrouterHandler.fetchModel] Models after sortModels:", JSON.stringify(this.models))
 
 		return this.getModel()
 	}
