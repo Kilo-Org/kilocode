@@ -194,16 +194,22 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 	// kilocode_change start
 	// Temporary way of making sure that the Settings view updates its local state properly when receiving
 	// api keys from providers that support url callbacks. This whole Settings View needs proper with this local state thing later
+	const { kilocodeToken, openRouterApiKey, glamaApiKey, requestyApiKey } = extensionState.apiConfiguration ?? {}
 	useEffect(() => {
-		setCachedState((prevCachedState) => ({ ...prevCachedState, ...extensionState }))
-		setChangeDetected(false)
+		setCachedState((prevCachedState) => ({
+			...prevCachedState,
+			apiConfiguration: {
+				...prevCachedState.apiConfiguration,
+				// Only set specific tokens/keys instead of spreading the entire
+				// `prevCachedState.apiConfiguration` since it may contain unsaved changes
+				kilocodeToken,
+				openRouterApiKey,
+				glamaApiKey,
+				requestyApiKey,
+			},
+		}))
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [
-		extensionState.apiConfiguration?.kilocodeToken,
-		extensionState.apiConfiguration?.openRouterApiKey,
-		extensionState.apiConfiguration?.glamaApiKey,
-		extensionState.apiConfiguration?.requestyApiKey,
-	])
+	}, [kilocodeToken, openRouterApiKey, glamaApiKey, requestyApiKey])
 
 	useEffect(() => {
 		// Only update if we're not already detecting changes
