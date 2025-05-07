@@ -2163,6 +2163,7 @@ export class Cline extends EventEmitter<ClineEvents> {
 		// Add context tokens information
 		const { contextTokens, totalCost } = getApiMetrics(this.clineMessages)
 		// kilocode_change
+		// Be sure to fetch the model information before we need it.
 		if (this.api instanceof OpenRouterHandler || this.api instanceof KilocodeOpenrouterHandler) {
 			const api = this.api as OpenRouterHandler
 			await api.fetchModel()

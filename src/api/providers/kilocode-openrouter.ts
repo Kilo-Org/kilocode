@@ -24,14 +24,9 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 			openRouterApiKey: options.kilocodeToken,
 		}
 
-		// fetch models from KiloCode OpenRouter endpoint
-
 		super(options)
 	}
 
-	/**
-	 * Override the getModel function to provide custom model information
-	 */
 	override getModel() {
 		let id
 		let info
@@ -49,17 +44,13 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 			claude37: "anthropic/claude-3.7-sonnet",
 		}
 
-		// log if this.models is empty
-		console.warn("[KilocodeOpenrouterHandler.getModel] this.models is empty", Object.keys(this.models).length)
-
 		// check if the selected model is in the mapping for backwards compatibility
 		id = selectedModel
 		if (Object.keys(modelMapping).includes(selectedModel)) {
 			id = modelMapping[selectedModel as keyof typeof modelMapping]
 		}
 
-		// Only use fetched models
-		if (Object.keys(this.models).length > 0 && this.models[id]) {
+		if (this.models[id]) {
 			info = this.models[id]
 		} else {
 			throw new Error(`Unsupported model: ${selectedModel}`)
@@ -89,18 +80,13 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 		return this.getModel()
 	}
 
-	/**
-	 * Get all available models, sorted with preferred models first
-	 */
 	async sortModels(models: ModelRecord): Promise<ModelRecord> {
-		// Sort the models with preferred models first
 		const sortedModels: Record<string, ModelInfo> = {}
 
 		// First add preferred models, sorted by preferredIndex
 		Object.entries(models)
 			.filter(([_, model]) => model.preferredIndex !== undefined)
 			.sort(([_, modelA], [__, modelB]) => {
-				// Sort by preferredIndex (lower index first)
 				return (modelA.preferredIndex || 0) - (modelB.preferredIndex || 0) // || 0 to satisfy TS
 			})
 			.forEach(([id, model]) => {
@@ -111,7 +97,6 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 		Object.entries(models)
 			.filter(([_, model]) => model.preferredIndex === undefined)
 			.forEach(([id, model]) => {
-				// Set preferred flag to false for models without preferredIndex
 				sortedModels[id] = { ...model }
 			})
 

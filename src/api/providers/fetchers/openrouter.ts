@@ -51,9 +51,11 @@ export async function getOpenRouterModels(options?: ApiHandlerOptions): Promise<
 	const baseURL = options?.openRouterBaseUrl || "https://openrouter.ai/api/v1"
 
 	try {
+		// kilocode_change begin
 		// Use optional headers if provided in options
 		const headers = (options as any)?.headers || {}
 		const response = await axios.get<OpenRouterModelsResponse>(`${baseURL}/models`, { headers })
+		// kilocode_change end
 		const result = openRouterModelsResponseSchema.safeParse(response.data)
 		const rawModels = result.success ? result.data.data : response.data.data
 
