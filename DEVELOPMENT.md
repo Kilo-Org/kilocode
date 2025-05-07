@@ -68,9 +68,11 @@ To run the extension in development mode:
 ### Hot Reloading
 
 - **Webview UI changes**: Changes to the webview UI will appear immediately without restarting
-- **Core extension changes**: Changes to the core extension code require a restart of the extension host
+- **Core extension changes**: Changes to the core extension code will automatically reload the ext host
 
-> **Important**: When making changes to the core extension, you need to:
+In development mode (NODE_ENV="development"), changing the core code will trigger a `workbench.action.reloadWindow` command, so it is no longer necessary to manually start/stop the debugger and tasks.
+
+> **Important**: In production builds, when making changes to the core extension, you need to:
 >
 > 1. Stop the debugging process
 > 2. Kill any npm tasks running in the background (see screenshot below)
