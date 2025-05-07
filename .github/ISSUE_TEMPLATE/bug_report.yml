@@ -1,70 +1,14 @@
-name: 1. Bug Report
+name: Bug Report
 description: File a bug report
 type: "Bug"
 body:
-    - type: input
-      id: version
-      attributes:
-          label: Which version of the app are you using?
-          description: Please specify the app version you're using (e.g. v3.3.1)
-      validations:
-          required: true
-    - type: dropdown
-      id: provider
-      attributes:
-          label: Which API Provider are you using?
-          multiple: false
-          options:
-              - Kilo Code
-              - OpenRouter
-              - Anthropic
-              - Fireworks
-              - Google Gemini
-              - DeepSeek
-              - OpenAI
-              - OpenAI Compatible
-              - GCP Vertex AI
-              - AWS Bedrock
-              - Glama
-              - VS Code LM API
-              - LM Studio
-              - Ollama
-      validations:
-          required: true
-    - type: input
-      id: model
-      attributes:
-          label: Which Model are you using?
-          description: Please specify the model you're using (e.g. Claude 3.7 Sonnet)
-      validations:
-          required: true
     - type: textarea
-      id: what-happened
       attributes:
-          label: What happened?
-          description: Also tell us, what did you expect to happen?
-          placeholder: Tell us what you see!
-      validations:
-          required: true
-    - type: textarea
-      id: steps
-      attributes:
-          label: Steps to reproduce
-          description: How do you trigger this bug? Please walk us through it step by step.
-          value: |
-              1.
-              2.
-              3.
-      validations:
-          required: true
-    - type: textarea
-      id: logs
-      attributes:
-          label: Relevant API REQUEST output
-          description: Please copy and paste any relevant output. This will be automatically formatted into code, so no need for backticks.
-          render: shell
-    - type: textarea
-      id: additional-context
-      attributes:
-          label: Additional context
-          description: Add any other context about the problem here, such as screenshots or related issues.
+          label: Description
+          description: |
+            Please specify the app version you're using (e.g. v3.3.1)
+            Which API Provider are you using? (e.g. Kilo, OpenRouter, Anthropic)
+            Which Model are you using? (e.g. Claude 3.7 Sonnet)
+            Steps to reproduce?
+            Relevant API REQUEST output?
+            Additional context?

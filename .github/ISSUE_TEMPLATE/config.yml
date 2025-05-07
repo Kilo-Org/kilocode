@@ -1,11 +1,14 @@
 blank_issues_enabled: false
 contact_links:
-    - name: 2. Feature Request / Idea
+    - name: Feature Request / Idea
       url: https://github.com/Kilo-Org/kilocode/discussions/new?category=1-feature-requests
       about: Submit a feature request (check Discussions first to prevent duplicates).
-    - name: 3. Design Improvement
+    - name: Design Improvement
       url: https://github.com/Kilo-Org/kilocode/discussions/categories/2-design-improvements
       about: Suggestions for better design (where the current UI/UX is not clear).
-    - name: 4. Leave a Review
+    - name: Leave a Review
       url: https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code&ssr=false#review-details
       about: Enjoying Kilo Code? Leave a review here!
+# NOTE(JP): I'd really like to have a "blank issue" at the end here, or accessible still through the URL
+# but this appears not to be possible due to https://github.com/orgs/community/discussions/14287#discussioncomment-12691930
+# and I haven't been able to find a workaround. Instead I've just made bug_report.yml simpler.

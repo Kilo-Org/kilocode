@@ -1,8 +1,0 @@
-name: 5. Blank issue
-description: Create a new issue from scratch
-body:
-    - type: textarea
-      attributes:
-        label: "Add a description"
-        description: "Add a description"
-        placeholder: "Type your description here…"
