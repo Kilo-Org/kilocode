@@ -46,7 +46,7 @@ const TaskHeader = ({
 	onClose,
 }: TaskHeaderProps) => {
 	const { t } = useTranslation()
-	const { apiConfiguration, currentTaskItem } = useExtensionState()
+	const { apiConfiguration, currentTaskItem, customModes } = useExtensionState()
 	const { info: model } = useSelectedModel(apiConfiguration)
 	const [isTaskExpanded, setIsTaskExpanded] = useState(false)
 
@@ -79,7 +79,7 @@ const TaskHeader = ({
 							</span>
 							{/* kilocode_change: pull slash commands from Cline */}
 							{!isTaskExpanded && (
-								<span style={{ marginLeft: 4 }}>{highlightText(task.text, false)}</span>
+								<span style={{ marginLeft: 4 }}>{highlightText(task.text, false, customModes)}</span>
 							)}
 						</div>
 					</div>
@@ -118,7 +118,7 @@ const TaskHeader = ({
 									WebkitBoxOrient: "vertical",
 								}}>
 								{/* kilocode_change: pull slash commands from Cline */}
-								{highlightText(task.text, false)}
+								{highlightText(task.text, false, customModes)}
 							</div>
 						</div>
 						{task.images && task.images.length > 0 && <Thumbnails images={task.images} />}
@@ -200,14 +200,14 @@ const TaskHeader = ({
 /**
  * Highlights slash-command in this text if it exists
  */
-const highlightSlashCommands = (text: string, withShadow = true) => {
+const highlightSlashCommands = (text: string, withShadow = true, customModes?: any[]) => {
 	const match = text.match(/^\s*\/([a-zA-Z0-9_-]+)(\s*|$)/)
 	if (!match) {
 		return text
 	}
 
 	const commandName = match[1]
-	const validationResult = validateSlashCommand(commandName)
+	const validationResult = validateSlashCommand(commandName, customModes)
 
 	if (!validationResult || validationResult !== "full") {
 		return text
@@ -256,12 +256,12 @@ export const highlightMentions = (text: string, withShadow = true) => {
 /**
  * Handles parsing both mentions and slash-commands
  */
-export const highlightText = (text?: string, withShadow = true) => {
+export const highlightText = (text?: string, withShadow = true, customModes?: any[]) => {
 	if (!text) {
 		return text
 	}
 
-	const resultWithSlashHighlighting = highlightSlashCommands(text, withShadow)
+	const resultWithSlashHighlighting = highlightSlashCommands(text, withShadow, customModes)
 
 	if (resultWithSlashHighlighting === text) {
 		// no highlighting done

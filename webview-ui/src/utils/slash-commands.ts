@@ -1,14 +1,31 @@
+import { getAllModes } from "@roo/shared/modes"
+
 export interface SlashCommand {
 	name: string
 	description: string
 }
 
-export const SUPPORTED_SLASH_COMMANDS: SlashCommand[] = [
-	{
-		name: "newtask",
-		description: "Create a new task with context from the current task",
-	},
-]
+// Create a function to get all supported slash commands
+export function getSupportedSlashCommands(customModes?: any[]): SlashCommand[] {
+	// Start with non-mode commands
+	const baseCommands: SlashCommand[] = [
+		{
+			name: "newtask",
+			description: "Create a new task with context from the current task",
+		},
+	]
+
+	// Add mode-switching commands dynamically
+	const modeCommands = getAllModes(customModes).map((mode) => ({
+		name: mode.slug,
+		description: `Switch to ${mode.name.replace(/^[💻🏗️❓🪲🪃]+ /, "")} mode`,
+	}))
+
+	return [...baseCommands, ...modeCommands]
+}
+
+// Export a default instance for backward compatibility
+export const SUPPORTED_SLASH_COMMANDS = getSupportedSlashCommands()
 
 // Regex for detecting slash commands in text
 export const slashCommandRegex = /\/([a-zA-Z0-9_-]+)(\s|$)/
@@ -47,13 +64,15 @@ export function shouldShowSlashCommandsMenu(text: string, cursorPosition: number
 /**
  * Gets filtered slash commands that match the current input
  */
-export function getMatchingSlashCommands(query: string): SlashCommand[] {
+export function getMatchingSlashCommands(query: string, customModes?: any[]): SlashCommand[] {
+	const commands = getSupportedSlashCommands(customModes)
+
 	if (!query) {
-		return [...SUPPORTED_SLASH_COMMANDS]
+		return [...commands]
 	}
 
 	// filter commands that start with the query (case sensitive)
-	return SUPPORTED_SLASH_COMMANDS.filter((cmd) => cmd.name.startsWith(query))
+	return commands.filter((cmd) => cmd.name.startsWith(query))
 }
 
 /**
@@ -76,19 +95,21 @@ export function insertSlashCommand(text: string, commandName: string): { newValu
  * Determines the validation state of a slash command
  * Returns partial if we have a partial match against valid commands, or full for full match
  */
-export function validateSlashCommand(command: string): "full" | "partial" | null {
+export function validateSlashCommand(command: string, customModes?: any[]): "full" | "partial" | null {
 	if (!command) {
 		return null
 	}
 
 	// case sensitive matching
-	const exactMatch = SUPPORTED_SLASH_COMMANDS.some((cmd) => cmd.name === command)
+	const commands = getSupportedSlashCommands(customModes)
+
+	const exactMatch = commands.some((cmd) => cmd.name === command)
 
 	if (exactMatch) {
 		return "full"
 	}
 
-	const partialMatch = SUPPORTED_SLASH_COMMANDS.some((cmd) => cmd.name.startsWith(command))
+	const partialMatch = commands.some((cmd) => cmd.name.startsWith(command))
 
 	if (partialMatch) {
 		return "partial"
