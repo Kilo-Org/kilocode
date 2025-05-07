@@ -13,7 +13,7 @@ import {
 import { ExternalLinkIcon } from "@radix-ui/react-icons"
 import { getKiloCodeBackendAuthUrl } from "../kilocode/helpers" // kilocode_change
 
-import { ReasoningEffort as ReasoningEffortType } from "@roo/schemas"
+import { ProviderSettings, ReasoningEffort as ReasoningEffortType } from "@roo/schemas"
 import {
 	ApiConfiguration,
 	ModelInfo,
@@ -438,7 +438,7 @@ const ApiOptions = ({
 						<Select
 							value={apiConfiguration?.kilocodeModel || "claude37"}
 							onValueChange={(value) =>
-								setApiConfigurationField("kilocodeModel", value as "claude37" | "gemini25" | "gpt41")
+								setApiConfigurationField("kilocodeModel", value as ProviderSettings["kilocodeModel"])
 							}>
 							<SelectTrigger className="w-full">
 								<SelectValue placeholder="Select provider" />
