@@ -18,9 +18,9 @@ export class KiloCodeHandler extends BaseProvider implements SingleCompletionHan
 		this.options = options
 		const modelType = options.kilocodeModel || "claude37"
 
-		const openrouterModels = ["gemini25", "gpt41", "gemini25flashpreview"]
-
-		if (modelType === "claude37") {
+		const openrouterModels = ["gemini25", "gpt41", "gemini25flashpreview", "claude37"]
+		console.log("KiloCode model type:", modelType)
+		if (modelType === "claude37n") {
 			this.handler = new KiloCodeAnthropicHandler(options)
 		} else if (openrouterModels.includes(modelType)) {
 			// Determine the correct OpenRouter model ID based on the selected KiloCode model type

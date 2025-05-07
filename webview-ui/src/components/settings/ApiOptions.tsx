@@ -338,6 +338,7 @@ const ApiOptions = ({
 	// kilocode_change start
 	const kilocodeDescriptions = {
 		claude37: "Claude 3.7 Sonnet is Anthropic's most capable model for reasoning, coding, and multimodal tasks.",
+		claude37n: "Claude 3.7 Sonnet is Anthropic's most capable model for reasoning, coding, and multimodal tasks.",
 		gemini25: "Gemini 2.5 Pro is Google's most capable model for reasoning, coding, and multimodal tasks.",
 		gpt41: "GPT-4.1 is OpenAI's most capable model for reasoning, coding, and multimodal tasks.",
 		gemini25flashpreview:
@@ -445,6 +446,7 @@ const ApiOptions = ({
 							</SelectTrigger>
 							<SelectContent>
 								<SelectItem value="claude37">Claude 3.7 Sonnet</SelectItem>
+								<SelectItem value="claude37n">Claude 3.7 Sonnet (native/direct)</SelectItem>
 								<SelectItem value="gemini25">Gemini 2.5 Pro</SelectItem>
 								<SelectItem value="gemini25flashpreview">Gemini 2.5 Flash Preview</SelectItem>
 								<SelectItem value="gpt41">GPT 4.1</SelectItem>

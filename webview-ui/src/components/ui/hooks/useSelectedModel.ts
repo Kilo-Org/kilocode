@@ -64,6 +64,7 @@ function getSelectedModelId({ provider, apiConfiguration }: { provider: string; 
 				gemini25: "Gemini 2.5 Pro",
 				gemini25flashpreview: "Gemini 2.5 Flash Preview",
 				claude37: "Claude 3.7 Sonnet",
+				claude37n: "Claude 3.7 Sonnet (native)",
 				gpt41: "GPT 4.1",
 			}
 
@@ -138,6 +139,7 @@ function getSelectedModelInfo({
 				gemini25: kilocodeOpenrouterModels["google/gemini-2.5-pro-preview-03-25"],
 				gemini25flashpreview: kilocodeOpenrouterModels["google/gemini-2.5-flash-preview"],
 				claude37: anthropicModels["claude-3-7-sonnet-20250219"],
+				claude37n: anthropicModels["claude-3-7-sonnet-20250219"],
 				gpt41: kilocodeOpenrouterModels["openai/gpt-4.1"],
 			}
 
