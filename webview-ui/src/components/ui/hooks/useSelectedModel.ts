@@ -58,15 +58,21 @@ function getSelectedModelId({ provider, apiConfiguration }: { provider: string; 
 				: ""
 		// kilocode_change begin
 		case "kilocode":
-			// TODO: in line with kilocode-openrouter provider use hardcoded for now but info needs to be fetched later
+			// backwards compatibility
 			const displayModelId = {
 				gemini25: "Gemini 2.5 Pro",
 				gemini25flashpreview: "Gemini 2.5 Flash Preview",
 				claude37: "Claude 3.7 Sonnet",
 				gpt41: "GPT 4.1",
 			}
-
-			return displayModelId[apiConfiguration?.kilocodeModel ?? "claude37"]
+			// if the kilocodeModel is not in the displayModelId use as is
+			if (
+				apiConfiguration.kilocodeModel &&
+				Object.keys(displayModelId).includes(apiConfiguration.kilocodeModel)
+			) {
+				return displayModelId[apiConfiguration.kilocodeModel as keyof typeof displayModelId]
+			}
+			return apiConfiguration.kilocodeModel
 
 		// kilocode_change end
 		default:
