@@ -1,8 +1,11 @@
 blank_issues_enabled: true
 contact_links:
-    - name: Feature Request / Idea
-      url: https://github.com/Kilo-Org/kilocode/discussions/new?category=feature-requests
-      about: Submit a feature request (check [Discussions](https://github.com/Kilo-Org/kilocode/discussions) first to prevent duplicates).
-    - name: Leave a Review
+    - name: 2. Feature Request / Idea
+      url: https://github.com/Kilo-Org/kilocode/discussions/new?category=1-feature-requests
+      about: Submit a feature request (check Discussions first to prevent duplicates).
+    - name: 3. Design Improvement
+      url: https://github.com/Kilo-Org/kilocode/discussions/categories/2-design-improvements
+      about: Suggestions for better design (where the current UI/UX is not clear).
+    - name: 4. Leave a Review
       url: https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code&ssr=false#review-details
       about: Enjoying Kilo Code? Leave a review here!
