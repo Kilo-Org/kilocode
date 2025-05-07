@@ -1,4 +1,5 @@
 import React, { memo, useState } from "react"
+import BottomControls from "../chat/BottomControls" // kilocode_change
 import { DeleteTaskDialog } from "./DeleteTaskDialog"
 import { BatchDeleteTaskDialog } from "./BatchDeleteTaskDialog"
 import prettyBytes from "pretty-bytes"
@@ -488,6 +489,12 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 						}
 					}}
 				/>
+			)}
+			{/* kilocode_change */}
+			{selectedTaskIds.length === 0 && (
+				<div className="fixed bottom-0 right-0">
+					<BottomControls />
+				</div>
 			)}
 		</Tab>
 	)
