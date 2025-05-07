@@ -70,13 +70,7 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 
 	public override async fetchModel() {
 		const modelsFromCache = await getModels("kilocode-openrouter")
-		console.log(
-			"[KilocodeOpenrouterHandler.fetchModel] Models received from getModels:",
-			JSON.stringify(modelsFromCache),
-		)
 		this.models = await this.sortModels(modelsFromCache)
-		console.log("[KilocodeOpenrouterHandler.fetchModel] Models after sortModels:", JSON.stringify(this.models))
-
 		return this.getModel()
 	}
 
