@@ -29,14 +29,4 @@ export const kilocodeOpenrouterModels = {
 		outputPrice: 0.6,
 		isPromptCacheOptional: true,
 	},
-	"anthropic/claude-3.7-sonnet": {
-		maxTokens: 64_000,
-		contextWindow: 200_000,
-		supportsImages: true,
-		supportsPromptCache: true,
-		supportsComputerUse: true,
-		inputPrice: 3,
-		outputPrice: 15,
-		description: "Claude 3.7 via OpenRouter",
-	},
 } as const satisfies Record<string, ModelInfo>
