@@ -4,5 +4,5 @@ body:
     - type: textarea
       attributes:
         label: "Add a description"
-        description: ""
+        description: "Add a description"
         placeholder: "Type your description here…"
