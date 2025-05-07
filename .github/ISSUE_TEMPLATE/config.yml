@@ -1,4 +1,4 @@
-blank_issues_enabled: true
+blank_issues_enabled: false
 contact_links:
     - name: 2. Feature Request / Idea
       url: https://github.com/Kilo-Org/kilocode/discussions/new?category=1-feature-requests
@@ -9,3 +9,5 @@ contact_links:
     - name: 4. Leave a Review
       url: https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code&ssr=false#review-details
       about: Enjoying Kilo Code? Leave a review here!
+    - name: 5. Blank Issue
+      url: https://github.com/Kilo-Org/kilocode/issues/new
