@@ -63,7 +63,6 @@ export const ModelPicker = ({
 		const restModelIds = []
 		// first add the preferred models
 		for (const [key, model] of Object.entries(models)) {
-			console.log("Model:", key, model.preferredIndex)
 			if (model.preferredIndex !== undefined && model.preferredIndex !== null) {
 				preferredModelIds.push(key)
 			}
