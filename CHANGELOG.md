@@ -1,5 +1,15 @@
 # kilo-code
 
+## 4.21.0
+
+### Minor Changes
+
+- Include changes from Roo Code v3.15.5
+
+### Patch Changes
+
+- Fix issue with removed slash commands for changing modes
+
 ## 4.20.1
 
 ### Patch Changes
