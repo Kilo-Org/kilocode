@@ -233,7 +233,7 @@ export const modeConfigSchema = z.object({
 	customInstructions: z.string().optional(),
 	groups: groupEntryArraySchema,
 	source: z.enum(["global", "project"]).optional(),
-	iconName: z.string().optional(),
+	iconName: z.string().optional(), // kilocode_change
 })
 
 export type ModeConfig = z.infer<typeof modeConfigSchema>
