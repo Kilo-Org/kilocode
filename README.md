@@ -40,11 +40,14 @@
 - **MCP Server Marketplace**: Easily find, and use MCP servers to extend the agent capabilities.
 - **Multi Mode**: Plan with Architect, Code with Coder, and Debug with Debugger, and make your own custom modes.
 
-## Get Started in 2 Minutes
+## How to get started with Kilo Code
 
 1.  Install the Kilo Code extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code).
 2.  Log in with your Google Account to get $20 in free Claude 3.7 Sonnet credits.
-3.  Start coding!
+3.  Start using the extension. Here's a video to help you get started (just click on the image below and you'll be redirected to YouTube):
+
+[![Watch the video](https://img.youtube.com/vi/pqGfYXgrhig/maxresdefault.jpg)](https://youtu.be/pqGfYXgrhig)
+
 
 ## Difference between Roo Code and Cline
 
