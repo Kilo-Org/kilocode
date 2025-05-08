@@ -17,6 +17,7 @@ export const openRouterModelSchema = z.object({
 	description: z.string().optional(),
 	context_length: z.number(),
 	max_completion_tokens: z.number().nullish(),
+	preferredIndex: z.number().optional(), // kilocode_change
 	architecture: z
 		.object({
 			modality: z.string().nullish(),
@@ -86,6 +87,7 @@ export async function getOpenRouterModels(options?: ApiHandlerOptions): Promise<
 				cacheReadsPrice,
 				description: rawModel.description,
 				thinking: rawModel.id === "anthropic/claude-3.7-sonnet:thinking",
+				preferredIndex: rawModel.preferredIndex, // kilocode_change
 			}
 
 			// The OpenRouter model definition doesn't give us any hints about
