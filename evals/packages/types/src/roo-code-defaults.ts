@@ -4,12 +4,9 @@ export const rooCodeDefaults: RooCodeSettings = {
 	apiProvider: "openrouter",
 	openRouterUseMiddleOutTransform: false,
 
-	// modelTemperature: null,
-	// reasoningEffort: "high",
-	rateLimitSeconds: 0,
+	lastShownAnnouncementId: "apr-30-2025-3-15",
 
 	pinnedApiConfigs: {},
-	lastShownAnnouncementId: "apr-18-2025-3-13",
 
 	autoApprovalEnabled: true,
 	alwaysAllowReadOnly: true,
@@ -31,39 +28,39 @@ export const rooCodeDefaults: RooCodeSettings = {
 	screenshotQuality: 75,
 	remoteBrowserEnabled: false,
 
-	enableCheckpoints: false,
-	checkpointStorage: "task",
-
 	ttsEnabled: false,
 	ttsSpeed: 1,
 	soundEnabled: false,
 	soundVolume: 0.5,
 
+	terminalOutputLineLimit: 500,
+	terminalShellIntegrationTimeout: 30000,
+	terminalCommandDelay: 0,
+	terminalPowershellCounter: false,
+	terminalZshOhMy: true,
+	terminalZshClearEolMark: true,
+	terminalZshP10k: false,
+	terminalZdotdir: true,
+	terminalCompressProgressBar: true,
+	terminalShellIntegrationDisabled: true,
+
+	diffEnabled: true,
+	fuzzyMatchThreshold: 1,
+
+	enableCheckpoints: false,
+
+	rateLimitSeconds: 0,
 	maxOpenTabsContext: 20,
 	maxWorkspaceFiles: 200,
 	showRooIgnoredFiles: true,
 	maxReadFileLine: 500,
 
-	terminalOutputLineLimit: 500,
-	terminalShellIntegrationTimeout: 30000,
-	terminalCommandDelay: 0,
-	terminalPowershellCounter: false,
-	terminalZshClearEolMark: true,
-	terminalZshOhMy: true,
-	terminalZshP10k: false,
-	terminalZdotdir: true,
-
-	diffEnabled: true,
-	fuzzyMatchThreshold: 1.0,
-	experiments: {
-		powerSteering: false,
-	},
-
 	language: "en",
-
 	telemetrySetting: "enabled",
 
 	mcpEnabled: false,
+
 	mode: "code",
+
 	customModes: [],
 }

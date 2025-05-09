@@ -55,6 +55,10 @@
 		"title": "Proceed While Running",
 		"tooltip": "Continue despite warnings"
 	},
+	"killCommand": {
+		"title": "Kill Command",
+		"tooltip": "Kill the current command"
+	},
 	"resumeTask": {
 		"title": "Resume Task",
 		"tooltip": "Continue the current task"
@@ -185,13 +189,6 @@
 		"title": "Edit Unsuccessful"
 	},
 	"troubleMessage": "Kilo Code is having trouble...",
-	"shellIntegration": {
-		"unavailable": "Shell Integration Unavailable",
-		"troubleshooting": "Still having trouble? Click here for shell integration documentation.",
-		"checkSettings": "Check terminal workarounds in the settings page",
-		"updateVSCode": "Update VSCode",
-		"supportedShell": "Make sure you're using a supported shell: zsh, bash, fish, or PowerShell"
-	},
 	"powershell": {
 		"issues": "It seems like you're having Windows PowerShell issues, please see this"
 	},
@@ -201,12 +198,12 @@
 		"description": "Auto-approve allows Kilo Code to perform actions without asking for permission. Only enable for actions you fully trust. More detailed configuration available in <settingsLink>Settings</settingsLink>."
 	},
 	"announcement": {
-		"title": "🎉 Roo Code 3.14 Released",
-		"description": "Roo Code 3.14 brings new features and improvements based on your feedback.",
+		"title": "🎉 Roo Code 3.15 Released",
+		"description": "Roo Code 3.15 brings new features and improvements based on your feedback.",
 		"whatsNew": "What's New",
-		"feature1": "<bold>Improved Editing Tools</bold>: The <code>search_and_replace</code> and <code>insert_content</code> tools have been improved and graduated from experimental status",
-		"feature2": "<bold>Diff Apply Fixes</bold>: We continue to work on improving the <code>apply_diff</code> tool",
-		"feature3": "<bold>Tons of Other Improvements</bold>: Numerous fixes and enhancements throughout the extension",
+		"feature1": "<bold>Prompt Caching for Vertex</bold>: Added prompt caching support for Vertex AI, improving response times and reducing API costs",
+		"feature2": "<bold>Terminal Fallback</bold>: Implemented a fallback mechanism when VSCode terminal shell integration fails",
+		"feature3": "<bold>Improved Code Snippets</bold>: Enhanced code snippet rendering and interaction in the chat interface",
 		"hideButton": "Hide announcement",
 		"detailsDiscussLinks": "Get more details and discuss in <discordLink>Discord</discordLink> and <redditLink>Reddit</redditLink> 🚀"
 	},
@@ -239,5 +236,10 @@
 			"close": "Close browser"
 		}
 	},
-	"systemPromptWarning": "WARNING: Custom system prompt override active. This can severely break functionality and cause unpredictable behavior."
+	"systemPromptWarning": "WARNING: Custom system prompt override active. This can severely break functionality and cause unpredictable behavior.",
+	"shellIntegration": {
+		"title": "Command Execution Warning",
+		"description": "Your command is being executed without VSCode terminal shell integration. To suppress this warning you can disable shell integration in the <strong>Terminal</strong> section of the <settingsLink>Roo Code settings</settingsLink> or troubleshoot VSCode terminal integration using the link below.",
+		"troubleshooting": "Click here for shell integration documentation."
+	}
 }

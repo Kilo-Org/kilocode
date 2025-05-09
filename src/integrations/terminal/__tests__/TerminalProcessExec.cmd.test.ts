@@ -1,6 +1,9 @@
-// src/integrations/terminal/__tests__/TerminalProcessExec.cmd.test.ts
+// npx jest src/integrations/terminal/__tests__/TerminalProcessExec.cmd.test.ts
+
 import * as vscode from "vscode"
-import { TerminalProcess, ExitCodeDetails } from "../TerminalProcess"
+
+import { ExitCodeDetails } from "../types"
+import { TerminalProcess } from "../TerminalProcess"
 import { Terminal } from "../Terminal"
 import { TerminalRegistry } from "../TerminalRegistry"
 import { createCmdCommandStream } from "./streamUtils/cmdStream"
@@ -54,6 +57,10 @@ jest.mock("vscode", () => {
 	}
 })
 
+jest.mock("execa", () => ({
+	execa: jest.fn(),
+}))
+
 /**
  * Test CMD command execution
  * @param command The CMD command to execute
@@ -69,7 +76,6 @@ async function testCmdCommand(
 	let startTime: bigint = BigInt(0)
 	let endTime: bigint = BigInt(0)
 	let timeRecorded = false
-	let timeoutId: NodeJS.Timeout | undefined
 
 	// Create a mock terminal with shell integration
 	const mockTerminal = {

@@ -4,7 +4,9 @@
 		"done": "Terminé",
 		"cancel": "Annuler",
 		"reset": "Réinitialiser",
-		"select": "Sélectionner"
+		"select": "Sélectionner",
+		"add": "Ajouter un en-tête",
+		"remove": "Supprimer"
 	},
 	"header": {
 		"title": "Paramètres",
@@ -116,6 +118,10 @@
 		"useCustomBaseUrl": "Utiliser une URL de base personnalisée",
 		"useHostHeader": "Utiliser un en-tête Host personnalisé",
 		"useLegacyFormat": "Utiliser le format API OpenAI hérité",
+		"customHeaders": "En-têtes personnalisés",
+		"headerName": "Nom de l'en-tête",
+		"headerValue": "Valeur de l'en-tête",
+		"noCustomHeaders": "Aucun en-tête personnalisé défini. Cliquez sur le bouton + pour en ajouter un.",
 		"requestyApiKey": "Clé API Requesty",
 		"getRequestyApiKey": "Obtenir la clé API Requesty",
 		"openRouterTransformsText": "Compresser les prompts et chaînes de messages à la taille du contexte (<a>Transformations OpenRouter</a>)",
@@ -238,7 +244,8 @@
 			"high": "Élevé",
 			"medium": "Moyen",
 			"low": "Faible"
-		}
+		},
+		"setReasoningLevel": "Activer l'effort de raisonnement"
 	},
 	"browser": {
 		"enable": {
@@ -316,6 +323,10 @@
 			"label": "Délai d'intégration du shell du terminal",
 			"description": "Temps maximum d'attente pour l'initialisation de l'intégration du shell avant d'exécuter des commandes. Pour les utilisateurs avec des temps de démarrage de shell longs, cette valeur peut nécessiter d'être augmentée si vous voyez des erreurs \"Shell Integration Unavailable\" dans le terminal."
 		},
+		"shellIntegrationDisabled": {
+			"label": "Désactiver l'intégration du shell du terminal",
+			"description": "Active ceci si les commandes du terminal ne fonctionnent pas correctement ou si tu vois des erreurs 'Shell Integration Unavailable'. Cela utilise une méthode plus simple pour exécuter les commandes, en contournant certaines fonctionnalités avancées du terminal."
+		},
 		"compressProgressBar": {
 			"label": "Compresser la sortie des barres de progression",
 			"description": "Lorsque activé, traite la sortie du terminal avec des retours chariot (\\r) pour simuler l'affichage d'un terminal réel. Cela supprime les états intermédiaires des barres de progression, ne conservant que l'état final, ce qui économise de l'espace de contexte pour des informations plus pertinentes."
@@ -338,7 +349,7 @@
 		},
 		"zshOhMy": {
 			"label": "Activer l'intégration Oh My Zsh",
-			"description": "Lorsqu'activé, définit ITERM_SHELL_INTEGRATION_INSTALLED=Yes pour activer les fonctionnalités d'intégration du shell Oh My Zsh. (expérimental)"
+			"description": "Lorsqu'activé, définit ITERM_SHELL_INTEGRATION_INSTALLED=Yes pour activer les fonctionnalités d'intégration du shell Oh My Zsh. L'application de ce paramètre peut nécessiter le redémarrage de l'IDE. (expérimental)"
 		},
 		"zshP10k": {
 			"label": "Activer l'intégration Powerlevel10k",

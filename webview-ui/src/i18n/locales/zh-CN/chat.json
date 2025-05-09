@@ -55,6 +55,10 @@
 		"title": "强制继续",
 		"tooltip": "忽略运行中的命令并继续"
 	},
+	"killCommand": {
+		"title": "终止命令",
+		"tooltip": "终止当前命令"
+	},
 	"resumeTask": {
 		"title": "恢复任务",
 		"tooltip": "继续当前任务"
@@ -89,6 +93,7 @@
 		}
 	},
 	"selectMode": "选择交互模式",
+	"selectApiConfig": "选择 API 配置",
 	"enhancePrompt": "增强提示词",
 	"addImages": "添加图片到消息",
 	"sendMessage": "发送消息",
@@ -184,13 +189,6 @@
 		"hasQuestion": "Kilo Code有一个问题:"
 	},
 	"taskCompleted": "任务完成",
-	"shellIntegration": {
-		"unavailable": "Shell集成不可用",
-		"troubleshooting": "仍有问题吗？点击此处查看Shell集成文档。",
-		"checkSettings": "检查设置页面中的终端解决方案",
-		"updateVSCode": "更新VSCode",
-		"supportedShell": "确保使用受支持的shell：zsh、bash、fish或PowerShell"
-	},
 	"powershell": {
 		"issues": "看起来您遇到了Windows PowerShell问题，请参阅此"
 	},
@@ -207,12 +205,12 @@
 		"copyToInput": "复制到输入框（或按住Shift点击）"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code 3.14 已发布",
-		"description": "Roo Code 3.14 带来基于您反馈的新功能和改进。",
+		"title": "🎉 Roo Code 3.15 已发布",
+		"description": "Roo Code 3.15 带来基于您反馈的新功能和改进。",
 		"whatsNew": "新特性",
-		"feature1": "<bold>编辑工具增强</bold>: <code>search_and_replace</code> 和 <code>insert_content</code> 工具已得到改进，并从实验性状态毕业",
-		"feature2": "<bold>差异更新修复</bold>: 我们持续改进 <code>apply_diff</code> 工具",
-		"feature3": "<bold>海量其他改进</bold>: 扩展中众多的修复和增强功能",
+		"feature1": "<bold>Vertex 提示词缓存</bold>: 为 Vertex AI 添加提示词缓存支持，提高响应速度并降低 API 费用",
+		"feature2": "<bold>终端备选方案</bold>: 实现 VSCode 终端 shell 集成失败时的备选机制",
+		"feature3": "<bold>代码片段优化</bold>: 增强聊天界面中代码片段的渲染和交互体验",
 		"hideButton": "隐藏公告",
 		"detailsDiscussLinks": "在 <discordLink>Discord</discordLink> 和 <redditLink>Reddit</redditLink> 获取更多详情并参与讨论 🚀"
 	},
@@ -239,5 +237,9 @@
 		}
 	},
 	"systemPromptWarning": "警告：自定义系统提示词覆盖已激活。这可能严重破坏功能并导致不可预测的行为。",
-	"selectApiConfig": "选择 API 配置"
+	"shellIntegration": {
+		"title": "命令执行警告",
+		"description": "您的命令正在没有 VSCode 终端 shell 集成的情况下执行。要隐藏此警告，您可以在 <settingsLink>Roo Code 设置</settingsLink>的 <strong>Terminal</strong> 部分禁用 shell 集成，或使用下方链接排查 VSCode 终端集成问题。",
+		"troubleshooting": "点击此处查看 shell 集成文档。"
+	}
 }

@@ -1,8 +1,8 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // npx jest src/api/providers/__tests__/fireworks.test.ts
 
 import { FireworksHandler } from "../fireworks"
 import { ApiHandlerOptions, fireworksDefaultModelId } from "../../../shared/api"
-import OpenAI from "openai"
 import { Anthropic } from "@anthropic-ai/sdk"
 import { BaseProvider } from "../base-provider"
 

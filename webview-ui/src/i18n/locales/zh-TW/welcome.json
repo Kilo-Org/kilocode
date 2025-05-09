@@ -15,5 +15,14 @@
 	},
 	"startRouter": "透過路由器快速設定",
 	"startCustom": "使用您自己的 API 金鑰",
-	"or": "或是"
+	"telemetry": {
+		"title": "協助改進 Kilo Code",
+		"anonymousTelemetry": "傳送匿名的錯誤和使用資料，以協助我們修復錯誤並改進擴充功能。我們絕不會傳送任何程式碼、提示或個人資訊。",
+		"changeSettings": "您隨時可以在<settingsLink>設定</settingsLink>底端更改此選項",
+		"settings": "設定",
+		"allow": "允許",
+		"deny": "拒絕"
+	},
+	"or": "或是",
+	"importSettings": "匯入設定"
 }

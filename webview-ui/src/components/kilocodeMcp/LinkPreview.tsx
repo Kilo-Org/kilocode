@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"
+import React from "react"
 import { vscode } from "../../utils/vscode"
 import DOMPurify from "dompurify"
 import { getSafeHostname, normalizeRelativeUrl } from "./McpRichUtil"

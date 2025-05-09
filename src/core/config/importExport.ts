@@ -6,15 +6,23 @@ import * as vscode from "vscode"
 import { z } from "zod"
 
 import { globalSettingsSchema } from "../../schemas"
+
 import { ProviderSettingsManager, providerProfilesSchema } from "./ProviderSettingsManager"
 import { ContextProxy } from "./ContextProxy"
+import { CustomModesManager } from "./CustomModesManager"
 
-type ImportExportOptions = {
+type ImportOptions = {
+	providerSettingsManager: ProviderSettingsManager
+	contextProxy: ContextProxy
+	customModesManager: CustomModesManager
+}
+
+type ExportOptions = {
 	providerSettingsManager: ProviderSettingsManager
 	contextProxy: ContextProxy
 }
 
-export const importSettings = async ({ providerSettingsManager, contextProxy }: ImportExportOptions) => {
+export const importSettings = async ({ providerSettingsManager, contextProxy, customModesManager }: ImportOptions) => {
 	const uris = await vscode.window.showOpenDialog({
 		filters: { JSON: ["json"] },
 		canSelectMany: false,
@@ -48,10 +56,25 @@ export const importSettings = async ({ providerSettingsManager, contextProxy }: 
 			},
 		}
 
-		await providerSettingsManager.import(newProviderProfiles)
+		await Promise.all(
+			(globalSettings.customModes ?? []).map((mode) => customModesManager.updateCustomMode(mode.slug, mode)),
+		)
 
+		await providerSettingsManager.import(newProviderProfiles)
 		await contextProxy.setValues(globalSettings)
-		contextProxy.setValue("currentApiConfigName", providerProfiles.currentApiConfigName)
+
+		// Set the current provider.
+		const currentProviderName = providerProfiles.currentApiConfigName
+		const currentProvider = providerProfiles.apiConfigs[currentProviderName]
+		contextProxy.setValue("currentApiConfigName", currentProviderName)
+
+		// TODO: It seems like we don't need to have the provider settings in
+		// the proxy; we can just use providerSettingsManager as the source of
+		// truth.
+		if (currentProvider) {
+			contextProxy.setProviderSettings(currentProvider)
+		}
+
 		contextProxy.setValue("listApiConfigMeta", await providerSettingsManager.listConfig())
 
 		return { providerProfiles, globalSettings, success: true }
@@ -60,7 +83,7 @@ export const importSettings = async ({ providerSettingsManager, contextProxy }: 
 	}
 }
 
-export const exportSettings = async ({ providerSettingsManager, contextProxy }: ImportExportOptions) => {
+export const exportSettings = async ({ providerSettingsManager, contextProxy }: ExportOptions) => {
 	const uri = await vscode.window.showSaveDialog({
 		filters: { JSON: ["json"] },
 		defaultUri: vscode.Uri.file(path.join(os.homedir(), "Documents", "kilo-code-settings.json")),

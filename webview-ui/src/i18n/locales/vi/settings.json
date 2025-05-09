@@ -4,7 +4,9 @@
 		"done": "Hoàn thành",
 		"cancel": "Hủy",
 		"reset": "Đặt lại",
-		"select": "Chọn"
+		"select": "Chọn",
+		"add": "Thêm tiêu đề",
+		"remove": "Xóa"
 	},
 	"header": {
 		"title": "Cài đặt",
@@ -116,6 +118,10 @@
 		"useCustomBaseUrl": "Sử dụng URL cơ sở tùy chỉnh",
 		"useHostHeader": "Sử dụng tiêu đề Host tùy chỉnh",
 		"useLegacyFormat": "Sử dụng định dạng API OpenAI cũ",
+		"customHeaders": "Tiêu đề tùy chỉnh",
+		"headerName": "Tên tiêu đề",
+		"headerValue": "Giá trị tiêu đề",
+		"noCustomHeaders": "Chưa có tiêu đề tùy chỉnh nào được định nghĩa. Nhấp vào nút + để thêm.",
 		"requestyApiKey": "Khóa API Requesty",
 		"getRequestyApiKey": "Lấy khóa API Requesty",
 		"anthropicApiKey": "Khóa API Anthropic",
@@ -238,7 +244,8 @@
 			"high": "Cao",
 			"medium": "Trung bình",
 			"low": "Thấp"
-		}
+		},
+		"setReasoningLevel": "Kích hoạt nỗ lực suy luận"
 	},
 	"browser": {
 		"enable": {
@@ -316,6 +323,10 @@
 			"label": "Thời gian chờ tích hợp shell terminal",
 			"description": "Thời gian tối đa để chờ tích hợp shell khởi tạo trước khi thực hiện lệnh. Đối với người dùng có thời gian khởi động shell dài, giá trị này có thể cần được tăng lên nếu bạn thấy lỗi \"Shell Integration Unavailable\" trong terminal."
 		},
+		"shellIntegrationDisabled": {
+			"label": "Tắt tích hợp shell terminal",
+			"description": "Bật tùy chọn này nếu lệnh terminal không hoạt động chính xác hoặc bạn thấy lỗi 'Shell Integration Unavailable'. Tùy chọn này sử dụng phương pháp đơn giản hơn để chạy lệnh, bỏ qua một số tính năng terminal nâng cao."
+		},
 		"compressProgressBar": {
 			"label": "Nén đầu ra thanh tiến trình",
 			"description": "Khi được bật, xử lý đầu ra terminal với các ký tự carriage return (\\r) để mô phỏng cách terminal thật hiển thị nội dung. Điều này loại bỏ các trạng thái trung gian của thanh tiến trình, chỉ giữ lại trạng thái cuối cùng, giúp tiết kiệm không gian ngữ cảnh cho thông tin quan trọng hơn."
@@ -338,7 +349,7 @@
 		},
 		"zshOhMy": {
 			"label": "Bật tích hợp Oh My Zsh",
-			"description": "Khi được bật, đặt ITERM_SHELL_INTEGRATION_INSTALLED=Yes để kích hoạt các tính năng tích hợp shell của Oh My Zsh. (thử nghiệm)"
+			"description": "Khi được bật, đặt ITERM_SHELL_INTEGRATION_INSTALLED=Yes để kích hoạt các tính năng tích hợp shell của Oh My Zsh. Việc áp dụng cài đặt này có thể yêu cầu khởi động lại IDE. (thử nghiệm)"
 		},
 		"zshP10k": {
 			"label": "Bật tích hợp Powerlevel10k",

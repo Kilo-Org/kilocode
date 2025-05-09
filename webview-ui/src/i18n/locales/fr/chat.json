@@ -55,6 +55,10 @@
 		"title": "Continuer pendant l'exécution",
 		"tooltip": "Continuer malgré les avertissements"
 	},
+	"killCommand": {
+		"title": "Arrêter la commande",
+		"tooltip": "Arrêter la commande actuelle"
+	},
 	"resumeTask": {
 		"title": "Reprendre la tâche",
 		"tooltip": "Continuer la tâche actuelle"
@@ -89,6 +93,7 @@
 		}
 	},
 	"selectMode": "Sélectionner le mode d'interaction",
+	"selectApiConfig": "Sélectionner la configuration de l'API",
 	"enhancePrompt": "Améliorer la requête avec un contexte supplémentaire",
 	"addImages": "Ajouter des images au message",
 	"sendMessage": "Envoyer le message",
@@ -184,13 +189,6 @@
 		"hasQuestion": "Kilo Code a une question :"
 	},
 	"taskCompleted": "Tâche terminée",
-	"shellIntegration": {
-		"unavailable": "Intégration du shell indisponible",
-		"troubleshooting": "Toujours des problèmes ? Cliquez ici pour la documentation d'intégration du shell.",
-		"checkSettings": "Vérifie les solutions de contournement du terminal dans les paramètres",
-		"updateVSCode": "Mets à jour VSCode",
-		"supportedShell": "Assure-toi d'utiliser un shell supporté : zsh, bash, fish ou PowerShell"
-	},
 	"powershell": {
 		"issues": "Il semble que vous rencontriez des problèmes avec Windows PowerShell, veuillez consulter ce"
 	},
@@ -207,12 +205,12 @@
 		"copyToInput": "Copier vers l'entrée (ou Shift + clic)"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code 3.14 est sortie",
-		"description": "Roo Code 3.14 apporte de nouvelles fonctionnalités et améliorations basées sur vos retours.",
+		"title": "🎉 Roo Code 3.15 est sortie",
+		"description": "Roo Code 3.15 apporte de nouvelles fonctionnalités et améliorations basées sur vos retours.",
 		"whatsNew": "Quoi de neuf",
-		"feature1": "<bold>Outils d'édition améliorés</bold> : Les outils <code>search_and_replace</code> et <code>insert_content</code> ont été améliorés et ne sont plus expérimentaux",
-		"feature2": "<bold>Corrections pour apply_diff</bold> : Nous continuons à travailler sur l'amélioration de l'outil <code>apply_diff</code>",
-		"feature3": "<bold>Quantité d'autres améliorations</bold> : Nombreuses corrections et optimisations dans toute l'extension",
+		"feature1": "<bold>Mise en cache des prompts pour Vertex</bold> : Ajout du support de mise en cache des prompts pour Vertex AI, améliorant les temps de réponse et réduisant les coûts API",
+		"feature2": "<bold>Solution de secours pour Terminal</bold> : Implémentation d'un mécanisme de secours lorsque l'intégration shell du terminal VSCode échoue",
+		"feature3": "<bold>Extraits de code améliorés</bold> : Rendu et interaction améliorés des extraits de code dans l'interface de chat",
 		"hideButton": "Masquer l'annonce",
 		"detailsDiscussLinks": "Obtenez plus de détails et participez aux discussions sur <discordLink>Discord</discordLink> et <redditLink>Reddit</redditLink> 🚀"
 	},
@@ -239,5 +237,9 @@
 		}
 	},
 	"systemPromptWarning": "AVERTISSEMENT : Remplacement d'instructions système personnalisées actif. Cela peut gravement perturber la fonctionnalité et provoquer un comportement imprévisible.",
-	"selectApiConfig": "Sélectionner la configuration de l’API"
+	"shellIntegration": {
+		"title": "Avertissement d'exécution de commande",
+		"description": "Votre commande est exécutée sans l'intégration shell du terminal VSCode. Pour supprimer cet avertissement, vous pouvez désactiver l'intégration shell dans la section <strong>Terminal</strong> des <settingsLink>paramètres de Roo Code</settingsLink> ou résoudre les problèmes d'intégration du terminal VSCode en utilisant le lien ci-dessous.",
+		"troubleshooting": "Cliquez ici pour la documentation d'intégration shell."
+	}
 }

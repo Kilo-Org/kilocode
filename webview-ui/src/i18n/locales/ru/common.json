@@ -13,5 +13,9 @@
 	},
 	"ui": {
 		"search_placeholder": "Поиск..."
+	},
+	"mermaid": {
+		"loading": "Создание диаграммы mermaid...",
+		"render_error": "Не удалось отобразить диаграмму"
 	}
 }

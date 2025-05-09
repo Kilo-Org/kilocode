@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code",
+	"extension.displayName": "Kilo Code AI Agent (feature-merge of Cline + Roo)",
 	"extension.description": "Assistente de codificação de IA de código aberto para planejamento, construção e correção de código.",
 	"command.newTask.title": "Nova Tarefa",
 	"command.explainCode.title": "Explicar Código",
@@ -12,8 +12,6 @@
 	"command.terminal.addToContext.title": "Adicionar Conteúdo do Terminal ao Contexto",
 	"command.terminal.fixCommand.title": "Corrigir Este Comando",
 	"command.terminal.explainCommand.title": "Explicar Este Comando",
-	"command.terminal.fixCommandInCurrentTask.title": "Corrigir Este Comando (Tarefa Atual)",
-	"command.terminal.explainCommandInCurrentTask.title": "Explicar Este Comando (Tarefa Atual)",
 	"command.acceptInput.title": "Aceitar Entrada/Sugestão",
 	"views.activitybar.title": "Kilo Code",
 	"views.contextMenu.label": "Kilo Code",

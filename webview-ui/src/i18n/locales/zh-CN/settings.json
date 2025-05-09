@@ -4,7 +4,9 @@
 		"done": "完成",
 		"cancel": "取消",
 		"reset": "恢复默认设置",
-		"select": "选择"
+		"select": "选择",
+		"add": "添加标头",
+		"remove": "移除"
 	},
 	"header": {
 		"title": "设置",
@@ -114,6 +116,10 @@
 		"useCustomBaseUrl": "使用自定义基础 URL",
 		"useHostHeader": "使用自定义 Host 标头",
 		"useLegacyFormat": "使用传统 OpenAI API 格式",
+		"customHeaders": "自定义标头",
+		"headerName": "标头名称",
+		"headerValue": "标头值",
+		"noCustomHeaders": "暂无自定义标头。点击 + 按钮添加。",
 		"glamaApiKey": "Glama API 密钥",
 		"getGlamaApiKey": "获取 Glama API 密钥",
 		"requestyApiKey": "Requesty API 密钥",
@@ -238,7 +244,8 @@
 			"high": "高",
 			"medium": "中",
 			"low": "低"
-		}
+		},
+		"setReasoningLevel": "启用推理工作量"
 	},
 	"browser": {
 		"enable": {
@@ -316,6 +323,10 @@
 			"label": "终端初始化等待时间",
 			"description": "执行命令前等待 Shell 集成初始化的最长时间。对于 Shell 启动时间较长的用户，如果在终端中看到\"Shell Integration Unavailable\"错误，可能需要增加此值。"
 		},
+		"shellIntegrationDisabled": {
+			"label": "禁用终端 Shell 集成",
+			"description": "如果终端命令无法正常工作或看到 'Shell Integration Unavailable' 错误，请启用此项。这将使用更简单的方法运行命令，绕过一些高级终端功能。"
+		},
 		"compressProgressBar": {
 			"label": "压缩进度条输出",
 			"description": "启用后，将处理包含回车符 (\\r) 的终端输出，模拟真实终端显示内容的方式。这会移除进度条的中间状态，只保留最终状态，为更重要的信息节省上下文空间。"
@@ -338,7 +349,7 @@
 		},
 		"zshOhMy": {
 			"label": "启用 Oh My Zsh 集成",
-			"description": "启用后，设置 ITERM_SHELL_INTEGRATION_INSTALLED=Yes 以启用 Oh My Zsh shell 集成功能。（实验性）"
+			"description": "启用后，设置 ITERM_SHELL_INTEGRATION_INSTALLED=Yes 以启用 Oh My Zsh shell 集成功能。应用此设置可能需要重启 IDE。（实验性）"
 		},
 		"zshP10k": {
 			"label": "启用 Powerlevel10k 集成",

@@ -4,7 +4,9 @@
 		"done": "Fet",
 		"cancel": "Cancel·lar",
 		"reset": "Restablir",
-		"select": "Seleccionar"
+		"select": "Seleccionar",
+		"add": "Afegir capçalera",
+		"remove": "Eliminar"
 	},
 	"header": {
 		"title": "Configuració",
@@ -112,6 +114,10 @@
 		"useCustomBaseUrl": "Utilitzar URL base personalitzada",
 		"useHostHeader": "Utilitzar capçalera Host personalitzada",
 		"useLegacyFormat": "Utilitzar el format d'API OpenAI antic",
+		"customHeaders": "Capçaleres personalitzades",
+		"headerName": "Nom de la capçalera",
+		"headerValue": "Valor de la capçalera",
+		"noCustomHeaders": "No hi ha capçaleres personalitzades definides. Feu clic al botó + per afegir-ne una.",
 		"openRouterTransformsText": "Comprimir prompts i cadenes de missatges a la mida del context (<a>Transformacions d'OpenRouter</a>)",
 		"model": "Model",
 		"getOpenRouterApiKey": "Obtenir clau API d'OpenRouter",
@@ -238,7 +244,8 @@
 			"high": "Alt",
 			"medium": "Mitjà",
 			"low": "Baix"
-		}
+		},
+		"setReasoningLevel": "Activa l'esforç de raonament"
 	},
 	"browser": {
 		"enable": {
@@ -316,6 +323,10 @@
 			"label": "Temps d'espera d'integració de shell del terminal",
 			"description": "Temps màxim d'espera per a la inicialització de la integració de shell abans d'executar comandes. Per a usuaris amb temps d'inici de shell llargs, aquest valor pot necessitar ser augmentat si veieu errors \"Shell Integration Unavailable\" al terminal."
 		},
+		"shellIntegrationDisabled": {
+			"label": "Desactiva la integració de l'intèrpret d'ordres del terminal",
+			"description": "Activa això si les ordres del terminal no funcionen correctament o si veus errors de 'Shell Integration Unavailable'. Això utilitza un mètode més senzill per executar ordres, evitant algunes funcions avançades del terminal."
+		},
 		"compressProgressBar": {
 			"label": "Comprimir sortida de barra de progrés",
 			"description": "Quan està habilitat, processa la sortida del terminal amb retorns de carro (\\r) per simular com un terminal real mostraria el contingut. Això elimina els estats intermedis de les barres de progrés, mantenint només l'estat final, la qual cosa conserva espai de context per a informació més rellevant."
@@ -338,7 +349,7 @@
 		},
 		"zshOhMy": {
 			"label": "Habilita la integració Oh My Zsh",
-			"description": "Quan està habilitat, estableix ITERM_SHELL_INTEGRATION_INSTALLED=Yes per habilitar les característiques d'integració del shell Oh My Zsh. (experimental)"
+			"description": "Quan està habilitat, estableix ITERM_SHELL_INTEGRATION_INSTALLED=Yes per habilitar les característiques d'integració del shell Oh My Zsh. Aplicar aquesta configuració pot requerir reiniciar l'IDE. (experimental)"
 		},
 		"zshP10k": {
 			"label": "Habilita la integració Powerlevel10k",

@@ -15,7 +15,7 @@
 
 # 🚀 Kilo Code
 
-> Open-source VS Code AI agent. Superset of [Roo Code](https://github.com/RooVetGit/Roo-Code) and [Cline](https://github.com/cline/cline).
+> Open-source VS Code AI agent. Merged features from [Roo Code](https://github.com/RooVetGit/Roo-Code) and [Cline](https://github.com/cline/cline).
 
 - ✨ Generate code from natural language
 - ✅ Checks its own work
@@ -40,15 +40,17 @@
 - **MCP Server Marketplace**: Easily find, and use MCP servers to extend the agent capabilities.
 - **Multi Mode**: Plan with Architect, Code with Coder, and Debug with Debugger, and make your own custom modes.
 
-## Get Started in 2 Minutes
+## How to get started with Kilo Code
 
 1.  Install the Kilo Code extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code).
 2.  Log in with your Google Account to get $20 in free Claude 3.7 Sonnet credits.
-3.  Start coding!
+3.  Start using the extension. Here's a video to help you get started (just click on the image below and you'll be redirected to YouTube):
+
+[![Watch the video](https://img.youtube.com/vi/pqGfYXgrhig/maxresdefault.jpg)](https://youtu.be/pqGfYXgrhig)
 
 ## Difference between Roo Code and Cline
 
-We're doing our best to combine the best of both worlds. Kilo Code is a superset of both Roo Code and Cline. It has the best features of both, and we're working on making it even better. 
+We're doing our best to combine the best of both worlds. Kilo Code is a feature-merge of both Roo Code and Cline. It has the best features of both, and we're working on making it even better!
 
 No need to fiddle with API keys, Kilo Code ships with the latest AI models plugged in, including Claude 3.7 Sonnet and Gemini 2.5 Pro.
 

@@ -101,6 +101,7 @@ export class FireworksHandler extends BaseProvider implements ApiHandler, Single
 				const delta = chunk.choices[0]?.delta
 				if (delta?.content) {
 					contentStarted = true
+					// eslint-disable-next-line @typescript-eslint/no-unused-vars
 					accumulatedText += delta.content
 					yield {
 						type: "text",

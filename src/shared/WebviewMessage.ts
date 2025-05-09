@@ -31,6 +31,7 @@ export interface WebviewMessage {
 		| "webviewDidLaunch"
 		| "newTask"
 		| "askResponse"
+		| "terminalOperation"
 		| "clearTask"
 		| "didShowAnnouncement"
 		| "selectImages"
@@ -85,6 +86,7 @@ export interface WebviewMessage {
 		| "deleteMessage"
 		| "terminalOutputLineLimit"
 		| "terminalShellIntegrationTimeout"
+		| "terminalShellIntegrationDisabled"
 		| "terminalCommandDelay"
 		| "terminalPowershellCounter"
 		| "terminalZshClearEolMark"
@@ -173,6 +175,7 @@ export interface WebviewMessage {
 	requestId?: string
 	ids?: string[]
 	hasSystemPromptOverride?: boolean
+	terminalOperation?: "continue" | "abort"
 	historyPreviewCollapsed?: boolean
 }
 

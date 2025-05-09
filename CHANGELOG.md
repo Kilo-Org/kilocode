@@ -1,5 +1,26 @@
 # kilo-code
 
+## 4.21.0
+
+### Minor Changes
+
+- Include changes from Roo Code v3.15.5
+
+### Patch Changes
+
+- Fix issue with removed slash commands for changing modes
+
+## 4.20.1
+
+### Patch Changes
+
+- Use the phrase feature-merge instead of superset in displayName and README
+- Fix "Some text unreadable in Light high contrast theme" issue
+
+## [4.20.0]
+
+- Include slash commands from Cline, include /newtask command
+
 ## 4.19.1
 
 ### Patch Changes

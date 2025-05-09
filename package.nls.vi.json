@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code",
+	"extension.displayName": "Kilo Code AI Agent (feature-merge of Cline + Roo)",
 	"extension.description": "Trợ lý mã hóa AI nguồn mở để lập kế hoạch, xây dựng và sửa mã.",
 	"command.newTask.title": "Tác Vụ Mới",
 	"command.explainCode.title": "Giải Thích Mã",
@@ -12,8 +12,6 @@
 	"command.terminal.addToContext.title": "Thêm Nội Dung Terminal vào Ngữ Cảnh",
 	"command.terminal.fixCommand.title": "Sửa Lệnh Này",
 	"command.terminal.explainCommand.title": "Giải Thích Lệnh Này",
-	"command.terminal.fixCommandInCurrentTask.title": "Sửa Lệnh Này (Tác Vụ Hiện Tại)",
-	"command.terminal.explainCommandInCurrentTask.title": "Giải Thích Lệnh Này (Tác Vụ Hiện Tại)",
 	"command.acceptInput.title": "Chấp Nhận Đầu Vào/Gợi Ý",
 	"views.activitybar.title": "Kilo Code",
 	"views.contextMenu.label": "Kilo Code",

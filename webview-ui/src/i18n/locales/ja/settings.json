@@ -4,7 +4,9 @@
 		"done": "完了",
 		"cancel": "キャンセル",
 		"reset": "リセット",
-		"select": "選択"
+		"select": "選択",
+		"add": "ヘッダーを追加",
+		"remove": "削除"
 	},
 	"header": {
 		"title": "設定",
@@ -116,6 +118,10 @@
 		"useCustomBaseUrl": "カスタムベースURLを使用",
 		"useHostHeader": "カスタムHostヘッダーを使用",
 		"useLegacyFormat": "レガシーOpenAI API形式を使用",
+		"customHeaders": "カスタムヘッダー",
+		"headerName": "ヘッダー名",
+		"headerValue": "ヘッダー値",
+		"noCustomHeaders": "カスタムヘッダーが定義されていません。+ ボタンをクリックして追加してください。",
 		"requestyApiKey": "Requesty APIキー",
 		"getRequestyApiKey": "Requesty APIキーを取得",
 		"openRouterTransformsText": "プロンプトとメッセージチェーンをコンテキストサイズに圧縮 (<a>OpenRouter Transforms</a>)",
@@ -238,7 +244,8 @@
 			"high": "高",
 			"medium": "中",
 			"low": "低"
-		}
+		},
+		"setReasoningLevel": "推論労力を有効にする"
 	},
 	"browser": {
 		"enable": {
@@ -316,6 +323,10 @@
 			"label": "ターミナルシェル統合タイムアウト",
 			"description": "コマンドを実行する前にシェル統合の初期化を待つ最大時間。シェルの起動時間が長いユーザーの場合、ターミナルで「Shell Integration Unavailable」エラーが表示される場合は、この値を増やす必要があるかもしれません。"
 		},
+		"shellIntegrationDisabled": {
+			"label": "ターミナルシェル統合を無効にする",
+			"description": "ターミナルコマンドが正しく機能しない場合や、「シェル統合が利用できません」というエラーが表示される場合は、これを有効にします。これにより、一部の高度なターミナル機能をバイパスして、コマンドを実行するより簡単な方法が使用されます。"
+		},
 		"compressProgressBar": {
 			"label": "プログレスバー出力を圧縮",
 			"description": "有効にすると、キャリッジリターン（\\r）を含むターミナル出力を処理して、実際のターミナルがコンテンツを表示する方法をシミュレートします。これによりプログレスバーの中間状態が削除され、最終状態のみが保持されるため、より関連性の高い情報のためのコンテキスト空間が節約されます。"
@@ -338,7 +349,7 @@
 		},
 		"zshOhMy": {
 			"label": "Oh My Zsh 統合を有効化",
-			"description": "有効にすると、ITERM_SHELL_INTEGRATION_INSTALLED=Yes を設定して Oh My Zsh シェル統合機能を有効にします。（実験的）"
+			"description": "有効にすると、ITERM_SHELL_INTEGRATION_INSTALLED=Yes を設定して Oh My Zsh シェル統合機能を有効にします。この設定を適用するには、IDEの再起動が必要な場合があります。（実験的）"
 		},
 		"zshP10k": {
 			"label": "Powerlevel10k 統合を有効化",

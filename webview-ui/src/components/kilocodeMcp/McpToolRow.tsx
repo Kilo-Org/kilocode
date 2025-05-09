@@ -1,7 +1,5 @@
-import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
 import { McpTool } from "../../../../src/shared/mcp"
 import { vscode } from "../../utils/vscode"
-import { useExtensionState } from "../../context/ExtensionStateContext"
 
 type McpToolRowProps = {
 	tool: McpTool
@@ -12,6 +10,7 @@ const McpToolRow = ({ tool, serverName }: McpToolRowProps) => {
 	// const { autoApprovalSettings } = useExtensionState()
 
 	// Accept the event object
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const handleAutoApproveChange = (event: any) => {
 		// Only proceed if the event was triggered by a direct user interaction
 		if (!serverName || !event.isTrusted) return

@@ -15,5 +15,14 @@
 	},
 	"startRouter": "Yönlendirici Üzerinden Hızlı Kurulum",
 	"startCustom": "Kendi API Anahtarını Kullan",
-	"or": "veya"
+	"telemetry": {
+		"title": "Kilo Code'u Geliştirmeye Yardım Et",
+		"anonymousTelemetry": "Hataları düzeltmemize ve eklentiyi geliştirmemize yardımcı olmak için anonim hata ve kullanım verileri gönder. Hiçbir zaman kod, metin veya kişisel bilgi gönderilmez.",
+		"changeSettings": "Bunu her zaman <settingsLink>ayarlar</settingsLink>ın altından değiştirebilirsin",
+		"settings": "ayarlar",
+		"allow": "İzin Ver",
+		"deny": "Reddet"
+	},
+	"or": "veya",
+	"importSettings": "Ayarları İçe Aktar"
 }

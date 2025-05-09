@@ -13,5 +13,9 @@
 	},
 	"ui": {
 		"search_placeholder": "Buscar..."
+	},
+	"mermaid": {
+		"loading": "Generando diagrama mermaid...",
+		"render_error": "No se puede renderizar el diagrama"
 	}
 }

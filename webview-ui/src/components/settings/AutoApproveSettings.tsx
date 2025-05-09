@@ -60,7 +60,6 @@ export const AutoApproveSettings = ({
 	allowedCommands,
 	showAutoApproveMenu, // kilocode_change
 	setCachedStateField,
-	className,
 	...props
 }: AutoApproveSettingsProps) => {
 	const { t } = useAppTranslation()

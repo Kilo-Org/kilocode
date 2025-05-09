@@ -137,7 +137,7 @@ jest.mock("vscode", () => ({
 			get: jest.fn().mockReturnValue([]),
 			update: jest.fn(),
 		}),
-		onDidChangeConfiguration: jest.fn().mockImplementation((_callback) => ({
+		onDidChangeConfiguration: jest.fn().mockImplementation(() => ({
 			dispose: jest.fn(),
 		})),
 		onDidSaveTextDocument: jest.fn(() => ({ dispose: jest.fn() })),
@@ -212,7 +212,7 @@ jest.mock("../../Cline", () => ({
 	Cline: jest
 		.fn()
 		.mockImplementation(
-			(provider, apiConfiguration, customInstructions, diffEnabled, fuzzyMatchThreshold, task, taskId) => ({
+			(_provider, _apiConfiguration, _customInstructions, _diffEnabled, _fuzzyMatchThreshold, _task, taskId) => ({
 				api: undefined,
 				abortTask: jest.fn(),
 				handleWebviewAskResponse: jest.fn(),
@@ -322,9 +322,7 @@ describe("ClineProvider", () => {
 				callback()
 				return { dispose: jest.fn() }
 			}),
-			onDidChangeVisibility: jest.fn().mockImplementation((_callback) => {
-				return { dispose: jest.fn() }
-			}),
+			onDidChangeVisibility: jest.fn().mockImplementation(() => ({ dispose: jest.fn() })),
 		} as unknown as vscode.WebviewView
 
 		provider = new ClineProvider(mockContext, mockOutputChannel, "sidebar", new ContextProxy(mockContext))
@@ -377,7 +375,14 @@ describe("ClineProvider", () => {
 		expect(mockWebviewView.webview.html).toContain(
 			"connect-src https://openrouter.ai https://api.requesty.ai https://us.i.posthog.com https://us-assets.i.posthog.com;",
 		)
-		expect(mockWebviewView.webview.html).toContain("script-src 'nonce-")
+
+		// Extract the script-src directive section and verify required security elements
+		const html = mockWebviewView.webview.html
+		const scriptSrcMatch = html.match(/script-src[^;]*;/)
+		expect(scriptSrcMatch).not.toBeNull()
+		expect(scriptSrcMatch![0]).toContain("'nonce-")
+		// Verify wasm-unsafe-eval is present for Shiki syntax highlighting
+		expect(scriptSrcMatch![0]).toContain("'wasm-unsafe-eval'")
 	})
 
 	test("postMessageToWebview sends message to webview", async () => {
@@ -2054,7 +2059,6 @@ describe.skip("ContextProxy integration", () => {
 	let mockContext: vscode.ExtensionContext
 	let mockOutputChannel: vscode.OutputChannel
 	let mockContextProxy: any
-	let _mockGlobalStateUpdate: jest.Mock
 
 	beforeEach(() => {
 		// Reset mocks
@@ -2076,8 +2080,6 @@ describe.skip("ContextProxy integration", () => {
 		mockOutputChannel = { appendLine: jest.fn() } as unknown as vscode.OutputChannel
 		mockContextProxy = new ContextProxy(mockContext)
 		provider = new ClineProvider(mockContext, mockOutputChannel, "sidebar", mockContextProxy)
-
-		_mockGlobalStateUpdate = mockContext.globalState.update as jest.Mock
 	})
 
 	test("updateGlobalState uses contextProxy", async () => {

@@ -32,41 +32,33 @@ const copyWasmFiles = {
 			const nodeModulesDir = path.join(__dirname, "node_modules")
 			const distDir = path.join(__dirname, "dist")
 
-			// tiktoken
+			// tiktoken WASM file
 			fs.copyFileSync(
 				path.join(nodeModulesDir, "tiktoken", "tiktoken_bg.wasm"),
 				path.join(distDir, "tiktoken_bg.wasm"),
 			)
 
-			// tree-sitter WASM
+			// Main tree-sitter WASM file
 			fs.copyFileSync(
 				path.join(nodeModulesDir, "web-tree-sitter", "tree-sitter.wasm"),
 				path.join(distDir, "tree-sitter.wasm"),
 			)
 
-			// language-specific tree-sitter WASMs
-			const languageWasmDir = path.join(nodeModulesDir, "tree-sitter-wasms", "out")
-			const languages = [
-				"typescript",
-				"tsx",
-				"python",
-				"rust",
-				"javascript",
-				"go",
-				"cpp",
-				"c",
-				"c_sharp",
-				"ruby",
-				"java",
-				"php",
-				"swift",
-				"kotlin",
-			]
+			// Copy language-specific WASM files
+			const languageWasmDir = path.join(__dirname, "node_modules", "tree-sitter-wasms", "out")
 
-			languages.forEach((lang) => {
-				const filename = `tree-sitter-${lang}.wasm`
-				fs.copyFileSync(path.join(languageWasmDir, filename), path.join(distDir, filename))
-			})
+			// Dynamically read all WASM files from the directory instead of using a hardcoded list
+			if (fs.existsSync(languageWasmDir)) {
+				const wasmFiles = fs.readdirSync(languageWasmDir).filter((file) => file.endsWith(".wasm"))
+
+				console.log(`Copying ${wasmFiles.length} tree-sitter WASM files to dist directory`)
+
+				wasmFiles.forEach((filename) => {
+					fs.copyFileSync(path.join(languageWasmDir, filename), path.join(distDir, filename))
+				})
+			} else {
+				console.warn(`Tree-sitter WASM directory not found: ${languageWasmDir}`)
+			}
 		})
 	},
 }
@@ -181,7 +173,7 @@ const extensionConfig = {
 		{
 			name: "alias-plugin",
 			setup(build) {
-				build.onResolve({ filter: /^pkce-challenge$/ }, (args) => {
+				build.onResolve({ filter: /^pkce-challenge$/ }, (_args) => {
 					return { path: require.resolve("pkce-challenge/dist/index.browser.js") }
 				})
 			},
@@ -195,22 +187,31 @@ const extensionConfig = {
 	external: ["vscode"],
 }
 
+const workerConfig = {
+	bundle: true,
+	minify: production,
+	sourcemap: !production,
+	logLevel: "silent",
+	entryPoints: ["src/workers/countTokens.ts"],
+	format: "cjs",
+	sourcesContent: false,
+	platform: "node",
+	outdir: "dist/workers",
+}
+
 async function main() {
-	const extensionCtx = await esbuild.context(extensionConfig)
+	const [extensionCtx, workerCtx] = await Promise.all([
+		esbuild.context(extensionConfig),
+		esbuild.context(workerConfig),
+	])
 
 	if (watch) {
-		// Start the esbuild watcher
-		await extensionCtx.watch()
-
-		// Copy and watch locale files
-		console.log("Copying locale files initially...")
+		await Promise.all([extensionCtx.watch(), workerCtx.watch()])
 		copyLocaleFiles()
-
-		// Set up the watcher for locale files
 		setupLocaleWatcher()
 	} else {
-		await extensionCtx.rebuild()
-		await extensionCtx.dispose()
+		await Promise.all([extensionCtx.rebuild(), workerCtx.rebuild()])
+		await Promise.all([extensionCtx.dispose(), workerCtx.dispose()])
 	}
 }
 
