@@ -38,7 +38,7 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 		// Map the selected model to the corresponding OpenRouter model ID
 		// legacy mapping
 		const modelMapping = {
-			gemini25: "google/gemini-2.5-pro-preview-03-25",
+			gemini25: "google/gemini-2.5-pro-preview",
 			gpt41: "openai/gpt-4.1",
 			gemini25flashpreview: "google/gemini-2.5-flash-preview",
 			claude37: "anthropic/claude-3.7-sonnet",
