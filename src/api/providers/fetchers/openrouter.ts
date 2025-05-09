@@ -17,6 +17,7 @@ export const openRouterModelSchema = z.object({
 	description: z.string().optional(),
 	context_length: z.number(),
 	max_completion_tokens: z.number().nullish(),
+	preferredIndex: z.number().optional(), // kilocode_change
 	architecture: z
 		.object({
 			modality: z.string().nullish(),
@@ -51,7 +52,11 @@ export async function getOpenRouterModels(options?: ApiHandlerOptions): Promise<
 	const baseURL = options?.openRouterBaseUrl || "https://openrouter.ai/api/v1"
 
 	try {
-		const response = await axios.get<OpenRouterModelsResponse>(`${baseURL}/models`)
+		// kilocode_change begin
+		// Use optional headers if provided in options
+		const headers = (options as any)?.headers || {}
+		const response = await axios.get<OpenRouterModelsResponse>(`${baseURL}/models`, { headers })
+		// kilocode_change end
 		const result = openRouterModelsResponseSchema.safeParse(response.data)
 		const rawModels = result.success ? result.data.data : response.data.data
 
@@ -82,6 +87,7 @@ export async function getOpenRouterModels(options?: ApiHandlerOptions): Promise<
 				cacheReadsPrice,
 				description: rawModel.description,
 				thinking: rawModel.id === "anthropic/claude-3.7-sonnet:thinking",
+				preferredIndex: rawModel.preferredIndex, // kilocode_change
 			}
 
 			// The OpenRouter model definition doesn't give us any hints about

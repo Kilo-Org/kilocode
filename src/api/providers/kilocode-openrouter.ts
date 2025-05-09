@@ -1,20 +1,32 @@
-import { ApiHandlerOptions, PROMPT_CACHING_MODELS, OPTIONAL_PROMPT_CACHING_MODELS } from "../../shared/api"
+import {
+	ApiHandlerOptions,
+	PROMPT_CACHING_MODELS,
+	OPTIONAL_PROMPT_CACHING_MODELS,
+	ModelInfo,
+	ModelRecord,
+} from "../../shared/api"
 import { OpenRouterHandler } from "./openrouter"
 import { getModelParams } from "../getModelParams"
-import { kilocodeOpenrouterModels } from "../../shared/kilocode/api"
+import { getModels } from "./fetchers/cache"
 
 /**
  * A custom OpenRouter handler that overrides the getModel function
- * to provide custom model information.
+ * to provide custom model information and fetches models from the KiloCode OpenRouter endpoint.
  */
 export class KilocodeOpenrouterHandler extends OpenRouterHandler {
+	protected override models: ModelRecord = {}
+
 	constructor(options: ApiHandlerOptions) {
+		const baseUri = getKiloBaseUri(options)
+		options = {
+			...options,
+			openRouterBaseUrl: `${baseUri}/api/openrouter/`,
+			openRouterApiKey: options.kilocodeToken,
+		}
+
 		super(options)
 	}
 
-	/**
-	 * Override the getModel function to provide custom model information
-	 */
 	override getModel() {
 		let id
 		let info
@@ -23,22 +35,23 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 
 		const selectedModel = this.options.kilocodeModel ?? "gemini25"
 
-		// TODO: use the models that have been fetched from openrouter.
-		// for now we are using the hardcoded models
-		// when updating, be sure to also update 'normalizeApiConfiguration' in ApiOptions.tsx
-		// because frontend needs to display the proper model
-		if (selectedModel === "gemini25") {
-			id = "google/gemini-2.5-pro-preview-03-25"
-			info = kilocodeOpenrouterModels["google/gemini-2.5-pro-preview-03-25"]
-		} else if (selectedModel === "gpt41") {
-			id = "openai/gpt-4.1"
-			info = kilocodeOpenrouterModels["openai/gpt-4.1"]
-		} else if (selectedModel === "gemini25flashpreview") {
-			id = "google/gemini-2.5-flash-preview"
-			info = kilocodeOpenrouterModels["google/gemini-2.5-flash-preview"]
-		} else if (selectedModel === "claude37") {
-			id = "anthropic/claude-3.7-sonnet"
-			info = kilocodeOpenrouterModels["anthropic/claude-3.7-sonnet"]
+		// Map the selected model to the corresponding OpenRouter model ID
+		// legacy mapping
+		const modelMapping = {
+			gemini25: "google/gemini-2.5-pro-preview",
+			gpt41: "openai/gpt-4.1",
+			gemini25flashpreview: "google/gemini-2.5-flash-preview",
+			claude37: "anthropic/claude-3.7-sonnet",
+		}
+
+		// check if the selected model is in the mapping for backwards compatibility
+		id = selectedModel
+		if (Object.keys(modelMapping).includes(selectedModel)) {
+			id = modelMapping[selectedModel as keyof typeof modelMapping]
+		}
+
+		if (this.models[id]) {
+			info = this.models[id]
 		} else {
 			throw new Error(`Unsupported model: ${selectedModel}`)
 		}
@@ -54,4 +67,46 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 			},
 		}
 	}
+
+	public override async fetchModel() {
+		const modelsFromCache = await getModels("kilocode-openrouter")
+		this.models = await this.sortModels(modelsFromCache)
+		return this.getModel()
+	}
+
+	async sortModels(models: ModelRecord): Promise<ModelRecord> {
+		const sortedModels: Record<string, ModelInfo> = {}
+
+		// First add preferred models, sorted by preferredIndex
+		Object.entries(models)
+			.filter(([_, model]) => model.preferredIndex !== undefined)
+			.sort(([_, modelA], [__, modelB]) => {
+				return (modelA.preferredIndex || 0) - (modelB.preferredIndex || 0) // || 0 to satisfy TS
+			})
+			.forEach(([id, model]) => {
+				sortedModels[id] = { ...model }
+			})
+
+		// Then add non-preferred models
+		Object.entries(models)
+			.filter(([_, model]) => model.preferredIndex === undefined)
+			.forEach(([id, model]) => {
+				sortedModels[id] = { ...model }
+			})
+
+		return sortedModels
+	}
+}
+
+function getKiloBaseUri(options: ApiHandlerOptions) {
+	try {
+		const token = options.kilocodeToken as string
+		const payload_string = token.split(".")[1]
+		const payload = JSON.parse(Buffer.from(payload_string, "base64").toString())
+		//note: this is UNTRUSTED, so we need to make sure we're OK with this being manipulated by an attacker; e.g. we should not read uri's from the JWT directly.
+		if (payload.env === "development") return "http://localhost:3000"
+	} catch (_error) {
+		console.warn("Failed to get base URL from Kilo Code token")
+	}
+	return "https://kilocode.ai"
 }

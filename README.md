@@ -48,7 +48,6 @@
 
 [![Watch the video](https://img.youtube.com/vi/pqGfYXgrhig/maxresdefault.jpg)](https://youtu.be/pqGfYXgrhig)
 
-
 ## Difference between Roo Code and Cline
 
 We're doing our best to combine the best of both worlds. Kilo Code is a feature-merge of both Roo Code and Cline. It has the best features of both, and we're working on making it even better!

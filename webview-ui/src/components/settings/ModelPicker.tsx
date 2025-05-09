@@ -26,7 +26,7 @@ import { ModelInfoView } from "./ModelInfoView"
 
 type ModelIdKey = keyof Pick<
 	ProviderSettings,
-	"glamaModelId" | "openRouterModelId" | "unboundModelId" | "requestyModelId" | "openAiModelId"
+	"glamaModelId" | "openRouterModelId" | "unboundModelId" | "requestyModelId" | "openAiModelId" | "kilocodeModel"
 >
 
 interface ModelPickerProps {
@@ -54,7 +54,37 @@ export const ModelPicker = ({
 	const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
 	const isInitialized = useRef(false)
 	const searchInputRef = useRef<HTMLInputElement>(null)
-	const modelIds = useMemo(() => Object.keys(models ?? {}).sort((a, b) => a.localeCompare(b)), [models])
+	const modelIds = useMemo(() => {
+		if (!models) return []
+
+		// kilocode_change begin
+		// Sort models by preferredIndex first, then alphabetically
+		const preferredModelIds = []
+		const restModelIds = []
+		// first add the preferred models
+		for (const [key, model] of Object.entries(models)) {
+			if (model.preferredIndex !== undefined && model.preferredIndex !== null) {
+				preferredModelIds.push(key)
+			}
+		}
+		preferredModelIds.sort((a, b) => {
+			const modelA = models[a]
+			const modelB = models[b]
+			return (modelA.preferredIndex ?? 0) - (modelB.preferredIndex ?? 0)
+		})
+
+		// then add the rest
+		for (const [key] of Object.entries(models)) {
+			if (!preferredModelIds.includes(key)) {
+				restModelIds.push(key)
+			}
+		}
+		restModelIds.sort((a, b) => a.localeCompare(b))
+
+		const combinedModelIds = [...preferredModelIds, ...restModelIds]
+		return combinedModelIds
+		// kilocode_change end
+	}, [models])
 
 	const { id: selectedModelId, info: selectedModelInfo } = useSelectedModel(apiConfiguration)
 
@@ -82,7 +112,7 @@ export const ModelPicker = ({
 			// Abandon the current search if the popover is closed.
 			if (!open) {
 				// Delay to ensure the popover is closed before setting the search value.
-				setTimeout(() => setSearchValue(selectedModelId), 100)
+				setTimeout(() => setSearchValue(selectedModelId || ""), 100)
 			}
 		},
 		[selectedModelId],
@@ -95,7 +125,8 @@ export const ModelPicker = ({
 
 	useEffect(() => {
 		if (!selectedModelId && !isInitialized.current) {
-			const initialValue = modelIds.includes(selectedModelId) ? selectedModelId : defaultModelId
+			const initialValue =
+				selectedModelId && modelIds.includes(selectedModelId) ? selectedModelId : defaultModelId
 			setApiConfigurationField(modelIdKey, initialValue)
 		}
 
@@ -147,7 +178,13 @@ export const ModelPicker = ({
 								</CommandEmpty>
 								<CommandGroup>
 									{modelIds.map((model) => (
-										<CommandItem key={model} value={model} onSelect={onSelect}>
+										<CommandItem
+											key={model}
+											value={model}
+											onSelect={onSelect}
+											className={cn(
+												models?.[model]?.preferredIndex !== null ? "font-semibold" : "",
+											)}>
 											{model}
 											<Check
 												className={cn(
