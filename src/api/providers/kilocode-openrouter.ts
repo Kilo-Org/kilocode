@@ -1,10 +1,4 @@
-import {
-	ApiHandlerOptions,
-	PROMPT_CACHING_MODELS,
-	OPTIONAL_PROMPT_CACHING_MODELS,
-	ModelInfo,
-	ModelRecord,
-} from "../../shared/api"
+import { ApiHandlerOptions, PROMPT_CACHING_MODELS, OPTIONAL_PROMPT_CACHING_MODELS, ModelRecord } from "../../shared/api"
 import { OpenRouterHandler } from "./openrouter"
 import { getModelParams } from "../getModelParams"
 import { getModels } from "./fetchers/cache"
@@ -69,32 +63,8 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 	}
 
 	public override async fetchModel() {
-		const modelsFromCache = await getModels("kilocode-openrouter")
-		this.models = await this.sortModels(modelsFromCache)
+		this.models = await getModels("kilocode-openrouter")
 		return this.getModel()
-	}
-
-	async sortModels(models: ModelRecord): Promise<ModelRecord> {
-		const sortedModels: Record<string, ModelInfo> = {}
-
-		// First add preferred models, sorted by preferredIndex
-		Object.entries(models)
-			.filter(([_, model]) => model.preferredIndex !== undefined)
-			.sort(([_, modelA], [__, modelB]) => {
-				return (modelA.preferredIndex || 0) - (modelB.preferredIndex || 0) // || 0 to satisfy TS
-			})
-			.forEach(([id, model]) => {
-				sortedModels[id] = { ...model }
-			})
-
-		// Then add non-preferred models
-		Object.entries(models)
-			.filter(([_, model]) => model.preferredIndex === undefined)
-			.forEach(([id, model]) => {
-				sortedModels[id] = { ...model }
-			})
-
-		return sortedModels
 	}
 }
 
