@@ -335,8 +335,6 @@ const ApiOptions = ({
 		}
 	}
 
-	// kilocode_change removed unused descriptions as they're now fetched from the API
-
 	const onApiProviderChange = useCallback(
 		(value: ApiProvider) => {
 			// It would be much easier to have a single attribute that stores

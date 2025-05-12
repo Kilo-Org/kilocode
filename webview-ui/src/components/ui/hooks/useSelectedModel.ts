@@ -150,20 +150,6 @@ function getSelectedModelInfo({
 						return modelInfo
 					}
 				}
-
-				// If no match found, use the first model with the right preferredIndex
-				const sortedModels = modelEntries.sort(([, a], [, b]) => {
-					if (a.preferredIndex !== undefined && b.preferredIndex !== undefined) {
-						return a.preferredIndex - b.preferredIndex
-					}
-					if (a.preferredIndex !== undefined) return -1
-					if (b.preferredIndex !== undefined) return 1
-					return 0
-				})
-
-				if (sortedModels.length > 0) {
-					return sortedModels[0][1]
-				}
 			}
 
 			// Fallback to anthropic model if no match found
