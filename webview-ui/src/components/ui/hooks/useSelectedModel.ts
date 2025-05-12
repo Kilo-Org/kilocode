@@ -72,7 +72,7 @@ function getSelectedModelId({ provider, apiConfiguration }: { provider: string; 
 			) {
 				return displayModelId[apiConfiguration.kilocodeModel as keyof typeof displayModelId]
 			}
-			return apiConfiguration.kilocodeModel
+			return apiConfiguration.kilocodeModel || ""
 
 		// kilocode_change end
 		default:
