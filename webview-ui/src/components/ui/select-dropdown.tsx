@@ -184,7 +184,6 @@ export const SelectDropdown = React.memo(
 				[onChange, options],
 			)
 
-			debugger
 			return (
 				<Popover open={open} onOpenChange={onOpenChange} data-testid="dropdown-root">
 					<PopoverTrigger
