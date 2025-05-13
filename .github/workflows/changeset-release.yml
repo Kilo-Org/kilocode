@@ -62,7 +62,7 @@ jobs:
 
     # Job 2: Process version bump PR created by kilocode-bot
     changeset-pr-edit-approve:
-        name: Auto approve and merge Bump version PRs
+        name: Auto approve Bump version PRs
         runs-on: ubuntu-latest
         permissions:
             contents: write
