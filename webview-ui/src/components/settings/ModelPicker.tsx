@@ -19,6 +19,7 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 	Button,
+	SelectSeparator, // kilocode_change
 } from "@src/components/ui"
 
 import { ThinkingBudget } from "./ThinkingBudget"
@@ -183,23 +184,32 @@ export const ModelPicker = ({
 									)}
 								</CommandEmpty>
 								<CommandGroup>
-									{modelIds.map((model) => (
-										<CommandItem
-											key={model}
-											value={model}
-											onSelect={onSelect}
-											className={cn(
-												models?.[model]?.preferredIndex !== null ? "font-semibold" : "",
-											)}>
-											{model}
-											<Check
-												className={cn(
-													"size-4 p-0.5 ml-auto",
-													model === selectedModelId ? "opacity-100" : "opacity-0",
-												)}
-											/>
-										</CommandItem>
-									))}
+									{/* kilocode_change start */}
+									{modelIds.map((model, i) => {
+										const isPreferred = models?.[model]?.preferredIndex !== null
+										const previousModelWasPreferred =
+											models?.[modelIds[i - 1]]?.preferredIndex !== null
+
+										return (
+											<>
+												{!isPreferred && previousModelWasPreferred ? <SelectSeparator /> : null}
+												<CommandItem
+													key={model}
+													value={model}
+													onSelect={onSelect}
+													className={cn(isPreferred ? "font-semibold" : "")}>
+													{model}
+													<Check
+														className={cn(
+															"size-4 p-0.5 ml-auto",
+															model === selectedModelId ? "opacity-100" : "opacity-0",
+														)}
+													/>
+												</CommandItem>
+											</>
+										)
+									})}
+									{/* kilocode_change end */}
 								</CommandGroup>
 							</CommandList>
 							{searchValue && !modelIds.includes(searchValue) && (
