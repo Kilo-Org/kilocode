@@ -50,7 +50,7 @@
 
 ## Difference between Roo Code and Cline
 
-We're doing our best to combine the best of both worlds. Kilo Code is a feature-merge of both Roo Code and Cline. It has the best features of both, and we're working on making it even better!
+We're doing our best to combine the best of both worlds. Kilo Code combines all features of Cline, Roo, and adds a few of our own additions. It has the best features of both, and we're working on making it even better!
 
 No need to fiddle with API keys, Kilo Code ships with the latest AI models plugged in, including Claude 3.7 Sonnet and Gemini 2.5 Pro.
 

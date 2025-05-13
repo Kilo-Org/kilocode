@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code AI Agent (feature-merge van Cline + Roo)",
+	"extension.displayName": "Kilo Code AI Agent (Cline / Roo features combined)",
 	"extension.description": "Open Source AI-codeerassistent voor het plannen, bouwen en repareren van code.",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",
