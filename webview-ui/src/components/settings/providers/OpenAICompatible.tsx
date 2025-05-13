@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { useEvent } from "react-use"
 import { Checkbox } from "vscrui"
 import { VSCodeButton, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
@@ -91,6 +91,15 @@ export const OpenAICompatible = ({ apiConfiguration, setApiConfigurationField }:
 	}, [])
 
 	useEvent("message", onMessage)
+
+	// kilocode_change start
+	// Update the main configuration whenever custom headers change
+	useEffect(() => {
+		// Convert the array of [key, value] pairs to an object, filtering out headers with empty keys
+		const headersObject = Object.fromEntries(customHeaders.filter(([key]) => key.trim() !== ""))
+		setApiConfigurationField("openAiHeaders", headersObject)
+	}, [customHeaders, setApiConfigurationField])
+	// kilocode_change end
 
 	return (
 		<>
