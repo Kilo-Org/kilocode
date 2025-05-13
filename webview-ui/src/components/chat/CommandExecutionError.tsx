@@ -28,7 +28,7 @@ export const CommandExecutionError = () => {
 					/>
 				</div>
 				<a
-					href="http://kilocode.ai/docs/troubleshooting/shell-integration/"
+					href="https://kilocode.ai/docs/features/shell-integration"
 					className="underline"
 					style={{ color: "inherit" }}>
 					{t("chat:shellIntegration.troubleshooting")}
