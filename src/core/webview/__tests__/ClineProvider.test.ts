@@ -386,7 +386,11 @@ describe("ClineProvider", () => {
 			taskHistory: [],
 			shouldShowAnnouncement: false,
 			apiConfiguration: {
+				// kilocode_change start
 				apiProvider: "kilocode",
+				kilocodeModel: "gemini25",
+				kilocodeToken: "kilocode-token",
+				// kilocode_change end
 			},
 			customInstructions: undefined,
 			alwaysAllowReadOnly: false,

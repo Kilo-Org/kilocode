@@ -10,6 +10,14 @@ import SettingsView from "../SettingsView"
 // Mock vscode API
 jest.mock("@src/utils/vscode", () => ({ vscode: { postMessage: jest.fn() } }))
 
+// kilocode_change start
+// Mock the validate functions to prevent validation errors
+jest.mock("@src/utils/validate", () => ({
+	validateApiConfiguration: jest.fn().mockReturnValue(undefined),
+	validateModelId: jest.fn().mockReturnValue(undefined),
+}))
+// kilocode_change end
+
 // Mock all lucide-react icons with a proxy to handle any icon requested
 jest.mock("lucide-react", () => {
 	return new Proxy(

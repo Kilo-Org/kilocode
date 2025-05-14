@@ -86,7 +86,7 @@ export function validateApiConfiguration(apiConfiguration: ProviderSettings): st
 			break
 		// kilocode_change start
 		case "kilocode":
-			if (!apiConfiguration.kilocodeToken) {
+			if (!apiConfiguration.kilocodeToken || !apiConfiguration.kilocodeModel) {
 				return i18next.t("settings:validation.apiKey")
 			}
 			break
