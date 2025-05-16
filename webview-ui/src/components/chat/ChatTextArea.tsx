@@ -281,6 +281,22 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			(type: ContextMenuOptionType, value?: string) => {
 				// kilocode_change start
 				if (type === ContextMenuOptionType.Image) {
+					// Close the context menu and remove the @character in this case
+					setShowContextMenu(false)
+					setSelectedType(null)
+
+					if (textAreaRef.current) {
+						const beforeCursor = textAreaRef.current.value.slice(0, cursorPosition)
+						const afterCursor = textAreaRef.current.value.slice(cursorPosition)
+						const lastAtIndex = beforeCursor.lastIndexOf("@")
+
+						if (lastAtIndex !== -1) {
+							const newValue = beforeCursor.slice(0, lastAtIndex) + afterCursor
+							setInputValue(newValue)
+						}
+					}
+
+					// Call the image selection function
 					onSelectImages()
 					return
 				}
