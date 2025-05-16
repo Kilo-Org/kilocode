@@ -4,7 +4,9 @@
 	"main": "index.js",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
-		"build": "tsc -p ./tsconfig.npm.json"
+		"build": "node ./build.js",
+		"clean": "rimraf dist",
+		"prebuild": "npm run clean"
 	},
 	"author": "",
 	"license": "ISC",

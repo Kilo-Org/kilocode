@@ -1,27 +1,11 @@
-// import type { Position, Range, RangeInFile } from "@continuedev/core"
-
 import * as vscode from "vscode"
 import * as path from "path"
-
-// Mock types to replace @continuedev dependencies
-interface Position {
-	line: number
-	character: number
-}
-
-interface Range {
-	start: Position
-	end: Position
-}
-
-interface RangeInFile {
-	filepath: string
-	range: Range
-}
+import type { Position, Range, RangeInFile } from "continue-wrapper"
 
 /**
  * Adapter that provides IDE functionality required by Continue's autocomplete
  * Note: This is a simplified version that doesn't implement the full IDE interface
+ * but provides the essential methods needed for autocomplete functionality
  */
 export class KiloCodeIDEAdapter {
 	/**
@@ -229,7 +213,13 @@ export class KiloCodeIDEAdapter {
 
 	// Additional required methods to satisfy the IDE interface
 	async getIdeInfo(): Promise<any> {
-		return { name: "vscode", version: vscode.version }
+		return {
+			ideType: "vscode",
+			name: "vscode",
+			version: vscode.version,
+			remoteName: "",
+			extensionVersion: vscode.extensions.getExtension("kilocode.kilo-code")?.packageJSON?.version || "unknown",
+		}
 	}
 
 	async getIdeSettings(): Promise<any> {
