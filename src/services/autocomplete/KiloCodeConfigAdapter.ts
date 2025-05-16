@@ -13,18 +13,18 @@ export class KiloCodeConfigAdapter {
 		return {
 			config: {
 				tabAutocompleteOptions: {
-					debounceDelay: config.get("autocomplete.debounceDelay") || 150,
-					useCache: config.get("autocomplete.useCache") || true,
-					useImports: config.get("autocomplete.useImports") || true,
-					useRecentlyEdited: config.get("autocomplete.useRecentlyEdited") || true,
-					onlyMyCode: config.get("autocomplete.onlyMyCode") || true,
-					multilineCompletions: config.get("autocomplete.multilineCompletions") || "auto",
+					debounceDelay: config.get<number>("autocomplete.debounceDelay") || 150,
+					useCache: config.get<boolean>("autocomplete.useCache") || true,
+					useImports: config.get<boolean>("autocomplete.useImports") || true,
+					useRecentlyEdited: config.get<boolean>("autocomplete.useRecentlyEdited") || true,
+					onlyMyCode: config.get<boolean>("autocomplete.onlyMyCode") || true,
+					multilineCompletions: config.get<string>("autocomplete.multilineCompletions") || "auto",
 				},
 				selectedModelByRole: {
 					autocomplete: {
-						model: config.get("autocomplete.model") || "ollama/qwen2.5-coder:1.5b",
-						apiKey: config.get("autocomplete.apiKey") || "",
-						providerName: config.get("autocomplete.providerName") || "ollama",
+						model: config.get<string>("autocomplete.model") || "ollama/qwen2.5-coder:1.5b",
+						apiKey: config.get<string>("autocomplete.apiKey") || "",
+						providerName: config.get<string>("autocomplete.providerName") || "ollama",
 					},
 				},
 			},
