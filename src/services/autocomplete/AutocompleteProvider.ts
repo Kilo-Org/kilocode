@@ -4,9 +4,7 @@ import { KiloCodeIDEAdapter } from "./KiloCodeIDEAdapter"
 import { KiloCodeConfigAdapter } from "./KiloCodeConfigAdapter"
 import { ApiHandler, buildApiHandler } from "../../api"
 import { ProviderSettings } from "../../shared/api"
-import { AutocompleteCodeSnippet } from "continue-wrapper"
-// import { AutocompleteCodeSnippet } from "@continuedev/core/autocomplete/snippets/types"
-// import { RecentlyEditedRange } from "@continuedev/core/autocomplete/util/types"
+import { AutocompleteCodeSnippet, RecentlyEditedRange } from "continue-wrapper/types"
 
 class CompletionProvider {
 	constructor(
