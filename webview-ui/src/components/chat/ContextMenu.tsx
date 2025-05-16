@@ -93,6 +93,10 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 				return <span>Paste URL to fetch contents</span>
 			case ContextMenuOptionType.NoResults:
 				return <span>No results found</span>
+			// kilocode_change start
+			case ContextMenuOptionType.Image:
+				return <span>Add Image</span>
+			// kilocode_change end
 			case ContextMenuOptionType.Git:
 				if (option.value) {
 					return (
@@ -173,6 +177,10 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 				return "terminal"
 			case ContextMenuOptionType.URL:
 				return "link"
+			// kilocode_change start
+			case ContextMenuOptionType.Image:
+				return "device-camera"
+			// kilocode_change end
 			case ContextMenuOptionType.Git:
 				return "git-commit"
 			case ContextMenuOptionType.NoResults:

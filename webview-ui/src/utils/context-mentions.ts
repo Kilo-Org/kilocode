@@ -95,6 +95,7 @@ export enum ContextMenuOptionType {
 	Git = "git",
 	NoResults = "noResults",
 	Mode = "mode", // Add mode type
+	Image = "image", // kilocode_change
 }
 
 export interface ContextMenuQueryItem {
@@ -187,6 +188,7 @@ export function getContextMenuOptions(
 			{ type: ContextMenuOptionType.URL },
 			{ type: ContextMenuOptionType.Folder },
 			{ type: ContextMenuOptionType.File },
+			{ type: ContextMenuOptionType.Image }, // kilocode_change
 			{ type: ContextMenuOptionType.Git },
 		]
 	}

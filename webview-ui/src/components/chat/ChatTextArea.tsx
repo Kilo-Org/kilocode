@@ -279,6 +279,13 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 		const handleMentionSelect = useCallback(
 			(type: ContextMenuOptionType, value?: string) => {
+				// kilocode_change start
+				if (type === ContextMenuOptionType.Image) {
+					onSelectImages()
+					return
+				}
+				// kilocode_change end
+
 				if (type === ContextMenuOptionType.NoResults) {
 					return
 				}
