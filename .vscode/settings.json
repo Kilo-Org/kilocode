@@ -10,5 +10,11 @@
 	},
 	// Turn off tsc task auto detection since we have the necessary tasks as npm scripts
 	"typescript.tsc.autoDetect": "off",
-	"i18n-ally.localesPaths": ["webview-ui/src/i18n", "webview-ui/src/__mocks__/i18n", "webview-ui/src/i18n/locales"]
+	"i18n-ally.localesPaths": [
+		"webview-ui/src/i18n",
+		"webview-ui/src/__mocks__/i18n",
+		"webview-ui/src/i18n/locales"
+	],
+	"typescript.tsdk": "node_modules/typescript/lib",
+	"vitest.disableWorkspaceWarning": true
 }

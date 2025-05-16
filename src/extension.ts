@@ -27,6 +27,7 @@ import {
 	registerCommands,
 	registerCodeActions,
 	registerTerminalActions,
+	registerAutocomplete,
 	CodeActionProvider,
 } from "./activate"
 import { initializeI18n } from "./i18n"
@@ -133,6 +134,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	registerCodeActions(context)
 	registerTerminalActions(context)
+	registerAutocomplete(context)
 
 	// Allows other extensions to activate once Kilo Code is ready.
 	vscode.commands.executeCommand("kilo-code.activationCompleted")

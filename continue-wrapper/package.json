@@ -1,0 +1,19 @@
+{
+	"name": "continue-wrapper",
+	"version": "0.0.1",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"build": "tsc -p ./tsconfig.npm.json"
+	},
+	"author": "",
+	"license": "ISC",
+	"description": "",
+	"dependencies": {
+		"@continuedev/config-types": "file:../continue/packages/config-types",
+		"@continuedev/core": "file:../continue/core",
+		"@continuedev/fetch": "file:../continue/packages/fetch",
+		"@continuedev/llm-info": "file:../continue/packages/llm-info",
+		"@continuedev/openai-adapters": "file:../continue/packages/openai-adapters"
+	}
+}

@@ -390,6 +390,72 @@
 					"type": "string",
 					"default": "",
 					"description": "%settings.customStoragePath.description%"
+				},
+				"kilo-code.autocomplete.enabled": {
+					"type": "boolean",
+					"default": true,
+					"description": "Enable or disable autocomplete functionality"
+				},
+				"kilo-code.autocomplete.debounceDelay": {
+					"type": "number",
+					"default": 150,
+					"description": "Delay in milliseconds before triggering autocomplete"
+				},
+				"kilo-code.autocomplete.useCache": {
+					"type": "boolean",
+					"default": true,
+					"description": "Use cache for autocomplete suggestions"
+				},
+				"kilo-code.autocomplete.useImports": {
+					"type": "boolean",
+					"default": true,
+					"description": "Consider imports when generating autocomplete suggestions"
+				},
+				"kilo-code.autocomplete.useRecentlyEdited": {
+					"type": "boolean",
+					"default": true,
+					"description": "Consider recently edited code when generating autocomplete suggestions"
+				},
+				"kilo-code.autocomplete.onlyMyCode": {
+					"type": "boolean",
+					"default": true,
+					"description": "Only consider user's code when generating autocomplete suggestions"
+				},
+				"kilo-code.autocomplete.multilineCompletions": {
+					"type": "string",
+					"enum": [
+						"always",
+						"never",
+						"auto"
+					],
+					"default": "auto",
+					"description": "Controls multiline completions for autocomplete"
+				},
+				"kilo-code.autocomplete.disableInFiles": {
+					"type": "string",
+					"default": "*.md,*.txt",
+					"description": "List of comma-separated glob patterns to disable autocomplete in matching files"
+				},
+				"kilo-code.autocomplete.model": {
+					"type": "string",
+					"default": "qwen2.5-coder:1.5b",
+					"description": "LLM model to use for autocomplete"
+				},
+				"kilo-code.autocomplete.providerName": {
+					"type": "string",
+					"enum": [
+						"ollama",
+						"openai",
+						"anthropic",
+						"mistral"
+					],
+					"default": "ollama",
+					"description": "LLM provider to use for autocomplete"
+				},
+				"kilo-code.autocomplete.apiKey": {
+					"type": "string",
+					"default": "",
+					"description": "API key for the LLM provider (not needed for Ollama)"
 				}
 			}
 		}
@@ -445,6 +511,7 @@
 		"@anthropic-ai/sdk": "^0.37.0",
 		"@anthropic-ai/vertex-sdk": "^0.7.0",
 		"@aws-sdk/client-bedrock-runtime": "^3.779.0",
+		"@continuedev/core": "^1.1.0",
 		"@google/genai": "^0.13.0",
 		"@mistralai/mistralai": "^1.3.6",
 		"@modelcontextprotocol/sdk": "^1.9.0",
@@ -458,6 +525,7 @@
 		"cheerio": "^1.0.0",
 		"chokidar": "^4.0.1",
 		"clone-deep": "^4.0.1",
+		"continue-wrapper": "file:./continue-wrapper",
 		"default-shell": "^2.2.0",
 		"delay": "^6.0.0",
 		"diff": "^5.2.0",
@@ -510,11 +578,14 @@
 		"@types/diff-match-patch": "^1.0.36",
 		"@types/glob": "^8.1.0",
 		"@types/jest": "^29.5.14",
+		"@types/jsdom": "^21.1.7",
+		"@types/json-schema": "^7.0.15",
 		"@types/mocha": "^10.0.10",
 		"@types/node": "20.x",
 		"@types/node-cache": "^4.1.3",
 		"@types/node-ipc": "^9.2.3",
 		"@types/ps-tree": "^1.1.6",
+		"@types/request": "^2.48.12",
 		"@types/string-similarity": "^4.0.2",
 		"@typescript-eslint/eslint-plugin": "^7.14.1",
 		"@typescript-eslint/parser": "^7.11.0",
@@ -532,6 +603,7 @@
 		"mkdirp": "^3.0.1",
 		"nock": "^14.0.4",
 		"npm-run-all2": "^8.0.1",
+		"patch-package": "^8.0.0",
 		"prettier": "^3.4.2",
 		"rimraf": "^6.0.1",
 		"ts-jest": "^29.2.5",
