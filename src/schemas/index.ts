@@ -703,6 +703,7 @@ export const globalSettingsSchema = z.object({
 	alwaysAllowSubtasks: z.boolean().optional(),
 	alwaysAllowExecute: z.boolean().optional(),
 	allowedCommands: z.array(z.string()).optional(),
+	allowedMaxRequests: z.number().optional(),
 
 	browserToolEnabled: z.boolean().optional(),
 	browserViewportSize: z.string().optional(),
@@ -783,6 +784,7 @@ const globalSettingsRecord: GlobalSettingsRecord = {
 	alwaysAllowSubtasks: undefined,
 	alwaysAllowExecute: undefined,
 	allowedCommands: undefined,
+	allowedMaxRequests: undefined,
 
 	browserToolEnabled: undefined,
 	browserViewportSize: undefined,
@@ -932,6 +934,7 @@ export const clineAsks = [
 	"browser_action_launch",
 	"use_mcp_server",
 	"payment_required_prompt", // kilocode_change: Added for the low credits dialog
+	"auto_approval_max_req_reached",
 ] as const
 
 export const clineAskSchema = z.enum(clineAsks)

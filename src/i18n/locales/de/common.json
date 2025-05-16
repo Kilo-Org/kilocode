@@ -102,5 +102,12 @@
 			"groqApiKey": "Groq API-Schlüssel",
 			"getGroqApiKey": "Groq API-Schlüssel erhalten"
 		}
+	},
+	"ask": {
+		"autoApprovedRequestLimitReached": {
+			"title": "Limit für automatisch genehmigte Anfragen erreicht",
+			"description": "Kilo Code hat das Limit von {{count}} automatisch genehmigten API-Anfragen erreicht. Möchten Sie den Zähler zurücksetzen und mit der Aufgabe fortfahren?",
+			"button": "Zurücksetzen und Fortfahren"
+		}
 	}
 }

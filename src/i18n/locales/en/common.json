@@ -96,5 +96,12 @@
 	"input": {
 		"task_prompt": "What should Kilo Code do?",
 		"task_placeholder": "Build, find, ask something"
+	},
+	"ask": {
+		"autoApprovedRequestLimitReached": {
+			"title": "Auto-Approved Request Limit Reached",
+			"description": "Kilo Code has reached the auto-approved limit of {{count}} API requests. Would you like to reset the count and proceed with the task?",
+			"button": "Reset and Continue"
+		}
 	}
 }

@@ -1,526 +1,529 @@
 {
-	"common": {
-		"save": "Zapisz",
-		"done": "Gotowe",
-		"cancel": "Anuluj",
-		"reset": "Resetuj",
-		"select": "Wybierz",
-		"add": "Dodaj nagłówek",
-		"remove": "Usuń"
-	},
-	"header": {
-		"title": "Ustawienia",
-		"saveButtonTooltip": "Zapisz zmiany",
-		"nothingChangedTooltip": "Nic się nie zmieniło",
-		"doneButtonTooltip": "Odrzuć niezapisane zmiany i zamknij panel ustawień"
-	},
-	"unsavedChangesDialog": {
-		"title": "Niezapisane zmiany",
-		"description": "Czy chcesz odrzucić zmiany i kontynuować?",
-		"cancelButton": "Anuluj",
-		"discardButton": "Odrzuć zmiany"
-	},
-	"sections": {
-		"providers": "Dostawcy",
-		"autoApprove": "Auto-zatwierdzanie",
-		"browser": "Dostęp komputera",
-		"checkpoints": "Punkty kontrolne",
-		"notifications": "Powiadomienia",
-		"contextManagement": "Kontekst",
-		"terminal": "Terminal",
-		"experimental": "Eksperymentalne",
-		"language": "Język",
-		"about": "O Kilo Code"
-	},
-	"autoApprove": {
-		"description": "Pozwól Kilo Code na automatyczne wykonywanie operacji bez wymagania zatwierdzenia. Włącz te ustawienia tylko jeśli w pełni ufasz AI i rozumiesz związane z tym zagrożenia bezpieczeństwa.",
-		"readOnly": {
-			"label": "Odczyt",
-			"description": "Gdy włączone, Kilo Code automatycznie będzie wyświetlać zawartość katalogów i czytać pliki bez konieczności klikania przycisku Zatwierdź.",
-			"outsideWorkspace": {
-				"label": "Uwzględnij pliki poza obszarem roboczym",
-				"description": "Pozwól Kilo Code na odczyt plików poza bieżącym obszarem roboczym bez konieczności zatwierdzania."
-			}
-		},
-		"write": {
-			"label": "Zapis",
-			"description": "Automatycznie twórz i edytuj pliki bez konieczności zatwierdzania",
-			"delayLabel": "Opóźnienie po zapisach, aby umożliwić diagnostyce wykrycie potencjalnych problemów",
-			"outsideWorkspace": {
-				"label": "Uwzględnij pliki poza obszarem roboczym",
-				"description": "Pozwól Kilo Code na tworzenie i edycję plików poza bieżącym obszarem roboczym bez konieczności zatwierdzania."
-			}
-		},
-		"browser": {
-			"label": "Przeglądarka",
-			"description": "Automatycznie wykonuj akcje przeglądarki bez konieczności zatwierdzania. Uwaga: Dotyczy tylko gdy model obsługuje używanie komputera"
-		},
-		"retry": {
-			"label": "Ponów",
-			"description": "Automatycznie ponawiaj nieudane żądania API, gdy serwer zwraca odpowiedź z błędem",
-			"delayLabel": "Opóźnienie przed ponowieniem żądania"
-		},
-		"mcp": {
-			"label": "MCP",
-			"description": "Włącz automatyczne zatwierdzanie poszczególnych narzędzi MCP w widoku Serwerów MCP (wymaga zarówno tego ustawienia, jak i pola wyboru \"Zawsze zezwalaj\" narzędzia)"
-		},
-		"modeSwitch": {
-			"label": "Tryb",
-			"description": "Automatycznie przełączaj między różnymi trybami bez konieczności zatwierdzania"
-		},
-		"subtasks": {
-			"label": "Podzadania",
-			"description": "Zezwalaj na tworzenie i ukończenie podzadań bez konieczności zatwierdzania"
-		},
-		"execute": {
-			"label": "Wykonaj",
-			"description": "Automatycznie wykonuj dozwolone polecenia terminala bez konieczności zatwierdzania",
-			"allowedCommands": "Dozwolone polecenia auto-wykonania",
-			"allowedCommandsDescription": "Prefiksy poleceń, które mogą być automatycznie wykonywane, gdy \"Zawsze zatwierdzaj operacje wykonania\" jest włączone. Dodaj * aby zezwolić na wszystkie polecenia (używaj z ostrożnością).",
-			"commandPlaceholder": "Wprowadź prefiks polecenia (np. 'git ')",
-			"addButton": "Dodaj"
-		},
-		"showMenu": {
-			"label": "Pokaż menu automatycznego zatwierdzania w widoku czatu",
-			"description": "Gdy włączone, menu automatycznego zatwierdzania będzie wyświetlane na dole widoku czatu, umożliwiając szybki dostęp do ustawień automatycznego zatwierdzania"
-		}
-	},
-	"providers": {
-		"configProfile": "Profil konfiguracji",
-		"providerDocumentation": "Dokumentacja {{provider}}",
-		"description": "Zapisz różne konfiguracje API, aby szybko przełączać się między dostawcami i ustawieniami.",
-		"apiProvider": "Dostawca API",
-		"model": "Model",
-		"nameEmpty": "Nazwa nie może być pusta",
-		"nameExists": "Profil o tej nazwie już istnieje",
-		"deleteProfile": "Usuń profil",
-		"invalidArnFormat": "Nieprawidłowy format ARN. Sprawdź powyższe przykłady.",
-		"enterNewName": "Wprowadź nową nazwę",
-		"addProfile": "Dodaj profil",
-		"renameProfile": "Zmień nazwę profilu",
-		"newProfile": "Nowy profil konfiguracji",
-		"enterProfileName": "Wprowadź nazwę profilu",
-		"createProfile": "Utwórz profil",
-		"cannotDeleteOnlyProfile": "Nie można usunąć jedynego profilu",
-		"searchPlaceholder": "Szukaj profili",
-		"noMatchFound": "Nie znaleziono pasujących profili",
-		"vscodeLmDescription": "Interfejs API modelu językowego VS Code umożliwia uruchamianie modeli dostarczanych przez inne rozszerzenia VS Code (w tym, ale nie tylko, GitHub Copilot). Najłatwiejszym sposobem na rozpoczęcie jest zainstalowanie rozszerzeń Copilot i Copilot Chat z VS Code Marketplace.",
-		"awsCustomArnUse": "Wprowadź prawidłowy Amazon Bedrock ARN dla modelu, którego chcesz użyć. Przykłady formatu:",
-		"awsCustomArnDesc": "Upewnij się, że region w ARN odpowiada wybranemu powyżej regionowi AWS.",
-		"openRouterApiKey": "Klucz API OpenRouter",
-		"getOpenRouterApiKey": "Uzyskaj klucz API OpenRouter",
-		"apiKeyStorageNotice": "Klucze API są bezpiecznie przechowywane w Tajnym Magazynie VSCode",
-		"glamaApiKey": "Klucz API Glama",
-		"getGlamaApiKey": "Uzyskaj klucz API Glama",
-		"useCustomBaseUrl": "Użyj niestandardowego URL bazowego",
-		"useHostHeader": "Użyj niestandardowego nagłówka Host",
-		"useLegacyFormat": "Użyj starszego formatu API OpenAI",
-		"customHeaders": "Niestandardowe nagłówki",
-		"headerName": "Nazwa nagłówka",
-		"headerValue": "Wartość nagłówka",
-		"noCustomHeaders": "Brak zdefiniowanych niestandardowych nagłówków. Kliknij przycisk +, aby dodać.",
-		"requestyApiKey": "Klucz API Requesty",
-		"getRequestyApiKey": "Uzyskaj klucz API Requesty",
-		"refreshModels": {
-			"label": "Odśwież modele",
-			"hint": "Proszę ponownie otworzyć ustawienia, aby zobaczyć najnowsze modele."
-		},
-		"openRouterTransformsText": "Kompresuj podpowiedzi i łańcuchy wiadomości do rozmiaru kontekstu (<a>Transformacje OpenRouter</a>)",
-		"anthropicApiKey": "Klucz API Anthropic",
-		"getAnthropicApiKey": "Uzyskaj klucz API Anthropic",
-		"anthropicUseAuthToken": "Przekaż klucz API Anthropic jako nagłówek Authorization zamiast X-Api-Key",
-		"chutesApiKey": "Klucz API Chutes",
-		"getChutesApiKey": "Uzyskaj klucz API Chutes",
-		"deepSeekApiKey": "Klucz API DeepSeek",
-		"getDeepSeekApiKey": "Uzyskaj klucz API DeepSeek",
-		"geminiApiKey": "Klucz API Gemini",
-		"getGroqApiKey": "Uzyskaj klucz API Groq",
-		"groqApiKey": "Klucz API Groq",
-		"getGeminiApiKey": "Uzyskaj klucz API Gemini",
-		"openAiApiKey": "Klucz API OpenAI",
-		"openAiBaseUrl": "URL bazowy",
-		"getOpenAiApiKey": "Uzyskaj klucz API OpenAI",
-		"mistralApiKey": "Klucz API Mistral",
-		"getMistralApiKey": "Uzyskaj klucz API Mistral / Codestral",
-		"codestralBaseUrl": "URL bazowy Codestral (opcjonalnie)",
-		"codestralBaseUrlDesc": "Ustaw opcjonalny URL dla modeli Codestral.",
-		"xaiApiKey": "Klucz API xAI",
-		"getXaiApiKey": "Uzyskaj klucz API xAI",
-		"litellmApiKey": "Klucz API LiteLLM",
-		"litellmBaseUrl": "URL bazowy LiteLLM",
-		"awsCredentials": "Poświadczenia AWS",
-		"awsProfile": "Profil AWS",
-		"awsProfileName": "Nazwa profilu AWS",
-		"awsAccessKey": "Klucz dostępu AWS",
-		"awsSecretKey": "Klucz tajny AWS",
-		"awsSessionToken": "Token sesji AWS",
-		"awsRegion": "Region AWS",
-		"awsCrossRegion": "Użyj wnioskowania międzyregionalnego",
-		"enablePromptCaching": "Włącz buforowanie podpowiedzi",
-		"enablePromptCachingTitle": "Włącz buforowanie podpowiedzi, aby poprawić wydajność i zmniejszyć koszty dla obsługiwanych modeli.",
-		"cacheUsageNote": "Uwaga: Jeśli nie widzisz użycia bufora, spróbuj wybrać inny model, a następnie ponownie wybrać żądany model.",
-		"vscodeLmModel": "Model językowy",
-		"vscodeLmWarning": "Uwaga: To bardzo eksperymentalna integracja, a wsparcie dostawcy może się różnić. Jeśli otrzymasz błąd dotyczący nieobsługiwanego modelu, jest to problem po stronie dostawcy.",
-		"googleCloudSetup": {
-			"title": "Aby korzystać z Google Cloud Vertex AI, potrzebujesz:",
-			"step1": "1. Utworzyć konto Google Cloud, włączyć API Vertex AI i włączyć żądane modele Claude.",
-			"step2": "2. Zainstalować Google Cloud CLI i skonfigurować domyślne poświadczenia aplikacji.",
-			"step3": "3. Lub utworzyć konto usługi z poświadczeniami."
-		},
-		"googleCloudCredentials": "Poświadczenia Google Cloud",
-		"googleCloudKeyFile": "Ścieżka pliku klucza Google Cloud",
-		"googleCloudProjectId": "ID projektu Google Cloud",
-		"googleCloudRegion": "Region Google Cloud",
-		"lmStudio": {
-			"baseUrl": "URL bazowy (opcjonalnie)",
-			"modelId": "ID modelu",
-			"speculativeDecoding": "Włącz dekodowanie spekulacyjne",
-			"draftModelId": "ID modelu szkicu",
-			"draftModelDesc": "Aby dekodowanie spekulacyjne działało poprawnie, model szkicu musi pochodzić z tej samej rodziny modeli.",
-			"selectDraftModel": "Wybierz model szkicu",
-			"noModelsFound": "Nie znaleziono modeli szkicu. Upewnij się, że LM Studio jest uruchomione z włączonym trybem serwera.",
-			"description": "LM Studio pozwala na lokalne uruchamianie modeli na twoim komputerze. Aby rozpocząć, zapoznaj się z ich <a>przewodnikiem szybkiego startu</a>. Będziesz również musiał uruchomić funkcję <b>serwera lokalnego</b> LM Studio, aby używać go z tym rozszerzeniem. <span>Uwaga:</span> Kilo Code używa złożonych podpowiedzi i działa najlepiej z modelami Claude. Modele o niższych możliwościach mogą nie działać zgodnie z oczekiwaniami."
-		},
-		"ollama": {
-			"baseUrl": "URL bazowy (opcjonalnie)",
-			"modelId": "ID modelu",
-			"description": "Ollama pozwala na lokalne uruchamianie modeli na twoim komputerze. Aby rozpocząć, zapoznaj się z przewodnikiem szybkiego startu.",
-			"warning": "Uwaga: Kilo Code używa złożonych podpowiedzi i działa najlepiej z modelami Claude. Modele o niższych możliwościach mogą nie działać zgodnie z oczekiwaniami."
-		},
-		"unboundApiKey": "Klucz API Unbound",
-		"getUnboundApiKey": "Uzyskaj klucz API Unbound",
-		"humanRelay": {
-			"description": "Nie jest wymagany klucz API, ale użytkownik będzie musiał pomóc w kopiowaniu i wklejaniu informacji do czatu internetowego AI.",
-			"instructions": "Podczas użytkowania pojawi się okno dialogowe, a bieżąca wiadomość zostanie automatycznie skopiowana do schowka. Będziesz musiał wkleić ją do internetowych wersji AI (takich jak ChatGPT lub Claude), a następnie skopiować odpowiedź AI z powrotem do okna dialogowego i kliknąć przycisk potwierdzenia."
-		},
-		"openRouter": {
-			"providerRouting": {
-				"title": "Routing dostawców OpenRouter",
-				"description": "OpenRouter kieruje żądania do najlepszych dostępnych dostawców dla Twojego modelu. Domyślnie żądania są równoważone między najlepszymi dostawcami, aby zmaksymalizować czas działania. Możesz jednak wybrać konkretnego dostawcę do użycia z tym modelem.",
-				"learnMore": "Dowiedz się więcej o routingu dostawców"
-			}
-		},
-		"customModel": {
-			"capabilities": "Skonfiguruj możliwości i ceny swojego niestandardowego modelu zgodnego z OpenAI. Zachowaj ostrożność podczas określania możliwości modelu, ponieważ mogą one wpływać na wydajność Kilo Code.",
-			"maxTokens": {
-				"label": "Maksymalna liczba tokenów wyjściowych",
-				"description": "Maksymalna liczba tokenów, które model może wygenerować w odpowiedzi. (Określ -1, aby pozwolić serwerowi ustawić maksymalną liczbę tokenów.)"
-			},
-			"contextWindow": {
-				"label": "Rozmiar okna kontekstu",
-				"description": "Całkowita liczba tokenów (wejście + wyjście), które model może przetworzyć."
-			},
-			"imageSupport": {
-				"label": "Obsługa obrazów",
-				"description": "Czy model jest w stanie przetwarzać i rozumieć obrazy?"
-			},
-			"computerUse": {
-				"label": "Użycie komputera",
-				"description": "Czy model jest w stanie wchodzić w interakcję z przeglądarką? (np. Claude 3.7 Sonnet)."
-			},
-			"promptCache": {
-				"label": "Buforowanie podpowiedzi",
-				"description": "Czy model jest w stanie buforować podpowiedzi?"
-			},
-			"pricing": {
-				"input": {
-					"label": "Cena wejścia",
-					"description": "Koszt za milion tokenów wejściowych/podpowiedzi. Wpływa to na koszt wysyłania kontekstu i instrukcji do modelu."
-				},
-				"output": {
-					"label": "Cena wyjścia",
-					"description": "Koszt za milion tokenów odpowiedzi modelu. Wpływa to na koszt generowanej treści i uzupełnień."
-				},
-				"cacheReads": {
-					"label": "Cena odczytów bufora",
-					"description": "Koszt za milion tokenów za odczyt z bufora. Ta cena jest naliczana przy otrzymywaniu zbuforowanej odpowiedzi."
-				},
-				"cacheWrites": {
-					"label": "Cena zapisów bufora",
-					"description": "Koszt za milion tokenów za zapis do bufora. Ta cena jest naliczana przy pierwszym buforowaniu podpowiedzi."
-				}
-			},
-			"resetDefaults": "Przywróć domyślne"
-		},
-		"rateLimitSeconds": {
-			"label": "Limit szybkości",
-			"description": "Minimalny czas między żądaniami API."
-		},
-		"reasoningEffort": {
-			"label": "Wysiłek rozumowania modelu",
-			"high": "Wysoki",
-			"medium": "Średni",
-			"low": "Niski"
-		},
-		"setReasoningLevel": "Włącz wysiłek rozumowania"
-	},
-	"browser": {
-		"enable": {
-			"label": "Włącz narzędzie przeglądarki",
-			"description": "Gdy włączone, Kilo Code może używać przeglądarki do interakcji ze stronami internetowymi podczas korzystania z modeli obsługujących używanie komputera."
-		},
-		"viewport": {
-			"label": "Rozmiar viewportu",
-			"description": "Wybierz rozmiar viewportu dla interakcji przeglądarki. Wpływa to na sposób wyświetlania stron internetowych i interakcji z nimi.",
-			"options": {
-				"largeDesktop": "Duży pulpit (1280x800)",
-				"smallDesktop": "Mały pulpit (900x600)",
-				"tablet": "Tablet (768x1024)",
-				"mobile": "Telefon (360x640)"
-			}
-		},
-		"screenshotQuality": {
-			"label": "Jakość zrzutów ekranu",
-			"description": "Dostosuj jakość WebP zrzutów ekranu przeglądarki. Wyższe wartości zapewniają wyraźniejsze zrzuty ekranu, ale zwiększają zużycie token."
-		},
-		"remote": {
-			"label": "Użyj zdalnego połączenia przeglądarki",
-			"description": "Połącz się z przeglądarką Chrome uruchomioną z włączonym zdalnym debugowaniem (--remote-debugging-port=9222).",
-			"urlPlaceholder": "Niestandardowy URL (np. http://localhost:9222)",
-			"testButton": "Testuj połączenie",
-			"testingButton": "Testowanie...",
-			"instructions": "Wprowadź adres hosta protokołu DevTools lub pozostaw puste, aby automatycznie wykryć lokalne instancje Chrome. Przycisk Test Połączenia spróbuje użyć niestandardowego URL, jeśli podany, lub automatycznie wykryje, jeśli pole jest puste."
-		}
-	},
-	"checkpoints": {
-		"enable": {
-			"label": "Włącz automatyczne punkty kontrolne",
-			"description": "Gdy włączone, Kilo Code automatycznie utworzy punkty kontrolne podczas wykonywania zadań, ułatwiając przeglądanie zmian lub powrót do wcześniejszych stanów."
-		}
-	},
-	"notifications": {
-		"sound": {
-			"label": "Włącz efekty dźwiękowe",
-			"description": "Gdy włączone, Kilo Code będzie odtwarzać efekty dźwiękowe dla powiadomień i zdarzeń.",
-			"volumeLabel": "Głośność"
-		},
-		"tts": {
-			"label": "Włącz syntezę mowy",
-			"description": "Gdy włączone, Kilo Code będzie czytać na głos swoje odpowiedzi za pomocą syntezy mowy.",
-			"speedLabel": "Szybkość"
-		}
-	},
-	"contextManagement": {
-		"description": "Kontroluj, jakie informacje są zawarte w oknie kontekstu AI, wpływając na zużycie token i jakość odpowiedzi",
-		"openTabs": {
-			"label": "Limit kontekstu otwartych kart",
-			"description": "Maksymalna liczba otwartych kart VSCode do uwzględnienia w kontekście. Wyższe wartości zapewniają więcej kontekstu, ale zwiększają zużycie token."
-		},
-		"workspaceFiles": {
-			"label": "Limit kontekstu plików obszaru roboczego",
-			"description": "Maksymalna liczba plików do uwzględnienia w szczegółach bieżącego katalogu roboczego. Wyższe wartości zapewniają więcej kontekstu, ale zwiększają zużycie token."
-		},
-		"rooignore": {
-			"label": "Pokaż pliki .kilocodeignore na listach i w wyszukiwaniach",
-			"description": "Gdy włączone, pliki pasujące do wzorców w .kilocodeignore będą pokazywane na listach z symbolem kłódki. Gdy wyłączone, te pliki będą całkowicie ukryte z list plików i wyszukiwań."
-		},
-		"maxReadFile": {
-			"label": "Próg automatycznego skracania odczytu pliku",
-			"description": "Kilo Code odczytuje tę liczbę linii, gdy model nie określa wartości początkowej/końcowej. Jeśli ta liczba jest mniejsza niż całkowita liczba linii pliku, Kilo Code generuje indeks numerów linii definicji kodu. Przypadki specjalne: -1 nakazuje Kilo Code odczytać cały plik (bez indeksowania), a 0 nakazuje nie czytać żadnych linii i dostarczyć tylko indeksy linii dla minimalnego kontekstu. Niższe wartości minimalizują początkowe użycie kontekstu, umożliwiając późniejsze precyzyjne odczyty zakresów linii. Jawne żądania początku/końca nie są ograniczone tym ustawieniem.",
-			"lines": "linii",
-			"always_full_read": "Zawsze czytaj cały plik"
-		}
-	},
-	"terminal": {
-		"basic": {
-			"label": "Ustawienia terminala: Podstawowe",
-			"description": "Podstawowe ustawienia terminala"
-		},
-		"advanced": {
-			"label": "Ustawienia terminala: Zaawansowane",
-			"description": "Poniższe opcje mogą wymagać ponownego uruchomienia terminala, aby zastosować ustawienie."
-		},
-		"outputLineLimit": {
-			"label": "Limit wyjścia terminala",
-			"description": "Maksymalna liczba linii do uwzględnienia w wyjściu terminala podczas wykonywania poleceń. Po przekroczeniu linie będą usuwane ze środka, oszczędzając token."
-		},
-		"shellIntegrationTimeout": {
-			"label": "Limit czasu integracji powłoki terminala",
-			"description": "Maksymalny czas oczekiwania na inicjalizację integracji powłoki przed wykonaniem poleceń. Dla użytkowników z długim czasem uruchamiania powłoki, ta wartość może wymagać zwiększenia, jeśli widzisz błędy \"Shell Integration Unavailable\" w terminalu."
-		},
-		"shellIntegrationDisabled": {
-			"label": "Wyłącz integrację powłoki terminala",
-			"description": "Włącz tę opcję, jeśli polecenia terminala nie działają poprawnie lub widzisz błędy 'Shell Integration Unavailable'. Używa to prostszej metody uruchamiania poleceń, omijając niektóre zaawansowane funkcje terminala."
-		},
-		"compressProgressBar": {
-			"label": "Kompresuj wyjście pasków postępu",
-			"description": "Po włączeniu, przetwarza wyjście terminala z powrotami karetki (\\r), aby symulować sposób wyświetlania treści przez prawdziwy terminal. Usuwa to pośrednie stany pasków postępu, zachowując tylko stan końcowy, co oszczędza przestrzeń kontekstową dla bardziej istotnych informacji."
-		},
-		"zdotdir": {
-			"label": "Włącz obsługę ZDOTDIR",
-			"description": "Po włączeniu tworzy tymczasowy katalog dla ZDOTDIR, aby poprawnie obsłużyć integrację powłoki zsh. Zapewnia to prawidłowe działanie integracji powłoki VSCode z zsh, zachowując twoją konfigurację zsh. (eksperymentalne)"
-		},
-		"commandDelay": {
-			"label": "Opóźnienie poleceń terminala",
-			"description": "Opóźnienie w milisekundach dodawane po wykonaniu polecenia. Domyślne ustawienie 0 całkowicie wyłącza opóźnienie. Może to pomóc w zapewnieniu pełnego przechwytywania wyjścia poleceń w terminalach z problemami z synchronizacją. W większości terminali jest to implementowane przez ustawienie `PROMPT_COMMAND='sleep N'`, a PowerShell dodaje `start-sleep` na końcu każdego polecenia. Pierwotnie było to obejście błędu VSCode#237208 i może nie być potrzebne."
-		},
-		"powershellCounter": {
-			"label": "Włącz obejście licznika PowerShell",
-			"description": "Po włączeniu dodaje licznik do poleceń PowerShell, aby zapewnić prawidłowe wykonanie poleceń. Pomaga to w terminalach PowerShell, które mogą mieć problemy z przechwytywaniem wyjścia."
-		},
-		"zshClearEolMark": {
-			"label": "Wyczyść znacznik końca linii ZSH",
-			"description": "Po włączeniu czyści znacznik końca linii ZSH poprzez ustawienie PROMPT_EOL_MARK=''. Zapobiega to problemom z interpretacją wyjścia poleceń, gdy kończy się ono znakami specjalnymi jak '%'."
-		},
-		"zshOhMy": {
-			"label": "Włącz integrację Oh My Zsh",
-			"description": "Po włączeniu ustawia ITERM_SHELL_INTEGRATION_INSTALLED=Yes, aby włączyć funkcje integracji powłoki Oh My Zsh. Zastosowanie tego ustawienia może wymagać ponownego uruchomienia IDE. (eksperymentalne)"
-		},
-		"zshP10k": {
-			"label": "Włącz integrację Powerlevel10k",
-			"description": "Po włączeniu ustawia POWERLEVEL9K_TERM_SHELL_INTEGRATION=true, aby włączyć funkcje integracji powłoki Powerlevel10k. (eksperymentalne)"
-		},
-		"inheritEnv": {
-			"label": "Dziedzicz zmienne środowiskowe",
-			"description": "Po włączeniu terminal dziedziczy zmienne środowiskowe z procesu nadrzędnego VSCode, takie jak ustawienia integracji powłoki zdefiniowane w profilu użytkownika. Przełącza to bezpośrednio globalne ustawienie VSCode `terminal.integrated.inheritEnv`"
-		}
-	},
-	"advanced": {
-		"diff": {
-			"label": "Włącz edycję przez różnice",
-			"description": "Gdy włączone, Kilo Code będzie w stanie edytować pliki szybciej i automatycznie odrzuci obcięte pełne zapisy plików. Działa najlepiej z najnowszym modelem Claude 3.7 Sonnet.",
-			"strategy": {
-				"label": "Strategia diff",
-				"options": {
-					"standard": "Standardowa (Pojedynczy blok)",
-					"multiBlock": "Eksperymentalna: Diff wieloblokowy",
-					"unified": "Eksperymentalna: Diff ujednolicony"
-				},
-				"descriptions": {
-					"standard": "Standardowa strategia diff stosuje zmiany do jednego bloku kodu na raz.",
-					"unified": "Strategia diff ujednoliconego stosuje wiele podejść do zastosowania różnic i wybiera najlepsze podejście.",
-					"multiBlock": "Strategia diff wieloblokowego pozwala na aktualizację wielu bloków kodu w pliku w jednym żądaniu."
-				}
-			},
-			"matchPrecision": {
-				"label": "Precyzja dopasowania",
-				"description": "Ten suwak kontroluje, jak dokładnie sekcje kodu muszą pasować podczas stosowania różnic. Niższe wartości umożliwiają bardziej elastyczne dopasowywanie, ale zwiększają ryzyko nieprawidłowych zamian. Używaj wartości poniżej 100% z najwyższą ostrożnością."
-			}
-		}
-	},
-	"experimental": {
-		"warning": "⚠️",
-		"DIFF_STRATEGY_UNIFIED": {
-			"name": "Użyj eksperymentalnej ujednoliconej strategii diff",
-			"description": "Włącz eksperymentalną ujednoliconą strategię diff. Ta strategia może zmniejszyć liczbę ponownych prób spowodowanych błędami modelu, ale może powodować nieoczekiwane zachowanie lub nieprawidłowe edycje. Włącz tylko jeśli rozumiesz ryzyko i jesteś gotów dokładnie przeglądać wszystkie zmiany."
-		},
-		"SEARCH_AND_REPLACE": {
-			"name": "Użyj eksperymentalnego narzędzia do wyszukiwania i zamiany",
-			"description": "Włącz eksperymentalne narzędzie do wyszukiwania i zamiany, umożliwiając Kilo Code zastąpienie wielu wystąpień wyszukiwanego terminu w jednym żądaniu."
-		},
-		"INSERT_BLOCK": {
-			"name": "Użyj eksperymentalnego narzędzia do wstawiania treści",
-			"description": "Włącz eksperymentalne narzędzie do wstawiania treści, umożliwiając Kilo Code wstawianie treści w określonych numerach linii bez konieczności tworzenia diff."
-		},
-		"POWER_STEERING": {
-			"name": "Użyj eksperymentalnego trybu \"wspomagania kierownicy\"",
-			"description": "Po włączeniu, Kilo Code będzie częściej przypominać modelowi o szczegółach jego bieżącej definicji trybu. Doprowadzi to do silniejszego przestrzegania definicji ról i niestandardowych instrukcji, ale będzie używać więcej tokenów na wiadomość."
-		},
-		"MULTI_SEARCH_AND_REPLACE": {
-			"name": "Użyj eksperymentalnego narzędzia diff wieloblokowego",
-			"description": "Po włączeniu, Kilo Code użyje narzędzia diff wieloblokowego. Spróbuje to zaktualizować wiele bloków kodu w pliku w jednym żądaniu."
-		}
-	},
-	"promptCaching": {
-		"label": "Wyłącz buforowanie promptów",
-		"description": "Po zaznaczeniu, Kilo Code nie będzie używać buforowania promptów dla tego modelu."
-	},
-	"temperature": {
-		"useCustom": "Użyj niestandardowej temperatury",
-		"description": "Kontroluje losowość w odpowiedziach modelu.",
-		"rangeDescription": "Wyższe wartości sprawiają, że wyjście jest bardziej losowe, niższe wartości czynią je bardziej deterministycznym."
-	},
-	"modelInfo": {
-		"supportsImages": "Obsługuje obrazy",
-		"noImages": "Nie obsługuje obrazów",
-		"supportsComputerUse": "Obsługuje użycie komputera",
-		"noComputerUse": "Nie obsługuje użycia komputera",
-		"supportsPromptCache": "Obsługuje buforowanie podpowiedzi",
-		"noPromptCache": "Nie obsługuje buforowania podpowiedzi",
-		"maxOutput": "Maksymalne wyjście",
-		"inputPrice": "Cena wejścia",
-		"outputPrice": "Cena wyjścia",
-		"cacheReadsPrice": "Cena odczytów bufora",
-		"cacheWritesPrice": "Cena zapisów bufora",
-		"enableStreaming": "Włącz strumieniowanie",
-		"enableR1Format": "Włącz parametry modelu R1",
-		"enableR1FormatTips": "Należy włączyć podczas korzystania z modeli R1, takich jak QWQ, aby uniknąć błędu 400",
-		"useAzure": "Użyj Azure",
-		"azureApiVersion": "Ustaw wersję API Azure",
-		"gemini": {
-			"freeRequests": "* Darmowe do {{count}} zapytań na minutę. Po tym, rozliczanie zależy od rozmiaru podpowiedzi.",
-			"pricingDetails": "Więcej informacji znajdziesz w szczegółach cennika.",
-			"billingEstimate": "* Rozliczenie jest szacunkowe - dokładny koszt zależy od rozmiaru podpowiedzi."
-		}
-	},
-	"modelPicker": {
-		"automaticFetch": "Rozszerzenie automatycznie pobiera najnowszą listę modeli dostępnych w <serviceLink>{{serviceName}}</serviceLink>. Jeśli nie jesteś pewien, który model wybrać, Kilo Code działa najlepiej z <defaultModelLink>{{defaultModelId}}</defaultModelLink>. Możesz również wyszukać \"free\", aby znaleźć obecnie dostępne opcje bezpłatne.",
-		"label": "Model",
-		"searchPlaceholder": "Wyszukaj",
-		"noMatchFound": "Nie znaleziono dopasowań",
-		"useCustomModel": "Użyj niestandardowy: {{modelId}}"
-	},
-	"footer": {
-		"feedback": "Jeśli masz jakiekolwiek pytania lub opinie, śmiało otwórz zgłoszenie na <githubLink>github.com/Kilo-Org/kilocode</githubLink> lub dołącz do <redditLink>reddit.com/r/kilocode</redditLink> lub <discordLink>kilocode.ai/discord</discordLink>",
-		"version": "Kilo Code v{{version}}",
-		"telemetry": {
-			"label": "Zezwól na anonimowe raportowanie błędów i użycia",
-			"description": "Pomóż ulepszyć Kilo Code, wysyłając anonimowe dane o użytkowaniu i raporty o błędach. Nigdy nie są wysyłane kod, podpowiedzi ani informacje osobiste. Zobacz naszą politykę prywatności, aby uzyskać więcej szczegółów."
-		},
-		"settings": {
-			"import": "Importuj",
-			"export": "Eksportuj",
-			"reset": "Resetuj"
-		}
-	},
-	"thinkingBudget": {
-		"maxTokens": "Maksymalna liczba tokenów",
-		"maxThinkingTokens": "Maksymalna liczba tokenów myślenia"
-	},
-	"validation": {
-		"apiKey": "Musisz podać prawidłowy klucz API.",
-		"awsRegion": "Musisz wybrać region, aby korzystać z Amazon Bedrock.",
-		"googleCloud": "Musisz podać prawidłowe ID projektu i region Google Cloud.",
-		"modelId": "Musisz podać prawidłowe ID modelu.",
-		"modelSelector": "Musisz podać prawidłowy selektor modelu.",
-		"openAi": "Musisz podać prawidłowy bazowy URL, klucz API i ID modelu.",
-		"arn": {
-			"invalidFormat": "Nieprawidłowy format ARN. Sprawdź wymagania dotyczące formatu.",
-			"regionMismatch": "Ostrzeżenie: Region w Twoim ARN ({{arnRegion}}) nie zgadza się z wybranym regionem ({{region}}). Może to powodować problemy z dostępem. Dostawca użyje regionu z ARN."
-		},
-		"modelAvailability": "Podane ID modelu ({{modelId}}) jest niedostępne. Wybierz inny model."
-	},
-	"placeholders": {
-		"apiKey": "Wprowadź klucz API...",
-		"profileName": "Wprowadź nazwę profilu",
-		"accessKey": "Wprowadź klucz dostępu...",
-		"secretKey": "Wprowadź klucz tajny...",
-		"sessionToken": "Wprowadź token sesji...",
-		"credentialsJson": "Wprowadź JSON poświadczeń...",
-		"keyFilePath": "Wprowadź ścieżkę pliku klucza...",
-		"projectId": "Wprowadź ID projektu...",
-		"customArn": "Wprowadź ARN (np. arn:aws:bedrock:us-east-1:123456789012:foundation-model/my-model)",
-		"baseUrl": "Wprowadź podstawowy URL...",
-		"modelId": {
-			"lmStudio": "np. meta-llama-3.1-8b-instruct",
-			"lmStudioDraft": "np. lmstudio-community/llama-3.2-1b-instruct",
-			"ollama": "np. llama3.1"
-		},
-		"numbers": {
-			"maxTokens": "np. 4096",
-			"contextWindow": "np. 128000",
-			"inputPrice": "np. 0.0001",
-			"outputPrice": "np. 0.0002",
-			"cacheWritePrice": "np. 0.00005"
-		}
-	},
-	"defaults": {
-		"ollamaUrl": "Domyślnie: http://localhost:11434",
-		"lmStudioUrl": "Domyślnie: http://localhost:1234",
-		"geminiUrl": "Domyślnie: https://generativelanguage.googleapis.com"
-	},
-	"labels": {
-		"customArn": "Niestandardowy ARN",
-		"useCustomArn": "Użyj niestandardowego ARN..."
-	}
+  "common": {
+    "save": "Zapisz",
+    "done": "Gotowe",
+    "cancel": "Anuluj",
+    "reset": "Resetuj",
+    "select": "Wybierz",
+    "add": "Dodaj nagłówek",
+    "remove": "Usuń"
+  },
+  "header": {
+    "title": "Ustawienia",
+    "saveButtonTooltip": "Zapisz zmiany",
+    "nothingChangedTooltip": "Nic się nie zmieniło",
+    "doneButtonTooltip": "Odrzuć niezapisane zmiany i zamknij panel ustawień"
+  },
+  "unsavedChangesDialog": {
+    "title": "Niezapisane zmiany",
+    "description": "Czy chcesz odrzucić zmiany i kontynuować?",
+    "cancelButton": "Anuluj",
+    "discardButton": "Odrzuć zmiany"
+  },
+  "sections": {
+    "providers": "Dostawcy",
+    "autoApprove": "Auto-zatwierdzanie",
+    "browser": "Dostęp komputera",
+    "checkpoints": "Punkty kontrolne",
+    "notifications": "Powiadomienia",
+    "contextManagement": "Kontekst",
+    "terminal": "Terminal",
+    "experimental": "Eksperymentalne",
+    "language": "Język",
+    "about": "O Kilo Code"
+  },
+  "autoApprove": {
+    "description": "Pozwól Kilo Code na automatyczne wykonywanie operacji bez wymagania zatwierdzenia. Włącz te ustawienia tylko jeśli w pełni ufasz AI i rozumiesz związane z tym zagrożenia bezpieczeństwa.",
+    "readOnly": {
+      "label": "Odczyt",
+      "description": "Gdy włączone, Kilo Code automatycznie będzie wyświetlać zawartość katalogów i czytać pliki bez konieczności klikania przycisku Zatwierdź.",
+      "outsideWorkspace": {
+        "label": "Uwzględnij pliki poza obszarem roboczym",
+        "description": "Pozwól Kilo Code na odczyt plików poza bieżącym obszarem roboczym bez konieczności zatwierdzania."
+      }
+    },
+    "write": {
+      "label": "Zapis",
+      "description": "Automatycznie twórz i edytuj pliki bez konieczności zatwierdzania",
+      "delayLabel": "Opóźnienie po zapisach, aby umożliwić diagnostyce wykrycie potencjalnych problemów",
+      "outsideWorkspace": {
+        "label": "Uwzględnij pliki poza obszarem roboczym",
+        "description": "Pozwól Kilo Code na tworzenie i edycję plików poza bieżącym obszarem roboczym bez konieczności zatwierdzania."
+      }
+    },
+    "browser": {
+      "label": "Przeglądarka",
+      "description": "Automatycznie wykonuj akcje przeglądarki bez konieczności zatwierdzania. Uwaga: Dotyczy tylko gdy model obsługuje używanie komputera"
+    },
+    "retry": {
+      "label": "Ponów",
+      "description": "Automatycznie ponawiaj nieudane żądania API, gdy serwer zwraca odpowiedź z błędem",
+      "delayLabel": "Opóźnienie przed ponowieniem żądania"
+    },
+    "mcp": {
+      "label": "MCP",
+      "description": "Włącz automatyczne zatwierdzanie poszczególnych narzędzi MCP w widoku Serwerów MCP (wymaga zarówno tego ustawienia, jak i pola wyboru \"Zawsze zezwalaj\" narzędzia)"
+    },
+    "modeSwitch": {
+      "label": "Tryb",
+      "description": "Automatycznie przełączaj między różnymi trybami bez konieczności zatwierdzania"
+    },
+    "subtasks": {
+      "label": "Podzadania",
+      "description": "Zezwalaj na tworzenie i ukończenie podzadań bez konieczności zatwierdzania"
+    },
+    "execute": {
+      "label": "Wykonaj",
+      "description": "Automatycznie wykonuj dozwolone polecenia terminala bez konieczności zatwierdzania",
+      "allowedCommands": "Dozwolone polecenia auto-wykonania",
+      "allowedCommandsDescription": "Prefiksy poleceń, które mogą być automatycznie wykonywane, gdy \"Zawsze zatwierdzaj operacje wykonania\" jest włączone. Dodaj * aby zezwolić na wszystkie polecenia (używaj z ostrożnością).",
+      "commandPlaceholder": "Wprowadź prefiks polecenia (np. 'git ')",
+      "addButton": "Dodaj"
+    },
+    "showMenu": {
+      "label": "Pokaż menu automatycznego zatwierdzania w widoku czatu",
+      "description": "Gdy włączone, menu automatycznego zatwierdzania będzie wyświetlane na dole widoku czatu, umożliwiając szybki dostęp do ustawień automatycznego zatwierdzania"
+    },
+    "apiRequestLimit": {
+      "description": "Automatycznie wykonaj tyle zapytań API, zanim poprosisz o zgodę na kontynuowanie zadania."
+    }
+  },
+  "providers": {
+    "configProfile": "Profil konfiguracji",
+    "providerDocumentation": "Dokumentacja {{provider}}",
+    "description": "Zapisz różne konfiguracje API, aby szybko przełączać się między dostawcami i ustawieniami.",
+    "apiProvider": "Dostawca API",
+    "model": "Model",
+    "nameEmpty": "Nazwa nie może być pusta",
+    "nameExists": "Profil o tej nazwie już istnieje",
+    "deleteProfile": "Usuń profil",
+    "invalidArnFormat": "Nieprawidłowy format ARN. Sprawdź powyższe przykłady.",
+    "enterNewName": "Wprowadź nową nazwę",
+    "addProfile": "Dodaj profil",
+    "renameProfile": "Zmień nazwę profilu",
+    "newProfile": "Nowy profil konfiguracji",
+    "enterProfileName": "Wprowadź nazwę profilu",
+    "createProfile": "Utwórz profil",
+    "cannotDeleteOnlyProfile": "Nie można usunąć jedynego profilu",
+    "searchPlaceholder": "Szukaj profili",
+    "noMatchFound": "Nie znaleziono pasujących profili",
+    "vscodeLmDescription": "Interfejs API modelu językowego VS Code umożliwia uruchamianie modeli dostarczanych przez inne rozszerzenia VS Code (w tym, ale nie tylko, GitHub Copilot). Najłatwiejszym sposobem na rozpoczęcie jest zainstalowanie rozszerzeń Copilot i Copilot Chat z VS Code Marketplace.",
+    "awsCustomArnUse": "Wprowadź prawidłowy Amazon Bedrock ARN dla modelu, którego chcesz użyć. Przykłady formatu:",
+    "awsCustomArnDesc": "Upewnij się, że region w ARN odpowiada wybranemu powyżej regionowi AWS.",
+    "openRouterApiKey": "Klucz API OpenRouter",
+    "getOpenRouterApiKey": "Uzyskaj klucz API OpenRouter",
+    "apiKeyStorageNotice": "Klucze API są bezpiecznie przechowywane w Tajnym Magazynie VSCode",
+    "glamaApiKey": "Klucz API Glama",
+    "getGlamaApiKey": "Uzyskaj klucz API Glama",
+    "useCustomBaseUrl": "Użyj niestandardowego URL bazowego",
+    "useHostHeader": "Użyj niestandardowego nagłówka Host",
+    "useLegacyFormat": "Użyj starszego formatu API OpenAI",
+    "customHeaders": "Niestandardowe nagłówki",
+    "headerName": "Nazwa nagłówka",
+    "headerValue": "Wartość nagłówka",
+    "noCustomHeaders": "Brak zdefiniowanych niestandardowych nagłówków. Kliknij przycisk +, aby dodać.",
+    "requestyApiKey": "Klucz API Requesty",
+    "getRequestyApiKey": "Uzyskaj klucz API Requesty",
+    "refreshModels": {
+      "label": "Odśwież modele",
+      "hint": "Proszę ponownie otworzyć ustawienia, aby zobaczyć najnowsze modele."
+    },
+    "openRouterTransformsText": "Kompresuj podpowiedzi i łańcuchy wiadomości do rozmiaru kontekstu (<a>Transformacje OpenRouter</a>)",
+    "anthropicApiKey": "Klucz API Anthropic",
+    "getAnthropicApiKey": "Uzyskaj klucz API Anthropic",
+    "anthropicUseAuthToken": "Przekaż klucz API Anthropic jako nagłówek Authorization zamiast X-Api-Key",
+    "chutesApiKey": "Klucz API Chutes",
+    "getChutesApiKey": "Uzyskaj klucz API Chutes",
+    "deepSeekApiKey": "Klucz API DeepSeek",
+    "getDeepSeekApiKey": "Uzyskaj klucz API DeepSeek",
+    "geminiApiKey": "Klucz API Gemini",
+    "getGroqApiKey": "Uzyskaj klucz API Groq",
+    "groqApiKey": "Klucz API Groq",
+    "getGeminiApiKey": "Uzyskaj klucz API Gemini",
+    "openAiApiKey": "Klucz API OpenAI",
+    "openAiBaseUrl": "URL bazowy",
+    "getOpenAiApiKey": "Uzyskaj klucz API OpenAI",
+    "mistralApiKey": "Klucz API Mistral",
+    "getMistralApiKey": "Uzyskaj klucz API Mistral / Codestral",
+    "codestralBaseUrl": "URL bazowy Codestral (opcjonalnie)",
+    "codestralBaseUrlDesc": "Ustaw opcjonalny URL dla modeli Codestral.",
+    "xaiApiKey": "Klucz API xAI",
+    "getXaiApiKey": "Uzyskaj klucz API xAI",
+    "litellmApiKey": "Klucz API LiteLLM",
+    "litellmBaseUrl": "URL bazowy LiteLLM",
+    "awsCredentials": "Poświadczenia AWS",
+    "awsProfile": "Profil AWS",
+    "awsProfileName": "Nazwa profilu AWS",
+    "awsAccessKey": "Klucz dostępu AWS",
+    "awsSecretKey": "Klucz tajny AWS",
+    "awsSessionToken": "Token sesji AWS",
+    "awsRegion": "Region AWS",
+    "awsCrossRegion": "Użyj wnioskowania międzyregionalnego",
+    "enablePromptCaching": "Włącz buforowanie podpowiedzi",
+    "enablePromptCachingTitle": "Włącz buforowanie podpowiedzi, aby poprawić wydajność i zmniejszyć koszty dla obsługiwanych modeli.",
+    "cacheUsageNote": "Uwaga: Jeśli nie widzisz użycia bufora, spróbuj wybrać inny model, a następnie ponownie wybrać żądany model.",
+    "vscodeLmModel": "Model językowy",
+    "vscodeLmWarning": "Uwaga: To bardzo eksperymentalna integracja, a wsparcie dostawcy może się różnić. Jeśli otrzymasz błąd dotyczący nieobsługiwanego modelu, jest to problem po stronie dostawcy.",
+    "googleCloudSetup": {
+      "title": "Aby korzystać z Google Cloud Vertex AI, potrzebujesz:",
+      "step1": "1. Utworzyć konto Google Cloud, włączyć API Vertex AI i włączyć żądane modele Claude.",
+      "step2": "2. Zainstalować Google Cloud CLI i skonfigurować domyślne poświadczenia aplikacji.",
+      "step3": "3. Lub utworzyć konto usługi z poświadczeniami."
+    },
+    "googleCloudCredentials": "Poświadczenia Google Cloud",
+    "googleCloudKeyFile": "Ścieżka pliku klucza Google Cloud",
+    "googleCloudProjectId": "ID projektu Google Cloud",
+    "googleCloudRegion": "Region Google Cloud",
+    "lmStudio": {
+      "baseUrl": "URL bazowy (opcjonalnie)",
+      "modelId": "ID modelu",
+      "speculativeDecoding": "Włącz dekodowanie spekulacyjne",
+      "draftModelId": "ID modelu szkicu",
+      "draftModelDesc": "Aby dekodowanie spekulacyjne działało poprawnie, model szkicu musi pochodzić z tej samej rodziny modeli.",
+      "selectDraftModel": "Wybierz model szkicu",
+      "noModelsFound": "Nie znaleziono modeli szkicu. Upewnij się, że LM Studio jest uruchomione z włączonym trybem serwera.",
+      "description": "LM Studio pozwala na lokalne uruchamianie modeli na twoim komputerze. Aby rozpocząć, zapoznaj się z ich <a>przewodnikiem szybkiego startu</a>. Będziesz również musiał uruchomić funkcję <b>serwera lokalnego</b> LM Studio, aby używać go z tym rozszerzeniem. <span>Uwaga:</span> Kilo Code używa złożonych podpowiedzi i działa najlepiej z modelami Claude. Modele o niższych możliwościach mogą nie działać zgodnie z oczekiwaniami."
+    },
+    "ollama": {
+      "baseUrl": "URL bazowy (opcjonalnie)",
+      "modelId": "ID modelu",
+      "description": "Ollama pozwala na lokalne uruchamianie modeli na twoim komputerze. Aby rozpocząć, zapoznaj się z przewodnikiem szybkiego startu.",
+      "warning": "Uwaga: Kilo Code używa złożonych podpowiedzi i działa najlepiej z modelami Claude. Modele o niższych możliwościach mogą nie działać zgodnie z oczekiwaniami."
+    },
+    "unboundApiKey": "Klucz API Unbound",
+    "getUnboundApiKey": "Uzyskaj klucz API Unbound",
+    "humanRelay": {
+      "description": "Nie jest wymagany klucz API, ale użytkownik będzie musiał pomóc w kopiowaniu i wklejaniu informacji do czatu internetowego AI.",
+      "instructions": "Podczas użytkowania pojawi się okno dialogowe, a bieżąca wiadomość zostanie automatycznie skopiowana do schowka. Będziesz musiał wkleić ją do internetowych wersji AI (takich jak ChatGPT lub Claude), a następnie skopiować odpowiedź AI z powrotem do okna dialogowego i kliknąć przycisk potwierdzenia."
+    },
+    "openRouter": {
+      "providerRouting": {
+        "title": "Routing dostawców OpenRouter",
+        "description": "OpenRouter kieruje żądania do najlepszych dostępnych dostawców dla Twojego modelu. Domyślnie żądania są równoważone między najlepszymi dostawcami, aby zmaksymalizować czas działania. Możesz jednak wybrać konkretnego dostawcę do użycia z tym modelem.",
+        "learnMore": "Dowiedz się więcej o routingu dostawców"
+      }
+    },
+    "customModel": {
+      "capabilities": "Skonfiguruj możliwości i ceny swojego niestandardowego modelu zgodnego z OpenAI. Zachowaj ostrożność podczas określania możliwości modelu, ponieważ mogą one wpływać na wydajność Kilo Code.",
+      "maxTokens": {
+        "label": "Maksymalna liczba tokenów wyjściowych",
+        "description": "Maksymalna liczba tokenów, które model może wygenerować w odpowiedzi. (Określ -1, aby pozwolić serwerowi ustawić maksymalną liczbę tokenów.)"
+      },
+      "contextWindow": {
+        "label": "Rozmiar okna kontekstu",
+        "description": "Całkowita liczba tokenów (wejście + wyjście), które model może przetworzyć."
+      },
+      "imageSupport": {
+        "label": "Obsługa obrazów",
+        "description": "Czy model jest w stanie przetwarzać i rozumieć obrazy?"
+      },
+      "computerUse": {
+        "label": "Użycie komputera",
+        "description": "Czy model jest w stanie wchodzić w interakcję z przeglądarką? (np. Claude 3.7 Sonnet)."
+      },
+      "promptCache": {
+        "label": "Buforowanie podpowiedzi",
+        "description": "Czy model jest w stanie buforować podpowiedzi?"
+      },
+      "pricing": {
+        "input": {
+          "label": "Cena wejścia",
+          "description": "Koszt za milion tokenów wejściowych/podpowiedzi. Wpływa to na koszt wysyłania kontekstu i instrukcji do modelu."
+        },
+        "output": {
+          "label": "Cena wyjścia",
+          "description": "Koszt za milion tokenów odpowiedzi modelu. Wpływa to na koszt generowanej treści i uzupełnień."
+        },
+        "cacheReads": {
+          "label": "Cena odczytów bufora",
+          "description": "Koszt za milion tokenów za odczyt z bufora. Ta cena jest naliczana przy otrzymywaniu zbuforowanej odpowiedzi."
+        },
+        "cacheWrites": {
+          "label": "Cena zapisów bufora",
+          "description": "Koszt za milion tokenów za zapis do bufora. Ta cena jest naliczana przy pierwszym buforowaniu podpowiedzi."
+        }
+      },
+      "resetDefaults": "Przywróć domyślne"
+    },
+    "rateLimitSeconds": {
+      "label": "Limit szybkości",
+      "description": "Minimalny czas między żądaniami API."
+    },
+    "reasoningEffort": {
+      "label": "Wysiłek rozumowania modelu",
+      "high": "Wysoki",
+      "medium": "Średni",
+      "low": "Niski"
+    },
+    "setReasoningLevel": "Włącz wysiłek rozumowania"
+  },
+  "browser": {
+    "enable": {
+      "label": "Włącz narzędzie przeglądarki",
+      "description": "Gdy włączone, Kilo Code może używać przeglądarki do interakcji ze stronami internetowymi podczas korzystania z modeli obsługujących używanie komputera."
+    },
+    "viewport": {
+      "label": "Rozmiar viewportu",
+      "description": "Wybierz rozmiar viewportu dla interakcji przeglądarki. Wpływa to na sposób wyświetlania stron internetowych i interakcji z nimi.",
+      "options": {
+        "largeDesktop": "Duży pulpit (1280x800)",
+        "smallDesktop": "Mały pulpit (900x600)",
+        "tablet": "Tablet (768x1024)",
+        "mobile": "Telefon (360x640)"
+      }
+    },
+    "screenshotQuality": {
+      "label": "Jakość zrzutów ekranu",
+      "description": "Dostosuj jakość WebP zrzutów ekranu przeglądarki. Wyższe wartości zapewniają wyraźniejsze zrzuty ekranu, ale zwiększają zużycie token."
+    },
+    "remote": {
+      "label": "Użyj zdalnego połączenia przeglądarki",
+      "description": "Połącz się z przeglądarką Chrome uruchomioną z włączonym zdalnym debugowaniem (--remote-debugging-port=9222).",
+      "urlPlaceholder": "Niestandardowy URL (np. http://localhost:9222)",
+      "testButton": "Testuj połączenie",
+      "testingButton": "Testowanie...",
+      "instructions": "Wprowadź adres hosta protokołu DevTools lub pozostaw puste, aby automatycznie wykryć lokalne instancje Chrome. Przycisk Test Połączenia spróbuje użyć niestandardowego URL, jeśli podany, lub automatycznie wykryje, jeśli pole jest puste."
+    }
+  },
+  "checkpoints": {
+    "enable": {
+      "label": "Włącz automatyczne punkty kontrolne",
+      "description": "Gdy włączone, Kilo Code automatycznie utworzy punkty kontrolne podczas wykonywania zadań, ułatwiając przeglądanie zmian lub powrót do wcześniejszych stanów."
+    }
+  },
+  "notifications": {
+    "sound": {
+      "label": "Włącz efekty dźwiękowe",
+      "description": "Gdy włączone, Kilo Code będzie odtwarzać efekty dźwiękowe dla powiadomień i zdarzeń.",
+      "volumeLabel": "Głośność"
+    },
+    "tts": {
+      "label": "Włącz syntezę mowy",
+      "description": "Gdy włączone, Kilo Code będzie czytać na głos swoje odpowiedzi za pomocą syntezy mowy.",
+      "speedLabel": "Szybkość"
+    }
+  },
+  "contextManagement": {
+    "description": "Kontroluj, jakie informacje są zawarte w oknie kontekstu AI, wpływając na zużycie token i jakość odpowiedzi",
+    "openTabs": {
+      "label": "Limit kontekstu otwartych kart",
+      "description": "Maksymalna liczba otwartych kart VSCode do uwzględnienia w kontekście. Wyższe wartości zapewniają więcej kontekstu, ale zwiększają zużycie token."
+    },
+    "workspaceFiles": {
+      "label": "Limit kontekstu plików obszaru roboczego",
+      "description": "Maksymalna liczba plików do uwzględnienia w szczegółach bieżącego katalogu roboczego. Wyższe wartości zapewniają więcej kontekstu, ale zwiększają zużycie token."
+    },
+    "rooignore": {
+      "label": "Pokaż pliki .kilocodeignore na listach i w wyszukiwaniach",
+      "description": "Gdy włączone, pliki pasujące do wzorców w .kilocodeignore będą pokazywane na listach z symbolem kłódki. Gdy wyłączone, te pliki będą całkowicie ukryte z list plików i wyszukiwań."
+    },
+    "maxReadFile": {
+      "label": "Próg automatycznego skracania odczytu pliku",
+      "description": "Kilo Code odczytuje tę liczbę linii, gdy model nie określa wartości początkowej/końcowej. Jeśli ta liczba jest mniejsza niż całkowita liczba linii pliku, Kilo Code generuje indeks numerów linii definicji kodu. Przypadki specjalne: -1 nakazuje Kilo Code odczytać cały plik (bez indeksowania), a 0 nakazuje nie czytać żadnych linii i dostarczyć tylko indeksy linii dla minimalnego kontekstu. Niższe wartości minimalizują początkowe użycie kontekstu, umożliwiając późniejsze precyzyjne odczyty zakresów linii. Jawne żądania początku/końca nie są ograniczone tym ustawieniem.",
+      "lines": "linii",
+      "always_full_read": "Zawsze czytaj cały plik"
+    }
+  },
+  "terminal": {
+    "basic": {
+      "label": "Ustawienia terminala: Podstawowe",
+      "description": "Podstawowe ustawienia terminala"
+    },
+    "advanced": {
+      "label": "Ustawienia terminala: Zaawansowane",
+      "description": "Poniższe opcje mogą wymagać ponownego uruchomienia terminala, aby zastosować ustawienie."
+    },
+    "outputLineLimit": {
+      "label": "Limit wyjścia terminala",
+      "description": "Maksymalna liczba linii do uwzględnienia w wyjściu terminala podczas wykonywania poleceń. Po przekroczeniu linie będą usuwane ze środka, oszczędzając token."
+    },
+    "shellIntegrationTimeout": {
+      "label": "Limit czasu integracji powłoki terminala",
+      "description": "Maksymalny czas oczekiwania na inicjalizację integracji powłoki przed wykonaniem poleceń. Dla użytkowników z długim czasem uruchamiania powłoki, ta wartość może wymagać zwiększenia, jeśli widzisz błędy \"Shell Integration Unavailable\" w terminalu."
+    },
+    "shellIntegrationDisabled": {
+      "label": "Wyłącz integrację powłoki terminala",
+      "description": "Włącz tę opcję, jeśli polecenia terminala nie działają poprawnie lub widzisz błędy 'Shell Integration Unavailable'. Używa to prostszej metody uruchamiania poleceń, omijając niektóre zaawansowane funkcje terminala."
+    },
+    "compressProgressBar": {
+      "label": "Kompresuj wyjście pasków postępu",
+      "description": "Po włączeniu, przetwarza wyjście terminala z powrotami karetki (\\r), aby symulować sposób wyświetlania treści przez prawdziwy terminal. Usuwa to pośrednie stany pasków postępu, zachowując tylko stan końcowy, co oszczędza przestrzeń kontekstową dla bardziej istotnych informacji."
+    },
+    "zdotdir": {
+      "label": "Włącz obsługę ZDOTDIR",
+      "description": "Po włączeniu tworzy tymczasowy katalog dla ZDOTDIR, aby poprawnie obsłużyć integrację powłoki zsh. Zapewnia to prawidłowe działanie integracji powłoki VSCode z zsh, zachowując twoją konfigurację zsh. (eksperymentalne)"
+    },
+    "commandDelay": {
+      "label": "Opóźnienie poleceń terminala",
+      "description": "Opóźnienie w milisekundach dodawane po wykonaniu polecenia. Domyślne ustawienie 0 całkowicie wyłącza opóźnienie. Może to pomóc w zapewnieniu pełnego przechwytywania wyjścia poleceń w terminalach z problemami z synchronizacją. W większości terminali jest to implementowane przez ustawienie `PROMPT_COMMAND='sleep N'`, a PowerShell dodaje `start-sleep` na końcu każdego polecenia. Pierwotnie było to obejście błędu VSCode#237208 i może nie być potrzebne."
+    },
+    "powershellCounter": {
+      "label": "Włącz obejście licznika PowerShell",
+      "description": "Po włączeniu dodaje licznik do poleceń PowerShell, aby zapewnić prawidłowe wykonanie poleceń. Pomaga to w terminalach PowerShell, które mogą mieć problemy z przechwytywaniem wyjścia."
+    },
+    "zshClearEolMark": {
+      "label": "Wyczyść znacznik końca linii ZSH",
+      "description": "Po włączeniu czyści znacznik końca linii ZSH poprzez ustawienie PROMPT_EOL_MARK=''. Zapobiega to problemom z interpretacją wyjścia poleceń, gdy kończy się ono znakami specjalnymi jak '%'."
+    },
+    "zshOhMy": {
+      "label": "Włącz integrację Oh My Zsh",
+      "description": "Po włączeniu ustawia ITERM_SHELL_INTEGRATION_INSTALLED=Yes, aby włączyć funkcje integracji powłoki Oh My Zsh. Zastosowanie tego ustawienia może wymagać ponownego uruchomienia IDE. (eksperymentalne)"
+    },
+    "zshP10k": {
+      "label": "Włącz integrację Powerlevel10k",
+      "description": "Po włączeniu ustawia POWERLEVEL9K_TERM_SHELL_INTEGRATION=true, aby włączyć funkcje integracji powłoki Powerlevel10k. (eksperymentalne)"
+    },
+    "inheritEnv": {
+      "label": "Dziedzicz zmienne środowiskowe",
+      "description": "Po włączeniu terminal dziedziczy zmienne środowiskowe z procesu nadrzędnego VSCode, takie jak ustawienia integracji powłoki zdefiniowane w profilu użytkownika. Przełącza to bezpośrednio globalne ustawienie VSCode `terminal.integrated.inheritEnv`"
+    }
+  },
+  "advanced": {
+    "diff": {
+      "label": "Włącz edycję przez różnice",
+      "description": "Gdy włączone, Kilo Code będzie w stanie edytować pliki szybciej i automatycznie odrzuci obcięte pełne zapisy plików. Działa najlepiej z najnowszym modelem Claude 3.7 Sonnet.",
+      "strategy": {
+        "label": "Strategia diff",
+        "options": {
+          "standard": "Standardowa (Pojedynczy blok)",
+          "multiBlock": "Eksperymentalna: Diff wieloblokowy",
+          "unified": "Eksperymentalna: Diff ujednolicony"
+        },
+        "descriptions": {
+          "standard": "Standardowa strategia diff stosuje zmiany do jednego bloku kodu na raz.",
+          "unified": "Strategia diff ujednoliconego stosuje wiele podejść do zastosowania różnic i wybiera najlepsze podejście.",
+          "multiBlock": "Strategia diff wieloblokowego pozwala na aktualizację wielu bloków kodu w pliku w jednym żądaniu."
+        }
+      },
+      "matchPrecision": {
+        "label": "Precyzja dopasowania",
+        "description": "Ten suwak kontroluje, jak dokładnie sekcje kodu muszą pasować podczas stosowania różnic. Niższe wartości umożliwiają bardziej elastyczne dopasowywanie, ale zwiększają ryzyko nieprawidłowych zamian. Używaj wartości poniżej 100% z najwyższą ostrożnością."
+      }
+    }
+  },
+  "experimental": {
+    "warning": "⚠️",
+    "DIFF_STRATEGY_UNIFIED": {
+      "name": "Użyj eksperymentalnej ujednoliconej strategii diff",
+      "description": "Włącz eksperymentalną ujednoliconą strategię diff. Ta strategia może zmniejszyć liczbę ponownych prób spowodowanych błędami modelu, ale może powodować nieoczekiwane zachowanie lub nieprawidłowe edycje. Włącz tylko jeśli rozumiesz ryzyko i jesteś gotów dokładnie przeglądać wszystkie zmiany."
+    },
+    "SEARCH_AND_REPLACE": {
+      "name": "Użyj eksperymentalnego narzędzia do wyszukiwania i zamiany",
+      "description": "Włącz eksperymentalne narzędzie do wyszukiwania i zamiany, umożliwiając Kilo Code zastąpienie wielu wystąpień wyszukiwanego terminu w jednym żądaniu."
+    },
+    "INSERT_BLOCK": {
+      "name": "Użyj eksperymentalnego narzędzia do wstawiania treści",
+      "description": "Włącz eksperymentalne narzędzie do wstawiania treści, umożliwiając Kilo Code wstawianie treści w określonych numerach linii bez konieczności tworzenia diff."
+    },
+    "POWER_STEERING": {
+      "name": "Użyj eksperymentalnego trybu \"wspomagania kierownicy\"",
+      "description": "Po włączeniu, Kilo Code będzie częściej przypominać modelowi o szczegółach jego bieżącej definicji trybu. Doprowadzi to do silniejszego przestrzegania definicji ról i niestandardowych instrukcji, ale będzie używać więcej tokenów na wiadomość."
+    },
+    "MULTI_SEARCH_AND_REPLACE": {
+      "name": "Użyj eksperymentalnego narzędzia diff wieloblokowego",
+      "description": "Po włączeniu, Kilo Code użyje narzędzia diff wieloblokowego. Spróbuje to zaktualizować wiele bloków kodu w pliku w jednym żądaniu."
+    }
+  },
+  "promptCaching": {
+    "label": "Wyłącz buforowanie promptów",
+    "description": "Po zaznaczeniu, Kilo Code nie będzie używać buforowania promptów dla tego modelu."
+  },
+  "temperature": {
+    "useCustom": "Użyj niestandardowej temperatury",
+    "description": "Kontroluje losowość w odpowiedziach modelu.",
+    "rangeDescription": "Wyższe wartości sprawiają, że wyjście jest bardziej losowe, niższe wartości czynią je bardziej deterministycznym."
+  },
+  "modelInfo": {
+    "supportsImages": "Obsługuje obrazy",
+    "noImages": "Nie obsługuje obrazów",
+    "supportsComputerUse": "Obsługuje użycie komputera",
+    "noComputerUse": "Nie obsługuje użycia komputera",
+    "supportsPromptCache": "Obsługuje buforowanie podpowiedzi",
+    "noPromptCache": "Nie obsługuje buforowania podpowiedzi",
+    "maxOutput": "Maksymalne wyjście",
+    "inputPrice": "Cena wejścia",
+    "outputPrice": "Cena wyjścia",
+    "cacheReadsPrice": "Cena odczytów bufora",
+    "cacheWritesPrice": "Cena zapisów bufora",
+    "enableStreaming": "Włącz strumieniowanie",
+    "enableR1Format": "Włącz parametry modelu R1",
+    "enableR1FormatTips": "Należy włączyć podczas korzystania z modeli R1, takich jak QWQ, aby uniknąć błędu 400",
+    "useAzure": "Użyj Azure",
+    "azureApiVersion": "Ustaw wersję API Azure",
+    "gemini": {
+      "freeRequests": "* Darmowe do {{count}} zapytań na minutę. Po tym, rozliczanie zależy od rozmiaru podpowiedzi.",
+      "pricingDetails": "Więcej informacji znajdziesz w szczegółach cennika.",
+      "billingEstimate": "* Rozliczenie jest szacunkowe - dokładny koszt zależy od rozmiaru podpowiedzi."
+    }
+  },
+  "modelPicker": {
+    "automaticFetch": "Rozszerzenie automatycznie pobiera najnowszą listę modeli dostępnych w <serviceLink>{{serviceName}}</serviceLink>. Jeśli nie jesteś pewien, który model wybrać, Kilo Code działa najlepiej z <defaultModelLink>{{defaultModelId}}</defaultModelLink>. Możesz również wyszukać \"free\", aby znaleźć obecnie dostępne opcje bezpłatne.",
+    "label": "Model",
+    "searchPlaceholder": "Wyszukaj",
+    "noMatchFound": "Nie znaleziono dopasowań",
+    "useCustomModel": "Użyj niestandardowy: {{modelId}}"
+  },
+  "footer": {
+    "feedback": "Jeśli masz jakiekolwiek pytania lub opinie, śmiało otwórz zgłoszenie na <githubLink>github.com/Kilo-Org/kilocode</githubLink> lub dołącz do <redditLink>reddit.com/r/kilocode</redditLink> lub <discordLink>kilocode.ai/discord</discordLink>",
+    "version": "Kilo Code v{{version}}",
+    "telemetry": {
+      "label": "Zezwól na anonimowe raportowanie błędów i użycia",
+      "description": "Pomóż ulepszyć Kilo Code, wysyłając anonimowe dane o użytkowaniu i raporty o błędach. Nigdy nie są wysyłane kod, podpowiedzi ani informacje osobiste. Zobacz naszą politykę prywatności, aby uzyskać więcej szczegółów."
+    },
+    "settings": {
+      "import": "Importuj",
+      "export": "Eksportuj",
+      "reset": "Resetuj"
+    }
+  },
+  "thinkingBudget": {
+    "maxTokens": "Maksymalna liczba tokenów",
+    "maxThinkingTokens": "Maksymalna liczba tokenów myślenia"
+  },
+  "validation": {
+    "apiKey": "Musisz podać prawidłowy klucz API.",
+    "awsRegion": "Musisz wybrać region, aby korzystać z Amazon Bedrock.",
+    "googleCloud": "Musisz podać prawidłowe ID projektu i region Google Cloud.",
+    "modelId": "Musisz podać prawidłowe ID modelu.",
+    "modelSelector": "Musisz podać prawidłowy selektor modelu.",
+    "openAi": "Musisz podać prawidłowy bazowy URL, klucz API i ID modelu.",
+    "arn": {
+      "invalidFormat": "Nieprawidłowy format ARN. Sprawdź wymagania dotyczące formatu.",
+      "regionMismatch": "Ostrzeżenie: Region w Twoim ARN ({{arnRegion}}) nie zgadza się z wybranym regionem ({{region}}). Może to powodować problemy z dostępem. Dostawca użyje regionu z ARN."
+    },
+    "modelAvailability": "Podane ID modelu ({{modelId}}) jest niedostępne. Wybierz inny model."
+  },
+  "placeholders": {
+    "apiKey": "Wprowadź klucz API...",
+    "profileName": "Wprowadź nazwę profilu",
+    "accessKey": "Wprowadź klucz dostępu...",
+    "secretKey": "Wprowadź klucz tajny...",
+    "sessionToken": "Wprowadź token sesji...",
+    "credentialsJson": "Wprowadź JSON poświadczeń...",
+    "keyFilePath": "Wprowadź ścieżkę pliku klucza...",
+    "projectId": "Wprowadź ID projektu...",
+    "customArn": "Wprowadź ARN (np. arn:aws:bedrock:us-east-1:123456789012:foundation-model/my-model)",
+    "baseUrl": "Wprowadź podstawowy URL...",
+    "modelId": {
+      "lmStudio": "np. meta-llama-3.1-8b-instruct",
+      "lmStudioDraft": "np. lmstudio-community/llama-3.2-1b-instruct",
+      "ollama": "np. llama3.1"
+    },
+    "numbers": {
+      "maxTokens": "np. 4096",
+      "contextWindow": "np. 128000",
+      "inputPrice": "np. 0.0001",
+      "outputPrice": "np. 0.0002",
+      "cacheWritePrice": "np. 0.00005"
+    }
+  },
+  "defaults": {
+    "ollamaUrl": "Domyślnie: http://localhost:11434",
+    "lmStudioUrl": "Domyślnie: http://localhost:1234",
+    "geminiUrl": "Domyślnie: https://generativelanguage.googleapis.com"
+  },
+  "labels": {
+    "customArn": "Niestandardowy ARN",
+    "useCustomArn": "Użyj niestandardowego ARN..."
+  }
 }

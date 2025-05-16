@@ -102,5 +102,12 @@
 			"groqApiKey": "Chave de API Groq",
 			"getGroqApiKey": "Obter chave de API Groq"
 		}
+	},
+	"ask": {
+		"autoApprovedRequestLimitReached": {
+			"title": "Limite de Solicitações Aprovadas Automaticamente Atingido",
+			"description": "O Kilo Code atingiu o limite de {{count}} solicitações de API aprovadas automaticamente. Gostaria de zerar a contagem e prosseguir com a tarefa?",
+			"button": "Zerar e Continuar"
+		}
 	}
 }

@@ -30,6 +30,7 @@ import { ProgressIndicator } from "./ProgressIndicator"
 import { Markdown } from "./Markdown"
 import { CommandExecution } from "./CommandExecution"
 import { CommandExecutionError } from "./CommandExecutionError"
+import { AutoApprovedRequestLimitWarning } from "./AutoApprovedRequestLimitWarning"
 
 interface ChatRowProps {
 	message: ClineMessage
@@ -1118,7 +1119,11 @@ export const ChatRowContent = ({
 				// kilocode_change begin
 				case "payment_required_prompt": {
 					return <LowCreditWarning message={message} />
-				} // kilocode_change end
+				}
+				// kilocode_change end
+				case "auto_approval_max_req_reached": {
+					return <AutoApprovedRequestLimitWarning message={message} />
+				}
 				default:
 					return null
 			}

@@ -96,5 +96,12 @@
 	"input": {
 		"task_prompt": "Wat moet Kilo Code doen?",
 		"task_placeholder": "Typ hier je taak"
+	},
+	"ask": {
+		"autoApprovedRequestLimitReached": {
+			"title": "Limiet voor automatisch goedgekeurde verzoeken bereikt",
+			"description": "Kilo Code heeft de limiet van {{count}} automatisch goedgekeurde API-verzoeken bereikt. Wilt u de teller resetten en doorgaan met de taak?",
+			"button": "Resetten en doorgaan"
+		}
 	}
 }

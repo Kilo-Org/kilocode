@@ -102,5 +102,12 @@
 			"groqApiKey": "Groq API 키",
 			"getGroqApiKey": "Groq API 키 받기"
 		}
+	},
+	"ask": {
+		"autoApprovedRequestLimitReached": {
+			"title": "자동 승인된 요청 한도 도달",
+			"description": "Kilo Code가 자동 승인된 API 요청 한도인 {{count}}개에 도달했습니다. 횟수를 재설정하고 작업을 계속하시겠습니까?",
+			"button": "재설정하고 계속하기"
+		}
 	}
 }

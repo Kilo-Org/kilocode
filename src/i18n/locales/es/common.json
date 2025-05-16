@@ -102,5 +102,12 @@
 			"groqApiKey": "Clave API de Groq",
 			"getGroqApiKey": "Obtener clave API de Groq"
 		}
+	},
+	"ask": {
+		"autoApprovedRequestLimitReached": {
+			"title": "Límite de Solicitudes Aprobadas Automáticamente Alcanzado",
+			"description": "Kilo Code ha alcanzado el límite de {{count}} solicitudes de API aprobadas automáticamente. ¿Te gustaría restablecer el contador y continuar con la tarea?",
+			"button": "Restablecer y Continuar"
+		}
 	}
 }

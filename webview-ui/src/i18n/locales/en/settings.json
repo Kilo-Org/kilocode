@@ -83,6 +83,9 @@
 		"showMenu": {
 			"label": "Show auto-approve menu in chat view",
 			"description": "When enabled, the auto-approve menu will be displayed at the bottom of the chat view, allowing quick access to auto-approve settings"
+		},
+		"apiRequestLimit": {
+			"description": "Automatically make this many API requests before asking for approval to continue with the task."
 		}
 	},
 	"providers": {

@@ -102,5 +102,12 @@
 			"groqApiKey": "Groq API 密钥",
 			"getGroqApiKey": "获取 Groq API 密钥"
 		}
+	},
+	"ask": {
+		"autoApprovedRequestLimitReached": {
+			"title": "已达到自动批准请求上限",
+			"description": "Kilo Code 已达到 {{count}} 个自动批准的 API 请求上限。您想重置计数并继续执行任务吗？",
+			"button": "重置并继续"
+		}
 	}
 }

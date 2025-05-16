@@ -102,5 +102,12 @@
 			"groqApiKey": "Groq APIキー",
 			"getGroqApiKey": "Groq APIキーを取得"
 		}
+	},
+	"ask": {
+		"autoApprovedRequestLimitReached": {
+			"title": "自動承認リクエスト上限に到達しました",
+			"description": "Kilo Codeは自動承認されたAPIリクエストの上限{{count}}件に達しました。カウントをリセットしてタスクを続行しますか？",
+			"button": "リセットして続行"
+		}
 	}
 }

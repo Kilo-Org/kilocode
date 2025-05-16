@@ -1,527 +1,530 @@
 {
-	"common": {
-		"save": "保存",
-		"done": "完成",
-		"cancel": "取消",
-		"reset": "恢复默认设置",
-		"select": "选择",
-		"add": "添加标头",
-		"remove": "移除"
-	},
-	"header": {
-		"title": "设置",
-		"saveButtonTooltip": "保存更改",
-		"nothingChangedTooltip": "暂无更改",
-		"doneButtonTooltip": "放弃未保存的更改并关闭设置面板"
-	},
-	"unsavedChangesDialog": {
-		"title": "未保存的更改",
-		"description": "是否放弃更改并继续？",
-		"cancelButton": "取消",
-		"discardButton": "放弃更改"
-	},
-	"sections": {
-		"providers": "提供商",
-		"autoApprove": "自动批准",
-		"browser": "计算机交互",
-		"checkpoints": "检查点",
-		"notifications": "通知",
-		"contextManagement": "上下文",
-		"terminal": "终端",
-		"experimental": "实验性",
-		"language": "语言",
-		"about": "关于 Kilo Code",
-		"mcp": "MCP 服务器"
-	},
-	"autoApprove": {
-		"description": "允许 Kilo Code 自动执行操作而无需批准。只有在您完全信任 AI 并了解相关安全风险的情况下才启用这些设置。",
-		"readOnly": {
-			"label": "读取",
-			"description": "启用后，Kilo Code 将自动浏览目录和读取文件内容，无需人工确认。",
-			"outsideWorkspace": {
-				"label": "包含工作区外的文件",
-				"description": "允许 Kilo Code 读取当前工作区外的文件，无需批准。"
-			}
-		},
-		"write": {
-			"label": "写入",
-			"description": "自动创建和编辑文件，无需二次确认",
-			"delayLabel": "延迟一段时间再自动批准写入，可以在期间检查模型输出是否有问题",
-			"outsideWorkspace": {
-				"label": "包含工作区外的文件",
-				"description": "允许 Kilo Code 创建和编辑当前工作区外的文件，无需批准。"
-			}
-		},
-		"browser": {
-			"label": "浏览器",
-			"description": "自动执行浏览器操作而无需批准 — 注意：仅当模型支持计算机功能调用时适用"
-		},
-		"retry": {
-			"label": "重试",
-			"description": "当服务器返回错误响应时自动重试失败的 API 请求",
-			"delayLabel": "重试请求前的延迟"
-		},
-		"mcp": {
-			"label": "MCP",
-			"description": "允许自动调用MCP服务而无需批准"
-		},
-		"modeSwitch": {
-			"label": "模式",
-			"description": "自动在不同模式之间切换而无需批准"
-		},
-		"subtasks": {
-			"label": "子任务",
-			"description": "允许创建和完成子任务而无需批准"
-		},
-		"execute": {
-			"label": "执行",
-			"description": "自动执行白名单中的命令而无需批准",
-			"allowedCommands": "命令白名单",
-			"allowedCommandsDescription": "当\"自动批准命令行操作\"启用时可以自动执行的命令前缀。添加 * 以允许所有命令（谨慎使用）。",
-			"commandPlaceholder": "输入命令前缀（例如 'git '）",
-			"addButton": "添加"
-		},
-		"showMenu": {
-			"label": "在聊天视图中显示自动批准菜单",
-			"description": "启用后，自动批准菜单将显示在聊天视图底部，方便快速访问自动批准设置"
-		}
-	},
-	"providers": {
-		"configProfile": "配置文件",
-		"providerDocumentation": "{{provider}} 文档",
-		"description": "保存多组API配置便于快速切换",
-		"apiProvider": "API提供商",
-		"model": "模型",
-		"nameEmpty": "名称不能为空",
-		"nameExists": "已存在同名的配置文件",
-		"deleteProfile": "删除配置文件",
-		"invalidArnFormat": "无效的 ARN 格式。请检查上面的示例。",
-		"enterNewName": "输入新名称",
-		"addProfile": "添加配置文件",
-		"renameProfile": "重命名配置文件",
-		"newProfile": "新建配置文件",
-		"enterProfileName": "输入新配置名称",
-		"createProfile": "创建配置",
-		"cannotDeleteOnlyProfile": "无法删除唯一的配置文件",
-		"searchPlaceholder": "搜索配置文件",
-		"noMatchFound": "未找到匹配的配置文件",
-		"vscodeLmDescription": "VS Code 语言模型 API 允许您运行由其他 VS Code 扩展（包括但不限于 GitHub Copilot）提供的模型。最简单的方法是从 VS Code 市场安装 Copilot 和 Copilot Chat 扩展。",
-		"awsCustomArnUse": "请输入有效的 Amazon Bedrock ARN（Amazon资源名称），格式示例：",
-		"awsCustomArnDesc": "请确保ARN中的区域与上方选择的AWS区域一致。",
-		"openRouterApiKey": "OpenRouter API 密钥",
-		"getOpenRouterApiKey": "获取 OpenRouter API 密钥",
-		"apiKeyStorageNotice": "API 密钥安全存储在 VSCode 的密钥存储中",
-		"useCustomBaseUrl": "使用自定义基础 URL",
-		"useHostHeader": "使用自定义 Host 标头",
-		"useLegacyFormat": "使用传统 OpenAI API 格式",
-		"customHeaders": "自定义标头",
-		"headerName": "标头名称",
-		"headerValue": "标头值",
-		"noCustomHeaders": "暂无自定义标头。点击 + 按钮添加。",
-		"glamaApiKey": "Glama API 密钥",
-		"getGlamaApiKey": "获取 Glama API 密钥",
-		"requestyApiKey": "Requesty API 密钥",
-		"getRequestyApiKey": "获取 Requesty API 密钥",
-		"refreshModels": {
-			"label": "刷新模型",
-			"hint": "请重新打开设置以查看最新模型。"
-		},
-		"openRouterTransformsText": "自动压缩提示词和消息链到上下文长度限制内 (<a>OpenRouter转换</a>)",
-		"anthropicApiKey": "Anthropic API 密钥",
-		"getAnthropicApiKey": "获取 Anthropic API 密钥",
-		"anthropicUseAuthToken": "将 Anthropic API 密钥作为 Authorization 标头传递，而不是 X-Api-Key",
-		"chutesApiKey": "Chutes API 密钥",
-		"getChutesApiKey": "获取 Chutes API 密钥",
-		"deepSeekApiKey": "DeepSeek API 密钥",
-		"getDeepSeekApiKey": "获取 DeepSeek API 密钥",
-		"geminiApiKey": "Gemini API 密钥",
-		"getGroqApiKey": "获取 Groq API 密钥",
-		"groqApiKey": "Groq API 密钥",
-		"getGeminiApiKey": "获取 Gemini API 密钥",
-		"openAiApiKey": "OpenAI API 密钥",
-		"openAiBaseUrl": "OpenAI 基础 URL",
-		"getOpenAiApiKey": "获取 OpenAI API 密钥",
-		"mistralApiKey": "Mistral API 密钥",
-		"getMistralApiKey": "获取 Mistral / Codestral API 密钥",
-		"codestralBaseUrl": "Codestral 基础 URL（可选）",
-		"codestralBaseUrlDesc": "为 Codestral 模型设置替代 URL。",
-		"xaiApiKey": "xAI API 密钥",
-		"getXaiApiKey": "获取 xAI API 密钥",
-		"litellmApiKey": "LiteLLM API 密钥",
-		"litellmBaseUrl": "LiteLLM 基础 URL",
-		"awsCredentials": "AWS 凭证",
-		"awsProfile": "AWS 配置文件",
-		"awsProfileName": "AWS 配置文件名称",
-		"awsAccessKey": "AWS 访问密钥",
-		"awsSecretKey": "AWS 密钥",
-		"awsSessionToken": "AWS 会话Token",
-		"awsRegion": "AWS 区域",
-		"awsCrossRegion": "使用跨区域推理",
-		"enablePromptCaching": "启用提示缓存",
-		"enablePromptCachingTitle": "开启提示缓存可提升性能并节省成本",
-		"cacheUsageNote": "提示：若未显示缓存使用情况，请切换模型后重新选择",
-		"vscodeLmModel": "VSCode LM 模型",
-		"vscodeLmWarning": "注意：这是一个非常实验性的集成，提供商支持会有所不同。如果您收到有关不支持模型的错误，则这是提供商方面的问题。",
-		"googleCloudSetup": {
-			"title": "要使用 Google Cloud Vertex AI，您需要：",
-			"step1": "1. 注册Google Cloud账号并启用Vertex AI API",
-			"step2": "2. 安装配置Google Cloud CLI工具",
-			"step3": "3. 创建服务账号获取凭证"
-		},
-		"googleCloudCredentials": "Google Cloud 凭证",
-		"googleCloudKeyFile": "Google Cloud 密钥文件路径",
-		"googleCloudProjectId": "Google Cloud 项目 ID",
-		"googleCloudRegion": "Google Cloud 区域",
-		"lmStudio": {
-			"baseUrl": "基础 URL（可选）",
-			"modelId": "模型 ID",
-			"speculativeDecoding": "启用推测性解码",
-			"draftModelId": "草稿模型 ID",
-			"draftModelDesc": "草稿模型必须来自相同的模型系列，推测性解码才能正常工作。",
-			"selectDraftModel": "选择草稿模型",
-			"noModelsFound": "未找到草稿模型。请确保 LM Studio 已启用服务器模式运行。",
-			"description": "LM Studio 允许您在本地计算机上运行模型。要了解如何开始，请参阅他们的 <a>快速入门指南</a>。您还需要启动 LM Studio 的 <b>本地服务器</b> 功能，以便与此扩展一起使用。<span>注意：</span>Kilo Code 使用复杂的提示，并且在 Claude 模型上效果最佳。功能较弱的模型可能无法正常工作。"
-		},
-		"ollama": {
-			"baseUrl": "基础 URL（可选）",
-			"modelId": "模型 ID",
-			"description": "Ollama 允许您在本地计算机上运行模型。有关如何开始使用的说明，请参阅其快速入门指南。",
-			"warning": "注意：Kilo Code 使用复杂的提示，与 Claude 模型配合最佳。功能较弱的模型可能无法按预期工作。"
-		},
-		"unboundApiKey": "Unbound API 密钥",
-		"getUnboundApiKey": "获取 Unbound API 密钥",
-		"humanRelay": {
-			"description": "不需要 API 密钥，但用户需要帮助将信息复制并粘贴到网页聊天 AI。",
-			"instructions": "使用期间，将弹出对话框并自动将当前消息复制到剪贴板。您需要将这些内容粘贴到 AI 的网页版本（如 ChatGPT 或 Claude），然后将 AI 的回复复制回对话框并点击确认按钮。"
-		},
-		"openRouter": {
-			"providerRouting": {
-				"title": "OpenRouter 提供商路由",
-				"description": "OpenRouter 将请求路由到适合您模型的最佳可用提供商。默认情况下，请求会在顶级提供商之间进行负载均衡以最大化正常运行时间。但是，您可以为此模型选择特定的提供商。",
-				"learnMore": "了解更多"
-			}
-		},
-		"customModel": {
-			"capabilities": "自定义模型配置注意事项：\n• 确保兼容OpenAI接口规范\n• 错误配置可能导致功能异常\n• 价格参数影响费用统计",
-			"maxTokens": {
-				"label": "最大输出Token数",
-				"description": "模型在响应中可以生成的最大Token数。（指定 -1 允许服务器设置最大Token数。）"
-			},
-			"contextWindow": {
-				"label": "上下文窗口大小",
-				"description": "模型可以处理的总Token数（输入 + 输出）。"
-			},
-			"imageSupport": {
-				"label": "图像支持",
-				"description": "此模型是否能够处理和理解图像？"
-			},
-			"computerUse": {
-				"label": "计算机功能调用",
-				"description": "此模型是否能够与浏览器交互？（例如 Claude 3.7 Sonnet）。"
-			},
-			"promptCache": {
-				"label": "提示缓存",
-				"description": "此模型是否能够缓存提示？"
-			},
-			"pricing": {
-				"input": {
-					"label": "输入价格",
-					"description": "输入/提示中每百万Token的成本。这会影响向模型发送上下文和指令的成本。"
-				},
-				"output": {
-					"label": "输出价格",
-					"description": "模型响应中每百万Token的成本。这会影响生成内容和补全的成本。"
-				},
-				"cacheReads": {
-					"label": "缓存读取价格",
-					"description": "从缓存读取每百万Token的成本。这是检索缓存响应时收取的费用。"
-				},
-				"cacheWrites": {
-					"label": "缓存写入价格",
-					"description": "向缓存写入每百万Token的成本。这是首次缓存提示时收取的费用。"
-				}
-			},
-			"resetDefaults": "重置为默认值"
-		},
-		"rateLimitSeconds": {
-			"label": "请求频率限制",
-			"description": "设置API请求的最小间隔时间"
-		},
-		"reasoningEffort": {
-			"label": "模型推理强度",
-			"high": "高",
-			"medium": "中",
-			"low": "低"
-		},
-		"setReasoningLevel": "启用推理工作量"
-	},
-	"browser": {
-		"enable": {
-			"label": "启用浏览器工具",
-			"description": "启用后，若模型支持计算机功能调用，Kilo Code 可以使用浏览器与网站交互。"
-		},
-		"viewport": {
-			"label": "视口大小",
-			"description": "选择浏览器交互的视口大小。这会影响网站的显示方式和交互方式。",
-			"options": {
-				"largeDesktop": "大桌面 (1280x800)",
-				"smallDesktop": "小桌面 (900x600)",
-				"tablet": "平板 (768x1024)",
-				"mobile": "移动设备 (360x640)"
-			}
-		},
-		"screenshotQuality": {
-			"label": "截图质量",
-			"description": "调整浏览器的截图质量。更高的值提供更清晰的截图，但会增加 token 消耗。"
-		},
-		"remote": {
-			"label": "使用远程浏览器连接",
-			"description": "连接到启用远程调试的 Chrome 浏览器 (--remote-debugging-port=9222)。",
-			"urlPlaceholder": "自定义 URL（例如 http://localhost:9222）",
-			"testButton": "测试连接",
-			"testingButton": "测试中...",
-			"instructions": "输入 DevTools 协议主机地址或留空以自动发现本地 Chrome 实例。测试连接按钮将尝试使用自定义 URL（如果提供），或者如果字段为空则自动发现。"
-		}
-	},
-	"checkpoints": {
-		"enable": {
-			"label": "启用自动检查点",
-			"description": "开启后自动创建任务检查点，方便回溯修改。"
-		}
-	},
-	"notifications": {
-		"sound": {
-			"label": "启用声音通知",
-			"description": "启用后，Kilo Code 将为通知和事件播放音效。",
-			"volumeLabel": "音量"
-		},
-		"tts": {
-			"label": "启用文本转语音",
-			"description": "启用后，Kilo Code 将使用文本转语音功能朗读其响应。",
-			"speedLabel": "速度"
-		}
-	},
-	"contextManagement": {
-		"description": "管理AI上下文信息（影响token用量和回答质量）",
-		"openTabs": {
-			"label": "标签页数量限制",
-			"description": "允许纳入上下文的最大标签页数（数值越大消耗token越多）"
-		},
-		"workspaceFiles": {
-			"label": "工作区文件限制",
-			"description": "允许纳入上下文的最大文件数（值越大消耗token越多）"
-		},
-		"rooignore": {
-			"label": "在列表和搜索中显示 .kilocodeignore 文件",
-			"description": "启用后，与 .kilocodeignore 中模式匹配的文件将在列表中显示锁定符号。禁用时，这些文件将从文件列表和搜索中完全隐藏。"
-		},
-		"maxReadFile": {
-			"label": "文件读取自动截断阈值",
-			"description": "自动读取文件行数设置：-1=完整读取 0=仅生成行号索引，较小值可节省token，支持后续使用行号进行读取。",
-			"lines": "行",
-			"always_full_read": "始终读取整个文件"
-		}
-	},
-	"terminal": {
-		"basic": {
-			"label": "终端设置：基础",
-			"description": "基础终端设置"
-		},
-		"advanced": {
-			"label": "终端设置：高级",
-			"description": "以下选项可能需要重启终端才能应用设置"
-		},
-		"outputLineLimit": {
-			"label": "终端输出限制",
-			"description": "执行命令时在终端输出中包含的最大行数。超过时将从中间删除行，节省 token。"
-		},
-		"shellIntegrationTimeout": {
-			"label": "终端初始化等待时间",
-			"description": "执行命令前等待 Shell 集成初始化的最长时间。对于 Shell 启动时间较长的用户，如果在终端中看到\"Shell Integration Unavailable\"错误，可能需要增加此值。"
-		},
-		"shellIntegrationDisabled": {
-			"label": "禁用终端 Shell 集成",
-			"description": "如果终端命令无法正常工作或看到 'Shell Integration Unavailable' 错误，请启用此项。这将使用更简单的方法运行命令，绕过一些高级终端功能。"
-		},
-		"compressProgressBar": {
-			"label": "压缩进度条输出",
-			"description": "启用后，将处理包含回车符 (\\r) 的终端输出，模拟真实终端显示内容的方式。这会移除进度条的中间状态，只保留最终状态，为更重要的信息节省上下文空间。"
-		},
-		"zdotdir": {
-			"label": "启用 ZDOTDIR 处理",
-			"description": "启用后将创建临时目录用于 ZDOTDIR，以正确处理 zsh shell 集成。这确保 VSCode shell 集成能与 zsh 正常工作，同时保留您的 zsh 配置。（实验性）"
-		},
-		"commandDelay": {
-			"label": "终端命令延迟",
-			"description": "命令执行后添加的延迟时间（毫秒）。默认设置为 0 时完全禁用延迟。这可以帮助确保在有计时问题的终端中完全捕获命令输出。在大多数终端中，这是通过设置 `PROMPT_COMMAND='sleep N'` 实现的，而 PowerShell 会在每个命令末尾添加 `start-sleep`。最初是为了解决 VSCode 错误#237208，现在可能不再需要。"
-		},
-		"powershellCounter": {
-			"label": "启用 PowerShell 计数器解决方案",
-			"description": "启用后，会在 PowerShell 命令中添加计数器以确保命令正确执行。这有助于解决可能存在输出捕获问题的 PowerShell 终端。"
-		},
-		"zshClearEolMark": {
-			"label": "清除 ZSH 行尾标记",
-			"description": "启用后，通过设置 PROMPT_EOL_MARK='' 清除 ZSH 行尾标记。这可以防止命令输出以特殊字符（如 '%'）结尾时的解析问题。"
-		},
-		"zshOhMy": {
-			"label": "启用 Oh My Zsh 集成",
-			"description": "启用后，设置 ITERM_SHELL_INTEGRATION_INSTALLED=Yes 以启用 Oh My Zsh shell 集成功能。应用此设置可能需要重启 IDE。（实验性）"
-		},
-		"zshP10k": {
-			"label": "启用 Powerlevel10k 集成",
-			"description": "启用后，设置 POWERLEVEL9K_TERM_SHELL_INTEGRATION=true 以启用 Powerlevel10k shell 集成功能。（实验性）"
-		},
-		"inheritEnv": {
-			"label": "继承环境变量",
-			"description": "启用后，终端将从 VSCode 父进程继承环境变量，如用户配置文件中定义的 shell 集成设置。这直接切换 VSCode 全局设置 `terminal.integrated.inheritEnv`"
-		}
-	},
-	"advanced": {
-		"diff": {
-			"label": "启用diff更新",
-			"description": "启用后，Kilo Code 将能够通过差异算法写入，避免模型输出完整文件，以降低Token消耗。与最新的 Claude 3.7 Sonnet 模型配合最佳。",
-			"strategy": {
-				"label": "Diff 策略",
-				"options": {
-					"standard": "标准（单块）",
-					"multiBlock": "实验性：多块 diff",
-					"unified": "实验性：统一 diff"
-				},
-				"descriptions": {
-					"standard": "标准 diff 策略一次对一个代码块应用更改。",
-					"unified": "统一 diff 策略采用多种方法应用差异并选择最佳方法。",
-					"multiBlock": "多块 diff 策略允许在一个请求中更新文件中的多个代码块。"
-				}
-			},
-			"matchPrecision": {
-				"label": "匹配精度",
-				"description": "控制代码匹配的精确程度。数值越低匹配越宽松（容错率高但风险大），建议保持100%以确保安全。"
-			}
-		}
-	},
-	"experimental": {
-		"warning": "⚠️",
-		"DIFF_STRATEGY_UNIFIED": {
-			"name": "启用diff更新工具",
-			"description": "可减少因模型错误导致的重复尝试，但可能引发意外操作。启用前请确保理解风险并会仔细检查所有修改。"
-		},
-		"SEARCH_AND_REPLACE": {
-			"name": "启用搜索和替换工具",
-			"description": "启用实验性搜索和替换工具，允许 Kilo Code 在一个请求中替换搜索词的多个实例。"
-		},
-		"INSERT_BLOCK": {
-			"name": "启用插入内容工具",
-			"description": "允许 Kilo Code 在特定行号插入内容，无需处理差异。"
-		},
-		"POWER_STEERING": {
-			"name": "启用增强导向模式",
-			"description": "开启后，Kilo Code 将更频繁地向模型推送当前模式定义的详细信息，从而强化对角色设定和自定义指令的遵循力度。注意：此模式会提升每条消息的 token 消耗量。"
-		},
-		"MULTI_SEARCH_AND_REPLACE": {
-			"name": "允许批量搜索和替换",
-			"description": "启用后，Kilo Code 将尝试在一个请求中进行批量搜索和替换。"
-		}
-	},
-	"promptCaching": {
-		"label": "禁用提示词缓存",
-		"description": "选中后，Kilo Code 将不会为此模型使用提示词缓存。"
-	},
-	"temperature": {
-		"useCustom": "使用自定义温度",
-		"description": "控制模型响应的随机性",
-		"rangeDescription": "值越高回答越多样，值越低越保守"
-	},
-	"modelInfo": {
-		"supportsImages": "支持图像",
-		"noImages": "不支持图像",
-		"supportsComputerUse": "支持计算机功能调用",
-		"noComputerUse": "不支持计算机功能调用",
-		"supportsPromptCache": "支持提示缓存",
-		"noPromptCache": "不支持提示缓存",
-		"maxOutput": "最大输出",
-		"inputPrice": "输入价格",
-		"outputPrice": "输出价格",
-		"cacheReadsPrice": "缓存读取价格",
-		"cacheWritesPrice": "缓存写入价格",
-		"enableStreaming": "启用流式传输",
-		"enableR1Format": "启用 R1 模型参数",
-		"enableR1FormatTips": "使用 QWQ 等 R1 系列模型时必须启用，避免出现 400 错误",
-		"useAzure": "使用 Azure 服务",
-		"azureApiVersion": "设置 Azure API 版本",
-		"gemini": {
-			"freeRequests": "* 每分钟免费 {{count}} 个请求。之后，计费取决于提示大小。",
-			"pricingDetails": "有关更多信息，请参阅定价详情。",
-			"billingEstimate": "* 计费为估计值 - 具体费用取决于提示大小。"
-		}
-	},
-	"modelPicker": {
-		"automaticFetch": "自动获取 <serviceLink>{{serviceName}}</serviceLink> 上可用的最新模型列表。如果您不确定选择哪个模型，Kilo Code 与 <defaultModelLink>{{defaultModelId}}</defaultModelLink> 配合最佳。您还可以搜索\"free\"以查找当前可用的免费选项。",
-		"label": "模型",
-		"searchPlaceholder": "搜索",
-		"noMatchFound": "未找到匹配项",
-		"useCustomModel": "使用自定义：{{modelId}}"
-	},
-	"footer": {
-		"feedback": "如果您有任何问题或反馈，请随时在 <githubLink>github.com/Kilo-Org/kilocode</githubLink> 上提出问题或加入 <redditLink>reddit.com/r/kilocode</redditLink> 或 <discordLink>kilocode.ai/discord</discordLink>",
-		"version": "Kilo Code v{{version}}",
-		"telemetry": {
-			"label": "允许匿名数据收集",
-			"description": "匿名收集错误报告和使用数据（不含代码/提示/个人信息），详情见隐私政策"
-		},
-		"settings": {
-			"import": "导入",
-			"export": "导出",
-			"reset": "重置"
-		}
-	},
-	"thinkingBudget": {
-		"maxTokens": "最大Token数",
-		"maxThinkingTokens": "最大思考Token数"
-	},
-	"validation": {
-		"apiKey": "您必须提供有效的 API 密钥。",
-		"awsRegion": "您必须选择一个区域来使用 Amazon Bedrock。",
-		"googleCloud": "您必须提供有效的 Google Cloud 项目 ID 和区域。",
-		"modelId": "您必须提供有效的模型 ID。",
-		"modelSelector": "您必须提供有效的模型选择器。",
-		"openAi": "您必须提供有效的基础 URL、API 密钥和模型 ID。",
-		"arn": {
-			"invalidFormat": "ARN 格式无效。请检查格式要求。",
-			"regionMismatch": "警告：您的 ARN 中的区域 ({{arnRegion}}) 与您选择的区域 ({{region}}) 不匹配。这可能会导致访问问题。提供程序将使用 ARN 中的区域。"
-		},
-		"modelAvailability": "模型ID {{modelId}} 不可用，请重新选择"
-	},
-	"placeholders": {
-		"apiKey": "请输入 API 密钥...",
-		"profileName": "请输入配置文件名称",
-		"accessKey": "请输入访问密钥...",
-		"secretKey": "请输入密钥...",
-		"sessionToken": "请输入会话Token...",
-		"credentialsJson": "请输入凭证 JSON...",
-		"keyFilePath": "请输入密钥文件路径...",
-		"projectId": "请输入项目 ID...",
-		"customArn": "请输入 ARN（例：arn:aws:bedrock:us-east-1:123456789012:foundation-model/my-model）",
-		"baseUrl": "请输入基础 URL...",
-		"modelId": {
-			"lmStudio": "例：meta-llama-3.1-8b-instruct",
-			"lmStudioDraft": "例：lmstudio-community/llama-3.2-1b-instruct",
-			"ollama": "例：llama3.1"
-		},
-		"numbers": {
-			"maxTokens": "例：4096",
-			"contextWindow": "例：128000",
-			"inputPrice": "例：0.0001",
-			"outputPrice": "例：0.0002",
-			"cacheWritePrice": "例：0.00005"
-		}
-	},
-	"defaults": {
-		"ollamaUrl": "默认值：http://localhost:11434",
-		"lmStudioUrl": "默认值：http://localhost:1234",
-		"geminiUrl": "默认值：https://generativelanguage.googleapis.com"
-	},
-	"labels": {
-		"customArn": "自定义 ARN",
-		"useCustomArn": "使用自定义 ARN..."
-	}
+  "common": {
+    "save": "保存",
+    "done": "完成",
+    "cancel": "取消",
+    "reset": "恢复默认设置",
+    "select": "选择",
+    "add": "添加标头",
+    "remove": "移除"
+  },
+  "header": {
+    "title": "设置",
+    "saveButtonTooltip": "保存更改",
+    "nothingChangedTooltip": "暂无更改",
+    "doneButtonTooltip": "放弃未保存的更改并关闭设置面板"
+  },
+  "unsavedChangesDialog": {
+    "title": "未保存的更改",
+    "description": "是否放弃更改并继续？",
+    "cancelButton": "取消",
+    "discardButton": "放弃更改"
+  },
+  "sections": {
+    "providers": "提供商",
+    "autoApprove": "自动批准",
+    "browser": "计算机交互",
+    "checkpoints": "检查点",
+    "notifications": "通知",
+    "contextManagement": "上下文",
+    "terminal": "终端",
+    "experimental": "实验性",
+    "language": "语言",
+    "about": "关于 Kilo Code",
+    "mcp": "MCP 服务器"
+  },
+  "autoApprove": {
+    "description": "允许 Kilo Code 自动执行操作而无需批准。只有在您完全信任 AI 并了解相关安全风险的情况下才启用这些设置。",
+    "readOnly": {
+      "label": "读取",
+      "description": "启用后，Kilo Code 将自动浏览目录和读取文件内容，无需人工确认。",
+      "outsideWorkspace": {
+        "label": "包含工作区外的文件",
+        "description": "允许 Kilo Code 读取当前工作区外的文件，无需批准。"
+      }
+    },
+    "write": {
+      "label": "写入",
+      "description": "自动创建和编辑文件，无需二次确认",
+      "delayLabel": "延迟一段时间再自动批准写入，可以在期间检查模型输出是否有问题",
+      "outsideWorkspace": {
+        "label": "包含工作区外的文件",
+        "description": "允许 Kilo Code 创建和编辑当前工作区外的文件，无需批准。"
+      }
+    },
+    "browser": {
+      "label": "浏览器",
+      "description": "自动执行浏览器操作而无需批准 — 注意：仅当模型支持计算机功能调用时适用"
+    },
+    "retry": {
+      "label": "重试",
+      "description": "当服务器返回错误响应时自动重试失败的 API 请求",
+      "delayLabel": "重试请求前的延迟"
+    },
+    "mcp": {
+      "label": "MCP",
+      "description": "允许自动调用MCP服务而无需批准"
+    },
+    "modeSwitch": {
+      "label": "模式",
+      "description": "自动在不同模式之间切换而无需批准"
+    },
+    "subtasks": {
+      "label": "子任务",
+      "description": "允许创建和完成子任务而无需批准"
+    },
+    "execute": {
+      "label": "执行",
+      "description": "自动执行白名单中的命令而无需批准",
+      "allowedCommands": "命令白名单",
+      "allowedCommandsDescription": "当\"自动批准命令行操作\"启用时可以自动执行的命令前缀。添加 * 以允许所有命令（谨慎使用）。",
+      "commandPlaceholder": "输入命令前缀（例如 'git '）",
+      "addButton": "添加"
+    },
+    "showMenu": {
+      "label": "在聊天视图中显示自动批准菜单",
+      "description": "启用后，自动批准菜单将显示在聊天视图底部，方便快速访问自动批准设置"
+    },
+    "apiRequestLimit": {
+      "description": "在继续任务之前自动发送这么多API请求，然后再请求批准。"
+    }
+  },
+  "providers": {
+    "configProfile": "配置文件",
+    "providerDocumentation": "{{provider}} 文档",
+    "description": "保存多组API配置便于快速切换",
+    "apiProvider": "API提供商",
+    "model": "模型",
+    "nameEmpty": "名称不能为空",
+    "nameExists": "已存在同名的配置文件",
+    "deleteProfile": "删除配置文件",
+    "invalidArnFormat": "无效的 ARN 格式。请检查上面的示例。",
+    "enterNewName": "输入新名称",
+    "addProfile": "添加配置文件",
+    "renameProfile": "重命名配置文件",
+    "newProfile": "新建配置文件",
+    "enterProfileName": "输入新配置名称",
+    "createProfile": "创建配置",
+    "cannotDeleteOnlyProfile": "无法删除唯一的配置文件",
+    "searchPlaceholder": "搜索配置文件",
+    "noMatchFound": "未找到匹配的配置文件",
+    "vscodeLmDescription": "VS Code 语言模型 API 允许您运行由其他 VS Code 扩展（包括但不限于 GitHub Copilot）提供的模型。最简单的方法是从 VS Code 市场安装 Copilot 和 Copilot Chat 扩展。",
+    "awsCustomArnUse": "请输入有效的 Amazon Bedrock ARN（Amazon资源名称），格式示例：",
+    "awsCustomArnDesc": "请确保ARN中的区域与上方选择的AWS区域一致。",
+    "openRouterApiKey": "OpenRouter API 密钥",
+    "getOpenRouterApiKey": "获取 OpenRouter API 密钥",
+    "apiKeyStorageNotice": "API 密钥安全存储在 VSCode 的密钥存储中",
+    "useCustomBaseUrl": "使用自定义基础 URL",
+    "useHostHeader": "使用自定义 Host 标头",
+    "useLegacyFormat": "使用传统 OpenAI API 格式",
+    "customHeaders": "自定义标头",
+    "headerName": "标头名称",
+    "headerValue": "标头值",
+    "noCustomHeaders": "暂无自定义标头。点击 + 按钮添加。",
+    "glamaApiKey": "Glama API 密钥",
+    "getGlamaApiKey": "获取 Glama API 密钥",
+    "requestyApiKey": "Requesty API 密钥",
+    "getRequestyApiKey": "获取 Requesty API 密钥",
+    "refreshModels": {
+      "label": "刷新模型",
+      "hint": "请重新打开设置以查看最新模型。"
+    },
+    "openRouterTransformsText": "自动压缩提示词和消息链到上下文长度限制内 (<a>OpenRouter转换</a>)",
+    "anthropicApiKey": "Anthropic API 密钥",
+    "getAnthropicApiKey": "获取 Anthropic API 密钥",
+    "anthropicUseAuthToken": "将 Anthropic API 密钥作为 Authorization 标头传递，而不是 X-Api-Key",
+    "chutesApiKey": "Chutes API 密钥",
+    "getChutesApiKey": "获取 Chutes API 密钥",
+    "deepSeekApiKey": "DeepSeek API 密钥",
+    "getDeepSeekApiKey": "获取 DeepSeek API 密钥",
+    "geminiApiKey": "Gemini API 密钥",
+    "getGroqApiKey": "获取 Groq API 密钥",
+    "groqApiKey": "Groq API 密钥",
+    "getGeminiApiKey": "获取 Gemini API 密钥",
+    "openAiApiKey": "OpenAI API 密钥",
+    "openAiBaseUrl": "OpenAI 基础 URL",
+    "getOpenAiApiKey": "获取 OpenAI API 密钥",
+    "mistralApiKey": "Mistral API 密钥",
+    "getMistralApiKey": "获取 Mistral / Codestral API 密钥",
+    "codestralBaseUrl": "Codestral 基础 URL（可选）",
+    "codestralBaseUrlDesc": "为 Codestral 模型设置替代 URL。",
+    "xaiApiKey": "xAI API 密钥",
+    "getXaiApiKey": "获取 xAI API 密钥",
+    "litellmApiKey": "LiteLLM API 密钥",
+    "litellmBaseUrl": "LiteLLM 基础 URL",
+    "awsCredentials": "AWS 凭证",
+    "awsProfile": "AWS 配置文件",
+    "awsProfileName": "AWS 配置文件名称",
+    "awsAccessKey": "AWS 访问密钥",
+    "awsSecretKey": "AWS 密钥",
+    "awsSessionToken": "AWS 会话Token",
+    "awsRegion": "AWS 区域",
+    "awsCrossRegion": "使用跨区域推理",
+    "enablePromptCaching": "启用提示缓存",
+    "enablePromptCachingTitle": "开启提示缓存可提升性能并节省成本",
+    "cacheUsageNote": "提示：若未显示缓存使用情况，请切换模型后重新选择",
+    "vscodeLmModel": "VSCode LM 模型",
+    "vscodeLmWarning": "注意：这是一个非常实验性的集成，提供商支持会有所不同。如果您收到有关不支持模型的错误，则这是提供商方面的问题。",
+    "googleCloudSetup": {
+      "title": "要使用 Google Cloud Vertex AI，您需要：",
+      "step1": "1. 注册Google Cloud账号并启用Vertex AI API",
+      "step2": "2. 安装配置Google Cloud CLI工具",
+      "step3": "3. 创建服务账号获取凭证"
+    },
+    "googleCloudCredentials": "Google Cloud 凭证",
+    "googleCloudKeyFile": "Google Cloud 密钥文件路径",
+    "googleCloudProjectId": "Google Cloud 项目 ID",
+    "googleCloudRegion": "Google Cloud 区域",
+    "lmStudio": {
+      "baseUrl": "基础 URL（可选）",
+      "modelId": "模型 ID",
+      "speculativeDecoding": "启用推测性解码",
+      "draftModelId": "草稿模型 ID",
+      "draftModelDesc": "草稿模型必须来自相同的模型系列，推测性解码才能正常工作。",
+      "selectDraftModel": "选择草稿模型",
+      "noModelsFound": "未找到草稿模型。请确保 LM Studio 已启用服务器模式运行。",
+      "description": "LM Studio 允许您在本地计算机上运行模型。要了解如何开始，请参阅他们的 <a>快速入门指南</a>。您还需要启动 LM Studio 的 <b>本地服务器</b> 功能，以便与此扩展一起使用。<span>注意：</span>Kilo Code 使用复杂的提示，并且在 Claude 模型上效果最佳。功能较弱的模型可能无法正常工作。"
+    },
+    "ollama": {
+      "baseUrl": "基础 URL（可选）",
+      "modelId": "模型 ID",
+      "description": "Ollama 允许您在本地计算机上运行模型。有关如何开始使用的说明，请参阅其快速入门指南。",
+      "warning": "注意：Kilo Code 使用复杂的提示，与 Claude 模型配合最佳。功能较弱的模型可能无法按预期工作。"
+    },
+    "unboundApiKey": "Unbound API 密钥",
+    "getUnboundApiKey": "获取 Unbound API 密钥",
+    "humanRelay": {
+      "description": "不需要 API 密钥，但用户需要帮助将信息复制并粘贴到网页聊天 AI。",
+      "instructions": "使用期间，将弹出对话框并自动将当前消息复制到剪贴板。您需要将这些内容粘贴到 AI 的网页版本（如 ChatGPT 或 Claude），然后将 AI 的回复复制回对话框并点击确认按钮。"
+    },
+    "openRouter": {
+      "providerRouting": {
+        "title": "OpenRouter 提供商路由",
+        "description": "OpenRouter 将请求路由到适合您模型的最佳可用提供商。默认情况下，请求会在顶级提供商之间进行负载均衡以最大化正常运行时间。但是，您可以为此模型选择特定的提供商。",
+        "learnMore": "了解更多"
+      }
+    },
+    "customModel": {
+      "capabilities": "自定义模型配置注意事项：\n• 确保兼容OpenAI接口规范\n• 错误配置可能导致功能异常\n• 价格参数影响费用统计",
+      "maxTokens": {
+        "label": "最大输出Token数",
+        "description": "模型在响应中可以生成的最大Token数。（指定 -1 允许服务器设置最大Token数。）"
+      },
+      "contextWindow": {
+        "label": "上下文窗口大小",
+        "description": "模型可以处理的总Token数（输入 + 输出）。"
+      },
+      "imageSupport": {
+        "label": "图像支持",
+        "description": "此模型是否能够处理和理解图像？"
+      },
+      "computerUse": {
+        "label": "计算机功能调用",
+        "description": "此模型是否能够与浏览器交互？（例如 Claude 3.7 Sonnet）。"
+      },
+      "promptCache": {
+        "label": "提示缓存",
+        "description": "此模型是否能够缓存提示？"
+      },
+      "pricing": {
+        "input": {
+          "label": "输入价格",
+          "description": "输入/提示中每百万Token的成本。这会影响向模型发送上下文和指令的成本。"
+        },
+        "output": {
+          "label": "输出价格",
+          "description": "模型响应中每百万Token的成本。这会影响生成内容和补全的成本。"
+        },
+        "cacheReads": {
+          "label": "缓存读取价格",
+          "description": "从缓存读取每百万Token的成本。这是检索缓存响应时收取的费用。"
+        },
+        "cacheWrites": {
+          "label": "缓存写入价格",
+          "description": "向缓存写入每百万Token的成本。这是首次缓存提示时收取的费用。"
+        }
+      },
+      "resetDefaults": "重置为默认值"
+    },
+    "rateLimitSeconds": {
+      "label": "请求频率限制",
+      "description": "设置API请求的最小间隔时间"
+    },
+    "reasoningEffort": {
+      "label": "模型推理强度",
+      "high": "高",
+      "medium": "中",
+      "low": "低"
+    },
+    "setReasoningLevel": "启用推理工作量"
+  },
+  "browser": {
+    "enable": {
+      "label": "启用浏览器工具",
+      "description": "启用后，若模型支持计算机功能调用，Kilo Code 可以使用浏览器与网站交互。"
+    },
+    "viewport": {
+      "label": "视口大小",
+      "description": "选择浏览器交互的视口大小。这会影响网站的显示方式和交互方式。",
+      "options": {
+        "largeDesktop": "大桌面 (1280x800)",
+        "smallDesktop": "小桌面 (900x600)",
+        "tablet": "平板 (768x1024)",
+        "mobile": "移动设备 (360x640)"
+      }
+    },
+    "screenshotQuality": {
+      "label": "截图质量",
+      "description": "调整浏览器的截图质量。更高的值提供更清晰的截图，但会增加 token 消耗。"
+    },
+    "remote": {
+      "label": "使用远程浏览器连接",
+      "description": "连接到启用远程调试的 Chrome 浏览器 (--remote-debugging-port=9222)。",
+      "urlPlaceholder": "自定义 URL（例如 http://localhost:9222）",
+      "testButton": "测试连接",
+      "testingButton": "测试中...",
+      "instructions": "输入 DevTools 协议主机地址或留空以自动发现本地 Chrome 实例。测试连接按钮将尝试使用自定义 URL（如果提供），或者如果字段为空则自动发现。"
+    }
+  },
+  "checkpoints": {
+    "enable": {
+      "label": "启用自动检查点",
+      "description": "开启后自动创建任务检查点，方便回溯修改。"
+    }
+  },
+  "notifications": {
+    "sound": {
+      "label": "启用声音通知",
+      "description": "启用后，Kilo Code 将为通知和事件播放音效。",
+      "volumeLabel": "音量"
+    },
+    "tts": {
+      "label": "启用文本转语音",
+      "description": "启用后，Kilo Code 将使用文本转语音功能朗读其响应。",
+      "speedLabel": "速度"
+    }
+  },
+  "contextManagement": {
+    "description": "管理AI上下文信息（影响token用量和回答质量）",
+    "openTabs": {
+      "label": "标签页数量限制",
+      "description": "允许纳入上下文的最大标签页数（数值越大消耗token越多）"
+    },
+    "workspaceFiles": {
+      "label": "工作区文件限制",
+      "description": "允许纳入上下文的最大文件数（值越大消耗token越多）"
+    },
+    "rooignore": {
+      "label": "在列表和搜索中显示 .kilocodeignore 文件",
+      "description": "启用后，与 .kilocodeignore 中模式匹配的文件将在列表中显示锁定符号。禁用时，这些文件将从文件列表和搜索中完全隐藏。"
+    },
+    "maxReadFile": {
+      "label": "文件读取自动截断阈值",
+      "description": "自动读取文件行数设置：-1=完整读取 0=仅生成行号索引，较小值可节省token，支持后续使用行号进行读取。",
+      "lines": "行",
+      "always_full_read": "始终读取整个文件"
+    }
+  },
+  "terminal": {
+    "basic": {
+      "label": "终端设置：基础",
+      "description": "基础终端设置"
+    },
+    "advanced": {
+      "label": "终端设置：高级",
+      "description": "以下选项可能需要重启终端才能应用设置"
+    },
+    "outputLineLimit": {
+      "label": "终端输出限制",
+      "description": "执行命令时在终端输出中包含的最大行数。超过时将从中间删除行，节省 token。"
+    },
+    "shellIntegrationTimeout": {
+      "label": "终端初始化等待时间",
+      "description": "执行命令前等待 Shell 集成初始化的最长时间。对于 Shell 启动时间较长的用户，如果在终端中看到\"Shell Integration Unavailable\"错误，可能需要增加此值。"
+    },
+    "shellIntegrationDisabled": {
+      "label": "禁用终端 Shell 集成",
+      "description": "如果终端命令无法正常工作或看到 'Shell Integration Unavailable' 错误，请启用此项。这将使用更简单的方法运行命令，绕过一些高级终端功能。"
+    },
+    "compressProgressBar": {
+      "label": "压缩进度条输出",
+      "description": "启用后，将处理包含回车符 (\\r) 的终端输出，模拟真实终端显示内容的方式。这会移除进度条的中间状态，只保留最终状态，为更重要的信息节省上下文空间。"
+    },
+    "zdotdir": {
+      "label": "启用 ZDOTDIR 处理",
+      "description": "启用后将创建临时目录用于 ZDOTDIR，以正确处理 zsh shell 集成。这确保 VSCode shell 集成能与 zsh 正常工作，同时保留您的 zsh 配置。（实验性）"
+    },
+    "commandDelay": {
+      "label": "终端命令延迟",
+      "description": "命令执行后添加的延迟时间（毫秒）。默认设置为 0 时完全禁用延迟。这可以帮助确保在有计时问题的终端中完全捕获命令输出。在大多数终端中，这是通过设置 `PROMPT_COMMAND='sleep N'` 实现的，而 PowerShell 会在每个命令末尾添加 `start-sleep`。最初是为了解决 VSCode 错误#237208，现在可能不再需要。"
+    },
+    "powershellCounter": {
+      "label": "启用 PowerShell 计数器解决方案",
+      "description": "启用后，会在 PowerShell 命令中添加计数器以确保命令正确执行。这有助于解决可能存在输出捕获问题的 PowerShell 终端。"
+    },
+    "zshClearEolMark": {
+      "label": "清除 ZSH 行尾标记",
+      "description": "启用后，通过设置 PROMPT_EOL_MARK='' 清除 ZSH 行尾标记。这可以防止命令输出以特殊字符（如 '%'）结尾时的解析问题。"
+    },
+    "zshOhMy": {
+      "label": "启用 Oh My Zsh 集成",
+      "description": "启用后，设置 ITERM_SHELL_INTEGRATION_INSTALLED=Yes 以启用 Oh My Zsh shell 集成功能。应用此设置可能需要重启 IDE。（实验性）"
+    },
+    "zshP10k": {
+      "label": "启用 Powerlevel10k 集成",
+      "description": "启用后，设置 POWERLEVEL9K_TERM_SHELL_INTEGRATION=true 以启用 Powerlevel10k shell 集成功能。（实验性）"
+    },
+    "inheritEnv": {
+      "label": "继承环境变量",
+      "description": "启用后，终端将从 VSCode 父进程继承环境变量，如用户配置文件中定义的 shell 集成设置。这直接切换 VSCode 全局设置 `terminal.integrated.inheritEnv`"
+    }
+  },
+  "advanced": {
+    "diff": {
+      "label": "启用diff更新",
+      "description": "启用后，Kilo Code 将能够通过差异算法写入，避免模型输出完整文件，以降低Token消耗。与最新的 Claude 3.7 Sonnet 模型配合最佳。",
+      "strategy": {
+        "label": "Diff 策略",
+        "options": {
+          "standard": "标准（单块）",
+          "multiBlock": "实验性：多块 diff",
+          "unified": "实验性：统一 diff"
+        },
+        "descriptions": {
+          "standard": "标准 diff 策略一次对一个代码块应用更改。",
+          "unified": "统一 diff 策略采用多种方法应用差异并选择最佳方法。",
+          "multiBlock": "多块 diff 策略允许在一个请求中更新文件中的多个代码块。"
+        }
+      },
+      "matchPrecision": {
+        "label": "匹配精度",
+        "description": "控制代码匹配的精确程度。数值越低匹配越宽松（容错率高但风险大），建议保持100%以确保安全。"
+      }
+    }
+  },
+  "experimental": {
+    "warning": "⚠️",
+    "DIFF_STRATEGY_UNIFIED": {
+      "name": "启用diff更新工具",
+      "description": "可减少因模型错误导致的重复尝试，但可能引发意外操作。启用前请确保理解风险并会仔细检查所有修改。"
+    },
+    "SEARCH_AND_REPLACE": {
+      "name": "启用搜索和替换工具",
+      "description": "启用实验性搜索和替换工具，允许 Kilo Code 在一个请求中替换搜索词的多个实例。"
+    },
+    "INSERT_BLOCK": {
+      "name": "启用插入内容工具",
+      "description": "允许 Kilo Code 在特定行号插入内容，无需处理差异。"
+    },
+    "POWER_STEERING": {
+      "name": "启用增强导向模式",
+      "description": "开启后，Kilo Code 将更频繁地向模型推送当前模式定义的详细信息，从而强化对角色设定和自定义指令的遵循力度。注意：此模式会提升每条消息的 token 消耗量。"
+    },
+    "MULTI_SEARCH_AND_REPLACE": {
+      "name": "允许批量搜索和替换",
+      "description": "启用后，Kilo Code 将尝试在一个请求中进行批量搜索和替换。"
+    }
+  },
+  "promptCaching": {
+    "label": "禁用提示词缓存",
+    "description": "选中后，Kilo Code 将不会为此模型使用提示词缓存。"
+  },
+  "temperature": {
+    "useCustom": "使用自定义温度",
+    "description": "控制模型响应的随机性",
+    "rangeDescription": "值越高回答越多样，值越低越保守"
+  },
+  "modelInfo": {
+    "supportsImages": "支持图像",
+    "noImages": "不支持图像",
+    "supportsComputerUse": "支持计算机功能调用",
+    "noComputerUse": "不支持计算机功能调用",
+    "supportsPromptCache": "支持提示缓存",
+    "noPromptCache": "不支持提示缓存",
+    "maxOutput": "最大输出",
+    "inputPrice": "输入价格",
+    "outputPrice": "输出价格",
+    "cacheReadsPrice": "缓存读取价格",
+    "cacheWritesPrice": "缓存写入价格",
+    "enableStreaming": "启用流式传输",
+    "enableR1Format": "启用 R1 模型参数",
+    "enableR1FormatTips": "使用 QWQ 等 R1 系列模型时必须启用，避免出现 400 错误",
+    "useAzure": "使用 Azure 服务",
+    "azureApiVersion": "设置 Azure API 版本",
+    "gemini": {
+      "freeRequests": "* 每分钟免费 {{count}} 个请求。之后，计费取决于提示大小。",
+      "pricingDetails": "有关更多信息，请参阅定价详情。",
+      "billingEstimate": "* 计费为估计值 - 具体费用取决于提示大小。"
+    }
+  },
+  "modelPicker": {
+    "automaticFetch": "自动获取 <serviceLink>{{serviceName}}</serviceLink> 上可用的最新模型列表。如果您不确定选择哪个模型，Kilo Code 与 <defaultModelLink>{{defaultModelId}}</defaultModelLink> 配合最佳。您还可以搜索\"free\"以查找当前可用的免费选项。",
+    "label": "模型",
+    "searchPlaceholder": "搜索",
+    "noMatchFound": "未找到匹配项",
+    "useCustomModel": "使用自定义：{{modelId}}"
+  },
+  "footer": {
+    "feedback": "如果您有任何问题或反馈，请随时在 <githubLink>github.com/Kilo-Org/kilocode</githubLink> 上提出问题或加入 <redditLink>reddit.com/r/kilocode</redditLink> 或 <discordLink>kilocode.ai/discord</discordLink>",
+    "version": "Kilo Code v{{version}}",
+    "telemetry": {
+      "label": "允许匿名数据收集",
+      "description": "匿名收集错误报告和使用数据（不含代码/提示/个人信息），详情见隐私政策"
+    },
+    "settings": {
+      "import": "导入",
+      "export": "导出",
+      "reset": "重置"
+    }
+  },
+  "thinkingBudget": {
+    "maxTokens": "最大Token数",
+    "maxThinkingTokens": "最大思考Token数"
+  },
+  "validation": {
+    "apiKey": "您必须提供有效的 API 密钥。",
+    "awsRegion": "您必须选择一个区域来使用 Amazon Bedrock。",
+    "googleCloud": "您必须提供有效的 Google Cloud 项目 ID 和区域。",
+    "modelId": "您必须提供有效的模型 ID。",
+    "modelSelector": "您必须提供有效的模型选择器。",
+    "openAi": "您必须提供有效的基础 URL、API 密钥和模型 ID。",
+    "arn": {
+      "invalidFormat": "ARN 格式无效。请检查格式要求。",
+      "regionMismatch": "警告：您的 ARN 中的区域 ({{arnRegion}}) 与您选择的区域 ({{region}}) 不匹配。这可能会导致访问问题。提供程序将使用 ARN 中的区域。"
+    },
+    "modelAvailability": "模型ID {{modelId}} 不可用，请重新选择"
+  },
+  "placeholders": {
+    "apiKey": "请输入 API 密钥...",
+    "profileName": "请输入配置文件名称",
+    "accessKey": "请输入访问密钥...",
+    "secretKey": "请输入密钥...",
+    "sessionToken": "请输入会话Token...",
+    "credentialsJson": "请输入凭证 JSON...",
+    "keyFilePath": "请输入密钥文件路径...",
+    "projectId": "请输入项目 ID...",
+    "customArn": "请输入 ARN（例：arn:aws:bedrock:us-east-1:123456789012:foundation-model/my-model）",
+    "baseUrl": "请输入基础 URL...",
+    "modelId": {
+      "lmStudio": "例：meta-llama-3.1-8b-instruct",
+      "lmStudioDraft": "例：lmstudio-community/llama-3.2-1b-instruct",
+      "ollama": "例：llama3.1"
+    },
+    "numbers": {
+      "maxTokens": "例：4096",
+      "contextWindow": "例：128000",
+      "inputPrice": "例：0.0001",
+      "outputPrice": "例：0.0002",
+      "cacheWritePrice": "例：0.00005"
+    }
+  },
+  "defaults": {
+    "ollamaUrl": "默认值：http://localhost:11434",
+    "lmStudioUrl": "默认值：http://localhost:1234",
+    "geminiUrl": "默认值：https://generativelanguage.googleapis.com"
+  },
+  "labels": {
+    "customArn": "自定义 ARN",
+    "useCustomArn": "使用自定义 ARN..."
+  }
 }

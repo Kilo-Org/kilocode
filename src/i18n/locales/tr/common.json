@@ -102,5 +102,12 @@
 			"groqApiKey": "Groq API Anahtarı",
 			"getGroqApiKey": "Groq API Anahtarı Al"
 		}
+	},
+	"ask": {
+		"autoApprovedRequestLimitReached": {
+			"title": "Otomatik Onaylı İstek Sınırına Ulaşıldı",
+			"description": "Kilo Code, {{count}} otomatik onaylı API isteği sınırına ulaştı. Sayacı sıfırlayıp göreve devam etmek ister misiniz?",
+			"button": "Sıfırla ve Devam Et"
+		}
 	}
 }

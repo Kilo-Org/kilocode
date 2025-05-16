@@ -72,6 +72,7 @@ type GlobalSettings = {
 	alwaysAllowSubtasks?: boolean | undefined
 	alwaysAllowExecute?: boolean | undefined
 	allowedCommands?: string[] | undefined
+	allowedMaxRequests?: number | undefined
 	browserToolEnabled?: boolean | undefined
 	browserViewportSize?: string | undefined
 	showAutoApproveMenu?: boolean | undefined
@@ -376,6 +377,7 @@ type ClineMessage = {
 				| "browser_action_launch"
 				| "use_mcp_server"
 				| "payment_required_prompt"
+				| "auto_approval_max_req_reached"
 		  )
 		| undefined
 	say?:
@@ -456,6 +458,7 @@ type RooCodeEvents = {
 							| "browser_action_launch"
 							| "use_mcp_server"
 							| "payment_required_prompt"
+							| "auto_approval_max_req_reached"
 					  )
 					| undefined
 				say?:

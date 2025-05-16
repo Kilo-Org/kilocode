@@ -41,6 +41,7 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setShowAutoApproveMenu: (value: boolean) => void // kilocode_change
 	setShowAnnouncement: (value: boolean) => void
 	setAllowedCommands: (value: string[]) => void
+	setAllowedMaxRequests: (value: number | undefined) => void
 	setSoundEnabled: (value: boolean) => void
 	setSoundVolume: (value: number) => void
 	terminalShellIntegrationTimeout?: number
@@ -140,6 +141,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		},
 		alwaysAllowReadOnly: true,
 		alwaysAllowWrite: true,
+		allowedMaxRequests: Infinity, // kilocode_change
 		soundEnabled: false,
 		soundVolume: 0.5,
 		ttsEnabled: false,
@@ -305,6 +307,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setAlwaysAllowSubtasks: (value) => setState((prevState) => ({ ...prevState, alwaysAllowSubtasks: value })),
 		setShowAnnouncement: (value) => setState((prevState) => ({ ...prevState, shouldShowAnnouncement: value })),
 		setAllowedCommands: (value) => setState((prevState) => ({ ...prevState, allowedCommands: value })),
+		setAllowedMaxRequests: (value) => setState((prevState) => ({ ...prevState, allowedMaxRequests: value })),
 		setSoundEnabled: (value) => setState((prevState) => ({ ...prevState, soundEnabled: value })),
 		setSoundVolume: (value) => setState((prevState) => ({ ...prevState, soundVolume: value })),
 		setTtsEnabled: (value) => setState((prevState) => ({ ...prevState, ttsEnabled: value })),

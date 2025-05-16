@@ -1,526 +1,529 @@
 {
-	"common": {
-		"save": "Lưu",
-		"done": "Hoàn thành",
-		"cancel": "Hủy",
-		"reset": "Đặt lại",
-		"select": "Chọn",
-		"add": "Thêm tiêu đề",
-		"remove": "Xóa"
-	},
-	"header": {
-		"title": "Cài đặt",
-		"saveButtonTooltip": "Lưu thay đổi",
-		"nothingChangedTooltip": "Không có gì thay đổi",
-		"doneButtonTooltip": "Hủy thay đổi chưa lưu và đóng bảng cài đặt"
-	},
-	"unsavedChangesDialog": {
-		"title": "Thay đổi chưa lưu",
-		"description": "Bạn có muốn hủy thay đổi và tiếp tục không?",
-		"cancelButton": "Hủy",
-		"discardButton": "Hủy thay đổi"
-	},
-	"sections": {
-		"providers": "Nhà cung cấp",
-		"autoApprove": "Phê duyệt",
-		"browser": "Trình duyệt",
-		"checkpoints": "Điểm kiểm tra",
-		"notifications": "Thông báo",
-		"contextManagement": "Ngữ cảnh",
-		"terminal": "Terminal",
-		"experimental": "Thử nghiệm",
-		"language": "Ngôn ngữ",
-		"about": "Giới thiệu"
-	},
-	"autoApprove": {
-		"description": "Cho phép Kilo Code tự động thực hiện các hoạt động mà không cần phê duyệt. Chỉ bật những cài đặt này nếu bạn hoàn toàn tin tưởng AI và hiểu rõ các rủi ro bảo mật liên quan.",
-		"readOnly": {
-			"label": "Đọc",
-			"description": "Khi được bật, Kilo Code sẽ tự động xem nội dung thư mục và đọc tệp mà không yêu cầu bạn nhấp vào nút Phê duyệt.",
-			"outsideWorkspace": {
-				"label": "Bao gồm các tệp ngoài không gian làm việc",
-				"description": "Cho phép Kilo Code đọc các tệp bên ngoài không gian làm việc hiện tại mà không yêu cầu phê duyệt."
-			}
-		},
-		"write": {
-			"label": "Ghi",
-			"description": "Tự động tạo và chỉnh sửa tệp mà không cần phê duyệt",
-			"delayLabel": "Trì hoãn sau khi ghi để cho phép chẩn đoán phát hiện các vấn đề tiềm ẩn",
-			"outsideWorkspace": {
-				"label": "Bao gồm các tệp ngoài không gian làm việc",
-				"description": "Cho phép Kilo Code tạo và chỉnh sửa các tệp bên ngoài không gian làm việc hiện tại mà không yêu cầu phê duyệt."
-			}
-		},
-		"browser": {
-			"label": "Trình duyệt",
-			"description": "Tự động thực hiện các hành động trình duyệt mà không cần phê duyệt. Lưu ý: Chỉ áp dụng khi mô hình hỗ trợ sử dụng máy tính"
-		},
-		"retry": {
-			"label": "Thử lại",
-			"description": "Tự động thử lại các yêu cầu API thất bại khi máy chủ trả về phản hồi lỗi",
-			"delayLabel": "Trì hoãn trước khi thử lại yêu cầu"
-		},
-		"mcp": {
-			"label": "MCP",
-			"description": "Bật tự động phê duyệt các công cụ MCP riêng lẻ trong chế độ xem Máy chủ MCP (yêu cầu cả cài đặt này và hộp kiểm \"Luôn cho phép\" của công cụ)"
-		},
-		"modeSwitch": {
-			"label": "Chế độ",
-			"description": "Tự động chuyển đổi giữa các chế độ khác nhau mà không cần phê duyệt"
-		},
-		"subtasks": {
-			"label": "Công việc phụ",
-			"description": "Cho phép tạo và hoàn thành các công việc phụ mà không cần phê duyệt"
-		},
-		"execute": {
-			"label": "Thực thi",
-			"description": "Tự động thực thi các lệnh terminal được phép mà không cần phê duyệt",
-			"allowedCommands": "Các lệnh tự động thực thi được phép",
-			"allowedCommandsDescription": "Tiền tố lệnh có thể được tự động thực thi khi \"Luôn phê duyệt các hoạt động thực thi\" được bật. Thêm * để cho phép tất cả các lệnh (sử dụng cẩn thận).",
-			"commandPlaceholder": "Nhập tiền tố lệnh (ví dụ: 'git ')",
-			"addButton": "Thêm"
-		},
-		"showMenu": {
-			"label": "Hiển thị menu tự động phê duyệt trong giao diện trò chuyện",
-			"description": "Khi được bật, menu tự động phê duyệt sẽ hiển thị ở phần dưới của giao diện trò chuyện, cho phép truy cập nhanh vào cài đặt tự động phê duyệt"
-		}
-	},
-	"providers": {
-		"configProfile": "Hồ sơ cấu hình",
-		"providerDocumentation": "Tài liệu {{provider}}",
-		"description": "Lưu các cấu hình API khác nhau để nhanh chóng chuyển đổi giữa các nhà cung cấp và cài đặt.",
-		"apiProvider": "Nhà cung cấp API",
-		"model": "Mẫu",
-		"nameEmpty": "Tên không được để trống",
-		"nameExists": "Đã tồn tại một hồ sơ với tên này",
-		"deleteProfile": "Xóa hồ sơ",
-		"invalidArnFormat": "Định dạng ARN không hợp lệ. Vui lòng kiểm tra các ví dụ ở trên.",
-		"enterNewName": "Nhập tên mới",
-		"addProfile": "Thêm hồ sơ",
-		"renameProfile": "Đổi tên hồ sơ",
-		"newProfile": "Hồ sơ cấu hình mới",
-		"enterProfileName": "Nhập tên hồ sơ",
-		"createProfile": "Tạo hồ sơ",
-		"cannotDeleteOnlyProfile": "Không thể xóa hồ sơ duy nhất",
-		"searchPlaceholder": "Tìm kiếm hồ sơ",
-		"noMatchFound": "Không tìm thấy hồ sơ phù hợp",
-		"vscodeLmDescription": "API Mô hình Ngôn ngữ VS Code cho phép bạn chạy các mô hình được cung cấp bởi các tiện ích mở rộng khác của VS Code (bao gồm nhưng không giới hạn ở GitHub Copilot). Cách dễ nhất để bắt đầu là cài đặt các tiện ích mở rộng Copilot và Copilot Chat từ VS Code Marketplace.",
-		"awsCustomArnUse": "Nhập một ARN Amazon Bedrock hợp lệ cho mô hình bạn muốn sử dụng. Ví dụ về định dạng:",
-		"awsCustomArnDesc": "Đảm bảo rằng vùng trong ARN khớp với vùng AWS đã chọn ở trên.",
-		"openRouterApiKey": "Khóa API OpenRouter",
-		"getOpenRouterApiKey": "Lấy khóa API OpenRouter",
-		"apiKeyStorageNotice": "Khóa API được lưu trữ an toàn trong Bộ lưu trữ bí mật của VSCode",
-		"glamaApiKey": "Khóa API Glama",
-		"getGlamaApiKey": "Lấy khóa API Glama",
-		"useCustomBaseUrl": "Sử dụng URL cơ sở tùy chỉnh",
-		"useHostHeader": "Sử dụng tiêu đề Host tùy chỉnh",
-		"useLegacyFormat": "Sử dụng định dạng API OpenAI cũ",
-		"customHeaders": "Tiêu đề tùy chỉnh",
-		"headerName": "Tên tiêu đề",
-		"headerValue": "Giá trị tiêu đề",
-		"noCustomHeaders": "Chưa có tiêu đề tùy chỉnh nào được định nghĩa. Nhấp vào nút + để thêm.",
-		"requestyApiKey": "Khóa API Requesty",
-		"getRequestyApiKey": "Lấy khóa API Requesty",
-		"anthropicApiKey": "Khóa API Anthropic",
-		"getAnthropicApiKey": "Lấy khóa API Anthropic",
-		"anthropicUseAuthToken": "Truyền khóa API Anthropic dưới dạng tiêu đề Authorization thay vì X-Api-Key",
-		"chutesApiKey": "Khóa API Chutes",
-		"getChutesApiKey": "Lấy khóa API Chutes",
-		"deepSeekApiKey": "Khóa API DeepSeek",
-		"getDeepSeekApiKey": "Lấy khóa API DeepSeek",
-		"geminiApiKey": "Khóa API Gemini",
-		"getGroqApiKey": "Lấy khóa API Groq",
-		"groqApiKey": "Khóa API Groq",
-		"getGeminiApiKey": "Lấy khóa API Gemini",
-		"openAiApiKey": "Khóa API OpenAI",
-		"openAiBaseUrl": "URL cơ sở",
-		"getOpenAiApiKey": "Lấy khóa API OpenAI",
-		"mistralApiKey": "Khóa API Mistral",
-		"getMistralApiKey": "Lấy khóa API Mistral / Codestral",
-		"codestralBaseUrl": "URL cơ sở Codestral (Tùy chọn)",
-		"codestralBaseUrlDesc": "Đặt URL thay thế cho mô hình Codestral.",
-		"xaiApiKey": "Khóa API xAI",
-		"getXaiApiKey": "Lấy khóa API xAI",
-		"litellmApiKey": "Khóa API LiteLLM",
-		"litellmBaseUrl": "URL cơ sở LiteLLM",
-		"awsCredentials": "Thông tin xác thực AWS",
-		"awsProfile": "Hồ sơ AWS",
-		"awsProfileName": "Tên hồ sơ AWS",
-		"awsAccessKey": "Khóa truy cập AWS",
-		"awsSecretKey": "Khóa bí mật AWS",
-		"awsSessionToken": "Token phiên AWS",
-		"awsRegion": "Vùng AWS",
-		"awsCrossRegion": "Sử dụng suy luận liên vùng",
-		"enablePromptCaching": "Bật bộ nhớ đệm lời nhắc",
-		"enablePromptCachingTitle": "Bật bộ nhớ đệm lời nhắc để cải thiện hiệu suất và giảm chi phí cho các mô hình được hỗ trợ.",
-		"cacheUsageNote": "Lưu ý: Nếu bạn không thấy việc sử dụng bộ nhớ đệm, hãy thử chọn một mô hình khác và sau đó chọn lại mô hình mong muốn của bạn.",
-		"vscodeLmModel": "Mô hình ngôn ngữ",
-		"vscodeLmWarning": "Lưu ý: Đây là tích hợp thử nghiệm và hỗ trợ nhà cung cấp có thể khác nhau. Nếu bạn nhận được lỗi về mô hình không được hỗ trợ, đó là vấn đề từ phía nhà cung cấp.",
-		"googleCloudSetup": {
-			"title": "Để sử dụng Google Cloud Vertex AI, bạn cần:",
-			"step1": "1. Tạo tài khoản Google Cloud, kích hoạt Vertex AI API và kích hoạt các mô hình Claude mong muốn.",
-			"step2": "2. Cài đặt Google Cloud CLI và cấu hình thông tin xác thực mặc định của ứng dụng.",
-			"step3": "3. Hoặc tạo tài khoản dịch vụ với thông tin xác thực."
-		},
-		"googleCloudCredentials": "Thông tin xác thực Google Cloud",
-		"googleCloudKeyFile": "Đường dẫn tệp khóa Google Cloud",
-		"googleCloudProjectId": "ID dự án Google Cloud",
-		"googleCloudRegion": "Vùng Google Cloud",
-		"lmStudio": {
-			"baseUrl": "URL cơ sở (tùy chọn)",
-			"modelId": "ID mô hình",
-			"speculativeDecoding": "Bật giải mã suy đoán",
-			"draftModelId": "ID mô hình nháp",
-			"draftModelDesc": "Mô hình nháp phải từ cùng một họ mô hình để giải mã suy đoán hoạt động chính xác.",
-			"selectDraftModel": "Chọn mô hình nháp",
-			"noModelsFound": "Không tìm thấy mô hình nháp nào. Vui lòng đảm bảo LM Studio đang chạy với chế độ máy chủ được bật.",
-			"description": "LM Studio cho phép bạn chạy các mô hình cục bộ trên máy tính của bạn. Để biết hướng dẫn về cách bắt đầu, xem <a>hướng dẫn nhanh</a> của họ. Bạn cũng sẽ cần khởi động tính năng <b>máy chủ cục bộ</b> của LM Studio để sử dụng nó với tiện ích mở rộng này. <span>Lưu ý:</span> Kilo Code sử dụng các lời nhắc phức tạp và hoạt động tốt nhất với các mô hình Claude. Các mô hình kém mạnh hơn có thể không hoạt động như mong đợi."
-		},
-		"ollama": {
-			"baseUrl": "URL cơ sở (tùy chọn)",
-			"modelId": "ID mô hình",
-			"description": "Ollama cho phép bạn chạy các mô hình cục bộ trên máy tính của bạn. Để biết hướng dẫn về cách bắt đầu, xem hướng dẫn nhanh của họ.",
-			"warning": "Lưu ý: Kilo Code sử dụng các lời nhắc phức tạp và hoạt động tốt nhất với các mô hình Claude. Các mô hình kém mạnh hơn có thể không hoạt động như mong đợi."
-		},
-		"openRouterTransformsText": "Nén lời nhắc và chuỗi tin nhắn theo kích thước ngữ cảnh (<a>OpenRouter Transforms</a>)",
-		"refreshModels": {
-			"label": "Làm mới mô hình",
-			"hint": "Vui lòng mở lại cài đặt để xem các mô hình mới nhất."
-		},
-		"unboundApiKey": "Khóa API Unbound",
-		"getUnboundApiKey": "Lấy khóa API Unbound",
-		"humanRelay": {
-			"description": "Không cần khóa API, nhưng người dùng cần giúp sao chép và dán thông tin vào AI trò chuyện web.",
-			"instructions": "Trong quá trình sử dụng, một hộp thoại sẽ xuất hiện và tin nhắn hiện tại sẽ được tự động sao chép vào clipboard. Bạn cần dán chúng vào các phiên bản web của AI (như ChatGPT hoặc Claude), sau đó sao chép phản hồi của AI trở lại hộp thoại và nhấp vào nút xác nhận."
-		},
-		"openRouter": {
-			"providerRouting": {
-				"title": "Định tuyến nhà cung cấp OpenRouter",
-				"description": "OpenRouter chuyển hướng yêu cầu đến các nhà cung cấp tốt nhất hiện có cho mô hình của bạn. Theo mặc định, các yêu cầu được cân bằng giữa các nhà cung cấp hàng đầu để tối đa hóa thời gian hoạt động. Tuy nhiên, bạn có thể chọn một nhà cung cấp cụ thể để sử dụng cho mô hình này.",
-				"learnMore": "Tìm hiểu thêm về định tuyến nhà cung cấp"
-			}
-		},
-		"customModel": {
-			"capabilities": "Cấu hình các khả năng và giá cả cho mô hình tương thích OpenAI tùy chỉnh của bạn. Hãy cẩn thận khi chỉ định khả năng của mô hình, vì chúng có thể ảnh hưởng đến cách Kilo Code hoạt động.",
-			"maxTokens": {
-				"label": "Số token đầu ra tối đa",
-				"description": "Số lượng token tối đa mà mô hình có thể tạo ra trong một phản hồi. (Chỉ định -1 để cho phép máy chủ đặt số token tối đa.)"
-			},
-			"contextWindow": {
-				"label": "Kích thước cửa sổ ngữ cảnh",
-				"description": "Tổng số token (đầu vào + đầu ra) mà mô hình có thể xử lý."
-			},
-			"imageSupport": {
-				"label": "Hỗ trợ hình ảnh",
-				"description": "Mô hình này có khả năng xử lý và hiểu hình ảnh không?"
-			},
-			"computerUse": {
-				"label": "Sử dụng máy tính",
-				"description": "Mô hình này có khả năng tương tác với trình duyệt không? (ví dụ: Claude 3.7 Sonnet)."
-			},
-			"promptCache": {
-				"label": "Bộ nhớ đệm lời nhắc",
-				"description": "Mô hình này có khả năng lưu trữ lời nhắc trong bộ nhớ đệm không?"
-			},
-			"pricing": {
-				"input": {
-					"label": "Giá đầu vào",
-					"description": "Chi phí cho mỗi triệu token trong đầu vào/lời nhắc. Điều này ảnh hưởng đến chi phí gửi ngữ cảnh và hướng dẫn đến mô hình."
-				},
-				"output": {
-					"label": "Giá đầu ra",
-					"description": "Chi phí cho mỗi triệu token trong phản hồi của mô hình. Điều này ảnh hưởng đến chi phí của nội dung được tạo ra và hoàn thành."
-				},
-				"cacheReads": {
-					"label": "Giá đọc bộ nhớ đệm",
-					"description": "Chi phí cho mỗi triệu token khi đọc từ bộ nhớ đệm. Đây là giá được tính khi một phản hồi được lưu trong bộ nhớ đệm được truy xuất."
-				},
-				"cacheWrites": {
-					"label": "Giá ghi bộ nhớ đệm",
-					"description": "Chi phí cho mỗi triệu token khi ghi vào bộ nhớ đệm. Đây là giá được tính khi một lời nhắc được lưu vào bộ nhớ đệm lần đầu tiên."
-				}
-			},
-			"resetDefaults": "Đặt lại về mặc định"
-		},
-		"rateLimitSeconds": {
-			"label": "Giới hạn tốc độ",
-			"description": "Thời gian tối thiểu giữa các yêu cầu API."
-		},
-		"reasoningEffort": {
-			"label": "Nỗ lực suy luận của mô hình",
-			"high": "Cao",
-			"medium": "Trung bình",
-			"low": "Thấp"
-		},
-		"setReasoningLevel": "Kích hoạt nỗ lực suy luận"
-	},
-	"browser": {
-		"enable": {
-			"label": "Bật công cụ trình duyệt",
-			"description": "Khi được bật, Kilo Code có thể sử dụng trình duyệt để tương tác với các trang web khi sử dụng các mô hình hỗ trợ sử dụng máy tính."
-		},
-		"viewport": {
-			"label": "Kích thước khung nhìn",
-			"description": "Chọn kích thước khung nhìn cho tương tác trình duyệt. Điều này ảnh hưởng đến cách trang web được hiển thị và tương tác.",
-			"options": {
-				"largeDesktop": "Máy tính để bàn lớn (1280x800)",
-				"smallDesktop": "Máy tính để bàn nhỏ (900x600)",
-				"tablet": "Máy tính bảng (768x1024)",
-				"mobile": "Di động (360x640)"
-			}
-		},
-		"screenshotQuality": {
-			"label": "Chất lượng ảnh chụp màn hình",
-			"description": "Điều chỉnh chất lượng WebP của ảnh chụp màn hình trình duyệt. Giá trị cao hơn cung cấp ảnh chụp màn hình rõ ràng hơn nhưng tăng sử dụng token."
-		},
-		"remote": {
-			"label": "Sử dụng kết nối trình duyệt từ xa",
-			"description": "Kết nối với trình duyệt Chrome đang chạy với tính năng gỡ lỗi từ xa được bật (--remote-debugging-port=9222).",
-			"urlPlaceholder": "URL tùy chỉnh (ví dụ: http://localhost:9222)",
-			"testButton": "Kiểm tra kết nối",
-			"testingButton": "Đang kiểm tra...",
-			"instructions": "Nhập địa chỉ DevTools Protocol hoặc để trống để tự động phát hiện các instance Chrome cục bộ. Nút Kiểm tra kết nối sẽ thử URL tùy chỉnh nếu được cung cấp, hoặc tự động phát hiện nếu trường này trống."
-		}
-	},
-	"checkpoints": {
-		"enable": {
-			"label": "Bật điểm kiểm tra tự động",
-			"description": "Khi được bật, Kilo Code sẽ tự động tạo các điểm kiểm tra trong quá trình thực hiện nhiệm vụ, giúp dễ dàng xem lại các thay đổi hoặc quay lại trạng thái trước đó."
-		}
-	},
-	"notifications": {
-		"sound": {
-			"label": "Bật hiệu ứng âm thanh",
-			"description": "Khi được bật, Kilo Code sẽ phát hiệu ứng âm thanh cho thông báo và sự kiện.",
-			"volumeLabel": "Âm lượng"
-		},
-		"tts": {
-			"label": "Bật chuyển văn bản thành giọng nói",
-			"description": "Khi được bật, Kilo Code sẽ đọc to các phản hồi của nó bằng chức năng chuyển văn bản thành giọng nói.",
-			"speedLabel": "Tốc độ"
-		}
-	},
-	"contextManagement": {
-		"description": "Kiểm soát thông tin nào được đưa vào cửa sổ ngữ cảnh của AI, ảnh hưởng đến việc sử dụng token và chất lượng phản hồi",
-		"openTabs": {
-			"label": "Giới hạn ngữ cảnh tab đang mở",
-			"description": "Số lượng tab VSCode đang mở tối đa để đưa vào ngữ cảnh. Giá trị cao hơn cung cấp nhiều ngữ cảnh hơn nhưng tăng sử dụng token."
-		},
-		"workspaceFiles": {
-			"label": "Giới hạn ngữ cảnh tệp workspace",
-			"description": "Số lượng tệp tối đa để đưa vào chi tiết thư mục làm việc hiện tại. Giá trị cao hơn cung cấp nhiều ngữ cảnh hơn nhưng tăng sử dụng token."
-		},
-		"rooignore": {
-			"label": "Hiển thị tệp .kilocodeignore trong danh sách và tìm kiếm",
-			"description": "Khi được bật, các tệp khớp với mẫu trong .kilocodeignore sẽ được hiển thị trong danh sách với biểu tượng khóa. Khi bị tắt, các tệp này sẽ hoàn toàn bị ẩn khỏi danh sách tệp và tìm kiếm."
-		},
-		"maxReadFile": {
-			"label": "Ngưỡng tự động cắt ngắn khi đọc tệp",
-			"description": "Kilo Code đọc số dòng này khi mô hình không chỉ định giá trị bắt đầu/kết thúc. Nếu số này nhỏ hơn tổng số dòng của tệp, Kilo Code sẽ tạo một chỉ mục số dòng của các định nghĩa mã. Trường hợp đặc biệt: -1 chỉ thị Kilo Code đọc toàn bộ tệp (không tạo chỉ mục), và 0 chỉ thị không đọc dòng nào và chỉ cung cấp chỉ mục dòng cho ngữ cảnh tối thiểu. Giá trị thấp hơn giảm thiểu việc sử dụng ngữ cảnh ban đầu, cho phép đọc chính xác các phạm vi dòng sau này. Các yêu cầu có chỉ định bắt đầu/kết thúc rõ ràng không bị giới hạn bởi cài đặt này.",
-			"lines": "dòng",
-			"always_full_read": "Luôn đọc toàn bộ tệp"
-		}
-	},
-	"terminal": {
-		"basic": {
-			"label": "Cài đặt Terminal: Cơ bản",
-			"description": "Cài đặt cơ bản cho terminal"
-		},
-		"advanced": {
-			"label": "Cài đặt Terminal: Nâng cao",
-			"description": "Các tùy chọn sau có thể yêu cầu khởi động lại terminal để áp dụng cài đặt."
-		},
-		"outputLineLimit": {
-			"label": "Giới hạn đầu ra terminal",
-			"description": "Số dòng tối đa để đưa vào đầu ra terminal khi thực hiện lệnh. Khi vượt quá, các dòng sẽ bị xóa khỏi phần giữa, tiết kiệm token."
-		},
-		"shellIntegrationTimeout": {
-			"label": "Thời gian chờ tích hợp shell terminal",
-			"description": "Thời gian tối đa để chờ tích hợp shell khởi tạo trước khi thực hiện lệnh. Đối với người dùng có thời gian khởi động shell dài, giá trị này có thể cần được tăng lên nếu bạn thấy lỗi \"Shell Integration Unavailable\" trong terminal."
-		},
-		"shellIntegrationDisabled": {
-			"label": "Tắt tích hợp shell terminal",
-			"description": "Bật tùy chọn này nếu lệnh terminal không hoạt động chính xác hoặc bạn thấy lỗi 'Shell Integration Unavailable'. Tùy chọn này sử dụng phương pháp đơn giản hơn để chạy lệnh, bỏ qua một số tính năng terminal nâng cao."
-		},
-		"compressProgressBar": {
-			"label": "Nén đầu ra thanh tiến trình",
-			"description": "Khi được bật, xử lý đầu ra terminal với các ký tự carriage return (\\r) để mô phỏng cách terminal thật hiển thị nội dung. Điều này loại bỏ các trạng thái trung gian của thanh tiến trình, chỉ giữ lại trạng thái cuối cùng, giúp tiết kiệm không gian ngữ cảnh cho thông tin quan trọng hơn."
-		},
-		"zdotdir": {
-			"label": "Bật xử lý ZDOTDIR",
-			"description": "Khi được bật, tạo thư mục tạm thời cho ZDOTDIR để xử lý tích hợp shell zsh một cách chính xác. Điều này đảm bảo tích hợp shell VSCode hoạt động chính xác với zsh trong khi vẫn giữ nguyên cấu hình zsh của bạn. (thử nghiệm)"
-		},
-		"commandDelay": {
-			"label": "Độ trễ lệnh terminal",
-			"description": "Độ trễ tính bằng mili giây để thêm vào sau khi thực hiện lệnh. Cài đặt mặc định là 0 sẽ tắt hoàn toàn độ trễ. Điều này có thể giúp đảm bảo đầu ra lệnh được ghi lại đầy đủ trong các terminal có vấn đề về thời gian. Trong hầu hết các terminal, điều này được thực hiện bằng cách đặt `PROMPT_COMMAND='sleep N'` và PowerShell thêm `start-sleep` vào cuối mỗi lệnh. Ban đầu là giải pháp cho lỗi VSCode#237208 và có thể không cần thiết."
-		},
-		"powershellCounter": {
-			"label": "Bật giải pháp bộ đếm PowerShell",
-			"description": "Khi được bật, thêm một bộ đếm vào các lệnh PowerShell để đảm bảo thực thi lệnh chính xác. Điều này giúp ích với các terminal PowerShell có thể gặp vấn đề về ghi lại đầu ra."
-		},
-		"zshClearEolMark": {
-			"label": "Xóa dấu cuối dòng ZSH",
-			"description": "Khi được bật, xóa dấu cuối dòng ZSH bằng cách đặt PROMPT_EOL_MARK=''. Điều này ngăn chặn các vấn đề về diễn giải đầu ra lệnh khi kết thúc bằng các ký tự đặc biệt như '%'."
-		},
-		"zshOhMy": {
-			"label": "Bật tích hợp Oh My Zsh",
-			"description": "Khi được bật, đặt ITERM_SHELL_INTEGRATION_INSTALLED=Yes để kích hoạt các tính năng tích hợp shell của Oh My Zsh. Việc áp dụng cài đặt này có thể yêu cầu khởi động lại IDE. (thử nghiệm)"
-		},
-		"zshP10k": {
-			"label": "Bật tích hợp Powerlevel10k",
-			"description": "Khi được bật, đặt POWERLEVEL9K_TERM_SHELL_INTEGRATION=true để kích hoạt các tính năng tích hợp shell của Powerlevel10k. (thử nghiệm)"
-		},
-		"inheritEnv": {
-			"label": "Kế thừa biến môi trường",
-			"description": "Khi được bật, terminal sẽ kế thừa các biến môi trường từ tiến trình cha của VSCode, như các cài đặt tích hợp shell được định nghĩa trong hồ sơ người dùng. Điều này trực tiếp chuyển đổi cài đặt toàn cục của VSCode `terminal.integrated.inheritEnv`"
-		}
-	},
-	"advanced": {
-		"diff": {
-			"label": "Bật chỉnh sửa qua diff",
-			"description": "Khi được bật, Kilo Code sẽ có thể chỉnh sửa tệp nhanh hơn và sẽ tự động từ chối ghi toàn bộ tệp bị cắt ngắn. Hoạt động tốt nhất với mô hình Claude 3.7 Sonnet mới nhất.",
-			"strategy": {
-				"label": "Chiến lược diff",
-				"options": {
-					"standard": "Tiêu chuẩn (khối đơn)",
-					"multiBlock": "Thử nghiệm: Diff đa khối",
-					"unified": "Thử nghiệm: Diff thống nhất"
-				},
-				"descriptions": {
-					"standard": "Chiến lược diff tiêu chuẩn áp dụng thay đổi cho một khối mã tại một thời điểm.",
-					"unified": "Chiến lược diff thống nhất thực hiện nhiều cách tiếp cận để áp dụng diff và chọn cách tiếp cận tốt nhất.",
-					"multiBlock": "Chiến lược diff đa khối cho phép cập nhật nhiều khối mã trong một tệp trong một yêu cầu."
-				}
-			},
-			"matchPrecision": {
-				"label": "Độ chính xác khớp",
-				"description": "Thanh trượt này kiểm soát mức độ chính xác các phần mã phải khớp khi áp dụng diff. Giá trị thấp hơn cho phép khớp linh hoạt hơn nhưng tăng nguy cơ thay thế không chính xác. Sử dụng giá trị dưới 100% với sự thận trọng cao."
-			}
-		}
-	},
-	"experimental": {
-		"warning": "⚠️",
-		"DIFF_STRATEGY_UNIFIED": {
-			"name": "Sử dụng chiến lược diff thống nhất thử nghiệm",
-			"description": "Bật chiến lược diff thống nhất thử nghiệm. Chiến lược này có thể giảm số lần thử lại do lỗi mô hình nhưng có thể gây ra hành vi không mong muốn hoặc chỉnh sửa không chính xác. Chỉ bật nếu bạn hiểu rõ các rủi ro và sẵn sàng xem xét cẩn thận tất cả các thay đổi."
-		},
-		"SEARCH_AND_REPLACE": {
-			"name": "Sử dụng công cụ tìm kiếm và thay thế thử nghiệm",
-			"description": "Bật công cụ tìm kiếm và thay thế thử nghiệm, cho phép Kilo Code thay thế nhiều phiên bản của một thuật ngữ tìm kiếm trong một yêu cầu."
-		},
-		"INSERT_BLOCK": {
-			"name": "Sử dụng công cụ chèn nội dung thử nghiệm",
-			"description": "Bật công cụ chèn nội dung thử nghiệm, cho phép Kilo Code chèn nội dung tại số dòng cụ thể mà không cần tạo diff."
-		},
-		"POWER_STEERING": {
-			"name": "Sử dụng chế độ \"power steering\" thử nghiệm",
-			"description": "Khi được bật, Kilo Code sẽ nhắc nhở mô hình về chi tiết định nghĩa chế độ hiện tại thường xuyên hơn. Điều này sẽ dẫn đến việc tuân thủ chặt chẽ hơn các định nghĩa vai trò và hướng dẫn tùy chỉnh, nhưng sẽ sử dụng nhiều token hơn cho mỗi tin nhắn."
-		},
-		"MULTI_SEARCH_AND_REPLACE": {
-			"name": "Sử dụng công cụ diff đa khối thử nghiệm",
-			"description": "Khi được bật, Kilo Code sẽ sử dụng công cụ diff đa khối. Điều này sẽ cố gắng cập nhật nhiều khối mã trong tệp trong một yêu cầu."
-		}
-	},
-	"promptCaching": {
-		"label": "Tắt bộ nhớ đệm prompt",
-		"description": "Khi được chọn, Kilo Code sẽ không sử dụng bộ nhớ đệm prompt cho mô hình này."
-	},
-	"temperature": {
-		"useCustom": "Sử dụng nhiệt độ tùy chỉnh",
-		"description": "Kiểm soát tính ngẫu nhiên trong phản hồi của mô hình.",
-		"rangeDescription": "Giá trị cao hơn làm cho đầu ra ngẫu nhiên hơn, giá trị thấp hơn làm cho nó xác định hơn."
-	},
-	"modelInfo": {
-		"supportsImages": "Hỗ trợ hình ảnh",
-		"noImages": "Không hỗ trợ hình ảnh",
-		"supportsComputerUse": "Hỗ trợ sử dụng máy tính",
-		"noComputerUse": "Không hỗ trợ sử dụng máy tính",
-		"supportsPromptCache": "Hỗ trợ bộ nhớ đệm lời nhắc",
-		"noPromptCache": "Không hỗ trợ bộ nhớ đệm lời nhắc",
-		"maxOutput": "Đầu ra tối đa",
-		"inputPrice": "Giá đầu vào",
-		"outputPrice": "Giá đầu ra",
-		"cacheReadsPrice": "Giá đọc bộ nhớ đệm",
-		"cacheWritesPrice": "Giá ghi bộ nhớ đệm",
-		"enableStreaming": "Bật streaming",
-		"enableR1Format": "Kích hoạt tham số mô hình R1",
-		"enableR1FormatTips": "Cần kích hoạt khi sử dụng các mô hình R1 như QWQ, để tránh lỗi 400",
-		"useAzure": "Sử dụng Azure",
-		"azureApiVersion": "Đặt phiên bản API Azure",
-		"gemini": {
-			"freeRequests": "* Miễn phí đến {{count}} yêu cầu mỗi phút. Sau đó, thanh toán phụ thuộc vào kích thước lời nhắc.",
-			"pricingDetails": "Để biết thêm thông tin, xem chi tiết giá.",
-			"billingEstimate": "* Thanh toán là ước tính - chi phí chính xác phụ thuộc vào kích thước lời nhắc."
-		}
-	},
-	"modelPicker": {
-		"automaticFetch": "Tiện ích mở rộng tự động lấy danh sách mới nhất các mô hình có sẵn trên <serviceLink>{{serviceName}}</serviceLink>. Nếu bạn không chắc chắn nên chọn mô hình nào, Kilo Code hoạt động tốt nhất với <defaultModelLink>{{defaultModelId}}</defaultModelLink>. Bạn cũng có thể thử tìm kiếm \"free\" cho các tùy chọn miễn phí hiện có.",
-		"label": "Mô hình",
-		"searchPlaceholder": "Tìm kiếm",
-		"noMatchFound": "Không tìm thấy kết quả",
-		"useCustomModel": "Sử dụng tùy chỉnh: {{modelId}}"
-	},
-	"footer": {
-		"feedback": "Nếu bạn có bất kỳ câu hỏi hoặc phản hồi nào, vui lòng mở một vấn đề tại <githubLink>github.com/Kilo-Org/kilocode</githubLink> hoặc tham gia <redditLink>reddit.com/r/kilocode</redditLink> hoặc <discordLink>kilocode.ai/discord</discordLink>",
-		"version": "Kilo Code v{{version}}",
-		"telemetry": {
-			"label": "Cho phép báo cáo lỗi và sử dụng ẩn danh",
-			"description": "Giúp cải thiện Kilo Code bằng cách gửi dữ liệu sử dụng ẩn danh và báo cáo lỗi. Không bao giờ gửi mã, lời nhắc hoặc thông tin cá nhân. Xem chính sách bảo mật của chúng tôi để biết thêm chi tiết."
-		},
-		"settings": {
-			"import": "Nhập",
-			"export": "Xuất",
-			"reset": "Đặt lại"
-		}
-	},
-	"thinkingBudget": {
-		"maxTokens": "Tokens tối đa",
-		"maxThinkingTokens": "Tokens suy nghĩ tối đa"
-	},
-	"validation": {
-		"apiKey": "Bạn phải cung cấp khóa API hợp lệ.",
-		"awsRegion": "Bạn phải chọn một vùng để sử dụng Amazon Bedrock.",
-		"googleCloud": "Bạn phải cung cấp ID dự án và vùng Google Cloud hợp lệ.",
-		"modelId": "Bạn phải cung cấp ID mô hình hợp lệ.",
-		"modelSelector": "Bạn phải cung cấp bộ chọn mô hình hợp lệ.",
-		"openAi": "Bạn phải cung cấp URL cơ sở, khóa API và ID mô hình hợp lệ.",
-		"arn": {
-			"invalidFormat": "Định dạng ARN không hợp lệ. Vui lòng kiểm tra yêu cầu về định dạng.",
-			"regionMismatch": "Cảnh báo: Vùng trong ARN của bạn ({{arnRegion}}) không khớp với vùng bạn đã chọn ({{region}}). Điều này có thể gây ra vấn đề truy cập. Nhà cung cấp sẽ sử dụng vùng từ ARN."
-		},
-		"modelAvailability": "ID mô hình ({{modelId}}) bạn đã cung cấp không khả dụng. Vui lòng chọn một mô hình khác."
-	},
-	"placeholders": {
-		"apiKey": "Nhập khóa API...",
-		"profileName": "Nhập tên hồ sơ",
-		"accessKey": "Nhập khóa truy cập...",
-		"secretKey": "Nhập khóa bí mật...",
-		"sessionToken": "Nhập token phiên...",
-		"credentialsJson": "Nhập JSON thông tin xác thực...",
-		"keyFilePath": "Nhập đường dẫn tệp khóa...",
-		"projectId": "Nhập ID dự án...",
-		"customArn": "Nhập ARN (vd: arn:aws:bedrock:us-east-1:123456789012:foundation-model/my-model)",
-		"baseUrl": "Nhập URL cơ sở...",
-		"modelId": {
-			"lmStudio": "vd: meta-llama-3.1-8b-instruct",
-			"lmStudioDraft": "vd: lmstudio-community/llama-3.2-1b-instruct",
-			"ollama": "vd: llama3.1"
-		},
-		"numbers": {
-			"maxTokens": "vd: 4096",
-			"contextWindow": "vd: 128000",
-			"inputPrice": "vd: 0.0001",
-			"outputPrice": "vd: 0.0002",
-			"cacheWritePrice": "vd: 0.00005"
-		}
-	},
-	"defaults": {
-		"ollamaUrl": "Mặc định: http://localhost:11434",
-		"lmStudioUrl": "Mặc định: http://localhost:1234",
-		"geminiUrl": "Mặc định: https://generativelanguage.googleapis.com"
-	},
-	"labels": {
-		"customArn": "ARN tùy chỉnh",
-		"useCustomArn": "Sử dụng ARN tùy chỉnh..."
-	}
+  "common": {
+    "save": "Lưu",
+    "done": "Hoàn thành",
+    "cancel": "Hủy",
+    "reset": "Đặt lại",
+    "select": "Chọn",
+    "add": "Thêm tiêu đề",
+    "remove": "Xóa"
+  },
+  "header": {
+    "title": "Cài đặt",
+    "saveButtonTooltip": "Lưu thay đổi",
+    "nothingChangedTooltip": "Không có gì thay đổi",
+    "doneButtonTooltip": "Hủy thay đổi chưa lưu và đóng bảng cài đặt"
+  },
+  "unsavedChangesDialog": {
+    "title": "Thay đổi chưa lưu",
+    "description": "Bạn có muốn hủy thay đổi và tiếp tục không?",
+    "cancelButton": "Hủy",
+    "discardButton": "Hủy thay đổi"
+  },
+  "sections": {
+    "providers": "Nhà cung cấp",
+    "autoApprove": "Phê duyệt",
+    "browser": "Trình duyệt",
+    "checkpoints": "Điểm kiểm tra",
+    "notifications": "Thông báo",
+    "contextManagement": "Ngữ cảnh",
+    "terminal": "Terminal",
+    "experimental": "Thử nghiệm",
+    "language": "Ngôn ngữ",
+    "about": "Giới thiệu"
+  },
+  "autoApprove": {
+    "description": "Cho phép Kilo Code tự động thực hiện các hoạt động mà không cần phê duyệt. Chỉ bật những cài đặt này nếu bạn hoàn toàn tin tưởng AI và hiểu rõ các rủi ro bảo mật liên quan.",
+    "readOnly": {
+      "label": "Đọc",
+      "description": "Khi được bật, Kilo Code sẽ tự động xem nội dung thư mục và đọc tệp mà không yêu cầu bạn nhấp vào nút Phê duyệt.",
+      "outsideWorkspace": {
+        "label": "Bao gồm các tệp ngoài không gian làm việc",
+        "description": "Cho phép Kilo Code đọc các tệp bên ngoài không gian làm việc hiện tại mà không yêu cầu phê duyệt."
+      }
+    },
+    "write": {
+      "label": "Ghi",
+      "description": "Tự động tạo và chỉnh sửa tệp mà không cần phê duyệt",
+      "delayLabel": "Trì hoãn sau khi ghi để cho phép chẩn đoán phát hiện các vấn đề tiềm ẩn",
+      "outsideWorkspace": {
+        "label": "Bao gồm các tệp ngoài không gian làm việc",
+        "description": "Cho phép Kilo Code tạo và chỉnh sửa các tệp bên ngoài không gian làm việc hiện tại mà không yêu cầu phê duyệt."
+      }
+    },
+    "browser": {
+      "label": "Trình duyệt",
+      "description": "Tự động thực hiện các hành động trình duyệt mà không cần phê duyệt. Lưu ý: Chỉ áp dụng khi mô hình hỗ trợ sử dụng máy tính"
+    },
+    "retry": {
+      "label": "Thử lại",
+      "description": "Tự động thử lại các yêu cầu API thất bại khi máy chủ trả về phản hồi lỗi",
+      "delayLabel": "Trì hoãn trước khi thử lại yêu cầu"
+    },
+    "mcp": {
+      "label": "MCP",
+      "description": "Bật tự động phê duyệt các công cụ MCP riêng lẻ trong chế độ xem Máy chủ MCP (yêu cầu cả cài đặt này và hộp kiểm \"Luôn cho phép\" của công cụ)"
+    },
+    "modeSwitch": {
+      "label": "Chế độ",
+      "description": "Tự động chuyển đổi giữa các chế độ khác nhau mà không cần phê duyệt"
+    },
+    "subtasks": {
+      "label": "Công việc phụ",
+      "description": "Cho phép tạo và hoàn thành các công việc phụ mà không cần phê duyệt"
+    },
+    "execute": {
+      "label": "Thực thi",
+      "description": "Tự động thực thi các lệnh terminal được phép mà không cần phê duyệt",
+      "allowedCommands": "Các lệnh tự động thực thi được phép",
+      "allowedCommandsDescription": "Tiền tố lệnh có thể được tự động thực thi khi \"Luôn phê duyệt các hoạt động thực thi\" được bật. Thêm * để cho phép tất cả các lệnh (sử dụng cẩn thận).",
+      "commandPlaceholder": "Nhập tiền tố lệnh (ví dụ: 'git ')",
+      "addButton": "Thêm"
+    },
+    "showMenu": {
+      "label": "Hiển thị menu tự động phê duyệt trong giao diện trò chuyện",
+      "description": "Khi được bật, menu tự động phê duyệt sẽ hiển thị ở phần dưới của giao diện trò chuyện, cho phép truy cập nhanh vào cài đặt tự động phê duyệt"
+    },
+    "apiRequestLimit": {
+      "description": "Tự động thực hiện số lượng API request này trước khi yêu cầu phê duyệt để tiếp tục với nhiệm vụ."
+    }
+  },
+  "providers": {
+    "configProfile": "Hồ sơ cấu hình",
+    "providerDocumentation": "Tài liệu {{provider}}",
+    "description": "Lưu các cấu hình API khác nhau để nhanh chóng chuyển đổi giữa các nhà cung cấp và cài đặt.",
+    "apiProvider": "Nhà cung cấp API",
+    "model": "Mẫu",
+    "nameEmpty": "Tên không được để trống",
+    "nameExists": "Đã tồn tại một hồ sơ với tên này",
+    "deleteProfile": "Xóa hồ sơ",
+    "invalidArnFormat": "Định dạng ARN không hợp lệ. Vui lòng kiểm tra các ví dụ ở trên.",
+    "enterNewName": "Nhập tên mới",
+    "addProfile": "Thêm hồ sơ",
+    "renameProfile": "Đổi tên hồ sơ",
+    "newProfile": "Hồ sơ cấu hình mới",
+    "enterProfileName": "Nhập tên hồ sơ",
+    "createProfile": "Tạo hồ sơ",
+    "cannotDeleteOnlyProfile": "Không thể xóa hồ sơ duy nhất",
+    "searchPlaceholder": "Tìm kiếm hồ sơ",
+    "noMatchFound": "Không tìm thấy hồ sơ phù hợp",
+    "vscodeLmDescription": "API Mô hình Ngôn ngữ VS Code cho phép bạn chạy các mô hình được cung cấp bởi các tiện ích mở rộng khác của VS Code (bao gồm nhưng không giới hạn ở GitHub Copilot). Cách dễ nhất để bắt đầu là cài đặt các tiện ích mở rộng Copilot và Copilot Chat từ VS Code Marketplace.",
+    "awsCustomArnUse": "Nhập một ARN Amazon Bedrock hợp lệ cho mô hình bạn muốn sử dụng. Ví dụ về định dạng:",
+    "awsCustomArnDesc": "Đảm bảo rằng vùng trong ARN khớp với vùng AWS đã chọn ở trên.",
+    "openRouterApiKey": "Khóa API OpenRouter",
+    "getOpenRouterApiKey": "Lấy khóa API OpenRouter",
+    "apiKeyStorageNotice": "Khóa API được lưu trữ an toàn trong Bộ lưu trữ bí mật của VSCode",
+    "glamaApiKey": "Khóa API Glama",
+    "getGlamaApiKey": "Lấy khóa API Glama",
+    "useCustomBaseUrl": "Sử dụng URL cơ sở tùy chỉnh",
+    "useHostHeader": "Sử dụng tiêu đề Host tùy chỉnh",
+    "useLegacyFormat": "Sử dụng định dạng API OpenAI cũ",
+    "customHeaders": "Tiêu đề tùy chỉnh",
+    "headerName": "Tên tiêu đề",
+    "headerValue": "Giá trị tiêu đề",
+    "noCustomHeaders": "Chưa có tiêu đề tùy chỉnh nào được định nghĩa. Nhấp vào nút + để thêm.",
+    "requestyApiKey": "Khóa API Requesty",
+    "getRequestyApiKey": "Lấy khóa API Requesty",
+    "anthropicApiKey": "Khóa API Anthropic",
+    "getAnthropicApiKey": "Lấy khóa API Anthropic",
+    "anthropicUseAuthToken": "Truyền khóa API Anthropic dưới dạng tiêu đề Authorization thay vì X-Api-Key",
+    "chutesApiKey": "Khóa API Chutes",
+    "getChutesApiKey": "Lấy khóa API Chutes",
+    "deepSeekApiKey": "Khóa API DeepSeek",
+    "getDeepSeekApiKey": "Lấy khóa API DeepSeek",
+    "geminiApiKey": "Khóa API Gemini",
+    "getGroqApiKey": "Lấy khóa API Groq",
+    "groqApiKey": "Khóa API Groq",
+    "getGeminiApiKey": "Lấy khóa API Gemini",
+    "openAiApiKey": "Khóa API OpenAI",
+    "openAiBaseUrl": "URL cơ sở",
+    "getOpenAiApiKey": "Lấy khóa API OpenAI",
+    "mistralApiKey": "Khóa API Mistral",
+    "getMistralApiKey": "Lấy khóa API Mistral / Codestral",
+    "codestralBaseUrl": "URL cơ sở Codestral (Tùy chọn)",
+    "codestralBaseUrlDesc": "Đặt URL thay thế cho mô hình Codestral.",
+    "xaiApiKey": "Khóa API xAI",
+    "getXaiApiKey": "Lấy khóa API xAI",
+    "litellmApiKey": "Khóa API LiteLLM",
+    "litellmBaseUrl": "URL cơ sở LiteLLM",
+    "awsCredentials": "Thông tin xác thực AWS",
+    "awsProfile": "Hồ sơ AWS",
+    "awsProfileName": "Tên hồ sơ AWS",
+    "awsAccessKey": "Khóa truy cập AWS",
+    "awsSecretKey": "Khóa bí mật AWS",
+    "awsSessionToken": "Token phiên AWS",
+    "awsRegion": "Vùng AWS",
+    "awsCrossRegion": "Sử dụng suy luận liên vùng",
+    "enablePromptCaching": "Bật bộ nhớ đệm lời nhắc",
+    "enablePromptCachingTitle": "Bật bộ nhớ đệm lời nhắc để cải thiện hiệu suất và giảm chi phí cho các mô hình được hỗ trợ.",
+    "cacheUsageNote": "Lưu ý: Nếu bạn không thấy việc sử dụng bộ nhớ đệm, hãy thử chọn một mô hình khác và sau đó chọn lại mô hình mong muốn của bạn.",
+    "vscodeLmModel": "Mô hình ngôn ngữ",
+    "vscodeLmWarning": "Lưu ý: Đây là tích hợp thử nghiệm và hỗ trợ nhà cung cấp có thể khác nhau. Nếu bạn nhận được lỗi về mô hình không được hỗ trợ, đó là vấn đề từ phía nhà cung cấp.",
+    "googleCloudSetup": {
+      "title": "Để sử dụng Google Cloud Vertex AI, bạn cần:",
+      "step1": "1. Tạo tài khoản Google Cloud, kích hoạt Vertex AI API và kích hoạt các mô hình Claude mong muốn.",
+      "step2": "2. Cài đặt Google Cloud CLI và cấu hình thông tin xác thực mặc định của ứng dụng.",
+      "step3": "3. Hoặc tạo tài khoản dịch vụ với thông tin xác thực."
+    },
+    "googleCloudCredentials": "Thông tin xác thực Google Cloud",
+    "googleCloudKeyFile": "Đường dẫn tệp khóa Google Cloud",
+    "googleCloudProjectId": "ID dự án Google Cloud",
+    "googleCloudRegion": "Vùng Google Cloud",
+    "lmStudio": {
+      "baseUrl": "URL cơ sở (tùy chọn)",
+      "modelId": "ID mô hình",
+      "speculativeDecoding": "Bật giải mã suy đoán",
+      "draftModelId": "ID mô hình nháp",
+      "draftModelDesc": "Mô hình nháp phải từ cùng một họ mô hình để giải mã suy đoán hoạt động chính xác.",
+      "selectDraftModel": "Chọn mô hình nháp",
+      "noModelsFound": "Không tìm thấy mô hình nháp nào. Vui lòng đảm bảo LM Studio đang chạy với chế độ máy chủ được bật.",
+      "description": "LM Studio cho phép bạn chạy các mô hình cục bộ trên máy tính của bạn. Để biết hướng dẫn về cách bắt đầu, xem <a>hướng dẫn nhanh</a> của họ. Bạn cũng sẽ cần khởi động tính năng <b>máy chủ cục bộ</b> của LM Studio để sử dụng nó với tiện ích mở rộng này. <span>Lưu ý:</span> Kilo Code sử dụng các lời nhắc phức tạp và hoạt động tốt nhất với các mô hình Claude. Các mô hình kém mạnh hơn có thể không hoạt động như mong đợi."
+    },
+    "ollama": {
+      "baseUrl": "URL cơ sở (tùy chọn)",
+      "modelId": "ID mô hình",
+      "description": "Ollama cho phép bạn chạy các mô hình cục bộ trên máy tính của bạn. Để biết hướng dẫn về cách bắt đầu, xem hướng dẫn nhanh của họ.",
+      "warning": "Lưu ý: Kilo Code sử dụng các lời nhắc phức tạp và hoạt động tốt nhất với các mô hình Claude. Các mô hình kém mạnh hơn có thể không hoạt động như mong đợi."
+    },
+    "openRouterTransformsText": "Nén lời nhắc và chuỗi tin nhắn theo kích thước ngữ cảnh (<a>OpenRouter Transforms</a>)",
+    "refreshModels": {
+      "label": "Làm mới mô hình",
+      "hint": "Vui lòng mở lại cài đặt để xem các mô hình mới nhất."
+    },
+    "unboundApiKey": "Khóa API Unbound",
+    "getUnboundApiKey": "Lấy khóa API Unbound",
+    "humanRelay": {
+      "description": "Không cần khóa API, nhưng người dùng cần giúp sao chép và dán thông tin vào AI trò chuyện web.",
+      "instructions": "Trong quá trình sử dụng, một hộp thoại sẽ xuất hiện và tin nhắn hiện tại sẽ được tự động sao chép vào clipboard. Bạn cần dán chúng vào các phiên bản web của AI (như ChatGPT hoặc Claude), sau đó sao chép phản hồi của AI trở lại hộp thoại và nhấp vào nút xác nhận."
+    },
+    "openRouter": {
+      "providerRouting": {
+        "title": "Định tuyến nhà cung cấp OpenRouter",
+        "description": "OpenRouter chuyển hướng yêu cầu đến các nhà cung cấp tốt nhất hiện có cho mô hình của bạn. Theo mặc định, các yêu cầu được cân bằng giữa các nhà cung cấp hàng đầu để tối đa hóa thời gian hoạt động. Tuy nhiên, bạn có thể chọn một nhà cung cấp cụ thể để sử dụng cho mô hình này.",
+        "learnMore": "Tìm hiểu thêm về định tuyến nhà cung cấp"
+      }
+    },
+    "customModel": {
+      "capabilities": "Cấu hình các khả năng và giá cả cho mô hình tương thích OpenAI tùy chỉnh của bạn. Hãy cẩn thận khi chỉ định khả năng của mô hình, vì chúng có thể ảnh hưởng đến cách Kilo Code hoạt động.",
+      "maxTokens": {
+        "label": "Số token đầu ra tối đa",
+        "description": "Số lượng token tối đa mà mô hình có thể tạo ra trong một phản hồi. (Chỉ định -1 để cho phép máy chủ đặt số token tối đa.)"
+      },
+      "contextWindow": {
+        "label": "Kích thước cửa sổ ngữ cảnh",
+        "description": "Tổng số token (đầu vào + đầu ra) mà mô hình có thể xử lý."
+      },
+      "imageSupport": {
+        "label": "Hỗ trợ hình ảnh",
+        "description": "Mô hình này có khả năng xử lý và hiểu hình ảnh không?"
+      },
+      "computerUse": {
+        "label": "Sử dụng máy tính",
+        "description": "Mô hình này có khả năng tương tác với trình duyệt không? (ví dụ: Claude 3.7 Sonnet)."
+      },
+      "promptCache": {
+        "label": "Bộ nhớ đệm lời nhắc",
+        "description": "Mô hình này có khả năng lưu trữ lời nhắc trong bộ nhớ đệm không?"
+      },
+      "pricing": {
+        "input": {
+          "label": "Giá đầu vào",
+          "description": "Chi phí cho mỗi triệu token trong đầu vào/lời nhắc. Điều này ảnh hưởng đến chi phí gửi ngữ cảnh và hướng dẫn đến mô hình."
+        },
+        "output": {
+          "label": "Giá đầu ra",
+          "description": "Chi phí cho mỗi triệu token trong phản hồi của mô hình. Điều này ảnh hưởng đến chi phí của nội dung được tạo ra và hoàn thành."
+        },
+        "cacheReads": {
+          "label": "Giá đọc bộ nhớ đệm",
+          "description": "Chi phí cho mỗi triệu token khi đọc từ bộ nhớ đệm. Đây là giá được tính khi một phản hồi được lưu trong bộ nhớ đệm được truy xuất."
+        },
+        "cacheWrites": {
+          "label": "Giá ghi bộ nhớ đệm",
+          "description": "Chi phí cho mỗi triệu token khi ghi vào bộ nhớ đệm. Đây là giá được tính khi một lời nhắc được lưu vào bộ nhớ đệm lần đầu tiên."
+        }
+      },
+      "resetDefaults": "Đặt lại về mặc định"
+    },
+    "rateLimitSeconds": {
+      "label": "Giới hạn tốc độ",
+      "description": "Thời gian tối thiểu giữa các yêu cầu API."
+    },
+    "reasoningEffort": {
+      "label": "Nỗ lực suy luận của mô hình",
+      "high": "Cao",
+      "medium": "Trung bình",
+      "low": "Thấp"
+    },
+    "setReasoningLevel": "Kích hoạt nỗ lực suy luận"
+  },
+  "browser": {
+    "enable": {
+      "label": "Bật công cụ trình duyệt",
+      "description": "Khi được bật, Kilo Code có thể sử dụng trình duyệt để tương tác với các trang web khi sử dụng các mô hình hỗ trợ sử dụng máy tính."
+    },
+    "viewport": {
+      "label": "Kích thước khung nhìn",
+      "description": "Chọn kích thước khung nhìn cho tương tác trình duyệt. Điều này ảnh hưởng đến cách trang web được hiển thị và tương tác.",
+      "options": {
+        "largeDesktop": "Máy tính để bàn lớn (1280x800)",
+        "smallDesktop": "Máy tính để bàn nhỏ (900x600)",
+        "tablet": "Máy tính bảng (768x1024)",
+        "mobile": "Di động (360x640)"
+      }
+    },
+    "screenshotQuality": {
+      "label": "Chất lượng ảnh chụp màn hình",
+      "description": "Điều chỉnh chất lượng WebP của ảnh chụp màn hình trình duyệt. Giá trị cao hơn cung cấp ảnh chụp màn hình rõ ràng hơn nhưng tăng sử dụng token."
+    },
+    "remote": {
+      "label": "Sử dụng kết nối trình duyệt từ xa",
+      "description": "Kết nối với trình duyệt Chrome đang chạy với tính năng gỡ lỗi từ xa được bật (--remote-debugging-port=9222).",
+      "urlPlaceholder": "URL tùy chỉnh (ví dụ: http://localhost:9222)",
+      "testButton": "Kiểm tra kết nối",
+      "testingButton": "Đang kiểm tra...",
+      "instructions": "Nhập địa chỉ DevTools Protocol hoặc để trống để tự động phát hiện các instance Chrome cục bộ. Nút Kiểm tra kết nối sẽ thử URL tùy chỉnh nếu được cung cấp, hoặc tự động phát hiện nếu trường này trống."
+    }
+  },
+  "checkpoints": {
+    "enable": {
+      "label": "Bật điểm kiểm tra tự động",
+      "description": "Khi được bật, Kilo Code sẽ tự động tạo các điểm kiểm tra trong quá trình thực hiện nhiệm vụ, giúp dễ dàng xem lại các thay đổi hoặc quay lại trạng thái trước đó."
+    }
+  },
+  "notifications": {
+    "sound": {
+      "label": "Bật hiệu ứng âm thanh",
+      "description": "Khi được bật, Kilo Code sẽ phát hiệu ứng âm thanh cho thông báo và sự kiện.",
+      "volumeLabel": "Âm lượng"
+    },
+    "tts": {
+      "label": "Bật chuyển văn bản thành giọng nói",
+      "description": "Khi được bật, Kilo Code sẽ đọc to các phản hồi của nó bằng chức năng chuyển văn bản thành giọng nói.",
+      "speedLabel": "Tốc độ"
+    }
+  },
+  "contextManagement": {
+    "description": "Kiểm soát thông tin nào được đưa vào cửa sổ ngữ cảnh của AI, ảnh hưởng đến việc sử dụng token và chất lượng phản hồi",
+    "openTabs": {
+      "label": "Giới hạn ngữ cảnh tab đang mở",
+      "description": "Số lượng tab VSCode đang mở tối đa để đưa vào ngữ cảnh. Giá trị cao hơn cung cấp nhiều ngữ cảnh hơn nhưng tăng sử dụng token."
+    },
+    "workspaceFiles": {
+      "label": "Giới hạn ngữ cảnh tệp workspace",
+      "description": "Số lượng tệp tối đa để đưa vào chi tiết thư mục làm việc hiện tại. Giá trị cao hơn cung cấp nhiều ngữ cảnh hơn nhưng tăng sử dụng token."
+    },
+    "rooignore": {
+      "label": "Hiển thị tệp .kilocodeignore trong danh sách và tìm kiếm",
+      "description": "Khi được bật, các tệp khớp với mẫu trong .kilocodeignore sẽ được hiển thị trong danh sách với biểu tượng khóa. Khi bị tắt, các tệp này sẽ hoàn toàn bị ẩn khỏi danh sách tệp và tìm kiếm."
+    },
+    "maxReadFile": {
+      "label": "Ngưỡng tự động cắt ngắn khi đọc tệp",
+      "description": "Kilo Code đọc số dòng này khi mô hình không chỉ định giá trị bắt đầu/kết thúc. Nếu số này nhỏ hơn tổng số dòng của tệp, Kilo Code sẽ tạo một chỉ mục số dòng của các định nghĩa mã. Trường hợp đặc biệt: -1 chỉ thị Kilo Code đọc toàn bộ tệp (không tạo chỉ mục), và 0 chỉ thị không đọc dòng nào và chỉ cung cấp chỉ mục dòng cho ngữ cảnh tối thiểu. Giá trị thấp hơn giảm thiểu việc sử dụng ngữ cảnh ban đầu, cho phép đọc chính xác các phạm vi dòng sau này. Các yêu cầu có chỉ định bắt đầu/kết thúc rõ ràng không bị giới hạn bởi cài đặt này.",
+      "lines": "dòng",
+      "always_full_read": "Luôn đọc toàn bộ tệp"
+    }
+  },
+  "terminal": {
+    "basic": {
+      "label": "Cài đặt Terminal: Cơ bản",
+      "description": "Cài đặt cơ bản cho terminal"
+    },
+    "advanced": {
+      "label": "Cài đặt Terminal: Nâng cao",
+      "description": "Các tùy chọn sau có thể yêu cầu khởi động lại terminal để áp dụng cài đặt."
+    },
+    "outputLineLimit": {
+      "label": "Giới hạn đầu ra terminal",
+      "description": "Số dòng tối đa để đưa vào đầu ra terminal khi thực hiện lệnh. Khi vượt quá, các dòng sẽ bị xóa khỏi phần giữa, tiết kiệm token."
+    },
+    "shellIntegrationTimeout": {
+      "label": "Thời gian chờ tích hợp shell terminal",
+      "description": "Thời gian tối đa để chờ tích hợp shell khởi tạo trước khi thực hiện lệnh. Đối với người dùng có thời gian khởi động shell dài, giá trị này có thể cần được tăng lên nếu bạn thấy lỗi \"Shell Integration Unavailable\" trong terminal."
+    },
+    "shellIntegrationDisabled": {
+      "label": "Tắt tích hợp shell terminal",
+      "description": "Bật tùy chọn này nếu lệnh terminal không hoạt động chính xác hoặc bạn thấy lỗi 'Shell Integration Unavailable'. Tùy chọn này sử dụng phương pháp đơn giản hơn để chạy lệnh, bỏ qua một số tính năng terminal nâng cao."
+    },
+    "compressProgressBar": {
+      "label": "Nén đầu ra thanh tiến trình",
+      "description": "Khi được bật, xử lý đầu ra terminal với các ký tự carriage return (\\r) để mô phỏng cách terminal thật hiển thị nội dung. Điều này loại bỏ các trạng thái trung gian của thanh tiến trình, chỉ giữ lại trạng thái cuối cùng, giúp tiết kiệm không gian ngữ cảnh cho thông tin quan trọng hơn."
+    },
+    "zdotdir": {
+      "label": "Bật xử lý ZDOTDIR",
+      "description": "Khi được bật, tạo thư mục tạm thời cho ZDOTDIR để xử lý tích hợp shell zsh một cách chính xác. Điều này đảm bảo tích hợp shell VSCode hoạt động chính xác với zsh trong khi vẫn giữ nguyên cấu hình zsh của bạn. (thử nghiệm)"
+    },
+    "commandDelay": {
+      "label": "Độ trễ lệnh terminal",
+      "description": "Độ trễ tính bằng mili giây để thêm vào sau khi thực hiện lệnh. Cài đặt mặc định là 0 sẽ tắt hoàn toàn độ trễ. Điều này có thể giúp đảm bảo đầu ra lệnh được ghi lại đầy đủ trong các terminal có vấn đề về thời gian. Trong hầu hết các terminal, điều này được thực hiện bằng cách đặt `PROMPT_COMMAND='sleep N'` và PowerShell thêm `start-sleep` vào cuối mỗi lệnh. Ban đầu là giải pháp cho lỗi VSCode#237208 và có thể không cần thiết."
+    },
+    "powershellCounter": {
+      "label": "Bật giải pháp bộ đếm PowerShell",
+      "description": "Khi được bật, thêm một bộ đếm vào các lệnh PowerShell để đảm bảo thực thi lệnh chính xác. Điều này giúp ích với các terminal PowerShell có thể gặp vấn đề về ghi lại đầu ra."
+    },
+    "zshClearEolMark": {
+      "label": "Xóa dấu cuối dòng ZSH",
+      "description": "Khi được bật, xóa dấu cuối dòng ZSH bằng cách đặt PROMPT_EOL_MARK=''. Điều này ngăn chặn các vấn đề về diễn giải đầu ra lệnh khi kết thúc bằng các ký tự đặc biệt như '%'."
+    },
+    "zshOhMy": {
+      "label": "Bật tích hợp Oh My Zsh",
+      "description": "Khi được bật, đặt ITERM_SHELL_INTEGRATION_INSTALLED=Yes để kích hoạt các tính năng tích hợp shell của Oh My Zsh. Việc áp dụng cài đặt này có thể yêu cầu khởi động lại IDE. (thử nghiệm)"
+    },
+    "zshP10k": {
+      "label": "Bật tích hợp Powerlevel10k",
+      "description": "Khi được bật, đặt POWERLEVEL9K_TERM_SHELL_INTEGRATION=true để kích hoạt các tính năng tích hợp shell của Powerlevel10k. (thử nghiệm)"
+    },
+    "inheritEnv": {
+      "label": "Kế thừa biến môi trường",
+      "description": "Khi được bật, terminal sẽ kế thừa các biến môi trường từ tiến trình cha của VSCode, như các cài đặt tích hợp shell được định nghĩa trong hồ sơ người dùng. Điều này trực tiếp chuyển đổi cài đặt toàn cục của VSCode `terminal.integrated.inheritEnv`"
+    }
+  },
+  "advanced": {
+    "diff": {
+      "label": "Bật chỉnh sửa qua diff",
+      "description": "Khi được bật, Kilo Code sẽ có thể chỉnh sửa tệp nhanh hơn và sẽ tự động từ chối ghi toàn bộ tệp bị cắt ngắn. Hoạt động tốt nhất với mô hình Claude 3.7 Sonnet mới nhất.",
+      "strategy": {
+        "label": "Chiến lược diff",
+        "options": {
+          "standard": "Tiêu chuẩn (khối đơn)",
+          "multiBlock": "Thử nghiệm: Diff đa khối",
+          "unified": "Thử nghiệm: Diff thống nhất"
+        },
+        "descriptions": {
+          "standard": "Chiến lược diff tiêu chuẩn áp dụng thay đổi cho một khối mã tại một thời điểm.",
+          "unified": "Chiến lược diff thống nhất thực hiện nhiều cách tiếp cận để áp dụng diff và chọn cách tiếp cận tốt nhất.",
+          "multiBlock": "Chiến lược diff đa khối cho phép cập nhật nhiều khối mã trong một tệp trong một yêu cầu."
+        }
+      },
+      "matchPrecision": {
+        "label": "Độ chính xác khớp",
+        "description": "Thanh trượt này kiểm soát mức độ chính xác các phần mã phải khớp khi áp dụng diff. Giá trị thấp hơn cho phép khớp linh hoạt hơn nhưng tăng nguy cơ thay thế không chính xác. Sử dụng giá trị dưới 100% với sự thận trọng cao."
+      }
+    }
+  },
+  "experimental": {
+    "warning": "⚠️",
+    "DIFF_STRATEGY_UNIFIED": {
+      "name": "Sử dụng chiến lược diff thống nhất thử nghiệm",
+      "description": "Bật chiến lược diff thống nhất thử nghiệm. Chiến lược này có thể giảm số lần thử lại do lỗi mô hình nhưng có thể gây ra hành vi không mong muốn hoặc chỉnh sửa không chính xác. Chỉ bật nếu bạn hiểu rõ các rủi ro và sẵn sàng xem xét cẩn thận tất cả các thay đổi."
+    },
+    "SEARCH_AND_REPLACE": {
+      "name": "Sử dụng công cụ tìm kiếm và thay thế thử nghiệm",
+      "description": "Bật công cụ tìm kiếm và thay thế thử nghiệm, cho phép Kilo Code thay thế nhiều phiên bản của một thuật ngữ tìm kiếm trong một yêu cầu."
+    },
+    "INSERT_BLOCK": {
+      "name": "Sử dụng công cụ chèn nội dung thử nghiệm",
+      "description": "Bật công cụ chèn nội dung thử nghiệm, cho phép Kilo Code chèn nội dung tại số dòng cụ thể mà không cần tạo diff."
+    },
+    "POWER_STEERING": {
+      "name": "Sử dụng chế độ \"power steering\" thử nghiệm",
+      "description": "Khi được bật, Kilo Code sẽ nhắc nhở mô hình về chi tiết định nghĩa chế độ hiện tại thường xuyên hơn. Điều này sẽ dẫn đến việc tuân thủ chặt chẽ hơn các định nghĩa vai trò và hướng dẫn tùy chỉnh, nhưng sẽ sử dụng nhiều token hơn cho mỗi tin nhắn."
+    },
+    "MULTI_SEARCH_AND_REPLACE": {
+      "name": "Sử dụng công cụ diff đa khối thử nghiệm",
+      "description": "Khi được bật, Kilo Code sẽ sử dụng công cụ diff đa khối. Điều này sẽ cố gắng cập nhật nhiều khối mã trong tệp trong một yêu cầu."
+    }
+  },
+  "promptCaching": {
+    "label": "Tắt bộ nhớ đệm prompt",
+    "description": "Khi được chọn, Kilo Code sẽ không sử dụng bộ nhớ đệm prompt cho mô hình này."
+  },
+  "temperature": {
+    "useCustom": "Sử dụng nhiệt độ tùy chỉnh",
+    "description": "Kiểm soát tính ngẫu nhiên trong phản hồi của mô hình.",
+    "rangeDescription": "Giá trị cao hơn làm cho đầu ra ngẫu nhiên hơn, giá trị thấp hơn làm cho nó xác định hơn."
+  },
+  "modelInfo": {
+    "supportsImages": "Hỗ trợ hình ảnh",
+    "noImages": "Không hỗ trợ hình ảnh",
+    "supportsComputerUse": "Hỗ trợ sử dụng máy tính",
+    "noComputerUse": "Không hỗ trợ sử dụng máy tính",
+    "supportsPromptCache": "Hỗ trợ bộ nhớ đệm lời nhắc",
+    "noPromptCache": "Không hỗ trợ bộ nhớ đệm lời nhắc",
+    "maxOutput": "Đầu ra tối đa",
+    "inputPrice": "Giá đầu vào",
+    "outputPrice": "Giá đầu ra",
+    "cacheReadsPrice": "Giá đọc bộ nhớ đệm",
+    "cacheWritesPrice": "Giá ghi bộ nhớ đệm",
+    "enableStreaming": "Bật streaming",
+    "enableR1Format": "Kích hoạt tham số mô hình R1",
+    "enableR1FormatTips": "Cần kích hoạt khi sử dụng các mô hình R1 như QWQ, để tránh lỗi 400",
+    "useAzure": "Sử dụng Azure",
+    "azureApiVersion": "Đặt phiên bản API Azure",
+    "gemini": {
+      "freeRequests": "* Miễn phí đến {{count}} yêu cầu mỗi phút. Sau đó, thanh toán phụ thuộc vào kích thước lời nhắc.",
+      "pricingDetails": "Để biết thêm thông tin, xem chi tiết giá.",
+      "billingEstimate": "* Thanh toán là ước tính - chi phí chính xác phụ thuộc vào kích thước lời nhắc."
+    }
+  },
+  "modelPicker": {
+    "automaticFetch": "Tiện ích mở rộng tự động lấy danh sách mới nhất các mô hình có sẵn trên <serviceLink>{{serviceName}}</serviceLink>. Nếu bạn không chắc chắn nên chọn mô hình nào, Kilo Code hoạt động tốt nhất với <defaultModelLink>{{defaultModelId}}</defaultModelLink>. Bạn cũng có thể thử tìm kiếm \"free\" cho các tùy chọn miễn phí hiện có.",
+    "label": "Mô hình",
+    "searchPlaceholder": "Tìm kiếm",
+    "noMatchFound": "Không tìm thấy kết quả",
+    "useCustomModel": "Sử dụng tùy chỉnh: {{modelId}}"
+  },
+  "footer": {
+    "feedback": "Nếu bạn có bất kỳ câu hỏi hoặc phản hồi nào, vui lòng mở một vấn đề tại <githubLink>github.com/Kilo-Org/kilocode</githubLink> hoặc tham gia <redditLink>reddit.com/r/kilocode</redditLink> hoặc <discordLink>kilocode.ai/discord</discordLink>",
+    "version": "Kilo Code v{{version}}",
+    "telemetry": {
+      "label": "Cho phép báo cáo lỗi và sử dụng ẩn danh",
+      "description": "Giúp cải thiện Kilo Code bằng cách gửi dữ liệu sử dụng ẩn danh và báo cáo lỗi. Không bao giờ gửi mã, lời nhắc hoặc thông tin cá nhân. Xem chính sách bảo mật của chúng tôi để biết thêm chi tiết."
+    },
+    "settings": {
+      "import": "Nhập",
+      "export": "Xuất",
+      "reset": "Đặt lại"
+    }
+  },
+  "thinkingBudget": {
+    "maxTokens": "Tokens tối đa",
+    "maxThinkingTokens": "Tokens suy nghĩ tối đa"
+  },
+  "validation": {
+    "apiKey": "Bạn phải cung cấp khóa API hợp lệ.",
+    "awsRegion": "Bạn phải chọn một vùng để sử dụng Amazon Bedrock.",
+    "googleCloud": "Bạn phải cung cấp ID dự án và vùng Google Cloud hợp lệ.",
+    "modelId": "Bạn phải cung cấp ID mô hình hợp lệ.",
+    "modelSelector": "Bạn phải cung cấp bộ chọn mô hình hợp lệ.",
+    "openAi": "Bạn phải cung cấp URL cơ sở, khóa API và ID mô hình hợp lệ.",
+    "arn": {
+      "invalidFormat": "Định dạng ARN không hợp lệ. Vui lòng kiểm tra yêu cầu về định dạng.",
+      "regionMismatch": "Cảnh báo: Vùng trong ARN của bạn ({{arnRegion}}) không khớp với vùng bạn đã chọn ({{region}}). Điều này có thể gây ra vấn đề truy cập. Nhà cung cấp sẽ sử dụng vùng từ ARN."
+    },
+    "modelAvailability": "ID mô hình ({{modelId}}) bạn đã cung cấp không khả dụng. Vui lòng chọn một mô hình khác."
+  },
+  "placeholders": {
+    "apiKey": "Nhập khóa API...",
+    "profileName": "Nhập tên hồ sơ",
+    "accessKey": "Nhập khóa truy cập...",
+    "secretKey": "Nhập khóa bí mật...",
+    "sessionToken": "Nhập token phiên...",
+    "credentialsJson": "Nhập JSON thông tin xác thực...",
+    "keyFilePath": "Nhập đường dẫn tệp khóa...",
+    "projectId": "Nhập ID dự án...",
+    "customArn": "Nhập ARN (vd: arn:aws:bedrock:us-east-1:123456789012:foundation-model/my-model)",
+    "baseUrl": "Nhập URL cơ sở...",
+    "modelId": {
+      "lmStudio": "vd: meta-llama-3.1-8b-instruct",
+      "lmStudioDraft": "vd: lmstudio-community/llama-3.2-1b-instruct",
+      "ollama": "vd: llama3.1"
+    },
+    "numbers": {
+      "maxTokens": "vd: 4096",
+      "contextWindow": "vd: 128000",
+      "inputPrice": "vd: 0.0001",
+      "outputPrice": "vd: 0.0002",
+      "cacheWritePrice": "vd: 0.00005"
+    }
+  },
+  "defaults": {
+    "ollamaUrl": "Mặc định: http://localhost:11434",
+    "lmStudioUrl": "Mặc định: http://localhost:1234",
+    "geminiUrl": "Mặc định: https://generativelanguage.googleapis.com"
+  },
+  "labels": {
+    "customArn": "ARN tùy chỉnh",
+    "useCustomArn": "Sử dụng ARN tùy chỉnh..."
+  }
 }

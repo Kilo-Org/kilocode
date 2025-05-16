@@ -166,6 +166,7 @@ export class Task extends EventEmitter<ClineEvents> {
 	consecutiveMistakeCount: number = 0
 	consecutiveMistakeLimit: number
 	consecutiveMistakeCountForApplyDiff: Map<string, number> = new Map()
+	private consecutiveAutoApprovedRequestsCount: number = 0
 	private toolUsage: ToolUsage = {}
 
 	// Checkpoints
@@ -1487,6 +1488,28 @@ export class Task extends EventEmitter<ClineEvents> {
 
 			return { role, content }
 		})
+
+		// Check if we've reached the maximum number of auto-approved requests
+		const { allowedMaxRequests } = (await this.providerRef.deref()?.getState()) ?? {}
+		const maxRequests = allowedMaxRequests || Infinity
+
+		// Increment the counter for each new API request
+		this.consecutiveAutoApprovedRequestsCount++
+
+		if (this.consecutiveAutoApprovedRequestsCount > maxRequests) {
+			const { response } = await this.ask(
+				"auto_approval_max_req_reached",
+				JSON.stringify({
+					title: t("common:ask.autoApprovedRequestLimitReached.title"),
+					description: t("common:ask.autoApprovedRequestLimitReached.description", { count: maxRequests }),
+					button: t("common:ask.autoApprovedRequestLimitReached.button"),
+				}),
+			)
+			// If we get past the promise, it means the user approved and did not start a new task
+			if (response === "retry_clicked") {
+				this.consecutiveAutoApprovedRequestsCount = 0
+			}
+		}
 
 		const stream = this.api.createMessage(systemPrompt, cleanConversationHistory, this.promptCacheKey)
 		const iterator = stream[Symbol.asyncIterator]()
