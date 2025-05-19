@@ -315,7 +315,7 @@ const ApiOptions = ({
 					<ModelPicker
 						apiConfiguration={apiConfiguration}
 						setApiConfigurationField={setApiConfigurationField}
-						defaultModelId="claude37"
+						defaultModelId="gemini25"
 						models={routerModels?.["kilocode-openrouter"] ?? {}}
 						modelIdKey="kilocodeModel"
 						serviceName="Kilo Code"
