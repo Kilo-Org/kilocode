@@ -113,6 +113,59 @@ describe("McpHub", () => {
 		console.error = originalConsoleError
 	})
 
+	describe("validateServerConfig", () => {
+		it("should infer streamableHttp when headers are missing", () => {
+			const config = {
+				url: "http://localhost:8080",
+			}
+			const result = (mcpHub as any).validateServerConfig(config)
+			expect(result.type).toBe("streamableHttp")
+		})
+		it("should infer sse when Accept is text/event-stream", () => {
+			const config = {
+				url: "http://localhost:8080",
+				headers: {
+					Accept: "text/event-stream",
+				},
+			}
+			const result = (mcpHub as any).validateServerConfig(config)
+			expect(result.type).toBe("sse")
+		})
+		it("should honor explicitly provided streamableHttp type", () => {
+			const config = {
+				type: "streamableHttp",
+				url: "http://localhost:8080",
+				headers: {
+					Authorization: "Bearer token",
+				},
+			}
+			const result = (mcpHub as any).validateServerConfig(config)
+			expect(result.type).toBe("streamableHttp")
+		})
+		it("should throw if streamableHttp config is missing url", () => {
+			const config = {
+				type: "streamableHttp",
+				headers: {
+					Authorization: "Bearer xyz",
+				},
+			}
+
+			expect(() => (mcpHub as any).validateServerConfig(config)).toThrow(
+				"For url based type servers, you must provide a 'url' field and can optionally include 'headers'",
+			)
+		})
+		it("should throw if unknown type is provided", () => {
+			const config = {
+				type: "nonsense",
+				command: "node",
+			}
+
+			expect(() => (mcpHub as any).validateServerConfig(config)).toThrow(
+				"Server type must be one of: 'stdio', 'sse', or 'streamableHttp'",
+			)
+		})
+	})
+
 	describe("toggleToolAlwaysAllow", () => {
 		it("should add tool to always allow list when enabling", async () => {
 			const mockConfig = {
