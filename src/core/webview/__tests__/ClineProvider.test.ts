@@ -165,12 +165,21 @@ jest.mock("vscode", () => ({
 	env: {
 		uriScheme: "vscode",
 		language: "en",
+		uiKind: 1, // kilocode_change Desktop
 	},
 	ExtensionMode: {
 		Production: 1,
 		Development: 2,
 		Test: 3,
 	},
+	// kilocode_change start
+	UIKind: {
+		1: "Desktop",
+		2: "Web",
+		Desktop: 1,
+		Web: 2,
+	},
+	// kilocode_change end
 }))
 
 jest.mock("../../../utils/sound", () => ({
