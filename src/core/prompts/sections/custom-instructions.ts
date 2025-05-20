@@ -1,9 +1,6 @@
 import fs from "fs/promises"
 import path from "path"
 
-// Use a dynamic require for vscode to avoid issues with Vite's static analysis
-// when this file is inadvertently pulled into the webview-ui build.
-// The 'vscode' module is only available in the extension host environment.
 let vscodeAPI: typeof import("vscode") | undefined
 try {
 	vscodeAPI = require("vscode")
