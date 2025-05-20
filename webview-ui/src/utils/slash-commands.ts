@@ -1,4 +1,4 @@
-import { getAllModes } from "@roo/shared/modes"
+import { getAllModes } from "../lib/modes"
 
 export interface SlashCommand {
 	name: string

@@ -1,4 +1,4 @@
-import { mentionRegex } from "@roo/shared/context-mentions"
+import { mentionRegex } from "../lib/context-mentions"
 import { Fzf } from "fzf"
 import { ModeConfig } from "@roo/shared/modes"
 

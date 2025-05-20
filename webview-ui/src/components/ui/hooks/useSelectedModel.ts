@@ -31,7 +31,7 @@ import {
 	glamaDefaultModelId,
 	unboundDefaultModelId,
 	litellmDefaultModelId,
-} from "@roo/shared/api"
+} from "../../../lib/api"
 
 import { useRouterModels } from "./useRouterModels"
 

@@ -12,14 +12,14 @@ import {
 	ClineSayBrowserAction,
 	ClineSayTool,
 	ExtensionMessage,
-} from "@roo/shared/ExtensionMessage"
-import { McpServer, McpTool } from "@roo/shared/mcp"
-import { findLast } from "@roo/shared/array"
-import { combineApiRequests } from "@roo/shared/combineApiRequests"
-import { combineCommandSequences } from "@roo/shared/combineCommandSequences"
-import { getApiMetrics } from "@roo/shared/getApiMetrics"
-import { AudioType } from "@roo/shared/WebviewMessage"
-import { getAllModes } from "@roo/shared/modes"
+} from "../../lib/ExtensionMessage"
+import { McpServer, McpTool } from "../../lib/mcp"
+import { findLast } from "@/lib/array"
+import { combineApiRequests } from "../../lib/combineApiRequests"
+import { combineCommandSequences } from "../../lib/combineCommandSequences"
+import { getApiMetrics } from "../../lib/getApiMetrics"
+import { AudioType } from "../../lib/WebviewMessage"
+import { getAllModes } from "../../lib/modes"
 
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { vscode } from "@src/utils/vscode"
@@ -667,7 +667,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 	const isReadOnlyToolAction = useCallback((message: ClineMessage | undefined) => {
 		if (message?.type === "ask") {
-			if (!message.text) {
+			if (!('text' in message) || !message.text) {
 				return true
 			}
 
@@ -731,7 +731,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const isAllowedCommand = useCallback(
 		(message: ClineMessage | undefined): boolean => {
 			if (message?.type !== "ask") return false
-			return validateCommand(message.text || "", allowedCommands || [])
+			return validateCommand(('text' in message && message.text) || "", allowedCommands || [])
 		},
 		[allowedCommands],
 	)
@@ -760,7 +760,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				let tool: any = {}
 
 				try {
-					tool = JSON.parse(message.text || "{}")
+					tool = JSON.parse(('text' in message && message.text) || "{}")
 				} catch (error) {
 					console.error("Failed to parse tool:", error)
 				}
@@ -858,7 +858,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		}
 
 		if (message.type === "say") {
-			return ["api_req_started", "text", "browser_action", "browser_action_result"].includes(message.say!)
+			return ["api_req_started", "text", "browser_action", "browser_action_result"].includes(('say' in message && message.say) || "")
 		}
 
 		return false
@@ -891,9 +891,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					// Get last `api_req_started` in currentGroup to check if
 					// it's cancelled. If it is then this api req is not part
 					// of the current browser session.
-					const lastApiReqStarted = [...currentGroup].reverse().find((m) => m.say === "api_req_started")
+					const lastApiReqStarted = [...currentGroup].reverse().find((m) => 'say' in m && m.say === "api_req_started")
 
-					if (lastApiReqStarted?.text !== null && lastApiReqStarted?.text !== undefined) {
+					if (lastApiReqStarted && 'text' in lastApiReqStarted && lastApiReqStarted.text !== null && lastApiReqStarted.text !== undefined) {
 						const info = JSON.parse(lastApiReqStarted.text)
 						const isCancelled = info.cancelReason !== null && info.cancelReason !== undefined
 
@@ -964,7 +964,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			const isLastCollapsedApiReq =
 				isLast &&
 				!Array.isArray(lastGroup) && // Make sure it's not a browser session group
-				lastGroup?.say === "api_req_started" &&
+				lastGroup && 'say' in lastGroup && lastGroup.say === "api_req_started" &&
 				!expandedRows[lastGroup.ts]
 
 			setExpandedRows((prev) => ({ ...prev, [ts]: !prev[ts] }))

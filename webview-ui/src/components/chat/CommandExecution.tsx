@@ -2,7 +2,7 @@ import { useCallback, useState, memo } from "react"
 import { useEvent } from "react-use"
 import { ChevronDown, Skull } from "lucide-react"
 
-import { CommandExecutionStatus, commandExecutionStatusSchema } from "@roo/schemas"
+import { CommandExecutionStatus, commandExecutionStatusSchema } from "../../lib/schemas"
 import { ExtensionMessage } from "@roo/shared/ExtensionMessage"
 import { safeJsonParse } from "@roo/shared/safeJsonParse"
 import { COMMAND_OUTPUT_STRING } from "@roo/shared/combineCommandSequences"
@@ -59,13 +59,13 @@ export const CommandExecution = ({ executionId, text }: CommandExecutionProps) =
 
 					switch (data.status) {
 						case "started":
-							setCommand(data.command)
+							setCommand(data.command || "")
 							setStatus(data)
 							break
-						case "output":
-							setOutput(data.output)
+						case "running":
+							setOutput(data.output || "")
 							break
-						case "fallback":
+						case "completed":
 							setIsExpanded(true)
 							break
 						default:

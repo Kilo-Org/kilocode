@@ -5,7 +5,7 @@ import deepEqual from "fast-deep-equal"
 import { VSCodeBadge, VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 
 import { ClineApiReqInfo, ClineAskUseMcpServer, ClineMessage, ClineSayTool } from "@roo/shared/ExtensionMessage"
-import { COMMAND_OUTPUT_STRING } from "@roo/shared/combineCommandSequences"
+import { COMMAND_OUTPUT_STRING } from "../../lib/combineCommandSequences"
 import { safeJsonParse } from "@roo/shared/safeJsonParse"
 
 import { useCopyToClipboard } from "@src/utils/clipboard"

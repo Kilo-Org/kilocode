@@ -3,10 +3,10 @@ import { useEvent } from "react-use"
 
 import { ProviderSettingsEntry, ExtensionMessage, ExtensionState } from "@roo/shared/ExtensionMessage"
 import { ProviderSettings } from "@roo/shared/api"
-import { findLastIndex } from "@roo/shared/array"
+import { findLastIndex } from "../lib/array"
 import { McpServer } from "@roo/shared/mcp"
 import { checkExistKey } from "@roo/shared/checkExistApiConfig"
-import { Mode, CustomModePrompts, defaultModeSlug, defaultPrompts, ModeConfig } from "@roo/shared/modes"
+import { Mode, CustomModePrompts, defaultModeSlug, defaultPrompts, ModeConfig } from "../lib/modes"
 import { CustomSupportPrompts } from "@roo/shared/support-prompt"
 import { experimentDefault, ExperimentId } from "@roo/shared/experiments"
 import { McpMarketplaceCatalog } from "../../../src/shared/kilocode/mcp" // kilocode_change
