@@ -63,6 +63,11 @@ export const toolParamNames = [
 	"ignore_case",
 	"start_line",
 	"end_line",
+	"title",
+	"what_happened",
+	"steps_to_reproduce",
+	"api_request_output",
+	"additional_context",
 ] as const
 
 export type ToolParamName = (typeof toolParamNames)[number]

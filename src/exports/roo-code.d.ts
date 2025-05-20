@@ -550,6 +550,7 @@ type RooCodeEvents = {
 			| "new_task"
 			| "fetch_instructions"
 			| "new_rule"
+			| "report_bug"
 		),
 		string,
 	]
