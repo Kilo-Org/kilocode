@@ -11,7 +11,7 @@ import ApiOptions from "../../settings/ApiOptions"
 import { getKiloCodeBackendAuthUrl } from "../helpers"
 
 const WelcomeView = () => {
-	const { apiConfiguration, currentApiConfigName, setApiConfiguration, uriScheme } = useExtensionState()
+	const { apiConfiguration, currentApiConfigName, setApiConfiguration, uriScheme, uiKind } = useExtensionState()
 	const [errorMessage, setErrorMessage] = useState<string | undefined>()
 	const [manualConfig, setManualConfig] = useState(false)
 	const { t } = useAppTranslation()
@@ -28,6 +28,10 @@ const WelcomeView = () => {
 		vscode.postMessage({ type: "upsertApiConfiguration", text: currentApiConfigName, apiConfiguration })
 	}, [apiConfiguration, currentApiConfigName])
 
+	const isSettingUpKiloCode =
+		!apiConfiguration?.apiProvider ||
+		(apiConfiguration?.apiProvider === "kilocode" && !apiConfiguration?.kilocodeToken)
+
 	return (
 		<Tab>
 			<TabContent className="flex flex-col gap-5">
@@ -39,13 +43,14 @@ const WelcomeView = () => {
 							fromWelcomeView
 							apiConfiguration={apiConfiguration || {}}
 							uriScheme={uriScheme}
+							uiKind={uiKind}
 							setApiConfigurationField={(field, value) => setApiConfiguration({ [field]: value })}
 							errorMessage={errorMessage}
 							setErrorMessage={setErrorMessage}
 							hideKiloCodeButton
 						/>
-						{!apiConfiguration?.apiProvider || apiConfiguration?.apiProvider === "kilocode" ? (
-							<ButtonLink href={getKiloCodeBackendAuthUrl(uriScheme)}>
+						{isSettingUpKiloCode ? (
+							<ButtonLink href={getKiloCodeBackendAuthUrl(uriScheme, uiKind)}>
 								{t("kilocode:welcome.ctaButton")}
 							</ButtonLink>
 						) : (
@@ -55,7 +60,13 @@ const WelcomeView = () => {
 				) : (
 					<div className="bg-vscode-sideBar-background">
 						<div className="flex flex-col gap-5">
-							<ButtonLink href={getKiloCodeBackendAuthUrl(uriScheme)}>
+							<ButtonLink
+								href={getKiloCodeBackendAuthUrl(uriScheme, uiKind)}
+								onClick={() => {
+									if (uiKind === "Web") {
+										setManualConfig(true)
+									}
+								}}>
 								{t("kilocode:welcome.ctaButton")}
 							</ButtonLink>
 							<ButtonSecondary onClick={() => setManualConfig(true)}>

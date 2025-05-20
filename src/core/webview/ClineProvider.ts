@@ -1299,6 +1299,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			alwaysAllowModeSwitch: alwaysAllowModeSwitch ?? true,
 			alwaysAllowSubtasks: alwaysAllowSubtasks ?? true,
 			uriScheme: vscode.env.uriScheme,
+			uiKind: vscode.UIKind[vscode.env.uiKind], // kilocode_change
 			currentTaskItem: this.getCurrentCline()?.taskId
 				? (taskHistory || []).find((item: HistoryItem) => item.id === this.getCurrentCline()?.taskId)
 				: undefined,

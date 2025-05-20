@@ -3,6 +3,7 @@ import styled from "styled-components"
 
 type ButtonLinkProps = PropsWithChildren<{
 	href: string
+	onClick?: () => void
 }>
 
 const StyledButtonLink = styled.a`
@@ -47,8 +48,8 @@ const StyledButtonLink = styled.a`
 	}
 `
 
-export const ButtonLink = ({ href, children }: ButtonLinkProps) => (
-	<StyledButtonLink href={href} className="flex flex-col gap-1 text-center">
+export const ButtonLink = ({ href, onClick, children }: ButtonLinkProps) => (
+	<StyledButtonLink href={href} onClick={onClick} className="flex flex-col gap-1 text-center">
 		{children}
 	</StyledButtonLink>
 )

@@ -104,7 +104,14 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 	const { t } = useAppTranslation()
 
 	const extensionState = useExtensionState()
-	const { currentApiConfigName, listApiConfigMeta, uriScheme, version, settingsImportedAt } = extensionState
+	const {
+		currentApiConfigName,
+		listApiConfigMeta,
+		uriScheme,
+		uiKind /* kilocode_change */,
+		version,
+		settingsImportedAt,
+	} = extensionState
 
 	const [isDiscardDialogShow, setDiscardDialogShow] = useState(false)
 	const [isChangeDetected, setChangeDetected] = useState(false)
@@ -584,6 +591,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 								/>
 								<ApiOptions
 									uriScheme={uriScheme}
+									uiKind={uiKind /* kilocode_change */}
 									apiConfiguration={apiConfiguration}
 									setApiConfigurationField={setApiConfigurationField}
 									errorMessage={errorMessage}

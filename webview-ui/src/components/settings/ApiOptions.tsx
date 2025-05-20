@@ -67,6 +67,7 @@ import { BedrockCustomArn } from "./providers/BedrockCustomArn"
 
 export interface ApiOptionsProps {
 	uriScheme: string | undefined
+	uiKind: string | undefined // kilocode_change
 	apiConfiguration: ProviderSettings
 	setApiConfigurationField: <K extends keyof ProviderSettings>(field: K, value: ProviderSettings[K]) => void
 	fromWelcomeView?: boolean
@@ -77,6 +78,7 @@ export interface ApiOptionsProps {
 
 const ApiOptions = ({
 	uriScheme,
+	uiKind, // kilocode_change
 	apiConfiguration,
 	setApiConfigurationField,
 	fromWelcomeView,
@@ -306,11 +308,23 @@ const ApiOptions = ({
 
 			{errorMessage && <ApiErrorMessage errorMessage={errorMessage} />}
 
+			{/* kilocode_change start */}
 			{selectedProvider === "kilocode" && (
 				<>
 					<div style={{ marginTop: "0px" }} className="text-sm text-vscode-descriptionForeground -mt-2">
 						You get $20 for free!
 					</div>
+
+					<VSCodeTextField
+						value={apiConfiguration?.kilocodeToken || ""}
+						type="password"
+						onInput={handleInputChange("kilocodeToken")}
+						placeholder="KiloCode API Key"
+						className="w-full">
+						<div className="flex justify-between items-center mb-1">
+							<label className="block font-medium">KiloCode API Key</label>
+						</div>
+					</VSCodeTextField>
 
 					<ModelPicker
 						apiConfiguration={apiConfiguration}
@@ -322,7 +336,6 @@ const ApiOptions = ({
 						serviceUrl="https://kilocode.ai"
 					/>
 
-					{/* kilocode_change start */}
 					{!hideKiloCodeButton &&
 						(apiConfiguration.kilocodeToken ? (
 							<div>
@@ -343,13 +356,13 @@ const ApiOptions = ({
 								</Button>
 							</div>
 						) : (
-							<VSCodeButtonLink variant="secondary" href={getKiloCodeBackendAuthUrl(uriScheme)}>
+							<VSCodeButtonLink variant="secondary" href={getKiloCodeBackendAuthUrl(uriScheme, uiKind)}>
 								Log in at Kilo Code
 							</VSCodeButtonLink>
 						))}
-					{/* kilocode_change end */}
 				</>
 			)}
+			{/* kilocode_change end */}
 
 			{selectedProvider === "fireworks" && (
 				<div>

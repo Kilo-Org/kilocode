@@ -12,7 +12,14 @@ import RooHero from "./RooHero"
 import knuthShuffle from "knuth-shuffle-seeded"
 
 const WelcomeView = () => {
-	const { apiConfiguration, currentApiConfigName, setApiConfiguration, uriScheme, machineId } = useExtensionState()
+	const {
+		apiConfiguration,
+		currentApiConfigName,
+		setApiConfiguration,
+		uriScheme,
+		uiKind /* kilocode_change */,
+		machineId,
+	} = useExtensionState()
 	const { t } = useAppTranslation()
 	const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined)
 
@@ -106,6 +113,7 @@ const WelcomeView = () => {
 						fromWelcomeView
 						apiConfiguration={apiConfiguration || {}}
 						uriScheme={uriScheme}
+						uiKind={uiKind /* kilocode_change */}
 						setApiConfigurationField={(field, value) => setApiConfiguration({ [field]: value })}
 						errorMessage={errorMessage}
 						setErrorMessage={setErrorMessage}
