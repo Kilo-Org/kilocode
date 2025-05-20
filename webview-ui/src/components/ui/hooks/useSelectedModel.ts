@@ -177,7 +177,7 @@ function getSelectedModel({
 				claude37: "Claude 3.7 Sonnet",
 				gpt41: "GPT 4.1",
 			}
-			const id = displayModelId[(apiConfiguration?.kilocodeModel as keyof typeof displayModelId) ?? "gemini25"]
+			const id = displayModelId[(apiConfiguration?.kilocodeModel as keyof typeof displayModelId) ?? "claude37"]
 
 			// Use the fetched models from routerModels
 			if (routerModels?.["kilocode-openrouter"] && apiConfiguration?.kilocodeModel) {
