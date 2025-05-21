@@ -21,5 +21,5 @@
 		"no-throw-literal": "warn",
 		"semi": "off"
 	},
-	"ignorePatterns": ["out", "dist", "**/*.d.ts", "!roo-code.d.ts"]
+	"ignorePatterns": ["out", "dist", "**/*.d.ts", "!roo-code.d.ts", "!src/services/autocomplete/ide-types.d.ts"]
 }
