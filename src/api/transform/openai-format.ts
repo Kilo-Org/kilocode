@@ -85,7 +85,12 @@ export function convertToOpenAiMessages(
 							if (part.type === "image") {
 								return {
 									type: "image_url",
-									image_url: { url: `data:${part.source.media_type};base64,${part.source.data}` },
+									image_url: {
+										url:
+											part.source.type === "url"
+												? part.source.url
+												: `data:${part.source.media_type};base64,${part.source.data}`,
+									},
 								}
 							}
 							return { type: "text", text: part.text }
