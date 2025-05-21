@@ -1299,6 +1299,10 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			await provider.silentlyRefreshMcpMarketplace()
 			break
 		}
+
+		case "reportBug":
+			provider.getCurrentCline()?.handleWebviewAskResponse("yesButtonClicked")
+			break
 		// end kilocode_change
 	}
 }
