@@ -358,7 +358,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		renderStart.current = performance.now()
 	}, [])
 	useEffect(() => {
-		if (renderStart.current) {
+		if (renderStart.current && process.env.NODE_ENV !== "test") {
 			const renderEnd = performance.now()
 			const renderTime = renderEnd - renderStart.current
 
