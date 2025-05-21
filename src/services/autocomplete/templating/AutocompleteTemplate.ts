@@ -25,6 +25,7 @@ export interface AutocompleteTemplate {
 	completionOptions?: Partial<CompletionOptions>
 }
 
+const specialStopSymbol = "<|end" + "of" + "text|>" // NOT as one string, because of an openAI/openrouter? limitation, e.g. https://github.com/Kilo-Org/kilocode/issues/452
 // https://huggingface.co/stabilityai/stable-code-3b
 const stableCodeFimTemplate: AutocompleteTemplate = {
 	template: "<fim_prefix>{{{prefix}}}<fim_suffix>{{{suffix}}}<fim_middle>",
@@ -34,7 +35,7 @@ const stableCodeFimTemplate: AutocompleteTemplate = {
 			"<fim_suffix>",
 			"<fim_middle>",
 			"<file_sep>",
-			"<|endoftext|>",
+			specialStopSymbol,
 			"</fim_middle>",
 			"</code>",
 		],
@@ -48,7 +49,7 @@ const qwenCoderFimTemplate: AutocompleteTemplate = {
 	template: "<|fim_prefix|>{{{prefix}}}<|fim_suffix|>{{{suffix}}}<|fim_middle|>",
 	completionOptions: {
 		stop: [
-			"<|endoftext|>",
+			specialStopSymbol,
 			"<|fim_prefix|>",
 			"<|fim_middle|>",
 			"<|fim_suffix|>",

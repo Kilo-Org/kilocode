@@ -1,20 +1,24 @@
 //PLANREF: continue/core/autocomplete/templating/index.ts
-import { readFile } from "fs/promises"
 import { languageForFilepath } from "../AutocompleteLanguageInfo"
 import { getRangeInString } from "./ranges"
 import { AutocompleteInput } from "../types"
+import { IDE } from "../utils/ide" // Added IDE import
 
 /**
  * We have to handle a few edge cases in getting the entire prefix/suffix for the current file.
  * This is entirely prior to finding snippets from other files
  */
-export async function constructInitialPrefixSuffix(input: AutocompleteInput): Promise<{
+export async function constructInitialPrefixSuffix(
+	input: AutocompleteInput,
+	ide: IDE, // Added ide parameter
+): Promise<{
 	prefix: string
 	suffix: string
 }> {
 	const lang = languageForFilepath(input.filepath)
 
-	const fileContents = input.manuallyPassFileContents ?? String(await readFile(input.filepath))
+	// Use ide.readFile instead of fs/promises
+	const fileContents = input.manuallyPassFileContents ?? (await ide.readFile(input.filepath))
 	const fileLines = fileContents.split("\n")
 	let prefix =
 		getRangeInString(fileContents, {

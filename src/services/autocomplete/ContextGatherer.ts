@@ -3,6 +3,12 @@
 //PLANREF: continue/extensions/vscode/src/autocomplete/RecentlyVisitedRangesService.ts
 //PLANREF: continue/extensions/vscode/src/autocomplete/lsp.ts
 import * as vscode from "vscode"
+import { IDE } from "./utils/ide" // Required for new services
+import { RecentlyEditedTracker } from "./context/RecentlyEditedTracker"
+import { RecentlyVisitedRangesService } from "./context/RecentlyVisitedRangesService"
+import { getDefinitionsFromLsp } from "./utils/lsp"
+import { getLanguageInfo } from "./AutocompleteLanguageInfo" // Required for getDefinitionsFromLsp, removed unused AutocompleteLanguageInfo interface
+import { RangeInFileWithContents, RecentlyEditedRange } from "./ide-types" // Removed unused IdePosition, IdeRange
 
 /**
  * Interface for code context
@@ -11,15 +17,14 @@ export interface CodeContext {
 	currentLine: string
 	precedingLines: string[]
 	followingLines: string[]
-	imports: string[]
-	definitions: {
-		filepath: string
-		content: string
-		range: {
-			start: { line: number; character: number }
-			end: { line: number; character: number }
-		}
-	}[]
+	imports: string[] // Retained for now, can be re-evaluated
+	definitions: RangeInFileWithContents[] // Updated to use common type
+	recentlyEdited: {
+		// Combined recently edited ranges and documents
+		ranges: RecentlyEditedRange[]
+		documents: RangeInFileWithContents[]
+	}
+	recentlyVisited: RangeInFileWithContents[]
 }
 
 /**
@@ -29,25 +34,35 @@ export class ContextGatherer {
 	private maxPrecedingLines: number
 	private maxFollowingLines: number
 	private maxImports: number
-	private maxDefinitions: number
+	// maxDefinitions might be handled differently by getDefinitionsFromLsp or internally
+	// private maxDefinitions: number;
+
+	private ide: IDE
+	private recentlyEditedTracker: RecentlyEditedTracker
+	private recentlyVisitedRangesService: RecentlyVisitedRangesService
 
 	/**
 	 * Create a new context gatherer
+	 * @param ide IDE instance
 	 * @param maxPrecedingLines Maximum number of preceding lines to include
 	 * @param maxFollowingLines Maximum number of following lines to include
 	 * @param maxImports Maximum number of imports to include
-	 * @param maxDefinitions Maximum number of definitions to include
 	 */
 	constructor(
+		ide: IDE,
 		maxPrecedingLines: number = 20,
 		maxFollowingLines: number = 10,
 		maxImports: number = 20,
-		maxDefinitions: number = 5,
+		// maxDefinitions: number = 5, // LSP might return a variable number
 	) {
+		this.ide = ide
 		this.maxPrecedingLines = maxPrecedingLines
 		this.maxFollowingLines = maxFollowingLines
 		this.maxImports = maxImports
-		this.maxDefinitions = maxDefinitions
+		// this.maxDefinitions = maxDefinitions;
+
+		this.recentlyEditedTracker = new RecentlyEditedTracker(this.ide)
+		this.recentlyVisitedRangesService = new RecentlyVisitedRangesService(this.ide)
 	}
 
 	/**
@@ -61,12 +76,14 @@ export class ContextGatherer {
 	async gatherContext(
 		document: vscode.TextDocument,
 		position: vscode.Position,
-		useImports: boolean = true,
-		useDefinitions: boolean = true,
+		useImports: boolean = true, // Retain for now
+		useDefinitions: boolean = true, // Retain for now
+		// TODO: Expose config for enabling/disabling new context sources
 	): Promise<CodeContext> {
-		const content = document.getText()
-		const lines = content.split("\n")
-		const currentLine = lines[position.line]
+		const fullContent = document.getText()
+		const lines = fullContent.split("\n")
+		const currentLine = lines[position.line] ?? ""
+		const cursorIndex = document.offsetAt(position)
 
 		// Get preceding lines
 		const precedingLines = lines
@@ -78,17 +95,41 @@ export class ContextGatherer {
 			.slice(position.line + 1, position.line + 1 + this.maxFollowingLines)
 			.filter((line) => line.trim().length > 0)
 
-		// Get imports
+		// Get imports (existing method)
 		let imports: string[] = []
 		if (useImports) {
 			imports = await this.extractImports(document)
 		}
 
-		// Get definitions
-		let definitions: CodeContext["definitions"] = []
+		// Get definitions using new LSP-based method
+		let definitions: RangeInFileWithContents[] = []
 		if (useDefinitions) {
-			definitions = await this.getDefinitions(document, position)
+			// Get language info using our existing function
+			const langInfoForLsp = getLanguageInfo(document.languageId)
+			// The getDefinitionsFromLsp function in lsp.ts currently only uses
+			// lang.singleLineComment from the AutocompleteLanguageInfo type.
+			// Other properties like delimiters or indentation are not used by it.
+			// If they were needed, we would have to extend AutocompleteLanguageInfo or pass them separately.
+
+			try {
+				definitions = await getDefinitionsFromLsp(
+					document.uri.fsPath,
+					fullContent,
+					cursorIndex,
+					this.ide,
+					langInfoForLsp, // Pass the correctly typed and named variable
+				)
+			} catch (e) {
+				console.error("Error fetching LSP definitions:", e)
+			}
 		}
+
+		// Get recently edited context
+		const recentlyEditedRanges = await this.recentlyEditedTracker.getRecentlyEditedRanges()
+		const recentlyEditedDocuments = await this.recentlyEditedTracker.getRecentlyEditedDocuments()
+
+		// Get recently visited context
+		const recentlyVisitedSnippets = this.recentlyVisitedRangesService.getSnippets(document.uri.fsPath)
 
 		return {
 			currentLine,
@@ -96,6 +137,11 @@ export class ContextGatherer {
 			followingLines,
 			imports,
 			definitions,
+			recentlyEdited: {
+				ranges: recentlyEditedRanges,
+				documents: recentlyEditedDocuments,
+			},
+			recentlyVisited: recentlyVisitedSnippets,
 		}
 	}
 
@@ -138,54 +184,8 @@ export class ContextGatherer {
 	 * @param position Position
 	 * @returns Array of definitions
 	 */
-	private async getDefinitions(
-		document: vscode.TextDocument,
-		position: vscode.Position,
-	): Promise<CodeContext["definitions"]> {
-		try {
-			// Use VSCode's definition provider
-			const uri = document.uri
-
-			const definitions = await vscode.commands.executeCommand<vscode.Location[]>(
-				"vscode.executeDefinitionProvider",
-				uri,
-				position,
-			)
-
-			if (!definitions || definitions.length === 0) {
-				return []
-			}
-
-			const result: CodeContext["definitions"] = []
-
-			for (const def of definitions.slice(0, this.maxDefinitions)) {
-				try {
-					const defDocument = await vscode.workspace.openTextDocument(def.uri)
-					const content = defDocument.getText(def.range)
-
-					result.push({
-						filepath: def.uri.toString(),
-						content,
-						range: {
-							start: {
-								line: def.range.start.line,
-								character: def.range.start.character,
-							},
-							end: {
-								line: def.range.end.line,
-								character: def.range.end.character,
-							},
-						},
-					})
-				} catch (error) {
-					console.error(`Error getting definition content: ${error}`)
-				}
-			}
-
-			return result
-		} catch (error) {
-			console.error(`Error getting definitions: ${error}`)
-			return []
-		}
-	}
+	// The old getDefinitions method is replaced by the call to getDefinitionsFromLsp
+	// If specific parts of the old logic are still needed, they should be integrated
+	// into the new LSP handling or called separately if they serve a different purpose.
+	// For now, we assume getDefinitionsFromLsp is the primary source for "definitions".
 }

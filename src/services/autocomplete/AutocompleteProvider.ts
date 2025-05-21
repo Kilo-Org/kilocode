@@ -5,6 +5,7 @@ import { AutocompleteConfig } from "./AutocompleteConfig"
 import { ApiHandler, buildApiHandler } from "../../api"
 import { ContextGatherer } from "./ContextGatherer"
 import { PromptRenderer } from "./PromptRenderer"
+import { VsCodeIde } from "./utils/ide" // Import VsCodeIde
 import { CompletionCache } from "./utils/CompletionCache"
 
 // Default configuration values
@@ -42,8 +43,9 @@ export class AutocompleteProvider {
 	constructor() {
 		this.cache = new CompletionCache()
 		this.config = new AutocompleteConfig()
-		this.contextGatherer = new ContextGatherer()
-		this.promptRenderer = new PromptRenderer({}, DEFAULT_OLLAMA_MODEL)
+		const ide = new VsCodeIde() // Correctly instantiate VsCodeIde
+		this.contextGatherer = new ContextGatherer(ide)
+		this.promptRenderer = new PromptRenderer({}, DEFAULT_OLLAMA_MODEL, ide)
 
 		this.apiHandler = buildApiHandler({
 			apiProvider: "ollama",
@@ -289,12 +291,28 @@ export class AutocompleteProvider {
 		const codeContext = await this.contextGatherer.gatherContext(document, position, useImports, useDefinitions)
 
 		// Render prompts
-		const prompt = this.promptRenderer.renderPrompt(codeContext, {
+		// PromptRenderer.renderPrompt is now async and takes document, position, codeContext
+		const promptOptionsForRenderer: Partial<import("./PromptRenderer").PromptOptions> = {
 			language: document.languageId,
-			includeImports: useImports,
-			includeDefinitions: useDefinitions,
-			multilineCompletions: multilineCompletions as any,
-		})
+			// These properties are expected by PromptRenderer's PromptOptions interface
+			// We'll use defaults or try to get them from config if they were added there.
+			// For now, using defaults as they are not in AutocompleteConfig's return type.
+			maxTokens: vscode.workspace.getConfiguration("kilo-code").get<number>("autocomplete.maxTokens") || 2048,
+			temperature: vscode.workspace.getConfiguration("kilo-code").get<number>("autocomplete.temperature") || 0.2,
+			prefixPercentage:
+				vscode.workspace.getConfiguration("kilo-code").get<number>("autocomplete.prefixPercentage") || 0.6,
+			maxSuffixPercentage:
+				vscode.workspace.getConfiguration("kilo-code").get<number>("autocomplete.maxSuffixPercentage") || 0.2,
+			onlyMyCode: conf.onlyMyCode, // This one comes from conf
+			useRecentlyEdited: conf.useRecentlyEdited, // This one comes from conf
+			useRecentlyVisited:
+				vscode.workspace.getConfiguration("kilo-code").get<boolean>("autocomplete.useRecentlyVisited") || true, // Default this one
+			template: vscode.workspace.getConfiguration("kilo-code").get<string>("autocomplete.template"),
+			multilineCompletions:
+				multilineCompletions === "true" ? true : multilineCompletions === "false" ? false : "auto",
+		}
+
+		const prompt = await this.promptRenderer.renderPrompt(document, position, codeContext, promptOptionsForRenderer)
 		const systemPrompt = this.promptRenderer.renderSystemPrompt()
 
 		// Setup cancellation

@@ -51,3 +51,13 @@ export interface SymbolWithRange extends RangeInFile {
 }
 
 export type FileSymbolMap = Record<string, SymbolWithRange[]>
+
+export interface RecentlyEditedRange {
+	filepath: string
+	range: Range
+	// lines: string[]; // We might not need to store full lines, content can be derived
+	// symbols: Set<string>; // Symbols can be derived if needed
+	timestamp: number
+	// Store the actual content of the range for easier use
+	contents: string
+}

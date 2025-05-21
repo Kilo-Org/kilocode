@@ -4,18 +4,20 @@ import { constructInitialPrefixSuffix } from "../templating/constructPrefixSuffi
 import { AutocompleteInput } from "../types"
 import { AstPath, getAst, getTreePathAtCursor } from "./ast"
 import { IDE } from "./ide"
+import { countTokens, pruneLinesFromBottom, pruneLinesFromTop } from "./countTokens"
 
 // Tab autocomplete options to configure how autocomplete should work
 export interface TabAutocompleteOptions {
 	maxPromptTokens: number
-	prefixPercentage?: number
-	maxSuffixPercentage?: number
+	prefixPercentage: number // Made non-optional as it's used in pruning
+	maxSuffixPercentage: number // Made non-optional as it's used in pruning
 	onlyMyCode?: boolean
 	useRecentlyEdited?: boolean
 	experimental_includeClipboard: boolean
 	experimental_includeRecentlyVisitedRanges: boolean
 	experimental_includeRecentlyEditedRanges: boolean
 	experimental_includeDiff: boolean
+	template?: string // Added from continue/core/index.d.ts TabAutocompleteOptions
 }
 
 /**
@@ -56,7 +58,8 @@ export class HelperVars {
 		this._fileLines = (this._fileContents ?? "").split("\n")
 
 		// Construct full prefix/suffix (a few edge cases handled in here)
-		const { prefix: fullPrefix, suffix: fullSuffix } = await constructInitialPrefixSuffix(this.input)
+		// Pass IDE to constructInitialPrefixSuffix as it's needed in the continue version
+		const { prefix: fullPrefix, suffix: fullSuffix } = await constructInitialPrefixSuffix(this.input, this.ide)
 		this._fullPrefix = fullPrefix
 		this._fullSuffix = fullSuffix
 
@@ -87,16 +90,15 @@ export class HelperVars {
 
 	prunePrefixSuffix() {
 		// Construct basic prefix
-		// const maxPrefixTokens = this.options.maxPromptTokens * this.options.prefixPercentage
-		const prunedPrefix = this.fullPrefix //pruneLinesFromTop(this.fullPrefix, maxPrefixTokens, this.modelName)
+		const maxPrefixTokens = this.options.maxPromptTokens * this.options.prefixPercentage
+		const prunedPrefix = pruneLinesFromTop(this.fullPrefix, maxPrefixTokens, this.modelName)
 
 		// Construct suffix
-		// const maxSuffixTokens = Math.min(
-		// 	this.options.maxPromptTokens - countTokens(prunedPrefix, this.modelName),
-		// 	this.options.maxSuffixPercentage * this.options.maxPromptTokens,
-		// )
-		// const prunedSuffix = pruneLinesFromBottom(this.fullSuffix, maxSuffixTokens, this.modelName)
-		const prunedSuffix = this.fullSuffix
+		const maxSuffixTokens = Math.min(
+			this.options.maxPromptTokens - countTokens(prunedPrefix, this.modelName),
+			this.options.maxSuffixPercentage * this.options.maxPromptTokens,
+		)
+		const prunedSuffix = pruneLinesFromBottom(this.fullSuffix, maxSuffixTokens, this.modelName)
 
 		return {
 			prunedPrefix,
