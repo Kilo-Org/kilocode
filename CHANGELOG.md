@@ -1,6 +1,22 @@
 # kilo-code
 
-## 4.24.0
+## 4.25.0
+
+### Minor Changes
+
+- [#432](https://github.com/Kilo-Org/kilocode/pull/432) [`adfed7c`](https://github.com/Kilo-Org/kilocode/commit/adfed7c6df8cd9979df4ed152df8bda4017dc997) Thanks [@seuros](https://github.com/seuros)! - Support Streamable HTTP for MCP according to the [2025-03-26](https://modelcontextprotocol.io/specification/2025-03-26) spec
+
+- [#440](https://github.com/Kilo-Org/kilocode/pull/440) [`64adc9c`](https://github.com/Kilo-Org/kilocode/commit/64adc9cc5ac5ea8cbe03305d586de24dc7a989cc) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Include changes from Roo Code v3.17.2
+
+### Patch Changes
+
+- [#430](https://github.com/Kilo-Org/kilocode/pull/430) [`44ed7ad`](https://github.com/Kilo-Org/kilocode/commit/44ed7adf365d1103bed76e94458f6a661b4e382e) Thanks [@drakonen](https://github.com/drakonen)! - Added a notification when using non-kilocode-rules files
+
+- [#436](https://github.com/Kilo-Org/kilocode/pull/436) [`c6f54b7`](https://github.com/Kilo-Org/kilocode/commit/c6f54b76be170b841bfce9c36f4565f40d868979) Thanks [@RSO](https://github.com/RSO)! - Make the prompts view accessible through the topbar
+
+- [#434](https://github.com/Kilo-Org/kilocode/pull/434) [`f38e83c`](https://github.com/Kilo-Org/kilocode/commit/f38e83c3b640772bb376504ed65804e2da921fa0) Thanks [@RSO](https://github.com/RSO)! - Fixed bug in SettingsView that caused issues with detecting/saving changes
+
+## [4.24.0]
 
 ### Minor Changes
 
@@ -14,7 +30,7 @@
 
 - [#354](https://github.com/Kilo-Org/kilocode/pull/354) [`106b722`](https://github.com/Kilo-Org/kilocode/commit/106b722e747f98edb15b5a8e7a65e19db31028db) Thanks [@hassoncs](https://github.com/hassoncs)! - Fix wrong model after login (#213)
 
-## 4.23.0
+## [4.23.0]
 
 ### Minor Changes
 
@@ -22,7 +38,7 @@
 
 - [#303](https://github.com/Kilo-Org/kilocode/pull/303) [`b69a57e`](https://github.com/Kilo-Org/kilocode/commit/b69a57e316a740470a8be40d77dad50efde5c35c) Thanks [@drakonen](https://github.com/drakonen)! - Kilo Code Provider can now do all the OpenRouter models
 
-## 4.22.0
+## [4.22.0]
 
 ### Minor Changes
 
@@ -33,7 +49,7 @@
 - Fixed UI Issue - Unreadable transparent section at bottom of chat textArea. Thanks to @agape-apps for reporting this issue! See [Kilo-Org/kilocode#306](https://github.com/Kilo-Org/kilocode/issues/306)
 - Fix feedback button overlapping selection action button in history view
 
-## 4.21.0
+## [4.21.0]
 
 ### Minor Changes
 
@@ -43,7 +59,7 @@
 
 - Fix issue with removed slash commands for changing modes
 
-## 4.20.1
+## [4.20.1]
 
 ### Patch Changes
 
@@ -54,14 +70,14 @@
 
 - Include slash commands from Cline, include /newtask command
 
-## 4.19.1
+## [4.19.1]
 
 ### Patch Changes
 
 - Fix translations for system notifications
 - Include changes from Roo Code v3.14.3
 
-## 4.19.0
+## [4.19.0]
 
 ### Minor Changes
 
@@ -71,7 +87,7 @@
 
 - Small UI improvements for dark themes
 
-## 4.18.0
+## [4.18.0]
 
 ### Minor Changes
 
@@ -82,7 +98,7 @@
 - Fix settingview appearing not to save when hitting save button
 - Fix dark buttons on light vscode themes (thanks @Aikiboy123)
 
-## 4.17.0
+## [4.17.0]
 
 ### Minor Changes
 
@@ -104,7 +120,7 @@
 
 - Fix http referer header
 
-## 4.16.0
+## [4.16.0]
 
 ### Minor Changes
 

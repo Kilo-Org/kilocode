@@ -7,7 +7,7 @@
 		"editModesConfig": "Editar configuració de modes",
 		"editGlobalModes": "Editar modes globals",
 		"editProjectModes": "Editar modes de projecte (.kilocodemodes)",
-		"createModeHelpText": "Feu clic a + per crear un nou mode personalitzat, o simplement demaneu a Kilo Code al xat que en creï un per a vostè!",
+		"createModeHelpText": "Els modes són persones especialitzades que adapten el comportament de Kilo Code. <0>Aprèn sobre l'ús de modes</0> o <1>Personalització de modes.</1>",
 		"selectMode": "Cerqueu modes"
 	},
 	"apiConfiguration": {
@@ -34,6 +34,11 @@
 		"resetToDefault": "Restablir a valors predeterminats",
 		"description": "Definiu l'experiència i personalitat de Kilo Code per a aquest mode. Aquesta descripció determina com Kilo Code es presenta i aborda les tasques."
 	},
+	"whenToUse": {
+		"title": "Quan utilitzar (opcional)",
+		"description": "Descriviu quan s'hauria d'utilitzar aquest mode. Això ajuda l'Orchestrator a escollir el mode correcte per a una tasca.",
+		"resetToDefault": "Restablir la descripció 'Quan utilitzar' a valors predeterminats"
+	},
 	"customInstructions": {
 		"title": "Instruccions personalitzades específiques del mode (opcional)",
 		"resetToDefault": "Restablir a valors predeterminats",
@@ -42,8 +47,8 @@
 	},
 	"globalCustomInstructions": {
 		"title": "Instruccions personalitzades per a tots els modes",
-		"description": "Aquestes instruccions s'apliquen a tots els modes. Proporcionen un conjunt bàsic de comportaments que es poden millorar amb instruccions específiques de cada mode a continuació.\nSi voleu que Kilo Code pensi i parli en un idioma diferent al de la visualització del vostre editor ({{language}}), podeu especificar-ho aquí.",
-		"loadFromFile": "Les instruccions també es poden carregar des de la carpeta <span>.kilocode/rules/</span> al vostre espai de treball (.kilocoderules estan obsolets i deixaran de funcionar aviat)."
+		"description": "Aquestes instruccions s'apliquen a tots els modes. Proporcionen un conjunt bàsic de comportaments que es poden millorar amb instruccions específiques de cada mode a continuació. <0>Més informació</0>",
+		"loadFromFile": "Les instruccions també es poden carregar des de la carpeta <span>.kilocode/rules/</span> al vostre espai de treball (.kilocoderules i .clinerules estan obsolets i deixaran de funcionar aviat)."
 	},
 	"systemPrompt": {
 		"preview": "Previsualització del prompt del sistema",
@@ -102,7 +107,7 @@
 	},
 	"advancedSystemPrompt": {
 		"title": "Avançat: Sobreescriure prompt del sistema",
-		"description": "Podeu reemplaçar completament el prompt del sistema per a aquest mode (a part de la definició de rol i instruccions personalitzades) creant un fitxer a <span>.kilocode/system-prompt-{{slug}}</span> al vostre espai de treball. Aquesta és una funcionalitat molt avançada que eludeix les salvaguardes integrades i les comprovacions de consistència (especialment al voltant de l'ús d'eines), així que aneu amb compte!"
+		"description": "<2>⚠️ Avís:</2> Aquesta funcionalitat avançada eludeix les salvaguardes. <1>LLEGIU AIXÒ ABANS D'UTILITZAR!</1>Sobreescriviu el prompt del sistema per defecte creant un fitxer a <span>.kilocode/system-prompt-{{slug}}</span>."
 	},
 	"createModeDialog": {
 		"title": "Crear nou mode",
@@ -130,6 +135,10 @@
 		"roleDefinition": {
 			"label": "Definició de rol",
 			"description": "Definiu l'experiència i personalitat de Kilo Code per a aquest mode."
+		},
+		"whenToUse": {
+			"label": "Quan utilitzar (opcional)",
+			"description": "Proporcioneu una descripció clara de quan aquest mode és més efectiu i per a quins tipus de tasques excel·leix."
 		},
 		"tools": {
 			"label": "Eines disponibles",

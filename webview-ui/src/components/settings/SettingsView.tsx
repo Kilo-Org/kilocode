@@ -350,6 +350,24 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		},
 		[setCachedState, setChangeDetected, extensionState], // Depend on extensionState to get the latest original state
 	)
+
+	// From time to time there's a bug that triggers unsaved changes upon rendering the SettingsView
+	// This is a (nasty) workaround to detect when this happens, and to force overwrite the unsaved changes
+	const renderStart = useRef<null | number>()
+	useEffect(() => {
+		renderStart.current = performance.now()
+	}, [])
+	useEffect(() => {
+		if (renderStart.current && process.env.NODE_ENV !== "test") {
+			const renderEnd = performance.now()
+			const renderTime = renderEnd - renderStart.current
+
+			if (renderTime < 100 && isChangeDetected) {
+				console.info("Overwriting unsaved changes in less than 100ms")
+				onConfirmDialogResult(true)
+			}
+		}
+	}, [isChangeDetected, onConfirmDialogResult])
 	// kilocode_change end
 
 	// Handle tab changes with unsaved changes check

@@ -9,7 +9,7 @@ import { ApiHandlerOptions } from "../../../shared/api"
 // Mock dependencies
 jest.mock("openai")
 jest.mock("delay", () => jest.fn(() => Promise.resolve()))
-jest.mock("../fetchers/cache", () => ({
+jest.mock("../fetchers/modelCache", () => ({
 	getModels: jest.fn().mockImplementation(() => {
 		return Promise.resolve({
 			"anthropic/claude-3.7-sonnet": {
@@ -78,7 +78,6 @@ describe("OpenRouterHandler", () => {
 				topP: undefined,
 				promptCache: {
 					supported: true,
-					optional: false,
 				},
 			})
 		})

@@ -113,7 +113,6 @@ export const modelInfoSchema = z.object({
 	supportsImages: z.boolean().optional(),
 	supportsComputerUse: z.boolean().optional(),
 	supportsPromptCache: z.boolean(),
-	isPromptCacheOptional: z.boolean().optional(),
 	inputPrice: z.number().optional(),
 	outputPrice: z.number().optional(),
 	cacheWritesPrice: z.number().optional(),
@@ -222,6 +221,7 @@ export const modeConfigSchema = z.object({
 	slug: z.string().regex(/^[a-zA-Z0-9-]+$/, "Slug must contain only letters numbers and dashes"),
 	name: z.string().min(1, "Name is required"),
 	roleDefinition: z.string().min(1, "Role definition is required"),
+	whenToUse: z.string().optional(),
 	customInstructions: z.string().optional(),
 	groups: groupEntryArraySchema,
 	source: z.enum(["global", "project"]).optional(),
@@ -262,6 +262,7 @@ export type CustomModesSettings = z.infer<typeof customModesSettingsSchema>
 
 export const promptComponentSchema = z.object({
 	roleDefinition: z.string().optional(),
+	whenToUse: z.string().optional(),
 	customInstructions: z.string().optional(),
 })
 
@@ -316,7 +317,7 @@ export type CommandExecutionStatus = z.infer<typeof commandExecutionStatusSchema
  * ExperimentId
  */
 
-export const experimentIds = ["powerSteering", "autocomplete"] as const
+export const experimentIds = ["autocomplete", "autoCondenseContext", "powerSteering"] as const
 
 export const experimentIdsSchema = z.enum(experimentIds)
 
@@ -327,6 +328,7 @@ export type ExperimentId = z.infer<typeof experimentIdsSchema>
  */
 
 const experimentsSchema = z.object({
+	autoCondenseContext: z.boolean(),
 	powerSteering: z.boolean(),
 	autocomplete: z.boolean(),
 })
@@ -354,7 +356,6 @@ export type ProviderSettingsEntry = z.infer<typeof providerSettingsEntrySchema>
 const baseProviderSettingsSchema = z.object({
 	includeMaxTokens: z.boolean().optional(),
 	reasoningEffort: reasoningEffortsSchema.optional(),
-	promptCachingDisabled: z.boolean().optional(),
 	diffEnabled: z.boolean().optional(),
 	fuzzyMatchThreshold: z.number().optional(),
 	modelTemperature: z.number().nullish(),
@@ -649,7 +650,6 @@ const providerSettingsRecord: ProviderSettingsRecord = {
 	// Generic
 	includeMaxTokens: undefined,
 	reasoningEffort: undefined,
-	promptCachingDisabled: undefined,
 	diffEnabled: undefined,
 	fuzzyMatchThreshold: undefined,
 	modelTemperature: undefined,
@@ -1039,6 +1039,7 @@ export const toolNames = [
 	"switch_mode",
 	"new_task",
 	"fetch_instructions",
+	"new_rule", // kilocode_change
 ] as const
 
 export const toolNamesSchema = z.enum(toolNames)
@@ -1102,6 +1103,142 @@ export const rooCodeEventsSchema = z.object({
 export type RooCodeEvents = z.infer<typeof rooCodeEventsSchema>
 
 /**
+ * Ack
+ */
+
+export const ackSchema = z.object({
+	clientId: z.string(),
+	pid: z.number(),
+	ppid: z.number(),
+})
+
+export type Ack = z.infer<typeof ackSchema>
+
+/**
+ * TaskCommand
+ */
+
+export enum TaskCommandName {
+	StartNewTask = "StartNewTask",
+	CancelTask = "CancelTask",
+	CloseTask = "CloseTask",
+}
+
+export const taskCommandSchema = z.discriminatedUnion("commandName", [
+	z.object({
+		commandName: z.literal(TaskCommandName.StartNewTask),
+		data: z.object({
+			configuration: rooCodeSettingsSchema,
+			text: z.string(),
+			images: z.array(z.string()).optional(),
+			newTab: z.boolean().optional(),
+		}),
+	}),
+	z.object({
+		commandName: z.literal(TaskCommandName.CancelTask),
+		data: z.string(),
+	}),
+	z.object({
+		commandName: z.literal(TaskCommandName.CloseTask),
+		data: z.string(),
+	}),
+])
+
+export type TaskCommand = z.infer<typeof taskCommandSchema>
+
+/**
+ * TaskEvent
+ */
+
+export const taskEventSchema = z.discriminatedUnion("eventName", [
+	z.object({
+		eventName: z.literal(RooCodeEventName.Message),
+		payload: rooCodeEventsSchema.shape[RooCodeEventName.Message],
+	}),
+	z.object({
+		eventName: z.literal(RooCodeEventName.TaskCreated),
+		payload: rooCodeEventsSchema.shape[RooCodeEventName.TaskCreated],
+	}),
+	z.object({
+		eventName: z.literal(RooCodeEventName.TaskStarted),
+		payload: rooCodeEventsSchema.shape[RooCodeEventName.TaskStarted],
+	}),
+	z.object({
+		eventName: z.literal(RooCodeEventName.TaskModeSwitched),
+		payload: rooCodeEventsSchema.shape[RooCodeEventName.TaskModeSwitched],
+	}),
+	z.object({
+		eventName: z.literal(RooCodeEventName.TaskPaused),
+		payload: rooCodeEventsSchema.shape[RooCodeEventName.TaskPaused],
+	}),
+	z.object({
+		eventName: z.literal(RooCodeEventName.TaskUnpaused),
+		payload: rooCodeEventsSchema.shape[RooCodeEventName.TaskUnpaused],
+	}),
+	z.object({
+		eventName: z.literal(RooCodeEventName.TaskAskResponded),
+		payload: rooCodeEventsSchema.shape[RooCodeEventName.TaskAskResponded],
+	}),
+	z.object({
+		eventName: z.literal(RooCodeEventName.TaskAborted),
+		payload: rooCodeEventsSchema.shape[RooCodeEventName.TaskAborted],
+	}),
+	z.object({
+		eventName: z.literal(RooCodeEventName.TaskSpawned),
+		payload: rooCodeEventsSchema.shape[RooCodeEventName.TaskSpawned],
+	}),
+	z.object({
+		eventName: z.literal(RooCodeEventName.TaskCompleted),
+		payload: rooCodeEventsSchema.shape[RooCodeEventName.TaskCompleted],
+	}),
+	z.object({
+		eventName: z.literal(RooCodeEventName.TaskTokenUsageUpdated),
+		payload: rooCodeEventsSchema.shape[RooCodeEventName.TaskTokenUsageUpdated],
+	}),
+])
+
+export type TaskEvent = z.infer<typeof taskEventSchema>
+
+/**
+ * IpcMessage
+ */
+
+export enum IpcMessageType {
+	Connect = "Connect",
+	Disconnect = "Disconnect",
+	Ack = "Ack",
+	TaskCommand = "TaskCommand",
+	TaskEvent = "TaskEvent",
+}
+
+export enum IpcOrigin {
+	Client = "client",
+	Server = "server",
+}
+
+export const ipcMessageSchema = z.discriminatedUnion("type", [
+	z.object({
+		type: z.literal(IpcMessageType.Ack),
+		origin: z.literal(IpcOrigin.Server),
+		data: ackSchema,
+	}),
+	z.object({
+		type: z.literal(IpcMessageType.TaskCommand),
+		origin: z.literal(IpcOrigin.Client),
+		clientId: z.string(),
+		data: taskCommandSchema,
+	}),
+	z.object({
+		type: z.literal(IpcMessageType.TaskEvent),
+		origin: z.literal(IpcOrigin.Server),
+		relayClientId: z.string().optional(),
+		data: taskEventSchema,
+	}),
+])
+
+export type IpcMessage = z.infer<typeof ipcMessageSchema>
+
+/**
  * TypeDefinition
  */
 
@@ -1117,7 +1254,10 @@ export const typeDefinitions: TypeDefinition[] = [
 	{ schema: clineMessageSchema, identifier: "ClineMessage" },
 	{ schema: tokenUsageSchema, identifier: "TokenUsage" },
 	{ schema: rooCodeEventsSchema, identifier: "RooCodeEvents" },
+	{ schema: ipcMessageSchema, identifier: "IpcMessage" },
+	{ schema: taskCommandSchema, identifier: "TaskCommand" },
+	{ schema: taskEventSchema, identifier: "TaskEvent" },
 ]
 
-// Also export as default for ESM compatibility
+// Also export as default for ESM compatibility.
 export default { typeDefinitions }

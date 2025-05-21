@@ -75,7 +75,10 @@ import {
 	checkpointRestore,
 	checkpointDiff,
 } from "../checkpoints"
-import { processUserContentMentions } from "../mentions/processUserContentMentions"
+import { ApiMessage } from "../task-persistence/apiMessages"
+import { getMessagesSinceLastSummary } from "../condense"
+import { maybeRemoveImageBlocks } from "../../api/transform/image-cleaning"
+import { processKiloUserContentMentions } from "../mentions/processKiloUserContentMentions" // kilocode_change
 
 export type ClineEvents = {
 	message: [{ action: "created" | "updated"; message: ClineMessage }]
@@ -94,7 +97,6 @@ export type ClineEvents = {
 export type TaskOptions = {
 	provider: ClineProvider
 	apiConfiguration: ProviderSettings
-	customInstructions?: string
 	enableDiff?: boolean
 	enableCheckpoints?: boolean
 	fuzzyMatchThreshold?: number
@@ -128,12 +130,10 @@ export class Task extends EventEmitter<ClineEvents> {
 	isPaused: boolean = false
 	pausedModeSlug: string = defaultModeSlug
 	private pauseInterval: NodeJS.Timeout | undefined
-	customInstructions?: string
 
 	// API
 	readonly apiConfiguration: ProviderSettings
 	api: ApiHandler
-	private promptCacheKey: string
 	private lastApiRequestTime?: number
 
 	toolRepetitionDetector: ToolRepetitionDetector
@@ -153,7 +153,7 @@ export class Task extends EventEmitter<ClineEvents> {
 	didEditFile: boolean = false
 
 	// LLM Messages & Chat Messages
-	apiConversationHistory: (Anthropic.MessageParam & { ts?: number })[] = []
+	apiConversationHistory: ApiMessage[] = []
 	clineMessages: ClineMessage[] = []
 
 	// Ask
@@ -166,7 +166,7 @@ export class Task extends EventEmitter<ClineEvents> {
 	consecutiveMistakeCount: number = 0
 	consecutiveMistakeLimit: number
 	consecutiveMistakeCountForApplyDiff: Map<string, number> = new Map()
-	private toolUsage: ToolUsage = {}
+	toolUsage: ToolUsage = {}
 
 	// Checkpoints
 	enableCheckpoints: boolean
@@ -189,7 +189,6 @@ export class Task extends EventEmitter<ClineEvents> {
 	constructor({
 		provider,
 		apiConfiguration,
-		customInstructions,
 		enableDiff = false,
 		enableCheckpoints = true,
 		fuzzyMatchThreshold = 1.0,
@@ -226,11 +225,9 @@ export class Task extends EventEmitter<ClineEvents> {
 
 		this.apiConfiguration = apiConfiguration
 		this.api = buildApiHandler(apiConfiguration)
-		this.promptCacheKey = crypto.randomUUID()
 
 		this.urlContentFetcher = new UrlContentFetcher(provider.context)
 		this.browserSession = new BrowserSession(provider.context)
-		this.customInstructions = customInstructions
 		this.diffEnabled = enableDiff
 		this.fuzzyMatchThreshold = fuzzyMatchThreshold
 		this.consecutiveMistakeLimit = consecutiveMistakeLimit
@@ -277,7 +274,7 @@ export class Task extends EventEmitter<ClineEvents> {
 
 	// API Messages
 
-	private async getSavedApiConversationHistory(): Promise<Anthropic.MessageParam[]> {
+	private async getSavedApiConversationHistory(): Promise<ApiMessage[]> {
 		return readApiMessages({ taskId: this.taskId, globalStoragePath: this.globalStoragePath })
 	}
 
@@ -287,7 +284,7 @@ export class Task extends EventEmitter<ClineEvents> {
 		await this.saveApiConversationHistory()
 	}
 
-	async overwriteApiConversationHistory(newHistory: Anthropic.MessageParam[]) {
+	async overwriteApiConversationHistory(newHistory: ApiMessage[]) {
 		this.apiConversationHistory = newHistory
 		await this.saveApiConversationHistory()
 	}
@@ -319,8 +316,6 @@ export class Task extends EventEmitter<ClineEvents> {
 	}
 
 	public async overwriteClineMessages(newMessages: ClineMessage[]) {
-		// Reset the the prompt cache key since we've altered the conversation history.
-		this.promptCacheKey = crypto.randomUUID()
 		this.clineMessages = newMessages
 		await this.saveClineMessages()
 	}
@@ -487,6 +482,9 @@ export class Task extends EventEmitter<ClineEvents> {
 		partial?: boolean,
 		checkpoint?: Record<string, unknown>,
 		progressStatus?: ToolProgressStatus,
+		options: {
+			isNonInteractive?: boolean
+		} = {},
 	): Promise<undefined> {
 		if (this.abort) {
 			throw new Error(`[Kilo Codeine#say] task ${this.taskId}.${this.instanceId} aborted`)
@@ -494,49 +492,71 @@ export class Task extends EventEmitter<ClineEvents> {
 
 		if (partial !== undefined) {
 			const lastMessage = this.clineMessages.at(-1)
+
 			const isUpdatingPreviousPartial =
 				lastMessage && lastMessage.partial && lastMessage.type === "say" && lastMessage.say === type
+
 			if (partial) {
 				if (isUpdatingPreviousPartial) {
-					// existing partial message, so update it
+					// Existing partial message, so update it.
 					lastMessage.text = text
 					lastMessage.images = images
 					lastMessage.partial = partial
 					lastMessage.progressStatus = progressStatus
 					this.updateClineMessage(lastMessage)
 				} else {
-					// this is a new partial message, so add it with partial state
+					// This is a new partial message, so add it with partial state.
 					const sayTs = Date.now()
-					this.lastMessageTs = sayTs
+
+					if (!options.isNonInteractive) {
+						this.lastMessageTs = sayTs
+					}
+
 					await this.addToClineMessages({ ts: sayTs, type: "say", say: type, text, images, partial })
 				}
 			} else {
 				// New now have a complete version of a previously partial message.
+				// This is the complete version of a previously partial
+				// message, so replace the partial with the complete version.
 				if (isUpdatingPreviousPartial) {
-					// This is the complete version of a previously partial
-					// message, so replace the partial with the complete version.
-					this.lastMessageTs = lastMessage.ts
-					// lastMessage.ts = sayTs
+					if (!options.isNonInteractive) {
+						this.lastMessageTs = lastMessage.ts
+					}
+
 					lastMessage.text = text
 					lastMessage.images = images
 					lastMessage.partial = false
 					lastMessage.progressStatus = progressStatus
+
 					// Instead of streaming partialMessage events, we do a save
 					// and post like normal to persist to disk.
 					await this.saveClineMessages()
-					// More performant than an entire postStateToWebview.
+
+					// More performant than an entire `postStateToWebview`.
 					this.updateClineMessage(lastMessage)
 				} else {
 					// This is a new and complete message, so add it like normal.
 					const sayTs = Date.now()
-					this.lastMessageTs = sayTs
+
+					if (!options.isNonInteractive) {
+						this.lastMessageTs = sayTs
+					}
+
 					await this.addToClineMessages({ ts: sayTs, type: "say", say: type, text, images })
 				}
 			}
 		} else {
-			// this is a new non-partial message, so add it like normal
+			// This is a new non-partial message, so add it like normal.
 			const sayTs = Date.now()
-			this.lastMessageTs = sayTs
+
+			// A "non-interactive" message is a message is one that the user
+			// does not need to respond to. We don't want these message types
+			// to trigger an update to `lastMessageTs` since they can be created
+			// asynchronously and could interrupt a pending ask.
+			if (!options.isNonInteractive) {
+				this.lastMessageTs = sayTs
+			}
+
 			await this.addToClineMessages({ ts: sayTs, type: "say", say: type, text, images, checkpoint })
 		}
 	}
@@ -554,8 +574,12 @@ export class Task extends EventEmitter<ClineEvents> {
 	// Start / Abort / Resume
 
 	private async startTask(task?: string, images?: string[]): Promise<void> {
-		// conversationHistory (for API) and clineMessages (for webview) need to be in sync
-		// if the extension process were killed, then on restart the clineMessages might not be empty, so we need to set it to [] when we create a new Cline client (otherwise webview would show stale messages from previous session)
+		// `conversationHistory` (for API) and `clineMessages` (for webview)
+		// need to be in sync.
+		// If the extension process were killed, then on restart the
+		// `clineMessages` might not be empty, so we need to set it to [] when
+		// we create a new Cline client (otherwise webview would show stale
+		// messages from previous session).
 		this.clineMessages = []
 		this.apiConversationHistory = []
 		await this.providerRef.deref()?.postStateToWebview()
@@ -577,28 +601,25 @@ export class Task extends EventEmitter<ClineEvents> {
 	}
 
 	public async resumePausedTask(lastMessage: string) {
-		// release this Cline instance from paused state
+		// Release this Cline instance from paused state.
 		this.isPaused = false
 		this.emit("taskUnpaused")
 
-		// fake an answer from the subtask that it has completed running and this is the result of what it has done
-		// add the message to the chat history and to the webview ui
+		// Fake an answer from the subtask that it has completed running and
+		// this is the result of what it has done  add the message to the chat
+		// history and to the webview ui.
 		try {
 			await this.say("subtask_result", lastMessage)
 
 			await this.addToApiConversationHistory({
 				role: "user",
-				content: [
-					{
-						type: "text",
-						text: `[new_task completed] Result: ${lastMessage}`,
-					},
-				],
+				content: [{ type: "text", text: `[new_task completed] Result: ${lastMessage}` }],
 			})
 		} catch (error) {
 			this.providerRef
 				.deref()
 				?.log(`Error failed to add reply from subtast into conversation of parent task, error: ${error}`)
+
 			throw error
 		}
 	}
@@ -666,8 +687,7 @@ export class Task extends EventEmitter<ClineEvents> {
 
 		// Make sure that the api conversation history can be resumed by the API,
 		// even if it goes out of sync with cline messages.
-		let existingApiConversationHistory: Anthropic.Messages.MessageParam[] =
-			await this.getSavedApiConversationHistory()
+		let existingApiConversationHistory: ApiMessage[] = await this.getSavedApiConversationHistory()
 
 		// v2.0 xml tags refactor caveat: since we don't use tools anymore, we need to replace all tool use blocks with a text block since the API disallows conversations with tool uses and no tool schema
 		const conversationWithoutToolBlocks = existingApiConversationHistory.map((message) => {
@@ -711,7 +731,7 @@ export class Task extends EventEmitter<ClineEvents> {
 		// if the last message is a user message, we can need to get the assistant message before it to see if it made tool calls, and if so, fill in the remaining tool responses with 'interrupted'
 
 		let modifiedOldUserContent: Anthropic.Messages.ContentBlockParam[] // either the last message if its user message, or the user message before the last (assistant) message
-		let modifiedApiConversationHistory: Anthropic.Messages.MessageParam[] // need to remove the last user message to replace with new modified user message
+		let modifiedApiConversationHistory: ApiMessage[] // need to remove the last user message to replace with new modified user message
 		if (existingApiConversationHistory.length > 0) {
 			const lastMessage = existingApiConversationHistory[existingApiConversationHistory.length - 1]
 
@@ -737,7 +757,7 @@ export class Task extends EventEmitter<ClineEvents> {
 					modifiedOldUserContent = []
 				}
 			} else if (lastMessage.role === "user") {
-				const previousAssistantMessage: Anthropic.Messages.MessageParam | undefined =
+				const previousAssistantMessage: ApiMessage | undefined =
 					existingApiConversationHistory[existingApiConversationHistory.length - 2]
 
 				const existingUserContent: Anthropic.Messages.ContentBlockParam[] = Array.isArray(lastMessage.content)
@@ -999,14 +1019,23 @@ export class Task extends EventEmitter<ClineEvents> {
 			}),
 		)
 
-		const parsedUserContent = await processUserContentMentions({
+		const environmentDetails = await getEnvironmentDetails(this, includeFileDetails)
+
+		// kilocode_change start
+		const [parsedUserContent, needsRulesFileCheck] = await processKiloUserContentMentions({
 			userContent,
 			cwd: this.cwd,
 			urlContentFetcher: this.urlContentFetcher,
 			fileContextTracker: this.fileContextTracker,
 		})
 
-		const environmentDetails = await getEnvironmentDetails(this, includeFileDetails)
+		if (needsRulesFileCheck) {
+			await this.say(
+				"error",
+				"Issue with processing the /newrule command. Double check that, if '.kilocode/rules' already exists, it's a directory and not a file. Otherwise there was an issue referencing this file/directory",
+			)
+		}
+		// kilocode_change end
 
 		// Add environment details as its own text block, separate from tool
 		// results.
@@ -1384,6 +1413,7 @@ export class Task extends EventEmitter<ClineEvents> {
 			browserViewportSize,
 			mode,
 			customModePrompts,
+			customInstructions,
 			experiments,
 			enableMcpServerCreation,
 			browserToolEnabled,
@@ -1409,7 +1439,7 @@ export class Task extends EventEmitter<ClineEvents> {
 				mode,
 				customModePrompts,
 				customModes,
-				this.customInstructions,
+				customInstructions,
 				this.diffEnabled,
 				experiments,
 				enableMcpServerCreation,
@@ -1449,46 +1479,26 @@ export class Task extends EventEmitter<ClineEvents> {
 
 			const contextWindow = modelInfo.contextWindow
 
+			const autoCondenseContext = experiments?.autoCondenseContext ?? false
 			const trimmedMessages = await truncateConversationIfNeeded({
 				messages: this.apiConversationHistory,
 				totalTokens,
 				maxTokens,
 				contextWindow,
 				apiHandler: this.api,
+				autoCondenseContext,
 			})
-
 			if (trimmedMessages !== this.apiConversationHistory) {
 				await this.overwriteApiConversationHistory(trimmedMessages)
 			}
 		}
 
-		// Clean conversation history by:
-		// 1. Converting to Anthropic.MessageParam by spreading only the API-required properties.
-		// 2. Converting image blocks to text descriptions if model doesn't support images.
-		const cleanConversationHistory = this.apiConversationHistory.map(({ role, content }) => {
-			// Handle array content (could contain image blocks).
-			if (Array.isArray(content)) {
-				if (!this.api.getModel().info.supportsImages) {
-					// Convert image blocks to text descriptions.
-					content = content.map((block) => {
-						if (block.type === "image") {
-							// Convert image blocks to text descriptions.
-							// Note: We can't access the actual image content/url due to API limitations,
-							// but we can indicate that an image was present in the conversation.
-							return {
-								type: "text",
-								text: "[Referenced image in conversation]",
-							}
-						}
-						return block
-					})
-				}
-			}
+		const messagesSinceLastSummary = getMessagesSinceLastSummary(this.apiConversationHistory)
+		const cleanConversationHistory = maybeRemoveImageBlocks(messagesSinceLastSummary, this.api).map(
+			({ role, content }) => ({ role, content }),
+		)
 
-			return { role, content }
-		})
-
-		const stream = this.api.createMessage(systemPrompt, cleanConversationHistory, this.promptCacheKey)
+		const stream = this.api.createMessage(systemPrompt, cleanConversationHistory)
 		const iterator = stream[Symbol.asyncIterator]()
 
 		try {
@@ -1652,17 +1662,9 @@ export class Task extends EventEmitter<ClineEvents> {
 		}
 	}
 
-	public getToolUsage() {
-		return this.toolUsage
-	}
-
 	// Getters
 
 	public get cwd() {
 		return this.workspacePath
-	}
-
-	public getFileContextTracker(): FileContextTracker {
-		return this.fileContextTracker
 	}
 }

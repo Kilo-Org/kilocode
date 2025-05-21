@@ -3,16 +3,18 @@ import { useTranslation } from "react-i18next"
 import { useState, useEffect } from "react"
 import clsx from "clsx"
 
+import { buildDocLink } from "@src/utils/docLinks"
+
 const tips = [
 	{
 		icon: "codicon-account",
-		href: "https://kilocode.ai/docs/basic-usage/using-modes",
+		href: buildDocLink("basic-usage/using-modes", "tips"),
 		titleKey: "rooTips.customizableModes.title",
 		descriptionKey: "rooTips.customizableModes.description",
 	},
 	{
 		icon: "codicon-list-tree",
-		href: "https://kilocode.ai/docs/features/boomerang-tasks",
+		href: buildDocLink("features/boomerang-tasks", "tips"),
 		titleKey: "rooTips.boomerangTasks.title",
 		descriptionKey: "rooTips.boomerangTasks.description",
 	},

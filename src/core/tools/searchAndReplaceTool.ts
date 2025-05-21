@@ -215,7 +215,7 @@ export async function searchAndReplaceTool(
 
 		// Track file edit operation
 		if (relPath) {
-			await cline.getFileContextTracker().trackFileContext(relPath, "roo_edited" as RecordSource)
+			await cline.fileContextTracker.trackFileContext(relPath, "roo_edited" as RecordSource)
 		}
 
 		cline.didEditFile = true
@@ -226,13 +226,14 @@ export async function searchAndReplaceTool(
 			return
 		}
 
-		const userFeedbackDiff = JSON.stringify({
-			tool: "appliedDiff",
-			path: getReadablePath(cline.cwd, relPath),
-			diff: userEdits,
-		} satisfies ClineSayTool)
-
-		await cline.say("user_feedback_diff", userFeedbackDiff)
+		await cline.say(
+			"user_feedback_diff",
+			JSON.stringify({
+				tool: "appliedDiff",
+				path: getReadablePath(cline.cwd, relPath),
+				diff: userEdits,
+			} satisfies ClineSayTool),
+		)
 
 		// Format and send response with user's updates
 		const resultMessage = [

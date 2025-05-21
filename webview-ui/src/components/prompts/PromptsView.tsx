@@ -1,13 +1,20 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import BottomControls from "../chat/BottomControls" // kilocode_change
 import { Button } from "@/components/ui/button"
-import { VSCodeCheckbox, VSCodeRadioGroup, VSCodeRadio, VSCodeTextArea } from "@vscode/webview-ui-toolkit/react"
+import {
+	VSCodeCheckbox,
+	VSCodeRadioGroup,
+	VSCodeRadio,
+	VSCodeTextArea,
+	VSCodeLink,
+} from "@vscode/webview-ui-toolkit/react"
 
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import {
 	Mode,
 	PromptComponent,
 	getRoleDefinition,
+	getWhenToUse,
 	getCustomInstructions,
 	getAllModes,
 	ModeConfig,
@@ -19,9 +26,9 @@ import { supportPrompt, SupportPromptType } from "@roo/shared/support-prompt"
 import { TOOL_GROUPS, ToolGroup } from "@roo/shared/tools"
 import { vscode } from "@src/utils/vscode"
 import { Tab, TabContent, TabHeader } from "../common/Tab"
-import i18next from "i18next"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { Trans } from "react-i18next"
+import { buildDocLink } from "@src/utils/docLinks"
 import {
 	Select,
 	SelectContent,
@@ -108,6 +115,9 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 			// Only include properties that differ from defaults
 			if (updatedPrompt.roleDefinition === getRoleDefinition(mode)) {
 				delete updatedPrompt.roleDefinition
+			}
+			if (updatedPrompt.whenToUse === getWhenToUse(mode)) {
+				delete updatedPrompt.whenToUse
 			}
 
 			vscode.postMessage({
@@ -198,6 +208,7 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 	const [newModeName, setNewModeName] = useState("")
 	const [newModeSlug, setNewModeSlug] = useState("")
 	const [newModeRoleDefinition, setNewModeRoleDefinition] = useState("")
+	const [newModeWhenToUse, setNewModeWhenToUse] = useState("")
 	const [newModeCustomInstructions, setNewModeCustomInstructions] = useState("")
 	const [newModeGroups, setNewModeGroups] = useState<GroupEntry[]>(availableGroups)
 	const [newModeSource, setNewModeSource] = useState<ModeSource>("global")
@@ -215,6 +226,7 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 		setNewModeSlug("")
 		setNewModeGroups(availableGroups)
 		setNewModeRoleDefinition("")
+		setNewModeWhenToUse("")
 		setNewModeCustomInstructions("")
 		setNewModeSource("global")
 		// Reset error states
@@ -261,6 +273,7 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 			slug: newModeSlug,
 			name: newModeName,
 			roleDefinition: newModeRoleDefinition.trim(),
+			whenToUse: newModeWhenToUse.trim() || undefined,
 			customInstructions: newModeCustomInstructions.trim() || undefined,
 			groups: newModeGroups,
 			source,
@@ -302,6 +315,7 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 		newModeName,
 		newModeSlug,
 		newModeRoleDefinition,
+		newModeWhenToUse, // Add whenToUse dependency
 		newModeCustomInstructions,
 		newModeGroups,
 		newModeSource,
@@ -399,7 +413,7 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 		})
 	}
 
-	const handleAgentReset = (modeSlug: string, type: "roleDefinition" | "customInstructions") => {
+	const handleAgentReset = (modeSlug: string, type: "roleDefinition" | "whenToUse" | "customInstructions") => {
 		// Only reset for built-in modes
 		const existingPrompt = customModePrompts?.[modeSlug] as PromptComponent
 		const updatedPrompt = { ...existingPrompt }
@@ -510,7 +524,14 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 					</div>
 
 					<div className="text-sm text-vscode-descriptionForeground mb-3">
-						{t("prompts:modes.createModeHelpText")}
+						<Trans i18nKey="prompts:modes.createModeHelpText">
+							<VSCodeLink
+								href={buildDocLink("basic-usage/using-modes", "prompts_view_modes")}
+								style={{ display: "inline" }}></VSCodeLink>
+							<VSCodeLink
+								href={buildDocLink("features/custom-modes", "prompts_view_modes")}
+								style={{ display: "inline" }}></VSCodeLink>
+						</Trans>
 					</div>
 
 					<div className="flex items-center gap-1 mb-3">
@@ -605,6 +626,34 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 								</Command>
 							</PopoverContent>
 						</Popover>
+					</div>
+					{/* API Configuration - Moved Here */}
+					<div className="mb-3">
+						<div className="font-bold mb-1">{t("prompts:apiConfiguration.title")}</div>
+						<div className="mb-2">
+							<Select
+								value={currentApiConfigName}
+								onValueChange={(value) => {
+									vscode.postMessage({
+										type: "loadApiConfiguration",
+										text: value,
+									})
+								}}>
+								<SelectTrigger className="w-full">
+									<SelectValue placeholder={t("settings:common.select")} />
+								</SelectTrigger>
+								<SelectContent>
+									{(listApiConfigMeta || []).map((config) => (
+										<SelectItem key={config.id} value={config.name}>
+											{config.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							<div className="text-xs mt-1.5 text-vscode-descriptionForeground">
+								{t("prompts:apiConfiguration.select")}
+							</div>
+						</div>
 					</div>
 				</div>
 
@@ -702,36 +751,63 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 							data-testid={`${getCurrentMode()?.slug || "code"}-prompt-textarea`}
 						/>
 					</div>
+
+					{/* When to Use section */}
+					<div className="mb-4">
+						<div className="flex justify-between items-center mb-1">
+							<div className="font-bold">{t("prompts:whenToUse.title")}</div>
+							{!findModeBySlug(visualMode, customModes) && (
+								<Button
+									variant="ghost"
+									size="icon"
+									onClick={() => {
+										const currentMode = getCurrentMode()
+										if (currentMode?.slug) {
+											handleAgentReset(currentMode.slug, "whenToUse")
+										}
+									}}
+									title={t("prompts:whenToUse.resetToDefault")}
+									data-testid="when-to-use-reset">
+									<span className="codicon codicon-discard"></span>
+								</Button>
+							)}
+						</div>
+						<div className="text-sm text-vscode-descriptionForeground mb-2">
+							{t("prompts:whenToUse.description")}
+						</div>
+						<VSCodeTextArea
+							value={(() => {
+								const customMode = findModeBySlug(visualMode, customModes)
+								const prompt = customModePrompts?.[visualMode] as PromptComponent
+								return customMode?.whenToUse ?? prompt?.whenToUse ?? getWhenToUse(visualMode)
+							})()}
+							onChange={(e) => {
+								const value =
+									(e as unknown as CustomEvent)?.detail?.target?.value ||
+									((e as any).target as HTMLTextAreaElement).value
+								const customMode = findModeBySlug(visualMode, customModes)
+								if (customMode) {
+									// For custom modes, update the JSON file
+									updateCustomMode(visualMode, {
+										...customMode,
+										whenToUse: value.trim() || undefined,
+										source: customMode.source || "global",
+									})
+								} else {
+									// For built-in modes, update the prompts
+									updateAgentPrompt(visualMode, {
+										whenToUse: value.trim() || undefined,
+									})
+								}
+							}}
+							className="resize-y w-full"
+							rows={3}
+							data-testid={`${getCurrentMode()?.slug || "code"}-when-to-use-textarea`}
+						/>
+					</div>
+
 					{/* Mode settings */}
 					<>
-						<div className="mb-3">
-							<div className="font-bold mb-1">{t("prompts:apiConfiguration.title")}</div>
-							<div className="mb-2">
-								<Select
-									value={currentApiConfigName}
-									onValueChange={(value) => {
-										vscode.postMessage({
-											type: "loadApiConfiguration",
-											text: value,
-										})
-									}}>
-									<SelectTrigger className="w-full">
-										<SelectValue placeholder={t("settings:common.select")} />
-									</SelectTrigger>
-									<SelectContent>
-										{(listApiConfigMeta || []).map((config) => (
-											<SelectItem key={config.id} value={config.name}>
-												{config.name}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-								<div className="text-xs mt-1.5 text-vscode-descriptionForeground">
-									{t("prompts:apiConfiguration.select")}
-								</div>
-							</div>
-						</div>
-
 						{/* Show tools for all modes */}
 						<div className="mb-4">
 							<div className="flex justify-between items-center mb-1">
@@ -990,6 +1066,15 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 												}}
 											/>
 										),
+										"1": (
+											<VSCodeLink
+												href={buildDocLink(
+													"features/footgun-prompting",
+													"prompts_advanced_system_prompt",
+												)}
+												style={{ display: "inline" }}></VSCodeLink>
+										),
+										"2": <strong />,
 									}}
 								/>
 							</div>
@@ -1001,9 +1086,14 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 					<h3 className="text-vscode-foreground mb-3">{t("prompts:globalCustomInstructions.title")}</h3>
 
 					<div className="text-sm text-vscode-descriptionForeground mb-2">
-						{t("prompts:globalCustomInstructions.description", {
-							language: i18next.language,
-						})}
+						<Trans i18nKey="prompts:globalCustomInstructions.description">
+							<VSCodeLink
+								href={buildDocLink(
+									"features/custom-instructions#global-custom-instructions",
+									"prompts_global_custom_instructions",
+								)}
+								style={{ display: "inline" }}></VSCodeLink>
+						</Trans>
 					</div>
 					<VSCodeTextArea
 						value={customInstructions || ""}
@@ -1308,6 +1398,21 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 										{roleDefinitionError}
 									</div>
 								)}
+							</div>
+
+							<div className="mb-4">
+								<div className="font-bold mb-1">{t("prompts:createModeDialog.whenToUse.label")}</div>
+								<div className="text-[13px] text-vscode-descriptionForeground mb-2">
+									{t("prompts:createModeDialog.whenToUse.description")}
+								</div>
+								<VSCodeTextArea
+									value={newModeWhenToUse}
+									onChange={(e) => {
+										setNewModeWhenToUse((e.target as HTMLTextAreaElement).value)
+									}}
+									rows={3}
+									className="w-full resize-y"
+								/>
 							</div>
 							<div className="mb-4">
 								<div className="font-bold mb-1">{t("prompts:createModeDialog.tools.label")}</div>

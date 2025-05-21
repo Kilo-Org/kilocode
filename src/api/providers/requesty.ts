@@ -12,7 +12,7 @@ import { ApiStream, ApiStreamUsageChunk } from "../transform/stream"
 import { SingleCompletionHandler } from "../"
 import { BaseProvider } from "./base-provider"
 import { DEFAULT_HEADERS } from "./constants"
-import { getModels } from "./fetchers/cache"
+import { getModels } from "./fetchers/modelCache"
 import OpenAI from "openai"
 
 // Requesty usage includes an extra field for Anthropic use cases.
@@ -101,6 +101,8 @@ export class RequestyHandler extends BaseProvider implements SingleCompletionHan
 
 		const stream = await this.client.chat.completions.create(completionParams)
 
+		let lastUsage: any = undefined
+
 		for await (const chunk of stream) {
 			const delta = chunk.choices[0]?.delta
 			if (delta?.content) {
@@ -118,8 +120,12 @@ export class RequestyHandler extends BaseProvider implements SingleCompletionHan
 			}
 
 			if (chunk.usage) {
-				yield this.processUsageMetrics(chunk.usage, model.info)
+				lastUsage = chunk.usage
 			}
+		}
+
+		if (lastUsage) {
+			yield this.processUsageMetrics(lastUsage, model.info)
 		}
 	}
 

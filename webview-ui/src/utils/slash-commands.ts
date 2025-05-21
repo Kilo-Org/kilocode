@@ -13,6 +13,12 @@ export function getSupportedSlashCommands(customModes?: any[]): SlashCommand[] {
 			name: "newtask",
 			description: "Create a new task with context from the current task",
 		},
+		// kilocode_change start
+		{
+			name: "newrule",
+			description: "Create a new Kilo rule with context from your conversation",
+		},
+		// kilocode_change end
 	]
 
 	// Add mode-switching commands dynamically

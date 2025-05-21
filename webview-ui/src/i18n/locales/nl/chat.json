@@ -1,16 +1,16 @@
 {
-	"greeting": "Wat kan Kilo Code voor u doen?",
+	"greeting": "Welkom bij Kilo Code",
 	"task": {
 		"title": "Taak",
-		"seeMore": "Meer zien",
-		"seeLess": "Minder zien",
+		"seeMore": "Meer weergeven",
+		"seeLess": "Minder weergeven",
 		"tokens": "Tokens:",
 		"cache": "Cache:",
-		"apiCost": "API Kosten:",
-		"contextWindow": "Context Lengte:",
+		"apiCost": "API-kosten:",
+		"contextWindow": "Contextlengte:",
 		"closeAndStart": "Taak sluiten en een nieuwe starten",
 		"export": "Taakgeschiedenis exporteren",
-		"delete": "Taak Verwijderen (Shift + Klik om bevestiging over te slaan)"
+		"delete": "Taak verwijderen (Shift + Klik om bevestiging over te slaan)"
 	},
 	"history": {
 		"title": "Geschiedenis"
@@ -22,16 +22,16 @@
 		"tooltip": "Probeer de bewerking opnieuw"
 	},
 	"startNewTask": {
-		"title": "Nieuwe Taak Starten",
+		"title": "Nieuwe taak starten",
 		"tooltip": "Begin een nieuwe taak"
 	},
 	"proceedAnyways": {
-		"title": "Toch Doorgaan",
-		"tooltip": "Doorgaan terwijl commando wordt uitgevoerd"
+		"title": "Toch doorgaan",
+		"tooltip": "Ga door terwijl het commando wordt uitgevoerd"
 	},
 	"save": {
 		"title": "Opslaan",
-		"tooltip": "Sla de bestandswijzigingen op"
+		"tooltip": "Bestandswijzigingen opslaan"
 	},
 	"tokenProgress": {
 		"availableSpace": "Beschikbare ruimte: {{amount}} tokens",
@@ -39,28 +39,28 @@
 		"reservedForResponse": "Gereserveerd voor modelantwoord: {{amount}} tokens"
 	},
 	"reject": {
-		"title": "Afwijzen",
-		"tooltip": "Wijs deze actie af"
+		"title": "Weigeren",
+		"tooltip": "Deze actie weigeren"
 	},
-	"completeSubtaskAndReturn": "Subtaak Voltooien en Terugkeren",
+	"completeSubtaskAndReturn": "Subtaak voltooien en terugkeren",
 	"approve": {
 		"title": "Goedkeuren",
-		"tooltip": "Keur deze actie goed"
+		"tooltip": "Deze actie goedkeuren"
 	},
 	"runCommand": {
-		"title": "Commando Uitvoeren",
+		"title": "Commando uitvoeren",
 		"tooltip": "Voer dit commando uit"
 	},
 	"proceedWhileRunning": {
-		"title": "Doorgaan Tijdens Uitvoering",
-		"tooltip": "Doorgaan ondanks waarschuwingen"
+		"title": "Doorgaan tijdens uitvoeren",
+		"tooltip": "Ga door ondanks waarschuwingen"
 	},
 	"killCommand": {
-		"title": "Commando Stoppen",
-		"tooltip": "Stop het huidige commando"
+		"title": "Commando stoppen",
+		"tooltip": "Huidig commando stoppen"
 	},
 	"resumeTask": {
-		"title": "Taak Hervatten",
+		"title": "Taak hervatten",
 		"tooltip": "Ga door met de huidige taak"
 	},
 	"terminate": {
@@ -71,69 +71,69 @@
 		"title": "Annuleren",
 		"tooltip": "Annuleer de huidige bewerking"
 	},
-	"scrollToBottom": "Scroll naar onderkant van chat",
+	"scrollToBottom": "Scroll naar onderaan de chat",
 	"about": "Genereer, refactor en debug code met AI-assistentie.<br />Bekijk onze <DocsLink>documentatie</DocsLink> voor meer informatie.",
-	"onboarding": "Uw takenlijst in deze werkruimte is leeg.",
+	"onboarding": "Je takenlijst in deze werkruimte is leeg.",
 	"rooTips": {
 		"boomerangTasks": {
-			"title": "Boomerang Taken",
+			"title": "Boomerang-taken",
 			"description": "Splits taken op in kleinere, beheersbare delen"
 		},
 		"stickyModels": {
-			"title": "Plakkende Modellen",
-			"description": "Elke modus onthoudt uw laatst gebruikte model"
+			"title": "Vastgezette modellen",
+			"description": "Elke modus onthoudt je laatst gebruikte model"
 		},
 		"tools": {
-			"title": "Gereedschappen",
-			"description": "Sta de AI toe problemen op te lossen door op het web te browsen, commando's uit te voeren en meer"
+			"title": "Tools",
+			"description": "Laat de AI problemen oplossen door te browsen, commando's uit te voeren en meer"
 		},
 		"customizableModes": {
-			"title": "Aanpasbare Modi",
+			"title": "Aanpasbare modi",
 			"description": "Gespecialiseerde persona's met hun eigen gedrag en toegewezen modellen"
 		}
 	},
 	"selectMode": "Selecteer modus voor interactie",
 	"selectApiConfig": "Selecteer API-configuratie",
-	"enhancePrompt": "Verbeter prompt met extra context",
-	"enhancePromptDescription": "De knop 'Verbeter Prompt' helpt uw prompt te verbeteren door extra context, verduidelijking of herformulering te bieden. Probeer hier een prompt in te typen en klik nogmaals op de knop om te zien hoe het werkt.",
+	"enhancePrompt": "Prompt verbeteren met extra context",
+	"enhancePromptDescription": "De knop 'Prompt verbeteren' helpt je prompt te verbeteren door extra context, verduidelijking of herformulering te bieden. Probeer hier een prompt te typen en klik opnieuw op de knop om te zien hoe het werkt.",
 	"addImages": "Afbeeldingen toevoegen aan bericht",
 	"sendMessage": "Bericht verzenden",
 	"typeMessage": "Typ een bericht...",
-	"typeTask": "Bouw, vind, vraag iets",
+	"typeTask": "Typ hier je taak...",
 	"addContext": "@ om context toe te voegen, / om van modus te wisselen",
 	"dragFiles": "houd shift ingedrukt om bestanden te slepen",
 	"dragFilesImages": "houd shift ingedrukt om bestanden/afbeeldingen te slepen",
-	"errorReadingFile": "Fout bij lezen bestand:",
-	"noValidImages": "Geen geldige afbeeldingen verwerkt",
+	"errorReadingFile": "Fout bij het lezen van bestand:",
+	"noValidImages": "Er zijn geen geldige afbeeldingen verwerkt",
 	"separator": "Scheidingsteken",
 	"edit": "Bewerken...",
 	"forNextMode": "voor volgende modus",
 	"apiRequest": {
-		"title": "API Verzoek",
-		"failed": "API Verzoek Mislukt",
-		"streaming": "API Verzoek...",
-		"cancelled": "API Verzoek Geannuleerd",
-		"streamingFailed": "API Streaming Mislukt"
+		"title": "API-verzoek",
+		"failed": "API-verzoek mislukt",
+		"streaming": "API-verzoek...",
+		"cancelled": "API-verzoek geannuleerd",
+		"streamingFailed": "API-streaming mislukt"
 	},
 	"checkpoint": {
-		"initial": "Initieel Controlepunt",
-		"regular": "Controlepunt",
-		"initializingWarning": "Controlepunt wordt nog geïnitialiseerd... Als dit te lang duurt, kunt u controlepunten uitschakelen in <settingsLink>instellingen</settingsLink> en uw taak opnieuw starten.",
+		"initial": "Initiële checkpoint",
+		"regular": "Checkpoint",
+		"initializingWarning": "Checkpoint wordt nog steeds geïnitialiseerd... Als dit te lang duurt, kun je checkpoints uitschakelen in de <settingsLink>instellingen</settingsLink> en je taak opnieuw starten.",
 		"menu": {
-			"viewDiff": "Verschil Bekijken",
-			"restore": "Controlepunt Herstellen",
-			"restoreFiles": "Bestanden Herstellen",
-			"restoreFilesDescription": "Herstelt de bestanden van uw project naar een momentopname die op dit punt is gemaakt.",
-			"restoreFilesAndTask": "Bestanden & Taak Herstellen",
+			"viewDiff": "Bekijk verschil",
+			"restore": "Herstel checkpoint",
+			"restoreFiles": "Bestanden herstellen",
+			"restoreFilesDescription": "Herstelt de bestanden van je project naar een momentopname die op dit punt is gemaakt.",
+			"restoreFilesAndTask": "Bestanden & taak herstellen",
 			"confirm": "Bevestigen",
 			"cancel": "Annuleren",
 			"cannotUndo": "Deze actie kan niet ongedaan worden gemaakt.",
-			"restoreFilesAndTaskDescription": "Herstelt de bestanden van uw project naar een momentopname die op dit punt is gemaakt en verwijdert alle berichten na dit punt."
+			"restoreFilesAndTaskDescription": "Herstelt de bestanden van je project naar een momentopname die op dit punt is gemaakt en verwijdert alle berichten na dit punt."
 		},
 		"current": "Huidig"
 	},
 	"instructions": {
-		"wantsToFetch": "Kilo Code wil gedetailleerde instructies ophalen om te helpen bij de huidige taak"
+		"wantsToFetch": "Kilo Code wil gedetailleerde instructies ophalen om te helpen met de huidige taak"
 	},
 	"fileOperations": {
 		"wantsToRead": "Kilo Code wil dit bestand lezen:",
@@ -149,106 +149,106 @@
 		"wantsToInsertAtEnd": "Kilo Code wil inhoud toevoegen aan het einde van dit bestand:"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Kilo Code wil de bestanden op het hoogste niveau in deze map bekijken:",
-		"didViewTopLevel": "Kilo Code heeft de bestanden op het hoogste niveau in deze map bekeken:",
-		"wantsToViewRecursive": "Kilo Code wil recursief alle bestanden in deze map bekijken:",
-		"didViewRecursive": "Kilo Code heeft recursief alle bestanden in deze map bekeken:",
-		"wantsToViewDefinitions": "Kilo Code wil broncode definitienamen bekijken die in deze map worden gebruikt:",
-		"didViewDefinitions": "Kilo Code heeft broncode definitienamen bekeken die in deze map worden gebruikt:",
+		"wantsToViewTopLevel": "Kilo Code wil de bovenliggende bestanden in deze map bekijken:",
+		"didViewTopLevel": "Kilo Code heeft de bovenliggende bestanden in deze map bekeken:",
+		"wantsToViewRecursive": "Kilo Code wil alle bestanden in deze map recursief bekijken:",
+		"didViewRecursive": "Kilo Code heeft alle bestanden in deze map recursief bekeken:",
+		"wantsToViewDefinitions": "Kilo Code wil broncode-definitienamen bekijken die in deze map worden gebruikt:",
+		"didViewDefinitions": "Kilo Code heeft broncode-definitienamen bekeken die in deze map worden gebruikt:",
 		"wantsToSearch": "Kilo Code wil deze map doorzoeken op <code>{{regex}}</code>:",
 		"didSearch": "Kilo Code heeft deze map doorzocht op <code>{{regex}}</code>:"
 	},
-	"commandOutput": "Commando Uitvoer",
+	"commandOutput": "Commando-uitvoer",
 	"response": "Antwoord",
 	"arguments": "Argumenten",
 	"mcp": {
-		"wantsToUseTool": "Kilo Code wil een tool gebruiken op de {{serverName}} MCP server:",
-		"wantsToAccessResource": "Kilo Code wil toegang krijgen tot een bron op de {{serverName}} MCP server:"
+		"wantsToUseTool": "Kilo Code wil een tool gebruiken op de {{serverName}} MCP-server:",
+		"wantsToAccessResource": "Kilo Code wil een bron benaderen op de {{serverName}} MCP-server:"
 	},
 	"modes": {
-		"wantsToSwitch": "Kilo Code wil overschakelen naar de {{mode}} modus",
-		"wantsToSwitchWithReason": "Kilo Code wil overschakelen naar de {{mode}} modus omdat: {{reason}}",
-		"didSwitch": "Kilo Code is overgeschakeld naar de {{mode}} modus",
-		"didSwitchWithReason": "Kilo Code is overgeschakeld naar de {{mode}} modus omdat: {{reason}}"
+		"wantsToSwitch": "Kilo Code wil overschakelen naar {{mode}} modus",
+		"wantsToSwitchWithReason": "Kilo Code wil overschakelen naar {{mode}} modus omdat: {{reason}}",
+		"didSwitch": "Kilo Code is overgeschakeld naar {{mode}} modus",
+		"didSwitchWithReason": "Kilo Code is overgeschakeld naar {{mode}} modus omdat: {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Kilo Code wil een nieuwe subtaak aanmaken in de {{mode}} modus:",
+		"wantsToCreate": "Kilo Code wil een nieuwe subtaak aanmaken in {{mode}} modus:",
 		"wantsToFinish": "Kilo Code wil deze subtaak voltooien",
-		"newTaskContent": "Subtaak Instructies",
-		"completionContent": "Subtaak Voltooid",
-		"resultContent": "Subtaak Resultaten",
-		"defaultResult": "Ga alstublieft verder met de volgende taak.",
-		"completionInstructions": "Subtaak voltooid! U kunt de resultaten bekijken en eventuele correcties of volgende stappen voorstellen. Als alles er goed uitziet, bevestig dan om het resultaat terug te sturen naar de hoofdtaak."
+		"newTaskContent": "Subtaak-instructies",
+		"completionContent": "Subtaak voltooid",
+		"resultContent": "Subtaakresultaten",
+		"defaultResult": "Ga verder met de volgende taak.",
+		"completionInstructions": "Subtaak voltooid! Je kunt de resultaten bekijken en eventuele correcties of volgende stappen voorstellen. Als alles goed is, bevestig dan om het resultaat terug te sturen naar de hoofdtaak."
 	},
 	"questions": {
 		"hasQuestion": "Kilo Code heeft een vraag:"
 	},
-	"taskCompleted": "Taak Voltooid",
+	"taskCompleted": "Taak voltooid",
 	"error": "Fout",
 	"diffError": {
-		"title": "Bewerking Mislukt"
+		"title": "Bewerking mislukt"
 	},
 	"troubleMessage": "Kilo Code ondervindt problemen...",
 	"powershell": {
-		"issues": "Het lijkt erop dat u problemen heeft met Windows PowerShell, zie alstublieft dit"
+		"issues": "Het lijkt erop dat je problemen hebt met Windows PowerShell, zie deze"
 	},
 	"autoApprove": {
 		"title": "Automatisch goedkeuren:",
 		"none": "Geen",
-		"description": "Automatisch goedkeuren stelt Kilo Code in staat acties uit te voeren zonder toestemming te vragen. Schakel dit alleen in voor acties die u volledig vertrouwt. Meer gedetailleerde configuratie beschikbaar in <settingsLink>Instellingen</settingsLink>."
+		"description": "Met automatisch goedkeuren kan Kilo Code acties uitvoeren zonder om toestemming te vragen. Schakel dit alleen in voor acties die je volledig vertrouwt. Meer gedetailleerde configuratie beschikbaar in de <settingsLink>Instellingen</settingsLink>."
 	},
 	"announcement": {
-		"title": "🎉 Roo Code 3.16 Uitgebracht",
-		"description": "Roo Code 3.16 brengt nieuwe functies en verbeteringen op basis van uw feedback.",
-		"whatsNew": "Wat is Nieuw",
-		"feature1": "<bold>Groq en Chutes API Providers</bold>: Ondersteuning toegevoegd voor Groq en Chutes API providers (dankzij @shariqriazz!)",
-		"feature2": "<bold>Klikbare Code Referenties</bold>: Code referenties in modelantwoorden navigeren nu naar bronregels (dankzij @KJ7LNW!)",
-		"feature3": "<bold>MCP Stabiliteitsverbeteringen</bold>: Verschillende bugs opgelost om de stabiliteit van MCP-integraties te verbeteren",
+		"title": "🎉 Roo Code 3.17 uitgebracht",
+		"description": "Roo Code 3.17 brengt krachtige nieuwe functies en verbeteringen op basis van jouw feedback.",
+		"feature1": "<bold>Impliciete caching voor Gemini</bold>: Gemini API-aanroepen worden nu automatisch gecachet, waardoor API-kosten worden verlaagd",
+		"feature2": "<bold>Slimmere modusselectie</bold>: Modusdefinities kunnen nu richtlijnen bevatten over wanneer elke modus moet worden gebruikt, wat betere orchestratie mogelijk maakt",
+		"feature3": "<bold>Intelligente contextcompressie</bold>: Vat gespreksgeschiedenis intelligent samen wanneer de context vol raakt in plaats van deze af te kappen (inschakelen in Instellingen -> Experimenteel)",
 		"hideButton": "Aankondiging verbergen",
-		"detailsDiscussLinks": "Krijg meer details en discussieer in <discordLink>Discord</discordLink> en <redditLink>Reddit</redditLink> 🚀"
+		"detailsDiscussLinks": "Meer details en discussie in <discordLink>Discord</discordLink> en <redditLink>Reddit</redditLink> 🚀",
+		"whatsNew": "Wat is er nieuw"
 	},
 	"reasoning": {
-		"thinking": "Denken",
+		"thinking": "Denkt na",
 		"seconds": "{{count}}s"
 	},
 	"followUpSuggest": {
-		"copyToInput": "Kopieer naar invoer (zelfde als shift + klik)"
+		"copyToInput": "Kopiëren naar invoer (zelfde als shift + klik)"
 	},
 	"browser": {
 		"rooWantsToUse": "Kilo Code wil de browser gebruiken:",
-		"consoleLogs": "Console Logs",
-		"noNewLogs": "(Geen nieuwe logs)",
-		"screenshot": "Browser screenshot",
+		"consoleLogs": "Console-logboeken",
+		"noNewLogs": "(Geen nieuwe logboeken)",
+		"screenshot": "Browserschermopname",
 		"cursor": "cursor",
 		"navigation": {
 			"step": "Stap {{current}} van {{total}}",
 			"previous": "Vorige",
 			"next": "Volgende"
 		},
-		"sessionStarted": "Browsersessie Gestart",
+		"sessionStarted": "Browsersessie gestart",
 		"actions": {
-			"title": "Browse Actie: ",
-			"launch": "Start browser op {{url}}",
+			"title": "Browse-actie: ",
+			"launch": "Browser starten op {{url}}",
 			"click": "Klik ({{coordinate}})",
 			"type": "Typ \"{{text}}\"",
-			"scrollDown": "Scroll omlaag",
-			"scrollUp": "Scroll omhoog",
-			"close": "Sluit browser"
+			"scrollDown": "Scroll naar beneden",
+			"scrollUp": "Scroll naar boven",
+			"close": "Browser sluiten"
 		}
 	},
 	"codeblock": {
 		"tooltips": {
 			"expand": "Codeblok uitvouwen",
-			"collapse": "Codeblok invouwen",
-			"enable_wrap": "Woordafbreking inschakelen",
-			"disable_wrap": "Woordafbreking uitschakelen",
+			"collapse": "Codeblok samenvouwen",
+			"enable_wrap": "Regelafbreking inschakelen",
+			"disable_wrap": "Regelafbreking uitschakelen",
 			"copy_code": "Code kopiëren"
 		}
 	},
-	"systemPromptWarning": "WAARSCHUWING: Aangepaste systeemprompt-override actief. Dit kan de functionaliteit ernstig verstoren en onvoorspelbaar gedrag veroorzaken.",
+	"systemPromptWarning": "WAARSCHUWING: Aangepaste systeemprompt actief. Dit kan de functionaliteit ernstig verstoren en onvoorspelbaar gedrag veroorzaken.",
 	"shellIntegration": {
-		"title": "Waarschuwing Commando Uitvoering",
-		"description": "Uw commando wordt uitgevoerd zonder VSCode terminal shell-integratie. Om deze waarschuwing te onderdrukken, kunt u shell-integratie uitschakelen in de sectie <strong>Terminal</strong> van de <settingsLink>Kilo Code-instellingen</settingsLink> of problemen met VSCode terminal-integratie oplossen via de onderstaande link.",
-		"troubleshooting": "Klik hier voor documentatie over shell-integratie."
+		"title": "Waarschuwing commando-uitvoering",
+		"description": "Je commando wordt uitgevoerd zonder VSCode-terminal shell-integratie. Om deze waarschuwing te onderdrukken kun je shell-integratie uitschakelen in het gedeelte <strong>Terminal</strong> van de <settingsLink>Kilo Code-instellingen</settingsLink> of de VSCode-terminalintegratie oplossen via de onderstaande link.",
+		"troubleshooting": "Klik hier voor shell-integratie documentatie."
 	}
 }
