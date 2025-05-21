@@ -2,7 +2,7 @@
 // Fill in the middle prompts
 
 import { CompletionOptions } from "../types.js"
-import { getLastNUriRelativePathParts } from "./uri.js"
+import { getLastNUriRelativePathParts } from "./uri" // Removed .js extension
 
 export interface AutocompleteTemplate {
 	compilePrefixSuffix?: (
@@ -95,6 +95,14 @@ const codegemmaFimTemplate: AutocompleteTemplate = {
 	template: "<|fim_prefix|>{{{prefix}}}<|fim_suffix|>{{{suffix}}}<|fim_middle|>",
 	completionOptions: {
 		stop: ["<|fim_prefix|>", "<|fim_suffix|>", "<|fim_middle|>", "<|file_separator|>", "<end_of_turn>", "<eos>"],
+	},
+}
+
+// Google Gemini 2.5 Flash FIM template
+const googleGeminiFlashFimTemplate: AutocompleteTemplate = {
+	template: "<FIM_PREFIX>{{{prefix}}}<FIM_SUFFIX>{{{suffix}}}<FIM_MIDDLE>",
+	completionOptions: {
+		stop: ["<FIM_PREFIX>", "<FIM_SUFFIX>", "<FIM_MIDDLE>", "<eos>"],
 	},
 }
 
@@ -246,6 +254,10 @@ export function getTemplateForModel(model: string): AutocompleteTemplate {
 
 	if (lowerCaseModel.includes("codegemma")) {
 		return codegemmaFimTemplate
+	}
+
+	if (lowerCaseModel.includes("gemini") && (lowerCaseModel.includes("flash") || lowerCaseModel.includes("2.5"))) {
+		return googleGeminiFlashFimTemplate
 	}
 
 	if (lowerCaseModel.includes("codellama")) {
