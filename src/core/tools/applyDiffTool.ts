@@ -30,6 +30,7 @@ export async function applyDiffTool(
 	const sharedMessageProps: ClineSayTool = {
 		tool: "appliedDiff",
 		path: getReadablePath(cline.cwd, removeClosingTag("path", relPath)),
+		diff: diffContent,
 	}
 
 	try {
@@ -45,8 +46,10 @@ export async function applyDiffTool(
 				return
 			}
 
-			const partialMessage = JSON.stringify(sharedMessageProps)
-			await cline.ask("tool", partialMessage, block.partial, toolProgressStatus).catch(() => {})
+			await cline
+				.ask("tool", JSON.stringify(sharedMessageProps), block.partial, toolProgressStatus)
+				.catch(() => {})
+
 			return
 		} else {
 			if (!relPath) {
@@ -162,7 +165,7 @@ export async function applyDiffTool(
 
 			// Track file edit operation
 			if (relPath) {
-				await cline.getFileContextTracker().trackFileContext(relPath, "roo_edited" as RecordSource)
+				await cline.fileContextTracker.trackFileContext(relPath, "roo_edited" as RecordSource)
 			}
 
 			// Used to determine if we should wait for busy terminal to update before sending api request

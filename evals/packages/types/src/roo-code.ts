@@ -102,7 +102,6 @@ export const modelInfoSchema = z.object({
 	supportsImages: z.boolean().optional(),
 	supportsComputerUse: z.boolean().optional(),
 	supportsPromptCache: z.boolean(),
-	isPromptCacheOptional: z.boolean().optional(),
 	inputPrice: z.number().optional(),
 	outputPrice: z.number().optional(),
 	cacheWritesPrice: z.number().optional(),
@@ -298,7 +297,7 @@ export type CommandExecutionStatus = z.infer<typeof commandExecutionStatusSchema
  * ExperimentId
  */
 
-export const experimentIds = ["powerSteering"] as const
+export const experimentIds = ["autoCondenseContext", "powerSteering"] as const
 
 export const experimentIdsSchema = z.enum(experimentIds)
 
@@ -309,6 +308,7 @@ export type ExperimentId = z.infer<typeof experimentIdsSchema>
  */
 
 const experimentsSchema = z.object({
+	autoCondenseContext: z.boolean(),
 	powerSteering: z.boolean(),
 })
 
@@ -336,7 +336,6 @@ export type ProviderSettingsEntry = z.infer<typeof providerSettingsEntrySchema>
 const genericProviderSettingsSchema = z.object({
 	includeMaxTokens: z.boolean().optional(),
 	reasoningEffort: reasoningEffortsSchema.optional(),
-	promptCachingDisabled: z.boolean().optional(),
 	diffEnabled: z.boolean().optional(),
 	fuzzyMatchThreshold: z.number().optional(),
 	modelTemperature: z.number().nullish(),
@@ -714,7 +713,6 @@ const providerSettingsRecord: ProviderSettingsRecord = {
 	// Generic
 	includeMaxTokens: undefined,
 	reasoningEffort: undefined,
-	promptCachingDisabled: undefined,
 	diffEnabled: undefined,
 	fuzzyMatchThreshold: undefined,
 	modelTemperature: undefined,
@@ -1092,6 +1090,7 @@ export const toolNames = [
 	"switch_mode",
 	"new_task",
 	"fetch_instructions",
+	"new_rule", // kilocode_change
 ] as const
 
 export const toolNamesSchema = z.enum(toolNames)

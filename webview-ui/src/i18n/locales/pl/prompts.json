@@ -7,7 +7,7 @@
 		"editModesConfig": "Edytuj konfigurację trybów",
 		"editGlobalModes": "Edytuj tryby globalne",
 		"editProjectModes": "Edytuj tryby projektu (.kilocodemodes)",
-		"createModeHelpText": "Kliknij +, aby utworzyć nowy niestandardowy tryb, lub po prostu poproś Kilo Code w czacie, aby utworzył go dla Ciebie!",
+		"createModeHelpText": "Tryby to wyspecjalizowane persony, które dostosowują zachowanie Kilo Code. <0>Dowiedz się o używaniu trybów</0> lub <1>dostosowywaniu trybów.</1>",
 		"selectMode": "Szukaj trybów"
 	},
 	"apiConfiguration": {
@@ -34,16 +34,21 @@
 		"resetToDefault": "Przywróć domyślne",
 		"description": "Zdefiniuj wiedzę specjalistyczną i osobowość Kilo Code dla tego trybu. Ten opis kształtuje, jak Kilo Code prezentuje się i podchodzi do zadań."
 	},
+	"whenToUse": {
+		"title": "Kiedy używać (opcjonalne)",
+		"description": "Opisz, kiedy ten tryb powinien być używany. Pomaga to Orchestratorowi wybrać odpowiedni tryb dla zadania.",
+		"resetToDefault": "Przywróć domyślny opis 'Kiedy używać'"
+	},
 	"customInstructions": {
 		"title": "Niestandardowe instrukcje dla trybu (opcjonalne)",
 		"resetToDefault": "Przywróć domyślne",
 		"description": "Dodaj wytyczne dotyczące zachowania specyficzne dla trybu {{modeName}}.",
-		"loadFromFile": "Niestandardowe instrukcje dla trybu {{modeName}} mogą być również ładowane z folderu <span>.kilocode/rules/</span> w Twoim obszarze roboczym (.kilocoderules-{{modeSlug}} jest przestarzały i wkrótce przestanie działać)."
+		"loadFromFile": "Niestandardowe instrukcje dla trybu {{mode}} mogą być również ładowane z folderu <span>.kilocode/rules-{{slug}}/</span> w Twoim obszarze roboczym (.kilocoderules-{{slug}} i .clinerules-{{slug}} są przestarzałe i wkrótce przestaną działać)."
 	},
 	"globalCustomInstructions": {
 		"title": "Niestandardowe instrukcje dla wszystkich trybów",
-		"description": "Te instrukcje dotyczą wszystkich trybów. Zapewniają podstawowy zestaw zachowań, które mogą być rozszerzone przez instrukcje specyficzne dla trybów poniżej.\nJeśli chcesz, aby Kilo Code myślał i mówił w języku innym niż język wyświetlania Twojego edytora ({{language}}), możesz to określić tutaj.",
-		"loadFromFile": "Instrukcje mogą być również ładowane z folderu <span>.kilocode/rules/</span> w Twoim obszarze roboczym (.kilocoderules jest przestarzały i wkrótce przestanie działać)."
+		"description": "Te instrukcje dotyczą wszystkich trybów. Zapewniają podstawowy zestaw zachowań, które mogą być rozszerzone przez instrukcje specyficzne dla trybów poniżej. <0>Dowiedz się więcej</0>",
+		"loadFromFile": "Instrukcje mogą być również ładowane z folderu <span>.kilocode/rules/</span> w Twoim obszarze roboczym (.kilocoderules i .clinerules są przestarzałe i wkrótce przestaną działać)."
 	},
 	"systemPrompt": {
 		"preview": "Podgląd podpowiedzi systemowej",
@@ -102,7 +107,7 @@
 	},
 	"advancedSystemPrompt": {
 		"title": "Zaawansowane: Zastąp podpowiedź systemową",
-		"description": "Możesz całkowicie zastąpić podpowiedź systemową dla tego trybu (oprócz definicji roli i niestandardowych instrukcji) poprzez utworzenie pliku w .kilocode/system-prompt-{{modeSlug}} w swoim obszarze roboczym. Jest to bardzo zaawansowana funkcja, która omija wbudowane zabezpieczenia i kontrole spójności (szczególnie wokół używania narzędzi), więc bądź ostrożny!"
+		"description": "<2>⚠️ Ostrzeżenie:</2> Ta zaawansowana funkcja omija zabezpieczenia. <1>PRZECZYTAJ TO PRZED UŻYCIEM!</1>Zastąp domyślną podpowiedź systemową, tworząc plik w <span>.kilocode/system-prompt-{{slug}}</span>."
 	},
 	"createModeDialog": {
 		"title": "Utwórz nowy tryb",
@@ -130,6 +135,10 @@
 		"roleDefinition": {
 			"label": "Definicja roli",
 			"description": "Zdefiniuj wiedzę specjalistyczną i osobowość Kilo Code dla tego trybu."
+		},
+		"whenToUse": {
+			"label": "Kiedy używać (opcjonalne)",
+			"description": "Podaj jasny opis, kiedy ten tryb jest najbardziej efektywny i w jakich typach zadań się sprawdza."
 		},
 		"tools": {
 			"label": "Dostępne narzędzia",

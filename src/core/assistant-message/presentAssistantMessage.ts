@@ -30,6 +30,7 @@ import { checkpointSave } from "../checkpoints"
 import { formatResponse } from "../prompts/responses"
 import { validateToolUse } from "../tools/validateToolUse"
 import { Task } from "../task/Task"
+import { newRuleTool } from "../tools/newRuleTool"
 
 /**
  * Processes and presents assistant message content to the user interface.
@@ -189,6 +190,10 @@ export async function presentAssistantMessage(cline: Task) {
 						const modeName = getModeBySlug(mode, customModes)?.name ?? mode
 						return `[${block.name} in ${modeName} mode: '${message}']`
 					}
+					// kilocode_change start
+					case "new_rule":
+						return `[${block.name} for '${block.params.path}']`
+					// kilocode_change end
 				}
 			}
 
@@ -460,6 +465,11 @@ export async function presentAssistantMessage(cline: Task) {
 						askFinishSubTaskApproval,
 					)
 					break
+				// kilocode_change start
+				case "new_rule":
+					await newRuleTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
+					break
+				// kilocode_change end
 			}
 
 			break

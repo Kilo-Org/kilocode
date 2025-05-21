@@ -1,7 +1,7 @@
-import { ApiHandlerOptions, PROMPT_CACHING_MODELS, OPTIONAL_PROMPT_CACHING_MODELS, ModelRecord } from "../../shared/api"
+import { ApiHandlerOptions, PROMPT_CACHING_MODELS, ModelRecord } from "../../shared/api"
 import { OpenRouterHandler } from "./openrouter"
 import { getModelParams } from "../getModelParams"
-import { getModels } from "./fetchers/cache"
+import { getModels } from "./fetchers/modelCache"
 
 /**
  * A custom OpenRouter handler that overrides the getModel function
@@ -57,7 +57,6 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 			topP,
 			promptCache: {
 				supported: PROMPT_CACHING_MODELS.has(id),
-				optional: OPTIONAL_PROMPT_CACHING_MODELS.has(id),
 			},
 		}
 	}

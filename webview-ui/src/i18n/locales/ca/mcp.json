@@ -1,19 +1,21 @@
 {
 	"title": "Servidors MCP",
 	"done": "Fet",
-	"description": "El <0>Model Context Protocol</0> permet la comunicació amb servidors MCP que s'executen localment i proporcionen eines i recursos addicionals per ampliar les capacitats de Kilo Code. Pots utilitzar <1>servidors creats per la comunitat</1> o demanar a Kilo Code que creï noves eines específiques per al teu flux de treball (per exemple, \"afegir una eina que obtingui la documentació més recent de npm\").",
+	"description": "Activa el Model Context Protocol (MCP) perquè Kilo Code pugui utilitzar eines i serveis addicionals de servidors externs. Això amplia el que Kilo Code pot fer per tu. <0>Més informació</0>",
 	"enableToggle": {
-		"title": "Habilitar servidors MCP",
-		"description": "Quan està habilitat, Kilo Code podrà interactuar amb servidors MCP per a funcionalitats avançades. Si no utilitzes MCP, pots desactivar això per reduir l'ús de tokens de Kilo Code."
+		"title": "Activa els servidors MCP",
+		"description": "Activa-ho perquè Kilo Code pugui utilitzar eines dels servidors MCP connectats. Això dóna més capacitats a Kilo Code. Si no vols utilitzar aquestes eines addicionals, desactiva-ho per ajudar a reduir el cost dels tokens API."
 	},
 	"enableServerCreation": {
-		"title": "Habilitar creació de servidors MCP",
-		"description": "Quan està habilitat, Kilo Code pot ajudar-te a crear nous servidors MCP mitjançant ordres com \"afegir una nova eina per a...\". Si no necessites crear servidors MCP, pots desactivar això per reduir l'ús de tokens de Kilo Code."
+		"title": "Activa la creació de servidors MCP",
+		"description": "Activa-ho perquè Kilo Code t'ajudi a crear <1>nous</1> servidors MCP personalitzats. <0>Més informació sobre la creació de servidors</0>",
+		"hint": "Consell: Per reduir el cost dels tokens API, desactiva aquesta opció quan no demanis a Kilo Code que creï un nou servidor MCP."
 	},
-	"editGlobalMCP": "Editar MCP Global",
-	"editProjectMCP": "Editar MCP del Projecte",
+	"editGlobalMCP": "Edita MCP global",
+	"editProjectMCP": "Edita MCP del projecte",
+	"learnMoreEditingSettings": "Més informació sobre com editar fitxers de configuració MCP",
 	"tool": {
-		"alwaysAllow": "Permetre sempre",
+		"alwaysAllow": "Permet sempre",
 		"parameters": "Paràmetres",
 		"noDescription": "Sense descripció"
 	},
@@ -30,7 +32,7 @@
 	},
 	"networkTimeout": {
 		"label": "Temps d'espera de xarxa",
-		"description": "Temps màxim d'espera per a respostes del servidor",
+		"description": "Temps màxim d'espera per a les respostes del servidor",
 		"options": {
 			"15seconds": "15 segons",
 			"30seconds": "30 segons",
@@ -43,13 +45,13 @@
 		}
 	},
 	"deleteDialog": {
-		"title": "Eliminar servidor MCP",
-		"description": "Estàs segur que vols eliminar el servidor MCP \"{{serverName}}\"? Aquesta acció no es pot desfer.",
-		"cancel": "Cancel·lar",
-		"delete": "Eliminar"
+		"title": "Elimina el servidor MCP",
+		"description": "Segur que vols eliminar el servidor MCP \"{{serverName}}\"? Aquesta acció no es pot desfer.",
+		"cancel": "Cancel·la",
+		"delete": "Elimina"
 	},
 	"serverStatus": {
-		"retrying": "Reintentant...",
-		"retryConnection": "Reintentar connexió"
+		"retrying": "Tornant a intentar...",
+		"retryConnection": "Torna a intentar la connexió"
 	}
 }

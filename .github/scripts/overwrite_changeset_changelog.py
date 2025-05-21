@@ -39,11 +39,13 @@ def overwrite_changelog_section(changelog_text: str, new_content: str):
     notes_end_index = changelog_text.find(prev_version_pattern, notes_start_index) if PREV_VERSION and prev_version_pattern in changelog_text else len(changelog_text)
 
     if new_content:
-        return changelog_text[:notes_start_index] + f"{new_content}\n" + changelog_text[notes_end_index:]
+        updated_changelog = changelog_text[:notes_start_index] + f"{new_content}\n" + changelog_text[notes_end_index:]
+        updated_changelog = updated_changelog.replace(f"## {VERSION}", f"## [{VERSION}]")
+        return updated_changelog
     else:
         changeset_lines = changelog_text[notes_start_index:notes_end_index].split("\n")
         # Remove the first two lines from the regular changeset format, ex: \n### Patch Changes
-        parsed_lines = "\n".join(changeset_lines[2:]) 
+        parsed_lines = "\n".join(changeset_lines[2:])
         updated_changelog = changelog_text[:notes_start_index] + parsed_lines + changelog_text[notes_end_index:]
         updated_changelog = updated_changelog.replace(f"## {VERSION}", f"## [{VERSION}]")
         return updated_changelog

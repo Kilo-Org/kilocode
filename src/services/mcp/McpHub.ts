@@ -1,6 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js"
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js"
 import ReconnectingEventSource from "reconnecting-eventsource"
 import {
 	CallToolResultSchema,
@@ -32,10 +33,12 @@ import { fileExistsAtPath } from "../../utils/fs"
 import { arePathsEqual } from "../../utils/path"
 import { injectEnv } from "../../utils/config"
 
+type Transport = StdioClientTransport | SSEClientTransport | StreamableHTTPClientTransport
+
 export type McpConnection = {
 	server: McpServer
 	client: Client
-	transport: StdioClientTransport | SSEClientTransport
+	transport: Transport
 }
 
 // Base configuration schema for common settings
@@ -47,14 +50,28 @@ const BaseConfigSchema = z.object({
 })
 
 // Custom error messages for better user feedback
-const typeErrorMessage = "Server type must be either 'stdio' or 'sse'"
+const typeErrorMessage = "Server type must be one of: 'stdio', 'sse', or 'streamableHttp'"
 const stdioFieldsErrorMessage =
 	"For 'stdio' type servers, you must provide a 'command' field and can optionally include 'args' and 'env'"
-const sseFieldsErrorMessage =
-	"For 'sse' type servers, you must provide a 'url' field and can optionally include 'headers'"
+const urlFieldsErrorMessage =
+	"For url based type servers, you must provide a 'url' field and can optionally include 'headers'"
 const mixedFieldsErrorMessage =
 	"Cannot mix 'stdio' and 'sse' fields. For 'stdio' use 'command', 'args', and 'env'. For 'sse' use 'url' and 'headers'"
 const missingFieldsErrorMessage = "Server configuration must include either 'command' (for stdio) or 'url' (for sse)"
+
+function inferUrlBasedType(config: any): "sse" | "streamableHttp" | null {
+	if (!config.headers || typeof config.headers !== "object") {
+		return "streamableHttp"
+	}
+
+	const headers = Object.fromEntries(Object.entries(config.headers).map(([k, v]) => [k.toLowerCase(), v]))
+
+	if (typeof headers["accept"] === "string" && headers["accept"].includes("text/event-stream")) {
+		return "sse"
+	}
+
+	return "streamableHttp"
+}
 
 // Helper function to create a refined schema with better error messages
 const createServerTypeSchema = () => {
@@ -90,6 +107,23 @@ const createServerTypeSchema = () => {
 				type: "sse" as const,
 			}))
 			.refine((data) => data.type === undefined || data.type === "sse", { message: typeErrorMessage }),
+		// Streamable HTTP config (has url field)
+		BaseConfigSchema.extend({
+			type: z.literal("streamableHttp").optional(),
+			url: z.string().url("URL must be a valid URL format"),
+			headers: z.record(z.string()).optional(),
+			// Explicitly disallow other types' fields
+			command: z.undefined().optional(),
+			args: z.undefined().optional(),
+			env: z.undefined().optional(),
+		})
+			.transform((data) => ({
+				...data,
+				type: "streamableHttp" as const,
+			}))
+			.refine((data) => data.type === undefined || data.type === "streamableHttp", {
+				message: typeErrorMessage,
+			}),
 	])
 }
 
@@ -161,23 +195,33 @@ export class McpHub {
 
 		// Check if it's a stdio or SSE config and add type if missing
 		if (!config.type) {
-			if (hasStdioFields) {
+			if (hasStdioFields && !hasSseFields) {
 				config.type = "stdio"
-			} else if (hasSseFields) {
-				config.type = "sse"
+			} else if (hasSseFields && !hasStdioFields) {
+				// Ambiguous: multiple types use URL. Try to infer more accurately.
+				const guessedType = inferUrlBasedType(config)
+				if (guessedType) {
+					config.type = guessedType
+				} else {
+					throw new Error("Cannot infer server type from provided fields. Please specify 'type' explicitly.")
+				}
 			} else {
 				throw new Error(missingFieldsErrorMessage)
 			}
-		} else if (config.type !== "stdio" && config.type !== "sse") {
+		} else if (!["stdio", "sse", "streamableHttp"].includes(config.type)) {
 			throw new Error(typeErrorMessage)
 		}
 
 		// Check for type/field mismatch
-		if (config.type === "stdio" && !hasStdioFields) {
+		const urlBasedTypes = new Set(["sse", "streamableHttp"])
+		const stdioBasedTypes = new Set(["stdio"])
+
+		if (stdioBasedTypes.has(config.type) && !hasStdioFields) {
 			throw new Error(stdioFieldsErrorMessage)
 		}
-		if (config.type === "sse" && !hasSseFields) {
-			throw new Error(sseFieldsErrorMessage)
+
+		if (urlBasedTypes.has(config.type) && !hasSseFields) {
+			throw new Error(urlFieldsErrorMessage)
 		}
 
 		// Validate the config against the schema
@@ -442,96 +486,116 @@ export class McpHub {
 				},
 			)
 
-			let transport: StdioClientTransport | SSEClientTransport
+			let transport: StdioClientTransport | SSEClientTransport | StreamableHTTPClientTransport
 
-			if (config.type === "stdio") {
-				transport = new StdioClientTransport({
-					command: config.command,
-					args: config.args,
-					cwd: config.cwd,
-					env: {
-						...(config.env ? await injectEnv(config.env) : {}),
-						...(process.env.PATH ? { PATH: process.env.PATH } : {}),
-					},
-					stderr: "pipe",
-				})
+			switch (config.type) {
+				case "stdio": {
+					transport = new StdioClientTransport({
+						command: config.command,
+						args: config.args,
+						cwd: config.cwd,
+						env: {
+							...(config.env ? await injectEnv(config.env) : {}),
+							...(process.env.PATH ? { PATH: process.env.PATH } : {}),
+						},
+						stderr: "pipe",
+					})
 
-				// Set up stdio specific error handling
-				transport.onerror = async (error) => {
-					console.error(`Transport error for "${name}":`, error)
-					const connection = this.findConnection(name, source)
-					if (connection) {
-						connection.server.status = "disconnected"
-						this.appendErrorMessage(connection, error instanceof Error ? error.message : `${error}`)
+					transport.onerror = async (error) => {
+						console.error(`Transport error for "${name}":`, error)
+						const connection = this.findConnection(name, source)
+						if (connection) {
+							connection.server.status = "disconnected"
+							this.appendErrorMessage(connection, error instanceof Error ? error.message : `${error}`)
+						}
+						await this.notifyWebviewOfServerChanges()
 					}
-					await this.notifyWebviewOfServerChanges()
-				}
 
-				transport.onclose = async () => {
-					const connection = this.findConnection(name, source)
-					if (connection) {
-						connection.server.status = "disconnected"
+					transport.onclose = async () => {
+						const connection = this.findConnection(name, source)
+						if (connection) {
+							connection.server.status = "disconnected"
+						}
+						await this.notifyWebviewOfServerChanges()
 					}
-					await this.notifyWebviewOfServerChanges()
-				}
 
-				// transport.stderr is only available after the process has been started. However we can't start it separately from the .connect() call because it also starts the transport. And we can't place this after the connect call since we need to capture the stderr stream before the connection is established, in order to capture errors during the connection process.
-				// As a workaround, we start the transport ourselves, and then monkey-patch the start method to no-op so that .connect() doesn't try to start it again.
-				await transport.start()
-				const stderrStream = transport.stderr
-				if (stderrStream) {
-					stderrStream.on("data", async (data: Buffer) => {
-						const output = data.toString()
-						// Check if output contains INFO level log
-						const isInfoLog = /INFO/i.test(output)
+					await transport.start()
+					const stderrStream = transport.stderr
+					if (stderrStream) {
+						stderrStream.on("data", async (data: Buffer) => {
+							const output = data.toString()
+							const isInfoLog = /INFO/i.test(output)
 
-						if (isInfoLog) {
-							// Log normal informational messages
-							console.log(`Server "${name}" info:`, output)
-						} else {
-							// Treat as error log
-							console.error(`Server "${name}" stderr:`, output)
-							const connection = this.findConnection(name, source)
-							if (connection) {
-								this.appendErrorMessage(connection, output)
-								if (connection.server.status === "disconnected") {
-									await this.notifyWebviewOfServerChanges()
+							if (isInfoLog) {
+								console.log(`Server "${name}" info:`, output)
+							} else {
+								console.error(`Server "${name}" stderr:`, output)
+								const connection = this.findConnection(name, source)
+								if (connection) {
+									this.appendErrorMessage(connection, output)
+									if (connection.server.status === "disconnected") {
+										await this.notifyWebviewOfServerChanges()
+									}
 								}
 							}
-						}
-					})
-				} else {
-					console.error(`No stderr stream for ${name}`)
-				}
-				transport.start = async () => {} // No-op now, .connect() won't fail
-			} else {
-				// SSE connection
-				const sseOptions = {
-					requestInit: {
-						headers: config.headers,
-					},
-				}
-				// Configure ReconnectingEventSource options
-				const reconnectingEventSourceOptions = {
-					max_retry_time: 5000, // Maximum retry time in milliseconds
-					withCredentials: config.headers?.["Authorization"] ? true : false, // Enable credentials if Authorization header exists
-				}
-				global.EventSource = ReconnectingEventSource
-				transport = new SSEClientTransport(new URL(config.url), {
-					...sseOptions,
-					eventSourceInit: reconnectingEventSourceOptions,
-				})
-
-				// Set up SSE specific error handling
-				transport.onerror = async (error) => {
-					console.error(`Transport error for "${name}":`, error)
-					const connection = this.findConnection(name, source)
-					if (connection) {
-						connection.server.status = "disconnected"
-						this.appendErrorMessage(connection, error instanceof Error ? error.message : `${error}`)
+						})
+					} else {
+						console.error(`No stderr stream for ${name}`)
 					}
-					await this.notifyWebviewOfServerChanges()
+
+					transport.start = async () => {}
+					break
 				}
+
+				case "sse": {
+					const sseOptions = {
+						requestInit: {
+							headers: config.headers,
+						},
+					}
+					const reconnectingEventSourceOptions = {
+						max_retry_time: 5000,
+						withCredentials: config.headers?.["Authorization"] ? true : false,
+					}
+					global.EventSource = ReconnectingEventSource
+					transport = new SSEClientTransport(new URL(config.url), {
+						...sseOptions,
+						eventSourceInit: reconnectingEventSourceOptions,
+					})
+
+					transport.onerror = async (error) => {
+						console.error(`Transport error for "${name}":`, error)
+						const connection = this.findConnection(name, source)
+						if (connection) {
+							connection.server.status = "disconnected"
+							this.appendErrorMessage(connection, error instanceof Error ? error.message : `${error}`)
+						}
+						await this.notifyWebviewOfServerChanges()
+					}
+					break
+				}
+
+				case "streamableHttp": {
+					transport = new StreamableHTTPClientTransport(new URL(config.url), {
+						requestInit: {
+							headers: config.headers,
+						},
+					})
+
+					transport.onerror = async (error) => {
+						console.error(`Transport error for "${name}":`, error)
+						const connection = this.findConnection(name, source)
+						if (connection) {
+							connection.server.status = "disconnected"
+							this.appendErrorMessage(connection, error instanceof Error ? error.message : `${error}`)
+						}
+						await this.notifyWebviewOfServerChanges()
+					}
+					break
+				}
+
+				default:
+					throw new Error(`Unknown transport type: ${(config as any).type}`)
 			}
 
 			const connection: McpConnection = {
@@ -1189,7 +1253,7 @@ export class McpHub {
 			timeout = 60 * 1000
 		}
 
-		return await connection.client.request(
+		const result = await connection.client.request(
 			{
 				method: "tools/call",
 				params: {
@@ -1202,6 +1266,11 @@ export class McpHub {
 				timeout,
 			},
 		)
+
+		return {
+			...result,
+			content: result.content ?? [],
+		}
 	}
 
 	async toggleToolAlwaysAllow(

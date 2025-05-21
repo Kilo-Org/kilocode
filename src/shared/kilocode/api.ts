@@ -10,7 +10,6 @@ export const kilocodeOpenrouterModels = {
 		inputPrice: 1.25,
 		outputPrice: 10,
 		description: "Gemini 2.5 Pro via OpenRouter",
-		isPromptCacheOptional: true,
 	},
 	"openai/gpt-4.1": {
 		maxTokens: 32_768,
@@ -27,7 +26,6 @@ export const kilocodeOpenrouterModels = {
 		supportsPromptCache: false,
 		inputPrice: 0.15,
 		outputPrice: 0.6,
-		isPromptCacheOptional: true,
 	},
 	"anthropic/claude-3.7-sonnet": {
 		maxTokens: 64_000,

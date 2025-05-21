@@ -42,6 +42,7 @@ import BottomControls from "./BottomControls" // kilocode_change
 import SystemPromptWarning from "./SystemPromptWarning"
 import { showSystemNotification } from "@/kilocode/helpers" // kilocode_change
 import { CheckpointWarning } from "./CheckpointWarning"
+import { buildDocLink } from "@src/utils/docLinks"
 
 export interface ChatViewProps {
 	isHidden: boolean
@@ -115,7 +116,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 	const [inputValue, setInputValue] = useState("")
 	const textAreaRef = useRef<HTMLTextAreaElement>(null)
-	const [textAreaDisabled, setTextAreaDisabled] = useState(false)
+	const [sendingDisabled, setSendingDisabled] = useState(false)
 	const [selectedImages, setSelectedImages] = useState<string[]>([])
 
 	// we need to hold on to the ask because useEffect > lastMessage will always let us know when an ask comes in and handle it, but by the time handleMessage is called, the last message might not be the ask anymore (it could be a say that followed)
@@ -158,7 +159,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					switch (lastMessage.ask) {
 						case "api_req_failed":
 							playSound("progress_loop")
-							setTextAreaDisabled(true)
+							setSendingDisabled(true)
 							setClineAsk("api_req_failed")
 							setEnableButtons(true)
 							setPrimaryButtonText(t("chat:retry.title"))
@@ -166,7 +167,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							break
 						case "mistake_limit_reached":
 							playSound("progress_loop")
-							setTextAreaDisabled(false)
+							setSendingDisabled(false)
 							setClineAsk("mistake_limit_reached")
 							setEnableButtons(true)
 							setPrimaryButtonText(t("chat:proceedAnyways.title"))
@@ -176,7 +177,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							if (!isPartial) {
 								playSound("notification")
 							}
-							setTextAreaDisabled(isPartial)
+							setSendingDisabled(isPartial)
 							setClineAsk("followup")
 							// setting enable buttons to `false` would trigger a focus grab when
 							// the text area is enabled which is undesirable.
@@ -191,7 +192,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 								playSound("notification")
 								showSystemNotification(t("kilocode:notifications.toolRequest")) // kilocode_change
 							}
-							setTextAreaDisabled(isPartial)
+							setSendingDisabled(isPartial)
 							setClineAsk("tool")
 							setEnableButtons(!isPartial)
 							const tool = JSON.parse(lastMessage.text || "{}") as ClineSayTool
@@ -218,7 +219,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 								playSound("notification")
 								showSystemNotification(t("kilocode:notifications.browserAction")) // kilocode_change
 							}
-							setTextAreaDisabled(isPartial)
+							setSendingDisabled(isPartial)
 							setClineAsk("browser_action_launch")
 							setEnableButtons(!isPartial)
 							setPrimaryButtonText(t("chat:approve.title"))
@@ -229,14 +230,14 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 								playSound("notification")
 								showSystemNotification(t("kilocode:notifications.command")) // kilocode_change
 							}
-							setTextAreaDisabled(isPartial)
+							setSendingDisabled(isPartial)
 							setClineAsk("command")
 							setEnableButtons(!isPartial)
 							setPrimaryButtonText(t("chat:runCommand.title"))
 							setSecondaryButtonText(t("chat:reject.title"))
 							break
 						case "command_output":
-							setTextAreaDisabled(false)
+							setSendingDisabled(false)
 							setClineAsk("command_output")
 							setEnableButtons(true)
 							setPrimaryButtonText(t("chat:proceedWhileRunning.title"))
@@ -246,7 +247,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							if (!isAutoApproved(lastMessage) && !isPartial) {
 								playSound("notification")
 							}
-							setTextAreaDisabled(isPartial)
+							setSendingDisabled(isPartial)
 							setClineAsk("use_mcp_server")
 							setEnableButtons(!isPartial)
 							setPrimaryButtonText(t("chat:approve.title"))
@@ -257,7 +258,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							if (!isPartial) {
 								playSound("celebration")
 							}
-							setTextAreaDisabled(isPartial)
+							setSendingDisabled(isPartial)
 							setClineAsk("completion_result")
 							setEnableButtons(!isPartial)
 							setPrimaryButtonText(t("chat:startNewTask.title"))
@@ -267,7 +268,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							if (!isAutoApproved(lastMessage) && !isPartial) {
 								playSound("notification")
 							}
-							setTextAreaDisabled(false)
+							setSendingDisabled(false)
 							setClineAsk("resume_task")
 							setEnableButtons(true)
 							setPrimaryButtonText(t("chat:resumeTask.title"))
@@ -278,7 +279,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							if (!isPartial) {
 								playSound("celebration")
 							}
-							setTextAreaDisabled(false)
+							setSendingDisabled(false)
 							setClineAsk("resume_completed_task")
 							setEnableButtons(true)
 							setPrimaryButtonText(t("chat:startNewTask.title"))
@@ -292,7 +293,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					// an "ask" while ask is waiting for response.
 					switch (lastMessage.say) {
 						case "api_req_retry_delayed":
-							setTextAreaDisabled(true)
+							setSendingDisabled(true)
 							break
 						case "api_req_started":
 							if (secondLastMessage?.ask === "command_output") {
@@ -304,7 +305,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 								// field or buttons to continue, which does the
 								// following automatically).
 								setInputValue("")
-								setTextAreaDisabled(true)
+								setSendingDisabled(true)
 								setSelectedImages([])
 								setClineAsk(undefined)
 								setEnableButtons(false)
@@ -328,7 +329,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 	useEffect(() => {
 		if (messages.length === 0) {
-			setTextAreaDisabled(false)
+			setSendingDisabled(false)
 			setClineAsk(undefined)
 			setEnableButtons(false)
 			setPrimaryButtonText(undefined)
@@ -382,7 +383,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const handleChatReset = useCallback(() => {
 		// Only reset message-specific state, preserving mode.
 		setInputValue("")
-		setTextAreaDisabled(true)
+		setSendingDisabled(true)
 		setSelectedImages([])
 		setClineAsk(undefined)
 		setEnableButtons(false)
@@ -480,7 +481,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					break
 			}
 
-			setTextAreaDisabled(true)
+			setSendingDisabled(true)
 			setClineAsk(undefined)
 			setEnableButtons(false)
 		},
@@ -527,7 +528,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					vscode.postMessage({ type: "terminalOperation", terminalOperation: "abort" })
 					break
 			}
-			setTextAreaDisabled(true)
+			setSendingDisabled(true)
 			setClineAsk(undefined)
 			setEnableButtons(false)
 		},
@@ -541,7 +542,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const selectImages = useCallback(() => vscode.postMessage({ type: "selectImages" }), [])
 
 	const shouldDisableImages =
-		!model?.supportsImages || textAreaDisabled || selectedImages.length >= MAX_IMAGES_PER_MESSAGE
+		!model?.supportsImages || sendingDisabled || selectedImages.length >= MAX_IMAGES_PER_MESSAGE
 
 	const handleMessage = useCallback(
 		(e: MessageEvent) => {
@@ -551,7 +552,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				case "action":
 					switch (message.action!) {
 						case "didBecomeVisible":
-							if (!isHidden && !textAreaDisabled && !enableButtons) {
+							if (!isHidden && !sendingDisabled && !enableButtons) {
 								textAreaRef.current?.focus()
 							}
 							break
@@ -590,7 +591,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		},
 		[
 			isHidden,
-			textAreaDisabled,
+			sendingDisabled,
 			enableButtons,
 			handleChatReset,
 			handleSendMessage,
@@ -607,7 +608,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 	useEffect(() => {
 		const timer = setTimeout(() => {
-			if (!isHidden && !textAreaDisabled && !enableButtons) {
+			if (!isHidden && !sendingDisabled && !enableButtons) {
 				textAreaRef.current?.focus()
 			}
 		}, 50)
@@ -615,7 +616,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		return () => {
 			clearTimeout(timer)
 		}
-	}, [isHidden, textAreaDisabled, enableButtons])
+	}, [isHidden, sendingDisabled, enableButtons])
 
 	const visibleMessages = useMemo(() => {
 		return modifiedMessages.filter((message) => {
@@ -1137,7 +1138,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				// things are actually needed.
 				setInputValue("")
 				setSelectedImages([])
-				setTextAreaDisabled(true)
+				setSendingDisabled(true)
 				setClineAsk(undefined)
 				setEnableButtons(false)
 			}
@@ -1200,7 +1201,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		acceptInput: () => {
 			if (enableButtons && primaryButtonText) {
 				handlePrimaryButtonClick(inputValue, selectedImages)
-			} else if (!textAreaDisabled && (inputValue.trim() || selectedImages.length > 0)) {
+			} else if (!sendingDisabled && (inputValue.trim() || selectedImages.length > 0)) {
 				handleSendMessage(inputValue, selectedImages)
 			}
 		},
@@ -1267,7 +1268,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 								i18nKey="chat:about"
 								components={{
 									DocsLink: (
-										<a href="https://kilocode.ai/docs" target="_blank" rel="noopener noreferrer">
+										<a href={buildDocLink("", "welcome")} target="_blank" rel="noopener noreferrer">
 											the docs
 										</a>
 									),
@@ -1409,8 +1410,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				ref={textAreaRef}
 				inputValue={inputValue}
 				setInputValue={setInputValue}
-				textAreaDisabled={textAreaDisabled}
-				selectApiConfigDisabled={textAreaDisabled && clineAsk !== "api_req_failed"}
+				sendingDisabled={sendingDisabled}
+				selectApiConfigDisabled={sendingDisabled && clineAsk !== "api_req_failed"}
 				placeholderText={placeholderText}
 				selectedImages={selectedImages}
 				setSelectedImages={setSelectedImages}

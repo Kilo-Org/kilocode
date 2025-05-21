@@ -7,7 +7,7 @@
 		"editModesConfig": "Modusconfiguratie bewerken",
 		"editGlobalModes": "Globale modi bewerken",
 		"editProjectModes": "Projectmodi bewerken (.kilocodemodes)",
-		"createModeHelpText": "Klik op + om een nieuwe aangepaste modus te maken, of vraag Kilo Code in de chat om er een voor je te maken!",
+		"createModeHelpText": "Modi zijn gespecialiseerde persona's die het gedrag van Kilo Code aanpassen. <0>Meer informatie over het gebruik van modi</0> of <1>het aanpassen van modi.</1>",
 		"selectMode": "Modus zoeken"
 	},
 	"apiConfiguration": {
@@ -34,6 +34,11 @@
 		"resetToDefault": "Terugzetten naar standaard",
 		"description": "Definieer Kilo Code's expertise en persoonlijkheid voor deze modus. Deze beschrijving bepaalt hoe Kilo Code zich presenteert en taken benadert."
 	},
+	"whenToUse": {
+		"title": "Wanneer te gebruiken (optioneel)",
+		"description": "Beschrijf wanneer deze modus gebruikt moet worden. Dit helpt de Orchestrator om de juiste modus voor een taak te kiezen.",
+		"resetToDefault": "Beschrijving 'Wanneer te gebruiken' terugzetten naar standaard"
+	},
 	"customInstructions": {
 		"title": "Modusspecifieke instructies (optioneel)",
 		"resetToDefault": "Terugzetten naar standaard",
@@ -42,7 +47,7 @@
 	},
 	"globalCustomInstructions": {
 		"title": "Aangepaste instructies voor alle modi",
-		"description": "Deze instructies gelden voor alle modi. Ze bieden een basisset aan gedragingen die kunnen worden uitgebreid met modusspecifieke instructies hieronder.\nWil je dat Kilo Code in een andere taal denkt en spreekt dan de weergavetaal van je editor ({{language}}), dan kun je dat hier aangeven.",
+		"description": "Deze instructies gelden voor alle modi. Ze bieden een basisset aan gedragingen die kunnen worden uitgebreid met modusspecifieke instructies hieronder. <0>Meer informatie</0>",
 		"loadFromFile": "Instructies kunnen ook worden geladen uit de map <span>.kilocode/rules/</span> in je werkruimte (.kilocoderules en .clinerules zijn verouderd en werken binnenkort niet meer)."
 	},
 	"systemPrompt": {
@@ -102,7 +107,7 @@
 	},
 	"advancedSystemPrompt": {
 		"title": "Geavanceerd: Systeemprompt overschrijven",
-		"description": "Je kunt de systeemprompt voor deze modus volledig vervangen (behalve de roldefinitie en aangepaste instructies) door een bestand aan te maken op <span>.kilocode/system-prompt-{{slug}}</span> in je werkruimte. Dit is een zeer geavanceerde functie die ingebouwde beveiligingen en consistentiecontroles omzeilt (vooral rond toolgebruik), dus wees voorzichtig!"
+		"description": "<2>⚠️ Waarschuwing:</2> Deze geavanceerde functie omzeilt beveiligingen. <1>LEES DIT VOOR GEBRUIK!</1>Overschrijf de standaard systeemprompt door een bestand aan te maken op <span>.kilocode/system-prompt-{{slug}}</span>."
 	},
 	"createModeDialog": {
 		"title": "Nieuwe modus aanmaken",
@@ -130,6 +135,10 @@
 		"roleDefinition": {
 			"label": "Roldefinitie",
 			"description": "Definieer Kilo Code's expertise en persoonlijkheid voor deze modus."
+		},
+		"whenToUse": {
+			"label": "Wanneer te gebruiken (optioneel)",
+			"description": "Geef een duidelijke beschrijving van wanneer deze modus het meest effectief is en voor welke soorten taken deze uitblinkt."
 		},
 		"tools": {
 			"label": "Beschikbare tools",

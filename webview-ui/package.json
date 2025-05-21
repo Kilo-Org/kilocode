@@ -4,7 +4,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"lint": "eslint src --ext .ts,.tsx",
+		"lint": "eslint src --ext .ts,.tsx --max-warnings=0",
 		"check-types": "tsc",
 		"test": "jest -w=40%",
 		"dev": "vite",
@@ -59,6 +59,7 @@
 		"remove-markdown": "^0.6.0",
 		"shell-quote": "^1.8.2",
 		"shiki": "^3.2.1",
+		"source-map": "^0.7.4",
 		"styled-components": "^6.1.13",
 		"tailwind-merge": "^2.6.0",
 		"tailwindcss": "^4.0.0",

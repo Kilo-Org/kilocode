@@ -12,6 +12,7 @@ import {
 	AskFinishSubTaskApproval,
 } from "../../shared/tools"
 import { formatResponse } from "../prompts/responses"
+import { telemetryService } from "../../services/telemetry/TelemetryService"
 import { type ExecuteCommandOptions, executeCommand } from "./executeCommandTool"
 
 export async function attemptCompletionTool(
@@ -44,7 +45,8 @@ export async function attemptCompletionTool(
 					// we have command string, which means we have the result as well, so finish it (doesnt have to exist yet)
 					await cline.say("completion_result", removeClosingTag("result", result), undefined, false)
 
-					cline.emit("taskCompleted", cline.taskId, cline.getTokenUsage(), cline.getToolUsage())
+					telemetryService.captureTaskCompleted(cline.taskId)
+					cline.emit("taskCompleted", cline.taskId, cline.getTokenUsage(), cline.toolUsage)
 
 					await cline.ask("command", removeClosingTag("command", command), block.partial).catch(() => {})
 				}
@@ -69,7 +71,8 @@ export async function attemptCompletionTool(
 				if (lastMessage && lastMessage.ask !== "command") {
 					// Haven't sent a command message yet so first send completion_result then command.
 					await cline.say("completion_result", result, undefined, false)
-					cline.emit("taskCompleted", cline.taskId, cline.getTokenUsage(), cline.getToolUsage())
+					telemetryService.captureTaskCompleted(cline.taskId)
+					cline.emit("taskCompleted", cline.taskId, cline.getTokenUsage(), cline.toolUsage)
 				}
 
 				// Complete command message.
@@ -93,7 +96,8 @@ export async function attemptCompletionTool(
 				commandResult = execCommandResult
 			} else {
 				await cline.say("completion_result", result, undefined, false)
-				cline.emit("taskCompleted", cline.taskId, cline.getTokenUsage(), cline.getToolUsage())
+				telemetryService.captureTaskCompleted(cline.taskId)
+				cline.emit("taskCompleted", cline.taskId, cline.getTokenUsage(), cline.toolUsage)
 			}
 
 			if (cline.parentTask) {

@@ -61,6 +61,7 @@ jest.mock("vscode", () => {
 	const mockTabGroup = { tabs: [mockTab] }
 
 	return {
+		TabInputTextDiff: jest.fn(),
 		CodeActionKind: {
 			QuickFix: { value: "quickfix" },
 			RefactorRewrite: { value: "refactor.rewrite" },
@@ -72,6 +73,7 @@ jest.mock("vscode", () => {
 			visibleTextEditors: [mockTextEditor],
 			tabGroups: {
 				all: [mockTabGroup],
+				close: jest.fn(),
 				onDidChangeTabs: jest.fn(() => ({ dispose: jest.fn() })),
 			},
 			showErrorMessage: jest.fn(),
@@ -273,13 +275,11 @@ describe("Cline", () => {
 			const cline = new Task({
 				provider: mockProvider,
 				apiConfiguration: mockApiConfig,
-				customInstructions: "custom instructions",
 				fuzzyMatchThreshold: 0.95,
 				task: "test task",
 				startTask: false,
 			})
 
-			expect(cline.customInstructions).toBe("custom instructions")
 			expect(cline.diffEnabled).toBe(false)
 		})
 
@@ -287,7 +287,6 @@ describe("Cline", () => {
 			const cline = new Task({
 				provider: mockProvider,
 				apiConfiguration: mockApiConfig,
-				customInstructions: "custom instructions",
 				enableDiff: true,
 				fuzzyMatchThreshold: 0.95,
 				task: "test task",

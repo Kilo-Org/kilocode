@@ -4,4 +4,5 @@ export const GlobalFileNames = {
 	mcpSettings: "mcp_settings.json",
 	customModes: "custom_modes.json",
 	taskMetadata: "task_metadata.json",
+	kiloRules: ".kilocode/rules", // kilocode_change
 }

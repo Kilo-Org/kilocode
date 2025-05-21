@@ -7,7 +7,7 @@
 		"editModesConfig": "モード設定を編集",
 		"editGlobalModes": "グローバルモードを編集",
 		"editProjectModes": "プロジェクトモードを編集 (.kilocodemodes)",
-		"createModeHelpText": "+ をクリックして新しいカスタムモードを作成するか、チャットで Kilo Code に作成を依頼してください！",
+		"createModeHelpText": "モードはKilo Codeの振る舞いを調整する専門的なペルソナです。<0>モードの使用について学ぶ</0>か、<1>モードのカスタマイズについて学ぶ</1>。",
 		"selectMode": "モードを検索"
 	},
 	"apiConfiguration": {
@@ -34,6 +34,11 @@
 		"resetToDefault": "デフォルトにリセット",
 		"description": "このモードのKilo Codeの専門知識と個性を定義します。この説明は、Kilo Codeが自身をどのように表現し、タスクにどのように取り組むかを形作ります。"
 	},
+	"whenToUse": {
+		"title": "使用タイミング（オプション）",
+		"description": "このモードをいつ使用すべきかを説明します。これはOrchestratorがタスクに適切なモードを選択するのに役立ちます。",
+		"resetToDefault": "「使用タイミング」説明をデフォルトにリセット"
+	},
 	"customInstructions": {
 		"title": "モード固有のカスタム指示（オプション）",
 		"resetToDefault": "デフォルトにリセット",
@@ -42,8 +47,8 @@
 	},
 	"globalCustomInstructions": {
 		"title": "すべてのモードのカスタム指示",
-		"description": "これらの指示はすべてのモードに適用されます。モード固有の指示で強化できる基本的な動作セットを提供します。\nKilo Codeにエディタの表示言語({{language}})とは異なる言語で考えたり話したりさせたい場合は、ここで指定できます。",
-		"loadFromFile": "指示はワークスペースの<span>.kilocode/rules/</span>フォルダからも読み込めます（.kilocoderules は非推奨であり、まもなく機能しなくなります）。"
+		"description": "これらの指示はすべてのモードに適用されます。モード固有の指示で強化できる基本的な動作セットを提供します。<0>詳細はこちら</0>",
+		"loadFromFile": "指示はワークスペースの<span>.kilocode/rules/</span>フォルダからも読み込めます（.kilocoderules と .clinerules は非推奨であり、まもなく機能しなくなります）。"
 	},
 	"systemPrompt": {
 		"preview": "システムプロンプトのプレビュー",
@@ -102,7 +107,7 @@
 	},
 	"advancedSystemPrompt": {
 		"title": "詳細設定：システムプロンプトの上書き",
-		"description": "ワークスペースの<span>.kilocode/system-prompt-{{slug}}</span>にファイルを作成することで、このモードのシステムプロンプト（役割定義とカスタム指示以外）を完全に置き換えることができます。これは組み込みの安全対策と一貫性チェック（特にツールの使用に関して）をバイパスする非常に高度な機能なので、注意して使用してください！"
+		"description": "<2>⚠️ 警告：</2> この高度な機能は安全対策をバイパスします。<1>使用前にこれを読んでください！</1>ワークスペースの<span>.kilocode/system-prompt-{{slug}}</span>にファイルを作成することで、デフォルトのシステムプロンプトを上書きします。"
 	},
 	"createModeDialog": {
 		"title": "新しいモードを作成",
@@ -130,6 +135,10 @@
 		"roleDefinition": {
 			"label": "役割の定義",
 			"description": "このモードのKilo Codeの専門知識と個性を定義します。"
+		},
+		"whenToUse": {
+			"label": "使用タイミング（オプション）",
+			"description": "このモードが最も効果的なタイミングと、どのようなタイプのタスクに適しているかを明確に説明します。"
 		},
 		"tools": {
 			"label": "利用可能なツール",
