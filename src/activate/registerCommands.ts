@@ -108,6 +108,15 @@ const getCommandsMap = ({ context, outputChannel }: RegisterCommandOptions) => {
 
 			visibleProvider.postMessageToWebview({ type: "action", action: "historyButtonClicked" })
 		},
+		"kilo-code.profileButtonClicked": () => {
+			const visibleProvider = getVisibleProviderOrLog(outputChannel)
+
+			if (!visibleProvider) {
+				return
+			}
+
+			visibleProvider.postMessageToWebview({ type: "action", action: "profileButtonClicked" })
+		},
 		"kilo-code.helpButtonClicked": () => {
 			vscode.env.openExternal(vscode.Uri.parse("https://kilocode.ai"))
 		},

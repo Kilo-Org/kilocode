@@ -12,16 +12,18 @@ import HistoryView from "./components/history/HistoryView"
 import SettingsView, { SettingsViewRef } from "./components/settings/SettingsView"
 import WelcomeView from "./components/kilocode/Welcome/WelcomeView" // kilocode_change
 import PromptsView from "./components/prompts/PromptsView"
+import ProfileView from "./components/kilocode/profile/ProfileView"
 import { HumanRelayDialog } from "./components/human-relay/HumanRelayDialog"
 import BottomControls from "./components/chat/BottomControls"
 
-type Tab = "settings" | "history" | "prompts" | "chat"
+type Tab = "settings" | "history" | "prompts" | "chat" | "profile"
 
 const tabsByMessageAction: Partial<Record<NonNullable<ExtensionMessage["action"]>, Tab>> = {
 	chatButtonClicked: "chat",
 	settingsButtonClicked: "settings",
 	promptsButtonClicked: "prompts",
 	historyButtonClicked: "history",
+	profileButtonClicked: "profile",
 }
 
 const App = () => {
@@ -119,6 +121,7 @@ const App = () => {
 			{tab === "settings" && (
 				<SettingsView ref={settingsRef} onDone={() => switchTab("chat")} targetSection={currentSection} /> // kilocode_change
 			)}
+			{tab === "profile" && <ProfileView onDone={() => switchTab("chat")} />}
 			<ChatView
 				ref={chatViewRef}
 				isHidden={tab !== "chat"}

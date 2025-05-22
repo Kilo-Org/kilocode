@@ -2,6 +2,7 @@ import * as path from "path"
 import fs from "fs/promises"
 import pWaitFor from "p-wait-for"
 import * as vscode from "vscode"
+import axios from "axios" // New: Import axios
 
 import { ClineProvider } from "./ClineProvider"
 import { Language, ProviderSettings } from "../../schemas"
@@ -1288,6 +1289,79 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			break
 
 		// kilocode_change_start
+		case "fetchProfileDataRequest":
+			try {
+				const { apiConfiguration } = await provider.getState()
+				const kilocodeToken = apiConfiguration?.kilocodeToken
+
+				if (!kilocodeToken) {
+					provider.log("KiloCode token not found in extension state.")
+					provider.postMessageToWebview({
+						type: "profileDataResponse",
+						payload: { success: false, error: "KiloCode API token not configured." },
+					})
+					break
+				}
+
+				// Changed to /api/profile
+				const response = await axios.get("https://kilocode.ai/api/profile", {
+					headers: {
+						Authorization: `Bearer ${kilocodeToken}`,
+						"Content-Type": "application/json",
+					},
+				})
+				provider.postMessageToWebview({
+					type: "profileDataResponse", // Assuming this response type is still appropriate for /api/profile
+					payload: { success: true, data: response.data },
+				})
+			} catch (error: any) {
+				const errorMessage =
+					error.response?.data?.message ||
+					error.message ||
+					"Failed to fetch general profile data from backend."
+				provider.log(`Error fetching general profile data: ${errorMessage}`)
+				provider.postMessageToWebview({
+					type: "profileDataResponse",
+					payload: { success: false, error: errorMessage },
+				})
+			}
+			break
+		case "fetchBalanceDataRequest": // New handler
+			try {
+				const { apiConfiguration } = await provider.getState()
+				const kilocodeToken = apiConfiguration?.kilocodeToken
+
+				if (!kilocodeToken) {
+					provider.log("KiloCode token not found in extension state for balance data.")
+					provider.postMessageToWebview({
+						type: "balanceDataResponse", // New response type
+						payload: { success: false, error: "KiloCode API token not configured." },
+					})
+					break
+				}
+
+				const response = await axios.get("https://kilocode.ai/api/profile/balance", {
+					// Original path for balance
+					headers: {
+						Authorization: `Bearer ${kilocodeToken}`,
+						"Content-Type": "application/json",
+					},
+				})
+				provider.postMessageToWebview({
+					type: "balanceDataResponse", // New response type
+					payload: { success: true, data: response.data },
+				})
+			} catch (error: any) {
+				const errorMessage =
+					error.response?.data?.message || error.message || "Failed to fetch balance data from backend."
+				provider.log(`Error fetching balance data: ${errorMessage}`)
+				provider.postMessageToWebview({
+					type: "balanceDataResponse", // New response type
+					payload: { success: false, error: errorMessage },
+				})
+			}
+			break
+
 		case "fetchMcpMarketplace": {
 			await provider.fetchMcpMarketplace(message.bool)
 			break

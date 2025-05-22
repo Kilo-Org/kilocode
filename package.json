@@ -233,6 +233,12 @@
 				"command": "kilo-code.acceptInput",
 				"title": "%command.acceptInput.title%",
 				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.profileButtonClicked",
+				"title": "%command.profile.title%",
+				"icon": "$(account)",
+				"category": "%configuration.title%"
 			}
 		],
 		"keybindings": [
@@ -311,18 +317,23 @@
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "kilo-code.settingsButtonClicked",
+					"command": "kilo-code.profileButtonClicked",
 					"group": "navigation@4",
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "kilo-code.popoutButtonClicked",
+					"command": "kilo-code.settingsButtonClicked",
 					"group": "navigation@5",
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "kilo-code.helpButtonClicked",
+					"command": "kilo-code.popoutButtonClicked",
 					"group": "navigation@6",
+					"when": "view == kilo-code.SidebarProvider"
+				},
+				{
+					"command": "kilo-code.helpButtonClicked",
+					"group": "navigation@7",
 					"when": "false && view == kilo-code.SidebarProvider"
 				}
 			],
@@ -395,6 +406,11 @@
 					"type": "string",
 					"default": "",
 					"description": "%settings.customStoragePath.description%"
+				},
+				"kilocode.isKilocodeProviderActive": {
+					"type": "boolean",
+					"default": false,
+					"description": "Context key to indicate if Kilocode is the active AI provider."
 				}
 			}
 		}

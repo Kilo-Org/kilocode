@@ -142,6 +142,11 @@ export interface WebviewMessage {
 		| "showSystemNotification" // kilocode_change
 		| "showAutoApproveMenu" // kilocode_change
 		| "reportBug" // kilocode_change
+		| "profileButtonClicked"
+		| "fetchProfileDataRequest" // New: Request for profile data
+		| "profileDataResponse" // New: Response with profile data
+		| "fetchBalanceDataRequest" // New: Request for balance data
+		| "balanceDataResponse" // New: Response with balance data
 		| "condense" // kilocode_change
 	text?: string
 	disabled?: boolean
@@ -185,6 +190,19 @@ export interface WebviewMessage {
 	historyPreviewCollapsed?: boolean
 }
 
+export interface ProfileDataResponsePayload {
+	success: boolean
+	data?: any // Replace 'any' with a more specific type if known
+	error?: string
+}
+
+export interface BalanceDataResponsePayload {
+	// New: Payload for balance data
+	success: boolean
+	data?: any // Replace 'any' with a more specific type if known for balance
+	error?: string
+}
+
 export const checkoutDiffPayloadSchema = z.object({
 	ts: z.number(),
 	previousCommitHash: z.string().optional(),
@@ -202,4 +220,8 @@ export const checkoutRestorePayloadSchema = z.object({
 
 export type CheckpointRestorePayload = z.infer<typeof checkoutRestorePayloadSchema>
 
-export type WebViewMessagePayload = CheckpointDiffPayload | CheckpointRestorePayload
+export type WebViewMessagePayload =
+	| CheckpointDiffPayload
+	| CheckpointRestorePayload
+	| ProfileDataResponsePayload
+	| BalanceDataResponsePayload // New: Add to union type
