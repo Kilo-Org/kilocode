@@ -30,6 +30,9 @@
 		"title": "新しいタスクを開始",
 		"tooltip": "新しいタスクを開始"
 	},
+	"reportBug": {
+		"title": "バグを報告"
+	},
 	"proceedAnyways": {
 		"title": "それでも続行",
 		"tooltip": "コマンド実行中でも続行"

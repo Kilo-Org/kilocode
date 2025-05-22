@@ -30,6 +30,9 @@
 		"title": "Inizia nuova attività",
 		"tooltip": "Inizia una nuova attività"
 	},
+	"reportBug": {
+		"title": "Segnala un bug"
+	},
 	"proceedAnyways": {
 		"title": "Procedi comunque",
 		"tooltip": "Continua mentre il comando è in esecuzione"

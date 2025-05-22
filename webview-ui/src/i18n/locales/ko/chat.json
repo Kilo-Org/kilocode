@@ -30,6 +30,9 @@
 		"title": "새 작업 시작",
 		"tooltip": "새 작업 시작하기"
 	},
+	"reportBug": {
+		"title": "버그 신고"
+	},
 	"proceedAnyways": {
 		"title": "그래도 계속",
 		"tooltip": "명령 실행 중에도 계속 진행"

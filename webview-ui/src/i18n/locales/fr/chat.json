@@ -30,6 +30,9 @@
 		"title": "Commencer une nouvelle tâche",
 		"tooltip": "Démarrer une nouvelle tâche"
 	},
+	"reportBug": {
+		"title": "Signaler un bug"
+	},
 	"proceedAnyways": {
 		"title": "Continuer quand même",
 		"tooltip": "Continuer pendant l'exécution de la commande"

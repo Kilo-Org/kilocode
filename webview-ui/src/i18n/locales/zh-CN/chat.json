@@ -30,6 +30,9 @@
 		"title": "开始新任务",
 		"tooltip": "开始一个新任务"
 	},
+	"reportBug": {
+		"title": "报告错误"
+	},
 	"proceedAnyways": {
 		"title": "仍然继续",
 		"tooltip": "在命令执行时继续"

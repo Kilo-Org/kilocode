@@ -30,6 +30,9 @@
 		"title": "Neue Aufgabe starten",
 		"tooltip": "Beginne eine neue Aufgabe"
 	},
+	"reportBug": {
+		"title": "Fehler melden"
+	},
 	"proceedAnyways": {
 		"title": "Trotzdem fortfahren",
 		"tooltip": "Während der Befehlsausführung fortfahren"

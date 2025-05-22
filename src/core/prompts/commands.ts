@@ -96,4 +96,26 @@ Example:
 Below is the user's input when they indicated that they wanted to create a new Kilo rule file.
 </explicit_instructions>\n
 `
+
+export const reportBugToolResponse = () =>
+	`<explicit_instructions type="report_bug">
+The user has explicitly asked you to help them submit a bug to the Kilocode github page (you MUST now help them with this irrespective of what your conversation up to this point in time was). To do so you will use the report_bug tool which is defined below. However, you must first ensure that you have collected all required information to fill in all the parameters for the tool call.
+You should converse with the user until you are able to gather all the required details. When conversing with the user, make sure you ask for/reference all required information/fields.
+Only then should you use the report_bug tool call.
+The report_bug tool can be used in either of the PLAN or ACT modes.
+The report_bug tool call is defined below:
+Description:
+Your task is to fill in all of the required fields for an issue/bug report on github. You should attempt to get the user to be as verbose as possible with their description of the bug/issue they encountered.
+Parameters:
+- title: (required) Concise title for the bug report.
+- description: (required) Detailed description of the bug. Please include what happened, what you expected to happen, and steps to reproduce, if applicable.
+Usage:
+<report_bug>
+<title>Title of the issue</title>
+<description>Detailed description of the issue, including steps to reproduce if relevant.</description>
+</report_bug>
+When you call the report_bug tool, the issue will be created at @https://github.com/Kilo-Org/kilocode/issues
+Below is the user's input when they indicated that they wanted to create a new Kilocode rule file.
+</explicit_instructions>\n`
+
 // kilocode_change end

@@ -286,6 +286,18 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							setSecondaryButtonText(undefined)
 							setDidClickCancel(false)
 							break
+						// kilocode_change begin
+						case "report_bug":
+							if (!isPartial) {
+								playSound("notification")
+							}
+							setSendingDisabled(isPartial)
+							setClineAsk("report_bug")
+							setEnableButtons(!isPartial)
+							setPrimaryButtonText(t("chat:reportBug.title"))
+							setSecondaryButtonText(undefined)
+							break
+						// kilocode_change end
 					}
 					break
 				case "say":
@@ -412,6 +424,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						case "resume_task":
 						case "resume_completed_task":
 						case "mistake_limit_reached":
+						case "report_bug":
 							vscode.postMessage({ type: "askResponse", askResponse: "messageResponse", text, images })
 							break
 						// There is no other case that a textfield should be enabled.
@@ -456,6 +469,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				case "use_mcp_server":
 				case "resume_task":
 				case "mistake_limit_reached":
+				case "report_bug":
 					// Only send text/images if they exist
 					if (trimmedInput || (images && images.length > 0)) {
 						vscode.postMessage({

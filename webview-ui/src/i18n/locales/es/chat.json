@@ -25,6 +25,9 @@
 		"title": "Iniciar nueva tarea",
 		"tooltip": "Comienza una nueva tarea"
 	},
+	"reportBug": {
+		"title": "Reportar Error"
+	},
 	"proceedAnyways": {
 		"title": "Continuar de todos modos",
 		"tooltip": "Continuar mientras se ejecuta el comando"

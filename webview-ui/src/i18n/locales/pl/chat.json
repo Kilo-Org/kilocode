@@ -30,6 +30,9 @@
 		"title": "Rozpocznij nowe zadanie",
 		"tooltip": "Rozpocznij nowe zadanie"
 	},
+	"reportBug": {
+		"title": "Zgłoś błąd"
+	},
 	"proceedAnyways": {
 		"title": "Kontynuuj mimo to",
 		"tooltip": "Kontynuuj podczas wykonywania polecenia"

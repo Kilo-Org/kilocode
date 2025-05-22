@@ -30,6 +30,9 @@
 		"title": "Yeni Görev Başlat",
 		"tooltip": "Yeni bir görev başlat"
 	},
+	"reportBug": {
+		"title": "Hata Bildir"
+	},
 	"proceedAnyways": {
 		"title": "Yine de Devam Et",
 		"tooltip": "Komut çalışırken devam et"
