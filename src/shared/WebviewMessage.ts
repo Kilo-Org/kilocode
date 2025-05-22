@@ -190,9 +190,18 @@ export interface WebviewMessage {
 	historyPreviewCollapsed?: boolean
 }
 
+export type ProfileData = {
+	user: {
+		id: string
+		name: string
+		email: string
+		image: string
+	}
+}
+
 export interface ProfileDataResponsePayload {
 	success: boolean
-	data?: any // Replace 'any' with a more specific type if known
+	data?: ProfileData
 	error?: string
 }
 

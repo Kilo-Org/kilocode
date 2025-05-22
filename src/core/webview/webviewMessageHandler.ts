@@ -1310,11 +1310,13 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 						"Content-Type": "application/json",
 					},
 				})
+
 				provider.postMessageToWebview({
 					type: "profileDataResponse", // Assuming this response type is still appropriate for /api/profile
 					payload: { success: true, data: response.data },
 				})
 			} catch (error: any) {
+				console.info(error)
 				const errorMessage =
 					error.response?.data?.message ||
 					error.message ||

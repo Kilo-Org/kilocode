@@ -1,38 +1,58 @@
 // import { useExtensionState } from "@/context/ExtensionStateContext" // No longer needed
 import React, { useEffect } from "react"
 import { vscode } from "@/utils/vscode"
-import { ProfileDataResponsePayload, WebviewMessage } from "@roo/shared/WebviewMessage"
+import {
+	BalanceDataResponsePayload,
+	ProfileData,
+	ProfileDataResponsePayload,
+	WebviewMessage,
+} from "@roo/shared/WebviewMessage"
+import { VSCodeButtonLink } from "@/components/common/VSCodeButtonLink"
+import { VSCodeButton, VSCodeDivider, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
+import CountUp from "react-countup"
+import { useExtensionState } from "@/context/ExtensionStateContext"
+import { getKiloCodeBackendAuthUrl } from "../helpers"
+import Logo from "../common/Logo"
 
 interface ProfileViewProps {
 	onDone: () => void
 }
 
-const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
-	// const [fetchError, setFetchError] = React.useState<string | null>(null) // Error display not currently implemented
+const ProfileView: React.FC<ProfileViewProps> = ({ onDone: _onDone }) => {
+	const { apiConfiguration, currentApiConfigName, uriScheme } = useExtensionState()
+	const [profileData, setProfileData] = React.useState<ProfileData | undefined | null>(null)
 	const [balance, setBalance] = React.useState<number | null>(null)
+	const [isLoadingBalance, setIsLoadingBalance] = React.useState(true)
 
 	useEffect(() => {
-		// Request profile data from the extension
-		// The backend will handle checking for the token
 		vscode.postMessage({
 			type: "fetchProfileDataRequest",
 		})
-	}, []) // Empty dependency array, so it runs once on mount
+		vscode.postMessage({
+			type: "fetchBalanceDataRequest",
+		})
+	}, [])
 
 	useEffect(() => {
-		// Listen for profile data response from the extension
 		const handleMessage = (event: MessageEvent<WebviewMessage>) => {
 			const message = event.data
 			if (message.type === "profileDataResponse") {
 				const payload = message.payload as ProfileDataResponsePayload
 				if (payload.success) {
-					setBalance(payload.data?.balance) // Assuming 'balance' is in data
-					// setFetchError(null)
+					setProfileData(payload.data)
 				} else {
-					// setFetchError(payload.error || "Failed to fetch profile data.") // Error display not currently implemented
 					console.error("Error fetching profile data:", payload.error)
+					setProfileData(null)
+				}
+			} else if (message.type === "balanceDataResponse") {
+				const payload = message.payload as BalanceDataResponsePayload
+				if (payload.success) {
+					setBalance(payload.data?.balance || 0)
+				} else {
+					console.error("Error fetching balance data:", payload.error)
 					setBalance(null)
 				}
+				setIsLoadingBalance(false)
 			}
 		}
 
@@ -42,14 +62,117 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 		}
 	}, [])
 
+	const user = profileData?.user
+
+	function handleLogout(): void {
+		console.info("Logging out...", apiConfiguration)
+		vscode.postMessage({
+			type: "upsertApiConfiguration",
+			text: currentApiConfigName,
+			apiConfiguration: {
+				...apiConfiguration,
+				kilocodeToken: "",
+			},
+		})
+	}
+
 	return (
-		<div className="p-4">
-			<h1 className="text-lg font-semibold mb-4">User Profile</h1>
-			{/* Placeholder for profile data */}
-			{balance && <h1>${balance.toFixed(2)}</h1>}
-			<button onClick={onDone} className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-				Close
-			</button>
+		<div className="h-full flex flex-col">
+			{user ? (
+				<div className="flex flex-col pr-3 h-full">
+					<div className="flex flex-col w-full">
+						<div className="flex items-center mb-6 flex-wrap gap-y-4">
+							{user.image ? (
+								<img src={user.image} alt="Profile" className="size-16 rounded-full mr-4" />
+							) : (
+								<div className="size-16 rounded-full bg-[var(--vscode-button-background)] flex items-center justify-center text-2xl text-[var(--vscode-button-foreground)] mr-4">
+									{user.name?.[0] || user.email?.[0] || "?"}
+								</div>
+							)}
+
+							<div className="flex flex-col">
+								{user.name && (
+									<h2 className="text-[var(--vscode-foreground)] m-0 mb-1 text-lg font-medium">
+										{user.name}
+									</h2>
+								)}
+
+								{user.email && (
+									<div className="text-sm text-[var(--vscode-descriptionForeground)]">
+										{user.email}
+									</div>
+								)}
+							</div>
+						</div>
+					</div>
+
+					<div className="w-full flex gap-2 flex-col min-[225px]:flex-row">
+						<div className="w-full min-[225px]:w-1/2">
+							<VSCodeButtonLink
+								href="https://kilocode.ai/profile"
+								appearance="primary"
+								className="w-full">
+								Dashboard
+							</VSCodeButtonLink>
+						</div>
+						<VSCodeButton
+							appearance="secondary"
+							onClick={handleLogout}
+							className="w-full min-[225px]:w-1/2">
+							Log out
+						</VSCodeButton>
+					</div>
+
+					<VSCodeDivider className="w-full my-6" />
+
+					<div className="w-full flex flex-col items-center">
+						<div className="text-sm text-[var(--vscode-descriptionForeground)] mb-3">CURRENT BALANCE</div>
+
+						<div className="text-4xl font-bold text-[var(--vscode-foreground)] mb-6 flex items-center gap-2">
+							{isLoadingBalance ? (
+								<div className="text-[var(--vscode-descriptionForeground)]">Loading...</div>
+							) : (
+								balance && (
+									<>
+										<span>$</span>
+										<CountUp end={balance} duration={0.66} decimals={2} />
+										<VSCodeButton
+											appearance="icon"
+											className="mt-1"
+											onClick={() => {
+												setIsLoadingBalance(true)
+
+												vscode.postMessage({ type: "fetchBalanceDataRequest" })
+											}}>
+											<span className="codicon codicon-refresh"></span>
+										</VSCodeButton>
+									</>
+								)
+							)}
+						</div>
+					</div>
+				</div>
+			) : (
+				<div className="flex flex-col items-center pr-3">
+					<Logo />
+
+					<p className="text-center">
+						Signing up with Kilo Code gives you free credits to get started. Use your credits to explore our
+						features, try out the latest and greatest models, and experience the benefits of Kilo Code
+						without any commitment.
+					</p>
+
+					<VSCodeButtonLink href={getKiloCodeBackendAuthUrl(uriScheme)} className="w-full mb-4">
+						Sign up with Kilo Code
+					</VSCodeButtonLink>
+
+					<p className="text-[var(--vscode-descriptionForeground)] text-xs text-center m-0">
+						By continuing, you agree to the{" "}
+						<VSCodeLink href="https://kilocode.ai/terms">Terms of Service</VSCodeLink> and{" "}
+						<VSCodeLink href="https://kilocode.ai/privacy">Privacy Policy.</VSCodeLink>
+					</p>
+				</div>
+			)}
 		</div>
 	)
 }
