@@ -799,8 +799,6 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			if (activate) {
 				const { mode } = await this.getState()
 
-				console.info(mode)
-
 				// These promises do the following:
 				// 1. Adds or updates the list of provider profiles.
 				// 2. Sets the current provider profile.
