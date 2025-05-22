@@ -1,5 +1,6 @@
 // import { useExtensionState } from "@/context/ExtensionStateContext" // No longer needed
 import React, { useEffect } from "react"
+import { Trans } from "react-i18next"
 import { vscode } from "@/utils/vscode"
 import {
 	BalanceDataResponsePayload,
@@ -11,6 +12,7 @@ import { VSCodeButtonLink } from "@/components/common/VSCodeButtonLink"
 import { VSCodeButton, VSCodeDivider, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 import CountUp from "react-countup"
 import { useExtensionState } from "@/context/ExtensionStateContext"
+import { useAppTranslation } from "@/i18n/TranslationContext"
 import { getKiloCodeBackendAuthUrl } from "../helpers"
 import Logo from "../common/Logo"
 
@@ -20,6 +22,7 @@ interface ProfileViewProps {
 
 const ProfileView: React.FC<ProfileViewProps> = ({ onDone: _onDone }) => {
 	const { apiConfiguration, currentApiConfigName, uriScheme } = useExtensionState()
+	const { t } = useAppTranslation()
 	const [profileData, setProfileData] = React.useState<ProfileData | undefined | null>(null)
 	const [balance, setBalance] = React.useState<number | null>(null)
 	const [isLoadingBalance, setIsLoadingBalance] = React.useState(true)
@@ -118,25 +121,29 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone: _onDone }) => {
 								href="https://kilocode.ai/profile"
 								appearance="primary"
 								className="w-full">
-								Dashboard
+								{t("kilocode:profile.dashboard")}
 							</VSCodeButtonLink>
 						</div>
 						<VSCodeButton
 							appearance="secondary"
 							onClick={handleLogout}
 							className="w-full min-[225px]:w-1/2">
-							Log out
+							{t("kilocode:profile.logOut")}
 						</VSCodeButton>
 					</div>
 
 					<VSCodeDivider className="w-full my-6" />
 
 					<div className="w-full flex flex-col items-center">
-						<div className="text-sm text-[var(--vscode-descriptionForeground)] mb-3">CURRENT BALANCE</div>
+						<div className="text-sm text-[var(--vscode-descriptionForeground)] mb-3">
+							{t("kilocode:profile.currentBalance")}
+						</div>
 
 						<div className="text-4xl font-bold text-[var(--vscode-foreground)] mb-6 flex items-center gap-2">
 							{isLoadingBalance ? (
-								<div className="text-[var(--vscode-descriptionForeground)]">Loading...</div>
+								<div className="text-[var(--vscode-descriptionForeground)]">
+									{t("kilocode:profile.loading")}
+								</div>
 							) : (
 								balance && (
 									<>
@@ -162,20 +169,20 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone: _onDone }) => {
 				<div className="flex flex-col items-center pr-3">
 					<Logo />
 
-					<p className="text-center">
-						Signing up with Kilo Code gives you free credits to get started. Use your credits to explore our
-						features, try out the latest and greatest models, and experience the benefits of Kilo Code
-						without any commitment.
-					</p>
+					<p className="text-center">{t("kilocode:profile.signUp.description")}</p>
 
 					<VSCodeButtonLink href={getKiloCodeBackendAuthUrl(uriScheme)} className="w-full mb-4">
-						Sign up with Kilo Code
+						{t("kilocode:profile.signUp.title")}
 					</VSCodeButtonLink>
 
 					<p className="text-[var(--vscode-descriptionForeground)] text-xs text-center m-0">
-						By continuing, you agree to the{" "}
-						<VSCodeLink href="https://kilocode.ai/terms">Terms of Service</VSCodeLink> and{" "}
-						<VSCodeLink href="https://kilocode.ai/privacy">Privacy Policy.</VSCodeLink>
+						<Trans
+							i18nKey="kilocode:profile.signUp.termsAndPrivacy"
+							components={{
+								termsLink: <VSCodeLink href="https://kilocode.ai/terms" />,
+								privacyLink: <VSCodeLink href="https://kilocode.ai/privacy" />,
+							}}
+						/>
 					</p>
 				</div>
 			)}

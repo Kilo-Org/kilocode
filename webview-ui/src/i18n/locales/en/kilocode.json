@@ -27,5 +27,16 @@
 	},
 	"newTaskPreview": {
 		"task": "Task"
+	},
+	"profile": {
+		"dashboard": "Dashboard",
+		"logOut": "Log out",
+		"currentBalance": "CURRENT BALANCE",
+		"loading": "Loading...",
+		"signUp": {
+			"title": "Sign up with Kilo Code",
+			"description": "Signing up with Kilo Code gives you free credits to get started. Use your credits to explore our features, try out the latest and greatest models, and experience the benefits of Kilo Code without any commitment.",
+			"termsAndPrivacy": "By continuing, you agree to the <termsLink>Terms of Service</termsLink> and <privacyLink>Privacy Policy.</privacyLink>"
+		}
 	}
 }
