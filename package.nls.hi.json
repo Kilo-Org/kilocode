@@ -22,6 +22,7 @@
 	"command.openInEditor.title": "एडिटर में खोलें",
 	"command.settings.title": "सेटिंग्स",
 	"command.documentation.title": "दस्तावेज़ीकरण",
+	"command.profile.title": "प्रोफ़ाइल",
 	"configuration.title": "Kilo Code",
 	"commands.allowedCommands.description": "वे कमांड जो स्वचालित रूप से निष्पादित की जा सकती हैं जब 'हमेशा निष्पादन संचालन को स्वीकृत करें' सक्रिय हो",
 	"settings.vsCodeLmModelSelector.description": "VSCode भाषा मॉडल API के लिए सेटिंग्स",

@@ -22,6 +22,7 @@
 	"command.openInEditor.title": "Mở trong Trình Soạn Thảo",
 	"command.settings.title": "Cài Đặt",
 	"command.documentation.title": "Tài Liệu",
+	"command.profile.title": "Hồ sơ",
 	"configuration.title": "Kilo Code",
 	"commands.allowedCommands.description": "Các lệnh có thể được thực thi tự động khi 'Luôn phê duyệt các thao tác thực thi' được bật",
 	"settings.vsCodeLmModelSelector.description": "Cài đặt cho API mô hình ngôn ngữ VSCode",

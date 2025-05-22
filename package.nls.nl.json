@@ -22,6 +22,7 @@
 	"command.terminal.fixCommand.title": "Repareer Dit Commando",
 	"command.terminal.explainCommand.title": "Leg Dit Commando Uit",
 	"command.acceptInput.title": "Invoer/Suggestie Accepteren",
+	"command.profile.title": "Profiel",
 	"configuration.title": "Kilo Code",
 	"commands.allowedCommands.description": "Commando's die automatisch kunnen worden uitgevoerd wanneer 'Altijd goedkeuren uitvoerbewerkingen' is ingeschakeld",
 	"settings.vsCodeLmModelSelector.description": "Instellingen voor VSCode Language Model API",

@@ -22,6 +22,7 @@
 	"command.openInEditor.title": "Apri nell'Editor",
 	"command.settings.title": "Impostazioni",
 	"command.documentation.title": "Documentazione",
+	"command.profile.title": "Profilo",
 	"configuration.title": "Kilo Code",
 	"commands.allowedCommands.description": "Comandi che possono essere eseguiti automaticamente quando 'Approva sempre le operazioni di esecuzione' è attivato",
 	"settings.vsCodeLmModelSelector.description": "Impostazioni per l'API del modello linguistico VSCode",

@@ -22,6 +22,7 @@
 	"command.terminal.fixCommand.title": "Исправить эту команду",
 	"command.terminal.explainCommand.title": "Объяснить эту команду",
 	"command.acceptInput.title": "Принять ввод/предложение",
+	"command.profile.title": "Профиль",
 	"configuration.title": "Kilo Code",
 	"commands.allowedCommands.description": "Команды, которые могут быть автоматически выполнены, когда включена опция 'Всегда подтверждать операции выполнения'",
 	"settings.vsCodeLmModelSelector.description": "Настройки для VSCode Language Model API",

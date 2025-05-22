@@ -22,6 +22,7 @@
 	"command.openInEditor.title": "在编辑器中打开",
 	"command.settings.title": "设置",
 	"command.documentation.title": "文档",
+	"command.profile.title": "配置文件",
 	"configuration.title": "Kilo Code",
 	"commands.allowedCommands.description": "当启用'始终批准执行操作'时可以自动执行的命令",
 	"settings.vsCodeLmModelSelector.description": "VSCode 语言模型 API 的设置",
