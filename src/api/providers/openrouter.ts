@@ -254,17 +254,18 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 
 // kilocode_change start
 function makeOpenRouterErrorReadable(error: any) {
-	if (error?.code === 429 || error?.code === 418) {
-		let retryAfter
-		try {
-			const parsedJson = JSON.parse(error.error.metadata?.raw)
-			retryAfter = parsedJson?.error?.details.map((detail: any) => detail.retryDelay).filter((r: any) => r)[0]
-		} catch (e) {}
-		if (retryAfter) {
-			return `Rate limit exceeded, try again in ${retryAfter}.`
-		}
-		return `Rate limit exceeded, try again later.\n${error?.message || error}`
+	if (error?.code !== 429 && error?.code !== 418) {
+		return `OpenRouter API Error: ${error?.message || error}`
 	}
-	return `OpenRouter API Error: ${error?.message || error}`
+
+	let retryAfter
+	try {
+		const parsedJson = JSON.parse(error.error.metadata?.raw)
+		retryAfter = parsedJson?.error?.details.map((detail: any) => detail.retryDelay).filter((r: any) => r)[0]
+	} catch (e) {}
+	if (retryAfter) {
+		return `Rate limit exceeded, try again in ${retryAfter}.`
+	}
+	return `Rate limit exceeded, try again later.\n${error?.message || error}`
 }
 // kilocode_change end
