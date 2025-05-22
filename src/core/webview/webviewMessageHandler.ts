@@ -2,7 +2,7 @@ import * as path from "path"
 import fs from "fs/promises"
 import pWaitFor from "p-wait-for"
 import * as vscode from "vscode"
-import axios from "axios" // New: Import axios
+import axios from "axios" // kilocode_change
 
 import { ClineProvider } from "./ClineProvider"
 import { Language, ProviderSettings } from "../../schemas"
