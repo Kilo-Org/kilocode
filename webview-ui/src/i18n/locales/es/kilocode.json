@@ -27,5 +27,16 @@
 	},
 	"newTaskPreview": {
 		"task": "Tarea"
+	},
+	"profile": {
+		"dashboard": "Panel de control",
+		"logOut": "Cerrar sesión",
+		"currentBalance": "SALDO ACTUAL",
+		"loading": "Cargando...",
+		"signUp": {
+			"title": "Regístrate en Kilo Code",
+			"description": "Registrarte en Kilo Code te da créditos gratuitos para empezar. Usa tus créditos para explorar nuestras funciones, probar los modelos más recientes y mejores, y experimentar los beneficios de Kilo Code sin compromiso.",
+			"termsAndPrivacy": "Al continuar, aceptas los <termsLink>Términos de Servicio</termsLink> y la <privacyLink>Política de Privacidad.</privacyLink>"
+		}
 	}
 }

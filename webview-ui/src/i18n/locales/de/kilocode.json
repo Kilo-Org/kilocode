@@ -27,5 +27,16 @@
 	},
 	"newTaskPreview": {
 		"task": "Aufgabe"
+	},
+	"profile": {
+		"dashboard": "Dashboard",
+		"logOut": "Abmelden",
+		"currentBalance": "AKTUELLES GUTHABEN",
+		"loading": "Lädt...",
+		"signUp": {
+			"title": "Bei Kilo Code anmelden",
+			"description": "Die Anmeldung bei Kilo Code gibt Ihnen kostenlose Credits zum Einstieg. Nutzen Sie Ihre Credits, um unsere Funktionen zu erkunden, die neuesten und besten Modelle auszuprobieren und die Vorteile von Kilo Code ohne Verpflichtung zu erleben.",
+			"termsAndPrivacy": "Durch Fortfahren stimmen Sie den <termsLink>Nutzungsbedingungen</termsLink> und der <privacyLink>Datenschutzrichtlinie</privacyLink> zu."
+		}
 	}
 }

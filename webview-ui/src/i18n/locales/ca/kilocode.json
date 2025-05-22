@@ -19,6 +19,17 @@
 			"mcp": "Servidors MCP"
 		}
 	},
+	"profile": {
+		"dashboard": "Tauler de control",
+		"logOut": "Tancar sessió",
+		"currentBalance": "SALDO ACTUAL",
+		"loading": "Carregant...",
+		"signUp": {
+			"title": "Registra't a Kilo Code",
+			"description": "Registrar-se a Kilo Code et dona crèdits gratuïts per començar. Utilitza els teus crèdits per explorar les nostres funcions, provar els models més nous i millors, i experimentar els beneficis de Kilo Code sense compromís.",
+			"termsAndPrivacy": "En continuar, acceptes les <termsLink>Condicions del Servei</termsLink> i la <privacyLink>Política de Privacitat.</privacyLink>"
+		}
+	},
 	"chat": {
 		"condense": {
 			"wantsToCondense": "Kilo Code vol condensar la teva conversa",

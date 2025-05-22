@@ -27,5 +27,16 @@
 	},
 	"newTaskPreview": {
 		"task": "작업"
+	},
+	"profile": {
+		"dashboard": "대시보드",
+		"logOut": "로그아웃",
+		"currentBalance": "현재 잔액",
+		"loading": "로딩 중...",
+		"signUp": {
+			"title": "Kilo Code 가입하기",
+			"description": "Kilo Code에 가입하면 시작할 수 있는 무료 크레딧을 받을 수 있습니다. 크레딧을 사용하여 기능을 탐색하고, 최신 최고의 모델을 시도하며, 약속 없이 Kilo Code의 이점을 경험해보세요.",
+			"termsAndPrivacy": "계속하면 <termsLink>서비스 약관</termsLink> 및 <privacyLink>개인정보 보호정책</privacyLink>에 동의하는 것입니다."
+		}
 	}
 }

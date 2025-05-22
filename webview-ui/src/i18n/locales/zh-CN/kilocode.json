@@ -27,5 +27,16 @@
 	},
 	"newTaskPreview": {
 		"task": "任务"
+	},
+	"profile": {
+		"dashboard": "仪表板",
+		"logOut": "退出登录",
+		"currentBalance": "当前余额",
+		"loading": "加载中...",
+		"signUp": {
+			"title": "注册 Kilo Code",
+			"description": "注册 Kilo Code 可获得免费积分开始使用。使用你的积分探索我们的功能，试用最新最好的模型，无需承诺即可体验 Kilo Code 的优势。",
+			"termsAndPrivacy": "继续即表示你同意<termsLink>服务条款</termsLink>和<privacyLink>隐私政策</privacyLink>。"
+		}
 	}
 }

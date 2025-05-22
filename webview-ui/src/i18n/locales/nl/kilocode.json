@@ -27,5 +27,16 @@
 	},
 	"newTaskPreview": {
 		"task": "Taak"
+	},
+	"profile": {
+		"dashboard": "Dashboard",
+		"logOut": "Uitloggen",
+		"currentBalance": "HUIDIG SALDO",
+		"loading": "Laden...",
+		"signUp": {
+			"title": "Aanmelden bij Kilo Code",
+			"description": "Aanmelden bij Kilo Code geeft u gratis credits om te beginnen. Gebruik uw credits om onze functies te verkennen, de nieuwste en beste modellen uit te proberen, en de voordelen van Kilo Code te ervaren zonder verplichtingen.",
+			"termsAndPrivacy": "Door verder te gaan, gaat u akkoord met de <termsLink>Servicevoorwaarden</termsLink> en het <privacyLink>Privacybeleid.</privacyLink>"
+		}
 	}
 }

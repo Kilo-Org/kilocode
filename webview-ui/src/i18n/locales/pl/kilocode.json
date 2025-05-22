@@ -27,5 +27,16 @@
 	},
 	"newTaskPreview": {
 		"task": "Zadanie"
+	},
+	"profile": {
+		"dashboard": "Panel kontrolny",
+		"logOut": "Wyloguj się",
+		"currentBalance": "AKTUALNY STAN KONTA",
+		"loading": "Ładowanie...",
+		"signUp": {
+			"title": "Zarejestruj się w Kilo Code",
+			"description": "Rejestracja w Kilo Code daje Ci darmowe kredyty na start. Użyj swoich kredytów, aby poznać nasze funkcje, wypróbować najnowsze i najlepsze modele oraz doświadczyć korzyści z Kilo Code bez zobowiązań.",
+			"termsAndPrivacy": "Kontynuując, zgadzasz się na <termsLink>Warunki Usługi</termsLink> i <privacyLink>Politykę Prywatności.</privacyLink>"
+		}
 	}
 }

@@ -27,5 +27,16 @@
 	},
 	"newTaskPreview": {
 		"task": "Görev"
+	},
+	"profile": {
+		"dashboard": "Kontrol Paneli",
+		"logOut": "Çıkış Yap",
+		"currentBalance": "MEVCUT BAKİYE",
+		"loading": "Yükleniyor...",
+		"signUp": {
+			"title": "Kilo Code'a Kaydol",
+			"description": "Kilo Code'a kaydolmak size başlamak için ücretsiz krediler verir. Özelliklerimizi keşfetmek, en yeni ve en iyi modelleri denemek ve herhangi bir taahhüt olmadan Kilo Code'un avantajlarını deneyimlemek için kredilerinizi kullanın.",
+			"termsAndPrivacy": "Devam ederek <termsLink>Hizmet Şartları</termsLink> ve <privacyLink>Gizlilik Politikası</privacyLink>'nı kabul etmiş olursunuz."
+		}
 	}
 }

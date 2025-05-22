@@ -27,5 +27,16 @@
 	},
 	"newTaskPreview": {
 		"task": "Tarefa"
+	},
+	"profile": {
+		"dashboard": "Painel",
+		"logOut": "Sair",
+		"currentBalance": "SALDO ATUAL",
+		"loading": "Carregando...",
+		"signUp": {
+			"title": "Cadastre-se no Kilo Code",
+			"description": "Cadastrar-se no Kilo Code oferece créditos gratuitos para começar. Use seus créditos para explorar nossos recursos, experimentar os modelos mais recentes e melhores, e vivenciar os benefícios do Kilo Code sem compromisso.",
+			"termsAndPrivacy": "Ao continuar, você concorda com os <termsLink>Termos de Serviço</termsLink> e a <privacyLink>Política de Privacidade.</privacyLink>"
+		}
 	}
 }
