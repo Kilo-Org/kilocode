@@ -258,14 +258,16 @@ function makeOpenRouterErrorReadable(error: any) {
 		return `OpenRouter API Error: ${error?.message || error}`
 	}
 
-	let retryAfter
 	try {
 		const parsedJson = JSON.parse(error.error.metadata?.raw)
+		let retryAfter
+
 		retryAfter = parsedJson?.error?.details.map((detail: any) => detail.retryDelay).filter((r: any) => r)[0]
+		if (retryAfter) {
+			return `Rate limit exceeded, try again in ${retryAfter}.`
+		}
 	} catch (e) {}
-	if (retryAfter) {
-		return `Rate limit exceeded, try again in ${retryAfter}.`
-	}
+
 	return `Rate limit exceeded, try again later.\n${error?.message || error}`
 }
 // kilocode_change end
