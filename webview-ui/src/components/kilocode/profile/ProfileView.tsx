@@ -31,7 +31,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone: _onDone }) => {
 		vscode.postMessage({
 			type: "fetchBalanceDataRequest",
 		})
-	}, [])
+	}, [apiConfiguration?.kilocodeToken])
 
 	useEffect(() => {
 		const handleMessage = (event: MessageEvent<WebviewMessage>) => {
