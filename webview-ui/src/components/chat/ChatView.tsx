@@ -286,6 +286,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							setSecondaryButtonText(undefined)
 							setDidClickCancel(false)
 							break
+						// kilocode_change begin
 						case "report_bug":
 							if (!isPartial) {
 								playSound("notification")
@@ -293,10 +294,10 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							setSendingDisabled(isPartial)
 							setClineAsk("report_bug")
 							setEnableButtons(!isPartial)
-							// TRUDO: figure out the translation
 							setPrimaryButtonText(t("chat:reportBug.title"))
 							setSecondaryButtonText(undefined)
 							break
+						// kilocode_change end
 					}
 					break
 				case "say":

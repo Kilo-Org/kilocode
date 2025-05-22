@@ -61,8 +61,8 @@ export const toolParamNames = [
 	"replace",
 	"use_regex",
 	"ignore_case",
-	"title",
-	"description",
+	"title", // kilocode_change
+	"description", // kilocode_change
 ] as const
 
 export type ToolParamName = (typeof toolParamNames)[number]
@@ -187,7 +187,7 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	insert_content: "insert content",
 	search_and_replace: "search and replace",
 	new_rule: "create new rule",
-	report_bug: "report bug",
+	report_bug: "report bug", // kilocode_change
 } as const
 
 export type { ToolGroup }

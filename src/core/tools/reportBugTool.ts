@@ -48,7 +48,8 @@ export async function reportBugTool(
 
 			// Derive system information values algorithmically
 			const operatingSystem = os.platform() + " " + os.release()
-			const clineVersion = vscode.extensions.getExtension("kilocode.kilo-code")?.packageJSON.version || "Unknown"
+			const kilocodeVersion =
+				vscode.extensions.getExtension("kilocode.kilo-code")?.packageJSON.version || "Unknown"
 			const systemInfo = `VSCode: ${vscode.version}, Node.js: ${process.version}, Architecture: ${os.arch()}`
 			const providerAndModel = `${(await cline.providerRef.deref()?.contextProxy.getGlobalState("apiProvider")) as string} / ${cline.api.getModel().id}`
 
@@ -60,7 +61,7 @@ export async function reportBugTool(
 				provider_and_model: providerAndModel,
 				operating_system: operatingSystem,
 				system_info: systemInfo,
-				cline_version: clineVersion,
+				kilocode_version: kilocodeVersion,
 			})
 
 			const { text, images } = await cline.ask("report_bug", bugReportData, false)
@@ -84,7 +85,7 @@ export async function reportBugTool(
 					params.set("title", title)
 					params.set(
 						"description",
-						`${description}\n\n**System Information:**\n- Provider & Model: ${providerAndModel}\n- Operating System: ${operatingSystem}\n- Kilo Code Version: ${clineVersion}\n- ${systemInfo}`,
+						`${description}\n\n**System Information:**\n- Provider & Model: ${providerAndModel}\n- Operating System: ${operatingSystem}\n- Kilo Code Version: ${kilocodeVersion}\n- ${systemInfo}`,
 					)
 
 					// Use our utility function to create and open the GitHub issue URL
