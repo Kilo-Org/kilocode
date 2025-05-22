@@ -74,8 +74,8 @@ export interface ExtensionMessage {
 		| "setHistoryPreviewCollapsed"
 		| "commandExecutionStatus"
 		| "vsCodeSetting"
-		| "profileDataResponse" // New: Add profile data response type
-		| "balanceDataResponse" // New: Add balance data response type
+		| "profileDataResponse" // kilocode_change
+		| "balanceDataResponse" // kilocode_change
 	text?: string
 	action?:
 		| "chatButtonClicked"

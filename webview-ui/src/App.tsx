@@ -16,7 +16,7 @@ import ProfileView from "./components/kilocode/profile/ProfileView"
 import { HumanRelayDialog } from "./components/human-relay/HumanRelayDialog"
 import BottomControls from "./components/chat/BottomControls"
 
-type Tab = "settings" | "history" | "prompts" | "chat" | "profile"
+type Tab = "settings" | "history" | "prompts" | "chat" | "profile" // kilocode_change
 
 const tabsByMessageAction: Partial<Record<NonNullable<ExtensionMessage["action"]>, Tab>> = {
 	chatButtonClicked: "chat",
