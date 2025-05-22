@@ -3,6 +3,7 @@ description: File a bug report
 type: "Bug"
 body:
     - type: textarea
+      id: description
       attributes:
           label: Add a description (be as detailed as possible)
           description: |
