@@ -1316,7 +1316,6 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 					payload: { success: true, data: response.data },
 				})
 			} catch (error: any) {
-				console.info(error)
 				const errorMessage =
 					error.response?.data?.message ||
 					error.message ||
