@@ -260,9 +260,7 @@ function makeOpenRouterErrorReadable(error: any) {
 
 	try {
 		const parsedJson = JSON.parse(error.error.metadata?.raw)
-		let retryAfter
-
-		retryAfter = parsedJson?.error?.details.map((detail: any) => detail.retryDelay).filter((r: any) => r)[0]
+		const retryAfter = parsedJson?.error?.details.map((detail: any) => detail.retryDelay).filter((r: any) => r)[0]
 		if (retryAfter) {
 			return `Rate limit exceeded, try again in ${retryAfter}.`
 		}
