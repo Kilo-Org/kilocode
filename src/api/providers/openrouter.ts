@@ -254,7 +254,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 
 // kilocode_change start
 function makeOpenRouterErrorReadable(error: any) {
-	if (error?.code === 429) {
+	if (error?.code === 429 || error?.code === 418) {
 		let retryAfter
 		try {
 			const parsedJson = JSON.parse(error.error.metadata?.raw)
