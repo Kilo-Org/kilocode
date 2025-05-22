@@ -18,6 +18,7 @@ export function getSupportedSlashCommands(customModes?: any[]): SlashCommand[] {
 			name: "newrule",
 			description: "Create a new Kilo rule with context from your conversation",
 		},
+		{ name: "reportbug", description: "Create a KiloCode GitHub issue" },
 		// kilocode_change end
 	]
 

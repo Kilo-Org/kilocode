@@ -61,8 +61,8 @@ export const toolParamNames = [
 	"replace",
 	"use_regex",
 	"ignore_case",
-	"start_line",
-	"end_line",
+	"title", // kilocode_change
+	"description", // kilocode_change
 ] as const
 
 export type ToolParamName = (typeof toolParamNames)[number]
@@ -151,6 +151,11 @@ export interface NewTaskToolUse extends ToolUse {
 	params: Partial<Pick<Record<ToolParamName, string>, "mode" | "message">>
 }
 
+export interface ReportBugToolUse extends ToolUse {
+	name: "report_bug"
+	params: Partial<Pick<Record<ToolParamName, string>, "title" | "description">>
+}
+
 export interface SearchAndReplaceToolUse extends ToolUse {
 	name: "search_and_replace"
 	params: Required<Pick<Record<ToolParamName, string>, "path" | "search" | "replace">> &
@@ -181,7 +186,8 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	new_task: "create new task",
 	insert_content: "insert content",
 	search_and_replace: "search and replace",
-	new_rule: "create new rule", // kilocode_change
+	new_rule: "create new rule",
+	report_bug: "report bug", // kilocode_change
 } as const
 
 export type { ToolGroup }
@@ -192,7 +198,7 @@ export const TOOL_GROUPS: Record<ToolGroup, ToolGroupConfig> = {
 		tools: ["read_file", "fetch_instructions", "search_files", "list_files", "list_code_definition_names"],
 	},
 	edit: {
-		tools: ["apply_diff", "write_to_file", "insert_content", "search_and_replace", "new_rule"], // kilocode_change
+		tools: ["apply_diff", "write_to_file", "insert_content", "search_and_replace", "new_rule"],
 	},
 	browser: {
 		tools: ["browser_action"],
@@ -215,6 +221,7 @@ export const ALWAYS_AVAILABLE_TOOLS: ToolName[] = [
 	"attempt_completion",
 	"switch_mode",
 	"new_task",
+	"report_bug",
 ] as const
 
 export type DiffResult =

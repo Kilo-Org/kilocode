@@ -27,12 +27,15 @@
 		"tooltip": "再次嘗試操作"
 	},
 	"startNewTask": {
-		"title": "開始新工作",
-		"tooltip": "開始一項新工作"
+		"title": "開始新任務",
+		"tooltip": "開始一個新任務"
+	},
+	"reportBug": {
+		"title": "回報錯誤"
 	},
 	"proceedAnyways": {
-		"title": "仍要繼續",
-		"tooltip": "在命令執行時繼續"
+		"title": "仍然繼續",
+		"tooltip": "在指令執行時繼續"
 	},
 	"save": {
 		"title": "儲存",

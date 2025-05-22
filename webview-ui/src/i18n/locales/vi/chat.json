@@ -30,6 +30,9 @@
 		"title": "Bắt đầu nhiệm vụ mới",
 		"tooltip": "Bắt đầu một nhiệm vụ mới"
 	},
+	"reportBug": {
+		"title": "Báo lỗi"
+	},
 	"proceedAnyways": {
 		"title": "Vẫn tiếp tục",
 		"tooltip": "Tiếp tục trong khi lệnh đang chạy"

@@ -25,6 +25,9 @@
 		"title": "Nieuwe taak starten",
 		"tooltip": "Begin een nieuwe taak"
 	},
+	"reportBug": {
+		"title": "Bug rapporteren"
+	},
 	"proceedAnyways": {
 		"title": "Toch doorgaan",
 		"tooltip": "Ga door terwijl het commando wordt uitgevoerd"
