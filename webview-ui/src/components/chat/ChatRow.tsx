@@ -34,6 +34,8 @@ import { CommandExecution } from "./CommandExecution"
 import { CommandExecutionError } from "./CommandExecutionError"
 import ReportBugPreview from "./ReportBugPreview"
 
+import { NewTaskPreview } from "../kilocode/chat/NewTaskPreview" // kilocode_change
+
 interface ChatRowProps {
 	message: ClineMessage
 	lastModifiedMessage?: ClineMessage
@@ -1090,7 +1092,26 @@ export const ChatRowContent = ({
 							/>
 						</>
 					)
+
 				// kilocode_change begin
+				case "condense":
+					return (
+						<>
+							<div style={headerStyle}>
+								<span
+									className="codicon codicon-new-file"
+									style={{
+										color: normalColor,
+										marginBottom: "-1.5px",
+									}}></span>
+								<span style={{ color: normalColor, fontWeight: "bold" }}>
+									{t("kilocode:chat.condense.wantsToCondense")}
+								</span>
+							</div>
+							<NewTaskPreview context={message.text || ""} />
+						</>
+					)
+
 				case "payment_required_prompt": {
 					return <LowCreditWarning message={message} />
 				}

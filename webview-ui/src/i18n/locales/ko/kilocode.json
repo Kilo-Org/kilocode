@@ -18,5 +18,14 @@
 		"sections": {
 			"mcp": "MCP 서버"
 		}
+	},
+	"chat": {
+		"condense": {
+			"wantsToCondense": "Kilo Code가 대화를 요약하고자 합니다",
+			"condenseConversation": "대화 요약하기"
+		}
+	},
+	"newTaskPreview": {
+		"task": "작업"
 	}
 }

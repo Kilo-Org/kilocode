@@ -29,7 +29,6 @@ export interface WebviewMessage {
 		| "alwaysAllowExecute"
 		| "webviewDidLaunch"
 		| "newTask"
-		| "condense"
 		| "askResponse"
 		| "terminalOperation"
 		| "clearTask"
@@ -143,6 +142,7 @@ export interface WebviewMessage {
 		| "showSystemNotification" // kilocode_change
 		| "showAutoApproveMenu" // kilocode_change
 		| "reportBug" // kilocode_change
+		| "condense" // kilocode_change
 	text?: string
 	disabled?: boolean
 	askResponse?: ClineAskResponse

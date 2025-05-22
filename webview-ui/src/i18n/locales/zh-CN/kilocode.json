@@ -18,5 +18,14 @@
 		"sections": {
 			"mcp": "MCP 服务器"
 		}
+	},
+	"chat": {
+		"condense": {
+			"wantsToCondense": "Kilo Code 想要压缩你的对话",
+			"condenseConversation": "压缩对话"
+		}
+	},
+	"newTaskPreview": {
+		"task": "任务"
 	}
 }

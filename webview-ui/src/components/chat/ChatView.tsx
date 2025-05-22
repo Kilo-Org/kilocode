@@ -295,6 +295,12 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							setClineAsk("report_bug")
 							setEnableButtons(!isPartial)
 							setPrimaryButtonText(t("chat:reportBug.title"))
+							break
+						case "condense":
+							setSendingDisabled(isPartial)
+							setClineAsk("condense")
+							setEnableButtons(!isPartial)
+							setPrimaryButtonText(t("kilocode:chat.condense.condenseConversation"))
 							setSecondaryButtonText(undefined)
 							break
 						// kilocode_change end
@@ -427,6 +433,16 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						case "report_bug":
 							vscode.postMessage({ type: "askResponse", askResponse: "messageResponse", text, images })
 							break
+						// kilocode_change start
+						case "condense":
+							vscode.postMessage({
+								type: "askResponse",
+								askResponse: "messageResponse",
+								text,
+								images,
+							})
+							break
+						// kilocode_change end
 						// There is no other case that a textfield should be enabled.
 					}
 				}
@@ -493,13 +509,21 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				case "command_output":
 					vscode.postMessage({ type: "terminalOperation", terminalOperation: "continue" })
 					break
+				// kilocode_change start
+				case "condense":
+					vscode.postMessage({
+						type: "condense",
+						text: lastMessage?.text,
+					})
+					break
+				// kilocode_change end
 			}
 
 			setSendingDisabled(true)
 			setClineAsk(undefined)
 			setEnableButtons(false)
 		},
-		[clineAsk, startNewTask],
+		[clineAsk, startNewTask, lastMessage?.text], // kilocode_change: add lastMessage?.text
 	)
 
 	const handleSecondaryButtonClick = useCallback(

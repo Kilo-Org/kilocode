@@ -18,5 +18,14 @@
 		"sections": {
 			"mcp": "Máy chủ MCP"
 		}
+	},
+	"chat": {
+		"condense": {
+			"wantsToCondense": "Kilo Code muốn tóm tắt cuộc trò chuyện của bạn",
+			"condenseConversation": "Tóm tắt cuộc trò chuyện"
+		}
+	},
+	"newTaskPreview": {
+		"task": "Nhiệm vụ"
 	}
 }

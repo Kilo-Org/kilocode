@@ -1,16 +1,22 @@
-import { newTaskToolResponse, newRuleToolResponse, reportBugToolResponse } from "../prompts/commands"
+import {
+	newTaskToolResponse,
+	newRuleToolResponse,
+	reportBugToolResponse,
+	condenseToolResponse,
+} from "../prompts/commands"
 
 /**
  * This file is a duplicate of parseSlashCommands, but it adds a check for the newrule command
  * and processes Kilo-specific slash commands. It should be merged with parseSlashCommands in the future.
  */
 export function parseKiloSlashCommands(text: string): { processedText: string; needsRulesFileCheck: boolean } {
-	const SUPPORTED_COMMANDS = ["newtask", "newrule", "reportbug"]
+	const SUPPORTED_COMMANDS = ["newtask", "newrule", "reportbug", "smol"]
 
 	const commandReplacements: Record<string, string> = {
 		newtask: newTaskToolResponse(),
 		newrule: newRuleToolResponse(),
 		reportbug: reportBugToolResponse(),
+		smol: condenseToolResponse(),
 	}
 
 	// this currently allows matching prepended whitespace prior to /slash-command

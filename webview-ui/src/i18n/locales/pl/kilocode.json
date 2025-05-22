@@ -18,5 +18,14 @@
 		"sections": {
 			"mcp": "Serwery MCP"
 		}
+	},
+	"chat": {
+		"condense": {
+			"wantsToCondense": "Kilo Code chce skondensować Twoją rozmowę",
+			"condenseConversation": "Skondensuj Rozmowę"
+		}
+	},
+	"newTaskPreview": {
+		"task": "Zadanie"
 	}
 }

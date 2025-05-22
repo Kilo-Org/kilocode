@@ -18,5 +18,14 @@
 		"sections": {
 			"mcp": "MCP-servers"
 		}
+	},
+	"chat": {
+		"condense": {
+			"wantsToCondense": "Kilo Code wil je gesprek samenvatten",
+			"condenseConversation": "Gesprek samenvatten"
+		}
+	},
+	"newTaskPreview": {
+		"task": "Taak"
 	}
 }

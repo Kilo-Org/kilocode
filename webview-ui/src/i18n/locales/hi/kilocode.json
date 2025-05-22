@@ -18,5 +18,14 @@
 		"sections": {
 			"mcp": "MCP सर्वर"
 		}
+	},
+	"chat": {
+		"condense": {
+			"wantsToCondense": "Kilo Code तुम्हारी बातचीत को संक्षिप्त करना चाहता है",
+			"condenseConversation": "बातचीत संक्षिप्त करें"
+		}
+	},
+	"newTaskPreview": {
+		"task": "कार्य"
 	}
 }

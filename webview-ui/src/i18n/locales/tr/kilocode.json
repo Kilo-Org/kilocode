@@ -18,5 +18,14 @@
 		"sections": {
 			"mcp": "MCP Sunucuları"
 		}
+	},
+	"chat": {
+		"condense": {
+			"wantsToCondense": "Kilo Code konuşmanı özetlemek istiyor",
+			"condenseConversation": "Konuşmayı Özetle"
+		}
+	},
+	"newTaskPreview": {
+		"task": "Görev"
 	}
 }

@@ -118,6 +118,11 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			// task. This essentially creates a fresh slate for the new task.
 			await provider.initClineWithTask(message.text, message.images)
 			break
+		// kilocode_change start
+		case "condense":
+			provider.getCurrentCline()?.handleWebviewAskResponse("yesButtonClicked")
+			break
+		// kilocode_change end
 		case "customInstructions":
 			await provider.updateCustomInstructions(message.text)
 			break

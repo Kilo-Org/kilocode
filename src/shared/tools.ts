@@ -188,6 +188,7 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	search_and_replace: "search and replace",
 	new_rule: "create new rule",
 	report_bug: "report bug", // kilocode_change
+	condense: "condense the current context window", // kilocode_change
 } as const
 
 export type { ToolGroup }
@@ -222,6 +223,7 @@ export const ALWAYS_AVAILABLE_TOOLS: ToolName[] = [
 	"switch_mode",
 	"new_task",
 	"report_bug",
+	"condense", // kilocode_Change
 ] as const
 
 export type DiffResult =
