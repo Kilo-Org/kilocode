@@ -23,6 +23,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone: _onDone }) => {
 	const [profileData, setProfileData] = React.useState<ProfileData | undefined | null>(null)
 	const [balance, setBalance] = React.useState<number | null>(null)
 	const [isLoadingBalance, setIsLoadingBalance] = React.useState(true)
+	const [isLoadingUser, setIsLoadingUser] = React.useState(true)
 
 	useEffect(() => {
 		vscode.postMessage({
@@ -44,6 +45,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone: _onDone }) => {
 					console.error("Error fetching profile data:", payload.error)
 					setProfileData(null)
 				}
+				setIsLoadingUser(false)
 			} else if (message.type === "balanceDataResponse") {
 				const payload = message.payload as BalanceDataResponsePayload
 				if (payload.success) {
@@ -74,6 +76,10 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone: _onDone }) => {
 				kilocodeToken: "",
 			},
 		})
+	}
+
+	if (isLoadingUser) {
+		return <></>
 	}
 
 	return (
