@@ -406,11 +406,6 @@
 					"type": "string",
 					"default": "",
 					"description": "%settings.customStoragePath.description%"
-				},
-				"kilocode.isKilocodeProviderActive": {
-					"type": "boolean",
-					"default": false,
-					"description": "Context key to indicate if Kilocode is the active AI provider."
 				}
 			}
 		}
