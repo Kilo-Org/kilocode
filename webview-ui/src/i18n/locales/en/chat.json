@@ -25,6 +25,9 @@
 		"title": "Start New Task",
 		"tooltip": "Begin a new task"
 	},
+	"reportBug": {
+		"title": "Report Bug"
+	},
 	"proceedAnyways": {
 		"title": "Proceed Anyways",
 		"tooltip": "Continue while command executes"
