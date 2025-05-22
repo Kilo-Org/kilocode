@@ -3,38 +3,35 @@ import { serializeError } from "serialize-error"
 
 import type { ToolName } from "../../schemas"
 
+import type { ClineAsk, ToolProgressStatus } from "../../shared/ExtensionMessage"
 import { defaultModeSlug, getModeBySlug } from "../../shared/modes"
 import type { ToolParamName, ToolResponse } from "../../shared/tools"
-import type { ClineAsk, ToolProgressStatus } from "../../shared/ExtensionMessage"
 
-import { fetchInstructionsTool } from "../tools/fetchInstructionsTool"
-import { listFilesTool } from "../tools/listFilesTool"
-import { readFileTool } from "../tools/readFileTool"
-import { writeToFileTool } from "../tools/writeToFileTool"
+import { accessMcpResourceTool } from "../tools/accessMcpResourceTool"
 import { applyDiffTool } from "../tools/applyDiffTool"
-import { insertContentTool } from "../tools/insertContentTool"
-import { searchAndReplaceTool } from "../tools/searchAndReplaceTool"
-import { listCodeDefinitionNamesTool } from "../tools/listCodeDefinitionNamesTool"
-import { searchFilesTool } from "../tools/searchFilesTool"
+import { askFollowupQuestionTool } from "../tools/askFollowupQuestionTool"
+import { attemptCompletionTool } from "../tools/attemptCompletionTool"
 import { browserActionTool } from "../tools/browserActionTool"
 import { executeCommandTool } from "../tools/executeCommandTool"
-import { useMcpToolTool } from "../tools/useMcpToolTool"
-import { accessMcpResourceTool } from "../tools/accessMcpResourceTool"
-import { askFollowupQuestionTool } from "../tools/askFollowupQuestionTool"
-import { switchModeTool } from "../tools/switchModeTool"
-import { attemptCompletionTool } from "../tools/attemptCompletionTool"
+import { fetchInstructionsTool } from "../tools/fetchInstructionsTool"
+import { insertContentTool } from "../tools/insertContentTool"
+import { listCodeDefinitionNamesTool } from "../tools/listCodeDefinitionNamesTool"
+import { listFilesTool } from "../tools/listFilesTool"
 import { newTaskTool } from "../tools/newTaskTool"
+import { readFileTool } from "../tools/readFileTool"
+import { searchAndReplaceTool } from "../tools/searchAndReplaceTool"
+import { searchFilesTool } from "../tools/searchFilesTool"
+import { switchModeTool } from "../tools/switchModeTool"
+import { useMcpToolTool } from "../tools/useMcpToolTool"
+import { writeToFileTool } from "../tools/writeToFileTool"
 
 import { checkpointSave } from "../checkpoints"
 
 import { formatResponse } from "../prompts/responses"
-import { validateToolUse } from "../tools/validateToolUse"
 import { Task } from "../task/Task"
-<<<<<<< HEAD
 import { newRuleTool } from "../tools/newRuleTool"
-=======
 import { reportBugTool } from "../tools/reportBugTool"
->>>>>>> 9d2157a6 (save)
+import { validateToolUse } from "../tools/validateToolUse"
 
 /**
  * Processes and presents assistant message content to the user interface.
@@ -194,15 +191,12 @@ export async function presentAssistantMessage(cline: Task) {
 						const modeName = getModeBySlug(mode, customModes)?.name ?? mode
 						return `[${block.name} in ${modeName} mode: '${message}']`
 					}
-<<<<<<< HEAD
 					// kilocode_change start
 					case "new_rule":
 						return `[${block.name} for '${block.params.path}']`
-					// kilocode_change end
-=======
 					case "report_bug":
-						return `[${block.name} for '${block.params.path}']`
->>>>>>> 9d2157a6 (save)
+						return `[${block.name}]`
+					// kilocode_change end
 				}
 			}
 
@@ -481,8 +475,8 @@ export async function presentAssistantMessage(cline: Task) {
 				case "report_bug":
 					await reportBugTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
-				}
-				// kilocode_change end
+			}
+			// kilocode_change end
 
 			break
 	}

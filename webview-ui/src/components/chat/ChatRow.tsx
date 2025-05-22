@@ -32,6 +32,7 @@ import { ProgressIndicator } from "./ProgressIndicator"
 import { Markdown } from "./Markdown"
 import { CommandExecution } from "./CommandExecution"
 import { CommandExecutionError } from "./CommandExecutionError"
+import ReportBugPreview from "./ReportBugPreview"
 
 interface ChatRowProps {
 	message: ClineMessage
@@ -1092,7 +1093,25 @@ export const ChatRowContent = ({
 				// kilocode_change begin
 				case "payment_required_prompt": {
 					return <LowCreditWarning message={message} />
-				} // kilocode_change end
+				}
+				case "report_bug":
+					return (
+						<>
+							<div style={headerStyle}>
+								<span
+									className="codicon codicon-new-file"
+									style={{
+										color: normalColor,
+										marginBottom: "-1.5px",
+									}}></span>
+								<span style={{ color: normalColor, fontWeight: "bold" }}>
+									KiloCode wants to create a Github issue:
+								</span>
+							</div>
+							<ReportBugPreview data={message.text || ""} />
+						</>
+					)
+				// kilocode_change end
 				default:
 					return null
 			}
