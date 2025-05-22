@@ -30,6 +30,9 @@
 		"title": "Començar una nova tasca",
 		"tooltip": "Comença una nova tasca"
 	},
+	"reportBug": {
+		"title": "Informa d'un error"
+	},
 	"proceedAnyways": {
 		"title": "Continuar de totes maneres",
 		"tooltip": "Continua mentre s'executa l'ordre"
