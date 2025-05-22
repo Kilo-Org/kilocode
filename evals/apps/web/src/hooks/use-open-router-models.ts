@@ -3,9 +3,14 @@ import { useQuery } from "@tanstack/react-query"
 
 import { type ModelInfo } from "@evals/types"
 
-const supportsPromptCache = ["anthropic/claude-3.7-sonnet", "anthropic/claude-3.5-sonnet", "anthropic/claude-3-5-haiku"]
+const supportsPromptCache = [
+	"anthropic/claude-3.7-sonnet",
+	"anthropic/claude-3.5-sonnet",
+	"anthropic/claude-3-5-haiku",
+	"anthropic/claude-opus-4",
+]
 
-const supportsComputerUse = ["anthropic/claude-3.7-sonnet", "anthropic/claude-3.5-sonnet"]
+const supportsComputerUse = ["anthropic/claude-3.7-sonnet", "anthropic/claude-3.5-sonnet", "anthropic/claude-opus-4"]
 
 const supportsThinking = ["anthropic/claude-3.7-sonnet:thinking"]
 
