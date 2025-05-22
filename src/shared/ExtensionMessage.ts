@@ -16,7 +16,7 @@ import { McpServer } from "./mcp"
 import { McpMarketplaceCatalog, McpDownloadResponse } from "./kilocode/mcp"
 import { Mode } from "./modes"
 import { RouterModels } from "./api"
-import { ProfileDataResponsePayload, BalanceDataResponsePayload } from "./WebviewMessage" // New: Import payload types
+import { ProfileDataResponsePayload, BalanceDataResponsePayload } from "./WebviewMessage"
 
 export type { ProviderSettingsEntry, ToolProgressStatus }
 

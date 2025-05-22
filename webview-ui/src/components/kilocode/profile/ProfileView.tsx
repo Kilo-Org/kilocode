@@ -1,7 +1,7 @@
 // import { useExtensionState } from "@/context/ExtensionStateContext" // No longer needed
 import React, { useEffect } from "react"
 import { vscode } from "@/utils/vscode"
-import { ProfileDataResponsePayload, WebviewMessage } from "../../../../../src/shared/WebviewMessage"
+import { ProfileDataResponsePayload, WebviewMessage } from "@roo/shared/WebviewMessage"
 
 interface ProfileViewProps {
 	onDone: () => void
