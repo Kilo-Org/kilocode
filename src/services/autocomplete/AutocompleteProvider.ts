@@ -6,11 +6,11 @@ import { ApiHandler, buildApiHandler } from "../../api"
 import { ContextGatherer } from "./ContextGatherer"
 import { PromptRenderer } from "./PromptRenderer"
 import { CompletionCache } from "./utils/CompletionCache"
+import { ContextProxy } from "../../core/config/ContextProxy"
 
 // Default configuration values
 const DEFAULT_DEBOUNCE_DELAY = 150
-const DEFAULT_OLLAMA_MODEL = "qwen2.5-coder:1.5b"
-const DEFAULT_OLLAMA_URL = "http://localhost:11434"
+const DEFAULT_MODEL = "google/gemini-2.5-flash-preview"
 const MIN_TYPED_LENGTH_FOR_COMPLETION = 4
 
 export class AutocompleteProvider {
@@ -45,12 +45,13 @@ export class AutocompleteProvider {
 		this.cache = new CompletionCache()
 		this.config = new AutocompleteConfig()
 		this.contextGatherer = new ContextGatherer()
-		this.promptRenderer = new PromptRenderer({}, DEFAULT_OLLAMA_MODEL)
+		this.promptRenderer = new PromptRenderer({}, DEFAULT_MODEL)
 
+		const kilocodeToken = ContextProxy.instance.getProviderSettings().kilocodeToken
 		this.apiHandler = buildApiHandler({
-			apiProvider: "ollama",
-			ollamaModelId: DEFAULT_OLLAMA_MODEL,
-			ollamaBaseUrl: DEFAULT_OLLAMA_URL,
+			apiProvider: "kilocode",
+			kilocodeToken: kilocodeToken,
+			kilocodeModel: DEFAULT_MODEL,
 		})
 
 		this.decorationType = vscode.window.createTextEditorDecorationType({
