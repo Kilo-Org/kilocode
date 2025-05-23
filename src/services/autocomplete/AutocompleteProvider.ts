@@ -434,11 +434,6 @@ ${result.remainingLines}
 			clearAutocompletePreview()
 		}
 
-		if (inlineCompletionProviderDisposable) {
-			inlineCompletionProviderDisposable.dispose()
-			inlineCompletionProviderDisposable = null
-		}
-
 		loadingDecorationType.dispose()
 		loadingDecorationType.dispose()
 		vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, false)
@@ -448,22 +443,20 @@ ${result.remainingLines}
 		{ pattern: "**" }, // All files
 		{ provideInlineCompletionItems: (...args) => provideInlineCompletionItems(...args) },
 	)
-	context.subscriptions.push(inlineCompletionProviderDisposable)
 	registerTextEditorEvents(context)
 	registerPreviewCommands(context)
-
-	context.subscriptions.push(
-		vscode.commands.registerCommand("editor.action.inlineSuggest.commit", async () => {
-			if (isShowingAutocompletePreview) {
-				await vscode.commands.executeCommand("kilo-code.acceptAutocompletePreview")
-			} else {
-				// not sure if this is needed: leaving it here for now
-				await vscode.commands.executeCommand("default:editor.action.inlineSuggest.commit")
-			}
-		}),
-	)
-
 	setUpStatusBarToggleButton(context, () => (enabled = !enabled))
 
+	const commitSuggestionCommand = vscode.commands.registerCommand("editor.action.inlineSuggest.commit", async () => {
+		if (isShowingAutocompletePreview) {
+			await vscode.commands.executeCommand("kilo-code.acceptAutocompletePreview")
+		} else {
+			// not sure if this is needed: leaving it here for now
+			await vscode.commands.executeCommand("default:editor.action.inlineSuggest.commit")
+		}
+	})
+
+	context.subscriptions.push(commitSuggestionCommand)
+	context.subscriptions.push(inlineCompletionProviderDisposable)
 	context.subscriptions.push({ dispose })
 }
