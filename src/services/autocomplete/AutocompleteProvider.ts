@@ -35,6 +35,15 @@ export function registerAutocomplete(context: vscode.ExtensionContext) {
 	}
 }
 
+const loadingDecorationType = vscode.window.createTextEditorDecorationType({
+	after: {
+		color: new vscode.ThemeColor("editorGhostText.foreground"),
+		fontStyle: "italic",
+		contentText: "⏳",
+	},
+	rangeBehavior: vscode.DecorationRangeBehavior.ClosedOpen,
+})
+
 function hookAutocompleteInner(context: vscode.ExtensionContext) {
 	vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, false)
 
@@ -57,24 +66,6 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 		kilocodeModel: DEFAULT_MODEL,
 	})
 
-	const loadingDecorationType = vscode.window.createTextEditorDecorationType({
-		after: {
-			color: new vscode.ThemeColor("editorGhostText.foreground"),
-			fontStyle: "italic",
-			contentText: "⏳",
-		},
-		rangeBehavior: vscode.DecorationRangeBehavior.ClosedOpen,
-	})
-
-	const streamingDecorationType = vscode.window.createTextEditorDecorationType({
-		after: {
-			color: new vscode.ThemeColor("editorGhostText.foreground"),
-			fontStyle: "italic",
-			contentText: "⌛",
-		},
-		rangeBehavior: vscode.DecorationRangeBehavior.ClosedOpen,
-	})
-
 	const clearAutocompletePreview = () => {
 		isShowingAutocompletePreview = false
 		isLoadingCompletion = false
@@ -85,7 +76,7 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 		const editor = vscode.window.activeTextEditor
 		if (editor) {
 			editor.setDecorations(loadingDecorationType, [])
-			editor.setDecorations(streamingDecorationType, [])
+			editor.setDecorations(loadingDecorationType, [])
 		}
 
 		vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, false)
@@ -97,7 +88,7 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 		const decoration: vscode.DecorationOptions = {
 			range: new vscode.Range(position, position),
 		}
-		editor.setDecorations(streamingDecorationType, [decoration])
+		editor.setDecorations(loadingDecorationType, [decoration])
 	}
 
 	// Centralized function to clean markdown and split completion
@@ -214,7 +205,7 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 			}
 		}
 
-		editor.setDecorations(streamingDecorationType, [])
+		editor.setDecorations(loadingDecorationType, [])
 
 		if (throttleTimeout) clearTimeout(throttleTimeout)
 
@@ -373,7 +364,7 @@ ${result.remainingLines}
 					}
 
 					// Always hide the streaming decorator when cursor moves
-					e.textEditor.setDecorations(streamingDecorationType, [])
+					e.textEditor.setDecorations(loadingDecorationType, [])
 
 					// If we've accepted the first line and cursor moves, reset state
 					// This prevents showing remaining lines if user moves cursor after accepting first line
@@ -392,7 +383,7 @@ ${result.remainingLines}
 					const editor = vscode.window.activeTextEditor
 					if (editor && editor.document === e.document) {
 						editor.setDecorations(loadingDecorationType, [])
-						editor.setDecorations(streamingDecorationType, [])
+						editor.setDecorations(loadingDecorationType, [])
 					}
 				}
 			}),
@@ -455,7 +446,7 @@ ${result.remainingLines}
 		}
 
 		loadingDecorationType.dispose()
-		streamingDecorationType.dispose()
+		loadingDecorationType.dispose()
 		vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, false)
 	}
 
