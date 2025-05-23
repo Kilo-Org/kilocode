@@ -76,7 +76,6 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 		const editor = vscode.window.activeTextEditor
 		if (editor) {
 			editor.setDecorations(loadingDecorationType, [])
-			editor.setDecorations(loadingDecorationType, [])
 		}
 
 		vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, false)
