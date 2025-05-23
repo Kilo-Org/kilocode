@@ -1,0 +1,42 @@
+{
+	"welcome": {
+		"greeting": "Apa yang bisa Kilo Code lakukan untuk Anda?",
+		"introText": "Saya telah dilatih pada model AI tercepat yang tersedia dan saya siap menghasilkan kode untuk kamu dengan kecepatan warp!",
+		"ctaButton": "Coba Kilo Code gratis",
+		"manualModeButton": "Gunakan API key sendiri"
+	},
+	"lowCreditWarning": {
+		"addCredit": "Tambah Kredit",
+		"lowBalance": "Saldo Kilo Code kamu rendah"
+	},
+	"notifications": {
+		"toolRequest": "Permintaan tool menunggu persetujuan",
+		"browserAction": "Aksi browser menunggu persetujuan",
+		"command": "Perintah menunggu persetujuan"
+	},
+	"settings": {
+		"sections": {
+			"mcp": "Server MCP"
+		}
+	},
+	"chat": {
+		"condense": {
+			"wantsToCondense": "Kilo Code ingin mengondensasi percakapan kamu",
+			"condenseConversation": "Kondensasi Percakapan"
+		}
+	},
+	"newTaskPreview": {
+		"task": "Tugas"
+	},
+	"profile": {
+		"dashboard": "Dashboard",
+		"logOut": "Keluar",
+		"currentBalance": "SALDO SAAT INI",
+		"loading": "Memuat...",
+		"signUp": {
+			"title": "Daftar dengan Kilo Code",
+			"description": "Mendaftar dengan Kilo Code memberi kamu kredit gratis untuk memulai. Gunakan kredit kamu untuk menjelajahi fitur kami, mencoba model terbaru dan terbaik, dan merasakan manfaat Kilo Code tanpa komitmen.",
+			"termsAndPrivacy": "Dengan melanjutkan, kamu menyetujui <termsLink>Syarat Layanan</termsLink> dan <privacyLink>Kebijakan Privasi.</privacyLink>"
+		}
+	}
+}

@@ -1,0 +1,57 @@
+{
+	"title": "Server MCP",
+	"done": "Selesai",
+	"description": "Aktifkan Model Context Protocol (MCP) untuk membiarkan Kilo Code menggunakan tool dan layanan tambahan dari server eksternal. Ini memperluas apa yang bisa Kilo Code lakukan untuk kamu. <0>Pelajari Lebih Lanjut</0>",
+	"enableToggle": {
+		"title": "Aktifkan Server MCP",
+		"description": "Nyalakan ini untuk membiarkan Kilo Code menggunakan tool dari server MCP yang terhubung. Ini memberi Kilo Code lebih banyak kemampuan. Jika kamu tidak berencana menggunakan tool tambahan ini, matikan untuk membantu mengurangi biaya token API."
+	},
+	"enableServerCreation": {
+		"title": "Aktifkan Pembuatan Server MCP",
+		"description": "Aktifkan ini untuk membiarkan Kilo Code membantu kamu membangun server MCP kustom <1>baru</1>. <0>Pelajari tentang pembuatan server</0>",
+		"hint": "Petunjuk: Untuk mengurangi biaya token API, nonaktifkan pengaturan ini ketika kamu tidak secara aktif meminta Kilo Code untuk membuat server MCP baru."
+	},
+	"editGlobalMCP": "Edit MCP Global",
+	"editProjectMCP": "Edit MCP Proyek",
+	"learnMoreEditingSettings": "Pelajari lebih lanjut tentang mengedit file pengaturan MCP",
+	"tool": {
+		"alwaysAllow": "Selalu izinkan",
+		"parameters": "Parameter",
+		"noDescription": "Tidak ada deskripsi"
+	},
+	"tabs": {
+		"tools": "Tools",
+		"resources": "Resources",
+		"errors": "Error"
+	},
+	"emptyState": {
+		"noTools": "Tidak ada tool ditemukan",
+		"noResources": "Tidak ada resource ditemukan",
+		"noLogs": "Tidak ada log ditemukan",
+		"noErrors": "Tidak ada error ditemukan"
+	},
+	"networkTimeout": {
+		"label": "Network Timeout",
+		"description": "Waktu maksimum untuk menunggu respons server",
+		"options": {
+			"15seconds": "15 detik",
+			"30seconds": "30 detik",
+			"1minute": "1 menit",
+			"5minutes": "5 menit",
+			"10minutes": "10 menit",
+			"15minutes": "15 menit",
+			"30minutes": "30 menit",
+			"60minutes": "60 menit"
+		}
+	},
+	"deleteDialog": {
+		"title": "Hapus Server MCP",
+		"description": "Apakah kamu yakin ingin menghapus server MCP \"{{serverName}}\"? Aksi ini tidak dapat dibatalkan.",
+		"cancel": "Batal",
+		"delete": "Hapus"
+	},
+	"serverStatus": {
+		"retrying": "Mencoba lagi...",
+		"retryConnection": "Coba Koneksi Lagi"
+	}
+}
