@@ -348,92 +348,86 @@ ${result.remainingLines}
 		}
 	}
 
-	const registerTextEditorEvents = (context: vscode.ExtensionContext): void => {
-		context.subscriptions.push(
-			vscode.window.onDidChangeTextEditorSelection((e) => {
-				if (e.textEditor) {
-					// Clear loading indicator when cursor moves
-					if (isLoadingCompletion) {
-						clearAutocompletePreview()
-					}
-
-					// Always hide the streaming decorator when cursor moves
-					e.textEditor.setDecorations(loadingDecorationType, [])
-
-					// If we've accepted the first line and cursor moves, reset state
-					// This prevents showing remaining lines if user moves cursor after accepting first line
-					if (hasAcceptedFirstLine && e.kind !== vscode.TextEditorSelectionChangeKind.Command) {
-						clearAutocompletePreview()
-					}
-				}
-			}),
-		)
-
-		context.subscriptions.push(
-			vscode.workspace.onDidChangeTextDocument((e) => {
-				if (isLoadingCompletion) {
-					clearAutocompletePreview()
-				} else {
-					const editor = vscode.window.activeTextEditor
-					if (editor && editor.document === e.document) {
-						editor.setDecorations(loadingDecorationType, [])
-					}
-				}
-			}),
-		)
-	}
-
-	const registerPreviewCommands = (context: vscode.ExtensionContext): void => {
-		const acceptCommand = vscode.commands.registerCommand("kilo-code.acceptAutocompletePreview", async () => {
-			console.log("Accepting autocomplete preview...")
-			const editor = vscode.window.activeTextEditor
-			if (!editor) return
-
-			// Handle the acceptance directly without calling commit again
-			if (!hasAcceptedFirstLine && preview.remainingLines) {
-				// First Tab press: Insert the first line
-				if (preview.firstLine) {
-					await editor.edit((editBuilder) => {
-						editBuilder.insert(editor.selection.active, preview.firstLine)
-					})
-
-					hasAcceptedFirstLine = true
-
-					// Wait a moment for the first line to be inserted
-					setTimeout(async () => {
-						await vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
-					}, 50)
-				}
-			} else if (hasAcceptedFirstLine && preview.remainingLines) {
-				// Second Tab press: Insert the remaining lines
-				await editor.edit((editBuilder) => {
-					editBuilder.insert(editor.selection.active, preview.remainingLines)
-				})
-
-				clearAutocompletePreview()
-			} else {
-				// For single line completion or when preview.remainingLines is empty after first line acceptance
-				// We need to ensure the full preview (which might be just the preview.firstLine if it was a single line)
-				// is inserted if it hasn't been fully by VS Code's default commit.
-				// However, the default commit (`editor.action.inlineSuggest.commit`) should handle this.
-				// So, just clearing our state should be enough.
-				clearAutocompletePreview()
-			}
-		})
-
-		const dismissCommand = vscode.commands.registerCommand("kilo-code.dismissAutocompletePreview", () => {
-			clearAutocompletePreview()
-		})
-
-		context.subscriptions.push(acceptCommand, dismissCommand)
-	}
-
 	inlineCompletionProviderDisposable = vscode.languages.registerInlineCompletionItemProvider(
 		{ pattern: "**" }, // All files
 		{ provideInlineCompletionItems: (...args) => provideInlineCompletionItems(...args) },
 	)
-	registerTextEditorEvents(context)
-	registerPreviewCommands(context)
+
+	context.subscriptions.push(
+		vscode.window.onDidChangeTextEditorSelection((e) => {
+			if (e.textEditor) {
+				// Clear loading indicator when cursor moves
+				if (isLoadingCompletion) {
+					clearAutocompletePreview()
+				}
+
+				// Always hide the streaming decorator when cursor moves
+				e.textEditor.setDecorations(loadingDecorationType, [])
+
+				// If we've accepted the first line and cursor moves, reset state
+				// This prevents showing remaining lines if user moves cursor after accepting first line
+				if (hasAcceptedFirstLine && e.kind !== vscode.TextEditorSelectionChangeKind.Command) {
+					clearAutocompletePreview()
+				}
+			}
+		}),
+	)
+
+	context.subscriptions.push(
+		vscode.workspace.onDidChangeTextDocument((e) => {
+			if (isLoadingCompletion) {
+				clearAutocompletePreview()
+			} else {
+				const editor = vscode.window.activeTextEditor
+				if (editor && editor.document === e.document) {
+					editor.setDecorations(loadingDecorationType, [])
+				}
+			}
+		}),
+	)
+
+	const acceptCommand = vscode.commands.registerCommand("kilo-code.acceptAutocompletePreview", async () => {
+		console.log("Accepting autocomplete preview...")
+		const editor = vscode.window.activeTextEditor
+		if (!editor) return
+
+		// Handle the acceptance directly without calling commit again
+		if (!hasAcceptedFirstLine && preview.remainingLines) {
+			// First Tab press: Insert the first line
+			if (preview.firstLine) {
+				await editor.edit((editBuilder) => {
+					editBuilder.insert(editor.selection.active, preview.firstLine)
+				})
+
+				hasAcceptedFirstLine = true
+
+				// Wait a moment for the first line to be inserted
+				setTimeout(async () => {
+					await vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
+				}, 50)
+			}
+		} else if (hasAcceptedFirstLine && preview.remainingLines) {
+			// Second Tab press: Insert the remaining lines
+			await editor.edit((editBuilder) => {
+				editBuilder.insert(editor.selection.active, preview.remainingLines)
+			})
+
+			clearAutocompletePreview()
+		} else {
+			// For single line completion or when preview.remainingLines is empty after first line acceptance
+			// We need to ensure the full preview (which might be just the preview.firstLine if it was a single line)
+			// is inserted if it hasn't been fully by VS Code's default commit.
+			// However, the default commit (`editor.action.inlineSuggest.commit`) should handle this.
+			// So, just clearing our state should be enough.
+			clearAutocompletePreview()
+		}
+	})
+
+	const dismissCommand = vscode.commands.registerCommand("kilo-code.dismissAutocompletePreview", () => {
+		clearAutocompletePreview()
+	})
+
+	context.subscriptions.push(acceptCommand, dismissCommand)
 	setUpStatusBarToggleButton(context, () => (enabled = !enabled))
 
 	const commitSuggestionCommand = vscode.commands.registerCommand("editor.action.inlineSuggest.commit", async () => {
