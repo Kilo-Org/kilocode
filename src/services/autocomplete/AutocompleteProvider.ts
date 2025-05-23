@@ -312,7 +312,7 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 		}
 
 		const duration = performance.now() - startTime
-		logCompletionResult(result, completionId, duration, promptString)
+		logCompletionResult(isCancelled ? null : suggestedCompletion, completionId, duration, promptString)
 
 		if (token.isCancellationRequested || !validateCompletionContext(context, document, position)) {
 			return null
