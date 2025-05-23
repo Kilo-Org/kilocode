@@ -73,6 +73,45 @@ const processCompletionText = (rawText: string): CompletionPreview => {
 	}
 }
 
+const isFileDisabled = (document: vscode.TextDocument): boolean => {
+	const vscodeConfig = vscode.workspace.getConfiguration("kilo-code")
+	const disabledPatterns = vscodeConfig.get<string>("autocomplete.disableInFiles") || ""
+	const patterns = disabledPatterns
+		.split(",")
+		.map((p) => p.trim())
+		.filter(Boolean)
+
+	return patterns.some((pattern) => {
+		const glob = new vscode.RelativePattern(vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || "", pattern)
+		return vscode.languages.match({ pattern: glob }, document)
+	})
+}
+
+const validateCompletionContext = (
+	context: vscode.InlineCompletionContext,
+	document: vscode.TextDocument,
+	position: vscode.Position,
+): boolean => {
+	if (context.triggerKind === vscode.InlineCompletionTriggerKind.Invoke) {
+		return true
+	}
+	const activeEditor = vscode.window.activeTextEditor
+	const currentPosition =
+		activeEditor && activeEditor.document.uri === document.uri ? activeEditor.selection.active : position
+
+	const lineText = document.lineAt(context.selectedCompletionInfo?.range.start.line ?? currentPosition.line).text
+	const textBeforeCursor = lineText.substring(
+		0,
+		context.selectedCompletionInfo?.range.start.character ?? currentPosition.character,
+	)
+	if (
+		context.triggerKind === vscode.InlineCompletionTriggerKind.Automatic &&
+		textBeforeCursor.trim().length < MIN_TYPED_LENGTH_FOR_COMPLETION
+	) {
+		return false
+	}
+	return true
+}
 function hookAutocompleteInner(context: vscode.ExtensionContext) {
 	vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, false)
 
@@ -109,46 +148,6 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 
 		vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, false)
 		vscode.commands.executeCommand("editor.action.inlineSuggest.hide")
-	}
-
-	const isFileDisabled = (document: vscode.TextDocument): boolean => {
-		const vscodeConfig = vscode.workspace.getConfiguration("kilo-code")
-		const disabledPatterns = vscodeConfig.get<string>("autocomplete.disableInFiles") || ""
-		const patterns = disabledPatterns
-			.split(",")
-			.map((p) => p.trim())
-			.filter(Boolean)
-
-		return patterns.some((pattern) => {
-			const glob = new vscode.RelativePattern(vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || "", pattern)
-			return vscode.languages.match({ pattern: glob }, document)
-		})
-	}
-
-	const validateCompletionContext = (
-		context: vscode.InlineCompletionContext,
-		document: vscode.TextDocument,
-		position: vscode.Position,
-	): boolean => {
-		if (context.triggerKind === vscode.InlineCompletionTriggerKind.Invoke) {
-			return true
-		}
-		const activeEditor = vscode.window.activeTextEditor
-		const currentPosition =
-			activeEditor && activeEditor.document.uri === document.uri ? activeEditor.selection.active : position
-
-		const lineText = document.lineAt(context.selectedCompletionInfo?.range.start.line ?? currentPosition.line).text
-		const textBeforeCursor = lineText.substring(
-			0,
-			context.selectedCompletionInfo?.range.start.character ?? currentPosition.character,
-		)
-		if (
-			context.triggerKind === vscode.InlineCompletionTriggerKind.Automatic &&
-			textBeforeCursor.trim().length < MIN_TYPED_LENGTH_FOR_COMPLETION
-		) {
-			return false
-		}
-		return true
 	}
 
 	const processCompletionStream = async (
