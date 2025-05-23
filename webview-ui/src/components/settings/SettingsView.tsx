@@ -701,7 +701,13 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 
 					{/* Experimental Section */}
 					{activeTab === "experimental" && (
-						<ExperimentalSettings setExperimentEnabled={setExperimentEnabled} experiments={experiments} />
+						// kilocode_change start
+						<ExperimentalSettings
+							setExperimentEnabled={setExperimentEnabled}
+							experiments={experiments}
+							providerSettings={apiConfiguration}
+						/>
+						// kilocode_change end
 					)}
 
 					{/* Language Section */}

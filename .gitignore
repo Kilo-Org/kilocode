@@ -41,3 +41,4 @@ logs
 
 # kilocode_change
 .history/
+.aider*

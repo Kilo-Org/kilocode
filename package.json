@@ -239,6 +239,16 @@
 				"title": "%command.profile.title%",
 				"icon": "$(account)",
 				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.acceptAutocompletePreview",
+				"title": "Accept Ghost Text Suggestion",
+				"category": "Kilo Code"
+			},
+			{
+				"command": "kilo-code.dismissAutocompletePreview",
+				"title": "Dismiss Ghost Text Suggestion",
+				"category": "Kilo Code"
 			}
 		],
 		"keybindings": [
@@ -253,6 +263,18 @@
 				"key": "ctrl+shift+k",
 				"mac": "cmd+shift+k",
 				"when": "true"
+			},
+			{
+				"command": "kilo-code.acceptAutocompletePreview",
+				"key": "tab",
+				"mac": "tab",
+				"when": "editorTextFocus && kilo-code.autocompletePreviewVisible"
+			},
+			{
+				"command": "kilo-code.dismissAutocompletePreview",
+				"key": "escape",
+				"mac": "escape",
+				"when": "editorTextFocus && kilo-code.autocompletePreviewVisible"
 			}
 		],
 		"menus": {
@@ -483,8 +505,10 @@
 		"fastest-levenshtein": "^1.0.16",
 		"fzf": "^0.5.2",
 		"get-folder-size": "^5.0.0",
+		"handlebars": "^4.7.8",
 		"i18next": "^24.2.2",
 		"isbinaryfile": "^5.0.2",
+		"lru-cache": "^11.1.0",
 		"mammoth": "^1.8.0",
 		"monaco-vscode-textmate-theme-converter": "^0.1.7",
 		"node-cache": "^5.1.2",
@@ -512,6 +536,7 @@
 		"tmp": "^0.2.3",
 		"tree-sitter-wasms": "^0.1.11",
 		"turndown": "^7.2.0",
+		"uri-js": "^4.4.1",
 		"vscode-material-icons": "^0.1.1",
 		"web-tree-sitter": "^0.22.6",
 		"workerpool": "^9.2.0",
