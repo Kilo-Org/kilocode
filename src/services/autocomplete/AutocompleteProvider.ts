@@ -44,6 +44,14 @@ const loadingDecorationType = vscode.window.createTextEditorDecorationType({
 	rangeBehavior: vscode.DecorationRangeBehavior.ClosedOpen,
 })
 
+const showStreamingIndicator = (editor: vscode.TextEditor) => {
+	const position = editor.selection.active
+	const decoration: vscode.DecorationOptions = {
+		range: new vscode.Range(position, position),
+	}
+	editor.setDecorations(loadingDecorationType, [decoration])
+}
+
 function hookAutocompleteInner(context: vscode.ExtensionContext) {
 	vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, false)
 
@@ -80,14 +88,6 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 
 		vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, false)
 		vscode.commands.executeCommand("editor.action.inlineSuggest.hide")
-	}
-
-	const showStreamingIndicator = (editor: vscode.TextEditor) => {
-		const position = editor.selection.active
-		const decoration: vscode.DecorationOptions = {
-			range: new vscode.Range(position, position),
-		}
-		editor.setDecorations(loadingDecorationType, [decoration])
 	}
 
 	// Centralized function to clean markdown and split completion
