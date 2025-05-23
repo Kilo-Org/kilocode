@@ -314,14 +314,13 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 		const duration = performance.now() - startTime
 		logCompletionResult(result, completionId, duration, promptString)
 
-		let completionPreview: CompletionSuggestion | null = null
-		if (!(token.isCancellationRequested || !validateCompletionContext(context, document, position))) {
-			completionPreview = result
+		if (token.isCancellationRequested || !validateCompletionContext(context, document, position)) {
+			return null
 		}
 
-		if (!completionPreview) return null
+		if (!result) return null
 
-		suggestedCompletion = completionPreview
+		suggestedCompletion = result
 
 		isShowingAutocompletePreview = true
 		vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, true)
