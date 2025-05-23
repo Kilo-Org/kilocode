@@ -113,16 +113,22 @@ const validateCompletionContext = (
 	return true
 }
 
-const registerStatusBarItem = (context: vscode.ExtensionContext): vscode.StatusBarItem => {
+function setUpStatusBarToggleButton(context: vscode.ExtensionContext, toggleEnabled: () => boolean) {
 	const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100)
 	statusBarItem.text = "$(sparkle) Autocomplete"
 	statusBarItem.tooltip = "Kilo Code Autocomplete"
 	statusBarItem.command = "kilo-code.toggleAutocomplete"
 	statusBarItem.show()
 	context.subscriptions.push(statusBarItem)
-	return statusBarItem
-}
 
+	context.subscriptions.push(
+		vscode.commands.registerCommand("kilo-code.toggleAutocomplete", () => {
+			const enabled = toggleEnabled()
+			statusBarItem.text = enabled ? "$(sparkle) Autocomplete" : "$(circle-slash) Autocomplete"
+			vscode.window.showInformationMessage(`Autocomplete ${enabled ? "enabled" : "disabled"}`)
+		}),
+	)
+}
 function hookAutocompleteInner(context: vscode.ExtensionContext) {
 	vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, false)
 
@@ -342,16 +348,6 @@ ${result.remainingLines}
 		}
 	}
 
-	const registerToggleCommand = (context: vscode.ExtensionContext, statusBarItem: vscode.StatusBarItem): void => {
-		context.subscriptions.push(
-			vscode.commands.registerCommand("kilo-code.toggleAutocomplete", () => {
-				enabled = !enabled
-				statusBarItem.text = enabled ? "$(sparkle) Autocomplete" : "$(circle-slash) Autocomplete"
-				vscode.window.showInformationMessage(`Autocomplete ${enabled ? "enabled" : "disabled"}`)
-			}),
-		)
-	}
-
 	const registerTextEditorEvents = (context: vscode.ExtensionContext): void => {
 		context.subscriptions.push(
 			vscode.window.onDidChangeTextEditorSelection((e) => {
@@ -468,8 +464,7 @@ ${result.remainingLines}
 			}),
 		)
 
-		const statusBarItem = registerStatusBarItem(context)
-		registerToggleCommand(context, statusBarItem)
+		setUpStatusBarToggleButton(context, () => (enabled = !enabled))
 	}
 
 	register(context)
