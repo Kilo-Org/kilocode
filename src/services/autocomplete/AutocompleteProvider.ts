@@ -444,29 +444,26 @@ ${result.remainingLines}
 		vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, false)
 	}
 
-	const register = (context: vscode.ExtensionContext) => {
-		inlineCompletionProviderDisposable = vscode.languages.registerInlineCompletionItemProvider(
-			{ pattern: "**" }, // All files
-			{ provideInlineCompletionItems: (...args) => provideInlineCompletionItems(...args) },
-		)
-		context.subscriptions.push(inlineCompletionProviderDisposable)
-		registerTextEditorEvents(context)
-		registerPreviewCommands(context)
+	inlineCompletionProviderDisposable = vscode.languages.registerInlineCompletionItemProvider(
+		{ pattern: "**" }, // All files
+		{ provideInlineCompletionItems: (...args) => provideInlineCompletionItems(...args) },
+	)
+	context.subscriptions.push(inlineCompletionProviderDisposable)
+	registerTextEditorEvents(context)
+	registerPreviewCommands(context)
 
-		context.subscriptions.push(
-			vscode.commands.registerCommand("editor.action.inlineSuggest.commit", async () => {
-				if (isShowingAutocompletePreview) {
-					await vscode.commands.executeCommand("kilo-code.acceptAutocompletePreview")
-				} else {
-					// not sure if this is needed: leaving it here for now
-					await vscode.commands.executeCommand("default:editor.action.inlineSuggest.commit")
-				}
-			}),
-		)
+	context.subscriptions.push(
+		vscode.commands.registerCommand("editor.action.inlineSuggest.commit", async () => {
+			if (isShowingAutocompletePreview) {
+				await vscode.commands.executeCommand("kilo-code.acceptAutocompletePreview")
+			} else {
+				// not sure if this is needed: leaving it here for now
+				await vscode.commands.executeCommand("default:editor.action.inlineSuggest.commit")
+			}
+		}),
+	)
 
-		setUpStatusBarToggleButton(context, () => (enabled = !enabled))
-	}
+	setUpStatusBarToggleButton(context, () => (enabled = !enabled))
 
-	register(context)
 	context.subscriptions.push({ dispose })
 }
