@@ -317,7 +317,7 @@ export type CommandExecutionStatus = z.infer<typeof commandExecutionStatusSchema
  * ExperimentId
  */
 
-export const experimentIds = ["autoCondenseContext", "powerSteering"] as const
+export const experimentIds = ["autoCondenseContext", "powerSteering", "watchMode"] as const
 
 export const experimentIdsSchema = z.enum(experimentIds)
 
@@ -330,6 +330,7 @@ export type ExperimentId = z.infer<typeof experimentIdsSchema>
 const experimentsSchema = z.object({
 	autoCondenseContext: z.boolean(),
 	powerSteering: z.boolean(),
+	watchMode: z.boolean(),
 })
 
 export type Experiments = z.infer<typeof experimentsSchema>

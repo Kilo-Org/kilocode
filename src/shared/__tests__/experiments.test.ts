@@ -24,6 +24,7 @@ describe("experiments", () => {
 			const experiments: Record<ExperimentId, boolean> = {
 				powerSteering: false,
 				autoCondenseContext: false,
+				watchMode: false,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.POWER_STEERING)).toBe(false)
 		})
@@ -32,6 +33,7 @@ describe("experiments", () => {
 			const experiments: Record<ExperimentId, boolean> = {
 				powerSteering: true,
 				autoCondenseContext: false,
+				watchMode: false,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.POWER_STEERING)).toBe(true)
 		})
@@ -40,6 +42,7 @@ describe("experiments", () => {
 			const experiments: Record<ExperimentId, boolean> = {
 				powerSteering: false,
 				autoCondenseContext: false,
+				watchMode: false,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.POWER_STEERING)).toBe(false)
 		})
@@ -48,6 +51,7 @@ describe("experiments", () => {
 			const experiments: Record<ExperimentId, boolean> = {
 				powerSteering: false,
 				autoCondenseContext: false,
+				watchMode: false,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.AUTO_CONDENSE_CONTEXT)).toBe(false)
 		})
@@ -56,6 +60,7 @@ describe("experiments", () => {
 			const experiments: Record<ExperimentId, boolean> = {
 				powerSteering: false,
 				autoCondenseContext: true,
+				watchMode: false,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.AUTO_CONDENSE_CONTEXT)).toBe(true)
 		})

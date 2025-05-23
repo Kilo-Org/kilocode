@@ -423,6 +423,10 @@
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Usar ferramenta diff de múltiplos blocos experimental",
 			"description": "Quando ativado, o Kilo Code usará a ferramenta diff de múltiplos blocos. Isso tentará atualizar vários blocos de código no arquivo em uma única solicitação."
+		},
+		"WATCH_MODE": {
+			"name": "Tarefas rápidas",
+			"description": "Quando ativado, o Kilo Code observará arquivos em busca de comentários (como \"KO!\" ou \"/* KO algo */\"). Ao salvar, o Kilo lerá os comentários e atualizará os arquivos de acordo. Este recurso ajuda a otimizar o fluxo de trabalho de alterações rápidas, permitindo que você marque áreas em seu código que precisam de assistência de IA sem iniciar explicitamente uma nova conversa."
 		}
 	},
 	"promptCaching": {

@@ -5,5 +5,11 @@
 	"lowCreditWarning": {
 		"title": "Ostrzeżenie o Niskim Kredycie!",
 		"message": "Sprawdź, czy możesz doładować darmowymi kredytami lub kupić więcej!"
+	},
+	"commands": {
+		"quickCommand": {
+			"prompt": "Co chcesz zmienić lub o co zapytać?",
+			"placeholder": "np. napraw błąd w tej funkcji, dodaj obsługę błędów, zrefaktoryzuj ten kod, co to robi"
+		}
 	}
 }

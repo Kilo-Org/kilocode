@@ -5,6 +5,7 @@ import { ClineProvider } from "../core/webview/ClineProvider"
 import { t } from "../i18n" // kilocode_change
 import { importSettings, exportSettings } from "../core/config/importExport" // kilocode_change
 import { ContextProxy } from "../core/config/ContextProxy"
+import { WatchModeService } from "../services/watchMode"
 
 import { registerHumanRelayCallback, unregisterHumanRelayCallback, handleHumanRelayResponse } from "./humanRelay"
 import { handleNewTask } from "./handleTask"
@@ -53,6 +54,7 @@ export type RegisterCommandOptions = {
 	context: vscode.ExtensionContext
 	outputChannel: vscode.OutputChannel
 	provider: ClineProvider
+	watchModeService?: WatchModeService
 }
 
 export const registerCommands = (options: RegisterCommandOptions) => {
@@ -63,9 +65,9 @@ export const registerCommands = (options: RegisterCommandOptions) => {
 	}
 }
 
-const getCommandsMap = ({ context, outputChannel }: RegisterCommandOptions) => {
+const getCommandsMap = ({ context, outputChannel, watchModeService }: RegisterCommandOptions) => {
 	return {
-		"kilo-code.activationCompleted": () => {},
+		"kilo-code.activationCompleted": () => { },
 		"kilo-code.plusButtonClicked": async () => {
 			const visibleProvider = getVisibleProviderOrLog(outputChannel)
 
@@ -200,8 +202,81 @@ const getCommandsMap = ({ context, outputChannel }: RegisterCommandOptions) => {
 				contextProxy: visibleProvider.contextProxy,
 			})
 		},
-		// kilocode_change end
+		// Watch Mode commands
+		"kilo-code.watchMode.enableExperiment": async () => {
+			if (!watchModeService) {
+				outputChannel.appendLine("Watch Mode service not initialized")
+				vscode.window.showErrorMessage("Watch Mode service not initialized")
+				return
+			}
+
+			// Enable the experiment flag
+			const experimentsConfig = (context.globalState.get("experiments") || {}) as Record<string, boolean>
+			experimentsConfig["watchMode"] = true
+			await context.globalState.update("experiments", experimentsConfig)
+
+			outputChannel.appendLine("Watch Mode experiment flag enabled")
+			vscode.window.showInformationMessage(
+				"Watch Mode experiment flag enabled. Please reload the window for changes to take effect.",
+			)
+		},
+		"kilo-code.quickCommand": async () => {
+			if (!watchModeService) {
+				outputChannel.appendLine("Watch Mode service not initialized")
+				vscode.window.showErrorMessage("Watch Mode service not initialized")
+				return
+			}
+
+			// Check if watch mode experiment is enabled
+			const experimentsConfig = (context.globalState.get("experiments") || {}) as Record<string, boolean>
+			if (!experimentsConfig["watchMode"]) {
+				const enableWatchMode = await vscode.window.showQuickPick(["Yes", "No"], {
+					placeHolder: "Watch Mode experiment is not enabled. Would you like to enable it?",
+				})
+
+				if (enableWatchMode === "Yes") {
+					experimentsConfig["watchMode"] = true
+					await context.globalState.update("experiments", experimentsConfig)
+					vscode.window.showInformationMessage(
+						"Watch Mode experiment enabled. Please reload the window to activate.",
+					)
+					return
+				} else {
+					return
+				}
+			}
+
+			// Show input box for the command
+			const input = await vscode.window.showInputBox({
+				prompt: t("kilocode:commands.quickCommand.prompt"),
+				placeHolder: t("kilocode:commands.quickCommand.placeholder"),
+				ignoreFocusOut: true,
+			})
+
+			if (input === undefined || input.trim() === "") {
+				// User cancelled or entered empty string
+				return
+			}
+
+			// Get the active text editor
+			const activeEditor = vscode.window.activeTextEditor
+			if (!activeEditor) {
+				vscode.window.showErrorMessage("No active text editor found")
+				return
+			}
+
+			// Process the quick command
+			try {
+				await watchModeService.processQuickCommand(activeEditor.document, input.trim())
+			} catch (error) {
+				outputChannel.appendLine(`Error processing quick command: ${error}`)
+				vscode.window.showErrorMessage(
+					`Failed to process command: ${error instanceof Error ? error.message : String(error)}`,
+				)
+			}
+		},
 	}
+	// kilocode_change end
 }
 
 export const openClineInNewTab = async ({ context, outputChannel }: Omit<RegisterCommandOptions, "provider">) => {

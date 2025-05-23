@@ -423,8 +423,13 @@
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Experimentelles Multi-Block-Diff-Werkzeug verwenden",
 			"description": "Wenn aktiviert, verwendet Kilo Code das Multi-Block-Diff-Werkzeug. Dies versucht, mehrere Codeblöcke in der Datei in einer Anfrage zu aktualisieren."
+		},
+		"WATCH_MODE": {
+			"name": "Schnelle Aufgaben",
+			"description": "Wenn aktiviert, überwacht Kilo Code Dateien auf Kommentare (wie \"KO!\" oder \"/* KO etwas */\"). Beim Speichern liest Kilo die Kommentare und aktualisiert die Dateien entsprechend. Diese Funktion hilft, den Workflow für schnelle Änderungen zu optimieren, indem du Bereiche in deinem Code markieren kannst, die KI-Unterstützung benötigen, ohne explizit eine neue Konversation zu starten."
 		}
 	},
+
 	"promptCaching": {
 		"label": "Prompt-Caching deaktivieren",
 		"description": "Wenn aktiviert, wird Kilo Code für dieses Modell kein Prompt-Caching verwenden."

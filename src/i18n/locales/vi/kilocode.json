@@ -5,5 +5,11 @@
 	"lowCreditWarning": {
 		"title": "Cảnh Báo Tín Dụng Thấp!",
 		"message": "Kiểm tra xem bạn có thể nạp thêm tín dụng miễn phí hoặc mua thêm không!"
+	},
+	"commands": {
+		"quickCommand": {
+			"prompt": "Bạn muốn thay đổi hoặc hỏi điều gì?",
+			"placeholder": "ví dụ, sửa lỗi trong hàm này, thêm xử lý lỗi, tái cấu trúc mã này, cái này làm gì"
+		}
 	}
 }

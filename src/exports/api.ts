@@ -64,6 +64,14 @@ export class API extends EventEmitter<RooCodeEvents> implements RooCodeAPI {
 				switch (commandName) {
 					case TaskCommandName.StartNewTask:
 						this.log(`[API] StartNewTask -> ${data.text}, ${JSON.stringify(data.configuration)}`)
+						// Ensure experiments object has all required properties
+						if (data.configuration.experiments) {
+							data.configuration.experiments = {
+								autoCondenseContext: data.configuration.experiments.autoCondenseContext ?? false,
+								powerSteering: data.configuration.experiments.powerSteering ?? false,
+								watchMode: data.configuration.experiments.watchMode ?? false,
+							}
+						}
 						await this.startNewTask(data)
 						break
 					case TaskCommandName.CancelTask:
@@ -350,3 +358,4 @@ export class API extends EventEmitter<RooCodeEvents> implements RooCodeAPI {
 		return this.getActiveProfile()
 	}
 }
+

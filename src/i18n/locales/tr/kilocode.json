@@ -5,5 +5,11 @@
 	"lowCreditWarning": {
 		"title": "Düşük Kredi Uyarısı!",
 		"message": "Ücretsiz kredilerle yükleme yapabilir veya daha fazla satın alabilir misiniz kontrol edin!"
+	},
+	"commands": {
+		"quickCommand": {
+			"prompt": "Neyi değiştirmek veya sormak istersiniz?",
+			"placeholder": "örn., bu fonksiyondaki hatayı düzelt, hata işleme ekle, bu kodu yeniden düzenle, bu ne işe yarıyor"
+		}
 	}
 }

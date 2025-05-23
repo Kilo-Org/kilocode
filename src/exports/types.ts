@@ -110,6 +110,7 @@ type GlobalSettings = {
 		| {
 				autoCondenseContext: boolean
 				powerSteering: boolean
+				watchMode: boolean
 		  }
 		| undefined
 	language?:
@@ -843,6 +844,7 @@ type IpcMessage =
 									| {
 											autoCondenseContext: boolean
 											powerSteering: boolean
+											watchMode: boolean
 									  }
 									| undefined
 								language?:
@@ -1327,6 +1329,7 @@ type TaskCommand =
 						| {
 								autoCondenseContext: boolean
 								powerSteering: boolean
+								watchMode: boolean
 						  }
 						| undefined
 					language?:

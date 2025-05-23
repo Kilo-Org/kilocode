@@ -423,6 +423,10 @@
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Use experimental multi block diff tool",
 			"description": "When enabled, Kilo Code will use multi block diff tool. This will try to update multiple code blocks in the file in one request."
+		},
+		"WATCH_MODE": {
+			"name": "Quick Tasks",
+			"description": "When enabled, Kilo Code will watch files for comments (like \"KO!\" or \"/* KO something */\"). When saved, Kilo will read the comment(s) and update the file(s) accordingly. This feature helps streamline quick changes workflow by letting you mark areas in your code that need AI assistance without explicitly starting a new conversation."
 		}
 	},
 	"promptCaching": {

@@ -423,6 +423,10 @@
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "使用實驗性多區塊差異比對工具",
 			"description": "啟用後，Kilo Code 將使用多區塊差異比對工具，嘗試在單一請求中更新檔案內的多個程式碼區塊。"
+		},
+		"WATCH_MODE": {
+			"name": "快速任務",
+			"description": "啟用後，Kilo Code 將監控檔案中的註解（例如「KO！」或「/* KO something */」）。儲存後，Kilo 將讀取註解並相應地更新檔案。此功能可讓您標記程式碼中需要 AI 協助的區域，而無需明確開始新的對話，藉此簡化快速變更工作流程。"
 		}
 	},
 	"promptCaching": {
