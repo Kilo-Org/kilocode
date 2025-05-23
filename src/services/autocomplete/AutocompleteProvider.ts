@@ -228,7 +228,9 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 		const multilineCompletions = "auto"
 		const codeContext = await contextGatherer.gatherContext(document, position, useImports, useDefinitions)
 		const editor = vscode.window.activeTextEditor
-		if (editor && editor.document === document) {
+		if (!editor) return null
+
+		if (editor.document === document) {
 			showStreamingIndicator(editor)
 		}
 
@@ -257,7 +259,7 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 		const startTime = performance.now()
 		const promptString = prompt.prompt
 		let completion = ""
-		let isCancelled = true
+		let isCancelled = false
 		let firstLineComplete = false
 		let throttleTimeout: NodeJS.Timeout | null = null
 
@@ -267,9 +269,6 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 			{ role: "user", content: [{ type: "text", text: promptString }] },
 		])
 
-		if (!editor) return null
-
-		isCancelled = false
 		editor.setDecorations(loadingDecorationType, [])
 
 		for await (const chunk of stream) {
