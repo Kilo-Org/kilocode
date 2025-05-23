@@ -52,6 +52,27 @@ const showStreamingIndicator = (editor: vscode.TextEditor) => {
 	editor.setDecorations(loadingDecorationType, [decoration])
 }
 
+// Centralized function to clean markdown and split completion
+const processCompletionText = (rawText: string): CompletionPreview => {
+	// Clean markdown code blocks once
+	const cleanedText = rawText
+		.replace(/```[\w-]*\n([\s\S]*?)\n```/g, "$1") // Handle complete code blocks
+		.replace(/^```[\w-]*\n/g, "") // Handle opening code block markers at the beginning of a chunk
+		.replace(/\n```[\w-]*\n/g, "\n") // Handle opening code block markers in the middle of a chunk
+		.replace(/\n```$/g, "") // Handle closing code block markers
+		.replace(/```[\w-]*$/g, "") // Handle any remaining backticks that might be part of incomplete code blocks
+		.trim() // Trim any leading/trailing whitespace that might be left over
+
+	// Split into first line and remaining lines
+	const firstLine = cleanedText.split("\n", 1)[0]
+
+	return {
+		firstLine,
+		remainingLines: cleanedText.substring(firstLine.length + 1),
+		rawCompletion: rawText,
+	}
+}
+
 function hookAutocompleteInner(context: vscode.ExtensionContext) {
 	vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, false)
 
@@ -88,27 +109,6 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 
 		vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, false)
 		vscode.commands.executeCommand("editor.action.inlineSuggest.hide")
-	}
-
-	// Centralized function to clean markdown and split completion
-	const processCompletionText = (rawText: string): CompletionPreview => {
-		// Clean markdown code blocks once
-		const cleanedText = rawText
-			.replace(/```[\w-]*\n([\s\S]*?)\n```/g, "$1") // Handle complete code blocks
-			.replace(/^```[\w-]*\n/g, "") // Handle opening code block markers at the beginning of a chunk
-			.replace(/\n```[\w-]*\n/g, "\n") // Handle opening code block markers in the middle of a chunk
-			.replace(/\n```$/g, "") // Handle closing code block markers
-			.replace(/```[\w-]*$/g, "") // Handle any remaining backticks that might be part of incomplete code blocks
-			.trim() // Trim any leading/trailing whitespace that might be left over
-
-		// Split into first line and remaining lines
-		const firstLine = cleanedText.split("\n", 1)[0]
-
-		return {
-			firstLine,
-			remainingLines: cleanedText.substring(firstLine.length + 1),
-			rawCompletion: rawText,
-		}
 	}
 
 	const isFileDisabled = (document: vscode.TextDocument): boolean => {
