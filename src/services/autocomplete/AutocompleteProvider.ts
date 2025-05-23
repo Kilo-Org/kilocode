@@ -64,7 +64,7 @@ const processCompletionText = (rawText: string): CompletionSuggestion => {
 		.trim() // Trim any leading/trailing whitespace that might be left over
 
 	// Split into first line and remaining lines
-	const firstLine = cleanedText.split("\n", 1)[0]
+	const firstLine = cleanedText.split(/\r?\n/, 1)[0]
 
 	return {
 		firstLine,
