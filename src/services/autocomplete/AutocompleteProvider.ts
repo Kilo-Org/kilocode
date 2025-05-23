@@ -9,7 +9,7 @@ import { ContextProxy } from "../../core/config/ContextProxy"
 import { generateImportSnippets, generateDefinitionSnippets } from "./context/snippetProvider" // Added import
 
 // Default configuration values
-export const DEFAULT_DEBOUNCE_DELAY = 150
+export const UI_UPDATE_DEBOUNCE_MS = 150
 const DEFAULT_MODEL = "mistralai/codestral-2501" // or google/gemini-2.5-flash-preview
 const MIN_TYPED_LENGTH_FOR_COMPLETION = 4
 const AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY = "kilo-code.autocompletePreviewVisible"
@@ -42,7 +42,6 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 	// Shared state encapsulated in closure
 	let enabled = true
 	let activeCompletionId: string | null = null
-	let debounceDelay = DEFAULT_DEBOUNCE_DELAY
 	let preview = emptyPreview
 	let hasAcceptedFirstLine = false
 	let isShowingAutocompletePreview = false
@@ -212,7 +211,7 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 							}
 						}
 						throttleTimeout = null
-					}, debounceDelay)
+					}, UI_UPDATE_DEBOUNCE_MS)
 				}
 			}
 		}
@@ -355,17 +354,6 @@ ${result.remainingLines}
 		return statusBarItem
 	}
 
-	const registerConfigurationWatcher = (context: vscode.ExtensionContext): void => {
-		context.subscriptions.push(
-			vscode.workspace.onDidChangeConfiguration((e) => {
-				if (e.affectsConfiguration("kilo-code.autocomplete")) {
-					const config = vscode.workspace.getConfiguration("kilo-code")
-					debounceDelay = config.get("autocomplete.debounceDelay") || DEFAULT_DEBOUNCE_DELAY
-				}
-			}),
-		)
-	}
-
 	const registerToggleCommand = (context: vscode.ExtensionContext, statusBarItem: vscode.StatusBarItem): void => {
 		context.subscriptions.push(
 			vscode.commands.registerCommand("kilo-code.toggleAutocomplete", () => {
@@ -495,7 +483,6 @@ ${result.remainingLines}
 		)
 
 		const statusBarItem = registerStatusBarItem(context)
-		registerConfigurationWatcher(context)
 		registerToggleCommand(context, statusBarItem)
 	}
 

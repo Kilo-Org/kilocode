@@ -1,6 +1,5 @@
 //PLANREF: continue/core/autocomplete/CompletionProvider.ts
 import * as vscode from "vscode"
-import { DEFAULT_DEBOUNCE_DELAY } from "./AutocompleteProvider"
 
 /**
  * Adapter that provides configuration options for Continue's autocomplete
@@ -13,7 +12,6 @@ export class AutocompleteConfig {
 		const config = vscode.workspace.getConfiguration("kilo-code")
 
 		return {
-			debounceDelay: config.get<number>("autocomplete.debounceDelay") || DEFAULT_DEBOUNCE_DELAY,
 			useCache: config.get<boolean>("autocomplete.useCache") || true,
 			useImports: config.get<boolean>("autocomplete.useImports") || true,
 			useRecentlyEdited: config.get<boolean>("autocomplete.useRecentlyEdited") || true,
