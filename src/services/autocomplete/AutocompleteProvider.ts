@@ -112,6 +112,17 @@ const validateCompletionContext = (
 	}
 	return true
 }
+
+const registerStatusBarItem = (context: vscode.ExtensionContext): vscode.StatusBarItem => {
+	const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100)
+	statusBarItem.text = "$(sparkle) Autocomplete"
+	statusBarItem.tooltip = "Kilo Code Autocomplete"
+	statusBarItem.command = "kilo-code.toggleAutocomplete"
+	statusBarItem.show()
+	context.subscriptions.push(statusBarItem)
+	return statusBarItem
+}
+
 function hookAutocompleteInner(context: vscode.ExtensionContext) {
 	vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, false)
 
@@ -328,16 +339,6 @@ ${result.remainingLines}
 			console.error("Error providing inline completion:", error)
 			return null
 		}
-	}
-
-	const registerStatusBarItem = (context: vscode.ExtensionContext): vscode.StatusBarItem => {
-		const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100)
-		statusBarItem.text = "$(sparkle) Autocomplete"
-		statusBarItem.tooltip = "Kilo Code Autocomplete"
-		statusBarItem.command = "kilo-code.toggleAutocomplete"
-		statusBarItem.show()
-		context.subscriptions.push(statusBarItem)
-		return statusBarItem
 	}
 
 	const registerToggleCommand = (context: vscode.ExtensionContext, statusBarItem: vscode.StatusBarItem): void => {
