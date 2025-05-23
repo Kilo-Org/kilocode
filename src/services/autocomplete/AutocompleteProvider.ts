@@ -312,6 +312,38 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 		return result
 	}
 
+	const createCompletionItems = async (
+		document: vscode.TextDocument,
+		position: vscode.Position,
+		context: vscode.InlineCompletionContext,
+		token: vscode.CancellationToken,
+	): Promise<vscode.InlineCompletionItem[] | null> => {
+		// Handle remaining lines from previously accepted first line
+		if (hasAcceptedFirstLine && suggestedCompletion.remainingLines) {
+			const item = new vscode.InlineCompletionItem(suggestedCompletion.remainingLines)
+			item.command = { command: "editor.action.inlineSuggest.commit", title: "Accept Completion" }
+			isShowingAutocompletePreview = true
+			vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, true)
+			return [item]
+		}
+
+		// Generate a new completion
+		const completionPreview = await generateCompletionText(document, position, context, token)
+		if (!completionPreview) return null
+
+		suggestedCompletion = completionPreview
+
+		isShowingAutocompletePreview = true
+		vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, true)
+
+		const item = new vscode.InlineCompletionItem(suggestedCompletion.firstLine)
+		item.command = {
+			command: "kilo-code.acceptAutocompletePreview",
+			title: "Accept Completion",
+		}
+		return [item]
+	}
+
 	const provideInlineCompletionItems = async (
 		document: vscode.TextDocument,
 		position: vscode.Position,
@@ -323,29 +355,7 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 		}
 
 		try {
-			if (hasAcceptedFirstLine && suggestedCompletion.remainingLines) {
-				const item = new vscode.InlineCompletionItem(suggestedCompletion.remainingLines)
-				item.command = { command: "editor.action.inlineSuggest.commit", title: "Accept Completion" }
-				isShowingAutocompletePreview = true
-				vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, true)
-				return [item]
-			}
-
-			// Otherwise, generate a new completion
-			const completionPreview = await generateCompletionText(document, position, context, token)
-			if (!completionPreview) return null
-
-			suggestedCompletion = completionPreview
-
-			isShowingAutocompletePreview = true
-			vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, true)
-
-			const item = new vscode.InlineCompletionItem(suggestedCompletion.firstLine)
-			item.command = {
-				command: "kilo-code.acceptAutocompletePreview",
-				title: "Accept Completion",
-			}
-			return [item]
+			return await createCompletionItems(document, position, context, token)
 		} catch (error) {
 			console.error("Error providing inline completion:", error)
 			return null
