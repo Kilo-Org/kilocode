@@ -182,10 +182,6 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 		context: vscode.InlineCompletionContext,
 		token: vscode.CancellationToken,
 	): Promise<CompletionSuggestion | null> => {
-		const editor = vscode.window.activeTextEditor
-		if (editor && editor.document === document) {
-			showStreamingIndicator(editor)
-		}
 		const completionId = crypto.randomUUID()
 		activeCompletionId = completionId
 		hasAcceptedFirstLine = false
@@ -194,6 +190,10 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 		const useDefinitions = true
 		const multilineCompletions = "auto"
 		const codeContext = await contextGatherer.gatherContext(document, position, useImports, useDefinitions)
+		const editor = vscode.window.activeTextEditor
+		if (editor && editor.document === document) {
+			showStreamingIndicator(editor)
+		}
 
 		const snippets = [
 			...generateImportSnippets(useImports, codeContext.imports, document.uri.fsPath),
@@ -231,7 +231,6 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 				{ role: "user", content: [{ type: "text", text: promptString }] },
 			])
 
-			const editor = vscode.window.activeTextEditor
 			if (!editor) return null
 
 			editor.setDecorations(loadingDecorationType, [])
