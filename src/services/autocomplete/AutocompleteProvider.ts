@@ -402,7 +402,7 @@ ${result.remainingLines}
 		if (!editor) return
 
 		// Handle the acceptance directly without calling commit again
-		if (!hasAcceptedFirstLine && preview.remainingLines) {
+		if (!hasAcceptedFirstLine) {
 			// First Tab press: Insert the first line
 			if (preview.firstLine) {
 				await editor.edit((editBuilder) => {
