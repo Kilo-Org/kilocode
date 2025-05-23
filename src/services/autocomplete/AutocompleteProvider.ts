@@ -218,12 +218,8 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 
 		// Process the completion stream
 		const startTime = performance.now()
-		const result = await (async (
-			systemPrompt: string,
-			prompt: string,
-			completionId: string,
-			document: vscode.TextDocument,
-		): Promise<CompletionSuggestion | null> => {
+		const promptString = prompt.prompt
+		const result = await (async (): Promise<CompletionSuggestion | null> => {
 			let completion = ""
 			let isCancelled = false
 			let firstLineComplete = false
@@ -232,7 +228,7 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 			// Create the stream using the API handler's createMessage method
 			// Note: Stop tokens are embedded in the prompt template format instead of passed directly
 			const stream = apiHandler.createMessage(systemPrompt, [
-				{ role: "user", content: [{ type: "text", text: prompt }] },
+				{ role: "user", content: [{ type: "text", text: promptString }] },
 			])
 
 			const editor = vscode.window.activeTextEditor
@@ -278,7 +274,7 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 			vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, true)
 
 			return isCancelled ? null : suggestedCompletion
-		})(systemPrompt, prompt.prompt, completionId, document)
+		})()
 
 		const duration = performance.now() - startTime
 		if (!result) {
