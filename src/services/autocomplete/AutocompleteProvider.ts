@@ -150,7 +150,6 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 	let suggestedCompletion = emptyCompletion
 	let hasAcceptedFirstLine = false
 	let isShowingAutocompletePreview = false
-	let isLoadingCompletion = false
 
 	// Core services - created once
 	const contextGatherer = new ContextGatherer()
@@ -166,7 +165,6 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 		suggestedCompletion = emptyCompletion
 		hasAcceptedFirstLine = false
 		isShowingAutocompletePreview = false
-		isLoadingCompletion = false
 
 		// Clear loading indicators
 		const editor = vscode.window.activeTextEditor
@@ -198,7 +196,6 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 		const editor = vscode.window.activeTextEditor
 		if (!editor) return null
 
-		isLoadingCompletion = false
 		editor.setDecorations(loadingDecorationType, [])
 
 		for await (const chunk of stream) {
@@ -306,12 +303,7 @@ ${result.remainingLines}
 				`)
 		}
 
-		if (!result || token.isCancellationRequested || !validateCompletionContext(context, document, position)) {
-			const editor = vscode.window.activeTextEditor
-			if (editor && isLoadingCompletion) {
-				editor.setDecorations(loadingDecorationType, [])
-				isLoadingCompletion = false
-			}
+		if (token.isCancellationRequested || !validateCompletionContext(context, document, position)) {
 			return null
 		}
 
@@ -364,34 +356,16 @@ ${result.remainingLines}
 	)
 
 	context.subscriptions.push(
-		vscode.window.onDidChangeTextEditorSelection((e) => {
-			if (e.textEditor) {
-				// Clear loading indicator when cursor moves
-				if (isLoadingCompletion) {
-					clearAutocompletePreview()
-				}
-
-				// Always hide the streaming decorator when cursor moves
-				e.textEditor.setDecorations(loadingDecorationType, [])
-
-				// If we've accepted the first line and cursor moves, reset state
-				// This prevents showing remaining lines if user moves cursor after accepting first line
-				if (hasAcceptedFirstLine && e.kind !== vscode.TextEditorSelectionChangeKind.Command) {
-					clearAutocompletePreview()
-				}
-			}
+		vscode.window.onDidChangeTextEditorSelection(() => {
+			clearAutocompletePreview()
 		}),
 	)
 
 	context.subscriptions.push(
 		vscode.workspace.onDidChangeTextDocument((e) => {
-			if (isLoadingCompletion) {
-				clearAutocompletePreview()
-			} else {
-				const editor = vscode.window.activeTextEditor
-				if (editor && editor.document === e.document) {
-					editor.setDecorations(loadingDecorationType, [])
-				}
+			const editor = vscode.window.activeTextEditor
+			if (editor && editor.document === e.document) {
+				editor.setDecorations(loadingDecorationType, [])
 			}
 		}),
 	)
