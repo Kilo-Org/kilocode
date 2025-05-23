@@ -14,12 +14,12 @@ const MIN_TYPED_LENGTH_FOR_COMPLETION = 4
 const AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY = "kilo-code.autocompletePreviewVisible"
 
 // Rich preview object to avoid primitive obsession
-interface CompletionPreview {
+interface CompletionSuggestion {
 	firstLine: string
 	remainingLines: string
 	rawCompletion: string
 }
-const emptyPreview: CompletionPreview = {
+const emptyCompletion: CompletionSuggestion = {
 	firstLine: "",
 	remainingLines: "",
 	rawCompletion: "",
@@ -53,7 +53,7 @@ const showStreamingIndicator = (editor: vscode.TextEditor) => {
 }
 
 // Centralized function to clean markdown and split completion
-const processCompletionText = (rawText: string): CompletionPreview => {
+const processCompletionText = (rawText: string): CompletionSuggestion => {
 	// Clean markdown code blocks once
 	const cleanedText = rawText
 		.replace(/```[\w-]*\n([\s\S]*?)\n```/g, "$1") // Handle complete code blocks
@@ -147,7 +147,7 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 	let activeCompletionId: string | null = null
 	let inlineCompletionProviderDisposable: vscode.Disposable | null = null
 
-	let preview = emptyPreview
+	let suggestedCompletion = emptyCompletion
 	let hasAcceptedFirstLine = false
 	let isShowingAutocompletePreview = false
 	let isLoadingCompletion = false
@@ -163,7 +163,7 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 	})
 
 	const clearAutocompletePreview = () => {
-		preview = emptyPreview
+		suggestedCompletion = emptyCompletion
 		hasAcceptedFirstLine = false
 		isShowingAutocompletePreview = false
 		isLoadingCompletion = false
@@ -183,7 +183,7 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 		prompt: string,
 		completionId: string,
 		document: vscode.TextDocument,
-	): Promise<CompletionPreview | null> => {
+	): Promise<CompletionSuggestion | null> => {
 		let completion = ""
 		let isCancelled = false
 		let firstLineComplete = false
@@ -209,7 +209,7 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 
 			if (chunk.type === "text") {
 				completion += chunk.text
-				preview = processCompletionText(completion)
+				suggestedCompletion = processCompletionText(completion)
 
 				if (throttleTimeout) clearTimeout(throttleTimeout)
 
@@ -238,7 +238,7 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 		// Set context for keybindings
 		vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, true)
 
-		return isCancelled ? null : preview
+		return isCancelled ? null : suggestedCompletion
 	}
 
 	const generateCompletionText = async (
@@ -246,7 +246,7 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 		position: vscode.Position,
 		context: vscode.InlineCompletionContext,
 		token: vscode.CancellationToken,
-	): Promise<CompletionPreview | null> => {
+	): Promise<CompletionSuggestion | null> => {
 		const editor = vscode.window.activeTextEditor
 		if (editor && editor.document === document) {
 			showStreamingIndicator(editor)
@@ -329,8 +329,8 @@ ${result.remainingLines}
 		}
 
 		try {
-			if (hasAcceptedFirstLine && preview.remainingLines) {
-				const item = new vscode.InlineCompletionItem(preview.remainingLines)
+			if (hasAcceptedFirstLine && suggestedCompletion.remainingLines) {
+				const item = new vscode.InlineCompletionItem(suggestedCompletion.remainingLines)
 				item.command = { command: "editor.action.inlineSuggest.commit", title: "Accept Completion" }
 				isShowingAutocompletePreview = true
 				vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, true)
@@ -341,12 +341,12 @@ ${result.remainingLines}
 			const completionPreview = await generateCompletionText(document, position, context, token)
 			if (!completionPreview) return null
 
-			preview = completionPreview
+			suggestedCompletion = completionPreview
 
 			isShowingAutocompletePreview = true
 			vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, true)
 
-			const item = new vscode.InlineCompletionItem(preview.firstLine)
+			const item = new vscode.InlineCompletionItem(suggestedCompletion.firstLine)
 			item.command = {
 				command: "kilo-code.acceptAutocompletePreview",
 				title: "Accept Completion",
@@ -404,9 +404,9 @@ ${result.remainingLines}
 		// Handle the acceptance directly without calling commit again
 		if (!hasAcceptedFirstLine) {
 			// First Tab press: Insert the first line
-			if (preview.firstLine) {
+			if (suggestedCompletion.firstLine) {
 				await editor.edit((editBuilder) => {
-					editBuilder.insert(editor.selection.active, preview.firstLine)
+					editBuilder.insert(editor.selection.active, suggestedCompletion.firstLine)
 				})
 
 				hasAcceptedFirstLine = true
@@ -416,10 +416,10 @@ ${result.remainingLines}
 					await vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
 				}, 50)
 			}
-		} else if (hasAcceptedFirstLine && preview.remainingLines) {
+		} else if (hasAcceptedFirstLine && suggestedCompletion.remainingLines) {
 			// Second Tab press: Insert the remaining lines
 			await editor.edit((editBuilder) => {
-				editBuilder.insert(editor.selection.active, preview.remainingLines)
+				editBuilder.insert(editor.selection.active, suggestedCompletion.remainingLines)
 			})
 
 			clearAutocompletePreview()
