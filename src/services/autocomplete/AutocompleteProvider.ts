@@ -68,7 +68,7 @@ const processCompletionText = (rawText: string): CompletionSuggestion => {
 
 	return {
 		firstLine,
-		remainingLines: cleanedText.substring(firstLine.length + 1),
+		remainingLines: cleanedText.substring(firstLine.length),
 		rawCompletion: rawText,
 	}
 }
