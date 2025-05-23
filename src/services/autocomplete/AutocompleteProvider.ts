@@ -129,6 +129,16 @@ function setUpStatusBarToggleButton(context: vscode.ExtensionContext, toggleEnab
 		}),
 	)
 }
+
+async function acceptSuggestion(isShowingAutocompletePreview: boolean) {
+	if (isShowingAutocompletePreview) {
+		await vscode.commands.executeCommand("kilo-code.acceptAutocompletePreview")
+	} else {
+		// not sure if this is needed: leaving it here for now
+		await vscode.commands.executeCommand("default:editor.action.inlineSuggest.commit")
+	}
+}
+
 function hookAutocompleteInner(context: vscode.ExtensionContext) {
 	vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, false)
 
@@ -430,14 +440,9 @@ ${result.remainingLines}
 	context.subscriptions.push(acceptCommand, dismissCommand)
 	setUpStatusBarToggleButton(context, () => (enabled = !enabled))
 
-	const commitSuggestionCommand = vscode.commands.registerCommand("editor.action.inlineSuggest.commit", async () => {
-		if (isShowingAutocompletePreview) {
-			await vscode.commands.executeCommand("kilo-code.acceptAutocompletePreview")
-		} else {
-			// not sure if this is needed: leaving it here for now
-			await vscode.commands.executeCommand("default:editor.action.inlineSuggest.commit")
-		}
-	})
+	const commitSuggestionCommand = vscode.commands.registerCommand("editor.action.inlineSuggest.commit", () =>
+		acceptSuggestion(isShowingAutocompletePreview),
+	)
 
 	context.subscriptions.push(commitSuggestionCommand)
 	context.subscriptions.push(inlineCompletionProviderDisposable)
