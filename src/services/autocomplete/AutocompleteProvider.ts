@@ -377,7 +377,6 @@ ${result.remainingLines}
 					const editor = vscode.window.activeTextEditor
 					if (editor && editor.document === e.document) {
 						editor.setDecorations(loadingDecorationType, [])
-						editor.setDecorations(loadingDecorationType, [])
 					}
 				}
 			}),
