@@ -219,109 +219,105 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 			return [item]
 		}
 
-		// Generate a new completion
-		const completionPreview = await (async (): Promise<CompletionSuggestion | null> => {
-			const completionId = crypto.randomUUID()
-			activeCompletionId = completionId
-			hasAcceptedFirstLine = false
+		const completionId = crypto.randomUUID()
+		activeCompletionId = completionId
+		hasAcceptedFirstLine = false
 
-			const useImports = true
-			const useDefinitions = true
-			const multilineCompletions = "auto"
-			const codeContext = await contextGatherer.gatherContext(document, position, useImports, useDefinitions)
-			const editor = vscode.window.activeTextEditor
-			if (editor && editor.document === document) {
-				showStreamingIndicator(editor)
+		const useImports = true
+		const useDefinitions = true
+		const multilineCompletions = "auto"
+		const codeContext = await contextGatherer.gatherContext(document, position, useImports, useDefinitions)
+		const editor = vscode.window.activeTextEditor
+		if (editor && editor.document === document) {
+			showStreamingIndicator(editor)
+		}
+
+		const snippets = [
+			...generateImportSnippets(useImports, codeContext.imports, document.uri.fsPath),
+			...generateDefinitionSnippets(useDefinitions, codeContext.definitions),
+		]
+
+		const promptOptions = {
+			language: document.languageId,
+			includeImports: useImports,
+			includeDefinitions: useDefinitions,
+			multilineCompletions: multilineCompletions as any, // Keep as any if type is complex or from external lib
+		}
+
+		const prompt = promptRenderer.renderPrompt(codeContext, snippets, promptOptions)
+		const systemPrompt = promptRenderer.renderSystemPrompt()
+
+		token.onCancellationRequested(() => {
+			if (activeCompletionId === completionId) {
+				activeCompletionId = null
 			}
+		})
 
-			const snippets = [
-				...generateImportSnippets(useImports, codeContext.imports, document.uri.fsPath),
-				...generateDefinitionSnippets(useDefinitions, codeContext.definitions),
-			]
+		// Process the completion stream
+		const startTime = performance.now()
+		const promptString = prompt.prompt
+		let completion = ""
+		let isCancelled = false
+		let firstLineComplete = false
+		let throttleTimeout: NodeJS.Timeout | null = null
+		let result: CompletionSuggestion | null = null
 
-			const promptOptions = {
-				language: document.languageId,
-				includeImports: useImports,
-				includeDefinitions: useDefinitions,
-				multilineCompletions: multilineCompletions as any, // Keep as any if type is complex or from external lib
-			}
+		// Create the stream using the API handler's createMessage method
+		// Note: Stop tokens are embedded in the prompt template format instead of passed directly
+		const stream = apiHandler.createMessage(systemPrompt, [
+			{ role: "user", content: [{ type: "text", text: promptString }] },
+		])
 
-			const prompt = promptRenderer.renderPrompt(codeContext, snippets, promptOptions)
-			const systemPrompt = promptRenderer.renderSystemPrompt()
+		if (editor) {
+			editor.setDecorations(loadingDecorationType, [])
 
-			token.onCancellationRequested(() => {
-				if (activeCompletionId === completionId) {
-					activeCompletionId = null
+			for await (const chunk of stream) {
+				if (activeCompletionId !== completionId) {
+					isCancelled = true
+					break
 				}
-			})
 
-			// Process the completion stream
-			const startTime = performance.now()
-			const promptString = prompt.prompt
-			let completion = ""
-			let isCancelled = false
-			let firstLineComplete = false
-			let throttleTimeout: NodeJS.Timeout | null = null
-			let result: CompletionSuggestion | null = null
+				if (chunk.type === "text") {
+					completion += chunk.text
+					suggestedCompletion = processCompletionText(completion)
 
-			// Create the stream using the API handler's createMessage method
-			// Note: Stop tokens are embedded in the prompt template format instead of passed directly
-			const stream = apiHandler.createMessage(systemPrompt, [
-				{ role: "user", content: [{ type: "text", text: promptString }] },
-			])
+					if (throttleTimeout) clearTimeout(throttleTimeout)
 
-			if (editor) {
-				editor.setDecorations(loadingDecorationType, [])
-
-				for await (const chunk of stream) {
-					if (activeCompletionId !== completionId) {
-						isCancelled = true
-						break
-					}
-
-					if (chunk.type === "text") {
-						completion += chunk.text
-						suggestedCompletion = processCompletionText(completion)
-
-						if (throttleTimeout) clearTimeout(throttleTimeout)
-
-						if (!firstLineComplete && completion.includes("\n")) {
-							firstLineComplete = true
-							isShowingAutocompletePreview = true
-							vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
-						} else {
-							// Set a new throttle timeout
-							throttleTimeout = setTimeout(() => {
-								if (editor.document === document) {
-									if (isShowingAutocompletePreview) {
-										vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
-									}
+					if (!firstLineComplete && completion.includes("\n")) {
+						firstLineComplete = true
+						isShowingAutocompletePreview = true
+						vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
+					} else {
+						// Set a new throttle timeout
+						throttleTimeout = setTimeout(() => {
+							if (editor.document === document) {
+								if (isShowingAutocompletePreview) {
+									vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
 								}
-								throttleTimeout = null
-							}, UI_UPDATE_DEBOUNCE_MS)
-						}
+							}
+							throttleTimeout = null
+						}, UI_UPDATE_DEBOUNCE_MS)
 					}
 				}
-
-				editor.setDecorations(loadingDecorationType, [])
-
-				if (throttleTimeout) clearTimeout(throttleTimeout)
-
-				// Set context for keybindings
-				vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, true)
-
-				result = isCancelled ? null : suggestedCompletion
 			}
 
-			const duration = performance.now() - startTime
-			logCompletionResult(result, completionId, duration, promptString)
+			editor.setDecorations(loadingDecorationType, [])
 
-			if (token.isCancellationRequested || !validateCompletionContext(context, document, position)) {
-				return null
-			}
+			if (throttleTimeout) clearTimeout(throttleTimeout)
 
-			return result
-		})()
+			// Set context for keybindings
+			vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, true)
+
+			result = isCancelled ? null : suggestedCompletion
+		}
+
+		const duration = performance.now() - startTime
+		logCompletionResult(result, completionId, duration, promptString)
+
+		let completionPreview: CompletionSuggestion | null = null
+		if (!(token.isCancellationRequested || !validateCompletionContext(context, document, position))) {
+			completionPreview = result
+		}
 
 		if (!completionPreview) return null
 
