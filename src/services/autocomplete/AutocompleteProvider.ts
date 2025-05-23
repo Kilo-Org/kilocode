@@ -139,6 +139,34 @@ async function acceptSuggestion(isShowingAutocompletePreview: boolean) {
 	}
 }
 
+function logCompletionResult(
+	result: CompletionSuggestion | null,
+	completionId: string,
+	duration: number,
+	promptString: string,
+) {
+	if (!result) {
+		console.info(`Completion ${completionId} CANCELLED in ${duration} ms`)
+	} else {
+		console.info(`
+Completion ${completionId} generated in ${duration} ms.
+
+🙈 Prompt:
+${promptString}
+
+
+🤖 Completion:
+${result.rawCompletion}
+
+🤖 first line:
+${result.firstLine}
+
+🤖 remaining:
+${result.remainingLines}
+				`)
+	}
+}
+
 function hookAutocompleteInner(context: vscode.ExtensionContext) {
 	vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, false)
 
@@ -275,26 +303,7 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 		}
 
 		const duration = performance.now() - startTime
-		if (!result) {
-			console.info(`Completion ${completionId} CANCELLED in ${duration} ms`)
-		} else {
-			console.info(`
-Completion ${completionId} generated in ${duration} ms.
-
-🙈 Prompt:
-${prompt.prompt}
-
-
-🤖 Completion:
-${result.rawCompletion}
-
-🤖 first line:
-${result.firstLine}
-
-🤖 remaining:
-${result.remainingLines}
-				`)
-		}
+		logCompletionResult(result, completionId, duration, promptString)
 
 		if (token.isCancellationRequested || !validateCompletionContext(context, document, position)) {
 			return null
