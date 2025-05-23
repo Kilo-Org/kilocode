@@ -267,47 +267,47 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 			{ role: "user", content: [{ type: "text", text: promptString }] },
 		])
 
-		if (editor) {
-			isCancelled = false
-			editor.setDecorations(loadingDecorationType, [])
+		if (!editor) return null
 
-			for await (const chunk of stream) {
-				if (activeCompletionId !== completionId) {
-					isCancelled = true
-					break
-				}
+		isCancelled = false
+		editor.setDecorations(loadingDecorationType, [])
 
-				if (chunk.type === "text") {
-					completion += chunk.text
-					suggestedCompletion = processCompletionText(completion)
-
-					if (throttleTimeout) clearTimeout(throttleTimeout)
-
-					if (!firstLineComplete && completion.includes("\n")) {
-						firstLineComplete = true
-						isShowingAutocompletePreview = true
-						vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
-					} else {
-						// Set a new throttle timeout
-						throttleTimeout = setTimeout(() => {
-							if (editor.document === document) {
-								if (isShowingAutocompletePreview) {
-									vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
-								}
-							}
-							throttleTimeout = null
-						}, UI_UPDATE_DEBOUNCE_MS)
-					}
-				}
+		for await (const chunk of stream) {
+			if (activeCompletionId !== completionId) {
+				isCancelled = true
+				break
 			}
 
-			editor.setDecorations(loadingDecorationType, [])
+			if (chunk.type === "text") {
+				completion += chunk.text
+				suggestedCompletion = processCompletionText(completion)
 
-			if (throttleTimeout) clearTimeout(throttleTimeout)
+				if (throttleTimeout) clearTimeout(throttleTimeout)
 
-			// Set context for keybindings
-			vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, true)
+				if (!firstLineComplete && completion.includes("\n")) {
+					firstLineComplete = true
+					isShowingAutocompletePreview = true
+					vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
+				} else {
+					// Set a new throttle timeout
+					throttleTimeout = setTimeout(() => {
+						if (editor.document === document) {
+							if (isShowingAutocompletePreview) {
+								vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
+							}
+						}
+						throttleTimeout = null
+					}, UI_UPDATE_DEBOUNCE_MS)
+				}
+			}
 		}
+
+		editor.setDecorations(loadingDecorationType, [])
+
+		if (throttleTimeout) clearTimeout(throttleTimeout)
+
+		// Set context for keybindings
+		vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, true)
 
 		const duration = performance.now() - startTime
 		logCompletionResult(isCancelled ? null : suggestedCompletion, completionId, duration, promptString)
