@@ -257,10 +257,9 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 		const startTime = performance.now()
 		const promptString = prompt.prompt
 		let completion = ""
-		let isCancelled = false
+		let isCancelled = true
 		let firstLineComplete = false
 		let throttleTimeout: NodeJS.Timeout | null = null
-		let result: CompletionSuggestion | null = null
 
 		// Create the stream using the API handler's createMessage method
 		// Note: Stop tokens are embedded in the prompt template format instead of passed directly
@@ -269,6 +268,7 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 		])
 
 		if (editor) {
+			isCancelled = false
 			editor.setDecorations(loadingDecorationType, [])
 
 			for await (const chunk of stream) {
@@ -307,20 +307,14 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 
 			// Set context for keybindings
 			vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, true)
-
-			result = isCancelled ? null : suggestedCompletion
 		}
 
 		const duration = performance.now() - startTime
 		logCompletionResult(isCancelled ? null : suggestedCompletion, completionId, duration, promptString)
 
-		if (token.isCancellationRequested || !validateCompletionContext(context, document, position)) {
+		if (isCancelled || token.isCancellationRequested || !validateCompletionContext(context, document, position)) {
 			return null
 		}
-
-		if (!result) return null
-
-		suggestedCompletion = result
 
 		isShowingAutocompletePreview = true
 		vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, true)
