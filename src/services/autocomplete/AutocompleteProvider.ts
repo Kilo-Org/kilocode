@@ -220,12 +220,7 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 		}
 
 		// Generate a new completion
-		const completionPreview = await (async (
-			document: vscode.TextDocument,
-			position: vscode.Position,
-			context: vscode.InlineCompletionContext,
-			token: vscode.CancellationToken,
-		): Promise<CompletionSuggestion | null> => {
+		const completionPreview = await (async (): Promise<CompletionSuggestion | null> => {
 			const completionId = crypto.randomUUID()
 			activeCompletionId = completionId
 			hasAcceptedFirstLine = false
@@ -326,7 +321,7 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 			}
 
 			return result
-		})(document, position, context, token)
+		})()
 
 		if (!completionPreview) return null
 
