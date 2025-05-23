@@ -1,7 +1,6 @@
 //PLANREF: continue/core/autocomplete/CompletionProvider.ts
 //PLANREF: continue/extensions/vscode/src/autocomplete/completionProvider.ts
 import * as vscode from "vscode"
-import { AutocompleteConfig } from "./AutocompleteConfig"
 import { buildApiHandler } from "../../api"
 import { ContextGatherer } from "./ContextGatherer"
 import { PromptRenderer } from "./PromptRenderer" // Imported PromptOptions
@@ -49,7 +48,6 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 	let inlineCompletionProviderDisposable: vscode.Disposable | null = null
 
 	// Core services - created once
-	const config = new AutocompleteConfig()
 	const contextGatherer = new ContextGatherer()
 	const promptRenderer = new PromptRenderer({}, DEFAULT_MODEL)
 	const kilocodeToken = ContextProxy.instance.getProviderSettings().kilocodeToken
@@ -240,10 +238,9 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 		activeCompletionId = completionId
 		hasAcceptedFirstLine = false
 
-		const conf = await config.loadConfig()
-		const useImports = conf?.useImports || false
-		const useDefinitions = conf?.onlyMyCode || false
-		const multilineCompletions = conf?.multilineCompletions || "auto"
+		const useImports = true
+		const useDefinitions = true
+		const multilineCompletions = "auto"
 		const codeContext = await contextGatherer.gatherContext(document, position, useImports, useDefinitions)
 
 		const snippets = [
