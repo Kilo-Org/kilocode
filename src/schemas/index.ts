@@ -62,6 +62,7 @@ export const languages = [
 	"es",
 	"fr",
 	"hi",
+	"id",
 	"it",
 	"ja",
 	"ko",
