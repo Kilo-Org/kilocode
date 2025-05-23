@@ -343,11 +343,9 @@ ${result.remainingLines}
 	const registerToggleCommand = (context: vscode.ExtensionContext, statusBarItem: vscode.StatusBarItem): void => {
 		context.subscriptions.push(
 			vscode.commands.registerCommand("kilo-code.toggleAutocomplete", () => {
-				const currentEnabled = enabled
-				enabled = !currentEnabled
-				const newEnabled = enabled
-				statusBarItem.text = newEnabled ? "$(sparkle) Autocomplete" : "$(circle-slash) Autocomplete"
-				vscode.window.showInformationMessage(`Autocomplete ${newEnabled ? "enabled" : "disabled"}`)
+				enabled = !enabled
+				statusBarItem.text = enabled ? "$(sparkle) Autocomplete" : "$(circle-slash) Autocomplete"
+				vscode.window.showInformationMessage(`Autocomplete ${enabled ? "enabled" : "disabled"}`)
 			}),
 		)
 	}
