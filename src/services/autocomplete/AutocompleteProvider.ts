@@ -447,10 +447,6 @@ ${result.remainingLines}
 
 	context.subscriptions.push(commitSuggestionCommand)
 	context.subscriptions.push(inlineCompletionProviderDisposable)
-	context.subscriptions.push({
-		dispose: () => {
-			clearAutocompletePreview()
-		},
-	})
+	context.subscriptions.push({ dispose: () => clearAutocompletePreview() })
 	context.subscriptions.push(loadingDecorationType)
 }
