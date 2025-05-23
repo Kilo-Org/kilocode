@@ -435,7 +435,6 @@ ${result.remainingLines}
 		}
 
 		loadingDecorationType.dispose()
-		loadingDecorationType.dispose()
 		vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, false)
 	}
 
