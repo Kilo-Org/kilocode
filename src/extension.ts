@@ -27,10 +27,10 @@ import {
 	registerCommands,
 	registerCodeActions,
 	registerTerminalActions,
-	registerAutocomplete,
 	CodeActionProvider,
 } from "./activate"
 import { initializeI18n } from "./i18n"
+import { registerAutocomplete } from "./services/autocomplete/AutocompleteProvider"
 
 /**
  * Built using https://github.com/microsoft/vscode-webview-ui-toolkit

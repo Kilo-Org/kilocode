@@ -26,10 +26,11 @@ const emptyPreview: CompletionPreview = {
 	rawCompletion: "",
 }
 
-export function hookAutocomplete(context: vscode.ExtensionContext) {
+export function registerAutocomplete(context: vscode.ExtensionContext) {
 	try {
 		// Initialize the autocomplete preview text visibility context to false
 		hookAutocompleteInner(context)
+		console.log("Kilo Code autocomplete provider registered")
 	} catch (error) {
 		console.error("Failed to register autocomplete provider:", error)
 	}
