@@ -129,11 +129,12 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 	// Shared state encapsulated in closure
 	let enabled = true
 	let activeCompletionId: string | null = null
+	let inlineCompletionProviderDisposable: vscode.Disposable | null = null
+
 	let preview = emptyPreview
 	let hasAcceptedFirstLine = false
 	let isShowingAutocompletePreview = false
 	let isLoadingCompletion = false
-	let inlineCompletionProviderDisposable: vscode.Disposable | null = null
 
 	// Core services - created once
 	const contextGatherer = new ContextGatherer()
@@ -146,10 +147,10 @@ function hookAutocompleteInner(context: vscode.ExtensionContext) {
 	})
 
 	const clearAutocompletePreview = () => {
-		isShowingAutocompletePreview = false
-		isLoadingCompletion = false
 		preview = emptyPreview
 		hasAcceptedFirstLine = false
+		isShowingAutocompletePreview = false
+		isLoadingCompletion = false
 
 		// Clear loading indicators
 		const editor = vscode.window.activeTextEditor
