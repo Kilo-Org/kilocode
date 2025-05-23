@@ -433,9 +433,9 @@ ${result.remainingLines}
 		}
 	})
 
-	const dismissCommand = vscode.commands.registerCommand("kilo-code.dismissAutocompletePreview", () => {
-		clearAutocompletePreview()
-	})
+	const dismissCommand = vscode.commands.registerCommand("kilo-code.dismissAutocompletePreview", () =>
+		clearAutocompletePreview(),
+	)
 
 	context.subscriptions.push(acceptCommand, dismissCommand)
 	setUpStatusBarToggleButton(context, () => (enabled = !enabled))
