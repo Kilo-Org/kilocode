@@ -88,7 +88,7 @@ export class PromptRenderer {
 			suffix = "\n"
 		}
 
-		const filepath = vscode.window.activeTextEditor?.document.uri.fsPath || "untitled.txt" // AIDIFF: Default to untitled.txt
+		const filepath = vscode.window.activeTextEditor?.document.uri.toString() || "file:///Untitled.txt" //WTF fallback?
 		const workspaceFolders = vscode.workspace.workspaceFolders
 		const reponame = workspaceFolders?.[0]?.uri.fsPath
 			? getUriPathBasename(workspaceFolders[0].uri.fsPath)
