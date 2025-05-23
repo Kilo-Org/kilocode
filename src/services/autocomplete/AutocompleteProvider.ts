@@ -428,15 +428,6 @@ ${result.remainingLines}
 		context.subscriptions.push(acceptCommand, dismissCommand)
 	}
 
-	const dispose = () => {
-		if (isShowingAutocompletePreview) {
-			clearAutocompletePreview()
-		}
-
-		loadingDecorationType.dispose()
-		vscode.commands.executeCommand("setContext", AUTOCOMPLETE_PREVIEW_VISIBLE_CONTEXT_KEY, false)
-	}
-
 	inlineCompletionProviderDisposable = vscode.languages.registerInlineCompletionItemProvider(
 		{ pattern: "**" }, // All files
 		{ provideInlineCompletionItems: (...args) => provideInlineCompletionItems(...args) },
@@ -456,5 +447,10 @@ ${result.remainingLines}
 
 	context.subscriptions.push(commitSuggestionCommand)
 	context.subscriptions.push(inlineCompletionProviderDisposable)
-	context.subscriptions.push({ dispose })
+	context.subscriptions.push({
+		dispose: () => {
+			clearAutocompletePreview()
+		},
+	})
+	context.subscriptions.push(loadingDecorationType)
 }
