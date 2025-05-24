@@ -154,7 +154,7 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 				let throttleTimer: NodeJS.Timeout | null = null
 
 				for await (const chunk of stream) {
-					console.log("stream chunk", chunk, activeRequest !== requestId, token.isCancellationRequested)
+					console.log("stream chunk", chunk, token.isCancellationRequested)
 					if (activeRequest !== requestId) break
 
 					if (chunk.type === "text") {
@@ -162,9 +162,9 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 						pendingCompletion = cleanMarkdown(completion)
 
 						// Throttle UI updates
-						console.log("update inline suggest", pendingCompletion, token.isCancellationRequested)
 						if (throttleTimer) clearTimeout(throttleTimer)
 						throttleTimer = setTimeout(() => {
+							console.log("update inline suggest", pendingCompletion, token.isCancellationRequested)
 							vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
 						}, UI_UPDATE_DEBOUNCE_MS)
 					}
@@ -172,9 +172,13 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 
 				if (throttleTimer) clearTimeout(throttleTimer)
 				editor.setDecorations(loadingDecoration, [])
-				console.log("return post-stream-cancelled", activeRequest !== requestId, token.isCancellationRequested)
 
 				if (activeRequest !== requestId || token.isCancellationRequested) {
+					console.log(
+						"return post-stream-cancelled",
+						activeRequest !== requestId,
+						token.isCancellationRequested,
+					)
 					return null
 				}
 
