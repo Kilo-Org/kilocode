@@ -53,8 +53,15 @@ export async function moveCodeWithJSCodeshift(options: MoveCodeOptions): Promise
         const nodesToMove: any[] = []
         const nodesToRemove: any[] = []
 
-        // Parse the source code into lines (for debugging if needed)
-        // const sourceLines = sourceCode.split("\n")
+        // Collect all identifiers in the source code to preserve references
+        const identifierMap = new Map<string, string>();
+
+        // First pass: collect all identifiers and their current names
+        sourceAst.find(jscodeshift.Identifier).forEach((path: any) => {
+            const name = path.node.name;
+            // Store the current name of each identifier
+            identifierMap.set(name, name);
+        });
 
         // Helper to check if a node is within the specified line range
         // FIXED: Standardize to 0-based line numbers internally
