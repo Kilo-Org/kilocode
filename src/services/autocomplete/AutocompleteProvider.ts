@@ -96,24 +96,18 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 
 	const provider: vscode.InlineCompletionItemProvider = {
 		async provideInlineCompletionItems(document, position, context, token) {
-			const beginT = performance.now()
-			token.onCancellationRequested((e) => console.log("cancellation after ", performance.now() - beginT, e))
-			console.log("trigger AAA")
 			if (!enabled || isFileDisabled(document) || !shouldProvideCompletion(context, document, position)) {
 				return null
 			}
-
 			// Handle multi-line completion flow
 			if (acceptedFirstLine && pendingCompletion) {
 				const lines = pendingCompletion.split(/\r?\n/)
 				const remaining = lines.slice(1).join("\n")
 				if (remaining) {
 					vscode.commands.executeCommand("setContext", PREVIEW_CONTEXT_KEY, true)
-					console.log("return comp-remaining ", remaining)
 					return [new vscode.InlineCompletionItem(remaining)]
 				}
 				clearState()
-				console.log("return comp-done ")
 				return null
 			}
 
@@ -146,7 +140,7 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 					includeDefinitions: true,
 					multilineCompletions: "auto" as any,
 				})
-				console.log(promptRenderer.renderSystemPrompt(), prompt.prompt, token.isCancellationRequested)
+
 				// Stream completion
 				const stream = apiHandler.createMessage(promptRenderer.renderSystemPrompt(), [
 					{ role: "user", content: [{ type: "text", text: prompt.prompt }] },
@@ -156,17 +150,14 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 				let throttleTimer: NodeJS.Timeout | null = null
 
 				for await (const chunk of stream) {
-					console.log("stream chunk", chunk, token.isCancellationRequested)
 					if (activeRequest !== requestId) break
 
 					if (chunk.type === "text") {
 						completion += chunk.text
 						pendingCompletion = cleanMarkdown(completion)
-
 						// Throttle UI updates
 						if (throttleTimer) clearTimeout(throttleTimer)
 						throttleTimer = setTimeout(() => {
-							console.log("update inline suggest", pendingCompletion, token.isCancellationRequested)
 							vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
 						}, UI_UPDATE_DEBOUNCE_MS)
 					}
@@ -176,16 +167,10 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 				editor.setDecorations(loadingDecoration, [])
 
 				if (activeRequest !== requestId || token.isCancellationRequested) {
-					console.log(
-						"return post-stream-cancelled",
-						activeRequest !== requestId,
-						token.isCancellationRequested,
-					)
 					return null
 				}
 
 				const firstLine = pendingCompletion.split(/\r?\n/)[0]
-				console.log("return first-line ", firstLine)
 				if (!firstLine) return null
 
 				vscode.commands.executeCommand("setContext", PREVIEW_CONTEXT_KEY, true)
@@ -195,7 +180,6 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 					command: "kilo-code.acceptAutocompletePreview",
 					title: "Accept Completion",
 				}
-				console.log("return completion", item)
 				return [item]
 			} catch (error) {
 				console.error("Completion error:", error)
