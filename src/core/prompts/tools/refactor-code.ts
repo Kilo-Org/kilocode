@@ -1,17 +1,28 @@
 import { ToolArgs } from "./types"
 
 export function getRefactorCodeDescription(args: ToolArgs): string {
-	return `## refactor_code
-Description: Request to perform code refactoring operations on TypeScript/JavaScript files. This tool provides automated refactoring capabilities including extracting functions, moving code to new files, and renaming symbols across all references. Supports both single and batch operations for efficiency.
+  return `## refactor_code
+Description: Request to perform code refactoring operations on TypeScript/JavaScript files. This tool provides automated refactoring capabilities for moving code to new files and renaming symbols across all references. Supports both single and batch operations for efficiency.
 Parameters:
 - path: (required) The path of the file to refactor (relative to the current workspace directory ${args.cwd})
-- operations: (required) Either a single operation object or an array of operation objects. Each operation object contains:
-  * operation: The refactoring operation to perform (extract_function, move_to_file, or rename_symbol)
-  * start_line: The starting line number of the code to refactor (1-based, optional for rename_symbol if old_name is provided)
-  * end_line: The ending line number (required for extract_function and move_to_file)
-  * new_name: The new name (required for extract_function and rename_symbol)
-  * old_name: The current name to rename (optional for rename_symbol, provides more robust matching)
-  * target_path: The target file path (required for move_to_file)
+- operations: (required) Either a single operation object or an array of operation objects. Each operation must specify one of the following types:
+
+For "move_to_file" operations:
+  {
+    "operation": "move_to_file",
+    "start_line": <number>,     // (required) The starting line number (1-based)
+    "end_line": <number>,       // (required) The ending line number (1-based)
+    "target_path": <string>     // (required) The target file path
+  }
+
+For "rename_symbol" operations:
+  {
+    "operation": "rename_symbol",
+    "new_name": <string>,       // (required) The new name for the symbol
+    // Plus ONE of the following to identify the symbol:
+    "start_line": <number>,     // Option 1: The line number where the symbol appears (1-based)
+    "old_name": <string>        // Option 2: The current name of the symbol (more robust)
+  }
 
 Usage for single operation:
 <refactor_code>
@@ -41,10 +52,10 @@ Usage for batch operations:
     "new_name": "userService"
   },
   {
-    "operation": "extract_function",
+    "operation": "move_to_file",
     "start_line": 30,
     "end_line": 40,
-    "new_name": "validateInput"
+    "target_path": "src/utils/validation.ts"
   }
 ]
 </operations>
@@ -76,20 +87,7 @@ Examples:
 </operations>
 </refactor_code>
 
-2. Single extract function:
-<refactor_code>
-<path>src/utils/helpers.ts</path>
-<operations>
-{
-  "operation": "extract_function",
-  "start_line": 10,
-  "end_line": 20,
-  "new_name": "calculateTotal"
-}
-</operations>
-</refactor_code>
-
-3. Mixed batch operations:
+2. Mixed batch operations:
 <refactor_code>
 <path>src/components/index.ts</path>
 <operations>
@@ -109,7 +107,20 @@ Examples:
 </operations>
 </refactor_code>
 
-4. Rename with line number (when symbol name is ambiguous):
+3. Move code to a new file:
+<refactor_code>
+<path>src/utils/helpers.ts</path>
+<operations>
+{
+  "operation": "move_to_file",
+  "start_line": 10,
+  "end_line": 20,
+  "target_path": "src/utils/formatting.ts"
+}
+</operations>
+</refactor_code>
+
+4. Rename symbol by line number:
 <refactor_code>
 <path>src/utils/helpers.ts</path>
 <operations>
@@ -121,7 +132,7 @@ Examples:
 </operations>
 </refactor_code>
 
-5. Rename with old_name (more robust against file changes):
+5. Rename symbol by name (more robust against file changes):
 <refactor_code>
 <path>src/utils/helpers.ts</path>
 <operations>
@@ -133,5 +144,10 @@ Examples:
 </operations>
 </refactor_code>
 
-Note: This tool currently supports TypeScript and JavaScript files. The refactoring operations use VS Code's built-in refactoring capabilities, ensuring safe and accurate code transformations. Batch operations are executed sequentially in the order specified. For rename_symbol, using old_name instead of start_line provides more robust matching that survives file edits.`
+Note: This tool supports TypeScript and JavaScript files. It uses VS Code's built-in refactoring capabilities and jscodeshift for code movement operations, ensuring safe and accurate code transformations. Important tips:
+
+1. Batch operations are executed sequentially in the order specified
+2. For rename_symbol, using old_name instead of start_line provides more robust matching that survives file edits
+3. For move_to_file, ensure the line range contains complete functions/classes/declarations for best results
+4. The tool automatically adds export statements to moved code when appropriate`
 }
