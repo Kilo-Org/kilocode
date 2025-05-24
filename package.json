@@ -419,6 +419,7 @@
 		"install-extension": "npm install",
 		"install-webview": "cd webview-ui && npm install",
 		"install-e2e": "cd e2e && npm install",
+		"install-repo-mcp-server": "cd repo-mcp-server && npm install && npm run build",
 		"lint": "npm-run-all -l -p lint:*",
 		"lint:extension": "eslint src --ext .ts",
 		"lint:webview": "cd webview-ui && npm run lint",

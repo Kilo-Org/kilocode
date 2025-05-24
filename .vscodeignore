@@ -39,6 +39,7 @@ e2e/**
 evals/**
 locales/**
 out/**
+repo-mcp-server/**
 ellipsis.yaml
 knip.json
 
