@@ -74,6 +74,7 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 	let activeRequest: string | null = null
 	let pendingCompletion = ""
 	let acceptedFirstLine = false
+	let isAcceptingCompletion = false
 
 	// Services
 	const contextGatherer = new ContextGatherer()
@@ -87,6 +88,7 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 	const clearState = () => {
 		pendingCompletion = ""
 		acceptedFirstLine = false
+		isAcceptingCompletion = false
 		vscode.commands.executeCommand("setContext", PREVIEW_CONTEXT_KEY, false)
 		vscode.commands.executeCommand("editor.action.inlineSuggest.hide")
 		vscode.window.activeTextEditor?.setDecorations(loadingDecoration, [])
@@ -213,14 +215,24 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 		const editor = vscode.window.activeTextEditor
 		if (!editor || !pendingCompletion) return
 
+		isAcceptingCompletion = true
+
 		if (!acceptedFirstLine) {
 			// Accept first line
 			const firstLine = pendingCompletion.split(/\r?\n/)[0]
 			await editor.edit((edit) => edit.insert(editor.selection.active, firstLine))
 			acceptedFirstLine = true
 
-			// Trigger for remaining lines
-			setTimeout(() => vscode.commands.executeCommand("editor.action.inlineSuggest.trigger"), 50)
+			const lines = pendingCompletion.split(/\r?\n/)
+			if (lines.length > 1) {
+				// Trigger for remaining lines
+				setTimeout(() => {
+					isAcceptingCompletion = false
+					vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
+				}, 50)
+			} else {
+				clearState()
+			}
 		} else {
 			// Accept remaining lines
 			const lines = pendingCompletion.split(/\r?\n/)
@@ -248,7 +260,12 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 	})
 
 	// Event handlers
-	const selectionHandler = vscode.window.onDidChangeTextEditorSelection(clearState)
+	const selectionHandler = vscode.window.onDidChangeTextEditorSelection(() => {
+		// Don't clear state if we're in the middle of accepting a completion
+		if (!isAcceptingCompletion) {
+			clearState()
+		}
+	})
 	const documentHandler = vscode.workspace.onDidChangeTextDocument((e) => {
 		const editor = vscode.window.activeTextEditor
 		if (editor?.document === e.document) {
