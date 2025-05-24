@@ -1202,6 +1202,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			alwaysAllowWrite,
 			alwaysAllowWriteOutsideWorkspace,
 			alwaysAllowExecute,
+			alwaysAllowRefactorCode, // kilocode_change
 			alwaysAllowBrowser,
 			alwaysAllowMcp,
 			alwaysAllowModeSwitch,
@@ -1279,6 +1280,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			alwaysAllowWrite: alwaysAllowWrite ?? true,
 			alwaysAllowWriteOutsideWorkspace: alwaysAllowWriteOutsideWorkspace ?? true,
 			alwaysAllowExecute: alwaysAllowExecute ?? true,
+			alwaysAllowRefactorCode: alwaysAllowRefactorCode ?? false, // kilocode_change
 			alwaysAllowBrowser: alwaysAllowBrowser ?? true,
 			alwaysAllowMcp: alwaysAllowMcp ?? true,
 			alwaysAllowModeSwitch: alwaysAllowModeSwitch ?? true,
@@ -1382,6 +1384,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			alwaysAllowWrite: stateValues.alwaysAllowWrite ?? true,
 			alwaysAllowWriteOutsideWorkspace: stateValues.alwaysAllowWriteOutsideWorkspace ?? true,
 			alwaysAllowExecute: stateValues.alwaysAllowExecute ?? true,
+			alwaysAllowRefactorCode: stateValues.alwaysAllowRefactorCode ?? false, // kilocode_change
 			alwaysAllowBrowser: stateValues.alwaysAllowBrowser ?? true,
 			alwaysAllowMcp: stateValues.alwaysAllowMcp ?? true,
 			alwaysAllowModeSwitch: stateValues.alwaysAllowModeSwitch ?? true,

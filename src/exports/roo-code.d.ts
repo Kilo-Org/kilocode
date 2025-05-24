@@ -72,6 +72,7 @@ type GlobalSettings = {
 	alwaysAllowSubtasks?: boolean | undefined
 	alwaysAllowExecute?: boolean | undefined
 	allowedCommands?: string[] | undefined
+	alwaysAllowRefactorCode?: boolean | undefined
 	browserToolEnabled?: boolean | undefined
 	browserViewportSize?: string | undefined
 	showAutoApproveMenu?: boolean | undefined
@@ -797,6 +798,7 @@ type IpcMessage =
 								alwaysAllowSubtasks?: boolean | undefined
 								alwaysAllowExecute?: boolean | undefined
 								allowedCommands?: string[] | undefined
+								alwaysAllowRefactorCode?: boolean | undefined
 								browserToolEnabled?: boolean | undefined
 								browserViewportSize?: string | undefined
 								showAutoApproveMenu?: boolean | undefined
@@ -1279,6 +1281,7 @@ type TaskCommand =
 					alwaysAllowSubtasks?: boolean | undefined
 					alwaysAllowExecute?: boolean | undefined
 					allowedCommands?: string[] | undefined
+					alwaysAllowRefactorCode?: boolean | undefined
 					browserToolEnabled?: boolean | undefined
 					browserViewportSize?: string | undefined
 					showAutoApproveMenu?: boolean | undefined

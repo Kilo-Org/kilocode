@@ -140,6 +140,7 @@ describe("refactorCodeTool", () => {
 			lineAt: jest.fn().mockReturnValue({ text: "const x = 1" }),
 			getText: jest.fn().mockReturnValue("const x = 1\nconst y = 2"),
 			uri: vscode.Uri.file("/test/test.ts"),
+			save: jest.fn().mockResolvedValue(true),
 		}
 		const mockEditor = {
 			selection: null,
@@ -203,6 +204,9 @@ describe("refactorCodeTool", () => {
 		const mockDocument = {
 			lineAt: jest.fn().mockReturnValue({ text: "const oldName = 1" }),
 			uri: vscode.Uri.file("/test/test.ts"),
+			save: jest.fn().mockResolvedValue(true),
+			lineCount: 10, // Add lineCount so line 5 is valid
+			getText: jest.fn().mockReturnValue("line1\nline2\nline3\nline4\nconst oldName = 1\nline6"),
 		}
 		const mockEditor = {
 			selection: null,
@@ -246,6 +250,7 @@ describe("refactorCodeTool", () => {
 			"newName",
 		)
 		expect(vscode.workspace.applyEdit).toHaveBeenCalledWith(mockRenameEdit)
+		expect(mockDocument.save).toHaveBeenCalled()
 		expect(mockPushToolResult).toHaveBeenCalledWith(
 			expect.stringContaining("Successfully renamed symbol to 'newName' at line 5 (updated 3 files)"),
 		)
@@ -456,6 +461,7 @@ describe("refactorCodeTool", () => {
 			})),
 			lineCount: 1,
 			uri: vscode.Uri.file("/test/test.ts"),
+			save: jest.fn().mockResolvedValue(true),
 		}
 		const mockEditor = {
 			selection: null,
@@ -568,25 +574,32 @@ describe("refactorCodeTool", () => {
 		})
 
 		it("should handle mixed batch operations", async () => {
+			const saveMock = jest.fn().mockResolvedValue(true)
 			const mockDocument = {
-				getText: jest.fn().mockReturnValue("const var1 = 1;\nfunction old() {\n  return 1;\n}"),
+				getText: jest.fn().mockReturnValue("const var1 = 1;\nconst x = 1;\nconst y = 2;\nconst z = x + y;"),
 				lineAt: jest.fn((line: number) => ({
-					text: ["const var1 = 1;", "function old() {", "  return 1;", "}"][line],
+					text: ["const var1 = 1;", "const x = 1;", "const y = 2;", "const z = x + y;"][line],
+					range: new vscode.Range(line, 0, line, 20),
 				})),
 				lineCount: 4,
 				uri: vscode.Uri.file("/test/test.ts"),
-				save: jest.fn().mockResolvedValue(true),
+				save: saveMock,
 			}
 			const mockEditor = {
 				selection: null,
 			}
 
-			;(vscode.workspace.openTextDocument as jest.Mock).mockResolvedValue(mockDocument as any)
-			;(vscode.window.showTextDocument as jest.Mock).mockResolvedValue(mockEditor as any)
+			;(vscode.workspace.openTextDocument as jest.Mock)
+				.mockResolvedValueOnce(mockDocument as any) // First operation
+				.mockResolvedValueOnce(mockDocument as any) // Second operation (re-open after save)
+			;(vscode.window.showTextDocument as jest.Mock)
+				.mockResolvedValueOnce(mockEditor as any) // First operation
+				.mockResolvedValueOnce(mockEditor as any) // Second operation
 
 			// Mock rename operation
 			;(vscode.commands.executeCommand as jest.Mock)
-				.mockResolvedValueOnce({ size: 1 }) // rename
+				.mockResolvedValueOnce({ size: 1 }) // First rename check (executeDocumentRenameProvider)
+				.mockResolvedValueOnce({ size: 1 }) // First rename apply (executeDocumentRenameProvider)
 				.mockResolvedValueOnce([
 					{
 						// extract function code actions
@@ -596,7 +609,7 @@ describe("refactorCodeTool", () => {
 							arguments: ["arg1"],
 						},
 					},
-				])
+				]) // executeCodeActionProvider for extract
 				.mockResolvedValueOnce(undefined) // extract command
 				.mockResolvedValueOnce({ size: 1 }) // rename after extract
 			;(vscode.workspace.applyEdit as jest.Mock).mockResolvedValue(true)
@@ -637,6 +650,8 @@ describe("refactorCodeTool", () => {
 				expect.stringContaining("Batch refactoring (2 operations)"),
 			)
 
+			// Verify save is called at least once (after all operations)
+			expect(saveMock).toHaveBeenCalled()
 			expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("Batch refactoring completed"))
 		})
 
@@ -648,6 +663,7 @@ describe("refactorCodeTool", () => {
 				}),
 				lineCount: 1,
 				uri: vscode.Uri.file("/test/test.ts"),
+				save: jest.fn().mockResolvedValue(true),
 			}
 			const mockEditor = {
 				selection: null,
@@ -722,6 +738,7 @@ describe("refactorCodeTool", () => {
 				}),
 				lineCount: 1,
 				uri: vscode.Uri.file("/test/test.ts"),
+				save: jest.fn().mockResolvedValue(true),
 			}
 			const mockEditor = {
 				selection: null,
@@ -771,6 +788,7 @@ describe("refactorCodeTool", () => {
 				}),
 				lineCount: 2,
 				uri: vscode.Uri.file("/test/test.ts"),
+				save: jest.fn().mockResolvedValue(true),
 				positionAt: jest.fn((offset: number) => {
 					// Mock position for "oldVariable" at offset 6
 					if (offset === 6) {
@@ -831,6 +849,7 @@ describe("refactorCodeTool", () => {
 				})),
 				lineCount: 2,
 				uri: vscode.Uri.file("/test/test.ts"),
+				save: jest.fn().mockResolvedValue(true),
 			}
 			const mockEditor = {
 				selection: null,
@@ -889,6 +908,7 @@ describe("refactorCodeTool", () => {
 				}),
 				lineCount: 1,
 				uri: vscode.Uri.file("/test/test.ts"),
+				save: jest.fn().mockResolvedValue(true),
 				positionAt: jest.fn(() => new vscode.Position(0, 0)),
 			}
 			const mockEditor = {

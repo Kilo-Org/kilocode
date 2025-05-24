@@ -80,6 +80,10 @@
 			"commandPlaceholder": "Wprowadź prefiks polecenia (np. 'git ')",
 			"addButton": "Dodaj"
 		},
+		"refactorCode": {
+			"label": "Refaktoryzacja",
+			"description": "Automatycznie zatwierdzaj operacje refaktoryzacji kodu bez konieczności ręcznego zatwierdzania"
+		},
 		"showMenu": {
 			"label": "Pokaż menu automatycznego zatwierdzania w widoku czatu",
 			"description": "Gdy włączone, menu automatycznego zatwierdzania będzie wyświetlane na dole widoku czatu, umożliwiając szybki dostęp do ustawień automatycznego zatwierdzania"

@@ -80,6 +80,10 @@
 			"commandPlaceholder": "Befehlspräfix eingeben (z.B. 'git ')",
 			"addButton": "Hinzufügen"
 		},
+		"refactorCode": {
+			"label": "Refaktorieren",
+			"description": "Code-Refaktorierungsoperationen automatisch ohne manuelle Genehmigung durchführen"
+		},
 		"showMenu": {
 			"label": "Auto-Genehmigungs-Menü in der Chat-Ansicht anzeigen",
 			"description": "Wenn aktiviert, wird das Auto-Genehmigungs-Menü am unteren Rand der Chat-Ansicht angezeigt, was einen schnellen Zugriff auf die Auto-Genehmigungs-Einstellungen ermöglicht"

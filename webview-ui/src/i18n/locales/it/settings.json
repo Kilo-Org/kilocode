@@ -80,6 +80,10 @@
 			"commandPlaceholder": "Inserisci prefisso comando (es. 'git ')",
 			"addButton": "Aggiungi"
 		},
+		"refactorCode": {
+			"label": "Refactoring",
+			"description": "Approva automaticamente le operazioni di refactoring del codice senza richiedere approvazione manuale"
+		},
 		"showMenu": {
 			"label": "Mostra menu di approvazione automatica nella vista chat",
 			"description": "Quando abilitato, il menu di approvazione automatica verrà mostrato nella parte inferiore della vista chat, permettendo un accesso rapido alle impostazioni di approvazione automatica"

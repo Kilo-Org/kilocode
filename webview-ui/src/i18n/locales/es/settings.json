@@ -80,6 +80,10 @@
 			"commandPlaceholder": "Ingrese prefijo de comando (ej. 'git ')",
 			"addButton": "Añadir"
 		},
+		"refactorCode": {
+			"label": "Refactorizar",
+			"description": "Aprobar automáticamente operaciones de refactorización de código sin requerir aprobación manual"
+		},
 		"showMenu": {
 			"label": "Mostrar menú de aprobación automática en la vista de chat",
 			"description": "Cuando está habilitado, el menú de aprobación automática se mostrará en la parte inferior de la vista de chat, permitiendo un acceso rápido a la configuración de aprobación automática"

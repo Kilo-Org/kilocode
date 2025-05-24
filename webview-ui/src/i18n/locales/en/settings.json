@@ -80,6 +80,10 @@
 			"commandPlaceholder": "Enter command prefix (e.g., 'git ')",
 			"addButton": "Add"
 		},
+		"refactorCode": {
+			"label": "Refactor",
+			"description": "Automatically approve code refactoring operations without requiring manual approval"
+		},
 		"showMenu": {
 			"label": "Show auto-approve menu in chat view",
 			"description": "When enabled, the auto-approve menu will be displayed at the bottom of the chat view, allowing quick access to auto-approve settings"

@@ -703,6 +703,7 @@ export const globalSettingsSchema = z.object({
 	alwaysAllowSubtasks: z.boolean().optional(),
 	alwaysAllowExecute: z.boolean().optional(),
 	allowedCommands: z.array(z.string()).optional(),
+	alwaysAllowRefactorCode: z.boolean().optional(), // kilocode_change
 
 	browserToolEnabled: z.boolean().optional(),
 	browserViewportSize: z.string().optional(),
@@ -784,6 +785,7 @@ const globalSettingsRecord: GlobalSettingsRecord = {
 	alwaysAllowSubtasks: undefined,
 	alwaysAllowExecute: undefined,
 	allowedCommands: undefined,
+	alwaysAllowRefactorCode: undefined, // kilocode_change
 
 	browserToolEnabled: undefined,
 	browserViewportSize: undefined,

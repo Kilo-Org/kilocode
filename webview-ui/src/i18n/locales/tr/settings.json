@@ -80,6 +80,10 @@
 			"commandPlaceholder": "Komut öneki girin (örn. 'git ')",
 			"addButton": "Ekle"
 		},
+		"refactorCode": {
+			"label": "Yeniden Düzenleme",
+			"description": "Manuel onay gerektirmeden kod yeniden düzenleme işlemlerini otomatik olarak onayla"
+		},
 		"showMenu": {
 			"label": "Sohbet görünümünde otomatik onay menüsünü göster",
 			"description": "Etkinleştirildiğinde, otomatik onay menüsü sohbet görünümünün alt kısmında gösterilecek, otomatik onay ayarlarına hızlı erişim sağlayacaktır"

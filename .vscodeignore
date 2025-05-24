@@ -18,6 +18,8 @@ jest.*
 **/.gitignore
 
 # Custom
+.env
+.env.local
 .env.sample
 .git-blame-ignore-revs
 .gitconfig
@@ -70,5 +72,4 @@ assets/docs/**
 !assets/icons/**
 !assets/images/**
 
-# Include .env file for telemetry
-!.env
+# Exclude .env file (removed for security reasons)

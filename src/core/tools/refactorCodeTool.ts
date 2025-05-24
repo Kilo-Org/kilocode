@@ -552,6 +552,9 @@ export async function refactorCodeTool(
 				}
 			}
 
+			// Save the document after all operations are completed
+			await document.save()
+
 			if (overallSuccess) {
 				cline.consecutiveMistakeCount = 0
 				// Used to determine if we should wait for busy terminal to update before sending api request
