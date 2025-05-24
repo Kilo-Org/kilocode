@@ -16,12 +16,26 @@ import { getAllTools, getToolByName } from "./tools/index.js"
 
 // Load environment variables from .env.local file
 const envPath = path.resolve(process.cwd(), "../.env.local")
-dotenv.config({ path: envPath })
-console.error(`Loading environment variables from: ${envPath}`)
+const envResult = dotenv.config({ path: envPath })
+
+if (envResult.error) {
+	console.error(`⚠️ Error loading environment variables from ${envPath}: ${envResult.error.message}`)
+	console.error(`⚠️ Will attempt to use environment variables from process.env if available`)
+} else {
+	console.error(`✅ Successfully loaded environment variables from: ${envPath}`)
+}
 
 // Environment variables from MCP config
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || "" // Default to empty for testing
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || ""
 const DEFAULT_MODEL = process.env.DEFAULT_MODEL || "anthropic/claude-3.7-sonnet"
+
+// Validate API key
+if (!OPENROUTER_API_KEY || OPENROUTER_API_KEY.trim() === "") {
+	console.error(`❌ ERROR: OPENROUTER_API_KEY is not set. Real translations will not work!`)
+	console.error(`❌ Please set a valid API key in ${envPath} or as an environment variable`)
+} else {
+	console.error(`✅ OPENROUTER_API_KEY is set (${OPENROUTER_API_KEY.substring(0, 10)}...)`)
+}
 
 // Determine the project root path (more reliable approach)
 const PROJECT_ROOT = process.cwd().includes("repo-mcp-server") ? path.resolve(process.cwd(), "..") : process.cwd()
