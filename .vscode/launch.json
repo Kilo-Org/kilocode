@@ -10,7 +10,7 @@
 			"type": "extensionHost",
 			"request": "launch",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceFolder}", "/Users/hassoncs/Workspaces/continue"],
+			"args": ["--extensionDevelopmentPath=${workspaceFolder}", "${workspaceFolder}/examples"],
 			"sourceMaps": true,
 			"outFiles": ["${workspaceFolder}/dist/**/*.js"],
 			"env": {

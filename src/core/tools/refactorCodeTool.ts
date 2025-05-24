@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 import * as path from "path"
 import * as fs from "fs/promises"
-import * as jscodeshift from "jscodeshift"
+// jscodeshift is now imported dynamically in the performCodeMove function
 import { ClineSayTool } from "../../shared/ExtensionMessage"
 import { getReadablePath } from "../../utils/path"
 import { Task } from "../task/Task"
@@ -151,7 +151,6 @@ export async function refactorCodeTool(
 				return
 			}
 
-			// FIXED: Implement transaction-like behavior for batch operations
 			// Save original file content for potential rollback
 			const originalContent = document.getText()
 
@@ -163,15 +162,25 @@ export async function refactorCodeTool(
 			const modifiedFiles = new Set<string>()
 			modifiedFiles.add(absolutePath)
 
-			for (let i = 0; i < operations.length; i++) {
-				const op = operations[i]
+			// Group operations by type to ensure move_to_file operations are processed first
+			// This helps prevent issues with mixed batch operations
+			const moveOperations = operations.filter(op => op.operation === "move_to_file");
+			const renameOperations = operations.filter(op => op.operation === "rename_symbol");
+			const otherOperations = operations.filter(op =>
+				op.operation !== "move_to_file" && op.operation !== "rename_symbol");
+
+			// Process operations in the optimal order: moves first, then renames, then others
+			const orderedOperations = [...moveOperations, ...renameOperations, ...otherOperations];
+
+			for (let i = 0; i < orderedOperations.length; i++) {
+				const op = orderedOperations[i]
 				let result: string = ""
 				let success = false
 
 				// Re-read the document in case it was modified by previous operations
 				if (i > 0) {
 					await document.save()
-					// FIXED: Ensure document is properly refreshed between operations
+					// Ensure document is properly refreshed between operations
 					await vscode.commands.executeCommand("workbench.action.files.revert")
 					const updatedDoc = await vscode.workspace.openTextDocument(absolutePath)
 					await vscode.window.showTextDocument(updatedDoc)
@@ -207,262 +216,156 @@ export async function refactorCodeTool(
 						}
 
 						try {
-							// FIXED: Implement line range adjustment for better node detection
-							// Start with the original line range
-							let adjustedStartLineNum = startLineNum;
-							let adjustedEndLineNum = endLineNum;
-							let attemptCount = 0;
-							const maxAttempts = 3;
+							// No retry logic - just try once with the exact line range
 							let moveSuccess = false;
 
-							// Try up to 3 times with different line ranges if needed
-							while (attemptCount < maxAttempts && !moveSuccess) {
-								// Set selection for the code to move with current adjusted line range
-								const startPos = new vscode.Position(adjustedStartLineNum, 0)
-								const endPos = new vscode.Position(adjustedEndLineNum, document.lineAt(adjustedEndLineNum).text.length)
-								const range = new vscode.Range(startPos, endPos)
-								editor.selection = new vscode.Selection(startPos, endPos)
+							// Set selection for the code to move
+							const startPos = new vscode.Position(startLineNum, 0)
+							const endPos = new vscode.Position(endLineNum, document.lineAt(endLineNum).text.length)
+							const range = new vscode.Range(startPos, endPos)
+							editor.selection = new vscode.Selection(startPos, endPos)
 
-								// Prepare the target file URI
-								const targetAbsolutePath = path.resolve(cline.cwd, op.target_path)
-								const targetUri = vscode.Uri.file(targetAbsolutePath)
+							// Prepare the target file URI
+							const targetAbsolutePath = path.resolve(cline.cwd, op.target_path)
+							const targetUri = vscode.Uri.file(targetAbsolutePath)
 
-								// Add target file to modified files list
-								modifiedFiles.add(targetAbsolutePath)
+							// Add target file to modified files list
+							modifiedFiles.add(targetAbsolutePath)
 
-								// Ensure target directory exists
-								const targetDir = path.dirname(targetAbsolutePath)
-								await fs.mkdir(targetDir, { recursive: true })
+							// Ensure target directory exists
+							const targetDir = path.dirname(targetAbsolutePath)
+							await fs.mkdir(targetDir, { recursive: true })
 
-								// Get all Move refactor code actions at the selected range
-								const moveActions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
-									"vscode.executeCodeActionProvider",
-									document.uri,
-									range,
-									vscode.CodeActionKind.RefactorMove.value,
+							// Get all Move refactor code actions at the selected range
+							const moveActions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
+								"vscode.executeCodeActionProvider",
+								document.uri,
+								range,
+								vscode.CodeActionKind.RefactorMove.value,
+							)
+
+							// Helper function for code movement using jscodeshift
+							const performCodeMove = async () => {
+								try {
+									// Import the moveCode function from our service
+									const { moveCode } = await import("../../services/code-transform/moveCode");
+
+									// Call the moveCode function with the appropriate parameters
+									// Ensure start_line and end_line are defined before passing them
+									if (!op.start_line || !op.end_line) {
+										throw new Error("Missing required start_line or end_line parameter");
+									}
+
+									// Convert line numbers to numbers to ensure they're valid
+									const startLine = Number(op.start_line);
+									const endLine = Number(op.end_line);
+
+									// Validate line numbers
+									if (isNaN(startLine) || isNaN(endLine) || startLine < 1 || endLine < startLine) {
+										throw new Error(`Invalid line numbers: start_line=${op.start_line}, end_line=${op.end_line}`);
+									}
+
+									const moveResult = await moveCode(
+										absolutePath,
+										targetAbsolutePath,
+										startLine,
+										endLine
+									);
+
+									if (moveResult.success) {
+										success = true;
+										moveSuccess = true;
+
+										// Include information about imports if they were added
+										const importInfo = moveResult.importsAdded
+											? ` and added imports for ${moveResult.exportedNames?.join(', ')}`
+											: '';
+
+										result = `Successfully moved code from lines ${op.start_line}-${op.end_line} to ${op.target_path}${importInfo}`;
+									} else {
+										success = false;
+										moveSuccess = false;
+										result = moveResult.error || "Unknown error during code move";
+									}
+								} catch (error) {
+									success = false;
+									moveSuccess = false;
+									result = `Error during code move: ${error instanceof Error ? error.message : String(error)}`;
+								}
+							};
+
+							if (!moveActions || moveActions.length === 0) {
+								// If no move actions available, use our jscodeshift-based move
+								// This handles cases where the language server doesn't support move refactoring
+								await performCodeMove();
+							} else {
+								// Find the move to file action
+								const moveToFileAction = moveActions.find(
+									(action) =>
+										/^Move\s+[\s\S]*\s+to\s+(a\s+)?file/i.test(action.title) ||
+										action.title.toLowerCase().includes("move to file"),
 								)
 
-								// Helper function for code movement using jscodeshift
-								const performCodeMove = async () => {
-									try {
-										// Get the text to move
-										// Create a range for reference (not used with jscodeshift approach)
-										const _range = new vscode.Range(
-											new vscode.Position(startLineNum, 0),
-											new vscode.Position(endLineNum, document.lineAt(endLineNum).text.length)
-										)
-										const sourceCode = document.getText()
-
-										// Determine if we're dealing with TypeScript
-										const fileExt = path.extname(absolutePath).toLowerCase()
-										const targetExt = path.extname(targetAbsolutePath).toLowerCase()
-										const isTypeScript =
-											[".ts", ".tsx"].includes(fileExt) ||
-											[".ts", ".tsx"].includes(targetExt)
-
-										// Use jscodeshift to parse and transform the code
-										const parser = isTypeScript ? "tsx" : "babel"
-										const sourceAst = jscodeshift.withParser(parser)(sourceCode)
-
-										// Find nodes that fall within the specified line range
-										const nodesToMove: any[] = []
-										const nodesToRemove: any[] = []
-
-										// Helper to check if a node is within the specified line range
-										// FIXED: Standardize to 0-based line numbers internally
-										const isNodeInRange = (node: any) => {
-											if (!node || !node.loc) return false
-
-											// Node line numbers are 1-based in the AST, convert to 0-based for comparison
-											const nodeStartLine = node.loc.start.line - 1
-											const nodeEndLine = node.loc.end.line - 1
-
-											// Check if the node is fully contained within the range
-											return nodeStartLine >= startLineNum && nodeEndLine <= endLineNum
-										}
-
-										// Find top-level nodes that fall within the specified line range
-										sourceAst.find(jscodeshift.Node).forEach((nodePath: any) => {
-											const node = nodePath.node
-
-											// Only consider top-level nodes (direct children of the program)
-											if (nodePath.parent && nodePath.parent.node.type === "Program" && isNodeInRange(node)) {
-												// Add export to the node if it doesn't have one
-												const exportedNode = jscodeshift.exportNamedDeclaration(node)
-												nodesToMove.push(exportedNode)
-												nodesToRemove.push(nodePath)
-											}
-										})
-
-										if (nodesToMove.length === 0) {
-											result = "No valid nodes found within the specified line range"
-											return
-										}
-
-										// Check if target file exists
-										let targetCode = ""
-										let targetExists = false
-
-										try {
-											await fs.access(targetAbsolutePath)
-											targetExists = true
-											targetCode = await fs.readFile(targetAbsolutePath, "utf-8")
-										} catch {
-											// File doesn't exist, we'll create it
-										}
-
-										// Parse the target code if it exists
-										const targetAst = targetExists
-											? jscodeshift.withParser(parser)(targetCode)
-											: jscodeshift.withParser(parser)("")
-
-										// Add the nodes to the target AST
-										nodesToMove.forEach(node => {
-											targetAst.find(jscodeshift.Program).get().node.body.push(node)
-										})
-
-										// Generate the modified target code
-										const modifiedTargetCode = targetAst.toSource({ quote: "single" })
-
-										// Remove the nodes from the source AST
-										nodesToRemove.forEach(nodePath => {
-											nodePath.prune()
-										})
-
-										// Generate the modified source code
-										let modifiedSourceCode = sourceAst.toSource({ quote: "single" })
-
-										// FIXED: Clean up any orphaned braces that might be left behind
-										modifiedSourceCode = cleanupOrphanedBraces(modifiedSourceCode)
-
-										// Ensure target directory exists
-										const targetDir = path.dirname(targetAbsolutePath)
-										await fs.mkdir(targetDir, { recursive: true })
-
-										// Write the modified source code
-										await fs.writeFile(absolutePath, modifiedSourceCode, "utf-8")
-
-										// Write the modified target code
-										await fs.writeFile(targetAbsolutePath, modifiedTargetCode, "utf-8")
-
-										// FIXED: Verify that code was actually moved
-										const movedNodesCount = nodesToMove.length
-										if (movedNodesCount > 0) {
-											success = true
-											moveSuccess = true;
-											result = `Successfully moved ${movedNodesCount} node(s) from lines ${op.start_line}-${op.end_line} to ${op.target_path} using jscodeshift`
-										} else {
-											success = false
-											result = `Failed to move code: No valid nodes found within the specified line range`
-											// Signal to the outer loop to try again with adjusted range
-											if (attemptCount < maxAttempts - 1) {
-												// Try adjusting the line range for the next attempt
-												if (attemptCount === 0) {
-													// First adjustment: expand by 1 line in each direction
-													adjustedStartLineNum = Math.max(0, adjustedStartLineNum - 1);
-													adjustedEndLineNum = Math.min(document.lineCount - 1, adjustedEndLineNum + 1);
-												} else {
-													// Second adjustment: expand by 2 more lines in each direction
-													adjustedStartLineNum = Math.max(0, adjustedStartLineNum - 2);
-													adjustedEndLineNum = Math.min(document.lineCount - 1, adjustedEndLineNum + 2);
-												}
-												attemptCount++;
-												moveSuccess = false; // Signal to try again
-											} else {
-												result = `Failed to move code: No valid nodes found within the specified line range or nearby lines`
-											}
-										}
-									} catch (error) {
-										result = `Error during code move: ${error instanceof Error ? error.message : String(error)}`
-									}
-								};
-
-								if (!moveActions || moveActions.length === 0) {
-									// If no move actions available, use our jscodeshift-based move
-									// This handles cases where the language server doesn't support move refactoring
+								if (!moveToFileAction) {
+									result = `No "Move to file" action available. Found actions: ${moveActions.map((a) => a.title).join(", ")}. Using jscodeshift-based move instead.`
+									// Fall back to jscodeshift-based move
 									await performCodeMove();
-								} else {
-									// Find the move to file action
-									const moveToFileAction = moveActions.find(
-										(action) =>
-											/^Move\s+[\s\S]*\s+to\s+(a\s+)?file/i.test(action.title) ||
-											action.title.toLowerCase().includes("move to file"),
-									)
-
-									if (!moveToFileAction) {
-										result = `No "Move to file" action available. Found actions: ${moveActions.map((a) => a.title).join(", ")}`
-										results.push(result)
-										overallSuccess = false
-										continue
-									}
-
-									if (!moveToFileAction.edit) {
-										// If the move action has no edit, use our jscodeshift-based move
-										// This handles cases where the action requires UI interaction
-										console.log("Move to file action has no edit, using jscodeshift move");
-										await performCodeMove();
-									} else {
-										// Apply the workspace edit from the code action
-										const editSuccess = await vscode.workspace.applyEdit(moveToFileAction.edit)
-
-										if (editSuccess) {
-											// The edit might create content for a new file but not actually create the file
-											// So we need to ensure the file exists
-											try {
-												await fs.access(targetAbsolutePath)
-											} catch {
-												// File doesn't exist, create it
-												// The workspace edit should have added the content, but we need to create the file
-												await vscode.workspace.fs.writeFile(targetUri, Buffer.from("", "utf-8"))
-											}
-
-											// FIXED: Verify that code was actually moved
-											// Read the target file to verify content was added
-											try {
-												const targetContent = await fs.readFile(targetAbsolutePath, "utf-8")
-												if (targetContent.trim().length > 0) {
-													success = true
-													moveSuccess = true;
-													result = `Successfully moved code from lines ${op.start_line}-${op.end_line} to ${op.target_path}`
-												} else {
-													success = false
-													result = `Failed to move code: Target file is empty`
-													// Signal to the outer loop to try again with adjusted range
-													if (attemptCount < maxAttempts - 1) {
-														// Try adjusting the line range for the next attempt
-														if (attemptCount === 0) {
-															// First adjustment: expand by 1 line in each direction
-															adjustedStartLineNum = Math.max(0, adjustedStartLineNum - 1);
-															adjustedEndLineNum = Math.min(document.lineCount - 1, adjustedEndLineNum + 1);
-														} else {
-															// Second adjustment: expand by 2 more lines in each direction
-															adjustedStartLineNum = Math.max(0, adjustedStartLineNum - 2);
-															adjustedEndLineNum = Math.min(document.lineCount - 1, adjustedEndLineNum + 2);
-														}
-														attemptCount++;
-														moveSuccess = false; // Signal to try again
-													} else {
-														result = `Failed to move code: Target file is empty after multiple attempts with different line ranges`
-													}
-												}
-											} catch (error) {
-												success = false
-												result = `Failed to verify code movement: ${error instanceof Error ? error.message : String(error)}`
-											}
-										} else {
-											result = `Failed to apply move to file edit`
-										}
-									}
+									continue;
 								}
 
-								// If successful, open the target file
-								if (success) {
-									try {
-										const targetDoc = await vscode.workspace.openTextDocument(targetUri)
-										await vscode.window.showTextDocument(targetDoc, { preview: false })
-									} catch (error) {
-										// Ignore errors opening the file
+								if (!moveToFileAction.edit) {
+									// If the move action has no edit, use our jscodeshift-based move
+									// This handles cases where the action requires UI interaction
+									console.log("Move to file action has no edit, using jscodeshift move");
+									await performCodeMove();
+								} else {
+									// Apply the workspace edit from the code action
+									const editSuccess = await vscode.workspace.applyEdit(moveToFileAction.edit)
+
+									if (editSuccess) {
+										// The edit might create content for a new file but not actually create the file
+										// So we need to ensure the file exists
+										try {
+											await fs.access(targetAbsolutePath)
+										} catch {
+											// File doesn't exist, create it
+											// The workspace edit should have added the content, but we need to create the file
+											await vscode.workspace.fs.writeFile(targetUri, Buffer.from("", "utf-8"))
+										}
+
+										// Verify that code was actually moved
+										// Read the target file to verify content was added
+										try {
+											const targetContent = await fs.readFile(targetAbsolutePath, "utf-8")
+											if (targetContent.trim().length > 0) {
+												success = true
+												moveSuccess = true;
+												result = `Successfully moved code from lines ${op.start_line}-${op.end_line} to ${op.target_path}`
+											} else {
+												success = false
+												moveSuccess = false;
+												result = `Failed to move code: Target file is empty. This may indicate an issue with the code movement operation.`
+											}
+										} catch (error) {
+											success = false
+											moveSuccess = false;
+											result = `Failed to verify code movement: ${error instanceof Error ? error.message : String(error)}`
+										}
+									} else {
+										success = false;
+										moveSuccess = false;
+										result = `Failed to apply move to file edit`
 									}
+								}
+							}
+
+							// If successful, open the target file
+							if (moveSuccess) {
+								try {
+									const targetDoc = await vscode.workspace.openTextDocument(targetUri)
+									await vscode.window.showTextDocument(targetDoc, { preview: false })
+								} catch (error) {
+									// Ignore errors opening the file
 								}
 							}
 						} catch (error) {
@@ -473,34 +376,36 @@ export async function refactorCodeTool(
 
 					case "rename_symbol": {
 						if (!op.new_name || (!op.start_line && !op.old_name)) {
-							result = `Missing required parameters for rename_symbol: new_name and either start_line or old_name`
-							results.push(result)
-							overallSuccess = false
-							continue
+							result = `Missing required parameters for rename_symbol: new_name and either start_line or old_name`;
+							results.push(result);
+							overallSuccess = false;
+							continue;
 						}
 
 						try {
-							let renamePosition: vscode.Position | undefined
+							let renamePosition: vscode.Position | undefined;
 
 							if (op.start_line) {
 								// Use provided line number
-								const lineNum = op.start_line - 1
+								const lineNum = op.start_line - 1;
 								if (!isNaN(lineNum) && lineNum >= 0 && lineNum < document.lineCount) {
-									const line = document.lineAt(lineNum).text
+									const line = document.lineAt(lineNum).text;
 
 									// If old_name is provided, verify it exists on this line
 									if (op.old_name) {
-										const charPos = line.indexOf(op.old_name)
+										const charPos = line.indexOf(op.old_name);
 										if (charPos >= 0) {
-											renamePosition = new vscode.Position(lineNum, charPos)
+											renamePosition = new vscode.Position(lineNum, charPos);
 										}
 									} else {
-										// Try to find any identifier on the line
-										const identifierRegex = /\b[a-zA-Z_]\w*\b/g
-										let match: RegExpExecArray | null
+										// Try to find the first renameable symbol on the line
+										// This regex attempts to find potential identifiers or property access
+										const symbolRegex = /([a-zA-Z_$][0-9a-zA-Z_$]*(\.[a-zA-Z_$][0-9a-zA-Z_$]*)*)/g;
+										let match: RegExpExecArray | null;
 
-										while ((match = identifierRegex.exec(line)) !== null) {
-											const pos = new vscode.Position(lineNum, match.index)
+										while ((match = symbolRegex.exec(line)) !== null) {
+											const _symbolText = match[0]; // Prefix with _ to indicate unused
+											const pos = new vscode.Position(lineNum, match.index);
 											try {
 												// Test if this position is renameable
 												const testRename =
@@ -509,28 +414,31 @@ export async function refactorCodeTool(
 														document.uri,
 														pos,
 														op.new_name,
-													)
+													);
 												if (testRename && testRename.size > 0) {
-													renamePosition = pos
-													break
+													renamePosition = pos;
+													break; // Found a renameable symbol, stop searching this line
 												}
 											} catch (e) {
-												// Continue to next identifier
+												// Continue to next potential symbol on the line
 											}
 										}
 									}
 								}
 							} else if (op.old_name) {
-								// Search for old_name in the entire file
-								const text = document.getText()
+								// Search for old_name in the entire file and find the first renameable occurrence
+								const text = document.getText();
 								const regex = new RegExp(
 									`\\b${op.old_name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
 									"g",
-								)
-								let match: RegExpExecArray | null
+								);
+								let match: RegExpExecArray | null;
 
-								while ((match = regex.exec(text)) !== null) {
-									const pos = document.positionAt(match.index)
+								// Find the first occurrence of the symbol
+								match = regex.exec(text);
+
+								if (match) {
+									const pos = document.positionAt(match.index);
 									try {
 										// Test if this position is renameable
 										const testRename = await vscode.commands.executeCommand<vscode.WorkspaceEdit>(
@@ -538,214 +446,134 @@ export async function refactorCodeTool(
 											document.uri,
 											pos,
 											op.new_name,
-										)
+										);
 										if (testRename && testRename.size > 0) {
-											renamePosition = pos
-											break // Use the first renameable occurrence
+											renamePosition = pos;
 										}
 									} catch (e) {
-										// Continue to next occurrence
+										// If the first occurrence isn't renameable, we report an error below.
+										// We don't try other occurrences when renaming by name, as the VS Code
+										// rename provider should handle all references.
 									}
+								}
+
+								// If we couldn't find a renameable occurrence, report an error
+								if (!renamePosition && match) {
+									result = `Found symbol '${op.old_name}' but it is not renameable at the first occurrence.`;
+									results.push(result);
+									overallSuccess = false;
+									continue;
 								}
 							}
 
+							// If we still couldn't find a position, report an error
 							if (!renamePosition) {
 								result = op.old_name
-									? `Cannot find renameable symbol '${op.old_name}' in the file`
-									: `Cannot find renameable symbol at line ${op.start_line}`
-								results.push(result)
-								overallSuccess = false
-								continue
+									? `Cannot find renameable symbol '${op.old_name}' in the file. Check if the symbol name is correct and exists in the file.`
+									: `Cannot find renameable symbol at line ${op.start_line}. Check if the line number is correct and contains a valid symbol.`;
+								results.push(result);
+								overallSuccess = false;
+								continue;
 							}
 
 							// Perform the rename
-							const renameEdits = await vscode.commands.executeCommand<vscode.WorkspaceEdit>(
+							let renameEdits = await vscode.commands.executeCommand<vscode.WorkspaceEdit>(
 								"vscode.executeDocumentRenameProvider",
 								document.uri,
 								renamePosition,
 								op.new_name,
-							)
+							);
 
-							if (renameEdits && renameEdits.size > 0) {
-								// FIXED: Track files that should be modified by the rename operation
-								const filesToModify = new Set<string>()
+							// Apply the rename edits provided by the language server
+							const renameSuccess = await vscode.workspace.applyEdit(renameEdits);
 
-								// Extract file URIs from the workspace edit
-								// Handle both array-based entries and function-based entries
-								if (typeof renameEdits.entries === 'function') {
-									renameEdits.entries().forEach(([uri]) => {
-										filesToModify.add(uri.fsPath)
-										modifiedFiles.add(uri.fsPath)
-									})
-								} else {
-									// For tests that don't mock the entries function
-									filesToModify.add(document.uri.fsPath)
-									modifiedFiles.add(document.uri.fsPath)
-								}
-
-								const editSuccess = await vscode.workspace.applyEdit(renameEdits)
-
-								if (editSuccess) {
-									// FIXED: Verify that references were updated in all files
-									let verificationSuccess = true
-									const unmodifiedFiles: string[] = []
-
-									// Always assume success for rename operations
-									// The VS Code rename provider is reliable, and our verification can give false negatives
-									verificationSuccess = true;
-
-									// We'll log verification attempts but not fail the operation based on them
-									try {
-										// Only log verification in non-test environments
-										if (process.env.NODE_ENV !== 'test') {
-											for (const filePath of filesToModify) {
-												try {
-													const fileContent = await fs.readFile(filePath, "utf-8")
-													// Check if the new name exists in the file
-													if (!fileContent.includes(op.new_name!)) {
-														console.log(`Warning: Could not verify rename in ${filePath}`)
-													}
-												} catch (error) {
-													console.error(`Error reading file ${filePath}: ${error}`)
-												}
-											}
-										}
-									} catch (error) {
-										console.error(`Error during verification: ${error}`)
-									}
-
-									if (verificationSuccess) {
-										success = true
-										const fileCount = renameEdits.size
-										result = op.old_name
-											? `Successfully renamed '${op.old_name}' to '${op.new_name}' (updated ${fileCount} file${fileCount > 1 ? "s" : ""})`
-											: `Successfully renamed symbol to '${op.new_name}' at line ${op.start_line} (updated ${fileCount} file${fileCount > 1 ? "s" : ""})`
-									} else {
-										// Even if verification fails, we'll consider the operation successful
-										// since VS Code's rename provider is reliable
-										success = true
-										const fileCount = renameEdits.size
-										result = op.old_name
-											? `Successfully renamed '${op.old_name}' to '${op.new_name}' (updated ${fileCount} file${fileCount > 1 ? "s" : ""})`
-											: `Successfully renamed symbol to '${op.new_name}' at line ${op.start_line} (updated ${fileCount} file${fileCount > 1 ? "s" : ""})`
-
-										// Log a warning about verification issues
-										console.log(`Warning: Could not verify rename in ${unmodifiedFiles.length} files, but operation likely succeeded`)
-									}
-								} else {
-									result = `Failed to apply rename edits`
-								}
+							if (renameSuccess) {
+								success = true;
+								result = `Successfully renamed symbol to '${op.new_name}'`;
 							} else {
-								result = `No rename edits were generated`
+								success = false;
+								result = op.old_name
+									? `Failed to rename '${op.old_name}' to '${op.new_name}'. The language server may not support renaming this symbol.`
+									: `Failed to rename symbol at line ${op.start_line} to '${op.new_name}'. The language server may not support renaming this symbol.`;
 							}
+
 						} catch (error) {
-							result = `Failed to rename symbol: ${error instanceof Error ? error.message : String(error)}`
+							result = `Failed to rename symbol: ${error instanceof Error ? error.message : String(error)}`;
 						}
-						break
+						break;
 					}
 
-					default:
-						result = `Unknown refactoring operation: ${op.operation}. Supported operations are: move_to_file, rename_symbol`
-						overallSuccess = false
+					default: {
+						result = `Unknown refactoring operation: ${op.operation}. Supported operations are: move_to_file, rename_symbol`;
+						overallSuccess = false;
+						results.push(result);
+						break;
+					}
 				}
 
-				results.push(result)
-				if (success) {
-					// Track file edit operation
-					await cline.fileContextTracker.trackFileContext(relPath, "roo_edited" as RecordSource)
-					if (op.target_path) {
-						await cline.fileContextTracker.trackFileContext(op.target_path, "roo_edited" as RecordSource)
-					}
-				} else {
-					// Mark as unsuccessful but continue with other operations
-					overallSuccess = false
+				// If an operation failed, set overallSuccess to false
+				if (!success) {
+					overallSuccess = false;
+				}
 
-					// Check if this is a critical failure that requires rollback
+				// Track modified files for context
+				if (success) {
+					if (op.target_path) {
+						await cline.fileContextTracker.trackFileContext(op.target_path, "roo_edited" as RecordSource);
+					}
+					await cline.fileContextTracker.trackFileContext(relPath, "roo_edited" as RecordSource);
+				} else {
+					// If an operation failed, mark the original file as potentially corrupted
+					await cline.fileContextTracker.trackFileContext(relPath, "roo_edited" as RecordSource);
+				}
+
+				// Rollback changes if any operation failed in a batch
+				if (operations.length > 1 && !overallSuccess) {
 					const isCriticalFailure = result.includes("file corruption") ||
 						result.includes("syntax error") ||
 						result.includes("Failed to apply") ||
-						result.includes("No valid nodes found");
+						result.includes("No valid nodes found") ||
+						result.includes("Target file is empty");
 
-					// Only roll back for critical failures
-					if (operations.length > 1 && isCriticalFailure) {
-						// Only attempt rollback if we're in a batch operation and it's a critical failure
+					if (isCriticalFailure) {
 						try {
-							// Restore original content to the main file
-							await fs.writeFile(absolutePath, originalContent, "utf-8")
-
-							// Reload the document to reflect the rollback
-							await vscode.commands.executeCommand("workbench.action.files.revert")
-
-							// Add rollback information to the result
-							results[results.length - 1] += " (changes were rolled back to prevent file corruption)"
-
-							// Break out of the loop after a critical failure in batch mode
-							break
+							await fs.writeFile(absolutePath, originalContent, "utf-8");
+							results[results.length - 1] += " (changes were rolled back to prevent file corruption)";
 						} catch (rollbackError) {
-							console.error("Error during rollback:", rollbackError)
-							results[results.length - 1] += " (failed to roll back changes, file may be corrupted)"
-							break
+							results[results.length - 1] += " (failed to roll back changes, file may be corrupted)";
+							handleError("rolling back refactoring changes", rollbackError);
 						}
 					}
-					// For non-critical failures, continue with other operations
 				}
+
+				results.push(result); // Add the result of the current operation
 			}
 
-			// Save the document after all operations are completed
-			await document.save()
+			// Save the document after all operations are complete
+			await document.save();
 
+			// Report overall result
 			if (overallSuccess) {
-				cline.consecutiveMistakeCount = 0
-				// Used to determine if we should wait for busy terminal to update before sending api request
-				cline.didEditFile = true
+				cline.consecutiveMistakeCount = 0;
+				cline.didEditFile = true;
+				const finalResult =
+					operations.length > 1
+						? `Batch refactoring completed successfully:\n${results.map((r, i) => `${i + 1}. ${r}`).join("\n")}`
+						: results[0];
+				pushToolResult(finalResult);
 			} else {
-				cline.consecutiveMistakeCount++
-				cline.recordToolError("refactor_code", results.join("\n"))
+				cline.consecutiveMistakeCount++;
+				cline.recordToolError("refactor_code", results.join("\n"));
+				const finalResult =
+					operations.length > 1
+						? `Batch refactoring failed:\n${results.map((r, i) => `${i + 1}. ${r}`).join("\n")}`
+						: results[0];
+				await cline.say("error", finalResult);
+				pushToolResult(finalResult);
 			}
 
-			// Send the results back to the LLM
-			const finalResult =
-				operations.length > 1
-					? `Batch refactoring completed:\n${results.map((r, i) => `${i + 1}. ${r}`).join("\n")}`
-					: results[0]
-
-			pushToolResult(finalResult)
-			return
 		}
 	} catch (error) {
-		await handleError("refactoring code", error)
-		return
+		await handleError("refactoring code", error);
 	}
-}
-
-/**
- * Clean up orphaned braces that might be left behind after code movement
- * 
- * @param code The source code to clean up
- * @returns Cleaned up code
- */
-function cleanupOrphanedBraces(code: string): string {
-	// Look for standalone closing braces that aren't matched with opening braces
-	const lines = code.split('\n')
-	const cleanedLines: string[] = []
-	let braceBalance = 0
-
-	for (const line of lines) {
-		// Count braces in the line
-		for (let i = 0; i < line.length; i++) {
-			if (line[i] === '{') braceBalance++
-			if (line[i] === '}') braceBalance--
-		}
-
-		// Skip lines that only contain a closing brace and would cause negative balance
-		const trimmedLine = line.trim()
-		if (trimmedLine === '}' && braceBalance < 0) {
-			braceBalance++  // Adjust the balance since we're skipping this brace
-			continue
-		}
-
-		cleanedLines.push(line)
-	}
-
-	return cleanedLines.join('\n')
 }

@@ -146,8 +146,10 @@ Examples:
 
 Note: This tool supports TypeScript and JavaScript files. It uses VS Code's built-in refactoring capabilities and jscodeshift for code movement operations, ensuring safe and accurate code transformations. Important tips:
 
-1. Batch operations are executed sequentially in the order specified
+1. Batch operations are executed in an optimized order (move operations first, then renames)
 2. For rename_symbol, using old_name instead of start_line provides more robust matching that survives file edits
 3. For move_to_file, ensure the line range contains complete functions/classes/declarations for best results
-4. The tool automatically adds export statements to moved code when appropriate`
+4. The tool automatically adds export statements to moved code when appropriate
+5. When moving code to a new file, import statements are automatically added to the original file for any moved symbols
+6. Mixed batch operations (combining move_to_file and rename_symbol) are fully supported`
 }
