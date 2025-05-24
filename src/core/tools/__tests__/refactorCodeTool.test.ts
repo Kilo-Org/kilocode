@@ -9,6 +9,7 @@ jest.mock("fs/promises", () => ({
 	mkdir: jest.fn(),
 	readFile: jest.fn(),
 	writeFile: jest.fn(),
+	access: jest.fn(),
 }))
 
 // Mock path module
@@ -37,6 +38,9 @@ jest.mock("vscode", () => ({
 	workspace: {
 		openTextDocument: jest.fn(),
 		applyEdit: jest.fn(),
+		fs: {
+			writeFile: jest.fn(),
+		},
 	},
 	window: {
 		showTextDocument: jest.fn(),
@@ -53,6 +57,8 @@ jest.mock("vscode", () => ({
 	},
 	WorkspaceEdit: jest.fn(() => ({
 		replace: jest.fn(),
+		insert: jest.fn(),
+		delete: jest.fn(),
 	})),
 }))
 
@@ -193,7 +199,7 @@ describe("refactorCodeTool", () => {
 			"vscode.executeCodeActionProvider",
 			mockDocument.uri,
 			expect.any(Object),
-			{ kind: "refactor.extract" },
+			"refactor.extract",
 		)
 		expect(mockPushToolResult).toHaveBeenCalledWith(
 			expect.stringContaining("Successfully extracted function 'extractedFunction'"),
@@ -323,12 +329,19 @@ describe("refactorCodeTool", () => {
 		expect(mockPushToolResult).toHaveBeenCalledWith("Refactoring cancelled by user")
 	})
 
-	it("should handle move_to_file operation with VS Code refactoring API", async () => {
+	it("should handle move_to_file operation with code actions", async () => {
 		const mockDocument = {
-			getText: jest.fn().mockReturnValue("line1\nline2\nline3\nline4\nline5"),
+			getText: jest.fn((range?: any) => {
+				if (range) {
+					// Return text for the specified range (lines 1-3, 0-based)
+					return "line2\nline3\nline4"
+				}
+				return "line1\nline2\nline3\nline4\nline5"
+			}),
 			lineAt: jest.fn((line: number) => ({
 				text: `line${line + 1}`,
 				range: new vscode.Range(line, 0, line, 10),
+				isEmptyOrWhitespace: false,
 			})),
 			lineCount: 5,
 			uri: vscode.Uri.file("/test/test.ts"),
@@ -342,23 +355,23 @@ describe("refactorCodeTool", () => {
 			uri: vscode.Uri.file("/test/target.ts"),
 		}
 
-		// Mock the code action for move refactoring
+		// Mock a code action with a workspace edit
+		const mockWorkspaceEdit = new vscode.WorkspaceEdit()
 		const mockMoveAction = {
 			title: "Move to a new file",
-			command: {
-				command: "typescript.moveToFile",
-				arguments: ["moveToFile"],
-			},
+			kind: vscode.CodeActionKind.RefactorMove,
+			edit: mockWorkspaceEdit,
 		}
 
 		;(vscode.workspace.openTextDocument as jest.Mock)
 			.mockResolvedValueOnce(mockDocument as any)
 			.mockResolvedValueOnce(mockTargetDocument as any)
 		;(vscode.window.showTextDocument as jest.Mock).mockResolvedValue(mockEditor as any)
-		;(vscode.commands.executeCommand as jest.Mock)
-			.mockResolvedValueOnce([mockMoveAction]) // vscode.executeCodeActionProvider
-			.mockResolvedValueOnce(undefined) // typescript.moveToFile
+		;(vscode.commands.executeCommand as jest.Mock).mockResolvedValueOnce([mockMoveAction]) // Return code action
+		;(vscode.workspace.applyEdit as jest.Mock).mockResolvedValue(true)
 		;(fs.mkdir as jest.Mock).mockResolvedValue(undefined)
+		;(fs.access as jest.Mock).mockRejectedValue(new Error("File not found")) // Target file doesn't exist
+		;(vscode.workspace.fs.writeFile as jest.Mock).mockResolvedValue(undefined)
 
 		const block: ToolUse = {
 			type: "tool_use",
@@ -382,21 +395,21 @@ describe("refactorCodeTool", () => {
 			mockRemoveClosingTag,
 		)
 
-		// Verify VS Code refactoring API was used
+		// Verify code action provider was called with correct filter
 		expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
 			"vscode.executeCodeActionProvider",
 			mockDocument.uri,
 			expect.any(Object), // Range
-			{ kind: "refactor.move" },
+			"refactor.move",
 		)
 
-		// Verify the move command was executed with target URI
-		expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-			"typescript.moveToFile",
-			"moveToFile",
-			expect.objectContaining({
-				toString: expect.any(Function),
-			}),
+		// Verify workspace edit was applied
+		expect(vscode.workspace.applyEdit).toHaveBeenCalledWith(mockWorkspaceEdit)
+
+		// Verify target file was created
+		expect(vscode.workspace.fs.writeFile).toHaveBeenCalledWith(
+			expect.objectContaining({ fsPath: "/test/target.ts" }),
+			Buffer.from("", "utf-8"),
 		)
 
 		expect(mockPushToolResult).toHaveBeenCalledWith(
@@ -404,12 +417,18 @@ describe("refactorCodeTool", () => {
 		)
 	})
 
-	it("should handle move_to_file when no refactor actions are available", async () => {
+	it("should handle move_to_file with manual fallback when no code actions available", async () => {
 		const mockDocument = {
-			getText: jest.fn().mockReturnValue("line1\nline2\nline3"),
+			getText: jest.fn((range?: any) => {
+				if (range) {
+					return "line2"
+				}
+				return "line1\nline2\nline3"
+			}),
 			lineAt: jest.fn((line: number) => ({
 				text: `line${line + 1}`,
 				range: new vscode.Range(line, 0, line, 10),
+				isEmptyOrWhitespace: false,
 			})),
 			lineCount: 3,
 			uri: vscode.Uri.file("/test/test.ts"),
@@ -418,10 +437,18 @@ describe("refactorCodeTool", () => {
 			selection: null,
 		}
 
+		const mockWorkspaceEdit = {
+			delete: jest.fn(),
+		}
+
+		;(vscode.WorkspaceEdit as jest.Mock).mockImplementation(() => mockWorkspaceEdit)
 		;(vscode.workspace.openTextDocument as jest.Mock).mockResolvedValue(mockDocument as any)
 		;(vscode.window.showTextDocument as jest.Mock).mockResolvedValue(mockEditor as any)
 		;(vscode.commands.executeCommand as jest.Mock).mockResolvedValueOnce([]) // No code actions
+		;(vscode.workspace.applyEdit as jest.Mock).mockResolvedValue(true)
 		;(fs.mkdir as jest.Mock).mockResolvedValue(undefined)
+		;(fs.access as jest.Mock).mockRejectedValue(new Error("File not found"))
+		;(vscode.workspace.fs.writeFile as jest.Mock).mockResolvedValue(undefined)
 
 		const block: ToolUse = {
 			type: "tool_use",
@@ -445,11 +472,17 @@ describe("refactorCodeTool", () => {
 			mockRemoveClosingTag,
 		)
 
-		expect(mockCline.recordToolError).toHaveBeenCalledWith(
-			"refactor_code",
-			expect.stringContaining("No Move refactor available"),
+		// Should fall back to manual move
+		expect(vscode.workspace.fs.writeFile).toHaveBeenCalledWith(
+			expect.objectContaining({ fsPath: "/test/target.ts" }),
+			Buffer.from("line2", "utf-8"),
 		)
-		expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("No Move refactor available"))
+
+		expect(mockWorkspaceEdit.delete).toHaveBeenCalledWith(mockDocument.uri, expect.any(vscode.Range))
+
+		expect(mockPushToolResult).toHaveBeenCalledWith(
+			expect.stringContaining("Successfully moved code from lines 2-2 to target.ts (manual move)"),
+		)
 	})
 
 	it("should handle move_to_file with WorkspaceEdit", async () => {
@@ -467,9 +500,11 @@ describe("refactorCodeTool", () => {
 			selection: null,
 		}
 
+		const mockTargetDocument = {
+			uri: vscode.Uri.file("/test/target.ts"),
+		}
+
 		const mockEdit = {
-			replace: jest.fn(),
-			insert: jest.fn(),
 			delete: jest.fn(),
 		}
 
@@ -479,11 +514,15 @@ describe("refactorCodeTool", () => {
 			edit: mockEdit,
 		}
 
-		;(vscode.workspace.openTextDocument as jest.Mock).mockResolvedValue(mockDocument as any)
+		;(vscode.workspace.openTextDocument as jest.Mock)
+			.mockResolvedValueOnce(mockDocument as any)
+			.mockResolvedValueOnce(mockTargetDocument as any)
 		;(vscode.window.showTextDocument as jest.Mock).mockResolvedValue(mockEditor as any)
 		;(vscode.commands.executeCommand as jest.Mock).mockResolvedValueOnce([mockMoveAction])
 		;(vscode.workspace.applyEdit as jest.Mock).mockResolvedValue(true)
 		;(fs.mkdir as jest.Mock).mockResolvedValue(undefined)
+		;(fs.access as jest.Mock).mockRejectedValue(new Error("File not found"))
+		;(vscode.workspace.fs.writeFile as jest.Mock).mockResolvedValue(undefined)
 
 		const block: ToolUse = {
 			type: "tool_use",
@@ -523,16 +562,33 @@ describe("refactorCodeTool", () => {
 				lineCount: 2,
 				uri: vscode.Uri.file("/test/test.ts"),
 				save: jest.fn().mockResolvedValue(true),
+				positionAt: jest.fn((offset: number) => {
+					// Mock position calculation
+					const lines = "const oldVar1 = 1;\nconst oldVar2 = 2;".split("\n")
+					let currentOffset = 0
+					for (let line = 0; line < lines.length; line++) {
+						if (currentOffset + lines[line].length >= offset) {
+							return new vscode.Position(line, offset - currentOffset)
+						}
+						currentOffset += lines[line].length + 1 // +1 for newline
+					}
+					return new vscode.Position(0, 0)
+				}),
 			}
 			const mockEditor = {
 				selection: null,
 			}
 
+			// Mock the rename provider to return a valid WorkspaceEdit
+			const mockWorkspaceEdit = {
+				size: 1,
+			}
+
 			;(vscode.workspace.openTextDocument as jest.Mock).mockResolvedValue(mockDocument as any)
 			;(vscode.window.showTextDocument as jest.Mock).mockResolvedValue(mockEditor as any)
-			;(vscode.commands.executeCommand as jest.Mock).mockResolvedValue({
-				size: 1,
-			})
+			;(vscode.commands.executeCommand as jest.Mock)
+				.mockResolvedValueOnce(mockWorkspaceEdit) // First rename
+				.mockResolvedValueOnce(mockWorkspaceEdit) // Second rename
 			;(vscode.workspace.applyEdit as jest.Mock).mockResolvedValue(true)
 
 			const block: ToolUse = {
@@ -669,11 +725,14 @@ describe("refactorCodeTool", () => {
 				selection: null,
 			}
 
+			// Mock the rename provider to return a valid WorkspaceEdit
+			const mockWorkspaceEdit = {
+				size: 1,
+			}
+
 			;(vscode.workspace.openTextDocument as jest.Mock).mockResolvedValue(mockDocument as any)
 			;(vscode.window.showTextDocument as jest.Mock).mockResolvedValue(mockEditor as any)
-			;(vscode.commands.executeCommand as jest.Mock).mockResolvedValue({
-				size: 1,
-			})
+			;(vscode.commands.executeCommand as jest.Mock).mockResolvedValue(mockWorkspaceEdit)
 			;(vscode.workspace.applyEdit as jest.Mock).mockResolvedValue(true)
 
 			const block: ToolUse = {

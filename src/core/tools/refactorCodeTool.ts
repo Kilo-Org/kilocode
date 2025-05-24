@@ -161,7 +161,7 @@ export async function refactorCodeTool(
 
 			for (let i = 0; i < operations.length; i++) {
 				const op = operations[i]
-				let result: string
+				let result: string = ""
 				let success = false
 
 				// Re-read the document in case it was modified by previous operations
@@ -208,9 +208,7 @@ export async function refactorCodeTool(
 								"vscode.executeCodeActionProvider",
 								document.uri,
 								range,
-								{
-									kind: vscode.CodeActionKind.RefactorExtract.value,
-								},
+								vscode.CodeActionKind.RefactorExtract.value,
 							)
 
 							if (!extractActions || extractActions.length === 0) {
@@ -336,71 +334,120 @@ export async function refactorCodeTool(
 								"vscode.executeCodeActionProvider",
 								document.uri,
 								range,
-								{
-									kind: vscode.CodeActionKind.RefactorMove.value,
-								},
+								vscode.CodeActionKind.RefactorMove.value,
 							)
 
 							if (!moveActions || moveActions.length === 0) {
-								result = `No Move refactor available for the selected code. The code might not be a complete moveable unit (e.g., a complete function, class, or module export).`
-								cline.consecutiveMistakeCount++
-								cline.recordToolError("refactor_code", result)
-								await cline.say("error", result)
-								pushToolResult(result)
-								return
-							}
+								// If no move actions available, fall back to manual move
+								// This handles cases where the language server doesn't support move refactoring
 
-							// Find the appropriate move action or use the first one
-							const moveAction = moveActions[0]
+								// Get the text to move
+								const textToMove = document.getText(range)
 
-							// Check if the action has a command that needs the target URI
-							if (moveAction.command) {
-								if (
-									moveAction.command.command === "typescript.moveToFile" ||
-									moveAction.command.command === "javascript.moveToFile" ||
-									moveAction.command.command === "_typescript.moveToFile" ||
-									moveAction.command.command === "_javascript.moveToFile"
-								) {
-									// For TypeScript/JavaScript move commands, provide the target URI
-									await vscode.commands.executeCommand(
-										moveAction.command.command,
-										moveAction.command.arguments?.[0], // action
-										targetUri, // target file URI
-									)
-									success = true
-									result = `Successfully moved code from lines ${op.start_line}-${op.end_line} to ${op.target_path}`
-								} else if (moveAction.command.command === "editor.action.refactor") {
-									// Generic refactor command - provide all necessary arguments
-									const args = [
-										document.uri, // source document
-										range, // the text range
-										"move", // refactor kind
-										moveAction.title, // action name
-										targetUri.toString(), // target file path
-									]
-									await vscode.commands.executeCommand(moveAction.command.command, ...args)
-									success = true
-									result = `Successfully moved code from lines ${op.start_line}-${op.end_line} to ${op.target_path}`
-								} else {
-									// Try to execute the command as-is
-									await vscode.commands.executeCommand(
-										moveAction.command.command,
-										...(moveAction.command.arguments || []),
-									)
-									success = true
-									result = `Successfully initiated move operation from lines ${op.start_line}-${op.end_line} to ${op.target_path}`
+								// Check if target file exists
+								let targetExists = false
+								try {
+									await fs.access(targetAbsolutePath)
+									targetExists = true
+								} catch {
+									// File doesn't exist
 								}
-							} else if (moveAction.edit) {
-								// If the action already has a WorkspaceEdit, apply it
-								const editSuccess = await vscode.workspace.applyEdit(moveAction.edit)
+
+								// Determine the file extension for proper formatting
+								const fileExt = path.extname(op.target_path).toLowerCase()
+								const isTypeScript = fileExt === ".ts" || fileExt === ".tsx"
+								const isJavaScript = fileExt === ".js" || fileExt === ".jsx"
+
+								// For TypeScript/JavaScript files, check if we need to add export
+								let processedText = textToMove
+								if (isTypeScript || isJavaScript) {
+									// Check if the text contains a function, class, or const that should be exported
+									const needsExport =
+										/^(function|class|const|let|var)\s+\w+/m.test(textToMove) &&
+										!/^export\s+(function|class|const|let|var)/m.test(textToMove)
+
+									if (needsExport) {
+										// Add export to the declarations
+										processedText = textToMove.replace(
+											/^(function|class|const|let|var)\s+/gm,
+											"export $1 ",
+										)
+									}
+								}
+
+								// Create the workspace edit
+								const edit = new vscode.WorkspaceEdit()
+
+								// Add content to target file
+								if (targetExists) {
+									// Read existing content
+									const existingContent = await fs.readFile(targetAbsolutePath, "utf-8")
+									const newContent = existingContent.trimEnd() + "\n\n" + processedText
+									await fs.writeFile(targetAbsolutePath, newContent, "utf-8")
+								} else {
+									// Create new file with content
+									await vscode.workspace.fs.writeFile(targetUri, Buffer.from(processedText, "utf-8"))
+								}
+
+								// Remove from source file
+								let deleteRange = range
+								if (endLineNum + 1 < document.lineCount) {
+									const nextLine = document.lineAt(endLineNum + 1)
+									if (nextLine.isEmptyOrWhitespace) {
+										deleteRange = new vscode.Range(startPos, new vscode.Position(endLineNum + 1, 0))
+									}
+								}
+
+								edit.delete(document.uri, deleteRange)
+								const editSuccess = await vscode.workspace.applyEdit(edit)
+
 								if (editSuccess) {
 									success = true
-									result = `Successfully moved code from lines ${op.start_line}-${op.end_line} to ${op.target_path}`
+									result = `Successfully moved code from lines ${op.start_line}-${op.end_line} to ${op.target_path} (manual move)`
 								} else {
-									result = `Failed to apply the move refactoring edit`
+									result = `Failed to remove code from source file after moving to ${op.target_path}`
 								}
 							} else {
-								result = `Move refactor action had no command or edit to apply`
+								// Find the move to file action
+								const moveToFileAction = moveActions.find(
+									(action) =>
+										/^Move\s+[\s\S]*\s+to\s+(a\s+)?file/i.test(action.title) ||
+										action.title.toLowerCase().includes("move to file"),
+								)
+
+								if (!moveToFileAction) {
+									result = `No "Move to file" action available. Found actions: ${moveActions.map((a) => a.title).join(", ")}`
+									results.push(result)
+									overallSuccess = false
+									continue
+								}
+
+								if (!moveToFileAction.edit) {
+									result = `Move to file action has no edit. This might require UI interaction.`
+									results.push(result)
+									overallSuccess = false
+									continue
+								}
+
+								// Apply the workspace edit from the code action
+								const editSuccess = await vscode.workspace.applyEdit(moveToFileAction.edit)
+
+								if (editSuccess) {
+									// The edit might create content for a new file but not actually create the file
+									// So we need to ensure the file exists
+									try {
+										await fs.access(targetAbsolutePath)
+									} catch {
+										// File doesn't exist, create it
+										// The workspace edit should have added the content, but we need to create the file
+										await vscode.workspace.fs.writeFile(targetUri, Buffer.from("", "utf-8"))
+									}
+
+									success = true
+									result = `Successfully moved code from lines ${op.start_line}-${op.end_line} to ${op.target_path}`
+								} else {
+									result = `Failed to apply move to file edit`
+								}
 							}
 
 							// If successful, open the target file
@@ -409,8 +456,7 @@ export async function refactorCodeTool(
 									const targetDoc = await vscode.workspace.openTextDocument(targetUri)
 									await vscode.window.showTextDocument(targetDoc, { preview: false })
 								} catch (error) {
-									// Target file might not exist yet if it's a new file
-									// This is okay, the refactoring might create it
+									// Ignore errors opening the file
 								}
 							}
 						} catch (error) {
