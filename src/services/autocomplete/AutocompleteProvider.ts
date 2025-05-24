@@ -177,9 +177,9 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 				if (activeRequest !== requestId || token.isCancellationRequested) {
 					return null
 				}
-				console.log("return first-line ", firstLine)
 
 				const firstLine = pendingCompletion.split(/\r?\n/)[0]
+				console.log("return first-line ", firstLine)
 				if (!firstLine) return null
 
 				vscode.commands.executeCommand("setContext", PREVIEW_CONTEXT_KEY, true)
