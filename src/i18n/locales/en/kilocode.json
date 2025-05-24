@@ -5,5 +5,10 @@
 	"lowCreditWarning": {
 		"title": "Low Credit Warning!",
 		"message": "Check to see if you can top up with free credits or purchase some more!"
+	},
+	"feedback": {
+		"title": "Your Feedback Matters",
+		"message": "Help us improve by sharing your experience with our service.",
+		"submit": "Submit Feedback"
 	}
 }

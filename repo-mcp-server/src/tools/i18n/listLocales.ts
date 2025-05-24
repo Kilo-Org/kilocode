@@ -1,5 +1,5 @@
 import { Context, McpToolCallResponse, ToolHandler } from "../types.js"
-import { getI18nLocales, getI18nNamespaces } from "../../locale-utils.js"
+import { getI18nLocales, getI18nNamespaces } from "../../utils/locale-utils.js"
 
 /**
  * List locales tool handler

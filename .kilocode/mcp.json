@@ -3,7 +3,8 @@
 		"translation-mcp-server": {
 			"type": "stdio",
 			"command": "npx",
-			"args": ["tsx", "repo-mcp-server/src/stdio-server.ts"],
+			"args": ["tsx", "./src/index.ts"],
+			"cwd": "repo-mcp-server",
 			"timeout": 180,
 			"alwaysAllow": ["translate_i18n_key", "move_i18n_key", "list_locales"]
 		}

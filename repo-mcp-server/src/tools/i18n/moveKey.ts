@@ -3,15 +3,15 @@ import fs from "node:fs/promises"
 import { existsSync } from "node:fs"
 
 import { Context, McpToolCallResponse, ToolHandler } from "../types.js"
-import { getI18nLocales } from "../../locale-utils.js"
+import { getI18nLocales } from "../../utils/locale-utils.js"
 import {
 	getI18nNestedKey,
 	setI18nNestedKey,
 	deleteI18nNestedKey,
 	cleanupEmptyI18nObjects,
 	detectIndentation,
-} from "../../json-utils.js"
-import { reorderJsonToMatchSource } from "../../order-utils.js"
+} from "../../utils/json-utils.js"
+import { reorderJsonToMatchSource } from "../../utils/order-utils.js"
 
 /**
  * Helper function to move a key from one file to another for a specific locale
@@ -179,10 +179,10 @@ class MoveKeyTool implements ToolHandler {
 				const englishDestFilePath = isEnglishLocale
 					? undefined
 					: path.join(
-							context.LOCALE_PATHS[target as keyof typeof context.LOCALE_PATHS],
-							englishLocale,
-							destFile,
-						)
+						context.LOCALE_PATHS[target as keyof typeof context.LOCALE_PATHS],
+						englishLocale,
+						destFile,
+					)
 
 				const result = await moveKeyForLocale(
 					sourceFilePath,
