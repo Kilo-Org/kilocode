@@ -1,0 +1,25 @@
+{
+	"name": "repo-mcp-server",
+	"version": "0.1.0",
+	"description": "MCP Server for i18n translation management",
+	"main": "build/index.js",
+	"type": "module",
+	"scripts": {
+		"build": "tsc && chmod 755 build/index.js",
+		"start": "node build/index.js",
+		"dev": "tsx src/index.ts",
+		"watch": "tsx watch src/index.ts"
+	},
+	"dependencies": {
+		"@modelcontextprotocol/sdk": "^1.11.4",
+		"axios": "^1.6.0",
+		"dotenv": "^16.5.0",
+		"p-limit": "^4.0.0",
+		"zod": "^3.21.4"
+	},
+	"devDependencies": {
+		"@types/node": "^18.0.0",
+		"tsx": "^4.7.1",
+		"typescript": "^5.0.0"
+	}
+}
