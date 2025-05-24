@@ -135,7 +135,7 @@ export async function getParserForFile(filepath: string) {
 
 		return parser
 	} catch (e) {
-		console.debug("Unable to load language for file", filepath, e)
+		console.debug("Unable to load language parser for file", filepath, e)
 		return undefined
 	}
 }
