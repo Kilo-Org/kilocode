@@ -149,16 +149,12 @@ export async function translateI18nText(
 		`🔤 Translating text to ${targetLanguage}: "${text.substring(0, 30)}${text.length > 30 ? "..." : ""}"`,
 	)
 
-	// Use mock translation if no API key is provided
+	// Require API key for translations
 	if (!apiKey || apiKey.trim() === "") {
-		console.error("🧪 No API key provided, using mock translation")
-		const prefix = `[${targetLanguage.substring(0, 2).toUpperCase()}] `
-		const mockTranslation = `${prefix}${text}`
-
-		console.error(
-			`✅ Mock translation complete: "${mockTranslation.substring(0, 30)}${mockTranslation.length > 30 ? "..." : ""}"`,
+		console.error("❌ ERROR: No API key provided for translation")
+		throw new Error(
+			"OpenRouter API key is required for translations. Please set OPENROUTER_API_KEY in .env.local file.",
 		)
-		return mockTranslation
 	}
 
 	try {

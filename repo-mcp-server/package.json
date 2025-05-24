@@ -6,7 +6,8 @@
 	"type": "module",
 	"scripts": {
 		"dev": "tsx src/index.ts",
-		"watch": "tsx watch src/index.ts"
+		"watch": "tsx watch src/index.ts",
+		"build": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@modelcontextprotocol/sdk": "^1.11.4",

@@ -11,7 +11,7 @@
 	},
 	"engines": {
 		"vscode": "^1.84.0",
-		"node": "20.18.1"
+		"node": ">=18.20.8"
 	},
 	"author": {
 		"name": "Kilo Code"
@@ -419,7 +419,7 @@
 		"install-extension": "npm install",
 		"install-webview": "cd webview-ui && npm install",
 		"install-e2e": "cd e2e && npm install",
-		"install-repo-mcp-server": "cd repo-mcp-server && npm install && npm run build",
+		"install-repo-mcp-server": "cd repo-mcp-server && npm install",
 		"lint": "npm-run-all -l -p lint:*",
 		"lint:extension": "eslint src --ext .ts",
 		"lint:webview": "cd webview-ui && npm run lint",
