@@ -11,8 +11,12 @@ import { fileExistsAtPath } from "../../utils/fs"
 import { RecordSource } from "../context-tracking/FileContextTrackerTypes"
 
 export interface RefactorOperation {
-	type: "extract_function" | "move_to_file" | "rename_symbol"
-	params: Record<string, any>
+	operation: "extract_function" | "move_to_file" | "rename_symbol"
+	start_line?: number // Made optional for rename_symbol
+	end_line?: number
+	new_name?: string
+	old_name?: string // Added for rename_symbol
+	target_path?: string
 }
 
 export async function refactorCodeTool(
@@ -24,16 +28,19 @@ export async function refactorCodeTool(
 	removeClosingTag: RemoveClosingTag,
 ) {
 	const relPath: string | undefined = block.params.path
-	const operation: string | undefined = block.params.operation
-	const startLine: string | undefined = block.params.start_line
-	const endLine: string | undefined = block.params.end_line
-	const newName: string | undefined = block.params.new_name
-	const targetPath: string | undefined = block.params.target_path
+	const operationsParam: string | undefined = block.params.operations
+
+	// Support legacy single operation format for backward compatibility
+	const legacyOperation: string | undefined = block.params.operation
+	const legacyStartLine: string | undefined = block.params.start_line
+	const legacyEndLine: string | undefined = block.params.end_line
+	const legacyNewName: string | undefined = block.params.new_name
+	const legacyTargetPath: string | undefined = block.params.target_path
 
 	const sharedMessageProps: ClineSayTool = {
 		tool: "refactorCode",
 		path: getReadablePath(cline.cwd, removeClosingTag("path", relPath)),
-		content: operation,
+		content: "",
 	}
 
 	try {
@@ -49,10 +56,36 @@ export async function refactorCodeTool(
 				return
 			}
 
-			if (!operation) {
+			// Parse operations - support both single and batch formats
+			let operations: RefactorOperation[]
+
+			if (operationsParam) {
+				try {
+					const parsed = JSON.parse(operationsParam)
+					operations = Array.isArray(parsed) ? parsed : [parsed]
+				} catch (error) {
+					cline.consecutiveMistakeCount++
+					cline.recordToolError("refactor_code")
+					const formattedError = `Invalid operations format. Expected JSON object or array: ${error}`
+					await cline.say("error", formattedError)
+					pushToolResult(formattedError)
+					return
+				}
+			} else if (legacyOperation) {
+				// Support legacy format
+				operations = [
+					{
+						operation: legacyOperation as RefactorOperation["operation"],
+						start_line: legacyStartLine ? parseInt(legacyStartLine) : 0,
+						end_line: legacyEndLine ? parseInt(legacyEndLine) : undefined,
+						new_name: legacyNewName,
+						target_path: legacyTargetPath,
+					},
+				]
+			} else {
 				cline.consecutiveMistakeCount++
 				cline.recordToolError("refactor_code")
-				pushToolResult(await cline.sayAndCreateMissingParamError("refactor_code", "operation"))
+				pushToolResult(await cline.sayAndCreateMissingParamError("refactor_code", "operations"))
 				return
 			}
 
@@ -80,26 +113,39 @@ export async function refactorCodeTool(
 			const document = await vscode.workspace.openTextDocument(absolutePath)
 			const editor = await vscode.window.showTextDocument(document)
 
-			// Prepare the operation description for approval
-			let operationDescription: string
-			switch (operation) {
-				case "extract_function":
-					operationDescription = `Extract function '${newName}' from lines ${startLine}-${endLine}`
-					break
-				case "move_to_file":
-					operationDescription = `Move code from lines ${startLine}-${endLine} to ${targetPath}`
-					break
-				case "rename_symbol":
-					operationDescription = `Rename symbol at line ${startLine} to '${newName}'`
-					break
-				default:
-					operationDescription = operation
+			// Prepare operation descriptions for approval
+			const operationDescriptions: string[] = []
+			for (const op of operations) {
+				switch (op.operation) {
+					case "extract_function":
+						operationDescriptions.push(
+							`Extract function '${op.new_name}' from lines ${op.start_line}-${op.end_line}`,
+						)
+						break
+					case "move_to_file":
+						operationDescriptions.push(
+							`Move code from lines ${op.start_line}-${op.end_line} to ${op.target_path}`,
+						)
+						break
+					case "rename_symbol":
+						if (op.old_name) {
+							operationDescriptions.push(`Rename '${op.old_name}' to '${op.new_name}'`)
+						} else {
+							operationDescriptions.push(`Rename symbol at line ${op.start_line} to '${op.new_name}'`)
+						}
+						break
+				}
 			}
+
+			const batchDescription =
+				operations.length > 1
+					? `Batch refactoring (${operations.length} operations):\n${operationDescriptions.map((d, i) => `${i + 1}. ${d}`).join("\n")}`
+					: operationDescriptions[0]
 
 			// Ask for approval BEFORE applying the refactoring
 			const approvalMessage = JSON.stringify({
 				...sharedMessageProps,
-				content: operationDescription,
+				content: batchDescription,
 			} satisfies ClineSayTool)
 
 			const didApprove = await askApproval("tool", approvalMessage)
@@ -110,392 +156,418 @@ export async function refactorCodeTool(
 			}
 
 			// Now proceed with the refactoring after approval
-			let result: string
-			let success = false
+			const results: string[] = []
+			let overallSuccess = true
 
-			switch (operation) {
-				case "extract_function": {
-					if (!startLine || !endLine || !newName) {
-						cline.consecutiveMistakeCount++
-						cline.recordToolError("refactor_code")
-						pushToolResult(
-							await cline.sayAndCreateMissingParamError(
-								"refactor_code",
-								"start_line, end_line, and new_name are required for extract_function",
-							),
-						)
-						return
-					}
+			for (let i = 0; i < operations.length; i++) {
+				const op = operations[i]
+				let result: string
+				let success = false
 
-					// Convert line numbers to VS Code positions (0-based)
-					const startLineNum = parseInt(startLine) - 1
-					const endLineNum = parseInt(endLine) - 1
+				// Re-read the document in case it was modified by previous operations
+				if (i > 0) {
+					await document.save()
+					const updatedDoc = await vscode.workspace.openTextDocument(absolutePath)
+					await vscode.window.showTextDocument(updatedDoc)
+				}
 
-					if (isNaN(startLineNum) || isNaN(endLineNum)) {
-						cline.consecutiveMistakeCount++
-						cline.recordToolError("refactor_code")
-						const formattedError = `Invalid line numbers provided: start_line=${startLine}, end_line=${endLine}`
-						await cline.say("error", formattedError)
-						pushToolResult(formattedError)
-						return
-					}
-
-					// Set selection
-					const startPos = new vscode.Position(startLineNum, 0)
-					const endPos = new vscode.Position(endLineNum, document.lineAt(endLineNum).text.length)
-					const range = new vscode.Range(startPos, endPos)
-					editor.selection = new vscode.Selection(startPos, endPos)
-
-					try {
-						// Get all Extract refactor code actions at the selected range
-						const extractActions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
-							"vscode.executeCodeActionProvider",
-							document.uri,
-							range,
-							{
-								kind: vscode.CodeActionKind.RefactorExtract.value,
-							},
-						)
-
-						if (!extractActions || extractActions.length === 0) {
-							result = `No Extract refactor available for the selected code. The code might not be a complete extractable unit.`
+				switch (op.operation) {
+					case "extract_function": {
+						if (!op.start_line || !op.end_line || !op.new_name) {
 							cline.consecutiveMistakeCount++
-							cline.recordToolError("refactor_code", result)
-							await cline.say("error", result)
-							pushToolResult(result)
+							cline.recordToolError("refactor_code")
+							pushToolResult(
+								await cline.sayAndCreateMissingParamError(
+									"refactor_code",
+									"start_line, end_line, and new_name are required for extract_function",
+								),
+							)
 							return
 						}
 
-						// Find the extract function action (not extract constant or extract type)
-						const extractFunctionAction =
-							extractActions.find(
-								(action) =>
-									action.title.toLowerCase().includes("function") ||
-									action.title.toLowerCase().includes("method"),
-							) || extractActions[0]
+						// Convert line numbers to VS Code positions (0-based)
+						const startLineNum = op.start_line - 1
+						const endLineNum = op.end_line - 1
 
-						let extractSuccess = false
-
-						// Apply the extract action
-						if (extractFunctionAction.command) {
-							await vscode.commands.executeCommand(
-								extractFunctionAction.command.command,
-								...(extractFunctionAction.command.arguments || []),
-							)
-							extractSuccess = true
-						} else if (extractFunctionAction.edit) {
-							extractSuccess = await vscode.workspace.applyEdit(extractFunctionAction.edit)
+						if (isNaN(startLineNum) || isNaN(endLineNum)) {
+							result = `Invalid line numbers provided: start_line=${op.start_line}, end_line=${op.end_line}`
+							results.push(result)
+							overallSuccess = false
+							continue
 						}
 
-						if (extractSuccess) {
-							// After extraction, try to rename the function
-							// Wait a bit for the extraction to complete and cursor to be positioned
-							await new Promise((resolve) => setTimeout(resolve, 500))
-
-							// Get the current cursor position (should be on the new function name)
-							const currentPosition = editor.selection.active
-
-							// Try to rename using the rename provider
-							try {
-								const renameEdits = await vscode.commands.executeCommand<vscode.WorkspaceEdit>(
-									"vscode.executeDocumentRenameProvider",
-									document.uri,
-									currentPosition,
-									newName,
-								)
-
-								if (renameEdits && renameEdits.size > 0) {
-									await vscode.workspace.applyEdit(renameEdits)
-									success = true
-									result = `Successfully extracted function '${newName}' from lines ${startLine}-${endLine} in ${relPath}`
-								} else {
-									// Extraction succeeded but rename failed
-									success = true
-									result = `Successfully extracted function from lines ${startLine}-${endLine} in ${relPath}, but could not rename to '${newName}'. You may need to rename it manually.`
-								}
-							} catch (renameError) {
-								// Extraction succeeded but rename failed
-								success = true
-								result = `Successfully extracted function from lines ${startLine}-${endLine} in ${relPath}, but could not rename to '${newName}'. You may need to rename it manually.`
-							}
-						} else {
-							result = `Failed to apply extract function refactoring`
-						}
-					} catch (error) {
-						result = `Failed to extract function: ${error instanceof Error ? error.message : String(error)}`
-					}
-					break
-				}
-
-				case "move_to_file": {
-					if (!startLine || !endLine || !targetPath) {
-						cline.consecutiveMistakeCount++
-						cline.recordToolError("refactor_code")
-						pushToolResult(
-							await cline.sayAndCreateMissingParamError(
-								"refactor_code",
-								"start_line, end_line, and target_path are required for move_to_file",
-							),
-						)
-						return
-					}
-
-					// Convert line numbers to VS Code positions (0-based)
-					const startLineNum = parseInt(startLine) - 1
-					const endLineNum = parseInt(endLine) - 1
-
-					if (isNaN(startLineNum) || isNaN(endLineNum)) {
-						cline.consecutiveMistakeCount++
-						cline.recordToolError("refactor_code")
-						const formattedError = `Invalid line numbers provided: start_line=${startLine}, end_line=${endLine}`
-						await cline.say("error", formattedError)
-						pushToolResult(formattedError)
-						return
-					}
-
-					// Validate target path access
-					const targetAccessAllowed = cline.rooIgnoreController?.validateAccess(targetPath)
-					if (!targetAccessAllowed) {
-						await cline.say("rooignore_error", targetPath)
-						pushToolResult(formatResponse.toolError(formatResponse.rooIgnoreError(targetPath)))
-						return
-					}
-
-					try {
-						// Set selection for the code to move
+						// Set selection
 						const startPos = new vscode.Position(startLineNum, 0)
 						const endPos = new vscode.Position(endLineNum, document.lineAt(endLineNum).text.length)
 						const range = new vscode.Range(startPos, endPos)
 						editor.selection = new vscode.Selection(startPos, endPos)
 
-						// Prepare the target file URI
-						const targetAbsolutePath = path.resolve(cline.cwd, targetPath)
-						const targetUri = vscode.Uri.file(targetAbsolutePath)
+						try {
+							// Get all Extract refactor code actions at the selected range
+							const extractActions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
+								"vscode.executeCodeActionProvider",
+								document.uri,
+								range,
+								{
+									kind: vscode.CodeActionKind.RefactorExtract.value,
+								},
+							)
 
-						// Ensure target directory exists
-						const targetDir = path.dirname(targetAbsolutePath)
-						await fs.mkdir(targetDir, { recursive: true })
+							if (!extractActions || extractActions.length === 0) {
+								result = `No Extract refactor available for the selected code. The code might not be a complete extractable unit.`
+								cline.consecutiveMistakeCount++
+								cline.recordToolError("refactor_code", result)
+								await cline.say("error", result)
+								pushToolResult(result)
+								return
+							}
 
-						// Get all Move refactor code actions at the selected range
-						const moveActions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
-							"vscode.executeCodeActionProvider",
-							document.uri,
-							range,
-							{
-								kind: vscode.CodeActionKind.RefactorMove.value,
-							},
-						)
+							// Find the extract function action (not extract constant or extract type)
+							const extractFunctionAction =
+								extractActions.find(
+									(action) =>
+										action.title.toLowerCase().includes("function") ||
+										action.title.toLowerCase().includes("method"),
+								) || extractActions[0]
 
-						if (!moveActions || moveActions.length === 0) {
-							result = `No Move refactor available for the selected code. The code might not be a complete moveable unit (e.g., a complete function, class, or module export).`
+							let extractSuccess = false
+
+							// Apply the extract action
+							if (extractFunctionAction.command) {
+								await vscode.commands.executeCommand(
+									extractFunctionAction.command.command,
+									...(extractFunctionAction.command.arguments || []),
+								)
+								extractSuccess = true
+							} else if (extractFunctionAction.edit) {
+								extractSuccess = await vscode.workspace.applyEdit(extractFunctionAction.edit)
+							}
+
+							if (extractSuccess) {
+								// After extraction, try to rename the function
+								// Wait a bit for the extraction to complete and cursor to be positioned
+								await new Promise((resolve) => setTimeout(resolve, 500))
+
+								// Get the current cursor position (should be on the new function name)
+								const currentPosition = editor.selection.active
+
+								// Try to rename using the rename provider
+								try {
+									const renameEdits = await vscode.commands.executeCommand<vscode.WorkspaceEdit>(
+										"vscode.executeDocumentRenameProvider",
+										document.uri,
+										currentPosition,
+										op.new_name,
+									)
+
+									if (renameEdits && renameEdits.size > 0) {
+										await vscode.workspace.applyEdit(renameEdits)
+										success = true
+										result = `Successfully extracted function '${op.new_name}' from lines ${op.start_line}-${op.end_line}`
+									} else {
+										// Extraction succeeded but rename failed
+										success = true
+										result = `Successfully extracted function from lines ${op.start_line}-${op.end_line}, but could not rename to '${op.new_name}'. You may need to rename it manually.`
+									}
+								} catch (renameError) {
+									// Extraction succeeded but rename failed
+									success = true
+									result = `Successfully extracted function from lines ${op.start_line}-${op.end_line}, but could not rename to '${op.new_name}'. You may need to rename it manually.`
+								}
+							} else {
+								result = `Failed to apply extract function refactoring`
+							}
+						} catch (error) {
+							result = `Failed to extract function: ${error instanceof Error ? error.message : String(error)}`
+						}
+						break
+					}
+
+					case "move_to_file": {
+						if (!op.start_line || !op.end_line || !op.target_path) {
 							cline.consecutiveMistakeCount++
-							cline.recordToolError("refactor_code", result)
-							await cline.say("error", result)
-							pushToolResult(result)
+							cline.recordToolError("refactor_code")
+							pushToolResult(
+								await cline.sayAndCreateMissingParamError(
+									"refactor_code",
+									"start_line, end_line, and target_path are required for move_to_file",
+								),
+							)
 							return
 						}
 
-						// Find the appropriate move action or use the first one
-						const moveAction = moveActions[0]
+						// Convert line numbers to VS Code positions (0-based)
+						const startLineNum = op.start_line - 1
+						const endLineNum = op.end_line - 1
 
-						// Check if the action has a command that needs the target URI
-						if (moveAction.command) {
-							if (
-								moveAction.command.command === "typescript.moveToFile" ||
-								moveAction.command.command === "javascript.moveToFile" ||
-								moveAction.command.command === "_typescript.moveToFile" ||
-								moveAction.command.command === "_javascript.moveToFile"
-							) {
-								// For TypeScript/JavaScript move commands, provide the target URI
-								await vscode.commands.executeCommand(
-									moveAction.command.command,
-									moveAction.command.arguments?.[0], // action
-									targetUri, // target file URI
-								)
-								success = true
-								result = `Successfully moved code from lines ${startLine}-${endLine} to ${targetPath}`
-							} else if (moveAction.command.command === "editor.action.refactor") {
-								// Generic refactor command - provide all necessary arguments
-								const args = [
-									document.uri, // source document
-									range, // the text range
-									"move", // refactor kind
-									moveAction.title, // action name
-									targetUri.toString(), // target file path
-								]
-								await vscode.commands.executeCommand(moveAction.command.command, ...args)
-								success = true
-								result = `Successfully moved code from lines ${startLine}-${endLine} to ${targetPath}`
-							} else {
-								// Try to execute the command as-is
-								await vscode.commands.executeCommand(
-									moveAction.command.command,
-									...(moveAction.command.arguments || []),
-								)
-								success = true
-								result = `Successfully initiated move operation from lines ${startLine}-${endLine} to ${targetPath}`
-							}
-						} else if (moveAction.edit) {
-							// If the action already has a WorkspaceEdit, apply it
-							const editSuccess = await vscode.workspace.applyEdit(moveAction.edit)
-							if (editSuccess) {
-								success = true
-								result = `Successfully moved code from lines ${startLine}-${endLine} to ${targetPath}`
-							} else {
-								result = `Failed to apply the move refactoring edit`
-							}
-						} else {
-							result = `Move refactor action had no command or edit to apply`
+						if (isNaN(startLineNum) || isNaN(endLineNum)) {
+							result = `Invalid line numbers provided: start_line=${op.start_line}, end_line=${op.end_line}`
+							results.push(result)
+							overallSuccess = false
+							continue
 						}
 
-						// If successful, open the target file
-						if (success) {
-							try {
-								const targetDoc = await vscode.workspace.openTextDocument(targetUri)
-								await vscode.window.showTextDocument(targetDoc, { preview: false })
-							} catch (error) {
-								// Target file might not exist yet if it's a new file
-								// This is okay, the refactoring might create it
-							}
-						}
-					} catch (error) {
-						result = `Failed to move to file: ${error instanceof Error ? error.message : String(error)}`
-					}
-					break
-				}
-
-				case "rename_symbol": {
-					if (!startLine || !newName) {
-						cline.consecutiveMistakeCount++
-						cline.recordToolError("refactor_code")
-						pushToolResult(
-							await cline.sayAndCreateMissingParamError(
-								"refactor_code",
-								"start_line and new_name are required for rename_symbol",
-							),
-						)
-						return
-					}
-
-					// Convert line number to VS Code position (0-based)
-					const lineNum = parseInt(startLine) - 1
-
-					if (isNaN(lineNum)) {
-						cline.consecutiveMistakeCount++
-						cline.recordToolError("refactor_code")
-						const formattedError = `Invalid line number provided: start_line=${startLine}`
-						await cline.say("error", formattedError)
-						pushToolResult(formattedError)
-						return
-					}
-
-					try {
-						// Get the line text
-						const line = document.lineAt(lineNum).text
-
-						// Try multiple strategies to find a renameable symbol on this line
-						let renameEdits: vscode.WorkspaceEdit | undefined
-						let attemptedPositions: number[] = []
-
-						// Strategy 1: Try to find identifiers (alphanumeric + underscore sequences)
-						const identifierRegex = /\b[a-zA-Z_]\w*\b/g
-						let match: RegExpExecArray | null
-
-						while ((match = identifierRegex.exec(line)) !== null) {
-							const charPos = match.index
-							attemptedPositions.push(charPos)
-							const position = new vscode.Position(lineNum, charPos)
-
-							try {
-								renameEdits = await vscode.commands.executeCommand<vscode.WorkspaceEdit>(
-									"vscode.executeDocumentRenameProvider",
-									document.uri,
-									position,
-									newName,
-								)
-
-								if (renameEdits && renameEdits.size > 0) {
-									break // Found a renameable symbol
-								}
-							} catch (e) {
-								// Continue to next identifier
-							}
+						// Validate target path access
+						const targetAccessAllowed = cline.rooIgnoreController?.validateAccess(op.target_path)
+						if (!targetAccessAllowed) {
+							result = formatResponse.rooIgnoreError(op.target_path)
+							results.push(result)
+							overallSuccess = false
+							continue
 						}
 
-						// Strategy 2: If no identifier worked, try the first non-whitespace position
-						if (!renameEdits || renameEdits.size === 0) {
-							let charPos = 0
-							for (let i = 0; i < line.length; i++) {
-								if (!/\s/.test(line[i])) {
-									charPos = i
-									break
-								}
+						try {
+							// Set selection for the code to move
+							const startPos = new vscode.Position(startLineNum, 0)
+							const endPos = new vscode.Position(endLineNum, document.lineAt(endLineNum).text.length)
+							const range = new vscode.Range(startPos, endPos)
+							editor.selection = new vscode.Selection(startPos, endPos)
+
+							// Prepare the target file URI
+							const targetAbsolutePath = path.resolve(cline.cwd, op.target_path)
+							const targetUri = vscode.Uri.file(targetAbsolutePath)
+
+							// Ensure target directory exists
+							const targetDir = path.dirname(targetAbsolutePath)
+							await fs.mkdir(targetDir, { recursive: true })
+
+							// Get all Move refactor code actions at the selected range
+							const moveActions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
+								"vscode.executeCodeActionProvider",
+								document.uri,
+								range,
+								{
+									kind: vscode.CodeActionKind.RefactorMove.value,
+								},
+							)
+
+							if (!moveActions || moveActions.length === 0) {
+								result = `No Move refactor available for the selected code. The code might not be a complete moveable unit (e.g., a complete function, class, or module export).`
+								cline.consecutiveMistakeCount++
+								cline.recordToolError("refactor_code", result)
+								await cline.say("error", result)
+								pushToolResult(result)
+								return
 							}
 
-							if (!attemptedPositions.includes(charPos)) {
-								const position = new vscode.Position(lineNum, charPos)
-								try {
-									renameEdits = await vscode.commands.executeCommand<vscode.WorkspaceEdit>(
-										"vscode.executeDocumentRenameProvider",
-										document.uri,
-										position,
-										newName,
+							// Find the appropriate move action or use the first one
+							const moveAction = moveActions[0]
+
+							// Check if the action has a command that needs the target URI
+							if (moveAction.command) {
+								if (
+									moveAction.command.command === "typescript.moveToFile" ||
+									moveAction.command.command === "javascript.moveToFile" ||
+									moveAction.command.command === "_typescript.moveToFile" ||
+									moveAction.command.command === "_javascript.moveToFile"
+								) {
+									// For TypeScript/JavaScript move commands, provide the target URI
+									await vscode.commands.executeCommand(
+										moveAction.command.command,
+										moveAction.command.arguments?.[0], // action
+										targetUri, // target file URI
 									)
-								} catch (e) {
-									// Ignore
+									success = true
+									result = `Successfully moved code from lines ${op.start_line}-${op.end_line} to ${op.target_path}`
+								} else if (moveAction.command.command === "editor.action.refactor") {
+									// Generic refactor command - provide all necessary arguments
+									const args = [
+										document.uri, // source document
+										range, // the text range
+										"move", // refactor kind
+										moveAction.title, // action name
+										targetUri.toString(), // target file path
+									]
+									await vscode.commands.executeCommand(moveAction.command.command, ...args)
+									success = true
+									result = `Successfully moved code from lines ${op.start_line}-${op.end_line} to ${op.target_path}`
+								} else {
+									// Try to execute the command as-is
+									await vscode.commands.executeCommand(
+										moveAction.command.command,
+										...(moveAction.command.arguments || []),
+									)
+									success = true
+									result = `Successfully initiated move operation from lines ${op.start_line}-${op.end_line} to ${op.target_path}`
+								}
+							} else if (moveAction.edit) {
+								// If the action already has a WorkspaceEdit, apply it
+								const editSuccess = await vscode.workspace.applyEdit(moveAction.edit)
+								if (editSuccess) {
+									success = true
+									result = `Successfully moved code from lines ${op.start_line}-${op.end_line} to ${op.target_path}`
+								} else {
+									result = `Failed to apply the move refactoring edit`
+								}
+							} else {
+								result = `Move refactor action had no command or edit to apply`
+							}
+
+							// If successful, open the target file
+							if (success) {
+								try {
+									const targetDoc = await vscode.workspace.openTextDocument(targetUri)
+									await vscode.window.showTextDocument(targetDoc, { preview: false })
+								} catch (error) {
+									// Target file might not exist yet if it's a new file
+									// This is okay, the refactoring might create it
 								}
 							}
+						} catch (error) {
+							result = `Failed to move to file: ${error instanceof Error ? error.message : String(error)}`
 						}
-
-						if (renameEdits && renameEdits.size > 0) {
-							// Apply the rename edits
-							const editSuccess = await vscode.workspace.applyEdit(renameEdits)
-
-							if (editSuccess) {
-								success = true
-								const fileCount = renameEdits.size
-								result = `Successfully renamed symbol to '${newName}' at line ${startLine} (updated ${fileCount} file${fileCount > 1 ? "s" : ""})`
-							} else {
-								result = `Failed to apply rename edits`
-							}
-						} else {
-							// Provide more helpful error message
-							const linePreview = line.trim().substring(0, 50) + (line.trim().length > 50 ? "..." : "")
-							result = `Cannot rename any symbol on line ${startLine}. The line contains: "${linePreview}". Make sure the line contains a renameable identifier (variable, function, class, etc.)`
-						}
-					} catch (error) {
-						result = `Failed to rename symbol: ${error instanceof Error ? error.message : String(error)}`
+						break
 					}
-					break
+
+					case "rename_symbol": {
+						if (!op.new_name || (!op.start_line && !op.old_name)) {
+							result = `Missing required parameters for rename_symbol: new_name and either start_line or old_name`
+							results.push(result)
+							overallSuccess = false
+							continue
+						}
+
+						try {
+							let renamePosition: vscode.Position | undefined
+
+							if (op.start_line) {
+								// Use provided line number
+								const lineNum = op.start_line - 1
+								if (!isNaN(lineNum) && lineNum >= 0 && lineNum < document.lineCount) {
+									const line = document.lineAt(lineNum).text
+
+									// If old_name is provided, verify it exists on this line
+									if (op.old_name) {
+										const charPos = line.indexOf(op.old_name)
+										if (charPos >= 0) {
+											renamePosition = new vscode.Position(lineNum, charPos)
+										}
+									} else {
+										// Try to find any identifier on the line
+										const identifierRegex = /\b[a-zA-Z_]\w*\b/g
+										let match: RegExpExecArray | null
+
+										while ((match = identifierRegex.exec(line)) !== null) {
+											const pos = new vscode.Position(lineNum, match.index)
+											try {
+												// Test if this position is renameable
+												const testRename =
+													await vscode.commands.executeCommand<vscode.WorkspaceEdit>(
+														"vscode.executeDocumentRenameProvider",
+														document.uri,
+														pos,
+														op.new_name,
+													)
+												if (testRename && testRename.size > 0) {
+													renamePosition = pos
+													break
+												}
+											} catch (e) {
+												// Continue to next identifier
+											}
+										}
+									}
+								}
+							} else if (op.old_name) {
+								// Search for old_name in the entire file
+								const text = document.getText()
+								const regex = new RegExp(
+									`\\b${op.old_name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
+									"g",
+								)
+								let match: RegExpExecArray | null
+
+								while ((match = regex.exec(text)) !== null) {
+									const pos = document.positionAt(match.index)
+									try {
+										// Test if this position is renameable
+										const testRename = await vscode.commands.executeCommand<vscode.WorkspaceEdit>(
+											"vscode.executeDocumentRenameProvider",
+											document.uri,
+											pos,
+											op.new_name,
+										)
+										if (testRename && testRename.size > 0) {
+											renamePosition = pos
+											break // Use the first renameable occurrence
+										}
+									} catch (e) {
+										// Continue to next occurrence
+									}
+								}
+							}
+
+							if (!renamePosition) {
+								result = op.old_name
+									? `Cannot find renameable symbol '${op.old_name}' in the file`
+									: `Cannot find renameable symbol at line ${op.start_line}`
+								results.push(result)
+								overallSuccess = false
+								continue
+							}
+
+							// Perform the rename
+							const renameEdits = await vscode.commands.executeCommand<vscode.WorkspaceEdit>(
+								"vscode.executeDocumentRenameProvider",
+								document.uri,
+								renamePosition,
+								op.new_name,
+							)
+
+							if (renameEdits && renameEdits.size > 0) {
+								const editSuccess = await vscode.workspace.applyEdit(renameEdits)
+
+								if (editSuccess) {
+									success = true
+									const fileCount = renameEdits.size
+									result = op.old_name
+										? `Successfully renamed '${op.old_name}' to '${op.new_name}' (updated ${fileCount} file${fileCount > 1 ? "s" : ""})`
+										: `Successfully renamed symbol to '${op.new_name}' at line ${op.start_line} (updated ${fileCount} file${fileCount > 1 ? "s" : ""})`
+								} else {
+									result = `Failed to apply rename edits`
+								}
+							} else {
+								result = `No rename edits were generated`
+							}
+						} catch (error) {
+							result = `Failed to rename symbol: ${error instanceof Error ? error.message : String(error)}`
+						}
+						break
+					}
+
+					default:
+						result = `Unknown refactoring operation: ${op.operation}. Supported operations are: extract_function, move_to_file, rename_symbol`
+						overallSuccess = false
 				}
 
-				default:
-					cline.consecutiveMistakeCount++
-					result = `Unknown refactoring operation: ${operation}. Supported operations are: extract_function, move_to_file, rename_symbol`
-					cline.recordToolError("refactor_code", result)
-					await cline.say("error", result)
-					pushToolResult(result)
-					return
+				results.push(result)
+				if (success) {
+					// Track file edit operation
+					await cline.fileContextTracker.trackFileContext(relPath, "roo_edited" as RecordSource)
+					if (op.target_path) {
+						await cline.fileContextTracker.trackFileContext(op.target_path, "roo_edited" as RecordSource)
+					}
+				} else {
+					overallSuccess = false
+				}
 			}
 
-			if (success) {
+			if (overallSuccess) {
 				cline.consecutiveMistakeCount = 0
-
-				// Track file edit operation
-				await cline.fileContextTracker.trackFileContext(relPath, "roo_edited" as RecordSource)
-				if (targetPath) {
-					await cline.fileContextTracker.trackFileContext(targetPath, "roo_edited" as RecordSource)
-				}
-
 				// Used to determine if we should wait for busy terminal to update before sending api request
 				cline.didEditFile = true
 			} else {
 				cline.consecutiveMistakeCount++
-				cline.recordToolError("refactor_code", result)
+				cline.recordToolError("refactor_code", results.join("\n"))
 			}
 
-			// Send the result back to the LLM
-			pushToolResult(result)
+			// Send the results back to the LLM
+			const finalResult =
+				operations.length > 1
+					? `Batch refactoring completed:\n${results.map((r, i) => `${i + 1}. ${r}`).join("\n")}`
+					: results[0]
+
+			pushToolResult(finalResult)
 			return
 		}
 	} catch (error) {

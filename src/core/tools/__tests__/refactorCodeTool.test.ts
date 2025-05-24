@@ -313,7 +313,8 @@ describe("refactorCodeTool", () => {
 			mockRemoveClosingTag,
 		)
 
-		expect(vscode.commands.executeCommand).toHaveBeenCalledWith("undo")
+		// Since we now ask for approval before applying changes, there's no undo
+		expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith("undo")
 		expect(mockPushToolResult).toHaveBeenCalledWith("Refactoring cancelled by user")
 	})
 
@@ -504,5 +505,427 @@ describe("refactorCodeTool", () => {
 		expect(mockPushToolResult).toHaveBeenCalledWith(
 			expect.stringContaining("Successfully moved code from lines 1-1 to target.ts"),
 		)
+	})
+
+	describe("batch operations", () => {
+		it("should handle batch rename operations", async () => {
+			const mockDocument = {
+				getText: jest.fn().mockReturnValue("const oldVar1 = 1;\nconst oldVar2 = 2;"),
+				lineAt: jest.fn((line: number) => ({
+					text: line === 0 ? "const oldVar1 = 1;" : "const oldVar2 = 2;",
+				})),
+				lineCount: 2,
+				uri: vscode.Uri.file("/test/test.ts"),
+				save: jest.fn().mockResolvedValue(true),
+			}
+			const mockEditor = {
+				selection: null,
+			}
+
+			;(vscode.workspace.openTextDocument as jest.Mock).mockResolvedValue(mockDocument as any)
+			;(vscode.window.showTextDocument as jest.Mock).mockResolvedValue(mockEditor as any)
+			;(vscode.commands.executeCommand as jest.Mock).mockResolvedValue({
+				size: 1,
+			})
+			;(vscode.workspace.applyEdit as jest.Mock).mockResolvedValue(true)
+
+			const block: ToolUse = {
+				type: "tool_use",
+				name: "refactor_code",
+				params: {
+					path: "test.ts",
+					operations: JSON.stringify([
+						{
+							operation: "rename_symbol",
+							start_line: 1,
+							new_name: "newVar1",
+						},
+						{
+							operation: "rename_symbol",
+							start_line: 2,
+							new_name: "newVar2",
+						},
+					]),
+				},
+				partial: false,
+			}
+
+			await refactorCodeTool(
+				mockCline,
+				block,
+				mockAskApproval,
+				mockHandleError,
+				mockPushToolResult,
+				mockRemoveClosingTag,
+			)
+
+			expect(mockAskApproval).toHaveBeenCalledWith(
+				"tool",
+				expect.stringContaining("Batch refactoring (2 operations)"),
+			)
+
+			expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("Batch refactoring completed"))
+		})
+
+		it("should handle mixed batch operations", async () => {
+			const mockDocument = {
+				getText: jest.fn().mockReturnValue("const var1 = 1;\nfunction old() {\n  return 1;\n}"),
+				lineAt: jest.fn((line: number) => ({
+					text: ["const var1 = 1;", "function old() {", "  return 1;", "}"][line],
+				})),
+				lineCount: 4,
+				uri: vscode.Uri.file("/test/test.ts"),
+				save: jest.fn().mockResolvedValue(true),
+			}
+			const mockEditor = {
+				selection: null,
+			}
+
+			;(vscode.workspace.openTextDocument as jest.Mock).mockResolvedValue(mockDocument as any)
+			;(vscode.window.showTextDocument as jest.Mock).mockResolvedValue(mockEditor as any)
+
+			// Mock rename operation
+			;(vscode.commands.executeCommand as jest.Mock)
+				.mockResolvedValueOnce({ size: 1 }) // rename
+				.mockResolvedValueOnce([
+					{
+						// extract function code actions
+						title: "Extract function",
+						command: {
+							command: "typescript.extractFunction",
+							arguments: ["arg1"],
+						},
+					},
+				])
+				.mockResolvedValueOnce(undefined) // extract command
+				.mockResolvedValueOnce({ size: 1 }) // rename after extract
+			;(vscode.workspace.applyEdit as jest.Mock).mockResolvedValue(true)
+
+			const block: ToolUse = {
+				type: "tool_use",
+				name: "refactor_code",
+				params: {
+					path: "test.ts",
+					operations: JSON.stringify([
+						{
+							operation: "rename_symbol",
+							start_line: 1,
+							new_name: "newVar",
+						},
+						{
+							operation: "extract_function",
+							start_line: 2,
+							end_line: 4,
+							new_name: "extractedFunc",
+						},
+					]),
+				},
+				partial: false,
+			}
+
+			await refactorCodeTool(
+				mockCline,
+				block,
+				mockAskApproval,
+				mockHandleError,
+				mockPushToolResult,
+				mockRemoveClosingTag,
+			)
+
+			expect(mockAskApproval).toHaveBeenCalledWith(
+				"tool",
+				expect.stringContaining("Batch refactoring (2 operations)"),
+			)
+
+			expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("Batch refactoring completed"))
+		})
+
+		it("should handle single operation in new format", async () => {
+			const mockDocument = {
+				getText: jest.fn().mockReturnValue("const oldVar = 'value'"),
+				lineAt: jest.fn().mockReturnValue({
+					text: "const oldVar = 'value'",
+				}),
+				lineCount: 1,
+				uri: vscode.Uri.file("/test/test.ts"),
+			}
+			const mockEditor = {
+				selection: null,
+			}
+
+			;(vscode.workspace.openTextDocument as jest.Mock).mockResolvedValue(mockDocument as any)
+			;(vscode.window.showTextDocument as jest.Mock).mockResolvedValue(mockEditor as any)
+			;(vscode.commands.executeCommand as jest.Mock).mockResolvedValue({
+				size: 1,
+			})
+			;(vscode.workspace.applyEdit as jest.Mock).mockResolvedValue(true)
+
+			const block: ToolUse = {
+				type: "tool_use",
+				name: "refactor_code",
+				params: {
+					path: "test.ts",
+					operations: JSON.stringify({
+						operation: "rename_symbol",
+						start_line: 1,
+						new_name: "newVar",
+					}),
+				},
+				partial: false,
+			}
+
+			await refactorCodeTool(
+				mockCline,
+				block,
+				mockAskApproval,
+				mockHandleError,
+				mockPushToolResult,
+				mockRemoveClosingTag,
+			)
+
+			expect(mockAskApproval).toHaveBeenCalledWith(
+				"tool",
+				expect.stringContaining("Rename symbol at line 1 to 'newVar'"),
+			)
+
+			expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("Successfully renamed symbol"))
+		})
+
+		it("should handle invalid JSON in operations", async () => {
+			const block: ToolUse = {
+				type: "tool_use",
+				name: "refactor_code",
+				params: {
+					path: "test.ts",
+					operations: "invalid json",
+				},
+				partial: false,
+			}
+
+			await refactorCodeTool(
+				mockCline,
+				block,
+				mockAskApproval,
+				mockHandleError,
+				mockPushToolResult,
+				mockRemoveClosingTag,
+			)
+
+			expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("Invalid operations format"))
+		})
+
+		it("should support legacy format", async () => {
+			const mockDocument = {
+				getText: jest.fn().mockReturnValue("const oldVar = 'value'"),
+				lineAt: jest.fn().mockReturnValue({
+					text: "const oldVar = 'value'",
+				}),
+				lineCount: 1,
+				uri: vscode.Uri.file("/test/test.ts"),
+			}
+			const mockEditor = {
+				selection: null,
+			}
+
+			;(vscode.workspace.openTextDocument as jest.Mock).mockResolvedValue(mockDocument as any)
+			;(vscode.window.showTextDocument as jest.Mock).mockResolvedValue(mockEditor as any)
+			;(vscode.commands.executeCommand as jest.Mock).mockResolvedValue({
+				size: 1,
+			})
+			;(vscode.workspace.applyEdit as jest.Mock).mockResolvedValue(true)
+
+			const block: ToolUse = {
+				type: "tool_use",
+				name: "refactor_code",
+				params: {
+					path: "test.ts",
+					operation: "rename_symbol",
+					start_line: "1",
+					new_name: "newVar",
+				},
+				partial: false,
+			}
+
+			await refactorCodeTool(
+				mockCline,
+				block,
+				mockAskApproval,
+				mockHandleError,
+				mockPushToolResult,
+				mockRemoveClosingTag,
+			)
+
+			expect(mockAskApproval).toHaveBeenCalledWith(
+				"tool",
+				expect.stringContaining("Rename symbol at line 1 to 'newVar'"),
+			)
+
+			expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("Successfully renamed symbol"))
+		})
+
+		it("should handle rename with old_name parameter", async () => {
+			const mockDocument = {
+				getText: jest.fn().mockReturnValue("const oldVariable = 'value';\nconst anotherVar = 'test';"),
+				lineAt: jest.fn().mockReturnValue({
+					text: "const oldVariable = 'value';",
+				}),
+				lineCount: 2,
+				uri: vscode.Uri.file("/test/test.ts"),
+				positionAt: jest.fn((offset: number) => {
+					// Mock position for "oldVariable" at offset 6
+					if (offset === 6) {
+						return new vscode.Position(0, 6)
+					}
+					return new vscode.Position(0, 0)
+				}),
+			}
+			const mockEditor = {
+				selection: null,
+			}
+
+			;(vscode.workspace.openTextDocument as jest.Mock).mockResolvedValue(mockDocument as any)
+			;(vscode.window.showTextDocument as jest.Mock).mockResolvedValue(mockEditor as any)
+			;(vscode.commands.executeCommand as jest.Mock).mockResolvedValue({
+				size: 1,
+			})
+			;(vscode.workspace.applyEdit as jest.Mock).mockResolvedValue(true)
+
+			const block: ToolUse = {
+				type: "tool_use",
+				name: "refactor_code",
+				params: {
+					path: "test.ts",
+					operations: JSON.stringify({
+						operation: "rename_symbol",
+						old_name: "oldVariable",
+						new_name: "newVariable",
+					}),
+				},
+				partial: false,
+			}
+
+			await refactorCodeTool(
+				mockCline,
+				block,
+				mockAskApproval,
+				mockHandleError,
+				mockPushToolResult,
+				mockRemoveClosingTag,
+			)
+
+			expect(mockAskApproval).toHaveBeenCalledWith(
+				"tool",
+				expect.stringContaining("Rename 'oldVariable' to 'newVariable'"),
+			)
+
+			expect(mockPushToolResult).toHaveBeenCalledWith(
+				expect.stringContaining("Successfully renamed 'oldVariable' to 'newVariable'"),
+			)
+		})
+
+		it("should handle rename with both old_name and start_line", async () => {
+			const mockDocument = {
+				getText: jest.fn().mockReturnValue("const data = 1;\nconst data = 2;"),
+				lineAt: jest.fn((line: number) => ({
+					text: line === 0 ? "const data = 1;" : "const data = 2;",
+				})),
+				lineCount: 2,
+				uri: vscode.Uri.file("/test/test.ts"),
+			}
+			const mockEditor = {
+				selection: null,
+			}
+
+			;(vscode.workspace.openTextDocument as jest.Mock).mockResolvedValue(mockDocument as any)
+			;(vscode.window.showTextDocument as jest.Mock).mockResolvedValue(mockEditor as any)
+			;(vscode.commands.executeCommand as jest.Mock).mockResolvedValue({
+				size: 1,
+			})
+			;(vscode.workspace.applyEdit as jest.Mock).mockResolvedValue(true)
+
+			const block: ToolUse = {
+				type: "tool_use",
+				name: "refactor_code",
+				params: {
+					path: "test.ts",
+					operations: JSON.stringify({
+						operation: "rename_symbol",
+						old_name: "data",
+						start_line: 2, // Rename only the second occurrence
+						new_name: "secondData",
+					}),
+				},
+				partial: false,
+			}
+
+			await refactorCodeTool(
+				mockCline,
+				block,
+				mockAskApproval,
+				mockHandleError,
+				mockPushToolResult,
+				mockRemoveClosingTag,
+			)
+
+			expect(mockAskApproval).toHaveBeenCalledWith(
+				"tool",
+				expect.stringContaining("Rename 'data' to 'secondData'"),
+			)
+
+			// Should use line 2 (index 1) position
+			expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+				"vscode.executeDocumentRenameProvider",
+				mockDocument.uri,
+				expect.objectContaining({ line: 1 }), // 0-based index
+				"secondData",
+			)
+		})
+
+		it("should handle rename when old_name not found", async () => {
+			const mockDocument = {
+				getText: jest.fn().mockReturnValue("const someVar = 'value';"),
+				lineAt: jest.fn().mockReturnValue({
+					text: "const someVar = 'value';",
+				}),
+				lineCount: 1,
+				uri: vscode.Uri.file("/test/test.ts"),
+				positionAt: jest.fn(() => new vscode.Position(0, 0)),
+			}
+			const mockEditor = {
+				selection: null,
+			}
+
+			;(vscode.workspace.openTextDocument as jest.Mock).mockResolvedValue(mockDocument as any)
+			;(vscode.window.showTextDocument as jest.Mock).mockResolvedValue(mockEditor as any)
+			// Mock that no position is renameable
+			;(vscode.commands.executeCommand as jest.Mock).mockRejectedValue(new Error("No rename"))
+
+			const block: ToolUse = {
+				type: "tool_use",
+				name: "refactor_code",
+				params: {
+					path: "test.ts",
+					operations: JSON.stringify({
+						operation: "rename_symbol",
+						old_name: "nonExistent",
+						new_name: "newName",
+					}),
+				},
+				partial: false,
+			}
+
+			await refactorCodeTool(
+				mockCline,
+				block,
+				mockAskApproval,
+				mockHandleError,
+				mockPushToolResult,
+				mockRemoveClosingTag,
+			)
+
+			expect(mockPushToolResult).toHaveBeenCalledWith(
+				expect.stringContaining("Cannot find renameable symbol 'nonExistent' in the file"),
+			)
+		})
 	})
 })
