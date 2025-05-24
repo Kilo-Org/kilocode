@@ -571,6 +571,7 @@ type RooCodeEvents = {
 			| "new_rule"
 			| "report_bug"
 			| "condense"
+			| "refactor_code"
 		),
 		string,
 	]

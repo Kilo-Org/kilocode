@@ -24,6 +24,7 @@ import { askFollowupQuestionTool } from "../tools/askFollowupQuestionTool"
 import { switchModeTool } from "../tools/switchModeTool"
 import { attemptCompletionTool } from "../tools/attemptCompletionTool"
 import { newTaskTool } from "../tools/newTaskTool"
+import { refactorCodeTool } from "../tools/refactorCodeTool"
 
 import { checkpointSave } from "../checkpoints"
 
@@ -199,6 +200,8 @@ export async function presentAssistantMessage(cline: Task) {
 						return `[${block.name}]`
 					case "condense":
 						return `[${block.name}]`
+					case "refactor_code":
+						return `[${block.name} for '${block.params.path}' - ${block.params.operation}]`
 					// kilocode_change end
 				}
 			}
@@ -480,6 +483,9 @@ export async function presentAssistantMessage(cline: Task) {
 					break
 				case "condense":
 					await condenseTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
+					break
+				case "refactor_code":
+					await refactorCodeTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 				// kilocode_change end
 			}

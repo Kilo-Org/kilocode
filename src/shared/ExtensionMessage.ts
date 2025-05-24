@@ -241,6 +241,7 @@ export interface ClineSayTool {
 		| "finishTask"
 		| "searchAndReplace"
 		| "insertContent"
+		| "refactorCode"
 	path?: string
 	diff?: string
 	content?: string
