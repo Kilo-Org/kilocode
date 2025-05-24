@@ -45,6 +45,7 @@ This server provides the following MCP tools:
 
 - Node.js 18+
 - npm or yarn
+- tsx (installed as a dev dependency)
 
 ### Setup
 
@@ -54,20 +55,15 @@ This server provides the following MCP tools:
     npm install
     ```
 
-2. Build the project:
-
-    ```
-    npm run build
-    ```
-
-3. Run the server:
-    ```
-    npm run start
-    ```
-
 ### Workflow
 
-This server is used by the Kilo Code extension and communicates via stdio. The extension launches this server as a child process when needed for translation tasks.
+This server is a simple script that's executed directly via TSX. It doesn't need to be built or started separately. The Kilo Code extension communicates with it via stdio, launching it as a child process when needed for translation tasks.
+
+For local testing, you can run:
+
+```
+npx tsx src/index.ts
+```
 
 ## Configuration
 

@@ -2,9 +2,8 @@
 	"mcpServers": {
 		"translation-mcp-server": {
 			"type": "stdio",
-			"command": "npx",
-			"args": ["tsx", "./src/index.ts"],
-			"cwd": "repo-mcp-server",
+			"command": "/bin/bash",
+			"args": ["-c", "cd \"$PWD/repo-mcp-server\" && npx tsx src/index.ts"],
 			"timeout": 180,
 			"alwaysAllow": ["translate_i18n_key", "move_i18n_key", "list_locales"]
 		}
