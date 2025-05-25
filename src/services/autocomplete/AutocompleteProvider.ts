@@ -39,6 +39,14 @@ function cleanMarkdown(text: string): string {
 		.trim()
 }
 
+function splitFirstLine(text: string): { firstLine: string; remaining: string } {
+	const lines = text.split(/\r?\n/)
+	return {
+		firstLine: lines[0] || "",
+		remaining: lines.slice(1).join("\n"),
+	}
+}
+
 function isFileDisabled(document: vscode.TextDocument): boolean {
 	const patterns = (vscode.workspace.getConfiguration("kilo-code").get<string>("autocomplete.disableInFiles") || "")
 		.split(",")
@@ -101,8 +109,7 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 			}
 			// Handle multi-line completion flow
 			if (acceptedFirstLine && pendingCompletion) {
-				const lines = pendingCompletion.split(/\r?\n/)
-				const remaining = lines.slice(1).join("\n")
+				const { remaining } = splitFirstLine(pendingCompletion)
 				if (remaining) {
 					vscode.commands.executeCommand("setContext", PREVIEW_CONTEXT_KEY, true)
 					return [new vscode.InlineCompletionItem(remaining)]
@@ -170,7 +177,7 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 					return null
 				}
 
-				const firstLine = pendingCompletion.split(/\r?\n/)[0]
+				const { firstLine } = splitFirstLine(pendingCompletion)
 				if (!firstLine) return null
 
 				vscode.commands.executeCommand("setContext", PREVIEW_CONTEXT_KEY, true)
@@ -203,12 +210,11 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 
 		if (!acceptedFirstLine) {
 			// Accept first line
-			const firstLine = pendingCompletion.split(/\r?\n/)[0]
+			const { firstLine, remaining } = splitFirstLine(pendingCompletion)
 			await editor.edit((edit) => edit.insert(editor.selection.active, firstLine))
 			acceptedFirstLine = true
 
-			const lines = pendingCompletion.split(/\r?\n/)
-			if (lines.length > 1) {
+			if (remaining) {
 				// Trigger for remaining lines
 				setTimeout(() => {
 					isAcceptingCompletion = false
@@ -219,8 +225,7 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 			}
 		} else {
 			// Accept remaining lines
-			const lines = pendingCompletion.split(/\r?\n/)
-			const remaining = lines.slice(1).join("\n")
+			const { remaining } = splitFirstLine(pendingCompletion)
 			if (remaining) {
 				await editor.edit((edit) => edit.insert(editor.selection.active, remaining))
 			}
