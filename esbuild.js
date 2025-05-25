@@ -46,15 +46,16 @@ const copyWasmFiles = {
 
 			// Copy language-specific WASM files
 			const languageWasmDir = path.join(__dirname, "node_modules", "tree-sitter-wasms", "out")
-
+			const distWasmsDir = path.join(distDir, "tree-sitter-wasms")
 			// Dynamically read all WASM files from the directory instead of using a hardcoded list
 			if (fs.existsSync(languageWasmDir)) {
+				fs.mkdirSync(distWasmsDir)
 				const wasmFiles = fs.readdirSync(languageWasmDir).filter((file) => file.endsWith(".wasm"))
 
 				console.log(`Copying ${wasmFiles.length} tree-sitter WASM files to dist directory`)
 
 				wasmFiles.forEach((filename) => {
-					fs.copyFileSync(path.join(languageWasmDir, filename), path.join(distDir, filename))
+					fs.copyFileSync(path.join(languageWasmDir, filename), path.join(distWasmsDir, filename))
 				})
 			} else {
 				console.warn(`Tree-sitter WASM directory not found: ${languageWasmDir}`)

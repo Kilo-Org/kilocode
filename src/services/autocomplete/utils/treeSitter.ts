@@ -196,7 +196,9 @@ export async function getQueryForFile(filepath: string, queryPath: string): Prom
 async function loadLanguageForFileExt(fileExtension: string): Promise<Language> {
 	const wasmPath = path.join(
 		__dirname,
-		...(process.env.NODE_ENV === "test" ? ["node_modules", "tree-sitter-wasms", "out"] : ["tree-sitter-wasms"]),
+		...(process.env.NODE_ENV !== "production"
+			? ["..", "node_modules", "tree-sitter-wasms", "out"]
+			: ["tree-sitter-wasms"]),
 		`tree-sitter-${supportedLanguages[fileExtension]}.wasm`,
 	)
 	return await Parser.Language.load(wasmPath)
