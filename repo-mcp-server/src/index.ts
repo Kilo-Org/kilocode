@@ -48,8 +48,9 @@ if (!OPENROUTER_API_KEY || OPENROUTER_API_KEY.trim() === "") {
 	console.error(`✅ OPENROUTER_API_KEY is set (${OPENROUTER_API_KEY.substring(0, 10)}...)`)
 }
 
-// Determine the project root path (more reliable approach)
-const PROJECT_ROOT = process.cwd().includes("repo-mcp-server") ? path.resolve(process.cwd(), "..") : process.cwd()
+// Find the project root by looking for the parent directory of repo-mcp-server
+// This is more reliable than checking the current working directory
+const PROJECT_ROOT = path.resolve(__dirname, "../..")
 
 // Initialize the base paths for locales
 const LOCALE_PATHS = {
