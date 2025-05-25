@@ -149,13 +149,17 @@ export async function translateI18nText(
 		`🔤 Translating text to ${targetLanguage}: "${text.substring(0, 30)}${text.length > 30 ? "..." : ""}"`,
 	)
 
-	// Require API key for translations
-	if (!apiKey || apiKey.trim() === "") {
+	// Simple validation for the API key
+	if (!apiKey) {
 		console.error("❌ ERROR: No API key provided for translation")
 		throw new Error(
-			"OpenRouter API key is required for translations. Please set OPENROUTER_API_KEY in .env.local file.",
+			"OpenRouter API key is required for translations. Please set OPENROUTER_API_KEY in your environment.",
 		)
 	}
+
+	// Log basic info about the key (safely)
+	const maskedKey = apiKey.substring(0, 5) + "..." + (apiKey.length > 10 ? apiKey.substring(apiKey.length - 3) : "")
+	console.error(`🔑 Using API key: ${maskedKey} (${apiKey.length} chars)`)
 
 	try {
 		// Get translation instructions

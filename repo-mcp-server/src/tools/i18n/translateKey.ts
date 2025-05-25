@@ -180,6 +180,11 @@ class TranslateKeyTool implements ToolHandler {
 		console.error("🔍 DEBUG: Translation request received with args:", JSON.stringify(args, null, 2))
 		console.error("🔍 DEBUG: Context paths:", JSON.stringify(context.LOCALE_PATHS, null, 2))
 
+		// Check if we have a valid OpenRouter API key
+		if (!context.OPENROUTER_API_KEY) {
+			console.error(`❌ ERROR: No OpenRouter API key in context!`)
+		}
+
 		const {
 			target,
 			paths,
