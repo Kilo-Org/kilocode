@@ -170,16 +170,11 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 				if (throttleTimer) clearTimeout(throttleTimer)
 				editor.setDecorations(loadingDecoration, [])
 
-				if (activeRequest !== requestId || token.isCancellationRequested) {
-					return null
-				}
-
-				const { firstLine } = splitFirstLine(pendingCompletion)
-				if (!firstLine) return null
+				if (activeRequest !== requestId || token.isCancellationRequested || !pendingCompletion) return null
 
 				vscode.commands.executeCommand("setContext", PREVIEW_CONTEXT_KEY, true)
 
-				const item = new vscode.InlineCompletionItem(firstLine)
+				const item = new vscode.InlineCompletionItem(splitFirstLine(pendingCompletion).firstLine)
 				item.command = {
 					command: "kilo-code.acceptAutocompletePreview",
 					title: "Accept Completion",
