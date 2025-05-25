@@ -1,6 +1,6 @@
 import { Anthropic } from "@anthropic-ai/sdk"
-import { Stream as AnthropicStream } from "@anthropic-ai/sdk/streaming"
 import { CacheControlEphemeral } from "@anthropic-ai/sdk/resources"
+import { Stream as AnthropicStream } from "@anthropic-ai/sdk/streaming"
 import {
 	anthropicDefaultModelId,
 	AnthropicModelId,
@@ -8,11 +8,11 @@ import {
 	ApiHandlerOptions,
 	ModelInfo,
 } from "../../shared/api"
+import { getModelParams } from "../getModelParams"
+import { SingleCompletionHandler } from "../index"
 import { ApiStream } from "../transform/stream"
 import { BaseProvider } from "./base-provider"
 import { ANTHROPIC_DEFAULT_MAX_TOKENS } from "./constants"
-import { SingleCompletionHandler } from "../index"
-import { getModelParams } from "../getModelParams"
 
 export class AnthropicHandler extends BaseProvider implements SingleCompletionHandler {
 	private options: ApiHandlerOptions
@@ -37,9 +37,11 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 		let { id: modelId, maxTokens, thinking, temperature, virtualId } = this.getModel()
 
 		switch (modelId) {
+			case "claude-sonnet-4-20250514":
 			case "claude-3-7-sonnet-20250219":
 			case "claude-3-5-sonnet-20241022":
 			case "claude-3-5-haiku-20241022":
+			case "claude-opus-4-20250514":
 			case "claude-3-opus-20240229":
 			case "claude-3-haiku-20240307": {
 				/**
@@ -100,6 +102,8 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 
 						// Then check for models that support prompt caching
 						switch (modelId) {
+							case "claude-sonnet-4-20250514":
+							case "claude-opus-4-20250514":
 							case "claude-3-7-sonnet-20250219":
 							case "claude-3-5-sonnet-20241022":
 							case "claude-3-5-haiku-20241022":
