@@ -49,7 +49,7 @@ const copyWasmFiles = {
 			const distWasmsDir = path.join(distDir, "tree-sitter-wasms")
 			// Dynamically read all WASM files from the directory instead of using a hardcoded list
 			if (fs.existsSync(languageWasmDir)) {
-				fs.mkdirSync(distWasmsDir)
+				if (!fs.existsSync(distWasmsDir)) fs.mkdirSync(distWasmsDir)
 				const wasmFiles = fs.readdirSync(languageWasmDir).filter((file) => file.endsWith(".wasm"))
 
 				console.log(`Copying ${wasmFiles.length} tree-sitter WASM files to dist directory`)
