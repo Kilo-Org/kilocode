@@ -39,12 +39,9 @@ function cleanMarkdown(text: string): string {
 		.trim()
 }
 
-function splitFirstLine(text: string): { firstLine: string; remaining: string } {
-	const lines = text.split(/\r?\n/)
-	return {
-		firstLine: lines[0] || "",
-		remaining: lines.slice(1).join("\n"),
-	}
+function splitFirstLine(text: string) {
+	const firstLine = text.split(/\r?\n/, 1)[0]
+	return { firstLine, remaining: text.slice(firstLine.length) }
 }
 
 function isFileDisabled(document: vscode.TextDocument): boolean {
