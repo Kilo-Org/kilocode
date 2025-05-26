@@ -24,6 +24,7 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	alwaysAllowModeSwitch?: boolean
 	alwaysAllowSubtasks?: boolean
 	alwaysAllowExecute?: boolean
+	alwaysAllowRefactorCode?: boolean // kilocode_change
 	allowedCommands?: string[]
 	showAutoApproveMenu?: boolean // kilocode_change
 	setCachedStateField: SetCachedStateField<
@@ -39,6 +40,7 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 		| "alwaysAllowModeSwitch"
 		| "alwaysAllowSubtasks"
 		| "alwaysAllowExecute"
+		| "alwaysAllowRefactorCode" // kilocode_change
 		| "allowedCommands"
 		| "showAutoApproveMenu" // kilocode_change
 	>
@@ -57,6 +59,7 @@ export const AutoApproveSettings = ({
 	alwaysAllowModeSwitch,
 	alwaysAllowSubtasks,
 	alwaysAllowExecute,
+	alwaysAllowRefactorCode, // kilocode_change
 	allowedCommands,
 	showAutoApproveMenu, // kilocode_change
 	setCachedStateField,
@@ -111,6 +114,7 @@ export const AutoApproveSettings = ({
 					alwaysAllowModeSwitch={alwaysAllowModeSwitch}
 					alwaysAllowSubtasks={alwaysAllowSubtasks}
 					alwaysAllowExecute={alwaysAllowExecute}
+					alwaysAllowRefactorCode={alwaysAllowRefactorCode} // kilocode_change
 					onToggle={(key, value) => setCachedStateField(key, value)}
 				/>
 

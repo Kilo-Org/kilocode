@@ -18,6 +18,8 @@ jest.*
 **/.gitignore
 
 # Custom
+.env
+.env.local
 .env.sample
 .git-blame-ignore-revs
 .gitconfig

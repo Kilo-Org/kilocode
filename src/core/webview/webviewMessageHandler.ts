@@ -150,6 +150,12 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			await updateGlobalState("alwaysAllowExecute", message.bool ?? undefined)
 			await provider.postStateToWebview()
 			break
+		// kilocode_change start
+		case "alwaysAllowRefactorCode":
+			await updateGlobalState("alwaysAllowRefactorCode", message.bool ?? undefined)
+			await provider.postStateToWebview()
+			break
+		// kilocode_change end
 		case "alwaysAllowBrowser":
 			await updateGlobalState("alwaysAllowBrowser", message.bool ?? undefined)
 			await provider.postStateToWebview()

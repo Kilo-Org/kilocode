@@ -80,6 +80,10 @@
 			"commandPlaceholder": "Introduïu prefix de comanda (ex. 'git ')",
 			"addButton": "Afegir"
 		},
+		"refactorCode": {
+			"label": "Refactoritzar",
+			"description": "Aprovar automàticament operacions de refactorització de codi sense requerir aprovació manual"
+		},
 		"showMenu": {
 			"label": "Mostrar menú d'aprovació automàtica a la vista de xat",
 			"description": "Quan està habilitat, el menú d'aprovació automàtica es mostrarà a la part inferior de la vista de xat, permetent un accés ràpid a la configuració d'aprovació automàtica"

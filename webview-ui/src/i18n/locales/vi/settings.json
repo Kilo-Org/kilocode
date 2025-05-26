@@ -80,6 +80,10 @@
 			"commandPlaceholder": "Nhập tiền tố lệnh (ví dụ: 'git ')",
 			"addButton": "Thêm"
 		},
+		"refactorCode": {
+			"label": "Tái cấu trúc",
+			"description": "Tự động phê duyệt các hoạt động tái cấu trúc mã mà không cần phê duyệt thủ công"
+		},
 		"showMenu": {
 			"label": "Hiển thị menu tự động phê duyệt trong giao diện trò chuyện",
 			"description": "Khi được bật, menu tự động phê duyệt sẽ hiển thị ở phần dưới của giao diện trò chuyện, cho phép truy cập nhanh vào cài đặt tự động phê duyệt"

@@ -781,6 +781,7 @@ export const globalSettingsSchema = z.object({
 	alwaysAllowSubtasks: z.boolean().optional(),
 	alwaysAllowExecute: z.boolean().optional(),
 	allowedCommands: z.array(z.string()).optional(),
+	alwaysAllowRefactorCode: z.boolean().optional(), // kilocode_change
 	allowedMaxRequests: z.number().optional(),
 	autoCondenseContextPercent: z.number().optional(),
 
@@ -863,6 +864,7 @@ const globalSettingsRecord: GlobalSettingsRecord = {
 	alwaysAllowModeSwitch: undefined,
 	alwaysAllowSubtasks: undefined,
 	alwaysAllowExecute: undefined,
+	alwaysAllowRefactorCode: undefined, // kilocode_change
 	allowedCommands: undefined,
 	allowedMaxRequests: undefined,
 	autoCondenseContextPercent: undefined,
@@ -1141,6 +1143,7 @@ export const toolNames = [
 	"new_rule", // kilocode_change
 	"report_bug", // kilocode_change
 	"condense", // kilocode_change
+	"refactor_code", // kilocode_change
 ] as const
 
 export const toolNamesSchema = z.enum(toolNames)

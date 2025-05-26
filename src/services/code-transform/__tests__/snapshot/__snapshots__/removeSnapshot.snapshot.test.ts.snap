@@ -1,0 +1,58 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Remove Code Snapshot Tests should remove a constant from a file: removeConstant-result 1`] = `
+"/**
+ * This file contains functions for testing the remove operation
+ */
+
+/**
+ * Function to be removed
+ */
+export function functionToRemove() {
+    console.log("This function will be removed");
+    return "This function will be removed";
+}
+
+/**
+ * Function to keep
+ */
+export function functionToKeep() {
+    console.log("This function will be kept");
+    return "This function will be kept";
+}
+
+/**
+ * Another function to be removed
+ */
+export function anotherFunctionToRemove() {
+    console.log("This function will also be removed");
+    return "This function will also be removed";
+}
+
+// A constant to keep
+export const CONSTANT_TO_KEEP = "This constant will be kept";"
+`;
+
+exports[`Remove Code Snapshot Tests should remove a function from a file: removeFunction-result 1`] = `
+"/**
+ * Function to keep
+ */
+export function functionToKeep() {
+    console.log("This function will be kept");
+    return "This function will be kept";
+}
+
+/**
+ * Another function to be removed
+ */
+export function anotherFunctionToRemove() {
+    console.log("This function will also be removed");
+    return "This function will also be removed";
+}
+
+// A constant to keep
+export const CONSTANT_TO_KEEP = "This constant will be kept";
+
+// A constant to remove
+export const CONSTANT_TO_REMOVE = "This constant will be removed";"
+`;

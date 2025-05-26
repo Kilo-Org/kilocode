@@ -80,6 +80,10 @@
 			"commandPlaceholder": "輸入命令前綴（例如 'git '）",
 			"addButton": "新增"
 		},
+		"refactorCode": {
+			"label": "重構",
+			"description": "自動核准程式碼重構操作而無需手動核准"
+		},
 		"showMenu": {
 			"label": "在聊天視圖中顯示自動核准選單",
 			"description": "啟用後，自動核准選單將顯示在聊天視圖底部，提供快速存取自動核准設定"

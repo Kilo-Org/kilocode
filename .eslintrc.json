@@ -21,5 +21,13 @@
 		"no-throw-literal": "warn",
 		"semi": "off"
 	},
-	"ignorePatterns": ["out", "dist", "**/*.d.ts", "!roo-code.d.ts"]
+	"ignorePatterns": [
+		"out",
+		"dist",
+		"**/*.d.ts",
+		"!roo-code.d.ts",
+		"**/services/code-transform/__tests__/examples/**/*",
+		"**/services/code-transform/__tests__/snapshot/fixtures/**/*",
+		"**/services/code-transform/__tests__/snapshot/testcases/**/*"
+	]
 }

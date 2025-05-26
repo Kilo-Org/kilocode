@@ -80,6 +80,10 @@
 			"commandPlaceholder": "Voer commando-prefix in (bijv. 'git ')",
 			"addButton": "Toevoegen"
 		},
+		"refactorCode": {
+			"label": "Refactoren",
+			"description": "Automatisch code-refactoring operaties goedkeuren zonder handmatige goedkeuring"
+		},
 		"showMenu": {
 			"label": "Menu voor automatisch goedkeuren weergeven in chatweergave",
 			"description": "Wanneer ingeschakeld, wordt het menu voor automatisch goedkeuren onderaan de chatweergave weergegeven, zodat u snel toegang hebt tot de instellingen voor automatisch goedkeuren"

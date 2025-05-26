@@ -91,6 +91,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		alwaysAllowModeSwitch,
 		showAutoApproveMenu, // kilocode_change
 		alwaysAllowSubtasks,
+		alwaysAllowRefactorCode,
 		customModes,
 		hasSystemPromptOverride,
 		historyPreviewCollapsed, // Added historyPreviewCollapsed
@@ -877,6 +878,12 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					return alwaysAllowSubtasks
 				}
 
+				// kilocode_change start
+				if (tool?.tool === "refactorCode") {
+					return alwaysAllowRefactorCode
+				}
+				// kilocode_change end
+
 				const isOutsideWorkspace = !!tool.isOutsideWorkspace
 
 				if (isReadOnlyToolAction(message)) {
@@ -905,6 +912,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			isMcpToolAlwaysAllowed,
 			alwaysAllowModeSwitch,
 			alwaysAllowSubtasks,
+			alwaysAllowRefactorCode, // kilocode_change
 		],
 	)
 

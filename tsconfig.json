@@ -21,5 +21,14 @@
 		"useUnknownInCatchVariables": false
 	},
 	"include": ["src/**/*", "scripts/**/*", ".changeset/**/*"],
-	"exclude": ["node_modules", ".vscode-test", "webview-ui", ".idea", ".qodo"]
+	"exclude": [
+		"node_modules",
+		".vscode-test",
+		"webview-ui",
+		".idea",
+		".qodo",
+		"**/__tests__/snapshot/fixtures/**/*",
+		"**/__tests__/examples/**/*",
+		"**/__tests__/snapshot/testcases/**/*"
+	]
 }

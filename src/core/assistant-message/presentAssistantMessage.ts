@@ -33,6 +33,7 @@ import { Task } from "../task/Task"
 import { newRuleTool } from "../tools/newRuleTool"
 import { reportBugTool } from "../tools/reportBugTool" // kilocode_change
 import { condenseTool } from "../tools/condenseTool" // kilocode_change
+import { refactorCodeTool } from "../tools/refactorCodeTool" // kilocode_change
 
 /**
  * Processes and presents assistant message content to the user interface.
@@ -199,6 +200,8 @@ export async function presentAssistantMessage(cline: Task) {
 						return `[${block.name}]`
 					case "condense":
 						return `[${block.name}]`
+					case "refactor_code":
+						return `[${block.name} for '${block.params.path}' - ${block.params.operation}]`
 					// kilocode_change end
 				}
 			}
@@ -481,9 +484,11 @@ export async function presentAssistantMessage(cline: Task) {
 				case "condense":
 					await condenseTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
+				case "refactor_code":
+					await refactorCodeTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
+					break
 				// kilocode_change end
 			}
-			// kilocode_change end
 
 			break
 	}

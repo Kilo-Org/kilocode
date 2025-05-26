@@ -81,6 +81,10 @@
 			"commandPlaceholder": "输入命令前缀（例如 'git '）",
 			"addButton": "添加"
 		},
+		"refactorCode": {
+			"label": "重构",
+			"description": "自动批准代码重构操作而无需手动批准"
+		},
 		"showMenu": {
 			"label": "在聊天视图中显示自动批准菜单",
 			"description": "启用后，自动批准菜单将显示在聊天视图底部，方便快速访问自动批准设置"

@@ -27,6 +27,7 @@ export interface WebviewMessage {
 		| "alwaysAllowWrite"
 		| "alwaysAllowWriteOutsideWorkspace"
 		| "alwaysAllowExecute"
+		| "alwaysAllowRefactorCode" // kilocode_change
 		| "webviewDidLaunch"
 		| "newTask"
 		| "askResponse"

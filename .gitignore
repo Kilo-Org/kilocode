@@ -10,9 +10,6 @@ mock/
 
 .DS_Store
 
-# IDEs
-.idea
-
 # Builds
 bin/
 *.vsix
@@ -42,9 +39,10 @@ logs
 # Vite development
 .vite-port
 
-# kilocode_change
-.history/
-
 # IntelliJ and Qodo plugin folders
 .idea/
 .qodo/
+
+# kilocode_change
+.history/
+.aider*
