@@ -1190,7 +1190,7 @@ export const litellmDefaultModelInfo: ModelInfo = {
 // xAI
 // https://docs.x.ai/docs/api-reference
 export type XAIModelId = keyof typeof xaiModels
-export const xaiDefaultModelId: XAIModelId = "grok-3-beta"
+export const xaiDefaultModelId: XAIModelId = "grok-3"
 export const xaiModels = {
 	"grok-3-beta": {
 		maxTokens: 8192,
@@ -1227,6 +1227,42 @@ export const xaiModels = {
 		inputPrice: 0.6,
 		outputPrice: 4.0,
 		description: "xAI's Grok-3 mini fast beta model with 131K context window",
+	},
+	"grok-3": {
+		maxTokens: 8192,
+		contextWindow: 131072,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 3.0,
+		outputPrice: 15.0,
+		description: "xAI's Grok-3 model with 131K context window",
+	},
+	"grok-3-fast": {
+		maxTokens: 8192,
+		contextWindow: 131072,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 5.0,
+		outputPrice: 25.0,
+		description: "xAI's Grok-3 fast model with 131K context window",
+	},
+	"grok-3-mini": {
+		maxTokens: 8192,
+		contextWindow: 131072,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0.3,
+		outputPrice: 0.5,
+		description: "xAI's Grok-3 mini model with 131K context window",
+	},
+	"grok-3-mini-fast": {
+		maxTokens: 8192,
+		contextWindow: 131072,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0.6,
+		outputPrice: 4.0,
+		description: "xAI's Grok-3 mini fast model with 131K context window",
 	},
 	"grok-2-latest": {
 		maxTokens: 8192,
@@ -1735,8 +1771,14 @@ export const chutesModels = {
  */
 
 // These models support reasoning efforts.
-export const REASONING_MODELS = new Set(["x-ai/grok-3-mini-beta", "grok-3-mini-beta", "grok-3-mini-fast-beta"])
-
+export const REASONING_MODELS = new Set([
+	"x-ai/grok-3-mini",
+	"grok-3-mini",
+	"grok-3-mini-fast",
+	"x-ai/grok-3-mini-beta",
+	"grok-3-mini-beta",
+	"grok-3-mini-fast-beta",
+])
 // These models support prompt caching.
 export const PROMPT_CACHING_MODELS = new Set([
 	"anthropic/claude-3-haiku",

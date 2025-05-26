@@ -71,7 +71,7 @@ describe("XAIHandler", () => {
 
 	test("should include reasoning_effort parameter for mini models", async () => {
 		const miniModelHandler = new XAIHandler({
-			apiModelId: "grok-3-mini-beta",
+			apiModelId: "grok-3-mini",
 			reasoningEffort: "high",
 		})
 
