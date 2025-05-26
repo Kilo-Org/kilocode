@@ -435,6 +435,10 @@
 			"name": "使用實驗性「動力輔助」模式",
 			"description": "啟用後，Kilo Code 將更頻繁地提醒模型目前模式的詳細設定。這能讓模型更嚴格遵守角色定義和自訂指令，但每則訊息會使用更多 token。"
 		},
+		"REFACTOR_CODE": {
+			"name": "啟用實驗性重構程式碼工具",
+			"description": "啟用後，Kilo Code 會為 LLM 提供 refactor_code 工具，可加速重構操作。目前僅支援 Typescript/Javascript。"
+		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "使用實驗性多區塊差異比對工具",
 			"description": "啟用後，Kilo Code 將使用多區塊差異比對工具，嘗試在單一請求中更新檔案內的多個程式碼區塊。"

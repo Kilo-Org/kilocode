@@ -435,6 +435,10 @@
 			"name": "Sử dụng chế độ \"power steering\" thử nghiệm",
 			"description": "Khi được bật, Kilo Code sẽ nhắc nhở mô hình về chi tiết định nghĩa chế độ hiện tại thường xuyên hơn. Điều này sẽ dẫn đến việc tuân thủ chặt chẽ hơn các định nghĩa vai trò và hướng dẫn tùy chỉnh, nhưng sẽ sử dụng nhiều token hơn cho mỗi tin nhắn."
 		},
+		"REFACTOR_CODE": {
+			"name": "Bật công cụ refactor_code thử nghiệm",
+			"description": "Khi được bật, Kilo Code cung cấp cho LLM một công cụ refactor_code có thể đẩy nhanh các thao tác tái cấu trúc. Hiện tại chỉ dành cho Typescript/Javascript."
+		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Sử dụng công cụ diff đa khối thử nghiệm",
 			"description": "Khi được bật, Kilo Code sẽ sử dụng công cụ diff đa khối. Điều này sẽ cố gắng cập nhật nhiều khối mã trong tệp trong một yêu cầu."

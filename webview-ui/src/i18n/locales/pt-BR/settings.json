@@ -435,6 +435,10 @@
 			"name": "Usar modo \"direção assistida\" experimental",
 			"description": "Quando ativado, o Kilo Code lembrará o modelo sobre os detalhes da sua definição de modo atual com mais frequência. Isso levará a uma adesão mais forte às definições de função e instruções personalizadas, mas usará mais tokens por mensagem."
 		},
+		"REFACTOR_CODE": {
+			"name": "Ativar ferramenta refactor_code experimental",
+			"description": "Quando ativado, o Kilo Code fornece ao LLM uma ferramenta refactor_code que pode acelerar operações de refatoração. Apenas para Typescript/Javascript por enquanto."
+		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Usar ferramenta diff de múltiplos blocos experimental",
 			"description": "Quando ativado, o Kilo Code usará a ferramenta diff de múltiplos blocos. Isso tentará atualizar vários blocos de código no arquivo em uma única solicitação."

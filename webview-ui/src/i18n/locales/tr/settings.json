@@ -435,6 +435,10 @@
 			"name": "Deneysel \"güç direksiyon\" modunu kullan",
 			"description": "Etkinleştirildiğinde, Kilo Code modele geçerli mod tanımının ayrıntılarını daha sık hatırlatacaktır. Bu, rol tanımlarına ve özel talimatlara daha güçlü uyum sağlayacak, ancak mesaj başına daha fazla token kullanacaktır."
 		},
+		"REFACTOR_CODE": {
+			"name": "Deneysel refactor_code aracını etkinleştir",
+			"description": "Etkinleştirildiğinde, Kilo Code LLM'e yeniden yapılandırma işlemlerini hızlandırabilecek bir refactor_code aracı sağlar. Şimdilik yalnızca Typescript/Javascript için."
+		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Deneysel çoklu blok diff aracını kullan",
 			"description": "Etkinleştirildiğinde, Kilo Code çoklu blok diff aracını kullanacaktır. Bu, tek bir istekte dosyadaki birden fazla kod bloğunu güncellemeye çalışacaktır."

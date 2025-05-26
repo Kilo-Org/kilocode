@@ -434,6 +434,10 @@
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Gunakan tool multi block diff eksperimental",
 			"description": "Ketika diaktifkan, Kilo Code akan menggunakan tool multi block diff. Ini akan mencoba memperbarui beberapa blok kode dalam file dalam satu permintaan."
+		},
+		"REFACTOR_CODE": {
+			"name": "Aktifkan tool refactor_code eksperimental",
+			"description": "Ketika diaktifkan, Kilo Code menyediakan tool refactor_code untuk LLM yang dapat mempercepat operasi refactoring. Saat ini hanya untuk Typescript/Javascript."
 		}
 	},
 	"promptCaching": {

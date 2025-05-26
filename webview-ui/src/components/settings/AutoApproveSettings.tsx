@@ -4,6 +4,7 @@ import { X } from "lucide-react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
 import { vscode } from "@/utils/vscode"
+import { useExtensionState } from "@/context/ExtensionStateContext"
 import { Button, Input, Slider } from "@/components/ui"
 
 import { SetCachedStateField } from "./types"
@@ -66,6 +67,7 @@ export const AutoApproveSettings = ({
 	...props
 }: AutoApproveSettingsProps) => {
 	const { t } = useAppTranslation()
+	const { experiments } = useExtensionState()
 	const [commandInput, setCommandInput] = useState("")
 
 	const handleAddCommand = () => {
@@ -116,6 +118,7 @@ export const AutoApproveSettings = ({
 					alwaysAllowExecute={alwaysAllowExecute}
 					alwaysAllowRefactorCode={alwaysAllowRefactorCode} // kilocode_change
 					onToggle={(key, value) => setCachedStateField(key, value)}
+					experiments={experiments}
 				/>
 
 				{/* ADDITIONAL SETTINGS */}

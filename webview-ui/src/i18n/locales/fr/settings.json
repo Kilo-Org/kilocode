@@ -435,6 +435,10 @@
 			"name": "Utiliser le mode \"direction assistée\" expérimental",
 			"description": "Lorsqu'il est activé, Kilo Code rappellera plus fréquemment au modèle les détails de sa définition de mode actuelle. Cela conduira à une adhérence plus forte aux définitions de rôles et aux instructions personnalisées, mais utilisera plus de tokens par message."
 		},
+		"REFACTOR_CODE": {
+			"name": "Activer l'outil refactor_code expérimental",
+			"description": "Lorsqu'il est activé, Kilo Code fournit au LLM un outil refactor_code qui peut accélérer les opérations de refactorisation. Uniquement pour Typescript/Javascript pour le moment."
+		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Utiliser l'outil diff multi-blocs expérimental",
 			"description": "Lorsqu'il est activé, Kilo Code utilisera l'outil diff multi-blocs. Cela tentera de mettre à jour plusieurs blocs de code dans le fichier en une seule requête."

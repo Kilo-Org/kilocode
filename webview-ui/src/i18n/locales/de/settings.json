@@ -435,6 +435,10 @@
 			"name": "Experimentellen \"Servolenkung\"-Modus verwenden",
 			"description": "Wenn aktiviert, wird Kilo Code das Modell häufiger an die Details seiner aktuellen Modusdefinition erinnern. Dies führt zu einer stärkeren Einhaltung von Rollendefinitionen und benutzerdefinierten Anweisungen, verwendet aber mehr Tokens pro Nachricht."
 		},
+		"REFACTOR_CODE": {
+			"name": "Experimentelles refactor_code-Tool aktivieren",
+			"description": "Wenn aktiviert, stellt Kilo Code dem LLM ein refactor_code-Tool zur Verfügung, das Refactoring-Operationen beschleunigen kann. Vorerst nur für Typescript/Javascript."
+		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Experimentelles Multi-Block-Diff-Werkzeug verwenden",
 			"description": "Wenn aktiviert, verwendet Kilo Code das Multi-Block-Diff-Werkzeug. Dies versucht, mehrere Codeblöcke in der Datei in einer Anfrage zu aktualisieren."

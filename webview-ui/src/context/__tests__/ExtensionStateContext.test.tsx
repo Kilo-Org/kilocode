@@ -269,6 +269,7 @@ describe("mergeExtensionState", () => {
 
 		expect(result.experiments).toEqual({
 			powerSteering: true,
+			refactorCode: true,
 			autoCondenseContext: true,
 		})
 	})

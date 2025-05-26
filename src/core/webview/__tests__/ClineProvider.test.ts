@@ -409,6 +409,7 @@ describe("ClineProvider", () => {
 			alwaysAllowWriteOutsideWorkspace: false,
 			alwaysAllowExecute: false,
 			alwaysAllowBrowser: false,
+			alwaysAllowRefactorCode: false,
 			alwaysAllowMcp: false,
 			uriScheme: "vscode",
 			soundEnabled: false,
@@ -507,6 +508,7 @@ describe("ClineProvider", () => {
 		expect(state).toHaveProperty("alwaysAllowWrite")
 		expect(state).toHaveProperty("alwaysAllowExecute")
 		expect(state).toHaveProperty("alwaysAllowBrowser")
+		expect(state).toHaveProperty("alwaysAllowRefactorCode")
 		expect(state).toHaveProperty("taskHistory")
 		expect(state).toHaveProperty("soundEnabled")
 		expect(state).toHaveProperty("ttsEnabled")

@@ -35,6 +35,7 @@ const AutoApproveMenu = ({ style }: AutoApproveMenuProps) => {
 		setAlwaysAllowSubtasks,
 		setAlwaysApproveResubmit,
 		setAllowedMaxRequests,
+		experiments,
 	} = useExtensionState()
 
 	const { t } = useAppTranslation()
@@ -199,7 +200,7 @@ const AutoApproveMenu = ({ style }: AutoApproveMenuProps) => {
 						/>
 					</div>
 
-					<AutoApproveToggle {...toggles} onToggle={onAutoApproveToggle} />
+					<AutoApproveToggle {...toggles} onToggle={onAutoApproveToggle} experiments={experiments} />
 
 					{/* Auto-approve API request count limit input row inspired by Cline */}
 					<div
@@ -244,3 +245,4 @@ const AutoApproveMenu = ({ style }: AutoApproveMenuProps) => {
 }
 
 export default AutoApproveMenu
+

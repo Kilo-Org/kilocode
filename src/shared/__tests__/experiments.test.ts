@@ -23,6 +23,7 @@ describe("experiments", () => {
 		it("returns false when POWER_STEERING experiment is not enabled", () => {
 			const experiments: Record<ExperimentId, boolean> = {
 				powerSteering: false,
+				refactorCode: false,
 				autoCondenseContext: false,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.POWER_STEERING)).toBe(false)
@@ -31,6 +32,7 @@ describe("experiments", () => {
 		it("returns true when experiment POWER_STEERING is enabled", () => {
 			const experiments: Record<ExperimentId, boolean> = {
 				powerSteering: true,
+				refactorCode: false,
 				autoCondenseContext: false,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.POWER_STEERING)).toBe(true)
@@ -39,6 +41,7 @@ describe("experiments", () => {
 		it("returns false when experiment is not present", () => {
 			const experiments: Record<ExperimentId, boolean> = {
 				powerSteering: false,
+				refactorCode: false,
 				autoCondenseContext: false,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.POWER_STEERING)).toBe(false)
@@ -47,6 +50,7 @@ describe("experiments", () => {
 		it("returns false when AUTO_CONDENSE_CONTEXT experiment is not enabled", () => {
 			const experiments: Record<ExperimentId, boolean> = {
 				powerSteering: false,
+				refactorCode: false,
 				autoCondenseContext: false,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.AUTO_CONDENSE_CONTEXT)).toBe(false)
@@ -56,6 +60,7 @@ describe("experiments", () => {
 			const experiments: Record<ExperimentId, boolean> = {
 				powerSteering: false,
 				autoCondenseContext: true,
+				refactorCode: false,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.AUTO_CONDENSE_CONTEXT)).toBe(true)
 		})

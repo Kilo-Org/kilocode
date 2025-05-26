@@ -435,6 +435,10 @@
 			"name": "Użyj eksperymentalnego trybu \"wspomagania kierownicy\"",
 			"description": "Po włączeniu, Kilo Code będzie częściej przypominać modelowi o szczegółach jego bieżącej definicji trybu. Doprowadzi to do silniejszego przestrzegania definicji ról i niestandardowych instrukcji, ale będzie używać więcej tokenów na wiadomość."
 		},
+		"REFACTOR_CODE": {
+			"name": "Włącz eksperymentalne narzędzie refactor_code",
+			"description": "Po włączeniu, Kilo Code dostarcza modelowi LLM narzędzie refactor_code, które może przyspieszyć operacje refaktoryzacji. Obecnie tylko dla Typescript/Javascript."
+		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Użyj eksperymentalnego narzędzia diff wieloblokowego",
 			"description": "Po włączeniu, Kilo Code użyje narzędzia diff wieloblokowego. Spróbuje to zaktualizować wiele bloków kodu w pliku w jednym żądaniu."

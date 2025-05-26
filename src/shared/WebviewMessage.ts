@@ -61,6 +61,7 @@ export interface WebviewMessage {
 		| "getVSCodeSetting"
 		| "vsCodeSetting"
 		| "alwaysAllowBrowser"
+		| "alwaysAllowRefactorCode"
 		| "alwaysAllowMcp"
 		| "alwaysAllowModeSwitch"
 		| "allowedMaxRequests"

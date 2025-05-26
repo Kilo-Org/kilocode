@@ -21,6 +21,7 @@ export const rooCodeDefaults: RooCodeSettings = {
 	alwaysAllowModeSwitch: true,
 	alwaysAllowSubtasks: true,
 	alwaysAllowExecute: true,
+	alwaysAllowRefactorCode: true, // kilocode_change
 	allowedCommands: ["*"],
 
 	browserToolEnabled: false,

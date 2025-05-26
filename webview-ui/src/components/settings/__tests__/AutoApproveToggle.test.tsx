@@ -3,6 +3,7 @@ import "@testing-library/jest-dom"
 
 import { AutoApproveToggle, autoApproveSettingsConfig } from "../AutoApproveToggle"
 import { TranslationProvider } from "@/i18n/__mocks__/TranslationContext"
+import { EXPERIMENT_IDS } from "@roo/shared/experiments"
 
 jest.mock("@/i18n/TranslationContext", () => {
 	const actual = jest.requireActual("@/i18n/TranslationContext")
@@ -27,6 +28,11 @@ describe("AutoApproveToggle", () => {
 		alwaysAllowExecute: true,
 		alwaysAllowRefactorCode: false, // kilocode_change
 		onToggle: mockOnToggle,
+		experiments: {
+			[EXPERIMENT_IDS.REFACTOR_CODE]: true, // Enable the refactor code experiment for testing
+			[EXPERIMENT_IDS.POWER_STEERING]: false,
+			[EXPERIMENT_IDS.AUTO_CONDENSE_CONTEXT]: false,
+		},
 	}
 
 	beforeEach(() => {

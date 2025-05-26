@@ -63,6 +63,7 @@ export async function run() {
 		alwaysApproveResubmit: true,
 		alwaysAllowMcp: true,
 		alwaysAllowModeSwitch: true,
+		alwaysAllowRefactorCode: true, // kilocode_change
 		enableCheckpoints: false,
 	})
 

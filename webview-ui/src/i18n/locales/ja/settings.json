@@ -435,6 +435,10 @@
 			"name": "実験的な「パワーステアリング」モードを使用する",
 			"description": "有効にすると、Kilo Codeはより頻繁にモデルに現在のモード定義の詳細を思い出させます。これにより、役割定義とカスタム指示へのより強い遵守が実現しますが、メッセージごとにより多くのtokenを使用します。"
 		},
+		"REFACTOR_CODE": {
+			"name": "実験的なrefactor_codeツールを有効にする",
+			"description": "有効にすると、Kilo CodeはLLMにrefactor_codeツールを提供し、リファクタリング操作を高速化できます。現在のところTypescript/Javascriptのみ対応。"
+		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "実験的なマルチブロックdiffツールを使用する",
 			"description": "有効にすると、Kilo Codeはマルチブロックdiffツールを使用します。これにより、1つのリクエストでファイル内の複数のコードブロックを更新しようとします。"

@@ -3,6 +3,7 @@ import type { GlobalSettings } from "@roo/schemas"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui"
+import { EXPERIMENT_IDS, ExperimentId } from "../../../../src/shared/experiments" // Import EXPERIMENT_IDS and ExperimentId
 
 type AutoApproveToggles = Pick<
 	GlobalSettings,
@@ -25,6 +26,7 @@ type AutoApproveConfig = {
 	descriptionKey: string
 	icon: string
 	testId: string
+	experimentId?: ExperimentId // Use ExperimentId type
 }
 
 export const autoApproveSettingsConfig: Record<AutoApproveSetting, AutoApproveConfig> = {
@@ -91,15 +93,17 @@ export const autoApproveSettingsConfig: Record<AutoApproveSetting, AutoApproveCo
 		descriptionKey: "settings:autoApprove.refactorCode.description",
 		icon: "edit",
 		testId: "always-allow-refactor-code-toggle",
+		experimentId: EXPERIMENT_IDS.REFACTOR_CODE, // Associate with the experiment flag
 	},
 	// kilocode_change end
 }
 
 type AutoApproveToggleProps = AutoApproveToggles & {
 	onToggle: (key: AutoApproveSetting, value: boolean) => void
+	experiments: Record<ExperimentId, boolean>
 }
 
-export const AutoApproveToggle = ({ onToggle, ...props }: AutoApproveToggleProps) => {
+export const AutoApproveToggle = ({ onToggle, experiments, ...props }: AutoApproveToggleProps) => {
 	const { t } = useAppTranslation()
 
 	return (
@@ -109,22 +113,24 @@ export const AutoApproveToggle = ({ onToggle, ...props }: AutoApproveToggleProps
 				"[@media(min-width:600px)]:gap-4",
 				"[@media(min-width:800px)]:max-w-[800px]",
 			)}>
-			{Object.values(autoApproveSettingsConfig).map(({ key, descriptionKey, labelKey, icon, testId }) => (
-				<Button
-					key={key}
-					variant={props[key] ? "default" : "outline"}
-					onClick={() => onToggle(key, !props[key])}
-					title={t(descriptionKey || "")}
-					aria-label={t(labelKey)}
-					aria-pressed={!!props[key]}
-					data-testid={testId}
-					className={cn(" aspect-square h-[80px]", !props[key] && "opacity-50")}>
-					<span className={cn("flex flex-col items-center gap-1")}>
-						<span className={`codicon codicon-${icon}`} />
-						<span className="text-sm text-center">{t(labelKey)}</span>
-					</span>
-				</Button>
-			))}
+			{Object.values(autoApproveSettingsConfig)
+				.filter((config) => !config.experimentId || experiments[config.experimentId]) // Filter based on experiment flag
+				.map(({ key, descriptionKey, labelKey, icon, testId }) => (
+					<Button
+						key={key}
+						variant={props[key] ? "default" : "outline"}
+						onClick={() => onToggle(key, !props[key])}
+						title={t(descriptionKey || "")}
+						aria-label={t(labelKey)}
+						aria-pressed={!!props[key]}
+						data-testid={testId}
+						className={cn(" aspect-square h-[80px]", !props[key] && "opacity-50")}>
+						<span className={cn("flex flex-col items-center gap-1")}>
+							<span className={`codicon codicon-${icon}`} />
+							<span className="text-sm text-center">{t(labelKey)}</span>
+						</span>
+					</Button>
+				))}
 		</div>
 	)
 }
