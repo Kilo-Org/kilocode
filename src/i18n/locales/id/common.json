@@ -58,7 +58,8 @@
 		"failed_remove_directory": "Gagal menghapus direktori tugas: {{error}}",
 		"custom_storage_path_unusable": "Path penyimpanan kustom \"{{path}}\" tidak dapat digunakan, akan menggunakan path default",
 		"cannot_access_path": "Tidak dapat mengakses path {{path}}: {{error}}",
-		"failed_update_project_mcp": "Gagal memperbarui server MCP proyek"
+		"failed_update_project_mcp": "Gagal memperbarui server MCP proyek",
+		"settings_import_failed": "Impor pengaturan gagal: {{error}}."
 	},
 	"warnings": {
 		"no_terminal_content": "Tidak ada konten terminal yang dipilih",
