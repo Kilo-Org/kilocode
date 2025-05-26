@@ -83,6 +83,11 @@
 		"showMenu": {
 			"label": "Tampilkan menu auto-approve di tampilan chat",
 			"description": "Ketika diaktifkan, menu auto-approve akan ditampilkan di bagian bawah tampilan chat, memungkinkan akses cepat ke pengaturan auto-approve"
+		},
+		"apiRequestLimit": {
+			"title": "Permintaan Maks",
+			"description": "Secara otomatis membuat sejumlah permintaan API ini sebelum meminta persetujuan untuk melanjutkan tugas.",
+			"unlimited": "Tidak terbatas"
 		}
 	},
 	"providers": {
@@ -189,6 +194,8 @@
 		},
 		"unboundApiKey": "Unbound API Key",
 		"getUnboundApiKey": "Dapatkan Unbound API Key",
+		"unboundRefreshModelsSuccess": "Daftar model diperbarui! Kamu sekarang dapat memilih dari model terbaru.",
+		"unboundInvalidApiKey": "API key tidak valid. Silakan periksa API key kamu dan coba lagi.",
 		"humanRelay": {
 			"description": "Tidak diperlukan API key, tetapi pengguna perlu membantu menyalin dan menempel informasi ke web chat AI.",
 			"instructions": "Selama penggunaan, kotak dialog akan muncul dan pesan saat ini akan disalin ke clipboard secara otomatis. Kamu perlu menempel ini ke versi web AI (seperti ChatGPT atau Claude), lalu salin balasan AI kembali ke kotak dialog dan klik tombol konfirmasi."
@@ -400,9 +407,13 @@
 	},
 	"experimental": {
 		"warning": "⚠️",
+		"autoCondenseContextPercent": {
+			"label": "Ambang batas untuk memicu kondensasi konteks cerdas",
+			"description": "Ketika context window mencapai ambang batas ini, Kilo Code akan secara otomatis mengondensasikannya."
+		},
 		"AUTO_CONDENSE_CONTEXT": {
 			"name": "Secara cerdas mengondensasi context window",
-			"description": "Menggunakan panggilan LLM untuk merangkum percakapan masa lalu ketika context window tugas hampir penuh, daripada menghapus pesan lama. Disclaimer: biaya merangkum saat ini tidak termasuk dalam biaya API yang ditampilkan di UI."
+			"description": "Kondensasi konteks cerdas menggunakan panggilan LLM untuk merangkum percakapan masa lalu ketika context window tugas mencapai ambang batas yang telah ditetapkan, daripada menghapus pesan lama ketika konteks penuh."
 		},
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "Gunakan strategi unified diff eksperimental",

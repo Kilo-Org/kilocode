@@ -7,6 +7,7 @@
 		"tokens": "Token:",
 		"cache": "Cache:",
 		"apiCost": "Biaya API:",
+		"condenseContext": "Kondensasi konteks secara cerdas",
 		"contextWindow": "Panjang Konteks:",
 		"closeAndStart": "Tutup tugas dan mulai yang baru",
 		"export": "Ekspor riwayat tugas",
@@ -135,6 +136,11 @@
 		},
 		"current": "Saat Ini"
 	},
+	"contextCondense": {
+		"title": "Konteks Dikondensasi",
+		"condensing": "Mengondensasi konteks...",
+		"tokens": "token"
+	},
 	"instructions": {
 		"wantsToFetch": "Kilo Code ingin mengambil instruksi detail untuk membantu tugas saat ini"
 	},
@@ -201,12 +207,12 @@
 		"description": "Auto-approve memungkinkan Kilo Code melakukan aksi tanpa meminta izin. Hanya aktifkan untuk aksi yang benar-benar kamu percayai. Konfigurasi lebih detail tersedia di <settingsLink>Pengaturan</settingsLink>."
 	},
 	"announcement": {
-		"title": "🎉 Roo Code 3.17 Dirilis",
-		"description": "Roo Code 3.17 menghadirkan fitur baru yang powerful dan perbaikan berdasarkan feedback kamu.",
+		"title": "🎉 Roo Code {{version}} Dirilis",
+		"description": "Roo Code {{version}} menghadirkan fitur baru yang powerful dan perbaikan berdasarkan feedback kamu.",
 		"whatsNew": "Apa yang Baru",
-		"feature1": "<bold>Implicit Caching untuk Gemini</bold>: Panggilan API Gemini sekarang otomatis di-cache, mengurangi biaya API",
-		"feature2": "<bold>Pemilihan Mode yang Lebih Cerdas</bold>: Definisi mode sekarang bisa menyertakan panduan kapan setiap mode harus digunakan, memungkinkan orkestrasi yang lebih baik",
-		"feature3": "<bold>Kondensasi Konteks Cerdas</bold>: Secara cerdas merangkum riwayat percakapan ketika konteks penuh alih-alih memotong (aktifkan di Pengaturan -> Eksperimental)",
+		"feature1": "<bold>Model Pratinjau Gemini 2.5 Flash</bold>: Akses model Gemini Flash terbaru untuk respons yang lebih cepat dan efisien",
+		"feature2": "<bold>Kondensasi Konteks Cerdas</bold>: Tombol baru di header tugas memungkinkan kamu mengondensasi konten secara cerdas dengan umpan balik visual",
+		"feature3": "<bold>Dukungan YAML untuk Definisi Mode</bold>: Buat dan sesuaikan mode lebih mudah dengan dukungan YAML",
 		"hideButton": "Sembunyikan pengumuman",
 		"detailsDiscussLinks": "Dapatkan detail lebih lanjut dan diskusi di <discordLink>Discord</discordLink> dan <redditLink>Reddit</redditLink> 🚀"
 	},
@@ -253,5 +259,12 @@
 		"title": "Peringatan Eksekusi Perintah",
 		"description": "Perintah kamu dijalankan tanpa integrasi shell terminal VSCode. Untuk menekan peringatan ini kamu bisa menonaktifkan integrasi shell di bagian <strong>Terminal</strong> dari <settingsLink>pengaturan Kilo Code</settingsLink> atau troubleshoot integrasi terminal VSCode menggunakan link di bawah.",
 		"troubleshooting": "Klik di sini untuk dokumentasi integrasi shell."
+	},
+	"ask": {
+		"autoApprovedRequestLimitReached": {
+			"title": "Batas Permintaan yang Disetujui Otomatis Tercapai",
+			"description": "Kilo Code telah mencapai batas {{count}} permintaan API yang disetujui otomatis. Apakah Anda ingin mengatur ulang hitungan dan melanjutkan tugas?",
+			"button": "Atur Ulang dan Lanjutkan"
+		}
 	}
 }
