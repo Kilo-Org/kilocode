@@ -423,6 +423,10 @@
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Usa strumento diff multi-blocco sperimentale",
 			"description": "Quando abilitato, Kilo Code utilizzerà lo strumento diff multi-blocco. Questo tenterà di aggiornare più blocchi di codice nel file in una singola richiesta."
+		},
+		"WATCH_MODE": {
+			"name": "Attività rapide",
+			"description": "Quando abilitato, Kilo Code monitorerà i file alla ricerca di commenti (come \"KO!\" o \"/* KO qualcosa */\"). Al salvataggio, Kilo leggerà i commenti e aggiornerà i file di conseguenza. Questa funzionalità aiuta a semplificare il flusso di lavoro delle modifiche rapide consentendoti di contrassegnare le aree nel tuo codice che necessitano dell'assistenza dell'IA senza avviare esplicitamente una nuova conversazione."
 		}
 	},
 	"promptCaching": {

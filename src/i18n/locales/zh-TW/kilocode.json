@@ -5,5 +5,11 @@
 	"lowCreditWarning": {
 		"title": "餘額不足警告！",
 		"message": "請檢查是否可以充值免費額度或購買更多額度！"
+	},
+	"commands": {
+		"quickCommand": {
+			"prompt": "您想要更改或詢問什麼？",
+			"placeholder": "例如，修復這個函數中的錯誤，添加錯誤處理，重構這段程式碼，這個是做什麼的"
+		}
 	}
 }

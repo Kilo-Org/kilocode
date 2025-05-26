@@ -423,6 +423,10 @@
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "실험적 다중 블록 diff 도구 사용",
 			"description": "활성화하면 Kilo Code가 다중 블록 diff 도구를 사용합니다. 이것은 하나의 요청에서 파일의 여러 코드 블록을 업데이트하려고 시도합니다."
+		},
+		"WATCH_MODE": {
+			"name": "빠른 작업",
+			"description": "활성화되면 Kilo Code는 주석(예: \"KO!\" 또는 \"/* KO something */\")에 대해 파일을 감시합니다. 저장되면 Kilo는 주석을 읽고 그에 따라 파일을 업데이트합니다. 이 기능은 명시적으로 새 대화를 시작하지 않고도 AI 지원이 필요한 코드 영역을 표시할 수 있도록 하여 빠른 변경 워크플로우를 간소화하는 데 도움이 됩니다."
 		}
 	},
 	"promptCaching": {

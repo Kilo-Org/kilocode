@@ -5,5 +5,11 @@
 	"lowCreditWarning": {
 		"title": "余额不足警告！",
 		"message": "请检查是否可以充值免费额度或购买更多额度！"
+	},
+	"commands": {
+		"quickCommand": {
+			"prompt": "您想要更改或询问什么？",
+			"placeholder": "例如，修复这个函数中的错误，添加错误处理，重构这段代码，这个是做什么的"
+		}
 	}
 }

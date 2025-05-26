@@ -5,5 +5,11 @@
 	"lowCreditWarning": {
 		"title": "Avviso Credito Basso!",
 		"message": "Verifica se puoi ricaricare con crediti gratuiti o acquistarne altri!"
+	},
+	"commands": {
+		"quickCommand": {
+			"prompt": "Cosa vorresti modificare o chiedere?",
+			"placeholder": "es., correggi il bug in questa funzione, aggiungi gestione errori, refactorizza questo codice, cosa fa questo"
+		}
 	}
 }

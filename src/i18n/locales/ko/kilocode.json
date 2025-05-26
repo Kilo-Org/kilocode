@@ -5,5 +5,11 @@
 	"lowCreditWarning": {
 		"title": "크레딧 부족 경고!",
 		"message": "무료 크레딧으로 충전하거나 추가 구매가 가능한지 확인하세요!"
+	},
+	"commands": {
+		"quickCommand": {
+			"prompt": "무엇을 변경하거나 질문하시겠습니까?",
+			"placeholder": "예: 이 함수의 버그 수정, 오류 처리 추가, 이 코드 리팩토링, 이것은 무엇을 하는가"
+		}
 	}
 }

@@ -423,6 +423,10 @@
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Sử dụng công cụ diff đa khối thử nghiệm",
 			"description": "Khi được bật, Kilo Code sẽ sử dụng công cụ diff đa khối. Điều này sẽ cố gắng cập nhật nhiều khối mã trong tệp trong một yêu cầu."
+		},
+		"WATCH_MODE": {
+			"name": "Tác vụ nhanh",
+			"description": "Khi được bật, Kilo Code sẽ theo dõi các tệp để tìm các nhận xét (như \"KO!\" hoặc \"/* KO gì đó */\"). Khi được lưu, Kilo sẽ đọc các nhận xét và cập nhật các tệp tương ứng. Tính năng này giúp đơn giản hóa quy trình làm việc thay đổi nhanh bằng cách cho phép bạn đánh dấu các khu vực trong mã của mình cần hỗ trợ AI mà không cần bắt đầu một cuộc trò chuyện mới một cách rõ ràng."
 		}
 	},
 	"promptCaching": {

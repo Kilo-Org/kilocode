@@ -15,6 +15,7 @@ export const NORMALIZATION_MAPS = {
 		"\u2014": "-", // Em dash
 		"\u2013": "-", // En dash
 		"\u00A0": " ", // Non-breaking space
+		"\uFFFD": "", // Unicode replacement character
 	},
 }
 

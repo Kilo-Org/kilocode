@@ -424,6 +424,10 @@
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "允许批量搜索和替换",
 			"description": "启用后，Kilo Code 将尝试在一个请求中进行批量搜索和替换。"
+		},
+		"WATCH_MODE": {
+			"name": "快速任务",
+			"description": "启用后，Kilo Code 将监视文件中的注释（例如\"KO！\"或\"/* KO something */\"）。保存后，Kilo 将读取注释并相应地更新文件。此功能通过允许您标记代码中需要 AI 帮助的区域来简化快速更改工作流程，而无需明确启动新对话。"
 		}
 	},
 	"promptCaching": {

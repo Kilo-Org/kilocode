@@ -5,5 +5,11 @@
 	"lowCreditWarning": {
 		"title": "Warnung: Niedriges Guthaben!",
 		"message": "Prüfen Sie, ob Sie kostenloses Guthaben aufladen oder mehr kaufen können!"
+	},
+	"commands": {
+		"quickCommand": {
+			"prompt": "Was möchtest du ändern oder fragen?",
+			"placeholder": "z.B. den Fehler in dieser Funktion beheben, Fehlerbehandlung hinzufügen, diesen Code umgestalten, was macht das"
+		}
 	}
 }

@@ -5,5 +5,11 @@
 	"lowCreditWarning": {
 		"title": "Waarschuwing: laag krediet!",
 		"message": "Controleer of je kunt opwaarderen met gratis credits of meer kunt kopen!"
+	},
+	"commands": {
+		"quickCommand": {
+			"prompt": "Wat wil je wijzigen of vragen?",
+			"placeholder": "bijv., los de bug in deze functie op, voeg foutafhandeling toe, herstructureer deze code, wat doet dit"
+		}
 	}
 }

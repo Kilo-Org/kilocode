@@ -5,5 +5,11 @@
 	"lowCreditWarning": {
 		"title": "Low Credit Warning!",
 		"message": "Check to see if you can top up with free credits or purchase some more!"
+	},
+	"commands": {
+		"quickCommand": {
+			"prompt": "What would you like to change or ask?",
+			"placeholder": "e.g., fix the bug in this function, add error handling, refactor this code, what does this do"
+		}
 	}
 }

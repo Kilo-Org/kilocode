@@ -423,6 +423,10 @@
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Użyj eksperymentalnego narzędzia diff wieloblokowego",
 			"description": "Po włączeniu, Kilo Code użyje narzędzia diff wieloblokowego. Spróbuje to zaktualizować wiele bloków kodu w pliku w jednym żądaniu."
+		},
+		"WATCH_MODE": {
+			"name": "Szybkie zadania",
+			"description": "Gdy włączone, Kilo Code będzie obserwować pliki pod kątem komentarzy (takich jak \"KO!\" lub \"/* KO coś */\"). Po zapisaniu, Kilo odczyta komentarze i odpowiednio zaktualizuje pliki. Ta funkcja pomaga usprawnić przepływ pracy szybkich zmian, pozwalając oznaczyć obszary w kodzie, które wymagają pomocy AI, bez jawnego rozpoczynania nowej rozmowy."
 		}
 	},
 	"promptCaching": {

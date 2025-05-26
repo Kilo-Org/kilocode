@@ -423,6 +423,10 @@
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Experimentele multi-block diff-tool gebruiken",
 			"description": "Indien ingeschakeld, gebruikt Kilo Code de multi-block diff-tool. Hiermee wordt geprobeerd meerdere codeblokken in het bestand in één verzoek bij te werken."
+		},
+		"WATCH_MODE": {
+			"name": "Snelle taken",
+			"description": "Indien ingeschakeld, kijkt Kilo Code naar bestanden voor opmerkingen (zoals \"KO!\" of \"/* KO iets */\"). Bij het opslaan leest Kilo de opmerking(en) en werkt de bestanden dienovereenkomstig bij. Deze functie helpt de workflow voor snelle wijzigingen te stroomlijnen door je gebieden in je code te laten markeren die AI-ondersteuning nodig hebben zonder expliciet een nieuw gesprek te starten."
 		}
 	},
 	"promptCaching": {

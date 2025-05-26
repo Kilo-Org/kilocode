@@ -423,6 +423,10 @@
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Deneysel çoklu blok diff aracını kullan",
 			"description": "Etkinleştirildiğinde, Kilo Code çoklu blok diff aracını kullanacaktır. Bu, tek bir istekte dosyadaki birden fazla kod bloğunu güncellemeye çalışacaktır."
+		},
+		"WATCH_MODE": {
+			"name": "Hızlı Görevler",
+			"description": "Etkinleştirildiğinde, Kilo Code dosyaları yorumlar (örn. \"KO!\" veya \"/* KO bir şey */\") için izleyecektir. Kaydedildiğinde, Kilo yorumları okuyacak ve dosyaları buna göre güncelleyecektir. Bu özellik, açıkça yeni bir konuşma başlatmadan AI yardımı gerektiren kod alanlarını işaretlemenize olanak tanıyarak hızlı değişiklik iş akışını kolaylaştırmaya yardımcı olur."
 		}
 	},
 	"promptCaching": {
