@@ -1,53 +1,30 @@
 import path from "node:path"
 import fs from "node:fs/promises"
 
-/**
- * Get all available locales for a target
- */
 export async function getI18nLocales(
 	target: "core" | "webview",
 	localePaths: { core: string; webview: string },
 ): Promise<string[]> {
 	const basePath = localePaths[target]
-	try {
-		const entries = await fs.readdir(basePath, { withFileTypes: true })
-		return entries.filter((entry) => entry.isDirectory()).map((dir) => dir.name)
-	} catch (error) {
-		throw new Error(
-			`Failed to get locales from ${basePath}: ${error instanceof Error ? error.message : String(error)}`,
-		)
-	}
+	const entries = await fs.readdir(basePath, { withFileTypes: true })
+	return entries.filter((entry) => entry.isDirectory()).map((dir) => dir.name)
 }
 
-/**
- * Get all available JSON files for a locale in a target
- */
 export async function getI18nNamespaces(
 	target: "core" | "webview",
 	locale: string,
 	localePaths: { core: string; webview: string },
 ): Promise<string[]> {
 	const localePath = path.join(localePaths[target], locale)
-	try {
-		const entries = await fs.readdir(localePath)
-		return entries.filter((file) => file.endsWith(".json"))
-	} catch (error) {
-		throw new Error(
-			`Failed to get JSON files from ${localePath}: ${error instanceof Error ? error.message : String(error)}`,
-		)
-	}
+	const entries = await fs.readdir(localePath)
+	return entries.filter((file) => file.endsWith(".json"))
 }
 
-/**
- * Get language code from locale code
- */
 export function getLanguageFromLocale(locale: string): string {
-	// Handle special cases
 	if (locale.toLowerCase().startsWith("zh-")) {
 		return "Chinese"
 	}
 
-	// Map locale codes to full language names
 	const languageMap: Record<string, string> = {
 		en: "English",
 		es: "Spanish",
@@ -81,8 +58,6 @@ export function getLanguageFromLocale(locale: string): string {
 		fa: "Persian",
 	}
 
-	// Get the base language code (before the hyphen)
 	const baseCode = locale.split("-")[0].toLowerCase()
-
 	return languageMap[baseCode] || baseCode
 }

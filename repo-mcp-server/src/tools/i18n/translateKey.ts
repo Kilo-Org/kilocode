@@ -9,17 +9,11 @@ import { translateI18nText } from "./translation.js"
 import { getI18nNestedKey, setI18nNestedKey } from "../../utils/json-utils.js"
 import { reorderJsonToMatchSource } from "../../utils/order-utils.js"
 
-/**
- * Expand keys using the colon format
- * For example, "kilocode:veryCool" will expand to ["kilocode.veryCool.one", "kilocode.veryCool.many"]
- * The colon format is required to clearly separate the filename from the key path
- */
 async function expandParentKeys(
 	paths: string[],
 	target: "core" | "webview",
 	localePaths: { core: string; webview: string },
 ): Promise<string[]> {
-	// Get all locales to find English
 	const locales = await getI18nLocales(target, localePaths)
 	const englishLocale = locales.find((locale) => locale.toLowerCase().startsWith("en"))
 
@@ -30,89 +24,40 @@ async function expandParentKeys(
 	const expandedPaths: string[] = []
 
 	for (const keyPath of paths) {
-		// Skip undefined or null paths
-		if (!keyPath) {
-			console.error("Skipping undefined or null path")
-			continue
-		}
+		if (!keyPath) continue
 
-		// All keys must use the colon format (filename:keyPath)
 		if (keyPath.includes(":")) {
 			const parts = keyPath.split(":")
-
-			// Ensure we have exactly two parts (fileName:parentKey)
-			if (parts.length !== 2) {
-				console.error(`Invalid parent key format: ${keyPath} (should be in format 'file:key')`)
-				continue
-			}
+			if (parts.length !== 2) continue
 
 			const [fileName, parentKey] = parts
-
-			// Ensure both parts are non-empty
-			if (!fileName || !parentKey) {
-				console.error(`Invalid parent key format: ${keyPath} (file or key is empty)`)
-				continue
-			}
+			if (!fileName || !parentKey) continue
 
 			const jsonFile = `${fileName}.json`
 			const englishFilePath = path.join(localePaths[target], englishLocale, jsonFile)
 
-			// Log the paths being checked
-			console.error(`🔍 DEBUG: Checking for English file at: ${englishFilePath}`)
-			console.error(`🔍 DEBUG: localePaths for ${target}: ${localePaths[target]}`)
+			if (!existsSync(englishFilePath)) continue
 
-			// Check if the file exists
-			if (!existsSync(englishFilePath)) {
-				console.error(`File not found: ${englishFilePath}`)
-				continue
-			}
-
-			// Read the English file
 			const englishContent = await fs.readFile(englishFilePath, "utf-8")
 			const englishJson = JSON.parse(englishContent)
-
-			// Log the file content structure
-			console.error(`🔍 DEBUG: Found English file with keys: ${Object.keys(englishJson).join(", ")}`)
-
-			// Get the parent object or string
 			const parentValue = getI18nNestedKey(englishJson, parentKey)
 
-			if (parentValue === undefined) {
-				console.error(`Parent key "${parentKey}" in ${jsonFile} doesn't exist`)
-				continue
-			}
+			if (parentValue === undefined) continue
 
-			// Handle both object and string cases
 			if (typeof parentValue === "string") {
-				// If it's a string, just add the key directly
 				expandedPaths.push(`${fileName}.${parentKey}`)
 			} else if (typeof parentValue === "object" && parentValue !== null) {
-				// If it's an object, recursively collect all leaf string keys
 				const leafKeys = collectLeafStringKeys(parentValue, parentKey)
-
-				// Add all leaf keys with the file prefix
 				for (const leafKey of leafKeys) {
 					expandedPaths.push(`${fileName}.${leafKey}`)
 				}
-			} else {
-				console.error(`Parent key "${parentKey}" in ${jsonFile} is not a string or object`)
-				continue
 			}
-		} else {
-			// Reject keys that don't use the colon format
-			console.error(
-				`❌ Invalid key format: ${keyPath} (must use colon format 'filename:keyPath', e.g., 'kilocode:lowCreditWarning.nice')`,
-			)
 		}
 	}
 
 	return expandedPaths
 }
 
-/**
- * Recursively collect all leaf string keys from an object
- * Returns keys in dot notation
- */
 function collectLeafStringKeys(obj: any, prefix: string = ""): string[] {
 	const keys: string[] = []
 
@@ -122,10 +67,8 @@ function collectLeafStringKeys(obj: any, prefix: string = ""): string[] {
 			const currentPath = prefix ? `${prefix}.${key}` : key
 
 			if (typeof value === "string") {
-				// This is a leaf string node
 				keys.push(currentPath)
 			} else if (typeof value === "object" && value !== null && !Array.isArray(value)) {
-				// This is an object, recursively collect its keys
 				const nestedKeys = collectLeafStringKeys(value, currentPath)
 				keys.push(...nestedKeys)
 			}
@@ -135,9 +78,6 @@ function collectLeafStringKeys(obj: any, prefix: string = ""): string[] {
 	return keys
 }
 
-/**
- * Translate i18n key tool handler
- */
 class TranslateKeyTool implements ToolHandler {
 	name = "translate_i18n_key"
 	description = "Translate a specific key or keys from English to other languages"
@@ -177,14 +117,6 @@ class TranslateKeyTool implements ToolHandler {
 	}
 
 	async execute(args: any, context: Context): Promise<McpToolCallResponse> {
-		console.error("🔍 DEBUG: Translation request received with args:", JSON.stringify(args, null, 2))
-		console.error("🔍 DEBUG: Context paths:", JSON.stringify(context.LOCALE_PATHS, null, 2))
-
-		// Check if we have a valid OpenRouter API key
-		if (!context.OPENROUTER_API_KEY) {
-			console.error(`❌ ERROR: No OpenRouter API key in context!`)
-		}
-
 		const {
 			target,
 			paths,
@@ -195,12 +127,11 @@ class TranslateKeyTool implements ToolHandler {
 		} = args
 
 		if (!Array.isArray(paths) || paths.length === 0) {
-			console.error("❌ ERROR: No translation keys provided in paths array")
 			return {
 				content: [
 					{
 						type: "text",
-						text: "Error: No translation keys provided. Please specify 'paths' as an array of strings in the format 'filename:keyPath' (e.g., 'kilocode:lowCreditWarning.nice').",
+						text: "Error: No translation keys provided. Please specify 'paths' as an array of strings in the format 'filename:keyPath'.",
 					},
 				],
 				isError: true,
@@ -208,65 +139,36 @@ class TranslateKeyTool implements ToolHandler {
 		}
 
 		try {
-			// Get all locales to translate to
 			const locales = await getI18nLocales(target, context.LOCALE_PATHS)
-			console.error(`📋 Found ${locales.length} locales in total`)
-
-			// Find the English locale
 			const englishLocale = locales.find((locale) => locale.toLowerCase().startsWith("en"))
 
 			if (!englishLocale) {
 				return {
-					content: [
-						{
-							type: "text",
-							text: "Error: English locale not found",
-						},
-					],
+					content: [{ type: "text", text: "Error: English locale not found" }],
 					isError: true,
 				}
 			}
 
-			// Process paths to handle different formats and auto-detection
 			let processedPaths = [...paths]
 
-			// Handle context-awareness if useCurrentFile is true
 			if (useCurrentFile && process.env.VSCODE_OPEN_FILES) {
-				try {
-					const openFiles = JSON.parse(process.env.VSCODE_OPEN_FILES)
-					const i18nFiles = openFiles.filter(
-						(file: string) => file.includes("/i18n/locales/") && file.endsWith(".json"),
-					)
+				const openFiles = JSON.parse(process.env.VSCODE_OPEN_FILES)
+				const i18nFiles = openFiles.filter(
+					(file: string) => file.includes("/i18n/locales/") && file.endsWith(".json"),
+				)
 
-					if (i18nFiles.length > 0) {
-						// Extract filename from the first i18n file
-						const currentFile = i18nFiles[0]
-						const fileName = path.basename(currentFile, ".json")
-
-						// Add filename prefix to any paths that don't have it
-						processedPaths = processedPaths.map((p: string) => {
-							if (!p.includes(".") && !p.includes(":")) {
-								return `${fileName}.${p}`
-							}
-							return p
-						})
-
-						console.error(`🔍 Using context from open file: ${fileName}.json`)
-					}
-				} catch (error) {
-					console.error(`⚠️ Error processing open files context: ${error}`)
+				if (i18nFiles.length > 0) {
+					const fileName = path.basename(i18nFiles[0], ".json")
+					processedPaths = processedPaths.map((p: string) => {
+						if (!p.includes(".") && !p.includes(":")) {
+							return `${fileName}.${p}`
+						}
+						return p
+					})
 				}
 			}
 
-			// Process paths to expand parent keys and handle auto-detection
-			console.error(`🔍 DEBUG: Expanding paths: ${processedPaths.join(", ")}`)
 			const keyPaths = await expandParentKeys(processedPaths, target, context.LOCALE_PATHS)
-
-			console.error(`🔍 Starting translation for ${keyPaths.length} key(s): ${keyPaths.join(", ")}`)
-			console.error(`🌐 Using model: ${model}`)
-			console.error(`⚡ Parallelization: Processing up to ${chunkSize} translations concurrently`)
-
-			// Filter locales if targetLocales is specified
 			const localesToTranslate =
 				targetLocales.length > 0
 					? locales.filter((locale) => targetLocales.includes(locale) && locale !== englishLocale)
@@ -274,41 +176,26 @@ class TranslateKeyTool implements ToolHandler {
 
 			if (localesToTranslate.length === 0) {
 				return {
-					content: [
-						{
-							type: "text",
-							text: "Error: No target locales to translate to",
-						},
-					],
+					content: [{ type: "text", text: "Error: No target locales to translate to" }],
 					isError: true,
 				}
 			}
 
-			// Initialize results array
 			const allResults: string[] = []
 			let totalSuccessCount = 0
 			let completedCount = 0
-
-			// Create a concurrency limiter
 			const limit = pLimit(chunkSize)
-
-			// Group keys by file to optimize file operations
 			const keysByFile: Record<string, string[]> = {}
 
-			// Validate all keys and group them by file
 			for (const keyPath of keyPaths) {
 				if (!keyPath || typeof keyPath !== "string") {
 					allResults.push(`❌ Invalid key path: ${keyPath}`)
 					continue
 				}
 
-				// Keys must be in the format filename.key1.key2...
-				// This is the internal format after expansion from filename:key1.key2...
 				const parts = keyPath.split(".")
 				if (parts.length < 2) {
-					allResults.push(
-						`❌ Invalid key format: ${keyPath} (should be in internal format 'filename.keyPath' after expansion)`,
-					)
+					allResults.push(`❌ Invalid key format: ${keyPath}`)
 					continue
 				}
 
@@ -324,12 +211,9 @@ class TranslateKeyTool implements ToolHandler {
 				keysByFile[jsonFile].push(keyInFile)
 			}
 
-			// Calculate total keys to translate
 			const totalKeysCount =
 				Object.entries(keysByFile).reduce((acc, [_, keys]) => acc + keys.length, 0) * localesToTranslate.length
-			console.error(`🔢 Total translation tasks: ${totalKeysCount}`)
 
-			// Store all file write operations to perform at the end
 			type FileWriteOperation = {
 				targetFilePath: string
 				targetJson: Record<string, any>
@@ -337,33 +221,22 @@ class TranslateKeyTool implements ToolHandler {
 				jsonFile: string
 			}
 			const fileWriteOperations: FileWriteOperation[] = []
-
-			// Create translation tasks for all files and locales
 			const translationTasks: Promise<void>[] = []
 
-			// Process each file
 			for (const [jsonFile, keysInFile] of Object.entries(keysByFile)) {
-				// Read the English source file
 				const englishFilePath = path.join(
 					context.LOCALE_PATHS[target as keyof typeof context.LOCALE_PATHS],
 					englishLocale,
 					jsonFile,
 				)
 
-				// Log the file path details
-				console.error(`🔍 DEBUG: Looking for file: ${englishFilePath}`)
-				console.error(
-					`🔍 DEBUG: Base locale path: ${context.LOCALE_PATHS[target as keyof typeof context.LOCALE_PATHS]}`,
-				)
-
 				if (!existsSync(englishFilePath)) {
-					// Try to suggest available files
 					try {
 						const availableFiles = await getI18nNamespaces(target, englishLocale, context.LOCALE_PATHS)
 						const suggestion =
 							availableFiles.length > 0 ? `\nAvailable files: ${availableFiles.join(", ")}` : ""
 						allResults.push(`❌ File not found: ${englishFilePath}${suggestion}`)
-					} catch (error) {
+					} catch {
 						allResults.push(`❌ File not found: ${englishFilePath}`)
 					}
 					continue
@@ -371,36 +244,25 @@ class TranslateKeyTool implements ToolHandler {
 
 				const englishContent = await fs.readFile(englishFilePath, "utf-8")
 				const englishJson = JSON.parse(englishContent)
-
-				// Validate all keys in this file
 				const validKeys: string[] = []
-				const invalidKeys: string[] = []
 
 				for (const keyInFile of keysInFile) {
 					const valueToTranslate = getI18nNestedKey(englishJson, keyInFile)
-					console.error(`🔍 DEBUG: Key "${keyInFile}" in ${jsonFile} => Value: "${valueToTranslate}"`)
 
 					if (valueToTranslate === undefined) {
-						// Simply report the key was not found without suggestions
 						allResults.push(`❌ Key "${keyInFile}" not found in ${jsonFile}`)
-						invalidKeys.push(keyInFile)
 						continue
 					}
 
 					if (typeof valueToTranslate !== "string") {
 						allResults.push(`❌ Value at key "${keyInFile}" in ${jsonFile} is not a string`)
-						invalidKeys.push(keyInFile)
 						continue
 					}
 
 					validKeys.push(keyInFile)
 				}
 
-				if (validKeys.length === 0) {
-					continue // Skip this file if no valid keys
-				}
-
-				console.error(`🌍 Preparing translations for ${localesToTranslate.length} locales for file ${jsonFile}`)
+				if (validKeys.length === 0) continue
 
 				// Process each locale
 				for (const locale of localesToTranslate) {
