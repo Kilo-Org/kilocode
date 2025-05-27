@@ -6,7 +6,7 @@ import pLimit from "p-limit"
 import { Context, McpToolCallResponse, ToolHandler } from "../types.js"
 import { getI18nLocales, getI18nNamespaces, getLanguageFromLocale } from "../../utils/locale-utils.js"
 import { translateI18nText } from "./translation.js"
-import { getI18nNestedKey, setI18nNestedKey } from "../../utils/json-utils.js"
+import { getI18nNestedKey, setI18nNestedKey, detectIndentation } from "../../utils/json-utils.js"
 import { reorderJsonToMatchSource } from "../../utils/order-utils.js"
 
 async function expandParentKeys(
@@ -349,9 +349,54 @@ class TranslateKeyTool implements ToolHandler {
 			await Promise.all(translationTasks)
 			console.error(`✅ All translation tasks completed`)
 
+			// Read English file indentation first to use as default for new files
+			const englishIndent = { char: " ", size: 2 } // Default fallback
+
+			// Try to get indentation from English files
+			for (const jsonFile of [...new Set(fileWriteOperations.map((op) => op.jsonFile))]) {
+				const englishFilePath = path.join(
+					context.LOCALE_PATHS[target as keyof typeof context.LOCALE_PATHS],
+					englishLocale,
+					jsonFile,
+				)
+
+				if (existsSync(englishFilePath)) {
+					try {
+						const englishContent = await fs.readFile(englishFilePath, "utf-8")
+						englishIndent.char = detectIndentation(englishContent).char
+						englishIndent.size = detectIndentation(englishContent).size
+						break // We only need one English file to determine the standard
+					} catch (error) {
+						console.error(`⚠️ Error reading English file for indentation detection: ${error}`)
+					}
+				}
+			}
+
 			// Write all files after translations are complete
 			console.error(`💾 Writing translated files...`)
 			for (const { targetFilePath, targetJson, locale, jsonFile } of fileWriteOperations) {
+				// Detect existing indentation style if file exists
+				let indentChar = englishIndent.char // Default to English indentation
+				let indentSize = englishIndent.size
+				let existingContent = ""
+
+				if (existsSync(targetFilePath)) {
+					try {
+						existingContent = await fs.readFile(targetFilePath, "utf-8")
+						const indentation = detectIndentation(existingContent)
+						// Only use the file's own indentation if we could detect it
+						if (indentation.size > 0) {
+							indentChar = indentation.char
+							indentSize = indentation.size
+						}
+					} catch (error) {
+						console.error(`⚠️ Error reading existing file for indentation detection: ${error}`)
+					}
+				}
+
+				// Create indentation string
+				const indent = indentChar.repeat(indentSize)
+
 				// For non-English locales, reorder the keys to match the English structure
 				if (locale !== englishLocale) {
 					// Get the corresponding English file to use as ordering reference
@@ -368,19 +413,29 @@ class TranslateKeyTool implements ToolHandler {
 
 							// Reorder the JSON object to match the English structure
 							const orderedJson = reorderJsonToMatchSource(targetJson, englishJson)
-							await fs.writeFile(targetFilePath, JSON.stringify(orderedJson, null, 2) + "\n", "utf-8")
+
+							// Use detected indentation
+							const jsonString = JSON.stringify(orderedJson, null, indent)
+							await fs.writeFile(targetFilePath, jsonString + "\n", "utf-8")
 							console.error(`💾 Saved and reordered translations to ${locale}/${jsonFile}`)
 						} catch (error) {
 							console.error(`⚠️ Error reordering JSON: ${error}`)
-							await fs.writeFile(targetFilePath, JSON.stringify(targetJson, null, 2) + "\n", "utf-8")
+
+							// Use detected indentation
+							const jsonString = JSON.stringify(targetJson, null, indent)
+							await fs.writeFile(targetFilePath, jsonString + "\n", "utf-8")
 							console.error(`💾 Saved translations to ${locale}/${jsonFile} without reordering`)
 						}
 					} else {
-						await fs.writeFile(targetFilePath, JSON.stringify(targetJson, null, 2) + "\n", "utf-8")
+						// Use detected indentation
+						const jsonString = JSON.stringify(targetJson, null, indent)
+						await fs.writeFile(targetFilePath, jsonString + "\n", "utf-8")
 						console.error(`💾 Saved translations to ${locale}/${jsonFile}`)
 					}
 				} else {
-					await fs.writeFile(targetFilePath, JSON.stringify(targetJson, null, 2) + "\n", "utf-8")
+					// Use detected indentation
+					const jsonString = JSON.stringify(targetJson, null, indent)
+					await fs.writeFile(targetFilePath, jsonString + "\n", "utf-8")
 					console.error(`💾 Saved translations to ${locale}/${jsonFile}`)
 				}
 			}
