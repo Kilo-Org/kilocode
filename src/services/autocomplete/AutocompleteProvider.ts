@@ -4,9 +4,10 @@ import { ContextProxy } from "../../core/config/ContextProxy"
 import { holeFillerTemplate } from "./templating/AutocompleteTemplate"
 import { stopAtStopTokens } from "./streamTransforms/charStream"
 import { getDocumentTextWithPlaceholder } from "./utils/document"
+import { LRUCache } from "lru-cache"
 
 // Configuration
-export const UI_UPDATE_DEBOUNCE_MS = 150
+export const UI_UPDATE_DEBOUNCE_MS = 500
 const DEFAULT_MODEL = "mistralai/codestral-2501"
 
 export function registerAutocomplete(context: vscode.ExtensionContext) {
@@ -40,18 +41,21 @@ function isFileDisabled(document: vscode.TextDocument): boolean {
 }
 
 // Cache interface for storing completion results
-interface CompletionCache {
-	response: string
-	documentVersion: number
-}
+// interface CompletionCache {
+// 	response: string
+// 	documentVersion: number
+// }
+
+const _COOLDOWN_PERIOD_MS = 500 // Prevent new suggestions for 500ms after accepting one
 
 function setupAutocomplete(context: vscode.ExtensionContext) {
+	let timer: NodeJS.Timeout | undefined
 	let enabled = true
 	let activeRequest: string | null = null
-	const _COOLDOWN_PERIOD_MS = 500 // Prevent new suggestions for 500ms after accepting one
+	let cache: LRUCache<string, string> = new LRUCache<string, string>({ max: 100 })
 
 	// Cache for storing the last completion result
-	let completionCache: CompletionCache | null = null
+	// let completionCache: CompletionCache | null = null
 
 	// Services
 	const apiHandler = buildApiHandler({
@@ -69,6 +73,7 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 		position: vscode.Position,
 		token: vscode.CancellationToken,
 	) => {
+		console.log(`🚀👹 Autocomplete generating...`)
 		if (!enabled || isFileDisabled(document)) {
 			return null
 		}
@@ -79,35 +84,34 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 
 		// Get document text with placeholder at cursor position
 
-		// if (completionCache && document.version === completionCache.documentVersion) {
-		// 	console.log("🚀 Cache hit! Using cached completion.")
+		const docWithPlaceholder = getDocumentTextWithPlaceholder(document, position)
+		const cacheKey = `${docWithPlaceholder.linesBeforeCursor}:${docWithPlaceholder.linesAfterCursor}`
+		const cachedResult = cache.get(cacheKey)
 
-		// 	// Calculate the remaining text to display
-		// 	const linePrefix = document.getText(new vscode.Range(new vscode.Position(position.line, 0), position))
+		if (cachedResult) {
+			const linePrefix = document.getText(new vscode.Range(new vscode.Position(position.line, 0), position))
 
-		// 	if (completionCache.response.startsWith(linePrefix)) {
-		// 		const remainingText = completionCache.response.substring(linePrefix.length)
+			if (cachedResult.startsWith(linePrefix)) {
+				const remainingText = cachedResult.substring(linePrefix.length)
+				if (remainingText.length === 0) {
+					return null
+				}
 
-		// 		if (remainingText.length === 0) {
-		// 			return null
-		// 		}
+				// Create completion item with the remaining text
+				const range = new vscode.Range(position, position)
+				const item = new vscode.InlineCompletionItem(remainingText, range)
 
-		// 		// Create completion item with the remaining text
-		// 		const range = new vscode.Range(position, position)
-		// 		const item = new vscode.InlineCompletionItem(remainingText, range)
+				// Set the filterText to the WHOLE completion
+				item.filterText = cachedResult
 
-		// 		// Set the filterText to the WHOLE completion
-		// 		item.filterText = completionCache.response
-
-		// 		return [item]
-		// 	}
-		// }
+				return [item]
+			}
+		}
 
 		const editor = vscode.window.activeTextEditor
 		if (!editor) return null
 
 		const systemPrompt = holeFillerTemplate.getSystemPrompt()
-		const docWithPlaceholder = getDocumentTextWithPlaceholder(document, position)
 		const prompt = holeFillerTemplate.template({
 			currentFileWithFillPlaceholder: docWithPlaceholder.textWithPlaceholder,
 		})
@@ -129,7 +133,7 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 			}
 		})()
 		if (activeRequest !== requestId || token.isCancellationRequested) {
-			console.log(`🚀🤖🤖🤖🤖❌ ABORTED ❌🤖🤖🤖🤖\n`)
+			// console.log(`🚀🤖🤖🤖🤖❌ ABORTED ❌🤖🤖🤖🤖\n`)
 			return null
 		}
 
@@ -146,21 +150,12 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 		if (activeRequest !== requestId || token.isCancellationRequested) return null
 
 		const autocompleteResponse = rawResponse.replace("<COMPLETION>", "").trim()
-		console.log(`🚀🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖 \n` + autocompleteResponse)
-
-		// Update the cache with the new completion
-		completionCache = {
-			response: autocompleteResponse,
-			documentVersion: document.version,
-		}
-
+		// console.log(`🚀🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖 \n` + autocompleteResponse)
 		editor.setDecorations(loadingDecoration, [])
 
-		// Get exactly what's been typed on the current line
 		const linePrefix = document
 			.getText(new vscode.Range(new vscode.Position(position.line, 0), position))
 			.trimStart()
-		// console.log(`🚀 ~ linePrefix is '${linePrefix}'`, linePrefix)
 
 		// If the response doesn't start with what's been typed, don't show completion
 		// if (!autocompleteResponse.startsWith(linePrefix)) {
@@ -195,38 +190,20 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 			console.log(`🚀💬 Autocomplete requested!`)
 
 			// Get exactly what's been typed on the current line
-			const linePrefix = document.getText(new vscode.Range(new vscode.Position(position.line, 0), position))
+			const linePrefix = document
+				.getText(new vscode.Range(new vscode.Position(position.line, 0), position))
+				.trimStart()
 
 			// Debug logging
 			console.log(`[DEBUG] Line prefix: "${linePrefix}"`)
 			console.log(`[DEBUG] Line prefix length: ${linePrefix.length}`)
 
-			// If nothing typed, don't show completion
-			if (linePrefix.length === 0) {
-				return null
-			}
-
-			// Check if we have a cached completion that starts with the line prefix
-			// if (completionCache && completionCache.response.startsWith(linePrefix)) {
-			// 	const remainingText = completionCache.response.substring(linePrefix.length)
-
-			// 	// Nothing left to complete?
-			// 	if (remainingText.length === 0) {
-			// 		return null
-			// 	}
-
-			// 	// Create completion item with the remaining text
-			// 	const range = new vscode.Range(position, position)
-			// 	const item = new vscode.InlineCompletionItem(remainingText, range)
-
-			// 	// Set the filterText to the WHOLE completion
-			// 	item.filterText = completionCache.response
-
-			// 	return [item]
-			// }
-
-			// Generate a new completion
-			return _generateCompletion(document, position, token)
+			return new Promise((resolve) => {
+				clearTimeout(timer)
+				timer = setTimeout(() => {
+					resolve(_generateCompletion(document, position, token))
+				}, UI_UPDATE_DEBOUNCE_MS)
+			})
 		},
 	}
 

@@ -19,7 +19,9 @@ function setupSimpleAutocomplete(context: vscode.ExtensionContext) {
 	const inlineCompletionProvider: vscode.InlineCompletionItemProvider = {
 		async provideInlineCompletionItems(document, position, _context, _token) {
 			// Get exactly what's been typed
-			const linePrefix = document.getText(new vscode.Range(new vscode.Position(position.line, 0), position))
+			const linePrefix = document
+				.getText(new vscode.Range(new vscode.Position(position.line, 0), position))
+				.trimStart()
 			console.log("🚀 ~ provideInlineCompletionItems ~ linePrefix:", linePrefix)
 
 			// Debug logging
