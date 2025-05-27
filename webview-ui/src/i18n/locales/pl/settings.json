@@ -385,7 +385,7 @@
 	"advanced": {
 		"diff": {
 			"label": "Włącz edycję przez różnice",
-			"description": "Gdy włączone, Kilo Code będzie w stanie edytować pliki szybciej i automatycznie odrzuci obcięte pełne zapisy plików. Działa najlepiej z najnowszym modelem Claude 3.7 Sonnet.",
+			"description": "Gdy włączone, Kilo Code będzie w stanie edytować pliki szybciej i automatycznie odrzuci obcięte pełne zapisy plików. Działa najlepiej z najnowszym modelem Claude 4 Sonnet.",
 			"strategy": {
 				"label": "Strategia diff",
 				"options": {

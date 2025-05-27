@@ -385,7 +385,7 @@
 	"advanced": {
 		"diff": {
 			"label": "diff를 통한 편집 활성화",
-			"description": "활성화되면 Kilo Code는 파일을 더 빠르게 편집할 수 있으며 잘린 전체 파일 쓰기를 자동으로 거부합니다. 최신 Claude 3.7 Sonnet 모델에서 가장 잘 작동합니다.",
+			"description": "활성화되면 Kilo Code는 파일을 더 빠르게 편집할 수 있으며 잘린 전체 파일 쓰기를 자동으로 거부합니다. 최신 Claude 4 Sonnet 모델에서 가장 잘 작동합니다.",
 			"strategy": {
 				"label": "Diff 전략",
 				"options": {

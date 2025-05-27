@@ -385,7 +385,7 @@
 	"advanced": {
 		"diff": {
 			"label": "diff経由の編集を有効化",
-			"description": "有効にすると、Kilo Codeはファイルをより迅速に編集でき、切り詰められた全ファイル書き込みを自動的に拒否します。最新のClaude 3.7 Sonnetモデルで最良に機能します。",
+			"description": "有効にすると、Kilo Codeはファイルをより迅速に編集でき、切り詰められた全ファイル書き込みを自動的に拒否します。最新のClaude 4 Sonnetモデルで最良に機能します。",
 			"strategy": {
 				"label": "Diff戦略",
 				"options": {
