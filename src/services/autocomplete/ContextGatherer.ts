@@ -693,18 +693,18 @@ export class ContextGatherer {
 		if (useDefinitions) {
 			// 1. LSP Definitions
 			// AIDIFF: Call the new LSP-based definition fetcher
-			const lspDefinitions = await this._getLspDefinitions(document, position)
-			allDefinitions.push(...lspDefinitions)
+			// const lspDefinitions = await this._getLspDefinitions(document, position)
+			// allDefinitions.push(...lspDefinitions)
 
-			// 2. Recently Edited Context
-			// AIDIFF: Fetch and add recently edited context
-			const recentlyEdited = await this.getRecentlyEditedContext(document.uri)
-			allDefinitions.push(...recentlyEdited)
+			// // 2. Recently Edited Context
+			// // AIDIFF: Fetch and add recently edited context
+			// const recentlyEdited = await this.getRecentlyEditedContext(document.uri)
+			// allDefinitions.push(...recentlyEdited)
 
 			// 3. Recently Visited Context
 			// AIDIFF: Fetch and add recently visited context
-			const recentlyVisited = this.getRecentlyVisitedContext(document.uri)
-			allDefinitions.push(...recentlyVisited)
+			// const recentlyVisited = this.getRecentlyVisitedContext(document.uri)
+			// allDefinitions.push(...recentlyVisited)
 
 			// AIDIFF: Deduplicate definitions from all sources
 			// Simple deduplication based on filepath and start line for now

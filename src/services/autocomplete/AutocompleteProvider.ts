@@ -7,6 +7,7 @@ import { generateImportSnippets, generateDefinitionSnippets } from "./context/sn
 
 // Configuration
 export const UI_UPDATE_DEBOUNCE_MS = 150
+export const BAIL_OUT_TOO_MANY_LINES_LIMIT = 100
 //const DEFAULT_MODEL = "mistralai/codestral-2501"
 const DEFAULT_MODEL = "google/gemini-2.5-flash-preview-05-20"
 
@@ -76,7 +77,11 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 			// New completion request
 			const requestId = crypto.randomUUID()
 			activeRequest = requestId
-			vscode.window.activeTextEditor.setDecorations(loadingDecoration, [])
+
+			// Apply loading indicator at the end of the line to avoid interfering with typing
+			const lineEndPosition = new vscode.Position(position.line, document.lineAt(position.line).text.length)
+			const loadingRange = new vscode.Range(lineEndPosition, lineEndPosition)
+			vscode.window.activeTextEditor.setDecorations(loadingDecoration, [loadingRange])
 
 			// Gather context and build prompt
 			const codeContext = await contextGatherer.gatherContext(document, position, true, true)
@@ -91,20 +96,33 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 			const systemPrompt = holeFillerTemplate.getSystemPrompt()
 			const userPrompt = holeFillerTemplate.template(codeContext, document, position, snippets)
 			console.log(`🚀🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶\n` + userPrompt)
+
 			// Stream completion
 			const stream = apiHandler.createMessage(systemPrompt, [
 				{ role: "user", content: [{ type: "text", text: userPrompt }] },
 			])
 
 			let completion = ""
+			let lineCount = 0
 			for await (const chunk of stream) {
-				if (activeRequest !== requestId) break
+				if (activeRequest !== requestId) {
+					break
+				}
 
 				if (chunk.type === "text") {
 					completion += chunk.text
+					lineCount += chunk.text.includes("\n") ? 1 : 0
 					processedCompletion = processModelResponse(completion)
 				}
+				if (lineCount > BAIL_OUT_TOO_MANY_LINES_LIMIT) {
+					break
+					completion = null
+				}
 			}
+			// Clear loading indicator when completion is done (success or failure)
+			// if (activeRequest === requestId) {
+			// vscode.window.activeTextEditor?.setDecorations(loadingDecoration, [])
+			// }
 
 			console.log(`🚀🚀🚀🚀🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖 \n` + processedCompletion)
 
@@ -138,7 +156,7 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 	const documentHandler = vscode.workspace.onDidChangeTextDocument((e) => {
 		const editor = vscode.window.activeTextEditor
 		if (editor?.document === e.document) {
-			editor.setDecorations(loadingDecoration, [])
+			// editor.setDecorations(loadingDecoration, [])
 		}
 	})
 
