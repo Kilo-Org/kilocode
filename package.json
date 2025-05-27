@@ -552,6 +552,7 @@
 		"@types/diff-match-patch": "^1.0.36",
 		"@types/glob": "^8.1.0",
 		"@types/jest": "^29.5.14",
+		"@types/lru-cache": "^7.10.9",
 		"@types/mocha": "^10.0.10",
 		"@types/node": "20.x",
 		"@types/node-cache": "^4.1.3",

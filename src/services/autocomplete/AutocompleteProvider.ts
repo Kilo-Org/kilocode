@@ -1,14 +1,14 @@
 import * as vscode from "vscode"
 import { buildApiHandler } from "../../api"
 import { ContextGatherer } from "./ContextGatherer"
-import { PromptRenderer } from "./PromptRenderer"
+import { holeFillerTemplate } from "./templating/AutocompleteTemplate"
 import { ContextProxy } from "../../core/config/ContextProxy"
 import { generateImportSnippets, generateDefinitionSnippets } from "./context/snippetProvider"
 
 // Configuration
 export const UI_UPDATE_DEBOUNCE_MS = 150
-const DEFAULT_MODEL = "mistralai/codestral-2501"
-const MIN_TYPED_LENGTH = 4
+//const DEFAULT_MODEL = "mistralai/codestral-2501"
+const DEFAULT_MODEL = "google/gemini-2.5-flash-preview-05-20"
 const PREVIEW_CONTEXT_KEY = "kilo-code.autocompletePreviewVisible"
 
 export function registerAutocomplete(context: vscode.ExtensionContext) {
@@ -29,14 +29,18 @@ const loadingDecoration = vscode.window.createTextEditorDecorationType({
 	rangeBehavior: vscode.DecorationRangeBehavior.ClosedOpen,
 })
 
-function cleanMarkdown(text: string): string {
-	return text
-		.replace(/```[\w-]*\n([\s\S]*?)\n```/g, "$1")
-		.replace(/^```[\w-]*\n/g, "")
-		.replace(/\n```[\w-]*\n/g, "\n")
-		.replace(/\n```$/g, "")
-		.replace(/```[\w-]*$/g, "")
-		.trim()
+export function processModelResponse(responseText: string): string {
+	const fullMatch = /(<COMPLETION>)?([\s\S]*?)(<\/COMPLETION>|$)/.exec(responseText)
+	if (!fullMatch) {
+		console.warn("No valid completion found in response:", responseText)
+		return responseText
+	}
+	if (fullMatch[2].endsWith("</COMPLETION>")) {
+		console.warn("Completion ends with </COMPLETION>, removing it:", fullMatch[2])
+		return fullMatch[2].slice(0, -"</COMPLETION>".length)
+	}
+	console.warn("Returning completion without </COMPLETION> tag:", fullMatch[2])
+	return fullMatch[2]
 }
 
 function splitFirstLine(text: string) {
@@ -56,21 +60,6 @@ function isFileDisabled(document: vscode.TextDocument): boolean {
 	})
 }
 
-function shouldProvideCompletion(
-	context: vscode.InlineCompletionContext,
-	document: vscode.TextDocument,
-	position: vscode.Position,
-): boolean {
-	if (context.triggerKind === vscode.InlineCompletionTriggerKind.Invoke) return true
-
-	const editor = vscode.window.activeTextEditor
-	const pos = editor?.document.uri === document.uri ? editor.selection.active : position
-	const line = document.lineAt(context.selectedCompletionInfo?.range.start.line ?? pos.line)
-	const textBefore = line.text.substring(0, context.selectedCompletionInfo?.range.start.character ?? pos.character)
-
-	return textBefore.trim().length >= MIN_TYPED_LENGTH
-}
-
 function setupAutocomplete(context: vscode.ExtensionContext) {
 	vscode.commands.executeCommand("setContext", PREVIEW_CONTEXT_KEY, false)
 
@@ -83,7 +72,6 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 
 	// Services
 	const contextGatherer = new ContextGatherer()
-	const promptRenderer = new PromptRenderer({}, DEFAULT_MODEL)
 	const apiHandler = buildApiHandler({
 		apiProvider: "kilocode",
 		kilocodeToken: ContextProxy.instance.getProviderSettings().kilocodeToken,
@@ -101,9 +89,10 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 
 	const provider: vscode.InlineCompletionItemProvider = {
 		async provideInlineCompletionItems(document, position, context, token) {
-			if (!enabled || isFileDisabled(document) || !shouldProvideCompletion(context, document, position)) {
+			if (!enabled || isFileDisabled(document)) {
 				return null
 			}
+
 			// Handle multi-line completion flow
 			if (acceptedFirstLine && pendingCompletion) {
 				const { remaining } = splitFirstLine(pendingCompletion)
@@ -138,16 +127,17 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 					...generateDefinitionSnippets(true, codeContext.definitions),
 				]
 
-				const prompt = promptRenderer.renderPrompt(codeContext, snippets, {
-					language: document.languageId,
-					includeImports: true,
-					includeDefinitions: true,
-					multilineCompletions: "auto" as any,
-				})
+				// Assume new PromptRenderer methods that use the holeFillerTemplate
+				// These methods would internally construct `currentFileWithFillPlaceholder`
+				// from codeContext, document, and position, then use the template.
+				const systemPrompt = holeFillerTemplate.getSystemPrompt()
+				const userPrompt = holeFillerTemplate.template(codeContext, document, position, snippets)
+
+				console.log(`🚀🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶\n` + userPrompt)
 
 				// Stream completion
-				const stream = apiHandler.createMessage(promptRenderer.renderSystemPrompt(), [
-					{ role: "user", content: [{ type: "text", text: prompt.prompt }] },
+				const stream = apiHandler.createMessage(systemPrompt, [
+					{ role: "user", content: [{ type: "text", text: userPrompt }] },
 				])
 
 				let completion = ""
@@ -158,10 +148,12 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 
 					if (chunk.type === "text") {
 						completion += chunk.text
-						pendingCompletion = cleanMarkdown(completion)
+						pendingCompletion = processModelResponse(completion)
 						// Throttle UI updates
 						if (throttleTimer) clearTimeout(throttleTimer)
 						throttleTimer = setTimeout(() => {
+							console.log(completion)
+							console.log(pendingCompletion)
 							vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
 						}, UI_UPDATE_DEBOUNCE_MS)
 					}
@@ -169,6 +161,7 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 
 				if (throttleTimer) clearTimeout(throttleTimer)
 				editor.setDecorations(loadingDecoration, [])
+				console.log(`🚀🚀🚀🚀🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖 \n`, completion, pendingCompletion)
 
 				if (activeRequest !== requestId || token.isCancellationRequested || !pendingCompletion) return null
 
