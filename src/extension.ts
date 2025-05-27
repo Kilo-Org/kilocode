@@ -135,7 +135,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	registerCodeActions(context)
 	registerTerminalActions(context)
-	await registerAutocomplete(context)
+	registerAutocomplete(context)
 
 	// Allows other extensions to activate once Kilo Code is ready.
 	vscode.commands.executeCommand(`${Package.name}.activationCompleted`)
