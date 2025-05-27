@@ -11,6 +11,7 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js"
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema, McpError } from "@modelcontextprotocol/sdk/types.js"
 import path from "node:path"
+import { fileURLToPath } from "node:url"
 import dotenv from "dotenv"
 
 // Import tool handlers
@@ -50,6 +51,8 @@ if (!OPENROUTER_API_KEY || OPENROUTER_API_KEY.trim() === "") {
 
 // Find the project root by looking for the parent directory of repo-mcp-server
 // This is more reliable than checking the current working directory
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 const PROJECT_ROOT = path.resolve(__dirname, "../..")
 
 // Initialize the base paths for locales

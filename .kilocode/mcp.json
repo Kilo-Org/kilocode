@@ -3,7 +3,10 @@
 		"repo-mcp-server": {
 			"type": "stdio",
 			"command": "/bin/bash",
-			"args": ["-c", "cd \"$PWD/repo-mcp-server\" && npx nodemon --exec \"npx tsx src/index.ts\" --watch src"],
+			"args": [
+				"-c",
+				"cd \"$PWD/repo-mcp-server\" && npm i && npx nodemon --exec \"npx tsx src/index.ts\" --watch src"
+			],
 			"env": {
 				"OPENROUTER_API_KEY": "${env:OPENROUTER_API_KEY}"
 			},
