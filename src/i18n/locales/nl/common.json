@@ -58,7 +58,8 @@
 		"failed_remove_directory": "Verwijderen van taakmap mislukt: {{error}}",
 		"custom_storage_path_unusable": "Aangepast opslagpad \"{{path}}\" is onbruikbaar, standaardpad wordt gebruikt",
 		"cannot_access_path": "Kan pad {{path}} niet openen: {{error}}",
-		"failed_update_project_mcp": "Bijwerken van project MCP-servers mislukt"
+		"failed_update_project_mcp": "Bijwerken van project MCP-servers mislukt",
+		"settings_import_failed": "Importeren van instellingen mislukt: {{error}}."
 	},
 	"warnings": {
 		"no_terminal_content": "Geen terminalinhoud geselecteerd",

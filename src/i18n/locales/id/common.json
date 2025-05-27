@@ -1,0 +1,101 @@
+{
+	"extension": {
+		"name": "Kilo Code",
+		"description": "Asisten coding AI Open Source untuk merencanakan, membangun, dan memperbaiki kode."
+	},
+	"number_format": {
+		"thousand_suffix": "rb",
+		"million_suffix": "jt",
+		"billion_suffix": "m"
+	},
+	"feedback": {
+		"title": "Feedback",
+		"description": "Kami ingin mendengar feedback kamu atau membantu dengan masalah yang kamu alami.",
+		"githubIssues": "Laporkan masalah di GitHub",
+		"githubDiscussions": "Bergabung dengan diskusi GitHub",
+		"discord": "Bergabung dengan komunitas Discord kami"
+	},
+	"welcome": "Selamat datang, {{name}}! Kamu punya {{count}} notifikasi.",
+	"items": {
+		"zero": "Tidak ada item",
+		"one": "Satu item",
+		"other": "{{count}} item"
+	},
+	"confirmation": {
+		"reset_state": "Apakah kamu yakin ingin mereset semua state dan secret storage di ekstensi? Ini tidak dapat dibatalkan.",
+		"delete_config_profile": "Apakah kamu yakin ingin menghapus profil konfigurasi ini?",
+		"delete_custom_mode": "Apakah kamu yakin ingin menghapus mode kustom ini?",
+		"delete_message": "Apa yang ingin kamu hapus?",
+		"just_this_message": "Hanya pesan ini",
+		"this_and_subsequent": "Ini dan semua pesan selanjutnya"
+	},
+	"errors": {
+		"invalid_mcp_config": "Format konfigurasi MCP proyek tidak valid",
+		"invalid_mcp_settings_format": "Format JSON pengaturan MCP tidak valid. Pastikan pengaturan kamu mengikuti format JSON yang benar.",
+		"invalid_mcp_settings_syntax": "Format JSON pengaturan MCP tidak valid. Periksa file pengaturan kamu untuk kesalahan sintaks.",
+		"invalid_mcp_settings_validation": "Format pengaturan MCP tidak valid: {{errorMessages}}",
+		"failed_initialize_project_mcp": "Gagal menginisialisasi server MCP proyek: {{error}}",
+		"invalid_data_uri": "Format data URI tidak valid",
+		"checkpoint_timeout": "Timeout saat mencoba memulihkan checkpoint.",
+		"checkpoint_failed": "Gagal memulihkan checkpoint.",
+		"no_workspace": "Silakan buka folder proyek terlebih dahulu",
+		"update_support_prompt": "Gagal memperbarui support prompt",
+		"reset_support_prompt": "Gagal mereset support prompt",
+		"enhance_prompt": "Gagal meningkatkan prompt",
+		"get_system_prompt": "Gagal mendapatkan system prompt",
+		"search_commits": "Gagal mencari commit",
+		"save_api_config": "Gagal menyimpan konfigurasi api",
+		"create_api_config": "Gagal membuat konfigurasi api",
+		"rename_api_config": "Gagal mengganti nama konfigurasi api",
+		"load_api_config": "Gagal memuat konfigurasi api",
+		"delete_api_config": "Gagal menghapus konfigurasi api",
+		"list_api_config": "Gagal mendapatkan daftar konfigurasi api",
+		"update_server_timeout": "Gagal memperbarui timeout server",
+		"create_mcp_json": "Gagal membuat atau membuka .kilocode/mcp.json: {{error}}",
+		"hmr_not_running": "Server pengembangan lokal tidak berjalan, HMR tidak akan bekerja. Silakan jalankan 'npm run dev' sebelum meluncurkan ekstensi untuk mengaktifkan HMR.",
+		"retrieve_current_mode": "Error: gagal mengambil mode saat ini dari state.",
+		"failed_delete_repo": "Gagal menghapus shadow repository atau branch yang terkait: {{error}}",
+		"failed_remove_directory": "Gagal menghapus direktori tugas: {{error}}",
+		"custom_storage_path_unusable": "Path penyimpanan kustom \"{{path}}\" tidak dapat digunakan, akan menggunakan path default",
+		"cannot_access_path": "Tidak dapat mengakses path {{path}}: {{error}}",
+		"failed_update_project_mcp": "Gagal memperbarui server MCP proyek",
+		"settings_import_failed": "Impor pengaturan gagal: {{error}}."
+	},
+	"warnings": {
+		"no_terminal_content": "Tidak ada konten terminal yang dipilih",
+		"missing_task_files": "File tugas ini hilang. Apakah kamu ingin menghapusnya dari daftar tugas?"
+	},
+	"info": {
+		"no_changes": "Tidak ada perubahan ditemukan.",
+		"clipboard_copy": "System prompt berhasil disalin ke clipboard",
+		"history_cleanup": "Membersihkan {{count}} tugas dengan file yang hilang dari riwayat.",
+		"mcp_server_restarting": "Merestart server MCP {{serverName}}...",
+		"mcp_server_connected": "Server MCP {{serverName}} terhubung",
+		"mcp_server_deleted": "Server MCP dihapus: {{serverName}}",
+		"mcp_server_not_found": "Server \"{{serverName}}\" tidak ditemukan dalam konfigurasi",
+		"custom_storage_path_set": "Path penyimpanan kustom diatur: {{path}}",
+		"default_storage_path": "Kembali menggunakan path penyimpanan default",
+		"settings_imported": "Pengaturan berhasil diimpor."
+	},
+	"answers": {
+		"yes": "Ya",
+		"no": "Tidak",
+		"cancel": "Batal",
+		"remove": "Hapus",
+		"keep": "Simpan"
+	},
+	"tasks": {
+		"canceled": "Error tugas: Dihentikan dan dibatalkan oleh pengguna.",
+		"deleted": "Kegagalan tugas: Dihentikan dan dihapus oleh pengguna."
+	},
+	"storage": {
+		"prompt_custom_path": "Masukkan path penyimpanan riwayat percakapan kustom, biarkan kosong untuk menggunakan lokasi default",
+		"path_placeholder": "D:\\KiloCodeStorage",
+		"enter_absolute_path": "Silakan masukkan path absolut (misalnya D:\\KiloCodeStorage atau /home/user/storage)",
+		"enter_valid_path": "Silakan masukkan path yang valid"
+	},
+	"input": {
+		"task_prompt": "Apa yang harus Kilo Code lakukan?",
+		"task_placeholder": "Bangun, cari, tanya sesuatu"
+	}
+}

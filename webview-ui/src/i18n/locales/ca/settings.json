@@ -83,6 +83,11 @@
 		"showMenu": {
 			"label": "Mostrar menú d'aprovació automàtica a la vista de xat",
 			"description": "Quan està habilitat, el menú d'aprovació automàtica es mostrarà a la part inferior de la vista de xat, permetent un accés ràpid a la configuració d'aprovació automàtica"
+		},
+		"apiRequestLimit": {
+			"title": "Màximes Sol·licituds",
+			"description": "Fes aquesta quantitat de sol·licituds API automàticament abans de demanar aprovació per continuar amb la tasca.",
+			"unlimited": "Il·limitat"
 		}
 	},
 	"providers": {
@@ -189,6 +194,8 @@
 		},
 		"unboundApiKey": "Clau API d'Unbound",
 		"getUnboundApiKey": "Obtenir clau API d'Unbound",
+		"unboundRefreshModelsSuccess": "Llista de models actualitzada! Ara podeu seleccionar entre els últims models.",
+		"unboundInvalidApiKey": "Clau API no vàlida. Si us plau, comproveu la vostra clau API i torneu-ho a provar.",
 		"humanRelay": {
 			"description": "No es requereix clau API, però l'usuari necessita ajuda per copiar i enganxar informació al xat d'IA web.",
 			"instructions": "Durant l'ús, apareixerà un diàleg i el missatge actual es copiarà automàticament al porta-retalls. Necessiteu enganxar-lo a les versions web d'IA (com ChatGPT o Claude), després copiar la resposta de l'IA de nou al diàleg i fer clic al botó de confirmació."
@@ -378,7 +385,7 @@
 	"advanced": {
 		"diff": {
 			"label": "Habilitar edició mitjançant diffs",
-			"description": "Quan està habilitat, Kilo Code podrà editar fitxers més ràpidament i rebutjarà automàticament escriptures completes de fitxers truncats. Funciona millor amb l'últim model Claude 3.7 Sonnet.",
+			"description": "Quan està habilitat, Kilo Code podrà editar fitxers més ràpidament i rebutjarà automàticament escriptures completes de fitxers truncats. Funciona millor amb l'últim model Claude 4 Sonnet.",
 			"strategy": {
 				"label": "Estratègia de diff",
 				"options": {
@@ -400,9 +407,13 @@
 	},
 	"experimental": {
 		"warning": "⚠️",
+		"autoCondenseContextPercent": {
+			"label": "Llindar per activar la condensació intel·ligent de context",
+			"description": "Quan la finestra de context assoleix aquest llindar, Kilo Code la condensarà automàticament."
+		},
 		"AUTO_CONDENSE_CONTEXT": {
-			"name": "Condensar intel·ligentment la finestra de context",
-			"description": "Utilitza una crida LLM per resumir la conversa anterior quan la finestra de context de la tasca està gairebé plena, en lloc d'eliminar missatges antics. Avís: el cost de resumir actualment no s'inclou en els costos d'API mostrats a la interfície."
+			"name": "Activar automàticament la condensació intel·ligent de context",
+			"description": "La condensació intel·ligent de context utilitza una crida LLM per resumir la conversa anterior quan la finestra de context de la tasca assoleix un llindar predefinit, en lloc d'eliminar missatges antics quan el context s'omple."
 		},
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "Utilitzar estratègia diff unificada experimental",

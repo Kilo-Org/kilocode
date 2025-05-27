@@ -58,7 +58,8 @@
 		"failed_delete_repo": "संबंधित शैडो रिपॉजिटरी या ब्रांच हटाने में विफल: {{error}}",
 		"failed_remove_directory": "टास्क डायरेक्टरी हटाने में विफल: {{error}}",
 		"custom_storage_path_unusable": "कस्टम स्टोरेज पाथ \"{{path}}\" उपयोग योग्य नहीं है, डिफ़ॉल्ट पाथ का उपयोग किया जाएगा",
-		"cannot_access_path": "पाथ {{path}} तक पहुंच नहीं पा रहे हैं: {{error}}"
+		"cannot_access_path": "पाथ {{path}} तक पहुंच नहीं पा रहे हैं: {{error}}",
+		"settings_import_failed": "सेटिंग्स इम्पोर्ट करने में विफल: {{error}}।"
 	},
 	"warnings": {
 		"no_terminal_content": "कोई टर्मिनल सामग्री चयनित नहीं",

@@ -10,7 +10,8 @@
 		"contextWindow": "Contextlengte:",
 		"closeAndStart": "Taak sluiten en een nieuwe starten",
 		"export": "Taakgeschiedenis exporteren",
-		"delete": "Taak verwijderen (Shift + Klik om bevestiging over te slaan)"
+		"delete": "Taak verwijderen (Shift + Klik om bevestiging over te slaan)",
+		"condenseContext": "Context intelligent samenvatten"
 	},
 	"history": {
 		"title": "Geschiedenis"
@@ -201,11 +202,11 @@
 		"description": "Met automatisch goedkeuren kan Kilo Code acties uitvoeren zonder om toestemming te vragen. Schakel dit alleen in voor acties die je volledig vertrouwt. Meer gedetailleerde configuratie beschikbaar in de <settingsLink>Instellingen</settingsLink>."
 	},
 	"announcement": {
-		"title": "🎉 Roo Code 3.17 uitgebracht",
-		"description": "Roo Code 3.17 brengt krachtige nieuwe functies en verbeteringen op basis van jouw feedback.",
-		"feature1": "<bold>Impliciete caching voor Gemini</bold>: Gemini API-aanroepen worden nu automatisch gecachet, waardoor API-kosten worden verlaagd",
-		"feature2": "<bold>Slimmere modusselectie</bold>: Modusdefinities kunnen nu richtlijnen bevatten over wanneer elke modus moet worden gebruikt, wat betere orchestratie mogelijk maakt",
-		"feature3": "<bold>Intelligente contextcompressie</bold>: Vat gespreksgeschiedenis intelligent samen wanneer de context vol raakt in plaats van deze af te kappen (inschakelen in Instellingen -> Experimenteel)",
+		"title": "🎉 Roo Code {{version}} uitgebracht",
+		"description": "Roo Code {{version}} brengt krachtige nieuwe functies en verbeteringen op basis van jouw feedback.",
+		"feature1": "<bold>Gemini 2.5 Flash preview-modellen</bold>: Toegang tot de nieuwste Gemini Flash-modellen voor snellere en efficiëntere antwoorden",
+		"feature2": "<bold>Intelligente contextcompressie</bold>: Nieuwe knop in de taakheader waarmee je content intelligent kunt comprimeren met visuele feedback",
+		"feature3": "<bold>YAML-ondersteuning voor modusdefinities</bold>: Maak en pas modi eenvoudiger aan met YAML-ondersteuning",
 		"hideButton": "Aankondiging verbergen",
 		"detailsDiscussLinks": "Meer details en discussie in <discordLink>Discord</discordLink> en <redditLink>Reddit</redditLink> 🚀",
 		"whatsNew": "Wat is er nieuw"
@@ -213,6 +214,11 @@
 	"reasoning": {
 		"thinking": "Denkt na",
 		"seconds": "{{count}}s"
+	},
+	"contextCondense": {
+		"title": "Context samengevat",
+		"condensing": "Context aan het samenvatten...",
+		"tokens": "tokens"
 	},
 	"followUpSuggest": {
 		"copyToInput": "Kopiëren naar invoer (zelfde als shift + klik)"
@@ -253,5 +259,12 @@
 		"title": "Waarschuwing commando-uitvoering",
 		"description": "Je commando wordt uitgevoerd zonder VSCode-terminal shell-integratie. Om deze waarschuwing te onderdrukken kun je shell-integratie uitschakelen in het gedeelte <strong>Terminal</strong> van de <settingsLink>Kilo Code-instellingen</settingsLink> of de VSCode-terminalintegratie oplossen via de onderstaande link.",
 		"troubleshooting": "Klik hier voor shell-integratie documentatie."
+	},
+	"ask": {
+		"autoApprovedRequestLimitReached": {
+			"title": "Limiet voor automatisch goedgekeurde verzoeken bereikt",
+			"description": "Kilo Code heeft de automatisch goedgekeurde limiet van {{count}} API-verzoek(en) bereikt. Wil je de teller resetten en doorgaan met de taak?",
+			"button": "Resetten en doorgaan"
+		}
 	}
 }

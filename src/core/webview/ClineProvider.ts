@@ -9,7 +9,18 @@ import axios from "axios"
 import pWaitFor from "p-wait-for"
 import * as vscode from "vscode"
 
-import type { GlobalState, ProviderName, ProviderSettings, RooCodeSettings, ProviderSettingsEntry } from "../../schemas"
+import {
+	GlobalState,
+	ProviderName,
+	ProviderSettings,
+	RooCodeSettings,
+	ProviderSettingsEntry,
+	Package,
+	CodeActionId,
+	CodeActionName,
+	TerminalActionId,
+	TerminalActionPromptType,
+} from "../../schemas"
 import { t } from "../../i18n"
 import { setPanel } from "../../activate/registerCommands"
 import { requestyDefaultModelId, openRouterDefaultModelId, glamaDefaultModelId } from "../../shared/api"
@@ -29,13 +40,11 @@ import { McpHub } from "../../services/mcp/McpHub"
 import { McpServerManager } from "../../services/mcp/McpServerManager"
 import { ShadowCheckpointService } from "../../services/checkpoints/ShadowCheckpointService"
 import { fileExistsAtPath } from "../../utils/fs"
-import { setSoundEnabled } from "../../utils/sound"
 import { setTtsEnabled, setTtsSpeed } from "../../utils/tts"
 import { ContextProxy } from "../config/ContextProxy"
 import { ProviderSettingsManager } from "../config/ProviderSettingsManager"
 import { CustomModesManager } from "../config/CustomModesManager"
 import { buildApiHandler } from "../../api"
-import { CodeActionName } from "../../activate/CodeActionProvider"
 import { Task, TaskOptions } from "../task/Task"
 import { getNonce } from "./getNonce"
 import { getUri } from "./getUri"
@@ -57,8 +66,11 @@ export type ClineProviderEvents = {
 }
 
 export class ClineProvider extends EventEmitter<ClineProviderEvents> implements vscode.WebviewViewProvider {
-	public static readonly sideBarId = "kilo-code.SidebarProvider" // used in package.json as the view's id. This value cannot be changed due to how vscode caches views based on their id, and updating the id would break existing instances of the extension.
-	public static readonly tabPanelId = "kilo-code.TabPanelProvider"
+	// Used in package.json as the view's id. This value cannot be changed due
+	// to how VSCode caches views based on their id, and updating the id would
+	// break existing instances of the extension.
+	public static readonly sideBarId = `${Package.name}.SidebarProvider`
+	public static readonly tabPanelId = `${Package.name}.TabPanelProvider`
 	private static activeInstances: Set<ClineProvider> = new Set()
 	private disposables: vscode.Disposable[] = []
 	private view?: vscode.WebviewView | vscode.WebviewPanel
@@ -71,7 +83,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 
 	public isViewLaunched = false
 	public settingsImportedAt?: number
-	public readonly latestAnnouncementId = "may-14-2025-3-17" // Update for v3.17.0 announcement
+	public readonly latestAnnouncementId = "may-21-2025-3-18" // Update for v3.18.0 announcement
 	public readonly providerSettingsManager: ProviderSettingsManager
 	public readonly customModesManager: CustomModesManager
 
@@ -224,7 +236,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 
 		// If no visible provider, try to show the sidebar view
 		if (!visibleProvider) {
-			await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
+			await vscode.commands.executeCommand(`${Package.name}.SidebarProvider.focus`)
 			// Wait briefly for the view to become visible
 			await delay(100)
 			visibleProvider = ClineProvider.getVisibleInstance()
@@ -253,7 +265,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 	}
 
 	public static async handleCodeAction(
-		command: string,
+		command: CodeActionId,
 		promptType: CodeActionName,
 		params: Record<string, string | any[]>,
 	): Promise<void> {
@@ -268,7 +280,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		// TODO: Improve type safety for promptType.
 		const prompt = supportPrompt.create(promptType, params, customSupportPrompts)
 
-		if (command.endsWith("addToContext")) {
+		if (command === "addToContext") {
 			await visibleProvider.postMessageToWebview({ type: "invoke", invoke: "setChatBoxMessage", text: prompt })
 			return
 		}
@@ -277,8 +289,8 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 	}
 
 	public static async handleTerminalAction(
-		command: string,
-		promptType: "TERMINAL_ADD_TO_CONTEXT" | "TERMINAL_FIX" | "TERMINAL_EXPLAIN",
+		command: TerminalActionId,
+		promptType: TerminalActionPromptType,
 		params: Record<string, string | any[]>,
 	): Promise<void> {
 		const visibleProvider = await ClineProvider.getInstance()
@@ -288,10 +300,9 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		}
 
 		const { customSupportPrompts } = await visibleProvider.getState()
-
 		const prompt = supportPrompt.create(promptType, params, customSupportPrompts)
 
-		if (command.endsWith("AddToContext")) {
+		if (command === "terminalAddToContext") {
 			await visibleProvider.postMessageToWebview({ type: "invoke", invoke: "setChatBoxMessage", text: prompt })
 			return
 		}
@@ -320,7 +331,6 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		// Initialize out-of-scope variables that need to recieve persistent global state values
 		this.getState().then(
 			({
-				soundEnabled = false,
 				terminalShellIntegrationTimeout = Terminal.defaultShellIntegrationTimeout,
 				terminalShellIntegrationDisabled = false,
 				terminalCommandDelay = 0,
@@ -330,7 +340,6 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 				terminalPowershellCounter = false,
 				terminalZdotdir = false,
 			}) => {
-				setSoundEnabled(soundEnabled)
 				Terminal.setShellIntegrationTimeout(terminalShellIntegrationTimeout)
 				Terminal.setShellIntegrationDisabled(terminalShellIntegrationDisabled)
 				Terminal.setCommandDelay(terminalCommandDelay)
@@ -574,6 +583,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		])
 
 		const imagesUri = getUri(webview, this.contextProxy.extensionUri, ["assets", "images"])
+		const audioUri = getUri(webview, this.contextProxy.extensionUri, ["webview-ui", "audio"])
 
 		const file = "src/index.tsx"
 		const scriptUri = `http://${localServerUrl}/${file}`
@@ -592,7 +602,8 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			"default-src 'none'",
 			`font-src ${webview.cspSource}`,
 			`style-src ${webview.cspSource} 'unsafe-inline' https://* http://${localServerUrl} http://0.0.0.0:${localPort}`,
-			`img-src ${webview.cspSource} https://*.googleusercontent.com data: https://*.googleapis.com`, // kilocode_change: add https://*.googleusercontent.com and https://*.googleapis.com
+			`img-src ${webview.cspSource} data: https://*.googleusercontent.com https://*.googleapis.com`, // kilocode_change: add https://*.googleusercontent.com and https://*.googleapis.com
+			`media-src ${webview.cspSource}`,
 			`script-src 'unsafe-eval' ${webview.cspSource} https://* https://*.posthog.com http://${localServerUrl} http://0.0.0.0:${localPort} 'nonce-${nonce}'`,
 			`connect-src https://* https://*.posthog.com ws://${localServerUrl} ws://0.0.0.0:${localPort} http://${localServerUrl} http://0.0.0.0:${localPort}`,
 		]
@@ -608,6 +619,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 					<link href="${codiconsUri}" rel="stylesheet" />
 					<script nonce="${nonce}">
 						window.IMAGES_BASE_URI = "${imagesUri}"
+						window.AUDIO_BASE_URI = "${audioUri}"
 						window.MATERIAL_ICONS_BASE_URI = "${materialIconsUri}"
 					</script>
 					<title>Kilo Code</title>
@@ -667,6 +679,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		])
 
 		const imagesUri = getUri(webview, this.contextProxy.extensionUri, ["assets", "images"])
+		const audioUri = getUri(webview, this.contextProxy.extensionUri, ["webview-ui", "audio"])
 
 		// const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, "assets", "main.js"))
 
@@ -698,11 +711,12 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
             <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
             <meta name="theme-color" content="#000000">
 			<!-- kilocode_change: add https://*.googleusercontent.com https://*.googleapis.com to img-src -->
-            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; font-src ${webview.cspSource}; style-src ${webview.cspSource} 'unsafe-inline'; img-src ${webview.cspSource} https://*.googleusercontent.com data: https://*.googleapis.com; script-src ${webview.cspSource} 'wasm-unsafe-eval' 'nonce-${nonce}' https://us-assets.i.posthog.com 'strict-dynamic'; connect-src https://openrouter.ai https://api.requesty.ai https://us.i.posthog.com https://us-assets.i.posthog.com;">
+            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; font-src ${webview.cspSource}; style-src ${webview.cspSource} 'unsafe-inline'; img-src ${webview.cspSource} https://*.googleusercontent.com data: https://*.googleapis.com; media-src ${webview.cspSource}; script-src ${webview.cspSource} 'wasm-unsafe-eval' 'nonce-${nonce}' https://us-assets.i.posthog.com 'strict-dynamic'; connect-src https://openrouter.ai https://api.requesty.ai https://us.i.posthog.com https://us-assets.i.posthog.com">
             <link rel="stylesheet" type="text/css" href="${stylesUri}">
 			<link href="${codiconsUri}" rel="stylesheet" />
 			<script nonce="${nonce}">
 				window.IMAGES_BASE_URI = "${imagesUri}"
+				window.AUDIO_BASE_URI = "${audioUri}"
 				window.MATERIAL_ICONS_BASE_URI = "${materialIconsUri}"
 			</script>
             <title>Kilo Code</title>
@@ -967,7 +981,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 	}
 
 	async ensureSettingsDirectoryExists(): Promise<string> {
-		const { getSettingsDirectoryPath } = await import("../../shared/storagePathManager")
+		const { getSettingsDirectoryPath } = await import("../../utils/storage")
 		const globalStoragePath = this.contextProxy.globalStorageUri.fsPath
 		return getSettingsDirectoryPath(globalStoragePath)
 	}
@@ -1084,7 +1098,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		const historyItem = history.find((item) => item.id === id)
 
 		if (historyItem) {
-			const { getTaskDirectoryPath } = await import("../../shared/storagePathManager")
+			const { getTaskDirectoryPath } = await import("../../utils/storage")
 			const globalStoragePath = this.contextProxy.globalStorageUri.fsPath
 			const taskDirPath = await getTaskDirectoryPath(globalStoragePath, id)
 			const apiConversationHistoryFilePath = path.join(taskDirPath, GlobalFileNames.apiConversationHistory)
@@ -1123,6 +1137,22 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 	async exportTaskWithId(id: string) {
 		const { historyItem, apiConversationHistory } = await this.getTaskWithId(id)
 		await downloadTask(historyItem.ts, apiConversationHistory)
+	}
+
+	/* Condenses a task's message history to use fewer tokens. */
+	async condenseTaskContext(taskId: string) {
+		let task: Task | undefined
+		for (let i = this.clineStack.length - 1; i >= 0; i--) {
+			if (this.clineStack[i].taskId === taskId) {
+				task = this.clineStack[i]
+				break
+			}
+		}
+		if (!task) {
+			throw new Error(`Task with id ${taskId} not found in stack`)
+		}
+		await task.condenseContext()
+		await this.postMessageToWebview({ type: "condenseTaskContextResponse", text: taskId })
 	}
 
 	// this function deletes a task from task hidtory, and deletes it's checkpoints and delete the task folder
@@ -1206,6 +1236,8 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			alwaysAllowMcp,
 			alwaysAllowModeSwitch,
 			alwaysAllowSubtasks,
+			allowedMaxRequests,
+			autoCondenseContextPercent,
 			soundEnabled,
 			ttsEnabled,
 			ttsSpeed,
@@ -1256,7 +1288,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		} = await this.getState()
 
 		const machineId = vscode.env.machineId
-		const allowedCommands = vscode.workspace.getConfiguration("kilo-code").get<string[]>("allowedCommands") || []
+		const allowedCommands = vscode.workspace.getConfiguration(Package.name).get<string[]>("allowedCommands") || []
 		const cwd = this.cwd
 
 		// kilocode_change start
@@ -1284,6 +1316,8 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			alwaysAllowMcp: alwaysAllowMcp ?? true,
 			alwaysAllowModeSwitch: alwaysAllowModeSwitch ?? true,
 			alwaysAllowSubtasks: alwaysAllowSubtasks ?? true,
+			allowedMaxRequests: allowedMaxRequests ?? Infinity,
+			autoCondenseContextPercent: autoCondenseContextPercent ?? 100,
 			uriScheme: vscode.env.uriScheme,
 			uiKind: vscode.UIKind[vscode.env.uiKind], // kilocode_change
 			currentTaskItem: this.getCurrentCline()?.taskId
@@ -1359,7 +1393,6 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 
 	async getState() {
 		const stateValues = this.contextProxy.getValues()
-
 		const customModes = await this.customModesManager.getCustomModes()
 
 		// Determine apiProvider with the same logic as before.
@@ -1388,6 +1421,8 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			alwaysAllowMcp: stateValues.alwaysAllowMcp ?? true,
 			alwaysAllowModeSwitch: stateValues.alwaysAllowModeSwitch ?? true,
 			alwaysAllowSubtasks: stateValues.alwaysAllowSubtasks ?? true,
+			allowedMaxRequests: stateValues.allowedMaxRequests ?? Infinity,
+			autoCondenseContextPercent: stateValues.autoCondenseContextPercent ?? 100,
 			taskHistory: stateValues.taskHistory,
 			allowedCommands: stateValues.allowedCommands,
 			soundEnabled: stateValues.soundEnabled ?? false,

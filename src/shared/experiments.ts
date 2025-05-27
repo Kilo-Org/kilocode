@@ -5,8 +5,8 @@ export type { ExperimentId }
 
 export const EXPERIMENT_IDS = {
 	AUTOCOMPLETE: "autocomplete",
-	AUTO_CONDENSE_CONTEXT: "autoCondenseContext",
 	POWER_STEERING: "powerSteering",
+	AUTO_CONDENSE_CONTEXT: "autoCondenseContext",
 } as const satisfies Record<string, ExperimentId>
 
 type _AssertExperimentIds = AssertEqual<Equals<ExperimentId, Values<typeof EXPERIMENT_IDS>>>
@@ -24,8 +24,8 @@ export const experimentConfigsMap: Record<ExperimentKey, ExperimentConfig> = {
 		enabled: false,
 		isAvailable: (settings) => settings.apiProvider === "kilocode" && !!settings.kilocodeToken,
 	},
-	AUTO_CONDENSE_CONTEXT: { enabled: false, isAvailable: () => true },
 	POWER_STEERING: { enabled: false, isAvailable: () => true },
+	AUTO_CONDENSE_CONTEXT: { enabled: false }, // Keep this last, there is a slider below it in the UI
 	// end kilocode_change
 }
 

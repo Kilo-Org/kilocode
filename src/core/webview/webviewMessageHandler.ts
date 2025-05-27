@@ -5,11 +5,10 @@ import * as vscode from "vscode"
 import axios from "axios" // kilocode_change
 
 import { ClineProvider } from "./ClineProvider"
-import { Language, ProviderSettings } from "../../schemas"
+import { Language, ProviderSettings, GlobalState, Package } from "../../schemas"
 import { changeLanguage, t } from "../../i18n"
 import { RouterName, toRouterName } from "../../shared/api"
 import { supportPrompt } from "../../shared/support-prompt"
-
 import { checkoutDiffPayloadSchema, checkoutRestorePayloadSchema, WebviewMessage } from "../../shared/WebviewMessage"
 import { checkExistKey } from "../../shared/checkExistApiConfig"
 import { experimentDefault } from "../../shared/experiments"
@@ -20,7 +19,6 @@ import { getTheme } from "../../integrations/theme/getTheme"
 import { discoverChromeHostUrl, tryChromeHostUrl } from "../../services/browser/browserDiscovery"
 import { searchWorkspaceFiles } from "../../services/search/file-search"
 import { fileExistsAtPath } from "../../utils/fs"
-import { playSound, setSoundEnabled, setSoundVolume } from "../../utils/sound"
 import { playTts, setTtsEnabled, setTtsSpeed, stopTts } from "../../utils/tts"
 import { showSystemNotification } from "../../integrations/notifications" // kilocode_change
 import { singleCompletionHandler } from "../../utils/single-completion-handler"
@@ -33,10 +31,10 @@ import { getLmStudioModels } from "../../api/providers/lmstudio"
 import { openMention } from "../mentions"
 import { getWorkspacePath } from "../../utils/path"
 import { Mode, defaultModeSlug } from "../../shared/modes"
-import { GlobalState } from "../../schemas"
 import { getModels, flushModels } from "../../api/providers/fetchers/modelCache"
 import { generateSystemPrompt } from "./generateSystemPrompt"
 import { ClineRulesToggles } from "../../shared/cline-rules" // kilocode_change
+import { getCommand } from "../../utils/commands"
 
 const ALLOWED_VSCODE_SETTINGS = new Set(["terminal.integrated.inheritEnv"])
 
@@ -164,12 +162,20 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			await updateGlobalState("alwaysAllowModeSwitch", message.bool)
 			await provider.postStateToWebview()
 			break
+		case "allowedMaxRequests":
+			await updateGlobalState("allowedMaxRequests", message.value)
+			await provider.postStateToWebview()
+			break
 		case "alwaysAllowSubtasks":
 			await updateGlobalState("alwaysAllowSubtasks", message.bool)
 			await provider.postStateToWebview()
 			break
 		case "askResponse":
 			provider.getCurrentCline()?.handleWebviewAskResponse(message.askResponse!, message.text, message.images)
+			break
+		case "autoCondenseContextPercent":
+			await updateGlobalState("autoCondenseContextPercent", message.value)
+			await provider.postStateToWebview()
 			break
 		case "terminalOperation":
 			if (message.terminalOperation) {
@@ -197,6 +203,9 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			break
 		case "showTaskWithId":
 			provider.showTaskWithId(message.text!)
+			break
+		case "condenseTaskContextRequest":
+			provider.condenseTaskContext(message.text!)
 			break
 		case "deleteTaskWithId":
 			provider.deleteTaskWithId(message.text!)
@@ -248,20 +257,23 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 		case "exportTaskWithId":
 			provider.exportTaskWithId(message.text!)
 			break
-		case "importSettings":
-			const { success } = await importSettings({
+		case "importSettings": {
+			const result = await importSettings({
 				providerSettingsManager: provider.providerSettingsManager,
 				contextProxy: provider.contextProxy,
 				customModesManager: provider.customModesManager,
 			})
 
-			if (success) {
+			if (result.success) {
 				provider.settingsImportedAt = Date.now()
 				await provider.postStateToWebview()
 				await vscode.window.showInformationMessage(t("common:info.settings_imported"))
+			} else if (result.error) {
+				await vscode.window.showErrorMessage(t("common:errors.settings_import_failed", { error: result.error }))
 			}
 
 			break
+		}
 		case "exportSettings":
 			await exportSettings({
 				providerSettingsManager: provider.providerSettingsManager,
@@ -374,7 +386,7 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 
 			// Also update workspace settings.
 			await vscode.workspace
-				.getConfiguration("kilo-code")
+				.getConfiguration(Package.name)
 				.update("allowedCommands", message.commands, vscode.ConfigurationTarget.Global)
 
 			break
@@ -489,12 +501,6 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			await updateGlobalState("enableMcpServerCreation", message.bool ?? true)
 			await provider.postStateToWebview()
 			break
-		case "playSound":
-			if (message.audioType) {
-				const soundPath = path.join(provider.context.extensionPath, "audio", `${message.audioType}.wav`)
-				playSound(soundPath)
-			}
-			break
 		// kilocode_change begin
 		case "showSystemNotification":
 			if (message.notificationOptions) {
@@ -510,13 +516,11 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 		case "soundEnabled":
 			const soundEnabled = message.bool ?? true
 			await updateGlobalState("soundEnabled", soundEnabled)
-			setSoundEnabled(soundEnabled) // Add this line to update the sound utility
 			await provider.postStateToWebview()
 			break
 		case "soundVolume":
 			const soundVolume = message.value ?? 0.5
 			await updateGlobalState("soundVolume", soundVolume)
-			setSoundVolume(soundVolume)
 			await provider.postStateToWebview()
 			break
 		case "ttsEnabled":
@@ -1280,7 +1284,7 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			break
 		case "humanRelayResponse":
 			if (message.requestId && message.text) {
-				vscode.commands.executeCommand("kilo-code.handleHumanRelayResponse", {
+				vscode.commands.executeCommand(getCommand("handleHumanRelayResponse"), {
 					requestId: message.requestId,
 					text: message.text,
 					cancelled: false,
@@ -1290,7 +1294,7 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 
 		case "humanRelayCancel":
 			if (message.requestId) {
-				vscode.commands.executeCommand("kilo-code.handleHumanRelayResponse", {
+				vscode.commands.executeCommand(getCommand("handleHumanRelayResponse"), {
 					requestId: message.requestId,
 					cancelled: true,
 				})

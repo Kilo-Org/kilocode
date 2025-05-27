@@ -242,6 +242,7 @@ describe("mergeExtensionState", () => {
 			renderContext: "sidebar",
 			maxReadFileLine: 500,
 			showAutoApproveMenu: false,
+			autoCondenseContextPercent: 100,
 		}
 
 		const prevState: ExtensionState = {

@@ -83,6 +83,11 @@
 		"showMenu": {
 			"label": "Menu voor automatisch goedkeuren weergeven in chatweergave",
 			"description": "Wanneer ingeschakeld, wordt het menu voor automatisch goedkeuren onderaan de chatweergave weergegeven, zodat u snel toegang hebt tot de instellingen voor automatisch goedkeuren"
+		},
+		"apiRequestLimit": {
+			"title": "Maximale verzoeken",
+			"description": "Voer automatisch dit aantal API-verzoeken uit voordat om goedkeuring wordt gevraagd om door te gaan met de taak.",
+			"unlimited": "Onbeperkt"
 		}
 	},
 	"providers": {
@@ -189,6 +194,8 @@
 		},
 		"unboundApiKey": "Unbound API-sleutel",
 		"getUnboundApiKey": "Unbound API-sleutel ophalen",
+		"unboundRefreshModelsSuccess": "Modellenlijst bijgewerkt! U kunt nu kiezen uit de nieuwste modellen.",
+		"unboundInvalidApiKey": "Ongeldige API-sleutel. Controleer uw API-sleutel en probeer het opnieuw.",
 		"humanRelay": {
 			"description": "Geen API-sleutel vereist, maar de gebruiker moet helpen met kopiëren en plakken naar de webchat-AI.",
 			"instructions": "Tijdens gebruik verschijnt een dialoogvenster en wordt het huidige bericht automatisch naar het klembord gekopieerd. Je moet deze plakken in webversies van AI (zoals ChatGPT of Claude), vervolgens het antwoord van de AI terugkopiëren naar het dialoogvenster en op bevestigen klikken."
@@ -378,7 +385,7 @@
 	"advanced": {
 		"diff": {
 			"label": "Bewerken via diffs inschakelen",
-			"description": "Indien ingeschakeld kan Kilo Code sneller bestanden bewerken en worden afgekorte volledige-bestandswijzigingen automatisch geweigerd. Werkt het beste met het nieuwste Claude 3.7 Sonnet-model.",
+			"description": "Indien ingeschakeld kan Kilo Code sneller bestanden bewerken en worden afgekorte volledige-bestandswijzigingen automatisch geweigerd. Werkt het beste met het nieuwste Claude 4 Sonnet-model.",
 			"strategy": {
 				"label": "Diff-strategie",
 				"options": {
@@ -400,9 +407,13 @@
 	},
 	"experimental": {
 		"warning": "⚠️",
+		"autoCondenseContextPercent": {
+			"label": "Drempelwaarde om intelligente contextcompressie te activeren",
+			"description": "Wanneer het contextvenster deze drempelwaarde bereikt, zal Kilo Code het automatisch comprimeren."
+		},
 		"AUTO_CONDENSE_CONTEXT": {
-			"name": "Contextvenster intelligent comprimeren",
-			"description": "Gebruikt een LLM-aanroep om eerdere gesprekken samen te vatten wanneer het contextvenster van de taak bijna vol is, in plaats van oude berichten te verwijderen. Let op: de kosten van het samenvatten zijn momenteel niet inbegrepen in de API-kosten die in de interface worden getoond."
+			"name": "Automatisch intelligente contextcompressie activeren",
+			"description": "Intelligente contextcompressie gebruikt een LLM-aanroep om eerdere gesprekken samen te vatten wanneer het contextvenster van de taak een vooraf ingestelde drempelwaarde bereikt, in plaats van oude berichten te verwijderen wanneer de context vol is."
 		},
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "Experimentele unified diff-strategie gebruiken",

@@ -62,7 +62,8 @@
 		"failed_delete_repo": "Ha fallat l'eliminació del repositori o branca associada: {{error}}",
 		"failed_remove_directory": "Ha fallat l'eliminació del directori de tasques: {{error}}",
 		"custom_storage_path_unusable": "La ruta d'emmagatzematge personalitzada \"{{path}}\" no és utilitzable, s'utilitzarà la ruta predeterminada",
-		"cannot_access_path": "No es pot accedir a la ruta {{path}}: {{error}}"
+		"cannot_access_path": "No es pot accedir a la ruta {{path}}: {{error}}",
+		"settings_import_failed": "Ha fallat la importació de la configuració: {{error}}."
 	},
 	"warnings": {
 		"no_terminal_content": "No s'ha seleccionat contingut de terminal",

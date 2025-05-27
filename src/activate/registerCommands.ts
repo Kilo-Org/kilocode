@@ -1,6 +1,8 @@
 import * as vscode from "vscode"
 import delay from "delay"
 
+import { CommandId } from "../schemas"
+import { getCommand } from "../utils/commands"
 import { ClineProvider } from "../core/webview/ClineProvider"
 import { t } from "../i18n" // kilocode_change
 import { importSettings, exportSettings } from "../core/config/importExport" // kilocode_change
@@ -58,151 +60,149 @@ export type RegisterCommandOptions = {
 export const registerCommands = (options: RegisterCommandOptions) => {
 	const { context } = options
 
-	for (const [command, callback] of Object.entries(getCommandsMap(options))) {
+	for (const [id, callback] of Object.entries(getCommandsMap(options))) {
+		const command = getCommand(id as CommandId)
 		context.subscriptions.push(vscode.commands.registerCommand(command, callback))
 	}
 }
 
-const getCommandsMap = ({ context, outputChannel }: RegisterCommandOptions) => {
-	return {
-		"kilo-code.activationCompleted": () => {},
-		"kilo-code.plusButtonClicked": async () => {
-			const visibleProvider = getVisibleProviderOrLog(outputChannel)
+const getCommandsMap = ({ context, outputChannel }: RegisterCommandOptions): Record<CommandId, any> => ({
+	activationCompleted: () => {},
+	plusButtonClicked: async () => {
+		const visibleProvider = getVisibleProviderOrLog(outputChannel)
+
+		if (!visibleProvider) {
+			return
+		}
+
+		await visibleProvider.removeClineFromStack()
+		await visibleProvider.postStateToWebview()
+		await visibleProvider.postMessageToWebview({ type: "action", action: "chatButtonClicked" })
+	},
+	promptsButtonClicked: () => {
+		const visibleProvider = getVisibleProviderOrLog(outputChannel)
+
+		if (!visibleProvider) {
+			return
+		}
+
+		visibleProvider.postMessageToWebview({ type: "action", action: "promptsButtonClicked" })
+	},
+	popoutButtonClicked: () => {
+		return openClineInNewTab({ context, outputChannel })
+	},
+	openInNewTab: () => openClineInNewTab({ context, outputChannel }),
+	settingsButtonClicked: () => {
+		const visibleProvider = getVisibleProviderOrLog(outputChannel)
+
+		if (!visibleProvider) {
+			return
+		}
+
+		visibleProvider.postMessageToWebview({ type: "action", action: "settingsButtonClicked" })
+		// Also explicitly post the visibility message to trigger scroll reliably
+		visibleProvider.postMessageToWebview({ type: "action", action: "didBecomeVisible" })
+	},
+	historyButtonClicked: () => {
+		const visibleProvider = getVisibleProviderOrLog(outputChannel)
+
+		if (!visibleProvider) {
+			return
+		}
+
+		visibleProvider.postMessageToWebview({ type: "action", action: "historyButtonClicked" })
+	},
+	// kilocode_change begin
+	profileButtonClicked: () => {
+		const visibleProvider = getVisibleProviderOrLog(outputChannel)
+
+		if (!visibleProvider) {
+			return
+		}
+
+		visibleProvider.postMessageToWebview({ type: "action", action: "profileButtonClicked" })
+	},
+	helpButtonClicked: () => {
+		vscode.env.openExternal(vscode.Uri.parse("https://kilocode.ai"))
+	},
+	// kilocode_change end
+	showHumanRelayDialog: (params: { requestId: string; promptText: string }) => {
+		const panel = getPanel()
+
+		if (panel) {
+			panel?.webview.postMessage({
+				type: "showHumanRelayDialog",
+				requestId: params.requestId,
+				promptText: params.promptText,
+			})
+		}
+	},
+	registerHumanRelayCallback: registerHumanRelayCallback,
+	unregisterHumanRelayCallback: unregisterHumanRelayCallback,
+	handleHumanRelayResponse: handleHumanRelayResponse,
+	newTask: handleNewTask,
+	setCustomStoragePath: async () => {
+		const { promptForCustomStoragePath } = await import("../utils/storage")
+		await promptForCustomStoragePath()
+	},
+	acceptInput: () => {
+		const visibleProvider = getVisibleProviderOrLog(outputChannel)
+
+		if (!visibleProvider) {
+			return
+		}
+
+		visibleProvider.postMessageToWebview({ type: "acceptInput" })
+	}, // kilocode_change begin
+	focusChatInput: async () => {
+		try {
+			await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
+			await delay(100)
+
+			let visibleProvider = getVisibleProviderOrLog(outputChannel)
 
 			if (!visibleProvider) {
-				return
-			}
-
-			await visibleProvider.removeClineFromStack()
-			await visibleProvider.postStateToWebview()
-			await visibleProvider.postMessageToWebview({ type: "action", action: "chatButtonClicked" })
-		},
-		"kilo-code.promptsButtonClicked": () => {
-			const visibleProvider = getVisibleProviderOrLog(outputChannel)
-
-			if (!visibleProvider) {
-				return
-			}
-
-			visibleProvider.postMessageToWebview({ type: "action", action: "promptsButtonClicked" })
-		},
-		"kilo-code.popoutButtonClicked": () => openClineInNewTab({ context, outputChannel }),
-		"kilo-code.openInNewTab": () => openClineInNewTab({ context, outputChannel }),
-		"kilo-code.settingsButtonClicked": () => {
-			const visibleProvider = getVisibleProviderOrLog(outputChannel)
-
-			if (!visibleProvider) {
-				return
-			}
-
-			visibleProvider.postMessageToWebview({ type: "action", action: "settingsButtonClicked" })
-			// Also explicitly post the visibility message to trigger scroll reliably
-			visibleProvider.postMessageToWebview({ type: "action", action: "didBecomeVisible" })
-		},
-		"kilo-code.historyButtonClicked": () => {
-			const visibleProvider = getVisibleProviderOrLog(outputChannel)
-
-			if (!visibleProvider) {
-				return
-			}
-
-			visibleProvider.postMessageToWebview({ type: "action", action: "historyButtonClicked" })
-		},
-		// kilocode_change begin
-		"kilo-code.profileButtonClicked": () => {
-			const visibleProvider = getVisibleProviderOrLog(outputChannel)
-
-			if (!visibleProvider) {
-				return
-			}
-
-			visibleProvider.postMessageToWebview({ type: "action", action: "profileButtonClicked" })
-		},
-		// kilocode_change end
-		"kilo-code.helpButtonClicked": () => {
-			vscode.env.openExternal(vscode.Uri.parse("https://kilocode.ai"))
-		},
-		"kilo-code.showHumanRelayDialog": (params: { requestId: string; promptText: string }) => {
-			const panel = getPanel()
-
-			if (panel) {
-				panel?.webview.postMessage({
-					type: "showHumanRelayDialog",
-					requestId: params.requestId,
-					promptText: params.promptText,
-				})
-			}
-		},
-		"kilo-code.registerHumanRelayCallback": registerHumanRelayCallback,
-		"kilo-code.unregisterHumanRelayCallback": unregisterHumanRelayCallback,
-		"kilo-code.handleHumanRelayResponse": handleHumanRelayResponse,
-		"kilo-code.newTask": handleNewTask,
-		"kilo-code.setCustomStoragePath": async () => {
-			const { promptForCustomStoragePath } = await import("../shared/storagePathManager")
-			await promptForCustomStoragePath()
-		},
-		// kilocode_change begin
-		"kilo-code.focusChatInput": async () => {
-			try {
-				await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
+				// If still no visible provider, try opening in a new tab
+				const tabProvider = await openClineInNewTab({ context, outputChannel })
 				await delay(100)
-
-				let visibleProvider = getVisibleProviderOrLog(outputChannel)
-
-				if (!visibleProvider) {
-					// If still no visible provider, try opening in a new tab
-					const tabProvider = await openClineInNewTab({ context, outputChannel })
-					await delay(100)
-					visibleProvider = tabProvider
-				}
-
-				visibleProvider?.postMessageToWebview({
-					type: "action",
-					action: "focusChatInput",
-				})
-			} catch (error) {
-				outputChannel.appendLine(`Error in focusChatInput: ${error}`)
-			}
-		},
-		// kilocode_change end
-		"kilo-code.acceptInput": () => {
-			const visibleProvider = getVisibleProviderOrLog(outputChannel)
-
-			if (!visibleProvider) {
-				return
+				visibleProvider = tabProvider
 			}
 
-			visibleProvider.postMessageToWebview({ type: "acceptInput" })
-		},
-		// kilocode_change start
-		"kilo-code.importSettings": async () => {
-			const visibleProvider = getVisibleProviderOrLog(outputChannel)
-			if (!visibleProvider) return
-
-			const { success } = await importSettings({
-				providerSettingsManager: visibleProvider.providerSettingsManager,
-				contextProxy: visibleProvider.contextProxy,
-				customModesManager: visibleProvider.customModesManager,
+			visibleProvider?.postMessageToWebview({
+				type: "action",
+				action: "focusChatInput",
 			})
+		} catch (error) {
+			outputChannel.appendLine(`Error in focusChatInput: ${error}`)
+		}
+	},
+	importSettings: async () => {
+		const visibleProvider = getVisibleProviderOrLog(outputChannel)
+		if (!visibleProvider) return
 
-			if (success) {
-				visibleProvider.settingsImportedAt = Date.now()
-				await visibleProvider.postStateToWebview()
-				await vscode.window.showInformationMessage(t("kilocode:info.settings_imported"))
-			}
-		},
-		"kilo-code.exportSettings": async () => {
-			const visibleProvider = getVisibleProviderOrLog(outputChannel)
-			if (!visibleProvider) return
+		const { success } = await importSettings({
+			providerSettingsManager: visibleProvider.providerSettingsManager,
+			contextProxy: visibleProvider.contextProxy,
+			customModesManager: visibleProvider.customModesManager,
+		})
 
-			await exportSettings({
-				providerSettingsManager: visibleProvider.providerSettingsManager,
-				contextProxy: visibleProvider.contextProxy,
-			})
-		},
-		// kilocode_change end
-	}
-}
+		if (success) {
+			visibleProvider.settingsImportedAt = Date.now()
+			await visibleProvider.postStateToWebview()
+			await vscode.window.showInformationMessage(t("kilocode:info.settings_imported"))
+		}
+	},
+	exportSettings: async () => {
+		const visibleProvider = getVisibleProviderOrLog(outputChannel)
+		if (!visibleProvider) return
+
+		await exportSettings({
+			providerSettingsManager: visibleProvider.providerSettingsManager,
+			contextProxy: visibleProvider.contextProxy,
+		})
+	},
+	// kilocode_change end
+})
 
 export const openClineInNewTab = async ({ context, outputChannel }: Omit<RegisterCommandOptions, "provider">) => {
 	// (This example uses webviewProvider activation event which is necessary to

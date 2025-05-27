@@ -5,9 +5,6 @@ out-*
 node_modules
 coverage/
 mock/
-
-.idea
-
 .DS_Store
 
 # Builds
@@ -42,3 +39,7 @@ logs
 # kilocode_change
 .history/
 .aider*
+
+# IntelliJ and Qodo plugin folders
+.idea/
+.qodo/

@@ -83,6 +83,11 @@
 		"showMenu": {
 			"label": "Show auto-approve menu in chat view",
 			"description": "When enabled, the auto-approve menu will be displayed at the bottom of the chat view, allowing quick access to auto-approve settings"
+		},
+		"apiRequestLimit": {
+			"title": "Max Requests",
+			"description": "Automatically make this many API requests before asking for approval to continue with the task.",
+			"unlimited": "Unlimited"
 		}
 	},
 	"providers": {
@@ -189,6 +194,8 @@
 		},
 		"unboundApiKey": "Unbound API Key",
 		"getUnboundApiKey": "Get Unbound API Key",
+		"unboundRefreshModelsSuccess": "Models list updated! You can now select from the latest models.",
+		"unboundInvalidApiKey": "Invalid API key. Please check your API key and try again.",
 		"humanRelay": {
 			"description": "No API key is required, but the user needs to help copy and paste the information to the web chat AI.",
 			"instructions": "During use, a dialog box will pop up and the current message will be copied to the clipboard automatically. You need to paste these to web versions of AI (such as ChatGPT or Claude), then copy the AI's reply back to the dialog box and click the confirm button."
@@ -378,7 +385,7 @@
 	"advanced": {
 		"diff": {
 			"label": "Enable editing through diffs",
-			"description": "When enabled, Kilo Code will be able to edit files more quickly and will automatically reject truncated full-file writes. Works best with the latest Claude 3.7 Sonnet model.",
+			"description": "When enabled, Kilo Code will be able to edit files more quickly and will automatically reject truncated full-file writes. Works best with the latest Claude 4 Sonnet model.",
 			"strategy": {
 				"label": "Diff strategy",
 				"options": {
@@ -400,9 +407,13 @@
 	},
 	"experimental": {
 		"warning": "⚠️",
+		"autoCondenseContextPercent": {
+			"label": "Threshold to trigger intelligent context condensing",
+			"description": "When the context window reaches this threshold, Kilo Code will automatically condense it."
+		},
 		"AUTO_CONDENSE_CONTEXT": {
-			"name": "Intelligently condense the context window",
-			"description": "Uses an LLM call to summarize the past conversation when the task's context window is almost full, rather than dropping old messages. Disclaimer: the cost of summarizing is not currently included in the API costs shown in the UI."
+			"name": "Automatically trigger intelligent context condensing",
+			"description": "Intelligent context condensing uses an LLM call to summarize the past conversation when the task's context window reaches a preset threshold, rather than dropping old messages when the context fills."
 		},
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "Use experimental unified diff strategy",

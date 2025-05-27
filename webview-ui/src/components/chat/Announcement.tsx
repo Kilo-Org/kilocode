@@ -2,6 +2,8 @@ import { useState, memo } from "react"
 import { Trans } from "react-i18next"
 import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 
+import { Package } from "@roo/schemas"
+
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@src/components/ui"
 
@@ -34,8 +36,10 @@ const Announcement = ({ hideAnnouncement }: AnnouncementProps) => {
 			}}>
 			<DialogContent className="max-w-96">
 				<DialogHeader>
-					<DialogTitle>{t("chat:announcement.title")}</DialogTitle>
-					<DialogDescription>{t("chat:announcement.description")}</DialogDescription>
+					<DialogTitle>{t("chat:announcement.title", { version: Package.version })}</DialogTitle>
+					<DialogDescription>
+						{t("chat:announcement.description", { version: Package.version })}
+					</DialogDescription>
 				</DialogHeader>
 				<div>
 					<h3>{t("chat:announcement.whatsNew")}</h3>

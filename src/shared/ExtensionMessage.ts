@@ -71,11 +71,13 @@ export interface ExtensionMessage {
 		| "showSystemNotification" // kilocode_change
 		| "openInBrowser" // kilocode_change
 		| "acceptInput"
+		| "focusChatInput" // kilocode_change
 		| "setHistoryPreviewCollapsed"
 		| "commandExecutionStatus"
 		| "vsCodeSetting"
 		| "profileDataResponse" // kilocode_change
 		| "balanceDataResponse" // kilocode_change
+		| "condenseTaskContextResponse"
 	text?: string
 	action?:
 		| "chatButtonClicked"
@@ -147,6 +149,7 @@ export type ExtensionState = Pick<
 	| "alwaysAllowSubtasks"
 	| "alwaysAllowExecute"
 	| "allowedCommands"
+	| "allowedMaxRequests"
 	| "browserToolEnabled"
 	| "browserViewportSize"
 	| "showAutoApproveMenu" // kilocode_change
@@ -222,6 +225,7 @@ export type ExtensionState = Pick<
 	renderContext: "sidebar" | "editor"
 	settingsImportedAt?: number
 	historyPreviewCollapsed?: boolean
+	autoCondenseContextPercent: number
 }
 
 export type { ClineMessage, ClineAsk, ClineSay }

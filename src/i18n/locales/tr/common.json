@@ -58,7 +58,8 @@
 		"failed_delete_repo": "İlişkili gölge depo veya dal silinemedi: {{error}}",
 		"failed_remove_directory": "Görev dizini kaldırılamadı: {{error}}",
 		"custom_storage_path_unusable": "Özel depolama yolu \"{{path}}\" kullanılamıyor, varsayılan yol kullanılacak",
-		"cannot_access_path": "{{path}} yoluna erişilemiyor: {{error}}"
+		"cannot_access_path": "{{path}} yoluna erişilemiyor: {{error}}",
+		"settings_import_failed": "Ayarlar içe aktarılamadı: {{error}}."
 	},
 	"warnings": {
 		"no_terminal_content": "Seçili terminal içeriği yok",

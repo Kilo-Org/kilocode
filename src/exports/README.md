@@ -6,8 +6,10 @@ The Cline extension exposes an API that can be used by other extensions. To use 
 2. Include `cline.d.ts` in your extension's compilation.
 3. Get access to the API with the following code:
 
-    ```ts
-    const clineExtension = vscode.extensions.getExtension<ClineAPI>("kilocode.Kilo-Code")
+````typescript
+import { RooCodeAPI, Package } from "path/to/roo-code"
+
+const extension = vscode.extensions.getExtension<RooCodeAPI>(`${Package.publisher}.${Package.name}`)
 
     if (!clineExtension?.isActive) {
     	throw new Error("Cline extension is not activated")
@@ -53,3 +55,4 @@ The Cline extension exposes an API that can be used by other extensions. To use 
     ```
 
 For detailed information on the available methods and their usage, refer to the `cline.d.ts` file.
+````
