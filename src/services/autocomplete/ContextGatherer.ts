@@ -101,8 +101,8 @@ export class ContextGatherer {
 	private disposables: vscode.Disposable[] = []
 
 	constructor(
-		maxPrecedingLines: number = 20,
-		maxFollowingLines: number = 10,
+		maxPrecedingLines: number = 500,
+		maxFollowingLines: number = 500,
 		maxImports: number = 20,
 		maxDefinitionsToFetch: number = 5, // AIDIFF: This now applies primarily to LSP fetching per symbol
 	) {

@@ -263,18 +263,6 @@
 				"key": "ctrl+shift+k",
 				"mac": "cmd+shift+k",
 				"when": "true"
-			},
-			{
-				"command": "kilo-code.acceptAutocompletePreview",
-				"key": "tab",
-				"mac": "tab",
-				"when": "editorTextFocus && kilo-code.autocompletePreviewVisible"
-			},
-			{
-				"command": "kilo-code.dismissAutocompletePreview",
-				"key": "escape",
-				"mac": "escape",
-				"when": "editorTextFocus && kilo-code.autocompletePreviewVisible"
 			}
 		],
 		"menus": {

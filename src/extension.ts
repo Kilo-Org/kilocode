@@ -30,6 +30,9 @@ import {
 	CodeActionProvider,
 } from "./activate"
 import { initializeI18n } from "./i18n"
+// Using simple autocomplete implementation instead of the complex one
+// import { registerAutocomplete } from "./services/autocomplete/AutocompleteProvider"
+import { registerSimpleAutocomplete } from "./services/autocomplete/SimpleAutoCompleteProvider"
 import { registerAutocomplete } from "./services/autocomplete/AutocompleteProvider"
 
 /**
@@ -134,6 +137,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	registerCodeActions(context)
 	registerTerminalActions(context)
+
+	// Original complex autocomplete implementation (commented out)
+	// registerSimpleAutocomplete(context)
 	await registerAutocomplete(context)
 
 	// Allows other extensions to activate once Kilo Code is ready.
