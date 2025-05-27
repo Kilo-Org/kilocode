@@ -15,7 +15,7 @@ type ExperimentKey = Keys<typeof EXPERIMENT_IDS>
 
 interface ExperimentConfig {
 	enabled: boolean
-	isAvailable: (settings: ProviderSettings) => boolean // kilocode_change
+	isAvailable?: (settings: ProviderSettings) => boolean // kilocode_change
 }
 
 export const experimentConfigsMap: Record<ExperimentKey, ExperimentConfig> = {
@@ -24,7 +24,7 @@ export const experimentConfigsMap: Record<ExperimentKey, ExperimentConfig> = {
 		enabled: false,
 		isAvailable: (settings) => settings.apiProvider === "kilocode" && !!settings.kilocodeToken,
 	},
-	POWER_STEERING: { enabled: false, isAvailable: () => true },
+	POWER_STEERING: { enabled: false },
 	AUTO_CONDENSE_CONTEXT: { enabled: false }, // Keep this last, there is a slider below it in the UI
 	// end kilocode_change
 }

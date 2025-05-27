@@ -52,7 +52,7 @@ export const ExperimentalSettings = ({
 							onChange={(enabled) =>
 								setExperimentEnabled(EXPERIMENT_IDS[config[0] as keyof typeof EXPERIMENT_IDS], enabled)
 							}
-							isAvailable={config[1].isAvailable(providerSettings)} // kilocode_change
+							isAvailable={config[1].isAvailable?.(providerSettings) ?? true} // kilocode_change
 						/>
 					))}
 				{experiments[EXPERIMENT_IDS.AUTO_CONDENSE_CONTEXT] && (
