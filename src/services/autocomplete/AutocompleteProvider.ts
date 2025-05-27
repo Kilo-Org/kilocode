@@ -7,7 +7,8 @@ import { getDocumentTextWithPlaceholder } from "./utils/document"
 import { LRUCache } from "lru-cache"
 
 // Configuration
-export const UI_UPDATE_DEBOUNCE_MS = 500
+const DEBUG_FULL_PROMPT_CYCLE = false
+export const UI_UPDATE_DEBOUNCE_MS = 2000
 const DEFAULT_MODEL = "mistralai/codestral-2501"
 
 export function registerAutocomplete(context: vscode.ExtensionContext) {
@@ -40,24 +41,12 @@ function isFileDisabled(document: vscode.TextDocument): boolean {
 	})
 }
 
-// Cache interface for storing completion results
-// interface CompletionCache {
-// 	response: string
-// 	documentVersion: number
-// }
-
-const _COOLDOWN_PERIOD_MS = 500 // Prevent new suggestions for 500ms after accepting one
-
 function setupAutocomplete(context: vscode.ExtensionContext) {
 	let timer: NodeJS.Timeout | undefined
 	let enabled = true
 	let activeRequest: string | null = null
 	let cache: LRUCache<string, string> = new LRUCache<string, string>({ max: 100 })
 
-	// Cache for storing the last completion result
-	// let completionCache: CompletionCache | null = null
-
-	// Services
 	const apiHandler = buildApiHandler({
 		apiProvider: "kilocode",
 		kilocodeToken: ContextProxy.instance.getProviderSettings().kilocodeToken,
@@ -73,52 +62,22 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 		position: vscode.Position,
 		token: vscode.CancellationToken,
 	) => {
-		console.log(`🚀👹 Autocomplete generating...`)
-		if (!enabled || isFileDisabled(document)) {
-			return null
-		}
+		if (!vscode.window.activeTextEditor) return null
 
 		const requestId = crypto.randomUUID() // New completion request!
-		activeRequest = requestId
-		console.log(`🚀 provideInlineCompletionItems: ${requestId.slice(0, 4)}`)
-
-		// Get document text with placeholder at cursor position
-
 		const docWithPlaceholder = getDocumentTextWithPlaceholder(document, position)
-		const cacheKey = `${docWithPlaceholder.linesBeforeCursor}:${docWithPlaceholder.linesAfterCursor}`
-		const cachedResult = cache.get(cacheKey)
-
-		if (cachedResult) {
-			const linePrefix = document.getText(new vscode.Range(new vscode.Position(position.line, 0), position))
-
-			if (cachedResult.startsWith(linePrefix)) {
-				const remainingText = cachedResult.substring(linePrefix.length)
-				if (remainingText.length === 0) {
-					return null
-				}
-
-				// Create completion item with the remaining text
-				const range = new vscode.Range(position, position)
-				const item = new vscode.InlineCompletionItem(remainingText, range)
-
-				// Set the filterText to the WHOLE completion
-				item.filterText = cachedResult
-
-				return [item]
-			}
-		}
-
-		const editor = vscode.window.activeTextEditor
-		if (!editor) return null
+		activeRequest = requestId
 
 		const systemPrompt = holeFillerTemplate.getSystemPrompt()
 		const prompt = holeFillerTemplate.template({
 			currentFileWithFillPlaceholder: docWithPlaceholder.textWithPlaceholder,
 		})
-		// console.log(`🚀🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶\n` + prompt)
+		if (DEBUG_FULL_PROMPT_CYCLE) {
+			console.log(`🚀🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶\n` + prompt)
+		}
 
 		// Start the LLM reponse stream
-		editor.setDecorations(loadingDecoration, [{ range: new vscode.Range(position, position) }])
+		// Place loading decoration at the end of the current line instead of at cursor position
 		const stream = apiHandler.createMessage(systemPrompt, [
 			{ role: "user", content: [{ type: "text", text: prompt }] },
 		])
@@ -133,7 +92,9 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 			}
 		})()
 		if (activeRequest !== requestId || token.isCancellationRequested) {
-			// console.log(`🚀🤖🤖🤖🤖❌ ABORTED ❌🤖🤖🤖🤖\n`)
+			if (DEBUG_FULL_PROMPT_CYCLE) {
+				console.log(`🚀🤖🤖🤖🤖❌ ABORTED ❌🤖🤖🤖🤖\n`)
+			}
 			return null
 		}
 
@@ -150,19 +111,53 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 		if (activeRequest !== requestId || token.isCancellationRequested) return null
 
 		const autocompleteResponse = rawResponse.replace("<COMPLETION>", "").trim()
-		// console.log(`🚀🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖 \n` + autocompleteResponse)
-		editor.setDecorations(loadingDecoration, [])
+		if (DEBUG_FULL_PROMPT_CYCLE) {
+			console.log(`🚀🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖 \n` + autocompleteResponse)
+		}
+
+		return autocompleteResponse
+	}
+
+	const maybeGenerateCompletion = async (
+		document: vscode.TextDocument,
+		position: vscode.Position,
+		token: vscode.CancellationToken,
+	): Promise<vscode.InlineCompletionItem[] | null> => {
+		if (!vscode.window.activeTextEditor) return null
+
+		console.log(`🚀👹 Autocomplete generating...`)
+		if (!enabled || isFileDisabled(document)) {
+			return null
+		}
+
+		const requestId = crypto.randomUUID() // New completion request!
+		const docWithPlaceholder = getDocumentTextWithPlaceholder(document, position)
+		activeRequest = requestId
+
+		const cacheKey = `${docWithPlaceholder.linesBeforeCursor}:${docWithPlaceholder.linesAfterCursor}`
+		const cachedResult = cache.get(cacheKey)
+		console.log(`🚀 provideInlineCompletionItems: ${requestId.slice(0, 4)} ${cachedResult ? "CACHED" : ""}`)
+
+		if (cachedResult) {
+			return cachedResult
+		}
+
+		const lineEndPosition = new vscode.Position(position.line, document.lineAt(position.line).text.length)
+		vscode.window.activeTextEditor.setDecorations(loadingDecoration, [
+			{ range: new vscode.Range(lineEndPosition, lineEndPosition) },
+		])
+
+		const autocompleteResponse = await _generateCompletion(document, position, token)
+		if (autocompleteResponse === null) return
+
+		vscode.window.activeTextEditor.setDecorations(loadingDecoration, [])
+		cache.set(cacheKey, autocompleteResponse)
+
+		// Actually insert the suggestion
 
 		const linePrefix = document
 			.getText(new vscode.Range(new vscode.Position(position.line, 0), position))
 			.trimStart()
-
-		// If the response doesn't start with what's been typed, don't show completion
-		// if (!autocompleteResponse.startsWith(linePrefix)) {
-		// 	return null
-		// }
-
-		// Calculate the remaining text
 		const remainingText = autocompleteResponse.startsWith(linePrefix)
 			? autocompleteResponse.substring(linePrefix.length)
 			: autocompleteResponse
@@ -170,7 +165,6 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 		console.log(`🚀 ~ remainingText is '${remainingText}'`)
 		console.log(`🚀 ~ autocompleteResponse is '${autocompleteResponse}'`)
 
-		// Nothing left to complete?
 		if (remainingText.length === 0) {
 			return null
 		}
@@ -201,7 +195,7 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 			return new Promise((resolve) => {
 				clearTimeout(timer)
 				timer = setTimeout(() => {
-					resolve(_generateCompletion(document, position, token))
+					maybeGenerateCompletion(document, position, token).then(resolve)
 				}, UI_UPDATE_DEBOUNCE_MS)
 			})
 		},
