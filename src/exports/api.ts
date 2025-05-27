@@ -3,6 +3,7 @@ import * as vscode from "vscode"
 import fs from "fs/promises"
 import * as path from "path"
 
+import { Package } from "../schemas"
 import { getWorkspacePath } from "../utils/path"
 import { ClineProvider } from "../core/webview/ClineProvider"
 import { openClineInNewTab } from "../activate/registerCommands"
@@ -13,8 +14,11 @@ import {
 	ProviderSettings,
 	ProviderSettingsEntry,
 	isSecretStateKey,
+	IpcOrigin,
+	IpcMessageType,
+	TaskCommandName,
+	TaskEvent,
 } from "../schemas"
-import { IpcOrigin, IpcMessageType, TaskCommandName, TaskEvent } from "../schemas"
 
 import { RooCodeAPI } from "./interface"
 import { IpcServer } from "./ipc"
@@ -109,7 +113,7 @@ export class API extends EventEmitter<RooCodeEvents> implements RooCodeAPI {
 			provider = await openClineInNewTab({ context: this.context, outputChannel: this.outputChannel })
 			this.registerListeners(provider)
 		} else {
-			await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
+			await vscode.commands.executeCommand(`${Package.name}.SidebarProvider.focus`)
 
 			provider = this.sidebarProvider
 		}
@@ -119,7 +123,7 @@ export class API extends EventEmitter<RooCodeEvents> implements RooCodeAPI {
 
 			if (configuration.allowedCommands) {
 				await vscode.workspace
-					.getConfiguration("kilo-code")
+					.getConfiguration(Package.name)
 					.update("allowedCommands", configuration.allowedCommands, vscode.ConfigurationTarget.Global)
 			}
 		}

@@ -1,7 +1,8 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import { ApiHandler } from "../../api"
-import { summarizeConversation } from "../condense"
+import { summarizeConversation, SummarizeResponse } from "../condense"
 import { ApiMessage } from "../task-persistence/apiMessages"
+import { telemetryService } from "../../services/telemetry/TelemetryService"
 
 /**
  * Default percentage of the context window to use as a buffer when deciding when to truncate
@@ -31,9 +32,11 @@ export async function estimateTokenCount(
  *
  * @param {ApiMessage[]} messages - The conversation messages.
  * @param {number} fracToRemove - The fraction (between 0 and 1) of messages (excluding the first) to remove.
+ * @param {string} taskId - The task ID for the conversation, used for telemetry
  * @returns {ApiMessage[]} The truncated conversation messages.
  */
-export function truncateConversation(messages: ApiMessage[], fracToRemove: number): ApiMessage[] {
+export function truncateConversation(messages: ApiMessage[], fracToRemove: number, taskId: string): ApiMessage[] {
+	telemetryService.captureSlidingWindowTruncation(taskId)
 	const truncatedMessages = [messages[0]]
 	const rawMessagesToRemove = Math.floor((messages.length - 1) * fracToRemove)
 	const messagesToRemove = rawMessagesToRemove - (rawMessagesToRemove % 2)
@@ -53,6 +56,7 @@ export function truncateConversation(messages: ApiMessage[], fracToRemove: numbe
  * @param {number} maxTokens - The maximum number of tokens allowed.
  * @param {ApiHandler} apiHandler - The API handler to use for token counting.
  * @param {boolean} autoCondenseContext - Whether to use LLM summarization or sliding window implementation
+ * @param {string} systemPrompt - The system prompt, used for estimating the new context size after summarizing.
  * @returns {ApiMessage[]} The original or truncated conversation messages.
  */
 
@@ -62,8 +66,13 @@ type TruncateOptions = {
 	contextWindow: number
 	maxTokens?: number | null
 	apiHandler: ApiHandler
-	autoCondenseContext?: boolean
+	autoCondenseContext: boolean
+	autoCondenseContextPercent: number
+	systemPrompt: string
+	taskId: string
 }
+
+type TruncateResponse = SummarizeResponse & { prevContextTokens: number }
 
 /**
  * Conditionally truncates the conversation messages if the total token count
@@ -79,7 +88,10 @@ export async function truncateConversationIfNeeded({
 	maxTokens,
 	apiHandler,
 	autoCondenseContext,
-}: TruncateOptions): Promise<ApiMessage[]> {
+	autoCondenseContextPercent,
+	systemPrompt,
+	taskId,
+}: TruncateOptions): Promise<TruncateResponse> {
 	// Calculate the maximum tokens reserved for response
 	const reservedTokens = maxTokens || contextWindow * 0.2
 
@@ -91,20 +103,28 @@ export async function truncateConversationIfNeeded({
 		: await estimateTokenCount([{ type: "text", text: lastMessageContent as string }], apiHandler)
 
 	// Calculate total effective tokens (totalTokens never includes the last message)
-	const effectiveTokens = totalTokens + lastMessageTokens
+	const prevContextTokens = totalTokens + lastMessageTokens
 
 	// Calculate available tokens for conversation history
 	// Truncate if we're within TOKEN_BUFFER_PERCENTAGE of the context window
 	const allowedTokens = contextWindow * (1 - TOKEN_BUFFER_PERCENTAGE) - reservedTokens
 
-	// Determine if truncation is needed and apply if necessary
-	if (effectiveTokens <= allowedTokens) {
-		return messages
-	} else if (autoCondenseContext) {
-		const summarizedMessages = await summarizeConversation(messages, apiHandler)
-		if (messages !== summarizedMessages) {
-			return summarizedMessages
+	if (autoCondenseContext) {
+		const contextPercent = (100 * prevContextTokens) / contextWindow
+		if (contextPercent >= autoCondenseContextPercent || prevContextTokens > allowedTokens) {
+			// Attempt to intelligently condense the context
+			const result = await summarizeConversation(messages, apiHandler, systemPrompt, taskId, true)
+			if (result.summary) {
+				return { ...result, prevContextTokens }
+			}
 		}
 	}
-	return truncateConversation(messages, 0.5)
+
+	// Fall back to sliding window truncation if needed
+	if (prevContextTokens > allowedTokens) {
+		const truncatedMessages = truncateConversation(messages, 0.5, taskId)
+		return { messages: truncatedMessages, prevContextTokens, summary: "", cost: 0 }
+	}
+	// No truncation or condensation needed
+	return { messages, summary: "", cost: 0, prevContextTokens }
 }

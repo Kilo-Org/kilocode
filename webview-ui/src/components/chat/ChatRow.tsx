@@ -13,6 +13,7 @@ import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { findMatchingResourceOrTemplate } from "@src/utils/mcp"
 import { vscode } from "@src/utils/vscode"
 import { removeLeadingNonAlphanumeric } from "@src/utils/removeLeadingNonAlphanumeric"
+import { getLanguageFromPath } from "@src/utils/getLanguageFromPath"
 import { Button } from "@src/components/ui"
 
 import { ToolUseBlock, ToolUseBlockHeader } from "../common/ToolUseBlock"
@@ -35,6 +36,8 @@ import { CommandExecutionError } from "./CommandExecutionError"
 import ReportBugPreview from "./ReportBugPreview"
 
 import { NewTaskPreview } from "../kilocode/chat/NewTaskPreview" // kilocode_change
+import { AutoApprovedRequestLimitWarning } from "./AutoApprovedRequestLimitWarning"
+import { CondensingContextRow, ContextCondenseRow } from "./ContextCondenseRow"
 
 interface ChatRowProps {
 	message: ClineMessage
@@ -295,7 +298,7 @@ export const ChatRowContent = ({
 						<CodeAccordian
 							path={tool.path}
 							code={tool.content ?? tool.diff}
-							language={tool.tool === "appliedDiff" ? "diff" : undefined}
+							language="diff"
 							progressStatus={message.progressStatus}
 							isLoading={message.partial}
 							isExpanded={isExpanded}
@@ -343,6 +346,7 @@ export const ChatRowContent = ({
 						<CodeAccordian
 							path={tool.path}
 							code={tool.diff}
+							language="diff"
 							progressStatus={message.progressStatus}
 							isLoading={message.partial}
 							isExpanded={isExpanded}
@@ -360,6 +364,7 @@ export const ChatRowContent = ({
 						<CodeAccordian
 							path={tool.path}
 							code={tool.content}
+							language={getLanguageFromPath(tool.path || "") || "log"}
 							isLoading={message.partial}
 							isExpanded={isExpanded}
 							onToggleExpand={onToggleExpand}
@@ -405,6 +410,7 @@ export const ChatRowContent = ({
 						</div>
 						<CodeAccordian
 							code={tool.content}
+							language="markdown"
 							isLoading={message.partial}
 							isExpanded={isExpanded}
 							onToggleExpand={onToggleExpand}
@@ -445,7 +451,7 @@ export const ChatRowContent = ({
 						<CodeAccordian
 							path={tool.path}
 							code={tool.content}
-							language="shell-session"
+							language="shellsession"
 							isExpanded={isExpanded}
 							onToggleExpand={onToggleExpand}
 						/>
@@ -465,6 +471,7 @@ export const ChatRowContent = ({
 						<CodeAccordian
 							path={tool.path}
 							code={tool.content}
+							language="markdown"
 							isExpanded={isExpanded}
 							onToggleExpand={onToggleExpand}
 						/>
@@ -494,7 +501,7 @@ export const ChatRowContent = ({
 						<CodeAccordian
 							path={tool.path! + (tool.filePattern ? `/(${tool.filePattern})` : "")}
 							code={tool.content}
-							language="log"
+							language="shellsession"
 							isExpanded={isExpanded}
 							onToggleExpand={onToggleExpand}
 						/>
@@ -714,7 +721,7 @@ export const ChatRowContent = ({
 											backgroundColor: "var(--vscode-editor-background)",
 											borderTop: "none",
 										}}>
-										<CodeBlock source={`${"```"}plaintext\n${message.text || ""}\n${"```"}`} />
+										<CodeBlock source={message.text || ""} language="xml" />
 									</div>
 								)}
 							</div>
@@ -935,6 +942,11 @@ export const ChatRowContent = ({
 							checkpoint={message.checkpoint}
 						/>
 					)
+				case "condense_context":
+					if (message.partial) {
+						return <CondensingContextRow />
+					}
+					return message.contextCondense ? <ContextCondenseRow {...message.contextCondense} /> : null
 				default:
 					return (
 						<>
@@ -1133,6 +1145,9 @@ export const ChatRowContent = ({
 						</>
 					)
 				// kilocode_change end
+				case "auto_approval_max_req_reached": {
+					return <AutoApprovedRequestLimitWarning message={message} />
+				}
 				default:
 					return null
 			}

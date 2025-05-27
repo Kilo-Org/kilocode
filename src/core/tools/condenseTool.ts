@@ -40,10 +40,16 @@ export const condenseTool = async (
 				pushToolResult(formatResponse.toolResult(formatResponse.condense()))
 
 				// Use summarizeConversation to create a condensed version of the conversation
-				const summarizedMessages = await summarizeConversation(cline.apiConversationHistory, cline.api)
+				const summarizedMessages = await summarizeConversation(
+					cline.apiConversationHistory,
+					cline.api,
+					await cline.getSystemPrompt(),
+					"TaskId condenseTool",
+					false,
+				)
 
 				// Overwrite the apiConversationHistory with the summarized messages
-				await cline.overwriteApiConversationHistory(summarizedMessages)
+				await cline.overwriteApiConversationHistory(summarizedMessages.messages)
 			}
 			return
 		}

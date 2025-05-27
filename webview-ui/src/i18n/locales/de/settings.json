@@ -83,6 +83,11 @@
 		"showMenu": {
 			"label": "Auto-Genehmigungs-Menü in der Chat-Ansicht anzeigen",
 			"description": "Wenn aktiviert, wird das Auto-Genehmigungs-Menü am unteren Rand der Chat-Ansicht angezeigt, was einen schnellen Zugriff auf die Auto-Genehmigungs-Einstellungen ermöglicht"
+		},
+		"apiRequestLimit": {
+			"title": "Maximale Anfragen",
+			"description": "Automatisch so viele API-Anfragen stellen, bevor du um die Erlaubnis gebeten wirst, mit der Aufgabe fortzufahren.",
+			"unlimited": "Unbegrenzt"
 		}
 	},
 	"providers": {
@@ -189,6 +194,8 @@
 		},
 		"unboundApiKey": "Unbound API-Schlüssel",
 		"getUnboundApiKey": "Unbound API-Schlüssel erhalten",
+		"unboundRefreshModelsSuccess": "Modellliste aktualisiert! Sie können jetzt aus den neuesten Modellen auswählen.",
+		"unboundInvalidApiKey": "Ungültiger API-Schlüssel. Bitte überprüfen Sie Ihren API-Schlüssel und versuchen Sie es erneut.",
 		"humanRelay": {
 			"description": "Es ist kein API-Schlüssel erforderlich, aber der Benutzer muss beim Kopieren und Einfügen der Informationen in den Web-Chat-KI helfen.",
 			"instructions": "Während der Verwendung wird ein Dialogfeld angezeigt und die aktuelle Nachricht wird automatisch in die Zwischenablage kopiert. Du musst diese in Web-Versionen von KI (wie ChatGPT oder Claude) einfügen, dann die Antwort der KI zurück in das Dialogfeld kopieren und auf die Bestätigungsschaltfläche klicken."
@@ -378,7 +385,7 @@
 	"advanced": {
 		"diff": {
 			"label": "Bearbeitung durch Diffs aktivieren",
-			"description": "Wenn aktiviert, kann Kilo Code Dateien schneller bearbeiten und lehnt automatisch gekürzte vollständige Dateischreibvorgänge ab. Funktioniert am besten mit dem neuesten Claude 3.7 Sonnet-Modell.",
+			"description": "Wenn aktiviert, kann Kilo Code Dateien schneller bearbeiten und lehnt automatisch gekürzte vollständige Dateischreibvorgänge ab. Funktioniert am besten mit dem neuesten Claude 4 Sonnet-Modell.",
 			"strategy": {
 				"label": "Diff-Strategie",
 				"options": {
@@ -400,9 +407,13 @@
 	},
 	"experimental": {
 		"warning": "⚠️",
+		"autoCondenseContextPercent": {
+			"label": "Schwellenwert für intelligente Kontextkomprimierung",
+			"description": "Wenn das Kontextfenster diesen Schwellenwert erreicht, wird Kilo Code es automatisch komprimieren."
+		},
 		"AUTO_CONDENSE_CONTEXT": {
-			"name": "Kontextfenster intelligent komprimieren",
-			"description": "Verwendet einen LLM-Aufruf, um das vorherige Gespräch zusammenzufassen, wenn das Kontextfenster der Aufgabe fast voll ist, anstatt alte Nachrichten zu verwerfen. Hinweis: Die Kosten für die Zusammenfassung sind derzeit nicht in den in der Benutzeroberfläche angezeigten API-Kosten enthalten."
+			"name": "Intelligente Kontextkomprimierung automatisch auslösen",
+			"description": "Intelligente Kontextkomprimierung verwendet einen LLM-Aufruf, um das vorherige Gespräch zusammenzufassen, wenn das Kontextfenster der Aufgabe einen voreingestellten Schwellenwert erreicht, anstatt alte Nachrichten zu verwerfen, wenn der Kontext voll ist."
 		},
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "Experimentelle einheitliche Diff-Strategie verwenden",

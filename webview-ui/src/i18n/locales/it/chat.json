@@ -10,7 +10,8 @@
 		"contextWindow": "Lunghezza del contesto:",
 		"closeAndStart": "Chiudi attività e iniziane una nuova",
 		"export": "Esporta cronologia attività",
-		"delete": "Elimina attività (Shift + Clic per saltare la conferma)"
+		"delete": "Elimina attività (Shift + Clic per saltare la conferma)",
+		"condenseContext": "Condensa contesto in modo intelligente"
 	},
 	"history": {
 		"title": "Cronologia"
@@ -204,16 +205,21 @@
 		"thinking": "Sto pensando",
 		"seconds": "{{count}}s"
 	},
+	"contextCondense": {
+		"title": "Contesto condensato",
+		"condensing": "Condensazione del contesto...",
+		"tokens": "token"
+	},
 	"followUpSuggest": {
 		"copyToInput": "Copia nell'input (o Shift + clic)"
 	},
 	"announcement": {
-		"title": "🎉 Rilasciato Roo Code 3.17",
-		"description": "Roo Code 3.17 introduce potenti nuove funzionalità e miglioramenti basati sui tuoi feedback.",
+		"title": "🎉 Rilasciato Roo Code {{version}}",
+		"description": "Roo Code {{version}} introduce potenti nuove funzionalità e miglioramenti basati sui tuoi feedback.",
 		"whatsNew": "Novità",
-		"feature1": "<bold>Caching implicito per Gemini</bold>: Le chiamate API Gemini vengono ora memorizzate automaticamente nella cache, riducendo i costi API",
-		"feature2": "<bold>Selezione della modalità più intelligente</bold>: Le definizioni delle modalità possono ora includere indicazioni su quando ogni modalità dovrebbe essere utilizzata, permettendo una migliore orchestrazione",
-		"feature3": "<bold>Condensazione intelligente del contesto</bold>: Riassume in modo intelligente la cronologia delle conversazioni quando il contesto si riempie invece di troncarla (abilitare in Impostazioni -> Sperimentale)",
+		"feature1": "<bold>Modelli di anteprima Gemini 2.5 Flash</bold>: Accedi agli ultimi modelli Gemini Flash per risposte più veloci ed efficienti",
+		"feature2": "<bold>Condensazione intelligente del contesto</bold>: Nuovo pulsante nell'intestazione dell'attività che ti permette di condensare intelligentemente il contenuto con feedback visivo",
+		"feature3": "<bold>Supporto YAML per definizioni di modalità</bold>: Crea e personalizza le modalità più facilmente con il supporto YAML",
 		"hideButton": "Nascondi annuncio",
 		"detailsDiscussLinks": "Ottieni maggiori dettagli e partecipa alle discussioni su <discordLink>Discord</discordLink> e <redditLink>Reddit</redditLink> 🚀"
 	},
@@ -253,5 +259,12 @@
 		"title": "Avviso di esecuzione comando",
 		"description": "Il tuo comando viene eseguito senza l'integrazione shell del terminale VSCode. Per sopprimere questo avviso puoi disattivare l'integrazione shell nella sezione <strong>Terminal</strong> delle <settingsLink>impostazioni di Kilo Code</settingsLink> o risolvere i problemi di integrazione del terminale VSCode utilizzando il link qui sotto.",
 		"troubleshooting": "Clicca qui per la documentazione sull'integrazione shell."
+	},
+	"ask": {
+		"autoApprovedRequestLimitReached": {
+			"title": "Limite di Richieste Auto-approvate Raggiunto",
+			"description": "Kilo Code ha raggiunto il limite auto-approvato di {{count}} richiesta/e API. Vuoi reimpostare il contatore e procedere con l'attività?",
+			"button": "Reimposta e Continua"
+		}
 	}
 }

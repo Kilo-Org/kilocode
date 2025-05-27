@@ -58,7 +58,8 @@
 		"failed_remove_directory": "Не удалось удалить директорию задачи: {{error}}",
 		"custom_storage_path_unusable": "Пользовательский путь хранения \"{{path}}\" непригоден, будет использован путь по умолчанию",
 		"cannot_access_path": "Невозможно получить доступ к пути {{path}}: {{error}}",
-		"failed_update_project_mcp": "Не удалось обновить серверы проекта MCP"
+		"failed_update_project_mcp": "Не удалось обновить серверы проекта MCP",
+		"settings_import_failed": "Не удалось импортировать настройки: {{error}}."
 	},
 	"warnings": {
 		"no_terminal_content": "Не выбрано содержимое терминала",

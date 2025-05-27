@@ -1,0 +1,21 @@
+{
+	"number_format": {
+		"thousand_suffix": "rb",
+		"million_suffix": "jt",
+		"billion_suffix": "m"
+	},
+	"feedback": {
+		"title": "Feedback",
+		"description": "Kami ingin mendengar feedback kamu atau membantu dengan masalah yang kamu alami.",
+		"githubIssues": "Laporkan masalah di GitHub",
+		"githubDiscussions": "Bergabung dengan diskusi GitHub",
+		"discord": "Bergabung dengan komunitas Discord kami"
+	},
+	"ui": {
+		"search_placeholder": "Cari..."
+	},
+	"mermaid": {
+		"loading": "Membuat diagram mermaid...",
+		"render_error": "Tidak Dapat Merender Diagram"
+	}
+}

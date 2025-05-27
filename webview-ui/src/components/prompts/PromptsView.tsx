@@ -718,6 +718,7 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 							{t("prompts:roleDefinition.description")}
 						</div>
 						<VSCodeTextArea
+							resize="vertical"
 							value={(() => {
 								const customMode = findModeBySlug(visualMode, customModes)
 								const prompt = customModePrompts?.[visualMode] as PromptComponent
@@ -746,7 +747,7 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 									})
 								}
 							}}
-							className="resize-y w-full"
+							className="w-full"
 							rows={4}
 							data-testid={`${getCurrentMode()?.slug || "code"}-prompt-textarea`}
 						/>
@@ -776,6 +777,7 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 							{t("prompts:whenToUse.description")}
 						</div>
 						<VSCodeTextArea
+							resize="vertical"
 							value={(() => {
 								const customMode = findModeBySlug(visualMode, customModes)
 								const prompt = customModePrompts?.[visualMode] as PromptComponent
@@ -800,7 +802,7 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 									})
 								}
 							}}
-							className="resize-y w-full"
+							className="w-full"
 							rows={3}
 							data-testid={`${getCurrentMode()?.slug || "code"}-when-to-use-textarea`}
 						/>
@@ -927,6 +929,7 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 							})}
 						</div>
 						<VSCodeTextArea
+							resize="vertical"
 							value={(() => {
 								const customMode = findModeBySlug(visualMode, customModes)
 								const prompt = customModePrompts?.[visualMode] as PromptComponent
@@ -958,7 +961,7 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 								}
 							}}
 							rows={4}
-							className="w-full resize-y"
+							className="w-full"
 							data-testid={`${getCurrentMode()?.slug || "code"}-custom-instructions-textarea`}
 						/>
 						<div className="text-xs text-vscode-descriptionForeground mt-1.5">
@@ -1096,6 +1099,7 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 						</Trans>
 					</div>
 					<VSCodeTextArea
+						resize="vertical"
 						value={customInstructions || ""}
 						onChange={(e) => {
 							const value =
@@ -1108,7 +1112,7 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 							})
 						}}
 						rows={4}
-						className="w-full resize-y"
+						className="w-full"
 						data-testid="global-custom-instructions-textarea"
 					/>
 					<div className="text-xs text-vscode-descriptionForeground mt-1.5">
@@ -1174,6 +1178,7 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 						</div>
 
 						<VSCodeTextArea
+							resize="vertical"
 							value={getSupportPromptValue(activeSupportOption)}
 							onChange={(e) => {
 								const value =
@@ -1183,7 +1188,7 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 								updateSupportPrompt(activeSupportOption, trimmedValue || undefined)
 							}}
 							rows={6}
-							className="resize-y w-full"
+							className="w-full"
 						/>
 
 						{activeSupportOption === "ENHANCE" && (
@@ -1234,11 +1239,12 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 
 								<div className="mt-4">
 									<VSCodeTextArea
+										resize="vertical"
 										value={testPrompt}
 										onChange={(e) => setTestPrompt((e.target as HTMLTextAreaElement).value)}
 										placeholder={t("prompts:supportPrompts.enhance.testPromptPlaceholder")}
 										rows={3}
-										className="w-full resize-y"
+										className="w-full"
 										data-testid="test-prompt-textarea"
 									/>
 									<div className="mt-2 flex justify-start items-center gap-2">
@@ -1386,12 +1392,13 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 									{t("prompts:createModeDialog.roleDefinition.description")}
 								</div>
 								<VSCodeTextArea
+									resize="vertical"
 									value={newModeRoleDefinition}
 									onChange={(e) => {
 										setNewModeRoleDefinition((e.target as HTMLTextAreaElement).value)
 									}}
 									rows={4}
-									className="w-full resize-y"
+									className="w-full"
 								/>
 								{roleDefinitionError && (
 									<div className="text-xs text-vscode-errorForeground mt-1">
@@ -1406,12 +1413,13 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 									{t("prompts:createModeDialog.whenToUse.description")}
 								</div>
 								<VSCodeTextArea
+									resize="vertical"
 									value={newModeWhenToUse}
 									onChange={(e) => {
 										setNewModeWhenToUse((e.target as HTMLTextAreaElement).value)
 									}}
 									rows={3}
-									className="w-full resize-y"
+									className="w-full"
 								/>
 							</div>
 							<div className="mb-4">
@@ -1452,12 +1460,13 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 									{t("prompts:createModeDialog.customInstructions.description")}
 								</div>
 								<VSCodeTextArea
+									resize="vertical"
 									value={newModeCustomInstructions}
 									onChange={(e) => {
 										setNewModeCustomInstructions((e.target as HTMLTextAreaElement).value)
 									}}
 									rows={4}
-									className="w-full resize-y"
+									className="w-full"
 								/>
 							</div>
 						</div>

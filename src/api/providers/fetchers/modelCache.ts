@@ -4,7 +4,7 @@ import fs from "fs/promises"
 import NodeCache from "node-cache"
 
 import { ContextProxy } from "../../../core/config/ContextProxy"
-import { getCacheDirectoryPath } from "../../../shared/storagePathManager"
+import { getCacheDirectoryPath } from "../../../utils/storage"
 import { RouterName, ModelRecord } from "../../../shared/api"
 import { fileExistsAtPath } from "../../../utils/fs"
 
@@ -65,7 +65,8 @@ export const getModels = async (
 			models = await getGlamaModels()
 			break
 		case "unbound":
-			models = await getUnboundModels()
+			// Unbound models endpoint requires an API key to fetch application specific models
+			models = await getUnboundModels(apiKey)
 			break
 		case "litellm":
 			if (apiKey && baseUrl) {

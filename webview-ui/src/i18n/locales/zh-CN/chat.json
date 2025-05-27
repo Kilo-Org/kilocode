@@ -10,7 +10,8 @@
 		"contextWindow": "上下文长度：",
 		"closeAndStart": "关闭任务并开始新任务",
 		"export": "导出任务历史",
-		"delete": "删除任务（Shift + 点击跳过确认）"
+		"delete": "删除任务（Shift + 点击跳过确认）",
+		"condenseContext": "智能压缩上下文"
 	},
 	"history": {
 		"title": "历史"
@@ -204,16 +205,21 @@
 		"thinking": "思考中",
 		"seconds": "{{count}}秒"
 	},
+	"contextCondense": {
+		"title": "上下文已压缩",
+		"condensing": "正在压缩上下文...",
+		"tokens": "tokens"
+	},
 	"followUpSuggest": {
 		"copyToInput": "复制到输入框（或按住Shift点击）"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code 3.17 已发布",
-		"description": "Roo Code 3.17 带来基于您反馈的强大新功能和改进。",
+		"title": "🎉 Roo Code {{version}} 已发布",
+		"description": "Roo Code {{version}} 带来基于您反馈的强大新功能和改进。",
 		"whatsNew": "新特性",
-		"feature1": "<bold>Gemini 的隐式缓存</bold>: Gemini API 调用现在会自动缓存，降低 API 费用",
-		"feature2": "<bold>更智能的模式选择</bold>: 模式定义现在可以包含何时使用每种模式的指导，实现更好的协调",
-		"feature3": "<bold>智能上下文压缩</bold>: 当上下文填满时，智能汇总对话历史而非截断（在设置 -> 实验性功能中启用）",
+		"feature1": "<bold>Gemini 2.5 Flash 预览模型</bold>: 访问最新的 Gemini Flash 模型，获得更快速高效的响应",
+		"feature2": "<bold>智能上下文压缩</bold>: 任务标题中的新按钮让您能够智能压缩内容并提供可视化反馈",
+		"feature3": "<bold>模式定义的 YAML 支持</bold>: 通过 YAML 支持更轻松地创建和自定义模式",
 		"hideButton": "隐藏公告",
 		"detailsDiscussLinks": "在 <discordLink>Discord</discordLink> 和 <redditLink>Reddit</redditLink> 获取更多详情并参与讨论 🚀"
 	},
@@ -253,5 +259,12 @@
 		"title": "命令执行警告",
 		"description": "您的命令正在没有 VSCode 终端 shell 集成的情况下执行。要隐藏此警告，您可以在 <settingsLink>Kilo Code 设置</settingsLink>的 <strong>Terminal</strong> 部分禁用 shell 集成，或使用下方链接排查 VSCode 终端集成问题。",
 		"troubleshooting": "点击此处查看 shell 集成文档。"
+	},
+	"ask": {
+		"autoApprovedRequestLimitReached": {
+			"title": "已达自动批准请求限制",
+			"description": "Kilo Code 已达到 {{count}} 次 API 请求的自动批准限制。您想重置计数并继续任务吗？",
+			"button": "重置并继续"
+		}
 	}
 }

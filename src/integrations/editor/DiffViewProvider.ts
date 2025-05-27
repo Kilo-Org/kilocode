@@ -122,7 +122,7 @@ export class DiffViewProvider {
 		const endLine = accumulatedLines.length
 		// Replace all content up to the current line with accumulated lines.
 		const edit = new vscode.WorkspaceEdit()
-		const rangeToReplace = new vscode.Range(0, 0, endLine + 1, 0)
+		const rangeToReplace = new vscode.Range(0, 0, endLine, 0)
 		const contentToReplace = accumulatedLines.slice(0, endLine + 1).join("\n") + "\n"
 		edit.replace(document.uri, rangeToReplace, this.stripAllBOMs(contentToReplace))
 		await vscode.workspace.applyEdit(edit)
@@ -130,7 +130,10 @@ export class DiffViewProvider {
 		this.activeLineController.setActiveLine(endLine)
 		this.fadedOverlayController.updateOverlayAfterLine(endLine, document.lineCount)
 		// Scroll to the current line.
-		this.scrollEditorToLine(endLine)
+		const ranges = this.activeDiffEditor?.visibleRanges
+		if (ranges && ranges.length > 0 && ranges[0].start.line < endLine && ranges[0].end.line > endLine) {
+			this.scrollEditorToLine(endLine)
+		}
 
 		// Update the streamedLines with the new accumulated content.
 		this.streamedLines = accumulatedLines
@@ -298,21 +301,25 @@ export class DiffViewProvider {
 		await this.reset()
 	}
 
-	private async closeAllDiffViews() {
-		const tabs = vscode.window.tabGroups.all
-			.flatMap((tg) => tg.tabs)
+	private async closeAllDiffViews(): Promise<void> {
+		const closeOps = vscode.window.tabGroups.all
+			.flatMap((group) => group.tabs)
 			.filter(
 				(tab) =>
 					tab.input instanceof vscode.TabInputTextDiff &&
-					tab.input?.original?.scheme === DIFF_VIEW_URI_SCHEME,
+					tab.input.original.scheme === DIFF_VIEW_URI_SCHEME &&
+					!tab.isDirty,
+			)
+			.map((tab) =>
+				vscode.window.tabGroups.close(tab).then(
+					() => undefined,
+					(err) => {
+						console.error(`Failed to close diff tab ${tab.label}`, err)
+					},
+				),
 			)
 
-		for (const tab of tabs) {
-			// Trying to close dirty views results in save popup.
-			if (!tab.isDirty) {
-				await vscode.window.tabGroups.close(tab)
-			}
-		}
+		await Promise.all(closeOps)
 	}
 
 	private async openDiffEditor(): Promise<vscode.TextEditor> {
@@ -419,15 +426,8 @@ export class DiffViewProvider {
 		return result
 	}
 
-	async reset() {
-		// Ensure any diff views opened by this provider are closed to release
-		// memory.
-		try {
-			await this.closeAllDiffViews()
-		} catch (error) {
-			console.error("Error closing diff views", error)
-		}
-
+	async reset(): Promise<void> {
+		await this.closeAllDiffViews()
 		this.editType = undefined
 		this.isEditing = false
 		this.originalContent = undefined

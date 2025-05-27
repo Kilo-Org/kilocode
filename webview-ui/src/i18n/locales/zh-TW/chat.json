@@ -10,7 +10,8 @@
 		"contextWindow": "上下文長度：",
 		"closeAndStart": "關閉現有工作並開始一項新的工作",
 		"export": "匯出工作紀錄",
-		"delete": "刪除工作（按住 Shift 並點選可跳過確認）"
+		"delete": "刪除工作（按住 Shift 並點選可跳過確認）",
+		"condenseContext": "智慧壓縮上下文"
 	},
 	"history": {
 		"title": "歷史"
@@ -204,16 +205,21 @@
 		"thinking": "思考中",
 		"seconds": "{{count}}秒"
 	},
+	"contextCondense": {
+		"title": "上下文已壓縮",
+		"condensing": "正在壓縮上下文...",
+		"tokens": "tokens"
+	},
 	"followUpSuggest": {
 		"copyToInput": "複製到輸入框（或按住 Shift 並點選）"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code 3.17 已發布",
-		"description": "Roo Code 3.17 帶來基於您意見回饋的強大新功能與改進。",
+		"title": "🎉 Roo Code {{version}} 已發布",
+		"description": "Roo Code {{version}} 帶來基於您意見回饋的強大新功能與改進。",
 		"whatsNew": "新功能",
-		"feature1": "<bold>Gemini 的隱式快取</bold>: Gemini API 呼叫現在自動快取，降低 API 費用",
-		"feature2": "<bold>更智慧的模式選擇</bold>: 模式定義現在可以包含何時應使用各個模式的指引，實現更好的協調",
-		"feature3": "<bold>智慧上下文壓縮</bold>: 當上下文填滿時，智慧地摘要對話歷史而非截斷（在設定 -> 實驗性功能中啟用）",
+		"feature1": "<bold>Gemini 2.5 Flash 預覽模型</bold>: 存取最新的 Gemini Flash 模型，獲得更快速高效的回應",
+		"feature2": "<bold>智慧上下文壓縮</bold>: 工作標題中的新按鈕讓您能夠智慧壓縮內容並提供視覺回饋",
+		"feature3": "<bold>模式定義的 YAML 支援</bold>: 透過 YAML 支援更輕鬆地建立和自訂模式",
 		"hideButton": "隱藏公告",
 		"detailsDiscussLinks": "在 <discordLink>Discord</discordLink> 和 <redditLink>Reddit</redditLink> 取得更多詳細資訊並參與討論 🚀"
 	},
@@ -253,5 +259,12 @@
 		"title": "命令執行警告",
 		"description": "您的命令正在沒有 VSCode 終端機 shell 整合的情況下執行。要隱藏此警告，您可以在 <settingsLink>Kilo Code 設定</settingsLink>的 <strong>Terminal</strong> 部分停用 shell 整合，或使用下方連結排查 VSCode 終端機整合問題。",
 		"troubleshooting": "點擊此處查看 shell 整合文件。"
+	},
+	"ask": {
+		"autoApprovedRequestLimitReached": {
+			"title": "已達自動核准請求限制",
+			"description": "Kilo Code 已達到 {{count}} 次 API 請求的自動核准限制。您想要重設計數並繼續工作嗎？",
+			"button": "重設並繼續"
+		}
 	}
 }

@@ -7,8 +7,28 @@ export type ApiHandlerOptions = Omit<ProviderSettings, "apiProvider" | "id">
 // Anthropic
 // https://docs.anthropic.com/en/docs/about-claude/models
 export type AnthropicModelId = keyof typeof anthropicModels
-export const anthropicDefaultModelId: AnthropicModelId = "claude-3-7-sonnet-20250219"
+export const anthropicDefaultModelId: AnthropicModelId = "claude-sonnet-4-20250514"
 export const anthropicModels = {
+	"claude-sonnet-4-20250514": {
+		maxTokens: 8192,
+		contextWindow: 200_000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		inputPrice: 3.0,
+		outputPrice: 15.0,
+		cacheWritesPrice: 3.75,
+		cacheReadsPrice: 0.3,
+	},
+	"claude-opus-4-20250514": {
+		maxTokens: 4096,
+		contextWindow: 200_000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		inputPrice: 15.0,
+		outputPrice: 75.0,
+		cacheWritesPrice: 18.75,
+		cacheReadsPrice: 1.5,
+	},
 	"claude-3-7-sonnet-20250219:thinking": {
 		maxTokens: 128_000,
 		contextWindow: 200_000,
@@ -472,6 +492,25 @@ export const openRouterDefaultModelInfo: ModelInfo = {
 export type VertexModelId = keyof typeof vertexModels
 export const vertexDefaultModelId: VertexModelId = "claude-3-7-sonnet@20250219"
 export const vertexModels = {
+	"gemini-2.5-flash-preview-05-20:thinking": {
+		maxTokens: 65_535,
+		contextWindow: 1_048_576,
+		supportsImages: true,
+		supportsPromptCache: false,
+		inputPrice: 0.15,
+		outputPrice: 3.5,
+		thinking: true,
+		maxThinkingTokens: 24_576,
+	},
+	"gemini-2.5-flash-preview-05-20": {
+		maxTokens: 65_535,
+		contextWindow: 1_048_576,
+		supportsImages: true,
+		supportsPromptCache: false,
+		inputPrice: 0.15,
+		outputPrice: 0.6,
+		thinking: false,
+	},
 	"gemini-2.5-flash-preview-04-17:thinking": {
 		maxTokens: 65_535,
 		contextWindow: 1_048_576,
@@ -665,6 +704,25 @@ export const geminiModels = {
 		maxThinkingTokens: 24_576,
 	},
 	"gemini-2.5-flash-preview-04-17": {
+		maxTokens: 65_535,
+		contextWindow: 1_048_576,
+		supportsImages: true,
+		supportsPromptCache: false,
+		inputPrice: 0.15,
+		outputPrice: 0.6,
+		thinking: false,
+	},
+	"gemini-2.5-flash-preview-05-20:thinking": {
+		maxTokens: 65_535,
+		contextWindow: 1_048_576,
+		supportsImages: true,
+		supportsPromptCache: false,
+		inputPrice: 0.15,
+		outputPrice: 3.5,
+		thinking: true,
+		maxThinkingTokens: 24_576,
+	},
+	"gemini-2.5-flash-preview-05-20": {
 		maxTokens: 65_535,
 		contextWindow: 1_048_576,
 		supportsImages: true,
@@ -1190,7 +1248,7 @@ export const litellmDefaultModelInfo: ModelInfo = {
 // xAI
 // https://docs.x.ai/docs/api-reference
 export type XAIModelId = keyof typeof xaiModels
-export const xaiDefaultModelId: XAIModelId = "grok-3-beta"
+export const xaiDefaultModelId: XAIModelId = "grok-3"
 export const xaiModels = {
 	"grok-3-beta": {
 		maxTokens: 8192,
@@ -1227,6 +1285,42 @@ export const xaiModels = {
 		inputPrice: 0.6,
 		outputPrice: 4.0,
 		description: "xAI's Grok-3 mini fast beta model with 131K context window",
+	},
+	"grok-3": {
+		maxTokens: 8192,
+		contextWindow: 131072,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 3.0,
+		outputPrice: 15.0,
+		description: "xAI's Grok-3 model with 131K context window",
+	},
+	"grok-3-fast": {
+		maxTokens: 8192,
+		contextWindow: 131072,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 5.0,
+		outputPrice: 25.0,
+		description: "xAI's Grok-3 fast model with 131K context window",
+	},
+	"grok-3-mini": {
+		maxTokens: 8192,
+		contextWindow: 131072,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0.3,
+		outputPrice: 0.5,
+		description: "xAI's Grok-3 mini model with 131K context window",
+	},
+	"grok-3-mini-fast": {
+		maxTokens: 8192,
+		contextWindow: 131072,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0.6,
+		outputPrice: 4.0,
+		description: "xAI's Grok-3 mini fast model with 131K context window",
 	},
 	"grok-2-latest": {
 		maxTokens: 8192,
@@ -1580,6 +1674,11 @@ export type ChutesModelId =
 	| "deepseek-ai/DeepSeek-V3-Base"
 	| "deepseek-ai/DeepSeek-R1-Zero"
 	| "deepseek-ai/DeepSeek-V3-0324"
+	| "Qwen/Qwen3-235B-A22B"
+	| "Qwen/Qwen3-32B"
+	| "Qwen/Qwen3-30B-A3B"
+	| "Qwen/Qwen3-14B"
+	| "Qwen/Qwen3-8B"
 	| "microsoft/MAI-DS-R1-FP8"
 	| "tngtech/DeepSeek-R1T-Chimera"
 export const chutesDefaultModelId: ChutesModelId = "deepseek-ai/DeepSeek-R1"
@@ -1710,6 +1809,51 @@ export const chutesModels = {
 		outputPrice: 0,
 		description: "DeepSeek V3 (0324) model.",
 	},
+	"Qwen/Qwen3-235B-A22B": {
+		maxTokens: 32768,
+		contextWindow: 40960,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0,
+		outputPrice: 0,
+		description: "Qwen3 235B A22B model.",
+	},
+	"Qwen/Qwen3-32B": {
+		maxTokens: 32768,
+		contextWindow: 40960,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0,
+		outputPrice: 0,
+		description: "Qwen3 32B model.",
+	},
+	"Qwen/Qwen3-30B-A3B": {
+		maxTokens: 32768,
+		contextWindow: 40960,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0,
+		outputPrice: 0,
+		description: "Qwen3 30B A3B model.",
+	},
+	"Qwen/Qwen3-14B": {
+		maxTokens: 32768,
+		contextWindow: 40960,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0,
+		outputPrice: 0,
+		description: "Qwen3 14B model.",
+	},
+	"Qwen/Qwen3-8B": {
+		maxTokens: 32768,
+		contextWindow: 40960,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0,
+		outputPrice: 0,
+		description: "Qwen3 8B model.",
+	},
 	"microsoft/MAI-DS-R1-FP8": {
 		maxTokens: 32768,
 		contextWindow: 163840,
@@ -1735,8 +1879,14 @@ export const chutesModels = {
  */
 
 // These models support reasoning efforts.
-export const REASONING_MODELS = new Set(["x-ai/grok-3-mini-beta", "grok-3-mini-beta", "grok-3-mini-fast-beta"])
-
+export const REASONING_MODELS = new Set([
+	"x-ai/grok-3-mini",
+	"grok-3-mini",
+	"grok-3-mini-fast",
+	"x-ai/grok-3-mini-beta",
+	"grok-3-mini-beta",
+	"grok-3-mini-fast-beta",
+])
 // These models support prompt caching.
 export const PROMPT_CACHING_MODELS = new Set([
 	"anthropic/claude-3-haiku",
@@ -1763,6 +1913,8 @@ export const PROMPT_CACHING_MODELS = new Set([
 	"google/gemini-2.5-pro-preview",
 	"google/gemini-2.5-flash-preview",
 	"google/gemini-2.5-flash-preview:thinking",
+	"google/gemini-2.5-flash-preview-05-20",
+	"google/gemini-2.5-flash-preview-05-20:thinking",
 	"google/gemini-2.0-flash-001",
 	"google/gemini-flash-1.5",
 	"google/gemini-flash-1.5-8b",

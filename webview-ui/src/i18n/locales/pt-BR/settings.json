@@ -83,6 +83,11 @@
 		"showMenu": {
 			"label": "Mostrar menu de aprovação automática na visualização de chat",
 			"description": "Quando ativado, o menu de aprovação automática será exibido na parte inferior da visualização de chat, permitindo acesso rápido às configurações de aprovação automática"
+		},
+		"apiRequestLimit": {
+			"title": "Máximo de Solicitações",
+			"description": "Fazer automaticamente este número de requisições à API antes de pedir aprovação para continuar com a tarefa.",
+			"unlimited": "Ilimitado"
 		}
 	},
 	"providers": {
@@ -189,6 +194,8 @@
 		},
 		"unboundApiKey": "Chave de API Unbound",
 		"getUnboundApiKey": "Obter chave de API Unbound",
+		"unboundRefreshModelsSuccess": "Lista de modelos atualizada! Agora você pode selecionar entre os modelos mais recentes.",
+		"unboundInvalidApiKey": "Chave API inválida. Por favor, verifique sua chave API e tente novamente.",
 		"humanRelay": {
 			"description": "Não é necessária chave de API, mas o usuário precisa ajudar a copiar e colar as informações para a IA do chat web.",
 			"instructions": "Durante o uso, uma caixa de diálogo será exibida e a mensagem atual será copiada para a área de transferência automaticamente. Você precisa colar isso nas versões web de IA (como ChatGPT ou Claude), depois copiar a resposta da IA de volta para a caixa de diálogo e clicar no botão confirmar."
@@ -378,7 +385,7 @@
 	"advanced": {
 		"diff": {
 			"label": "Ativar edição através de diffs",
-			"description": "Quando ativado, o Kilo Code poderá editar arquivos mais rapidamente e rejeitará automaticamente escritas completas de arquivos truncados. Funciona melhor com o modelo mais recente Claude 3.7 Sonnet.",
+			"description": "Quando ativado, o Kilo Code poderá editar arquivos mais rapidamente e rejeitará automaticamente escritas completas de arquivos truncados. Funciona melhor com o modelo mais recente Claude 4 Sonnet.",
 			"strategy": {
 				"label": "Estratégia de diff",
 				"options": {
@@ -400,9 +407,13 @@
 	},
 	"experimental": {
 		"warning": "⚠️",
+		"autoCondenseContextPercent": {
+			"label": "Limite para acionar a condensação inteligente de contexto",
+			"description": "Quando a janela de contexto atingir este limite, o Kilo Code a condensará automaticamente."
+		},
 		"AUTO_CONDENSE_CONTEXT": {
-			"name": "Condensar inteligentemente a janela de contexto",
-			"description": "Usa uma chamada LLM para resumir a conversa anterior quando a janela de contexto da tarefa está quase cheia, em vez de descartar mensagens antigas. Aviso: o custo de resumir não está atualmente incluído nos custos de API mostrados na interface."
+			"name": "Acionar automaticamente a condensação inteligente de contexto",
+			"description": "A condensação inteligente de contexto usa uma chamada LLM para resumir a conversa anterior quando a janela de contexto da tarefa atinge um limite predefinido, em vez de descartar mensagens antigas quando o contexto estiver cheio."
 		},
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "Usar estratégia diff unificada experimental",

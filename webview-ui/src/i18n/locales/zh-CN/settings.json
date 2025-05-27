@@ -84,6 +84,11 @@
 		"showMenu": {
 			"label": "在聊天视图中显示自动批准菜单",
 			"description": "启用后，自动批准菜单将显示在聊天视图底部，方便快速访问自动批准设置"
+		},
+		"apiRequestLimit": {
+			"title": "最大请求数",
+			"description": "在请求批准以继续执行任务之前，自动发出此数量的 API 请求。",
+			"unlimited": "无限制"
 		}
 	},
 	"providers": {
@@ -190,6 +195,8 @@
 		},
 		"unboundApiKey": "Unbound API 密钥",
 		"getUnboundApiKey": "获取 Unbound API 密钥",
+		"unboundRefreshModelsSuccess": "模型列表已更新！您现在可以从最新模型中选择。",
+		"unboundInvalidApiKey": "无效的API密钥。请检查您的API密钥并重试。",
 		"humanRelay": {
 			"description": "不需要 API 密钥，但用户需要帮助将信息复制并粘贴到网页聊天 AI。",
 			"instructions": "使用期间，将弹出对话框并自动将当前消息复制到剪贴板。您需要将这些内容粘贴到 AI 的网页版本（如 ChatGPT 或 Claude），然后将 AI 的回复复制回对话框并点击确认按钮。"
@@ -379,7 +386,7 @@
 	"advanced": {
 		"diff": {
 			"label": "启用diff更新",
-			"description": "启用后，Kilo Code 将能够通过差异算法写入，避免模型输出完整文件，以降低Token消耗。与最新的 Claude 3.7 Sonnet 模型配合最佳。",
+			"description": "启用后，Kilo Code 将能够通过差异算法写入，避免模型输出完整文件，以降低Token消耗。与最新的 Claude 4 Sonnet 模型配合最佳。",
 			"strategy": {
 				"label": "Diff 策略",
 				"options": {
@@ -401,9 +408,13 @@
 	},
 	"experimental": {
 		"warning": "⚠️",
+		"autoCondenseContextPercent": {
+			"label": "触发智能上下文压缩的阈值",
+			"description": "当上下文窗口达到此阈值时，Kilo Code 将自动压缩它。"
+		},
 		"AUTO_CONDENSE_CONTEXT": {
-			"name": "智能压缩上下文窗口",
-			"description": "当任务上下文窗口接近填满时，使用 LLM 调用来总结过去的对话，而不是删除旧消息。注意：目前 UI 中显示的 API 费用不包括总结的成本。"
+			"name": "自动触发智能上下文压缩",
+			"description": "智能上下文压缩使用 LLM 调用来总结过去的对话，在任务上下文窗口达到预设阈值时进行，而不是在上下文填满时丢弃旧消息。"
 		},
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "启用diff更新工具",

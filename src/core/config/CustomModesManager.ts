@@ -7,6 +7,7 @@ import { fileExistsAtPath } from "../../utils/fs"
 import { arePathsEqual, getWorkspacePath } from "../../utils/path"
 import { logger } from "../../utils/logging"
 import { GlobalFileNames } from "../../shared/globalFileNames"
+import * as yaml from "yaml"
 
 const ROOMODES_FILENAME = ".kilocodemodes"
 
@@ -71,7 +72,7 @@ export class CustomModesManager {
 	private async loadModesFromFile(filePath: string): Promise<ModeConfig[]> {
 		try {
 			const content = await fs.readFile(filePath, "utf-8")
-			const settings = JSON.parse(content)
+			const settings = yaml.parse(content)
 			const result = customModesSettingsSchema.safeParse(settings)
 			if (!result.success) {
 				return []
@@ -119,7 +120,7 @@ export class CustomModesManager {
 		const fileExists = await fileExistsAtPath(filePath)
 
 		if (!fileExists) {
-			await this.queueWrite(() => fs.writeFile(filePath, JSON.stringify({ customModes: [] }, null, 2)))
+			await this.queueWrite(() => fs.writeFile(filePath, yaml.stringify({ customModes: [] })))
 		}
 
 		return filePath
@@ -135,12 +136,12 @@ export class CustomModesManager {
 					const content = await fs.readFile(settingsPath, "utf-8")
 
 					const errorMessage =
-						"Invalid custom modes format. Please ensure your settings follow the correct JSON format."
+						"Invalid custom modes format. Please ensure your settings follow the correct YAML format."
 
 					let config: any
 
 					try {
-						config = JSON.parse(content)
+						config = yaml.parse(content)
 					} catch (error) {
 						console.error(error)
 						vscode.window.showErrorMessage(errorMessage)
@@ -290,20 +291,20 @@ export class CustomModesManager {
 			content = await fs.readFile(filePath, "utf-8")
 		} catch (error) {
 			// File might not exist yet.
-			content = JSON.stringify({ customModes: [] })
+			content = yaml.stringify({ customModes: [] })
 		}
 
 		let settings
 
 		try {
-			settings = JSON.parse(content)
+			settings = yaml.parse(content)
 		} catch (error) {
-			console.error(`[CustomModesManager] Failed to parse JSON from ${filePath}:`, error)
+			console.error(`[CustomModesManager] Failed to parse YAML from ${filePath}:`, error)
 			settings = { customModes: [] }
 		}
 
 		settings.customModes = operation(settings.customModes || [])
-		await fs.writeFile(filePath, JSON.stringify(settings, null, 2), "utf-8")
+		await fs.writeFile(filePath, yaml.stringify(settings), "utf-8")
 	}
 
 	private async refreshMergedState(): Promise<void> {
@@ -368,7 +369,7 @@ export class CustomModesManager {
 	public async resetCustomModes(): Promise<void> {
 		try {
 			const filePath = await this.getCustomModesFilePath()
-			await fs.writeFile(filePath, JSON.stringify({ customModes: [] }, null, 2))
+			await fs.writeFile(filePath, yaml.stringify({ customModes: [] }))
 			await this.context.globalState.update("customModes", [])
 			this.clearCache()
 			await this.onUpdate()

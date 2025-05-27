@@ -5,6 +5,7 @@ import { Virtuoso, type VirtuosoHandle } from "react-virtuoso"
 import removeMd from "remove-markdown"
 import { Trans } from "react-i18next"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
+import useSound from "use-sound"
 
 import {
 	ClineAsk,
@@ -63,10 +64,15 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	{ isHidden, showAnnouncement, hideAnnouncement },
 	ref,
 ) => {
+	const [audioBaseUri] = useState(() => {
+		const w = window as any
+		return w.AUDIO_BASE_URI || ""
+	})
 	const { t } = useAppTranslation()
 	const modeShortcutText = `${isMac ? "⌘" : "Ctrl"} + . ${t("chat:forNextMode")}`
 	const {
 		clineMessages: messages,
+		currentTaskItem,
 		taskHistory,
 		apiConfiguration,
 		mcpServers,
@@ -88,6 +94,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		customModes,
 		hasSystemPromptOverride,
 		historyPreviewCollapsed, // Added historyPreviewCollapsed
+		soundEnabled,
+		soundVolume,
 	} = useExtensionState()
 
 	const { tasks } = useTaskSearch()
@@ -134,14 +142,46 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const lastTtsRef = useRef<string>("")
 	const [wasStreaming, setWasStreaming] = useState<boolean>(false)
 	const [showCheckpointWarning, setShowCheckpointWarning] = useState<boolean>(false)
+	const [isCondensing, setIsCondensing] = useState<boolean>(false)
 
 	// UI layout depends on the last 2 messages
 	// (since it relies on the content of these messages, we are deep comparing. i.e. the button state after hitting button sets enableButtons to false, and this effect otherwise would have to true again even if messages didn't change
 	const lastMessage = useMemo(() => messages.at(-1), [messages])
 	const secondLastMessage = useMemo(() => messages.at(-2), [messages])
 
+	// Setup sound hooks with use-sound
+	const volume = typeof soundVolume === "number" ? soundVolume : 0.5
+	const soundConfig = {
+		volume,
+		// useSound expects 'disabled' property, not 'soundEnabled'
+		soundEnabled,
+	}
+
+	const getAudioUrl = (path: string) => {
+		return `${audioBaseUri}/${path}`
+	}
+
+	// Use the getAudioUrl helper function
+	const [playNotification] = useSound(getAudioUrl("notification.wav"), soundConfig)
+	const [playCelebration] = useSound(getAudioUrl("celebration.wav"), soundConfig)
+	const [playProgressLoop] = useSound(getAudioUrl("progress_loop.wav"), soundConfig)
+
 	function playSound(audioType: AudioType) {
-		vscode.postMessage({ type: "playSound", audioType })
+		// Play the appropriate sound based on type
+		// The disabled state is handled by the useSound hook configuration
+		switch (audioType) {
+			case "notification":
+				playNotification()
+				break
+			case "celebration":
+				playCelebration()
+				break
+			case "progress_loop":
+				playProgressLoop()
+				break
+			default:
+				console.warn(`Unknown audio type: ${audioType}`)
+		}
 	}
 
 	function playTts(text: string) {
@@ -622,15 +662,26 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							handleSecondaryButtonClick(message.text ?? "", message.images ?? [])
 							break
 					}
+					break
+				case "condenseTaskContextResponse":
+					if (message.text && message.text === currentTaskItem?.id) {
+						if (isCondensing && sendingDisabled) {
+							setSendingDisabled(false)
+						}
+						setIsCondensing(false)
+					}
+					break
 			}
 			// textAreaRef.current is not explicitly required here since React
 			// guarantees that ref will be stable across re-renders, and we're
 			// not using its value but its reference.
 		},
 		[
+			isCondensing,
 			isHidden,
 			sendingDisabled,
 			enableButtons,
+			currentTaskItem,
 			handleChatReset,
 			handleSendMessage,
 			handleSetChatBoxMessage,
@@ -969,8 +1020,18 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			result.push([...currentGroup])
 		}
 
+		if (isCondensing) {
+			// Show indicator after clicking condense button
+			result.push({
+				type: "say",
+				say: "condense_context",
+				ts: Date.now(),
+				partial: true,
+			})
+		}
+
 		return result
-	}, [visibleMessages])
+	}, [isCondensing, visibleMessages])
 
 	// scrolling
 
@@ -1252,6 +1313,15 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		// kilocode_change end
 	}))
 
+	const handleCondenseContext = (taskId: string) => {
+		if (isCondensing || sendingDisabled) {
+			return
+		}
+		setIsCondensing(true)
+		setSendingDisabled(true)
+		vscode.postMessage({ type: "condenseTaskContextRequest", text: taskId })
+	}
+
 	return (
 		<div className={isHidden ? "hidden" : "fixed top-0 left-0 right-0 bottom-0 flex flex-col overflow-hidden"}>
 			{showAnnouncement && <Announcement hideAnnouncement={hideAnnouncement} />}
@@ -1266,6 +1336,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						cacheReads={apiMetrics.totalCacheReads}
 						totalCost={apiMetrics.totalCost}
 						contextTokens={apiMetrics.contextTokens}
+						buttonsDisabled={sendingDisabled}
+						handleCondenseContext={handleCondenseContext}
 						onClose={handleTaskCloseButtonClick}
 					/>
 

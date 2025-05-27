@@ -83,6 +83,11 @@
 		"showMenu": {
 			"label": "Sohbet görünümünde otomatik onay menüsünü göster",
 			"description": "Etkinleştirildiğinde, otomatik onay menüsü sohbet görünümünün alt kısmında gösterilecek, otomatik onay ayarlarına hızlı erişim sağlayacaktır"
+		},
+		"apiRequestLimit": {
+			"title": "Maksimum İstek",
+			"description": "Göreve devam etmek için onay istemeden önce bu sayıda API isteği otomatik olarak yap.",
+			"unlimited": "Sınırsız"
 		}
 	},
 	"providers": {
@@ -189,6 +194,8 @@
 		},
 		"unboundApiKey": "Unbound API Anahtarı",
 		"getUnboundApiKey": "Unbound API Anahtarı Al",
+		"unboundRefreshModelsSuccess": "Model listesi güncellendi! Artık en son modeller arasından seçim yapabilirsiniz.",
+		"unboundInvalidApiKey": "Geçersiz API anahtarı. Lütfen API anahtarınızı kontrol edin ve tekrar deneyin.",
 		"humanRelay": {
 			"description": "API anahtarı gerekmez, ancak kullanıcının bilgileri web sohbet yapay zekasına kopyalayıp yapıştırması gerekir.",
 			"instructions": "Kullanım sırasında bir iletişim kutusu açılacak ve mevcut mesaj otomatik olarak panoya kopyalanacaktır. Bunları web yapay zekalarına (ChatGPT veya Claude gibi) yapıştırmanız, ardından yapay zekanın yanıtını iletişim kutusuna kopyalayıp onay düğmesine tıklamanız gerekir."
@@ -378,7 +385,7 @@
 	"advanced": {
 		"diff": {
 			"label": "Diff'ler aracılığıyla düzenlemeyi etkinleştir",
-			"description": "Etkinleştirildiğinde, Kilo Code dosyaları daha hızlı düzenleyebilecek ve kesik tam dosya yazımlarını otomatik olarak reddedecektir. En son Claude 3.7 Sonnet modeliyle en iyi şekilde çalışır.",
+			"description": "Etkinleştirildiğinde, Kilo Code dosyaları daha hızlı düzenleyebilecek ve kesik tam dosya yazımlarını otomatik olarak reddedecektir. En son Claude 4 Sonnet modeliyle en iyi şekilde çalışır.",
 			"strategy": {
 				"label": "Diff stratejisi",
 				"options": {
@@ -400,9 +407,13 @@
 	},
 	"experimental": {
 		"warning": "⚠️",
+		"autoCondenseContextPercent": {
+			"label": "Akıllı bağlam sıkıştırmayı tetikleyecek eşik",
+			"description": "Bağlam penceresi bu eşiğe ulaştığında, Kilo Code otomatik olarak sıkıştıracaktır."
+		},
 		"AUTO_CONDENSE_CONTEXT": {
-			"name": "Bağlam penceresini akıllıca sıkıştır",
-			"description": "Görevin bağlam penceresi neredeyse dolduğunda, eski mesajları atmak yerine önceki konuşmayı özetlemek için bir LLM çağrısı kullanır. Not: Özetleme maliyeti şu anda arayüzde gösterilen API maliyetlerine dahil değildir."
+			"name": "Akıllı bağlam sıkıştırmayı otomatik olarak tetikle",
+			"description": "Akıllı bağlam sıkıştırma, görevin bağlam penceresi önceden belirlenmiş bir eşiğe ulaştığında, bağlam dolduğunda eski mesajları atmak yerine önceki konuşmayı özetlemek için bir LLM çağrısı kullanır."
 		},
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "Deneysel birleştirilmiş diff stratejisini kullan",
@@ -469,7 +480,7 @@
 		"useCustomModel": "Özel kullan: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "Herhangi bir sorunuz veya geri bildiriminiz varsa, <githubLink>github.com/Kilo-Org/kilocode</githubLink> adresinde bir konu açmaktan veya <redditLink>reddit.com/r/kilocode</redditLink> ya da <discordLink>discord.gg/kilocode</discordLink>'a katılmaktan çekinmeyin",
+		"feedback": "Herhangi bir sorunuz veya geri bildiriminiz varsa, <githubLink>github.com/Kilo-Org/kilocode</githubLink> adresinde bir konu açmaktan veya <redditLink>reddit.com/r/kilocode</redditLink> ya da <discordLink>kilocode.ai/discord</discordLink>'a katılmaktan çekinmeyin",
 		"telemetry": {
 			"label": "Anonim hata ve kullanım raporlamaya izin ver",
 			"description": "Anonim kullanım verileri ve hata raporları göndererek Kilo Code'u geliştirmeye yardımcı olun. Hiçbir kod, istem veya kişisel bilgi asla gönderilmez. Daha fazla ayrıntı için gizlilik politikamıza bakın."
