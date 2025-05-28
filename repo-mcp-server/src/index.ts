@@ -3,10 +3,11 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js"
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema, McpError } from "@modelcontextprotocol/sdk/types.js"
+import { ToolHandler } from "./tools/types.js"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import dotenv from "dotenv"
-import { getAllTools, getToolByName } from "./tools/index.js"
+import { i18nTools } from "./tools/i18n/index.js"
 
 try {
 	const rootEnvPath = path.resolve(process.cwd(), "../.env")
@@ -33,10 +34,10 @@ try {
 		server: Server
 
 		constructor() {
-			const allTools = getAllTools()
+			const allTools: ToolHandler[] = i18nTools
 			const toolCapabilities: Record<string, any> = {}
 
-			allTools.forEach((tool) => {
+			allTools.forEach((tool: ToolHandler) => {
 				toolCapabilities[tool.name] = {
 					description: tool.description,
 					inputSchema: tool.inputSchema,
@@ -65,10 +66,10 @@ try {
 		}
 
 		setupToolHandlers() {
-			const allTools = getAllTools()
+			const allTools: ToolHandler[] = i18nTools
 
 			this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-				tools: allTools.map((tool) => ({
+				tools: allTools.map((tool: ToolHandler) => ({
 					name: tool.name,
 					description: tool.description,
 					inputSchema: tool.inputSchema,
@@ -78,7 +79,7 @@ try {
 			this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
 				const { name, arguments: args } = request.params
 				const context = { LOCALE_PATHS, OPENROUTER_API_KEY, DEFAULT_MODEL }
-				const tool = getToolByName(name)
+				const tool = i18nTools.find((tool: ToolHandler) => tool.name === name)
 
 				if (tool) {
 					return await tool.execute(args, context)
@@ -94,9 +95,7 @@ try {
 			transport.onerror = (error) => console.error("[Transport Error]", error)
 			await this.server.connect(transport)
 
-			const toolNames = getAllTools()
-				.map((t) => t.name)
-				.join(", ")
+			const toolNames = i18nTools.map((t: ToolHandler) => t.name).join(", ")
 			console.error(`📝 Available tools: ${toolNames}`)
 		}
 	}
