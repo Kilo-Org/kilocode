@@ -32,14 +32,11 @@ const loadingDecoration = vscode.window.createTextEditorDecorationType({
 export function processModelResponse(responseText: string): string {
 	const fullMatch = /(<COMPLETION>)?([\s\S]*?)(<\/COMPLETION>|$)/.exec(responseText)
 	if (!fullMatch) {
-		console.warn("No valid completion found in response:", responseText)
 		return responseText
 	}
 	if (fullMatch[2].endsWith("</COMPLETION>")) {
-		console.warn("Completion ends with </COMPLETION>, removing it:", fullMatch[2])
 		return fullMatch[2].slice(0, -"</COMPLETION>".length)
 	}
-	console.warn("Returning completion without </COMPLETION> tag:", fullMatch[2])
 	return fullMatch[2]
 }
 
@@ -132,8 +129,6 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 				// from codeContext, document, and position, then use the template.
 				const systemPrompt = holeFillerTemplate.getSystemPrompt()
 				const userPrompt = holeFillerTemplate.template(codeContext, document, position, snippets)
-
-				console.log(`🚀🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶\n` + userPrompt)
 
 				// Stream completion
 				const stream = apiHandler.createMessage(systemPrompt, [
