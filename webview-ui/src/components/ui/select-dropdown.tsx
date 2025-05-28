@@ -217,103 +217,97 @@ export const SelectDropdown = React.memo(
 						align={align}
 						sideOffset={sideOffset}
 						container={portalContainer}
-						className={cn("p-0 overflow-hidden", contentClassName)}>
-						<div className="flex flex-col w-full">
-							{/* Search input */}
-							<div className="relative p-2 border-b border-vscode-dropdown-border">
-								<input
-									aria-label="Search"
-									ref={searchInputRef}
-									value={searchValue}
-									onChange={(e) => setSearchValue(e.target.value)}
-									placeholder={t("common:ui.search_placeholder")}
-									className="w-full h-8 px-2 py-1 text-xs bg-vscode-input-background text-vscode-input-foreground border border-vscode-input-border rounded focus:outline-0"
-								/>
-								{searchValue.length > 0 && (
-									<div className="absolute right-4 top-0 bottom-0 flex items-center justify-center">
-										<X
-											className="text-vscode-input-foreground opacity-50 hover:opacity-100 size-4 p-0.5 cursor-pointer"
-											onClick={onClearSearch}
-										/>
-									</div>
-								)}
-							</div>
-
-							{/* Dropdown items - Use windowing for large lists */}
-							<div className="max-h-[300px] overflow-y-auto">
-								{groupedOptions.length === 0 && searchValue ? (
-									<div className="py-2 px-3 text-sm text-vscode-foreground/70">No results found</div>
-								) : (
-									<div className="py-1">
-										{groupedOptions.map((option, index) => {
-											// Memoize rendering of each item type for better performance
-											if (option.type === DropdownOptionType.SEPARATOR) {
-												return (
-													<div
-														key={`sep-${index}`}
-														className="mx-1 my-1 h-px bg-vscode-dropdown-foreground/10"
-														data-testid="dropdown-separator"
-													/>
-												)
-											}
-
-											if (
-												option.type === DropdownOptionType.SHORTCUT ||
-												(option.disabled && shortcutText && option.label.includes(shortcutText))
-											) {
-												return (
-													<div
-														key={`label-${index}`}
-														className="px-3 py-1.5 text-sm opacity-50">
-														{option.label}
-													</div>
-												)
-											}
-
-											// Use stable keys for better reconciliation
-											const itemKey = `item-${option.value || option.label || index}`
-
+						className={cn("p-0 overflow-hidden max-h-[300px] flex flex-col", contentClassName)}>
+						{" "}
+						{/* kilocode_change */}
+						{/* Search input */}
+						<div className="flex-none p-2 border-b border-vscode-dropdown-border">
+							{" "}
+							{/* kilocode_change */}
+							<input
+								aria-label="Search"
+								ref={searchInputRef}
+								value={searchValue}
+								onChange={(e) => setSearchValue(e.target.value)}
+								placeholder={t("common:ui.search_placeholder")}
+								className="w-full h-8 px-2 py-1 text-xs bg-vscode-input-background text-vscode-input-foreground border border-vscode-input-border rounded focus:outline-0"
+							/>
+							{searchValue.length > 0 && (
+								<div className="absolute right-4 top-0 bottom-0 flex items-center justify-center">
+									<X
+										className="text-vscode-input-foreground opacity-50 hover:opacity-100 size-4 p-0.5 cursor-pointer"
+										onClick={onClearSearch}
+									/>
+								</div>
+							)}
+						</div>
+						{/* Options container - Scrollable */}
+						<div className="flex-1 overflow-y-auto min-h-0">
+							{groupedOptions.length === 0 && searchValue ? (
+								<div className="py-2 px-3 text-sm text-vscode-foreground/70">No results found</div>
+							) : (
+								<div className="py-1">
+									{groupedOptions.map((option, index) => {
+										if (option.type === DropdownOptionType.SEPARATOR) {
 											return (
 												<div
-													key={itemKey}
-													onClick={() => !option.disabled && handleSelect(option.value)}
-													className={cn(
-														"px-3 py-1.5 text-sm cursor-pointer flex items-center",
-														option.disabled
-															? "opacity-50 cursor-not-allowed"
-															: "hover:bg-vscode-list-hoverBackground",
-														option.value === value
-															? "bg-vscode-list-activeSelectionBackground text-vscode-list-activeSelectionForeground"
-															: "",
-														itemClassName,
-													)}
-													data-testid="dropdown-item">
-													{renderItem ? (
-														renderItem(option)
-													) : (
-														<>
-															{/* kilocode_change start */}
-															<span
-																slot="start"
-																style={{ fontSize: "12px" }}
-																className={cn(
-																	"codicon opacity-80 mr-1.5",
-																	option.codicon,
-																)}
-															/>
-															{/* kilocode_change end */}
-															<span>{option.label}</span>
-															{option.value === value && (
-																<Check className="ml-auto size-4 p-0.5" />
-															)}
-														</>
-													)}
+													key={`sep-${index}`}
+													className="mx-1 my-1 h-px bg-vscode-dropdown-foreground/10"
+													data-testid="dropdown-separator"
+												/>
+											)
+										}
+
+										if (
+											option.type === DropdownOptionType.SHORTCUT ||
+											(option.disabled && shortcutText && option.label.includes(shortcutText))
+										) {
+											return (
+												<div key={`label-${index}`} className="px-3 py-1.5 text-sm opacity-50">
+													{option.label}
 												</div>
 											)
-										})}
-									</div>
-								)}
-							</div>
+										}
+
+										const itemKey = `item-${option.value || option.label || index}`
+
+										return (
+											<div
+												key={itemKey}
+												onClick={() => !option.disabled && handleSelect(option.value)}
+												className={cn(
+													"px-3 py-1.5 text-sm cursor-pointer flex items-center",
+													option.disabled
+														? "opacity-50 cursor-not-allowed"
+														: "hover:bg-vscode-list-hoverBackground",
+													option.value === value
+														? "bg-vscode-list-activeSelectionBackground text-vscode-list-activeSelectionForeground"
+														: "",
+													itemClassName,
+												)}
+												data-testid="dropdown-item">
+												{renderItem ? (
+													renderItem(option)
+												) : (
+													<>
+														{/* kilocode_change start */}
+														<span
+															slot="start"
+															style={{ fontSize: "12px" }}
+															className={cn("codicon opacity-80 mr-1.5", option.codicon)}
+														/>
+														{/* kilocode_change end */}
+														<span>{option.label}</span>
+														{option.value === value && (
+															<Check className="ml-auto size-4 p-0.5" />
+														)}
+													</>
+												)}
+											</div>
+										)
+									})}
+								</div>
+							)}
 						</div>
 					</PopoverContent>
 				</Popover>
