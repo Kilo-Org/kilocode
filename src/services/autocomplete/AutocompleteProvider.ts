@@ -17,7 +17,7 @@ const DEFAULT_MODEL = "google/gemini-2.5-flash-preview-05-20"
 export function registerAutocomplete(context: vscode.ExtensionContext) {
 	try {
 		setupAutocomplete(context)
-		console.log("🚀 Kilo Code autocomplete provider registered")
+		console.log("� Kilo Code autocomplete provider registered")
 	} catch (error) {
 		console.error("Failed to register autocomplete provider:", error)
 	}
@@ -29,14 +29,11 @@ const animationManager = AutocompleteDecorationAnimation.getInstance()
 export function processModelResponse(responseText: string): string {
 	const fullMatch = /(<COMPLETION>)?([\s\S]*?)(<\/COMPLETION>|$)/.exec(responseText)
 	if (!fullMatch) {
-		console.warn("No valid completion found in response:", responseText)
 		return responseText
 	}
 	if (fullMatch[2].endsWith("</COMPLETION>")) {
-		console.warn("Completion ends with </COMPLETION>, removing it:", fullMatch[2])
 		return fullMatch[2].slice(0, -"</COMPLETION>".length)
 	}
-	console.warn("Returning completion without </COMPLETION> tag:", fullMatch[2])
 	return fullMatch[2]
 }
 
@@ -159,7 +156,7 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 			const linePrefix = document
 				.getText(new vscode.Range(new vscode.Position(position.line, 0), position))
 				.trimStart()
-			console.log(`🚀💬 Autocomplete for line with prefix: "${linePrefix}"!`)
+			console.log(`�� Autocomplete for line with prefix: "${linePrefix}"!`)
 
 			// New completion request
 			const requestId = crypto.randomUUID()
@@ -228,7 +225,7 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 				return null
 			}
 
-			console.log(`🚀🚀🚀🚀🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖 \n` + processedCompletion)
+			console.log(`����������������� \n` + processedCompletion)
 
 			// Cache the successful completion for future use
 			if (processedCompletion && lineCount <= BAIL_OUT_TOO_MANY_LINES_LIMIT) {
