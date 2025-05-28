@@ -218,12 +218,8 @@ export const SelectDropdown = React.memo(
 						sideOffset={sideOffset}
 						container={portalContainer}
 						className={cn("p-0 overflow-hidden max-h-[300px] flex flex-col", contentClassName)}>
-						{" "}
-						{/* kilocode_change */}
 						{/* Search input */}
 						<div className="flex-none p-2 border-b border-vscode-dropdown-border">
-							{" "}
-							{/* kilocode_change */}
 							<input
 								aria-label="Search"
 								ref={searchInputRef}
