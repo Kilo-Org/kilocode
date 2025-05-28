@@ -1,6 +1,7 @@
 import path from "node:path"
 import fs from "node:fs/promises"
 import { existsSync } from "node:fs"
+import commentJson from "comment-json"
 
 import { Context, McpToolCallResponse, ToolHandler } from "../types.js"
 import { getI18nLocales } from "../../utils/locale-utils.js"
@@ -72,15 +73,18 @@ async function moveKeyForLocale(
 	// Clean up any empty objects left behind
 	cleanupEmptyI18nObjects(sourceJson)
 
-	// Detect indentation from source file or use default
-	const indent = detectIndentation(sourceContent) || 2
+	// Detect indentation from source file
+	const indent = detectIndentation(sourceContent)
 
-	// Write the updated files
-	// Use the size property if indent is an object, or use indent directly if it's a number
-	const indentSize = typeof indent === "object" ? indent.size : indent
-
-	// Write source file (always as-is)
-	await fs.writeFile(sourceFilePath, JSON.stringify(sourceJson, null, indentSize) + "\n", "utf-8")
+	// Write the updated files using the detected indentation
+	// Write source file (always as-is) using commentJson to preserve formatting
+	// If tabs were detected, use a tab character, otherwise use the detected indent
+	const usesTabsForIndentation = indent.includes("\t")
+	await fs.writeFile(
+		sourceFilePath,
+		commentJson.stringify(sourceJson, null, usesTabsForIndentation ? "\t" : indent) + "\n",
+		"utf-8",
+	)
 
 	// For non-English locales, reorder keys to match English structure if available
 	if (!isEnglishLocale && englishDestFilePath && existsSync(englishDestFilePath)) {
@@ -91,16 +95,29 @@ async function moveKeyForLocale(
 			// Reorder the destination JSON to match the English structure
 			const reorderedDestJson = reorderJsonToMatchSource(englishJson, destJson)
 
-			// Write the reordered destination JSON
-			await fs.writeFile(destFilePath, JSON.stringify(reorderedDestJson, null, indentSize) + "\n", "utf-8")
+			// Write the reordered destination JSON using commentJson to preserve formatting
+			// If tabs were detected, use a tab character, otherwise use the detected indent
+			await fs.writeFile(
+				destFilePath,
+				commentJson.stringify(reorderedDestJson, null, usesTabsForIndentation ? "\t" : indent) + "\n",
+				"utf-8",
+			)
 		} catch (error) {
 			// If reordering fails, fall back to original order
 			console.error(`⚠️ Failed to reorder keys for ${locale}, writing with original order: ${error}`)
-			await fs.writeFile(destFilePath, JSON.stringify(destJson, null, indentSize) + "\n", "utf-8")
+			await fs.writeFile(
+				destFilePath,
+				commentJson.stringify(destJson, null, usesTabsForIndentation ? "\t" : indent) + "\n",
+				"utf-8",
+			)
 		}
 	} else {
 		// English locale or no English reference file available
-		await fs.writeFile(destFilePath, JSON.stringify(destJson, null, indentSize) + "\n", "utf-8")
+		await fs.writeFile(
+			destFilePath,
+			commentJson.stringify(destJson, null, usesTabsForIndentation ? "\t" : indent) + "\n",
+			"utf-8",
+		)
 	}
 
 	return `✅ Moved key "${keyToMove}" ${newKeyName ? `to "${newKeyName}"` : ""} for locale ${locale}`
@@ -179,10 +196,10 @@ class MoveKeyTool implements ToolHandler {
 				const englishDestFilePath = isEnglishLocale
 					? undefined
 					: path.join(
-						context.LOCALE_PATHS[target as keyof typeof context.LOCALE_PATHS],
-						englishLocale,
-						destFile,
-					)
+							context.LOCALE_PATHS[target as keyof typeof context.LOCALE_PATHS],
+							englishLocale,
+							destFile,
+						)
 
 				const result = await moveKeyForLocale(
 					sourceFilePath,

@@ -325,7 +325,7 @@ class TranslateKeyTool implements ToolHandler {
 
 			// Read or create target file
 			let targetJson = {}
-			let sourceIndentation: IndentationSettings | undefined = undefined
+			let sourceIndentation: string | undefined = undefined
 
 			// First, try to get indentation from the English file
 			const englishFilePath = path.join(
@@ -522,14 +522,10 @@ class TranslateKeyTool implements ToolHandler {
 				englishLocale,
 			)
 		} else {
-			// Check if the original file uses tabs
+			// Use the detected indentation directly with commentJson to preserve formatting
+			// If tabs were detected, use a tab character, otherwise use the detected indent
 			const usesTabsForIndentation = indent.includes("\t")
-
-			// Use the appropriate indentation character
-			const indentChar = usesTabsForIndentation ? "\t" : "  "
-
-			// Use JSON.stringify with the appropriate indentation character
-			const jsonString = JSON.stringify(targetJson, null, indentChar)
+			const jsonString = commentJson.stringify(targetJson, null, usesTabsForIndentation ? "\t" : indent)
 
 			await fs.writeFile(targetFilePath, jsonString, "utf-8")
 			console.error(`💾 Saved translations to ${locale}/${jsonFile}`)
@@ -565,27 +561,27 @@ class TranslateKeyTool implements ToolHandler {
 				// Reorder the JSON object to match the English structure
 				const orderedJson = reorderJsonToMatchSource(targetJson, englishJson)
 
-				// Use detected indentation but preserve formatting
-				const jsonString = commentJson.stringify(orderedJson, null, indent)
+				// Use detected indentation directly with commentJson to preserve formatting
+				// If tabs were detected, use a tab character, otherwise use the detected indent
+				const usesTabsForIndentation = indent.includes("\t")
+				const jsonString = commentJson.stringify(orderedJson, null, usesTabsForIndentation ? "\t" : indent)
 				await fs.writeFile(targetFilePath, jsonString, "utf-8")
 				console.error(`💾 Saved and reordered translations to ${locale}/${jsonFile}`)
 			} catch (error) {
 				console.error(`⚠️ Error reordering JSON: ${error}`)
 
-				// Use detected indentation but preserve formatting
-				const jsonString = commentJson.stringify(targetJson, null, indent)
+				// Use detected indentation directly with commentJson to preserve formatting
+				// If tabs were detected, use a tab character, otherwise use the detected indent
+				const usesTabsForIndentation = indent.includes("\t")
+				const jsonString = commentJson.stringify(targetJson, null, usesTabsForIndentation ? "\t" : indent)
 				await fs.writeFile(targetFilePath, jsonString, "utf-8")
 				console.error(`💾 Saved translations to ${locale}/${jsonFile} without reordering`)
 			}
 		} else {
-			// Check if the original file uses tabs
+			// Use the detected indentation directly with commentJson to preserve formatting
+			// If tabs were detected, use a tab character, otherwise use the detected indent
 			const usesTabsForIndentation = indent.includes("\t")
-
-			// Use the appropriate indentation character
-			const indentChar = usesTabsForIndentation ? "\t" : "  "
-
-			// Use JSON.stringify with the appropriate indentation character
-			const jsonString = JSON.stringify(targetJson, null, indentChar)
+			const jsonString = commentJson.stringify(targetJson, null, usesTabsForIndentation ? "\t" : indent)
 
 			await fs.writeFile(targetFilePath, jsonString, "utf-8")
 			console.error(`💾 Saved translations to ${locale}/${jsonFile}`)

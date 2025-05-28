@@ -93,20 +93,21 @@ export function detectIndentation(content: string): string {
 	// Default to two spaces if we can't detect
 	const defaultIndent = "  "
 
-	// Check if the file uses tabs for indentation
+	// First, try to detect the exact indentation from the first indented line
+	const indentMatch = content.match(/^[^\r\n]*\r?\n([ \t]+)\S/m)
+	if (indentMatch) {
+		// Return the actual indentation string
+		return indentMatch[1]
+	}
+
+	// If no match found, check if the file uses tabs for indentation
 	if (content.includes("\n\t")) {
 		// If tabs are used, return a tab character
 		return "\t"
 	}
 
-	// Otherwise, try to detect the exact indentation
-	const indentMatch = content.match(/^[^\r\n]*\r?\n([ \t]+)\S/m)
-	if (!indentMatch) {
-		return defaultIndent
-	}
-
-	// Return the actual indentation string
-	return indentMatch[1]
+	// Default to two spaces
+	return defaultIndent
 }
 
 /**

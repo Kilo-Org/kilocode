@@ -120,18 +120,15 @@ class RemoveKeysTool implements ToolHandler {
 					}
 
 					if (keysRemovedInThisFile > 0) {
-						// Check if the original file uses tabs by looking at the raw content
-						const usesTabsForIndentation = content.includes("\n\t")
-
 						// Log the indentation being used
 						console.error(
-							`📏 Detected ${usesTabsForIndentation ? "tab" : "space"} indentation for ${locale}/${jsonFile}`,
+							`📏 Using indentation: '${usesTabsForIndentation ? "\\t" : " "}' for ${locale}/${jsonFile}`,
 						)
 
 						// Create the JSON string with the appropriate indentation
-						// Use the native JSON.stringify with the appropriate indentation character
-						const indentChar = usesTabsForIndentation ? "\t" : "  "
-						const jsonString = JSON.stringify(json, null, indentChar)
+						// Use commentJson.stringify to preserve comments and formatting
+						// If tabs were detected, use a tab character, otherwise use the detected indent
+						const jsonString = commentJson.stringify(json, null, usesTabsForIndentation ? "\t" : indent)
 
 						// Write the file with the correct indentation
 						await fs.writeFile(localeFilePath, jsonString, "utf-8")
