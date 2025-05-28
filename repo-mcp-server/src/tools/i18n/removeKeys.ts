@@ -1,6 +1,7 @@
 import path from "node:path"
 import fs from "node:fs/promises"
 import { existsSync } from "node:fs"
+import commentJson from "comment-json"
 
 import { Context, McpToolCallResponse, ToolHandler } from "../types.js"
 import { getI18nLocales } from "../../utils/locale-utils.js"
@@ -95,7 +96,7 @@ class RemoveKeysTool implements ToolHandler {
 				try {
 					// Read the locale file
 					const content = await fs.readFile(localeFilePath, "utf-8")
-					let json = JSON.parse(content)
+					let json = commentJson.parse(content, null, true) // preserve comments and formatting
 
 					let keysRemovedInThisFile = 0
 
@@ -109,8 +110,8 @@ class RemoveKeysTool implements ToolHandler {
 					}
 
 					if (keysRemovedInThisFile > 0) {
-						// Write the updated file
-						await fs.writeFile(localeFilePath, JSON.stringify(json, null, 2))
+						// Write the updated file with preserved formatting
+						await fs.writeFile(localeFilePath, commentJson.stringify(json, null, null))
 						results.push(`✅ Removed ${keysRemovedInThisFile} keys from ${locale}/${jsonFile}`)
 						totalFiles++
 					} else {

@@ -20,44 +20,9 @@ export async function getI18nNamespaces(
 	return entries.filter((file) => file.endsWith(".json"))
 }
 
-export function getLanguageFromLocale(locale: string): string {
-	if (locale.toLowerCase().startsWith("zh-")) {
-		return "Chinese"
-	}
-
-	const languageMap: Record<string, string> = {
-		en: "English",
-		es: "Spanish",
-		fr: "French",
-		de: "German",
-		it: "Italian",
-		ja: "Japanese",
-		ko: "Korean",
-		pt: "Portuguese",
-		ru: "Russian",
-		ar: "Arabic",
-		hi: "Hindi",
-		nl: "Dutch",
-		tr: "Turkish",
-		pl: "Polish",
-		vi: "Vietnamese",
-		ca: "Catalan",
-		sv: "Swedish",
-		fi: "Finnish",
-		no: "Norwegian",
-		da: "Danish",
-		cs: "Czech",
-		hu: "Hungarian",
-		ro: "Romanian",
-		uk: "Ukrainian",
-		el: "Greek",
-		he: "Hebrew",
-		th: "Thai",
-		id: "Indonesian",
-		ms: "Malay",
-		fa: "Persian",
-	}
-
-	const baseCode = locale.split("-")[0].toLowerCase()
-	return languageMap[baseCode] || baseCode
+// Function to get the locale code in a format suitable for translation
+export function getLocaleForTranslation(locale: string): string {
+	// Just return the locale code itself, which is what most translation APIs expect
+	// This avoids maintaining a map of locale codes to language names
+	return locale
 }

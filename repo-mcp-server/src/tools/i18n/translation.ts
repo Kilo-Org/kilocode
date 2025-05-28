@@ -103,7 +103,7 @@ function findI18nUntranslatedKeys(obj: any, prefix: string, englishObj: any, loc
 
 export async function translateI18nText(
 	text: string,
-	targetLanguage: string,
+	targetLocale: string,
 	apiKey: string,
 	model: string = "anthropic/claude-3.7-sonnet",
 ): Promise<string> {
@@ -119,7 +119,7 @@ export async function translateI18nText(
 
 Source text: ${text}
 
-Target language: ${targetLanguage}
+Target locale: ${targetLocale}
 
 Translation:`
 
@@ -152,12 +152,13 @@ Translation:`
 }
 
 function getTranslationRules(): string {
-	return `You are an expert translator. Your task is to translate the provided source text to the target language while following these rules:
+	return `You are an expert translator. Your task is to translate the provided source text to the target locale while following these rules:
 
-1. Maintain the original meaning, tone, and intent of the text.
-2. Respect any placeholders like {{variable}} or %{variable} and keep them unchanged.
-3. Preserve any HTML tags, markdown formatting, or special syntax.
-4. Ensure the translation is culturally appropriate for the target language.
-5. For UI strings, keep the translation concise but clear.
-6. Respond ONLY with the translated text, nothing else.`
+1. The target locale will be provided as a locale code (e.g., 'fr', 'es-ES', 'zh-CN'). Translate to the appropriate language for that locale.
+2. Maintain the original meaning, tone, and intent of the text.
+3. Respect any placeholders like {{variable}} or %{variable} and keep them unchanged.
+4. Preserve any HTML tags, markdown formatting, or special syntax.
+5. Ensure the translation is culturally appropriate for the target locale.
+6. For UI strings, keep the translation concise but clear.
+7. Respond ONLY with the translated text, nothing else.`
 }

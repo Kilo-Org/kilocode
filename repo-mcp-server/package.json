@@ -12,6 +12,7 @@
 	"dependencies": {
 		"@modelcontextprotocol/sdk": "^1.11.4",
 		"axios": "^1.6.0",
+		"comment-json": "^4.2.3",
 		"dotenv": "^16.5.0",
 		"p-limit": "^4.0.0",
 		"zod": "^3.21.4"
