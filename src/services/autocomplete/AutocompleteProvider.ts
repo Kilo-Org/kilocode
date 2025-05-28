@@ -9,12 +9,11 @@ import { generateImportSnippets, generateDefinitionSnippets } from "./context/sn
 export const UI_UPDATE_DEBOUNCE_MS = 150
 //const DEFAULT_MODEL = "mistralai/codestral-2501"
 const DEFAULT_MODEL = "google/gemini-2.5-flash-preview-05-20"
-const PREVIEW_CONTEXT_KEY = "kilo-code.autocompletePreviewVisible"
 
 export function registerAutocomplete(context: vscode.ExtensionContext) {
 	try {
 		setupAutocomplete(context)
-		console.log("Kilo Code autocomplete provider registered")
+		console.log("� Kilo Code autocomplete provider registered")
 	} catch (error) {
 		console.error("Failed to register autocomplete provider:", error)
 	}
@@ -40,32 +39,12 @@ export function processModelResponse(responseText: string): string {
 	return fullMatch[2]
 }
 
-function splitFirstLine(text: string) {
-	const firstLine = text.split(/\r?\n/, 1)[0]
-	return { firstLine, remaining: text.slice(firstLine.length) }
-}
-
-function isFileDisabled(document: vscode.TextDocument): boolean {
-	const patterns = (vscode.workspace.getConfiguration("kilo-code").get<string>("autocomplete.disableInFiles") || "")
-		.split(",")
-		.map((p) => p.trim())
-		.filter(Boolean)
-
-	return patterns.some((pattern) => {
-		const glob = new vscode.RelativePattern(vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || "", pattern)
-		return vscode.languages.match({ pattern: glob }, document)
-	})
-}
-
 function setupAutocomplete(context: vscode.ExtensionContext) {
-	vscode.commands.executeCommand("setContext", PREVIEW_CONTEXT_KEY, false)
-
 	// State
 	let enabled = true
+	// let timer: NodeJS.Timeout | undefined
 	let activeRequest: string | null = null
-	let pendingCompletion = ""
-	let acceptedFirstLine = false
-	let isAcceptingCompletion = false
+	let processedCompletion = ""
 
 	// Services
 	const contextGatherer = new ContextGatherer()
@@ -76,144 +55,64 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 	})
 
 	const clearState = () => {
-		pendingCompletion = ""
-		acceptedFirstLine = false
-		isAcceptingCompletion = false
-		vscode.commands.executeCommand("setContext", PREVIEW_CONTEXT_KEY, false)
+		processedCompletion = ""
 		vscode.commands.executeCommand("editor.action.inlineSuggest.hide")
 		vscode.window.activeTextEditor?.setDecorations(loadingDecoration, [])
 	}
 
 	const provider: vscode.InlineCompletionItemProvider = {
 		async provideInlineCompletionItems(document, position, context, token) {
-			if (!enabled || isFileDisabled(document)) {
-				return null
-			}
+			if (!enabled || !vscode.window.activeTextEditor) return null
 
-			// Handle multi-line completion flow
-			if (acceptedFirstLine && pendingCompletion) {
-				const { remaining } = splitFirstLine(pendingCompletion)
-				if (remaining) {
-					vscode.commands.executeCommand("setContext", PREVIEW_CONTEXT_KEY, true)
-					return [new vscode.InlineCompletionItem(remaining)]
-				}
-				clearState()
-				return null
-			}
+			// Get exactly what's been typed on the current line
+			const linePrefix = document
+				.getText(new vscode.Range(new vscode.Position(position.line, 0), position))
+				.trimStart()
+			console.log(`�� Autocomplete for line with prefix: "${linePrefix}"!`)
 
 			// New completion request
 			const requestId = crypto.randomUUID()
 			activeRequest = requestId
-			acceptedFirstLine = false
+			vscode.window.activeTextEditor.setDecorations(loadingDecoration, [])
 
-			try {
-				const editor = vscode.window.activeTextEditor
-				if (!editor) return null
+			// Gather context and build prompt
+			const codeContext = await contextGatherer.gatherContext(document, position, true, true)
+			const snippets = [
+				...generateImportSnippets(true, codeContext.imports, document.uri.fsPath),
+				...generateDefinitionSnippets(true, codeContext.definitions),
+			]
 
-				// Show loading indicator
-				editor.setDecorations(loadingDecoration, [
-					{
-						range: new vscode.Range(position, position),
-					},
-				])
+			// Assume new PromptRenderer methods that use the holeFillerTemplate
+			// These methods would internally construct `currentFileWithFillPlaceholder`
+			// from codeContext, document, and position, then use the template.
+			const systemPrompt = holeFillerTemplate.getSystemPrompt()
+			const userPrompt = holeFillerTemplate.template(codeContext, document, position, snippets)
+			// Stream completion
+			const stream = apiHandler.createMessage(systemPrompt, [
+				{ role: "user", content: [{ type: "text", text: userPrompt }] },
+			])
 
-				// Gather context and build prompt
-				const codeContext = await contextGatherer.gatherContext(document, position, true, true)
-				const snippets = [
-					...generateImportSnippets(true, codeContext.imports, document.uri.fsPath),
-					...generateDefinitionSnippets(true, codeContext.definitions),
-				]
+			let completion = ""
+			for await (const chunk of stream) {
+				if (activeRequest !== requestId) break
 
-				// Assume new PromptRenderer methods that use the holeFillerTemplate
-				// These methods would internally construct `currentFileWithFillPlaceholder`
-				// from codeContext, document, and position, then use the template.
-				const systemPrompt = holeFillerTemplate.getSystemPrompt()
-				const userPrompt = holeFillerTemplate.template(codeContext, document, position, snippets)
-
-				// Stream completion
-				const stream = apiHandler.createMessage(systemPrompt, [
-					{ role: "user", content: [{ type: "text", text: userPrompt }] },
-				])
-
-				let completion = ""
-				let throttleTimer: NodeJS.Timeout | null = null
-
-				for await (const chunk of stream) {
-					if (activeRequest !== requestId) break
-
-					if (chunk.type === "text") {
-						completion += chunk.text
-						pendingCompletion = processModelResponse(completion)
-						// Throttle UI updates
-						if (throttleTimer) clearTimeout(throttleTimer)
-						throttleTimer = setTimeout(() => {
-							console.log(completion)
-							console.log(pendingCompletion)
-							vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
-						}, UI_UPDATE_DEBOUNCE_MS)
-					}
-				}
-
-				if (throttleTimer) clearTimeout(throttleTimer)
-				editor.setDecorations(loadingDecoration, [])
-				console.log(`🚀🚀🚀🚀🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖 \n`, completion, pendingCompletion)
-
-				if (activeRequest !== requestId || token.isCancellationRequested || !pendingCompletion) return null
-
-				vscode.commands.executeCommand("setContext", PREVIEW_CONTEXT_KEY, true)
-
-				const item = new vscode.InlineCompletionItem(splitFirstLine(pendingCompletion).firstLine)
-				item.command = {
-					command: "kilo-code.acceptAutocompletePreview",
-					title: "Accept Completion",
-				}
-				return [item]
-			} catch (error) {
-				console.error("Completion error:", error)
-				return null
-			} finally {
-				if (activeRequest === requestId) {
-					activeRequest = null
+				if (chunk.type === "text") {
+					completion += chunk.text
+					processedCompletion = processModelResponse(completion)
 				}
 			}
+
+			console.log(`����������������� \n` + processedCompletion)
+
+			if (activeRequest !== requestId || token.isCancellationRequested || !processedCompletion) return null
+
+			const item = new vscode.InlineCompletionItem(processedCompletion)
+			return [item]
 		},
 	}
 
 	// Register provider and commands
 	const providerDisposable = vscode.languages.registerInlineCompletionItemProvider({ pattern: "**" }, provider)
-
-	const acceptCommand = vscode.commands.registerCommand("kilo-code.acceptAutocompletePreview", async () => {
-		const editor = vscode.window.activeTextEditor
-		if (!editor || !pendingCompletion) return
-
-		isAcceptingCompletion = true
-
-		if (!acceptedFirstLine) {
-			// Accept first line
-			const { firstLine, remaining } = splitFirstLine(pendingCompletion)
-			await editor.edit((edit) => edit.insert(editor.selection.active, firstLine))
-			acceptedFirstLine = true
-
-			if (remaining) {
-				// Trigger for remaining lines
-				setTimeout(() => {
-					isAcceptingCompletion = false
-					vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
-				}, 50)
-			} else {
-				clearState()
-			}
-		} else {
-			// Accept remaining lines
-			const { remaining } = splitFirstLine(pendingCompletion)
-			if (remaining) {
-				await editor.edit((edit) => edit.insert(editor.selection.active, remaining))
-			}
-			clearState()
-		}
-	})
-
-	const dismissCommand = vscode.commands.registerCommand("kilo-code.dismissAutocompletePreview", clearState)
 
 	// Status bar
 	const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100)
@@ -230,10 +129,7 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 
 	// Event handlers
 	const selectionHandler = vscode.window.onDidChangeTextEditorSelection(() => {
-		// Don't clear state if we're in the middle of accepting a completion
-		if (!isAcceptingCompletion) {
-			clearState()
-		}
+		clearState()
 	})
 	const documentHandler = vscode.workspace.onDidChangeTextDocument((e) => {
 		const editor = vscode.window.activeTextEditor
@@ -245,8 +141,6 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 	// Register disposables
 	context.subscriptions.push(
 		providerDisposable,
-		acceptCommand,
-		dismissCommand,
 		toggleCommand,
 		statusBar,
 		selectionHandler,
