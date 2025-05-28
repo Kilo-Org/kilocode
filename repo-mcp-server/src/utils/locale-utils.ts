@@ -19,10 +19,3 @@ export async function getI18nNamespaces(
 	const entries = await fs.readdir(localePath)
 	return entries.filter((file) => file.endsWith(".json"))
 }
-
-// Function to get the locale code in a format suitable for translation
-export function getLocaleForTranslation(locale: string): string {
-	// Just return the locale code itself, which is what most translation APIs expect
-	// This avoids maintaining a map of locale codes to language names
-	return locale
-}

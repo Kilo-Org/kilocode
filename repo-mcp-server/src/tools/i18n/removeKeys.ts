@@ -5,6 +5,7 @@ import commentJson from "comment-json"
 
 import { Context, McpToolCallResponse, ToolHandler } from "../types.js"
 import { getI18nLocales } from "../../utils/locale-utils.js"
+import { detectIndentation } from "../../utils/json-utils.js"
 
 /**
  * Remove i18n keys tool handler
@@ -98,6 +99,10 @@ class RemoveKeysTool implements ToolHandler {
 					const content = await fs.readFile(localeFilePath, "utf-8")
 					let json = commentJson.parse(content, null, true) // preserve comments and formatting
 
+					// Detect the original indentation
+					const indentation = detectIndentation(content)
+					const indent = indentation.char.repeat(indentation.size)
+
 					let keysRemovedInThisFile = 0
 
 					// Remove each specified key
@@ -110,8 +115,8 @@ class RemoveKeysTool implements ToolHandler {
 					}
 
 					if (keysRemovedInThisFile > 0) {
-						// Write the updated file with preserved formatting
-						await fs.writeFile(localeFilePath, commentJson.stringify(json, null, null))
+						// Write the updated file with preserved formatting and original indentation
+						await fs.writeFile(localeFilePath, commentJson.stringify(json, null, indent))
 						results.push(`✅ Removed ${keysRemovedInThisFile} keys from ${locale}/${jsonFile}`)
 						totalFiles++
 					} else {
