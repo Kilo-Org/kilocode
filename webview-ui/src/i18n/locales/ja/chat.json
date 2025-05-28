@@ -266,5 +266,10 @@
 			"description": "Rooは{{count}}件のAPI自動承認リクエスト制限に達しました。カウントをリセットしてタスクを続行しますか？",
 			"button": "リセットして続行"
 		}
+	},
+	"codebaseSearch": {
+		"wantsToSearch": "Rooはコードベースで <code>{{query}}</code> を検索したい:",
+		"wantsToSearchWithPath": "Rooは <code>{{path}}</code> 内のコードベースで <code>{{query}}</code> を検索したい:",
+		"didSearch": "<code>{{query}}</code> の検索結果: {{count}} 件"
 	}
 }

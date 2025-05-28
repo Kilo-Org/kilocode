@@ -32,6 +32,30 @@
 		"language": "Язык",
 		"about": "О Kilo Code"
 	},
+	"codeIndex": {
+		"title": "Индексация кодовой базы",
+		"enableLabel": "Включить индексацию кодовой базы",
+		"enableDescription": "<0>Индексация кодовой базы</0> — это экспериментальная функция, которая создает семантический поисковый индекс вашего проекта с использованием ИИ-эмбеддингов. Это позволяет Roo Code лучше понимать и навигировать по большим кодовым базам, находя релевантный код на основе смысла, а не только ключевых слов.",
+		"providerLabel": "Провайдер эмбеддингов",
+		"selectProviderPlaceholder": "Выберите провайдера",
+		"openaiProvider": "OpenAI",
+		"ollamaProvider": "Ollama",
+		"openaiKeyLabel": "Ключ OpenAI:",
+		"modelLabel": "Модель",
+		"selectModelPlaceholder": "Выберите модель",
+		"ollamaUrlLabel": "URL Ollama:",
+		"qdrantUrlLabel": "URL Qdrant",
+		"qdrantKeyLabel": "Ключ Qdrant:",
+		"startIndexingButton": "Начать индексацию",
+		"clearIndexDataButton": "Очистить данные индекса",
+		"unsavedSettingsMessage": "Пожалуйста, сохрани настройки перед запуском процесса индексации.",
+		"clearDataDialog": {
+			"title": "Вы уверены?",
+			"description": "Это действие нельзя отменить. Оно навсегда удалит данные индекса вашей кодовой базы.",
+			"cancelButton": "Отмена",
+			"confirmButton": "Очистить данные"
+		}
+	},
 	"autoApprove": {
 		"description": "Разрешить Kilo Code автоматически выполнять операции без необходимости одобрения. Включайте эти параметры только если полностью доверяете ИИ и понимаете связанные с этим риски безопасности.",
 		"readOnly": {
@@ -118,6 +142,7 @@
 		"glamaApiKey": "Glama API-ключ",
 		"getGlamaApiKey": "Получить Glama API-ключ",
 		"useCustomBaseUrl": "Использовать пользовательский базовый URL",
+		"useReasoning": "Включить рассуждения",
 		"useHostHeader": "Использовать пользовательский Host-заголовок",
 		"useLegacyFormat": "Использовать устаревший формат OpenAI API",
 		"customHeaders": "Пользовательские заголовки",
@@ -127,7 +152,10 @@
 		"requestyApiKey": "Requesty API-ключ",
 		"refreshModels": {
 			"label": "Обновить модели",
-			"hint": "Пожалуйста, откройте настройки заново, чтобы увидеть последние модели."
+			"hint": "Пожалуйста, откройте настройки заново, чтобы увидеть последние модели.",
+			"loading": "Обновление списка моделей...",
+			"success": "Список моделей успешно обновлен!",
+			"error": "Не удалось обновить список моделей. Пожалуйста, попробуйте снова."
 		},
 		"getRequestyApiKey": "Получить Requesty API-ключ",
 		"openRouterTransformsText": "Сжимать подсказки и цепочки сообщений до размера контекста (<a>OpenRouter Transforms</a>)",
@@ -406,7 +434,18 @@
 		}
 	},
 	"experimental": {
-		"warning": "⚠️",
+		"condensingApiConfiguration": {
+			"label": "API Configuration for Context Condensing",
+			"description": "Select which API configuration to use for context condensing operations. Leave unselected to use the current active configuration.",
+			"useCurrentConfig": "Default"
+		},
+		"customCondensingPrompt": {
+			"label": "Пользовательская подсказка для сжатия контекста",
+			"description": "Пользовательская системная подсказка для сжатия контекста. Оставьте пустым, чтобы использовать подсказку по умолчанию.",
+			"placeholder": "Enter your custom condensing prompt here...\n\nYou can use the same structure as the default prompt:\n- Previous Conversation\n- Current Work\n- Key Technical Concepts\n- Relevant Files and Code\n- Problem Solving\n- Pending Tasks and Next Steps",
+			"reset": "Reset to Default",
+			"hint": "Empty = use default prompt"
+		},
 		"autoCondenseContextPercent": {
 			"label": "Порог для запуска интеллектуального сжатия контекста",
 			"description": "Когда контекстное окно достигает этого порога, Kilo Code автоматически его сожмёт."

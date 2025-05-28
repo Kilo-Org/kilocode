@@ -13,7 +13,7 @@ import { getRequestyModels } from "./requesty"
 import { getGlamaModels } from "./glama"
 import { getUnboundModels } from "./unbound"
 import { getLiteLLMModels } from "./litellm"
-
+import { GetModelsOptions } from "../../../shared/api"
 const memoryCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 5 * 60 })
 
 async function writeModels(router: RouterName, data: ModelRecord) {
@@ -41,13 +41,9 @@ async function readModels(router: RouterName): Promise<ModelRecord | undefined> 
  * @param baseUrl - Optional base URL for the provider (currently used only for LiteLLM).
  * @returns The models from the cache or the fetched models.
  */
-export const getModels = async (
-	router: RouterName,
-	apiKey: string | undefined = undefined,
-	baseUrl: string | undefined = undefined,
-): Promise<ModelRecord> => {
-	let models = memoryCache.get<ModelRecord>(router)
-
+export const getModels = async (options: GetModelsOptions): Promise<ModelRecord> => {
+	const { provider } = options
+	let models = memoryCache.get<ModelRecord>(provider)
 	if (models) {
 		// console.log(`[getModels] NodeCache hit for ${router} -> ${Object.keys(models).length}`)
 		return models
@@ -103,13 +99,51 @@ export const getModels = async (
 	}
 
 	try {
-		models = await readModels(router)
-		// console.log(`[getModels] read ${router} models from file cache`)
-	} catch (error) {
-		console.error(`[getModels] error reading ${router} models from file cache`, error)
-	}
+		switch (provider) {
+			case "openrouter":
+				models = await getOpenRouterModels()
+				break
+			case "requesty":
+				// Requesty models endpoint requires an API key for per-user custom policies
+				models = await getRequestyModels(options.apiKey)
+				break
+			case "glama":
+				models = await getGlamaModels()
+				break
+			case "unbound":
+				// Unbound models endpoint requires an API key to fetch application specific models
+				models = await getUnboundModels(options.apiKey)
+				break
+			case "litellm":
+				// Type safety ensures apiKey and baseUrl are always provided for litellm
+				models = await getLiteLLMModels(options.apiKey, options.baseUrl)
+				break
+			default: {
+				// Ensures router is exhaustively checked if RouterName is a strict union
+				const exhaustiveCheck: never = provider
+				throw new Error(`Unknown provider: ${exhaustiveCheck}`)
+			}
+		}
 
-	return models ?? {}
+		// Cache the fetched models (even if empty, to signify a successful fetch with no models)
+		memoryCache.set(provider, models)
+		await writeModels(provider, models).catch((err) =>
+			console.error(`[getModels] Error writing ${provider} models to file cache:`, err),
+		)
+
+		try {
+			models = await readModels(provider)
+			// console.log(`[getModels] read ${router} models from file cache`)
+		} catch (error) {
+			console.error(`[getModels] error reading ${provider} models from file cache`, error)
+		}
+		return models || {}
+	} catch (error) {
+		// Log the error and re-throw it so the caller can handle it (e.g., show a UI message).
+		console.error(`[getModels] Failed to fetch models in modelCache for ${provider}:`, error)
+
+		throw error // Re-throw the original error to be handled by the caller.
+	}
 }
 
 /**

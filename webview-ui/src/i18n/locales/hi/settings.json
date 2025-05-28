@@ -32,6 +32,30 @@
 		"language": "भाषा",
 		"about": "परिचय"
 	},
+	"codeIndex": {
+		"title": "कोडबेस इंडेक्सिंग",
+		"enableLabel": "कोडबेस इंडेक्सिंग सक्षम करें",
+		"enableDescription": "<0>कोडबेस इंडेक्सिंग</0> एक प्रयोगात्मक सुविधा है जो AI एम्बेडिंग का उपयोग करके आपके प्रोजेक्ट का सिमेंटिक सर्च इंडेक्स बनाती है। यह Roo Code को केवल कीवर्ड के बजाय अर्थ के आधार पर संबंधित कोड खोजकर बड़े कोडबेस को बेहतर तरीके से समझने और नेविगेट करने में सक्षम बनाता है।",
+		"providerLabel": "एम्बेडिंग प्रदाता",
+		"selectProviderPlaceholder": "प्रदाता चुनें",
+		"openaiProvider": "OpenAI",
+		"ollamaProvider": "Ollama",
+		"openaiKeyLabel": "OpenAI कुंजी:",
+		"modelLabel": "मॉडल",
+		"selectModelPlaceholder": "मॉडल चुनें",
+		"ollamaUrlLabel": "Ollama URL:",
+		"qdrantUrlLabel": "Qdrant URL",
+		"qdrantKeyLabel": "Qdrant कुंजी:",
+		"startIndexingButton": "इंडेक्सिंग शुरू करें",
+		"clearIndexDataButton": "इंडेक्स डेटा साफ़ करें",
+		"unsavedSettingsMessage": "इंडेक्सिंग प्रक्रिया शुरू करने से पहले कृपया अपनी सेटिंग्स सहेजें।",
+		"clearDataDialog": {
+			"title": "क्या आप सुनिश्चित हैं?",
+			"description": "यह क्रिया पूर्ववत नहीं की जा सकती। यह आपके कोडबेस इंडेक्स डेटा को स्थायी रूप से हटा देगी।",
+			"cancelButton": "रद्द करें",
+			"confirmButton": "डेटा साफ़ करें"
+		}
+	},
 	"autoApprove": {
 		"description": "Kilo Code को अनुमोदन की आवश्यकता के बिना स्वचालित रूप से ऑपरेशन करने की अनुमति दें। इन सेटिंग्स को केवल तभी सक्षम करें जब आप AI पर पूरी तरह से भरोसा करते हों और संबंधित सुरक्षा जोखिमों को समझते हों।",
 		"readOnly": {
@@ -118,6 +142,7 @@
 		"glamaApiKey": "Glama API कुंजी",
 		"getGlamaApiKey": "Glama API कुंजी प्राप्त करें",
 		"useCustomBaseUrl": "कस्टम बेस URL का उपयोग करें",
+		"useReasoning": "तर्क सक्षम करें",
 		"useHostHeader": "कस्टम होस्ट हेडर का उपयोग करें",
 		"useLegacyFormat": "पुराने OpenAI API प्रारूप का उपयोग करें",
 		"customHeaders": "कस्टम हेडर्स",
@@ -127,7 +152,10 @@
 		"requestyApiKey": "Requesty API कुंजी",
 		"refreshModels": {
 			"label": "मॉडल रिफ्रेश करें",
-			"hint": "नवीनतम मॉडल देखने के लिए कृपया सेटिंग्स को फिर से खोलें।"
+			"hint": "नवीनतम मॉडल देखने के लिए कृपया सेटिंग्स को फिर से खोलें।",
+			"loading": "मॉडल सूची अपडेट हो रही है...",
+			"success": "मॉडल सूची सफलतापूर्वक अपडेट की गई!",
+			"error": "मॉडल सूची अपडेट करने में विफल। कृपया पुनः प्रयास करें।"
 		},
 		"getRequestyApiKey": "Requesty API कुंजी प्राप्त करें",
 		"openRouterTransformsText": "संदर्भ आकार के लिए प्रॉम्प्ट और संदेश श्रृंखलाओं को संपीड़ित करें (<a>OpenRouter ट्रांसफॉर्म</a>)",
@@ -406,7 +434,18 @@
 		}
 	},
 	"experimental": {
-		"warning": "⚠️",
+		"condensingApiConfiguration": {
+			"label": "API Configuration for Context Condensing",
+			"description": "Select which API configuration to use for context condensing operations. Leave unselected to use the current active configuration.",
+			"useCurrentConfig": "Default"
+		},
+		"customCondensingPrompt": {
+			"label": "कस्टम संदर्भ संघनन प्रॉम्प्ट",
+			"description": "संदर्भ संघनन के लिए कस्टम सिस्टम प्रॉम्प्ट। डिफ़ॉल्ट प्रॉम्प्ट का उपयोग करने के लिए खाली छोड़ें।",
+			"placeholder": "Enter your custom condensing prompt here...\n\nYou can use the same structure as the default prompt:\n- Previous Conversation\n- Current Work\n- Key Technical Concepts\n- Relevant Files and Code\n- Problem Solving\n- Pending Tasks and Next Steps",
+			"reset": "Reset to Default",
+			"hint": "Empty = use default prompt"
+		},
 		"autoCondenseContextPercent": {
 			"label": "बुद्धिमान संदर्भ संघनन को ट्रिगर करने की सीमा",
 			"description": "जब संदर्भ विंडो इस सीमा तक पहुंचती है, तो Roo इसे स्वचालित रूप से संघनित कर देगा।"

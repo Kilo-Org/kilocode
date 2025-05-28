@@ -32,6 +32,30 @@
 		"language": "Lingua",
 		"about": "Informazioni su Kilo Code"
 	},
+	"codeIndex": {
+		"title": "Indicizzazione del codice",
+		"enableLabel": "Abilita indicizzazione del codice",
+		"enableDescription": "<0>L'indicizzazione del codice</0> è una funzionalità sperimentale che crea un indice di ricerca semantica del tuo progetto utilizzando embedding AI. Questo permette a Roo Code di comprendere meglio e navigare grandi basi di codice trovando codice rilevante basato sul significato piuttosto che solo su parole chiave.",
+		"providerLabel": "Fornitore di embedding",
+		"selectProviderPlaceholder": "Seleziona fornitore",
+		"openaiProvider": "OpenAI",
+		"ollamaProvider": "Ollama",
+		"openaiKeyLabel": "Chiave OpenAI:",
+		"modelLabel": "Modello",
+		"selectModelPlaceholder": "Seleziona modello",
+		"ollamaUrlLabel": "URL Ollama:",
+		"qdrantUrlLabel": "URL Qdrant",
+		"qdrantKeyLabel": "Chiave Qdrant:",
+		"startIndexingButton": "Avvia indicizzazione",
+		"clearIndexDataButton": "Cancella dati indice",
+		"unsavedSettingsMessage": "Per favore salva le tue impostazioni prima di avviare il processo di indicizzazione.",
+		"clearDataDialog": {
+			"title": "Sei sicuro?",
+			"description": "Questa azione non può essere annullata. Eliminerà permanentemente i dati di indice del tuo codice.",
+			"cancelButton": "Annulla",
+			"confirmButton": "Cancella dati"
+		}
+	},
 	"autoApprove": {
 		"description": "Permetti a Kilo Code di eseguire automaticamente operazioni senza richiedere approvazione. Abilita queste impostazioni solo se ti fidi completamente dell'IA e comprendi i rischi di sicurezza associati.",
 		"readOnly": {
@@ -118,6 +142,7 @@
 		"glamaApiKey": "Chiave API Glama",
 		"getGlamaApiKey": "Ottieni chiave API Glama",
 		"useCustomBaseUrl": "Usa URL base personalizzato",
+		"useReasoning": "Abilita ragionamento",
 		"useHostHeader": "Usa intestazione Host personalizzata",
 		"useLegacyFormat": "Usa formato API OpenAI legacy",
 		"customHeaders": "Intestazioni personalizzate",
@@ -127,7 +152,10 @@
 		"requestyApiKey": "Chiave API Requesty",
 		"refreshModels": {
 			"label": "Aggiorna modelli",
-			"hint": "Riapri le impostazioni per vedere i modelli più recenti."
+			"hint": "Riapri le impostazioni per vedere i modelli più recenti.",
+			"loading": "Aggiornamento dell'elenco dei modelli...",
+			"success": "Elenco dei modelli aggiornato con successo!",
+			"error": "Impossibile aggiornare l'elenco dei modelli. Riprova."
 		},
 		"getRequestyApiKey": "Ottieni chiave API Requesty",
 		"openRouterTransformsText": "Comprimi prompt e catene di messaggi alla dimensione del contesto (<a>Trasformazioni OpenRouter</a>)",
@@ -406,7 +434,18 @@
 		}
 	},
 	"experimental": {
-		"warning": "⚠️",
+		"condensingApiConfiguration": {
+			"label": "API Configuration for Context Condensing",
+			"description": "Select which API configuration to use for context condensing operations. Leave unselected to use the current active configuration.",
+			"useCurrentConfig": "Default"
+		},
+		"customCondensingPrompt": {
+			"label": "Prompt personalizzato condensazione contesto",
+			"description": "Prompt di sistema personalizzato per la condensazione del contesto. Lascia vuoto per utilizzare il prompt predefinito.",
+			"placeholder": "Enter your custom condensing prompt here...\n\nYou can use the same structure as the default prompt:\n- Previous Conversation\n- Current Work\n- Key Technical Concepts\n- Relevant Files and Code\n- Problem Solving\n- Pending Tasks and Next Steps",
+			"reset": "Reset to Default",
+			"hint": "Empty = use default prompt"
+		},
 		"autoCondenseContextPercent": {
 			"label": "Soglia per attivare la condensazione intelligente del contesto",
 			"description": "Quando la finestra di contesto raggiunge questa soglia, Kilo Code la condenserà automaticamente."

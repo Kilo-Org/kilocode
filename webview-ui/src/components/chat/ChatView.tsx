@@ -7,32 +7,29 @@ import { Trans } from "react-i18next"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import useSound from "use-sound"
 
-import {
-	ClineAsk,
-	ClineMessage,
-	ClineSayBrowserAction,
-	ClineSayTool,
-	ExtensionMessage,
-} from "@roo/shared/ExtensionMessage"
-import { McpServer, McpTool } from "@roo/shared/mcp"
-import { findLast } from "@roo/shared/array"
-import { combineApiRequests } from "@roo/shared/combineApiRequests"
-import { combineCommandSequences } from "@roo/shared/combineCommandSequences"
-import { getApiMetrics } from "@roo/shared/getApiMetrics"
-import { AudioType } from "@roo/shared/WebviewMessage"
-import { getAllModes } from "@roo/shared/modes"
+import type { ClineAsk, ClineMessage } from "@roo-code/types"
 
-import { useExtensionState } from "@src/context/ExtensionStateContext"
+import { ClineSayBrowserAction, ClineSayTool, ExtensionMessage } from "@roo/ExtensionMessage"
+import { McpServer, McpTool } from "@roo/mcp"
+import { findLast } from "@roo/array"
+import { combineApiRequests } from "@roo/combineApiRequests"
+import { combineCommandSequences } from "@roo/combineCommandSequences"
+import { getApiMetrics } from "@roo/getApiMetrics"
+import { AudioType } from "@roo/WebviewMessage"
+import { getAllModes } from "@roo/modes"
+
 import { vscode } from "@src/utils/vscode"
-import { useSelectedModel } from "@/components/ui/hooks/useSelectedModel"
 import { validateCommand } from "@src/utils/command-validation"
+import { buildDocLink } from "@src/utils/docLinks"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
+import { useExtensionState } from "@src/context/ExtensionStateContext"
+import { useSelectedModel } from "@src/components/ui/hooks/useSelectedModel"
+// import RooHero from "@src/components/welcome/RooHero" // kilocode_change
+// import RooTips from "@src/components/welcome/RooTips"
 
 import { useTaskSearch } from "../history/useTaskSearch"
 import HistoryPreview from "../history/HistoryPreview"
 
-// import RooHero from "@src/components/welcome/RooHero" kilocode_change
-// import RooTips from "@src/components/welcome/RooTips"
 import Announcement from "./Announcement"
 import BrowserSessionRow from "./BrowserSessionRow"
 import ChatRow from "./ChatRow"
@@ -43,7 +40,6 @@ import BottomControls from "./BottomControls" // kilocode_change
 import SystemPromptWarning from "./SystemPromptWarning"
 import { showSystemNotification } from "@/kilocode/helpers" // kilocode_change
 import { CheckpointWarning } from "./CheckpointWarning"
-import { buildDocLink } from "@src/utils/docLinks"
 
 export interface ChatViewProps {
 	isHidden: boolean
@@ -770,6 +766,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				"listFilesRecursive",
 				"listCodeDefinitionNames",
 				"searchFiles",
+				"codebaseSearch",
 			].includes(tool.tool)
 		}
 
@@ -1235,8 +1232,6 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				// This is copied from `handlePrimaryButtonClick`, which we used
 				// to call from `autoApprove`. I'm not sure how many of these
 				// things are actually needed.
-				setInputValue("")
-				setSelectedImages([])
 				setSendingDisabled(true)
 				setClineAsk(undefined)
 				setEnableButtons(false)
@@ -1373,7 +1368,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						{/* <RooHero /> kilocode_change: do not show */}
 						{/* Show the task history preview if expanded and tasks exist */}
 						{taskHistory.length > 0 && isExpanded && <HistoryPreview />}
-						<p className="text-vscode-editor-foreground leading-tight font-vscode-font-family text-center">
+						<p className="text-vscode-editor-foreground leading-tight font-vscode-font-family text-center text-balance max-w-[380px]">
 							<Trans
 								i18nKey="chat:about"
 								components={{

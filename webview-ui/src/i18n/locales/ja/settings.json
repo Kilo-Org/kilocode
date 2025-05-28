@@ -32,6 +32,30 @@
 		"language": "言語",
 		"about": "Kilo Codeについて"
 	},
+	"codeIndex": {
+		"title": "コードベースのインデックス作成",
+		"enableLabel": "コードベースのインデックス作成を有効化",
+		"enableDescription": "<0>コードベースのインデックス作成</0>は、AIエンベディングを使用してプロジェクトのセマンティック検索インデックスを作成する実験的機能です。これにより、Roo Codeは単なるキーワードではなく意味に基づいて関連するコードを見つけることで、大規模なコードベースをより良く理解し、ナビゲートできるようになります。",
+		"providerLabel": "埋め込みプロバイダー",
+		"selectProviderPlaceholder": "プロバイダーを選択",
+		"openaiProvider": "OpenAI",
+		"ollamaProvider": "Ollama",
+		"openaiKeyLabel": "OpenAIキー：",
+		"modelLabel": "モデル",
+		"selectModelPlaceholder": "モデルを選択",
+		"ollamaUrlLabel": "Ollama URL：",
+		"qdrantUrlLabel": "Qdrant URL",
+		"qdrantKeyLabel": "Qdrantキー：",
+		"startIndexingButton": "インデックス作成を開始",
+		"clearIndexDataButton": "インデックスデータをクリア",
+		"unsavedSettingsMessage": "インデックス作成プロセスを開始する前に設定を保存してください。",
+		"clearDataDialog": {
+			"title": "本当によろしいですか？",
+			"description": "この操作は元に戻せません。コードベースのインデックスデータが完全に削除されます。",
+			"cancelButton": "キャンセル",
+			"confirmButton": "データをクリア"
+		}
+	},
 	"autoApprove": {
 		"description": "Kilo Codeが承認なしで自動的に操作を実行できるようにします。AIを完全に信頼し、関連するセキュリティリスクを理解している場合にのみ、これらの設定を有効にしてください。",
 		"readOnly": {
@@ -118,6 +142,7 @@
 		"glamaApiKey": "Glama APIキー",
 		"getGlamaApiKey": "Glama APIキーを取得",
 		"useCustomBaseUrl": "カスタムベースURLを使用",
+		"useReasoning": "推論を有効化",
 		"useHostHeader": "カスタムHostヘッダーを使用",
 		"useLegacyFormat": "レガシーOpenAI API形式を使用",
 		"customHeaders": "カスタムヘッダー",
@@ -127,7 +152,10 @@
 		"requestyApiKey": "Requesty APIキー",
 		"refreshModels": {
 			"label": "モデルを更新",
-			"hint": "最新のモデルを表示するには設定を再度開いてください。"
+			"hint": "最新のモデルを表示するには設定を再度開いてください。",
+			"loading": "モデルリストを更新中...",
+			"success": "モデルリストが正常に更新されました！",
+			"error": "モデルリストの更新に失敗しました。もう一度お試しください。"
 		},
 		"getRequestyApiKey": "Requesty APIキーを取得",
 		"openRouterTransformsText": "プロンプトとメッセージチェーンをコンテキストサイズに圧縮 (<a>OpenRouter Transforms</a>)",
@@ -406,10 +434,21 @@
 		}
 	},
 	"experimental": {
-		"warning": "⚠️",
 		"autoCondenseContextPercent": {
 			"label": "インテリジェントなコンテキスト圧縮をトリガーするしきい値",
 			"description": "コンテキストウィンドウがこのしきい値に達すると、Rooは自動的に圧縮します。"
+		},
+		"condensingApiConfiguration": {
+			"label": "コンテキスト圧縮用のAPI設定",
+			"description": "コンテキスト圧縮操作に使用するAPI設定を選択します。選択しない場合は現在のアクティブな設定が使用されます。",
+			"useCurrentConfig": "現在の設定を使用"
+		},
+		"customCondensingPrompt": {
+			"label": "カスタムコンテキスト圧縮プロンプト",
+			"description": "コンテキスト圧縮に使用するシステムプロンプトをカスタマイズします。空のままにするとデフォルトのプロンプトが使用されます。",
+			"placeholder": "ここにカスタム圧縮プロンプトを入力してください...\n\nデフォルトプロンプトと同じ構造を使用できます：\n- 過去の会話\n- 現在の作業\n- 重要な技術的概念\n- 関連するファイルとコード\n- 問題解決\n- 保留中のタスクと次のステップ",
+			"reset": "デフォルトにリセット",
+			"hint": "空 = デフォルトプロンプトを使用"
 		},
 		"AUTO_CONDENSE_CONTEXT": {
 			"name": "インテリジェントなコンテキスト圧縮を自動的にトリガーする",

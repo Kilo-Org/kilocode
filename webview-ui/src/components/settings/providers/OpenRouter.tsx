@@ -4,7 +4,9 @@ import { Checkbox } from "vscrui"
 import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 import { ExternalLinkIcon } from "@radix-ui/react-icons"
 
-import { ProviderSettings, RouterModels, openRouterDefaultModelId } from "@roo/shared/api"
+import type { ProviderSettings } from "@roo-code/types"
+
+import { RouterModels, openRouterDefaultModelId } from "@roo/api"
 
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { getOpenRouterAuthUrl } from "@src/oauth/urls"
@@ -116,7 +118,6 @@ export const OpenRouter = ({
 						<Trans
 							i18nKey="settings:providers.openRouterTransformsText"
 							components={{
-								// eslint-disable-next-line jsx-a11y/anchor-has-content
 								a: <a href="https://openrouter.ai/docs/transforms" />,
 							}}
 						/>

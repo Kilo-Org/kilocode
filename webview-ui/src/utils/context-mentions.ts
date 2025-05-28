@@ -1,6 +1,8 @@
-import { mentionRegex } from "@roo/shared/context-mentions"
 import { Fzf } from "fzf"
-import { ModeConfig } from "@roo/shared/modes"
+
+import type { ModeConfig } from "@roo-code/types"
+
+import { mentionRegex } from "@roo/context-mentions"
 
 import { escapeSpaces } from "./path-mentions"
 
@@ -257,7 +259,7 @@ export function getContextMenuOptions(
 	// Convert search results to queryItems format
 	const searchResultItems = dynamicSearchResults.map((result) => {
 		// Ensure paths start with / for consistency
-		let formattedPath = result.path.startsWith("/") ? result.path : `/${result.path}`
+		const formattedPath = result.path.startsWith("/") ? result.path : `/${result.path}`
 
 		// For display purposes, we don't escape spaces in the label or description
 		const displayPath = formattedPath

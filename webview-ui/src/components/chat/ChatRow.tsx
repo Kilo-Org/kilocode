@@ -4,9 +4,11 @@ import { useTranslation, Trans } from "react-i18next"
 import deepEqual from "fast-deep-equal"
 import { VSCodeBadge, VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 
-import { ClineApiReqInfo, ClineAskUseMcpServer, ClineMessage, ClineSayTool } from "@roo/shared/ExtensionMessage"
-import { COMMAND_OUTPUT_STRING } from "@roo/shared/combineCommandSequences"
-import { safeJsonParse } from "@roo/shared/safeJsonParse"
+import type { ClineMessage } from "@roo-code/types"
+
+import { ClineApiReqInfo, ClineAskUseMcpServer, ClineSayTool } from "@roo/ExtensionMessage"
+import { COMMAND_OUTPUT_STRING } from "@roo/combineCommandSequences"
+import { safeJsonParse } from "@roo/safeJsonParse"
 
 import { useCopyToClipboard } from "@src/utils/clipboard"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
@@ -38,6 +40,7 @@ import ReportBugPreview from "./ReportBugPreview"
 import { NewTaskPreview } from "../kilocode/chat/NewTaskPreview" // kilocode_change
 import { AutoApprovedRequestLimitWarning } from "./AutoApprovedRequestLimitWarning"
 import { CondensingContextRow, ContextCondenseRow } from "./ContextCondenseRow"
+import CodebaseSearchResultsDisplay from "./CodebaseSearchResultsDisplay"
 
 interface ChatRowProps {
 	message: ClineMessage
@@ -50,6 +53,7 @@ interface ChatRowProps {
 	onSuggestionClick?: (answer: string, event?: React.MouseEvent) => void
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface ChatRowContentProps extends Omit<ChatRowProps, "onHeightChange"> {}
 
 const ChatRow = memo(
@@ -354,6 +358,28 @@ export const ChatRowContent = ({
 						/>
 					</>
 				)
+			case "codebaseSearch": {
+				return (
+					<div style={headerStyle}>
+						{toolIcon("search")}
+						<span style={{ fontWeight: "bold" }}>
+							{tool.path ? (
+								<Trans
+									i18nKey="chat:codebaseSearch.wantsToSearchWithPath"
+									components={{ code: <code></code> }}
+									values={{ query: tool.query, path: tool.path }}
+								/>
+							) : (
+								<Trans
+									i18nKey="chat:codebaseSearch.wantsToSearch"
+									components={{ code: <code></code> }}
+									values={{ query: tool.query }}
+								/>
+							)}
+						</span>
+					</div>
+				)
+			}
 			case "newFileCreated":
 				return (
 					<>
@@ -947,6 +973,36 @@ export const ChatRowContent = ({
 						return <CondensingContextRow />
 					}
 					return message.contextCondense ? <ContextCondenseRow {...message.contextCondense} /> : null
+				case "codebase_search_result":
+					let parsed: {
+						content: {
+							query: string
+							results: Array<{
+								filePath: string
+								score: number
+								startLine: number
+								endLine: number
+								codeChunk: string
+							}>
+						}
+					} | null = null
+
+					try {
+						if (message.text) {
+							parsed = JSON.parse(message.text)
+						}
+					} catch (error) {
+						console.error("Failed to parse codebaseSearch content:", error)
+					}
+
+					if (parsed && !parsed?.content) {
+						console.error("Invalid codebaseSearch content structure:", parsed.content)
+						return <div>Error displaying search results.</div>
+					}
+
+					const { query = "", results = [] } = parsed?.content || {}
+
+					return <CodebaseSearchResultsDisplay query={query} results={results} />
 				default:
 					return (
 						<>

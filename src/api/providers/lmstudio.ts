@@ -2,12 +2,16 @@ import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
 import axios from "axios"
 
-import { SingleCompletionHandler } from "../"
-import { ApiHandlerOptions, ModelInfo, openAiModelInfoSaneDefaults } from "../../shared/api"
+import type { ModelInfo } from "@roo-code/types"
+
+import { ApiHandlerOptions, openAiModelInfoSaneDefaults } from "../../shared/api"
+import { XmlMatcher } from "../../utils/xml-matcher"
+
 import { convertToOpenAiMessages } from "../transform/openai-format"
 import { ApiStream } from "../transform/stream"
+
 import { BaseProvider } from "./base-provider"
-import { XmlMatcher } from "../../utils/xml-matcher"
+import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 
 const LMSTUDIO_DEFAULT_TEMPERATURE = 0
 
@@ -24,7 +28,11 @@ export class LmStudioHandler extends BaseProvider implements SingleCompletionHan
 		})
 	}
 
-	override async *createMessage(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): ApiStream {
+	override async *createMessage(
+		systemPrompt: string,
+		messages: Anthropic.Messages.MessageParam[],
+		metadata?: ApiHandlerCreateMessageMetadata,
+	): ApiStream {
 		const openAiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
 			{ role: "system", content: systemPrompt },
 			...convertToOpenAiMessages(messages),
@@ -118,7 +126,11 @@ export class LmStudioHandler extends BaseProvider implements SingleCompletionHan
 			} as const
 		} catch (error) {
 			throw new Error(
+<<<<<<< HEAD
 				"Please check the LM Studio developer logs to debug what went wrong. You may need to load the model with a larger context length to work with Kilo Code's prompts.",
+=======
+				"Please check the LM Studio developer logs to debug what went wrong. You may need to load the model with a larger context length to work with Roo Code's prompts.",
+>>>>>>> 582a117a9a6c6c061af5fb2020d8dc79d36e89d6
 			)
 		}
 	}

@@ -6,10 +6,10 @@ import * as path from "path"
 import * as vscode from "vscode"
 import { Anthropic } from "@anthropic-ai/sdk"
 
-import { GlobalState } from "../../../schemas"
+import type { GlobalState, ProviderSettings, ModelInfo } from "@roo-code/types"
+
 import { Task } from "../Task"
 import { ClineProvider } from "../../webview/ClineProvider"
-import { ProviderSettings, ModelInfo } from "../../../shared/api"
 import { ApiStreamChunk } from "../../../api/transform/stream"
 import { ContextProxy } from "../../config/ContextProxy"
 import { processUserContentMentions } from "../../mentions/processUserContentMentions"
@@ -554,6 +554,7 @@ describe("Cline", () => {
 				// Create a stream that fails on first chunk
 				const mockError = new Error("API Error")
 				const mockFailedStream = {
+					// eslint-disable-next-line require-yield
 					async *[Symbol.asyncIterator]() {
 						throw mockError
 					},
@@ -679,6 +680,7 @@ describe("Cline", () => {
 				// Create a stream that fails on first chunk
 				const mockError = new Error("API Error")
 				const mockFailedStream = {
+					// eslint-disable-next-line require-yield
 					async *[Symbol.asyncIterator]() {
 						throw mockError
 					},

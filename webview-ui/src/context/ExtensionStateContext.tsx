@@ -1,14 +1,23 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react"
 import { useEvent } from "react-use"
 
-import { ProviderSettingsEntry, ExtensionMessage, ExtensionState } from "@roo/shared/ExtensionMessage"
-import { ProviderSettings } from "@roo/shared/api"
-import { findLastIndex } from "@roo/shared/array"
-import { McpServer } from "@roo/shared/mcp"
-import { checkExistKey } from "@roo/shared/checkExistApiConfig"
-import { Mode, CustomModePrompts, defaultModeSlug, defaultPrompts, ModeConfig } from "@roo/shared/modes"
-import { CustomSupportPrompts } from "@roo/shared/support-prompt"
-import { experimentDefault, ExperimentId } from "@roo/shared/experiments"
+import type {
+	ProviderSettings,
+	ProviderSettingsEntry,
+	CustomModePrompts,
+	ModeConfig,
+	ExperimentId,
+} from "@roo-code/types"
+
+import { ExtensionMessage, ExtensionState } from "@roo/ExtensionMessage"
+import { findLastIndex } from "@roo/array"
+import { McpServer } from "@roo/mcp"
+import { checkExistKey } from "@roo/checkExistApiConfig"
+import { Mode, defaultModeSlug, defaultPrompts } from "@roo/modes"
+import { CustomSupportPrompts } from "@roo/support-prompt"
+import { experimentDefault } from "@roo/experiments"
+import { TelemetrySetting } from "@roo/TelemetrySetting"
+import { RouterModels } from "@roo/api"
 import { McpMarketplaceCatalog } from "../../../src/shared/kilocode/mcp" // kilocode_change
 
 import { vscode } from "@src/utils/vscode"
@@ -26,6 +35,10 @@ export interface ExtensionStateContextType extends ExtensionState {
 	filePaths: string[]
 	openedTabs: Array<{ label: string; isActive: boolean; path?: string }>
 	setWorkflowToggles: (toggles: Record<string, boolean>) => void // kilocode_change
+	condensingApiConfigId?: string
+	setCondensingApiConfigId: (value: string) => void
+	customCondensingPrompt?: string
+	setCustomCondensingPrompt: (value: string) => void
 	setApiConfiguration: (config: ProviderSettings) => void
 	setCustomInstructions: (value?: string) => void
 	setAlwaysAllowReadOnly: (value: boolean) => void
@@ -100,6 +113,7 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setHistoryPreviewCollapsed: (value: boolean) => void
 	autoCondenseContextPercent: number
 	setAutoCondenseContextPercent: (value: number) => void
+	routerModels?: RouterModels
 }
 
 export const ExtensionStateContext = createContext<ExtensionStateContextType | undefined>(undefined)
@@ -169,6 +183,8 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		customSupportPrompts: {},
 		experiments: experimentDefault,
 		enhancementApiConfigId: "",
+		condensingApiConfigId: "", // Default empty string for condensing API config ID
+		customCondensingPrompt: "", // Default empty string for custom condensing prompt
 		autoApprovalEnabled: true,
 		customModes: [],
 		maxOpenTabsContext: 20,
@@ -178,7 +194,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		showRooIgnoredFiles: true, // Default to showing .rooignore'd files with lock symbol (current behavior).
 		showAutoApproveMenu: false, // kilocode_change
 		renderContext: "sidebar",
-		maxReadFileLine: 500, // Default max read file line limit
+		maxReadFileLine: -1, // Default max read file line limit
 		pinnedApiConfigs: {}, // Empty object for pinned API configs
 		terminalZshOhMy: false, // Default Oh My Zsh integration setting
 		terminalZshP10k: false, // Default Powerlevel10k integration setting
@@ -187,6 +203,14 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		historyPreviewCollapsed: false, // Initialize the new state (default to expanded)
 		workflowToggles: {}, // Initialize with empty workflow toggles  // kilocode_change
 		autoCondenseContextPercent: 100,
+		codebaseIndexConfig: {
+			codebaseIndexEnabled: false,
+			codebaseIndexQdrantUrl: "http://localhost:6333",
+			codebaseIndexEmbedderProvider: "openai",
+			codebaseIndexEmbedderBaseUrl: "",
+			codebaseIndexEmbedderModelId: "",
+		},
+		codebaseIndexModels: { ollama: {}, openai: {} },
 	})
 
 	const [didHydrateState, setDidHydrateState] = useState(false)
@@ -197,11 +221,22 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 	const [mcpServers, setMcpServers] = useState<McpServer[]>([])
 	const [mcpMarketplaceCatalog, setMcpMarketplaceCatalog] = useState<McpMarketplaceCatalog>({ items: [] }) // kilocode_change
 	const [currentCheckpoint, setCurrentCheckpoint] = useState<string>()
+	const [extensionRouterModels, setExtensionRouterModels] = useState<RouterModels | undefined>(undefined)
 
 	const setListApiConfigMeta = useCallback(
 		(value: ProviderSettingsEntry[]) => setState((prevState) => ({ ...prevState, listApiConfigMeta: value })),
 		[],
 	)
+
+	const setApiConfiguration = useCallback((value: ProviderSettings) => {
+		setState((prevState) => ({
+			...prevState,
+			apiConfiguration: {
+				...prevState.apiConfiguration,
+				...value,
+			},
+		}))
+	}, [])
 
 	const handleMessage = useCallback(
 		(event: MessageEvent) => {
@@ -262,6 +297,10 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 					setListApiConfigMeta(message.listApiConfig ?? [])
 					break
 				}
+				case "routerModels": {
+					setExtensionRouterModels(message.routerModels)
+					break
+				}
 			}
 		},
 		[setListApiConfigMeta],
@@ -288,16 +327,10 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		fuzzyMatchThreshold: state.fuzzyMatchThreshold,
 		writeDelayMs: state.writeDelayMs,
 		screenshotQuality: state.screenshotQuality,
+		routerModels: extensionRouterModels,
 		setExperimentEnabled: (id, enabled) =>
 			setState((prevState) => ({ ...prevState, experiments: { ...prevState.experiments, [id]: enabled } })),
-		setApiConfiguration: (value) =>
-			setState((prevState) => ({
-				...prevState,
-				apiConfiguration: {
-					...prevState.apiConfiguration,
-					...value,
-				},
-			})),
+		setApiConfiguration,
 		setCustomInstructions: (value) => setState((prevState) => ({ ...prevState, customInstructions: value })),
 		setAlwaysAllowReadOnly: (value) => setState((prevState) => ({ ...prevState, alwaysAllowReadOnly: value })),
 		setAlwaysAllowReadOnlyOutsideWorkspace: (value) =>
@@ -372,7 +405,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 				return { ...prevState, pinnedApiConfigs: newPinned }
 			}),
 		setHistoryPreviewCollapsed: (value) =>
-			setState((prevState) => ({ ...prevState, historyPreviewCollapsed: value })), // Implement the setter
+			setState((prevState) => ({ ...prevState, historyPreviewCollapsed: value })),
 
 		// kilocode_change
 		setWorkflowToggles: (toggles) =>
@@ -382,6 +415,9 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 			})),
 		setAutoCondenseContextPercent: (value) =>
 			setState((prevState) => ({ ...prevState, autoCondenseContextPercent: value })),
+		setCondensingApiConfigId: (value) => setState((prevState) => ({ ...prevState, condensingApiConfigId: value })),
+		setCustomCondensingPrompt: (value) =>
+			setState((prevState) => ({ ...prevState, customCondensingPrompt: value })),
 	}
 
 	return <ExtensionStateContext.Provider value={contextValue}>{children}</ExtensionStateContext.Provider>

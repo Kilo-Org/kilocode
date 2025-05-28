@@ -2,30 +2,32 @@ import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI, { AzureOpenAI } from "openai"
 import axios from "axios"
 
-import {
-	ApiHandlerOptions,
-	azureOpenAiDefaultApiVersion,
-	ModelInfo,
-	openAiModelInfoSaneDefaults,
-} from "../../shared/api"
-import { SingleCompletionHandler } from "../index"
+import type { ModelInfo } from "@roo-code/types"
+
+import { ApiHandlerOptions, azureOpenAiDefaultApiVersion, openAiModelInfoSaneDefaults } from "../../shared/api"
+
+import { XmlMatcher } from "../../utils/xml-matcher"
+
 import { convertToOpenAiMessages } from "../transform/openai-format"
 import { convertToR1Format } from "../transform/r1-format"
 import { convertToSimpleMessages } from "../transform/simple-format"
 import { ApiStream, ApiStreamUsageChunk } from "../transform/stream"
-import { BaseProvider } from "./base-provider"
-import { XmlMatcher } from "../../utils/xml-matcher"
+import { getModelParams } from "../transform/model-params"
+
 import { DEFAULT_HEADERS, DEEP_SEEK_DEFAULT_TEMPERATURE } from "./constants"
+import { BaseProvider } from "./base-provider"
+import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 
 export const AZURE_AI_INFERENCE_PATH = "/models/chat/completions"
 
-export interface OpenAiHandlerOptions extends ApiHandlerOptions {}
-
+// TODO: Rename this to OpenAICompatibleHandler. Also, I think the
+// `OpenAINativeHandler` can subclass from this, since it's obviously
+// compatible with the OpenAI API. We can also rename it to `OpenAIHandler`.
 export class OpenAiHandler extends BaseProvider implements SingleCompletionHandler {
-	protected options: OpenAiHandlerOptions
+	protected options: ApiHandlerOptions
 	private client: OpenAI
 
-	constructor(options: OpenAiHandlerOptions) {
+	constructor(options: ApiHandlerOptions) {
 		super()
 		this.options = options
 
@@ -66,8 +68,12 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 		}
 	}
 
-	override async *createMessage(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): ApiStream {
-		const modelInfo = this.getModel().info
+	override async *createMessage(
+		systemPrompt: string,
+		messages: Anthropic.Messages.MessageParam[],
+		metadata?: ApiHandlerCreateMessageMetadata,
+	): ApiStream {
+		const { info: modelInfo, reasoning } = this.getModel()
 		const modelUrl = this.options.openAiBaseUrl ?? ""
 		const modelId = this.options.openAiModelId ?? ""
 		const enabledR1Format = this.options.openAiR1FormatEnabled ?? false
@@ -145,9 +151,10 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				messages: convertedMessages,
 				stream: true as const,
 				...(isGrokXAI ? {} : { stream_options: { include_usage: true } }),
-				reasoning_effort: this.getModel().info.reasoningEffort,
+				...(reasoning && reasoning),
 			}
 
+			// @TODO: Move this to the `getModelParams` function.
 			if (this.options.includeMaxTokens) {
 				requestOptions.max_tokens = modelInfo.maxTokens
 			}
@@ -235,11 +242,11 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 		}
 	}
 
-	override getModel(): { id: string; info: ModelInfo } {
-		return {
-			id: this.options.openAiModelId ?? "",
-			info: this.options.openAiCustomModelInfo ?? openAiModelInfoSaneDefaults,
-		}
+	override getModel() {
+		const id = this.options.openAiModelId ?? ""
+		const info = this.options.openAiCustomModelInfo ?? openAiModelInfoSaneDefaults
+		const params = getModelParams({ format: "openai", modelId: id, model: info, settings: this.options })
+		return { id, info, ...params }
 	}
 
 	async completePrompt(prompt: string): Promise<string> {

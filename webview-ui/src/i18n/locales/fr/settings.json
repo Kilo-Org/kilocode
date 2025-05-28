@@ -32,6 +32,30 @@
 		"language": "Langue",
 		"about": "À propos de Kilo Code"
 	},
+	"codeIndex": {
+		"title": "Indexation de la base de code",
+		"enableLabel": "Activer l'indexation de la base de code",
+		"enableDescription": "<0>L'indexation de la base de code</0> est une fonctionnalité expérimentale qui crée un index de recherche sémantique de votre projet en utilisant des embeddings IA. Cela permet à Roo Code de mieux comprendre et naviguer dans de grandes bases de code en trouvant du code pertinent basé sur le sens plutôt que seulement sur des mots-clés.",
+		"providerLabel": "Fournisseur d'embeddings",
+		"selectProviderPlaceholder": "Sélectionner un fournisseur",
+		"openaiProvider": "OpenAI",
+		"ollamaProvider": "Ollama",
+		"openaiKeyLabel": "Clé OpenAI :",
+		"modelLabel": "Modèle",
+		"selectModelPlaceholder": "Sélectionner un modèle",
+		"ollamaUrlLabel": "URL Ollama :",
+		"qdrantUrlLabel": "URL Qdrant",
+		"qdrantKeyLabel": "Clé Qdrant :",
+		"startIndexingButton": "Démarrer l'indexation",
+		"clearIndexDataButton": "Effacer les données d'index",
+		"unsavedSettingsMessage": "Merci d'enregistrer tes paramètres avant de démarrer le processus d'indexation.",
+		"clearDataDialog": {
+			"title": "Êtes-vous sûr ?",
+			"description": "Cette action ne peut pas être annulée. Cela supprimera définitivement les données d'index de votre base de code.",
+			"cancelButton": "Annuler",
+			"confirmButton": "Effacer les données"
+		}
+	},
 	"autoApprove": {
 		"description": "Permettre à Kilo Code d'effectuer automatiquement des opérations sans requérir d'approbation. Activez ces paramètres uniquement si vous faites entièrement confiance à l'IA et que vous comprenez les risques de sécurité associés.",
 		"readOnly": {
@@ -118,6 +142,7 @@
 		"glamaApiKey": "Clé API Glama",
 		"getGlamaApiKey": "Obtenir la clé API Glama",
 		"useCustomBaseUrl": "Utiliser une URL de base personnalisée",
+		"useReasoning": "Activer le raisonnement",
 		"useHostHeader": "Utiliser un en-tête Host personnalisé",
 		"useLegacyFormat": "Utiliser le format API OpenAI hérité",
 		"customHeaders": "En-têtes personnalisés",
@@ -127,7 +152,10 @@
 		"requestyApiKey": "Clé API Requesty",
 		"refreshModels": {
 			"label": "Actualiser les modèles",
-			"hint": "Veuillez rouvrir les paramètres pour voir les modèles les plus récents."
+			"hint": "Veuillez rouvrir les paramètres pour voir les modèles les plus récents.",
+			"loading": "Actualisation de la liste des modèles...",
+			"success": "Liste des modèles actualisée avec succès !",
+			"error": "Échec de l'actualisation de la liste des modèles. Veuillez réessayer."
 		},
 		"getRequestyApiKey": "Obtenir la clé API Requesty",
 		"openRouterTransformsText": "Compresser les prompts et chaînes de messages à la taille du contexte (<a>Transformations OpenRouter</a>)",
@@ -406,10 +434,21 @@
 		}
 	},
 	"experimental": {
-		"warning": "⚠️",
 		"autoCondenseContextPercent": {
 			"label": "Seuil pour déclencher la condensation intelligente du contexte",
 			"description": "Lorsque la fenêtre de contexte atteint ce seuil, Kilo Code la condensera automatiquement."
+		},
+		"condensingApiConfiguration": {
+			"label": "Configuration API pour la condensation du contexte",
+			"description": "Sélectionnez quelle configuration API utiliser pour les opérations de condensation du contexte. Laissez non sélectionné pour utiliser la configuration active actuelle.",
+			"useCurrentConfig": "Utiliser la configuration actuelle"
+		},
+		"customCondensingPrompt": {
+			"label": "Prompt personnalisé pour la condensation du contexte",
+			"description": "Personnalisez le prompt système utilisé pour la condensation du contexte. Laissez vide pour utiliser le prompt par défaut.",
+			"placeholder": "Entrez votre prompt de condensation personnalisé ici...\n\nVous pouvez utiliser la même structure que le prompt par défaut :\n- Conversation précédente\n- Travail actuel\n- Concepts techniques clés\n- Fichiers et code pertinents\n- Résolution de problèmes\n- Tâches en attente et prochaines étapes",
+			"reset": "Réinitialiser par défaut",
+			"hint": "Vide = utiliser le prompt par défaut"
 		},
 		"AUTO_CONDENSE_CONTEXT": {
 			"name": "Déclencher automatiquement la condensation intelligente du contexte",

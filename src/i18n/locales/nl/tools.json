@@ -6,5 +6,8 @@
 		"definitionsOnly": " (alleen definities)",
 		"maxLines": " (max {{max}} regels)"
 	},
-	"toolRepetitionLimitReached": "Kilo Code lijkt vast te zitten in een lus, waarbij hij herhaaldelijk dezelfde actie ({{toolName}}) probeert. Dit kan duiden op een probleem met de huidige strategie. Overweeg de taak te herformuleren, specifiekere instructies te geven of Kilo Code naar een andere aanpak te leiden."
+	"toolRepetitionLimitReached": "Kilo Code lijkt vast te zitten in een lus, waarbij hij herhaaldelijk dezelfde actie ({{toolName}}) probeert. Dit kan duiden op een probleem met de huidige strategie. Overweeg de taak te herformuleren, specifiekere instructies te geven of Kilo Code naar een andere aanpak te leiden.",
+	"codebaseSearch": {
+		"approval": "Zoeken naar '{{query}}' in codebase..."
+	}
 }

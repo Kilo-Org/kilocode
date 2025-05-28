@@ -32,11 +32,7 @@ docs/_site/
 .env.*
 !.env.*.sample
 
-
-#Local lint config
-.eslintrc.local.json
-
-#Logging
+# Logging
 logs
 
 # Vite development
@@ -44,6 +40,9 @@ logs
 
 # kilocode_change
 .history/
+
+# Turborepo
+.turbo
 
 # IntelliJ and Qodo plugin folders
 .idea/

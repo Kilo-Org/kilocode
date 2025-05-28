@@ -76,7 +76,7 @@
 		"tooltip": "Cancelar la operación actual"
 	},
 	"scrollToBottom": "Desplazarse al final del chat",
-	"about": "Genera, refactoriza y depura código con asistencia de IA.<br />Consulta nuestra <DocsLink>documentación</DocsLink> para obtener más información.",
+	"about": "Genera, refactoriza y depura código con asistencia de IA. Consulta nuestra <DocsLink>documentación</DocsLink> para obtener más información.",
 	"onboarding": "<strong>Tu lista de tareas en este espacio de trabajo está vacía.</strong> Comienza escribiendo una tarea abajo. ¿No estás seguro cómo empezar? Lee más sobre lo que Kilo Code puede hacer por ti en <DocsLink>la documentación</DocsLink>.",
 	"rooTips": {
 		"boomerangTasks": {
@@ -266,5 +266,10 @@
 			"description": "Kilo Code ha alcanzado el límite auto-aprobado de {{count}} solicitud(es) API. ¿Deseas reiniciar el contador y continuar con la tarea?",
 			"button": "Reiniciar y Continuar"
 		}
+	},
+	"codebaseSearch": {
+		"wantsToSearch": "Roo quiere buscar en la base de código <code>{{query}}</code>:",
+		"wantsToSearchWithPath": "Roo quiere buscar en la base de código <code>{{query}}</code> en <code>{{path}}</code>:",
+		"didSearch": "Se encontraron {{count}} resultado(s) para <code>{{query}}</code>:"
 	}
 }
