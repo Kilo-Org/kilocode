@@ -4,9 +4,12 @@ import { ContextGatherer } from "./ContextGatherer"
 import { holeFillerTemplate } from "./templating/AutocompleteTemplate"
 import { ContextProxy } from "../../core/config/ContextProxy"
 import { generateImportSnippets, generateDefinitionSnippets } from "./context/snippetProvider"
+import { LRUCache } from "lru-cache"
+import { CompletionStreamHandler } from "./utils/CompletionStreamHandler"
+import { AutocompleteDecorationAnimation } from "./utils/AutocompleteDecorationAnimation"
 
 // Configuration
-export const UI_UPDATE_DEBOUNCE_MS = 150
+export const UI_UPDATE_DEBOUNCE_MS = 500
 export const BAIL_OUT_TOO_MANY_LINES_LIMIT = 100
 //const DEFAULT_MODEL = "mistralai/codestral-2501"
 const DEFAULT_MODEL = "google/gemini-2.5-flash-preview-05-20"
@@ -20,14 +23,8 @@ export function registerAutocomplete(context: vscode.ExtensionContext) {
 	}
 }
 
-const loadingDecoration = vscode.window.createTextEditorDecorationType({
-	after: {
-		color: new vscode.ThemeColor("editorGhostText.foreground"),
-		fontStyle: "italic",
-		contentText: "⏳",
-	},
-	rangeBehavior: vscode.DecorationRangeBehavior.ClosedOpen,
-})
+// Animation manager for the loading indicator
+const animationManager = AutocompleteDecorationAnimation.getInstance()
 
 export function processModelResponse(responseText: string): string {
 	const fullMatch = /(<COMPLETION>)?([\s\S]*?)(<\/COMPLETION>|$)/.exec(responseText)
@@ -43,12 +40,74 @@ export function processModelResponse(responseText: string): string {
 	return fullMatch[2]
 }
 
+/**
+ * Generates a cache key based on context's preceding and following lines
+ * This is used to identify when we can reuse a previous completion
+ */
+function generateCacheKey(precedingLines: string[], followingLines: string[]): string {
+	// Use a limited number of lines to ensure the key isn't too large
+	const maxLinesToConsider = 10
+	const precedingContext = precedingLines.slice(-maxLinesToConsider).join("\n")
+	const followingContext = followingLines.slice(0, maxLinesToConsider).join("\n")
+	return `${precedingContext}|||${followingContext}`
+}
+
+/**
+ * Handles the streaming of completions from the API
+ */
+async function streamCompletion(
+	stream: any, // Using 'any' for now to avoid type issues with the API stream
+	activeRequestId: string,
+	getCurrentRequestId: () => string | null,
+): Promise<{ processedCompletion: string; lineCount: number }> {
+	let completion = ""
+	let processedCompletion = ""
+	let lineCount = 0
+
+	try {
+		for await (const chunk of stream) {
+			// Check if this request is still active
+			if (getCurrentRequestId() !== activeRequestId) {
+				break
+			}
+
+			if (chunk.type === "text") {
+				completion += chunk.text
+				processedCompletion = processModelResponse(completion)
+				lineCount += processedCompletion.split("/n").length
+			}
+
+			if (lineCount > BAIL_OUT_TOO_MANY_LINES_LIMIT) {
+				processedCompletion = ""
+				break
+			}
+		}
+	} catch (error) {
+		console.error("Error streaming completion:", error)
+		processedCompletion = ""
+	}
+
+	return { processedCompletion, lineCount }
+}
+
 function setupAutocomplete(context: vscode.ExtensionContext) {
 	// State
 	let enabled = true
-	// let timer: NodeJS.Timeout | undefined
 	let activeRequest: string | null = null
-	let processedCompletion = ""
+
+	// Track accepted suggestions to prevent immediate re-triggering
+	let lastAcceptedSuggestion: string | null = null
+	let lastAcceptedPosition: vscode.Position | null = null
+	let lastAcceptedTimestamp: number = 0
+	const SUGGESTION_COOLDOWN_MS = 300 // Time window to ignore subsequent requests
+
+	// LRU Cache for completions
+	// Keep up to 50 completions in memory
+	const completionsCache = new LRUCache<string, string>({
+		max: 50,
+		// Cache for 24 hours since code and models don't change frequently
+		ttl: 1000 * 60 * 60 * 24,
+	})
 
 	// Services
 	const contextGatherer = new ContextGatherer()
@@ -59,14 +118,42 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 	})
 
 	const clearState = () => {
-		processedCompletion = ""
 		vscode.commands.executeCommand("editor.action.inlineSuggest.hide")
-		vscode.window.activeTextEditor?.setDecorations(loadingDecoration, [])
+		animationManager.stopAnimation()
+
+		// Also clear the accepted suggestion tracking state
+		lastAcceptedSuggestion = null
+		lastAcceptedPosition = null
+
+		// Cancel any active request
+		if (activeRequest) {
+			console.log(`🚀🛑 Cancelling active request: ${activeRequest}`)
+			CompletionStreamHandler.cancelRequest(activeRequest)
+			activeRequest = null
+		}
 	}
 
 	const provider: vscode.InlineCompletionItemProvider = {
 		async provideInlineCompletionItems(document, position, context, token) {
 			if (!enabled || !vscode.window.activeTextEditor) return null
+
+			// Check if this request is immediately after accepting a suggestion
+			const now = Date.now()
+			if (
+				lastAcceptedSuggestion !== null &&
+				lastAcceptedPosition !== null &&
+				now - lastAcceptedTimestamp < SUGGESTION_COOLDOWN_MS
+			) {
+				// If the cursor is at the expected position after accepting a suggestion,
+				// ignore this request to prevent cascading suggestions
+				if (
+					position.line === lastAcceptedPosition.line &&
+					position.character === lastAcceptedPosition.character
+				) {
+					console.log("🚀🛑 Ignoring autocomplete request immediately after accepting suggestion")
+					return null
+				}
+			}
 
 			// Get exactly what's been typed on the current line
 			const linePrefix = document
@@ -78,57 +165,85 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 			const requestId = crypto.randomUUID()
 			activeRequest = requestId
 
-			// Apply loading indicator at the end of the line to avoid interfering with typing
+			// Apply animated loading indicator at the end of the line
 			const lineEndPosition = new vscode.Position(position.line, document.lineAt(position.line).text.length)
 			const loadingRange = new vscode.Range(lineEndPosition, lineEndPosition)
-			vscode.window.activeTextEditor.setDecorations(loadingDecoration, [loadingRange])
+			animationManager.startAnimation(vscode.window.activeTextEditor, loadingRange)
 
 			// Gather context and build prompt
 			const codeContext = await contextGatherer.gatherContext(document, position, true, true)
+
+			// Check if we have a cached completion for this context
+			const cacheKey = generateCacheKey(codeContext.precedingLines, codeContext.followingLines)
+			const cachedCompletion = completionsCache.get(cacheKey)
+
+			if (cachedCompletion) {
+				console.log("🚀🎯 Using cached completion")
+				animationManager.stopAnimation()
+				const item = new vscode.InlineCompletionItem(cachedCompletion)
+				return [item]
+			}
+
 			const snippets = [
 				...generateImportSnippets(true, codeContext.imports, document.uri.fsPath),
 				...generateDefinitionSnippets(true, codeContext.definitions),
 			]
 
-			// Assume new PromptRenderer methods that use the holeFillerTemplate
-			// These methods would internally construct `currentFileWithFillPlaceholder`
-			// from codeContext, document, and position, then use the template.
+			// Prepare the prompts
 			const systemPrompt = holeFillerTemplate.getSystemPrompt()
 			const userPrompt = holeFillerTemplate.template(codeContext, document, position, snippets)
-			console.log(`🚀🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶\n` + userPrompt)
 
-			// Stream completion
-			const stream = apiHandler.createMessage(systemPrompt, [
-				{ role: "user", content: [{ type: "text", text: userPrompt }] },
-			])
+			// Use debouncing for the API call
+			const result = await CompletionStreamHandler.streamWithDebounce(requestId, async () => {
+				// Create the stream only after debounce period
+				console.log(`🚀🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶\n` + userPrompt)
 
-			let completion = ""
-			let lineCount = 0
-			for await (const chunk of stream) {
+				// Check if the request was cancelled during debounce
 				if (activeRequest !== requestId) {
-					break
+					console.log("🚀🛑 Request cancelled during debounce")
+					return { processedCompletion: "", lineCount: 0 }
 				}
 
-				if (chunk.type === "text") {
-					completion += chunk.text
-					lineCount += chunk.text.includes("\n") ? 1 : 0
-					processedCompletion = processModelResponse(completion)
-				}
-				if (lineCount > BAIL_OUT_TOO_MANY_LINES_LIMIT) {
-					break
-					completion = null
-				}
+				const stream = apiHandler.createMessage(systemPrompt, [
+					{ role: "user", content: [{ type: "text", text: userPrompt }] },
+				])
+
+				// Stream the completion
+				return streamCompletion(stream, requestId, () => activeRequest)
+			})
+
+			// Clear loading indicator when completion is done
+			if (activeRequest === requestId) {
+				animationManager.stopAnimation()
 			}
-			// Clear loading indicator when completion is done (success or failure)
-			// if (activeRequest === requestId) {
-			// vscode.window.activeTextEditor?.setDecorations(loadingDecoration, [])
-			// }
+
+			// If no result or request was cancelled
+			if (!result || activeRequest !== requestId || token.isCancellationRequested) {
+				return null
+			}
+
+			const { processedCompletion, lineCount } = result
+
+			if (!processedCompletion) {
+				return null
+			}
 
 			console.log(`🚀🚀🚀🚀🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖 \n` + processedCompletion)
 
-			if (activeRequest !== requestId || token.isCancellationRequested || !processedCompletion) return null
+			// Cache the successful completion for future use
+			if (processedCompletion && lineCount <= BAIL_OUT_TOO_MANY_LINES_LIMIT) {
+				completionsCache.set(cacheKey, processedCompletion)
+			}
 
 			const item = new vscode.InlineCompletionItem(processedCompletion)
+
+			// Store information about this suggestion so we can track if it's accepted
+			item.command = {
+				command: "kilo-code.trackAcceptedSuggestion",
+				title: "Track Accepted Suggestion",
+				arguments: [processedCompletion, position],
+			}
+
 			return [item]
 		},
 	}
@@ -149,14 +264,43 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 		vscode.window.showInformationMessage(`Autocomplete ${enabled ? "enabled" : "disabled"}`)
 	})
 
+	// Command to track when a suggestion is accepted
+	const trackAcceptedSuggestionCommand = vscode.commands.registerCommand(
+		"kilo-code.trackAcceptedSuggestion",
+		(suggestion: string, position: vscode.Position) => {
+			lastAcceptedSuggestion = suggestion
+			// Calculate the expected position after accepting the suggestion
+			const lines = suggestion.split("\n") // Check if multiline
+			if (lines.length > 1) {
+				const lastLine = lines[lines.length - 1]
+				lastAcceptedPosition = new vscode.Position(position.line + lines.length - 1, lastLine.length)
+			} else {
+				lastAcceptedPosition = new vscode.Position(position.line, position.character + suggestion.length)
+			}
+			lastAcceptedTimestamp = Date.now()
+			console.log(`🚀✅ Tracked accepted suggestion: "${suggestion}"`)
+		},
+	)
+
 	// Event handlers
-	const selectionHandler = vscode.window.onDidChangeTextEditorSelection(() => {
-		clearState()
+	const selectionHandler = vscode.window.onDidChangeTextEditorSelection((e) => {
+		// If this selection change is not from accepting a suggestion, clear the state
+		const now = Date.now()
+		if (
+			lastAcceptedPosition === null ||
+			now - lastAcceptedTimestamp > SUGGESTION_COOLDOWN_MS ||
+			!e.selections.length ||
+			(e.selections[0].active.line === lastAcceptedPosition.line &&
+				e.selections[0].active.character !== lastAcceptedPosition.character)
+		) {
+			// Clear state when selection changes (this handles Escape key naturally)
+			clearState()
+		}
 	})
 	const documentHandler = vscode.workspace.onDidChangeTextDocument((e) => {
 		const editor = vscode.window.activeTextEditor
 		if (editor?.document === e.document) {
-			// editor.setDecorations(loadingDecoration, [])
+			// Animation will be stopped by clearState when selection changes
 		}
 	})
 
@@ -164,10 +308,15 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		providerDisposable,
 		toggleCommand,
+		trackAcceptedSuggestionCommand,
 		statusBar,
 		selectionHandler,
 		documentHandler,
-		loadingDecoration,
-		{ dispose: clearState },
+		{
+			dispose: () => {
+				clearState()
+				animationManager.dispose()
+			},
+		},
 	)
 }
