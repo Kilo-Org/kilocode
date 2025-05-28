@@ -145,15 +145,15 @@ function hypothenuse(a, b) {
 
 		if (snippets && snippets.length > 0) {
 			const snippetStrings = snippets.map((snippet) => {
-				let header = `// Snippet (type: ${snippet.type})`
+				let header = `// Some context: ${snippet.type})`
 				if ("filepath" in snippet && (snippet as any).filepath) {
-					header = `// Snippet (type: ${snippet.type}) from: ${(snippet as any).filepath}`
+					header = `// Some context: ${snippet.type}) from: ${(snippet as any).filepath}`
 				} else if (
 					snippet.type === AutocompleteSnippetType.Clipboard &&
 					"copiedAt" in snippet &&
 					(snippet as any).copiedAt
 				) {
-					header = `// Snippet (type: ${snippet.type}, copiedAt: ${(snippet as any).copiedAt})`
+					header = `// Some context: ${snippet.type}, copiedAt: ${(snippet as any).copiedAt})`
 				}
 				return `${header}\n${snippet.content}`
 			})
