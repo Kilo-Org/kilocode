@@ -85,7 +85,35 @@ export function cleanupEmptyI18nObjects(obj: any): boolean {
 	return isEmpty
 }
 
-export function detectIndentation(content: string): { char: string; size: number } {
+/**
+ * Detects the indentation string used in a file
+ * Returns the actual indentation string to be used with JSON.stringify
+ */
+export function detectIndentation(content: string): string {
+	// Default to two spaces if we can't detect
+	const defaultIndent = "  "
+
+	// Check if the file uses tabs for indentation
+	if (content.includes("\n\t")) {
+		// If tabs are used, return a tab character
+		return "\t"
+	}
+
+	// Otherwise, try to detect the exact indentation
+	const indentMatch = content.match(/^[^\r\n]*\r?\n([ \t]+)\S/m)
+	if (!indentMatch) {
+		return defaultIndent
+	}
+
+	// Return the actual indentation string
+	return indentMatch[1]
+}
+
+/**
+ * Legacy function for backward compatibility
+ * @deprecated Use the string-returning version instead
+ */
+export function detectIndentationLegacy(content: string): { char: string; size: number } {
 	const defaultIndentation = { char: " ", size: 2 }
 	const lines = content.split("\n")
 	const indentations = []
@@ -113,8 +141,22 @@ export function detectIndentation(content: string): { char: string; size: number
 		}
 	}
 
-	const char = mostCommon.includes("\t") ? "\t" : " "
-	const size = mostCommon.length
+	// Check if tabs are used for indentation
+	const usesTab = mostCommon.includes("\t")
+	const char = usesTab ? "\t" : " "
+
+	// Calculate size differently for tabs vs spaces
+	let size: number
+	if (usesTab) {
+		// For tabs, count the number of tab characters
+		size = mostCommon.split("\t").length - 1
+	} else {
+		// For spaces, use the length of the string
+		size = mostCommon.length
+	}
+
+	// Ensure size is at least 1
+	size = Math.max(1, size)
 
 	return { char, size }
 }

@@ -99,9 +99,14 @@ class RemoveKeysTool implements ToolHandler {
 					const content = await fs.readFile(localeFilePath, "utf-8")
 					let json = commentJson.parse(content, null, true) // preserve comments and formatting
 
-					// Detect the original indentation
-					const indentation = detectIndentation(content)
-					const indent = indentation.char.repeat(indentation.size)
+					// Detect the original indentation string directly
+					const indent = detectIndentation(content)
+
+					// Log the detected indentation for debugging
+					const usesTabsForIndentation = indent.includes("\t")
+					console.error(
+						`📏 Detected indentation for ${locale}/${jsonFile}: '${usesTabsForIndentation ? "\\t" : " "}', length=${indent.length}`,
+					)
 
 					let keysRemovedInThisFile = 0
 
@@ -115,8 +120,21 @@ class RemoveKeysTool implements ToolHandler {
 					}
 
 					if (keysRemovedInThisFile > 0) {
-						// Write the updated file with preserved formatting and original indentation
-						await fs.writeFile(localeFilePath, commentJson.stringify(json, null, indent))
+						// Check if the original file uses tabs by looking at the raw content
+						const usesTabsForIndentation = content.includes("\n\t")
+
+						// Log the indentation being used
+						console.error(
+							`📏 Detected ${usesTabsForIndentation ? "tab" : "space"} indentation for ${locale}/${jsonFile}`,
+						)
+
+						// Create the JSON string with the appropriate indentation
+						// Use the native JSON.stringify with the appropriate indentation character
+						const indentChar = usesTabsForIndentation ? "\t" : "  "
+						const jsonString = JSON.stringify(json, null, indentChar)
+
+						// Write the file with the correct indentation
+						await fs.writeFile(localeFilePath, jsonString, "utf-8")
 						results.push(`✅ Removed ${keysRemovedInThisFile} keys from ${locale}/${jsonFile}`)
 						totalFiles++
 					} else {

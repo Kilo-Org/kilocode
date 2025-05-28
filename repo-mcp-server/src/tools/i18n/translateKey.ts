@@ -5,7 +5,7 @@ import pLimit from "p-limit"
 import commentJson from "comment-json"
 
 import { Context, McpToolCallResponse, ToolHandler } from "../types.js"
-import { getI18nLocales, getI18nNamespaces, getLocaleForTranslation } from "../../utils/locale-utils.js"
+import { getI18nLocales, getI18nNamespaces } from "../../utils/locale-utils.js"
 import { translateI18nText } from "./translation.js"
 import { getI18nNestedKey, setI18nNestedKey, detectIndentation } from "../../utils/json-utils.js"
 import { reorderJsonToMatchSource } from "../../utils/order-utils.js"
@@ -18,15 +18,7 @@ interface FileWriteOperation {
 	targetJson: Record<string, any>
 	locale: string
 	jsonFile: string
-	sourceIndentation?: IndentationSettings
-}
-
-/**
- * Represents indentation settings for JSON files
- */
-interface IndentationSettings {
-	char: string
-	size: number
+	sourceIndentation?: string
 }
 
 /**
@@ -346,8 +338,9 @@ class TranslateKeyTool implements ToolHandler {
 				try {
 					const englishContent = await fs.readFile(englishFilePath, "utf-8")
 					sourceIndentation = detectIndentation(englishContent)
+					const usesTabsForIndentation = sourceIndentation.includes("\t")
 					console.error(
-						`📏 Detected indentation from English file for ${jsonFile}: char='${sourceIndentation.char === "\t" ? "\\t" : " "}', size=${sourceIndentation.size}`,
+						`📏 Detected indentation from English file for ${jsonFile}: '${usesTabsForIndentation ? "\\t" : " "}', length=${sourceIndentation.length}`,
 					)
 				} catch (error) {
 					console.error(`⚠️ Error reading English file for indentation detection: ${error}`)
@@ -381,7 +374,7 @@ class TranslateKeyTool implements ToolHandler {
 						// Translate the text
 						const translatedValue = await translateI18nText(
 							valueToTranslate as string,
-							getLocaleForTranslation(locale),
+							locale,
 							context.OPENROUTER_API_KEY,
 							model,
 						)
@@ -427,7 +420,7 @@ class TranslateKeyTool implements ToolHandler {
 		context: Context,
 	): Promise<void> {
 		// Default indentation for new files
-		const defaultIndent: IndentationSettings = { char: " ", size: 2 }
+		const defaultIndent = "  "
 
 		// Write all files after translations are complete
 		console.error(`💾 Writing translated files...`)
@@ -445,9 +438,9 @@ class TranslateKeyTool implements ToolHandler {
 		target: "core" | "webview",
 		localePaths: { core: string; webview: string },
 		englishLocale: string,
-	): Promise<IndentationSettings> {
+	): Promise<string> {
 		// Default fallback
-		const defaultIndent: IndentationSettings = { char: " ", size: 2 }
+		const defaultIndent = "  "
 
 		// Try to get indentation from English files
 		for (const jsonFile of [...new Set(fileWriteOperations.map((op) => op.jsonFile))]) {
@@ -457,13 +450,11 @@ class TranslateKeyTool implements ToolHandler {
 				try {
 					const englishContent = await fs.readFile(englishFilePath, "utf-8")
 					const detected = detectIndentation(englishContent)
+					const usesTabsForIndentation = detected.includes("\t")
 					console.error(
-						`📏 Detected indentation for ${jsonFile}: char='${detected.char === "\t" ? "\\t" : " "}', size=${detected.size}`,
+						`📏 Detected indentation for ${jsonFile}: '${usesTabsForIndentation ? "\\t" : " "}', length=${detected.length}`,
 					)
-					return {
-						char: detected.char,
-						size: detected.size,
-					}
+					return detected
 				} catch (error) {
 					console.error(`⚠️ Error reading English file for indentation detection: ${error}`)
 				}
@@ -478,7 +469,7 @@ class TranslateKeyTool implements ToolHandler {
 	 */
 	private async writeTranslatedFile(
 		fileOp: FileWriteOperation,
-		defaultIndent: IndentationSettings,
+		defaultIndent: string,
 		englishLocale: string,
 		target: "core" | "webview",
 		context: Context,
@@ -487,20 +478,18 @@ class TranslateKeyTool implements ToolHandler {
 
 		// For existing files, detect and use their own indentation
 		// For new files, use the source indentation if available, otherwise use the default
-		let indentSettings = defaultIndent
+		let indent = defaultIndent
 
 		if (existsSync(targetFilePath)) {
 			try {
 				const existingContent = await fs.readFile(targetFilePath, "utf-8")
-				const indentation = detectIndentation(existingContent)
+				const detectedIndent = detectIndentation(existingContent)
 				// Only use the file's own indentation if we could detect it
-				if (indentation.size > 0) {
-					indentSettings = {
-						char: indentation.char,
-						size: indentation.size,
-					}
+				if (detectedIndent.length > 0) {
+					indent = detectedIndent
+					const usesTabsForIndentation = indent.includes("\t")
 					console.error(
-						`📏 Using existing indentation for ${locale}/${jsonFile}: char='${indentation.char === "\t" ? "\\t" : " "}', size=${indentation.size}`,
+						`📏 Using existing indentation for ${locale}/${jsonFile}: '${usesTabsForIndentation ? "\\t" : " "}', length=${indent.length}`,
 					)
 				}
 			} catch (error) {
@@ -508,18 +497,17 @@ class TranslateKeyTool implements ToolHandler {
 			}
 		} else if (sourceIndentation) {
 			// For new files, use the source indentation if available
-			indentSettings = sourceIndentation
+			indent = sourceIndentation
+			const usesTabsForIndentation = indent.includes("\t")
 			console.error(
-				`📏 Using source indentation for new file ${locale}/${jsonFile}: char='${sourceIndentation.char === "\t" ? "\\t" : " "}', size=${sourceIndentation.size}`,
+				`📏 Using source indentation for new file ${locale}/${jsonFile}: '${usesTabsForIndentation ? "\\t" : " "}', length=${indent.length}`,
 			)
 		} else {
+			const usesTabsForIndentation = defaultIndent.includes("\t")
 			console.error(
-				`📏 Using default indentation for new file ${locale}/${jsonFile}: char='${defaultIndent.char === "\t" ? "\\t" : " "}', size=${defaultIndent.size}`,
+				`📏 Using default indentation for new file ${locale}/${jsonFile}: '${usesTabsForIndentation ? "\\t" : " "}', length=${defaultIndent.length}`,
 			)
 		}
-
-		// Create the indent string based on the detected settings
-		const indent = indentSettings.char.repeat(indentSettings.size)
 
 		// For non-English locales, reorder the keys to match the English structure
 		if (locale !== englishLocale) {
@@ -534,8 +522,15 @@ class TranslateKeyTool implements ToolHandler {
 				englishLocale,
 			)
 		} else {
-			// Use detected indentation but preserve formatting
-			const jsonString = commentJson.stringify(targetJson, null, indent)
+			// Check if the original file uses tabs
+			const usesTabsForIndentation = indent.includes("\t")
+
+			// Use the appropriate indentation character
+			const indentChar = usesTabsForIndentation ? "\t" : "  "
+
+			// Use JSON.stringify with the appropriate indentation character
+			const jsonString = JSON.stringify(targetJson, null, indentChar)
+
 			await fs.writeFile(targetFilePath, jsonString, "utf-8")
 			console.error(`💾 Saved translations to ${locale}/${jsonFile}`)
 		}
@@ -583,8 +578,15 @@ class TranslateKeyTool implements ToolHandler {
 				console.error(`💾 Saved translations to ${locale}/${jsonFile} without reordering`)
 			}
 		} else {
-			// Use detected indentation but preserve formatting
-			const jsonString = commentJson.stringify(targetJson, null, indent)
+			// Check if the original file uses tabs
+			const usesTabsForIndentation = indent.includes("\t")
+
+			// Use the appropriate indentation character
+			const indentChar = usesTabsForIndentation ? "\t" : "  "
+
+			// Use JSON.stringify with the appropriate indentation character
+			const jsonString = JSON.stringify(targetJson, null, indentChar)
+
 			await fs.writeFile(targetFilePath, jsonString, "utf-8")
 			console.error(`💾 Saved translations to ${locale}/${jsonFile}`)
 		}
