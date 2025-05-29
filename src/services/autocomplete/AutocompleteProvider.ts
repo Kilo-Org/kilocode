@@ -11,7 +11,7 @@ import { AutocompleteDecorationAnimation } from "./utils/AutocompleteDecorationA
 // Configuration
 export const UI_UPDATE_DEBOUNCE_MS = 500
 export const BAIL_OUT_TOO_MANY_LINES_LIMIT = 100
-//const DEFAULT_MODEL = "mistralai/codestral-2501"
+// const DEFAULT_MODEL = "mistralai/codestral-2501"
 const DEFAULT_MODEL = "google/gemini-2.5-flash-preview-05-20"
 
 export function registerAutocomplete(context: vscode.ExtensionContext) {
