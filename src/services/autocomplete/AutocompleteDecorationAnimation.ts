@@ -42,11 +42,19 @@ export class AutocompleteDecorationAnimation {
 	/**
 	 * Starts the loading animation at the specified range in the editor
 	 */
-	public startAnimation(editor: vscode.TextEditor, range: vscode.Range): void {
+	public startAnimation(): void {
+		const editor = vscode.window.activeTextEditor
+		if (!editor) return
+
 		this.stopAnimation() // Stop any existing animation
 
+		// Get current position from editor's selection
+		const position = editor.selection.active
+		const document = editor.document
+		const lineEndPosition = new vscode.Position(position.line, document.lineAt(position.line).text.length)
+
 		this.editor = editor
-		this.range = range
+		this.range = new vscode.Range(lineEndPosition, lineEndPosition)
 		this.animationState = 0
 		this.isTypingPhase = true // Reset to typing phase
 		this.isBlockVisible = true
@@ -154,8 +162,6 @@ export class AutocompleteDecorationAnimation {
 	 */
 	public dispose(): void {
 		this.stopAnimation()
-		if (this.decorationType) {
-			this.decorationType.dispose()
-		}
+		this.decorationType?.dispose()
 	}
 }
