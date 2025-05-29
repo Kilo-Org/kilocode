@@ -5,6 +5,7 @@ import * as vscode from "vscode"
  */
 export class AutocompleteDecorationAnimation {
 	private static instance: AutocompleteDecorationAnimation
+	private animationInitialWaitTimer: NodeJS.Timeout | null = null
 	private animationInterval: NodeJS.Timeout | null = null
 	private decorationType: vscode.TextEditorDecorationType
 	private animationState = 0
@@ -33,13 +34,6 @@ export class AutocompleteDecorationAnimation {
 	}
 
 	/**
-	 * Returns the decoration type to be used in the editor
-	 */
-	public getDecorationType(): vscode.TextEditorDecorationType {
-		return this.decorationType
-	}
-
-	/**
 	 * Starts the loading animation at the specified range in the editor
 	 */
 	public startAnimation(): void {
@@ -48,7 +42,6 @@ export class AutocompleteDecorationAnimation {
 
 		this.stopAnimation() // Stop any existing animation
 
-		// Get current position from editor's selection
 		const position = editor.selection.active
 		const document = editor.document
 		const lineEndPosition = new vscode.Position(position.line, document.lineAt(position.line).text.length)
@@ -59,12 +52,16 @@ export class AutocompleteDecorationAnimation {
 		this.isTypingPhase = true // Reset to typing phase
 		this.isBlockVisible = true
 
-		// Apply initial animation state
-		this.updateDecorationText()
+		// Delay starting the animation slightly to not distract users
+		// We're still fetching the completion, this just delays showing the decorator.
+		this.animationInitialWaitTimer = setTimeout(() => {
+			// Apply initial animation state
+			this.updateDecorationText()
 
-		// Start animation interval
-		this.animationInterval = setInterval(() => {
-			this.updateAnimation()
+			// Start animation interval
+			this.animationInterval = setInterval(() => {
+				this.updateAnimation()
+			}, 100)
 		}, 100)
 	}
 
@@ -76,6 +73,10 @@ export class AutocompleteDecorationAnimation {
 		if (this.animationInterval) {
 			clearInterval(this.animationInterval)
 			this.animationInterval = null
+		}
+
+		if (this.animationInitialWaitTimer) {
+			clearTimeout(this.animationInitialWaitTimer)
 		}
 
 		if (this.editor && this.decorationType) {
