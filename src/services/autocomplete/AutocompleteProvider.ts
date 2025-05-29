@@ -8,8 +8,7 @@ import { LRUCache } from "lru-cache"
 import { createDebouncedFn } from "./utils/createDebouncedFn"
 import { AutocompleteDecorationAnimation } from "./AutocompleteDecorationAnimation"
 
-// Configuration
-export const UI_UPDATE_DEBOUNCE_MS = 250
+export const UI_UPDATE_DEBOUNCE_MS = 150
 export const BAIL_OUT_TOO_MANY_LINES_LIMIT = 100
 export const MAX_COMPLETIONS_PER_CONTEXT = 5 // Per-given prefix/suffix lines, how many different per-line options to cache
 
