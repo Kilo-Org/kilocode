@@ -17,9 +17,9 @@ const DEFAULT_MODEL = "google/gemini-2.5-flash-preview-05-20"
 export function registerAutocomplete(context: vscode.ExtensionContext) {
 	try {
 		setupAutocomplete(context)
-		console.log("� Kilo Code autocomplete provider registered")
+		console.log("🚀🛑 Kilo Code autocomplete provider registered")
 	} catch (error) {
-		console.error("Failed to register autocomplete provider:", error)
+		console.error("🚀🛑 Failed to register autocomplete provider:", error)
 	}
 }
 
@@ -225,7 +225,7 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 				return null
 			}
 
-			console.log(`����������������� \n` + processedCompletion)
+			console.log(`🚀🛑🚀🛑🚀🛑🚀🛑🚀🛑 \n` + processedCompletion)
 
 			// Cache the successful completion for future use
 			if (processedCompletion && lineCount <= BAIL_OUT_TOO_MANY_LINES_LIMIT) {
