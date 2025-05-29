@@ -91,6 +91,7 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 	// State
 	let enabled = true
 	let activeRequest: string | null = null
+	let isBackspaceOperation = false // Flag to track backspace operations
 
 	// Track accepted suggestions to prevent immediate re-triggering
 	let lastAcceptedSuggestion: string | null = null
@@ -133,6 +134,14 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 	const provider: vscode.InlineCompletionItemProvider = {
 		async provideInlineCompletionItems(document, position, context, token) {
 			if (!enabled || !vscode.window.activeTextEditor) return null
+
+			// Skip providing completions if this was triggered by a backspace operation
+			if (isBackspaceOperation) {
+				console.log("🚀🛑 Ignoring autocomplete request triggered by backspace")
+				// Reset the flag after checking it
+				isBackspaceOperation = false
+				return null
+			}
 
 			// Check if this request is immediately after accepting a suggestion
 			const now = Date.now()
@@ -297,6 +306,16 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 	const documentHandler = vscode.workspace.onDidChangeTextDocument((e) => {
 		const editor = vscode.window.activeTextEditor
 		if (editor?.document === e.document) {
+			// Detect backspace operations by checking content changes
+			if (e.contentChanges.length > 0) {
+				const change = e.contentChanges[0]
+				// A backspace operation is a deletion (rangeLength > 0) with no replacement text
+				isBackspaceOperation = change.rangeLength > 0 && change.text === ""
+
+				if (isBackspaceOperation) {
+					console.log("🚀🛑 Detected backspace operation")
+				}
+			}
 			// Animation will be stopped by clearState when selection changes
 		}
 	})
