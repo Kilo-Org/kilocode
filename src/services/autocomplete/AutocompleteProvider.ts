@@ -244,6 +244,10 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 		if (change.rangeLength > 0 && change.text === "") {
 			isBackspaceOperation = true
 		}
+
+		// Force inlineSuggestions to appear, even for whitespace changes
+		// without this, hitting keys like spacebar won't show the completion
+		vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
 	})
 
 	context.subscriptions.push(
