@@ -32,7 +32,6 @@
 		"@changesets/cli": "^2.27.10",
 		"@dotenvx/dotenvx": "^1.34.0",
 		"@vscode/vsce": "3.3.2",
-		"@types/lru-cache": "^7.10.9",
 		"esbuild": "^0.25.0",
 		"eslint": "^9.27.0",
 		"husky": "^9.1.7",

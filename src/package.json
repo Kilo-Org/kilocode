@@ -436,6 +436,7 @@
 		"@google/genai": "^0.13.0",
 		"@mistralai/mistralai": "^1.6.0",
 		"@modelcontextprotocol/sdk": "^1.9.0",
+		"@types/lru-cache": "^7.10.9",
 		"@vscode/codicons": "^0.0.36",
 		"axios": "^1.7.4",
 		"cheerio": "^1.0.0",
