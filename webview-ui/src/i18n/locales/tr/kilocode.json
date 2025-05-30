@@ -17,6 +17,11 @@
 	"settings": {
 		"sections": {
 			"mcp": "MCP Sunucuları"
+		},
+		"provider": {
+			"apiKey": "Kilo Code API Anahtarı",
+			"login": "Kilo Code'a giriş yap",
+			"logout": "Kilo Code'dan çıkış yap"
 		}
 	},
 	"chat": {

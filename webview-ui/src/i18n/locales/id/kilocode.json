@@ -17,6 +17,11 @@
 	"settings": {
 		"sections": {
 			"mcp": "Server MCP"
+		},
+		"provider": {
+			"apiKey": "API Key Kilo Code",
+			"login": "Masuk ke Kilo Code",
+			"logout": "Keluar dari Kilo Code"
 		}
 	},
 	"chat": {

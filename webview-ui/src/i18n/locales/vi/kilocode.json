@@ -17,6 +17,11 @@
 	"settings": {
 		"sections": {
 			"mcp": "Máy chủ MCP"
+		},
+		"provider": {
+			"apiKey": "Khóa API Kilo Code",
+			"login": "Đăng nhập vào Kilo Code",
+			"logout": "Đăng xuất khỏi Kilo Code"
 		}
 	},
 	"chat": {
