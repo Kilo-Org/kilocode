@@ -454,6 +454,7 @@
 		"i18next": "^24.2.2",
 		"ignore": "^7.0.3",
 		"isbinaryfile": "^5.0.2",
+		"lru-cache": "^11.1.0",
 		"mammoth": "^1.8.0",
 		"monaco-vscode-textmate-theme-converter": "^0.1.7",
 		"node-cache": "^5.1.2",
@@ -489,9 +490,9 @@
 	},
 	"devDependencies": {
 		"@jest/globals": "^29.7.0",
+		"@roo-code/build": "workspace:^",
 		"@roo-code/config-eslint": "workspace:^",
 		"@roo-code/config-typescript": "workspace:^",
-		"@roo-code/build": "workspace:^",
 		"@types/clone-deep": "^4.0.4",
 		"@types/debug": "^4.1.12",
 		"@types/diff": "^5.2.1",

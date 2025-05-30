@@ -239,6 +239,9 @@ importers:
       isbinaryfile:
         specifier: ^5.0.2
         version: 5.0.4
+      lru-cache:
+        specifier: ^11.1.0
+        version: 11.1.0
       mammoth:
         specifier: ^1.8.0
         version: 1.9.0
