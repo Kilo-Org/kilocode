@@ -52,6 +52,8 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 	let activeRequestId: string | null = null
 	let isBackspaceOperation = false // Flag to track backspace operations
 	let justAcceptedSuggestion = false // Flag to track if a suggestion was just accepted
+	let lastCompletionCost = 0 // Track the cost of the last completion
+	let totalSessionCost = 0 // Track the total cost of all completions in the session
 
 	// LRU Cache for completions
 	const completionsCache = new LRUCache<string, string[]>({
@@ -107,18 +109,20 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 		let completion = ""
 		let processedCompletion = ""
 		let lineCount = 0
+		let completionCost = 0
 
 		try {
 			for await (const chunk of stream) {
-				// Check if this request is still active
 				if (activeRequestId !== requestId) {
-					break
+					break // This request is no longer active
 				}
 
 				if (chunk.type === "text") {
 					completion += chunk.text
 					processedCompletion = processModelResponse(completion)
 					lineCount += processedCompletion.split("/n").length
+				} else if (chunk.type === "usage") {
+					completionCost = chunk.totalCost ?? 0
 				}
 
 				if (lineCount > BAIL_OUT_TOO_MANY_LINES_LIMIT) {
@@ -131,11 +135,19 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 			processedCompletion = ""
 		}
 
+		// Update cost tracking variables
+		totalSessionCost += completionCost
+		lastCompletionCost = completionCost
+		console.log(`🚀💰 Completion cost: ${humanFormatCost(completionCost)}`)
+
+		// Update status bar with cost information
+		updateStatusBarWithCost(statusBar, lastCompletionCost, totalSessionCost, enabled)
+
 		if (activeRequestId === requestId) {
 			animationManager.stopAnimation()
 		}
 
-		return { processedCompletion, lineCount }
+		return { processedCompletion, lineCount, cost: completionCost }
 	}
 
 	const debouncedGenerateCompletion = createDebouncedFn(generateCompletion, UI_UPDATE_DEBOUNCE_MS)
@@ -176,8 +188,11 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 			if (!result || token.isCancellationRequested) {
 				return null
 			}
-			const { processedCompletion } = result
-			console.log(`🚀🛑🚀🛑🚀🛑🚀🛑🚀🛑 \n`, { processedCompletion })
+			const { processedCompletion, cost } = result
+			console.log(`🚀🛑🚀🛑🚀🛑🚀🛑🚀🛑 \n`, {
+				processedCompletion,
+				cost: humanFormatCost(cost || 0),
+			})
 
 			// Cache the successful completion for future use
 			if (processedCompletion) {
@@ -206,15 +221,40 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 
 	// Status bar
 	const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100)
-	statusBar.text = "$(sparkle) Autocomplete"
+	statusBar.text = "$(sparkle) Kilo-complete"
 	statusBar.tooltip = "Kilo Code Autocomplete"
 	statusBar.command = "kilo-code.toggleAutocomplete"
 	statusBar.show()
 
+	// Helper function to format cost with special handling for small amounts
+	const humanFormatCost = (cost: number): string => {
+		if (cost === 0) return "$0.00"
+		if (cost > 0 && cost < 0.01) return "<$0.01" // Less than one cent
+		return `$${cost.toFixed(2)}`
+	}
+
+	// Helper function to update status bar with cost information
+	const updateStatusBarWithCost = (
+		statusBar: vscode.StatusBarItem,
+		lastCost: number,
+		totalCost: number,
+		isEnabled: boolean,
+	) => {
+		if (!isEnabled) {
+			statusBar.text = "$(circle-slash) Kilo-complete"
+			statusBar.tooltip = "Kilo Code Autocomplete (disabled)"
+			return
+		}
+
+		const totalCostFormatted = humanFormatCost(totalCost)
+		statusBar.text = `$(sparkle) Kilo-complete (${totalCostFormatted})`
+		statusBar.tooltip = `Kilo Code Autocomplete\nLast completion: ${lastCost.toFixed(5)}\nSession total: ${totalCostFormatted}`
+	}
+
 	const toggleCommand = vscode.commands.registerCommand("kilo-code.toggleAutocomplete", () => {
 		enabled = !enabled
-		statusBar.text = enabled ? "$(sparkle) Autocomplete" : "$(circle-slash) Autocomplete"
-		vscode.window.showInformationMessage(`Autocomplete ${enabled ? "enabled" : "disabled"}`)
+		updateStatusBarWithCost(statusBar, lastCompletionCost, totalSessionCost, enabled)
+		vscode.window.showInformationMessage(`Kilo-complete ${enabled ? "enabled" : "disabled"}`)
 	})
 
 	// Command to track when a suggestion is accepted
