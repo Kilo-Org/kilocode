@@ -323,6 +323,9 @@ importers:
       turndown:
         specifier: ^7.2.0
         version: 7.2.0
+      uri-js:
+        specifier: ^4.4.1
+        version: 4.4.1
       vscode-material-icons:
         specifier: ^0.1.1
         version: 0.1.1

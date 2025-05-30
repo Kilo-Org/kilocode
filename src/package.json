@@ -482,6 +482,7 @@
 		"tmp": "^0.2.3",
 		"tree-sitter-wasms": "^0.1.11",
 		"turndown": "^7.2.0",
+		"uri-js": "^4.4.1",
 		"vscode-material-icons": "^0.1.1",
 		"web-tree-sitter": "^0.22.6",
 		"workerpool": "^9.2.0",
