@@ -481,9 +481,6 @@ export async function presentAssistantMessage(cline: Task) {
 				case "condense":
 					await condenseTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
-				case "condense":
-					await condenseTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
-					break
 				// kilocode_change end
 			}
 			// kilocode_change end

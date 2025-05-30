@@ -76,7 +76,6 @@ export function copyWasms(srcDir: string, distDir: string): void {
 
 	// Copy language-specific WASM files.
 	const languageWasmDir = path.join(nodeModulesDir, "tree-sitter-wasms", "out")
-	const distWasmsDir = path.join(distDir, "tree-sitter-wasms")
 
 	if (!fs.existsSync(languageWasmDir)) {
 		throw new Error(`Directory does not exist: ${languageWasmDir}`)
