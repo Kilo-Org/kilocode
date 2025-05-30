@@ -1,6 +1,6 @@
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 
-interface DangerButtonProps extends React.ComponentProps<typeof VSCodeButton> {}
+type DangerButtonProps = React.ComponentProps<typeof VSCodeButton>
 
 const DangerButton: React.FC<DangerButtonProps> = (props) => {
 	return (

@@ -75,12 +75,13 @@ export const getModels = async (
 				models = {}
 			}
 			break
-		case "kilocode-openrouter":
+		case "kilocode-openrouter": {
 			models = await getOpenRouterModels({
 				baseUrl,
 				headers: { Authorization: `Bearer ${apiKey}` },
 			})
 			break
+		}
 	}
 
 	if (Object.keys(models).length > 0) {

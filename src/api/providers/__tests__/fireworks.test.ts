@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 // npx jest src/api/providers/__tests__/fireworks.test.ts
 
 import { FireworksHandler } from "../fireworks"
@@ -335,6 +334,7 @@ describe("FireworksHandler", () => {
 
 		it("should handle streaming errors gracefully", async () => {
 			mockCreate.mockImplementationOnce(async () => ({
+				// eslint-disable-next-line require-yield
 				[Symbol.asyncIterator]: async function* () {
 					throw new Error("Streaming interrupted")
 				},

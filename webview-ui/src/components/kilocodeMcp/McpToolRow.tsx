@@ -10,7 +10,6 @@ const McpToolRow = ({ tool, serverName }: McpToolRowProps) => {
 	// const { autoApprovalSettings } = useExtensionState()
 
 	// Accept the event object
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const handleAutoApproveChange = (event: any) => {
 		// Only proceed if the event was triggered by a direct user interaction
 		if (!serverName || !event.isTrusted) return

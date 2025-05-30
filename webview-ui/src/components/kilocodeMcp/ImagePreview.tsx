@@ -200,12 +200,12 @@ class ImagePreview extends React.Component<
 					)}
 					{/* Hidden image that we'll use to detect load/error events */}
 					{/\.svg(\?.*)?$/i.test(url) ? (
-						// eslint-disable-next-line jsx-a11y/alt-text
 						<object
 							type="image/svg+xml"
 							data={DOMPurify.sanitize(url)}
 							style={{ display: "none" }}
 							onLoad={this.handleImageLoad}
+							// eslint-disable-next-line react/no-unknown-property
 							onError={this.handleImageError}
 						/>
 					) : (
@@ -286,7 +286,6 @@ class ImagePreview extends React.Component<
 						/>
 					</object>
 				) : (
-					// eslint-disable-next-line jsx-a11y/img-redundant-alt
 					<img
 						src={DOMPurify.sanitize(url)}
 						alt={`Image from ${getSafeHostname(url)}`}

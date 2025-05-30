@@ -28,11 +28,8 @@ build_extension() {
   echo "🔨 Building the Kilo Code extension..."
   cd ..
   mkdir -p bin
-  npm run install-extension -- --silent --no-audit || exit 1
-  npm run install-webview -- --silent --no-audit || exit 1
-  npm run install-e2e -- --silent --no-audit || exit 1
-  npx vsce package --out bin/kilo-code-latest.vsix || exit 1
-  code --install-extension bin/kilo-code-latest.vsix || exit 1
+  pnpm build --out ../bin/kilo-code-$(git rev-parse --short HEAD).vsix || exit 1
+  code --install-extension bin/kilo-code-$(git rev-parse --short HEAD).vsix || exit 1
   cd evals
 }
 

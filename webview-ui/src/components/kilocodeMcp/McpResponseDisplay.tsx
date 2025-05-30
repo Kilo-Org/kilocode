@@ -344,7 +344,6 @@ const McpResponseDisplay: React.FC<McpResponseDisplayProps> = ({ responseText })
 									</div>,
 								)
 
-								// eslint-disable-next-line @typescript-eslint/no-unused-vars
 								embedCount++
 								// console.log(`Added link preview for ${url}, embed count: ${embedCount}`);
 							}

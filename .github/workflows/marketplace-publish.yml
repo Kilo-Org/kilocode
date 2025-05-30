@@ -7,6 +7,7 @@ on:
 env:
     GIT_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'main' }}
     NODE_VERSION: 20.18.1
+    PNPM_VERSION: 10.8.1
 
 jobs:
     publish-extension:
@@ -19,51 +20,66 @@ jobs:
             contains(github.event.pull_request.title, 'Changeset version bump') ) ||
             github.event_name == 'workflow_dispatch'
         steps:
-            - uses: actions/checkout@v4
+            - name: Checkout code
+              uses: actions/checkout@v4
               with:
                   ref: ${{ env.GIT_REF }}
-            - uses: actions/setup-node@v4
+            - name: Install pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: ${{ env.PNPM_VERSION }}
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
               with:
                   node-version: ${{ env.NODE_VERSION }}
-            - run: |
+                  cache: "pnpm"
+            - name: Install dependencies
+              run: pnpm install
+            - name: Configure Git
+              run: |
                   git config user.name "github-actions[bot]"
                   git config user.email "github-actions[bot]@users.noreply.github.com"
-            - name: Install Dependencies
-              run: |
-                  npm install -g vsce ovsx
-                  npm run install:all
-            #  To be enabled if we do  want to use posthog in extension perhaps in the future?
-            # - name: Create .env file
-            #   run: echo "POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY }}" >> .env
+            - name: Create .env file
+              run: echo "Z" >> .env
             - name: Package Extension
               run: |
-                  current_package_version=$(node -p "require('./package.json').version")
-                  npm run vsix
-                  package=$(unzip -l bin/kilo-code-${current_package_version}.vsix)
-                  echo "$package"
-                  echo "$package" | grep -q "dist/extension.js" || exit 1
-                  echo "$package" | grep -q "extension/webview-ui/build/assets/index.js" || exit 1
-                  echo "$package" | grep -q "extension/node_modules/@vscode/codicons/dist/codicon.ttf" || exit 1
-                  echo "$package" | grep -q ".env" || exit 1
+                  current_package_version=$(node -p "require('./src/package.json').version")
+                  pnpm build
+
+                  # Save VSIX contents to a temporary file to avoid broken pipe issues.
+                  unzip -l bin/kilo-code-${current_package_version}.vsix > /tmp/kilo-code-vsix-contents.txt
+
+                  # Check for required files.
+                  grep -q "extension/package.json" /tmp/kilo-code-vsix-contents.txt || exit 1
+                  grep -q "extension/package.nls.json" /tmp/kilo-code-vsix-contents.txt || exit 1
+                  grep -q "extension/dist/extension.js" /tmp/kilo-code-vsix-contents.txt || exit 1
+                  grep -q "extension/webview-ui/audio/celebration.wav" /tmp/kilo-code-vsix-contents.txt || exit 1
+                  grep -q "extension/webview-ui/build/assets/index.js" /tmp/kilo-code-vsix-contents.txt || exit 1
+                  grep -q "extension/assets/codicons/codicon.ttf" /tmp/kilo-code-vsix-contents.txt || exit 1
+                  grep -q "extension/assets/vscode-material-icons/icons/3d.svg" /tmp/kilo-code-vsix-contents.txt || exit 1
+                  grep -q ".env" /tmp/kilo-code-vsix-contents.txt || exit 1
+
+                  # Clean up temporary file.
+                  rm /tmp/kilo-code-vsix-contents.txt
             - name: Create and Push Git Tag
               run: |
-                  current_package_version=$(node -p "require('./package.json').version")
+                  current_package_version=$(node -p "require('./src/package.json').version")
                   git tag -a "v${current_package_version}" -m "Release v${current_package_version}"
-                  git push origin "v${current_package_version}"
+                  git push origin "v${current_package_version}" --no-verify
                   echo "Successfully created and pushed git tag v${current_package_version}"
             - name: Publish Extension
               env:
                   VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
                   OVSX_PAT: ${{ secrets.OVSX_TOKEN }}
               run: |
-                  current_package_version=$(node -p "require('./package.json').version")
-                  npm run publish:marketplace
+                  current_package_version=$(node -p "require('./src/package.json').version")
+                  pnpm --filter kilo-code publish:marketplace
                   echo "Successfully published version $current_package_version to VS Code Marketplace"
             - name: Create GitHub Release
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
-                  current_package_version=$(node -p "require('./package.json').version")
+                  current_package_version=$(node -p "require('./src/package.json').version")
 
                   # Extract changelog for current version
                   echo "Extracting changelog for version ${current_package_version}"

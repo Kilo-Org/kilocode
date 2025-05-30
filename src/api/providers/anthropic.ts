@@ -38,10 +38,10 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 
 		switch (modelId) {
 			case "claude-sonnet-4-20250514":
+			case "claude-opus-4-20250514":
 			case "claude-3-7-sonnet-20250219":
 			case "claude-3-5-sonnet-20241022":
 			case "claude-3-5-haiku-20241022":
-			case "claude-opus-4-20250514":
 			case "claude-3-opus-20240229":
 			case "claude-3-haiku-20240307": {
 				/**
@@ -95,7 +95,8 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 
 						const betas = []
 
-						// Check for the thinking-128k variant first
+						// Enable extended thinking for Claude 3.7 Sonnet only.
+						// https://docs.anthropic.com/en/docs/about-claude/models/migrating-to-claude-4#extended-output-no-longer-supported
 						if (virtualId === "claude-3-7-sonnet-20250219:thinking") {
 							betas.push("output-128k-2025-02-19")
 						}
@@ -133,7 +134,7 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 
 		for await (const chunk of stream) {
 			switch (chunk.type) {
-				case "message_start":
+				case "message_start": {
 					// Tells us cache reads/writes/input/output.
 					const usage = chunk.message.usage
 
@@ -146,6 +147,7 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 					}
 
 					break
+				}
 				case "message_delta":
 					// Tells us stop_reason, stop_sequence, and output tokens
 					// along the way and at the end of the message.
@@ -206,11 +208,14 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 		// Track the original model ID for special variant handling
 		const virtualId = id
 
-		// The `:thinking` variant is a virtual identifier for the
-		// `claude-3-7-sonnet-20250219` model with a thinking budget.
+		// The `:thinking` variants are virtual identifiers for models with a thinking budget.
 		// We can handle this more elegantly in the future.
 		if (id === "claude-3-7-sonnet-20250219:thinking") {
 			id = "claude-3-7-sonnet-20250219"
+		} else if (id === "claude-sonnet-4-20250514:thinking") {
+			id = "claude-sonnet-4-20250514"
+		} else if (id === "claude-opus-4-20250514:thinking") {
+			id = "claude-opus-4-20250514"
 		}
 
 		return {

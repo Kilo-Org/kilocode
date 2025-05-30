@@ -104,14 +104,8 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 	const { t } = useAppTranslation()
 
 	const extensionState = useExtensionState()
-	const {
-		currentApiConfigName,
-		listApiConfigMeta,
-		uriScheme,
-		uiKind /* kilocode_change */,
-		version,
-		settingsImportedAt,
-	} = extensionState
+	// kilocode_change: add uiKind
+	const { currentApiConfigName, listApiConfigMeta, uiKind, uriScheme, settingsImportedAt } = extensionState
 
 	const [isDiscardDialogShow, setDiscardDialogShow] = useState(false)
 	const [isChangeDetected, setChangeDetected] = useState(false)
@@ -217,7 +211,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 				requestyApiKey,
 			},
 		}))
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [kilocodeToken, openRouterApiKey, glamaApiKey, requestyApiKey])
 
 	useEffect(() => {
@@ -721,12 +714,12 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 						<LanguageSettings language={language || "en"} setCachedStateField={setCachedStateField} />
 					)}
 
-					{/* About Section */}
-					{activeTab === "about" && <About version={version} />}
-
 					{/* kilocode_change */}
 					{/* MCP Section */}
 					{activeTab === "mcp" && <McpView />}
+
+					{/* About Section */}
+					{activeTab === "about" && <About telemetrySetting={"disabled"} setTelemetrySetting={() => {}} />}
 				</TabContent>
 			</div>
 

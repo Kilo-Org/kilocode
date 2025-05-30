@@ -1624,6 +1624,7 @@ declare const Package: {
 	readonly name: string
 	readonly version: string
 	readonly outputChannel: string
+	readonly sha: string | undefined
 }
 /**
  * ProviderName
