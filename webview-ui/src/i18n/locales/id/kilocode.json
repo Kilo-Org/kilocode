@@ -28,6 +28,14 @@
 	"newTaskPreview": {
 		"task": "Tugas"
 	},
+	"autocompleteApiConfig": {
+		"title": "Konfigurasi API Autocomplete",
+		"description": "Konfigurasi API mana yang akan digunakan untuk fungsionalitas autocomplete.",
+		"fieldLabel": "Konfigurasi API Autocomplete",
+		"fieldDescription": "Pilih konfigurasi API spesifik untuk autocomplete. Hanya model tertentu yang bagus dalam melengkapi kode secara otomatis.",
+		"learnMore": "Pelajari lebih lanjut",
+		"useCurrentConfig": "Gunakan konfigurasi API saat ini"
+	},
 	"profile": {
 		"dashboard": "Dashboard",
 		"logOut": "Keluar",
