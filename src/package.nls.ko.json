@@ -16,6 +16,7 @@
 	"views.activitybar.title": "Kilo Code",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",
+	"views.sidebar.name": "Kilo Code",
 	"command.mcpServers.title": "MCP 서버",
 	"command.prompts.title": "프롬프트",
 	"command.history.title": "기록",
