@@ -320,10 +320,10 @@ const ApiOptions = ({
 						value={apiConfiguration?.kilocodeToken || ""}
 						type="password"
 						onInput={handleInputChange("kilocodeToken")}
-						placeholder="KiloCode API Key"
+						placeholder={t("kilocode:settings.provider.apiKey")}
 						className="w-full">
 						<div className="flex justify-between items-center mb-1">
-							<label className="block font-medium">KiloCode API Key</label>
+							<label className="block font-medium">{t("kilocode:settings.provider.apiKey")}</label>
 						</div>
 					</VSCodeTextField>
 
@@ -353,12 +353,12 @@ const ApiOptions = ({
 											},
 										})
 									}}>
-									Log out from Kilo Code
+									{t("kilocode:settings.provider.logout")}
 								</Button>
 							</div>
 						) : (
 							<VSCodeButtonLink variant="secondary" href={getKiloCodeBackendAuthUrl(uriScheme, uiKind)}>
-								Log in at Kilo Code
+								{t("kilocode:settings.provider.login")}
 							</VSCodeButtonLink>
 						))}
 				</>

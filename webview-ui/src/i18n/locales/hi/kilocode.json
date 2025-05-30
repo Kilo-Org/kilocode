@@ -17,6 +17,11 @@
 	"settings": {
 		"sections": {
 			"mcp": "MCP सर्वर"
+		},
+		"provider": {
+			"apiKey": "Kilo Code API कुंजी",
+			"login": "Kilo Code में लॉग इन करें",
+			"logout": "Kilo Code से लॉग आउट करें"
 		}
 	},
 	"chat": {

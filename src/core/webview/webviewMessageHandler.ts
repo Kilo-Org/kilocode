@@ -417,16 +417,27 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			const workspaceFolder = vscode.workspace.workspaceFolders[0]
 			const rooDir = path.join(workspaceFolder.uri.fsPath, ".kilocode")
 			const mcpPath = path.join(rooDir, "mcp.json")
+			const rootMcpPath = path.join(workspaceFolder.uri.fsPath, ".mcp.json")
 
 			try {
-				await fs.mkdir(rooDir, { recursive: true })
-				const exists = await fileExistsAtPath(mcpPath)
-
-				if (!exists) {
-					await fs.writeFile(mcpPath, JSON.stringify({ mcpServers: {} }, null, 2))
+				// First check if .kilocode/mcp.json exists
+				const kilocodeExists = await fileExistsAtPath(mcpPath)
+				if (kilocodeExists) {
+					// Open it
+					await openFile(mcpPath)
+				} else {
+					// Check if .mcp.json exists in the root directory
+					const rootExists = await fileExistsAtPath(rootMcpPath)
+					if (rootExists) {
+						// Open it
+						await openFile(rootMcpPath)
+					} else {
+						// If neither exists, create .kilocode/mcp.json to mark the territory
+						await fs.mkdir(rooDir, { recursive: true })
+						await fs.writeFile(mcpPath, JSON.stringify({ mcpServers: {} }, null, 2))
+						await openFile(mcpPath)
+					}
 				}
-
-				await openFile(mcpPath)
 			} catch (error) {
 				vscode.window.showErrorMessage(t("common:errors.create_mcp_json", { error: `${error}` }))
 			}

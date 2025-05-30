@@ -17,6 +17,11 @@
 	"settings": {
 		"sections": {
 			"mcp": "Servidors MCP"
+		},
+		"provider": {
+			"apiKey": "Clau API de Kilo Code",
+			"login": "Iniciar sessió a Kilo Code",
+			"logout": "Tancar sessió de Kilo Code"
 		}
 	},
 	"profile": {

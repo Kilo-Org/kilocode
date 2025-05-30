@@ -17,6 +17,11 @@
 	"settings": {
 		"sections": {
 			"mcp": "MCP 服务器"
+		},
+		"provider": {
+			"apiKey": "Kilo Code API 密钥",
+			"login": "登录 Kilo Code",
+			"logout": "退出 Kilo Code"
 		}
 	},
 	"chat": {
