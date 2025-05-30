@@ -319,14 +319,17 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 
 		this.view = webviewView
 
+		// kilocode_change start: extract constant inTabMode
 		// Set panel reference according to webview type
-		if ("onDidChangeViewState" in webviewView) {
+		const inTabMode = "onDidChangeViewState" in webviewView
+		if (inTabMode) {
 			// Tag page type
 			setPanel(webviewView, "tab")
 		} else if ("onDidChangeVisibility" in webviewView) {
 			// Sidebar Type
 			setPanel(webviewView, "sidebar")
 		}
+		// kilocode_change end
 
 		// Initialize out-of-scope variables that need to recieve persistent global state values
 		this.getState().then(
@@ -410,7 +413,14 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		// This happens when the user closes the view or when the view is closed programmatically
 		webviewView.onDidDispose(
 			async () => {
-				await this.dispose()
+				// kilocode_change start: only dispose in tab mode
+				if (inTabMode) {
+					this.log("Disposing ClineProvider because it was in tab mode.")
+					await this.dispose()
+				} else {
+					this.log("NOT disposing ClineProvider because it is in sidebar mode and can be reused.")
+				}
+				// kilocode_change end
 			},
 			null,
 			this.disposables,
