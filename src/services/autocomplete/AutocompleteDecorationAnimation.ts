@@ -64,7 +64,7 @@ export class AutocompleteDecorationAnimation {
 			this.animationInterval = setInterval(() => {
 				this.updateAnimation()
 			}, 100)
-		}, 100)
+		}, UI_SHOW_LOADING_DELAY_MS)
 	}
 
 	/**
