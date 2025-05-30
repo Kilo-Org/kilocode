@@ -3,6 +3,7 @@
 	"extension.description": "コードの計画、構築、修正のためのオープンソース AI コーディング アシスタント。",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",
+	"views.sidebar.name": "Kilo Code",
 	"views.activitybar.title": "Kilo Code",
 	"command.newTask.title": "新しいタスク",
 	"command.mcpServers.title": "MCPサーバー",

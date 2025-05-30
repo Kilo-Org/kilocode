@@ -4,6 +4,7 @@
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",
 	"views.activitybar.title": "Kilo Code (⇧⌘A)",
+	"views.sidebar.name": "Kilo Code",
 	"command.newTask.title": "New Task",
 	"command.mcpServers.title": "MCP Servers",
 	"command.prompts.title": "Prompts",

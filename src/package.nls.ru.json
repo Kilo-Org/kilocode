@@ -3,6 +3,7 @@
 	"extension.description": "Целая команда ИИ-разработчиков в вашем редакторе.",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",
+	"views.sidebar.name": "Kilo Code",
 	"views.activitybar.title": "Kilo Code",
 	"command.newTask.title": "Новая задача",
 	"command.mcpServers.title": "MCP серверы",

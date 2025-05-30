@@ -119,7 +119,7 @@
 				{
 					"type": "webview",
 					"id": "kilo-code.SidebarProvider",
-					"name": ""
+					"name": "%views.sidebar.name%"
 				}
 			]
 		},
