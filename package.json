@@ -1,15 +1,6 @@
 {
 	"name": "kilo-code",
 	"packageManager": "pnpm@10.8.1",
-	"displayName": "%extension.displayName%",
-	"description": "%extension.description%",
-	"publisher": "kilocode",
-	"version": "4.29.2",
-	"icon": "assets/icons/logo-outline-black.png",
-	"galleryBanner": {
-		"color": "#FFFFFF",
-		"theme": "light"
-	},
 	"engines": {
 		"node": "20.18.1"
 	},
