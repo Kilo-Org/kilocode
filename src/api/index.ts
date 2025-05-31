@@ -106,4 +106,4 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 	}
 }
 
-// kilocode_change: moved getModelParams to ./getModelParams.ts because of circular dependencys
+// kilocode_change: moved getModelParams to ./getModelParams.ts because of circular dependencies
