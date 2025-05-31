@@ -3,11 +3,11 @@ import * as vscode from "vscode"
 import fs from "fs/promises"
 import * as path from "path"
 
-import { Package } from "../schemas"
 import { getWorkspacePath } from "../utils/path"
 import { ClineProvider } from "../core/webview/ClineProvider"
 import { openClineInNewTab } from "../activate/registerCommands"
 import {
+	Package,
 	RooCodeSettings,
 	RooCodeEvents,
 	RooCodeEventName,
