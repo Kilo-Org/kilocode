@@ -1,4 +1,4 @@
-// Updates to this file will automatically propgate to src/exports/types.ts
+// Updates to this file will automatically propagate to src/exports/types.ts
 // via a pre-commit hook. If you want to update the types before committing you
 // can run `pnpm generate-types`.
 
