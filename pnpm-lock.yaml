@@ -182,6 +182,9 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.9.0
         version: 1.11.2
+      '@types/lru-cache':
+        specifier: ^7.10.9
+        version: 7.10.10
       '@vscode/codicons':
         specifier: ^0.0.36
         version: 0.0.36
@@ -236,6 +239,9 @@ importers:
       isbinaryfile:
         specifier: ^5.0.2
         version: 5.0.4
+      lru-cache:
+        specifier: ^11.1.0
+        version: 11.1.0
       mammoth:
         specifier: ^1.8.0
         version: 1.9.0
@@ -317,6 +323,9 @@ importers:
       turndown:
         specifier: ^7.2.0
         version: 7.2.0
+      uri-js:
+        specifier: ^4.4.1
+        version: 4.4.1
       vscode-material-icons:
         specifier: ^0.1.1
         version: 0.1.1
@@ -3036,6 +3045,10 @@ packages:
 
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
+
+  '@types/lru-cache@7.10.10':
+    resolution: {integrity: sha512-nEpVRPWW9EBmx2SCfNn3ClYxPL7IktPX12HhIoSc/H5mMjdeW3+YsXIpseLQ2xF35+OcpwKQbEUw5VtqE4PDNA==}
+    deprecated: This is a stub types definition. lru-cache provides its own type definitions, so you do not need this installed.
 
   '@types/mdast@3.0.15':
     resolution: {integrity: sha512-LnwD+mUEfxWMa1QpDraczIn6k0Ee3SMicuYSSzS6ZYl2gKS09EClnJYGd8Du6rfc5r/GZEk5o1mRb8TaTj03sQ==}
@@ -11980,6 +11993,10 @@ snapshots:
       parse5: 7.3.0
 
   '@types/json-schema@7.0.15': {}
+
+  '@types/lru-cache@7.10.10':
+    dependencies:
+      lru-cache: 11.1.0
 
   '@types/mdast@3.0.15':
     dependencies:

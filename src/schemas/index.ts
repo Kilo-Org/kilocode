@@ -396,7 +396,7 @@ export type CommandExecutionStatus = z.infer<typeof commandExecutionStatusSchema
  * ExperimentId
  */
 
-export const experimentIds = ["autoCondenseContext", "powerSteering"] as const
+export const experimentIds = ["autocomplete", "autoCondenseContext", "powerSteering"] as const
 
 export const experimentIdsSchema = z.enum(experimentIds)
 
@@ -409,6 +409,7 @@ export type ExperimentId = z.infer<typeof experimentIdsSchema>
 const experimentsSchema = z.object({
 	autoCondenseContext: z.boolean(),
 	powerSteering: z.boolean(),
+	autocomplete: z.boolean(),
 })
 
 export type Experiments = z.infer<typeof experimentsSchema>
@@ -834,6 +835,7 @@ export const globalSettingsSchema = z.object({
 	customModePrompts: customModePromptsSchema.optional(),
 	customSupportPrompts: customSupportPromptsSchema.optional(),
 	enhancementApiConfigId: z.string().optional(),
+	autocompleteApiConfigId: z.string().optional(),
 	historyPreviewCollapsed: z.boolean().optional(),
 })
 
@@ -916,6 +918,7 @@ const globalSettingsRecord: GlobalSettingsRecord = {
 	customModePrompts: undefined,
 	customSupportPrompts: undefined,
 	enhancementApiConfigId: undefined,
+	autocompleteApiConfigId: undefined,
 	cachedChromeHostUrl: undefined,
 	historyPreviewCollapsed: undefined,
 }

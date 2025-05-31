@@ -1,6 +1,7 @@
 import { HTMLAttributes } from "react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { FlaskConical } from "lucide-react"
+import { ProviderSettings } from "@roo/shared/api" // kilocode_change
 
 import { EXPERIMENT_IDS, experimentConfigsMap, ExperimentId } from "@roo/shared/experiments"
 
@@ -15,6 +16,7 @@ import { Slider } from "@/components/ui/"
 type ExperimentalSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	experiments: Record<ExperimentId, boolean>
 	setExperimentEnabled: SetExperimentEnabled
+	providerSettings: ProviderSettings // kilocode_change
 	autoCondenseContextPercent: number
 	setCachedStateField: SetCachedStateField<"autoCondenseContextPercent">
 }
@@ -25,6 +27,7 @@ export const ExperimentalSettings = ({
 	autoCondenseContextPercent,
 	setCachedStateField,
 	className,
+	providerSettings, // kilocode_change
 	...props
 }: ExperimentalSettingsProps) => {
 	const { t } = useAppTranslation()
@@ -49,6 +52,7 @@ export const ExperimentalSettings = ({
 							onChange={(enabled) =>
 								setExperimentEnabled(EXPERIMENT_IDS[config[0] as keyof typeof EXPERIMENT_IDS], enabled)
 							}
+							isAvailable={config[1].isAvailable?.(providerSettings) ?? true} // kilocode_change
 						/>
 					))}
 				{experiments[EXPERIMENT_IDS.AUTO_CONDENSE_CONTEXT] && (

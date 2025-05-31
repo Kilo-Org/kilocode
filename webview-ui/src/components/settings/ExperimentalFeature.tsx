@@ -6,9 +6,17 @@ interface ExperimentalFeatureProps {
 	onChange: (value: boolean) => void
 	// Additional property to identify the experiment
 	experimentKey?: string
+	isAvailable: boolean // kilocode_change
 }
 
-export const ExperimentalFeature = ({ enabled, onChange, experimentKey }: ExperimentalFeatureProps) => {
+export const ExperimentalFeature = ({
+	// kilocode_change start
+	enabled,
+	onChange,
+	experimentKey,
+	isAvailable,
+	// kilocode_change end
+}: ExperimentalFeatureProps) => {
 	const { t } = useAppTranslation()
 
 	// Generate translation keys based on experiment key
@@ -19,9 +27,14 @@ export const ExperimentalFeature = ({ enabled, onChange, experimentKey }: Experi
 		<div>
 			<div className="flex items-center gap-2">
 				<span className="text-vscode-errorForeground">{t("settings:experimental.warning")}</span>
-				<VSCodeCheckbox checked={enabled} onChange={(e: any) => onChange(e.target.checked)}>
+				{/* kilocode_change start */}
+				<VSCodeCheckbox
+					checked={enabled}
+					disabled={!isAvailable}
+					onChange={(e: any) => onChange(e.target.checked)}>
 					<span className="font-medium">{t(nameKey)}</span>
 				</VSCodeCheckbox>
+				{/* kilocode_change end */}
 			</div>
 			<p className="text-vscode-descriptionForeground text-sm mt-0">{t(descriptionKey)}</p>
 		</div>

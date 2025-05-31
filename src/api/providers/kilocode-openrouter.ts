@@ -62,7 +62,7 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 	}
 
 	public override async fetchModel() {
-		this.models = await getModels("kilocode-openrouter")
+		this.models = await getModels("kilocode-openrouter", this.options.kilocodeToken, this.options.openRouterBaseUrl)
 		return this.getModel()
 	}
 }

@@ -1,9 +1,10 @@
-import { ExperimentId } from "../schemas"
+import { ExperimentId, ProviderSettings } from "../schemas" // kilocode_change
 import { AssertEqual, Equals, Keys, Values } from "../utils/type-fu"
 
 export type { ExperimentId }
 
 export const EXPERIMENT_IDS = {
+	AUTOCOMPLETE: "autocomplete",
 	POWER_STEERING: "powerSteering",
 	AUTO_CONDENSE_CONTEXT: "autoCondenseContext",
 } as const satisfies Record<string, ExperimentId>
@@ -14,11 +15,18 @@ type ExperimentKey = Keys<typeof EXPERIMENT_IDS>
 
 interface ExperimentConfig {
 	enabled: boolean
+	isAvailable?: (settings: ProviderSettings) => boolean // kilocode_change
 }
 
 export const experimentConfigsMap: Record<ExperimentKey, ExperimentConfig> = {
+	// start kilocode_change
+	AUTOCOMPLETE: {
+		enabled: false,
+		isAvailable: (settings) => settings.apiProvider === "kilocode" && !!settings.kilocodeToken,
+	},
 	POWER_STEERING: { enabled: false },
 	AUTO_CONDENSE_CONTEXT: { enabled: false }, // Keep this last, there is a slider below it in the UI
+	// end kilocode_change
 }
 
 export const experimentDefault = Object.fromEntries(

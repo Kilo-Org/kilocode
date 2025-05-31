@@ -112,6 +112,7 @@ type GlobalSettings = {
 		| {
 				autoCondenseContext: boolean
 				powerSteering: boolean
+				autocomplete: boolean
 		  }
 		| undefined
 	language?:
@@ -183,6 +184,7 @@ type GlobalSettings = {
 		  }
 		| undefined
 	enhancementApiConfigId?: string | undefined
+	autocompleteApiConfigId?: string | undefined
 	historyPreviewCollapsed?: boolean | undefined
 }
 
@@ -881,6 +883,7 @@ type IpcMessage =
 									| {
 											autoCondenseContext: boolean
 											powerSteering: boolean
+											autocomplete: boolean
 									  }
 									| undefined
 								language?:
@@ -952,6 +955,7 @@ type IpcMessage =
 									  }
 									| undefined
 								enhancementApiConfigId?: string | undefined
+								autocompleteApiConfigId?: string | undefined
 								historyPreviewCollapsed?: boolean | undefined
 							}
 							text: string
@@ -1376,6 +1380,7 @@ type TaskCommand =
 						| {
 								autoCondenseContext: boolean
 								powerSteering: boolean
+								autocomplete: boolean
 						  }
 						| undefined
 					language?:
@@ -1447,6 +1452,7 @@ type TaskCommand =
 						  }
 						| undefined
 					enhancementApiConfigId?: string | undefined
+					autocompleteApiConfigId?: string | undefined
 					historyPreviewCollapsed?: boolean | undefined
 				}
 				text: string
