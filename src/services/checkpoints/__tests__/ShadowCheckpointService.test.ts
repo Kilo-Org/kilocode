@@ -61,6 +61,10 @@ describe.each([[RepoPerTaskCheckpointService, "RepoPerTaskCheckpointService"]])(
 		beforeEach(async () => {
 			const shadowDir = path.join(tmpDir, `${prefix}-${Date.now()}`)
 			const workspaceDir = path.join(tmpDir, `workspace-${Date.now()}`)
+
+			// Ensure the tmp directory exists before initializing
+			await fs.mkdir(tmpDir, { recursive: true })
+
 			const repo = await initWorkspaceRepo({ workspaceDir })
 
 			workspaceGit = repo.git

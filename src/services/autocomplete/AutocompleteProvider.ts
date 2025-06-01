@@ -7,6 +7,7 @@ import { generateImportSnippets, generateDefinitionSnippets } from "./context/sn
 import { LRUCache } from "lru-cache"
 import { createDebouncedFn } from "./utils/createDebouncedFn"
 import { AutocompleteDecorationAnimation } from "./AutocompleteDecorationAnimation"
+import { isHumanEdit } from "./utils/EditDetectionUtils"
 
 export const UI_UPDATE_DEBOUNCE_MS = 250
 export const BAIL_OUT_TOO_MANY_LINES_LIMIT = 100
@@ -273,6 +274,14 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 		if (!editor || editor.document !== e.document || !e.contentChanges.length) return
 
 		clearState()
+
+		// Check if this edit is from human typing rather than AI tools, copy-paste, etc.
+		// Only trigger autocomplete for human edits to avoid interference
+		const isHumanTyping = isHumanEdit(e)
+		if (!isHumanTyping) {
+			console.log("🚀🤖 Skipping autocomplete trigger during non-human edit")
+			return
+		}
 
 		// Reset the justAcceptedSuggestion flag when the user makes any edit
 		// This ensures we only skip one completion request after accepting a suggestion
