@@ -59,7 +59,8 @@
 		"custom_storage_path_unusable": "Path penyimpanan kustom \"{{path}}\" tidak dapat digunakan, akan menggunakan path default",
 		"cannot_access_path": "Tidak dapat mengakses path {{path}}: {{error}}",
 		"failed_update_project_mcp": "Gagal memperbarui server MCP proyek",
-		"settings_import_failed": "Impor pengaturan gagal: {{error}}."
+		"settings_import_failed": "Impor pengaturan gagal: {{error}}.",
+		"mistake_limit_guidance": "Ini mungkin menunjukkan kegagalan dalam proses pemikiran model atau ketidakmampuan untuk menggunakan tool dengan benar, yang dapat diatasi dengan beberapa panduan pengguna (misalnya \"Coba bagi tugas menjadi langkah-langkah yang lebih kecil\")."
 	},
 	"warnings": {
 		"no_terminal_content": "Tidak ada konten terminal yang dipilih",

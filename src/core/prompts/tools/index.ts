@@ -1,7 +1,8 @@
-import { ToolName } from "../../../schemas"
+import type { ToolName, ModeConfig } from "@roo-code/types"
+
 import { TOOL_GROUPS, ALWAYS_AVAILABLE_TOOLS, DiffStrategy } from "../../../shared/tools"
 import { McpHub } from "../../../services/mcp/McpHub"
-import { Mode, ModeConfig, getModeConfig, isToolAllowedForMode, getGroupName } from "../../../shared/modes"
+import { Mode, getModeConfig, isToolAllowedForMode, getGroupName } from "../../../shared/modes"
 
 import { ToolArgs } from "./types"
 import { getExecuteCommandDescription } from "./execute-command"
@@ -20,6 +21,8 @@ import { getUseMcpToolDescription } from "./use-mcp-tool"
 import { getAccessMcpResourceDescription } from "./access-mcp-resource"
 import { getSwitchModeDescription } from "./switch-mode"
 import { getNewTaskDescription } from "./new-task"
+import { getCodebaseSearchDescription } from "./codebase-search"
+import { CodeIndexManager } from "../../../services/code-index/manager"
 
 // Map of tool names to their description functions
 const toolDescriptionMap: Record<string, (args: ToolArgs) => string | undefined> = {
@@ -35,6 +38,7 @@ const toolDescriptionMap: Record<string, (args: ToolArgs) => string | undefined>
 	attempt_completion: () => getAttemptCompletionDescription(),
 	use_mcp_tool: (args) => getUseMcpToolDescription(args),
 	access_mcp_resource: (args) => getAccessMcpResourceDescription(args),
+	codebase_search: () => getCodebaseSearchDescription(),
 	switch_mode: () => getSwitchModeDescription(),
 	new_task: (args) => getNewTaskDescription(args),
 	insert_content: (args) => getInsertContentDescription(args),
@@ -47,11 +51,13 @@ export function getToolDescriptionsForMode(
 	mode: Mode,
 	cwd: string,
 	supportsComputerUse: boolean,
+	codeIndexManager?: CodeIndexManager,
 	diffStrategy?: DiffStrategy,
 	browserViewportSize?: string,
 	mcpHub?: McpHub,
 	customModes?: ModeConfig[],
 	experiments?: Record<string, boolean>,
+	partialReadsEnabled?: boolean,
 ): string {
 	const config = getModeConfig(mode, customModes)
 	const args: ToolArgs = {
@@ -60,6 +66,7 @@ export function getToolDescriptionsForMode(
 		diffStrategy,
 		browserViewportSize,
 		mcpHub,
+		partialReadsEnabled,
 	}
 
 	const tools = new Set<string>()
@@ -88,6 +95,14 @@ export function getToolDescriptionsForMode(
 
 	// Add always available tools
 	ALWAYS_AVAILABLE_TOOLS.forEach((tool) => tools.add(tool))
+
+	// Conditionally exclude codebase_search if feature is disabled or not configured
+	if (
+		!codeIndexManager ||
+		!(codeIndexManager.isFeatureEnabled && codeIndexManager.isFeatureConfigured && codeIndexManager.isInitialized)
+	) {
+		tools.delete("codebase_search")
+	}
 
 	// Map tool descriptions for allowed tools
 	const descriptions = Array.from(tools).map((toolName) => {
@@ -122,4 +137,5 @@ export {
 	getSwitchModeDescription,
 	getInsertContentDescription,
 	getSearchAndReplaceDescription,
+	getCodebaseSearchDescription,
 }

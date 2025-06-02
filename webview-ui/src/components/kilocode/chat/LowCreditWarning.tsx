@@ -1,4 +1,4 @@
-import { ClineMessage } from "@roo/schemas"
+import { ClineMessage } from "@roo-code/types"
 import { vscode } from "@src/utils/vscode"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import { RetryIconButton } from "../common/RetryIconButton"

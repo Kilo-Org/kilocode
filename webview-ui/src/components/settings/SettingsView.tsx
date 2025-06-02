@@ -9,7 +9,6 @@ import React, {
 	useRef,
 	useState,
 } from "react"
-import { useAppTranslation } from "@/i18n/TranslationContext"
 import {
 	CheckCheck,
 	SquareMousePointer,
@@ -29,11 +28,11 @@ import {
 // kilocode_change
 import { ensureBodyPointerEventsRestored } from "@/utils/fixPointerEvents"
 
-import { ExperimentId } from "@roo/shared/experiments"
-import { ProviderSettings } from "@roo/shared/api"
+import type { ProviderSettings, ExperimentId } from "@roo-code/types"
 
-import { vscode } from "@/utils/vscode"
-import { ExtensionStateContextType, useExtensionState } from "@/context/ExtensionStateContext"
+import { vscode } from "@src/utils/vscode"
+import { useAppTranslation } from "@src/i18n/TranslationContext"
+import { ExtensionStateContextType, useExtensionState } from "@src/context/ExtensionStateContext"
 import {
 	AlertDialog,
 	AlertDialogContent,
@@ -48,7 +47,7 @@ import {
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger,
-} from "@/components/ui"
+} from "@src/components/ui"
 
 import { Tab, TabContent, TabHeader, TabList, TabTrigger } from "../common/Tab"
 import { SetCachedStateField, SetExperimentEnabled } from "./types"
@@ -178,6 +177,10 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		maxReadFileLine,
 		showAutoApproveMenu, // kilocode_change
 		terminalCompressProgressBar,
+		condensingApiConfigId,
+		customCondensingPrompt,
+		codebaseIndexConfig,
+		codebaseIndexModels,
 	} = cachedState
 
 	const apiConfiguration = useMemo(() => cachedState.apiConfiguration ?? {}, [cachedState.apiConfiguration])
@@ -282,7 +285,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			vscode.postMessage({ type: "alwaysAllowBrowser", bool: alwaysAllowBrowser })
 			vscode.postMessage({ type: "alwaysAllowMcp", bool: alwaysAllowMcp })
 			vscode.postMessage({ type: "allowedCommands", commands: allowedCommands ?? [] })
-			vscode.postMessage({ type: "allowedMaxRequests", value: allowedMaxRequests })
+			vscode.postMessage({ type: "allowedMaxRequests", value: allowedMaxRequests ?? undefined })
 			vscode.postMessage({ type: "autoCondenseContextPercent", value: autoCondenseContextPercent })
 			vscode.postMessage({ type: "browserToolEnabled", bool: browserToolEnabled })
 			vscode.postMessage({ type: "soundEnabled", bool: soundEnabled })
@@ -313,13 +316,16 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			vscode.postMessage({ type: "maxOpenTabsContext", value: maxOpenTabsContext })
 			vscode.postMessage({ type: "maxWorkspaceFiles", value: maxWorkspaceFiles ?? 200 })
 			vscode.postMessage({ type: "showRooIgnoredFiles", bool: showRooIgnoredFiles })
-			vscode.postMessage({ type: "maxReadFileLine", value: maxReadFileLine ?? 500 })
 			vscode.postMessage({ type: "showAutoApproveMenu", bool: showAutoApproveMenu }) // kilocode_change
+			vscode.postMessage({ type: "maxReadFileLine", value: maxReadFileLine ?? -1 })
 			vscode.postMessage({ type: "currentApiConfigName", text: currentApiConfigName })
 			vscode.postMessage({ type: "updateExperimental", values: experiments })
 			vscode.postMessage({ type: "alwaysAllowModeSwitch", bool: alwaysAllowModeSwitch })
 			vscode.postMessage({ type: "alwaysAllowSubtasks", bool: alwaysAllowSubtasks })
+			vscode.postMessage({ type: "condensingApiConfigId", text: condensingApiConfigId || "" })
+			vscode.postMessage({ type: "updateCondensingPrompt", text: customCondensingPrompt || "" })
 			vscode.postMessage({ type: "upsertApiConfiguration", text: currentApiConfigName, apiConfiguration })
+			vscode.postMessage({ type: "codebaseIndexConfig", values: codebaseIndexConfig })
 
 			// Update cachedState to match the current state to prevent isChangeDetected from being set back to true
 			setCachedState((prevState) => ({ ...prevState, ...extensionState }))
@@ -611,6 +617,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 									setApiConfigurationField={setApiConfigurationField}
 									errorMessage={errorMessage}
 									setErrorMessage={setErrorMessage}
+									currentApiConfigName={currentApiConfigName}
 								/>
 							</Section>
 						</div>
@@ -702,7 +709,17 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 							setExperimentEnabled={setExperimentEnabled}
 							experiments={experiments}
 							autoCondenseContextPercent={autoCondenseContextPercent}
+							condensingApiConfigId={condensingApiConfigId}
+							setCondensingApiConfigId={(value) => setCachedStateField("condensingApiConfigId", value)}
+							customCondensingPrompt={customCondensingPrompt}
+							setCustomCondensingPrompt={(value) => setCachedStateField("customCondensingPrompt", value)}
+							listApiConfigMeta={listApiConfigMeta ?? []}
 							setCachedStateField={setCachedStateField}
+							codebaseIndexModels={codebaseIndexModels}
+							codebaseIndexConfig={codebaseIndexConfig}
+							apiConfiguration={apiConfiguration}
+							setApiConfigurationField={setApiConfigurationField}
+							areSettingsCommitted={!isChangeDetected}
 						/>
 					)}
 

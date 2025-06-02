@@ -2,12 +2,13 @@
 import React, { useEffect } from "react"
 import { Trans } from "react-i18next"
 import { vscode } from "@/utils/vscode"
+
 import {
 	BalanceDataResponsePayload,
 	ProfileData,
 	ProfileDataResponsePayload,
 	WebviewMessage,
-} from "@roo/shared/WebviewMessage"
+} from "@roo/WebviewMessage"
 import { VSCodeButtonLink } from "@/components/common/VSCodeButtonLink"
 import { VSCodeButton, VSCodeDivider, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 import CountUp from "react-countup"

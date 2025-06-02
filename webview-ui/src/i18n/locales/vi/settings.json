@@ -32,6 +32,30 @@
 		"language": "Ngôn ngữ",
 		"about": "Giới thiệu"
 	},
+	"codeIndex": {
+		"title": "Lập chỉ mục mã nguồn",
+		"enableLabel": "Bật lập chỉ mục mã nguồn",
+		"enableDescription": "<0>Lập chỉ mục mã nguồn</0> là một tính năng thử nghiệm tạo ra chỉ mục tìm kiếm ngữ nghĩa cho dự án của bạn bằng cách sử dụng AI embeddings. Điều này cho phép Kilo Code hiểu rõ hơn và điều hướng các codebase lớn bằng cách tìm mã liên quan dựa trên ý nghĩa thay vì chỉ từ khóa.",
+		"providerLabel": "Nhà cung cấp nhúng",
+		"selectProviderPlaceholder": "Chọn nhà cung cấp",
+		"openaiProvider": "OpenAI",
+		"ollamaProvider": "Ollama",
+		"openaiKeyLabel": "Khóa OpenAI:",
+		"modelLabel": "Mô hình",
+		"selectModelPlaceholder": "Chọn mô hình",
+		"ollamaUrlLabel": "URL Ollama:",
+		"qdrantUrlLabel": "URL Qdrant",
+		"qdrantKeyLabel": "Khóa Qdrant:",
+		"startIndexingButton": "Bắt đầu lập chỉ mục",
+		"clearIndexDataButton": "Xóa dữ liệu chỉ mục",
+		"unsavedSettingsMessage": "Vui lòng lưu cài đặt của bạn trước khi bắt đầu quá trình lập chỉ mục.",
+		"clearDataDialog": {
+			"title": "Bạn có chắc không?",
+			"description": "Hành động này không thể hoàn tác. Điều này sẽ xóa vĩnh viễn dữ liệu chỉ mục mã nguồn của bạn.",
+			"cancelButton": "Hủy",
+			"confirmButton": "Xóa dữ liệu"
+		}
+	},
 	"autoApprove": {
 		"description": "Cho phép Kilo Code tự động thực hiện các hoạt động mà không cần phê duyệt. Chỉ bật những cài đặt này nếu bạn hoàn toàn tin tưởng AI và hiểu rõ các rủi ro bảo mật liên quan.",
 		"readOnly": {
@@ -118,6 +142,7 @@
 		"glamaApiKey": "Khóa API Glama",
 		"getGlamaApiKey": "Lấy khóa API Glama",
 		"useCustomBaseUrl": "Sử dụng URL cơ sở tùy chỉnh",
+		"useReasoning": "Bật lý luận",
 		"useHostHeader": "Sử dụng tiêu đề Host tùy chỉnh",
 		"useLegacyFormat": "Sử dụng định dạng API OpenAI cũ",
 		"customHeaders": "Tiêu đề tùy chỉnh",
@@ -127,7 +152,10 @@
 		"requestyApiKey": "Khóa API Requesty",
 		"refreshModels": {
 			"label": "Làm mới mô hình",
-			"hint": "Vui lòng mở lại cài đặt để xem các mô hình mới nhất."
+			"hint": "Vui lòng mở lại cài đặt để xem các mô hình mới nhất.",
+			"loading": "Đang làm mới danh sách mô hình...",
+			"success": "Danh sách mô hình đã được làm mới thành công!",
+			"error": "Không thể làm mới danh sách mô hình. Vui lòng thử lại."
 		},
 		"getRequestyApiKey": "Lấy khóa API Requesty",
 		"openRouterTransformsText": "Nén lời nhắc và chuỗi tin nhắn theo kích thước ngữ cảnh (<a>OpenRouter Transforms</a>)",
@@ -406,7 +434,18 @@
 		}
 	},
 	"experimental": {
-		"warning": "⚠️",
+		"condensingApiConfiguration": {
+			"label": "API Configuration for Context Condensing",
+			"description": "Select which API configuration to use for context condensing operations. Leave unselected to use the current active configuration.",
+			"useCurrentConfig": "Default"
+		},
+		"customCondensingPrompt": {
+			"label": "Lời nhắc nén ngữ cảnh tùy chỉnh",
+			"description": "Lời nhắc hệ thống tùy chỉnh cho việc nén ngữ cảnh. Để trống để sử dụng lời nhắc mặc định.",
+			"placeholder": "Enter your custom condensing prompt here...\n\nYou can use the same structure as the default prompt:\n- Previous Conversation\n- Current Work\n- Key Technical Concepts\n- Relevant Files and Code\n- Problem Solving\n- Pending Tasks and Next Steps",
+			"reset": "Reset to Default",
+			"hint": "Empty = use default prompt"
+		},
 		"autoCondenseContextPercent": {
 			"label": "Ngưỡng kích hoạt nén ngữ cảnh thông minh",
 			"description": "Khi cửa sổ ngữ cảnh đạt đến ngưỡng này, Kilo Code sẽ tự động nén nó."

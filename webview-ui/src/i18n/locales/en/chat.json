@@ -76,7 +76,7 @@
 		"tooltip": "Cancel the current operation"
 	},
 	"scrollToBottom": "Scroll to bottom of chat",
-	"about": "Generate, refactor, and debug code with AI assistance.<br />Check out our <DocsLink>documentation</DocsLink> to learn more.",
+	"about": "Generate, refactor, and debug code with AI assistance. Check out our <DocsLink>documentation</DocsLink> to learn more.",
 	"onboarding": "Your task list in this workspace is empty.",
 	"rooTips": {
 		"boomerangTasks": {
@@ -166,6 +166,11 @@
 		"didViewDefinitions": "Kilo Code viewed source code definition names used in this directory:",
 		"wantsToSearch": "Kilo Code wants to search this directory for <code>{{regex}}</code>:",
 		"didSearch": "Kilo Code searched this directory for <code>{{regex}}</code>:"
+	},
+	"codebaseSearch": {
+		"wantsToSearch": "Kilo Code wants to search the codebase for <code>{{query}}</code>:",
+		"wantsToSearchWithPath": "Kilo Code wants to search the codebase for <code>{{query}}</code> in <code>{{path}}</code>:",
+		"didSearch": "Found {{count}} result(s) for <code>{{query}}</code>:"
 	},
 	"commandOutput": "Command Output",
 	"response": "Response",

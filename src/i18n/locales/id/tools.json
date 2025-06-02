@@ -6,5 +6,8 @@
 		"definitionsOnly": " (hanya definisi)",
 		"maxLines": " (maks {{max}} baris)"
 	},
-	"toolRepetitionLimitReached": "Kilo Code tampaknya terjebak dalam loop, mencoba aksi yang sama ({{toolName}}) berulang kali. Ini mungkin menunjukkan masalah dengan strategi saat ini. Pertimbangkan untuk mengubah frasa tugas, memberikan instruksi yang lebih spesifik, atau mengarahkannya ke pendekatan yang berbeda."
+	"toolRepetitionLimitReached": "Kilo Code tampaknya terjebak dalam loop, mencoba aksi yang sama ({{toolName}}) berulang kali. Ini mungkin menunjukkan masalah dengan strategi saat ini. Pertimbangkan untuk mengubah frasa tugas, memberikan instruksi yang lebih spesifik, atau mengarahkannya ke pendekatan yang berbeda.",
+	"codebaseSearch": {
+		"approval": "Mencari '{{query}}' di codebase..."
+	}
 }
