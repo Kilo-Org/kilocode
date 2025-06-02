@@ -1,5 +1,5 @@
 import * as vscode from "vscode"
-import { buildApiHandler } from "../../api"
+import { buildApiHandler, ApiHandler } from "../../api"
 import { CodeContext, ContextGatherer } from "./ContextGatherer"
 import { holeFillerTemplate } from "./templating/AutocompleteTemplate"
 import { ContextProxy } from "../../core/config/ContextProxy"
@@ -96,11 +96,17 @@ function setupAutocomplete(context: vscode.ExtensionContext): vscode.Disposable 
 	const contextGatherer = new ContextGatherer()
 	const animationManager = AutocompleteDecorationAnimation.getInstance()
 
-	const apiHandler = buildApiHandler({
-		apiProvider: "kilocode",
-		kilocodeToken: ContextProxy.instance.getProviderSettings().kilocodeToken,
-		kilocodeModel: DEFAULT_MODEL,
-	})
+	// Initialize API handler only if we have a valid token
+	let apiHandler: ApiHandler | null = null
+	const kilocodeToken = ContextProxy.instance.getProviderSettings().kilocodeToken
+
+	if (kilocodeToken) {
+		apiHandler = buildApiHandler({
+			apiProvider: "kilocode",
+			kilocodeToken,
+			kilocodeModel: DEFAULT_MODEL,
+		})
+	}
 
 	const clearState = () => {
 		vscode.commands.executeCommand("editor.action.inlineSuggest.hide")
@@ -120,6 +126,8 @@ function setupAutocomplete(context: vscode.ExtensionContext): vscode.Disposable 
 		document: vscode.TextDocument
 		position: vscode.Position
 	}) => {
+		if (!apiHandler) throw new Error("apiHandler must be set before calling generateCompletion!")
+
 		const requestId = crypto.randomUUID()
 		activeRequestId = requestId
 		animationManager.startAnimation()
@@ -186,6 +194,16 @@ function setupAutocomplete(context: vscode.ExtensionContext): vscode.Disposable 
 	const provider: vscode.InlineCompletionItemProvider = {
 		async provideInlineCompletionItems(document, position, context, token) {
 			if (!enabled || !vscode.window.activeTextEditor) return null
+
+			const kilocodeToken = ContextProxy.instance.getProviderSettings().kilocodeToken
+			if (!kilocodeToken) {
+				return null
+			}
+
+			// Create or recreate the API handler if needed
+			apiHandler =
+				apiHandler ??
+				buildApiHandler({ apiProvider: "kilocode", kilocodeToken: kilocodeToken, kilocodeModel: DEFAULT_MODEL })
 
 			// Skip providing completions if this was triggered by a backspace operation of if we just accepted a suggestion
 			if (isBackspaceOperation || justAcceptedSuggestion) {
@@ -272,6 +290,14 @@ function setupAutocomplete(context: vscode.ExtensionContext): vscode.Disposable 
 			return
 		}
 
+		// Check if kilocode token is set
+		const kilocodeToken = ContextProxy.instance.getProviderSettings().kilocodeToken
+		if (!kilocodeToken) {
+			statusBar.text = "$(warning) Kilo Complete"
+			statusBar.tooltip = "A valid Kilocode token must be set to use autocomplete"
+			return
+		}
+
 		const totalCostFormatted = humanFormatCost(totalSessionCost)
 		statusBar.text = `$(sparkle) Kilo Complete (${totalCostFormatted})`
 		statusBar.tooltip = `\
@@ -342,6 +368,9 @@ Model: ${DEFAULT_MODEL}\
 
 	// Still register with context for safety
 	context.subscriptions.push(disposable)
+
+	// Initialize status bar with correct state
+	updateStatusBar()
 
 	return disposable
 }
