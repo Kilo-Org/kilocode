@@ -228,7 +228,7 @@ describe("importExport", () => {
 
 			expect(result).toEqual({
 				success: false,
-				error: "Expected property name or '}' in JSON at position 2 (line 1 column 3)",
+				error: "Expected property name or '}' in JSON at position 2",
 			})
 			expect(fs.readFile).toHaveBeenCalledWith("/mock/path/settings.json", "utf-8")
 			expect(mockProviderSettingsManager.import).not.toHaveBeenCalled()
