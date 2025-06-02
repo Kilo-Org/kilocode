@@ -12,15 +12,11 @@ type ExperimentKey = Keys<typeof EXPERIMENT_IDS>
 
 interface ExperimentConfig {
 	enabled: boolean
-	isAvailable?: (settings: ProviderSettings) => boolean // kilocode_change
 }
 
 export const experimentConfigsMap: Record<ExperimentKey, ExperimentConfig> = {
 	// start kilocode_change
-	AUTOCOMPLETE: {
-		enabled: false,
-		isAvailable: (settings) => settings.apiProvider === "kilocode" && !!settings.kilocodeToken,
-	},
+	AUTOCOMPLETE: { enabled: false },
 	POWER_STEERING: { enabled: false },
 	AUTO_CONDENSE_CONTEXT: { enabled: false }, // Keep this last, there is a slider below it in the UI
 	// end kilocode_change
