@@ -2081,4 +2081,4 @@ export type GetModelsOptions =
 	| { provider: "requesty"; apiKey?: string }
 	| { provider: "unbound"; apiKey?: string }
 	| { provider: "litellm"; apiKey: string; baseUrl: string }
-	| { provider: "kilocode-openrouter"; apiKey: string; baseUrl: string } // kilocode_change
+	| { provider: "kilocode-openrouter"; kilocodeToken?: string } // kilocode_change

@@ -1,7 +1,6 @@
 import { HTMLAttributes } from "react"
 import { VSCodeTextArea } from "@vscode/webview-ui-toolkit/react"
 import { FlaskConical } from "lucide-react"
-import { ProviderSettings } from "@roo/shared/api" // kilocode_change
 
 import type { ExperimentId, CodebaseIndexConfig, CodebaseIndexModels, ProviderSettings } from "@roo-code/types"
 
