@@ -263,8 +263,13 @@
 	"ask": {
 		"autoApprovedRequestLimitReached": {
 			"title": "स्वत:-स्वीकृत अनुरोध सीमा पहुंची",
-			"description": "Roo {{count}} API अनुरोध(धों) की स्वत:-स्वीकृत सीमा तक पहुंच गया है। क्या आप गणना को रीसेट करके कार्य जारी रखना चाहते हैं?",
+			"description": "Kilo Code {{count}} API अनुरोध(धों) की स्वत:-स्वीकृत सीमा तक पहुंच गया है। क्या आप गणना को रीसेट करके कार्य जारी रखना चाहते हैं?",
 			"button": "रीसेट करें और जारी रखें"
 		}
+	},
+	"codebaseSearch": {
+		"wantsToSearch": "Kilo Code कोडबेस में <code>{{query}}</code> खोजना चाहता है:",
+		"wantsToSearchWithPath": "Kilo Code <code>{{path}}</code> में कोडबेस में <code>{{query}}</code> खोजना चाहता है:",
+		"didSearch": "<code>{{query}}</code> के लिए {{count}} परिणाम मिले:"
 	}
 }

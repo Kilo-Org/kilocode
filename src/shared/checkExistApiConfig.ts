@@ -1,4 +1,4 @@
-import { SECRET_STATE_KEYS, ProviderSettings } from "../schemas"
+import { SECRET_STATE_KEYS, ProviderSettings } from "@roo-code/types"
 
 export function checkExistKey(config: ProviderSettings | undefined) {
 	if (!config) {
@@ -20,6 +20,7 @@ export function checkExistKey(config: ProviderSettings | undefined) {
 		config.ollamaModelId,
 		config.lmStudioModelId,
 		config.vsCodeLmModelSelector,
+		config.kilocodeModel, // kilocode_change
 	].some((value) => value !== undefined)
 
 	return hasSecretKey || hasOtherConfig

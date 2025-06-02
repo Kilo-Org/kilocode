@@ -1,6 +1,6 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 
-import { ClineAsk, ToolProgressStatus, ToolGroup, ToolName } from "../schemas"
+import type { ClineAsk, ToolProgressStatus, ToolGroup, ToolName } from "@roo-code/types"
 
 export type ToolResponse = string | Array<Anthropic.TextBlockParam | Anthropic.ImageBlockParam>
 
@@ -63,6 +63,9 @@ export const toolParamNames = [
 	"ignore_case",
 	"title", // kilocode_change
 	"description", // kilocode_change
+	"start_line",
+	"end_line",
+	"query",
 ] as const
 
 export type ToolParamName = (typeof toolParamNames)[number]
@@ -99,6 +102,11 @@ export interface WriteToFileToolUse extends ToolUse {
 export interface InsertCodeBlockToolUse extends ToolUse {
 	name: "insert_content"
 	params: Partial<Pick<Record<ToolParamName, string>, "path" | "line" | "content">>
+}
+
+export interface CodebaseSearchToolUse extends ToolUse {
+	name: "codebase_search"
+	params: Partial<Pick<Record<ToolParamName, string>, "query" | "path">>
 }
 
 export interface SearchFilesToolUse extends ToolUse {
@@ -189,14 +197,20 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	new_rule: "create new rule",
 	report_bug: "report bug", // kilocode_change
 	condense: "condense the current context window", // kilocode_change
+	codebase_search: "codebase search",
 } as const
-
-export type { ToolGroup }
 
 // Define available tool groups.
 export const TOOL_GROUPS: Record<ToolGroup, ToolGroupConfig> = {
 	read: {
-		tools: ["read_file", "fetch_instructions", "search_files", "list_files", "list_code_definition_names"],
+		tools: [
+			"read_file",
+			"fetch_instructions",
+			"search_files",
+			"list_files",
+			"list_code_definition_names",
+			"codebase_search",
+		],
 	},
 	edit: {
 		tools: ["apply_diff", "write_to_file", "insert_content", "search_and_replace", "new_rule"],

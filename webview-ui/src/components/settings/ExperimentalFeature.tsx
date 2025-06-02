@@ -26,7 +26,6 @@ export const ExperimentalFeature = ({
 	return (
 		<div>
 			<div className="flex items-center gap-2">
-				<span className="text-vscode-errorForeground">{t("settings:experimental.warning")}</span>
 				{/* kilocode_change start */}
 				<VSCodeCheckbox
 					checked={enabled}

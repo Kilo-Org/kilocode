@@ -5,17 +5,21 @@
 		"node": "20.18.1"
 	},
 	"scripts": {
-		"preinstall": "npx only-allow pnpm",
+		"preinstall": "node scripts/bootstrap.mjs",
 		"prepare": "husky",
+		"install": "node scripts/bootstrap.mjs",
+		"install:all": "node scripts/bootstrap.mjs",
 		"lint": "turbo lint --log-order grouped --output-logs new-only",
 		"check-types": "turbo check-types --log-order grouped --output-logs new-only",
 		"test": "turbo test --log-order grouped --output-logs new-only",
 		"format": "turbo format --log-order grouped --output-logs new-only",
+		"bundle": "turbo bundle --log-order grouped --output-logs new-only",
+		"bundle:nightly": "turbo bundle:nightly --log-order grouped --output-logs new-only",
+		"build": "turbo vsix --log-order grouped --output-logs new-only",
+		"build:nightly": "turbo vsix:nightly --log-order grouped --output-logs new-only",
 		"clean": "turbo clean --log-order grouped --output-logs new-only && rimraf dist out bin .vite-port .turbo",
-		"build": "pnpm --filter kilo-code vsix",
-		"build:nightly": "pnpm --filter @roo-code/vscode-nightly vsix",
 		"changeset:version": "cp CHANGELOG.md src/CHANGELOG.md && changeset version && cp -vf src/CHANGELOG.md .",
-		"knip": "pnpm --filter @roo-code/build build && knip --include files",
+		"knip": "knip --include files",
 		"update-contributors": "node scripts/update-contributors.js"
 	},
 	"devDependencies": {

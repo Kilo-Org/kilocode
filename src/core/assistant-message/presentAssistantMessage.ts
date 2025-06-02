@@ -1,11 +1,10 @@
 import cloneDeep from "clone-deep"
 import { serializeError } from "serialize-error"
 
-import type { ToolName } from "../../schemas"
+import type { ToolName, ClineAsk, ToolProgressStatus } from "@roo-code/types"
 
 import { defaultModeSlug, getModeBySlug } from "../../shared/modes"
 import type { ToolParamName, ToolResponse } from "../../shared/tools"
-import type { ClineAsk, ToolProgressStatus } from "../../shared/ExtensionMessage"
 
 import { fetchInstructionsTool } from "../tools/fetchInstructionsTool"
 import { listFilesTool } from "../tools/listFilesTool"
@@ -30,9 +29,10 @@ import { checkpointSave } from "../checkpoints"
 import { formatResponse } from "../prompts/responses"
 import { validateToolUse } from "../tools/validateToolUse"
 import { Task } from "../task/Task"
-import { newRuleTool } from "../tools/newRuleTool"
+import { newRuleTool } from "../tools/newRuleTool" // kilocode_change
 import { reportBugTool } from "../tools/reportBugTool" // kilocode_change
 import { condenseTool } from "../tools/condenseTool" // kilocode_change
+import { codebaseSearchTool } from "../tools/codebaseSearchTool"
 
 /**
  * Processes and presents assistant message content to the user interface.
@@ -186,6 +186,8 @@ export async function presentAssistantMessage(cline: Task) {
 						return `[${block.name}]`
 					case "switch_mode":
 						return `[${block.name} to '${block.params.mode_slug}'${block.params.reason ? ` because: ${block.params.reason}` : ""}]`
+					case "codebase_search": // Add case for the new tool
+						return `[${block.name} for '${block.params.query}']`
 					case "new_task": {
 						const mode = block.params.mode ?? defaultModeSlug
 						const message = block.params.message ?? "(no message)"
@@ -410,6 +412,9 @@ export async function presentAssistantMessage(cline: Task) {
 					break
 				case "list_files":
 					await listFilesTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
+					break
+				case "codebase_search":
+					await codebaseSearchTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 				case "list_code_definition_names":
 					await listCodeDefinitionNamesTool(

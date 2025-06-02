@@ -1,7 +1,8 @@
 import { z } from "zod"
 
-import { ProviderSettings } from "./api"
-import { Mode, PromptComponent, ModeConfig } from "./modes"
+import type { ProviderSettings, PromptComponent, ModeConfig } from "@roo-code/types"
+
+import { Mode } from "./modes"
 
 export type ClineAskResponse = "yesButtonClicked" | "noButtonClicked" | "messageResponse" | "retry_clicked" // kilocode_change: Added for payment required dialog
 
@@ -65,6 +66,8 @@ export interface WebviewMessage {
 		| "allowedMaxRequests"
 		| "alwaysAllowSubtasks"
 		| "autoCondenseContextPercent"
+		| "condensingApiConfigId"
+		| "updateCondensingPrompt"
 		| "playSound"
 		| "playTts"
 		| "stopTts"
@@ -153,6 +156,13 @@ export interface WebviewMessage {
 		| "condense" // kilocode_change
 		| "toggleWorkflow" // kilocode_change
 		| "condenseTaskContextRequest"
+		| "requestIndexingStatus"
+		| "startIndexing"
+		| "clearIndexData"
+		| "indexingStatusUpdate"
+		| "indexCleared"
+		| "codebaseIndexConfig"
+		| "telemetrySetting"
 	text?: string
 	disabled?: boolean
 	askResponse?: ClineAskResponse
@@ -238,8 +248,20 @@ export const checkoutRestorePayloadSchema = z.object({
 
 export type CheckpointRestorePayload = z.infer<typeof checkoutRestorePayloadSchema>
 
+export interface IndexingStatusPayload {
+	state: "Standby" | "Indexing" | "Indexed" | "Error"
+	message: string
+}
+
+export interface IndexClearedPayload {
+	success: boolean
+	error?: string
+}
+
 export type WebViewMessagePayload =
 	| CheckpointDiffPayload
 	| CheckpointRestorePayload
+	| IndexingStatusPayload
+	| IndexClearedPayload
 	| ProfileDataResponsePayload // kilocode_change
 	| BalanceDataResponsePayload // kilocode_change

@@ -1,7 +1,4 @@
-import { ExperimentId, ProviderSettings } from "../schemas" // kilocode_change
-import { AssertEqual, Equals, Keys, Values } from "../utils/type-fu"
-
-export type { ExperimentId }
+import type { AssertEqual, Equals, Keys, Values, ExperimentId } from "@roo-code/types"
 
 export const EXPERIMENT_IDS = {
 	AUTOCOMPLETE: "autocomplete",

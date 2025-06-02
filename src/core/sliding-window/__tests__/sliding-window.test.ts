@@ -2,16 +2,18 @@
 
 import { Anthropic } from "@anthropic-ai/sdk"
 
-import { ModelInfo } from "../../../shared/api"
+import type { ModelInfo } from "@roo-code/types"
+
 import { BaseProvider } from "../../../api/providers/base-provider"
+import { ApiMessage } from "../../task-persistence/apiMessages"
+import * as condenseModule from "../../condense"
+
 import {
 	TOKEN_BUFFER_PERCENTAGE,
 	estimateTokenCount,
 	truncateConversation,
 	truncateConversationIfNeeded,
 } from "../index"
-import { ApiMessage } from "../../task-persistence/apiMessages"
-import * as condenseModule from "../../condense"
 
 // Create a mock ApiHandler for testing
 class MockApiHandler extends BaseProvider {
@@ -531,6 +533,8 @@ describe("truncateConversationIfNeeded", () => {
 			"System prompt",
 			taskId,
 			true,
+			undefined, // customCondensingPrompt
+			undefined, // condensingApiHandler
 		)
 
 		// Verify the result contains the summary information
@@ -675,6 +679,8 @@ describe("truncateConversationIfNeeded", () => {
 			"System prompt",
 			taskId,
 			true,
+			undefined, // customCondensingPrompt
+			undefined, // condensingApiHandler
 		)
 
 		// Verify the result contains the summary information

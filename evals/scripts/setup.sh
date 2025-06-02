@@ -28,7 +28,7 @@ build_extension() {
   echo "🔨 Building the Kilo Code extension..."
   cd ..
   mkdir -p bin
-  pnpm build --out ../bin/kilo-code-$(git rev-parse --short HEAD).vsix || exit 1
+  pnpm build -- --out ../bin/kilo-code-$(git rev-parse --short HEAD).vsix || exit 1
   code --install-extension bin/kilo-code-$(git rev-parse --short HEAD).vsix || exit 1
   cd evals
 }
