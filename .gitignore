@@ -6,6 +6,7 @@ node_modules
 coverage/
 mock/
 .DS_Store
+*.orig
 
 # Builds
 bin/
