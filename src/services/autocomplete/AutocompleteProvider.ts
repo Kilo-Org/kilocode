@@ -252,9 +252,10 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 		statusBar.tooltip = `\
 Kilo Code Autocomplete
 
-Model: ${DEFAULT_MODEL}
 Last completion: $${lastCost.toFixed(5)}
-Session total cost: ${totalCostFormatted}`
+Session total cost: ${totalCostFormatted}
+Model: ${DEFAULT_MODEL}\
+`
 	}
 
 	const toggleCommand = vscode.commands.registerCommand("kilo-code.toggleAutocomplete", () => {
