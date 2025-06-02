@@ -132,6 +132,7 @@ export class Task extends EventEmitter<ClineEvents> {
 	readonly parentTask: Task | undefined = undefined
 	readonly taskNumber: number
 	readonly workspacePath: string
+	readonly initialMode: string // kilocode_change: log initial mode slug for exports and filtering
 
 	providerRef: WeakRef<ClineProvider>
 	private readonly globalStoragePath: string
@@ -254,6 +255,7 @@ export class Task extends EventEmitter<ClineEvents> {
 		this.rootTask = rootTask
 		this.parentTask = parentTask
 		this.taskNumber = taskNumber
+		this.initialMode = provider.getValue("mode") || defaultModeSlug
 
 		this.diffStrategy = new MultiSearchReplaceDiffStrategy(this.fuzzyMatchThreshold)
 		this.toolRepetitionDetector = new ToolRepetitionDetector(this.consecutiveMistakeLimit)
@@ -364,6 +366,11 @@ export class Task extends EventEmitter<ClineEvents> {
 				taskNumber: this.taskNumber,
 				globalStoragePath: this.globalStoragePath,
 				workspace: this.cwd,
+				mode: this.initialMode,
+				parentTaskId: this.parentTask?.taskId,
+				rootTaskId:
+					this.rootTask?.taskId ||
+					(this.parentTask ? this.parentTask.rootTask?.taskId || this.parentTask.taskId : undefined),
 			})
 
 			this.emit("taskTokenUsageUpdated", this.taskId, tokenUsage)

@@ -1109,6 +1109,28 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		await downloadTask(historyItem.ts, apiConversationHistory)
 	}
 
+	// kilocode_change begin
+	async exportTaskFamilyWithId(id: string) {
+		const { downloadTaskFamily, buildTaskFamily } = await import("../../integrations/misc/export-markdown")
+
+		try {
+			const allTasks = this.getGlobalState("taskHistory") ?? []
+
+			const task = allTasks.find((t) => t.id === id)
+			if (!task) {
+				throw new Error("Task not found")
+			}
+
+			const rootTaskId = task.rootTaskId || task.id
+			const taskFamily = buildTaskFamily(allTasks, rootTaskId)
+
+			await downloadTaskFamily(taskFamily, this.getTaskWithId.bind(this))
+		} catch (error) {
+			await vscode.window.showErrorMessage(`Failed to export task family: ${error}`)
+		}
+	}
+	// kilocode_change end
+
 	/* Condenses a task's message history to use fewer tokens. */
 	async condenseTaskContext(taskId: string) {
 		let task: Task | undefined

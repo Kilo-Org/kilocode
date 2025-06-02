@@ -35,5 +35,19 @@
 	"confirmDeleteTasks": "{{count}}개의 작업을 삭제하시겠습니까?",
 	"deleteTasksWarning": "삭제된 작업은 복구할 수 없습니다. 계속 진행하시겠습니까?",
 	"deleteItems": "{{count}}개 항목 삭제",
-	"showAllWorkspaces": "모든 워크스페이스의 작업 표시"
+	"showAllWorkspaces": "모든 워크스페이스의 작업 표시",
+	"filterByMode": "{{mode}} 모드로 필터링",
+	"allModes": "모든 모드",
+	"exportOptions": "내보내기 옵션",
+	"exportSingleTask": "단일 작업 내보내기",
+	"exportTaskFamily": "작업 패밀리 내보내기",
+	"modes": {
+		"code": "코드",
+		"architect": "아키텍트",
+		"ask": "질문",
+		"debug": "디버그",
+		"orchestrator": "오케스트레이터",
+		"translate": "번역",
+		"test": "테스트"
+	}
 }

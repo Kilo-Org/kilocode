@@ -35,5 +35,19 @@
 	"confirmDeleteTasks": "Bist du sicher, dass du {{count}} Aufgaben löschen möchtest?",
 	"deleteTasksWarning": "Gelöschte Aufgaben können nicht wiederhergestellt werden. Bitte vergewissere dich, dass du fortfahren möchtest.",
 	"deleteItems": "{{count}} Elemente löschen",
-	"showAllWorkspaces": "Aufgaben aus allen Arbeitsbereichen anzeigen"
+	"showAllWorkspaces": "Aufgaben aus allen Arbeitsbereichen anzeigen",
+	"filterByMode": "Nach {{mode}}-Modus filtern",
+	"allModes": "Alle Modi",
+	"exportOptions": "Export-Optionen",
+	"exportSingleTask": "Einzelne Aufgabe exportieren",
+	"exportTaskFamily": "Aufgabenfamilie exportieren",
+	"modes": {
+		"code": "Code",
+		"architect": "Architekt",
+		"ask": "Fragen",
+		"debug": "Debug",
+		"orchestrator": "Orchestrator",
+		"translate": "Übersetzen",
+		"test": "Test"
+	}
 }

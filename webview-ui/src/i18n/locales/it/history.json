@@ -35,5 +35,19 @@
 	"confirmDeleteTasks": "Sei sicuro di voler eliminare {{count}} attività?",
 	"deleteTasksWarning": "Le attività eliminate non possono essere recuperate. Assicurati di voler continuare.",
 	"deleteItems": "Elimina {{count}} elementi",
-	"showAllWorkspaces": "Mostra attività da tutti gli spazi di lavoro"
+	"showAllWorkspaces": "Mostra attività da tutti gli spazi di lavoro",
+	"filterByMode": "Filtra per modalità {{mode}}",
+	"allModes": "Tutte le modalità",
+	"exportOptions": "Opzioni di esportazione",
+	"exportSingleTask": "Esporta attività singola",
+	"exportTaskFamily": "Esporta famiglia di attività",
+	"modes": {
+		"code": "Codice",
+		"architect": "Architetto",
+		"ask": "Chiedi",
+		"debug": "Debug",
+		"orchestrator": "Orchestratore",
+		"translate": "Traduci",
+		"test": "Test"
+	}
 }

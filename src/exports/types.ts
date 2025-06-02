@@ -56,6 +56,11 @@ type GlobalSettings = {
 				totalCost: number
 				size?: number | undefined
 				workspace?: string | undefined
+				// kilocode_change begin
+				mode?: string | undefined
+				parentTaskId?: string | undefined
+				rootTaskId?: string | undefined
+				// kilocode_change end
 		  }[]
 		| undefined
 	autoApprovalEnabled?: boolean | undefined
@@ -842,6 +847,11 @@ type IpcMessage =
 											totalCost: number
 											size?: number | undefined
 											workspace?: string | undefined
+											// kilocode_change begin
+											mode?: string | undefined
+											parentTaskId?: string | undefined
+											rootTaskId?: string | undefined
+											// kilocode_change end
 									  }[]
 									| undefined
 								autoApprovalEnabled?: boolean | undefined
@@ -1339,6 +1349,11 @@ type TaskCommand =
 								totalCost: number
 								size?: number | undefined
 								workspace?: string | undefined
+								// kilocode_change begin
+								mode?: string | undefined
+								parentTaskId?: string | undefined
+								rootTaskId?: string | undefined
+								// kilocode_change end
 						  }[]
 						| undefined
 					autoApprovalEnabled?: boolean | undefined

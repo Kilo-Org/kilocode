@@ -35,5 +35,19 @@
 	"confirmDeleteTasks": "Apakah kamu yakin ingin menghapus {{count}} tugas?",
 	"deleteTasksWarning": "Tugas yang dihapus tidak dapat dipulihkan. Pastikan kamu ingin melanjutkan.",
 	"deleteItems": "Hapus {{count}} Item",
-	"showAllWorkspaces": "Tampilkan tugas dari semua workspace"
+	"showAllWorkspaces": "Tampilkan tugas dari semua workspace",
+	"filterByMode": "Filter berdasarkan mode {{mode}}",
+	"allModes": "Semua Mode",
+	"exportOptions": "Opsi Ekspor",
+	"exportSingleTask": "Ekspor Tugas Tunggal",
+	"exportTaskFamily": "Ekspor Keluarga Tugas",
+	"modes": {
+		"code": "Kode",
+		"architect": "Arsitek",
+		"ask": "Tanya",
+		"debug": "Debug",
+		"orchestrator": "Orkestrator",
+		"translate": "Terjemah",
+		"test": "Tes"
+	}
 }

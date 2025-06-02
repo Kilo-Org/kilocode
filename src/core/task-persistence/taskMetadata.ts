@@ -17,6 +17,9 @@ export type TaskMetadataOptions = {
 	taskNumber: number
 	globalStoragePath: string
 	workspace: string
+	mode?: string // kilocode_change
+	parentTaskId?: string // kilocode_change
+	rootTaskId?: string // kilocode_change
 }
 
 export async function taskMetadata({
@@ -25,6 +28,9 @@ export async function taskMetadata({
 	taskNumber,
 	globalStoragePath,
 	workspace,
+	mode, // kilocode_change
+	parentTaskId, // kilocode_change
+	rootTaskId, // kilocode_change
 }: TaskMetadataOptions) {
 	const taskDir = await getTaskDirectoryPath(globalStoragePath, taskId)
 	const taskMessage = messages[0] // First message is always the task say.
@@ -57,6 +63,9 @@ export async function taskMetadata({
 		totalCost: tokenUsage.totalCost,
 		size: taskDirSize,
 		workspace,
+		mode, // kilocode_change
+		parentTaskId, // kilocode_change
+		rootTaskId, // kilocode_change
 	}
 
 	return { historyItem, tokenUsage }

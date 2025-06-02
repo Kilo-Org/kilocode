@@ -12,9 +12,10 @@ export const useTaskSearch = () => {
 	const [sortOption, setSortOption] = useState<SortOption>("newest")
 	const [lastNonRelevantSort, setLastNonRelevantSort] = useState<SortOption | null>("newest")
 	const [showAllWorkspaces, setShowAllWorkspaces] = useState(false)
+	const [selectedMode, setSelectedMode] = useState<string | null>(null) // kilocode_change
 
 	useEffect(() => {
-		if (searchQuery && sortOption !== "mostRelevant" && !lastNonRelevantSort) {
+		if (searchQuery && sortOption !== "mostRelevant") {
 			setLastNonRelevantSort(sortOption)
 			setSortOption("mostRelevant")
 		} else if (!searchQuery && sortOption === "mostRelevant" && lastNonRelevantSort) {
@@ -28,8 +29,13 @@ export const useTaskSearch = () => {
 		if (!showAllWorkspaces) {
 			tasks = tasks.filter((item) => item.workspace === cwd)
 		}
+		// kilocode_change begin
+		if (selectedMode) {
+			tasks = tasks.filter((item) => item.mode === selectedMode)
+		}
+		// kilocode_change end
 		return tasks
-	}, [taskHistory, showAllWorkspaces, cwd])
+	}, [taskHistory, showAllWorkspaces, cwd, selectedMode]) // kilocode_change
 
 	const fzf = useMemo(() => {
 		return new Fzf(presentableTasks, {
@@ -78,6 +84,19 @@ export const useTaskSearch = () => {
 		})
 	}, [presentableTasks, searchQuery, fzf, sortOption])
 
+	// kilocode_change begin
+	// Get unique modes from all tasks for filtering
+	const availableModes = useMemo(() => {
+		const modes = new Set<string>()
+		taskHistory.forEach((item) => {
+			if (item.mode) {
+				modes.add(item.mode)
+			}
+		})
+		return Array.from(modes).sort()
+	}, [taskHistory])
+	// kilocode_change end
+
 	return {
 		tasks,
 		searchQuery,
@@ -88,5 +107,10 @@ export const useTaskSearch = () => {
 		setLastNonRelevantSort,
 		showAllWorkspaces,
 		setShowAllWorkspaces,
+		// kilocode_change begin
+		selectedMode,
+		setSelectedMode,
+		availableModes,
+		// kilocode_change end
 	}
 }

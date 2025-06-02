@@ -35,5 +35,19 @@
 	"confirmDeleteTasks": "{{count}} görevi silmek istediğinizden emin misiniz?",
 	"deleteTasksWarning": "Silinen görevler geri alınamaz. Lütfen devam etmek istediğinizden emin olun.",
 	"deleteItems": "{{count}} Öğeyi Sil",
-	"showAllWorkspaces": "Tüm çalışma alanlarından görevleri göster"
+	"showAllWorkspaces": "Tüm çalışma alanlarından görevleri göster",
+	"filterByMode": "{{mode}} moduna göre filtrele",
+	"allModes": "Tüm Modlar",
+	"exportOptions": "Dışa Aktarma Seçenekleri",
+	"exportSingleTask": "Tek Görevi Dışa Aktar",
+	"exportTaskFamily": "Görev Ailesini Dışa Aktar",
+	"modes": {
+		"code": "Kod",
+		"architect": "Mimar",
+		"ask": "Sor",
+		"debug": "Hata Ayıklama",
+		"orchestrator": "Orkestratör",
+		"translate": "Çevir",
+		"test": "Test"
+	}
 }

@@ -257,6 +257,11 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 		case "exportTaskWithId":
 			provider.exportTaskWithId(message.text!)
 			break
+		// kilocode_change begin
+		case "exportTaskFamilyWithId":
+			provider.exportTaskFamilyWithId(message.text!)
+			break
+		// kilocode_change end
 		case "importSettings": {
 			const result = await importSettings({
 				providerSettingsManager: provider.providerSettingsManager,

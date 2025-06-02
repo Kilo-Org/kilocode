@@ -5,7 +5,15 @@ import { BatchDeleteTaskDialog } from "./BatchDeleteTaskDialog"
 import prettyBytes from "pretty-bytes"
 import { Virtuoso } from "react-virtuoso"
 
-import { VSCodeTextField, VSCodeRadioGroup, VSCodeRadio } from "@vscode/webview-ui-toolkit/react"
+// kilocode_change begin
+import {
+	VSCodeTextField,
+	VSCodeRadioGroup,
+	VSCodeRadio,
+	VSCodeDropdown,
+	VSCodeOption,
+} from "@vscode/webview-ui-toolkit/react"
+// kilocode_change end
 
 import { vscode } from "@/utils/vscode"
 import { formatLargeNumber, formatDate } from "@/utils/format"
@@ -17,6 +25,7 @@ import { Tab, TabContent, TabHeader } from "../common/Tab"
 import { useTaskSearch } from "./useTaskSearch"
 import { ExportButton } from "./ExportButton"
 import { CopyButton } from "./CopyButton"
+import { ModeIndicator } from "./ModeIndicator" // kilocode_change
 
 type HistoryViewProps = {
 	onDone: () => void
@@ -34,8 +43,30 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 		setLastNonRelevantSort,
 		showAllWorkspaces,
 		setShowAllWorkspaces,
+		// kilocode_change begin
+		selectedMode,
+		setSelectedMode,
+		availableModes,
+		// kilocode_change end
 	} = useTaskSearch()
 	const { t } = useAppTranslation()
+
+	// kilocode_change begin
+	/**
+	 * Helper function to determine if a task has a family (children or siblings)
+	 * @param taskId - The ID of the task to check
+	 * @returns {boolean} - True if the task has a family, false otherwise
+	 */
+	const hasTaskFamily = (taskId: string) => {
+		const task = tasks.find((t) => t.id === taskId)
+		if (!task) return false
+
+		const rootTaskId = task.rootTaskId || task.id
+		const familyTasks = tasks.filter((t) => t.rootTaskId === rootTaskId || t.id === rootTaskId)
+
+		return familyTasks.length > 1
+	}
+	// kilocode_change end
 
 	const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null)
 	const [isSelectionMode, setIsSelectionMode] = useState(false)
@@ -158,16 +189,43 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 						</VSCodeRadio>
 					</VSCodeRadioGroup>
 
-					<div className="flex items-center gap-2">
-						<Checkbox
-							id="show-all-workspaces-view"
-							checked={showAllWorkspaces}
-							onCheckedChange={(checked) => setShowAllWorkspaces(checked === true)}
-							variant="description"
-						/>
-						<label htmlFor="show-all-workspaces-view" className="text-vscode-foreground cursor-pointer">
-							{t("history:showAllWorkspaces")}
-						</label>
+					{/* kilocode_change begin */}
+					<div className="flex flex-col gap-2">
+						<div className="flex items-center gap-2">
+							<Checkbox
+								id="show-all-workspaces-view"
+								checked={showAllWorkspaces}
+								onCheckedChange={(checked) => setShowAllWorkspaces(checked === true)}
+								variant="description"
+							/>
+							<label htmlFor="show-all-workspaces-view" className="text-vscode-foreground cursor-pointer">
+								{t("history:showAllWorkspaces")}
+							</label>
+						</div>
+
+						{/* Mode filter dropdown */}
+						{availableModes.length > 0 && (
+							<div className="flex items-center gap-2">
+								<label className="text-vscode-foreground text-sm">
+									{t("history:filterByMode", { mode: "" }).replace(" mode", "")}:
+								</label>
+								<VSCodeDropdown
+									value={selectedMode || ""}
+									onChange={(e) => {
+										const value = (e.target as HTMLSelectElement).value
+										setSelectedMode(value || null)
+									}}
+									style={{ minWidth: "120px" }}>
+									<VSCodeOption value="">{t("history:allModes")}</VSCodeOption>
+									{availableModes.map((mode) => (
+										<VSCodeOption key={mode} value={mode}>
+											{t(`history:modes.${mode}`, { defaultValue: mode })}
+										</VSCodeOption>
+									))}
+								</VSCodeDropdown>
+							</div>
+						)}
+						{/* kilocode_change end */}
 					</div>
 
 					{/* Select all control in selection mode */}
@@ -246,9 +304,18 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 
 								<div className="flex-1">
 									<div className="flex justify-between items-center">
-										<span className="text-vscode-descriptionForeground font-medium text-sm uppercase">
-											{formatDate(item.ts)}
-										</span>
+										{/* kilocode_change begin */}
+										<div className="flex items-center gap-2">
+											<span className="text-vscode-descriptionForeground font-medium text-sm uppercase">
+												{formatDate(item.ts)}
+											</span>
+											<ModeIndicator
+												mode={item.mode}
+												clickable={!isSelectionMode}
+												onClick={() => !isSelectionMode && setSelectedMode(item.mode || null)}
+											/>
+										</div>
+										{/* kilocode_change end */}
 										<div className="flex flex-row">
 											{!isSelectionMode && (
 												<Button
@@ -351,7 +418,9 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 											{!item.totalCost && !isSelectionMode && (
 												<div className="flex flex-row gap-1">
 													<CopyButton itemTask={item.task} />
-													<ExportButton itemId={item.id} />
+													{/* kilocode_change begin */}
+													<ExportButton itemId={item.id} hasFamily={hasTaskFamily(item.id)} />
+													{/* kilocode_change end */}
 												</div>
 											)}
 										</div>
@@ -434,7 +503,12 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 												{!isSelectionMode && (
 													<div className="flex flex-row gap-1">
 														<CopyButton itemTask={item.task} />
-														<ExportButton itemId={item.id} />
+														{/* kilocode_change begin */}
+														<ExportButton
+															itemId={item.id}
+															hasFamily={hasTaskFamily(item.id)}
+														/>
+														{/* kilocode_change end */}
 													</div>
 												)}
 											</div>

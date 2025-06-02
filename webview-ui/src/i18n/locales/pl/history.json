@@ -35,5 +35,19 @@
 	"confirmDeleteTasks": "Czy na pewno chcesz usunąć {{count}} zadań?",
 	"deleteTasksWarning": "Usuniętych zadań nie można przywrócić. Upewnij się, że chcesz kontynuować.",
 	"deleteItems": "Usuń {{count}} elementów",
-	"showAllWorkspaces": "Pokaż zadania ze wszystkich przestrzeni roboczych"
+	"showAllWorkspaces": "Pokaż zadania ze wszystkich przestrzeni roboczych",
+	"filterByMode": "Filtruj według trybu {{mode}}",
+	"allModes": "Wszystkie tryby",
+	"exportOptions": "Opcje eksportu",
+	"exportSingleTask": "Eksportuj pojedyncze zadanie",
+	"exportTaskFamily": "Eksportuj rodzinę zadań",
+	"modes": {
+		"code": "Kod",
+		"architect": "Architekt",
+		"ask": "Zapytaj",
+		"debug": "Debug",
+		"orchestrator": "Orkiestrator",
+		"translate": "Tłumacz",
+		"test": "Test"
+	}
 }

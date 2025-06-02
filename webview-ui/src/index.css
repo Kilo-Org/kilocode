@@ -125,6 +125,24 @@
 	--color-vscode-inputValidation-infoForeground: var(--vscode-inputValidation-infoForeground);
 	--color-vscode-inputValidation-infoBackground: var(--vscode-inputValidation-infoBackground);
 	--color-vscode-inputValidation-infoBorder: var(--vscode-inputValidation-infoBorder);
+
+	/* kilocode_change begin */
+	/* Mode indicator colors */
+	--color-blue-500: #3b82f6;
+	--color-blue-300: #93c5fd;
+	--color-purple-500: #8b5cf6;
+	--color-purple-300: #c4b5fd;
+	--color-green-500: #10b981;
+	--color-green-300: #86efac;
+	--color-red-500: #ef4444;
+	--color-red-300: #fca5a5;
+	--color-yellow-500: #eab308;
+	--color-yellow-300: #fde047;
+	--color-cyan-500: #06b6d4;
+	--color-cyan-300: #67e8f9;
+	--color-orange-500: #f97316;
+	--color-orange-300: #fdba74;
+	/* kilocode_change end */
 }
 
 @layer base {

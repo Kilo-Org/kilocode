@@ -35,5 +35,19 @@
 	"confirmDeleteTasks": "Estàs segur que vols eliminar {{count}} tasques?",
 	"deleteTasksWarning": "Les tasques eliminades no es poden recuperar. Si us plau, assegura't que vols continuar.",
 	"deleteItems": "Eliminar {{count}} elements",
-	"showAllWorkspaces": "Mostrar tasques de tots els espais de treball"
+	"showAllWorkspaces": "Mostrar tasques de tots els espais de treball",
+	"filterByMode": "Filtrar per mode {{mode}}",
+	"allModes": "Tots els modes",
+	"exportOptions": "Opcions d'exportació",
+	"exportSingleTask": "Exportar tasca única",
+	"exportTaskFamily": "Exportar família de tasques",
+	"modes": {
+		"code": "Codi",
+		"architect": "Arquitecte",
+		"ask": "Preguntar",
+		"debug": "Depurar",
+		"orchestrator": "Orquestrador",
+		"translate": "Traduir",
+		"test": "Provar"
+	}
 }

@@ -25,6 +25,7 @@ const buttonVariants = cva(
 				sm: "h-6 px-2 text-sm",
 				lg: "h-8 px-4 text-lg",
 				icon: "h-7 w-7",
+				iconChevron: "h-7 w-11", // kilocode_change
 			},
 		},
 		defaultVariants: {

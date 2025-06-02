@@ -5,11 +5,12 @@ import { formatLargeNumber, formatDate } from "@/utils/format"
 
 import { CopyButton } from "./CopyButton"
 import { useTaskSearch } from "./useTaskSearch"
+import { ModeIndicator } from "./ModeIndicator" // kilocode_change
 
 import { Coins } from "lucide-react"
 
 const HistoryPreview = () => {
-	const { tasks, showAllWorkspaces } = useTaskSearch()
+	const { tasks, showAllWorkspaces, setSelectedMode } = useTaskSearch() // kilocode_change
 
 	return (
 		<>
@@ -23,9 +24,18 @@ const HistoryPreview = () => {
 								onClick={() => vscode.postMessage({ type: "showTaskWithId", text: item.id })}>
 								<div className="flex flex-col gap-2 p-3 pt-1">
 									<div className="flex justify-between items-center">
-										<span className="text-xs font-medium text-vscode-descriptionForeground uppercase">
-											{formatDate(item.ts)}
-										</span>
+										{/* kilocode_change begin */}
+										<div className="flex items-center gap-2">
+											<span className="text-xs font-medium text-vscode-descriptionForeground uppercase">
+												{formatDate(item.ts)}
+											</span>
+											<ModeIndicator
+												mode={item.mode}
+												clickable={true}
+												onClick={() => setSelectedMode(item.mode || null)}
+											/>
+										</div>
+										{/* kilocode_change end */}
 										<CopyButton itemTask={item.task} />
 									</div>
 									<div

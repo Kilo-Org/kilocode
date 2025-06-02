@@ -35,5 +35,19 @@
 	"confirmDeleteTasks": "确认删除 {{count}} 项任务？",
 	"deleteTasksWarning": "删除后将无法恢复，请谨慎操作。",
 	"deleteItems": "删除 {{count}} 项",
-	"showAllWorkspaces": "显示所有工作区的任务"
+	"showAllWorkspaces": "显示所有工作区的任务",
+	"filterByMode": "按{{mode}}模式筛选",
+	"allModes": "所有模式",
+	"exportOptions": "导出选项",
+	"exportSingleTask": "导出单个任务",
+	"exportTaskFamily": "导出任务组",
+	"modes": {
+		"code": "代码",
+		"architect": "架构师",
+		"ask": "问答",
+		"debug": "调试",
+		"orchestrator": "编排器",
+		"translate": "翻译",
+		"test": "测试"
+	}
 }

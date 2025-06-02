@@ -35,5 +35,19 @@
 	"confirmDeleteTasks": "क्या आप वाकई {{count}} कार्य हटाना चाहते हैं?",
 	"deleteTasksWarning": "हटाए गए कार्य पुनर्प्राप्त नहीं किए जा सकते। कृपया सुनिश्चित करें कि आप आगे बढ़ना चाहते हैं।",
 	"deleteItems": "{{count}} आइटम हटाएं",
-	"showAllWorkspaces": "सभी वर्कस्पेस से कार्य दिखाएं"
+	"showAllWorkspaces": "सभी वर्कस्पेस से कार्य दिखाएं",
+	"filterByMode": "{{mode}} मोड के अनुसार फ़िल्टर करें",
+	"allModes": "सभी मोड",
+	"exportOptions": "निर्यात विकल्प",
+	"exportSingleTask": "एकल कार्य निर्यात करें",
+	"exportTaskFamily": "कार्य परिवार निर्यात करें",
+	"modes": {
+		"code": "कोड",
+		"architect": "आर्किटेक्ट",
+		"ask": "पूछें",
+		"debug": "डिबग",
+		"orchestrator": "ऑर्केस्ट्रेटर",
+		"translate": "अनुवाद",
+		"test": "टेस्ट"
+	}
 }

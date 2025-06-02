@@ -1,5 +1,5 @@
 {
-	"recentTasks": "Recent Tasks",
+	"recentTasks": "タスク",
 	"viewAll": "すべて表示",
 	"tokens": "Tokens: ↑{{in}} ↓{{out}}",
 	"cache": "キャッシュ: +{{writes}} → {{reads}}",
@@ -35,5 +35,19 @@
 	"confirmDeleteTasks": "{{count}} 件のタスクを削除してもよろしいですか？",
 	"deleteTasksWarning": "削除されたタスクは復元できません。続行してもよろしいですか？",
 	"deleteItems": "{{count}} 項目を削除",
-	"showAllWorkspaces": "すべてのワークスペースのタスクを表示"
+	"showAllWorkspaces": "すべてのワークスペースのタスクを表示",
+	"filterByMode": "{{mode}}モードでフィルター",
+	"allModes": "すべてのモード",
+	"exportOptions": "エクスポートオプション",
+	"exportSingleTask": "単一タスクをエクスポート",
+	"exportTaskFamily": "タスクファミリーをエクスポート",
+	"modes": {
+		"code": "コード",
+		"architect": "アーキテクト",
+		"ask": "質問",
+		"debug": "デバッグ",
+		"orchestrator": "オーケストレーター",
+		"translate": "翻訳",
+		"test": "テスト"
+	}
 }

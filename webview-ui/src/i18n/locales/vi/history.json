@@ -35,5 +35,19 @@
 	"confirmDeleteTasks": "Bạn có chắc chắn muốn xóa {{count}} nhiệm vụ không?",
 	"deleteTasksWarning": "Các nhiệm vụ đã xóa không thể khôi phục. Vui lòng chắc chắn bạn muốn tiếp tục.",
 	"deleteItems": "Xóa {{count}} mục",
-	"showAllWorkspaces": "Hiển thị nhiệm vụ từ tất cả không gian làm việc"
+	"showAllWorkspaces": "Hiển thị nhiệm vụ từ tất cả không gian làm việc",
+	"filterByMode": "Lọc theo chế độ {{mode}}",
+	"allModes": "Tất cả chế độ",
+	"exportOptions": "Tùy chọn xuất",
+	"exportSingleTask": "Xuất nhiệm vụ đơn",
+	"exportTaskFamily": "Xuất nhóm nhiệm vụ",
+	"modes": {
+		"code": "Mã",
+		"architect": "Kiến trúc sư",
+		"ask": "Hỏi",
+		"debug": "Gỡ lỗi",
+		"orchestrator": "Điều phối",
+		"translate": "Dịch",
+		"test": "Kiểm tra"
+	}
 }

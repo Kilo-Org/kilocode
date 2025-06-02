@@ -20,6 +20,9 @@
 	"apiCostLabel": "API Cost:",
 	"copyPrompt": "Copy Prompt",
 	"exportTask": "Export Task",
+	"exportOptions": "Export Options",
+	"exportSingleTask": "Export Single Task",
+	"exportTaskFamily": "Export Task Family",
 	"deleteTask": "Delete Task",
 	"deleteTaskMessage": "Are you sure you want to delete this task? This action cannot be undone.",
 	"cancel": "Cancel",
@@ -35,5 +38,16 @@
 	"confirmDeleteTasks": "Are you sure you want to delete {{count}} tasks?",
 	"deleteTasksWarning": "Deleted tasks cannot be recovered. Please make sure you want to proceed.",
 	"deleteItems": "Delete {{count}} Items",
-	"showAllWorkspaces": "Show tasks from all workspaces"
+	"showAllWorkspaces": "Show tasks from all workspaces",
+	"filterByMode": "Filter by {{mode}} mode",
+	"allModes": "All Modes",
+	"modes": {
+		"code": "Code",
+		"architect": "Architect",
+		"ask": "Ask",
+		"debug": "Debug",
+		"orchestrator": "Orchestrator",
+		"translate": "Translate",
+		"test": "Test"
+	}
 }

@@ -35,5 +35,19 @@
 	"confirmDeleteTasks": "¿Estás seguro de que quieres eliminar {{count}} tareas?",
 	"deleteTasksWarning": "Las tareas eliminadas no se pueden recuperar. Por favor, asegúrate de que quieres continuar.",
 	"deleteItems": "Eliminar {{count}} elementos",
-	"showAllWorkspaces": "Mostrar tareas de todos los espacios de trabajo"
+	"showAllWorkspaces": "Mostrar tareas de todos los espacios de trabajo",
+	"filterByMode": "Filtrar por modo {{mode}}",
+	"allModes": "Todos los modos",
+	"exportOptions": "Opciones de exportación",
+	"exportSingleTask": "Exportar tarea única",
+	"exportTaskFamily": "Exportar familia de tareas",
+	"modes": {
+		"code": "Código",
+		"architect": "Arquitecto",
+		"ask": "Preguntar",
+		"debug": "Depurar",
+		"orchestrator": "Orquestador",
+		"translate": "Traducir",
+		"test": "Probar"
+	}
 }

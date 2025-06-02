@@ -38,6 +38,7 @@ export interface WebviewMessage {
 		| "showTaskWithId"
 		| "deleteTaskWithId"
 		| "exportTaskWithId"
+		| "exportTaskFamilyWithId" // kilocode_change
 		| "importSettings"
 		| "toggleToolAutoApprove"
 		| "openExtensionSettings"

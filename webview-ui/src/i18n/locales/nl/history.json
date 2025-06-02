@@ -35,5 +35,19 @@
 	"confirmDeleteTasks": "Weet je zeker dat je {{count}} taken wilt verwijderen?",
 	"deleteTasksWarning": "Verwijderde taken kunnen niet worden hersteld. Zorg ervoor dat je wilt doorgaan.",
 	"deleteItems": "Verwijder {{count}} items",
-	"showAllWorkspaces": "Toon taken van alle werkruimtes"
+	"showAllWorkspaces": "Toon taken van alle werkruimtes",
+	"filterByMode": "Filter op {{mode}} modus",
+	"allModes": "Alle modi",
+	"exportOptions": "Exportopties",
+	"exportSingleTask": "Enkele taak exporteren",
+	"exportTaskFamily": "Taakfamilie exporteren",
+	"modes": {
+		"code": "Code",
+		"architect": "Architect",
+		"ask": "Vragen",
+		"debug": "Debug",
+		"orchestrator": "Orchestrator",
+		"translate": "Vertalen",
+		"test": "Test"
+	}
 }

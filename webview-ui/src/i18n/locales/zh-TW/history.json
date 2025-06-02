@@ -35,5 +35,19 @@
 	"confirmDeleteTasks": "確定要刪除 {{count}} 個工作嗎？",
 	"deleteTasksWarning": "已刪除的工作無法還原。請確認是否要繼續。",
 	"deleteItems": "刪除 {{count}} 個項目",
-	"showAllWorkspaces": "顯示所有工作區的工作"
+	"showAllWorkspaces": "顯示所有工作區的工作",
+	"filterByMode": "依{{mode}}模式篩選",
+	"allModes": "所有模式",
+	"exportOptions": "匯出選項",
+	"exportSingleTask": "匯出單一工作",
+	"exportTaskFamily": "匯出工作群組",
+	"modes": {
+		"code": "程式碼",
+		"architect": "架構師",
+		"ask": "詢問",
+		"debug": "除錯",
+		"orchestrator": "協調器",
+		"translate": "翻譯",
+		"test": "測試"
+	}
 }
