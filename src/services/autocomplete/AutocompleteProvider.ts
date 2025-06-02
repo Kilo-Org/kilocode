@@ -222,7 +222,7 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 
 	// Status bar
 	const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100)
-	statusBar.text = "$(sparkle) Kilo-complete"
+	statusBar.text = "$(sparkle) Kilo Complete"
 	statusBar.tooltip = "Kilo Code Autocomplete"
 	statusBar.command = "kilo-code.toggleAutocomplete"
 	statusBar.show()
@@ -242,20 +242,25 @@ function setupAutocomplete(context: vscode.ExtensionContext) {
 		isEnabled: boolean,
 	) => {
 		if (!isEnabled) {
-			statusBar.text = "$(circle-slash) Kilo-complete"
+			statusBar.text = "$(circle-slash) Kilo Complete"
 			statusBar.tooltip = "Kilo Code Autocomplete (disabled)"
 			return
 		}
 
 		const totalCostFormatted = humanFormatCost(totalCost)
-		statusBar.text = `$(sparkle) Kilo-complete (${totalCostFormatted})`
-		statusBar.tooltip = `Kilo Code Autocomplete\nLast completion: ${lastCost.toFixed(5)}\nSession total: ${totalCostFormatted}`
+		statusBar.text = `$(sparkle) Kilo Complete (${totalCostFormatted})`
+		statusBar.tooltip = `\
+Kilo Code Autocomplete
+
+Model: ${DEFAULT_MODEL}
+Last completion: $${lastCost.toFixed(5)}
+Session total cost: ${totalCostFormatted}`
 	}
 
 	const toggleCommand = vscode.commands.registerCommand("kilo-code.toggleAutocomplete", () => {
 		enabled = !enabled
 		updateStatusBarWithCost(statusBar, lastCompletionCost, totalSessionCost, enabled)
-		vscode.window.showInformationMessage(`Kilo-complete ${enabled ? "enabled" : "disabled"}`)
+		vscode.window.showInformationMessage(`Kilo Complete ${enabled ? "enabled" : "disabled"}`)
 	})
 
 	// Command to track when a suggestion is accepted
