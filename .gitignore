@@ -5,8 +5,13 @@ out-*
 node_modules
 coverage/
 mock/
+
+.idea
+
 .DS_Store
-*.orig
+
+# IDEs
+.idea
 
 # Builds
 bin/
@@ -35,7 +40,6 @@ logs
 
 # kilocode_change
 .history/
-.aider*
 # Turborepo
 .turbo
 
