@@ -64,8 +64,6 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 		currentApiConfigName,
 		enhancementApiConfigId,
 		setEnhancementApiConfigId,
-		autocompleteApiConfigId,
-		setAutocompleteApiConfigId,
 		mode,
 		customInstructions,
 		setCustomInstructions,
@@ -1250,53 +1248,6 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 								</div>
 							</>
 						)}
-					</div>
-
-					{/* Autocomplete API Configuration Section */}
-					<div className="mt-5 pb-5 border-b border-vscode-input-border">
-						<h3 className="text-vscode-foreground mb-3">{t("kilocode:autocompleteApiConfig.title")}</h3>
-						<div className="text-sm text-vscode-descriptionForeground mb-2">
-							{t("kilocode:autocompleteApiConfig.description")}
-						</div>
-
-						<div className="mb-3">
-							<div className="mb-2">
-								<div className="font-bold mb-1">{t("kilocode:autocompleteApiConfig.fieldLabel")}</div>
-								<div className="text-[13px] text-vscode-descriptionForeground">
-									{t("kilocode:autocompleteApiConfig.fieldDescription")}
-									<a
-										href="https://kilocode.ai/autocomplete"
-										className="text-vscode-textLink-foreground ml-1">
-										{t("kilocode:autocompleteApiConfig.learnMore")}
-									</a>
-								</div>
-							</div>
-							<Select
-								value={autocompleteApiConfigId || "-"}
-								onValueChange={(value) => {
-									// normalise to empty string for empty value
-									// because we can't use it directly for the select element
-									setAutocompleteApiConfigId(value === "-" ? "" : value)
-									vscode.postMessage({ type: "autocompleteApiConfigId", text: value })
-								}}>
-								<SelectTrigger data-testid="autocomplete-api-config-select" className="w-full">
-									<SelectValue placeholder={t("kilocode:autocompleteApiConfig.useCurrentConfig")} />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="-">
-										{t("kilocode:autocompleteApiConfig.useCurrentConfig")}
-									</SelectItem>
-									{(listApiConfigMeta || []).map((config) => (
-										<SelectItem
-											key={config.id}
-											value={config.id}
-											data-testid={`autocomplete-${config.id}-option`}>
-											{config.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
 					</div>
 				</div>
 			</TabContent>
