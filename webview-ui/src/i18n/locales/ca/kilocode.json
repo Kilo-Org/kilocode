@@ -43,13 +43,5 @@
 	},
 	"newTaskPreview": {
 		"task": "Tasca"
-	},
-	"autocompleteApiConfig": {
-		"title": "Configuració de l'API d'autocompletat",
-		"description": "Configura quina configuració d'API utilitzar per a la funcionalitat d'autocompletat.",
-		"fieldLabel": "Configuració de l'API d'autocompletat",
-		"fieldDescription": "Selecciona una configuració d'API específica per a l'autocompletat. Només certs models són bons per autocompletar codi.",
-		"learnMore": "Més informació",
-		"useCurrentConfig": "Utilitza la configuració d'API actual"
 	}
 }

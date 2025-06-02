@@ -33,14 +33,6 @@
 	"newTaskPreview": {
 		"task": "작업"
 	},
-	"autocompleteApiConfig": {
-		"title": "자동 완성 API 구성",
-		"description": "자동 완성 기능에 사용할 API 구성을 설정합니다.",
-		"fieldLabel": "자동 완성 API 구성",
-		"fieldDescription": "자동 완성을 위한 특정 API 구성을 선택하세요. 일부 모델만 코드 자동 완성에 적합합니다.",
-		"learnMore": "더 알아보기",
-		"useCurrentConfig": "현재 API 구성 사용하기"
-	},
 	"profile": {
 		"dashboard": "대시보드",
 		"logOut": "로그아웃",

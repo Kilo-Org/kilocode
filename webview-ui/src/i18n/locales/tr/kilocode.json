@@ -33,14 +33,6 @@
 	"newTaskPreview": {
 		"task": "Görev"
 	},
-	"autocompleteApiConfig": {
-		"title": "Otomatik Tamamlama API Yapılandırması",
-		"description": "Otomatik tamamlama işlevi için hangi API yapılandırmasının kullanılacağını yapılandırın.",
-		"fieldLabel": "Otomatik Tamamlama API Yapılandırması",
-		"fieldDescription": "Otomatik tamamlama için belirli bir API yapılandırması seçin. Yalnızca belirli modeller kod otomatik tamamlamada iyidir.",
-		"learnMore": "Daha fazla bilgi",
-		"useCurrentConfig": "Mevcut API yapılandırmasını kullan"
-	},
 	"profile": {
 		"dashboard": "Kontrol Paneli",
 		"logOut": "Çıkış Yap",

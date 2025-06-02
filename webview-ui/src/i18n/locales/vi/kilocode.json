@@ -33,14 +33,6 @@
 	"newTaskPreview": {
 		"task": "Nhiệm vụ"
 	},
-	"autocompleteApiConfig": {
-		"title": "Cấu hình API tự động hoàn thành",
-		"description": "Cấu hình cài đặt API nào sẽ được sử dụng cho chức năng tự động hoàn thành.",
-		"fieldLabel": "Cấu hình API tự động hoàn thành",
-		"fieldDescription": "Chọn một cấu hình API cụ thể cho tự động hoàn thành. Chỉ một số mô hình nhất định mới giỏi trong việc tự động hoàn thành mã.",
-		"learnMore": "Tìm hiểu thêm",
-		"useCurrentConfig": "Sử dụng cấu hình API hiện tại"
-	},
 	"profile": {
 		"dashboard": "Bảng điều khiển",
 		"logOut": "Đăng xuất",

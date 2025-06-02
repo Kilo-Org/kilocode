@@ -188,7 +188,6 @@ export type ExtensionState = Pick<
 	| "customModePrompts"
 	| "customSupportPrompts"
 	| "enhancementApiConfigId"
-	| "autocompleteApiConfigId" // kilocode_change
 	| "workflowToggles"
 	| "condensingApiConfigId"
 	| "customCondensingPrompt"

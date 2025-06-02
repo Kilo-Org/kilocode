@@ -33,14 +33,6 @@
 	"newTaskPreview": {
 		"task": "タスク"
 	},
-	"autocompleteApiConfig": {
-		"title": "オートコンプリートAPI設定",
-		"description": "オートコンプリート機能に使用するAPI設定を構成します。",
-		"fieldLabel": "オートコンプリートAPI設定",
-		"fieldDescription": "オートコンプリート用の特定のAPI設定を選択します。コードの自動補完が得意なモデルは限られています。",
-		"learnMore": "詳細を見る",
-		"useCurrentConfig": "現在のAPI設定を使用する"
-	},
 	"profile": {
 		"dashboard": "ダッシュボード",
 		"logOut": "ログアウト",

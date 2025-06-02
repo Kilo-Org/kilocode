@@ -33,14 +33,6 @@
 	"newTaskPreview": {
 		"task": "任務"
 	},
-	"autocompleteApiConfig": {
-		"title": "自動完成API配置",
-		"description": "配置用於自動完成功能的API設置。",
-		"fieldLabel": "自動完成API配置",
-		"fieldDescription": "為自動完成選擇特定的API配置。只有某些模型在自動完成程式碼方面表現良好。",
-		"learnMore": "了解更多",
-		"useCurrentConfig": "使用當前API配置"
-	},
 	"profile": {
 		"dashboard": "儀表板",
 		"logOut": "登出",

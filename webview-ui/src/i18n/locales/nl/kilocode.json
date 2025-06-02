@@ -33,14 +33,6 @@
 	"newTaskPreview": {
 		"task": "Taak"
 	},
-	"autocompleteApiConfig": {
-		"title": "Automatisch aanvullen API-configuratie",
-		"description": "Configureer welke API-configuratie moet worden gebruikt voor de functionaliteit voor automatisch aanvullen.",
-		"fieldLabel": "Automatisch aanvullen API-configuratie",
-		"fieldDescription": "Selecteer een specifieke API-configuratie voor automatisch aanvullen. Alleen bepaalde modellen zijn goed in het automatisch aanvullen van code.",
-		"learnMore": "Meer informatie",
-		"useCurrentConfig": "Gebruik huidige API-configuratie"
-	},
 	"profile": {
 		"dashboard": "Dashboard",
 		"logOut": "Uitloggen",

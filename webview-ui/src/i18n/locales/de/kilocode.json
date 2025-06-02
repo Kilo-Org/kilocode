@@ -33,14 +33,6 @@
 	"newTaskPreview": {
 		"task": "Aufgabe"
 	},
-	"autocompleteApiConfig": {
-		"title": "Autovervollständigung-API-Konfiguration",
-		"description": "Konfiguriere, welche API-Konfiguration für die Autovervollständigungsfunktion verwendet werden soll.",
-		"fieldLabel": "Autovervollständigung-API-Konfiguration",
-		"fieldDescription": "Wähle eine spezifische API-Konfiguration für die Autovervollständigung. Nur bestimmte Modelle sind gut darin, Code automatisch zu vervollständigen.",
-		"learnMore": "Mehr erfahren",
-		"useCurrentConfig": "Aktuelle API-Konfiguration verwenden"
-	},
 	"profile": {
 		"dashboard": "Dashboard",
 		"logOut": "Abmelden",

@@ -102,7 +102,6 @@ export const globalSettingsSchema = z.object({
 	customModePrompts: customModePromptsSchema.optional(),
 	customSupportPrompts: customSupportPromptsSchema.optional(),
 	enhancementApiConfigId: z.string().optional(),
-	autocompleteApiConfigId: z.string().optional(), // kilocode_change
 	historyPreviewCollapsed: z.boolean().optional(),
 })
 
@@ -190,7 +189,6 @@ export const GLOBAL_SETTINGS_KEYS = keysOf<GlobalSettings>()([
 	"cachedChromeHostUrl",
 	"historyPreviewCollapsed",
 
-	"autocompleteApiConfigId", // kilocode_change
 	"showAutoApproveMenu", // kilocode_change
 	"workflowToggles", // kilocode_change
 ])

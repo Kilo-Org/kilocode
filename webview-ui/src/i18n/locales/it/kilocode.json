@@ -33,14 +33,6 @@
 	"newTaskPreview": {
 		"task": "Attività"
 	},
-	"autocompleteApiConfig": {
-		"title": "Configurazione API di autocompletamento",
-		"description": "Configura quale configurazione API utilizzare per la funzionalità di autocompletamento.",
-		"fieldLabel": "Configurazione API di autocompletamento",
-		"fieldDescription": "Seleziona una configurazione API specifica per l'autocompletamento. Solo alcuni modelli sono efficaci nell'autocompletamento del codice.",
-		"learnMore": "Scopri di più",
-		"useCurrentConfig": "Usa la configurazione API corrente"
-	},
 	"profile": {
 		"dashboard": "Dashboard",
 		"logOut": "Disconnetti",

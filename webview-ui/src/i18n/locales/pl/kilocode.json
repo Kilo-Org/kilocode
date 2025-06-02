@@ -33,14 +33,6 @@
 	"newTaskPreview": {
 		"task": "Zadanie"
 	},
-	"autocompleteApiConfig": {
-		"title": "Konfiguracja API autouzupełniania",
-		"description": "Skonfiguruj, która konfiguracja API ma być używana do funkcji autouzupełniania.",
-		"fieldLabel": "Konfiguracja API autouzupełniania",
-		"fieldDescription": "Wybierz określoną konfigurację API dla autouzupełniania. Tylko niektóre modele dobrze radzą sobie z autouzupełnianiem kodu.",
-		"learnMore": "Dowiedz się więcej",
-		"useCurrentConfig": "Użyj bieżącej konfiguracji API"
-	},
 	"profile": {
 		"dashboard": "Panel kontrolny",
 		"logOut": "Wyloguj się",

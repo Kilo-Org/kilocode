@@ -33,14 +33,6 @@
 	"newTaskPreview": {
 		"task": "Task"
 	},
-	"autocompleteApiConfig": {
-		"title": "Autocomplete API Configuration",
-		"description": "Configure which API configuration to use for autocomplete functionality.",
-		"fieldLabel": "Autocomplete API Configuration",
-		"fieldDescription": "Select a specific API configuration for autocomplete. Only certain models are good at auto-completing code.",
-		"learnMore": "Learn more",
-		"useCurrentConfig": "Use current API configuration"
-	},
 	"profile": {
 		"dashboard": "Dashboard",
 		"logOut": "Log out",
