@@ -14,8 +14,6 @@ import { getGlamaModels } from "./glama"
 import { getUnboundModels } from "./unbound"
 import { getLiteLLMModels } from "./litellm"
 import { GetModelsOptions } from "../../../shared/api"
-import { get } from "http"
-import { getKiloBaseUriFromToken } from "../kilocode-openrouter"
 const memoryCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 5 * 60 })
 
 async function writeModels(router: RouterName, data: ModelRecord) {
@@ -72,10 +70,15 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				break
 			// kilocode_change start
 			case "kilocode-openrouter": {
-				models = await getOpenRouterModels({
-					baseUrl: getKiloBaseUriFromToken(options.kilocodeToken ?? "") + "/api/openrouter",
-					headers: { Authorization: `Bearer ${options.kilocodeToken}` },
-				})
+				const kilocodeToken = ContextProxy.instance.getProviderSettings().kilocodeToken
+				const options: any = {
+					openRouterBaseUrl: "https://kilocode.ai/api/openrouter",
+					headers: {
+						Authorization: `Bearer ${kilocodeToken}`,
+					},
+				}
+
+				models = await getOpenRouterModels(options)
 				break
 			}
 			// kilocode_change end
