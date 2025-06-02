@@ -9,12 +9,12 @@ export const safeCreateUrl = (url: string): URL | null => {
 		}
 
 		return new URL(url)
-	} catch (e) {
+	} catch (_e) {
 		// If the URL doesn't have a protocol, add https://
 		if (!url.startsWith("https://")) {
 			try {
 				return new URL(`https://${url}`)
-			} catch (e) {
+			} catch (_e) {
 				console.log(`Invalid URL: ${url}`)
 				return null
 			}
@@ -34,7 +34,7 @@ export const getSafeHostname = (url: string): string => {
 	try {
 		const urlObj = safeCreateUrl(url)
 		return urlObj ? urlObj.hostname : "unknown-host"
-	} catch (e) {
+	} catch (_e) {
 		return "unknown-host"
 	}
 }
@@ -51,7 +51,7 @@ export const isLocalhostUrl = (url: string): boolean => {
 			hostname.startsWith("10.") ||
 			hostname.endsWith(".local")
 		)
-	} catch (e) {
+	} catch (_e) {
 		// If we can't parse the URL, assume it's not localhost
 		return false
 	}
@@ -167,7 +167,7 @@ export const checkIfImageUrl = async (url: string): Promise<boolean> => {
 					resolve(false)
 				}, 3000)
 			})
-		} catch (error) {
+		} catch (_error) {
 			console.log("Error checking if URL is an image:", url)
 			// Don't fall back to extension check on error
 			// Instead, return false to indicate it's not an image

@@ -76,7 +76,7 @@
 		"tooltip": "Annulla l'operazione corrente"
 	},
 	"scrollToBottom": "Scorri fino alla fine della chat",
-	"about": "Genera, refactor e debug del codice con l'assistenza dell'IA.<br />Consulta la nostra <DocsLink>documentazione</DocsLink> per saperne di più.",
+	"about": "Genera, refactor e debug del codice con l'assistenza dell'IA. Consulta la nostra <DocsLink>documentazione</DocsLink> per saperne di più.",
 	"onboarding": "Grazie alle più recenti innovazioni nelle capacità di codifica agentica, posso gestire complesse attività di sviluppo software passo dopo passo. Con strumenti che mi permettono di creare e modificare file, esplorare progetti complessi, utilizzare il browser ed eseguire comandi da terminale (dopo la tua autorizzazione), posso aiutarti in modi che vanno oltre il completamento del codice o il supporto tecnico. Posso persino usare MCP per creare nuovi strumenti ed estendere le mie capacità.",
 	"rooTips": {
 		"boomerangTasks": {
@@ -266,5 +266,10 @@
 			"description": "Kilo Code ha raggiunto il limite auto-approvato di {{count}} richiesta/e API. Vuoi reimpostare il contatore e procedere con l'attività?",
 			"button": "Reimposta e Continua"
 		}
+	},
+	"codebaseSearch": {
+		"wantsToSearch": "Kilo Code vuole cercare nella base di codice <code>{{query}}</code>:",
+		"wantsToSearchWithPath": "Kilo Code vuole cercare nella base di codice <code>{{query}}</code> in <code>{{path}}</code>:",
+		"didSearch": "Trovato {{count}} risultato/i per <code>{{query}}</code>:"
 	}
 }

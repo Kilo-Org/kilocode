@@ -12,7 +12,7 @@ jest.mock("delay", () => jest.fn(() => Promise.resolve()))
 jest.mock("../fetchers/modelCache", () => ({
 	getModels: jest.fn().mockImplementation(() => {
 		return Promise.resolve({
-			"anthropic/claude-3.7-sonnet": {
+			"anthropic/claude-sonnet-4": {
 				maxTokens: 8192,
 				contextWindow: 200000,
 				supportsImages: true,
@@ -35,7 +35,6 @@ jest.mock("../fetchers/modelCache", () => ({
 				cacheWritesPrice: 3.75,
 				cacheReadsPrice: 0.3,
 				description: "Claude 3.7 Sonnet with thinking",
-				thinking: true,
 				supportsComputerUse: true,
 			},
 		})
@@ -45,7 +44,7 @@ jest.mock("../fetchers/modelCache", () => ({
 describe("OpenRouterHandler", () => {
 	const mockOptions: ApiHandlerOptions = {
 		openRouterApiKey: "test-key",
-		openRouterModelId: "anthropic/claude-3.7-sonnet",
+		openRouterModelId: "anthropic/claude-sonnet-4",
 	}
 
 	beforeEach(() => jest.clearAllMocks())
@@ -85,7 +84,7 @@ describe("OpenRouterHandler", () => {
 		it("returns default model info when options are not provided", async () => {
 			const handler = new OpenRouterHandler({})
 			const result = await handler.fetchModel()
-			expect(result.id).toBe("anthropic/claude-3.7-sonnet")
+			expect(result.id).toBe("anthropic/claude-sonnet-4")
 			expect(result.info.supportsPromptCache).toBe(true)
 		})
 
@@ -99,7 +98,7 @@ describe("OpenRouterHandler", () => {
 
 			const result = await handler.fetchModel()
 			expect(result.maxTokens).toBe(32_768)
-			expect(result.thinking).toEqual({ type: "enabled", budget_tokens: 16_384 })
+			expect(result.reasoningBudget).toEqual(16_384)
 			expect(result.temperature).toBe(1.0)
 		})
 
@@ -112,7 +111,7 @@ describe("OpenRouterHandler", () => {
 
 			const result = await handler.fetchModel()
 			expect(result.maxTokens).toBe(8192)
-			expect(result.thinking).toBeUndefined()
+			expect(result.reasoningBudget).toBeUndefined()
 			expect(result.temperature).toBe(0)
 		})
 	})
@@ -173,7 +172,7 @@ describe("OpenRouterHandler", () => {
 							role: "user",
 						},
 					],
-					model: "anthropic/claude-3.7-sonnet",
+					model: "anthropic/claude-sonnet-4",
 					stream: true,
 					stream_options: { include_usage: true },
 					temperature: 0,

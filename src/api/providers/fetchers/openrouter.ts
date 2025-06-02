@@ -1,8 +1,16 @@
 import axios from "axios"
 import { z } from "zod"
 
-import { ApiHandlerOptions, ModelInfo, anthropicModels, COMPUTER_USE_MODELS } from "../../../shared/api"
-import { parseApiPrice } from "../../../utils/cost"
+import { type ModelInfo, isModelParameter } from "@roo-code/types"
+
+import {
+	ApiHandlerOptions,
+	OPEN_ROUTER_COMPUTER_USE_MODELS,
+	OPEN_ROUTER_REASONING_BUDGET_MODELS,
+	OPEN_ROUTER_REQUIRED_REASONING_BUDGET_MODELS,
+	anthropicModels,
+} from "../../../shared/api"
+import { parseApiPrice } from "../../../shared/cost"
 
 /**
  * OpenRouterBaseModel
@@ -39,6 +47,7 @@ export const openRouterModelSchema = modelRouterBaseModelSchema.extend({
 	id: z.string(),
 	architecture: openRouterArchitectureSchema.optional(),
 	top_provider: z.object({ max_completion_tokens: z.number().nullish() }).optional(),
+	supported_parameters: z.array(z.string()).optional(),
 })
 
 export type OpenRouterModel = z.infer<typeof openRouterModelSchema>
@@ -73,6 +82,7 @@ const openRouterModelEndpointsResponseSchema = z.object({
 		name: z.string(),
 		description: z.string().optional(),
 		architecture: openRouterArchitectureSchema.optional(),
+		supported_parameters: z.array(z.string()).optional(),
 		endpoints: z.array(openRouterModelEndpointSchema),
 	}),
 })
@@ -101,13 +111,14 @@ export async function getOpenRouterModels(options?: ApiHandlerOptions): Promise<
 		}
 
 		for (const model of data) {
-			const { id, architecture, top_provider } = model
+			const { id, architecture, top_provider, supported_parameters = [] } = model
 
 			models[id] = parseOpenRouterModel({
 				id,
 				model,
 				modality: architecture?.modality,
-				maxTokens: id.startsWith("anthropic/") ? top_provider?.max_completion_tokens : 0,
+				maxTokens: top_provider?.max_completion_tokens,
+				supportedParameters: supported_parameters,
 			})
 		}
 	} catch (error) {
@@ -146,7 +157,7 @@ export async function getOpenRouterModelEndpoints(
 				id,
 				model: endpoint,
 				modality: architecture?.modality,
-				maxTokens: id.startsWith("anthropic/") ? endpoint.max_completion_tokens : 0,
+				maxTokens: endpoint.max_completion_tokens,
 			})
 		}
 	} catch (error) {
@@ -167,11 +178,13 @@ export const parseOpenRouterModel = ({
 	model,
 	modality,
 	maxTokens,
+	supportedParameters,
 }: {
 	id: string
 	model: OpenRouterBaseModel
 	modality: string | null | undefined
 	maxTokens: number | null | undefined
+	supportedParameters?: string[]
 }): ModelInfo => {
 	const cacheWritesPrice = model.pricing?.input_cache_write
 		? parseApiPrice(model.pricing?.input_cache_write)
@@ -181,8 +194,10 @@ export const parseOpenRouterModel = ({
 
 	const supportsPromptCache = typeof cacheWritesPrice !== "undefined" && typeof cacheReadsPrice !== "undefined"
 
+	const useMaxTokens = OPEN_ROUTER_REASONING_BUDGET_MODELS.has(id) || id.startsWith("anthropic/")
+
 	const modelInfo: ModelInfo = {
-		maxTokens: maxTokens || 0,
+		maxTokens: useMaxTokens ? maxTokens || 0 : 0,
 		contextWindow: model.context_length,
 		supportsImages: modality?.includes("image") ?? false,
 		supportsPromptCache,
@@ -191,24 +206,37 @@ export const parseOpenRouterModel = ({
 		cacheWritesPrice,
 		cacheReadsPrice,
 		description: model.description,
-		thinking: id === "anthropic/claude-3.7-sonnet:thinking",
+		supportsReasoningEffort: supportedParameters ? supportedParameters.includes("reasoning") : undefined,
+		supportedParameters: supportedParameters ? supportedParameters.filter(isModelParameter) : undefined,
 		preferredIndex: model.preferredIndex, // kilocode_change
 	}
 
 	// The OpenRouter model definition doesn't give us any hints about
 	// computer use, so we need to set that manually.
-	if (COMPUTER_USE_MODELS.has(id)) {
+	if (OPEN_ROUTER_COMPUTER_USE_MODELS.has(id)) {
 		modelInfo.supportsComputerUse = true
 	}
 
-	// Claude 3.7 Sonnet is a "hybrid" thinking model, and the `maxTokens`
-	// values can be configured. For the non-thinking variant we want to
-	// use 8k. The `thinking` variant can be run in 64k and 128k modes,
-	// and we want to use 128k.
-	if (id.startsWith("anthropic/claude-3.7-sonnet")) {
-		modelInfo.maxTokens = id.includes("thinking")
-			? anthropicModels["claude-3-7-sonnet-20250219:thinking"].maxTokens
-			: anthropicModels["claude-3-7-sonnet-20250219"].maxTokens
+	if (OPEN_ROUTER_REASONING_BUDGET_MODELS.has(id)) {
+		modelInfo.supportsReasoningBudget = true
+	}
+
+	if (OPEN_ROUTER_REQUIRED_REASONING_BUDGET_MODELS.has(id)) {
+		modelInfo.requiredReasoningBudget = true
+	}
+
+	// For backwards compatibility with the old model definitions we will
+	// continue to disable extending thinking for anthropic/claude-3.7-sonnet
+	// and force it for anthropic/claude-3.7-sonnet:thinking.
+
+	if (id === "anthropic/claude-3.7-sonnet") {
+		modelInfo.maxTokens = anthropicModels["claude-3-7-sonnet-20250219"].maxTokens
+		modelInfo.supportsReasoningBudget = false
+		modelInfo.supportsReasoningEffort = false
+	}
+
+	if (id === "anthropic/claude-3.7-sonnet:thinking") {
+		modelInfo.maxTokens = anthropicModels["claude-3-7-sonnet-20250219:thinking"].maxTokens
 	}
 
 	return modelInfo

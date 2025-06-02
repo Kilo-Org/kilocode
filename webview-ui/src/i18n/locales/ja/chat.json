@@ -263,8 +263,13 @@
 	"ask": {
 		"autoApprovedRequestLimitReached": {
 			"title": "自動承認リクエスト制限に達しました",
-			"description": "Rooは{{count}}件のAPI自動承認リクエスト制限に達しました。カウントをリセットしてタスクを続行しますか？",
+			"description": "Kilo Codeは{{count}}件のAPI自動承認リクエスト制限に達しました。カウントをリセットしてタスクを続行しますか？",
 			"button": "リセットして続行"
 		}
+	},
+	"codebaseSearch": {
+		"wantsToSearch": "Kilo Codeはコードベースで <code>{{query}}</code> を検索したい:",
+		"wantsToSearchWithPath": "Kilo Codeは <code>{{path}}</code> 内のコードベースで <code>{{query}}</code> を検索したい:",
+		"didSearch": "<code>{{query}}</code> の検索結果: {{count}} 件"
 	}
 }

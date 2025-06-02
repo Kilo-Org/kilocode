@@ -76,7 +76,7 @@
 		"tooltip": "取消当前操作"
 	},
 	"scrollToBottom": "滚动到聊天底部",
-	"about": "通过 AI 辅助生成、重构和调试代码。<br />查看我们的 <DocsLink>文档</DocsLink> 了解更多信息。",
+	"about": "通过 AI 辅助生成、重构和调试代码。查看我们的 <DocsLink>文档</DocsLink> 了解更多信息。",
 	"onboarding": "<strong>此工作区中的任务列表为空。</strong> 请在下方输入任务开始。 不确定如何开始？ 在 <DocsLink>文档</DocsLink> 中阅读更多关于 Kilo Code 可以为您做什么的信息。",
 	"rooTips": {
 		"boomerangTasks": {
@@ -266,5 +266,10 @@
 			"description": "Kilo Code 已达到 {{count}} 次 API 请求的自动批准限制。您想重置计数并继续任务吗？",
 			"button": "重置并继续"
 		}
+	},
+	"codebaseSearch": {
+		"wantsToSearch": "Kilo Code 需要搜索代码库: <code>{{query}}</code>",
+		"wantsToSearchWithPath": "Kilo Code 需要在 <code>{{path}}</code> 中搜索: <code>{{query}}</code>",
+		"didSearch": "找到 {{count}} 个结果: <code>{{query}}</code>"
 	}
 }

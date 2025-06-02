@@ -76,7 +76,7 @@
 		"tooltip": "Отменить текущую операцию"
 	},
 	"scrollToBottom": "Прокрутить чат вниз",
-	"about": "Создавайте, рефакторите и отлаживайте код с помощью ИИ.<br />Подробнее см. в нашей <DocsLink>документации</DocsLink>.",
+	"about": "Создавайте, рефакторите и отлаживайте код с помощью ИИ. Подробнее см. в нашей <DocsLink>документации</DocsLink>.",
 	"rooTips": {
 		"boomerangTasks": {
 			"title": "Задачи-бумеранги",
@@ -266,5 +266,10 @@
 			"description": "Kilo Code достиг автоматически одобренного лимита в {{count}} API-запрос(ов). Хотите сбросить счетчик и продолжить задачу?",
 			"button": "Сбросить и продолжить"
 		}
+	},
+	"codebaseSearch": {
+		"wantsToSearch": "Kilo Code хочет выполнить поиск в кодовой базе по <code>{{query}}</code>:",
+		"wantsToSearchWithPath": "Kilo Code хочет выполнить поиск в кодовой базе по <code>{{query}}</code> в <code>{{path}}</code>:",
+		"didSearch": "Найдено {{count}} результат(ов) для <code>{{query}}</code>:"
 	}
 }
