@@ -705,11 +705,9 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 
 					{/* Experimental Section */}
 					{activeTab === "experimental" && (
-						// kilocode_change start
 						<ExperimentalSettings
 							setExperimentEnabled={setExperimentEnabled}
 							experiments={experiments}
-							providerSettings={apiConfiguration}
 							autoCondenseContextPercent={autoCondenseContextPercent}
 							condensingApiConfigId={condensingApiConfigId}
 							setCondensingApiConfigId={(value) => setCachedStateField("condensingApiConfigId", value)}
@@ -723,7 +721,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 							setApiConfigurationField={setApiConfigurationField}
 							areSettingsCommitted={!isChangeDetected}
 						/>
-						// kilocode_change end
 					)}
 
 					{/* Language Section */}
