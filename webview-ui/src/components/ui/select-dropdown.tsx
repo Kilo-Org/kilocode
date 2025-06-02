@@ -218,7 +218,10 @@ export const SelectDropdown = React.memo(
 						sideOffset={sideOffset}
 						container={portalContainer}
 						className={cn("p-0 overflow-hidden max-h-[300px] flex flex-col", contentClassName)}>
+						{" "}
+						{/* kilocode_change */}
 						{/* Search input */}
+						{/* kilocode_change removed <div className="flex flex-col w-full"> to fix double scrollbar */}
 						<div className="flex-none p-2 border-b border-vscode-dropdown-border">
 							<input
 								aria-label="Search"
@@ -237,7 +240,7 @@ export const SelectDropdown = React.memo(
 								</div>
 							)}
 						</div>
-						{/* Options container - Scrollable */}
+						{/* Dropdown items - Use windowing for large lists */}
 						<div className="flex-1 overflow-y-auto min-h-0">
 							{groupedOptions.length === 0 && searchValue ? (
 								<div className="py-2 px-3 text-sm text-vscode-foreground/70">No results found</div>
