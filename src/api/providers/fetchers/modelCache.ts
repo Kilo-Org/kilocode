@@ -73,7 +73,7 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 			// kilocode_change start
 			case "kilocode-openrouter": {
 				models = await getOpenRouterModels({
-					baseUrl: getKiloBaseUriFromToken(options.kilocodeToken ?? ""),
+					baseUrl: getKiloBaseUriFromToken(options.kilocodeToken ?? "") + "/api/openrouter",
 					headers: { Authorization: `Bearer ${options.kilocodeToken}` },
 				})
 				break
