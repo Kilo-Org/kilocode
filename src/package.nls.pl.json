@@ -16,6 +16,7 @@
 	"views.activitybar.title": "Kilo Code",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",
+	"views.sidebar.name": "Kilo Code",
 	"command.mcpServers.title": "Serwery MCP",
 	"command.prompts.title": "Podpowiedzi",
 	"command.history.title": "Historia",

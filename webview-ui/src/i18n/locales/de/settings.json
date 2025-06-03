@@ -32,6 +32,30 @@
 		"language": "Sprache",
 		"about": "Über Kilo Code"
 	},
+	"codeIndex": {
+		"title": "Codebase-Indexierung",
+		"enableLabel": "Codebase-Indexierung aktivieren",
+		"enableDescription": "<0>Codebase-Indexierung</0> ist eine experimentelle Funktion, die einen semantischen Suchindex deines Projekts mit KI-Embeddings erstellt. Dies ermöglicht es Kilo Code, große Codebasen besser zu verstehen und zu navigieren, indem relevanter Code basierend auf Bedeutung statt nur Schlüsselwörtern gefunden wird.",
+		"providerLabel": "Embeddings-Anbieter",
+		"selectProviderPlaceholder": "Anbieter auswählen",
+		"openaiProvider": "OpenAI",
+		"ollamaProvider": "Ollama",
+		"openaiKeyLabel": "OpenAI-Schlüssel:",
+		"modelLabel": "Modell",
+		"selectModelPlaceholder": "Modell auswählen",
+		"ollamaUrlLabel": "Ollama-URL:",
+		"qdrantUrlLabel": "Qdrant-URL",
+		"qdrantKeyLabel": "Qdrant-Schlüssel:",
+		"startIndexingButton": "Indexierung starten",
+		"clearIndexDataButton": "Indexdaten löschen",
+		"unsavedSettingsMessage": "Bitte speichere deine Einstellungen, bevor du den Indexierungsprozess startest.",
+		"clearDataDialog": {
+			"title": "Sind Sie sicher?",
+			"description": "Diese Aktion kann nicht rückgängig gemacht werden. Dies wird Ihre Codebase-Indexdaten dauerhaft löschen.",
+			"cancelButton": "Abbrechen",
+			"confirmButton": "Daten löschen"
+		}
+	},
 	"autoApprove": {
 		"description": "Erlaubt Kilo Code, Operationen automatisch ohne Genehmigung durchzuführen. Aktiviere diese Einstellungen nur, wenn du der KI vollständig vertraust und die damit verbundenen Sicherheitsrisiken verstehst.",
 		"readOnly": {
@@ -118,6 +142,7 @@
 		"glamaApiKey": "Glama API-Schlüssel",
 		"getGlamaApiKey": "Glama API-Schlüssel erhalten",
 		"useCustomBaseUrl": "Benutzerdefinierte Basis-URL verwenden",
+		"useReasoning": "Reasoning aktivieren",
 		"useHostHeader": "Benutzerdefinierten Host-Header verwenden",
 		"useLegacyFormat": "Altes OpenAI API-Format verwenden",
 		"customHeaders": "Benutzerdefinierte Headers",
@@ -127,7 +152,10 @@
 		"requestyApiKey": "Requesty API-Schlüssel",
 		"refreshModels": {
 			"label": "Modelle aktualisieren",
-			"hint": "Bitte öffne die Einstellungen erneut, um die neuesten Modelle zu sehen."
+			"hint": "Bitte öffne die Einstellungen erneut, um die neuesten Modelle zu sehen.",
+			"loading": "Modellliste wird aktualisiert...",
+			"success": "Modellliste erfolgreich aktualisiert!",
+			"error": "Fehler beim Aktualisieren der Modellliste. Bitte versuche es erneut."
 		},
 		"getRequestyApiKey": "Requesty API-Schlüssel erhalten",
 		"openRouterTransformsText": "Prompts und Nachrichtenketten auf Kontextgröße komprimieren (<a>OpenRouter Transformationen</a>)",
@@ -408,10 +436,21 @@
 		}
 	},
 	"experimental": {
-		"warning": "⚠️",
 		"autoCondenseContextPercent": {
 			"label": "Schwellenwert für intelligente Kontextkomprimierung",
 			"description": "Wenn das Kontextfenster diesen Schwellenwert erreicht, wird Kilo Code es automatisch komprimieren."
+		},
+		"condensingApiConfiguration": {
+			"label": "API-Konfiguration für Kontextkomprimierung",
+			"description": "Wählen Sie, welche API-Konfiguration für Kontextkomprimierungsoperationen verwendet werden soll. Lassen Sie unausgewählt, um die aktuelle aktive Konfiguration zu verwenden.",
+			"useCurrentConfig": "Aktuelle Konfiguration verwenden"
+		},
+		"customCondensingPrompt": {
+			"label": "Benutzerdefinierter Kontextkomprimierungs-Prompt",
+			"description": "Passen Sie den System-Prompt an, der für die Kontextkomprimierung verwendet wird. Lassen Sie leer, um den Standard-Prompt zu verwenden.",
+			"placeholder": "Geben Sie hier Ihren benutzerdefinierten Komprimierungs-Prompt ein...\n\nSie können die gleiche Struktur wie der Standard-Prompt verwenden:\n- Vorherige Konversation\n- Aktuelle Arbeit\n- Wichtige technische Konzepte\n- Relevante Dateien und Code\n- Problemlösung\n- Ausstehende Aufgaben und nächste Schritte",
+			"reset": "Auf Standard zurücksetzen",
+			"hint": "Leer = Standard-Prompt verwenden"
 		},
 		"AUTO_CONDENSE_CONTEXT": {
 			"name": "Intelligente Kontextkomprimierung automatisch auslösen",
@@ -432,6 +471,10 @@
 		"POWER_STEERING": {
 			"name": "Experimentellen \"Servolenkung\"-Modus verwenden",
 			"description": "Wenn aktiviert, wird Kilo Code das Modell häufiger an die Details seiner aktuellen Modusdefinition erinnern. Dies führt zu einer stärkeren Einhaltung von Rollendefinitionen und benutzerdefinierten Anweisungen, verwendet aber mehr Tokens pro Nachricht."
+		},
+		"AUTOCOMPLETE": {
+			"name": "Experimentelle \"Autovervollständigungs\"-Funktion verwenden",
+			"description": "Wenn aktiviert, bietet Kilo Code während der Eingabe Inline-Code-Vorschläge an."
 		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Experimentelles Multi-Block-Diff-Werkzeug verwenden",

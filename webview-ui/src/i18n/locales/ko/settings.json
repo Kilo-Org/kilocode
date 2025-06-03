@@ -32,6 +32,30 @@
 		"language": "언어",
 		"about": "Kilo Code 정보"
 	},
+	"codeIndex": {
+		"title": "코드베이스 인덱싱",
+		"enableLabel": "코드베이스 인덱싱 활성화",
+		"enableDescription": "<0>코드베이스 인덱싱</0>은 AI 임베딩을 사용하여 프로젝트의 의미론적 검색 인덱스를 생성하는 실험적 기능입니다. 이를 통해 Kilo Code는 단순한 키워드가 아닌 의미를 기반으로 관련 코드를 찾아 대규모 코드베이스를 더 잘 이해하고 탐색할 수 있습니다.",
+		"providerLabel": "임베딩 제공자",
+		"selectProviderPlaceholder": "제공자 선택",
+		"openaiProvider": "OpenAI",
+		"ollamaProvider": "Ollama",
+		"openaiKeyLabel": "OpenAI 키:",
+		"modelLabel": "모델",
+		"selectModelPlaceholder": "모델 선택",
+		"ollamaUrlLabel": "Ollama URL:",
+		"qdrantUrlLabel": "Qdrant URL",
+		"qdrantKeyLabel": "Qdrant 키:",
+		"startIndexingButton": "인덱싱 시작",
+		"clearIndexDataButton": "인덱스 데이터 지우기",
+		"unsavedSettingsMessage": "인덱싱 프로세스를 시작하기 전에 설정을 저장해 주세요.",
+		"clearDataDialog": {
+			"title": "확실합니까?",
+			"description": "이 작업은 취소할 수 없습니다. 코드베이스 인덱스 데이터가 영구적으로 삭제됩니다.",
+			"cancelButton": "취소",
+			"confirmButton": "데이터 지우기"
+		}
+	},
 	"autoApprove": {
 		"description": "Kilo Code가 승인 없이 자동으로 작업을 수행할 수 있도록 허용합니다. AI를 완전히 신뢰하고 관련 보안 위험을 이해하는 경우에만 이러한 설정을 활성화하세요.",
 		"readOnly": {
@@ -118,6 +142,7 @@
 		"glamaApiKey": "Glama API 키",
 		"getGlamaApiKey": "Glama API 키 받기",
 		"useCustomBaseUrl": "사용자 정의 기본 URL 사용",
+		"useReasoning": "추론 활성화",
 		"useHostHeader": "사용자 정의 Host 헤더 사용",
 		"useLegacyFormat": "레거시 OpenAI API 형식 사용",
 		"customHeaders": "사용자 정의 헤더",
@@ -127,7 +152,10 @@
 		"requestyApiKey": "Requesty API 키",
 		"refreshModels": {
 			"label": "모델 새로고침",
-			"hint": "최신 모델을 보려면 설정을 다시 열어주세요."
+			"hint": "최신 모델을 보려면 설정을 다시 열어주세요.",
+			"loading": "모델 목록 새로고침 중...",
+			"success": "모델 목록이 성공적으로 새로고침되었습니다!",
+			"error": "모델 목록 새로고침에 실패했습니다. 다시 시도해 주세요."
 		},
 		"getRequestyApiKey": "Requesty API 키 받기",
 		"openRouterTransformsText": "프롬프트와 메시지 체인을 컨텍스트 크기로 압축 (<a>OpenRouter Transforms</a>)",
@@ -408,7 +436,18 @@
 		}
 	},
 	"experimental": {
-		"warning": "⚠️",
+		"condensingApiConfiguration": {
+			"label": "API Configuration for Context Condensing",
+			"description": "Select which API configuration to use for context condensing operations. Leave unselected to use the current active configuration.",
+			"useCurrentConfig": "Default"
+		},
+		"customCondensingPrompt": {
+			"label": "사용자 지정 컨텍스트 압축 프롬프트",
+			"description": "컨텍스트 압축을 위한 사용자 지정 시스템 프롬프트입니다. 기본 프롬프트를 사용하려면 비워 두세요.",
+			"placeholder": "Enter your custom condensing prompt here...\n\nYou can use the same structure as the default prompt:\n- Previous Conversation\n- Current Work\n- Key Technical Concepts\n- Relevant Files and Code\n- Problem Solving\n- Pending Tasks and Next Steps",
+			"reset": "Reset to Default",
+			"hint": "Empty = use default prompt"
+		},
 		"autoCondenseContextPercent": {
 			"label": "지능적 컨텍스트 압축을 트리거하는 임계값",
 			"description": "컨텍스트 창이 이 임계값에 도달하면 Roo가 자동으로 압축합니다."
@@ -432,6 +471,10 @@
 		"POWER_STEERING": {
 			"name": "실험적 \"파워 스티어링\" 모드 사용",
 			"description": "활성화하면 Kilo Code가 현재 모드 정의의 세부 정보를 모델에 더 자주 상기시킵니다. 이로 인해 역할 정의 및 사용자 지정 지침에 대한 준수가 강화되지만 메시지당 더 많은 token이 사용됩니다."
+		},
+		"AUTOCOMPLETE": {
+			"name": "실험적인 \"자동 완성\" 기능 사용",
+			"description": "활성화하면 입력할 때 Kilo Code가 인라인 코드 제안을 제공합니다."
 		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "실험적 다중 블록 diff 도구 사용",

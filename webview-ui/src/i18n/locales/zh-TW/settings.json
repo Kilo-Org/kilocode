@@ -32,6 +32,30 @@
 		"language": "語言",
 		"about": "關於 Kilo Code"
 	},
+	"codeIndex": {
+		"title": "程式碼庫索引",
+		"enableLabel": "啟用程式碼庫索引",
+		"enableDescription": "<0>程式碼庫索引</0>是一個實驗性功能，使用 AI 嵌入為您的專案建立語義搜尋索引。這使 Kilo Code 能夠透過基於含義而非僅僅關鍵詞來尋找相關程式碼，從而更好地理解和導覽大型程式碼庫。",
+		"providerLabel": "嵌入提供者",
+		"selectProviderPlaceholder": "選擇提供者",
+		"openaiProvider": "OpenAI",
+		"ollamaProvider": "Ollama",
+		"openaiKeyLabel": "OpenAI 金鑰：",
+		"modelLabel": "模型",
+		"selectModelPlaceholder": "選擇模型",
+		"ollamaUrlLabel": "Ollama URL：",
+		"qdrantUrlLabel": "Qdrant URL",
+		"qdrantKeyLabel": "Qdrant 金鑰：",
+		"startIndexingButton": "開始索引",
+		"clearIndexDataButton": "清除索引資料",
+		"unsavedSettingsMessage": "請先儲存設定再開始索引程序。",
+		"clearDataDialog": {
+			"title": "確定要繼續嗎？",
+			"description": "此操作無法復原。這將永久刪除您的程式碼庫索引資料。",
+			"cancelButton": "取消",
+			"confirmButton": "清除資料"
+		}
+	},
 	"autoApprove": {
 		"description": "允許 Kilo Code 無需核准即執行操作。僅在您完全信任 AI 並了解相關安全風險時啟用這些設定。",
 		"readOnly": {
@@ -118,6 +142,7 @@
 		"glamaApiKey": "Glama API 金鑰",
 		"getGlamaApiKey": "取得 Glama API 金鑰",
 		"useCustomBaseUrl": "使用自訂基礎 URL",
+		"useReasoning": "啟用推理",
 		"useHostHeader": "使用自訂 Host 標頭",
 		"useLegacyFormat": "使用舊版 OpenAI API 格式",
 		"customHeaders": "自訂標頭",
@@ -127,7 +152,10 @@
 		"requestyApiKey": "Requesty API 金鑰",
 		"refreshModels": {
 			"label": "重新整理模型",
-			"hint": "請重新開啟設定以查看最新模型。"
+			"hint": "請重新開啟設定以查看最新模型。",
+			"loading": "正在重新整理模型列表...",
+			"success": "模型列表重新整理成功！",
+			"error": "重新整理模型列表失敗。請再試一次。"
 		},
 		"getRequestyApiKey": "取得 Requesty API 金鑰",
 		"openRouterTransformsText": "將提示和訊息鏈壓縮到上下文大小 (<a>OpenRouter 轉換</a>)",
@@ -408,7 +436,18 @@
 		}
 	},
 	"experimental": {
-		"warning": "⚠️",
+		"condensingApiConfiguration": {
+			"label": "API Configuration for Context Condensing",
+			"description": "Select which API configuration to use for context condensing operations. Leave unselected to use the current active configuration.",
+			"useCurrentConfig": "Default"
+		},
+		"customCondensingPrompt": {
+			"label": "自訂上下文壓縮提示",
+			"description": "自訂用於上下文壓縮的系統提示。留空則使用預設提示。",
+			"placeholder": "請在此輸入您的自訂上下文壓縮提示...\n\n您可以參考預設提示的結構：\n- 先前對話\n- 目前工作\n- 主要技術概念\n- 相關檔案與程式碼\n- 問題解決\n- 未完成的任務與後續步驟",
+			"reset": "重設為預設值",
+			"hint": "Empty = use default prompt"
+		},
 		"autoCondenseContextPercent": {
 			"label": "觸發智慧上下文壓縮的閾值",
 			"description": "當上下文視窗達到此閾值時，Kilo Code 將自動壓縮它。"
@@ -432,6 +471,10 @@
 		"POWER_STEERING": {
 			"name": "使用實驗性「動力輔助」模式",
 			"description": "啟用後，Kilo Code 將更頻繁地提醒模型目前模式的詳細設定。這能讓模型更嚴格遵守角色定義和自訂指令，但每則訊息會使用更多 token。"
+		},
+		"AUTOCOMPLETE": {
+			"name": "使用實驗性「自動完成」功能",
+			"description": "啟用後，Kilo Code 會在您輸入時提供內嵌程式碼建議。"
 		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "使用實驗性多區塊差異比對工具",

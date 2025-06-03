@@ -32,6 +32,30 @@
 		"language": "Bahasa",
 		"about": "Tentang Kilo Code"
 	},
+	"codeIndex": {
+		"title": "Pengindeksan Codebase",
+		"enableLabel": "Aktifkan Pengindeksan Codebase",
+		"enableDescription": "<0>Pengindeksan Codebase</0> adalah fitur eksperimental yang membuat indeks pencarian semantik dari proyek kamu menggunakan AI embeddings. Ini memungkinkan Kilo Code untuk lebih memahami dan menavigasi codebase besar dengan menemukan kode yang relevan berdasarkan makna daripada hanya kata kunci.",
+		"providerLabel": "Provider Embeddings",
+		"selectProviderPlaceholder": "Pilih provider",
+		"openaiProvider": "OpenAI",
+		"ollamaProvider": "Ollama",
+		"openaiKeyLabel": "OpenAI Key:",
+		"modelLabel": "Model",
+		"selectModelPlaceholder": "Pilih model",
+		"ollamaUrlLabel": "Ollama URL:",
+		"qdrantUrlLabel": "Qdrant URL",
+		"qdrantKeyLabel": "Qdrant Key:",
+		"startIndexingButton": "Mulai Pengindeksan",
+		"clearIndexDataButton": "Hapus Data Indeks",
+		"unsavedSettingsMessage": "Silakan simpan pengaturan kamu sebelum memulai proses pengindeksan.",
+		"clearDataDialog": {
+			"title": "Apakah kamu yakin?",
+			"description": "Tindakan ini tidak dapat dibatalkan. Ini akan menghapus data indeks codebase kamu secara permanen.",
+			"cancelButton": "Batal",
+			"confirmButton": "Hapus Data"
+		}
+	},
 	"autoApprove": {
 		"description": "Izinkan Kilo Code untuk secara otomatis melakukan operasi tanpa memerlukan persetujuan. Aktifkan pengaturan ini hanya jika kamu sepenuhnya mempercayai AI dan memahami risiko keamanan yang terkait.",
 		"readOnly": {
@@ -118,6 +142,7 @@
 		"glamaApiKey": "Glama API Key",
 		"getGlamaApiKey": "Dapatkan Glama API Key",
 		"useCustomBaseUrl": "Gunakan base URL kustom",
+		"useReasoning": "Aktifkan reasoning",
 		"useHostHeader": "Gunakan Host header kustom",
 		"useLegacyFormat": "Gunakan format API OpenAI legacy",
 		"customHeaders": "Header Kustom",
@@ -127,7 +152,10 @@
 		"requestyApiKey": "Requesty API Key",
 		"refreshModels": {
 			"label": "Refresh Model",
-			"hint": "Silakan buka kembali pengaturan untuk melihat model terbaru."
+			"hint": "Silakan buka kembali pengaturan untuk melihat model terbaru.",
+			"loading": "Merefresh daftar model...",
+			"success": "Daftar model berhasil direfresh!",
+			"error": "Gagal merefresh daftar model. Silakan coba lagi."
 		},
 		"getRequestyApiKey": "Dapatkan Requesty API Key",
 		"openRouterTransformsText": "Kompres prompt dan rantai pesan ke ukuran konteks (<a>OpenRouter Transforms</a>)",
@@ -413,6 +441,18 @@
 			"label": "Ambang batas untuk memicu kondensasi konteks cerdas",
 			"description": "Ketika context window mencapai ambang batas ini, Kilo Code akan secara otomatis mengondensasikannya."
 		},
+		"condensingApiConfiguration": {
+			"label": "Konfigurasi API untuk Kondensasi Konteks",
+			"description": "Pilih konfigurasi API mana yang akan digunakan untuk operasi kondensasi konteks. Biarkan tidak dipilih untuk menggunakan konfigurasi aktif saat ini.",
+			"useCurrentConfig": "Default"
+		},
+		"customCondensingPrompt": {
+			"label": "Prompt Kondensasi Konteks Kustom",
+			"description": "Kustomisasi system prompt yang digunakan untuk kondensasi konteks. Biarkan kosong untuk menggunakan prompt default.",
+			"placeholder": "Masukkan prompt kondensasi kustom kamu di sini...\n\nKamu dapat menggunakan struktur yang sama dengan prompt default:\n- Previous Conversation\n- Current Work\n- Key Technical Concepts\n- Relevant Files and Code\n- Problem Solving\n- Pending Tasks and Next Steps",
+			"reset": "Reset ke Default",
+			"hint": "Kosong = gunakan prompt default"
+		},
 		"AUTO_CONDENSE_CONTEXT": {
 			"name": "Secara cerdas mengondensasi context window",
 			"description": "Kondensasi konteks cerdas menggunakan panggilan LLM untuk merangkum percakapan masa lalu ketika context window tugas mencapai ambang batas yang telah ditetapkan, daripada menghapus pesan lama ketika konteks penuh."
@@ -432,6 +472,10 @@
 		"POWER_STEERING": {
 			"name": "Gunakan mode \"power steering\" eksperimental",
 			"description": "Ketika diaktifkan, Kilo Code akan mengingatkan model tentang detail definisi mode saat ini lebih sering. Ini akan menghasilkan kepatuhan yang lebih kuat terhadap definisi peran dan instruksi kustom, tetapi akan menggunakan lebih banyak token per pesan."
+		},
+		"AUTOCOMPLETE": {
+			"name": "Gunakan fitur \"autocomplete\" eksperimental",
+			"description": "Ketika diaktifkan, Kilo Code akan memberikan saran kode inline saat kamu mengetik. Memerlukan Kilo Code API Provider."
 		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Gunakan tool multi block diff eksperimental",

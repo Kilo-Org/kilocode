@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.29.1",
+	"version": "4.32.0",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -119,7 +119,7 @@
 				{
 					"type": "webview",
 					"id": "kilo-code.SidebarProvider",
-					"name": ""
+					"name": "%views.sidebar.name%"
 				}
 			]
 		},
@@ -413,19 +413,16 @@
 	"scripts": {
 		"lint": "eslint . --ext=ts --max-warnings=0",
 		"check-types": "tsc --noEmit",
-		"pretest": "pnpm bundle",
-		"test": "jest -w=40% && vitest run",
+		"pretest": "turbo run bundle --cwd ..",
+		"test": "jest -w=40% && vitest run --globals",
 		"format": "prettier --write .",
-		"bundle": "pnpm clean && pnpm --filter @roo-code/build build && node esbuild.mjs",
-		"build": "pnpm bundle --production && pnpm --filter @roo-code/vscode-webview build",
-		"build:development": "pnpm bundle && pnpm --filter @roo-code/vscode-webview build",
-		"publish:marketplace": "vsce publish --no-dependencies && ovsx publish --no-dependencies",
-		"vscode:prepublish": "pnpm build",
+		"bundle": "node esbuild.mjs",
+		"vscode:prepublish": "pnpm bundle --production",
 		"vsix": "mkdirp ../bin && npx vsce package --no-dependencies --out ../bin",
-		"watch:esbuild": "pnpm bundle --watch",
+		"publish:marketplace": "vsce publish --no-dependencies && ovsx publish --no-dependencies",
+		"watch:bundle": "pnpm bundle --watch",
 		"watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-		"generate-types": "tsx scripts/generate-types.mts",
-		"clean": "rimraf README.md CHANGELOG.md LICENSE dist webview-ui out .turbo"
+		"clean": "rimraf README.md CHANGELOG.md LICENSE dist webview-ui out mock .turbo"
 	},
 	"dependencies": {
 		"@anthropic-ai/bedrock-sdk": "^0.22.0",
@@ -436,7 +433,12 @@
 		"@google/genai": "^0.13.0",
 		"@mistralai/mistralai": "^1.6.0",
 		"@modelcontextprotocol/sdk": "^1.9.0",
+		"@types/lru-cache": "^7.10.9",
+		"@roo-code/types": "workspace:^",
+		"@qdrant/js-client-rest": "^1.14.0",
+		"@types/lodash.debounce": "^4.0.9",
 		"@vscode/codicons": "^0.0.36",
+		"async-mutex": "^0.5.0",
 		"axios": "^1.7.4",
 		"cheerio": "^1.0.0",
 		"chokidar": "^4.0.1",
@@ -454,12 +456,15 @@
 		"i18next": "^24.2.2",
 		"ignore": "^7.0.3",
 		"isbinaryfile": "^5.0.2",
+		"lru-cache": "^11.1.0",
+		"lodash.debounce": "^4.0.8",
 		"mammoth": "^1.8.0",
 		"monaco-vscode-textmate-theme-converter": "^0.1.7",
 		"node-cache": "^5.1.2",
 		"node-ipc": "^12.0.0",
 		"openai": "^4.100.0",
 		"os-name": "^6.0.0",
+		"p-limit": "^6.2.0",
 		"p-wait-for": "^5.0.2",
 		"pdf-parse": "^1.1.1",
 		"pkce-challenge": "^4.1.0",
@@ -481,6 +486,8 @@
 		"tmp": "^0.2.3",
 		"tree-sitter-wasms": "^0.1.11",
 		"turndown": "^7.2.0",
+		"uri-js": "^4.4.1",
+		"uuid": "^11.1.0",
 		"vscode-material-icons": "^0.1.1",
 		"web-tree-sitter": "^0.22.6",
 		"workerpool": "^9.2.0",
@@ -489,9 +496,9 @@
 	},
 	"devDependencies": {
 		"@jest/globals": "^29.7.0",
+		"@roo-code/build": "workspace:^",
 		"@roo-code/config-eslint": "workspace:^",
 		"@roo-code/config-typescript": "workspace:^",
-		"@roo-code/build": "workspace:^",
 		"@types/clone-deep": "^4.0.4",
 		"@types/debug": "^4.1.12",
 		"@types/diff": "^5.2.1",

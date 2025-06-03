@@ -167,6 +167,11 @@
 		"wantsToSearch": "Kilo Code ingin mencari direktori ini untuk <code>{{regex}}</code>:",
 		"didSearch": "Kilo Code mencari direktori ini untuk <code>{{regex}}</code>:"
 	},
+	"codebaseSearch": {
+		"wantsToSearch": "Kilo Code ingin mencari codebase untuk <code>{{query}}</code>:",
+		"wantsToSearchWithPath": "Kilo Code ingin mencari codebase untuk <code>{{query}}</code> di <code>{{path}}</code>:",
+		"didSearch": "Ditemukan {{count}} hasil untuk <code>{{query}}</code>:"
+	},
 	"commandOutput": "Output Perintah",
 	"response": "Respons",
 	"arguments": "Argumen",

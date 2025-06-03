@@ -76,6 +76,9 @@ describe("File-Based Custom System Prompt", () => {
 			undefined, // diffEnabled
 			undefined, // experiments
 			true, // enableMcpServerCreation
+			undefined, // language
+			undefined, // rooIgnoreInstructions
+			undefined, // partialReadsEnabled
 		)
 
 		// Should contain default sections
@@ -111,6 +114,9 @@ describe("File-Based Custom System Prompt", () => {
 			undefined, // diffEnabled
 			undefined, // experiments
 			true, // enableMcpServerCreation
+			undefined, // language
+			undefined, // rooIgnoreInstructions
+			undefined, // partialReadsEnabled
 		)
 
 		// Should contain role definition and file-based system prompt
@@ -155,6 +161,9 @@ describe("File-Based Custom System Prompt", () => {
 			undefined, // diffEnabled
 			undefined, // experiments
 			true, // enableMcpServerCreation
+			undefined, // language
+			undefined, // rooIgnoreInstructions
+			undefined, // partialReadsEnabled
 		)
 
 		// Should contain custom role definition and file-based system prompt

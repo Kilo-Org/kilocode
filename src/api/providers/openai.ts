@@ -2,31 +2,32 @@ import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI, { AzureOpenAI } from "openai"
 import axios from "axios"
 
-import {
-	ApiHandlerOptions,
-	azureOpenAiDefaultApiVersion,
-	ModelInfo,
-	openAiModelInfoSaneDefaults,
-} from "../../shared/api"
-import { SingleCompletionHandler } from "../index"
+import type { ModelInfo } from "@roo-code/types"
+
+import { ApiHandlerOptions, azureOpenAiDefaultApiVersion, openAiModelInfoSaneDefaults } from "../../shared/api"
+
+import { XmlMatcher } from "../../utils/xml-matcher"
+
 import { convertToOpenAiMessages } from "../transform/openai-format"
 import { convertToR1Format } from "../transform/r1-format"
 import { convertToSimpleMessages } from "../transform/simple-format"
 import { ApiStream, ApiStreamUsageChunk } from "../transform/stream"
-import { BaseProvider } from "./base-provider"
-import { XmlMatcher } from "../../utils/xml-matcher"
+import { getModelParams } from "../transform/model-params"
+
 import { DEFAULT_HEADERS, DEEP_SEEK_DEFAULT_TEMPERATURE } from "./constants"
+import { BaseProvider } from "./base-provider"
+import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 
 export const AZURE_AI_INFERENCE_PATH = "/models/chat/completions"
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface OpenAiHandlerOptions extends ApiHandlerOptions {}
-
+// TODO: Rename this to OpenAICompatibleHandler. Also, I think the
+// `OpenAINativeHandler` can subclass from this, since it's obviously
+// compatible with the OpenAI API. We can also rename it to `OpenAIHandler`.
 export class OpenAiHandler extends BaseProvider implements SingleCompletionHandler {
-	protected options: OpenAiHandlerOptions
+	protected options: ApiHandlerOptions
 	private client: OpenAI
 
-	constructor(options: OpenAiHandlerOptions) {
+	constructor(options: ApiHandlerOptions) {
 		super()
 		this.options = options
 
@@ -67,8 +68,12 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 		}
 	}
 
-	override async *createMessage(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): ApiStream {
-		const modelInfo = this.getModel().info
+	override async *createMessage(
+		systemPrompt: string,
+		messages: Anthropic.Messages.MessageParam[],
+		metadata?: ApiHandlerCreateMessageMetadata,
+	): ApiStream {
+		const { info: modelInfo, reasoning } = this.getModel()
 		const modelUrl = this.options.openAiBaseUrl ?? ""
 		const modelId = this.options.openAiModelId ?? ""
 		const enabledR1Format = this.options.openAiR1FormatEnabled ?? false
@@ -146,14 +151,17 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				messages: convertedMessages,
 				stream: true as const,
 				...(isGrokXAI ? {} : { stream_options: { include_usage: true } }),
+				// Add reasoning effort if available
 				...((this.options.reasoningEffort ?? this.getModel().info.reasoningEffort)
 					? { reasoning_effort: this.options.reasoningEffort ?? this.getModel().info.reasoningEffort }
 					: {}),
+				// Add reasoning parameters from getModelParams
+				...(reasoning && reasoning),
 			}
 
-			// Add thinking configuration when enabled and budget > 0, but not for OpenAI official models
+			// Add thinking configuration when model supports reasoning budget and budget > 0
 			if (
-				this.options.openAiThinkingEnabled &&
+				modelInfo.supportsReasoningBudget &&
 				this.options.modelMaxThinkingTokens &&
 				this.options.modelMaxThinkingTokens > 0
 			) {
@@ -163,6 +171,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				}
 			}
 
+			// @TODO: Move this to the `getModelParams` function.
 			if (this.options.includeMaxTokens) {
 				requestOptions.max_tokens = modelInfo.maxTokens
 			}
@@ -226,9 +235,9 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 						: [systemMessage, ...convertToOpenAiMessages(messages)],
 			}
 
-			// Add thinking configuration when enabled and budget > 0, but not for OpenAI official models
+			// Add thinking configuration when model supports reasoning budget and budget > 0
 			if (
-				this.options.openAiThinkingEnabled &&
+				modelInfo.supportsReasoningBudget &&
 				this.options.modelMaxThinkingTokens &&
 				this.options.modelMaxThinkingTokens > 0
 			) {
@@ -262,25 +271,15 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 		}
 	}
 
-	override getModel(): { id: string; info: ModelInfo } {
+	override getModel() {
+		const id = this.options.openAiModelId ?? ""
 		const baseModelInfo = this.options.openAiCustomModelInfo ?? openAiModelInfoSaneDefaults
 
-		// If thinking mode is enabled, add thinking-related properties
-		if (this.options.openAiThinkingEnabled) {
-			return {
-				id: this.options.openAiModelId ?? "",
-				info: {
-					...baseModelInfo,
-					thinking: true,
-					maxThinkingTokens: this.options.modelMaxThinkingTokens || 32000,
-				},
-			}
-		}
+		// Use base model info as-is since thinking properties are handled elsewhere
+		const info = baseModelInfo
 
-		return {
-			id: this.options.openAiModelId ?? "",
-			info: baseModelInfo,
-		}
+		const params = getModelParams({ format: "openai", modelId: id, model: info, settings: this.options })
+		return { id, info, ...params }
 	}
 
 	async completePrompt(prompt: string): Promise<string> {
@@ -292,9 +291,10 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				messages: [{ role: "user", content: prompt }],
 			}
 
-			// Add thinking configuration when enabled and budget > 0, but not for OpenAI official models
+			// Add thinking configuration when model supports reasoning budget and budget > 0
+			const modelInfo = this.getModel().info
 			if (
-				this.options.openAiThinkingEnabled &&
+				modelInfo.supportsReasoningBudget &&
 				this.options.modelMaxThinkingTokens &&
 				this.options.modelMaxThinkingTokens > 0
 			) {

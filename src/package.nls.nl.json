@@ -3,6 +3,7 @@
 	"extension.description": "Een compleet ontwikkelteam van AI-agents in je editor.",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",
+	"views.sidebar.name": "Kilo Code",
 	"views.activitybar.title": "Kilo Code",
 	"command.newTask.title": "Nieuwe Taak",
 	"command.mcpServers.title": "MCP Servers",

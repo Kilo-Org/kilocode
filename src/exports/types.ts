@@ -112,6 +112,7 @@ type GlobalSettings = {
 		| {
 				autoCondenseContext: boolean
 				powerSteering: boolean
+				autocomplete: boolean
 		  }
 		| undefined
 	language?:
@@ -897,6 +898,7 @@ type IpcMessage =
 									| {
 											autoCondenseContext: boolean
 											powerSteering: boolean
+											autocomplete: boolean
 									  }
 									| undefined
 								language?:
@@ -1395,6 +1397,7 @@ type TaskCommand =
 						| {
 								autoCondenseContext: boolean
 								powerSteering: boolean
+								autocomplete: boolean
 						  }
 						| undefined
 					language?:

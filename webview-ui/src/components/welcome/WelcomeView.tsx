@@ -1,15 +1,20 @@
 import { useCallback, useState } from "react"
+import knuthShuffle from "knuth-shuffle-seeded"
+import { Trans } from "react-i18next"
 import { VSCodeButton, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
+
+import type { ProviderSettings } from "@roo-code/types"
+
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { validateApiConfiguration } from "@src/utils/validate"
 import { vscode } from "@src/utils/vscode"
-import ApiOptions from "../settings/ApiOptions"
-import { Tab, TabContent } from "../common/Tab"
-import { Trans } from "react-i18next"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { getRequestyAuthUrl, getOpenRouterAuthUrl } from "@src/oauth/urls"
+
+import ApiOptions from "../settings/ApiOptions"
+import { Tab, TabContent } from "../common/Tab"
+
 import RooHero from "./RooHero"
-import knuthShuffle from "knuth-shuffle-seeded"
 
 const WelcomeView = () => {
 	const {
@@ -22,6 +27,14 @@ const WelcomeView = () => {
 	} = useExtensionState()
 	const { t } = useAppTranslation()
 	const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined)
+
+	// Memoize the setApiConfigurationField function to pass to ApiOptions
+	const setApiConfigurationFieldForApiOptions = useCallback(
+		<K extends keyof ProviderSettings>(field: K, value: ProviderSettings[K]) => {
+			setApiConfiguration({ [field]: value })
+		},
+		[setApiConfiguration], // setApiConfiguration from context is stable
+	)
 
 	const handleSubmit = useCallback(() => {
 		const error = apiConfiguration ? validateApiConfiguration(apiConfiguration) : undefined
@@ -114,7 +127,7 @@ const WelcomeView = () => {
 						apiConfiguration={apiConfiguration || {}}
 						uriScheme={uriScheme}
 						uiKind={uiKind /* kilocode_change */}
-						setApiConfigurationField={(field, value) => setApiConfiguration({ [field]: value })}
+						setApiConfigurationField={setApiConfigurationFieldForApiOptions}
 						errorMessage={errorMessage}
 						setErrorMessage={setErrorMessage}
 					/>

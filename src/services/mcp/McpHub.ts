@@ -451,6 +451,8 @@ export class McpHub {
 
 		const workspaceFolder = vscode.workspace.workspaceFolders[0]
 		// kilocode_change
+		// First, we try the standard location: .kilocode/mcp.json
+		// If not found, fall back to .mcp.json in the project root
 		const projectMcpDir = path.join(workspaceFolder.uri.fsPath, ".kilocode")
 		const projectMcpPath = path.join(projectMcpDir, "mcp.json")
 
@@ -458,7 +460,14 @@ export class McpHub {
 			await fs.access(projectMcpPath)
 			return projectMcpPath
 		} catch {
-			return null
+			// If not found in .kilocode/, fall back to .mcp.json in root directory
+			const rootMcpPath = path.join(workspaceFolder.uri.fsPath, ".mcp.json")
+			try {
+				await fs.access(rootMcpPath)
+				return rootMcpPath
+			} catch {
+				return null
+			}
 		}
 	}
 
@@ -497,6 +506,7 @@ export class McpHub {
 						env: {
 							...(config.env ? await injectEnv(config.env) : {}),
 							...(process.env.PATH ? { PATH: process.env.PATH } : {}),
+							...(process.env.HOME ? { HOME: process.env.HOME } : {}),
 						},
 						stderr: "pipe",
 					})

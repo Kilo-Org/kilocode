@@ -6,15 +6,15 @@ import { VSCodeLink, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 
 import { getKiloCodeBackendAuthUrl } from "../kilocode/helpers" // kilocode_change
 
+import type { ProviderName, ProviderSettings } from "@roo-code/types"
+
 import {
-	type ProviderName,
-	type ProviderSettings,
 	openRouterDefaultModelId,
 	requestyDefaultModelId,
 	glamaDefaultModelId,
 	unboundDefaultModelId,
 	litellmDefaultModelId,
-} from "@roo/shared/api"
+} from "@roo/api"
 
 import { vscode } from "@src/utils/vscode"
 import { validateApiConfiguration, validateModelId } from "@src/utils/validate"
@@ -52,12 +52,11 @@ import {
 	XAI,
 } from "./providers"
 
-import { MODELS_BY_PROVIDER, PROVIDERS, REASONING_MODELS } from "./constants"
+import { MODELS_BY_PROVIDER, PROVIDERS } from "./constants"
 import { inputEventTransform, noTransform } from "./transforms"
 import { ModelPicker } from "./ModelPicker"
 import { ModelInfoView } from "./ModelInfoView"
 import { ApiErrorMessage } from "./ApiErrorMessage"
-import { ReasoningEffort } from "./ReasoningEffort"
 import { ThinkingBudget } from "./ThinkingBudget"
 import { DiffSettingsControl } from "./DiffSettingsControl"
 import { TemperatureControl } from "./TemperatureControl"
@@ -74,6 +73,7 @@ export interface ApiOptionsProps {
 	errorMessage: string | undefined
 	setErrorMessage: React.Dispatch<React.SetStateAction<string | undefined>>
 	hideKiloCodeButton?: boolean // kilocode_change
+	currentApiConfigName?: string // kilocode_change
 }
 
 const ApiOptions = ({
@@ -85,6 +85,7 @@ const ApiOptions = ({
 	errorMessage,
 	setErrorMessage,
 	hideKiloCodeButton = false,
+	currentApiConfigName, // kilocode_change
 }: ApiOptionsProps) => {
 	const { t } = useAppTranslation()
 
@@ -241,6 +242,11 @@ const ApiOptions = ({
 						setApiConfigurationField("litellmModelId", litellmDefaultModelId)
 					}
 					break
+				case "kilocode":
+					if (!apiConfiguration.kilocodeModel) {
+						setApiConfigurationField("kilocodeModel", "claude37")
+					}
+					break
 			}
 
 			setApiConfigurationField("apiProvider", value)
@@ -252,6 +258,7 @@ const ApiOptions = ({
 			apiConfiguration.unboundModelId,
 			apiConfiguration.requestyModelId,
 			apiConfiguration.litellmModelId,
+			apiConfiguration.kilocodeModel,
 		],
 	)
 
@@ -320,10 +327,10 @@ const ApiOptions = ({
 						value={apiConfiguration?.kilocodeToken || ""}
 						type="password"
 						onInput={handleInputChange("kilocodeToken")}
-						placeholder="KiloCode API Key"
+						placeholder={t("kilocode:settings.provider.apiKey")}
 						className="w-full">
 						<div className="flex justify-between items-center mb-1">
-							<label className="block font-medium">KiloCode API Key</label>
+							<label className="block font-medium">{t("kilocode:settings.provider.apiKey")}</label>
 						</div>
 					</VSCodeTextField>
 
@@ -347,18 +354,19 @@ const ApiOptions = ({
 
 										vscode.postMessage({
 											type: "upsertApiConfiguration",
+											text: currentApiConfigName,
 											apiConfiguration: {
 												...apiConfiguration,
 												kilocodeToken: "",
 											},
 										})
 									}}>
-									Log out from Kilo Code
+									{t("kilocode:settings.provider.logout")}
 								</Button>
 							</div>
 						) : (
 							<VSCodeButtonLink variant="secondary" href={getKiloCodeBackendAuthUrl(uriScheme, uiKind)}>
-								Log in at Kilo Code
+								{t("kilocode:settings.provider.login")}
 							</VSCodeButtonLink>
 						))}
 				</>
@@ -495,11 +503,7 @@ const ApiOptions = ({
 			)}
 
 			{selectedProvider === "litellm" && (
-				<LiteLLM
-					apiConfiguration={apiConfiguration}
-					setApiConfigurationField={setApiConfigurationField}
-					routerModels={routerModels}
-				/>
+				<LiteLLM apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
 
 			{selectedProvider === "human-relay" && (
@@ -560,19 +564,14 @@ const ApiOptions = ({
 				</>
 			)}
 
-			{REASONING_MODELS.has(selectedModelId) && (
-				<ReasoningEffort
-					apiConfiguration={apiConfiguration}
-					setApiConfigurationField={setApiConfigurationField}
-				/>
-			)}
-			{selectedModelInfo?.thinking && (
-				<ThinkingBudget
-					apiConfiguration={apiConfiguration}
-					setApiConfigurationField={setApiConfigurationField}
-					modelInfo={selectedModelInfo}
-				/>
-			)}
+			{/* Thinking budget for both thinking models and reasoning budget models */}
+			<ThinkingBudget
+				key={`${selectedProvider}-${selectedModelId}`}
+				apiConfiguration={apiConfiguration}
+				setApiConfigurationField={setApiConfigurationField}
+				modelInfo={selectedModelInfo}
+				useOpenAiThinkingLogic={selectedProvider === "openai"}
+			/>
 
 			{!fromWelcomeView && (
 				<>

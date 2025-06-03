@@ -17,6 +17,11 @@
 	"settings": {
 		"sections": {
 			"mcp": "MCP Servers"
+		},
+		"provider": {
+			"apiKey": "Kilo Code API Key",
+			"login": "Log in at Kilo Code",
+			"logout": "Log out from Kilo Code"
 		}
 	},
 	"chat": {

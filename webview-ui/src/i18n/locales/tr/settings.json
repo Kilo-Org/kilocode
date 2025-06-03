@@ -32,6 +32,30 @@
 		"language": "Dil",
 		"about": "Kilo Code Hakkında"
 	},
+	"codeIndex": {
+		"title": "Kod Tabanı İndeksleme",
+		"enableLabel": "Kod Tabanı İndekslemeyi Etkinleştir",
+		"enableDescription": "<0>Kod Tabanı İndeksleme</0>, AI gömme teknolojisini kullanarak projenizin semantik arama indeksini oluşturan deneysel bir özelliktir. Bu, Kilo Code'un sadece anahtar kelimeler yerine anlam temelinde ilgili kodu bularak büyük kod tabanlarını daha iyi anlamasını ve gezinmesini sağlar.",
+		"providerLabel": "Gömme Sağlayıcısı",
+		"selectProviderPlaceholder": "Sağlayıcı seç",
+		"openaiProvider": "OpenAI",
+		"ollamaProvider": "Ollama",
+		"openaiKeyLabel": "OpenAI Anahtarı:",
+		"modelLabel": "Model",
+		"selectModelPlaceholder": "Model seç",
+		"ollamaUrlLabel": "Ollama URL:",
+		"qdrantUrlLabel": "Qdrant URL",
+		"qdrantKeyLabel": "Qdrant Anahtarı:",
+		"startIndexingButton": "İndekslemeyi Başlat",
+		"clearIndexDataButton": "İndeks Verilerini Temizle",
+		"unsavedSettingsMessage": "İndeksleme işlemini başlatmadan önce lütfen ayarlarını kaydet.",
+		"clearDataDialog": {
+			"title": "Emin misiniz?",
+			"description": "Bu işlem geri alınamaz. Bu, kod tabanı indeks verilerinizi kalıcı olarak silecektir.",
+			"cancelButton": "İptal",
+			"confirmButton": "Verileri Temizle"
+		}
+	},
 	"autoApprove": {
 		"description": "Kilo Code'nun onay gerektirmeden otomatik olarak işlemler gerçekleştirmesine izin verin. Bu ayarları yalnızca yapay zekaya tamamen güveniyorsanız ve ilgili güvenlik risklerini anlıyorsanız etkinleştirin.",
 		"readOnly": {
@@ -118,6 +142,7 @@
 		"glamaApiKey": "Glama API Anahtarı",
 		"getGlamaApiKey": "Glama API Anahtarı Al",
 		"useCustomBaseUrl": "Özel temel URL kullan",
+		"useReasoning": "Akıl yürütmeyi etkinleştir",
 		"useHostHeader": "Özel Host başlığı kullan",
 		"useLegacyFormat": "Eski OpenAI API formatını kullan",
 		"customHeaders": "Özel Başlıklar",
@@ -127,7 +152,10 @@
 		"requestyApiKey": "Requesty API Anahtarı",
 		"refreshModels": {
 			"label": "Modelleri Yenile",
-			"hint": "En son modelleri görmek için lütfen ayarları yeniden açın."
+			"hint": "En son modelleri görmek için lütfen ayarları yeniden açın.",
+			"loading": "Model listesi yenileniyor...",
+			"success": "Model listesi başarıyla yenilendi!",
+			"error": "Model listesi yenilenemedi. Lütfen tekrar deneyin."
 		},
 		"getRequestyApiKey": "Requesty API Anahtarı Al",
 		"openRouterTransformsText": "İstem ve mesaj zincirlerini bağlam boyutuna sıkıştır (<a>OpenRouter Dönüşümleri</a>)",
@@ -408,7 +436,18 @@
 		}
 	},
 	"experimental": {
-		"warning": "⚠️",
+		"condensingApiConfiguration": {
+			"label": "API Configuration for Context Condensing",
+			"description": "Select which API configuration to use for context condensing operations. Leave unselected to use the current active configuration.",
+			"useCurrentConfig": "Default"
+		},
+		"customCondensingPrompt": {
+			"label": "Özel Bağlam Yoğunlaştırma İstemcisi",
+			"description": "Bağlam yoğunlaştırma için özel sistem istemcisi. Varsayılan istemciyi kullanmak için boş bırakın.",
+			"placeholder": "Enter your custom condensing prompt here...\n\nYou can use the same structure as the default prompt:\n- Previous Conversation\n- Current Work\n- Key Technical Concepts\n- Relevant Files and Code\n- Problem Solving\n- Pending Tasks and Next Steps",
+			"reset": "Reset to Default",
+			"hint": "Empty = use default prompt"
+		},
 		"autoCondenseContextPercent": {
 			"label": "Akıllı bağlam sıkıştırmayı tetikleyecek eşik",
 			"description": "Bağlam penceresi bu eşiğe ulaştığında, Kilo Code otomatik olarak sıkıştıracaktır."
@@ -432,6 +471,10 @@
 		"POWER_STEERING": {
 			"name": "Deneysel \"güç direksiyon\" modunu kullan",
 			"description": "Etkinleştirildiğinde, Kilo Code modele geçerli mod tanımının ayrıntılarını daha sık hatırlatacaktır. Bu, rol tanımlarına ve özel talimatlara daha güçlü uyum sağlayacak, ancak mesaj başına daha fazla token kullanacaktır."
+		},
+		"AUTOCOMPLETE": {
+			"name": "Deneysel \"otomatik tamamlama\" özelliğini kullan",
+			"description": "Etkinleştirildiğinde, Kilo Code siz yazarken satır içi kod önerileri sunar."
 		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Deneysel çoklu blok diff aracını kullan",

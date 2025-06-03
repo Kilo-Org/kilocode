@@ -297,7 +297,7 @@ export type CommandExecutionStatus = z.infer<typeof commandExecutionStatusSchema
  * ExperimentId
  */
 
-export const experimentIds = ["autoCondenseContext", "powerSteering"] as const
+export const experimentIds = ["autoCondenseContext", "powerSteering", "autocomplete"] as const
 
 export const experimentIdsSchema = z.enum(experimentIds)
 
@@ -310,6 +310,7 @@ export type ExperimentId = z.infer<typeof experimentIdsSchema>
 const experimentsSchema = z.object({
 	autoCondenseContext: z.boolean(),
 	powerSteering: z.boolean(),
+	autocomplete: z.boolean(),
 })
 
 export type Experiments = z.infer<typeof experimentsSchema>
@@ -335,12 +336,14 @@ export type ProviderSettingsEntry = z.infer<typeof providerSettingsEntrySchema>
 
 const genericProviderSettingsSchema = z.object({
 	includeMaxTokens: z.boolean().optional(),
-	reasoningEffort: reasoningEffortsSchema.optional(),
 	diffEnabled: z.boolean().optional(),
 	fuzzyMatchThreshold: z.number().optional(),
 	modelTemperature: z.number().nullish(),
 	rateLimitSeconds: z.number().optional(),
-	// Claude 3.7 Sonnet Thinking
+
+	// Model reasoning.
+	enableReasoningEffort: z.boolean().optional(),
+	reasoningEffort: reasoningEffortsSchema.optional(),
 	modelMaxTokens: z.number().optional(),
 	modelMaxThinkingTokens: z.number().optional(),
 })

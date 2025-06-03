@@ -2,19 +2,20 @@ import { useState, useCallback, useEffect } from "react"
 import { useEvent } from "react-use"
 import { Checkbox } from "vscrui"
 import { VSCodeButton, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
-import { convertHeadersToObject } from "../utils/headers"
 
-import { ModelInfo, ReasoningEffort as ReasoningEffortType } from "@roo/schemas"
-import { ProviderSettings, azureOpenAiDefaultApiVersion, openAiModelInfoSaneDefaults } from "@roo/shared/api"
-import { ExtensionMessage } from "@roo/shared/ExtensionMessage"
+import type { ProviderSettings, ModelInfo, ReasoningEffort } from "@roo-code/types"
+
+import { azureOpenAiDefaultApiVersion, openAiModelInfoSaneDefaults } from "@roo/api"
+import { ExtensionMessage } from "@roo/ExtensionMessage"
 
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { Button } from "@src/components/ui"
 
+import { convertHeadersToObject } from "../utils/headers"
 import { inputEventTransform, noTransform } from "../transforms"
 import { ModelPicker } from "../ModelPicker"
 import { R1FormatSetting } from "../R1FormatSetting"
-import { ReasoningEffort } from "../ReasoningEffort"
+import { ThinkingBudget } from "../ThinkingBudget"
 import { ThinkingBudgetToggle } from "./ThinkingBudgetToggle"
 
 type OpenAICompatibleProps = {
@@ -233,7 +234,7 @@ export const OpenAICompatible = ({ apiConfiguration, setApiConfigurationField }:
 					{t("settings:providers.setReasoningLevel")}
 				</Checkbox>
 				{!!apiConfiguration.enableReasoningEffort && (
-					<ReasoningEffort
+					<ThinkingBudget
 						apiConfiguration={{
 							...apiConfiguration,
 							reasoningEffort: apiConfiguration.openAiCustomModelInfo?.reasoningEffort,
@@ -245,9 +246,13 @@ export const OpenAICompatible = ({ apiConfiguration, setApiConfigurationField }:
 
 								setApiConfigurationField("openAiCustomModelInfo", {
 									...openAiCustomModelInfo,
-									reasoningEffort: value as ReasoningEffortType,
+									reasoningEffort: value as ReasoningEffort,
 								})
 							}
+						}}
+						modelInfo={{
+							...(apiConfiguration.openAiCustomModelInfo || openAiModelInfoSaneDefaults),
+							supportsReasoningEffort: true,
 						}}
 					/>
 				)}
@@ -258,7 +263,7 @@ export const OpenAICompatible = ({ apiConfiguration, setApiConfigurationField }:
 					setApiConfigurationField={setApiConfigurationField}
 					modelInfo={{
 						...(apiConfiguration.openAiCustomModelInfo || openAiModelInfoSaneDefaults),
-						thinking: true,
+						supportsReasoningBudget: true,
 						maxTokens:
 							(apiConfiguration.openAiCustomModelInfo || openAiModelInfoSaneDefaults).maxTokens || 16384,
 					}}
