@@ -146,7 +146,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				messages: convertedMessages,
 				stream: true as const,
 				...(isGrokXAI ? {} : { stream_options: { include_usage: true } }),
-				reasoning_effort: this.getModel().info.reasoningEffort,
+				...(this.options.reasoningEffort ? { reasoning_effort: this.options.reasoningEffort } : {}),
 			}
 
 			// Add thinking configuration when enabled and budget > 0, but not for OpenAI official models
@@ -339,7 +339,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 					],
 					stream: true,
 					...(isGrokXAI ? {} : { stream_options: { include_usage: true } }),
-					reasoning_effort: this.getModel().info.reasoningEffort,
+					...(this.options.reasoningEffort ? { reasoning_effort: this.options.reasoningEffort } : {}),
 				},
 				methodIsAzureAiInference ? { path: AZURE_AI_INFERENCE_PATH } : {},
 			)
