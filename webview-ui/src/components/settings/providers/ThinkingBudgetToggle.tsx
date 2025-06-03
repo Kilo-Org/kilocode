@@ -1,6 +1,6 @@
 import { useEffect } from "react"
 import { Checkbox } from "vscrui"
-import { ProviderSettings, ModelInfo } from "@roo/shared/api"
+import { ProviderSettings, ModelInfo } from "@roo-code/types"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { Slider } from "@src/components/ui"
 

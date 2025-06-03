@@ -20,7 +20,7 @@ import { ThinkingBudgetToggle } from "./ThinkingBudgetToggle"
 
 type OpenAICompatibleProps = {
 	apiConfiguration: ProviderSettings
-	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
+	setApiConfigurationField: <K extends keyof ProviderSettings>(field: K, value: ProviderSettings[K]) => void
 }
 
 export const OpenAICompatible = ({ apiConfiguration, setApiConfigurationField }: OpenAICompatibleProps) => {
