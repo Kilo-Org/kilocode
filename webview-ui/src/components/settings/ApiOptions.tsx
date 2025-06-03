@@ -58,6 +58,7 @@ import { ModelPicker } from "./ModelPicker"
 import { ModelInfoView } from "./ModelInfoView"
 import { ApiErrorMessage } from "./ApiErrorMessage"
 import { ReasoningEffort } from "./ReasoningEffort"
+import { ThinkingBudget } from "./ThinkingBudget"
 import { DiffSettingsControl } from "./DiffSettingsControl"
 import { TemperatureControl } from "./TemperatureControl"
 import { RateLimitSecondsControl } from "./RateLimitSecondsControl"
@@ -563,6 +564,13 @@ const ApiOptions = ({
 				<ReasoningEffort
 					apiConfiguration={apiConfiguration}
 					setApiConfigurationField={setApiConfigurationField}
+				/>
+			)}
+			{selectedModelInfo?.thinking && (
+				<ThinkingBudget
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+					modelInfo={selectedModelInfo}
 				/>
 			)}
 

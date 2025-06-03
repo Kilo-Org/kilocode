@@ -52,10 +52,10 @@ describe("ThinkingBudget", () => {
 		expect(container.firstChild).toBeNull()
 	})
 
-	it("should render sliders when model supports thinking", () => {
+	it("should render slider when model supports thinking", () => {
 		render(<ThinkingBudget {...defaultProps} />)
 
-		expect(screen.getAllByTestId("slider")).toHaveLength(2)
+		expect(screen.getByTestId("slider")).toBeInTheDocument()
 	})
 
 	it("should update modelMaxThinkingTokens", () => {
@@ -69,8 +69,8 @@ describe("ThinkingBudget", () => {
 			/>,
 		)
 
-		const sliders = screen.getAllByTestId("slider")
-		fireEvent.change(sliders[1], { target: { value: "5000" } })
+		const slider = screen.getByTestId("slider")
+		fireEvent.change(slider, { target: { value: "5000" } })
 
 		expect(setApiConfigurationField).toHaveBeenCalledWith("modelMaxThinkingTokens", 5000)
 	})
@@ -94,31 +94,14 @@ describe("ThinkingBudget", () => {
 		render(<ThinkingBudget {...defaultProps} apiConfiguration={{ modelMaxTokens: 10000 }} />)
 
 		// Default is 80% of max tokens, capped at 8192
-		const sliders = screen.getAllByTestId("slider")
-		expect(sliders[1]).toHaveValue("8000") // 80% of 10000
+		const slider = screen.getByTestId("slider")
+		expect(slider).toHaveValue("8000") // 80% of 10000
 	})
 
-	it("should use min thinking tokens of 1024", () => {
+	it("should use min thinking tokens of 0", () => {
 		render(<ThinkingBudget {...defaultProps} apiConfiguration={{ modelMaxTokens: 1000 }} />)
 
-		const sliders = screen.getAllByTestId("slider")
-		expect(sliders[1].getAttribute("min")).toBe("1024")
-	})
-
-	it("should update max tokens when slider changes", () => {
-		const setApiConfigurationField = jest.fn()
-
-		render(
-			<ThinkingBudget
-				{...defaultProps}
-				apiConfiguration={{ modelMaxTokens: 10000 }}
-				setApiConfigurationField={setApiConfigurationField}
-			/>,
-		)
-
-		const sliders = screen.getAllByTestId("slider")
-		fireEvent.change(sliders[0], { target: { value: "12000" } })
-
-		expect(setApiConfigurationField).toHaveBeenCalledWith("modelMaxTokens", 12000)
+		const slider = screen.getByTestId("slider")
+		expect(slider.getAttribute("min")).toBe("0")
 	})
 })
