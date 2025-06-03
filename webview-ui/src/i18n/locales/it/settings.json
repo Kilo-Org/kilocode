@@ -259,7 +259,9 @@
 			"medium": "Medio",
 			"low": "Basso"
 		},
-		"setReasoningLevel": "Abilita sforzo di ragionamento"
+		"setReasoningLevel": "Abilita sforzo di ragionamento",
+		"controlThinkingBudget": "Controlla budget di pensiero",
+		"controlThinkingBudgetDescription": "Assicura compatibilità con Claude"
 	},
 	"browser": {
 		"enable": {

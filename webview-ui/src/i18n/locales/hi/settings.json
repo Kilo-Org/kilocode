@@ -259,7 +259,9 @@
 			"medium": "मध्यम",
 			"low": "निम्न"
 		},
-		"setReasoningLevel": "तर्क प्रयास सक्षम करें"
+		"setReasoningLevel": "तर्क प्रयास सक्षम करें",
+		"controlThinkingBudget": "सोच बजट नियंत्रित करें",
+		"controlThinkingBudgetDescription": "Claude के साथ संगतता सुनिश्चित करें"
 	},
 	"browser": {
 		"enable": {

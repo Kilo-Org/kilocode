@@ -259,7 +259,9 @@
 			"medium": "中",
 			"low": "低"
 		},
-		"setReasoningLevel": "推論労力を有効にする"
+		"setReasoningLevel": "推論労力を有効にする",
+		"controlThinkingBudget": "思考予算を制御",
+		"controlThinkingBudgetDescription": "Claudeとの互換性を確保"
 	},
 	"browser": {
 		"enable": {

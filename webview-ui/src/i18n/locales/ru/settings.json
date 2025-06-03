@@ -259,7 +259,9 @@
 			"medium": "Средние",
 			"low": "Низкие"
 		},
-		"setReasoningLevel": "Включить усилие рассуждения"
+		"setReasoningLevel": "Включить усилие рассуждения",
+		"controlThinkingBudget": "Контролировать бюджет размышлений",
+		"controlThinkingBudgetDescription": "Обеспечить совместимость с Claude"
 	},
 	"browser": {
 		"enable": {

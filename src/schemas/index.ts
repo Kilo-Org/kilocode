@@ -502,6 +502,7 @@ const openAiSchema = baseProviderSettingsSchema.extend({
 	azureApiVersion: z.string().optional(),
 	openAiStreamingEnabled: z.boolean().optional(),
 	enableReasoningEffort: z.boolean().optional(),
+	openAiThinkingEnabled: z.boolean().optional(),
 	openAiHostHeader: z.string().optional(), // Keep temporarily for backward compatibility during migration.
 	openAiHeaders: z.record(z.string(), z.string()).optional(),
 })
@@ -692,6 +693,7 @@ const providerSettingsRecord: ProviderSettingsRecord = {
 	azureApiVersion: undefined,
 	openAiStreamingEnabled: undefined,
 	enableReasoningEffort: undefined,
+	openAiThinkingEnabled: undefined,
 	openAiHostHeader: undefined, // Keep temporarily for backward compatibility during migration
 	openAiHeaders: undefined,
 	// Ollama

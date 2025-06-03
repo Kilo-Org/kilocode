@@ -22,7 +22,6 @@ import {
 	SelectSeparator, // kilocode_change
 } from "@src/components/ui"
 
-import { ThinkingBudget } from "./ThinkingBudget"
 import { ModelInfoView } from "./ModelInfoView"
 
 type ModelIdKey = keyof Pick<
@@ -232,11 +231,6 @@ export const ModelPicker = ({
 					setIsDescriptionExpanded={setIsDescriptionExpanded}
 				/>
 			)}
-			<ThinkingBudget
-				apiConfiguration={apiConfiguration}
-				setApiConfigurationField={setApiConfigurationField}
-				modelInfo={selectedModelInfo}
-			/>
 			<div className="text-sm text-vscode-descriptionForeground">
 				<Trans
 					i18nKey="settings:modelPicker.automaticFetch"

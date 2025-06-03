@@ -259,7 +259,9 @@
 			"medium": "Medium",
 			"low": "Low"
 		},
-		"setReasoningLevel": "Enable Reasoning Effort"
+		"setReasoningLevel": "Enable Reasoning Effort",
+		"controlThinkingBudget": "Control ThinkingBudget",
+		"controlThinkingBudgetDescription": "Ensure compatible with Claude"
 	},
 	"browser": {
 		"enable": {

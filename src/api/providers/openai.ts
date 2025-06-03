@@ -149,6 +149,18 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				reasoning_effort: this.getModel().info.reasoningEffort,
 			}
 
+			// Add thinking configuration when enabled and budget > 0, but not for OpenAI official models
+			if (
+				this.options.openAiThinkingEnabled &&
+				this.options.modelMaxThinkingTokens &&
+				this.options.modelMaxThinkingTokens > 0
+			) {
+				;(requestOptions as any).thinking = {
+					type: "enabled",
+					budget_tokens: this.options.modelMaxThinkingTokens,
+				}
+			}
+
 			if (this.options.includeMaxTokens) {
 				requestOptions.max_tokens = modelInfo.maxTokens
 			}
@@ -212,6 +224,18 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 						: [systemMessage, ...convertToOpenAiMessages(messages)],
 			}
 
+			// Add thinking configuration when enabled and budget > 0, but not for OpenAI official models
+			if (
+				this.options.openAiThinkingEnabled &&
+				this.options.modelMaxThinkingTokens &&
+				this.options.modelMaxThinkingTokens > 0
+			) {
+				;(requestOptions as any).thinking = {
+					type: "enabled",
+					budget_tokens: this.options.modelMaxThinkingTokens,
+				}
+			}
+
 			const response = await this.client.chat.completions.create(
 				requestOptions,
 				this._isAzureAiInference(modelUrl) ? { path: AZURE_AI_INFERENCE_PATH } : {},
@@ -237,9 +261,23 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 	}
 
 	override getModel(): { id: string; info: ModelInfo } {
+		const baseModelInfo = this.options.openAiCustomModelInfo ?? openAiModelInfoSaneDefaults
+
+		// If thinking mode is enabled, add thinking-related properties
+		if (this.options.openAiThinkingEnabled) {
+			return {
+				id: this.options.openAiModelId ?? "",
+				info: {
+					...baseModelInfo,
+					thinking: true,
+					maxThinkingTokens: this.options.modelMaxThinkingTokens || 32000,
+				},
+			}
+		}
+
 		return {
 			id: this.options.openAiModelId ?? "",
-			info: this.options.openAiCustomModelInfo ?? openAiModelInfoSaneDefaults,
+			info: baseModelInfo,
 		}
 	}
 
@@ -250,6 +288,18 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
 				model: this.getModel().id,
 				messages: [{ role: "user", content: prompt }],
+			}
+
+			// Add thinking configuration when enabled and budget > 0, but not for OpenAI official models
+			if (
+				this.options.openAiThinkingEnabled &&
+				this.options.modelMaxThinkingTokens &&
+				this.options.modelMaxThinkingTokens > 0
+			) {
+				;(requestOptions as any).thinking = {
+					type: "enabled",
+					budget_tokens: this.options.modelMaxThinkingTokens,
+				}
 			}
 
 			const response = await this.client.chat.completions.create(

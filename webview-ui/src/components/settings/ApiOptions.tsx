@@ -57,7 +57,6 @@ import { inputEventTransform, noTransform } from "./transforms"
 import { ModelPicker } from "./ModelPicker"
 import { ModelInfoView } from "./ModelInfoView"
 import { ApiErrorMessage } from "./ApiErrorMessage"
-import { ThinkingBudget } from "./ThinkingBudget"
 import { ReasoningEffort } from "./ReasoningEffort"
 import { DiffSettingsControl } from "./DiffSettingsControl"
 import { TemperatureControl } from "./TemperatureControl"
@@ -556,13 +555,6 @@ const ApiOptions = ({
 						modelInfo={selectedModelInfo}
 						isDescriptionExpanded={isDescriptionExpanded}
 						setIsDescriptionExpanded={setIsDescriptionExpanded}
-					/>
-
-					<ThinkingBudget
-						key={`${selectedProvider}-${selectedModelId}`}
-						apiConfiguration={apiConfiguration}
-						setApiConfigurationField={setApiConfigurationField}
-						modelInfo={selectedModelInfo}
 					/>
 				</>
 			)}

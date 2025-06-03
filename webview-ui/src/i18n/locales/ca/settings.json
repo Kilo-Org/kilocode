@@ -259,7 +259,9 @@
 			"medium": "Mitjà",
 			"low": "Baix"
 		},
-		"setReasoningLevel": "Activa l'esforç de raonament"
+		"setReasoningLevel": "Activa l'esforç de raonament",
+		"controlThinkingBudget": "Controlar pressupost de pensament",
+		"controlThinkingBudgetDescription": "Assegurar compatibilitat amb Claude"
 	},
 	"browser": {
 		"enable": {

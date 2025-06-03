@@ -12,15 +12,29 @@ interface ThinkingBudgetProps {
 	apiConfiguration: ProviderSettings
 	setApiConfigurationField: <K extends keyof ProviderSettings>(field: K, value: ProviderSettings[K]) => void
 	modelInfo?: ModelInfo
+	useOpenAiThinkingLogic?: boolean
 }
 
-export const ThinkingBudget = ({ apiConfiguration, setApiConfigurationField, modelInfo }: ThinkingBudgetProps) => {
+export const ThinkingBudget = ({
+	apiConfiguration,
+	setApiConfigurationField,
+	modelInfo,
+	useOpenAiThinkingLogic = false,
+}: ThinkingBudgetProps) => {
 	const { t } = useAppTranslation()
 
 	const isThinkingModel = !!modelInfo && !!modelInfo.thinking && !!modelInfo.maxTokens
 
-	const customMaxOutputTokens = apiConfiguration.modelMaxTokens || DEFAULT_MAX_OUTPUT_TOKENS
-	const customMaxThinkingTokens = apiConfiguration.modelMaxThinkingTokens || DEFAULT_MAX_THINKING_TOKENS
+	// For OpenAI compatible providers, use the thinking enabled logic
+	// For other providers, use the original thinking model logic
+	const shouldShowThinkingBudget = useOpenAiThinkingLogic
+		? isThinkingModel || apiConfiguration.openAiThinkingEnabled === true
+		: isThinkingModel
+
+	const customMaxOutputTokens =
+		apiConfiguration.modelMaxTokens ??
+		(modelInfo?.maxTokens && modelInfo.maxTokens > 0 ? modelInfo.maxTokens : DEFAULT_MAX_OUTPUT_TOKENS)
+	const customMaxThinkingTokens = apiConfiguration.modelMaxThinkingTokens ?? DEFAULT_MAX_THINKING_TOKENS
 
 	// Dynamically expand or shrink the max thinking budget based on the custom
 	// max output tokens so that there's always a 20% buffer.
@@ -32,39 +46,24 @@ export const ThinkingBudget = ({ apiConfiguration, setApiConfigurationField, mod
 	// to the custom max output tokens being reduced then we need to shrink it
 	// appropriately.
 	useEffect(() => {
-		if (isThinkingModel && customMaxThinkingTokens > modelMaxThinkingTokens) {
+		if (shouldShowThinkingBudget && customMaxThinkingTokens > modelMaxThinkingTokens) {
 			setApiConfigurationField("modelMaxThinkingTokens", modelMaxThinkingTokens)
 		}
-	}, [isThinkingModel, customMaxThinkingTokens, modelMaxThinkingTokens, setApiConfigurationField])
+	}, [shouldShowThinkingBudget, customMaxThinkingTokens, modelMaxThinkingTokens, setApiConfigurationField])
 
-	return isThinkingModel ? (
-		<>
-			<div className="flex flex-col gap-1">
-				<div className="font-medium">{t("settings:thinkingBudget.maxTokens")}</div>
-				<div className="flex items-center gap-1">
-					<Slider
-						min={8192}
-						max={modelInfo.maxTokens!}
-						step={1024}
-						value={[customMaxOutputTokens]}
-						onValueChange={([value]) => setApiConfigurationField("modelMaxTokens", value)}
-					/>
-					<div className="w-12 text-sm text-center">{customMaxOutputTokens}</div>
-				</div>
+	return shouldShowThinkingBudget && modelInfo?.maxTokens ? (
+		<div className="flex flex-col gap-1">
+			<div className="font-medium">{t("settings:thinkingBudget.maxThinkingTokens")}</div>
+			<div className="flex items-center gap-1" data-testid="thinking-budget">
+				<Slider
+					min={0}
+					max={modelMaxThinkingTokens}
+					step={1024}
+					value={[customMaxThinkingTokens]}
+					onValueChange={([value]) => setApiConfigurationField("modelMaxThinkingTokens", value)}
+				/>
+				<div className="w-12 text-sm text-center">{customMaxThinkingTokens}</div>
 			</div>
-			<div className="flex flex-col gap-1">
-				<div className="font-medium">{t("settings:thinkingBudget.maxThinkingTokens")}</div>
-				<div className="flex items-center gap-1" data-testid="thinking-budget">
-					<Slider
-						min={1024}
-						max={modelMaxThinkingTokens}
-						step={1024}
-						value={[customMaxThinkingTokens]}
-						onValueChange={([value]) => setApiConfigurationField("modelMaxThinkingTokens", value)}
-					/>
-					<div className="w-12 text-sm text-center">{customMaxThinkingTokens}</div>
-				</div>
-			</div>
-		</>
+		</div>
 	) : null
 }

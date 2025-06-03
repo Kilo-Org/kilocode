@@ -260,7 +260,9 @@
 			"medium": "中",
 			"low": "低"
 		},
-		"setReasoningLevel": "启用推理工作量"
+		"setReasoningLevel": "启用推理工作量",
+		"controlThinkingBudget": "控制思考预算",
+		"controlThinkingBudgetDescription": "确保与 Claude 兼容"
 	},
 	"browser": {
 		"enable": {

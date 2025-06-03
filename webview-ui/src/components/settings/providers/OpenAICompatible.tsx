@@ -15,6 +15,7 @@ import { inputEventTransform, noTransform } from "../transforms"
 import { ModelPicker } from "../ModelPicker"
 import { R1FormatSetting } from "../R1FormatSetting"
 import { ReasoningEffort } from "../ReasoningEffort"
+import { ThinkingBudgetToggle } from "./ThinkingBudgetToggle"
 
 type OpenAICompatibleProps = {
 	apiConfiguration: ProviderSettings
@@ -250,6 +251,21 @@ export const OpenAICompatible = ({ apiConfiguration, setApiConfigurationField }:
 						}}
 					/>
 				)}
+			</div>
+			<div className="flex flex-col gap-1">
+				<ThinkingBudgetToggle
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+					modelInfo={{
+						...(apiConfiguration.openAiCustomModelInfo || openAiModelInfoSaneDefaults),
+						thinking: true,
+						maxTokens:
+							(apiConfiguration.openAiCustomModelInfo || openAiModelInfoSaneDefaults).maxTokens || 16384,
+					}}
+				/>
+				<div className="text-sm text-vscode-descriptionForeground">
+					{t("settings:providers.controlThinkingBudgetDescription")}
+				</div>
 			</div>
 			<div className="flex flex-col gap-3">
 				<div className="text-sm text-vscode-descriptionForeground whitespace-pre-line">

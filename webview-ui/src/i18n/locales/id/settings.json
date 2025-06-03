@@ -259,7 +259,9 @@
 			"medium": "Sedang",
 			"low": "Rendah"
 		},
-		"setReasoningLevel": "Aktifkan Upaya Reasoning"
+		"setReasoningLevel": "Aktifkan Upaya Reasoning",
+		"controlThinkingBudget": "Kontrol Anggaran Berpikir",
+		"controlThinkingBudgetDescription": "Pastikan kompatibilitas dengan Claude"
 	},
 	"browser": {
 		"enable": {

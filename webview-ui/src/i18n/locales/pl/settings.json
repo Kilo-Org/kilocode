@@ -259,7 +259,9 @@
 			"medium": "Średni",
 			"low": "Niski"
 		},
-		"setReasoningLevel": "Włącz wysiłek rozumowania"
+		"setReasoningLevel": "Włącz wysiłek rozumowania",
+		"controlThinkingBudget": "Kontroluj budżet myślenia",
+		"controlThinkingBudgetDescription": "Zapewnij zgodność z Claude"
 	},
 	"browser": {
 		"enable": {

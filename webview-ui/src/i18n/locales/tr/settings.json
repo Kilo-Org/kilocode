@@ -259,7 +259,9 @@
 			"medium": "Orta",
 			"low": "Düşük"
 		},
-		"setReasoningLevel": "Akıl Yürütme Çabasını Etkinleştir"
+		"setReasoningLevel": "Akıl Yürütme Çabasını Etkinleştir",
+		"controlThinkingBudget": "Düşünme Bütçesini Kontrol Et",
+		"controlThinkingBudgetDescription": "Claude ile Uyumluluğu Sağla"
 	},
 	"browser": {
 		"enable": {

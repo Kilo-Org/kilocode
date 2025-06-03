@@ -259,7 +259,9 @@
 			"medium": "Middel",
 			"low": "Laag"
 		},
-		"setReasoningLevel": "Redeneervermogen inschakelen"
+		"setReasoningLevel": "Redeneervermogen inschakelen",
+		"controlThinkingBudget": "Denkbudget beheren",
+		"controlThinkingBudgetDescription": "Compatibiliteit met Claude verzekeren"
 	},
 	"browser": {
 		"enable": {

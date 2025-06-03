@@ -259,7 +259,9 @@
 			"medium": "Trung bình",
 			"low": "Thấp"
 		},
-		"setReasoningLevel": "Kích hoạt nỗ lực suy luận"
+		"setReasoningLevel": "Kích hoạt nỗ lực suy luận",
+		"controlThinkingBudget": "Kiểm soát ngân sách suy nghĩ",
+		"controlThinkingBudgetDescription": "Đảm bảo tương thích với Claude"
 	},
 	"browser": {
 		"enable": {
