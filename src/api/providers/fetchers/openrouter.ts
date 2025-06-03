@@ -1,4 +1,4 @@
-import axios from "axios"
+import axios, { RawAxiosRequestHeaders } from "axios"
 import { z } from "zod"
 
 import { type ModelInfo, isModelParameter } from "@roo-code/types"
@@ -93,17 +93,16 @@ type OpenRouterModelEndpointsResponse = z.infer<typeof openRouterModelEndpointsR
  * getOpenRouterModels
  */
 
-export async function getOpenRouterModels({
-	baseUrl = "https://openrouter.ai/api/v1",
-	headers,
-}: { baseUrl?: string; headers?: Record<string, string> } = {}): Promise<Record<string, ModelInfo>> {
+export async function getOpenRouterModels(
+	options?: ApiHandlerOptions & { headers?: RawAxiosRequestHeaders }, // kilocode_change: added headers
+): Promise<Record<string, ModelInfo>> {
 	const models: Record<string, ModelInfo> = {}
+	const baseURL = options?.openRouterBaseUrl || "https://openrouter.ai/api/v1"
 
 	try {
-		// kilocode_change begin
-		// Use optional headers if provided in options
-		const response = await axios.get<OpenRouterModelsResponse>(`${baseUrl}/models`, { headers })
-		// kilocode_change end
+		const response = await axios.get<OpenRouterModelsResponse>(`${baseURL}/models`, {
+			headers: options?.headers, // kilocode_change: added headers
+		})
 		const result = openRouterModelsResponseSchema.safeParse(response.data)
 		const data = result.success ? result.data.data : response.data.data
 

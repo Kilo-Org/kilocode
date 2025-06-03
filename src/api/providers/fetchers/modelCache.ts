@@ -70,13 +70,12 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				models = await getLiteLLMModels(options.apiKey, options.baseUrl)
 				break
 			// kilocode_change start
-			case "kilocode-openrouter": {
+			case "kilocode-openrouter":
 				models = await getOpenRouterModels({
-					baseUrl: getKiloBaseUriFromToken(options.kilocodeToken ?? "") + "/api/openrouter",
+					openRouterBaseUrl: getKiloBaseUriFromToken(options.kilocodeToken ?? "") + "/api/openrouter",
 					headers: { Authorization: `Bearer ${options.kilocodeToken}` },
 				})
 				break
-			}
 			// kilocode_change end
 			default: {
 				// Ensures router is exhaustively checked if RouterName is a strict union
