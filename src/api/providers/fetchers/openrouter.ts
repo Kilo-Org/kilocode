@@ -1,4 +1,4 @@
-import axios, { RawAxiosRequestHeaders } from "axios"
+import axios, { type RawAxiosRequestHeaders /*kilocode_change*/ } from "axios"
 import { z } from "zod"
 
 import { type ModelInfo, isModelParameter } from "@roo-code/types"
