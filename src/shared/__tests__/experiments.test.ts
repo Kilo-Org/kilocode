@@ -23,9 +23,19 @@ describe("experiments", () => {
 		})
 	})
 
+	describe("AUTOCOMPLETE", () => {
+		it("is configured correctly", () => {
+			expect(EXPERIMENT_IDS.AUTOCOMPLETE).toBe("autocomplete")
+			expect(experimentConfigsMap.AUTOCOMPLETE).toMatchObject({
+				enabled: false,
+			})
+		})
+	})
+
 	describe("isEnabled", () => {
 		it("returns false when POWER_STEERING experiment is not enabled", () => {
 			const experiments: Record<ExperimentId, boolean> = {
+				autocomplete: false,
 				powerSteering: false,
 				autoCondenseContext: false,
 			}
@@ -34,6 +44,7 @@ describe("experiments", () => {
 
 		it("returns true when experiment POWER_STEERING is enabled", () => {
 			const experiments: Record<ExperimentId, boolean> = {
+				autocomplete: true,
 				powerSteering: true,
 				autoCondenseContext: false,
 			}
@@ -42,6 +53,7 @@ describe("experiments", () => {
 
 		it("returns false when experiment is not present", () => {
 			const experiments: Record<ExperimentId, boolean> = {
+				autocomplete: false,
 				powerSteering: false,
 				autoCondenseContext: false,
 			}
@@ -51,6 +63,7 @@ describe("experiments", () => {
 		it("returns false when AUTO_CONDENSE_CONTEXT experiment is not enabled", () => {
 			const experiments: Record<ExperimentId, boolean> = {
 				powerSteering: false,
+				autocomplete: false,
 				autoCondenseContext: false,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.AUTO_CONDENSE_CONTEXT)).toBe(false)
@@ -59,6 +72,7 @@ describe("experiments", () => {
 		it("returns true when AUTO_CONDENSE_CONTEXT experiment is enabled", () => {
 			const experiments: Record<ExperimentId, boolean> = {
 				powerSteering: false,
+				autocomplete: false,
 				autoCondenseContext: true,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.AUTO_CONDENSE_CONTEXT)).toBe(true)

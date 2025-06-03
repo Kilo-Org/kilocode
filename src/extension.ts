@@ -33,6 +33,7 @@ import {
 	CodeActionProvider,
 } from "./activate"
 import { initializeI18n } from "./i18n"
+import { registerAutocomplete } from "./services/autocomplete/AutocompleteProvider"
 
 /**
  * Built using https://github.com/microsoft/vscode-webview-ui-toolkit
@@ -148,6 +149,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		}),
 	)
 
+	registerAutocomplete(context) // kilocode_change
 	registerCodeActions(context)
 	registerTerminalActions(context)
 

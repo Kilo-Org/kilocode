@@ -470,6 +470,10 @@
 			"name": "Użyj eksperymentalnego trybu \"wspomagania kierownicy\"",
 			"description": "Po włączeniu, Kilo Code będzie częściej przypominać modelowi o szczegółach jego bieżącej definicji trybu. Doprowadzi to do silniejszego przestrzegania definicji ról i niestandardowych instrukcji, ale będzie używać więcej tokenów na wiadomość."
 		},
+		"AUTOCOMPLETE": {
+			"name": "Użyj eksperymentalnej funkcji \"autouzupełniania\"",
+			"description": "Po włączeniu Kilo Code będzie dostarczać sugestie kodu w trakcie pisania."
+		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Użyj eksperymentalnego narzędzia diff wieloblokowego",
 			"description": "Po włączeniu, Kilo Code użyje narzędzia diff wieloblokowego. Spróbuje to zaktualizować wiele bloków kodu w pliku w jednym żądaniu."

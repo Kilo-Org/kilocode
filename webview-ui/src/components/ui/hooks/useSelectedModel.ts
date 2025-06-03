@@ -213,11 +213,15 @@ function getSelectedModel({
 				// Find the model in the fetched models
 				const modelEntries = Object.entries(routerModels["kilocode-openrouter"])
 
-				// Try to find a model with a matching ID or name
-				for (const [modelId, modelInfo] of modelEntries) {
-					if (modelId.toLowerCase().includes(apiConfiguration.kilocodeModel.toLowerCase())) {
-						return { id: modelId, info: modelInfo }
-					}
+				const selectedModelId = apiConfiguration.kilocodeModel.toLowerCase()
+
+				// Prefer exact match
+				const selectedModel =
+					modelEntries.find((model) => model[0].toLowerCase() === selectedModelId) ??
+					modelEntries.find((model) => model[0].toLowerCase().includes(selectedModelId))
+
+				if (selectedModel) {
+					return { id: selectedModel[0], info: selectedModel[1] }
 				}
 			}
 

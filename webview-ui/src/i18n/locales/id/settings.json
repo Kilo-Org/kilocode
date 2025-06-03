@@ -471,6 +471,10 @@
 			"name": "Gunakan mode \"power steering\" eksperimental",
 			"description": "Ketika diaktifkan, Kilo Code akan mengingatkan model tentang detail definisi mode saat ini lebih sering. Ini akan menghasilkan kepatuhan yang lebih kuat terhadap definisi peran dan instruksi kustom, tetapi akan menggunakan lebih banyak token per pesan."
 		},
+		"AUTOCOMPLETE": {
+			"name": "Gunakan fitur \"autocomplete\" eksperimental",
+			"description": "Ketika diaktifkan, Kilo Code akan memberikan saran kode inline saat kamu mengetik. Memerlukan Kilo Code API Provider."
+		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Gunakan tool multi block diff eksperimental",
 			"description": "Ketika diaktifkan, Kilo Code akan menggunakan tool multi block diff. Ini akan mencoba memperbarui beberapa blok kode dalam file dalam satu permintaan."

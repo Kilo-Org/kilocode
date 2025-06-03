@@ -470,6 +470,10 @@
 			"name": "Experimentele 'power steering'-modus gebruiken",
 			"description": "Indien ingeschakeld, herinnert Kilo Code het model vaker aan de details van de huidige modusdefinitie. Dit leidt tot sterkere naleving van roldefinities en aangepaste instructies, maar gebruikt meer tokens per bericht."
 		},
+		"AUTOCOMPLETE": {
+			"name": "Gebruik experimentele \"automatisch aanvullen\"-functie",
+			"description": "Indien ingeschakeld, zal Kilo Code inline codesuggesties geven terwijl je typt."
+		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Experimentele multi-block diff-tool gebruiken",
 			"description": "Indien ingeschakeld, gebruikt Kilo Code de multi-block diff-tool. Hiermee wordt geprobeerd meerdere codeblokken in het bestand in één verzoek bij te werken."

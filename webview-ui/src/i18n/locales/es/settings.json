@@ -470,6 +470,10 @@
 			"name": "Usar modo experimental de \"dirección asistida\"",
 			"description": "Cuando está habilitado, Kilo Code recordará al modelo los detalles de su definición de modo actual con más frecuencia. Esto llevará a una mayor adherencia a las definiciones de roles e instrucciones personalizadas, pero usará más tokens por mensaje."
 		},
+		"AUTOCOMPLETE": {
+			"name": "Usar la función experimental de \"autocompletar\"",
+			"description": "Cuando está activado, Kilo Code proporcionará sugerencias de código en línea mientras escribes."
+		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Usar herramienta experimental de diff de bloques múltiples",
 			"description": "Cuando está habilitado, Kilo Code usará la herramienta de diff de bloques múltiples. Esto intentará actualizar múltiples bloques de código en el archivo en una sola solicitud."

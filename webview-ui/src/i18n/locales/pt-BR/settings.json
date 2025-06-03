@@ -470,6 +470,10 @@
 			"name": "Usar modo \"direção assistida\" experimental",
 			"description": "Quando ativado, o Kilo Code lembrará o modelo sobre os detalhes da sua definição de modo atual com mais frequência. Isso levará a uma adesão mais forte às definições de função e instruções personalizadas, mas usará mais tokens por mensagem."
 		},
+		"AUTOCOMPLETE": {
+			"name": "Usar recurso experimental de \"autocompletar\"",
+			"description": "Quando ativado, o Kilo Code fornecerá sugestões de código em linha enquanto você digita."
+		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Usar ferramenta diff de múltiplos blocos experimental",
 			"description": "Quando ativado, o Kilo Code usará a ferramenta diff de múltiplos blocos. Isso tentará atualizar vários blocos de código no arquivo em uma única solicitação."

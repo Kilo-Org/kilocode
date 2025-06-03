@@ -470,6 +470,10 @@
 			"name": "Deneysel \"güç direksiyon\" modunu kullan",
 			"description": "Etkinleştirildiğinde, Kilo Code modele geçerli mod tanımının ayrıntılarını daha sık hatırlatacaktır. Bu, rol tanımlarına ve özel talimatlara daha güçlü uyum sağlayacak, ancak mesaj başına daha fazla token kullanacaktır."
 		},
+		"AUTOCOMPLETE": {
+			"name": "Deneysel \"otomatik tamamlama\" özelliğini kullan",
+			"description": "Etkinleştirildiğinde, Kilo Code siz yazarken satır içi kod önerileri sunar."
+		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Deneysel çoklu blok diff aracını kullan",
 			"description": "Etkinleştirildiğinde, Kilo Code çoklu blok diff aracını kullanacaktır. Bu, tek bir istekte dosyadaki birden fazla kod bloğunu güncellemeye çalışacaktır."

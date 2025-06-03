@@ -470,6 +470,10 @@
 			"name": "使用實驗性「動力輔助」模式",
 			"description": "啟用後，Kilo Code 將更頻繁地提醒模型目前模式的詳細設定。這能讓模型更嚴格遵守角色定義和自訂指令，但每則訊息會使用更多 token。"
 		},
+		"AUTOCOMPLETE": {
+			"name": "使用實驗性「自動完成」功能",
+			"description": "啟用後，Kilo Code 會在您輸入時提供內嵌程式碼建議。"
+		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "使用實驗性多區塊差異比對工具",
 			"description": "啟用後，Kilo Code 將使用多區塊差異比對工具，嘗試在單一請求中更新檔案內的多個程式碼區塊。"

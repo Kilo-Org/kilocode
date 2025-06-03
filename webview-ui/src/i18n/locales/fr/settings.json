@@ -470,6 +470,10 @@
 			"name": "Utiliser le mode \"direction assistée\" expérimental",
 			"description": "Lorsqu'il est activé, Kilo Code rappellera plus fréquemment au modèle les détails de sa définition de mode actuelle. Cela conduira à une adhérence plus forte aux définitions de rôles et aux instructions personnalisées, mais utilisera plus de tokens par message."
 		},
+		"AUTOCOMPLETE": {
+			"name": "Utiliser la fonctionnalité expérimentale de \"saisie semi-automatique\"",
+			"description": "Lorsque cette option est activée, Kilo Code fournira des suggestions de code en ligne pendant que vous tapez."
+		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Utiliser l'outil diff multi-blocs expérimental",
 			"description": "Lorsqu'il est activé, Kilo Code utilisera l'outil diff multi-blocs. Cela tentera de mettre à jour plusieurs blocs de code dans le fichier en une seule requête."

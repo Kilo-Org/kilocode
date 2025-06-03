@@ -470,6 +470,10 @@
 			"name": "실험적 \"파워 스티어링\" 모드 사용",
 			"description": "활성화하면 Kilo Code가 현재 모드 정의의 세부 정보를 모델에 더 자주 상기시킵니다. 이로 인해 역할 정의 및 사용자 지정 지침에 대한 준수가 강화되지만 메시지당 더 많은 token이 사용됩니다."
 		},
+		"AUTOCOMPLETE": {
+			"name": "실험적인 \"자동 완성\" 기능 사용",
+			"description": "활성화하면 입력할 때 Kilo Code가 인라인 코드 제안을 제공합니다."
+		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "실험적 다중 블록 diff 도구 사용",
 			"description": "활성화하면 Kilo Code가 다중 블록 diff 도구를 사용합니다. 이것은 하나의 요청에서 파일의 여러 코드 블록을 업데이트하려고 시도합니다."
