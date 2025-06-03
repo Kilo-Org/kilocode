@@ -30,24 +30,73 @@ NEW_CONTENT = os.environ.get("NEW_CONTENT", "")
 
 def overwrite_changelog_section(changelog_text: str, new_content: str):
     # Find the section for the specified version
-    version_pattern = f"## {VERSION}\n"
-    prev_version_pattern = f"## [{PREV_VERSION}]\n"
+    # Try multiple patterns to find the version header
+    version_patterns = [
+        f"## {VERSION}\n",
+        f"## [{VERSION}]\n",
+        f"## [v{VERSION}]\n"
+    ]
+
+    # Try multiple patterns for previous version
+    prev_version_patterns = [
+        f"## {PREV_VERSION}\n" if PREV_VERSION else "",
+        f"## [{PREV_VERSION}]\n" if PREV_VERSION else "",
+        f"## [v{PREV_VERSION}]\n" if PREV_VERSION else ""
+    ]
+
     print(f"latest version: {VERSION}")
     print(f"prev_version: {PREV_VERSION}")
+    print(f"Looking for version patterns: {version_patterns}")
+    print(f"Looking for prev version patterns: {prev_version_patterns}")
 
-    notes_start_index = changelog_text.find(version_pattern) + len(version_pattern)
-    notes_end_index = changelog_text.find(prev_version_pattern, notes_start_index) if PREV_VERSION and prev_version_pattern in changelog_text else len(changelog_text)
+    # Find which pattern matches for current version
+    notes_start_index = -1
+    matched_pattern = None
+    for pattern in version_patterns:
+        index = changelog_text.find(pattern)
+        if index != -1:
+            notes_start_index = index + len(pattern)
+            matched_pattern = pattern
+            print(f"Found current version with pattern: '{pattern}' at index {index}")
+            break
+
+    if notes_start_index == -1:
+        print(f"ERROR: Could not find any version pattern for {VERSION}")
+        print("First 500 chars of changelog:")
+        print(changelog_text[:500])
+        return changelog_text
+
+    # Find end boundary using previous version patterns
+    notes_end_index = len(changelog_text)
+    if PREV_VERSION:
+        for pattern in prev_version_patterns:
+            if pattern:
+                index = changelog_text.find(pattern, notes_start_index)
+                if index != -1:
+                    notes_end_index = index
+                    print(f"Found previous version boundary with pattern: '{pattern}' at index {index}")
+                    break
+
+    print(f"Content section from {notes_start_index} to {notes_end_index}")
+    section_content = changelog_text[notes_start_index:notes_end_index]
+    print(f"Section content (first 200 chars): {section_content[:200]}")
 
     if new_content:
         updated_changelog = changelog_text[:notes_start_index] + f"{new_content}\n" + changelog_text[notes_end_index:]
-        updated_changelog = updated_changelog.replace(f"## {VERSION}", f"## [{VERSION}]")
+        # Replace any existing version format with the desired [vX.X.X] format
+        for pattern in version_patterns:
+            pattern_without_newline = pattern.rstrip('\n')
+            updated_changelog = updated_changelog.replace(pattern_without_newline, f"## [v{VERSION}]")
         return updated_changelog
     else:
         changeset_lines = changelog_text[notes_start_index:notes_end_index].split("\n")
         # Remove the first two lines from the regular changeset format, ex: \n### Patch Changes
         parsed_lines = "\n".join(changeset_lines[2:])
         updated_changelog = changelog_text[:notes_start_index] + parsed_lines + changelog_text[notes_end_index:]
-        updated_changelog = updated_changelog.replace(f"## {VERSION}", f"## [{VERSION}]")
+        # Replace any existing version format with the desired [vX.X.X] format
+        for pattern in version_patterns:
+            pattern_without_newline = pattern.rstrip('\n')
+            updated_changelog = updated_changelog.replace(pattern_without_newline, f"## [v{VERSION}]")
         return updated_changelog
 
 with open(CHANGELOG_PATH, 'r') as f:
