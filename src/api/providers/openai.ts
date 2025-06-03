@@ -159,9 +159,10 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				...(reasoning && reasoning),
 			}
 
-			// Add thinking configuration when model supports reasoning budget and budget > 0
+			// Add thinking configuration when enabled by user and budget > 0
+			// Prioritize user's explicit choice over model capabilities
 			if (
-				modelInfo.supportsReasoningBudget &&
+				this.options.openAiThinkingEnabled &&
 				this.options.modelMaxThinkingTokens &&
 				this.options.modelMaxThinkingTokens > 0
 			) {
@@ -235,9 +236,10 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 						: [systemMessage, ...convertToOpenAiMessages(messages)],
 			}
 
-			// Add thinking configuration when model supports reasoning budget and budget > 0
+			// Add thinking configuration when enabled by user and budget > 0
+			// Prioritize user's explicit choice over model capabilities
 			if (
-				modelInfo.supportsReasoningBudget &&
+				this.options.openAiThinkingEnabled &&
 				this.options.modelMaxThinkingTokens &&
 				this.options.modelMaxThinkingTokens > 0
 			) {
@@ -291,10 +293,10 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				messages: [{ role: "user", content: prompt }],
 			}
 
-			// Add thinking configuration when model supports reasoning budget and budget > 0
-			const modelInfo = this.getModel().info
+			// Add thinking configuration when enabled by user and budget > 0
+			// Prioritize user's explicit choice over model capabilities
 			if (
-				modelInfo.supportsReasoningBudget &&
+				this.options.openAiThinkingEnabled &&
 				this.options.modelMaxThinkingTokens &&
 				this.options.modelMaxThinkingTokens > 0
 			) {
