@@ -13,7 +13,8 @@
 		"description": "Geri bildirimlerinizi duymak veya yaşadığınız sorunlarda size yardımcı olmak isteriz.",
 		"githubIssues": "GitHub'da bir sorun bildirin",
 		"githubDiscussions": "GitHub tartışmalarına katılın",
-		"discord": "Discord topluluğumuza katılın"
+		"discord": "Discord topluluğumuza katılın",
+		"customerSupport": "Müşteri Desteği"
 	},
 	"welcome": "Hoş geldiniz, {{name}}! {{count}} bildiriminiz var.",
 	"items": {

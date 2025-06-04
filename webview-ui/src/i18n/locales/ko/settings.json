@@ -520,6 +520,7 @@
 	},
 	"footer": {
 		"feedback": "질문이나 피드백이 있으시면 <githubLink>github.com/Kilo-Org/kilocode</githubLink>에서 이슈를 열거나 <redditLink>reddit.com/r/kilocode</redditLink> 또는 <discordLink>kilocode.ai/discord</discordLink>에 가입하세요",
+		"support": "재무 관련 문의는 <supportLink>hi@kilocode.ai</supportLink>로 고객 지원팀에 문의하세요",
 		"telemetry": {
 			"label": "익명 오류 및 사용 보고 허용",
 			"description": "익명 사용 데이터 및 오류 보고서를 보내 Kilo Code 개선에 도움을 주세요. 코드, 프롬프트 또는 개인 정보는 절대 전송되지 않습니다. 자세한 내용은 개인정보 보호정책을 참조하세요."

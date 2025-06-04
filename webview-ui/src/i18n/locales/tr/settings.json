@@ -520,6 +520,7 @@
 	},
 	"footer": {
 		"feedback": "Herhangi bir sorunuz veya geri bildiriminiz varsa, <githubLink>github.com/Kilo-Org/kilocode</githubLink> adresinde bir konu açmaktan veya <redditLink>reddit.com/r/kilocode</redditLink> ya da <discordLink>kilocode.ai/discord</discordLink>'a katılmaktan çekinmeyin",
+		"support": "Mali konular için lütfen <supportLink>hi@kilocode.ai</supportLink> adresinden Müşteri Desteği ile iletişime geçin",
 		"telemetry": {
 			"label": "Anonim hata ve kullanım raporlamaya izin ver",
 			"description": "Anonim kullanım verileri ve hata raporları göndererek Kilo Code'u geliştirmeye yardımcı olun. Hiçbir kod, istem veya kişisel bilgi asla gönderilmez. Daha fazla ayrıntı için gizlilik politikamıza bakın."

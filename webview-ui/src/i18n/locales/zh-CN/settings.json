@@ -521,6 +521,7 @@
 	},
 	"footer": {
 		"feedback": "如果您有任何问题或反馈，请随时在 <githubLink>github.com/Kilo-Org/kilocode</githubLink> 上提出问题或加入 <redditLink>reddit.com/r/kilocode</redditLink> 或 <discordLink>kilocode.ai/discord</discordLink>",
+		"support": "如有财务问题，请联系客户支持 <supportLink>hi@kilocode.ai</supportLink>",
 		"telemetry": {
 			"label": "允许匿名数据收集",
 			"description": "匿名收集错误报告和使用数据（不含代码/提示/个人信息），详情见隐私政策"

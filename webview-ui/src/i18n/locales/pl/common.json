@@ -9,7 +9,8 @@
 		"description": "Chcielibyśmy usłyszeć Twoje opinie lub pomóc Ci z problemami, których doświadczasz.",
 		"githubIssues": "Zgłoś problem na GitHubie",
 		"githubDiscussions": "Dołącz do dyskusji na GitHubie",
-		"discord": "Dołącz do naszej społeczności Discord"
+		"discord": "Dołącz do naszej społeczności Discord",
+		"customerSupport": "Obsługa Klienta"
 	},
 	"ui": {
 		"search_placeholder": "Szukaj..."

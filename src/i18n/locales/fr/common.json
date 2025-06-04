@@ -13,7 +13,8 @@
 		"description": "Nous aimerions recevoir vos commentaires ou vous aider avec tout problème que vous rencontrez.",
 		"githubIssues": "Signaler un problème sur GitHub",
 		"githubDiscussions": "Rejoindre les discussions GitHub",
-		"discord": "Rejoindre notre communauté Discord"
+		"discord": "Rejoindre notre communauté Discord",
+		"customerSupport": "Support Client"
 	},
 	"welcome": "Bienvenue, {{name}} ! Vous avez {{count}} notification(s).",
 	"items": {

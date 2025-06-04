@@ -1116,6 +1116,7 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			const githubIssuesText = t("common:feedback.githubIssues")
 			const githubDiscussionsText = t("common:feedback.githubDiscussions")
 			const discordText = t("common:feedback.discord")
+			const customerSupport = t("common:feedback.customerSupport")
 
 			const answer = await vscode.window.showInformationMessage(
 				t("common:feedback.description"),
@@ -1123,6 +1124,7 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 				githubIssuesText,
 				githubDiscussionsText,
 				discordText,
+				customerSupport,
 			)
 
 			if (answer === githubIssuesText) {
@@ -1131,6 +1133,8 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 				await vscode.env.openExternal(vscode.Uri.parse("https://github.com/Kilo-Org/kilocode/discussions"))
 			} else if (answer === discordText) {
 				await vscode.env.openExternal(vscode.Uri.parse("https://discord.gg/fxrhCFGhkP"))
+			} else if (answer === customerSupport) {
+				await vscode.env.openExternal(vscode.Uri.parse("mailto:hi@kilocode.ai"))
 			}
 			break
 		}
