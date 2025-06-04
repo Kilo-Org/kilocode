@@ -34,6 +34,7 @@
 		"task": "任务"
 	},
 	"profile": {
+		"title": "个人资料",
 		"dashboard": "仪表板",
 		"logOut": "退出登录",
 		"currentBalance": "当前余额",

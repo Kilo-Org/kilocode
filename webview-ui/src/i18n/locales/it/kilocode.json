@@ -34,6 +34,7 @@
 		"task": "Attività"
 	},
 	"profile": {
+		"title": "Profilo",
 		"dashboard": "Dashboard",
 		"logOut": "Disconnetti",
 		"currentBalance": "SALDO ATTUALE",

@@ -34,6 +34,7 @@
 		"task": "작업"
 	},
 	"profile": {
+		"title": "프로필",
 		"dashboard": "대시보드",
 		"logOut": "로그아웃",
 		"currentBalance": "현재 잔액",

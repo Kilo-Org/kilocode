@@ -34,6 +34,7 @@
 		"task": "Zadanie"
 	},
 	"profile": {
+		"title": "Profil",
 		"dashboard": "Panel kontrolny",
 		"logOut": "Wyloguj się",
 		"currentBalance": "AKTUALNY STAN KONTA",

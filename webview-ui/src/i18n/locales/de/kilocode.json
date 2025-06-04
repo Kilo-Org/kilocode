@@ -34,6 +34,7 @@
 		"task": "Aufgabe"
 	},
 	"profile": {
+		"title": "Profil",
 		"dashboard": "Dashboard",
 		"logOut": "Abmelden",
 		"currentBalance": "AKTUELLES GUTHABEN",

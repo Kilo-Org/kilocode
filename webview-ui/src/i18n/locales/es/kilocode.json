@@ -34,6 +34,7 @@
 		"task": "Tarea"
 	},
 	"profile": {
+		"title": "Perfil",
 		"dashboard": "Panel de control",
 		"logOut": "Cerrar sesión",
 		"currentBalance": "SALDO ACTUAL",
