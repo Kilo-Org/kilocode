@@ -156,6 +156,37 @@ importers:
 
   packages/config-typescript: {}
 
+  packages/typed-llm-stream:
+    dependencies:
+      sax:
+        specifier: ^1.2.4
+        version: 1.4.1
+      zod:
+        specifier: ^3.22.4
+        version: 3.25.48
+    devDependencies:
+      '@types/jest':
+        specifier: ^29.5.5
+        version: 29.5.14
+      '@types/node':
+        specifier: ^20.8.2
+        version: 20.17.57
+      '@types/sax':
+        specifier: ^1.2.4
+        version: 1.2.7
+      jest:
+        specifier: ^29.7.0
+        version: 29.7.0(@types/node@20.17.57)
+      rimraf:
+        specifier: ^5.0.5
+        version: 5.0.10
+      ts-jest:
+        specifier: ^29.1.1
+        version: 29.3.4(@babel/core@7.27.4)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.27.4))(esbuild@0.25.5)(jest@29.7.0(@types/node@20.17.57))(typescript@5.8.3)
+      typescript:
+        specifier: ^5.2.2
+        version: 5.8.3
+
   packages/types:
     dependencies:
       zod:
@@ -207,6 +238,9 @@ importers:
       '@qdrant/js-client-rest':
         specifier: ^1.14.0
         version: 1.14.1(typescript@5.8.3)
+      '@roo-code/typed-llm-stream':
+        specifier: workspace:^
+        version: link:../packages/typed-llm-stream
       '@roo-code/types':
         specifier: workspace:^
         version: link:../packages/types
@@ -3200,6 +3234,9 @@ packages:
 
   '@types/resolve@1.20.6':
     resolution: {integrity: sha512-A4STmOXPhMUtHH+S6ymgE2GiBSMqf4oTvcQZMcHzokuTLVYzXTB8ttjcgxOVaAp2lGwEdzZ0J+cRbbeevQj1UQ==}
+
+  '@types/sax@1.2.7':
+    resolution: {integrity: sha512-rO73L89PJxeYM3s3pPPjiPgVVcymqU490g0YO5n5By0k2Erzj6tay/4lr1CHAAU4JyOWd1rpQ8bCf6cZfHU96A==}
 
   '@types/shell-quote@1.7.5':
     resolution: {integrity: sha512-+UE8GAGRPbJVQDdxi16dgadcBfQ+KG2vgZhV1+3A1XmHbmwcdwhCUwIdy+d3pAGrbvgRoVSjeI9vOWyq376Yzw==}
@@ -7411,6 +7448,10 @@ packages:
 
   rfdc@1.4.1:
     resolution: {integrity: sha512-q1b3N5QkRUWUl7iyylaaj3kOpIT0N2i9MqIEQXP73GVsN9cw3fdx8X63cEmWhJGi2PPCF23Ijp7ktmd39rawIA==}
+
+  rimraf@5.0.10:
+    resolution: {integrity: sha512-l0OE8wL34P4nJH/H2ffoaniAokM2qSmrtXHmlpvYr5AVVX8msAyW0l8NVJFDxlSK4u3Uh/f41cQheDVdnYijwQ==}
+    hasBin: true
 
   rimraf@6.0.1:
     resolution: {integrity: sha512-9dkvaxAsk/xNXSJzMgFqqMCuFgt2+KsOFek3TMLfo8NCPfWpBmqwyNn5Y+NX56QUYfCtsyhF3ayiboEoUmJk/A==}
@@ -12046,6 +12087,10 @@ snapshots:
 
   '@types/resolve@1.20.6': {}
 
+  '@types/sax@1.2.7':
+    dependencies:
+      '@types/node': 22.15.29
+
   '@types/shell-quote@1.7.5': {}
 
   '@types/stack-utils@2.0.3': {}
@@ -12056,7 +12101,7 @@ snapshots:
 
   '@types/testing-library__jest-dom@5.14.9':
     dependencies:
-      '@types/jest': 27.5.2
+      '@types/jest': 29.5.14
 
   '@types/tmp@0.2.6': {}
 
@@ -17325,6 +17370,10 @@ snapshots:
   reusify@1.1.0: {}
 
   rfdc@1.4.1: {}
+
+  rimraf@5.0.10:
+    dependencies:
+      glob: 10.4.5
 
   rimraf@6.0.1:
     dependencies:
