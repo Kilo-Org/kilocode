@@ -81,6 +81,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 	private view?: vscode.WebviewView | vscode.WebviewPanel
 	private clineStack: Task[] = []
 	private codeIndexStatusSubscription?: vscode.Disposable
+	public editorStateSubscriptions: vscode.Disposable[] = []
 	private _workspaceTracker?: WorkspaceTracker // workSpaceTracker read-only for access outside this class
 	public get workspaceTracker(): WorkspaceTracker | undefined {
 		return this._workspaceTracker
@@ -233,6 +234,15 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		await this.mcpHub?.unregisterClient()
 		this.mcpHub = undefined
 		this.customModesManager?.dispose()
+
+		// Clean up editor state subscriptions
+		while (this.editorStateSubscriptions.length) {
+			const subscription = this.editorStateSubscriptions.pop()
+			if (subscription) {
+				subscription.dispose()
+			}
+		}
+
 		this.log("Disposed all disposables")
 		ClineProvider.activeInstances.delete(this)
 

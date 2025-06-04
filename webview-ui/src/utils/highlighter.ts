@@ -56,6 +56,8 @@ const languageAliases: Record<string, ExtendedLanguage> = {
 
 	// HTML variants
 	htm: "html",
+	handlebars: "html",
+	hbs: "html",
 
 	// YAML variants
 	yml: "yaml",

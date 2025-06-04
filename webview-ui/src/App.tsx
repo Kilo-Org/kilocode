@@ -13,10 +13,11 @@ import SettingsView, { SettingsViewRef } from "./components/settings/SettingsVie
 import WelcomeView from "./components/kilocode/Welcome/WelcomeView" // kilocode_change
 import PromptsView from "./components/prompts/PromptsView"
 import ProfileView from "./components/kilocode/profile/ProfileView"
+import PromptDebuggerView from "./components/prompt-debugger/PromptDebuggerView"
 import { HumanRelayDialog } from "./components/human-relay/HumanRelayDialog"
 import BottomControls from "./components/chat/BottomControls"
 
-type Tab = "settings" | "history" | "prompts" | "chat" | "profile" // kilocode_change
+type Tab = "settings" | "history" | "prompts" | "chat" | "profile" | "prompt-debugger" // kilocode_change
 
 const tabsByMessageAction: Partial<Record<NonNullable<ExtensionMessage["action"]>, Tab>> = {
 	chatButtonClicked: "chat",
@@ -104,6 +105,15 @@ const App = () => {
 	}, [shouldShowAnnouncement])
 
 	// Tell the extension that we are ready to receive messages.
+	// Add a global function to switch to the prompt debugger tab for testing
+	// This is temporary and would be replaced with proper navigation in a real implementation
+	useEffect(() => {
+		;(window as any).switchToPromptDebugger = () => {
+			switchTab("prompt-debugger")
+		}
+	}, [switchTab])
+
+	// Tell the extension that we are ready to receive messages.
 	useEffect(() => vscode.postMessage({ type: "webviewDidLaunch" }), [])
 
 	if (!didHydrateState) {
@@ -122,6 +132,9 @@ const App = () => {
 				<SettingsView ref={settingsRef} onDone={() => switchTab("chat")} targetSection={currentSection} /> // kilocode_change
 			)}
 			{tab === "profile" && <ProfileView onDone={() => switchTab("chat")} />}
+
+			{tab === "prompt-debugger" && <PromptDebuggerView onDone={() => switchTab("chat")} />}
+
 			<ChatView
 				ref={chatViewRef}
 				isHidden={tab !== "chat"}

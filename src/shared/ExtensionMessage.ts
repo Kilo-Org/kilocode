@@ -35,6 +35,9 @@ export interface ExtensionMessage {
 		| "workspaceUpdated"
 		| "invoke"
 		| "partialMessage"
+		| "promptDebuggerPartialMessage" // New dedicated type for prompt debugger streaming responses
+		| "editorStateUpdate" // New type for sending editor state to prompt debugger
+		| "editorStateUpdate" // New type for sending editor state to prompt debugger
 		| "mcpServers"
 		| "enhancedPrompt"
 		| "commitSearchResults"
@@ -97,6 +100,7 @@ export interface ExtensionMessage {
 		path?: string
 	}>
 	partialMessage?: ClineMessage
+	responseId?: string // Added for prompt debugger LLM API integration
 	routerModels?: RouterModels
 	openAiModels?: string[]
 	ollamaModels?: string[]
@@ -125,6 +129,7 @@ export interface ExtensionMessage {
 	setting?: string
 	value?: any
 	payload?: ProfileDataResponsePayload | BalanceDataResponsePayload // New: Add payload for profile and balance data
+	editorState?: EditorState // Editor state information for prompt debugger
 }
 
 export type ExtensionState = Pick<
@@ -311,6 +316,29 @@ export interface ClineApiReqInfo {
 	cost?: number
 	cancelReason?: ClineApiReqCancelReason
 	streamingFailedMessage?: string
+}
+
+export interface EditorState {
+	document: {
+		path: string
+		name: string
+		language: string
+		lineCount: number
+	}
+	selection: {
+		text: string
+		lineNumber: number
+		column: number
+	}
+	cursor: {
+		line: number
+		column: number
+	}
+	content: {
+		beforeCursor: string
+		afterCursor: string
+		all: string
+	}
 }
 
 export type ClineApiReqCancelReason = "streaming_failed" | "user_cancelled"

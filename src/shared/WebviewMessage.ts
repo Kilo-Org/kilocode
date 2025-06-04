@@ -154,6 +154,7 @@ export interface WebviewMessage {
 		| "balanceDataResponse" // kilocode_change
 		| "condense" // kilocode_change
 		| "toggleWorkflow" // kilocode_change
+		| "promptDebuggerCallLLM" // Added for prompt debugger LLM API integration
 		| "condenseTaskContextRequest"
 		| "requestIndexingStatus"
 		| "startIndexing"
@@ -162,6 +163,7 @@ export interface WebviewMessage {
 		| "indexCleared"
 		| "codebaseIndexConfig"
 		| "telemetrySetting"
+		| "promptDebuggerReady" // Added for prompt debugger to request editor state updates
 	text?: string
 	disabled?: boolean
 	askResponse?: ClineAskResponse
@@ -198,6 +200,9 @@ export interface WebviewMessage {
 	modeConfig?: ModeConfig
 	timeout?: number
 	payload?: WebViewMessagePayload
+	systemPrompt?: string // Added for prompt debugger LLM API integration
+	userPrompt?: string // Added for prompt debugger LLM API integration
+	responseId?: string // Added for prompt debugger LLM API integration
 	source?: "global" | "project"
 	requestId?: string
 	ids?: string[]

@@ -12,6 +12,7 @@ import { Package } from "../../shared/package"
 import { RouterName, toRouterName, ModelRecord } from "../../shared/api"
 import { supportPrompt } from "../../shared/support-prompt"
 import { checkoutDiffPayloadSchema, checkoutRestorePayloadSchema, WebviewMessage } from "../../shared/WebviewMessage"
+import { EditorState } from "../../shared/ExtensionMessage"
 import { checkExistKey } from "../../shared/checkExistApiConfig"
 import { experimentDefault } from "../../shared/experiments"
 import { Terminal } from "../../integrations/terminal/Terminal"
@@ -30,6 +31,8 @@ import { getOpenAiModels } from "../../api/providers/openai"
 import { getOllamaModels } from "../../api/providers/ollama"
 import { getVsCodeLmModels } from "../../api/providers/vscode-lm"
 import { getLmStudioModels } from "../../api/providers/lmstudio"
+import { buildApiHandler } from "../../api"
+import { ApiStreamChunk } from "../../api/transform/stream"
 import { openMention } from "../mentions"
 import { telemetryService } from "../../services/telemetry"
 import { TelemetrySetting } from "../../shared/TelemetrySetting"
@@ -1283,6 +1286,123 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 				}
 			}
 			break
+		case "promptDebuggerCallLLM":
+			try {
+				// Get the API configuration for the selected model
+				const apiConfigId = message.text
+				if (!apiConfigId) {
+					provider.log("No API config ID provided for promptDebuggerCallLLM")
+					break
+				}
+
+				// Get the prompts
+				const systemPrompt = message.systemPrompt || "You are a helpful AI assistant."
+				const userPrompt = message.userPrompt
+				if (!userPrompt) {
+					provider.log("No user prompt provided for promptDebuggerCallLLM")
+					break
+				}
+
+				// Get the response ID
+				const responseId = message.responseId
+				if (!responseId) {
+					provider.log("No response ID provided for promptDebuggerCallLLM")
+					break
+				}
+
+				// Get the API configuration
+				const { name, ...apiConfig } = await provider.providerSettingsManager.getProfile({ id: apiConfigId })
+				if (!apiConfig) {
+					provider.log(`API configuration not found for ID: ${apiConfigId}`)
+					await provider.postMessageToWebview({
+						type: "partialMessage",
+						partialMessage: {
+							type: "say",
+							say: "error",
+							ts: Date.now(),
+							text: `Error: API configuration not found for ID: ${apiConfigId}`,
+						},
+						responseId: responseId,
+					})
+					break
+				}
+
+				// Create the API handler
+				const apiHandler = buildApiHandler(apiConfig)
+
+				// Create the message
+				const stream = apiHandler.createMessage(systemPrompt, [
+					{ role: "user", content: [{ type: "text", text: userPrompt }] },
+				])
+
+				// Stream the response back to the webview
+				let responseText = ""
+				try {
+					for await (const chunk of stream) {
+						if (chunk.type === "text") {
+							// Log each chunk for debugging
+							provider.log(`🚀 promptDebuggerCallLLM: Received chunk: ${chunk.text}`)
+
+							// Append the chunk to the response text
+							responseText += chunk.text
+
+							// Send the updated response text immediately using the dedicated prompt debugger message type
+							await provider.postMessageToWebview({
+								type: "promptDebuggerPartialMessage",
+								partialMessage: {
+									type: "say",
+									say: "text",
+									ts: Date.now(),
+									text: responseText,
+								},
+								responseId: responseId,
+							})
+
+							// Add a small delay to ensure UI updates are visible
+							await new Promise((resolve) => setTimeout(resolve, 10))
+						}
+					}
+
+					// Send the final message using the dedicated prompt debugger message type
+					await provider.postMessageToWebview({
+						type: "promptDebuggerPartialMessage",
+						partialMessage: {
+							type: "say",
+							say: "text",
+							ts: Date.now(),
+							text: responseText,
+						},
+						responseId: responseId,
+					})
+				} catch (error) {
+					provider.log(`Error streaming response: ${error}`)
+					await provider.postMessageToWebview({
+						type: "promptDebuggerPartialMessage",
+						partialMessage: {
+							type: "say",
+							say: "error",
+							ts: Date.now(),
+							text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+						},
+						responseId: responseId,
+					})
+				}
+			} catch (error) {
+				provider.log(`Error in promptDebuggerCallLLM: ${error}`)
+				if (message.responseId) {
+					await provider.postMessageToWebview({
+						type: "promptDebuggerPartialMessage",
+						partialMessage: {
+							type: "say",
+							say: "error",
+							ts: Date.now(),
+							text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+						},
+						responseId: message.responseId,
+					})
+				}
+			}
+			break
 		case "getListApiConfiguration":
 			try {
 				const listApiConfig = await provider.providerSettingsManager.listConfig()
@@ -1558,5 +1678,81 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			}
 			break
 		}
+		case "promptDebuggerReady":
+			// Set up tracking for editor state changes and send them to the prompt debugger
+			const sendEditorState = () => {
+				const activeEditor = vscode.window.activeTextEditor
+
+				if (activeEditor) {
+					const document = activeEditor.document
+					const selection = activeEditor.selection
+					const position = selection.active
+
+					// Extract file name from path
+					const fileName = document.fileName.split("/").pop() || document.fileName
+
+					// Get content before and after cursor
+					const beforeCursor = document.getText(new vscode.Range(new vscode.Position(0, 0), position))
+
+					const afterCursor = document.getText(
+						new vscode.Range(position, new vscode.Position(document.lineCount, 0)),
+					)
+
+					const editorState: EditorState = {
+						document: {
+							path: document.fileName,
+							name: fileName,
+							language: document.languageId,
+							lineCount: document.lineCount,
+						},
+						selection: {
+							text: document.getText(selection),
+							lineNumber: selection.start.line + 1,
+							column: selection.start.character + 1,
+						},
+						cursor: {
+							line: position.line + 1,
+							column: position.character + 1,
+						},
+						content: {
+							beforeCursor,
+							afterCursor,
+							all: document.getText(),
+						},
+					}
+
+					// Send editor state to webview
+					provider.postMessageToWebview({
+						type: "editorStateUpdate",
+						editorState,
+					})
+				}
+			}
+
+			// Send initial state
+			sendEditorState()
+
+			// Clean up any existing subscriptions first
+			while (provider.editorStateSubscriptions.length) {
+				const sub = provider.editorStateSubscriptions.pop()
+				if (sub) {
+					sub.dispose()
+				}
+			}
+
+			// Set up listeners for document and selection changes directly on the provider's array
+			provider.editorStateSubscriptions.push(
+				vscode.window.onDidChangeTextEditorSelection(() => {
+					sendEditorState()
+				}),
+				vscode.workspace.onDidChangeTextDocument(() => {
+					sendEditorState()
+				}),
+				vscode.window.onDidChangeActiveTextEditor(() => {
+					sendEditorState()
+				}),
+			)
+
+			break
 	}
 }

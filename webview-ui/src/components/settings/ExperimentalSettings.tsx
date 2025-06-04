@@ -226,6 +226,26 @@ export const ExperimentalSettings = ({
 					</div>
 				)}
 
+				{/* Prompt Debugger Section */}
+				<div className="flex flex-col gap-3 mt-4">
+					<div className="flex items-center gap-4 font-bold">
+						<span className="codicon codicon-debug" />
+						<div>{t("Prompt Debugger")}</div>
+					</div>
+					<div>
+						<div className="text-[13px] text-vscode-descriptionForeground mb-2">
+							Access the prompt debugger to test and debug prompts with different models.
+						</div>
+						<Button
+							onClick={() => {
+								// Use the global function we added to App.tsx
+								(window as any).switchToPromptDebugger?.()
+							}}>
+							Open Prompt Debugger
+						</Button>
+					</div>
+				</div>
+
 				<CodeIndexSettings
 					codebaseIndexModels={codebaseIndexModels}
 					codebaseIndexConfig={codebaseIndexConfig}
