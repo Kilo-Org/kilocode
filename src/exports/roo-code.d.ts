@@ -315,6 +315,7 @@ type ProviderSettings = {
 	azureApiVersion?: string | undefined
 	openAiStreamingEnabled?: boolean | undefined
 	enableReasoningEffort?: boolean | undefined
+	openAiThinkingEnabled?: boolean | undefined
 	openAiHostHeader?: string | undefined
 	openAiHeaders?:
 		| {
@@ -736,6 +737,7 @@ type IpcMessage =
 								azureApiVersion?: string | undefined
 								openAiStreamingEnabled?: boolean | undefined
 								enableReasoningEffort?: boolean | undefined
+								openAiThinkingEnabled?: boolean | undefined
 								openAiHostHeader?: string | undefined
 								openAiHeaders?:
 									| {
@@ -1232,6 +1234,7 @@ type TaskCommand =
 					azureApiVersion?: string | undefined
 					openAiStreamingEnabled?: boolean | undefined
 					enableReasoningEffort?: boolean | undefined
+					openAiThinkingEnabled?: boolean | undefined
 					openAiHostHeader?: string | undefined
 					openAiHeaders?:
 						| {

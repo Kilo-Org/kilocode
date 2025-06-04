@@ -564,11 +564,13 @@ const ApiOptions = ({
 				</>
 			)}
 
+			{/* Thinking budget for both thinking models and reasoning budget models */}
 			<ThinkingBudget
 				key={`${selectedProvider}-${selectedModelId}`}
 				apiConfiguration={apiConfiguration}
 				setApiConfigurationField={setApiConfigurationField}
 				modelInfo={selectedModelInfo}
+				useOpenAiThinkingLogic={selectedProvider === "openai"}
 			/>
 
 			{!fromWelcomeView && (

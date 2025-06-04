@@ -128,6 +128,7 @@ const openAiSchema = baseProviderSettingsSchema.extend({
 	openAiUseAzure: z.boolean().optional(),
 	azureApiVersion: z.string().optional(),
 	openAiStreamingEnabled: z.boolean().optional(),
+	openAiThinkingEnabled: z.boolean().optional(),
 	openAiHostHeader: z.string().optional(), // Keep temporarily for backward compatibility during migration.
 	openAiHeaders: z.record(z.string(), z.string()).optional(),
 })
@@ -323,6 +324,7 @@ export const PROVIDER_SETTINGS_KEYS = keysOf<ProviderSettings>()([
 	"openAiUseAzure",
 	"azureApiVersion",
 	"openAiStreamingEnabled",
+	"openAiThinkingEnabled",
 	"openAiHostHeader", // Keep temporarily for backward compatibility during migration.
 	"openAiHeaders",
 	// Ollama

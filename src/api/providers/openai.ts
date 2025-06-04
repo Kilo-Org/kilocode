@@ -151,7 +151,25 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				messages: convertedMessages,
 				stream: true as const,
 				...(isGrokXAI ? {} : { stream_options: { include_usage: true } }),
+				// Add reasoning effort if available
+				...((this.options.reasoningEffort ?? this.getModel().info.reasoningEffort)
+					? { reasoning_effort: this.options.reasoningEffort ?? this.getModel().info.reasoningEffort }
+					: {}),
+				// Add reasoning parameters from getModelParams
 				...(reasoning && reasoning),
+			}
+
+			// Add thinking configuration when enabled by user and budget > 0
+			// Prioritize user's explicit choice over model capabilities
+			if (
+				this.options.openAiThinkingEnabled &&
+				this.options.modelMaxThinkingTokens &&
+				this.options.modelMaxThinkingTokens > 0
+			) {
+				;(requestOptions as any).thinking = {
+					type: "enabled",
+					budget_tokens: this.options.modelMaxThinkingTokens,
+				}
 			}
 
 			// @TODO: Move this to the `getModelParams` function.
@@ -218,6 +236,19 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 						: [systemMessage, ...convertToOpenAiMessages(messages)],
 			}
 
+			// Add thinking configuration when enabled by user and budget > 0
+			// Prioritize user's explicit choice over model capabilities
+			if (
+				this.options.openAiThinkingEnabled &&
+				this.options.modelMaxThinkingTokens &&
+				this.options.modelMaxThinkingTokens > 0
+			) {
+				;(requestOptions as any).thinking = {
+					type: "enabled",
+					budget_tokens: this.options.modelMaxThinkingTokens,
+				}
+			}
+
 			const response = await this.client.chat.completions.create(
 				requestOptions,
 				this._isAzureAiInference(modelUrl) ? { path: AZURE_AI_INFERENCE_PATH } : {},
@@ -244,7 +275,11 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 
 	override getModel() {
 		const id = this.options.openAiModelId ?? ""
-		const info = this.options.openAiCustomModelInfo ?? openAiModelInfoSaneDefaults
+		const baseModelInfo = this.options.openAiCustomModelInfo ?? openAiModelInfoSaneDefaults
+
+		// Use base model info as-is since thinking properties are handled elsewhere
+		const info = baseModelInfo
+
 		const params = getModelParams({ format: "openai", modelId: id, model: info, settings: this.options })
 		return { id, info, ...params }
 	}
@@ -256,6 +291,19 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
 				model: this.getModel().id,
 				messages: [{ role: "user", content: prompt }],
+			}
+
+			// Add thinking configuration when enabled by user and budget > 0
+			// Prioritize user's explicit choice over model capabilities
+			if (
+				this.options.openAiThinkingEnabled &&
+				this.options.modelMaxThinkingTokens &&
+				this.options.modelMaxThinkingTokens > 0
+			) {
+				;(requestOptions as any).thinking = {
+					type: "enabled",
+					budget_tokens: this.options.modelMaxThinkingTokens,
+				}
 			}
 
 			const response = await this.client.chat.completions.create(
@@ -295,7 +343,9 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 					],
 					stream: true,
 					...(isGrokXAI ? {} : { stream_options: { include_usage: true } }),
-					reasoning_effort: this.getModel().info.reasoningEffort,
+					...((this.options.reasoningEffort ?? this.getModel().info.reasoningEffort)
+						? { reasoning_effort: this.options.reasoningEffort ?? this.getModel().info.reasoningEffort }
+						: {}),
 				},
 				methodIsAzureAiInference ? { path: AZURE_AI_INFERENCE_PATH } : {},
 			)

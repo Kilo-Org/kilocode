@@ -287,7 +287,9 @@
 			"medium": "Mittel",
 			"low": "Niedrig"
 		},
-		"setReasoningLevel": "Denkaufwand aktivieren"
+		"setReasoningLevel": "Denkaufwand aktivieren",
+		"controlThinkingBudget": "Denkbudget kontrollieren",
+		"controlThinkingBudgetDescription": "Kompatibilität mit Claude sicherstellen"
 	},
 	"browser": {
 		"enable": {
