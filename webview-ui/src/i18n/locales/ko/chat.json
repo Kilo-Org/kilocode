@@ -155,7 +155,9 @@
 		"didSearchReplace": "Kilo Code가 이 파일에서 검색 및 바꾸기를 수행했습니다:",
 		"wantsToInsert": "Kilo Code가 이 파일에 내용을 삽입하고 싶어합니다:",
 		"wantsToInsertWithLineNumber": "Kilo Code가 이 파일의 {{lineNumber}}번 줄에 내용을 삽입하고 싶어합니다:",
-		"wantsToInsertAtEnd": "Kilo Code가 이 파일의 끝에 내용을 추가하고 싶어합니다:"
+		"wantsToInsertAtEnd": "Kilo Code가 이 파일의 끝에 내용을 추가하고 싶어합니다:",
+		"wantsToReadAndXMore": "Kilo Code가 이 파일과 {{count}}개의 파일을 더 읽으려고 합니다:",
+		"wantsToReadMultiple": "Kilo Code가 여러 파일을 읽으려고 합니다:"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code가 이 디렉토리의 최상위 파일을 보고 싶어합니다:",
@@ -208,6 +210,7 @@
 	"contextCondense": {
 		"title": "컨텍스트 요약됨",
 		"condensing": "컨텍스트 압축 중...",
+		"errorHeader": "컨텍스트 압축 실패",
 		"tokens": "토큰"
 	},
 	"followUpSuggest": {
@@ -217,9 +220,9 @@
 		"title": "🎉 Roo Code {{version}} 출시",
 		"description": "Roo Code {{version}}은 사용자 피드백을 기반으로 강력한 새로운 기능과 개선사항을 제공합니다.",
 		"whatsNew": "새로운 기능",
-		"feature1": "<bold>Gemini 2.5 Flash 프리뷰 모델</bold>: 더 빠르고 효율적인 응답을 위한 최신 Gemini Flash 모델에 접근 가능",
-		"feature2": "<bold>지능적인 컨텍스트 압축</bold>: 작업 헤더의 새 버튼으로 시각적 피드백과 함께 컨텍스트를 지능적으로 압축할 수 있습니다",
-		"feature3": "<bold>모드 정의를 위한 YAML 지원</bold>: YAML 지원으로 모드를 더 쉽게 생성하고 사용자 정의할 수 있습니다",
+		"feature1": "<bold>지능형 컨텍스트 압축이 기본적으로 활성화됨</bold>: 컨텍스트 압축이 이제 기본적으로 활성화되며 자동 압축이 발생하는 시점을 구성할 수 있습니다",
+		"feature2": "<bold>수동 압축 버튼</bold>: 작업 헤더의 새 버튼으로 언제든지 수동으로 컨텍스트 압축을 트리거할 수 있습니다",
+		"feature3": "<bold>향상된 압축 설정</bold>: <contextSettingsLink>컨텍스트 설정</contextSettingsLink>을 통해 자동 압축이 언제 어떻게 발생하는지 세밀하게 조정",
 		"hideButton": "공지 숨기기",
 		"detailsDiscussLinks": "<discordLink>Discord</discordLink>와 <redditLink>Reddit</redditLink>에서 더 자세한 정보를 확인하고 논의하세요 🚀"
 	},
@@ -255,6 +258,7 @@
 		}
 	},
 	"systemPromptWarning": "경고: 사용자 정의 시스템 프롬프트 재정의가 활성화되었습니다. 이로 인해 기능이 심각하게 손상되고 예측할 수 없는 동작이 발생할 수 있습니다.",
+	"profileViolationWarning": "현재 프로필이 조직 설정을 위반합니다",
 	"shellIntegration": {
 		"title": "명령 실행 경고",
 		"description": "명령이 VSCode 터미널 쉘 통합 없이 실행되고 있습니다. 이 경고를 숨기려면 <settingsLink>Kilo Code 설정</settingsLink>의 <strong>Terminal</strong> 섹션에서 쉘 통합을 비활성화하거나 아래 링크를 사용하여 VSCode 터미널 통합 문제를 해결하세요.",
@@ -271,5 +275,13 @@
 		"wantsToSearch": "Kilo Code가 코드베이스에서 <code>{{query}}</code>을(를) 검색하고 싶어합니다:",
 		"wantsToSearchWithPath": "Kilo Code가 <code>{{path}}</code>에서 <code>{{query}}</code>을(를) 검색하고 싶어합니다:",
 		"didSearch": "<code>{{query}}</code>에 대한 검색 결과 {{count}}개 찾음:"
+	},
+	"read-batch": {
+		"approve": {
+			"title": "모두 승인"
+		},
+		"deny": {
+			"title": "모두 거부"
+		}
 	}
 }

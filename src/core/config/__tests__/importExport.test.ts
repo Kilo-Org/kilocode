@@ -6,6 +6,7 @@ import * as path from "path"
 import * as vscode from "vscode"
 
 import type { ProviderName } from "@roo-code/types"
+import { TelemetryService } from "@roo-code/telemetry"
 
 import { importSettings, exportSettings } from "../importExport"
 import { ProviderSettingsManager } from "../ProviderSettingsManager"
@@ -40,6 +41,10 @@ describe("importExport", () => {
 
 	beforeEach(() => {
 		jest.clearAllMocks()
+
+		if (!TelemetryService.hasInstance()) {
+			TelemetryService.createInstance([])
+		}
 
 		mockProviderSettingsManager = {
 			export: jest.fn(),
@@ -226,10 +231,8 @@ describe("importExport", () => {
 				customModesManager: mockCustomModesManager,
 			})
 
-			expect(result).toEqual({
-				success: false,
-				error: "Expected property name or '}' in JSON at position 2",
-			})
+			expect(result.success).toBe(false)
+			expect(result.error).toMatch(/^Expected property name or '}' in JSON at position 2/)
 			expect(fs.readFile).toHaveBeenCalledWith("/mock/path/settings.json", "utf-8")
 			expect(mockProviderSettingsManager.import).not.toHaveBeenCalled()
 			expect(mockContextProxy.setValues).not.toHaveBeenCalled()

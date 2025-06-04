@@ -6,6 +6,7 @@ import removeMd from "remove-markdown"
 import { Trans } from "react-i18next"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import useSound from "use-sound"
+import { LRUCache } from "lru-cache"
 
 import type { ClineAsk, ClineMessage } from "@roo-code/types"
 
@@ -17,6 +18,7 @@ import { combineCommandSequences } from "@roo/combineCommandSequences"
 import { getApiMetrics } from "@roo/getApiMetrics"
 import { AudioType } from "@roo/WebviewMessage"
 import { getAllModes } from "@roo/modes"
+import { ProfileValidator } from "@roo/ProfileValidator"
 
 import { vscode } from "@src/utils/vscode"
 import { validateCommand } from "@src/utils/command-validation"
@@ -36,6 +38,7 @@ import AutoApproveMenu from "./AutoApproveMenu"
 import BottomControls from "./BottomControls" // kilocode_change
 import SystemPromptWarning from "./SystemPromptWarning"
 import { showSystemNotification } from "@/kilocode/helpers" // kilocode_change
+// import ProfileViolationWarning from "./ProfileViolationWarning" kilocode_change: unused
 import { CheckpointWarning } from "./CheckpointWarning"
 
 export interface ChatViewProps {
@@ -68,6 +71,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		currentTaskItem,
 		taskHistory,
 		apiConfiguration,
+		organizationAllowList,
 		mcpServers,
 		alwaysAllowBrowser,
 		alwaysAllowReadOnly,
@@ -90,6 +94,11 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		soundEnabled,
 		soundVolume,
 	} = useExtensionState()
+
+	const messagesRef = useRef(messages)
+	useEffect(() => {
+		messagesRef.current = messages
+	}, [messages])
 
 	const { tasks } = useTaskSearch()
 
@@ -128,6 +137,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const [didClickCancel, setDidClickCancel] = useState(false)
 	const virtuosoRef = useRef<VirtuosoHandle>(null)
 	const [expandedRows, setExpandedRows] = useState<Record<number, boolean>>({})
+	const prevExpandedRowsRef = useRef<Record<number, boolean>>()
 	const scrollContainerRef = useRef<HTMLDivElement>(null)
 	const disableAutoScrollRef = useRef(false)
 	const [showScrollToBottom, setShowScrollToBottom] = useState(false)
@@ -136,6 +146,22 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const [wasStreaming, setWasStreaming] = useState<boolean>(false)
 	const [showCheckpointWarning, setShowCheckpointWarning] = useState<boolean>(false)
 	const [isCondensing, setIsCondensing] = useState<boolean>(false)
+	const everVisibleMessagesTsRef = useRef<LRUCache<number, boolean>>(
+		new LRUCache({
+			max: 250,
+			ttl: 1000 * 60 * 15, // 15 minutes TTL for long-running tasks
+		}),
+	)
+
+	const clineAskRef = useRef(clineAsk)
+	useEffect(() => {
+		clineAskRef.current = clineAsk
+	}, [clineAsk])
+
+	const isProfileDisabled = useMemo(
+		() => !!apiConfiguration && !ProfileValidator.isProfileAllowed(apiConfiguration, organizationAllowList),
+		[apiConfiguration, organizationAllowList],
+	)
 
 	// UI layout depends on the last 2 messages
 	// (since it relies on the content of these messages, we are deep comparing. i.e. the button state after hitting button sets enableButtons to false, and this effect otherwise would have to true again even if messages didn't change
@@ -240,6 +266,15 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 								case "finishTask":
 									setPrimaryButtonText(t("chat:completeSubtaskAndReturn"))
 									setSecondaryButtonText(undefined)
+									break
+								case "readFile":
+									if (tool.batchFiles && Array.isArray(tool.batchFiles)) {
+										setPrimaryButtonText(t("chat:read-batch.approve.title"))
+										setSecondaryButtonText(t("chat:read-batch.deny.title"))
+									} else {
+										setPrimaryButtonText(t("chat:approve.title"))
+										setSecondaryButtonText(t("chat:reject.title"))
+									}
 									break
 								default:
 									setPrimaryButtonText(t("chat:approve.title"))
@@ -348,14 +383,6 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							break
 						case "api_req_started":
 							if (secondLastMessage?.ask === "command_output") {
-								// If the last ask is a command_output, and we
-								// receive an api_req_started, then that means
-								// the command has finished and we don't need
-								// input from the user anymore (in every other
-								// case, the user has to interact with input
-								// field or buttons to continue, which does the
-								// following automatically).
-								setInputValue("")
 								setSendingDisabled(true)
 								setSelectedImages([])
 								setClineAsk(undefined)
@@ -388,7 +415,32 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		}
 	}, [messages.length])
 
-	useEffect(() => setExpandedRows({}), [task?.ts])
+	useEffect(() => {
+		setExpandedRows({})
+		everVisibleMessagesTsRef.current.clear() // Clear for new task
+	}, [task?.ts])
+
+	useEffect(() => () => everVisibleMessagesTsRef.current.clear(), [])
+
+	useEffect(() => {
+		const prev = prevExpandedRowsRef.current
+		let wasAnyRowExpandedByUser = false
+		if (prev) {
+			// Check if any row transitioned from false/undefined to true
+			for (const [tsKey, isExpanded] of Object.entries(expandedRows)) {
+				const ts = Number(tsKey)
+				if (isExpanded && !(prev[ts] ?? false)) {
+					wasAnyRowExpandedByUser = true
+					break
+				}
+			}
+		}
+
+		if (wasAnyRowExpandedByUser) {
+			disableAutoScrollRef.current = true
+		}
+		prevExpandedRowsRef.current = expandedRows // Store current state for next comparison
+	}, [expandedRows])
 
 	const isStreaming = useMemo(() => {
 		// Checking clineAsk isn't enough since messages effect may be called
@@ -449,10 +501,13 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			text = text.trim()
 
 			if (text || images.length > 0) {
-				if (messages.length === 0) {
+				if (messagesRef.current.length === 0) {
 					vscode.postMessage({ type: "newTask", text, images })
-				} else if (clineAsk) {
-					switch (clineAsk) {
+				} else if (clineAskRef.current) {
+					// Use clineAskRef.current
+					switch (
+						clineAskRef.current // Use clineAskRef.current
+					) {
 						case "followup":
 						case "tool":
 						case "browser_action_launch":
@@ -483,7 +538,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				handleChatReset()
 			}
 		},
-		[messages.length, clineAsk, handleChatReset],
+		[handleChatReset], // messagesRef and clineAskRef are stable
 	)
 
 	const handleSetChatBoxMessage = useCallback(
@@ -701,51 +756,68 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	}, [isHidden, sendingDisabled, enableButtons])
 
 	const visibleMessages = useMemo(() => {
-		return modifiedMessages.filter((message) => {
+		const newVisibleMessages = modifiedMessages.filter((message) => {
+			if (everVisibleMessagesTsRef.current.has(message.ts)) {
+				// If it was ever visible, and it's not one of the types that should always be hidden once processed, keep it.
+				// This helps prevent flickering for messages like 'api_req_retry_delayed' if they are no longer the absolute last.
+				const alwaysHiddenOnceProcessedAsk: ClineAsk[] = [
+					"api_req_failed",
+					"resume_task",
+					"resume_completed_task",
+				]
+				const alwaysHiddenOnceProcessedSay = [
+					"api_req_finished",
+					"api_req_retried",
+					"api_req_deleted",
+					"mcp_server_request_started",
+				]
+				if (message.ask && alwaysHiddenOnceProcessedAsk.includes(message.ask)) return false
+				if (message.say && alwaysHiddenOnceProcessedSay.includes(message.say)) return false
+				// Also, re-evaluate empty text messages if they were previously visible but now empty (e.g. partial stream ended)
+				if (message.say === "text" && (message.text ?? "") === "" && (message.images?.length ?? 0) === 0) {
+					return false
+				}
+				return true
+			}
+
+			// Original filter logic
 			switch (message.ask) {
 				case "completion_result":
-					// Don't show a chat row for a completion_result ask without
-					// text. This specific type of message only occurs if cline
-					// wants to execute a command as part of its completion
-					// result, in which case we interject the completion_result
-					// tool with the execute_command tool.
-					if (message.text === "") {
-						return false
-					}
+					if (message.text === "") return false
 					break
-				case "api_req_failed": // This message is used to update the latest `api_req_started` that the request failed.
+				case "api_req_failed":
 				case "resume_task":
 				case "resume_completed_task":
 					return false
 			}
 			switch (message.say) {
-				case "api_req_finished": // `combineApiRequests` removes this from `modifiedMessages` anyways.
-				case "api_req_retried": // This message is used to update the latest `api_req_started` that the request was retried.
-				case "api_req_deleted": // Aggregated `api_req` metrics from deleted messages.
+				case "api_req_finished":
+				case "api_req_retried":
+				case "api_req_deleted":
 					return false
 				case "api_req_retry_delayed":
-					// Only show the retry message if it's the last message or
-					// the last messages is api_req_retry_delayed+resume_task.
 					const last1 = modifiedMessages.at(-1)
 					const last2 = modifiedMessages.at(-2)
 					if (last1?.ask === "resume_task" && last2 === message) {
-						return true
-					}
-					return message === last1
-				case "text":
-					// Sometimes cline returns an empty text message, we don't
-					// want to render these. (We also use a say text for user
-					// messages, so in case they just sent images we still
-					// render that.)
-					if ((message.text ?? "") === "" && (message.images?.length ?? 0) === 0) {
+						// This specific sequence should be visible
+					} else if (message !== last1) {
+						// If not the specific sequence above, and not the last message, hide it.
 						return false
 					}
+					break
+				case "text":
+					if ((message.text ?? "") === "" && (message.images?.length ?? 0) === 0) return false
 					break
 				case "mcp_server_request_started":
 					return false
 			}
 			return true
 		})
+
+		// Update the set of ever-visible messages (LRUCache automatically handles cleanup)
+		newVisibleMessages.forEach((msg) => everVisibleMessagesTsRef.current.set(msg.ts, true))
+
+		return newVisibleMessages
 	}, [modifiedMessages])
 
 	const isReadOnlyToolAction = useCallback((message: ClineMessage | undefined) => {
@@ -1044,54 +1116,21 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		})
 	}, [])
 
+	const handleSetExpandedRow = useCallback(
+		(ts: number, expand?: boolean) => {
+			setExpandedRows((prev) => ({ ...prev, [ts]: expand === undefined ? !prev[ts] : expand }))
+		},
+		[setExpandedRows], // setExpandedRows is stable
+	)
+
 	// Scroll when user toggles certain rows.
 	const toggleRowExpansion = useCallback(
 		(ts: number) => {
-			const isCollapsing = expandedRows[ts] ?? false
-			const lastGroup = groupedMessages.at(-1)
-			const isLast = Array.isArray(lastGroup) ? lastGroup[0].ts === ts : lastGroup?.ts === ts
-			const secondToLastGroup = groupedMessages.at(-2)
-			const isSecondToLast = Array.isArray(secondToLastGroup)
-				? secondToLastGroup[0].ts === ts
-				: secondToLastGroup?.ts === ts
-
-			const isLastCollapsedApiReq =
-				isLast &&
-				!Array.isArray(lastGroup) && // Make sure it's not a browser session group
-				lastGroup?.say === "api_req_started" &&
-				!expandedRows[lastGroup.ts]
-
-			setExpandedRows((prev) => ({ ...prev, [ts]: !prev[ts] }))
-
-			// Disable auto scroll when user expands row
-			if (!isCollapsing) {
-				disableAutoScrollRef.current = true
-			}
-
-			if (isCollapsing && isAtBottom) {
-				const timer = setTimeout(() => scrollToBottomAuto(), 0)
-				return () => clearTimeout(timer)
-			} else if (isLast || isSecondToLast) {
-				if (isCollapsing) {
-					if (isSecondToLast && !isLastCollapsedApiReq) {
-						return
-					}
-
-					const timer = setTimeout(() => scrollToBottomAuto(), 0)
-					return () => clearTimeout(timer)
-				} else {
-					const timer = setTimeout(() => {
-						virtuosoRef.current?.scrollToIndex({
-							index: groupedMessages.length - (isLast ? 1 : 2),
-							align: "start",
-						})
-					}, 0)
-
-					return () => clearTimeout(timer)
-				}
-			}
+			handleSetExpandedRow(ts)
+			// The logic to set disableAutoScrollRef.current = true on expansion
+			// is now handled by the useEffect hook that observes expandedRows.
 		},
-		[groupedMessages, expandedRows, scrollToBottomAuto, isAtBottom],
+		[handleSetExpandedRow],
 	)
 
 	const handleRowHeightChange = useCallback(
@@ -1149,6 +1188,25 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 	const placeholderText = task ? t("chat:typeMessage") : t("chat:typeTask")
 
+	const handleSuggestionClickInRow = useCallback(
+		(answer: string, event?: React.MouseEvent) => {
+			if (event?.shiftKey) {
+				// Always append to existing text, don't overwrite
+				setInputValue((currentValue) => {
+					return currentValue !== "" ? `${currentValue} \n${answer}` : answer
+				})
+			} else {
+				handleSendMessage(answer, [])
+			}
+		},
+		[handleSendMessage, setInputValue], // setInputValue is stable, handleSendMessage depends on clineAsk
+	)
+
+	const handleBatchFileResponse = useCallback((response: { [key: string]: boolean }) => {
+		// Handle batch file response, e.g., for file uploads
+		vscode.postMessage({ type: "askResponse", askResponse: "objectResponse", text: JSON.stringify(response) })
+	}, [])
+
 	const itemContent = useCallback(
 		(index: number, messageOrGroup: ClineMessage | ClineMessage[]) => {
 			// browser session group
@@ -1160,7 +1218,6 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						lastModifiedMessage={modifiedMessages.at(-1)}
 						onHeightChange={handleRowHeightChange}
 						isStreaming={isStreaming}
-						// Pass handlers for each message in the group
 						isExpanded={(messageTs: number) => expandedRows[messageTs] ?? false}
 						onToggleExpand={(messageTs: number) => {
 							setExpandedRows((prev) => ({
@@ -1178,32 +1235,25 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					key={messageOrGroup.ts}
 					message={messageOrGroup}
 					isExpanded={expandedRows[messageOrGroup.ts] || false}
-					onToggleExpand={() => toggleRowExpansion(messageOrGroup.ts)}
-					lastModifiedMessage={modifiedMessages.at(-1)}
-					isLast={index === groupedMessages.length - 1}
+					onToggleExpand={toggleRowExpansion} // This was already stabilized
+					lastModifiedMessage={modifiedMessages.at(-1)} // Original direct access
+					isLast={index === groupedMessages.length - 1} // Original direct access
 					onHeightChange={handleRowHeightChange}
 					isStreaming={isStreaming}
-					onSuggestionClick={(answer: string, event?: React.MouseEvent) => {
-						if (event?.shiftKey) {
-							// Always append to existing text, don't overwrite
-							setInputValue((currentValue) => {
-								return currentValue !== "" ? `${currentValue} \n${answer}` : answer
-							})
-						} else {
-							handleSendMessage(answer, [])
-						}
-					}}
+					onSuggestionClick={handleSuggestionClickInRow} // This was already stabilized
+					onBatchFileResponse={handleBatchFileResponse}
 				/>
 			)
 		},
 		[
 			expandedRows,
+			toggleRowExpansion,
 			modifiedMessages,
 			groupedMessages.length,
 			handleRowHeightChange,
 			isStreaming,
-			toggleRowExpansion,
-			handleSendMessage,
+			handleSuggestionClickInRow,
+			handleBatchFileResponse,
 		],
 	)
 
@@ -1292,7 +1342,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		acceptInput: () => {
 			if (enableButtons && primaryButtonText) {
 				handlePrimaryButtonClick(inputValue, selectedImages)
-			} else if (!sendingDisabled && (inputValue.trim() || selectedImages.length > 0)) {
+			} else if (!sendingDisabled && !isProfileDisabled && (inputValue.trim() || selectedImages.length > 0)) {
 				handleSendMessage(inputValue, selectedImages)
 			}
 		},
@@ -1365,7 +1415,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						{/* <RooHero /> kilocode_change: do not show */}
 						{/* Show the task history preview if expanded and tasks exist */}
 						{taskHistory.length > 0 && isExpanded && <HistoryPreview />}
-						<p className="text-vscode-editor-foreground leading-tight font-vscode-font-family text-center text-balance max-w-[380px]">
+						<p className="text-vscode-editor-foreground leading-tight font-vscode-font-family text-center text-balance max-w-[380px] mx-auto">
 							<Trans
 								i18nKey="chat:about"
 								components={{
@@ -1410,10 +1460,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						<Virtuoso
 							ref={virtuosoRef}
 							key={task.ts} // trick to make sure virtuoso re-renders when task changes, and we use initialTopMostItemIndex to start at the bottom
-							className="scrollable grow overflow-y-scroll"
-							components={{
-								Footer: () => <div className="h-[5px]" />, // Add empty padding at the bottom
-							}}
+							className="scrollable grow overflow-y-scroll mb-[5px]"
 							// increasing top by 3_000 to prevent jumping around when user collapses a row
 							increaseViewportBy={{ top: 3_000, bottom: Number.MAX_SAFE_INTEGER }} // hack to make sure the last message is always rendered to get truly perfect scroll to bottom animation when new messages are added (Number.MAX_SAFE_INTEGER is safe for arithmetic operations, which is all virtuoso uses this value for in src/sizeRangeSystem.ts)
 							data={groupedMessages} // messages is the raw format returned by extension, modifiedMessages is the manipulated structure that combines certain messages of related type, and visibleMessages is the filtered structure that removes messages that should not be rendered
@@ -1512,7 +1559,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				ref={textAreaRef}
 				inputValue={inputValue}
 				setInputValue={setInputValue}
-				sendingDisabled={sendingDisabled}
+				sendingDisabled={sendingDisabled || isProfileDisabled}
 				selectApiConfigDisabled={sendingDisabled && clineAsk !== "api_req_failed"}
 				placeholderText={placeholderText}
 				selectedImages={selectedImages}
@@ -1530,6 +1577,13 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				modeShortcutText={modeShortcutText}
 			/>
 			<BottomControls />
+
+			{/* kilocode_change: disable {isProfileDisabled && (
+				<div className="px-3">
+					<ProfileViolationWarning />
+				</div>
+			)} */}
+
 			<div id="roo-portal" />
 		</div>
 	)

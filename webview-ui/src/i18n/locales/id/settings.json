@@ -28,9 +28,13 @@
 		"notifications": "Notifikasi",
 		"contextManagement": "Konteks",
 		"terminal": "Terminal",
+		"prompts": "Prompt",
 		"experimental": "Eksperimental",
 		"language": "Bahasa",
 		"about": "Tentang Kilo Code"
+	},
+	"prompts": {
+		"description": "Konfigurasi support prompt yang digunakan untuk aksi cepat seperti meningkatkan prompt, menjelaskan kode, dan memperbaiki masalah. Prompt ini membantu Kilo Code memberikan bantuan yang lebih baik untuk tugas pengembangan umum."
 	},
 	"codeIndex": {
 		"title": "Pengindeksan Codebase",
@@ -171,6 +175,7 @@
 		"groqApiKey": "Groq API Key",
 		"getGeminiApiKey": "Dapatkan Gemini API Key",
 		"openAiApiKey": "OpenAI API Key",
+		"apiKey": "API Key",
 		"openAiBaseUrl": "Base URL",
 		"getOpenAiApiKey": "Dapatkan OpenAI API Key",
 		"mistralApiKey": "Mistral API Key",
@@ -189,6 +194,11 @@
 		"awsSessionToken": "AWS Session Token",
 		"awsRegion": "AWS Region",
 		"awsCrossRegion": "Gunakan cross-region inference",
+		"awsBedrockVpc": {
+			"useCustomVpcEndpoint": "Gunakan VPC endpoint kustom",
+			"vpcEndpointUrlPlaceholder": "Masukkan VPC Endpoint URL (opsional)",
+			"examples": "Contoh:"
+		},
 		"enablePromptCaching": "Aktifkan prompt caching",
 		"enablePromptCachingTitle": "Aktifkan prompt caching untuk meningkatkan performa dan mengurangi biaya untuk model yang didukung.",
 		"cacheUsageNote": "Catatan: Jika kamu tidak melihat penggunaan cache, coba pilih model yang berbeda lalu pilih model yang kamu inginkan lagi.",
@@ -337,6 +347,25 @@
 	},
 	"contextManagement": {
 		"description": "Kontrol informasi apa yang disertakan dalam context window AI, mempengaruhi penggunaan token dan kualitas respons",
+		"autoCondenseContextPercent": {
+			"label": "Ambang batas untuk memicu kondensasi konteks cerdas",
+			"description": "Ketika context window mencapai ambang batas ini, Kilo Code akan secara otomatis mengondensasikannya."
+		},
+		"condensingApiConfiguration": {
+			"label": "Konfigurasi API untuk Kondensasi Konteks",
+			"description": "Pilih konfigurasi API mana yang akan digunakan untuk operasi kondensasi konteks. Biarkan tidak dipilih untuk menggunakan konfigurasi aktif saat ini.",
+			"useCurrentConfig": "Default"
+		},
+		"customCondensingPrompt": {
+			"label": "Prompt Kondensasi Konteks Kustom",
+			"description": "Kustomisasi system prompt yang digunakan untuk kondensasi konteks. Biarkan kosong untuk menggunakan prompt default.",
+			"placeholder": "Masukkan prompt kondensasi kustom kamu di sini...\n\nKamu dapat menggunakan struktur yang sama dengan prompt default:\n- Previous Conversation\n- Current Work\n- Key Technical Concepts\n- Relevant Files and Code\n- Problem Solving\n- Pending Tasks and Next Steps",
+			"reset": "Reset ke Default",
+			"hint": "Kosong = gunakan prompt default"
+		},
+		"autoCondenseContext": {
+			"name": "Secara otomatis memicu kondensasi konteks cerdas"
+		},
 		"openTabs": {
 			"label": "Batas konteks tab terbuka",
 			"description": "Jumlah maksimum tab VSCode terbuka yang disertakan dalam konteks. Nilai yang lebih tinggi memberikan lebih banyak konteks tetapi meningkatkan penggunaan token."
@@ -348,6 +377,10 @@
 		"rooignore": {
 			"label": "Tampilkan file .kilocodeignore'd dalam daftar dan pencarian",
 			"description": "Ketika diaktifkan, file yang cocok dengan pola di .kilocodeignore akan ditampilkan dalam daftar dengan simbol kunci. Ketika dinonaktifkan, file ini akan sepenuhnya disembunyikan dari daftar file dan pencarian."
+		},
+		"maxConcurrentFileReads": {
+			"label": "Batas pembacaan file bersamaan",
+			"description": "Jumlah maksimum file yang dapat diproses oleh tool 'read_file' secara bersamaan. Nilai yang lebih tinggi dapat mempercepat pembacaan beberapa file kecil tetapi meningkatkan penggunaan memori."
 		},
 		"maxReadFile": {
 			"label": "Ambang batas auto-truncate pembacaan file",
@@ -475,6 +508,10 @@
 			"name": "Gunakan fitur \"autocomplete\" eksperimental",
 			"description": "Ketika diaktifkan, Kilo Code akan memberikan saran kode inline saat kamu mengetik. Memerlukan Kilo Code API Provider."
 		},
+		"CONCURRENT_FILE_READS": {
+			"name": "Aktifkan pembacaan file bersamaan",
+			"description": "Ketika diaktifkan, Kilo Code dapat membaca beberapa file dalam satu permintaan (hingga 15 file). Ketika dinonaktifkan, Kilo Code harus membaca file satu per satu. Menonaktifkan ini dapat membantu saat bekerja dengan model yang kurang mampu atau ketika kamu ingin kontrol lebih terhadap akses file."
+		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Gunakan tool multi block diff eksperimental",
 			"description": "Ketika diaktifkan, Kilo Code akan menggunakan tool multi block diff. Ini akan mencoba memperbarui beberapa blok kode dalam file dalam satu permintaan."
@@ -547,7 +584,10 @@
 			"invalidFormat": "Format ARN tidak valid. Silakan periksa persyaratan format.",
 			"regionMismatch": "Peringatan: Region di ARN kamu ({{arnRegion}}) tidak cocok dengan region yang kamu pilih ({{region}}). Ini dapat menyebabkan masalah akses. Provider akan menggunakan region dari ARN."
 		},
-		"modelAvailability": "Model ID ({{modelId}}) yang kamu berikan tidak tersedia. Silakan pilih model yang berbeda."
+		"modelAvailability": "Model ID ({{modelId}}) yang kamu berikan tidak tersedia. Silakan pilih model yang berbeda.",
+		"providerNotAllowed": "Provider '{{provider}}' tidak diizinkan oleh organisasi kamu",
+		"modelNotAllowed": "Model '{{model}}' tidak diizinkan untuk provider '{{provider}}' oleh organisasi kamu",
+		"profileInvalid": "Profil ini berisi provider atau model yang tidak diizinkan oleh organisasi kamu"
 	},
 	"placeholders": {
 		"apiKey": "Masukkan API Key...",

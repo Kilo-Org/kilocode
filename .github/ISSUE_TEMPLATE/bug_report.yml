@@ -5,7 +5,7 @@ body:
     - type: textarea
       id: description
       attributes:
-          label: Add a description (be as detailed as possible)
+          label: Description
           description: |
             Which app version are you using (e.g. v3.3.1)?
             Which API Provider are you using (e.g. Kilo, OpenRouter, Anthropic)?

@@ -1,0 +1,8 @@
+{
+	"title": "Compte",
+	"profilePicture": "Imatge de perfil",
+	"unknownUser": "Usuari desconegut",
+	"logOut": "Tancar sessió",
+	"testApiAuthentication": "Provar autenticació d'API",
+	"signIn": "Connecta't a Roo Code Cloud"
+}

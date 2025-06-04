@@ -28,9 +28,13 @@
 		"notifications": "Benachrichtigungen",
 		"contextManagement": "Kontext",
 		"terminal": "Terminal",
+		"prompts": "Eingabeaufforderungen",
 		"experimental": "Experimentell",
 		"language": "Sprache",
 		"about": "Über Kilo Code"
+	},
+	"prompts": {
+		"description": "Konfiguriere Support-Prompts, die für schnelle Aktionen wie das Verbessern von Prompts, das Erklären von Code und das Beheben von Problemen verwendet werden. Diese Prompts helfen Kilo Code dabei, bessere Unterstützung für häufige Entwicklungsaufgaben zu bieten."
 	},
 	"codeIndex": {
 		"title": "Codebase-Indexierung",
@@ -171,6 +175,7 @@
 		"groqApiKey": "Groq API-Schlüssel",
 		"getGeminiApiKey": "Gemini API-Schlüssel erhalten",
 		"openAiApiKey": "OpenAI API-Schlüssel",
+		"apiKey": "API-Schlüssel",
 		"openAiBaseUrl": "Basis-URL",
 		"getOpenAiApiKey": "OpenAI API-Schlüssel erhalten",
 		"mistralApiKey": "Mistral API-Schlüssel",
@@ -189,6 +194,11 @@
 		"awsSessionToken": "AWS Sitzungstoken",
 		"awsRegion": "AWS Region",
 		"awsCrossRegion": "Regionsübergreifende Inferenz verwenden",
+		"awsBedrockVpc": {
+			"useCustomVpcEndpoint": "Benutzerdefinierten VPC-Endpunkt verwenden",
+			"vpcEndpointUrlPlaceholder": "VPC-Endpunkt-URL eingeben (optional)",
+			"examples": "Beispiele:"
+		},
 		"enablePromptCaching": "Prompt-Caching aktivieren",
 		"enablePromptCachingTitle": "Prompt-Caching aktivieren, um die Leistung zu verbessern und Kosten für unterstützte Modelle zu reduzieren.",
 		"cacheUsageNote": "Hinweis: Wenn Sie keine Cache-Nutzung sehen, versuchen Sie ein anderes Modell auszuwählen und dann Ihr gewünschtes Modell erneut auszuwählen.",
@@ -337,6 +347,25 @@
 	},
 	"contextManagement": {
 		"description": "Steuern Sie, welche Informationen im KI-Kontextfenster enthalten sind, was den Token-Verbrauch und die Antwortqualität beeinflusst",
+		"autoCondenseContextPercent": {
+			"label": "Schwellenwert für intelligente Kontextkomprimierung",
+			"description": "Wenn das Kontextfenster diesen Schwellenwert erreicht, wird Kilo Code es automatisch komprimieren."
+		},
+		"condensingApiConfiguration": {
+			"label": "API-Konfiguration für Kontextkomprimierung",
+			"description": "Wählen Sie, welche API-Konfiguration für Kontextkomprimierungsoperationen verwendet werden soll. Lassen Sie unausgewählt, um die aktuelle aktive Konfiguration zu verwenden.",
+			"useCurrentConfig": "Aktuelle Konfiguration verwenden"
+		},
+		"customCondensingPrompt": {
+			"label": "Benutzerdefinierter Kontextkomprimierungs-Prompt",
+			"description": "Passen Sie den System-Prompt an, der für die Kontextkomprimierung verwendet wird. Lassen Sie leer, um den Standard-Prompt zu verwenden.",
+			"placeholder": "Geben Sie hier Ihren benutzerdefinierten Komprimierungs-Prompt ein...\n\nSie können die gleiche Struktur wie der Standard-Prompt verwenden:\n- Vorherige Konversation\n- Aktuelle Arbeit\n- Wichtige technische Konzepte\n- Relevante Dateien und Code\n- Problemlösung\n- Ausstehende Aufgaben und nächste Schritte",
+			"reset": "Auf Standard zurücksetzen",
+			"hint": "Leer = Standard-Prompt verwenden"
+		},
+		"autoCondenseContext": {
+			"name": "Intelligente Kontextkomprimierung automatisch auslösen"
+		},
 		"openTabs": {
 			"label": "Geöffnete Tabs Kontextlimit",
 			"description": "Maximale Anzahl von geöffneten VSCode-Tabs, die im Kontext enthalten sein sollen. Höhere Werte bieten mehr Kontext, erhöhen aber den Token-Verbrauch."
@@ -348,6 +377,10 @@
 		"rooignore": {
 			"label": ".kilocodeignore-Dateien in Listen und Suchen anzeigen",
 			"description": "Wenn aktiviert, werden Dateien, die mit Mustern in .kilocodeignore übereinstimmen, in Listen mit einem Schlosssymbol angezeigt. Wenn deaktiviert, werden diese Dateien vollständig aus Dateilisten und Suchen ausgeblendet."
+		},
+		"maxConcurrentFileReads": {
+			"label": "Concurrent file reads limit",
+			"description": "Maximum number of files the 'read_file' tool can process concurrently. Higher values may speed up reading multiple small files but increase memory usage."
 		},
 		"maxReadFile": {
 			"label": "Schwellenwert für automatische Dateilesekürzung",
@@ -434,26 +467,6 @@
 		}
 	},
 	"experimental": {
-		"autoCondenseContextPercent": {
-			"label": "Schwellenwert für intelligente Kontextkomprimierung",
-			"description": "Wenn das Kontextfenster diesen Schwellenwert erreicht, wird Kilo Code es automatisch komprimieren."
-		},
-		"condensingApiConfiguration": {
-			"label": "API-Konfiguration für Kontextkomprimierung",
-			"description": "Wählen Sie, welche API-Konfiguration für Kontextkomprimierungsoperationen verwendet werden soll. Lassen Sie unausgewählt, um die aktuelle aktive Konfiguration zu verwenden.",
-			"useCurrentConfig": "Aktuelle Konfiguration verwenden"
-		},
-		"customCondensingPrompt": {
-			"label": "Benutzerdefinierter Kontextkomprimierungs-Prompt",
-			"description": "Passen Sie den System-Prompt an, der für die Kontextkomprimierung verwendet wird. Lassen Sie leer, um den Standard-Prompt zu verwenden.",
-			"placeholder": "Geben Sie hier Ihren benutzerdefinierten Komprimierungs-Prompt ein...\n\nSie können die gleiche Struktur wie der Standard-Prompt verwenden:\n- Vorherige Konversation\n- Aktuelle Arbeit\n- Wichtige technische Konzepte\n- Relevante Dateien und Code\n- Problemlösung\n- Ausstehende Aufgaben und nächste Schritte",
-			"reset": "Auf Standard zurücksetzen",
-			"hint": "Leer = Standard-Prompt verwenden"
-		},
-		"AUTO_CONDENSE_CONTEXT": {
-			"name": "Intelligente Kontextkomprimierung automatisch auslösen",
-			"description": "Intelligente Kontextkomprimierung verwendet einen LLM-Aufruf, um das vorherige Gespräch zusammenzufassen, wenn das Kontextfenster der Aufgabe einen voreingestellten Schwellenwert erreicht, anstatt alte Nachrichten zu verwerfen, wenn der Kontext voll ist."
-		},
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "Experimentelle einheitliche Diff-Strategie verwenden",
 			"description": "Aktiviert die experimentelle einheitliche Diff-Strategie. Diese Strategie könnte die Anzahl der durch Modellfehler verursachten Wiederholungen reduzieren, kann aber unerwartetes Verhalten oder falsche Bearbeitungen verursachen. Nur aktivieren, wenn du die Risiken verstehst und bereit bist, alle Änderungen sorgfältig zu überprüfen."
@@ -477,6 +490,10 @@
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Experimentelles Multi-Block-Diff-Werkzeug verwenden",
 			"description": "Wenn aktiviert, verwendet Kilo Code das Multi-Block-Diff-Werkzeug. Dies versucht, mehrere Codeblöcke in der Datei in einer Anfrage zu aktualisieren."
+		},
+		"CONCURRENT_FILE_READS": {
+			"name": "Gleichzeitiges Lesen von Dateien aktivieren",
+			"description": "Wenn aktiviert, kann Kilo Code mehrere Dateien in einer einzigen Anfrage lesen (bis zu 15 Dateien). Wenn deaktiviert, muss Kilo Code Dateien nacheinander lesen. Das Deaktivieren kann helfen, wenn Sie mit weniger leistungsfähigen Modellen arbeiten oder mehr Kontrolle über den Dateizugriff wünschen."
 		}
 	},
 	"promptCaching": {
@@ -546,7 +563,10 @@
 			"invalidFormat": "Ungültiges ARN-Format. Bitte überprüfen Sie die Formatanforderungen.",
 			"regionMismatch": "Warnung: Die Region in deiner ARN ({{arnRegion}}) stimmt nicht mit deiner ausgewählten Region ({{region}}) überein. Dies kann zu Zugriffsproblemen führen. Der Provider wird die Region aus der ARN verwenden."
 		},
-		"modelAvailability": "Die von dir angegebene Modell-ID ({{modelId}}) ist nicht verfügbar. Bitte wähle ein anderes Modell."
+		"modelAvailability": "Die von dir angegebene Modell-ID ({{modelId}}) ist nicht verfügbar. Bitte wähle ein anderes Modell.",
+		"providerNotAllowed": "Anbieter '{{provider}}' ist von deiner Organisation nicht erlaubt",
+		"modelNotAllowed": "Modell '{{model}}' ist für Anbieter '{{provider}}' von deiner Organisation nicht erlaubt",
+		"profileInvalid": "Dieses Profil enthält einen Anbieter oder ein Modell, das von deiner Organisation nicht erlaubt ist"
 	},
 	"placeholders": {
 		"apiKey": "API-Schlüssel eingeben...",

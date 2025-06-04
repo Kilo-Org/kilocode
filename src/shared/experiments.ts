@@ -3,7 +3,7 @@ import type { AssertEqual, Equals, Keys, Values, ExperimentId, ProviderSettings 
 export const EXPERIMENT_IDS = {
 	AUTOCOMPLETE: "autocomplete",
 	POWER_STEERING: "powerSteering",
-	AUTO_CONDENSE_CONTEXT: "autoCondenseContext",
+	CONCURRENT_FILE_READS: "concurrentFileReads",
 } as const satisfies Record<string, ExperimentId>
 
 type _AssertExperimentIds = AssertEqual<Equals<ExperimentId, Values<typeof EXPERIMENT_IDS>>>
@@ -15,11 +15,9 @@ interface ExperimentConfig {
 }
 
 export const experimentConfigsMap: Record<ExperimentKey, ExperimentConfig> = {
-	// start kilocode_change
-	AUTOCOMPLETE: { enabled: false },
+	AUTOCOMPLETE: { enabled: false }, // kilocode_change
 	POWER_STEERING: { enabled: false },
-	AUTO_CONDENSE_CONTEXT: { enabled: false }, // Keep this last, there is a slider below it in the UI
-	// end kilocode_change
+	CONCURRENT_FILE_READS: { enabled: false },
 }
 
 export const experimentDefault = Object.fromEntries(

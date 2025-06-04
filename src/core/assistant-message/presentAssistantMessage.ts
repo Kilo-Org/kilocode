@@ -8,7 +8,7 @@ import type { ToolParamName, ToolResponse } from "../../shared/tools"
 
 import { fetchInstructionsTool } from "../tools/fetchInstructionsTool"
 import { listFilesTool } from "../tools/listFilesTool"
-import { readFileTool } from "../tools/readFileTool"
+import { getReadFileToolDescription, readFileTool } from "../tools/readFileTool"
 import { writeToFileTool } from "../tools/writeToFileTool"
 import { applyDiffTool } from "../tools/applyDiffTool"
 import { insertContentTool } from "../tools/insertContentTool"
@@ -155,7 +155,7 @@ export async function presentAssistantMessage(cline: Task) {
 					case "execute_command":
 						return `[${block.name} for '${block.params.command}']`
 					case "read_file":
-						return `[${block.name} for '${block.params.path}']`
+						return getReadFileToolDescription(block.name, block.params)
 					case "fetch_instructions":
 						return `[${block.name} for '${block.params.task}']`
 					case "write_to_file":
@@ -329,7 +329,6 @@ export async function presentAssistantMessage(cline: Task) {
 
 			if (!block.partial) {
 				cline.recordToolUsage(block.name)
-				// telemetryService.captureToolUsage(cline.taskId, block.name)
 			}
 
 			// Validate tool use before execution.
@@ -375,9 +374,6 @@ export async function presentAssistantMessage(cline: Task) {
 
 						// Add user feedback to chat.
 						await cline.say("user_feedback", text, images)
-
-						// Track tool repetition in telemetry.
-						// telemetryService.captureConsecutiveMistakeError(cline.taskId)
 					}
 
 					// Return tool result message about the repetition

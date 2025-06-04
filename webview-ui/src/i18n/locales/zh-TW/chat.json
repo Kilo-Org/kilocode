@@ -155,7 +155,9 @@
 		"didSearchReplace": "Kilo Code 已在此檔案執行搜尋和取代：",
 		"wantsToInsert": "Kilo Code 想要在此檔案中插入內容：",
 		"wantsToInsertWithLineNumber": "Kilo Code 想要在此檔案第 {{lineNumber}} 行插入內容：",
-		"wantsToInsertAtEnd": "Kilo Code 想要在此檔案末尾新增內容："
+		"wantsToInsertAtEnd": "Kilo Code 想要在此檔案末尾新增內容：",
+		"wantsToReadAndXMore": "Kilo Code 想要讀取此檔案以及另外 {{count}} 個檔案：",
+		"wantsToReadMultiple": "Kilo Code 想要讀取多個檔案："
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code 想要檢視此目錄中最上層的檔案：",
@@ -208,6 +210,7 @@
 	"contextCondense": {
 		"title": "上下文已壓縮",
 		"condensing": "正在壓縮上下文...",
+		"errorHeader": "上下文壓縮失敗",
 		"tokens": "tokens"
 	},
 	"followUpSuggest": {
@@ -217,9 +220,9 @@
 		"title": "🎉 Roo Code {{version}} 已發布",
 		"description": "Roo Code {{version}} 帶來基於您意見回饋的強大新功能與改進。",
 		"whatsNew": "新功能",
-		"feature1": "<bold>Gemini 2.5 Flash 預覽模型</bold>: 存取最新的 Gemini Flash 模型，獲得更快速高效的回應",
-		"feature2": "<bold>智慧上下文壓縮</bold>: 工作標題中的新按鈕讓您能夠智慧壓縮內容並提供視覺回饋",
-		"feature3": "<bold>模式定義的 YAML 支援</bold>: 透過 YAML 支援更輕鬆地建立和自訂模式",
+		"feature1": "<bold>智慧上下文壓縮預設啟用</bold>: 上下文壓縮現已預設啟用，並提供可設定的自動壓縮觸發設定",
+		"feature2": "<bold>手動壓縮按鈕</bold>: 工作標題中的新按鈕讓您隨時手動觸發上下文壓縮",
+		"feature3": "<bold>進階壓縮設定</bold>: 透過<contextSettingsLink>上下文設定</contextSettingsLink>精確控制自動壓縮的時機和方式",
 		"hideButton": "隱藏公告",
 		"detailsDiscussLinks": "在 <discordLink>Discord</discordLink> 和 <redditLink>Reddit</redditLink> 取得更多詳細資訊並參與討論 🚀"
 	},
@@ -255,6 +258,7 @@
 		}
 	},
 	"systemPromptWarning": "警告：自訂系統提示詞覆蓋已啟用。這可能嚴重破壞功能並導致不可預測的行為。",
+	"profileViolationWarning": "目前設定檔違反了您的組織設定",
 	"shellIntegration": {
 		"title": "命令執行警告",
 		"description": "您的命令正在沒有 VSCode 終端機 shell 整合的情況下執行。要隱藏此警告，您可以在 <settingsLink>Kilo Code 設定</settingsLink>的 <strong>Terminal</strong> 部分停用 shell 整合，或使用下方連結排查 VSCode 終端機整合問題。",
@@ -271,5 +275,13 @@
 		"wantsToSearch": "Kilo Code 想要搜尋程式碼庫：<code>{{query}}</code>",
 		"wantsToSearchWithPath": "Kilo Code 想要在 <code>{{path}}</code> 中搜尋：<code>{{query}}</code>",
 		"didSearch": "找到 {{count}} 個結果：<code>{{query}}</code>"
+	},
+	"read-batch": {
+		"approve": {
+			"title": "全部核准"
+		},
+		"deny": {
+			"title": "全部拒絕"
+		}
 	}
 }

@@ -28,9 +28,13 @@
 		"notifications": "알림",
 		"contextManagement": "컨텍스트",
 		"terminal": "터미널",
+		"prompts": "프롬프트",
 		"experimental": "실험적",
 		"language": "언어",
 		"about": "Kilo Code 정보"
+	},
+	"prompts": {
+		"description": "프롬프트 향상, 코드 설명, 문제 해결과 같은 빠른 작업에 사용되는 지원 프롬프트를 구성합니다. 이러한 프롬프트는 Kilo Code가 일반적인 개발 작업에 대해 더 나은 지원을 제공하는 데 도움이 됩니다."
 	},
 	"codeIndex": {
 		"title": "코드베이스 인덱싱",
@@ -170,6 +174,7 @@
 		"getGroqApiKey": "Groq API 키 받기",
 		"groqApiKey": "Groq API 키",
 		"getGeminiApiKey": "Gemini API 키 받기",
+		"apiKey": "API 키",
 		"openAiApiKey": "OpenAI API 키",
 		"openAiBaseUrl": "기본 URL",
 		"getOpenAiApiKey": "OpenAI API 키 받기",
@@ -189,6 +194,11 @@
 		"awsSessionToken": "AWS 세션 토큰",
 		"awsRegion": "AWS 리전",
 		"awsCrossRegion": "교차 리전 추론 사용",
+		"awsBedrockVpc": {
+			"useCustomVpcEndpoint": "사용자 지정 VPC 엔드포인트 사용",
+			"vpcEndpointUrlPlaceholder": "VPC 엔드포인트 URL 입력 (선택사항)",
+			"examples": "예시:"
+		},
 		"enablePromptCaching": "프롬프트 캐시 활성화",
 		"enablePromptCachingTitle": "지원되는 모델의 성능을 향상시키고 비용을 절감하기 위해 프롬프트 캐시를 활성화합니다.",
 		"cacheUsageNote": "참고: 캐시 사용이 표시되지 않는 경우, 다른 모델을 선택한 다음 원하는 모델을 다시 선택해 보세요.",
@@ -337,6 +347,25 @@
 	},
 	"contextManagement": {
 		"description": "AI의 컨텍스트 창에 포함되는 정보를 제어하여 token 사용량과 응답 품질에 영향을 미칩니다",
+		"autoCondenseContextPercent": {
+			"label": "지능적 컨텍스트 압축을 트리거하는 임계값",
+			"description": "컨텍스트 창이 이 임계값에 도달하면 Kilo Code가 자동으로 압축합니다."
+		},
+		"condensingApiConfiguration": {
+			"label": "컨텍스트 압축을 위한 API 설정",
+			"description": "컨텍스트 압축 작업에 사용할 API 설정을 선택하세요. 선택하지 않으면 현재 활성화된 설정을 사용합니다.",
+			"useCurrentConfig": "기본값"
+		},
+		"customCondensingPrompt": {
+			"label": "사용자 지정 컨텍스트 압축 프롬프트",
+			"description": "컨텍스트 압축을 위한 사용자 지정 시스템 프롬프트입니다. 기본 프롬프트를 사용하려면 비워 두세요.",
+			"placeholder": "여기에 사용자 정의 압축 프롬프트를 입력하세요...\n\n기본 프롬프트와 동일한 구조를 사용할 수 있습니다:\n- 이전 대화\n- 현재 작업\n- 주요 기술 개념\n- 관련 파일 및 코드\n- 문제 해결\n- 보류 중인 작업 및 다음 단계",
+			"reset": "기본값으로 재설정",
+			"hint": "비어있음 = 기본 프롬프트 사용"
+		},
+		"autoCondenseContext": {
+			"name": "지능적 컨텍스트 압축 자동 트리거"
+		},
 		"openTabs": {
 			"label": "열린 탭 컨텍스트 제한",
 			"description": "컨텍스트에 포함할 VSCode 열린 탭의 최대 수. 높은 값은 더 많은 컨텍스트를 제공하지만 token 사용량이 증가합니다."
@@ -354,6 +383,10 @@
 			"description": "모델이 시작/끝 값을 지정하지 않을 때 Kilo Code가 읽는 줄 수입니다. 이 수가 파일의 총 줄 수보다 적으면 Kilo Code는 코드 정의의 줄 번호 인덱스를 생성합니다. 특수한 경우: -1은 Kilo Code에게 전체 파일을 읽도록 지시하고(인덱싱 없이), 0은 줄을 읽지 않고 최소한의 컨텍스트를 위해 줄 인덱스만 제공하도록 지시합니다. 낮은 값은 초기 컨텍스트 사용을 최소화하고, 이후 정확한 줄 범위 읽기를 가능하게 합니다. 명시적 시작/끝 요청은 이 설정의 제한을 받지 않습니다.",
 			"lines": "줄",
 			"always_full_read": "항상 전체 파일 읽기"
+		},
+		"maxConcurrentFileReads": {
+			"label": "동시 파일 읽기 제한",
+			"description": "read_file 도구가 동시에 처리할 수 있는 최대 파일 수입니다. 높은 값은 여러 작은 파일을 읽는 속도를 높일 수 있지만 메모리 사용량이 증가합니다."
 		}
 	},
 	"terminal": {
@@ -434,26 +467,6 @@
 		}
 	},
 	"experimental": {
-		"condensingApiConfiguration": {
-			"label": "API Configuration for Context Condensing",
-			"description": "Select which API configuration to use for context condensing operations. Leave unselected to use the current active configuration.",
-			"useCurrentConfig": "Default"
-		},
-		"customCondensingPrompt": {
-			"label": "사용자 지정 컨텍스트 압축 프롬프트",
-			"description": "컨텍스트 압축을 위한 사용자 지정 시스템 프롬프트입니다. 기본 프롬프트를 사용하려면 비워 두세요.",
-			"placeholder": "Enter your custom condensing prompt here...\n\nYou can use the same structure as the default prompt:\n- Previous Conversation\n- Current Work\n- Key Technical Concepts\n- Relevant Files and Code\n- Problem Solving\n- Pending Tasks and Next Steps",
-			"reset": "Reset to Default",
-			"hint": "Empty = use default prompt"
-		},
-		"autoCondenseContextPercent": {
-			"label": "지능적 컨텍스트 압축을 트리거하는 임계값",
-			"description": "컨텍스트 창이 이 임계값에 도달하면 Roo가 자동으로 압축합니다."
-		},
-		"AUTO_CONDENSE_CONTEXT": {
-			"name": "지능적 컨텍스트 압축 자동 트리거",
-			"description": "지능적 컨텍스트 압축은 작업의 컨텍스트 창이 사전 설정된 임계값에 도달했을 때 컨텍스트가 가득 차서 이전 메시지를 삭제하는 대신 LLM 호출을 사용하여 이전 대화를 요약합니다."
-		},
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "실험적 통합 diff 전략 사용",
 			"description": "실험적 통합 diff 전략을 활성화합니다. 이 전략은 모델 오류로 인한 재시도 횟수를 줄일 수 있지만 예기치 않은 동작이나 잘못된 편집을 일으킬 수 있습니다. 위험을 이해하고 모든 변경 사항을 신중하게 검토할 의향이 있는 경우에만 활성화하십시오."
@@ -477,6 +490,10 @@
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "실험적 다중 블록 diff 도구 사용",
 			"description": "활성화하면 Kilo Code가 다중 블록 diff 도구를 사용합니다. 이것은 하나의 요청에서 파일의 여러 코드 블록을 업데이트하려고 시도합니다."
+		},
+		"CONCURRENT_FILE_READS": {
+			"name": "동시 파일 읽기 활성화",
+			"description": "활성화하면 Kilo Code가 한 번의 요청으로 여러 파일(최대 15개)을 읽을 수 있습니다. 비활성화하면 Kilo Code는 파일을 하나씩 읽어야 합니다. 성능이 낮은 모델로 작업하거나 파일 액세스를 더 제어하려는 경우 비활성화하면 도움이 될 수 있습니다."
 		}
 	},
 	"promptCaching": {
@@ -546,7 +563,10 @@
 			"invalidFormat": "ARN 형식이 잘못되었습니다. 형식 요구사항을 확인하세요.",
 			"regionMismatch": "경고: ARN의 리전({{arnRegion}})이 선택한 리전({{region}})과 일치하지 않습니다. 접근 문제가 발생할 수 있습니다. 제공자는 ARN의 리전을 사용합니다."
 		},
-		"modelAvailability": "제공한 모델 ID({{modelId}})를 사용할 수 없습니다. 다른 모델을 선택하세요."
+		"modelAvailability": "제공한 모델 ID({{modelId}})를 사용할 수 없습니다. 다른 모델을 선택하세요.",
+		"providerNotAllowed": "제공자 '{{provider}}'는 조직에서 허용되지 않습니다",
+		"modelNotAllowed": "모델 '{{model}}'은 제공자 '{{provider}}'에 대해 조직에서 허용되지 않습니다",
+		"profileInvalid": "이 프로필에는 조직에서 허용되지 않는 제공자 또는 모델이 포함되어 있습니다"
 	},
 	"placeholders": {
 		"apiKey": "API 키 입력...",

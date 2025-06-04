@@ -155,7 +155,9 @@
 		"didSearchReplace": "Kilo Code realizou busca e substituição neste arquivo:",
 		"wantsToInsert": "Kilo Code quer inserir conteúdo neste arquivo:",
 		"wantsToInsertWithLineNumber": "Kilo Code quer inserir conteúdo neste arquivo na linha {{lineNumber}}:",
-		"wantsToInsertAtEnd": "Kilo Code quer adicionar conteúdo ao final deste arquivo:"
+		"wantsToInsertAtEnd": "Kilo Code quer adicionar conteúdo ao final deste arquivo:",
+		"wantsToReadAndXMore": "Kilo Code quer ler este arquivo e mais {{count}}:",
+		"wantsToReadMultiple": "Kilo Code deseja ler múltiplos arquivos:"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code quer visualizar os arquivos de nível superior neste diretório:",
@@ -208,6 +210,7 @@
 	"contextCondense": {
 		"title": "Contexto condensado",
 		"condensing": "Condensando contexto...",
+		"errorHeader": "Falha ao condensar contexto",
 		"tokens": "tokens"
 	},
 	"followUpSuggest": {
@@ -217,9 +220,9 @@
 		"title": "🎉 Roo Code {{version}} Lançado",
 		"description": "Roo Code {{version}} traz poderosos novos recursos e melhorias baseados no seu feedback.",
 		"whatsNew": "O que há de novo",
-		"feature1": "<bold>Modelos de Pré-visualização Gemini 2.5 Flash</bold>: Acesse os mais recentes modelos Gemini Flash para respostas mais rápidas e eficientes",
-		"feature2": "<bold>Condensação Inteligente de Contexto</bold>: Novo botão no cabeçalho da tarefa permite condensar conteúdo de forma inteligente com feedback visual",
-		"feature3": "<bold>Suporte YAML para Definições de Modo</bold>: Crie e personalize modos mais facilmente com suporte a YAML",
+		"feature1": "<bold>Condensação Inteligente de Contexto Habilitada por Padrão</bold>: A condensação de contexto agora está habilitada por padrão com configurações ajustáveis para quando a condensação automática acontece",
+		"feature2": "<bold>Botão de Condensação Manual</bold>: Novo botão no cabeçalho da tarefa permite acionar manualmente a condensação de contexto a qualquer momento",
+		"feature3": "<bold>Configurações de Condensação Aprimoradas</bold>: Ajuste quando e como a condensação automática ocorre através das <contextSettingsLink>Configurações de Contexto</contextSettingsLink>",
 		"hideButton": "Ocultar anúncio",
 		"detailsDiscussLinks": "Obtenha mais detalhes e participe da discussão no <discordLink>Discord</discordLink> e <redditLink>Reddit</redditLink> 🚀"
 	},
@@ -255,6 +258,7 @@
 		}
 	},
 	"systemPromptWarning": "AVISO: Substituição personalizada de instrução do sistema ativa. Isso pode comprometer gravemente a funcionalidade e causar comportamento imprevisível.",
+	"profileViolationWarning": "O perfil atual viola as configurações da sua organização",
 	"shellIntegration": {
 		"title": "Aviso de execução de comando",
 		"description": "Seu comando está sendo executado sem a integração de shell do terminal VSCode. Para suprimir este aviso, você pode desativar a integração de shell na seção <strong>Terminal</strong> das <settingsLink>configurações do Kilo Code</settingsLink> ou solucionar problemas de integração do terminal VSCode usando o link abaixo.",
@@ -271,5 +275,13 @@
 		"wantsToSearch": "Kilo Code quer pesquisar na base de código por <code>{{query}}</code>:",
 		"wantsToSearchWithPath": "Kilo Code quer pesquisar na base de código por <code>{{query}}</code> em <code>{{path}}</code>:",
 		"didSearch": "Encontrado {{count}} resultado(s) para <code>{{query}}</code>:"
+	},
+	"read-batch": {
+		"approve": {
+			"title": "Aprovar tudo"
+		},
+		"deny": {
+			"title": "Negar tudo"
+		}
 	}
 }

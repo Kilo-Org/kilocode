@@ -1,12 +1,14 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react"
 import { useEvent } from "react-use"
 
-import type {
-	ProviderSettings,
-	ProviderSettingsEntry,
-	CustomModePrompts,
-	ModeConfig,
-	ExperimentId,
+import {
+	type ProviderSettings,
+	type ProviderSettingsEntry,
+	type CustomModePrompts,
+	type ModeConfig,
+	type ExperimentId,
+	type OrganizationAllowList,
+	ORGANIZATION_ALLOW_ALL,
 } from "@roo-code/types"
 
 import { ExtensionMessage, ExtensionState } from "@roo/ExtensionMessage"
@@ -34,6 +36,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	filePaths: string[]
 	openedTabs: Array<{ label: string; isActive: boolean; path?: string }>
 	setWorkflowToggles: (toggles: Record<string, boolean>) => void // kilocode_change
+	organizationAllowList: OrganizationAllowList
+	maxConcurrentFileReads?: number
 	condensingApiConfigId?: string
 	setCondensingApiConfigId: (value: string) => void
 	customCondensingPrompt?: string
@@ -110,6 +114,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	terminalCompressProgressBar?: boolean
 	setTerminalCompressProgressBar: (value: boolean) => void
 	setHistoryPreviewCollapsed: (value: boolean) => void
+	autoCondenseContext: boolean
+	setAutoCondenseContext: (value: boolean) => void
 	autoCondenseContextPercent: number
 	setAutoCondenseContextPercent: (value: number) => void
 	routerModels?: RouterModels
@@ -145,7 +151,7 @@ export const mergeExtensionState = (prevState: ExtensionState, newState: Extensi
 }
 
 export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-	const [state, setState] = useState<ExtensionState>({
+	const [state, setState] = useState<ExtensionState & { organizationAllowList?: OrganizationAllowList }>({
 		version: "",
 		clineMessages: [],
 		taskHistory: [],
@@ -191,11 +197,15 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		maxReadFileLine: -1, // Default max read file line limit
 		pinnedApiConfigs: {}, // Empty object for pinned API configs
 		terminalZshOhMy: false, // Default Oh My Zsh integration setting
+		maxConcurrentFileReads: 15, // Default concurrent file reads
 		terminalZshP10k: false, // Default Powerlevel10k integration setting
 		terminalZdotdir: false, // Default ZDOTDIR handling setting
 		terminalCompressProgressBar: true, // Default to compress progress bar output
 		historyPreviewCollapsed: false, // Initialize the new state (default to expanded)
 		workflowToggles: {}, // Initialize with empty workflow toggles  // kilocode_change
+		cloudUserInfo: null,
+		organizationAllowList: ORGANIZATION_ALLOW_ALL,
+		autoCondenseContext: true,
 		autoCondenseContextPercent: 100,
 		codebaseIndexConfig: {
 			codebaseIndexEnabled: false,
@@ -407,6 +417,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 				...prevState,
 				workflowToggles: toggles,
 			})),
+		setAutoCondenseContext: (value) => setState((prevState) => ({ ...prevState, autoCondenseContext: value })),
 		setAutoCondenseContextPercent: (value) =>
 			setState((prevState) => ({ ...prevState, autoCondenseContextPercent: value })),
 		setCondensingApiConfigId: (value) => setState((prevState) => ({ ...prevState, condensingApiConfigId: value })),

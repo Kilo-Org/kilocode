@@ -28,9 +28,13 @@
 		"notifications": "Notifications",
 		"contextManagement": "Contexte",
 		"terminal": "Terminal",
+		"prompts": "Invites",
 		"experimental": "Expérimental",
 		"language": "Langue",
 		"about": "À propos de Kilo Code"
+	},
+	"prompts": {
+		"description": "Configurez les invites de support utilisées pour les actions rapides comme l'amélioration des invites, l'explication du code et la résolution des problèmes. Ces invites aident Kilo Code à fournir une meilleure assistance pour les tâches de développement courantes."
 	},
 	"codeIndex": {
 		"title": "Indexation de la base de code",
@@ -171,6 +175,7 @@
 		"groqApiKey": "Clé API Groq",
 		"getGeminiApiKey": "Obtenir la clé API Gemini",
 		"openAiApiKey": "Clé API OpenAI",
+		"apiKey": "Clé API",
 		"openAiBaseUrl": "URL de base",
 		"getOpenAiApiKey": "Obtenir la clé API OpenAI",
 		"mistralApiKey": "Clé API Mistral",
@@ -189,6 +194,11 @@
 		"awsSessionToken": "Jeton de session AWS",
 		"awsRegion": "Région AWS",
 		"awsCrossRegion": "Utiliser l'inférence inter-régions",
+		"awsBedrockVpc": {
+			"useCustomVpcEndpoint": "Utiliser un point de terminaison VPC personnalisé",
+			"vpcEndpointUrlPlaceholder": "Entrer l'URL du point de terminaison VPC (optionnel)",
+			"examples": "Exemples :"
+		},
 		"enablePromptCaching": "Activer la mise en cache des prompts",
 		"enablePromptCachingTitle": "Activer la mise en cache des prompts pour améliorer les performances et réduire les coûts pour les modèles pris en charge.",
 		"cacheUsageNote": "Remarque : Si vous ne voyez pas l'utilisation du cache, essayez de sélectionner un modèle différent puis de sélectionner à nouveau votre modèle souhaité.",
@@ -337,6 +347,25 @@
 	},
 	"contextManagement": {
 		"description": "Contrôlez quelles informations sont incluses dans la fenêtre de contexte de l'IA, affectant l'utilisation de token et la qualité des réponses",
+		"autoCondenseContextPercent": {
+			"label": "Seuil de déclenchement de la condensation intelligente du contexte",
+			"description": "Lorsque la fenêtre de contexte atteint ce seuil, Kilo Code la condensera automatiquement."
+		},
+		"condensingApiConfiguration": {
+			"label": "Configuration API pour la condensation du contexte",
+			"description": "Sélectionnez quelle configuration API utiliser pour les opérations de condensation du contexte. Laissez non sélectionné pour utiliser la configuration active actuelle.",
+			"useCurrentConfig": "Par défaut"
+		},
+		"customCondensingPrompt": {
+			"label": "Prompt personnalisé de condensation du contexte",
+			"description": "Personnalisez le prompt système utilisé pour la condensation du contexte. Laissez vide pour utiliser le prompt par défaut.",
+			"placeholder": "Entrez votre prompt de condensation personnalisé ici...\n\nVous pouvez utiliser la même structure que le prompt par défaut :\n- Conversation précédente\n- Travail en cours\n- Concepts techniques clés\n- Fichiers et code pertinents\n- Résolution de problèmes\n- Tâches en attente et prochaines étapes",
+			"reset": "Réinitialiser par défaut",
+			"hint": "Vide = utiliser le prompt par défaut"
+		},
+		"autoCondenseContext": {
+			"name": "Déclencher automatiquement la condensation intelligente du contexte"
+		},
 		"openTabs": {
 			"label": "Limite de contexte des onglets ouverts",
 			"description": "Nombre maximum d'onglets VSCode ouverts à inclure dans le contexte. Des valeurs plus élevées fournissent plus de contexte mais augmentent l'utilisation de token."
@@ -354,6 +383,10 @@
 			"description": "Kilo Code lit ce nombre de lignes lorsque le modèle omet les valeurs de début/fin. Si ce nombre est inférieur au total du fichier, Kilo Code génère un index des numéros de ligne des définitions de code. Cas spéciaux : -1 indique à Kilo Code de lire le fichier entier (sans indexation), et 0 indique de ne lire aucune ligne et de fournir uniquement les index de ligne pour un contexte minimal. Des valeurs plus basses minimisent l'utilisation initiale du contexte, permettant des lectures ultérieures de plages de lignes précises. Les requêtes avec début/fin explicites ne sont pas limitées par ce paramètre.",
 			"lines": "lignes",
 			"always_full_read": "Toujours lire le fichier entier"
+		},
+		"maxConcurrentFileReads": {
+			"label": "Limite de lectures simultanées",
+			"description": "Nombre maximum de fichiers que l'outil 'read_file' peut traiter simultanément. Des valeurs plus élevées peuvent accélérer la lecture de plusieurs petits fichiers mais augmentent l'utilisation de la mémoire."
 		}
 	},
 	"terminal": {
@@ -434,26 +467,6 @@
 		}
 	},
 	"experimental": {
-		"autoCondenseContextPercent": {
-			"label": "Seuil pour déclencher la condensation intelligente du contexte",
-			"description": "Lorsque la fenêtre de contexte atteint ce seuil, Kilo Code la condensera automatiquement."
-		},
-		"condensingApiConfiguration": {
-			"label": "Configuration API pour la condensation du contexte",
-			"description": "Sélectionnez quelle configuration API utiliser pour les opérations de condensation du contexte. Laissez non sélectionné pour utiliser la configuration active actuelle.",
-			"useCurrentConfig": "Utiliser la configuration actuelle"
-		},
-		"customCondensingPrompt": {
-			"label": "Prompt personnalisé pour la condensation du contexte",
-			"description": "Personnalisez le prompt système utilisé pour la condensation du contexte. Laissez vide pour utiliser le prompt par défaut.",
-			"placeholder": "Entrez votre prompt de condensation personnalisé ici...\n\nVous pouvez utiliser la même structure que le prompt par défaut :\n- Conversation précédente\n- Travail actuel\n- Concepts techniques clés\n- Fichiers et code pertinents\n- Résolution de problèmes\n- Tâches en attente et prochaines étapes",
-			"reset": "Réinitialiser par défaut",
-			"hint": "Vide = utiliser le prompt par défaut"
-		},
-		"AUTO_CONDENSE_CONTEXT": {
-			"name": "Déclencher automatiquement la condensation intelligente du contexte",
-			"description": "La condensation intelligente du contexte utilise un appel LLM pour résumer la conversation passée lorsque la fenêtre de contexte de la tâche atteint un seuil prédéfini, plutôt que de supprimer les anciens messages lorsque le contexte est plein."
-		},
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "Utiliser la stratégie diff unifiée expérimentale",
 			"description": "Activer la stratégie diff unifiée expérimentale. Cette stratégie pourrait réduire le nombre de tentatives causées par des erreurs de modèle, mais peut provoquer des comportements inattendus ou des modifications incorrectes. Activez-la uniquement si vous comprenez les risques et êtes prêt à examiner attentivement tous les changements."
@@ -477,6 +490,10 @@
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Utiliser l'outil diff multi-blocs expérimental",
 			"description": "Lorsqu'il est activé, Kilo Code utilisera l'outil diff multi-blocs. Cela tentera de mettre à jour plusieurs blocs de code dans le fichier en une seule requête."
+		},
+		"CONCURRENT_FILE_READS": {
+			"name": "Activer la lecture simultanée de fichiers",
+			"description": "Lorsqu'activé, Kilo Code peut lire plusieurs fichiers dans une seule requête (jusqu'à 15 fichiers). Lorsque désactivé, Kilo Code doit lire les fichiers un par un. La désactivation peut aider lors du travail avec des modèles moins performants ou lorsque vous souhaitez plus de contrôle sur l'accès aux fichiers."
 		}
 	},
 	"promptCaching": {
@@ -546,7 +563,10 @@
 			"invalidFormat": "Format ARN invalide. Veuillez vérifier les exigences de format.",
 			"regionMismatch": "Attention : La région dans votre ARN ({{arnRegion}}) ne correspond pas à votre région sélectionnée ({{region}}). Cela peut causer des problèmes d'accès. Le fournisseur utilisera la région de l'ARN."
 		},
-		"modelAvailability": "L'ID de modèle ({{modelId}}) que vous avez fourni n'est pas disponible. Veuillez choisir un modèle différent."
+		"modelAvailability": "L'ID de modèle ({{modelId}}) que vous avez fourni n'est pas disponible. Veuillez choisir un modèle différent.",
+		"providerNotAllowed": "Le fournisseur '{{provider}}' n'est pas autorisé par votre organisation",
+		"modelNotAllowed": "Le modèle '{{model}}' n'est pas autorisé pour le fournisseur '{{provider}}' par votre organisation",
+		"profileInvalid": "Ce profil contient un fournisseur ou un modèle qui n'est pas autorisé par votre organisation"
 	},
 	"placeholders": {
 		"apiKey": "Saisissez la clé API...",

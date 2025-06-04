@@ -28,9 +28,13 @@
 		"notifications": "Thông báo",
 		"contextManagement": "Ngữ cảnh",
 		"terminal": "Terminal",
+		"prompts": "Lời nhắc",
 		"experimental": "Thử nghiệm",
 		"language": "Ngôn ngữ",
 		"about": "Giới thiệu"
+	},
+	"prompts": {
+		"description": "Cấu hình các lời nhắc hỗ trợ được sử dụng cho các hành động nhanh như cải thiện lời nhắc, giải thích mã và khắc phục sự cố. Những lời nhắc này giúp Kilo Code cung cấp hỗ trợ tốt hơn cho các tác vụ phát triển phổ biến."
 	},
 	"codeIndex": {
 		"title": "Lập chỉ mục mã nguồn",
@@ -171,6 +175,7 @@
 		"groqApiKey": "Khóa API Groq",
 		"getGeminiApiKey": "Lấy khóa API Gemini",
 		"openAiApiKey": "Khóa API OpenAI",
+		"apiKey": "Khóa API",
 		"openAiBaseUrl": "URL cơ sở",
 		"getOpenAiApiKey": "Lấy khóa API OpenAI",
 		"mistralApiKey": "Khóa API Mistral",
@@ -189,6 +194,11 @@
 		"awsSessionToken": "Token phiên AWS",
 		"awsRegion": "Vùng AWS",
 		"awsCrossRegion": "Sử dụng suy luận liên vùng",
+		"awsBedrockVpc": {
+			"useCustomVpcEndpoint": "Sử dụng điểm cuối VPC tùy chỉnh",
+			"vpcEndpointUrlPlaceholder": "Nhập URL điểm cuối VPC (tùy chọn)",
+			"examples": "Ví dụ:"
+		},
 		"enablePromptCaching": "Bật bộ nhớ đệm lời nhắc",
 		"enablePromptCachingTitle": "Bật bộ nhớ đệm lời nhắc để cải thiện hiệu suất và giảm chi phí cho các mô hình được hỗ trợ.",
 		"cacheUsageNote": "Lưu ý: Nếu bạn không thấy việc sử dụng bộ nhớ đệm, hãy thử chọn một mô hình khác và sau đó chọn lại mô hình mong muốn của bạn.",
@@ -337,6 +347,25 @@
 	},
 	"contextManagement": {
 		"description": "Kiểm soát thông tin nào được đưa vào cửa sổ ngữ cảnh của AI, ảnh hưởng đến việc sử dụng token và chất lượng phản hồi",
+		"autoCondenseContextPercent": {
+			"label": "Ngưỡng kích hoạt nén ngữ cảnh thông minh",
+			"description": "Khi cửa sổ ngữ cảnh đạt đến ngưỡng này, Kilo Code sẽ tự động nén nó."
+		},
+		"condensingApiConfiguration": {
+			"label": "Cấu hình API cho Tóm tắt Ngữ cảnh",
+			"description": "Chọn cấu hình API để sử dụng cho các thao tác tóm tắt ngữ cảnh. Để trống để sử dụng cấu hình đang hoạt động hiện tại.",
+			"useCurrentConfig": "Mặc định"
+		},
+		"customCondensingPrompt": {
+			"label": "Lời nhắc nén ngữ cảnh tùy chỉnh",
+			"description": "Lời nhắc hệ thống tùy chỉnh cho việc nén ngữ cảnh. Để trống để sử dụng lời nhắc mặc định.",
+			"placeholder": "Nhập prompt tóm tắt tùy chỉnh của bạn tại đây...\n\nBạn có thể sử dụng cùng cấu trúc như prompt mặc định:\n- Cuộc hội thoại trước\n- Công việc hiện tại\n- Khái niệm kỹ thuật chính\n- Tệp và mã liên quan\n- Giải quyết vấn đề\n- Công việc đang chờ và các bước tiếp theo",
+			"reset": "Khôi phục mặc định",
+			"hint": "Để trống = sử dụng prompt mặc định"
+		},
+		"autoCondenseContext": {
+			"name": "Tự động kích hoạt nén ngữ cảnh thông minh"
+		},
 		"openTabs": {
 			"label": "Giới hạn ngữ cảnh tab đang mở",
 			"description": "Số lượng tab VSCode đang mở tối đa để đưa vào ngữ cảnh. Giá trị cao hơn cung cấp nhiều ngữ cảnh hơn nhưng tăng sử dụng token."
@@ -354,6 +383,10 @@
 			"description": "Kilo Code đọc số dòng này khi mô hình không chỉ định giá trị bắt đầu/kết thúc. Nếu số này nhỏ hơn tổng số dòng của tệp, Kilo Code sẽ tạo một chỉ mục số dòng của các định nghĩa mã. Trường hợp đặc biệt: -1 chỉ thị Kilo Code đọc toàn bộ tệp (không tạo chỉ mục), và 0 chỉ thị không đọc dòng nào và chỉ cung cấp chỉ mục dòng cho ngữ cảnh tối thiểu. Giá trị thấp hơn giảm thiểu việc sử dụng ngữ cảnh ban đầu, cho phép đọc chính xác các phạm vi dòng sau này. Các yêu cầu có chỉ định bắt đầu/kết thúc rõ ràng không bị giới hạn bởi cài đặt này.",
 			"lines": "dòng",
 			"always_full_read": "Luôn đọc toàn bộ tệp"
+		},
+		"maxConcurrentFileReads": {
+			"label": "Giới hạn đọc file đồng thời",
+			"description": "Số lượng file tối đa mà công cụ 'read_file' có thể xử lý cùng lúc. Giá trị cao hơn có thể tăng tốc độ đọc nhiều file nhỏ nhưng sẽ tăng mức sử dụng bộ nhớ."
 		}
 	},
 	"terminal": {
@@ -434,26 +467,6 @@
 		}
 	},
 	"experimental": {
-		"condensingApiConfiguration": {
-			"label": "API Configuration for Context Condensing",
-			"description": "Select which API configuration to use for context condensing operations. Leave unselected to use the current active configuration.",
-			"useCurrentConfig": "Default"
-		},
-		"customCondensingPrompt": {
-			"label": "Lời nhắc nén ngữ cảnh tùy chỉnh",
-			"description": "Lời nhắc hệ thống tùy chỉnh cho việc nén ngữ cảnh. Để trống để sử dụng lời nhắc mặc định.",
-			"placeholder": "Enter your custom condensing prompt here...\n\nYou can use the same structure as the default prompt:\n- Previous Conversation\n- Current Work\n- Key Technical Concepts\n- Relevant Files and Code\n- Problem Solving\n- Pending Tasks and Next Steps",
-			"reset": "Reset to Default",
-			"hint": "Empty = use default prompt"
-		},
-		"autoCondenseContextPercent": {
-			"label": "Ngưỡng kích hoạt nén ngữ cảnh thông minh",
-			"description": "Khi cửa sổ ngữ cảnh đạt đến ngưỡng này, Kilo Code sẽ tự động nén nó."
-		},
-		"AUTO_CONDENSE_CONTEXT": {
-			"name": "Tự động kích hoạt nén ngữ cảnh thông minh",
-			"description": "Nén ngữ cảnh thông minh sử dụng một lệnh gọi LLM để tóm tắt cuộc trò chuyện trước đó khi cửa sổ ngữ cảnh của tác vụ đạt đến ngưỡng đã định, thay vì loại bỏ các tin nhắn cũ khi ngữ cảnh đầy."
-		},
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "Sử dụng chiến lược diff thống nhất thử nghiệm",
 			"description": "Bật chiến lược diff thống nhất thử nghiệm. Chiến lược này có thể giảm số lần thử lại do lỗi mô hình nhưng có thể gây ra hành vi không mong muốn hoặc chỉnh sửa không chính xác. Chỉ bật nếu bạn hiểu rõ các rủi ro và sẵn sàng xem xét cẩn thận tất cả các thay đổi."
@@ -477,6 +490,10 @@
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Sử dụng công cụ diff đa khối thử nghiệm",
 			"description": "Khi được bật, Kilo Code sẽ sử dụng công cụ diff đa khối. Điều này sẽ cố gắng cập nhật nhiều khối mã trong tệp trong một yêu cầu."
+		},
+		"CONCURRENT_FILE_READS": {
+			"name": "Bật đọc tệp đồng thời",
+			"description": "Khi bật, Kilo Code có thể đọc nhiều tệp trong một yêu cầu duy nhất (tối đa 15 tệp). Khi tắt, Kilo Code phải đọc từng tệp một. Việc tắt có thể hữu ích khi làm việc với các mô hình ít khả năng hơn hoặc khi bạn muốn kiểm soát nhiều hơn quyền truy cập tệp."
 		}
 	},
 	"promptCaching": {
@@ -546,7 +563,10 @@
 			"invalidFormat": "Định dạng ARN không hợp lệ. Vui lòng kiểm tra yêu cầu về định dạng.",
 			"regionMismatch": "Cảnh báo: Vùng trong ARN của bạn ({{arnRegion}}) không khớp với vùng bạn đã chọn ({{region}}). Điều này có thể gây ra vấn đề truy cập. Nhà cung cấp sẽ sử dụng vùng từ ARN."
 		},
-		"modelAvailability": "ID mô hình ({{modelId}}) bạn đã cung cấp không khả dụng. Vui lòng chọn một mô hình khác."
+		"modelAvailability": "ID mô hình ({{modelId}}) bạn đã cung cấp không khả dụng. Vui lòng chọn một mô hình khác.",
+		"providerNotAllowed": "Nhà cung cấp '{{provider}}' không được phép bởi tổ chức của bạn",
+		"modelNotAllowed": "Mô hình '{{model}}' không được phép cho nhà cung cấp '{{provider}}' bởi tổ chức của bạn",
+		"profileInvalid": "Hồ sơ này chứa một nhà cung cấp hoặc mô hình không được phép bởi tổ chức của bạn"
 	},
 	"placeholders": {
 		"apiKey": "Nhập khóa API...",

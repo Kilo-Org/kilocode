@@ -1,8 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk"
+
+import { TelemetryService } from "@roo-code/telemetry"
+
+import { t } from "../../i18n"
 import { ApiHandler } from "../../api"
 import { ApiMessage } from "../task-persistence/apiMessages"
 import { maybeRemoveImageBlocks } from "../../api/transform/image-cleaning"
-import { telemetryService } from "../../services/telemetry/TelemetryService"
 
 export const N_MESSAGES_TO_KEEP = 3
 
@@ -51,6 +54,7 @@ export type SummarizeResponse = {
 	summary: string // The summary text; empty string for no summary
 	cost: number // The cost of the summarization operation
 	newContextTokens?: number // The number of tokens in the context for the next API request
+	error?: string // Populated iff the operation fails: error message shown to the user on failure (see Task.ts)
 }
 
 /**
@@ -70,6 +74,7 @@ export type SummarizeResponse = {
  * @param {ApiHandler} apiHandler - The API handler to use for token counting (fallback if condensingApiHandler not provided)
  * @param {string} systemPrompt - The system prompt for API requests (fallback if customCondensingPrompt not provided)
  * @param {string} taskId - The task ID for the conversation, used for telemetry
+ * @param {number} prevContextTokens - The number of tokens currently in the context, used to ensure we don't grow the context
  * @param {boolean} isAutomaticTrigger - Whether the summarization is triggered automatically
  * @param {string} customCondensingPrompt - Optional custom prompt to use for condensing
  * @param {ApiHandler} condensingApiHandler - Optional specific API handler to use for condensing
@@ -80,34 +85,47 @@ export async function summarizeConversation(
 	apiHandler: ApiHandler,
 	systemPrompt: string,
 	taskId: string,
+	prevContextTokens: number,
 	isAutomaticTrigger?: boolean,
 	customCondensingPrompt?: string,
 	condensingApiHandler?: ApiHandler,
 ): Promise<SummarizeResponse> {
-	telemetryService.captureContextCondensed(
+	TelemetryService.instance.captureContextCondensed(
 		taskId,
 		isAutomaticTrigger ?? false,
 		!!customCondensingPrompt?.trim(),
 		!!condensingApiHandler,
 	)
+
 	const response: SummarizeResponse = { messages, cost: 0, summary: "" }
 	const messagesToSummarize = getMessagesSinceLastSummary(messages.slice(0, -N_MESSAGES_TO_KEEP))
+
 	if (messagesToSummarize.length <= 1) {
-		return response // Not enough messages to warrant a summary
+		const error =
+			messages.length <= N_MESSAGES_TO_KEEP + 1
+				? t("common:errors.condense_not_enough_messages")
+				: t("common:errors.condensed_recently")
+		return { ...response, error }
 	}
+
 	const keepMessages = messages.slice(-N_MESSAGES_TO_KEEP)
 	// Check if there's a recent summary in the messages we're keeping
 	const recentSummaryExists = keepMessages.some((message) => message.isSummary)
+
 	if (recentSummaryExists) {
-		return response // We recently summarized these messages; it's too soon to summarize again.
+		const error = t("common:errors.condensed_recently")
+		return { ...response, error }
 	}
+
 	const finalRequestMessage: Anthropic.MessageParam = {
 		role: "user",
 		content: "Summarize the conversation so far, as described in the prompt instructions.",
 	}
+
 	const requestMessages = maybeRemoveImageBlocks([...messagesToSummarize, finalRequestMessage], apiHandler).map(
 		({ role, content }) => ({ role, content }),
 	)
+
 	// Note: this doesn't need to be a stream, consider using something like apiHandler.completePrompt
 	// Use custom prompt if provided and non-empty, otherwise use the default SUMMARY_PROMPT
 	const promptToUse = customCondensingPrompt?.trim() ? customCondensingPrompt.trim() : SUMMARY_PROMPT
@@ -120,26 +138,26 @@ export async function summarizeConversation(
 		console.warn(
 			"Chosen API handler for condensing does not support message creation or is invalid, falling back to main apiHandler.",
 		)
+
 		handlerToUse = apiHandler // Fallback to the main, presumably valid, apiHandler
+
 		// Ensure the main apiHandler itself is valid before this point or add another check.
 		if (!handlerToUse || typeof handlerToUse.createMessage !== "function") {
 			// This case should ideally not happen if main apiHandler is always valid.
 			// Consider throwing an error or returning a specific error response.
 			console.error("Main API handler is also invalid for condensing. Cannot proceed.")
 			// Return an appropriate error structure for SummarizeResponse
-			return {
-				messages,
-				summary: "",
-				cost: 0,
-				newContextTokens: 0,
-			}
+			const error = t("common:errors.condense_handler_invalid")
+			return { ...response, error }
 		}
 	}
 
 	const stream = handlerToUse.createMessage(promptToUse, requestMessages)
+
 	let summary = ""
 	let cost = 0
 	let outputTokens = 0
+
 	for await (const chunk of stream) {
 		if (chunk.type === "text") {
 			summary += chunk.text
@@ -149,38 +167,60 @@ export async function summarizeConversation(
 			outputTokens = chunk.outputTokens ?? 0
 		}
 	}
+
 	summary = summary.trim()
+
 	if (summary.length === 0) {
-		console.warn("Received empty summary from API")
-		return { ...response, cost }
+		const error = t("common:errors.condense_failed")
+		return { ...response, cost, error }
 	}
+
 	const summaryMessage: ApiMessage = {
 		role: "assistant",
 		content: summary,
 		ts: keepMessages[0].ts,
 		isSummary: true,
 	}
+
 	const newMessages = [...messages.slice(0, -N_MESSAGES_TO_KEEP), summaryMessage, ...keepMessages]
 
 	// Count the tokens in the context for the next API request
 	// We only estimate the tokens in summaryMesage if outputTokens is 0, otherwise we use outputTokens
 	const systemPromptMessage: ApiMessage = { role: "user", content: systemPrompt }
+
 	const contextMessages = outputTokens
 		? [systemPromptMessage, ...keepMessages]
 		: [systemPromptMessage, summaryMessage, ...keepMessages]
+
 	const contextBlocks = contextMessages.flatMap((message) =>
 		typeof message.content === "string" ? [{ text: message.content, type: "text" as const }] : message.content,
 	)
+
 	const newContextTokens = outputTokens + (await apiHandler.countTokens(contextBlocks))
+	if (newContextTokens >= prevContextTokens) {
+		const error = t("common:errors.condense_context_grew")
+		return { ...response, cost, error }
+	}
 	return { messages: newMessages, summary, cost, newContextTokens }
 }
 
 /* Returns the list of all messages since the last summary message, including the summary. Returns all messages if there is no summary. */
 export function getMessagesSinceLastSummary(messages: ApiMessage[]): ApiMessage[] {
 	let lastSummaryIndexReverse = [...messages].reverse().findIndex((message) => message.isSummary)
+
 	if (lastSummaryIndexReverse === -1) {
 		return messages
 	}
+
 	const lastSummaryIndex = messages.length - lastSummaryIndexReverse - 1
-	return messages.slice(lastSummaryIndex)
+	const messagesSinceSummary = messages.slice(lastSummaryIndex)
+
+	// Bedrock requires the first message to be a user message.
+	// See https://github.com/RooCodeInc/Roo-Code/issues/4147
+	const userMessage: ApiMessage = {
+		role: "user",
+		content: "Please continue from the following summary:",
+		ts: messages[0]?.ts ? messages[0].ts - 1 : Date.now(),
+	}
+	return [userMessage, ...messagesSinceSummary]
 }

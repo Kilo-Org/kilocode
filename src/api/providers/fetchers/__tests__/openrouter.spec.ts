@@ -1,4 +1,4 @@
-// npx vitest run --globals api/providers/fetchers/__tests__/openrouter.spec.ts
+// npx vitest run api/providers/fetchers/__tests__/openrouter.spec.ts
 
 import * as path from "path"
 
@@ -9,7 +9,7 @@ import {
 	OPEN_ROUTER_COMPUTER_USE_MODELS,
 	OPEN_ROUTER_REASONING_BUDGET_MODELS,
 	OPEN_ROUTER_REQUIRED_REASONING_BUDGET_MODELS,
-} from "../../../../shared/api"
+} from "@roo-code/types"
 
 import { getOpenRouterModelEndpoints, getOpenRouterModels } from "../openrouter"
 

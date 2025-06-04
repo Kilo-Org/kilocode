@@ -1,7 +1,8 @@
 {
 	"title": "Servidors MCP",
 	"done": "Fet",
-	"description": "Activa el Model Context Protocol (MCP) perquè Kilo Code pugui utilitzar eines i serveis addicionals de servidors externs. Això amplia el que Kilo Code pot fer per tu. <0>Més informació</0>",
+	"description": "El <0>Model Context Protocol</0> permet la comunicació amb servidors MCP que s'executen localment i proporcionen eines i recursos addicionals per ampliar les capacitats de Kilo Code. Pots utilitzar <1>servidors creats per la comunitat</1> o demanar a Kilo Code que creï noves eines específiques per al teu flux de treball (per exemple, \"afegir una eina que obtingui la documentació més recent de npm\").",
+	"instructions": "Instruccions",
 	"enableToggle": {
 		"title": "Activa els servidors MCP",
 		"description": "Activa-ho perquè Kilo Code pugui utilitzar eines dels servidors MCP connectats. Això dóna més capacitats a Kilo Code. Si no vols utilitzar aquestes eines addicionals, desactiva-ho per ajudar a reduir el cost dels tokens API."

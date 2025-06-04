@@ -1,7 +1,8 @@
 {
 	"title": "Máy chủ MCP",
-	"done": "Xong",
-	"description": "Bật Model Context Protocol (MCP) để Kilo Code có thể dùng thêm công cụ và dịch vụ từ máy chủ bên ngoài. Điều này mở rộng khả năng của Kilo Code cho bạn. <0>Tìm hiểu thêm</0>",
+	"done": "Hoàn thành",
+	"description": "<0>Giao thức ngữ cảnh mô hình</0> cho phép giao tiếp với các máy chủ MCP đang chạy cục bộ, cung cấp các công cụ và tài nguyên bổ sung để mở rộng khả năng của Kilo Code. Bạn có thể sử dụng <1>các máy chủ do cộng đồng tạo</1> hoặc yêu cầu Kilo Code tạo các công cụ mới dành riêng cho quy trình làm việc của bạn (ví dụ: \"thêm công cụ lấy tài liệu npm mới nhất\").",
+	"instructions": "Hướng dẫn",
 	"enableToggle": {
 		"title": "Bật máy chủ MCP",
 		"description": "Bật lên để Kilo Code dùng công cụ từ các máy chủ MCP đã kết nối. Kilo Code sẽ có nhiều khả năng hơn. Nếu không dùng các công cụ này, hãy tắt để tiết kiệm chi phí token API."

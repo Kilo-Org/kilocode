@@ -70,6 +70,15 @@ export const registerCommands = (options: RegisterCommandOptions) => {
 
 const getCommandsMap = ({ context, outputChannel }: RegisterCommandOptions): Record<CommandId, any> => ({
 	activationCompleted: () => {},
+	accountButtonClicked: () => {
+		const visibleProvider = getVisibleProviderOrLog(outputChannel)
+
+		if (!visibleProvider) {
+			return
+		}
+
+		visibleProvider.postMessageToWebview({ type: "action", action: "accountButtonClicked" })
+	},
 	plusButtonClicked: async () => {
 		const visibleProvider = getVisibleProviderOrLog(outputChannel)
 
@@ -81,6 +90,19 @@ const getCommandsMap = ({ context, outputChannel }: RegisterCommandOptions): Rec
 		await visibleProvider.postStateToWebview()
 		await visibleProvider.postMessageToWebview({ type: "action", action: "chatButtonClicked" })
 	},
+
+	// kilocode_change: unused
+	// mcpButtonClicked: () => {
+	// 	const visibleProvider = getVisibleProviderOrLog(outputChannel)
+
+	// 	if (!visibleProvider) {
+	// 		return
+	// 	}
+
+	// 	TelemetryService.instance.captureTitleButtonClicked("mcp")
+
+	// 	visibleProvider.postMessageToWebview({ type: "action", action: "mcpButtonClicked" })
+	// },
 	promptsButtonClicked: () => {
 		const visibleProvider = getVisibleProviderOrLog(outputChannel)
 

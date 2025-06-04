@@ -1,7 +1,8 @@
 {
 	"title": "Server MCP",
 	"done": "Selesai",
-	"description": "Aktifkan Model Context Protocol (MCP) untuk membiarkan Kilo Code menggunakan tool dan layanan tambahan dari server eksternal. Ini memperluas apa yang bisa Kilo Code lakukan untuk kamu. <0>Pelajari Lebih Lanjut</0>",
+	"description": "<0>Model Context Protocol</0> memungkinkan komunikasi dengan server MCP yang berjalan secara lokal yang menyediakan tool dan resource tambahan untuk memperluas kemampuan Kilo Code. Kamu bisa menggunakan <1>server buatan komunitas</1> atau meminta Kilo Code untuk membuat tool baru yang spesifik untuk workflow kamu (contoh: \"tambahkan tool yang mendapatkan dokumentasi npm terbaru\").",
+	"instructions": "Instruksi",
 	"enableToggle": {
 		"title": "Aktifkan Server MCP",
 		"description": "Nyalakan ini untuk membiarkan Kilo Code menggunakan tool dari server MCP yang terhubung. Ini memberi Kilo Code lebih banyak kemampuan. Jika kamu tidak berencana menggunakan tool tambahan ini, matikan untuk membantu mengurangi biaya token API."

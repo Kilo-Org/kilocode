@@ -11,23 +11,25 @@ import ChatView, { ChatViewRef } from "./components/chat/ChatView"
 import HistoryView from "./components/history/HistoryView"
 import SettingsView, { SettingsViewRef } from "./components/settings/SettingsView"
 import WelcomeView from "./components/kilocode/Welcome/WelcomeView" // kilocode_change
-import PromptsView from "./components/prompts/PromptsView"
-import ProfileView from "./components/kilocode/profile/ProfileView"
+import ProfileView from "./components/kilocode/profile/ProfileView" // kilocode_change
+import ModesView from "./components/modes/ModesView"
 import { HumanRelayDialog } from "./components/human-relay/HumanRelayDialog"
-import BottomControls from "./components/chat/BottomControls"
+import BottomControls from "./components/chat/BottomControls" // kilocode_change
+import { AccountView } from "./components/account/AccountView"
 
-type Tab = "settings" | "history" | "prompts" | "chat" | "profile" // kilocode_change
+type Tab = "settings" | "history" | "mcp" | "modes" | "chat" | "account" | "profile" // kilocode_change: add "profile"
 
 const tabsByMessageAction: Partial<Record<NonNullable<ExtensionMessage["action"]>, Tab>> = {
 	chatButtonClicked: "chat",
 	settingsButtonClicked: "settings",
-	promptsButtonClicked: "prompts",
+	promptsButtonClicked: "modes",
 	historyButtonClicked: "history",
 	profileButtonClicked: "profile",
+	accountButtonClicked: "account",
 }
 
 const App = () => {
-	const { didHydrateState, showWelcome, shouldShowAnnouncement } = useExtensionState()
+	const { didHydrateState, showWelcome, shouldShowAnnouncement, cloudUserInfo } = useExtensionState()
 
 	const [showAnnouncement, setShowAnnouncement] = useState(false)
 	const [tab, setTab] = useState<Tab>("chat")
@@ -116,12 +118,13 @@ const App = () => {
 		<WelcomeView />
 	) : (
 		<>
-			{tab === "prompts" && <PromptsView onDone={() => switchTab("chat")} />}
+			{tab === "modes" && <ModesView onDone={() => switchTab("chat")} />}
 			{tab === "history" && <HistoryView onDone={() => switchTab("chat")} />}
 			{tab === "settings" && (
 				<SettingsView ref={settingsRef} onDone={() => switchTab("chat")} targetSection={currentSection} /> // kilocode_change
 			)}
 			{tab === "profile" && <ProfileView onDone={() => switchTab("chat")} />}
+			{tab === "account" && <AccountView userInfo={cloudUserInfo} onDone={() => switchTab("chat")} />}
 			<ChatView
 				ref={chatViewRef}
 				isHidden={tab !== "chat"}

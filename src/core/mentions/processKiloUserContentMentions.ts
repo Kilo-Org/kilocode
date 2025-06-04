@@ -18,12 +18,16 @@ export async function processKiloUserContentMentions({
 	cwd,
 	urlContentFetcher,
 	fileContextTracker,
+	rooIgnoreController,
+	showRooIgnoredFiles = true,
 }: {
 	context: vscode.ExtensionContext // kilocode_change
 	userContent: Anthropic.Messages.ContentBlockParam[]
 	cwd: string
 	urlContentFetcher: UrlContentFetcher
 	fileContextTracker: FileContextTracker
+	rooIgnoreController?: any
+	showRooIgnoredFiles: boolean
 }): Promise<[Anthropic.Messages.ContentBlockParam[], boolean]> {
 	// Track if we need to check kilorules file
 	let needsRulesFileCheck = false
@@ -52,7 +56,14 @@ export async function processKiloUserContentMentions({
 				if (block.type === "text") {
 					if (shouldProcessMentions(block.text)) {
 						// kilocode_change begin: pull slash commands from Cline
-						const parsedText = await parseMentions(block.text, cwd, urlContentFetcher, fileContextTracker)
+						const parsedText = await parseMentions(
+							block.text,
+							cwd,
+							urlContentFetcher,
+							fileContextTracker,
+							rooIgnoreController,
+							showRooIgnoredFiles,
+						)
 
 						// when parsing slash commands, we still want to allow the user to provide their desired context
 						const { processedText, needsRulesFileCheck: needsCheck } = await parseKiloSlashCommands(
@@ -77,7 +88,14 @@ export async function processKiloUserContentMentions({
 						if (shouldProcessMentions(block.content)) {
 							return {
 								...block,
-								content: await parseMentions(block.content, cwd, urlContentFetcher, fileContextTracker),
+								content: await parseMentions(
+									block.content,
+									cwd,
+									urlContentFetcher,
+									fileContextTracker,
+									rooIgnoreController,
+									showRooIgnoredFiles,
+								),
 							}
 						}
 
@@ -93,6 +111,8 @@ export async function processKiloUserContentMentions({
 											cwd,
 											urlContentFetcher,
 											fileContextTracker,
+											rooIgnoreController,
+											showRooIgnoredFiles,
 										),
 									}
 								}

@@ -34,6 +34,7 @@
 		"task": "कार्य"
 	},
 	"profile": {
+		"title": "प्रोफ़ाइल",
 		"dashboard": "डैशबोर्ड",
 		"logOut": "लॉग आउट",
 		"currentBalance": "वर्तमान बैलेंस",

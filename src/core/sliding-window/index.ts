@@ -1,8 +1,10 @@
 import { Anthropic } from "@anthropic-ai/sdk"
+
+import { TelemetryService } from "@roo-code/telemetry"
+
 import { ApiHandler } from "../../api"
 import { summarizeConversation, SummarizeResponse } from "../condense"
 import { ApiMessage } from "../task-persistence/apiMessages"
-import { telemetryService } from "../../services/telemetry/TelemetryService"
 
 /**
  * Default percentage of the context window to use as a buffer when deciding when to truncate
@@ -36,7 +38,7 @@ export async function estimateTokenCount(
  * @returns {ApiMessage[]} The truncated conversation messages.
  */
 export function truncateConversation(messages: ApiMessage[], fracToRemove: number, taskId: string): ApiMessage[] {
-	telemetryService.captureSlidingWindowTruncation(taskId)
+	TelemetryService.instance.captureSlidingWindowTruncation(taskId)
 	const truncatedMessages = [messages[0]]
 	const rawMessagesToRemove = Math.floor((messages.length - 1) * fracToRemove)
 	const messagesToRemove = rawMessagesToRemove - (rawMessagesToRemove % 2)
@@ -96,6 +98,8 @@ export async function truncateConversationIfNeeded({
 	customCondensingPrompt,
 	condensingApiHandler,
 }: TruncateOptions): Promise<TruncateResponse> {
+	let error: string | undefined
+	let cost = 0
 	// Calculate the maximum tokens reserved for response
 	const reservedTokens = maxTokens || contextWindow * 0.2
 
@@ -122,11 +126,15 @@ export async function truncateConversationIfNeeded({
 				apiHandler,
 				systemPrompt,
 				taskId,
+				prevContextTokens,
 				true, // automatic trigger
 				customCondensingPrompt,
 				condensingApiHandler,
 			)
-			if (result.summary) {
+			if (result.error) {
+				error = result.error
+				cost = result.cost
+			} else {
 				return { ...result, prevContextTokens }
 			}
 		}
@@ -135,8 +143,8 @@ export async function truncateConversationIfNeeded({
 	// Fall back to sliding window truncation if needed
 	if (prevContextTokens > allowedTokens) {
 		const truncatedMessages = truncateConversation(messages, 0.5, taskId)
-		return { messages: truncatedMessages, prevContextTokens, summary: "", cost: 0 }
+		return { messages: truncatedMessages, prevContextTokens, summary: "", cost, error }
 	}
 	// No truncation or condensation needed
-	return { messages, summary: "", cost: 0, prevContextTokens }
+	return { messages, summary: "", cost, prevContextTokens, error }
 }

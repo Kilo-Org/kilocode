@@ -51,6 +51,14 @@
 		"title": "Setujui",
 		"tooltip": "Setujui aksi ini"
 	},
+	"read-batch": {
+		"approve": {
+			"title": "Setujui Semua"
+		},
+		"deny": {
+			"title": "Tolak Semua"
+		}
+	},
 	"runCommand": {
 		"title": "Jalankan Perintah",
 		"tooltip": "Eksekusi perintah ini"
@@ -139,6 +147,7 @@
 	"contextCondense": {
 		"title": "Konteks Dikondensasi",
 		"condensing": "Mengondensasi konteks...",
+		"errorHeader": "Gagal mengondensasi konteks",
 		"tokens": "token"
 	},
 	"instructions": {
@@ -146,6 +155,8 @@
 	},
 	"fileOperations": {
 		"wantsToRead": "Kilo Code ingin membaca file ini:",
+		"wantsToReadMultiple": "Kilo Code ingin membaca beberapa file:",
+		"wantsToReadAndXMore": "Kilo Code ingin membaca file ini dan {{count}} lainnya:",
 		"wantsToReadOutsideWorkspace": "Kilo Code ingin membaca file ini di luar workspace:",
 		"didRead": "Kilo Code membaca file ini:",
 		"wantsToEdit": "Kilo Code ingin mengedit file ini:",
@@ -260,6 +271,7 @@
 		}
 	},
 	"systemPromptWarning": "PERINGATAN: Override system prompt kustom aktif. Ini dapat merusak fungsionalitas secara serius dan menyebabkan perilaku yang tidak terduga.",
+	"profileViolationWarning": "Profil saat ini melanggar pengaturan organisasi kamu",
 	"shellIntegration": {
 		"title": "Peringatan Eksekusi Perintah",
 		"description": "Perintah kamu dijalankan tanpa integrasi shell terminal VSCode. Untuk menekan peringatan ini kamu bisa menonaktifkan integrasi shell di bagian <strong>Terminal</strong> dari <settingsLink>pengaturan Kilo Code</settingsLink> atau troubleshoot integrasi terminal VSCode menggunakan link di bawah.",

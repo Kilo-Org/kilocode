@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.32.0",
+	"version": "4.33.0",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -11,7 +11,7 @@
 	},
 	"engines": {
 		"vscode": "^1.84.0",
-		"node": "20.18.1"
+		"node": "20.19.2"
 	},
 	"author": {
 		"name": "Kilo Code"
@@ -142,7 +142,7 @@
 			{
 				"command": "kilo-code.promptsButtonClicked",
 				"title": "%command.prompts.title%",
-				"icon": "$(notebook)"
+				"icon": "$(organization)"
 			},
 			{
 				"command": "kilo-code.historyButtonClicked",
@@ -414,7 +414,7 @@
 		"lint": "eslint . --ext=ts --max-warnings=0",
 		"check-types": "tsc --noEmit",
 		"pretest": "turbo run bundle --cwd ..",
-		"test": "jest -w=40% && vitest run --globals",
+		"test": "jest -w=40% && vitest run",
 		"format": "prettier --write .",
 		"bundle": "node esbuild.mjs",
 		"vscode:prepublish": "pnpm bundle --production",
@@ -433,7 +433,8 @@
 		"@google/genai": "^0.13.0",
 		"@mistralai/mistralai": "^1.6.0",
 		"@modelcontextprotocol/sdk": "^1.9.0",
-		"@types/lru-cache": "^7.10.9",
+		"@roo-code/cloud": "workspace:^",
+		"@roo-code/telemetry": "workspace:^",
 		"@roo-code/types": "workspace:^",
 		"@qdrant/js-client-rest": "^1.14.0",
 		"@types/lodash.debounce": "^4.0.9",
@@ -468,7 +469,6 @@
 		"p-wait-for": "^5.0.2",
 		"pdf-parse": "^1.1.1",
 		"pkce-challenge": "^4.1.0",
-		"posthog-node": "^4.7.0",
 		"pretty-bytes": "^6.1.1",
 		"ps-tree": "^1.2.0",
 		"puppeteer-chromium-resolver": "^23.0.0",

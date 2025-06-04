@@ -46,7 +46,9 @@ export const globalSettingsSchema = z.object({
 	alwaysAllowExecute: z.boolean().optional(),
 	allowedCommands: z.array(z.string()).optional(),
 	allowedMaxRequests: z.number().nullish(),
+	autoCondenseContext: z.boolean().optional(),
 	autoCondenseContextPercent: z.number().optional(),
+ 	maxConcurrentFileReads: z.number().optional(),
 
 	browserToolEnabled: z.boolean().optional(),
 	browserViewportSize: z.string().optional(),
@@ -134,7 +136,9 @@ export const GLOBAL_SETTINGS_KEYS = keysOf<GlobalSettings>()([
 	"alwaysAllowExecute",
 	"allowedCommands",
 	"allowedMaxRequests",
+	"autoCondenseContext",
 	"autoCondenseContextPercent",
+	"maxConcurrentFileReads",
 
 	"browserToolEnabled",
 	"browserViewportSize",

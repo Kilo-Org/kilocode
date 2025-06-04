@@ -2,7 +2,7 @@ import { ApiHandlerOptions, ModelRecord } from "../../shared/api"
 import { OpenRouterHandler } from "./openrouter"
 import { getModelParams } from "../transform/model-params"
 import { getModels } from "./fetchers/modelCache"
-import { DEEP_SEEK_DEFAULT_TEMPERATURE } from "./constants"
+import { DEEP_SEEK_DEFAULT_TEMPERATURE } from "@roo-code/types"
 import { getKiloBaseUriFromToken } from "../../utils/kilocode-token"
 
 /**

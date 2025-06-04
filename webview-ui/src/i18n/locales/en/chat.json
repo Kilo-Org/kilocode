@@ -51,6 +51,14 @@
 		"title": "Approve",
 		"tooltip": "Approve this action"
 	},
+	"read-batch": {
+		"approve": {
+			"title": "Approve All"
+		},
+		"deny": {
+			"title": "Deny All"
+		}
+	},
 	"runCommand": {
 		"title": "Run Command",
 		"tooltip": "Execute this command"
@@ -139,6 +147,7 @@
 	"contextCondense": {
 		"title": "Context Condensed",
 		"condensing": "Condensing context...",
+		"errorHeader": "Failed to condense context",
 		"tokens": "tokens"
 	},
 	"instructions": {
@@ -146,6 +155,8 @@
 	},
 	"fileOperations": {
 		"wantsToRead": "Kilo Code wants to read this file:",
+		"wantsToReadMultiple": "Kilo Code wants to read multiple files:",
+		"wantsToReadAndXMore": "Kilo Code wants to read this file and {{count}} more:",
 		"wantsToReadOutsideWorkspace": "Kilo Code wants to read this file outside of the workspace:",
 		"didRead": "Kilo Code read this file:",
 		"wantsToEdit": "Kilo Code wants to edit this file:",
@@ -215,9 +226,9 @@
 		"title": "🎉 Roo Code {{version}} Released",
 		"description": "Roo Code {{version}} brings powerful new features and improvements based on your feedback.",
 		"whatsNew": "What's New",
-		"feature1": "<bold>Gemini 2.5 Flash Preview Models</bold>: Access the latest Gemini Flash models for faster and more efficient responses",
-		"feature2": "<bold>Intelligent Context Condensing</bold>: New button in task header lets you intelligently condense content with visual feedback",
-		"feature3": "<bold>YAML Support for Mode Definitions</bold>: Create and customize modes more easily with YAML support",
+		"feature1": "<bold>Intelligent Context Condensing Enabled by Default</bold>: Context condensing is now enabled by default with configurable settings for when automatic condensing happens",
+		"feature2": "<bold>Manual Condensing Button</bold>: New button in the task header allows you to manually trigger context condensing at any time",
+		"feature3": "<bold>Enhanced Condensing Settings</bold>: Fine-tune when and how automatic condensing occurs through the <contextSettingsLink>Context Settings</contextSettingsLink>",
 		"hideButton": "Hide announcement",
 		"detailsDiscussLinks": "Get more details and discuss in <discordLink>Discord</discordLink> and <redditLink>Reddit</redditLink> 🚀"
 	},
@@ -260,6 +271,7 @@
 		}
 	},
 	"systemPromptWarning": "WARNING: Custom system prompt override active. This can severely break functionality and cause unpredictable behavior.",
+	"profileViolationWarning": "The current profile violates your organization's settings",
 	"shellIntegration": {
 		"title": "Command Execution Warning",
 		"description": "Your command is being executed without VSCode terminal shell integration. To suppress this warning you can disable shell integration in the <strong>Terminal</strong> section of the <settingsLink>Kilo Code settings</settingsLink> or troubleshoot VSCode terminal integration using the link below.",

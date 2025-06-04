@@ -64,7 +64,8 @@
 			"apiConfigDescription": "Kamu bisa memilih konfigurasi API untuk selalu digunakan untuk meningkatkan prompt, atau gunakan yang sedang dipilih",
 			"useCurrentConfig": "Gunakan konfigurasi API yang sedang dipilih",
 			"testPromptPlaceholder": "Masukkan prompt untuk menguji peningkatan",
-			"previewButton": "Preview Peningkatan Prompt"
+			"previewButton": "Preview Peningkatan Prompt",
+			"testEnhancement": "Uji Peningkatan"
 		},
 		"types": {
 			"ENHANCE": {

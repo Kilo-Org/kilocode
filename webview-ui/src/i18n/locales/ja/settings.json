@@ -28,9 +28,13 @@
 		"notifications": "通知",
 		"contextManagement": "コンテキスト",
 		"terminal": "ターミナル",
+		"prompts": "プロンプト",
 		"experimental": "実験的",
 		"language": "言語",
 		"about": "Kilo Codeについて"
+	},
+	"prompts": {
+		"description": "プロンプトの強化、コードの説明、問題の修正などの迅速なアクションに使用されるサポートプロンプトを設定します。これらのプロンプトは、Kilo Codeが一般的な開発タスクでより良いサポートを提供するのに役立ちます。"
 	},
 	"codeIndex": {
 		"title": "コードベースのインデックス作成",
@@ -171,6 +175,7 @@
 		"groqApiKey": "Groq APIキー",
 		"getGeminiApiKey": "Gemini APIキーを取得",
 		"openAiApiKey": "OpenAI APIキー",
+		"apiKey": "APIキー",
 		"openAiBaseUrl": "ベースURL",
 		"getOpenAiApiKey": "OpenAI APIキーを取得",
 		"mistralApiKey": "Mistral APIキー",
@@ -189,6 +194,11 @@
 		"awsSessionToken": "AWSセッショントークン",
 		"awsRegion": "AWSリージョン",
 		"awsCrossRegion": "クロスリージョン推論を使用",
+		"awsBedrockVpc": {
+			"useCustomVpcEndpoint": "カスタムVPCエンドポイントを使用",
+			"vpcEndpointUrlPlaceholder": "VPCエンドポイントURLを入力（任意）",
+			"examples": "例："
+		},
 		"enablePromptCaching": "プロンプトキャッシュを有効化",
 		"enablePromptCachingTitle": "サポートされているモデルのパフォーマンスを向上させ、コストを削減するためにプロンプトキャッシュを有効化します。",
 		"cacheUsageNote": "注意：キャッシュの使用が表示されない場合は、別のモデルを選択してから希望のモデルを再度選択してみてください。",
@@ -337,6 +347,25 @@
 	},
 	"contextManagement": {
 		"description": "AIのコンテキストウィンドウに含まれる情報を制御し、token使用量とレスポンスの品質に影響します",
+		"autoCondenseContextPercent": {
+			"label": "インテリジェントなコンテキスト圧縮をトリガーするしきい値",
+			"description": "コンテキストウィンドウがこのしきい値に達すると、Kilo Codeは自動的に圧縮します。"
+		},
+		"condensingApiConfiguration": {
+			"label": "コンテキスト圧縮用のAPI設定",
+			"description": "コンテキスト圧縮操作に使用するAPI設定を選択します。選択しない場合は現在のアクティブな設定が使用されます。",
+			"useCurrentConfig": "現在の設定を使用"
+		},
+		"customCondensingPrompt": {
+			"label": "カスタムコンテキスト圧縮プロンプト",
+			"description": "コンテキスト圧縮に使用するシステムプロンプトをカスタマイズします。空のままにするとデフォルトのプロンプトが使用されます。",
+			"placeholder": "ここにカスタム圧縮プロンプトを入力してください...\n\nデフォルトプロンプトと同じ構造を使用できます：\n- 過去の会話\n- 現在の作業\n- 重要な技術的概念\n- 関連するファイルとコード\n- 問題解決\n- 保留中のタスクと次のステップ",
+			"reset": "デフォルトにリセット",
+			"hint": "空 = デフォルトプロンプトを使用"
+		},
+		"autoCondenseContext": {
+			"name": "インテリジェントなコンテキスト圧縮を自動的にトリガーする"
+		},
 		"openTabs": {
 			"label": "オープンタブコンテキスト制限",
 			"description": "コンテキストに含めるVSCodeオープンタブの最大数。高い値はより多くのコンテキストを提供しますが、token使用量が増加します。"
@@ -354,6 +383,10 @@
 			"description": "モデルが開始/終了の値を指定しない場合、Kilo Codeはこの行数を読み込みます。この数がファイルの総行数より少ない場合、Kilo Codeはコード定義の行番号インデックスを生成します。特殊なケース：-1はKilo Codeにファイル全体を読み込むよう指示し（インデックス作成なし）、0は行を読み込まず最小限のコンテキストのために行インデックスのみを提供するよう指示します。低い値は初期コンテキスト使用量を最小限に抑え、後続の正確な行範囲の読み込みを可能にします。明示的な開始/終了の要求はこの設定による制限を受けません。",
 			"lines": "行",
 			"always_full_read": "常にファイル全体を読み込む"
+		},
+		"maxConcurrentFileReads": {
+			"label": "同時ファイル読み取り制限",
+			"description": "read_file ツールが同時に処理できるファイルの最大数。値を高くすると複数の小さなファイルの読み取りが速くなる可能性がありますが、メモリ使用量が増加します。"
 		}
 	},
 	"terminal": {
@@ -434,26 +467,6 @@
 		}
 	},
 	"experimental": {
-		"autoCondenseContextPercent": {
-			"label": "インテリジェントなコンテキスト圧縮をトリガーするしきい値",
-			"description": "コンテキストウィンドウがこのしきい値に達すると、Rooは自動的に圧縮します。"
-		},
-		"condensingApiConfiguration": {
-			"label": "コンテキスト圧縮用のAPI設定",
-			"description": "コンテキスト圧縮操作に使用するAPI設定を選択します。選択しない場合は現在のアクティブな設定が使用されます。",
-			"useCurrentConfig": "現在の設定を使用"
-		},
-		"customCondensingPrompt": {
-			"label": "カスタムコンテキスト圧縮プロンプト",
-			"description": "コンテキスト圧縮に使用するシステムプロンプトをカスタマイズします。空のままにするとデフォルトのプロンプトが使用されます。",
-			"placeholder": "ここにカスタム圧縮プロンプトを入力してください...\n\nデフォルトプロンプトと同じ構造を使用できます：\n- 過去の会話\n- 現在の作業\n- 重要な技術的概念\n- 関連するファイルとコード\n- 問題解決\n- 保留中のタスクと次のステップ",
-			"reset": "デフォルトにリセット",
-			"hint": "空 = デフォルトプロンプトを使用"
-		},
-		"AUTO_CONDENSE_CONTEXT": {
-			"name": "インテリジェントなコンテキスト圧縮を自動的にトリガーする",
-			"description": "インテリジェントなコンテキスト圧縮は、タスクのコンテキストウィンドウが事前設定されたしきい値に達したとき、コンテキストがいっぱいになって古いメッセージを削除する代わりに、LLM呼び出しを使用して過去の会話を要約します。"
-		},
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "実験的な統合diff戦略を使用する",
 			"description": "実験的な統合diff戦略を有効にします。この戦略はモデルエラーによる再試行の回数を減らす可能性がありますが、予期しない動作や不正確な編集を引き起こす可能性があります。リスクを理解し、すべての変更を注意深く確認する準備がある場合にのみ有効にしてください。"
@@ -477,6 +490,10 @@
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "実験的なマルチブロックdiffツールを使用する",
 			"description": "有効にすると、Kilo Codeはマルチブロックdiffツールを使用します。これにより、1つのリクエストでファイル内の複数のコードブロックを更新しようとします。"
+		},
+		"CONCURRENT_FILE_READS": {
+			"name": "並行ファイル読み取りを有効にする",
+			"description": "有効にすると、Kilo Codeは1回のリクエストで複数のファイル（最大15ファイル）を読み取ることができます。無効にすると、Kilo Codeはファイルを1つずつ読み取る必要があります。能力の低いモデルで作業する場合や、ファイルアクセスをより細かく制御したい場合は、無効にすると役立ちます。"
 		}
 	},
 	"promptCaching": {
@@ -546,7 +563,10 @@
 			"invalidFormat": "ARNの形式が無効です。フォーマット要件を確認してください。",
 			"regionMismatch": "警告：ARN内のリージョン（{{arnRegion}}）が選択したリージョン（{{region}}）と一致しません。これによりアクセスの問題が発生する可能性があります。プロバイダーはARNのリージョンを使用します。"
 		},
-		"modelAvailability": "指定されたモデルID（{{modelId}}）は利用できません。別のモデルを選択してください。"
+		"modelAvailability": "指定されたモデルID（{{modelId}}）は利用できません。別のモデルを選択してください。",
+		"providerNotAllowed": "プロバイダー「{{provider}}」は組織によって許可されていません",
+		"modelNotAllowed": "モデル「{{model}}」はプロバイダー「{{provider}}」に対して組織によって許可されていません",
+		"profileInvalid": "このプロファイルには、組織によって許可されていないプロバイダーまたはモデルが含まれています"
 	},
 	"placeholders": {
 		"apiKey": "API キーを入力...",

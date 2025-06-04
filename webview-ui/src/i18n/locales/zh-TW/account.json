@@ -1,0 +1,8 @@
+{
+	"title": "帳戶",
+	"profilePicture": "個人圖片",
+	"unknownUser": "未知使用者",
+	"logOut": "登出",
+	"testApiAuthentication": "測試 API 認證",
+	"signIn": "連接到 Roo Code Cloud"
+}

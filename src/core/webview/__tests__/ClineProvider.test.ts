@@ -1,10 +1,10 @@
-// npx jest src/core/webview/__tests__/ClineProvider.test.ts
+// npx jest core/webview/__tests__/ClineProvider.test.ts
 
 import Anthropic from "@anthropic-ai/sdk"
 import * as vscode from "vscode"
 import axios from "axios"
 
-import type { ProviderSettingsEntry, ClineMessage } from "@roo-code/types"
+import { type ProviderSettingsEntry, type ClineMessage, ORGANIZATION_ALLOW_ALL } from "@roo-code/types"
 
 import { ExtensionMessage, ExtensionState } from "../../../shared/ExtensionMessage"
 import { defaultModeSlug } from "../../../shared/modes"
@@ -94,13 +94,11 @@ jest.mock("../../../services/browser/browserDiscovery", () => ({
 	}),
 }))
 
-// Initialize mocks
 const mockAddCustomInstructions = jest.fn().mockResolvedValue("Combined instructions")
 
 ;(jest.requireMock("../../prompts/sections/custom-instructions") as any).addCustomInstructions =
 	mockAddCustomInstructions
 
-// Mock delay module
 jest.mock("delay", () => {
 	const delayFn = (_ms: number) => Promise.resolve()
 	delayFn.createDelay = () => delayFn
@@ -109,7 +107,7 @@ jest.mock("delay", () => {
 	return delayFn
 })
 
-// MCP-related modules are mocked once above (lines 87-109)
+// MCP-related modules are mocked once above (lines 87-109).
 
 jest.mock(
 	"@modelcontextprotocol/sdk/client/index.js",
@@ -249,10 +247,8 @@ describe("ClineProvider", () => {
 	let updateGlobalStateSpy: jest.SpyInstance<ClineProvider["contextProxy"]["updateGlobalState"]>
 
 	beforeEach(() => {
-		// Reset mocks
 		jest.clearAllMocks()
 
-		// Mock context
 		const globalState: Record<string, string | undefined> = {
 			mode: "architect",
 			currentApiConfigName: "current-config",
@@ -441,6 +437,9 @@ describe("ClineProvider", () => {
 			renderContext: "sidebar",
 			maxReadFileLine: 500,
 			showAutoApproveMenu: false, // kilocode_change
+			cloudUserInfo: null,
+			organizationAllowList: ORGANIZATION_ALLOW_ALL,
+			autoCondenseContext: true,
 			autoCondenseContextPercent: 100,
 		}
 
@@ -611,6 +610,24 @@ describe("ClineProvider", () => {
 
 		const state = await provider.getState()
 		expect(state.alwaysApproveResubmit).toBe(false)
+	})
+
+	test("autoCondenseContext defaults to true", async () => {
+		// Mock globalState.get to return undefined for autoCondenseContext
+		;(mockContext.globalState.get as jest.Mock).mockImplementation((key: string) =>
+			key === "autoCondenseContext" ? undefined : null,
+		)
+		const state = await provider.getState()
+		expect(state.autoCondenseContext).toBe(true)
+	})
+
+	test("handles autoCondenseContext message", async () => {
+		await provider.resolveWebviewView(mockWebviewView)
+		const messageHandler = (mockWebviewView.webview.onDidReceiveMessage as jest.Mock).mock.calls[0][0]
+		await messageHandler({ type: "autoCondenseContext", bool: false })
+		expect(updateGlobalStateSpy).toHaveBeenCalledWith("autoCondenseContext", false)
+		expect(mockContext.globalState.update).toHaveBeenCalledWith("autoCondenseContext", false)
+		expect(mockPostMessage).toHaveBeenCalled()
 	})
 
 	test("autoCondenseContextPercent defaults to 100", async () => {

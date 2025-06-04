@@ -28,9 +28,13 @@
 		"notifications": "通知",
 		"contextManagement": "上下文",
 		"terminal": "終端機",
+		"prompts": "提示詞",
 		"experimental": "實驗性",
 		"language": "語言",
 		"about": "關於 Kilo Code"
+	},
+	"prompts": {
+		"description": "設定用於快速操作的支援提示詞，如增強提示詞、解釋程式碼和修復問題。這些提示詞幫助 Kilo Code 為常見開發工作提供更好的支援。"
 	},
 	"codeIndex": {
 		"title": "程式碼庫索引",
@@ -171,6 +175,7 @@
 		"groqApiKey": "Groq API 金鑰",
 		"getGeminiApiKey": "取得 Gemini API 金鑰",
 		"openAiApiKey": "OpenAI API 金鑰",
+		"apiKey": "API 金鑰",
 		"openAiBaseUrl": "基礎 URL",
 		"getOpenAiApiKey": "取得 OpenAI API 金鑰",
 		"mistralApiKey": "Mistral API 金鑰",
@@ -189,6 +194,11 @@
 		"awsSessionToken": "AWS 工作階段權杖",
 		"awsRegion": "AWS 區域",
 		"awsCrossRegion": "使用跨區域推論",
+		"awsBedrockVpc": {
+			"useCustomVpcEndpoint": "使用自訂 VPC 端點",
+			"vpcEndpointUrlPlaceholder": "輸入 VPC 端點 URL（選填）",
+			"examples": "範例："
+		},
 		"enablePromptCaching": "啟用提示快取",
 		"enablePromptCachingTitle": "啟用提示快取以提升支援的模型效能並降低成本。",
 		"cacheUsageNote": "注意：如果您沒有看到快取使用情況，請嘗試選擇其他模型，然後重新選擇您想要的模型。",
@@ -337,6 +347,25 @@
 	},
 	"contextManagement": {
 		"description": "控制 AI 上下文視窗中要包含哪些資訊，會影響 token 用量和回應品質",
+		"autoCondenseContextPercent": {
+			"label": "觸發智慧上下文壓縮的閾值",
+			"description": "當上下文視窗達到此閾值時，Kilo Code 將自動壓縮它。"
+		},
+		"condensingApiConfiguration": {
+			"label": "上下文壓縮的API配置",
+			"description": "選擇用於上下文壓縮操作的API配置。留空則使用當前活動的配置。",
+			"useCurrentConfig": "使用當前配置"
+		},
+		"customCondensingPrompt": {
+			"label": "自訂上下文壓縮提示",
+			"description": "自訂用於上下文壓縮的系統提示。留空則使用預設提示。",
+			"placeholder": "請在此輸入您的自訂上下文壓縮提示...\n\n您可以參考預設提示的結構：\n- 先前對話\n- 目前工作\n- 主要技術概念\n- 相關檔案與程式碼\n- 問題解決\n- 未完成的任務與後續步驟",
+			"reset": "重設為預設值",
+			"hint": "留空 = 使用預設提示"
+		},
+		"autoCondenseContext": {
+			"name": "自動觸發智慧上下文壓縮"
+		},
 		"openTabs": {
 			"label": "開啟分頁的上下文限制",
 			"description": "上下文中最多包含多少個 VS Code 開啟的分頁。數值越高提供的上下文越多，但 token 用量也會增加。"
@@ -354,6 +383,10 @@
 			"description": "當模型未指定起始/結束值時，Kilo Code 讀取的行數。如果此數值小於檔案總行數，Kilo Code 將產生程式碼定義的行號索引。特殊情況：-1 指示 Kilo Code 讀取整個檔案（不建立索引），0 指示不讀取任何行並僅提供行索引以取得最小上下文。較低的值可最小化初始上下文使用，允許後續精確的行範圍讀取。明確指定起始/結束的請求不受此設定限制。 <0>瞭解更多</0>",
 			"lines": "行",
 			"always_full_read": "始終讀取整個檔案"
+		},
+		"maxConcurrentFileReads": {
+			"label": "並行檔案讀取限制",
+			"description": "read_file 工具可以同時處理的最大檔案數。較高的值可能會加快讀取多個小檔案的速度，但會增加記憶體使用量。"
 		}
 	},
 	"terminal": {
@@ -434,26 +467,6 @@
 		}
 	},
 	"experimental": {
-		"condensingApiConfiguration": {
-			"label": "API Configuration for Context Condensing",
-			"description": "Select which API configuration to use for context condensing operations. Leave unselected to use the current active configuration.",
-			"useCurrentConfig": "Default"
-		},
-		"customCondensingPrompt": {
-			"label": "自訂上下文壓縮提示",
-			"description": "自訂用於上下文壓縮的系統提示。留空則使用預設提示。",
-			"placeholder": "請在此輸入您的自訂上下文壓縮提示...\n\n您可以參考預設提示的結構：\n- 先前對話\n- 目前工作\n- 主要技術概念\n- 相關檔案與程式碼\n- 問題解決\n- 未完成的任務與後續步驟",
-			"reset": "重設為預設值",
-			"hint": "Empty = use default prompt"
-		},
-		"autoCondenseContextPercent": {
-			"label": "觸發智慧上下文壓縮的閾值",
-			"description": "當上下文視窗達到此閾值時，Kilo Code 將自動壓縮它。"
-		},
-		"AUTO_CONDENSE_CONTEXT": {
-			"name": "自動觸發智慧上下文壓縮",
-			"description": "智慧上下文壓縮使用 LLM 呼叫來摘要過去的對話，在工作的上下文視窗達到預設閾值時進行，而非在上下文填滿時捨棄舊訊息。"
-		},
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "使用實驗性統一差異比對策略",
 			"description": "啟用實驗性的統一差異比對策略。此策略可能減少因模型錯誤而導致的重試次數，但也可能導致意外行為或錯誤的編輯。請務必了解風險，並願意仔細檢查所有變更後再啟用。"
@@ -477,6 +490,10 @@
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "使用實驗性多區塊差異比對工具",
 			"description": "啟用後，Kilo Code 將使用多區塊差異比對工具，嘗試在單一請求中更新檔案內的多個程式碼區塊。"
+		},
+		"CONCURRENT_FILE_READS": {
+			"name": "啟用並行檔案讀取",
+			"description": "啟用後，Kilo Code 可以在單一請求中讀取多個檔案（最多 15 個檔案）。停用後，Kilo Code 必須逐一讀取檔案。在使用能力較弱的模型或希望對檔案存取有更多控制時，停用此功能可能會有所幫助。"
 		}
 	},
 	"promptCaching": {
@@ -546,7 +563,10 @@
 			"invalidFormat": "ARN 格式無效，請檢查格式要求。",
 			"regionMismatch": "警告：您 ARN 中的區域 ({{arnRegion}}) 與您選擇的區域 ({{region}}) 不符，可能導致存取問題。系統將使用 ARN 中指定的區域。"
 		},
-		"modelAvailability": "您指定的模型 ID ({{modelId}}) 目前無法使用，請選擇其他模型。"
+		"modelAvailability": "您指定的模型 ID ({{modelId}}) 目前無法使用，請選擇其他模型。",
+		"providerNotAllowed": "供應商 '{{provider}}' 不允許用於您的組織。",
+		"modelNotAllowed": "模型 '{{model}}' 不允許用於供應商 '{{provider}}'，您的組織不允許",
+		"profileInvalid": "此設定檔包含您的組織不允許的供應商或模型"
 	},
 	"placeholders": {
 		"apiKey": "請輸入 API 金鑰...",

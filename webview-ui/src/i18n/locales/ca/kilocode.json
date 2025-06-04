@@ -25,6 +25,7 @@
 		}
 	},
 	"profile": {
+		"title": "Perfil",
 		"dashboard": "Tauler de control",
 		"logOut": "Tancar sessió",
 		"currentBalance": "SALDO ACTUAL",

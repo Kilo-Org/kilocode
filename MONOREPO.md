@@ -27,3 +27,16 @@ If things are in good working order then you should be able to build a vsix and 
 pnpm build --out ../bin/kilo-code-main.vsix && \
   code --install-extension bin/kilo-code-main.vsix
 ```
+
+To fully stress the monorepo setup, run the following:
+
+```sh
+pnpm clean && pnpm lint
+pnpm clean && pnpm check-types
+pnpm clean && pnpm test
+pnpm clean && pnpm bundle
+pnpm clean && pnpm build
+pnpm clean && pnpm npx turbo watch:bundle
+pnpm clean && pnpm npx turbo watch:tsc
+cd apps/vscode-e2e && pnpm test:ci
+```

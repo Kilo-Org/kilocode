@@ -2,9 +2,9 @@ import { useCallback, useState, useRef } from "react"
 import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 import { useQueryClient } from "@tanstack/react-query"
 
-import type { ProviderSettings } from "@roo-code/types"
+import { type ProviderSettings, type OrganizationAllowList, unboundDefaultModelId } from "@roo-code/types"
 
-import { RouterModels, unboundDefaultModelId } from "@roo/api"
+import type { RouterModels } from "@roo/api"
 
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { VSCodeButtonLink } from "@src/components/common/VSCodeButtonLink"
@@ -18,9 +18,15 @@ type UnboundProps = {
 	apiConfiguration: ProviderSettings
 	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
 	routerModels?: RouterModels
+	organizationAllowList: OrganizationAllowList
 }
 
-export const Unbound = ({ apiConfiguration, setApiConfigurationField, routerModels }: UnboundProps) => {
+export const Unbound = ({
+	apiConfiguration,
+	setApiConfigurationField,
+	routerModels,
+	organizationAllowList,
+}: UnboundProps) => {
 	const { t } = useAppTranslation()
 	const [didRefetch, setDidRefetch] = useState<boolean>()
 	const [isInvalidKey, setIsInvalidKey] = useState<boolean>(false)
@@ -169,6 +175,7 @@ export const Unbound = ({ apiConfiguration, setApiConfigurationField, routerMode
 				serviceName="Unbound"
 				serviceUrl="https://api.getunbound.ai/models"
 				setApiConfigurationField={setApiConfigurationField}
+				organizationAllowList={organizationAllowList}
 			/>
 		</>
 	)

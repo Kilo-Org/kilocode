@@ -150,7 +150,9 @@
 		"didSearchReplace": "Kilo Code heeft zoeken en vervangen uitgevoerd op dit bestand:",
 		"wantsToInsert": "Kilo Code wil inhoud invoegen in dit bestand:",
 		"wantsToInsertWithLineNumber": "Kilo Code wil inhoud invoegen in dit bestand op regel {{lineNumber}}:",
-		"wantsToInsertAtEnd": "Kilo Code wil inhoud toevoegen aan het einde van dit bestand:"
+		"wantsToInsertAtEnd": "Kilo Code wil inhoud toevoegen aan het einde van dit bestand:",
+		"wantsToReadAndXMore": "Kilo Code wil dit bestand en nog {{count}} andere lezen:",
+		"wantsToReadMultiple": "Kilo Code wil meerdere bestanden lezen:"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code wil de bovenliggende bestanden in deze map bekijken:",
@@ -204,9 +206,9 @@
 	"announcement": {
 		"title": "🎉 Roo Code {{version}} uitgebracht",
 		"description": "Roo Code {{version}} brengt krachtige nieuwe functies en verbeteringen op basis van jouw feedback.",
-		"feature1": "<bold>Gemini 2.5 Flash preview-modellen</bold>: Toegang tot de nieuwste Gemini Flash-modellen voor snellere en efficiëntere antwoorden",
-		"feature2": "<bold>Intelligente contextcompressie</bold>: Nieuwe knop in de taakheader waarmee je content intelligent kunt comprimeren met visuele feedback",
-		"feature3": "<bold>YAML-ondersteuning voor modusdefinities</bold>: Maak en pas modi eenvoudiger aan met YAML-ondersteuning",
+		"feature1": "<bold>Intelligente Contextcompressie Standaard Ingeschakeld</bold>: Contextcompressie is nu standaard ingeschakeld met configureerbare instellingen voor wanneer automatische compressie plaatsvindt",
+		"feature2": "<bold>Handmatige Compressieknop</bold>: Nieuwe knop in de taakheader stelt je in staat om op elk moment handmatig contextcompressie te activeren",
+		"feature3": "<bold>Verbeterde Compressie-instellingen</bold>: Stel bij wanneer en hoe automatische compressie plaatsvindt via de <contextSettingsLink>Contextinstellingen</contextSettingsLink>",
 		"hideButton": "Aankondiging verbergen",
 		"detailsDiscussLinks": "Meer details en discussie in <discordLink>Discord</discordLink> en <redditLink>Reddit</redditLink> 🚀",
 		"whatsNew": "Wat is er nieuw"
@@ -218,6 +220,7 @@
 	"contextCondense": {
 		"title": "Context samengevat",
 		"condensing": "Context aan het samenvatten...",
+		"errorHeader": "Context samenvatten mislukt",
 		"tokens": "tokens"
 	},
 	"followUpSuggest": {
@@ -255,6 +258,7 @@
 		}
 	},
 	"systemPromptWarning": "WAARSCHUWING: Aangepaste systeemprompt actief. Dit kan de functionaliteit ernstig verstoren en onvoorspelbaar gedrag veroorzaken.",
+	"profileViolationWarning": "Het huidige profiel schendt de instellingen van uw organisatie",
 	"shellIntegration": {
 		"title": "Waarschuwing commando-uitvoering",
 		"description": "Je commando wordt uitgevoerd zonder VSCode-terminal shell-integratie. Om deze waarschuwing te onderdrukken kun je shell-integratie uitschakelen in het gedeelte <strong>Terminal</strong> van de <settingsLink>Kilo Code-instellingen</settingsLink> of de VSCode-terminalintegratie oplossen via de onderstaande link.",
@@ -271,5 +275,13 @@
 		"wantsToSearch": "Kilo Code wil de codebase doorzoeken op <code>{{query}}</code>:",
 		"wantsToSearchWithPath": "Kilo Code wil de codebase doorzoeken op <code>{{query}}</code> in <code>{{path}}</code>:",
 		"didSearch": "{{count}} resultaat/resultaten gevonden voor <code>{{query}}</code>:"
+	},
+	"read-batch": {
+		"approve": {
+			"title": "Alles goedkeuren"
+		},
+		"deny": {
+			"title": "Alles weigeren"
+		}
 	}
 }

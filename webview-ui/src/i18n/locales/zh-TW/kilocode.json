@@ -34,6 +34,7 @@
 		"task": "任務"
 	},
 	"profile": {
+		"title": "個人檔案",
 		"dashboard": "儀表板",
 		"logOut": "登出",
 		"currentBalance": "目前餘額",

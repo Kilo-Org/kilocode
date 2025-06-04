@@ -243,6 +243,9 @@ describe("mergeExtensionState", () => {
 			renderContext: "sidebar",
 			maxReadFileLine: 500,
 			showAutoApproveMenu: false,
+			cloudUserInfo: null,
+			organizationAllowList: { allowAll: true, providers: {} },
+			autoCondenseContext: true,
 			autoCondenseContextPercent: 100,
 		}
 
@@ -258,6 +261,8 @@ describe("mergeExtensionState", () => {
 			experiments: {
 				powerSteering: true,
 				autoCondenseContext: true,
+				concurrentFileReads: true,
+				autocomplete: true,
 			} as Record<ExperimentId, boolean>,
 		}
 
@@ -271,6 +276,8 @@ describe("mergeExtensionState", () => {
 		expect(result.experiments).toEqual({
 			powerSteering: true,
 			autoCondenseContext: true,
+			concurrentFileReads: true,
+			autocomplete: true,
 		})
 	})
 })

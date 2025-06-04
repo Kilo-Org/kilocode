@@ -4,7 +4,12 @@ import type { ProviderSettings, PromptComponent, ModeConfig } from "@roo-code/ty
 
 import { Mode } from "./modes"
 
-export type ClineAskResponse = "yesButtonClicked" | "noButtonClicked" | "messageResponse" | "retry_clicked" // kilocode_change: Added for payment required dialog
+export type ClineAskResponse =
+	| "yesButtonClicked"
+	| "noButtonClicked"
+	| "messageResponse"
+	| "objectResponse"
+	| "retry_clicked" // kilocode_change: Added retry_clicked for payment required dialog
 
 export type PromptMode = Mode | "enhance"
 
@@ -65,6 +70,7 @@ export interface WebviewMessage {
 		| "alwaysAllowModeSwitch"
 		| "allowedMaxRequests"
 		| "alwaysAllowSubtasks"
+		| "autoCondenseContext"
 		| "autoCondenseContextPercent"
 		| "condensingApiConfigId"
 		| "updateCondensingPrompt"
@@ -136,6 +142,7 @@ export interface WebviewMessage {
 		| "remoteBrowserEnabled"
 		| "language"
 		| "maxReadFileLine"
+		| "maxConcurrentFileReads"
 		| "searchFiles"
 		| "setHistoryPreviewCollapsed"
 		| "showFeedbackOptions" // kilocode_change
@@ -154,6 +161,9 @@ export interface WebviewMessage {
 		| "balanceDataResponse" // kilocode_change
 		| "condense" // kilocode_change
 		| "toggleWorkflow" // kilocode_change
+		| "accountButtonClicked"
+		| "rooCloudSignIn"
+		| "rooCloudSignOut"
 		| "condenseTaskContextRequest"
 		| "requestIndexingStatus"
 		| "startIndexing"

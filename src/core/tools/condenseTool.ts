@@ -39,13 +39,15 @@ export const condenseTool = async (
 				// If no response, the user accepted the condensed version
 				pushToolResult(formatResponse.toolResult(formatResponse.condense()))
 
+				const { contextTokens: prevContextTokens } = cline.getTokenUsage()
+
 				// Use summarizeConversation to create a condensed version of the conversation
 				const summarizedMessages = await summarizeConversation(
 					cline.apiConversationHistory,
 					cline.api,
 					await cline.getSystemPrompt(),
 					"TaskId condenseTool",
-					false,
+					prevContextTokens,
 				)
 
 				// Overwrite the apiConversationHistory with the summarized messages
