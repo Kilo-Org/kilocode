@@ -38,7 +38,8 @@ export async function estimateTokenCount(
  * @returns {ApiMessage[]} The truncated conversation messages.
  */
 export function truncateConversation(messages: ApiMessage[], fracToRemove: number, taskId: string): ApiMessage[] {
-	TelemetryService.instance.captureSlidingWindowTruncation(taskId)
+	// kilocode_change: do not get instance
+	// TelemetryService.instance.captureSlidingWindowTruncation(taskId)
 	const truncatedMessages = [messages[0]]
 	const rawMessagesToRemove = Math.floor((messages.length - 1) * fracToRemove)
 	const messagesToRemove = rawMessagesToRemove - (rawMessagesToRemove % 2)

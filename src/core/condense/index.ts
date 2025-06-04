@@ -90,12 +90,14 @@ export async function summarizeConversation(
 	customCondensingPrompt?: string,
 	condensingApiHandler?: ApiHandler,
 ): Promise<SummarizeResponse> {
-	TelemetryService.instance.captureContextCondensed(
-		taskId,
-		isAutomaticTrigger ?? false,
-		!!customCondensingPrompt?.trim(),
-		!!condensingApiHandler,
-	)
+	// kilocode_change start
+	// TelemetryService.instance.captureContextCondensed(
+	// 	taskId,
+	// 	isAutomaticTrigger ?? false,
+	// 	!!customCondensingPrompt?.trim(),
+	// 	!!condensingApiHandler,
+	// )
+	// kilocode_change end
 
 	const response: SummarizeResponse = { messages, cost: 0, summary: "" }
 	const messagesToSummarize = getMessagesSinceLastSummary(messages.slice(0, -N_MESSAGES_TO_KEEP))
