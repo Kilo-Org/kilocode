@@ -233,7 +233,10 @@
 			{
 				"command": "kilo-code.generateCommitMessage",
 				"title": "%command.generateCommitMessage.title%",
-				"icon": "$(sparkle)",
+				"icon": {
+					"light": "assets/icons/kilo-light.svg",
+					"dark": "assets/icons/kilo-dark.svg"
+				},
 				"category": "%configuration.title%"
 			}
 		],
