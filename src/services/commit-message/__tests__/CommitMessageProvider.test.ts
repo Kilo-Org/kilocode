@@ -49,20 +49,20 @@ jest.mock("vscode", () => {
 })
 
 // Mock dependencies
+jest.mock("../GitExtensionService")
 jest.mock("../../../utils/single-completion-handler")
 jest.mock("../../../core/config/ContextProxy")
-jest.mock("../GitUtils")
 jest.mock("../../../core/prompts/sections/custom-instructions")
 
 const mockSingleCompletionHandler = singleCompletionHandler as jest.MockedFunction<typeof singleCompletionHandler>
 const mockContextProxy = ContextProxy as jest.Mocked<typeof ContextProxy>
-const MockGitUtils = GitExtensionService as jest.MockedClass<typeof GitExtensionService>
+const MockGitExtensionService = GitExtensionService as jest.MockedClass<typeof GitExtensionService>
 const mockLoadRuleFiles = loadRuleFiles as jest.MockedFunction<typeof loadRuleFiles>
 
 describe("CommitMessageProvider", () => {
 	let provider: CommitMessageProvider
 	let mockContext: vscode.ExtensionContext
-	let mockGitUtils: jest.Mocked<GitExtensionService>
+	let mockGitExtensionService: jest.Mocked<GitExtensionService>
 	let mockRepo: any
 
 	beforeEach(() => {
@@ -76,9 +76,9 @@ describe("CommitMessageProvider", () => {
 			inputBox: { value: "" },
 		}
 
-		// Mock GitUtils
-		mockGitUtils = new MockGitUtils() as jest.Mocked<GitExtensionService>
-		MockGitUtils.mockImplementation(() => mockGitUtils)
+		// Mock GitExtensionService
+		mockGitExtensionService = new MockGitExtensionService() as jest.Mocked<GitExtensionService>
+		MockGitExtensionService.mockImplementation(() => mockGitExtensionService)
 
 		// Mock ContextProxy
 		Object.defineProperty(mockContextProxy, "instance", {
@@ -109,11 +109,11 @@ describe("CommitMessageProvider", () => {
 
 	describe("activate", () => {
 		it("should activate successfully", async () => {
-			mockGitUtils.initializeGitExtension.mockResolvedValue({} as any)
+			mockGitExtensionService.initializeGitExtension.mockResolvedValue({} as any)
 
 			await provider.activate()
 
-			expect(mockGitUtils.initializeGitExtension).toHaveBeenCalled()
+			expect(mockGitExtensionService.initializeGitExtension).toHaveBeenCalled()
 			expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
 				"kilo-code.generateCommitMessage",
 				expect.any(Function),
@@ -121,7 +121,7 @@ describe("CommitMessageProvider", () => {
 		})
 
 		it("should handle Git extension initialization failure", async () => {
-			mockGitUtils.initializeGitExtension.mockRejectedValue(new Error("Git extension not found"))
+			mockGitExtensionService.initializeGitExtension.mockRejectedValue(new Error("Git extension not found"))
 
 			await expect(provider.activate()).rejects.toThrow("Failed to initialize Git extension")
 		})
@@ -129,14 +129,16 @@ describe("CommitMessageProvider", () => {
 
 	describe("generateCommitMessage", () => {
 		beforeEach(async () => {
-			mockGitUtils.initializeGitExtension.mockResolvedValue({} as any)
+			mockGitExtensionService.initializeGitExtension.mockResolvedValue({} as any)
 			await provider.activate()
 		})
 
 		it("should generate commit message for staged changes", async () => {
-			mockGitUtils.getActiveRepository.mockReturnValue(mockRepo)
-			mockGitUtils.gatherStagedChanges.mockResolvedValue("Staged changes:\n\nModified files:\n- src/test.ts")
-			mockGitUtils.setCommitMessage.mockImplementation(() => {})
+			mockGitExtensionService.getActiveRepository.mockReturnValue(mockRepo)
+			mockGitExtensionService.gatherStagedChanges.mockResolvedValue(
+				"Staged changes:\n\nModified files:\n- src/test.ts",
+			)
+			mockGitExtensionService.setCommitMessage.mockImplementation(() => {})
 
 			// Mock vscode.window.withProgress to call the callback immediately
 			;(vscode.window.withProgress as jest.Mock).mockImplementation(async (options, callback) => {
@@ -159,13 +161,13 @@ describe("CommitMessageProvider", () => {
 				expect.stringContaining("Staged changes:"),
 			)
 
-			expect(mockGitUtils.setCommitMessage).toHaveBeenCalledWith(mockRepo, "feat: add new feature")
+			expect(mockGitExtensionService.setCommitMessage).toHaveBeenCalledWith(mockRepo, "feat: add new feature")
 			expect(vscode.window.showInformationMessage).toHaveBeenCalledWith("✨ Commit message generated!")
 		})
 
 		it("should handle no staged changes", async () => {
-			mockGitUtils.getActiveRepository.mockReturnValue(mockRepo)
-			mockGitUtils.gatherStagedChanges.mockResolvedValue(null)
+			mockGitExtensionService.getActiveRepository.mockReturnValue(mockRepo)
+			mockGitExtensionService.gatherStagedChanges.mockResolvedValue(null)
 			;(vscode.window.withProgress as jest.Mock).mockImplementation(async (options, callback) => {
 				const mockProgress = {
 					report: jest.fn(),
@@ -181,7 +183,7 @@ describe("CommitMessageProvider", () => {
 		})
 
 		it("should handle no repository", async () => {
-			mockGitUtils.getActiveRepository.mockReturnValue(null)
+			mockGitExtensionService.getActiveRepository.mockReturnValue(null)
 			;(vscode.window.showInformationMessage as jest.Mock).mockResolvedValue(undefined)
 
 			await vscode.commands.executeCommand("kilo-code.generateCommitMessage")
@@ -191,8 +193,10 @@ describe("CommitMessageProvider", () => {
 		})
 
 		it("should handle missing Kilo Code token", async () => {
-			mockGitUtils.getActiveRepository.mockReturnValue(mockRepo)
-			mockGitUtils.gatherStagedChanges.mockResolvedValue("Staged changes:\n\nModified files:\n- src/test.ts")
+			mockGitExtensionService.getActiveRepository.mockReturnValue(mockRepo)
+			mockGitExtensionService.gatherStagedChanges.mockResolvedValue(
+				"Staged changes:\n\nModified files:\n- src/test.ts",
+			)
 
 			// Mock missing token
 			Object.defineProperty(mockContextProxy, "instance", {
@@ -221,9 +225,11 @@ describe("CommitMessageProvider", () => {
 		})
 
 		it("should include rules in the prompt when rules are available", async () => {
-			mockGitUtils.getActiveRepository.mockReturnValue(mockRepo)
-			mockGitUtils.gatherStagedChanges.mockResolvedValue("Staged changes:\n\nModified files:\n- src/test.ts")
-			mockGitUtils.setCommitMessage.mockImplementation(() => {})
+			mockGitExtensionService.getActiveRepository.mockReturnValue(mockRepo)
+			mockGitExtensionService.gatherStagedChanges.mockResolvedValue(
+				"Staged changes:\n\nModified files:\n- src/test.ts",
+			)
+			mockGitExtensionService.setCommitMessage.mockImplementation(() => {})
 
 			// Mock rules content
 			const mockRules =
