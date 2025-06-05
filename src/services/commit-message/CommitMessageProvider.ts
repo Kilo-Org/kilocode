@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import { ContextProxy } from "../../core/config/ContextProxy"
 import { singleCompletionHandler } from "../../utils/single-completion-handler"
 import { GitUtils, GitRepository } from "./GitUtils"
+import { loadRuleFiles } from "../../core/prompts/sections/custom-instructions"
 
 /**
  * Provides AI-powered commit message generation for source control management.
@@ -91,7 +92,7 @@ export class CommitMessageProvider {
 			throw new Error("Kilo Code token is required for AI commit message generation")
 		}
 
-		const prompt = this.buildCommitMessagePrompt(context)
+		const prompt = await this.buildCommitMessagePrompt(context)
 		const response = await singleCompletionHandler(
 			{
 				apiProvider: "kilocode",
@@ -107,8 +108,12 @@ export class CommitMessageProvider {
 	/**
 	 * Builds the AI prompt for commit message generation.
 	 */
-	private buildCommitMessagePrompt(context: string): string {
-		return `You are an expert software developer tasked with writing a concise, informative commit message.
+	private async buildCommitMessagePrompt(context: string): Promise<string> {
+		// Load rules from the workspace
+		const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+		const rules = workspaceRoot ? await loadRuleFiles(workspaceRoot) : ""
+
+		const basePrompt = `You are an expert software developer tasked with writing a concise, informative commit message.
 
 ${context}
 
@@ -123,9 +128,12 @@ Examples:
 - feat(auth): add user login validation
 - fix(api): resolve null pointer exception
 - docs(readme): update installation steps
-- refactor(utils): extract common helper functions
+- refactor(utils): extract common helper functions`
 
-Return ONLY the commit message, nothing else.`
+		// Append rules if they exist
+		const rulesSection = rules ? `\n\nAdditional Rules:${rules}` : ""
+
+		return `${basePrompt}${rulesSection}\n\nReturn ONLY the commit message, nothing else.`
 	}
 
 	/**
