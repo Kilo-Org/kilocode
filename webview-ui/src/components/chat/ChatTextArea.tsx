@@ -950,8 +950,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			}
 		})
 
-		// kilocode_change
-		// const placeholderBottomText = `\n(${t("chat:addContext")}${shouldDisableImages ? `, ${t("chat:dragFiles")}` : `, ${t("chat:dragFilesImages")}`})`
+		const placeholderBottomText = `\n(${t("chat:addContext")}${shouldDisableImages ? `, ${t("chat:dragFiles")}` : `, ${t("chat:dragFilesImages")}`})`
 
 		return (
 			<div
@@ -1101,7 +1100,8 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 									onHeightChange?.(height)
 								}}
-								placeholder={placeholderText}
+								// kilocode_change: combine placeholderText and placeholderBottomText here
+								placeholder={`${placeholderText}\n${placeholderBottomText}`}
 								minRows={3}
 								maxRows={15}
 								autoFocus={true}
