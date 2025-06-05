@@ -1124,7 +1124,7 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			const githubIssuesText = t("common:feedback.githubIssues")
 			const githubDiscussionsText = t("common:feedback.githubDiscussions")
 			const discordText = t("common:feedback.discord")
-			const customerSupport = t("common:feedback.customerSupport")
+			const customerSupport = t("common:feedback.customerSupport") // kilocode_change
 
 			const answer = await vscode.window.showInformationMessage(
 				t("common:feedback.description"),
