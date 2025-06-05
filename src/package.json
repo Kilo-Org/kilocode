@@ -229,6 +229,12 @@
 				"title": "%command.profile.title%",
 				"icon": "$(account)",
 				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.generateCommitMessage",
+				"title": "%command.generateCommitMessage.title%",
+				"icon": "$(sparkle)",
+				"category": "%configuration.title%"
 			}
 		],
 		"keybindings": [
@@ -357,6 +363,19 @@
 					"command": "kilo-code.helpButtonClicked",
 					"group": "navigation@6",
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
+				}
+			],
+			"scm/input": [
+				{
+					"command": "kilo-code.generateCommitMessage",
+					"group": "navigation"
+				}
+			],
+			"scm/title": [
+				{
+					"command": "kilo-code.generateCommitMessage",
+					"when": "scmProvider == git",
+					"group": "navigation"
 				}
 			]
 		},

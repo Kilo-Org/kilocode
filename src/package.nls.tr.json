@@ -13,6 +13,7 @@
 	"command.terminal.fixCommand.title": "Bu Komutu Düzelt",
 	"command.terminal.explainCommand.title": "Bu Komutu Açıkla",
 	"command.acceptInput.title": "Girişi/Öneriyi Kabul Et",
+	"command.generateCommitMessage.title": "Kilo ile Commit Mesajı Oluştur",
 	"views.activitybar.title": "Kilo Code",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",

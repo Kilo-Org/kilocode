@@ -13,6 +13,7 @@
 	"command.terminal.fixCommand.title": "Corregir Este Comando",
 	"command.terminal.explainCommand.title": "Explicar Este Comando",
 	"command.acceptInput.title": "Aceptar Entrada/Sugerencia",
+	"command.generateCommitMessage.title": "Generar mensaje de commit con Kilo",
 	"views.activitybar.title": "Kilo Code",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",
