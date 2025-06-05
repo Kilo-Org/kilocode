@@ -2,7 +2,7 @@ import * as vscode from "vscode"
 import { CommitMessageProvider } from "../CommitMessageProvider"
 import { ContextProxy } from "../../../core/config/ContextProxy"
 import { singleCompletionHandler } from "../../../utils/single-completion-handler"
-import { GitUtils } from "../GitUtils"
+import { GitExtensionService } from "../GitExtensionService"
 import { loadRuleFiles } from "../../../core/prompts/sections/custom-instructions"
 
 // Mock vscode module
@@ -56,13 +56,13 @@ jest.mock("../../../core/prompts/sections/custom-instructions")
 
 const mockSingleCompletionHandler = singleCompletionHandler as jest.MockedFunction<typeof singleCompletionHandler>
 const mockContextProxy = ContextProxy as jest.Mocked<typeof ContextProxy>
-const MockGitUtils = GitUtils as jest.MockedClass<typeof GitUtils>
+const MockGitUtils = GitExtensionService as jest.MockedClass<typeof GitExtensionService>
 const mockLoadRuleFiles = loadRuleFiles as jest.MockedFunction<typeof loadRuleFiles>
 
 describe("CommitMessageProvider", () => {
 	let provider: CommitMessageProvider
 	let mockContext: vscode.ExtensionContext
-	let mockGitUtils: jest.Mocked<GitUtils>
+	let mockGitUtils: jest.Mocked<GitExtensionService>
 	let mockRepo: any
 
 	beforeEach(() => {
@@ -77,7 +77,7 @@ describe("CommitMessageProvider", () => {
 		}
 
 		// Mock GitUtils
-		mockGitUtils = new MockGitUtils() as jest.Mocked<GitUtils>
+		mockGitUtils = new MockGitUtils() as jest.Mocked<GitExtensionService>
 		MockGitUtils.mockImplementation(() => mockGitUtils)
 
 		// Mock ContextProxy

@@ -22,7 +22,7 @@ export interface GitChange {
 /**
  * Utility class for Git operations and integration
  */
-export class GitUtils {
+export class GitExtensionService {
 	private gitAPI: GitAPI | null = null
 
 	/**

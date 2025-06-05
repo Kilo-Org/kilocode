@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 import { ContextProxy } from "../../core/config/ContextProxy"
 import { singleCompletionHandler } from "../../utils/single-completion-handler"
-import { GitUtils, GitRepository } from "./GitUtils"
+import { GitExtensionService, GitRepository } from "./GitExtensionService"
 import { loadRuleFiles } from "../../core/prompts/sections/custom-instructions"
 
 /**
@@ -10,13 +10,13 @@ import { loadRuleFiles } from "../../core/prompts/sections/custom-instructions"
  * conventional commit messages using AI.
  */
 export class CommitMessageProvider {
-	private gitUtils: GitUtils
+	private gitUtils: GitExtensionService
 
 	constructor(
 		private context: vscode.ExtensionContext,
 		private outputChannel: vscode.OutputChannel,
 	) {
-		this.gitUtils = new GitUtils()
+		this.gitUtils = new GitExtensionService()
 	}
 
 	/**
