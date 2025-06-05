@@ -1501,8 +1501,10 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 		case "telemetrySetting": {
 			const telemetrySetting = message.text as TelemetrySetting
 			await updateGlobalState("telemetrySetting", telemetrySetting)
-			const isOptedIn = telemetrySetting === "enabled"
-			TelemetryService.instance.updateTelemetryState(isOptedIn)
+			// kilocode_change: do not get instance
+			// const isOptedIn = telemetrySetting === "enabled"
+
+			// TelemetryService.instance.updateTelemetryState(isOptedIn)
 			await provider.postStateToWebview()
 			break
 		}
@@ -1513,7 +1515,8 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 		}
 		case "rooCloudSignIn": {
 			try {
-				TelemetryService.instance.captureEvent(TelemetryEventName.AUTHENTICATION_INITIATED)
+				// kilocode_change: do not get instance
+				// TelemetryService.instance.captureEvent(TelemetryEventName.AUTHENTICATION_INITIATED)
 				await CloudService.instance.login()
 			} catch (error) {
 				provider.log(`AuthService#login failed: ${error}`)

@@ -83,7 +83,8 @@ export const importSettings = async ({ providerSettingsManager, contextProxy, cu
 
 		if (e instanceof ZodError) {
 			error = e.issues.map((issue) => `[${issue.path.join(".")}]: ${issue.message}`).join("\n")
-			TelemetryService.instance.captureSchemaValidationError({ schemaName: "ImportExport", error: e })
+			// kilocode_change: do not get instance
+			// TelemetryService.instance.captureSchemaValidationError({ schemaName: "ImportExport", error: e })
 		} else if (e instanceof Error) {
 			error = e.message
 		}
