@@ -133,9 +133,9 @@ CommandExecution.displayName = "CommandExecution"
 
 const OutputContainerInternal = ({ isExpanded, output }: { isExpanded: boolean; output: string }) => (
 	<div
-		className={cn("overflow-hidden", {
+		className={cn("overflow-hidden transition-all duration-300", {
 			"max-h-0": !isExpanded,
-			"max-h-[100%] mt-1 pt-1 border-t border-border/25": isExpanded,
+			"max-h-[500px] mt-1 pt-1 border-t border-border/25": isExpanded,
 		})}>
 		{output.length > 0 && <CodeBlock source={output} language="log" />}
 	</div>
