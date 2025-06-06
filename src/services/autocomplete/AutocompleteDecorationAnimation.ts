@@ -1,4 +1,5 @@
 import * as vscode from "vscode"
+import { abortableDelay } from "./utils/abortableDelay"
 
 export const UI_SHOW_LOADING_DELAY_MS = 150
 
@@ -6,9 +7,6 @@ export const UI_SHOW_LOADING_DELAY_MS = 150
  * Manages the animated decoration for autocomplete loading indicator
  */
 export class AutocompleteDecorationAnimation {
-	private static instance: AutocompleteDecorationAnimation
-	private animationInitialWaitTimer: NodeJS.Timeout | null = null
-	private animationInterval: NodeJS.Timeout | null = null
 	private decorationType: vscode.TextEditorDecorationType
 	private animationState = 0
 	private isTypingPhase = true // Track whether we're in typing phase or blinking phase
@@ -16,8 +14,9 @@ export class AutocompleteDecorationAnimation {
 	private isBlockVisible = true // For blinking effect when fully spelled
 	private editor: vscode.TextEditor | null = null
 	private range: vscode.Range | null = null
+	private currentAbortController: AbortController | null = null
 
-	private constructor() {
+	constructor() {
 		this.decorationType = vscode.window.createTextEditorDecorationType({
 			after: {
 				color: new vscode.ThemeColor("editorGhostText.foreground"),
@@ -28,21 +27,18 @@ export class AutocompleteDecorationAnimation {
 		})
 	}
 
-	public static getInstance(): AutocompleteDecorationAnimation {
-		if (!AutocompleteDecorationAnimation.instance) {
-			AutocompleteDecorationAnimation.instance = new AutocompleteDecorationAnimation()
-		}
-		return AutocompleteDecorationAnimation.instance
-	}
-
 	/**
 	 * Starts the loading animation at the specified range in the editor
+	 * @returns A function that stops this specific animation (no-op if superseded)
 	 */
-	public startAnimation(): void {
+	public startAnimation(): () => void {
 		const editor = vscode.window.activeTextEditor
-		if (!editor) return
+		if (!editor) return () => {} // Return no-op function
 
-		this.stopAnimation() // Stop any existing animation
+		// Abort any existing animation
+		if (this.currentAbortController) {
+			this.currentAbortController.abort()
+		}
 
 		const position = editor.selection.active
 		const document = editor.document
@@ -54,31 +50,68 @@ export class AutocompleteDecorationAnimation {
 		this.isTypingPhase = true // Reset to typing phase
 		this.isBlockVisible = true
 
-		// Delay starting the animation slightly to not distract users
-		// We're still fetching the completion, this just delays showing the decorator.
-		this.animationInitialWaitTimer = setTimeout(() => {
+		// Create abort controller for this animation instance
+		const abortController = new AbortController()
+		this.currentAbortController = abortController
+
+		// Start the animation asynchronously
+		this.runAnimation(abortController)
+
+		// Return scoped stop function for this specific animation
+		return () => {
+			// Only abort if this is still the current animation
+			if (abortController === this.currentAbortController) {
+				abortController.abort()
+			}
+		}
+	}
+
+	/**
+	 * Runs the animation loop with proper cleanup using AbortController
+	 */
+	private async runAnimation(abortController: AbortController): Promise<void> {
+		try {
+			// Wait for initial delay
+			await abortableDelay(UI_SHOW_LOADING_DELAY_MS, abortController.signal)
+
 			// Apply initial animation state
 			this.updateDecorationText()
 
-			// Start animation interval
-			this.animationInterval = setInterval(() => {
-				this.updateAnimation()
-			}, 100)
-		}, UI_SHOW_LOADING_DELAY_MS)
+			// Phase 1: Typing animation (100ms intervals)
+			while (this.animationState < this.animationFrames.length - 1 && !abortController.signal.aborted) {
+				await abortableDelay(100, abortController.signal)
+				this.animationState++
+				this.updateDecorationText()
+			}
+
+			// Transition to blinking phase
+			this.isTypingPhase = false
+
+			// Phase 2: Blinking animation (200ms intervals)
+			while (!abortController.signal.aborted) {
+				await abortableDelay(200, abortController.signal)
+				this.isBlockVisible = !this.isBlockVisible
+				this.updateDecorationText()
+			}
+		} catch (error) {
+			// Animation was aborted - only clean up if this is still the current animation
+			if (abortController === this.currentAbortController) {
+				if (this.editor && this.decorationType) {
+					this.editor.setDecorations(this.decorationType, [])
+				}
+				this.editor = null
+				this.range = null
+				this.currentAbortController = null
+			}
+		}
 	}
 
 	/**
 	 * Stops the loading animation and immediately hides the decorator
 	 */
 	public stopAnimation(): void {
-		// Clear animation immediately
-		if (this.animationInterval) {
-			clearInterval(this.animationInterval)
-			this.animationInterval = null
-		}
-
-		if (this.animationInitialWaitTimer) {
-			clearTimeout(this.animationInitialWaitTimer)
+		if (this.currentAbortController) {
+			this.currentAbortController.abort()
 		}
 
 		if (this.editor && this.decorationType) {
@@ -87,44 +120,7 @@ export class AutocompleteDecorationAnimation {
 
 		this.editor = null
 		this.range = null
-	}
-
-	/**
-	 * Updates the animation state and decoration text
-	 */
-	private updateAnimation(): void {
-		if (!this.editor || !this.range) {
-			this.stopAnimation()
-			return
-		}
-
-		// Animation with two phases:
-		// 1. Typing out "KILO" (block moves to the right) - faster (100ms)
-		// 2. Blinking block at the end when fully spelled - slower (200ms)
-		if (this.animationState < this.animationFrames.length - 1) {
-			// Phase 1: Spell out "KILO" with block cursor
-			this.animationState++
-		} else {
-			// Check if we just reached the end of typing phase
-			if (this.isTypingPhase) {
-				// Transition from typing to blinking phase
-				this.isTypingPhase = false
-
-				// Clear current interval and create a new one with slower timing (200ms)
-				if (this.animationInterval) {
-					clearInterval(this.animationInterval)
-				}
-
-				this.animationInterval = setInterval(() => {
-					this.updateAnimation()
-				}, 200)
-			}
-
-			// Phase 2: Blink the block cursor at the end
-			this.isBlockVisible = !this.isBlockVisible
-		}
-
-		this.updateDecorationText()
+		this.currentAbortController = null
 	}
 
 	/**
