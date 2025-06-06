@@ -124,7 +124,10 @@ const App = () => {
 				<SettingsView ref={settingsRef} onDone={() => switchTab("chat")} targetSection={currentSection} /> // kilocode_change
 			)}
 			{tab === "profile" && <ProfileView onDone={() => switchTab("chat")} />}
-			{tab === "account" && <AccountView userInfo={cloudUserInfo} onDone={() => switchTab("chat")} />}
+			{/*  kilocode_change: isAuthenticated = false because no roo cloud */}
+			{tab === "account" && (
+				<AccountView userInfo={cloudUserInfo} isAuthenticated={false} onDone={() => switchTab("chat")} />
+			)}
 			<ChatView
 				ref={chatViewRef}
 				isHidden={tab !== "chat"}

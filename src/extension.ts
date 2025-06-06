@@ -13,9 +13,10 @@ try {
 }
 
 import { CloudService } from "@roo-code/cloud"
-import { TelemetryService, PostHogTelemetryClient } from "@roo-code/telemetry"
+// import { TelemetryService, PostHogTelemetryClient } from "@roo-code/telemetry" kilocode_change
 
 import "./utils/path" // Necessary to have access to String.prototype.toPosix.
+import { createOutputChannelLogger, createDualLogger } from "./utils/outputChannelLogger"
 
 import { Package } from "./shared/package"
 import { formatLanguage } from "./shared/language"
@@ -60,9 +61,22 @@ export async function activate(context: vscode.ExtensionContext) {
 	// Migrate old settings to new
 	await migrateSettings(context, outputChannel)
 
+	// Initialize telemetry service.
+	// const telemetryService = TelemetryService.createInstance()
+
+	try {
+		// telemetryService.register(new PostHogTelemetryClient())
+	} catch (error) {
+		console.warn("Failed to register PostHogTelemetryClient:", error)
+	}
+
+	// Create logger for cloud services
+	const cloudLogger = createDualLogger(createOutputChannelLogger(outputChannel))
+
 	// Initialize Roo Code Cloud service.
 	await CloudService.createInstance(context, {
 		stateChanged: () => ClineProvider.getVisibleInstance()?.postStateToWebview(),
+		log: cloudLogger,
 	})
 
 	// Initialize i18n for internationalization support
