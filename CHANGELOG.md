@@ -1,6 +1,12 @@
 # kilo-code
 
-## 4.33.1
+## [v4.33.2]
+
+### Patch Changes
+
+- [#628](https://github.com/Kilo-Org/kilocode/pull/628) [`3bfd49e`](https://github.com/Kilo-Org/kilocode/commit/3bfd49e495400d2be89f9754255a0af32db8f942) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Add clarification about adding context and how to add files/images
+
+## [v4.33.1]
 
 ### Patch Changes
 

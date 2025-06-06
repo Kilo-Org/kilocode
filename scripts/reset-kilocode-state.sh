@@ -13,4 +13,4 @@ sqlite3 ~/Library/Application\ Support/Code/User/globalStorage/state.vscdb \
 rm -rf ~/Library/Application\ Support/Code/User/globalStorage/kilocode.kilo-code/
 
 # clear some of the vscode cache that I've observed contains kilocode related entries:
-rm ~/Library/Application\ Support/Code/CachedProfilesData/__default__profile__/extensions.user.cache
+rm -f ~/Library/Application\ Support/Code/CachedProfilesData/__default__profile__/extensions.user.cache
