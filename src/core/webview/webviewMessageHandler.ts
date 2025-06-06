@@ -1605,5 +1605,10 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			}
 			break
 		}
+		case "toggleTaskFavorite":
+			if (message.text) {
+				await provider.toggleTaskFavorite(message.text)
+			}
+			break
 	}
 }

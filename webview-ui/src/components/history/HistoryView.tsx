@@ -30,6 +30,8 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 		setLastNonRelevantSort,
 		showAllWorkspaces,
 		setShowAllWorkspaces,
+		showFavoritesOnly,
+		setShowFavoritesOnly,
 	} = useTaskSearch()
 	const { t } = useAppTranslation()
 
@@ -163,6 +165,18 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 						/>
 						<label htmlFor="show-all-workspaces-view" className="text-vscode-foreground cursor-pointer">
 							{t("history:showAllWorkspaces")}
+						</label>
+					</div>
+
+					<div className="flex items-center gap-2">
+						<Checkbox
+							id="show-favorites-only"
+							checked={showFavoritesOnly}
+							onCheckedChange={(checked) => setShowFavoritesOnly(checked === true)}
+							variant="description"
+						/>
+						<label htmlFor="show-favorites-only" className="text-vscode-foreground cursor-pointer">
+							{t("history:showFavoritesOnly")}
 						</label>
 					</div>
 

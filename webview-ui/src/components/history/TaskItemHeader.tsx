@@ -33,6 +33,11 @@ const TaskItemHeader: React.FC<TaskItemHeaderProps> = ({ item, variant, isSelect
 		}
 	}
 
+	const handleFavoriteClick = (e: React.MouseEvent) => {
+		e.stopPropagation()
+		vscode.postMessage({ type: "toggleTaskFavorite", text: item.id })
+	}
+
 	return (
 		<div className="flex justify-between items-center pb-0">
 			<div className="flex items-center flex-wrap gap-x-2 text-xs">
@@ -44,6 +49,20 @@ const TaskItemHeader: React.FC<TaskItemHeaderProps> = ({ item, variant, isSelect
 			{/* Action Buttons */}
 			{!isSelectionMode && (
 				<div className="flex flex-row gap-0 items-center opacity-50 hover:opacity-100">
+					{/* Favorite Star Button */}
+					<Button
+						variant="ghost"
+						size="icon"
+						title={item.favorite ? t("history:unfavoriteTask") : t("history:favoriteTask")}
+						data-testid="favorite-task-button"
+						onClick={handleFavoriteClick}
+						className={item.favorite ? "text-yellow-500" : ""}>
+						<span
+							className={`codicon ${item.favorite ? "codicon-star-full" : "codicon-star-empty"}`}
+							style={actionIconStyle}
+						/>
+					</Button>
+
 					{isCompact ? (
 						<CopyButton itemTask={item.task} />
 					) : (

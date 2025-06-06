@@ -1195,6 +1195,13 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			// get the task directory full path
 			const { taskDirPath } = await this.getTaskWithId(id)
 
+			// Check if task is favorited
+			const history = this.getGlobalState("taskHistory") ?? []
+			const task = history.find((item) => item.id === id)
+			if (task?.favorite) {
+				throw new Error("Cannot delete a favorited task. Please unfavorite it first.")
+			}
+
 			// remove task from stack if it's the current task
 			if (id === this.getCurrentCline()?.taskId) {
 				// if we found the taskid to delete - call finish to abort this task and allow a new task to be started,
@@ -1844,4 +1851,36 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
 		}
 	}
 	// end kilocode_change
+
+	// Add new methods for favorite functionality
+	async toggleTaskFavorite(id: string) {
+		const history = this.getGlobalState("taskHistory") ?? []
+		const updatedHistory = history.map((item) => {
+			if (item.id === id) {
+				return { ...item, favorite: !item.favorite }
+			}
+			return item
+		})
+		await this.updateGlobalState("taskHistory", updatedHistory)
+		await this.postStateToWebview()
+	}
+
+	async getFavoriteTasks(): Promise<HistoryItem[]> {
+		const history = this.getGlobalState("taskHistory") ?? []
+		return history.filter((item) => item.favorite)
+	}
+
+	// Modify batch delete to respect favorites
+	async deleteMultipleTasks(taskIds: string[]) {
+		const history = this.getGlobalState("taskHistory") ?? []
+		const favoritedTaskIds = taskIds.filter((id) => history.find((item) => item.id === id)?.favorite)
+
+		if (favoritedTaskIds.length > 0) {
+			throw new Error("Cannot delete favorited tasks. Please unfavorite them first.")
+		}
+
+		for (const id of taskIds) {
+			await this.deleteTaskWithId(id)
+		}
+	}
 }

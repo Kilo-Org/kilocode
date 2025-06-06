@@ -172,6 +172,7 @@ export interface WebviewMessage {
 		| "indexCleared"
 		| "codebaseIndexConfig"
 		| "telemetrySetting"
+		| "toggleTaskFavorite"
 	text?: string
 	disabled?: boolean
 	askResponse?: ClineAskResponse
