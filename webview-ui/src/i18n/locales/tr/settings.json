@@ -192,6 +192,16 @@
 		"getXaiApiKey": "xAI API Anahtarı Al",
 		"litellmApiKey": "LiteLLM API Anahtarı",
 		"litellmBaseUrl": "LiteLLM Temel URL",
+		"makehubApiKey": "MakeHub API Anahtarı",
+		"getMakehubApiKey": "MakeHub API Anahtarı Al",
+		"makehubPerfRatio": "Performans/Fiyat Oranı",
+		"makehubPerfRatioDescription": "MakeHub'ın sağlayıcılara yönlendirirken fiyat ve performans arasında nasıl denge kurduğunu kontrol eder.",
+		"makehubPerfRatioLabels": {
+			"price": "Fiyat Optimize",
+			"balanced": "Dengeli",
+			"performance": "Hız Optimize"
+		},
+		"noModelsFound": "{{provider}} için model bulunamadı. API anahtarınızın geçerli olduğundan emin olun ve model listesini yenileyin.",
 		"awsCredentials": "AWS Kimlik Bilgileri",
 		"awsProfile": "AWS Profili",
 		"awsProfileName": "AWS Profil Adı",

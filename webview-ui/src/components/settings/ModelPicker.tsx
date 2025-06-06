@@ -33,6 +33,7 @@ type ModelIdKey = keyof Pick<
 	| "requestyModelId"
 	| "openAiModelId"
 	| "litellmModelId"
+	| "makehubModelId"
 	| "kilocodeModel"
 >
 

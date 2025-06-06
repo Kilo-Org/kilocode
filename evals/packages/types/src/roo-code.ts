@@ -25,6 +25,7 @@ export const providerNames = [
 	"fake-ai",
 	"xai",
 	"kilocode", // kilocode change
+	"makehub",
 ] as const
 
 export const providerNamesSchema = z.enum(providerNames)
@@ -477,6 +478,11 @@ const litellmSchema = z.object({
 	litellmApiKey: z.string().optional(),
 	litellmModelId: z.string().optional(),
 })
+//makehubSchema
+const makehubSchema = z.object({
+	makehubApiKey: z.string().optional(),
+	makehubModelId: z.string().optional(),
+})
 
 // kilocode_change start
 const kilocodeSchema = z.object({
@@ -596,6 +602,12 @@ export const providerSettingsSchemaDiscriminated = z
 				apiProvider: z.literal("litellm"),
 			}),
 		),
+		//makehub
+		makehubSchema.merge(
+			z.object({
+				apiProvider: z.literal("makehub"),
+			}),
+		),
 		// kilocode_change start
 		kilocodeSchema.merge(
 			z.object({
@@ -632,6 +644,7 @@ export const providerSettingsSchema = z.object({
 	...litellmSchema.shape,
 	...kilocodeSchema.shape, // kilocode_change
 	...genericProviderSettingsSchema.shape,
+	...makehubSchema.shape, // makehub
 })
 
 export type ProviderSettings = z.infer<typeof providerSettingsSchema>
@@ -731,6 +744,9 @@ const providerSettingsRecord: ProviderSettingsRecord = {
 	litellmBaseUrl: undefined,
 	litellmApiKey: undefined,
 	litellmModelId: undefined,
+	// MakeHub
+	makehubApiKey: undefined,
+	makehubModelId: undefined,
 	// kilocode_change start
 	// Kilocode
 	kilocodeToken: undefined,
@@ -930,6 +946,7 @@ export type SecretState = Pick<
 	| "unboundApiKey"
 	| "requestyApiKey"
 	| "xaiApiKey"
+	| "makehubApiKey"
 	| "kilocodeToken" // kilocode_change
 >
 
@@ -950,6 +967,7 @@ const secretStateRecord: SecretStateRecord = {
 	unboundApiKey: undefined,
 	requestyApiKey: undefined,
 	xaiApiKey: undefined,
+	makehubApiKey: undefined,
 	kilocodeToken: undefined, // kilocode_change
 }
 

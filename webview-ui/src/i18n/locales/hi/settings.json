@@ -192,6 +192,16 @@
 		"getXaiApiKey": "xAI API कुंजी प्राप्त करें",
 		"litellmApiKey": "LiteLLM API कुंजी",
 		"litellmBaseUrl": "LiteLLM आधार URL",
+		"makehubApiKey": "MakeHub API कुंजी",
+		"getMakehubApiKey": "MakeHub API कुंजी प्राप्त करें",
+		"makehubPerfRatio": "प्रदर्शन/मूल्य अनुपात",
+		"makehubPerfRatioDescription": "नियंत्रित करता है कि MakeHub प्रदाताओं को रूट करते समय मूल्य और प्रदर्शन के बीच कैसे संतुलन बनाता है।",
+		"makehubPerfRatioLabels": {
+			"price": "मूल्य अनुकूलित",
+			"balanced": "संतुलित",
+			"performance": "गति अनुकूलित"
+		},
+		"noModelsFound": "{{provider}} के लिए कोई मॉडल नहीं मिला। सुनिश्चित करें कि आपकी API कुंजी मान्य है और मॉडल सूची को रिफ्रेश करें।",
 		"awsCredentials": "AWS क्रेडेंशियल्स",
 		"awsProfile": "AWS प्रोफाइल",
 		"awsProfileName": "AWS प्रोफाइल नाम",

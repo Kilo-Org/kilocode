@@ -70,6 +70,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				glama: mockModels,
 				unbound: mockModels,
 				litellm: mockModels,
+				makehub: mockModels,
 				"kilocode-openrouter": mockModels,
 			},
 		})
@@ -147,18 +148,19 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			}),
 		)
 
-		// Verify response includes empty object for LiteLLM
-		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
-			type: "routerModels",
-			routerModels: {
-				openrouter: mockModels,
-				requesty: mockModels,
-				glama: mockModels,
-				unbound: mockModels,
-				litellm: {},
-				"kilocode-openrouter": mockModels,
-			},
-		})
+// Verify response includes empty object for LiteLLM
+expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+type: "routerModels",
+routerModels: {
+openrouter: mockModels,
+requesty: mockModels,
+glama: mockModels,
+unbound: mockModels,
+litellm: {},
+makehub: mockModels,
+"kilocode-openrouter": mockModels,
+},
+})
 	})
 
 	it("handles individual provider failures gracefully", async () => {
@@ -172,30 +174,33 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		}
 
 		// Mock some providers to succeed and others to fail
+		// Order matches webviewMessageHandler.ts: openrouter, requesty, glama, unbound, kilocode-openrouter, makehub, litellm
 		mockGetModels
 			.mockResolvedValueOnce(mockModels) // openrouter
 			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty
 			.mockResolvedValueOnce(mockModels) // glama
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound
 			.mockResolvedValueOnce(mockModels) // kilocode-openrouter
+			.mockRejectedValueOnce(new Error("MakeHub connection failed")) // makehub
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
 
-		await webviewMessageHandler(mockClineProvider, {
-			type: "requestRouterModels",
-		})
+await webviewMessageHandler(mockClineProvider, {
+type: "requestRouterModels",
+})
 
-		// Verify successful providers are included
-		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
-			type: "routerModels",
-			routerModels: {
-				openrouter: mockModels,
-				requesty: {},
-				glama: mockModels,
-				unbound: {},
-				litellm: {},
-				"kilocode-openrouter": mockModels,
-			},
-		})
+// Verify successful providers are included
+expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+type: "routerModels",
+routerModels: {
+openrouter: mockModels,
+requesty: {},
+glama: mockModels,
+unbound: {},
+litellm: {},
+makehub: {},
+"kilocode-openrouter": mockModels,
+},
+})
 
 		// Verify error messages were sent for failed providers
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
@@ -212,12 +217,19 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			values: { provider: "unbound" },
 		})
 
-		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
-			type: "singleRouterModelFetchResponse",
-			success: false,
-			error: "LiteLLM connection failed",
-			values: { provider: "litellm" },
-		})
+expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+type: "singleRouterModelFetchResponse",
+success: false,
+error: "MakeHub connection failed",
+values: { provider: "makehub" },
+})
+
+expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+type: "singleRouterModelFetchResponse",
+success: false,
+error: "LiteLLM connection failed",
+values: { provider: "litellm" },
+})
 	})
 
 	it("handles Error objects and string errors correctly", async () => {

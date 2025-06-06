@@ -30,6 +30,7 @@ import {
 	glamaDefaultModelId,
 	unboundDefaultModelId,
 	litellmDefaultModelId,
+	makehubDefaultModelId,
 } from "@roo-code/types"
 
 import type { RouterModels } from "@roo/api"
@@ -199,6 +200,14 @@ function getSelectedModel({
 			const modelFamily = apiConfiguration?.vsCodeLmModelSelector?.family ?? vscodeLlmDefaultModelId
 			const info = vscodeLlmModels[modelFamily as keyof typeof vscodeLlmModels]
 			return { id, info: { ...openAiModelInfoSaneDefaults, ...info, supportsImages: false } } // VSCode LM API currently doesn't support images.
+		}
+
+		case "makehub": {
+			const id = apiConfiguration.makehubModelId ?? makehubDefaultModelId
+			const info = routerModels.makehub[id]
+			return info
+				? { id, info }
+				: { id: makehubDefaultModelId, info: routerModels.makehub[makehubDefaultModelId] }
 		}
 		// kilocode_change begin
 		case "kilocode": {
