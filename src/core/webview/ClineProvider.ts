@@ -489,8 +489,8 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		this.log("Webview view resolved")
 	}
 
-	public async initClineWithSubTask(parent: Task, task?: string, images?: string[]) {
-		return this.initClineWithTask(task, images, parent)
+	public async initClineWithSubTask(parent: Task, task?: string, images?: string[], files?: string[]) {
+		return this.initClineWithTask(task, images, files, parent)
 	}
 
 	// When initializing a new task, (not from history but from a tool command
@@ -502,6 +502,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 	public async initClineWithTask(
 		task?: string,
 		images?: string[],
+		files?: string[],
 		parentTask?: Task,
 		options: Partial<
 			Pick<
@@ -532,6 +533,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			fuzzyMatchThreshold,
 			task,
 			images,
+			files,
 			experiments,
 			rootTask: this.clineStack.length > 0 ? this.clineStack[0] : undefined,
 			parentTask,

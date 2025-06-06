@@ -177,6 +177,7 @@ export interface WebviewMessage {
 	askResponse?: ClineAskResponse
 	apiConfiguration?: ProviderSettings
 	images?: string[]
+	files?: string[]
 	bool?: boolean
 	value?: number
 	commands?: string[]

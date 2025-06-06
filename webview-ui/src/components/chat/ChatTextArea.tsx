@@ -24,7 +24,7 @@ import { SelectDropdown, DropdownOptionType, Button } from "@/components/ui"
 import { useVSCodeTheme } from "@/kilocode/hooks/useVSCodeTheme" // kilocode_change
 
 import Thumbnails from "../common/Thumbnails"
-import { MAX_IMAGES_PER_MESSAGE } from "./ChatView"
+import { MAX_IMAGES_AND_FILES_PER_MESSAGE } from "./ChatView"
 import ContextMenu from "./ContextMenu"
 import { VolumeX, Pin, Check } from "lucide-react"
 import { IconButton } from "./IconButton"
@@ -51,9 +51,11 @@ interface ChatTextAreaProps {
 	placeholderText: string
 	selectedImages: string[]
 	setSelectedImages: React.Dispatch<React.SetStateAction<string[]>>
+	selectedFiles: string[]
+	setSelectedFiles: React.Dispatch<React.SetStateAction<string[]>>
 	onSend: () => void
-	onSelectImages: () => void
-	shouldDisableImages: boolean
+	onSelectFilesAndImages: () => void
+	shouldDisableFilesAndImages: boolean
 	onHeightChange?: (height: number) => void
 	mode: Mode
 	setMode: (value: Mode) => void
@@ -70,9 +72,11 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			placeholderText,
 			selectedImages,
 			setSelectedImages,
+			selectedFiles,
+			setSelectedFiles,
 			onSend,
-			onSelectImages,
-			shouldDisableImages,
+			onSelectFilesAndImages,
+			shouldDisableFilesAndImages,
 			onHeightChange,
 			mode,
 			setMode,
@@ -296,7 +300,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					}
 
 					// Call the image selection function
-					onSelectImages()
+					onSelectFilesAndImages()
 					return
 				}
 				// kilocode_change end
@@ -731,7 +735,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					return type === "image" && acceptedTypes.includes(subtype)
 				})
 
-				if (!shouldDisableImages && imageItems.length > 0) {
+				if (!shouldDisableFilesAndImages && imageItems.length > 0) {
 					e.preventDefault()
 
 					const imagePromises = imageItems.map((item) => {
@@ -763,13 +767,28 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					const dataUrls = imageDataArray.filter((dataUrl): dataUrl is string => dataUrl !== null)
 
 					if (dataUrls.length > 0) {
-						setSelectedImages((prevImages) => [...prevImages, ...dataUrls].slice(0, MAX_IMAGES_PER_MESSAGE))
+						const filesAndImagesLength = selectedImages.length + selectedFiles.length
+						const availableSlots = MAX_IMAGES_AND_FILES_PER_MESSAGE - filesAndImagesLength
+
+						if (availableSlots > 0) {
+							const imagesToAdd = Math.min(dataUrls.length, availableSlots)
+							setSelectedImages((prevImages) => [...prevImages, ...dataUrls.slice(0, imagesToAdd)])
+						}
 					} else {
 						console.warn(t("chat:noValidImages"))
 					}
 				}
 			},
-			[shouldDisableImages, setSelectedImages, cursorPosition, setInputValue, inputValue, t],
+			[
+				shouldDisableFilesAndImages,
+				setSelectedImages,
+				cursorPosition,
+				setInputValue,
+				inputValue,
+				t,
+				selectedFiles,
+				selectedImages,
+			],
 		)
 
 		const handleMenuMouseDown = useCallback(() => {
@@ -889,7 +908,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						return type === "image" && acceptedTypes.includes(subtype)
 					})
 
-					if (!shouldDisableImages && imageFiles.length > 0) {
+					if (!shouldDisableFilesAndImages && imageFiles.length > 0) {
 						const imagePromises = imageFiles.map((file) => {
 							return new Promise<string | null>((resolve) => {
 								const reader = new FileReader()
@@ -913,7 +932,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 						if (dataUrls.length > 0) {
 							setSelectedImages((prevImages) =>
-								[...prevImages, ...dataUrls].slice(0, MAX_IMAGES_PER_MESSAGE),
+								[...prevImages, ...dataUrls].slice(0, MAX_IMAGES_AND_FILES_PER_MESSAGE),
 							)
 
 							if (typeof vscode !== "undefined") {
@@ -932,7 +951,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				setInputValue,
 				setCursorPosition,
 				setIntendedCursorPosition,
-				shouldDisableImages,
+				shouldDisableFilesAndImages,
 				setSelectedImages,
 				t,
 			],
@@ -950,7 +969,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			}
 		})
 
-		const placeholderBottomText = `\n(${t("chat:addContext")}${shouldDisableImages ? `, ${t("chat:dragFiles")}` : `, ${t("chat:dragFilesImages")}`})`
+		const placeholderBottomText = `\n(${t("chat:addContext")}${shouldDisableFilesAndImages ? `, ${t("chat:dragFiles")}` : `, ${t("chat:dragFilesImages")}`})`
 
 		return (
 			<div
@@ -1396,13 +1415,6 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							}}
 						/>
 						<IconButton
-							className="hidden" // kilocode_change
-							iconClass="codicon-device-camera"
-							title={t("chat:addImages")}
-							disabled={shouldDisableImages}
-							onClick={onSelectImages}
-						/>
-						<IconButton
 							iconClass="codicon-send"
 							title={t("chat:sendMessage")}
 							disabled={sendingDisabled}
@@ -1411,14 +1423,16 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					</div>
 				</div>
 
-				{selectedImages.length > 0 && (
+				{(selectedImages.length > 0 || selectedFiles.length > 0) && (
 					<Thumbnails
 						images={selectedImages}
+						files={selectedFiles}
 						setImages={setSelectedImages}
+						setFiles={setSelectedFiles}
 						style={{
 							left: "16px",
 							zIndex: 2,
-							marginTop: "14px", // kilocode_change
+							marginTop: "14px",
 							marginBottom: 0,
 						}}
 					/>

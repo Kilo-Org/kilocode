@@ -48,6 +48,7 @@ export async function browserActionTool(
 						text: removeClosingTag("text", text),
 					} satisfies ClineSayBrowserAction),
 					undefined,
+					undefined,
 					block.partial,
 				)
 			}
@@ -119,6 +120,7 @@ export async function browserActionTool(
 						coordinate,
 						text,
 					} satisfies ClineSayBrowserAction),
+					undefined,
 					undefined,
 					false,
 				)

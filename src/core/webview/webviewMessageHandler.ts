@@ -4,7 +4,7 @@ import pWaitFor from "p-wait-for"
 import * as vscode from "vscode"
 import axios from "axios" // kilocode_change
 
-import { type Language, type ProviderSettings, type GlobalState, TelemetryEventName } from "@roo-code/types"
+import type { Language, ProviderSettings, GlobalState } from "@roo-code/types"
 import { CloudService } from "@roo-code/cloud"
 import { TelemetryService } from "@roo-code/telemetry"
 
@@ -13,13 +13,12 @@ import { changeLanguage, t } from "../../i18n"
 import { Package } from "../../shared/package"
 import { RouterName, toRouterName, ModelRecord } from "../../shared/api"
 import { supportPrompt } from "../../shared/support-prompt"
-
 import { checkoutDiffPayloadSchema, checkoutRestorePayloadSchema, WebviewMessage } from "../../shared/WebviewMessage"
 import { checkExistKey } from "../../shared/checkExistApiConfig"
 import { experimentDefault } from "../../shared/experiments"
 import { Terminal } from "../../integrations/terminal/Terminal"
 import { openFile, openImage } from "../../integrations/misc/open-file"
-import { selectImages } from "../../integrations/misc/process-images"
+import { selectFiles } from "../../integrations/misc/process-files"
 import { getTheme } from "../../integrations/theme/getTheme"
 import { discoverChromeHostUrl, tryChromeHostUrl } from "../../services/browser/browserDiscovery"
 import { searchWorkspaceFiles } from "../../services/search/file-search"
@@ -127,7 +126,7 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			// Initializing new instance of Cline will make sure that any
 			// agentically running promises in old instance don't affect our new
 			// task. This essentially creates a fresh slate for the new task.
-			await provider.initClineWithTask(message.text, message.images)
+			await provider.initClineWithTask(message.text, message.images, message.files)
 			break
 		// kilocode_change start
 		case "condense":
@@ -178,7 +177,9 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			await provider.postStateToWebview()
 			break
 		case "askResponse":
-			provider.getCurrentCline()?.handleWebviewAskResponse(message.askResponse!, message.text, message.images)
+			provider
+				.getCurrentCline()
+				?.handleWebviewAskResponse(message.askResponse!, message.text, message.images, message.files)
 			break
 		case "autoCondenseContext":
 			await updateGlobalState("autoCondenseContext", message.bool)
@@ -203,8 +204,8 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			await provider.postStateToWebview()
 			break
 		case "selectImages":
-			const images = await selectImages()
-			await provider.postMessageToWebview({ type: "selectedImages", images })
+			const { images, files } = await selectFiles()
+			await provider.postMessageToWebview({ type: "selectedImages", images, filePaths: files })
 			break
 		case "exportCurrentTask":
 			const currentTaskId = provider.getCurrentCline()?.taskId
@@ -1061,7 +1062,10 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 						supportPrompt.create("ENHANCE", { userInput: message.text }, customSupportPrompts),
 					)
 
-					await provider.postMessageToWebview({ type: "enhancedPrompt", text: enhancedPrompt })
+					await provider.postMessageToWebview({
+						type: "enhancedPrompt",
+						text: enhancedPrompt,
+					})
 				} catch (error) {
 					provider.log(
 						`Error enhancing prompt: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,

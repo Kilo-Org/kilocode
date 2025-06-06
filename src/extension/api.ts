@@ -96,11 +96,13 @@ export class API extends EventEmitter<RooCodeEvents> implements RooCodeAPI {
 		configuration,
 		text,
 		images,
+		files,
 		newTab,
 	}: {
 		configuration: RooCodeSettings
 		text?: string
 		images?: string[]
+		files?: string[]
 		newTab?: boolean
 	}) {
 		let provider: ClineProvider
@@ -130,9 +132,9 @@ export class API extends EventEmitter<RooCodeEvents> implements RooCodeAPI {
 		await provider.removeClineFromStack()
 		await provider.postStateToWebview()
 		await provider.postMessageToWebview({ type: "action", action: "chatButtonClicked" })
-		await provider.postMessageToWebview({ type: "invoke", invoke: "newChat", text, images })
+		await provider.postMessageToWebview({ type: "invoke", invoke: "newChat", text, images, filePaths: files })
 
-		const { taskId } = await provider.initClineWithTask(text, images, undefined, {
+		const { taskId } = await provider.initClineWithTask(text, images, files, undefined, {
 			consecutiveMistakeLimit: Number.MAX_SAFE_INTEGER,
 		})
 

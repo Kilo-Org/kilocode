@@ -931,7 +931,11 @@ export const ChatRowContent = ({
 								</Button>
 							</div>
 							{message.images && message.images.length > 0 && (
-								<Thumbnails images={message.images} style={{ marginTop: "8px" }} />
+								<Thumbnails
+									images={message.images}
+									files={message.files ?? []}
+									style={{ marginTop: "8px" }}
+								/>
 							)}
 						</div>
 					)

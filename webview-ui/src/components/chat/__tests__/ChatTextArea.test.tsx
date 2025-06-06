@@ -63,6 +63,10 @@ describe("ChatTextArea", () => {
 		mode: defaultModeSlug,
 		setMode: jest.fn(),
 		modeShortcutText: "(⌘. for next mode)",
+		selectedFiles: [],
+		setSelectedFiles: jest.fn(),
+		onSelectFilesAndImages: jest.fn(),
+		shouldDisableFilesAndImages: false,
 	}
 
 	beforeEach(() => {
