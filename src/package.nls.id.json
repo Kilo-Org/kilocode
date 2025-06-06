@@ -23,6 +23,7 @@
 	"command.terminal.fixCommand.title": "Perbaiki Perintah Ini",
 	"command.terminal.explainCommand.title": "Jelaskan Perintah Ini",
 	"command.acceptInput.title": "Terima Input/Saran",
+	"command.generateCommitMessage.title": "Buat Pesan Commit dengan Kilo",
 	"command.profile.title": "Profil",
 	"configuration.title": "Kilo Code",
 	"commands.allowedCommands.description": "Perintah yang dapat dijalankan secara otomatis ketika 'Selalu setujui operasi eksekusi' diaktifkan",
