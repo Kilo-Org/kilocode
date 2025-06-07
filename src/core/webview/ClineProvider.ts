@@ -782,6 +782,22 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			cline.emit("taskModeSwitched", cline.taskId, newMode)
 		}
 
+		// Get the current mode before switching
+		const currentMode = this.getGlobalState("mode") || "code"
+		const currentApiConfigName = this.getGlobalState("currentApiConfigName")
+		let currentApiConfiguration: (ProviderSettings & { apiModelId?: string }) | undefined
+		if (currentApiConfigName) {
+			try {
+				const profile = await this.providerSettingsManager.getProfile({ name: currentApiConfigName })
+				if (profile) {
+					const { name, id, ...settings } = profile
+					currentApiConfiguration = settings
+				}
+			} catch {
+				// If the profile doesn't exist, currentApiConfiguration will remain undefined
+			}
+		}
+
 		await this.updateGlobalState("mode", newMode)
 
 		// If useSameProviderForAllModes is enabled, we don't need to do anything.
@@ -789,6 +805,13 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		if (useSameProviderForAllModes) {
 			await this.postStateToWebview()
 			return
+		}
+
+		// Save the current mode's model selection before switching
+		const modeModelConfigs = this.getGlobalState("modeModelConfigs") || {}
+		if (currentApiConfiguration?.apiModelId) {
+			modeModelConfigs[currentMode] = currentApiConfiguration.apiModelId
+			await this.updateGlobalState("modeModelConfigs", modeModelConfigs)
 		}
 
 		// Load the saved API config for the new mode if it exists
@@ -804,6 +827,23 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 
 			if (profile?.name) {
 				await this.activateProviderProfile({ name: profile.name })
+
+				// After activating the profile, check if we have a saved model for this mode
+				const savedModelId = modeModelConfigs[newMode]
+				if (savedModelId) {
+					// Update the active configuration with the saved model
+					try {
+						const existingProfile = await this.providerSettingsManager.getProfile({ name: profile.name })
+						if (existingProfile) {
+							const { name, ...settings } = existingProfile
+							settings.apiModelId = savedModelId
+							await this.providerSettingsManager.saveConfig(profile.name, settings)
+							await this.activateProviderProfile({ name: profile.name })
+						}
+					} catch {
+						// If the profile doesn't exist, skip updating the model
+					}
+				}
 			}
 		} else {
 			// If no saved config for this mode, save current config as default.

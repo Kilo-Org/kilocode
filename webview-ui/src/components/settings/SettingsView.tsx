@@ -192,19 +192,20 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 
 	useEffect(() => {
 		// Update only when currentApiConfigName is changed.
-		// Expected to be triggered by loadApiConfiguration/upsertApiConfiguration.
 		if (prevApiConfigName.current === currentApiConfigName) {
 			return
 		}
 
-		setCachedState((prevCachedState) => ({
-			...prevCachedState,
-			...extensionState,
-			useSameProviderForAllModes: prevCachedState.useSameProviderForAllModes,
-		}))
+		// When a new API config is loaded, update the cached state
+		// but preserve the user's unsaved change to the checkbox.
+		setCachedState((prevCachedState) => {
+			const newCachedState = { ...extensionState }
+			newCachedState.useSameProviderForAllModes = prevCachedState.useSameProviderForAllModes
+			return newCachedState
+		})
+
 		prevApiConfigName.current = currentApiConfigName
-		setChangeDetected(false)
-	}, [currentApiConfigName, extensionState, isChangeDetected])
+	}, [currentApiConfigName, extensionState])
 
 	// kilocode_change start
 	// Temporary way of making sure that the Settings view updates its local state properly when receiving

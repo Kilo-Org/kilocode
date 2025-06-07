@@ -1200,6 +1200,15 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 		case "upsertApiConfiguration":
 			if (message.text && message.apiConfiguration) {
 				await provider.upsertProviderProfile(message.text, message.apiConfiguration)
+
+				// If "use same provider for all modes" is disabled, track model selection per mode
+				const useSameProviderForAllModes = getGlobalState("useSameProviderForAllModes")
+				if (!useSameProviderForAllModes && message.apiConfiguration.apiModelId) {
+					const currentMode = getGlobalState("mode") || "code"
+					const modeModelConfigs = getGlobalState("modeModelConfigs") || {}
+					modeModelConfigs[currentMode] = message.apiConfiguration.apiModelId
+					await updateGlobalState("modeModelConfigs", modeModelConfigs)
+				}
 			}
 			break
 		case "renameApiConfiguration":
@@ -1605,48 +1614,59 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			}
 			break
 		}
-		case "toggleUseSameProviderForAllModes": {
-			// Get current state values
-			const currentUseSameProvider = getGlobalState("useSameProviderForAllModes") ?? false
-			const currentModeApiConfigs: Record<string, string> = getGlobalState("modeApiConfigs") ?? {}
-
-			// Toggle the boolean value
-			const newUseSameProvider = !currentUseSameProvider
-
-			// Update the useSameProviderForAllModes setting
-			await updateGlobalState("useSameProviderForAllModes", newUseSameProvider)
-
-			// Handle modeApiConfigs based on the new value
-			if (newUseSameProvider) {
-				// When toggled ON (true): Save current modeApiConfigs before clearing
-				// This allows us to restore them when toggling OFF
+		case "toggleUseSameProviderForAllModes":
+			if (message.bool) {
+				// Save current configurations before overriding
+				const currentModeApiConfigs = getGlobalState("modeApiConfigs") ?? {}
 				const savedModeApiConfigs = getGlobalState("savedModeApiConfigs")
-				if (!savedModeApiConfigs && Object.keys(currentModeApiConfigs).length > 0) {
-					// Save the current mode configs if we haven't already
-					await updateGlobalState("savedModeApiConfigs", currentModeApiConfigs as Record<string, string>)
+				// Only save provider configs if there are current mode configs and no saved configs yet
+				if (Object.keys(currentModeApiConfigs).length > 0 && !savedModeApiConfigs) {
+					await updateGlobalState("savedModeApiConfigs", currentModeApiConfigs)
 				}
-				// Clear modeApiConfigs (use same model for all modes)
-				await updateGlobalState("modeApiConfigs", {} as Record<string, string>)
-				// When toggled ON (true): Save current modeApiConfigs before clearing
-				// This allows us to restore them when toggling OFF
-				const existingSavedConfigs = getGlobalState("savedModeApiConfigs")
-				if (!existingSavedConfigs && Object.keys(currentModeApiConfigs).length > 0) {
-					// Save the current mode configs if we haven't already
-					await updateGlobalState("savedModeApiConfigs", currentModeApiConfigs as Record<string, string>)
-				}
-				// Clear modeApiConfigs (use same model for all modes)
-				await updateGlobalState("modeApiConfigs", {} as Record<string, string>)
-			} else {
-				// When toggled OFF (false): Restore saved configs or populate with current config
-				const restoredModeApiConfigs = getGlobalState("savedModeApiConfigs")
 
-				if (restoredModeApiConfigs && Object.keys(restoredModeApiConfigs).length > 0) {
-					// Restore the previously saved mode configs
-					await updateGlobalState("modeApiConfigs", restoredModeApiConfigs)
-					// Clear the saved configs since we've restored them
+				// Save current model configurations
+				const currentModeModelConfigs = getGlobalState("modeModelConfigs") ?? {}
+				const savedModeModelConfigs = getGlobalState("savedModeModelConfigs")
+				// Only save model configs if there are current mode configs and no saved configs yet
+				if (Object.keys(currentModeModelConfigs).length > 0 && !savedModeModelConfigs) {
+					await updateGlobalState("savedModeModelConfigs", currentModeModelConfigs)
+				}
+
+				// Get the current model selection to apply to all modes
+				const { apiConfiguration } = await provider.getState()
+				const currentModelId = apiConfiguration?.apiModelId
+
+				// If we have a current model selection, apply it to all modes
+				if (currentModelId) {
+					const { customModes } = await provider.getState()
+					const allModes = getAllModes(customModes)
+					const unifiedModeModelConfigs: Record<string, string> = {}
+
+					// Apply current model to all modes
+					allModes.forEach((mode) => {
+						unifiedModeModelConfigs[mode.slug] = currentModelId
+					})
+
+					// Save this unified configuration (but it will be ignored while toggle is on)
+					await updateGlobalState("modeModelConfigs", unifiedModeModelConfigs)
+				} else {
+					// Clear current mode-specific configurations
+					await updateGlobalState("modeModelConfigs", {})
+				}
+
+				// Clear provider-specific configurations
+				await updateGlobalState("modeApiConfigs", {})
+			} else {
+				// Restore saved configurations
+				const savedModeApiConfigs = getGlobalState("savedModeApiConfigs")
+				const savedModeModelConfigs = getGlobalState("savedModeModelConfigs")
+
+				// Restore provider configurations
+				if (savedModeApiConfigs) {
+					await updateGlobalState("modeApiConfigs", savedModeApiConfigs)
 					await updateGlobalState("savedModeApiConfigs", undefined)
 				} else {
-					// No saved configs, populate with current primary config for all modes
+					// If no saved provider configs, populate with current primary config for all modes
 					const { apiConfiguration, customModes } = await provider.getState()
 					const currentApiConfigName = getGlobalState("currentApiConfigName")
 
@@ -1664,11 +1684,16 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 						await updateGlobalState("modeApiConfigs", newModeApiConfigs)
 					}
 				}
-			}
 
-			// Post updated state to webview
+				// Restore model configurations
+				if (savedModeModelConfigs) {
+					await updateGlobalState("modeModelConfigs", savedModeModelConfigs)
+					await updateGlobalState("savedModeModelConfigs", undefined)
+				}
+				// If no saved model configs, modeModelConfigs remains empty (default behavior)
+			}
+			await updateGlobalState("useSameProviderForAllModes", message.bool)
 			await provider.postStateToWebview()
 			break
-		}
 	}
 }
