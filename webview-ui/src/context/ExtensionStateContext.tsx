@@ -120,6 +120,7 @@ export interface ExtensionStateContextType extends ExtensionState {
 	autoCondenseContextPercent: number
 	setAutoCondenseContextPercent: (value: number) => void
 	routerModels?: RouterModels
+	useSameProviderForAllModes?: boolean
 }
 
 export const ExtensionStateContext = createContext<ExtensionStateContextType | undefined>(undefined)
@@ -217,6 +218,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 			codebaseIndexEmbedderModelId: "",
 		},
 		codebaseIndexModels: { ollama: {}, openai: {} },
+		useSameProviderForAllModes: false,
 	})
 
 	const [didHydrateState, setDidHydrateState] = useState(false)

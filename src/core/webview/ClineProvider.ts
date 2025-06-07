@@ -784,6 +784,13 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 
 		await this.updateGlobalState("mode", newMode)
 
+		// If useSameProviderForAllModes is enabled, we don't need to do anything.
+		const { useSameProviderForAllModes } = await this.getState()
+		if (useSameProviderForAllModes) {
+			await this.postStateToWebview()
+			return
+		}
+
 		// Load the saved API config for the new mode if it exists
 		const savedConfigId = await this.providerSettingsManager.getModeConfigId(newMode)
 		const listApiConfig = await this.providerSettingsManager.listConfig()
@@ -1327,6 +1334,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			customCondensingPrompt,
 			codebaseIndexConfig,
 			codebaseIndexModels,
+			useSameProviderForAllModes,
 		} = await this.getState()
 
 		const machineId = vscode.env.machineId
@@ -1438,6 +1446,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 				codebaseIndexEmbedderBaseUrl: "",
 				codebaseIndexEmbedderModelId: "",
 			},
+			useSameProviderForAllModes: useSameProviderForAllModes ?? false,
 		}
 	}
 
@@ -1546,6 +1555,8 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			listApiConfigMeta: stateValues.listApiConfigMeta ?? [],
 			pinnedApiConfigs: stateValues.pinnedApiConfigs ?? {},
 			modeApiConfigs: stateValues.modeApiConfigs ?? ({} as Record<Mode, string>),
+			savedModeApiConfigs: stateValues.savedModeApiConfigs ?? ({} as Record<Mode, string>),
+			useSameProviderForAllModes: stateValues.useSameProviderForAllModes ?? false,
 			customModePrompts: stateValues.customModePrompts ?? {},
 			customSupportPrompts: stateValues.customSupportPrompts ?? {},
 			enhancementApiConfigId: stateValues.enhancementApiConfigId,

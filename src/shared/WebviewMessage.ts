@@ -172,6 +172,7 @@ export interface WebviewMessage {
 		| "indexCleared"
 		| "codebaseIndexConfig"
 		| "telemetrySetting"
+		| "toggleUseSameProviderForAllModes"
 	text?: string
 	disabled?: boolean
 	askResponse?: ClineAskResponse

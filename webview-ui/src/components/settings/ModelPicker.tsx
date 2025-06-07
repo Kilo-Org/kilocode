@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect, useRef } from "react"
+import React, { useMemo, useState, useCallback, useEffect, useRef } from "react"
 import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 import { Trans } from "react-i18next"
 import { ChevronsUpDown, Check, X } from "lucide-react"
@@ -193,7 +193,7 @@ export const ModelPicker = ({
 											models?.[modelIds[i - 1]]?.preferredIndex !== null
 
 										return (
-											<>
+											<React.Fragment key={model}>
 												{!isPreferred && previousModelWasPreferred ? <SelectSeparator /> : null}
 												<CommandItem
 													key={model}
@@ -208,7 +208,7 @@ export const ModelPicker = ({
 														)}
 													/>
 												</CommandItem>
-											</>
+											</React.Fragment>
 										)
 									})}
 									{/* kilocode_change end */}

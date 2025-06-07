@@ -14,8 +14,7 @@ import { MessageSquare } from "lucide-react"
 const PromptsSettings = () => {
 	const { t } = useAppTranslation()
 
-	const { customSupportPrompts, listApiConfigMeta, enhancementApiConfigId, setEnhancementApiConfigId } =
-		useExtensionState()
+	const { customSupportPrompts, listApiConfigMeta, enhancementApiConfigId } = useExtensionState()
 
 	const [testPrompt, setTestPrompt] = useState("")
 	const [isEnhancing, setIsEnhancing] = useState(false)
@@ -133,10 +132,9 @@ const PromptsSettings = () => {
 								<Select
 									value={enhancementApiConfigId || "-"}
 									onValueChange={(value) => {
-										setEnhancementApiConfigId(value === "-" ? "" : value)
 										vscode.postMessage({
 											type: "enhancementApiConfigId",
-											text: value,
+											text: value === "-" ? "" : value,
 										})
 									}}>
 									<SelectTrigger data-testid="api-config-select" className="w-full">

@@ -36,7 +36,7 @@ import { getLmStudioModels } from "../../api/providers/lm-studio"
 import { openMention } from "../mentions"
 import { TelemetrySetting } from "../../shared/TelemetrySetting"
 import { getWorkspacePath } from "../../utils/path"
-import { Mode, defaultModeSlug } from "../../shared/modes"
+import { Mode, defaultModeSlug, getAllModes } from "../../shared/modes"
 import { getModels, flushModels } from "../../api/providers/fetchers/modelCache"
 import { GetModelsOptions } from "../../shared/api"
 import { generateSystemPrompt } from "./generateSystemPrompt"
@@ -1603,6 +1603,71 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 					},
 				})
 			}
+			break
+		}
+		case "toggleUseSameProviderForAllModes": {
+			// Get current state values
+			const currentUseSameProvider = getGlobalState("useSameProviderForAllModes") ?? false
+			const currentModeApiConfigs: Record<string, string> = getGlobalState("modeApiConfigs") ?? {}
+
+			// Toggle the boolean value
+			const newUseSameProvider = !currentUseSameProvider
+
+			// Update the useSameProviderForAllModes setting
+			await updateGlobalState("useSameProviderForAllModes", newUseSameProvider)
+
+			// Handle modeApiConfigs based on the new value
+			if (newUseSameProvider) {
+				// When toggled ON (true): Save current modeApiConfigs before clearing
+				// This allows us to restore them when toggling OFF
+				const savedModeApiConfigs = getGlobalState("savedModeApiConfigs")
+				if (!savedModeApiConfigs && Object.keys(currentModeApiConfigs).length > 0) {
+					// Save the current mode configs if we haven't already
+					await updateGlobalState("savedModeApiConfigs", currentModeApiConfigs as Record<string, string>)
+				}
+				// Clear modeApiConfigs (use same model for all modes)
+				await updateGlobalState("modeApiConfigs", {} as Record<string, string>)
+				// When toggled ON (true): Save current modeApiConfigs before clearing
+				// This allows us to restore them when toggling OFF
+				const existingSavedConfigs = getGlobalState("savedModeApiConfigs")
+				if (!existingSavedConfigs && Object.keys(currentModeApiConfigs).length > 0) {
+					// Save the current mode configs if we haven't already
+					await updateGlobalState("savedModeApiConfigs", currentModeApiConfigs as Record<string, string>)
+				}
+				// Clear modeApiConfigs (use same model for all modes)
+				await updateGlobalState("modeApiConfigs", {} as Record<string, string>)
+			} else {
+				// When toggled OFF (false): Restore saved configs or populate with current config
+				const restoredModeApiConfigs = getGlobalState("savedModeApiConfigs")
+
+				if (restoredModeApiConfigs && Object.keys(restoredModeApiConfigs).length > 0) {
+					// Restore the previously saved mode configs
+					await updateGlobalState("modeApiConfigs", restoredModeApiConfigs)
+					// Clear the saved configs since we've restored them
+					await updateGlobalState("savedModeApiConfigs", undefined)
+				} else {
+					// No saved configs, populate with current primary config for all modes
+					const { apiConfiguration, customModes } = await provider.getState()
+					const currentApiConfigName = getGlobalState("currentApiConfigName")
+
+					if (currentApiConfigName && apiConfiguration) {
+						// Get all available modes (built-in + custom)
+						const allModes = getAllModes(customModes)
+
+						// Create modeApiConfigs object mapping each mode slug to the current API config name
+						const newModeApiConfigs: Record<string, string> = {}
+						allModes.forEach((mode) => {
+							newModeApiConfigs[mode.slug] = currentApiConfigName
+						})
+
+						// Save the populated modeApiConfigs
+						await updateGlobalState("modeApiConfigs", newModeApiConfigs)
+					}
+				}
+			}
+
+			// Post updated state to webview
+			await provider.postStateToWebview()
 			break
 		}
 	}

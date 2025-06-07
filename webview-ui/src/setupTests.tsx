@@ -4,6 +4,9 @@ import { setupI18nForTests } from "./i18n/test-utils"
 // Set up i18n for all tests
 setupI18nForTests()
 
+// Mock scrollIntoView
+window.HTMLElement.prototype.scrollIntoView = jest.fn()
+
 // Mock crypto.getRandomValues
 Object.defineProperty(window, "crypto", {
 	value: {
