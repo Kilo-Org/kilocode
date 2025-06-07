@@ -47,7 +47,7 @@ export async function processKiloUserContentMentions({
 		// these tags so they can effectively be used as markers for when we
 		// should parse mentions).
 
-		const workflowToggles = await refreshWorkflowToggles(context, cwd) // kilocode_change
+		const { localWorkflowToggles, globalWorkflowToggles } = await refreshWorkflowToggles(context, cwd) // kilocode_change
 
 		return await Promise.all(
 			userContent.map(async (block) => {
@@ -68,7 +68,8 @@ export async function processKiloUserContentMentions({
 						// when parsing slash commands, we still want to allow the user to provide their desired context
 						const { processedText, needsRulesFileCheck: needsCheck } = await parseKiloSlashCommands(
 							parsedText,
-							workflowToggles, // kilocode_change
+							localWorkflowToggles, // kilocode_change
+							globalWorkflowToggles, // kilocode_change
 						)
 
 						if (needsCheck) {

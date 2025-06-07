@@ -42,7 +42,7 @@ const TaskItemFooter: React.FC<TaskItemFooterProps> = ({ item, variant, isSelect
 							{formatLargeNumber(item.cacheReads || 0)}
 						</span>
 					)}
-					
+
 					{/* Compact Tokens */}
 					{(item.tokensIn || item.tokensOut) && (
 						<>
@@ -74,12 +74,15 @@ const TaskItemFooter: React.FC<TaskItemFooterProps> = ({ item, variant, isSelect
 									<span className="font-medium">{formatLargeNumber(item.cacheWrites || 0)}</span>
 								</span>
 								<span className="flex items-center gap-px" data-testid="cache-reads">
-									<i className="codicon codicon-arrow-right" style={metadataIconWithTextAdjustStyle} />
+									<i
+										className="codicon codicon-arrow-right"
+										style={metadataIconWithTextAdjustStyle}
+									/>
 									<span className="font-medium">{formatLargeNumber(item.cacheReads || 0)}</span>
 								</span>
 							</div>
 						)}
-						
+
 						{/* Full Tokens */}
 						{(item.tokensIn || item.tokensOut) && (
 							<div className="flex items-center flex-wrap gap-x-1">

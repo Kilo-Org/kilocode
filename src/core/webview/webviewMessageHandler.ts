@@ -40,8 +40,8 @@ import { Mode, defaultModeSlug } from "../../shared/modes"
 import { getModels, flushModels } from "../../api/providers/fetchers/modelCache"
 import { GetModelsOptions } from "../../shared/api"
 import { generateSystemPrompt } from "./generateSystemPrompt"
-import { ClineRulesToggles } from "../../shared/cline-rules" // kilocode_change
 import { getCommand } from "../../utils/commands"
+import { toggleWorkflow, toggleRule, createRuleFile, deleteRuleFile } from "./kilorules"
 
 const ALLOWED_VSCODE_SETTINGS = new Set(["terminal.integrated.inheritEnv"])
 
@@ -1476,16 +1476,60 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 		}
 
 		case "toggleWorkflow": {
-			const { workflowPath, enabled } = message
-			if (workflowPath && typeof enabled === "boolean") {
-				const toggles =
-					((await provider.contextProxy.getWorkspaceState(
-						provider.context,
-						"workflowToggles",
-					)) as ClineRulesToggles) || {}
-				toggles[workflowPath] = enabled
-				await provider.contextProxy.updateWorkspaceState(provider.context, "workflowToggles", toggles)
-				await provider.postStateToWebview()
+			if (message.workflowPath && typeof message.enabled === "boolean" && typeof message.isGlobal === "boolean") {
+				await toggleWorkflow(
+					message.workflowPath,
+					message.enabled,
+					message.isGlobal,
+					provider.contextProxy,
+					provider.context,
+				)
+				await provider.postRulesDataToWebview()
+			}
+			break
+		}
+
+		case "refreshRules": {
+			await provider.postRulesDataToWebview()
+			break
+		}
+
+		case "toggleRule": {
+			if (message.rulePath && typeof message.enabled === "boolean" && typeof message.isGlobal === "boolean") {
+				await toggleRule(
+					message.rulePath,
+					message.enabled,
+					message.isGlobal,
+					provider.contextProxy,
+					provider.context,
+				)
+				await provider.postRulesDataToWebview()
+			}
+			break
+		}
+
+		case "createRuleFile": {
+			if (message.filename && typeof message.isGlobal === "boolean" && message.ruleType) {
+				try {
+					await createRuleFile(message.filename, message.isGlobal, message.ruleType)
+				} catch (error) {
+					console.error("Error creating rule file:", error)
+					vscode.window.showErrorMessage(t("kilocode:rules.errors.failedToCreateRuleFile"))
+				}
+				await provider.postRulesDataToWebview()
+			}
+			break
+		}
+
+		case "deleteRuleFile": {
+			if (message.rulePath) {
+				try {
+					await deleteRuleFile(message.rulePath)
+				} catch (error) {
+					console.error("Error deleting rule file:", error)
+					vscode.window.showErrorMessage(t("kilocode:rules.errors.failedToDeleteRuleFile"))
+				}
+				await provider.postRulesDataToWebview()
 			}
 			break
 		}

@@ -19,7 +19,7 @@ const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({
 	query,
 	customModes,
 }) => {
-	const { workflowToggles } = useExtensionState() // kilocode_change
+	const { localWorkflows, globalWorkflows } = useExtensionState() // kilocode_change
 	const menuRef = useRef<HTMLDivElement>(null)
 
 	const handleClick = useCallback(
@@ -47,7 +47,7 @@ const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({
 	}, [selectedIndex])
 
 	// Filter commands based on query
-	const filteredCommands = getMatchingSlashCommands(query, customModes, workflowToggles) // kilocode_change
+	const filteredCommands = getMatchingSlashCommands(query, customModes, localWorkflows, globalWorkflows) // kilocode_change
 
 	return (
 		<div

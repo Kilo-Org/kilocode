@@ -53,6 +53,7 @@ import type { IndexProgressUpdate } from "../../services/code-index/interfaces/m
 import { fileExistsAtPath } from "../../utils/fs"
 import { setTtsEnabled, setTtsSpeed } from "../../utils/tts"
 import { ContextProxy } from "../config/ContextProxy"
+import { getEnabledRules } from "./kilorules"
 import { ProviderSettingsManager } from "../config/ProviderSettingsManager"
 import { CustomModesManager } from "../config/CustomModesManager"
 import { buildApiHandler } from "../../api"
@@ -1249,6 +1250,18 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		this.postMessageToWebview({ type: "state", state })
 	}
 
+	// kilocode_change start
+	async postRulesDataToWebview() {
+		const workspacePath = this.cwd
+		if (workspacePath) {
+			this.postMessageToWebview({
+				type: "rulesData",
+				...(await getEnabledRules(workspacePath, this.contextProxy, this.context)),
+			})
+		}
+	}
+	// kilocode_change end
+
 	/**
 	 * Checks if there is a file-based system prompt override for the given mode
 	 */
@@ -1332,13 +1345,6 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		const machineId = vscode.env.machineId
 		const allowedCommands = vscode.workspace.getConfiguration(Package.name).get<string[]>("allowedCommands") || []
 		const cwd = this.cwd
-
-		// kilocode_change start
-		// Get workflow toggles from workspace state
-		const workflowToggles =
-			((await this.contextProxy.getWorkspaceState(this.context, "workflowToggles")) as Record<string, boolean>) ||
-			{}
-		// kilocode_change end
 
 		// Check if there's a system prompt override for the current mode
 		const currentMode = mode ?? defaultModeSlug
@@ -1424,7 +1430,6 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			terminalCompressProgressBar: terminalCompressProgressBar ?? true,
 			hasSystemPromptOverride,
 			historyPreviewCollapsed: historyPreviewCollapsed ?? false,
-			workflowToggles, // kilocode_change
 			cloudUserInfo,
 			cloudIsAuthenticated: cloudIsAuthenticated ?? false,
 			organizationAllowList,

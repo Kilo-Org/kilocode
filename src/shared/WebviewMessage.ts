@@ -161,6 +161,10 @@ export interface WebviewMessage {
 		| "balanceDataResponse" // kilocode_change
 		| "condense" // kilocode_change
 		| "toggleWorkflow" // kilocode_change
+		| "refreshRules" // kilocode_change
+		| "toggleRule" // kilocode_change
+		| "createRuleFile" // kilocode_change
+		| "deleteRuleFile" // kilocode_change
 		| "accountButtonClicked"
 		| "rooCloudSignIn"
 		| "rooCloudSignOut"
@@ -193,6 +197,10 @@ export interface WebviewMessage {
 	autoApprove?: boolean
 	workflowPath?: string // kilocode_change
 	enabled?: boolean // kilocode_change
+	rulePath?: string // kilocode_change
+	isGlobal?: boolean // kilocode_change
+	filename?: string // kilocode_change
+	ruleType?: string // kilocode_change
 	// kilocode_change end
 	serverName?: string
 	toolName?: string

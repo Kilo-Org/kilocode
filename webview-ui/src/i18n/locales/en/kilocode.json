@@ -44,5 +44,25 @@
 			"description": "Signing up with Kilo Code gives you free credits to get started. Use your credits to explore our features, try out the latest and greatest models, and experience the benefits of Kilo Code without any commitment.",
 			"termsAndPrivacy": "By continuing, you agree to the <termsLink>Terms of Service</termsLink> and <privacyLink>Privacy Policy.</privacyLink>"
 		}
+	},
+	"docs": "Docs",
+	"rules": {
+		"tooltip": "Manage Kilo Code Rules & Workflows",
+		"ariaLabel": "Kilo Code Rules",
+		"tabs": {
+			"rules": "Rules",
+			"workflows": "Workflows"
+		},
+		"description": {
+			"rules": "Rules allow you to provide Kilo Code with system-level guidance. Think of them as a persistent way to include context and preferences for your projects or globally for every conversation.",
+			"workflows": "Workflows allow you to define a series of steps to guide Kilo Code through a repetitive set of tasks, such as deploying a service or submitting a PR. To invoke a workflow, type",
+			"workflowsInChat": "in the chat."
+		},
+		"sections": {
+			"globalRules": "Global Rules",
+			"workspaceRules": "Workspace Rules",
+			"globalWorkflows": "Global Workflows",
+			"workspaceWorkflows": "Workspace Workflows"
+		}
 	}
 }

@@ -35,7 +35,12 @@ export interface ExtensionStateContextType extends ExtensionState {
 	currentCheckpoint?: string
 	filePaths: string[]
 	openedTabs: Array<{ label: string; isActive: boolean; path?: string }>
-	setWorkflowToggles: (toggles: Record<string, boolean>) => void // kilocode_change
+	// kilocode_change start
+	globalRules: Record<string, boolean>
+	localRules: Record<string, boolean>
+	globalWorkflows: Record<string, boolean>
+	localWorkflows: Record<string, boolean>
+	// kilocode_change start
 	organizationAllowList: OrganizationAllowList
 	cloudIsAuthenticated: boolean
 	maxConcurrentFileReads?: number
@@ -203,7 +208,6 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		terminalZdotdir: false, // Default ZDOTDIR handling setting
 		terminalCompressProgressBar: true, // Default to compress progress bar output
 		historyPreviewCollapsed: false, // Initialize the new state (default to expanded)
-		workflowToggles: {}, // Initialize with empty workflow toggles  // kilocode_change
 		cloudUserInfo: null,
 		cloudIsAuthenticated: false,
 		organizationAllowList: ORGANIZATION_ALLOW_ALL,
@@ -228,6 +232,12 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 	const [mcpMarketplaceCatalog, setMcpMarketplaceCatalog] = useState<McpMarketplaceCatalog>({ items: [] }) // kilocode_change
 	const [currentCheckpoint, setCurrentCheckpoint] = useState<string>()
 	const [extensionRouterModels, setExtensionRouterModels] = useState<RouterModels | undefined>(undefined)
+	// kilocode_change start
+	const [globalRules, setGlobalRules] = useState<Record<string, boolean>>({})
+	const [localRules, setLocalRules] = useState<Record<string, boolean>>({})
+	const [globalWorkflows, setGlobalWorkflows] = useState<Record<string, boolean>>({})
+	const [localWorkflows, setLocalWorkflows] = useState<Record<string, boolean>>({})
+	// kilocode_change end
 
 	const setListApiConfigMeta = useCallback(
 		(value: ProviderSettingsEntry[]) => setState((prevState) => ({ ...prevState, listApiConfigMeta: value })),
@@ -294,6 +304,13 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 					}
 					break
 				}
+				case "rulesData": {
+					if (message.globalRules) setGlobalRules(message.globalRules)
+					if (message.localRules) setLocalRules(message.localRules)
+					if (message.globalWorkflows) setGlobalWorkflows(message.globalWorkflows)
+					if (message.localWorkflows) setLocalWorkflows(message.localWorkflows)
+					break
+				}
 				// end kilocode_change
 				case "currentCheckpointUpdated": {
 					setCurrentCheckpoint(message.text)
@@ -328,6 +345,12 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		currentCheckpoint,
 		filePaths,
 		openedTabs,
+		// kilocode_change start
+		globalRules,
+		localRules,
+		globalWorkflows,
+		localWorkflows,
+		// kilocode_change end
 		soundVolume: state.soundVolume,
 		ttsSpeed: state.ttsSpeed,
 		fuzzyMatchThreshold: state.fuzzyMatchThreshold,
@@ -414,12 +437,6 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setHistoryPreviewCollapsed: (value) =>
 			setState((prevState) => ({ ...prevState, historyPreviewCollapsed: value })),
 
-		// kilocode_change
-		setWorkflowToggles: (toggles) =>
-			setState((prevState) => ({
-				...prevState,
-				workflowToggles: toggles,
-			})),
 		setAutoCondenseContext: (value) => setState((prevState) => ({ ...prevState, autoCondenseContext: value })),
 		setAutoCondenseContextPercent: (value) =>
 			setState((prevState) => ({ ...prevState, autoCondenseContextPercent: value })),

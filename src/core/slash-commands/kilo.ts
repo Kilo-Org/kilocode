@@ -2,6 +2,7 @@
 
 import { ClineRulesToggles } from "../../shared/cline-rules"
 import fs from "fs/promises"
+import path from "path"
 import {
 	newTaskToolResponse,
 	newRuleToolResponse,
@@ -9,13 +10,23 @@ import {
 	condenseToolResponse,
 } from "../prompts/commands"
 
+function enabledWorkflowToggles(workflowToggles: ClineRulesToggles) {
+	return Object.entries(workflowToggles)
+		.filter(([_, enabled]) => enabled)
+		.map(([filePath, _]) => ({
+			fullPath: filePath,
+			fileName: path.basename(filePath),
+		}))
+}
+
 /**
  * This file is a duplicate of parseSlashCommands, but it adds a check for the newrule command
  * and processes Kilo-specific slash commands. It should be merged with parseSlashCommands in the future.
  */
 export async function parseKiloSlashCommands(
 	text: string,
-	workflowToggles: ClineRulesToggles,
+	localWorkflowToggles: ClineRulesToggles,
+	globalWorkflowToggles: ClineRulesToggles,
 ): Promise<{ processedText: string; needsRulesFileCheck: boolean }> {
 	const SUPPORTED_COMMANDS = ["newtask", "newrule", "reportbug", "smol"]
 
@@ -64,20 +75,10 @@ export async function parseKiloSlashCommands(
 				return { processedText, needsRulesFileCheck: commandName === "newrule" }
 			}
 
-			// in practice we want to minimize this work, so we only do it if theres a possible match
-			const enabledWorkflows = Object.entries(workflowToggles)
-				.filter(([_, enabled]) => enabled)
-				.map(([filePath, _]) => {
-					const fileName = filePath.replace(/^.*[/\\]/, "")
-
-					return {
-						fullPath: filePath,
-						fileName: fileName,
-					}
-				})
-
-			// Then check if the command matches any enabled workflow filename
-			const matchingWorkflow = enabledWorkflows.find((workflow) => workflow.fileName === commandName)
+			const matchingWorkflow = [
+				...enabledWorkflowToggles(localWorkflowToggles),
+				...enabledWorkflowToggles(globalWorkflowToggles),
+			].find((workflow) => workflow.fileName === commandName)
 
 			if (matchingWorkflow) {
 				try {

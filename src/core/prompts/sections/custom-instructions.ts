@@ -1,6 +1,8 @@
 import fs from "fs/promises"
 import path from "path"
 
+import { getRuleFilesTotalContent } from "./kilo"
+
 // kilocode_change start
 let vscodeAPI: typeof import("vscode") | undefined
 try {
@@ -168,8 +170,54 @@ function formatDirectoryContent(dirPath: string, files: Array<{ filename: string
 	)
 }
 
+// kilocode_change start: added functions
+
+async function loadEnabledRulesFromDirectory(
+	rulesDir: string,
+	toggleState: Record<string, boolean>,
+	label: string,
+): Promise<string | null> {
+	if (!(await directoryExists(rulesDir))) {
+		return null
+	}
+
+	const files = await readTextFilesFromDirectory(rulesDir)
+	if (files.length === 0) {
+		return null
+	}
+
+	const rulesContent = await getRuleFilesTotalContent(
+		files.map((f) => f.filename),
+		rulesDir,
+		toggleState,
+	)
+
+	return rulesContent ? `# ${label} from ${rulesDir}:\n${rulesContent}` : null
+}
+
+async function loadEnabledRules(
+	cwd: string,
+	localRulesToggleState: Record<string, boolean>,
+	globalRulesToggleState: Record<string, boolean>,
+): Promise<string> {
+	const globalRulesContent = await loadEnabledRulesFromDirectory(
+		path.join(require("os").homedir(), ".kilocode", "rules"),
+		globalRulesToggleState,
+		"Global Rules",
+	)
+	const localRulesContent = await loadEnabledRulesFromDirectory(
+		path.join(cwd, ".kilocode", "rules"),
+		localRulesToggleState,
+		"Local Rules",
+	)
+	return [globalRulesContent, localRulesContent].filter(Boolean).join("\n\n")
+}
+
+// kilocode_change end
+
 /**
  * Load rule files from the specified directory
+ * kilocode_change: this function is only called when the user hasn't used the rule configuration window
  */
 export async function loadRuleFiles(cwd: string): Promise<string> {
 	// kilocode_change start: add kilocode directory, leave fallback to roo directory
@@ -224,7 +272,14 @@ export async function addCustomInstructions(
 	globalCustomInstructions: string,
 	cwd: string,
 	mode: string,
-	options: { language?: string; rooIgnoreInstructions?: string } = {},
+	// kilocode_change begin: rule toggles
+	options: {
+		language?: string
+		rooIgnoreInstructions?: string
+		localRulesToggleState?: Record<string, boolean>
+		globalRulesToggleState?: Record<string, boolean>
+	} = {},
+	// kilocode_change end
 ): Promise<string> {
 	const sections = []
 
@@ -301,11 +356,23 @@ export async function addCustomInstructions(
 		rules.push(options.rooIgnoreInstructions)
 	}
 
-	// Add generic rules
-	const genericRuleContent = await loadRuleFiles(cwd)
-	if (genericRuleContent && genericRuleContent.trim()) {
-		rules.push(genericRuleContent.trim())
+	// kilocode_change start: rule toggles
+	if (options.localRulesToggleState || options.globalRulesToggleState) {
+		const genericRuleContent =
+			(
+				await loadEnabledRules(cwd, options.localRulesToggleState || {}, options.globalRulesToggleState || {})
+			)?.trim() ?? ""
+		if (genericRuleContent) {
+			rules.push(genericRuleContent)
+		}
+	} else {
+		// Fallback to legacy function if no toggle states provided
+		const genericRuleContent = (await loadRuleFiles(cwd))?.trim() ?? ""
+		if (genericRuleContent) {
+			rules.push(genericRuleContent)
+		}
 	}
+	// kilocode_change end
 
 	if (rules.length > 0) {
 		sections.push(`Rules:\n\n${rules.join("\n\n")}`)
