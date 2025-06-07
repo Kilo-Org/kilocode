@@ -10,6 +10,9 @@ import SettingsView from "../SettingsView"
 // Mock vscode API
 jest.mock("@src/utils/vscode", () => ({ vscode: { postMessage: jest.fn() } }))
 
+// Mock scrollIntoView
+window.HTMLElement.prototype.scrollIntoView = jest.fn()
+
 // kilocode_change start
 // Mock the validate functions to prevent validation errors
 jest.mock("@src/utils/validate", () => ({
@@ -44,6 +47,39 @@ jest.mock("../ApiConfigManager", () => ({
 	),
 }))
 
+// Mock ApiOptions component with the checkbox
+jest.mock("../ApiOptions", () => {
+	const React = jest.requireActual("react")
+	const originalModule = jest.requireActual("@src/context/ExtensionStateContext")
+	const { VSCodeCheckbox } = jest.requireMock("@vscode/webview-ui-toolkit/react")
+
+	return {
+		__esModule: true,
+		default: function ApiOptions({
+			apiConfiguration: _apiConfiguration,
+			setApiConfigurationField: _setApiConfigurationField,
+		}: any) {
+			const { useSameProviderForAllModes } = originalModule.useExtensionState()
+
+			const handleChange = () => {
+				jest.requireMock("@src/utils/vscode").vscode.postMessage({ type: "toggleUseSameProviderForAllModes" })
+			}
+
+			return (
+				<div data-testid="api-options">
+					<div>API Provider Options</div>
+					<VSCodeCheckbox
+						checked={!!useSameProviderForAllModes}
+						onChange={handleChange}
+						data-testid="use-same-provider-for-all-modes-checkbox">
+						Use same provider for all modes
+					</VSCodeCheckbox>
+				</div>
+			)
+		},
+	}
+})
+
 // Mock VSCode components
 jest.mock("@vscode/webview-ui-toolkit/react", () => ({
 	VSCodeButton: ({ children, onClick, appearance, "data-testid": dataTestId }: any) =>
@@ -60,18 +96,38 @@ jest.mock("@vscode/webview-ui-toolkit/react", () => ({
 				{children}
 			</button>
 		),
-	VSCodeCheckbox: ({ children, onChange, checked, "data-testid": dataTestId }: any) => (
-		<label>
-			<input
-				type="checkbox"
-				checked={checked}
-				onChange={(e) => onChange({ target: { checked: e.target.checked } })}
-				aria-label={typeof children === "string" ? children : undefined}
-				data-testid={dataTestId}
-			/>
-			{children}
-		</label>
-	),
+	VSCodeCheckbox: ({ children, onChange, onClick, checked, "data-testid": dataTestId }: any) => {
+		const [isChecked, setIsChecked] = React.useState(checked)
+		React.useEffect(() => {
+			setIsChecked(checked)
+		}, [checked])
+
+		const handleChange = (e: any) => {
+			setIsChecked(e.target.checked)
+			if (onChange) {
+				onChange(e)
+			}
+		}
+
+		const handleClick = () => {
+			if (onClick) {
+				onClick()
+			}
+		}
+
+		return (
+			<label onClick={handleClick}>
+				<input
+					type="checkbox"
+					checked={isChecked}
+					onChange={handleChange}
+					aria-label={typeof children === "string" ? children : undefined}
+					data-testid={dataTestId}
+				/>
+				{children}
+			</label>
+		)
+	},
 	VSCodeTextField: ({ value, onInput, placeholder, "data-testid": dataTestId }: any) => (
 		<input
 			type="text"
@@ -103,30 +159,37 @@ jest.mock("../../../components/common/Tab", () => ({
 			</div>
 		)
 	},
-	TabTrigger: ({ children, value, "data-testid": dataTestId, onClick, isSelected }: any) => {
-		// This function simulates clicking on a tab and making its content visible
-		const handleClick = () => {
-			if (onClick) onClick()
-			// Access onValueChange from the global variable
-			const onValueChange = (window as any).__onValueChange
-			if (onValueChange) onValueChange(value)
-			// Make all tab contents invisible
-			document.querySelectorAll("[data-tab-content]").forEach((el) => {
-				;(el as HTMLElement).style.display = "none"
-			})
-			// Make this tab's content visible
-			const tabContent = document.querySelector(`[data-tab-content="${value}"]`)
-			if (tabContent) {
-				;(tabContent as HTMLElement).style.display = "block"
+	TabTrigger: React.forwardRef(
+		({ children, value, "data-testid": dataTestId, onClick, isSelected }: any, ref: any) => {
+			// This function simulates clicking on a tab and making its content visible
+			const handleClick = () => {
+				if (onClick) onClick()
+				// Access onValueChange from the global variable
+				const onValueChange = (window as any).__onValueChange
+				if (onValueChange) onValueChange(value)
+				// Make all tab contents invisible
+				document.querySelectorAll("[data-tab-content]").forEach((el) => {
+					;(el as HTMLElement).style.display = "none"
+				})
+				// Make this tab's content visible
+				const tabContent = document.querySelector(`[data-tab-content="${value}"]`)
+				if (tabContent) {
+					;(tabContent as HTMLElement).style.display = "block"
+				}
 			}
-		}
 
-		return (
-			<button data-testid={dataTestId} data-value={value} data-selected={isSelected} onClick={handleClick}>
-				{children}
-			</button>
-		)
-	},
+			return (
+				<button
+					ref={ref}
+					data-testid={dataTestId}
+					data-value={value}
+					data-selected={isSelected}
+					onClick={handleClick}>
+					{children}
+				</button>
+			)
+		},
+	),
 }))
 
 // Mock Slider component
@@ -198,18 +261,25 @@ const renderSettingsView = (initialState = {}) => {
 
 	// Helper function to activate a tab and ensure its content is visible
 	const activateTab = (tabId: string) => {
-		// Skip trying to find and click the tab, just directly render with the target section
-		// This bypasses the actual tab clicking mechanism but ensures the content is shown
-		result.rerender(
-			<ExtensionStateContextProvider>
-				<QueryClientProvider client={queryClient}>
-					<SettingsView onDone={onDone} targetSection={tabId} />
-				</QueryClientProvider>
-			</ExtensionStateContextProvider>,
-		)
+		const tab = screen.getByTestId(`tab-${tabId}`)
+		fireEvent.click(tab)
 	}
 
-	return { onDone, activateTab }
+	return {
+		onDone,
+		activateTab,
+		result,
+		rerender: (newState: any) => {
+			result.rerender(
+				<ExtensionStateContextProvider>
+					<QueryClientProvider client={queryClient}>
+						<SettingsView onDone={onDone} />
+					</QueryClientProvider>
+				</ExtensionStateContextProvider>,
+			)
+			mockPostMessage(newState)
+		},
+	}
 }
 
 describe("SettingsView - Sound Settings", () => {
@@ -524,6 +594,74 @@ describe("SettingsView - Allowed Commands", () => {
 			// Verify browser-related content is visible and API config is not
 			expect(screen.queryByTestId("api-config-management")).not.toBeInTheDocument()
 		})
+
+		it("shows unsaved changes dialog when switching tabs and clicking Done", () => {
+			// Render once and get the activateTab helper
+			const { activateTab } = renderSettingsView()
+
+			// Activate the notifications tab and make a change
+			activateTab("notifications")
+			const soundCheckbox = screen.getByTestId("sound-enabled-checkbox")
+			fireEvent.click(soundCheckbox)
+
+			// Switch to another tab
+			activateTab("autoApprove")
+
+			// Click the Done button
+			const doneButton = screen.getByText("settings:common.done")
+			fireEvent.click(doneButton)
+
+			// Check that unsaved changes dialog is shown
+			expect(screen.getByText("settings:unsavedChangesDialog.title")).toBeInTheDocument()
+		})
+
+		it("calls onDone directly when no changes are made", () => {
+			const { onDone } = renderSettingsView()
+			const doneButton = screen.getByText("settings:common.done")
+			fireEvent.click(doneButton)
+			expect(onDone).toHaveBeenCalled()
+		})
+
+		it("disables Save button when no changes are made", () => {
+			renderSettingsView()
+			const saveButton = screen.getByTestId("save-button")
+			expect(saveButton).toBeDisabled()
+		})
+	})
+})
+
+describe("SettingsView - Use Same Provider For All Modes", () => {
+	it("should toggle the setting and update state", async () => {
+		const { activateTab } = renderSettingsView({
+			useSameProviderForAllModes: false,
+		})
+
+		// The checkbox is in the providers tab, so we need to make sure it's active
+		activateTab("providers")
+
+		const checkbox = screen.getByTestId("use-same-provider-for-all-modes-checkbox")
+		expect(checkbox).not.toBeChecked()
+
+		// Click the checkbox
+		fireEvent.click(checkbox)
+
+		// Verify the message was sent
+		expect(vscode.postMessage).toHaveBeenCalledWith({
+			type: "toggleUseSameProviderForAllModes",
+		})
+
+		// Simulate the backend responding with updated state
+		// This is what would happen in the real app after the backend processes the toggle
+		mockPostMessage({
+			useSameProviderForAllModes: true,
+		})
+
+		// Wait for the state to update
+		await screen.findByTestId("use-same-provider-for-all-modes-checkbox")
+
+		// The checkbox should now be checked
+		const updatedCheckbox = screen.getByTestId("use-same-provider-for-all-modes-checkbox")
+		expect(updatedCheckbox).toBeChecked()
 	})
 })
 
@@ -588,5 +726,18 @@ describe("SettingsView - Duplicate Commands", () => {
 				commands: ["npm test"],
 			}),
 		)
+	})
+})
+
+describe("SettingsView - General", () => {
+	beforeEach(() => {
+		jest.clearAllMocks()
+	})
+
+	it("renders correctly with default state", () => {
+		renderSettingsView()
+		expect(screen.getByTestId("settings-tab-list")).toBeInTheDocument()
+		// Check that the default tab (providers) is active.
+		expect(screen.getByTestId("api-config-management")).toBeInTheDocument()
 	})
 })

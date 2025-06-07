@@ -242,6 +242,7 @@ export type ExtensionState = Pick<
 
 	autoCondenseContext: boolean
 	autoCondenseContextPercent: number
+	useSameProviderForAllModes?: boolean
 }
 
 export interface ClineSayTool {

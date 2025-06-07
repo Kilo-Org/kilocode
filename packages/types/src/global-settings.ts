@@ -100,6 +100,10 @@ export const globalSettingsSchema = z.object({
 
 	mode: z.string().optional(),
 	modeApiConfigs: z.record(z.string(), z.string()).optional(),
+	savedModeApiConfigs: z.record(z.string(), z.string()).optional(),
+	modeModelConfigs: z.record(z.string(), z.string()).optional(), // kilocode_change: Track model selections per mode
+	savedModeModelConfigs: z.record(z.string(), z.string()).optional(), // kilocode_change: Backup for restoration
+	useSameProviderForAllModes: z.boolean().optional(),
 	customModes: z.array(modeConfigSchema).optional(),
 	customModePrompts: customModePromptsSchema.optional(),
 	customSupportPrompts: customSupportPromptsSchema.optional(),
@@ -142,9 +146,12 @@ export const GLOBAL_SETTINGS_KEYS = keysOf<GlobalSettings>()([
 
 	"browserToolEnabled",
 	"browserViewportSize",
+	"showAutoApproveMenu", // kilocode_change
+	"workflowToggles", // kilocode_change
 	"screenshotQuality",
 	"remoteBrowserEnabled",
 	"remoteBrowserHost",
+	"cachedChromeHostUrl",
 
 	"enableCheckpoints",
 
@@ -186,15 +193,15 @@ export const GLOBAL_SETTINGS_KEYS = keysOf<GlobalSettings>()([
 
 	"mode",
 	"modeApiConfigs",
+	"savedModeApiConfigs",
+	"modeModelConfigs", // kilocode_change
+	"savedModeModelConfigs", // kilocode_change
+	"useSameProviderForAllModes",
 	"customModes",
 	"customModePrompts",
 	"customSupportPrompts",
 	"enhancementApiConfigId",
-	"cachedChromeHostUrl",
 	"historyPreviewCollapsed",
-
-	"showAutoApproveMenu", // kilocode_change
-	"workflowToggles", // kilocode_change
 ])
 
 /**

@@ -21,6 +21,18 @@ jest.mock("@vscode/webview-ui-toolkit/react", () => ({
 	VSCodeRadio: ({ value, checked }: any) => <input type="radio" value={value} checked={checked} />,
 	VSCodeRadioGroup: ({ children }: any) => <div>{children}</div>,
 	VSCodeButton: ({ children }: any) => <div>{children}</div>,
+	VSCodeCheckbox: ({ children, onClick, checked, "data-testid": dataTestId }: any) => (
+		<label>
+			<input
+				type="checkbox"
+				checked={checked}
+				onClick={onClick}
+				aria-label={typeof children === "string" ? children : undefined}
+				data-testid={dataTestId}
+			/>
+			{children}
+		</label>
+	),
 }))
 
 // Mock other components

@@ -192,15 +192,20 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 
 	useEffect(() => {
 		// Update only when currentApiConfigName is changed.
-		// Expected to be triggered by loadApiConfiguration/upsertApiConfiguration.
 		if (prevApiConfigName.current === currentApiConfigName) {
 			return
 		}
 
-		setCachedState((prevCachedState) => ({ ...prevCachedState, ...extensionState }))
+		// When a new API config is loaded, update the cached state
+		// but preserve the user's unsaved change to the checkbox.
+		setCachedState((prevCachedState) => {
+			const newCachedState = { ...extensionState }
+			newCachedState.useSameProviderForAllModes = prevCachedState.useSameProviderForAllModes
+			return newCachedState
+		})
+
 		prevApiConfigName.current = currentApiConfigName
-		setChangeDetected(false)
-	}, [currentApiConfigName, extensionState, isChangeDetected])
+	}, [currentApiConfigName, extensionState])
 
 	// kilocode_change start
 	// Temporary way of making sure that the Settings view updates its local state properly when receiving
@@ -222,12 +227,9 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 	}, [kilocodeToken, openRouterApiKey, glamaApiKey, requestyApiKey])
 
 	useEffect(() => {
-		// Only update if we're not already detecting changes
-		// This prevents overwriting user changes that haven't been saved yet
-		if (!isChangeDetected) {
-			setCachedState(extensionState)
-		}
-	}, [extensionState, isChangeDetected])
+		setCachedState(extensionState)
+		setChangeDetected(false)
+	}, [extensionState, settingsImportedAt])
 	// kilocode_change end
 
 	// Bust the cache when settings are imported.
@@ -246,6 +248,16 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 
 			setChangeDetected(true)
 			return { ...prevState, [field]: value }
+		})
+	}, [])
+
+	const { useSameProviderForAllModes } = cachedState
+
+	const handleToggleUseSameProvider = useCallback(() => {
+		setCachedState((prevState) => {
+			const newValue = !prevState.useSameProviderForAllModes
+			setChangeDetected(true)
+			return { ...prevState, useSameProviderForAllModes: newValue }
 		})
 	}, [])
 
@@ -333,6 +345,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			vscode.postMessage({ type: "updateCondensingPrompt", text: customCondensingPrompt || "" })
 			vscode.postMessage({ type: "upsertApiConfiguration", text: currentApiConfigName, apiConfiguration })
 			vscode.postMessage({ type: "codebaseIndexConfig", values: codebaseIndexConfig })
+			vscode.postMessage({ type: "toggleUseSameProviderForAllModes", bool: useSameProviderForAllModes })
 
 			// Update cachedState to match the current state to prevent isChangeDetected from being set back to true
 			setCachedState((prevState) => ({ ...prevState, ...extensionState }))
@@ -370,22 +383,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 
 	// From time to time there's a bug that triggers unsaved changes upon rendering the SettingsView
 	// This is a (nasty) workaround to detect when this happens, and to force overwrite the unsaved changes
-	const renderStart = useRef<null | number>()
-	useEffect(() => {
-		renderStart.current = performance.now()
-	}, [])
-	useEffect(() => {
-		if (renderStart.current && process.env.NODE_ENV !== "test") {
-			const renderEnd = performance.now()
-			const renderTime = renderEnd - renderStart.current
-
-			if (renderTime < 100 && isChangeDetected) {
-				console.info("Overwriting unsaved changes in less than 100ms")
-				onConfirmDialogResult(true)
-			}
-		}
-	}, [isChangeDetected, onConfirmDialogResult])
-	// kilocode_change end
 
 	// Handle tab changes with unsaved changes check
 	const handleTabChange = useCallback(
@@ -626,6 +623,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 									errorMessage={errorMessage}
 									setErrorMessage={setErrorMessage}
 									currentApiConfigName={currentApiConfigName}
+									handleToggleUseSameProvider={handleToggleUseSameProvider}
 								/>
 							</Section>
 						</div>

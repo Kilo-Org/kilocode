@@ -2,7 +2,7 @@ import React, { memo, useCallback, useEffect, useMemo, useState } from "react"
 import { convertHeadersToObject } from "./utils/headers"
 import { useDebounce } from "react-use"
 import { VSCodeButtonLink } from "../common/VSCodeButtonLink"
-import { VSCodeLink, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
+import { VSCodeCheckbox, VSCodeLink, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 
 import { getKiloCodeBackendAuthUrl } from "../kilocode/helpers" // kilocode_change
 
@@ -77,6 +77,7 @@ export interface ApiOptionsProps {
 	setErrorMessage: React.Dispatch<React.SetStateAction<string | undefined>>
 	hideKiloCodeButton?: boolean // kilocode_change
 	currentApiConfigName?: string // kilocode_change
+	handleToggleUseSameProvider?: () => void
 }
 
 const ApiOptions = ({
@@ -89,6 +90,7 @@ const ApiOptions = ({
 	setErrorMessage,
 	hideKiloCodeButton = false,
 	currentApiConfigName, // kilocode_change
+	handleToggleUseSameProvider,
 }: ApiOptionsProps) => {
 	const { t } = useAppTranslation()
 	const { organizationAllowList } = useExtensionState()
@@ -289,6 +291,8 @@ const ApiOptions = ({
 		}
 	}, [selectedProvider])
 
+	const { useSameProviderForAllModes } = useExtensionState()
+
 	return (
 		<div className="flex flex-col gap-3">
 			<div className="flex flex-col gap-1 relative">
@@ -308,16 +312,24 @@ const ApiOptions = ({
 					</SelectTrigger>
 					<SelectContent>
 						{PROVIDERS.map(({ value, label }, i) => (
-							<>
-								<SelectItem key={value} value={value}>
-									{label}
-								</SelectItem>
+							<React.Fragment key={value}>
+								<SelectItem value={value}>{label}</SelectItem>
 								{/*  kilocode_change */}
 								{i === 0 ? <SelectSeparator /> : null}
-							</>
+							</React.Fragment>
 						))}
 					</SelectContent>
 				</Select>
+				<div className="flex items-center gap-2 mt-2">
+					<VSCodeCheckbox
+						checked={!!useSameProviderForAllModes}
+						onChange={handleToggleUseSameProvider}
+						data-testid="use-same-provider-for-all-modes-checkbox">
+						{selectedModelId
+							? `Use ${selectedModelId} for all modes`
+							: t("settings:providers.useSameProviderForAllModes")}
+					</VSCodeCheckbox>
+				</div>
 			</div>
 
 			{errorMessage && <ApiErrorMessage errorMessage={errorMessage} />}
