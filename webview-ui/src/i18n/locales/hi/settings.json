@@ -44,6 +44,12 @@
 		"selectProviderPlaceholder": "प्रदाता चुनें",
 		"openaiProvider": "OpenAI",
 		"ollamaProvider": "Ollama",
+		"openaiCompatibleProvider": "OpenAI संगत",
+		"openaiCompatibleBaseUrlLabel": "आधार URL:",
+		"openaiCompatibleApiKeyLabel": "API कुंजी:",
+		"openaiCompatibleModelDimensionLabel": "एम्बेडिंग आयाम:",
+		"openaiCompatibleModelDimensionPlaceholder": "उदा., 1536",
+		"openaiCompatibleModelDimensionDescription": "आपके मॉडल के लिए एम्बेडिंग आयाम (आउटपुट साइज)। इस मान के लिए अपने प्रदाता के दस्तावेज़ीकरण की जांच करें। सामान्य मान: 384, 768, 1536, 3072।",
 		"openaiKeyLabel": "OpenAI कुंजी:",
 		"modelLabel": "मॉडल",
 		"selectModelPlaceholder": "मॉडल चुनें",
@@ -537,6 +543,7 @@
 	},
 	"footer": {
 		"feedback": "यदि आपके कोई प्रश्न या प्रतिक्रिया है, तो <githubLink>github.com/Kilo-Org/kilocode</githubLink> पर एक मुद्दा खोलने या <redditLink>reddit.com/r/kilocode</redditLink> या <discordLink>kilocode.ai/discord</discordLink> में शामिल होने में संकोच न करें",
+		"support": "वित्तीय प्रश्नों के लिए, कृपया <supportLink>hi@kilocode.ai</supportLink> पर ग्राहक सहायता से संपर्क करें",
 		"telemetry": {
 			"label": "गुमनाम त्रुटि और उपयोग रिपोर्टिंग की अनुमति दें",
 			"description": "गुमनाम उपयोग डेटा और त्रुटि रिपोर्ट भेजकर Kilo Code को बेहतर बनाने में मदद करें। कोड, प्रॉम्प्ट, या व्यक्तिगत जानकारी कभी भी नहीं भेजी जाती है। अधिक विवरण के लिए हमारी गोपनीयता नीति देखें।"

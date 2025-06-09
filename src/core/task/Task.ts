@@ -357,17 +357,17 @@ export class Task extends EventEmitter<ClineEvents> {
 		await this.saveClineMessages()
 	}
 
-	private async updateClineMessage(partialMessage: ClineMessage) {
+	private async updateClineMessage(message: ClineMessage) {
 		const provider = this.providerRef.deref()
-		await provider?.postMessageToWebview({ type: "partialMessage", partialMessage })
-		this.emit("message", { action: "updated", message: partialMessage })
+		await provider?.postMessageToWebview({ type: "messageUpdated", clineMessage: message })
+		this.emit("message", { action: "updated", message })
 
-		const shouldCaptureMessage = partialMessage.partial !== true && CloudService.isEnabled()
+		const shouldCaptureMessage = message.partial !== true && CloudService.isEnabled()
 
 		if (shouldCaptureMessage) {
 			CloudService.instance.captureEvent({
 				event: TelemetryEventName.TASK_MESSAGE,
-				properties: { taskId: this.taskId, message: partialMessage },
+				properties: { taskId: this.taskId, message },
 			})
 		}
 	}
@@ -994,6 +994,59 @@ export class Task extends EventEmitter<ClineEvents> {
 		await this.initiateTaskLoop(newUserContent)
 	}
 
+	public dispose(): void {
+		// Stop waiting for child task completion.
+		if (this.pauseInterval) {
+			clearInterval(this.pauseInterval)
+			this.pauseInterval = undefined
+		}
+
+		// Release any terminals associated with this task.
+		try {
+			// Release any terminals associated with this task.
+			TerminalRegistry.releaseTerminalsForTask(this.taskId)
+		} catch (error) {
+			console.error("Error releasing terminals:", error)
+		}
+
+		try {
+			this.urlContentFetcher.closeBrowser()
+		} catch (error) {
+			console.error("Error closing URL content fetcher browser:", error)
+		}
+
+		try {
+			this.browserSession.closeBrowser()
+		} catch (error) {
+			console.error("Error closing browser session:", error)
+		}
+
+		try {
+			if (this.rooIgnoreController) {
+				this.rooIgnoreController.dispose()
+				this.rooIgnoreController = undefined
+			}
+		} catch (error) {
+			console.error("Error disposing RooIgnoreController:", error)
+			// This is the critical one for the leak fix
+		}
+
+		try {
+			this.fileContextTracker.dispose()
+		} catch (error) {
+			console.error("Error disposing file context tracker:", error)
+		}
+
+		try {
+			// If we're not streaming then `abortStream` won't be called
+			if (this.isStreaming && this.diffViewProvider.isEditing) {
+				this.diffViewProvider.revertChanges().catch(console.error)
+			}
+		} catch (error) {
+			console.error("Error reverting diff changes:", error)
+		}
+	}
+
 	public async abortTask(isAbandoned = false) {
 		console.log(`[subtasks] aborting task ${this.taskId}.${this.instanceId}`)
 
@@ -1005,28 +1058,19 @@ export class Task extends EventEmitter<ClineEvents> {
 		this.abort = true
 		this.emit("taskAborted")
 
-		// Stop waiting for child task completion.
-		if (this.pauseInterval) {
-			clearInterval(this.pauseInterval)
-			this.pauseInterval = undefined
+		try {
+			this.dispose() // Call the centralized dispose method
+		} catch (error) {
+			console.error(`Error during task ${this.taskId}.${this.instanceId} disposal:`, error)
+			// Don't rethrow - we want abort to always succeed
 		}
-
-		// Release any terminals associated with this task.
-		TerminalRegistry.releaseTerminalsForTask(this.taskId)
-
-		this.urlContentFetcher.closeBrowser()
-		this.browserSession.closeBrowser()
-		this.rooIgnoreController?.dispose()
-		this.fileContextTracker.dispose()
-
-		// If we're not streaming then `abortStream` (which reverts the diff
-		// view changes) won't be called, so we need to revert the changes here.
-		if (this.isStreaming && this.diffViewProvider.isEditing) {
-			await this.diffViewProvider.revertChanges()
-		}
-
 		// Save the countdown message in the automatic retry or other content.
-		await this.saveClineMessages()
+		try {
+			// Save the countdown message in the automatic retry or other content.
+			await this.saveClineMessages()
+		} catch (error) {
+			console.error(`Error saving messages during abort for task ${this.taskId}.${this.instanceId}:`, error)
+		}
 	}
 
 	// Used when a sub-task is launched and the parent task is waiting for it to

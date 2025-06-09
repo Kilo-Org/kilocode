@@ -44,6 +44,12 @@
 		"selectProviderPlaceholder": "Seleziona fornitore",
 		"openaiProvider": "OpenAI",
 		"ollamaProvider": "Ollama",
+		"openaiCompatibleProvider": "Compatibile con OpenAI",
+		"openaiCompatibleBaseUrlLabel": "URL di base:",
+		"openaiCompatibleApiKeyLabel": "Chiave API:",
+		"openaiCompatibleModelDimensionLabel": "Dimensione Embedding:",
+		"openaiCompatibleModelDimensionPlaceholder": "es., 1536",
+		"openaiCompatibleModelDimensionDescription": "La dimensione dell'embedding (dimensione di output) per il tuo modello. Controlla la documentazione del tuo provider per questo valore. Valori comuni: 384, 768, 1536, 3072.",
 		"openaiKeyLabel": "Chiave OpenAI:",
 		"modelLabel": "Modello",
 		"selectModelPlaceholder": "Seleziona modello",
@@ -537,6 +543,7 @@
 	},
 	"footer": {
 		"feedback": "Se hai domande o feedback, sentiti libero di aprire un issue su <githubLink>github.com/Kilo-Org/kilocode</githubLink> o unirti a <redditLink>reddit.com/r/kilocode</redditLink> o <discordLink>kilocode.ai/discord</discordLink>",
+		"support": "Per domande finanziarie, contatta il Supporto Clienti a <supportLink>hi@kilocode.ai</supportLink>",
 		"telemetry": {
 			"label": "Consenti segnalazioni anonime di errori e utilizzo",
 			"description": "Aiuta a migliorare Kilo Code inviando dati di utilizzo anonimi e segnalazioni di errori. Non vengono mai inviati codice, prompt o informazioni personali. Consulta la nostra politica sulla privacy per maggiori dettagli."

@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.33.2",
+	"version": "4.34.0",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -422,7 +422,7 @@
 		"publish:marketplace": "vsce publish --no-dependencies && ovsx publish --no-dependencies",
 		"watch:bundle": "pnpm bundle --watch",
 		"watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-		"clean": "rimraf README.md CHANGELOG.md LICENSE dist webview-ui out mock .turbo"
+		"clean": "rimraf README.md CHANGELOG.md LICENSE dist mock .turbo"
 	},
 	"dependencies": {
 		"@anthropic-ai/bedrock-sdk": "^0.22.0",
@@ -434,6 +434,7 @@
 		"@mistralai/mistralai": "^1.6.0",
 		"@modelcontextprotocol/sdk": "^1.9.0",
 		"@roo-code/cloud": "workspace:^",
+		"@roo-code/ipc": "workspace:^",
 		"@roo-code/telemetry": "workspace:^",
 		"@roo-code/types": "workspace:^",
 		"@qdrant/js-client-rest": "^1.14.0",
@@ -524,7 +525,7 @@
 		"mkdirp": "^3.0.1",
 		"nock": "^14.0.4",
 		"npm-run-all2": "^8.0.1",
-		"ovsx": "0.10.2",
+		"ovsx": "0.10.4",
 		"rimraf": "^6.0.1",
 		"ts-jest": "^29.2.5",
 		"tsup": "^8.4.0",

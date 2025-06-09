@@ -93,6 +93,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 	public static readonly tabPanelId = `${Package.name}.TabPanelProvider`
 	private static activeInstances: Set<ClineProvider> = new Set()
 	private disposables: vscode.Disposable[] = []
+	private webviewDisposables: vscode.Disposable[] = []
 	private view?: vscode.WebviewView | vscode.WebviewPanel
 	private clineStack: Task[] = []
 	private codeIndexStatusSubscription?: vscode.Disposable
@@ -225,6 +226,15 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 	- https://vscode-docs.readthedocs.io/en/stable/extensions/patterns-and-principles/
 	- https://github.com/microsoft/vscode-extension-samples/blob/main/webview-sample/src/extension.ts
 	*/
+	private clearWebviewResources() {
+		while (this.webviewDisposables.length) {
+			const x = this.webviewDisposables.pop()
+			if (x) {
+				x.dispose()
+			}
+		}
+	}
+
 	async dispose() {
 		this.log("Disposing ClineProvider...")
 		await this.removeClineFromStack()
@@ -234,6 +244,8 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			this.view.dispose()
 			this.log("Disposed webview")
 		}
+
+		this.clearWebviewResources()
 
 		while (this.disposables.length) {
 			const x = this.disposables.pop()
@@ -251,7 +263,6 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		this.log("Disposed all disposables")
 		ClineProvider.activeInstances.delete(this)
 
-		// Unregister from McpServerManager
 		McpServerManager.unregisterProvider(this)
 	}
 
@@ -419,8 +430,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 					values: update,
 				})
 			})
-			// Add the subscription to the main disposables array
-			this.disposables.push(this.codeIndexStatusSubscription)
+			this.webviewDisposables.push(this.codeIndexStatusSubscription)
 		}
 
 		// Logs show up in bottom panel > Debug Console
@@ -431,26 +441,20 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		if ("onDidChangeViewState" in webviewView) {
 			// WebviewView and WebviewPanel have all the same properties except for this visibility listener
 			// panel
-			webviewView.onDidChangeViewState(
-				() => {
-					if (this.view?.visible) {
-						this.postMessageToWebview({ type: "action", action: "didBecomeVisible" })
-					}
-				},
-				null,
-				this.disposables,
-			)
+			const viewStateDisposable = webviewView.onDidChangeViewState(() => {
+				if (this.view?.visible) {
+					this.postMessageToWebview({ type: "action", action: "didBecomeVisible" })
+				}
+			})
+			this.webviewDisposables.push(viewStateDisposable)
 		} else if ("onDidChangeVisibility" in webviewView) {
 			// sidebar
-			webviewView.onDidChangeVisibility(
-				() => {
-					if (this.view?.visible) {
-						this.postMessageToWebview({ type: "action", action: "didBecomeVisible" })
-					}
-				},
-				null,
-				this.disposables,
-			)
+			const visibilityDisposable = webviewView.onDidChangeVisibility(() => {
+				if (this.view?.visible) {
+					this.postMessageToWebview({ type: "action", action: "didBecomeVisible" })
+				}
+			})
+			this.webviewDisposables.push(visibilityDisposable)
 		}
 
 		// Listen for when the view is disposed
@@ -461,7 +465,10 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 					this.log("Disposing ClineProvider instance for tab view")
 					await this.dispose()
 				} else {
-					this.log("Preserving ClineProvider instance for sidebar view reuse")
+					this.log("Clearing webview resources for sidebar view")
+					this.clearWebviewResources()
+					this.codeIndexStatusSubscription?.dispose()
+					this.codeIndexStatusSubscription = undefined
 				}
 			},
 			null,
@@ -469,16 +476,13 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		)
 
 		// Listen for when color changes
-		vscode.workspace.onDidChangeConfiguration(
-			async (e) => {
-				if (e && e.affectsConfiguration("workbench.colorTheme")) {
-					// Sends latest theme name to webview
-					await this.postMessageToWebview({ type: "theme", text: JSON.stringify(await getTheme()) })
-				}
-			},
-			null,
-			this.disposables,
-		)
+		const configDisposable = vscode.workspace.onDidChangeConfiguration(async (e) => {
+			if (e && e.affectsConfiguration("workbench.colorTheme")) {
+				// Sends latest theme name to webview
+				await this.postMessageToWebview({ type: "theme", text: JSON.stringify(await getTheme()) })
+			}
+		})
+		this.webviewDisposables.push(configDisposable)
 
 		// If the extension is starting a new session, clear previous task state.
 		await this.removeClineFromStack()
@@ -764,7 +768,8 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 	private setWebviewMessageListener(webview: vscode.Webview) {
 		const onReceiveMessage = async (message: WebviewMessage) => webviewMessageHandler(this, message)
 
-		webview.onDidReceiveMessage(onReceiveMessage, null, this.disposables)
+		const messageDisposable = webview.onDidReceiveMessage(onReceiveMessage)
+		this.webviewDisposables.push(messageDisposable)
 	}
 
 	/**
@@ -1328,6 +1333,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			terminalCompressProgressBar,
 			historyPreviewCollapsed,
 			cloudUserInfo,
+			cloudIsAuthenticated,
 			organizationAllowList,
 			maxConcurrentFileReads,
 			condensingApiConfigId,
@@ -1425,6 +1431,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			hasSystemPromptOverride,
 			historyPreviewCollapsed: historyPreviewCollapsed ?? false,
 			cloudUserInfo,
+			cloudIsAuthenticated: cloudIsAuthenticated ?? false,
 			organizationAllowList,
 			condensingApiConfigId,
 			customCondensingPrompt,
@@ -1477,6 +1484,16 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		} catch (error) {
 			console.error(
 				`[getState] failed to get cloud user info: ${error instanceof Error ? error.message : String(error)}`,
+			)
+		}
+
+		let cloudIsAuthenticated: boolean = false
+
+		try {
+			cloudIsAuthenticated = CloudService.instance.isAuthenticated()
+		} catch (error) {
+			console.error(
+				`[getState] failed to get cloud authentication state: ${error instanceof Error ? error.message : String(error)}`,
 			)
 		}
 
@@ -1555,6 +1572,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 				: 1,
 			historyPreviewCollapsed: stateValues.historyPreviewCollapsed ?? false,
 			cloudUserInfo,
+			cloudIsAuthenticated,
 			organizationAllowList,
 			// Explicitly add condensing settings
 			condensingApiConfigId: stateValues.condensingApiConfigId,

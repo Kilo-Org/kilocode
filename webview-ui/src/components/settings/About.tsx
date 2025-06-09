@@ -49,6 +49,15 @@ export const About = ({ telemetrySetting, setTelemetrySetting, className, ...pro
 					/>
 				</div>
 
+				<div>
+					<Trans
+						i18nKey="settings:footer.support"
+						components={{
+							supportLink: <VSCodeLink href="mailto:hi@kilocode.ai" />,
+						}}
+					/>
+				</div>
+
 				<div className="flex flex-wrap items-center gap-2 mt-2">
 					<Button onClick={() => vscode.postMessage({ type: "exportSettings" })} className="w-28">
 						<Upload className="p-0.5" />

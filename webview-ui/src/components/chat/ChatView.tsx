@@ -60,6 +60,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	{ isHidden, showAnnouncement, hideAnnouncement },
 	ref,
 ) => {
+	const isMountedRef = useRef(true)
 	const [audioBaseUri] = useState(() => {
 		const w = window as any
 		return w.AUDIO_BASE_URI || ""
@@ -157,6 +158,13 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	useEffect(() => {
 		clineAskRef.current = clineAsk
 	}, [clineAsk])
+
+	useEffect(() => {
+		isMountedRef.current = true
+		return () => {
+			isMountedRef.current = false
+		}
+	}, [])
 
 	const isProfileDisabled = useMemo(
 		() => !!apiConfiguration && !ProfileValidator.isProfileAllowed(apiConfiguration, organizationAllowList),
@@ -1147,10 +1155,14 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	)
 
 	useEffect(() => {
+		let timerId: NodeJS.Timeout | undefined
 		if (!disableAutoScrollRef.current) {
-			setTimeout(() => scrollToBottomSmooth(), 50)
-			// Don't cleanup since if visibleMessages.length changes it cancels.
-			// return () => clearTimeout(timer)
+			timerId = setTimeout(() => scrollToBottomSmooth(), 50)
+		}
+		return () => {
+			if (timerId) {
+				clearTimeout(timerId)
+			}
 		}
 	}, [groupedMessages.length, scrollToBottomSmooth])
 
@@ -1272,6 +1284,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				// Add delay for write operations.
 				if (lastMessage.ask === "tool" && isWriteToolAction(lastMessage)) {
 					await new Promise((resolve) => setTimeout(resolve, writeDelayMs))
+					if (!isMountedRef.current) {
+						return
+					}
 				}
 
 				vscode.postMessage({ type: "askResponse", askResponse: "yesButtonClicked" })
@@ -1279,9 +1294,11 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				// This is copied from `handlePrimaryButtonClick`, which we used
 				// to call from `autoApprove`. I'm not sure how many of these
 				// things are actually needed.
-				setSendingDisabled(true)
-				setClineAsk(undefined)
-				setEnableButtons(false)
+				if (isMountedRef.current) {
+					setSendingDisabled(true)
+					setClineAsk(undefined)
+					setEnableButtons(false)
+				}
 			}
 		}
 		autoApprove()

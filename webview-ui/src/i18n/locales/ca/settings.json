@@ -44,6 +44,12 @@
 		"selectProviderPlaceholder": "Seleccionar proveïdor",
 		"openaiProvider": "OpenAI",
 		"ollamaProvider": "Ollama",
+		"openaiCompatibleProvider": "Compatible amb OpenAI",
+		"openaiCompatibleBaseUrlLabel": "URL base:",
+		"openaiCompatibleApiKeyLabel": "Clau API:",
+		"openaiCompatibleModelDimensionLabel": "Dimensió d'Embedding:",
+		"openaiCompatibleModelDimensionPlaceholder": "p. ex., 1536",
+		"openaiCompatibleModelDimensionDescription": "La dimensió d'embedding (mida de sortida) per al teu model. Consulta la documentació del teu proveïdor per a aquest valor. Valors comuns: 384, 768, 1536, 3072.",
 		"openaiKeyLabel": "Clau OpenAI:",
 		"modelLabel": "Model",
 		"selectModelPlaceholder": "Seleccionar model",
@@ -537,6 +543,7 @@
 	},
 	"footer": {
 		"feedback": "Si teniu qualsevol pregunta o comentari, no dubteu a obrir un issue a <githubLink>github.com/Kilo-Org/kilocode</githubLink> o unir-vos a <redditLink>reddit.com/r/kilocode</redditLink> o <discordLink>kilocode.ai/discord</discordLink>",
+		"support": "Per a qüestions financeres, poseu-vos en contacte amb el Suport al Client a <supportLink>hi@kilocode.ai</supportLink>",
 		"telemetry": {
 			"label": "Permetre informes anònims d'errors i ús",
 			"description": "Ajudeu a millorar Kilo Code enviant dades d'ús anònimes i informes d'errors. Mai s'envia codi, prompts o informació personal. Vegeu la nostra política de privacitat per a més detalls."

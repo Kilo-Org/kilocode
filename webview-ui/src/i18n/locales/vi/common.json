@@ -9,7 +9,8 @@
 		"description": "Chúng tôi rất muốn nghe phản hồi của bạn hoặc giúp bạn với bất kỳ vấn đề nào bạn đang gặp phải.",
 		"githubIssues": "Báo cáo vấn đề trên GitHub",
 		"githubDiscussions": "Tham gia thảo luận trên GitHub",
-		"discord": "Tham gia cộng đồng Discord của chúng tôi"
+		"discord": "Tham gia cộng đồng Discord của chúng tôi",
+		"customerSupport": "Hỗ trợ khách hàng"
 	},
 	"ui": {
 		"search_placeholder": "Tìm kiếm..."
