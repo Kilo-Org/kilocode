@@ -55,12 +55,12 @@ const TaskItemHeader: React.FC<TaskItemHeaderProps> = ({ item, variant, isSelect
 					<Button
 						variant="ghost"
 						size="icon"
-						title={item.favorite ? t("history:unfavoriteTask") : t("history:favoriteTask")}
+						title={item.isFavorited ? t("history:unfavoriteTask") : t("history:favoriteTask")}
 						data-testid="favorite-task-button"
 						onClick={handleFavoriteClick}
-						className={item.favorite ? "text-yellow-500" : ""}>
+						className={item.isFavorited ? "text-yellow-500" : ""}>
 						<span
-							className={`codicon ${item.favorite ? "codicon-star-full" : "codicon-star-empty"}`}
+							className={`codicon ${item.isFavorited ? "codicon-star-full" : "codicon-star-empty"}`}
 							style={actionIconStyle}
 						/>
 					</Button>
