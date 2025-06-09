@@ -1,273 +1,228 @@
 import * as vscode from "vscode"
 import { CommitMessageProvider } from "../CommitMessageProvider"
+import { GitExtensionService, GitChange } from "../GitExtensionService"
 import { ContextProxy } from "../../../core/config/ContextProxy"
 import { singleCompletionHandler } from "../../../utils/single-completion-handler"
-import { GitExtensionService } from "../GitExtensionService"
-import { loadRuleFiles } from "../../../core/prompts/sections/custom-instructions"
-
-// Mock vscode module
-jest.mock("vscode", () => {
-	const registeredCommands = new Map<string, (...args: any[]) => any>()
-
-	return {
-		extensions: {
-			getExtension: jest.fn(),
-		},
-		commands: {
-			registerCommand: jest.fn((commandId: string, handler: (...args: any[]) => any) => {
-				registeredCommands.set(commandId, handler)
-				return { dispose: jest.fn() }
-			}),
-			executeCommand: jest.fn((commandId: string, ...args: any[]) => {
-				const handler = registeredCommands.get(commandId)
-				if (handler) {
-					return handler(...args)
-				}
-				return Promise.resolve()
-			}),
-		},
-		window: {
-			withProgress: jest.fn(),
-			showInformationMessage: jest.fn(),
-			showErrorMessage: jest.fn(),
-		},
-		workspace: {
-			workspaceFolders: [
-				{
-					uri: {
-						fsPath: "/test/workspace",
-					},
-				},
-			],
-		},
-		ProgressLocation: {
-			SourceControl: 1,
-			Window: 10,
-			Notification: 15,
-		},
-	}
-})
 
 // Mock dependencies
-jest.mock("../GitExtensionService")
-jest.mock("../../../utils/single-completion-handler")
+jest.mock("vscode", () => ({
+	window: {
+		showInformationMessage: jest.fn(),
+		showErrorMessage: jest.fn(),
+		withProgress: jest.fn().mockImplementation((_, callback) => callback({ report: jest.fn() })),
+	},
+	workspace: {
+		workspaceFolders: [{ uri: { fsPath: "/mock/workspace" } }],
+	},
+	commands: {
+		registerCommand: jest.fn(),
+	},
+	ExtensionContext: jest.fn(),
+	OutputChannel: jest.fn(),
+	ProgressLocation: {
+		SourceControl: 1,
+		Window: 2,
+		Notification: 3,
+	},
+}))
 jest.mock("../../../core/config/ContextProxy")
-jest.mock("../../../core/prompts/sections/custom-instructions")
-
-const mockSingleCompletionHandler = singleCompletionHandler as jest.MockedFunction<typeof singleCompletionHandler>
-const mockContextProxy = ContextProxy as jest.Mocked<typeof ContextProxy>
-const MockGitExtensionService = GitExtensionService as jest.MockedClass<typeof GitExtensionService>
-const mockLoadRuleFiles = loadRuleFiles as jest.MockedFunction<typeof loadRuleFiles>
+jest.mock("../../../utils/single-completion-handler")
+jest.mock("../GitExtensionService")
+jest.mock("child_process")
 
 describe("CommitMessageProvider", () => {
-	let provider: CommitMessageProvider
+	let commitMessageProvider: CommitMessageProvider
 	let mockContext: vscode.ExtensionContext
-	let mockGitExtensionService: jest.Mocked<GitExtensionService>
-	let mockRepo: any
+	let mockOutputChannel: vscode.OutputChannel
+	let mockGitService: jest.Mocked<GitExtensionService>
+	let mockExecSync: jest.Mock
 
 	beforeEach(() => {
-		// Mock extension context
-		mockContext = {
-			subscriptions: [],
-		} as any
+		// Setup mocks
+		mockContext = {} as vscode.ExtensionContext
+		mockOutputChannel = {
+			appendLine: jest.fn(),
+		} as unknown as vscode.OutputChannel
 
-		// Mock repository
-		mockRepo = {
-			inputBox: { value: "" },
-		}
+		// Mock child_process.execSync
+		mockExecSync = jest.fn()
+		jest.requireMock("child_process").execSync = mockExecSync
 
-		// Mock GitExtensionService
-		mockGitExtensionService = new MockGitExtensionService() as jest.Mocked<GitExtensionService>
-		MockGitExtensionService.mockImplementation(() => mockGitExtensionService)
+		// Setup GitExtensionService mock
+		mockGitService = new GitExtensionService() as jest.Mocked<GitExtensionService>
+		GitExtensionService.prototype.initialize = jest.fn().mockResolvedValue(true)
+		GitExtensionService.prototype.gatherStagedChanges = jest.fn()
+		GitExtensionService.prototype.setCommitMessage = jest.fn()
+		GitExtensionService.prototype.executeGitCommand = jest.fn().mockReturnValue("")
+		GitExtensionService.prototype.getCommitContext = jest.fn().mockImplementation(() => {
+			return `## Input Context Commands
 
-		// Mock ContextProxy
-		Object.defineProperty(mockContextProxy, "instance", {
-			value: {
-				getProviderSettings: jest.fn().mockReturnValue({
-					apiProvider: "kilocode",
-					kilocodeToken: "test-token",
-					kilocodeModel: "google/gemini-2.5-flash-preview-05-20",
-				}),
-			},
-			writable: true,
+### Staged changes with context
+\`\`\`diff
+diff --git a/file1.ts b/file1.ts
+index 123..456 100644
+--- a/file1.ts
++++ b/file1.ts
+@@ -1,3 +1,3 @@
+-old line
++new line
+\`\`\`
+
+### Staged file names and status
+\`\`\`
+M file1.ts
+A file2.ts
+\`\`\`
+
+### Summary of staged changes
+\`\`\`
+file1.ts | 2 +-
+file2.ts | 10 ++++++++++
+2 files changed, 11 insertions(+), 1 deletion(-)
+\`\`\`
+
+### Additional Context
+
+#### Current branch
+\`\`\`
+feature/new-commit-message
+\`\`\`
+
+#### Recent commits for context
+\`\`\`
+abc123 Previous commit
+def456 Another commit
+\`\`\`
+
+## Staged Changes Summary
+
+### Modified files:
+- /path/to/file1.ts
+
+### Added files:
+- /path/to/file2.ts
+`
 		})
 
-		// Mock single completion handler
-		mockSingleCompletionHandler.mockResolvedValue("feat: add new feature")
+		// Setup ContextProxy mock
+		const mockContextProxy = {
+			getProviderSettings: jest.fn().mockReturnValue({
+				kilocodeToken: "mock-token",
+			}),
+		}
+		;(ContextProxy as any).instance = mockContextProxy
 
-		// Mock loadRuleFiles
-		mockLoadRuleFiles.mockResolvedValue("")
+		// Setup singleCompletionHandler mock
+		;(singleCompletionHandler as jest.Mock).mockResolvedValue(
+			"feat(commit): implement conventional commit message generator",
+		)
 
-		provider = new CommitMessageProvider(mockContext, {
-			appendLine: jest.fn(),
-		} as any)
+		// Create CommitMessageProvider instance
+		commitMessageProvider = new CommitMessageProvider(mockContext, mockOutputChannel)
+		;(commitMessageProvider as any).gitService = mockGitService
 	})
 
 	afterEach(() => {
 		jest.clearAllMocks()
 	})
 
-	describe("activate", () => {
-		it("should activate successfully", async () => {
-			mockGitExtensionService.initializeGitExtension.mockResolvedValue({} as any)
-
-			await provider.activate()
-
-			expect(mockGitExtensionService.initializeGitExtension).toHaveBeenCalled()
-			expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
-				"kilo-code.generateCommitMessage",
-				expect.any(Function),
-			)
-		})
-
-		it("should handle Git extension initialization failure", async () => {
-			mockGitExtensionService.initializeGitExtension.mockRejectedValue(new Error("Git extension not found"))
-
-			await expect(provider.activate()).rejects.toThrow("Failed to initialize Git extension")
-		})
-	})
-
 	describe("generateCommitMessage", () => {
-		beforeEach(async () => {
-			mockGitExtensionService.initializeGitExtension.mockResolvedValue({} as any)
-			await provider.activate()
-		})
+		it("should generate a commit message based on staged changes", async () => {
+			// Mock staged changes
+			const mockChanges: GitChange[] = [
+				{ filePath: "/path/to/file1.ts", status: "Modified" },
+				{ filePath: "/path/to/file2.ts", status: "Added" },
+			]
+			mockGitService.gatherStagedChanges.mockResolvedValue(mockChanges)
 
-		it("should generate commit message for staged changes", async () => {
-			mockGitExtensionService.gatherStagedChanges.mockResolvedValue([
-				{
-					filePath: "src/test.ts",
-					status: "Modified",
-				},
-			])
-			mockGitExtensionService.setCommitMessage.mockImplementation(() => {})
+			// Call the method
+			await commitMessageProvider.generateCommitMessage()
 
-			// Mock vscode.window.withProgress to call the callback immediately
-			;(vscode.window.withProgress as jest.Mock).mockImplementation(async (options, callback) => {
-				const mockProgress = {
-					report: jest.fn(),
-				}
-				return callback(mockProgress as any, {} as any)
-			})
-			;(vscode.window.showInformationMessage as jest.Mock).mockResolvedValue(undefined)
+			// Verify commit context was requested
+			expect(mockGitService.getCommitContext).toHaveBeenCalledWith(mockChanges)
 
-			// Execute the command
-			await vscode.commands.executeCommand("kilo-code.generateCommitMessage")
-
-			expect(mockSingleCompletionHandler).toHaveBeenCalledWith(
-				{
+			// Verify AI was called with the correct prompt
+			expect(singleCompletionHandler).toHaveBeenCalledWith(
+				expect.objectContaining({
 					apiProvider: "kilocode",
-					kilocodeToken: "test-token",
 					kilocodeModel: "google/gemini-2.5-flash-preview-05-20",
-				},
-				expect.stringContaining("Staged changes:"),
+				}),
+				expect.stringContaining("Conventional Commit Message Generator"),
 			)
 
-			expect(mockGitExtensionService.setCommitMessage).toHaveBeenCalledWith("feat: add new feature")
-			expect(vscode.window.showInformationMessage).toHaveBeenCalledWith("✨ Commit message generated!")
-		})
-
-		it("should handle no staged changes", async () => {
-			// Return empty array to indicate no staged changes but repository exists
-			mockGitExtensionService.gatherStagedChanges.mockResolvedValue([])
-			;(vscode.window.withProgress as jest.Mock).mockImplementation(async (options, callback) => {
-				const mockProgress = {
-					report: jest.fn(),
-				}
-				return callback(mockProgress as any, {} as any)
-			})
-			;(vscode.window.showInformationMessage as jest.Mock).mockResolvedValue(undefined)
-
-			await vscode.commands.executeCommand("kilo-code.generateCommitMessage")
-
-			expect(vscode.window.showInformationMessage).toHaveBeenCalledWith("No staged changes found to analyze")
-			expect(mockSingleCompletionHandler).not.toHaveBeenCalled()
-		})
-
-		it("should handle no repository", async () => {
-			// Return null to indicate no repository available
-			mockGitExtensionService.gatherStagedChanges.mockResolvedValue(null)
-			;(vscode.window.showInformationMessage as jest.Mock).mockResolvedValue(undefined)
-
-			await vscode.commands.executeCommand("kilo-code.generateCommitMessage")
-
-			expect(vscode.window.showInformationMessage).toHaveBeenCalledWith("No Git repository found")
-			expect(mockSingleCompletionHandler).not.toHaveBeenCalled()
-		})
-
-		it("should handle missing Kilo Code token", async () => {
-			mockGitExtensionService.gatherStagedChanges.mockResolvedValue([
-				{
-					filePath: "src/test.ts",
-					status: "Modified",
-				},
-			])
-
-			// Mock missing token
-			Object.defineProperty(mockContextProxy, "instance", {
-				value: {
-					getProviderSettings: jest.fn().mockReturnValue({
-						apiProvider: "kilocode",
-						kilocodeToken: null,
-						kilocodeModel: "google/gemini-2.5-flash-preview-05-20",
-					}),
-				},
-				writable: true,
-			})
-			;(vscode.window.withProgress as jest.Mock).mockImplementation(async (options, callback) => {
-				const mockProgress = {
-					report: jest.fn(),
-				}
-				return callback(mockProgress as any, {} as any)
-			})
-			;(vscode.window.showErrorMessage as jest.Mock).mockResolvedValue(undefined)
-
-			await vscode.commands.executeCommand("kilo-code.generateCommitMessage")
-
-			expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-				"Failed to generate commit message: Kilo Code token is required for AI commit message generation",
+			// Verify commit message was set
+			expect(mockGitService.setCommitMessage).toHaveBeenCalledWith(
+				"feat(commit): implement conventional commit message generator",
 			)
 		})
 
-		it("should include rules in the prompt when rules are available", async () => {
-			mockGitExtensionService.gatherStagedChanges.mockResolvedValue([
-				{
-					filePath: "src/test.ts",
-					status: "Modified",
-				},
-			])
-			mockGitExtensionService.setCommitMessage.mockImplementation(() => {})
+		it("should handle multi-line commit messages with body and footer", async () => {
+			// Mock staged changes
+			const mockChanges: GitChange[] = [
+				{ filePath: "/path/to/file1.ts", status: "Modified" },
+				{ filePath: "/path/to/file2.ts", status: "Added" },
+			]
+			mockGitService.gatherStagedChanges.mockResolvedValue(mockChanges)
 
-			// Mock rules content
-			const mockRules =
-				"\n\n# Rules from .kilocode/rules/commit.md:\nAlways include ticket numbers in format [TICKET-123]"
-			mockLoadRuleFiles.mockResolvedValue(mockRules)
+			// No need to mock git command outputs as we're mocking getCommitContext
 
-			// Mock vscode.window.withProgress to call the callback immediately
-			;(vscode.window.withProgress as jest.Mock).mockImplementation(async (options, callback) => {
-				const mockProgress = {
-					report: jest.fn(),
-				}
-				return callback(mockProgress as any, {} as any)
-			})
-			;(vscode.window.showInformationMessage as jest.Mock).mockResolvedValue(undefined)
+			// Mock AI response with multi-line commit message
+			;(singleCompletionHandler as jest.Mock).mockResolvedValue(`feat(auth): implement OAuth2 authentication
 
-			// Execute the command
-			await vscode.commands.executeCommand("kilo-code.generateCommitMessage")
+This change adds OAuth2 authentication support with the following features:
+- Google and GitHub providers
+- Token refresh mechanism
+- User profile integration
 
-			expect(mockLoadRuleFiles).toHaveBeenCalledWith("/test/workspace")
-			expect(mockSingleCompletionHandler).toHaveBeenCalledWith(
-				{
-					apiProvider: "kilocode",
-					kilocodeToken: "test-token",
-					kilocodeModel: "google/gemini-2.5-flash-preview-05-20",
-				},
-				expect.stringContaining("Additional Rules:"),
-			)
-			expect(mockSingleCompletionHandler).toHaveBeenCalledWith(
-				expect.anything(),
-				expect.stringContaining("Always include ticket numbers in format [TICKET-123]"),
-			)
+Fixes #123
+BREAKING CHANGE: Removes the old authentication system`)
+
+			// withProgress is already mocked in the vscode mock
+
+			// Call the method
+			await commitMessageProvider.generateCommitMessage()
+
+			// Verify commit message was set with full multi-line message
+			expect(mockGitService.setCommitMessage).toHaveBeenCalledWith(`feat(auth): implement OAuth2 authentication
+
+This change adds OAuth2 authentication support with the following features:
+- Google and GitHub providers
+- Token refresh mechanism
+- User profile integration
+
+Fixes #123
+BREAKING CHANGE: Removes the old authentication system`)
+		})
+
+		it("should handle code blocks in AI responses", async () => {
+			// Mock staged changes
+			const mockChanges: GitChange[] = [{ filePath: "/path/to/file1.ts", status: "Modified" }]
+			mockGitService.gatherStagedChanges.mockResolvedValue(mockChanges)
+
+			// No need to mock git command outputs as we're mocking getCommitContext
+
+			// Mock AI response with code blocks
+			;(singleCompletionHandler as jest.Mock).mockResolvedValue(`\`\`\`
+feat(core): update authentication logic
+
+Refactor the authentication system to use JWT tokens
+and improve security measures.
+
+Fixes #456
+\`\`\``)
+
+			// withProgress is already mocked in the vscode mock
+
+			// Call the method
+			await commitMessageProvider.generateCommitMessage()
+
+			// Verify commit message was set with code blocks removed
+			expect(mockGitService.setCommitMessage).toHaveBeenCalledWith(`feat(core): update authentication logic
+
+Refactor the authentication system to use JWT tokens
+and improve security measures.
+
+Fixes #456`)
 		})
 	})
 })

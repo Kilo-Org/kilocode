@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 import { ContextProxy } from "../../core/config/ContextProxy"
 import { singleCompletionHandler } from "../../utils/single-completion-handler"
-import { GitExtensionService, GitRepository, GitChange } from "./GitExtensionService"
+import { GitExtensionService, GitChange } from "./GitExtensionService"
 import { loadRuleFiles } from "../../core/prompts/sections/custom-instructions"
 
 /**
@@ -23,12 +23,15 @@ export class CommitMessageProvider {
 	 * Activates the commit message provider by setting up Git integration.
 	 */
 	public async activate(): Promise<void> {
-		this.outputChannel.appendLine("✨ Commit message generator activated")
+		this.outputChannel.appendLine("✨ Kilo Commit message generator activated")
 
 		try {
-			await this.gitService.initializeGitExtension()
+			const initialized = await this.gitService.initialize()
+			if (!initialized) {
+				this.outputChannel.appendLine("⚠️ Git repository not found or git not available")
+			}
 		} catch (error) {
-			throw new Error(`Failed to initialize Git extension: ${error}`)
+			this.outputChannel.appendLine(`⚠️ Git initialization error: ${error}`)
 		}
 
 		// Register the command
@@ -42,13 +45,7 @@ export class CommitMessageProvider {
 	 * Generates an AI-powered commit message based on staged changes.
 	 */
 	public async generateCommitMessage(): Promise<void> {
-		// Check if we can gather staged changes to determine if a repository is available
-		const changes = await this.gitService.gatherStagedChanges()
-		if (changes === null) {
-			vscode.window.showInformationMessage("No Git repository found")
-			return
-		}
-
+		await this.gitService.initialize()
 		await vscode.window.withProgress(
 			{
 				location: vscode.ProgressLocation.SourceControl,
@@ -59,21 +56,26 @@ export class CommitMessageProvider {
 				try {
 					progress.report({ increment: 25, message: "Analyzing staged changes..." })
 
-					// We already have the changes from the initial check
+					// Check if we can gather staged changes
+					const changes = await this.gitService.gatherStagedChanges()
+					if (changes === null) {
+						vscode.window.showInformationMessage("No staged changes found in git repository")
+						return
+					}
+
 					if (changes.length === 0) {
 						vscode.window.showInformationMessage("No staged changes found to analyze")
 						return
 					}
 
-					const context = this.formatChangesForAI(changes)
-					console.log("🚀 ~ CommitMessageProvider ~ context:", context)
+					const gitContextString = this.gitService.getCommitContext(changes)
 					progress.report({ increment: 50, message: "Generating message with AI..." })
 
-					const generatedMessage = await this.callAIForCommitMessage(context)
+					const generatedMessage = await this.callAIForCommitMessage(gitContextString)
 					this.gitService.setCommitMessage(generatedMessage)
 
 					progress.report({ increment: 100, message: "Complete!" })
-					vscode.window.showInformationMessage("✨ Commit message generated!")
+					vscode.window.showInformationMessage("✨ Kilo Commit message generated!")
 				} catch (error) {
 					const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
 					vscode.window.showErrorMessage(`Failed to generate commit message: ${errorMessage}`)
@@ -115,27 +117,82 @@ export class CommitMessageProvider {
 		const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
 		const rules = workspaceRoot ? await loadRuleFiles(workspaceRoot) : ""
 
-		const basePrompt = `You are an expert software developer tasked with writing a concise, informative commit message.
+		const basePrompt = `# Conventional Commit Message Generator
+
+## System Instructions
+
+You are an expert Git commit message generator that creates conventional commit messages based on staged changes. Analyze the provided git diff output and generate appropriate conventional commit messages following the specification.
 
 ${context}
 
-Please generate a single commit message that follows conventional commit format:
-- Use type(scope): description format
-- Types: feat, fix, docs, style, refactor, test, chore
-- Keep the description under 50 characters
-- Use imperative mood (e.g., "add" not "added")
-- Be specific about what changed
+## Conventional Commits Format
 
-Examples:
-- feat(auth): add user login validation
-- fix(api): resolve null pointer exception
-- docs(readme): update installation steps
-- refactor(utils): extract common helper functions`
+Generate commit messages following this exact structure:
+
+\`\`\`
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+\`\`\`
+
+### Core Types (Required)
+- **feat**: New feature or functionality (MINOR version bump)
+- **fix**: Bug fix or error correction (PATCH version bump)
+
+### Additional Types (Extended)
+- **docs**: Documentation changes only
+- **style**: Code style changes (whitespace, formatting, semicolons, etc.)
+- **refactor**: Code refactoring without feature changes or bug fixes
+- **perf**: Performance improvements
+- **test**: Adding or fixing tests
+- **build**: Build system or external dependency changes
+- **ci**: CI/CD configuration changes
+- **chore**: Maintenance tasks, tooling changes
+- **revert**: Reverting previous commits
+
+### Scope Guidelines
+- Use parentheses: \`feat(api):\`, \`fix(ui):\`
+- Common scopes: \`api\`, \`ui\`, \`auth\`, \`db\`, \`config\`, \`deps\`, \`docs\`
+- For monorepos: package or module names
+- Keep scope concise and lowercase
+
+### Description Rules
+- Use imperative mood ("add" not "added" or "adds")
+- Start with lowercase letter
+- No period at the end
+- Maximum 50 characters
+- Be concise but descriptive
+
+### Body Guidelines (Optional)
+- Start one blank line after description
+- Explain the "what" and "why", not the "how"
+- Wrap at 72 characters per line
+- Use for complex changes requiring explanation
+
+### Footer Guidelines (Optional)
+- Start one blank line after body
+- **Breaking Changes**: \`BREAKING CHANGE: description\`
+- **Issue References**: \`Fixes #123\`, \`Closes #456\`, \`Refs #789\`
+
+## Analysis Instructions
+
+When analyzing staged changes:
+
+1. Determine Primary Type based on the nature of changes
+2. Identify Scope from modified directories or modules
+3. Craft Description focusing on the most significant change
+4. Determine if there are Breaking Changes
+5. For complex changes, include a detailed body explaining what and why
+6. Add appropriate footers for issue references or breaking changes
+
+For significant changes, include a detailed body explaining the changes.`
 
 		// Append rules if they exist
 		const rulesSection = rules ? `\n\nAdditional Rules:${rules}` : ""
 
-		return `${basePrompt}${rulesSection}\n\nReturn ONLY the commit message, nothing else.`
+		return `${basePrompt}${rulesSection}\n\nReturn ONLY the commit message in the conventional format, nothing else.`
 	}
 
 	/**
@@ -145,36 +202,12 @@ Examples:
 		// Clean up the response by removing any extra whitespace or formatting
 		const cleaned = response.trim()
 
-		// If the response contains multiple lines, take the first line
-		const firstLine = cleaned.split("\n")[0].trim()
+		// Remove any code block markers
+		const withoutCodeBlocks = cleaned.replace(/```[a-z]*\n|```/g, "")
 
 		// Remove any quotes or backticks that might wrap the message
-		return firstLine.replace(/^["'`]|["'`]$/g, "")
-	}
+		const withoutQuotes = withoutCodeBlocks.replace(/^["'`]|["'`]$/g, "")
 
-	/**
-	 * Formats changes for AI consumption
-	 */
-	private formatChangesForAI(changes: GitChange[]): string {
-		const changesByType = changes.reduce(
-			(acc, change) => {
-				if (!acc[change.status]) {
-					acc[change.status] = []
-				}
-				acc[change.status].push(change.filePath)
-				return acc
-			},
-			{} as Record<string, string[]>,
-		)
-
-		let context = "Staged changes:\n"
-		for (const [status, files] of Object.entries(changesByType)) {
-			context += `\n${status} files:\n`
-			files.forEach((file) => {
-				context += `- ${file}\n`
-			})
-		}
-
-		return context
+		return withoutQuotes.trim()
 	}
 }

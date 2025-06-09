@@ -201,16 +201,16 @@ export async function activate(context: vscode.ExtensionContext) {
 			`♻️♻️♻️ Core auto-reloading is ENABLED. Watching for changes in: ${watchPaths.map(({ name }) => name).join(", ")}`,
 		)
 
-		watchPaths.forEach(({ path: watchPath, name }) => {
-			const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(watchPath, pattern))
+		// watchPaths.forEach(({ path: watchPath, name }) => {
+		// 	const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(watchPath, pattern))
 
-			watcher.onDidChange((uri) => {
-				console.log(`♻️ ${name} file changed: ${uri.fsPath}. Reloading host…`)
-				vscode.commands.executeCommand("workbench.action.reloadWindow")
-			})
+		// 	watcher.onDidChange((uri) => {
+		// 		console.log(`♻️ ${name} file changed: ${uri.fsPath}. Reloading host…`)
+		// 		vscode.commands.executeCommand("workbench.action.reloadWindow")
+		// 	})
 
-			context.subscriptions.push(watcher)
-		})
+		// 	context.subscriptions.push(watcher)
+		// })
 	}
 
 	await checkAndRunAutoLaunchingTask(context) // kilocode_change
