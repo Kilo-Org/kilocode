@@ -35,5 +35,6 @@
 	"confirmDeleteTasks": "Apakah kamu yakin ingin menghapus {{count}} tugas?",
 	"deleteTasksWarning": "Tugas yang dihapus tidak dapat dipulihkan. Pastikan kamu ingin melanjutkan.",
 	"deleteItems": "Hapus {{count}} Item",
-	"showAllWorkspaces": "Tampilkan tugas dari semua workspace"
+	"showAllWorkspaces": "Tampilkan tugas dari semua workspace",
+	"showFavoritesOnly": "Tampilkan hanya favorit"
 }

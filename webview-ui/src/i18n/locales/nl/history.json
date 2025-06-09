@@ -35,5 +35,6 @@
 	"confirmDeleteTasks": "Weet je zeker dat je {{count}} taken wilt verwijderen?",
 	"deleteTasksWarning": "Verwijderde taken kunnen niet worden hersteld. Zorg ervoor dat je wilt doorgaan.",
 	"deleteItems": "Verwijder {{count}} items",
-	"showAllWorkspaces": "Toon taken van alle werkruimtes"
+	"showAllWorkspaces": "Toon taken van alle werkruimtes",
+	"showFavoritesOnly": "Toon alleen favorieten"
 }
