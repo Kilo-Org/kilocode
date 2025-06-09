@@ -121,19 +121,6 @@ const TaskItem = ({
 						</div>
 					)}
 				</div>
-				{/* kilocode_change start */}
-				{item.isFavorited && (
-					<div
-						style={{
-							position: "absolute",
-							top: "12px",
-							right: "12px",
-							color: "var(--vscode-button-background)",
-						}}>
-						<span className="codicon codicon-star-full" aria-label="Favorited" />
-					</div>
-				)}
-				{/* kilocode_change end */}
 			</div>
 		</div>
 	)

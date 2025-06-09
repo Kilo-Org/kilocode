@@ -13,6 +13,7 @@ import {
 } from "@/components/ui"
 import { vscode } from "@/utils/vscode"
 import { AlertDialogProps } from "@radix-ui/react-alert-dialog"
+import { useTaskSearch } from "./useTaskSearch"
 
 interface BatchDeleteTaskDialogProps extends AlertDialogProps {
 	taskIds: string[]
@@ -20,7 +21,11 @@ interface BatchDeleteTaskDialogProps extends AlertDialogProps {
 
 export const BatchDeleteTaskDialog = ({ taskIds, ...props }: BatchDeleteTaskDialogProps) => {
 	const { t } = useAppTranslation()
+	const { tasks } = useTaskSearch()
 	const { onOpenChange } = props
+
+	const favoritedTasks = tasks.filter((task) => taskIds.includes(task.id) && task.isFavorited)
+	const hasFavoritedTasks = favoritedTasks.length > 0
 
 	const onDelete = useCallback(() => {
 		if (taskIds.length > 0) {
@@ -36,6 +41,11 @@ export const BatchDeleteTaskDialog = ({ taskIds, ...props }: BatchDeleteTaskDial
 					<AlertDialogTitle>{t("history:deleteTasks")}</AlertDialogTitle>
 					<AlertDialogDescription className="text-vscode-foreground">
 						<div className="mb-2">{t("history:confirmDeleteTasks", { count: taskIds.length })}</div>
+						{hasFavoritedTasks && (
+							<div className="text-yellow-500 mb-2">
+								{t("history:deleteTasksFavoritedWarning", { count: favoritedTasks.length })}
+							</div>
+						)}
 						<div className="text-vscode-editor-foreground bg-vscode-editor-background p-2 rounded text-sm">
 							{t("history:deleteTasksWarning")}
 						</div>

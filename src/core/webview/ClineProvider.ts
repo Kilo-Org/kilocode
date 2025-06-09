@@ -1842,7 +1842,7 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
 		const history = this.getGlobalState("taskHistory") ?? []
 		const updatedHistory = history.map((item) => {
 			if (item.id === id) {
-				return { ...item, favorite: !item.isFavorited }
+				return { ...item, isFavorited: !item.isFavorited }
 			}
 			return item
 		})
