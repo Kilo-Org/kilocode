@@ -33,10 +33,12 @@ const TaskItemHeader: React.FC<TaskItemHeaderProps> = ({ item, variant, isSelect
 		}
 	}
 
+	// kilocode_change start
 	const handleFavoriteClick = (e: React.MouseEvent) => {
 		e.stopPropagation()
 		vscode.postMessage({ type: "toggleTaskFavorite", text: item.id })
 	}
+	// kilocode_change end
 
 	return (
 		<div className="flex justify-between items-center pb-0">

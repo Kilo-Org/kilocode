@@ -1605,10 +1605,12 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			}
 			break
 		}
+		// kilocode_change start
 		case "toggleTaskFavorite":
 			if (message.text) {
 				await provider.toggleTaskFavorite(message.text)
 			}
 			break
+		// kilocode_change end
 	}
 }

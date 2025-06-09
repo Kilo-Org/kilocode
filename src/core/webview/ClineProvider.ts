@@ -1190,12 +1190,14 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			// get the task directory full path
 			const { taskDirPath } = await this.getTaskWithId(id)
 
+			// kilocode_change start
 			// Check if task is favorited
 			const history = this.getGlobalState("taskHistory") ?? []
 			const task = history.find((item) => item.id === id)
-			if (task?.favorite) {
+			if (task?.isFavorited) {
 				throw new Error("Cannot delete a favorited task. Please unfavorite it first.")
 			}
+			// kilocode_change end
 
 			// remove task from stack if it's the current task
 			if (id === this.getCurrentCline()?.taskId) {
@@ -1834,12 +1836,13 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
 	}
 	// end kilocode_change
 
+	// kilocode_change start
 	// Add new methods for favorite functionality
 	async toggleTaskFavorite(id: string) {
 		const history = this.getGlobalState("taskHistory") ?? []
 		const updatedHistory = history.map((item) => {
 			if (item.id === id) {
-				return { ...item, favorite: !item.favorite }
+				return { ...item, favorite: !item.isFavorited }
 			}
 			return item
 		})
@@ -1849,13 +1852,13 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
 
 	async getFavoriteTasks(): Promise<HistoryItem[]> {
 		const history = this.getGlobalState("taskHistory") ?? []
-		return history.filter((item) => item.favorite)
+		return history.filter((item) => item.isFavorited)
 	}
 
 	// Modify batch delete to respect favorites
 	async deleteMultipleTasks(taskIds: string[]) {
 		const history = this.getGlobalState("taskHistory") ?? []
-		const favoritedTaskIds = taskIds.filter((id) => history.find((item) => item.id === id)?.favorite)
+		const favoritedTaskIds = taskIds.filter((id) => history.find((item) => item.id === id)?.isFavorited)
 
 		if (favoritedTaskIds.length > 0) {
 			throw new Error("Cannot delete favorited tasks. Please unfavorite them first.")
@@ -1865,4 +1868,5 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
 			await this.deleteTaskWithId(id)
 		}
 	}
+	// kilocode_change end
 }
