@@ -10,7 +10,7 @@ export interface GitRepository {
 	}
 }
 
-export interface GitAPI {
+export interface GitApi {
 	repositories: GitRepository[]
 }
 
@@ -23,12 +23,13 @@ export interface GitChange {
  * Utility class for Git operations and integration
  */
 export class GitExtensionService {
-	private gitAPI: GitAPI | null = null
+	private gitAPI: GitApi | null = null
+	private activeRepository: GitRepository | null = null
 
 	/**
 	 * Initializes the Git extension and returns the API
 	 */
-	public async initializeGitExtension(): Promise<GitAPI> {
+	public async initializeGitExtension(): Promise<GitApi> {
 		const gitExtension = vscode.extensions.getExtension("vscode.git")
 		if (!gitExtension) {
 			throw new Error("Git extension not found")
@@ -46,19 +47,38 @@ export class GitExtensionService {
 	}
 
 	/**
-	 * Gets the first available Git repository
+	 * Gets the first available Git repository and stores it internally
+	 * @private Internal implementation detail
 	 */
-	public getActiveRepository(): GitRepository | null {
+	private getActiveRepository(): GitRepository | null {
 		if (!this.gitAPI || this.gitAPI.repositories.length === 0) {
+			this.activeRepository = null
 			return null
 		}
-		return this.gitAPI.repositories[0]
+		this.activeRepository = this.gitAPI.repositories[0]
+		return this.activeRepository
 	}
 
 	/**
-	 * Gathers context about staged changes in the repository
+	 * Ensures we have an active repository, fetching it if needed
+	 * @private
 	 */
-	public async gatherStagedChanges(repository: GitRepository): Promise<string | null> {
+	private ensureActiveRepository(): GitRepository | null {
+		if (!this.activeRepository) {
+			return this.getActiveRepository()
+		}
+		return this.activeRepository
+	}
+
+	/**
+	 * Gathers context about staged changes in the active repository
+	 */
+	public async gatherStagedChanges(): Promise<GitChange[] | null> {
+		const repository = this.ensureActiveRepository()
+		if (!repository) {
+			return null
+		}
+
 		const stagedChanges = repository.state.indexChanges
 		if (!stagedChanges || stagedChanges.length === 0) {
 			return null
@@ -69,13 +89,17 @@ export class GitExtensionService {
 			status: this.getChangeStatusText(change.status),
 		}))
 
-		return this.formatChangesForAI(changes)
+		return changes
 	}
 
 	/**
-	 * Sets the commit message in the repository's input box
+	 * Sets the commit message in the active repository's input box
 	 */
-	public setCommitMessage(repository: GitRepository, message: string): void {
+	public setCommitMessage(message: string): void {
+		const repository = this.ensureActiveRepository()
+		if (!repository) {
+			throw new Error("No active repository found")
+		}
 		repository.inputBox.value = message
 	}
 
@@ -103,31 +127,5 @@ export class GitExtensionService {
 			default:
 				return "Unknown"
 		}
-	}
-
-	/**
-	 * Formats changes for AI consumption
-	 */
-	private formatChangesForAI(changes: GitChange[]): string {
-		const changesByType = changes.reduce(
-			(acc, change) => {
-				if (!acc[change.status]) {
-					acc[change.status] = []
-				}
-				acc[change.status].push(change.filePath)
-				return acc
-			},
-			{} as Record<string, string[]>,
-		)
-
-		let context = "Staged changes:\n"
-		for (const [status, files] of Object.entries(changesByType)) {
-			context += `\n${status} files:\n`
-			files.forEach((file) => {
-				context += `- ${file}\n`
-			})
-		}
-
-		return context
 	}
 }

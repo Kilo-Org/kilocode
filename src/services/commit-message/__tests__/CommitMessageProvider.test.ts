@@ -134,10 +134,12 @@ describe("CommitMessageProvider", () => {
 		})
 
 		it("should generate commit message for staged changes", async () => {
-			mockGitExtensionService.getActiveRepository.mockReturnValue(mockRepo)
-			mockGitExtensionService.gatherStagedChanges.mockResolvedValue(
-				"Staged changes:\n\nModified files:\n- src/test.ts",
-			)
+			mockGitExtensionService.gatherStagedChanges.mockResolvedValue([
+				{
+					filePath: "src/test.ts",
+					status: "Modified",
+				},
+			])
 			mockGitExtensionService.setCommitMessage.mockImplementation(() => {})
 
 			// Mock vscode.window.withProgress to call the callback immediately
@@ -161,13 +163,13 @@ describe("CommitMessageProvider", () => {
 				expect.stringContaining("Staged changes:"),
 			)
 
-			expect(mockGitExtensionService.setCommitMessage).toHaveBeenCalledWith(mockRepo, "feat: add new feature")
+			expect(mockGitExtensionService.setCommitMessage).toHaveBeenCalledWith("feat: add new feature")
 			expect(vscode.window.showInformationMessage).toHaveBeenCalledWith("✨ Commit message generated!")
 		})
 
 		it("should handle no staged changes", async () => {
-			mockGitExtensionService.getActiveRepository.mockReturnValue(mockRepo)
-			mockGitExtensionService.gatherStagedChanges.mockResolvedValue(null)
+			// Return empty array to indicate no staged changes but repository exists
+			mockGitExtensionService.gatherStagedChanges.mockResolvedValue([])
 			;(vscode.window.withProgress as jest.Mock).mockImplementation(async (options, callback) => {
 				const mockProgress = {
 					report: jest.fn(),
@@ -183,7 +185,8 @@ describe("CommitMessageProvider", () => {
 		})
 
 		it("should handle no repository", async () => {
-			mockGitExtensionService.getActiveRepository.mockReturnValue(null)
+			// Return null to indicate no repository available
+			mockGitExtensionService.gatherStagedChanges.mockResolvedValue(null)
 			;(vscode.window.showInformationMessage as jest.Mock).mockResolvedValue(undefined)
 
 			await vscode.commands.executeCommand("kilo-code.generateCommitMessage")
@@ -193,10 +196,12 @@ describe("CommitMessageProvider", () => {
 		})
 
 		it("should handle missing Kilo Code token", async () => {
-			mockGitExtensionService.getActiveRepository.mockReturnValue(mockRepo)
-			mockGitExtensionService.gatherStagedChanges.mockResolvedValue(
-				"Staged changes:\n\nModified files:\n- src/test.ts",
-			)
+			mockGitExtensionService.gatherStagedChanges.mockResolvedValue([
+				{
+					filePath: "src/test.ts",
+					status: "Modified",
+				},
+			])
 
 			// Mock missing token
 			Object.defineProperty(mockContextProxy, "instance", {
@@ -225,10 +230,12 @@ describe("CommitMessageProvider", () => {
 		})
 
 		it("should include rules in the prompt when rules are available", async () => {
-			mockGitExtensionService.getActiveRepository.mockReturnValue(mockRepo)
-			mockGitExtensionService.gatherStagedChanges.mockResolvedValue(
-				"Staged changes:\n\nModified files:\n- src/test.ts",
-			)
+			mockGitExtensionService.gatherStagedChanges.mockResolvedValue([
+				{
+					filePath: "src/test.ts",
+					status: "Modified",
+				},
+			])
 			mockGitExtensionService.setCommitMessage.mockImplementation(() => {})
 
 			// Mock rules content
