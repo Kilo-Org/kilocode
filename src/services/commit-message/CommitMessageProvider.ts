@@ -49,33 +49,33 @@ export class CommitMessageProvider {
 		await vscode.window.withProgress(
 			{
 				location: vscode.ProgressLocation.SourceControl,
-				title: "Generating commit message...",
+				title: "Kilo: Generating commit message...",
 				cancellable: false,
 			},
 			async (progress) => {
 				try {
-					progress.report({ increment: 25, message: "Analyzing staged changes..." })
+					progress.report({ increment: 25, message: "Kilo: Analyzing staged changes..." })
 
 					// Check if we can gather staged changes
 					const changes = await this.gitService.gatherStagedChanges()
 					if (changes === null) {
-						vscode.window.showInformationMessage("No staged changes found in git repository")
+						vscode.window.showInformationMessage("Kilo: No staged changes found in git repository")
 						return
 					}
 
 					if (changes.length === 0) {
-						vscode.window.showInformationMessage("No staged changes found to analyze")
+						vscode.window.showInformationMessage("Kilo: No staged changes found to analyze")
 						return
 					}
 
 					const gitContextString = this.gitService.getCommitContext(changes)
-					progress.report({ increment: 50, message: "Generating message with AI..." })
+					progress.report({ increment: 50, message: "Kilo: Generating message with AI..." })
 
 					const generatedMessage = await this.callAIForCommitMessage(gitContextString)
 					this.gitService.setCommitMessage(generatedMessage)
 
 					progress.report({ increment: 100, message: "Complete!" })
-					vscode.window.showInformationMessage("✨ Kilo Commit message generated!")
+					vscode.window.showInformationMessage("✨ Kilo: Commit message generated!")
 				} catch (error) {
 					const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
 					vscode.window.showErrorMessage(`Failed to generate commit message: ${errorMessage}`)
