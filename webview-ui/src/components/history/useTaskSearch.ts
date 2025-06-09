@@ -30,7 +30,7 @@ export const useTaskSearch = () => {
 			tasks = tasks.filter((item) => item.workspace === cwd)
 		}
 		if (showFavoritesOnly) {
-			tasks = tasks.filter((item) => item.favorite)
+			tasks = tasks.filter((item) => item.isFavorited)
 		}
 		return tasks
 	}, [taskHistory, showAllWorkspaces, showFavoritesOnly, cwd])

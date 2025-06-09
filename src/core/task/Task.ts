@@ -128,6 +128,7 @@ export class Task extends EventEmitter<ClineEvents> {
 	private context: vscode.ExtensionContext // kilocode_change
 
 	readonly taskId: string
+	private taskIsFavorited?: boolean // kilocode_change
 	readonly instanceId: string
 
 	readonly rootTask: Task | undefined = undefined
@@ -226,6 +227,7 @@ export class Task extends EventEmitter<ClineEvents> {
 		}
 
 		this.taskId = historyItem ? historyItem.id : crypto.randomUUID()
+		this.taskIsFavorited = historyItem?.isFavorited // kilocode_change
 		// normal use-case is usually retry similar history task with new workspace
 		this.workspacePath = parentTask
 			? parentTask.workspacePath
