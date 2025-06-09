@@ -11,6 +11,8 @@ import { loadRuleFiles } from "../../core/prompts/sections/custom-instructions"
  */
 export class CommitMessageProvider {
 	private gitService: GitExtensionService
+	private previousGitContext: string | null = null
+	private previousCommitMessage: string | null = null
 
 	constructor(
 		private context: vscode.ExtensionContext,
@@ -39,6 +41,15 @@ export class CommitMessageProvider {
 			this.generateCommitMessage(),
 		)
 		this.context.subscriptions.push(disposable)
+	}
+
+	/**
+	 * Resets the tracking of previous commit message and context.
+	 * This should be called when a commit is submitted or when the context changes.
+	 */
+	public resetPreviousMessageTracking(): void {
+		this.previousGitContext = null
+		this.previousCommitMessage = null
 	}
 
 	/**
@@ -74,6 +85,10 @@ export class CommitMessageProvider {
 					const generatedMessage = await this.callAIForCommitMessage(gitContextString)
 					this.gitService.setCommitMessage(generatedMessage)
 
+					// Store the current context and message for future reference
+					this.previousGitContext = gitContextString
+					this.previousCommitMessage = generatedMessage
+
 					progress.report({ increment: 100, message: "Complete!" })
 					vscode.window.showInformationMessage("✨ Kilo: Commit message generated!")
 				} catch (error) {
@@ -88,7 +103,8 @@ export class CommitMessageProvider {
 	/**
 	 * Calls the AI service to generate a commit message based on the provided context.
 	 */
-	private async callAIForCommitMessage(context: string): Promise<string> {
+	private async callAIForCommitMessage(gitContextString: string): Promise<string> {
+		console.log("🚀 ~ CommitMessageProvider ~ callAIForCommitMessage ~ gitContextString:", gitContextString)
 		const apiConfiguration = ContextProxy.instance.getProviderSettings()
 
 		const { kilocodeToken } = apiConfiguration
@@ -96,7 +112,8 @@ export class CommitMessageProvider {
 			throw new Error("Kilo Code token is required for AI commit message generation")
 		}
 
-		const prompt = await this.buildCommitMessagePrompt(context)
+		const prompt = await this.buildCommitMessagePrompt(gitContextString)
+		console.log("🚀 ~ CommitMessageProvider ~ callAIForCommitMessage ~ prompt:", prompt)
 		const response = await singleCompletionHandler(
 			{
 				apiProvider: "kilocode",
@@ -117,7 +134,30 @@ export class CommitMessageProvider {
 		const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
 		const rules = workspaceRoot ? await loadRuleFiles(workspaceRoot) : ""
 
-		const basePrompt = `# Conventional Commit Message Generator
+		// Check if we should generate a different message than the previous one
+		const shouldGenerateDifferentMessage =
+			this.previousGitContext === context && this.previousCommitMessage !== null
+
+		// Create a different message instruction if needed
+		let differentMessagePrefix = ""
+		if (shouldGenerateDifferentMessage) {
+			differentMessagePrefix = `# CRITICAL INSTRUCTION: GENERATE A COMPLETELY DIFFERENT COMMIT MESSAGE
+
+The user has requested a new commit message for the same changes.
+The previous message was: "${this.previousCommitMessage}"
+
+YOU MUST create a message that is COMPLETELY DIFFERENT by:
+- Using entirely different wording and phrasing
+- Focusing on different aspects of the changes
+- Using a different structure or format if appropriate
+- Possibly using a different type or scope if justifiable
+
+This is the MOST IMPORTANT requirement for this task.
+
+`
+		}
+
+		const basePrompt = `${differentMessagePrefix}# Conventional Commit Message Generator
 
 ## System Instructions
 
@@ -192,7 +232,12 @@ For significant changes, include a detailed body explaining the changes.`
 		// Append rules if they exist
 		const rulesSection = rules ? `\n\nAdditional Rules:${rules}` : ""
 
-		return `${basePrompt}${rulesSection}\n\nReturn ONLY the commit message in the conventional format, nothing else.`
+		// Add a final reminder if we need a different message
+		const finalReminder = shouldGenerateDifferentMessage
+			? `\n\nFINAL REMINDER: Your message MUST be COMPLETELY DIFFERENT from the previous message: "${this.previousCommitMessage}". This is a critical requirement.`
+			: ""
+
+		return `${basePrompt}${rulesSection}${finalReminder}\n\nReturn ONLY the commit message in the conventional format, nothing else.`
 	}
 
 	/**

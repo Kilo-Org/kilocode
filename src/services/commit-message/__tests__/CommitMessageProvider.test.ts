@@ -224,5 +224,56 @@ and improve security measures.
 
 Fixes #456`)
 		})
+
+		it("should generate a different message when called twice with the same context", async () => {
+			// Mock staged changes
+			const mockChanges: GitChange[] = [{ filePath: "/path/to/file1.ts", status: "Modified" }]
+			mockGitService.gatherStagedChanges.mockResolvedValue(mockChanges)
+
+			// First call to generate message
+			await commitMessageProvider.generateCommitMessage()
+
+			// Verify first call to AI
+			expect(singleCompletionHandler).toHaveBeenCalledWith(
+				expect.any(Object),
+				expect.not.stringContaining("DIFFERENT from the previous message"),
+			)
+
+			// Reset mock to check second call
+			;(singleCompletionHandler as jest.Mock).mockClear()
+
+			// Second call with same context
+			await commitMessageProvider.generateCommitMessage()
+
+			// Verify second call includes instruction to make message different
+			expect(singleCompletionHandler).toHaveBeenCalledWith(
+				expect.anything(),
+				expect.stringContaining("DIFFERENT from the previous message"),
+			)
+		})
+
+		it("should reset tracking when resetPreviousMessageTracking is called", async () => {
+			// Mock staged changes
+			const mockChanges: GitChange[] = [{ filePath: "/path/to/file1.ts", status: "Modified" }]
+			mockGitService.gatherStagedChanges.mockResolvedValue(mockChanges)
+
+			// First call to generate message
+			await commitMessageProvider.generateCommitMessage()
+
+			// Reset tracking
+			;(commitMessageProvider as any).resetPreviousMessageTracking()
+
+			// Reset mock to check next call
+			;(singleCompletionHandler as jest.Mock).mockClear()
+
+			// Call generate again
+			await commitMessageProvider.generateCommitMessage()
+
+			// Verify call doesn't include instruction to make message different
+			expect(singleCompletionHandler).toHaveBeenCalledWith(
+				expect.any(Object),
+				expect.not.stringContaining("DIFFERENT from the previous message"),
+			)
+		})
 	})
 })
