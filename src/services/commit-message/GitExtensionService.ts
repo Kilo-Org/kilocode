@@ -79,10 +79,9 @@ export class GitExtensionService {
 			const gitExtension = vscode.extensions.getExtension("vscode.git")
 			if (gitExtension && gitExtension.isActive) {
 				const gitApi = gitExtension.exports.getAPI(1)
-				if (gitApi && gitApi.repositories && gitApi.repositories.length > 0) {
+				if (gitApi?.repositories?.length > 0) {
 					const repo = gitApi.repositories[0]
 					repo.inputBox.value = message
-					vscode.window.showInformationMessage("✨ Commit message set in Git input box!")
 					return
 				}
 			}
@@ -112,27 +111,51 @@ export class GitExtensionService {
 		}
 	}
 
-	public getStagedDiff(): string {
+	/**
+	 * Gets the diff of staged changes
+	 * @private Internal helper method
+	 */
+	private getStagedDiff(): string {
 		return this.executeGitCommand("git diff --staged")
 	}
 
-	public getStagedStatus(): string {
+	/**
+	 * Gets the status of staged files in porcelain format
+	 * @private Internal helper method
+	 */
+	private getStagedStatus(): string {
 		return this.executeGitCommand("git status --porcelain")
 	}
 
-	public getStagedSummary(): string {
+	/**
+	 * Gets a summary of staged changes
+	 * @private Internal helper method
+	 */
+	private getStagedSummary(): string {
 		return this.executeGitCommand("git diff --staged --stat")
 	}
 
-	public getExtendedDiff(): string {
+	/**
+	 * Gets extended context for complex changes
+	 * @private Internal helper method
+	 */
+	private getExtendedDiff(): string {
 		return this.executeGitCommand("git diff --staged --unified=5")
 	}
 
-	public getCurrentBranch(): string {
+	/**
+	 * Gets the current branch name
+	 * @private Internal helper method
+	 */
+	private getCurrentBranch(): string {
 		return this.executeGitCommand("git branch --show-current")
 	}
 
-	public getRecentCommits(count: number = 5): string {
+	/**
+	 * Gets recent commits for context
+	 * @private Internal helper method
+	 */
+	private getRecentCommits(count: number = 5): string {
 		return this.executeGitCommand(`git log --oneline -${count}`)
 	}
 
