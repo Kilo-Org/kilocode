@@ -6,7 +6,6 @@ export type ParsedApiReqStartedTextType = {
 	cacheWrites: number
 	cacheReads: number
 	cost?: number // Only present if combineApiRequests has been called
-	isByok?: boolean // kilocode_change
 }
 
 /**
