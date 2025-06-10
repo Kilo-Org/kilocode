@@ -25,7 +25,6 @@ export type ParsedApiReqStartedTextType = {
  * const { totalTokensIn, totalTokensOut, totalCost } = getApiMetrics(messages);
  * // Result: { totalTokensIn: 10, totalTokensOut: 20, totalCost: 0.005 }
  */
-
 export function getApiMetrics(messages: ClineMessage[]) {
 	const result: TokenUsage = {
 		totalTokensIn: 0,
