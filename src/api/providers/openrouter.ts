@@ -172,7 +172,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 				// and how to best support it.
 				// cacheReadTokens: lastUsage.prompt_tokens_details?.cached_tokens,
 				reasoningTokens: lastUsage.completion_tokens_details?.reasoning_tokens,
-				totalCost: lastUsage.is_byok ? BYOK_COST_MULTIPLIER * (lastUsage.cost || 0) : lastUsage.cost || 0, // kilocode_change byok
+				totalCost: (lastUsage.is_byok ? BYOK_COST_MULTIPLIER : 1) * (lastUsage.cost || 0), // kilocode_change byok
 			}
 		}
 	}
