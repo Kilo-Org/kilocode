@@ -5,5 +5,17 @@
 	"lowCreditWarning": {
 		"title": "Waarschuwing: laag krediet!",
 		"message": "Controleer of je kunt opwaarderen met gratis credits of meer kunt kopen!"
+	},
+	"commitMessage": {
+		"activated": "Kilo Code commit-berichtgenerator geactiveerd",
+		"gitNotFound": "⚠️ Git repository niet gevonden of git niet beschikbaar",
+		"gitInitError": "⚠️ Git initialisatiefout: {{error}}",
+		"generating": "Kilo: Commit-bericht aan het genereren...",
+		"analyzingChanges": "Kilo: Bezig met het analyseren van gefaseerde wijzigingen...",
+		"noStagedChangesRepo": "Kilo: Geen gefaseerde wijzigingen gevonden in de git repository",
+		"noStagedChanges": "Kilo: Geen gefaseerde wijzigingen gevonden om te analyseren",
+		"generated": "Kilo: Commit-bericht gegenereerd!",
+		"generationFailed": "Kilo: Mislukt om commit-bericht te genereren: {{errorMessage}}",
+		"tokenRequired": "Kilo Code token is vereist voor het genereren van commit berichten"
 	}
 }

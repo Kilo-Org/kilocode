@@ -5,5 +5,17 @@
 	"lowCreditWarning": {
 		"title": "クレジット残高警告！",
 		"message": "無料クレジットでチャージするか、追加購入できるか確認してください！"
+	},
+	"commitMessage": {
+		"activated": "Kiloコードコミットメッセージジェネレーターが起動しました",
+		"gitNotFound": "⚠️ Gitリポジトリが見つからないか、gitが利用できません",
+		"gitInitError": "⚠️ Git 初期化エラー: {{error}}",
+		"generating": "Kilo: コミットメッセージを生成中...",
+		"analyzingChanges": "Kilo: 段階的な変更を分析中...",
+		"noStagedChangesRepo": "キロ: gitリポジトリにステージングされた変更は見つかりませんでした",
+		"noStagedChanges": "Kilo: 分析する対象のステージングされた変更は見つかりませんでした",
+		"generated": "キロ: コミットメッセージが生成されました！",
+		"generationFailed": "Kilo: コミットメッセージの生成に失敗しました: {{errorMessage}}",
+		"tokenRequired": "コミットメッセージの生成にはKilo Codeトークンが必要です"
 	}
 }

@@ -26,9 +26,9 @@ import { DIFF_VIEW_URI_SCHEME } from "./integrations/editor/DiffViewProvider"
 import { TerminalRegistry } from "./integrations/terminal/TerminalRegistry"
 import { McpServerManager } from "./services/mcp/McpServerManager"
 import { CodeIndexManager } from "./services/code-index/manager"
+import { registerAutocomplete } from "./services/autocomplete/AutocompleteProvider"
 import { migrateSettings } from "./utils/migrateSettings"
 import { checkAndRunAutoLaunchingTask as checkAndRunAutoLaunchingTask } from "./utils/autoLaunchingTask"
-import { registerAutocomplete } from "./services/autocomplete/AutocompleteProvider"
 import { API } from "./extension/api"
 
 import {
@@ -39,7 +39,6 @@ import {
 	CodeActionProvider,
 } from "./activate"
 import { initializeI18n } from "./i18n"
-import { registerAutocomplete } from "./services/autocomplete/AutocompleteProvider"
 
 /**
  * Built using https://github.com/microsoft/vscode-webview-ui-toolkit

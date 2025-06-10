@@ -5,5 +5,17 @@
 	"lowCreditWarning": {
 		"title": "Cảnh Báo Tín Dụng Thấp!",
 		"message": "Kiểm tra xem bạn có thể nạp thêm tín dụng miễn phí hoặc mua thêm không!"
+	},
+	"commitMessage": {
+		"activated": "Trình tạo thông điệp commit Kilo Code đã được kích hoạt",
+		"gitNotFound": "⚠️ Không tìm thấy kho lưu trữ Git hoặc git không khả dụng",
+		"gitInitError": "⚠️ Lỗi khởi tạo Git: {{error}}",
+		"generating": "Kilo: Đang tạo tin nhắn commit...",
+		"analyzingChanges": "Kilo: Đang phân tích các thay đổi đã dàn dựng...",
+		"noStagedChangesRepo": "Kilo: Không tìm thấy thay đổi nào đã được staged trong kho git",
+		"noStagedChanges": "Kilo: Không tìm thấy thay đổi đã tổ chức để phân tích",
+		"generated": "Kilo: Đã tạo thông điệp commit!",
+		"generationFailed": "Kilo: Không thể tạo thông điệp commit: {{errorMessage}}",
+		"tokenRequired": "Mã token Kilo Code được yêu cầu để tạo thông điệp commit"
 	}
 }

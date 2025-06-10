@@ -5,5 +5,17 @@
 	"lowCreditWarning": {
 		"title": "Avertissement de Crédit Faible !",
 		"message": "Vérifiez si vous pouvez recharger avec des crédits gratuits ou en acheter davantage !"
+	},
+	"commitMessage": {
+		"activated": "Générateur de message de commit Kilo Code activé",
+		"gitNotFound": "⚠️ Dépôt Git introuvable ou git non disponible",
+		"gitInitError": "⚠️ Erreur d'initialisation Git : {{error}}",
+		"generating": "Kilo : Génération du message de commit...",
+		"analyzingChanges": "Kilo : Analyse des modifications en cours...",
+		"noStagedChangesRepo": "Kilo : Aucun changement en attente trouvé dans le dépôt git",
+		"noStagedChanges": "Kilo : Aucune modification en attente trouvée à analyser",
+		"generated": "Kilo : Message de commit généré !",
+		"generationFailed": "Kilo : Échec de génération du message de commit : {{errorMessage}}",
+		"tokenRequired": "Le jeton Kilo Code est requis pour la génération de messages de commit"
 	}
 }

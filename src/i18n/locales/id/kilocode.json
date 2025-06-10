@@ -5,5 +5,17 @@
 	"lowCreditWarning": {
 		"title": "Peringatan Kredit Rendah!",
 		"message": "Periksa apakah kamu bisa mengisi ulang dengan kredit gratis atau beli lebih banyak!"
+	},
+	"commitMessage": {
+		"activated": "Generator pesan commit Kilo Code telah diaktifkan",
+		"gitNotFound": "⚠️ Repositori Git tidak ditemukan atau git tidak tersedia",
+		"gitInitError": "⚠️ Kesalahan inisialisasi Git: {{error}}",
+		"generating": "Kilo: Menghasilkan pesan commit...",
+		"analyzingChanges": "Kilo: Menganalisis perubahan yang dipentaskan...",
+		"noStagedChangesRepo": "Kilo: Tidak ditemukan perubahan yang tertahap di repositori git",
+		"noStagedChanges": "Kilo: Tidak ditemukan perubahan yang dipentaskan untuk dianalisis",
+		"generated": "Kilo: Pesan commit telah dibuat!",
+		"generationFailed": "Kilo: Gagal menghasilkan pesan commit: {{errorMessage}}",
+		"tokenRequired": "Token Kilo Code diperlukan untuk pembuatan pesan commit"
 	}
 }

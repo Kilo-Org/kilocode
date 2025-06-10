@@ -3,6 +3,7 @@ import { ContextProxy } from "../../core/config/ContextProxy"
 import { singleCompletionHandler } from "../../utils/single-completion-handler"
 import { GitExtensionService, GitChange } from "./GitExtensionService"
 import { loadRuleFiles } from "../../core/prompts/sections/custom-instructions"
+import { t } from "../../i18n"
 
 /**
  * Provides AI-powered commit message generation for source control management.
@@ -25,15 +26,15 @@ export class CommitMessageProvider {
 	 * Activates the commit message provider by setting up Git integration.
 	 */
 	public async activate(): Promise<void> {
-		this.outputChannel.appendLine("✨ Kilo Commit message generator activated")
+		this.outputChannel.appendLine(t("kilocode:commitMessage.activated"))
 
 		try {
 			const initialized = await this.gitService.initialize()
 			if (!initialized) {
-				this.outputChannel.appendLine("⚠️ Git repository not found or git not available")
+				this.outputChannel.appendLine(t("kilocode:commitMessage.gitNotFound"))
 			}
 		} catch (error) {
-			this.outputChannel.appendLine(`⚠️ Git initialization error: ${error}`)
+			this.outputChannel.appendLine(t("kilocode:commitMessage.gitInitError", { error }))
 		}
 
 		// Register the command
@@ -44,15 +45,6 @@ export class CommitMessageProvider {
 	}
 
 	/**
-	 * Resets the tracking of previous commit message and context.
-	 * This should be called when a commit is submitted or when the context changes.
-	 */
-	public resetPreviousMessageTracking(): void {
-		this.previousGitContext = null
-		this.previousCommitMessage = null
-	}
-
-	/**
 	 * Generates an AI-powered commit message based on staged changes.
 	 */
 	public async generateCommitMessage(): Promise<void> {
@@ -60,27 +52,25 @@ export class CommitMessageProvider {
 		await vscode.window.withProgress(
 			{
 				location: vscode.ProgressLocation.SourceControl,
-				title: "Kilo: Generating commit message...",
+				title: t("kilocode:commitMessage.generating"),
 				cancellable: false,
 			},
 			async (progress) => {
 				try {
-					progress.report({ increment: 25, message: "Kilo: Analyzing staged changes..." })
+					progress.report({ increment: 25, message: t("kilocode:commitMessage.analyzingChanges") })
 
-					// Check if we can gather staged changes
 					const changes = await this.gitService.gatherStagedChanges()
 					if (changes === null) {
-						vscode.window.showInformationMessage("Kilo: No staged changes found in git repository")
+						vscode.window.showInformationMessage(t("kilocode:commitMessage.noStagedChangesRepo"))
 						return
 					}
-
 					if (changes.length === 0) {
-						vscode.window.showInformationMessage("Kilo: No staged changes found to analyze")
+						vscode.window.showInformationMessage(t("kilocode:commitMessage.noStagedChanges"))
 						return
 					}
 
 					const gitContextString = this.gitService.getCommitContext(changes)
-					progress.report({ increment: 50, message: "Kilo: Generating message with AI..." })
+					progress.report({ increment: 50, message: t("kilocode:commitMessage.generating") })
 
 					const generatedMessage = await this.callAIForCommitMessage(gitContextString)
 					this.gitService.setCommitMessage(generatedMessage)
@@ -90,10 +80,10 @@ export class CommitMessageProvider {
 					this.previousCommitMessage = generatedMessage
 
 					progress.report({ increment: 100, message: "Complete!" })
-					vscode.window.showInformationMessage("✨ Kilo: Commit message generated!")
+					vscode.window.showInformationMessage(t("kilocode:commitMessage.generated"))
 				} catch (error) {
 					const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
-					vscode.window.showErrorMessage(`Failed to generate commit message: ${errorMessage}`)
+					vscode.window.showErrorMessage(t("kilocode:commitMessage.generationFailed", { errorMessage }))
 					console.error("Error generating commit message:", error)
 				}
 			},
@@ -101,19 +91,17 @@ export class CommitMessageProvider {
 	}
 
 	/**
-	 * Calls the AI service to generate a commit message based on the provided context.
+	 * Calls the provider to generate a commit message based on the git context.
 	 */
 	private async callAIForCommitMessage(gitContextString: string): Promise<string> {
-		console.log("🚀 ~ CommitMessageProvider ~ callAIForCommitMessage ~ gitContextString:", gitContextString)
 		const apiConfiguration = ContextProxy.instance.getProviderSettings()
 
 		const { kilocodeToken } = apiConfiguration
 		if (!kilocodeToken) {
-			throw new Error("Kilo Code token is required for AI commit message generation")
+			throw new Error(t("kilocode:commitMessage.tokenRequired"))
 		}
 
 		const prompt = await this.buildCommitMessagePrompt(gitContextString)
-		console.log("🚀 ~ CommitMessageProvider ~ callAIForCommitMessage ~ prompt:", prompt)
 		const response = await singleCompletionHandler(
 			{
 				apiProvider: "kilocode",
