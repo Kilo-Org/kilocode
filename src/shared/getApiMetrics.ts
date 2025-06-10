@@ -27,8 +27,6 @@ export type ParsedApiReqStartedTextType = {
  * // Result: { totalTokensIn: 10, totalTokensOut: 20, totalCost: 0.005 }
  */
 
-const BYOK_MULTIPLIER = 20 // kilocode_change
-
 export function getApiMetrics(messages: ClineMessage[]) {
 	const result: TokenUsage = {
 		totalTokensIn: 0,
@@ -44,7 +42,7 @@ export function getApiMetrics(messages: ClineMessage[]) {
 		if (message.type === "say" && message.say === "api_req_started" && message.text) {
 			try {
 				const parsedText: ParsedApiReqStartedTextType = JSON.parse(message.text)
-				const { tokensIn, tokensOut, cacheWrites, cacheReads, cost, isByok } = parsedText // kilocode_change byok
+				const { tokensIn, tokensOut, cacheWrites, cacheReads, cost } = parsedText
 
 				if (typeof tokensIn === "number") {
 					result.totalTokensIn += tokensIn
@@ -59,7 +57,7 @@ export function getApiMetrics(messages: ClineMessage[]) {
 					result.totalCacheReads = (result.totalCacheReads ?? 0) + cacheReads
 				}
 				if (typeof cost === "number") {
-					result.totalCost += isByok ? cost * BYOK_MULTIPLIER : cost // kilocode_change byok
+					result.totalCost += cost
 				}
 			} catch (error) {
 				console.error("Error parsing JSON:", error)

@@ -51,6 +51,8 @@ interface CompletionUsage {
 	is_byok?: boolean // kilocode_change
 }
 
+const BYOK_COST_MULTIPLIER = 20 // kilocode_change
+
 export class OpenRouterHandler extends BaseProvider implements SingleCompletionHandler {
 	protected options: ApiHandlerOptions
 	private client: OpenAI
@@ -170,8 +172,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 				// and how to best support it.
 				// cacheReadTokens: lastUsage.prompt_tokens_details?.cached_tokens,
 				reasoningTokens: lastUsage.completion_tokens_details?.reasoning_tokens,
-				totalCost: lastUsage.cost || 0,
-				isByok: lastUsage.is_byok || false, // kilocode_change
+				totalCost: lastUsage.is_byok ? BYOK_COST_MULTIPLIER * (lastUsage.cost || 0) : lastUsage.cost || 0, // kilocode_change byok
 			}
 		}
 	}
