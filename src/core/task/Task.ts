@@ -1240,7 +1240,7 @@ export class Task extends EventEmitter<ClineEvents> {
 			let inputTokens = 0
 			let outputTokens = 0
 			let totalCost: number | undefined
-			let isByok: boolean | undefined = undefined
+			let isByok: boolean | undefined // kilocode_change
 
 			// We can't use `api_req_finished` anymore since it's a unique case
 			// where it could come after a streaming message (i.e. in the middle
@@ -1250,7 +1250,6 @@ export class Task extends EventEmitter<ClineEvents> {
 			// of prices in tasks from history (it's worth removing a few months
 			// from now).
 			const updateApiReqMsg = (cancelReason?: ClineApiReqCancelReason, streamingFailedMessage?: string) => {
-				console.log("\n\n\n\n######PDATING api_req_started message", this.clineMessages[lastApiReqIndex])
 				this.clineMessages[lastApiReqIndex].text = JSON.stringify({
 					...JSON.parse(this.clineMessages[lastApiReqIndex].text || "{}"),
 					tokensIn: inputTokens,
@@ -1266,11 +1265,10 @@ export class Task extends EventEmitter<ClineEvents> {
 							cacheWriteTokens,
 							cacheReadTokens,
 						),
-					isByok,
+					isByok, // kilocode_change
 					cancelReason,
 					streamingFailedMessage,
 				} satisfies ClineApiReqInfo)
-				console.log("\n\n#######UPDATE FINISHED api_req_started message", this.clineMessages[lastApiReqIndex])
 			}
 
 			const abortStream = async (cancelReason: ClineApiReqCancelReason, streamingFailedMessage?: string) => {
@@ -1351,13 +1349,12 @@ export class Task extends EventEmitter<ClineEvents> {
 							await this.say("reasoning", reasoningMessage, undefined, true)
 							break
 						case "usage":
-							console.log("##### Chunk", chunk)
 							inputTokens += chunk.inputTokens
 							outputTokens += chunk.outputTokens
 							cacheWriteTokens += chunk.cacheWriteTokens ?? 0
 							cacheReadTokens += chunk.cacheReadTokens ?? 0
 							totalCost = chunk.totalCost
-							isByok = chunk.isByok
+							isByok = chunk.isByok // // kilocode_change
 							break
 						case "text": {
 							assistantMessage += chunk.text

@@ -6,7 +6,7 @@ export type ParsedApiReqStartedTextType = {
 	cacheWrites: number
 	cacheReads: number
 	cost?: number // Only present if combineApiRequests has been called
-	isByok?: boolean // Indicates if the request is BYOK (Bring Your Own Key)
+	isByok?: boolean // kilocode_change
 }
 
 /**
@@ -27,7 +27,7 @@ export type ParsedApiReqStartedTextType = {
  * // Result: { totalTokensIn: 10, totalTokensOut: 20, totalCost: 0.005 }
  */
 
-const IS_BYOK_MULTIPLIER = 20 // Multiplier for BYOK requests
+const BYOK_MULTIPLIER = 20 // kilocode_change
 
 export function getApiMetrics(messages: ClineMessage[]) {
 	const result: TokenUsage = {
@@ -44,7 +44,7 @@ export function getApiMetrics(messages: ClineMessage[]) {
 		if (message.type === "say" && message.say === "api_req_started" && message.text) {
 			try {
 				const parsedText: ParsedApiReqStartedTextType = JSON.parse(message.text)
-				const { tokensIn, tokensOut, cacheWrites, cacheReads, cost, isByok } = parsedText // add is_byok
+				const { tokensIn, tokensOut, cacheWrites, cacheReads, cost, isByok } = parsedText // kilocode_change byok
 
 				if (typeof tokensIn === "number") {
 					result.totalTokensIn += tokensIn
@@ -59,9 +59,7 @@ export function getApiMetrics(messages: ClineMessage[]) {
 					result.totalCacheReads = (result.totalCacheReads ?? 0) + cacheReads
 				}
 				if (typeof cost === "number") {
-					console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\nCost:", cost, "is_byok:", isByok)
-					result.totalCost += isByok ? cost * IS_BYOK_MULTIPLIER : cost
-					console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\nUpdated totalCost:", result.totalCost)
+					result.totalCost += isByok ? cost * BYOK_MULTIPLIER : cost // kilocode_change byok
 				}
 			} catch (error) {
 				console.error("Error parsing JSON:", error)
