@@ -134,9 +134,14 @@ export async function createRuleFile(
 	}
 
 	const baseFileName = path.basename(filename)
-	const content =
-		ruleType === "workflow"
-			? `# ${baseFileName}
+	const content = ruleType === "workflow" ? workflowTemplate(baseFileName) : ruleTemplate(baseFileName)
+
+	await fs.writeFile(filePath, content, "utf8")
+	await openFile(filePath)
+}
+
+function workflowTemplate(baseFileName: string) {
+	return `# ${baseFileName}
 
 ${t("kilocode:rules.templates.workflow.description")}
 
@@ -145,7 +150,10 @@ ${t("kilocode:rules.templates.workflow.stepsHeader")}
 1. ${t("kilocode:rules.templates.workflow.step1")}
 2. ${t("kilocode:rules.templates.workflow.step2")}
 `
-			: `# ${baseFileName}
+}
+
+function ruleTemplate(baseFileName: string) {
+	return `# ${baseFileName}
 
 ${t("kilocode:rules.templates.rule.description")}
 
@@ -154,9 +162,6 @@ ${t("kilocode:rules.templates.rule.guidelinesHeader")}
 - ${t("kilocode:rules.templates.rule.guideline1")}
 - ${t("kilocode:rules.templates.rule.guideline2")}
 `
-
-	await fs.writeFile(filePath, content, "utf8")
-	await openFile(filePath)
 }
 
 export async function deleteRuleFile(rulePath: string): Promise<void> {
