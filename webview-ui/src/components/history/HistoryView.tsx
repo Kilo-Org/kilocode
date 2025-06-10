@@ -30,8 +30,8 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 		setLastNonRelevantSort,
 		showAllWorkspaces,
 		setShowAllWorkspaces,
-		showFavoritesOnly,
-		setShowFavoritesOnly,
+		showFavoritesOnly, // kilocode_change
+		setShowFavoritesOnly, // kilocode_change
 	} = useTaskSearch()
 	const { t } = useAppTranslation()
 
@@ -168,6 +168,7 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 						</label>
 					</div>
 
+					{/* kilocode_change start */}
 					<div className="flex items-center gap-2">
 						<Checkbox
 							id="show-favorites-only"
@@ -179,7 +180,7 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 							{t("history:showFavoritesOnly")}
 						</label>
 					</div>
-
+					{/* kilocode_change end */}
 					{/* Select all control in selection mode */}
 					{isSelectionMode && tasks.length > 0 && (
 						<div className="flex items-center py-1">

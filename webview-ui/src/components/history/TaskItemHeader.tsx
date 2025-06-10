@@ -51,6 +51,7 @@ const TaskItemHeader: React.FC<TaskItemHeaderProps> = ({ item, variant, isSelect
 			{/* Action Buttons */}
 			{!isSelectionMode && (
 				<div className="flex flex-row gap-0 items-center opacity-50 hover:opacity-100">
+					{/* kilocode_change start */}
 					{/* Favorite Star Button */}
 					<Button
 						variant="ghost"
@@ -64,6 +65,7 @@ const TaskItemHeader: React.FC<TaskItemHeaderProps> = ({ item, variant, isSelect
 							style={actionIconStyle}
 						/>
 					</Button>
+					{/* kilocode_change end */}
 
 					{isCompact ? (
 						<CopyButton itemTask={item.task} />

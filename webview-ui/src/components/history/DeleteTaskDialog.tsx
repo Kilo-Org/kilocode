@@ -14,7 +14,7 @@ import {
 	Button,
 } from "@/components/ui"
 import { useAppTranslation } from "@/i18n/TranslationContext"
-import { useTaskSearch } from "./useTaskSearch"
+import { useTaskSearch } from "./useTaskSearch" // kilocode_change
 import { vscode } from "@/utils/vscode"
 
 interface DeleteTaskDialogProps extends AlertDialogProps {
@@ -24,12 +24,12 @@ interface DeleteTaskDialogProps extends AlertDialogProps {
 export const DeleteTaskDialog = ({ taskId, ...props }: DeleteTaskDialogProps) => {
 	const { t } = useAppTranslation()
 	const [isEnterPressed] = useKeyPress("Enter")
-	const { tasks } = useTaskSearch()
+	const { tasks } = useTaskSearch() // kilocode_change
 
 	const { onOpenChange } = props
 
-	const task = tasks.find((t) => t.id === taskId)
-	const isFavorited = task?.isFavorited
+	const task = tasks.find((t) => t.id === taskId) // kilocode_change
+	const isFavorited = task?.isFavorited // kilocode_change
 
 	const onDelete = useCallback(() => {
 		if (taskId) {
@@ -49,12 +49,14 @@ export const DeleteTaskDialog = ({ taskId, ...props }: DeleteTaskDialogProps) =>
 			<AlertDialogContent onEscapeKeyDown={() => onOpenChange?.(false)}>
 				<AlertDialogHeader>
 					<AlertDialogTitle>{t("history:deleteTask")}</AlertDialogTitle>
+					{/* kilocode_change start */}
 					<AlertDialogDescription>
 						{isFavorited ? (
 							<div className="text-yellow-500 mb-2">{t("history:deleteTaskFavoritedWarning")}</div>
 						) : null}
 						{t("history:deleteTaskMessage")}
 					</AlertDialogDescription>
+					{/* kilocode_change end */}
 				</AlertDialogHeader>
 				<AlertDialogFooter>
 					<AlertDialogCancel asChild>
