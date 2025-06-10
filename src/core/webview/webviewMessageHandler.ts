@@ -1509,7 +1509,11 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 		}
 
 		case "createRuleFile": {
-			if (message.filename && typeof message.isGlobal === "boolean" && message.ruleType) {
+			if (
+				message.filename &&
+				typeof message.isGlobal === "boolean" &&
+				(message.ruleType === "rule" || message.ruleType === "workflow")
+			) {
 				try {
 					await createRuleFile(message.filename, message.isGlobal, message.ruleType)
 				} catch (error) {
