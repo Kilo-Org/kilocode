@@ -6,7 +6,7 @@ export type ParsedApiReqStartedTextType = {
 	cacheWrites: number
 	cacheReads: number
 	cost?: number // Only present if combineApiRequests has been called
-	is_byok?: boolean // Indicates if the request is BYOK (Bring Your Own Key)
+	isByok?: boolean // Indicates if the request is BYOK (Bring Your Own Key)
 }
 
 /**
