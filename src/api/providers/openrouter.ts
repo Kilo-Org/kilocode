@@ -48,6 +48,7 @@ interface CompletionUsage {
 	}
 	total_tokens?: number
 	cost?: number
+	is_byok?: boolean // Bring your own key
 }
 
 export class OpenRouterHandler extends BaseProvider implements SingleCompletionHandler {
@@ -161,6 +162,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		}
 
 		if (lastUsage) {
+			console.log("**************************************************\nOpenRouter last usage:", lastUsage)
 			yield {
 				type: "usage",
 				inputTokens: lastUsage.prompt_tokens || 0,
@@ -170,6 +172,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 				// cacheReadTokens: lastUsage.prompt_tokens_details?.cached_tokens,
 				reasoningTokens: lastUsage.completion_tokens_details?.reasoning_tokens,
 				totalCost: lastUsage.cost || 0,
+				isByok: lastUsage.is_byok || false, // Add is_byok if available
 			}
 		}
 	}

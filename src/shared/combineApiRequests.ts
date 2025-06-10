@@ -44,6 +44,7 @@ export function combineApiRequests(messages: ClineMessage[]): ClineMessage[] {
 	const startedIndices: number[] = []
 
 	for (const message of messages) {
+		console.log("?????message:", message)
 		if (message.type !== "say" || (message.say !== "api_req_started" && message.say !== "api_req_finished")) {
 			result.push(message)
 			continue
