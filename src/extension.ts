@@ -40,7 +40,6 @@ import {
 } from "./activate"
 import { initializeI18n } from "./i18n"
 import { registerAutocomplete } from "./services/autocomplete/AutocompleteProvider"
-import { registerCommitMessageProvider } from "./services/commit-message"
 
 /**
  * Built using https://github.com/microsoft/vscode-webview-ui-toolkit
@@ -175,7 +174,6 @@ export async function activate(context: vscode.ExtensionContext) {
 	)
 
 	registerAutocomplete(context) // kilocode_change
-	registerCommitMessageProvider(context, outputChannel) // kilocode_change
 	registerCodeActions(context)
 	registerTerminalActions(context)
 
@@ -201,16 +199,16 @@ export async function activate(context: vscode.ExtensionContext) {
 			`♻️♻️♻️ Core auto-reloading is ENABLED. Watching for changes in: ${watchPaths.map(({ name }) => name).join(", ")}`,
 		)
 
-		// watchPaths.forEach(({ path: watchPath, name }) => {
-		// 	const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(watchPath, pattern))
+		watchPaths.forEach(({ path: watchPath, name }) => {
+			const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(watchPath, pattern))
 
-		// 	watcher.onDidChange((uri) => {
-		// 		console.log(`♻️ ${name} file changed: ${uri.fsPath}. Reloading host…`)
-		// 		vscode.commands.executeCommand("workbench.action.reloadWindow")
-		// 	})
+			watcher.onDidChange((uri) => {
+				console.log(`♻️ ${name} file changed: ${uri.fsPath}. Reloading host…`)
+				vscode.commands.executeCommand("workbench.action.reloadWindow")
+			})
 
-		// 	context.subscriptions.push(watcher)
-		// })
+			context.subscriptions.push(watcher)
+		})
 	}
 
 	await checkAndRunAutoLaunchingTask(context) // kilocode_change
