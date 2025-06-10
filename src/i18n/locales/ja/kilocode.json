@@ -16,6 +16,8 @@
 		"noStagedChanges": "Kilo: 分析する対象のステージングされた変更は見つかりませんでした",
 		"generated": "キロ: コミットメッセージが生成されました！",
 		"generationFailed": "Kilo: コミットメッセージの生成に失敗しました: {{errorMessage}}",
-		"tokenRequired": "コミットメッセージの生成にはKilo Codeトークンが必要です"
+		"tokenRequired": "コミットメッセージの生成にはKilo Codeトークンが必要です",
+		"activationFailed": "Kilo: コミットメッセージプロバイダーのアクティベーションに失敗しました: {{error}}",
+		"providerRegistered": "Kilo: コミットメッセージプロバイダーが登録されました"
 	}
 }

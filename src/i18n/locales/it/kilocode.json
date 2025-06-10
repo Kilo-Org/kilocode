@@ -16,6 +16,8 @@
 		"noStagedChanges": "Kilo: Nessuna modifica in fase di staging trovata da analizzare",
 		"generated": "Kilo: Messaggio di commit generato!",
 		"generationFailed": "Kilo: Generazione del messaggio di commit fallita: {{errorMessage}}",
-		"tokenRequired": "Il token Kilo Code è necessario per la generazione del messaggio di commit"
+		"tokenRequired": "Il token Kilo Code è necessario per la generazione del messaggio di commit",
+		"activationFailed": "Kilo: Impossibile attivare il provider dei messaggi di commit: {{error}}",
+		"providerRegistered": "Kilo: Provider di messaggi di commit registrato"
 	}
 }

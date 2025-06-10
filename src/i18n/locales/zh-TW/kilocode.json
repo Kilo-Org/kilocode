@@ -16,6 +16,8 @@
 		"noStagedChanges": "Kilo：找不到暂存的更改可供分析",
 		"generated": "Kilo：提交信息已生成！",
 		"generationFailed": "Kilo：无法生成提交信息：{{errorMessage}}",
-		"tokenRequired": "提交信息生成需要 Kilo Code 令牌"
+		"tokenRequired": "提交信息生成需要 Kilo Code 令牌",
+		"activationFailed": "Kilo: 无法激活提交消息提供者: {{error}}",
+		"providerRegistered": "Kilo: 提交消息提供程序已注册"
 	}
 }

@@ -16,6 +16,8 @@
 		"noStagedChanges": "Kilo: No s'han trobat canvis preparats per analitzar",
 		"generated": "Kilo: Missatge de comissió generat!",
 		"generationFailed": "Kilo: No s'ha pogut generar el missatge de commit: {{errorMessage}}",
-		"tokenRequired": "Es requereix el token de Kilo Code per a la generació de missatges de commit"
+		"tokenRequired": "Es requereix el token de Kilo Code per a la generació de missatges de commit",
+		"activationFailed": "Kilo: No s'ha pogut activar el proveïdor de missatges de confirmació: {{error}}",
+		"providerRegistered": "Kilo: S'ha registrat el proveïdor de missatges de confirmació"
 	}
 }

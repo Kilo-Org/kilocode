@@ -16,6 +16,8 @@
 		"noStagedChanges": "Kilo: 분석할 단계적 변경사항이 없습니다",
 		"generated": "Kilo: 커밋 메시지가 생성되었습니다!",
 		"generationFailed": "Kilo: 커밋 메시지 생성 실패: {{errorMessage}}",
-		"tokenRequired": "커밋 메시지 생성에는 Kilo Code 토큰이 필요합니다"
+		"tokenRequired": "커밋 메시지 생성에는 Kilo Code 토큰이 필요합니다",
+		"activationFailed": "Kilo: 커밋 메시지 제공자 활성화 실패: {{error}}",
+		"providerRegistered": "Kilo: 커밋 메시지 제공자가 등록되었습니다"
 	}
 }

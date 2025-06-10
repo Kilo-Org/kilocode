@@ -16,6 +16,8 @@
 		"noStagedChanges": "Kilo: Không tìm thấy thay đổi đã tổ chức để phân tích",
 		"generated": "Kilo: Đã tạo thông điệp commit!",
 		"generationFailed": "Kilo: Không thể tạo thông điệp commit: {{errorMessage}}",
-		"tokenRequired": "Mã token Kilo Code được yêu cầu để tạo thông điệp commit"
+		"tokenRequired": "Mã token Kilo Code được yêu cầu để tạo thông điệp commit",
+		"activationFailed": "Kilo: Không thể kích hoạt nhà cung cấp tin nhắn commit: {{error}}",
+		"providerRegistered": "Kilo: Đã đăng ký nhà cung cấp thông điệp commit"
 	}
 }

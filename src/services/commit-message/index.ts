@@ -1,5 +1,6 @@
 import * as vscode from "vscode"
 import { CommitMessageProvider } from "./CommitMessageProvider"
+import { t } from "../../i18n"
 
 /**
  * Registers the commit message provider with the extension context.
@@ -12,9 +13,9 @@ export function registerCommitMessageProvider(
 	const commitProvider = new CommitMessageProvider(context, outputChannel)
 
 	commitProvider.activate().catch((error) => {
-		outputChannel.appendLine(`Failed to activate commit message provider: ${error.message}`)
+		outputChannel.appendLine(t("kilocode:commitMessage.activationFailed", { error: error.message }))
 		console.error("Commit message provider activation failed:", error)
 	})
 
-	outputChannel.appendLine("✨ Commit message provider registered")
+	outputChannel.appendLine(t("kilocode:commitMessage.providerRegistered"))
 }

@@ -16,6 +16,8 @@
 		"noStagedChanges": "Kilo: Не найдено изменений для анализа",
 		"generated": "Kilo: Сообщение коммита сгенерировано!",
 		"generationFailed": "Kilo: Не удалось сгенерировать сообщение коммита: {{errorMessage}}",
-		"tokenRequired": "Для генерации сообщения коммита требуется токен Kilo Code"
+		"tokenRequired": "Для генерации сообщения коммита требуется токен Kilo Code",
+		"activationFailed": "Kilo: Не удалось активировать поставщик сообщений фиксации: {{error}}",
+		"providerRegistered": "Kilo: Поставщик сообщений коммита зарегистрирован"
 	}
 }

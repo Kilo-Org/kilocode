@@ -16,6 +16,8 @@
 		"noStagedChanges": "Kilo: Nie znaleziono przygotowanych zmian do analizy",
 		"generated": "Kilo: Wygenerowano wiadomość commita!",
 		"generationFailed": "Kilo: Nie udało się wygenerować treści commitu: {{errorMessage}}",
-		"tokenRequired": "Token Kilo Code jest wymagany do generowania wiadomości commit"
+		"tokenRequired": "Token Kilo Code jest wymagany do generowania wiadomości commit",
+		"activationFailed": "Kilo: Nie udało się aktywować dostawcy treści commita: {{error}}",
+		"providerRegistered": "Kilo: Zarejestrowano dostawcę wiadomości commit"
 	}
 }

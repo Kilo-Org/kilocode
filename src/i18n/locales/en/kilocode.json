@@ -16,6 +16,8 @@
 		"noStagedChanges": "Kilo: No staged changes found to analyze",
 		"generated": "Kilo: Commit message generated!",
 		"generationFailed": "Kilo: Failed to generate commit message: {{errorMessage}}",
-		"tokenRequired": "Kilo Code token is required for commit message generation"
+		"tokenRequired": "Kilo Code token is required for commit message generation",
+		"activationFailed": "Kilo: Failed to activate commit message provider: {{error}}",
+		"providerRegistered": "Kilo: Commit message provider registered"
 	}
 }

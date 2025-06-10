@@ -16,6 +16,8 @@
 		"noStagedChanges": "Kilo: Analiz edilecek hazırlanmış değişiklik bulunamadı",
 		"generated": "Kilo: Taahhüt mesajı oluşturuldu!",
 		"generationFailed": "Kilo: Taahhüt mesajı oluşturulamadı: {{errorMessage}}",
-		"tokenRequired": "Taahhüt (commit) mesajı oluşturmak için Kilo Code token'ı gerekmektedir"
+		"tokenRequired": "Taahhüt (commit) mesajı oluşturmak için Kilo Code token'ı gerekmektedir",
+		"activationFailed": "Kilo: Commit mesaj sağlayıcısı etkinleştirilemedi: {{error}}",
+		"providerRegistered": "Kilo: Bildirim mesajı sağlayıcısı kaydedildi"
 	}
 }

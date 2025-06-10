@@ -16,6 +16,8 @@
 		"noStagedChanges": "Kilo: Tidak ditemukan perubahan yang dipentaskan untuk dianalisis",
 		"generated": "Kilo: Pesan commit telah dibuat!",
 		"generationFailed": "Kilo: Gagal menghasilkan pesan commit: {{errorMessage}}",
-		"tokenRequired": "Token Kilo Code diperlukan untuk pembuatan pesan commit"
+		"tokenRequired": "Token Kilo Code diperlukan untuk pembuatan pesan commit",
+		"activationFailed": "Kilo: Gagal mengaktifkan penyedia pesan commit: {{error}}",
+		"providerRegistered": "Kilo: Penyedia pesan commit terdaftar"
 	}
 }
