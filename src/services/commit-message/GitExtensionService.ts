@@ -36,7 +36,7 @@ export class GitExtensionService {
 	}
 
 	/**
-	 * Gathers information about staged changes using git status
+	 * Gathers information about staged changes using git diff --cached
 	 */
 	public async gatherStagedChanges(): Promise<GitChange[] | null> {
 		try {
@@ -46,21 +46,18 @@ export class GitExtensionService {
 			}
 
 			const changes: GitChange[] = []
-			const lines = statusOutput.split("\n").filter((line) => line.trim())
+			const lines = statusOutput.split("\n").filter((line: string) => line.trim())
 
 			for (const line of lines) {
-				if (line.length < 3) continue
+				if (line.length < 2) continue
 
-				const statusCode = line.substring(0, 2).trim()
-				const filePath = line.substring(3).trim()
+				const statusCode = line.substring(0, 1).trim()
+				const filePath = line.substring(1).trim()
 
-				// Only include staged changes (those in the index)
-				if (statusCode[0] !== "?" && statusCode[0] !== " ") {
-					changes.push({
-						filePath: path.join(this.workspaceRoot || "", filePath),
-						status: this.getChangeStatusFromCode(statusCode[0]),
-					})
-				}
+				changes.push({
+					filePath: path.join(this.workspaceRoot || "", filePath),
+					status: this.getChangeStatusFromCode(statusCode),
+				})
 			}
 
 			return changes.length > 0 ? changes : null
@@ -116,15 +113,15 @@ export class GitExtensionService {
 	 * @private Internal helper method
 	 */
 	private getStagedDiff(): string {
-		return this.executeGitCommand("git diff --staged")
+		return this.executeGitCommand("git diff --cached")
 	}
 
 	/**
-	 * Gets the status of staged files in porcelain format
+	 * Gets only the staged files using git diff --cached
 	 * @private Internal helper method
 	 */
 	private getStagedStatus(): string {
-		return this.executeGitCommand("git status --porcelain")
+		return this.executeGitCommand("git diff --name-status --cached")
 	}
 
 	/**
@@ -132,7 +129,7 @@ export class GitExtensionService {
 	 * @private Internal helper method
 	 */
 	private getStagedSummary(): string {
-		return this.executeGitCommand("git diff --staged --stat")
+		return this.executeGitCommand("git diff --cached --stat")
 	}
 
 	/**
@@ -140,7 +137,7 @@ export class GitExtensionService {
 	 * @private Internal helper method
 	 */
 	private getExtendedDiff(): string {
-		return this.executeGitCommand("git diff --staged --unified=5")
+		return this.executeGitCommand("git diff --cached --unified=5")
 	}
 
 	/**
@@ -165,40 +162,32 @@ export class GitExtensionService {
 	public getCommitContext(changes: GitChange[]): string {
 		try {
 			// Start building the context with the required sections
-			let context = "## Input Context Commands\n\n"
+			let context = "## Git Context for Commit Message Generation\n\n"
 
-			// Add staged changes with diff
+			// Add full diff - essential for understanding what changed
 			try {
 				const stagedDiff = this.getStagedDiff()
-				context += "### Staged changes with context\n```diff\n" + stagedDiff + "\n```\n\n"
+				context += "### Full Diff of Staged Changes\n```diff\n" + stagedDiff + "\n```\n\n"
 			} catch (error) {
-				context += "### Staged changes with context\n```diff\n(No diff available)\n```\n\n"
+				context += "### Full Diff of Staged Changes\n```diff\n(No diff available)\n```\n\n"
 			}
 
-			// Add staged file names and status
-			try {
-				const stagedStatus = this.getStagedStatus()
-				context += "### Staged file names and status\n```\n" + stagedStatus + "\n```\n\n"
-			} catch (error) {
-				context += "### Staged file names and status\n```\n(No status available)\n```\n\n"
-			}
-
-			// Add summary of staged changes
+			// Add statistical summary - helpful for quick overview
 			try {
 				const stagedSummary = this.getStagedSummary()
-				context += "### Summary of staged changes\n```\n" + stagedSummary + "\n```\n\n"
+				context += "### Statistical Summary\n```\n" + stagedSummary + "\n```\n\n"
 			} catch (error) {
-				context += "### Summary of staged changes\n```\n(No summary available)\n```\n\n"
+				context += "### Statistical Summary\n```\n(No summary available)\n```\n\n"
 			}
 
-			// Add additional context if available
-			context += "### Additional Context\n\n"
+			// Add contextual information
+			context += "### Repository Context\n\n"
 
 			// Show current branch
 			try {
 				const currentBranch = this.getCurrentBranch()
 				if (currentBranch) {
-					context += "#### Current branch\n```\n" + currentBranch + "\n```\n\n"
+					context += "**Current branch:** `" + currentBranch.trim() + "`\n\n"
 				}
 			} catch (error) {
 				// Skip if not available
@@ -208,32 +197,10 @@ export class GitExtensionService {
 			try {
 				const recentCommits = this.getRecentCommits()
 				if (recentCommits) {
-					context += "#### Recent commits for context\n```\n" + recentCommits + "\n```\n\n"
+					context += "**Recent commits:**\n```\n" + recentCommits + "\n```\n"
 				}
 			} catch (error) {
 				// Skip if not available
-			}
-
-			// Add a summary of the changes by file type
-			if (changes && changes.length > 0) {
-				const changesByType = changes.reduce(
-					(acc, change) => {
-						if (!acc[change.status]) {
-							acc[change.status] = []
-						}
-						acc[change.status].push(change.filePath)
-						return acc
-					},
-					{} as Record<string, string[]>,
-				)
-
-				context += "## Staged Changes Summary\n\n"
-				for (const [status, files] of Object.entries(changesByType)) {
-					context += `\n### ${status} files:\n`
-					files.forEach((file) => {
-						context += `- ${file}\n`
-					})
-				}
 			}
 
 			return context

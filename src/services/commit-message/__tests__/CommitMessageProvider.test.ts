@@ -117,5 +117,33 @@ describe("CommitMessageProvider", () => {
 			// Verify error handling
 			expect(vscode.window.showErrorMessage).toHaveBeenCalled()
 		})
+
+		it("should show information message when there are no staged changes", async () => {
+			// Mock no staged changes
+			mockGitService.gatherStagedChanges.mockResolvedValue(null)
+
+			// Call the method
+			await commitMessageProvider.generateCommitMessage()
+
+			// Verify that it shows the appropriate message and doesn't proceed
+			expect(vscode.window.showInformationMessage).toHaveBeenCalled()
+			expect(mockGitService.getCommitContext).not.toHaveBeenCalled()
+			expect(singleCompletionHandler).not.toHaveBeenCalled()
+			expect(mockGitService.setCommitMessage).not.toHaveBeenCalled()
+		})
+
+		it("should show information message when staged changes array is empty", async () => {
+			// Mock empty staged changes array
+			mockGitService.gatherStagedChanges.mockResolvedValue([])
+
+			// Call the method
+			await commitMessageProvider.generateCommitMessage()
+
+			// Verify that it shows the appropriate message and doesn't proceed
+			expect(vscode.window.showInformationMessage).toHaveBeenCalled()
+			expect(mockGitService.getCommitContext).not.toHaveBeenCalled()
+			expect(singleCompletionHandler).not.toHaveBeenCalled()
+			expect(mockGitService.setCommitMessage).not.toHaveBeenCalled()
+		})
 	})
 })

@@ -18,6 +18,3 @@ export function registerCommitMessageProvider(
 
 	outputChannel.appendLine("✨ Commit message provider registered")
 }
-
-// Keep the old function name for backward compatibility
-export const registerGitCommitMessageProvider = registerCommitMessageProvider
