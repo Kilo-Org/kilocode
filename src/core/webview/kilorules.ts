@@ -103,26 +103,26 @@ export async function toggleRule(
 	}
 }
 
-export async function createRuleFile(filename: string, isGlobal: boolean, ruleType: string): Promise<void> {
+function getRuleDirectoryPath(baseDir: string, ruleType: "rule" | "workflow") {
+	return ruleType === "workflow"
+		? path.join(baseDir, GlobalFileNames.workflows)
+		: path.join(baseDir, GlobalFileNames.kiloRules)
+}
+
+export async function createRuleFile(
+	filename: string,
+	isGlobal: boolean,
+	ruleType: "rule" | "workflow",
+): Promise<void> {
 	const workspacePath = getWorkspacePath()
 	if (!workspacePath && !isGlobal) {
 		vscode.window.showErrorMessage(t("kilocode:rules.errors.noWorkspaceFound"))
 		return
 	}
 
-	let rulesDir: string
-	if (isGlobal) {
-		const homeDir = os.homedir()
-		rulesDir =
-			ruleType === "workflow"
-				? path.join(homeDir, GlobalFileNames.workflows)
-				: path.join(homeDir, GlobalFileNames.kiloRules)
-	} else {
-		rulesDir =
-			ruleType === "workflow"
-				? path.join(workspacePath, GlobalFileNames.workflows)
-				: path.join(workspacePath, GlobalFileNames.kiloRules)
-	}
+	const rulesDir = isGlobal
+		? getRuleDirectoryPath(os.homedir(), ruleType)
+		: getRuleDirectoryPath(workspacePath, ruleType)
 
 	await fs.mkdir(rulesDir, { recursive: true })
 
