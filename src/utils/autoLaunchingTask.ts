@@ -3,7 +3,7 @@ import * as vscode from "vscode"
 /**
  * Checks for a file in .kilocode/launchPrompt.md and runs it immediately if it exists.
  */
-export async function maybeRunAutoLaunchPrompt(context: vscode.ExtensionContext): Promise<void> {
+export async function checkAndRunAutoLaunchingTask(context: vscode.ExtensionContext): Promise<void> {
 	if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
 		return
 	}
@@ -14,7 +14,7 @@ export async function maybeRunAutoLaunchPrompt(context: vscode.ExtensionContext)
 	try {
 		const fileContent = await vscode.workspace.fs.readFile(promptFilePath)
 		const prompt = Buffer.from(fileContent).toString("utf8")
-		console.log(`Auto-launching task from '${promptFilePath}' with content:\n${prompt}`)
+		console.log(`🚀 Auto-launching task from '${promptFilePath}' with content:\n${prompt}`)
 
 		await new Promise((resolve) => setTimeout(resolve, 500))
 		await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
@@ -22,8 +22,7 @@ export async function maybeRunAutoLaunchPrompt(context: vscode.ExtensionContext)
 		vscode.commands.executeCommand("kilo-code.newTask", { prompt })
 	} catch (error) {
 		if (error instanceof vscode.FileSystemError && error.code === "FileNotFound") {
-			// File not found, which is expected if no launchPrompt.md exists
-			return
+			return // File not found, which is expected if no launchPrompt.md exists
 		}
 		console.error(`Error running .kilocode/launchPrompt.md: ${error}`)
 	}

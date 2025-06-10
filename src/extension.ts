@@ -27,7 +27,7 @@ import { TerminalRegistry } from "./integrations/terminal/TerminalRegistry"
 import { McpServerManager } from "./services/mcp/McpServerManager"
 import { CodeIndexManager } from "./services/code-index/manager"
 import { migrateSettings } from "./utils/migrateSettings"
-import { maybeRunAutoLaunchPrompt } from "./utils/autoLaunchPrompt"
+import { checkAndRunAutoLaunchingTask as checkAndRunAutoLaunchingTask } from "./utils/autoLaunchingTask"
 import { registerAutocomplete } from "./services/autocomplete/AutocompleteProvider"
 import { API } from "./extension/api"
 
@@ -210,7 +210,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		})
 	}
 
-	maybeRunAutoLaunchPrompt(context) // kilocode_change
+	await checkAndRunAutoLaunchingTask(context) // kilocode_change
 
 	return new API(outputChannel, provider, socketPath, enableLogging)
 }
