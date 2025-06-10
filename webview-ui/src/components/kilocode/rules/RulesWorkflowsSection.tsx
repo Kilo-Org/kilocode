@@ -18,10 +18,8 @@ const RulesWorkflowsSection: React.FC<RulesWorkflowsSectionProps> = ({
 }) => {
 	const { t } = useTranslation()
 
-	const isRules = type === "rules"
-	const ruleType = isRules ? "rule" : "workflow"
-	const globalSectionKey = isRules ? "globalRules" : "globalWorkflows"
-	const workspaceSectionKey = isRules ? "workspaceRules" : "workspaceWorkflows"
+	const globalSectionKey = type === "rules" ? "globalRules" : "globalWorkflows"
+	const workspaceSectionKey = type === "rules" ? "workspaceRules" : "workspaceWorkflows"
 
 	return (
 		<>
@@ -32,7 +30,7 @@ const RulesWorkflowsSection: React.FC<RulesWorkflowsSectionProps> = ({
 					toggleRule={toggleGlobal}
 					listGap="small"
 					isGlobal={true}
-					ruleType={ruleType}
+					ruleType={type}
 					showNewRule={true}
 					showNoRules={false}
 				/>
@@ -45,7 +43,7 @@ const RulesWorkflowsSection: React.FC<RulesWorkflowsSectionProps> = ({
 					toggleRule={toggleLocal}
 					listGap="small"
 					isGlobal={false}
-					ruleType={ruleType}
+					ruleType={type}
 					showNewRule={true}
 					showNoRules={false}
 				/>
