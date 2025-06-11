@@ -9,6 +9,7 @@ import type { ContextProxy } from "../config/ContextProxy"
 import type { ClineRulesToggles } from "../../shared/cline-rules"
 import { t } from "../../i18n"
 import { GlobalFileNames } from "../../shared/globalFileNames"
+import { allowedExtensions } from "../../shared/kilocode/rules"
 
 export interface RulesData {
 	globalRules: Record<string, boolean>
@@ -56,7 +57,7 @@ async function getEnabledRulesFromDirectory(
 	const rules: Record<string, boolean> = {}
 
 	for (const file of files) {
-		if (file.isFile() && (file.name.endsWith(".md") || file.name.endsWith(".txt"))) {
+		if (file.isFile() && allowedExtensions.some((ext) => file.name.toLowerCase().endsWith(ext))) {
 			const filePath = path.join(dirPath, file.name)
 			rules[filePath] = toggleState[filePath] ?? true
 		}

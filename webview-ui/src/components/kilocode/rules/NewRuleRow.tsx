@@ -4,6 +4,7 @@ import { useClickAway } from "react-use"
 import { useTranslation } from "react-i18next"
 import { vscode } from "@/utils/vscode"
 import { getExtension } from "@/utils/kilocode/path-webview"
+import { allowedExtensions } from "@roo/kilocode/rules"
 
 interface NewRuleRowProps {
 	isGlobal: boolean
@@ -34,7 +35,7 @@ const NewRuleRow: React.FC<NewRuleRowProps> = ({ isGlobal, ruleType }) => {
 	})
 
 	const isValidExtension = (ext: string): boolean => {
-		return ext === "" || ext === ".md" || ext === ".txt"
+		return ext === "" || allowedExtensions.includes(ext)
 	}
 
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
