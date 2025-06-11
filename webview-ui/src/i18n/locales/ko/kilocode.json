@@ -44,5 +44,36 @@
 			"description": "Kilo Code에 가입하면 시작할 수 있는 무료 크레딧을 받을 수 있습니다. 크레딧을 사용하여 기능을 탐색하고, 최신 최고의 모델을 시도하며, 약속 없이 Kilo Code의 이점을 경험해보세요.",
 			"termsAndPrivacy": "계속하면 <termsLink>서비스 약관</termsLink> 및 <privacyLink>개인정보 보호정책</privacyLink>에 동의하는 것입니다."
 		}
+	},
+	"docs": "문서",
+	"rules": {
+		"tooltip": "Kilo Code 규칙 및 워크플로우 관리",
+		"ariaLabel": "Kilo Code 규칙",
+		"tabs": {
+			"rules": "규칙",
+			"workflows": "워크플로우"
+		},
+		"description": {
+			"rules": "규칙을 사용하면 Kilo Code에 시스템 수준의 지침을 제공할 수 있습니다. 프로젝트나 모든 대화에 전역적으로 컨텍스트와 기본 설정을 포함하는 지속적인 방법으로 생각하세요.",
+			"workflows": "워크플로우를 사용하면 서비스 배포나 PR 제출과 같은 반복적인 작업 세트를 통해 Kilo Code를 안내하는 일련의 단계를 정의할 수 있습니다. 워크플로우를 호출하려면 다음과 같이 입력하세요",
+			"workflowsInChat": "채팅에서."
+		},
+		"sections": {
+			"globalRules": "전역 규칙",
+			"workspaceRules": "워크스페이스 규칙",
+			"globalWorkflows": "전역 워크플로우",
+			"workspaceWorkflows": "워크스페이스 워크플로우"
+		},
+		"validation": {
+			"invalidFileExtension": ".md, .txt 또는 확장자 없음만 허용됩니다"
+		},
+		"placeholders": {
+			"workflowName": "워크플로우-이름 (.md, .txt 또는 확장자 없음)",
+			"ruleName": "규칙-이름 (.md, .txt 또는 확장자 없음)"
+		},
+		"newFile": {
+			"newWorkflowFile": "새 워크플로우 파일...",
+			"newRuleFile": "새 규칙 파일..."
+		}
 	}
 }

@@ -6,6 +6,33 @@
 		"title": "余额不足警告！",
 		"message": "请检查是否可以充值免费额度或购买更多额度！"
 	},
+	"rules": {
+		"actions": {
+			"delete": "删除",
+			"confirmDelete": "确定要删除 {{filename}} 吗？",
+			"deleted": "已删除 {{filename}}"
+		},
+		"errors": {
+			"noWorkspaceFound": "未找到工作区文件夹",
+			"fileAlreadyExists": "文件 {{filename}} 已存在",
+			"failedToCreateRuleFile": "创建规则文件失败。",
+			"failedToDeleteRuleFile": "删除规则文件失败。"
+		},
+		"templates": {
+			"workflow": {
+				"description": "工作流描述在此...",
+				"stepsHeader": "## 步骤",
+				"step1": "步骤 1",
+				"step2": "步骤 2"
+			},
+			"rule": {
+				"description": "规则描述在此...",
+				"guidelinesHeader": "## 指导原则",
+				"guideline1": "指导原则 1",
+				"guideline2": "指导原则 2"
+			}
+		}
+	},
 	"commitMessage": {
 		"activated": "千行代码提交信息生成器已激活",
 		"gitNotFound": "⚠️ Git 仓库未找到或 git 不可用",

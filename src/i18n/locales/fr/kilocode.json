@@ -6,6 +6,33 @@
 		"title": "Avertissement de Crédit Faible !",
 		"message": "Vérifiez si vous pouvez recharger avec des crédits gratuits ou en acheter davantage !"
 	},
+	"rules": {
+		"actions": {
+			"delete": "Supprimer",
+			"confirmDelete": "Êtes-vous sûr de vouloir supprimer {{filename}} ?",
+			"deleted": "{{filename}} supprimé"
+		},
+		"errors": {
+			"noWorkspaceFound": "Aucun dossier d'espace de travail trouvé",
+			"fileAlreadyExists": "Le fichier {{filename}} existe déjà",
+			"failedToCreateRuleFile": "Échec de la création du fichier de règle.",
+			"failedToDeleteRuleFile": "Échec de la suppression du fichier de règle."
+		},
+		"templates": {
+			"workflow": {
+				"description": "Description du flux de travail ici...",
+				"stepsHeader": "## Étapes",
+				"step1": "Étape 1",
+				"step2": "Étape 2"
+			},
+			"rule": {
+				"description": "Description de la règle ici...",
+				"guidelinesHeader": "## Directives",
+				"guideline1": "Directive 1",
+				"guideline2": "Directive 2"
+			}
+		}
+	},
 	"commitMessage": {
 		"activated": "Générateur de message de commit Kilo Code activé",
 		"gitNotFound": "⚠️ Dépôt Git introuvable ou git non disponible",

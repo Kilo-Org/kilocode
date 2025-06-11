@@ -6,6 +6,33 @@
 		"title": "कम क्रेडिट चेतावनी!",
 		"message": "जांचें कि क्या आप मुफ्त क्रेडिट से टॉप अप कर सकते हैं या अधिक खरीद सकते हैं!"
 	},
+	"rules": {
+		"actions": {
+			"delete": "हटाएं",
+			"confirmDelete": "क्या आप वाकई {{filename}} को हटाना चाहते हैं?",
+			"deleted": "{{filename}} हटा दिया गया"
+		},
+		"errors": {
+			"noWorkspaceFound": "कोई वर्कस्पेस फ़ोल्डर नहीं मिला",
+			"fileAlreadyExists": "फ़ाइल {{filename}} पहले से मौजूद है",
+			"failedToCreateRuleFile": "नियम फ़ाइल बनाने में विफल।",
+			"failedToDeleteRuleFile": "नियम फ़ाइल हटाने में विफल।"
+		},
+		"templates": {
+			"workflow": {
+				"description": "वर्कफ़्लो विवरण यहाँ...",
+				"stepsHeader": "## चरण",
+				"step1": "चरण 1",
+				"step2": "चरण 2"
+			},
+			"rule": {
+				"description": "नियम विवरण यहाँ...",
+				"guidelinesHeader": "## दिशानिर्देश",
+				"guideline1": "दिशानिर्देश 1",
+				"guideline2": "दिशानिर्देश 2"
+			}
+		}
+	},
 	"commitMessage": {
 		"activated": "किलो कोड कमिट संदेश जनरेटर सक्रिय किया गया",
 		"gitNotFound": "⚠️ Git रेपोजिटरी नहीं मिली या git उपलब्ध नहीं है",

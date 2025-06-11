@@ -44,5 +44,36 @@
 			"description": "Kilo Codeにサインアップすると、開始するための無料クレジットが提供されます。クレジットを使用して機能を探索し、最新で最高のモデルを試し、コミットメントなしでKilo Codeの利点を体験してください。",
 			"termsAndPrivacy": "続行することで、<termsLink>利用規約</termsLink>および<privacyLink>プライバシーポリシー</privacyLink>に同意したものとみなされます。"
 		}
+	},
+	"docs": "ドキュメント",
+	"rules": {
+		"tooltip": "Kilo Codeルールとワークフローを管理",
+		"ariaLabel": "Kilo Codeルール",
+		"tabs": {
+			"rules": "ルール",
+			"workflows": "ワークフロー"
+		},
+		"description": {
+			"rules": "ルールを使用すると、Kilo Codeにシステムレベルのガイダンスを提供できます。プロジェクトまたはすべての会話にグローバルにコンテキストと設定を含める永続的な方法として考えてください。",
+			"workflows": "ワークフローを使用すると、サービスのデプロイやPRの送信など、反復的なタスクのセットを通じてKilo Codeをガイドする一連のステップを定義できます。ワークフローを呼び出すには、次のように入力します",
+			"workflowsInChat": "チャットで。"
+		},
+		"sections": {
+			"globalRules": "グローバルルール",
+			"workspaceRules": "ワークスペースルール",
+			"globalWorkflows": "グローバルワークフロー",
+			"workspaceWorkflows": "ワークスペースワークフロー"
+		},
+		"validation": {
+			"invalidFileExtension": ".md、.txt、または拡張子なしのみ許可されています"
+		},
+		"placeholders": {
+			"workflowName": "ワークフロー名（.md、.txt、または拡張子なし）",
+			"ruleName": "ルール名（.md、.txt、または拡張子なし）"
+		},
+		"newFile": {
+			"newWorkflowFile": "新しいワークフローファイル...",
+			"newRuleFile": "新しいルールファイル..."
+		}
 	}
 }

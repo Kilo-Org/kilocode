@@ -44,5 +44,36 @@
 			"description": "注册 Kilo Code 可获得免费积分开始使用。使用你的积分探索我们的功能，试用最新最好的模型，无需承诺即可体验 Kilo Code 的优势。",
 			"termsAndPrivacy": "继续即表示你同意<termsLink>服务条款</termsLink>和<privacyLink>隐私政策</privacyLink>。"
 		}
+	},
+	"docs": "文档",
+	"rules": {
+		"tooltip": "管理 Kilo Code 规则和工作流",
+		"ariaLabel": "Kilo Code 规则",
+		"tabs": {
+			"rules": "规则",
+			"workflows": "工作流"
+		},
+		"description": {
+			"rules": "规则允许你为 Kilo Code 提供系统级指导。将它们视为为你的项目或全局每次对话包含上下文和偏好的持久方式。",
+			"workflows": "工作流允许你定义一系列步骤来指导 Kilo Code 完成重复性任务集，如部署服务或提交 PR。要调用工作流，请输入",
+			"workflowsInChat": "在聊天中。"
+		},
+		"sections": {
+			"globalRules": "全局规则",
+			"workspaceRules": "工作区规则",
+			"globalWorkflows": "全局工作流",
+			"workspaceWorkflows": "工作区工作流"
+		},
+		"validation": {
+			"invalidFileExtension": "仅允许 .md、.txt 或无文件扩展名"
+		},
+		"placeholders": {
+			"workflowName": "工作流名称（.md、.txt 或无扩展名）",
+			"ruleName": "规则名称（.md、.txt 或无扩展名）"
+		},
+		"newFile": {
+			"newWorkflowFile": "新建工作流文件...",
+			"newRuleFile": "新建规则文件..."
+		}
 	}
 }

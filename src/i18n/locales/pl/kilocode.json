@@ -6,6 +6,33 @@
 		"title": "Ostrzeżenie o Niskim Kredycie!",
 		"message": "Sprawdź, czy możesz doładować darmowymi kredytami lub kupić więcej!"
 	},
+	"rules": {
+		"actions": {
+			"delete": "Usuń",
+			"confirmDelete": "Czy na pewno chcesz usunąć {{filename}}?",
+			"deleted": "Usunięto {{filename}}"
+		},
+		"errors": {
+			"noWorkspaceFound": "Nie znaleziono folderu obszaru roboczego",
+			"fileAlreadyExists": "Plik {{filename}} już istnieje",
+			"failedToCreateRuleFile": "Nie udało się utworzyć pliku reguły.",
+			"failedToDeleteRuleFile": "Nie udało się usunąć pliku reguły."
+		},
+		"templates": {
+			"workflow": {
+				"description": "Opis przepływu pracy tutaj...",
+				"stepsHeader": "## Kroki",
+				"step1": "Krok 1",
+				"step2": "Krok 2"
+			},
+			"rule": {
+				"description": "Opis reguły tutaj...",
+				"guidelinesHeader": "## Wytyczne",
+				"guideline1": "Wytyczna 1",
+				"guideline2": "Wytyczna 2"
+			}
+		}
+	},
 	"commitMessage": {
 		"activated": "Generator wiadomości do zatwierdzeń kodu Kilo aktywowany",
 		"gitNotFound": "⚠️ Nie znaleziono repozytorium Git lub Git jest niedostępny",

@@ -44,5 +44,36 @@
 			"description": "註冊 Kilo Code 可獲得免費積分開始使用。使用你的積分探索我們的功能，試用最新最好的模型，無需承諾即可體驗 Kilo Code 的優勢。",
 			"termsAndPrivacy": "繼續即表示你同意<termsLink>服務條款</termsLink>和<privacyLink>隱私政策</privacyLink>。"
 		}
+	},
+	"docs": "文件",
+	"rules": {
+		"tooltip": "管理 Kilo Code 規則和工作流程",
+		"ariaLabel": "Kilo Code 規則",
+		"tabs": {
+			"rules": "規則",
+			"workflows": "工作流程"
+		},
+		"description": {
+			"rules": "規則允許你為 Kilo Code 提供系統級指導。將它們視為為你的專案或全域每次對話包含上下文和偏好的持久方式。",
+			"workflows": "工作流程允許你定義一系列步驟來指導 Kilo Code 完成重複性任務集，如部署服務或提交 PR。要調用工作流程，請輸入",
+			"workflowsInChat": "在聊天中。"
+		},
+		"sections": {
+			"globalRules": "全域規則",
+			"workspaceRules": "工作區規則",
+			"globalWorkflows": "全域工作流程",
+			"workspaceWorkflows": "工作區工作流程"
+		},
+		"validation": {
+			"invalidFileExtension": "僅允許 .md、.txt 或無檔案副檔名"
+		},
+		"placeholders": {
+			"workflowName": "工作流程名稱（.md、.txt 或無副檔名）",
+			"ruleName": "規則名稱（.md、.txt 或無副檔名）"
+		},
+		"newFile": {
+			"newWorkflowFile": "新建工作流程檔案...",
+			"newRuleFile": "新建規則檔案..."
+		}
 	}
 }

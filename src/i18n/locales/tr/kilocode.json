@@ -6,6 +6,33 @@
 		"title": "Düşük Kredi Uyarısı!",
 		"message": "Ücretsiz kredilerle yükleme yapabilir veya daha fazla satın alabilir misiniz kontrol edin!"
 	},
+	"rules": {
+		"actions": {
+			"delete": "Sil",
+			"confirmDelete": "{{filename}} dosyasını silmek istediğinizden emin misiniz?",
+			"deleted": "{{filename}} silindi"
+		},
+		"errors": {
+			"noWorkspaceFound": "Çalışma alanı klasörü bulunamadı",
+			"fileAlreadyExists": "{{filename}} dosyası zaten mevcut",
+			"failedToCreateRuleFile": "Kural dosyası oluşturulamadı.",
+			"failedToDeleteRuleFile": "Kural dosyası silinemedi."
+		},
+		"templates": {
+			"workflow": {
+				"description": "İş akışı açıklaması buraya...",
+				"stepsHeader": "## Adımlar",
+				"step1": "Adım 1",
+				"step2": "Adım 2"
+			},
+			"rule": {
+				"description": "Kural açıklaması buraya...",
+				"guidelinesHeader": "## Yönergeler",
+				"guideline1": "Yönerge 1",
+				"guideline2": "Yönerge 2"
+			}
+		}
+	},
 	"commitMessage": {
 		"activated": "Kilo Code commit mesaj üreticisi etkinleştirildi",
 		"gitNotFound": "⚠️ Git deposu bulunamadı veya git kullanılamıyor",

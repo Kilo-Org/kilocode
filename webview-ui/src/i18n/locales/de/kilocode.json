@@ -44,5 +44,36 @@
 			"description": "Die Anmeldung bei Kilo Code gibt Ihnen kostenlose Credits zum Einstieg. Nutzen Sie Ihre Credits, um unsere Funktionen zu erkunden, die neuesten und besten Modelle auszuprobieren und die Vorteile von Kilo Code ohne Verpflichtung zu erleben.",
 			"termsAndPrivacy": "Durch Fortfahren stimmen Sie den <termsLink>Nutzungsbedingungen</termsLink> und der <privacyLink>Datenschutzrichtlinie</privacyLink> zu."
 		}
+	},
+	"docs": "Dokumentation",
+	"rules": {
+		"tooltip": "Kilo Code Regeln & Workflows verwalten",
+		"ariaLabel": "Kilo Code Regeln",
+		"tabs": {
+			"rules": "Regeln",
+			"workflows": "Workflows"
+		},
+		"description": {
+			"rules": "Regeln ermöglichen es dir, Kilo Code systemweite Anleitung zu geben. Denke an sie als persistente Möglichkeit, Kontext und Präferenzen für deine Projekte oder global für jede Unterhaltung einzubeziehen.",
+			"workflows": "Workflows ermöglichen es dir, eine Reihe von Schritten zu definieren, um Kilo Code durch eine wiederholende Reihe von Aufgaben zu führen, wie das Bereitstellen eines Dienstes oder das Einreichen einer PR. Um einen Workflow aufzurufen, tippe",
+			"workflowsInChat": "im Chat."
+		},
+		"sections": {
+			"globalRules": "Globale Regeln",
+			"workspaceRules": "Arbeitsbereich-Regeln",
+			"globalWorkflows": "Globale Workflows",
+			"workspaceWorkflows": "Arbeitsbereich-Workflows"
+		},
+		"validation": {
+			"invalidFileExtension": "Nur .md, .txt oder keine Dateierweiterung erlaubt"
+		},
+		"placeholders": {
+			"workflowName": "workflow-name (.md, .txt oder keine Erweiterung)",
+			"ruleName": "regel-name (.md, .txt oder keine Erweiterung)"
+		},
+		"newFile": {
+			"newWorkflowFile": "Neue Workflow-Datei...",
+			"newRuleFile": "Neue Regel-Datei..."
+		}
 	}
 }

@@ -44,5 +44,36 @@
 			"description": "Cadastrar-se no Kilo Code oferece créditos gratuitos para começar. Use seus créditos para explorar nossos recursos, experimentar os modelos mais recentes e melhores, e vivenciar os benefícios do Kilo Code sem compromisso.",
 			"termsAndPrivacy": "Ao continuar, você concorda com os <termsLink>Termos de Serviço</termsLink> e a <privacyLink>Política de Privacidade.</privacyLink>"
 		}
+	},
+	"docs": "Documentação",
+	"rules": {
+		"tooltip": "Gerenciar Regras e Fluxos de Trabalho do Kilo Code",
+		"ariaLabel": "Regras do Kilo Code",
+		"tabs": {
+			"rules": "Regras",
+			"workflows": "Fluxos de Trabalho"
+		},
+		"description": {
+			"rules": "As regras permitem fornecer ao Kilo Code orientação em nível de sistema. Pense nelas como uma forma persistente de incluir contexto e preferências para seus projetos ou globalmente para cada conversa.",
+			"workflows": "Os fluxos de trabalho permitem definir uma série de passos para guiar o Kilo Code através de um conjunto repetitivo de tarefas, como implantar um serviço ou enviar um PR. Para invocar um fluxo de trabalho, digite",
+			"workflowsInChat": "no chat."
+		},
+		"sections": {
+			"globalRules": "Regras Globais",
+			"workspaceRules": "Regras do Workspace",
+			"globalWorkflows": "Fluxos de Trabalho Globais",
+			"workspaceWorkflows": "Fluxos de Trabalho do Workspace"
+		},
+		"validation": {
+			"invalidFileExtension": "Apenas extensões .md, .txt ou sem extensão são permitidas"
+		},
+		"placeholders": {
+			"workflowName": "nome-fluxo-trabalho (.md, .txt ou sem extensão)",
+			"ruleName": "nome-regra (.md, .txt ou sem extensão)"
+		},
+		"newFile": {
+			"newWorkflowFile": "Novo arquivo de fluxo de trabalho...",
+			"newRuleFile": "Novo arquivo de regra..."
+		}
 	}
 }

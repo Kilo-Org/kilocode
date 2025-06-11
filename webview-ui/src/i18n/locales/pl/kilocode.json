@@ -44,5 +44,36 @@
 			"description": "Rejestracja w Kilo Code daje Ci darmowe kredyty na start. Użyj swoich kredytów, aby poznać nasze funkcje, wypróbować najnowsze i najlepsze modele oraz doświadczyć korzyści z Kilo Code bez zobowiązań.",
 			"termsAndPrivacy": "Kontynuując, zgadzasz się na <termsLink>Warunki Usługi</termsLink> i <privacyLink>Politykę Prywatności.</privacyLink>"
 		}
+	},
+	"docs": "Dokumentacja",
+	"rules": {
+		"tooltip": "Zarządzaj Regułami i Przepływami Pracy Kilo Code",
+		"ariaLabel": "Reguły Kilo Code",
+		"tabs": {
+			"rules": "Reguły",
+			"workflows": "Przepływy Pracy"
+		},
+		"description": {
+			"rules": "Reguły pozwalają dostarczyć Kilo Code wskazówki na poziomie systemu. Myśl o nich jako o trwałym sposobie dołączania kontekstu i preferencji dla swoich projektów lub globalnie dla każdej rozmowy.",
+			"workflows": "Przepływy pracy pozwalają zdefiniować serię kroków, aby poprowadzić Kilo Code przez powtarzalny zestaw zadań, takich jak wdrażanie usługi lub przesyłanie PR. Aby wywołać przepływ pracy, wpisz",
+			"workflowsInChat": "w czacie."
+		},
+		"sections": {
+			"globalRules": "Reguły Globalne",
+			"workspaceRules": "Reguły Obszaru Roboczego",
+			"globalWorkflows": "Przepływy Pracy Globalne",
+			"workspaceWorkflows": "Przepływy Pracy Obszaru Roboczego"
+		},
+		"validation": {
+			"invalidFileExtension": "Dozwolone są tylko rozszerzenia .md, .txt lub brak rozszerzenia"
+		},
+		"placeholders": {
+			"workflowName": "nazwa-przepływu-pracy (.md, .txt lub bez rozszerzenia)",
+			"ruleName": "nazwa-reguły (.md, .txt lub bez rozszerzenia)"
+		},
+		"newFile": {
+			"newWorkflowFile": "Nowy plik przepływu pracy...",
+			"newRuleFile": "Nowy plik reguły..."
+		}
 	}
 }

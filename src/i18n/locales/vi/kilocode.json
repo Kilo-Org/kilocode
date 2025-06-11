@@ -6,6 +6,33 @@
 		"title": "Cảnh Báo Tín Dụng Thấp!",
 		"message": "Kiểm tra xem bạn có thể nạp thêm tín dụng miễn phí hoặc mua thêm không!"
 	},
+	"rules": {
+		"actions": {
+			"delete": "Xóa",
+			"confirmDelete": "Bạn có chắc chắn muốn xóa {{filename}} không?",
+			"deleted": "Đã xóa {{filename}}"
+		},
+		"errors": {
+			"noWorkspaceFound": "Không tìm thấy thư mục workspace",
+			"fileAlreadyExists": "Tệp {{filename}} đã tồn tại",
+			"failedToCreateRuleFile": "Không thể tạo tệp quy tắc.",
+			"failedToDeleteRuleFile": "Không thể xóa tệp quy tắc."
+		},
+		"templates": {
+			"workflow": {
+				"description": "Mô tả quy trình làm việc ở đây...",
+				"stepsHeader": "## Các bước",
+				"step1": "Bước 1",
+				"step2": "Bước 2"
+			},
+			"rule": {
+				"description": "Mô tả quy tắc ở đây...",
+				"guidelinesHeader": "## Hướng dẫn",
+				"guideline1": "Hướng dẫn 1",
+				"guideline2": "Hướng dẫn 2"
+			}
+		}
+	},
 	"commitMessage": {
 		"activated": "Trình tạo thông điệp commit Kilo Code đã được kích hoạt",
 		"gitNotFound": "⚠️ Không tìm thấy kho lưu trữ Git hoặc git không khả dụng",

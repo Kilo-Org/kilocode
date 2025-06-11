@@ -44,5 +44,36 @@
 			"description": "Mendaftar dengan Kilo Code memberi kamu kredit gratis untuk memulai. Gunakan kredit kamu untuk menjelajahi fitur kami, mencoba model terbaru dan terbaik, dan merasakan manfaat Kilo Code tanpa komitmen.",
 			"termsAndPrivacy": "Dengan melanjutkan, kamu menyetujui <termsLink>Syarat Layanan</termsLink> dan <privacyLink>Kebijakan Privasi.</privacyLink>"
 		}
+	},
+	"docs": "Dokumentasi",
+	"rules": {
+		"tooltip": "Kelola Aturan & Alur Kerja Kilo Code",
+		"ariaLabel": "Aturan Kilo Code",
+		"tabs": {
+			"rules": "Aturan",
+			"workflows": "Alur Kerja"
+		},
+		"description": {
+			"rules": "Aturan memungkinkan kamu memberikan panduan tingkat sistem kepada Kilo Code. Anggap mereka sebagai cara persisten untuk menyertakan konteks dan preferensi untuk proyek kamu atau secara global untuk setiap percakapan.",
+			"workflows": "Alur kerja memungkinkan kamu mendefinisikan serangkaian langkah untuk memandu Kilo Code melalui serangkaian tugas berulang, seperti menerapkan layanan atau mengirim PR. Untuk memanggil alur kerja, ketik",
+			"workflowsInChat": "di chat."
+		},
+		"sections": {
+			"globalRules": "Aturan Global",
+			"workspaceRules": "Aturan Workspace",
+			"globalWorkflows": "Alur Kerja Global",
+			"workspaceWorkflows": "Alur Kerja Workspace"
+		},
+		"validation": {
+			"invalidFileExtension": "Hanya ekstensi .md, .txt atau tanpa ekstensi yang diizinkan"
+		},
+		"placeholders": {
+			"workflowName": "nama-alur-kerja (.md, .txt atau tanpa ekstensi)",
+			"ruleName": "nama-aturan (.md, .txt atau tanpa ekstensi)"
+		},
+		"newFile": {
+			"newWorkflowFile": "File alur kerja baru...",
+			"newRuleFile": "File aturan baru..."
+		}
 	}
 }

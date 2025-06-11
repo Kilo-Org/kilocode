@@ -6,6 +6,33 @@
 		"title": "Avviso Credito Basso!",
 		"message": "Verifica se puoi ricaricare con crediti gratuiti o acquistarne altri!"
 	},
+	"rules": {
+		"actions": {
+			"delete": "Elimina",
+			"confirmDelete": "Sei sicuro di voler eliminare {{filename}}?",
+			"deleted": "{{filename}} eliminato"
+		},
+		"errors": {
+			"noWorkspaceFound": "Nessuna cartella dell'area di lavoro trovata",
+			"fileAlreadyExists": "Il file {{filename}} esiste già",
+			"failedToCreateRuleFile": "Impossibile creare il file delle regole.",
+			"failedToDeleteRuleFile": "Impossibile eliminare il file delle regole."
+		},
+		"templates": {
+			"workflow": {
+				"description": "Descrizione del flusso di lavoro qui...",
+				"stepsHeader": "## Passaggi",
+				"step1": "Passaggio 1",
+				"step2": "Passaggio 2"
+			},
+			"rule": {
+				"description": "Descrizione della regola qui...",
+				"guidelinesHeader": "## Linee guida",
+				"guideline1": "Linea guida 1",
+				"guideline2": "Linea guida 2"
+			}
+		}
+	},
 	"commitMessage": {
 		"activated": "Generatore di messaggi di commit per Kilo Code attivato",
 		"gitNotFound": "⚠️ Repository Git non trovato o git non disponibile",

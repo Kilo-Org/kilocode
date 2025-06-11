@@ -6,6 +6,33 @@
 		"title": "クレジット残高警告！",
 		"message": "無料クレジットでチャージするか、追加購入できるか確認してください！"
 	},
+	"rules": {
+		"actions": {
+			"delete": "削除",
+			"confirmDelete": "{{filename}}を削除してもよろしいですか？",
+			"deleted": "{{filename}}を削除しました"
+		},
+		"errors": {
+			"noWorkspaceFound": "ワークスペースフォルダが見つかりません",
+			"fileAlreadyExists": "ファイル{{filename}}は既に存在します",
+			"failedToCreateRuleFile": "ルールファイルの作成に失敗しました。",
+			"failedToDeleteRuleFile": "ルールファイルの削除に失敗しました。"
+		},
+		"templates": {
+			"workflow": {
+				"description": "ワークフローの説明をここに...",
+				"stepsHeader": "## ステップ",
+				"step1": "ステップ1",
+				"step2": "ステップ2"
+			},
+			"rule": {
+				"description": "ルールの説明をここに...",
+				"guidelinesHeader": "## ガイドライン",
+				"guideline1": "ガイドライン1",
+				"guideline2": "ガイドライン2"
+			}
+		}
+	},
 	"commitMessage": {
 		"activated": "Kiloコードコミットメッセージジェネレーターが起動しました",
 		"gitNotFound": "⚠️ Gitリポジトリが見つからないか、gitが利用できません",

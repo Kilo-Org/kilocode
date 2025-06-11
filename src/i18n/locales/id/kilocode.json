@@ -6,6 +6,33 @@
 		"title": "Peringatan Kredit Rendah!",
 		"message": "Periksa apakah kamu bisa mengisi ulang dengan kredit gratis atau beli lebih banyak!"
 	},
+	"rules": {
+		"actions": {
+			"delete": "Hapus",
+			"confirmDelete": "Apakah kamu yakin ingin menghapus {{filename}}?",
+			"deleted": "{{filename}} telah dihapus"
+		},
+		"errors": {
+			"noWorkspaceFound": "Folder workspace tidak ditemukan",
+			"fileAlreadyExists": "File {{filename}} sudah ada",
+			"failedToCreateRuleFile": "Gagal membuat file aturan.",
+			"failedToDeleteRuleFile": "Gagal menghapus file aturan."
+		},
+		"templates": {
+			"workflow": {
+				"description": "Deskripsi alur kerja di sini...",
+				"stepsHeader": "## Langkah-langkah",
+				"step1": "Langkah 1",
+				"step2": "Langkah 2"
+			},
+			"rule": {
+				"description": "Deskripsi aturan di sini...",
+				"guidelinesHeader": "## Pedoman",
+				"guideline1": "Pedoman 1",
+				"guideline2": "Pedoman 2"
+			}
+		}
+	},
 	"commitMessage": {
 		"activated": "Generator pesan commit Kilo Code telah diaktifkan",
 		"gitNotFound": "⚠️ Repositori Git tidak ditemukan atau git tidak tersedia",

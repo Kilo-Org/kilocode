@@ -44,5 +44,36 @@
 			"description": "Đăng ký Kilo Code sẽ cung cấp cho bạn tín dụng miễn phí để bắt đầu. Sử dụng tín dụng của bạn để khám phá các tính năng, thử nghiệm các mô hình mới nhất và tốt nhất, và trải nghiệm lợi ích của Kilo Code mà không cần cam kết.",
 			"termsAndPrivacy": "Bằng cách tiếp tục, bạn đồng ý với <termsLink>Điều khoản Dịch vụ</termsLink> và <privacyLink>Chính sách Bảo mật.</privacyLink>"
 		}
+	},
+	"docs": "Tài liệu",
+	"rules": {
+		"tooltip": "Quản lý Quy tắc & Quy trình làm việc Kilo Code",
+		"ariaLabel": "Quy tắc Kilo Code",
+		"tabs": {
+			"rules": "Quy tắc",
+			"workflows": "Quy trình làm việc"
+		},
+		"description": {
+			"rules": "Quy tắc cho phép bạn cung cấp hướng dẫn cấp hệ thống cho Kilo Code. Hãy coi chúng như một cách bền vững để bao gồm ngữ cảnh và tùy chọn cho các dự án của bạn hoặc toàn cầu cho mọi cuộc trò chuyện.",
+			"workflows": "Quy trình làm việc cho phép bạn xác định một loạt các bước để hướng dẫn Kilo Code thông qua một tập hợp các tác vụ lặp đi lặp lại, chẳng hạn như triển khai dịch vụ hoặc gửi PR. Để gọi quy trình làm việc, hãy nhập",
+			"workflowsInChat": "trong chat."
+		},
+		"sections": {
+			"globalRules": "Quy tắc Toàn cầu",
+			"workspaceRules": "Quy tắc Workspace",
+			"globalWorkflows": "Quy trình làm việc Toàn cầu",
+			"workspaceWorkflows": "Quy trình làm việc Workspace"
+		},
+		"validation": {
+			"invalidFileExtension": "Chỉ cho phép phần mở rộng .md, .txt hoặc không có phần mở rộng"
+		},
+		"placeholders": {
+			"workflowName": "tên-quy-trình-làm-việc (.md, .txt hoặc không có phần mở rộng)",
+			"ruleName": "tên-quy-tắc (.md, .txt hoặc không có phần mở rộng)"
+		},
+		"newFile": {
+			"newWorkflowFile": "Tệp quy trình làm việc mới...",
+			"newRuleFile": "Tệp quy tắc mới..."
+		}
 	}
 }

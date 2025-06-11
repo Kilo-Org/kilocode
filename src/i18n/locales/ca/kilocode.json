@@ -6,6 +6,33 @@
 		"title": "Avís de Crèdit Baix!",
 		"message": "Comprova si pots recarregar amb crèdits gratuïts o comprar-ne més!"
 	},
+	"rules": {
+		"actions": {
+			"delete": "Eliminar",
+			"confirmDelete": "Estàs segur que vols eliminar {{filename}}?",
+			"deleted": "{{filename}} eliminat"
+		},
+		"errors": {
+			"noWorkspaceFound": "No s'ha trobat cap carpeta d'espai de treball",
+			"fileAlreadyExists": "El fitxer {{filename}} ja existeix",
+			"failedToCreateRuleFile": "No s'ha pogut crear el fitxer de regla.",
+			"failedToDeleteRuleFile": "No s'ha pogut eliminar el fitxer de regla."
+		},
+		"templates": {
+			"workflow": {
+				"description": "Descripció del flux de treball aquí...",
+				"stepsHeader": "## Passos",
+				"step1": "Pas 1",
+				"step2": "Pas 2"
+			},
+			"rule": {
+				"description": "Descripció de la regla aquí...",
+				"guidelinesHeader": "## Directrius",
+				"guideline1": "Directriu 1",
+				"guideline2": "Directriu 2"
+			}
+		}
+	},
 	"commitMessage": {
 		"activated": "Generador de missatges de commit de Kilo Code activat",
 		"gitNotFound": "⚠️ Repositori Git no trobat o git no disponible",

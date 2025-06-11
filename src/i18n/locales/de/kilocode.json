@@ -6,6 +6,33 @@
 		"title": "Warnung: Niedriges Guthaben!",
 		"message": "Prüfen Sie, ob Sie kostenloses Guthaben aufladen oder mehr kaufen können!"
 	},
+	"rules": {
+		"actions": {
+			"delete": "Löschen",
+			"confirmDelete": "Bist du sicher, dass du {{filename}} löschen möchtest?",
+			"deleted": "{{filename}} gelöscht"
+		},
+		"errors": {
+			"noWorkspaceFound": "Kein Arbeitsbereich-Ordner gefunden",
+			"fileAlreadyExists": "Datei {{filename}} existiert bereits",
+			"failedToCreateRuleFile": "Regel-Datei konnte nicht erstellt werden.",
+			"failedToDeleteRuleFile": "Regel-Datei konnte nicht gelöscht werden."
+		},
+		"templates": {
+			"workflow": {
+				"description": "Workflow-Beschreibung hier...",
+				"stepsHeader": "## Schritte",
+				"step1": "Schritt 1",
+				"step2": "Schritt 2"
+			},
+			"rule": {
+				"description": "Regel-Beschreibung hier...",
+				"guidelinesHeader": "## Richtlinien",
+				"guideline1": "Richtlinie 1",
+				"guideline2": "Richtlinie 2"
+			}
+		}
+	},
 	"commitMessage": {
 		"activated": "Kilo Code Commit-Nachrichtengenerator aktiviert",
 		"gitNotFound": "⚠️ Git-Repository nicht gefunden oder Git nicht verfügbar",

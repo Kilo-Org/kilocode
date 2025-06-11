@@ -6,6 +6,33 @@
 		"title": "Waarschuwing: laag krediet!",
 		"message": "Controleer of je kunt opwaarderen met gratis credits of meer kunt kopen!"
 	},
+	"rules": {
+		"actions": {
+			"delete": "Verwijderen",
+			"confirmDelete": "Weet je zeker dat je {{filename}} wilt verwijderen?",
+			"deleted": "{{filename}} verwijderd"
+		},
+		"errors": {
+			"noWorkspaceFound": "Geen werkruimte map gevonden",
+			"fileAlreadyExists": "Bestand {{filename}} bestaat al",
+			"failedToCreateRuleFile": "Kon regelbestand niet aanmaken.",
+			"failedToDeleteRuleFile": "Kon regelbestand niet verwijderen."
+		},
+		"templates": {
+			"workflow": {
+				"description": "Workflow beschrijving hier...",
+				"stepsHeader": "## Stappen",
+				"step1": "Stap 1",
+				"step2": "Stap 2"
+			},
+			"rule": {
+				"description": "Regel beschrijving hier...",
+				"guidelinesHeader": "## Richtlijnen",
+				"guideline1": "Richtlijn 1",
+				"guideline2": "Richtlijn 2"
+			}
+		}
+	},
 	"commitMessage": {
 		"activated": "Kilo Code commit-berichtgenerator geactiveerd",
 		"gitNotFound": "⚠️ Git repository niet gevonden of git niet beschikbaar",

@@ -6,6 +6,33 @@
 		"title": "Предупреждение о низком балансе!",
 		"message": "Проверьте, можете ли вы пополнить счет бесплатными кредитами или приобрести дополнительные!"
 	},
+	"rules": {
+		"actions": {
+			"delete": "Удалить",
+			"confirmDelete": "Вы уверены, что хотите удалить {{filename}}?",
+			"deleted": "{{filename}} удален"
+		},
+		"errors": {
+			"noWorkspaceFound": "Папка рабочего пространства не найдена",
+			"fileAlreadyExists": "Файл {{filename}} уже существует",
+			"failedToCreateRuleFile": "Не удалось создать файл правила.",
+			"failedToDeleteRuleFile": "Не удалось удалить файл правила."
+		},
+		"templates": {
+			"workflow": {
+				"description": "Описание рабочего процесса здесь...",
+				"stepsHeader": "## Шаги",
+				"step1": "Шаг 1",
+				"step2": "Шаг 2"
+			},
+			"rule": {
+				"description": "Описание правила здесь...",
+				"guidelinesHeader": "## Руководящие принципы",
+				"guideline1": "Принцип 1",
+				"guideline2": "Принцип 2"
+			}
+		}
+	},
 	"commitMessage": {
 		"activated": "Генератор сообщений о коммитах Kilo Code активирован",
 		"gitNotFound": "⚠️ Git-репозиторий не найден или git недоступен",
