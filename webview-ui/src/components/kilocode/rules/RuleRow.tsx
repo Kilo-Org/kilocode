@@ -1,6 +1,6 @@
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import { vscode } from "@/utils/vscode"
-import { basename } from "@/utils/kilocode/path-webview"
+import { getBasename } from "@/utils/kilocode/path-webview"
 
 const RuleRow: React.FC<{
 	rulePath: string
@@ -30,7 +30,7 @@ const RuleRow: React.FC<{
 				<span
 					className="flex-1 overflow-hidden break-all whitespace-normal flex items-center mr-1"
 					title={rulePath}>
-					<span className="ph-no-capture">{basename(rulePath)}</span>
+					<span className="ph-no-capture">{getBasename(rulePath)}</span>
 				</span>
 				<div className="flex items-center ml-2 space-x-2">
 					<div

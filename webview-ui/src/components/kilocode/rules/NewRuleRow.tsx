@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import { useClickAway } from "react-use"
 import { vscode } from "@/utils/vscode"
+import { getExtension } from "@/utils/kilocode/path-webview"
 
 interface NewRuleRowProps {
 	isGlobal: boolean
@@ -30,12 +31,6 @@ const NewRuleRow: React.FC<NewRuleRowProps> = ({ isGlobal, ruleType }) => {
 			setError(null)
 		}
 	})
-
-	const getExtension = (filename: string): string => {
-		if (filename.startsWith(".") && !filename.includes(".", 1)) return ""
-		const match = filename.match(/\.[^.]+$/)
-		return match ? match[0].toLowerCase() : ""
-	}
 
 	const isValidExtension = (ext: string): boolean => {
 		return ext === "" || ext === ".md" || ext === ".txt"
