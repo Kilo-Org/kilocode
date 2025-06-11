@@ -34,10 +34,6 @@ const NewRuleRow: React.FC<NewRuleRowProps> = ({ isGlobal, ruleType }) => {
 		}
 	})
 
-	const isValidExtension = (ext: string): boolean => {
-		return ext === "" || allowedExtensions.includes(ext)
-	}
-
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault()
 
@@ -45,7 +41,7 @@ const NewRuleRow: React.FC<NewRuleRowProps> = ({ isGlobal, ruleType }) => {
 			const trimmedFilename = filename.trim()
 			const extension = getExtension(trimmedFilename)
 
-			if (!isValidExtension(extension)) {
+			if (extension !== "" && !allowedExtensions.includes(extension)) {
 				setError(t("kilocode:rules.validation.invalidFileExtension"))
 				return
 			}
