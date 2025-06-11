@@ -166,7 +166,7 @@ const KiloRulesToggleModal: React.FC = () => {
 					<div className="text-xs text-[var(--vscode-descriptionForeground)] mb-4">
 						{currentView === "rule" ? (
 							<DescriptionWithLink
-								href="https://kilocode.ai/docs/advanced-usage/rules"
+								href="https://kilocode.ai/docs/advanced-usage/custom-rules"
 								linkText={t("kilocode:docs")}>
 								{t("kilocode:rules.description.rules")}
 							</DescriptionWithLink>
