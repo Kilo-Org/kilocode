@@ -3,6 +3,7 @@
 
 import { getAllModes } from "@roo/modes"
 import { getBasename } from "./kilocode/path-webview"
+import { ClineRulesToggles } from "@roo/cline-rules"
 
 export interface SlashCommand {
 	name: string
@@ -13,8 +14,8 @@ export interface SlashCommand {
 // Create a function to get all supported slash commands
 export function getSupportedSlashCommands(
 	customModes?: any[],
-	localWorkflowToggles: Record<string, boolean> = {}, // kilocode_change
-	globalWorkflowToggles: Record<string, boolean> = {}, // kilocode_change
+	localWorkflowToggles: ClineRulesToggles = {}, // kilocode_change
+	globalWorkflowToggles: ClineRulesToggles = {}, // kilocode_change
 ): SlashCommand[] {
 	// Start with non-mode commands
 	const baseCommands: SlashCommand[] = [
@@ -80,7 +81,7 @@ export function shouldShowSlashCommandsMenu(text: string, cursorPosition: number
 }
 
 // kilocode_change start
-function enabledWorkflowToggles(workflowToggles: Record<string, boolean>): SlashCommand[] {
+function enabledWorkflowToggles(workflowToggles: ClineRulesToggles): SlashCommand[] {
 	return Object.entries(workflowToggles)
 		.filter(([_, enabled]) => enabled)
 		.map(([filePath, _]) => ({
@@ -90,8 +91,8 @@ function enabledWorkflowToggles(workflowToggles: Record<string, boolean>): Slash
 }
 
 export function getWorkflowCommands(
-	localWorkflowToggles: Record<string, boolean> = {},
-	globalWorkflowToggles: Record<string, boolean> = {},
+	localWorkflowToggles: ClineRulesToggles = {},
+	globalWorkflowToggles: ClineRulesToggles = {},
 ): SlashCommand[] {
 	return [...enabledWorkflowToggles(localWorkflowToggles), ...enabledWorkflowToggles(globalWorkflowToggles)]
 }
@@ -103,8 +104,8 @@ export function getWorkflowCommands(
 export function getMatchingSlashCommands(
 	query: string,
 	customModes?: any[],
-	localWorkflowToggles: Record<string, boolean> = {}, // kilocode_change
-	globalWorkflowToggles: Record<string, boolean> = {}, // kilocode_change
+	localWorkflowToggles: ClineRulesToggles = {}, // kilocode_change
+	globalWorkflowToggles: ClineRulesToggles = {}, // kilocode_change
 ): SlashCommand[] {
 	const commands = getSupportedSlashCommands(customModes, localWorkflowToggles, globalWorkflowToggles)
 
@@ -139,8 +140,8 @@ export function insertSlashCommand(text: string, commandName: string): { newValu
 export function validateSlashCommand(
 	command: string,
 	customModes?: any[],
-	localWorkflowToggles: Record<string, boolean> = {}, // kilocode_change
-	globalWorkflowToggles: Record<string, boolean> = {}, // kilocode_change
+	localWorkflowToggles: ClineRulesToggles = {}, // kilocode_change
+	globalWorkflowToggles: ClineRulesToggles = {}, // kilocode_change
 ): "full" | "partial" | null {
 	if (!command) {
 		return null

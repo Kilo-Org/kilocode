@@ -17,6 +17,7 @@ import { McpMarketplaceCatalog, McpDownloadResponse } from "./kilocode/mcp"
 import { Mode } from "./modes"
 import { RouterModels } from "./api"
 import { ProfileDataResponsePayload, BalanceDataResponsePayload } from "./WebviewMessage"
+import { ClineRulesToggles } from "./cline-rules" // kilocode_change
 
 export interface LanguageModelChatSelector {
 	vendor?: string
@@ -133,10 +134,10 @@ export interface ExtensionMessage {
 	userInfo?: CloudUserInfo
 	organizationAllowList?: OrganizationAllowList
 	// kilocode_change: Rules data
-	globalRules?: Record<string, boolean>
-	localRules?: Record<string, boolean>
-	globalWorkflows?: Record<string, boolean>
-	localWorkflows?: Record<string, boolean>
+	globalRules?: ClineRulesToggles
+	localRules?: ClineRulesToggles
+	globalWorkflows?: ClineRulesToggles
+	localWorkflows?: ClineRulesToggles
 }
 
 export type ExtensionState = Pick<

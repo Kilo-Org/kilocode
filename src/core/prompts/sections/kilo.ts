@@ -1,5 +1,6 @@
 import fs from "fs/promises"
 import path from "path"
+import { ClineRulesToggles } from "../../../shared/cline-rules"
 
 /**
  * Get rule files content with toggle state filtering (matches Cline's getRuleFilesTotalContent)
@@ -7,7 +8,7 @@ import path from "path"
 export async function getRuleFilesTotalContent(
 	rulesFilePaths: string[],
 	basePath: string,
-	toggles: Record<string, boolean>,
+	toggles: ClineRulesToggles,
 ): Promise<string> {
 	const ruleFilesTotalContent = await Promise.all(
 		rulesFilePaths.map(async (filePath) => {

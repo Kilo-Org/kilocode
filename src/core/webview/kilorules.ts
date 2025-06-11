@@ -12,10 +12,10 @@ import { GlobalFileNames } from "../../shared/globalFileNames"
 import { allowedExtensions } from "../../shared/kilocode/rules"
 
 export interface RulesData {
-	globalRules: Record<string, boolean>
-	localRules: Record<string, boolean>
-	globalWorkflows: Record<string, boolean>
-	localWorkflows: Record<string, boolean>
+	globalRules: ClineRulesToggles
+	localRules: ClineRulesToggles
+	globalWorkflows: ClineRulesToggles
+	localWorkflows: ClineRulesToggles
 }
 
 export async function getEnabledRules(
@@ -27,34 +27,34 @@ export async function getEnabledRules(
 	return {
 		globalRules: await getEnabledRulesFromDirectory(
 			path.join(homedir, GlobalFileNames.kiloRules),
-			((await contextProxy.getGlobalState("globalRulesToggles")) as Record<string, boolean>) || {},
+			((await contextProxy.getGlobalState("globalRulesToggles")) as ClineRulesToggles) || {},
 		),
 		localRules: await getEnabledRulesFromDirectory(
 			path.join(workspacePath, GlobalFileNames.kiloRules),
-			((await contextProxy.getWorkspaceState(context, "localRulesToggles")) as Record<string, boolean>) || {},
+			((await contextProxy.getWorkspaceState(context, "localRulesToggles")) as ClineRulesToggles) || {},
 		),
 		globalWorkflows: await getEnabledRulesFromDirectory(
 			path.join(os.homedir(), GlobalFileNames.workflows),
-			((await contextProxy.getGlobalState("globalWorkflowToggles")) as Record<string, boolean>) || {},
+			((await contextProxy.getGlobalState("globalWorkflowToggles")) as ClineRulesToggles) || {},
 		),
 		localWorkflows: await getEnabledRulesFromDirectory(
 			path.join(workspacePath, GlobalFileNames.workflows),
-			((await contextProxy.getWorkspaceState(context, "localWorkflowToggles")) as Record<string, boolean>) || {},
+			((await contextProxy.getWorkspaceState(context, "localWorkflowToggles")) as ClineRulesToggles) || {},
 		),
 	}
 }
 
 async function getEnabledRulesFromDirectory(
 	dirPath: string,
-	toggleState: Record<string, boolean> = {},
-): Promise<Record<string, boolean>> {
+	toggleState: ClineRulesToggles = {},
+): Promise<ClineRulesToggles> {
 	const exists = await fileExistsAtPath(dirPath)
 	if (!exists) {
 		return {}
 	}
 
 	const files = await fs.readdir(dirPath, { withFileTypes: true })
-	const rules: Record<string, boolean> = {}
+	const rules: ClineRulesToggles = {}
 
 	for (const file of files) {
 		if (file.isFile() && allowedExtensions.some((ext) => file.name.toLowerCase().endsWith(ext))) {
@@ -93,12 +93,12 @@ export async function toggleRule(
 	context: vscode.ExtensionContext,
 ): Promise<void> {
 	if (isGlobal) {
-		const toggles = ((await contextProxy.getGlobalState("globalRulesToggles")) as Record<string, boolean>) || {}
+		const toggles = ((await contextProxy.getGlobalState("globalRulesToggles")) as ClineRulesToggles) || {}
 		toggles[rulePath] = enabled
 		await contextProxy.updateGlobalState("globalRulesToggles", toggles)
 	} else {
 		const toggles =
-			((await contextProxy.getWorkspaceState(context, "localRulesToggles")) as Record<string, boolean>) || {}
+			((await contextProxy.getWorkspaceState(context, "localRulesToggles")) as ClineRulesToggles) || {}
 		toggles[rulePath] = enabled
 		await contextProxy.updateWorkspaceState(context, "localRulesToggles", toggles)
 	}

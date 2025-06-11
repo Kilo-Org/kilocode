@@ -21,6 +21,7 @@ import { Dirent } from "fs"
 import { isLanguage } from "@roo-code/types"
 
 import { LANGUAGES } from "../../../shared/language"
+import { ClineRulesToggles } from "../../../shared/cline-rules" // kilocode_change
 
 /**
  * Safely read a file and return its trimmed content
@@ -174,7 +175,7 @@ function formatDirectoryContent(dirPath: string, files: Array<{ filename: string
 
 async function loadEnabledRulesFromDirectory(
 	rulesDir: string,
-	toggleState: Record<string, boolean>,
+	toggleState: ClineRulesToggles,
 	label: string,
 ): Promise<string | null> {
 	if (!(await directoryExists(rulesDir))) {
@@ -197,8 +198,8 @@ async function loadEnabledRulesFromDirectory(
 
 async function loadEnabledRules(
 	cwd: string,
-	localRulesToggleState: Record<string, boolean>,
-	globalRulesToggleState: Record<string, boolean>,
+	localRulesToggleState: ClineRulesToggles,
+	globalRulesToggleState: ClineRulesToggles,
 ): Promise<string> {
 	const globalRulesContent = await loadEnabledRulesFromDirectory(
 		path.join(require("os").homedir(), ".kilocode", "rules"),
@@ -276,8 +277,8 @@ export async function addCustomInstructions(
 	options: {
 		language?: string
 		rooIgnoreInstructions?: string
-		localRulesToggleState?: Record<string, boolean>
-		globalRulesToggleState?: Record<string, boolean>
+		localRulesToggleState?: ClineRulesToggles
+		globalRulesToggleState?: ClineRulesToggles
 	} = {},
 	// kilocode_change end
 ): Promise<string> {

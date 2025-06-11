@@ -23,6 +23,7 @@ import { McpMarketplaceCatalog } from "../../../src/shared/kilocode/mcp" // kilo
 
 import { vscode } from "@src/utils/vscode"
 import { convertTextMateToHljs } from "@src/utils/textMateToHljs"
+import { ClineRulesToggles } from "@roo/cline-rules" // kilocode_change
 
 export interface ExtensionStateContextType extends ExtensionState {
 	historyPreviewCollapsed?: boolean // Add the new state property
@@ -36,10 +37,10 @@ export interface ExtensionStateContextType extends ExtensionState {
 	filePaths: string[]
 	openedTabs: Array<{ label: string; isActive: boolean; path?: string }>
 	// kilocode_change start
-	globalRules: Record<string, boolean>
-	localRules: Record<string, boolean>
-	globalWorkflows: Record<string, boolean>
-	localWorkflows: Record<string, boolean>
+	globalRules: ClineRulesToggles
+	localRules: ClineRulesToggles
+	globalWorkflows: ClineRulesToggles
+	localWorkflows: ClineRulesToggles
 	// kilocode_change start
 	organizationAllowList: OrganizationAllowList
 	cloudIsAuthenticated: boolean
@@ -233,10 +234,10 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 	const [currentCheckpoint, setCurrentCheckpoint] = useState<string>()
 	const [extensionRouterModels, setExtensionRouterModels] = useState<RouterModels | undefined>(undefined)
 	// kilocode_change start
-	const [globalRules, setGlobalRules] = useState<Record<string, boolean>>({})
-	const [localRules, setLocalRules] = useState<Record<string, boolean>>({})
-	const [globalWorkflows, setGlobalWorkflows] = useState<Record<string, boolean>>({})
-	const [localWorkflows, setLocalWorkflows] = useState<Record<string, boolean>>({})
+	const [globalRules, setGlobalRules] = useState<ClineRulesToggles>({})
+	const [localRules, setLocalRules] = useState<ClineRulesToggles>({})
+	const [globalWorkflows, setGlobalWorkflows] = useState<ClineRulesToggles>({})
+	const [localWorkflows, setLocalWorkflows] = useState<ClineRulesToggles>({})
 	// kilocode_change end
 
 	const setListApiConfigMeta = useCallback(
