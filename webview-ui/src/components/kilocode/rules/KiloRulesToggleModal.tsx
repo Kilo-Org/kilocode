@@ -4,7 +4,7 @@ import { VSCodeButton, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 import { useTranslation } from "react-i18next"
 import styled from "styled-components"
 
-import Tooltip from "../../common/Tooltip"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../ui/tooltip"
 import { vscode } from "@/utils/vscode"
 
 import RulesWorkflowsSection from "./RulesWorkflowsSection"
@@ -101,20 +101,25 @@ const KiloRulesToggleModal: React.FC = () => {
 	return (
 		<div ref={modalRef}>
 			<div ref={buttonRef} className="inline-flex min-w-0 max-w-full">
-				<Tooltip tipText={t("kilocode:rules.tooltip")} visible={isVisible ? false : undefined}>
-					<VSCodeButton
-						appearance="icon"
-						aria-label={t("kilocode:rules.ariaLabel")}
-						onClick={() => setIsVisible(!isVisible)}
-						style={{ padding: "0px 0px", height: "20px" }}>
-						<div className="flex items-center gap-1 text-xs whitespace-nowrap min-w-0 w-full">
-							<span
-								className="codicon codicon-law flex items-center"
-								style={{ fontSize: "12.5px", marginBottom: 1 }}
-							/>
-						</div>
-					</VSCodeButton>
-				</Tooltip>
+				<TooltipProvider>
+					<Tooltip open={isVisible ? false : undefined}>
+						<TooltipTrigger asChild>
+							<VSCodeButton
+								appearance="icon"
+								aria-label={t("kilocode:rules.ariaLabel")}
+								onClick={() => setIsVisible(!isVisible)}
+								style={{ padding: "0px 0px", height: "20px" }}>
+								<div className="flex items-center gap-1 text-xs whitespace-nowrap min-w-0 w-full">
+									<span
+										className="codicon codicon-law flex items-center"
+										style={{ fontSize: "12.5px", marginBottom: 1 }}
+									/>
+								</div>
+							</VSCodeButton>
+						</TooltipTrigger>
+						<TooltipContent>{t("kilocode:rules.tooltip")}</TooltipContent>
+					</Tooltip>
+				</TooltipProvider>
 			</div>
 
 			{isVisible && (
