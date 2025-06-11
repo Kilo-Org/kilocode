@@ -28,14 +28,6 @@ const Tooltip: React.FC<TooltipProps> = ({ tipText, visible, children }) => {
 						border: "1px solid var(--vscode-editorHoverWidget-border)",
 					}}>
 					{tipText}
-					<div
-						className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0"
-						style={{
-							borderLeft: "4px solid transparent",
-							borderRight: "4px solid transparent",
-							borderTop: "4px solid var(--vscode-editorHoverWidget-border)",
-						}}
-					/>
 				</div>
 			)}
 		</div>
