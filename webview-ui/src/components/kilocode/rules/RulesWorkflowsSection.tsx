@@ -25,26 +25,12 @@ const RulesWorkflowsSection: React.FC<RulesWorkflowsSectionProps> = ({
 		<>
 			<div className="mb-3">
 				<div className="text-sm font-normal mb-2">{t(`kilocode:rules.sections.${globalSectionKey}`)}</div>
-				<RulesToggleList
-					rules={globalItems}
-					toggleRule={toggleGlobal}
-					isGlobal={true}
-					ruleType={type}
-					showNewRule={true}
-					showNoRules={false}
-				/>
+				<RulesToggleList rules={globalItems} toggleRule={toggleGlobal} isGlobal={true} ruleType={type} />
 			</div>
 
 			<div style={{ marginBottom: -10 }}>
 				<div className="text-sm font-normal mb-2">{t(`kilocode:rules.sections.${workspaceSectionKey}`)}</div>
-				<RulesToggleList
-					rules={localItems}
-					toggleRule={toggleLocal}
-					isGlobal={false}
-					ruleType={type}
-					showNewRule={true}
-					showNoRules={false}
-				/>
+				<RulesToggleList rules={localItems} toggleRule={toggleLocal} isGlobal={false} ruleType={type} />
 			</div>
 		</>
 	)
