@@ -10,6 +10,7 @@ import { DiffStrategy } from "../../shared/tools"
 import { formatLanguage } from "../../shared/language"
 import { isEmpty } from "../../utils/object"
 
+import { VSCLMToolsService } from "../../services/vsclm/VSCLMToolsService"
 import { McpHub } from "../../services/mcp/McpHub"
 import { CodeIndexManager } from "../../services/code-index/manager"
 
@@ -21,6 +22,7 @@ import {
 	getSystemInfoSection,
 	getObjectiveSection,
 	getSharedToolUseSection,
+	getVSCLMTSection,
 	getMcpServersSection,
 	getToolUseGuidelinesSection,
 	getCapabilitiesSection,
@@ -47,6 +49,7 @@ async function generatePrompt(
 	cwd: string,
 	supportsComputerUse: boolean,
 	mode: Mode,
+	vsclmtService?: VSCLMToolsService,
 	mcpHub?: McpHub,
 	diffStrategy?: DiffStrategy,
 	browserViewportSize?: string,
@@ -78,8 +81,9 @@ async function generatePrompt(
 	const hasMcpServers = mcpHub && mcpHub.getServers().length > 0
 	const shouldIncludeMcp = hasMcpGroup && hasMcpServers
 
-	const [modesSection, mcpServersSection] = await Promise.all([
+	const [modesSection, vsclmtSection, mcpServersSection] = await Promise.all([
 		getModesSection(context),
+		vsclmtService ? getVSCLMTSection(vsclmtService.getSelectedTools()) : Promise.resolve(""),
 		shouldIncludeMcp
 			? getMcpServersSection(mcpHub, effectiveDiffStrategy, enableMcpServerCreation)
 			: Promise.resolve(""),
@@ -109,6 +113,8 @@ ${getToolDescriptionsForMode(
 
 ${getToolUseGuidelinesSection(codeIndexManager)}
 
+${vsclmtSection}
+
 ${mcpServersSection}
 
 ${getCapabilitiesSection(cwd, supportsComputerUse, shouldIncludeMcp ? mcpHub : undefined, effectiveDiffStrategy, codeIndexManager)}
@@ -136,6 +142,7 @@ export const SYSTEM_PROMPT = async (
 	context: vscode.ExtensionContext,
 	cwd: string,
 	supportsComputerUse: boolean,
+	vsclmtService?: VSCLMToolsService,
 	mcpHub?: McpHub,
 	diffStrategy?: DiffStrategy,
 	browserViewportSize?: string,
@@ -211,6 +218,7 @@ ${customInstructions}`
 		cwd,
 		supportsComputerUse,
 		currentMode.slug,
+		vsclmtService,
 		mcpHub,
 		effectiveDiffStrategy,
 		browserViewportSize,

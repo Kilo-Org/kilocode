@@ -1900,6 +1900,7 @@ export class Task extends EventEmitter<ClineEvents> {
 	// kilocode_change end
 
 	/*private kilocode_change*/ async getSystemPrompt(): Promise<string> {
+		const vsclmtService = this.providerRef.deref()?.getVSCLMToolService()
 		const { mcpEnabled } = (await this.providerRef.deref()?.getState()) ?? {}
 		let mcpHub: McpHub | undefined
 		if (mcpEnabled ?? true) {
@@ -1953,6 +1954,7 @@ export class Task extends EventEmitter<ClineEvents> {
 				this.cwd,
 				// kilocode_change: supports images => supports browser
 				(this.api.getModel().info.supportsImages ?? false) && (browserToolEnabled ?? true),
+				vsclmtService,
 				mcpHub,
 				this.diffStrategy,
 				browserViewportSize,
