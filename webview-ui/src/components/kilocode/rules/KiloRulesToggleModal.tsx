@@ -14,6 +14,21 @@ const sortedRules = (data: Record<string, unknown> | undefined) =>
 		.map(([path, enabled]): [string, boolean] => [path, enabled as boolean])
 		.sort(([a], [b]) => a.localeCompare(b))
 
+interface DescriptionWithLinkProps {
+	children: React.ReactNode
+	href: string
+	linkText: string
+}
+
+const DescriptionWithLink: React.FC<DescriptionWithLinkProps> = ({ children, href, linkText }) => (
+	<p>
+		{children}{" "}
+		<VSCodeLink href={href} style={{ display: "inline" }} className="text-xs">
+			{linkText}
+		</VSCodeLink>
+	</p>
+)
+
 const KiloRulesToggleModal: React.FC = () => {
 	const { t } = useTranslation()
 
@@ -145,27 +160,19 @@ const KiloRulesToggleModal: React.FC = () => {
 
 					<div className="text-xs text-[var(--vscode-descriptionForeground)] mb-4">
 						{currentView === "rule" ? (
-							<p>
-								{t("kilocode:rules.description.rules")}{" "}
-								<VSCodeLink
-									href="https://kilocode.ai/docs/advanced-usage/rules"
-									style={{ display: "inline" }}
-									className="text-xs">
-									{t("kilocode:docs")}
-								</VSCodeLink>
-							</p>
+							<DescriptionWithLink
+								href="https://kilocode.ai/docs/advanced-usage/rules"
+								linkText={t("kilocode:docs")}>
+								{t("kilocode:rules.description.rules")}
+							</DescriptionWithLink>
 						) : (
-							<p>
+							<DescriptionWithLink
+								href="https://kilocode.ai/docs/advanced-usage/workflows"
+								linkText={t("kilocode:docs")}>
 								{t("kilocode:rules.description.workflows")}{" "}
 								<span className="text-[var(--vscode-foreground)] font-bold">/workflow-name</span>{" "}
-								{t("kilocode:rules.description.workflowsInChat")}{" "}
-								<VSCodeLink
-									href="https://kilocode.ai/docs/advanced-usage/workflows"
-									style={{ display: "inline" }}
-									className="text-xs">
-									{t("kilocode:docs")}
-								</VSCodeLink>
-							</p>
+								{t("kilocode:rules.description.workflowsInChat")}
+							</DescriptionWithLink>
 						)}
 					</div>
 
