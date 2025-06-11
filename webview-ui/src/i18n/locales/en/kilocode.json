@@ -70,6 +70,14 @@
 		},
 		"validation": {
 			"invalidFileExtension": "Only .md, .txt, or no file extension allowed"
+		},
+		"placeholders": {
+			"workflowName": "workflow-name (.md, .txt, or no extension)",
+			"ruleName": "rule-name (.md, .txt, or no extension)"
+		},
+		"newFile": {
+			"newWorkflowFile": "New workflow file...",
+			"newRuleFile": "New rule file..."
 		}
 	}
 }
