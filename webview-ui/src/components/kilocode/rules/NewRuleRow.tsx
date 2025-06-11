@@ -19,7 +19,6 @@ const NewRuleRow: React.FC<NewRuleRowProps> = ({ isGlobal, ruleType }) => {
 
 	const componentRef = useRef<HTMLDivElement>(null)
 
-	// Focus the input when expanded
 	useEffect(() => {
 		if (isExpanded && inputRef.current) {
 			inputRef.current.focus()
