@@ -32,8 +32,6 @@ const RuleRow: React.FC<{
 					title={rulePath}>
 					<span className="ph-no-capture">{basename(rulePath)}</span>
 				</span>
-
-				{/* Toggle Switch */}
 				<div className="flex items-center ml-2 space-x-2">
 					<div
 						role="switch"
