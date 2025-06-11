@@ -67,6 +67,9 @@
 		"emptyState": {
 			"noRulesFound": "No rules found",
 			"noWorkflowsFound": "No workflows found"
+		},
+		"validation": {
+			"invalidFileExtension": "Only .md, .txt, or no file extension allowed"
 		}
 	}
 }

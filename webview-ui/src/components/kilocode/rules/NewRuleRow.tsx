@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import { useClickAway } from "react-use"
+import { useTranslation } from "react-i18next"
 import { vscode } from "@/utils/vscode"
 import { getExtension } from "@/utils/kilocode/path-webview"
 
@@ -10,6 +11,7 @@ interface NewRuleRowProps {
 }
 
 const NewRuleRow: React.FC<NewRuleRowProps> = ({ isGlobal, ruleType }) => {
+	const { t } = useTranslation()
 	const [isExpanded, setIsExpanded] = useState(false)
 	const [filename, setFilename] = useState("")
 	const inputRef = useRef<HTMLInputElement>(null)
@@ -44,7 +46,7 @@ const NewRuleRow: React.FC<NewRuleRowProps> = ({ isGlobal, ruleType }) => {
 			const extension = getExtension(trimmedFilename)
 
 			if (!isValidExtension(extension)) {
-				setError("Only .md, .txt, or no file extension allowed")
+				setError(t("kilocode:rules.validation.invalidFileExtension"))
 				return
 			}
 
