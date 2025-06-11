@@ -1,5 +1,20 @@
 # kilo-code
 
+## [v4.35.0]
+
+- [#633](https://github.com/Kilo-Org/kilocode/pull/633) [`347cf9e`](https://github.com/Kilo-Org/kilocode/commit/347cf9e6dc10d5b8706af5e111ccc854f7742566) Thanks [@hassoncs](https://github.com/hassoncs)! - # AI-Powered Git Commit Message Generation
+
+    Automatically generate meaningful Git commit messages using AI
+
+    ## How It Works
+
+    1. Stage your changes in Git as usual
+    2. Click the [KILO] square icon in the Source Control panel
+    3. The AI analyzes your staged changes and generates an appropriate commit message
+    4. The generated message is automatically populated in the commit input box
+
+- [#638](https://github.com/Kilo-Org/kilocode/pull/638) [`3d2e749`](https://github.com/Kilo-Org/kilocode/commit/3d2e749d51797681c018bc390757fdabefd60620) Thanks [@tru-kilo](https://github.com/tru-kilo)! - Added ability to favorite tasks
+
 ## [v4.34.1]
 
 ### Patch Changes
