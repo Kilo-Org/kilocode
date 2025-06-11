@@ -47,6 +47,7 @@ describe("RequestyHandler", () => {
 			defaultHeaders: {
 				"HTTP-Referer": "https://kilocode.ai",
 				"X-Title": "Kilo Code",
+				"X-KiloCode-Version": expect.any(String), // kilocode_change
 			},
 		})
 	})

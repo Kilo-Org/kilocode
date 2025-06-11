@@ -12,6 +12,7 @@ export const useTaskSearch = () => {
 	const [sortOption, setSortOption] = useState<SortOption>("newest")
 	const [lastNonRelevantSort, setLastNonRelevantSort] = useState<SortOption | null>("newest")
 	const [showAllWorkspaces, setShowAllWorkspaces] = useState(false)
+	const [showFavoritesOnly, setShowFavoritesOnly] = useState(false) // kilocode_change
 
 	useEffect(() => {
 		if (searchQuery && sortOption !== "mostRelevant" && !lastNonRelevantSort) {
@@ -28,8 +29,13 @@ export const useTaskSearch = () => {
 		if (!showAllWorkspaces) {
 			tasks = tasks.filter((item) => item.workspace === cwd)
 		}
+		// kilocode_change start
+		if (showFavoritesOnly) {
+			tasks = tasks.filter((item) => item.isFavorited)
+		}
+		// kilocode_change end
 		return tasks
-	}, [taskHistory, showAllWorkspaces, cwd])
+	}, [taskHistory, showAllWorkspaces, showFavoritesOnly, cwd]) // kilocode_change
 
 	const fzf = useMemo(() => {
 		return new Fzf(presentableTasks, {
@@ -88,5 +94,7 @@ export const useTaskSearch = () => {
 		setLastNonRelevantSort,
 		showAllWorkspaces,
 		setShowAllWorkspaces,
+		showFavoritesOnly,
+		setShowFavoritesOnly,
 	}
 }

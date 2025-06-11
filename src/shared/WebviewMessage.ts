@@ -176,6 +176,7 @@ export interface WebviewMessage {
 		| "indexCleared"
 		| "codebaseIndexConfig"
 		| "telemetrySetting"
+		| "toggleTaskFavorite" // kilocode_change
 	text?: string
 	disabled?: boolean
 	askResponse?: ClineAskResponse

@@ -34,6 +34,9 @@
 	"deleteTasks": "Aufgaben löschen",
 	"confirmDeleteTasks": "Bist du sicher, dass du {{count}} Aufgaben löschen möchtest?",
 	"deleteTasksWarning": "Gelöschte Aufgaben können nicht wiederhergestellt werden. Bitte vergewissere dich, dass du fortfahren möchtest.",
+	"deleteTaskFavoritedWarning": "Diese Aufgabe ist favorisiert. Bist du sicher, dass du sie löschen möchtest?",
+	"deleteTasksFavoritedWarning": "{{count}} der ausgewählten Aufgaben sind favorisiert. Bist du sicher, dass du sie löschen möchtest?",
 	"deleteItems": "{{count}} Elemente löschen",
-	"showAllWorkspaces": "Aufgaben aus allen Arbeitsbereichen anzeigen"
+	"showAllWorkspaces": "Aufgaben aus allen Arbeitsbereichen anzeigen",
+	"showFavoritesOnly": "Nur Favoriten anzeigen"
 }

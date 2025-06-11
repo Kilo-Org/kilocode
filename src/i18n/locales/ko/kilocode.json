@@ -5,5 +5,19 @@
 	"lowCreditWarning": {
 		"title": "크레딧 부족 경고!",
 		"message": "무료 크레딧으로 충전하거나 추가 구매가 가능한지 확인하세요!"
+	},
+	"commitMessage": {
+		"activated": "Kilo Code 커밋 메시지 생성기가 활성화되었습니다",
+		"gitNotFound": "⚠️ Git 저장소를 찾을 수 없거나 git을 사용할 수 없습니다",
+		"gitInitError": "⚠️ Git 초기화 오류: {{error}}",
+		"generating": "Kilo: 커밋 메시지 생성 중...",
+		"analyzingChanges": "킬로: 스테이지된 변경사항 분석 중...",
+		"noStagedChangesRepo": "Kilo: git 저장소에서 스테이지된 변경 사항이 없습니다",
+		"noStagedChanges": "Kilo: 분석할 단계적 변경사항이 없습니다",
+		"generated": "Kilo: 커밋 메시지가 생성되었습니다!",
+		"generationFailed": "Kilo: 커밋 메시지 생성 실패: {{errorMessage}}",
+		"tokenRequired": "커밋 메시지 생성에는 Kilo Code 토큰이 필요합니다",
+		"activationFailed": "Kilo: 커밋 메시지 제공자 활성화 실패: {{error}}",
+		"providerRegistered": "Kilo: 커밋 메시지 제공자가 등록되었습니다"
 	}
 }

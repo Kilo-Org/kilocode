@@ -5,5 +5,19 @@
 	"lowCreditWarning": {
 		"title": "Düşük Kredi Uyarısı!",
 		"message": "Ücretsiz kredilerle yükleme yapabilir veya daha fazla satın alabilir misiniz kontrol edin!"
+	},
+	"commitMessage": {
+		"activated": "Kilo Code commit mesaj üreticisi etkinleştirildi",
+		"gitNotFound": "⚠️ Git deposu bulunamadı veya git kullanılamıyor",
+		"gitInitError": "⚠️ Git başlatma hatası: {{error}}",
+		"generating": "Kilo: Taahhüt mesajı oluşturuluyor...",
+		"analyzingChanges": "Kilo: Aşamalı değişiklikler analiz ediliyor...",
+		"noStagedChangesRepo": "Kilo: Git deposunda hazırlanan değişiklik bulunamadı",
+		"noStagedChanges": "Kilo: Analiz edilecek hazırlanmış değişiklik bulunamadı",
+		"generated": "Kilo: Taahhüt mesajı oluşturuldu!",
+		"generationFailed": "Kilo: Taahhüt mesajı oluşturulamadı: {{errorMessage}}",
+		"tokenRequired": "Taahhüt (commit) mesajı oluşturmak için Kilo Code token'ı gerekmektedir",
+		"activationFailed": "Kilo: Commit mesaj sağlayıcısı etkinleştirilemedi: {{error}}",
+		"providerRegistered": "Kilo: Bildirim mesajı sağlayıcısı kaydedildi"
 	}
 }

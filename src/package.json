@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.34.0",
+	"version": "4.34.1",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -229,6 +229,15 @@
 				"title": "%command.profile.title%",
 				"icon": "$(account)",
 				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.generateCommitMessage",
+				"title": "%command.generateCommitMessage.title%",
+				"icon": {
+					"light": "assets/icons/kilo-light.svg",
+					"dark": "assets/icons/kilo-dark.svg"
+				},
+				"category": "%configuration.title%"
 			}
 		],
 		"keybindings": [
@@ -357,6 +366,19 @@
 					"command": "kilo-code.helpButtonClicked",
 					"group": "navigation@6",
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
+				}
+			],
+			"scm/input": [
+				{
+					"command": "kilo-code.generateCommitMessage",
+					"group": "navigation"
+				}
+			],
+			"scm/title": [
+				{
+					"command": "kilo-code.generateCommitMessage",
+					"when": "scmProvider == git",
+					"group": "navigation"
 				}
 			]
 		},

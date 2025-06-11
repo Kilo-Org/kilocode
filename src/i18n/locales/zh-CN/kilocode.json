@@ -5,5 +5,19 @@
 	"lowCreditWarning": {
 		"title": "余额不足警告！",
 		"message": "请检查是否可以充值免费额度或购买更多额度！"
+	},
+	"commitMessage": {
+		"activated": "千行代码提交信息生成器已激活",
+		"gitNotFound": "⚠️ Git 仓库未找到或 git 不可用",
+		"gitInitError": "⚠️ Git 初始化错误：{{error}}",
+		"generating": "Kilo: 正在生成提交信息...",
+		"analyzingChanges": "Kilo：正在分析暂存的更改...",
+		"noStagedChangesRepo": "Kilo: Git 仓库中未发现已暂存的更改",
+		"noStagedChanges": "Kilo：未发现可进行分析的已暂存更改",
+		"generated": "千字计: 提交信息已生成!",
+		"generationFailed": "Kilo: 生成提交信息失败：{{errorMessage}}",
+		"tokenRequired": "提交消息生成需要 Kilo Code 令牌",
+		"activationFailed": "Kilo：激活提交消息提供者失败：{{error}}",
+		"providerRegistered": "Kilo: 提交消息提供程序已注册"
 	}
 }

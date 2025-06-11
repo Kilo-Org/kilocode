@@ -5,5 +5,19 @@
 	"lowCreditWarning": {
 		"title": "Avviso Credito Basso!",
 		"message": "Verifica se puoi ricaricare con crediti gratuiti o acquistarne altri!"
+	},
+	"commitMessage": {
+		"activated": "Generatore di messaggi di commit per Kilo Code attivato",
+		"gitNotFound": "⚠️ Repository Git non trovato o git non disponibile",
+		"gitInitError": "⚠️ Errore di inizializzazione Git: {{error}}",
+		"generating": "Kilo: Generazione del messaggio di commit in corso...",
+		"analyzingChanges": "Kilo: Analisi delle modifiche in corso...",
+		"noStagedChangesRepo": "Kilo: Nessuna modifica in attesa trovata nel repository git",
+		"noStagedChanges": "Kilo: Nessuna modifica in fase di staging trovata da analizzare",
+		"generated": "Kilo: Messaggio di commit generato!",
+		"generationFailed": "Kilo: Generazione del messaggio di commit fallita: {{errorMessage}}",
+		"tokenRequired": "Il token Kilo Code è necessario per la generazione del messaggio di commit",
+		"activationFailed": "Kilo: Impossibile attivare il provider dei messaggi di commit: {{error}}",
+		"providerRegistered": "Kilo: Provider di messaggi di commit registrato"
 	}
 }

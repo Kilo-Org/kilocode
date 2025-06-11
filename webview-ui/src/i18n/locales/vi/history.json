@@ -34,6 +34,9 @@
 	"deleteTasks": "Xóa nhiệm vụ",
 	"confirmDeleteTasks": "Bạn có chắc chắn muốn xóa {{count}} nhiệm vụ không?",
 	"deleteTasksWarning": "Các nhiệm vụ đã xóa không thể khôi phục. Vui lòng chắc chắn bạn muốn tiếp tục.",
+	"deleteTaskFavoritedWarning": "Nhiệm vụ này đã được đánh dấu là yêu thích. Bạn có chắc chắn muốn xóa nó không?",
+	"deleteTasksFavoritedWarning": "{{count}} nhiệm vụ đã được đánh dấu là yêu thích. Bạn có chắc chắn muốn xóa chúng không?",
 	"deleteItems": "Xóa {{count}} mục",
-	"showAllWorkspaces": "Hiển thị nhiệm vụ từ tất cả không gian làm việc"
+	"showAllWorkspaces": "Hiển thị nhiệm vụ từ tất cả không gian làm việc",
+	"showFavoritesOnly": "Chỉ hiển thị mục yêu thích"
 }

@@ -34,6 +34,9 @@
 	"deleteTasks": "Eliminar tasques",
 	"confirmDeleteTasks": "Estàs segur que vols eliminar {{count}} tasques?",
 	"deleteTasksWarning": "Les tasques eliminades no es poden recuperar. Si us plau, assegura't que vols continuar.",
+	"deleteTaskFavoritedWarning": "Aquesta tasca està marcada com a preferida. Estàs segur que vols eliminar-la?",
+	"deleteTasksFavoritedWarning": "{{count}} de les tasques seleccionades estan marcades com a preferides. Estàs segur que vols eliminar-les?",
 	"deleteItems": "Eliminar {{count}} elements",
-	"showAllWorkspaces": "Mostrar tasques de tots els espais de treball"
+	"showAllWorkspaces": "Mostrar tasques de tots els espais de treball",
+	"showFavoritesOnly": "Mostrar només els preferits"
 }

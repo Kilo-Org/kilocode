@@ -34,6 +34,9 @@
 	"deleteTasks": "タスクを削除",
 	"confirmDeleteTasks": "{{count}} 件のタスクを削除してもよろしいですか？",
 	"deleteTasksWarning": "削除されたタスクは復元できません。続行してもよろしいですか？",
+	"deleteTaskFavoritedWarning": "このタスクはお気に入りに登録されています。削除してもよろしいですか？",
+	"deleteTasksFavoritedWarning": "{{count}} 件のタスクはお気に入りに登録されています。削除してもよろしいですか？",
 	"deleteItems": "{{count}} 項目を削除",
-	"showAllWorkspaces": "すべてのワークスペースのタスクを表示"
+	"showAllWorkspaces": "すべてのワークスペースのタスクを表示",
+	"showFavoritesOnly": "お気に入りのみ表示"
 }

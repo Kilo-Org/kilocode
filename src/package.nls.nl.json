@@ -23,6 +23,7 @@
 	"command.terminal.fixCommand.title": "Repareer Dit Commando",
 	"command.terminal.explainCommand.title": "Leg Dit Commando Uit",
 	"command.acceptInput.title": "Invoer/Suggestie Accepteren",
+	"command.generateCommitMessage.title": "Genereer commit bericht met Kilo",
 	"command.profile.title": "Profiel",
 	"configuration.title": "Kilo Code",
 	"commands.allowedCommands.description": "Commando's die automatisch kunnen worden uitgevoerd wanneer 'Altijd goedkeuren uitvoerbewerkingen' is ingeschakeld",

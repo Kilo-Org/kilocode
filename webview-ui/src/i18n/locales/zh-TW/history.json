@@ -34,6 +34,9 @@
 	"deleteTasks": "刪除工作",
 	"confirmDeleteTasks": "確定要刪除 {{count}} 個工作嗎？",
 	"deleteTasksWarning": "已刪除的工作無法還原。請確認是否要繼續。",
+	"deleteTaskFavoritedWarning": "該工作已收藏，確定刪除？",
+	"deleteTasksFavoritedWarning": "已收藏 {{count}} 個工作，確定刪除？",
 	"deleteItems": "刪除 {{count}} 個項目",
-	"showAllWorkspaces": "顯示所有工作區的工作"
+	"showAllWorkspaces": "顯示所有工作區的工作",
+	"showFavoritesOnly": "僅顯示收藏"
 }

@@ -32,5 +32,19 @@
 				"guideline2": "Guideline 2"
 			}
 		}
+	},
+	"commitMessage": {
+		"activated": "Kilo Code commit message generator activated",
+		"gitNotFound": "⚠️ Git repository not found or git not available",
+		"gitInitError": "⚠️ Git initialization error: {{error}}",
+		"generating": "Kilo: Generating commit message...",
+		"analyzingChanges": "Kilo: Analyzing staged changes...",
+		"noStagedChangesRepo": "Kilo: No staged changes found in git repository",
+		"noStagedChanges": "Kilo: No staged changes found to analyze",
+		"generated": "Kilo: Commit message generated!",
+		"generationFailed": "Kilo: Failed to generate commit message: {{errorMessage}}",
+		"tokenRequired": "Kilo Code token is required for commit message generation",
+		"activationFailed": "Kilo: Failed to activate commit message provider: {{error}}",
+		"providerRegistered": "Kilo: Commit message provider registered"
 	}
 }

@@ -33,6 +33,13 @@ const TaskItemHeader: React.FC<TaskItemHeaderProps> = ({ item, variant, isSelect
 		}
 	}
 
+	// kilocode_change start
+	const handleFavoriteClick = (e: React.MouseEvent) => {
+		e.stopPropagation()
+		vscode.postMessage({ type: "toggleTaskFavorite", text: item.id })
+	}
+	// kilocode_change end
+
 	return (
 		<div className="flex justify-between items-center pb-0">
 			<div className="flex items-center flex-wrap gap-x-2 text-xs">
@@ -44,6 +51,22 @@ const TaskItemHeader: React.FC<TaskItemHeaderProps> = ({ item, variant, isSelect
 			{/* Action Buttons */}
 			{!isSelectionMode && (
 				<div className="flex flex-row gap-0 items-center opacity-50 hover:opacity-100">
+					{/* kilocode_change start */}
+					{/* Favorite Star Button */}
+					<Button
+						variant="ghost"
+						size="icon"
+						title={item.isFavorited ? t("history:unfavoriteTask") : t("history:favoriteTask")}
+						data-testid="favorite-task-button"
+						onClick={handleFavoriteClick}
+						className={item.isFavorited ? "text-yellow-500" : ""}>
+						<span
+							className={`codicon ${item.isFavorited ? "codicon-star-full" : "codicon-star-empty"}`}
+							style={actionIconStyle}
+						/>
+					</Button>
+					{/* kilocode_change end */}
+
 					{isCompact ? (
 						<CopyButton itemTask={item.task} />
 					) : (

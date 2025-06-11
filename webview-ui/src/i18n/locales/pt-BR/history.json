@@ -34,6 +34,9 @@
 	"deleteTasks": "Excluir tarefas",
 	"confirmDeleteTasks": "Tem certeza que deseja excluir {{count}} tarefas?",
 	"deleteTasksWarning": "As tarefas excluídas não podem ser recuperadas. Por favor, certifique-se de que deseja prosseguir.",
+	"deleteTaskFavoritedWarning": "Esta tarefa está marcada como favorita. Tem certeza que deseja excluí-la?",
+	"deleteTasksFavoritedWarning": "{{count}} das tarefas selecionadas estão marcadas como favoritas. Tem certeza que deseja excluí-las?",
 	"deleteItems": "Excluir {{count}} itens",
-	"showAllWorkspaces": "Mostrar tarefas de todos os espaços de trabalho"
+	"showAllWorkspaces": "Mostrar tarefas de todos os espaços de trabalho",
+	"showFavoritesOnly": "Mostrar apenas favoritos"
 }

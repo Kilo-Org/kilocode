@@ -34,6 +34,9 @@
 	"deleteTasks": "删除任务",
 	"confirmDeleteTasks": "确认删除 {{count}} 项任务？",
 	"deleteTasksWarning": "删除后将无法恢复，请谨慎操作。",
+	"deleteTaskFavoritedWarning": "该任务已收藏，确认删除？",
+	"deleteTasksFavoritedWarning": "已收藏 {{count}} 项任务，确认删除？",
 	"deleteItems": "删除 {{count}} 项",
-	"showAllWorkspaces": "显示所有工作区的任务"
+	"showAllWorkspaces": "显示所有工作区的任务",
+	"showFavoritesOnly": "仅显示收藏"
 }
