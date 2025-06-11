@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next"
 import RulesToggleList from "./RulesToggleList"
 
 interface RulesWorkflowsSectionProps {
-	type: "rules" | "workflows"
+	type: "rule" | "workflow"
 	globalItems: [string, boolean][]
 	localItems: [string, boolean][]
 	toggleGlobal: (path: string, enabled: boolean) => void
@@ -18,8 +18,8 @@ const RulesWorkflowsSection: React.FC<RulesWorkflowsSectionProps> = ({
 }) => {
 	const { t } = useTranslation()
 
-	const globalSectionKey = type === "rules" ? "globalRules" : "globalWorkflows"
-	const workspaceSectionKey = type === "rules" ? "workspaceRules" : "workspaceWorkflows"
+	const globalSectionKey = type === "rule" ? "globalRules" : "globalWorkflows"
+	const workspaceSectionKey = type === "rule" ? "workspaceRules" : "workspaceWorkflows"
 
 	return (
 		<>

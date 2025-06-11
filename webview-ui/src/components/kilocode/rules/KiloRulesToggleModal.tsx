@@ -23,7 +23,7 @@ const KiloRulesToggleModal: React.FC = () => {
 	const { width: viewportWidth, height: viewportHeight } = useWindowSize()
 	const [arrowPosition, setArrowPosition] = useState(0)
 	const [menuPosition, setMenuPosition] = useState(0)
-	const [currentView, setCurrentView] = useState<"rules" | "workflows">("rules")
+	const [currentView, setCurrentView] = useState<"rule" | "workflow">("rule")
 	const [localRules, setLocalRules] = useState<[string, boolean][]>([])
 	const [globalRules, setGlobalRules] = useState<[string, boolean][]>([])
 	const [localWorkflows, setLocalWorkflows] = useState<[string, boolean][]>([])
@@ -132,19 +132,19 @@ const KiloRulesToggleModal: React.FC = () => {
 								gap: "1px",
 								borderBottom: "1px solid var(--vscode-panel-border)",
 							}}>
-							<StyledTabButton isActive={currentView === "rules"} onClick={() => setCurrentView("rules")}>
+							<StyledTabButton isActive={currentView === "rule"} onClick={() => setCurrentView("rule")}>
 								{t("kilocode:rules.tabs.rules")}
 							</StyledTabButton>
 							<StyledTabButton
-								isActive={currentView === "workflows"}
-								onClick={() => setCurrentView("workflows")}>
+								isActive={currentView === "workflow"}
+								onClick={() => setCurrentView("workflow")}>
 								{t("kilocode:rules.tabs.workflows")}
 							</StyledTabButton>
 						</div>
 					</div>
 
 					<div className="text-xs text-[var(--vscode-descriptionForeground)] mb-4">
-						{currentView === "rules" ? (
+						{currentView === "rule" ? (
 							<p>
 								{t("kilocode:rules.description.rules")}{" "}
 								<VSCodeLink
@@ -171,15 +171,15 @@ const KiloRulesToggleModal: React.FC = () => {
 
 					<RulesWorkflowsSection
 						type={currentView}
-						globalItems={currentView === "rules" ? globalRules : globalWorkflows}
-						localItems={currentView === "rules" ? localRules : localWorkflows}
+						globalItems={currentView === "rule" ? globalRules : globalWorkflows}
+						localItems={currentView === "rule" ? localRules : localWorkflows}
 						toggleGlobal={(path: string, enabled: boolean) =>
-							currentView === "rules"
+							currentView === "rule"
 								? toggleRule(true, path, enabled)
 								: toggleWorkflow(true, path, enabled)
 						}
 						toggleLocal={(path: string, enabled: boolean) =>
-							currentView === "rules"
+							currentView === "rule"
 								? toggleRule(false, path, enabled)
 								: toggleWorkflow(false, path, enabled)
 						}

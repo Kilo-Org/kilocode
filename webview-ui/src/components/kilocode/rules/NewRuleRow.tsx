@@ -5,7 +5,7 @@ import { vscode } from "@/utils/vscode"
 
 interface NewRuleRowProps {
 	isGlobal: boolean
-	ruleType?: string
+	ruleType: "rule" | "workflow"
 }
 
 const NewRuleRow: React.FC<NewRuleRowProps> = ({ isGlobal, ruleType }) => {
@@ -62,7 +62,7 @@ const NewRuleRow: React.FC<NewRuleRowProps> = ({ isGlobal, ruleType }) => {
 					type: "createRuleFile",
 					isGlobal,
 					filename: finalFilename,
-					ruleType: ruleType || "rule",
+					ruleType: ruleType,
 				})
 			} catch (err) {
 				console.error("Error creating rule file:", err)

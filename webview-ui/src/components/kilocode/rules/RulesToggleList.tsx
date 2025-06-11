@@ -10,7 +10,7 @@ const RulesToggleList = ({
 	rules: [string, boolean][]
 	toggleRule: (rulePath: string, enabled: boolean) => void
 	isGlobal: boolean
-	ruleType: "rules" | "workflows"
+	ruleType: "rule" | "workflow"
 }) => {
 	return (
 		<div className="flex flex-col gap-0">
@@ -20,7 +20,7 @@ const RulesToggleList = ({
 				))
 			) : (
 				<div className="flex flex-col items-center gap-3 my-3 text-[var(--vscode-descriptionForeground)]">
-					{ruleType === "workflows" ? "No workflows found" : "No rules found"}
+					{ruleType === "workflow" ? "No workflows found" : "No rules found"}
 				</div>
 			)}
 			<NewRuleRow isGlobal={isGlobal} ruleType={ruleType} />
