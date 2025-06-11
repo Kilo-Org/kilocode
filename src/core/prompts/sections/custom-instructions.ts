@@ -22,7 +22,7 @@ import { isLanguage } from "@roo-code/types"
 
 import { LANGUAGES } from "../../../shared/language"
 import { ClineRulesToggles } from "../../../shared/cline-rules" // kilocode_change
-import { GlobalFileNames } from "../../../shared/globalFileNames"
+import { GlobalFileNames } from "../../../shared/globalFileNames" // kilocode_change
 
 /**
  * Safely read a file and return its trimmed content
