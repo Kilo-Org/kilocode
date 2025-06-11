@@ -22,6 +22,7 @@ import { isLanguage } from "@roo-code/types"
 
 import { LANGUAGES } from "../../../shared/language"
 import { ClineRulesToggles } from "../../../shared/cline-rules" // kilocode_change
+import { GlobalFileNames } from "../../../shared/globalFileNames"
 
 /**
  * Safely read a file and return its trimmed content
@@ -202,12 +203,12 @@ async function loadEnabledRules(
 	globalRulesToggleState: ClineRulesToggles,
 ): Promise<string> {
 	const globalRulesContent = await loadEnabledRulesFromDirectory(
-		path.join(require("os").homedir(), ".kilocode", "rules"),
+		path.join(require("os").homedir(), GlobalFileNames.kiloRules),
 		globalRulesToggleState,
 		"Global Rules",
 	)
 	const localRulesContent = await loadEnabledRulesFromDirectory(
-		path.join(cwd, ".kilocode", "rules"),
+		path.join(cwd, GlobalFileNames.kiloRules),
 		localRulesToggleState,
 		"Local Rules",
 	)
