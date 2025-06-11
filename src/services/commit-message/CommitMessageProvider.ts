@@ -118,10 +118,6 @@ export class CommitMessageProvider {
 	 * Builds the AI prompt for commit message generation.
 	 */
 	private async buildCommitMessagePrompt(context: string): Promise<string> {
-		// Load rules from the workspace
-		const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
-		const rules = workspaceRoot ? await loadRuleFiles(workspaceRoot) : ""
-
 		// Check if we should generate a different message than the previous one
 		const shouldGenerateDifferentMessage =
 			this.previousGitContext === context && this.previousCommitMessage !== null
@@ -217,15 +213,12 @@ When analyzing staged changes:
 
 For significant changes, include a detailed body explaining the changes.`
 
-		// Append rules if they exist
-		const rulesSection = rules ? `\n\nAdditional Rules:${rules}` : ""
-
 		// Add a final reminder if we need a different message
 		const finalReminder = shouldGenerateDifferentMessage
 			? `\n\nFINAL REMINDER: Your message MUST be COMPLETELY DIFFERENT from the previous message: "${this.previousCommitMessage}". This is a critical requirement.`
 			: ""
 
-		return `${basePrompt}${rulesSection}${finalReminder}\n\nReturn ONLY the commit message in the conventional format, nothing else.`
+		return `${basePrompt}${finalReminder}\n\nReturn ONLY the commit message in the conventional format, nothing else.`
 	}
 
 	/**
