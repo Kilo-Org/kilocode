@@ -21,7 +21,7 @@ async function refreshLocalWorkflowToggles(
 
 async function refreshGlobalWorkflowToggles(proxy: ContextProxy) {
 	const globalWorkflowToggles = ((await proxy.getGlobalState("globalWorkflowToggles")) as ClineRulesToggles) || {}
-	const globalWorkflowsDir = path.join(os.homedir(), ".kilocode", "workflows")
+	const globalWorkflowsDir = path.join(os.homedir(), GlobalFileNames.workflows)
 	const updatedGlobalWorkflowToggles = await synchronizeRuleToggles(globalWorkflowsDir, globalWorkflowToggles)
 	await proxy.updateGlobalState("globalWorkflowToggles", updatedGlobalWorkflowToggles)
 	return updatedGlobalWorkflowToggles
