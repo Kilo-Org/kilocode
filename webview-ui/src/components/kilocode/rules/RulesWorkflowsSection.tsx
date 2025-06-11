@@ -28,7 +28,6 @@ const RulesWorkflowsSection: React.FC<RulesWorkflowsSectionProps> = ({
 				<RulesToggleList
 					rules={globalItems}
 					toggleRule={toggleGlobal}
-					listGap="small"
 					isGlobal={true}
 					ruleType={type}
 					showNewRule={true}
@@ -41,7 +40,6 @@ const RulesWorkflowsSection: React.FC<RulesWorkflowsSectionProps> = ({
 				<RulesToggleList
 					rules={localItems}
 					toggleRule={toggleLocal}
-					listGap="small"
 					isGlobal={false}
 					ruleType={type}
 					showNewRule={true}
