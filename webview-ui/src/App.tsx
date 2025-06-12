@@ -143,8 +143,8 @@ const App = () => {
 				onCancel={(requestId) => vscode.postMessage({ type: "humanRelayCancel", requestId })}
 			/>
 			{/* kilocode_change */}
-			{/* Chat, prompts and history view contain their own bottom controls */}
-			{!["chat", "prompts", "history"].includes(tab) && (
+			{/* Chat, modes and history view contain their own bottom controls */}
+			{!["chat", "modes", "history"].includes(tab) && (
 				<div className="fixed inset-0 top-auto">
 					<BottomControls />
 				</div>

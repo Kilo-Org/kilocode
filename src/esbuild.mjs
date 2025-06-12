@@ -59,6 +59,9 @@ async function main() {
 						srcDir,
 						buildDir,
 					)
+
+					// Copy walkthrough files to dist directory
+					copyPaths([["walkthrough", "walkthrough"]], srcDir, distDir)
 				})
 			},
 		},
