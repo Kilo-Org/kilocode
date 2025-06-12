@@ -1,5 +1,6 @@
 import fs from "fs/promises"
 import path from "path"
+import os from "os"
 import { ClineRulesToggles } from "../../../shared/cline-rules"
 import { GlobalFileNames } from "../../../shared/globalFileNames"
 
@@ -61,7 +62,7 @@ export async function loadEnabledRules(
 	readTextFilesFromDirectory: (dirPath: string) => Promise<Array<{ filename: string; content: string }>>,
 ): Promise<string> {
 	const globalRulesContent = await loadEnabledRulesFromDirectory(
-		path.join(require("os").homedir(), GlobalFileNames.kiloRules),
+		path.join(os.homedir(), GlobalFileNames.kiloRules),
 		globalRulesToggleState,
 		"Global Rules",
 		directoryExists,
