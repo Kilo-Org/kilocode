@@ -1,7 +1,8 @@
 // npx jest src/components/ui/__tests__/select-dropdown.test.tsx
 
 import { ReactNode } from "react"
-import { render, screen, fireEvent } from "@testing-library/react"
+import { render, screen } from "@testing-library/react"
+import { fireEvent } from "@testing-library/dom"
 import { SelectDropdown, DropdownOptionType } from "../select-dropdown"
 
 // Mock window.postMessage
