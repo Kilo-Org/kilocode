@@ -4,6 +4,9 @@ import os from "os"
 import { ClineRulesToggles } from "../../../shared/cline-rules"
 import { GlobalFileNames } from "../../../shared/globalFileNames"
 
+type DirectoryExistsFunction = (dirPath: string) => Promise<boolean>
+type ReadTextFilesFromDirectoryFunction = (dirPath: string) => Promise<Array<{ filename: string; content: string }>>
+
 /**
  * Get rule files content with toggle state filtering (matches Cline's getRuleFilesTotalContent)
  */
@@ -58,8 +61,8 @@ export async function loadEnabledRules(
 	cwd: string,
 	localRulesToggleState: ClineRulesToggles,
 	globalRulesToggleState: ClineRulesToggles,
-	directoryExists: (dirPath: string) => Promise<boolean>,
-	readTextFilesFromDirectory: (dirPath: string) => Promise<Array<{ filename: string; content: string }>>,
+	directoryExists: DirectoryExistsFunction,
+	readTextFilesFromDirectory: ReadTextFilesFromDirectoryFunction,
 ): Promise<string> {
 	const globalRulesContent = await loadEnabledRulesFromDirectory(
 		path.join(os.homedir(), GlobalFileNames.kiloRules),
