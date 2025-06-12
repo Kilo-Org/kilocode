@@ -1,9 +1,11 @@
 import * as vscode from "vscode"
 import { ContextProxy } from "../../core/config/ContextProxy"
+import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 import { singleCompletionHandler } from "../../utils/single-completion-handler"
 import { GitExtensionService, GitChange } from "./GitExtensionService"
 import { loadRuleFiles } from "../../core/prompts/sections/custom-instructions"
 import { t } from "../../i18n"
+import type { ProviderSettings } from "@roo-code/types"
 
 /**
  * Provides AI-powered commit message generation for source control management.
@@ -12,6 +14,7 @@ import { t } from "../../i18n"
  */
 export class CommitMessageProvider {
 	private gitService: GitExtensionService
+	private providerSettingsManager: ProviderSettingsManager
 	private previousGitContext: string | null = null
 	private previousCommitMessage: string | null = null
 
@@ -20,6 +23,7 @@ export class CommitMessageProvider {
 		private outputChannel: vscode.OutputChannel,
 	) {
 		this.gitService = new GitExtensionService()
+		this.providerSettingsManager = new ProviderSettingsManager(this.context)
 	}
 
 	/**
@@ -29,6 +33,9 @@ export class CommitMessageProvider {
 		this.outputChannel.appendLine(t("kilocode:commitMessage.activated"))
 
 		try {
+			// Initialize provider settings manager
+			await this.providerSettingsManager.initialize()
+
 			const initialized = await this.gitService.initialize()
 			if (!initialized) {
 				this.outputChannel.appendLine(t("kilocode:commitMessage.gitNotFound"))
@@ -94,22 +101,39 @@ export class CommitMessageProvider {
 	 * Calls the provider to generate a commit message based on the git context.
 	 */
 	private async callAIForCommitMessage(gitContextString: string): Promise<string> {
-		const apiConfiguration = ContextProxy.instance.getProviderSettings()
+		const contextProxy = ContextProxy.instance
+		const apiConfiguration = contextProxy.getProviderSettings()
+		const commitMessageApiConfigId = contextProxy.getValue("commitMessageApiConfigId")
+		const listApiConfigMeta = contextProxy.getValue("listApiConfigMeta") || []
 
-		const { kilocodeToken } = apiConfiguration
+		// Try to get commit message config first, fall back to current config.
+		let configToUse: ProviderSettings = apiConfiguration
+
+		if (
+			commitMessageApiConfigId &&
+			listApiConfigMeta.find(({ id }: { id: string }) => id === commitMessageApiConfigId)
+		) {
+			try {
+				const { name: _, ...providerSettings } = await this.providerSettingsManager.getProfile({
+					id: commitMessageApiConfigId,
+				})
+
+				if (providerSettings.apiProvider) {
+					configToUse = providerSettings
+				}
+			} catch (error) {
+				// Fall back to default configuration if profile doesn't exist
+				console.warn(`Failed to load commit message API config ${commitMessageApiConfigId}:`, error)
+			}
+		}
+
+		const { kilocodeToken } = configToUse
 		if (!kilocodeToken) {
 			throw new Error(t("kilocode:commitMessage.tokenRequired"))
 		}
 
 		const prompt = await this.buildCommitMessagePrompt(gitContextString)
-		const response = await singleCompletionHandler(
-			{
-				apiProvider: "kilocode",
-				kilocodeModel: "google/gemini-2.5-flash-preview-05-20",
-				kilocodeToken,
-			},
-			prompt,
-		)
+		const response = await singleCompletionHandler(configToUse, prompt)
 
 		return this.extractCommitMessage(response)
 	}

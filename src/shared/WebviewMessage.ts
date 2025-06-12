@@ -124,6 +124,7 @@ export interface WebviewMessage {
 		| "copySystemPrompt"
 		| "systemPrompt"
 		| "enhancementApiConfigId"
+		| "commitMessageApiConfigId"
 		| "updateExperimental"
 		| "autoApprovalEnabled"
 		| "updateCustomMode"

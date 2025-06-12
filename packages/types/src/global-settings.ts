@@ -107,6 +107,7 @@ export const globalSettingsSchema = z.object({
 	customModePrompts: customModePromptsSchema.optional(),
 	customSupportPrompts: customSupportPromptsSchema.optional(),
 	enhancementApiConfigId: z.string().optional(),
+	commitMessageApiConfigId: z.string().optional(),
 	historyPreviewCollapsed: z.boolean().optional(),
 })
 
