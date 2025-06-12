@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.35.0",
+	"version": "4.35.1",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -63,7 +63,7 @@
 						"title": "Write code for you",
 						"description": "Describe what you want to build. Kilo Code will write it from scratch, generate the files, and run them for you.",
 						"media": {
-							"markdown": "walkthrough/step1.md"
+							"markdown": "./dist/walkthrough/step1.md"
 						}
 					},
 					{
@@ -71,10 +71,10 @@
 						"title": "Understand your codebase",
 						"description": "Need clarity on how something works? Ask Kilo Code about any part of your files and get a clear explanation.",
 						"media": {
-							"markdown": "walkthrough/step2.md"
+							"markdown": "./dist/walkthrough/step2.md"
 						},
 						"content": {
-							"path": "walkthrough/step2.md"
+							"path": "./dist/walkthrough/step2.md"
 						}
 					},
 					{
@@ -82,7 +82,7 @@
 						"title": "Get things working again",
 						"description": "Stuck on an error? Kilo Code can find the issue, fix it, and get your code running.",
 						"media": {
-							"markdown": "walkthrough/step3.md"
+							"markdown": "./dist/walkthrough/step3.md"
 						}
 					},
 					{
@@ -90,7 +90,7 @@
 						"title": "Plan your logic",
 						"description": "Not sure where to start? Map out your logic and structure before writing a single line of code.",
 						"media": {
-							"markdown": "walkthrough/step4.md"
+							"markdown": "./dist/walkthrough/step4.md"
 						}
 					},
 					{
@@ -98,7 +98,7 @@
 						"title": "And more",
 						"description": "Improve your prompt, add context, or create your own custom modes.",
 						"media": {
-							"markdown": "walkthrough/step5.md"
+							"markdown": "./dist/walkthrough/step5.md"
 						}
 					}
 				]
