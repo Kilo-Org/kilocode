@@ -80,3 +80,7 @@ export async function loadEnabledRules(
 	)
 	return [globalRulesContent, localRulesContent].filter(Boolean).join("\n\n")
 }
+
+export function hasAnyToggles(toggles?: ClineRulesToggles): boolean {
+	return Object.keys(toggles ?? {}).length > 0
+}

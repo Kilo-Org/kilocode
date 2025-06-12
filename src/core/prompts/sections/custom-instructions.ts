@@ -1,7 +1,7 @@
 import fs from "fs/promises"
 import path from "path"
 
-import { loadEnabledRules } from "./kilo"
+import { hasAnyToggles, loadEnabledRules } from "./kilo"
 
 // kilocode_change start
 let vscodeAPI: typeof import("vscode") | undefined
@@ -313,7 +313,7 @@ export async function addCustomInstructions(
 	}
 
 	// kilocode_change start: rule toggles
-	if (options.localRulesToggleState || options.globalRulesToggleState) {
+	if (hasAnyToggles(options.localRulesToggleState) || hasAnyToggles(options.globalRulesToggleState)) {
 		const genericRuleContent =
 			(
 				await loadEnabledRules(
