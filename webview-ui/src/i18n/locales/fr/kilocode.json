@@ -54,8 +54,8 @@
 			"workflows": "Flux de Travail"
 		},
 		"description": {
-			"rules": "Les règles vous permettent de fournir à Kilo Code des conseils au niveau système. Considérez-les comme un moyen persistant d'inclure du contexte et des préférences pour vos projets ou globalement pour chaque conversation.",
-			"workflows": "Les flux de travail vous permettent de définir une série d'étapes pour guider Kilo Code à travers un ensemble répétitif de tâches, comme déployer un service ou soumettre une PR. Pour invoquer un flux de travail, tapez",
+			"rules": "Les règles vous permettent de fournir à Kilo Code des instructions qu'il doit suivre dans tous les modes et pour tous les prompts. Elles sont un moyen persistant d'inclure du contexte et des préférences pour toutes les conversations dans votre espace de travail ou globalement.",
+			"workflows": "Les flux de travail sont un modèle préparé pour une conversation. Les flux de travail vous permettent de définir des prompts que vous utilisez fréquemment, et peuvent inclure une série d'étapes pour guider Kilo Code à travers des tâches répétitives, comme déployer un service ou soumettre une PR. Pour invoquer un flux de travail, tapez",
 			"workflowsInChat": "dans le chat."
 		},
 		"sections": {

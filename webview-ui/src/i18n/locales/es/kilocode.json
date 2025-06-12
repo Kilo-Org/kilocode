@@ -54,8 +54,8 @@
 			"workflows": "Flujos de Trabajo"
 		},
 		"description": {
-			"rules": "Las reglas te permiten proporcionar a Kilo Code orientación a nivel de sistema. Piensa en ellas como una forma persistente de incluir contexto y preferencias para tus proyectos o globalmente para cada conversación.",
-			"workflows": "Los flujos de trabajo te permiten definir una serie de pasos para guiar a Kilo Code a través de un conjunto repetitivo de tareas, como desplegar un servicio o enviar un PR. Para invocar un flujo de trabajo, escribe",
+			"rules": "Las reglas te permiten proporcionar a Kilo Code instrucciones que debe seguir en todos los modos y para todos los prompts. Son una forma persistente de incluir contexto y preferencias para todas las conversaciones en tu espacio de trabajo o globalmente.",
+			"workflows": "Los flujos de trabajo son una plantilla preparada para una conversación. Los flujos de trabajo te permiten definir prompts que usas frecuentemente, y pueden incluir una serie de pasos para guiar a Kilo Code a través de tareas repetitivas, como desplegar un servicio o enviar una PR. Para invocar un flujo de trabajo, escribe",
 			"workflowsInChat": "en el chat."
 		},
 		"sections": {

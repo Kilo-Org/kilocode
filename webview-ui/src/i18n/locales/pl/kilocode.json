@@ -54,8 +54,8 @@
 			"workflows": "Przepływy Pracy"
 		},
 		"description": {
-			"rules": "Reguły pozwalają dostarczyć Kilo Code wskazówki na poziomie systemu. Myśl o nich jako o trwałym sposobie dołączania kontekstu i preferencji dla swoich projektów lub globalnie dla każdej rozmowy.",
-			"workflows": "Przepływy pracy pozwalają zdefiniować serię kroków, aby poprowadzić Kilo Code przez powtarzalny zestaw zadań, takich jak wdrażanie usługi lub przesyłanie PR. Aby wywołać przepływ pracy, wpisz",
+			"rules": "Reguły pozwalają dostarczyć Kilo Code instrukcje, których powinien przestrzegać we wszystkich trybach i dla wszystkich promptów. To trwały sposób dołączania kontekstu i preferencji dla wszystkich rozmów w twoim obszarze roboczym lub globalnie.",
+			"workflows": "Przepływy pracy to przygotowany szablon dla rozmowy. Przepływy pracy pozwalają zdefiniować prompty, których często używasz, i mogą zawierać serię kroków, aby poprowadzić Kilo Code przez powtarzalne zadania, takie jak wdrażanie usługi lub przesyłanie PR. Aby wywołać przepływ pracy, wpisz",
 			"workflowsInChat": "w czacie."
 		},
 		"sections": {

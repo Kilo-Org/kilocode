@@ -54,8 +54,8 @@
 			"workflows": "Quy trình làm việc"
 		},
 		"description": {
-			"rules": "Quy tắc cho phép bạn cung cấp hướng dẫn cấp hệ thống cho Kilo Code. Hãy coi chúng như một cách bền vững để bao gồm ngữ cảnh và tùy chọn cho các dự án của bạn hoặc toàn cầu cho mọi cuộc trò chuyện.",
-			"workflows": "Quy trình làm việc cho phép bạn xác định một loạt các bước để hướng dẫn Kilo Code thông qua một tập hợp các tác vụ lặp đi lặp lại, chẳng hạn như triển khai dịch vụ hoặc gửi PR. Để gọi quy trình làm việc, hãy nhập",
+			"rules": "Quy tắc cho phép bạn cung cấp hướng dẫn cho Kilo Code mà nó phải tuân theo trong tất cả các chế độ và cho tất cả các prompt. Chúng là một cách bền vững để bao gồm ngữ cảnh và tùy chọn cho tất cả các cuộc trò chuyện trong workspace của bạn hoặc toàn cầu.",
+			"workflows": "Quy trình làm việc là một mẫu được chuẩn bị cho một cuộc trò chuyện. Quy trình làm việc cho phép bạn xác định các prompt mà bạn sử dụng thường xuyên, và có thể bao gồm một loạt các bước để hướng dẫn Kilo Code thông qua các tác vụ lặp đi lặp lại, chẳng hạn như triển khai dịch vụ hoặc gửi PR. Để gọi quy trình làm việc, hãy nhập",
 			"workflowsInChat": "trong chat."
 		},
 		"sections": {

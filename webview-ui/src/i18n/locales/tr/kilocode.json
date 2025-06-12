@@ -54,8 +54,8 @@
 			"workflows": "İş Akışları"
 		},
 		"description": {
-			"rules": "Kurallar, Kilo Code'a sistem düzeyinde rehberlik sağlamanıza olanak tanır. Bunları projeleriniz için veya her konuşma için global olarak bağlam ve tercihleri dahil etmenin kalıcı bir yolu olarak düşünün.",
-			"workflows": "İş akışları, bir hizmeti dağıtmak veya PR göndermek gibi tekrarlayan görevler kümesi boyunca Kilo Code'u yönlendirmek için bir dizi adım tanımlamanıza olanak tanır. Bir iş akışını çağırmak için şunu yazın",
+			"rules": "Kurallar, Kilo Code'a tüm modlarda ve tüm promptlarda uyması gereken talimatlar sağlamanıza olanak tanır. Bunlar, çalışma alanınızda veya global olarak tüm konuşmalar için bağlam ve tercihleri dahil etmenin kalıcı bir yoludur.",
+			"workflows": "İş akışları, bir konuşma için hazırlanmış bir şablondur. İş akışları, sık kullandığınız promptları tanımlamanıza olanak tanır ve bir hizmeti dağıtmak veya PR göndermek gibi tekrarlayan görevler boyunca Kilo Code'u yönlendirmek için bir dizi adım içerebilir. Bir iş akışını çağırmak için şunu yazın",
 			"workflowsInChat": "sohbette."
 		},
 		"sections": {

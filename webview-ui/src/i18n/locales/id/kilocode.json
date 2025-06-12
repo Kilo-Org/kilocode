@@ -54,8 +54,8 @@
 			"workflows": "Alur Kerja"
 		},
 		"description": {
-			"rules": "Aturan memungkinkan kamu memberikan panduan tingkat sistem kepada Kilo Code. Anggap mereka sebagai cara persisten untuk menyertakan konteks dan preferensi untuk proyek kamu atau secara global untuk setiap percakapan.",
-			"workflows": "Alur kerja memungkinkan kamu mendefinisikan serangkaian langkah untuk memandu Kilo Code melalui serangkaian tugas berulang, seperti menerapkan layanan atau mengirim PR. Untuk memanggil alur kerja, ketik",
+			"rules": "Aturan memungkinkan kamu memberikan instruksi kepada Kilo Code yang harus diikuti di semua mode dan untuk semua prompt. Mereka adalah cara persisten untuk menyertakan konteks dan preferensi untuk semua percakapan di workspace kamu atau secara global.",
+			"workflows": "Alur kerja adalah template yang disiapkan untuk percakapan. Alur kerja memungkinkan kamu menentukan prompt yang sering kamu gunakan, dan dapat mencakup serangkaian langkah untuk memandu Kilo Code melalui tugas-tugas berulang, seperti menerapkan layanan atau mengirim PR. Untuk memanggil alur kerja, ketik",
 			"workflowsInChat": "di chat."
 		},
 		"sections": {

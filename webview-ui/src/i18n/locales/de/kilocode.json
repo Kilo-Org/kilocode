@@ -54,8 +54,8 @@
 			"workflows": "Workflows"
 		},
 		"description": {
-			"rules": "Regeln ermöglichen es dir, Kilo Code systemweite Anleitung zu geben. Denke an sie als persistente Möglichkeit, Kontext und Präferenzen für deine Projekte oder global für jede Unterhaltung einzubeziehen.",
-			"workflows": "Workflows ermöglichen es dir, eine Reihe von Schritten zu definieren, um Kilo Code durch eine wiederholende Reihe von Aufgaben zu führen, wie das Bereitstellen eines Dienstes oder das Einreichen einer PR. Um einen Workflow aufzurufen, tippe",
+			"rules": "Regeln ermöglichen es dir, Kilo Code Anweisungen zu geben, die es in allen Modi und für alle Prompts befolgen soll. Sie sind eine dauerhafte Möglichkeit, Kontext und Präferenzen für alle Unterhaltungen in deinem Arbeitsbereich oder global einzubeziehen.",
+			"workflows": "Workflows sind eine vorbereitete Vorlage für eine Unterhaltung. Workflows ermöglichen es dir, Prompts zu definieren, die du häufig verwendest, und können eine Reihe von Schritten enthalten, um Kilo Code durch sich wiederholende Aufgaben zu führen, wie das Bereitstellen eines Dienstes oder das Einreichen einer PR. Um einen Workflow aufzurufen, tippe",
 			"workflowsInChat": "im Chat."
 		},
 		"sections": {

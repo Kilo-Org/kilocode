@@ -54,8 +54,8 @@
 			"workflows": "Fluxos de Treball"
 		},
 		"description": {
-			"rules": "Les regles et permeten proporcionar a Kilo Code orientació a nivell de sistema. Pensa en elles com una manera persistent d'incloure context i preferències per als teus projectes o globalment per a cada conversa.",
-			"workflows": "Els fluxos de treball et permeten definir una sèrie de passos per guiar Kilo Code a través d'un conjunt repetitiu de tasques, com desplegar un servei o enviar una PR. Per invocar un flux de treball, escriu",
+			"rules": "Les regles et permeten proporcionar a Kilo Code instruccions que ha de seguir en tots els modes i per a tots els prompts. Són una manera persistent d'incloure context i preferències per a totes les converses al teu espai de treball o globalment.",
+			"workflows": "Els fluxos de treball són una plantilla preparada per a una conversa. Els fluxos de treball et permeten definir prompts que uses freqüentment, i poden incloure una sèrie de passos per guiar Kilo Code a través de tasques repetitives, com desplegar un servei o enviar una PR. Per invocar un flux de treball, escriu",
 			"workflowsInChat": "al xat."
 		},
 		"sections": {
