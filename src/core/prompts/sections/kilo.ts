@@ -1,11 +1,12 @@
 import fs from "fs/promises"
 import path from "path"
 import { ClineRulesToggles } from "../../../shared/cline-rules"
+import { GlobalFileNames } from "../../../shared/globalFileNames"
 
 /**
  * Get rule files content with toggle state filtering (matches Cline's getRuleFilesTotalContent)
  */
-export async function getRuleFilesTotalContent(
+async function getRuleFilesTotalContent(
 	rulesFilePaths: string[],
 	basePath: string,
 	toggles: ClineRulesToggles,
@@ -25,4 +26,53 @@ export async function getRuleFilesTotalContent(
 	).then((contents) => contents.filter(Boolean).join("\n\n"))
 
 	return ruleFilesTotalContent
+}
+
+async function loadEnabledRulesFromDirectory(
+	rulesDir: string,
+	toggleState: ClineRulesToggles,
+	label: string,
+	directoryExists: (dirPath: string) => Promise<boolean>,
+	readTextFilesFromDirectory: (dirPath: string) => Promise<Array<{ filename: string; content: string }>>,
+): Promise<string | null> {
+	if (!(await directoryExists(rulesDir))) {
+		return null
+	}
+
+	const files = await readTextFilesFromDirectory(rulesDir)
+	if (files.length === 0) {
+		return null
+	}
+
+	const rulesContent = await getRuleFilesTotalContent(
+		files.map((f) => f.filename),
+		rulesDir,
+		toggleState,
+	)
+
+	return rulesContent ? `# ${label} from ${rulesDir}:\n${rulesContent}` : null
+}
+
+export async function loadEnabledRules(
+	cwd: string,
+	localRulesToggleState: ClineRulesToggles,
+	globalRulesToggleState: ClineRulesToggles,
+	directoryExists: (dirPath: string) => Promise<boolean>,
+	readTextFilesFromDirectory: (dirPath: string) => Promise<Array<{ filename: string; content: string }>>,
+): Promise<string> {
+	const globalRulesContent = await loadEnabledRulesFromDirectory(
+		path.join(require("os").homedir(), GlobalFileNames.kiloRules),
+		globalRulesToggleState,
+		"Global Rules",
+		directoryExists,
+		readTextFilesFromDirectory,
+	)
+	const localRulesContent = await loadEnabledRulesFromDirectory(
+		path.join(cwd, GlobalFileNames.kiloRules),
+		localRulesToggleState,
+		"Local Rules",
+		directoryExists,
+		readTextFilesFromDirectory,
+	)
+	return [globalRulesContent, localRulesContent].filter(Boolean).join("\n\n")
 }

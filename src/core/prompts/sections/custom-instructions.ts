@@ -1,7 +1,7 @@
 import fs from "fs/promises"
 import path from "path"
 
-import { getRuleFilesTotalContent } from "./kilo"
+import { loadEnabledRules } from "./kilo"
 
 // kilocode_change start
 let vscodeAPI: typeof import("vscode") | undefined
@@ -22,7 +22,6 @@ import { isLanguage } from "@roo-code/types"
 
 import { LANGUAGES } from "../../../shared/language"
 import { ClineRulesToggles } from "../../../shared/cline-rules" // kilocode_change
-import { GlobalFileNames } from "../../../shared/globalFileNames" // kilocode_change
 
 /**
  * Safely read a file and return its trimmed content
@@ -172,51 +171,6 @@ function formatDirectoryContent(dirPath: string, files: Array<{ filename: string
 	)
 }
 
-// kilocode_change start: added functions
-
-async function loadEnabledRulesFromDirectory(
-	rulesDir: string,
-	toggleState: ClineRulesToggles,
-	label: string,
-): Promise<string | null> {
-	if (!(await directoryExists(rulesDir))) {
-		return null
-	}
-
-	const files = await readTextFilesFromDirectory(rulesDir)
-	if (files.length === 0) {
-		return null
-	}
-
-	const rulesContent = await getRuleFilesTotalContent(
-		files.map((f) => f.filename),
-		rulesDir,
-		toggleState,
-	)
-
-	return rulesContent ? `# ${label} from ${rulesDir}:\n${rulesContent}` : null
-}
-
-async function loadEnabledRules(
-	cwd: string,
-	localRulesToggleState: ClineRulesToggles,
-	globalRulesToggleState: ClineRulesToggles,
-): Promise<string> {
-	const globalRulesContent = await loadEnabledRulesFromDirectory(
-		path.join(require("os").homedir(), GlobalFileNames.kiloRules),
-		globalRulesToggleState,
-		"Global Rules",
-	)
-	const localRulesContent = await loadEnabledRulesFromDirectory(
-		path.join(cwd, GlobalFileNames.kiloRules),
-		localRulesToggleState,
-		"Local Rules",
-	)
-	return [globalRulesContent, localRulesContent].filter(Boolean).join("\n\n")
-}
-
-// kilocode_change end
-
 /**
  * Load rule files from the specified directory
  * kilocode_change: this function is only called when the user doesn't have any rules toggles stored yet
@@ -362,7 +316,13 @@ export async function addCustomInstructions(
 	if (options.localRulesToggleState || options.globalRulesToggleState) {
 		const genericRuleContent =
 			(
-				await loadEnabledRules(cwd, options.localRulesToggleState || {}, options.globalRulesToggleState || {})
+				await loadEnabledRules(
+					cwd,
+					options.localRulesToggleState || {},
+					options.globalRulesToggleState || {},
+					directoryExists,
+					readTextFilesFromDirectory,
+				)
 			)?.trim() ?? ""
 		if (genericRuleContent) {
 			rules.push(genericRuleContent)
