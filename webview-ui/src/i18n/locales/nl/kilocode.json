@@ -54,7 +54,7 @@
 			"workflows": "Workflows"
 		},
 		"description": {
-			"rules": "Regels stellen je in staat om Kilo Code systeemniveau begeleiding te geven. Zie ze als een persistente manier om context en voorkeuren voor je projecten of globaal voor elk gesprek op te nemen.",
+			"rules": "Regels stellen je in staat om Kilo Code op systeemniveau begeleiding te geven. Zie ze als een persistente manier om context en voorkeuren voor je projecten of globaal voor elk gesprek op te nemen.",
 			"workflows": "Workflows stellen je in staat om een reeks stappen te definiëren om Kilo Code door een repetitieve set taken te leiden, zoals het implementeren van een service of het indienen van een PR. Om een workflow aan te roepen, typ",
 			"workflowsInChat": "in de chat."
 		},
