@@ -46,5 +46,28 @@
 		"tokenRequired": "Taahhüt (commit) mesajı oluşturmak için Kilo Code token'ı gerekmektedir",
 		"activationFailed": "Kilo: Commit mesaj sağlayıcısı etkinleştirilemedi: {{error}}",
 		"providerRegistered": "Kilo: Bildirim mesajı sağlayıcısı kaydedildi"
+	},
+	"taskProgress": {
+		"tooltip": {
+			"messageTypes": {
+				"api_req_failed": "API isteği başarısız oldu",
+				"api_req_started": "API isteği başladı",
+				"browser_action_launch": "tarayıcı başlatma",
+				"browser_action_result": "tarayıcı eylemi sonucu",
+				"browser_action": "tarayıcı eylemi",
+				"command_output": "komut çıktısı",
+				"command": "komut yürütme",
+				"completion_result": "tamamlama sonucu",
+				"error": "hata mesajı",
+				"followup": "takip sorusu",
+				"mcp_server_response": "MCP sunucu yanıtı",
+				"reasoning": "Yapay zeka mantık yürütme",
+				"text": "AI yanıtı",
+				"tool": "araç kullanımı",
+				"unknown": "bilinmeyen mesaj türü",
+				"use_mcp_server": "MCP sunucu kullanımı",
+				"user": "kullanıcı girişi"
+			}
+		}
 	}
 }

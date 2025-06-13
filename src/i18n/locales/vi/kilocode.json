@@ -46,5 +46,28 @@
 		"tokenRequired": "Mã token Kilo Code được yêu cầu để tạo thông điệp commit",
 		"activationFailed": "Kilo: Không thể kích hoạt nhà cung cấp tin nhắn commit: {{error}}",
 		"providerRegistered": "Kilo: Đã đăng ký nhà cung cấp thông điệp commit"
+	},
+	"taskProgress": {
+		"tooltip": {
+			"messageTypes": {
+				"api_req_failed": "Yêu cầu API thất bại",
+				"api_req_started": "Yêu cầu API đã bắt đầu",
+				"browser_action_launch": "khởi chạy trình duyệt",
+				"browser_action_result": "kết quả hành động trình duyệt",
+				"browser_action": "hành động của trình duyệt",
+				"command_output": "kết quả của lệnh",
+				"command": "thực thi lệnh",
+				"completion_result": "kết quả hoàn thành",
+				"error": "thông báo lỗi",
+				"followup": "câu hỏi tiếp theo",
+				"mcp_server_response": "Phản hồi từ máy chủ MCP",
+				"reasoning": "Lập luận AI",
+				"text": "Phản hồi của AI",
+				"tool": "sử dụng công cụ",
+				"unknown": "loại tin nhắn không xác định",
+				"use_mcp_server": "Mức sử dụng máy chủ MCP",
+				"user": "đầu vào của người dùng"
+			}
+		}
 	}
 }

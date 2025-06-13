@@ -46,5 +46,28 @@
 		"tokenRequired": "Kilo Code-Token wird für die Generierung von Commit-Nachrichten benötigt",
 		"activationFailed": "Kilo: Fehler beim Aktivieren des Commit-Nachrichtenanbieters: {{error}}",
 		"providerRegistered": "Kilo: Anbieter für Commit-Nachrichten registriert"
+	},
+	"taskProgress": {
+		"tooltip": {
+			"messageTypes": {
+				"api_req_failed": "API-Anfrage fehlgeschlagen",
+				"api_req_started": "API-Anfrage gestartet",
+				"browser_action_launch": "Browser-Start",
+				"browser_action_result": "Browser-Aktionsergebnis",
+				"browser_action": "Browser-Aktion",
+				"command_output": "Befehlsausgabe",
+				"command": "Befehlsausführung",
+				"completion_result": "Fertigstellungsergebnis",
+				"error": "Fehlermeldung",
+				"followup": "Anschlussfrage",
+				"mcp_server_response": "MCP-Serverantwort",
+				"reasoning": "KI Reasoning",
+				"text": "KI-Antwort",
+				"tool": "Werkzeugnutzung",
+				"unknown": "unbekannter Nachrichtentyp",
+				"use_mcp_server": "MCP-Servernutzung",
+				"user": "Benutzereingabe"
+			}
+		}
 	}
 }

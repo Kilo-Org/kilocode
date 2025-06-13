@@ -46,5 +46,28 @@
 		"tokenRequired": "提交消息生成需要 Kilo Code 令牌",
 		"activationFailed": "Kilo：激活提交消息提供者失败：{{error}}",
 		"providerRegistered": "Kilo: 提交消息提供程序已注册"
+	},
+	"taskProgress": {
+		"tooltip": {
+			"messageTypes": {
+				"api_req_failed": "API 请求失败",
+				"api_req_started": "API 请求已开始",
+				"browser_action_launch": "浏览器启动",
+				"browser_action_result": "浏览器动作结果",
+				"browser_action": "浏览器操作",
+				"command_output": "命令输出",
+				"command": "命令执行",
+				"completion_result": "完成结果",
+				"error": "错误信息",
+				"followup": "后续问题",
+				"mcp_server_response": "MCP服务器响应",
+				"reasoning": "AI推理",
+				"text": "AI回复",
+				"tool": "工具使用",
+				"unknown": "未知消息类型",
+				"use_mcp_server": "MCP服务器使用情况",
+				"user": "用户输入"
+			}
+		}
 	}
 }

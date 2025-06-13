@@ -46,5 +46,28 @@
 		"tokenRequired": "Kilo Code token is vereist voor het genereren van commit berichten",
 		"activationFailed": "Kilo: Kon berichtverstrekker voor commits niet activeren: {{error}}",
 		"providerRegistered": "Kilo: Commit message provider geregistreerd"
+	},
+	"taskProgress": {
+		"tooltip": {
+			"messageTypes": {
+				"api_req_failed": "API-aanvraag mislukt",
+				"api_req_started": "API-verzoek gestart",
+				"browser_action_launch": "browser starten",
+				"browser_action_result": "browseractieresultaat",
+				"browser_action": "browseractie",
+				"command_output": "opdrachtuitvoer",
+				"command": "opdrachtuitvoering",
+				"completion_result": "resultaat voltooien",
+				"error": "foutmelding",
+				"followup": "vervolgvraag",
+				"mcp_server_response": "MCP-serverreactie",
+				"reasoning": "AI redeneren",
+				"text": "AI-antwoord",
+				"tool": "gereedschapsgebruik",
+				"unknown": "onbekend berichttype",
+				"use_mcp_server": "MCP-servergebruik",
+				"user": "gebruikersinvoer"
+			}
+		}
 	}
 }

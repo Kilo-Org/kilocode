@@ -1,6 +1,7 @@
-import { memo, useMemo, useRef, useEffect, useCallback } from "react"
+import { memo, useMemo, useRef, useEffect, useCallback, useState } from "react"
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso"
 import type { ClineMessage } from "@roo-code/types"
+import { useTranslation } from "react-i18next"
 
 interface TaskProgressDisplayRowProps {
 	groupedMessages: (ClineMessage | ClineMessage[])[]
@@ -15,113 +16,127 @@ interface MessageSquareData {
 	color: string
 	isActive: boolean
 	message: ClineMessage | ClineMessage[]
+	isNew: boolean
 }
 
 const getMessageTypeColor = (message: ClineMessage | ClineMessage[]): string => {
 	if (Array.isArray(message)) {
-		return "bg-cyan-500"
+		return "bg-cyan-400" // Cyan for grouped messages
 	}
 
 	const singleMessage = message as ClineMessage
 	if (singleMessage.type === "ask") {
 		switch (singleMessage.ask) {
 			case "followup":
-				return "bg-blue-500" // User input
+				return "bg-gray-300" // Light gray for user messages
 			case "command":
-				return "bg-green-500" // Command execution
+				return "bg-purple-500" // Purple for command approvals
 			case "tool":
-				return "bg-blue-500" // Tool usage
+				// Parse tool data for more specific coloring
+				if (singleMessage.text) {
+					try {
+						const toolData = JSON.parse(singleMessage.text)
+						if (
+							toolData.tool === "read_file" ||
+							toolData.tool === "list_files" ||
+							toolData.tool === "list_code_definition_names" ||
+							toolData.tool === "search_files"
+						) {
+							return "bg-yellow-300" // Yellow for file read operations
+						} else if (toolData.tool === "apply_diff" || toolData.tool === "write_to_file") {
+							return "bg-blue-500" // Blue for file edit/create operations
+						} else if (toolData.tool === "browser_action") {
+							return "bg-purple-500" // Purple for browser actions
+						}
+					} catch (_e) {
+						// JSON parse error, use default
+					}
+				}
+				return "bg-yellow-300" // Default yellow for tool approvals
 			case "browser_action_launch":
-				return "bg-cyan-500" // Browser actions
+				return "bg-purple-500" // Purple for browser launch approvals
 			case "use_mcp_server":
-				return "bg-yellow-500" // MCP server
+				return "bg-orange-400" // Orange for MCP server
 			case "api_req_failed":
-				return "bg-red-500" // Errors
+				return "bg-red-500" // Red for errors
 			case "completion_result":
-				return "bg-green-500" // Task completed successfully
+				return "bg-green-500" // Green for task completion
 			default:
-				return "bg-gray-500" // Default
+				return "bg-gray-400" // Dark gray for unknown
 		}
 	}
 
 	// Handle say types
 	if (singleMessage.type === "say") {
 		switch (singleMessage.say) {
-			case "reasoning":
-				return "bg-purple-500" // AI reasoning
-			case "api_req_started":
-				return "bg-orange-500" // Tool usage
-			case "command_output":
-				return "bg-green-500" // Command execution
-			case "browser_action":
-				return "bg-cyan-500" // Browser actions
-			case "mcp_server_response":
-				return "bg-yellow-500" // MCP server
-			case "error":
-				return "bg-red-500" // Errors
 			case "text":
+				return "bg-gray-300" // Light gray for assistant responses
+			case "command_output":
+				return "bg-purple-500" // Purple for terminal commands
+			case "completion_result":
+				return "bg-green-500" // Green for task success
+			case "reasoning":
+				return "bg-gray-300" // Light gray for AI reasoning
+			case "api_req_started":
+				return "bg-orange-400" // Orange for API requests
+			case "mcp_server_response":
+				return "bg-orange-400" // Orange for MCP server responses
+			case "error":
+				return "bg-red-500" // Red for errors
 			default:
-				return "bg-gray-500" // Text output / default
+				return "bg-gray-400" // Dark gray for unknown
 		}
 	}
 
-	return "bg-gray-500" // Fallback
+	return "bg-gray-400" // Fallback
 }
 
-const getMessageTypeDescription = (message: ClineMessage | ClineMessage[]): string => {
+const getMessageTypeDescription = (message: ClineMessage | ClineMessage[], t: any): string => {
 	if (Array.isArray(message)) {
-		return "Multiple messages"
+		return t("kilocode:taskProgress.tooltip.messageTypes.unknown")
 	}
 
 	const singleMessage = message as ClineMessage
+	let messageType: string
+
 	if (singleMessage.type === "ask") {
-		switch (singleMessage.ask) {
-			case "followup":
-				return "User input"
-			case "command":
-				return "Command execution"
-			case "tool":
-				return "Tool usage"
-			case "browser_action_launch":
-				return "Browser action"
-			case "use_mcp_server":
-				return "MCP server interaction"
-			case "api_req_failed":
-				return "API request failed"
-			case "completion_result":
-				return "Task completed"
-			default:
-				return "User interaction"
+		messageType = singleMessage.ask || "unknown"
+
+		// For tool messages, try to get more specific type from JSON
+		if (messageType === "tool" && singleMessage.text) {
+			try {
+				const toolData = JSON.parse(singleMessage.text)
+				if (toolData.tool === "browser_action") {
+					messageType = "browser_action"
+				}
+				// Keep as "tool" for other tool types
+			} catch (_e) {
+				// JSON parse error, keep as "tool"
+			}
 		}
+	} else if (singleMessage.type === "say") {
+		messageType = singleMessage.say || "unknown"
+	} else {
+		messageType = "unknown"
 	}
 
-	// Handle say types
-	if (singleMessage.type === "say") {
-		switch (singleMessage.say) {
-			case "reasoning":
-				return "AI reasoning"
-			case "api_req_started":
-				return "API request"
-			case "command_output":
-				return "Command output"
-			case "browser_action":
-				return "Browser action"
-			case "mcp_server_response":
-				return "MCP server response"
-			case "error":
-				return "Error message"
-			case "text":
-			default:
-				return "AI response"
-		}
-	}
+	// Use direct message type as translation key
+	const translationKey = `kilocode:taskProgress.tooltip.messageTypes.${messageType}`
 
-	return "Message"
+	// Try the translation, fallback to unknown if it doesn't exist
+	try {
+		return t(translationKey)
+	} catch {
+		return t("kilocode:taskProgress.tooltip.messageTypes.unknown")
+	}
 }
 
-const MessageSquare = memo(({ data }: { data: MessageSquareData }) => {
-	const messageDescription = getMessageTypeDescription(data.message)
-	const tooltip = `Click to scroll to ${messageDescription.toLowerCase()} (message ${data.index + 1})`
+const MessageSquare = memo(({ data, t }: { data: MessageSquareData; t: any }) => {
+	const messageDescription = getMessageTypeDescription(data.message, t)
+	const tooltip = t("kilocode:taskProgress.tooltip.clickToScroll", {
+		messageType: messageDescription,
+		messageNumber: data.index + 1,
+	})
 
 	return (
 		<div
@@ -130,6 +145,7 @@ const MessageSquare = memo(({ data }: { data: MessageSquareData }) => {
 				${data.color}
 				hover:opacity-80
 				${data.isActive ? "animate-slow-pulse" : ""}
+				${data.isNew ? "animate-fade-in" : ""}
 			`}
 			onClick={() => {
 				// This will be handled by the parent component
@@ -143,18 +159,44 @@ MessageSquare.displayName = "MessageSquare"
 
 export const TaskProgressDisplayRow = memo<TaskProgressDisplayRowProps>(
 	({ groupedMessages, onMessageClick, currentMessageIndex, className = "", isTaskActive = false }) => {
+		const { t } = useTranslation()
 		const virtuosoRef = useRef<VirtuosoHandle>(null)
 		const userInteractionRef = useRef(false)
+		const previousLengthRef = useRef(0)
+		const [newMessageIndices, setNewMessageIndices] = useState<Set<number>>(new Set())
 
 		// Create data for message squares
 		const messageSquareData = useMemo<MessageSquareData[]>(() => {
-			return groupedMessages.map((message, index) => ({
+			const currentLength = groupedMessages.length
+			const previousLength = previousLengthRef.current
+
+			// Track new message indices
+			if (currentLength > previousLength) {
+				const newIndices = new Set<number>()
+				for (let i = previousLength; i < currentLength; i++) {
+					newIndices.add(i)
+				}
+				setNewMessageIndices(newIndices)
+
+				// Clear the new message flags after animation duration
+				setTimeout(() => {
+					setNewMessageIndices(new Set())
+				}, 300) // Match the animation duration
+			}
+
+			const data = groupedMessages.map((message, index) => ({
 				index,
 				color: getMessageTypeColor(message),
 				isActive: currentMessageIndex === index && isTaskActive,
 				message,
+				isNew: newMessageIndices.has(index), // Mark new messages for fade-in animation
 			}))
-		}, [groupedMessages, currentMessageIndex, isTaskActive])
+
+			// Update the previous length for next render
+			previousLengthRef.current = currentLength
+
+			return data
+		}, [groupedMessages, currentMessageIndex, isTaskActive, newMessageIndices])
 
 		// Auto-scroll to show the latest message when new messages are added
 		useEffect(() => {
@@ -188,11 +230,11 @@ export const TaskProgressDisplayRow = memo<TaskProgressDisplayRowProps>(
 							userInteractionRef.current = true
 							onMessageClick(data.index)
 						}}>
-						<MessageSquare data={data} />
+						<MessageSquare data={data} t={t} />
 					</div>
 				)
 			},
-			[messageSquareData, onMessageClick],
+			[messageSquareData, onMessageClick, t],
 		)
 
 		if (messageSquareData.length === 0) {
@@ -200,7 +242,7 @@ export const TaskProgressDisplayRow = memo<TaskProgressDisplayRowProps>(
 		}
 
 		return (
-			<div className={`w-full ${className}`}>
+			<div className={`w-full ${className} mt-2`}>
 				<Virtuoso
 					ref={virtuosoRef}
 					data={messageSquareData}

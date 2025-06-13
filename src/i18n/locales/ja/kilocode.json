@@ -46,5 +46,28 @@
 		"tokenRequired": "コミットメッセージの生成にはKilo Codeトークンが必要です",
 		"activationFailed": "Kilo: コミットメッセージプロバイダーのアクティベーションに失敗しました: {{error}}",
 		"providerRegistered": "Kilo: コミットメッセージプロバイダーが登録されました"
+	},
+	"taskProgress": {
+		"tooltip": {
+			"messageTypes": {
+				"api_req_failed": "API リクエストに失敗しました",
+				"api_req_started": "APIリクエスト開始",
+				"browser_action_launch": "ブラウザ起動",
+				"browser_action_result": "ブラウザアクションの結果",
+				"browser_action": "ブラウザアクション",
+				"command_output": "コマンド出力",
+				"command": "コマンド実行",
+				"completion_result": "完了結果",
+				"error": "エラーメッセージ",
+				"followup": "フォローアップの質問",
+				"mcp_server_response": "MCP サーバーの応答",
+				"reasoning": "AI推論",
+				"text": "AI応答",
+				"tool": "ツール使用",
+				"unknown": "不明なメッセージタイプ",
+				"use_mcp_server": "MCPサーバーの使用状況",
+				"user": "ユーザー入力"
+			}
+		}
 	}
 }

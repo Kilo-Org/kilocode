@@ -46,5 +46,28 @@
 		"tokenRequired": "Для генерации сообщения коммита требуется токен Kilo Code",
 		"activationFailed": "Kilo: Не удалось активировать поставщик сообщений фиксации: {{error}}",
 		"providerRegistered": "Kilo: Поставщик сообщений коммита зарегистрирован"
+	},
+	"taskProgress": {
+		"tooltip": {
+			"messageTypes": {
+				"api_req_failed": "Сбой запроса API",
+				"api_req_started": "Запрос API начат",
+				"browser_action_launch": "запуск браузера",
+				"browser_action_result": "результат действия браузера",
+				"browser_action": "действие браузера",
+				"command_output": "вывод команды",
+				"command": "выполнение команды",
+				"completion_result": "результат завершения",
+				"error": "Сообщение об ошибке",
+				"followup": "дополнительный вопрос",
+				"mcp_server_response": "Ответ сервера MCP",
+				"reasoning": "ИИ-рассуждение",
+				"text": "Ответ ИИ",
+				"tool": "использование инструмента",
+				"unknown": "неизвестный тип сообщения",
+				"use_mcp_server": "Использование MCP-сервера",
+				"user": "ввод пользователя"
+			}
+		}
 	}
 }

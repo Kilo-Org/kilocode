@@ -46,5 +46,28 @@
 		"tokenRequired": "Token Kilo Code é necessário para a geração de mensagens de commit",
 		"activationFailed": "Kilo: Falha ao ativar o provedor de mensagem de commit: {{error}}",
 		"providerRegistered": "Kilo: Provedor de mensagem de commit registrado"
+	},
+	"taskProgress": {
+		"tooltip": {
+			"messageTypes": {
+				"api_req_failed": "Falha na solicitação de API",
+				"api_req_started": "Solicitação de API iniciada",
+				"browser_action_launch": "iniciar navegador",
+				"browser_action_result": "resultado da ação do navegador",
+				"browser_action": "ação do navegador",
+				"command_output": "saída do comando",
+				"command": "execução de comando",
+				"completion_result": "resultado da conclusão",
+				"error": "mensagem de erro",
+				"followup": "pergunta de acompanhamento",
+				"mcp_server_response": "Resposta do servidor MCP",
+				"reasoning": "Raciocínio de IA",
+				"text": "Resposta da IA",
+				"tool": "uso de ferramenta",
+				"unknown": "tipo de mensagem desconhecido",
+				"use_mcp_server": "Uso do servidor MCP",
+				"user": "entrada do usuário"
+			}
+		}
 	}
 }
