@@ -10,6 +10,7 @@ import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue }
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
 import { MessageSquare } from "lucide-react"
+import CommitMessagePromptSettings from "./CommitMessagePromptSettings"
 
 // kilocode_change start
 interface PromptsSettingsProps {
@@ -21,9 +22,7 @@ interface PromptsSettingsProps {
 const PromptsSettings = ({ customSupportPrompts, setCustomSupportPrompts }: PromptsSettingsProps) => {
 	const { t } = useAppTranslation()
 
-	const { listApiConfigMeta, enhancementApiConfigId, setEnhancementApiConfigId } =
-		useExtensionState()
-	const { commitMessageApiConfigId, setCommitMessageApiConfigId } = useExtensionState()
+	const { listApiConfigMeta, enhancementApiConfigId, setEnhancementApiConfigId } = useExtensionState()
 
 	const [testPrompt, setTestPrompt] = useState("")
 	const [isEnhancing, setIsEnhancing] = useState(false)
@@ -189,46 +188,7 @@ const PromptsSettings = ({ customSupportPrompts, setCustomSupportPrompts }: Prom
 					)}
 
 					{/* kilocode_change start */}
-					{activeSupportOption === "COMMIT_MESSAGE" && (
-						<div className="mt-4 flex flex-col gap-3 pl-3 border-l-2 border-vscode-button-background">
-							<div>
-								<label className="block font-medium mb-1">
-									{t("prompts:supportPrompts.enhance.apiConfiguration")}
-								</label>
-								<Select
-									value={commitMessageApiConfigId || "-"}
-									onValueChange={(value) => {
-										setCommitMessageApiConfigId(value === "-" ? "" : value)
-										vscode.postMessage({
-											type: "commitMessageApiConfigId",
-											text: value,
-										})
-									}}>
-									<SelectTrigger data-testid="commit-message-api-config-select" className="w-full">
-										<SelectValue
-											placeholder={t("prompts:supportPrompts.enhance.useCurrentConfig")}
-										/>
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="-">
-											{t("prompts:supportPrompts.enhance.useCurrentConfig")}
-										</SelectItem>
-										{(listApiConfigMeta || []).map((config) => (
-											<SelectItem
-												key={config.id}
-												value={config.id}
-												data-testid={`commit-message-${config.id}-option`}>
-												{config.name}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-								<div className="text-sm text-vscode-descriptionForeground mt-1">
-									{t("prompts:supportPrompts.enhance.apiConfigDescription")}
-								</div>
-							</div>
-						</div>
-					)}
+					{activeSupportOption === "COMMIT_MESSAGE" && <CommitMessagePromptSettings />}
 					{/* kilocode_change end */}
 				</div>
 			</Section>
