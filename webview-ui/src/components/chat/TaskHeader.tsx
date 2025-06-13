@@ -78,12 +78,11 @@ const TaskHeader = ({
 		</button>
 	)
 
-	console.log("🚀 groupedMessages", groupedMessages)
 	return (
 		<div className="py-2 px-3">
 			<div
 				className={cn(
-					"rounded-xs p-2.5 flex flex-col gap-1.5 relative z-1 border",
+					"rounded-xs p-2.5 flex flex-col relative z-1 border",
 					isTaskExpanded
 						? "border-vscode-panel-border text-vscode-foreground"
 						: "border-vscode-panel-border/80 text-vscode-foreground/80",
@@ -118,6 +117,15 @@ const TaskHeader = ({
 				{/* Collapsed state: Track context and cost if we have any */}
 				{!isTaskExpanded && contextWindow > 0 && (
 					<div className={`w-full flex flex-col gap-1 h-auto`}>
+						{groupedMessages && onMessageClick && (
+							<TaskProgressDisplayRow
+								groupedMessages={groupedMessages}
+								onMessageClick={onMessageClick}
+								currentMessageIndex={currentMessageIndex}
+								className="mt-1"
+							/>
+						)}
+
 						<div className="flex flex-row items-center gap-1">
 							<ContextWindowProgress
 								contextWindow={contextWindow}
@@ -131,15 +139,6 @@ const TaskHeader = ({
 							{condenseButton}
 							{!!totalCost && <VSCodeBadge>${totalCost.toFixed(2)}</VSCodeBadge>}
 						</div>
-						{/* Task Progress Display Row */}
-						{groupedMessages && onMessageClick && (
-							<TaskProgressDisplayRow
-								groupedMessages={groupedMessages}
-								onMessageClick={onMessageClick}
-								currentMessageIndex={currentMessageIndex}
-								className="mt-1"
-							/>
-						)}
 					</div>
 				)}
 				{/* Expanded state: Show task text and images */}

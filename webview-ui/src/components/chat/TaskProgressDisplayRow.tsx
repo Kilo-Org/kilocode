@@ -1,4 +1,5 @@
-import { memo, useMemo, useRef, useEffect } from "react"
+import { memo, useMemo, useRef, useEffect, useCallback } from "react"
+import { Virtuoso, type VirtuosoHandle } from "react-virtuoso"
 import type { ClineMessage } from "@roo-code/types"
 
 interface TaskProgressDisplayRowProps {
@@ -67,7 +68,7 @@ const MessageSquare = memo(({ data }: { data: MessageSquareData }) => {
 	return (
 		<div
 			className={`
-				w-3 h-3 rounded-sm cursor-pointer transition-all duration-200 hover:scale-110 flex-shrink-0
+				w-3 h-3 rounded-xs cursor-pointer transition-all duration-200 hover:scale-110 flex-shrink-0
 				${data.color}
 				${data.isActive ? "animate-slow-pulse" : ""}
 			`}
@@ -83,9 +84,9 @@ MessageSquare.displayName = "MessageSquare"
 
 export const TaskProgressDisplayRow = memo<TaskProgressDisplayRowProps>(
 	({ groupedMessages, onMessageClick, currentMessageIndex, className = "" }) => {
-		const virtuosoRef = useRef<any>(null)
+		const virtuosoRef = useRef<VirtuosoHandle>(null)
 
-		// Create data for virtualization
+		// Create data for message squares
 		const messageSquareData = useMemo<MessageSquareData[]>(() => {
 			return groupedMessages.map((message, index) => ({
 				index,
@@ -94,53 +95,56 @@ export const TaskProgressDisplayRow = memo<TaskProgressDisplayRowProps>(
 			}))
 		}, [groupedMessages, currentMessageIndex])
 
-		// Auto-scroll to latest message
+		// Auto-scroll to show the current active message or latest message
 		useEffect(() => {
 			if (virtuosoRef.current && messageSquareData.length > 0) {
-				// Scroll to the end to show the latest message
+				// If we have a current message index, scroll to it
+				// Otherwise, scroll to the latest message
+				const targetIndex =
+					currentMessageIndex !== undefined && currentMessageIndex >= 0
+						? currentMessageIndex
+						: messageSquareData.length - 1
+
 				virtuosoRef.current.scrollToIndex({
-					index: messageSquareData.length - 1,
+					index: targetIndex,
 					align: "end",
 					behavior: "smooth",
 				})
 			}
-		}, [messageSquareData.length])
+		}, [messageSquareData.length, currentMessageIndex])
 
-		// Auto-scroll to current active message
-		useEffect(() => {
-			if (virtuosoRef.current && currentMessageIndex !== undefined && currentMessageIndex >= 0) {
-				virtuosoRef.current.scrollToIndex({
-					index: currentMessageIndex,
-					align: "center",
-					behavior: "smooth",
-				})
-			}
-		}, [currentMessageIndex])
+		// Item content renderer for Virtuoso
+		const itemContent = useCallback(
+			(index: number) => {
+				const data = messageSquareData[index]
+				return (
+					<div className="px-0.5" onClick={() => onMessageClick(data.index)}>
+						<MessageSquare data={data} />
+					</div>
+				)
+			},
+			[messageSquareData, onMessageClick],
+		)
 
 		if (messageSquareData.length === 0) {
 			return null
 		}
 
 		return (
-			<div
-				className={`
-					w-full h-5 overflow-x-scroll overflow-y-hidden ${className}
-					scrollbar-hide
-				`}
-				style={{
-					scrollbarWidth: "none" /* Firefox */,
-					msOverflowStyle: "none" /* IE10+ */,
-				}}>
-				<div className="flex items-center gap-0.5 h-full min-w-fit">
-					{messageSquareData.map((data) => (
-						<div
-							key={`message-square-${data.index}`}
-							className="px-0.5"
-							onClick={() => onMessageClick(data.index)}>
-							<MessageSquare data={data} />
-						</div>
-					))}
-				</div>
+			<div className={`w-full ${className}`}>
+				<Virtuoso
+					ref={virtuosoRef}
+					data={messageSquareData}
+					itemContent={itemContent}
+					horizontalDirection={true}
+					className="scrollbar-hide"
+					style={{
+						height: "20px", // 5 * 4px (h-5)
+						width: "100%",
+						scrollbarWidth: "none", // Firefox
+						msOverflowStyle: "none", // IE10+
+					}}
+				/>
 			</div>
 		)
 	},
