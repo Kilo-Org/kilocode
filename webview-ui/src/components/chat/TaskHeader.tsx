@@ -39,6 +39,7 @@ export interface TaskHeaderProps {
 	groupedMessages?: (ClineMessage | ClineMessage[])[]
 	onMessageClick?: (index: number) => void
 	currentMessageIndex?: number
+	isTaskActive?: boolean
 }
 
 const TaskHeader = ({
@@ -56,6 +57,7 @@ const TaskHeader = ({
 	groupedMessages,
 	onMessageClick,
 	currentMessageIndex,
+	isTaskActive = false,
 }: TaskHeaderProps) => {
 	const { t } = useTranslation()
 	const { apiConfiguration, currentTaskItem, customModes } = useExtensionState()
@@ -122,6 +124,7 @@ const TaskHeader = ({
 								groupedMessages={groupedMessages}
 								onMessageClick={onMessageClick}
 								currentMessageIndex={currentMessageIndex}
+								isTaskActive={isTaskActive}
 								className="mt-1"
 							/>
 						)}

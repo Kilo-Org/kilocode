@@ -1414,6 +1414,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						groupedMessages={groupedMessages}
 						onMessageClick={handleMessageClick}
 						currentMessageIndex={groupedMessages.length - 1}
+						isTaskActive={sendingDisabled}
 					/>
 
 					{hasSystemPromptOverride && (
