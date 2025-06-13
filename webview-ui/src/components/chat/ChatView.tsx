@@ -1124,6 +1124,19 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		})
 	}, [])
 
+	const handleMessageClick = useCallback(
+		(index: number) => {
+			if (virtuosoRef.current && index >= 0 && index < groupedMessages.length) {
+				virtuosoRef.current.scrollToIndex({
+					index,
+					align: "center",
+					behavior: "smooth",
+				})
+			}
+		},
+		[groupedMessages.length],
+	)
+
 	const handleSetExpandedRow = useCallback(
 		(ts: number, expand?: boolean) => {
 			setExpandedRows((prev) => ({ ...prev, [ts]: expand === undefined ? !prev[ts] : expand }))
@@ -1398,6 +1411,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						buttonsDisabled={sendingDisabled}
 						handleCondenseContext={handleCondenseContext}
 						onClose={handleTaskCloseButtonClick}
+						groupedMessages={groupedMessages}
+						onMessageClick={handleMessageClick}
+						currentMessageIndex={groupedMessages.length - 1}
 					/>
 
 					{hasSystemPromptOverride && (

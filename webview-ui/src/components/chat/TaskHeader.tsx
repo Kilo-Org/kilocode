@@ -19,6 +19,7 @@ import Thumbnails from "../common/Thumbnails"
 
 import { TaskActions } from "./TaskActions"
 import { ContextWindowProgress } from "./ContextWindowProgress"
+import { TaskProgressDisplayRow } from "./TaskProgressDisplayRow"
 import { mentionRegexGlobal } from "@roo/context-mentions"
 
 import { vscode } from "@/utils/vscode" // kilocode_change: pull slash commands from Cline
@@ -35,6 +36,9 @@ export interface TaskHeaderProps {
 	buttonsDisabled: boolean
 	handleCondenseContext: (taskId: string) => void
 	onClose: () => void
+	groupedMessages?: (ClineMessage | ClineMessage[])[]
+	onMessageClick?: (index: number) => void
+	currentMessageIndex?: number
 }
 
 const TaskHeader = ({
@@ -49,6 +53,9 @@ const TaskHeader = ({
 	buttonsDisabled,
 	handleCondenseContext,
 	onClose,
+	groupedMessages,
+	onMessageClick,
+	currentMessageIndex,
 }: TaskHeaderProps) => {
 	const { t } = useTranslation()
 	const { apiConfiguration, currentTaskItem, customModes } = useExtensionState()
@@ -71,6 +78,7 @@ const TaskHeader = ({
 		</button>
 	)
 
+	console.log("🚀 groupedMessages", groupedMessages)
 	return (
 		<div className="py-2 px-3">
 			<div
@@ -109,18 +117,29 @@ const TaskHeader = ({
 				</div>
 				{/* Collapsed state: Track context and cost if we have any */}
 				{!isTaskExpanded && contextWindow > 0 && (
-					<div className={`w-full flex flex-row items-center gap-1 h-auto`}>
-						<ContextWindowProgress
-							contextWindow={contextWindow}
-							contextTokens={contextTokens || 0}
-							maxTokens={
-								model
-									? getModelMaxOutputTokens({ modelId, model, settings: apiConfiguration })
-									: undefined
-							}
-						/>
-						{condenseButton}
-						{!!totalCost && <VSCodeBadge>${totalCost.toFixed(2)}</VSCodeBadge>}
+					<div className={`w-full flex flex-col gap-1 h-auto`}>
+						<div className="flex flex-row items-center gap-1">
+							<ContextWindowProgress
+								contextWindow={contextWindow}
+								contextTokens={contextTokens || 0}
+								maxTokens={
+									model
+										? getModelMaxOutputTokens({ modelId, model, settings: apiConfiguration })
+										: undefined
+								}
+							/>
+							{condenseButton}
+							{!!totalCost && <VSCodeBadge>${totalCost.toFixed(2)}</VSCodeBadge>}
+						</div>
+						{/* Task Progress Display Row */}
+						{groupedMessages && onMessageClick && (
+							<TaskProgressDisplayRow
+								groupedMessages={groupedMessages}
+								onMessageClick={onMessageClick}
+								currentMessageIndex={currentMessageIndex}
+								className="mt-1"
+							/>
+						)}
 					</div>
 				)}
 				{/* Expanded state: Show task text and images */}

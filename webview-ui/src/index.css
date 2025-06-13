@@ -429,6 +429,22 @@ input[cmdk-input]:focus {
 	color: transparent;
 }
 /* kilocode_change end */
+
+/* Custom slow pulse animation for task progress squares */
+@keyframes slow-pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.3;
+	}
+}
+
+.animate-slow-pulse {
+	animation: slow-pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
 /*
  * Fix the color of <a> in ChatView
  */
