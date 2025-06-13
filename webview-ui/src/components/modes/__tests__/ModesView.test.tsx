@@ -20,6 +20,8 @@ const mockExtensionState = {
 	],
 	enhancementApiConfigId: "",
 	setEnhancementApiConfigId: jest.fn(),
+	commitMessageApiConfigId: "",
+	setCommitMessageApiConfigId: jest.fn(),
 	mode: "code",
 	customModes: [],
 	customSupportPrompts: [],

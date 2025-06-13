@@ -103,6 +103,10 @@
 			"NEW_TASK": {
 				"label": "Avvia nuova attività",
 				"description": "Avvia una nuova attività con il tuo input. Disponibile nella palette dei comandi."
+			},
+			"COMMIT_MESSAGE": {
+				"label": "Generazione di Messaggi di Commit",
+				"description": "Genera messaggi di commit basati sulle tue modifiche git in stato di staging. Personalizza il prompt per creare messaggi di commit consistenti che seguano le migliori pratiche del tuo team."
 			}
 		}
 	},

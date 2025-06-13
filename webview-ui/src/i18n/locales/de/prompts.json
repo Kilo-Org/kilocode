@@ -103,6 +103,10 @@
 			"NEW_TASK": {
 				"label": "Neue Aufgabe starten",
 				"description": "Starte eine neue Aufgabe mit deiner Eingabe. Verfügbar in der Befehlspalette."
+			},
+			"COMMIT_MESSAGE": {
+				"label": "Commit-Nachricht-Generierung",
+				"description": "Generiere Commit-Nachrichten basierend auf deinen bereitgestellten Git-Änderungen. Passe den Prompt an, um einheitliche Commit-Nachrichten zu erstellen, die den Best Practices deines Teams entsprechen."
 			}
 		}
 	},

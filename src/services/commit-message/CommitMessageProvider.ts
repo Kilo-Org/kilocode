@@ -3,7 +3,7 @@ import { ContextProxy } from "../../core/config/ContextProxy"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 import { singleCompletionHandler } from "../../utils/single-completion-handler"
 import { GitExtensionService, GitChange } from "./GitExtensionService"
-import { loadRuleFiles } from "../../core/prompts/sections/custom-instructions"
+import { supportPrompt } from "../../shared/support-prompt"
 import { t } from "../../i18n"
 import type { ProviderSettings } from "@roo-code/types"
 
@@ -55,7 +55,6 @@ export class CommitMessageProvider {
 	 * Generates an AI-powered commit message based on staged changes.
 	 */
 	public async generateCommitMessage(): Promise<void> {
-		await this.gitService.initialize()
 		await vscode.window.withProgress(
 			{
 				location: vscode.ProgressLocation.SourceControl,
@@ -105,6 +104,7 @@ export class CommitMessageProvider {
 		const apiConfiguration = contextProxy.getProviderSettings()
 		const commitMessageApiConfigId = contextProxy.getValue("commitMessageApiConfigId")
 		const listApiConfigMeta = contextProxy.getValue("listApiConfigMeta") || []
+		const customSupportPrompts = contextProxy.getValue("customSupportPrompts") || {}
 
 		// Try to get commit message config first, fall back to current config.
 		let configToUse: ProviderSettings = apiConfiguration
@@ -127,12 +127,8 @@ export class CommitMessageProvider {
 			}
 		}
 
-		const { kilocodeToken } = configToUse
-		if (!kilocodeToken) {
-			throw new Error(t("kilocode:commitMessage.tokenRequired"))
-		}
+		const prompt = this.buildCommitMessagePrompt(gitContextString, customSupportPrompts)
 
-		const prompt = await this.buildCommitMessagePrompt(gitContextString)
 		const response = await singleCompletionHandler(configToUse, prompt)
 
 		return this.extractCommitMessage(response)
@@ -140,109 +136,45 @@ export class CommitMessageProvider {
 
 	/**
 	 * Builds the AI prompt for commit message generation.
+	 * Handles logic for generating different messages when requested for the same changes.
 	 */
-	private async buildCommitMessagePrompt(context: string): Promise<string> {
+	private buildCommitMessagePrompt(gitContextString: string, customSupportPrompts: Record<string, any>): string {
 		// Check if we should generate a different message than the previous one
 		const shouldGenerateDifferentMessage =
-			this.previousGitContext === context && this.previousCommitMessage !== null
+			this.previousGitContext === gitContextString && this.previousCommitMessage !== null
 
-		// Create a different message instruction if needed
-		let differentMessagePrefix = ""
+		// Create prompt with different message logic if needed
 		if (shouldGenerateDifferentMessage) {
-			differentMessagePrefix = `# CRITICAL INSTRUCTION: GENERATE A COMPLETELY DIFFERENT COMMIT MESSAGE
-
+			const differentMessagePrefix = `# CRITICAL INSTRUCTION: GENERATE A COMPLETELY DIFFERENT COMMIT MESSAGE
 The user has requested a new commit message for the same changes.
 The previous message was: "${this.previousCommitMessage}"
-
 YOU MUST create a message that is COMPLETELY DIFFERENT by:
 - Using entirely different wording and phrasing
 - Focusing on different aspects of the changes
 - Using a different structure or format if appropriate
 - Possibly using a different type or scope if justifiable
-
 This is the MOST IMPORTANT requirement for this task.
 
 `
+			const baseTemplate = supportPrompt.get(customSupportPrompts, "COMMIT_MESSAGE")
+			const modifiedTemplate =
+				differentMessagePrefix +
+				baseTemplate +
+				`
+
+FINAL REMINDER: Your message MUST be COMPLETELY DIFFERENT from the previous message: "${this.previousCommitMessage}". This is a critical requirement.`
+
+			return supportPrompt.create(
+				"COMMIT_MESSAGE",
+				{ gitContext: gitContextString },
+				{
+					...customSupportPrompts,
+					COMMIT_MESSAGE: modifiedTemplate,
+				},
+			)
+		} else {
+			return supportPrompt.create("COMMIT_MESSAGE", { gitContext: gitContextString }, customSupportPrompts)
 		}
-
-		const basePrompt = `${differentMessagePrefix}# Conventional Commit Message Generator
-
-## System Instructions
-
-You are an expert Git commit message generator that creates conventional commit messages based on staged changes. Analyze the provided git diff output and generate appropriate conventional commit messages following the specification.
-
-${context}
-
-## Conventional Commits Format
-
-Generate commit messages following this exact structure:
-
-\`\`\`
-<type>[optional scope]: <description>
-
-[optional body]
-
-[optional footer(s)]
-\`\`\`
-
-### Core Types (Required)
-- **feat**: New feature or functionality (MINOR version bump)
-- **fix**: Bug fix or error correction (PATCH version bump)
-
-### Additional Types (Extended)
-- **docs**: Documentation changes only
-- **style**: Code style changes (whitespace, formatting, semicolons, etc.)
-- **refactor**: Code refactoring without feature changes or bug fixes
-- **perf**: Performance improvements
-- **test**: Adding or fixing tests
-- **build**: Build system or external dependency changes
-- **ci**: CI/CD configuration changes
-- **chore**: Maintenance tasks, tooling changes
-- **revert**: Reverting previous commits
-
-### Scope Guidelines
-- Use parentheses: \`feat(api):\`, \`fix(ui):\`
-- Common scopes: \`api\`, \`ui\`, \`auth\`, \`db\`, \`config\`, \`deps\`, \`docs\`
-- For monorepos: package or module names
-- Keep scope concise and lowercase
-
-### Description Rules
-- Use imperative mood ("add" not "added" or "adds")
-- Start with lowercase letter
-- No period at the end
-- Maximum 50 characters
-- Be concise but descriptive
-
-### Body Guidelines (Optional)
-- Start one blank line after description
-- Explain the "what" and "why", not the "how"
-- Wrap at 72 characters per line
-- Use for complex changes requiring explanation
-
-### Footer Guidelines (Optional)
-- Start one blank line after body
-- **Breaking Changes**: \`BREAKING CHANGE: description\`
-- **Issue References**: \`Fixes #123\`, \`Closes #456\`, \`Refs #789\`
-
-## Analysis Instructions
-
-When analyzing staged changes:
-
-1. Determine Primary Type based on the nature of changes
-2. Identify Scope from modified directories or modules
-3. Craft Description focusing on the most significant change
-4. Determine if there are Breaking Changes
-5. For complex changes, include a detailed body explaining what and why
-6. Add appropriate footers for issue references or breaking changes
-
-For significant changes, include a detailed body explaining the changes.`
-
-		// Add a final reminder if we need a different message
-		const finalReminder = shouldGenerateDifferentMessage
-			? `\n\nFINAL REMINDER: Your message MUST be COMPLETELY DIFFERENT from the previous message: "${this.previousCommitMessage}". This is a critical requirement.`
-			: ""
-
-		return `${basePrompt}${finalReminder}\n\nReturn ONLY the commit message in the conventional format, nothing else.`
 	}
 
 	/**

@@ -103,6 +103,10 @@
 			"NEW_TASK": {
 				"label": "Iniciar Nova Tarefa",
 				"description": "Inicie uma nova tarefa com a entrada fornecida. Disponível na paleta de comandos."
+			},
+			"COMMIT_MESSAGE": {
+				"label": "Geração de Mensagem de Commit",
+				"description": "Gere mensagens de commit com base nas suas alterações git em stage. Personalize o prompt para criar mensagens de commit consistentes que sigam as melhores práticas da sua equipe."
 			}
 		}
 	},

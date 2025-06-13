@@ -13,9 +13,14 @@ import { MessageSquare } from "lucide-react"
 
 const PromptsSettings = () => {
 	const { t } = useAppTranslation()
-
-	const { customSupportPrompts, listApiConfigMeta, enhancementApiConfigId, setEnhancementApiConfigId } =
-		useExtensionState()
+	const {
+		listApiConfigMeta,
+		enhancementApiConfigId,
+		setEnhancementApiConfigId,
+		commitMessageApiConfigId,
+		setCommitMessageApiConfigId,
+		customSupportPrompts,
+	} = useExtensionState()
 
 	const [testPrompt, setTestPrompt] = useState("")
 	const [isEnhancing, setIsEnhancing] = useState(false)
@@ -180,6 +185,47 @@ const PromptsSettings = () => {
 									<Button variant="default" onClick={handleTestEnhancement} disabled={isEnhancing}>
 										{t("prompts:supportPrompts.enhance.previewButton")}
 									</Button>
+								</div>
+							</div>
+						</div>
+					)}
+
+					{activeSupportOption === "COMMIT_MESSAGE" && (
+						<div className="mt-4 flex flex-col gap-3 pl-3 border-l-2 border-vscode-button-background">
+							<div>
+								<label className="block font-medium mb-1">
+									{t("prompts:supportPrompts.enhance.apiConfiguration")}
+								</label>
+								<Select
+									value={commitMessageApiConfigId || "-"}
+									onValueChange={(value) => {
+										setCommitMessageApiConfigId(value === "-" ? "" : value)
+										vscode.postMessage({
+											type: "commitMessageApiConfigId",
+											text: value,
+										})
+									}}>
+									<SelectTrigger data-testid="commit-message-api-config-select" className="w-full">
+										<SelectValue
+											placeholder={t("prompts:supportPrompts.enhance.useCurrentConfig")}
+										/>
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="-">
+											{t("prompts:supportPrompts.enhance.useCurrentConfig")}
+										</SelectItem>
+										{(listApiConfigMeta || []).map((config) => (
+											<SelectItem
+												key={config.id}
+												value={config.id}
+												data-testid={`commit-message-${config.id}-option`}>
+												{config.name}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+								<div className="text-sm text-vscode-descriptionForeground mt-1">
+									{t("prompts:supportPrompts.enhance.apiConfigDescription")}
 								</div>
 							</div>
 						</div>

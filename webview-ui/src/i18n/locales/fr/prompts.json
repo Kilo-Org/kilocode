@@ -103,6 +103,10 @@
 			"NEW_TASK": {
 				"label": "Démarrer une nouvelle tâche",
 				"description": "Démarre une nouvelle tâche avec ton entrée. Disponible dans la palette de commandes."
+			},
+			"COMMIT_MESSAGE": {
+				"label": "Génération de Message de Commit",
+				"description": "Générez des messages de commit basés sur vos modifications git en attente. Personnalisez le prompt pour créer des messages de commit cohérents qui suivent les meilleures pratiques de votre équipe."
 			}
 		}
 	},

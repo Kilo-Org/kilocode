@@ -103,6 +103,10 @@
 			"NEW_TASK": {
 				"label": "Yeni Görev Başlat",
 				"description": "Girdiyle yeni bir görev başlat. Komut paletinde kullanılabilir."
+			},
+			"COMMIT_MESSAGE": {
+				"label": "Commit Mesajı Oluşturma",
+				"description": "Sahnelenmiş git değişikliklerinize göre commit mesajları oluşturun. Takımınızın en iyi uygulamalarını takip eden tutarlı commit mesajları oluşturmak için komutu özelleştirin."
 			}
 		}
 	},

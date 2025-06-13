@@ -103,6 +103,10 @@
 			"NEW_TASK": {
 				"label": "Rozpocznij nowe zadanie",
 				"description": "Rozpocznij nowe zadanie z wprowadzonymi danymi. Dostępne w palecie poleceń."
+			},
+			"COMMIT_MESSAGE": {
+				"label": "Generowanie Komunikatów Zatwierdzania",
+				"description": "Generuj komunikaty commitów na podstawie zmian zaplanowanych w git. Dostosuj podpowiedź, aby tworzyć spójne komunikaty commitów, które są zgodne z najlepszymi praktykami twojego zespołu."
 			}
 		}
 	},
