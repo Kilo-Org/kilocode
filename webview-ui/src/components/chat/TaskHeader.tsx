@@ -19,7 +19,7 @@ import Thumbnails from "../common/Thumbnails"
 
 import { TaskActions } from "./TaskActions"
 import { ContextWindowProgress } from "./ContextWindowProgress"
-import { TaskTimelineDisplayRow } from "./TaskTimelineDisplayRow"
+import { TaskTimeline } from "./TaskTimeline"
 import { mentionRegexGlobal } from "@roo/context-mentions"
 
 import { vscode } from "@/utils/vscode" // kilocode_change: pull slash commands from Cline
@@ -120,7 +120,7 @@ const TaskHeader = ({
 				{!isTaskExpanded && contextWindow > 0 && (
 					<div className={`w-full flex flex-col gap-1 h-auto`}>
 						{groupedMessages && onMessageClick && showTaskTimeline && (
-							<TaskTimelineDisplayRow
+							<TaskTimeline
 								groupedMessages={groupedMessages}
 								onMessageClick={onMessageClick}
 								currentMessageIndex={currentMessageIndex}
