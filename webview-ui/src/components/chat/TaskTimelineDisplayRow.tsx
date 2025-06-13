@@ -3,7 +3,7 @@ import { Virtuoso, type VirtuosoHandle } from "react-virtuoso"
 import type { ClineMessage } from "@roo-code/types"
 import { useTranslation } from "react-i18next"
 
-interface TaskProgressDisplayRowProps {
+interface TaskTimelineDisplayRowProps {
 	groupedMessages: (ClineMessage | ClineMessage[])[]
 	onMessageClick: (index: number) => void
 	currentMessageIndex?: number
@@ -93,7 +93,7 @@ const getMessageTypeColor = (message: ClineMessage | ClineMessage[]): string => 
 
 const getMessageTypeDescription = (message: ClineMessage | ClineMessage[], t: any): string => {
 	if (Array.isArray(message)) {
-		return t("kilocode:taskProgress.tooltip.messageTypes.unknown")
+		return t("kilocode:taskTimeline.tooltip.messageTypes.unknown")
 	}
 
 	const singleMessage = message as ClineMessage
@@ -121,19 +121,19 @@ const getMessageTypeDescription = (message: ClineMessage | ClineMessage[], t: an
 	}
 
 	// Use direct message type as translation key
-	const translationKey = `kilocode:taskProgress.tooltip.messageTypes.${messageType}`
+	const translationKey = `kilocode:taskTimeline.tooltip.messageTypes.${messageType}`
 
 	// Try the translation, fallback to unknown if it doesn't exist
 	try {
 		return t(translationKey)
 	} catch {
-		return t("kilocode:taskProgress.tooltip.messageTypes.unknown")
+		return t("kilocode:taskTimeline.tooltip.messageTypes.unknown")
 	}
 }
 
 const MessageSquare = memo(({ data, t }: { data: MessageSquareData; t: any }) => {
 	const messageDescription = getMessageTypeDescription(data.message, t)
-	const tooltip = t("kilocode:taskProgress.tooltip.clickToScroll", {
+	const tooltip = t("kilocode:taskTimeline.tooltip.clickToScroll", {
 		messageType: messageDescription,
 		messageNumber: data.index + 1,
 	})
@@ -157,7 +157,7 @@ const MessageSquare = memo(({ data, t }: { data: MessageSquareData; t: any }) =>
 
 MessageSquare.displayName = "MessageSquare"
 
-export const TaskProgressDisplayRow = memo<TaskProgressDisplayRowProps>(
+export const TaskTimelineDisplayRow = memo<TaskTimelineDisplayRowProps>(
 	({ groupedMessages, onMessageClick, currentMessageIndex, className = "", isTaskActive = false }) => {
 		const { t } = useTranslation()
 		const virtuosoRef = useRef<VirtuosoHandle>(null)
@@ -261,4 +261,4 @@ export const TaskProgressDisplayRow = memo<TaskProgressDisplayRowProps>(
 	},
 )
 
-TaskProgressDisplayRow.displayName = "TaskProgressDisplayRow"
+TaskTimelineDisplayRow.displayName = "TaskTimelineDisplayRow"

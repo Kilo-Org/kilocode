@@ -47,15 +47,16 @@
 		"activationFailed": "Kilo: 커밋 메시지 제공자 활성화 실패: {{error}}",
 		"providerRegistered": "Kilo: 커밋 메시지 제공자가 등록되었습니다"
 	},
-	"taskProgress": {
+	"taskTimeline": {
 		"tooltip": {
+			"clickToScroll": "{{messageType}} 보기 (메시지 {{messageNumber}})",
 			"messageTypes": {
 				"api_req_failed": "API 요청 실패",
-				"api_req_started": "API 요청이 시작되었습니다",
+				"api_req_started": "API 요청이 시작됨",
 				"browser_action_launch": "브라우저 실행",
 				"browser_action_result": "브라우저 작업 결과",
 				"browser_action": "브라우저 작업",
-				"command_output": "명령 출력",
+				"command_output": "명령어 출력",
 				"command": "명령어 실행",
 				"completion_result": "완료 결과",
 				"error": "오류 메시지",

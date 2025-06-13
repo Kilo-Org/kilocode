@@ -19,7 +19,7 @@ import Thumbnails from "../common/Thumbnails"
 
 import { TaskActions } from "./TaskActions"
 import { ContextWindowProgress } from "./ContextWindowProgress"
-import { TaskProgressDisplayRow } from "./TaskProgressDisplayRow"
+import { TaskTimelineDisplayRow } from "./TaskTimelineDisplayRow"
 import { mentionRegexGlobal } from "@roo/context-mentions"
 
 import { vscode } from "@/utils/vscode" // kilocode_change: pull slash commands from Cline
@@ -60,7 +60,7 @@ const TaskHeader = ({
 	isTaskActive = false,
 }: TaskHeaderProps) => {
 	const { t } = useTranslation()
-	const { apiConfiguration, currentTaskItem, customModes } = useExtensionState()
+	const { apiConfiguration, currentTaskItem, customModes, showTaskTimeline } = useExtensionState()
 	const { id: modelId, info: model } = useSelectedModel(apiConfiguration)
 	const [isTaskExpanded, setIsTaskExpanded] = useState(false)
 
@@ -119,8 +119,8 @@ const TaskHeader = ({
 				{/* Collapsed state: Track context and cost if we have any */}
 				{!isTaskExpanded && contextWindow > 0 && (
 					<div className={`w-full flex flex-col gap-1 h-auto`}>
-						{groupedMessages && onMessageClick && (
-							<TaskProgressDisplayRow
+						{groupedMessages && onMessageClick && showTaskTimeline && (
+							<TaskTimelineDisplayRow
 								groupedMessages={groupedMessages}
 								onMessageClick={onMessageClick}
 								currentMessageIndex={currentMessageIndex}

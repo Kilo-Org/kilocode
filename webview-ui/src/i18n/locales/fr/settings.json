@@ -25,6 +25,7 @@
 		"autoApprove": "Auto-approbation",
 		"browser": "Accès ordinateur",
 		"checkpoints": "Points de contrôle",
+		"display": "Afficher",
 		"notifications": "Notifications",
 		"contextManagement": "Contexte",
 		"terminal": "Terminal",
@@ -45,12 +46,12 @@
 		"openaiProvider": "OpenAI",
 		"ollamaProvider": "Ollama",
 		"openaiCompatibleProvider": "Compatible OpenAI",
+		"openaiKeyLabel": "Clé OpenAI :",
 		"openaiCompatibleBaseUrlLabel": "URL de base :",
 		"openaiCompatibleApiKeyLabel": "Clé API :",
 		"openaiCompatibleModelDimensionLabel": "Dimension d'Embedding :",
 		"openaiCompatibleModelDimensionPlaceholder": "ex., 1536",
 		"openaiCompatibleModelDimensionDescription": "La dimension d'embedding (taille de sortie) pour votre modèle. Consultez la documentation de votre fournisseur pour cette valeur. Valeurs courantes : 384, 768, 1536, 3072.",
-		"openaiKeyLabel": "Clé OpenAI :",
 		"modelLabel": "Modèle",
 		"selectModelPlaceholder": "Sélectionner un modèle",
 		"ollamaUrlLabel": "URL Ollama :",
@@ -339,6 +340,12 @@
 			"description": "Lorsque cette option est activée, Kilo Code créera automatiquement des points de contrôle pendant l'exécution des tâches, facilitant la révision des modifications ou le retour à des états antérieurs. <0>En savoir plus</0>"
 		}
 	},
+	"display": {
+		"taskTimeline": {
+			"label": "Afficher la chronologie des tâches",
+			"description": "Affichez une chronologie visuelle des messages de tâche, colorisés par type, vous permettant de visualiser rapidement la progression des tâches et de faire défiler jusqu'à des points spécifiques dans l'historique de la tâche."
+		}
+	},
 	"notifications": {
 		"sound": {
 			"label": "Activer les effets sonores",
@@ -384,15 +391,15 @@
 			"label": "Afficher les fichiers .kilocodeignore dans les listes et recherches",
 			"description": "Lorsque cette option est activée, les fichiers correspondant aux modèles dans .kilocodeignore seront affichés dans les listes avec un symbole de cadenas. Lorsqu'elle est désactivée, ces fichiers seront complètement masqués des listes de fichiers et des recherches."
 		},
+		"maxConcurrentFileReads": {
+			"label": "Limite de lectures simultanées",
+			"description": "Nombre maximum de fichiers que l'outil 'read_file' peut traiter simultanément. Des valeurs plus élevées peuvent accélérer la lecture de plusieurs petits fichiers mais augmentent l'utilisation de la mémoire."
+		},
 		"maxReadFile": {
 			"label": "Seuil d'auto-troncature de lecture de fichier",
 			"description": "Kilo Code lit ce nombre de lignes lorsque le modèle omet les valeurs de début/fin. Si ce nombre est inférieur au total du fichier, Kilo Code génère un index des numéros de ligne des définitions de code. Cas spéciaux : -1 indique à Kilo Code de lire le fichier entier (sans indexation), et 0 indique de ne lire aucune ligne et de fournir uniquement les index de ligne pour un contexte minimal. Des valeurs plus basses minimisent l'utilisation initiale du contexte, permettant des lectures ultérieures de plages de lignes précises. Les requêtes avec début/fin explicites ne sont pas limitées par ce paramètre.",
 			"lines": "lignes",
 			"always_full_read": "Toujours lire le fichier entier"
-		},
-		"maxConcurrentFileReads": {
-			"label": "Limite de lectures simultanées",
-			"description": "Nombre maximum de fichiers que l'outil 'read_file' peut traiter simultanément. Des valeurs plus élevées peuvent accélérer la lecture de plusieurs petits fichiers mais augmentent l'utilisation de la mémoire."
 		}
 	},
 	"terminal": {
@@ -493,13 +500,13 @@
 			"name": "Utiliser la fonctionnalité expérimentale de \"saisie semi-automatique\"",
 			"description": "Lorsque cette option est activée, Kilo Code fournira des suggestions de code en ligne pendant que vous tapez."
 		},
-		"MULTI_SEARCH_AND_REPLACE": {
-			"name": "Utiliser l'outil diff multi-blocs expérimental",
-			"description": "Lorsqu'il est activé, Kilo Code utilisera l'outil diff multi-blocs. Cela tentera de mettre à jour plusieurs blocs de code dans le fichier en une seule requête."
-		},
 		"CONCURRENT_FILE_READS": {
 			"name": "Activer la lecture simultanée de fichiers",
 			"description": "Lorsqu'activé, Kilo Code peut lire plusieurs fichiers dans une seule requête. Lorsque désactivé, Kilo Code doit lire les fichiers un par un. La désactivation peut aider lors du travail avec des modèles moins performants ou lorsque tu souhaites plus de contrôle sur l'accès aux fichiers."
+		},
+		"MULTI_SEARCH_AND_REPLACE": {
+			"name": "Utiliser l'outil diff multi-blocs expérimental",
+			"description": "Lorsqu'il est activé, Kilo Code utilisera l'outil diff multi-blocs. Cela tentera de mettre à jour plusieurs blocs de code dans le fichier en une seule requête."
 		},
 		"DISABLE_COMPLETION_COMMAND": {
 			"name": "Désactiver l'exécution des commandes dans attempt_completion",

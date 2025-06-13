@@ -25,6 +25,7 @@
 		"autoApprove": "Auto-Genehmigung",
 		"browser": "Computerzugriff",
 		"checkpoints": "Kontrollpunkte",
+		"display": "Anzeigen",
 		"notifications": "Benachrichtigungen",
 		"contextManagement": "Kontext",
 		"terminal": "Terminal",
@@ -45,12 +46,12 @@
 		"openaiProvider": "OpenAI",
 		"ollamaProvider": "Ollama",
 		"openaiCompatibleProvider": "OpenAI-kompatibel",
+		"openaiKeyLabel": "OpenAI-Schlüssel:",
 		"openaiCompatibleBaseUrlLabel": "Basis-URL:",
 		"openaiCompatibleApiKeyLabel": "API-Schlüssel:",
 		"openaiCompatibleModelDimensionLabel": "Embedding-Dimension:",
 		"openaiCompatibleModelDimensionPlaceholder": "z.B. 1536",
 		"openaiCompatibleModelDimensionDescription": "Die Embedding-Dimension (Ausgabegröße) für Ihr Modell. Überprüfen Sie die Dokumentation Ihres Anbieters für diesen Wert. Übliche Werte: 384, 768, 1536, 3072.",
-		"openaiKeyLabel": "OpenAI-Schlüssel:",
 		"modelLabel": "Modell",
 		"selectModelPlaceholder": "Modell auswählen",
 		"ollamaUrlLabel": "Ollama-URL:",
@@ -339,6 +340,12 @@
 			"description": "Wenn aktiviert, erstellt Kilo Code automatisch Kontrollpunkte während der Aufgabenausführung, was die Überprüfung von Änderungen oder die Rückkehr zu früheren Zuständen erleichtert. <0>Mehr erfahren</0>"
 		}
 	},
+	"display": {
+		"taskTimeline": {
+			"label": "Aufgabenverlauf anzeigen",
+			"description": "Zeigt eine visuelle Zeitachse der Aufgabennachrichten an, farblich nach Typ gekennzeichnet, sodass Sie den Fortschritt der Aufgabe schnell einsehen und zu bestimmten Punkten in der Historie der Aufgabe zurückblättern können."
+		}
+	},
 	"notifications": {
 		"sound": {
 			"label": "Soundeffekte aktivieren",
@@ -493,13 +500,13 @@
 			"name": "Experimentelle \"Autovervollständigungs\"-Funktion verwenden",
 			"description": "Wenn aktiviert, bietet Kilo Code während der Eingabe Inline-Code-Vorschläge an."
 		},
-		"MULTI_SEARCH_AND_REPLACE": {
-			"name": "Experimentelles Multi-Block-Diff-Werkzeug verwenden",
-			"description": "Wenn aktiviert, verwendet Kilo Code das Multi-Block-Diff-Werkzeug. Dies versucht, mehrere Codeblöcke in der Datei in einer Anfrage zu aktualisieren."
-		},
 		"CONCURRENT_FILE_READS": {
 			"name": "Gleichzeitiges Lesen von Dateien aktivieren",
 			"description": "Wenn aktiviert, kann Kilo Code mehrere Dateien in einer einzigen Anfrage lesen. Wenn deaktiviert, muss Kilo Code Dateien nacheinander lesen. Das Deaktivieren kann helfen, wenn du mit weniger leistungsfähigen Modellen arbeitest oder mehr Kontrolle über den Dateizugriff möchtest."
+		},
+		"MULTI_SEARCH_AND_REPLACE": {
+			"name": "Experimentelles Multi-Block-Diff-Werkzeug verwenden",
+			"description": "Wenn aktiviert, verwendet Kilo Code das Multi-Block-Diff-Werkzeug. Dies versucht, mehrere Codeblöcke in der Datei in einer Anfrage zu aktualisieren."
 		},
 		"DISABLE_COMPLETION_COMMAND": {
 			"name": "Befehlsausführung in attempt_completion deaktivieren",

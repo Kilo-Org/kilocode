@@ -25,6 +25,7 @@
 		"autoApprove": "자동 승인",
 		"browser": "컴퓨터 접근",
 		"checkpoints": "체크포인트",
+		"display": "표시",
 		"notifications": "알림",
 		"contextManagement": "컨텍스트",
 		"terminal": "터미널",
@@ -45,12 +46,12 @@
 		"openaiProvider": "OpenAI",
 		"ollamaProvider": "Ollama",
 		"openaiCompatibleProvider": "OpenAI 호환",
+		"openaiKeyLabel": "OpenAI 키:",
 		"openaiCompatibleBaseUrlLabel": "기본 URL:",
 		"openaiCompatibleApiKeyLabel": "API 키:",
 		"openaiCompatibleModelDimensionLabel": "임베딩 차원:",
 		"openaiCompatibleModelDimensionPlaceholder": "예: 1536",
 		"openaiCompatibleModelDimensionDescription": "모델의 임베딩 차원(출력 크기)입니다. 이 값에 대해서는 제공업체의 문서를 확인하세요. 일반적인 값: 384, 768, 1536, 3072.",
-		"openaiKeyLabel": "OpenAI 키:",
 		"modelLabel": "모델",
 		"selectModelPlaceholder": "모델 선택",
 		"ollamaUrlLabel": "Ollama URL:",
@@ -180,8 +181,8 @@
 		"getGroqApiKey": "Groq API 키 받기",
 		"groqApiKey": "Groq API 키",
 		"getGeminiApiKey": "Gemini API 키 받기",
-		"apiKey": "API 키",
 		"openAiApiKey": "OpenAI API 키",
+		"apiKey": "API 키",
 		"openAiBaseUrl": "기본 URL",
 		"getOpenAiApiKey": "OpenAI API 키 받기",
 		"mistralApiKey": "Mistral API 키",
@@ -339,6 +340,12 @@
 			"description": "활성화되면 Kilo Code는 작업 실행 중에 자동으로 체크포인트를 생성하여 변경 사항을 검토하거나 이전 상태로 되돌리기 쉽게 합니다. <0>더 알아보기</0>"
 		}
 	},
+	"display": {
+		"taskTimeline": {
+			"label": "작업 타임라인 표시",
+			"description": "작업 메시지의 시각적 타임라인을 유형별로 색상화하여 표시하여 작업 진행 상황을 빠르게 확인하고 작업 기록의 특정 지점으로 스크롤하여 돌아갈 수 있습니다."
+		}
+	},
 	"notifications": {
 		"sound": {
 			"label": "사운드 효과 활성화",
@@ -384,15 +391,15 @@
 			"label": "목록 및 검색에서 .kilocodeignore 파일 표시",
 			"description": "활성화되면 .kilocodeignore의 패턴과 일치하는 파일이 잠금 기호와 함께 목록에 표시됩니다. 비활성화되면 이러한 파일은 파일 목록 및 검색에서 완전히 숨겨집니다."
 		},
+		"maxConcurrentFileReads": {
+			"label": "동시 파일 읽기 제한",
+			"description": "read_file 도구가 동시에 처리할 수 있는 최대 파일 수입니다. 높은 값은 여러 작은 파일을 읽는 속도를 높일 수 있지만 메모리 사용량이 증가합니다."
+		},
 		"maxReadFile": {
 			"label": "파일 읽기 자동 축소 임계값",
 			"description": "모델이 시작/끝 값을 지정하지 않을 때 Kilo Code가 읽는 줄 수입니다. 이 수가 파일의 총 줄 수보다 적으면 Kilo Code는 코드 정의의 줄 번호 인덱스를 생성합니다. 특수한 경우: -1은 Kilo Code에게 전체 파일을 읽도록 지시하고(인덱싱 없이), 0은 줄을 읽지 않고 최소한의 컨텍스트를 위해 줄 인덱스만 제공하도록 지시합니다. 낮은 값은 초기 컨텍스트 사용을 최소화하고, 이후 정확한 줄 범위 읽기를 가능하게 합니다. 명시적 시작/끝 요청은 이 설정의 제한을 받지 않습니다.",
 			"lines": "줄",
 			"always_full_read": "항상 전체 파일 읽기"
-		},
-		"maxConcurrentFileReads": {
-			"label": "동시 파일 읽기 제한",
-			"description": "read_file 도구가 동시에 처리할 수 있는 최대 파일 수입니다. 높은 값은 여러 작은 파일을 읽는 속도를 높일 수 있지만 메모리 사용량이 증가합니다."
 		}
 	},
 	"terminal": {
@@ -493,13 +500,13 @@
 			"name": "실험적인 \"자동 완성\" 기능 사용",
 			"description": "활성화하면 입력할 때 Kilo Code가 인라인 코드 제안을 제공합니다."
 		},
-		"MULTI_SEARCH_AND_REPLACE": {
-			"name": "실험적 다중 블록 diff 도구 사용",
-			"description": "활성화하면 Kilo Code가 다중 블록 diff 도구를 사용합니다. 이것은 하나의 요청에서 파일의 여러 코드 블록을 업데이트하려고 시도합니다."
-		},
 		"CONCURRENT_FILE_READS": {
 			"name": "동시 파일 읽기 활성화",
 			"description": "활성화하면 Kilo Code가 한 번의 요청으로 여러 파일 을 읽을 수 있습니다. 비활성화하면 Kilo Code는 파일을 하나씩 읽어야 합니다. 성능이 낮은 모델로 작업하거나 파일 액세스를 더 제어하려는 경우 비활성화하면 도움이 될 수 있습니다."
+		},
+		"MULTI_SEARCH_AND_REPLACE": {
+			"name": "실험적 다중 블록 diff 도구 사용",
+			"description": "활성화하면 Kilo Code가 다중 블록 diff 도구를 사용합니다. 이것은 하나의 요청에서 파일의 여러 코드 블록을 업데이트하려고 시도합니다."
 		},
 		"DISABLE_COMPLETION_COMMAND": {
 			"name": "attempt_completion에서 명령 실행 비활성화",

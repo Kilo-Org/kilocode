@@ -47,25 +47,26 @@
 		"activationFailed": "Kilo: Не удалось активировать поставщик сообщений фиксации: {{error}}",
 		"providerRegistered": "Kilo: Поставщик сообщений коммита зарегистрирован"
 	},
-	"taskProgress": {
+	"taskTimeline": {
 		"tooltip": {
+			"clickToScroll": "Просмотреть {{messageType}} (сообщение {{messageNumber}})",
 			"messageTypes": {
-				"api_req_failed": "Сбой запроса API",
-				"api_req_started": "Запрос API начат",
+				"api_req_failed": "Ошибка запроса API",
+				"api_req_started": "Запрос к API запущен",
 				"browser_action_launch": "запуск браузера",
-				"browser_action_result": "результат действия браузера",
+				"browser_action_result": "результат действия в браузере",
 				"browser_action": "действие браузера",
-				"command_output": "вывод команды",
+				"command_output": "выходные данные команды",
 				"command": "выполнение команды",
 				"completion_result": "результат завершения",
-				"error": "Сообщение об ошибке",
+				"error": "сообщение об ошибке",
 				"followup": "дополнительный вопрос",
 				"mcp_server_response": "Ответ сервера MCP",
-				"reasoning": "ИИ-рассуждение",
+				"reasoning": "Рассуждения ИИ",
 				"text": "Ответ ИИ",
 				"tool": "использование инструмента",
 				"unknown": "неизвестный тип сообщения",
-				"use_mcp_server": "Использование MCP-сервера",
+				"use_mcp_server": "Использование MCP сервера",
 				"user": "ввод пользователя"
 			}
 		}

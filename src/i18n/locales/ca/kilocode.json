@@ -47,23 +47,24 @@
 		"activationFailed": "Kilo: No s'ha pogut activar el proveïdor de missatges de confirmació: {{error}}",
 		"providerRegistered": "Kilo: S'ha registrat el proveïdor de missatges de confirmació"
 	},
-	"taskProgress": {
+	"taskTimeline": {
 		"tooltip": {
+			"clickToScroll": "Veure {{messageType}} (missatge {{messageNumber}})",
 			"messageTypes": {
-				"api_req_failed": "Ha fallat la petició a l'API",
-				"api_req_started": "S'ha iniciat la sol·licitud a l'API",
-				"browser_action_launch": "iniciació del navegador",
+				"api_req_failed": "La sol·licitud API ha fallat",
+				"api_req_started": "La petició a l'API s'ha iniciat",
+				"browser_action_launch": "iniciar navegador",
 				"browser_action_result": "resultat d'acció del navegador",
 				"browser_action": "acció del navegador",
-				"command_output": "sortida de l'ordre",
+				"command_output": "sortida de la comanda",
 				"command": "execució de comandes",
 				"completion_result": "resultat de la compleció",
 				"error": "missatge d'error",
 				"followup": "pregunta de seguiment",
 				"mcp_server_response": "Resposta del servidor MCP",
 				"reasoning": "Raonament de la IA",
-				"text": "Resposta d'IA",
-				"tool": "ús d'eines",
+				"text": "Resposta de la IA",
+				"tool": "ús de l'eina",
 				"unknown": "tipus de missatge desconegut",
 				"use_mcp_server": "Ús del servidor MCP",
 				"user": "entrada d'usuari"

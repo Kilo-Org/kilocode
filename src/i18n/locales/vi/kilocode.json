@@ -47,25 +47,26 @@
 		"activationFailed": "Kilo: Không thể kích hoạt nhà cung cấp tin nhắn commit: {{error}}",
 		"providerRegistered": "Kilo: Đã đăng ký nhà cung cấp thông điệp commit"
 	},
-	"taskProgress": {
+	"taskTimeline": {
 		"tooltip": {
+			"clickToScroll": "Xem {{messageType}} (thông báo {{messageNumber}})",
 			"messageTypes": {
 				"api_req_failed": "Yêu cầu API thất bại",
 				"api_req_started": "Yêu cầu API đã bắt đầu",
 				"browser_action_launch": "khởi chạy trình duyệt",
-				"browser_action_result": "kết quả hành động trình duyệt",
-				"browser_action": "hành động của trình duyệt",
-				"command_output": "kết quả của lệnh",
+				"browser_action_result": "kết quả tác vụ trình duyệt",
+				"browser_action": "tiện ích trình duyệt",
+				"command_output": "kết quả lệnh",
 				"command": "thực thi lệnh",
 				"completion_result": "kết quả hoàn thành",
 				"error": "thông báo lỗi",
 				"followup": "câu hỏi tiếp theo",
 				"mcp_server_response": "Phản hồi từ máy chủ MCP",
-				"reasoning": "Lập luận AI",
+				"reasoning": "Lập luận của trí tuệ nhân tạo",
 				"text": "Phản hồi của AI",
 				"tool": "sử dụng công cụ",
 				"unknown": "loại tin nhắn không xác định",
-				"use_mcp_server": "Mức sử dụng máy chủ MCP",
+				"use_mcp_server": "Sử dụng máy chủ MCP",
 				"user": "đầu vào của người dùng"
 			}
 		}

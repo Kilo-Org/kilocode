@@ -25,6 +25,7 @@
 		"autoApprove": "自动批准",
 		"browser": "计算机交互",
 		"checkpoints": "存档点",
+		"display": "显示",
 		"notifications": "通知",
 		"contextManagement": "上下文",
 		"terminal": "终端",
@@ -46,12 +47,12 @@
 		"openaiProvider": "OpenAI",
 		"ollamaProvider": "Ollama",
 		"openaiCompatibleProvider": "OpenAI 兼容",
+		"openaiKeyLabel": "OpenAI 密钥：",
 		"openaiCompatibleBaseUrlLabel": "基础 URL：",
 		"openaiCompatibleApiKeyLabel": "API 密钥：",
 		"openaiCompatibleModelDimensionLabel": "嵌入维度：",
 		"openaiCompatibleModelDimensionPlaceholder": "例如，1536",
 		"openaiCompatibleModelDimensionDescription": "模型的嵌入维度（输出大小）。请查阅您的提供商文档获取此值。常见值：384、768、1536、3072。",
-		"openaiKeyLabel": "OpenAI 密钥：",
 		"modelLabel": "模型",
 		"selectModelPlaceholder": "选择模型",
 		"ollamaUrlLabel": "Ollama URL：",
@@ -340,6 +341,12 @@
 			"description": "开启后自动创建任务存档点，方便回溯修改。 <0>了解更多</0>"
 		}
 	},
+	"display": {
+		"taskTimeline": {
+			"label": "显示任务时间线",
+			"description": "显示任务消息的可视化时间线，按类型着色，让您能够快速查看任务进度并滚动回溯至任务历史中的特定时间点。"
+		}
+	},
 	"notifications": {
 		"sound": {
 			"label": "启用声音通知",
@@ -385,15 +392,15 @@
 			"label": "在列表和搜索中显示 .kilocodeignore 文件",
 			"description": "启用后，与 .kilocodeignore 中模式匹配的文件将在列表中显示锁定符号。禁用时，这些文件将从文件列表和搜索中完全隐藏。"
 		},
+		"maxConcurrentFileReads": {
+			"label": "并发文件读取限制",
+			"description": "read_file 工具可以同时处理的最大文件数。较高的值可能会加快读取多个小文件的速度，但会增加内存使用量。"
+		},
 		"maxReadFile": {
 			"label": "文件读取自动截断阈值",
 			"description": "自动读取文件行数设置：-1=完整读取 0=仅生成行号索引，较小值可节省token，支持后续使用行号进行读取。 <0>了解更多</0>",
 			"lines": "行",
 			"always_full_read": "始终读取整个文件"
-		},
-		"maxConcurrentFileReads": {
-			"label": "并发文件读取限制",
-			"description": "read_file 工具可以同时处理的最大文件数。较高的值可能会加快读取多个小文件的速度，但会增加内存使用量。"
 		}
 	},
 	"terminal": {
@@ -494,13 +501,13 @@
 			"name": "使用实验性“自动完成”功能",
 			"description": "启用后，Kilo Code 会在您键入时提供内联代码建议。"
 		},
-		"MULTI_SEARCH_AND_REPLACE": {
-			"name": "允许批量搜索和替换",
-			"description": "启用后，Kilo Code 将尝试在一个请求中进行批量搜索和替换。"
-		},
 		"CONCURRENT_FILE_READS": {
 			"name": "启用并发文件读取",
 			"description": "启用后，Kilo Code 可以在单个请求中读取多个文件。禁用后，Kilo Code 必须逐个读取文件。在使用能力较弱的模型或希望对文件访问有更多控制时，禁用此功能可能会有所帮助。"
+		},
+		"MULTI_SEARCH_AND_REPLACE": {
+			"name": "允许批量搜索和替换",
+			"description": "启用后，Kilo Code 将尝试在一个请求中进行批量搜索和替换。"
 		},
 		"DISABLE_COMPLETION_COMMAND": {
 			"name": "禁用 attempt_completion 中的命令执行",

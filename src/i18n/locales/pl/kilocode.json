@@ -47,17 +47,18 @@
 		"activationFailed": "Kilo: Nie udało się aktywować dostawcy treści commita: {{error}}",
 		"providerRegistered": "Kilo: Zarejestrowano dostawcę wiadomości commit"
 	},
-	"taskProgress": {
+	"taskTimeline": {
 		"tooltip": {
+			"clickToScroll": "Zobacz {{messageType}} (wiadomość {{messageNumber}})",
 			"messageTypes": {
 				"api_req_failed": "Żądanie API nie powiodło się",
-				"api_req_started": "Rozpoczęto zapytanie API",
+				"api_req_started": "Rozpoczęto żądanie API",
 				"browser_action_launch": "uruchomienie przeglądarki",
-				"browser_action_result": "wynik akcji przeglądarki",
-				"browser_action": "działanie przeglądarki",
-				"command_output": "dane wyjściowe polecenia",
+				"browser_action_result": "wynik działania przeglądarki",
+				"browser_action": "akcja przeglądarki",
+				"command_output": "wynik polecenia",
 				"command": "wykonanie polecenia",
-				"completion_result": "wynik uzupełnienia",
+				"completion_result": "wynik ukończenia",
 				"error": "komunikat o błędzie",
 				"followup": "pytanie uzupełniające",
 				"mcp_server_response": "Odpowiedź serwera MCP",
@@ -65,8 +66,8 @@
 				"text": "Odpowiedź AI",
 				"tool": "użycie narzędzia",
 				"unknown": "nieznany typ wiadomości",
-				"use_mcp_server": "Użycie serwera MCP",
-				"user": "dane wprowadzone przez użytkownika"
+				"use_mcp_server": "Wykorzystanie serwera MCP",
+				"user": "wprowadzanie danych przez użytkownika"
 			}
 		}
 	}

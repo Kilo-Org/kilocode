@@ -47,13 +47,14 @@
 		"activationFailed": "Kilo: Commit mesaj sağlayıcısı etkinleştirilemedi: {{error}}",
 		"providerRegistered": "Kilo: Bildirim mesajı sağlayıcısı kaydedildi"
 	},
-	"taskProgress": {
+	"taskTimeline": {
 		"tooltip": {
+			"clickToScroll": "{{messageType}} görüntüle (mesaj {{messageNumber}})",
 			"messageTypes": {
 				"api_req_failed": "API isteği başarısız oldu",
 				"api_req_started": "API isteği başladı",
 				"browser_action_launch": "tarayıcı başlatma",
-				"browser_action_result": "tarayıcı eylemi sonucu",
+				"browser_action_result": "tarayıcı işlem sonucu",
 				"browser_action": "tarayıcı eylemi",
 				"command_output": "komut çıktısı",
 				"command": "komut yürütme",
@@ -61,8 +62,8 @@
 				"error": "hata mesajı",
 				"followup": "takip sorusu",
 				"mcp_server_response": "MCP sunucu yanıtı",
-				"reasoning": "Yapay zeka mantık yürütme",
-				"text": "AI yanıtı",
+				"reasoning": "Yapay zeka muhakemesi",
+				"text": "Yapay zeka yanıtı",
 				"tool": "araç kullanımı",
 				"unknown": "bilinmeyen mesaj türü",
 				"use_mcp_server": "MCP sunucu kullanımı",

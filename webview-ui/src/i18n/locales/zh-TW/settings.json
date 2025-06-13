@@ -25,6 +25,7 @@
 		"autoApprove": "自動核准",
 		"browser": "電腦存取",
 		"checkpoints": "檢查點",
+		"display": "显示",
 		"notifications": "通知",
 		"contextManagement": "上下文",
 		"terminal": "終端機",
@@ -45,12 +46,12 @@
 		"openaiProvider": "OpenAI",
 		"ollamaProvider": "Ollama",
 		"openaiCompatibleProvider": "OpenAI 相容",
+		"openaiKeyLabel": "OpenAI 金鑰：",
 		"openaiCompatibleBaseUrlLabel": "基礎 URL：",
 		"openaiCompatibleApiKeyLabel": "API 金鑰：",
 		"openaiCompatibleModelDimensionLabel": "嵌入維度：",
 		"openaiCompatibleModelDimensionPlaceholder": "例如，1536",
 		"openaiCompatibleModelDimensionDescription": "模型的嵌入維度（輸出大小）。請查閱您的提供商文件獲取此值。常見值：384、768、1536、3072。",
-		"openaiKeyLabel": "OpenAI 金鑰：",
 		"modelLabel": "模型",
 		"selectModelPlaceholder": "選擇模型",
 		"ollamaUrlLabel": "Ollama URL：",
@@ -339,6 +340,12 @@
 			"description": "啟用後，Kilo Code 將在工作執行期間自動建立檢查點，使審核變更或回到早期狀態變得容易。 <0>瞭解更多</0>"
 		}
 	},
+	"display": {
+		"taskTimeline": {
+			"label": "显示任务时间线",
+			"description": "显示任务消息的可视化时间线，按类型进行着色，使您能够快速查看任务进度并滚动回到任务历史中的特定点。"
+		}
+	},
 	"notifications": {
 		"sound": {
 			"label": "啟用音效",
@@ -384,15 +391,15 @@
 			"label": "在列表和搜尋中顯示被 .kilocodeignore 排除的檔案",
 			"description": "啟用後，符合 .kilocodeignore 規則的檔案會在列表中顯示並標示鎖定圖示。停用後，這些檔案將完全從檔案列表和搜尋結果中隱藏。"
 		},
+		"maxConcurrentFileReads": {
+			"label": "並行檔案讀取限制",
+			"description": "read_file 工具可以同時處理的最大檔案數。較高的值可能會加快讀取多個小檔案的速度，但會增加記憶體使用量。"
+		},
 		"maxReadFile": {
 			"label": "檔案讀取自動截斷閾值",
 			"description": "當模型未指定起始/結束值時，Kilo Code 讀取的行數。如果此數值小於檔案總行數，Kilo Code 將產生程式碼定義的行號索引。特殊情況：-1 指示 Kilo Code 讀取整個檔案（不建立索引），0 指示不讀取任何行並僅提供行索引以取得最小上下文。較低的值可最小化初始上下文使用，允許後續精確的行範圍讀取。明確指定起始/結束的請求不受此設定限制。 <0>瞭解更多</0>",
 			"lines": "行",
 			"always_full_read": "始終讀取整個檔案"
-		},
-		"maxConcurrentFileReads": {
-			"label": "並行檔案讀取限制",
-			"description": "read_file 工具可以同時處理的最大檔案數。較高的值可能會加快讀取多個小檔案的速度，但會增加記憶體使用量。"
 		}
 	},
 	"terminal": {
@@ -493,13 +500,13 @@
 			"name": "使用實驗性「自動完成」功能",
 			"description": "啟用後，Kilo Code 會在您輸入時提供內嵌程式碼建議。"
 		},
-		"MULTI_SEARCH_AND_REPLACE": {
-			"name": "使用實驗性多區塊差異比對工具",
-			"description": "啟用後，Kilo Code 將使用多區塊差異比對工具，嘗試在單一請求中更新檔案內的多個程式碼區塊。"
-		},
 		"CONCURRENT_FILE_READS": {
 			"name": "啟用並行檔案讀取",
 			"description": "啟用後，Kilo Code 可以在單一請求中讀取多個檔案（最多 15 個檔案）。停用後，Kilo Code 必須逐一讀取檔案。在使用能力較弱的模型或希望對檔案存取有更多控制時，停用此功能可能會有所幫助。"
+		},
+		"MULTI_SEARCH_AND_REPLACE": {
+			"name": "使用實驗性多區塊差異比對工具",
+			"description": "啟用後，Kilo Code 將使用多區塊差異比對工具，嘗試在單一請求中更新檔案內的多個程式碼區塊。"
 		},
 		"DISABLE_COMPLETION_COMMAND": {
 			"name": "停用 attempt_completion 中的指令執行",

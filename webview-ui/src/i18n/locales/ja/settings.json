@@ -25,6 +25,7 @@
 		"autoApprove": "自動承認",
 		"browser": "コンピューターアクセス",
 		"checkpoints": "チェックポイント",
+		"display": "表示",
 		"notifications": "通知",
 		"contextManagement": "コンテキスト",
 		"terminal": "ターミナル",
@@ -45,12 +46,12 @@
 		"openaiProvider": "OpenAI",
 		"ollamaProvider": "Ollama",
 		"openaiCompatibleProvider": "OpenAI互換",
+		"openaiKeyLabel": "OpenAIキー：",
 		"openaiCompatibleBaseUrlLabel": "ベースURL：",
 		"openaiCompatibleApiKeyLabel": "APIキー：",
 		"openaiCompatibleModelDimensionLabel": "埋め込みディメンション：",
 		"openaiCompatibleModelDimensionPlaceholder": "例：1536",
 		"openaiCompatibleModelDimensionDescription": "モデルの埋め込みディメンション（出力サイズ）。この値についてはプロバイダーのドキュメントを確認してください。一般的な値：384、768、1536、3072。",
-		"openaiKeyLabel": "OpenAIキー：",
 		"modelLabel": "モデル",
 		"selectModelPlaceholder": "モデルを選択",
 		"ollamaUrlLabel": "Ollama URL：",
@@ -339,6 +340,12 @@
 			"description": "有効にすると、Kilo Codeはタスク実行中に自動的にチェックポイントを作成し、変更の確認や以前の状態への復帰を容易にします。 <0>詳細情報</0>"
 		}
 	},
+	"display": {
+		"taskTimeline": {
+			"label": "タスクのタイムラインを表示",
+			"description": "タスクメッセージの視覚的なタイムラインを表示し、種類ごとに色分けされているため、タスクの進捗を素早く確認したり、タスク履歴の特定のポイントまでスクロールバックしたりできます。"
+		}
+	},
 	"notifications": {
 		"sound": {
 			"label": "サウンドエフェクトを有効化",
@@ -384,15 +391,15 @@
 			"label": "リストと検索で.kilocodeignoreファイルを表示",
 			"description": "有効にすると、.kilocodeignoreのパターンに一致するファイルがロックシンボル付きでリストに表示されます。無効にすると、これらのファイルはファイルリストや検索から完全に非表示になります。"
 		},
+		"maxConcurrentFileReads": {
+			"label": "同時ファイル読み取り制限",
+			"description": "read_file ツールが同時に処理できるファイルの最大数。値を高くすると複数の小さなファイルの読み取りが速くなる可能性がありますが、メモリ使用量が増加します。"
+		},
 		"maxReadFile": {
 			"label": "ファイル読み込み自動切り詰めしきい値",
 			"description": "モデルが開始/終了の値を指定しない場合、Kilo Codeはこの行数を読み込みます。この数がファイルの総行数より少ない場合、Kilo Codeはコード定義の行番号インデックスを生成します。特殊なケース：-1はKilo Codeにファイル全体を読み込むよう指示し（インデックス作成なし）、0は行を読み込まず最小限のコンテキストのために行インデックスのみを提供するよう指示します。低い値は初期コンテキスト使用量を最小限に抑え、後続の正確な行範囲の読み込みを可能にします。明示的な開始/終了の要求はこの設定による制限を受けません。",
 			"lines": "行",
 			"always_full_read": "常にファイル全体を読み込む"
-		},
-		"maxConcurrentFileReads": {
-			"label": "同時ファイル読み取り制限",
-			"description": "read_file ツールが同時に処理できるファイルの最大数。値を高くすると複数の小さなファイルの読み取りが速くなる可能性がありますが、メモリ使用量が増加します。"
 		}
 	},
 	"terminal": {
@@ -493,13 +500,13 @@
 			"name": "実験的な「オートコンプリート」機能を使用する",
 			"description": "有効にすると、入力中にKilo Codeがインラインコードの提案を行います。"
 		},
-		"MULTI_SEARCH_AND_REPLACE": {
-			"name": "実験的なマルチブロックdiffツールを使用する",
-			"description": "有効にすると、Kilo Codeはマルチブロックdiffツールを使用します。これにより、1つのリクエストでファイル内の複数のコードブロックを更新しようとします。"
-		},
 		"CONCURRENT_FILE_READS": {
 			"name": "並行ファイル読み取りを有効にする",
 			"description": "有効にすると、Kilo Codeは1回のリクエストで複数のファイル を読み取ることができます。無効にすると、Kilo Codeはファイルを1つずつ読み取る必要があります。能力の低いモデルで作業する場合や、ファイルアクセスをより細かく制御したい場合は、無効にすると役立ちます。"
+		},
+		"MULTI_SEARCH_AND_REPLACE": {
+			"name": "実験的なマルチブロックdiffツールを使用する",
+			"description": "有効にすると、Kilo Codeはマルチブロックdiffツールを使用します。これにより、1つのリクエストでファイル内の複数のコードブロックを更新しようとします。"
 		},
 		"DISABLE_COMPLETION_COMMAND": {
 			"name": "attempt_completionでのコマンド実行を無効にする",

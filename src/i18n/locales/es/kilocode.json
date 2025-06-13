@@ -47,26 +47,27 @@
 		"activationFailed": "Kilo: Error al activar el proveedor de mensajes de commit: {{error}}",
 		"providerRegistered": "Kilo: Proveedor de mensajes de confirmación registrado"
 	},
-	"taskProgress": {
+	"taskTimeline": {
 		"tooltip": {
+			"clickToScroll": "Ver {{messageType}} (mensaje {{messageNumber}})",
 			"messageTypes": {
-				"api_req_failed": "Error en la solicitud de API",
+				"api_req_failed": "La solicitud a la API falló",
 				"api_req_started": "Solicitud de API iniciada",
 				"browser_action_launch": "inicio del navegador",
-				"browser_action_result": "resultado de la acción del navegador",
+				"browser_action_result": "resultado de acción del navegador",
 				"browser_action": "acción del navegador",
-				"command_output": "salida del comando",
-				"command": "ejecución de comandos",
-				"completion_result": "resultado de finalización",
+				"command_output": "salida de comando",
+				"command": "ejecución de comando",
+				"completion_result": "resultado de la finalización",
 				"error": "mensaje de error",
 				"followup": "pregunta de seguimiento",
 				"mcp_server_response": "Respuesta del servidor MCP",
-				"reasoning": "Razonamiento de IA",
+				"reasoning": "Razonamiento de la IA",
 				"text": "Respuesta de IA",
 				"tool": "uso de herramientas",
 				"unknown": "tipo de mensaje desconocido",
 				"use_mcp_server": "Uso del servidor MCP",
-				"user": "entrada de usuario"
+				"user": "entrada del usuario"
 			}
 		}
 	}

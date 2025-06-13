@@ -47,23 +47,24 @@
 		"activationFailed": "किलो: कमिट संदेश प्रदाता को सक्रिय करने में विफल: {{error}}",
 		"providerRegistered": "किलो: प्रतिबद्ध संदेश प्रदाता पंजीकृत"
 	},
-	"taskProgress": {
+	"taskTimeline": {
 		"tooltip": {
+			"clickToScroll": "{{messageType}} देखें (संदेश {{messageNumber}})",
 			"messageTypes": {
 				"api_req_failed": "API अनुरोध विफल हुआ",
 				"api_req_started": "API अनुरोध शुरू हुआ",
 				"browser_action_launch": "ब्राउज़र लॉन्च",
-				"browser_action_result": "ब्राउज़र क्रिया परिणाम",
-				"browser_action": "ब्राउज़र क्रिया",
+				"browser_action_result": "ब्राउज़र कार्रवाई परिणाम",
+				"browser_action": "ब्राउज़र एक्शन",
 				"command_output": "कमांड आउटपुट",
 				"command": "कमांड निष्पादन",
-				"completion_result": "पूरा होने का परिणाम",
+				"completion_result": "पूर्णता परिणाम",
 				"error": "त्रुटि संदेश",
 				"followup": "अनुवर्ती प्रश्न",
 				"mcp_server_response": "MCP सर्वर प्रतिक्रिया",
-				"reasoning": "AI तर्क",
+				"reasoning": "AI तर्क-विवेचन",
 				"text": "एआई प्रतिक्रिया",
-				"tool": "उपकरण उपयोग",
+				"tool": "संसाधन उपयोग",
 				"unknown": "अज्ञात संदेश प्रकार",
 				"use_mcp_server": "MCP सर्वर उपयोग",
 				"user": "उपयोगकर्ता इनपुट"

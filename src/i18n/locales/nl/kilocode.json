@@ -47,23 +47,24 @@
 		"activationFailed": "Kilo: Kon berichtverstrekker voor commits niet activeren: {{error}}",
 		"providerRegistered": "Kilo: Commit message provider geregistreerd"
 	},
-	"taskProgress": {
+	"taskTimeline": {
 		"tooltip": {
+			"clickToScroll": "Bekijk {{messageType}} (bericht {{messageNumber}})",
 			"messageTypes": {
-				"api_req_failed": "API-aanvraag mislukt",
-				"api_req_started": "API-verzoek gestart",
+				"api_req_failed": "API-verzoek mislukt",
+				"api_req_started": "API-aanvraag gestart",
 				"browser_action_launch": "browser starten",
 				"browser_action_result": "browseractieresultaat",
-				"browser_action": "browseractie",
-				"command_output": "opdrachtuitvoer",
-				"command": "opdrachtuitvoering",
-				"completion_result": "resultaat voltooien",
+				"browser_action": "browser-actie",
+				"command_output": "opdrachtresultaat",
+				"command": "uitvoering van commando's",
+				"completion_result": "voltooiingsresultaat",
 				"error": "foutmelding",
 				"followup": "vervolgvraag",
-				"mcp_server_response": "MCP-serverreactie",
+				"mcp_server_response": "MCP-serverrespons",
 				"reasoning": "AI redeneren",
-				"text": "AI-antwoord",
-				"tool": "gereedschapsgebruik",
+				"text": "AI-reactie",
+				"tool": "hulpmiddelengebruik",
 				"unknown": "onbekend berichttype",
 				"use_mcp_server": "MCP-servergebruik",
 				"user": "gebruikersinvoer"

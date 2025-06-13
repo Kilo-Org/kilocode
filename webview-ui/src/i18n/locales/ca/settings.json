@@ -25,6 +25,7 @@
 		"autoApprove": "Auto-aprovació",
 		"browser": "Accés a l'ordinador",
 		"checkpoints": "Punts de control",
+		"display": "Mostra",
 		"notifications": "Notificacions",
 		"contextManagement": "Context",
 		"terminal": "Terminal",
@@ -45,12 +46,12 @@
 		"openaiProvider": "OpenAI",
 		"ollamaProvider": "Ollama",
 		"openaiCompatibleProvider": "Compatible amb OpenAI",
+		"openaiKeyLabel": "Clau OpenAI:",
 		"openaiCompatibleBaseUrlLabel": "URL base:",
 		"openaiCompatibleApiKeyLabel": "Clau API:",
 		"openaiCompatibleModelDimensionLabel": "Dimensió d'Embedding:",
 		"openaiCompatibleModelDimensionPlaceholder": "p. ex., 1536",
 		"openaiCompatibleModelDimensionDescription": "La dimensió d'embedding (mida de sortida) per al teu model. Consulta la documentació del teu proveïdor per a aquest valor. Valors comuns: 384, 768, 1536, 3072.",
-		"openaiKeyLabel": "Clau OpenAI:",
 		"modelLabel": "Model",
 		"selectModelPlaceholder": "Seleccionar model",
 		"ollamaUrlLabel": "URL d'Ollama:",
@@ -339,6 +340,12 @@
 			"description": "Quan està habilitat, Kilo Code crearà automàticament punts de control durant l'execució de tasques, facilitant la revisió de canvis o la reversió a estats anteriors. <0>Més informació</0>"
 		}
 	},
+	"display": {
+		"taskTimeline": {
+			"label": "Mostra la cronologia de la tasca",
+			"description": "Mostra una línia temporal visual dels missatges de tasques, acolorida per tipus, que et permet veure ràpidament el progrés de la tasca i retrocedir a punts específics en l'historial de la tasca."
+		}
+	},
 	"notifications": {
 		"sound": {
 			"label": "Habilitar efectes de so",
@@ -384,15 +391,15 @@
 			"label": "Mostrar fitxers .kilocodeignore en llistes i cerques",
 			"description": "Quan està habilitat, els fitxers que coincideixen amb els patrons a .kilocodeignore es mostraran en llistes amb un símbol de cadenat. Quan està deshabilitat, aquests fitxers s'ocultaran completament de les llistes de fitxers i cerques."
 		},
+		"maxConcurrentFileReads": {
+			"label": "Límit de lectures simultànies",
+			"description": "Nombre màxim de fitxers que l'eina 'read_file' pot processar simultàniament. Els valors més alts poden accelerar la lectura de múltiples fitxers petits però augmenten l'ús de memòria."
+		},
 		"maxReadFile": {
 			"label": "Llindar d'auto-truncament de lectura de fitxers",
 			"description": "Kilo Code llegeix aquest nombre de línies quan el model omet els valors d'inici/final. Si aquest nombre és menor que el total del fitxer, Kilo Code genera un índex de números de línia de les definicions de codi. Casos especials: -1 indica a Kilo Code que llegeixi tot el fitxer (sense indexació), i 0 indica que no llegeixi cap línia i proporcioni només índexs de línia per a un context mínim. Valors més baixos minimitzen l'ús inicial de context, permetent lectures posteriors de rangs de línies precisos. Les sol·licituds amb inici/final explícits no estan limitades per aquesta configuració.",
 			"lines": "línies",
 			"always_full_read": "Llegeix sempre el fitxer sencer"
-		},
-		"maxConcurrentFileReads": {
-			"label": "Límit de lectures simultànies",
-			"description": "Nombre màxim de fitxers que l'eina 'read_file' pot processar simultàniament. Els valors més alts poden accelerar la lectura de múltiples fitxers petits però augmenten l'ús de memòria."
 		}
 	},
 	"terminal": {
@@ -493,13 +500,13 @@
 			"name": "Utilitza la funció experimental d'\"autocompletar\"",
 			"description": "Quan està activat, Kilo Code proporcionarà suggeriments de codi en línia mentre escrius."
 		},
-		"MULTI_SEARCH_AND_REPLACE": {
-			"name": "Utilitzar eina diff de blocs múltiples experimental",
-			"description": "Quan està activat, Kilo Code utilitzarà l'eina diff de blocs múltiples. Això intentarà actualitzar múltiples blocs de codi a l'arxiu en una sola petició."
-		},
 		"CONCURRENT_FILE_READS": {
 			"name": "Habilitar lectura concurrent de fitxers",
 			"description": "Quan està habilitat, Kilo Code pot llegir múltiples fitxers en una sola sol·licitud. Quan està deshabilitat, Kilo Code ha de llegir fitxers un per un. Deshabilitar-ho pot ajudar quan es treballa amb models menys capaços o quan voleu més control sobre l'accés als fitxers."
+		},
+		"MULTI_SEARCH_AND_REPLACE": {
+			"name": "Utilitzar eina diff de blocs múltiples experimental",
+			"description": "Quan està activat, Kilo Code utilitzarà l'eina diff de blocs múltiples. Això intentarà actualitzar múltiples blocs de codi a l'arxiu en una sola petició."
 		},
 		"DISABLE_COMPLETION_COMMAND": {
 			"name": "Desactivar l'execució de comandes a attempt_completion",

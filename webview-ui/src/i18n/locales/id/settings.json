@@ -25,6 +25,7 @@
 		"autoApprove": "Auto-Approve",
 		"browser": "Browser",
 		"checkpoints": "Checkpoint",
+		"display": "Tampilkan",
 		"notifications": "Notifikasi",
 		"contextManagement": "Konteks",
 		"terminal": "Terminal",
@@ -339,6 +340,12 @@
 			"description": "Ketika diaktifkan, Kilo Code akan secara otomatis membuat checkpoint selama eksekusi tugas, memudahkan untuk meninjau perubahan atau kembali ke state sebelumnya. <0>Pelajari lebih lanjut</0>"
 		}
 	},
+	"display": {
+		"taskTimeline": {
+			"label": "Tampilkan linimasa tugas",
+			"description": "Tampilkan garis waktu visual dari pesan tugas, berwarna menurut jenisnya, memungkinkan Anda untuk dengan cepat melihat kemajuan tugas dan menggulir kembali ke titik-titik tertentu dalam riwayat tugas."
+		}
+	},
 	"notifications": {
 		"sound": {
 			"label": "Aktifkan efek suara",
@@ -473,27 +480,6 @@
 		}
 	},
 	"experimental": {
-		"warning": "⚠️",
-		"autoCondenseContextPercent": {
-			"label": "Ambang batas untuk memicu kondensasi konteks cerdas",
-			"description": "Ketika context window mencapai ambang batas ini, Kilo Code akan secara otomatis mengondensasikannya."
-		},
-		"condensingApiConfiguration": {
-			"label": "Konfigurasi API untuk Kondensasi Konteks",
-			"description": "Pilih konfigurasi API mana yang akan digunakan untuk operasi kondensasi konteks. Biarkan tidak dipilih untuk menggunakan konfigurasi aktif saat ini.",
-			"useCurrentConfig": "Default"
-		},
-		"customCondensingPrompt": {
-			"label": "Prompt Kondensasi Konteks Kustom",
-			"description": "Kustomisasi system prompt yang digunakan untuk kondensasi konteks. Biarkan kosong untuk menggunakan prompt default.",
-			"placeholder": "Masukkan prompt kondensasi kustom kamu di sini...\n\nKamu dapat menggunakan struktur yang sama dengan prompt default:\n- Previous Conversation\n- Current Work\n- Key Technical Concepts\n- Relevant Files and Code\n- Problem Solving\n- Pending Tasks and Next Steps",
-			"reset": "Reset ke Default",
-			"hint": "Kosong = gunakan prompt default"
-		},
-		"AUTO_CONDENSE_CONTEXT": {
-			"name": "Secara cerdas mengondensasi context window",
-			"description": "Kondensasi konteks cerdas menggunakan panggilan LLM untuk merangkum percakapan masa lalu ketika context window tugas mencapai ambang batas yang telah ditetapkan, daripada menghapus pesan lama ketika konteks penuh."
-		},
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "Gunakan strategi unified diff eksperimental",
 			"description": "Aktifkan strategi unified diff eksperimental. Strategi ini mungkin mengurangi jumlah retry yang disebabkan oleh error model tetapi dapat menyebabkan perilaku yang tidak terduga atau edit yang salah. Hanya aktifkan jika kamu memahami risikonya dan bersedia meninjau semua perubahan dengan hati-hati."
@@ -525,6 +511,27 @@
 		"DISABLE_COMPLETION_COMMAND": {
 			"name": "Nonaktifkan eksekusi perintah di attempt_completion",
 			"description": "Ketika diaktifkan, tool attempt_completion tidak akan mengeksekusi perintah. Ini adalah fitur eksperimental untuk mempersiapkan penghentian eksekusi perintah dalam penyelesaian tugas."
+		},
+		"warning": "⚠️",
+		"autoCondenseContextPercent": {
+			"label": "Ambang batas untuk memicu kondensasi konteks cerdas",
+			"description": "Ketika context window mencapai ambang batas ini, Kilo Code akan secara otomatis mengondensasikannya."
+		},
+		"condensingApiConfiguration": {
+			"label": "Konfigurasi API untuk Kondensasi Konteks",
+			"description": "Pilih konfigurasi API mana yang akan digunakan untuk operasi kondensasi konteks. Biarkan tidak dipilih untuk menggunakan konfigurasi aktif saat ini.",
+			"useCurrentConfig": "Default"
+		},
+		"customCondensingPrompt": {
+			"label": "Prompt Kondensasi Konteks Kustom",
+			"description": "Kustomisasi system prompt yang digunakan untuk kondensasi konteks. Biarkan kosong untuk menggunakan prompt default.",
+			"placeholder": "Masukkan prompt kondensasi kustom kamu di sini...\n\nKamu dapat menggunakan struktur yang sama dengan prompt default:\n- Previous Conversation\n- Current Work\n- Key Technical Concepts\n- Relevant Files and Code\n- Problem Solving\n- Pending Tasks and Next Steps",
+			"reset": "Reset ke Default",
+			"hint": "Kosong = gunakan prompt default"
+		},
+		"AUTO_CONDENSE_CONTEXT": {
+			"name": "Secara cerdas mengondensasi context window",
+			"description": "Kondensasi konteks cerdas menggunakan panggilan LLM untuk merangkum percakapan masa lalu ketika context window tugas mencapai ambang batas yang telah ditetapkan, daripada menghapus pesan lama ketika konteks penuh."
 		}
 	},
 	"promptCaching": {

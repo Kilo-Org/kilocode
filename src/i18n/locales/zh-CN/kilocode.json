@@ -47,13 +47,14 @@
 		"activationFailed": "Kilo：激活提交消息提供者失败：{{error}}",
 		"providerRegistered": "Kilo: 提交消息提供程序已注册"
 	},
-	"taskProgress": {
+	"taskTimeline": {
 		"tooltip": {
+			"clickToScroll": "查看{{messageType}} (消息 {{messageNumber}})",
 			"messageTypes": {
-				"api_req_failed": "API 请求失败",
-				"api_req_started": "API 请求已开始",
+				"api_req_failed": "API请求失败",
+				"api_req_started": "API 请求已启动",
 				"browser_action_launch": "浏览器启动",
-				"browser_action_result": "浏览器动作结果",
+				"browser_action_result": "浏览器操作结果",
 				"browser_action": "浏览器操作",
 				"command_output": "命令输出",
 				"command": "命令执行",
@@ -65,7 +66,7 @@
 				"text": "AI回复",
 				"tool": "工具使用",
 				"unknown": "未知消息类型",
-				"use_mcp_server": "MCP服务器使用情况",
+				"use_mcp_server": "MCP服务器用量",
 				"user": "用户输入"
 			}
 		}

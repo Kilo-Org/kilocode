@@ -47,26 +47,27 @@
 		"activationFailed": "Kilo: Gagal mengaktifkan penyedia pesan commit: {{error}}",
 		"providerRegistered": "Kilo: Penyedia pesan commit terdaftar"
 	},
-	"taskProgress": {
+	"taskTimeline": {
 		"tooltip": {
+			"clickToScroll": "Lihat {{messageType}} (pesan {{messageNumber}})",
 			"messageTypes": {
 				"api_req_failed": "Permintaan API gagal",
 				"api_req_started": "Permintaan API dimulai",
-				"browser_action_launch": "meluncurkan peramban",
+				"browser_action_launch": "peluncuran peramban",
 				"browser_action_result": "hasil tindakan peramban",
 				"browser_action": "tindakan peramban",
-				"command_output": "output perintah",
+				"command_output": "keluaran perintah",
 				"command": "eksekusi perintah",
 				"completion_result": "hasil penyelesaian",
-				"error": "pesan error",
+				"error": "pesan kesalahan",
 				"followup": "pertanyaan lanjutan",
 				"mcp_server_response": "Respons server MCP",
 				"reasoning": "Penalaran AI",
-				"text": "Respon AI",
+				"text": "Respons AI",
 				"tool": "penggunaan alat",
-				"unknown": "tipe pesan tidak diketahui",
+				"unknown": "jenis pesan tidak diketahui",
 				"use_mcp_server": "Penggunaan server MCP",
-				"user": "masukan pengguna"
+				"user": "input pengguna"
 			}
 		}
 	}

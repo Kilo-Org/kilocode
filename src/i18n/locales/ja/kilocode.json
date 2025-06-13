@@ -47,11 +47,12 @@
 		"activationFailed": "Kilo: コミットメッセージプロバイダーのアクティベーションに失敗しました: {{error}}",
 		"providerRegistered": "Kilo: コミットメッセージプロバイダーが登録されました"
 	},
-	"taskProgress": {
+	"taskTimeline": {
 		"tooltip": {
+			"clickToScroll": "{{messageType}}を表示 (メッセージ {{messageNumber}})",
 			"messageTypes": {
 				"api_req_failed": "API リクエストに失敗しました",
-				"api_req_started": "APIリクエスト開始",
+				"api_req_started": "API リクエスト開始",
 				"browser_action_launch": "ブラウザ起動",
 				"browser_action_result": "ブラウザアクションの結果",
 				"browser_action": "ブラウザアクション",
@@ -59,9 +60,9 @@
 				"command": "コマンド実行",
 				"completion_result": "完了結果",
 				"error": "エラーメッセージ",
-				"followup": "フォローアップの質問",
-				"mcp_server_response": "MCP サーバーの応答",
-				"reasoning": "AI推論",
+				"followup": "追加質問",
+				"mcp_server_response": "MCPサーバーの応答",
+				"reasoning": "AI 推論",
 				"text": "AI応答",
 				"tool": "ツール使用",
 				"unknown": "不明なメッセージタイプ",

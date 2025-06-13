@@ -47,7 +47,7 @@
 		"activationFailed": "Kilo: Failed to activate commit message provider: {{error}}",
 		"providerRegistered": "Kilo: Commit message provider registered"
 	},
-	"taskProgress": {
+	"taskTimeline": {
 		"tooltip": {
 			"clickToScroll": "View {{messageType}} (message {{messageNumber}})",
 			"messageTypes": {

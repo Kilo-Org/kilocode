@@ -47,8 +47,9 @@
 		"activationFailed": "Kilo: Fehler beim Aktivieren des Commit-Nachrichtenanbieters: {{error}}",
 		"providerRegistered": "Kilo: Anbieter für Commit-Nachrichten registriert"
 	},
-	"taskProgress": {
+	"taskTimeline": {
 		"tooltip": {
+			"clickToScroll": "{{messageType}} anzeigen (Nachricht {{messageNumber}})",
 			"messageTypes": {
 				"api_req_failed": "API-Anfrage fehlgeschlagen",
 				"api_req_started": "API-Anfrage gestartet",
@@ -57,16 +58,16 @@
 				"browser_action": "Browser-Aktion",
 				"command_output": "Befehlsausgabe",
 				"command": "Befehlsausführung",
-				"completion_result": "Fertigstellungsergebnis",
+				"completion_result": "Abschlussergebnis",
 				"error": "Fehlermeldung",
-				"followup": "Anschlussfrage",
+				"followup": "Nachfrage",
 				"mcp_server_response": "MCP-Serverantwort",
-				"reasoning": "KI Reasoning",
+				"reasoning": "KI-Argumentation",
 				"text": "KI-Antwort",
-				"tool": "Werkzeugnutzung",
+				"tool": "Werkzeugeinsatz",
 				"unknown": "unbekannter Nachrichtentyp",
 				"use_mcp_server": "MCP-Servernutzung",
-				"user": "Benutzereingabe"
+				"user": "Nutzereingabe"
 			}
 		}
 	}

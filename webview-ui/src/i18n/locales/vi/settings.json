@@ -25,6 +25,7 @@
 		"autoApprove": "Phê duyệt",
 		"browser": "Trình duyệt",
 		"checkpoints": "Điểm kiểm tra",
+		"display": "Hiển thị",
 		"notifications": "Thông báo",
 		"contextManagement": "Ngữ cảnh",
 		"terminal": "Terminal",
@@ -45,12 +46,12 @@
 		"openaiProvider": "OpenAI",
 		"ollamaProvider": "Ollama",
 		"openaiCompatibleProvider": "Tương thích OpenAI",
+		"openaiKeyLabel": "Khóa OpenAI:",
 		"openaiCompatibleBaseUrlLabel": "URL cơ sở:",
 		"openaiCompatibleApiKeyLabel": "Khóa API:",
 		"openaiCompatibleModelDimensionLabel": "Kích thước Embedding:",
 		"openaiCompatibleModelDimensionPlaceholder": "vd., 1536",
 		"openaiCompatibleModelDimensionDescription": "Kích thước embedding (kích thước đầu ra) cho mô hình của bạn. Kiểm tra tài liệu của nhà cung cấp để biết giá trị này. Giá trị phổ biến: 384, 768, 1536, 3072.",
-		"openaiKeyLabel": "Khóa OpenAI:",
 		"modelLabel": "Mô hình",
 		"selectModelPlaceholder": "Chọn mô hình",
 		"ollamaUrlLabel": "URL Ollama:",
@@ -339,6 +340,12 @@
 			"description": "Khi được bật, Kilo Code sẽ tự động tạo các điểm kiểm tra trong quá trình thực hiện nhiệm vụ, giúp dễ dàng xem lại các thay đổi hoặc quay lại trạng thái trước đó. <0>Tìm hiểu thêm</0>"
 		}
 	},
+	"display": {
+		"taskTimeline": {
+			"label": "Hiển thị dòng thời gian của nhiệm vụ",
+			"description": "Hiển thị dòng thời gian trực quan của các thông báo nhiệm vụ, được phân loại màu sắc theo loại, cho phép bạn nhanh chóng xem tiến trình nhiệm vụ và cuộn trở lại các điểm cụ thể trong lịch sử của nhiệm vụ."
+		}
+	},
 	"notifications": {
 		"sound": {
 			"label": "Bật hiệu ứng âm thanh",
@@ -384,15 +391,15 @@
 			"label": "Hiển thị tệp .kilocodeignore trong danh sách và tìm kiếm",
 			"description": "Khi được bật, các tệp khớp với mẫu trong .kilocodeignore sẽ được hiển thị trong danh sách với biểu tượng khóa. Khi bị tắt, các tệp này sẽ hoàn toàn bị ẩn khỏi danh sách tệp và tìm kiếm."
 		},
+		"maxConcurrentFileReads": {
+			"label": "Giới hạn đọc file đồng thời",
+			"description": "Số lượng file tối đa mà công cụ 'read_file' có thể xử lý cùng lúc. Giá trị cao hơn có thể tăng tốc độ đọc nhiều file nhỏ nhưng sẽ tăng mức sử dụng bộ nhớ."
+		},
 		"maxReadFile": {
 			"label": "Ngưỡng tự động cắt ngắn khi đọc tệp",
 			"description": "Kilo Code đọc số dòng này khi mô hình không chỉ định giá trị bắt đầu/kết thúc. Nếu số này nhỏ hơn tổng số dòng của tệp, Kilo Code sẽ tạo một chỉ mục số dòng của các định nghĩa mã. Trường hợp đặc biệt: -1 chỉ thị Kilo Code đọc toàn bộ tệp (không tạo chỉ mục), và 0 chỉ thị không đọc dòng nào và chỉ cung cấp chỉ mục dòng cho ngữ cảnh tối thiểu. Giá trị thấp hơn giảm thiểu việc sử dụng ngữ cảnh ban đầu, cho phép đọc chính xác các phạm vi dòng sau này. Các yêu cầu có chỉ định bắt đầu/kết thúc rõ ràng không bị giới hạn bởi cài đặt này.",
 			"lines": "dòng",
 			"always_full_read": "Luôn đọc toàn bộ tệp"
-		},
-		"maxConcurrentFileReads": {
-			"label": "Giới hạn đọc file đồng thời",
-			"description": "Số lượng file tối đa mà công cụ 'read_file' có thể xử lý cùng lúc. Giá trị cao hơn có thể tăng tốc độ đọc nhiều file nhỏ nhưng sẽ tăng mức sử dụng bộ nhớ."
 		}
 	},
 	"terminal": {
@@ -493,13 +500,13 @@
 			"name": "Sử dụng tính năng \"tự động hoàn thành\" thử nghiệm",
 			"description": "Khi được bật, Kilo Code sẽ cung cấp các gợi ý mã nội tuyến khi bạn nhập."
 		},
-		"MULTI_SEARCH_AND_REPLACE": {
-			"name": "Sử dụng công cụ diff đa khối thử nghiệm",
-			"description": "Khi được bật, Kilo Code sẽ sử dụng công cụ diff đa khối. Điều này sẽ cố gắng cập nhật nhiều khối mã trong tệp trong một yêu cầu."
-		},
 		"CONCURRENT_FILE_READS": {
 			"name": "Bật đọc tệp đồng thời",
 			"description": "Khi bật, Kilo Code có thể đọc nhiều tệp trong một yêu cầu duy nhất. Khi tắt, Kilo Code phải đọc từng tệp một. Việc tắt có thể hữu ích khi làm việc với các mô hình ít khả năng hơn hoặc khi bạn muốn kiểm soát nhiều hơn quyền truy cập tệp."
+		},
+		"MULTI_SEARCH_AND_REPLACE": {
+			"name": "Sử dụng công cụ diff đa khối thử nghiệm",
+			"description": "Khi được bật, Kilo Code sẽ sử dụng công cụ diff đa khối. Điều này sẽ cố gắng cập nhật nhiều khối mã trong tệp trong một yêu cầu."
 		},
 		"DISABLE_COMPLETION_COMMAND": {
 			"name": "Tắt thực thi lệnh trong attempt_completion",
