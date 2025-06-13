@@ -840,11 +840,7 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			break
 		case "updateSupportPrompt":
 			try {
-				if (!message?.values) {
-					return
-				}
-
-				await updateGlobalState("customSupportPrompts", message.values)
+				await updateGlobalState("customSupportPrompts", message.values || {})
 				await provider.postStateToWebview()
 			} catch (error) {
 				provider.log(
