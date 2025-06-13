@@ -106,7 +106,7 @@
 			},
 			"COMMIT_MESSAGE": {
 				"label": "Geração de Mensagem de Commit",
-				"description": "Gere mensagens de commit com base nas suas alterações git em stage. Personalize o prompt para criar mensagens de commit consistentes que sigam as melhores práticas da sua equipe."
+				"description": "Gere mensagens de commit descritivas baseadas em suas alterações git preparadas. Personalize o prompt para gerar mensagens que sigam as melhores práticas do seu repositório."
 			}
 		}
 	},

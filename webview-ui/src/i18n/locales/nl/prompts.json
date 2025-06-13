@@ -106,7 +106,7 @@
 			},
 			"COMMIT_MESSAGE": {
 				"label": "Commit Bericht Generatie",
-				"description": "Genereer commit-berichten op basis van je staged git-wijzigingen. Pas de prompt aan om consistente commit-berichten te maken die voldoen aan de best practices van je team."
+				"description": "Genereer beschrijvende commit-berichten gebaseerd op je staged git-wijzigingen. Pas de prompt aan om berichten te genereren die de best practices van je repository volgen."
 			}
 		}
 	},

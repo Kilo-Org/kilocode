@@ -106,7 +106,7 @@
 			},
 			"COMMIT_MESSAGE": {
 				"label": "Commit-Nachricht-Generierung",
-				"description": "Generiere Commit-Nachrichten basierend auf deinen bereitgestellten Git-Änderungen. Passe den Prompt an, um einheitliche Commit-Nachrichten zu erstellen, die den Best Practices deines Teams entsprechen."
+				"description": "Generiere beschreibende Commit-Nachrichten basierend auf deinen bereitgestellten Git-Änderungen. Passe den Prompt an, um Nachrichten zu erstellen, die den Best Practices deines Repositories entsprechen."
 			}
 		}
 	},

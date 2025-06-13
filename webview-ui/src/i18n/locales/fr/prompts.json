@@ -106,7 +106,7 @@
 			},
 			"COMMIT_MESSAGE": {
 				"label": "Génération de Message de Commit",
-				"description": "Générez des messages de commit basés sur vos modifications git en attente. Personnalisez le prompt pour créer des messages de commit cohérents qui suivent les meilleures pratiques de votre équipe."
+				"description": "Générer des messages de commit descriptifs basés sur vos modifications git en attente. Personnalisez le prompt pour générer des messages qui suivent les meilleures pratiques de votre dépôt."
 			}
 		}
 	},

@@ -106,7 +106,7 @@
 			},
 			"COMMIT_MESSAGE": {
 				"label": "Commit Mesajı Oluşturma",
-				"description": "Sahnelenmiş git değişikliklerinize göre commit mesajları oluşturun. Takımınızın en iyi uygulamalarını takip eden tutarlı commit mesajları oluşturmak için komutu özelleştirin."
+				"description": "Sahnelenmiş git değişikliklerinize göre açıklayıcı commit mesajları oluşturun. Deponuzun en iyi uygulamalarına uygun mesajlar oluşturmak için komut istemini özelleştirin."
 			}
 		}
 	},

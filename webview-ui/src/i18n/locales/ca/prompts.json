@@ -106,7 +106,7 @@
 			},
 			"COMMIT_MESSAGE": {
 				"label": "Generació de Missatges de Commit",
-				"description": "Genera missatges de commit basats en els teus canvis posats a l'àrea de preparació de git. Personalitza el prompt per crear missatges de commit consistents que segueixin les millors pràctiques del teu equip."
+				"description": "Genera missatges de commit descriptius basats en els teus canvis preparats a git. Personalitza el prompt per generar missatges que segueixin les millors pràctiques del teu repositori."
 			}
 		}
 	},

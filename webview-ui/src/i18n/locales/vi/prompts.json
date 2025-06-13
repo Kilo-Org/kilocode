@@ -106,7 +106,7 @@
 			},
 			"COMMIT_MESSAGE": {
 				"label": "Tạo Thông Điệp Commit",
-				"description": "Tạo ra các thông điệp commit dựa trên những thay đổi git đã được staged. Tùy chỉnh prompt để tạo ra các thông điệp commit nhất quán, tuân theo những phương pháp tốt nhất của đội bạn."
+				"description": "Tạo thông điệp commit mô tả dựa trên các thay đổi đã được đưa vào staging trong git. Tùy chỉnh prompt để tạo ra các thông điệp tuân theo các phương pháp tốt nhất của kho lưu trữ của bạn."
 			}
 		}
 	},

@@ -106,7 +106,7 @@
 			},
 			"COMMIT_MESSAGE": {
 				"label": "Pembuatan Pesan Commit",
-				"description": "Hasilkan pesan commit berdasarkan perubahan git yang telah di-staged. Sesuaikan prompt untuk membuat pesan commit yang konsisten yang mengikuti praktik terbaik tim Anda."
+				"description": "Buat pesan commit deskriptif berdasarkan perubahan git yang sudah dipentaskan. Sesuaikan prompt untuk menghasilkan pesan yang mengikuti praktik terbaik repositori Anda."
 			}
 		}
 	},
