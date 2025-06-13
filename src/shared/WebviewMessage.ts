@@ -123,7 +123,7 @@ export interface WebviewMessage {
 		| "copySystemPrompt"
 		| "systemPrompt"
 		| "enhancementApiConfigId"
-		| "commitMessageApiConfigId"
+		| "commitMessageApiConfigId" // kilocode_change
 		| "updateExperimental"
 		| "autoApprovalEnabled"
 		| "updateCustomMode"

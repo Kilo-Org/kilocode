@@ -844,7 +844,6 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 					return
 				}
 
-				// Replace all prompts with the new values from the cached state
 				await updateGlobalState("customSupportPrompts", message.values)
 				await provider.postStateToWebview()
 			} catch (error) {
@@ -1035,10 +1034,12 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			await updateGlobalState("enhancementApiConfigId", message.text)
 			await provider.postStateToWebview()
 			break
+		// kilocode_change start
 		case "commitMessageApiConfigId":
 			await updateGlobalState("commitMessageApiConfigId", message.text)
 			await provider.postStateToWebview()
 			break
+		// kilocode_change end
 		case "condensingApiConfigId":
 			await updateGlobalState("condensingApiConfigId", message.text)
 			await provider.postStateToWebview()

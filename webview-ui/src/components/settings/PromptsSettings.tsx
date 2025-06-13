@@ -11,20 +11,19 @@ import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
 import { MessageSquare } from "lucide-react"
 
+// kilocode_change start
 interface PromptsSettingsProps {
 	customSupportPrompts: Record<string, string | undefined>
 	setCustomSupportPrompts: (prompts: Record<string, string | undefined>) => void
 }
+// kilocode_change end
 
 const PromptsSettings = ({ customSupportPrompts, setCustomSupportPrompts }: PromptsSettingsProps) => {
 	const { t } = useAppTranslation()
-	const {
-		listApiConfigMeta,
-		enhancementApiConfigId,
-		setEnhancementApiConfigId,
-		commitMessageApiConfigId,
-		setCommitMessageApiConfigId,
-	} = useExtensionState()
+
+	const { listApiConfigMeta, enhancementApiConfigId, setEnhancementApiConfigId } =
+		useExtensionState()
+	const { commitMessageApiConfigId, setCommitMessageApiConfigId } = useExtensionState()
 
 	const [testPrompt, setTestPrompt] = useState("")
 	const [isEnhancing, setIsEnhancing] = useState(false)
@@ -189,6 +188,7 @@ const PromptsSettings = ({ customSupportPrompts, setCustomSupportPrompts }: Prom
 						</div>
 					)}
 
+					{/* kilocode_change start */}
 					{activeSupportOption === "COMMIT_MESSAGE" && (
 						<div className="mt-4 flex flex-col gap-3 pl-3 border-l-2 border-vscode-button-background">
 							<div>
@@ -229,6 +229,7 @@ const PromptsSettings = ({ customSupportPrompts, setCustomSupportPrompts }: Prom
 							</div>
 						</div>
 					)}
+					{/* kilocode_change end */}
 				</div>
 			</Section>
 		</div>

@@ -762,7 +762,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 					{activeTab === "mcp" && <McpView />}
 
 					{/* About Section */}
-					{activeTab === "about" && <About telemetrySetting={"disabled"} setTelemetrySetting={() => {}} />}
+					{activeTab === "about" && <About telemetrySetting={"disabled"} setTelemetrySetting={() => { }} />}
 				</TabContent>
 			</div>
 

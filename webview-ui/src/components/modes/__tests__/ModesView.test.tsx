@@ -20,8 +20,8 @@ const mockExtensionState = {
 	],
 	enhancementApiConfigId: "",
 	setEnhancementApiConfigId: jest.fn(),
-	commitMessageApiConfigId: "",
-	setCommitMessageApiConfigId: jest.fn(),
+	commitMessageApiConfigId: "", // kilocode_change
+	setCommitMessageApiConfigId: jest.fn(), // kilocode_change
 	mode: "code",
 	customModes: [],
 	customSupportPrompts: [],
@@ -40,9 +40,9 @@ const renderPromptsView = (props = {}) => {
 }
 
 class MockResizeObserver {
-	observe() {}
-	unobserve() {}
-	disconnect() {}
+	observe() { }
+	unobserve() { }
+	disconnect() { }
 }
 
 global.ResizeObserver = MockResizeObserver

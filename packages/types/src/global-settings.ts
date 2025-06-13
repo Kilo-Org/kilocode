@@ -107,7 +107,7 @@ export const globalSettingsSchema = z.object({
 	customModePrompts: customModePromptsSchema.optional(),
 	customSupportPrompts: customSupportPromptsSchema.optional(),
 	enhancementApiConfigId: z.string().optional(),
-	commitMessageApiConfigId: z.string().optional(),
+	commitMessageApiConfigId: z.string().optional(), // kilocode_change
 	historyPreviewCollapsed: z.boolean().optional(),
 })
 

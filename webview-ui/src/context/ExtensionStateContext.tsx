@@ -101,8 +101,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setCustomSupportPrompts: (value: CustomSupportPrompts) => void
 	enhancementApiConfigId?: string
 	setEnhancementApiConfigId: (value: string) => void
-	commitMessageApiConfigId?: string
-	setCommitMessageApiConfigId: (value: string) => void
+	commitMessageApiConfigId?: string // kilocode_change
+	setCommitMessageApiConfigId: (value: string) => void // kilocode_change
 	setExperimentEnabled: (id: ExperimentId, enabled: boolean) => void
 	setAutoApprovalEnabled: (value: boolean) => void
 	customModes: ModeConfig[]
@@ -155,8 +155,7 @@ export const mergeExtensionState = (prevState: ExtensionState, newState: Extensi
 
 	// Note that we completely replace the previous apiConfiguration object with
 	// a new one since the state that is broadcast is the entire apiConfiguration
-	// and therefore merging is not necessary.
-	// Same logic applies to customSupportPrompts since we send the complete state.
+	// and therefore merging is not necessary, same with customSupportPrompts since we send the complete state.
 	return { ...rest, apiConfiguration, customModePrompts, customSupportPrompts, experiments }
 }
 
@@ -193,7 +192,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		customSupportPrompts: {},
 		experiments: experimentDefault,
 		enhancementApiConfigId: "",
-		commitMessageApiConfigId: "",
+		commitMessageApiConfigId: "", // kilocode_change
 		condensingApiConfigId: "", // Default empty string for condensing API config ID
 		customCondensingPrompt: "", // Default empty string for custom condensing prompt
 		autoApprovalEnabled: true,
@@ -417,8 +416,10 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setCustomSupportPrompts: (value) => setState((prevState) => ({ ...prevState, customSupportPrompts: value })),
 		setEnhancementApiConfigId: (value) =>
 			setState((prevState) => ({ ...prevState, enhancementApiConfigId: value })),
+		// kilocode_change start
 		setCommitMessageApiConfigId: (value) =>
 			setState((prevState) => ({ ...prevState, commitMessageApiConfigId: value })),
+		// kilocode_change end
 		setAutoApprovalEnabled: (value) => setState((prevState) => ({ ...prevState, autoApprovalEnabled: value })),
 		setCustomModes: (value) => setState((prevState) => ({ ...prevState, customModes: value })),
 		setMaxOpenTabsContext: (value) => setState((prevState) => ({ ...prevState, maxOpenTabsContext: value })),
