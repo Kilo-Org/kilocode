@@ -36,10 +36,12 @@ export interface TaskHeaderProps {
 	buttonsDisabled: boolean
 	handleCondenseContext: (taskId: string) => void
 	onClose: () => void
+	// kilocode_change start
 	groupedMessages?: (ClineMessage | ClineMessage[])[]
 	onMessageClick?: (index: number) => void
 	currentMessageIndex?: number
 	isTaskActive?: boolean
+	// kilocode_change end
 }
 
 const TaskHeader = ({
@@ -54,13 +56,16 @@ const TaskHeader = ({
 	buttonsDisabled,
 	handleCondenseContext,
 	onClose,
+	// kilocode_change start
 	groupedMessages,
 	onMessageClick,
 	currentMessageIndex,
 	isTaskActive = false,
+	// kilocode_change end
 }: TaskHeaderProps) => {
 	const { t } = useTranslation()
-	const { apiConfiguration, currentTaskItem, customModes, showTaskTimeline } = useExtensionState()
+	const { showTaskTimeline } = useExtensionState() // kilocode_change
+	const { apiConfiguration, currentTaskItem, customModes } = useExtensionState()
 	const { id: modelId, info: model } = useSelectedModel(apiConfiguration)
 	const [isTaskExpanded, setIsTaskExpanded] = useState(false)
 
@@ -119,6 +124,7 @@ const TaskHeader = ({
 				{/* Collapsed state: Track context and cost if we have any */}
 				{!isTaskExpanded && contextWindow > 0 && (
 					<div className={`w-full flex flex-col gap-1 h-auto`}>
+						{/* kilocode_change start */}
 						{groupedMessages && onMessageClick && showTaskTimeline && (
 							<TaskTimeline
 								groupedMessages={groupedMessages}
@@ -128,6 +134,7 @@ const TaskHeader = ({
 								className="mt-1"
 							/>
 						)}
+						{/* kilocode_change end */}
 
 						<div className="flex flex-row items-center gap-1">
 							<ContextWindowProgress

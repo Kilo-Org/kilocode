@@ -428,7 +428,6 @@ input[cmdk-input]:focus {
 	box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--vscode-focusBorder) 30%, transparent);
 	color: transparent;
 }
-/* kilocode_change end */
 
 /* Custom slow pulse animation for task progress squares */
 @keyframes slow-pulse {
@@ -460,6 +459,7 @@ input[cmdk-input]:focus {
 .animate-fade-in {
 	animation: fade-in 0.3s ease-out forwards;
 }
+/* kilocode_change end */
 
 /*
  * Fix the color of <a> in ChatView

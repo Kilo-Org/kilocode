@@ -59,7 +59,7 @@ import ApiOptions from "./ApiOptions"
 import { AutoApproveSettings } from "./AutoApproveSettings"
 import { BrowserSettings } from "./BrowserSettings"
 import { CheckpointSettings } from "./CheckpointSettings"
-import { DisplaySettings } from "./DisplaySettings"
+import { DisplaySettings } from "./DisplaySettings" // kilocode_change
 import { NotificationSettings } from "./NotificationSettings"
 import { ContextManagementSettings } from "./ContextManagementSettings"
 import { TerminalSettings } from "./TerminalSettings"
@@ -87,7 +87,7 @@ const sectionNames = [
 	"autoApprove",
 	"browser",
 	"checkpoints",
-	"display",
+	"display", // kilocode_change
 	"notifications",
 	"contextManagement",
 	"terminal",
@@ -333,9 +333,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			vscode.postMessage({ type: "updateExperimental", values: experiments })
 			vscode.postMessage({ type: "alwaysAllowModeSwitch", bool: alwaysAllowModeSwitch })
 			vscode.postMessage({ type: "alwaysAllowSubtasks", bool: alwaysAllowSubtasks })
-
-			vscode.postMessage({ type: "showTaskTimeline", bool: showTaskTimeline })
-
+			vscode.postMessage({ type: "showTaskTimeline", bool: showTaskTimeline }) // kilocode_change
 			vscode.postMessage({ type: "condensingApiConfigId", text: condensingApiConfigId || "" })
 			vscode.postMessage({ type: "updateCondensingPrompt", text: customCondensingPrompt || "" })
 			vscode.postMessage({ type: "upsertApiConfiguration", text: currentApiConfigName, apiConfiguration })
@@ -436,7 +434,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			{ id: "autoApprove", icon: CheckCheck },
 			{ id: "browser", icon: SquareMousePointer },
 			{ id: "checkpoints", icon: GitBranch },
-			{ id: "display", icon: Monitor },
+			{ id: "display", icon: Monitor }, // kilocode_change
 			{ id: "notifications", icon: Bell },
 			{ id: "contextManagement", icon: Database },
 			{ id: "terminal", icon: SquareTerminal },
@@ -680,13 +678,14 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 						/>
 					)}
 
-					{/* Display Section */}
+					{/* kilocode_change start display Section */}
 					{activeTab === "display" && (
 						<DisplaySettings
 							showTaskTimeline={showTaskTimeline}
 							setCachedStateField={setCachedStateField}
 						/>
 					)}
+					{/* kilocode_change end display Section */}
 
 					{/* Notifications Section */}
 					{activeTab === "notifications" && (

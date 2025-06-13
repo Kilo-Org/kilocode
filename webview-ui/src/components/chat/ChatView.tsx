@@ -1124,6 +1124,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		})
 	}, [])
 
+	// kilocode_change start
 	const handleMessageClick = useCallback(
 		(index: number) => {
 			if (virtuosoRef.current && index >= 0 && index < groupedMessages.length) {
@@ -1136,6 +1137,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		},
 		[groupedMessages.length],
 	)
+	// kilocode_change end
 
 	const handleSetExpandedRow = useCallback(
 		(ts: number, expand?: boolean) => {

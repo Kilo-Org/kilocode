@@ -26,7 +26,7 @@ import { ClineRulesToggles } from "@roo/cline-rules" // kilocode_change
 
 export interface ExtensionStateContextType extends ExtensionState {
 	historyPreviewCollapsed?: boolean // Add the new state property
-	showTaskTimeline?: boolean // Add the new task timeline display setting
+	showTaskTimeline?: boolean // kilocode_change
 	didHydrateState: boolean
 	showWelcome: boolean
 	theme: any
@@ -122,7 +122,7 @@ export interface ExtensionStateContextType extends ExtensionState {
 	terminalCompressProgressBar?: boolean
 	setTerminalCompressProgressBar: (value: boolean) => void
 	setHistoryPreviewCollapsed: (value: boolean) => void
-	setShowTaskTimeline: (value: boolean) => void
+	setShowTaskTimeline: (value: boolean) => void // kilocode_change
 	autoCondenseContext: boolean
 	setAutoCondenseContext: (value: boolean) => void
 	autoCondenseContextPercent: number
@@ -211,7 +211,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		terminalZdotdir: false, // Default ZDOTDIR handling setting
 		terminalCompressProgressBar: true, // Default to compress progress bar output
 		historyPreviewCollapsed: false, // Initialize the new state (default to expanded)
-		showTaskTimeline: true, // Default to showing task timeline
+		showTaskTimeline: true, // kilocode_change
 		cloudUserInfo: null,
 		cloudIsAuthenticated: false,
 		sharingEnabled: false,
@@ -446,7 +446,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 			}),
 		setHistoryPreviewCollapsed: (value) =>
 			setState((prevState) => ({ ...prevState, historyPreviewCollapsed: value })),
-		setShowTaskTimeline: (value) => setState((prevState) => ({ ...prevState, showTaskTimeline: value })),
+		setShowTaskTimeline: (value) => setState((prevState) => ({ ...prevState, showTaskTimeline: value })), // kilocode_change
 
 		setAutoCondenseContext: (value) => setState((prevState) => ({ ...prevState, autoCondenseContext: value })),
 		setAutoCondenseContextPercent: (value) =>
