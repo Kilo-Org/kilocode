@@ -192,6 +192,16 @@
 		"getXaiApiKey": "Lấy khóa API xAI",
 		"litellmApiKey": "Khóa API LiteLLM",
 		"litellmBaseUrl": "URL cơ sở LiteLLM",
+		"makehubApiKey": "Khóa API MakeHub",
+		"getMakehubApiKey": "Lấy khóa API MakeHub",
+		"makehubPerfRatio": "Tỷ lệ Hiệu suất/Giá",
+		"makehubPerfRatioDescription": "Kiểm soát cách MakeHub cân bằng giữa giá và hiệu suất khi định tuyến đến các nhà cung cấp.",
+		"makehubPerfRatioLabels": {
+			"price": "Tối ưu hóa giá",
+			"balanced": "Cân bằng",
+			"performance": "Tối ưu hóa tốc độ"
+		},
+		"noModelsFound": "Không tìm thấy mô hình cho {{provider}}. Đảm bảo rằng khóa API của bạn hợp lệ và làm mới danh sách mô hình.",
 		"awsCredentials": "Thông tin xác thực AWS",
 		"awsProfile": "Hồ sơ AWS",
 		"awsProfileName": "Tên hồ sơ AWS",

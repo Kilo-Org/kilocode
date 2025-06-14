@@ -53,7 +53,7 @@ export const fireworksDefaultModelId: FireworksModelId = "accounts/fireworks/mod
 
 // RouterName
 
-const routerNames = ["openrouter", "requesty", "glama", "unbound", "litellm", "kilocode-openrouter"] as const
+const routerNames = ["openrouter", "requesty", "glama", "unbound", "litellm", "kilocode-openrouter","makehub"] as const
 
 export type RouterName = (typeof routerNames)[number]
 
@@ -129,4 +129,5 @@ export type GetModelsOptions =
 	| { provider: "requesty"; apiKey?: string }
 	| { provider: "unbound"; apiKey?: string }
 	| { provider: "litellm"; apiKey: string; baseUrl: string }
+	| { provider: "makehub"; apiKey?: string }
 	| { provider: "kilocode-openrouter"; kilocodeToken?: string } // kilocode_change

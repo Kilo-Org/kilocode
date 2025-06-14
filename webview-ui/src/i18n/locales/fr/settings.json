@@ -192,6 +192,16 @@
 		"getXaiApiKey": "Obtenir la clé API xAI",
 		"litellmApiKey": "Clé API LiteLLM",
 		"litellmBaseUrl": "URL de base LiteLLM",
+		"makehubApiKey": "Clé API MakeHub",
+		"getMakehubApiKey": "Obtenir la clé API MakeHub",
+		"makehubPerfRatio": "Ratio Performance/Prix",
+		"makehubPerfRatioDescription": "Contrôle comment MakeHub équilibre entre le prix et la performance lors du routage vers les fournisseurs.",
+		"makehubPerfRatioLabels": {
+			"price": "Optimisé pour le prix",
+			"balanced": "Équilibré",
+			"performance": "Optimisé pour la vitesse"
+		},
+		"noModelsFound": "Aucun modèle trouvé pour {{provider}}. Assurez-vous que votre clé API est valide et actualisez la liste des modèles.",
 		"awsCredentials": "Identifiants AWS",
 		"awsProfile": "Profil AWS",
 		"awsProfileName": "Nom du profil AWS",

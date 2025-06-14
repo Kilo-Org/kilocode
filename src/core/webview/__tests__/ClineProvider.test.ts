@@ -2127,8 +2127,8 @@ describe.skip("ContextProxy integration", () => {
 
 // Mock getModels for router model tests
 jest.mock("../../../api/providers/fetchers/modelCache", () => ({
-	getModels: jest.fn(),
-	flushModels: jest.fn(),
+getModels: jest.fn(),
+flushModels: jest.fn(),
 }))
 
 describe("ClineProvider - Router Models", () => {
@@ -2231,18 +2231,19 @@ describe("ClineProvider - Router Models", () => {
 			baseUrl: "http://localhost:4000",
 		})
 
-		// Verify response was sent
-		expect(mockPostMessage).toHaveBeenCalledWith({
-			type: "routerModels",
-			routerModels: {
-				openrouter: mockModels,
-				requesty: mockModels,
-				glama: mockModels,
-				unbound: mockModels,
-				litellm: mockModels,
-				"kilocode-openrouter": mockModels,
-			},
-		})
+// Verify response was sent
+expect(mockPostMessage).toHaveBeenCalledWith({
+type: "routerModels",
+routerModels: {
+openrouter: mockModels,
+requesty: mockModels,
+glama: mockModels,
+unbound: mockModels,
+litellm: mockModels,
+makehub: mockModels,
+"kilocode-openrouter": mockModels,
+},
+})
 	})
 
 	test("handles requestRouterModels with individual provider failures", async () => {
@@ -2263,14 +2264,15 @@ describe("ClineProvider - Router Models", () => {
 		const mockModels = { "model-1": { maxTokens: 4096, contextWindow: 8192, description: "Test model" } }
 		const { getModels } = require("../../../api/providers/fetchers/modelCache")
 
-		// Mock some providers to succeed and others to fail
-		getModels
-			.mockResolvedValueOnce(mockModels) // openrouter success
-			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty fail
-			.mockResolvedValueOnce(mockModels) // glama success
-			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound fail
-			.mockRejectedValueOnce(new Error("Kilocode-OpenRouter API error")) // kilocode-openrouter fail
-			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm fail
+// Mock some providers to succeed and others to fail
+getModels
+.mockResolvedValueOnce(mockModels) // openrouter success
+.mockRejectedValueOnce(new Error("Requesty API error")) // requesty fail
+.mockResolvedValueOnce(mockModels) // glama success
+.mockRejectedValueOnce(new Error("Unbound API error")) // unbound fail
+.mockRejectedValueOnce(new Error("Kilocode-OpenRouter API error")) // kilocode-openrouter fail
+.mockRejectedValueOnce(new Error("MakeHub API error")) // makehub fail
+.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm fail
 
 		await messageHandler({ type: "requestRouterModels" })
 
@@ -2283,6 +2285,7 @@ describe("ClineProvider - Router Models", () => {
 				glama: mockModels,
 				unbound: {},
 				litellm: {},
+				makehub: {},
 				"kilocode-openrouter": {},
 			},
 		})
@@ -2302,19 +2305,26 @@ describe("ClineProvider - Router Models", () => {
 			values: { provider: "unbound" },
 		})
 
-		expect(mockPostMessage).toHaveBeenCalledWith({
-			type: "singleRouterModelFetchResponse",
-			success: false,
-			error: "Kilocode-OpenRouter API error",
-			values: { provider: "kilocode-openrouter" },
-		})
+expect(mockPostMessage).toHaveBeenCalledWith({
+	type: "singleRouterModelFetchResponse",
+	success: false,
+	error: "MakeHub API error",
+	values: { provider: "makehub" },
+})
 
-		expect(mockPostMessage).toHaveBeenCalledWith({
-			type: "singleRouterModelFetchResponse",
-			success: false,
-			error: "LiteLLM connection failed",
-			values: { provider: "litellm" },
-		})
+expect(mockPostMessage).toHaveBeenCalledWith({
+type: "singleRouterModelFetchResponse",
+success: false,
+error: "Kilocode-OpenRouter API error",
+values: { provider: "kilocode-openrouter" },
+})
+
+expect(mockPostMessage).toHaveBeenCalledWith({
+type: "singleRouterModelFetchResponse",
+success: false,
+error: "LiteLLM connection failed",
+values: { provider: "litellm" },
+})
 	})
 
 	test("handles requestRouterModels with LiteLLM values from message", async () => {
@@ -2379,17 +2389,18 @@ describe("ClineProvider - Router Models", () => {
 			}),
 		)
 
-		// Verify response includes empty object for LiteLLM
-		expect(mockPostMessage).toHaveBeenCalledWith({
-			type: "routerModels",
-			routerModels: {
-				openrouter: mockModels,
-				requesty: mockModels,
-				glama: mockModels,
-				unbound: mockModels,
-				litellm: {},
-				"kilocode-openrouter": mockModels,
-			},
-		})
+// Verify response includes empty object for LiteLLM
+expect(mockPostMessage).toHaveBeenCalledWith({
+type: "routerModels",
+routerModels: {
+openrouter: mockModels,
+requesty: mockModels,
+glama: mockModels,
+unbound: mockModels,
+litellm: {},
+makehub: mockModels,
+"kilocode-openrouter": mockModels,
+},
+})
 	})
 })

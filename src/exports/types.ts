@@ -32,6 +32,7 @@ type GlobalSettings = {
 							| "groq"
 							| "chutes"
 							| "litellm"
+							| "makehub"
 					  )
 					| undefined
 		  }[]
@@ -213,6 +214,7 @@ type ProviderName =
 	| "groq"
 	| "chutes"
 	| "litellm"
+	| "makehub"
 
 export type { ProviderName }
 
@@ -242,6 +244,7 @@ type ProviderSettings = {
 				| "groq"
 				| "chutes"
 				| "litellm"
+				| "makehub"
 		  )
 		| undefined
 	includeMaxTokens?: boolean | undefined
@@ -358,6 +361,9 @@ type ProviderSettings = {
 	litellmBaseUrl?: string | undefined
 	litellmApiKey?: string | undefined
 	litellmModelId?: string | undefined
+	makehubApiKey?: string | undefined
+	makehubModelId?: string | undefined
+	makehubPerfRatio?: number | undefined
 }
 
 export type { ProviderSettings }
@@ -390,6 +396,7 @@ type ProviderSettingsEntry = {
 				| "groq"
 				| "chutes"
 				| "litellm"
+				| "makehub"
 		  )
 		| undefined
 }
@@ -673,6 +680,7 @@ type IpcMessage =
 											| "groq"
 											| "chutes"
 											| "litellm"
+											| "makehub"
 									  )
 									| undefined
 								includeMaxTokens?: boolean | undefined
@@ -789,6 +797,9 @@ type IpcMessage =
 								litellmBaseUrl?: string | undefined
 								litellmApiKey?: string | undefined
 								litellmModelId?: string | undefined
+								makehubApiKey?: string | undefined
+								makehubModelId?: string | undefined
+								makehubPerfRatio?: number | undefined
 								currentApiConfigName?: string | undefined
 								listApiConfigMeta?:
 									| {
@@ -819,6 +830,7 @@ type IpcMessage =
 														| "groq"
 														| "chutes"
 														| "litellm"
+														| "makehub"
 												  )
 												| undefined
 									  }[]
@@ -1171,6 +1183,7 @@ type TaskCommand =
 								| "groq"
 								| "chutes"
 								| "litellm"
+								| "makehub"
 						  )
 						| undefined
 					includeMaxTokens?: boolean | undefined
@@ -1287,6 +1300,9 @@ type TaskCommand =
 					litellmBaseUrl?: string | undefined
 					litellmApiKey?: string | undefined
 					litellmModelId?: string | undefined
+					makehubApiKey?: string | undefined
+					makehubModelId?: string | undefined
+					makehubPerfRatio?: number | undefined
 					currentApiConfigName?: string | undefined
 					listApiConfigMeta?:
 						| {
@@ -1317,6 +1333,7 @@ type TaskCommand =
 											| "groq"
 											| "chutes"
 											| "litellm"
+											| "makehub"
 									  )
 									| undefined
 						  }[]
