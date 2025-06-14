@@ -88,6 +88,7 @@ import { parseMentions } from "../mentions" // kilocode_change
 import { parseKiloSlashCommands } from "../slash-commands/kilo" // kilocode_change
 import { GlobalFileNames } from "../../shared/globalFileNames" // kilocode_change
 import { ensureLocalKilorulesDirExists } from "../context/instructions/kilo-rules" // kilocode_change
+import { processFilesIntoText } from "../../integrations/misc/process-files"
 
 export type ClineEvents = {
 	message: [{ action: "created" | "updated"; message: ClineMessage }]
@@ -113,6 +114,7 @@ export type TaskOptions = {
 	consecutiveMistakeLimit?: number
 	task?: string
 	images?: string[]
+	files?: string[] // kilocode_change
 	historyItem?: HistoryItem
 	experiments?: Record<string, boolean>
 	startTask?: boolean
@@ -176,6 +178,7 @@ export class Task extends EventEmitter<ClineEvents> {
 	private askResponse?: ClineAskResponse
 	private askResponseText?: string
 	private askResponseImages?: string[]
+	private askResponseFiles?: string[] // kilocode_change
 	public lastMessageTs?: number
 
 	// Tool Use
@@ -212,6 +215,7 @@ export class Task extends EventEmitter<ClineEvents> {
 		consecutiveMistakeLimit = 3,
 		task,
 		images,
+		files, // kilocode_change
 		historyItem,
 		startTask = true,
 		rootTask,
@@ -222,7 +226,8 @@ export class Task extends EventEmitter<ClineEvents> {
 		super()
 		this.context = context // kilocode_change
 
-		if (startTask && !task && !images && !historyItem) {
+		if (startTask && !task && !images && !files && !historyItem) {
+			// kilocode_change
 			throw new Error("Either historyItem or task/images must be provided")
 		}
 
@@ -265,8 +270,9 @@ export class Task extends EventEmitter<ClineEvents> {
 		onCreated?.(this)
 
 		if (startTask) {
-			if (task || images) {
-				this.startTask(task, images)
+			if (task || images || files) {
+				// kilocode_change
+				this.startTask(task, images, files)
 			} else if (historyItem) {
 				this.resumeTaskFromHistory()
 			} else {
@@ -287,11 +293,12 @@ export class Task extends EventEmitter<ClineEvents> {
 
 	static create(options: TaskOptions): [Task, Promise<void>] {
 		const instance = new Task({ ...options, startTask: false })
-		const { images, task, historyItem } = options
+		const { images, task, historyItem, files } = options // kilocode_change
 		let promise
 
-		if (images || task) {
-			promise = instance.startTask(task, images)
+		if (images || task || files) {
+			// kilocode_change
+			promise = instance.startTask(task, images, files) // kilocode_change
 		} else if (historyItem) {
 			promise = instance.resumeTaskFromHistory()
 		} else {
@@ -406,7 +413,8 @@ export class Task extends EventEmitter<ClineEvents> {
 		text?: string,
 		partial?: boolean,
 		progressStatus?: ToolProgressStatus,
-	): Promise<{ response: ClineAskResponse; text?: string; images?: string[] }> {
+	): Promise<{ response: ClineAskResponse; text?: string; images?: string[]; files?: string[] }> {
+		// kilocode_change
 		// If this Cline instance was aborted by the provider, then the only
 		// thing keeping us alive is a promise still running in the background,
 		// in which case we don't want to send its result to the webview as it
@@ -454,6 +462,7 @@ export class Task extends EventEmitter<ClineEvents> {
 					this.askResponse = undefined
 					this.askResponseText = undefined
 					this.askResponseImages = undefined
+					this.askResponseFiles = undefined // kilocode_change
 
 					// Bug for the history books:
 					// In the webview we use the ts as the chatrow key for the
@@ -478,6 +487,7 @@ export class Task extends EventEmitter<ClineEvents> {
 					this.askResponse = undefined
 					this.askResponseText = undefined
 					this.askResponseImages = undefined
+					this.askResponseFiles = undefined // kilocode_change
 					askTs = Date.now()
 					this.lastMessageTs = askTs
 					await this.addToClineMessages({ ts: askTs, type: "ask", ask: type, text })
@@ -488,6 +498,7 @@ export class Task extends EventEmitter<ClineEvents> {
 			this.askResponse = undefined
 			this.askResponseText = undefined
 			this.askResponseImages = undefined
+			this.askResponseFiles = undefined
 			askTs = Date.now()
 			this.lastMessageTs = askTs
 			await this.addToClineMessages({ ts: askTs, type: "ask", ask: type, text })
@@ -502,18 +513,26 @@ export class Task extends EventEmitter<ClineEvents> {
 			throw new Error("Current ask promise was ignored")
 		}
 
-		const result = { response: this.askResponse!, text: this.askResponseText, images: this.askResponseImages }
+		const result = {
+			response: this.askResponse!,
+			text: this.askResponseText,
+			images: this.askResponseImages,
+			files: this.askResponseFiles, // kilocode_change
+		}
 		this.askResponse = undefined
 		this.askResponseText = undefined
 		this.askResponseImages = undefined
+		this.askResponseFiles = undefined
 		this.emit("taskAskResponded")
 		return result
 	}
 
-	async handleWebviewAskResponse(askResponse: ClineAskResponse, text?: string, images?: string[]) {
+	async handleWebviewAskResponse(askResponse: ClineAskResponse, text?: string, images?: string[], files?: string[]) {
+		// kilocode_change
 		this.askResponse = askResponse
 		this.askResponseText = text
 		this.askResponseImages = images
+		this.askResponseFiles = files // kilocode_change
 	}
 
 	async handleTerminalOperation(terminalOperation: "continue" | "abort") {
@@ -572,6 +591,7 @@ export class Task extends EventEmitter<ClineEvents> {
 				"condense_context_error",
 				error,
 				undefined /* images */,
+				undefined /* files */, // kilocode_change
 				false /* partial */,
 				undefined /* checkpoint */,
 				undefined /* progressStatus */,
@@ -585,6 +605,7 @@ export class Task extends EventEmitter<ClineEvents> {
 			"condense_context",
 			undefined /* text */,
 			undefined /* images */,
+			undefined /* files */, // kilocode_change
 			false /* partial */,
 			undefined /* checkpoint */,
 			undefined /* progressStatus */,
@@ -597,6 +618,7 @@ export class Task extends EventEmitter<ClineEvents> {
 		type: ClineSay,
 		text?: string,
 		images?: string[],
+		files?: string[], // kilocode_change
 		partial?: boolean,
 		checkpoint?: Record<string, unknown>,
 		progressStatus?: ToolProgressStatus,
@@ -620,6 +642,7 @@ export class Task extends EventEmitter<ClineEvents> {
 					// Existing partial message, so update it.
 					lastMessage.text = text
 					lastMessage.images = images
+					lastMessage.files = files // kilocode_change
 					lastMessage.partial = partial
 					lastMessage.progressStatus = progressStatus
 					this.updateClineMessage(lastMessage)
@@ -637,6 +660,7 @@ export class Task extends EventEmitter<ClineEvents> {
 						say: type,
 						text,
 						images,
+						files, // kilocode_change
 						partial,
 						contextCondense,
 					})
@@ -652,6 +676,7 @@ export class Task extends EventEmitter<ClineEvents> {
 
 					lastMessage.text = text
 					lastMessage.images = images
+					lastMessage.files = files // kilocode_change
 					lastMessage.partial = false
 					lastMessage.progressStatus = progressStatus
 
@@ -690,6 +715,7 @@ export class Task extends EventEmitter<ClineEvents> {
 				say: type,
 				text,
 				images,
+				files, // kilocode_change
 				checkpoint,
 				contextCondense,
 			})
@@ -708,7 +734,7 @@ export class Task extends EventEmitter<ClineEvents> {
 
 	// Start / Abort / Resume
 
-	private async startTask(task?: string, images?: string[]): Promise<void> {
+	private async startTask(task?: string, images?: string[], files?: string[]): Promise<void> {
 		// `conversationHistory` (for API) and `clineMessages` (for webview)
 		// need to be in sync.
 		// If the extension process were killed, then on restart the
@@ -719,20 +745,31 @@ export class Task extends EventEmitter<ClineEvents> {
 		this.apiConversationHistory = []
 		await this.providerRef.deref()?.postStateToWebview()
 
-		await this.say("text", task, images)
+		await this.say("text", task, images, files) // kilocode_change
 		this.isInitialized = true
 
 		let imageBlocks: Anthropic.ImageBlockParam[] = formatResponse.imageBlocks(images)
-
 		console.log(`[subtasks] task ${this.taskId}.${this.instanceId} starting`)
 
-		await this.initiateTaskLoop([
+		let userContent: UserContent = [
 			{
 				type: "text",
 				text: `<task>\n${task}\n</task>`,
 			},
 			...imageBlocks,
-		])
+		]
+		// kilocode_change start
+		if (files && files.length > 0) {
+			const fileContentString = await processFilesIntoText(files)
+			if (fileContentString) {
+				userContent.push({
+					type: "text",
+					text: fileContentString,
+				})
+			}
+		}
+		// kilocode_change end
+		await this.initiateTaskLoop(userContent)
 	}
 
 	public async resumePausedTask(lastMessage: string) {
@@ -811,13 +848,15 @@ export class Task extends EventEmitter<ClineEvents> {
 
 		this.isInitialized = true
 
-		const { response, text, images } = await this.ask(askType) // calls poststatetowebview
+		const { response, text, images, files } = await this.ask(askType) // calls poststatetowebview
 		let responseText: string | undefined
 		let responseImages: string[] | undefined
+		let responseFiles: string[] | undefined // kilocode_change
 		if (response === "messageResponse") {
-			await this.say("user_feedback", text, images)
+			await this.say("user_feedback", text, images, files) // kilocode_change
 			responseText = text
 			responseImages = images
+			responseFiles = files // kilocode_change
 		}
 
 		// Make sure that the api conversation history can be resumed by the API,
@@ -988,7 +1027,17 @@ export class Task extends EventEmitter<ClineEvents> {
 		if (responseImages && responseImages.length > 0) {
 			newUserContent.push(...formatResponse.imageBlocks(responseImages))
 		}
-
+		// kilocode_change start
+		if (responseFiles && responseFiles.length > 0) {
+			const fileContentString = await processFilesIntoText(responseFiles)
+			if (fileContentString) {
+				newUserContent.push({
+					type: "text",
+					text: fileContentString,
+				})
+			}
+		}
+		// kilocode_change end
 		await this.overwriteApiConversationHistory(modifiedApiConversationHistory)
 
 		console.log(`[subtasks] task ${this.taskId}.${this.instanceId} resuming from history item`)
@@ -1137,7 +1186,8 @@ export class Task extends EventEmitter<ClineEvents> {
 		}
 
 		if (this.consecutiveMistakeCount >= this.consecutiveMistakeLimit) {
-			const { response, text, images } = await this.ask(
+			const { response, text, images, files } = await this.ask(
+				// kilocode_change
 				"mistake_limit_reached",
 				t("common:errors.mistake_limit_guidance"),
 			)
@@ -1149,8 +1199,18 @@ export class Task extends EventEmitter<ClineEvents> {
 						...formatResponse.imageBlocks(images),
 					],
 				)
-
-				await this.say("user_feedback", text, images)
+				// kilocode_change start
+				if (files && files.length > 0) {
+					const fileContentString = await processFilesIntoText(files)
+					if (fileContentString) {
+						userContent.push({
+							type: "text",
+							text: fileContentString,
+						})
+					}
+				}
+				// kilocode_change end
+				await this.say("user_feedback", text, images, files) // kilocode_change
 
 				// Track consecutive mistake errors in telemetry.
 				// TelemetryService.instance.captureConsecutiveMistakeError(this.taskId)
@@ -1346,7 +1406,7 @@ export class Task extends EventEmitter<ClineEvents> {
 					switch (chunk.type) {
 						case "reasoning":
 							reasoningMessage += chunk.text
-							await this.say("reasoning", reasoningMessage, undefined, true)
+							await this.say("reasoning", reasoningMessage, undefined, undefined, true)
 							break
 						case "usage":
 							inputTokens += chunk.inputTokens
@@ -1738,7 +1798,7 @@ export class Task extends EventEmitter<ClineEvents> {
 			// Show countdown timer
 			for (let i = rateLimitDelay; i > 0; i--) {
 				const delayMessage = `Rate limiting for ${i} seconds...`
-				await this.say("api_req_retry_delayed", delayMessage, undefined, true)
+				await this.say("api_req_retry_delayed", delayMessage, undefined, undefined, true)
 				await delay(1000)
 			}
 		}
@@ -1787,6 +1847,7 @@ export class Task extends EventEmitter<ClineEvents> {
 					"condense_context",
 					undefined /* text */,
 					undefined /* images */,
+					undefined /* files */, // kilocode_change
 					false /* partial */,
 					undefined /* checkpoint */,
 					undefined /* progressStatus */,
@@ -1892,6 +1953,7 @@ export class Task extends EventEmitter<ClineEvents> {
 						"api_req_retry_delayed",
 						`${errorMsg}\n\nRetry attempt ${retryAttempt + 1}\nRetrying in ${i} seconds...`,
 						undefined,
+						undefined,
 						true,
 					)
 					await delay(1000)
@@ -1900,6 +1962,7 @@ export class Task extends EventEmitter<ClineEvents> {
 				await this.say(
 					"api_req_retry_delayed",
 					`${errorMsg}\n\nRetry attempt ${retryAttempt + 1}\nRetrying now...`,
+					undefined,
 					undefined,
 					false,
 				)

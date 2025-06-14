@@ -52,7 +52,8 @@ export interface ChatViewRef {
 	focusInput: () => void // kilocode_change
 }
 
-export const MAX_IMAGES_PER_MESSAGE = 20 // Anthropic limits to 20 images
+// Anthropic limits to 20 images, which we use to constrain both images & files for simplicity
+export const MAX_IMAGES_AND_FILES_PER_MESSAGE = 20
 
 const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0
 
@@ -96,11 +97,6 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		soundVolume,
 	} = useExtensionState()
 
-	const messagesRef = useRef(messages)
-	useEffect(() => {
-		messagesRef.current = messages
-	}, [messages])
-
 	const { tasks } = useTaskSearch()
 
 	// Initialize expanded state based on the persisted setting (default to expanded if undefined)
@@ -129,6 +125,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const textAreaRef = useRef<HTMLTextAreaElement>(null)
 	const [sendingDisabled, setSendingDisabled] = useState(false)
 	const [selectedImages, setSelectedImages] = useState<string[]>([])
+	const [selectedFiles, setSelectedFiles] = useState<string[]>([])
 
 	// we need to hold on to the ask because useEffect > lastMessage will always let us know when an ask comes in and handle it, but by the time handleMessage is called, the last message might not be the ask anymore (it could be a say that followed)
 	const [clineAsk, setClineAsk] = useState<ClineAsk | undefined>(undefined)
@@ -496,6 +493,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		setInputValue("")
 		setSendingDisabled(true)
 		setSelectedImages([])
+		setSelectedFiles([])
 		setClineAsk(undefined)
 		setEnableButtons(false)
 		// Do not reset mode here as it should persist.
@@ -505,17 +503,14 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	}, [])
 
 	const handleSendMessage = useCallback(
-		(text: string, images: string[]) => {
+		(text: string, images: string[], files: string[]) => {
 			text = text.trim()
 
-			if (text || images.length > 0) {
-				if (messagesRef.current.length === 0) {
-					vscode.postMessage({ type: "newTask", text, images })
-				} else if (clineAskRef.current) {
-					// Use clineAskRef.current
-					switch (
-						clineAskRef.current // Use clineAskRef.current
-					) {
+			if (text || images.length > 0 || files.length > 0) {
+				if (messages.length === 0) {
+					vscode.postMessage({ type: "newTask", text, images, files })
+				} else if (clineAsk) {
+					switch (clineAsk) {
 						case "followup":
 						case "tool":
 						case "browser_action_launch":
@@ -527,7 +522,13 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						case "resume_completed_task":
 						case "mistake_limit_reached":
 						case "report_bug":
-							vscode.postMessage({ type: "askResponse", askResponse: "messageResponse", text, images })
+							vscode.postMessage({
+								type: "askResponse",
+								askResponse: "messageResponse",
+								text,
+								images,
+								files,
+							})
 							break
 						// kilocode_change start
 						case "condense":
@@ -536,6 +537,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 								askResponse: "messageResponse",
 								text,
 								images,
+								files,
 							})
 							break
 						// kilocode_change end
@@ -546,11 +548,11 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				handleChatReset()
 			}
 		},
-		[handleChatReset], // messagesRef and clineAskRef are stable
+		[messages.length, clineAsk, handleChatReset],
 	)
 
 	const handleSetChatBoxMessage = useCallback(
-		(text: string, images: string[]) => {
+		(text: string, images: string[], files: string[]) => {
 			// Avoid nested template literals by breaking down the logic
 			let newValue = text
 
@@ -560,8 +562,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 			setInputValue(newValue)
 			setSelectedImages([...selectedImages, ...images])
+			setSelectedFiles([...selectedFiles, ...files])
 		},
-		[inputValue, selectedImages],
+		[inputValue, selectedImages, selectedFiles],
 	)
 
 	const startNewTask = useCallback(() => vscode.postMessage({ type: "clearTask" }), [])
@@ -570,7 +573,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	// after which buttons are shown and we then send an askResponse to the
 	// extension.
 	const handlePrimaryButtonClick = useCallback(
-		(text?: string, images?: string[]) => {
+		(text?: string, images?: string[], files?: string[]) => {
+			// kilocode_change: add files
 			const trimmedInput = text?.trim()
 
 			switch (clineAsk) {
@@ -589,6 +593,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							askResponse: "yesButtonClicked",
 							text: trimmedInput,
 							images: images,
+							files: files,
 						})
 					} else {
 						vscode.postMessage({ type: "askResponse", askResponse: "yesButtonClicked" })
@@ -596,6 +601,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					// Clear input state after sending
 					setInputValue("")
 					setSelectedImages([])
+					setSelectedFiles([])
 					break
 				case "completion_result":
 				case "resume_completed_task":
@@ -623,7 +629,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	)
 
 	const handleSecondaryButtonClick = useCallback(
-		(text?: string, images?: string[]) => {
+		(text?: string, images?: string[], files?: string[]) => {
+			// kilocode_change: add files
 			const trimmedInput = text?.trim()
 
 			if (isStreaming) {
@@ -649,6 +656,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							askResponse: "noButtonClicked",
 							text: trimmedInput,
 							images: images,
+							files: files, // kilocode_change
 						})
 					} else {
 						// Responds to the API with a "This operation failed" and lets it try again
@@ -673,10 +681,56 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 	const { info: model } = useSelectedModel(apiConfiguration)
 
-	const selectImages = useCallback(() => vscode.postMessage({ type: "selectImages" }), [])
+	// kilocode_change start
+	const selectFilesAndImages = useCallback(async () => {
+		try {
+			vscode.postMessage({ type: "selectImages" })
 
-	const shouldDisableImages =
-		!model?.supportsImages || sendingDisabled || selectedImages.length >= MAX_IMAGES_PER_MESSAGE
+			const handleFileSelection = (event: MessageEvent) => {
+				const message = event.data
+				if (message.type === "selectedImages") {
+					window.removeEventListener("message", handleFileSelection)
+
+					const currentTotal = selectedImages.length + selectedFiles.length
+					const availableSlots = MAX_IMAGES_AND_FILES_PER_MESSAGE - currentTotal
+
+					if (availableSlots > 0) {
+						if (message.images?.length > 0) {
+							const imagesToAdd = Math.min(message.images.length, availableSlots)
+							if (imagesToAdd > 0) {
+								setSelectedImages((prevImages) => {
+									const newImages = message.images.slice(0, imagesToAdd)
+									const uniqueNewImages = newImages.filter((img: string) => !prevImages.includes(img))
+									return [...prevImages, ...uniqueNewImages]
+								})
+							}
+						}
+
+						if (message.filePaths?.length > 0) {
+							const remainingSlots = availableSlots - (message.images?.length || 0)
+							if (remainingSlots > 0) {
+								const filesToAdd = Math.min(message.filePaths.length, remainingSlots)
+								setSelectedFiles((prevFiles) => {
+									const newFiles = message.filePaths.slice(0, filesToAdd)
+									const uniqueNewFiles = newFiles.filter((file: string) => !prevFiles.includes(file))
+									return [...prevFiles, ...uniqueNewFiles]
+								})
+							}
+						}
+					}
+				}
+			}
+
+			window.addEventListener("message", handleFileSelection)
+		} catch (error) {
+			console.error("Error selecting files and images:", error)
+		}
+	}, [selectedImages, selectedFiles])
+	// kilocode_change end
+
+	// kilocode_change start
+	const shouldDisableFilesAndImages = selectedImages.length + selectedFiles.length >= MAX_IMAGES_AND_FILES_PER_MESSAGE
+	// kilocode_change end
 
 	const handleMessage = useCallback(
 		(e: MessageEvent) => {
@@ -692,30 +746,30 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							break
 					}
 					break
-				case "selectedImages":
-					const newImages = message.images ?? []
-					if (newImages.length > 0) {
-						setSelectedImages((prevImages) =>
-							[...prevImages, ...newImages].slice(0, MAX_IMAGES_PER_MESSAGE),
-						)
-					}
-					break
 				case "invoke":
 					switch (message.invoke!) {
 						case "newChat":
 							handleChatReset()
 							break
 						case "sendMessage":
-							handleSendMessage(message.text ?? "", message.images ?? [])
+							handleSendMessage(message.text ?? "", message.images ?? [], message.filePaths ?? []) // kilocode_change
 							break
 						case "setChatBoxMessage":
-							handleSetChatBoxMessage(message.text ?? "", message.images ?? [])
+							handleSetChatBoxMessage(message.text ?? "", message.images ?? [], message.filePaths ?? []) // kilocode_change
 							break
 						case "primaryButtonClick":
-							handlePrimaryButtonClick(message.text ?? "", message.images ?? [])
+							handlePrimaryButtonClick(
+								message.text ?? "",
+								message.images ?? [],
+								message.filePaths ?? [], // kilocode_change
+							)
 							break
 						case "secondaryButtonClick":
-							handleSecondaryButtonClick(message.text ?? "", message.images ?? [])
+							handleSecondaryButtonClick(
+								message.text ?? "",
+								message.images ?? [],
+								message.filePaths ?? [], // kilocode_change
+							)
 							break
 					}
 					break
@@ -1200,25 +1254,6 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 	const placeholderText = task ? t("chat:typeMessage") : t("chat:typeTask")
 
-	const handleSuggestionClickInRow = useCallback(
-		(answer: string, event?: React.MouseEvent) => {
-			if (event?.shiftKey) {
-				// Always append to existing text, don't overwrite
-				setInputValue((currentValue) => {
-					return currentValue !== "" ? `${currentValue} \n${answer}` : answer
-				})
-			} else {
-				handleSendMessage(answer, [])
-			}
-		},
-		[handleSendMessage, setInputValue], // setInputValue is stable, handleSendMessage depends on clineAsk
-	)
-
-	const handleBatchFileResponse = useCallback((response: { [key: string]: boolean }) => {
-		// Handle batch file response, e.g., for file uploads
-		vscode.postMessage({ type: "askResponse", askResponse: "objectResponse", text: JSON.stringify(response) })
-	}, [])
-
 	const itemContent = useCallback(
 		(index: number, messageOrGroup: ClineMessage | ClineMessage[]) => {
 			// browser session group
@@ -1230,6 +1265,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						lastModifiedMessage={modifiedMessages.at(-1)}
 						onHeightChange={handleRowHeightChange}
 						isStreaming={isStreaming}
+						// Pass handlers for each message in the group
 						isExpanded={(messageTs: number) => expandedRows[messageTs] ?? false}
 						onToggleExpand={(messageTs: number) => {
 							setExpandedRows((prev) => ({
@@ -1247,25 +1283,32 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					key={messageOrGroup.ts}
 					message={messageOrGroup}
 					isExpanded={expandedRows[messageOrGroup.ts] || false}
-					onToggleExpand={toggleRowExpansion} // This was already stabilized
-					lastModifiedMessage={modifiedMessages.at(-1)} // Original direct access
-					isLast={index === groupedMessages.length - 1} // Original direct access
+					onToggleExpand={() => toggleRowExpansion(messageOrGroup.ts)}
+					lastModifiedMessage={modifiedMessages.at(-1)}
+					isLast={index === groupedMessages.length - 1}
 					onHeightChange={handleRowHeightChange}
 					isStreaming={isStreaming}
-					onSuggestionClick={handleSuggestionClickInRow} // This was already stabilized
-					onBatchFileResponse={handleBatchFileResponse}
+					onSuggestionClick={(answer: string, event?: React.MouseEvent) => {
+						if (event?.shiftKey) {
+							// Always append to existing text, don't overwrite
+							setInputValue((currentValue) => {
+								return currentValue !== "" ? `${currentValue} \n${answer}` : answer
+							})
+						} else {
+							handleSendMessage(answer, [], [])
+						}
+					}}
 				/>
 			)
 		},
 		[
 			expandedRows,
-			toggleRowExpansion,
 			modifiedMessages,
 			groupedMessages.length,
 			handleRowHeightChange,
 			isStreaming,
-			handleSuggestionClickInRow,
-			handleBatchFileResponse,
+			toggleRowExpansion,
+			handleSendMessage,
 		],
 	)
 
@@ -1356,14 +1399,14 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	}, [handleKeyDown])
 
 	useImperativeHandle(ref, () => ({
+		// kilocode_change start
 		acceptInput: () => {
 			if (enableButtons && primaryButtonText) {
-				handlePrimaryButtonClick(inputValue, selectedImages)
+				handlePrimaryButtonClick(inputValue, selectedImages, selectedFiles)
 			} else if (!sendingDisabled && !isProfileDisabled && (inputValue.trim() || selectedImages.length > 0)) {
-				handleSendMessage(inputValue, selectedImages)
+				handleSendMessage(inputValue, selectedImages, selectedFiles)
 			}
 		},
-		// kilocode_change start
 		focusInput: () => {
 			if (textAreaRef.current) {
 				textAreaRef.current.focus()
@@ -1432,7 +1475,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						{/* <RooHero /> kilocode_change: do not show */}
 						{/* Show the task history preview if expanded and tasks exist */}
 						{taskHistory.length > 0 && isExpanded && <HistoryPreview />}
-						<p className="text-vscode-editor-foreground leading-tight font-vscode-font-family text-center text-balance max-w-[380px] mx-auto">
+						<p className="text-vscode-editor-foreground leading-tight font-vscode-font-family text-center text-balance max-w-[380px]">
 							<Trans
 								i18nKey="chat:about"
 								components={{
@@ -1543,7 +1586,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 																		? t("chat:proceedWhileRunning.tooltip")
 																		: undefined
 									}
-									onClick={() => handlePrimaryButtonClick(inputValue, selectedImages)}>
+									onClick={() => handlePrimaryButtonClick(inputValue, selectedImages, selectedFiles)}>
 									{primaryButtonText}
 								</VSCodeButton>
 							)}
@@ -1563,7 +1606,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 														? t("chat:terminate.tooltip")
 														: undefined
 									}
-									onClick={() => handleSecondaryButtonClick(inputValue, selectedImages)}>
+									onClick={() =>
+										handleSecondaryButtonClick(inputValue, selectedImages, selectedFiles)
+									}>
 									{isStreaming ? t("chat:cancel.title") : secondaryButtonText}
 								</VSCodeButton>
 							)}
@@ -1581,9 +1626,11 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				placeholderText={placeholderText}
 				selectedImages={selectedImages}
 				setSelectedImages={setSelectedImages}
-				onSend={() => handleSendMessage(inputValue, selectedImages)}
-				onSelectImages={selectImages}
-				shouldDisableImages={shouldDisableImages}
+				setSelectedFiles={setSelectedFiles}
+				selectedFiles={selectedFiles}
+				onSend={() => handleSendMessage(inputValue, selectedImages, selectedFiles)}
+				onSelectFilesAndImages={selectFilesAndImages}
+				shouldDisableFilesAndImages={shouldDisableFilesAndImages}
 				onHeightChange={() => {
 					if (isAtBottom) {
 						scrollToBottomAuto()

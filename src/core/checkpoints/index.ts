@@ -93,7 +93,7 @@ export function getCheckpointService(cline: Task) {
 				provider?.postMessageToWebview({ type: "currentCheckpointUpdated", text: to })
 
 				cline
-					.say("checkpoint_saved", to, undefined, undefined, { isFirst, from, to }, undefined, {
+					.say("checkpoint_saved", to, undefined, undefined, undefined, { isFirst, from, to }, undefined, {
 						isNonInteractive: true,
 					})
 					.catch((err) => {

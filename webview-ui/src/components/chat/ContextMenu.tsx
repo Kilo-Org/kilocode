@@ -97,7 +97,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 				return <span>No results found</span>
 			// kilocode_change start
 			case ContextMenuOptionType.Image:
-				return <span>Add Image</span>
+				return <span>Upload Images & Files</span>
 			// kilocode_change end
 			case ContextMenuOptionType.Git:
 				if (option.value) {
@@ -158,7 +158,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 						</div>
 					)
 				} else {
-					return <span>Add {option.type === ContextMenuOptionType.File ? "File" : "Folder"}</span>
+					return <span>Reference {option.type === ContextMenuOptionType.File ? "File" : "Folder"}</span> // kilocode_change
 				}
 		}
 	}

@@ -82,7 +82,7 @@ export async function newTaskTool(
 			// Delay to allow mode change to take effect before next tool is executed.
 			await delay(500)
 
-			const newCline = await provider.initClineWithTask(message, undefined, cline)
+			const newCline = await provider.initClineWithTask(message, undefined, undefined, cline)
 			cline.emit("taskSpawned", newCline.taskId)
 
 			pushToolResult(`Successfully created new task in ${targetMode.name} mode with message: ${message}`)

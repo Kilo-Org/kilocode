@@ -70,7 +70,7 @@ interface ChatTextAreaProps {
 	sendingDisabled?: boolean
 	placeholderText?: string
 	selectedImages?: string[]
-	shouldDisableImages?: boolean
+	shouldDisableFilesAndImages?: boolean
 }
 
 const mockInputRef = React.createRef<HTMLInputElement>()

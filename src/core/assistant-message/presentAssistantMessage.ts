@@ -146,7 +146,7 @@ export async function presentAssistantMessage(cline: Task) {
 				}
 			}
 
-			await cline.say("text", content, undefined, block.partial)
+			await cline.say("text", content, undefined, undefined, block.partial) // kilocode_change
 			break
 		}
 		case "tool_use":

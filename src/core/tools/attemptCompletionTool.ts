@@ -45,7 +45,13 @@ export async function attemptCompletionTool(
 				} else {
 					// last message is completion_result
 					// we have command string, which means we have the result as well, so finish it (doesnt have to exist yet)
-					await cline.say("completion_result", removeClosingTag("result", result), undefined, false)
+					await cline.say(
+						"completion_result",
+						removeClosingTag("result", result),
+						undefined,
+						undefined,
+						false,
+					)
 
 					// kilocode_change: do not get instance
 					// TelemetryService.instance.captureTaskCompleted(cline.taskId)
@@ -55,7 +61,13 @@ export async function attemptCompletionTool(
 				}
 			} else {
 				// no command, still outputting partial result
-				await cline.say("completion_result", removeClosingTag("result", result), undefined, block.partial)
+				await cline.say(
+					"completion_result",
+					removeClosingTag("result", result),
+					undefined,
+					undefined,
+					block.partial,
+				)
 			}
 			return
 		} else {
@@ -81,9 +93,8 @@ export async function attemptCompletionTool(
 			if (command && !isCommandDisabled) {
 				if (lastMessage && lastMessage.ask !== "command") {
 					// Haven't sent a command message yet so first send completion_result then command.
-					await cline.say("completion_result", result, undefined, false)
-					// kilocode_change: do not get instance
-					// TelemetryService.instance.captureTaskCompleted(cline.taskId)
+					await cline.say("completion_result", result, undefined, undefined, false)
+					// telemetryService.captureTaskCompleted(cline.taskId)
 					cline.emit("taskCompleted", cline.taskId, cline.getTokenUsage(), cline.toolUsage)
 				}
 
@@ -107,9 +118,9 @@ export async function attemptCompletionTool(
 				// User didn't reject, but the command may have output.
 				commandResult = execCommandResult
 			} else {
-				await cline.say("completion_result", result, undefined, false)
+				await cline.say("completion_result", result, undefined, undefined, false)
 				// kilocode_change: do not get instance
-				// TelemetryService.instance.captureTaskCompleted(cline.taskId)
+				//TelemetryService.instance.captureTaskCompleted(cline.taskId)
 				cline.emit("taskCompleted", cline.taskId, cline.getTokenUsage(), cline.toolUsage)
 			}
 
