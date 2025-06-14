@@ -1329,6 +1329,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			customModePrompts,
 			customSupportPrompts,
 			enhancementApiConfigId,
+			commitMessageApiConfigId, // kilocode_change
 			autoApprovalEnabled,
 			customModes,
 			experiments,
@@ -1421,6 +1422,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			customModePrompts: customModePrompts ?? {},
 			customSupportPrompts: customSupportPrompts ?? {},
 			enhancementApiConfigId,
+			commitMessageApiConfigId, // kilocode_change
 			autoApprovalEnabled: autoApprovalEnabled ?? true,
 			customModes,
 			experiments: experiments ?? experimentDefault,
@@ -1575,6 +1577,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			customModePrompts: stateValues.customModePrompts ?? {},
 			customSupportPrompts: stateValues.customSupportPrompts ?? {},
 			enhancementApiConfigId: stateValues.enhancementApiConfigId,
+			commitMessageApiConfigId: stateValues.commitMessageApiConfigId, // kilocode_change
 			experiments: stateValues.experiments ?? experimentDefault,
 			autoApprovalEnabled: stateValues.autoApprovalEnabled ?? true,
 			customModes,

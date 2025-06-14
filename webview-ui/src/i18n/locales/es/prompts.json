@@ -103,6 +103,10 @@
 			"NEW_TASK": {
 				"label": "Iniciar nueva tarea",
 				"description": "Inicia una nueva tarea con entrada del usuario. Disponible en la Paleta de comandos."
+			},
+			"COMMIT_MESSAGE": {
+				"label": "Generación de Mensajes de Commit",
+				"description": "Genera mensajes de confirmación descriptivos basados en tus cambios git preparados. Personaliza el prompt para generar mensajes que sigan las mejores prácticas de tu repositorio."
 			}
 		}
 	},

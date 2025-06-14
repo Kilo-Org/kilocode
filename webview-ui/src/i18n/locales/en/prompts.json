@@ -103,6 +103,10 @@
 			"NEW_TASK": {
 				"label": "Start New Task",
 				"description": "Start a new task with user input. Available in the Command Palette."
+			},
+			"COMMIT_MESSAGE": {
+				"label": "Commit Message Generation",
+				"description": "Generate descriptive commit messages based on your staged git changes. Customize the prompt to generate messages that follow your repository's best practices."
 			}
 		}
 	},

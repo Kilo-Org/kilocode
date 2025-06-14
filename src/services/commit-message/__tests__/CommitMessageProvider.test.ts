@@ -60,6 +60,18 @@ describe("CommitMessageProvider", () => {
 			getProviderSettings: jest.fn().mockReturnValue({
 				kilocodeToken: "mock-token",
 			}),
+			getValue: jest.fn().mockImplementation((key: string) => {
+				switch (key) {
+					case "commitMessageApiConfigId":
+						return undefined
+					case "listApiConfigMeta":
+						return []
+					case "customSupportPrompts":
+						return {}
+					default:
+						return undefined
+				}
+			}),
 		}
 		;(ContextProxy as any).instance = mockContextProxy
 
@@ -144,6 +156,73 @@ describe("CommitMessageProvider", () => {
 			expect(mockGitService.getCommitContext).not.toHaveBeenCalled()
 			expect(singleCompletionHandler).not.toHaveBeenCalled()
 			expect(mockGitService.setCommitMessage).not.toHaveBeenCalled()
+		})
+
+		it("should use custom API config when commitMessageApiConfigId is set", async () => {
+			const mockChanges: GitChange[] = [{ filePath: "file.ts", status: "Modified" }]
+			mockGitService.gatherStagedChanges.mockResolvedValue(mockChanges)
+
+			// Mock custom API config
+			const customApiConfig = { apiProvider: "openai", apiKey: "custom-key" }
+			const mockProviderSettingsManager = {
+				getProfile: jest.fn().mockResolvedValue({ name: "Custom Config", ...customApiConfig }),
+			}
+			;(commitMessageProvider as any).providerSettingsManager = mockProviderSettingsManager
+
+			// Setup ContextProxy to return custom config ID
+			const mockContextProxy = (ContextProxy as any).instance
+			mockContextProxy.getValue.mockImplementation((key: string) => {
+				switch (key) {
+					case "commitMessageApiConfigId":
+						return "custom-config-id"
+					case "listApiConfigMeta":
+						return [{ id: "custom-config-id", name: "Custom Config" }]
+					case "customSupportPrompts":
+						return {}
+					default:
+						return undefined
+				}
+			})
+
+			await commitMessageProvider.generateCommitMessage()
+
+			// Verify custom config was used
+			expect(mockProviderSettingsManager.getProfile).toHaveBeenCalledWith({ id: "custom-config-id" })
+			expect(singleCompletionHandler).toHaveBeenCalledWith(customApiConfig, expect.any(String))
+		})
+
+		it("should fall back to default config when custom API config fails to load", async () => {
+			const mockChanges: GitChange[] = [{ filePath: "file.ts", status: "Modified" }]
+			mockGitService.gatherStagedChanges.mockResolvedValue(mockChanges)
+
+			// Mock provider settings manager to throw error
+			const mockProviderSettingsManager = {
+				getProfile: jest.fn().mockRejectedValue(new Error("Config not found")),
+			}
+			;(commitMessageProvider as any).providerSettingsManager = mockProviderSettingsManager
+
+			// Setup ContextProxy to return custom config ID
+			const mockContextProxy = (ContextProxy as any).instance
+			mockContextProxy.getValue.mockImplementation((key: string) => {
+				switch (key) {
+					case "commitMessageApiConfigId":
+						return "invalid-config-id"
+					case "listApiConfigMeta":
+						return [{ id: "custom-config-id", name: "Custom Config" }]
+					case "customSupportPrompts":
+						return {}
+					default:
+						return undefined
+				}
+			})
+
+			const defaultConfig = { kilocodeToken: "mock-token" }
+			mockContextProxy.getProviderSettings.mockReturnValue(defaultConfig)
+
+			await commitMessageProvider.generateCommitMessage()
+
+			// Verify fallback to default config
+			expect(singleCompletionHandler).toHaveBeenCalledWith(defaultConfig, expect.any(String))
 		})
 	})
 })

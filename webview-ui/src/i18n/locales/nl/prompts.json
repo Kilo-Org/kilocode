@@ -103,6 +103,10 @@
 			"NEW_TASK": {
 				"label": "Nieuwe taak starten",
 				"description": "Start een nieuwe taak met gebruikersinvoer. Beschikbaar via de Command Palette."
+			},
+			"COMMIT_MESSAGE": {
+				"label": "Commit Bericht Generatie",
+				"description": "Genereer beschrijvende commit-berichten gebaseerd op je staged git-wijzigingen. Pas de prompt aan om berichten te genereren die de best practices van je repository volgen."
 			}
 		}
 	},

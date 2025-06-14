@@ -10,12 +10,19 @@ import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue }
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
 import { MessageSquare } from "lucide-react"
+import CommitMessagePromptSettings from "./CommitMessagePromptSettings"
 
-const PromptsSettings = () => {
+// kilocode_change start
+interface PromptsSettingsProps {
+	customSupportPrompts: Record<string, string | undefined>
+	setCustomSupportPrompts: (prompts: Record<string, string | undefined>) => void
+}
+// kilocode_change end
+
+const PromptsSettings = ({ customSupportPrompts, setCustomSupportPrompts }: PromptsSettingsProps) => {
 	const { t } = useAppTranslation()
 
-	const { customSupportPrompts, listApiConfigMeta, enhancementApiConfigId, setEnhancementApiConfigId } =
-		useExtensionState()
+	const { listApiConfigMeta, enhancementApiConfigId, setEnhancementApiConfigId } = useExtensionState()
 
 	const [testPrompt, setTestPrompt] = useState("")
 	const [isEnhancing, setIsEnhancing] = useState(false)
@@ -37,19 +44,14 @@ const PromptsSettings = () => {
 	}, [])
 
 	const updateSupportPrompt = (type: SupportPromptType, value: string | undefined) => {
-		vscode.postMessage({
-			type: "updateSupportPrompt",
-			values: {
-				[type]: value,
-			},
-		})
+		const updatedPrompts = { ...customSupportPrompts, [type]: value }
+		setCustomSupportPrompts(updatedPrompts)
 	}
 
 	const handleSupportReset = (type: SupportPromptType) => {
-		vscode.postMessage({
-			type: "resetSupportPrompt",
-			text: type,
-		})
+		const updatedPrompts = { ...customSupportPrompts }
+		delete updatedPrompts[type]
+		setCustomSupportPrompts(updatedPrompts)
 	}
 
 	const getSupportPromptValue = (type: SupportPromptType): string => {
@@ -184,6 +186,10 @@ const PromptsSettings = () => {
 							</div>
 						</div>
 					)}
+
+					{/* kilocode_change start */}
+					{activeSupportOption === "COMMIT_MESSAGE" && <CommitMessagePromptSettings />}
+					{/* kilocode_change end */}
 				</div>
 			</Section>
 		</div>
