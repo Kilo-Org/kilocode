@@ -8,8 +8,9 @@ export const openRouterModelSchema = z.object({
 
 export type OpenRouterModel = z.infer<typeof openRouterModelSchema>
 
-export const getOpenRouterModels = async (): Promise<OpenRouterModel[]> => {
-	const response = await fetch("https://openrouter.ai/api/v1/models")
+export const getOpenRouterModels = async (baseUrl?: string): Promise<OpenRouterModel[]> => {
+	const url = baseUrl || "https://openrouter.ai/api/v1"
+	const response = await fetch(`${url}/models`)
 
 	if (!response.ok) {
 		return []
@@ -25,8 +26,8 @@ export const getOpenRouterModels = async (): Promise<OpenRouterModel[]> => {
 	return result.data.data.sort((a, b) => a.name.localeCompare(b.name))
 }
 
-export const useOpenRouterModels = () =>
+export const useOpenRouterModels = (baseUrl?: string) =>
 	useQuery({
-		queryKey: ["getOpenRouterModels"],
-		queryFn: getOpenRouterModels,
+		queryKey: ["getOpenRouterModels", baseUrl],
+		queryFn: () => getOpenRouterModels(baseUrl),
 	})

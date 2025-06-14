@@ -171,14 +171,14 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			},
 		}
 
-		// Mock some providers to succeed and others to fail
+		// Mock some providers to succeed and others to fail - in the same order as they're called
 		mockGetModels
-			.mockResolvedValueOnce(mockModels) // openrouter
-			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty
-			.mockResolvedValueOnce(mockModels) // glama
-			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound
-			.mockResolvedValueOnce(mockModels) // kilocode-openrouter
-			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
+			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty fail
+			.mockResolvedValueOnce(mockModels) // glama success
+			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound fail
+			.mockRejectedValueOnce(new Error("Kilocode-OpenRouter API error")) // kilocode-openrouter fail
+			.mockResolvedValueOnce(mockModels) // openrouter success
+			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm fail
 
 		await webviewMessageHandler(mockClineProvider, {
 			type: "requestRouterModels",
@@ -192,8 +192,8 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				requesty: {},
 				glama: mockModels,
 				unbound: {},
+				"kilocode-openrouter": {},
 				litellm: {},
-				"kilocode-openrouter": mockModels,
 			},
 		})
 
@@ -215,19 +215,26 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
+			error: "Kilocode-OpenRouter API error",
+			values: { provider: "kilocode-openrouter" },
+		})
+
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
 			error: "LiteLLM connection failed",
 			values: { provider: "litellm" },
 		})
 	})
 
 	it("handles Error objects and string errors correctly", async () => {
-		// Mock providers to fail with different error types
+		// Mock providers to fail with different error types - in the same order as they're called
 		mockGetModels
-			.mockRejectedValueOnce(new Error("Structured error message")) // openrouter - Error object
-			.mockRejectedValueOnce("String error message") // requesty - String error
-			.mockRejectedValueOnce({ message: "Object with message" }) // glama - Object error
-			.mockResolvedValueOnce({}) // unbound - Success
-			.mockResolvedValueOnce({}) // kilocode-openrouter - Success
+			.mockRejectedValueOnce(new Error("Structured error message")) // requesty - Error object
+			.mockRejectedValueOnce("String error message") // glama - String error
+			.mockRejectedValueOnce({ message: "Object with message" }) // unbound - Object error
+			.mockRejectedValueOnce(new Error("Kilocode error")) // kilocode-openrouter - Error
+			.mockResolvedValueOnce({}) // openrouter - Success
 			.mockResolvedValueOnce({}) // litellm - Success
 
 		await webviewMessageHandler(mockClineProvider, {
@@ -239,21 +246,28 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			type: "singleRouterModelFetchResponse",
 			success: false,
 			error: "Structured error message",
-			values: { provider: "openrouter" },
-		})
-
-		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
-			type: "singleRouterModelFetchResponse",
-			success: false,
-			error: "String error message",
 			values: { provider: "requesty" },
 		})
 
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
-			error: "[object Object]",
+			error: "String error message",
 			values: { provider: "glama" },
+		})
+
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "[object Object]",
+			values: { provider: "unbound" },
+		})
+
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "Kilocode error",
+			values: { provider: "kilocode-openrouter" },
 		})
 	})
 

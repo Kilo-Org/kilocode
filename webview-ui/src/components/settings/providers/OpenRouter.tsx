@@ -56,13 +56,17 @@ export const OpenRouter = ({
 		[setApiConfigurationField],
 	)
 
-	const { data: openRouterModelProviders } = useOpenRouterModelProviders(apiConfiguration?.openRouterModelId, {
-		enabled:
-			!!apiConfiguration?.openRouterModelId &&
-			routerModels?.openrouter &&
-			Object.keys(routerModels.openrouter).length > 1 &&
-			apiConfiguration.openRouterModelId in routerModels.openrouter,
-	})
+	const { data: openRouterModelProviders } = useOpenRouterModelProviders(
+		apiConfiguration?.openRouterModelId,
+		apiConfiguration?.openRouterBaseUrl,
+		{
+			enabled:
+				!!apiConfiguration?.openRouterModelId &&
+				routerModels?.openrouter &&
+				Object.keys(routerModels.openrouter).length > 1 &&
+				apiConfiguration.openRouterModelId in routerModels.openrouter,
+		},
+	)
 
 	return (
 		<>
@@ -156,9 +160,9 @@ export const OpenRouter = ({
 							<SelectItem value={OPENROUTER_DEFAULT_PROVIDER_NAME}>
 								{OPENROUTER_DEFAULT_PROVIDER_NAME}
 							</SelectItem>
-							{Object.entries(openRouterModelProviders).map(([value, { label }]) => (
+							{Object.entries(openRouterModelProviders).map(([value, provider]) => (
 								<SelectItem key={value} value={value}>
-									{label}
+									{provider.label}
 								</SelectItem>
 							))}
 						</SelectContent>

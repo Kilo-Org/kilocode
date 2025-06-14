@@ -124,7 +124,7 @@ export const getModelMaxOutputTokens = ({
 // GetModelsOptions
 
 export type GetModelsOptions =
-	| { provider: "openrouter" }
+	| { provider: "openrouter"; apiKey?: string; baseUrl?: string }
 	| { provider: "glama" }
 	| { provider: "requesty"; apiKey?: string }
 	| { provider: "unbound"; apiKey?: string }
