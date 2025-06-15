@@ -30,8 +30,9 @@ export type OpenRouterModel = z.infer<typeof openRouterModelSchema>
 
 export type OpenRouterModelRecord = Record<string, OpenRouterModel & { modelInfo: ModelInfo }>
 
-export const getOpenRouterModels = async (): Promise<OpenRouterModelRecord> => {
-	const response = await fetch("https://openrouter.ai/api/v1/models")
+export const getOpenRouterModels = async (baseUrl?: string): Promise<OpenRouterModelRecord> => {
+	const url = baseUrl || "https://openrouter.ai/api/v1"
+	const response = await fetch(`${url}/models`)
 
 	if (!response.ok) {
 		console.error("Failed to fetch OpenRouter models")
@@ -67,5 +68,8 @@ export const getOpenRouterModels = async (): Promise<OpenRouterModelRecord> => {
 		}, {} as OpenRouterModelRecord)
 }
 
-export const useOpenRouterModels = () =>
-	useQuery<OpenRouterModelRecord>({ queryKey: ["getOpenRouterModels"], queryFn: getOpenRouterModels })
+export const useOpenRouterModels = (baseUrl?: string) =>
+	useQuery<OpenRouterModelRecord>({
+		queryKey: ["getOpenRouterModels", baseUrl],
+		queryFn: ({ queryKey }) => getOpenRouterModels(queryKey[1] as string),
+	})

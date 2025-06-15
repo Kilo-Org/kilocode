@@ -42,7 +42,7 @@ export const useSelectedModel = (apiConfiguration?: ProviderSettings) => {
 	const openRouterModelId = provider === "openrouter" ? apiConfiguration?.openRouterModelId : undefined
 
 	const routerModels = useRouterModels()
-	const openRouterModelProviders = useOpenRouterModelProviders(openRouterModelId)
+	const openRouterModelProviders = useOpenRouterModelProviders(openRouterModelId, apiConfiguration?.openRouterBaseUrl)
 
 	const { id, info } =
 		apiConfiguration &&

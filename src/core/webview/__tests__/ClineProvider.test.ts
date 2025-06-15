@@ -2263,13 +2263,13 @@ describe("ClineProvider - Router Models", () => {
 		const mockModels = { "model-1": { maxTokens: 4096, contextWindow: 8192, description: "Test model" } }
 		const { getModels } = require("../../../api/providers/fetchers/modelCache")
 
-		// Mock some providers to succeed and others to fail
+		// Mock some providers to succeed and others to fail - in the same order as they're called
 		getModels
-			.mockResolvedValueOnce(mockModels) // openrouter success
 			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty fail
 			.mockResolvedValueOnce(mockModels) // glama success
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound fail
 			.mockRejectedValueOnce(new Error("Kilocode-OpenRouter API error")) // kilocode-openrouter fail
+			.mockResolvedValueOnce(mockModels) // openrouter success
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm fail
 
 		await messageHandler({ type: "requestRouterModels" })
@@ -2282,8 +2282,8 @@ describe("ClineProvider - Router Models", () => {
 				requesty: {},
 				glama: mockModels,
 				unbound: {},
-				litellm: {},
 				"kilocode-openrouter": {},
+				litellm: {},
 			},
 		})
 

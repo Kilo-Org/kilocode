@@ -730,6 +730,15 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		in meta tag we add nonce attribute: A cryptographic nonce (only used once) to allow scripts. The server must generate a unique nonce value each time it transmits a policy. It is critical to provide a nonce that cannot be guessed as bypassing a resource's policy is otherwise trivial.
 		*/
 		const nonce = getNonce()
+		const allowedConnectDomains =
+			vscode.workspace.getConfiguration(Package.name).get<string[]>("allowedConnectDomains") || []
+		const connectSrc = [
+			"https://openrouter.ai",
+			"https://api.requesty.ai",
+			"https://us.i.posthog.com",
+			"https://us-assets.i.posthog.com",
+			...allowedConnectDomains,
+		].join(" ")
 
 		// Tip: Install the es6-string-html VS Code extension to enable code highlighting below
 		return /*html*/ `
@@ -740,13 +749,13 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
             <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
             <meta name="theme-color" content="#000000">
 			<!-- kilocode_change: add https://*.googleusercontent.com https://*.googleapis.com to img-src -->
-            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; font-src ${webview.cspSource}; style-src ${webview.cspSource} 'unsafe-inline'; img-src ${webview.cspSource} https://*.googleusercontent.com https://storage.googleapis.com https://img.clerk.com data: https://*.googleapis.com; media-src ${webview.cspSource}; script-src ${webview.cspSource} 'wasm-unsafe-eval' 'nonce-${nonce}' https://us-assets.i.posthog.com 'strict-dynamic'; connect-src https://openrouter.ai https://api.requesty.ai https://us.i.posthog.com https://us-assets.i.posthog.com;">
+            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; font-src ${webview.cspSource} vscode-resource:; style-src ${webview.cspSource} 'unsafe-inline'; img-src ${webview.cspSource} https://*.googleusercontent.com https://storage.googleapis.com https://img.clerk.com data: https://*.googleapis.com vscode-resource:; media-src ${webview.cspSource} vscode-resource:; script-src ${webview.cspSource} 'wasm-unsafe-eval' 'nonce-${nonce}' https://us-assets.i.posthog.com 'strict-dynamic' vscode-webview:; connect-src ${connectSrc} vscode-resource: ${connectSrc},">
             <link rel="stylesheet" type="text/css" href="${stylesUri}">
 			<link href="${codiconsUri}" rel="stylesheet" />
 			<script nonce="${nonce}">
-				window.IMAGES_BASE_URI = "${imagesUri}"
-				window.AUDIO_BASE_URI = "${audioUri}"
-				window.MATERIAL_ICONS_BASE_URI = "${materialIconsUri}"
+					window.IMAGES_BASE_URI = "${imagesUri}"
+					window.AUDIO_BASE_URI = "${audioUri}"
+					window.MATERIAL_ICONS_BASE_URI = "${materialIconsUri}"
 			</script>
             <title>Kilo Code</title>
           </head>

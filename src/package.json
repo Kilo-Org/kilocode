@@ -428,6 +428,19 @@
 					"type": "string",
 					"default": "",
 					"description": "%settings.customStoragePath.description%"
+				},
+				"kilo-code.allowedConnectDomains": {
+					"type": "array",
+					"default": [
+						"https://openrouter.ai",
+						"https://api.requesty.ai",
+						"https://us.i.posthog.com",
+						"https://us-assets.i.posthog.com"
+					],
+					"description": "Domains allowed for network connections within the webview (Content Security Policy).",
+					"items": {
+						"type": "string"
+					}
 				}
 			}
 		}

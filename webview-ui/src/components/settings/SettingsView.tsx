@@ -334,6 +334,22 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			vscode.postMessage({ type: "upsertApiConfiguration", text: currentApiConfigName, apiConfiguration })
 			vscode.postMessage({ type: "codebaseIndexConfig", values: codebaseIndexConfig })
 
+			// kilocode_change: Update allowed connect domains for OpenRouter custom base URL on save
+			if (apiConfiguration?.openRouterBaseUrl) {
+				console.log("handleSubmit", apiConfiguration, apiConfiguration?.openRouterBaseUrl)
+				try {
+					const url = new URL(apiConfiguration.openRouterBaseUrl)
+					vscode.postMessage({
+						type: "updateAllowedConnectDomains",
+						text: `https://${url.hostname}`,
+					})
+				} catch (error) {
+					console.error("Invalid OpenRouter base URL on save:", error)
+					// You might want to display this error to the user in the UI as well
+					setErrorMessage(t("settings:errors.invalidOpenRouterBaseUrl"))
+				}
+			}
+
 			// Update cachedState to match the current state to prevent isChangeDetected from being set back to true
 			setCachedState((prevState) => ({ ...prevState, ...extensionState }))
 			setChangeDetected(false)
