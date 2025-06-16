@@ -1,0 +1,22 @@
+{
+	"extends": "../webview-ui/tsconfig.json",
+	"compilerOptions": {
+		"baseUrl": ".",
+		// Path mappings are automatically inherited from webview-ui/tsconfig.json
+		// and processed by vite-tsconfig-paths plugin
+		"types": ["node", "react", "react-dom"],
+		"moduleResolution": "bundler",
+		"allowImportingTsExtensions": true,
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"noEmit": true,
+		"jsx": "react-jsx",
+		"strict": true,
+		"noUnusedLocals": false,
+		"noUnusedParameters": false,
+		"noFallthroughCasesInSwitch": true,
+		"skipLibCheck": true
+	},
+	"include": ["stories/**/*", "src/**/*", ".storybook/**/*", "../webview-ui/src/**/*"],
+	"exclude": ["node_modules", "storybook-static"]
+}

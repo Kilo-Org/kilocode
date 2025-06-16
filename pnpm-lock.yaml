@@ -987,6 +987,100 @@ importers:
         specifier: ^1.2.0
         version: 1.2.0(typescript@5.8.3)(zod@3.25.48)
 
+  storybook:
+    dependencies:
+      '@radix-ui/react-slot':
+        specifier: ^1.1.2
+        version: 1.2.3(@types/react@18.3.23)(react@18.3.1)
+      '@vscode/codicons':
+        specifier: ^0.0.36
+        version: 0.0.36
+      class-variance-authority:
+        specifier: ^0.7.1
+        version: 0.7.1
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      lucide-react:
+        specifier: ^0.513.0
+        version: 0.513.0(react@18.3.1)
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.1
+        version: 18.3.1(react@18.3.1)
+      shiki:
+        specifier: ^3.2.1
+        version: 3.4.2
+      styled-components:
+        specifier: ^6.1.13
+        version: 6.1.18(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      tailwind-merge:
+        specifier: ^2.6.0
+        version: 2.6.0
+      tailwindcss:
+        specifier: ^4.0.0
+        version: 4.1.8
+    devDependencies:
+      '@chromatic-com/storybook':
+        specifier: ^3.2.2
+        version: 3.2.6(react@18.3.1)(storybook@8.6.14(prettier@3.5.3))
+      '@storybook/addon-essentials':
+        specifier: ^8.4.7
+        version: 8.6.14(@types/react@18.3.23)(storybook@8.6.14(prettier@3.5.3))
+      '@storybook/addon-interactions':
+        specifier: ^8.4.7
+        version: 8.6.14(storybook@8.6.14(prettier@3.5.3))
+      '@storybook/addon-links':
+        specifier: ^8.4.7
+        version: 8.6.14(react@18.3.1)(storybook@8.6.14(prettier@3.5.3))
+      '@storybook/blocks':
+        specifier: ^8.4.7
+        version: 8.6.14(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.6.14(prettier@3.5.3))
+      '@storybook/react':
+        specifier: ^8.4.7
+        version: 8.6.14(@storybook/test@8.6.14(storybook@8.6.14(prettier@3.5.3)))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.6.14(prettier@3.5.3))(typescript@5.8.3)
+      '@storybook/react-vite':
+        specifier: ^8.4.7
+        version: 8.6.14(@storybook/test@8.6.14(storybook@8.6.14(prettier@3.5.3)))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rollup@4.41.1)(storybook@8.6.14(prettier@3.5.3))(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.29)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.19.4)(yaml@2.8.0))
+      '@storybook/test':
+        specifier: ^8.4.7
+        version: 8.6.14(storybook@8.6.14(prettier@3.5.3))
+      '@storybook/test-runner':
+        specifier: ^0.21.2
+        version: 0.21.3(@types/node@22.15.29)(storybook@8.6.14(prettier@3.5.3))
+      '@tailwindcss/vite':
+        specifier: ^4.0.0
+        version: 4.1.8(vite@6.3.5(@types/node@22.15.29)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.19.4)(yaml@2.8.0))
+      '@types/react':
+        specifier: ^18.3.23
+        version: 18.3.23
+      '@types/react-dom':
+        specifier: ^18.3.5
+        version: 18.3.7(@types/react@18.3.23)
+      '@types/styled-components':
+        specifier: ^5.1.34
+        version: 5.1.34
+      '@vitejs/plugin-react':
+        specifier: ^4.3.4
+        version: 4.5.0(vite@6.3.5(@types/node@22.15.29)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.19.4)(yaml@2.8.0))
+      rimraf:
+        specifier: ^6.0.1
+        version: 6.0.1
+      storybook:
+        specifier: ^8.4.7
+        version: 8.6.14(prettier@3.5.3)
+      tailwindcss-animate:
+        specifier: ^1.0.7
+        version: 1.0.7(tailwindcss@4.1.8)
+      typescript:
+        specifier: ^5.4.5
+        version: 5.8.3
+      vite:
+        specifier: 6.3.5
+        version: 6.3.5(@types/node@22.15.29)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.19.4)(yaml@2.8.0)
+
   webview-ui:
     dependencies:
       '@radix-ui/react-alert-dialog':
