@@ -16,6 +16,13 @@
 		},
 		"watch:tsc": {
 			"cache": false
+		},
+		"storybook": {
+			"cache": false,
+			"persistent": true
+		},
+		"storybook:build": {
+			"outputs": ["storybook-static/**"]
 		}
 	}
 }
