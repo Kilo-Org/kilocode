@@ -1,10 +1,10 @@
 import type { Preview } from "@storybook/react"
-// Import VSCode theme variables first
+
 import "./vscode-theme.css"
-// Import Storybook-specific Tailwind CSS (which includes webview-ui CSS + @source directive)
 import "./storybook-tailwind.css"
+
 import "@vscode/codicons/dist/codicon.css"
-import "../../webview-ui/src/codicon-custom.css"
+import "../../../webview-ui/src/codicon-custom.css"
 
 const preview: Preview = {
 	parameters: {

@@ -7,8 +7,8 @@
  */
 
 /* Import the webview-ui CSS first */
-@import "../../webview-ui/src/index.css";
+@import "../../../webview-ui/src/index.css";
 
 /* Add content scanning for Tailwind v4 - this scans both webview-ui and storybook files */
 @source "../**/*.{js,ts,jsx,tsx}";
-@source "../../webview-ui/src/**/*.{js,ts,jsx,tsx}";
+@source "../../../webview-ui/src/**/*.{js,ts,jsx,tsx}";

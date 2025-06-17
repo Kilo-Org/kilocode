@@ -3,7 +3,7 @@ import { resolve } from "path"
 import { readFileSync } from "fs"
 
 // Read and parse the webview-ui tsconfig.json to get path mappings
-const webviewTsConfigPath = resolve(__dirname, "../../webview-ui/tsconfig.json")
+const webviewTsConfigPath = resolve(__dirname, "../../../webview-ui/tsconfig.json")
 const webviewTsConfig = JSON.parse(readFileSync(webviewTsConfigPath, "utf-8"))
 const webviewPaths = webviewTsConfig.compilerOptions?.paths || {}
 
@@ -17,7 +17,7 @@ const createAliasesFromTsConfig = () => {
 			const cleanAlias = alias.replace(/\/\*$/, "")
 			const cleanPath = paths[0].replace(/\/\*$/, "")
 			// Resolve path relative to webview-ui directory
-			aliases[cleanAlias] = resolve(__dirname, "../../webview-ui", cleanPath)
+			aliases[cleanAlias] = resolve(__dirname, "../../../webview-ui", cleanPath)
 		}
 	}
 

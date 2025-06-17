@@ -1,5 +1,5 @@
 {
-	"extends": "../webview-ui/tsconfig.json",
+	"extends": "../../webview-ui/tsconfig.json",
 	"compilerOptions": {
 		"baseUrl": ".",
 		// Path mappings are automatically inherited from webview-ui/tsconfig.json
