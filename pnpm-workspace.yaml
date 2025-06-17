@@ -3,7 +3,6 @@ packages:
   - webview-ui
   - apps/*
   - packages/*
-  - storybook
 
 onlyBuiltDependencies:
   - '@tailwindcss/oxide'
