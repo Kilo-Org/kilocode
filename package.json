@@ -46,5 +46,8 @@
 		"*.{js,jsx,ts,tsx,json,css,md}": [
 			"prettier --write"
 		]
+	},
+	"dependencies": {
+		"https-proxy-agent": "^7.0.6"
 	}
 }

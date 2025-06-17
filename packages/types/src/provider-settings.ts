@@ -111,6 +111,12 @@ const bedrockSchema = apiModelIdProviderModelSchema.extend({
 	awsModelContextWindow: z.number().optional(),
 	awsBedrockEndpointEnabled: z.boolean().optional(),
 	awsBedrockEndpoint: z.string().optional(),
+	awsProxyUrl: z.string().optional(),
+	awsProxyUsername: z.string().optional(),
+	awsProxyPassword: z.string().optional(),
+	awsCustomCaBundlePath: z.string().optional(),
+	awsTlsCiphers: z.string().optional(),
+	awsSecureProtocol: z.string().optional(),
 })
 
 const vertexSchema = apiModelIdProviderModelSchema.extend({

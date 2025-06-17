@@ -1,5 +1,17 @@
 # kilo-code
 
+## [Unreleased]
+
+### New Features / Enhancements
+
+- **AWS Bedrock Provider:** Added advanced network configuration options:
+    - `awsProxyUrl`: Specify an HTTPS proxy URL for Bedrock API calls.
+    - `awsProxyUsername`: Username for proxy authentication.
+    - `awsProxyPassword`: Password for proxy authentication.
+    - `awsCustomCaBundlePath`: Path to a custom CA certificate bundle file for TLS inspection.
+    - `awsTlsCiphers`: Specify custom TLS cipher suites.
+    - `awsSecureProtocol`: Specify a specific TLS/SSL protocol version.
+
 ## [v4.38.1]
 
 - [#747](https://github.com/Kilo-Org/kilocode/pull/747) [`943c7dd`](https://github.com/Kilo-Org/kilocode/commit/943c7ddb671ed19bb4b9a35ec32ee7898424bf31) Thanks [@markijbema](https://github.com/markijbema)! - Close the browsertool properly when a remote browser is configured but a fallback local one is used

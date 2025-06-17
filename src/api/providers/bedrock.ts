@@ -8,7 +8,10 @@ import {
 	SystemContentBlock,
 } from "@aws-sdk/client-bedrock-runtime"
 import { fromIni } from "@aws-sdk/credential-providers"
+import { HttpsProxyAgent, HttpsProxyAgentOptions } from "https-proxy-agent"
 import { Anthropic } from "@anthropic-ai/sdk"
+import { readFileSync } from "fs"
+import { Agent as HttpsAgent } from "https"
 
 import {
 	type ModelInfo,
@@ -173,6 +176,46 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 			// Add the endpoint configuration when specified and enabled
 			...(this.options.awsBedrockEndpoint &&
 				this.options.awsBedrockEndpointEnabled && { endpoint: this.options.awsBedrockEndpoint }),
+		}
+
+		let customCa: Buffer | undefined
+		if (this.options.awsCustomCaBundlePath) {
+			try {
+				customCa = readFileSync(this.options.awsCustomCaBundlePath)
+			} catch (error) {
+				logger.error("Failed to read custom CA bundle", {
+					ctx: "bedrock",
+					path: this.options.awsCustomCaBundlePath,
+					error: error instanceof Error ? error.message : String(error),
+				})
+			}
+		}
+
+		// Prepare options for HttpsProxyAgent or HttpsAgent
+		const agentOptions: HttpsProxyAgentOptions | import("https").AgentOptions = {}
+		if (customCa) {
+			agentOptions.ca = customCa
+		}
+		if (this.options.awsTlsCiphers) {
+			agentOptions.ciphers = this.options.awsTlsCiphers
+		}
+		if (this.options.awsSecureProtocol) {
+			agentOptions.secureProtocol = this.options.awsSecureProtocol
+		}
+
+		if (this.options.awsProxyUrl) {
+			const proxyUrl = new URL(this.options.awsProxyUrl)
+			if (this.options.awsProxyUsername && this.options.awsProxyPassword) {
+				proxyUrl.username = this.options.awsProxyUsername
+				proxyUrl.password = this.options.awsProxyPassword
+			}
+			clientConfig.requestHandler = new HttpsProxyAgent(
+				proxyUrl.toString(),
+				agentOptions as HttpsProxyAgentOptions,
+			)
+		} else if (Object.keys(agentOptions).length > 0) {
+			// Only create HttpsAgent if there are any CA or TLS options
+			clientConfig.requestHandler = new HttpsAgent(agentOptions)
 		}
 
 		if (this.options.awsUseProfile && this.options.awsProfile) {
