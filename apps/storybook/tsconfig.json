@@ -1,0 +1,25 @@
+{
+	"extends": "../../webview-ui/tsconfig.json",
+	"compilerOptions": {
+		"baseUrl": ".",
+		"paths": {
+			"@/*": ["../../webview-ui/src/*"],
+			"@src/*": ["../../webview-ui/src/*"],
+			"@roo/*": ["../../src/shared/*"]
+		},
+		"types": ["react", "react-dom"],
+		"moduleResolution": "bundler",
+		"allowImportingTsExtensions": true,
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"noEmit": true,
+		"jsx": "react-jsx",
+		"strict": true,
+		"noUnusedLocals": false,
+		"noUnusedParameters": false,
+		"noFallthroughCasesInSwitch": true,
+		"skipLibCheck": true
+	},
+	"include": ["stories/**/*", "src/**/*", ".storybook/**/*", "../webview-ui/src/**/*"],
+	"exclude": ["node_modules", "storybook-static"]
+}

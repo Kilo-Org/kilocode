@@ -1,0 +1,5 @@
+# Storybook build output
+storybook-static/
+
+# Turbo cache
+.turbo/
