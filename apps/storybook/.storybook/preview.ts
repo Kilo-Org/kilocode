@@ -1,10 +1,7 @@
 import type { Preview } from "@storybook/react"
+import { withTheme } from "./decorators"
 
-import "./vscode-theme.css"
-import "./storybook-tailwind.css"
-
-import "@vscode/codicons/dist/codicon.css"
-import "../../../webview-ui/src/codicon-custom.css"
+import "./storybook.css"
 
 const preview: Preview = {
 	parameters: {
@@ -15,14 +12,14 @@ const preview: Preview = {
 			},
 		},
 		backgrounds: {
-			default: "vscode-dark",
+			default: "dark",
 			values: [
 				{
-					name: "vscode-dark",
+					name: "dark",
 					value: "var(--vscode-editor-background, #1e1e1e)",
 				},
 				{
-					name: "vscode-light",
+					name: "light",
 					value: "var(--vscode-editor-background, #ffffff)",
 				},
 			],
@@ -30,7 +27,7 @@ const preview: Preview = {
 	},
 	globalTypes: {
 		theme: {
-			description: "Global theme for components",
+			description: "Global Theme",
 			defaultValue: "dark",
 			toolbar: {
 				title: "Theme",
@@ -40,6 +37,7 @@ const preview: Preview = {
 			},
 		},
 	},
+	decorators: [withTheme],
 }
 
 export default preview
