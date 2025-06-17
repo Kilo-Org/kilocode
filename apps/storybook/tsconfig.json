@@ -2,9 +2,12 @@
 	"extends": "../../webview-ui/tsconfig.json",
 	"compilerOptions": {
 		"baseUrl": ".",
-		// Path mappings are automatically inherited from webview-ui/tsconfig.json
-		// and processed by vite-tsconfig-paths plugin
-		"types": ["node", "react", "react-dom"],
+		"paths": {
+			"@/*": ["../../webview-ui/src/*"],
+			"@src/*": ["../../webview-ui/src/*"],
+			"@roo/*": ["../../src/shared/*"]
+		},
+		"types": ["react", "react-dom"],
 		"moduleResolution": "bundler",
 		"allowImportingTsExtensions": true,
 		"resolveJsonModule": true,
