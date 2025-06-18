@@ -2,8 +2,6 @@ import type { Meta, StoryObj } from "@storybook/react"
 import { fn } from "@storybook/test"
 
 import TaskHeader from "../../../webview-ui/src/components/chat/TaskHeader"
-
-// Import shared mock data
 import { createTaskHeaderMessages, createMockTask } from "../src/mockData/clineMessages"
 
 const meta = {

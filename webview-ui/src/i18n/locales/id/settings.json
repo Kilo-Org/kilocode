@@ -631,5 +631,11 @@
 	"labels": {
 		"customArn": "ARN Kustom",
 		"useCustomArn": "Gunakan ARN kustom..."
+	},
+	"display": {
+		"taskTimeline": {
+			"label": "Tampilkan linimasa tugas",
+			"description": "Tampilkan timeline visual dari pesan-pesan tugas, diwarnai berdasarkan jenisnya, memungkinkan Anda untuk melihat kemajuan tugas dengan cepat dan menggulir kembali ke titik-titik tertentu dalam riwayat tugas."
+		}
 	}
 }

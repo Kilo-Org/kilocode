@@ -178,6 +178,7 @@ export interface WebviewMessage {
 		| "indexCleared"
 		| "codebaseIndexConfig"
 		| "telemetrySetting"
+		| "showTaskTimeline" // kilocode_change
 		| "toggleTaskFavorite" // kilocode_change
 	text?: string
 	disabled?: boolean

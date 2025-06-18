@@ -610,5 +610,11 @@
 	"labels": {
 		"customArn": "Özel ARN",
 		"useCustomArn": "Özel ARN kullan..."
+	},
+	"display": {
+		"taskTimeline": {
+			"description": "Görev mesajlarını türe göre renklendirilmiş görsel bir zaman çizelgesi olarak görüntüleyin, böylece görevin ilerlemesini hızlıca görebilir ve görevin geçmişindeki belirli noktalara geri dönmek için kaydırabilirsiniz.",
+			"label": "Görev zaman çizelgesini göster"
+		}
 	}
 }

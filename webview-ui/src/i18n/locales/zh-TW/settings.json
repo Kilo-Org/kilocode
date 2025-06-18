@@ -610,5 +610,11 @@
 	"labels": {
 		"customArn": "自訂 ARN",
 		"useCustomArn": "使用自訂 ARN..."
+	},
+	"display": {
+		"taskTimeline": {
+			"label": "显示任务时间轴",
+			"description": "显示任务消息的可视化时间线，按类型着色，让您能够快速查看任务进度并回滚到任务历史中的特定点。"
+		}
 	}
 }

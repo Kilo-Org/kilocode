@@ -610,5 +610,11 @@
 	"labels": {
 		"customArn": "ARN personalizado",
 		"useCustomArn": "Usar ARN personalizado..."
+	},
+	"display": {
+		"taskTimeline": {
+			"label": "Mostrar cronología de tareas",
+			"description": "Muestra una línea de tiempo visual de los mensajes de tareas, colorizados por tipo, permitiéndote ver rápidamente el progreso de la tarea y desplazarte hacia atrás hasta puntos específicos en el historial de la tarea."
+		}
 	}
 }

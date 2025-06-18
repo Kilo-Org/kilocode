@@ -75,5 +75,28 @@
 			"newWorkflowFile": "새 워크플로우 파일...",
 			"newRuleFile": "새 규칙 파일..."
 		}
+	},
+	"taskTimeline": {
+		"tooltip": {
+			"clickToScroll": "{{messageType}} (#{{messageNumber}}) 보기",
+			"messageTypes": {
+				"browser_action": "브라우저 작업",
+				"checkpoint_saved": "체크포인트 저장됨",
+				"browser_action_launch": "브라우저 실행",
+				"browser_action_result": "브라우저 작업 결과",
+				"command_output": "명령어 출력",
+				"command": "명령어 실행",
+				"condense_context": "컨텍스트 요약",
+				"followup": "후속 질문",
+				"error": "오류 메시지",
+				"completion_result": "완성 결과",
+				"mcp_server_response": "MCP 서버 응답",
+				"text": "AI 응답",
+				"tool": "도구 사용",
+				"unknown": "알 수 없는 메시지 유형",
+				"reasoning": "AI 추론",
+				"use_mcp_server": "MCP 서버 사용량"
+			}
+		}
 	}
 }

@@ -19,6 +19,7 @@ import Thumbnails from "../common/Thumbnails"
 
 import { TaskActions } from "./TaskActions"
 import { ContextWindowProgress } from "./ContextWindowProgress"
+import { TaskTimeline } from "./TaskTimeline"
 import { mentionRegexGlobal } from "@roo/context-mentions"
 
 import { vscode } from "@/utils/vscode" // kilocode_change: pull slash commands from Cline
@@ -35,6 +36,12 @@ export interface TaskHeaderProps {
 	buttonsDisabled: boolean
 	handleCondenseContext: (taskId: string) => void
 	onClose: () => void
+	// kilocode_change start
+	groupedMessages: (ClineMessage | ClineMessage[])[]
+	onMessageClick?: (index: number) => void
+	currentMessageIndex?: number
+	isTaskActive?: boolean
+	// kilocode_change end
 }
 
 const TaskHeader = ({
@@ -49,8 +56,15 @@ const TaskHeader = ({
 	buttonsDisabled,
 	handleCondenseContext,
 	onClose,
+	// kilocode_change start
+	groupedMessages,
+	onMessageClick,
+	currentMessageIndex,
+	isTaskActive = false,
+	// kilocode_change end
 }: TaskHeaderProps) => {
 	const { t } = useTranslation()
+	const { showTaskTimeline } = useExtensionState() // kilocode_change
 	const { apiConfiguration, currentTaskItem, customModes } = useExtensionState()
 	const { id: modelId, info: model } = useSelectedModel(apiConfiguration)
 	const [isTaskExpanded, setIsTaskExpanded] = useState(false)
@@ -75,7 +89,7 @@ const TaskHeader = ({
 		<div className="py-2 px-3">
 			<div
 				className={cn(
-					"rounded-xs p-2.5 flex flex-col gap-1.5 relative z-1 border",
+					"rounded-xs p-2.5 flex flex-col relative z-1 border",
 					isTaskExpanded
 						? "border-vscode-panel-border text-vscode-foreground"
 						: "border-vscode-panel-border/80 text-vscode-foreground/80",
@@ -109,18 +123,31 @@ const TaskHeader = ({
 				</div>
 				{/* Collapsed state: Track context and cost if we have any */}
 				{!isTaskExpanded && contextWindow > 0 && (
-					<div className={`w-full flex flex-row items-center gap-1 h-auto`}>
-						<ContextWindowProgress
-							contextWindow={contextWindow}
-							contextTokens={contextTokens || 0}
-							maxTokens={
-								model
-									? getModelMaxOutputTokens({ modelId, model, settings: apiConfiguration })
-									: undefined
-							}
-						/>
-						{condenseButton}
-						{!!totalCost && <VSCodeBadge>${totalCost.toFixed(2)}</VSCodeBadge>}
+					// kilocode_change start
+					<div className={`w-full flex flex-col h-auto`}>
+						{showTaskTimeline && (
+							<TaskTimeline
+								groupedMessages={groupedMessages}
+								onMessageClick={onMessageClick}
+								currentMessageIndex={currentMessageIndex}
+								isTaskActive={isTaskActive}
+							/>
+						)}
+						{/* kilocode_change end */}
+
+						<div className="flex flex-row items-center gap-1">
+							<ContextWindowProgress
+								contextWindow={contextWindow}
+								contextTokens={contextTokens || 0}
+								maxTokens={
+									model
+										? getModelMaxOutputTokens({ modelId, model, settings: apiConfiguration })
+										: undefined
+								}
+							/>
+							{condenseButton}
+							{!!totalCost && <VSCodeBadge>${totalCost.toFixed(2)}</VSCodeBadge>}
+						</div>
 					</div>
 				)}
 				{/* Expanded state: Show task text and images */}
@@ -142,6 +169,17 @@ const TaskHeader = ({
 							</div>
 						</div>
 						{task.images && task.images.length > 0 && <Thumbnails images={task.images} />}
+
+						{/* kilocode_change start */}
+						{showTaskTimeline && (
+							<TaskTimeline
+								groupedMessages={groupedMessages}
+								onMessageClick={onMessageClick}
+								currentMessageIndex={currentMessageIndex}
+								isTaskActive={isTaskActive}
+							/>
+						)}
+						{/* kilocode_change end */}
 
 						<div className="flex flex-col gap-1">
 							{isTaskExpanded && contextWindow > 0 && (

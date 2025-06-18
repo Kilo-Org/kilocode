@@ -610,5 +610,11 @@
 	"labels": {
 		"customArn": "ARN personalizzato",
 		"useCustomArn": "Usa ARN personalizzato..."
+	},
+	"display": {
+		"taskTimeline": {
+			"label": "Mostra cronologia attività",
+			"description": "Visualizza una cronologia visiva dei messaggi delle attività, colorati per tipologia, permettendoti di visualizzare rapidamente i progressi delle attività e scorrere indietro fino a punti specifici nella cronologia dell'attività."
+		}
 	}
 }

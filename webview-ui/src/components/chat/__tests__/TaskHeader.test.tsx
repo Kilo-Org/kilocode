@@ -55,6 +55,7 @@ describe("TaskHeader", () => {
 		buttonsDisabled: false,
 		handleCondenseContext: jest.fn(),
 		onClose: jest.fn(),
+		groupedMessages: [],
 	}
 
 	const queryClient = new QueryClient()

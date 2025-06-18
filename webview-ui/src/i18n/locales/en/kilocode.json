@@ -75,5 +75,28 @@
 			"newWorkflowFile": "New workflow file...",
 			"newRuleFile": "New rule file..."
 		}
+	},
+	"taskTimeline": {
+		"tooltip": {
+			"clickToScroll": "View {{messageType}} (#{{messageNumber}})",
+			"messageTypes": {
+				"browser_action_launch": "browser launch",
+				"browser_action_result": "browser action result",
+				"browser_action": "browser action",
+				"checkpoint_saved": "checkpoint saved",
+				"command": "command execution",
+				"command_output": "command output",
+				"completion_result": "completion result",
+				"condense_context": "condense context",
+				"error": "error message",
+				"followup": "followup question",
+				"mcp_server_response": "MCP server response",
+				"reasoning": "AI reasoning",
+				"text": "AI response",
+				"tool": "tool usage",
+				"unknown": "unknown message type",
+				"use_mcp_server": "MCP server usage"
+			}
+		}
 	}
 }

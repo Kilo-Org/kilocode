@@ -52,11 +52,19 @@ export const LongTask: Story = {
 	},
 }
 
-export const MessageVariety: Story = {
+export const AllMessageTypes: Story = {
+	name: "All Supported Message Types",
 	args: {
 		groupedMessages: createMessageTypeVarietyMessages(),
 		onMessageClick: fn(),
 		currentMessageIndex: undefined,
 		isTaskActive: false,
+	},
+	parameters: {
+		docs: {
+			description: {
+				story: "Displays examples of all message types supported by the timeline registry, including ask types (command, followup, tool, browser_action_launch, use_mcp_server, completion_result) and say types (text, reasoning, command_output, mcp_server_response, browser_action, browser_action_result, checkpoint_saved, completion_result, error, condense_context). Each message type has its own color and translation.",
+			},
+		},
 	},
 }

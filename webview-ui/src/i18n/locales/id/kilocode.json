@@ -75,5 +75,28 @@
 			"newWorkflowFile": "File alur kerja baru...",
 			"newRuleFile": "File aturan baru..."
 		}
+	},
+	"taskTimeline": {
+		"tooltip": {
+			"clickToScroll": "Lihat {{messageType}} (#{{messageNumber}})",
+			"messageTypes": {
+				"browser_action": "aksi peramban",
+				"browser_action_result": "hasil tindakan peramban",
+				"browser_action_launch": "peluncuran browser",
+				"command_output": "hasil perintah",
+				"checkpoint_saved": "pos pemeriksaan tersimpan",
+				"completion_result": "hasil penyelesaian",
+				"command": "eksekusi perintah",
+				"condense_context": "ringkas konteks",
+				"error": "pesan error",
+				"followup": "pertanyaan lanjutan",
+				"mcp_server_response": "Respon server MCP",
+				"text": "Respons AI",
+				"reasoning": "Penalaran AI",
+				"tool": "penggunaan alat",
+				"unknown": "jenis pesan tidak diketahui",
+				"use_mcp_server": "Penggunaan server MCP"
+			}
+		}
 	}
 }

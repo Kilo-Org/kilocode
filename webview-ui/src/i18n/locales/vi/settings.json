@@ -610,5 +610,11 @@
 	"labels": {
 		"customArn": "ARN tùy chỉnh",
 		"useCustomArn": "Sử dụng ARN tùy chỉnh..."
+	},
+	"display": {
+		"taskTimeline": {
+			"label": "Hiển thị dòng thời gian công việc",
+			"description": "Hiển thị dòng thời gian trực quan của các tin nhắn công việc, được phân loại theo màu sắc theo từng loại, cho phép bạn nhanh chóng xem tiến độ công việc và cuộn lại các điểm cụ thể trong lịch sử của công việc."
+		}
 	}
 }

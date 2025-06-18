@@ -1339,6 +1339,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			showRooIgnoredFiles,
 			language,
 			showAutoApproveMenu, // kilocode_change
+			showTaskTimeline, // kilocode_change
 			maxReadFileLine,
 			terminalCompressProgressBar,
 			historyPreviewCollapsed,
@@ -1434,6 +1435,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			machineId,
 			showRooIgnoredFiles: showRooIgnoredFiles ?? true,
 			showAutoApproveMenu: showAutoApproveMenu ?? false, // kilocode_change
+			showTaskTimeline: showTaskTimeline ?? false, // kilocode_change
 			language, // kilocode_change
 			renderContext: this.renderContext,
 			maxReadFileLine: maxReadFileLine ?? -1,
@@ -1587,6 +1589,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			browserToolEnabled: stateValues.browserToolEnabled ?? true,
 			showRooIgnoredFiles: stateValues.showRooIgnoredFiles ?? true,
 			showAutoApproveMenu: stateValues.showAutoApproveMenu ?? false, // kilocode_change
+			showTaskTimeline: stateValues.showTaskTimeline ?? false, // kilocode_change
 			maxReadFileLine: stateValues.maxReadFileLine ?? -1,
 			maxConcurrentFileReads: experiments.isEnabled(
 				stateValues.experiments ?? experimentDefault,

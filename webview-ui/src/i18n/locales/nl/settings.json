@@ -610,5 +610,11 @@
 	"labels": {
 		"customArn": "Aangepaste ARN",
 		"useCustomArn": "Aangepaste ARN gebruiken..."
+	},
+	"display": {
+		"taskTimeline": {
+			"label": "Taaktijdlijn weergeven",
+			"description": "Toon een visuele tijdlijn van taakmeldingen, gekleurd per type, waardoor je snel de voortgang van taken kunt bekijken en terug kunt scrollen naar specifieke punten in de geschiedenis van de taak."
+		}
 	}
 }

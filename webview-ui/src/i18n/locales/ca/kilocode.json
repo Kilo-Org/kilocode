@@ -75,5 +75,28 @@
 			"newWorkflowFile": "Nou fitxer de flux de treball...",
 			"newRuleFile": "Nou fitxer de regla..."
 		}
+	},
+	"taskTimeline": {
+		"tooltip": {
+			"messageTypes": {
+				"browser_action_launch": "iniciar navegador",
+				"browser_action": "acció del navegador",
+				"browser_action_result": "resultat de l'acció del navegador",
+				"checkpoint_saved": "punt de control desat",
+				"condense_context": "condensar context",
+				"command_output": "sortida de comanda",
+				"completion_result": "resultat de la compleció",
+				"command": "execució de comandes",
+				"error": "missatge d'error",
+				"followup": "pregunta de seguiment",
+				"mcp_server_response": "Resposta del servidor MCP",
+				"text": "Resposta de la IA",
+				"reasoning": "Raonament d'IA",
+				"unknown": "tipus de missatge desconegut",
+				"tool": "ús de l'eina",
+				"use_mcp_server": "Ús del servidor MCP"
+			},
+			"clickToScroll": "Veure {{messageType}} (núm. {{messageNumber}})"
+		}
 	}
 }

@@ -1124,6 +1124,20 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		})
 	}, [])
 
+	// kilocode_change start
+	// Animated "blink" to highlight a specific message. Used by the TaskTimeline
+	const highlightClearTimerRef = useRef<NodeJS.Timeout | undefined>()
+	const [highlightedMessageIndex, setHighlightedMessageIndex] = useState<number | null>(null)
+	const handleMessageClick = useCallback((index: number) => {
+		setHighlightedMessageIndex(index)
+		virtuosoRef.current?.scrollToIndex({ index, align: "end", behavior: "smooth" })
+
+		// Clear the highlight after a delay
+		clearTimeout(highlightClearTimerRef.current)
+		highlightClearTimerRef.current = setTimeout(() => setHighlightedMessageIndex(null), 1000)
+	}, [])
+	// kilocode_change end
+
 	const handleSetExpandedRow = useCallback(
 		(ts: number, expand?: boolean) => {
 			setExpandedRows((prev) => ({ ...prev, [ts]: expand === undefined ? !prev[ts] : expand }))
@@ -1254,6 +1268,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					isStreaming={isStreaming}
 					onSuggestionClick={handleSuggestionClickInRow} // This was already stabilized
 					onBatchFileResponse={handleBatchFileResponse}
+					highlighted={highlightedMessageIndex === index} // kilocode_change: Add highlight prop
 				/>
 			)
 		},
@@ -1266,6 +1281,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			isStreaming,
 			handleSuggestionClickInRow,
 			handleBatchFileResponse,
+			highlightedMessageIndex,
 		],
 	)
 
@@ -1398,6 +1414,12 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						buttonsDisabled={sendingDisabled}
 						handleCondenseContext={handleCondenseContext}
 						onClose={handleTaskCloseButtonClick}
+						// kilocode_change start
+						groupedMessages={groupedMessages}
+						onMessageClick={handleMessageClick}
+						currentMessageIndex={groupedMessages.length - 1}
+						isTaskActive={sendingDisabled}
+						// kilocode_change end
 					/>
 
 					{hasSystemPromptOverride && (

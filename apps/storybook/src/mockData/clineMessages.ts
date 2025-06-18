@@ -498,66 +498,197 @@ export const createQuickTaskMessages = (): ClineMessage[] => [
 
 /**
  * Create mock messages for testing different message types
- * Useful for testing UI components that need to handle various message types
+ * Includes examples of all message types supported by the timeline registry
  */
 export const createMessageTypeVarietyMessages = (): ClineMessage[] => {
 	let currentTime = BASE_TIMESTAMP
 	const messages: ClineMessage[] = []
 
-	// Different message types with varied content lengths and timing
-	const messageVariations = [
-		{ type: "ask", ask: "command", text: "Short command", timing: [1000, 3000] },
+	// Helper to add message with timing
+	const addMessage = (message: Omit<ClineMessage, "ts">, timingRange: [number, number] = [1000, 3000]) => {
+		messages.push({ ...message, ts: currentTime })
+		currentTime += randomInterval(timingRange[0], timingRange[1])
+	}
+
+	// All supported ASK message types from registry
+	addMessage(
 		{
-			type: "say",
-			say: "text",
-			text: "This is a medium length response that provides some context and explanation about what's happening in the current task.",
-			timing: [3000, 8000],
+			type: "ask",
+			ask: "command",
+			text: "Create a new React component with TypeScript support",
 		},
+		[0, 0],
+	) // First message has no delay
+
+	addMessage(
+		{
+			type: "ask",
+			ask: "followup",
+			text: "Please review the implementation and provide feedback",
+		},
+		[2000, 4000],
+	)
+
+	addMessage(
+		{
+			type: "ask",
+			ask: "followup",
+			text: "Would you like me to add error handling to this component?",
+		},
+		[1000, 2000],
+	)
+
+	addMessage(
 		{
 			type: "ask",
 			ask: "tool",
 			text: JSON.stringify({
 				tool: "read_file",
-				path: "very/long/path/to/some/file/that/demonstrates/how/tool/calls/can/have/varying/lengths.ts",
+				path: "src/components/UserProfile.tsx",
 			}),
-			timing: [1000, 3000],
 		},
-		{ type: "say", say: "command_output", text: "Success", timing: [500, 1500] },
-		{ type: "say", say: "checkpoint_saved", text: "Checkpoint saved", timing: [200, 600] },
+		[1000, 3000],
+	)
+
+	addMessage(
 		{
-			type: "say",
-			say: "error",
-			text: "Error: This is a longer error message that explains what went wrong and provides some context about the failure that occurred during the operation.",
-			timing: [800, 2000],
+			type: "ask",
+			ask: "tool",
+			text: JSON.stringify({
+				tool: "write_to_file",
+				path: "src/components/NewComponent.tsx",
+				content: "export const NewComponent = () => <div>Hello World</div>",
+			}),
 		},
+		[2000, 4000],
+	)
+
+	addMessage(
+		{
+			type: "ask",
+			ask: "browser_action_launch",
+			text: "Launching browser to test the component",
+		},
+		[1000, 2000],
+	)
+
+	addMessage(
+		{
+			type: "ask",
+			ask: "use_mcp_server",
+			text: "Using MCP server to fetch additional data",
+		},
+		[1500, 3000],
+	)
+
+	addMessage(
+		{
+			type: "ask",
+			ask: "completion_result",
+			text: "Task completed successfully! Created a new React component with proper TypeScript typing and error handling.",
+		},
+		[3000, 5000],
+	)
+
+	// All supported SAY message types from registry
+	addMessage(
 		{
 			type: "say",
 			say: "text",
-			text: "Very long explanation that goes into great detail about the implementation, covering multiple aspects of the solution including architecture decisions, performance considerations, security implications, and future maintenance requirements. This type of message demonstrates how the timeline handles content with significant length differences.",
-			timing: [10000, 20000],
+			text: "I'll help you create a new React component. Let me analyze the requirements first.",
 		},
-	]
+		[2000, 4000],
+	)
 
-	messageVariations.forEach((variation, index) => {
-		if (index === 0) {
-			messages.push({
-				ts: currentTime,
-				type: variation.type as "ask" | "say",
-				...(variation.ask && { ask: variation.ask as any }),
-				...(variation.say && { say: variation.say as any }),
-				text: variation.text,
-			})
-		} else {
-			currentTime += randomInterval(variation.timing[0], variation.timing[1])
-			messages.push({
-				ts: currentTime,
-				type: variation.type as "ask" | "say",
-				...(variation.ask && { ask: variation.ask as any }),
-				...(variation.say && { say: variation.say as any }),
-				text: variation.text,
-			})
-		}
-	})
+	addMessage(
+		{
+			type: "say",
+			say: "reasoning",
+			text: "Based on the project structure, I should use functional components with hooks for better performance and maintainability.",
+		},
+		[3000, 6000],
+	)
+
+	addMessage(
+		{
+			type: "say",
+			say: "command_output",
+			text: "File created successfully: src/components/NewComponent.tsx",
+		},
+		[500, 1500],
+	)
+
+	addMessage(
+		{
+			type: "say",
+			say: "mcp_server_response",
+			text: "MCP server returned user data successfully",
+		},
+		[1000, 2000],
+	)
+
+	addMessage(
+		{
+			type: "say",
+			say: "browser_action",
+			text: "Clicking on the submit button to test form functionality",
+		},
+		[800, 1500],
+	)
+
+	addMessage(
+		{
+			type: "say",
+			say: "browser_action_result",
+			text: "Button click successful - form submitted correctly",
+		},
+		[500, 1000],
+	)
+
+	addMessage(
+		{
+			type: "say",
+			say: "checkpoint_saved",
+			text: "Checkpoint saved after component creation",
+		},
+		[200, 600],
+	)
+
+	addMessage(
+		{
+			type: "say",
+			say: "completion_result",
+			text: "All components have been successfully created and tested",
+		},
+		[2000, 4000],
+	)
+
+	addMessage(
+		{
+			type: "say",
+			say: "error",
+			text: "Error: TypeScript compilation failed. Missing import statement for React.",
+		},
+		[800, 2000],
+	)
+
+	addMessage(
+		{
+			type: "say",
+			say: "condense_context",
+			text: "Condensing conversation to save context space",
+		},
+		[1000, 2000],
+	)
+
+	addMessage(
+		{
+			type: "say",
+			say: "text",
+			text: "Context condensed - removed redundant information while preserving key details",
+		},
+		[1500, 3000],
+	)
 
 	return messages
 }

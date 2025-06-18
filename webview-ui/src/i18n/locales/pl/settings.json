@@ -610,5 +610,11 @@
 	"labels": {
 		"customArn": "Niestandardowy ARN",
 		"useCustomArn": "Użyj niestandardowego ARN..."
+	},
+	"display": {
+		"taskTimeline": {
+			"label": "Pokaż oś czasu zadania",
+			"description": "Wyświetlaj wizualną oś czasu wiadomości zadania, oznaczoną kolorami według typu, co pozwala na szybki przegląd postępu zadania i przewijanie do określonych punktów w historii zadania."
+		}
 	}
 }

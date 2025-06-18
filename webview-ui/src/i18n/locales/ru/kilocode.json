@@ -75,5 +75,28 @@
 			"newWorkflowFile": "Новый файл рабочего процесса...",
 			"newRuleFile": "Новый файл правила..."
 		}
+	},
+	"taskTimeline": {
+		"tooltip": {
+			"messageTypes": {
+				"browser_action_launch": "запуск браузера",
+				"browser_action_result": "результат действия в браузере",
+				"browser_action": "действие в браузере",
+				"command": "выполнение команды",
+				"command_output": "вывод команды",
+				"checkpoint_saved": "контрольная точка сохранена",
+				"error": "сообщение об ошибке",
+				"completion_result": "результат завершения",
+				"condense_context": "сжать контекст",
+				"followup": "дополнительный вопрос",
+				"mcp_server_response": "Ответ сервера MCP",
+				"tool": "использование инструмента",
+				"reasoning": "ИИ рассуждение",
+				"text": "Ответ ИИ",
+				"use_mcp_server": "Использование сервера MCP",
+				"unknown": "неизвестный тип сообщения"
+			},
+			"clickToScroll": "Посмотреть {{messageType}} (#{{messageNumber}})"
+		}
 	}
 }
