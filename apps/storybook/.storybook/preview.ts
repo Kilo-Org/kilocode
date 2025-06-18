@@ -1,11 +1,17 @@
 import type { Preview } from "@storybook/react"
-import { withTheme } from "./decorators"
+import isChromatic from "chromatic/isChromatic"
+
+import { withExtensionState } from "../src/decorators/withExtensionState"
+import { withQueryClient } from "../src/decorators/withQueryClient"
+import { withTheme } from "../src/decorators/withTheme"
+import { withI18n } from "../src/decorators/withI18n"
 import { withChromaticDecorator } from "./ChromaticDecorator"
 
 import "./storybook.css"
 
 const preview: Preview = {
 	parameters: {
+		layout: isChromatic() ? "fullscreen" : "padded",
 		controls: {
 			matchers: {
 				color: /(background|color)$/i,
@@ -26,7 +32,6 @@ const preview: Preview = {
 			],
 		},
 	},
-
 	globalTypes: {
 		theme: {
 			description: "Global Theme",
@@ -39,7 +44,7 @@ const preview: Preview = {
 			},
 		},
 	},
-	decorators: [withTheme, withChromaticDecorator],
+	decorators: [withQueryClient, withExtensionState, withTheme, withI18n, withChromaticDecorator],
 }
 
 export default preview

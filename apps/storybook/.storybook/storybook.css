@@ -9,7 +9,9 @@
 
 /* Theme support - defaults to dark */
 :root {
-	@import "../generated-theme-styles/dark-modern.css";
+	[data-theme="dark"] {
+		@import "../generated-theme-styles/dark-modern.css";
+	}
 
 	[data-theme="light"] {
 		@import "../generated-theme-styles/light-modern.css";
