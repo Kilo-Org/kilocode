@@ -92,8 +92,8 @@ describe("calculateTaskTimelineSizes", () => {
 		const messages = [messageWithReasoning]
 		const result = calculateTaskTimelineSizes(messages)
 
-		// Should include text + reasoning + images (2 * 50)
-		const expectedLength = "Main text".length + "Some reasoning".length + 2 * 50
+		// Should include text + reasoning + images (2 * 100)
+		const expectedLength = "Main text".length + "Some reasoning".length + 2 * 100
 		expect(result[0].contentLength).toBe(expectedLength)
 	})
 
