@@ -1,160 +1,26 @@
 import type { Decorator } from "@storybook/react"
-import {
-	ExtensionStateContext,
-	ExtensionStateContextType,
-} from "../../../../webview-ui/src/context/ExtensionStateContext"
-import { defaultModeSlug, defaultPrompts } from "../../../../src/shared/modes"
-import { experimentDefault } from "../../../../src/shared/experiments"
+import { ExtensionStateContext } from "../../../../webview-ui/src/context/ExtensionStateContext"
+import { createExtensionStateMock } from "../utils/createExtensionStateMock"
 
-// Mock ExtensionState for Storybook
-const mockExtensionState: ExtensionStateContextType = {
-	version: "1.0.0",
-	clineMessages: [],
-	taskHistory: [],
-	shouldShowAnnouncement: false,
-	allowedCommands: [],
-	soundEnabled: false,
-	soundVolume: 0.5,
-	ttsEnabled: false,
-	ttsSpeed: 1.0,
-	diffEnabled: false,
-	enableCheckpoints: true,
-	fuzzyMatchThreshold: 1.0,
-	language: "en",
-	writeDelayMs: 1000,
-	browserViewportSize: "900x600",
-	screenshotQuality: 75,
-	terminalOutputLineLimit: 500,
-	terminalShellIntegrationTimeout: 4000,
-	mcpEnabled: true,
-	enableMcpServerCreation: true,
-	alwaysApproveResubmit: false,
-	alwaysAllowWrite: true,
-	alwaysAllowReadOnly: true,
-	requestDelaySeconds: 5,
-	currentApiConfigName: "default",
-	listApiConfigMeta: [],
-	mode: defaultModeSlug,
-	customModePrompts: defaultPrompts,
-	customSupportPrompts: {},
-	experiments: experimentDefault,
-	enhancementApiConfigId: "",
-	commitMessageApiConfigId: "",
-	condensingApiConfigId: "",
-	customCondensingPrompt: "",
-	autoApprovalEnabled: true,
-	customModes: [],
-	maxOpenTabsContext: 20,
-	maxWorkspaceFiles: 200,
-	cwd: "",
-	browserToolEnabled: true,
-	showRooIgnoredFiles: true,
-	showAutoApproveMenu: false,
-	renderContext: "sidebar",
-	maxReadFileLine: -1,
-	pinnedApiConfigs: {},
-	terminalZshOhMy: false,
-	maxConcurrentFileReads: 15,
-	terminalZshP10k: false,
-	terminalZdotdir: false,
-	terminalCompressProgressBar: true,
-	historyPreviewCollapsed: false,
-	showTaskTimeline: true,
-	cloudUserInfo: null,
-	cloudIsAuthenticated: false,
-	sharingEnabled: false,
-	organizationAllowList: { allowAll: true, providers: {} },
-	autoCondenseContext: true,
-	autoCondenseContextPercent: 100,
-	codebaseIndexConfig: {
-		codebaseIndexEnabled: false,
-		codebaseIndexQdrantUrl: "http://localhost:6333",
-		codebaseIndexEmbedderProvider: "openai",
-		codebaseIndexEmbedderBaseUrl: "",
-		codebaseIndexEmbedderModelId: "",
-	},
-	codebaseIndexModels: { ollama: {}, openai: {} },
-	didHydrateState: true,
-	showWelcome: false,
-	theme: {},
-	mcpServers: [],
-	mcpMarketplaceCatalog: { items: [] },
-	hasSystemPromptOverride: false,
-	currentCheckpoint: undefined,
-	filePaths: [],
-	openedTabs: [],
-	globalRules: {},
-	localRules: {},
-	globalWorkflows: {},
-	localWorkflows: {},
-	machineId: "storybook-mock",
-	routerModels: undefined,
-	// Mock setter functions
-	setCondensingApiConfigId: () => {},
-	setCustomCondensingPrompt: () => {},
-	setApiConfiguration: () => {},
-	setCustomInstructions: () => {},
-	setAlwaysAllowReadOnly: () => {},
-	setAlwaysAllowReadOnlyOutsideWorkspace: () => {},
-	setAlwaysAllowWrite: () => {},
-	setAlwaysAllowWriteOutsideWorkspace: () => {},
-	setAlwaysAllowExecute: () => {},
-	setAlwaysAllowBrowser: () => {},
-	setAlwaysAllowMcp: () => {},
-	setAlwaysAllowModeSwitch: () => {},
-	setAlwaysAllowSubtasks: () => {},
-	setBrowserToolEnabled: () => {},
-	setShowRooIgnoredFiles: () => {},
-	setShowAutoApproveMenu: () => {},
-	setShowAnnouncement: () => {},
-	setAllowedCommands: () => {},
-	setAllowedMaxRequests: () => {},
-	setSoundEnabled: () => {},
-	setSoundVolume: () => {},
-	setTerminalShellIntegrationTimeout: () => {},
-	setTerminalShellIntegrationDisabled: () => {},
-	setTerminalZdotdir: () => {},
-	setTtsEnabled: () => {},
-	setTtsSpeed: () => {},
-	setDiffEnabled: () => {},
-	setEnableCheckpoints: () => {},
-	setBrowserViewportSize: () => {},
-	setFuzzyMatchThreshold: () => {},
-	setWriteDelayMs: () => {},
-	setScreenshotQuality: () => {},
-	setTerminalOutputLineLimit: () => {},
-	setMcpEnabled: () => {},
-	setEnableMcpServerCreation: () => {},
-	setAlwaysApproveResubmit: () => {},
-	setRequestDelaySeconds: () => {},
-	setCurrentApiConfigName: () => {},
-	setListApiConfigMeta: () => {},
-	setMode: () => {},
-	setCustomModePrompts: () => {},
-	setCustomSupportPrompts: () => {},
-	setEnhancementApiConfigId: () => {},
-	setCommitMessageApiConfigId: () => {},
-	setExperimentEnabled: () => {},
-	setAutoApprovalEnabled: () => {},
-	setCustomModes: () => {},
-	setMaxOpenTabsContext: () => {},
-	setMaxWorkspaceFiles: () => {},
-	setRemoteBrowserEnabled: () => {},
-	setAwsUsePromptCache: () => {},
-	setMaxReadFileLine: () => {},
-	setPinnedApiConfigs: () => {},
-	togglePinnedApiConfig: () => {},
-	setTerminalCompressProgressBar: () => {},
-	setHistoryPreviewCollapsed: () => {},
-	setShowTaskTimeline: () => {},
-	setAutoCondenseContext: () => {},
-	setAutoCondenseContextPercent: () => {},
-}
+const mockExtensionState = createExtensionStateMock()
 
 // Decorator to provide ExtensionStateContext for all stories
-export const withExtensionState: Decorator = (Story) => {
+//
+// To override specific properties in a story, use the parameters:
+// export const MyStory = {
+//   parameters: {
+//     extensionState: {
+//       showTaskTimeline: false,
+//       clineMessages: [/* custom messages */]
+//     }
+//   }
+// }
+export const withExtensionState: Decorator = (Story, context) => {
+	const storyOverrides = context.parameters?.extensionState || {}
+	const contextValue = { ...mockExtensionState, ...storyOverrides }
+
 	return (
-		<ExtensionStateContext.Provider value={mockExtensionState}>
+		<ExtensionStateContext.Provider value={contextValue}>
 			<Story />
 		</ExtensionStateContext.Provider>
 	)
