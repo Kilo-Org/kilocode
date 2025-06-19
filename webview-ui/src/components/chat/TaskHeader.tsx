@@ -19,7 +19,7 @@ import Thumbnails from "../common/Thumbnails"
 
 import { TaskActions } from "./TaskActions"
 import { ContextWindowProgress } from "./ContextWindowProgress"
-import { TaskTimelineProps } from "./TaskTimeline"
+import { TaskTimeline } from "./TaskTimeline"
 import { mentionRegexGlobal } from "@roo/context-mentions"
 
 import { vscode } from "@/utils/vscode" // kilocode_change: pull slash commands from Cline
@@ -39,7 +39,6 @@ export interface TaskHeaderProps {
 	// kilocode_change start
 	groupedMessages: (ClineMessage | ClineMessage[])[]
 	onMessageClick?: (index: number) => void
-	currentMessageIndex?: number
 	isTaskActive?: boolean
 	// kilocode_change end
 }
@@ -59,7 +58,6 @@ const TaskHeader = ({
 	// kilocode_change start
 	groupedMessages,
 	onMessageClick,
-	currentMessageIndex,
 	isTaskActive = false,
 	// kilocode_change end
 }: TaskHeaderProps) => {
@@ -129,7 +127,6 @@ const TaskHeader = ({
 							<TaskTimeline
 								groupedMessages={groupedMessages}
 								onMessageClick={onMessageClick}
-								currentMessageIndex={currentMessageIndex}
 								isTaskActive={isTaskActive}
 							/>
 						)}
@@ -175,7 +172,6 @@ const TaskHeader = ({
 							<TaskTimeline
 								groupedMessages={groupedMessages}
 								onMessageClick={onMessageClick}
-								currentMessageIndex={currentMessageIndex}
 								isTaskActive={isTaskActive}
 							/>
 						)}

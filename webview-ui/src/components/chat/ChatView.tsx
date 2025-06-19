@@ -1417,7 +1417,6 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						// kilocode_change start
 						groupedMessages={groupedMessages}
 						onMessageClick={handleMessageClick}
-						currentMessageIndex={groupedMessages.length - 1}
 						isTaskActive={sendingDisabled}
 						// kilocode_change end
 					/>
