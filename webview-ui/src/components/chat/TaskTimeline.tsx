@@ -30,27 +30,24 @@ export const TaskTimeline = memo<TaskTimelineProps>(({ groupedMessages, onMessag
 		[timelineMessagesData, activeIndex, onMessageClick],
 	)
 
-	// Auto-scroll to show the latest message when new messages are added
+	// Auto-scroll to show the latest message when
+	// new messages are added or on initial mount
 	useEffect(() => {
 		const currentLength = groupedMessages.length
 		const previousLength = previousGroupedLengthRef.current
+		const hasNewMessages = currentLength > previousLength
+		const isInitialMount = previousLength === 0 && currentLength > 0
 
-		// Only scroll if we actually have new messages and timeline data is ready
-		if (currentLength > previousLength && timelineMessagesData.length > 0) {
+		// Scroll to end if we have timeline data and either:
+		// 1. New messages were added, or 2. This is the initial mount with data
+		if (timelineMessagesData.length > 0 && (hasNewMessages || isInitialMount)) {
 			const targetIndex = timelineMessagesData.length - 1
-			virtuosoRef.current?.scrollToIndex({ index: targetIndex, align: "end", behavior: "smooth" })
+			const behavior = isInitialMount ? "auto" : "smooth"
+			virtuosoRef.current?.scrollToIndex({ index: targetIndex, align: "end", behavior })
 		}
 
 		previousGroupedLengthRef.current = currentLength
 	}, [groupedMessages.length, timelineMessagesData.length])
-
-	// Initial scroll to end when component first mounts with data
-	useEffect(() => {
-		if (timelineMessagesData.length > 0 && previousGroupedLengthRef.current === groupedMessages.length) {
-			const targetIndex = timelineMessagesData.length - 1
-			virtuosoRef.current?.scrollToIndex({ index: targetIndex, align: "end", behavior: "auto" })
-		}
-	}, [groupedMessages.length, timelineMessagesData.length]) // Only run when timeline data is first available
 
 	return (
 		<div className="w-full px-2">

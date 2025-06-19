@@ -122,7 +122,7 @@ const TaskHeader = ({
 				{/* Collapsed state: Track context and cost if we have any */}
 				{!isTaskExpanded && contextWindow > 0 && (
 					// kilocode_change start
-					<div className={`w-full flex flex-col h-auto`}>
+					<div className={`w-full flex flex-col gap-1 h-auto`}>
 						{showTaskTimeline && (
 							<TaskTimeline
 								groupedMessages={groupedMessages}
