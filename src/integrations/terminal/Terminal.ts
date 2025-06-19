@@ -6,7 +6,7 @@ import { BaseTerminal } from "./BaseTerminal"
 import { TerminalProcess } from "./TerminalProcess"
 import { ShellIntegrationManager } from "./ShellIntegrationManager"
 import { mergePromise } from "./mergePromise"
-import { getWorkspacePath } from "../../utils/path"
+import { getWorkspacePath } from "../../utils/path" // kilocode_change
 
 export class Terminal extends BaseTerminal {
 	public terminal: vscode.Terminal
