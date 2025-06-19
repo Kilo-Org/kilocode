@@ -50,6 +50,7 @@ jobs:
               with:
                   # Project token is now public in package.json for open source contributions
                   projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+                  storybookBaseDir: apps/storybook/
                   storybookBuildDir: apps/storybook/storybook-static
                   onlyChanged: true
                   exitOnceUploaded: ${{ github.event_name == 'pull_request' }}
