@@ -5,10 +5,10 @@
 	"scripts": {
 		"generate-theme-styles": "node scripts/generate-vscode-themes.js",
 		"storybook": "storybook dev -p 6006",
-		"build-storybook": "storybook build",
+		"build-storybook": "storybook build --webpack-stats-json",
 		"preview": "storybook preview",
 		"test": "test-storybook",
-		"chromatic": "chromatic --project-token=chpt_f6ec377cea9b457 --exit-zero-on-changes",
+		"chromatic": "chromatic --exit-zero-on-changes --storybook-base-dir=apps/storybook",
 		"clean": "rimraf storybook-static .turbo"
 	},
 	"dependencies": {
