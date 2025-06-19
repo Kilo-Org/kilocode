@@ -83,6 +83,10 @@
 			"outsideWorkspace": {
 				"label": "Bao gồm các tệp ngoài không gian làm việc",
 				"description": "Cho phép Kilo Code tạo và chỉnh sửa các tệp bên ngoài không gian làm việc hiện tại mà không yêu cầu phê duyệt."
+			},
+			"protected": {
+				"label": "Bao gồm các tệp được bảo vệ",
+				"description": "Cho phép Kilo Code tạo và chỉnh sửa các tệp được bảo vệ (như .kilocodeignore và các tệp cấu hình .kilocode/) mà không yêu cầu phê duyệt."
 			}
 		},
 		"browser": {
@@ -501,9 +505,17 @@
 			"name": "Bật đọc tệp đồng thời",
 			"description": "Khi bật, Kilo Code có thể đọc nhiều tệp trong một yêu cầu duy nhất. Khi tắt, Kilo Code phải đọc từng tệp một. Việc tắt có thể hữu ích khi làm việc với các mô hình ít khả năng hơn hoặc khi bạn muốn kiểm soát nhiều hơn quyền truy cập tệp."
 		},
+		"MARKETPLACE": {
+			"name": "Bật Marketplace",
+			"description": "Khi được bật, bạn có thể cài đặt MCP và chế độ tùy chỉnh từ Marketplace."
+		},
 		"DISABLE_COMPLETION_COMMAND": {
 			"name": "Tắt thực thi lệnh trong attempt_completion",
 			"description": "Khi được bật, công cụ attempt_completion sẽ không thực thi lệnh. Đây là một tính năng thử nghiệm để chuẩn bị cho việc ngừng hỗ trợ thực thi lệnh khi hoàn thành tác vụ trong tương lai."
+		},
+		"MULTI_FILE_APPLY_DIFF": {
+			"name": "Bật chỉnh sửa tệp đồng thời",
+			"description": "Khi được bật, Kilo Code có thể chỉnh sửa nhiều tệp trong một yêu cầu duy nhất. Khi bị tắt, Kilo Code phải chỉnh sửa từng tệp một. Tắt tính năng này có thể hữu ích khi làm việc với các mô hình kém khả năng hơn hoặc khi bạn muốn kiểm soát nhiều hơn đối với các thay đổi tệp."
 		}
 	},
 	"promptCaching": {

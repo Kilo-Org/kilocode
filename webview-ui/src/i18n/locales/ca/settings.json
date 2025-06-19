@@ -83,6 +83,10 @@
 			"outsideWorkspace": {
 				"label": "Incloure fitxers fora de l'espai de treball",
 				"description": "Permetre a Kilo Code crear i editar fitxers fora de l'espai de treball actual sense requerir aprovació."
+			},
+			"protected": {
+				"label": "Incloure fitxers protegits",
+				"description": "Permetre a Kilo Code crear i editar fitxers protegits (com .kilocodeignore i fitxers de configuració .kilocode/) sense requerir aprovació."
 			}
 		},
 		"browser": {
@@ -501,9 +505,17 @@
 			"name": "Habilitar lectura concurrent de fitxers",
 			"description": "Quan està habilitat, Kilo Code pot llegir múltiples fitxers en una sola sol·licitud. Quan està deshabilitat, Kilo Code ha de llegir fitxers un per un. Deshabilitar-ho pot ajudar quan es treballa amb models menys capaços o quan voleu més control sobre l'accés als fitxers."
 		},
+		"MARKETPLACE": {
+			"name": "Habilitar Marketplace",
+			"description": "Quan està habilitat, pots instal·lar MCP i modes personalitzats del Marketplace."
+		},
 		"DISABLE_COMPLETION_COMMAND": {
 			"name": "Desactivar l'execució de comandes a attempt_completion",
 			"description": "Quan està activat, l'eina attempt_completion no executarà comandes. Aquesta és una característica experimental per preparar la futura eliminació de l'execució de comandes en la finalització de tasques."
+		},
+		"MULTI_FILE_APPLY_DIFF": {
+			"name": "Habilita edicions de fitxers concurrents",
+			"description": "Quan està activat, Kilo Code pot editar múltiples fitxers en una sola petició. Quan està desactivat, Kilo Code ha d'editar fitxers d'un en un. Desactivar això pot ajudar quan es treballa amb models menys capaços o quan vols més control sobre les modificacions de fitxers."
 		}
 	},
 	"promptCaching": {

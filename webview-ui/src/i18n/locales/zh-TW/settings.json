@@ -83,6 +83,10 @@
 			"outsideWorkspace": {
 				"label": "包含工作區外的檔案",
 				"description": "允許 Kilo Code 在目前工作區外建立和編輯檔案，無需核准。"
+			},
+			"protected": {
+				"label": "包含受保護的檔案",
+				"description": "允許 Kilo Code 建立和編輯受保護的檔案（如 .kilocodeignore 和 .kilocode/ 設定檔），無需核准。"
 			}
 		},
 		"browser": {
@@ -501,9 +505,17 @@
 			"name": "啟用並行檔案讀取",
 			"description": "啟用後，Kilo Code 可以在單一請求中讀取多個檔案（最多 15 個檔案）。停用後，Kilo Code 必須逐一讀取檔案。在使用能力較弱的模型或希望對檔案存取有更多控制時，停用此功能可能會有所幫助。"
 		},
+		"MARKETPLACE": {
+			"name": "啟用 Marketplace",
+			"description": "啟用後，您可以從 Marketplace 安裝 MCP 和自訂模式。"
+		},
 		"DISABLE_COMPLETION_COMMAND": {
 			"name": "停用 attempt_completion 中的指令執行",
 			"description": "啟用後，attempt_completion 工具將不會執行指令。這是一項實驗性功能，旨在為未來停用工作完成時的指令執行做準備。"
+		},
+		"MULTI_FILE_APPLY_DIFF": {
+			"name": "啟用並行檔案編輯",
+			"description": "啟用後 Kilo Code 可在單個請求中編輯多個檔案。停用後 Kilo Code 必須逐個編輯檔案。停用此功能有助於使用能力較弱的模型或需要更精確控制檔案修改時。"
 		}
 	},
 	"promptCaching": {

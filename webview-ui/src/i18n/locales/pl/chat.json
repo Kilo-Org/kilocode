@@ -151,6 +151,7 @@
 		"didRead": "Kilo Code przeczytał ten plik:",
 		"wantsToEdit": "Kilo Code chce edytować ten plik:",
 		"wantsToEditOutsideWorkspace": "Kilo Code chce edytować ten plik poza obszarem roboczym:",
+		"wantsToEditProtected": "Kilo Code chce edytować chroniony plik konfiguracyjny:",
 		"wantsToCreate": "Kilo Code chce utworzyć nowy plik:",
 		"wantsToSearchReplace": "Kilo Code chce wykonać wyszukiwanie i zamianę w tym pliku:",
 		"didSearchReplace": "Kilo Code wykonał wyszukiwanie i zamianę w tym pliku:",
@@ -158,7 +159,8 @@
 		"wantsToInsertWithLineNumber": "Kilo Code chce wstawić zawartość do tego pliku w linii {{lineNumber}}:",
 		"wantsToInsertAtEnd": "Kilo Code chce dodać zawartość na końcu tego pliku:",
 		"wantsToReadAndXMore": "Kilo Code chce przeczytać ten plik i {{count}} więcej:",
-		"wantsToReadMultiple": "Kilo Code chce odczytać wiele plików:"
+		"wantsToReadMultiple": "Kilo Code chce odczytać wiele plików:",
+		"wantsToApplyBatchChanges": "Kilo Code chce zastosować zmiany do wielu plików:"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code chce zobaczyć pliki najwyższego poziomu w tym katalogu:",
@@ -168,7 +170,15 @@
 		"wantsToViewDefinitions": "Kilo Code chce zobaczyć nazwy definicji kodu źródłowego używane w tym katalogu:",
 		"didViewDefinitions": "Kilo Code zobaczył nazwy definicji kodu źródłowego używane w tym katalogu:",
 		"wantsToSearch": "Kilo Code chce przeszukać ten katalog w poszukiwaniu <code>{{regex}}</code>:",
-		"didSearch": "Kilo Code przeszukał ten katalog w poszukiwaniu <code>{{regex}}</code>:"
+		"didSearch": "Kilo Code przeszukał ten katalog w poszukiwaniu <code>{{regex}}</code>:",
+		"wantsToSearchOutsideWorkspace": "Kilo Code chce przeszukać ten katalog (poza obszarem roboczym) w poszukiwaniu <code>{{regex}}</code>:",
+		"didSearchOutsideWorkspace": "Kilo Code przeszukał ten katalog (poza obszarem roboczym) w poszukiwaniu <code>{{regex}}</code>:",
+		"wantsToViewTopLevelOutsideWorkspace": "Kilo Code chce zobaczyć pliki najwyższego poziomu w tym katalogu (poza obszarem roboczym):",
+		"didViewTopLevelOutsideWorkspace": "Kilo Code zobaczył pliki najwyższego poziomu w tym katalogu (poza obszarem roboczym):",
+		"wantsToViewRecursiveOutsideWorkspace": "Kilo Code chce rekurencyjnie zobaczyć wszystkie pliki w tym katalogu (poza obszarem roboczym):",
+		"didViewRecursiveOutsideWorkspace": "Kilo Code rekurencyjnie zobaczył wszystkie pliki w tym katalogu (poza obszarem roboczym):",
+		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code chce zobaczyć nazwy definicji kodu źródłowego używane w tym katalogu (poza obszarem roboczym):",
+		"didViewDefinitionsOutsideWorkspace": "Kilo Code zobaczył nazwy definicji kodu źródłowego używane w tym katalogu (poza obszarem roboczym):"
 	},
 	"commandOutput": "Wyjście polecenia",
 	"response": "Odpowiedź",
@@ -221,9 +231,9 @@
 		"title": "🎉 Roo Code {{version}} wydany",
 		"description": "Roo Code {{version}} przynosi potężne nowe funkcje i ulepszenia na podstawie Twoich opinii.",
 		"whatsNew": "Co nowego",
-		"feature1": "<bold>Inteligentne Kondensowanie Kontekstu Włączone Domyślnie</bold>: Kondensowanie kontekstu jest teraz włączone domyślnie z konfigurowalnymi ustawieniami określającymi kiedy następuje automatyczne kondensowanie",
-		"feature2": "<bold>Przycisk Ręcznego Kondensowania</bold>: Nowy przycisk w nagłówku zadania pozwala ręcznie uruchomić kondensowanie kontekstu w dowolnym momencie",
-		"feature3": "<bold>Ulepszone Ustawienia Kondensowania</bold>: Dostosuj kiedy i jak następuje automatyczne kondensowanie poprzez <contextSettingsLink>Ustawienia Kontekstu</contextSettingsLink>",
+		"feature1": "<bold>Eksperymentalny Marketplace</bold>: Odkryj i instaluj tryby oraz MCP z nowego marketplace (włącz w <experimentalSettingsLink>Ustawieniach Eksperymentalnych</experimentalSettingsLink>)",
+		"feature2": "<bold>Ulepszone Operacje na Plikach</bold>: Eksperymentalne operacje wielowątkowego zapisu plików, a odczyt współbieżny jest teraz dostępny w <contextSettingsLink>Ustawieniach Kontekstu</contextSettingsLink>",
+		"feature3": "<bold>Ulepszenia MCP i Więcej</bold>: Ulepszona obsługa MCP, kontrola Mermaid, wsparcie dla Amazon Bedrock thinking i więcej!",
 		"hideButton": "Ukryj ogłoszenie",
 		"detailsDiscussLinks": "Uzyskaj więcej szczegółów i dołącz do dyskusji na <discordLink>Discord</discordLink> i <redditLink>Reddit</redditLink> 🚀"
 	},
@@ -284,5 +294,12 @@
 		"deny": {
 			"title": "Odrzuć wszystko"
 		}
+	},
+	"indexingStatus": {
+		"ready": "Indeks gotowy",
+		"indexing": "Indeksowanie {{percentage}}%",
+		"indexed": "Zaindeksowane",
+		"error": "Błąd indeksu",
+		"status": "Status indeksu"
 	}
 }

@@ -151,6 +151,7 @@
 		"didRead": "Kilo Code leyó este archivo:",
 		"wantsToEdit": "Kilo Code quiere editar este archivo:",
 		"wantsToEditOutsideWorkspace": "Kilo Code quiere editar este archivo fuera del espacio de trabajo:",
+		"wantsToEditProtected": "Kilo Code quiere editar un archivo de configuración protegido:",
 		"wantsToCreate": "Kilo Code quiere crear un nuevo archivo:",
 		"wantsToSearchReplace": "Kilo Code quiere realizar búsqueda y reemplazo en este archivo:",
 		"didSearchReplace": "Kilo Code realizó búsqueda y reemplazo en este archivo:",
@@ -158,7 +159,8 @@
 		"wantsToInsertWithLineNumber": "Kilo Code quiere insertar contenido en este archivo en la línea {{lineNumber}}:",
 		"wantsToInsertAtEnd": "Kilo Code quiere añadir contenido al final de este archivo:",
 		"wantsToReadAndXMore": "Kilo Code quiere leer este archivo y {{count}} más:",
-		"wantsToReadMultiple": "Kilo Code quiere leer varios archivos:"
+		"wantsToReadMultiple": "Kilo Code quiere leer varios archivos:",
+		"wantsToApplyBatchChanges": "Kilo Code quiere aplicar cambios a múltiples archivos:"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code quiere ver los archivos de nivel superior en este directorio:",
@@ -168,7 +170,15 @@
 		"wantsToViewDefinitions": "Kilo Code quiere ver nombres de definiciones de código fuente utilizados en este directorio:",
 		"didViewDefinitions": "Kilo Code vio nombres de definiciones de código fuente utilizados en este directorio:",
 		"wantsToSearch": "Kilo Code quiere buscar en este directorio <code>{{regex}}</code>:",
-		"didSearch": "Kilo Code buscó en este directorio <code>{{regex}}</code>:"
+		"didSearch": "Kilo Code buscó en este directorio <code>{{regex}}</code>:",
+		"wantsToSearchOutsideWorkspace": "Kilo Code quiere buscar en este directorio (fuera del espacio de trabajo) <code>{{regex}}</code>:",
+		"didSearchOutsideWorkspace": "Kilo Code buscó en este directorio (fuera del espacio de trabajo) <code>{{regex}}</code>:",
+		"wantsToViewTopLevelOutsideWorkspace": "Kilo Code quiere ver los archivos de nivel superior en este directorio (fuera del espacio de trabajo):",
+		"didViewTopLevelOutsideWorkspace": "Kilo Code vio los archivos de nivel superior en este directorio (fuera del espacio de trabajo):",
+		"wantsToViewRecursiveOutsideWorkspace": "Kilo Code quiere ver recursivamente todos los archivos en este directorio (fuera del espacio de trabajo):",
+		"didViewRecursiveOutsideWorkspace": "Kilo Code vio recursivamente todos los archivos en este directorio (fuera del espacio de trabajo):",
+		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code quiere ver nombres de definiciones de código fuente utilizados en este directorio (fuera del espacio de trabajo):",
+		"didViewDefinitionsOutsideWorkspace": "Kilo Code vio nombres de definiciones de código fuente utilizados en este directorio (fuera del espacio de trabajo):"
 	},
 	"commandOutput": "Salida del comando",
 	"response": "Respuesta",
@@ -221,9 +231,9 @@
 		"title": "🎉 Roo Code {{version}} publicado",
 		"description": "Roo Code {{version}} trae potentes nuevas funcionalidades y mejoras basadas en tus comentarios.",
 		"whatsNew": "Novedades",
-		"feature1": "<bold>Condensación Inteligente de Contexto Habilitada por Defecto</bold>: La condensación de contexto ahora está habilitada por defecto con configuraciones ajustables para cuando ocurre la condensación automática",
-		"feature2": "<bold>Botón de Condensación Manual</bold>: Nuevo botón en el encabezado de tareas te permite activar manualmente la condensación de contexto en cualquier momento",
-		"feature3": "<bold>Configuraciones de Condensación Mejoradas</bold>: Ajusta cuándo y cómo ocurre la condensación automática a través de la <contextSettingsLink>Configuración de Contexto</contextSettingsLink>",
+		"feature1": "<bold>Marketplace Experimental</bold>: Descubre e instala modos y MCPs desde el nuevo marketplace (habilitar en <experimentalSettingsLink>Configuración Experimental</experimentalSettingsLink>)",
+		"feature2": "<bold>Operaciones de Archivo Mejoradas</bold>: Múltiples escrituras concurrentes de archivos en configuración experimental, y lecturas concurrentes ahora en <contextSettingsLink>Configuración de Contexto</contextSettingsLink>",
+		"feature3": "<bold>Mejoras de MCP y más</bold>: Soporte MCP mejorado, controles Mermaid, soporte para Amazon Bedrock thinking, ¡y mucho más!",
 		"hideButton": "Ocultar anuncio",
 		"detailsDiscussLinks": "Obtén más detalles y participa en <discordLink>Discord</discordLink> y <redditLink>Reddit</redditLink> 🚀"
 	},
@@ -284,5 +294,12 @@
 		"deny": {
 			"title": "Denegar todo"
 		}
+	},
+	"indexingStatus": {
+		"ready": "Índice listo",
+		"indexing": "Indexando {{percentage}}%",
+		"indexed": "Indexado",
+		"error": "Error de índice",
+		"status": "Estado del índice"
 	}
 }

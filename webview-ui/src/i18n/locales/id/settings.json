@@ -83,6 +83,10 @@
 			"outsideWorkspace": {
 				"label": "Sertakan file di luar workspace",
 				"description": "Izinkan Kilo Code membuat dan mengedit file di luar workspace saat ini tanpa memerlukan persetujuan."
+			},
+			"protected": {
+				"label": "Sertakan file yang dilindungi",
+				"description": "Izinkan Kilo Code membuat dan mengedit file yang dilindungi (seperti .kilocodeignore dan file konfigurasi .kilocode/) tanpa memerlukan persetujuan."
 			}
 		},
 		"browser": {
@@ -516,15 +520,23 @@
 		},
 		"CONCURRENT_FILE_READS": {
 			"name": "Aktifkan pembacaan file bersamaan",
-			"description": "Ketika diaktifkan, Kilo Code dapat membaca beberapa file dalam satu permintaan (hingga 15 file). Ketika dinonaktifkan, Kilo Code harus membaca file satu per satu. Menonaktifkan ini dapat membantu saat bekerja dengan model yang kurang mampu atau ketika kamu ingin kontrol lebih terhadap akses file."
+			"description": "Ketika diaktifkan, Kilo Code dapat membaca beberapa file dalam satu permintaan. Ketika dinonaktifkan, Kilo Code harus membaca file satu per satu. Menonaktifkan ini dapat membantu saat bekerja dengan model yang kurang mampu atau ketika kamu ingin kontrol lebih terhadap akses file."
 		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Gunakan tool multi block diff eksperimental",
 			"description": "Ketika diaktifkan, Kilo Code akan menggunakan tool multi block diff. Ini akan mencoba memperbarui beberapa blok kode dalam file dalam satu permintaan."
 		},
+		"MARKETPLACE": {
+			"name": "Aktifkan Marketplace",
+			"description": "Ketika diaktifkan, kamu dapat menginstal MCP dan mode kustom dari Marketplace."
+		},
 		"DISABLE_COMPLETION_COMMAND": {
 			"name": "Nonaktifkan eksekusi perintah di attempt_completion",
 			"description": "Ketika diaktifkan, tool attempt_completion tidak akan mengeksekusi perintah. Ini adalah fitur eksperimental untuk mempersiapkan penghentian eksekusi perintah dalam penyelesaian tugas."
+		},
+		"MULTI_FILE_APPLY_DIFF": {
+			"name": "Aktifkan edit file bersamaan",
+			"description": "Ketika diaktifkan, Kilo Code dapat mengedit beberapa file dalam satu permintaan. Ketika dinonaktifkan, Kilo Code harus mengedit file satu per satu. Menonaktifkan ini dapat membantu saat bekerja dengan model yang kurang mampu atau ketika kamu ingin kontrol lebih terhadap modifikasi file."
 		}
 	},
 	"promptCaching": {
@@ -568,7 +580,7 @@
 	},
 	"footer": {
 		"feedback": "Jika kamu punya pertanyaan atau feedback, jangan ragu untuk membuka issue di <githubLink>github.com/Kilo-Org/kilocode</githubLink> atau bergabung <redditLink>reddit.com/r/kilocode</redditLink> atau <discordLink>kilocode.ai/discord</discordLink>",
-		"support": "Untuk pertanyaan keuangan, silakan hubungi Dukungan Pelanggan di <supportLink>hi@kilocode.ai</supportLink>",
+		"support": "Untuk pertanyaan keuangan, silakan hubungi Customer Support di <supportLink>hi@kilocode.ai</supportLink>",
 		"telemetry": {
 			"label": "Izinkan pelaporan error dan penggunaan anonim",
 			"description": "Bantu tingkatkan Kilo Code dengan mengirim data penggunaan anonim dan laporan error. Tidak ada kode, prompt, atau informasi pribadi yang pernah dikirim. Lihat kebijakan privasi kami untuk detail lebih lanjut."

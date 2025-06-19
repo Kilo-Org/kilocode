@@ -1,5 +1,5 @@
 {
-	"greeting": "Apa yang bisa Kilo Code lakukan untuk Anda?",
+	"greeting": "Selamat datang di Kilo Code",
 	"task": {
 		"title": "Tugas",
 		"seeMore": "Lihat lebih banyak",
@@ -162,6 +162,8 @@
 		"didRead": "Kilo Code membaca file ini:",
 		"wantsToEdit": "Kilo Code ingin mengedit file ini:",
 		"wantsToEditOutsideWorkspace": "Kilo Code ingin mengedit file ini di luar workspace:",
+		"wantsToEditProtected": "Kilo Code ingin mengedit file konfigurasi yang dilindungi:",
+		"wantsToApplyBatchChanges": "Kilo Code ingin menerapkan perubahan ke beberapa file:",
 		"wantsToCreate": "Kilo Code ingin membuat file baru:",
 		"wantsToSearchReplace": "Kilo Code ingin mencari dan mengganti di file ini:",
 		"didSearchReplace": "Kilo Code melakukan pencarian dan penggantian pada file ini:",
@@ -177,7 +179,15 @@
 		"wantsToViewDefinitions": "Kilo Code ingin melihat nama definisi source code yang digunakan di direktori ini:",
 		"didViewDefinitions": "Kilo Code melihat nama definisi source code yang digunakan di direktori ini:",
 		"wantsToSearch": "Kilo Code ingin mencari direktori ini untuk <code>{{regex}}</code>:",
-		"didSearch": "Kilo Code mencari direktori ini untuk <code>{{regex}}</code>:"
+		"didSearch": "Kilo Code mencari direktori ini untuk <code>{{regex}}</code>:",
+		"wantsToSearchOutsideWorkspace": "Kilo Code ingin mencari direktori ini (di luar workspace) untuk <code>{{regex}}</code>:",
+		"didSearchOutsideWorkspace": "Kilo Code mencari direktori ini (di luar workspace) untuk <code>{{regex}}</code>:",
+		"wantsToViewTopLevelOutsideWorkspace": "Kilo Code ingin melihat file tingkat atas di direktori ini (di luar workspace):",
+		"didViewTopLevelOutsideWorkspace": "Kilo Code melihat file tingkat atas di direktori ini (di luar workspace):",
+		"wantsToViewRecursiveOutsideWorkspace": "Kilo Code ingin melihat semua file secara rekursif di direktori ini (di luar workspace):",
+		"didViewRecursiveOutsideWorkspace": "Kilo Code melihat semua file secara rekursif di direktori ini (di luar workspace):",
+		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code ingin melihat nama definisi source code yang digunakan di direktori ini (di luar workspace):",
+		"didViewDefinitionsOutsideWorkspace": "Kilo Code melihat nama definisi source code yang digunakan di direktori ini (di luar workspace):"
 	},
 	"codebaseSearch": {
 		"wantsToSearch": "Kilo Code ingin mencari codebase untuk <code>{{query}}</code>:",
@@ -281,8 +291,15 @@
 	"ask": {
 		"autoApprovedRequestLimitReached": {
 			"title": "Batas Permintaan yang Disetujui Otomatis Tercapai",
-			"description": "Kilo Code telah mencapai batas {{count}} permintaan API yang disetujui otomatis. Apakah Anda ingin mengatur ulang hitungan dan melanjutkan tugas?",
+			"description": "Kilo Code telah mencapai batas {{count}} permintaan API yang disetujui otomatis. Apakah kamu ingin mengatur ulang hitungan dan melanjutkan tugas?",
 			"button": "Atur Ulang dan Lanjutkan"
 		}
+	},
+	"indexingStatus": {
+		"ready": "Indeks siap",
+		"indexing": "Mengindeks {{percentage}}%",
+		"indexed": "Terindeks",
+		"error": "Error indeks",
+		"status": "Status indeks"
 	}
 }

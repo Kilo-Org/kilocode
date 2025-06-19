@@ -83,6 +83,10 @@
 			"outsideWorkspace": {
 				"label": "Includi file al di fuori dell'area di lavoro",
 				"description": "Permetti a Kilo Code di creare e modificare file al di fuori dell'area di lavoro attuale senza richiedere approvazione."
+			},
+			"protected": {
+				"label": "Includi file protetti",
+				"description": "Permetti a Kilo Code di creare e modificare file protetti (come .kilocodeignore e file di configurazione .kilocode/) senza richiedere approvazione."
 			}
 		},
 		"browser": {
@@ -501,9 +505,17 @@
 			"name": "Abilita lettura simultanea dei file",
 			"description": "Quando abilitato, Kilo Code può leggere più file in una singola richiesta. Quando disabilitato, Kilo Code deve leggere i file uno alla volta. Disabilitarlo può aiutare quando si lavora con modelli meno capaci o quando si desidera maggiore controllo sull'accesso ai file."
 		},
+		"MARKETPLACE": {
+			"name": "Abilita Marketplace",
+			"description": "Quando abilitato, puoi installare MCP e modalità personalizzate dal Marketplace."
+		},
 		"DISABLE_COMPLETION_COMMAND": {
 			"name": "Disabilita l'esecuzione dei comandi in attempt_completion",
 			"description": "Se abilitato, lo strumento attempt_completion non eseguirà comandi. Questa è una funzionalità sperimentale per preparare la futura deprecazione dell'esecuzione dei comandi al completamento dell'attività."
+		},
+		"MULTI_FILE_APPLY_DIFF": {
+			"name": "Abilita modifiche di file concorrenti",
+			"description": "Quando abilitato, Kilo Code può modificare più file in una singola richiesta. Quando disabilitato, Kilo Code deve modificare i file uno alla volta. Disabilitare questa opzione può aiutare quando lavori con modelli meno capaci o quando vuoi più controllo sulle modifiche dei file."
 		}
 	},
 	"promptCaching": {

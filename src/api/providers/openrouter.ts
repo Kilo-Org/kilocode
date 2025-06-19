@@ -48,10 +48,12 @@ interface CompletionUsage {
 	}
 	total_tokens?: number
 	cost?: number
-	is_byok?: boolean // kilocode_change
+	is_byok?: boolean
 }
 
-const BYOK_COST_MULTIPLIER = 20 // kilocode_change
+// with bring your own key, OpenRouter charges 5% of what it normally would: https://openrouter.ai/docs/use-cases/byok
+// so we multiply the cost reported by OpenRouter to get an estimate of what the request actually cost
+const BYOK_COST_MULTIPLIER = 20
 
 export class OpenRouterHandler extends BaseProvider implements SingleCompletionHandler {
 	protected options: ApiHandlerOptions
@@ -172,7 +174,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 				// and how to best support it.
 				// cacheReadTokens: lastUsage.prompt_tokens_details?.cached_tokens,
 				reasoningTokens: lastUsage.completion_tokens_details?.reasoning_tokens,
-				totalCost: (lastUsage.is_byok ? BYOK_COST_MULTIPLIER : 1) * (lastUsage.cost || 0), // kilocode_change byok
+				totalCost: (lastUsage.is_byok ? BYOK_COST_MULTIPLIER : 1) * (lastUsage.cost || 0),
 			}
 		}
 	}

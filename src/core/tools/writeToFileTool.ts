@@ -26,9 +26,25 @@ export async function writeToFileTool(
 	let newContent: string | undefined = block.params.content
 	let predictedLineCount: number | undefined = parseInt(block.params.line_count ?? "0")
 
-	if (!relPath || newContent === undefined) {
+	if (block.partial && (!relPath || newContent === undefined)) {
 		// checking for newContent ensure relPath is complete
 		// wait so we can determine if it's a new file or editing an existing file
+		return
+	}
+
+	if (!relPath) {
+		cline.consecutiveMistakeCount++
+		cline.recordToolError("write_to_file")
+		pushToolResult(await cline.sayAndCreateMissingParamError("write_to_file", "path"))
+		await cline.diffViewProvider.reset()
+		return
+	}
+
+	if (newContent === undefined) {
+		cline.consecutiveMistakeCount++
+		cline.recordToolError("write_to_file")
+		pushToolResult(await cline.sayAndCreateMissingParamError("write_to_file", "content"))
+		await cline.diffViewProvider.reset()
 		return
 	}
 
@@ -39,6 +55,9 @@ export async function writeToFileTool(
 		pushToolResult(formatResponse.toolError(formatResponse.rooIgnoreError(relPath)))
 		return
 	}
+
+	// Check if file is write-protected
+	const isWriteProtected = cline.rooProtectedController?.isWriteProtected(relPath) || false
 
 	// Check if file exists using cached map or fs.access
 	let fileExists: boolean
@@ -74,6 +93,7 @@ export async function writeToFileTool(
 		path: getReadablePath(cline.cwd, removeClosingTag("path", relPath)),
 		content: newContent,
 		isOutsideWorkspace,
+		isProtected: isWriteProtected,
 	}
 
 	try {
@@ -96,22 +116,6 @@ export async function writeToFileTool(
 
 			return
 		} else {
-			if (!relPath) {
-				cline.consecutiveMistakeCount++
-				cline.recordToolError("write_to_file")
-				pushToolResult(await cline.sayAndCreateMissingParamError("write_to_file", "path"))
-				await cline.diffViewProvider.reset()
-				return
-			}
-
-			if (newContent === undefined) {
-				cline.consecutiveMistakeCount++
-				cline.recordToolError("write_to_file")
-				pushToolResult(await cline.sayAndCreateMissingParamError("write_to_file", "content"))
-				await cline.diffViewProvider.reset()
-				return
-			}
-
 			if (predictedLineCount === undefined) {
 				cline.consecutiveMistakeCount++
 				cline.recordToolError("write_to_file")
@@ -201,7 +205,7 @@ export async function writeToFileTool(
 					: undefined,
 			} satisfies ClineSayTool)
 
-			const didApprove = await askApproval("tool", completeMessage)
+			const didApprove = await askApproval("tool", completeMessage, undefined, isWriteProtected)
 
 			if (!didApprove) {
 				await cline.diffViewProvider.revertChanges()

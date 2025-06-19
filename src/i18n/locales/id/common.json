@@ -31,12 +31,12 @@
 		"this_and_subsequent": "Ini dan semua pesan selanjutnya"
 	},
 	"errors": {
-		"invalid_mcp_config": "Format konfigurasi MCP proyek tidak valid",
-		"invalid_mcp_settings_format": "Format JSON pengaturan MCP tidak valid. Pastikan pengaturan kamu mengikuti format JSON yang benar.",
-		"invalid_mcp_settings_syntax": "Format JSON pengaturan MCP tidak valid. Periksa file pengaturan kamu untuk kesalahan sintaks.",
-		"invalid_mcp_settings_validation": "Format pengaturan MCP tidak valid: {{errorMessages}}",
-		"failed_initialize_project_mcp": "Gagal menginisialisasi server MCP proyek: {{error}}",
 		"invalid_data_uri": "Format data URI tidak valid",
+		"error_copying_image": "Error menyalin gambar: {{errorMessage}}",
+		"error_opening_image": "Error membuka gambar: {{error}}",
+		"error_saving_image": "Error menyimpan gambar: {{errorMessage}}",
+		"could_not_open_file": "Tidak dapat membuka file: {{errorMessage}}",
+		"could_not_open_file_generic": "Tidak dapat membuka file!",
 		"checkpoint_timeout": "Timeout saat mencoba memulihkan checkpoint.",
 		"checkpoint_failed": "Gagal memulihkan checkpoint.",
 		"no_workspace": "Silakan buka folder proyek terlebih dahulu",
@@ -52,14 +52,12 @@
 		"delete_api_config": "Gagal menghapus konfigurasi api",
 		"list_api_config": "Gagal mendapatkan daftar konfigurasi api",
 		"update_server_timeout": "Gagal memperbarui timeout server",
-		"create_mcp_json": "Gagal membuat atau membuka .kilocode/mcp.json: {{error}}",
 		"hmr_not_running": "Server pengembangan lokal tidak berjalan, HMR tidak akan bekerja. Silakan jalankan 'npm run dev' sebelum meluncurkan ekstensi untuk mengaktifkan HMR.",
 		"retrieve_current_mode": "Error: gagal mengambil mode saat ini dari state.",
 		"failed_delete_repo": "Gagal menghapus shadow repository atau branch yang terkait: {{error}}",
 		"failed_remove_directory": "Gagal menghapus direktori tugas: {{error}}",
 		"custom_storage_path_unusable": "Path penyimpanan kustom \"{{path}}\" tidak dapat digunakan, akan menggunakan path default",
 		"cannot_access_path": "Tidak dapat mengakses path {{path}}: {{error}}",
-		"failed_update_project_mcp": "Gagal memperbarui server MCP proyek",
 		"settings_import_failed": "Impor pengaturan gagal: {{error}}.",
 		"mistake_limit_guidance": "Ini mungkin menunjukkan kegagalan dalam proses pemikiran model atau ketidakmampuan untuk menggunakan tool dengan benar, yang dapat diatasi dengan beberapa panduan pengguna (misalnya \"Coba bagi tugas menjadi langkah-langkah yang lebih kecil\").",
 		"violated_organization_allowlist": "Gagal menjalankan tugas: profil saat ini melanggar pengaturan organisasi kamu",
@@ -79,14 +77,12 @@
 		"no_changes": "Tidak ada perubahan ditemukan.",
 		"clipboard_copy": "System prompt berhasil disalin ke clipboard",
 		"history_cleanup": "Membersihkan {{count}} tugas dengan file yang hilang dari riwayat.",
-		"mcp_server_restarting": "Merestart server MCP {{serverName}}...",
-		"mcp_server_connected": "Server MCP {{serverName}} terhubung",
-		"mcp_server_deleted": "Server MCP dihapus: {{serverName}}",
-		"mcp_server_not_found": "Server \"{{serverName}}\" tidak ditemukan dalam konfigurasi",
 		"custom_storage_path_set": "Path penyimpanan kustom diatur: {{path}}",
 		"default_storage_path": "Kembali menggunakan path penyimpanan default",
 		"settings_imported": "Pengaturan berhasil diimpor.",
-		"share_link_copied": "Link bagikan disalin ke clipboard"
+		"share_link_copied": "Link bagikan disalin ke clipboard",
+		"image_copied_to_clipboard": "Data URI gambar disalin ke clipboard",
+		"image_saved": "Gambar disimpan ke {{path}}"
 	},
 	"answers": {
 		"yes": "Ya",
@@ -107,6 +103,6 @@
 	},
 	"input": {
 		"task_prompt": "Apa yang harus Kilo Code lakukan?",
-		"task_placeholder": "Bangun, cari, tanya sesuatu"
+		"task_placeholder": "Ketik tugas kamu di sini"
 	}
 }

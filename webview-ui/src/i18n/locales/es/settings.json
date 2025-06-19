@@ -83,6 +83,10 @@
 			"outsideWorkspace": {
 				"label": "Incluir archivos fuera del espacio de trabajo",
 				"description": "Permitir a Kilo Code crear y editar archivos fuera del espacio de trabajo actual sin requerir aprobación."
+			},
+			"protected": {
+				"label": "Incluir archivos protegidos",
+				"description": "Permitir a Kilo Code crear y editar archivos protegidos (como .kilocodeignore y archivos de configuración .kilocode/) sin requerir aprobación."
 			}
 		},
 		"browser": {
@@ -501,9 +505,17 @@
 			"name": "Habilitar lectura concurrente de archivos",
 			"description": "Cuando está habilitado, Kilo Code puede leer múltiples archivos en una sola solicitud. Cuando está deshabilitado, Kilo Code debe leer archivos uno a la vez. Deshabilitarlo puede ayudar cuando se trabaja con modelos menos capaces o cuando deseas más control sobre el acceso a archivos."
 		},
+		"MARKETPLACE": {
+			"name": "Habilitar Marketplace",
+			"description": "Cuando está habilitado, puedes instalar MCP y modos personalizados del Marketplace."
+		},
 		"DISABLE_COMPLETION_COMMAND": {
 			"name": "Desactivar la ejecución de comandos en attempt_completion",
 			"description": "Cuando está activado, la herramienta attempt_completion no ejecutará comandos. Esta es una función experimental para preparar la futura eliminación de la ejecución de comandos en la finalización de tareas."
+		},
+		"MULTI_FILE_APPLY_DIFF": {
+			"name": "Habilitar ediciones de archivos concurrentes",
+			"description": "Cuando está habilitado, Kilo Code puede editar múltiples archivos en una sola solicitud. Cuando está deshabilitado, Kilo Code debe editar archivos de uno en uno. Deshabilitar esto puede ayudar cuando trabajas con modelos menos capaces o cuando quieres más control sobre las modificaciones de archivos."
 		}
 	},
 	"promptCaching": {

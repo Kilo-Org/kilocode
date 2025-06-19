@@ -3,8 +3,9 @@ import { useEvent } from "react-use"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 
 import { ExtensionMessage } from "@roo/ExtensionMessage"
-
 import TranslationProvider from "./i18n/TranslationContext"
+// import { MarketplaceViewStateManager } from "./components/marketplace/MarketplaceViewStateManager" // kilocode_change: we have our own marketplace
+
 import { vscode } from "./utils/vscode"
 import { ExtensionStateContextProvider, useExtensionState } from "./context/ExtensionStateContext"
 import ChatView, { ChatViewRef } from "./components/chat/ChatView"
@@ -15,9 +16,8 @@ import ProfileView from "./components/kilocode/profile/ProfileView" // kilocode_
 import ModesView from "./components/modes/ModesView"
 import { HumanRelayDialog } from "./components/human-relay/HumanRelayDialog"
 import BottomControls from "./components/kilocode/BottomControls" // kilocode_change
-import { AccountView } from "./components/account/AccountView"
 
-type Tab = "settings" | "history" | "mcp" | "modes" | "chat" | "account" | "profile" // kilocode_change: add "profile"
+type Tab = "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "account" | "profile" // kilocode_change: add "profile"
 
 const tabsByMessageAction: Partial<Record<NonNullable<ExtensionMessage["action"]>, Tab>> = {
 	chatButtonClicked: "chat",
@@ -25,11 +25,15 @@ const tabsByMessageAction: Partial<Record<NonNullable<ExtensionMessage["action"]
 	promptsButtonClicked: "modes",
 	historyButtonClicked: "history",
 	profileButtonClicked: "profile",
+	marketplaceButtonClicked: "marketplace",
 	accountButtonClicked: "account",
 }
 
 const App = () => {
-	const { didHydrateState, showWelcome, shouldShowAnnouncement, cloudUserInfo } = useExtensionState()
+	const { didHydrateState, showWelcome, shouldShowAnnouncement, experiments } = useExtensionState()
+
+	// Create a persistent state manager
+	// const marketplaceStateManager = useMemo(() => new MarketplaceViewStateManager(), []) // kilocode_change: we have or own marketplace
 
 	const [showAnnouncement, setShowAnnouncement] = useState(false)
 	const [tab, setTab] = useState<Tab>("chat")
@@ -74,12 +78,28 @@ const App = () => {
 				}
 				// kilocode_change end
 
-				const newTab = tabsByMessageAction[message.action]
-				const section = message.values?.section as string | undefined
+				// Handle switchTab action with tab parameter
+				if (message.action === "switchTab" && message.tab) {
+					const targetTab = message.tab as Tab
+					// Don't switch to marketplace tab if the experiment is disabled
+					if (targetTab === "marketplace" && !experiments.marketplace) {
+						return
+					}
+					switchTab(targetTab)
+					setCurrentSection(undefined)
+				} else {
+					// Handle other actions using the mapping
+					const newTab = tabsByMessageAction[message.action]
+					const section = message.values?.section as string | undefined
 
-				if (newTab) {
-					switchTab(newTab)
-					setCurrentSection(section)
+					if (newTab) {
+						// Don't switch to marketplace tab if the experiment is disabled
+						if (newTab === "marketplace" && !experiments.marketplace) {
+							return
+						}
+						switchTab(newTab)
+						setCurrentSection(section)
+					}
 				}
 			}
 
@@ -93,7 +113,7 @@ const App = () => {
 			}
 		},
 		// kilocode_change: add tab
-		[tab, switchTab],
+		[tab, switchTab, experiments],
 	)
 
 	useEvent("message", onMessage)
@@ -123,11 +143,16 @@ const App = () => {
 			{tab === "settings" && (
 				<SettingsView ref={settingsRef} onDone={() => switchTab("chat")} targetSection={currentSection} /> // kilocode_change
 			)}
+			{/* kilocode_change: add profileview */}
 			{tab === "profile" && <ProfileView onDone={() => switchTab("chat")} />}
-			{/*  kilocode_change: isAuthenticated = false because no roo cloud */}
-			{tab === "account" && (
+			{/* kilocode_change: we have our own market place */}
+			{/* {tab === "marketplace" && (
+				<MarketplaceView stateManager={marketplaceStateManager} onDone={() => switchTab("chat")} />
+			)} */}
+			{/* kilocode_change: we have our own profile view */}
+			{/* {tab === "account" && (
 				<AccountView userInfo={cloudUserInfo} isAuthenticated={false} onDone={() => switchTab("chat")} />
-			)}
+			)} */}
 			<ChatView
 				ref={chatViewRef}
 				isHidden={tab !== "chat"}
