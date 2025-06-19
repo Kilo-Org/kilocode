@@ -13,7 +13,7 @@ import {
 	chutesModels,
 } from "@roo-code/types"
 
-import { fireworksModels } from "@roo/api" // kilocode_change
+import { fireworksModels, cerebrasModels } from "@roo/api" // kilocode_change
 
 export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, ModelInfo>>> = {
 	anthropic: anthropicModels,
@@ -27,6 +27,7 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	xai: xaiModels,
 	groq: groqModels,
 	chutes: chutesModels,
+	cerebras: cerebrasModels, // kilocode_change
 }
 
 export const PROVIDERS = [
@@ -51,5 +52,6 @@ export const PROVIDERS = [
 	{ value: "xai", label: "xAI (Grok)" },
 	{ value: "groq", label: "Groq" },
 	{ value: "chutes", label: "Chutes AI" },
+	{ value: "cerebras", label: "Cerebras" }, // kilocode_change
 	{ value: "litellm", label: "LiteLLM" },
 ] // .sort((a, b) => a.label.localeCompare(b.label)) // kilocode_change: Sort providers with kilocode first

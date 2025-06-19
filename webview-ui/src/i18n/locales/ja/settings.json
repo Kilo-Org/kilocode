@@ -255,6 +255,10 @@
 				"learnMore": "プロバイダールーティングについて詳しく知る"
 			}
 		},
+		"cerebras": {
+			"apiKey": "Cerebras APIキー",
+			"getApiKey": "Cerebras APIキーを取得"
+		},
 		"customModel": {
 			"capabilities": "カスタムOpenAI互換モデルの機能と価格を設定します。モデルの機能はKilo Codeのパフォーマンスに影響を与える可能性があるため、慎重に指定してください。",
 			"maxTokens": {

@@ -483,6 +483,10 @@ const kilocodeSchema = z.object({
 	kilocodeToken: z.string().optional(),
 	kilocodeModel: z.string().optional(),
 })
+const cerebrasSchema = z.object({
+	kilocodeToken: z.string().optional(),
+	kilocodeModel: z.string().optional(),
+})
 // kilocode_change end
 
 const defaultSchema = z.object({
@@ -602,6 +606,11 @@ export const providerSettingsSchemaDiscriminated = z
 				apiProvider: z.literal("kilocode"),
 			}),
 		),
+		cerebrasSchema.merge(
+			z.object({
+				apiProvider: z.literal("cerebras"),
+			}),
+		),
 		// kilocode_change end
 		defaultSchema,
 	])
@@ -631,6 +640,7 @@ export const providerSettingsSchema = z.object({
 	...chutesSchema.shape,
 	...litellmSchema.shape,
 	...kilocodeSchema.shape, // kilocode_change
+	...cerebrasSchema.shape, // kilocode_change
 	...genericProviderSettingsSchema.shape,
 })
 

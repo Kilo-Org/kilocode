@@ -51,6 +51,61 @@ export type FireworksModelId = keyof typeof fireworksModels
 export const fireworksDefaultModelId: FireworksModelId = "accounts/fireworks/models/llama4-maverick-instruct-basic"
 // kilocode_change end
 
+// kilocode_change start
+// Cerebras
+// https://inference-docs.cerebras.ai/api-reference/models
+export const cerebrasModels = {
+	"llama-4-scout-17b-16e-instruct": {
+		maxTokens: 8192,
+		contextWindow: 8192,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0,
+		outputPrice: 0,
+		description: "Fast inference model with ~2700 tokens/s",
+	},
+	"llama3.1-8b": {
+		maxTokens: 8192,
+		contextWindow: 8192,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0,
+		outputPrice: 0,
+		description: "Efficient model with ~2100 tokens/s",
+	},
+	"llama-3.3-70b": {
+		maxTokens: 8192,
+		contextWindow: 8192,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0,
+		outputPrice: 0,
+		description: "Powerful model with ~2600 tokens/s",
+	},
+	"qwen-3-32b": {
+		maxTokens: 16382,
+		contextWindow: 16382,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0,
+		outputPrice: 0,
+		description: "SOTA coding performance with ~2500 tokens/s",
+	},
+	"deepseek-r1-distill-llama-70b": {
+		maxTokens: 8192,
+		contextWindow: 8192,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0,
+		outputPrice: 0,
+		description: "Advanced reasoning model with ~2300 tokens/s (private preview)",
+	},
+} as const satisfies Record<string, ModelInfo>
+export type CerebrasModelId = keyof typeof cerebrasModels
+export const cerebrasDefaultModelId: CerebrasModelId = "llama3.1-8b"
+
+// kilocode_change end
+
 // RouterName
 
 const routerNames = ["openrouter", "requesty", "glama", "unbound", "litellm", "kilocode-openrouter"] as const
@@ -130,3 +185,4 @@ export type GetModelsOptions =
 	| { provider: "unbound"; apiKey?: string }
 	| { provider: "litellm"; apiKey: string; baseUrl: string }
 	| { provider: "kilocode-openrouter"; kilocodeToken?: string } // kilocode_change
+	| { provider: "cerebras"; cerebrasApiKey?: string } // kilocode_change

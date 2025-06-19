@@ -255,6 +255,10 @@
 				"learnMore": "Dowiedz się więcej o routingu dostawców"
 			}
 		},
+		"cerebras": {
+			"apiKey": "Klucz API Cerebras",
+			"getApiKey": "Uzyskaj klucz API Cerebras"
+		},
 		"customModel": {
 			"capabilities": "Skonfiguruj możliwości i ceny swojego niestandardowego modelu zgodnego z OpenAI. Zachowaj ostrożność podczas określania możliwości modelu, ponieważ mogą one wpływać na wydajność Kilo Code.",
 			"maxTokens": {

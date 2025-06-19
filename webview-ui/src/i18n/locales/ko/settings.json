@@ -255,6 +255,10 @@
 				"learnMore": "제공자 라우팅에 대해 자세히 알아보기"
 			}
 		},
+		"cerebras": {
+			"apiKey": "Cerebras API 키",
+			"getApiKey": "Cerebras API 키 받기"
+		},
 		"customModel": {
 			"capabilities": "사용자 정의 OpenAI 호환 모델의 기능과 가격을 구성하세요. 모델 기능이 Kilo Code의 성능에 영향을 미칠 수 있으므로 신중하게 지정하세요.",
 			"maxTokens": {

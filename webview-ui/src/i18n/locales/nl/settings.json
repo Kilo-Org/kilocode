@@ -255,6 +255,10 @@
 				"learnMore": "Meer informatie over providerroutering"
 			}
 		},
+		"cerebras": {
+			"apiKey": "Cerebras API-sleutel",
+			"getApiKey": "Cerebras API-sleutel verkrijgen"
+		},
 		"customModel": {
 			"capabilities": "Stel de mogelijkheden en prijzen in voor je aangepaste OpenAI-compatibele model. Wees voorzichtig met het opgeven van de modelmogelijkheden, want deze kunnen de prestaties van Kilo Code beïnvloeden.",
 			"maxTokens": {

@@ -255,6 +255,10 @@
 				"learnMore": "Mehr über Anbieter-Routing erfahren"
 			}
 		},
+		"cerebras": {
+			"apiKey": "Cerebras API-Schlüssel",
+			"getApiKey": "Cerebras API-Schlüssel erhalten"
+		},
 		"customModel": {
 			"capabilities": "Konfiguriere die Fähigkeiten und Preise für dein benutzerdefiniertes OpenAI-kompatibles Modell. Sei vorsichtig bei der Angabe der Modellfähigkeiten, da diese beeinflussen können, wie Kilo Code funktioniert.",
 			"maxTokens": {
