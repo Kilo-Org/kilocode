@@ -1,10 +1,12 @@
-import { memo, useRef, useEffect, useCallback } from "react"
+import { memo, useRef, useEffect, useCallback, useMemo } from "react"
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso"
 import type { ClineMessage } from "@roo-code/types"
 import { TaskTimelineMessage } from "./TaskTimelineMessage"
 import { VirtuosoHorizontalNoScrollbarScroller } from "../ui/VirtuosoHorizontalNoScrollbarScroller"
 import { MAX_HEIGHT_PX } from "../../utils/timeline/calculateTaskTimelineSizes"
-import { useTaskTimelineCache } from "../../utils/timeline/useTimelineCache"
+import { consolidateMessagesForTimeline } from "../../utils/timeline/consolidateMessagesForTimeline"
+import { calculateTaskTimelineSizes } from "../../utils/timeline/calculateTaskTimelineSizes"
+import { getTaskTimelineMessageColor } from "../../utils/timeline/taskTimelineTypeRegistry"
 
 interface TaskTimelineProps {
 	groupedMessages: (ClineMessage | ClineMessage[])[]
@@ -16,7 +18,21 @@ export const TaskTimeline = memo<TaskTimelineProps>(({ groupedMessages, onMessag
 	const virtuosoRef = useRef<VirtuosoHandle>(null)
 	const previousGroupedLengthRef = useRef(groupedMessages.length)
 
-	const timelineMessagesData = useTaskTimelineCache(groupedMessages)
+	const timelineMessagesData = useMemo(() => {
+		const { processedMessages, messageToOriginalIndex } = consolidateMessagesForTimeline(groupedMessages)
+		const messageSizeData = calculateTaskTimelineSizes(processedMessages)
+
+		return processedMessages.map((message, filteredIndex) => {
+			const originalIndex = messageToOriginalIndex.get(message) || 0
+			return {
+				index: originalIndex,
+				color: getTaskTimelineMessageColor(message),
+				message,
+				sizeData: messageSizeData[filteredIndex],
+			}
+		})
+	}, [groupedMessages])
+
 	const activeIndex = isTaskActive ? groupedMessages.length - 1 : -1
 
 	const itemContent = useCallback(

@@ -1,12 +1,19 @@
 import { memo, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
+import type { ClineMessage } from "@roo-code/types"
 import { cn } from "@/lib/utils"
 import { getMessageTypeDescription } from "@/utils/timeline/taskTimelineTypeRegistry"
-import { MAX_HEIGHT_PX } from "@/utils/timeline/calculateTaskTimelineSizes"
-import type { CachedTimelineMessageData } from "../../utils/timeline/useTimelineCache"
+import { MAX_HEIGHT_PX, type MessageSizeData } from "@/utils/timeline/calculateTaskTimelineSizes"
+
+interface TimelineMessageData {
+	index: number
+	color: string
+	message: ClineMessage | ClineMessage[]
+	sizeData: MessageSizeData
+}
 
 interface TaskTimelineMessageProps {
-	data: CachedTimelineMessageData
+	data: TimelineMessageData
 	activeIndex: number
 	onClick?: () => void
 }
@@ -18,7 +25,6 @@ export const TaskTimelineMessage = memo(({ data, activeIndex, onClick }: TaskTim
 		messageType: messageDescription,
 		messageNumber: data.index + 1,
 	})
-
 	const isActive = activeIndex === data.index
 
 	const [isNew, setIsNew] = useState(true)
