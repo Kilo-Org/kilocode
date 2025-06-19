@@ -1,21 +1,8 @@
-import seedrandom from "seedrandom"
 import type { ClineMessage } from "../../../../src/exports/types"
+import { randomInterval } from "../utils/randomUtils"
 
 // Fixed base timestamp for consistent snapshots (January 1, 2024, 12:00:00 UTC)
 export const BASE_TIMESTAMP = 1704110400000
-
-// Seeded random number generator for reproducible but varied timing
-const rng = seedrandom("cline-messages-mock-data")
-
-/**
- * Generate a random timing interval using seeded random
- * @param min Minimum milliseconds
- * @param max Maximum milliseconds
- * @returns Random interval in milliseconds
- */
-export const randomInterval = (min: number, max: number): number => {
-	return Math.floor(rng() * (max - min + 1)) + min
-}
 
 /**
  * Create mock messages for a typical component creation task
@@ -196,7 +183,7 @@ export const createFullStackMessages = (): ClineMessage[] => {
 	]
 
 	// Generate 15-20 messages with varied timing
-	const messageCount = 15 + Math.floor(rng() * 6) // 15-20 messages
+	const messageCount = 15 + randomInterval(0, 5) // 15-20 messages
 
 	const messageTypes = [
 		{ type: "say", say: "text", baseText: "Analyzing requirements and planning architecture" },
