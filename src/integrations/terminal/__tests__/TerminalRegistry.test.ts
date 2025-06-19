@@ -43,6 +43,8 @@ jest.mock("execa", () => ({
 	execa: jest.fn(),
 }))
 
+jest.mock("../../../utils/path", () => ({ getWorkspacePath: jest.fn(() => "/test/workspace") }))
+
 describe("TerminalRegistry", () => {
 	beforeEach(() => {
 		mockCreateTerminal.mockClear()
@@ -68,6 +70,7 @@ describe("TerminalRegistry", () => {
 				env: {
 					PAGER,
 					VTE_VERSION: "0",
+					WORKSPACE_ROOT: "/test/workspace", // kilocode_change
 					PROMPT_EOL_MARK: "",
 				},
 			})
@@ -89,6 +92,7 @@ describe("TerminalRegistry", () => {
 						PAGER,
 						PROMPT_COMMAND: "sleep 0.05",
 						VTE_VERSION: "0",
+						WORKSPACE_ROOT: "/test/workspace", // kilocode_change
 						PROMPT_EOL_MARK: "",
 					},
 				})
@@ -110,6 +114,7 @@ describe("TerminalRegistry", () => {
 					env: {
 						PAGER,
 						VTE_VERSION: "0",
+						WORKSPACE_ROOT: "/test/workspace", // kilocode_change
 						PROMPT_EOL_MARK: "",
 						ITERM_SHELL_INTEGRATION_INSTALLED: "Yes",
 					},
@@ -131,6 +136,7 @@ describe("TerminalRegistry", () => {
 					env: {
 						PAGER,
 						VTE_VERSION: "0",
+						WORKSPACE_ROOT: "/test/workspace", // kilocode_change
 						PROMPT_EOL_MARK: "",
 						POWERLEVEL9K_TERM_SHELL_INTEGRATION: "true",
 					},

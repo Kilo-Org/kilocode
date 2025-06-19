@@ -6,6 +6,7 @@ import { BaseTerminal } from "./BaseTerminal"
 import { TerminalProcess } from "./TerminalProcess"
 import { ShellIntegrationManager } from "./ShellIntegrationManager"
 import { mergePromise } from "./mergePromise"
+import { getWorkspacePath } from "../../utils/path"
 
 export class Terminal extends BaseTerminal {
 	public terminal: vscode.Terminal
@@ -151,12 +152,15 @@ export class Terminal extends BaseTerminal {
 	}
 
 	public static getEnv(): Record<string, string> {
+		const workspaceRoot = getWorkspacePath() // kilocode_change
 		const env: Record<string, string> = {
 			PAGER: process.platform === "win32" ? "" : "cat",
 
 			// VTE must be disabled because it prevents the prompt command from executing
 			// See https://wiki.gnome.org/Apps/Terminal/VTE
 			VTE_VERSION: "0",
+
+			WORKSPACE_ROOT: workspaceRoot, // kilocode_change
 		}
 
 		// Set Oh My Zsh shell integration if enabled
