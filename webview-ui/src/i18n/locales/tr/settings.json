@@ -31,7 +31,8 @@
 		"prompts": "Promptlar",
 		"experimental": "Deneysel",
 		"language": "Dil",
-		"about": "Kilo Code Hakkında"
+		"about": "Kilo Code Hakkında",
+		"display": "Göster"
 	},
 	"prompts": {
 		"description": "Prompt geliştirme, kod açıklama ve sorun çözme gibi hızlı eylemler için kullanılan destek promptlarını yapılandırın. Bu promptlar, Kilo Code'nun yaygın geliştirme görevleri için daha iyi destek sağlamasına yardımcı olur."

@@ -31,7 +31,8 @@
 		"prompts": "Prompt",
 		"experimental": "Eksperimental",
 		"language": "Bahasa",
-		"about": "Tentang Kilo Code"
+		"about": "Tentang Kilo Code",
+		"display": "Tampilkan"
 	},
 	"prompts": {
 		"description": "Konfigurasi support prompt yang digunakan untuk aksi cepat seperti meningkatkan prompt, menjelaskan kode, dan memperbaiki masalah. Prompt ini membantu Kilo Code memberikan bantuan yang lebih baik untuk tugas pengembangan umum."

@@ -31,7 +31,8 @@
 		"prompts": "Podpowiedzi",
 		"experimental": "Eksperymentalne",
 		"language": "Język",
-		"about": "O Kilo Code"
+		"about": "O Kilo Code",
+		"display": "Wyświetl"
 	},
 	"prompts": {
 		"description": "Skonfiguruj podpowiedzi wsparcia używane do szybkich działań, takich jak ulepszanie podpowiedzi, wyjaśnianie kodu i rozwiązywanie problemów. Te podpowiedzi pomagają Kilo Code zapewnić lepsze wsparcie dla typowych zadań programistycznych."

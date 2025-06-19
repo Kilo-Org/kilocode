@@ -31,7 +31,8 @@
 		"prompts": "Indicacions",
 		"experimental": "Experimental",
 		"language": "Idioma",
-		"about": "Sobre Kilo Code"
+		"about": "Sobre Kilo Code",
+		"display": "Mostrar"
 	},
 	"prompts": {
 		"description": "Configura les indicacions de suport utilitzades per a accions ràpides com millorar indicacions, explicar codi i solucionar problemes. Aquestes indicacions ajuden Kilo Code a proporcionar millor assistència per a tasques comunes de desenvolupament."

@@ -31,7 +31,8 @@
 		"prompts": "Prompts",
 		"experimental": "Experimenteel",
 		"language": "Taal",
-		"about": "Over Kilo Code"
+		"about": "Over Kilo Code",
+		"display": "Weergeven"
 	},
 	"prompts": {
 		"description": "Configureer ondersteuningsprompts die worden gebruikt voor snelle acties zoals het verbeteren van prompts, het uitleggen van code en het oplossen van problemen. Deze prompts helpen Kilo Code om betere ondersteuning te bieden voor veelvoorkomende ontwikkelingstaken."

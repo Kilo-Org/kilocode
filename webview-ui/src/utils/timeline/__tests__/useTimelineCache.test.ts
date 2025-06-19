@@ -2,8 +2,8 @@ import { renderHook } from "@testing-library/react"
 import type { ClineMessage } from "@roo-code/types"
 import { useTaskTimelineCache } from "../useTimelineCache"
 
-jest.mock("../timelineMessageProcessing", () => ({
-	processTimelineMessages: jest.fn((messages: any[]) => ({
+jest.mock("../consolidateMessagesForTimeline", () => ({
+	consolidateMessagesForTimeline: jest.fn((messages: any[]) => ({
 		processedMessages: messages.slice(1),
 		messageToOriginalIndex: new Map(messages.slice(1).map((msg: any, idx: number) => [msg, idx + 1])),
 	})),

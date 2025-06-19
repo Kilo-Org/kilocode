@@ -31,7 +31,8 @@
 		"prompts": "Prompts",
 		"experimental": "Experimental",
 		"language": "Idioma",
-		"about": "Sobre"
+		"about": "Sobre",
+		"display": "Exibir"
 	},
 	"prompts": {
 		"description": "Configure prompts de suporte usados para ações rápidas como melhorar prompts, explicar código e corrigir problemas. Esses prompts ajudam o Kilo Code a fornecer melhor assistência para tarefas comuns de desenvolvimento."

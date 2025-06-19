@@ -31,7 +31,8 @@
 		"prompts": "プロンプト",
 		"experimental": "実験的",
 		"language": "言語",
-		"about": "Kilo Codeについて"
+		"about": "Kilo Codeについて",
+		"display": "表示"
 	},
 	"prompts": {
 		"description": "プロンプトの強化、コードの説明、問題の修正などの迅速なアクションに使用されるサポートプロンプトを設定します。これらのプロンプトは、Kilo Codeが一般的な開発タスクでより良いサポートを提供するのに役立ちます。"

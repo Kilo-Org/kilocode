@@ -31,7 +31,8 @@
 		"prompts": "Indicaciones",
 		"experimental": "Experimental",
 		"language": "Idioma",
-		"about": "Acerca de Kilo Code"
+		"about": "Acerca de Kilo Code",
+		"display": "Mostrar"
 	},
 	"prompts": {
 		"description": "Configura indicaciones de soporte que se utilizan para acciones rápidas como mejorar indicaciones, explicar código y solucionar problemas. Estas indicaciones ayudan a Kilo Code a brindar mejor asistencia para tareas comunes de desarrollo."

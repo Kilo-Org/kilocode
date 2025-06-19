@@ -31,7 +31,8 @@
 		"prompts": "Invites",
 		"experimental": "Expérimental",
 		"language": "Langue",
-		"about": "À propos de Kilo Code"
+		"about": "À propos de Kilo Code",
+		"display": "Afficher"
 	},
 	"prompts": {
 		"description": "Configurez les invites de support utilisées pour les actions rapides comme l'amélioration des invites, l'explication du code et la résolution des problèmes. Ces invites aident Kilo Code à fournir une meilleure assistance pour les tâches de développement courantes."
