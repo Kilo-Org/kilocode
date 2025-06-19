@@ -151,6 +151,7 @@
 		"didRead": "已读取文件:",
 		"wantsToEdit": "需要编辑文件:",
 		"wantsToEditOutsideWorkspace": "需要编辑外部文件:",
+		"wantsToEditProtected": "需要编辑受保护的配置文件:",
 		"wantsToCreate": "需要新建文件:",
 		"wantsToSearchReplace": "需要在此文件中搜索和替换:",
 		"didSearchReplace": "已完成搜索和替换:",
@@ -158,7 +159,8 @@
 		"wantsToInsertWithLineNumber": "需要在第 {{lineNumber}} 行插入内容:",
 		"wantsToInsertAtEnd": "需要在文件末尾添加内容:",
 		"wantsToReadAndXMore": "Kilo Code 想读取此文件以及另外 {{count}} 个文件：",
-		"wantsToReadMultiple": "Kilo Code 想要读取多个文件："
+		"wantsToReadMultiple": "Kilo Code 想要读取多个文件：",
+		"wantsToApplyBatchChanges": "Kilo Code 想要对多个文件应用更改："
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "需要查看目录文件列表:",
@@ -168,7 +170,15 @@
 		"wantsToViewDefinitions": "Kilo Code想查看此目录中使用的源代码定义名称:",
 		"didViewDefinitions": "Kilo Code已查看此目录中使用的源代码定义名称:",
 		"wantsToSearch": "需要搜索内容: {{regex}}",
-		"didSearch": "已完成内容搜索: {{regex}}"
+		"didSearch": "已完成内容搜索: {{regex}}",
+		"wantsToSearchOutsideWorkspace": "需要搜索内容（工作区外）: {{regex}}",
+		"didSearchOutsideWorkspace": "已完成内容搜索（工作区外）: {{regex}}",
+		"wantsToViewTopLevelOutsideWorkspace": "需要查看目录文件列表（工作区外）:",
+		"didViewTopLevelOutsideWorkspace": "已查看目录文件列表（工作区外）:",
+		"wantsToViewRecursiveOutsideWorkspace": "需要查看目录所有文件（工作区外）:",
+		"didViewRecursiveOutsideWorkspace": "已查看目录所有文件（工作区外）:",
+		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code想查看此目录中使用的源代码定义名称（工作区外）:",
+		"didViewDefinitionsOutsideWorkspace": "Kilo Code已查看此目录中使用的源代码定义名称（工作区外）:"
 	},
 	"commandOutput": "命令输出",
 	"response": "响应",
@@ -221,9 +231,9 @@
 		"title": "🎉 Roo Code {{version}} 已发布",
 		"description": "Roo Code {{version}} 带来基于您反馈的强大新功能和改进。",
 		"whatsNew": "新特性",
-		"feature1": "<bold>智能上下文压缩默认启用</bold>: 上下文压缩现已默认启用，并提供可配置的自动压缩触发设置",
-		"feature2": "<bold>手动压缩按钮</bold>: 任务标题中的新按钮让您随时手动触发上下文压缩",
-		"feature3": "<bold>高级压缩设置</bold>: 通过<contextSettingsLink>上下文设置</contextSettingsLink>精确控制自动压缩的时机和方式",
+		"feature1": "<bold>实验性市场</bold>: 从新市场发现和安装模式及 MCP（在<experimentalSettingsLink>实验性设置</experimentalSettingsLink>中启用）",
+		"feature2": "<bold>增强文件操作</bold>: 实验性设置中的多个并发文件写入，并发读取现在在<contextSettingsLink>上下文设置</contextSettingsLink>中",
+		"feature3": "<bold>MCP 改进及更多</bold>: 增强的 MCP 支持、Mermaid 控制、Amazon Bedrock 思考支持等等！",
 		"hideButton": "隐藏公告",
 		"detailsDiscussLinks": "在 <discordLink>Discord</discordLink> 和 <redditLink>Reddit</redditLink> 获取更多详情并参与讨论 🚀"
 	},
@@ -284,5 +294,12 @@
 		"deny": {
 			"title": "全部拒绝"
 		}
+	},
+	"indexingStatus": {
+		"ready": "索引就绪",
+		"indexing": "索引中 {{percentage}}%",
+		"indexed": "已索引",
+		"error": "索引错误",
+		"status": "索引状态"
 	}
 }

@@ -1,5 +1,5 @@
 {
-	"title": "Prompt",
+	"title": "Mode",
 	"done": "Selesai",
 	"modes": {
 		"title": "Mode",
@@ -15,9 +15,9 @@
 		"select": "Pilih konfigurasi API mana yang akan digunakan untuk mode ini"
 	},
 	"tools": {
-		"title": "Tool yang Tersedia",
-		"builtInModesText": "Tool untuk mode bawaan tidak dapat dimodifikasi",
-		"editTools": "Edit tool",
+		"title": "Tools yang Tersedia",
+		"builtInModesText": "Tools untuk mode bawaan tidak dapat dimodifikasi",
+		"editTools": "Edit tools",
 		"doneEditing": "Selesai mengedit",
 		"allowedFiles": "File yang diizinkan:",
 		"toolNames": {
@@ -32,45 +32,45 @@
 	"roleDefinition": {
 		"title": "Definisi Peran",
 		"resetToDefault": "Reset ke default",
-		"description": "Definisikan keahlian dan kepribadian Kilo Code untuk mode ini. Deskripsi ini membentuk bagaimana Kilo Code mempresentasikan dirinya dan mendekati tugas."
+		"description": "Tentukan keahlian dan kepribadian Kilo Code untuk mode ini. Deskripsi ini membentuk bagaimana Kilo Code mempresentasikan dirinya dan mendekati tugas."
 	},
 	"whenToUse": {
 		"title": "Kapan Menggunakan (opsional)",
-		"description": "Jelaskan kapan mode ini harus digunakan. Ini membantu Orchestrator memilih mode yang tepat untuk tugas.",
-		"resetToDefault": "Reset ke deskripsi 'Kapan Menggunakan' default"
+		"description": "Jelaskan kapan mode ini harus digunakan. Ini membantu Orchestrator memilih mode yang tepat untuk suatu tugas.",
+		"resetToDefault": "Reset ke deskripsi default 'Kapan Menggunakan'"
 	},
 	"customInstructions": {
 		"title": "Instruksi Kustom Khusus Mode (opsional)",
 		"resetToDefault": "Reset ke default",
 		"description": "Tambahkan panduan perilaku khusus untuk mode {{modeName}}.",
-		"loadFromFile": "Instruksi kustom khusus untuk mode {{mode}} juga dapat dimuat dari folder <span>.kilocode/rules/</span> di workspace kamu (.kilocoderules-{{slug}} sudah deprecated dan akan berhenti bekerja segera)."
+		"loadFromFile": "Instruksi kustom khusus untuk mode {{mode}} juga dapat dimuat dari folder <span>.kilocode/rules-{{slug}}/</span> di workspace Anda (.kilocodemodes-{{slug}} dan .clinerules-{{slug}} sudah deprecated dan akan segera berhenti bekerja)."
 	},
 	"globalCustomInstructions": {
 		"title": "Instruksi Kustom untuk Semua Mode",
-		"description": "Instruksi ini berlaku untuk semua mode. Mereka menyediakan set perilaku dasar yang dapat ditingkatkan oleh instruksi khusus mode di bawah. <0>Pelajari lebih lanjut</0>",
-		"loadFromFile": "Instruksi juga dapat dimuat dari folder <span>.kilocode/rules/</span> di workspace kamu (.kilocoderules sudah deprecated dan akan berhenti bekerja segera)."
+		"description": "Instruksi ini berlaku untuk semua mode. Mereka menyediakan set dasar perilaku yang dapat ditingkatkan oleh instruksi khusus mode di bawah. <0>Pelajari lebih lanjut</0>",
+		"loadFromFile": "Instruksi juga dapat dimuat dari folder <span>.kilocode/rules/</span> di workspace Anda (.kilocoderules dan .clinerules sudah deprecated dan akan segera berhenti bekerja)."
 	},
 	"systemPrompt": {
-		"preview": "Preview System Prompt",
+		"preview": "Pratinjau System Prompt",
 		"copy": "Salin system prompt ke clipboard",
 		"title": "System Prompt (mode {{modeName}})"
 	},
 	"supportPrompts": {
-		"title": "Support Prompt",
+		"title": "Support Prompts",
 		"resetPrompt": "Reset prompt {{promptType}} ke default",
 		"prompt": "Prompt",
 		"enhance": {
 			"apiConfiguration": "Konfigurasi API",
-			"apiConfigDescription": "Kamu bisa memilih konfigurasi API untuk selalu digunakan untuk meningkatkan prompt, atau gunakan yang sedang dipilih",
+			"apiConfigDescription": "Anda dapat memilih konfigurasi API untuk selalu digunakan untuk meningkatkan prompt, atau gunakan yang sedang dipilih saat ini",
 			"useCurrentConfig": "Gunakan konfigurasi API yang sedang dipilih",
 			"testPromptPlaceholder": "Masukkan prompt untuk menguji peningkatan",
-			"previewButton": "Preview Peningkatan Prompt",
+			"previewButton": "Pratinjau Peningkatan Prompt",
 			"testEnhancement": "Uji Peningkatan"
 		},
 		"types": {
 			"ENHANCE": {
 				"label": "Tingkatkan Prompt",
-				"description": "Gunakan peningkatan prompt untuk mendapatkan saran atau perbaikan yang disesuaikan untuk input kamu. Ini memastikan Kilo Code memahami maksud kamu dan memberikan respons terbaik. Tersedia melalui ikon ✨ di chat."
+				"description": "Gunakan peningkatan prompt untuk mendapatkan saran atau perbaikan yang disesuaikan untuk input Anda. Ini memastikan Kilo Code memahami maksud Anda dan memberikan respons terbaik. Tersedia melalui ikon ✨ di chat."
 			},
 			"EXPLAIN": {
 				"label": "Jelaskan Kode",
@@ -105,8 +105,8 @@
 				"description": "Mulai tugas baru dengan input pengguna. Tersedia di Command Palette."
 			},
 			"COMMIT_MESSAGE": {
-				"label": "Pembuatan Pesan Commit",
-				"description": "Buat pesan commit deskriptif berdasarkan perubahan git yang sudah dipentaskan. Sesuaikan prompt untuk menghasilkan pesan yang mengikuti praktik terbaik repositori Anda."
+				"label": "Generasi Pesan Commit",
+				"description": "Buat pesan commit yang deskriptif berdasarkan perubahan git yang sudah di-stage. Sesuaikan prompt untuk menghasilkan pesan yang mengikuti praktik terbaik repositori kamu."
 			}
 		}
 	},
@@ -123,10 +123,10 @@
 		},
 		"slug": {
 			"label": "Slug",
-			"description": "Slug digunakan di URL dan nama file. Harus huruf kecil dan hanya berisi huruf, angka, dan tanda hubung."
+			"description": "Slug digunakan dalam URL dan nama file. Harus huruf kecil dan hanya berisi huruf, angka, dan tanda hubung."
 		},
 		"saveLocation": {
-			"label": "Lokasi Simpan",
+			"label": "Lokasi Penyimpanan",
 			"description": "Pilih di mana menyimpan mode ini. Mode khusus proyek lebih diutamakan daripada mode global.",
 			"global": {
 				"label": "Global",
@@ -139,15 +139,15 @@
 		},
 		"roleDefinition": {
 			"label": "Definisi Peran",
-			"description": "Definisikan keahlian dan kepribadian Kilo Code untuk mode ini."
+			"description": "Tentukan keahlian dan kepribadian Kilo Code untuk mode ini."
 		},
 		"whenToUse": {
 			"label": "Kapan Menggunakan (opsional)",
 			"description": "Berikan deskripsi yang jelas tentang kapan mode ini paling efektif dan jenis tugas apa yang unggul."
 		},
 		"tools": {
-			"label": "Tool yang Tersedia",
-			"description": "Pilih tool mana yang bisa digunakan mode ini."
+			"label": "Tools yang Tersedia",
+			"description": "Pilih tools mana yang dapat digunakan mode ini."
 		},
 		"customInstructions": {
 			"label": "Instruksi Kustom (opsional)",

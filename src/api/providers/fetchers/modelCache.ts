@@ -5,7 +5,7 @@ import NodeCache from "node-cache"
 
 import { ContextProxy } from "../../../core/config/ContextProxy"
 import { getCacheDirectoryPath } from "../../../utils/storage"
-import { RouterName, ModelRecord } from "../../../shared/api"
+import { RouterName, ModelRecord, cerebrasModels } from "../../../shared/api"
 import { fileExistsAtPath } from "../../../utils/fs"
 
 import { getOpenRouterModels } from "./openrouter"
@@ -85,6 +85,9 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 					openRouterBaseUrl: getKiloBaseUriFromToken(options.kilocodeToken ?? "") + "/api/openrouter",
 					headers: { Authorization: `Bearer ${options.kilocodeToken}` },
 				})
+				break
+			case "cerebras":
+				models = cerebrasModels
 				break
 			// kilocode_change end
 			default: {

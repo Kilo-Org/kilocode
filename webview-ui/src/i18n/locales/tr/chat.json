@@ -151,6 +151,7 @@
 		"didRead": "Kilo Code bu dosyayı okudu:",
 		"wantsToEdit": "Kilo Code bu dosyayı düzenlemek istiyor:",
 		"wantsToEditOutsideWorkspace": "Kilo Code çalışma alanı dışındaki bu dosyayı düzenlemek istiyor:",
+		"wantsToEditProtected": "Kilo Code korumalı bir yapılandırma dosyasını düzenlemek istiyor:",
 		"wantsToCreate": "Kilo Code yeni bir dosya oluşturmak istiyor:",
 		"wantsToSearchReplace": "Kilo Code bu dosyada arama ve değiştirme yapmak istiyor:",
 		"didSearchReplace": "Kilo Code bu dosyada arama ve değiştirme yaptı:",
@@ -158,7 +159,8 @@
 		"wantsToInsertWithLineNumber": "Kilo Code bu dosyanın {{lineNumber}}. satırına içerik eklemek istiyor:",
 		"wantsToInsertAtEnd": "Kilo Code bu dosyanın sonuna içerik eklemek istiyor:",
 		"wantsToReadAndXMore": "Kilo Code bu dosyayı ve {{count}} tane daha okumak istiyor:",
-		"wantsToReadMultiple": "Kilo Code birden fazla dosya okumak istiyor:"
+		"wantsToReadMultiple": "Kilo Code birden fazla dosya okumak istiyor:",
+		"wantsToApplyBatchChanges": "Kilo Code birden fazla dosyaya değişiklik uygulamak istiyor:"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code bu dizindeki üst düzey dosyaları görüntülemek istiyor:",
@@ -168,7 +170,15 @@
 		"wantsToViewDefinitions": "Kilo Code bu dizinde kullanılan kaynak kod tanımlama isimlerini görüntülemek istiyor:",
 		"didViewDefinitions": "Kilo Code bu dizinde kullanılan kaynak kod tanımlama isimlerini görüntüledi:",
 		"wantsToSearch": "Kilo Code bu dizinde <code>{{regex}}</code> için arama yapmak istiyor:",
-		"didSearch": "Kilo Code bu dizinde <code>{{regex}}</code> için arama yaptı:"
+		"didSearch": "Kilo Code bu dizinde <code>{{regex}}</code> için arama yaptı:",
+		"wantsToSearchOutsideWorkspace": "Kilo Code bu dizinde (çalışma alanı dışında) <code>{{regex}}</code> için arama yapmak istiyor:",
+		"didSearchOutsideWorkspace": "Kilo Code bu dizinde (çalışma alanı dışında) <code>{{regex}}</code> için arama yaptı:",
+		"wantsToViewTopLevelOutsideWorkspace": "Kilo Code bu dizindeki (çalışma alanı dışında) üst düzey dosyaları görüntülemek istiyor:",
+		"didViewTopLevelOutsideWorkspace": "Kilo Code bu dizindeki (çalışma alanı dışında) üst düzey dosyaları görüntüledi:",
+		"wantsToViewRecursiveOutsideWorkspace": "Kilo Code bu dizindeki (çalışma alanı dışında) tüm dosyaları özyinelemeli olarak görüntülemek istiyor:",
+		"didViewRecursiveOutsideWorkspace": "Kilo Code bu dizindeki (çalışma alanı dışında) tüm dosyaları özyinelemeli olarak görüntüledi:",
+		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code bu dizinde (çalışma alanı dışında) kullanılan kaynak kod tanımlama isimlerini görüntülemek istiyor:",
+		"didViewDefinitionsOutsideWorkspace": "Kilo Code bu dizinde (çalışma alanı dışında) kullanılan kaynak kod tanımlama isimlerini görüntüledi:"
 	},
 	"commandOutput": "Komut Çıktısı",
 	"response": "Yanıt",
@@ -221,9 +231,9 @@
 		"title": "🎉 Roo Code {{version}} Yayınlandı",
 		"description": "Roo Code {{version}} geri bildirimlerinize dayalı güçlü yeni özellikler ve iyileştirmeler getiriyor.",
 		"whatsNew": "Yenilikler",
-		"feature1": "<bold>Akıllı Bağlam Sıkıştırma Varsayılan Olarak Etkin</bold>: Bağlam sıkıştırma artık varsayılan olarak etkin ve otomatik sıkıştırmanın ne zaman gerçekleşeceği için yapılandırılabilir ayarlar mevcut",
-		"feature2": "<bold>Manuel Sıkıştırma Butonu</bold>: Görev başlığındaki yeni buton, istediğiniz zaman manuel olarak bağlam sıkıştırmayı tetiklemenize olanak tanır",
-		"feature3": "<bold>Gelişmiş Sıkıştırma Ayarları</bold>: <contextSettingsLink>Bağlam Ayarları</contextSettingsLink> üzerinden otomatik sıkıştırmanın ne zaman ve nasıl gerçekleşeceğini ince ayarlayın",
+		"feature1": "<bold>Deneysel Marketplace</bold>: Yeni marketplaceden modları ve MCP'leri keşfedin ve kurun (<experimentalSettingsLink>Deneysel Ayarlar</experimentalSettingsLink>'da etkinleştirin)",
+		"feature2": "<bold>Gelişmiş Dosya İşlemleri</bold>: Deneysel çoklu eşzamanlı dosya yazma işlemleri ve eşzamanlı okuma artık <contextSettingsLink>Bağlam Ayarları</contextSettingsLink>'nda mevcut",
+		"feature3": "<bold>MCP İyileştirmeleri ve Daha Fazlası</bold>: Gelişmiş MCP desteği, Mermaid kontrolleri, Amazon Bedrock thinking desteği ve daha fazlası!",
 		"hideButton": "Duyuruyu gizle",
 		"detailsDiscussLinks": "<discordLink>Discord</discordLink> ve <redditLink>Reddit</redditLink> üzerinde daha fazla ayrıntı edinin ve tartışmalara katılın 🚀"
 	},
@@ -284,5 +294,12 @@
 		"deny": {
 			"title": "Tümünü Reddet"
 		}
+	},
+	"indexingStatus": {
+		"ready": "İndeks hazır",
+		"indexing": "İndeksleniyor {{percentage}}%",
+		"indexed": "İndekslendi",
+		"error": "İndeks hatası",
+		"status": "İndeks durumu"
 	}
 }

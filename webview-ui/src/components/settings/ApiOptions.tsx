@@ -53,6 +53,7 @@ import {
 	Vertex,
 	VSCodeLM,
 	XAI,
+	Cerebras, // kilocode_change
 } from "./providers"
 
 import { MODELS_BY_PROVIDER, PROVIDERS } from "./constants"
@@ -66,6 +67,7 @@ import { TemperatureControl } from "./TemperatureControl"
 import { RateLimitSecondsControl } from "./RateLimitSecondsControl"
 import { BedrockCustomArn } from "./providers/BedrockCustomArn"
 import { buildDocLink } from "@src/utils/docLinks"
+import { cerebrasDefaultModelId } from "@roo/api"
 
 export interface ApiOptionsProps {
 	uriScheme: string | undefined
@@ -258,6 +260,13 @@ const ApiOptions = ({
 						setApiConfigurationField("kilocodeModel", "claude37")
 					}
 					break
+				// kilocode_change start
+				case "cerebras":
+					if (!apiConfiguration.cerebrasModelId) {
+						setApiConfigurationField("cerebrasModelId", cerebrasDefaultModelId)
+					}
+					break
+				// kilocode_change end
 			}
 
 			setApiConfigurationField("apiProvider", value)
@@ -270,6 +279,7 @@ const ApiOptions = ({
 			apiConfiguration.requestyModelId,
 			apiConfiguration.litellmModelId,
 			apiConfiguration.kilocodeModel,
+			apiConfiguration.cerebrasModelId, // kilocode_change
 		],
 	)
 
@@ -517,6 +527,12 @@ const ApiOptions = ({
 			{selectedProvider === "chutes" && (
 				<Chutes apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
+
+			{/* kilocode_change start */}
+			{selectedProvider === "cerebras" && (
+				<Cerebras apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
+			)}
+			{/* kilocode_change end */}
 
 			{selectedProvider === "litellm" && (
 				<LiteLLM

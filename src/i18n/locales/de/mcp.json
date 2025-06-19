@@ -3,8 +3,9 @@
 		"invalid_settings_format": "Ungültiges MCP-Einstellungen-JSON-Format. Bitte stelle sicher, dass deine Einstellungen dem korrekten JSON-Format entsprechen.",
 		"invalid_settings_syntax": "Ungültiges MCP-Einstellungen-JSON-Format. Bitte überprüfe deine Einstellungsdatei auf Syntaxfehler.",
 		"invalid_settings_validation": "Ungültiges MCP-Einstellungen-Format: {{errorMessages}}",
-		"create_json": "Fehler beim Erstellen oder Öffnen von .roo/mcp.json: {{error}}",
-		"failed_update_project": "Fehler beim Aktualisieren der Projekt-MCP-Server"
+		"create_json": "Fehler beim Erstellen oder Öffnen von .kilocode/mcp.json: {{error}}",
+		"failed_update_project": "Fehler beim Aktualisieren der Projekt-MCP-Server",
+		"invalidJsonArgument": "Kilo Code hat versucht, {{toolName}} mit einem ungültigen JSON-Argument zu verwenden. Wiederhole..."
 	},
 	"info": {
 		"server_restarting": "MCP-Server {{serverName}} wird neu gestartet...",

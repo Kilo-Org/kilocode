@@ -1,5 +1,6 @@
 import type { Preview } from "@storybook/react"
 import { withTheme } from "./decorators"
+import { withChromaticDecorator } from "./ChromaticDecorator"
 
 import "./storybook.css"
 
@@ -25,6 +26,7 @@ const preview: Preview = {
 			],
 		},
 	},
+
 	globalTypes: {
 		theme: {
 			description: "Global Theme",
@@ -32,12 +34,12 @@ const preview: Preview = {
 			toolbar: {
 				title: "Theme",
 				icon: "paintbrush",
-				items: ["light", "dark"],
+				items: ["light", "dark", "both"],
 				dynamicTitle: true,
 			},
 		},
 	},
-	decorators: [withTheme],
+	decorators: [withTheme, withChromaticDecorator],
 }
 
 export default preview

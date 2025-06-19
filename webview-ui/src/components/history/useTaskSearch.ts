@@ -54,7 +54,7 @@ export const useTaskSearch = () => {
 
 				return {
 					...result.item,
-					task: highlightFzfMatch(
+					highlight: highlightFzfMatch(
 						result.item.task,
 						positions.filter((p) => p < taskEndIndex),
 					),

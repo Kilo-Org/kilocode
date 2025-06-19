@@ -28,7 +28,9 @@ import { MAX_IMAGES_PER_MESSAGE } from "./ChatView"
 import ContextMenu from "./ContextMenu"
 import { VolumeX, Pin, Check } from "lucide-react"
 import { IconButton } from "./IconButton"
+import { IndexingStatusDot } from "./IndexingStatusBadge"
 import { cn } from "@/lib/utils"
+import { usePromptHistory } from "./hooks/usePromptHistory"
 
 import { useSelectedModel } from "../ui/hooks/useSelectedModel"
 
@@ -93,6 +95,9 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			apiConfiguration, // kilocode_change
 			localWorkflows, // kilocode_change
 			globalWorkflows, // kilocode_change
+			taskHistory,
+			clineMessages,
+			codebaseIndexConfig,
 		} = useExtensionState()
 
 		const currentTheme = useVSCodeTheme() // kilocode_change
@@ -210,6 +215,15 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		const contextMenuContainerRef = useRef<HTMLDivElement>(null)
 		const [isEnhancingPrompt, setIsEnhancingPrompt] = useState(false)
 		const [isFocused, setIsFocused] = useState(false)
+
+		// Use custom hook for prompt history navigation
+		const { handleHistoryNavigation, resetHistoryNavigation, resetOnInputChange } = usePromptHistory({
+			clineMessages,
+			taskHistory,
+			cwd,
+			inputValue,
+			setInputValue,
+		})
 
 		// Fetch git commits when Git is selected or when typing a hash.
 		useEffect(() => {
@@ -520,10 +534,17 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 				const isComposing = event.nativeEvent?.isComposing ?? false
 
+				// Handle prompt history navigation using custom hook
+				if (handleHistoryNavigation(event, showContextMenu, isComposing)) {
+					return
+				}
+
 				if (event.key === "Enter" && !event.shiftKey && !isComposing) {
 					event.preventDefault()
 
 					if (!sendingDisabled) {
+						// Reset history navigation state when sending
+						resetHistoryNavigation()
 						onSend()
 					}
 				}
@@ -585,11 +606,13 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				selectedType,
 				queryItems,
 				fileSearchResults,
+				handleHistoryNavigation,
+				resetHistoryNavigation,
+				cursorPosition,
 				customModes,
 				handleMentionSelect,
-				onSend,
-				cursorPosition,
 				justDeletedSpaceAfterMention,
+				onSend,
 				setInputValue,
 				localWorkflows, // kilocode_change
 				globalWorkflows, // kilocode_change
@@ -609,6 +632,11 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		const handleInputChange = useCallback(
 			(e: React.ChangeEvent<HTMLTextAreaElement>) => {
 				const newValue = e.target.value
+				setInputValue(newValue)
+
+				// Reset history navigation when user types
+				resetOnInputChange()
+
 				const newCursorPosition = e.target.selectionStart
 				setInputValue(newValue)
 				setCursorPosition(newCursorPosition)
@@ -687,7 +715,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					setFileSearchResults([]) // Clear file search results.
 				}
 			},
-			[setInputValue, setSearchRequestId, setFileSearchResults, setSearchLoading],
+			[setInputValue, setSearchRequestId, setFileSearchResults, setSearchLoading, resetOnInputChange],
 		)
 
 		useEffect(() => {
@@ -1383,6 +1411,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						//  kilocode_change: add ref and add hidden on small containerWidth
 						className={cn("flex", "items-center", "gap-0.5", "shrink-0", { hidden: containerWidth < 235 })}
 						ref={actionButtonsRef}>
+						{codebaseIndexConfig?.codebaseIndexEnabled && <IndexingStatusDot />}
 						<IconButton
 							iconClass={isEnhancingPrompt ? "codicon-loading" : "codicon-sparkle"}
 							title={t("chat:enhancePrompt")}

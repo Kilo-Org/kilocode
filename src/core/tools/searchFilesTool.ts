@@ -4,6 +4,7 @@ import { Task } from "../task/Task"
 import { ToolUse, AskApproval, HandleError, PushToolResult, RemoveClosingTag } from "../../shared/tools"
 import { ClineSayTool } from "../../shared/ExtensionMessage"
 import { getReadablePath } from "../../utils/path"
+import { isPathOutsideWorkspace } from "../../utils/pathUtils"
 import { regexSearchFiles } from "../../services/ripgrep"
 
 export async function searchFilesTool(
@@ -18,11 +19,15 @@ export async function searchFilesTool(
 	const regex: string | undefined = block.params.regex
 	const filePattern: string | undefined = block.params.file_pattern
 
+	const absolutePath = relDirPath ? path.resolve(cline.cwd, relDirPath) : cline.cwd
+	const isOutsideWorkspace = isPathOutsideWorkspace(absolutePath)
+
 	const sharedMessageProps: ClineSayTool = {
 		tool: "searchFiles",
 		path: getReadablePath(cline.cwd, removeClosingTag("path", relDirPath)),
 		regex: removeClosingTag("regex", regex),
 		filePattern: removeClosingTag("file_pattern", filePattern),
+		isOutsideWorkspace,
 	}
 
 	try {
@@ -46,8 +51,6 @@ export async function searchFilesTool(
 			}
 
 			cline.consecutiveMistakeCount = 0
-
-			const absolutePath = path.resolve(cline.cwd, relDirPath)
 
 			const results = await regexSearchFiles(
 				cline.cwd,

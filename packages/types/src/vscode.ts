@@ -33,6 +33,7 @@ export const commandIds = [
 	"promptsButtonClicked",
 
 	"historyButtonClicked",
+	"marketplaceButtonClicked",
 	"popoutButtonClicked",
 	"accountButtonClicked",
 	"settingsButtonClicked",
@@ -70,7 +71,7 @@ export const languages = [
 	"es",
 	"fr",
 	"hi",
-	"id", // kilocode_change
+	"id",
 	"it",
 	"ja",
 	"ko",

@@ -146,6 +146,7 @@
 		"didRead": "Kilo Code heeft dit bestand gelezen:",
 		"wantsToEdit": "Kilo Code wil dit bestand bewerken:",
 		"wantsToEditOutsideWorkspace": "Kilo Code wil dit bestand buiten de werkruimte bewerken:",
+		"wantsToEditProtected": "Kilo Code wil een beveiligd configuratiebestand bewerken:",
 		"wantsToCreate": "Kilo Code wil een nieuw bestand aanmaken:",
 		"wantsToSearchReplace": "Kilo Code wil zoeken en vervangen in dit bestand:",
 		"didSearchReplace": "Kilo Code heeft zoeken en vervangen uitgevoerd op dit bestand:",
@@ -153,7 +154,8 @@
 		"wantsToInsertWithLineNumber": "Kilo Code wil inhoud invoegen in dit bestand op regel {{lineNumber}}:",
 		"wantsToInsertAtEnd": "Kilo Code wil inhoud toevoegen aan het einde van dit bestand:",
 		"wantsToReadAndXMore": "Kilo Code wil dit bestand en nog {{count}} andere lezen:",
-		"wantsToReadMultiple": "Kilo Code wil meerdere bestanden lezen:"
+		"wantsToReadMultiple": "Kilo Code wil meerdere bestanden lezen:",
+		"wantsToApplyBatchChanges": "Kilo Code wil wijzigingen toepassen op meerdere bestanden:"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code wil de bovenliggende bestanden in deze map bekijken:",
@@ -163,7 +165,15 @@
 		"wantsToViewDefinitions": "Kilo Code wil broncode-definitienamen bekijken die in deze map worden gebruikt:",
 		"didViewDefinitions": "Kilo Code heeft broncode-definitienamen bekeken die in deze map worden gebruikt:",
 		"wantsToSearch": "Kilo Code wil deze map doorzoeken op <code>{{regex}}</code>:",
-		"didSearch": "Kilo Code heeft deze map doorzocht op <code>{{regex}}</code>:"
+		"didSearch": "Kilo Code heeft deze map doorzocht op <code>{{regex}}</code>:",
+		"wantsToSearchOutsideWorkspace": "Kilo Code wil deze map (buiten werkruimte) doorzoeken op <code>{{regex}}</code>:",
+		"didSearchOutsideWorkspace": "Kilo Code heeft deze map (buiten werkruimte) doorzocht op <code>{{regex}}</code>:",
+		"wantsToViewTopLevelOutsideWorkspace": "Kilo Code wil de bovenliggende bestanden in deze map (buiten werkruimte) bekijken:",
+		"didViewTopLevelOutsideWorkspace": "Kilo Code heeft de bovenliggende bestanden in deze map (buiten werkruimte) bekeken:",
+		"wantsToViewRecursiveOutsideWorkspace": "Kilo Code wil alle bestanden in deze map (buiten werkruimte) recursief bekijken:",
+		"didViewRecursiveOutsideWorkspace": "Kilo Code heeft alle bestanden in deze map (buiten werkruimte) recursief bekeken:",
+		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code wil broncode-definitienamen bekijken die in deze map (buiten werkruimte) worden gebruikt:",
+		"didViewDefinitionsOutsideWorkspace": "Kilo Code heeft broncode-definitienamen bekeken die in deze map (buiten werkruimte) worden gebruikt:"
 	},
 	"commandOutput": "Commando-uitvoer",
 	"response": "Antwoord",
@@ -207,9 +217,9 @@
 	"announcement": {
 		"title": "🎉 Roo Code {{version}} uitgebracht",
 		"description": "Roo Code {{version}} brengt krachtige nieuwe functies en verbeteringen op basis van jouw feedback.",
-		"feature1": "<bold>Intelligente Contextcompressie Standaard Ingeschakeld</bold>: Contextcompressie is nu standaard ingeschakeld met configureerbare instellingen voor wanneer automatische compressie plaatsvindt",
-		"feature2": "<bold>Handmatige Compressieknop</bold>: Nieuwe knop in de taakheader stelt je in staat om op elk moment handmatig contextcompressie te activeren",
-		"feature3": "<bold>Verbeterde Compressie-instellingen</bold>: Stel bij wanneer en hoe automatische compressie plaatsvindt via de <contextSettingsLink>Contextinstellingen</contextSettingsLink>",
+		"feature1": "<bold>Experimentele Marketplace</bold>: Ontdek en installeer modi en MCP's van de nieuwe marketplace (activeer in <experimentalSettingsLink>Experimentele Instellingen</experimentalSettingsLink>)",
+		"feature2": "<bold>Verbeterde Bestandsoperaties</bold>: Experimentele multi-concurrent bestandsschrijfoperaties, en concurrent lezen is nu beschikbaar in <contextSettingsLink>Contextinstellingen</contextSettingsLink>",
+		"feature3": "<bold>MCP Verbeteringen & Meer</bold>: Verbeterde MCP-ondersteuning, Mermaid-besturing, Amazon Bedrock thinking ondersteuning en meer!",
 		"hideButton": "Aankondiging verbergen",
 		"detailsDiscussLinks": "Meer details en discussie in <discordLink>Discord</discordLink> en <redditLink>Reddit</redditLink> 🚀",
 		"whatsNew": "Wat is er nieuw"
@@ -284,5 +294,12 @@
 		"deny": {
 			"title": "Alles weigeren"
 		}
+	},
+	"indexingStatus": {
+		"ready": "Index gereed",
+		"indexing": "Indexeren {{percentage}}%",
+		"indexed": "Geïndexeerd",
+		"error": "Index fout",
+		"status": "Index status"
 	}
 }

@@ -151,6 +151,7 @@
 		"didRead": "Kilo Code 已讀取此檔案：",
 		"wantsToEdit": "Kilo Code 想要編輯此檔案：",
 		"wantsToEditOutsideWorkspace": "Kilo Code 想要編輯此工作區外的檔案：",
+		"wantsToEditProtected": "Kilo Code 想要編輯受保護的設定檔案：",
 		"wantsToCreate": "Kilo Code 想要建立新檔案：",
 		"wantsToSearchReplace": "Kilo Code 想要在此檔案中搜尋和取代：",
 		"didSearchReplace": "Kilo Code 已在此檔案執行搜尋和取代：",
@@ -158,7 +159,8 @@
 		"wantsToInsertWithLineNumber": "Kilo Code 想要在此檔案第 {{lineNumber}} 行插入內容：",
 		"wantsToInsertAtEnd": "Kilo Code 想要在此檔案末尾新增內容：",
 		"wantsToReadAndXMore": "Kilo Code 想要讀取此檔案以及另外 {{count}} 個檔案：",
-		"wantsToReadMultiple": "Kilo Code 想要讀取多個檔案："
+		"wantsToReadMultiple": "Kilo Code 想要讀取多個檔案：",
+		"wantsToApplyBatchChanges": "Kilo Code 想要對多個檔案套用變更："
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code 想要檢視此目錄中最上層的檔案：",
@@ -168,7 +170,15 @@
 		"wantsToViewDefinitions": "Kilo Code 想要檢視此目錄中使用的原始碼定義名稱：",
 		"didViewDefinitions": "Kilo Code 已檢視此目錄中使用的原始碼定義名稱：",
 		"wantsToSearch": "Kilo Code 想要在此目錄中搜尋 <code>{{regex}}</code>：",
-		"didSearch": "Kilo Code 已在此目錄中搜尋 <code>{{regex}}</code>："
+		"didSearch": "Kilo Code 已在此目錄中搜尋 <code>{{regex}}</code>：",
+		"wantsToSearchOutsideWorkspace": "Kilo Code 想要在此目錄（工作區外）中搜尋 <code>{{regex}}</code>：",
+		"didSearchOutsideWorkspace": "Kilo Code 已在此目錄（工作區外）中搜尋 <code>{{regex}}</code>：",
+		"wantsToViewTopLevelOutsideWorkspace": "Kilo Code 想要檢視此目錄（工作區外）中最上層的檔案：",
+		"didViewTopLevelOutsideWorkspace": "Kilo Code 已檢視此目錄（工作區外）中最上層的檔案：",
+		"wantsToViewRecursiveOutsideWorkspace": "Kilo Code 想要遞迴檢視此目錄（工作區外）中的所有檔案：",
+		"didViewRecursiveOutsideWorkspace": "Kilo Code 已遞迴檢視此目錄（工作區外）中的所有檔案：",
+		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code 想要檢視此目錄（工作區外）中使用的原始碼定義名稱：",
+		"didViewDefinitionsOutsideWorkspace": "Kilo Code 已檢視此目錄（工作區外）中使用的原始碼定義名稱："
 	},
 	"commandOutput": "命令輸出",
 	"response": "回應",
@@ -221,9 +231,9 @@
 		"title": "🎉 Roo Code {{version}} 已發布",
 		"description": "Roo Code {{version}} 帶來基於您意見回饋的強大新功能與改進。",
 		"whatsNew": "新功能",
-		"feature1": "<bold>智慧上下文壓縮預設啟用</bold>: 上下文壓縮現已預設啟用，並提供可設定的自動壓縮觸發設定",
-		"feature2": "<bold>手動壓縮按鈕</bold>: 工作標題中的新按鈕讓您隨時手動觸發上下文壓縮",
-		"feature3": "<bold>進階壓縮設定</bold>: 透過<contextSettingsLink>上下文設定</contextSettingsLink>精確控制自動壓縮的時機和方式",
+		"feature1": "<bold>實驗性市場</bold>: 探索並安裝新市場中的模式和 MCP（在<experimentalSettingsLink>實驗性設定</experimentalSettingsLink>中啟用）",
+		"feature2": "<bold>增強檔案操作</bold>: 實驗性多檔案並行寫入操作，並行讀取現已在<contextSettingsLink>上下文設定</contextSettingsLink>中提供",
+		"feature3": "<bold>MCP 改進與更多功能</bold>: 增強的 MCP 支援、Mermaid 控制項、Amazon Bedrock thinking 支援等更多功能！",
 		"hideButton": "隱藏公告",
 		"detailsDiscussLinks": "在 <discordLink>Discord</discordLink> 和 <redditLink>Reddit</redditLink> 取得更多詳細資訊並參與討論 🚀"
 	},
@@ -284,5 +294,12 @@
 		"deny": {
 			"title": "全部拒絕"
 		}
+	},
+	"indexingStatus": {
+		"ready": "索引就緒",
+		"indexing": "索引中 {{percentage}}%",
+		"indexed": "已索引",
+		"error": "索引錯誤",
+		"status": "索引狀態"
 	}
 }

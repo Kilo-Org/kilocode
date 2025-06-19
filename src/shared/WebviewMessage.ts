@@ -1,6 +1,13 @@
 import { z } from "zod"
 
-import type { ProviderSettings, PromptComponent, ModeConfig } from "@roo-code/types"
+import type {
+	ProviderSettings,
+	PromptComponent,
+	ModeConfig,
+	InstallMarketplaceItemOptions,
+	MarketplaceItem,
+} from "@roo-code/types"
+import { marketplaceItemSchema } from "@roo-code/types"
 
 import { Mode } from "./modes"
 
@@ -32,6 +39,7 @@ export interface WebviewMessage {
 		| "alwaysAllowReadOnlyOutsideWorkspace"
 		| "alwaysAllowWrite"
 		| "alwaysAllowWriteOutsideWorkspace"
+		| "alwaysAllowWriteProtected"
 		| "alwaysAllowExecute"
 		| "webviewDidLaunch"
 		| "newTask"
@@ -60,6 +68,7 @@ export interface WebviewMessage {
 		| "requestLmStudioModels"
 		| "requestVsCodeLmModels"
 		| "openImage"
+		| "saveImage"
 		| "openFile"
 		| "openMention"
 		| "cancelTask"
@@ -177,10 +186,22 @@ export interface WebviewMessage {
 		| "indexingStatusUpdate"
 		| "indexCleared"
 		| "codebaseIndexConfig"
-		| "telemetrySetting"
+		| "setHistoryPreviewCollapsed"
 		| "toggleTaskFavorite" // kilocode_change
+		| "openExternal"
+		| "filterMarketplaceItems"
+		| "marketplaceButtonClicked"
+		| "installMarketplaceItem"
+		| "installMarketplaceItemWithParameters"
+		| "cancelMarketplaceInstall"
+		| "removeInstalledMarketplaceItem"
+		| "marketplaceInstallResult"
+		| "switchTab"
+		| "telemetrySetting"
 	text?: string
+	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "account"
 	disabled?: boolean
+	dataUri?: string
 	askResponse?: ClineAskResponse
 	apiConfiguration?: ProviderSettings
 	images?: string[]
@@ -196,7 +217,6 @@ export interface WebviewMessage {
 	}
 	mcpId?: string
 	toolNames?: string[]
-	url?: string
 	autoApprove?: boolean
 	workflowPath?: string // kilocode_change
 	enabled?: boolean // kilocode_change
@@ -225,6 +245,11 @@ export interface WebviewMessage {
 	hasSystemPromptOverride?: boolean
 	terminalOperation?: "continue" | "abort"
 	historyPreviewCollapsed?: boolean
+	filters?: { type?: string; search?: string; tags?: string[] }
+	url?: string // For openExternal
+	mpItem?: MarketplaceItem
+	mpInstallOptions?: InstallMarketplaceItemOptions
+	config?: Record<string, any> // Add config to the payload
 }
 
 // kilocode_change begin
@@ -278,6 +303,15 @@ export interface IndexClearedPayload {
 	error?: string
 }
 
+export const installMarketplaceItemWithParametersPayloadSchema = z.object({
+	item: marketplaceItemSchema,
+	parameters: z.record(z.string(), z.any()),
+})
+
+export type InstallMarketplaceItemWithParametersPayload = z.infer<
+	typeof installMarketplaceItemWithParametersPayloadSchema
+>
+
 export type WebViewMessagePayload =
 	| CheckpointDiffPayload
 	| CheckpointRestorePayload
@@ -285,3 +319,4 @@ export type WebViewMessagePayload =
 	| IndexClearedPayload
 	| ProfileDataResponsePayload // kilocode_change
 	| BalanceDataResponsePayload // kilocode_change
+	| InstallMarketplaceItemWithParametersPayload

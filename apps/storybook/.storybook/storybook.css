@@ -14,4 +14,10 @@
 	[data-theme="light"] {
 		@import "../generated-theme-styles/light-modern.css";
 	}
+
+	/* These are normally by VSCode directly. Set them here so Storybook looks like VSCode! */
+	font-family:
+		-apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", system-ui, "Ubuntu", "Droid Sans", sans-serif;
+	font-weight: normal;
+	font-size: 13px;
 }

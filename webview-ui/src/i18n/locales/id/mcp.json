@@ -1,16 +1,16 @@
 {
 	"title": "Server MCP",
 	"done": "Selesai",
-	"description": "<0>Model Context Protocol</0> memungkinkan komunikasi dengan server MCP yang berjalan secara lokal yang menyediakan tool dan resource tambahan untuk memperluas kemampuan Kilo Code. Kamu bisa menggunakan <1>server buatan komunitas</1> atau meminta Kilo Code untuk membuat tool baru yang spesifik untuk workflow kamu (contoh: \"tambahkan tool yang mendapatkan dokumentasi npm terbaru\").",
+	"description": "<0>Model Context Protocol</0> memungkinkan komunikasi dengan server MCP yang berjalan secara lokal yang menyediakan tools dan resources tambahan untuk memperluas kemampuan Kilo Code. Anda dapat menggunakan <1>server buatan komunitas</1> atau meminta Kilo Code membuat tools baru yang spesifik untuk workflow Anda (misalnya, \"tambahkan tool yang mendapatkan dokumentasi npm terbaru\").",
 	"instructions": "Instruksi",
 	"enableToggle": {
 		"title": "Aktifkan Server MCP",
-		"description": "Nyalakan ini untuk membiarkan Kilo Code menggunakan tool dari server MCP yang terhubung. Ini memberi Kilo Code lebih banyak kemampuan. Jika kamu tidak berencana menggunakan tool tambahan ini, matikan untuk membantu mengurangi biaya token API."
+		"description": "Nyalakan ini untuk membiarkan Kilo Code menggunakan tools dari server MCP yang terhubung. Ini memberikan Kilo Code lebih banyak kemampuan. Jika Anda tidak berencana menggunakan tools tambahan ini, matikan untuk membantu mengurangi biaya token API."
 	},
 	"enableServerCreation": {
 		"title": "Aktifkan Pembuatan Server MCP",
-		"description": "Aktifkan ini untuk membiarkan Kilo Code membantu kamu membangun server MCP kustom <1>baru</1>. <0>Pelajari tentang pembuatan server</0>",
-		"hint": "Petunjuk: Untuk mengurangi biaya token API, nonaktifkan pengaturan ini ketika kamu tidak secara aktif meminta Kilo Code untuk membuat server MCP baru."
+		"description": "Aktifkan ini agar Kilo Code membantu Anda membangun server MCP kustom <1>baru</1>. <0>Pelajari tentang pembuatan server</0>",
+		"hint": "Petunjuk: Untuk mengurangi biaya token API, nonaktifkan pengaturan ini ketika Anda tidak secara aktif meminta Kilo Code untuk membuat server MCP baru."
 	},
 	"editGlobalMCP": "Edit MCP Global",
 	"editProjectMCP": "Edit MCP Proyek",
@@ -27,9 +27,8 @@
 		"errors": "Error"
 	},
 	"emptyState": {
-		"noTools": "Tidak ada tool ditemukan",
-		"noResources": "Tidak ada resource ditemukan",
-		"noLogs": "Tidak ada log ditemukan",
+		"noTools": "Tidak ada tools ditemukan",
+		"noResources": "Tidak ada resources ditemukan",
 		"noErrors": "Tidak ada error ditemukan"
 	},
 	"networkTimeout": {
@@ -48,12 +47,17 @@
 	},
 	"deleteDialog": {
 		"title": "Hapus Server MCP",
-		"description": "Apakah kamu yakin ingin menghapus server MCP \"{{serverName}}\"? Aksi ini tidak dapat dibatalkan.",
+		"description": "Apakah Anda yakin ingin menghapus server MCP \"{{serverName}}\"? Aksi ini tidak dapat dibatalkan.",
 		"cancel": "Batal",
 		"delete": "Hapus"
 	},
 	"serverStatus": {
 		"retrying": "Mencoba lagi...",
 		"retryConnection": "Coba Koneksi Lagi"
+	},
+	"execution": {
+		"running": "Berjalan",
+		"completed": "Selesai",
+		"error": "Error"
 	}
 }

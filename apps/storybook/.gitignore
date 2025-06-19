@@ -1,5 +1,6 @@
 # Storybook build output
 storybook-static/
+build-storybook.log
 
 # Turbo cache
 .turbo/

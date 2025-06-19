@@ -32,6 +32,8 @@ import {
 	litellmDefaultModelId,
 } from "@roo-code/types"
 
+import { cerebrasModels, cerebrasDefaultModelId } from "@roo/api" // kilocode_change
+
 import type { RouterModels } from "@roo/api"
 
 import { useRouterModels } from "./useRouterModels"
@@ -145,6 +147,12 @@ function getSelectedModel({
 			const info = chutesModels[id as keyof typeof chutesModels]
 			return info ? { id, info } : { id: chutesDefaultModelId, info: chutesModels[chutesDefaultModelId] }
 		}
+		// kilocode_change start
+		case "cerebras": {
+			const id = apiConfiguration.apiModelId ?? cerebrasDefaultModelId
+			const info = cerebrasModels[id as keyof typeof cerebrasModels]
+			return info ? { id, info } : { id: cerebrasDefaultModelId, info: cerebrasModels[cerebrasDefaultModelId] }
+		} // kilocode_change end
 		case "bedrock": {
 			const id = apiConfiguration.apiModelId ?? bedrockDefaultModelId
 			const info = bedrockModels[id as keyof typeof bedrockModels]

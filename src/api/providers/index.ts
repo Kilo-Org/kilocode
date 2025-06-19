@@ -1,6 +1,7 @@
 export { AnthropicVertexHandler } from "./anthropic-vertex"
 export { AnthropicHandler } from "./anthropic"
 export { AwsBedrockHandler } from "./bedrock"
+export { CerebrasHandler } from "./cerebras" // kilocode_change
 export { ChutesHandler } from "./chutes"
 export { DeepSeekHandler } from "./deepseek"
 export { FakeAIHandler } from "./fake-ai"

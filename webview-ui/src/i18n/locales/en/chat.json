@@ -162,6 +162,8 @@
 		"didRead": "Kilo Code read this file:",
 		"wantsToEdit": "Kilo Code wants to edit this file:",
 		"wantsToEditOutsideWorkspace": "Kilo Code wants to edit this file outside of the workspace:",
+		"wantsToEditProtected": "Kilo Code wants to edit a protected configuration file:",
+		"wantsToApplyBatchChanges": "Kilo Code wants to apply changes to multiple files:",
 		"wantsToCreate": "Kilo Code wants to create a new file:",
 		"wantsToSearchReplace": "Kilo Code wants to search and replace in this file:",
 		"didSearchReplace": "Kilo Code performed search and replace on this file:",
@@ -172,12 +174,20 @@
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code wants to view the top level files in this directory:",
 		"didViewTopLevel": "Kilo Code viewed the top level files in this directory:",
+		"wantsToViewTopLevelOutsideWorkspace": "Kilo Code wants to view the top level files in this directory (outside workspace):",
+		"didViewTopLevelOutsideWorkspace": "Kilo Code viewed the top level files in this directory (outside workspace):",
 		"wantsToViewRecursive": "Kilo Code wants to recursively view all files in this directory:",
 		"didViewRecursive": "Kilo Code recursively viewed all files in this directory:",
+		"wantsToViewRecursiveOutsideWorkspace": "Kilo Code wants to recursively view all files in this directory (outside workspace):",
+		"didViewRecursiveOutsideWorkspace": "Kilo Code recursively viewed all files in this directory (outside workspace):",
 		"wantsToViewDefinitions": "Kilo Code wants to view source code definition names used in this directory:",
 		"didViewDefinitions": "Kilo Code viewed source code definition names used in this directory:",
+		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code wants to view source code definition names used in this directory (outside workspace):",
+		"didViewDefinitionsOutsideWorkspace": "Kilo Code viewed source code definition names used in this directory (outside workspace):",
 		"wantsToSearch": "Kilo Code wants to search this directory for <code>{{regex}}</code>:",
-		"didSearch": "Kilo Code searched this directory for <code>{{regex}}</code>:"
+		"didSearch": "Kilo Code searched this directory for <code>{{regex}}</code>:",
+		"wantsToSearchOutsideWorkspace": "Kilo Code wants to search this directory (outside workspace) for <code>{{regex}}</code>:",
+		"didSearchOutsideWorkspace": "Kilo Code searched this directory (outside workspace) for <code>{{regex}}</code>:"
 	},
 	"codebaseSearch": {
 		"wantsToSearch": "Kilo Code wants to search the codebase for <code>{{query}}</code>:",
@@ -225,11 +235,11 @@
 	},
 	"announcement": {
 		"title": "🎉 Roo Code {{version}} Released",
-		"description": "Roo Code {{version}} brings powerful new features and improvements based on your feedback.",
+		"description": "Roo Code {{version}} brings major new features and improvements based on your feedback.",
 		"whatsNew": "What's New",
-		"feature1": "<bold>Intelligent Context Condensing Enabled by Default</bold>: Context condensing is now enabled by default with configurable settings for when automatic condensing happens",
-		"feature2": "<bold>Manual Condensing Button</bold>: New button in the task header allows you to manually trigger context condensing at any time",
-		"feature3": "<bold>Enhanced Condensing Settings</bold>: Fine-tune when and how automatic condensing occurs through the <contextSettingsLink>Context Settings</contextSettingsLink>",
+		"feature1": "<bold>Experimental Marketplace</bold>: Discover and install modes and MCPs from the new marketplace (enable in <experimentalSettingsLink>Experimental Settings</experimentalSettingsLink>)",
+		"feature2": "<bold>Enhanced File Operations</bold>: Multiple concurrent file writes in experimental settings, and concurrent reads now in <contextSettingsLink>Context Settings</contextSettingsLink>",
+		"feature3": "<bold>MCP Improvements & More</bold>: Enhanced MCP support, Mermaid controls, Amazon Bedrock thinking support, and much more!",
 		"hideButton": "Hide announcement",
 		"detailsDiscussLinks": "Get more details and discuss in <discordLink>Discord</discordLink> and <redditLink>Reddit</redditLink> 🚀"
 	},
@@ -284,5 +294,12 @@
 			"description": "Kilo Code has reached the auto-approved limit of {{count}} API request(s). Would you like to reset the count and proceed with the task?",
 			"button": "Reset and Continue"
 		}
+	},
+	"indexingStatus": {
+		"ready": "Index ready",
+		"indexing": "Indexing {{percentage}}%",
+		"indexed": "Indexed",
+		"error": "Index error",
+		"status": "Index status"
 	}
 }

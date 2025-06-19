@@ -151,6 +151,7 @@
 		"didRead": "Kilo Code가 이 파일을 읽었습니다:",
 		"wantsToEdit": "Kilo Code가 이 파일을 편집하고 싶어합니다:",
 		"wantsToEditOutsideWorkspace": "Kilo Code가 워크스페이스 외부의 이 파일을 편집하고 싶어합니다:",
+		"wantsToEditProtected": "Kilo Code가 보호된 설정 파일을 편집하고 싶어합니다:",
 		"wantsToCreate": "Kilo Code가 새 파일을 만들고 싶어합니다:",
 		"wantsToSearchReplace": "Kilo Code가 이 파일에서 검색 및 바꾸기를 수행하고 싶어합니다:",
 		"didSearchReplace": "Kilo Code가 이 파일에서 검색 및 바꾸기를 수행했습니다:",
@@ -158,7 +159,8 @@
 		"wantsToInsertWithLineNumber": "Kilo Code가 이 파일의 {{lineNumber}}번 줄에 내용을 삽입하고 싶어합니다:",
 		"wantsToInsertAtEnd": "Kilo Code가 이 파일의 끝에 내용을 추가하고 싶어합니다:",
 		"wantsToReadAndXMore": "Kilo Code가 이 파일과 {{count}}개의 파일을 더 읽으려고 합니다:",
-		"wantsToReadMultiple": "Kilo Code가 여러 파일을 읽으려고 합니다:"
+		"wantsToReadMultiple": "Kilo Code가 여러 파일을 읽으려고 합니다:",
+		"wantsToApplyBatchChanges": "Kilo Code가 여러 파일에 변경 사항을 적용하고 싶어합니다:"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code가 이 디렉토리의 최상위 파일을 보고 싶어합니다:",
@@ -168,7 +170,15 @@
 		"wantsToViewDefinitions": "Kilo Code가 이 디렉토리에서 사용된 소스 코드 정의 이름을 보고 싶어합니다:",
 		"didViewDefinitions": "Kilo Code가 이 디렉토리에서 사용된 소스 코드 정의 이름을 보았습니다:",
 		"wantsToSearch": "Kilo Code가 이 디렉토리에서 <code>{{regex}}</code>을(를) 검색하고 싶어합니다:",
-		"didSearch": "Kilo Code가 이 디렉토리에서 <code>{{regex}}</code>을(를) 검색했습니다:"
+		"didSearch": "Kilo Code가 이 디렉토리에서 <code>{{regex}}</code>을(를) 검색했습니다:",
+		"wantsToSearchOutsideWorkspace": "Kilo Code가 이 디렉토리(워크스페이스 외부)에서 <code>{{regex}}</code>을(를) 검색하고 싶어합니다:",
+		"didSearchOutsideWorkspace": "Kilo Code가 이 디렉토리(워크스페이스 외부)에서 <code>{{regex}}</code>을(를) 검색했습니다:",
+		"wantsToViewTopLevelOutsideWorkspace": "Kilo Code가 이 디렉토리(워크스페이스 외부)의 최상위 파일을 보고 싶어합니다:",
+		"didViewTopLevelOutsideWorkspace": "Kilo Code가 이 디렉토리(워크스페이스 외부)의 최상위 파일을 보았습니다:",
+		"wantsToViewRecursiveOutsideWorkspace": "Kilo Code가 이 디렉토리(워크스페이스 외부)의 모든 파일을 재귀적으로 보고 싶어합니다:",
+		"didViewRecursiveOutsideWorkspace": "Kilo Code가 이 디렉토리(워크스페이스 외부)의 모든 파일을 재귀적으로 보았습니다:",
+		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code가 이 디렉토리(워크스페이스 외부)에서 사용된 소스 코드 정의 이름을 보고 싶어합니다:",
+		"didViewDefinitionsOutsideWorkspace": "Kilo Code가 이 디렉토리(워크스페이스 외부)에서 사용된 소스 코드 정의 이름을 보았습니다:"
 	},
 	"commandOutput": "명령 출력",
 	"response": "응답",
@@ -221,9 +231,9 @@
 		"title": "🎉 Roo Code {{version}} 출시",
 		"description": "Roo Code {{version}}은 사용자 피드백을 기반으로 강력한 새로운 기능과 개선사항을 제공합니다.",
 		"whatsNew": "새로운 기능",
-		"feature1": "<bold>지능형 컨텍스트 압축이 기본적으로 활성화됨</bold>: 컨텍스트 압축이 이제 기본적으로 활성화되며 자동 압축이 발생하는 시점을 구성할 수 있습니다",
-		"feature2": "<bold>수동 압축 버튼</bold>: 작업 헤더의 새 버튼으로 언제든지 수동으로 컨텍스트 압축을 트리거할 수 있습니다",
-		"feature3": "<bold>향상된 압축 설정</bold>: <contextSettingsLink>컨텍스트 설정</contextSettingsLink>을 통해 자동 압축이 언제 어떻게 발생하는지 세밀하게 조정",
+		"feature1": "<bold>실험적 마켓플레이스</bold>: 새로운 마켓플레이스에서 모드와 MCP를 발견하고 설치하세요 (<experimentalSettingsLink>실험적 설정</experimentalSettingsLink>에서 활성화)",
+		"feature2": "<bold>향상된 파일 작업</bold>: 실험적 설정에서 다중 동시 파일 쓰기, 동시 읽기는 이제 <contextSettingsLink>컨텍스트 설정</contextSettingsLink>에서 사용 가능",
+		"feature3": "<bold>MCP 개선 사항 및 기타</bold>: 향상된 MCP 지원, Mermaid 컨트롤, Amazon Bedrock thinking 지원 등!",
 		"hideButton": "공지 숨기기",
 		"detailsDiscussLinks": "<discordLink>Discord</discordLink>와 <redditLink>Reddit</redditLink>에서 더 자세한 정보를 확인하고 논의하세요 🚀"
 	},
@@ -284,5 +294,12 @@
 		"deny": {
 			"title": "모두 거부"
 		}
+	},
+	"indexingStatus": {
+		"ready": "인덱스 준비됨",
+		"indexing": "인덱싱 중 {{percentage}}%",
+		"indexed": "인덱싱 완료",
+		"error": "인덱스 오류",
+		"status": "인덱스 상태"
 	}
 }

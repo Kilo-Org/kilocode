@@ -150,6 +150,11 @@ const getCommandsMap = ({ context, outputChannel }: RegisterCommandOptions): Rec
 		vscode.env.openExternal(vscode.Uri.parse("https://kilocode.ai"))
 	},
 	// kilocode_change end
+	marketplaceButtonClicked: () => {
+		const visibleProvider = getVisibleProviderOrLog(outputChannel)
+		if (!visibleProvider) return
+		visibleProvider.postMessageToWebview({ type: "action", action: "marketplaceButtonClicked" })
+	},
 	showHumanRelayDialog: (params: { requestId: string; promptText: string }) => {
 		const panel = getPanel()
 
