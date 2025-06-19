@@ -14,6 +14,11 @@ export interface MessageSizeData {
 	timingMs: number | null
 }
 
+interface NormalizationBounds {
+	maxContentLength: number
+	maxTiming: number
+}
+
 /**
  * Calculate dynamic sizes for all messages
  * Width is always based on timing, height is always based on content
@@ -30,10 +35,7 @@ export function calculateTaskTimelineSizes(messages: (ClineMessage | ClineMessag
 		return { contentLength, timingMs }
 	})
 
-	// Find max values for normalization
-	const maxContentLength = Math.max(...rawData.map((d) => d.contentLength))
-	const validTimings = rawData.map((d) => d.timingMs).filter((t): t is number => t !== null)
-	const maxTiming = validTimings.length > 0 ? Math.max(...validTimings) : AVERAGE_REQUEST_TIME_MS
+	const { maxContentLength, maxTiming } = findMinMaxBoundingValues(rawData)
 
 	return rawData.map(({ contentLength, timingMs }, index) => {
 		// Normalize content length (0-1 scale) - used for HEIGHT
@@ -56,9 +58,6 @@ export function calculateTaskTimelineSizes(messages: (ClineMessage | ClineMessag
 	})
 }
 
-/**
- * Calculate an estimated 'content length' of a message for the TaskTimeline display
- */
 function calculateMessageContentLength(message: ClineMessage | ClineMessage[]): number {
 	if (Array.isArray(message)) {
 		return message.reduce((total, msg) => total + calculateMessageContentLength(msg), 0)
@@ -73,9 +72,6 @@ function calculateMessageContentLength(message: ClineMessage | ClineMessage[]): 
 	return Math.max(1, length) // Ensure minimum of 1
 }
 
-/**
- * Calculate active duration of a message (time until next message appeared)
- */
 function calculateMessageTiming(
 	currentMessage: ClineMessage | ClineMessage[],
 	nextMessage: ClineMessage | ClineMessage[] | null,
@@ -84,8 +80,17 @@ function calculateMessageTiming(
 
 	const currentTs = Array.isArray(currentMessage) ? currentMessage[0]?.ts : currentMessage.ts
 	const nextTs = Array.isArray(nextMessage) ? nextMessage[0]?.ts : nextMessage.ts
-
 	if (!currentTs || !nextTs) return null
 
 	return Math.max(0, nextTs - currentTs) // Time until next message appeared
+}
+
+function findMinMaxBoundingValues(
+	rawData: Array<{ contentLength: number; timingMs: number | null }>,
+): NormalizationBounds {
+	const maxContentLength = Math.max(...rawData.map((d) => d.contentLength))
+	const validTimings = rawData.map((d) => d.timingMs).filter((t): t is number => t !== null)
+	const maxTiming = validTimings.length > 0 ? Math.max(...validTimings) : AVERAGE_REQUEST_TIME_MS
+
+	return { maxContentLength, maxTiming }
 }

@@ -72,7 +72,7 @@ const ChatRow = memo(
 		const [chatrow, { height }] = useSize(
 			<div
 				// kilocode_change: add highlighted className
-				className={cn("px-[15px] py-[10px] pr-[6px]", highlighted && "animate-message-highlight")}>
+				className={cn(`px-[15px] py-[10px] pr-[6px] ${highlighted ? "animate-message-highlight" : ""}`)}>
 				<ChatRowContent {...props} />
 			</div>,
 		)

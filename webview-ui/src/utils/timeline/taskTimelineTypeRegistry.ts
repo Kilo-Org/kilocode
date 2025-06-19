@@ -26,81 +26,81 @@ export const TASK_TIMELINE_MESSAGE_TYPES: Record<string, TaskTimelineMessageType
 	// Ask types that should be shown (everything except the filtered ones)
 	"ask:tool": {
 		color: taskTimelineColorsByType.SYSTEM_GENERAL_TOOL,
-		translationKey: "tool",
+		translationKey: "kilocode:taskTimeline.tooltip.messageTypes.tool",
 	},
 	"ask:completion_result": {
 		color: taskTimelineColorsByType.SUCCESS,
-		translationKey: "completion_result",
+		translationKey: "kilocode:taskTimeline.tooltip.messageTypes.completion_result",
 	},
 	"ask:browser_action_launch": {
 		color: taskTimelineColorsByType.SYSTEM_GENERAL_TOOL,
-		translationKey: "browser_action_launch",
+		translationKey: "kilocode:taskTimeline.tooltip.messageTypes.browser_action_launch",
 	},
 	"ask:use_mcp_server": {
 		color: taskTimelineColorsByType.SYSTEM_GENERAL_TOOL,
-		translationKey: "use_mcp_server",
+		translationKey: "kilocode:taskTimeline.tooltip.messageTypes.use_mcp_server",
 	},
 	"ask:followup": {
 		color: taskTimelineColorsByType.USER_INTERACTION,
-		translationKey: "followup",
+		translationKey: "kilocode:taskTimeline.tooltip.messageTypes.followup",
 	},
 	"ask:command": {
 		color: taskTimelineColorsByType.USER_INTERACTION,
-		translationKey: "command",
+		translationKey: "kilocode:taskTimeline.tooltip.messageTypes.command",
 	},
 
 	// Say types that should be shown (everything except the filtered ones)
 	"say:text": {
 		color: taskTimelineColorsByType.ASSISTANT_MUTTERING,
-		translationKey: "text",
+		translationKey: "kilocode:taskTimeline.tooltip.messageTypes.text",
 	},
 	"say:reasoning": {
 		color: taskTimelineColorsByType.ASSISTANT_MUTTERING,
-		translationKey: "reasoning",
+		translationKey: "kilocode:taskTimeline.tooltip.messageTypes.reasoning",
 	},
 	"say:mcp_server_response": {
 		color: taskTimelineColorsByType.SYSTEM_GENERAL_TOOL,
-		translationKey: "mcp_server_response",
+		translationKey: "kilocode:taskTimeline.tooltip.messageTypes.mcp_server_response",
 	},
 	"say:command_output": {
 		color: taskTimelineColorsByType.SYSTEM_GENERAL_TOOL,
-		translationKey: "command_output",
+		translationKey: "kilocode:taskTimeline.tooltip.messageTypes.command_output",
 	},
 	"say:browser_action": {
 		color: taskTimelineColorsByType.SYSTEM_GENERAL_TOOL,
-		translationKey: "browser_action",
+		translationKey: "kilocode:taskTimeline.tooltip.messageTypes.browser_action",
 	},
 	"say:browser_action_result": {
 		color: taskTimelineColorsByType.SYSTEM_GENERAL_TOOL,
-		translationKey: "browser_action_result",
+		translationKey: "kilocode:taskTimeline.tooltip.messageTypes.browser_action_result",
 	},
 	"say:completion_result": {
 		color: taskTimelineColorsByType.SUCCESS,
-		translationKey: "completion_result",
+		translationKey: "kilocode:taskTimeline.tooltip.messageTypes.completion_result",
 	},
 	"say:error": {
 		color: taskTimelineColorsByType.ERROR,
-		translationKey: "error",
+		translationKey: "kilocode:taskTimeline.tooltip.messageTypes.error",
 	},
 	"say:checkpoint_saved": {
 		color: taskTimelineColorsByType.SUCCESS,
-		translationKey: "checkpoint_saved",
+		translationKey: "kilocode:taskTimeline.tooltip.messageTypes.checkpoint_saved",
 	},
 	"say:condense_context": {
 		color: taskTimelineColorsByType.ASSISTANT_MUTTERING,
-		translationKey: "condense_context",
+		translationKey: "kilocode:taskTimeline.tooltip.messageTypes.condense_context",
 	},
 	"say:user_feedback": {
 		color: taskTimelineColorsByType.USER_INTERACTION,
-		translationKey: "user",
+		translationKey: "kilocode:taskTimeline.tooltip.messageTypes.user",
 	},
 	"say:user_feedback_diff": {
 		color: taskTimelineColorsByType.USER_INTERACTION,
-		translationKey: "user",
+		translationKey: "kilocode:taskTimeline.tooltip.messageTypes.user",
 	},
 	"ask:condense": {
 		color: taskTimelineColorsByType.ASSISTANT_MUTTERING,
-		translationKey: "condense",
+		translationKey: "kilocode:taskTimeline.tooltip.messageTypes.condense",
 	},
 }
 
@@ -127,9 +127,9 @@ export function getMessageTypeDescription(message: ClineMessage | ClineMessage[]
 
 	const messageKey = getTaskTimelineMessageTypeKey(singleMessage)
 	const config = TASK_TIMELINE_MESSAGE_TYPES[messageKey]
-	const translationKey = config ? config.translationKey : "unknown"
+	const translationKey = config ? config.translationKey : "kilocode:taskTimeline.tooltip.messageTypes.unknown"
 
-	return t(`kilocode:taskTimeline.tooltip.messageTypes.${translationKey}`)
+	return t(translationKey)
 }
 
 /**
@@ -151,7 +151,7 @@ export function isFileOperation(message: ClineMessage): { isFile: boolean; isWri
 				return { isFile: true, isWrite }
 			}
 		} catch (_e) {
-			// JSON parse error, not a file operation
+			console.error("Failed to parse message text JSON - cannot determine if message contained toolData", message)
 		}
 	}
 	return { isFile: false, isWrite: false }

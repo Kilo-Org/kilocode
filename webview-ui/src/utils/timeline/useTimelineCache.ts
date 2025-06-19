@@ -1,6 +1,6 @@
 import { useMemo, useRef } from "react"
 import type { ClineMessage } from "@roo-code/types"
-import { processTimelineMessages } from "./timelineMessageProcessing"
+import { consolidateMessagesForTimeline } from "./consolidateMessagesForTimeline"
 import { calculateTaskTimelineSizes, type MessageSizeData } from "./calculateTaskTimelineSizes"
 import { getTaskTimelineMessageColor } from "./taskTimelineTypeRegistry"
 
@@ -22,7 +22,7 @@ interface ProcessedTimelineCache {
 	sourceLength: number
 }
 
-export function useTimelineCache(groupedMessages: (ClineMessage | ClineMessage[])[]): CachedTimelineMessageData[] {
+export function useTaskTimelineCache(groupedMessages: (ClineMessage | ClineMessage[])[]): CachedTimelineMessageData[] {
 	const cacheRef = useRef<ProcessedTimelineCache | null>(null)
 
 	const processedData = useMemo(() => {
@@ -33,7 +33,7 @@ export function useTimelineCache(groupedMessages: (ClineMessage | ClineMessage[]
 			return cache
 		}
 
-		const { processedMessages, messageToOriginalIndex } = processTimelineMessages(groupedMessages)
+		const { processedMessages, messageToOriginalIndex } = consolidateMessagesForTimeline(groupedMessages)
 		const messageSizeData = calculateTaskTimelineSizes(processedMessages)
 
 		const newCache: ProcessedTimelineCache = {

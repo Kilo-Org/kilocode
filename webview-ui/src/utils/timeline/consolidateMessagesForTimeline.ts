@@ -10,7 +10,7 @@ import { TASK_TIMELINE_MESSAGE_TYPES, getTaskTimelineMessageTypeKey } from "./ta
  * 3. Filters out unwanted message types
  * 4. Returns processed messages with original index mapping
  */
-export function processTimelineMessages(groupedMessages: (ClineMessage | ClineMessage[])[]): {
+export function consolidateMessagesForTimeline(groupedMessages: (ClineMessage | ClineMessage[])[]): {
 	processedMessages: ClineMessage[]
 	messageToOriginalIndex: Map<ClineMessage, number>
 } {

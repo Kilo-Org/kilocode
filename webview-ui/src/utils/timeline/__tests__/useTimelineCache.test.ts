@@ -1,6 +1,6 @@
 import { renderHook } from "@testing-library/react"
 import type { ClineMessage } from "@roo-code/types"
-import { useTimelineCache } from "../useTimelineCache"
+import { useTaskTimelineCache } from "../useTimelineCache"
 
 jest.mock("../timelineMessageProcessing", () => ({
 	processTimelineMessages: jest.fn((messages: any[]) => ({
@@ -34,7 +34,7 @@ const createMessage = (id: string): ClineMessage => ({
 describe("useTimelineCache", () => {
 	it("processes messages correctly", () => {
 		const messages = [createMessage("1"), createMessage("2"), createMessage("3")]
-		const { result } = renderHook(() => useTimelineCache(messages))
+		const { result } = renderHook(() => useTaskTimelineCache(messages))
 
 		expect(result.current).toHaveLength(2) // Skips first message
 		expect(result.current[0].message).toBe(messages[1])
@@ -43,7 +43,7 @@ describe("useTimelineCache", () => {
 
 	it("caches results when message count doesn't change", () => {
 		const messages = [createMessage("1"), createMessage("2")]
-		const { result, rerender } = renderHook(() => useTimelineCache(messages))
+		const { result, rerender } = renderHook(() => useTaskTimelineCache(messages))
 
 		const firstResult = result.current
 		rerender()
@@ -54,7 +54,7 @@ describe("useTimelineCache", () => {
 
 	it("recalculates when new messages added", () => {
 		const initialMessages = [createMessage("1"), createMessage("2")]
-		const { result, rerender } = renderHook(({ messages }) => useTimelineCache(messages), {
+		const { result, rerender } = renderHook(({ messages }) => useTaskTimelineCache(messages), {
 			initialProps: { messages: initialMessages },
 		})
 
@@ -69,7 +69,7 @@ describe("useTimelineCache", () => {
 
 	it("returns cached data without isActive", () => {
 		const messages = [createMessage("1"), createMessage("2"), createMessage("3")]
-		const { result } = renderHook(() => useTimelineCache(messages))
+		const { result } = renderHook(() => useTaskTimelineCache(messages))
 
 		const timelineData = result.current
 		expect(timelineData[0]).toHaveProperty("index")

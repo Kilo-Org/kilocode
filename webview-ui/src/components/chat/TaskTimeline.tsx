@@ -4,7 +4,7 @@ import type { ClineMessage } from "@roo-code/types"
 import { TaskTimelineMessage } from "./TaskTimelineMessage"
 import { VirtuosoHorizontalNoScrollbarScroller } from "../ui/VirtuosoHorizontalNoScrollbarScroller"
 import { MAX_HEIGHT_PX } from "../../utils/timeline/calculateTaskTimelineSizes"
-import { useTimelineCache } from "../../utils/timeline/useTimelineCache"
+import { useTaskTimelineCache } from "../../utils/timeline/useTimelineCache"
 
 interface TaskTimelineProps {
 	groupedMessages: (ClineMessage | ClineMessage[])[]
@@ -16,7 +16,7 @@ export const TaskTimeline = memo<TaskTimelineProps>(({ groupedMessages, onMessag
 	const virtuosoRef = useRef<VirtuosoHandle>(null)
 	const previousGroupedLengthRef = useRef(groupedMessages.length)
 
-	const timelineMessagesData = useTimelineCache(groupedMessages)
+	const timelineMessagesData = useTaskTimelineCache(groupedMessages)
 	const activeIndex = isTaskActive ? groupedMessages.length - 1 : -1
 
 	const itemContent = useCallback(
