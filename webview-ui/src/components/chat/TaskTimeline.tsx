@@ -19,14 +19,14 @@ export interface TaskTimelineMessageData {
 	sizeData: MessageSizeData
 }
 
-interface TaskTimeline {
+interface TaskTimelineProps {
 	groupedMessages: (ClineMessage | ClineMessage[])[]
 	onMessageClick?: (index: number) => void
 	currentMessageIndex?: number
 	isTaskActive?: boolean
 }
 
-export const TaskTimeline = memo<TaskTimeline>(
+export const TaskTimeline = memo<TaskTimelineProps>(
 	({ groupedMessages, onMessageClick, currentMessageIndex, isTaskActive = false }) => {
 		const previousLengthRef = useRef(0)
 		const virtuosoRef = useRef<VirtuosoHandle>(null)

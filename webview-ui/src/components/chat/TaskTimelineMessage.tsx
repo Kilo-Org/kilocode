@@ -1,7 +1,7 @@
 import { memo, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { cn } from "@/lib/utils"
-import { getMessageTypeDescription } from "@/utils/timeline/getMessageTypeDescription"
+import { getMessageTypeDescription } from "@/utils/timeline/taskTimelineTypeRegistry"
 import { MAX_HEIGHT_PX } from "@/utils/timeline/calculateTaskTimelineSizes"
 import type { TaskTimelineMessageData } from "./TaskTimeline"
 

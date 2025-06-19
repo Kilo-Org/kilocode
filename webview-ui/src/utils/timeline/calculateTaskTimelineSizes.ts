@@ -57,7 +57,7 @@ export function calculateTaskTimelineSizes(messages: (ClineMessage | ClineMessag
 }
 
 /**
- * Calculate the content length of a message
+ * Calculate an estimated 'content length' of a message for the TaskTimeline display
  */
 function calculateMessageContentLength(message: ClineMessage | ClineMessage[]): number {
 	if (Array.isArray(message)) {
@@ -65,17 +65,9 @@ function calculateMessageContentLength(message: ClineMessage | ClineMessage[]): 
 	}
 
 	let length = 0
-
-	// Add text content
 	length += message.text?.length ?? 0
-
-	// Add reasoning content
 	length += message.reasoning?.length ?? 0
-
-	// Add images (count each as equivalent to some text)
-	length += (message.images?.length ?? 0) * 100 // Each image counts as 100 characters
-
-	// Add context condense summary
+	length += (message.images?.length ?? 0) * 100 // Each image counts as X characters
 	length += message.contextCondense?.summary.length ?? 0
 
 	return Math.max(1, length) // Ensure minimum of 1

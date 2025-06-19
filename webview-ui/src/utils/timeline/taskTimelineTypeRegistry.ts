@@ -5,8 +5,7 @@ export interface TaskTimelineMessageTypeConfig {
 	translationKey: string
 }
 
-const taskTimelineColorPalette = {
-	// VS Code Theme-Aware Colors with Tailwind bg- classes
+const taskTimelineColorsByType = {
 	USER_INTERACTION: "bg-[var(--vscode-chat-editedFileForeground)]", // Tan/orange for all 'ask' types
 	SYSTEM_READ: "bg-[var(--vscode-textLink-foreground)]", // Light blue for file reads
 	SYSTEM_WRITE: "bg-[var(--vscode-focusBorder)]", // Dark blue for file writes
@@ -26,70 +25,82 @@ const taskTimelineColorPalette = {
 export const TASK_TIMELINE_MESSAGE_TYPES: Record<string, TaskTimelineMessageTypeConfig> = {
 	// Ask types that should be shown (everything except the filtered ones)
 	"ask:tool": {
-		color: taskTimelineColorPalette.SYSTEM_GENERAL_TOOL,
+		color: taskTimelineColorsByType.SYSTEM_GENERAL_TOOL,
 		translationKey: "tool",
 	},
 	"ask:completion_result": {
-		color: taskTimelineColorPalette.SUCCESS,
+		color: taskTimelineColorsByType.SUCCESS,
 		translationKey: "completion_result",
 	},
 	"ask:browser_action_launch": {
-		color: taskTimelineColorPalette.SYSTEM_GENERAL_TOOL,
+		color: taskTimelineColorsByType.SYSTEM_GENERAL_TOOL,
 		translationKey: "browser_action_launch",
 	},
 	"ask:use_mcp_server": {
-		color: taskTimelineColorPalette.SYSTEM_GENERAL_TOOL,
+		color: taskTimelineColorsByType.SYSTEM_GENERAL_TOOL,
 		translationKey: "use_mcp_server",
 	},
 	"ask:followup": {
-		color: taskTimelineColorPalette.USER_INTERACTION,
+		color: taskTimelineColorsByType.USER_INTERACTION,
 		translationKey: "followup",
 	},
 	"ask:command": {
-		color: taskTimelineColorPalette.USER_INTERACTION,
+		color: taskTimelineColorsByType.USER_INTERACTION,
 		translationKey: "command",
 	},
 
 	// Say types that should be shown (everything except the filtered ones)
 	"say:text": {
-		color: taskTimelineColorPalette.ASSISTANT_MUTTERING,
+		color: taskTimelineColorsByType.ASSISTANT_MUTTERING,
 		translationKey: "text",
 	},
 	"say:reasoning": {
-		color: taskTimelineColorPalette.ASSISTANT_MUTTERING,
+		color: taskTimelineColorsByType.ASSISTANT_MUTTERING,
 		translationKey: "reasoning",
 	},
 	"say:mcp_server_response": {
-		color: taskTimelineColorPalette.SYSTEM_GENERAL_TOOL,
+		color: taskTimelineColorsByType.SYSTEM_GENERAL_TOOL,
 		translationKey: "mcp_server_response",
 	},
 	"say:command_output": {
-		color: taskTimelineColorPalette.SYSTEM_GENERAL_TOOL,
+		color: taskTimelineColorsByType.SYSTEM_GENERAL_TOOL,
 		translationKey: "command_output",
 	},
 	"say:browser_action": {
-		color: taskTimelineColorPalette.SYSTEM_GENERAL_TOOL,
+		color: taskTimelineColorsByType.SYSTEM_GENERAL_TOOL,
 		translationKey: "browser_action",
 	},
 	"say:browser_action_result": {
-		color: taskTimelineColorPalette.SYSTEM_GENERAL_TOOL,
+		color: taskTimelineColorsByType.SYSTEM_GENERAL_TOOL,
 		translationKey: "browser_action_result",
 	},
 	"say:completion_result": {
-		color: taskTimelineColorPalette.SUCCESS,
+		color: taskTimelineColorsByType.SUCCESS,
 		translationKey: "completion_result",
 	},
 	"say:error": {
-		color: taskTimelineColorPalette.ERROR,
+		color: taskTimelineColorsByType.ERROR,
 		translationKey: "error",
 	},
 	"say:checkpoint_saved": {
-		color: taskTimelineColorPalette.SUCCESS,
+		color: taskTimelineColorsByType.SUCCESS,
 		translationKey: "checkpoint_saved",
 	},
 	"say:condense_context": {
-		color: taskTimelineColorPalette.ASSISTANT_MUTTERING,
+		color: taskTimelineColorsByType.ASSISTANT_MUTTERING,
 		translationKey: "condense_context",
+	},
+	"say:user_feedback": {
+		color: taskTimelineColorsByType.USER_INTERACTION,
+		translationKey: "user",
+	},
+	"say:user_feedback_diff": {
+		color: taskTimelineColorsByType.USER_INTERACTION,
+		translationKey: "user",
+	},
+	"ask:condense": {
+		color: taskTimelineColorsByType.ASSISTANT_MUTTERING,
+		translationKey: "condense",
 	},
 }
 
@@ -103,6 +114,22 @@ export function getTaskTimelineMessageTypeKey(message: ClineMessage): string {
 		return `say:${message.say || "unknown"}`
 	}
 	return "unknown"
+}
+
+/**
+ * Get a human-readable description of a message type for the task timeline
+ */
+export function getMessageTypeDescription(message: ClineMessage | ClineMessage[], t: any): string {
+	const singleMessage = Array.isArray(message) ? message[0] : message
+	if (!singleMessage) {
+		return t("kilocode:taskTimeline.tooltip.messageTypes.unknown")
+	}
+
+	const messageKey = getTaskTimelineMessageTypeKey(singleMessage)
+	const config = TASK_TIMELINE_MESSAGE_TYPES[messageKey]
+	const translationKey = config ? config.translationKey : "unknown"
+
+	return t(`kilocode:taskTimeline.tooltip.messageTypes.${translationKey}`)
 }
 
 /**
@@ -135,7 +162,7 @@ export function isFileOperation(message: ClineMessage): { isFile: boolean; isWri
  */
 export function getTaskTimelineMessageColor(message: ClineMessage | ClineMessage[]): string {
 	if (Array.isArray(message)) {
-		return taskTimelineColorPalette.GROUPED
+		return taskTimelineColorsByType.GROUPED
 	}
 
 	const singleMessage = message as ClineMessage
@@ -145,13 +172,13 @@ export function getTaskTimelineMessageColor(message: ClineMessage | ClineMessage
 	if (singleMessage.type === "ask") {
 		const fileOp = isFileOperation(singleMessage)
 		if (fileOp.isFile) {
-			return fileOp.isWrite ? taskTimelineColorPalette.SYSTEM_WRITE : taskTimelineColorPalette.SYSTEM_READ
+			return fileOp.isWrite ? taskTimelineColorsByType.SYSTEM_WRITE : taskTimelineColorsByType.SYSTEM_READ
 		}
 	}
 
 	// Use registry color or fallback to default
 	const config = TASK_TIMELINE_MESSAGE_TYPES[messageKey]
-	return config ? config.color : taskTimelineColorPalette.DEFAULT
+	return config ? config.color : taskTimelineColorsByType.DEFAULT
 }
 
-export { taskTimelineColorPalette }
+export { taskTimelineColorsByType as taskTimelineColorPalette }

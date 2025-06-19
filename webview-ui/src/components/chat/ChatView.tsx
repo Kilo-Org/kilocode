@@ -1268,7 +1268,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					isStreaming={isStreaming}
 					onSuggestionClick={handleSuggestionClickInRow} // This was already stabilized
 					onBatchFileResponse={handleBatchFileResponse}
-					highlighted={highlightedMessageIndex === index} // kilocode_change: Add highlight prop
+					highlighted={highlightedMessageIndex === index} // kilocode_change: add highlight prop
 				/>
 			)
 		},
@@ -1281,7 +1281,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			isStreaming,
 			handleSuggestionClickInRow,
 			handleBatchFileResponse,
-			highlightedMessageIndex,
+			highlightedMessageIndex, // kilocode_change: add highlightedMessageIndex
 		],
 	)
 
