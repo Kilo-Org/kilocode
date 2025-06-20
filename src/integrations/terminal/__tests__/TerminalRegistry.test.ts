@@ -43,7 +43,7 @@ jest.mock("execa", () => ({
 	execa: jest.fn(),
 }))
 
-jest.mock("../../../utils/path", () => ({ getWorkspacePath: jest.fn(() => "/test/workspace") }))
+jest.mock("../../../utils/path", () => ({ getWorkspacePath: jest.fn(() => "/test/workspace") })) // kilocode_change
 
 describe("TerminalRegistry", () => {
 	beforeEach(() => {
