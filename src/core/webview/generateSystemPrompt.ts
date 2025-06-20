@@ -67,6 +67,7 @@ export const generateSystemPrompt = async (provider: ClineProvider, message: Web
 		provider.context,
 		cwd,
 		canUseBrowserTool,
+		provider.getVSCLMToolService(),
 		mcpEnabled ? provider.getMcpHub() : undefined,
 		diffStrategy,
 		browserViewportSize ?? "900x600",
