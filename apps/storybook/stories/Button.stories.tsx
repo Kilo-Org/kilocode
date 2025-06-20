@@ -2,9 +2,6 @@ import type { Meta, StoryObj } from "@storybook/react"
 import { fn } from "@storybook/test"
 import { Button } from "@/components/ui/button"
 
-// Import mocks
-import "../../src/mocks/vscode"
-
 const meta = {
 	title: "UI/Button",
 	component: Button,

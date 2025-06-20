@@ -31,7 +31,8 @@
 		"prompts": "Prompts",
 		"experimental": "Experimental",
 		"language": "Idioma",
-		"about": "Sobre"
+		"about": "Sobre",
+		"display": "Exibir"
 	},
 	"prompts": {
 		"description": "Configure prompts de suporte usados para ações rápidas como melhorar prompts, explicar código e corrigir problemas. Esses prompts ajudam o Kilo Code a fornecer melhor assistência para tarefas comuns de desenvolvimento."
@@ -152,6 +153,10 @@
 		"awsCustomArnDesc": "Certifique-se de que a região no ARN corresponde à região AWS selecionada acima.",
 		"openRouterApiKey": "Chave de API OpenRouter",
 		"getOpenRouterApiKey": "Obter chave de API OpenRouter",
+		"cerebras": {
+			"apiKey": "Chave de API Cerebras",
+			"getApiKey": "Obter chave de API Cerebras"
+		},
 		"apiKeyStorageNotice": "As chaves de API são armazenadas com segurança no Armazenamento Secreto do VSCode",
 		"glamaApiKey": "Chave de API Glama",
 		"getGlamaApiKey": "Obter chave de API Glama",
@@ -622,5 +627,11 @@
 	"labels": {
 		"customArn": "ARN personalizado",
 		"useCustomArn": "Usar ARN personalizado..."
+	},
+	"display": {
+		"taskTimeline": {
+			"label": "Mostrar linha do tempo da tarefa",
+			"description": "Exibe uma linha do tempo visual das mensagens de tarefas, coloridas por tipo, permitindo que você visualize rapidamente o progresso da tarefa e volte para pontos específicos no histórico da tarefa."
+		}
 	}
 }

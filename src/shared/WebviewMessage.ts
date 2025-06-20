@@ -187,6 +187,7 @@ export interface WebviewMessage {
 		| "indexCleared"
 		| "codebaseIndexConfig"
 		| "setHistoryPreviewCollapsed"
+		| "showTaskTimeline" // kilocode_change
 		| "toggleTaskFavorite" // kilocode_change
 		| "openExternal"
 		| "filterMarketplaceItems"

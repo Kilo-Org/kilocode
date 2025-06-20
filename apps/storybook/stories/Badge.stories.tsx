@@ -1,9 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react"
 import { Badge } from "@/components/ui/badge"
 
-// Import mocks
-import "../../src/mocks/vscode"
-
 const meta = {
 	title: "UI/Badge",
 	component: Badge,

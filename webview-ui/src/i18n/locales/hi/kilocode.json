@@ -75,5 +75,28 @@
 			"newWorkflowFile": "नई वर्कफ़्लो फ़ाइल...",
 			"newRuleFile": "नई नियम फ़ाइल..."
 		}
+	},
+	"taskTimeline": {
+		"tooltip": {
+			"clickToScroll": "{{messageType}} (#{{messageNumber}}) देखें",
+			"messageTypes": {
+				"browser_action_launch": "ब्राउज़र लॉन्च",
+				"browser_action": "ब्राउज़र क्रिया",
+				"checkpoint_saved": "चेकपॉइंट सहेजा गया",
+				"browser_action_result": "ब्राउज़र क्रिया परिणाम",
+				"command": "कमांड एक्जीक्यूशन",
+				"command_output": "कमांड आउटपुट",
+				"completion_result": "पूर्णता परिणाम",
+				"error": "त्रुटि संदेश",
+				"mcp_server_response": "MCP सर्वर प्रतिक्रिया",
+				"condense_context": "संदर्भ संक्षिप्त करें",
+				"followup": "अनुवर्ती प्रश्न",
+				"reasoning": "AI तर्क",
+				"text": "AI प्रतिक्रिया",
+				"unknown": "अज्ञात संदेश प्रकार",
+				"tool": "उपकरण उपयोग",
+				"use_mcp_server": "MCP सर्वर उपयोग"
+			}
+		}
 	}
 }

@@ -59,6 +59,7 @@ describe("ContextWindowProgress", () => {
 			onClose: jest.fn(),
 			buttonsDisabled: false,
 			handleCondenseContext: jest.fn((_taskId: string) => {}),
+			groupedMessages: [],
 		}
 
 		return render(

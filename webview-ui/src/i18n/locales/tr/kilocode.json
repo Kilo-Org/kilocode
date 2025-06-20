@@ -75,5 +75,28 @@
 			"newWorkflowFile": "Yeni iş akışı dosyası...",
 			"newRuleFile": "Yeni kural dosyası..."
 		}
+	},
+	"taskTimeline": {
+		"tooltip": {
+			"clickToScroll": "{{messageType}} (#{{messageNumber}}) Görüntüle",
+			"messageTypes": {
+				"browser_action_launch": "tarayıcı başlatma",
+				"browser_action_result": "tarayıcı işlemi sonucu",
+				"browser_action": "tarayıcı eylemi",
+				"command_output": "komut çıktısı",
+				"completion_result": "tamamlama sonucu",
+				"checkpoint_saved": "kontrol noktası kaydedildi\n(sometimes can be \"ilerleme kaydedildi\" depending on context)",
+				"condense_context": "bağlamı özetle",
+				"error": "hata mesajı",
+				"command": "komut yürütme",
+				"followup": "devam sorusu",
+				"mcp_server_response": "MCP sunucu yanıtı",
+				"text": "YZ yanıtı",
+				"reasoning": "Yapay zeka muhakemesi",
+				"tool": "araç kullanımı",
+				"unknown": "bilinmeyen mesaj türü",
+				"use_mcp_server": "MCP sunucu kullanımı"
+			}
+		}
 	}
 }

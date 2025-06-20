@@ -23,6 +23,10 @@
 		},
 		"storybook:build": {
 			"outputs": ["storybook-static/**"]
+		},
+		"chromatic": {
+			"dependsOn": ["storybook:build"],
+			"cache": false
 		}
 	}
 }

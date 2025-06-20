@@ -32,7 +32,8 @@
 		"experimental": "实验性",
 		"language": "语言",
 		"about": "关于 Kilo Code",
-		"mcp": "MCP 服务器"
+		"mcp": "MCP 服务器",
+		"display": "显示"
 	},
 	"prompts": {
 		"description": "配置用于快速操作的支持提示词，如增强提示词、解释代码和修复问题。这些提示词帮助 Kilo Code 为常见开发任务提供更好的支持。"
@@ -154,6 +155,10 @@
 		"openRouterApiKey": "OpenRouter API 密钥",
 		"getOpenRouterApiKey": "获取 OpenRouter API 密钥",
 		"apiKeyStorageNotice": "API 密钥安全存储在 VSCode 的密钥存储中",
+		"cerebras": {
+			"apiKey": "Cerebras API 密钥",
+			"getApiKey": "获取 Cerebras API 密钥"
+		},
 		"glamaApiKey": "Glama API 密钥",
 		"getGlamaApiKey": "获取 Glama API 密钥",
 		"useCustomBaseUrl": "使用自定义基础 URL",
@@ -623,5 +628,11 @@
 	"labels": {
 		"customArn": "自定义 ARN",
 		"useCustomArn": "使用自定义 ARN..."
+	},
+	"display": {
+		"taskTimeline": {
+			"label": "显示任务时间轴",
+			"description": "显示任务消息的可视化时间线，按类型进行颜色区分，让您能够快速查看任务进度并滚动回溯到任务历史中的特定节点。"
+		}
 	}
 }

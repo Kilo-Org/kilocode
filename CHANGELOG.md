@@ -1,5 +1,56 @@
 # kilo-code
 
+## [v4.39.0]
+
+- [#777](https://github.com/Kilo-Org/kilocode/pull/777) [`b04ad66`](https://github.com/Kilo-Org/kilocode/commit/b04ad661e195ca42430bd7d1c6f5a247cf3ff49b) Thanks [@markijbema](https://github.com/markijbema)! - Added Cerebras API provider (from Cline)
+
+- [#768](https://github.com/Kilo-Org/kilocode/pull/768) [`fc7a357`](https://github.com/Kilo-Org/kilocode/commit/fc7a357fa6460d54eec58800af60d335fbc71a96) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Include changes from Roo Code v3.20.3
+
+    - Resolve diff editor race condition in multi-monitor setups (thanks @daniel-lxs!)
+    - Add logic to prevent auto-approving edits of configuration files
+    - Adjust searching and listing files outside of the workspace to respect the auto-approve settings
+    - Fix multi-file diff error handling and UI feedback (thanks @daniel-lxs!)
+    - Improve prompt history navigation to not interfere with text editing (thanks @daniel-lxs!)
+    - Fix errant maxReadFileLine default
+    - Limit search_files to only look within the workspace for improved security
+    - Force tar-fs >=2.1.3 for security vulnerability fix
+    - Add cache breakpoints for custom vertex models on Unbound (thanks @pugazhendhi-m!)
+    - Reapply reasoning for bedrock with fix (thanks @daniel-lxs!)
+    - Sync BatchDiffApproval styling with BatchFilePermission for UI consistency (thanks @samhvw8!)
+    - Add max height constraint to MCP execution response for better UX (thanks @samhvw8!)
+    - Prevent MCP 'installed' label from being squeezed #4630 (thanks @daniel-lxs!)
+    - Allow a lower context condesning threshold (thanks @SECKainersdorfer!)
+    - Avoid type system duplication for cleaner codebase (thanks @EamonNerbonne!)
+    - Temporarily revert thinking support for Bedrock models
+    - Improve performance of MCP execution block
+    - Add indexing status badge to chat view
+    - Add experimental multi-file edits (thanks @samhvw8!)
+    - Move concurrent reads setting to context settings with default of 5
+    - Improve MCP execution UX (thanks @samhvw8!)
+    - Add magic variables support for MCPs with `workspaceFolder` injection (thanks @NamesMT!)
+    - Add prompt history navigation via arrow up/down in prompt field
+    - Add support for escaping context mentions (thanks @KJ7LNW!)
+    - Add DeepSeek R1 support to Chutes provider
+    - Add reasoning budget support to Bedrock models for extended thinking
+    - Add mermaid diagram support buttons (thanks @qdaxb!)
+    - Update XAI models and pricing (thanks @edwin-truthsearch-io!)
+    - Update O3 model pricing
+    - Add manual OpenAI-compatible format specification and parsing (thanks @dflatline!)
+    - Add core tools integration tests for comprehensive coverage
+    - Add JSDoc documentation for ClineAsk and ClineSay types (thanks @hannesrudolph!)
+    - Populate whenToUse descriptions for built-in modes
+    - Fix file write tool with early relPath & newContent validation checks (thanks @Ruakij!)
+    - Fix TaskItem display and copy issues with HTML tags in task messages (thanks @forestyoo!)
+    - Fix OpenRouter cost calculation with BYOK (thanks @chrarnoldus!)
+    - Fix terminal busy state reset after manual commands complete
+    - Fix undefined output on multi-file apply_diff operations (thanks @daniel-lxs!)
+
+- [#769](https://github.com/Kilo-Org/kilocode/pull/769) [`d12f4a3`](https://github.com/Kilo-Org/kilocode/commit/d12f4a358af696fa8f8877446661345125c4bb52) Thanks [@hassoncs](https://github.com/hassoncs)! - Add task timeline visualization to help you navigate chat history
+
+    We've added a new task timeline that gives you a visual overview of your conversation flow. You can click on timeline messages to quickly jump to specific points in your chat history, making it much easier to understand what happened during your session and navigate back to important moments.
+
+    This feature is available as a new setting in Display Settings. Enable it when you want that extra visibility into your task progress!
+
 ## [v4.38.1]
 
 - [#747](https://github.com/Kilo-Org/kilocode/pull/747) [`943c7dd`](https://github.com/Kilo-Org/kilocode/commit/943c7ddb671ed19bb4b9a35ec32ee7898424bf31) Thanks [@markijbema](https://github.com/markijbema)! - Close the browsertool properly when a remote browser is configured but a fallback local one is used

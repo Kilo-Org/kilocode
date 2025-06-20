@@ -75,5 +75,28 @@
 			"newWorkflowFile": "新建工作流文件...",
 			"newRuleFile": "新建规则文件..."
 		}
+	},
+	"taskTimeline": {
+		"tooltip": {
+			"messageTypes": {
+				"browser_action": "浏览器操作",
+				"browser_action_result": "浏览器操作结果",
+				"browser_action_launch": "浏览器启动",
+				"command": "命令执行",
+				"checkpoint_saved": "检查点已保存",
+				"completion_result": "完成结果",
+				"command_output": "命令输出",
+				"condense_context": "简化上下文",
+				"followup": "跟进问题",
+				"error": "错误信息",
+				"mcp_server_response": "MCP 服务器响应",
+				"reasoning": "AI 推理",
+				"unknown": "未知消息类型",
+				"text": "AI回复",
+				"tool": "工具使用",
+				"use_mcp_server": "MCP 服务器使用情况"
+			},
+			"clickToScroll": "查看{{messageType}} (#{{messageNumber}})"
+		}
 	}
 }

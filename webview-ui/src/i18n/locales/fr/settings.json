@@ -31,7 +31,8 @@
 		"prompts": "Invites",
 		"experimental": "Expérimental",
 		"language": "Langue",
-		"about": "À propos de Kilo Code"
+		"about": "À propos de Kilo Code",
+		"display": "Afficher"
 	},
 	"prompts": {
 		"description": "Configurez les invites de support utilisées pour les actions rapides comme l'amélioration des invites, l'explication du code et la résolution des problèmes. Ces invites aident Kilo Code à fournir une meilleure assistance pour les tâches de développement courantes."
@@ -254,6 +255,10 @@
 				"description": "OpenRouter dirige les requêtes vers les meilleurs fournisseurs disponibles pour votre modèle. Par défaut, les requêtes sont équilibrées entre les principaux fournisseurs pour maximiser la disponibilité. Cependant, vous pouvez choisir un fournisseur spécifique à utiliser pour ce modèle.",
 				"learnMore": "En savoir plus sur le routage des fournisseurs"
 			}
+		},
+		"cerebras": {
+			"apiKey": "Clé API Cerebras",
+			"getApiKey": "Obtenir la clé API Cerebras"
 		},
 		"customModel": {
 			"capabilities": "Configurez les capacités et les prix pour votre modèle personnalisé compatible OpenAI. Soyez prudent lors de la spécification des capacités du modèle, car elles peuvent affecter le fonctionnement de Kilo Code.",
@@ -622,5 +627,11 @@
 	"labels": {
 		"customArn": "ARN personnalisé",
 		"useCustomArn": "Utiliser un ARN personnalisé..."
+	},
+	"display": {
+		"taskTimeline": {
+			"label": "Afficher la chronologie des tâches",
+			"description": "Afficher une chronologie visuelle des messages de tâches, colorés selon leur type, permettant de voir rapidement la progression des tâches et de revenir à des points spécifiques dans l'historique de la tâche."
+		}
 	}
 }

@@ -31,7 +31,8 @@
 		"prompts": "Prompt",
 		"experimental": "Eksperimental",
 		"language": "Bahasa",
-		"about": "Tentang Kilo Code"
+		"about": "Tentang Kilo Code",
+		"display": "Tampilkan"
 	},
 	"prompts": {
 		"description": "Konfigurasi support prompt yang digunakan untuk aksi cepat seperti meningkatkan prompt, menjelaskan kode, dan memperbaiki masalah. Prompt ini membantu Kilo Code memberikan bantuan yang lebih baik untuk tugas pengembangan umum."
@@ -153,6 +154,10 @@
 		"openRouterApiKey": "OpenRouter API Key",
 		"getOpenRouterApiKey": "Dapatkan OpenRouter API Key",
 		"apiKeyStorageNotice": "API key disimpan dengan aman di Secret Storage VSCode",
+		"cerebras": {
+			"apiKey": "Cerebras API Key",
+			"getApiKey": "Dapatkan Cerebras API Key"
+		},
 		"glamaApiKey": "Glama API Key",
 		"getGlamaApiKey": "Dapatkan Glama API Key",
 		"useCustomBaseUrl": "Gunakan base URL kustom",
@@ -643,5 +648,11 @@
 	"labels": {
 		"customArn": "ARN Kustom",
 		"useCustomArn": "Gunakan ARN kustom..."
+	},
+	"display": {
+		"taskTimeline": {
+			"label": "Tampilkan linimasa tugas",
+			"description": "Tampilkan timeline visual dari pesan-pesan tugas, diwarnai berdasarkan jenisnya, memungkinkan Anda untuk melihat kemajuan tugas dengan cepat dan menggulir kembali ke titik-titik tertentu dalam riwayat tugas."
+		}
 	}
 }

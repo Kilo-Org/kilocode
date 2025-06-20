@@ -75,5 +75,28 @@
 			"newWorkflowFile": "Neue Workflow-Datei...",
 			"newRuleFile": "Neue Regel-Datei..."
 		}
+	},
+	"taskTimeline": {
+		"tooltip": {
+			"messageTypes": {
+				"browser_action_launch": "Browser-Start",
+				"browser_action_result": "Browser-Aktionsergebnis",
+				"browser_action": "Browser-Aktion",
+				"command": "Befehlsausführung",
+				"completion_result": "Fertigstellungsergebnis",
+				"condense_context": "Kontext verdichten",
+				"command_output": "Befehlsausgabe",
+				"error": "Fehlermeldung",
+				"reasoning": "KI-Denken",
+				"mcp_server_response": "MCP-Server-Antwort",
+				"checkpoint_saved": "Kontrollpunkt gespeichert",
+				"text": "KI-Antwort",
+				"unknown": "unbekannter Nachrichtentyp",
+				"tool": "Werkzeugnutzung",
+				"use_mcp_server": "MCP-Server-Nutzung",
+				"followup": "Nachfrage"
+			},
+			"clickToScroll": "{{messageType}} (#{{messageNumber}}) ansehen"
+		}
 	}
 }

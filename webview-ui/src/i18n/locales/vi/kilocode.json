@@ -75,5 +75,28 @@
 			"newWorkflowFile": "Tệp quy trình làm việc mới...",
 			"newRuleFile": "Tệp quy tắc mới..."
 		}
+	},
+	"taskTimeline": {
+		"tooltip": {
+			"messageTypes": {
+				"browser_action_launch": "khởi chạy trình duyệt",
+				"browser_action": "hành động trình duyệt",
+				"browser_action_result": "kết quả hành động trình duyệt",
+				"checkpoint_saved": "đã lưu điểm kiểm tra",
+				"command_output": "kết quả lệnh",
+				"command": "thực thi lệnh",
+				"completion_result": "kết quả hoàn thành",
+				"error": "thông báo lỗi",
+				"followup": "câu hỏi tiếp theo",
+				"condense_context": "thu gọn ngữ cảnh",
+				"mcp_server_response": "Phản hồi từ máy chủ MCP",
+				"reasoning": "Suy luận AI",
+				"unknown": "loại tin nhắn không xác định",
+				"tool": "sử dụng công cụ",
+				"text": "Phản hồi của AI",
+				"use_mcp_server": "Sử dụng máy chủ MCP"
+			},
+			"clickToScroll": "Xem {{messageType}} (#{{messageNumber}})"
+		}
 	}
 }

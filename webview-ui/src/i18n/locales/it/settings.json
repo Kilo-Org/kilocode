@@ -31,7 +31,8 @@
 		"prompts": "Prompt",
 		"experimental": "Sperimentale",
 		"language": "Lingua",
-		"about": "Informazioni su Kilo Code"
+		"about": "Informazioni su Kilo Code",
+		"display": "Mostra"
 	},
 	"prompts": {
 		"description": "Configura i prompt di supporto utilizzati per azioni rapide come il miglioramento dei prompt, la spiegazione del codice e la risoluzione dei problemi. Questi prompt aiutano Kilo Code a fornire una migliore assistenza per le attività di sviluppo comuni."
@@ -254,6 +255,10 @@
 				"description": "OpenRouter indirizza le richieste ai migliori fornitori disponibili per il tuo modello. Per impostazione predefinita, le richieste sono bilanciate tra i principali fornitori per massimizzare il tempo di attività. Tuttavia, puoi scegliere un fornitore specifico da utilizzare per questo modello.",
 				"learnMore": "Scopri di più sul routing dei fornitori"
 			}
+		},
+		"cerebras": {
+			"apiKey": "Chiave API Cerebras",
+			"getApiKey": "Ottieni chiave API Cerebras"
 		},
 		"customModel": {
 			"capabilities": "Configura le capacità e i prezzi del tuo modello personalizzato compatibile con OpenAI. Fai attenzione quando specifichi le capacità del modello, poiché possono influenzare le prestazioni di Kilo Code.",
@@ -622,5 +627,11 @@
 	"labels": {
 		"customArn": "ARN personalizzato",
 		"useCustomArn": "Usa ARN personalizzato..."
+	},
+	"display": {
+		"taskTimeline": {
+			"label": "Mostra cronologia attività",
+			"description": "Visualizza una cronologia visiva dei messaggi delle attività, colorati per tipologia, permettendoti di visualizzare rapidamente i progressi delle attività e scorrere indietro fino a punti specifici nella cronologia dell'attività."
+		}
 	}
 }

@@ -25,6 +25,7 @@
 		"autoApprove": "Auto-Approve",
 		"browser": "Browser",
 		"checkpoints": "Checkpoints",
+		"display": "Display",
 		"notifications": "Notifications",
 		"contextManagement": "Context",
 		"terminal": "Terminal",
@@ -255,6 +256,10 @@
 				"learnMore": "Learn more about provider routing"
 			}
 		},
+		"cerebras": {
+			"apiKey": "Cerebras API Key",
+			"getApiKey": "Get Cerebras API Key"
+		},
 		"customModel": {
 			"capabilities": "Configure the capabilities and pricing for your custom OpenAI-compatible model. Be careful when specifying the model capabilities, as they can affect how Kilo Code performs.",
 			"maxTokens": {
@@ -341,6 +346,12 @@
 		"enable": {
 			"label": "Enable automatic checkpoints",
 			"description": "When enabled, Kilo Code will automatically create checkpoints during task execution, making it easy to review changes or revert to earlier states. <0>Learn more</0>"
+		}
+	},
+	"display": {
+		"taskTimeline": {
+			"label": "Show task timeline",
+			"description": "Display a visual timeline of task messages, colorized by type, allowing you to quickly view task progress and scroll back to specific points in the task's history."
 		}
 	},
 	"notifications": {

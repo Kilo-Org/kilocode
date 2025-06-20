@@ -31,7 +31,8 @@
 		"prompts": "Lời nhắc",
 		"experimental": "Thử nghiệm",
 		"language": "Ngôn ngữ",
-		"about": "Giới thiệu"
+		"about": "Giới thiệu",
+		"display": "Hiển thị"
 	},
 	"prompts": {
 		"description": "Cấu hình các lời nhắc hỗ trợ được sử dụng cho các hành động nhanh như cải thiện lời nhắc, giải thích mã và khắc phục sự cố. Những lời nhắc này giúp Kilo Code cung cấp hỗ trợ tốt hơn cho các tác vụ phát triển phổ biến."
@@ -153,6 +154,10 @@
 		"openRouterApiKey": "Khóa API OpenRouter",
 		"getOpenRouterApiKey": "Lấy khóa API OpenRouter",
 		"apiKeyStorageNotice": "Khóa API được lưu trữ an toàn trong Bộ lưu trữ bí mật của VSCode",
+		"cerebras": {
+			"apiKey": "Khóa API Cerebras",
+			"getApiKey": "Lấy khóa API Cerebras"
+		},
 		"glamaApiKey": "Khóa API Glama",
 		"getGlamaApiKey": "Lấy khóa API Glama",
 		"useCustomBaseUrl": "Sử dụng URL cơ sở tùy chỉnh",
@@ -622,5 +627,11 @@
 	"labels": {
 		"customArn": "ARN tùy chỉnh",
 		"useCustomArn": "Sử dụng ARN tùy chỉnh..."
+	},
+	"display": {
+		"taskTimeline": {
+			"label": "Hiển thị dòng thời gian công việc",
+			"description": "Hiển thị dòng thời gian trực quan của các tin nhắn công việc, được phân loại theo màu sắc theo từng loại, cho phép bạn nhanh chóng xem tiến độ công việc và cuộn lại các điểm cụ thể trong lịch sử của công việc."
+		}
 	}
 }

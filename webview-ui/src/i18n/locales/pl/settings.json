@@ -31,7 +31,8 @@
 		"prompts": "Podpowiedzi",
 		"experimental": "Eksperymentalne",
 		"language": "Język",
-		"about": "O Kilo Code"
+		"about": "O Kilo Code",
+		"display": "Wyświetl"
 	},
 	"prompts": {
 		"description": "Skonfiguruj podpowiedzi wsparcia używane do szybkich działań, takich jak ulepszanie podpowiedzi, wyjaśnianie kodu i rozwiązywanie problemów. Te podpowiedzi pomagają Kilo Code zapewnić lepsze wsparcie dla typowych zadań programistycznych."
@@ -254,6 +255,10 @@
 				"description": "OpenRouter kieruje żądania do najlepszych dostępnych dostawców dla Twojego modelu. Domyślnie żądania są równoważone między najlepszymi dostawcami, aby zmaksymalizować czas działania. Możesz jednak wybrać konkretnego dostawcę do użycia z tym modelem.",
 				"learnMore": "Dowiedz się więcej o routingu dostawców"
 			}
+		},
+		"cerebras": {
+			"apiKey": "Klucz API Cerebras",
+			"getApiKey": "Uzyskaj klucz API Cerebras"
 		},
 		"customModel": {
 			"capabilities": "Skonfiguruj możliwości i ceny swojego niestandardowego modelu zgodnego z OpenAI. Zachowaj ostrożność podczas określania możliwości modelu, ponieważ mogą one wpływać na wydajność Kilo Code.",
@@ -622,5 +627,11 @@
 	"labels": {
 		"customArn": "Niestandardowy ARN",
 		"useCustomArn": "Użyj niestandardowego ARN..."
+	},
+	"display": {
+		"taskTimeline": {
+			"label": "Pokaż oś czasu zadania",
+			"description": "Wyświetlaj wizualną oś czasu wiadomości zadania, oznaczoną kolorami według typu, co pozwala na szybki przegląd postępu zadania i przewijanie do określonych punktów w historii zadania."
+		}
 	}
 }

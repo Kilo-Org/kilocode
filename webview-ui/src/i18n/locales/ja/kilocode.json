@@ -75,5 +75,28 @@
 			"newWorkflowFile": "新しいワークフローファイル...",
 			"newRuleFile": "新しいルールファイル..."
 		}
+	},
+	"taskTimeline": {
+		"tooltip": {
+			"messageTypes": {
+				"browser_action_launch": "ブラウザ起動",
+				"browser_action_result": "ブラウザ操作の結果",
+				"browser_action": "ブラウザアクション",
+				"command": "コマンド実行",
+				"checkpoint_saved": "チェックポイントを保存しました",
+				"command_output": "コマンド出力",
+				"completion_result": "完了結果",
+				"followup": "フォローアップの質問",
+				"reasoning": "AI推論",
+				"condense_context": "文脈を要約",
+				"error": "エラーメッセージ",
+				"mcp_server_response": "MCP サーバーの応答",
+				"text": "AI応答",
+				"use_mcp_server": "MCPサーバーの使用状況",
+				"tool": "ツール使用",
+				"unknown": "不明なメッセージタイプ"
+			},
+			"clickToScroll": "{{messageType}}を表示 (#{{messageNumber}})"
+		}
 	}
 }

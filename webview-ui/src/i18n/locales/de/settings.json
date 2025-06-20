@@ -31,7 +31,8 @@
 		"prompts": "Eingabeaufforderungen",
 		"experimental": "Experimentell",
 		"language": "Sprache",
-		"about": "Über Kilo Code"
+		"about": "Über Kilo Code",
+		"display": "Anzeigen"
 	},
 	"prompts": {
 		"description": "Konfiguriere Support-Prompts, die für schnelle Aktionen wie das Verbessern von Prompts, das Erklären von Code und das Beheben von Problemen verwendet werden. Diese Prompts helfen Kilo Code dabei, bessere Unterstützung für häufige Entwicklungsaufgaben zu bieten."
@@ -254,6 +255,10 @@
 				"description": "OpenRouter leitet Anfragen an die besten verfügbaren Anbieter für dein Modell weiter. Standardmäßig werden Anfragen über die Top-Anbieter lastverteilt, um maximale Verfügbarkeit zu gewährleisten. Du kannst jedoch einen bestimmten Anbieter für dieses Modell auswählen.",
 				"learnMore": "Mehr über Anbieter-Routing erfahren"
 			}
+		},
+		"cerebras": {
+			"apiKey": "Cerebras API-Schlüssel",
+			"getApiKey": "Cerebras API-Schlüssel erhalten"
 		},
 		"customModel": {
 			"capabilities": "Konfiguriere die Fähigkeiten und Preise für dein benutzerdefiniertes OpenAI-kompatibles Modell. Sei vorsichtig bei der Angabe der Modellfähigkeiten, da diese beeinflussen können, wie Kilo Code funktioniert.",
@@ -622,5 +627,11 @@
 	"labels": {
 		"customArn": "Benutzerdefinierte ARN",
 		"useCustomArn": "Benutzerdefinierte ARN verwenden..."
+	},
+	"display": {
+		"taskTimeline": {
+			"label": "Aufgabenzeitplan anzeigen",
+			"description": "Zeigt eine visuelle Zeitleiste der Aufgabennachrichten an, farblich nach Typ gekennzeichnet, sodass Sie den Fortschritt der Aufgabe schnell überblicken und zu bestimmten Punkten in der Aufgabenhistorie zurückspringen können."
+		}
 	}
 }

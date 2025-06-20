@@ -75,5 +75,28 @@
 			"newWorkflowFile": "Nowy plik przepływu pracy...",
 			"newRuleFile": "Nowy plik reguły..."
 		}
+	},
+	"taskTimeline": {
+		"tooltip": {
+			"clickToScroll": "Wyświetl {{messageType}} (nr {{messageNumber}})",
+			"messageTypes": {
+				"browser_action_result": "wynik działania przeglądarki",
+				"browser_action": "akcja przeglądarki",
+				"checkpoint_saved": "punkt kontrolny zapisany",
+				"browser_action_launch": "uruchomienie przeglądarki",
+				"command": "wykonanie polecenia",
+				"command_output": "wynik polecenia",
+				"completion_result": "wynik wykonania",
+				"condense_context": "skondensuj kontekst",
+				"followup": "pytanie uzupełniające",
+				"mcp_server_response": "Odpowiedź serwera MCP",
+				"reasoning": "Rozumowanie AI",
+				"error": "komunikat o błędzie",
+				"unknown": "nieznany typ wiadomości",
+				"text": "Odpowiedź AI",
+				"tool": "użycie narzędzi",
+				"use_mcp_server": "Użycie serwera MCP"
+			}
+		}
 	}
 }

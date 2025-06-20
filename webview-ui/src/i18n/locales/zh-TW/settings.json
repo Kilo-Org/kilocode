@@ -31,7 +31,8 @@
 		"prompts": "提示詞",
 		"experimental": "實驗性",
 		"language": "語言",
-		"about": "關於 Kilo Code"
+		"about": "關於 Kilo Code",
+		"display": "显示"
 	},
 	"prompts": {
 		"description": "設定用於快速操作的支援提示詞，如增強提示詞、解釋程式碼和修復問題。這些提示詞幫助 Kilo Code 為常見開發工作提供更好的支援。"
@@ -153,6 +154,10 @@
 		"openRouterApiKey": "OpenRouter API 金鑰",
 		"getOpenRouterApiKey": "取得 OpenRouter API 金鑰",
 		"apiKeyStorageNotice": "API 金鑰安全儲存於 VSCode 金鑰儲存中",
+		"cerebras": {
+			"apiKey": "Cerebras API 金鑰",
+			"getApiKey": "取得 Cerebras API 金鑰"
+		},
 		"glamaApiKey": "Glama API 金鑰",
 		"getGlamaApiKey": "取得 Glama API 金鑰",
 		"useCustomBaseUrl": "使用自訂基礎 URL",
@@ -622,5 +627,11 @@
 	"labels": {
 		"customArn": "自訂 ARN",
 		"useCustomArn": "使用自訂 ARN..."
+	},
+	"display": {
+		"taskTimeline": {
+			"label": "显示任务时间轴",
+			"description": "显示任务消息的可视化时间线，按类型着色，让您能够快速查看任务进度并回滚到任务历史中的特定点。"
+		}
 	}
 }

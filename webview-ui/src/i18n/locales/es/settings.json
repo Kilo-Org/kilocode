@@ -31,7 +31,8 @@
 		"prompts": "Indicaciones",
 		"experimental": "Experimental",
 		"language": "Idioma",
-		"about": "Acerca de Kilo Code"
+		"about": "Acerca de Kilo Code",
+		"display": "Mostrar"
 	},
 	"prompts": {
 		"description": "Configura indicaciones de soporte que se utilizan para acciones rápidas como mejorar indicaciones, explicar código y solucionar problemas. Estas indicaciones ayudan a Kilo Code a brindar mejor asistencia para tareas comunes de desarrollo."
@@ -254,6 +255,10 @@
 				"description": "OpenRouter dirige las solicitudes a los mejores proveedores disponibles para su modelo. Por defecto, las solicitudes se equilibran entre los principales proveedores para maximizar el tiempo de actividad. Sin embargo, puede elegir un proveedor específico para este modelo.",
 				"learnMore": "Más información sobre el enrutamiento de proveedores"
 			}
+		},
+		"cerebras": {
+			"apiKey": "Clave API de Cerebras",
+			"getApiKey": "Obtener clave API de Cerebras"
 		},
 		"customModel": {
 			"capabilities": "Configure las capacidades y precios para su modelo personalizado compatible con OpenAI. Tenga cuidado al especificar las capacidades del modelo, ya que pueden afectar cómo funciona Kilo Code.",
@@ -622,5 +627,11 @@
 	"labels": {
 		"customArn": "ARN personalizado",
 		"useCustomArn": "Usar ARN personalizado..."
+	},
+	"display": {
+		"taskTimeline": {
+			"label": "Mostrar cronología de tareas",
+			"description": "Muestra una línea de tiempo visual de los mensajes de tareas, colorizados por tipo, permitiéndote ver rápidamente el progreso de la tarea y desplazarte hacia atrás hasta puntos específicos en el historial de la tarea."
+		}
 	}
 }

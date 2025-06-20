@@ -27,6 +27,7 @@ import {
 	GroqHandler,
 	ChutesHandler,
 	LiteLLMHandler,
+	CerebrasHandler, // kilocode_change
 } from "./providers"
 // kilocode_change start
 import { FireworksHandler } from "./providers/fireworks"
@@ -116,6 +117,10 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new ChutesHandler(options)
 		case "litellm":
 			return new LiteLLMHandler(options)
+		// kilocode_change start
+		case "cerebras":
+			return new CerebrasHandler(options)
+		// kilocode_change end
 		default:
 			return new AnthropicHandler(options)
 	}

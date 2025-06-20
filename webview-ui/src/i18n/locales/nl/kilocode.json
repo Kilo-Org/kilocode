@@ -75,5 +75,28 @@
 			"newWorkflowFile": "Nieuw workflow bestand...",
 			"newRuleFile": "Nieuw regel bestand..."
 		}
+	},
+	"taskTimeline": {
+		"tooltip": {
+			"clickToScroll": "Bekijk {{messageType}} (#{{messageNumber}})",
+			"messageTypes": {
+				"browser_action_result": "resultaat van browseractie",
+				"browser_action_launch": "browser opstarten",
+				"checkpoint_saved": "controlepunt opgeslagen",
+				"command": "opdrachtuitvoering",
+				"browser_action": "browseractie",
+				"command_output": "opdrachtuitvoer",
+				"completion_result": "voltooiingsresultaat",
+				"error": "foutmelding",
+				"followup": "vervolgvraag",
+				"mcp_server_response": "MCP-serverrespons",
+				"reasoning": "AI-redenering",
+				"text": "AI-antwoord",
+				"unknown": "onbekend berichttype",
+				"condense_context": "context samenvatten",
+				"use_mcp_server": "MCP-servergebruik",
+				"tool": "gereedschapsgebruik"
+			}
+		}
 	}
 }

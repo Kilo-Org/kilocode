@@ -43,6 +43,7 @@ import { NewTaskPreview } from "../kilocode/chat/NewTaskPreview" // kilocode_cha
 import { AutoApprovedRequestLimitWarning } from "./AutoApprovedRequestLimitWarning"
 import { CondenseContextErrorRow, CondensingContextRow, ContextCondenseRow } from "./ContextCondenseRow"
 import CodebaseSearchResultsDisplay from "./CodebaseSearchResultsDisplay"
+import { cn } from "@/lib/utils"
 
 interface ChatRowProps {
 	message: ClineMessage
@@ -54,6 +55,7 @@ interface ChatRowProps {
 	onHeightChange: (isTaller: boolean) => void
 	onSuggestionClick?: (answer: string, event?: React.MouseEvent) => void
 	onBatchFileResponse?: (response: { [key: string]: boolean }) => void
+	highlighted?: boolean // kilocode_change: Add highlighted prop
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
@@ -61,13 +63,16 @@ interface ChatRowContentProps extends Omit<ChatRowProps, "onHeightChange"> {}
 
 const ChatRow = memo(
 	(props: ChatRowProps) => {
+		const { highlighted } = props // kilocode_change: Add highlighted prop
 		const { isLast, onHeightChange, message } = props
 		// Store the previous height to compare with the current height
 		// This allows us to detect changes without causing re-renders
 		const prevHeightRef = useRef(0)
 
 		const [chatrow, { height }] = useSize(
-			<div className="px-[15px] py-[10px] pr-[6px]">
+			<div
+				// kilocode_change: add highlighted className
+				className={cn(`px-[15px] py-[10px] pr-[6px] ${highlighted ? "animate-message-highlight" : ""}`)}>
 				<ChatRowContent {...props} />
 			</div>,
 		)

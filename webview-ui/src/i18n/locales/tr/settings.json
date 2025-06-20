@@ -31,7 +31,8 @@
 		"prompts": "Promptlar",
 		"experimental": "Deneysel",
 		"language": "Dil",
-		"about": "Kilo Code Hakkında"
+		"about": "Kilo Code Hakkında",
+		"display": "Göster"
 	},
 	"prompts": {
 		"description": "Prompt geliştirme, kod açıklama ve sorun çözme gibi hızlı eylemler için kullanılan destek promptlarını yapılandırın. Bu promptlar, Kilo Code'nun yaygın geliştirme görevleri için daha iyi destek sağlamasına yardımcı olur."
@@ -153,6 +154,10 @@
 		"openRouterApiKey": "OpenRouter API Anahtarı",
 		"getOpenRouterApiKey": "OpenRouter API Anahtarı Al",
 		"apiKeyStorageNotice": "API anahtarları VSCode'un Gizli Depolamasında güvenli bir şekilde saklanır",
+		"cerebras": {
+			"apiKey": "Cerebras API Anahtarı",
+			"getApiKey": "Cerebras API Anahtarı Al"
+		},
 		"glamaApiKey": "Glama API Anahtarı",
 		"getGlamaApiKey": "Glama API Anahtarı Al",
 		"useCustomBaseUrl": "Özel temel URL kullan",
@@ -622,5 +627,11 @@
 	"labels": {
 		"customArn": "Özel ARN",
 		"useCustomArn": "Özel ARN kullan..."
+	},
+	"display": {
+		"taskTimeline": {
+			"description": "Görev mesajlarını türe göre renklendirilmiş görsel bir zaman çizelgesi olarak görüntüleyin, böylece görevin ilerlemesini hızlıca görebilir ve görevin geçmişindeki belirli noktalara geri dönmek için kaydırabilirsiniz.",
+			"label": "Görev zaman çizelgesini göster"
+		}
 	}
 }
