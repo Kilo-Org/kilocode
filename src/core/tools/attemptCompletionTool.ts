@@ -125,6 +125,10 @@ export async function attemptCompletionTool(
 				return
 			}
 
+			// Note: Auto-queue logic is handled in ClineProvider.handleIdleState()
+			// We let the task wait for user response normally, and auto-queue will
+			// automatically respond when the task becomes idle
+
 			// We already sent completion_result says, an
 			// empty string asks relinquishes control over
 			// button and field.

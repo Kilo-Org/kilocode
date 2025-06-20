@@ -130,6 +130,10 @@ export interface ExtensionStateContextType extends ExtensionState {
 	autoCondenseContextPercent: number
 	setAutoCondenseContextPercent: (value: number) => void
 	routerModels?: RouterModels
+
+	// Auto-queue methods
+	setQueuedPrompt: (prompt: string | null) => void
+	setAutoQueueEnabled: (enabled: boolean) => void
 }
 
 export const ExtensionStateContext = createContext<ExtensionStateContextType | undefined>(undefined)
@@ -222,6 +226,10 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 			codebaseIndexEmbedderModelId: "",
 		},
 		codebaseIndexModels: { ollama: {}, openai: {} },
+		// Auto-queue default state
+		queuedPrompt: null,
+		autoQueueEnabled: false,
+		isProcessingQueue: false,
 	})
 
 	const [didHydrateState, setDidHydrateState] = useState(false)
@@ -454,6 +462,16 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setCondensingApiConfigId: (value) => setState((prevState) => ({ ...prevState, condensingApiConfigId: value })),
 		setCustomCondensingPrompt: (value) =>
 			setState((prevState) => ({ ...prevState, customCondensingPrompt: value })),
+
+		// Auto-queue methods
+		setQueuedPrompt: (prompt) => {
+			setState((prev) => ({ ...prev, queuedPrompt: prompt }))
+			vscode.postMessage({ type: "setQueuedPrompt", prompt })
+		},
+		setAutoQueueEnabled: (enabled) => {
+			setState((prev) => ({ ...prev, autoQueueEnabled: enabled }))
+			vscode.postMessage({ type: "setAutoQueueEnabled", autoQueueEnabled: enabled })
+		},
 	}
 
 	return <ExtensionStateContext.Provider value={contextValue}>{children}</ExtensionStateContext.Provider>

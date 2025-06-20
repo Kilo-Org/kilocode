@@ -1704,6 +1704,23 @@ export const webviewMessageHandler = async (
 				await provider.toggleTaskFavorite(message.text)
 			}
 			break
+
+		// Auto-queue message handlers
+		case "setQueuedPrompt":
+			provider.setQueuedPrompt(message.prompt ?? null)
+			break
+
+		case "clearQueuedPrompt":
+			provider.setQueuedPrompt(null)
+			break
+
+		case "setAutoQueueEnabled":
+			provider.setAutoQueueEnabled(message.autoQueueEnabled ?? false)
+			break
+
+		case "getQueueState":
+			await provider.postStateToWebview()
+			break
 		// kilocode_change end
 		case "filterMarketplaceItems": {
 			// Check if marketplace is enabled before making API calls

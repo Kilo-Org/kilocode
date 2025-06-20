@@ -249,6 +249,9 @@ describe("mergeExtensionState", () => {
 			autoCondenseContextPercent: 100,
 			cloudIsAuthenticated: false,
 			sharingEnabled: false,
+			queuedPrompt: null,
+			isProcessingQueue: false,
+			autoQueueEnabled: false,
 		}
 
 		const prevState: ExtensionState = {

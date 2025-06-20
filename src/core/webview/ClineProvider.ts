@@ -105,6 +105,15 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 	protected mcpHub?: McpHub // Change from private to protected
 	private marketplaceManager: MarketplaceManager
 
+	// Auto-queue feature properties
+	private queuedPrompt: string | null = null
+	private autoQueueEnabled: boolean = false
+	private isProcessingQueue: boolean = false // Prevent race conditions
+	private queueExecutionCount: number = 0
+	private readonly MAX_QUEUE_EXECUTIONS = 10 // Prevent infinite loops
+	private lastQueueExecutionTime: number = 0
+	private readonly MIN_QUEUE_INTERVAL = 5000 // 5 seconds minimum between executions
+
 	public isViewLaunched = false
 	public settingsImportedAt?: number
 	public readonly latestAnnouncementId = "dec-12-2025-3-20" // Update for v3.20.0 announcement
@@ -170,7 +179,13 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 	// Removes and destroys the top Cline instance (the current finished task),
 	// activating the previous one (resuming the parent task).
 	async removeClineFromStack() {
+		this.log(`[auto-queue] DEBUG: removeClineFromStack called, stack length: ${this.clineStack.length}`)
+		this.log(
+			`[auto-queue] DEBUG: autoQueueEnabled: ${this.autoQueueEnabled}, queuedPrompt: ${this.queuedPrompt ? "YES" : "NO"}`,
+		)
+
 		if (this.clineStack.length === 0) {
+			this.log(`[auto-queue] DEBUG: Stack already empty, returning`)
 			return
 		}
 
@@ -193,6 +208,17 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			// Make sure no reference kept, once promises end it will be
 			// garbage collected.
 			cline = undefined
+		}
+
+		// After removing from stack, check if we're now completely idle
+		if (this.clineStack.length === 0) {
+			this.log(`[auto-queue] DEBUG: Task stack is now empty - checking for auto-queue`)
+			this.log(
+				`[auto-queue] DEBUG: Before handleIdleState - autoQueueEnabled: ${this.autoQueueEnabled}, queuedPrompt: ${this.queuedPrompt ? "YES" : "NO"}`,
+			)
+			await this.handleIdleState()
+		} else {
+			this.log(`[auto-queue] DEBUG: Stack not empty after removal, length: ${this.clineStack.length}`)
 		}
 	}
 
@@ -219,10 +245,179 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 	// this is used when a sub task is finished and the parent task needs to be resumed
 	async finishSubTask(lastMessage: string) {
 		console.log(`[subtasks] finishing subtask ${lastMessage}`)
+		this.log(`[auto-queue] DEBUG: finishSubTask called, stack length before removal: ${this.clineStack.length}`)
+		this.log(
+			`[auto-queue] DEBUG: autoQueueEnabled: ${this.autoQueueEnabled}, queuedPrompt: ${this.queuedPrompt ? "YES" : "NO"}`,
+		)
+
 		// remove the last cline instance from the stack (this is the finished sub task)
 		await this.removeClineFromStack()
-		// resume the last cline instance in the stack (if it exists - this is the 'parent' calling task)
-		await this.getCurrentCline()?.resumePausedTask(lastMessage)
+
+		// Check if parent task exists to resume
+		const currentTask = this.getCurrentCline()
+		this.log(`[auto-queue] DEBUG: After removeClineFromStack, currentTask exists: ${currentTask ? "YES" : "NO"}`)
+
+		if (currentTask) {
+			this.log(`[auto-queue] DEBUG: Resuming parent task`)
+			await currentTask.resumePausedTask(lastMessage)
+		} else {
+			// No parent task - we're truly idle
+			this.log(`[auto-queue] DEBUG: No parent task to resume - checking idle state`)
+			await this.handleIdleState()
+		}
+	}
+
+	// Auto-queue management methods
+	public setQueuedPrompt(prompt: string | null): void {
+		this.log(
+			`[auto-queue] DEBUG: setQueuedPrompt called with: ${prompt ? `"${prompt.substring(0, 50)}..."` : "null"}`,
+		)
+		this.log(
+			`[auto-queue] DEBUG: Previous state - queuedPrompt: ${this.queuedPrompt ? "YES" : "NO"}, autoQueueEnabled: ${this.autoQueueEnabled}`,
+		)
+		this.log(`[auto-queue] DEBUG: Current stack length: ${this.clineStack.length}`)
+
+		this.queuedPrompt = prompt
+		if (prompt) {
+			this.autoQueueEnabled = true // Enable auto-queue when a prompt is set
+		}
+
+		this.log(
+			`[auto-queue] DEBUG: New state - queuedPrompt: ${this.queuedPrompt ? "YES" : "NO"}, autoQueueEnabled: ${this.autoQueueEnabled}`,
+		)
+		this.log(`[auto-queue] Queued prompt ${prompt ? "set" : "cleared"}: ${prompt?.substring(0, 50)}...`)
+		this.postStateToWebview() // Update UI
+	}
+
+	public getQueuedPrompt(): string | null {
+		return this.queuedPrompt
+	}
+
+	public shouldAutoApproveCompletion(): boolean {
+		return this.autoQueueEnabled && this.queuedPrompt !== null
+	}
+
+	public setAutoQueueEnabled(enabled: boolean): void {
+		this.autoQueueEnabled = enabled
+		this.log(`[auto-queue] Auto-queue ${enabled ? "enabled" : "disabled"}`)
+		this.postStateToWebview()
+	}
+
+	public getAutoQueueEnabled(): boolean {
+		return this.autoQueueEnabled
+	}
+
+	// Handle idle state detection and queue execution
+	private async handleIdleState(): Promise<void> {
+		this.log(`[auto-queue] DEBUG: handleIdleState called`)
+		this.log(`[auto-queue] DEBUG: Current state - autoQueueEnabled: ${this.autoQueueEnabled}`)
+		this.log(
+			`[auto-queue] DEBUG: Current state - queuedPrompt: ${this.queuedPrompt ? `"${this.queuedPrompt.substring(0, 50)}..."` : "null"}`,
+		)
+		this.log(`[auto-queue] DEBUG: Current state - isProcessingQueue: ${this.isProcessingQueue}`)
+		this.log(`[auto-queue] DEBUG: Current state - stack length: ${this.clineStack.length}`)
+
+		if (!this.autoQueueEnabled) {
+			this.log(`[auto-queue] DEBUG: Auto-queue disabled, not processing`)
+			return
+		}
+
+		if (!this.queuedPrompt) {
+			this.log(`[auto-queue] DEBUG: No queued prompt, remaining idle`)
+			return
+		}
+
+		if (this.isProcessingQueue) {
+			this.log(`[auto-queue] DEBUG: Already processing queue, skipping`)
+			return
+		}
+
+		// Stack is empty - submit queued message as if user typed it
+		this.log(`[auto-queue] DEBUG: Stack is empty - submitting queued message as if user typed it`)
+
+		// Safety check: prevent too many rapid executions
+		const now = Date.now()
+		const timeSinceLastExecution = now - this.lastQueueExecutionTime
+		this.log(
+			`[auto-queue] DEBUG: Time since last execution: ${timeSinceLastExecution}ms, min interval: ${this.MIN_QUEUE_INTERVAL}ms`,
+		)
+
+		if (timeSinceLastExecution < this.MIN_QUEUE_INTERVAL) {
+			this.log(`[auto-queue] DEBUG: Too soon since last execution, waiting...`)
+			return
+		}
+
+		// Safety check: prevent infinite loops
+		this.log(
+			`[auto-queue] DEBUG: Queue execution count: ${this.queueExecutionCount}, max: ${this.MAX_QUEUE_EXECUTIONS}`,
+		)
+		if (this.queueExecutionCount >= this.MAX_QUEUE_EXECUTIONS) {
+			this.log(`[auto-queue] DEBUG: Max executions reached (${this.MAX_QUEUE_EXECUTIONS}), disabling auto-queue`)
+			this.autoQueueEnabled = false
+			await this.postStateToWebview()
+			return
+		}
+
+		const promptToExecute = this.queuedPrompt
+		this.queuedPrompt = null // Clear queue before execution
+		this.autoQueueEnabled = false // Disable auto-queue after processing
+		this.isProcessingQueue = true
+
+		this.log(
+			`[auto-queue] DEBUG: About to submit queued message as if user typed it: "${promptToExecute.substring(0, 100)}..."`,
+		)
+
+		try {
+			this.queueExecutionCount++
+			this.lastQueueExecutionTime = now
+
+			// Small delay to ensure UI updates and prevent race conditions
+			setTimeout(async () => {
+				try {
+					this.log(`[auto-queue] DEBUG: Submitting queued message as conversation input`)
+					await this.initClineWithTask(promptToExecute)
+					this.log(`[auto-queue] DEBUG: Successfully submitted queued message as conversation input`)
+				} catch (error) {
+					this.log(`[auto-queue] DEBUG: Error submitting queued message: ${error}`)
+					await this.handleQueueError(error as Error, promptToExecute)
+				} finally {
+					this.isProcessingQueue = false
+					await this.postStateToWebview()
+					this.log(`[auto-queue] DEBUG: Message submission completed, isProcessingQueue reset to false`)
+				}
+			}, 2000) // 2 second delay for stability and user feedback
+
+			// Reset counter after successful execution with delay
+			setTimeout(() => {
+				this.queueExecutionCount = Math.max(0, this.queueExecutionCount - 1)
+				this.log(`[auto-queue] DEBUG: Queue execution count decremented to: ${this.queueExecutionCount}`)
+			}, 60000) // Reset one count per minute
+		} catch (error) {
+			this.log(`[auto-queue] DEBUG: Error in handleIdleState: ${error}`)
+			this.isProcessingQueue = false
+			await this.handleQueueError(error as Error, promptToExecute)
+		}
+	}
+
+	// Handle queue execution errors with retry logic
+	private async handleQueueError(error: Error, originalPrompt: string): Promise<void> {
+		this.log(`[auto-queue] Error executing queued task: ${error.message}`)
+
+		// Optionally re-queue the prompt with a retry count
+		const retryMatch = originalPrompt.match(/\[RETRY:(\d+)\]/)
+		const retryCount = retryMatch ? parseInt(retryMatch[1]) : 0
+
+		if (retryCount < 3) {
+			// Max 3 retries
+			const retryPrompt = `[RETRY:${retryCount + 1}] ${originalPrompt.replace(/\[RETRY:\d+\]\s*/, "")}`
+			this.queuedPrompt = retryPrompt
+			this.log(`[auto-queue] Re-queued with retry count: ${retryCount + 1}`)
+		} else {
+			this.log(`[auto-queue] Max retries reached, not re-queuing`)
+			this.autoQueueEnabled = false // Disable to prevent further issues
+		}
+
+		await this.postStateToWebview()
 	}
 
 	/*
@@ -1496,6 +1691,10 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 				codebaseIndexEmbedderBaseUrl: "",
 				codebaseIndexEmbedderModelId: "",
 			},
+			// Auto-queue state
+			queuedPrompt: this.queuedPrompt,
+			autoQueueEnabled: this.autoQueueEnabled,
+			isProcessingQueue: this.isProcessingQueue,
 		}
 	}
 
@@ -1647,6 +1846,10 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 				codebaseIndexEmbedderBaseUrl: "",
 				codebaseIndexEmbedderModelId: "",
 			},
+			// Auto-queue state
+			queuedPrompt: this.queuedPrompt,
+			autoQueueEnabled: this.autoQueueEnabled,
+			isProcessingQueue: this.isProcessingQueue,
 		}
 	}
 

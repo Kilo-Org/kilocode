@@ -446,6 +446,9 @@ describe("ClineProvider", () => {
 			autoCondenseContextPercent: 100,
 			cloudIsAuthenticated: false,
 			sharingEnabled: false,
+			queuedPrompt: null,
+			autoQueueEnabled: false,
+			isProcessingQueue: false,
 		}
 
 		const message: ExtensionMessage = {
