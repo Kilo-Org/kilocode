@@ -152,7 +152,6 @@ export class Terminal extends BaseTerminal {
 	}
 
 	public static getEnv(): Record<string, string> {
-		const workspaceRoot = getWorkspacePath() // kilocode_change
 		const env: Record<string, string> = {
 			PAGER: process.platform === "win32" ? "" : "cat",
 
@@ -160,7 +159,7 @@ export class Terminal extends BaseTerminal {
 			// See https://wiki.gnome.org/Apps/Terminal/VTE
 			VTE_VERSION: "0",
 
-			WORKSPACE_ROOT: workspaceRoot, // kilocode_change
+			WORKSPACE_ROOT: getWorkspacePath(), // kilocode_change
 		}
 
 		// Set Oh My Zsh shell integration if enabled
