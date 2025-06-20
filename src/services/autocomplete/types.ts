@@ -1,5 +1,6 @@
 //PLANREF: continue/core/autocomplete/util/types.ts
 //PLANREF: continue/core/autocomplete/types.ts
+import * as vscode from "vscode"
 import { Position } from "vscode"
 import { RangeInFile, Range, RangeInFileWithContents } from "./ide-types"
 
@@ -72,4 +73,19 @@ export interface Prediction {
  */
 export type AutocompleteSnippetDeprecated = RangeInFileWithContents & {
 	score?: number
+}
+
+export interface AutocompleteState {
+	enabled: boolean
+	lastCompletionCost: number
+	totalSessionCost: number
+	lastCompletionTime: number // Time in seconds for the last completion
+	model: string
+	hasValidToken: boolean
+}
+
+export interface Autocompletion {
+	text: string // Full line including prefix
+	range: vscode.Range
+	originalPrefix: string // Store the prefix for subtraction
 }

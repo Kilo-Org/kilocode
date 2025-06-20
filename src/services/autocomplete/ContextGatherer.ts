@@ -57,6 +57,8 @@ export interface CodeContext {
 	followingLines: string[]
 	imports: string[] // Keep this for simple import strings
 	definitions: CodeContextDefinition[] // This will now hold combined context
+	document: vscode.TextDocument
+	position: vscode.Position
 }
 
 // PLANREF: continue/extensions/vscode/src/autocomplete/recentlyEdited.ts
@@ -735,6 +737,8 @@ export class ContextGatherer {
 			followingLines,
 			imports: importStrings,
 			definitions: allDefinitions,
+			document,
+			position,
 		}
 	}
 
