@@ -633,5 +633,7 @@
 			"label": "Aufgabenzeitplan anzeigen",
 			"description": "Zeigt eine visuelle Zeitleiste der Aufgabennachrichten an, farblich nach Typ gekennzeichnet, sodass Sie den Fortschritt der Aufgabe schnell überblicken und zu bestimmten Punkten in der Aufgabenhistorie zurückspringen können."
 		}
-	}
+	},
+	"includeMaxOutputTokens": "Maximale Ausgabe-Tokens einbeziehen",
+	"includeMaxOutputTokensDescription": "Sende den Parameter für maximale Ausgabe-Tokens in API-Anfragen. Einige Anbieter unterstützen dies möglicherweise nicht."
 }

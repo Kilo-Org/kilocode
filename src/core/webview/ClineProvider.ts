@@ -51,6 +51,7 @@ import { MarketplaceManager } from "../../services/marketplace"
 import { ShadowCheckpointService } from "../../services/checkpoints/ShadowCheckpointService"
 import { CodeIndexManager } from "../../services/code-index/manager"
 import type { IndexProgressUpdate } from "../../services/code-index/interfaces/manager"
+import { MdmService } from "../../services/mdm/MdmService"
 import { fileExistsAtPath } from "../../utils/fs"
 import { setTtsEnabled, setTtsSpeed } from "../../utils/tts"
 import { ContextProxy } from "../config/ContextProxy"
@@ -104,10 +105,11 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 	}
 	protected mcpHub?: McpHub // Change from private to protected
 	private marketplaceManager: MarketplaceManager
+	private mdmService?: MdmService
 
 	public isViewLaunched = false
 	public settingsImportedAt?: number
-	public readonly latestAnnouncementId = "dec-12-2025-3-20" // Update for v3.20.0 announcement
+	public readonly latestAnnouncementId = "jun-17-2025-3-21" // Update for v3.21.0 announcement
 	public readonly providerSettingsManager: ProviderSettingsManager
 	public readonly customModesManager: CustomModesManager
 
@@ -117,6 +119,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		private readonly renderContext: "sidebar" | "editor" = "sidebar",
 		public readonly contextProxy: ContextProxy,
 		public readonly codeIndexManager?: CodeIndexManager,
+		mdmService?: MdmService,
 	) {
 		super()
 
@@ -124,6 +127,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		ClineProvider.activeInstances.add(this)
 
 		this.codeIndexManager = codeIndexManager
+		this.mdmService = mdmService
 		this.updateGlobalState("codebaseIndexModels", EMBEDDING_MODEL_PROFILES)
 
 		// Start configuration loading (which might trigger indexing) in the background.
@@ -491,9 +495,6 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 
 		// If the extension is starting a new session, clear previous task state.
 		await this.removeClineFromStack()
-
-		// Set initial VSCode context for experiments
-		await this.updateVSCodeContext()
 
 		this.log("Webview view resolved")
 	}
@@ -1267,22 +1268,10 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		const state = await this.getStateToPostToWebview()
 		this.postMessageToWebview({ type: "state", state })
 
-		// Update VSCode context for experiments
-		await this.updateVSCodeContext()
-	}
-
-	/**
-	 * Updates VSCode context variables for experiments so they can be used in when clauses
-	 */
-	private async updateVSCodeContext() {
-		const { experiments } = await this.getState()
-
-		// Set context for marketplace experiment
-		await vscode.commands.executeCommand(
-			"setContext",
-			`${Package.name}.marketplaceEnabled`,
-			experiments.marketplace ?? false,
-		)
+		// Check MDM compliance and send user to account tab if not compliant
+		if (!this.checkMdmCompliance()) {
+			await this.postMessageToWebview({ type: "action", action: "accountButtonClicked" })
+		}
 	}
 
 	// kilocode_change start
@@ -1385,14 +1374,12 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		const allowedCommands = vscode.workspace.getConfiguration(Package.name).get<string[]>("allowedCommands") || []
 		const cwd = this.cwd
 
-		// Only fetch marketplace data if the feature is enabled
+		// Fetch marketplace data
 		let marketplaceItems: any[] = []
 		let marketplaceInstalledMetadata: any = { project: {}, global: {} }
 
-		if (experiments.marketplace) {
-			marketplaceItems = (await this.marketplaceManager.getCurrentItems()) || []
-			marketplaceInstalledMetadata = await this.marketplaceManager.getInstallationMetadata()
-		}
+		marketplaceItems = (await this.marketplaceManager.getCurrentItems()) || []
+		marketplaceInstalledMetadata = await this.marketplaceManager.getInstallationMetadata()
 
 		// Check if there's a system prompt override for the current mode
 		const currentMode = mode ?? defaultModeSlug
@@ -1496,6 +1483,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 				codebaseIndexEmbedderBaseUrl: "",
 				codebaseIndexEmbedderModelId: "",
 			},
+			mdmCompliant: this.checkMdmCompliance(),
 		}
 	}
 
@@ -1741,9 +1729,26 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		return this.mcpHub
 	}
 
+	/**
+	 * Check if the current state is compliant with MDM policy
+	 * @returns true if compliant, false if blocked
+	 */
+	public checkMdmCompliance(): boolean {
+		if (!this.mdmService) {
+			return true // No MDM service, allow operation
+		}
+
+		const compliance = this.mdmService.isCompliant()
+
+		if (!compliance.compliant) {
+			return false
+		}
+
+		return true
+	}
+
 	// kilocode_change:
 	// MCP Marketplace
-
 	private async fetchMcpMarketplaceFromApi(silent: boolean = false): Promise<McpMarketplaceCatalog | undefined> {
 		try {
 			const response = await axios.get("https://api.cline.bot/v1/mcp/marketplace", {

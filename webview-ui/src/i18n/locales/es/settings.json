@@ -633,5 +633,7 @@
 			"label": "Mostrar cronología de tareas",
 			"description": "Muestra una línea de tiempo visual de los mensajes de tareas, colorizados por tipo, permitiéndote ver rápidamente el progreso de la tarea y desplazarte hacia atrás hasta puntos específicos en el historial de la tarea."
 		}
-	}
+	},
+	"includeMaxOutputTokens": "Incluir tokens máximos de salida",
+	"includeMaxOutputTokensDescription": "Enviar parámetro de tokens máximos de salida en solicitudes API. Algunos proveedores pueden no soportar esto."
 }

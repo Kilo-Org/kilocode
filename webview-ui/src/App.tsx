@@ -16,6 +16,8 @@ import ProfileView from "./components/kilocode/profile/ProfileView" // kilocode_
 import ModesView from "./components/modes/ModesView"
 import { HumanRelayDialog } from "./components/human-relay/HumanRelayDialog"
 import BottomControls from "./components/kilocode/BottomControls" // kilocode_change
+import { AccountView } from "./components/account/AccountView"
+import { useAddNonInteractiveClickListener } from "./components/ui/hooks/useNonInteractiveClick"
 
 type Tab = "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "account" | "profile" // kilocode_change: add "profile"
 
@@ -30,7 +32,18 @@ const tabsByMessageAction: Partial<Record<NonNullable<ExtensionMessage["action"]
 }
 
 const App = () => {
-	const { didHydrateState, showWelcome, shouldShowAnnouncement, experiments } = useExtensionState()
+	const {
+		didHydrateState,
+		showWelcome,
+		shouldShowAnnouncement,
+		// telemetrySetting, // kilocode_change not used
+		// telemetryKey, // kilocode_change not used
+		// machineId, // kilocode_change not used
+		// cloudUserInfo, // kilocode_change not used
+		// cloudIsAuthenticated, // kilocode_change not used
+		renderContext,
+		mdmCompliant,
+	} = useExtensionState()
 
 	// Create a persistent state manager
 	// const marketplaceStateManager = useMemo(() => new MarketplaceViewStateManager(), []) // kilocode_change: we have or own marketplace
@@ -51,15 +64,23 @@ const App = () => {
 	const settingsRef = useRef<SettingsViewRef>(null)
 	const chatViewRef = useRef<ChatViewRef & { focusInput: () => void }>(null) // kilocode_change
 
-	const switchTab = useCallback((newTab: Tab) => {
-		setCurrentSection(undefined)
+	const switchTab = useCallback(
+		(newTab: Tab) => {
+			// Check MDM compliance before allowing tab switching
+			if (mdmCompliant === false && newTab !== "account") {
+				return
+			}
 
-		if (settingsRef.current?.checkUnsaveChanges) {
-			settingsRef.current.checkUnsaveChanges(() => setTab(newTab))
-		} else {
-			setTab(newTab)
-		}
-	}, [])
+			setCurrentSection(undefined)
+
+			if (settingsRef.current?.checkUnsaveChanges) {
+				settingsRef.current.checkUnsaveChanges(() => setTab(newTab))
+			} else {
+				setTab(newTab)
+			}
+		},
+		[mdmCompliant],
+	)
 
 	const [currentSection, setCurrentSection] = useState<string | undefined>(undefined)
 
@@ -81,10 +102,6 @@ const App = () => {
 				// Handle switchTab action with tab parameter
 				if (message.action === "switchTab" && message.tab) {
 					const targetTab = message.tab as Tab
-					// Don't switch to marketplace tab if the experiment is disabled
-					if (targetTab === "marketplace" && !experiments.marketplace) {
-						return
-					}
 					switchTab(targetTab)
 					setCurrentSection(undefined)
 				} else {
@@ -93,10 +110,6 @@ const App = () => {
 					const section = message.values?.section as string | undefined
 
 					if (newTab) {
-						// Don't switch to marketplace tab if the experiment is disabled
-						if (newTab === "marketplace" && !experiments.marketplace) {
-							return
-						}
 						switchTab(newTab)
 						setCurrentSection(section)
 					}
@@ -113,7 +126,7 @@ const App = () => {
 			}
 		},
 		// kilocode_change: add tab
-		[tab, switchTab, experiments],
+		[tab, switchTab],
 	)
 
 	useEvent("message", onMessage)
@@ -127,6 +140,22 @@ const App = () => {
 
 	// Tell the extension that we are ready to receive messages.
 	useEffect(() => vscode.postMessage({ type: "webviewDidLaunch" }), [])
+
+	// Focus the WebView when non-interactive content is clicked (only in editor/tab mode)
+	useAddNonInteractiveClickListener(
+		useCallback(() => {
+			// Only send focus request if we're in editor (tab) mode, not sidebar
+			if (renderContext === "editor") {
+				vscode.postMessage({ type: "focusPanelRequest" })
+			}
+		}, [renderContext]),
+	)
+	// Track marketplace tab views
+	useEffect(() => {
+		if (tab === "marketplace") {
+			// telemetryClient.capture(TelemetryEventName.MARKETPLACE_TAB_VIEWED) // kilocode_change commented out
+		}
+	}, [tab])
 
 	if (!didHydrateState) {
 		return null

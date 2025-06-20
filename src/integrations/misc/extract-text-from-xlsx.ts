@@ -40,11 +40,16 @@ function formatCellValue(cell: ExcelJS.Cell): string {
 	return value.toString()
 }
 
-export async function extractTextFromXLSX(filePath: string): Promise<string> {
-	const workbook = new ExcelJS.Workbook()
+export async function extractTextFromXLSX(filePathOrWorkbook: string | ExcelJS.Workbook): Promise<string> {
+	let workbook: ExcelJS.Workbook
 	let excelText = ""
 
-	await workbook.xlsx.readFile(filePath)
+	if (typeof filePathOrWorkbook === "string") {
+		workbook = new ExcelJS.Workbook()
+		await workbook.xlsx.readFile(filePathOrWorkbook)
+	} else {
+		workbook = filePathOrWorkbook
+	}
 
 	workbook.eachSheet((worksheet, sheetId) => {
 		if (worksheet.state === "hidden" || worksheet.state === "veryHidden") {

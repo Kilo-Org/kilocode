@@ -633,5 +633,7 @@
 			"label": "Hiển thị dòng thời gian công việc",
 			"description": "Hiển thị dòng thời gian trực quan của các tin nhắn công việc, được phân loại theo màu sắc theo từng loại, cho phép bạn nhanh chóng xem tiến độ công việc và cuộn lại các điểm cụ thể trong lịch sử của công việc."
 		}
-	}
+	},
+	"includeMaxOutputTokens": "Bao gồm token đầu ra tối đa",
+	"includeMaxOutputTokensDescription": "Gửi tham số token đầu ra tối đa trong các yêu cầu API. Một số nhà cung cấp có thể không hỗ trợ điều này."
 }

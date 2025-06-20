@@ -24,6 +24,7 @@ import {
 } from "@src/components/ui"
 
 import { ModelInfoView } from "./ModelInfoView"
+import { ApiErrorMessage } from "./ApiErrorMessage"
 
 type ModelIdKey = keyof Pick<
 	ProviderSettings,
@@ -45,6 +46,7 @@ interface ModelPickerProps {
 	apiConfiguration: ProviderSettings
 	setApiConfigurationField: <K extends keyof ProviderSettings>(field: K, value: ProviderSettings[K]) => void
 	organizationAllowList: OrganizationAllowList
+	errorMessage?: string
 }
 
 export const ModelPicker = ({
@@ -55,7 +57,12 @@ export const ModelPicker = ({
 	serviceUrl,
 	apiConfiguration,
 	setApiConfigurationField,
+<<<<<<< HEAD
 	// organizationAllowList, // kilocode_change: unused
+=======
+	organizationAllowList,
+	errorMessage,
+>>>>>>> upstream-at-v3.21.1
 }: ModelPickerProps) => {
 	const { t } = useAppTranslation()
 
@@ -152,7 +159,8 @@ export const ModelPicker = ({
 							variant="combobox"
 							role="combobox"
 							aria-expanded={open}
-							className="w-full justify-between">
+							className="w-full justify-between"
+							data-testid="model-picker-button">
 							<div>{selectedModelId ?? t("settings:common.select")}</div>
 							<ChevronsUpDown className="opacity-50" />
 						</Button>
@@ -186,6 +194,7 @@ export const ModelPicker = ({
 									)}
 								</CommandEmpty>
 								<CommandGroup>
+<<<<<<< HEAD
 									{/* kilocode_change start */}
 									{modelIds.map((model, i) => {
 										const isPreferred = models?.[model]?.preferredIndex !== null
@@ -211,6 +220,23 @@ export const ModelPicker = ({
 										)
 									})}
 									{/* kilocode_change end */}
+=======
+									{modelIds.map((model) => (
+										<CommandItem
+											key={model}
+											value={model}
+											onSelect={onSelect}
+											data-testid={`model-option-${model}`}>
+											{model}
+											<Check
+												className={cn(
+													"size-4 p-0.5 ml-auto",
+													model === selectedModelId ? "opacity-100" : "opacity-0",
+												)}
+											/>
+										</CommandItem>
+									))}
+>>>>>>> upstream-at-v3.21.1
 								</CommandGroup>
 							</CommandList>
 							{searchValue && !modelIds.includes(searchValue) && (
@@ -224,6 +250,7 @@ export const ModelPicker = ({
 					</PopoverContent>
 				</Popover>
 			</div>
+			{errorMessage && <ApiErrorMessage errorMessage={errorMessage} />}
 			{selectedModelId && selectedModelInfo && (
 				<ModelInfoView
 					apiProvider={apiConfiguration.apiProvider}

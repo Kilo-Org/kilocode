@@ -1,19 +1,16 @@
 import React from "react"
 import type { HistoryItem } from "@roo-code/types"
-import prettyBytes from "pretty-bytes"
-import { vscode } from "@/utils/vscode"
 import { formatDate } from "@/utils/format"
-import { Button } from "@/components/ui"
-import { CopyButton } from "./CopyButton"
+import { DeleteButton } from "./DeleteButton"
+import { cn } from "@/lib/utils"
 
 export interface TaskItemHeaderProps {
 	item: HistoryItem
-	variant: "compact" | "full"
 	isSelectionMode: boolean
-	t: (key: string, options?: any) => string
 	onDelete?: (taskId: string) => void
 }
 
+<<<<<<< HEAD
 const TaskItemHeader: React.FC<TaskItemHeaderProps> = ({ item, variant, isSelectionMode, t, onDelete }) => {
 	const isCompact = variant === "compact"
 
@@ -40,8 +37,16 @@ const TaskItemHeader: React.FC<TaskItemHeaderProps> = ({ item, variant, isSelect
 	}
 	// kilocode_change end
 
+=======
+const TaskItemHeader: React.FC<TaskItemHeaderProps> = ({ item, isSelectionMode, onDelete }) => {
+>>>>>>> upstream-at-v3.21.1
 	return (
-		<div className="flex justify-between items-center pb-0">
+		<div
+			className={cn("flex justify-between items-center", {
+				// this is to balance out the margin when we don't have a delete button
+				// because the delete button sorta pushes the date up due to its size
+				"mb-1": !onDelete,
+			})}>
 			<div className="flex items-center flex-wrap gap-x-2 text-xs">
 				<span className="text-vscode-descriptionForeground font-medium text-sm uppercase">
 					{formatDate(item.ts)}
@@ -51,6 +56,7 @@ const TaskItemHeader: React.FC<TaskItemHeaderProps> = ({ item, variant, isSelect
 			{/* Action Buttons */}
 			{!isSelectionMode && (
 				<div className="flex flex-row gap-0 items-center opacity-20 group-hover:opacity-50 hover:opacity-100">
+<<<<<<< HEAD
 					{/* kilocode_change start */}
 					{/* Favorite Star Button */}
 					<Button
@@ -88,6 +94,9 @@ const TaskItemHeader: React.FC<TaskItemHeaderProps> = ({ item, variant, isSelect
 							)}
 						</>
 					)}
+=======
+					{onDelete && <DeleteButton itemId={item.id} onDelete={onDelete} />}
+>>>>>>> upstream-at-v3.21.1
 				</div>
 			)}
 		</div>

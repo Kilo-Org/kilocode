@@ -38,5 +38,18 @@
 	"deleteTasksFavoritedWarning": "{{count}} de les tasques seleccionades estan marcades com a preferides. Estàs segur que vols eliminar-les?",
 	"deleteItems": "Eliminar {{count}} elements",
 	"showAllWorkspaces": "Mostrar tasques de tots els espais de treball",
-	"showFavoritesOnly": "Mostrar només els preferits"
+	"showFavoritesOnly": "Mostrar només els preferits",
+	"workspace": {
+		"prefix": "Espai de treball:",
+		"current": "Actual",
+		"all": "Tots"
+	},
+	"sort": {
+		"prefix": "Ordenar:",
+		"newest": "Més recents",
+		"oldest": "Més antigues",
+		"mostExpensive": "Més cares",
+		"mostTokens": "Més tokens",
+		"mostRelevant": "Més rellevants"
+	}
 }

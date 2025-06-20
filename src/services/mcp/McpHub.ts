@@ -242,9 +242,10 @@ export class McpHub {
 
 	public setupWorkspaceFoldersWatcher(): void {
 		// Skip if test environment is detected
-		if (process.env.NODE_ENV === "test" || process.env.JEST_WORKER_ID !== undefined) {
+		if (process.env.NODE_ENV === "test") {
 			return
 		}
+
 		this.disposables.push(
 			vscode.workspace.onDidChangeWorkspaceFolders(async () => {
 				await this.updateProjectMcpServers()
@@ -314,11 +315,7 @@ export class McpHub {
 
 	private async watchProjectMcpFile(): Promise<void> {
 		// Skip if test environment is detected or VSCode APIs are not available
-		if (
-			process.env.NODE_ENV === "test" ||
-			process.env.JEST_WORKER_ID !== undefined ||
-			!vscode.workspace.createFileSystemWatcher
-		) {
+		if (process.env.NODE_ENV === "test" || !vscode.workspace.createFileSystemWatcher) {
 			return
 		}
 
@@ -451,11 +448,7 @@ export class McpHub {
 
 	private async watchMcpSettingsFile(): Promise<void> {
 		// Skip if test environment is detected or VSCode APIs are not available
-		if (
-			process.env.NODE_ENV === "test" ||
-			process.env.JEST_WORKER_ID !== undefined ||
-			!vscode.workspace.createFileSystemWatcher
-		) {
+		if (process.env.NODE_ENV === "test" || !vscode.workspace.createFileSystemWatcher) {
 			return
 		}
 
@@ -596,9 +589,25 @@ export class McpHub {
 			})) as typeof config
 
 			if (configInjected.type === "stdio") {
+				// On Windows, wrap commands with cmd.exe to handle non-exe executables like npx.ps1
+				// This is necessary for node version managers (fnm, nvm-windows, volta) that implement
+				// commands as PowerShell scripts rather than executables.
+				// Note: This adds a small overhead as commands go through an additional shell layer.
+				const isWindows = process.platform === "win32"
+
+				// Check if command is already cmd.exe to avoid double-wrapping
+				const isAlreadyWrapped =
+					configInjected.command.toLowerCase() === "cmd.exe" || configInjected.command.toLowerCase() === "cmd"
+
+				const command = isWindows && !isAlreadyWrapped ? "cmd.exe" : configInjected.command
+				const args =
+					isWindows && !isAlreadyWrapped
+						? ["/c", configInjected.command, ...(configInjected.args || [])]
+						: configInjected.args
+
 				transport = new StdioClientTransport({
-					command: configInjected.command,
-					args: configInjected.args,
+					command,
+					args,
 					cwd: configInjected.cwd,
 					env: {
 						...getDefaultEnvironment(),

@@ -8,7 +8,8 @@
 		"dev": "scripts/check-services.sh && next dev",
 		"format": "prettier --write src",
 		"build": "next build",
-		"start": "next start"
+		"start": "next start",
+		"clean": "rimraf .next .turbo"
 	},
 	"dependencies": {
 		"@hookform/resolvers": "^5.1.1",
@@ -31,7 +32,7 @@
 		"clsx": "^2.1.1",
 		"cmdk": "^1.1.0",
 		"fuzzysort": "^3.1.0",
-		"lucide-react": "^0.513.0",
+		"lucide-react": "^0.518.0",
 		"next": "^15.2.5",
 		"next-themes": "^0.4.6",
 		"p-map": "^7.0.3",
@@ -54,6 +55,6 @@
 		"@types/react": "^18.3.23",
 		"@types/react-dom": "^18.3.5",
 		"tailwindcss": "^4",
-		"vitest": "^3.2.1"
+		"vitest": "^3.2.3"
 	}
 }

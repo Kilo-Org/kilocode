@@ -1,11 +1,9 @@
-import { vitest, describe, it, expect, beforeEach } from "vitest"
-import { QdrantVectorStore } from "../qdrant-client"
 import { QdrantClient } from "@qdrant/js-client-rest"
 import { createHash } from "crypto"
-import * as path from "path"
+
+import { QdrantVectorStore } from "../qdrant-client"
 import { getWorkspacePath } from "../../../../utils/path"
 import { MAX_SEARCH_RESULTS, SEARCH_MIN_SCORE } from "../../constants"
-import { Payload, VectorStoreSearchResult } from "../../interfaces"
 
 // Mocks
 vitest.mock("@qdrant/js-client-rest")
@@ -229,7 +227,10 @@ describe("QdrantVectorStore", () => {
 			mockQdrantClientInstance.createCollection.mockRejectedValue(createError)
 			vitest.spyOn(console, "error").mockImplementation(() => {}) // Suppress console.error
 
-			await expect(vectorStore.initialize()).rejects.toThrow(createError)
+			// The actual error message includes the URL and error details
+			await expect(vectorStore.initialize()).rejects.toThrow(
+				/Failed to connect to Qdrant vector database|vectorStore\.qdrantConnectionFailed/,
+			)
 
 			expect(mockQdrantClientInstance.getCollection).toHaveBeenCalledTimes(1)
 			expect(mockQdrantClientInstance.createCollection).toHaveBeenCalledTimes(1)
@@ -289,7 +290,10 @@ describe("QdrantVectorStore", () => {
 			vitest.spyOn(console, "error").mockImplementation(() => {})
 			vitest.spyOn(console, "warn").mockImplementation(() => {})
 
-			await expect(vectorStore.initialize()).rejects.toThrow(deleteError)
+			// The actual error message includes the URL and error details
+			await expect(vectorStore.initialize()).rejects.toThrow(
+				/Failed to connect to Qdrant vector database|vectorStore\.qdrantConnectionFailed/,
+			)
 
 			expect(mockQdrantClientInstance.getCollection).toHaveBeenCalledTimes(1)
 			expect(mockQdrantClientInstance.deleteCollection).toHaveBeenCalledTimes(1)

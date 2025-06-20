@@ -12,16 +12,13 @@ import { Section } from "./Section"
 import { MessageSquare } from "lucide-react"
 import CommitMessagePromptSettings from "./CommitMessagePromptSettings"
 
-// kilocode_change start
 interface PromptsSettingsProps {
 	customSupportPrompts: Record<string, string | undefined>
 	setCustomSupportPrompts: (prompts: Record<string, string | undefined>) => void
 }
-// kilocode_change end
 
 const PromptsSettings = ({ customSupportPrompts, setCustomSupportPrompts }: PromptsSettingsProps) => {
 	const { t } = useAppTranslation()
-
 	const { listApiConfigMeta, enhancementApiConfigId, setEnhancementApiConfigId } = useExtensionState()
 
 	const [testPrompt, setTestPrompt] = useState("")

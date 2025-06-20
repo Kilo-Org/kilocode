@@ -38,5 +38,18 @@
 	"deleteTasksFavoritedWarning": "{{count}} der ausgewählten Aufgaben sind favorisiert. Bist du sicher, dass du sie löschen möchtest?",
 	"deleteItems": "{{count}} Elemente löschen",
 	"showAllWorkspaces": "Aufgaben aus allen Arbeitsbereichen anzeigen",
-	"showFavoritesOnly": "Nur Favoriten anzeigen"
+	"showFavoritesOnly": "Nur Favoriten anzeigen",
+	"workspace": {
+		"prefix": "Arbeitsbereich:",
+		"current": "Aktuell",
+		"all": "Alle"
+	},
+	"sort": {
+		"prefix": "Sortieren:",
+		"newest": "Neueste",
+		"oldest": "Älteste",
+		"mostExpensive": "Teuerste",
+		"mostTokens": "Meiste Tokens",
+		"mostRelevant": "Relevanteste"
+	}
 }

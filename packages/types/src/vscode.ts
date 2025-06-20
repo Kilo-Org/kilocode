@@ -56,6 +56,7 @@ export const commandIds = [
 	"focusChatInput", // kilocode_change
 	"importSettings", // kilocode_change
 	"exportSettings", // kilocode_change
+	"focusPanel",
 ] as const
 
 export type CommandId = (typeof commandIds)[number]

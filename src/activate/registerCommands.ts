@@ -8,6 +8,7 @@ import { ClineProvider } from "../core/webview/ClineProvider"
 import { t } from "../i18n" // kilocode_change
 import { importSettings, exportSettings } from "../core/config/importExport" // kilocode_change
 import { ContextProxy } from "../core/config/ContextProxy"
+import { focusPanel } from "../utils/focusPanel"
 
 import { registerHumanRelayCallback, unregisterHumanRelayCallback, handleHumanRelayResponse } from "./humanRelay"
 import { handleNewTask } from "./handleTask"
@@ -173,6 +174,13 @@ const getCommandsMap = ({ context, outputChannel }: RegisterCommandOptions): Rec
 	setCustomStoragePath: async () => {
 		const { promptForCustomStoragePath } = await import("../utils/storage")
 		await promptForCustomStoragePath()
+	},
+	focusPanel: async () => {
+		try {
+			await focusPanel(tabPanel, sidebarPanel)
+		} catch (error) {
+			outputChannel.appendLine(`Error focusing panel: ${error}`)
+		}
 	},
 	acceptInput: () => {
 		const visibleProvider = getVisibleProviderOrLog(outputChannel)

@@ -38,5 +38,18 @@
 	"deleteTasksFavoritedWarning": "{{count}} de las tareas seleccionadas están marcadas como favoritas. ¿Estás seguro de que quieres eliminarlas?",
 	"deleteItems": "Eliminar {{count}} elementos",
 	"showAllWorkspaces": "Mostrar tareas de todos los espacios de trabajo",
-	"showFavoritesOnly": "Mostrar solo favoritos"
+	"showFavoritesOnly": "Mostrar solo favoritos",
+	"workspace": {
+		"prefix": "Espacio de trabajo:",
+		"current": "Actual",
+		"all": "Todos"
+	},
+	"sort": {
+		"prefix": "Ordenar:",
+		"newest": "Más recientes",
+		"oldest": "Más antiguas",
+		"mostExpensive": "Más costosas",
+		"mostTokens": "Más tokens",
+		"mostRelevant": "Más relevantes"
+	}
 }

@@ -28,6 +28,7 @@ import { McpServerManager } from "./services/mcp/McpServerManager"
 import { CodeIndexManager } from "./services/code-index/manager"
 import { registerAutocomplete } from "./services/autocomplete/AutocompleteProvider"
 import { registerCommitMessageProvider } from "./services/commit-message"
+import { MdmService } from "./services/mdm/MdmService"
 import { migrateSettings } from "./utils/migrateSettings"
 import { checkAndRunAutoLaunchingTask as checkAndRunAutoLaunchingTask } from "./utils/autoLaunchingTask"
 import { API } from "./extension/api"
@@ -81,6 +82,9 @@ export async function activate(context: vscode.ExtensionContext) {
 		log: cloudLogger,
 	})
 
+	// Initialize MDM service
+	const mdmService = await MdmService.createInstance(cloudLogger)
+
 	// Initialize i18n for internationalization support
 	initializeI18n(context.globalState.get("language") ?? "en-US") // kilocode_change
 
@@ -106,7 +110,8 @@ export async function activate(context: vscode.ExtensionContext) {
 		)
 	}
 
-	const provider = new ClineProvider(context, outputChannel, "sidebar", contextProxy, codeIndexManager)
+	const provider = new ClineProvider(context, outputChannel, "sidebar", contextProxy, codeIndexManager, mdmService)
+	// TelemetryService.instance.setProvider(provider) // kilocode_change no telemetry
 
 	if (codeIndexManager) {
 		context.subscriptions.push(codeIndexManager)
