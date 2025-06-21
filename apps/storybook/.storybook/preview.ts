@@ -11,7 +11,7 @@ import "./storybook.css"
 
 const preview: Preview = {
 	parameters: {
-		layout: isChromatic() ? "fullscreen" : "padded",
+		layout: "fullscreen",
 		controls: {
 			matchers: {
 				color: /(background|color)$/i,
