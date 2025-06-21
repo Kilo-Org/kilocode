@@ -340,6 +340,8 @@ export const webviewMessageHandler = async (
 				glama: {},
 				unbound: {},
 				litellm: {},
+				makehub: {},
+				// kilocode_change
 				"kilocode-openrouter": {}, // kilocode_change
 			}
 
@@ -372,6 +374,20 @@ export const webviewMessageHandler = async (
 					options: { provider: "kilocode-openrouter", kilocodeToken: apiConfiguration.kilocodeToken },
 				},
 			]
+			
+			// Add MakeHub with proper API key handling
+			if (apiConfiguration.makehubApiKey) {
+				modelFetchPromises.push({
+					key: "makehub",
+					options: { provider: "makehub", apiKey: apiConfiguration.makehubApiKey },
+				})
+			} else {
+				// MakeHub can work without API key, but with limited access
+				modelFetchPromises.push({
+					key: "makehub",
+					options: { provider: "makehub" },
+				})
+			}
 			// kilocode_change end
 
 			const litellmApiKey = apiConfiguration.litellmApiKey || message?.values?.litellmApiKey

@@ -14,6 +14,7 @@ import {
 	glamaDefaultModelId,
 	unboundDefaultModelId,
 	litellmDefaultModelId,
+	makehubDefaultModelId,
 } from "@roo-code/types"
 
 import { vscode } from "@src/utils/vscode"
@@ -43,6 +44,7 @@ import {
 	Groq,
 	LMStudio,
 	LiteLLM,
+	MakeHub,
 	Mistral,
 	Ollama,
 	OpenAI,
@@ -255,6 +257,11 @@ const ApiOptions = ({
 						setApiConfigurationField("litellmModelId", litellmDefaultModelId)
 					}
 					break
+				case "makehub":
+					if (!apiConfiguration.makehubModelId) {
+						setApiConfigurationField("makehubModelId", makehubDefaultModelId)
+					}
+					break
 				case "kilocode":
 					if (!apiConfiguration.kilocodeModel) {
 						setApiConfigurationField("kilocodeModel", "claude37")
@@ -278,6 +285,7 @@ const ApiOptions = ({
 			apiConfiguration.unboundModelId,
 			apiConfiguration.requestyModelId,
 			apiConfiguration.litellmModelId,
+			apiConfiguration.makehubModelId,
 			apiConfiguration.kilocodeModel,
 			apiConfiguration.cerebrasModelId, // kilocode_change
 		],
@@ -536,9 +544,17 @@ const ApiOptions = ({
 
 			{selectedProvider === "litellm" && (
 				<LiteLLM
+				apiConfiguration={apiConfiguration}
+				setApiConfigurationField={setApiConfigurationField}
+				organizationAllowList={organizationAllowList}
+				/>
+			)}
+			{selectedProvider === "makehub" && (
+				<MakeHub
 					apiConfiguration={apiConfiguration}
 					setApiConfigurationField={setApiConfigurationField}
-					organizationAllowList={organizationAllowList}
+					routerModels={routerModels}
+					refetchRouterModels={refetchRouterModels}
 				/>
 			)}
 

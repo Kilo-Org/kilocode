@@ -33,6 +33,7 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 export const PROVIDERS = [
 	{ value: "kilocode", label: "Kilo Code" },
 	{ value: "openrouter", label: "OpenRouter" },
+	{ value: "makehub", label: "MakeHub" },
 	{ value: "anthropic", label: "Anthropic" },
 	{ value: "fireworks", label: "Fireworks" }, // kilocode_change
 	{ value: "gemini", label: "Google Gemini" },

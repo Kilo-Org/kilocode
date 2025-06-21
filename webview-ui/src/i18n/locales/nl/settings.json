@@ -197,6 +197,16 @@
 		"getXaiApiKey": "xAI API-sleutel ophalen",
 		"litellmApiKey": "LiteLLM API-sleutel",
 		"litellmBaseUrl": "LiteLLM basis-URL",
+		"makehubApiKey": "MakeHub API-sleutel",
+		"getMakehubApiKey": "MakeHub API-sleutel verkrijgen",
+		"makehubPerfRatio": "Prestatie/prijs-verhouding",
+		"makehubPerfRatioDescription": "Bepaalt hoe MakeHub de balans tussen prijs en prestatie beheert bij het routeren naar providers.",
+		"makehubPerfRatioLabels": {
+			"price": "Prijsgeoptimaliseerd",
+			"balanced": "Gebalanceerd",
+			"performance": "Snelheidsgeoptimaliseerd"
+		},
+		"noModelsFound": "Geen modellen gevonden voor {{provider}}. Zorg ervoor dat je API-sleutel geldig is en vernieuw de modellijst.",
 		"awsCredentials": "AWS-inloggegevens",
 		"awsProfile": "AWS-profiel",
 		"awsProfileName": "AWS-profielnaam",
