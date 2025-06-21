@@ -1,5 +1,5 @@
 import React from "react"
-import { StoryTable } from "./StoryTable.story-helpers"
+import { StoryTable } from "./StoryTable"
 
 /**
  * Creates a story object that makes rendering a matrix of properties quick and easy
@@ -8,7 +8,7 @@ import { StoryTable } from "./StoryTable.story-helpers"
  *
  * Example usage:
  * ```tsx
- * export const Variants = createSimpleStoryTableStory({
+ * export const Variants = createTableStory({
  *   component: Button,
  *   rows: { variant: ["default", "destructive", "outline"] },
  *   columns: { size: ["sm", "default", "lg"] },
@@ -16,7 +16,7 @@ import { StoryTable } from "./StoryTable.story-helpers"
  * })
  * ```
  */
-export function createSimpleStoryTableStory<T extends Record<string, any>>(props: {
+export function createTableStory<T extends Record<string, any>>(props: {
 	component: React.ComponentType<T>
 	rows?: {
 		[K in keyof T]?: readonly T[K][]
