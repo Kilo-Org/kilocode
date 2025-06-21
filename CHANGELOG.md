@@ -1,5 +1,11 @@
 # kilo-code
 
+## [v4.40.1]
+
+### Patch Changes
+
+- [#801](https://github.com/Kilo-Org/kilocode/pull/801) [`e64e172`](https://github.com/Kilo-Org/kilocode/commit/e64e172b7ccc21e7d3e1e278c3ada368b19ab43f) Thanks [@hassoncs](https://github.com/hassoncs)! - Fix minor task timeline layout shift from hidden scrollbar
+
 ## [v4.40.0]
 
 ### Minor Changes
