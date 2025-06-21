@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react"
 import { Badge } from "@/components/ui/badge"
-import { createSimpleStoryTableStory } from "../src/utils/SimpleStoryTable.story-helpers"
+import { createTableStory } from "../src/utils/createTableStory"
 
 const BADGE_VARIANTS = ["default", "secondary", "destructive", "outline"] as const
 
@@ -28,7 +28,7 @@ export const Default: Story = {
 	},
 }
 
-export const Variants = createSimpleStoryTableStory({
+export const Variants = createTableStory({
 	component: Badge,
 	rows: { variant: BADGE_VARIANTS },
 	columns: { children: ["Badge", "42", "This is a longer badge text"] },

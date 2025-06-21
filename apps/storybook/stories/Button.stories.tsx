@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react"
 import { fn } from "@storybook/test"
 import { Button } from "@/components/ui/button"
-import { createSimpleStoryTableStory } from "../src/utils/SimpleStoryTable.story-helpers"
+import { createTableStory } from "../src/utils/createTableStory"
 
 const BUTTON_VARIANTS = ["default", "destructive", "outline", "secondary", "ghost", "link"] as const
 const BUTTON_SIZES = ["default", "sm", "lg", "icon"] as const
@@ -36,14 +36,14 @@ export const Default: Story = {
 	},
 }
 
-export const Variants = createSimpleStoryTableStory({
+export const Variants = createTableStory({
 	component: Button,
 	rows: { variant: BUTTON_VARIANTS },
 	columns: { size: STORY_TABLE_SIZES },
 	defaultProps: { children: "Button", onClick: fn() },
 })
 
-export const States = createSimpleStoryTableStory({
+export const States = createTableStory({
 	component: Button,
 	rows: { variant: BUTTON_VARIANTS },
 	columns: { disabled: [false, true] },
