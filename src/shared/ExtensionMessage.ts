@@ -280,6 +280,11 @@ export type ExtensionState = Pick<
 	autoCondenseContextPercent: number
 	marketplaceItems?: MarketplaceItem[]
 	marketplaceInstalledMetadata?: { project: Record<string, any>; global: Record<string, any> }
+
+	// Auto-queue properties
+	queuedPrompt: string | null
+	autoQueueEnabled: boolean
+	isProcessingQueue: boolean
 }
 
 export interface ClineSayTool {

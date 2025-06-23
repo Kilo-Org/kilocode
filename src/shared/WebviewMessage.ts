@@ -199,6 +199,11 @@ export interface WebviewMessage {
 		| "marketplaceInstallResult"
 		| "switchTab"
 		| "telemetrySetting"
+		| "toggleTaskFavorite" // kilocode_change
+		| "setQueuedPrompt" // Auto-queue feature
+		| "clearQueuedPrompt" // Auto-queue feature
+		| "setAutoQueueEnabled" // Auto-queue feature
+		| "getQueueState" // Auto-queue feature
 	text?: string
 	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "account"
 	disabled?: boolean
@@ -251,6 +256,9 @@ export interface WebviewMessage {
 	mpItem?: MarketplaceItem
 	mpInstallOptions?: InstallMarketplaceItemOptions
 	config?: Record<string, any> // Add config to the payload
+	// Auto-queue properties
+	prompt?: string | null
+	autoQueueEnabled?: boolean
 }
 
 // kilocode_change begin
