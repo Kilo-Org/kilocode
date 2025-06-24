@@ -78,3 +78,10 @@ class VSCodeAPIWrapper {
 
 // Exports class singleton to prevent multiple invocations of acquireVsCodeApi.
 export const vscode = new VSCodeAPIWrapper()
+
+// kilocode_change start
+// Make vscode API available globally for testing purposes
+if (typeof window !== "undefined") {
+	;(window as unknown as { vscode: VSCodeAPIWrapper }).vscode = vscode
+}
+// kilocode_change end
