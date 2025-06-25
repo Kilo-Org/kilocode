@@ -2,4 +2,4 @@
 "kilo-code": minor
 ---
 
-Add a colored gutter to Chat messages matching the Task Timeline
+Add a colorful gutter to chat messages corresponding to the Task Timeline

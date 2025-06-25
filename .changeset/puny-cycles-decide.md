@@ -2,4 +2,4 @@
 "kilo-code": patch
 ---
 
-Enable the TaskTimeline by default
+Enable the Task Timeline by default
