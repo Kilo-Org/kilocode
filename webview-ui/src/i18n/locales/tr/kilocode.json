@@ -95,7 +95,8 @@
 				"reasoning": "Yapay zeka muhakemesi",
 				"tool": "araç kullanımı",
 				"unknown": "bilinmeyen mesaj türü",
-				"use_mcp_server": "MCP sunucu kullanımı"
+				"use_mcp_server": "MCP sunucu kullanımı",
+				"user": "kullanıcı geri bildirimi"
 			}
 		}
 	}

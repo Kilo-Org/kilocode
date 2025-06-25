@@ -95,7 +95,8 @@
 				"text": "Resposta da IA",
 				"tool": "uso de ferramentas",
 				"unknown": "tipo de mensagem desconhecido",
-				"use_mcp_server": "Uso do servidor MCP"
+				"use_mcp_server": "Uso do servidor MCP",
+				"user": "feedback do usuário"
 			}
 		}
 	}

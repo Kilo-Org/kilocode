@@ -94,7 +94,8 @@
 				"reasoning": "ИИ рассуждение",
 				"text": "Ответ ИИ",
 				"use_mcp_server": "Использование сервера MCP",
-				"unknown": "неизвестный тип сообщения"
+				"unknown": "неизвестный тип сообщения",
+				"user": "отзыв пользователя"
 			},
 			"clickToScroll": "Посмотреть {{messageType}} (#{{messageNumber}})"
 		}

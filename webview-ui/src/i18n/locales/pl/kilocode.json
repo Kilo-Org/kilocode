@@ -95,7 +95,8 @@
 				"unknown": "nieznany typ wiadomości",
 				"text": "Odpowiedź AI",
 				"tool": "użycie narzędzi",
-				"use_mcp_server": "Użycie serwera MCP"
+				"use_mcp_server": "Użycie serwera MCP",
+				"user": "opinia użytkownika"
 			}
 		}
 	}

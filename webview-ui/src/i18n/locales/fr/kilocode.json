@@ -95,7 +95,8 @@
 				"unknown": "type de message inconnu",
 				"reasoning": "Raisonnement de l'IA",
 				"use_mcp_server": "Utilisation du serveur MCP",
-				"tool": "utilisation d'outils"
+				"tool": "utilisation d'outils",
+				"user": "commentaires des utilisateurs"
 			}
 		}
 	}

@@ -95,7 +95,8 @@
 				"reasoning": "Penalaran AI",
 				"tool": "penggunaan alat",
 				"unknown": "jenis pesan tidak diketahui",
-				"use_mcp_server": "Penggunaan server MCP"
+				"use_mcp_server": "Penggunaan server MCP",
+				"user": "umpan balik pengguna"
 			}
 		}
 	}

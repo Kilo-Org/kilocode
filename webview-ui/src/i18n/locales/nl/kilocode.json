@@ -95,7 +95,8 @@
 				"unknown": "onbekend berichttype",
 				"condense_context": "context samenvatten",
 				"use_mcp_server": "MCP-servergebruik",
-				"tool": "gereedschapsgebruik"
+				"tool": "gereedschapsgebruik",
+				"user": "gebruikersfeedback"
 			}
 		}
 	}

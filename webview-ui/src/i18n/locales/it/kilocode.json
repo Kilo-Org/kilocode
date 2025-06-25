@@ -94,7 +94,8 @@
 				"text": "Risposta dell'IA",
 				"unknown": "tipo di messaggio sconosciuto",
 				"use_mcp_server": "Utilizzo del server MCP",
-				"tool": "utilizzo strumenti"
+				"tool": "utilizzo strumenti",
+				"user": "feedback dell'utente"
 			},
 			"clickToScroll": "Visualizza {{messageType}} (#{{messageNumber}})"
 		}

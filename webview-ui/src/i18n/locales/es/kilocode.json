@@ -95,7 +95,8 @@
 				"text": "Respuesta de IA",
 				"error": "mensaje de error",
 				"unknown": "tipo de mensaje desconocido",
-				"use_mcp_server": "Uso del servidor MCP"
+				"use_mcp_server": "Uso del servidor MCP",
+				"user": "opinión del usuario"
 			}
 		}
 	}

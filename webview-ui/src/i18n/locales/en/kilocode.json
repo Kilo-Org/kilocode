@@ -94,6 +94,7 @@
 				"reasoning": "AI reasoning",
 				"text": "AI response",
 				"tool": "tool usage",
+				"user": "user feedback",
 				"unknown": "unknown message type",
 				"use_mcp_server": "MCP server usage"
 			}

@@ -95,7 +95,8 @@
 				"text": "AI回复",
 				"tool": "工具使用",
 				"use_mcp_server": "MCP 服务器使用情况",
-				"unknown": "未知消息类型"
+				"unknown": "未知消息类型",
+				"user": "用户反馈"
 			}
 		}
 	}

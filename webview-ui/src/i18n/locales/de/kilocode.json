@@ -94,7 +94,8 @@
 				"unknown": "unbekannter Nachrichtentyp",
 				"tool": "Werkzeugnutzung",
 				"use_mcp_server": "MCP-Server-Nutzung",
-				"followup": "Nachfrage"
+				"followup": "Nachfrage",
+				"user": "Nutzerfeedback"
 			},
 			"clickToScroll": "{{messageType}} (#{{messageNumber}}) ansehen"
 		}

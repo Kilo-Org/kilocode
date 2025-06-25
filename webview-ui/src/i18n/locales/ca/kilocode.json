@@ -94,7 +94,8 @@
 				"reasoning": "Raonament d'IA",
 				"unknown": "tipus de missatge desconegut",
 				"tool": "ús de l'eina",
-				"use_mcp_server": "Ús del servidor MCP"
+				"use_mcp_server": "Ús del servidor MCP",
+				"user": "comentaris dels usuaris"
 			},
 			"clickToScroll": "Veure {{messageType}} (núm. {{messageNumber}})"
 		}

@@ -94,7 +94,8 @@
 				"text": "AI応答",
 				"use_mcp_server": "MCPサーバーの使用状況",
 				"tool": "ツール使用",
-				"unknown": "不明なメッセージタイプ"
+				"unknown": "不明なメッセージタイプ",
+				"user": "ユーザーフィードバック"
 			},
 			"clickToScroll": "{{messageType}}を表示 (#{{messageNumber}})"
 		}

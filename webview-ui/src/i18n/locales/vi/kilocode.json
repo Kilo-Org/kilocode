@@ -94,7 +94,8 @@
 				"unknown": "loại tin nhắn không xác định",
 				"tool": "sử dụng công cụ",
 				"text": "Phản hồi của AI",
-				"use_mcp_server": "Sử dụng máy chủ MCP"
+				"use_mcp_server": "Sử dụng máy chủ MCP",
+				"user": "phản hồi của người dùng"
 			},
 			"clickToScroll": "Xem {{messageType}} (#{{messageNumber}})"
 		}
