@@ -6,7 +6,8 @@ export interface TaskTimelineMessageTypeConfig {
 }
 
 export const taskTimelineColorPalette = {
-	USER_INTERACTION: "bg-[var(--vscode-chat-editedFileForeground)]", // Tan/orange for all 'ask' types
+	USER_INTERACTION:
+		"bg-[color-mix(in_srgb,var(--vscode-editor-findMatchBackground)_50%,var(--vscode-errorForeground))]", // Tan/orange-ish
 	SYSTEM_READ: "bg-[var(--vscode-textLink-foreground)]", // Light blue for file reads
 	SYSTEM_WRITE: "bg-[var(--vscode-focusBorder)]", // Dark blue for file writes
 	SYSTEM_GENERAL_TOOL: "bg-[var(--vscode-activityBarBadge-background)]", // Blue for browser/server tools
@@ -40,13 +41,13 @@ export const TASK_TIMELINE_MESSAGE_TYPES: Record<string, TaskTimelineMessageType
 		color: taskTimelineColorPalette.SYSTEM_GENERAL_TOOL,
 		translationKey: "kilocode:taskTimeline.tooltip.messageTypes.use_mcp_server",
 	},
+	"ask:command": {
+		color: taskTimelineColorPalette.SYSTEM_GENERAL_TOOL,
+		translationKey: "kilocode:taskTimeline.tooltip.messageTypes.command",
+	},
 	"ask:followup": {
 		color: taskTimelineColorPalette.USER_INTERACTION,
 		translationKey: "kilocode:taskTimeline.tooltip.messageTypes.followup",
-	},
-	"ask:command": {
-		color: taskTimelineColorPalette.USER_INTERACTION,
-		translationKey: "kilocode:taskTimeline.tooltip.messageTypes.command",
 	},
 
 	// Say types that should be shown (everything except the filtered ones)
