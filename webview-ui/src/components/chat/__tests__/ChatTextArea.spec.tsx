@@ -763,4 +763,6 @@ describe("ChatTextArea", () => {
 			})
 		})
 	})
+
+	// kilocode_change remove selectApiConfig from ChatTextArea
 })

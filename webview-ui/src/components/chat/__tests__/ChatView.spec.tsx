@@ -778,8 +778,6 @@ describe("ChatView - Auto Approval Tests", () => {
 	})
 })
 
-// kilocode_change remove selectApiConfig from ChatTextArea
-
 describe("ChatView - Sound Playing Tests", () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
