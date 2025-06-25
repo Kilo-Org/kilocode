@@ -1,4 +1,4 @@
-import { HTMLAttributes } from "react"
+import { HTMLAttributes, useMemo } from "react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
 import { Monitor } from "lucide-react"
@@ -17,7 +17,7 @@ type DisplaySettingsProps = HTMLAttributes<HTMLDivElement> & {
 export const DisplaySettings = ({ showTaskTimeline, setCachedStateField, ...props }: DisplaySettingsProps) => {
 	const { t } = useAppTranslation()
 
-	const sampleTimelineData = generateSampleTimelineData()
+	const sampleTimelineData = useMemo(() => generateSampleTimelineData(), [])
 
 	return (
 		<div {...props}>
@@ -43,7 +43,7 @@ export const DisplaySettings = ({ showTaskTimeline, setCachedStateField, ...prop
 
 					{/* Sample TaskTimeline preview */}
 					<div className="mt-3">
-						<div className="font-medium text-vscode-foreground text-xs mb-4 font-medium">Preview</div>
+						<div className="font-medium text-vscode-foreground text-xs mb-4">Preview</div>
 						<div className="opacity-60">
 							<TaskTimeline groupedMessages={sampleTimelineData} isTaskActive={false} />
 						</div>
