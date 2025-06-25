@@ -61,7 +61,7 @@ export function StoryTable<RowProps, ColumnProps>(props: StoryTableProps<RowProp
 			<tbody>
 				{rowsWithDefault.map((row) => (
 					<tr key={row.label}>
-						<td key={row.label}>
+						<td>
 							<div className={rowLabelStyle}>{row.label}</div>
 						</td>
 
