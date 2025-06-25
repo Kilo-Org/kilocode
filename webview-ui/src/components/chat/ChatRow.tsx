@@ -40,6 +40,7 @@ import { CommandExecutionError } from "./CommandExecutionError"
 import ReportBugPreview from "./ReportBugPreview"
 
 import { NewTaskPreview } from "../kilocode/chat/NewTaskPreview" // kilocode_change
+import { KiloChatRowGutterBar } from "../kilocode/chat/KiloChatRowGutterBar" // kilocode_change
 import { AutoApprovedRequestLimitWarning } from "./AutoApprovedRequestLimitWarning"
 import { CondenseContextErrorRow, CondensingContextRow, ContextCondenseRow } from "./ContextCondenseRow"
 import CodebaseSearchResultsDisplay from "./CodebaseSearchResultsDisplay"
@@ -72,7 +73,10 @@ const ChatRow = memo(
 		const [chatrow, { height }] = useSize(
 			<div
 				// kilocode_change: add highlighted className
-				className={cn(`px-[15px] py-[10px] pr-[6px] ${highlighted ? "animate-message-highlight" : ""}`)}>
+				className={cn(
+					`px-[15px] py-[10px] pr-[6px] relative ${highlighted ? "animate-message-highlight" : ""}`,
+				)}>
+				<KiloChatRowGutterBar message={message} />
 				<ChatRowContent {...props} />
 			</div>,
 		)
