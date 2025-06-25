@@ -5,7 +5,7 @@ import { TaskTimelineMessage } from "./TaskTimelineMessage"
 import { MAX_HEIGHT_PX as TASK_TIMELINE_MAX_HEIGHT_PX } from "../../utils/timeline/calculateTaskTimelineSizes"
 import { consolidateMessagesForTimeline } from "../../utils/timeline/consolidateMessagesForTimeline"
 import { calculateTaskTimelineSizes } from "../../utils/timeline/calculateTaskTimelineSizes"
-import { getTaskTimelineMessageColor } from "../../utils/timeline/taskTimelineTypeRegistry"
+import { getTaskTimelineMessageColor } from "../../utils/messageColors"
 import { TooltipProvider } from "../ui/tooltip"
 
 // We hide the scrollbars for the TaskTimeline by wrapping it in a container with

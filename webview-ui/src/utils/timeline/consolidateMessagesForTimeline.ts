@@ -1,7 +1,7 @@
 import type { ClineMessage } from "@roo-code/types"
 import { combineApiRequests } from "@roo/combineApiRequests"
 import { combineCommandSequences } from "@roo/combineCommandSequences"
-import { TASK_TIMELINE_MESSAGE_TYPES, getTaskTimelineMessageTypeKey } from "./taskTimelineTypeRegistry"
+import { shouldShowInTimeline } from "../messageColors"
 
 /**
  * Processes grouped messages using the existing shared utilities:
@@ -63,13 +63,4 @@ export function consolidateMessagesForTimeline(groupedMessages: (ClineMessage | 
 		processedMessages,
 		messageToOriginalIndex: updatedMapping,
 	}
-}
-
-/**
- * Determines if a message should be shown in the task timeline
- * Uses the registry-based allowlist approach
- */
-function shouldShowInTimeline(message: ClineMessage): boolean {
-	const messageKey = getTaskTimelineMessageTypeKey(message)
-	return messageKey in TASK_TIMELINE_MESSAGE_TYPES
 }
