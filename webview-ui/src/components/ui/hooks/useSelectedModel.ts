@@ -76,6 +76,7 @@ export const useSelectedModel = (apiConfiguration?: ProviderSettings) => {
 	}
 }
 
+// kilocode_change start: simplify multiprovider differences
 export const getModelIdKey = ({
 	provider,
 }: {
@@ -154,6 +155,8 @@ export const getSelectedModelId = ({
 }
 
 // TODO(catrielmuller): refactor this function to use the ProviderModels Hook and the getSelectedModelId to simplify the code
+// kilocode_change end
+
 function getSelectedModel({
 	provider,
 	apiConfiguration,

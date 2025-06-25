@@ -25,7 +25,7 @@ import { SelectDropdown, DropdownOptionType, Button } from "@/components/ui"
 import Thumbnails from "../common/Thumbnails"
 import { MAX_IMAGES_PER_MESSAGE } from "./ChatView"
 import ContextMenu from "./ContextMenu"
-import { VolumeX } from "lucide-react"
+import { VolumeX } from "lucide-react" // kilocode_change
 import { IconButton } from "./IconButton"
 import { IndexingStatusDot } from "./IndexingStatusBadge"
 import { cn } from "@/lib/utils"
@@ -1241,11 +1241,15 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 									vscode.postMessage({ type: "mode", text: value })
 								}}
 								shortcutText={modeShortcutText}
+								// kilocode_change start - VSC Theme
 								triggerClassName={cn(
 									"w-full bg-[var(--background)] border-[var(--vscode-input-border)] hover:bg-[var(--color-vscode-list-hoverBackground)]",
 								)}
+								// kilocode_change end
 							/>
 						</div>
+
+						{/* kilocode_change move thumbnails to bottom component */}
 					</div>
 
 					<div

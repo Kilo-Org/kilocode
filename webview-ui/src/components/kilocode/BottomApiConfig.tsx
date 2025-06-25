@@ -16,13 +16,8 @@ interface BottomControlsProps {
 export const BottomApiConfig = ({ selectApiConfigDisabled = false }: BottomControlsProps) => {
 	const { t } = useAppTranslation()
 
-	const {
-		currentApiConfigName,
-		listApiConfigMeta,
-		pinnedApiConfigs,
-		togglePinnedApiConfig,
-		apiConfiguration, // kilocode_change
-	} = useExtensionState()
+	const { currentApiConfigName, listApiConfigMeta, pinnedApiConfigs, togglePinnedApiConfig, apiConfiguration } =
+		useExtensionState()
 
 	// Find the ID and display text for the currently selected API configuration
 	const { currentConfigId, displayName } = useMemo(() => {
@@ -33,9 +28,7 @@ export const BottomApiConfig = ({ selectApiConfigDisabled = false }: BottomContr
 		}
 	}, [listApiConfigMeta, currentApiConfigName])
 
-	// kilocode_change start
 	const { id: selectedModelId, provider: selectedProvider } = useSelectedModel(apiConfiguration)
-	// kilocode_change end
 
 	return (
 		<>

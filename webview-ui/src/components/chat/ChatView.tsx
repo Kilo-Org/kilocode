@@ -1620,7 +1620,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				setMode={setMode}
 				modeShortcutText={modeShortcutText}
 			/>
+			{/* kilocode_change: added settings toggle the profile and model selection */}
 			<BottomControls selectApiConfigDisabled={sendingDisabled && clineAsk !== "api_req_failed"} showApiConfig />
+			{/* kilocode_change: end */}
 
 			{/* kilocode_change: disable {isProfileDisabled && (
 				<div className="px-3">

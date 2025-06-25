@@ -191,6 +191,7 @@ export const SelectDropdown = React.memo(
 						disabled={disabled}
 						title={title}
 						data-testid="dropdown-trigger"
+						// kilocode_change start: fix padding
 						className={cn(
 							"w-full min-w-0 max-w-full inline-flex items-center gap-1.5 relative whitespace-nowrap pl-1.5 pr-3 py-1  text-xs",
 							"bg-transparent border border-[rgba(255,255,255,0.08)] rounded-md text-vscode-foreground w-auto",
@@ -200,6 +201,7 @@ export const SelectDropdown = React.memo(
 								: "opacity-90 hover:opacity-100 hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)] cursor-pointer",
 							triggerClassName,
 						)}>
+						{/* kilocode_change end */}
 						<CaretUpIcon className="pointer-events-none opacity-80 flex-shrink-0 size-3" />
 
 						{/* kilocode_change start */}
