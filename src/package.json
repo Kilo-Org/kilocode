@@ -130,6 +130,11 @@
 				"icon": "$(add)"
 			},
 			{
+				"command": "kilo-code.mcpButtonClicked",
+				"title": "%command.mcpServers.title%",
+				"icon": "$(server)"
+			},
+			{
 				"command": "kilo-code.importSettings",
 				"title": "Import Settings",
 				"category": "%configuration.title%"
@@ -148,6 +153,11 @@
 				"command": "kilo-code.historyButtonClicked",
 				"title": "%command.history.title%",
 				"icon": "$(history)"
+			},
+			{
+				"command": "kilo-code.marketplaceButtonClicked",
+				"title": "%command.marketplace.title%",
+				"icon": "$(extensions)"
 			},
 			{
 				"command": "kilo-code.popoutButtonClicked",
@@ -311,28 +321,38 @@
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "kilo-code.historyButtonClicked",
+					"command": "kilo-code.mcpButtonClicked",
 					"group": "navigation@3",
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "kilo-code.profileButtonClicked",
+					"command": "kilo-code.marketplaceButtonClicked",
 					"group": "navigation@4",
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "kilo-code.settingsButtonClicked",
+					"command": "kilo-code.historyButtonClicked",
 					"group": "navigation@5",
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "kilo-code.popoutButtonClicked",
+					"command": "kilo-code.profileButtonClicked",
 					"group": "navigation@6",
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "kilo-code.helpButtonClicked",
+					"command": "kilo-code.settingsButtonClicked",
 					"group": "navigation@7",
+					"when": "view == kilo-code.SidebarProvider"
+				},
+				{
+					"command": "kilo-code.popoutButtonClicked",
+					"group": "navigation@8",
+					"when": "view == kilo-code.SidebarProvider"
+				},
+				{
+					"command": "kilo-code.helpButtonClicked",
+					"group": "navigation@9",
 					"when": "false && view == kilo-code.SidebarProvider"
 				}
 			],
@@ -348,23 +368,33 @@
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
 				},
 				{
-					"command": "kilo-code.historyButtonClicked",
+					"command": "kilo-code.mcpButtonClicked",
 					"group": "navigation@3",
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
 				},
 				{
-					"command": "kilo-code.popoutButtonClicked",
+					"command": "kilo-code.marketplaceButtonClicked",
 					"group": "navigation@4",
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
 				},
 				{
-					"command": "kilo-code.settingsButtonClicked",
+					"command": "kilo-code.historyButtonClicked",
 					"group": "navigation@5",
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
 				},
 				{
-					"command": "kilo-code.helpButtonClicked",
+					"command": "kilo-code.popoutButtonClicked",
 					"group": "navigation@6",
+					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
+				},
+				{
+					"command": "kilo-code.settingsButtonClicked",
+					"group": "navigation@7",
+					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
+				},
+				{
+					"command": "kilo-code.helpButtonClicked",
+					"group": "navigation@8",
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
 				}
 			],

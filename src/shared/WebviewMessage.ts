@@ -194,6 +194,7 @@ export interface WebviewMessage {
 		| "toggleTaskFavorite" // kilocode_change
 		| "openExternal"
 		| "filterMarketplaceItems"
+		| "mcpButtonClicked"
 		| "marketplaceButtonClicked"
 		| "installMarketplaceItem"
 		| "installMarketplaceItemWithParameters"
