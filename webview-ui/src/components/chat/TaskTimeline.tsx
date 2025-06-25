@@ -11,7 +11,7 @@ import { TooltipProvider } from "../ui/tooltip"
 // We hide the scrollbars for the TaskTimeline by wrapping it in a container with
 // overflow hidden. This hides the scrollbars for the actual Virtuoso element
 // by clipping them out view. This just needs to be greater than the webview scrollbar width.
-const SCROLLBAR_WIDTH_PX = 15
+const SCROLLBAR_WIDTH_PX = 25
 
 interface TaskTimelineProps {
 	groupedMessages: (ClineMessage | ClineMessage[])[]
