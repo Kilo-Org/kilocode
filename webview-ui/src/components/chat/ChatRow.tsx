@@ -65,6 +65,7 @@ interface ChatRowContentProps extends Omit<ChatRowProps, "onHeightChange"> {}
 const ChatRow = memo(
 	(props: ChatRowProps) => {
 		const { highlighted } = props // kilocode_change: Add highlighted prop
+		const { showTaskTimeline } = useExtensionState() // kilocode_change: Used by KiloChatRowGutterBar
 		const { isLast, onHeightChange, message } = props
 		// Store the previous height to compare with the current height
 		// This allows us to detect changes without causing re-renders
@@ -76,7 +77,7 @@ const ChatRow = memo(
 				className={cn(
 					`px-[15px] py-[10px] pr-[6px] relative ${highlighted ? "animate-message-highlight" : ""}`,
 				)}>
-				<KiloChatRowGutterBar message={message} />
+				{showTaskTimeline && <KiloChatRowGutterBar message={message} />}
 				<ChatRowContent {...props} />
 			</div>,
 		)
