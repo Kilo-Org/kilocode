@@ -105,7 +105,9 @@
 	},
 	"tasks": {
 		"canceled": "Error de tarea: Fue detenida y cancelada por el usuario.",
-		"deleted": "Fallo de tarea: Fue detenida y eliminada por el usuario."
+		"deleted": "Fallo de tarea: Fue detenida y eliminada por el usuario.",
+		"incomplete": "Tarea #{{taskNumber}} (Incompleta)",
+		"no_messages": "Tarea #{{taskNumber}} (Sin mensajes)"
 	},
 	"storage": {
 		"prompt_custom_path": "Ingresa la ruta de almacenamiento personalizada para el historial de conversaciones, déjala vacía para usar la ubicación predeterminada",
@@ -128,10 +130,22 @@
 			}
 		}
 	},
+	"customModes": {
+		"errors": {
+			"yamlParseError": "YAML inválido en archivo .roomodes en línea {{line}}. Verifica:\n• Indentación correcta (usa espacios, no tabs)\n• Comillas y corchetes coincidentes\n• Sintaxis YAML válida",
+			"schemaValidationError": "Formato inválido de modos personalizados en .roomodes:\n{{issues}}",
+			"invalidFormat": "Formato inválido de modos personalizados. Asegúrate de que tu configuración siga el formato YAML correcto.",
+			"updateFailed": "Error al actualizar modo personalizado: {{error}}",
+			"deleteFailed": "Error al eliminar modo personalizado: {{error}}",
+			"resetFailed": "Error al restablecer modos personalizados: {{error}}",
+			"modeNotFound": "Error de escritura: Modo no encontrado",
+			"noWorkspaceForProject": "No se encontró carpeta de espacio de trabajo para modo específico del proyecto"
+		}
+	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "Tu organización requiere autenticación de Roo Code Cloud. Por favor, inicia sesión para continuar.",
-			"organization_mismatch": "Debes estar autenticado con la cuenta de Roo Code Cloud de tu organización.",
+			"cloud_auth_required": "Tu organización requiere autenticación de Kilo Code Cloud. Por favor, inicia sesión para continuar.",
+			"organization_mismatch": "Debes estar autenticado con la cuenta de Kilo Code Cloud de tu organización.",
 			"verification_failed": "No se pudo verificar la autenticación de la organización."
 		}
 	}

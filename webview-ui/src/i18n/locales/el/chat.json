@@ -16,7 +16,12 @@
 		"shareWithOrganization": "Κοινοποίηση στον Οργανισμό",
 		"shareWithOrganizationDescription": "Μόνο τα μέλη του οργανισμού σου έχουν πρόσβαση",
 		"sharePublicly": "Δημόσια Κοινοποίηση",
-		"sharePubliclyDescription": "Οποιοσδήποτε με τον σύνδεσμο έχει πρόσβαση"
+		"sharePubliclyDescription": "Οποιοσδήποτε με τον σύνδεσμο έχει πρόσβαση",
+		"connectToCloud": "Σύνδεση στο Cloud",
+		"connectToCloudDescription": "Συνδέσου στο Kilo Code Cloud για να μοιραστείς εργασίες",
+		"sharingDisabledByOrganization": "Η κοινοποίηση απενεργοποιήθηκε από τον οργανισμό",
+		"shareSuccessOrganization": "Ο σύνδεσμος οργανισμού αντιγράφηκε στο πρόχειρο",
+		"shareSuccessPublic": "Ο δημόσιος σύνδεσμος αντιγράφηκε στο πρόχειρο"
 	},
 	"history": {
 		"title": "Ιστορικό"
@@ -113,6 +118,12 @@
 	"selectApiConfig": "Επίλεξε διαμόρφωση API",
 	"enhancePrompt": "Βελτίωσε το prompt με επιπλέον περιεχόμενο",
 	"enhancePromptDescription": "Το κουμπί 'Βελτίωση Prompt' βοηθά να βελτιώσεις το prompt σου παρέχοντας επιπλέον περιεχόμενο, διευκρίνιση ή αναδιατύπωση. Δοκίμασε να πληκτρολογήσεις ένα prompt εδώ και κάνε κλικ στο κουμπί ξανά για να δεις πώς λειτουργεί.",
+	"modeSelector": {
+		"title": "Λειτουργίες",
+		"marketplace": "Αγορά Λειτουργιών",
+		"settings": "Ρυθμίσεις Λειτουργιών",
+		"description": "Εξειδικευμένες προσωπικότητες που προσαρμόζουν τη συμπεριφορά του Roo."
+	},
 	"addImages": "Πρόσθεσε εικόνες στο μήνυμα",
 	"sendMessage": "Αποστολή μηνύματος",
 	"typeMessage": "Πληκτρολόγησε ένα μήνυμα...",
@@ -238,8 +249,8 @@
 		"description": "Η αυτόματη έγκριση επιτρέπει στο Kilo Code να εκτελεί ενέργειες χωρίς να ζητά άδεια. Ενεργοποίησε μόνο για ενέργειες που εμπιστεύεσαι πλήρως. Πιο λεπτομερής διαμόρφωση διαθέσιμη στις <settingsLink>Ρυθμίσεις</settingsLink>."
 	},
 	"announcement": {
-		"title": "🎉 Κυκλοφόρησε το Roo Code {{version}}",
-		"description": "Το Roo Code {{version}} φέρνει σημαντικές νέες δυνατότητες και βελτιώσεις βασισμένες στα σχόλιά σου.",
+		"title": "🎉 Κυκλοφόρησε το Kilo Code {{version}}",
+		"description": "Το Kilo Code {{version}} φέρνει σημαντικές νέες δυνατότητες και βελτιώσεις βασισμένες στα σχόλιά σου.",
 		"whatsNew": "Τι Νέο Υπάρχει",
 		"feature1": "<bold>Λανσάρισμα του Roo Marketplace</bold>: Το marketplace είναι τώρα ζωντανό! Ανακάλυψε και εγκατάστησε λειτουργίες και MCP ευκολότερα από ποτέ.",
 		"feature2": "<bold>Μοντέλα Gemini 2.5</bold>: Προστέθηκε υποστήριξη για τα νέα μοντέλα Gemini 2.5 Pro, Flash και Flash Lite.",

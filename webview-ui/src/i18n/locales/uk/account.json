@@ -4,5 +4,12 @@
 	"unknownUser": "Невідомий користувач",
 	"logOut": "Вийти",
 	"testApiAuthentication": "Перевірити автентифікацію API",
-	"signIn": "Підключитися до Roo Code Cloud"
+	"signIn": "Підключитися до Kilo Code Cloud",
+	"connect": "Підключитися",
+	"cloudBenefitsTitle": "Підключитися до Kilo Code Cloud",
+	"cloudBenefitsSubtitle": "Синхронізуйте свої запити та телеметрію, щоб увімкнути:",
+	"cloudBenefitHistory": "Онлайн-історія завдань",
+	"cloudBenefitSharing": "Функції спільного доступу та співпраці",
+	"cloudBenefitMetrics": "Показники використання на основі завдань, токенів та вартості",
+	"visitCloudWebsite": "Відвідати Kilo Code Cloud"
 }

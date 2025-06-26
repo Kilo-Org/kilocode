@@ -71,7 +71,7 @@ describe("LmStudioHandler", () => {
 		mockOptions = {
 			apiModelId: "local-model",
 			lmStudioModelId: "local-model",
-			lmStudioBaseUrl: "http://localhost:1234/v1",
+			lmStudioBaseUrl: "http://localhost:1234",
 		}
 		handler = new LmStudioHandler(mockOptions)
 		mockCreate.mockClear()

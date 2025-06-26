@@ -6,9 +6,10 @@ import {
 	VSCodeRadio,
 	VSCodeTextArea,
 	VSCodeLink,
+	VSCodeTextField,
 } from "@vscode/webview-ui-toolkit/react"
 import { Trans } from "react-i18next"
-import { ChevronsUpDown, X } from "lucide-react"
+import { ChevronDown, X } from "lucide-react"
 
 import { ModeConfig, GroupEntry, PromptComponent, ToolGroup, modeConfigSchema } from "@roo-code/types"
 
@@ -16,6 +17,7 @@ import {
 	Mode,
 	getRoleDefinition,
 	getWhenToUse,
+	getDescription,
 	getCustomInstructions,
 	getAllModes,
 	findModeBySlug as findCustomModeBySlug,
@@ -106,6 +108,9 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 			if (updatedPrompt.roleDefinition === getRoleDefinition(mode)) {
 				delete updatedPrompt.roleDefinition
 			}
+			if (updatedPrompt.description === getDescription(mode)) {
+				delete updatedPrompt.description
+			}
 			if (updatedPrompt.whenToUse === getWhenToUse(mode)) {
 				delete updatedPrompt.whenToUse
 			}
@@ -121,6 +126,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 
 	const updateCustomMode = useCallback((slug: string, modeConfig: ModeConfig) => {
 		const source = modeConfig.source || "global"
+
 		vscode.postMessage({
 			type: "updateCustomMode",
 			slug,
@@ -195,6 +201,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 	// State for create mode dialog
 	const [newModeName, setNewModeName] = useState("")
 	const [newModeSlug, setNewModeSlug] = useState("")
+	const [newModeDescription, setNewModeDescription] = useState("")
 	const [newModeRoleDefinition, setNewModeRoleDefinition] = useState("")
 	const [newModeWhenToUse, setNewModeWhenToUse] = useState("")
 	const [newModeCustomInstructions, setNewModeCustomInstructions] = useState("")
@@ -204,6 +211,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 	// Field-specific error states
 	const [nameError, setNameError] = useState<string>("")
 	const [slugError, setSlugError] = useState<string>("")
+	const [descriptionError, setDescriptionError] = useState<string>("")
 	const [roleDefinitionError, setRoleDefinitionError] = useState<string>("")
 	const [groupsError, setGroupsError] = useState<string>("")
 
@@ -212,6 +220,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 		// Reset form fields
 		setNewModeName("")
 		setNewModeSlug("")
+		setNewModeDescription("")
 		setNewModeGroups(availableGroups)
 		setNewModeRoleDefinition("")
 		setNewModeWhenToUse("")
@@ -220,6 +229,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 		// Reset error states
 		setNameError("")
 		setSlugError("")
+		setDescriptionError("")
 		setRoleDefinitionError("")
 		setGroupsError("")
 	}, [])
@@ -253,6 +263,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 		// Clear previous errors
 		setNameError("")
 		setSlugError("")
+		setDescriptionError("")
 		setRoleDefinitionError("")
 		setGroupsError("")
 
@@ -260,6 +271,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 		const newMode: ModeConfig = {
 			slug: newModeSlug,
 			name: newModeName,
+			description: newModeDescription.trim() || undefined,
 			roleDefinition: newModeRoleDefinition.trim(),
 			whenToUse: newModeWhenToUse.trim() || undefined,
 			customInstructions: newModeCustomInstructions.trim() || undefined,
@@ -283,6 +295,9 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 					case "slug":
 						setSlugError(message)
 						break
+					case "description":
+						setDescriptionError(message)
+						break
 					case "roleDefinition":
 						setRoleDefinitionError(message)
 						break
@@ -302,6 +317,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 	}, [
 		newModeName,
 		newModeSlug,
+		newModeDescription,
 		newModeRoleDefinition,
 		newModeWhenToUse, // Add whenToUse dependency
 		newModeCustomInstructions,
@@ -349,6 +365,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 				}
 				if (customMode) {
 					const source = customMode.source || "global"
+
 					updateCustomMode(customMode.slug, {
 						...customMode,
 						groups: newGroups,
@@ -387,7 +404,10 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 		return () => window.removeEventListener("message", handler)
 	}, [])
 
-	const handleAgentReset = (modeSlug: string, type: "roleDefinition" | "whenToUse" | "customInstructions") => {
+	const handleAgentReset = (
+		modeSlug: string,
+		type: "roleDefinition" | "description" | "whenToUse" | "customInstructions",
+	) => {
 		// Only reset for built-in modes
 		const existingPrompt = customModePrompts?.[modeSlug] as PromptComponent
 		const updatedPrompt = { ...existingPrompt }
@@ -494,10 +514,10 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 									variant="combobox"
 									role="combobox"
 									aria-expanded={open}
-									className="grow justify-between"
+									className="justify-between w-60"
 									data-testid="mode-select-trigger">
 									<div>{getCurrentMode()?.name || t("prompts:modes.selectMode")}</div>
-									<ChevronsUpDown className="opacity-50" />
+									<ChevronDown className="opacity-50" />
 								</Button>
 							</PopoverTrigger>
 							<PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]">
@@ -583,6 +603,9 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 					{/* API Configuration - Moved Here */}
 					<div className="mb-3">
 						<div className="font-bold mb-1">{t("prompts:apiConfiguration.title")}</div>
+						<div className="text-sm text-vscode-descriptionForeground mb-2">
+							{t("prompts:apiConfiguration.select")}
+						</div>
 						<div className="mb-2">
 							<Select
 								value={currentApiConfigName}
@@ -592,7 +615,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 										text: value,
 									})
 								}}>
-								<SelectTrigger className="w-full">
+								<SelectTrigger className="w-60">
 									<SelectValue placeholder={t("settings:common.select")} />
 								</SelectTrigger>
 								<SelectContent>
@@ -603,13 +626,11 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 									))}
 								</SelectContent>
 							</Select>
-							<div className="text-xs mt-1.5 text-vscode-descriptionForeground">
-								{t("prompts:apiConfiguration.select")}
-							</div>
 						</div>
 					</div>
 				</div>
 
+				{/* Name section */}
 				<div className="mb-5">
 					{/* Only show name and delete for custom modes */}
 					{visualMode && findModeBySlug(visualMode, customModes) && (
@@ -648,6 +669,8 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 							</div>
 						</div>
 					)}
+
+					{/* Role Definition section */}
 					<div className="mb-4">
 						<div className="flex justify-between items-center mb-1">
 							<div className="font-bold">{t("prompts:roleDefinition.title")}</div>
@@ -701,8 +724,61 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 								}
 							}}
 							className="w-full"
-							rows={4}
+							rows={5}
 							data-testid={`${getCurrentMode()?.slug || "code"}-prompt-textarea`}
+						/>
+					</div>
+
+					{/* Description section */}
+					<div className="mb-4">
+						<div className="flex justify-between items-center mb-1">
+							<div className="font-bold">{t("prompts:description.title")}</div>
+							{!findModeBySlug(visualMode, customModes) && (
+								<Button
+									variant="ghost"
+									size="icon"
+									onClick={() => {
+										const currentMode = getCurrentMode()
+										if (currentMode?.slug) {
+											handleAgentReset(currentMode.slug, "description")
+										}
+									}}
+									title={t("prompts:description.resetToDefault")}
+									data-testid="description-reset">
+									<span className="codicon codicon-discard"></span>
+								</Button>
+							)}
+						</div>
+						<div className="text-sm text-vscode-descriptionForeground mb-2">
+							{t("prompts:description.description")}
+						</div>
+						<VSCodeTextField
+							value={(() => {
+								const customMode = findModeBySlug(visualMode, customModes)
+								const prompt = customModePrompts?.[visualMode] as PromptComponent
+								return customMode?.description ?? prompt?.description ?? getDescription(visualMode)
+							})()}
+							onChange={(e) => {
+								const value =
+									(e as unknown as CustomEvent)?.detail?.target?.value ||
+									((e as any).target as HTMLTextAreaElement).value
+								const customMode = findModeBySlug(visualMode, customModes)
+								if (customMode) {
+									// For custom modes, update the JSON file
+									updateCustomMode(visualMode, {
+										...customMode,
+										description: value.trim() || undefined,
+										source: customMode.source || "global",
+									})
+								} else {
+									// For built-in modes, update the prompts
+									updateAgentPrompt(visualMode, {
+										description: value.trim() || undefined,
+									})
+								}
+							}}
+							className="w-full"
+							data-testid={`${getCurrentMode()?.slug || "code"}-description-textfield`}
 						/>
 					</div>
 
@@ -756,7 +832,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 								}
 							}}
 							className="w-full"
-							rows={3}
+							rows={4}
 							data-testid={`${getCurrentMode()?.slug || "code"}-when-to-use-textarea`}
 						/>
 					</div>
@@ -913,7 +989,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 									})
 								}
 							}}
-							rows={4}
+							rows={10}
 							className="w-full"
 							data-testid={`${getCurrentMode()?.slug || "code"}-custom-instructions-textarea`}
 						/>
@@ -1188,6 +1264,23 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 									<div className="text-xs text-vscode-errorForeground mt-1">
 										{roleDefinitionError}
 									</div>
+								)}
+							</div>
+
+							<div className="mb-4">
+								<div className="font-bold mb-1">{t("prompts:createModeDialog.description.label")}</div>
+								<div className="text-[13px] text-vscode-descriptionForeground mb-2">
+									{t("prompts:createModeDialog.description.description")}
+								</div>
+								<VSCodeTextField
+									value={newModeDescription}
+									onChange={(e) => {
+										setNewModeDescription((e.target as HTMLInputElement).value)
+									}}
+									className="w-full"
+								/>
+								{descriptionError && (
+									<div className="text-xs text-vscode-errorForeground mt-1">{descriptionError}</div>
 								)}
 							</div>
 

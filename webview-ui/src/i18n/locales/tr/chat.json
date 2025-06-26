@@ -16,7 +16,12 @@
 		"shareWithOrganization": "Kuruluşla paylaş",
 		"shareWithOrganizationDescription": "Sadece kuruluşunuzun üyeleri erişebilir",
 		"sharePublicly": "Herkese açık paylaş",
-		"sharePubliclyDescription": "Bağlantıya sahip herkes erişebilir"
+		"sharePubliclyDescription": "Bağlantıya sahip herkes erişebilir",
+		"connectToCloud": "Buluta bağlan",
+		"connectToCloudDescription": "Görevleri paylaşmak için Kilo Code Cloud'a giriş yap",
+		"sharingDisabledByOrganization": "Paylaşım kuruluş tarafından devre dışı bırakıldı",
+		"shareSuccessOrganization": "Organizasyon bağlantısı panoya kopyalandı",
+		"shareSuccessPublic": "Genel bağlantı panoya kopyalandı"
 	},
 	"history": {
 		"title": "Geçmiş"
@@ -112,6 +117,12 @@
 	"dragFiles": "dosyaları sürüklemek için shift tuşuna basılı tutun",
 	"dragFilesImages": "dosyaları/resimleri sürüklemek için shift tuşuna basılı tutun",
 	"enhancePromptDescription": "'İstemi geliştir' düğmesi, ek bağlam, açıklama veya yeniden ifade sağlayarak isteğinizi iyileştirmeye yardımcı olur. Buraya bir istek yazıp düğmeye tekrar tıklayarak nasıl çalıştığını görebilirsiniz.",
+	"modeSelector": {
+		"title": "Modlar",
+		"marketplace": "Mod Pazaryeri",
+		"settings": "Mod Ayarları",
+		"description": "Roo'nun davranışını özelleştiren uzmanlaşmış kişilikler."
+	},
 	"errorReadingFile": "Dosya okuma hatası:",
 	"noValidImages": "Hiçbir geçerli resim işlenmedi",
 	"separator": "Ayırıcı",
@@ -232,8 +243,8 @@
 		"copyToInput": "Giriş alanına kopyala (veya Shift + tıklama)"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} Yayınlandı",
-		"description": "Roo Code {{version}} geri bildirimlerinize dayalı güçlü yeni özellikler ve iyileştirmeler getiriyor.",
+		"title": "🎉 Kilo Code {{version}} Yayınlandı",
+		"description": "Kilo Code {{version}} geri bildirimlerinize dayalı güçlü yeni özellikler ve iyileştirmeler getiriyor.",
 		"whatsNew": "Yenilikler",
 		"feature1": "<bold>Roo Marketplace Lansmanı</bold> - Marketplace artık canlı! Modları ve MCP'leri her zamankinden daha kolay keşfedin ve kurun.",
 		"feature2": "<bold>Gemini 2.5 Modelleri</bold> - Yeni Gemini 2.5 Pro, Flash ve Flash Lite modelleri için destek eklendi.",

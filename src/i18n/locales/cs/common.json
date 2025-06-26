@@ -105,7 +105,9 @@
 	},
 	"tasks": {
 		"canceled": "Chyba úlohy: Byla zastavena a zrušena uživatelem.",
-		"deleted": "Selhání úlohy: Byla zastavena a smazána uživatelem."
+		"deleted": "Selhání úlohy: Byla zastavena a smazána uživatelem.",
+		"incomplete": "Úloha #{{taskNumber}} (Nedokončená)",
+		"no_messages": "Úloha #{{taskNumber}} (Žádné zprávy)"
 	},
 	"storage": {
 		"prompt_custom_path": "Zadej vlastní cestu úložiště historie konverzací, ponech prázdné pro použití výchozího umístění",
@@ -117,10 +119,22 @@
 		"task_prompt": "Co by měl Kilo Code udělat?",
 		"task_placeholder": "Vytvořit, najít, zeptat se na něco"
 	},
+	"customModes": {
+		"errors": {
+			"yamlParseError": "Neplatný YAML v souboru .roomodes na řádku {{line}}. Zkontroluj prosím:\n• Správné odsazení (používej mezery, ne tabulátory)\n• Odpovídající uvozovky a závorky\n• Platnou syntaxi YAML",
+			"schemaValidationError": "Neplatný formát vlastních režimů v .roomodes:\n{{issues}}",
+			"invalidFormat": "Neplatný formát vlastních režimů. Ujisti se, že tvá nastavení dodržují správný formát YAML.",
+			"updateFailed": "Aktualizace vlastního režimu selhala: {{error}}",
+			"deleteFailed": "Smazání vlastního režimu selhalo: {{error}}",
+			"resetFailed": "Reset vlastních režimů selhal: {{error}}",
+			"modeNotFound": "Chyba zápisu: Režim nebyl nalezen",
+			"noWorkspaceForProject": "Nebyla nalezena složka pracovního prostoru pro režim specifický pro projekt"
+		}
+	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "Tvá organizace vyžaduje autentizaci Roo Code Cloud. Prosím přihlas se pro pokračování.",
-			"organization_mismatch": "Musíš být autentizován s účtem Roo Code Cloud tvé organizace.",
+			"cloud_auth_required": "Tvá organizace vyžaduje autentizaci Kilo Code Cloud. Prosím přihlas se pro pokračování.",
+			"organization_mismatch": "Musíš být autentizován s účtem Kilo Code Cloud tvé organizace.",
 			"verification_failed": "Nelze ověřit autentizaci organizace."
 		}
 	}

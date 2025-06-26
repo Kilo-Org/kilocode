@@ -16,7 +16,12 @@
 		"shareWithOrganization": "Compartir con organización",
 		"shareWithOrganizationDescription": "Solo los miembros de tu organización pueden acceder",
 		"sharePublicly": "Compartir públicamente",
-		"sharePubliclyDescription": "Cualquiera con el enlace puede acceder"
+		"sharePubliclyDescription": "Cualquiera con el enlace puede acceder",
+		"connectToCloud": "Conectar al Cloud",
+		"connectToCloudDescription": "Inicia sesión en Kilo Code Cloud para compartir tareas",
+		"sharingDisabledByOrganization": "Compartir deshabilitado por la organización",
+		"shareSuccessOrganization": "Enlace de organización copiado al portapapeles",
+		"shareSuccessPublic": "Enlace público copiado al portapapeles"
 	},
 	"history": {
 		"title": "Historial"
@@ -112,6 +117,12 @@
 	"dragFiles": "mantén shift para arrastrar archivos",
 	"dragFilesImages": "mantén shift para arrastrar archivos/imágenes",
 	"enhancePromptDescription": "El botón 'Mejorar el mensaje' ayuda a mejorar tu petición proporcionando contexto adicional, aclaraciones o reformulaciones. Intenta escribir una petición aquí y haz clic en el botón nuevamente para ver cómo funciona.",
+	"modeSelector": {
+		"title": "Modos",
+		"marketplace": "Marketplace de Modos",
+		"settings": "Configuración de Modos",
+		"description": "Personalidades especializadas que adaptan el comportamiento de Roo."
+	},
 	"errorReadingFile": "Error al leer el archivo:",
 	"noValidImages": "No se procesaron imágenes válidas",
 	"separator": "Separador",
@@ -232,8 +243,8 @@
 		"copyToInput": "Copiar a la entrada (o Shift + clic)"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} publicado",
-		"description": "Roo Code {{version}} trae importantes nuevas funcionalidades y mejoras basadas en tus comentarios.",
+		"title": "🎉 Kilo Code {{version}} publicado",
+		"description": "Kilo Code {{version}} trae importantes nuevas funcionalidades y mejoras basadas en tus comentarios.",
 		"whatsNew": "Novedades",
 		"feature1": "<bold>Lanzamiento del Marketplace de Roo</bold>: ¡El marketplace ya está disponible! Descubre e instala modos y MCPs más fácil que nunca.",
 		"feature2": "<bold>Modelos Gemini 2.5</bold>: Se agregó soporte para los nuevos modelos Gemini 2.5 Pro, Flash y Flash Lite.",

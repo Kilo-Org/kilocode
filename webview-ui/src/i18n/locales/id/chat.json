@@ -16,7 +16,12 @@
 		"shareWithOrganization": "Bagikan dengan organisasi",
 		"shareWithOrganizationDescription": "Hanya anggota organisasi Anda yang dapat mengakses",
 		"sharePublicly": "Bagikan secara publik",
-		"sharePubliclyDescription": "Siapa pun dengan tautan dapat mengakses"
+		"sharePubliclyDescription": "Siapa pun dengan tautan dapat mengakses",
+		"connectToCloud": "Hubungkan ke Cloud",
+		"connectToCloudDescription": "Masuk ke Kilo Code Cloud untuk berbagi tugas",
+		"sharingDisabledByOrganization": "Berbagi dinonaktifkan oleh organisasi",
+		"shareSuccessOrganization": "Tautan organisasi disalin ke clipboard",
+		"shareSuccessPublic": "Tautan publik disalin ke clipboard"
 	},
 	"history": {
 		"title": "Riwayat"
@@ -113,6 +118,12 @@
 	"selectApiConfig": "Pilih konfigurasi API",
 	"enhancePrompt": "Tingkatkan prompt dengan konteks tambahan",
 	"enhancePromptDescription": "Tombol 'Tingkatkan Prompt' membantu memperbaiki prompt kamu dengan memberikan konteks tambahan, klarifikasi, atau penyusunan ulang. Coba ketik prompt di sini dan klik tombol lagi untuk melihat cara kerjanya.",
+	"modeSelector": {
+		"title": "Mode",
+		"marketplace": "Marketplace Mode",
+		"settings": "Pengaturan Mode",
+		"description": "Persona khusus yang menyesuaikan perilaku Roo."
+	},
 	"addImages": "Tambahkan gambar ke pesan",
 	"sendMessage": "Kirim pesan",
 	"typeMessage": "Ketik pesan...",
@@ -238,8 +249,8 @@
 		"description": "Auto-approve memungkinkan Kilo Code melakukan aksi tanpa meminta izin. Hanya aktifkan untuk aksi yang benar-benar kamu percayai. Konfigurasi lebih detail tersedia di <settingsLink>Pengaturan</settingsLink>."
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} Dirilis",
-		"description": "Roo Code {{version}} menghadirkan fitur baru yang powerful dan perbaikan berdasarkan feedback kamu.",
+		"title": "🎉 Kilo Code {{version}} Dirilis",
+		"description": "Kilo Code {{version}} menghadirkan fitur baru yang powerful dan perbaikan berdasarkan feedback kamu.",
 		"whatsNew": "Apa yang Baru",
 		"feature1": "<bold>Peluncuran Roo Marketplace</bold> - Marketplace sekarang sudah live! Temukan dan install mode serta MCP lebih mudah dari sebelumnya.",
 		"feature2": "<bold>Model Gemini 2.5</bold> - Menambahkan dukungan untuk model Gemini 2.5 Pro, Flash, dan Flash Lite yang baru.",

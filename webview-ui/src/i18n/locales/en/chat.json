@@ -16,7 +16,12 @@
 		"shareWithOrganization": "Share with Organization",
 		"shareWithOrganizationDescription": "Only members of your organization can access",
 		"sharePublicly": "Share Publicly",
-		"sharePubliclyDescription": "Anyone with the link can access"
+		"sharePubliclyDescription": "Anyone with the link can access",
+		"connectToCloud": "Connect to Cloud",
+		"connectToCloudDescription": "Sign in to Kilo Code Cloud to share tasks",
+		"sharingDisabledByOrganization": "Sharing disabled by organization",
+		"shareSuccessOrganization": "Organization link copied to clipboard",
+		"shareSuccessPublic": "Public link copied to clipboard"
 	},
 	"history": {
 		"title": "History"
@@ -112,6 +117,12 @@
 	"selectMode": "Select mode for interaction",
 	"selectApiConfig": "Select API configuration",
 	"enhancePrompt": "Enhance prompt with additional context",
+	"modeSelector": {
+		"title": "Modes",
+		"marketplace": "Mode Marketplace",
+		"settings": "Mode Settings",
+		"description": "Specialized personas that tailor Roo's behavior."
+	},
 	"enhancePromptDescription": "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
 	"addImages": "Add images to message",
 	"sendMessage": "Send message",
@@ -238,8 +249,8 @@
 		"description": "Auto-approve allows Kilo Code to perform actions without asking for permission. Only enable for actions you fully trust. More detailed configuration available in <settingsLink>Settings</settingsLink>."
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} Released",
-		"description": "Roo Code {{version}} brings major new features and improvements based on your feedback.",
+		"title": "🎉 Kilo Code {{version}} Released",
+		"description": "Kilo Code {{version}} brings major new features and improvements based on your feedback.",
 		"whatsNew": "What's New",
 		"feature1": "<bold>Roo Marketplace Launch</bold>: The marketplace is now live! Discover and install modes and MCPs easier than ever before.",
 		"feature2": "<bold>Gemini 2.5 Models</bold>: Added support for new Gemini 2.5 Pro, Flash, and Flash Lite models.",

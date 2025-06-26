@@ -20,6 +20,7 @@
 	"command.addToContext.title": "Добавить в контекст",
 	"command.focusInput.title": "Фокус на поле ввода",
 	"command.setCustomStoragePath.title": "Указать путь хранения",
+	"command.importSettings.title": "Импортировать настройки",
 	"command.terminal.addToContext.title": "Добавить содержимое терминала в контекст",
 	"command.terminal.fixCommand.title": "Исправить эту команду",
 	"command.terminal.explainCommand.title": "Объяснить эту команду",
@@ -31,5 +32,6 @@
 	"settings.vsCodeLmModelSelector.description": "Настройки для VSCode Language Model API",
 	"settings.vsCodeLmModelSelector.vendor.description": "Поставщик языковой модели (например, copilot)",
 	"settings.vsCodeLmModelSelector.family.description": "Семейство языковой модели (например, gpt-4)",
-	"settings.customStoragePath.description": "Пользовательский путь хранения. Оставьте пустым для использования пути по умолчанию. Поддерживает абсолютные пути (например, 'D:\\KiloCodeStorage')"
+	"settings.customStoragePath.description": "Пользовательский путь хранения. Оставьте пустым для использования пути по умолчанию. Поддерживает абсолютные пути (например, 'D:\\KiloCodeStorage')",
+	"settings.enableCodeActions.description": "Включить быстрые исправления Kilo Code."
 }

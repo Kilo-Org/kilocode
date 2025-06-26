@@ -105,7 +105,9 @@
 	},
 	"tasks": {
 		"canceled": "Task error: Ito ay tinigil at kinansela ng user.",
-		"deleted": "Task failure: Ito ay tinigil at tinanggal ng user."
+		"deleted": "Task failure: Ito ay tinigil at tinanggal ng user.",
+		"incomplete": "Task #{{taskNumber}} (Hindi kumpleto)",
+		"no_messages": "Task #{{taskNumber}} (Walang mga mensahe)"
 	},
 	"storage": {
 		"prompt_custom_path": "Maglagay ng custom conversation history storage path, iwanang blangko para gamitin ang default na lokasyon",
@@ -117,10 +119,22 @@
 		"task_prompt": "Ano ang dapat gawin ng Kilo Code?",
 		"task_placeholder": "Bumuo, maghanap, magtanong ng kahit ano"
 	},
+	"customModes": {
+		"errors": {
+			"yamlParseError": "Invalid na YAML sa .roomodes file sa line {{line}}. Mangyaring suriin para sa:\n• Tamang indentation (gumamit ng spaces, hindi tabs)\n• Magkatugmang quotes at brackets\n• Valid na YAML syntax",
+			"schemaValidationError": "Invalid na format ng custom modes sa .roomodes:\n{{issues}}",
+			"invalidFormat": "Invalid na format ng custom modes. Mangyaring tiyakin na ang iyong mga setting ay sumusunod sa tamang YAML format.",
+			"updateFailed": "Nabigo ang pag-update ng custom mode: {{error}}",
+			"deleteFailed": "Nabigo ang pagtanggal ng custom mode: {{error}}",
+			"resetFailed": "Nabigo ang pag-reset ng custom modes: {{error}}",
+			"modeNotFound": "Write error: Hindi nahanap ang Mode",
+			"noWorkspaceForProject": "Walang nahanap na workspace folder para sa project-specific mode"
+		}
+	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "Ang iyong organisasyon ay nangangailangan ng Roo Code Cloud authentication. Mangyaring mag-sign in upang magpatuloy.",
-			"organization_mismatch": "Dapat kang ma-authenticate gamit ang Roo Code Cloud account ng iyong organisasyon.",
+			"cloud_auth_required": "Ang iyong organisasyon ay nangangailangan ng Kilo Code Cloud authentication. Mangyaring mag-sign in upang magpatuloy.",
+			"organization_mismatch": "Dapat kang ma-authenticate gamit ang Kilo Code Cloud account ng iyong organisasyon.",
 			"verification_failed": "Hindi ma-verify ang authentication ng organisasyon."
 		}
 	}

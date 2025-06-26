@@ -20,6 +20,7 @@
 	"command.addToContext.title": "Toevoegen aan Context",
 	"command.focusInput.title": "Focus op Invoerveld",
 	"command.setCustomStoragePath.title": "Aangepast Opslagpad Instellen",
+	"command.importSettings.title": "Instellingen Importeren",
 	"command.terminal.addToContext.title": "Terminalinhoud aan Context Toevoegen",
 	"command.terminal.fixCommand.title": "Repareer Dit Commando",
 	"command.terminal.explainCommand.title": "Leg Dit Commando Uit",
@@ -31,5 +32,6 @@
 	"settings.vsCodeLmModelSelector.description": "Instellingen voor VSCode Language Model API",
 	"settings.vsCodeLmModelSelector.vendor.description": "De leverancier van het taalmodel (bijv. copilot)",
 	"settings.vsCodeLmModelSelector.family.description": "De familie van het taalmodel (bijv. gpt-4)",
-	"settings.customStoragePath.description": "Aangepast opslagpad. Laat leeg om de standaardlocatie te gebruiken. Ondersteunt absolute paden (bijv. 'D:\\KiloCodeStorage')"
+	"settings.customStoragePath.description": "Aangepast opslagpad. Laat leeg om de standaardlocatie te gebruiken. Ondersteunt absolute paden (bijv. 'D:\\KiloCodeStorage')",
+	"settings.enableCodeActions.description": "Snelle correcties van Kilo Code inschakelen."
 }

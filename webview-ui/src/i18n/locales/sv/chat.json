@@ -16,7 +16,12 @@
 		"shareWithOrganization": "Dela med organisation",
 		"shareWithOrganizationDescription": "Endast medlemmar i din organisation har åtkomst",
 		"sharePublicly": "Dela offentligt",
-		"sharePubliclyDescription": "Alla med länken har åtkomst"
+		"sharePubliclyDescription": "Alla med länken har åtkomst",
+		"connectToCloud": "Anslut till molnet",
+		"connectToCloudDescription": "Logga in på Kilo Code Cloud för att dela uppgifter",
+		"sharingDisabledByOrganization": "Delning inaktiverad av organisationen",
+		"shareSuccessOrganization": "Organisationslänk kopierad till urklipp",
+		"shareSuccessPublic": "Offentlig länk kopierad till urklipp"
 	},
 	"history": {
 		"title": "Historik"
@@ -113,6 +118,12 @@
 	"selectApiConfig": "Välj API-konfiguration",
 	"enhancePrompt": "Förbättra prompt med ytterligare kontext",
 	"enhancePromptDescription": "Knappen 'Förbättra prompt' hjälper till att förbättra din prompt genom att tillhandahålla ytterligare kontext, förtydligande eller omformulering. Prova att skriva en prompt här och klicka på knappen igen för att se hur det fungerar.",
+	"modeSelector": {
+		"title": "Lägen",
+		"marketplace": "Lägesmarknadsplats",
+		"settings": "Lägesinställningar",
+		"description": "Specialiserade personas som anpassar Roos beteende."
+	},
 	"addImages": "Lägg till bilder i meddelandet",
 	"sendMessage": "Skicka meddelande",
 	"typeMessage": "Skriv ett meddelande...",
@@ -238,8 +249,8 @@
 		"description": "Auto-godkännande låter Kilo Code utföra åtgärder utan att be om tillåtelse. Aktivera endast för åtgärder du helt litar på. Mer detaljerad konfiguration finns i <settingsLink>Inställningar</settingsLink>."
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} släppt",
-		"description": "Roo Code {{version}} kommer med stora nya funktioner och förbättringar baserade på din feedback.",
+		"title": "🎉 Kilo Code {{version}} släppt",
+		"description": "Kilo Code {{version}} kommer med stora nya funktioner och förbättringar baserade på din feedback.",
 		"whatsNew": "Vad är nytt",
 		"feature1": "<bold>Roo Marketplace lansering</bold>: Marknadsplatsen är nu live! Upptäck och installera lägen och MCP:er enklare än någonsin.",
 		"feature2": "<bold>Gemini 2.5-modeller</bold>: Lagt till stöd för nya Gemini 2.5 Pro, Flash och Flash Lite-modeller.",

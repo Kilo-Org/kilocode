@@ -16,7 +16,12 @@
 		"shareWithOrganization": "組織と共有",
 		"shareWithOrganizationDescription": "組織のメンバーのみがアクセスできます",
 		"sharePublicly": "公開で共有",
-		"sharePubliclyDescription": "リンクを持つ誰でもアクセスできます"
+		"sharePubliclyDescription": "リンクを持つ誰でもアクセスできます",
+		"connectToCloud": "クラウドに接続",
+		"connectToCloudDescription": "タスクを共有するためにKilo Code Cloudにサインイン",
+		"sharingDisabledByOrganization": "組織により共有が無効化されています",
+		"shareSuccessOrganization": "組織リンクをクリップボードにコピーしました",
+		"shareSuccessPublic": "公開リンクをクリップボードにコピーしました"
 	},
 	"history": {
 		"title": "履歴"
@@ -112,6 +117,12 @@
 	"dragFiles": "ファイルをドラッグするにはShiftキーを押したまま",
 	"dragFilesImages": "ファイル/画像をドラッグするにはShiftキーを押したまま",
 	"enhancePromptDescription": "「プロンプトを強化」ボタンは、追加コンテキスト、説明、または言い換えを提供することで、リクエストを改善します。ここにリクエストを入力し、ボタンを再度クリックして動作を確認してください。",
+	"modeSelector": {
+		"title": "モード",
+		"marketplace": "モードマーケットプレイス",
+		"settings": "モード設定",
+		"description": "Rooの動作をカスタマイズする専門的なペルソナ。"
+	},
 	"errorReadingFile": "ファイル読み込みエラー:",
 	"noValidImages": "有効な画像が処理されませんでした",
 	"separator": "区切り",
@@ -232,8 +243,8 @@
 		"copyToInput": "入力欄にコピー（またはShift + クリック）"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} リリース",
-		"description": "Roo Code {{version}}は、あなたのフィードバックに基づく重要な新機能と改善をもたらします。",
+		"title": "🎉 Kilo Code {{version}} リリース",
+		"description": "Kilo Code {{version}}は、あなたのフィードバックに基づく重要な新機能と改善をもたらします。",
 		"whatsNew": "新機能",
 		"feature1": "<bold>Roo マーケットプレイス開始</bold>: マーケットプレイスが開始されました！これまで以上に簡単にモードとMCPを発見・インストール。",
 		"feature2": "<bold>Gemini 2.5 モデル</bold>: 新しいGemini 2.5 Pro、Flash、Flash Liteモデルのサポートを追加。",

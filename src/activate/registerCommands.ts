@@ -5,7 +5,6 @@ import type { CommandId } from "@roo-code/types"
 
 import { getCommand } from "../utils/commands"
 import { ClineProvider } from "../core/webview/ClineProvider"
-import { t } from "../i18n" // kilocode_change
 import { importSettings, exportSettings } from "../core/config/importExport" // kilocode_change
 import { ContextProxy } from "../core/config/ContextProxy"
 import { focusPanel } from "../utils/focusPanel"
@@ -13,6 +12,8 @@ import { focusPanel } from "../utils/focusPanel"
 import { registerHumanRelayCallback, unregisterHumanRelayCallback, handleHumanRelayResponse } from "./humanRelay"
 import { handleNewTask } from "./handleTask"
 import { CodeIndexManager } from "../services/code-index/manager"
+import { importSettingsWithFeedback } from "../core/config/importExport"
+import { t } from "../i18n"
 
 /**
  * Helper to get the visible ClineProvider instance or log if not found.

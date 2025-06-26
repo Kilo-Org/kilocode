@@ -296,7 +296,8 @@ describe("TelemetryClient", () => {
 			expect(mockFetch).not.toHaveBeenCalled()
 		})
 
-		it("should not send request when schema validation fails", async () => {
+		it.skip("should not send request when schema validation fails", async () => {
+			// kilocode_change Skipped: TelemetryClient capture method is disabled
 			const client = new TelemetryClient(mockAuthService, mockSettingsService)
 
 			await client.capture({
@@ -308,7 +309,8 @@ describe("TelemetryClient", () => {
 			expect(console.error).toHaveBeenCalledWith(expect.stringContaining("Invalid telemetry event"))
 		})
 
-		it("should send request when event is capturable and validation passes", async () => {
+		it.skip("should send request when event is capturable and validation passes", async () => {
+			// kilocode_change Skipped: TelemetryClient capture method is disabled
 			const client = new TelemetryClient(mockAuthService, mockSettingsService)
 
 			const providerProperties = {
@@ -353,7 +355,8 @@ describe("TelemetryClient", () => {
 			)
 		})
 
-		it("should attempt to capture TASK_MESSAGE events when recordTaskMessages is true", async () => {
+		it.skip("should attempt to capture TASK_MESSAGE events when recordTaskMessages is true", async () => {
+			// kilocode_change Skipped: TelemetryClient capture method is disabled
 			mockSettingsService.getSettings.mockReturnValue({
 				cloudSettings: {
 					recordTaskMessages: true,
@@ -422,6 +425,325 @@ describe("TelemetryClient", () => {
 			const client = new TelemetryClient(mockAuthService, mockSettingsService)
 			client.updateTelemetryState(true)
 			await client.shutdown()
+		})
+	})
+
+	describe("backfillMessages", () => {
+		it("should not send request when not authenticated", async () => {
+			mockAuthService.isAuthenticated.mockReturnValue(false)
+			const client = new TelemetryClient(mockAuthService, mockSettingsService)
+
+			const messages = [
+				{
+					ts: 1,
+					type: "say" as const,
+					say: "text" as const,
+					text: "test message",
+				},
+			]
+
+			await client.backfillMessages(messages, "test-task-id")
+
+			expect(mockFetch).not.toHaveBeenCalled()
+		})
+
+		it.skip("should not send request when no session token available", async () => {
+			// kilocode_change Skipped: TelemetryClient backfillMessages method is disabled
+			mockAuthService.getSessionToken.mockReturnValue(null)
+			const client = new TelemetryClient(mockAuthService, mockSettingsService)
+
+			const messages = [
+				{
+					ts: 1,
+					type: "say" as const,
+					say: "text" as const,
+					text: "test message",
+				},
+			]
+
+			await client.backfillMessages(messages, "test-task-id")
+
+			expect(mockFetch).not.toHaveBeenCalled()
+			expect(console.error).toHaveBeenCalledWith(
+				"[TelemetryClient#backfillMessages] Unauthorized: No session token available.",
+			)
+		})
+
+		it.skip("should send FormData request with correct structure when authenticated", async () => {
+			// kilocode_change Skipped: TelemetryClient backfillMessages method is disabled
+			const client = new TelemetryClient(mockAuthService, mockSettingsService)
+
+			const providerProperties = {
+				appName: "roo-code",
+				appVersion: "1.0.0",
+				vscodeVersion: "1.60.0",
+				platform: "darwin",
+				editorName: "vscode",
+				language: "en",
+				mode: "code",
+			}
+
+			const mockProvider: TelemetryPropertiesProvider = {
+				getTelemetryProperties: vi.fn().mockResolvedValue(providerProperties),
+			}
+
+			client.setProvider(mockProvider)
+
+			const messages = [
+				{
+					ts: 1,
+					type: "say" as const,
+					say: "text" as const,
+					text: "test message 1",
+				},
+				{
+					ts: 2,
+					type: "ask" as const,
+					ask: "followup" as const,
+					text: "test question",
+				},
+			]
+
+			await client.backfillMessages(messages, "test-task-id")
+
+			expect(mockFetch).toHaveBeenCalledWith(
+				"https://app.roocode.com/api/events/backfill",
+				expect.objectContaining({
+					method: "POST",
+					headers: {
+						Authorization: "Bearer mock-token",
+					},
+					body: expect.any(FormData),
+				}),
+			)
+
+			// Verify FormData contents
+			const call = mockFetch.mock.calls[0]
+			const formData = call[1].body as FormData
+
+			expect(formData.get("taskId")).toBe("test-task-id")
+
+			// Parse and compare properties as objects since JSON.stringify order can vary
+			const propertiesJson = formData.get("properties") as string
+			const parsedProperties = JSON.parse(propertiesJson)
+			expect(parsedProperties).toEqual({
+				taskId: "test-task-id",
+				...providerProperties,
+			})
+			// The messages are stored as a File object under the "file" key
+			const fileField = formData.get("file") as File
+			expect(fileField).toBeInstanceOf(File)
+			expect(fileField.name).toBe("task.json")
+			expect(fileField.type).toBe("application/json")
+
+			// Read the file content to verify the messages
+			const fileContent = await fileField.text()
+			expect(fileContent).toBe(JSON.stringify(messages))
+		})
+
+		it.skip("should handle provider errors gracefully", async () => {
+			// kilocode_change Skipped: TelemetryClient backfillMessages method is disabled
+			const client = new TelemetryClient(mockAuthService, mockSettingsService)
+
+			const mockProvider: TelemetryPropertiesProvider = {
+				getTelemetryProperties: vi.fn().mockRejectedValue(new Error("Provider error")),
+			}
+
+			client.setProvider(mockProvider)
+
+			const messages = [
+				{
+					ts: 1,
+					type: "say" as const,
+					say: "text" as const,
+					text: "test message",
+				},
+			]
+
+			await client.backfillMessages(messages, "test-task-id")
+
+			expect(mockFetch).toHaveBeenCalledWith(
+				"https://app.roocode.com/api/events/backfill",
+				expect.objectContaining({
+					method: "POST",
+					headers: {
+						Authorization: "Bearer mock-token",
+					},
+					body: expect.any(FormData),
+				}),
+			)
+
+			// Verify FormData contents - should still work with just taskId
+			const call = mockFetch.mock.calls[0]
+			const formData = call[1].body as FormData
+
+			expect(formData.get("taskId")).toBe("test-task-id")
+			expect(formData.get("properties")).toBe(
+				JSON.stringify({
+					taskId: "test-task-id",
+				}),
+			)
+			// The messages are stored as a File object under the "file" key
+			const fileField = formData.get("file") as File
+			expect(fileField).toBeInstanceOf(File)
+			expect(fileField.name).toBe("task.json")
+			expect(fileField.type).toBe("application/json")
+
+			// Read the file content to verify the messages
+			const fileContent = await fileField.text()
+			expect(fileContent).toBe(JSON.stringify(messages))
+		})
+
+		it.skip("should work without provider set", async () => {
+			// kilocode_change Skipped: TelemetryClient backfillMessages method is disabled
+			const client = new TelemetryClient(mockAuthService, mockSettingsService)
+
+			const messages = [
+				{
+					ts: 1,
+					type: "say" as const,
+					say: "text" as const,
+					text: "test message",
+				},
+			]
+
+			await client.backfillMessages(messages, "test-task-id")
+
+			expect(mockFetch).toHaveBeenCalledWith(
+				"https://app.roocode.com/api/events/backfill",
+				expect.objectContaining({
+					method: "POST",
+					headers: {
+						Authorization: "Bearer mock-token",
+					},
+					body: expect.any(FormData),
+				}),
+			)
+
+			// Verify FormData contents - should work with just taskId
+			const call = mockFetch.mock.calls[0]
+			const formData = call[1].body as FormData
+
+			expect(formData.get("taskId")).toBe("test-task-id")
+			expect(formData.get("properties")).toBe(
+				JSON.stringify({
+					taskId: "test-task-id",
+				}),
+			)
+			// The messages are stored as a File object under the "file" key
+			const fileField = formData.get("file") as File
+			expect(fileField).toBeInstanceOf(File)
+			expect(fileField.name).toBe("task.json")
+			expect(fileField.type).toBe("application/json")
+
+			// Read the file content to verify the messages
+			const fileContent = await fileField.text()
+			expect(fileContent).toBe(JSON.stringify(messages))
+		})
+
+		it.skip("should handle fetch errors gracefully", async () => {
+			// kilocode_change Skipped: TelemetryClient backfillMessages method is disabled
+			const client = new TelemetryClient(mockAuthService, mockSettingsService)
+
+			mockFetch.mockRejectedValue(new Error("Network error"))
+
+			const messages = [
+				{
+					ts: 1,
+					type: "say" as const,
+					say: "text" as const,
+					text: "test message",
+				},
+			]
+
+			await expect(client.backfillMessages(messages, "test-task-id")).resolves.not.toThrow()
+
+			expect(console.error).toHaveBeenCalledWith(
+				expect.stringContaining(
+					"[TelemetryClient#backfillMessages] Error uploading messages: Error: Network error",
+				),
+			)
+		})
+
+		it.skip("should handle HTTP error responses", async () => {
+			// kilocode_change Skipped: TelemetryClient backfillMessages method is disabled
+			const client = new TelemetryClient(mockAuthService, mockSettingsService)
+
+			mockFetch.mockResolvedValue({
+				ok: false,
+				status: 404,
+				statusText: "Not Found",
+			})
+
+			const messages = [
+				{
+					ts: 1,
+					type: "say" as const,
+					say: "text" as const,
+					text: "test message",
+				},
+			]
+
+			await client.backfillMessages(messages, "test-task-id")
+
+			expect(console.error).toHaveBeenCalledWith(
+				"[TelemetryClient#backfillMessages] POST events/backfill -> 404 Not Found",
+			)
+		})
+
+		it.skip("should log debug information when debug is enabled", async () => {
+			// kilocode_change Skipped: TelemetryClient backfillMessages method is disabled
+			const client = new TelemetryClient(mockAuthService, mockSettingsService, true)
+
+			const messages = [
+				{
+					ts: 1,
+					type: "say" as const,
+					say: "text" as const,
+					text: "test message",
+				},
+			]
+
+			await client.backfillMessages(messages, "test-task-id")
+
+			expect(console.info).toHaveBeenCalledWith(
+				"[TelemetryClient#backfillMessages] Uploading 1 messages for task test-task-id",
+			)
+			expect(console.info).toHaveBeenCalledWith(
+				"[TelemetryClient#backfillMessages] Successfully uploaded messages for task test-task-id",
+			)
+		})
+
+		it.skip("should handle empty messages array", async () => {
+			// kilocode_change Skipped: TelemetryClient backfillMessages method is disabled
+			const client = new TelemetryClient(mockAuthService, mockSettingsService)
+
+			await client.backfillMessages([], "test-task-id")
+
+			expect(mockFetch).toHaveBeenCalledWith(
+				"https://app.roocode.com/api/events/backfill",
+				expect.objectContaining({
+					method: "POST",
+					headers: {
+						Authorization: "Bearer mock-token",
+					},
+					body: expect.any(FormData),
+				}),
+			)
+
+			// Verify FormData contents
+			const call = mockFetch.mock.calls[0]
+			const formData = call[1].body as FormData
+
+			// The messages are stored as a File object under the "file" key
+			const fileField = formData.get("file") as File
+			expect(fileField).toBeInstanceOf(File)
+			expect(fileField.name).toBe("task.json")
+			expect(fileField.type).toBe("application/json")
+
+			// Read the file content to verify the empty messages array
+			const fileContent = await fileField.text()
+			expect(fileContent).toBe("[]")
 		})
 	})
 })

@@ -16,7 +16,12 @@
 		"shareWithOrganization": "Condividi con l'organizzazione",
 		"shareWithOrganizationDescription": "Solo i membri della tua organizzazione possono accedere",
 		"sharePublicly": "Condividi pubblicamente",
-		"sharePubliclyDescription": "Chiunque con il link può accedere"
+		"sharePubliclyDescription": "Chiunque con il link può accedere",
+		"connectToCloud": "Connetti al Cloud",
+		"connectToCloudDescription": "Accedi a Kilo Code Cloud per condividere attività",
+		"sharingDisabledByOrganization": "Condivisione disabilitata dall'organizzazione",
+		"shareSuccessOrganization": "Link organizzazione copiato negli appunti",
+		"shareSuccessPublic": "Link pubblico copiato negli appunti"
 	},
 	"history": {
 		"title": "Cronologia"
@@ -112,6 +117,12 @@
 	"dragFiles": "tieni premuto shift per trascinare file",
 	"dragFilesImages": "tieni premuto shift per trascinare file/immagini",
 	"enhancePromptDescription": "Il pulsante 'Migliora prompt' aiuta a migliorare la tua richiesta fornendo contesto aggiuntivo, chiarimenti o riformulazioni. Prova a digitare una richiesta qui e fai di nuovo clic sul pulsante per vedere come funziona.",
+	"modeSelector": {
+		"title": "Modalità",
+		"marketplace": "Marketplace delle Modalità",
+		"settings": "Impostazioni Modalità",
+		"description": "Personalità specializzate che adattano il comportamento di Roo."
+	},
 	"errorReadingFile": "Errore nella lettura del file:",
 	"noValidImages": "Nessuna immagine valida è stata elaborata",
 	"separator": "Separatore",
@@ -232,8 +243,8 @@
 		"copyToInput": "Copia nell'input (o Shift + clic)"
 	},
 	"announcement": {
-		"title": "🎉 Rilasciato Roo Code {{version}}",
-		"description": "Roo Code {{version}} introduce importanti nuove funzionalità e miglioramenti basati sui tuoi feedback.",
+		"title": "🎉 Rilasciato Kilo Code {{version}}",
+		"description": "Kilo Code {{version}} introduce importanti nuove funzionalità e miglioramenti basati sui tuoi feedback.",
 		"whatsNew": "Novità",
 		"feature1": "<bold>Lancio del Marketplace Roo</bold>: Il marketplace è ora attivo! Scopri e installa modalità e MCP più facilmente che mai.",
 		"feature2": "<bold>Modelli Gemini 2.5</bold>: Aggiunto supporto per i nuovi modelli Gemini 2.5 Pro, Flash e Flash Lite.",

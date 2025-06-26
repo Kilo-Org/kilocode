@@ -16,7 +16,12 @@
 		"shareWithOrganization": "Delen met organisatie",
 		"shareWithOrganizationDescription": "Alleen leden van je organisatie kunnen toegang krijgen",
 		"sharePublicly": "Openbaar delen",
-		"sharePubliclyDescription": "Iedereen met de link kan toegang krijgen"
+		"sharePubliclyDescription": "Iedereen met de link kan toegang krijgen",
+		"connectToCloud": "Verbind met Cloud",
+		"connectToCloudDescription": "Meld je aan bij Kilo Code Cloud om taken te delen",
+		"sharingDisabledByOrganization": "Delen uitgeschakeld door organisatie",
+		"shareSuccessOrganization": "Organisatielink gekopieerd naar klembord",
+		"shareSuccessPublic": "Openbare link gekopieerd naar klembord"
 	},
 	"history": {
 		"title": "Geschiedenis"
@@ -105,6 +110,12 @@
 	"selectApiConfig": "Selecteer API-configuratie",
 	"enhancePrompt": "Prompt verbeteren met extra context",
 	"enhancePromptDescription": "De knop 'Prompt verbeteren' helpt je prompt te verbeteren door extra context, verduidelijking of herformulering te bieden. Probeer hier een prompt te typen en klik opnieuw op de knop om te zien hoe het werkt.",
+	"modeSelector": {
+		"title": "Modi",
+		"marketplace": "Modus Marktplaats",
+		"settings": "Modus Instellingen",
+		"description": "Gespecialiseerde persona's die het gedrag van Roo aanpassen."
+	},
 	"addImages": "Afbeeldingen toevoegen aan bericht",
 	"sendMessage": "Bericht verzenden",
 	"typeMessage": "Typ een bericht...",
@@ -219,8 +230,8 @@
 		"description": "Met automatisch goedkeuren kan Kilo Code acties uitvoeren zonder om toestemming te vragen. Schakel dit alleen in voor acties die je volledig vertrouwt. Meer gedetailleerde configuratie beschikbaar in de <settingsLink>Instellingen</settingsLink>."
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} uitgebracht",
-		"description": "Roo Code {{version}} brengt krachtige nieuwe functies en verbeteringen op basis van jouw feedback.",
+		"title": "🎉 Kilo Code {{version}} uitgebracht",
+		"description": "Kilo Code {{version}} brengt krachtige nieuwe functies en verbeteringen op basis van jouw feedback.",
 		"whatsNew": "Wat is er nieuw",
 		"feature1": "<bold>Roo Marketplace Launch</bold> - De marketplace is nu live! Ontdek en installeer modi en MCP's makkelijker dan ooit tevoren.",
 		"feature2": "<bold>Gemini 2.5 Modellen</bold> - Ondersteuning toegevoegd voor nieuwe Gemini 2.5 Pro, Flash en Flash Lite modellen.",

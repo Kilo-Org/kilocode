@@ -4,5 +4,12 @@
 	"unknownUser": "Hindi Kilalang User",
 	"logOut": "Mag-log out",
 	"testApiAuthentication": "Subukan ang API Authentication",
-	"signIn": "Kumonekta sa Roo Code Cloud"
+	"signIn": "Kumonekta sa Kilo Code Cloud",
+	"connect": "Kumonekta",
+	"cloudBenefitsTitle": "Kumonekta sa Kilo Code Cloud",
+	"cloudBenefitsSubtitle": "I-sync ang iyong mga prompt at telemetry para paganahin:",
+	"cloudBenefitHistory": "Online na kasaysayan ng mga task",
+	"cloudBenefitSharing": "Mga feature ng pagbabahagi at kolaborasyon",
+	"cloudBenefitMetrics": "Mga sukatan ng paggamit batay sa task, token, at gastos",
+	"visitCloudWebsite": "Bisitahin ang Kilo Code Cloud"
 }

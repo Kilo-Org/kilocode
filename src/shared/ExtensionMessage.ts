@@ -8,6 +8,7 @@ import type {
 	ClineMessage,
 	OrganizationAllowList,
 	CloudUserInfo,
+	ShareVisibility,
 } from "@roo-code/types"
 
 import { GitCommit } from "../utils/git"
@@ -108,6 +109,7 @@ export interface ExtensionMessage {
 		| "marketplaceInstallResult"
 		| "marketplaceData"
 		| "mermaidFixResponse" // kilocode_change
+		| "shareTaskSuccess"
 	text?: string
 	payload?: ProfileDataResponsePayload | BalanceDataResponsePayload // kilocode_change: Add payload for profile and balance data
 	action?:
@@ -171,6 +173,7 @@ export interface ExtensionMessage {
 	marketplaceItems?: MarketplaceItem[]
 	marketplaceInstalledMetadata?: MarketplaceInstalledMetadata
 	fixedCode?: string | null // For mermaidFixResponse // kilocode_change
+	visibility?: ShareVisibility
 }
 
 export type ExtensionState = Pick<
@@ -285,6 +288,7 @@ export type ExtensionState = Pick<
 
 	cloudUserInfo: CloudUserInfo | null
 	cloudIsAuthenticated: boolean
+	cloudApiUrl?: string
 	sharingEnabled: boolean
 	organizationAllowList: OrganizationAllowList
 
@@ -293,6 +297,7 @@ export type ExtensionState = Pick<
 	marketplaceItems?: MarketplaceItem[]
 	marketplaceInstalledMetadata?: { project: Record<string, any>; global: Record<string, any> }
 	profileThresholds: Record<string, number>
+	hasOpenedModeSelector: boolean
 }
 
 export interface ClineSayTool {

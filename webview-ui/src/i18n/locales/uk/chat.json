@@ -16,7 +16,12 @@
 		"shareWithOrganization": "Поділитися з організацією",
 		"shareWithOrganizationDescription": "Лише члени твоєї організації мають доступ",
 		"sharePublicly": "Поділитися публічно",
-		"sharePubliclyDescription": "Будь-хто з посиланням має доступ"
+		"sharePubliclyDescription": "Будь-хто з посиланням має доступ",
+		"connectToCloud": "Підключитися до хмари",
+		"connectToCloudDescription": "Увійдіть до Kilo Code Cloud, щоб ділитися завданнями",
+		"sharingDisabledByOrganization": "Спільний доступ вимкнено організацією",
+		"shareSuccessOrganization": "Посилання організації скопійовано в буфер обміну",
+		"shareSuccessPublic": "Публічне посилання скопійовано в буфер обміну"
 	},
 	"history": {
 		"title": "Історія"
@@ -112,6 +117,12 @@
 	"selectMode": "Вибери режим для взаємодії",
 	"selectApiConfig": "Вибери конфігурацію API",
 	"enhancePrompt": "Покращити запит додатковим контекстом",
+	"modeSelector": {
+		"title": "Режими",
+		"marketplace": "Маркетплейс режимів",
+		"settings": "Налаштування режимів",
+		"description": "Спеціалізовані персони, які налаштовують поведінку Roo."
+	},
 	"enhancePromptDescription": "Кнопка 'Покращити запит' допомагає покращити твій запит, надаючи додатковий контекст, роз'яснення або переформулювання. Спробуй ввести запит тут і натиснути кнопку знову, щоб побачити, як це працює.",
 	"addImages": "Додати зображення до повідомлення",
 	"sendMessage": "Надіслати повідомлення",
@@ -238,8 +249,8 @@
 		"description": "Автосхвалення дозволяє Kilo Code виконувати дії без запиту дозволу. Увімкни лише для дій, яким ти повністю довіряєш. Більш детальна конфігурація доступна в <settingsLink>Налаштуваннях</settingsLink>."
 	},
 	"announcement": {
-		"title": "🎉 Випущено Roo Code {{version}}",
-		"description": "Roo Code {{version}} приносить основні нові функції та покращення на основі твоїх відгуків.",
+		"title": "🎉 Випущено Kilo Code {{version}}",
+		"description": "Kilo Code {{version}} приносить основні нові функції та покращення на основі твоїх відгуків.",
 		"whatsNew": "Що нового",
 		"feature1": "<bold>Запуск Roo Marketplace</bold>: Маркетплейс тепер працює! Відкривай та встановлюй режими та MCP легше, ніж будь-коли.",
 		"feature2": "<bold>Моделі Gemini 2.5</bold>: Додано підтримку нових моделей Gemini 2.5 Pro, Flash та Flash Lite.",

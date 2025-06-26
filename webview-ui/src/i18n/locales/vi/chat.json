@@ -16,7 +16,12 @@
 		"shareWithOrganization": "Chia sẻ với tổ chức",
 		"shareWithOrganizationDescription": "Chỉ thành viên tổ chức của bạn mới có thể truy cập",
 		"sharePublicly": "Chia sẻ công khai",
-		"sharePubliclyDescription": "Bất kỳ ai có liên kết đều có thể truy cập"
+		"sharePubliclyDescription": "Bất kỳ ai có liên kết đều có thể truy cập",
+		"connectToCloud": "Kết nối với Cloud",
+		"connectToCloudDescription": "Đăng nhập vào Kilo Code Cloud để chia sẻ tác vụ",
+		"sharingDisabledByOrganization": "Chia sẻ bị tổ chức vô hiệu hóa",
+		"shareSuccessOrganization": "Liên kết tổ chức đã được sao chép vào clipboard",
+		"shareSuccessPublic": "Liên kết công khai đã được sao chép vào clipboard"
 	},
 	"history": {
 		"title": "Lịch Sử"
@@ -112,6 +117,12 @@
 	"dragFiles": "giữ shift để kéo tệp",
 	"dragFilesImages": "giữ shift để kéo tệp/hình ảnh",
 	"enhancePromptDescription": "Nút 'Nâng cao yêu cầu' giúp cải thiện yêu cầu của bạn bằng cách cung cấp ngữ cảnh bổ sung, làm rõ hoặc diễn đạt lại. Hãy thử nhập yêu cầu tại đây và nhấp vào nút một lần nữa để xem cách thức hoạt động.",
+	"modeSelector": {
+		"title": "Chế độ",
+		"marketplace": "Chợ Chế độ",
+		"settings": "Cài đặt Chế độ",
+		"description": "Các nhân cách chuyên biệt điều chỉnh hành vi của Roo."
+	},
 	"errorReadingFile": "Lỗi khi đọc tệp:",
 	"noValidImages": "Không có hình ảnh hợp lệ nào được xử lý",
 	"separator": "Dấu phân cách",
@@ -232,8 +243,8 @@
 		"copyToInput": "Sao chép vào ô nhập liệu (hoặc Shift + nhấp chuột)"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} Đã phát hành",
-		"description": "Roo Code {{version}} mang đến các tính năng mạnh mẽ và cải tiến mới dựa trên phản hồi của bạn.",
+		"title": "🎉 Kilo Code {{version}} Đã phát hành",
+		"description": "Kilo Code {{version}} mang đến các tính năng mạnh mẽ và cải tiến mới dựa trên phản hồi của bạn.",
 		"whatsNew": "Có gì mới",
 		"feature1": "<bold>Ra mắt Roo Marketplace</bold> - Marketplace hiện đã hoạt động! Khám phá và cài đặt các chế độ và MCP dễ dàng hơn bao giờ hết.",
 		"feature2": "<bold>Các mô hình Gemini 2.5</bold> - Đã thêm hỗ trợ cho các mô hình Gemini 2.5 Pro, Flash và Flash Lite mới.",

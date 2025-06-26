@@ -16,7 +16,12 @@
 		"shareWithOrganization": "Ibahagi sa Organisasyon",
 		"shareWithOrganizationDescription": "Tanging mga miyembro ng iyong organisasyon ang may access",
 		"sharePublicly": "Ibahagi sa Publiko",
-		"sharePubliclyDescription": "Sinuman na may link ay may access"
+		"sharePubliclyDescription": "Sinuman na may link ay may access",
+		"connectToCloud": "Kumonekta sa Cloud",
+		"connectToCloudDescription": "Mag-sign in sa Kilo Code Cloud para makapagbahagi ng mga gawain",
+		"sharingDisabledByOrganization": "Hindi pinapayagan ang pagbabahagi ng organisasyon",
+		"shareSuccessOrganization": "Nakopya ang link ng organisasyon sa clipboard",
+		"shareSuccessPublic": "Nakopya ang pampublikong link sa clipboard"
 	},
 	"history": {
 		"title": "Kasaysayan"
@@ -113,6 +118,12 @@
 	"selectApiConfig": "Pumili ng API configuration",
 	"enhancePrompt": "Pahusayin ang prompt gamit ang karagdagang konteksto",
 	"enhancePromptDescription": "Ang button na 'Enhance Prompt' ay tumutulong na mapahusay ang iyong prompt sa pamamagitan ng pagbibigay ng karagdagang konteksto, paglilinaw, o muling pagpapahayag. Subukang mag-type ng prompt dito at i-click muli ang button para makita kung paano ito gumagana.",
+	"modeSelector": {
+		"title": "Mga Mode",
+		"marketplace": "Mode Marketplace",
+		"settings": "Mga Setting ng Mode",
+		"description": "Mga espesyal na persona na nag-a-adjust ng gawi ng Roo."
+	},
 	"addImages": "Magdagdag ng mga larawan sa mensahe",
 	"sendMessage": "Ipadala ang mensahe",
 	"typeMessage": "Mag-type ng mensahe...",
@@ -238,8 +249,8 @@
 		"description": "Ang auto-approve ay nagpapahintulot sa Kilo Code na magsagawa ng mga aksyon nang hindi humihingi ng pahintulot. I-enable lamang para sa mga aksyon na lubos mong pinagkakatiwalaan. Mas detalyadong configuration ay available sa <settingsLink>Settings</settingsLink>."
 	},
 	"announcement": {
-		"title": "🎉 Inilabas ang Roo Code {{version}}",
-		"description": "Ang Roo Code {{version}} ay may mga pangunahing bagong feature at pagpapahusay batay sa iyong feedback.",
+		"title": "🎉 Inilabas ang Kilo Code {{version}}",
+		"description": "Ang Kilo Code {{version}} ay may mga pangunahing bagong feature at pagpapahusay batay sa iyong feedback.",
 		"whatsNew": "Ano ang Bago",
 		"feature1": "<bold>Paglulunsad ng Roo Marketplace</bold>: Live na ngayon ang marketplace! Tuklasin at mag-install ng mga mode at MCP nang mas madali kaysa dati.",
 		"feature2": "<bold>Mga Modelo ng Gemini 2.5</bold>: Idinagdag ang suporta para sa mga bagong Gemini 2.5 Pro, Flash, at Flash Lite na modelo.",

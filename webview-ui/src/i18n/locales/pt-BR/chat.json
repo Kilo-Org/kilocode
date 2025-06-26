@@ -16,7 +16,12 @@
 		"shareWithOrganization": "Compartilhar com organização",
 		"shareWithOrganizationDescription": "Apenas membros da sua organização podem acessar",
 		"sharePublicly": "Compartilhar publicamente",
-		"sharePubliclyDescription": "Qualquer pessoa com o link pode acessar"
+		"sharePubliclyDescription": "Qualquer pessoa com o link pode acessar",
+		"connectToCloud": "Conectar ao Cloud",
+		"connectToCloudDescription": "Entre no Kilo Code Cloud para compartilhar tarefas",
+		"sharingDisabledByOrganization": "Compartilhamento desabilitado pela organização",
+		"shareSuccessOrganization": "Link da organização copiado para a área de transferência",
+		"shareSuccessPublic": "Link público copiado para a área de transferência"
 	},
 	"history": {
 		"title": "Histórico"
@@ -112,6 +117,12 @@
 	"dragFiles": "segure shift para arrastar arquivos",
 	"dragFilesImages": "segure shift para arrastar arquivos/imagens",
 	"enhancePromptDescription": "O botão 'Aprimorar prompt' ajuda a melhorar seu pedido fornecendo contexto adicional, esclarecimentos ou reformulações. Tente digitar um pedido aqui e clique no botão novamente para ver como funciona.",
+	"modeSelector": {
+		"title": "Modos",
+		"marketplace": "Marketplace de Modos",
+		"settings": "Configurações de Modos",
+		"description": "Personas especializadas que adaptam o comportamento do Roo."
+	},
 	"errorReadingFile": "Erro ao ler arquivo:",
 	"noValidImages": "Nenhuma imagem válida foi processada",
 	"separator": "Separador",
@@ -232,8 +243,8 @@
 		"copyToInput": "Copiar para entrada (ou Shift + clique)"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} Lançado",
-		"description": "Roo Code {{version}} traz importantes novos recursos e melhorias baseados no seu feedback.",
+		"title": "🎉 Kilo Code {{version}} Lançado",
+		"description": "Kilo Code {{version}} traz importantes novos recursos e melhorias baseados no seu feedback.",
 		"whatsNew": "O que há de novo",
 		"feature1": "<bold>Lançamento do Marketplace Roo</bold>: O marketplace está agora no ar! Descubra e instale modos e MCPs mais facilmente do que nunca.",
 		"feature2": "<bold>Modelos Gemini 2.5</bold>: Adicionado suporte para novos modelos Gemini 2.5 Pro, Flash e Flash Lite.",

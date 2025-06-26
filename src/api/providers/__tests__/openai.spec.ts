@@ -600,7 +600,7 @@ describe("OpenAiHandler", () => {
 					stream: true,
 					stream_options: { include_usage: true },
 					reasoning_effort: "medium",
-					temperature: 0.5,
+					temperature: undefined,
 					// O3 models do not support deprecated max_tokens but do support max_completion_tokens
 					max_completion_tokens: 32000,
 				}),
@@ -641,7 +641,7 @@ describe("OpenAiHandler", () => {
 					stream: true,
 					stream_options: { include_usage: true },
 					reasoning_effort: "medium",
-					temperature: 0.7,
+					temperature: undefined,
 				}),
 				{},
 			)
@@ -683,7 +683,7 @@ describe("OpenAiHandler", () => {
 						{ role: "user", content: "Hello!" },
 					],
 					reasoning_effort: "medium",
-					temperature: 0.3,
+					temperature: undefined,
 					// O3 models do not support deprecated max_tokens but do support max_completion_tokens
 					max_completion_tokens: 65536, // Using default maxTokens from o3Options
 				}),
@@ -713,7 +713,7 @@ describe("OpenAiHandler", () => {
 
 			expect(mockCreate).toHaveBeenCalledWith(
 				expect.objectContaining({
-					temperature: 0, // Default temperature
+					temperature: undefined, // Temperature is not supported for O3 models
 				}),
 				{},
 			)

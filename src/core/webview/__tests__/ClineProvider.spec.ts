@@ -12,6 +12,7 @@ import { experimentDefault } from "../../../shared/experiments"
 import { setTtsEnabled } from "../../../utils/tts"
 import { ContextProxy } from "../../config/ContextProxy"
 import { Task, TaskOptions } from "../../task/Task"
+import { safeWriteJson } from "../../../utils/safeWriteJson"
 
 import { ClineProvider } from "../ClineProvider"
 
@@ -41,6 +42,8 @@ vi.mock("axios", () => ({
 	get: vi.fn().mockResolvedValue({ data: { data: [] } }),
 	post: vi.fn(),
 }))
+
+vi.mock("../../../utils/safeWriteJson")
 
 vi.mock("@modelcontextprotocol/sdk/types.js", () => ({
 	CallToolResultSchema: {},
@@ -316,6 +319,18 @@ vi.mock("../diff/strategies/multi-search-replace", () => ({
 	})),
 }))
 
+vi.mock("@roo-code/cloud", () => ({
+	CloudService: {
+		hasInstance: vi.fn().mockReturnValue(true),
+		get instance() {
+			return {
+				isAuthenticated: vi.fn().mockReturnValue(false),
+			}
+		},
+	},
+	getRooCodeApiUrl: vi.fn().mockReturnValue("https://app.roocode.com"),
+}))
+
 afterAll(() => {
 	vi.restoreAllMocks()
 })
@@ -537,6 +552,7 @@ describe("ClineProvider", () => {
 			cloudIsAuthenticated: false,
 			sharingEnabled: false,
 			profileThresholds: {},
+			hasOpenedModeSelector: false,
 		}
 
 		const message: ExtensionMessage = {
@@ -1995,11 +2011,8 @@ describe("Project MCP Settings", () => {
 		// Check that fs.mkdir was called with the correct path
 		expect(mockedFs.mkdir).toHaveBeenCalledWith("/test/workspace/.kilocode", { recursive: true })
 
-		// Check that fs.writeFile was called with default content
-		expect(mockedFs.writeFile).toHaveBeenCalledWith(
-			"/test/workspace/.roo/mcp.json",
-			JSON.stringify({ mcpServers: {} }, null, 2),
-		)
+		// Verify file was created with default content
+		expect(safeWriteJson).toHaveBeenCalledWith("/test/workspace/.roo/mcp.json", { mcpServers: {} })
 
 		// Check that openFile was called
 		expect(openFileSpy).toHaveBeenCalledWith("/test/workspace/.kilocode/mcp.json")
