@@ -95,7 +95,8 @@
 				"text": "การตอบกลับของ AI",
 				"tool": "การใช้เครื่องมือ",
 				"unknown": "ประเภทข้อความที่ไม่รู้จัก",
-				"use_mcp_server": "การใช้ MCP server"
+				"use_mcp_server": "การใช้ MCP server",
+				"user": "ความคิดเห็นของผู้ใช้"
 			}
 		}
 	}

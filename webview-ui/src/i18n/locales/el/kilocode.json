@@ -95,7 +95,8 @@
 				"text": "απόκριση AI",
 				"tool": "χρήση εργαλείου",
 				"unknown": "άγνωστος τύπος μηνύματος",
-				"use_mcp_server": "χρήση MCP server"
+				"use_mcp_server": "χρήση MCP server",
+				"user": "σχόλια χρηστών"
 			}
 		}
 	}

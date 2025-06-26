@@ -95,7 +95,8 @@
 				"text": "tugon ng AI",
 				"tool": "paggamit ng tool",
 				"unknown": "hindi kilalang uri ng mensahe",
-				"use_mcp_server": "paggamit ng MCP server"
+				"use_mcp_server": "paggamit ng MCP server",
+				"user": "feedback ng user"
 			}
 		}
 	}

@@ -95,7 +95,8 @@
 				"text": "AI-svar",
 				"tool": "verktygsanvändning",
 				"unknown": "okänd meddelandetyp",
-				"use_mcp_server": "MCP-serveranvändning"
+				"use_mcp_server": "MCP-serveranvändning",
+				"user": "användarfeedback"
 			}
 		}
 	}
