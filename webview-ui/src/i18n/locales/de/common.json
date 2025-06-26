@@ -25,6 +25,17 @@
 	"mermaid": {
 		"loading": "Mermaid-Diagramm wird generiert...",
 		"render_error": "Diagramm kann nicht gerendert werden",
+		"fixing_syntax": "Mermaid-Syntax wird korrigiert...",
+		"fix_syntax_button": "Syntax mit KI korrigieren",
+		"original_code": "Ursprünglicher Code:",
+		"errors": {
+			"unknown_syntax": "Unbekannter Syntaxfehler",
+			"fix_timeout": "KI-Korrekturanfrage hat das Zeitlimit überschritten",
+			"fix_failed": "KI-Korrektur fehlgeschlagen",
+			"fix_attempts": "Korrektur nach {{attempts}} Versuchen fehlgeschlagen. Letzter Fehler: {{error}}",
+			"no_fix_provided": "KI konnte keine Korrektur bereitstellen",
+			"fix_request_failed": "Korrekturanfrage fehlgeschlagen"
+		},
 		"buttons": {
 			"zoom": "Zoom",
 			"zoomIn": "Vergrößern",

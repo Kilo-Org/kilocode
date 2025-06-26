@@ -25,6 +25,17 @@
 	"mermaid": {
 		"loading": "Membuat diagram mermaid...",
 		"render_error": "Tidak Dapat Merender Diagram",
+		"fixing_syntax": "Memperbaiki sintaks Mermaid...",
+		"fix_syntax_button": "Perbaiki sintaks dengan AI",
+		"original_code": "Kode asli:",
+		"errors": {
+			"unknown_syntax": "Error sintaks tidak dikenal",
+			"fix_timeout": "Permintaan perbaikan LLM habis waktu",
+			"fix_failed": "Perbaikan LLM gagal",
+			"fix_attempts": "Gagal memperbaiki sintaks setelah {{attempts}} percobaan. Error terakhir: {{error}}",
+			"no_fix_provided": "LLM gagal memberikan perbaikan",
+			"fix_request_failed": "Permintaan perbaikan gagal"
+		},
 		"buttons": {
 			"zoom": "Zoom",
 			"zoomIn": "Perbesar",

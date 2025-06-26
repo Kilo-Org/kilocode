@@ -25,6 +25,17 @@
 	"mermaid": {
 		"loading": "Skapar mermaid-diagram...",
 		"render_error": "Kunde inte rendera diagram",
+		"fixing_syntax": "Fixar Mermaid-syntax...",
+		"fix_syntax_button": "Fixa syntax med AI",
+		"original_code": "Ursprunglig kod:",
+		"errors": {
+			"unknown_syntax": "Okänt syntaxfel",
+			"fix_timeout": "LLM-fixförfrågan tog för lång tid",
+			"fix_failed": "LLM-fix misslyckades",
+			"fix_attempts": "Misslyckades med att fixa syntax efter {{attempts}} försök. Senaste fel: {{error}}",
+			"no_fix_provided": "LLM kunde inte tillhandahålla en fix",
+			"fix_request_failed": "Fixförfrågan misslyckades"
+		},
 		"buttons": {
 			"zoom": "Zoom",
 			"zoomIn": "Zooma in",

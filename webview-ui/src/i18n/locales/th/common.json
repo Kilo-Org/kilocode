@@ -25,6 +25,17 @@
 	"mermaid": {
 		"loading": "กำลังสร้างไดอะแกรม mermaid...",
 		"render_error": "ไม่สามารถแสดงไดอะแกรม",
+		"fixing_syntax": "กำลังแก้ไขไวยากรณ์ Mermaid...",
+		"fix_syntax_button": "แก้ไขไวยากรณ์ด้วย AI",
+		"original_code": "โค้ดต้นฉบับ:",
+		"errors": {
+			"unknown_syntax": "ข้อผิดพลาดทางไวยากรณ์ที่ไม่รู้จัก",
+			"fix_timeout": "คำขอแก้ไข LLM หมดเวลา",
+			"fix_failed": "การแก้ไข LLM ล้มเหลว",
+			"fix_attempts": "ไม่สามารถแก้ไขไวยากรณ์หลังจากพยายาม {{attempts}} ครั้ง ข้อผิดพลาดล่าสุด: {{error}}",
+			"no_fix_provided": "LLM ไม่สามารถให้การแก้ไขได้",
+			"fix_request_failed": "คำขอแก้ไขล้มเหลว"
+		},
 		"buttons": {
 			"zoom": "ซูม",
 			"zoomIn": "ซูมเข้า",

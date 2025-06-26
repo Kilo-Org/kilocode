@@ -25,6 +25,17 @@
 	"mermaid": {
 		"loading": "Vytváření diagramu mermaid...",
 		"render_error": "Nepodařilo se vykreslit diagram",
+		"fixing_syntax": "Opravuji syntaxi Mermaid...",
+		"fix_syntax_button": "Opravit syntaxi pomocí AI",
+		"original_code": "Původní kód:",
+		"errors": {
+			"unknown_syntax": "Neznámá chyba syntaxe",
+			"fix_timeout": "Vypršel časový limit požadavku na opravu LLM",
+			"fix_failed": "Oprava LLM selhala",
+			"fix_attempts": "Nepodařilo se opravit syntaxi po {{attempts}} pokusech. Poslední chyba: {{error}}",
+			"no_fix_provided": "LLM neposkytl opravu",
+			"fix_request_failed": "Požadavek na opravu selhal"
+		},
 		"buttons": {
 			"zoom": "Přiblížení",
 			"zoomIn": "Přiblížit",

@@ -25,6 +25,17 @@
 	"mermaid": {
 		"loading": "Створення діаграми mermaid...",
 		"render_error": "Не вдалося відобразити діаграму",
+		"fixing_syntax": "Виправлення синтаксису Mermaid...",
+		"fix_syntax_button": "Виправити синтаксис за допомогою AI",
+		"original_code": "Оригінальний код:",
+		"errors": {
+			"unknown_syntax": "Невідома синтаксична помилка",
+			"fix_timeout": "Час очікування запиту на виправлення LLM вичерпано",
+			"fix_failed": "Виправлення LLM не вдалося",
+			"fix_attempts": "Не вдалося виправити синтаксис після {{attempts}} спроб. Остання помилка: {{error}}",
+			"no_fix_provided": "LLM не надав виправлення",
+			"fix_request_failed": "Запит на виправлення не вдався"
+		},
 		"buttons": {
 			"zoom": "Масштаб",
 			"zoomIn": "Збільшити",

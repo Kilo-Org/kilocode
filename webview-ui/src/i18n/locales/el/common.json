@@ -25,6 +25,17 @@
 	"mermaid": {
 		"loading": "Δημιουργία διαγράμματος mermaid...",
 		"render_error": "Αδυναμία απόδοσης διαγράμματος",
+		"fixing_syntax": "Διόρθωση σύνταξης Mermaid...",
+		"fix_syntax_button": "Διόρθωση σύνταξης με AI",
+		"original_code": "Αρχικός κώδικας:",
+		"errors": {
+			"unknown_syntax": "Άγνωστο συντακτικό σφάλμα",
+			"fix_timeout": "Το αίτημα διόρθωσης LLM έληξε",
+			"fix_failed": "Η διόρθωση LLM απέτυχε",
+			"fix_attempts": "Αποτυχία διόρθωσης σύνταξης μετά από {{attempts}} προσπάθειες. Τελευταίο σφάλμα: {{error}}",
+			"no_fix_provided": "Το LLM απέτυχε να παρέχει διόρθωση",
+			"fix_request_failed": "Το αίτημα διόρθωσης απέτυχε"
+		},
 		"buttons": {
 			"zoom": "Ζουμ",
 			"zoomIn": "Μεγέθυνση",

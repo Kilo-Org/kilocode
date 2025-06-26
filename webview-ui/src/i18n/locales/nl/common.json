@@ -25,6 +25,17 @@
 	"mermaid": {
 		"loading": "Mermaid-diagram genereren...",
 		"render_error": "Kan diagram niet weergeven",
+		"fixing_syntax": "Mermaid-syntax corrigeren...",
+		"fix_syntax_button": "Syntax corrigeren met AI",
+		"original_code": "Originele code:",
+		"errors": {
+			"unknown_syntax": "Onbekende syntaxfout",
+			"fix_timeout": "LLM-correctieverzoek is verlopen",
+			"fix_failed": "LLM-correctie mislukt",
+			"fix_attempts": "Syntax kon niet worden gecorrigeerd na {{attempts}} pogingen. Laatste fout: {{error}}",
+			"no_fix_provided": "LLM kon geen correctie leveren",
+			"fix_request_failed": "Correctieverzoek mislukt"
+		},
 		"buttons": {
 			"zoom": "Zoom",
 			"zoomIn": "Inzoomen",

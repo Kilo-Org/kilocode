@@ -192,6 +192,8 @@ export interface WebviewMessage {
 		| "setHistoryPreviewCollapsed"
 		| "showTaskTimeline" // kilocode_change
 		| "toggleTaskFavorite" // kilocode_change
+		| "fixMermaidSyntax" // kilocode_change
+		| "mermaidFixResponse" // kilocode_change
 		| "openExternal"
 		| "filterMarketplaceItems"
 		| "marketplaceButtonClicked"

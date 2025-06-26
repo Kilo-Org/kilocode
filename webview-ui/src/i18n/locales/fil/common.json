@@ -25,6 +25,17 @@
 	"mermaid": {
 		"loading": "Ginagawa ang mermaid diagram...",
 		"render_error": "Hindi Maipakita ang Diagram",
+		"fixing_syntax": "Inaayos ang Mermaid syntax...",
+		"fix_syntax_button": "Ayusin ang syntax gamit ang AI",
+		"original_code": "Orihinal na code:",
+		"errors": {
+			"unknown_syntax": "Hindi kilalang syntax error",
+			"fix_timeout": "Nag-timeout ang LLM fix request",
+			"fix_failed": "Nabigo ang LLM fix",
+			"fix_attempts": "Hindi naayos ang syntax pagkatapos ng {{attempts}} na pagtatangka. Huling error: {{error}}",
+			"no_fix_provided": "Hindi nakapagbigay ng fix ang LLM",
+			"fix_request_failed": "Nabigo ang fix request"
+		},
 		"buttons": {
 			"zoom": "Zoom",
 			"zoomIn": "Palakihin",
