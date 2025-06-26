@@ -9,7 +9,7 @@ export function KiloChatRowGutterBar({ message }: { message: ClineMessage }) {
 	return (
 		<div
 			className={cn(
-				"absolute left-0 top-0 bottom-0 w-0.5 opacity-0 transition-opacity",
+				"absolute w-[4px] left-[4px] top-0 bottom-0  opacity-0 transition-opacity",
 				getTaskTimelineMessageColor(message),
 				hoveringTaskTimeline && "opacity-70",
 			)}
