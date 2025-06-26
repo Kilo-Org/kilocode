@@ -27,6 +27,9 @@ import { ClineRulesToggles } from "@roo/cline-rules" // kilocode_change
 export interface ExtensionStateContextType extends ExtensionState {
 	historyPreviewCollapsed?: boolean // Add the new state property
 	showTaskTimeline?: boolean // kilocode_change
+	setShowTaskTimeline: (value: boolean) => void // kilocode_change
+	hoveringTaskTimeline?: boolean // kilocode_change
+	setHoveringTaskTimeline: (value: boolean) => void // kilocode_change
 	didHydrateState: boolean
 	showWelcome: boolean
 	theme: any
@@ -129,7 +132,6 @@ export interface ExtensionStateContextType extends ExtensionState {
 	terminalCompressProgressBar?: boolean
 	setTerminalCompressProgressBar: (value: boolean) => void
 	setHistoryPreviewCollapsed: (value: boolean) => void
-	setShowTaskTimeline: (value: boolean) => void // kilocode_change
 	autoCondenseContext: boolean
 	setAutoCondenseContext: (value: boolean) => void
 	autoCondenseContextPercent: number
@@ -477,6 +479,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setHistoryPreviewCollapsed: (value) =>
 			setState((prevState) => ({ ...prevState, historyPreviewCollapsed: value })),
 		setShowTaskTimeline: (value) => setState((prevState) => ({ ...prevState, showTaskTimeline: value })), // kilocode_change
+		setHoveringTaskTimeline: (value) => setState((prevState) => ({ ...prevState, hoveringTaskTimeline: value })),
 
 		setAutoCondenseContext: (value) => setState((prevState) => ({ ...prevState, autoCondenseContext: value })),
 		setAutoCondenseContextPercent: (value) =>
