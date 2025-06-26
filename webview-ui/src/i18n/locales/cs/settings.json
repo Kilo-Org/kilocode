@@ -317,6 +317,36 @@
 			"pathLabel": "Cesta ke Claude Code",
 			"description": "Volitelná cesta k vašemu CLI Claude Code. Ve výchozím nastavení 'claude', pokud není nastaveno.",
 			"placeholder": "Výchozí: claude"
+		},
+		"geminiCli": {
+			"description": "Tento poskytovatel používá OAuth autentizaci z nástroje Gemini CLI a nevyžaduje klíče API.",
+			"oauthPath": "Cesta k OAuth přihlašovacím údajům (volitelné)",
+			"oauthPathDescription": "Cesta k souboru přihlašovacích údajů OAuth. Ponechte prázdné pro použití výchozího umístění (~/.gemini/oauth_creds.json).",
+			"instructions": "Pokud jste se ještě neověřili, spusťte prosím",
+			"instructionsContinued": "ve vašem terminálu nejdříve.",
+			"setupLink": "Pokyny k nastavení Gemini CLI",
+			"requirementsTitle": "Důležité požadavky",
+			"requirement1": "Nejprve musíte nainstalovat nástroj Gemini CLI",
+			"requirement2": "Poté spusťte gemini ve vašem terminálu a ujistěte se, že se přihlásíte pomocí Google",
+			"requirement3": "Funguje pouze s osobními účty Google (ne s účty Google Workspace)",
+			"requirement4": "Nepoužívá klíče API - ověřování je řešeno přes OAuth",
+			"requirement5": "Vyžaduje, aby byl nástroj Gemini CLI nejdříve nainstalován a ověřen",
+			"freeAccess": "Přístup k bezplatné úrovni prostřednictvím OAuth autentizace"
+		},
+		"geminiCli": {
+			"description": "Tento poskytovatel používá OAuth autentifikaci nástroje Gemini CLI a nevyžaduje API klíče.",
+			"oauthPath": "Cesta k OAuth přihlašovacím údajům (volitelné)",
+			"oauthPathDescription": "Cesta k souboru OAuth přihlašovacích údajů. Nechte prázdné pro použití výchozího umístění (~/.gemini/oauth_creds.json).",
+			"instructions": "Pokud jste se ještě neověřili, spusťte",
+			"instructionsContinued": "ve svém terminálu nejprve.",
+			"setupLink": "Pokyny k nastavení Gemini CLI",
+			"requirementsTitle": "Důležité požadavky",
+			"requirement1": "Nejprve musíte nainstalovat nástroj Gemini CLI",
+			"requirement2": "Poté spusťte gemini ve svém terminálu a ujistěte se, že se přihlásíte pomocí Google",
+			"requirement3": "Funguje pouze s osobními Google účty (ne Google Workspace účty)",
+			"requirement4": "Nepoužívá API klíče - autentifikace je zpracována přes OAuth",
+			"requirement5": "Vyžaduje, aby byl nástroj Gemini CLI nejprve nainstalován a ověřen",
+			"freeAccess": "Bezplatný přístup přes OAuth autentifikaci"
 		}
 	},
 	"browser": {

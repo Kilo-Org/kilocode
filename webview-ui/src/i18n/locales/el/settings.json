@@ -317,6 +317,21 @@
 			"pathLabel": "Διαδρομή Claude Code",
 			"description": "Προαιρετική διαδρομή προς το Claude Code CLI. Προεπιλογή 'claude' εάν δεν οριστεί.",
 			"placeholder": "Προεπιλογή: claude"
+		},
+		"geminiCli": {
+			"description": "Αυτός ο πάροχος χρησιμοποιεί την αυθεντικοποίηση OAuth του εργαλείου Gemini CLI και δεν απαιτεί κλειδιά API.",
+			"oauthPath": "Διαδρομή διαπιστευτηρίων OAuth (προαιρετικό)",
+			"oauthPathDescription": "Διαδρομή προς το αρχείο διαπιστευτηρίων OAuth. Αφήστε κενό για χρήση της προεπιλεγμένης τοποθεσίας (~/.gemini/oauth_creds.json).",
+			"instructions": "Αν δεν έχεις αυθεντικοποιηθεί ακόμα, εκτέλεσε",
+			"instructionsContinued": "στο τερματικό σου πρώτα.",
+			"setupLink": "Οδηγίες εγκατάστασης Gemini CLI",
+			"requirementsTitle": "Σημαντικές απαιτήσεις",
+			"requirement1": "Πρώτα, πρέπει να εγκαταστήσεις το εργαλείο Gemini CLI",
+			"requirement2": "Έπειτα, εκτέλεσε gemini στο τερματικό σου και βεβαιώσου ότι συνδέεσαι με Google",
+			"requirement3": "Λειτουργεί μόνο με προσωπικούς λογαριασμούς Google (όχι λογαριασμούς Google Workspace)",
+			"requirement4": "Δεν χρησιμοποιεί κλειδιά API - η αυθεντικοποίηση διαχειρίζεται μέσω OAuth",
+			"requirement5": "Απαιτεί το εργαλείο Gemini CLI να είναι εγκατεστημένο και αυθεντικοποιημένο πρώτα",
+			"freeAccess": "Δωρεάν πρόσβαση μέσω αυθεντικοποίησης OAuth"
 		}
 	},
 	"browser": {

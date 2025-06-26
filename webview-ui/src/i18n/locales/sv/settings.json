@@ -317,6 +317,21 @@
 			"pathLabel": "Sökväg till Claude Code",
 			"description": "Valfri sökväg till din Claude Code CLI. Standard är 'claude' om den inte är inställd.",
 			"placeholder": "Standard: claude"
+		},
+		"geminiCli": {
+			"description": "Den här leverantören använder OAuth-autentisering från Gemini CLI-verktyget och kräver inga API-nycklar.",
+			"oauthPath": "OAuth-inloggningsuppgifter sökväg (valfritt)",
+			"oauthPathDescription": "Sökväg till OAuth-inloggningsuppgifter filen. Lämna tom för att använda standardplatsen (~/.gemini/oauth_creds.json).",
+			"instructions": "Om du inte har autentiserat än, kör",
+			"instructionsContinued": "i din terminal först.",
+			"setupLink": "Gemini CLI-installationsinstruktioner",
+			"requirementsTitle": "Viktiga krav",
+			"requirement1": "Först måste du installera Gemini CLI-verktyget",
+			"requirement2": "Sedan, kör gemini i din terminal och se till att du loggar in med Google",
+			"requirement3": "Fungerar endast med personliga Google-konton (inte Google Workspace-konton)",
+			"requirement4": "Använder inte API-nycklar - autentisering hanteras via OAuth",
+			"requirement5": "Kräver att Gemini CLI-verktyget installeras och autentiseras först",
+			"freeAccess": "Gratis nivå åtkomst via OAuth-autentisering"
 		}
 	},
 	"browser": {

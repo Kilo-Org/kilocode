@@ -317,6 +317,21 @@
 			"pathLabel": "Claude Code Path",
 			"description": "Opsyonal na path sa iyong Claude Code CLI. Default sa 'claude' kung hindi nakatakda.",
 			"placeholder": "Default: claude"
+		},
+		"geminiCli": {
+			"description": "Ang provider na ito ay gumagamit ng OAuth authentication ng Gemini CLI tool at hindi nangangailangan ng mga API key.",
+			"oauthPath": "OAuth Credentials Path (opsyonal)",
+			"oauthPathDescription": "Path sa OAuth credentials file. Iwanang blank para gamitin ang default na lokasyon (~/.gemini/oauth_creds.json).",
+			"instructions": "Kung hindi ka pa nag-authenticate, mangyaring patakbuhin ang",
+			"instructionsContinued": "sa iyong terminal muna.",
+			"setupLink": "Gemini CLI Setup Instructions",
+			"requirementsTitle": "Mahalagang Requirements",
+			"requirement1": "Una, kailangan mong i-install ang Gemini CLI tool",
+			"requirement2": "Pagkatapos, patakbuhin ang gemini sa iyong terminal at siguraduhing mag-log in gamit ang Google",
+			"requirement3": "Gumagana lang sa personal na Google accounts (hindi Google Workspace accounts)",
+			"requirement4": "Hindi gumagamit ng API keys - ang authentication ay ginagawa sa pamamagitan ng OAuth",
+			"requirement5": "Nangangailangan na ma-install at ma-authenticate muna ang Gemini CLI tool",
+			"freeAccess": "Free tier access sa pamamagitan ng OAuth authentication"
 		}
 	},
 	"browser": {
