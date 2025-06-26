@@ -1043,6 +1043,9 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.68.0
         version: 5.79.0(react@18.3.1)
+      '@types/seedrandom':
+        specifier: ^3.0.8
+        version: 3.0.8
       '@vscode/codicons':
         specifier: ^0.0.36
         version: 0.0.36
@@ -1145,6 +1148,9 @@ importers:
       remove-markdown:
         specifier: ^0.6.0
         version: 0.6.2
+      seedrandom:
+        specifier: ^3.0.5
+        version: 3.0.5
       shell-quote:
         specifier: ^1.8.2
         version: 1.8.3

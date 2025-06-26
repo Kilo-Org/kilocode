@@ -1,7 +1,9 @@
 import type { ClineMessage } from "@roo-code/types"
+import seedrandom from "seedrandom"
 
 // Fixed base timestamp for consistent snapshots (January 1, 2024, 12:00:00 UTC)
 const BASE_TIMESTAMP = 1704110400000
+const rng = seedrandom("TimelineData")
 
 export function generateSampleTimelineData(): ClineMessage[] {
 	const messages: ClineMessage[] = []
@@ -47,9 +49,9 @@ export function generateSampleTimelineData(): ClineMessage[] {
 
 	for (let cycle = 0; cycle < 8; cycle++) {
 		messageTemplates.forEach((template, i) => {
-			const randomText = template.texts[Math.floor(Math.random() * template.texts.length)]
+			const randomText = template.texts[Math.floor(rng() * template.texts.length)]
 			messages.push({
-				ts: BASE_TIMESTAMP + (cycle * 8 + i) * (1000 + Math.random() * 3000),
+				ts: BASE_TIMESTAMP + (cycle * 8 + i) * (1000 + rng() * 3000),
 				type: template.type as "ask" | "say",
 				...(template.ask && { ask: template.ask as any }),
 				...(template.say && { say: template.say as any }),
