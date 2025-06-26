@@ -14,6 +14,7 @@ export const taskTimelineColorPalette = {
 	SUCCESS: "bg-[var(--vscode-editorGutter-addedBackground)]", // Green for success
 	ERROR: "bg-[var(--vscode-errorForeground)]", // Red for errors
 	ASSISTANT_MUTTERING: "bg-[var(--vscode-descriptionForeground)]", // Gray for reasoning/text
+	ASSISTANT_QUESTION: "bg-[color-mix(in_srgb,var(--vscode-editor-findMatchBackground)_60%,var(--vscode-foreground))]", // Yellowish/tan
 	GROUPED: "bg-[var(--vscode-textLink-activeForeground)]", // Cyan for grouped messages
 	DEFAULT: "bg-[var(--vscode-badge-background)]", // Fallback gray
 }
@@ -46,7 +47,7 @@ export const TASK_TIMELINE_MESSAGE_TYPES: Record<string, TaskTimelineMessageType
 		translationKey: "kilocode:taskTimeline.tooltip.messageTypes.command",
 	},
 	"ask:followup": {
-		color: taskTimelineColorPalette.USER_INTERACTION,
+		color: taskTimelineColorPalette.ASSISTANT_QUESTION,
 		translationKey: "kilocode:taskTimeline.tooltip.messageTypes.followup",
 	},
 
