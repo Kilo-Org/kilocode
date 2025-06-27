@@ -25,7 +25,7 @@ import {
 } from "@src/components/ui"
 import { buildDocLink } from "@src/utils/docLinks"
 
-import { Tab, TabContent } from "../common/Tab"
+import { Tab, TabContent, TabHeader } from "../common/Tab"
 
 import McpToolRow from "./McpToolRow"
 import McpResourceRow from "./McpResourceRow"
@@ -33,11 +33,10 @@ import McpResourceRow from "./McpResourceRow"
 import { McpErrorRow } from "./McpErrorRow"
 
 type McpViewProps = {
-	onDone?: () => void // kilocode_change
+	onDone: () => void
 }
 
-// kilocode_change: no props used
-const McpView = (_props: McpViewProps) => {
+const McpView = ({ onDone }: McpViewProps) => {
 	const {
 		mcpServers: servers,
 		alwaysAllowMcp,
@@ -52,10 +51,10 @@ const McpView = (_props: McpViewProps) => {
 		// kilocode_change: add relative className
 		<Tab className="relative">
 			{/*  kilocode_change: disable header */}
-			{/* <TabHeader className="flex justify-between items-center">
+			<TabHeader style={{ display: "none" }} className="flex justify-between items-center">
 				<h3 className="text-vscode-foreground m-0">{t("mcp:title")}</h3>
 				<Button onClick={onDone}>{t("mcp:done")}</Button>
-			</TabHeader> */}
+			</TabHeader>
 
 			<TabContent>
 				<div

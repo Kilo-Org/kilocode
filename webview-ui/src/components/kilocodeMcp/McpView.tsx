@@ -1,9 +1,6 @@
-// kilocode_change: imported from Cline and adjusted with our own changes
-
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import styled from "styled-components"
 import { vscode } from "../../utils/vscode"
-import McpMarketplaceView from "./marketplace/McpMarketplaceView"
 import { useAppTranslation } from "../../i18n/TranslationContext"
 
 import { Server } from "lucide-react"
@@ -11,9 +8,13 @@ import { SectionHeader } from "../settings/SectionHeader"
 import { Section } from "../settings/Section"
 
 import RooMcpView from "../../components/mcp/McpView"
+import { MarketplaceViewStateManager } from "../../components/marketplace/MarketplaceViewStateManager"
+import { MarketplaceView } from "../../components/marketplace/MarketplaceView"
 
 const McpView = () => {
 	const [activeTab, setActiveTab] = useState("marketplace")
+	// Create a persistent state manager
+	const marketplaceStateManager = useMemo(() => new MarketplaceViewStateManager(), [])
 	const { t } = useAppTranslation()
 
 	const handleTabChange = (tab: string) => {
@@ -65,8 +66,8 @@ const McpView = () => {
 
 					{/* Content container */}
 					<div style={{ width: "100%" }}>
-						{activeTab === "marketplace" && <McpMarketplaceView />}
-						{activeTab === "installed" && <RooMcpView />}
+						{activeTab === "marketplace" && <MarketplaceView stateManager={marketplaceStateManager} />}
+						{activeTab === "installed" && <RooMcpView onDone={() => {}} />}
 					</div>
 				</div>
 			</Section>

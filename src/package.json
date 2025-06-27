@@ -321,33 +321,28 @@
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "kilo-code.marketplaceButtonClicked",
-					"group": "navigation@4",
-					"when": "view == kilo-code.SidebarProvider"
-				},
-				{
 					"command": "kilo-code.historyButtonClicked",
-					"group": "navigation@5",
+					"group": "navigation@3",
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
 					"command": "kilo-code.profileButtonClicked",
-					"group": "navigation@6",
+					"group": "navigation@4",
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
 					"command": "kilo-code.settingsButtonClicked",
-					"group": "navigation@7",
+					"group": "navigation@5",
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
 					"command": "kilo-code.popoutButtonClicked",
-					"group": "navigation@8",
+					"group": "navigation@6",
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
 					"command": "kilo-code.helpButtonClicked",
-					"group": "navigation@9",
+					"group": "navigation@7",
 					"when": "false && view == kilo-code.SidebarProvider"
 				}
 			],
@@ -363,28 +358,23 @@
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
 				},
 				{
-					"command": "kilo-code.marketplaceButtonClicked",
-					"group": "navigation@4",
-					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
-				},
-				{
 					"command": "kilo-code.historyButtonClicked",
-					"group": "navigation@5",
+					"group": "navigation@3",
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
 				},
 				{
 					"command": "kilo-code.popoutButtonClicked",
-					"group": "navigation@6",
+					"group": "navigation@4",
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
 				},
 				{
 					"command": "kilo-code.settingsButtonClicked",
-					"group": "navigation@7",
+					"group": "navigation@5",
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
 				},
 				{
 					"command": "kilo-code.helpButtonClicked",
-					"group": "navigation@8",
+					"group": "navigation@6",
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
 				}
 			],
