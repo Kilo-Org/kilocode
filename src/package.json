@@ -321,11 +321,6 @@
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "kilo-code.mcpButtonClicked",
-					"group": "navigation@3",
-					"when": "view == kilo-code.SidebarProvider"
-				},
-				{
 					"command": "kilo-code.marketplaceButtonClicked",
 					"group": "navigation@4",
 					"when": "view == kilo-code.SidebarProvider"
@@ -365,11 +360,6 @@
 				{
 					"command": "kilo-code.promptsButtonClicked",
 					"group": "navigation@2",
-					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
-				},
-				{
-					"command": "kilo-code.mcpButtonClicked",
-					"group": "navigation@3",
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
 				},
 				{
