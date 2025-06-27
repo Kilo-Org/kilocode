@@ -108,7 +108,16 @@ export const cerebrasDefaultModelId: CerebrasModelId = "llama3.1-8b"
 
 // RouterName
 
-const routerNames = ["openrouter", "requesty", "glama", "unbound", "litellm", "kilocode-openrouter"] as const
+const routerNames = [
+	"openrouter",
+	"requesty",
+	"glama",
+	"unbound",
+	"litellm",
+	"kilocode-openrouter",
+	"ollama",
+	"lmstudio",
+] as const
 
 export type RouterName = (typeof routerNames)[number]
 
@@ -186,3 +195,5 @@ export type GetModelsOptions =
 	| { provider: "litellm"; apiKey: string; baseUrl: string }
 	| { provider: "kilocode-openrouter"; kilocodeToken?: string } // kilocode_change
 	| { provider: "cerebras"; cerebrasApiKey?: string } // kilocode_change
+	| { provider: "ollama"; baseUrl?: string }
+	| { provider: "lmstudio"; baseUrl?: string }

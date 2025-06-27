@@ -11,7 +11,7 @@ import "./storybook.css"
 
 const preview: Preview = {
 	parameters: {
-		layout: isChromatic() ? "fullscreen" : "padded",
+		layout: "fullscreen",
 		controls: {
 			matchers: {
 				color: /(background|color)$/i,
@@ -44,7 +44,7 @@ const preview: Preview = {
 			},
 		},
 	},
-	decorators: [withQueryClient, withExtensionState, withTheme, withI18n, withChromaticDecorator],
+	decorators: [withI18n, withQueryClient, withExtensionState, withTheme, withChromaticDecorator],
 }
 
 export default preview

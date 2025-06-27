@@ -1,0 +1,107 @@
+{
+	"welcome": {
+		"greeting": "Ласкаво просимо до Kilo Code!",
+		"introText1": "Kilo Code — це безкоштовний агент кодування AI з відкритим кодом.",
+		"introText2": "Працює з найновішими моделями AI, такими як Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1 та понад 450 іншими.",
+		"introText3": "Створи безкоштовний акаунт і отримай токени на $20 для використання з будь-якою моделлю AI.",
+		"ctaButton": "Створити безкоштовний акаунт",
+		"manualModeButton": "Використовуй власний API key",
+		"alreadySignedUp": "Вже зареєструвався?",
+		"loginText": "Увійти тут"
+	},
+	"lowCreditWarning": {
+		"addCredit": "Додати кредит",
+		"lowBalance": "Твій баланс Kilo Code низький"
+	},
+	"notifications": {
+		"toolRequest": "Запит інструменту очікує на схвалення",
+		"browserAction": "Дія браузера очікує на схвалення",
+		"command": "Команда очікує на схвалення"
+	},
+	"settings": {
+		"sections": {
+			"mcp": "MCP сервери"
+		},
+		"provider": {
+			"apiKey": "Kilo Code API Key",
+			"login": "Увійти в Kilo Code",
+			"logout": "Вийти з Kilo Code"
+		}
+	},
+	"chat": {
+		"condense": {
+			"wantsToCondense": "Kilo Code хоче стиснути твою розмову",
+			"condenseConversation": "Стиснути розмову"
+		}
+	},
+	"newTaskPreview": {
+		"task": "Завдання"
+	},
+	"profile": {
+		"title": "Профіль",
+		"dashboard": "Панель керування",
+		"logOut": "Вийти",
+		"currentBalance": "ПОТОЧНИЙ БАЛАНС",
+		"loading": "Завантаження...",
+		"signUp": {
+			"title": "Зареєструватися в Kilo Code",
+			"description": "Реєстрація в Kilo Code дає тобі безкоштовні кредити для початку роботи. Використовуй свої кредити, щоб дослідити наші функції, спробувати найновіші та найкращі моделі та відчути переваги Kilo Code без жодних зобов'язань.",
+			"termsAndPrivacy": "Продовжуючи, ти погоджуєшся з <termsLink>Умовами обслуговування</termsLink> та <privacyLink>Політикою конфіденційності.</privacyLink>"
+		}
+	},
+	"docs": "Документація",
+	"rules": {
+		"tooltip": "Керувати Kilo Code Rules та Workflows",
+		"ariaLabel": "Kilo Code Rules",
+		"tabs": {
+			"rules": "Правила",
+			"workflows": "Робочі процеси"
+		},
+		"description": {
+			"rules": "Правила дозволяють тобі надавати Kilo Code інструкції, яких він повинен дотримуватися в усіх режимах і для всіх промптів. Це постійний спосіб включити контекст і налаштування для всіх розмов у твоєму робочому просторі або глобально.",
+			"workflows": "Робочі процеси - це підготовлений шаблон для розмови. Робочі процеси можуть дозволити тобі визначити промпти, які ти часто використовуєш, і можуть включати серію кроків для керування Kilo Code через повторювані завдання, такі як розгортання сервісу або надсилання PR. Щоб викликати робочий процес, введи",
+			"workflowsInChat": "в чаті."
+		},
+		"sections": {
+			"globalRules": "Глобальні правила",
+			"workspaceRules": "Правила робочого простору",
+			"globalWorkflows": "Глобальні робочі процеси",
+			"workspaceWorkflows": "Робочі процеси робочого простору"
+		},
+		"validation": {
+			"invalidFileExtension": "Дозволено лише .md, .txt або без розширення файлу"
+		},
+		"placeholders": {
+			"workflowName": "workflow-name (.md, .txt або без розширення)",
+			"ruleName": "rule-name (.md, .txt або без розширення)"
+		},
+		"newFile": {
+			"newWorkflowFile": "Новий файл робочого процесу...",
+			"newRuleFile": "Новий файл правила..."
+		}
+	},
+	"taskTimeline": {
+		"tooltip": {
+			"clickToScroll": "Переглянути {{messageType}} (#{{messageNumber}})",
+			"messageTypes": {
+				"browser_action_launch": "запуск браузера",
+				"browser_action_result": "результат дії браузера",
+				"browser_action": "дія браузера",
+				"checkpoint_saved": "збережено контрольну точку",
+				"command": "виконання команди",
+				"command_output": "вивід команди",
+				"completion_result": "результат завершення",
+				"condense_context": "стиснути контекст",
+				"error": "повідомлення про помилку",
+				"followup": "додаткове питання",
+				"mcp_server_response": "відповідь MCP сервера",
+				"reasoning": "міркування AI",
+				"text": "відповідь AI",
+				"tool": "використання інструменту",
+				"unknown": "невідомий тип повідомлення",
+				"use_mcp_server": "використання MCP сервера",
+				"user": "відгуки користувача"
+			}
+		}
+	}
+}

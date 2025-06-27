@@ -1,0 +1,27 @@
+{
+	"greeting": "Ahoj, jsem Kilo Code!",
+	"introduction": "<strong>Kilo Code je přední autonomní agent pro kódování.</strong> Připrav se na architekturu, kódování, ladění a zvýšení své produktivity jako nikdy předtím. Pro pokračování Kilo Code vyžaduje API klíč.",
+	"notice": "Pro začátek toto rozšíření potřebuje poskytovatele API.",
+	"start": "Pojďme na to!",
+	"routers": {
+		"requesty": {
+			"description": "Tvůj optimalizovaný LLM router",
+			"incentive": "$1 kredit zdarma"
+		},
+		"openrouter": {
+			"description": "Jednotné rozhraní pro LLM"
+		}
+	},
+	"chooseProvider": "Aby mohl dělat svá kouzla, Kilo Code potřebuje API klíč.",
+	"startRouter": "Doporučujeme použít LLM Router:",
+	"startCustom": "Nebo můžeš přinést svůj vlastní API klíč poskytovatele:",
+	"telemetry": {
+		"title": "Pomoz Vylepšit Kilo Code",
+		"anonymousTelemetry": "Odesílej anonymní data o chybách a používání, abys nám pomohl opravit chyby a vylepšit rozšíření. Žádný kód, prompts ani osobní informace se nikdy neodesílají.",
+		"changeSettings": "Toto můžeš vždy změnit v dolní části <settingsLink>nastavení</settingsLink>",
+		"settings": "nastavení",
+		"allow": "Povolit",
+		"deny": "Odmítnout"
+	},
+	"importSettings": "Importovat Nastavení"
+}

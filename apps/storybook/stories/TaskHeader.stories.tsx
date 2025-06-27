@@ -37,7 +37,6 @@ export const Default: Story = {
 		onClose: fn(),
 		groupedMessages: createTaskHeaderMessages(),
 		onMessageClick: fn(),
-		currentMessageIndex: 4,
 		isTaskActive: true,
 	},
 }

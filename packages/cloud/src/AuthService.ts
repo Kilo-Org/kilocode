@@ -1,17 +1,17 @@
 import crypto from "crypto"
 import EventEmitter from "events"
 
-import axios from "axios"
 import * as vscode from "vscode"
 import { z } from "zod"
 
 import type { CloudUserInfo, CloudOrganizationMembership } from "@roo-code/types"
 
-import { getClerkBaseUrl, getRooCodeApiUrl } from "./Config"
+import { getClerkBaseUrl, getRooCodeApiUrl, PRODUCTION_CLERK_BASE_URL } from "./Config"
 import { RefreshTimer } from "./RefreshTimer"
 import { getUserAgent } from "./utils"
 
 export interface AuthServiceEvents {
+	"attempting-session": [data: { previousState: AuthState }]
 	"inactive-session": [data: { previousState: AuthState }]
 	"active-session": [data: { previousState: AuthState }]
 	"logged-out": [data: { previousState: AuthState }]
@@ -21,30 +21,95 @@ export interface AuthServiceEvents {
 const authCredentialsSchema = z.object({
 	clientToken: z.string().min(1, "Client token cannot be empty"),
 	sessionId: z.string().min(1, "Session ID cannot be empty"),
+	organizationId: z.string().nullable().optional(),
 })
 
 type AuthCredentials = z.infer<typeof authCredentialsSchema>
 
-const AUTH_CREDENTIALS_KEY = "clerk-auth-credentials"
 const AUTH_STATE_KEY = "clerk-auth-state"
 
-type AuthState = "initializing" | "logged-out" | "active-session" | "inactive-session"
+type AuthState = "initializing" | "logged-out" | "active-session" | "attempting-session" | "inactive-session"
+
+const clerkSignInResponseSchema = z.object({
+	response: z.object({
+		created_session_id: z.string(),
+	}),
+})
+
+const clerkCreateSessionTokenResponseSchema = z.object({
+	jwt: z.string(),
+})
+
+const clerkMeResponseSchema = z.object({
+	response: z.object({
+		first_name: z.string().optional(),
+		last_name: z.string().optional(),
+		image_url: z.string().optional(),
+		primary_email_address_id: z.string().optional(),
+		email_addresses: z
+			.array(
+				z.object({
+					id: z.string(),
+					email_address: z.string(),
+				}),
+			)
+			.optional(),
+	}),
+})
+
+const clerkOrganizationMembershipsSchema = z.object({
+	response: z.array(
+		z.object({
+			id: z.string(),
+			role: z.string(),
+			permissions: z.array(z.string()).optional(),
+			created_at: z.number().optional(),
+			updated_at: z.number().optional(),
+			organization: z.object({
+				id: z.string(),
+				name: z.string(),
+				slug: z.string().optional(),
+				image_url: z.string().optional(),
+				has_image: z.boolean().optional(),
+				created_at: z.number().optional(),
+				updated_at: z.number().optional(),
+			}),
+		}),
+	),
+})
+
+class InvalidClientTokenError extends Error {
+	constructor() {
+		super("Invalid/Expired client token")
+		Object.setPrototypeOf(this, InvalidClientTokenError.prototype)
+	}
+}
 
 export class AuthService extends EventEmitter<AuthServiceEvents> {
 	private context: vscode.ExtensionContext
 	private timer: RefreshTimer
 	private state: AuthState = "initializing"
 	private log: (...args: unknown[]) => void
+	private readonly authCredentialsKey: string
 
 	private credentials: AuthCredentials | null = null
 	private sessionToken: string | null = null
 	private userInfo: CloudUserInfo | null = null
+	private isFirstRefreshAttempt: boolean = false
 
 	constructor(context: vscode.ExtensionContext, log?: (...args: unknown[]) => void) {
 		super()
 
 		this.context = context
 		this.log = log || console.log
+
+		// Calculate auth credentials key based on Clerk base URL
+		const clerkBaseUrl = getClerkBaseUrl()
+		if (clerkBaseUrl !== PRODUCTION_CLERK_BASE_URL) {
+			this.authCredentialsKey = `clerk-auth-credentials-${clerkBaseUrl}`
+		} else {
+			this.authCredentialsKey = "clerk-auth-credentials"
+		}
 
 		this.timer = new RefreshTimer({
 			callback: async () => {
@@ -67,7 +132,7 @@ export class AuthService extends EventEmitter<AuthServiceEvents> {
 					this.credentials.clientToken !== credentials.clientToken ||
 					this.credentials.sessionId !== credentials.sessionId
 				) {
-					this.transitionToInactiveSession(credentials)
+					this.transitionToAttemptingSession(credentials)
 				}
 			} else {
 				if (this.state !== "logged-out") {
@@ -94,9 +159,24 @@ export class AuthService extends EventEmitter<AuthServiceEvents> {
 		this.log("[auth] Transitioned to logged-out state")
 	}
 
-	private transitionToInactiveSession(credentials: AuthCredentials): void {
+	private transitionToAttemptingSession(credentials: AuthCredentials): void {
 		this.credentials = credentials
 
+		const previousState = this.state
+		this.state = "attempting-session"
+
+		this.sessionToken = null
+		this.userInfo = null
+		this.isFirstRefreshAttempt = true
+
+		this.emit("attempting-session", { previousState })
+
+		this.timer.start()
+
+		this.log("[auth] Transitioned to attempting-session state")
+	}
+
+	private transitionToInactiveSession(): void {
 		const previousState = this.state
 		this.state = "inactive-session"
 
@@ -104,8 +184,6 @@ export class AuthService extends EventEmitter<AuthServiceEvents> {
 		this.userInfo = null
 
 		this.emit("inactive-session", { previousState })
-
-		this.timer.start()
 
 		this.log("[auth] Transitioned to inactive-session state")
 	}
@@ -126,7 +204,7 @@ export class AuthService extends EventEmitter<AuthServiceEvents> {
 
 		this.context.subscriptions.push(
 			this.context.secrets.onDidChange((e) => {
-				if (e.key === AUTH_CREDENTIALS_KEY) {
+				if (e.key === this.authCredentialsKey) {
 					this.handleCredentialsChange()
 				}
 			}),
@@ -134,16 +212,25 @@ export class AuthService extends EventEmitter<AuthServiceEvents> {
 	}
 
 	private async storeCredentials(credentials: AuthCredentials): Promise<void> {
-		await this.context.secrets.store(AUTH_CREDENTIALS_KEY, JSON.stringify(credentials))
+		await this.context.secrets.store(this.authCredentialsKey, JSON.stringify(credentials))
 	}
 
 	private async loadCredentials(): Promise<AuthCredentials | null> {
-		const credentialsJson = await this.context.secrets.get(AUTH_CREDENTIALS_KEY)
+		const credentialsJson = await this.context.secrets.get(this.authCredentialsKey)
 		if (!credentialsJson) return null
 
 		try {
 			const parsedJson = JSON.parse(credentialsJson)
-			return authCredentialsSchema.parse(parsedJson)
+			const credentials = authCredentialsSchema.parse(parsedJson)
+
+			// Migration: If no organizationId but we have userInfo, add it
+			if (credentials.organizationId === undefined && this.userInfo?.organizationId) {
+				credentials.organizationId = this.userInfo.organizationId
+				await this.storeCredentials(credentials)
+				this.log("[auth] Migrated credentials with organizationId")
+			}
+
+			return credentials
 		} catch (error) {
 			if (error instanceof z.ZodError) {
 				this.log("[auth] Invalid credentials format:", error.errors)
@@ -155,7 +242,7 @@ export class AuthService extends EventEmitter<AuthServiceEvents> {
 	}
 
 	private async clearCredentials(): Promise<void> {
-		await this.context.secrets.delete(AUTH_CREDENTIALS_KEY)
+		await this.context.secrets.delete(this.authCredentialsKey)
 	}
 
 	/**
@@ -192,8 +279,13 @@ export class AuthService extends EventEmitter<AuthServiceEvents> {
 	 *
 	 * @param code The authorization code from the callback
 	 * @param state The state parameter from the callback
+	 * @param organizationId The organization ID from the callback (null for personal accounts)
 	 */
-	public async handleCallback(code: string | null, state: string | null): Promise<void> {
+	public async handleCallback(
+		code: string | null,
+		state: string | null,
+		organizationId?: string | null,
+	): Promise<void> {
 		if (!code || !state) {
 			vscode.window.showInformationMessage("Invalid Roo Code Cloud sign in url")
 			return
@@ -208,7 +300,10 @@ export class AuthService extends EventEmitter<AuthServiceEvents> {
 				throw new Error("Invalid state parameter. Authentication request may have been tampered with.")
 			}
 
-			const { credentials } = await this.clerkSignIn(code)
+			const credentials = await this.clerkSignIn(code)
+
+			// Set organizationId (null for personal accounts)
+			credentials.organizationId = organizationId || null
 
 			await this.storeCredentials(credentials)
 
@@ -267,14 +362,25 @@ export class AuthService extends EventEmitter<AuthServiceEvents> {
 	/**
 	 * Check if the user is authenticated
 	 *
-	 * @returns True if the user is authenticated (has an active or inactive session)
+	 * @returns True if the user is authenticated (has an active, attempting, or inactive session)
 	 */
 	public isAuthenticated(): boolean {
-		return this.state === "active-session" || this.state === "inactive-session"
+		return (
+			this.state === "active-session" || this.state === "attempting-session" || this.state === "inactive-session"
+		)
 	}
 
 	public hasActiveSession(): boolean {
 		return this.state === "active-session"
+	}
+
+	/**
+	 * Check if the user has an active session or is currently attempting to acquire one
+	 *
+	 * @returns True if the user has an active session or is attempting to get one
+	 */
+	public hasOrIsAcquiringActiveSession(): boolean {
+		return this.state === "active-session" || this.state === "attempting-session"
 	}
 
 	/**
@@ -285,7 +391,6 @@ export class AuthService extends EventEmitter<AuthServiceEvents> {
 	private async refreshSession(): Promise<void> {
 		if (!this.credentials) {
 			this.log("[auth] Cannot refresh session: missing credentials")
-			this.state = "inactive-session"
 			return
 		}
 
@@ -300,6 +405,13 @@ export class AuthService extends EventEmitter<AuthServiceEvents> {
 				this.fetchUserInfo()
 			}
 		} catch (error) {
+			if (error instanceof InvalidClientTokenError) {
+				this.log("[auth] Invalid/Expired client token: clearing credentials")
+				this.clearCredentials()
+			} else if (this.isFirstRefreshAttempt && this.state === "attempting-session") {
+				this.isFirstRefreshAttempt = false
+				this.transitionToInactiveSession()
+			}
 			this.log("[auth] Failed to refresh session", error)
 			throw error
 		}
@@ -323,172 +435,215 @@ export class AuthService extends EventEmitter<AuthServiceEvents> {
 		return this.userInfo
 	}
 
-	private async clerkSignIn(ticket: string): Promise<{ credentials: AuthCredentials; sessionToken: string }> {
+	/**
+	 * Get the stored organization ID from credentials
+	 *
+	 * @returns The stored organization ID, null for personal accounts or if no credentials exist
+	 */
+	public getStoredOrganizationId(): string | null {
+		return this.credentials?.organizationId || null
+	}
+
+	private async clerkSignIn(ticket: string): Promise<AuthCredentials> {
 		const formData = new URLSearchParams()
 		formData.append("strategy", "ticket")
 		formData.append("ticket", ticket)
 
-		const response = await axios.post(`${getClerkBaseUrl()}/v1/client/sign_ins`, formData, {
+		const response = await fetch(`${getClerkBaseUrl()}/v1/client/sign_ins`, {
+			method: "POST",
 			headers: {
 				"Content-Type": "application/x-www-form-urlencoded",
 				"User-Agent": this.userAgent(),
 			},
+			body: formData.toString(),
+			signal: AbortSignal.timeout(10000),
 		})
 
+		if (!response.ok) {
+			throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+		}
+
+		const {
+			response: { created_session_id: sessionId },
+		} = clerkSignInResponseSchema.parse(await response.json())
+
 		// 3. Extract the client token from the Authorization header.
-		const clientToken = response.headers.authorization
+		const clientToken = response.headers.get("authorization")
 
 		if (!clientToken) {
 			throw new Error("No authorization header found in the response")
 		}
 
-		// 4. Find the session using created_session_id and extract the JWT.
-		const sessionId = response.data?.response?.created_session_id
-
-		if (!sessionId) {
-			throw new Error("No session ID found in the response")
-		}
-
-		// Find the session in the client sessions array.
-		const session = response.data?.client?.sessions?.find((s: { id: string }) => s.id === sessionId)
-
-		if (!session) {
-			throw new Error("Session not found in the response")
-		}
-
-		// Extract the session token (JWT) and store it.
-		const sessionToken = session.last_active_token?.jwt
-
-		if (!sessionToken) {
-			throw new Error("Session does not have a token")
-		}
-
-		const credentials = authCredentialsSchema.parse({ clientToken, sessionId })
-
-		return { credentials, sessionToken }
+		return authCredentialsSchema.parse({ clientToken, sessionId })
 	}
 
 	private async clerkCreateSessionToken(): Promise<string> {
 		const formData = new URLSearchParams()
 		formData.append("_is_native", "1")
 
-		const response = await axios.post(
-			`${getClerkBaseUrl()}/v1/client/sessions/${this.credentials!.sessionId}/tokens`,
-			formData,
-			{
-				headers: {
-					"Content-Type": "application/x-www-form-urlencoded",
-					Authorization: `Bearer ${this.credentials!.clientToken}`,
-					"User-Agent": this.userAgent(),
-				},
+		// Handle 3 cases for organization_id:
+		// 1. Have an org id: organization_id=THE_ORG_ID
+		// 2. Have a personal account: organization_id= (empty string)
+		// 3. Don't know if you have an org id (old style credentials): don't send organization_id param at all
+		const organizationId = this.getStoredOrganizationId()
+		if (this.credentials?.organizationId !== undefined) {
+			// We have organization context info (either org id or personal account)
+			formData.append("organization_id", organizationId || "")
+		}
+		// If organizationId is undefined, don't send the param at all (old credentials)
+
+		const response = await fetch(`${getClerkBaseUrl()}/v1/client/sessions/${this.credentials!.sessionId}/tokens`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/x-www-form-urlencoded",
+				Authorization: `Bearer ${this.credentials!.clientToken}`,
+				"User-Agent": this.userAgent(),
 			},
-		)
+			body: formData.toString(),
+			signal: AbortSignal.timeout(10000),
+		})
 
-		const sessionToken = response.data?.jwt
-
-		if (!sessionToken) {
-			throw new Error("No JWT found in refresh response")
+		if (response.status >= 400 && response.status < 500) {
+			throw new InvalidClientTokenError()
+		} else if (!response.ok) {
+			throw new Error(`HTTP ${response.status}: ${response.statusText}`)
 		}
 
-		return sessionToken
+		const data = clerkCreateSessionTokenResponseSchema.parse(await response.json())
+
+		return data.jwt
 	}
 
 	private async clerkMe(): Promise<CloudUserInfo> {
-		const response = await axios.get(`${getClerkBaseUrl()}/v1/me`, {
+		const response = await fetch(`${getClerkBaseUrl()}/v1/me`, {
 			headers: {
 				Authorization: `Bearer ${this.credentials!.clientToken}`,
 				"User-Agent": this.userAgent(),
 			},
+			signal: AbortSignal.timeout(10000),
 		})
 
-		const userData = response.data?.response
-
-		if (!userData) {
-			throw new Error("No response user data")
+		if (!response.ok) {
+			throw new Error(`HTTP ${response.status}: ${response.statusText}`)
 		}
+
+		const { response: userData } = clerkMeResponseSchema.parse(await response.json())
 
 		const userInfo: CloudUserInfo = {}
 
-		userInfo.name = `${userData?.first_name} ${userData?.last_name}`
-		const primaryEmailAddressId = userData?.primary_email_address_id
-		const emailAddresses = userData?.email_addresses
+		userInfo.name = `${userData.first_name} ${userData.last_name}`
+		const primaryEmailAddressId = userData.primary_email_address_id
+		const emailAddresses = userData.email_addresses
 
 		if (primaryEmailAddressId && emailAddresses) {
 			userInfo.email = emailAddresses.find(
-				(email: { id: string }) => primaryEmailAddressId === email?.id,
+				(email: { id: string }) => primaryEmailAddressId === email.id,
 			)?.email_address
 		}
 
-		userInfo.picture = userData?.image_url
+		userInfo.picture = userData.image_url
 
-		// Fetch organization memberships separately
+		// Fetch organization info if user is in organization context
 		try {
-			const orgMemberships = await this.clerkGetOrganizationMemberships()
-			if (orgMemberships && orgMemberships.length > 0) {
-				// Get the first (or active) organization membership
-				const primaryOrgMembership = orgMemberships[0]
-				const organization = primaryOrgMembership?.organization
+			const storedOrgId = this.getStoredOrganizationId()
 
-				if (organization) {
-					userInfo.organizationId = organization.id
-					userInfo.organizationName = organization.name
-					userInfo.organizationRole = primaryOrgMembership.role
+			if (this.credentials?.organizationId !== undefined) {
+				// We have organization context info
+				if (storedOrgId !== null) {
+					// User is in organization context - fetch user's memberships and filter
+					const orgMemberships = await this.clerkGetOrganizationMemberships()
+					const userMembership = this.findOrganizationMembership(orgMemberships, storedOrgId)
+
+					if (userMembership) {
+						this.setUserOrganizationInfo(userInfo, userMembership)
+						this.log("[auth] User in organization context:", {
+							id: userMembership.organization.id,
+							name: userMembership.organization.name,
+							role: userMembership.role,
+						})
+					} else {
+						this.log("[auth] Warning: User not found in stored organization:", storedOrgId)
+					}
+				} else {
+					this.log("[auth] User in personal account context - not setting organization info")
+				}
+			} else {
+				// Old credentials without organization context - fetch organization info to determine context
+				const orgMemberships = await this.clerkGetOrganizationMemberships()
+				const primaryOrgMembership = this.findPrimaryOrganizationMembership(orgMemberships)
+
+				if (primaryOrgMembership) {
+					this.setUserOrganizationInfo(userInfo, primaryOrgMembership)
+					this.log("[auth] Legacy credentials: Found organization membership:", {
+						id: primaryOrgMembership.organization.id,
+						name: primaryOrgMembership.organization.name,
+						role: primaryOrgMembership.role,
+					})
+				} else {
+					this.log("[auth] Legacy credentials: No organization memberships found")
 				}
 			}
 		} catch (error) {
-			this.log("[auth] Failed to fetch organization memberships:", error)
+			this.log("[auth] Failed to fetch organization info:", error)
 			// Don't throw - organization info is optional
 		}
 
 		return userInfo
 	}
 
+	private findOrganizationMembership(
+		memberships: CloudOrganizationMembership[],
+		organizationId: string,
+	): CloudOrganizationMembership | undefined {
+		return memberships?.find((membership) => membership.organization.id === organizationId)
+	}
+
+	private findPrimaryOrganizationMembership(
+		memberships: CloudOrganizationMembership[],
+	): CloudOrganizationMembership | undefined {
+		return memberships && memberships.length > 0 ? memberships[0] : undefined
+	}
+
+	private setUserOrganizationInfo(userInfo: CloudUserInfo, membership: CloudOrganizationMembership): void {
+		userInfo.organizationId = membership.organization.id
+		userInfo.organizationName = membership.organization.name
+		userInfo.organizationRole = membership.role
+		userInfo.organizationImageUrl = membership.organization.image_url
+	}
+
 	private async clerkGetOrganizationMemberships(): Promise<CloudOrganizationMembership[]> {
-		const response = await axios.get(`${getClerkBaseUrl()}/v1/me/organization_memberships`, {
+		const response = await fetch(`${getClerkBaseUrl()}/v1/me/organization_memberships`, {
 			headers: {
 				Authorization: `Bearer ${this.credentials!.clientToken}`,
 				"User-Agent": this.userAgent(),
 			},
+			signal: AbortSignal.timeout(10000),
 		})
 
-		// The response structure is: { response: [...] }
-		// Extract the organization memberships from the response.response array
-		return response.data?.response || []
+		return clerkOrganizationMembershipsSchema.parse(await response.json()).response
 	}
 
 	private async clerkLogout(credentials: AuthCredentials): Promise<void> {
 		const formData = new URLSearchParams()
 		formData.append("_is_native", "1")
 
-		await axios.post(`${getClerkBaseUrl()}/v1/client/sessions/${credentials.sessionId}/remove`, formData, {
+		const response = await fetch(`${getClerkBaseUrl()}/v1/client/sessions/${credentials.sessionId}/remove`, {
+			method: "POST",
 			headers: {
+				"Content-Type": "application/x-www-form-urlencoded",
 				Authorization: `Bearer ${credentials.clientToken}`,
 				"User-Agent": this.userAgent(),
 			},
+			body: formData.toString(),
+			signal: AbortSignal.timeout(10000),
 		})
+
+		if (!response.ok) {
+			throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+		}
 	}
 
 	private userAgent(): string {
 		return getUserAgent(this.context)
-	}
-
-	private static _instance: AuthService | null = null
-
-	static get instance() {
-		if (!this._instance) {
-			throw new Error("AuthService not initialized")
-		}
-
-		return this._instance
-	}
-
-	static async createInstance(context: vscode.ExtensionContext, log?: (...args: unknown[]) => void) {
-		if (this._instance) {
-			throw new Error("AuthService instance already created")
-		}
-
-		this._instance = new AuthService(context, log)
-		await this._instance.initialize()
-		return this._instance
 	}
 }

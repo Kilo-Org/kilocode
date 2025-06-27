@@ -12,7 +12,11 @@
 		"export": "Taakgeschiedenis exporteren",
 		"delete": "Taak verwijderen (Shift + Klik om bevestiging over te slaan)",
 		"condenseContext": "Context intelligent samenvatten",
-		"share": "Taak delen"
+		"share": "Taak delen",
+		"shareWithOrganization": "Delen met organisatie",
+		"shareWithOrganizationDescription": "Alleen leden van je organisatie kunnen toegang krijgen",
+		"sharePublicly": "Openbaar delen",
+		"sharePubliclyDescription": "Iedereen met de link kan toegang krijgen"
 	},
 	"history": {
 		"title": "Geschiedenis"
@@ -81,7 +85,7 @@
 	"onboarding": "Je takenlijst in deze werkruimte is leeg.",
 	"rooTips": {
 		"boomerangTasks": {
-			"title": "Boomerang-taken",
+			"title": "Taak Orchestratie",
 			"description": "Splits taken op in kleinere, beheersbare delen"
 		},
 		"stickyModels": {

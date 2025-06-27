@@ -1,0 +1,50 @@
+{
+	"info": {
+		"settings_imported": "Οι ρυθμίσεις εισήχθησαν επιτυχώς."
+	},
+	"lowCreditWarning": {
+		"title": "Προειδοποίηση Χαμηλών Πιστώσεων!",
+		"message": "Έλεγξε αν μπορείς να προσθέσεις δωρεάν πιστώσεις ή να αγοράσεις περισσότερες!"
+	},
+	"rules": {
+		"actions": {
+			"delete": "Διαγραφή",
+			"confirmDelete": "Είσαι σίγουρος ότι θέλεις να διαγράψεις το {{filename}};",
+			"deleted": "Διαγράφηκε το {{filename}}"
+		},
+		"errors": {
+			"noWorkspaceFound": "Δεν βρέθηκε φάκελος χώρου εργασίας",
+			"fileAlreadyExists": "Το αρχείο {{filename}} υπάρχει ήδη",
+			"failedToCreateRuleFile": "Αποτυχία δημιουργίας αρχείου κανόνα.",
+			"failedToDeleteRuleFile": "Αποτυχία διαγραφής αρχείου κανόνα."
+		},
+		"templates": {
+			"workflow": {
+				"description": "Περιγραφή ροής εργασίας εδώ...",
+				"stepsHeader": "## Βήματα",
+				"step1": "Βήμα 1",
+				"step2": "Βήμα 2"
+			},
+			"rule": {
+				"description": "Περιγραφή κανόνα εδώ...",
+				"guidelinesHeader": "## Κατευθυντήριες γραμμές",
+				"guideline1": "Κατευθυντήρια γραμμή 1",
+				"guideline2": "Κατευθυντήρια γραμμή 2"
+			}
+		}
+	},
+	"commitMessage": {
+		"activated": "Ενεργοποιήθηκε η δημιουργία μηνυμάτων commit του Kilo Code",
+		"gitNotFound": "⚠️ Δεν βρέθηκε αποθετήριο Git ή το git δεν είναι διαθέσιμο",
+		"gitInitError": "⚠️ Σφάλμα αρχικοποίησης Git: {{error}}",
+		"generating": "Kilo: Δημιουργία μηνύματος commit...",
+		"analyzingChanges": "Kilo: Ανάλυση σταδιακών αλλαγών...",
+		"noStagedChangesRepo": "Kilo: Δεν βρέθηκαν σταδιακές αλλαγές στο αποθετήριο git",
+		"noStagedChanges": "Kilo: Δεν βρέθηκαν σταδιακές αλλαγές για ανάλυση",
+		"generated": "Kilo: Το μήνυμα commit δημιουργήθηκε!",
+		"generationFailed": "Kilo: Αποτυχία δημιουργίας μηνύματος commit: {{errorMessage}}",
+		"tokenRequired": "Απαιτείται το token του Kilo Code για τη δημιουργία μηνύματος commit",
+		"activationFailed": "Kilo: Αποτυχία ενεργοποίησης του παρόχου μηνυμάτων commit: {{error}}",
+		"providerRegistered": "Kilo: Ο πάροχος μηνυμάτων commit καταχωρήθηκε"
+	}
+}

@@ -55,7 +55,7 @@ export class MarketplaceViewStateManager {
 		return {
 			allItems: [],
 			displayItems: [], // Always initialize as empty array, not undefined
-			isFetching: false,
+			isFetching: true, // Start with loading state for initial load
 			activeTab: "mcp",
 			filters: {
 				type: "",
@@ -97,7 +97,8 @@ export class MarketplaceViewStateManager {
 		// Only create new arrays if they exist and have items
 		const allItems = this.state.allItems.length ? [...this.state.allItems] : []
 		// Ensure displayItems is always an array, never undefined
-		const displayItems = this.state.displayItems ? [...this.state.displayItems] : []
+		// If displayItems is undefined or null, fall back to allItems
+		const displayItems = this.state.displayItems ? [...this.state.displayItems] : [...allItems]
 		const tags = this.state.filters.tags.length ? [...this.state.filters.tags] : []
 
 		// Create minimal new state object
@@ -148,8 +149,12 @@ export class MarketplaceViewStateManager {
 	public async transition(transition: ViewStateTransition): Promise<void> {
 		switch (transition.type) {
 			case "FETCH_ITEMS": {
-				// Fetch functionality removed - data comes automatically from extension
-				// No manual fetching needed since we removed caching
+				// Set fetching state to show loading indicator
+				this.state = {
+					...this.state,
+					isFetching: true,
+				}
+				this.notifyStateChange()
 				break
 			}
 
@@ -170,11 +175,20 @@ export class MarketplaceViewStateManager {
 					break
 				}
 
+				// Calculate display items based on current filters
+				let newDisplayItems: MarketplaceItem[]
+				if (this.isFilterActive()) {
+					newDisplayItems = this.filterItems([...items])
+				} else {
+					// No filters active - show all items
+					newDisplayItems = [...items]
+				}
+
 				// Update allItems as source of truth
 				this.state = {
 					...this.state,
 					allItems: [...items],
-					displayItems: this.isFilterActive() ? this.filterItems([...items]) : [...items],
+					displayItems: newDisplayItems,
 					isFetching: false,
 				}
 
@@ -225,10 +239,19 @@ export class MarketplaceViewStateManager {
 					tags: filters.tags !== undefined ? filters.tags : this.state.filters.tags,
 				}
 
-				// Update state
+				// Update filters first
 				this.state = {
 					...this.state,
 					filters: updatedFilters,
+				}
+
+				// Apply filters to displayItems with the updated filters
+				const newDisplayItems = this.filterItems(this.state.allItems)
+
+				// Update state with filtered items
+				this.state = {
+					...this.state,
+					displayItems: newDisplayItems,
 				}
 
 				// Send filter message
@@ -309,7 +332,17 @@ export class MarketplaceViewStateManager {
 				// Always use the marketplace items from the extension when they're provided
 				// This ensures fresh data is always displayed
 				const items = [...marketplaceItems]
-				const newDisplayItems = this.isFilterActive() ? this.filterItems(items) : items
+
+				// Calculate display items based on current filters
+				// If no filters are active, show all items
+				// If filters are active, apply filtering
+				let newDisplayItems: MarketplaceItem[]
+				if (this.isFilterActive()) {
+					newDisplayItems = this.filterItems(items)
+				} else {
+					// No filters active - show all items
+					newDisplayItems = items
+				}
 
 				// Update state in a single operation
 				this.state = {
@@ -340,6 +373,29 @@ export class MarketplaceViewStateManager {
 				// Refresh request
 				void this.transition({ type: "FETCH_ITEMS" })
 			}
+		}
+
+		// Handle marketplace data updates (fetched on demand)
+		if (message.type === "marketplaceData") {
+			const marketplaceItems = message.marketplaceItems
+
+			if (marketplaceItems !== undefined) {
+				// Always use the marketplace items from the extension when they're provided
+				// This ensures fresh data is always displayed
+				const items = [...marketplaceItems]
+				const newDisplayItems = this.isFilterActive() ? this.filterItems(items) : items
+
+				// Update state in a single operation
+				this.state = {
+					...this.state,
+					isFetching: false,
+					allItems: items,
+					displayItems: newDisplayItems,
+				}
+			}
+
+			// Notify state change
+			this.notifyStateChange()
 		}
 	}
 }

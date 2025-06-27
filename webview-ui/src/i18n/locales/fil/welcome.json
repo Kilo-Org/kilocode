@@ -1,0 +1,27 @@
+{
+	"greeting": "Hi, ako si Kilo Code!",
+	"introduction": "<strong>Ang Kilo Code ay ang nangungunang autonomous coding agent.</strong> Maghanda na para mag-architect, mag-code, mag-debug, at palakasin ang iyong productivity na hindi mo pa nakita dati. Para magpatuloy, kailangan ng Kilo Code ng API key.",
+	"notice": "Para magsimula, kailangan ng extension na ito ng API provider.",
+	"start": "Tara na!",
+	"routers": {
+		"requesty": {
+			"description": "Ang iyong optimized LLM router",
+			"incentive": "$1 libreng credit"
+		},
+		"openrouter": {
+			"description": "Isang unified interface para sa mga LLM"
+		}
+	},
+	"chooseProvider": "Para gumawa ng magic, kailangan ng Kilo Code ng API key.",
+	"startRouter": "Inirerekomenda namin ang paggamit ng LLM Router:",
+	"startCustom": "O maaari mong dalhin ang iyong provider API key:",
+	"telemetry": {
+		"title": "Tumulong na Mapahusay ang Kilo Code",
+		"anonymousTelemetry": "Magpadala ng anonymous na error at usage data para tulungan kaming ayusin ang mga bug at pahusayin ang extension. Walang code, prompts, o personal na impormasyon ang ipinapadala.",
+		"changeSettings": "Maaari mo itong palaging baguhin sa ibaba ng <settingsLink>settings</settingsLink>",
+		"settings": "settings",
+		"allow": "Payagan",
+		"deny": "Tanggihan"
+	},
+	"importSettings": "I-import ang mga Setting"
+}

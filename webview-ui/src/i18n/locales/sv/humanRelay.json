@@ -1,0 +1,13 @@
+{
+	"dialogTitle": "Human Relay - Vänligen hjälp till att kopiera/klistra in information",
+	"dialogDescription": "Vänligen kopiera följande prompt till webb-AI:n, klistra sedan in AI:ns svar i inmatningsfältet nedan.",
+	"copiedToClipboard": "Kopierat till urklipp",
+	"aiResponse": {
+		"label": "Vänligen ange AI:ns svar:",
+		"placeholder": "Klistra in AI:ns svar här..."
+	},
+	"actions": {
+		"cancel": "Avbryt",
+		"submit": "Skicka"
+	}
+}

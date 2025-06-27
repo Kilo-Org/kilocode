@@ -312,7 +312,27 @@
 			"medium": "中",
 			"low": "低"
 		},
-		"setReasoningLevel": "推論労力を有効にする"
+		"setReasoningLevel": "推論労力を有効にする",
+		"claudeCode": {
+			"pathLabel": "クロードコードパス",
+			"description": "Claude Code CLIへのオプションパス。設定されていない場合、デフォルトは「claude」です。",
+			"placeholder": "デフォルト：claude"
+		},
+		"geminiCli": {
+			"description": "このプロバイダーは Gemini CLI ツールの OAuth 認証を使用し、API キーは必要ありません。",
+			"oauthPath": "OAuth 認証情報パス（オプション）",
+			"oauthPathDescription": "OAuth 認証情報ファイルへのパス。空のままにするとデフォルトの場所（~/.gemini/oauth_creds.json）を使用します。",
+			"instructions": "まだ認証していない場合は、",
+			"instructionsContinued": "をターミナルで最初に実行してください。",
+			"setupLink": "Gemini CLI セットアップ手順",
+			"requirementsTitle": "重要な要件",
+			"requirement1": "まず、Gemini CLI ツールをインストールする必要があります",
+			"requirement2": "次に、ターミナルで gemini を実行し、Google でログインしてください",
+			"requirement3": "個人の Google アカウントでのみ動作します（Google Workspace アカウントは不可）",
+			"requirement4": "API キーは使用しません - 認証は OAuth 経由で処理されます",
+			"requirement5": "Gemini CLI ツールが最初にインストールされ、認証されている必要があります",
+			"freeAccess": "OAuth 認証による無料ティアアクセス"
+		}
 	},
 	"browser": {
 		"enable": {
@@ -379,7 +399,8 @@
 			"hint": "空 = デフォルトプロンプトを使用"
 		},
 		"autoCondenseContext": {
-			"name": "インテリジェントなコンテキスト圧縮を自動的にトリガーする"
+			"name": "インテリジェントなコンテキスト圧縮を自動的にトリガーする",
+			"description": "有効にすると、Rooは閾値に達したときに自動的にコンテキストを圧縮します。無効にすると、手動でコンテキスト圧縮をトリガーできます。"
 		},
 		"openTabs": {
 			"label": "オープンタブコンテキスト制限",
@@ -402,6 +423,15 @@
 		"maxConcurrentFileReads": {
 			"label": "同時ファイル読み取り制限",
 			"description": "read_file ツールが同時に処理できるファイルの最大数。値を高くすると複数の小さなファイルの読み取りが速くなる可能性がありますが、メモリ使用量が増加します。"
+		},
+		"condensingThreshold": {
+			"label": "圧縮トリガーしきい値",
+			"selectProfile": "プロファイルのしきい値を設定",
+			"defaultProfile": "グローバルデフォルト（全プロファイル）",
+			"defaultDescription": "コンテキストがこの割合に達すると、カスタム設定がない限り、すべてのプロファイルで自動的に圧縮されます",
+			"profileDescription": "このプロファイルのみのカスタムしきい値（グローバルデフォルトを上書き）",
+			"inheritDescription": "このプロファイルはグローバルデフォルトしきい値を継承します（{{threshold}}%）",
+			"usesGlobal": "（グローバル {{threshold}}% を使用）"
 		}
 	},
 	"terminal": {
@@ -513,10 +543,6 @@
 		"MARKETPLACE": {
 			"name": "Marketplaceを有効にする",
 			"description": "有効にすると、MarketplaceからMCPとカスタムモードをインストールできます。"
-		},
-		"DISABLE_COMPLETION_COMMAND": {
-			"name": "attempt_completionでのコマンド実行を無効にする",
-			"description": "有効にすると、attempt_completionツールはコマンドを実行しません。これは、タスク完了時のコマンド実行の非推奨化に備えるための実験的な機能です。"
 		},
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "同時ファイル編集を有効にする",

@@ -7,6 +7,8 @@ import TranslationProvider from "./i18n/TranslationContext"
 // import { MarketplaceViewStateManager } from "./components/marketplace/MarketplaceViewStateManager" // kilocode_change: we have our own marketplace
 
 import { vscode } from "./utils/vscode"
+import { telemetryClient } from "./utils/TelemetryClient"
+import { TelemetryEventName } from "@roo-code/types"
 import { ExtensionStateContextProvider, useExtensionState } from "./context/ExtensionStateContext"
 import ChatView, { ChatViewRef } from "./components/chat/ChatView"
 import HistoryView from "./components/history/HistoryView"
@@ -18,6 +20,7 @@ import { HumanRelayDialog } from "./components/human-relay/HumanRelayDialog"
 import BottomControls from "./components/kilocode/BottomControls" // kilocode_change
 // import { AccountView } from "./components/account/AccountView" // kilocode_change: we have our own profile view
 import { useAddNonInteractiveClickListener } from "./components/ui/hooks/useNonInteractiveClick"
+import { KiloCodeErrorBoundary } from "./kilocode/KiloCodeErrorBoundary"
 
 type Tab = "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "account" | "profile" // kilocode_change: add "profile"
 
@@ -153,7 +156,7 @@ const App = () => {
 	// Track marketplace tab views
 	useEffect(() => {
 		if (tab === "marketplace") {
-			// telemetryClient.capture(TelemetryEventName.MARKETPLACE_TAB_VIEWED) // kilocode_change commented out
+			telemetryClient.capture(TelemetryEventName.MARKETPLACE_TAB_VIEWED)
 		}
 	}, [tab])
 
@@ -210,13 +213,15 @@ const App = () => {
 const queryClient = new QueryClient()
 
 const AppWithProviders = () => (
-	<ExtensionStateContextProvider>
-		<TranslationProvider>
-			<QueryClientProvider client={queryClient}>
-				<App />
-			</QueryClientProvider>
-		</TranslationProvider>
-	</ExtensionStateContextProvider>
+	<KiloCodeErrorBoundary>
+		<ExtensionStateContextProvider>
+			<TranslationProvider>
+				<QueryClientProvider client={queryClient}>
+					<App />
+				</QueryClientProvider>
+			</TranslationProvider>
+		</ExtensionStateContextProvider>
+	</KiloCodeErrorBoundary>
 )
 
 export default AppWithProviders

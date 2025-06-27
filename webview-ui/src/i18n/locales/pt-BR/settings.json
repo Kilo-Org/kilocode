@@ -312,7 +312,27 @@
 			"medium": "Médio",
 			"low": "Baixo"
 		},
-		"setReasoningLevel": "Habilitar esforço de raciocínio"
+		"setReasoningLevel": "Habilitar esforço de raciocínio",
+		"claudeCode": {
+			"pathLabel": "Caminho do Claude Code",
+			"description": "Caminho opcional para o seu Claude Code CLI. O padrão é 'claude' se não for definido.",
+			"placeholder": "Padrão: claude"
+		},
+		"geminiCli": {
+			"description": "Este provedor usa autenticação OAuth da ferramenta Gemini CLI e não requer chaves de API.",
+			"oauthPath": "Caminho das credenciais OAuth (opcional)",
+			"oauthPathDescription": "Caminho para o arquivo de credenciais OAuth. Deixe vazio para usar a localização padrão (~/.gemini/oauth_creds.json).",
+			"instructions": "Se você ainda não se autenticou, execute",
+			"instructionsContinued": "no seu terminal primeiro.",
+			"setupLink": "Instruções de configuração do Gemini CLI",
+			"requirementsTitle": "Requisitos importantes",
+			"requirement1": "Primeiro, você precisa instalar a ferramenta Gemini CLI",
+			"requirement2": "Depois, execute gemini no seu terminal e certifique-se de fazer login com o Google",
+			"requirement3": "Funciona apenas com contas pessoais do Google (não contas do Google Workspace)",
+			"requirement4": "Não usa chaves de API - autenticação é feita via OAuth",
+			"requirement5": "Requer que a ferramenta Gemini CLI seja instalada e autenticada primeiro",
+			"freeAccess": "Acesso de nível gratuito via autenticação OAuth"
+		}
 	},
 	"browser": {
 		"enable": {
@@ -379,7 +399,8 @@
 			"hint": "Vazio = usar prompt padrão"
 		},
 		"autoCondenseContext": {
-			"name": "Acionar automaticamente a condensação inteligente de contexto"
+			"name": "Acionar automaticamente a condensação inteligente de contexto",
+			"description": "Quando habilitado, o Roo condensará automaticamente o contexto quando o limite for atingido. Quando desabilitado, você ainda pode acionar manualmente a condensação de contexto."
 		},
 		"openTabs": {
 			"label": "Limite de contexto de abas abertas",
@@ -402,6 +423,15 @@
 		"maxConcurrentFileReads": {
 			"label": "Limite de leituras simultâneas",
 			"description": "Número máximo de arquivos que a ferramenta 'read_file' pode processar simultaneamente. Valores mais altos podem acelerar a leitura de vários arquivos pequenos, mas aumentam o uso de memória."
+		},
+		"condensingThreshold": {
+			"label": "Limite de Ativação de Condensação",
+			"selectProfile": "Configurar limite para perfil",
+			"defaultProfile": "Padrão Global (todos os perfis)",
+			"defaultDescription": "Quando o contexto atingir essa porcentagem, será automaticamente condensado para todos os perfis, a menos que tenham configurações personalizadas",
+			"profileDescription": "Limite personalizado apenas para este perfil (substitui o padrão global)",
+			"inheritDescription": "Este perfil herda o limite padrão global ({{threshold}}%)",
+			"usesGlobal": "(usa global {{threshold}}%)"
 		}
 	},
 	"terminal": {
@@ -509,10 +539,6 @@
 		"CONCURRENT_FILE_READS": {
 			"name": "Habilitar leitura simultânea de arquivos",
 			"description": "Quando habilitado, o Kilo Code pode ler vários arquivos em uma única solicitação. Quando desabilitado, o Kilo Code deve ler arquivos um de cada vez. Desabilitar pode ajudar ao trabalhar com modelos menos capazes ou quando você deseja mais controle sobre o acesso aos arquivos."
-		},
-		"DISABLE_COMPLETION_COMMAND": {
-			"name": "Desativar execução de comando em attempt_completion",
-			"description": "Quando ativado, a ferramenta attempt_completion não executará comandos. Este é um recurso experimental para preparar a futura descontinuação da execução de comandos na conclusão da tarefa."
 		},
 		"MARKETPLACE": {
 			"name": "Ativar Marketplace",

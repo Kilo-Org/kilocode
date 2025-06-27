@@ -12,7 +12,11 @@
 		"export": "Xuất lịch sử nhiệm vụ",
 		"delete": "Xóa nhiệm vụ (Shift + Click để bỏ qua xác nhận)",
 		"condenseContext": "Cô đọng ngữ cảnh thông minh",
-		"share": "Chia sẻ nhiệm vụ"
+		"share": "Chia sẻ nhiệm vụ",
+		"shareWithOrganization": "Chia sẻ với tổ chức",
+		"shareWithOrganizationDescription": "Chỉ thành viên tổ chức của bạn mới có thể truy cập",
+		"sharePublicly": "Chia sẻ công khai",
+		"sharePubliclyDescription": "Bất kỳ ai có liên kết đều có thể truy cập"
 	},
 	"history": {
 		"title": "Lịch Sử"
@@ -81,7 +85,7 @@
 	"onboarding": "<strong>Danh sách nhiệm vụ của bạn trong không gian làm việc này trống.</strong> Bắt đầu bằng cách nhập nhiệm vụ bên dưới. Bạn không chắc chắn nên bắt đầu như thế nào? Đọc thêm về những gì Kilo Code có thể làm cho bạn trong <DocsLink>tài liệu</DocsLink>.",
 	"rooTips": {
 		"boomerangTasks": {
-			"title": "Nhiệm vụ Boomerang",
+			"title": "Điều phối Nhiệm vụ",
 			"description": "Chia nhỏ các nhiệm vụ thành các phần nhỏ hơn, dễ quản lý hơn."
 		},
 		"stickyModels": {

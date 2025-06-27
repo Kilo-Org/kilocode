@@ -1,0 +1,107 @@
+{
+	"welcome": {
+		"greeting": "Välkommen till Kilo Code!",
+		"introText1": "Kilo Code är en gratis, öppen källkods AI-kodningsagent.",
+		"introText2": "Den fungerar med de senaste AI-modellerna som Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1, och över 450 andra.",
+		"introText3": "Skapa ett gratis konto och få tokens värda $20 att använda med vilken AI-modell som helst.",
+		"ctaButton": "Skapa gratis konto",
+		"manualModeButton": "Använd din egen API-nyckel",
+		"alreadySignedUp": "Redan registrerad?",
+		"loginText": "Logga in här"
+	},
+	"lowCreditWarning": {
+		"addCredit": "Lägg till kredit",
+		"lowBalance": "Ditt Kilo Code-saldo är lågt"
+	},
+	"notifications": {
+		"toolRequest": "Verktygsbegäran väntar på godkännande",
+		"browserAction": "Webbläsaråtgärd väntar på godkännande",
+		"command": "Kommando väntar på godkännande"
+	},
+	"settings": {
+		"sections": {
+			"mcp": "MCP-servrar"
+		},
+		"provider": {
+			"apiKey": "Kilo Code API-nyckel",
+			"login": "Logga in på Kilo Code",
+			"logout": "Logga ut från Kilo Code"
+		}
+	},
+	"chat": {
+		"condense": {
+			"wantsToCondense": "Kilo Code vill komprimera din konversation",
+			"condenseConversation": "Komprimera konversation"
+		}
+	},
+	"newTaskPreview": {
+		"task": "Uppgift"
+	},
+	"profile": {
+		"title": "Profil",
+		"dashboard": "Instrumentpanel",
+		"logOut": "Logga ut",
+		"currentBalance": "AKTUELLT SALDO",
+		"loading": "Laddar...",
+		"signUp": {
+			"title": "Registrera dig hos Kilo Code",
+			"description": "Att registrera dig hos Kilo Code ger dig gratis krediter för att komma igång. Använd dina krediter för att utforska våra funktioner, prova de senaste och bästa modellerna och uppleva fördelarna med Kilo Code utan några åtaganden.",
+			"termsAndPrivacy": "Genom att fortsätta godkänner du <termsLink>Användarvillkoren</termsLink> och <privacyLink>Integritetspolicyn.</privacyLink>"
+		}
+	},
+	"docs": "Dokumentation",
+	"rules": {
+		"tooltip": "Hantera Kilo Code Rules och Workflows",
+		"ariaLabel": "Kilo Code Rules",
+		"tabs": {
+			"rules": "Regler",
+			"workflows": "Arbetsflöden"
+		},
+		"description": {
+			"rules": "Regler låter dig ge Kilo Code instruktioner som den ska följa i alla lägen och för alla prompts. Det är ett beständigt sätt att inkludera kontext och preferenser för alla konversationer i din arbetsyta eller globalt.",
+			"workflows": "Arbetsflöden är en förberedd mall för en konversation. Arbetsflöden kan låta dig definiera prompts du använder ofta, och kan inkludera en serie steg för att guida Kilo Code genom repetitiva uppgifter, som att distribuera en tjänst eller skicka in en PR. För att anropa ett arbetsflöde, skriv",
+			"workflowsInChat": "i chatten."
+		},
+		"sections": {
+			"globalRules": "Globala regler",
+			"workspaceRules": "Arbetsyteregler",
+			"globalWorkflows": "Globala arbetsflöden",
+			"workspaceWorkflows": "Arbetsytearbetsflöden"
+		},
+		"validation": {
+			"invalidFileExtension": "Endast .md, .txt eller ingen filändelse tillåten"
+		},
+		"placeholders": {
+			"workflowName": "workflow-name (.md, .txt eller ingen ändelse)",
+			"ruleName": "rule-name (.md, .txt eller ingen ändelse)"
+		},
+		"newFile": {
+			"newWorkflowFile": "Ny arbetsflödesfil...",
+			"newRuleFile": "Ny regelfil..."
+		}
+	},
+	"taskTimeline": {
+		"tooltip": {
+			"clickToScroll": "Visa {{messageType}} (#{{messageNumber}})",
+			"messageTypes": {
+				"browser_action_launch": "webbläsarstart",
+				"browser_action_result": "webbläsaråtgärdsresultat",
+				"browser_action": "webbläsaråtgärd",
+				"checkpoint_saved": "kontrollpunkt sparad",
+				"command": "kommandokörning",
+				"command_output": "kommandoutdata",
+				"completion_result": "slutföranderesultat",
+				"condense_context": "komprimera kontext",
+				"error": "felmeddelande",
+				"followup": "uppföljningsfråga",
+				"mcp_server_response": "MCP-serversvar",
+				"reasoning": "AI-resonemang",
+				"text": "AI-svar",
+				"tool": "verktygsanvändning",
+				"unknown": "okänd meddelandetyp",
+				"use_mcp_server": "MCP-serveranvändning",
+				"user": "användarfeedback"
+			}
+		}
+	}
+}

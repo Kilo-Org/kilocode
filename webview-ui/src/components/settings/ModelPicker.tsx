@@ -66,6 +66,9 @@ export const ModelPicker = ({
 	const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
 	const isInitialized = useRef(false)
 	const searchInputRef = useRef<HTMLInputElement>(null)
+	const selectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+	const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
 	const modelIds = useMemo(() => {
 		if (!models) return []
 
@@ -111,8 +114,13 @@ export const ModelPicker = ({
 			setOpen(false)
 			setApiConfigurationField(modelIdKey, modelId)
 
+			// Clear any existing timeout
+			if (selectTimeoutRef.current) {
+				clearTimeout(selectTimeoutRef.current)
+			}
+
 			// Delay to ensure the popover is closed before setting the search value.
-			setTimeout(() => setSearchValue(modelId), 100)
+			selectTimeoutRef.current = setTimeout(() => setSearchValue(modelId), 100)
 		},
 		[modelIdKey, setApiConfigurationField],
 	)
@@ -123,8 +131,13 @@ export const ModelPicker = ({
 
 			// Abandon the current search if the popover is closed.
 			if (!open) {
+				// Clear any existing timeout
+				if (closeTimeoutRef.current) {
+					clearTimeout(closeTimeoutRef.current)
+				}
+
 				// Delay to ensure the popover is closed before setting the search value.
-				setTimeout(() => setSearchValue(selectedModelId || ""), 100)
+				closeTimeoutRef.current = setTimeout(() => setSearchValue(selectedModelId), 100)
 			}
 		},
 		[selectedModelId],
@@ -144,6 +157,18 @@ export const ModelPicker = ({
 
 		isInitialized.current = true
 	}, [modelIds, setApiConfigurationField, modelIdKey, selectedModelId, defaultModelId])
+
+	// Cleanup timeouts on unmount to prevent test flakiness
+	useEffect(() => {
+		return () => {
+			if (selectTimeoutRef.current) {
+				clearTimeout(selectTimeoutRef.current)
+			}
+			if (closeTimeoutRef.current) {
+				clearTimeout(closeTimeoutRef.current)
+			}
+		}
+	}, [])
 
 	return (
 		<>

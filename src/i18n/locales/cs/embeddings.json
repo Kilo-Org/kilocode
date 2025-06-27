@@ -1,0 +1,23 @@
+{
+	"unknownError": "Neznámá chyba",
+	"authenticationFailed": "Vytvoření embeddings selhalo: Autentizace selhala. Zkontroluj prosím svůj API klíč.",
+	"failedWithStatus": "Vytvoření embeddings selhalo po {{attempts}} pokusech: HTTP {{statusCode}} - {{errorMessage}}",
+	"failedWithError": "Vytvoření embeddings selhalo po {{attempts}} pokusech: {{errorMessage}}",
+	"failedMaxAttempts": "Vytvoření embeddings selhalo po {{attempts}} pokusech",
+	"textExceedsTokenLimit": "Text na indexu {{index}} překračuje maximální limit tokenů ({{itemTokens}} > {{maxTokens}}). Přeskakuji.",
+	"rateLimitRetry": "Dosažen limit rychlosti, opakování za {{delayMs}}ms (pokus {{attempt}}/{{maxRetries}})",
+	"ollama": {
+		"couldNotReadErrorBody": "Nelze přečíst tělo chyby",
+		"requestFailed": "Požadavek Ollama API selhal se stavem {{status}} {{statusText}}: {{errorBody}}",
+		"invalidResponseStructure": "Neplatná struktura odpovědi z Ollama API: pole \"embeddings\" nebylo nalezeno nebo není polem.",
+		"embeddingFailed": "Ollama embedding selhalo: {{message}}"
+	},
+	"scanner": {
+		"unknownErrorProcessingFile": "Neznámá chyba při zpracování souboru {{filePath}}",
+		"unknownErrorDeletingPoints": "Neznámá chyba při mazání bodů pro {{filePath}}",
+		"failedToProcessBatchWithError": "Zpracování dávky selhalo po {{maxRetries}} pokusech: {{errorMessage}}"
+	},
+	"vectorStore": {
+		"qdrantConnectionFailed": "Připojení k vektorové databázi Qdrant selhalo. Ujisti se prosím, že Qdrant běží a je přístupný na {{qdrantUrl}}. Chyba: {{errorMessage}}"
+	}
+}

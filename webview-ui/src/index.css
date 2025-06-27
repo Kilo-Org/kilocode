@@ -19,6 +19,7 @@
 @import "./preflight.css" layer(base);
 @import "tailwindcss/utilities.css" layer(utilities);
 @import "./kilocode.css";
+@import "katex/dist/katex.min.css";
 
 @plugin "tailwindcss-animate";
 
@@ -119,6 +120,9 @@
 	--color-vscode-sideBarSectionHeader-foreground: var(--vscode-sideBarSectionHeader-foreground);
 	--color-vscode-sideBarSectionHeader-background: var(--vscode-sideBarSectionHeader-background);
 	--color-vscode-sideBarSectionHeader-border: var(--vscode-sideBarSectionHeader-border);
+
+	--color-vscode-titleBar-activeForeground: var(--vscode-titleBar-activeForeground);
+	--color-vscode-titleBar-inactiveForeground: var(--vscode-titleBar-inactiveForeground);
 
 	--color-vscode-charts-green: var(--vscode-charts-green);
 	--color-vscode-charts-yellow: var(--vscode-charts-yellow);

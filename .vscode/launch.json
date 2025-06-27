@@ -24,6 +24,26 @@
 				"group": "tasks",
 				"order": 1
 			}
+		},
+		{
+			"name": "Run Extension [Isolated]",
+			"type": "extensionHost",
+			"request": "launch",
+			"runtimeExecutable": "${execPath}",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceFolder}/src",
+				"--disable-extensions",
+				"${workspaceFolder}/launch"
+			],
+			"sourceMaps": true,
+			"outFiles": ["${workspaceFolder}/dist/**/*.js"],
+			"preLaunchTask": "${defaultBuildTask}",
+			"env": {
+				"NODE_ENV": "development",
+				"VSCODE_DEBUG_MODE": "true"
+			},
+			"resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
+			"presentation": { "hidden": false, "group": "tasks", "order": 1 }
 		}
 	]
 }

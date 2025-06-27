@@ -312,7 +312,27 @@
 			"medium": "중간",
 			"low": "낮음"
 		},
-		"setReasoningLevel": "추론 노력 활성화"
+		"setReasoningLevel": "추론 노력 활성화",
+		"claudeCode": {
+			"pathLabel": "클로드 코드 경로",
+			"description": "Claude Code CLI의 선택적 경로입니다. 설정하지 않으면 'claude'가 기본값입니다.",
+			"placeholder": "기본값: claude"
+		},
+		"geminiCli": {
+			"description": "이 공급자는 Gemini CLI 도구의 OAuth 인증을 사용하며 API 키가 필요하지 않습니다.",
+			"oauthPath": "OAuth 자격 증명 경로 (선택사항)",
+			"oauthPathDescription": "OAuth 자격 증명 파일 경로입니다. 기본 위치(~/.gemini/oauth_creds.json)를 사용하려면 비워두세요.",
+			"instructions": "아직 인증하지 않았다면",
+			"instructionsContinued": "을 터미널에서 먼저 실행해주세요.",
+			"setupLink": "Gemini CLI 설정 지침",
+			"requirementsTitle": "중요한 요구사항",
+			"requirement1": "먼저 Gemini CLI 도구를 설치해야 합니다",
+			"requirement2": "그다음 터미널에서 gemini를 실행하고 Google로 로그인하세요",
+			"requirement3": "개인 Google 계정에서만 작동합니다 (Google Workspace 계정 불가)",
+			"requirement4": "API 키를 사용하지 않습니다 - 인증은 OAuth를 통해 처리됩니다",
+			"requirement5": "Gemini CLI 도구가 먼저 설치되고 인증되어야 합니다",
+			"freeAccess": "OAuth 인증을 통한 무료 등급 액세스"
+		}
 	},
 	"browser": {
 		"enable": {
@@ -379,7 +399,8 @@
 			"hint": "비어있음 = 기본 프롬프트 사용"
 		},
 		"autoCondenseContext": {
-			"name": "지능적 컨텍스트 압축 자동 트리거"
+			"name": "지능적 컨텍스트 압축 자동 트리거",
+			"description": "활성화되면 Roo는 임계값에 도달했을 때 자동으로 컨텍스트를 압축합니다. 비활성화되면 여전히 수동으로 컨텍스트 압축을 트리거할 수 있습니다."
 		},
 		"openTabs": {
 			"label": "열린 탭 컨텍스트 제한",
@@ -402,6 +423,15 @@
 		"maxConcurrentFileReads": {
 			"label": "동시 파일 읽기 제한",
 			"description": "read_file 도구가 동시에 처리할 수 있는 최대 파일 수입니다. 높은 값은 여러 작은 파일을 읽는 속도를 높일 수 있지만 메모리 사용량이 증가합니다."
+		},
+		"condensingThreshold": {
+			"label": "압축 트리거 임계값",
+			"selectProfile": "프로필 임계값 구성",
+			"defaultProfile": "글로벌 기본값 (모든 프로필)",
+			"defaultDescription": "컨텍스트가 이 비율에 도달하면 사용자 정의 설정이 없는 한 모든 프로필에 대해 자동으로 압축됩니다",
+			"profileDescription": "이 프로필만을 위한 사용자 정의 임계값 (글로벌 기본값 재정의)",
+			"inheritDescription": "이 프로필은 글로벌 기본 임계값을 상속합니다 ({{threshold}}%)",
+			"usesGlobal": "(글로벌 {{threshold}}% 사용)"
 		}
 	},
 	"terminal": {
@@ -513,10 +543,6 @@
 		"MARKETPLACE": {
 			"name": "Marketplace 활성화",
 			"description": "활성화하면 Marketplace에서 MCP와 사용자 정의 모드를 설치할 수 있습니다."
-		},
-		"DISABLE_COMPLETION_COMMAND": {
-			"name": "attempt_completion에서 명령 실행 비활성화",
-			"description": "활성화하면 attempt_completion 도구가 명령을 실행하지 않습니다. 이는 작업 완료 시 명령 실행을 더 이상 사용하지 않도록 준비하기 위한 실험적 기능입니다."
 		},
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "동시 파일 편집 활성화",

@@ -1,9 +1,13 @@
 {
 	"welcome": {
-		"greeting": "What can Kilo Code do for you?",
-		"introText": "I've been trained on the fastest AI models available and I am ready to generate code for you at warp speed!",
-		"ctaButton": "Try Kilo Code for free",
-		"manualModeButton": "Use your own API key"
+		"greeting": "Welcome to Kilo Code!",
+		"introText1": "Kilo Code is a free, open source AI coding agent.",
+		"introText2": "It works with the latest AI models like Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1, and 450+ more.",
+		"introText3": "Create a free account and get $20 worth of tokens to use across any AI model.",
+		"ctaButton": "Create a free account",
+		"manualModeButton": "Use your own API key",
+		"alreadySignedUp": "Already signed up?",
+		"loginText": "Log in here"
 	},
 	"lowCreditWarning": {
 		"addCredit": "Add Credit",
@@ -94,6 +98,7 @@
 				"reasoning": "AI reasoning",
 				"text": "AI response",
 				"tool": "tool usage",
+				"user": "user feedback",
 				"unknown": "unknown message type",
 				"use_mcp_server": "MCP server usage"
 			}

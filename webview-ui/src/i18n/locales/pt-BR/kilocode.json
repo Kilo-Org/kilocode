@@ -1,9 +1,13 @@
 {
 	"welcome": {
-		"greeting": "O que o Kilo Code pode fazer por você?",
-		"introText": "Fui treinado nos modelos de IA mais rápidos disponíveis e estou pronto para gerar código para você em velocidade máxima!",
-		"ctaButton": "Experimente o Kilo Code gratuitamente",
-		"manualModeButton": "Use sua própria chave de API"
+		"greeting": "Bem-vindo ao Kilo Code!",
+		"introText1": "Kilo Code é um agente de codificação AI gratuito e de código aberto.",
+		"introText2": "Funciona com os mais recentes modelos de IA como Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1, e mais de 450 outros.",
+		"introText3": "Crie uma conta gratuita e receba $20 em tokens para usar com qualquer modelo de IA.",
+		"ctaButton": "Criar conta gratuita",
+		"manualModeButton": "Use sua própria chave de API",
+		"alreadySignedUp": "Já se cadastrou?",
+		"loginText": "Faça login aqui"
 	},
 	"lowCreditWarning": {
 		"addCredit": "Adicionar crédito",
@@ -95,7 +99,8 @@
 				"text": "Resposta da IA",
 				"tool": "uso de ferramentas",
 				"unknown": "tipo de mensagem desconhecido",
-				"use_mcp_server": "Uso do servidor MCP"
+				"use_mcp_server": "Uso do servidor MCP",
+				"user": "feedback do usuário"
 			}
 		}
 	}

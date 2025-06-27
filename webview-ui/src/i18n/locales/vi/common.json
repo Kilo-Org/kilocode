@@ -25,6 +25,17 @@
 	"mermaid": {
 		"loading": "Đang tạo biểu đồ mermaid...",
 		"render_error": "Không thể hiển thị biểu đồ",
+		"fixing_syntax": "Đang sửa cú pháp Mermaid...",
+		"fix_syntax_button": "Sửa cú pháp bằng AI",
+		"original_code": "Mã gốc:",
+		"errors": {
+			"unknown_syntax": "Lỗi cú pháp không xác định",
+			"fix_timeout": "Yêu cầu sửa LLM đã hết thời gian",
+			"fix_failed": "Sửa LLM thất bại",
+			"fix_attempts": "Không thể sửa cú pháp sau {{attempts}} lần thử. Lỗi cuối cùng: {{error}}",
+			"no_fix_provided": "LLM không cung cấp được bản sửa",
+			"fix_request_failed": "Yêu cầu sửa thất bại"
+		},
 		"buttons": {
 			"zoom": "Thu phóng",
 			"zoomIn": "Phóng to",

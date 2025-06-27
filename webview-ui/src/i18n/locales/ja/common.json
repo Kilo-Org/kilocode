@@ -25,6 +25,17 @@
 	"mermaid": {
 		"loading": "Mermaidダイアグラムを生成中...",
 		"render_error": "ダイアグラムをレンダリングできません",
+		"fixing_syntax": "Mermaid構文を修正中...",
+		"fix_syntax_button": "AIで構文を修正",
+		"original_code": "元のコード：",
+		"errors": {
+			"unknown_syntax": "不明な構文エラー",
+			"fix_timeout": "AI修正リクエストがタイムアウトしました",
+			"fix_failed": "AI修正に失敗しました",
+			"fix_attempts": "{{attempts}}回の試行後に構文の修正に失敗しました。最後のエラー：{{error}}",
+			"no_fix_provided": "AIが修正を提供できませんでした",
+			"fix_request_failed": "修正リクエストに失敗しました"
+		},
 		"buttons": {
 			"zoom": "ズーム",
 			"zoomIn": "拡大",

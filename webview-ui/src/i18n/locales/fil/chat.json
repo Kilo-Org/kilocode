@@ -1,0 +1,309 @@
+{
+	"greeting": "Ano ang magagawa ng Kilo Code para sa iyo?",
+	"task": {
+		"title": "Gawain",
+		"seeMore": "Tingnan pa",
+		"seeLess": "Mas kaunti",
+		"tokens": "Mga Token:",
+		"cache": "Cache:",
+		"apiCost": "Gastos sa API:",
+		"condenseContext": "Matalinong pagpapaikli ng konteksto",
+		"contextWindow": "Haba ng Konteksto:",
+		"closeAndStart": "Isara ang gawain at magsimula ng bago",
+		"export": "I-export ang kasaysayan ng gawain",
+		"share": "Ibahagi ang gawain",
+		"delete": "Tanggalin ang Gawain (Shift + Click para laktawan ang kumpirmasyon)",
+		"shareWithOrganization": "Ibahagi sa Organisasyon",
+		"shareWithOrganizationDescription": "Tanging mga miyembro ng iyong organisasyon ang may access",
+		"sharePublicly": "Ibahagi sa Publiko",
+		"sharePubliclyDescription": "Sinuman na may link ay may access"
+	},
+	"history": {
+		"title": "Kasaysayan"
+	},
+	"unpin": "Alisin ang pin",
+	"pin": "I-pin",
+	"retry": {
+		"title": "Subukan Muli",
+		"tooltip": "Subukan muli ang operasyon"
+	},
+	"startNewTask": {
+		"title": "Magsimula ng Bagong Gawain",
+		"tooltip": "Magsimula ng bagong gawain"
+	},
+	"reportBug": {
+		"title": "Mag-ulat ng Bug"
+	},
+	"proceedAnyways": {
+		"title": "Magpatuloy Pa Rin",
+		"tooltip": "Magpatuloy habang tumatakbo ang command"
+	},
+	"save": {
+		"title": "I-save",
+		"tooltip": "I-save ang mga pagbabago sa file"
+	},
+	"tokenProgress": {
+		"availableSpace": "Available na espasyo: {{amount}} tokens",
+		"tokensUsed": "Mga token na ginamit: {{used}} ng {{total}}",
+		"reservedForResponse": "Nakalaan para sa tugon ng modelo: {{amount}} tokens"
+	},
+	"reject": {
+		"title": "Tanggihan",
+		"tooltip": "Tanggihan ang aksyon na ito"
+	},
+	"completeSubtaskAndReturn": "Kumpletuhin ang Subtask at Bumalik",
+	"approve": {
+		"title": "Aprubahan",
+		"tooltip": "Aprubahan ang aksyon na ito"
+	},
+	"read-batch": {
+		"approve": {
+			"title": "Aprubahan Lahat"
+		},
+		"deny": {
+			"title": "Tanggihan Lahat"
+		}
+	},
+	"runCommand": {
+		"title": "Patakbuhin ang Command",
+		"tooltip": "I-execute ang command na ito"
+	},
+	"proceedWhileRunning": {
+		"title": "Magpatuloy Habang Tumatakbo",
+		"tooltip": "Magpatuloy sa kabila ng mga babala"
+	},
+	"killCommand": {
+		"title": "Patayin ang Command",
+		"tooltip": "Patayin ang kasalukuyang command"
+	},
+	"resumeTask": {
+		"title": "Ipagpatuloy ang Gawain",
+		"tooltip": "Ipagpatuloy ang kasalukuyang gawain"
+	},
+	"terminate": {
+		"title": "Wakasan",
+		"tooltip": "Wakasan ang kasalukuyang gawain"
+	},
+	"cancel": {
+		"title": "Kanselahin",
+		"tooltip": "Kanselahin ang kasalukuyang operasyon"
+	},
+	"scrollToBottom": "Mag-scroll sa ibaba ng chat",
+	"about": "Gumawa, mag-refactor, at mag-debug ng code gamit ang tulong ng AI. Tingnan ang aming <DocsLink>dokumentasyon</DocsLink> para matuto pa.",
+	"onboarding": "Walang laman ang iyong listahan ng gawain sa workspace na ito.",
+	"rooTips": {
+		"boomerangTasks": {
+			"title": "Task Orchestration",
+			"description": "Hatiin ang mga gawain sa mas maliliit at madaling pamahalaan na bahagi"
+		},
+		"stickyModels": {
+			"title": "Sticky Models",
+			"description": "Naaalala ng bawat mode ang huling ginamit mong modelo"
+		},
+		"tools": {
+			"title": "Mga Tool",
+			"description": "Payagan ang AI na malutas ang mga problema sa pamamagitan ng pag-browse sa web, pagpapatakbo ng mga command, at iba pa"
+		},
+		"customizableModes": {
+			"title": "Mga Customizable na Mode",
+			"description": "Mga espesyal na persona na may sariling mga gawi at nakatalagang modelo"
+		}
+	},
+	"selectMode": "Pumili ng mode para sa pakikipag-ugnayan",
+	"selectApiConfig": "Pumili ng API configuration",
+	"enhancePrompt": "Pahusayin ang prompt gamit ang karagdagang konteksto",
+	"enhancePromptDescription": "Ang button na 'Enhance Prompt' ay tumutulong na mapahusay ang iyong prompt sa pamamagitan ng pagbibigay ng karagdagang konteksto, paglilinaw, o muling pagpapahayag. Subukang mag-type ng prompt dito at i-click muli ang button para makita kung paano ito gumagana.",
+	"addImages": "Magdagdag ng mga larawan sa mensahe",
+	"sendMessage": "Ipadala ang mensahe",
+	"typeMessage": "Mag-type ng mensahe...",
+	"typeTask": "Bumuo, maghanap, magtanong ng kahit ano",
+	"addContext": "@ para magdagdag ng konteksto, / para magpalit ng mode",
+	"dragFiles": "hawakan ang shift para mag-drag ng mga file",
+	"dragFilesImages": "hawakan ang shift para mag-drag ng mga file/larawan",
+	"errorReadingFile": "Error sa pagbasa ng file:",
+	"noValidImages": "Walang valid na larawan na naproseso",
+	"separator": "Separator",
+	"edit": "I-edit...",
+	"forNextMode": "para sa susunod na mode",
+	"apiRequest": {
+		"title": "API Request",
+		"failed": "Nabigo ang API Request",
+		"streaming": "API Request...",
+		"cancelled": "Nakansela ang API Request",
+		"streamingFailed": "Nabigo ang API Streaming"
+	},
+	"checkpoint": {
+		"initial": "Paunang Checkpoint",
+		"regular": "Checkpoint",
+		"initializingWarning": "Nag-i-initialize pa rin ang checkpoint... Kung masyadong matagal ito, maaari mong i-disable ang mga checkpoint sa <settingsLink>settings</settingsLink> at i-restart ang iyong gawain.",
+		"menu": {
+			"viewDiff": "Tingnan ang Diff",
+			"restore": "Ibalik ang Checkpoint",
+			"restoreFiles": "Ibalik ang mga File",
+			"restoreFilesDescription": "Ibinabalik ang mga file ng iyong proyekto sa snapshot na kinuha sa puntong ito.",
+			"restoreFilesAndTask": "Ibalik ang mga File at Gawain",
+			"confirm": "Kumpirmahin",
+			"cancel": "Kanselahin",
+			"cannotUndo": "Hindi maaaring i-undo ang aksyon na ito.",
+			"restoreFilesAndTaskDescription": "Ibinabalik ang mga file ng iyong proyekto sa snapshot na kinuha sa puntong ito at tinatanggal ang lahat ng mensahe pagkatapos ng puntong ito."
+		},
+		"current": "Kasalukuyan"
+	},
+	"contextCondense": {
+		"title": "Pinaikli ang Konteksto",
+		"condensing": "Pinapaikli ang konteksto...",
+		"errorHeader": "Nabigo ang pagpapaikli ng konteksto",
+		"tokens": "tokens"
+	},
+	"instructions": {
+		"wantsToFetch": "Nais ng Kilo Code na kumuha ng detalyadong mga tagubilin para tumulong sa kasalukuyang gawain"
+	},
+	"fileOperations": {
+		"wantsToRead": "Nais basahin ng Kilo Code ang file na ito:",
+		"wantsToReadMultiple": "Nais basahin ng Kilo Code ang maraming file:",
+		"wantsToReadAndXMore": "Nais basahin ng Kilo Code ang file na ito at {{count}} pa:",
+		"wantsToReadOutsideWorkspace": "Nais basahin ng Kilo Code ang file na ito sa labas ng workspace:",
+		"didRead": "Nabasa ng Kilo Code ang file na ito:",
+		"wantsToEdit": "Nais i-edit ng Kilo Code ang file na ito:",
+		"wantsToEditOutsideWorkspace": "Nais i-edit ng Kilo Code ang file na ito sa labas ng workspace:",
+		"wantsToEditProtected": "Nais i-edit ng Kilo Code ang protektadong configuration file:",
+		"wantsToApplyBatchChanges": "Nais maglapat ng Kilo Code ng mga pagbabago sa maraming file:",
+		"wantsToCreate": "Nais gumawa ng Kilo Code ng bagong file:",
+		"wantsToSearchReplace": "Nais maghanap at magpalit ng Kilo Code sa file na ito:",
+		"didSearchReplace": "Nagsagawa ng paghahanap at pagpapalit ang Kilo Code sa file na ito:",
+		"wantsToInsert": "Nais magpasok ng Kilo Code ng nilalaman sa file na ito:",
+		"wantsToInsertWithLineNumber": "Nais magpasok ng Kilo Code ng nilalaman sa file na ito sa linya {{lineNumber}}:",
+		"wantsToInsertAtEnd": "Nais magdagdag ng Kilo Code ng nilalaman sa dulo ng file na ito:"
+	},
+	"directoryOperations": {
+		"wantsToViewTopLevel": "Nais tingnan ng Kilo Code ang mga top level na file sa directory na ito:",
+		"didViewTopLevel": "Tiningnan ng Kilo Code ang mga top level na file sa directory na ito:",
+		"wantsToViewTopLevelOutsideWorkspace": "Nais tingnan ng Kilo Code ang mga top level na file sa directory na ito (sa labas ng workspace):",
+		"didViewTopLevelOutsideWorkspace": "Tiningnan ng Kilo Code ang mga top level na file sa directory na ito (sa labas ng workspace):",
+		"wantsToViewRecursive": "Nais tingnan ng Kilo Code nang recursive ang lahat ng file sa directory na ito:",
+		"didViewRecursive": "Tiningnan ng Kilo Code nang recursive ang lahat ng file sa directory na ito:",
+		"wantsToViewRecursiveOutsideWorkspace": "Nais tingnan ng Kilo Code nang recursive ang lahat ng file sa directory na ito (sa labas ng workspace):",
+		"didViewRecursiveOutsideWorkspace": "Tiningnan ng Kilo Code nang recursive ang lahat ng file sa directory na ito (sa labas ng workspace):",
+		"wantsToViewDefinitions": "Nais tingnan ng Kilo Code ang mga pangalan ng source code definition na ginagamit sa directory na ito:",
+		"didViewDefinitions": "Tiningnan ng Kilo Code ang mga pangalan ng source code definition na ginagamit sa directory na ito:",
+		"wantsToViewDefinitionsOutsideWorkspace": "Nais tingnan ng Kilo Code ang mga pangalan ng source code definition na ginagamit sa directory na ito (sa labas ng workspace):",
+		"didViewDefinitionsOutsideWorkspace": "Tiningnan ng Kilo Code ang mga pangalan ng source code definition na ginagamit sa directory na ito (sa labas ng workspace):",
+		"wantsToSearch": "Nais maghanap ng Kilo Code sa directory na ito para sa <code>{{regex}}</code>:",
+		"didSearch": "Naghanap ang Kilo Code sa directory na ito para sa <code>{{regex}}</code>:",
+		"wantsToSearchOutsideWorkspace": "Nais maghanap ng Kilo Code sa directory na ito (sa labas ng workspace) para sa <code>{{regex}}</code>:",
+		"didSearchOutsideWorkspace": "Naghanap ang Kilo Code sa directory na ito (sa labas ng workspace) para sa <code>{{regex}}</code>:"
+	},
+	"codebaseSearch": {
+		"wantsToSearch": "Nais maghanap ng Kilo Code sa codebase para sa <code>{{query}}</code>:",
+		"wantsToSearchWithPath": "Nais maghanap ng Kilo Code sa codebase para sa <code>{{query}}</code> sa <code>{{path}}</code>:",
+		"didSearch": "Nakahanap ng {{count}} resulta para sa <code>{{query}}</code>:"
+	},
+	"commandOutput": "Output ng Command",
+	"response": "Tugon",
+	"arguments": "Mga Argumento",
+	"mcp": {
+		"wantsToUseTool": "Nais gumamit ng Kilo Code ng tool sa {{serverName}} MCP server:",
+		"wantsToAccessResource": "Nais mag-access ng Kilo Code ng resource sa {{serverName}} MCP server:"
+	},
+	"modes": {
+		"wantsToSwitch": "Nais magpalit ng Kilo Code sa {{mode}} mode",
+		"wantsToSwitchWithReason": "Nais magpalit ng Kilo Code sa {{mode}} mode dahil: {{reason}}",
+		"didSwitch": "Lumipat ang Kilo Code sa {{mode}} mode",
+		"didSwitchWithReason": "Lumipat ang Kilo Code sa {{mode}} mode dahil: {{reason}}"
+	},
+	"subtasks": {
+		"wantsToCreate": "Nais gumawa ng Kilo Code ng bagong subtask sa {{mode}} mode:",
+		"wantsToFinish": "Nais tapusin ng Kilo Code ang subtask na ito",
+		"newTaskContent": "Mga Tagubilin sa Subtask",
+		"completionContent": "Nakumpleto ang Subtask",
+		"resultContent": "Mga Resulta ng Subtask",
+		"defaultResult": "Mangyaring magpatuloy sa susunod na gawain.",
+		"completionInstructions": "Nakumpleto ang subtask! Maaari mong suriin ang mga resulta at magmungkahi ng anumang pagwawasto o susunod na hakbang. Kung mukhang maayos ang lahat, kumpirmahin para ibalik ang resulta sa parent task."
+	},
+	"questions": {
+		"hasQuestion": "May tanong ang Kilo Code:"
+	},
+	"taskCompleted": "Nakumpleto ang Gawain",
+	"error": "Error",
+	"diffError": {
+		"title": "Hindi Matagumpay ang Pag-edit"
+	},
+	"troubleMessage": "Nagkakaproblema ang Kilo Code...",
+	"powershell": {
+		"issues": "Mukhang may problema ka sa Windows PowerShell, pakitingnan ito"
+	},
+	"autoApprove": {
+		"title": "Auto-approve:",
+		"none": "Wala",
+		"description": "Ang auto-approve ay nagpapahintulot sa Kilo Code na magsagawa ng mga aksyon nang hindi humihingi ng pahintulot. I-enable lamang para sa mga aksyon na lubos mong pinagkakatiwalaan. Mas detalyadong configuration ay available sa <settingsLink>Settings</settingsLink>."
+	},
+	"announcement": {
+		"title": "🎉 Inilabas ang Roo Code {{version}}",
+		"description": "Ang Roo Code {{version}} ay may mga pangunahing bagong feature at pagpapahusay batay sa iyong feedback.",
+		"whatsNew": "Ano ang Bago",
+		"feature1": "<bold>Paglulunsad ng Roo Marketplace</bold>: Live na ngayon ang marketplace! Tuklasin at mag-install ng mga mode at MCP nang mas madali kaysa dati.",
+		"feature2": "<bold>Mga Modelo ng Gemini 2.5</bold>: Idinagdag ang suporta para sa mga bagong Gemini 2.5 Pro, Flash, at Flash Lite na modelo.",
+		"feature3": "<bold>Suporta sa Excel File at Iba Pa</bold>: Idinagdag ang suporta sa Excel (.xlsx) file at maraming bug fix at pagpapahusay!",
+		"hideButton": "Itago ang anunsyo",
+		"detailsDiscussLinks": "Kumuha ng mas maraming detalye at mag-usap sa <discordLink>Discord</discordLink> at <redditLink>Reddit</redditLink> 🚀"
+	},
+	"reasoning": {
+		"thinking": "Nag-iisip",
+		"seconds": "{{count}}s"
+	},
+	"followUpSuggest": {
+		"copyToInput": "Kopyahin sa input (katulad ng shift + click)"
+	},
+	"browser": {
+		"rooWantsToUse": "Nais gamitin ng Kilo Code ang browser:",
+		"consoleLogs": "Mga Console Log",
+		"noNewLogs": "(Walang bagong log)",
+		"screenshot": "Screenshot ng browser",
+		"cursor": "cursor",
+		"navigation": {
+			"step": "Hakbang {{current}} ng {{total}}",
+			"previous": "Nakaraan",
+			"next": "Susunod"
+		},
+		"sessionStarted": "Nagsimula ang Browser Session",
+		"actions": {
+			"title": "Browse Action: ",
+			"launch": "I-launch ang browser sa {{url}}",
+			"click": "I-click ({{coordinate}})",
+			"type": "I-type ang \"{{text}}\"",
+			"scrollDown": "Mag-scroll pababa",
+			"scrollUp": "Mag-scroll pataas",
+			"close": "Isara ang browser"
+		}
+	},
+	"codeblock": {
+		"tooltips": {
+			"expand": "Palawakin ang code block",
+			"collapse": "I-collapse ang code block",
+			"enable_wrap": "I-enable ang word wrap",
+			"disable_wrap": "I-disable ang word wrap",
+			"copy_code": "Kopyahin ang code"
+		}
+	},
+	"systemPromptWarning": "BABALA: Aktibo ang custom system prompt override. Maaari itong lubhang makasira sa functionality at magdulot ng hindi inaasahang gawi.",
+	"profileViolationWarning": "Ang kasalukuyang profile ay lumalabag sa mga setting ng iyong organisasyon",
+	"shellIntegration": {
+		"title": "Babala sa Command Execution",
+		"description": "Ang iyong command ay pinapatakbo nang walang VSCode terminal shell integration. Para alisin ang babalang ito maaari mong i-disable ang shell integration sa <strong>Terminal</strong> na seksyon ng <settingsLink>Kilo Code settings</settingsLink> o i-troubleshoot ang VSCode terminal integration gamit ang link sa ibaba.",
+		"troubleshooting": "I-click dito para sa shell integration documentation."
+	},
+	"ask": {
+		"autoApprovedRequestLimitReached": {
+			"title": "Naabot ang Limitasyon ng Auto-Approved Request",
+			"description": "Naabot ng Kilo Code ang auto-approved na limitasyon ng {{count}} API request. Gusto mo bang i-reset ang bilang at magpatuloy sa gawain?",
+			"button": "I-reset at Magpatuloy"
+		}
+	},
+	"indexingStatus": {
+		"ready": "Handa na ang index",
+		"indexing": "Nag-i-index {{percentage}}%",
+		"indexed": "Na-index",
+		"error": "Error sa index",
+		"status": "Status ng index"
+	}
+}

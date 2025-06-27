@@ -13,7 +13,7 @@ try {
 }
 
 import { CloudService } from "@roo-code/cloud"
-// import { TelemetryService, PostHogTelemetryClient } from "@roo-code/telemetry" kilocode_change
+import { TelemetryService, PostHogTelemetryClient } from "@roo-code/telemetry"
 
 import "./utils/path" // Necessary to have access to String.prototype.toPosix.
 import { createOutputChannelLogger, createDualLogger } from "./utils/outputChannelLogger"
@@ -65,10 +65,10 @@ export async function activate(context: vscode.ExtensionContext) {
 	await migrateSettings(context, outputChannel)
 
 	// Initialize telemetry service.
-	// const telemetryService = TelemetryService.createInstance()
+	const telemetryService = TelemetryService.createInstance()
 
 	try {
-		// telemetryService.register(new PostHogTelemetryClient())
+		telemetryService.register(new PostHogTelemetryClient())
 	} catch (error) {
 		console.warn("Failed to register PostHogTelemetryClient:", error)
 	}
@@ -111,7 +111,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	}
 
 	const provider = new ClineProvider(context, outputChannel, "sidebar", contextProxy, codeIndexManager, mdmService)
-	// TelemetryService.instance.setProvider(provider) // kilocode_change no telemetry
+	TelemetryService.instance.setProvider(provider) // kilocode_change no telemetry
 
 	if (codeIndexManager) {
 		context.subscriptions.push(codeIndexManager)

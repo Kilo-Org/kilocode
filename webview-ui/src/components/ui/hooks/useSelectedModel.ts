@@ -10,6 +10,8 @@ import {
 	deepSeekModels,
 	geminiDefaultModelId,
 	geminiModels,
+	geminiCliDefaultModelId,
+	geminiCliModels,
 	mistralDefaultModelId,
 	mistralModels,
 	openAiModelInfoSaneDefaults,
@@ -172,6 +174,11 @@ function getSelectedModel({
 			const info = geminiModels[id as keyof typeof geminiModels]
 			return { id, info }
 		}
+		case "gemini-cli": {
+			const id = apiConfiguration.apiModelId ?? geminiCliDefaultModelId
+			const info = geminiCliModels[id as keyof typeof geminiCliModels]
+			return { id, info }
+		}
 		case "deepseek": {
 			const id = apiConfiguration.apiModelId ?? deepSeekDefaultModelId
 			const info = deepSeekModels[id as keyof typeof deepSeekModels]
@@ -194,13 +201,19 @@ function getSelectedModel({
 		}
 		case "ollama": {
 			const id = apiConfiguration.ollamaModelId ?? ""
-			const info = openAiModelInfoSaneDefaults
-			return { id, info }
+			const info = routerModels.ollama && routerModels.ollama[id]
+			return {
+				id,
+				info: info || undefined,
+			}
 		}
 		case "lmstudio": {
 			const id = apiConfiguration.lmStudioModelId ?? ""
-			const info = openAiModelInfoSaneDefaults
-			return { id, info }
+			const info = routerModels.lmstudio && routerModels.lmstudio[id]
+			return {
+				id,
+				info: info || undefined,
+			}
 		}
 		case "vscode-lm": {
 			const id = apiConfiguration?.vsCodeLmModelSelector
@@ -212,16 +225,8 @@ function getSelectedModel({
 		}
 		// kilocode_change begin
 		case "kilocode": {
-			const displayModelId = {
-				gemini25: "Gemini 2.5 Pro",
-				gemini25flashpreview: "Gemini 2.5 Flash Preview",
-				claude37: "Claude 3.7 Sonnet",
-				gpt41: "GPT 4.1",
-			}
-			const id = displayModelId[(apiConfiguration?.kilocodeModel as keyof typeof displayModelId) ?? "claude37"]
-
 			// Use the fetched models from routerModels
-			if (routerModels?.["kilocode-openrouter"] && apiConfiguration?.kilocodeModel) {
+			if (routerModels["kilocode-openrouter"] && apiConfiguration.kilocodeModel) {
 				// Find the model in the fetched models
 				const modelEntries = Object.entries(routerModels["kilocode-openrouter"])
 
@@ -238,7 +243,7 @@ function getSelectedModel({
 			}
 
 			// Fallback to anthropic model if no match found
-			return { id, info: anthropicModels["claude-3-7-sonnet-20250219"] }
+			return { id: "Claude 3.7 Sonnet", info: anthropicModels["claude-3-7-sonnet-20250219"] }
 		}
 		// kilocode_change end
 

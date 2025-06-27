@@ -206,7 +206,7 @@ export class TelemetryService {
 	 * @returns Whether telemetry is enabled
 	 */
 	public isTelemetryEnabled(): boolean {
-		return false // kilocode_change
+		return this.isReady && this.clients.some((client) => client.isTelemetryEnabled())
 	}
 
 	public async shutdown(): Promise<void> {

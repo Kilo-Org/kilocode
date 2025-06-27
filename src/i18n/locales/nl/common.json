@@ -67,7 +67,17 @@
 		"condense_handler_invalid": "API-handler voor het comprimeren van context is ongeldig",
 		"condense_context_grew": "Contextgrootte nam toe tijdens comprimeren; deze poging wordt overgeslagen",
 		"share_task_failed": "Delen van taak mislukt",
-		"share_no_active_task": "Geen actieve taak om te delen"
+		"share_no_active_task": "Geen actieve taak om te delen",
+		"share_auth_required": "Authenticatie vereist. Log in om taken te delen.",
+		"share_not_enabled": "Taken delen is niet ingeschakeld voor deze organisatie.",
+		"share_task_not_found": "Taak niet gevonden of toegang geweigerd.",
+		"claudeCode": {
+			"processExited": "Claude Code proces beëindigd met code {{exitCode}}.",
+			"errorOutput": "Foutuitvoer: {{output}}",
+			"processExitedWithError": "Claude Code proces beëindigd met code {{exitCode}}. Foutuitvoer: {{output}}",
+			"stoppedWithReason": "Claude Code gestopt om reden: {{reason}}",
+			"apiKeyModelPlanMismatch": "API-sleutels en abonnementsplannen staan verschillende modellen toe. Zorg ervoor dat het geselecteerde model is opgenomen in je plan."
+		}
 	},
 	"warnings": {
 		"no_terminal_content": "Geen terminalinhoud geselecteerd",
@@ -82,7 +92,9 @@
 		"settings_imported": "Instellingen succesvol geïmporteerd.",
 		"share_link_copied": "Deellink gekopieerd naar klembord",
 		"image_copied_to_clipboard": "Afbeelding data-URI gekopieerd naar klembord",
-		"image_saved": "Afbeelding opgeslagen naar {{path}}"
+		"image_saved": "Afbeelding opgeslagen naar {{path}}",
+		"organization_share_link_copied": "Organisatie deel-link gekopieerd naar klembord!",
+		"public_share_link_copied": "Openbare deel-link gekopieerd naar klembord!"
 	},
 	"answers": {
 		"yes": "Ja",
@@ -104,6 +116,17 @@
 	"input": {
 		"task_prompt": "Wat moet Kilo Code doen?",
 		"task_placeholder": "Typ hier je taak"
+	},
+	"settings": {
+		"providers": {
+			"groqApiKey": "Groq API-sleutel",
+			"getGroqApiKey": "Groq API-sleutel ophalen",
+			"claudeCode": {
+				"pathLabel": "Claude Code Pad",
+				"description": "Optioneel pad naar je Claude Code CLI. Standaard 'claude' indien niet ingesteld.",
+				"placeholder": "Standaard: claude"
+			}
+		}
 	},
 	"mdm": {
 		"errors": {

@@ -1,9 +1,13 @@
 {
 	"welcome": {
-		"greeting": "Què pot fer Kilo Code per tu?",
-		"introText": "He estat entrenat amb els models d'IA més ràpids disponibles i estic preparat per generar codi per a tu a velocitat de vertigen!",
-		"ctaButton": "Prova Kilo Code gratuïtament",
-		"manualModeButton": "Utilitza la teva pròpia clau API"
+		"greeting": "Benvingut a Kilo Code!",
+		"introText1": "Kilo Code és un agent de codificació d'IA gratuït i de codi obert.",
+		"introText2": "Funciona amb els models d'IA més recents com Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1, i més de 450 més.",
+		"introText3": "Crea un compte gratuït i obtén $20 en tokens per utilitzar en qualsevol model d'IA.",
+		"ctaButton": "Crear un compte gratuït",
+		"manualModeButton": "Utilitza la teva pròpia clau API",
+		"alreadySignedUp": "Ja t'has registrat?",
+		"loginText": "Inicia sessió aquí"
 	},
 	"lowCreditWarning": {
 		"addCredit": "Afegir crèdit",
@@ -94,7 +98,8 @@
 				"reasoning": "Raonament d'IA",
 				"unknown": "tipus de missatge desconegut",
 				"tool": "ús de l'eina",
-				"use_mcp_server": "Ús del servidor MCP"
+				"use_mcp_server": "Ús del servidor MCP",
+				"user": "comentaris dels usuaris"
 			},
 			"clickToScroll": "Veure {{messageType}} (núm. {{messageNumber}})"
 		}

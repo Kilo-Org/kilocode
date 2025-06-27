@@ -312,7 +312,27 @@
 			"medium": "Moyen",
 			"low": "Faible"
 		},
-		"setReasoningLevel": "Activer l'effort de raisonnement"
+		"setReasoningLevel": "Activer l'effort de raisonnement",
+		"claudeCode": {
+			"pathLabel": "Chemin du code Claude",
+			"description": "Chemin facultatif vers votre CLI Claude Code. La valeur par défaut est 'claude' si non défini.",
+			"placeholder": "Défaut : claude"
+		},
+		"geminiCli": {
+			"description": "Ce fournisseur utilise l'authentification OAuth de l'outil Gemini CLI et ne nécessite pas de clés API.",
+			"oauthPath": "Chemin des identifiants OAuth (optionnel)",
+			"oauthPathDescription": "Chemin vers le fichier d'identifiants OAuth. Laissez vide pour utiliser l'emplacement par défaut (~/.gemini/oauth_creds.json).",
+			"instructions": "Si tu ne t'es pas encore authentifié, veuillez exécuter",
+			"instructionsContinued": "dans ton terminal d'abord.",
+			"setupLink": "Instructions de configuration de Gemini CLI",
+			"requirementsTitle": "Exigences importantes",
+			"requirement1": "D'abord, tu dois installer l'outil Gemini CLI",
+			"requirement2": "Ensuite, exécute gemini dans ton terminal et assure-toi de te connecter avec Google",
+			"requirement3": "Fonctionne uniquement avec les comptes Google personnels (pas les comptes Google Workspace)",
+			"requirement4": "N'utilise pas de clés API - l'authentification est gérée via OAuth",
+			"requirement5": "Nécessite que l'outil Gemini CLI soit installé et authentifié d'abord",
+			"freeAccess": "Accès de niveau gratuit via l'authentification OAuth"
+		}
 	},
 	"browser": {
 		"enable": {
@@ -379,7 +399,8 @@
 			"hint": "Vide = utiliser le prompt par défaut"
 		},
 		"autoCondenseContext": {
-			"name": "Déclencher automatiquement la condensation intelligente du contexte"
+			"name": "Déclencher automatiquement la condensation intelligente du contexte",
+			"description": "Lorsque cette option est activée, Roo condensera automatiquement le contexte lorsque le seuil est atteint. Lorsqu'elle est désactivée, vous pouvez toujours déclencher manuellement la condensation du contexte."
 		},
 		"openTabs": {
 			"label": "Limite de contexte des onglets ouverts",
@@ -402,6 +423,15 @@
 		"maxConcurrentFileReads": {
 			"label": "Limite de lectures simultanées",
 			"description": "Nombre maximum de fichiers que l'outil 'read_file' peut traiter simultanément. Des valeurs plus élevées peuvent accélérer la lecture de plusieurs petits fichiers mais augmentent l'utilisation de la mémoire."
+		},
+		"condensingThreshold": {
+			"label": "Seuil de condensation du contexte",
+			"selectProfile": "Configurer le seuil pour le profil",
+			"defaultProfile": "Par défaut global (tous les profils)",
+			"defaultDescription": "Lorsque le contexte atteint ce pourcentage, il sera automatiquement condensé pour tous les profils sauf s'ils ont des paramètres personnalisés",
+			"profileDescription": "Seuil personnalisé pour ce profil uniquement (remplace le défaut global)",
+			"inheritDescription": "Ce profil hérite du seuil par défaut global ({{threshold}}%)",
+			"usesGlobal": "(utilise global {{threshold}}%)"
 		}
 	},
 	"terminal": {
@@ -514,10 +544,7 @@
 			"name": "Activer le Marketplace",
 			"description": "Lorsque cette option est activée, tu peux installer des MCP et des modes personnalisés depuis le Marketplace."
 		},
-		"DISABLE_COMPLETION_COMMAND": {
-			"name": "Désactiver l'exécution des commandes dans attempt_completion",
-			"description": "Lorsque cette option est activée, l'outil attempt_completion n'exécutera pas de commandes. Il s'agit d'une fonctionnalité expérimentale visant à préparer la dépréciation de l'exécution des commandes lors de la finalisation des tâches."
-		},
+
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Activer les éditions de fichiers concurrentes",
 			"description": "Lorsque cette option est activée, Kilo Code peut éditer plusieurs fichiers en une seule requête. Lorsqu'elle est désactivée, Kilo Code doit éditer les fichiers un par un. Désactiver cette option peut aider lorsque tu travailles avec des modèles moins capables ou lorsque tu veux plus de contrôle sur les modifications de fichiers."

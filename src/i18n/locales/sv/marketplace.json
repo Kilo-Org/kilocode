@@ -1,0 +1,63 @@
+{
+	"type-group": {
+		"modes": "Lägen",
+		"mcps": "MCP-servrar",
+		"match": "träff"
+	},
+	"item-card": {
+		"type-mode": "Läge",
+		"type-mcp": "MCP-server",
+		"type-other": "Annat",
+		"by-author": "av {{author}}",
+		"authors-profile": "Författarens profil",
+		"remove-tag-filter": "Ta bort taggfilter: {{tag}}",
+		"filter-by-tag": "Filtrera efter tagg: {{tag}}",
+		"component-details": "Komponentdetaljer",
+		"view": "Visa",
+		"source": "Källa"
+	},
+	"filters": {
+		"search": {
+			"placeholder": "Sök på marknadsplatsen..."
+		},
+		"type": {
+			"label": "Typ",
+			"all": "Alla typer",
+			"mode": "Läge",
+			"mcpServer": "MCP-server"
+		},
+		"sort": {
+			"label": "Sortera efter",
+			"name": "Namn",
+			"lastUpdated": "Senast uppdaterad"
+		},
+		"tags": {
+			"label": "Taggar",
+			"clear": "Rensa taggar",
+			"placeholder": "Sök taggar...",
+			"noResults": "Inga taggar hittades.",
+			"selected": "Visar objekt med någon av de valda taggarna"
+		},
+		"title": "Marknadsplats"
+	},
+	"done": "Klar",
+	"tabs": {
+		"installed": "Installerade",
+		"browse": "Bläddra",
+		"settings": "Inställningar"
+	},
+	"items": {
+		"empty": {
+			"noItems": "Inga marknadsplatsobjekt hittades.",
+			"emptyHint": "Försök justera dina filter eller söktermer"
+		}
+	},
+	"installation": {
+		"installing": "Installerar objekt: \"{{itemName}}\"",
+		"installSuccess": "\"{{itemName}}\" installerades framgångsrikt",
+		"installError": "Misslyckades med att installera \"{{itemName}}\": {{errorMessage}}",
+		"removing": "Tar bort objekt: \"{{itemName}}\"",
+		"removeSuccess": "\"{{itemName}}\" togs bort framgångsrikt",
+		"removeError": "Misslyckades med att ta bort \"{{itemName}}\": {{errorMessage}}"
+	}
+}

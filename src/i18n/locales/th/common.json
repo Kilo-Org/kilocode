@@ -1,0 +1,127 @@
+{
+	"extension": {
+		"name": "Kilo Code",
+		"description": "ผู้ช่วยเขียนโค้ด AI แบบ Open Source สำหรับการวางแผน สร้าง และแก้ไขโค้ด"
+	},
+	"number_format": {
+		"thousand_suffix": "k",
+		"million_suffix": "m",
+		"billion_suffix": "b"
+	},
+	"feedback": {
+		"title": "ข้อเสนอแนะ",
+		"description": "เรายินดีรับฟังข้อเสนอแนะของคุณหรือช่วยเหลือเกี่ยวกับปัญหาที่คุณกำลังประสบ",
+		"githubIssues": "รายงานปัญหาบน GitHub",
+		"githubDiscussions": "เข้าร่วมการสนทนาบน GitHub",
+		"discord": "เข้าร่วมชุมชน Discord ของเรา",
+		"customerSupport": "ฝ่ายสนับสนุนลูกค้า"
+	},
+	"welcome": "ยินดีต้อนรับ {{name}}! คุณมี {{count}} การแจ้งเตือน",
+	"items": {
+		"zero": "ไม่มีรายการ",
+		"one": "หนึ่งรายการ",
+		"other": "{{count}} รายการ"
+	},
+	"confirmation": {
+		"reset_state": "คุณแน่ใจหรือไม่ว่าต้องการรีเซ็ตสถานะและที่เก็บข้อมูลลับทั้งหมดในส่วนขยาย? การดำเนินการนี้ไม่สามารถยกเลิกได้",
+		"delete_config_profile": "คุณแน่ใจหรือไม่ว่าต้องการลบโปรไฟล์การกำหนดค่านี้?",
+		"delete_custom_mode": "คุณแน่ใจหรือไม่ว่าต้องการลบโหมดที่กำหนดเองนี้?",
+		"delete_message": "คุณต้องการลบอะไร?",
+		"just_this_message": "เฉพาะข้อความนี้",
+		"this_and_subsequent": "ข้อความนี้และข้อความที่ตามมาทั้งหมด"
+	},
+	"errors": {
+		"invalid_data_uri": "รูปแบบ data URI ไม่ถูกต้อง",
+		"error_copying_image": "เกิดข้อผิดพลาดในการคัดลอกรูปภาพ: {{errorMessage}}",
+		"error_opening_image": "เกิดข้อผิดพลาดในการเปิดรูปภาพ: {{error}}",
+		"error_saving_image": "เกิดข้อผิดพลาดในการบันทึกรูปภาพ: {{errorMessage}}",
+		"could_not_open_file": "ไม่สามารถเปิดไฟล์: {{errorMessage}}",
+		"could_not_open_file_generic": "ไม่สามารถเปิดไฟล์!",
+		"checkpoint_timeout": "หมดเวลาเมื่อพยายามกู้คืน checkpoint",
+		"checkpoint_failed": "ล้มเหลวในการกู้คืน checkpoint",
+		"no_workspace": "กรุณาเปิดโฟลเดอร์โปรเจ็กต์ก่อน",
+		"update_support_prompt": "ล้มเหลวในการอัปเดต support prompt",
+		"reset_support_prompt": "ล้มเหลวในการรีเซ็ต support prompt",
+		"enhance_prompt": "ล้มเหลวในการปรับปรุง prompt",
+		"get_system_prompt": "ล้มเหลวในการรับ system prompt",
+		"search_commits": "ล้มเหลวในการค้นหา commits",
+		"save_api_config": "ล้มเหลวในการบันทึกการกำหนดค่า api",
+		"create_api_config": "ล้มเหลวในการสร้างการกำหนดค่า api",
+		"rename_api_config": "ล้มเหลวในการเปลี่ยนชื่อการกำหนดค่า api",
+		"load_api_config": "ล้มเหลวในการโหลดการกำหนดค่า api",
+		"delete_api_config": "ล้มเหลวในการลบการกำหนดค่า api",
+		"list_api_config": "ล้มเหลวในการรับรายการการกำหนดค่า api",
+		"update_server_timeout": "ล้มเหลวในการอัปเดต server timeout",
+		"hmr_not_running": "เซิร์ฟเวอร์การพัฒนาในเครื่องไม่ทำงาน HMR จะไม่ทำงาน กรุณารัน 'npm run dev' ก่อนเปิดส่วนขยายเพื่อเปิดใช้งาน HMR",
+		"retrieve_current_mode": "ข้อผิดพลาด: ล้มเหลวในการดึงโหมดปัจจุบันจากสถานะ",
+		"failed_delete_repo": "ล้มเหลวในการลบ shadow repository หรือ branch ที่เกี่ยวข้อง: {{error}}",
+		"failed_remove_directory": "ล้มเหลวในการลบไดเรกทอรีงาน: {{error}}",
+		"custom_storage_path_unusable": "เส้นทางจัดเก็บที่กำหนดเอง \"{{path}}\" ไม่สามารถใช้งานได้ จะใช้เส้นทางเริ่มต้น",
+		"cannot_access_path": "ไม่สามารถเข้าถึงเส้นทาง {{path}}: {{error}}",
+		"settings_import_failed": "การนำเข้าการตั้งค่าล้มเหลว: {{error}}",
+		"mistake_limit_guidance": "สิ่งนี้อาจบ่งชี้ถึงความล้มเหลวในกระบวนการคิดของโมเดลหรือไม่สามารถใช้เครื่องมือได้อย่างถูกต้อง ซึ่งสามารถบรรเทาได้ด้วยคำแนะนำจากผู้ใช้ (เช่น \"ลองแบ่งงานออกเป็นขั้นตอนเล็กๆ\")",
+		"violated_organization_allowlist": "ล้มเหลวในการรันงาน: โปรไฟล์ปัจจุบันละเมิดการตั้งค่าองค์กรของคุณ",
+		"condense_failed": "ล้มเหลวในการย่อบริบท",
+		"condense_not_enough_messages": "ข้อความไม่เพียงพอที่จะย่อบริบท",
+		"condensed_recently": "บริบทถูกย่อเมื่อเร็วๆ นี้ ข้ามความพยายามนี้",
+		"condense_handler_invalid": "ตัวจัดการ API สำหรับการย่อบริบทไม่ถูกต้อง",
+		"condense_context_grew": "ขนาดบริบทเพิ่มขึ้นระหว่างการย่อ ข้ามความพยายามนี้",
+		"share_task_failed": "ล้มเหลวในการแชร์งาน กรุณาลองอีกครั้ง",
+		"share_no_active_task": "ไม่มีงานที่ใช้งานอยู่เพื่อแชร์",
+		"share_auth_required": "ต้องมีการยืนยันตัวตน กรุณาลงชื่อเข้าใช้เพื่อแชร์งาน",
+		"share_not_enabled": "การแชร์งานไม่ได้เปิดใช้งานสำหรับองค์กรนี้",
+		"share_task_not_found": "ไม่พบงานหรือการเข้าถึงถูกปฏิเสธ",
+		"claudeCode": {
+			"processExited": "กระบวนการ Claude Code ออกด้วยรหัส {{exitCode}}",
+			"errorOutput": "ผลลัพธ์ข้อผิดพลาด: {{output}}",
+			"processExitedWithError": "กระบวนการ Claude Code ออกด้วยรหัส {{exitCode}} ผลลัพธ์ข้อผิดพลาด: {{output}}",
+			"stoppedWithReason": "Claude Code หยุดด้วยเหตุผล: {{reason}}",
+			"apiKeyModelPlanMismatch": "คีย์ API และแผนการสมัครสมาชิกอนุญาตให้ใช้โมเดลที่แตกต่างกัน ตรวจสอบให้แน่ใจว่าโมเดลที่เลือกรวมอยู่ในแผนของคุณ"
+		}
+	},
+	"warnings": {
+		"no_terminal_content": "ไม่มีเนื้อหาเทอร์มินัลที่เลือก",
+		"missing_task_files": "ไฟล์ของงานนี้หายไป คุณต้องการลบออกจากรายการงานหรือไม่?"
+	},
+	"info": {
+		"no_changes": "ไม่พบการเปลี่ยนแปลง",
+		"clipboard_copy": "คัดลอก system prompt ไปยังคลิปบอร์ดเรียบร้อยแล้ว",
+		"history_cleanup": "ทำความสะอาด {{count}} งานที่มีไฟล์หายไปจากประวัติ",
+		"custom_storage_path_set": "ตั้งค่าเส้นทางจัดเก็บที่กำหนดเอง: {{path}}",
+		"default_storage_path": "กลับไปใช้เส้นทางจัดเก็บเริ่มต้น",
+		"settings_imported": "นำเข้าการตั้งค่าเรียบร้อยแล้ว",
+		"share_link_copied": "คัดลอกลิงก์แชร์ไปยังคลิปบอร์ด",
+		"organization_share_link_copied": "คัดลอกลิงก์แชร์องค์กรไปยังคลิปบอร์ด!",
+		"public_share_link_copied": "คัดลอกลิงก์แชร์สาธารณะไปยังคลิปบอร์ด!",
+		"image_copied_to_clipboard": "คัดลอก image data URI ไปยังคลิปบอร์ด",
+		"image_saved": "บันทึกรูปภาพไปที่ {{path}}"
+	},
+	"answers": {
+		"yes": "ใช่",
+		"no": "ไม่",
+		"cancel": "ยกเลิก",
+		"remove": "ลบ",
+		"keep": "เก็บไว้"
+	},
+	"tasks": {
+		"canceled": "ข้อผิดพลาดงาน: ถูกหยุดและยกเลิกโดยผู้ใช้",
+		"deleted": "ความล้มเหลวของงาน: ถูกหยุดและลบโดยผู้ใช้"
+	},
+	"storage": {
+		"prompt_custom_path": "ป้อนเส้นทางจัดเก็บประวัติการสนทนาที่กำหนดเอง เว้นว่างไว้เพื่อใช้ตำแหน่งเริ่มต้น",
+		"path_placeholder": "D:\\KiloCodeStorage",
+		"enter_absolute_path": "กรุณาป้อนเส้นทางแบบสัมบูรณ์ (เช่น D:\\KiloCodeStorage หรือ /home/user/storage)",
+		"enter_valid_path": "กรุณาป้อนเส้นทางที่ถูกต้อง"
+	},
+	"input": {
+		"task_prompt": "Kilo Code ควรทำอะไร?",
+		"task_placeholder": "สร้าง ค้นหา ถามอะไรก็ได้"
+	},
+	"mdm": {
+		"errors": {
+			"cloud_auth_required": "องค์กรของคุณต้องการการยืนยันตัวตน Roo Code Cloud กรุณาลงชื่อเข้าใช้เพื่อดำเนินการต่อ",
+			"organization_mismatch": "คุณต้องยืนยันตัวตนด้วยบัญชี Roo Code Cloud ขององค์กรของคุณ",
+			"verification_failed": "ไม่สามารถตรวจสอบการยืนยันตัวตนขององค์กร"
+		}
+	}
+}

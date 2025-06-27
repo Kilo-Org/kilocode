@@ -312,7 +312,27 @@
 			"medium": "Sedang",
 			"low": "Rendah"
 		},
-		"setReasoningLevel": "Aktifkan Upaya Reasoning"
+		"setReasoningLevel": "Aktifkan Upaya Reasoning",
+		"claudeCode": {
+			"pathLabel": "Jalur Kode Claude",
+			"description": "Jalur opsional ke Claude Code CLI Anda. Defaultnya adalah 'claude' jika tidak diatur.",
+			"placeholder": "Default: claude"
+		},
+		"geminiCli": {
+			"description": "Provider ini menggunakan autentikasi OAuth dari alat Gemini CLI dan tidak memerlukan kunci API.",
+			"oauthPath": "Jalur Kredensial OAuth (opsional)",
+			"oauthPathDescription": "Jalur ke file kredensial OAuth. Biarkan kosong untuk menggunakan lokasi default (~/.gemini/oauth_creds.json).",
+			"instructions": "Jika kamu belum melakukan autentikasi, silakan jalankan",
+			"instructionsContinued": "di terminal kamu terlebih dahulu.",
+			"setupLink": "Instruksi Pengaturan Gemini CLI",
+			"requirementsTitle": "Persyaratan Penting",
+			"requirement1": "Pertama, kamu perlu menginstal alat Gemini CLI",
+			"requirement2": "Kemudian, jalankan gemini di terminal kamu dan pastikan kamu masuk dengan Google",
+			"requirement3": "Hanya bekerja dengan akun Google pribadi (bukan akun Google Workspace)",
+			"requirement4": "Tidak menggunakan kunci API - autentikasi ditangani melalui OAuth",
+			"requirement5": "Memerlukan alat Gemini CLI diinstal dan diautentikasi terlebih dahulu",
+			"freeAccess": "Akses tingkat gratis melalui autentikasi OAuth"
+		}
 	},
 	"browser": {
 		"enable": {
@@ -379,7 +399,17 @@
 			"hint": "Kosong = gunakan prompt default"
 		},
 		"autoCondenseContext": {
-			"name": "Secara otomatis memicu kondensasi konteks cerdas"
+			"name": "Secara otomatis memicu kondensasi konteks cerdas",
+			"description": "Ketika diaktifkan, Roo akan secara otomatis mengondensasi konteks ketika ambang batas tercapai. Ketika dinonaktifkan, kamu masih dapat memicu kondensasi konteks secara manual."
+		},
+		"condensingThreshold": {
+			"label": "Ambang Batas Pemicu Kondensasi",
+			"selectProfile": "Konfigurasi ambang batas untuk profil",
+			"defaultProfile": "Default Global (semua profil)",
+			"defaultDescription": "Ketika konteks mencapai persentase ini, akan secara otomatis dikondensasi untuk semua profil kecuali mereka memiliki pengaturan kustom",
+			"profileDescription": "Ambang batas kustom untuk profil ini saja (menimpa default global)",
+			"inheritDescription": "Profil ini mewarisi ambang batas default global ({{threshold}}%)",
+			"usesGlobal": "(menggunakan global {{threshold}}%)"
 		},
 		"openTabs": {
 			"label": "Batas konteks tab terbuka",
@@ -534,10 +564,6 @@
 		"MARKETPLACE": {
 			"name": "Aktifkan Marketplace",
 			"description": "Ketika diaktifkan, kamu dapat menginstal MCP dan mode kustom dari Marketplace."
-		},
-		"DISABLE_COMPLETION_COMMAND": {
-			"name": "Nonaktifkan eksekusi perintah di attempt_completion",
-			"description": "Ketika diaktifkan, tool attempt_completion tidak akan mengeksekusi perintah. Ini adalah fitur eksperimental untuk mempersiapkan penghentian eksekusi perintah dalam penyelesaian tugas."
 		},
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Aktifkan edit file bersamaan",

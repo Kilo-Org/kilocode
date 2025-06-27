@@ -54,6 +54,8 @@ describe("Model Validation Functions", () => {
 		requesty: {},
 		unbound: {},
 		litellm: {},
+		ollama: {},
+		lmstudio: {},
 	}
 
 	const allowAllOrganization: OrganizationAllowList = {

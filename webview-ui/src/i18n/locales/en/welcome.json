@@ -3,7 +3,6 @@
 	"introduction": "<strong>Kilo Code is the premiere autonomous coding agent.</strong> Get ready to architect, code, debug, and boost your productivity like you've never seen before. To continue, Kilo Code requires an API key.",
 	"notice": "To get started, this extension needs an API provider.",
 	"start": "Let's go!",
-	"chooseProvider": "Choose an API provider to get started:",
 	"routers": {
 		"requesty": {
 			"description": "Your optimized LLM router",
@@ -13,8 +12,9 @@
 			"description": "A unified interface for LLMs"
 		}
 	},
-	"startRouter": "Express Setup Through a Router",
-	"startCustom": "Bring Your Own API Key",
+	"chooseProvider": "To do its magic, Kilo Code needs an API key.",
+	"startRouter": "We recommend using an LLM Router:",
+	"startCustom": "Or you can bring your provider API key:",
 	"telemetry": {
 		"title": "Help Improve Kilo Code",
 		"anonymousTelemetry": "Send anonymous error and usage data to help us fix bugs and improve the extension. No code, prompts, or personal information is ever sent.",
@@ -23,6 +23,5 @@
 		"allow": "Allow",
 		"deny": "Deny"
 	},
-	"or": "or",
 	"importSettings": "Import Settings"
 }

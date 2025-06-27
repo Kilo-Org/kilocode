@@ -123,54 +123,9 @@ export class CodeIndexManager {
 		const needsServiceRecreation = !this._serviceFactory || requiresRestart
 
 		if (needsServiceRecreation) {
-			// Stop watcher if it exists
-			if (this._orchestrator) {
-				this.stopWatcher()
-			}
-
-			// (Re)Initialize service factory
-			this._serviceFactory = new CodeIndexServiceFactory(
-				this._configManager,
-				this.workspacePath,
-				this._cacheManager,
-			)
-
-			const ignoreInstance = ignore()
-			const ignorePath = path.join(getWorkspacePath(), ".gitignore")
-			try {
-				const content = await fs.readFile(ignorePath, "utf8")
-				ignoreInstance.add(content)
-				ignoreInstance.add(".gitignore")
-			} catch (error) {
-				// Should never happen: reading file failed even though it exists
-				console.error("Unexpected error loading .gitignore:", error)
-			}
-
-			// (Re)Create shared service instances
-			const { embedder, vectorStore, scanner, fileWatcher } = this._serviceFactory.createServices(
-				this.context,
-				this._cacheManager,
-				ignoreInstance,
-			)
-
-			// (Re)Initialize orchestrator
-			this._orchestrator = new CodeIndexOrchestrator(
-				this._configManager,
-				this._stateManager,
-				this.workspacePath,
-				this._cacheManager,
-				vectorStore,
-				scanner,
-				fileWatcher,
-			)
-
-			// (Re)Initialize search service
-			this._searchService = new CodeIndexSearchService(
-				this._configManager,
-				this._stateManager,
-				embedder,
-				vectorStore,
-			)
+			// kilocode_change start: recreate services with new configuration
+			await this._recreateServices()
+			// kilocode_change end
 		}
 
 		// 5. Handle Indexing Start/Restart
@@ -248,6 +203,63 @@ export class CodeIndexManager {
 		return this._searchService!.searchIndex(query, directoryPrefix)
 	}
 
+	// kilocode_change start
+	/**
+	 * Private helper method to recreate services with current configuration.
+	 * Used by both initialize() and handleExternalSettingsChange().
+	 */
+	private async _recreateServices(): Promise<void> {
+		// Stop watcher if it exists
+		if (this._orchestrator) {
+			this.stopWatcher()
+		}
+
+		// (Re)Initialize service factory
+		this._serviceFactory = new CodeIndexServiceFactory(
+			this._configManager!,
+			this.workspacePath,
+			this._cacheManager!,
+		)
+
+		const ignoreInstance = ignore()
+		const ignorePath = path.join(getWorkspacePath(), ".gitignore")
+		try {
+			const content = await fs.readFile(ignorePath, "utf8")
+			ignoreInstance.add(content)
+			ignoreInstance.add(".gitignore")
+		} catch (error) {
+			// Should never happen: reading file failed even though it exists
+			console.error("Unexpected error loading .gitignore:", error)
+		}
+
+		// (Re)Create shared service instances
+		const { embedder, vectorStore, scanner, fileWatcher } = this._serviceFactory.createServices(
+			this.context,
+			this._cacheManager!,
+			ignoreInstance,
+		)
+
+		// (Re)Initialize orchestrator
+		this._orchestrator = new CodeIndexOrchestrator(
+			this._configManager!,
+			this._stateManager,
+			this.workspacePath,
+			this._cacheManager!,
+			vectorStore,
+			scanner,
+			fileWatcher,
+		)
+
+		// (Re)Initialize search service
+		this._searchService = new CodeIndexSearchService(
+			this._configManager!,
+			this._stateManager,
+			embedder,
+			vectorStore,
+		)
+	}
+	// kilocode_change end
+
 	/**
 	 * Handles external settings changes by reloading configuration.
 	 * This method should be called when API provider settings are updated
@@ -261,9 +273,13 @@ export class CodeIndexManager {
 			const isFeatureEnabled = this.isFeatureEnabled
 			const isFeatureConfigured = this.isFeatureConfigured
 
-			// If configuration changes require a restart and the manager is initialized, restart the service
+			// If configuration changes require a restart and the manager is initialized, recreate services and restart
 			if (requiresRestart && isFeatureEnabled && isFeatureConfigured && this.isInitialized) {
-				this.stopWatcher()
+				// kilocode_change start: recreate services with new configuration
+				await this._recreateServices()
+				// kilocode_change end
+
+				// Start indexing with new services
 				await this.startIndexing()
 			}
 		}

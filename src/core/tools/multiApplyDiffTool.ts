@@ -427,7 +427,7 @@ Original error: ${errorMessage}`
 					const currentCount = (cline.consecutiveMistakeCountForApplyDiff.get(relPath) || 0) + 1
 					cline.consecutiveMistakeCountForApplyDiff.set(relPath, currentCount)
 
-					// TelemetryService.instance.captureDiffApplicationError(cline.taskId, currentCount)
+					TelemetryService.instance.captureDiffApplicationError(cline.taskId, currentCount)
 
 					if (diffResult.failParts && diffResult.failParts.length > 0) {
 						for (let i = 0; i < diffResult.failParts.length; i++) {

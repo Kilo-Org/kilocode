@@ -25,6 +25,17 @@
 	"mermaid": {
 		"loading": "生成 Mermaid 图表中...",
 		"render_error": "无法渲染图表",
+		"fixing_syntax": "修复 Mermaid 语法中...",
+		"fix_syntax_button": "使用 AI 修复语法",
+		"original_code": "原始代码：",
+		"errors": {
+			"unknown_syntax": "未知语法错误",
+			"fix_timeout": "AI 修复请求超时",
+			"fix_failed": "AI 修复失败",
+			"fix_attempts": "在 {{attempts}} 次尝试后修复语法失败。最后错误：{{error}}",
+			"no_fix_provided": "AI 未能提供修复",
+			"fix_request_failed": "修复请求失败"
+		},
 		"buttons": {
 			"zoom": "缩放",
 			"zoomIn": "放大",
