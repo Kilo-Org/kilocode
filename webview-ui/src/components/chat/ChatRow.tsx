@@ -523,6 +523,26 @@ export const ChatRowContent = ({
 						</ToolUseBlock>
 					</>
 				)
+			case "readMedia":
+				return (
+					<>
+						<div style={headerStyle}>
+							{toolIcon("files")}
+							<span style={{ fontWeight: "bold" }}>
+								{message.type === "ask" ? "Wants to read media" : "Did read media"}
+							</span>
+						</div>
+						<CodeAccordian
+							path={tool.path}
+							code={tool.content}
+							language="markdown"
+							isLoading={message.partial}
+							isExpanded={isExpanded}
+							onToggleExpand={handleToggleExpand}
+						/>
+					</>
+				)
+
 			case "fetchInstructions":
 				return (
 					<>
