@@ -91,8 +91,6 @@ const getCommandsMap = ({ context, outputChannel }: RegisterCommandOptions): Rec
 		await visibleProvider.postStateToWebview()
 		await visibleProvider.postMessageToWebview({ type: "action", action: "chatButtonClicked" })
 	},
-
-	// kilocode_change: unused
 	mcpButtonClicked: () => {
 		const visibleProvider = getVisibleProviderOrLog(outputChannel)
 
