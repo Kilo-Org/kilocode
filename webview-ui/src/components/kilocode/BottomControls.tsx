@@ -7,10 +7,9 @@ import { BottomApiConfig } from "./BottomApiConfig" // kilocode_change
 
 interface BottomControlsProps {
 	showApiConfig?: boolean
-	selectApiConfigDisabled?: boolean
 }
 
-const BottomControls: React.FC<BottomControlsProps> = ({ showApiConfig = false, selectApiConfigDisabled = false }) => {
+const BottomControls: React.FC<BottomControlsProps> = ({ showApiConfig = false }) => {
 	const { t } = useAppTranslation()
 
 	const showFeedbackOptions = () => {
@@ -20,7 +19,7 @@ const BottomControls: React.FC<BottomControlsProps> = ({ showApiConfig = false, 
 	return (
 		<div className="flex flex-row w-auto items-center justify-between h-[30px] mx-3.5 mb-1 gap-1">
 			<div className="flex flex-item flex-row justify-start gap-1 grow overflow-hidden">
-				{showApiConfig && <BottomApiConfig selectApiConfigDisabled={selectApiConfigDisabled} />}
+				{showApiConfig && <BottomApiConfig />}
 			</div>
 			<div className="flex flex-row justify-end w-auto">
 				<div className="flex items-center gap-1">

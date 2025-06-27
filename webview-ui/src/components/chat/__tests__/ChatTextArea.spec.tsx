@@ -764,5 +764,74 @@ describe("ChatTextArea", () => {
 		})
 	})
 
-	// kilocode_change remove selectApiConfig from ChatTextArea
+	describe("selectApiConfig", () => {
+		// Helper function to get the API config dropdown
+		const getApiConfigDropdown = () => {
+			return screen.getByTitle("chat:selectApiConfig")
+		}
+
+		// kilocode_change start
+		// Helper function to check if the API config dropdown exists
+		const apiConfigDropdownExists = () => {
+			return screen.queryByTitle("chat:selectApiConfig") !== null
+		}
+
+		beforeEach(() => {
+			// Default mock with multiple API configs
+			;(useExtensionState as ReturnType<typeof vi.fn>).mockReturnValue({
+				filePaths: [],
+				openedTabs: [],
+				apiConfiguration: {
+					apiProvider: "anthropic",
+				},
+				taskHistory: [],
+				cwd: "/test/workspace",
+				listApiConfigMeta: [
+					{ id: "config1", name: "Config 1" },
+					{ id: "config2", name: "Config 2" },
+				],
+				pinnedApiConfigs: {},
+				currentApiConfigName: "Config 1",
+			})
+		})
+
+		it("should be visible when there are multiple API configs", () => {
+			render(<ChatTextArea {...defaultProps} sendingDisabled={false} selectApiConfigDisabled={false} />)
+			expect(apiConfigDropdownExists()).toBe(true)
+		})
+
+		it("should be hidden when there is only one API config", () => {
+			// Mock with only one API config
+			;(useExtensionState as ReturnType<typeof vi.fn>).mockReturnValue({
+				filePaths: [],
+				openedTabs: [],
+				apiConfiguration: {
+					apiProvider: "anthropic",
+				},
+				taskHistory: [],
+				cwd: "/test/workspace",
+				listApiConfigMeta: [{ id: "config1", name: "Config 1" }],
+				pinnedApiConfigs: {},
+				currentApiConfigName: "Config 1",
+			})
+
+			render(<ChatTextArea {...defaultProps} sendingDisabled={false} selectApiConfigDisabled={false} />)
+			expect(apiConfigDropdownExists()).toBe(false)
+		})
+		// kilocode_change end
+
+		it("should be enabled independently of sendingDisabled", () => {
+			// Using the default mock from beforeEach which has multiple API configs
+			render(<ChatTextArea {...defaultProps} sendingDisabled={true} selectApiConfigDisabled={false} />)
+			const apiConfigDropdown = getApiConfigDropdown()
+			expect(apiConfigDropdown).not.toHaveAttribute("disabled")
+		})
+
+		it("should be disabled when selectApiConfigDisabled is true", () => {
+			// Using the default mock from beforeEach which has multiple API configs
+			render(<ChatTextArea {...defaultProps} sendingDisabled={true} selectApiConfigDisabled={true} />)
+			const apiConfigDropdown = getApiConfigDropdown()
+			expect(apiConfigDropdown).toHaveAttribute("disabled")
+		})
+	})
 })

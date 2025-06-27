@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next"
 import { cn } from "@/lib/utils"
 import { useRooPortal } from "./hooks/useRooPortal"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui"
+import { IconProps } from "@radix-ui/react-icons/dist/types" // kilocode_change
 
 export enum DropdownOptionType {
 	ITEM = "item",
@@ -38,6 +39,7 @@ export interface SelectDropdownProps {
 	placeholder?: string
 	shortcutText?: string
 	renderItem?: (option: DropdownOption) => React.ReactNode
+	triggerIcon?: React.ForwardRefExoticComponent<IconProps & React.RefAttributes<SVGSVGElement>> | boolean | undefined
 }
 
 export const SelectDropdown = React.memo(
@@ -57,6 +59,7 @@ export const SelectDropdown = React.memo(
 				placeholder = "",
 				shortcutText = "",
 				renderItem,
+				triggerIcon = CaretUpIcon,
 			},
 			ref,
 		) => {
@@ -65,6 +68,10 @@ export const SelectDropdown = React.memo(
 			const [searchValue, setSearchValue] = React.useState("")
 			const searchInputRef = React.useRef<HTMLInputElement>(null)
 			const portalContainer = useRooPortal("roo-portal")
+
+			// kilocode_change start
+			const TriggerIcon = triggerIcon === false ? null : triggerIcon === true ? CaretUpIcon : triggerIcon
+			// kilocode_change end
 
 			// Memoize the selected option to prevent unnecessary calculations
 			const selectedOption = React.useMemo(
@@ -201,8 +208,8 @@ export const SelectDropdown = React.memo(
 								: "opacity-90 hover:opacity-100 hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)] cursor-pointer",
 							triggerClassName,
 						)}>
+						{TriggerIcon && <TriggerIcon className="pointer-events-none opacity-80 flex-shrink-0 size-3" />}
 						{/* kilocode_change end */}
-						<CaretUpIcon className="pointer-events-none opacity-80 flex-shrink-0 size-3" />
 
 						{/* kilocode_change start */}
 						{selectedOption?.codicon && (

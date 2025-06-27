@@ -71,9 +71,10 @@ export const ModelSelector = ({ currentApiConfigName, apiConfiguration, fallback
 			onChange={onChange}
 			contentClassName="max-h-[300px] overflow-y-auto"
 			triggerClassName={cn(
-				"w-full text-ellipsis overflow-hidden",
-				"bg-[var(--vscode-input-background)] border-[var(--vscode-input-border)] hover:bg-[var(--color-vscode-list-hoverBackground)]",
+				"w-full text-ellipsis overflow-hidden p-0",
+				"bg-transparent border-transparent hover:bg-transparent hover:border-transparent",
 			)}
+			triggerIcon={false}
 			itemClassName="group"
 		/>
 	)
