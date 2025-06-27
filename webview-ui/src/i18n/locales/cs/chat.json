@@ -111,6 +111,7 @@
 	},
 	"selectMode": "Vyber režim pro interakci",
 	"selectApiConfig": "Vyber konfiguraci API",
+	"selectModelConfig": "Vybrat model",
 	"enhancePrompt": "Vylepšit prompt s dodatečným kontextem",
 	"enhancePromptDescription": "Tlačítko 'Vylepšit prompt' pomáhá zlepšit tvůj prompt poskytnutím dodatečného kontextu, vyjasnění nebo přeformulování. Zkus sem napsat prompt a znovu kliknout na tlačítko, abys viděl, jak to funguje.",
 	"addImages": "Přidat obrázky do zprávy",
