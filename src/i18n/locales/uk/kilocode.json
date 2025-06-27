@@ -1,0 +1,50 @@
+{
+	"info": {
+		"settings_imported": "Налаштування успішно імпортовано."
+	},
+	"lowCreditWarning": {
+		"title": "Попередження про низький кредит!",
+		"message": "Перевір, чи можеш ти поповнити безкоштовними кредитами або придбати більше!"
+	},
+	"rules": {
+		"actions": {
+			"delete": "Видалити",
+			"confirmDelete": "Ти впевнений, що хочеш видалити {{filename}}?",
+			"deleted": "Видалено {{filename}}"
+		},
+		"errors": {
+			"noWorkspaceFound": "Не знайдено папку робочої області",
+			"fileAlreadyExists": "Файл {{filename}} вже існує",
+			"failedToCreateRuleFile": "Не вдалося створити файл правила.",
+			"failedToDeleteRuleFile": "Не вдалося видалити файл правила."
+		},
+		"templates": {
+			"workflow": {
+				"description": "Опис робочого процесу тут...",
+				"stepsHeader": "## Кроки",
+				"step1": "Крок 1",
+				"step2": "Крок 2"
+			},
+			"rule": {
+				"description": "Опис правила тут...",
+				"guidelinesHeader": "## Рекомендації",
+				"guideline1": "Рекомендація 1",
+				"guideline2": "Рекомендація 2"
+			}
+		}
+	},
+	"commitMessage": {
+		"activated": "Активовано генератор повідомлень коміту Kilo Code",
+		"gitNotFound": "⚠️ Git репозиторій не знайдено або git недоступний",
+		"gitInitError": "⚠️ Помилка ініціалізації Git: {{error}}",
+		"generating": "Kilo: Генерація повідомлення коміту...",
+		"analyzingChanges": "Kilo: Аналіз підготовлених змін...",
+		"noStagedChangesRepo": "Kilo: Не знайдено підготовлених змін у git репозиторії",
+		"noStagedChanges": "Kilo: Не знайдено підготовлених змін для аналізу",
+		"generated": "Kilo: Повідомлення коміту згенеровано!",
+		"generationFailed": "Kilo: Не вдалося згенерувати повідомлення коміту: {{errorMessage}}",
+		"tokenRequired": "Для генерації повідомлення коміту потрібен токен Kilo Code",
+		"activationFailed": "Kilo: Не вдалося активувати провайдер повідомлень коміту: {{error}}",
+		"providerRegistered": "Kilo: Провайдер повідомлень коміту зареєстровано"
+	}
+}

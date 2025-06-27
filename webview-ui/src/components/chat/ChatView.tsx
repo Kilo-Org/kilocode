@@ -896,7 +896,15 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const isAllowedCommand = useCallback(
 		(message: ClineMessage | undefined): boolean => {
 			if (message?.type !== "ask") return false
-			return validateCommand(message.text || "", allowedCommands || [])
+			// kilocode_change start wrap in try/catch
+			try {
+				return validateCommand(message.text || "", allowedCommands || [])
+			} catch (e) {
+				// shell-quote sometimes throws a "Bad substitution" error
+				console.error("Cannot validate command, auto-approve denied.", e)
+				return false
+			}
+			// kilocode_change end
 		},
 		[allowedCommands],
 	)

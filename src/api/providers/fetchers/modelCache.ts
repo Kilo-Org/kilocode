@@ -15,6 +15,9 @@ import { getUnboundModels } from "./unbound"
 import { getLiteLLMModels } from "./litellm"
 import { GetModelsOptions } from "../../../shared/api"
 import { getKiloBaseUriFromToken } from "../../../utils/kilocode-token"
+import { getOllamaModels } from "./ollama"
+import { getLMStudioModels } from "./lmstudio"
+
 const memoryCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 5 * 60 })
 
 export /*kilocode_change*/ async function writeModels(router: RouterName, data: ModelRecord) {
@@ -90,6 +93,12 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				models = cerebrasModels
 				break
 			// kilocode_change end
+			case "ollama":
+				models = await getOllamaModels(options.baseUrl)
+				break
+			case "lmstudio":
+				models = await getLMStudioModels(options.baseUrl)
+				break
 			default: {
 				// Ensures router is exhaustively checked if RouterName is a strict union
 				const exhaustiveCheck: never = provider

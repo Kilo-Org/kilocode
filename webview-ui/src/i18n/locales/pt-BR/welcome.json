@@ -3,7 +3,6 @@
 	"introduction": "<strong>Kilo Code é o principal agente de codificação autônomo.</strong> Prepare-se para arquitetar, codificar, depurar e aumentar sua produtividade como nunca antes. Para continuar, o Kilo Code necessita de uma chave API.",
 	"notice": "Para começar, esta extensão precisa de um provedor de API.",
 	"start": "Vamos lá!",
-	"chooseProvider": "Escolha um provedor de API para começar:",
 	"routers": {
 		"requesty": {
 			"description": "Seu roteador LLM otimizado",
@@ -13,8 +12,9 @@
 			"description": "Uma interface unificada para LLMs"
 		}
 	},
-	"startRouter": "Configuração rápida através de um roteador",
-	"startCustom": "Use sua própria chave API",
+	"chooseProvider": "Para fazer sua mágica, o Kilo Code precisa de uma chave API.",
+	"startRouter": "Recomendamos usar um roteador LLM:",
+	"startCustom": "Ou você pode trazer sua própria chave API:",
 	"telemetry": {
 		"title": "Ajude a melhorar o Kilo Code",
 		"anonymousTelemetry": "Envie dados de uso e erros anônimos para nos ajudar a corrigir bugs e melhorar a extensão. Nenhum código, texto ou informação pessoal é enviado.",
@@ -23,6 +23,5 @@
 		"allow": "Permitir",
 		"deny": "Negar"
 	},
-	"or": "ou",
 	"importSettings": "Importar configurações"
 }

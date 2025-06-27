@@ -1,0 +1,23 @@
+{
+	"unknownError": "Невідома помилка",
+	"authenticationFailed": "Не вдалося створити embeddings: Автентифікація не вдалася. Будь ласка, перевір свій API ключ.",
+	"failedWithStatus": "Не вдалося створити embeddings після {{attempts}} спроб: HTTP {{statusCode}} - {{errorMessage}}",
+	"failedWithError": "Не вдалося створити embeddings після {{attempts}} спроб: {{errorMessage}}",
+	"failedMaxAttempts": "Не вдалося створити embeddings після {{attempts}} спроб",
+	"textExceedsTokenLimit": "Текст за індексом {{index}} перевищує максимальний ліміт токенів ({{itemTokens}} > {{maxTokens}}). Пропускаємо.",
+	"rateLimitRetry": "Досягнуто ліміт швидкості, повторна спроба через {{delayMs}}мс (спроба {{attempt}}/{{maxRetries}})",
+	"ollama": {
+		"couldNotReadErrorBody": "Не вдалося прочитати тіло помилки",
+		"requestFailed": "Запит Ollama API не вдався зі статусом {{status}} {{statusText}}: {{errorBody}}",
+		"invalidResponseStructure": "Недійсна структура відповіді від Ollama API: масив \"embeddings\" не знайдено або це не масив.",
+		"embeddingFailed": "Ollama embedding не вдалося: {{message}}"
+	},
+	"scanner": {
+		"unknownErrorProcessingFile": "Невідома помилка при обробці файлу {{filePath}}",
+		"unknownErrorDeletingPoints": "Невідома помилка при видаленні точок для {{filePath}}",
+		"failedToProcessBatchWithError": "Не вдалося обробити пакет після {{maxRetries}} спроб: {{errorMessage}}"
+	},
+	"vectorStore": {
+		"qdrantConnectionFailed": "Не вдалося підключитися до векторної бази даних Qdrant. Будь ласка, переконайся, що Qdrant працює і доступний за адресою {{qdrantUrl}}. Помилка: {{errorMessage}}"
+	}
+}

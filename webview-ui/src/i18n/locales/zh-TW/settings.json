@@ -312,7 +312,27 @@
 			"medium": "中",
 			"low": "低"
 		},
-		"setReasoningLevel": "啟用推理工作量"
+		"setReasoningLevel": "啟用推理工作量",
+		"claudeCode": {
+			"pathLabel": "Claude Code 路徑",
+			"description": "可選的 Claude Code CLI 路徑。如果未設定，則預設為 'claude'。",
+			"placeholder": "預設：claude"
+		},
+		"geminiCli": {
+			"description": "此提供商使用 Gemini CLI 工具的 OAuth 身份驗證，不需要 API 金鑰。",
+			"oauthPath": "OAuth 憑證路徑（可選）",
+			"oauthPathDescription": "OAuth 憑證檔案的路徑。留空以使用預設位置 (~/.gemini/oauth_creds.json)。",
+			"instructions": "如果你還沒有進行身份驗證，請執行",
+			"instructionsContinued": "在你的終端機中首先。",
+			"setupLink": "Gemini CLI 設定說明",
+			"requirementsTitle": "重要要求",
+			"requirement1": "首先，你需要安裝 Gemini CLI 工具",
+			"requirement2": "然後，在你的終端機中執行 gemini 並確保你用 Google 登入",
+			"requirement3": "僅適用於個人 Google 帳戶（不適用於 Google Workspace 帳戶）",
+			"requirement4": "不使用 API 金鑰 - 身份驗證透過 OAuth 處理",
+			"requirement5": "需要首先安裝並驗證 Gemini CLI 工具",
+			"freeAccess": "透過 OAuth 身份驗證的免費層存取"
+		}
 	},
 	"browser": {
 		"enable": {
@@ -379,7 +399,8 @@
 			"hint": "留空 = 使用預設提示"
 		},
 		"autoCondenseContext": {
-			"name": "自動觸發智慧上下文壓縮"
+			"name": "自動觸發智慧上下文壓縮",
+			"description": "啟用時，Kilo Code 會在達到閾值時自動壓縮上下文。停用時，您仍可手動觸發上下文壓縮。"
 		},
 		"openTabs": {
 			"label": "開啟分頁的上下文限制",
@@ -402,6 +423,15 @@
 		"maxConcurrentFileReads": {
 			"label": "並行檔案讀取限制",
 			"description": "read_file 工具可以同時處理的最大檔案數。較高的值可能會加快讀取多個小檔案的速度，但會增加記憶體使用量。"
+		},
+		"condensingThreshold": {
+			"label": "壓縮觸發閾值",
+			"selectProfile": "設定檔案閾值",
+			"defaultProfile": "全域預設（所有檔案）",
+			"defaultDescription": "當上下文達到此百分比時，將自動為所有檔案壓縮，除非它們有自訂設定",
+			"profileDescription": "僅此檔案的自訂閾值（覆蓋全域預設）",
+			"inheritDescription": "此檔案繼承全域預設閾值（{{threshold}}%）",
+			"usesGlobal": "（使用全域 {{threshold}}%）"
 		}
 	},
 	"terminal": {
@@ -513,10 +543,6 @@
 		"MARKETPLACE": {
 			"name": "啟用 Marketplace",
 			"description": "啟用後，您可以從 Marketplace 安裝 MCP 和自訂模式。"
-		},
-		"DISABLE_COMPLETION_COMMAND": {
-			"name": "停用 attempt_completion 中的指令執行",
-			"description": "啟用後，attempt_completion 工具將不會執行指令。這是一項實驗性功能，旨在為未來停用工作完成時的指令執行做準備。"
 		},
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "啟用並行檔案編輯",

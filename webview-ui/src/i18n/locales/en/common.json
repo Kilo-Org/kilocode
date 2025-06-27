@@ -25,6 +25,17 @@
 	"mermaid": {
 		"loading": "Generating mermaid diagram...",
 		"render_error": "Unable to Render Diagram",
+		"fixing_syntax": "Fixing Mermaid syntax...",
+		"fix_syntax_button": "Fix syntax with AI",
+		"original_code": "Original code:",
+		"errors": {
+			"unknown_syntax": "Unknown syntax error",
+			"fix_timeout": "LLM fix request timed out",
+			"fix_failed": "LLM fix failed",
+			"fix_attempts": "Failed to fix syntax after {{attempts}} attempts. Last error: {{error}}",
+			"no_fix_provided": "LLM failed to provide a fix",
+			"fix_request_failed": "Fix request failed"
+		},
 		"buttons": {
 			"zoom": "Zoom",
 			"zoomIn": "Zoom In",

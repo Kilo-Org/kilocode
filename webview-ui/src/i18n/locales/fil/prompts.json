@@ -1,0 +1,163 @@
+{
+	"title": "Mga Mode",
+	"done": "Tapos na",
+	"modes": {
+		"title": "Mga Mode",
+		"createNewMode": "Gumawa ng bagong mode",
+		"editModesConfig": "I-edit ang configuration ng mga mode",
+		"editGlobalModes": "I-edit ang Global Modes",
+		"editProjectModes": "I-edit ang Project Modes (.kilocodemodes)",
+		"createModeHelpText": "Ang mga mode ay mga espesyalisadong persona na nag-aayos ng ugali ng Kilo Code. <0>Alamin ang tungkol sa Paggamit ng mga Mode</0> o <1>Pag-customize ng mga Mode.</1>",
+		"selectMode": "Maghanap ng mga mode"
+	},
+	"apiConfiguration": {
+		"title": "API Configuration",
+		"select": "Piliin kung aling API configuration ang gagamitin para sa mode na ito"
+	},
+	"tools": {
+		"title": "Mga Available na Tool",
+		"builtInModesText": "Ang mga tool para sa built-in na mga mode ay hindi maaaring baguhin",
+		"editTools": "I-edit ang mga tool",
+		"doneEditing": "Tapos na ang pag-edit",
+		"allowedFiles": "Mga pinapayagang file:",
+		"toolNames": {
+			"read": "Magbasa ng mga File",
+			"edit": "I-edit ang mga File",
+			"browser": "Gamitin ang Browser",
+			"command": "Magpatakbo ng mga Command",
+			"mcp": "Gamitin ang MCP"
+		},
+		"noTools": "Wala"
+	},
+	"roleDefinition": {
+		"title": "Kahulugan ng Role",
+		"resetToDefault": "Ibalik sa default",
+		"description": "Tukuyin ang kadalubhasaan at personalidad ng Kilo Code para sa mode na ito. Ang paglalarawan na ito ay humuhubog kung paano nagpapakita ang Kilo Code at paano nito nilalapitan ang mga gawain."
+	},
+	"whenToUse": {
+		"title": "Kailan Gamitin (opsyonal)",
+		"description": "Ilarawan kung kailan dapat gamitin ang mode na ito. Tumutulong ito sa Orchestrator na pumili ng tamang mode para sa isang gawain.",
+		"resetToDefault": "Ibalik sa default na paglalarawan ng 'Kailan Gamitin'"
+	},
+	"customInstructions": {
+		"title": "Mga Custom na Tagubilin para sa Mode (opsyonal)",
+		"resetToDefault": "Ibalik sa default",
+		"description": "Magdagdag ng mga gabay sa ugali na partikular sa {{modeName}} mode.",
+		"loadFromFile": "Ang mga custom na tagubilin na partikular sa {{mode}} mode ay maaari ring i-load mula sa <span>.kilocode/rules/</span> folder sa iyong workspace (.kilocoderules-{{slug}} ay deprecated at hindi na gagana sa lalong madaling panahon)."
+	},
+	"globalCustomInstructions": {
+		"title": "Mga Custom na Tagubilin para sa Lahat ng Mode",
+		"description": "Ang mga tagubiling ito ay nalalapat sa lahat ng mode. Nagbibigay sila ng base set ng mga ugali na maaaring pahusayin ng mga tagubilin na partikular sa mode sa ibaba. <0>Alamin pa</0>",
+		"loadFromFile": "Ang mga tagubilin ay maaari ring i-load mula sa <span>.kilocode/rules/</span> folder sa iyong workspace (.kilocoderules ay deprecated at hindi na gagana sa lalong madaling panahon)."
+	},
+	"systemPrompt": {
+		"preview": "I-preview ang System Prompt",
+		"copy": "Kopyahin ang system prompt sa clipboard",
+		"title": "System Prompt ({{modeName}} mode)"
+	},
+	"supportPrompts": {
+		"title": "Mga Support Prompt",
+		"resetPrompt": "Ibalik ang {{promptType}} prompt sa default",
+		"prompt": "Prompt",
+		"enhance": {
+			"apiConfiguration": "API Configuration",
+			"apiConfigDescription": "Maaari kang pumili ng API configuration na palaging gagamitin para sa pagpapahusay ng mga prompt, o gamitin lang kung ano ang kasalukuyang napili",
+			"useCurrentConfig": "Gamitin ang kasalukuyang napiling API configuration",
+			"testPromptPlaceholder": "Maglagay ng prompt para subukan ang pagpapahusay",
+			"previewButton": "I-preview ang Pagpapahusay ng Prompt",
+			"testEnhancement": "Subukan ang Pagpapahusay"
+		},
+		"types": {
+			"ENHANCE": {
+				"label": "Pahusayin ang Prompt",
+				"description": "Gamitin ang pagpapahusay ng prompt para makakuha ng mga suhestiyon o pagpapabuti na angkop sa iyong mga input. Tinitiyak nito na nauunawaan ng Kilo Code ang iyong layunin at nagbibigay ng pinakamahusay na mga tugon. Available sa pamamagitan ng ✨ icon sa chat."
+			},
+			"EXPLAIN": {
+				"label": "Ipaliwanag ang Code",
+				"description": "Makakuha ng detalyadong paliwanag ng mga code snippet, function, o buong file. Kapaki-pakinabang para sa pag-unawa ng komplikadong code o pag-aaral ng mga bagong pattern. Available sa code actions (lightbulb icon sa editor) at sa editor context menu (right-click sa napiling code)."
+			},
+			"FIX": {
+				"label": "Ayusin ang mga Isyu",
+				"description": "Makakuha ng tulong sa pagtukoy at pag-resolba ng mga bug, error, o isyu sa kalidad ng code. Nagbibigay ng hakbang-hakbang na gabay para sa pag-aayos ng mga problema. Available sa code actions (lightbulb icon sa editor) at sa editor context menu (right-click sa napiling code)."
+			},
+			"IMPROVE": {
+				"label": "Pahusayin ang Code",
+				"description": "Makatanggap ng mga suhestiyon para sa pag-optimize ng code, mas mahusay na mga kasanayan, at mga pagpapabuti sa arkitektura habang pinapanatili ang functionality. Available sa code actions (lightbulb icon sa editor) at sa editor context menu (right-click sa napiling code)."
+			},
+			"ADD_TO_CONTEXT": {
+				"label": "Idagdag sa Context",
+				"description": "Magdagdag ng context sa iyong kasalukuyang gawain o pag-uusap. Kapaki-pakinabang para sa pagbibigay ng karagdagang impormasyon o paglilinaw. Available sa code actions (lightbulb icon sa editor) at sa editor context menu (right-click sa napiling code)."
+			},
+			"TERMINAL_ADD_TO_CONTEXT": {
+				"label": "Idagdag ang Terminal Content sa Context",
+				"description": "Idagdag ang terminal output sa iyong kasalukuyang gawain o pag-uusap. Kapaki-pakinabang para sa pagbibigay ng mga command output o log. Available sa terminal context menu (right-click sa napiling terminal content)."
+			},
+			"TERMINAL_FIX": {
+				"label": "Ayusin ang Terminal Command",
+				"description": "Makakuha ng tulong sa pag-aayos ng mga terminal command na nabigo o nangangailangan ng pagpapabuti. Available sa terminal context menu (right-click sa napiling terminal content)."
+			},
+			"TERMINAL_EXPLAIN": {
+				"label": "Ipaliwanag ang Terminal Command",
+				"description": "Makakuha ng detalyadong paliwanag ng mga terminal command at ang kanilang mga output. Available sa terminal context menu (right-click sa napiling terminal content)."
+			},
+			"NEW_TASK": {
+				"label": "Magsimula ng Bagong Gawain",
+				"description": "Magsimula ng bagong gawain gamit ang user input. Available sa Command Palette."
+			},
+			"COMMIT_MESSAGE": {
+				"label": "Paggawa ng Commit Message",
+				"description": "Gumawa ng mga deskriptibong commit message batay sa iyong mga staged git change. I-customize ang prompt para gumawa ng mga mensahe na sumusunod sa best practices ng iyong repository."
+			}
+		}
+	},
+	"advancedSystemPrompt": {
+		"title": "Advanced: I-override ang System Prompt",
+		"description": "<2>⚠️ Babala:</2> Ang advanced feature na ito ay lumalampas sa mga safeguard. <1>BASAHIN ITO BAGO GAMITIN!</1>I-override ang default system prompt sa pamamagitan ng paggawa ng file sa <span>.kilocode/system-prompt-{{slug}}</span>."
+	},
+	"createModeDialog": {
+		"title": "Gumawa ng Bagong Mode",
+		"close": "Isara",
+		"name": {
+			"label": "Pangalan",
+			"placeholder": "Ilagay ang pangalan ng mode"
+		},
+		"slug": {
+			"label": "Slug",
+			"description": "Ang slug ay ginagamit sa mga URL at pangalan ng file. Dapat itong lowercase at naglalaman lamang ng mga letra, numero, at hyphen."
+		},
+		"saveLocation": {
+			"label": "Lokasyon ng Pag-save",
+			"description": "Piliin kung saan i-save ang mode na ito. Ang mga mode na partikular sa project ay mas pinapahalagahan kaysa sa mga global mode.",
+			"global": {
+				"label": "Global",
+				"description": "Available sa lahat ng workspace"
+			},
+			"project": {
+				"label": "Partikular sa Project (.kilocodemodes)",
+				"description": "Available lang sa workspace na ito, mas pinapahalagahan kaysa sa global"
+			}
+		},
+		"roleDefinition": {
+			"label": "Kahulugan ng Role",
+			"description": "Tukuyin ang kadalubhasaan at personalidad ng Kilo Code para sa mode na ito."
+		},
+		"whenToUse": {
+			"label": "Kailan Gamitin (opsyonal)",
+			"description": "Magbigay ng malinaw na paglalarawan kung kailan pinaka-epektibo ang mode na ito at kung anong uri ng mga gawain ang kanyang mahusay."
+		},
+		"tools": {
+			"label": "Mga Available na Tool",
+			"description": "Piliin kung aling mga tool ang maaaring gamitin ng mode na ito."
+		},
+		"customInstructions": {
+			"label": "Mga Custom na Tagubilin (opsyonal)",
+			"description": "Magdagdag ng mga gabay sa ugali na partikular sa mode na ito."
+		},
+		"buttons": {
+			"cancel": "Kanselahin",
+			"create": "Gumawa ng Mode"
+		},
+		"deleteMode": "Tanggalin ang mode"
+	},
+	"allFiles": "lahat ng file"
+}

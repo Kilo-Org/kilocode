@@ -25,6 +25,17 @@
 	"mermaid": {
 		"loading": "產生 Mermaid 圖表中...",
 		"render_error": "無法渲染圖表",
+		"fixing_syntax": "修復 Mermaid 語法中...",
+		"fix_syntax_button": "使用 AI 修復語法",
+		"original_code": "原始程式碼：",
+		"errors": {
+			"unknown_syntax": "未知的語法錯誤",
+			"fix_timeout": "LLM 修復請求超時",
+			"fix_failed": "LLM 修復失敗",
+			"fix_attempts": "嘗試 {{attempts}} 次後無法修復語法。最後錯誤：{{error}}",
+			"no_fix_provided": "LLM 未能提供修復方案",
+			"fix_request_failed": "修復請求失敗"
+		},
 		"buttons": {
 			"zoom": "縮放",
 			"zoomIn": "放大",

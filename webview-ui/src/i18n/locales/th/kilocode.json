@@ -1,0 +1,107 @@
+{
+	"welcome": {
+		"greeting": "ยินดีต้อนรับสู่ Kilo Code!",
+		"introText1": "Kilo Code เป็นเอเจนต์เขียนโค้ด AI แบบฟรีและโอเพ่นซอร์ส",
+		"introText2": "ทำงานร่วมกับโมเดล AI ล่าสุด เช่น Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1 และอีกกว่า 450 โมเดล",
+		"introText3": "สร้างบัญชีฟรีและรับ tokens มูลค่า $20 เพื่อใช้กับโมเดล AI ใดก็ได้",
+		"ctaButton": "สร้างบัญชีฟรี",
+		"manualModeButton": "ใช้ API key ของคุณเอง",
+		"alreadySignedUp": "สมัครแล้ว?",
+		"loginText": "เข้าสู่ระบบที่นี่"
+	},
+	"lowCreditWarning": {
+		"addCredit": "เติมเครดิต",
+		"lowBalance": "ยอดเงิน Kilo Code ของคุณเหลือน้อย"
+	},
+	"notifications": {
+		"toolRequest": "คำขอใช้เครื่องมือรอการอนุมัติ",
+		"browserAction": "การดำเนินการของเบราว์เซอร์รอการอนุมัติ",
+		"command": "คำสั่งรอการอนุมัติ"
+	},
+	"settings": {
+		"sections": {
+			"mcp": "MCP Servers"
+		},
+		"provider": {
+			"apiKey": "Kilo Code API Key",
+			"login": "เข้าสู่ระบบที่ Kilo Code",
+			"logout": "ออกจากระบบ Kilo Code"
+		}
+	},
+	"chat": {
+		"condense": {
+			"wantsToCondense": "Kilo Code ต้องการย่อการสนทนาของคุณ",
+			"condenseConversation": "ย่อการสนทนา"
+		}
+	},
+	"newTaskPreview": {
+		"task": "งาน"
+	},
+	"profile": {
+		"title": "โปรไฟล์",
+		"dashboard": "แดชบอร์ด",
+		"logOut": "ออกจากระบบ",
+		"currentBalance": "ยอดเงินปัจจุบัน",
+		"loading": "กำลังโหลด...",
+		"signUp": {
+			"title": "สมัครใช้งาน Kilo Code",
+			"description": "การสมัครใช้งาน Kilo Code จะให้เครดิตฟรีเพื่อเริ่มต้นใช้งาน ใช้เครดิตของคุณเพื่อสำรวจฟีเจอร์ของเรา ลองใช้โมเดลล่าสุดและดีที่สุด และสัมผัสประโยชน์ของ Kilo Code โดยไม่มีข้อผูกมัด",
+			"termsAndPrivacy": "เมื่อดำเนินการต่อ คุณยอมรับ<termsLink>ข้อกำหนดการให้บริการ</termsLink>และ<privacyLink>นโยบายความเป็นส่วนตัว</privacyLink>"
+		}
+	},
+	"docs": "เอกสาร",
+	"rules": {
+		"tooltip": "จัดการ Kilo Code Rules และ Workflows",
+		"ariaLabel": "Kilo Code Rules",
+		"tabs": {
+			"rules": "Rules",
+			"workflows": "Workflows"
+		},
+		"description": {
+			"rules": "Rules ช่วยให้คุณสามารถให้คำแนะนำแก่ Kilo Code ที่ควรปฏิบัติตามในทุกโหมดและสำหรับทุก prompts เป็นวิธีที่คงอยู่ในการรวมบริบทและการตั้งค่าสำหรับการสนทนาทั้งหมดใน workspace ของคุณหรือทั่วโลก",
+			"workflows": "Workflows เป็นเทมเพลตที่เตรียมไว้สำหรับการสนทนา Workflows สามารถให้คุณกำหนด prompts ที่คุณใช้บ่อย และสามารถรวมชุดของขั้นตอนเพื่อนำทาง Kilo Code ผ่านงานที่ซ้ำซาก เช่น การ deploy service หรือการส่ง PR หากต้องการเรียกใช้ workflow ให้พิมพ์",
+			"workflowsInChat": "ในแชท"
+		},
+		"sections": {
+			"globalRules": "Global Rules",
+			"workspaceRules": "Workspace Rules",
+			"globalWorkflows": "Global Workflows",
+			"workspaceWorkflows": "Workspace Workflows"
+		},
+		"validation": {
+			"invalidFileExtension": "อนุญาตเฉพาะ .md, .txt หรือไม่มีนามสกุลไฟล์เท่านั้น"
+		},
+		"placeholders": {
+			"workflowName": "workflow-name (.md, .txt หรือไม่มีนามสกุล)",
+			"ruleName": "rule-name (.md, .txt หรือไม่มีนามสกุล)"
+		},
+		"newFile": {
+			"newWorkflowFile": "ไฟล์ workflow ใหม่...",
+			"newRuleFile": "ไฟล์ rule ใหม่..."
+		}
+	},
+	"taskTimeline": {
+		"tooltip": {
+			"clickToScroll": "ดู {{messageType}} (#{{messageNumber}})",
+			"messageTypes": {
+				"browser_action_launch": "เปิดเบราว์เซอร์",
+				"browser_action_result": "ผลลัพธ์การดำเนินการของเบราว์เซอร์",
+				"browser_action": "การดำเนินการของเบราว์เซอร์",
+				"checkpoint_saved": "บันทึก checkpoint แล้ว",
+				"command": "การดำเนินการคำสั่ง",
+				"command_output": "ผลลัพธ์คำสั่ง",
+				"completion_result": "ผลลัพธ์การเสร็จสิ้น",
+				"condense_context": "ย่อบริบท",
+				"error": "ข้อความแสดงข้อผิดพลาด",
+				"followup": "คำถามติดตาม",
+				"mcp_server_response": "การตอบกลับของ MCP server",
+				"reasoning": "การให้เหตุผลของ AI",
+				"text": "การตอบกลับของ AI",
+				"tool": "การใช้เครื่องมือ",
+				"unknown": "ประเภทข้อความที่ไม่รู้จัก",
+				"use_mcp_server": "การใช้ MCP server",
+				"user": "ความคิดเห็นของผู้ใช้"
+			}
+		}
+	}
+}

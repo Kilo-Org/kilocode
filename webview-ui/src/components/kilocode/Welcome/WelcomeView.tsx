@@ -36,7 +36,9 @@ const WelcomeView = () => {
 		<Tab>
 			<TabContent className="flex flex-col gap-5">
 				<h2 className="m-0 p-0">{t("kilocode:welcome.greeting")}</h2>
-				<div>{t("kilocode:welcome.introText")}</div>
+				<div>{t("kilocode:welcome.introText1")}</div>
+				<div>{t("kilocode:welcome.introText2")}</div>
+				<div>{t("kilocode:welcome.introText3")}</div>
 				{manualConfig ? (
 					<>
 						<ApiOptions
@@ -72,6 +74,15 @@ const WelcomeView = () => {
 							<ButtonSecondary onClick={() => setManualConfig(true)}>
 								{t("kilocode:welcome.manualModeButton")}
 							</ButtonSecondary>
+							<div className="text-center text-vscode-descriptionForeground">
+								{t("kilocode:welcome.alreadySignedUp")}{" "}
+								<a
+									href={getKiloCodeBackendAuthUrl(uriScheme, uiKind)}
+									className="underline"
+									style={{ color: "inherit" }}>
+									{t("kilocode:welcome.loginText")}
+								</a>
+							</div>
 						</div>
 					</div>
 				)}

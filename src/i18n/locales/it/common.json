@@ -67,7 +67,17 @@
 		"condense_handler_invalid": "Il gestore API per condensare il contesto non è valido",
 		"condense_context_grew": "La dimensione del contesto è aumentata durante la condensazione; questo tentativo viene saltato",
 		"share_task_failed": "Condivisione dell'attività fallita. Riprova.",
-		"share_no_active_task": "Nessuna attività attiva da condividere"
+		"share_no_active_task": "Nessuna attività attiva da condividere",
+		"share_auth_required": "Autenticazione richiesta. Accedi per condividere le attività.",
+		"share_not_enabled": "La condivisione delle attività non è abilitata per questa organizzazione.",
+		"share_task_not_found": "Attività non trovata o accesso negato.",
+		"claudeCode": {
+			"processExited": "Il processo Claude Code è terminato con codice {{exitCode}}.",
+			"errorOutput": "Output di errore: {{output}}",
+			"processExitedWithError": "Il processo Claude Code è terminato con codice {{exitCode}}. Output di errore: {{output}}",
+			"stoppedWithReason": "Claude Code si è fermato per il motivo: {{reason}}",
+			"apiKeyModelPlanMismatch": "Le chiavi API e i piani di abbonamento consentono modelli diversi. Assicurati che il modello selezionato sia incluso nel tuo piano."
+		}
 	},
 	"warnings": {
 		"no_terminal_content": "Nessun contenuto del terminale selezionato",
@@ -82,7 +92,9 @@
 		"settings_imported": "Impostazioni importate con successo.",
 		"share_link_copied": "Link di condivisione copiato negli appunti",
 		"image_copied_to_clipboard": "URI dati dell'immagine copiato negli appunti",
-		"image_saved": "Immagine salvata in {{path}}"
+		"image_saved": "Immagine salvata in {{path}}",
+		"organization_share_link_copied": "Link di condivisione organizzazione copiato negli appunti!",
+		"public_share_link_copied": "Link di condivisione pubblica copiato negli appunti!"
 	},
 	"answers": {
 		"yes": "Sì",
@@ -108,7 +120,12 @@
 	"settings": {
 		"providers": {
 			"groqApiKey": "Chiave API Groq",
-			"getGroqApiKey": "Ottieni chiave API Groq"
+			"getGroqApiKey": "Ottieni chiave API Groq",
+			"claudeCode": {
+				"pathLabel": "Percorso Claude Code",
+				"description": "Percorso opzionale alla tua CLI Claude Code. Predefinito 'claude' se non impostato.",
+				"placeholder": "Predefinito: claude"
+			}
 		}
 	},
 	"mdm": {

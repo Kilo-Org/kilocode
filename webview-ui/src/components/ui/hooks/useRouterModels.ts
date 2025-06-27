@@ -39,6 +39,8 @@ const getRouterModels = async () =>
 type RouterModelsQueryKey = {
 	openRouterBaseUrl?: string
 	openRouterApiKey?: string
+	lmStudioBaseUrl?: string
+	ollamaBaseUrl?: string
 	// Requesty, Unbound, etc should perhaps also be here, but they already have their own hacks for reloading
 }
 

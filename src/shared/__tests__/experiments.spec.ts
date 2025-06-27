@@ -39,7 +39,6 @@ describe("experiments", () => {
 			const experiments: Record<ExperimentId, boolean> = {
 				autocomplete: false,
 				powerSteering: false,
-				disableCompletionCommand: false,
 				multiFileApplyDiff: false,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.POWER_STEERING)).toBe(false)
@@ -49,7 +48,6 @@ describe("experiments", () => {
 			const experiments: Record<ExperimentId, boolean> = {
 				autocomplete: true,
 				powerSteering: true,
-				disableCompletionCommand: false,
 				multiFileApplyDiff: false,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.POWER_STEERING)).toBe(true)
@@ -59,7 +57,6 @@ describe("experiments", () => {
 			const experiments: Record<ExperimentId, boolean> = {
 				autocomplete: false,
 				powerSteering: false,
-				disableCompletionCommand: false,
 				multiFileApplyDiff: false,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.POWER_STEERING)).toBe(false)

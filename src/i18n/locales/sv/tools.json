@@ -1,0 +1,16 @@
+{
+	"readFile": {
+		"linesRange": " (rader {{start}}-{{end}})",
+		"definitionsOnly": " (endast definitioner)",
+		"maxLines": " (max {{max}} rader)"
+	},
+	"toolRepetitionLimitReached": "Kilo Code verkar ha fastnat i en loop och försöker utföra samma åtgärd ({{toolName}}) upprepade gånger. Detta kan indikera ett problem med dess nuvarande strategi. Överväg att omformulera uppgiften, ge mer specifika instruktioner eller vägleda den mot ett annat tillvägagångssätt.",
+	"codebaseSearch": {
+		"approval": "Söker efter '{{query}}' i kodbasen..."
+	},
+	"newTask": {
+		"errors": {
+			"policy_restriction": "Kunde inte skapa ny uppgift på grund av policybegränsningar."
+		}
+	}
+}

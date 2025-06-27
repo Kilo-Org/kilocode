@@ -1,0 +1,127 @@
+{
+	"extension": {
+		"name": "Kilo Code",
+		"description": "Open Source AI-kodningsassistent för planering, byggande och fixande av kod."
+	},
+	"number_format": {
+		"thousand_suffix": "k",
+		"million_suffix": "m",
+		"billion_suffix": "b"
+	},
+	"feedback": {
+		"title": "Feedback",
+		"description": "Vi skulle gärna höra din feedback eller hjälpa till med eventuella problem du upplever.",
+		"githubIssues": "Rapportera ett problem på GitHub",
+		"githubDiscussions": "Gå med i GitHub-diskussioner",
+		"discord": "Gå med i vår Discord-community",
+		"customerSupport": "Kundsupport"
+	},
+	"welcome": "Välkommen, {{name}}! Du har {{count}} notifikationer.",
+	"items": {
+		"zero": "Inga objekt",
+		"one": "Ett objekt",
+		"other": "{{count}} objekt"
+	},
+	"confirmation": {
+		"reset_state": "Är du säker på att du vill återställa all status och hemlig lagring i tillägget? Detta kan inte ångras.",
+		"delete_config_profile": "Är du säker på att du vill ta bort denna konfigurationsprofil?",
+		"delete_custom_mode": "Är du säker på att du vill ta bort detta anpassade läge?",
+		"delete_message": "Vad vill du ta bort?",
+		"just_this_message": "Bara detta meddelande",
+		"this_and_subsequent": "Detta och alla efterföljande meddelanden"
+	},
+	"errors": {
+		"invalid_data_uri": "Ogiltigt data URI-format",
+		"error_copying_image": "Fel vid kopiering av bild: {{errorMessage}}",
+		"error_opening_image": "Fel vid öppning av bild: {{error}}",
+		"error_saving_image": "Fel vid sparande av bild: {{errorMessage}}",
+		"could_not_open_file": "Kunde inte öppna fil: {{errorMessage}}",
+		"could_not_open_file_generic": "Kunde inte öppna fil!",
+		"checkpoint_timeout": "Tidsgräns uppnådd vid försök att återställa checkpoint.",
+		"checkpoint_failed": "Misslyckades med att återställa checkpoint.",
+		"no_workspace": "Öppna en projektmapp först",
+		"update_support_prompt": "Misslyckades med att uppdatera support prompt",
+		"reset_support_prompt": "Misslyckades med att återställa support prompt",
+		"enhance_prompt": "Misslyckades med att förbättra prompt",
+		"get_system_prompt": "Misslyckades med att hämta system prompt",
+		"search_commits": "Misslyckades med att söka commits",
+		"save_api_config": "Misslyckades med att spara api-konfiguration",
+		"create_api_config": "Misslyckades med att skapa api-konfiguration",
+		"rename_api_config": "Misslyckades med att byta namn på api-konfiguration",
+		"load_api_config": "Misslyckades med att ladda api-konfiguration",
+		"delete_api_config": "Misslyckades med att ta bort api-konfiguration",
+		"list_api_config": "Misslyckades med att hämta lista över api-konfiguration",
+		"update_server_timeout": "Misslyckades med att uppdatera server timeout",
+		"hmr_not_running": "Lokal utvecklingsserver körs inte, HMR kommer inte att fungera. Kör 'npm run dev' innan du startar tillägget för att aktivera HMR.",
+		"retrieve_current_mode": "Fel: misslyckades med att hämta aktuellt läge från tillstånd.",
+		"failed_delete_repo": "Misslyckades med att ta bort associerat shadow repository eller gren: {{error}}",
+		"failed_remove_directory": "Misslyckades med att ta bort uppgiftskatalog: {{error}}",
+		"custom_storage_path_unusable": "Anpassad lagringssökväg \"{{path}}\" är oanvändbar, kommer att använda standardsökväg",
+		"cannot_access_path": "Kan inte komma åt sökväg {{path}}: {{error}}",
+		"settings_import_failed": "Import av inställningar misslyckades: {{error}}.",
+		"mistake_limit_guidance": "Detta kan indikera ett fel i modellens tankeprocess eller oförmåga att använda ett verktyg korrekt, vilket kan mildras med viss användarvägledning (t.ex. \"Försök dela upp uppgiften i mindre steg\").",
+		"violated_organization_allowlist": "Misslyckades med att köra uppgift: den aktuella profilen bryter mot din organisations inställningar",
+		"condense_failed": "Misslyckades med att kondensera kontext",
+		"condense_not_enough_messages": "Inte tillräckligt med meddelanden för att kondensera kontext",
+		"condensed_recently": "Kontext kondenserades nyligen; hoppar över detta försök",
+		"condense_handler_invalid": "API-hanterare för kondensering av kontext är ogiltig",
+		"condense_context_grew": "Kontextstorlek ökade under kondensering; hoppar över detta försök",
+		"share_task_failed": "Misslyckades med att dela uppgift. Försök igen.",
+		"share_no_active_task": "Ingen aktiv uppgift att dela",
+		"share_auth_required": "Autentisering krävs. Logga in för att dela uppgifter.",
+		"share_not_enabled": "Uppgiftsdelning är inte aktiverat för denna organisation.",
+		"share_task_not_found": "Uppgift hittades inte eller åtkomst nekad.",
+		"claudeCode": {
+			"processExited": "Claude Code-processen avslutades med kod {{exitCode}}.",
+			"errorOutput": "Felutdata: {{output}}",
+			"processExitedWithError": "Claude Code-processen avslutades med kod {{exitCode}}. Felutdata: {{output}}",
+			"stoppedWithReason": "Claude Code stoppades med anledning: {{reason}}",
+			"apiKeyModelPlanMismatch": "API-nycklar och prenumerationsplaner tillåter olika modeller. Se till att den valda modellen ingår i din plan."
+		}
+	},
+	"warnings": {
+		"no_terminal_content": "Inget terminalinnehåll valt",
+		"missing_task_files": "Denna uppgifts filer saknas. Vill du ta bort den från uppgiftslistan?"
+	},
+	"info": {
+		"no_changes": "Inga ändringar hittades.",
+		"clipboard_copy": "System prompt kopierades till urklipp",
+		"history_cleanup": "Rensade {{count}} uppgift(er) med saknade filer från historiken.",
+		"custom_storage_path_set": "Anpassad lagringssökväg inställd: {{path}}",
+		"default_storage_path": "Återgick till att använda standardlagringssökväg",
+		"settings_imported": "Inställningar importerades framgångsrikt.",
+		"share_link_copied": "Delningslänk kopierad till urklipp",
+		"organization_share_link_copied": "Organisationsdelningslänk kopierad till urklipp!",
+		"public_share_link_copied": "Offentlig delningslänk kopierad till urklipp!",
+		"image_copied_to_clipboard": "Image data URI kopierad till urklipp",
+		"image_saved": "Bild sparad till {{path}}"
+	},
+	"answers": {
+		"yes": "Ja",
+		"no": "Nej",
+		"cancel": "Avbryt",
+		"remove": "Ta bort",
+		"keep": "Behåll"
+	},
+	"tasks": {
+		"canceled": "Uppgiftsfel: Den stoppades och avbröts av användaren.",
+		"deleted": "Uppgiftsfel: Den stoppades och togs bort av användaren."
+	},
+	"storage": {
+		"prompt_custom_path": "Ange anpassad lagringssökväg för konversationshistorik, lämna tomt för att använda standardplats",
+		"path_placeholder": "D:\\KiloCodeStorage",
+		"enter_absolute_path": "Ange en absolut sökväg (t.ex. D:\\KiloCodeStorage eller /home/user/storage)",
+		"enter_valid_path": "Ange en giltig sökväg"
+	},
+	"input": {
+		"task_prompt": "Vad ska Kilo Code göra?",
+		"task_placeholder": "Bygg, hitta, fråga något"
+	},
+	"mdm": {
+		"errors": {
+			"cloud_auth_required": "Din organisation kräver Roo Code Cloud-autentisering. Logga in för att fortsätta.",
+			"organization_mismatch": "Du måste vara autentiserad med din organisations Roo Code Cloud-konto.",
+			"verification_failed": "Kunde inte verifiera organisationsautentisering."
+		}
+	}
+}

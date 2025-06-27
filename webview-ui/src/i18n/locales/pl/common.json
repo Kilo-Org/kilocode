@@ -25,6 +25,17 @@
 	"mermaid": {
 		"loading": "Generowanie diagramu mermaid...",
 		"render_error": "Nie można renderować diagramu",
+		"fixing_syntax": "Naprawianie składni Mermaid...",
+		"fix_syntax_button": "Napraw składnię za pomocą AI",
+		"original_code": "Oryginalny kod:",
+		"errors": {
+			"unknown_syntax": "Nieznany błąd składni",
+			"fix_timeout": "Upłynął limit czasu żądania naprawy LLM",
+			"fix_failed": "Naprawa LLM nie powiodła się",
+			"fix_attempts": "Nie udało się naprawić składni po {{attempts}} próbach. Ostatni błąd: {{error}}",
+			"no_fix_provided": "LLM nie dostarczył naprawy",
+			"fix_request_failed": "Żądanie naprawy nie powiodło się"
+		},
 		"buttons": {
 			"zoom": "Powiększenie",
 			"zoomIn": "Powiększ",

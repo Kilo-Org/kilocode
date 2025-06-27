@@ -25,6 +25,17 @@
 	"mermaid": {
 		"loading": "머메이드 다이어그램 생성 중...",
 		"render_error": "다이어그램을 렌더링할 수 없음",
+		"fixing_syntax": "머메이드 구문 수정 중...",
+		"fix_syntax_button": "AI로 구문 수정하기",
+		"original_code": "원본 코드:",
+		"errors": {
+			"unknown_syntax": "알 수 없는 구문 오류",
+			"fix_timeout": "LLM 수정 요청 시간 초과",
+			"fix_failed": "LLM 수정 실패",
+			"fix_attempts": "{{attempts}}번의 시도 후 구문 수정 실패. 마지막 오류: {{error}}",
+			"no_fix_provided": "LLM이 수정을 제공하지 못함",
+			"fix_request_failed": "수정 요청 실패"
+		},
 		"buttons": {
 			"zoom": "줌",
 			"zoomIn": "확대",

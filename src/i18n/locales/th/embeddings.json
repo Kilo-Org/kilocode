@@ -1,0 +1,23 @@
+{
+	"unknownError": "ข้อผิดพลาดที่ไม่รู้จัก",
+	"authenticationFailed": "ล้มเหลวในการสร้าง embeddings: การยืนยันตัวตนล้มเหลว กรุณาตรวจสอบ API key ของคุณ",
+	"failedWithStatus": "ล้มเหลวในการสร้าง embeddings หลังจาก {{attempts}} ครั้ง: HTTP {{statusCode}} - {{errorMessage}}",
+	"failedWithError": "ล้มเหลวในการสร้าง embeddings หลังจาก {{attempts}} ครั้ง: {{errorMessage}}",
+	"failedMaxAttempts": "ล้มเหลวในการสร้าง embeddings หลังจาก {{attempts}} ครั้ง",
+	"textExceedsTokenLimit": "ข้อความที่ดัชนี {{index}} เกินขีดจำกัด token สูงสุด ({{itemTokens}} > {{maxTokens}}) ข้าม",
+	"rateLimitRetry": "ถึงขีดจำกัดอัตรา จะลองใหม่ใน {{delayMs}}ms (ความพยายาม {{attempt}}/{{maxRetries}})",
+	"ollama": {
+		"couldNotReadErrorBody": "ไม่สามารถอ่าน error body",
+		"requestFailed": "คำขอ Ollama API ล้มเหลวด้วยสถานะ {{status}} {{statusText}}: {{errorBody}}",
+		"invalidResponseStructure": "โครงสร้างการตอบสนองไม่ถูกต้องจาก Ollama API: ไม่พบ \"embeddings\" array หรือไม่ใช่ array",
+		"embeddingFailed": "Ollama embedding ล้มเหลว: {{message}}"
+	},
+	"scanner": {
+		"unknownErrorProcessingFile": "ข้อผิดพลาดที่ไม่รู้จักในการประมวลผลไฟล์ {{filePath}}",
+		"unknownErrorDeletingPoints": "ข้อผิดพลาดที่ไม่รู้จักในการลบจุดสำหรับ {{filePath}}",
+		"failedToProcessBatchWithError": "ล้มเหลวในการประมวลผลแบทช์หลังจาก {{maxRetries}} ครั้ง: {{errorMessage}}"
+	},
+	"vectorStore": {
+		"qdrantConnectionFailed": "ล้มเหลวในการเชื่อมต่อกับฐานข้อมูล Qdrant vector กรุณาตรวจสอบให้แน่ใจว่า Qdrant กำลังทำงานและสามารถเข้าถึงได้ที่ {{qdrantUrl}} ข้อผิดพลาด: {{errorMessage}}"
+	}
+}

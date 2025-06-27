@@ -1,8 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react"
 import { Badge } from "@/components/ui/badge"
+import { createTableStory } from "../src/utils/createTableStory"
+
+const BADGE_VARIANTS = ["default", "secondary", "destructive", "outline"] as const
 
 const meta = {
-	title: "UI/Badge",
+	title: "Component/Badge",
 	component: Badge,
 	parameters: {
 		layout: "centered",
@@ -11,7 +14,7 @@ const meta = {
 	argTypes: {
 		variant: {
 			control: { type: "select" },
-			options: ["default", "secondary", "destructive", "outline"],
+			options: BADGE_VARIANTS,
 		},
 	},
 } satisfies Meta<typeof Badge>
@@ -25,46 +28,9 @@ export const Default: Story = {
 	},
 }
 
-export const Secondary: Story = {
-	args: {
-		variant: "secondary",
-		children: "Secondary",
-	},
-}
-
-export const Destructive: Story = {
-	args: {
-		variant: "destructive",
-		children: "Destructive",
-	},
-}
-
-export const Outline: Story = {
-	args: {
-		variant: "outline",
-		children: "Outline",
-	},
-}
-
-export const WithIcon: Story = {
-	args: {
-		children: (
-			<>
-				<span className="codicon codicon-check"></span>
-				Success
-			</>
-		),
-	},
-}
-
-export const LongText: Story = {
-	args: {
-		children: "This is a longer badge text",
-	},
-}
-
-export const Number: Story = {
-	args: {
-		children: "42",
-	},
-}
+export const Variants = createTableStory({
+	component: Badge,
+	rows: { variant: BADGE_VARIANTS },
+	columns: { children: ["Badge", "42", "This is a longer badge text"] },
+	cellClassName: "p-4",
+})

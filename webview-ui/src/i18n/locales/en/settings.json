@@ -312,7 +312,27 @@
 			"medium": "Medium",
 			"low": "Low"
 		},
-		"setReasoningLevel": "Enable Reasoning Effort"
+		"setReasoningLevel": "Enable Reasoning Effort",
+		"claudeCode": {
+			"pathLabel": "Claude Code Path",
+			"description": "Optional path to your Claude Code CLI. Defaults to 'claude' if not set.",
+			"placeholder": "Default: claude"
+		},
+		"geminiCli": {
+			"description": "This provider uses OAuth authentication from the Gemini CLI tool and does not require API keys.",
+			"oauthPath": "OAuth Credentials Path (optional)",
+			"oauthPathDescription": "Path to the OAuth credentials file. Leave empty to use the default location (~/.gemini/oauth_creds.json).",
+			"instructions": "If you haven't authenticated yet, please run",
+			"instructionsContinued": "in your terminal first.",
+			"setupLink": "Gemini CLI Setup Instructions",
+			"requirementsTitle": "Important Requirements",
+			"requirement1": "First, you need to install the Gemini CLI tool",
+			"requirement2": "Then, run gemini in your terminal and make sure you Log in with Google",
+			"requirement3": "Only works with personal Google accounts (not Google Workspace accounts)",
+			"requirement4": "Does not use API keys - authentication is handled via OAuth",
+			"requirement5": "Requires the Gemini CLI tool to be installed and authenticated first",
+			"freeAccess": "Free tier access via OAuth authentication"
+		}
 	},
 	"browser": {
 		"enable": {
@@ -385,7 +405,8 @@
 			"hint": "Empty = use default prompt"
 		},
 		"autoCondenseContext": {
-			"name": "Automatically trigger intelligent context condensing"
+			"name": "Automatically trigger intelligent context condensing",
+			"description": "When enabled, Roo will automatically condense the context when the threshold is reached. When disabled, you can still manually trigger context condensing."
 		},
 		"openTabs": {
 			"label": "Open tabs context limit",
@@ -408,6 +429,15 @@
 			"description": "Kilo Code reads this number of lines when the model omits start/end values. If this number is less than the file's total, Kilo Code generates a line number index of code definitions. Special cases: -1 instructs Kilo Code to read the entire file (without indexing), and 0 instructs it to read no lines and provides line indexes only for minimal context. Lower values minimize initial context usage, enabling precise subsequent line-range reads. Explicit start/end requests are not limited by this setting.",
 			"lines": "lines",
 			"always_full_read": "Always read entire file"
+		},
+		"condensingThreshold": {
+			"label": "Condensing Trigger Threshold",
+			"selectProfile": "Configure threshold for profile",
+			"defaultProfile": "Global Default (all profiles)",
+			"defaultDescription": "When context reaches this percentage, it will be automatically condensed for all profiles unless they have custom settings",
+			"profileDescription": "Custom threshold for this profile only (overrides global default)",
+			"inheritDescription": "This profile inherits the global default threshold ({{threshold}}%)",
+			"usesGlobal": "(uses global {{threshold}}%)"
 		}
 	},
 	"terminal": {
@@ -519,10 +549,6 @@
 		"MARKETPLACE": {
 			"name": "Enable Marketplace",
 			"description": "When enabled, you can install MCPs and custom modes from the Marketplace."
-		},
-		"DISABLE_COMPLETION_COMMAND": {
-			"name": "Disable command execution in attempt_completion",
-			"description": "When enabled, the attempt_completion tool will not execute commands. This is an experimental feature to prepare for deprecating command execution in task completion."
 		},
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Enable concurrent file edits",

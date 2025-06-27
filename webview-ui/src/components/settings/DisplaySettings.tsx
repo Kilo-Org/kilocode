@@ -1,4 +1,4 @@
-import { HTMLAttributes } from "react"
+import { HTMLAttributes, useMemo } from "react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
 import { Monitor } from "lucide-react"
@@ -6,6 +6,8 @@ import { Monitor } from "lucide-react"
 import { SetCachedStateField } from "./types"
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
+import { TaskTimeline } from "../chat/TaskTimeline"
+import { generateSampleTimelineData } from "../../utils/timeline/mockData"
 
 type DisplaySettingsProps = HTMLAttributes<HTMLDivElement> & {
 	showTaskTimeline?: boolean
@@ -14,6 +16,8 @@ type DisplaySettingsProps = HTMLAttributes<HTMLDivElement> & {
 
 export const DisplaySettings = ({ showTaskTimeline, setCachedStateField, ...props }: DisplaySettingsProps) => {
 	const { t } = useAppTranslation()
+
+	const sampleTimelineData = useMemo(() => generateSampleTimelineData(), [])
 
 	return (
 		<div {...props}>
@@ -35,6 +39,14 @@ export const DisplaySettings = ({ showTaskTimeline, setCachedStateField, ...prop
 					</VSCodeCheckbox>
 					<div className="text-vscode-descriptionForeground text-sm mt-1">
 						{t("settings:display.taskTimeline.description")}
+					</div>
+
+					{/* Sample TaskTimeline preview */}
+					<div className="mt-3">
+						<div className="font-medium text-vscode-foreground text-xs mb-4">Preview</div>
+						<div className="opacity-60">
+							<TaskTimeline groupedMessages={sampleTimelineData} isTaskActive={false} />
+						</div>
 					</div>
 				</div>
 			</Section>

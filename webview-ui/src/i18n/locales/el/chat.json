@@ -1,0 +1,309 @@
+{
+	"greeting": "Τι μπορεί να κάνει το Kilo Code για σένα;",
+	"task": {
+		"title": "Εργασία",
+		"seeMore": "Δες περισσότερα",
+		"seeLess": "Δες λιγότερα",
+		"tokens": "Tokens:",
+		"cache": "Cache:",
+		"apiCost": "Κόστος API:",
+		"condenseContext": "Έξυπνη συμπύκνωση περιεχομένου",
+		"contextWindow": "Μήκος Περιεχομένου:",
+		"closeAndStart": "Κλείσε την εργασία και ξεκίνα νέα",
+		"export": "Εξαγωγή ιστορικού εργασίας",
+		"share": "Κοινοποίηση εργασίας",
+		"delete": "Διαγραφή Εργασίας (Shift + Κλικ για παράλειψη επιβεβαίωσης)",
+		"shareWithOrganization": "Κοινοποίηση στον Οργανισμό",
+		"shareWithOrganizationDescription": "Μόνο τα μέλη του οργανισμού σου έχουν πρόσβαση",
+		"sharePublicly": "Δημόσια Κοινοποίηση",
+		"sharePubliclyDescription": "Οποιοσδήποτε με τον σύνδεσμο έχει πρόσβαση"
+	},
+	"history": {
+		"title": "Ιστορικό"
+	},
+	"unpin": "Ξεκαρφίτσωμα",
+	"pin": "Καρφίτσωμα",
+	"retry": {
+		"title": "Επανάληψη",
+		"tooltip": "Δοκίμασε ξανά τη λειτουργία"
+	},
+	"startNewTask": {
+		"title": "Έναρξη Νέας Εργασίας",
+		"tooltip": "Ξεκίνα μια νέα εργασία"
+	},
+	"reportBug": {
+		"title": "Αναφορά Σφάλματος"
+	},
+	"proceedAnyways": {
+		"title": "Συνέχισε Ούτως ή Άλλως",
+		"tooltip": "Συνέχισε ενώ εκτελείται η εντολή"
+	},
+	"save": {
+		"title": "Αποθήκευση",
+		"tooltip": "Αποθήκευσε τις αλλαγές του αρχείου"
+	},
+	"tokenProgress": {
+		"availableSpace": "Διαθέσιμος χώρος: {{amount}} tokens",
+		"tokensUsed": "Tokens που χρησιμοποιήθηκαν: {{used}} από {{total}}",
+		"reservedForResponse": "Δεσμευμένα για απάντηση μοντέλου: {{amount}} tokens"
+	},
+	"reject": {
+		"title": "Απόρριψη",
+		"tooltip": "Απόρριψε αυτή την ενέργεια"
+	},
+	"completeSubtaskAndReturn": "Ολοκλήρωσε την Υποεργασία και Επέστρεψε",
+	"approve": {
+		"title": "Έγκριση",
+		"tooltip": "Έγκρινε αυτή την ενέργεια"
+	},
+	"read-batch": {
+		"approve": {
+			"title": "Έγκριση Όλων"
+		},
+		"deny": {
+			"title": "Απόρριψη Όλων"
+		}
+	},
+	"runCommand": {
+		"title": "Εκτέλεση Εντολής",
+		"tooltip": "Εκτέλεσε αυτή την εντολή"
+	},
+	"proceedWhileRunning": {
+		"title": "Συνέχισε Κατά την Εκτέλεση",
+		"tooltip": "Συνέχισε παρά τις προειδοποιήσεις"
+	},
+	"killCommand": {
+		"title": "Τερματισμός Εντολής",
+		"tooltip": "Τερμάτισε την τρέχουσα εντολή"
+	},
+	"resumeTask": {
+		"title": "Συνέχιση Εργασίας",
+		"tooltip": "Συνέχισε την τρέχουσα εργασία"
+	},
+	"terminate": {
+		"title": "Τερματισμός",
+		"tooltip": "Τερμάτισε την τρέχουσα εργασία"
+	},
+	"cancel": {
+		"title": "Ακύρωση",
+		"tooltip": "Ακύρωσε την τρέχουσα λειτουργία"
+	},
+	"scrollToBottom": "Κύλιση στο τέλος της συνομιλίας",
+	"about": "Δημιούργησε, αναδιάρθρωσε και διόρθωσε κώδικα με τη βοήθεια AI. Δες την <DocsLink>τεκμηρίωσή</DocsLink> μας για να μάθεις περισσότερα.",
+	"onboarding": "Η λίστα εργασιών σου σε αυτόν τον χώρο εργασίας είναι κενή.",
+	"rooTips": {
+		"boomerangTasks": {
+			"title": "Οργάνωση Εργασιών",
+			"description": "Διαίρεσε τις εργασίες σε μικρότερα, διαχειρίσιμα μέρη"
+		},
+		"stickyModels": {
+			"title": "Μόνιμα Μοντέλα",
+			"description": "Κάθε λειτουργία θυμάται το τελευταίο μοντέλο που χρησιμοποίησες"
+		},
+		"tools": {
+			"title": "Εργαλεία",
+			"description": "Επέτρεψε στο AI να λύνει προβλήματα περιηγούμενο στο διαδίκτυο, εκτελώντας εντολές και άλλα"
+		},
+		"customizableModes": {
+			"title": "Προσαρμόσιμες Λειτουργίες",
+			"description": "Εξειδικευμένες προσωπικότητες με τις δικές τους συμπεριφορές και ανατεθειμένα μοντέλα"
+		}
+	},
+	"selectMode": "Επίλεξε λειτουργία για αλληλεπίδραση",
+	"selectApiConfig": "Επίλεξε διαμόρφωση API",
+	"enhancePrompt": "Βελτίωσε το prompt με επιπλέον περιεχόμενο",
+	"enhancePromptDescription": "Το κουμπί 'Βελτίωση Prompt' βοηθά να βελτιώσεις το prompt σου παρέχοντας επιπλέον περιεχόμενο, διευκρίνιση ή αναδιατύπωση. Δοκίμασε να πληκτρολογήσεις ένα prompt εδώ και κάνε κλικ στο κουμπί ξανά για να δεις πώς λειτουργεί.",
+	"addImages": "Πρόσθεσε εικόνες στο μήνυμα",
+	"sendMessage": "Αποστολή μηνύματος",
+	"typeMessage": "Πληκτρολόγησε ένα μήνυμα...",
+	"typeTask": "Δημιούργησε, βρες, ρώτα κάτι",
+	"addContext": "@ για προσθήκη περιεχομένου, / για αλλαγή λειτουργίας",
+	"dragFiles": "κράτα το shift για να σύρεις αρχεία",
+	"dragFilesImages": "κράτα το shift για να σύρεις αρχεία/εικόνες",
+	"errorReadingFile": "Σφάλμα ανάγνωσης αρχείου:",
+	"noValidImages": "Δεν επεξεργάστηκαν έγκυρες εικόνες",
+	"separator": "Διαχωριστικό",
+	"edit": "Επεξεργασία...",
+	"forNextMode": "για την επόμενη λειτουργία",
+	"apiRequest": {
+		"title": "Αίτημα API",
+		"failed": "Το Αίτημα API Απέτυχε",
+		"streaming": "Αίτημα API...",
+		"cancelled": "Το Αίτημα API Ακυρώθηκε",
+		"streamingFailed": "Η Ροή API Απέτυχε"
+	},
+	"checkpoint": {
+		"initial": "Αρχικό Σημείο Ελέγχου",
+		"regular": "Σημείο Ελέγχου",
+		"initializingWarning": "Ακόμα αρχικοποιείται το σημείο ελέγχου... Αν αυτό πάρει πολύ χρόνο, μπορείς να απενεργοποιήσεις τα σημεία ελέγχου στις <settingsLink>ρυθμίσεις</settingsLink> και να επανεκκινήσεις την εργασία σου.",
+		"menu": {
+			"viewDiff": "Προβολή Διαφορών",
+			"restore": "Επαναφορά Σημείου Ελέγχου",
+			"restoreFiles": "Επαναφορά Αρχείων",
+			"restoreFilesDescription": "Επαναφέρει τα αρχεία του έργου σου σε ένα στιγμιότυπο που λήφθηκε σε αυτό το σημείο.",
+			"restoreFilesAndTask": "Επαναφορά Αρχείων & Εργασίας",
+			"confirm": "Επιβεβαίωση",
+			"cancel": "Ακύρωση",
+			"cannotUndo": "Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.",
+			"restoreFilesAndTaskDescription": "Επαναφέρει τα αρχεία του έργου σου σε ένα στιγμιότυπο που λήφθηκε σε αυτό το σημείο και διαγράφει όλα τα μηνύματα μετά από αυτό το σημείο."
+		},
+		"current": "Τρέχον"
+	},
+	"contextCondense": {
+		"title": "Το Περιεχόμενο Συμπυκνώθηκε",
+		"condensing": "Συμπύκνωση περιεχομένου...",
+		"errorHeader": "Αποτυχία συμπύκνωσης περιεχομένου",
+		"tokens": "tokens"
+	},
+	"instructions": {
+		"wantsToFetch": "Το Kilo Code θέλει να ανακτήσει λεπτομερείς οδηγίες για να βοηθήσει με την τρέχουσα εργασία"
+	},
+	"fileOperations": {
+		"wantsToRead": "Το Kilo Code θέλει να διαβάσει αυτό το αρχείο:",
+		"wantsToReadMultiple": "Το Kilo Code θέλει να διαβάσει πολλαπλά αρχεία:",
+		"wantsToReadAndXMore": "Το Kilo Code θέλει να διαβάσει αυτό το αρχείο και {{count}} ακόμα:",
+		"wantsToReadOutsideWorkspace": "Το Kilo Code θέλει να διαβάσει αυτό το αρχείο εκτός του χώρου εργασίας:",
+		"didRead": "Το Kilo Code διάβασε αυτό το αρχείο:",
+		"wantsToEdit": "Το Kilo Code θέλει να επεξεργαστεί αυτό το αρχείο:",
+		"wantsToEditOutsideWorkspace": "Το Kilo Code θέλει να επεξεργαστεί αυτό το αρχείο εκτός του χώρου εργασίας:",
+		"wantsToEditProtected": "Το Kilo Code θέλει να επεξεργαστεί ένα προστατευμένο αρχείο διαμόρφωσης:",
+		"wantsToApplyBatchChanges": "Το Kilo Code θέλει να εφαρμόσει αλλαγές σε πολλαπλά αρχεία:",
+		"wantsToCreate": "Το Kilo Code θέλει να δημιουργήσει ένα νέο αρχείο:",
+		"wantsToSearchReplace": "Το Kilo Code θέλει να αναζητήσει και να αντικαταστήσει σε αυτό το αρχείο:",
+		"didSearchReplace": "Το Kilo Code εκτέλεσε αναζήτηση και αντικατάσταση σε αυτό το αρχείο:",
+		"wantsToInsert": "Το Kilo Code θέλει να εισάγει περιεχόμενο σε αυτό το αρχείο:",
+		"wantsToInsertWithLineNumber": "Το Kilo Code θέλει να εισάγει περιεχόμενο σε αυτό το αρχείο στη γραμμή {{lineNumber}}:",
+		"wantsToInsertAtEnd": "Το Kilo Code θέλει να προσθέσει περιεχόμενο στο τέλος αυτού του αρχείου:"
+	},
+	"directoryOperations": {
+		"wantsToViewTopLevel": "Το Kilo Code θέλει να δει τα αρχεία ανώτατου επιπέδου σε αυτόν τον κατάλογο:",
+		"didViewTopLevel": "Το Kilo Code είδε τα αρχεία ανώτατου επιπέδου σε αυτόν τον κατάλογο:",
+		"wantsToViewTopLevelOutsideWorkspace": "Το Kilo Code θέλει να δει τα αρχεία ανώτατου επιπέδου σε αυτόν τον κατάλογο (εκτός χώρου εργασίας):",
+		"didViewTopLevelOutsideWorkspace": "Το Kilo Code είδε τα αρχεία ανώτατου επιπέδου σε αυτόν τον κατάλογο (εκτός χώρου εργασίας):",
+		"wantsToViewRecursive": "Το Kilo Code θέλει να δει αναδρομικά όλα τα αρχεία σε αυτόν τον κατάλογο:",
+		"didViewRecursive": "Το Kilo Code είδε αναδρομικά όλα τα αρχεία σε αυτόν τον κατάλογο:",
+		"wantsToViewRecursiveOutsideWorkspace": "Το Kilo Code θέλει να δει αναδρομικά όλα τα αρχεία σε αυτόν τον κατάλογο (εκτός χώρου εργασίας):",
+		"didViewRecursiveOutsideWorkspace": "Το Kilo Code είδε αναδρομικά όλα τα αρχεία σε αυτόν τον κατάλογο (εκτός χώρου εργασίας):",
+		"wantsToViewDefinitions": "Το Kilo Code θέλει να δει τα ονόματα ορισμών πηγαίου κώδικα που χρησιμοποιούνται σε αυτόν τον κατάλογο:",
+		"didViewDefinitions": "Το Kilo Code είδε τα ονόματα ορισμών πηγαίου κώδικα που χρησιμοποιούνται σε αυτόν τον κατάλογο:",
+		"wantsToViewDefinitionsOutsideWorkspace": "Το Kilo Code θέλει να δει τα ονόματα ορισμών πηγαίου κώδικα που χρησιμοποιούνται σε αυτόν τον κατάλογο (εκτός χώρου εργασίας):",
+		"didViewDefinitionsOutsideWorkspace": "Το Kilo Code είδε τα ονόματα ορισμών πηγαίου κώδικα που χρησιμοποιούνται σε αυτόν τον κατάλογο (εκτός χώρου εργασίας):",
+		"wantsToSearch": "Το Kilo Code θέλει να αναζητήσει σε αυτόν τον κατάλογο για <code>{{regex}}</code>:",
+		"didSearch": "Το Kilo Code αναζήτησε σε αυτόν τον κατάλογο για <code>{{regex}}</code>:",
+		"wantsToSearchOutsideWorkspace": "Το Kilo Code θέλει να αναζητήσει σε αυτόν τον κατάλογο (εκτός χώρου εργασίας) για <code>{{regex}}</code>:",
+		"didSearchOutsideWorkspace": "Το Kilo Code αναζήτησε σε αυτόν τον κατάλογο (εκτός χώρου εργασίας) για <code>{{regex}}</code>:"
+	},
+	"codebaseSearch": {
+		"wantsToSearch": "Το Kilo Code θέλει να αναζητήσει στη βάση κώδικα για <code>{{query}}</code>:",
+		"wantsToSearchWithPath": "Το Kilo Code θέλει να αναζητήσει στη βάση κώδικα για <code>{{query}}</code> στο <code>{{path}}</code>:",
+		"didSearch": "Βρέθηκαν {{count}} αποτέλεσμα(τα) για <code>{{query}}</code>:"
+	},
+	"commandOutput": "Έξοδος Εντολής",
+	"response": "Απάντηση",
+	"arguments": "Ορίσματα",
+	"mcp": {
+		"wantsToUseTool": "Το Kilo Code θέλει να χρησιμοποιήσει ένα εργαλείο στον διακομιστή MCP {{serverName}}:",
+		"wantsToAccessResource": "Το Kilo Code θέλει να αποκτήσει πρόσβαση σε έναν πόρο στον διακομιστή MCP {{serverName}}:"
+	},
+	"modes": {
+		"wantsToSwitch": "Το Kilo Code θέλει να αλλάξει σε λειτουργία {{mode}}",
+		"wantsToSwitchWithReason": "Το Kilo Code θέλει να αλλάξει σε λειτουργία {{mode}} επειδή: {{reason}}",
+		"didSwitch": "Το Kilo Code άλλαξε σε λειτουργία {{mode}}",
+		"didSwitchWithReason": "Το Kilo Code άλλαξε σε λειτουργία {{mode}} επειδή: {{reason}}"
+	},
+	"subtasks": {
+		"wantsToCreate": "Το Kilo Code θέλει να δημιουργήσει μια νέα υποεργασία σε λειτουργία {{mode}}:",
+		"wantsToFinish": "Το Kilo Code θέλει να ολοκληρώσει αυτή την υποεργασία",
+		"newTaskContent": "Οδηγίες Υποεργασίας",
+		"completionContent": "Η Υποεργασία Ολοκληρώθηκε",
+		"resultContent": "Αποτελέσματα Υποεργασίας",
+		"defaultResult": "Παρακαλώ συνέχισε στην επόμενη εργασία.",
+		"completionInstructions": "Η υποεργασία ολοκληρώθηκε! Μπορείς να ελέγξεις τα αποτελέσματα και να προτείνεις τυχόν διορθώσεις ή επόμενα βήματα. Αν όλα φαίνονται καλά, επιβεβαίωσε για να επιστρέψεις το αποτέλεσμα στην κύρια εργασία."
+	},
+	"questions": {
+		"hasQuestion": "Το Kilo Code έχει μια ερώτηση:"
+	},
+	"taskCompleted": "Η Εργασία Ολοκληρώθηκε",
+	"error": "Σφάλμα",
+	"diffError": {
+		"title": "Η Επεξεργασία Απέτυχε"
+	},
+	"troubleMessage": "Το Kilo Code αντιμετωπίζει δυσκολίες...",
+	"powershell": {
+		"issues": "Φαίνεται ότι έχεις προβλήματα με το Windows PowerShell, παρακαλώ δες αυτό"
+	},
+	"autoApprove": {
+		"title": "Αυτόματη έγκριση:",
+		"none": "Καμία",
+		"description": "Η αυτόματη έγκριση επιτρέπει στο Kilo Code να εκτελεί ενέργειες χωρίς να ζητά άδεια. Ενεργοποίησε μόνο για ενέργειες που εμπιστεύεσαι πλήρως. Πιο λεπτομερής διαμόρφωση διαθέσιμη στις <settingsLink>Ρυθμίσεις</settingsLink>."
+	},
+	"announcement": {
+		"title": "🎉 Κυκλοφόρησε το Roo Code {{version}}",
+		"description": "Το Roo Code {{version}} φέρνει σημαντικές νέες δυνατότητες και βελτιώσεις βασισμένες στα σχόλιά σου.",
+		"whatsNew": "Τι Νέο Υπάρχει",
+		"feature1": "<bold>Λανσάρισμα του Roo Marketplace</bold>: Το marketplace είναι τώρα ζωντανό! Ανακάλυψε και εγκατάστησε λειτουργίες και MCP ευκολότερα από ποτέ.",
+		"feature2": "<bold>Μοντέλα Gemini 2.5</bold>: Προστέθηκε υποστήριξη για τα νέα μοντέλα Gemini 2.5 Pro, Flash και Flash Lite.",
+		"feature3": "<bold>Υποστήριξη Αρχείων Excel & Άλλα</bold>: Προστέθηκε υποστήριξη αρχείων Excel (.xlsx) και πολλές διορθώσεις σφαλμάτων και βελτιώσεις!",
+		"hideButton": "Απόκρυψη ανακοίνωσης",
+		"detailsDiscussLinks": "Μάθε περισσότερες λεπτομέρειες και συζήτησε στο <discordLink>Discord</discordLink> και το <redditLink>Reddit</redditLink> 🚀"
+	},
+	"reasoning": {
+		"thinking": "Σκέφτομαι",
+		"seconds": "{{count}}δ"
+	},
+	"followUpSuggest": {
+		"copyToInput": "Αντιγραφή στην είσοδο (όπως shift + κλικ)"
+	},
+	"browser": {
+		"rooWantsToUse": "Το Kilo Code θέλει να χρησιμοποιήσει τον περιηγητή:",
+		"consoleLogs": "Αρχεία Καταγραφής Κονσόλας",
+		"noNewLogs": "(Χωρίς νέα αρχεία καταγραφής)",
+		"screenshot": "Στιγμιότυπο οθόνης περιηγητή",
+		"cursor": "δρομέας",
+		"navigation": {
+			"step": "Βήμα {{current}} από {{total}}",
+			"previous": "Προηγούμενο",
+			"next": "Επόμενο"
+		},
+		"sessionStarted": "Η Συνεδρία Περιηγητή Ξεκίνησε",
+		"actions": {
+			"title": "Ενέργεια Περιήγησης: ",
+			"launch": "Εκκίνηση περιηγητή στο {{url}}",
+			"click": "Κλικ ({{coordinate}})",
+			"type": "Πληκτρολόγηση \"{{text}}\"",
+			"scrollDown": "Κύλιση προς τα κάτω",
+			"scrollUp": "Κύλιση προς τα πάνω",
+			"close": "Κλείσιμο περιηγητή"
+		}
+	},
+	"codeblock": {
+		"tooltips": {
+			"expand": "Επέκταση μπλοκ κώδικα",
+			"collapse": "Σύμπτυξη μπλοκ κώδικα",
+			"enable_wrap": "Ενεργοποίηση αναδίπλωσης λέξεων",
+			"disable_wrap": "Απενεργοποίηση αναδίπλωσης λέξεων",
+			"copy_code": "Αντιγραφή κώδικα"
+		}
+	},
+	"systemPromptWarning": "ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Ενεργή προσαρμοσμένη παράκαμψη system prompt. Αυτό μπορεί να καταστρέψει σοβαρά τη λειτουργικότητα και να προκαλέσει απρόβλεπτη συμπεριφορά.",
+	"profileViolationWarning": "Το τρέχον προφίλ παραβιάζει τις ρυθμίσεις του οργανισμού σου",
+	"shellIntegration": {
+		"title": "Προειδοποίηση Εκτέλεσης Εντολής",
+		"description": "Η εντολή σου εκτελείται χωρίς ενσωμάτωση κελύφους τερματικού VSCode. Για να καταργήσεις αυτή την προειδοποίηση μπορείς να απενεργοποιήσεις την ενσωμάτωση κελύφους στην ενότητα <strong>Terminal</strong> των <settingsLink>ρυθμίσεων Kilo Code</settingsLink> ή να αντιμετωπίσεις την ενσωμάτωση τερματικού VSCode χρησιμοποιώντας τον παρακάτω σύνδεσμο.",
+		"troubleshooting": "Κάνε κλικ εδώ για την τεκμηρίωση ενσωμάτωσης κελύφους."
+	},
+	"ask": {
+		"autoApprovedRequestLimitReached": {
+			"title": "Επιτεύχθηκε το Όριο Αυτόματα Εγκεκριμένων Αιτημάτων",
+			"description": "Το Kilo Code έφτασε το αυτόματα εγκεκριμένο όριο των {{count}} αιτημάτων API. Θέλεις να μηδενίσεις τον μετρητή και να συνεχίσεις με την εργασία;",
+			"button": "Μηδενισμός και Συνέχεια"
+		}
+	},
+	"indexingStatus": {
+		"ready": "Το ευρετήριο είναι έτοιμο",
+		"indexing": "Δημιουργία ευρετηρίου {{percentage}}%",
+		"indexed": "Δημιουργήθηκε ευρετήριο",
+		"error": "Σφάλμα ευρετηρίου",
+		"status": "Κατάσταση ευρετηρίου"
+	}
+}

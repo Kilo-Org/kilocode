@@ -1,9 +1,13 @@
 {
 	"welcome": {
-		"greeting": "Kilo Code 能为你做什么？",
-		"introText": "我经过了最快的 AI 模型训练，已准备好以极快的速度为你生成代码！",
-		"ctaButton": "免费试用 Kilo Code",
-		"manualModeButton": "使用你自己的 API 密钥"
+		"greeting": "欢迎使用 Kilo Code！",
+		"introText1": "Kilo Code 是一个免费的开源 AI 编程代理。",
+		"introText2": "它适用于最新的 AI 模型，如 Claude 4 Sonnet、Gemini 2.5 Pro、GPT-4.1 以及 450 多个其他模型。",
+		"introText3": "创建免费账户，获得价值 20 美元的 token，可用于任何 AI 模型。",
+		"ctaButton": "创建免费账户",
+		"manualModeButton": "使用你自己的 API 密钥",
+		"alreadySignedUp": "已经注册了？",
+		"loginText": "在此登录"
 	},
 	"lowCreditWarning": {
 		"addCredit": "添加额度",
@@ -94,7 +98,8 @@
 				"unknown": "未知消息类型",
 				"text": "AI回复",
 				"tool": "工具使用",
-				"use_mcp_server": "MCP 服务器使用情况"
+				"use_mcp_server": "MCP 服务器使用情况",
+				"user": "用户反馈"
 			},
 			"clickToScroll": "查看{{messageType}} (#{{messageNumber}})"
 		}

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react"
+import { useState, useCallback, useMemo, useEffect } from "react"
 import { useEvent } from "react-use"
 import { VSCodeTextField, VSCodeRadioGroup, VSCodeRadio } from "@vscode/webview-ui-toolkit/react"
 
@@ -7,6 +7,8 @@ import type { ProviderSettings } from "@roo-code/types"
 import { ExtensionMessage } from "@roo/ExtensionMessage"
 
 import { useAppTranslation } from "@src/i18n/TranslationContext"
+import { useRouterModels } from "@src/components/ui/hooks/useRouterModels"
+import { vscode } from "@src/utils/vscode"
 
 import { inputEventTransform } from "../transforms"
 
@@ -19,6 +21,7 @@ export const Ollama = ({ apiConfiguration, setApiConfigurationField }: OllamaPro
 	const { t } = useAppTranslation()
 
 	const [ollamaModels, setOllamaModels] = useState<string[]>([])
+	const routerModels = useRouterModels({ ollamaBaseUrl: apiConfiguration.ollamaBaseUrl }) // kilocode_change query key
 
 	const handleInputChange = useCallback(
 		<K extends keyof ProviderSettings, E>(
@@ -46,6 +49,33 @@ export const Ollama = ({ apiConfiguration, setApiConfigurationField }: OllamaPro
 
 	useEvent("message", onMessage)
 
+	// Refresh models on mount
+	useEffect(() => {
+		// Request fresh models - the handler now flushes cache automatically
+		vscode.postMessage({ type: "requestOllamaModels" })
+	}, [])
+
+	// Check if the selected model exists in the fetched models
+	const modelNotAvailable = useMemo(() => {
+		const selectedModel = apiConfiguration?.ollamaModelId
+		if (!selectedModel) return false
+
+		// Check if model exists in local ollama models
+		if (ollamaModels.length > 0 && ollamaModels.includes(selectedModel)) {
+			return false // Model is available locally
+		}
+
+		// If we have router models data for Ollama
+		if (routerModels.data?.ollama) {
+			const availableModels = Object.keys(routerModels.data.ollama)
+			// Show warning if model is not in the list (regardless of how many models there are)
+			return !availableModels.includes(selectedModel)
+		}
+
+		// If neither source has loaded yet, don't show warning
+		return false
+	}, [apiConfiguration?.ollamaModelId, routerModels.data, ollamaModels])
+
 	return (
 		<>
 			<VSCodeTextField
@@ -63,6 +93,16 @@ export const Ollama = ({ apiConfiguration, setApiConfigurationField }: OllamaPro
 				className="w-full">
 				<label className="block font-medium mb-1">{t("settings:providers.ollama.modelId")}</label>
 			</VSCodeTextField>
+			{modelNotAvailable && (
+				<div className="flex flex-col gap-2 text-vscode-errorForeground text-sm">
+					<div className="flex flex-row items-center gap-1">
+						<div className="codicon codicon-close" />
+						<div>
+							{t("settings:validation.modelAvailability", { modelId: apiConfiguration?.ollamaModelId })}
+						</div>
+					</div>
+				</div>
+			)}
 			{ollamaModels.length > 0 && (
 				<VSCodeRadioGroup
 					value={

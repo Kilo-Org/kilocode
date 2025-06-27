@@ -1,0 +1,50 @@
+{
+	"info": {
+		"settings_imported": "นำเข้าการตั้งค่าเรียบร้อยแล้ว"
+	},
+	"lowCreditWarning": {
+		"title": "คำเตือนเครดิตต่ำ!",
+		"message": "ตรวจสอบดูว่าคุณสามารถเติมเครดิตฟรีหรือซื้อเพิ่มได้หรือไม่!"
+	},
+	"rules": {
+		"actions": {
+			"delete": "ลบ",
+			"confirmDelete": "คุณแน่ใจหรือไม่ว่าต้องการลบ {{filename}}?",
+			"deleted": "ลบ {{filename}} แล้ว"
+		},
+		"errors": {
+			"noWorkspaceFound": "ไม่พบโฟลเดอร์ workspace",
+			"fileAlreadyExists": "ไฟล์ {{filename}} มีอยู่แล้ว",
+			"failedToCreateRuleFile": "ล้มเหลวในการสร้างไฟล์กฎ",
+			"failedToDeleteRuleFile": "ล้มเหลวในการลบไฟล์กฎ"
+		},
+		"templates": {
+			"workflow": {
+				"description": "คำอธิบาย workflow ที่นี่...",
+				"stepsHeader": "## ขั้นตอน",
+				"step1": "ขั้นตอนที่ 1",
+				"step2": "ขั้นตอนที่ 2"
+			},
+			"rule": {
+				"description": "คำอธิบายกฎที่นี่...",
+				"guidelinesHeader": "## แนวทาง",
+				"guideline1": "แนวทางที่ 1",
+				"guideline2": "แนวทางที่ 2"
+			}
+		}
+	},
+	"commitMessage": {
+		"activated": "เปิดใช้งานตัวสร้างข้อความ commit ของ Kilo Code แล้ว",
+		"gitNotFound": "⚠️ ไม่พบ Git repository หรือ git ไม่พร้อมใช้งาน",
+		"gitInitError": "⚠️ ข้อผิดพลาดการเริ่มต้น Git: {{error}}",
+		"generating": "Kilo: กำลังสร้างข้อความ commit...",
+		"analyzingChanges": "Kilo: กำลังวิเคราะห์การเปลี่ยนแปลงที่ staged...",
+		"noStagedChangesRepo": "Kilo: ไม่พบการเปลี่ยนแปลงที่ staged ใน git repository",
+		"noStagedChanges": "Kilo: ไม่พบการเปลี่ยนแปลงที่ staged เพื่อวิเคราะห์",
+		"generated": "Kilo: สร้างข้อความ commit แล้ว!",
+		"generationFailed": "Kilo: ล้มเหลวในการสร้างข้อความ commit: {{errorMessage}}",
+		"tokenRequired": "ต้องใช้ Kilo Code token สำหรับการสร้างข้อความ commit",
+		"activationFailed": "Kilo: ล้มเหลวในการเปิดใช้งานผู้ให้บริการข้อความ commit: {{error}}",
+		"providerRegistered": "Kilo: ลงทะเบียนผู้ให้บริการข้อความ commit แล้ว"
+	}
+}

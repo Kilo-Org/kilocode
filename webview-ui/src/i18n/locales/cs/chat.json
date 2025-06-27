@@ -1,0 +1,309 @@
+{
+	"greeting": "Co pro tebe může Kilo Code udělat?",
+	"task": {
+		"title": "Úkol",
+		"seeMore": "Zobrazit více",
+		"seeLess": "Zobrazit méně",
+		"tokens": "Tokeny:",
+		"cache": "Cache:",
+		"apiCost": "Cena API:",
+		"condenseContext": "Inteligentně zhustit kontext",
+		"contextWindow": "Délka kontextu:",
+		"closeAndStart": "Zavřít úkol a začít nový",
+		"export": "Exportovat historii úkolu",
+		"share": "Sdílet úkol",
+		"delete": "Smazat úkol (Shift + Klik pro přeskočení potvrzení)",
+		"shareWithOrganization": "Sdílet s organizací",
+		"shareWithOrganizationDescription": "Přístup mají pouze členové tvé organizace",
+		"sharePublicly": "Sdílet veřejně",
+		"sharePubliclyDescription": "Kdokoli s odkazem má přístup"
+	},
+	"history": {
+		"title": "Historie"
+	},
+	"unpin": "Odepnout",
+	"pin": "Připnout",
+	"retry": {
+		"title": "Zkusit znovu",
+		"tooltip": "Zkusit operaci znovu"
+	},
+	"startNewTask": {
+		"title": "Začít nový úkol",
+		"tooltip": "Začít nový úkol"
+	},
+	"reportBug": {
+		"title": "Nahlásit chybu"
+	},
+	"proceedAnyways": {
+		"title": "Přesto pokračovat",
+		"tooltip": "Pokračovat během provádění příkazu"
+	},
+	"save": {
+		"title": "Uložit",
+		"tooltip": "Uložit změny souboru"
+	},
+	"tokenProgress": {
+		"availableSpace": "Dostupný prostor: {{amount}} tokenů",
+		"tokensUsed": "Použité tokeny: {{used}} z {{total}}",
+		"reservedForResponse": "Rezervováno pro odpověď modelu: {{amount}} tokenů"
+	},
+	"reject": {
+		"title": "Odmítnout",
+		"tooltip": "Odmítnout tuto akci"
+	},
+	"completeSubtaskAndReturn": "Dokončit podúkol a vrátit se",
+	"approve": {
+		"title": "Schválit",
+		"tooltip": "Schválit tuto akci"
+	},
+	"read-batch": {
+		"approve": {
+			"title": "Schválit vše"
+		},
+		"deny": {
+			"title": "Odmítnout vše"
+		}
+	},
+	"runCommand": {
+		"title": "Spustit příkaz",
+		"tooltip": "Provést tento příkaz"
+	},
+	"proceedWhileRunning": {
+		"title": "Pokračovat během běhu",
+		"tooltip": "Pokračovat navzdory varováním"
+	},
+	"killCommand": {
+		"title": "Ukončit příkaz",
+		"tooltip": "Ukončit aktuální příkaz"
+	},
+	"resumeTask": {
+		"title": "Pokračovat v úkolu",
+		"tooltip": "Pokračovat v aktuálním úkolu"
+	},
+	"terminate": {
+		"title": "Ukončit",
+		"tooltip": "Ukončit aktuální úkol"
+	},
+	"cancel": {
+		"title": "Zrušit",
+		"tooltip": "Zrušit aktuální operaci"
+	},
+	"scrollToBottom": "Posunout se na konec chatu",
+	"about": "Generuj, refaktoruj a ladí kód s pomocí AI. Podívej se na naši <DocsLink>dokumentaci</DocsLink> pro více informací.",
+	"onboarding": "Tvůj seznam úkolů v tomto pracovním prostoru je prázdný.",
+	"rooTips": {
+		"boomerangTasks": {
+			"title": "Orchestrace úkolů",
+			"description": "Rozděl úkoly na menší, zvládnutelné části"
+		},
+		"stickyModels": {
+			"title": "Přilepené modely",
+			"description": "Každý režim si pamatuje tvůj naposledy použitý model"
+		},
+		"tools": {
+			"title": "Nástroje",
+			"description": "Umožni AI řešit problémy procházením webu, spouštěním příkazů a dalším"
+		},
+		"customizableModes": {
+			"title": "Přizpůsobitelné režimy",
+			"description": "Specializované persony s vlastním chováním a přiřazenými modely"
+		}
+	},
+	"selectMode": "Vyber režim pro interakci",
+	"selectApiConfig": "Vyber konfiguraci API",
+	"enhancePrompt": "Vylepšit prompt s dodatečným kontextem",
+	"enhancePromptDescription": "Tlačítko 'Vylepšit prompt' pomáhá zlepšit tvůj prompt poskytnutím dodatečného kontextu, vyjasnění nebo přeformulování. Zkus sem napsat prompt a znovu kliknout na tlačítko, abys viděl, jak to funguje.",
+	"addImages": "Přidat obrázky do zprávy",
+	"sendMessage": "Odeslat zprávu",
+	"typeMessage": "Napiš zprávu...",
+	"typeTask": "Vytvoř, najdi, zeptej se na něco",
+	"addContext": "@ pro přidání kontextu, / pro přepnutí režimů",
+	"dragFiles": "drž shift pro přetažení souborů",
+	"dragFilesImages": "drž shift pro přetažení souborů/obrázků",
+	"errorReadingFile": "Chyba při čtení souboru:",
+	"noValidImages": "Nebyly zpracovány žádné platné obrázky",
+	"separator": "Oddělovač",
+	"edit": "Upravit...",
+	"forNextMode": "pro další režim",
+	"apiRequest": {
+		"title": "API požadavek",
+		"failed": "API požadavek selhal",
+		"streaming": "API požadavek...",
+		"cancelled": "API požadavek zrušen",
+		"streamingFailed": "Streamování API selhalo"
+	},
+	"checkpoint": {
+		"initial": "Počáteční kontrolní bod",
+		"regular": "Kontrolní bod",
+		"initializingWarning": "Stále se inicializuje kontrolní bod... Pokud to trvá příliš dlouho, můžeš vypnout kontrolní body v <settingsLink>nastavení</settingsLink> a restartovat svůj úkol.",
+		"menu": {
+			"viewDiff": "Zobrazit rozdíly",
+			"restore": "Obnovit kontrolní bod",
+			"restoreFiles": "Obnovit soubory",
+			"restoreFilesDescription": "Obnoví soubory tvého projektu zpět na snímek pořízený v tomto bodě.",
+			"restoreFilesAndTask": "Obnovit soubory a úkol",
+			"confirm": "Potvrdit",
+			"cancel": "Zrušit",
+			"cannotUndo": "Tuto akci nelze vrátit zpět.",
+			"restoreFilesAndTaskDescription": "Obnoví soubory tvého projektu zpět na snímek pořízený v tomto bodě a smaže všechny zprávy po tomto bodě."
+		},
+		"current": "Aktuální"
+	},
+	"contextCondense": {
+		"title": "Kontext zhušťěn",
+		"condensing": "Zhušťování kontextu...",
+		"errorHeader": "Nepodařilo se zhuštit kontext",
+		"tokens": "tokeny"
+	},
+	"instructions": {
+		"wantsToFetch": "Kilo Code chce načíst podrobné instrukce pro pomoc s aktuálním úkolem"
+	},
+	"fileOperations": {
+		"wantsToRead": "Kilo Code chce přečíst tento soubor:",
+		"wantsToReadMultiple": "Kilo Code chce přečíst více souborů:",
+		"wantsToReadAndXMore": "Kilo Code chce přečíst tento soubor a {{count}} dalších:",
+		"wantsToReadOutsideWorkspace": "Kilo Code chce přečíst tento soubor mimo pracovní prostor:",
+		"didRead": "Kilo Code přečetl tento soubor:",
+		"wantsToEdit": "Kilo Code chce upravit tento soubor:",
+		"wantsToEditOutsideWorkspace": "Kilo Code chce upravit tento soubor mimo pracovní prostor:",
+		"wantsToEditProtected": "Kilo Code chce upravit chráněný konfigurační soubor:",
+		"wantsToApplyBatchChanges": "Kilo Code chce aplikovat změny na více souborů:",
+		"wantsToCreate": "Kilo Code chce vytvořit nový soubor:",
+		"wantsToSearchReplace": "Kilo Code chce hledat a nahradit v tomto souboru:",
+		"didSearchReplace": "Kilo Code provedl hledání a nahrazení v tomto souboru:",
+		"wantsToInsert": "Kilo Code chce vložit obsah do tohoto souboru:",
+		"wantsToInsertWithLineNumber": "Kilo Code chce vložit obsah do tohoto souboru na řádek {{lineNumber}}:",
+		"wantsToInsertAtEnd": "Kilo Code chce přidat obsah na konec tohoto souboru:"
+	},
+	"directoryOperations": {
+		"wantsToViewTopLevel": "Kilo Code chce zobrazit soubory nejvyšší úrovně v tomto adresáři:",
+		"didViewTopLevel": "Kilo Code zobrazil soubory nejvyšší úrovně v tomto adresáři:",
+		"wantsToViewTopLevelOutsideWorkspace": "Kilo Code chce zobrazit soubory nejvyšší úrovně v tomto adresáři (mimo pracovní prostor):",
+		"didViewTopLevelOutsideWorkspace": "Kilo Code zobrazil soubory nejvyšší úrovně v tomto adresáři (mimo pracovní prostor):",
+		"wantsToViewRecursive": "Kilo Code chce rekurzivně zobrazit všechny soubory v tomto adresáři:",
+		"didViewRecursive": "Kilo Code rekurzivně zobrazil všechny soubory v tomto adresáři:",
+		"wantsToViewRecursiveOutsideWorkspace": "Kilo Code chce rekurzivně zobrazit všechny soubory v tomto adresáři (mimo pracovní prostor):",
+		"didViewRecursiveOutsideWorkspace": "Kilo Code rekurzivně zobrazil všechny soubory v tomto adresáři (mimo pracovní prostor):",
+		"wantsToViewDefinitions": "Kilo Code chce zobrazit názvy definic zdrojového kódu použité v tomto adresáři:",
+		"didViewDefinitions": "Kilo Code zobrazil názvy definic zdrojového kódu použité v tomto adresáři:",
+		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code chce zobrazit názvy definic zdrojového kódu použité v tomto adresáři (mimo pracovní prostor):",
+		"didViewDefinitionsOutsideWorkspace": "Kilo Code zobrazil názvy definic zdrojového kódu použité v tomto adresáři (mimo pracovní prostor):",
+		"wantsToSearch": "Kilo Code chce hledat v tomto adresáři <code>{{regex}}</code>:",
+		"didSearch": "Kilo Code hledal v tomto adresáři <code>{{regex}}</code>:",
+		"wantsToSearchOutsideWorkspace": "Kilo Code chce hledat v tomto adresáři (mimo pracovní prostor) <code>{{regex}}</code>:",
+		"didSearchOutsideWorkspace": "Kilo Code hledal v tomto adresáři (mimo pracovní prostor) <code>{{regex}}</code>:"
+	},
+	"codebaseSearch": {
+		"wantsToSearch": "Kilo Code chce hledat v kódové základně <code>{{query}}</code>:",
+		"wantsToSearchWithPath": "Kilo Code chce hledat v kódové základně <code>{{query}}</code> v <code>{{path}}</code>:",
+		"didSearch": "Nalezeno {{count}} výsledků pro <code>{{query}}</code>:"
+	},
+	"commandOutput": "Výstup příkazu",
+	"response": "Odpověď",
+	"arguments": "Argumenty",
+	"mcp": {
+		"wantsToUseTool": "Kilo Code chce použít nástroj na MCP serveru {{serverName}}:",
+		"wantsToAccessResource": "Kilo Code chce přistupovat k prostředku na MCP serveru {{serverName}}:"
+	},
+	"modes": {
+		"wantsToSwitch": "Kilo Code chce přepnout do režimu {{mode}}",
+		"wantsToSwitchWithReason": "Kilo Code chce přepnout do režimu {{mode}}, protože: {{reason}}",
+		"didSwitch": "Kilo Code přepnul do režimu {{mode}}",
+		"didSwitchWithReason": "Kilo Code přepnul do režimu {{mode}}, protože: {{reason}}"
+	},
+	"subtasks": {
+		"wantsToCreate": "Kilo Code chce vytvořit nový podúkol v režimu {{mode}}:",
+		"wantsToFinish": "Kilo Code chce dokončit tento podúkol",
+		"newTaskContent": "Instrukce podúkolu",
+		"completionContent": "Podúkol dokončen",
+		"resultContent": "Výsledky podúkolu",
+		"defaultResult": "Prosím pokračuj k dalšímu úkolu.",
+		"completionInstructions": "Podúkol dokončen! Můžeš zkontrolovat výsledky a navrhnout jakékoli opravy nebo další kroky. Pokud vše vypadá dobře, potvrď pro vrácení výsledku do nadřazeného úkolu."
+	},
+	"questions": {
+		"hasQuestion": "Kilo Code má otázku:"
+	},
+	"taskCompleted": "Úkol dokončen",
+	"error": "Chyba",
+	"diffError": {
+		"title": "Úprava neúspěšná"
+	},
+	"troubleMessage": "Kilo Code má potíže...",
+	"powershell": {
+		"issues": "Zdá se, že máš problémy s Windows PowerShell, prosím podívej se na toto"
+	},
+	"autoApprove": {
+		"title": "Automatické schvalování:",
+		"none": "Žádné",
+		"description": "Automatické schvalování umožňuje Kilo Code provádět akce bez žádání o povolení. Zapni pouze pro akce, kterým plně důvěřuješ. Podrobnější konfigurace je dostupná v <settingsLink>Nastavení</settingsLink>."
+	},
+	"announcement": {
+		"title": "🎉 Vydán Roo Code {{version}}",
+		"description": "Roo Code {{version}} přináší hlavní nové funkce a vylepšení na základě tvé zpětné vazby.",
+		"whatsNew": "Co je nového",
+		"feature1": "<bold>Spuštění Roo Marketplace</bold>: Tržiště je nyní živé! Objevuj a instaluj režimy a MCP snadněji než kdy dříve.",
+		"feature2": "<bold>Modely Gemini 2.5</bold>: Přidána podpora pro nové modely Gemini 2.5 Pro, Flash a Flash Lite.",
+		"feature3": "<bold>Podpora souborů Excel a další</bold>: Přidána podpora souborů Excel (.xlsx) a mnoho oprav chyb a vylepšení!",
+		"hideButton": "Skrýt oznámení",
+		"detailsDiscussLinks": "Získej více podrobností a diskutuj na <discordLink>Discord</discordLink> a <redditLink>Reddit</redditLink> 🚀"
+	},
+	"reasoning": {
+		"thinking": "Přemýšlím",
+		"seconds": "{{count}}s"
+	},
+	"followUpSuggest": {
+		"copyToInput": "Kopírovat do vstupu (stejné jako shift + klik)"
+	},
+	"browser": {
+		"rooWantsToUse": "Kilo Code chce použít prohlížeč:",
+		"consoleLogs": "Záznamy konzole",
+		"noNewLogs": "(Žádné nové záznamy)",
+		"screenshot": "Snímek obrazovky prohlížeče",
+		"cursor": "kurzor",
+		"navigation": {
+			"step": "Krok {{current}} z {{total}}",
+			"previous": "Předchozí",
+			"next": "Další"
+		},
+		"sessionStarted": "Relace prohlížeče zahájena",
+		"actions": {
+			"title": "Akce procházení: ",
+			"launch": "Spustit prohlížeč na {{url}}",
+			"click": "Kliknout ({{coordinate}})",
+			"type": "Napsat \"{{text}}\"",
+			"scrollDown": "Posunout dolů",
+			"scrollUp": "Posunout nahoru",
+			"close": "Zavřít prohlížeč"
+		}
+	},
+	"codeblock": {
+		"tooltips": {
+			"expand": "Rozbalit blok kódu",
+			"collapse": "Sbalit blok kódu",
+			"enable_wrap": "Zapnout zalamování slov",
+			"disable_wrap": "Vypnout zalamování slov",
+			"copy_code": "Kopírovat kód"
+		}
+	},
+	"systemPromptWarning": "VAROVÁNÍ: Aktivní vlastní přepsání systémového promptu. To může vážně narušit funkčnost a způsobit nepředvídatelné chování.",
+	"profileViolationWarning": "Aktuální profil porušuje nastavení tvé organizace",
+	"shellIntegration": {
+		"title": "Varování provádění příkazu",
+		"description": "Tvůj příkaz se provádí bez integrace shellu terminálu VSCode. Pro potlačení tohoto varování můžeš vypnout integraci shellu v sekci <strong>Terminal</strong> <settingsLink>nastavení Kilo Code</settingsLink> nebo vyřešit integraci terminálu VSCode pomocí odkazu níže.",
+		"troubleshooting": "Klikni zde pro dokumentaci integrace shellu."
+	},
+	"ask": {
+		"autoApprovedRequestLimitReached": {
+			"title": "Dosažen limit automaticky schválených požadavků",
+			"description": "Kilo Code dosáhl automaticky schváleného limitu {{count}} API požadavků. Chceš resetovat počítadlo a pokračovat v úkolu?",
+			"button": "Resetovat a pokračovat"
+		}
+	},
+	"indexingStatus": {
+		"ready": "Index připraven",
+		"indexing": "Indexování {{percentage}}%",
+		"indexed": "Indexováno",
+		"error": "Chyba indexu",
+		"status": "Stav indexu"
+	}
+}

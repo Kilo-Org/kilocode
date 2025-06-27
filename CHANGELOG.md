@@ -1,5 +1,80 @@
 # kilo-code
 
+## [v4.45.0]
+
+- [#867](https://github.com/Kilo-Org/kilocode/pull/867) [`717823f`](https://github.com/Kilo-Org/kilocode/commit/717823f40419bda32813b3e1f9f357fdabfa89df) Thanks [@Juice10](https://github.com/Juice10)! - Add copy prompt button to task actions. Based on [@vultrnerd's feedback](https://github.com/Kilo-Org/kilocode/discussions/850).
+
+### Patch Changes
+
+- [#890](https://github.com/Kilo-Org/kilocode/pull/890) [`1a35cfe`](https://github.com/Kilo-Org/kilocode/commit/1a35cfe2c0dbfee68c09c7abeb42199e8713095f) Thanks [@hassoncs](https://github.com/hassoncs)! - Only show the colorful gutter bars when hovering over the Task Timeline
+
+## [v4.44.1]
+
+### Patch Changes
+
+- [#887](https://github.com/Kilo-Org/kilocode/pull/887) [`df10163`](https://github.com/Kilo-Org/kilocode/commit/df101636d0f9851b2f3ee4820c84cb09b3c41f33) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Update text on welcome screen
+
+- [#886](https://github.com/Kilo-Org/kilocode/pull/886) [`084cee7`](https://github.com/Kilo-Org/kilocode/commit/084cee76dc59a2f83ddf36dfdf71666f89a2898a) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Fixed crashes with the error message "Bad substitution" and "Cannot read properties of undefined (reading 'includes')"
+
+## [v4.44.0]
+
+- [#881](https://github.com/Kilo-Org/kilocode/pull/881) [`30836f4`](https://github.com/Kilo-Org/kilocode/commit/30836f4d11a02769787af91c552789c14118ebdf) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Add support for Gemini CLI provider (thanks Roo & Cline!)
+
+## [v4.43.1]
+
+- [#842](https://github.com/Kilo-Org/kilocode/pull/842) [`32e4c30`](https://github.com/Kilo-Org/kilocode/commit/32e4c304506b4042b76265446a3169206eb243a5) Thanks [@markijbema](https://github.com/markijbema)! - add a button to fix mermaid syntax errors by calling the LLM
+
+## [v4.43.0]
+
+- [#871](https://github.com/Kilo-Org/kilocode/pull/871) [`52f216d`](https://github.com/Kilo-Org/kilocode/commit/52f216de21ea5be0366976a9108e3c9edd993620) Thanks [@hassoncs](https://github.com/hassoncs)! - Add a colorful gutter to chat messages corresponding to the Task Timeline
+
+- [#861](https://github.com/Kilo-Org/kilocode/pull/861) [`8e9df82`](https://github.com/Kilo-Org/kilocode/commit/8e9df820f22b3ea833a00dc490ad05bfaa6f1645) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Add language support for Filipino, Thai, Ukrainian, Czech, Greek and Swedish
+
+- [#847](https://github.com/Kilo-Org/kilocode/pull/847) [`fbe3c75`](https://github.com/Kilo-Org/kilocode/commit/fbe3c75c1fbaf2b16cea43554cf7e9be2ef8849f) Thanks [@hassoncs](https://github.com/hassoncs)! - Highlight the context window progress bar red when near the limit
+
+### Patch Changes
+
+- [#853](https://github.com/Kilo-Org/kilocode/pull/853) [`e9452f1`](https://github.com/Kilo-Org/kilocode/commit/e9452f11035c8daa40c5afd752bad4c18f7f3f64) Thanks [@hassoncs](https://github.com/hassoncs)! - Fix @ mentions not working after slash commands
+
+- [#854](https://github.com/Kilo-Org/kilocode/pull/854) [`81d8b06`](https://github.com/Kilo-Org/kilocode/commit/81d8b0657ec045efa67b41bb7af493ef4753a8ae) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Fix allowed commands export/import
+
+- [#871](https://github.com/Kilo-Org/kilocode/pull/871) [`52f216d`](https://github.com/Kilo-Org/kilocode/commit/52f216de21ea5be0366976a9108e3c9edd993620) Thanks [@hassoncs](https://github.com/hassoncs)! - Enable the Task Timeline by default
+
+## [v4.42.0]
+
+- [#844](https://github.com/Kilo-Org/kilocode/pull/844) [`8f33721`](https://github.com/Kilo-Org/kilocode/commit/8f3372102d8a06cfbe0dd2889287befea6a347a4) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Include changes from Roo Code v3.21.5
+
+    - Fix Qdrant URL prefix handling for QdrantClient initialization (thanks @CW-B-W!)
+    - Improve LM Studio model detection to show all downloaded models (thanks @daniel-lxs!)
+    - Resolve Claude Code provider JSON parsing and reasoning block display
+    - Fix start line not working in multiple apply diff (thanks @samhvw8!)
+    - Resolve diff editor issues with markdown preview associations (thanks @daniel-lxs!)
+    - Resolve URL port handling bug for HTTPS URLs in Qdrant (thanks @benashby!)
+    - Mark unused Ollama schema properties as optional (thanks @daniel-lxs!)
+    - Close the local browser when used as fallback for remote (thanks @markijbema!)
+    - Add Claude Code provider for local CLI integration (thanks @BarreiroT!)
+    - Add profile-specific context condensing thresholds (thanks @SannidhyaSah!)
+    - Fix context length for lmstudio and ollama (thanks @thecolorblue!)
+    - Resolve MCP tool eye icon state and hide in chat context (thanks @daniel-lxs!)
+    - Add LaTeX math equation rendering in chat window
+    - Add toggle for excluding MCP server tools from the prompt (thanks @Rexarrior!)
+    - Add symlink support to list_files tool
+    - Fix marketplace blanking after populating
+    - Fix recursive directory scanning in @ mention "Add Folder" functionality (thanks @village-way!)
+    - Resolve phantom subtask display on cancel during API retry
+    - Correct Gemini 2.5 Flash pricing (thanks @daniel-lxs!)
+    - Resolve marketplace timeout issues and display installed MCPs (thanks @daniel-lxs!)
+    - Onboarding tweaks to emphasize modes (thanks @brunobergher!)
+    - Rename 'Boomerang Tasks' to 'Task Orchestration' for clarity
+    - Remove command execution from attempt_completion
+    - Fix markdown for links followed by punctuation (thanks @xyOz-dev!)
+
+### Patch Changes
+
+- [#845](https://github.com/Kilo-Org/kilocode/pull/845) [`8e53c23`](https://github.com/Kilo-Org/kilocode/commit/8e53c237151787523f7338037d5442e9e0225e94) Thanks [@hassoncs](https://github.com/hassoncs)! - Improved Task Timeline tooltips
+
+- [#825](https://github.com/Kilo-Org/kilocode/pull/825) [`b7b7f8c`](https://github.com/Kilo-Org/kilocode/commit/b7b7f8c165a0b85f504076432e2fa4ce695077b8) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Show number of cache reads for Gemini models
+
 ## [v4.41.0]
 
 - [#794](https://github.com/Kilo-Org/kilocode/pull/794) [`7113260`](https://github.com/Kilo-Org/kilocode/commit/711326037cbb38db49f6a2d12671c7974a981787) Thanks [@markijbema](https://github.com/markijbema)! - Include changes from Roo Code v3.21.1

@@ -1,0 +1,74 @@
+{
+	"answers": {
+		"yes": "Oo",
+		"no": "Hindi",
+		"cancel": "Kanselahin",
+		"remove": "Alisin",
+		"keep": "Panatilihin"
+	},
+	"number_format": {
+		"thousand_suffix": "k",
+		"million_suffix": "m",
+		"billion_suffix": "b"
+	},
+	"feedback": {
+		"title": "Feedback",
+		"description": "Gusto naming marinig ang iyong feedback o tumulong sa anumang isyu na iyong nararanasan.",
+		"githubIssues": "Mag-ulat ng isyu sa GitHub",
+		"githubDiscussions": "Sumali sa mga diskusyon sa GitHub",
+		"discord": "Sumali sa aming Discord community",
+		"customerSupport": "Customer Support"
+	},
+	"ui": {
+		"search_placeholder": "Maghanap..."
+	},
+	"mermaid": {
+		"loading": "Ginagawa ang mermaid diagram...",
+		"render_error": "Hindi Maipakita ang Diagram",
+		"fixing_syntax": "Inaayos ang Mermaid syntax...",
+		"fix_syntax_button": "Ayusin ang syntax gamit ang AI",
+		"original_code": "Orihinal na code:",
+		"errors": {
+			"unknown_syntax": "Hindi kilalang syntax error",
+			"fix_timeout": "Nag-timeout ang LLM fix request",
+			"fix_failed": "Nabigo ang LLM fix",
+			"fix_attempts": "Hindi naayos ang syntax pagkatapos ng {{attempts}} na pagtatangka. Huling error: {{error}}",
+			"no_fix_provided": "Hindi nakapagbigay ng fix ang LLM",
+			"fix_request_failed": "Nabigo ang fix request"
+		},
+		"buttons": {
+			"zoom": "Zoom",
+			"zoomIn": "Palakihin",
+			"zoomOut": "Paliitin",
+			"copy": "Kopyahin",
+			"save": "I-save ang Larawan",
+			"viewCode": "Tingnan ang Code",
+			"viewDiagram": "Tingnan ang Diagram",
+			"close": "Isara"
+		},
+		"modal": {
+			"codeTitle": "Mermaid Code"
+		},
+		"tabs": {
+			"diagram": "Diagram",
+			"code": "Code"
+		},
+		"feedback": {
+			"imageCopied": "Nakopya ang larawan sa clipboard",
+			"copyError": "Error sa pagkopya ng larawan"
+		}
+	},
+	"file": {
+		"errors": {
+			"invalidDataUri": "Hindi valid ang format ng data URI",
+			"copyingImage": "Error sa pagkopya ng larawan: {{error}}",
+			"openingImage": "Error sa pagbukas ng larawan: {{error}}",
+			"pathNotExists": "Hindi umiiral ang path: {{path}}",
+			"couldNotOpen": "Hindi mabuksan ang file: {{error}}",
+			"couldNotOpenGeneric": "Hindi mabuksan ang file!"
+		},
+		"success": {
+			"imageDataUriCopied": "Nakopya ang image data URI sa clipboard"
+		}
+	}
+}

@@ -1,0 +1,107 @@
+{
+	"welcome": {
+		"greeting": "Maligayang pagdating sa Kilo Code!",
+		"introText1": "Ang Kilo Code ay isang libreng, open source AI coding agent.",
+		"introText2": "Gumagana ito sa pinakabagong AI models tulad ng Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1, at higit 450 pang iba.",
+		"introText3": "Gumawa ng libreng account at makakuha ng $20 na tokens para gamitin sa kahit anong AI model.",
+		"ctaButton": "Gumawa ng libreng account",
+		"manualModeButton": "Gamitin ang sarili mong API key",
+		"alreadySignedUp": "Nag-sign up ka na ba?",
+		"loginText": "Mag-log in dito"
+	},
+	"lowCreditWarning": {
+		"addCredit": "Magdagdag ng Credit",
+		"lowBalance": "Mababa na ang iyong Kilo Code balance"
+	},
+	"notifications": {
+		"toolRequest": "Naghihintay ng pag-apruba ang tool request",
+		"browserAction": "Naghihintay ng pag-apruba ang browser action",
+		"command": "Naghihintay ng pag-apruba ang command"
+	},
+	"settings": {
+		"sections": {
+			"mcp": "MCP Servers"
+		},
+		"provider": {
+			"apiKey": "Kilo Code API Key",
+			"login": "Mag-log in sa Kilo Code",
+			"logout": "Mag-log out mula sa Kilo Code"
+		}
+	},
+	"chat": {
+		"condense": {
+			"wantsToCondense": "Gusto ng Kilo Code na paikliin ang iyong pag-uusap",
+			"condenseConversation": "Paikliin ang Pag-uusap"
+		}
+	},
+	"newTaskPreview": {
+		"task": "Gawain"
+	},
+	"profile": {
+		"title": "Profile",
+		"dashboard": "Dashboard",
+		"logOut": "Mag-log out",
+		"currentBalance": "KASALUKUYANG BALANSE",
+		"loading": "Nag-lo-load...",
+		"signUp": {
+			"title": "Mag-sign up sa Kilo Code",
+			"description": "Ang pag-sign up sa Kilo Code ay nagbibigay sa iyo ng libreng credits para makapagsimula. Gamitin ang iyong credits para tuklasin ang aming mga feature, subukan ang pinakabago at pinakamahusay na models, at maranasan ang mga benepisyo ng Kilo Code nang walang commitment.",
+			"termsAndPrivacy": "Sa pagpapatuloy, sumasang-ayon ka sa <termsLink>Terms of Service</termsLink> at <privacyLink>Privacy Policy.</privacyLink>"
+		}
+	},
+	"docs": "Docs",
+	"rules": {
+		"tooltip": "Pamahalaan ang Kilo Code Rules at Workflows",
+		"ariaLabel": "Kilo Code Rules",
+		"tabs": {
+			"rules": "Rules",
+			"workflows": "Workflows"
+		},
+		"description": {
+			"rules": "Ang Rules ay nagbibigay-daan sa iyo na magbigay sa Kilo Code ng mga tagubilin na dapat nitong sundin sa lahat ng modes at para sa lahat ng prompts. Ito ay isang patuloy na paraan upang isama ang konteksto at mga kagustuhan para sa lahat ng pag-uusap sa iyong workspace o globally.",
+			"workflows": "Ang Workflows ay isang nakahandang template para sa isang pag-uusap. Ang Workflows ay maaaring magbigay-daan sa iyo na tukuyin ang mga prompts na madalas mong ginagamit, at maaaring magsama ng serye ng mga hakbang upang gabayan ang Kilo Code sa mga paulit-ulit na gawain, tulad ng pag-deploy ng service o pag-submit ng PR. Para gamitin ang workflow, i-type",
+			"workflowsInChat": "sa chat."
+		},
+		"sections": {
+			"globalRules": "Global Rules",
+			"workspaceRules": "Workspace Rules",
+			"globalWorkflows": "Global Workflows",
+			"workspaceWorkflows": "Workspace Workflows"
+		},
+		"validation": {
+			"invalidFileExtension": "Tanging .md, .txt, o walang file extension ang pinapayagan"
+		},
+		"placeholders": {
+			"workflowName": "workflow-name (.md, .txt, o walang extension)",
+			"ruleName": "rule-name (.md, .txt, o walang extension)"
+		},
+		"newFile": {
+			"newWorkflowFile": "Bagong workflow file...",
+			"newRuleFile": "Bagong rule file..."
+		}
+	},
+	"taskTimeline": {
+		"tooltip": {
+			"clickToScroll": "Tingnan ang {{messageType}} (#{{messageNumber}})",
+			"messageTypes": {
+				"browser_action_launch": "paglunsad ng browser",
+				"browser_action_result": "resulta ng browser action",
+				"browser_action": "browser action",
+				"checkpoint_saved": "na-save na checkpoint",
+				"command": "pagpapatupad ng command",
+				"command_output": "output ng command",
+				"completion_result": "resulta ng pagkumpleto",
+				"condense_context": "paikliin ang konteksto",
+				"error": "mensahe ng error",
+				"followup": "follow-up na tanong",
+				"mcp_server_response": "tugon ng MCP server",
+				"reasoning": "pag-iisip ng AI",
+				"text": "tugon ng AI",
+				"tool": "paggamit ng tool",
+				"unknown": "hindi kilalang uri ng mensahe",
+				"use_mcp_server": "paggamit ng MCP server",
+				"user": "feedback ng user"
+			}
+		}
+	}
+}

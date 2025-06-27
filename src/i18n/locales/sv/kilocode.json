@@ -1,0 +1,50 @@
+{
+	"info": {
+		"settings_imported": "Inställningar importerades framgångsrikt."
+	},
+	"lowCreditWarning": {
+		"title": "Varning för låg kredit!",
+		"message": "Kontrollera om du kan fylla på med gratis krediter eller köpa fler!"
+	},
+	"rules": {
+		"actions": {
+			"delete": "Ta bort",
+			"confirmDelete": "Är du säker på att du vill ta bort {{filename}}?",
+			"deleted": "Tog bort {{filename}}"
+		},
+		"errors": {
+			"noWorkspaceFound": "Ingen arbetsytemapp hittades",
+			"fileAlreadyExists": "Filen {{filename}} finns redan",
+			"failedToCreateRuleFile": "Misslyckades med att skapa regelfil.",
+			"failedToDeleteRuleFile": "Misslyckades med att ta bort regelfil."
+		},
+		"templates": {
+			"workflow": {
+				"description": "Arbetsflödesbeskrivning här...",
+				"stepsHeader": "## Steg",
+				"step1": "Steg 1",
+				"step2": "Steg 2"
+			},
+			"rule": {
+				"description": "Regelbeskrivning här...",
+				"guidelinesHeader": "## Riktlinjer",
+				"guideline1": "Riktlinje 1",
+				"guideline2": "Riktlinje 2"
+			}
+		}
+	},
+	"commitMessage": {
+		"activated": "Kilo Code commit-meddelandegenerator aktiverad",
+		"gitNotFound": "⚠️ Git-repository hittades inte eller git är inte tillgängligt",
+		"gitInitError": "⚠️ Git-initieringsfel: {{error}}",
+		"generating": "Kilo: Genererar commit-meddelande...",
+		"analyzingChanges": "Kilo: Analyserar förberedda ändringar...",
+		"noStagedChangesRepo": "Kilo: Inga förberedda ändringar hittades i git-repository",
+		"noStagedChanges": "Kilo: Inga förberedda ändringar hittades att analysera",
+		"generated": "Kilo: Commit-meddelande genererat!",
+		"generationFailed": "Kilo: Misslyckades med att generera commit-meddelande: {{errorMessage}}",
+		"tokenRequired": "Kilo Code-token krävs för att generera commit-meddelande",
+		"activationFailed": "Kilo: Misslyckades med att aktivera commit-meddelandeleverantör: {{error}}",
+		"providerRegistered": "Kilo: Commit-meddelandeleverantör registrerad"
+	}
+}

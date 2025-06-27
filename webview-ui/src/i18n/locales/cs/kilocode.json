@@ -1,0 +1,107 @@
+{
+	"welcome": {
+		"greeting": "Vítej v Kilo Code!",
+		"introText1": "Kilo Code je bezplatný open source AI coding agent.",
+		"introText2": "Funguje s nejnovějšími AI modely jako Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1 a více než 450 dalšími.",
+		"introText3": "Vytvoř si bezplatný účet a získej $20 v tokenech pro použití s jakýmkoli AI modelem.",
+		"ctaButton": "Vytvořit bezplatný účet",
+		"manualModeButton": "Použij vlastní API key",
+		"alreadySignedUp": "Už jsi registrovaný?",
+		"loginText": "Přihlas se zde"
+	},
+	"lowCreditWarning": {
+		"addCredit": "Přidat kredit",
+		"lowBalance": "Tvůj Kilo Code zůstatek je nízký"
+	},
+	"notifications": {
+		"toolRequest": "Požadavek na nástroj čeká na schválení",
+		"browserAction": "Akce prohlížeče čeká na schválení",
+		"command": "Příkaz čeká na schválení"
+	},
+	"settings": {
+		"sections": {
+			"mcp": "MCP servery"
+		},
+		"provider": {
+			"apiKey": "Kilo Code API Key",
+			"login": "Přihlásit se do Kilo Code",
+			"logout": "Odhlásit se z Kilo Code"
+		}
+	},
+	"chat": {
+		"condense": {
+			"wantsToCondense": "Kilo Code chce zkrátit tvou konverzaci",
+			"condenseConversation": "Zkrátit konverzaci"
+		}
+	},
+	"newTaskPreview": {
+		"task": "Úkol"
+	},
+	"profile": {
+		"title": "Profil",
+		"dashboard": "Přehled",
+		"logOut": "Odhlásit se",
+		"currentBalance": "AKTUÁLNÍ ZŮSTATEK",
+		"loading": "Načítání...",
+		"signUp": {
+			"title": "Zaregistruj se v Kilo Code",
+			"description": "Registrace v Kilo Code ti dává bezplatné kredity pro začátek. Použij své kredity k prozkoumání našich funkcí, vyzkoušej nejnovější a nejlepší modely a zažij výhody Kilo Code bez jakýchkoli závazků.",
+			"termsAndPrivacy": "Pokračováním souhlasíš s <termsLink>Podmínkami služby</termsLink> a <privacyLink>Zásadami ochrany osobních údajů.</privacyLink>"
+		}
+	},
+	"docs": "Dokumentace",
+	"rules": {
+		"tooltip": "Spravovat Kilo Code Rules a Workflows",
+		"ariaLabel": "Kilo Code Rules",
+		"tabs": {
+			"rules": "Pravidla",
+			"workflows": "Pracovní postupy"
+		},
+		"description": {
+			"rules": "Pravidla ti umožňují poskytnout Kilo Code pokyny, které by měl dodržovat ve všech režimech a pro všechny prompty. Je to trvalý způsob, jak zahrnout kontext a preference pro všechny konverzace ve tvém pracovním prostoru nebo globálně.",
+			"workflows": "Pracovní postupy jsou připravená šablona pro konverzaci. Pracovní postupy ti mohou umožnit definovat prompty, které často používáš, a mohou zahrnovat řadu kroků k vedení Kilo Code přes opakující se úkoly, jako je nasazení služby nebo odeslání PR. Pro vyvolání pracovního postupu napiš",
+			"workflowsInChat": "v chatu."
+		},
+		"sections": {
+			"globalRules": "Globální pravidla",
+			"workspaceRules": "Pravidla pracovního prostoru",
+			"globalWorkflows": "Globální pracovní postupy",
+			"workspaceWorkflows": "Pracovní postupy pracovního prostoru"
+		},
+		"validation": {
+			"invalidFileExtension": "Povoleno pouze .md, .txt nebo bez přípony souboru"
+		},
+		"placeholders": {
+			"workflowName": "workflow-name (.md, .txt nebo bez přípony)",
+			"ruleName": "rule-name (.md, .txt nebo bez přípony)"
+		},
+		"newFile": {
+			"newWorkflowFile": "Nový soubor pracovního postupu...",
+			"newRuleFile": "Nový soubor pravidla..."
+		}
+	},
+	"taskTimeline": {
+		"tooltip": {
+			"clickToScroll": "Zobrazit {{messageType}} (#{{messageNumber}})",
+			"messageTypes": {
+				"browser_action_launch": "spuštění prohlížeče",
+				"browser_action_result": "výsledek akce prohlížeče",
+				"browser_action": "akce prohlížeče",
+				"checkpoint_saved": "uložený kontrolní bod",
+				"command": "provedení příkazu",
+				"command_output": "výstup příkazu",
+				"completion_result": "výsledek dokončení",
+				"condense_context": "zkrátit kontext",
+				"error": "chybová zpráva",
+				"followup": "následná otázka",
+				"mcp_server_response": "odpověď MCP serveru",
+				"reasoning": "uvažování AI",
+				"text": "odpověď AI",
+				"tool": "použití nástroje",
+				"unknown": "neznámý typ zprávy",
+				"use_mcp_server": "použití MCP serveru",
+				"user": "zpětná vazba uživatele"
+			}
+		}
+	}
+}

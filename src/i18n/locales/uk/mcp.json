@@ -1,0 +1,22 @@
+{
+	"errors": {
+		"invalid_settings_format": "Неправильний формат JSON налаштувань MCP. Будь ласка, переконайся, що твої налаштування відповідають правильному формату JSON.",
+		"invalid_settings_syntax": "Неправильний формат JSON налаштувань MCP. Будь ласка, перевір свій файл налаштувань на наявність синтаксичних помилок.",
+		"invalid_settings_validation": "Неправильний формат налаштувань MCP: {{errorMessages}}",
+		"create_json": "Не вдалося створити або відкрити .kilocode/mcp.json: {{error}}",
+		"failed_update_project": "Не вдалося оновити сервери MCP проекту",
+		"invalidJsonArgument": "Kilo Code спробував використати {{toolName}} з неправильним аргументом JSON. Повторна спроба..."
+	},
+	"info": {
+		"server_restarting": "Перезапуск сервера MCP {{serverName}}...",
+		"server_connected": "Сервер MCP {{serverName}} підключено",
+		"server_deleted": "Видалено сервер MCP: {{serverName}}",
+		"server_not_found": "Сервер \"{{serverName}}\" не знайдено в конфігурації",
+		"global_servers_active": "Активні глобальні сервери MCP: {{mcpServers}}",
+		"project_servers_active": "Активні сервери MCP проекту: {{mcpServers}}",
+		"already_refreshing": "Сервери MCP вже оновлюються.",
+		"refreshing_all": "Оновлення всіх серверів MCP...",
+		"all_refreshed": "Усі сервери MCP оновлено.",
+		"project_config_deleted": "Файл конфігурації MCP проекту видалено. Усі сервери MCP проекту відключено."
+	}
+}

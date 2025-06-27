@@ -5,7 +5,7 @@
 	"tasks": [
 		{
 			"label": "watch",
-			"dependsOn": ["watch:webview", "watch:bundle", "watch:tsc"],
+			"dependsOn": ["watch:pnpm", "watch:webview", "watch:bundle", "watch:tsc"],
 			"presentation": {
 				"reveal": "never"
 			},
@@ -18,15 +18,34 @@
 			}
 		},
 		{
+			"label": "watch:pnpm",
+			"type": "shell",
+			"command": "npx",
+			"args": ["nodemon", "--watch", "pnpm-lock.yaml", "--exec", "pnpm install"],
+			"group": "build",
+			"isBackground": true,
+			"presentation": {
+				"group": "watch",
+				"reveal": "always"
+			},
+			"problemMatcher": {
+				"pattern": { "regexp": "^$" },
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": "\\[nodemon\\] starting",
+					"endsPattern": "\\[nodemon\\] clean exit - waiting for changes before restart"
+				}
+			}
+		},
+		{
 			"label": "watch:webview",
+			"dependsOn": ["watch:pnpm"],
 			"type": "shell",
 			"command": "pnpm --filter @roo-code/vscode-webview dev",
 			"group": "build",
 			"problemMatcher": {
 				"owner": "vite",
-				"pattern": {
-					"regexp": "^$"
-				},
+				"pattern": { "regexp": "^$" },
 				"background": {
 					"activeOnStart": true,
 					"beginsPattern": ".*VITE.*",
@@ -41,6 +60,7 @@
 		},
 		{
 			"label": "watch:bundle",
+			"dependsOn": ["watch:pnpm"],
 			"type": "shell",
 			"command": "npx turbo watch:bundle",
 			"group": "build",
@@ -63,6 +83,7 @@
 		},
 		{
 			"label": "watch:tsc",
+			"dependsOn": ["watch:pnpm"],
 			"type": "shell",
 			"command": "npx turbo watch:tsc",
 			"group": "build",

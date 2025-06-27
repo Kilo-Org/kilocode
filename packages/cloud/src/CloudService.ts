@@ -37,16 +37,19 @@ export class CloudService {
 		}
 
 		try {
-			this.authService = await AuthService.createInstance(this.context, this.log)
+			this.authService = new AuthService(this.context, this.log)
+			await this.authService.initialize()
 
+			this.authService.on("attempting-session", this.authListener)
 			this.authService.on("inactive-session", this.authListener)
 			this.authService.on("active-session", this.authListener)
 			this.authService.on("logged-out", this.authListener)
 			this.authService.on("user-info", this.authListener)
 
-			this.settingsService = await SettingsService.createInstance(this.context, () =>
+			this.settingsService = new SettingsService(this.context, this.authService, () =>
 				this.callbacks.stateChanged?.(),
 			)
+			this.settingsService.initialize()
 
 			this.telemetryClient = new TelemetryClient(this.authService, this.settingsService)
 
@@ -87,6 +90,11 @@ export class CloudService {
 		return this.authService!.hasActiveSession()
 	}
 
+	public hasOrIsAcquiringActiveSession(): boolean {
+		this.ensureInitialized()
+		return this.authService!.hasOrIsAcquiringActiveSession()
+	}
+
 	public getUserInfo(): CloudUserInfo | null {
 		this.ensureInitialized()
 		return this.authService!.getUserInfo()
@@ -110,14 +118,28 @@ export class CloudService {
 		return userInfo?.organizationRole || null
 	}
 
+	public hasStoredOrganizationId(): boolean {
+		this.ensureInitialized()
+		return this.authService!.getStoredOrganizationId() !== null
+	}
+
+	public getStoredOrganizationId(): string | null {
+		this.ensureInitialized()
+		return this.authService!.getStoredOrganizationId()
+	}
+
 	public getAuthState(): string {
 		this.ensureInitialized()
 		return this.authService!.getState()
 	}
 
-	public async handleAuthCallback(code: string | null, state: string | null): Promise<void> {
+	public async handleAuthCallback(
+		code: string | null,
+		state: string | null,
+		organizationId?: string | null,
+	): Promise<void> {
 		this.ensureInitialized()
-		return this.authService!.handleCallback(code, state)
+		return this.authService!.handleCallback(code, state, organizationId)
 	}
 
 	// SettingsService
@@ -136,9 +158,9 @@ export class CloudService {
 
 	// ShareService
 
-	public async shareTask(taskId: string): Promise<boolean> {
+	public async shareTask(taskId: string, visibility: "organization" | "public" = "organization") {
 		this.ensureInitialized()
-		return this.shareService!.shareTask(taskId)
+		return this.shareService!.shareTask(taskId, visibility)
 	}
 
 	public async canShareTask(): Promise<boolean> {
@@ -150,6 +172,8 @@ export class CloudService {
 
 	public dispose(): void {
 		if (this.authService) {
+			this.authService.off("attempting-session", this.authListener)
+			this.authService.off("inactive-session", this.authListener)
 			this.authService.off("active-session", this.authListener)
 			this.authService.off("logged-out", this.authListener)
 			this.authService.off("user-info", this.authListener)
@@ -162,13 +186,7 @@ export class CloudService {
 	}
 
 	private ensureInitialized(): void {
-		if (
-			!this.isInitialized ||
-			!this.authService ||
-			!this.settingsService ||
-			!this.telemetryClient ||
-			!this.shareService
-		) {
+		if (!this.isInitialized) {
 			throw new Error("CloudService not initialized.")
 		}
 	}

@@ -1,0 +1,64 @@
+{
+	"title": "MCP-servrar",
+	"done": "Klar",
+	"description": "<0>Model Context Protocol</0> möjliggör kommunikation med lokala MCP-servrar som tillhandahåller ytterligare verktyg och resurser för att utöka Kilo Codes kapacitet. Du kan använda <1>servrar skapade av communityn</1> eller be Kilo Code skapa nya verktyg specifikt för ditt arbetsflöde (t.ex. \"lägg till ett verktyg som hämtar de senaste npm docs\").",
+	"instructions": "Instruktioner",
+	"enableToggle": {
+		"title": "Aktivera MCP-servrar",
+		"description": "Slå på detta för att låta Kilo Code använda verktyg från anslutna MCP-servrar. Detta ger Kilo Code ytterligare förmågor. Om du inte planerar att använda dessa extra verktyg, stäng av det för att minska API-token-kostnader."
+	},
+	"enableServerCreation": {
+		"title": "Aktivera skapande av MCP-server",
+		"description": "Aktivera detta för att låta Kilo Code hjälpa dig skapa <1>nya</1> anpassade MCP-servrar. <0>Lär dig mer om att skapa servrar</0>",
+		"hint": "Tips: För att minska API-token-kostnader, stäng av denna inställning när du inte aktivt ber Kilo Code skapa nya MCP-servrar."
+	},
+	"editGlobalMCP": "Redigera Global MCP",
+	"editProjectMCP": "Redigera Project MCP",
+	"refreshMCP": "Uppdatera MCP-servrar",
+	"learnMoreEditingSettings": "Lär dig mer om att redigera MCP-inställningsfiler",
+	"tool": {
+		"alwaysAllow": "Tillåt alltid",
+		"parameters": "Parametrar",
+		"noDescription": "Ingen beskrivning",
+		"togglePromptInclusion": "Växla inkludering i prompt"
+	},
+	"tabs": {
+		"tools": "Verktyg",
+		"resources": "Resurser",
+		"errors": "Fel"
+	},
+	"emptyState": {
+		"noTools": "Inga verktyg hittades",
+		"noResources": "Inga resurser hittades",
+		"noErrors": "Inga fel hittades"
+	},
+	"networkTimeout": {
+		"label": "Nätverkstimeout",
+		"description": "Maximal tid att vänta på svar från servern",
+		"options": {
+			"15seconds": "15 sekunder",
+			"30seconds": "30 sekunder",
+			"1minute": "1 minut",
+			"5minutes": "5 minuter",
+			"10minutes": "10 minuter",
+			"15minutes": "15 minuter",
+			"30minutes": "30 minuter",
+			"60minutes": "60 minuter"
+		}
+	},
+	"deleteDialog": {
+		"title": "Ta bort MCP-server",
+		"description": "Är du säker på att du vill ta bort MCP-servern \"{{serverName}}\"? Denna åtgärd kan inte ångras.",
+		"cancel": "Avbryt",
+		"delete": "Ta bort"
+	},
+	"serverStatus": {
+		"retrying": "Försöker igen...",
+		"retryConnection": "Försök ansluta igen"
+	},
+	"execution": {
+		"running": "Körs",
+		"completed": "Slutförd",
+		"error": "Fel"
+	}
+}

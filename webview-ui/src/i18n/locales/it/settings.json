@@ -312,7 +312,27 @@
 			"medium": "Medio",
 			"low": "Basso"
 		},
-		"setReasoningLevel": "Abilita sforzo di ragionamento"
+		"setReasoningLevel": "Abilita sforzo di ragionamento",
+		"claudeCode": {
+			"pathLabel": "Percorso Claude Code",
+			"description": "Percorso facoltativo per la tua CLI Claude Code. Predefinito 'claude' se non impostato.",
+			"placeholder": "Predefinito: claude"
+		},
+		"geminiCli": {
+			"description": "Questo provider utilizza l'autenticazione OAuth dello strumento Gemini CLI e non richiede chiavi API.",
+			"oauthPath": "Percorso credenziali OAuth (opzionale)",
+			"oauthPathDescription": "Percorso al file delle credenziali OAuth. Lascia vuoto per utilizzare la posizione predefinita (~/.gemini/oauth_creds.json).",
+			"instructions": "Se non ti sei ancora autenticato, esegui",
+			"instructionsContinued": "nel tuo terminale prima.",
+			"setupLink": "Istruzioni di configurazione Gemini CLI",
+			"requirementsTitle": "Requisiti importanti",
+			"requirement1": "Prima, devi installare lo strumento Gemini CLI",
+			"requirement2": "Poi, esegui gemini nel tuo terminale e assicurati di accedere con Google",
+			"requirement3": "Funziona solo con account Google personali (non account Google Workspace)",
+			"requirement4": "Non usa chiavi API - l'autenticazione è gestita tramite OAuth",
+			"requirement5": "Richiede che lo strumento Gemini CLI sia installato e autenticato prima",
+			"freeAccess": "Accesso di livello gratuito tramite autenticazione OAuth"
+		}
 	},
 	"browser": {
 		"enable": {
@@ -379,7 +399,8 @@
 			"hint": "Vuoto = usa prompt predefinito"
 		},
 		"autoCondenseContext": {
-			"name": "Attiva automaticamente la condensazione intelligente del contesto"
+			"name": "Attiva automaticamente la condensazione intelligente del contesto",
+			"description": "Quando abilitato, Roo condenserà automaticamente il contesto quando viene raggiunta la soglia. Quando disabilitato, puoi ancora attivare manualmente la condensazione del contesto."
 		},
 		"openTabs": {
 			"label": "Limite contesto schede aperte",
@@ -402,6 +423,15 @@
 		"maxConcurrentFileReads": {
 			"label": "Limite letture simultanee",
 			"description": "Numero massimo di file che lo strumento 'read_file' può elaborare contemporaneamente. Valori più alti possono velocizzare la lettura di più file piccoli ma aumentano l'utilizzo della memoria."
+		},
+		"condensingThreshold": {
+			"label": "Soglia di attivazione condensazione",
+			"selectProfile": "Configura soglia per profilo",
+			"defaultProfile": "Predefinito globale (tutti i profili)",
+			"defaultDescription": "Quando il contesto raggiunge questa percentuale, verrà automaticamente condensato per tutti i profili a meno che non abbiano impostazioni personalizzate",
+			"profileDescription": "Soglia personalizzata solo per questo profilo (sovrascrive il predefinito globale)",
+			"inheritDescription": "Questo profilo eredita la soglia predefinita globale ({{threshold}}%)",
+			"usesGlobal": "(usa globale {{threshold}}%)"
 		}
 	},
 	"terminal": {
@@ -513,10 +543,6 @@
 		"MARKETPLACE": {
 			"name": "Abilita Marketplace",
 			"description": "Quando abilitato, puoi installare MCP e modalità personalizzate dal Marketplace."
-		},
-		"DISABLE_COMPLETION_COMMAND": {
-			"name": "Disabilita l'esecuzione dei comandi in attempt_completion",
-			"description": "Se abilitato, lo strumento attempt_completion non eseguirà comandi. Questa è una funzionalità sperimentale per preparare la futura deprecazione dell'esecuzione dei comandi al completamento dell'attività."
 		},
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Abilita modifiche di file concorrenti",

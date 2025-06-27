@@ -1,0 +1,665 @@
+{
+	"common": {
+		"save": "I-save",
+		"done": "Tapos na",
+		"cancel": "Kanselahin",
+		"reset": "I-reset",
+		"select": "Piliin",
+		"add": "Magdagdag ng Header",
+		"remove": "Tanggalin"
+	},
+	"header": {
+		"title": "Mga Setting",
+		"saveButtonTooltip": "I-save ang mga pagbabago",
+		"nothingChangedTooltip": "Walang nabago",
+		"doneButtonTooltip": "Itapon ang mga hindi na-save na pagbabago at isara ang panel ng mga setting"
+	},
+	"unsavedChangesDialog": {
+		"title": "Mga Hindi Na-save na Pagbabago",
+		"description": "Gusto mo bang itapon ang mga pagbabago at magpatuloy?",
+		"cancelButton": "Kanselahin",
+		"discardButton": "Itapon ang mga pagbabago"
+	},
+	"sections": {
+		"providers": "Mga Provider",
+		"autoApprove": "Auto-Approve",
+		"browser": "Browser",
+		"checkpoints": "Mga Checkpoint",
+		"display": "Display",
+		"notifications": "Mga Notipikasyon",
+		"contextManagement": "Context",
+		"terminal": "Terminal",
+		"prompts": "Mga Prompt",
+		"experimental": "Experimental",
+		"language": "Wika",
+		"about": "Tungkol sa Kilo Code"
+	},
+	"prompts": {
+		"description": "I-configure ang mga support prompt na ginagamit para sa mga mabilis na aksyon tulad ng pagpapahusay ng mga prompt, pagpapaliwanag ng code, at pag-aayos ng mga isyu. Ang mga prompt na ito ay tumutulong sa Kilo Code na magbigay ng mas mahusay na tulong para sa mga karaniwang gawain sa development."
+	},
+	"codeIndex": {
+		"title": "Codebase Indexing",
+		"enableLabel": "I-enable ang Codebase Indexing",
+		"enableDescription": "Ang <0>Codebase Indexing</0> ay isang experimental na feature na gumagawa ng semantic search index ng iyong project gamit ang AI embeddings. Ito ay nagbibigay-daan sa Kilo Code na mas maunawaan at ma-navigate ang malalaking codebase sa pamamagitan ng paghahanap ng relevant na code batay sa kahulugan kaysa sa mga keyword lang.",
+		"providerLabel": "Embeddings Provider",
+		"selectProviderPlaceholder": "Piliin ang provider",
+		"openaiProvider": "OpenAI",
+		"ollamaProvider": "Ollama",
+		"openaiCompatibleProvider": "OpenAI Compatible",
+		"openaiKeyLabel": "OpenAI Key:",
+		"openaiCompatibleBaseUrlLabel": "Base URL:",
+		"openaiCompatibleApiKeyLabel": "API Key:",
+		"openaiCompatibleModelDimensionLabel": "Embedding Dimension:",
+		"openaiCompatibleModelDimensionPlaceholder": "hal., 1536",
+		"openaiCompatibleModelDimensionDescription": "Ang embedding dimension (laki ng output) para sa iyong model. Tingnan ang dokumentasyon ng iyong provider para sa value na ito. Mga karaniwang value: 384, 768, 1536, 3072.",
+		"modelLabel": "Model",
+		"selectModelPlaceholder": "Piliin ang model",
+		"ollamaUrlLabel": "Ollama URL:",
+		"qdrantUrlLabel": "Qdrant URL",
+		"qdrantKeyLabel": "Qdrant Key:",
+		"startIndexingButton": "Simulan ang Indexing",
+		"clearIndexDataButton": "I-clear ang Index Data",
+		"unsavedSettingsMessage": "Paki-save ang iyong mga setting bago simulan ang proseso ng indexing.",
+		"clearDataDialog": {
+			"title": "Sigurado ka ba?",
+			"description": "Hindi na maaaring bawiin ang aksyon na ito. Permanenteng tatanggalin nito ang iyong codebase index data.",
+			"cancelButton": "Kanselahin",
+			"confirmButton": "I-clear ang Data"
+		}
+	},
+	"autoApprove": {
+		"description": "Payagan ang Kilo Code na awtomatikong magsagawa ng mga operasyon nang hindi nangangailangan ng pag-apruba. I-enable lang ang mga setting na ito kung lubos mong pinagkakatiwalaan ang AI at nauunawaan ang mga kaugnay na panganib sa seguridad.",
+		"readOnly": {
+			"label": "Magbasa",
+			"description": "Kapag naka-enable, awtomatikong titingnan ng Kilo Code ang mga nilalaman ng directory at magbabasa ng mga file nang hindi mo kailangang i-click ang button na Aprubahan.",
+			"outsideWorkspace": {
+				"label": "Isama ang mga file sa labas ng workspace",
+				"description": "Payagan ang Kilo Code na magbasa ng mga file sa labas ng kasalukuyang workspace nang hindi nangangailangan ng pag-apruba."
+			}
+		},
+		"write": {
+			"label": "Magsulat",
+			"description": "Awtomatikong gumawa at mag-edit ng mga file nang hindi nangangailangan ng pag-apruba",
+			"delayLabel": "Pagkaantala pagkatapos magsulat upang payagan ang diagnostics na makita ang mga potensyal na problema",
+			"outsideWorkspace": {
+				"label": "Isama ang mga file sa labas ng workspace",
+				"description": "Payagan ang Kilo Code na gumawa at mag-edit ng mga file sa labas ng kasalukuyang workspace nang hindi nangangailangan ng pag-apruba."
+			},
+			"protected": {
+				"label": "Isama ang mga protektadong file",
+				"description": "Payagan ang Kilo Code na gumawa at mag-edit ng mga protektadong file (tulad ng .kilocodeignore at .kilocode/ configuration files) nang hindi nangangailangan ng pag-apruba."
+			}
+		},
+		"browser": {
+			"label": "Browser",
+			"description": "Awtomatikong magsagawa ng mga browser action nang hindi nangangailangan ng pag-apruba. Tandaan: Nalalapat lang kapag sinusuportahan ng model ang computer use"
+		},
+		"retry": {
+			"label": "Subukan Muli",
+			"description": "Awtomatikong subukan muli ang mga nabigong API request kapag nagbalik ang server ng error response",
+			"delayLabel": "Pagkaantala bago subukan muli ang request"
+		},
+		"mcp": {
+			"label": "MCP",
+			"description": "I-enable ang auto-approval ng mga indibidwal na MCP tool sa MCP Servers view (nangangailangan ng parehong setting na ito at ang indibidwal na \"Always allow\" checkbox ng tool)"
+		},
+		"modeSwitch": {
+			"label": "Mode",
+			"description": "Awtomatikong lumipat sa pagitan ng iba't ibang mode nang hindi nangangailangan ng pag-apruba"
+		},
+		"subtasks": {
+			"label": "Mga Subtask",
+			"description": "Payagan ang paggawa at pagkumpleto ng mga subtask nang hindi nangangailangan ng pag-apruba"
+		},
+		"execute": {
+			"label": "I-execute",
+			"description": "Awtomatikong i-execute ang mga pinapayagang terminal command nang hindi nangangailangan ng pag-apruba",
+			"allowedCommands": "Mga Pinapayagang Auto-Execute Command",
+			"allowedCommandsDescription": "Mga command prefix na maaaring i-auto-execute kapag naka-enable ang \"Always approve execute operations\". Magdagdag ng * para payagan ang lahat ng command (gamitin nang may pag-iingat).",
+			"commandPlaceholder": "Ilagay ang command prefix (hal., 'git ')",
+			"addButton": "Idagdag"
+		},
+		"showMenu": {
+			"label": "Ipakita ang auto-approve menu sa chat view",
+			"description": "Kapag naka-enable, ang auto-approve menu ay ipapakita sa ibaba ng chat view, na nagbibigay ng mabilis na access sa mga auto-approve setting"
+		},
+		"apiRequestLimit": {
+			"title": "Max na Request",
+			"description": "Awtomatikong gumawa ng ganitong daming API request bago humingi ng pag-apruba para magpatuloy sa gawain.",
+			"unlimited": "Walang Hangganan"
+		}
+	},
+	"providers": {
+		"providerDocumentation": "{{provider}} dokumentasyon",
+		"configProfile": "Configuration Profile",
+		"description": "Mag-save ng iba't ibang API configuration para mabilis na lumipat sa pagitan ng mga provider at setting.",
+		"apiProvider": "API Provider",
+		"model": "Model",
+		"nameEmpty": "Hindi maaaring walang laman ang pangalan",
+		"nameExists": "May profile na na may ganitong pangalan",
+		"deleteProfile": "Tanggalin ang Profile",
+		"invalidArnFormat": "Invalid na ARN format. Pakitingnan ang mga halimbawa sa itaas.",
+		"enterNewName": "Ilagay ang bagong pangalan",
+		"addProfile": "Magdagdag ng Profile",
+		"renameProfile": "Palitan ang Pangalan ng Profile",
+		"newProfile": "Bagong Configuration Profile",
+		"enterProfileName": "Ilagay ang pangalan ng profile",
+		"createProfile": "Gumawa ng Profile",
+		"cannotDeleteOnlyProfile": "Hindi maaaring tanggalin ang tanging profile",
+		"searchPlaceholder": "Maghanap ng mga profile",
+		"noMatchFound": "Walang nahanap na tumugmang profile",
+		"vscodeLmDescription": "Ang VS Code Language Model API ay nagbibigay-daan sa iyo na magpatakbo ng mga model na ibinigay ng ibang VS Code extension (kasama ngunit hindi limitado sa GitHub Copilot). Ang pinakamadaling paraan para magsimula ay i-install ang Copilot at Copilot Chat extension mula sa VS Code Marketplace.",
+		"awsCustomArnUse": "Maglagay ng valid na Amazon Bedrock ARN para sa model na gusto mong gamitin. Mga halimbawa ng format:",
+		"awsCustomArnDesc": "Siguraduhing ang region sa ARN ay tumutugma sa iyong napiling AWS Region sa itaas.",
+		"openRouterApiKey": "OpenRouter API Key",
+		"getOpenRouterApiKey": "Kumuha ng OpenRouter API Key",
+		"apiKeyStorageNotice": "Ang mga API key ay ligtas na naka-imbak sa Secret Storage ng VSCode",
+		"glamaApiKey": "Glama API Key",
+		"getGlamaApiKey": "Kumuha ng Glama API Key",
+		"useCustomBaseUrl": "Gumamit ng custom base URL",
+		"useReasoning": "I-enable ang reasoning",
+		"useHostHeader": "Gumamit ng custom Host header",
+		"useLegacyFormat": "Gumamit ng legacy OpenAI API format",
+		"customHeaders": "Mga Custom Header",
+		"headerName": "Pangalan ng header",
+		"headerValue": "Value ng header",
+		"noCustomHeaders": "Walang mga custom header na natukoy. I-click ang + button para magdagdag.",
+		"requestyApiKey": "Requesty API Key",
+		"refreshModels": {
+			"label": "I-refresh ang mga Model",
+			"hint": "Pakibuksan muli ang mga setting para makita ang pinakabagong mga model.",
+			"loading": "Nire-refresh ang listahan ng mga model...",
+			"success": "Matagumpay na na-refresh ang listahan ng mga model!",
+			"error": "Nabigo ang pag-refresh ng listahan ng mga model. Pakisubukan muli."
+		},
+		"getRequestyApiKey": "Kumuha ng Requesty API Key",
+		"openRouterTransformsText": "I-compress ang mga prompt at message chain sa laki ng context (<a>OpenRouter Transforms</a>)",
+		"anthropicApiKey": "Anthropic API Key",
+		"getAnthropicApiKey": "Kumuha ng Anthropic API Key",
+		"anthropicUseAuthToken": "Ipasa ang Anthropic API Key bilang Authorization header sa halip na X-Api-Key",
+		"chutesApiKey": "Chutes API Key",
+		"getChutesApiKey": "Kumuha ng Chutes API Key",
+		"deepSeekApiKey": "DeepSeek API Key",
+		"getDeepSeekApiKey": "Kumuha ng DeepSeek API Key",
+		"geminiApiKey": "Gemini API Key",
+		"getGroqApiKey": "Kumuha ng Groq API Key",
+		"groqApiKey": "Groq API Key",
+		"getGeminiApiKey": "Kumuha ng Gemini API Key",
+		"openAiApiKey": "OpenAI API Key",
+		"apiKey": "API Key",
+		"openAiBaseUrl": "Base URL",
+		"getOpenAiApiKey": "Kumuha ng OpenAI API Key",
+		"mistralApiKey": "Mistral API Key",
+		"getMistralApiKey": "Kumuha ng Mistral / Codestral API Key",
+		"codestralBaseUrl": "Codestral Base URL (Opsyonal)",
+		"codestralBaseUrlDesc": "Magtakda ng alternatibong URL para sa Codestral model.",
+		"xaiApiKey": "xAI API Key",
+		"getXaiApiKey": "Kumuha ng xAI API Key",
+		"litellmApiKey": "LiteLLM API Key",
+		"litellmBaseUrl": "LiteLLM Base URL",
+		"awsCredentials": "AWS Credentials",
+		"awsProfile": "AWS Profile",
+		"awsProfileName": "Pangalan ng AWS Profile",
+		"awsAccessKey": "AWS Access Key",
+		"awsSecretKey": "AWS Secret Key",
+		"awsSessionToken": "AWS Session Token",
+		"awsRegion": "AWS Region",
+		"awsCrossRegion": "Gumamit ng cross-region inference",
+		"awsBedrockVpc": {
+			"useCustomVpcEndpoint": "Gumamit ng custom VPC endpoint",
+			"vpcEndpointUrlPlaceholder": "Ilagay ang VPC Endpoint URL (opsyonal)",
+			"examples": "Mga halimbawa:"
+		},
+		"enablePromptCaching": "I-enable ang prompt caching",
+		"enablePromptCachingTitle": "I-enable ang prompt caching para mapabuti ang performance at mabawasan ang mga gastos para sa mga suportadong model.",
+		"cacheUsageNote": "Tandaan: Kung hindi mo nakikita ang cache usage, subukang pumili ng ibang model at pagkatapos ay piliin muli ang iyong gustong model.",
+		"vscodeLmModel": "Language Model",
+		"vscodeLmWarning": "Tandaan: Ito ay isang napaka-experimental na integration at ang suporta ng provider ay mag-iiba. Kung nakakuha ka ng error tungkol sa model na hindi suportado, iyon ay isyu sa panig ng provider.",
+		"googleCloudSetup": {
+			"title": "Para gamitin ang Google Cloud Vertex AI, kailangan mo:",
+			"step1": "1. Gumawa ng Google Cloud account, i-enable ang Vertex AI API at i-enable ang mga gustong Claude model.",
+			"step2": "2. I-install ang Google Cloud CLI at i-configure ang application default credentials.",
+			"step3": "3. O gumawa ng service account na may credentials."
+		},
+		"googleCloudCredentials": "Google Cloud Credentials",
+		"googleCloudKeyFile": "Google Cloud Key File Path",
+		"googleCloudProjectId": "Google Cloud Project ID",
+		"googleCloudRegion": "Google Cloud Region",
+		"lmStudio": {
+			"baseUrl": "Base URL (opsyonal)",
+			"modelId": "Model ID",
+			"speculativeDecoding": "I-enable ang Speculative Decoding",
+			"draftModelId": "Draft Model ID",
+			"draftModelDesc": "Ang draft model ay dapat mula sa parehong model family para gumana nang tama ang speculative decoding.",
+			"selectDraftModel": "Piliin ang Draft Model",
+			"noModelsFound": "Walang nahanap na draft model. Pakisiguro na tumatakbo ang LM Studio na may naka-enable na Server Mode.",
+			"description": "Ang LM Studio ay nagbibigay-daan sa iyo na magpatakbo ng mga model nang lokal sa iyong computer. Para sa mga tagubilin kung paano magsimula, tingnan ang kanilang <a>quickstart guide</a>. Kakailanganin mo ring simulan ang <b>local server</b> feature ng LM Studio para magamit ito sa extension na ito. <span>Tandaan:</span> Ang Kilo Code ay gumagamit ng mga komplikadong prompt at pinakamahusay na gumagana sa mga Claude model. Ang mga hindi gaanong capable na model ay maaaring hindi gumana ayon sa inaasahan."
+		},
+		"ollama": {
+			"baseUrl": "Base URL (opsyonal)",
+			"modelId": "Model ID",
+			"description": "Ang Ollama ay nagbibigay-daan sa iyo na magpatakbo ng mga model nang lokal sa iyong computer. Para sa mga tagubilin kung paano magsimula, tingnan ang kanilang quickstart guide.",
+			"warning": "Tandaan: Ang Kilo Code ay gumagamit ng mga komplikadong prompt at pinakamahusay na gumagana sa mga Claude model. Ang mga hindi gaanong capable na model ay maaaring hindi gumana ayon sa inaasahan."
+		},
+		"unboundApiKey": "Unbound API Key",
+		"getUnboundApiKey": "Kumuha ng Unbound API Key",
+		"unboundRefreshModelsSuccess": "Na-update ang listahan ng mga model! Maaari ka nang pumili mula sa pinakabagong mga model.",
+		"unboundInvalidApiKey": "Invalid na API key. Pakitingnan ang iyong API key at subukan muli.",
+		"humanRelay": {
+			"description": "Hindi kailangan ng API key, ngunit kailangan ng user na tumulong sa pag-copy at paste ng impormasyon sa web chat AI.",
+			"instructions": "Sa panahon ng paggamit, may lalabas na dialog box at ang kasalukuyang mensahe ay awtomatikong makokopya sa clipboard. Kailangan mong i-paste ang mga ito sa web version ng AI (tulad ng ChatGPT o Claude), pagkatapos ay kopyahin ang sagot ng AI pabalik sa dialog box at i-click ang confirm button."
+		},
+		"openRouter": {
+			"providerRouting": {
+				"title": "OpenRouter Provider Routing",
+				"description": "Ang OpenRouter ay nag-route ng mga request sa pinakamahusay na available na provider para sa iyong model. Sa default, ang mga request ay load balanced sa mga nangungunang provider para ma-maximize ang uptime. Gayunpaman, maaari kang pumili ng partikular na provider na gagamitin para sa model na ito.",
+				"learnMore": "Alamin pa ang tungkol sa provider routing"
+			}
+		},
+		"cerebras": {
+			"apiKey": "Cerebras API Key",
+			"getApiKey": "Kumuha ng Cerebras API Key"
+		},
+		"customModel": {
+			"capabilities": "I-configure ang mga kakayahan at presyo para sa iyong custom OpenAI-compatible model. Mag-ingat kapag tinutukoy ang mga kakayahan ng model, dahil maaari nitong maapektuhan kung paano gumaganap ang Kilo Code.",
+			"maxTokens": {
+				"label": "Max Output Tokens",
+				"description": "Maximum na bilang ng token na maaaring i-generate ng model sa isang tugon. (Magtukoy ng -1 para payagan ang server na itakda ang max tokens.)"
+			},
+			"contextWindow": {
+				"label": "Laki ng Context Window",
+				"description": "Kabuuang token (input + output) na maaaring iproseso ng model."
+			},
+			"imageSupport": {
+				"label": "Suporta sa Larawan",
+				"description": "May kakayahan ba ang model na ito na magproseso at maunawaan ang mga larawan?"
+			},
+			"computerUse": {
+				"label": "Computer Use",
+				"description": "May kakayahan ba ang model na ito na makipag-ugnayan sa browser? (hal. Claude 3.7 Sonnet)."
+			},
+			"promptCache": {
+				"label": "Prompt Caching",
+				"description": "May kakayahan ba ang model na ito na mag-cache ng mga prompt?"
+			},
+			"pricing": {
+				"input": {
+					"label": "Presyo ng Input",
+					"description": "Gastos bawat milyong token sa input/prompt. Ito ay nakakaapekto sa gastos ng pagpapadala ng context at mga tagubilin sa model."
+				},
+				"output": {
+					"label": "Presyo ng Output",
+					"description": "Gastos bawat milyong token sa tugon ng model. Ito ay nakakaapekto sa gastos ng mga nabuong nilalaman at completion."
+				},
+				"cacheReads": {
+					"label": "Presyo ng Cache Reads",
+					"description": "Gastos bawat milyong token para sa pagbasa mula sa cache. Ito ang presyong sinisingil kapag nakuha ang naka-cache na tugon."
+				},
+				"cacheWrites": {
+					"label": "Presyo ng Cache Writes",
+					"description": "Gastos bawat milyong token para sa pagsulat sa cache. Ito ang presyong sinisingil kapag ang prompt ay naka-cache sa unang pagkakataon."
+				}
+			},
+			"resetDefaults": "Ibalik sa mga Default"
+		},
+		"rateLimitSeconds": {
+			"label": "Rate limit",
+			"description": "Minimum na oras sa pagitan ng mga API request."
+		},
+		"reasoningEffort": {
+			"label": "Model Reasoning Effort",
+			"high": "Mataas",
+			"medium": "Katamtaman",
+			"low": "Mababa"
+		},
+		"setReasoningLevel": "I-enable ang Reasoning Effort",
+		"claudeCode": {
+			"pathLabel": "Claude Code Path",
+			"description": "Opsyonal na path sa iyong Claude Code CLI. Default sa 'claude' kung hindi nakatakda.",
+			"placeholder": "Default: claude"
+		},
+		"geminiCli": {
+			"description": "Ang provider na ito ay gumagamit ng OAuth authentication ng Gemini CLI tool at hindi nangangailangan ng mga API key.",
+			"oauthPath": "OAuth Credentials Path (opsyonal)",
+			"oauthPathDescription": "Path sa OAuth credentials file. Iwanang blank para gamitin ang default na lokasyon (~/.gemini/oauth_creds.json).",
+			"instructions": "Kung hindi ka pa nag-authenticate, mangyaring patakbuhin ang",
+			"instructionsContinued": "sa iyong terminal muna.",
+			"setupLink": "Gemini CLI Setup Instructions",
+			"requirementsTitle": "Mahalagang Requirements",
+			"requirement1": "Una, kailangan mong i-install ang Gemini CLI tool",
+			"requirement2": "Pagkatapos, patakbuhin ang gemini sa iyong terminal at siguraduhing mag-log in gamit ang Google",
+			"requirement3": "Gumagana lang sa personal na Google accounts (hindi Google Workspace accounts)",
+			"requirement4": "Hindi gumagamit ng API keys - ang authentication ay ginagawa sa pamamagitan ng OAuth",
+			"requirement5": "Nangangailangan na ma-install at ma-authenticate muna ang Gemini CLI tool",
+			"freeAccess": "Free tier access sa pamamagitan ng OAuth authentication"
+		}
+	},
+	"browser": {
+		"enable": {
+			"label": "I-enable ang browser tool",
+			"description": "Kapag naka-enable, maaaring gumamit ang Kilo Code ng browser para makipag-ugnayan sa mga website kapag gumagamit ng mga model na sumusuporta sa computer use. <0>Alamin pa</0>"
+		},
+		"viewport": {
+			"label": "Laki ng viewport",
+			"description": "Piliin ang laki ng viewport para sa mga pakikipag-ugnayan sa browser. Ito ay nakakaapekto kung paano ipinapakita at nakikipag-ugnayan sa mga website.",
+			"options": {
+				"largeDesktop": "Malaking Desktop (1280x800)",
+				"smallDesktop": "Maliit na Desktop (900x600)",
+				"tablet": "Tablet (768x1024)",
+				"mobile": "Mobile (360x640)"
+			}
+		},
+		"screenshotQuality": {
+			"label": "Kalidad ng screenshot",
+			"description": "I-adjust ang WebP quality ng mga browser screenshot. Ang mas mataas na value ay nagbibigay ng mas malinaw na screenshot ngunit tumataas ang paggamit ng token."
+		},
+		"remote": {
+			"label": "Gumamit ng remote browser connection",
+			"description": "Kumonekta sa Chrome browser na tumatakbo na may naka-enable na remote debugging (--remote-debugging-port=9222).",
+			"urlPlaceholder": "Custom URL (hal., http://localhost:9222)",
+			"testButton": "Subukan ang Koneksyon",
+			"testingButton": "Sinusubukan...",
+			"instructions": "Ilagay ang DevTools Protocol host address o iwanang blangko para awtomatikong tuklasin ang mga lokal na Chrome instance. Ang Test Connection button ay susubukan ang custom URL kung ibinigay, o awtomatikong tuklasin kung blangko ang field."
+		}
+	},
+	"checkpoints": {
+		"enable": {
+			"label": "I-enable ang mga awtomatikong checkpoint",
+			"description": "Kapag naka-enable, awtomatikong gagawa ang Kilo Code ng mga checkpoint sa panahon ng pagpapatupad ng gawain, na ginagawang madaling suriin ang mga pagbabago o bumalik sa mga naunang estado. <0>Alamin pa</0>"
+		}
+	},
+	"display": {
+		"taskTimeline": {
+			"label": "Ipakita ang task timeline",
+			"description": "Magpakita ng visual timeline ng mga mensahe ng gawain, na may kulay ayon sa uri, na nagbibigay-daan sa iyo na mabilis na tingnan ang progreso ng gawain at mag-scroll pabalik sa mga partikular na punto sa kasaysayan ng gawain."
+		}
+	},
+	"notifications": {
+		"sound": {
+			"label": "I-enable ang mga sound effect",
+			"description": "Kapag naka-enable, magpe-play ang Kilo Code ng mga sound effect para sa mga notipikasyon at kaganapan.",
+			"volumeLabel": "Volume"
+		},
+		"tts": {
+			"label": "I-enable ang text-to-speech",
+			"description": "Kapag naka-enable, babasahin ng Kilo Code nang malakas ang mga tugon nito gamit ang text-to-speech.",
+			"speedLabel": "Bilis"
+		}
+	},
+	"contextManagement": {
+		"description": "Kontrolin kung anong impormasyon ang kasama sa context window ng AI, na nakakaapekto sa paggamit ng token at kalidad ng tugon",
+		"autoCondenseContextPercent": {
+			"label": "Threshold para mag-trigger ng intelligent context condensing",
+			"description": "Kapag naabot ng context window ang threshold na ito, awtomatikong ico-condense ito ng Kilo Code."
+		},
+		"condensingApiConfiguration": {
+			"label": "API Configuration para sa Context Condensing",
+			"description": "Piliin kung aling API configuration ang gagamitin para sa mga operasyon ng context condensing. Iwanang hindi napili para gamitin ang kasalukuyang aktibong configuration.",
+			"useCurrentConfig": "Default"
+		},
+		"customCondensingPrompt": {
+			"label": "Custom Context Condensing Prompt",
+			"description": "I-customize ang system prompt na ginagamit para sa context condensing. Iwanang blangko para gamitin ang default prompt.",
+			"placeholder": "Ilagay ang iyong custom condensing prompt dito...\n\nMaaari mong gamitin ang parehong istruktura ng default prompt:\n- Nakaraang Pag-uusap\n- Kasalukuyang Gawain\n- Mga Pangunahing Technical na Konsepto\n- Mga Relevant na File at Code\n- Paglutas ng Problema\n- Mga Nakabinbing Gawain at Susunod na Hakbang",
+			"reset": "Ibalik sa Default",
+			"hint": "Blangko = gamitin ang default prompt"
+		},
+		"autoCondenseContext": {
+			"name": "Awtomatikong mag-trigger ng intelligent context condensing",
+			"description": "Kapag naka-enable, awtomatikong ico-condense ng Roo ang context kapag naabot ang threshold. Kapag naka-disable, maaari mo pa ring manu-manong i-trigger ang context condensing."
+		},
+		"openTabs": {
+			"label": "Limitasyon ng context ng mga bukas na tab",
+			"description": "Maximum na bilang ng mga VSCode open tab na isasama sa context. Ang mas mataas na value ay nagbibigay ng mas maraming context ngunit tumataas ang paggamit ng token."
+		},
+		"workspaceFiles": {
+			"label": "Limitasyon ng context ng mga workspace file",
+			"description": "Maximum na bilang ng mga file na isasama sa mga detalye ng kasalukuyang working directory. Ang mas mataas na value ay nagbibigay ng mas maraming context ngunit tumataas ang paggamit ng token."
+		},
+		"rooignore": {
+			"label": "Ipakita ang mga .kilocodeignore'd file sa mga listahan at paghahanap",
+			"description": "Kapag naka-enable, ang mga file na tumutugma sa mga pattern sa .kilocodeignore ay ipapakita sa mga listahan na may lock symbol. Kapag naka-disable, ang mga file na ito ay ganap na itatago mula sa mga listahan ng file at paghahanap."
+		},
+		"maxConcurrentFileReads": {
+			"label": "Limitasyon ng sabay-sabay na pagbasa ng file",
+			"description": "Maximum na bilang ng mga file na maaaring iproseso ng 'read_file' tool nang sabay-sabay. Ang mas mataas na value ay maaaring pabilisin ang pagbasa ng maraming maliliit na file ngunit tumataas ang paggamit ng memory."
+		},
+		"maxReadFile": {
+			"label": "File read auto-truncate threshold",
+			"description": "Binabasa ng Kilo Code ang ganitong bilang ng mga linya kapag inalis ng model ang mga start/end value. Kung ang bilang na ito ay mas mababa sa kabuuan ng file, gumagawa ang Kilo Code ng line number index ng mga code definition. Mga espesyal na kaso: -1 ay nag-uutos sa Kilo Code na basahin ang buong file (nang walang pag-index), at 0 ay nag-uutos dito na huwag magbasa ng mga linya at nagbibigay lamang ng mga line index para sa minimal na context. Ang mas mababang value ay nagpapababa ng paunang paggamit ng context, na nagbibigay-daan sa tumpak na kasunod na pagbasa ng line-range. Ang mga tahasang start/end request ay hindi limitado ng setting na ito.",
+			"lines": "mga linya",
+			"always_full_read": "Laging basahin ang buong file"
+		},
+		"condensingThreshold": {
+			"label": "Condensing Trigger Threshold",
+			"selectProfile": "I-configure ang threshold para sa profile",
+			"defaultProfile": "Global Default (lahat ng profile)",
+			"defaultDescription": "Kapag naabot ng context ang porsyentong ito, awtomatiko itong ico-condense para sa lahat ng profile maliban kung mayroon silang mga custom setting",
+			"profileDescription": "Custom threshold para lamang sa profile na ito (nag-o-override sa global default)",
+			"inheritDescription": "Ang profile na ito ay nagmamana ng global default threshold ({{threshold}}%)",
+			"usesGlobal": "(gumagamit ng global na {{threshold}}%)"
+		}
+	},
+	"terminal": {
+		"basic": {
+			"label": "Mga Setting ng Terminal: Basic",
+			"description": "Mga pangunahing setting ng terminal"
+		},
+		"advanced": {
+			"label": "Mga Setting ng Terminal: Advanced",
+			"description": "Ang mga sumusunod na opsyon ay maaaring mangailangan ng pag-restart ng terminal para mailapat ang setting."
+		},
+		"outputLineLimit": {
+			"label": "Limitasyon ng output ng terminal",
+			"description": "Maximum na bilang ng mga linya na isasama sa terminal output kapag nag-e-execute ng mga command. Kapag lumampas, aalisin ang mga linya mula sa gitna, na nakakatipid ng mga token. <0>Alamin pa</0>"
+		},
+		"shellIntegrationTimeout": {
+			"label": "Timeout ng terminal shell integration",
+			"description": "Maximum na oras na maghintay para mag-initialize ang shell integration bago mag-execute ng mga command. Para sa mga user na may mahabang startup time ng shell, maaaring kailanganing taasan ang value na ito kung nakakakita ka ng mga error na \"Shell Integration Unavailable\" sa terminal. <0>Alamin pa</0>"
+		},
+		"shellIntegrationDisabled": {
+			"label": "I-disable ang terminal shell integration",
+			"description": "I-enable ito kung hindi gumagana nang tama ang mga terminal command o nakakakita ka ng mga error na 'Shell Integration Unavailable'. Gumagamit ito ng mas simpleng paraan para magpatakbo ng mga command, na lumalampas sa ilang advanced na feature ng terminal. <0>Alamin pa</0>"
+		},
+		"commandDelay": {
+			"label": "Pagkaantala ng terminal command",
+			"description": "Pagkaantala sa millisecond na idaragdag pagkatapos ng pag-execute ng command. Ang default na setting na 0 ay ganap na nag-disable ng pagkaantala. Makakatulong ito na matiyak na ganap na makuha ang output ng command sa mga terminal na may mga isyu sa timing. Sa karamihan ng mga terminal, ipinapatupad ito sa pamamagitan ng pagtatakda ng `PROMPT_COMMAND='sleep N'` at idinaragdag ng Powershell ang `start-sleep` sa dulo ng bawat command. Orihinal na workaround para sa VSCode bug#237208 at maaaring hindi na kailanganin. <0>Alamin pa</0>"
+		},
+		"compressProgressBar": {
+			"label": "I-compress ang output ng progress bar",
+			"description": "Kapag naka-enable, pinoproseso ang terminal output na may mga carriage return (\\r) para gayahin kung paano ipapakita ng isang tunay na terminal ang nilalaman. Tinatanggal nito ang mga intermediate na estado ng progress bar, na pinapanatili lamang ang panghuling estado, na nakakatipid ng espasyo sa context para sa mas relevant na impormasyon. <0>Alamin pa</0>"
+		},
+		"powershellCounter": {
+			"label": "I-enable ang PowerShell counter workaround",
+			"description": "Kapag naka-enable, nagdaragdag ng counter sa mga PowerShell command para matiyak ang tamang pag-execute ng command. Nakakatulong ito sa mga PowerShell terminal na maaaring may mga isyu sa pagkuha ng output ng command. <0>Alamin pa</0>"
+		},
+		"zshClearEolMark": {
+			"label": "I-clear ang ZSH EOL mark",
+			"description": "Kapag naka-enable, nililinis nito ang ZSH end-of-line mark sa pamamagitan ng pagtatakda ng PROMPT_EOL_MARK=''. Pinipigilan nito ang mga isyu sa interpretasyon ng output ng command kapag nagtatapos ang output sa mga espesyal na character tulad ng '%'. <0>Alamin pa</0>"
+		},
+		"zshOhMy": {
+			"label": "I-enable ang Oh My Zsh integration",
+			"description": "Kapag naka-enable, itinatakda ang ITERM_SHELL_INTEGRATION_INSTALLED=Yes para i-enable ang mga feature ng Oh My Zsh shell integration. Ang paglalapat ng setting na ito ay maaaring mangailangan ng pag-restart ng IDE. <0>Alamin pa</0>"
+		},
+		"zshP10k": {
+			"label": "I-enable ang Powerlevel10k integration",
+			"description": "Kapag naka-enable, itinatakda ang POWERLEVEL9K_TERM_SHELL_INTEGRATION=true para i-enable ang mga feature ng Powerlevel10k shell integration. <0>Alamin pa</0>"
+		},
+		"zdotdir": {
+			"label": "I-enable ang ZDOTDIR handling",
+			"description": "Kapag naka-enable, gumagawa ng pansamantalang directory para sa ZDOTDIR para maayos na hawakan ang zsh shell integration. Tinitiyak nito na gumagana nang tama ang VSCode shell integration sa zsh habang pinapanatili ang iyong zsh configuration. <0>Alamin pa</0>"
+		},
+		"inheritEnv": {
+			"label": "Magmana ng mga environment variable",
+			"description": "Kapag naka-enable, magmamana ang terminal ng mga environment variable mula sa parent process ng VSCode, tulad ng mga setting ng shell integration na tinukoy sa user-profile. Direktang nagto-toggle ito ng global na setting ng VSCode na `terminal.integrated.inheritEnv`. <0>Alamin pa</0>"
+		}
+	},
+	"advanced": {
+		"diff": {
+			"label": "I-enable ang pag-e-edit sa pamamagitan ng mga diff",
+			"description": "Kapag naka-enable, mas mabilis na makakapag-edit ng mga file ang Kilo Code at awtomatikong tatanggihan ang mga truncated full-file write. Pinakamahusay na gumagana sa pinakabagong Claude 4 Sonnet model.",
+			"strategy": {
+				"label": "Diff strategy",
+				"options": {
+					"standard": "Standard (Isang block)",
+					"multiBlock": "Experimental: Multi-block diff",
+					"unified": "Experimental: Unified diff"
+				},
+				"descriptions": {
+					"standard": "Ang standard diff strategy ay naglalapat ng mga pagbabago sa isang code block sa isang pagkakataon.",
+					"unified": "Ang unified diff strategy ay gumagamit ng maraming paraan para ilapat ang mga diff at pinipili ang pinakamahusay na paraan.",
+					"multiBlock": "Ang multi-block diff strategy ay nagbibigay-daan sa pag-update ng maraming code block sa isang file sa isang request."
+				}
+			},
+			"matchPrecision": {
+				"label": "Tumpak na pagtutugma",
+				"description": "Kinokontrol ng slider na ito kung gaano katumpak dapat tumugma ang mga seksyon ng code kapag naglalapat ng mga diff. Ang mas mababang value ay nagbibigay-daan sa mas flexible na pagtutugma ngunit tumataas ang panganib ng maling pagpapalit. Gamitin ang mga value na mas mababa sa 100% nang may labis na pag-iingat."
+			}
+		}
+	},
+	"experimental": {
+		"DIFF_STRATEGY_UNIFIED": {
+			"name": "Gumamit ng experimental unified diff strategy",
+			"description": "I-enable ang experimental unified diff strategy. Ang strategy na ito ay maaaring mabawasan ang bilang ng mga retry na dulot ng mga error ng model ngunit maaaring magdulot ng hindi inaasahang pag-uugali o maling pag-edit. I-enable lang kung nauunawaan mo ang mga panganib at handa kang maingat na suriin ang lahat ng pagbabago."
+		},
+		"SEARCH_AND_REPLACE": {
+			"name": "Gumamit ng experimental search and replace tool",
+			"description": "I-enable ang experimental search and replace tool, na nagbibigay-daan sa Kilo Code na palitan ang maraming instance ng search term sa isang request."
+		},
+		"INSERT_BLOCK": {
+			"name": "Gumamit ng experimental insert content tool",
+			"description": "I-enable ang experimental insert content tool, na nagbibigay-daan sa Kilo Code na mag-insert ng content sa mga partikular na line number nang hindi kailangang gumawa ng diff."
+		},
+		"POWER_STEERING": {
+			"name": "Gumamit ng experimental \"power steering\" mode",
+			"description": "Kapag naka-enable, mas madalas na ipapaalala ng Kilo Code sa model ang mga detalye ng kasalukuyang mode definition nito. Ito ay hahantong sa mas malakas na pagsunod sa mga role definition at custom instruction, ngunit gagamit ng mas maraming token bawat mensahe."
+		},
+		"AUTOCOMPLETE": {
+			"name": "Gumamit ng experimental \"autocomplete\" feature",
+			"description": "Kapag naka-enable, magbibigay ang Kilo Code ng mga inline code suggestion habang nagta-type ka. Nangangailangan ng Kilo Code API Provider."
+		},
+		"CONCURRENT_FILE_READS": {
+			"name": "I-enable ang sabay-sabay na pagbasa ng file",
+			"description": "Kapag naka-enable, maaaring magbasa ang Kilo Code ng maraming file sa isang request. Kapag naka-disable, dapat magbasa ang Kilo Code ng mga file nang isa-isa. Ang pag-disable nito ay makakatulong kapag gumagamit ng mga hindi gaanong capable na model o kapag gusto mo ng mas maraming kontrol sa file access."
+		},
+		"MULTI_SEARCH_AND_REPLACE": {
+			"name": "Gumamit ng experimental multi block diff tool",
+			"description": "Kapag naka-enable, gagamitin ng Kilo Code ang multi block diff tool. Susubukan nitong mag-update ng maraming code block sa file sa isang request."
+		},
+		"MARKETPLACE": {
+			"name": "I-enable ang Marketplace",
+			"description": "Kapag naka-enable, maaari kang mag-install ng mga MCP at custom mode mula sa Marketplace."
+		},
+		"MULTI_FILE_APPLY_DIFF": {
+			"name": "I-enable ang sabay-sabay na pag-edit ng file",
+			"description": "Kapag naka-enable, maaaring mag-edit ang Kilo Code ng maraming file sa isang request. Kapag naka-disable, dapat mag-edit ang Kilo Code ng mga file nang isa-isa. Ang pag-disable nito ay makakatulong kapag gumagamit ng mga hindi gaanong capable na model o kapag gusto mo ng mas maraming kontrol sa mga pagbabago sa file."
+		}
+	},
+	"promptCaching": {
+		"label": "I-disable ang prompt caching",
+		"description": "Kapag naka-check, hindi gagamitin ng Kilo Code ang prompt caching para sa model na ito."
+	},
+	"temperature": {
+		"useCustom": "Gumamit ng custom temperature",
+		"description": "Kinokontrol ang randomness sa mga tugon ng model.",
+		"rangeDescription": "Ang mas mataas na value ay ginagawang mas random ang output, ang mas mababang value ay ginagawang mas deterministic ito."
+	},
+	"modelInfo": {
+		"supportsImages": "Sumusuporta sa mga larawan",
+		"noImages": "Hindi sumusuporta sa mga larawan",
+		"supportsComputerUse": "Sumusuporta sa computer use",
+		"noComputerUse": "Hindi sumusuporta sa computer use",
+		"supportsPromptCache": "Sumusuporta sa prompt caching",
+		"noPromptCache": "Hindi sumusuporta sa prompt caching",
+		"maxOutput": "Max output",
+		"inputPrice": "Presyo ng input",
+		"outputPrice": "Presyo ng output",
+		"cacheReadsPrice": "Presyo ng cache reads",
+		"cacheWritesPrice": "Presyo ng cache writes",
+		"enableStreaming": "I-enable ang streaming",
+		"enableR1Format": "I-enable ang R1 model parameters",
+		"enableR1FormatTips": "Dapat naka-enable kapag gumagamit ng R1 models tulad ng QWQ para maiwasan ang 400 errors",
+		"useAzure": "Gumamit ng Azure",
+		"azureApiVersion": "Itakda ang Azure API version",
+		"gemini": {
+			"freeRequests": "* Libre hanggang {{count}} request bawat minuto. Pagkatapos nito, ang bayad ay depende sa laki ng prompt.",
+			"pricingDetails": "Para sa karagdagang impormasyon, tingnan ang mga detalye ng pagpepresyo.",
+			"billingEstimate": "* Ang bayad ay isang tantya - ang eksaktong gastos ay depende sa laki ng prompt."
+		}
+	},
+	"modelPicker": {
+		"automaticFetch": "Awtomatikong kinukuha ng extension ang pinakabagong listahan ng mga model na available sa <serviceLink>{{serviceName}}</serviceLink>. Kung hindi ka sigurado kung aling model ang pipiliin, pinakamahusay na gumagana ang Kilo Code sa <defaultModelLink>{{defaultModelId}}</defaultModelLink>. Maaari mo ring subukang maghanap ng \"free\" para sa mga walang bayad na opsyon na kasalukuyang available.",
+		"label": "Model",
+		"searchPlaceholder": "Maghanap",
+		"noMatchFound": "Walang nahanap na tugma",
+		"useCustomModel": "Gumamit ng custom: {{modelId}}"
+	},
+	"footer": {
+		"feedback": "Kung mayroon kang mga tanong o feedback, huwag mag-atubiling mag-open ng issue sa <githubLink>github.com/Kilo-Org/kilocode</githubLink> o sumali sa <redditLink>reddit.com/r/kilocode</redditLink> o <discordLink>kilocode.ai/discord</discordLink>.",
+		"support": "Para sa mga tanong tungkol sa pananalapi, makipag-ugnayan sa Customer Support sa <supportLink>hi@kilocode.ai</supportLink>",
+		"telemetry": {
+			"label": "Payagan ang anonymous na pag-ulat ng error at paggamit",
+			"description": "Tumulong na mapabuti ang Kilo Code sa pamamagitan ng pagpapadala ng anonymous na data ng paggamit at mga ulat ng error. Walang code, prompt, o personal na impormasyon ang kailanman ipinapadala. Tingnan ang aming privacy policy para sa karagdagang detalye."
+		},
+		"settings": {
+			"import": "Mag-import",
+			"export": "Mag-export",
+			"reset": "I-reset"
+		}
+	},
+	"thinkingBudget": {
+		"maxTokens": "Max Tokens",
+		"maxThinkingTokens": "Max Thinking Tokens"
+	},
+	"validation": {
+		"apiKey": "Dapat kang magbigay ng valid na API key.",
+		"awsRegion": "Dapat kang pumili ng region na gagamitin sa Amazon Bedrock.",
+		"googleCloud": "Dapat kang magbigay ng valid na Google Cloud Project ID at Region.",
+		"modelId": "Dapat kang magbigay ng valid na model ID.",
+		"modelSelector": "Dapat kang magbigay ng valid na model selector.",
+		"openAi": "Dapat kang magbigay ng valid na base URL, API key, at model ID.",
+		"arn": {
+			"invalidFormat": "Invalid na ARN format. Pakitingnan ang mga kinakailangan sa format.",
+			"regionMismatch": "Babala: Ang region sa iyong ARN ({{arnRegion}}) ay hindi tumutugma sa iyong napiling region ({{region}}). Maaari itong magdulot ng mga isyu sa access. Gagamitin ng provider ang region mula sa ARN."
+		},
+		"modelAvailability": "Ang model ID ({{modelId}}) na ibinigay mo ay hindi available. Pumili ng ibang model.",
+		"providerNotAllowed": "Ang provider na '{{provider}}' ay hindi pinapayagan ng iyong organisasyon",
+		"modelNotAllowed": "Ang model na '{{model}}' ay hindi pinapayagan para sa provider na '{{provider}}' ng iyong organisasyon",
+		"profileInvalid": "Ang profile na ito ay naglalaman ng provider o model na hindi pinapayagan ng iyong organisasyon"
+	},
+	"placeholders": {
+		"apiKey": "Ilagay ang API Key...",
+		"profileName": "Ilagay ang pangalan ng profile",
+		"accessKey": "Ilagay ang Access Key...",
+		"secretKey": "Ilagay ang Secret Key...",
+		"sessionToken": "Ilagay ang Session Token...",
+		"credentialsJson": "Ilagay ang Credentials JSON...",
+		"keyFilePath": "Ilagay ang Key File Path...",
+		"projectId": "Ilagay ang Project ID...",
+		"customArn": "Ilagay ang ARN (hal. arn:aws:bedrock:us-east-1:123456789012:foundation-model/my-model)",
+		"baseUrl": "Ilagay ang base URL...",
+		"modelId": {
+			"lmStudio": "hal. meta-llama-3.1-8b-instruct",
+			"lmStudioDraft": "hal. lmstudio-community/llama-3.2-1b-instruct",
+			"ollama": "hal. llama3.1"
+		},
+		"numbers": {
+			"maxTokens": "hal. 4096",
+			"contextWindow": "hal. 128000",
+			"inputPrice": "hal. 0.0001",
+			"outputPrice": "hal. 0.0002",
+			"cacheWritePrice": "hal. 0.00005"
+		}
+	},
+	"defaults": {
+		"ollamaUrl": "Default: http://localhost:11434",
+		"lmStudioUrl": "Default: http://localhost:1234",
+		"geminiUrl": "Default: https://generativelanguage.googleapis.com"
+	},
+	"labels": {
+		"customArn": "Custom ARN",
+		"useCustomArn": "Gumamit ng custom ARN..."
+	},
+	"includeMaxOutputTokens": "Isama ang max output tokens",
+	"includeMaxOutputTokensDescription": "Magpadala ng max output tokens parameter sa mga API request. Maaaring hindi suportado ito ng ilang provider."
+}

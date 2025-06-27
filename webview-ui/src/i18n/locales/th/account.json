@@ -1,0 +1,8 @@
+{
+	"title": "บัญชี",
+	"profilePicture": "รูปโปรไฟล์",
+	"unknownUser": "ผู้ใช้ที่ไม่รู้จัก",
+	"logOut": "ออกจากระบบ",
+	"testApiAuthentication": "ทดสอบการยืนยันตัวตน API",
+	"signIn": "เชื่อมต่อกับ Roo Code Cloud"
+}

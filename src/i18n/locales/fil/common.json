@@ -1,0 +1,127 @@
+{
+	"extension": {
+		"name": "Kilo Code",
+		"description": "Open Source AI coding assistant para sa pagpaplano, pagbuo, at pag-aayos ng code."
+	},
+	"number_format": {
+		"thousand_suffix": "k",
+		"million_suffix": "m",
+		"billion_suffix": "b"
+	},
+	"feedback": {
+		"title": "Feedback",
+		"description": "Gusto naming marinig ang iyong feedback o tumulong sa anumang mga isyu na iyong nararanasan.",
+		"githubIssues": "Mag-ulat ng isyu sa GitHub",
+		"githubDiscussions": "Sumali sa mga diskusyon sa GitHub",
+		"discord": "Sumali sa aming Discord community",
+		"customerSupport": "Customer Support"
+	},
+	"welcome": "Maligayang pagdating, {{name}}! Mayroon kang {{count}} mga notipikasyon.",
+	"items": {
+		"zero": "Walang mga item",
+		"one": "Isang item",
+		"other": "{{count}} mga item"
+	},
+	"confirmation": {
+		"reset_state": "Sigurado ka bang gusto mong i-reset ang lahat ng state at secret storage sa extension? Hindi ito maaaring bawiin.",
+		"delete_config_profile": "Sigurado ka bang gusto mong tanggalin ang configuration profile na ito?",
+		"delete_custom_mode": "Sigurado ka bang gusto mong tanggalin ang custom mode na ito?",
+		"delete_message": "Ano ang gusto mong tanggalin?",
+		"just_this_message": "Ang mensaheng ito lang",
+		"this_and_subsequent": "Ito at lahat ng kasunod na mga mensahe"
+	},
+	"errors": {
+		"invalid_data_uri": "Invalid na format ng data URI",
+		"error_copying_image": "Error sa pagkopya ng larawan: {{errorMessage}}",
+		"error_opening_image": "Error sa pagbubukas ng larawan: {{error}}",
+		"error_saving_image": "Error sa pag-save ng larawan: {{errorMessage}}",
+		"could_not_open_file": "Hindi mabuksan ang file: {{errorMessage}}",
+		"could_not_open_file_generic": "Hindi mabuksan ang file!",
+		"checkpoint_timeout": "Nag-timeout habang sinusubukang ibalik ang checkpoint.",
+		"checkpoint_failed": "Nabigo ang pagbabalik ng checkpoint.",
+		"no_workspace": "Mangyaring magbukas muna ng project folder",
+		"update_support_prompt": "Nabigo ang pag-update ng support prompt",
+		"reset_support_prompt": "Nabigo ang pag-reset ng support prompt",
+		"enhance_prompt": "Nabigo ang pagpahusay ng prompt",
+		"get_system_prompt": "Nabigo ang pagkuha ng system prompt",
+		"search_commits": "Nabigo ang paghahanap ng mga commit",
+		"save_api_config": "Nabigo ang pag-save ng api configuration",
+		"create_api_config": "Nabigo ang paggawa ng api configuration",
+		"rename_api_config": "Nabigo ang pagpapalit ng pangalan ng api configuration",
+		"load_api_config": "Nabigo ang pag-load ng api configuration",
+		"delete_api_config": "Nabigo ang pagtanggal ng api configuration",
+		"list_api_config": "Nabigo ang pagkuha ng listahan ng api configuration",
+		"update_server_timeout": "Nabigo ang pag-update ng server timeout",
+		"hmr_not_running": "Ang local development server ay hindi tumatakbo, ang HMR ay hindi gagana. Mangyaring patakbuhin ang 'npm run dev' bago ilunsad ang extension upang paganahin ang HMR.",
+		"retrieve_current_mode": "Error: nabigo ang pagkuha ng kasalukuyang mode mula sa state.",
+		"failed_delete_repo": "Nabigo ang pagtanggal ng kaugnay na shadow repository o branch: {{error}}",
+		"failed_remove_directory": "Nabigo ang pagtanggal ng task directory: {{error}}",
+		"custom_storage_path_unusable": "Ang custom storage path \"{{path}}\" ay hindi magagamit, gagamitin ang default path",
+		"cannot_access_path": "Hindi ma-access ang path {{path}}: {{error}}",
+		"settings_import_failed": "Nabigo ang pag-import ng settings: {{error}}.",
+		"mistake_limit_guidance": "Ito ay maaaring magpahiwatig ng pagkabigo sa proseso ng pag-iisip ng modelo o kawalan ng kakayahang gumamit ng tool nang maayos, na maaaring mabawasan sa pamamagitan ng ilang gabay ng user (hal. \"Subukang hatiin ang gawain sa mas maliliit na hakbang\").",
+		"violated_organization_allowlist": "Nabigo ang pagpapatakbo ng task: ang kasalukuyang profile ay lumalabag sa iyong mga setting ng organisasyon",
+		"condense_failed": "Nabigo ang pag-condense ng context",
+		"condense_not_enough_messages": "Hindi sapat ang mga mensahe para i-condense ang context",
+		"condensed_recently": "Ang context ay na-condense kamakailan; nilalaktawan ang pagtatangkang ito",
+		"condense_handler_invalid": "Ang API handler para sa pag-condense ng context ay invalid",
+		"condense_context_grew": "Ang laki ng context ay tumaas habang nag-condense; nilalaktawan ang pagtatangkang ito",
+		"share_task_failed": "Nabigo ang pagbahagi ng task. Mangyaring subukan muli.",
+		"share_no_active_task": "Walang aktibong task na ibabahagi",
+		"share_auth_required": "Kailangan ng authentication. Mangyaring mag-sign in upang magbahagi ng mga task.",
+		"share_not_enabled": "Ang pagbahagi ng task ay hindi pinagana para sa organisasyong ito.",
+		"share_task_not_found": "Hindi nahanap ang task o tinanggihan ang access.",
+		"claudeCode": {
+			"processExited": "Ang proseso ng Claude Code ay lumabas gamit ang code {{exitCode}}.",
+			"errorOutput": "Error output: {{output}}",
+			"processExitedWithError": "Ang proseso ng Claude Code ay lumabas gamit ang code {{exitCode}}. Error output: {{output}}",
+			"stoppedWithReason": "Ang Claude Code ay tumigil dahil sa: {{reason}}",
+			"apiKeyModelPlanMismatch": "Ang mga API key at subscription plan ay nagpapahintulot ng iba't ibang mga modelo. Siguraduhing ang napiling modelo ay kasama sa iyong plano."
+		}
+	},
+	"warnings": {
+		"no_terminal_content": "Walang napiling terminal content",
+		"missing_task_files": "Ang mga file ng task na ito ay nawawala. Gusto mo bang tanggalin ito mula sa listahan ng task?"
+	},
+	"info": {
+		"no_changes": "Walang nahanap na mga pagbabago.",
+		"clipboard_copy": "Matagumpay na nakopya ang system prompt sa clipboard",
+		"history_cleanup": "Naglinis ng {{count}} task(s) na may nawawalang mga file mula sa history.",
+		"custom_storage_path_set": "Naitakda ang custom storage path: {{path}}",
+		"default_storage_path": "Bumalik sa paggamit ng default storage path",
+		"settings_imported": "Matagumpay na na-import ang mga setting.",
+		"share_link_copied": "Nakopya ang share link sa clipboard",
+		"organization_share_link_copied": "Nakopya ang organization share link sa clipboard!",
+		"public_share_link_copied": "Nakopya ang public share link sa clipboard!",
+		"image_copied_to_clipboard": "Nakopya ang image data URI sa clipboard",
+		"image_saved": "Na-save ang larawan sa {{path}}"
+	},
+	"answers": {
+		"yes": "Oo",
+		"no": "Hindi",
+		"cancel": "Kanselahin",
+		"remove": "Tanggalin",
+		"keep": "Panatilihin"
+	},
+	"tasks": {
+		"canceled": "Task error: Ito ay tinigil at kinansela ng user.",
+		"deleted": "Task failure: Ito ay tinigil at tinanggal ng user."
+	},
+	"storage": {
+		"prompt_custom_path": "Maglagay ng custom conversation history storage path, iwanang blangko para gamitin ang default na lokasyon",
+		"path_placeholder": "D:\\KiloCodeStorage",
+		"enter_absolute_path": "Mangyaring maglagay ng absolute path (hal. D:\\KiloCodeStorage o /home/user/storage)",
+		"enter_valid_path": "Mangyaring maglagay ng valid na path"
+	},
+	"input": {
+		"task_prompt": "Ano ang dapat gawin ng Kilo Code?",
+		"task_placeholder": "Bumuo, maghanap, magtanong ng kahit ano"
+	},
+	"mdm": {
+		"errors": {
+			"cloud_auth_required": "Ang iyong organisasyon ay nangangailangan ng Roo Code Cloud authentication. Mangyaring mag-sign in upang magpatuloy.",
+			"organization_mismatch": "Dapat kang ma-authenticate gamit ang Roo Code Cloud account ng iyong organisasyon.",
+			"verification_failed": "Hindi ma-verify ang authentication ng organisasyon."
+		}
+	}
+}

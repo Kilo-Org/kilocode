@@ -658,14 +658,17 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				// kilocode_change end
 
 				if (showMenu) {
-					if (newValue.startsWith("/")) {
+					// kilocode_change start - check lastAtIndex before handling slash commands
+					const lastAtIndex = newValue.lastIndexOf("@", newCursorPosition - 1)
+
+					// if (newValue.startsWith("/")) { ⚠️ kilocode_change added lastAtIndex check
+					if (newValue.startsWith("/") && lastAtIndex === -1) {
 						// Handle slash command.
 						const query = newValue
 						setSearchQuery(query)
 						setSelectedMenuIndex(0)
 					} else {
 						// Existing @ mention handling.
-						const lastAtIndex = newValue.lastIndexOf("@", newCursorPosition - 1)
 						const query = newValue.slice(lastAtIndex + 1, newCursorPosition)
 						setSearchQuery(query)
 

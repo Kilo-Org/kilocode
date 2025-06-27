@@ -72,6 +72,9 @@ function validateModelsAndKeysProvided(apiConfiguration: ProviderSettings): stri
 				return i18next.t("settings:validation.apiKey")
 			}
 			break
+		case "gemini-cli":
+			// OAuth-based provider, no API key validation needed
+			break
 		case "openai-native":
 			if (!apiConfiguration.openAiNativeApiKey) {
 				return i18next.t("settings:validation.apiKey")
@@ -238,6 +241,12 @@ export function validateModelId(apiConfiguration: ProviderSettings, routerModels
 			break
 		case "requesty":
 			modelId = apiConfiguration.requestyModelId
+			break
+		case "ollama":
+			modelId = apiConfiguration.ollamaModelId
+			break
+		case "lmstudio":
+			modelId = apiConfiguration.lmStudioModelId
 			break
 		case "litellm":
 			modelId = apiConfiguration.litellmModelId

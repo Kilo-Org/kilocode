@@ -5,8 +5,10 @@ import { useDebounceEffect } from "@src/utils/useDebounceEffect"
 import { vscode } from "@src/utils/vscode"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { useCopyToClipboard } from "@src/utils/clipboard"
+import { MermaidSyntaxFixer } from "@src/services/mermaidSyntaxFixer" // kilocode_change
 import CodeBlock from "./CodeBlock"
 import { MermaidButton } from "@/components/common/MermaidButton"
+import { MermaidFixButton } from "@/components/common/MermaidFixButton" // kilocode_change
 
 // Removed previous attempts at static imports for individual diagram types
 // as the paths were incorrect for Mermaid v11.4.1 and caused errors.
@@ -86,11 +88,17 @@ interface MermaidBlockProps {
 	code: string
 }
 
-export default function MermaidBlock({ code }: MermaidBlockProps) {
+// kilocode_change next line rename to originalCode to keep the difference with Roo smaller
+export default function MermaidBlock({ code: originalCode }: MermaidBlockProps) {
 	const containerRef = useRef<HTMLDivElement>(null)
 	const [isLoading, setIsLoading] = useState(false)
 	const [error, setError] = useState<string | null>(null)
 	const [isErrorExpanded, setIsErrorExpanded] = useState(false)
+	// kilocode_change start
+	const [svgContent, setSvgContent] = useState<string>("")
+	const [isFixing, setIsFixing] = useState(false)
+	const [code, setCode] = useState("")
+	// kilocode_change end
 	const { showCopyFeedback, copyWithFeedback } = useCopyToClipboard()
 	const { t } = useAppTranslation()
 
@@ -98,14 +106,41 @@ export default function MermaidBlock({ code }: MermaidBlockProps) {
 	useEffect(() => {
 		setIsLoading(true)
 		setError(null)
-	}, [code])
+		// kilocode_change start
+		setCode(originalCode)
+		setIsFixing(false)
+		// kilocode_change end
+	}, [originalCode]) // kilocode_change originalCode instead of code
+
+	// kilocode_change start
+	const handleSyntaxFix = async () => {
+		if (isFixing) return
+
+		setIsLoading(true)
+		setIsFixing(true)
+		const result = await MermaidSyntaxFixer.autoFixSyntax(code)
+		if (result.fixedCode) {
+			// Use the improved code even if not completely successful
+			setCode(result.fixedCode)
+		}
+
+		if (!result.success) {
+			setError(result.error || t("common:mermaid.errors.fix_failed"))
+		}
+
+		setIsFixing(false)
+		setIsLoading(false)
+	}
+	// kilocode_change end
 
 	// 2) Debounce the actual parse/render
+	// the LLM is still 'typing', and we do not want to start rendering and/or autofixing before it is fully done.
 	useDebounceEffect(
 		() => {
-			if (containerRef.current) {
-				containerRef.current.innerHTML = ""
-			}
+			//kilocode_change start
+			if (isFixing) return
+			setIsLoading(true)
+			//kilocode_change end
 
 			mermaid
 				.parse(code)
@@ -114,20 +149,24 @@ export default function MermaidBlock({ code }: MermaidBlockProps) {
 					return mermaid.render(id, code)
 				})
 				.then(({ svg }) => {
-					if (containerRef.current) {
-						containerRef.current.innerHTML = svg
-					}
+					//kilocode_change start
+					setError(null)
+					setSvgContent(svg)
+					// kilocode_change end
 				})
 				.catch((err) => {
 					console.warn("Mermaid parse/render failed:", err)
-					setError(err.message || "Failed to render Mermaid diagram")
+					// kilocode_change start
+					const errorMessage = err instanceof Error ? err.message : t("common:mermaid.render_error")
+					setError(errorMessage)
+					// kilocode_change end
 				})
 				.finally(() => {
 					setIsLoading(false)
 				})
 		},
 		500, // Delay 500ms
-		[code], // Dependencies for scheduling
+		[code, isFixing, originalCode, t], // Dependencies for scheduling // kilocode_change added isFixing, originalCode and t
 	)
 
 	/**
@@ -154,7 +193,11 @@ export default function MermaidBlock({ code }: MermaidBlockProps) {
 
 	return (
 		<MermaidBlockContainer>
-			{isLoading && <LoadingMessage>{t("common:mermaid.loading")}</LoadingMessage>}
+			{isLoading && (
+				<LoadingMessage>
+					{isFixing /* kilocode_change */ ? t("common:mermaid.fixing_syntax") : t("common:mermaid.loading")}
+				</LoadingMessage>
+			)}
 
 			{error ? (
 				<div style={{ marginTop: "0px", overflow: "hidden", marginBottom: "8px" }}>
@@ -188,6 +231,19 @@ export default function MermaidBlock({ code }: MermaidBlockProps) {
 							<span style={{ fontWeight: "bold" }}>{t("common:mermaid.render_error")}</span>
 						</div>
 						<div style={{ display: "flex", alignItems: "center" }}>
+							{/* kilocode_change start */}
+							{!!error && (
+								<MermaidFixButton
+									onClick={(e) => {
+										e.stopPropagation()
+										handleSyntaxFix()
+									}}
+									disabled={isFixing}
+									title={t("common:mermaid.fix_syntax_button")}>
+									<span className={`codicon codicon-${isFixing ? "loading" : "wand"}`}></span>
+								</MermaidFixButton>
+							)}
+							{/* kilocode_change end */}
 							<CopyButton
 								onClick={(e) => {
 									e.stopPropagation()
@@ -210,12 +266,28 @@ export default function MermaidBlock({ code }: MermaidBlockProps) {
 								{error}
 							</div>
 							<CodeBlock language="mermaid" source={code} />
+							{/* kilocode_change start */}
+							{code !== originalCode && (
+								<div style={{ marginTop: "8px" }}>
+									<div style={{ marginBottom: "4px", fontSize: "0.9em", fontWeight: "bold" }}>
+										{t("common:mermaid.original_code")}
+									</div>
+									<CodeBlock language="mermaid" source={originalCode} />
+								</div>
+							)}
+							{/* kilocode_change end */}
 						</div>
 					)}
 				</div>
 			) : (
 				<MermaidButton containerRef={containerRef} code={code} isLoading={isLoading} svgToPng={svgToPng}>
-					<SvgContainer onClick={handleClick} ref={containerRef} $isLoading={isLoading}></SvgContainer>
+					{/* kilocode_change start switched from ref to dangerouslySetInnerHTML */}
+					<SvgContainer
+						onClick={handleClick}
+						$isLoading={isLoading}
+						dangerouslySetInnerHTML={{ __html: svgContent }}
+					/>
+					{/* kilocode_change end */}
 				</MermaidButton>
 			)}
 		</MermaidBlockContainer>
