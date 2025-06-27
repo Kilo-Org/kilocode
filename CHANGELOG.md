@@ -1,8 +1,6 @@
 # kilo-code
 
-## 4.45.1
-
-### Patch Changes
+## [v4.45.1]
 
 - [#889](https://github.com/Kilo-Org/kilocode/pull/889) [`7f72a33`](https://github.com/Kilo-Org/kilocode/commit/7f72a33278100f3a7679d7b2761f1380a54bfc90) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Refresh CodeIndex Services (Qdrant) when change the configuration
 
