@@ -28,13 +28,11 @@ export async function parseKiloSlashCommands(
 	localWorkflowToggles: ClineRulesToggles,
 	globalWorkflowToggles: ClineRulesToggles,
 ): Promise<{ processedText: string; needsRulesFileCheck: boolean }> {
-	const SUPPORTED_COMMANDS = ["newtask", "newrule", "reportbug", "smol"]
-
-	const commandReplacements: Record<string, string> = {
-		newtask: newTaskToolResponse(),
-		newrule: newRuleToolResponse(),
-		reportbug: reportBugToolResponse(),
-		smol: condenseToolResponse(),
+	const commandReplacements: Record<string, ((userInput: string) => string) | undefined> = {
+		newtask: newTaskToolResponse,
+		newrule: newRuleToolResponse,
+		reportbug: reportBugToolResponse,
+		smol: condenseToolResponse,
 	}
 
 	// this currently allows matching prepended whitespace prior to /slash-command
@@ -55,8 +53,9 @@ export async function parseKiloSlashCommands(
 			// match[2] is just the command name (e.g. "newtask")
 
 			const commandName = match[2] // casing matters
+			const command = commandReplacements[commandName]
 
-			if (SUPPORTED_COMMANDS.includes(commandName)) {
+			if (command) {
 				const fullMatchStartIndex = match.index
 
 				// find position of slash command within the full match
@@ -70,7 +69,7 @@ export async function parseKiloSlashCommands(
 				// remove the slash command and add custom instructions at the top of this message
 				const textWithoutSlashCommand =
 					text.substring(0, slashCommandStartIndex) + text.substring(slashCommandEndIndex)
-				const processedText = commandReplacements[commandName] + textWithoutSlashCommand
+				const processedText = command(textWithoutSlashCommand)
 
 				return { processedText, needsRulesFileCheck: commandName === "newrule" }
 			}
