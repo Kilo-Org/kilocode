@@ -54,7 +54,7 @@ export class SimpleInstaller {
 				existingData = { customModes: [] }
 			} else if (error.name === "YAMLParseError" || error.message?.includes("YAML")) {
 				// YAML parsing error - don't overwrite the file!
-				const fileName = target === "project" ? ".roomodes" : "custom-modes.yaml"
+				const fileName = target === "project" ? ".kilocodemodes" : "custom-modes.yaml"
 				throw new Error(
 					`Cannot install mode: The ${fileName} file contains invalid YAML. ` +
 						`Please fix the syntax errors in the file before installing new modes.`,
@@ -189,7 +189,7 @@ export class SimpleInstaller {
 				existingData = { mcpServers: {} }
 			} else if (error instanceof SyntaxError) {
 				// JSON parsing error - don't overwrite the file!
-				const fileName = target === "project" ? ".roo/mcp.json" : "mcp-settings.json"
+				const fileName = target === "project" ? ".kilocode/mcp.json" : "mcp-settings.json"
 				throw new Error(
 					`Cannot install MCP server: The ${fileName} file contains invalid JSON. ` +
 						`Please fix the syntax errors in the file before installing new servers.`,
@@ -256,7 +256,7 @@ export class SimpleInstaller {
 				existingData = yaml.parse(existing)
 			} catch (parseError) {
 				// If we can't parse the file, we can't safely remove a mode
-				const fileName = target === "project" ? ".roomodes" : "custom-modes.yaml"
+				const fileName = target === "project" ? ".kilocodemodes" : "custom-modes.yaml"
 				throw new Error(
 					`Cannot remove mode: The ${fileName} file contains invalid YAML. ` +
 						`Please fix the syntax errors before removing modes.`,
@@ -327,7 +327,7 @@ export class SimpleInstaller {
 			if (!workspaceFolder) {
 				throw new Error("No workspace folder found")
 			}
-			return path.join(workspaceFolder.uri.fsPath, ".roomodes")
+			return path.join(workspaceFolder.uri.fsPath, ".kilocodemodes")
 		} else {
 			const globalSettingsPath = await ensureSettingsDirectoryExists(this.context)
 			return path.join(globalSettingsPath, GlobalFileNames.customModes)
@@ -340,7 +340,7 @@ export class SimpleInstaller {
 			if (!workspaceFolder) {
 				throw new Error("No workspace folder found")
 			}
-			return path.join(workspaceFolder.uri.fsPath, ".roo", "mcp.json")
+			return path.join(workspaceFolder.uri.fsPath, ".kilocode", "mcp.json")
 		} else {
 			const globalSettingsPath = await ensureSettingsDirectoryExists(this.context)
 			return path.join(globalSettingsPath, GlobalFileNames.mcpSettings)

@@ -130,6 +130,11 @@
 				"icon": "$(add)"
 			},
 			{
+				"command": "kilo-code.mcpButtonClicked",
+				"title": "%command.mcpServers.title%",
+				"icon": "$(server)"
+			},
+			{
 				"command": "kilo-code.importSettings",
 				"title": "Import Settings",
 				"category": "%configuration.title%"
@@ -148,6 +153,11 @@
 				"command": "kilo-code.historyButtonClicked",
 				"title": "%command.history.title%",
 				"icon": "$(history)"
+			},
+			{
+				"command": "kilo-code.marketplaceButtonClicked",
+				"title": "%command.marketplace.title%",
+				"icon": "$(extensions)"
 			},
 			{
 				"command": "kilo-code.popoutButtonClicked",

@@ -112,6 +112,7 @@ export interface ExtensionMessage {
 	payload?: ProfileDataResponsePayload | BalanceDataResponsePayload // kilocode_change: Add payload for profile and balance data
 	action?:
 		| "chatButtonClicked"
+		| "mcpButtonClicked"
 		| "settingsButtonClicked"
 		| "historyButtonClicked"
 		| "promptsButtonClicked"

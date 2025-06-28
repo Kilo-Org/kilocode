@@ -196,6 +196,7 @@ export interface WebviewMessage {
 		| "mermaidFixResponse" // kilocode_change
 		| "openExternal"
 		| "filterMarketplaceItems"
+		| "mcpButtonClicked"
 		| "marketplaceButtonClicked"
 		| "installMarketplaceItem"
 		| "installMarketplaceItemWithParameters"
