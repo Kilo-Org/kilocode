@@ -13,7 +13,6 @@ import { MarketplaceView } from "../../components/marketplace/MarketplaceView"
 
 const McpView = () => {
 	const [activeTab, setActiveTab] = useState("marketplace")
-	// Create a persistent state manager
 	const marketplaceStateManager = useMemo(() => new MarketplaceViewStateManager(), [])
 	const { t } = useAppTranslation()
 
