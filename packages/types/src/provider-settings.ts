@@ -21,6 +21,7 @@ export const providerNames = [
 	"gemini",
 	"gemini-cli",
 	"openai-native",
+	"makehub",
 	"mistral",
 	"deepseek",
 	"unbound",
@@ -223,6 +224,11 @@ const litellmSchema = baseProviderSettingsSchema.extend({
 	litellmModelId: z.string().optional(),
 })
 
+const makehubSchema = baseProviderSettingsSchema.extend({
+	makehubApiKey: z.string().optional(),
+	makehubModelId: z.string().optional(),
+	makehubPerfRatio: z.number().optional(),
+})
 // kilocode_change start
 const kilocodeSchema = baseProviderSettingsSchema.extend({
 	kilocodeToken: z.string().optional(),
@@ -268,6 +274,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	groqSchema.merge(z.object({ apiProvider: z.literal("groq") })),
 	chutesSchema.merge(z.object({ apiProvider: z.literal("chutes") })),
 	litellmSchema.merge(z.object({ apiProvider: z.literal("litellm") })),
+	makehubSchema.merge(z.object({ apiProvider: z.literal("makehub") })),
 	kilocodeSchema.merge(z.object({ apiProvider: z.literal("kilocode") })), // kilocode_change
 	fireworksSchema.merge(z.object({ apiProvider: z.literal("fireworks") })), // kilocode_change
 	cerebrasSchema.merge(z.object({ apiProvider: z.literal("cerebras") })), // kilocode_change
@@ -299,6 +306,7 @@ export const providerSettingsSchema = z.object({
 	...groqSchema.shape,
 	...chutesSchema.shape,
 	...litellmSchema.shape,
+	...makehubSchema.shape,
 	...codebaseIndexProviderSchema.shape,
 	...kilocodeSchema.shape, // kilocode_change
 	...fireworksSchema.shape, // kilocode_change

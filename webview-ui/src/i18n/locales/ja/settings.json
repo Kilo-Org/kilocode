@@ -197,6 +197,16 @@
 		"getXaiApiKey": "xAI APIキーを取得",
 		"litellmApiKey": "LiteLLM APIキー",
 		"litellmBaseUrl": "LiteLLM ベースURL",
+		"makehubApiKey": "MakeHub APIキー",
+		"getMakehubApiKey": "MakeHub APIキーを取得",
+		"makehubPerfRatio": "性能/価格比率",
+		"makehubPerfRatioDescription": "MakeHubがプロバイダーにルーティングする際の価格と性能のバランスを制御します。",
+		"makehubPerfRatioLabels": {
+			"price": "価格最適化",
+			"balanced": "バランス",
+			"performance": "速度最適化"
+		},
+		"noModelsFound": "{{provider}}のモデルが見つかりません。APIキーが有効であることを確認し、モデルリストを更新してください。",
 		"awsCredentials": "AWS認証情報",
 		"awsProfile": "AWSプロファイル",
 		"awsProfileName": "AWSプロファイル名",
