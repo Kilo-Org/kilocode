@@ -70,7 +70,7 @@ export async function readMediaTool(
 			throw new Error(`Unsupported file type. Supported extensions are: ${supportedExtensions}`)
 		}
 
-		const fileBuffer = fs.readFileSync(absolutePath)
+		const fileBuffer = await fs.promises.readFile(absolutePath)
 		const base64Data = fileBuffer.toString("base64")
 
 		const imageBlock: ImageBlockParam = {
@@ -84,8 +84,9 @@ export async function readMediaTool(
 		pushToolResult([imageBlock])
 	} catch (error) {
 		const errorMsg = error instanceof Error ? error.message : String(error)
-		var xml = `<file><path>${realPath}</path><error>Error reading file: ${errorMsg}</error></file>`
-		pushToolResult(xml)
+		const errorXml = `<file><path>${realPath}</path><error>Error reading file: ${errorMsg}</error></file>`
+		const filesXml = `<files>\n${errorXml}\n</files>`
+		pushToolResult(filesXml)
 		await handleError("reading media", error)
 	}
 }
