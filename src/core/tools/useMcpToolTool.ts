@@ -4,6 +4,8 @@ import { formatResponse } from "../prompts/responses"
 import { ClineAskUseMcpServer } from "../../shared/ExtensionMessage"
 import { McpExecutionStatus } from "@roo-code/types"
 import { t } from "../../i18n"
+import { truncateIfNeeded } from "./kilocode/truncateIfNeeded" // kilocode_change
+import { McpToolCallResponse } from "../../shared/mcp" // kilocode_change
 
 interface McpToolParams {
 	server_name?: string
@@ -89,12 +91,15 @@ async function sendExecutionStatus(cline: Task, status: McpExecutionStatus): Pro
 	})
 }
 
-function processToolContent(toolResult: any): string {
+function processToolContent(
+	toolResult: McpToolCallResponse, // kilocode_change: type added
+	contextWindow: number, // kilocode_change: added
+): string {
 	if (!toolResult?.content || toolResult.content.length === 0) {
 		return ""
 	}
 
-	return toolResult.content
+	const outputText = toolResult.content // kilocode_change: introduce const
 		.map((item: any) => {
 			if (item.type === "text") {
 				return item.text
@@ -107,6 +112,8 @@ function processToolContent(toolResult: any): string {
 		})
 		.filter(Boolean)
 		.join("\n\n")
+
+	return truncateIfNeeded(outputText, contextWindow) // kilocode_change: truncate
 }
 
 async function executeToolAndProcessResult(
@@ -132,7 +139,7 @@ async function executeToolAndProcessResult(
 	let toolResultPretty = "(No response)"
 
 	if (toolResult) {
-		const outputText = processToolContent(toolResult)
+		const outputText = processToolContent(toolResult, cline.api.getModel().info.contextWindow) // kilocode_change: contextWindow added
 
 		if (outputText) {
 			await sendExecutionStatus(cline, {

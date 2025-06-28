@@ -53,6 +53,17 @@ describe("useMcpToolTool", () => {
 			ask: vi.fn(),
 			lastMessageTs: 123456789,
 			providerRef: mockProviderRef,
+			// kilocode_change start
+			api: {
+				getModel: vi.fn().mockReturnValue({
+					info: {
+						contextWindow: 32_000,
+					},
+				}),
+				createMessage: vi.fn(),
+				countTokens: vi.fn().mockResolvedValue(100),
+			},
+			// kilocode_change end
 		}
 	})
 
