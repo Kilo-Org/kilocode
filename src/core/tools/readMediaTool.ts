@@ -50,8 +50,8 @@ export async function readMediaTool(
 			...sharedMessageProps,
 			content: contentForApproval,
 		} satisfies ClineSayTool)
-		const { response } = await cline.ask("tool", completeMessage)
-		if (response != "yesButtonClicked") {
+		const didApprove = await askApproval("tool", completeMessage)
+		if (!didApprove) {
 			pushToolResult(`<file><path>${realPath}</path><status>Denied by user</status></file>`)
 			return
 		}
