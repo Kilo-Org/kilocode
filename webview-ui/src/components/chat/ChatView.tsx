@@ -839,6 +839,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 			return [
 				"readFile",
+				"readMedia",
 				"listFiles",
 				"listFilesTopLevel",
 				"listFilesRecursive",
