@@ -21,7 +21,6 @@ import {
 import { convertToMentionPath } from "@/utils/path-mentions"
 import { SelectDropdown, DropdownOptionType, Button } from "@/components/ui"
 // import { normalizeApiConfiguration } from "@/utils/normalizeApiConfiguration" // kilocode_change
-import { useVSCodeTheme } from "@/kilocode/hooks/useVSCodeTheme" // kilocode_change
 
 import Thumbnails from "../common/Thumbnails"
 import { MAX_IMAGES_PER_MESSAGE } from "./ChatView"
@@ -31,8 +30,6 @@ import { IconButton } from "./IconButton"
 import { IndexingStatusDot } from "./IndexingStatusBadge"
 import { cn } from "@/lib/utils"
 import { usePromptHistory } from "./hooks/usePromptHistory"
-
-import { useSelectedModel } from "../ui/hooks/useSelectedModel"
 
 // kilocode_change start: pull slash commands from Cline
 import SlashCommandMenu from "@/components/chat/SlashCommandMenu"
@@ -92,15 +89,12 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			cwd,
 			pinnedApiConfigs,
 			togglePinnedApiConfig,
-			apiConfiguration, // kilocode_change
 			localWorkflows, // kilocode_change
 			globalWorkflows, // kilocode_change
 			taskHistory,
 			clineMessages,
 			codebaseIndexConfig,
 		} = useExtensionState()
-
-		const currentTheme = useVSCodeTheme() // kilocode_change
 
 		// Find the ID and display text for the currently selected API configuration
 		const { currentConfigId, displayName } = useMemo(() => {
@@ -110,10 +104,6 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				displayName: currentApiConfigName || "", // Use the name directly for display
 			}
 		}, [listApiConfigMeta, currentApiConfigName])
-
-		// kilocode_change start
-		const { id: selectedModelId, provider: selectedProvider } = useSelectedModel(apiConfiguration)
-		// kilocode_change end
 
 		const [gitCommits, setGitCommits] = useState<any[]>([])
 		const [showDropdown, setShowDropdown] = useState(false)
@@ -995,6 +985,58 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 		const placeholderBottomText = `\n(${t("chat:addContext")}${shouldDisableImages ? `, ${t("chat:dragFiles")}` : `, ${t("chat:dragFilesImages")}`})`
 
+		// kilocode_change start
+		const selectApiConfigOptions = useMemo(() => {
+			return [
+				// Pinned items first.
+				...(listApiConfigMeta || [])
+					.filter((config) => pinnedApiConfigs && pinnedApiConfigs[config.id])
+					.map((config) => ({
+						value: config.id,
+						label: config.name,
+						name: config.name, // Keep name for comparison with currentApiConfigName.
+						type: DropdownOptionType.ITEM,
+						pinned: true,
+					}))
+					.sort((a, b) => a.label.localeCompare(b.label)),
+				// If we have pinned items and unpinned items, add a separator.
+				...(pinnedApiConfigs &&
+				Object.keys(pinnedApiConfigs).length > 0 &&
+				(listApiConfigMeta || []).some((config) => !pinnedApiConfigs[config.id])
+					? [
+							{
+								value: "sep-pinned",
+								label: t("chat:separator"),
+								type: DropdownOptionType.SEPARATOR,
+							},
+						]
+					: []),
+				// Unpinned items sorted alphabetically.
+				...(listApiConfigMeta || [])
+					.filter((config) => !pinnedApiConfigs || !pinnedApiConfigs[config.id])
+					.map((config) => ({
+						value: config.id,
+						label: config.name,
+						name: config.name, // Keep name for comparison with currentApiConfigName.
+						type: DropdownOptionType.ITEM,
+						pinned: false,
+					}))
+					.sort((a, b) => a.label.localeCompare(b.label)),
+				{
+					value: "sep-2",
+					label: t("chat:separator"),
+					type: DropdownOptionType.SEPARATOR,
+				},
+				{
+					value: "settingsButtonClicked",
+					label: t("chat:edit"),
+					type: DropdownOptionType.ACTION,
+				},
+			]
+		}, [t, listApiConfigMeta, pinnedApiConfigs])
+
+		console.log("selectApiConfigOptions.length", selectApiConfigOptions.length)
+
 		return (
 			<div
 				className={cn(
@@ -1269,145 +1311,91 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 									vscode.postMessage({ type: "mode", text: value })
 								}}
 								shortcutText={modeShortcutText}
-								triggerClassName={cn("w-full", {
-									"bg-[#1e1e1e] border-[#333333] hover:bg-[#2d2d2d]":
-										currentTheme === "vscode-dark" || currentTheme === "vscode-high-contrast",
-									"bg-[var(--vscode-input-background)] border-[var(--vscode-input-border)] hover:bg-[var(--vscode-input-hoverBackground)]":
-										currentTheme === "vscode-light",
-								})}
+								// kilocode_change start - VSC Theme
+								triggerClassName={cn(
+									"w-full bg-[var(--background)] border-[var(--vscode-input-border)] hover:bg-[var(--color-vscode-list-hoverBackground)]",
+								)}
+								// kilocode_change end
 							/>
 						</div>
 
-						{/* kilocode_change: fixed width */}
-						{/* API configuration selector - fixed width */}
-						<div className={cn("shrink-0", "w-[70px]")}>
-							<SelectDropdown
-								value={currentConfigId}
-								disabled={selectApiConfigDisabled}
-								title={t("chat:selectApiConfig")}
-								placeholder={displayName}
-								options={[
-									// Pinned items first.
-									...(listApiConfigMeta || [])
-										.filter((config) => pinnedApiConfigs && pinnedApiConfigs[config.id])
-										.map((config) => ({
-											value: config.id,
-											label: config.name,
-											name: config.name, // Keep name for comparison with currentApiConfigName.
-											type: DropdownOptionType.ITEM,
-											pinned: true,
-										}))
-										.sort((a, b) => a.label.localeCompare(b.label)),
-									// If we have pinned items and unpinned items, add a separator.
-									...(pinnedApiConfigs &&
-									Object.keys(pinnedApiConfigs).length > 0 &&
-									(listApiConfigMeta || []).some((config) => !pinnedApiConfigs[config.id])
-										? [
-												{
-													value: "sep-pinned",
-													label: t("chat:separator"),
-													type: DropdownOptionType.SEPARATOR,
-												},
-											]
-										: []),
-									// Unpinned items sorted alphabetically.
-									...(listApiConfigMeta || [])
-										.filter((config) => !pinnedApiConfigs || !pinnedApiConfigs[config.id])
-										.map((config) => ({
-											value: config.id,
-											label: config.name,
-											name: config.name, // Keep name for comparison with currentApiConfigName.
-											type: DropdownOptionType.ITEM,
-											pinned: false,
-										}))
-										.sort((a, b) => a.label.localeCompare(b.label)),
-									{
-										value: "sep-2",
-										label: t("chat:separator"),
-										type: DropdownOptionType.SEPARATOR,
-									},
-									{
-										value: "settingsButtonClicked",
-										label: t("chat:edit"),
-										type: DropdownOptionType.ACTION,
-									},
-								]}
-								onChange={(value) => {
-									if (value === "settingsButtonClicked") {
-										vscode.postMessage({
-											type: "loadApiConfiguration",
-											text: value,
-											values: { section: "providers" },
-										})
-									} else {
-										vscode.postMessage({ type: "loadApiConfigurationById", text: value })
-									}
-								}}
-								contentClassName="max-h-[300px] overflow-y-auto"
-								// kilocode_change: add different border and background colors
-								triggerClassName={cn("w-full text-ellipsis overflow-hidden", {
-									"bg-[#1e1e1e] border-[#333333] hover:bg-[#2d2d2d]":
-										currentTheme === "vscode-dark" || currentTheme === "vscode-high-contrast",
-									"bg-[var(--vscode-input-background)] border-[var(--vscode-input-border)] hover:bg-[var(--vscode-input-hoverBackground)]":
-										currentTheme === "vscode-light",
-								})}
-								itemClassName="group"
-								renderItem={({ type, value, label, pinned }) => {
-									if (type !== DropdownOptionType.ITEM) {
-										return label
-									}
+						{/* kilocode_change start - hide if there is only one profile */}
+						{selectApiConfigOptions.length >= 4 && (
+							<div className={cn("shrink-0", "w-[70px]")}>
+								<SelectDropdown
+									value={currentConfigId}
+									disabled={selectApiConfigDisabled}
+									title={t("chat:selectApiConfig")}
+									placeholder={displayName}
+									// kilocode_change start
+									options={selectApiConfigOptions}
+									onChange={(value) => {
+										if (value === "settingsButtonClicked") {
+											vscode.postMessage({
+												type: "loadApiConfiguration",
+												text: value,
+												values: { section: "providers" },
+											})
+										} else {
+											vscode.postMessage({ type: "loadApiConfigurationById", text: value })
+										}
+									}}
+									contentClassName="max-h-[300px] overflow-y-auto"
+									triggerClassName={cn(
+										"w-full text-ellipsis overflow-hidden",
+										"bg-[var(--background)] border-[var(--vscode-input-border)] hover:bg-[var(--color-vscode-list-hoverBackground)]",
+									)}
+									itemClassName="group"
+									renderItem={({ type, value, label, pinned }) => {
+										if (type !== DropdownOptionType.ITEM) {
+											return label
+										}
 
-									const config = listApiConfigMeta?.find((c) => c.id === value)
-									const isCurrentConfig = config?.name === currentApiConfigName
+										const config = listApiConfigMeta?.find((c) => c.id === value)
+										const isCurrentConfig = config?.name === currentApiConfigName
 
-									return (
-										<div className="flex justify-between gap-2 w-full h-5">
-											<div
-												className={cn("truncate min-w-0 overflow-hidden", {
-													"font-medium": isCurrentConfig,
-												})}
-												title={label}>
-												{label}
-											</div>
-											<div className="flex justify-end w-10 flex-shrink-0">
+										return (
+											<div className="flex justify-between gap-2 w-full h-5">
 												<div
-													className={cn("size-5 p-1", {
-														"block group-hover:hidden": !pinned,
-														hidden: !isCurrentConfig,
-													})}>
-													<Check className="size-3" />
+													className={cn("truncate min-w-0 overflow-hidden", {
+														"font-medium": isCurrentConfig,
+													})}
+													title={label}>
+													{label}
 												</div>
-												<Button
-													variant="ghost"
-													size="icon"
-													title={pinned ? t("chat:unpin") : t("chat:pin")}
-													onClick={(e) => {
-														e.stopPropagation()
-														togglePinnedApiConfig(value)
-														vscode.postMessage({ type: "toggleApiConfigPin", text: value })
-													}}
-													className={cn("size-5", {
-														"hidden group-hover:flex": !pinned,
-														"bg-accent": pinned,
-													})}>
-													<Pin className="size-3 p-0.5 opacity-50" />
-												</Button>
+												<div className="flex justify-end w-10 flex-shrink-0">
+													<div
+														className={cn("size-5 p-1", {
+															"block group-hover:hidden": !pinned,
+															hidden: !isCurrentConfig,
+														})}>
+														<Check className="size-3" />
+													</div>
+													<Button
+														variant="ghost"
+														size="icon"
+														title={pinned ? t("chat:unpin") : t("chat:pin")}
+														onClick={(e) => {
+															e.stopPropagation()
+															togglePinnedApiConfig(value)
+															vscode.postMessage({
+																type: "toggleApiConfigPin",
+																text: value,
+															})
+														}}
+														className={cn("size-5", {
+															"hidden group-hover:flex": !pinned,
+															"bg-accent": pinned,
+														})}>
+														<Pin className="size-3 p-0.5 opacity-50" />
+													</Button>
+												</div>
 											</div>
-										</div>
-									)
-								}}
-							/>
-						</div>
-
-						{/* kilocode_change begin: Model display */}
-						<div
-							className="flex items-center mx-2 overflow-hidden"
-							title={`${selectedProvider}:${selectedModelId}`}>
-							<span className="text-xs text-vscode-descriptionForeground opacity-70 truncate">
-								{selectedProvider}:{selectedModelId}
-							</span>
-						</div>
-						{/* kilocode_change end */}
+										)
+									}}
+								/>
+							</div>
+						)}
 					</div>
 
 					<div

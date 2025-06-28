@@ -111,6 +111,7 @@
 	},
 	"selectMode": "Pumili ng mode para sa pakikipag-ugnayan",
 	"selectApiConfig": "Pumili ng API configuration",
+	"selectModelConfig": "Pumili ng modelo",
 	"enhancePrompt": "Pahusayin ang prompt gamit ang karagdagang konteksto",
 	"enhancePromptDescription": "Ang button na 'Enhance Prompt' ay tumutulong na mapahusay ang iyong prompt sa pamamagitan ng pagbibigay ng karagdagang konteksto, paglilinaw, o muling pagpapahayag. Subukang mag-type ng prompt dito at i-click muli ang button para makita kung paano ito gumagana.",
 	"addImages": "Magdagdag ng mga larawan sa mensahe",

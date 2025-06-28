@@ -103,6 +103,7 @@
 	},
 	"selectMode": "상호작용 모드 선택",
 	"selectApiConfig": "API 구성 선택",
+	"selectModelConfig": "모델 선택",
 	"enhancePrompt": "추가 컨텍스트로 프롬프트 향상",
 	"addImages": "메시지에 이미지 추가",
 	"sendMessage": "메시지 보내기",
