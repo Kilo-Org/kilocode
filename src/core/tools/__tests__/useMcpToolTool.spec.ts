@@ -53,6 +53,17 @@ describe("useMcpToolTool", () => {
 			ask: vi.fn(),
 			lastMessageTs: 123456789,
 			providerRef: mockProviderRef,
+			// kilocode_change start
+			api: {
+				getModel: vi.fn().mockReturnValue({
+					info: {
+						contextWindow: 32_000,
+					},
+				}),
+				createMessage: vi.fn(),
+				countTokens: vi.fn().mockResolvedValue(100),
+			},
+			// kilocode_change end
 		}
 	})
 
@@ -267,4 +278,112 @@ describe("useMcpToolTool", () => {
 			expect(mockHandleError).toHaveBeenCalledWith("executing MCP tool", error)
 		})
 	})
+
+	// kilocode_change start
+	describe("context window overflow handling", () => {
+		it("should summarize output when it exceeds context window limit", async () => {
+			const block: ToolUse = {
+				type: "tool_use",
+				name: "use_mcp_tool",
+				params: {
+					server_name: "test_server",
+					tool_name: "test_tool",
+					arguments: '{"param": "value"}',
+				},
+				partial: false,
+			}
+
+			mockAskApproval.mockResolvedValue(true)
+
+			// Create a very long output that exceeds the context window
+			const longOutput = "x".repeat(100000)
+			const mockToolResult = {
+				content: [{ type: "text", text: longOutput }],
+				isError: false,
+			}
+
+			// Mock token counting to exceed the limit
+			mockTask.api!.countTokens = vi.fn().mockResolvedValue(30000) // 93.75% of 32k context window
+
+			mockProviderRef.deref.mockReturnValue({
+				getMcpHub: () => ({
+					callTool: vi.fn().mockResolvedValue(mockToolResult),
+				}),
+				postMessageToWebview: vi.fn(),
+			})
+
+			await useMcpToolTool(
+				mockTask as Task,
+				block,
+				mockAskApproval,
+				mockHandleError,
+				mockPushToolResult,
+				mockRemoveClosingTag,
+			)
+
+			// Should show the summarized message instead of the actual output
+			expect(mockTask.say).toHaveBeenCalledWith(
+				"mcp_server_response",
+				expect.stringContaining("The MCP tool executed successfully, but the output is unavailable"),
+			)
+			expect(mockTask.say).toHaveBeenCalledWith(
+				"mcp_server_response",
+				expect.stringContaining("100000 characters"),
+			)
+			expect(mockPushToolResult).toHaveBeenCalledWith(
+				expect.stringContaining("The MCP tool executed successfully, but the output is unavailable"),
+			)
+		})
+
+		it("should not summarize output when there is an error even if it exceeds context window", async () => {
+			const block: ToolUse = {
+				type: "tool_use",
+				name: "use_mcp_tool",
+				params: {
+					server_name: "test_server",
+					tool_name: "test_tool",
+					arguments: '{"param": "value"}',
+				},
+				partial: false,
+			}
+
+			mockAskApproval.mockResolvedValue(true)
+
+			// Create a very long error output
+			const longErrorOutput = "Error: " + "x".repeat(100000)
+			const mockToolResult = {
+				content: [{ type: "text", text: longErrorOutput }],
+				isError: true, // This is an error response
+			}
+
+			// Mock token counting to exceed the limit
+			mockTask.api!.countTokens = vi.fn().mockResolvedValue(30000) // 93.75% of 32k context window
+
+			mockProviderRef.deref.mockReturnValue({
+				getMcpHub: () => ({
+					callTool: vi.fn().mockResolvedValue(mockToolResult),
+				}),
+				postMessageToWebview: vi.fn(),
+			})
+
+			await useMcpToolTool(
+				mockTask as Task,
+				block,
+				mockAskApproval,
+				mockHandleError,
+				mockPushToolResult,
+				mockRemoveClosingTag,
+			)
+
+			// Should show the actual error output, not the summarized message
+			expect(mockTask.say).toHaveBeenCalledWith("mcp_server_response", "Error:\n" + longErrorOutput)
+			expect(mockPushToolResult).toHaveBeenCalledWith("Tool result: Error:\n" + longErrorOutput)
+			// Should NOT contain the summarized message
+			expect(mockTask.say).not.toHaveBeenCalledWith(
+				"mcp_server_response",
+				expect.stringContaining("The MCP tool executed successfully"),
+			)
+		})
+	})
+	// kilocode_change end
 })

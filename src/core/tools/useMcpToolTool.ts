@@ -4,6 +4,9 @@ import { formatResponse } from "../prompts/responses"
 import { ClineAskUseMcpServer } from "../../shared/ExtensionMessage"
 import { McpExecutionStatus } from "@roo-code/types"
 import { t } from "../../i18n"
+import { ApiHandler } from "../../api" // kilocode_change
+import { McpToolCallResponse } from "../../shared/mcp" // kilocode_change
+import { summarizeSuccessfulMcpOutputWhenTooLong } from "./kilocode" // kilocode_change
 
 interface McpToolParams {
 	server_name?: string
@@ -89,12 +92,13 @@ async function sendExecutionStatus(cline: Task, status: McpExecutionStatus): Pro
 	})
 }
 
-function processToolContent(toolResult: any): string {
+// kilocode_change: make async, add api parameter
+async function processToolContent(api: ApiHandler, toolResult: McpToolCallResponse): Promise<string> {
 	if (!toolResult?.content || toolResult.content.length === 0) {
 		return ""
 	}
 
-	return toolResult.content
+	const outputText = toolResult.content // kilocode_change: introduce const
 		.map((item: any) => {
 			if (item.type === "text") {
 				return item.text
@@ -107,6 +111,9 @@ function processToolContent(toolResult: any): string {
 		})
 		.filter(Boolean)
 		.join("\n\n")
+
+	// kilocode_change: summarize
+	return toolResult.isError ? outputText : await summarizeSuccessfulMcpOutputWhenTooLong(api, outputText)
 }
 
 async function executeToolAndProcessResult(
@@ -132,7 +139,8 @@ async function executeToolAndProcessResult(
 	let toolResultPretty = "(No response)"
 
 	if (toolResult) {
-		const outputText = processToolContent(toolResult)
+		// kilochange_change: await, add api parameter
+		const outputText = await processToolContent(cline.api, toolResult)
 
 		if (outputText) {
 			await sendExecutionStatus(cline, {
