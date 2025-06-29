@@ -1,0 +1,127 @@
+{
+	"extension": {
+		"name": "Kilo Code",
+		"description": "مساعد برمجة بالذكاء الاصطناعي مفتوح المصدر للتخطيط والبناء وإصلاح الكود."
+	},
+	"number_format": {
+		"thousand_suffix": "ألف",
+		"million_suffix": "مليون",
+		"billion_suffix": "مليار"
+	},
+	"feedback": {
+		"title": "التعليقات",
+		"description": "نود سماع تعليقاتك أو مساعدتك في أي مشاكل تواجهها.",
+		"githubIssues": "الإبلاغ عن مشكلة على GitHub",
+		"githubDiscussions": "انضم إلى مناقشات GitHub",
+		"discord": "انضم إلى مجتمع Discord الخاص بنا",
+		"customerSupport": "دعم العملاء"
+	},
+	"welcome": "مرحباً، {{name}}! لديك {{count}} إشعارات.",
+	"items": {
+		"zero": "لا توجد عناصر",
+		"one": "عنصر واحد",
+		"other": "{{count}} عناصر"
+	},
+	"confirmation": {
+		"reset_state": "هل أنت متأكد من أنك تريد إعادة تعيين جميع الحالات والتخزين السري في الإضافة؟ لا يمكن التراجع عن هذا.",
+		"delete_config_profile": "هل أنت متأكد من أنك تريد حذف ملف التكوين هذا؟",
+		"delete_custom_mode": "هل أنت متأكد من أنك تريد حذف هذا الوضع المخصص؟",
+		"delete_message": "ماذا تريد أن تحذف؟",
+		"just_this_message": "هذه الرسالة فقط",
+		"this_and_subsequent": "هذه وجميع الرسائل اللاحقة"
+	},
+	"errors": {
+		"invalid_data_uri": "تنسيق URI للبيانات غير صالح",
+		"error_copying_image": "خطأ في نسخ الصورة: {{errorMessage}}",
+		"error_opening_image": "خطأ في فتح الصورة: {{error}}",
+		"error_saving_image": "خطأ في حفظ الصورة: {{errorMessage}}",
+		"could_not_open_file": "تعذر فتح الملف: {{errorMessage}}",
+		"could_not_open_file_generic": "تعذر فتح الملف!",
+		"checkpoint_timeout": "انتهت مهلة محاولة استعادة نقطة التفتيش.",
+		"checkpoint_failed": "فشل في استعادة نقطة التفتيش.",
+		"no_workspace": "يرجى فتح مجلد المشروع أولاً",
+		"update_support_prompt": "فشل في تحديث موجه الدعم",
+		"reset_support_prompt": "فشل في إعادة تعيين موجه الدعم",
+		"enhance_prompt": "فشل في تحسين الموجه",
+		"get_system_prompt": "فشل في الحصول على موجه النظام",
+		"search_commits": "فشل في البحث عن الالتزامات",
+		"save_api_config": "فشل في حفظ تكوين API",
+		"create_api_config": "فشل في إنشاء تكوين API",
+		"rename_api_config": "فشل في إعادة تسمية تكوين API",
+		"load_api_config": "فشل في تحميل تكوين API",
+		"delete_api_config": "فشل في حذف تكوين API",
+		"list_api_config": "فشل في الحصول على قائمة تكوين API",
+		"update_server_timeout": "فشل في تحديث مهلة الخادم",
+		"hmr_not_running": "خادم التطوير المحلي لا يعمل، HMR لن يعمل. يرجى تشغيل 'npm run dev' قبل تشغيل الإضافة لتمكين HMR.",
+		"retrieve_current_mode": "خطأ: فشل في استرداد الوضع الحالي من الحالة.",
+		"failed_delete_repo": "فشل في حذف مستودع الظل المرتبط أو الفرع: {{error}}",
+		"failed_remove_directory": "فشل في إزالة دليل المهمة: {{error}}",
+		"custom_storage_path_unusable": "مسار التخزين المخصص \"{{path}}\" غير قابل للاستخدام، سيتم استخدام المسار الافتراضي",
+		"cannot_access_path": "لا يمكن الوصول إلى المسار {{path}}: {{error}}",
+		"settings_import_failed": "فشل استيراد الإعدادات: {{error}}.",
+		"mistake_limit_guidance": "قد يشير هذا إلى فشل في عملية تفكير النموذج أو عدم القدرة على استخدام أداة بشكل صحيح، والتي يمكن التخفيف منها ببعض توجيهات المستخدم (مثل \"حاول تقسيم المهمة إلى خطوات أصغر\").",
+		"violated_organization_allowlist": "فشل في تشغيل المهمة: الملف الشخصي الحالي ينتهك إعدادات مؤسستك",
+		"condense_failed": "فشل في تكثيف السياق",
+		"condense_not_enough_messages": "لا توجد رسائل كافية لتكثيف السياق",
+		"condensed_recently": "تم تكثيف السياق مؤخراً؛ تخطي هذه المحاولة",
+		"condense_handler_invalid": "معالج API لتكثيف السياق غير صالح",
+		"condense_context_grew": "زاد حجم السياق أثناء التكثيف؛ تخطي هذه المحاولة",
+		"share_task_failed": "فشل في مشاركة المهمة. يرجى المحاولة مرة أخرى.",
+		"share_no_active_task": "لا توجد مهمة نشطة للمشاركة",
+		"share_auth_required": "المصادقة مطلوبة. يرجى تسجيل الدخول لمشاركة المهام.",
+		"share_not_enabled": "مشاركة المهام غير مفعلة لهذه المؤسسة.",
+		"share_task_not_found": "المهمة غير موجودة أو تم رفض الوصول.",
+		"claudeCode": {
+			"processExited": "خرجت عملية Claude Code برمز {{exitCode}}.",
+			"errorOutput": "مخرجات الخطأ: {{output}}",
+			"processExitedWithError": "خرجت عملية Claude Code برمز {{exitCode}}. مخرجات الخطأ: {{output}}",
+			"stoppedWithReason": "توقف Claude Code بسبب: {{reason}}",
+			"apiKeyModelPlanMismatch": "مفاتيح API وخطط الاشتراك تسمح بنماذج مختلفة. تأكد من أن النموذج المحدد مدرج في خطتك."
+		}
+	},
+	"warnings": {
+		"no_terminal_content": "لم يتم تحديد محتوى طرفي",
+		"missing_task_files": "ملفات هذه المهمة مفقودة. هل تريد إزالتها من قائمة المهام؟"
+	},
+	"info": {
+		"no_changes": "لم يتم العثور على تغييرات.",
+		"clipboard_copy": "تم نسخ موجه النظام بنجاح إلى الحافظة",
+		"history_cleanup": "تم تنظيف {{count}} مهمة (مهام) بملفات مفقودة من السجل.",
+		"custom_storage_path_set": "تم تعيين مسار التخزين المخصص: {{path}}",
+		"default_storage_path": "تم الرجوع إلى استخدام مسار التخزين الافتراضي",
+		"settings_imported": "تم استيراد الإعدادات بنجاح.",
+		"share_link_copied": "تم نسخ رابط المشاركة إلى الحافظة",
+		"organization_share_link_copied": "تم نسخ رابط مشاركة المؤسسة إلى الحافظة!",
+		"public_share_link_copied": "تم نسخ رابط المشاركة العام إلى الحافظة!",
+		"image_copied_to_clipboard": "تم نسخ URI بيانات الصورة إلى الحافظة",
+		"image_saved": "تم حفظ الصورة في {{path}}"
+	},
+	"answers": {
+		"yes": "نعم",
+		"no": "لا",
+		"cancel": "إلغاء",
+		"remove": "إزالة",
+		"keep": "احتفظ"
+	},
+	"tasks": {
+		"canceled": "خطأ في المهمة: تم إيقافها وإلغاؤها من قبل المستخدم.",
+		"deleted": "فشل المهمة: تم إيقافها وحذفها من قبل المستخدم."
+	},
+	"storage": {
+		"prompt_custom_path": "أدخل مسار تخزين سجل المحادثة المخصص، اتركه فارغاً لاستخدام الموقع الافتراضي",
+		"path_placeholder": "D:\\KiloCodeStorage",
+		"enter_absolute_path": "يرجى إدخال مسار مطلق (مثل D:\\KiloCodeStorage أو /home/user/storage)",
+		"enter_valid_path": "يرجى إدخال مسار صالح"
+	},
+	"input": {
+		"task_prompt": "ماذا يجب أن يفعل Kilo Code؟",
+		"task_placeholder": "ابني، ابحث، اسأل عن شيء"
+	},
+	"mdm": {
+		"errors": {
+			"cloud_auth_required": "تتطلب مؤسستك مصادقة Roo Code Cloud. يرجى تسجيل الدخول للمتابعة.",
+			"organization_mismatch": "يجب أن تكون مصادقاً بحساب Roo Code Cloud الخاص بمؤسستك.",
+			"verification_failed": "غير قادر على التحقق من مصادقة المؤسسة."
+		}
+	}
+}

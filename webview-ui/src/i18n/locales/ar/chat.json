@@ -1,0 +1,309 @@
+{
+	"greeting": "ما الذي يمكن لـ Kilo Code فعله من أجلك؟",
+	"task": {
+		"title": "المهمة",
+		"seeMore": "عرض المزيد",
+		"seeLess": "عرض أقل",
+		"tokens": "Tokens:",
+		"cache": "الذاكرة المؤقتة:",
+		"apiCost": "تكلفة API:",
+		"condenseContext": "تكثيف السياق بذكاء",
+		"contextWindow": "طول السياق:",
+		"closeAndStart": "إغلاق المهمة وبدء مهمة جديدة",
+		"export": "تصدير سجل المهمة",
+		"share": "مشاركة المهمة",
+		"delete": "حذف المهمة (Shift + نقر لتخطي التأكيد)",
+		"shareWithOrganization": "مشاركة مع المؤسسة",
+		"shareWithOrganizationDescription": "يمكن لأعضاء مؤسستك فقط الوصول",
+		"sharePublicly": "مشاركة علنية",
+		"sharePubliclyDescription": "يمكن لأي شخص لديه الرابط الوصول"
+	},
+	"history": {
+		"title": "السجل"
+	},
+	"unpin": "إلغاء التثبيت",
+	"pin": "تثبيت",
+	"retry": {
+		"title": "إعادة المحاولة",
+		"tooltip": "حاول العملية مرة أخرى"
+	},
+	"startNewTask": {
+		"title": "بدء مهمة جديدة",
+		"tooltip": "ابدأ مهمة جديدة"
+	},
+	"reportBug": {
+		"title": "الإبلاغ عن خطأ"
+	},
+	"proceedAnyways": {
+		"title": "المتابعة على أي حال",
+		"tooltip": "المتابعة أثناء تنفيذ الأمر"
+	},
+	"save": {
+		"title": "حفظ",
+		"tooltip": "حفظ تغييرات الملف"
+	},
+	"tokenProgress": {
+		"availableSpace": "المساحة المتاحة: {{amount}} tokens",
+		"tokensUsed": "Tokens المستخدمة: {{used}} من {{total}}",
+		"reservedForResponse": "محجوز لاستجابة النموذج: {{amount}} tokens"
+	},
+	"reject": {
+		"title": "رفض",
+		"tooltip": "رفض هذا الإجراء"
+	},
+	"completeSubtaskAndReturn": "إكمال المهمة الفرعية والعودة",
+	"approve": {
+		"title": "موافقة",
+		"tooltip": "الموافقة على هذا الإجراء"
+	},
+	"read-batch": {
+		"approve": {
+			"title": "الموافقة على الكل"
+		},
+		"deny": {
+			"title": "رفض الكل"
+		}
+	},
+	"runCommand": {
+		"title": "تشغيل الأمر",
+		"tooltip": "تنفيذ هذا الأمر"
+	},
+	"proceedWhileRunning": {
+		"title": "المتابعة أثناء التشغيل",
+		"tooltip": "المتابعة رغم التحذيرات"
+	},
+	"killCommand": {
+		"title": "إيقاف الأمر",
+		"tooltip": "إيقاف الأمر الحالي"
+	},
+	"resumeTask": {
+		"title": "استئناف المهمة",
+		"tooltip": "متابعة المهمة الحالية"
+	},
+	"terminate": {
+		"title": "إنهاء",
+		"tooltip": "إنهاء المهمة الحالية"
+	},
+	"cancel": {
+		"title": "إلغاء",
+		"tooltip": "إلغاء العملية الحالية"
+	},
+	"scrollToBottom": "التمرير إلى أسفل المحادثة",
+	"about": "إنشاء وإعادة هيكلة وتصحيح الكود بمساعدة الذكاء الاصطناعي. تحقق من <DocsLink>الوثائق</DocsLink> لمعرفة المزيد.",
+	"onboarding": "قائمة المهام في مساحة العمل هذه فارغة.",
+	"rooTips": {
+		"boomerangTasks": {
+			"title": "تنسيق المهام",
+			"description": "تقسيم المهام إلى أجزاء أصغر يمكن إدارتها"
+		},
+		"stickyModels": {
+			"title": "النماذج الثابتة",
+			"description": "كل وضع يتذكر آخر نموذج استخدمته"
+		},
+		"tools": {
+			"title": "الأدوات",
+			"description": "السماح للذكاء الاصطناعي بحل المشاكل عبر تصفح الويب وتشغيل الأوامر والمزيد"
+		},
+		"customizableModes": {
+			"title": "الأوضاع القابلة للتخصيص",
+			"description": "شخصيات متخصصة بسلوكياتها ونماذجها المخصصة"
+		}
+	},
+	"selectMode": "اختر وضع التفاعل",
+	"selectApiConfig": "اختر تكوين API",
+	"enhancePrompt": "تحسين الموجه بسياق إضافي",
+	"enhancePromptDescription": "زر 'تحسين الموجه' يساعد في تحسين موجهك من خلال توفير سياق إضافي أو توضيح أو إعادة صياغة. جرب كتابة موجه هنا والنقر على الزر مرة أخرى لترى كيف يعمل.",
+	"addImages": "إضافة صور إلى الرسالة",
+	"sendMessage": "إرسال رسالة",
+	"typeMessage": "اكتب رسالة...",
+	"typeTask": "ابني، ابحث، اسأل عن شيء",
+	"addContext": "@ لإضافة سياق، / لتبديل الأوضاع",
+	"dragFiles": "اضغط shift لسحب الملفات",
+	"dragFilesImages": "اضغط shift لسحب الملفات/الصور",
+	"errorReadingFile": "خطأ في قراءة الملف:",
+	"noValidImages": "لم تتم معالجة أي صور صالحة",
+	"separator": "فاصل",
+	"edit": "تحرير...",
+	"forNextMode": "للوضع التالي",
+	"apiRequest": {
+		"title": "طلب API",
+		"failed": "فشل طلب API",
+		"streaming": "طلب API...",
+		"cancelled": "تم إلغاء طلب API",
+		"streamingFailed": "فشل بث API"
+	},
+	"checkpoint": {
+		"initial": "نقطة التفتيش الأولية",
+		"regular": "نقطة تفتيش",
+		"initializingWarning": "لا يزال يتم تهيئة نقطة التفتيش... إذا استغرق هذا وقتًا طويلاً، يمكنك تعطيل نقاط التفتيش في <settingsLink>الإعدادات</settingsLink> وإعادة تشغيل مهمتك.",
+		"menu": {
+			"viewDiff": "عرض الفروقات",
+			"restore": "استعادة نقطة التفتيش",
+			"restoreFiles": "استعادة الملفات",
+			"restoreFilesDescription": "استعادة ملفات مشروعك إلى لقطة مأخوذة في هذه النقطة.",
+			"restoreFilesAndTask": "استعادة الملفات والمهمة",
+			"confirm": "تأكيد",
+			"cancel": "إلغاء",
+			"cannotUndo": "لا يمكن التراجع عن هذا الإجراء.",
+			"restoreFilesAndTaskDescription": "استعادة ملفات مشروعك إلى لقطة مأخوذة في هذه النقطة وحذف جميع الرسائل بعد هذه النقطة."
+		},
+		"current": "الحالي"
+	},
+	"contextCondense": {
+		"title": "تم تكثيف السياق",
+		"condensing": "جاري تكثيف السياق...",
+		"errorHeader": "فشل تكثيف السياق",
+		"tokens": "tokens"
+	},
+	"instructions": {
+		"wantsToFetch": "يريد Kilo Code جلب تعليمات مفصلة للمساعدة في المهمة الحالية"
+	},
+	"fileOperations": {
+		"wantsToRead": "يريد Kilo Code قراءة هذا الملف:",
+		"wantsToReadMultiple": "يريد Kilo Code قراءة ملفات متعددة:",
+		"wantsToReadAndXMore": "يريد Kilo Code قراءة هذا الملف و {{count}} آخرين:",
+		"wantsToReadOutsideWorkspace": "يريد Kilo Code قراءة هذا الملف خارج مساحة العمل:",
+		"didRead": "قرأ Kilo Code هذا الملف:",
+		"wantsToEdit": "يريد Kilo Code تحرير هذا الملف:",
+		"wantsToEditOutsideWorkspace": "يريد Kilo Code تحرير هذا الملف خارج مساحة العمل:",
+		"wantsToEditProtected": "يريد Kilo Code تحرير ملف تكوين محمي:",
+		"wantsToApplyBatchChanges": "يريد Kilo Code تطبيق تغييرات على ملفات متعددة:",
+		"wantsToCreate": "يريد Kilo Code إنشاء ملف جديد:",
+		"wantsToSearchReplace": "يريد Kilo Code البحث والاستبدال في هذا الملف:",
+		"didSearchReplace": "أجرى Kilo Code بحثًا واستبدالًا في هذا الملف:",
+		"wantsToInsert": "يريد Kilo Code إدراج محتوى في هذا الملف:",
+		"wantsToInsertWithLineNumber": "يريد Kilo Code إدراج محتوى في هذا الملف عند السطر {{lineNumber}}:",
+		"wantsToInsertAtEnd": "يريد Kilo Code إلحاق محتوى في نهاية هذا الملف:"
+	},
+	"directoryOperations": {
+		"wantsToViewTopLevel": "يريد Kilo Code عرض الملفات في المستوى الأعلى في هذا الدليل:",
+		"didViewTopLevel": "عرض Kilo Code الملفات في المستوى الأعلى في هذا الدليل:",
+		"wantsToViewTopLevelOutsideWorkspace": "يريد Kilo Code عرض الملفات في المستوى الأعلى في هذا الدليل (خارج مساحة العمل):",
+		"didViewTopLevelOutsideWorkspace": "عرض Kilo Code الملفات في المستوى الأعلى في هذا الدليل (خارج مساحة العمل):",
+		"wantsToViewRecursive": "يريد Kilo Code عرض جميع الملفات بشكل متكرر في هذا الدليل:",
+		"didViewRecursive": "عرض Kilo Code جميع الملفات بشكل متكرر في هذا الدليل:",
+		"wantsToViewRecursiveOutsideWorkspace": "يريد Kilo Code عرض جميع الملفات بشكل متكرر في هذا الدليل (خارج مساحة العمل):",
+		"didViewRecursiveOutsideWorkspace": "عرض Kilo Code جميع الملفات بشكل متكرر في هذا الدليل (خارج مساحة العمل):",
+		"wantsToViewDefinitions": "يريد Kilo Code عرض أسماء تعريفات الكود المصدري المستخدمة في هذا الدليل:",
+		"didViewDefinitions": "عرض Kilo Code أسماء تعريفات الكود المصدري المستخدمة في هذا الدليل:",
+		"wantsToViewDefinitionsOutsideWorkspace": "يريد Kilo Code عرض أسماء تعريفات الكود المصدري المستخدمة في هذا الدليل (خارج مساحة العمل):",
+		"didViewDefinitionsOutsideWorkspace": "عرض Kilo Code أسماء تعريفات الكود المصدري المستخدمة في هذا الدليل (خارج مساحة العمل):",
+		"wantsToSearch": "يريد Kilo Code البحث في هذا الدليل عن <code>{{regex}}</code>:",
+		"didSearch": "بحث Kilo Code في هذا الدليل عن <code>{{regex}}</code>:",
+		"wantsToSearchOutsideWorkspace": "يريد Kilo Code البحث في هذا الدليل (خارج مساحة العمل) عن <code>{{regex}}</code>:",
+		"didSearchOutsideWorkspace": "بحث Kilo Code في هذا الدليل (خارج مساحة العمل) عن <code>{{regex}}</code>:"
+	},
+	"codebaseSearch": {
+		"wantsToSearch": "يريد Kilo Code البحث في قاعدة الكود عن <code>{{query}}</code>:",
+		"wantsToSearchWithPath": "يريد Kilo Code البحث في قاعدة الكود عن <code>{{query}}</code> في <code>{{path}}</code>:",
+		"didSearch": "تم العثور على {{count}} نتيجة/نتائج لـ <code>{{query}}</code>:"
+	},
+	"commandOutput": "مخرجات الأمر",
+	"response": "الاستجابة",
+	"arguments": "المعاملات",
+	"mcp": {
+		"wantsToUseTool": "يريد Kilo Code استخدام أداة على خادم MCP {{serverName}}:",
+		"wantsToAccessResource": "يريد Kilo Code الوصول إلى مورد على خادم MCP {{serverName}}:"
+	},
+	"modes": {
+		"wantsToSwitch": "يريد Kilo Code التبديل إلى وضع {{mode}}",
+		"wantsToSwitchWithReason": "يريد Kilo Code التبديل إلى وضع {{mode}} بسبب: {{reason}}",
+		"didSwitch": "تحول Kilo Code إلى وضع {{mode}}",
+		"didSwitchWithReason": "تحول Kilo Code إلى وضع {{mode}} بسبب: {{reason}}"
+	},
+	"subtasks": {
+		"wantsToCreate": "يريد Kilo Code إنشاء مهمة فرعية جديدة في وضع {{mode}}:",
+		"wantsToFinish": "يريد Kilo Code إنهاء هذه المهمة الفرعية",
+		"newTaskContent": "تعليمات المهمة الفرعية",
+		"completionContent": "اكتملت المهمة الفرعية",
+		"resultContent": "نتائج المهمة الفرعية",
+		"defaultResult": "يرجى المتابعة إلى المهمة التالية.",
+		"completionInstructions": "اكتملت المهمة الفرعية! يمكنك مراجعة النتائج واقتراح أي تصحيحات أو خطوات تالية. إذا كان كل شيء يبدو جيدًا، قم بالتأكيد لإرجاع النتيجة إلى المهمة الأصلية."
+	},
+	"questions": {
+		"hasQuestion": "لدى Kilo Code سؤال:"
+	},
+	"taskCompleted": "اكتملت المهمة",
+	"error": "خطأ",
+	"diffError": {
+		"title": "فشل التحرير"
+	},
+	"troubleMessage": "يواجه Kilo Code مشكلة...",
+	"powershell": {
+		"issues": "يبدو أنك تواجه مشاكل مع Windows PowerShell، يرجى الاطلاع على هذا"
+	},
+	"autoApprove": {
+		"title": "الموافقة التلقائية:",
+		"none": "لا شيء",
+		"description": "تسمح الموافقة التلقائية لـ Kilo Code بتنفيذ الإجراءات دون طلب الإذن. قم بتمكينها فقط للإجراءات التي تثق بها تمامًا. تتوفر تكوينات أكثر تفصيلاً في <settingsLink>الإعدادات</settingsLink>."
+	},
+	"announcement": {
+		"title": "🎉 تم إصدار Roo Code {{version}}",
+		"description": "يجلب Roo Code {{version}} ميزات وتحسينات رئيسية جديدة بناءً على ملاحظاتك.",
+		"whatsNew": "ما الجديد",
+		"feature1": "<bold>إطلاق سوق Roo</bold>: السوق متاح الآن! اكتشف وثبت الأوضاع وخوادم MCP بسهولة أكثر من أي وقت مضى.",
+		"feature2": "<bold>نماذج Gemini 2.5</bold>: تمت إضافة دعم لنماذج Gemini 2.5 Pro وFlash وFlash Lite الجديدة.",
+		"feature3": "<bold>دعم ملفات Excel والمزيد</bold>: تمت إضافة دعم ملفات Excel (.xlsx) والعديد من إصلاحات الأخطاء والتحسينات!",
+		"hideButton": "إخفاء الإعلان",
+		"detailsDiscussLinks": "احصل على مزيد من التفاصيل وناقش في <discordLink>Discord</discordLink> و <redditLink>Reddit</redditLink> 🚀"
+	},
+	"reasoning": {
+		"thinking": "يفكر",
+		"seconds": "{{count}} ثانية"
+	},
+	"followUpSuggest": {
+		"copyToInput": "نسخ إلى الإدخال (مثل shift + نقر)"
+	},
+	"browser": {
+		"rooWantsToUse": "يريد Kilo Code استخدام المتصفح:",
+		"consoleLogs": "سجلات وحدة التحكم",
+		"noNewLogs": "(لا توجد سجلات جديدة)",
+		"screenshot": "لقطة شاشة المتصفح",
+		"cursor": "المؤشر",
+		"navigation": {
+			"step": "الخطوة {{current}} من {{total}}",
+			"previous": "السابق",
+			"next": "التالي"
+		},
+		"sessionStarted": "بدأت جلسة المتصفح",
+		"actions": {
+			"title": "إجراء التصفح: ",
+			"launch": "تشغيل المتصفح على {{url}}",
+			"click": "نقر ({{coordinate}})",
+			"type": "اكتب \"{{text}}\"",
+			"scrollDown": "التمرير لأسفل",
+			"scrollUp": "التمرير لأعلى",
+			"close": "إغلاق المتصفح"
+		}
+	},
+	"codeblock": {
+		"tooltips": {
+			"expand": "توسيع كتلة الكود",
+			"collapse": "طي كتلة الكود",
+			"enable_wrap": "تمكين التفاف الكلمات",
+			"disable_wrap": "تعطيل التفاف الكلمات",
+			"copy_code": "نسخ الكود"
+		}
+	},
+	"systemPromptWarning": "تحذير: تجاوز موجه النظام المخصص نشط. يمكن أن يؤدي هذا إلى تعطيل الوظائف بشدة والتسبب في سلوك غير متوقع.",
+	"profileViolationWarning": "الملف الشخصي الحالي ينتهك إعدادات مؤسستك",
+	"shellIntegration": {
+		"title": "تحذير تنفيذ الأوامر",
+		"description": "يتم تنفيذ أمرك بدون تكامل shell لمحطة VSCode. لإخفاء هذا التحذير يمكنك تعطيل تكامل shell في قسم <strong>المحطة الطرفية</strong> من <settingsLink>إعدادات Kilo Code</settingsLink> أو استكشاف أخطاء تكامل محطة VSCode باستخدام الرابط أدناه.",
+		"troubleshooting": "انقر هنا للحصول على وثائق تكامل shell."
+	},
+	"ask": {
+		"autoApprovedRequestLimitReached": {
+			"title": "تم الوصول إلى حد الطلبات المعتمدة تلقائيًا",
+			"description": "وصل Kilo Code إلى الحد المعتمد تلقائيًا وهو {{count}} طلب/طلبات API. هل تريد إعادة تعيين العدد والمتابعة مع المهمة؟",
+			"button": "إعادة تعيين والمتابعة"
+		}
+	},
+	"indexingStatus": {
+		"ready": "الفهرس جاهز",
+		"indexing": "جاري الفهرسة {{percentage}}%",
+		"indexed": "مفهرس",
+		"error": "خطأ في الفهرس",
+		"status": "حالة الفهرس"
+	}
+}

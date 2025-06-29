@@ -66,7 +66,8 @@ export type CommandId = (typeof commandIds)[number]
  */
 
 export const languages = [
-	"ca", // kilocode_change
+	"ar", // kilocode_change
+	"ca",
 	"cs", // kilocode_change
 	"de",
 	"el", // kilocode_change

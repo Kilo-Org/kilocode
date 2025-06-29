@@ -1,8 +1,8 @@
 # 1. SUPPORTED LANGUAGES AND LOCATION
 
-- Localize all strings into the following locale files: ca, cs, de, el, en, es, fil, fr, hi, id, it, ja, ko, nl, pl, pt-BR, ru, sv, th, tr, uk, vi, zh-CN, zh-TW
+- Localize all strings into the following locale files: ar, ca, cs, de, el, en, es, fil, fr, hi, id, it, ja, ko, nl, pl, pt-BR, ru, sv, th, tr, uk, vi, zh-CN, zh-TW
 - The VSCode extension has two main areas that require localization:
-    - Core Extension: src/i18n/locales/ (extension backend)
+    - Core Extension: src/i18n/locales/, src/package.nls.json (extension backend)
     - WebView UI: webview-ui/src/i18n/locales/ (user interface)
 
 # 2. VOICE, STYLE AND TONE

@@ -1,0 +1,50 @@
+{
+	"info": {
+		"settings_imported": "تم استيراد الإعدادات بنجاح."
+	},
+	"lowCreditWarning": {
+		"title": "تحذير انخفاض الرصيد!",
+		"message": "تحقق لمعرفة ما إذا كان يمكنك الشحن بأرصدة مجانية أو شراء المزيد!"
+	},
+	"rules": {
+		"actions": {
+			"delete": "حذف",
+			"confirmDelete": "هل أنت متأكد من أنك تريد حذف {{filename}}؟",
+			"deleted": "تم حذف {{filename}}"
+		},
+		"errors": {
+			"noWorkspaceFound": "لم يتم العثور على مجلد مساحة العمل",
+			"fileAlreadyExists": "الملف {{filename}} موجود بالفعل",
+			"failedToCreateRuleFile": "فشل في إنشاء ملف القاعدة.",
+			"failedToDeleteRuleFile": "فشل في حذف ملف القاعدة."
+		},
+		"templates": {
+			"workflow": {
+				"description": "وصف سير العمل هنا...",
+				"stepsHeader": "## الخطوات",
+				"step1": "الخطوة 1",
+				"step2": "الخطوة 2"
+			},
+			"rule": {
+				"description": "وصف القاعدة هنا...",
+				"guidelinesHeader": "## الإرشادات",
+				"guideline1": "الإرشاد 1",
+				"guideline2": "الإرشاد 2"
+			}
+		}
+	},
+	"commitMessage": {
+		"activated": "تم تفعيل مولد رسائل الالتزام Kilo Code",
+		"gitNotFound": "⚠️ لم يتم العثور على مستودع Git أو Git غير متاح",
+		"gitInitError": "⚠️ خطأ في تهيئة Git: {{error}}",
+		"generating": "Kilo: جاري توليد رسالة الالتزام...",
+		"analyzingChanges": "Kilo: جاري تحليل التغييرات المرحلية...",
+		"noStagedChangesRepo": "Kilo: لم يتم العثور على تغييرات مرحلية في مستودع git",
+		"noStagedChanges": "Kilo: لم يتم العثور على تغييرات مرحلية للتحليل",
+		"generated": "Kilo: تم توليد رسالة الالتزام!",
+		"generationFailed": "Kilo: فشل في توليد رسالة الالتزام: {{errorMessage}}",
+		"tokenRequired": "مطلوب رمز Kilo Code لتوليد رسالة الالتزام",
+		"activationFailed": "Kilo: فشل في تفعيل موفر رسالة الالتزام: {{error}}",
+		"providerRegistered": "Kilo: تم تسجيل موفر رسالة الالتزام"
+	}
+}

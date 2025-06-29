@@ -20,6 +20,8 @@ vi.mock("react-i18next", () => ({
 				return key
 			},
 			changeLanguage: vi.fn(),
+			language: "en",
+			dir: () => "ltr",
 		},
 	}),
 }))
@@ -35,6 +37,8 @@ vi.mock("../setup", () => ({
 			return key
 		},
 		changeLanguage: vi.fn(),
+		language: "en",
+		dir: () => "ltr",
 	},
 	loadTranslations: vi.fn(),
 }))

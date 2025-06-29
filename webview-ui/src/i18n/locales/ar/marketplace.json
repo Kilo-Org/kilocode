@@ -1,0 +1,131 @@
+{
+	"title": "سوق Roo",
+	"tabs": {
+		"installed": "مثبت",
+		"settings": "الإعدادات",
+		"browse": "تصفح"
+	},
+	"done": "تم",
+	"refresh": "تحديث",
+	"filters": {
+		"search": {
+			"placeholder": "البحث في عناصر السوق...",
+			"placeholderMcp": "البحث في خوادم MCP...",
+			"placeholderMode": "البحث في الأوضاع..."
+		},
+		"type": {
+			"label": "تصفية حسب النوع:",
+			"all": "جميع الأنواع",
+			"mode": "وضع",
+			"mcpServer": "خادم MCP"
+		},
+		"sort": {
+			"label": "ترتيب حسب:",
+			"name": "الاسم",
+			"author": "المؤلف",
+			"lastUpdated": "آخر تحديث"
+		},
+		"tags": {
+			"label": "تصفية حسب العلامات:",
+			"clear": "مسح العلامات",
+			"placeholder": "اكتب للبحث واختيار العلامات...",
+			"noResults": "لم يتم العثور على علامات مطابقة",
+			"selected": "عرض العناصر مع أي من العلامات المحددة",
+			"clickToFilter": "انقر على العلامات لتصفية العناصر"
+		},
+		"none": "لا شيء"
+	},
+	"type-group": {
+		"modes": "الأوضاع",
+		"mcps": "خوادم MCP"
+	},
+	"items": {
+		"empty": {
+			"noItems": "لم يتم العثور على عناصر في السوق",
+			"withFilters": "حاول تعديل المرشحات",
+			"noSources": "حاول إضافة مصدر في علامة تبويب المصادر",
+			"adjustFilters": "حاول تعديل المرشحات أو مصطلحات البحث",
+			"clearAllFilters": "مسح جميع المرشحات"
+		},
+		"count": "تم العثور على {{count}} عنصر",
+		"components": "{{count}} مكونات",
+		"matched": "{{count}} مطابق",
+		"refresh": {
+			"button": "تحديث",
+			"refreshing": "جاري التحديث...",
+			"mayTakeMoment": "قد يستغرق هذا لحظة."
+		},
+		"card": {
+			"by": "بواسطة {{author}}",
+			"from": "من {{source}}",
+			"install": "تثبيت",
+			"installProject": "تثبيت",
+			"installGlobal": "تثبيت (عام)",
+			"remove": "إزالة",
+			"removeProject": "إزالة",
+			"removeGlobal": "إزالة (عام)",
+			"viewSource": "عرض",
+			"viewOnSource": "عرض على {{source}}",
+			"noWorkspaceTooltip": "افتح مساحة عمل لتثبيت عناصر السوق",
+			"installed": "مثبت",
+			"removeProjectTooltip": "إزالة من المشروع الحالي",
+			"removeGlobalTooltip": "إزالة من التكوين العام",
+			"actionsMenuLabel": "المزيد من الإجراءات"
+		}
+	},
+	"install": {
+		"title": "تثبيت {{name}}",
+		"titleMode": "تثبيت وضع {{name}}",
+		"titleMcp": "تثبيت MCP {{name}}",
+		"scope": "نطاق التثبيت",
+		"project": "المشروع (مساحة العمل الحالية)",
+		"global": "عام (جميع مساحات العمل)",
+		"method": "طريقة التثبيت",
+		"prerequisites": "المتطلبات الأساسية",
+		"configuration": "التكوين",
+		"configurationDescription": "قم بتكوين المعاملات المطلوبة لخادم MCP هذا",
+		"button": "تثبيت",
+		"successTitle": "تم تثبيت {{name}}",
+		"successDescription": "اكتمل التثبيت بنجاح",
+		"installed": "تم التثبيت بنجاح!",
+		"whatNextMcp": "يمكنك الآن تكوين واستخدام خادم MCP هذا. انقر على أيقونة MCP في الشريط الجانبي لتبديل علامات التبويب.",
+		"whatNextMode": "يمكنك الآن استخدام هذا الوضع. انقر على أيقونة الأوضاع في الشريط الجانبي لتبديل علامات التبويب.",
+		"done": "تم",
+		"goToMcp": "الانتقال إلى علامة تبويب MCP",
+		"goToModes": "الانتقال إلى علامة تبويب الأوضاع",
+		"moreInfoMcp": "عرض وثائق MCP {{name}}",
+		"validationRequired": "يرجى توفير قيمة لـ {{paramName}}"
+	},
+	"sources": {
+		"title": "تكوين مصادر السوق",
+		"description": "أضف مستودعات Git التي تحتوي على عناصر السوق. سيتم جلب هذه المستودعات عند تصفح السوق.",
+		"add": {
+			"title": "إضافة مصدر جديد",
+			"urlPlaceholder": "عنوان URL لمستودع Git (مثال: https://github.com/username/repo)",
+			"urlFormats": "التنسيقات المدعومة: HTTPS (https://github.com/username/repo)، SSH (git@github.com:username/repo.git)، أو بروتوكول Git (git://github.com/username/repo.git)",
+			"namePlaceholder": "اسم العرض (20 حرف كحد أقصى)",
+			"button": "إضافة مصدر"
+		},
+		"current": {
+			"title": "المصادر الحالية",
+			"empty": "لم يتم تكوين أي مصادر. أضف مصدرًا للبدء.",
+			"refresh": "تحديث هذا المصدر",
+			"remove": "إزالة المصدر"
+		},
+		"errors": {
+			"emptyUrl": "لا يمكن أن يكون عنوان URL فارغًا",
+			"invalidUrl": "تنسيق URL غير صالح",
+			"nonVisibleChars": "يحتوي عنوان URL على أحرف غير مرئية غير المسافات",
+			"invalidGitUrl": "يجب أن يكون عنوان URL عنوان مستودع Git صالح (مثال: https://github.com/username/repo)",
+			"duplicateUrl": "هذا العنوان موجود بالفعل في القائمة (مطابقة غير حساسة لحالة الأحرف والمسافات)",
+			"nameTooLong": "يجب أن يكون الاسم 20 حرفًا أو أقل",
+			"nonVisibleCharsName": "يحتوي الاسم على أحرف غير مرئية غير المسافات",
+			"duplicateName": "هذا الاسم مستخدم بالفعل (مطابقة غير حساسة لحالة الأحرف والمسافات)",
+			"emojiName": "قد تسبب رموز الإيموجي مشاكل في العرض",
+			"maxSources": "الحد الأقصى {{max}} مصدر مسموح به"
+		}
+	},
+	"footer": {
+		"issueText": "وجدت مشكلة في عنصر من السوق أو لديك اقتراحات لعناصر جديدة؟ <0>افتح مشكلة على GitHub</0> لإعلامنا!"
+	}
+}

@@ -1,0 +1,107 @@
+{
+	"welcome": {
+		"greeting": "مرحبًا بك في Kilo Code!",
+		"introText1": "Kilo Code هو وكيل برمجة بالذكاء الاصطناعي مجاني ومفتوح المصدر.",
+		"introText2": "يعمل مع أحدث نماذج الذكاء الاصطناعي مثل Claude 4 Sonnet وGemini 2.5 Pro وGPT-4.1 وأكثر من 450 نموذج آخر.",
+		"introText3": "أنشئ حسابًا مجانيًا واحصل على tokens بقيمة 20 دولارًا لاستخدامها عبر أي نموذج ذكاء اصطناعي.",
+		"ctaButton": "إنشاء حساب مجاني",
+		"manualModeButton": "استخدم مفتاح API الخاص بك",
+		"alreadySignedUp": "هل سجلت بالفعل؟",
+		"loginText": "تسجيل الدخول هنا"
+	},
+	"lowCreditWarning": {
+		"addCredit": "إضافة رصيد",
+		"lowBalance": "رصيد Kilo Code الخاص بك منخفض"
+	},
+	"notifications": {
+		"toolRequest": "طلب أداة في انتظار الموافقة",
+		"browserAction": "إجراء المتصفح في انتظار الموافقة",
+		"command": "أمر في انتظار الموافقة"
+	},
+	"settings": {
+		"sections": {
+			"mcp": "خوادم MCP"
+		},
+		"provider": {
+			"apiKey": "مفتاح API لـ Kilo Code",
+			"login": "تسجيل الدخول في Kilo Code",
+			"logout": "تسجيل الخروج من Kilo Code"
+		}
+	},
+	"chat": {
+		"condense": {
+			"wantsToCondense": "يريد Kilo Code تكثيف محادثتك",
+			"condenseConversation": "تكثيف المحادثة"
+		}
+	},
+	"newTaskPreview": {
+		"task": "المهمة"
+	},
+	"profile": {
+		"title": "الملف الشخصي",
+		"dashboard": "لوحة التحكم",
+		"logOut": "تسجيل الخروج",
+		"currentBalance": "الرصيد الحالي",
+		"loading": "جاري التحميل...",
+		"signUp": {
+			"title": "التسجيل مع Kilo Code",
+			"description": "يمنحك التسجيل مع Kilo Code أرصدة مجانية للبدء. استخدم أرصدتك لاستكشاف ميزاتنا، وتجربة أحدث وأفضل النماذج، وتجربة فوائد Kilo Code دون أي التزام.",
+			"termsAndPrivacy": "بالمتابعة، فإنك توافق على <termsLink>شروط الخدمة</termsLink> و<privacyLink>سياسة الخصوصية.</privacyLink>"
+		}
+	},
+	"docs": "الوثائق",
+	"rules": {
+		"tooltip": "إدارة قواعد وسير عمل Kilo Code",
+		"ariaLabel": "قواعد Kilo Code",
+		"tabs": {
+			"rules": "القواعد",
+			"workflows": "سير العمل"
+		},
+		"description": {
+			"rules": "تسمح لك القواعد بتزويد Kilo Code بالتعليمات التي يجب أن يتبعها في جميع الأوضاع ولجميع المطالبات. إنها طريقة دائمة لتضمين السياق والتفضيلات لجميع المحادثات في مساحة العمل الخاصة بك أو عالميًا.",
+			"workflows": "سير العمل هي قوالب معدة مسبقًا للمحادثة. يمكن أن تسمح لك سير العمل بتحديد المطالبات التي تستخدمها بشكل متكرر، ويمكن أن تتضمن سلسلة من الخطوات لتوجيه Kilo Code خلال المهام المتكررة، مثل نشر خدمة أو إرسال طلب سحب. لاستدعاء سير عمل، اكتب",
+			"workflowsInChat": "في المحادثة."
+		},
+		"sections": {
+			"globalRules": "القواعد العامة",
+			"workspaceRules": "قواعد مساحة العمل",
+			"globalWorkflows": "سير العمل العامة",
+			"workspaceWorkflows": "سير عمل مساحة العمل"
+		},
+		"validation": {
+			"invalidFileExtension": "مسموح فقط بامتدادات .md أو .txt أو بدون امتداد"
+		},
+		"placeholders": {
+			"workflowName": "اسم-سير-العمل (.md أو .txt أو بدون امتداد)",
+			"ruleName": "اسم-القاعدة (.md أو .txt أو بدون امتداد)"
+		},
+		"newFile": {
+			"newWorkflowFile": "ملف سير عمل جديد...",
+			"newRuleFile": "ملف قاعدة جديد..."
+		}
+	},
+	"taskTimeline": {
+		"tooltip": {
+			"clickToScroll": "عرض {{messageType}} (#{{messageNumber}})",
+			"messageTypes": {
+				"browser_action_launch": "تشغيل المتصفح",
+				"browser_action_result": "نتيجة إجراء المتصفح",
+				"browser_action": "إجراء المتصفح",
+				"checkpoint_saved": "تم حفظ نقطة التفتيش",
+				"command": "تنفيذ الأمر",
+				"command_output": "مخرجات الأمر",
+				"completion_result": "نتيجة الإكمال",
+				"condense_context": "تكثيف السياق",
+				"error": "رسالة خطأ",
+				"followup": "سؤال متابعة",
+				"mcp_server_response": "استجابة خادم MCP",
+				"reasoning": "تفكير الذكاء الاصطناعي",
+				"text": "استجابة الذكاء الاصطناعي",
+				"tool": "استخدام الأداة",
+				"user": "ملاحظات المستخدم",
+				"unknown": "نوع رسالة غير معروف",
+				"use_mcp_server": "استخدام خادم MCP"
+			}
+		}
+	}
+}

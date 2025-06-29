@@ -1,0 +1,74 @@
+{
+	"answers": {
+		"yes": "نعم",
+		"no": "لا",
+		"cancel": "إلغاء",
+		"remove": "إزالة",
+		"keep": "احتفظ"
+	},
+	"number_format": {
+		"thousand_suffix": "ألف",
+		"million_suffix": "مليون",
+		"billion_suffix": "مليار"
+	},
+	"feedback": {
+		"title": "التعليقات",
+		"description": "نود سماع تعليقاتك أو مساعدتك في أي مشاكل تواجهها.",
+		"githubIssues": "الإبلاغ عن مشكلة على GitHub",
+		"githubDiscussions": "انضم إلى مناقشات GitHub",
+		"discord": "انضم إلى مجتمع Discord",
+		"customerSupport": "دعم العملاء"
+	},
+	"ui": {
+		"search_placeholder": "بحث..."
+	},
+	"mermaid": {
+		"loading": "جاري إنشاء مخطط mermaid...",
+		"render_error": "غير قادر على عرض المخطط",
+		"fixing_syntax": "جاري إصلاح صيغة Mermaid...",
+		"fix_syntax_button": "إصلاح الصيغة بالذكاء الاصطناعي",
+		"original_code": "الكود الأصلي:",
+		"errors": {
+			"unknown_syntax": "خطأ غير معروف في الصيغة",
+			"fix_timeout": "انتهت مهلة طلب إصلاح LLM",
+			"fix_failed": "فشل إصلاح LLM",
+			"fix_attempts": "فشل إصلاح الصيغة بعد {{attempts}} محاولات. آخر خطأ: {{error}}",
+			"no_fix_provided": "فشل LLM في توفير إصلاح",
+			"fix_request_failed": "فشل طلب الإصلاح"
+		},
+		"buttons": {
+			"zoom": "تكبير/تصغير",
+			"zoomIn": "تكبير",
+			"zoomOut": "تصغير",
+			"copy": "نسخ",
+			"save": "حفظ الصورة",
+			"viewCode": "عرض الكود",
+			"viewDiagram": "عرض المخطط",
+			"close": "إغلاق"
+		},
+		"modal": {
+			"codeTitle": "كود Mermaid"
+		},
+		"tabs": {
+			"diagram": "المخطط",
+			"code": "الكود"
+		},
+		"feedback": {
+			"imageCopied": "تم نسخ الصورة إلى الحافظة",
+			"copyError": "خطأ في نسخ الصورة"
+		}
+	},
+	"file": {
+		"errors": {
+			"invalidDataUri": "تنسيق URI للبيانات غير صالح",
+			"copyingImage": "خطأ في نسخ الصورة: {{error}}",
+			"openingImage": "خطأ في فتح الصورة: {{error}}",
+			"pathNotExists": "المسار غير موجود: {{path}}",
+			"couldNotOpen": "تعذر فتح الملف: {{error}}",
+			"couldNotOpenGeneric": "تعذر فتح الملف!"
+		},
+		"success": {
+			"imageDataUriCopied": "تم نسخ URI بيانات الصورة إلى الحافظة"
+		}
+	}
+}

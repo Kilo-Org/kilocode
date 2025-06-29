@@ -1,0 +1,64 @@
+{
+	"title": "خوادم MCP",
+	"done": "تم",
+	"description": "يتيح <0>بروتوكول سياق النموذج</0> التواصل مع خوادم MCP المحلية التي توفر أدوات وموارد إضافية لتوسيع قدرات Kilo Code. يمكنك استخدام <1>خوادم من صنع المجتمع</1> أو طلب من Kilo Code إنشاء أدوات جديدة خاصة بسير عملك (مثل \"أضف أداة تحصل على أحدث وثائق npm\").",
+	"instructions": "التعليمات",
+	"enableToggle": {
+		"title": "تمكين خوادم MCP",
+		"description": "قم بتشغيل هذا للسماح لـ Kilo Code باستخدام الأدوات من خوادم MCP المتصلة. هذا يمنح Kilo Code المزيد من القدرات. إذا كنت لا تخطط لاستخدام هذه الأدوات الإضافية، قم بإيقاف تشغيلها للمساعدة في تقليل تكاليف رموز API."
+	},
+	"enableServerCreation": {
+		"title": "تمكين إنشاء خادم MCP",
+		"description": "قم بتمكين هذا ليساعدك Kilo Code في بناء خوادم MCP مخصصة <1>جديدة</1>. <0>تعرف على إنشاء الخادم</0>",
+		"hint": "تلميح: لتقليل تكاليف رموز API، قم بتعطيل هذا الإعداد عندما لا تطلب بنشاط من Kilo Code إنشاء خادم MCP جديد."
+	},
+	"editGlobalMCP": "تحرير MCP العام",
+	"editProjectMCP": "تحرير MCP المشروع",
+	"refreshMCP": "تحديث خوادم MCP",
+	"learnMoreEditingSettings": "تعرف على المزيد حول تحرير ملفات إعدادات MCP",
+	"tool": {
+		"alwaysAllow": "السماح دائمًا",
+		"parameters": "المعاملات",
+		"noDescription": "لا يوجد وصف",
+		"togglePromptInclusion": "تبديل التضمين في الموجه"
+	},
+	"tabs": {
+		"tools": "الأدوات",
+		"resources": "الموارد",
+		"errors": "الأخطاء"
+	},
+	"emptyState": {
+		"noTools": "لم يتم العثور على أدوات",
+		"noResources": "لم يتم العثور على موارد",
+		"noErrors": "لم يتم العثور على أخطاء"
+	},
+	"networkTimeout": {
+		"label": "مهلة الشبكة",
+		"description": "الحد الأقصى للوقت لانتظار استجابات الخادم",
+		"options": {
+			"15seconds": "15 ثانية",
+			"30seconds": "30 ثانية",
+			"1minute": "دقيقة واحدة",
+			"5minutes": "5 دقائق",
+			"10minutes": "10 دقائق",
+			"15minutes": "15 دقيقة",
+			"30minutes": "30 دقيقة",
+			"60minutes": "60 دقيقة"
+		}
+	},
+	"deleteDialog": {
+		"title": "حذف خادم MCP",
+		"description": "هل أنت متأكد من أنك تريد حذف خادم MCP \"{{serverName}}\"؟ لا يمكن التراجع عن هذا الإجراء.",
+		"cancel": "إلغاء",
+		"delete": "حذف"
+	},
+	"serverStatus": {
+		"retrying": "إعادة المحاولة...",
+		"retryConnection": "إعادة محاولة الاتصال"
+	},
+	"execution": {
+		"running": "قيد التشغيل",
+		"completed": "مكتمل",
+		"error": "خطأ"
+	}
+}

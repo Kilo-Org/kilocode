@@ -1,0 +1,22 @@
+{
+	"errors": {
+		"invalid_settings_format": "تنسيق JSON لإعدادات MCP غير صالح. يرجى التأكد من أن إعداداتك تتبع تنسيق JSON الصحيح.",
+		"invalid_settings_syntax": "تنسيق JSON لإعدادات MCP غير صالح. يرجى التحقق من ملف الإعدادات الخاص بك بحثاً عن أخطاء في بناء الجملة.",
+		"invalid_settings_validation": "تنسيق إعدادات MCP غير صالح: {{errorMessages}}",
+		"create_json": "فشل في إنشاء أو فتح .kilocode/mcp.json: {{error}}",
+		"failed_update_project": "فشل في تحديث خوادم MCP للمشروع",
+		"invalidJsonArgument": "حاول Kilo Code استخدام {{toolName}} مع وسيطة JSON غير صالحة. جاري إعادة المحاولة..."
+	},
+	"info": {
+		"server_restarting": "جاري إعادة تشغيل خادم MCP {{serverName}}...",
+		"server_connected": "تم الاتصال بخادم MCP {{serverName}}",
+		"server_deleted": "تم حذف خادم MCP: {{serverName}}",
+		"server_not_found": "الخادم \"{{serverName}}\" غير موجود في التكوين",
+		"global_servers_active": "خوادم MCP العامة النشطة: {{mcpServers}}",
+		"project_servers_active": "خوادم MCP للمشروع النشطة: {{mcpServers}}",
+		"already_refreshing": "خوادم MCP قيد التحديث بالفعل.",
+		"refreshing_all": "جاري تحديث جميع خوادم MCP...",
+		"all_refreshed": "تم تحديث جميع خوادم MCP.",
+		"project_config_deleted": "تم حذف ملف تكوين MCP للمشروع. تم قطع الاتصال بجميع خوادم MCP للمشروع."
+	}
+}

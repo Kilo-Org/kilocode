@@ -1,0 +1,27 @@
+{
+	"greeting": "مرحبًا، أنا Kilo Code!",
+	"introduction": "<strong>Kilo Code هو وكيل البرمجة المستقل الرائد.</strong> استعد لتصميم وبرمجة وتصحيح وتعزيز إنتاجيتك بطريقة لم ترها من قبل. للمتابعة، يحتاج Kilo Code إلى مفتاح API.",
+	"notice": "للبدء، يحتاج هذا الملحق إلى مزود API.",
+	"start": "هيا بنا!",
+	"routers": {
+		"requesty": {
+			"description": "موجه LLM المحسّن الخاص بك",
+			"incentive": "رصيد مجاني بقيمة 1 دولار"
+		},
+		"openrouter": {
+			"description": "واجهة موحدة لنماذج اللغة الكبيرة"
+		}
+	},
+	"chooseProvider": "للقيام بسحره، يحتاج Kilo Code إلى مفتاح API.",
+	"startRouter": "نوصي باستخدام موجه LLM:",
+	"startCustom": "أو يمكنك إحضار مفتاح API الخاص بمزودك:",
+	"telemetry": {
+		"title": "ساعد في تحسين Kilo Code",
+		"anonymousTelemetry": "أرسل بيانات الأخطاء والاستخدام المجهولة لمساعدتنا في إصلاح الأخطاء وتحسين الملحق. لا يتم إرسال أي كود أو مطالبات أو معلومات شخصية.",
+		"changeSettings": "يمكنك دائمًا تغيير هذا في أسفل <settingsLink>الإعدادات</settingsLink>",
+		"settings": "الإعدادات",
+		"allow": "سماح",
+		"deny": "رفض"
+	},
+	"importSettings": "استيراد الإعدادات"
+}

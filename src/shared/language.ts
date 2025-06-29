@@ -5,6 +5,7 @@ import { type Language, isLanguage } from "@roo-code/types"
  */
 
 export const LANGUAGES: Record<Language, string> = {
+	ar: "العربية", // kilocode_change
 	ca: "Català",
 	cs: "Čeština", // kilocode_change
 	de: "Deutsch",

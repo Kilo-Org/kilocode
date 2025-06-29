@@ -1,0 +1,23 @@
+{
+	"unknownError": "خطأ غير معروف",
+	"authenticationFailed": "فشل في إنشاء التضمينات: فشلت المصادقة. يرجى التحقق من مفتاح API الخاص بك.",
+	"failedWithStatus": "فشل في إنشاء التضمينات بعد {{attempts}} محاولات: HTTP {{statusCode}} - {{errorMessage}}",
+	"failedWithError": "فشل في إنشاء التضمينات بعد {{attempts}} محاولات: {{errorMessage}}",
+	"failedMaxAttempts": "فشل في إنشاء التضمينات بعد {{attempts}} محاولات",
+	"textExceedsTokenLimit": "النص في الفهرس {{index}} يتجاوز الحد الأقصى للرموز ({{itemTokens}} > {{maxTokens}}). تخطي.",
+	"rateLimitRetry": "تم الوصول إلى حد المعدل، إعادة المحاولة في {{delayMs}} مللي ثانية (محاولة {{attempt}}/{{maxRetries}})",
+	"ollama": {
+		"couldNotReadErrorBody": "تعذر قراءة نص الخطأ",
+		"requestFailed": "فشل طلب Ollama API بالحالة {{status}} {{statusText}}: {{errorBody}}",
+		"invalidResponseStructure": "بنية استجابة غير صالحة من Ollama API: مصفوفة \"embeddings\" غير موجودة أو ليست مصفوفة.",
+		"embeddingFailed": "فشل تضمين Ollama: {{message}}"
+	},
+	"scanner": {
+		"unknownErrorProcessingFile": "خطأ غير معروف في معالجة الملف {{filePath}}",
+		"unknownErrorDeletingPoints": "خطأ غير معروف في حذف النقاط لـ {{filePath}}",
+		"failedToProcessBatchWithError": "فشل في معالجة الدفعة بعد {{maxRetries}} محاولات: {{errorMessage}}"
+	},
+	"vectorStore": {
+		"qdrantConnectionFailed": "فشل في الاتصال بقاعدة بيانات Qdrant المتجهة. يرجى التأكد من أن Qdrant يعمل ويمكن الوصول إليه على {{qdrantUrl}}. خطأ: {{errorMessage}}"
+	}
+}
