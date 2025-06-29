@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="id" class="">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BELAJARHUKUM.ONLINE</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .transition-all { transition: all 0.3s ease-in-out; }
+        .hidden { display: none; }
+        /* Animasi sederhana untuk item yang muncul */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+    </style>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 transition-all">
+
+    <!-- ===== HEADER ===== -->
+    <header class="bg-white dark:bg-gray-800 shadow-md sticky top-0 z-40">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-2xl font-bold text-blue-600 dark:text-blue-400">BELAJARHUKUM.ONLINE</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div id="auth-section">
+                        <button id="login-btn" class="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">
+                            <i class="fas fa-sign-in-alt mr-1"></i> Login Admin
+                        </button>
+                        <button id="logout-btn" class="hidden text-sm font-medium text-red-500 hover:text-red-700">
+                            <i class="fas fa-sign-out-alt mr-1"></i> Logout
+                        </button>
+                    </div>
+                    <button id="theme-toggle" class="p-2 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none">
+                        <i class="fas fa-sun" id="theme-icon-sun"></i>
+                        <i class="fas fa-moon hidden" id="theme-icon-moon"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <main class="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 space-y-12">
+
+        <!-- ===== ADMIN CONTROLS SECTION (HIDDEN BY DEFAULT) ===== -->
+        <section id="admin-panel" class="admin-controls hidden bg-blue-50 dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-bold mb-4 text-blue-800 dark:text-blue-300">Panel Admin</h2>
+            <!-- Post Management -->
+            <div id="upload-section">
+                <h3 class="text-xl font-semibold mb-3">Manajemen Postingan</h3>
+                <button id="show-post-form-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all">
+                    <i class="fas fa-plus-circle mr-2"></i>Buat Postingan Baru
+                </button>
+                <form id="post-form" class="hidden mt-4 space-y-4">
+                    <input type="text" id="post-title" placeholder="Judul Tulisan" class="w-full p-3 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <textarea id="post-content" rows="6" placeholder="Isi Tulisan Anda..." class="w-full p-3 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+                    <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all">
+                        <i class="fas fa-upload mr-2"></i>Publikasikan Tulisan
+                    </button>
+                </form>
+            </div>
+             <!-- Product Management -->
+            <div id="product-management-section" class="mt-8">
+                <h3 class="text-xl font-semibold mb-3">Manajemen Produk</h3>
+                <button id="show-product-form-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all">
+                    <i class="fas fa-plus-circle mr-2"></i>Tambah Produk/Jasa Baru
+                </button>
+                <form id="product-form" class="hidden mt-4 space-y-4">
+                    <input type="hidden" id="product-id">
+                    <input type="text" id="product-name" placeholder="Nama Produk/Jasa" class="w-full p-3 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <textarea id="product-desc" rows="3" placeholder="Deskripsi Produk/Jasa" class="w-full p-3 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+                    <input type="text" id="product-price" placeholder="Harga (contoh: Rp 50.000)" class="w-full p-3 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <button type="submit" id="product-submit-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all">
+                        <i class="fas fa-save mr-2"></i>Simpan Produk
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- ===== BLOG POSTS DISPLAY SECTION ===== -->
+        <section id="blog-posts-section">
+             <h2 class="text-3xl font-bold mb-6 text-center">Karya Tulis Terbaru</h2>
+            <div id="posts-container" class="space-y-8">
+                <!-- Postingan akan ditampilkan di sini oleh JavaScript -->
+            </div>
+        </section>
+
+        <!-- ===== PRODUCT CATALOG SECTION ===== -->
+        <section id="katalog-produk">
+            <h2 class="text-3xl font-bold mb-6 text-center mt-16">Katalog Produk & Jasa</h2>
+            <div id="products-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Produk akan ditampilkan di sini -->
+            </div>
+        </section>
+
+        <!-- ===== FEEDBACK SECTION ===== -->
+        <section id="feedback-section">
+            <h2 class="text-3xl font-bold mb-6 text-center mt-16">Penilaian, Kritik & Saran</h2>
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-2xl mx-auto">
+                <form id="feedback-form" class="space-y-4">
+                    <input type="text" id="feedback-name" placeholder="Nama Anda" required class="w-full p-3 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <textarea id="feedback-content" rows="4" placeholder="Kritik & Saran Anda..." required class="w-full p-3 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+                    <div>
+                        <label class="block mb-2 font-medium">Penilaian:</label>
+                        <div id="rating-stars" class="flex space-x-1 text-2xl text-gray-400">
+                            <i class="fas fa-star cursor-pointer" data-value="1"></i><i class="fas fa-star cursor-pointer" data-value="2"></i><i class="fas fa-star cursor-pointer" data-value="3"></i><i class="fas fa-star cursor-pointer" data-value="4"></i><i class="fas fa-star cursor-pointer" data-value="5"></i>
+                        </div>
+                        <input type="hidden" id="feedback-rating" value="0">
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all">
+                        <i class="fas fa-paper-plane mr-2"></i>Kirim Masukan
+                    </button>
+                </form>
+            </div>
+            <div id="feedback-container" class="mt-8 space-y-4 max-w-2xl mx-auto">
+                <!-- Feedback akan ditampilkan di sini -->
+            </div>
+        </section>
+    </main>
+    
+    <!-- ===== FOOTER ===== -->
+    <footer class="bg-gray-800 dark:bg-gray-900 text-white mt-12">
+        <div class="max-w-5xl mx-auto py-6 px-4 sm:px-6 lg:px-8 text-center text-gray-400">
+            <p class="font-bold">Kantor Pusat:</p>
+            <p>Dsn Tengah, Tagengser Daya, Pasean, Pamekasan, 69356</p>
+            <p class="mt-2"><i class="fas fa-phone-alt mr-2"></i>085190002348</p>
+            <p class="mt-4 text-sm">&copy; 2024 BELAJARHUKUM.ONLINE. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- ===== PASSWORD MODAL ===== -->
+    <div id="password-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-sm mx-4">
+            <h3 class="text-xl font-bold mb-4">Login Admin</h3>
+            <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">Masukkan sandi untuk masuk ke mode edit.</p>
+            <form id="password-form">
+                <input type="password" id="password-input" placeholder="Masukkan Sandi..." class="w-full p-3 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                <p id="password-error" class="text-red-500 text-sm mt-2 hidden">Sandi salah, coba lagi.</p>
+                <div class="flex justify-end space-x-4 mt-6">
+                    <button type="button" id="cancel-password-btn" class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500">Batal</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Login</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- CONSTANTS & STATE ---
+        const ADMIN_PASSWORD = "ADMIN234817";
+        let posts = JSON.parse(localStorage.getItem('belajarhukum_posts')) || [];
+        let products = JSON.parse(localStorage.getItem('belajarhukum_products')) || [];
+        let feedbacks = JSON.parse(localStorage.getItem('belajarhukum_feedbacks')) || [];
+        
+        let isAdminMode = sessionStorage.getItem('isAdminLoggedIn') === 'true';
+
+        // --- DOM ELEMENTS ---
+        const themeToggle = document.getElementById('theme-toggle');
+        const sunIcon = document.getElementById('theme-icon-sun');
+        const moonIcon = document.getElementById('theme-icon-moon');
+        
+        const loginBtn = document.getElementById('login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const adminControls = document.querySelectorAll('.admin-controls');
+
+        const showPostFormBtn = document.getElementById('show-post-form-btn');
+        const postForm = document.getElementById('post-form');
+        const postTitleInput = document.getElementById('post-title');
+        const postContentInput = document.getElementById('post-content');
+        const postsContainer = document.getElementById('posts-container');
+        
+        const showProductFormBtn = document.getElementById('show-product-form-btn');
+        const productForm = document.getElementById('product-form');
+        const productIdInput = document.getElementById('product-id');
+        const productNameInput = document.getElementById('product-name');
+        const productDescInput = document.getElementById('product-desc');
+        const productPriceInput = document.getElementById('product-price');
+        const productSubmitBtn = document.getElementById('product-submit-btn');
+        const productsContainer = document.getElementById('products-container');
+
+        const feedbackForm = document.getElementById('feedback-form');
+        const feedbackContainer = document.getElementById('feedback-container');
+        const ratingStarsContainer = document.getElementById('rating-stars');
+
+        const passwordModal = document.getElementById('password-modal');
+        const passwordForm = document.getElementById('password-form');
+        const passwordInput = document.getElementById('password-input');
+        const passwordError = document.getElementById('password-error');
+        const cancelPasswordBtn = document.getElementById('cancel-password-btn');
+
+        // --- CORE FUNCTIONS ---
+        const savePosts = () => localStorage.setItem('belajarhukum_posts', JSON.stringify(posts));
+        const saveProducts = () => localStorage.setItem('belajarhukum_products', JSON.stringify(products));
+        const saveFeedbacks = () => localStorage.setItem('belajarhukum_feedbacks', JSON.stringify(feedbacks));
+
+        // --- RENDER FUNCTIONS ---
+        const renderPosts = () => {
+            postsContainer.innerHTML = '';
+            if (posts.length === 0) {
+                postsContainer.innerHTML = `<p class="text-center text-gray-500 dark:text-gray-400">Belum ada postingan.</p>`;
+            } else {
+                [...posts].reverse().forEach(post => {
+                    const postEl = document.createElement('article');
+                    postEl.className = 'bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg transition-all animate-fade-in';
+                    postEl.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="text-2xl font-bold text-blue-700 dark:text-blue-400 mb-2">${escapeHTML(post.title)}</h3>
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Dipublikasikan pada: ${new Date(post.id).toLocaleString('id-ID')}</p>
+                                <p class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">${escapeHTML(post.content)}</p>
+                            </div>
+                            ${isAdminMode ? `
+                            <button data-id="${post.id}" class="delete-post-btn ml-4 p-2 text-red-500 hover:text-red-700 hover:bg-red-100 dark:hover:bg-gray-700 rounded-full focus:outline-none transition-colors">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>` : ''}
+                        </div>
+                    `;
+                    postsContainer.appendChild(postEl);
+                });
+            }
+        };
+
+        const renderProducts = () => {
+            productsContainer.innerHTML = '';
+            if (products.length === 0) {
+                productsContainer.innerHTML = `<p class="text-center text-gray-500 dark:text-gray-400 md:col-span-2 lg:col-span-3">Belum ada produk atau jasa.</p>`;
+            } else {
+                products.forEach(product => {
+                    const productEl = document.createElement('div');
+                    productEl.className = 'bg-white dark:bg-gray-800 rounded-lg shadow-lg flex flex-col overflow-hidden';
+                    productEl.innerHTML = `
+                        <div class="p-5 flex-grow">
+                            <h4 class="text-lg font-bold text-blue-700 dark:text-blue-400">${escapeHTML(product.name)}</h4>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 my-2 flex-grow">${escapeHTML(product.desc)}</p>
+                            <p class="font-semibold text-green-600 dark:text-green-400 mt-2">${escapeHTML(product.price)}</p>
+                        </div>
+                        <div class="p-4 bg-gray-50 dark:bg-gray-700/50 flex items-center justify-between gap-2">
+                             <button data-name="${escapeHTML(product.name)}" class="buy-product-btn w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-3 rounded-md transition-all text-sm">
+                                <i class="fab fa-whatsapp mr-2"></i>Beli
+                            </button>
+                            ${isAdminMode ? `
+                            <div class="flex">
+                                <button data-id="${product.id}" class="edit-product-btn p-2 text-yellow-500 hover:text-yellow-700 rounded-full focus:outline-none transition-colors">
+                                    <i class="fas fa-pencil-alt"></i>
+                                </button>
+                                <button data-id="${product.id}" class="delete-product-btn p-2 text-red-500 hover:text-red-700 rounded-full focus:outline-none transition-colors">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>` : ''}
+                        </div>
+                    `;
+                    productsContainer.appendChild(productEl);
+                });
+            }
+        };
+        
+        const renderFeedbacks = () => {
+            feedbackContainer.innerHTML = '';
+            if (feedbacks.length === 0) {
+                feedbackContainer.innerHTML = `<p class="text-center text-gray-500 dark:text-gray-400">Belum ada masukan.</p>`;
+            } else {
+                [...feedbacks].reverse().forEach(fb => {
+                    const ratingHtml = Array(5).fill(0).map((_, i) => 
+                        `<i class="fas fa-star ${i < fb.rating ? 'text-yellow-400' : 'text-gray-300'}"></i>`
+                    ).join('');
+                    const fbEl = document.createElement('div');
+                    fbEl.className = 'bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md';
+                    fbEl.innerHTML = `<div class="flex justify-between items-center mb-2"><p class="font-semibold">${escapeHTML(fb.name)}</p><div class="flex">${ratingHtml}</div></div><p class="text-gray-600 dark:text-gray-300 italic">"${escapeHTML(fb.content)}"</p><p class="text-xs text-gray-400 dark:text-gray-500 mt-2">${new Date(fb.id).toLocaleString('id-ID')}</p>`;
+                    feedbackContainer.appendChild(fbEl);
+                });
+            }
+        };
+
+        // --- UI & MODE MANAGEMENT ---
+        const updateUIForAdminMode = () => {
+            // Toggle visibility of all admin controls
+            adminControls.forEach(el => el.classList.toggle('hidden', !isAdminMode));
+            
+            // Toggle login/logout buttons
+            loginBtn.classList.toggle('hidden', isAdminMode);
+            logoutBtn.classList.toggle('hidden', !isAdminMode);
+
+            // Re-render content to show/hide inline edit/delete buttons
+            renderPosts();
+            renderProducts();
+        };
+
+        const login = () => {
+            isAdminMode = true;
+            sessionStorage.setItem('isAdminLoggedIn', 'true');
+            updateUIForAdminMode();
+        };
+
+        const logout = () => {
+            isAdminMode = false;
+            sessionStorage.removeItem('isAdminLoggedIn');
+            // Hide forms if they are open
+            postForm.classList.add('hidden');
+            showPostFormBtn.classList.remove('hidden');
+            resetProductForm();
+            updateUIForAdminMode();
+        };
+        
+        loginBtn.addEventListener('click', () => passwordModal.classList.remove('hidden'));
+        logoutBtn.addEventListener('click', logout);
+        cancelPasswordBtn.addEventListener('click', () => passwordModal.classList.add('hidden'));
+
+        passwordForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (passwordInput.value === ADMIN_PASSWORD) {
+                login();
+                passwordModal.classList.add('hidden');
+                passwordInput.value = '';
+                passwordError.classList.add('hidden');
+            } else {
+                passwordError.classList.remove('hidden');
+            }
+        });
+
+        // --- THEME ---
+        const applyTheme = (theme) => {
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+                sunIcon.classList.add('hidden'); moonIcon.classList.remove('hidden');
+            } else {
+                document.documentElement.classList.remove('dark');
+                sunIcon.classList.remove('hidden'); moonIcon.classList.add('hidden');
+            }
+        };
+        themeToggle.addEventListener('click', () => {
+            const newTheme = document.documentElement.classList.toggle('dark') ? 'dark' : 'light';
+            localStorage.setItem('theme', newTheme);
+            applyTheme(newTheme);
+        });
+
+        // --- FORM & ACTION HANDLERS ---
+        // Post form toggle
+        showPostFormBtn.addEventListener('click', () => {
+            showPostFormBtn.classList.add('hidden');
+            postForm.classList.remove('hidden');
+        });
+
+        postForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const title = postTitleInput.value.trim();
+            const content = postContentInput.value.trim();
+            if (title && content) {
+                posts.push({ id: Date.now(), title, content });
+                savePosts();
+                renderPosts();
+                postForm.reset();
+                postForm.classList.add('hidden');
+                showPostFormBtn.classList.remove('hidden');
+            }
+        });
+        
+        postsContainer.addEventListener('click', (e) => {
+            if (e.target.closest('.delete-post-btn')) {
+                const postId = parseInt(e.target.closest('.delete-post-btn').dataset.id);
+                if (confirm('Anda yakin ingin menghapus postingan ini?')) {
+                    posts = posts.filter(post => post.id !== postId);
+                    savePosts();
+                    renderPosts();
+                }
+            }
+        });
+
+        // Product form toggle
+        const resetProductForm = () => {
+            productForm.reset();
+            productIdInput.value = '';
+            productSubmitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Simpan Produk';
+            productSubmitBtn.classList.remove('bg-yellow-600', 'hover:bg-yellow-700');
+            productSubmitBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+            productForm.classList.add('hidden');
+            showProductFormBtn.classList.remove('hidden');
+        };
+
+        showProductFormBtn.addEventListener('click', () => {
+            resetProductForm();
+            showProductFormBtn.classList.add('hidden');
+            productForm.classList.remove('hidden');
+            productNameInput.focus();
+        });
+
+        productForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = productNameInput.value.trim();
+            const desc = productDescInput.value.trim();
+            const price = productPriceInput.value.trim();
+            const id = parseInt(productIdInput.value);
+
+            if (name && desc && price) {
+                if (id) { // Editing existing product
+                    const index = products.findIndex(p => p.id === id);
+                    if (index > -1) products[index] = { id, name, desc, price };
+                } else { // Adding new product
+                    products.push({ id: Date.now(), name, desc, price });
+                }
+                saveProducts();
+                renderProducts();
+                resetProductForm();
+            }
+        });
+
+        productsContainer.addEventListener('click', (e) => {
+            const buyBtn = e.target.closest('.buy-product-btn');
+            const editBtn = e.target.closest('.edit-product-btn');
+            const deleteBtn = e.target.closest('.delete-product-btn');
+
+            if (buyBtn) {
+                const productName = buyBtn.dataset.name;
+                const phoneNumber = '6285190002348'; // Gunakan kode negara tanpa '+' atau '0' di depan
+                const message = encodeURIComponent(`Halo, saya tertarik untuk membeli produk: ${productName}`);
+                const whatsappURL = `https://wa.me/${phoneNumber}?text=${message}`;
+                window.open(whatsappURL, '_blank');
+            }
+
+            if (editBtn && isAdminMode) {
+                const productId = parseInt(editBtn.dataset.id);
+                const product = products.find(p => p.id === productId);
+                if (product) {
+                    showProductFormBtn.classList.add('hidden');
+                    productForm.classList.remove('hidden');
+                    productIdInput.value = product.id;
+                    productNameInput.value = product.name;
+                    productDescInput.value = product.desc;
+                    productPriceInput.value = product.price;
+                    productSubmitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Update Produk';
+                    productSubmitBtn.classList.remove('bg-green-600').add('bg-yellow-600', 'hover:bg-yellow-700');
+                    productNameInput.focus();
+                    productForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+
+            if (deleteBtn && isAdminMode) {
+                const productId = parseInt(deleteBtn.dataset.id);
+                if (confirm('Anda yakin ingin menghapus produk ini?')) {
+                    products = products.filter(p => p.id !== productId);
+                    saveProducts();
+                    renderProducts();
+                }
+            }
+        });
+        
+        // Feedback form
+        feedbackForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('feedback-name').value.trim();
+            const content = document.getElementById('feedback-content').value.trim();
+            const rating = parseInt(document.getElementById('feedback-rating').value);
+            if (name && content && rating > 0) {
+                feedbacks.push({ id: Date.now(), name, content, rating });
+                saveFeedbacks();
+                renderFeedbacks();
+                feedbackForm.reset();
+                Array.from(ratingStarsContainer.children).forEach(s => s.classList.remove('text-yellow-400') || s.classList.add('text-gray-400'));
+            } else {
+                alert('Harap isi semua kolom dan berikan rating bintang.');
+            }
+        });
+        
+        ratingStarsContainer.addEventListener('click', e => {
+            if (e.target.matches('.fa-star')) {
+                const ratingValue = parseInt(e.target.dataset.value);
+                document.getElementById('feedback-rating').value = ratingValue;
+                Array.from(ratingStarsContainer.children).forEach((star, index) => {
+                    star.classList.toggle('text-yellow-400', index < ratingValue);
+                    star.classList.toggle('text-gray-400', index >= ratingValue);
+                });
+            }
+        });
+        
+        const escapeHTML = (str) => {
+            const p = document.createElement('p');
+            p.appendChild(document.createTextNode(str));
+            return p.innerHTML;
+        };
+
+        // --- INITIALIZATION ---
+        applyTheme(localStorage.getItem('theme') || 'light');
+        updateUIForAdminMode(); // Set initial UI based on login status
+        renderFeedbacks(); // Feedbacks always render
+    });
+    </script>
+</body>
+</html>
