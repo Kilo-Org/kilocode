@@ -13,6 +13,12 @@ vi.mock("@roo-code/cloud", () => ({
 	getRooCodeApiUrl: () => "https://test.api.com",
 }))
 
+// kilocode_change start
+vi.mock("../../../shared/kilocode/api", () => ({
+	getKiloCodeApiUrl: () => "https://test.api.com",
+}))
+// kilocode_change end
+
 describe("RemoteConfigLoader", () => {
 	let loader: RemoteConfigLoader
 
