@@ -1,5 +1,57 @@
 # kilo-code
 
+## [v4.46.0]
+
+- [#921](https://github.com/Kilo-Org/kilocode/pull/921) [`4d0d1ed`](https://github.com/Kilo-Org/kilocode/commit/4d0d1ed6081266a24b3b715f3450a5bd82718dbb) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Enable browser tool for Gemini, GPT and all other models that can read images
+
+### Patch Changes
+
+- [#889](https://github.com/Kilo-Org/kilocode/pull/889) [`7f72a33`](https://github.com/Kilo-Org/kilocode/commit/7f72a33278100f3a7679d7b2761f1380a54bfc90) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Refresh CodeIndex Services (Qdrant) when change the configuration
+
+- [#911](https://github.com/Kilo-Org/kilocode/pull/911) [`ef17629`](https://github.com/Kilo-Org/kilocode/commit/ef17629f278e759345ae4aa4bb3ea27006ff7918) Thanks [@NyxJae](https://github.com/NyxJae)! - Improve Chinese translation: Kilo Code should be a proper noun
+
+- [#910](https://github.com/Kilo-Org/kilocode/pull/910) [`91ce5a6`](https://github.com/Kilo-Org/kilocode/commit/91ce5a649f7b2d9cb0911b3b5c4fcf3a133b420a) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Fix not being able to open Mermaid diagrams in a tab or save them
+
+## [v4.45.0]
+
+- [#867](https://github.com/Kilo-Org/kilocode/pull/867) [`717823f`](https://github.com/Kilo-Org/kilocode/commit/717823f40419bda32813b3e1f9f357fdabfa89df) Thanks [@Juice10](https://github.com/Juice10)! - Add copy prompt button to task actions. Based on [@vultrnerd's feedback](https://github.com/Kilo-Org/kilocode/discussions/850).
+
+### Patch Changes
+
+- [#890](https://github.com/Kilo-Org/kilocode/pull/890) [`1a35cfe`](https://github.com/Kilo-Org/kilocode/commit/1a35cfe2c0dbfee68c09c7abeb42199e8713095f) Thanks [@hassoncs](https://github.com/hassoncs)! - Only show the colorful gutter bars when hovering over the Task Timeline
+
+## [v4.44.1]
+
+### Patch Changes
+
+- [#887](https://github.com/Kilo-Org/kilocode/pull/887) [`df10163`](https://github.com/Kilo-Org/kilocode/commit/df101636d0f9851b2f3ee4820c84cb09b3c41f33) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Update text on welcome screen
+
+- [#886](https://github.com/Kilo-Org/kilocode/pull/886) [`084cee7`](https://github.com/Kilo-Org/kilocode/commit/084cee76dc59a2f83ddf36dfdf71666f89a2898a) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Fixed crashes with the error message "Bad substitution" and "Cannot read properties of undefined (reading 'includes')"
+
+## [v4.44.0]
+
+- [#881](https://github.com/Kilo-Org/kilocode/pull/881) [`30836f4`](https://github.com/Kilo-Org/kilocode/commit/30836f4d11a02769787af91c552789c14118ebdf) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Add support for Gemini CLI provider (thanks Roo & Cline!)
+
+## [v4.43.1]
+
+- [#842](https://github.com/Kilo-Org/kilocode/pull/842) [`32e4c30`](https://github.com/Kilo-Org/kilocode/commit/32e4c304506b4042b76265446a3169206eb243a5) Thanks [@markijbema](https://github.com/markijbema)! - add a button to fix mermaid syntax errors by calling the LLM
+
+## [v4.43.0]
+
+- [#871](https://github.com/Kilo-Org/kilocode/pull/871) [`52f216d`](https://github.com/Kilo-Org/kilocode/commit/52f216de21ea5be0366976a9108e3c9edd993620) Thanks [@hassoncs](https://github.com/hassoncs)! - Add a colorful gutter to chat messages corresponding to the Task Timeline
+
+- [#861](https://github.com/Kilo-Org/kilocode/pull/861) [`8e9df82`](https://github.com/Kilo-Org/kilocode/commit/8e9df820f22b3ea833a00dc490ad05bfaa6f1645) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Add language support for Filipino, Thai, Ukrainian, Czech, Greek and Swedish
+
+- [#847](https://github.com/Kilo-Org/kilocode/pull/847) [`fbe3c75`](https://github.com/Kilo-Org/kilocode/commit/fbe3c75c1fbaf2b16cea43554cf7e9be2ef8849f) Thanks [@hassoncs](https://github.com/hassoncs)! - Highlight the context window progress bar red when near the limit
+
+### Patch Changes
+
+- [#853](https://github.com/Kilo-Org/kilocode/pull/853) [`e9452f1`](https://github.com/Kilo-Org/kilocode/commit/e9452f11035c8daa40c5afd752bad4c18f7f3f64) Thanks [@hassoncs](https://github.com/hassoncs)! - Fix @ mentions not working after slash commands
+
+- [#854](https://github.com/Kilo-Org/kilocode/pull/854) [`81d8b06`](https://github.com/Kilo-Org/kilocode/commit/81d8b0657ec045efa67b41bb7af493ef4753a8ae) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Fix allowed commands export/import
+
+- [#871](https://github.com/Kilo-Org/kilocode/pull/871) [`52f216d`](https://github.com/Kilo-Org/kilocode/commit/52f216de21ea5be0366976a9108e3c9edd993620) Thanks [@hassoncs](https://github.com/hassoncs)! - Enable the Task Timeline by default
+
 ## [v4.42.0]
 
 - [#844](https://github.com/Kilo-Org/kilocode/pull/844) [`8f33721`](https://github.com/Kilo-Org/kilocode/commit/8f3372102d8a06cfbe0dd2889287befea6a347a4) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Include changes from Roo Code v3.21.5

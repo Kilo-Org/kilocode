@@ -25,6 +25,17 @@
 	"mermaid": {
 		"loading": "मरमेड डायग्राम जनरेट हो रहा है...",
 		"render_error": "डायग्राम रेंडर नहीं किया जा सकता",
+		"fixing_syntax": "मरमेड सिंटैक्स ठीक किया जा रहा है...",
+		"fix_syntax_button": "AI से सिंटैक्स ठीक करें",
+		"original_code": "मूल कोड:",
+		"errors": {
+			"unknown_syntax": "अज्ञात सिंटैक्स त्रुटि",
+			"fix_timeout": "LLM फिक्स अनुरोध का समय समाप्त हो गया",
+			"fix_failed": "LLM फिक्स विफल हुआ",
+			"fix_attempts": "{{attempts}} प्रयासों के बाद सिंटैक्स ठीक करने में विफल। अंतिम त्रुटि: {{error}}",
+			"no_fix_provided": "LLM फिक्स प्रदान करने में विफल रहा",
+			"fix_request_failed": "फिक्स अनुरोध विफल हुआ"
+		},
 		"buttons": {
 			"zoom": "ज़ूम",
 			"zoomIn": "बड़ा करें",

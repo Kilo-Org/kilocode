@@ -1351,6 +1351,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			alwaysAllowWriteOutsideWorkspace,
 			alwaysAllowWriteProtected,
 			alwaysAllowExecute,
+			allowedCommands, // kilocode_change
 			alwaysAllowBrowser,
 			alwaysAllowMcp,
 			alwaysAllowModeSwitch,
@@ -1419,7 +1420,13 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		} = await this.getState()
 
 		const machineId = vscode.env.machineId
-		const allowedCommands = vscode.workspace.getConfiguration(Package.name).get<string[]>("allowedCommands") || []
+		// kilocode_change start
+		const allowedCommandsState = allowedCommands || []
+		const allowedCommandsWorkspace =
+			vscode.workspace.getConfiguration(Package.name).get<string[]>("allowedCommands") || []
+		const allowedCommandsCombined = [...new Set([...allowedCommandsState, ...allowedCommandsWorkspace])]
+		// kilocode_change end
+
 		const cwd = this.cwd
 
 		// Check if there's a system prompt override for the current mode
@@ -1458,7 +1465,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			diffEnabled: diffEnabled ?? true,
 			enableCheckpoints: enableCheckpoints ?? true,
 			shouldShowAnnouncement: false,
-			allowedCommands,
+			allowedCommands: allowedCommandsCombined, // kilocode_change
 			soundVolume: soundVolume ?? 0.5,
 			browserViewportSize: browserViewportSize ?? "900x600",
 			screenshotQuality: screenshotQuality ?? 75,
@@ -1499,7 +1506,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			machineId,
 			showRooIgnoredFiles: showRooIgnoredFiles ?? true,
 			showAutoApproveMenu: showAutoApproveMenu ?? false, // kilocode_change
-			showTaskTimeline: showTaskTimeline ?? false, // kilocode_change
+			showTaskTimeline: showTaskTimeline ?? true, // kilocode_change
 			language, // kilocode_change
 			renderContext: this.renderContext,
 			maxReadFileLine: maxReadFileLine ?? -1,
@@ -1656,7 +1663,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			browserToolEnabled: stateValues.browserToolEnabled ?? true,
 			showRooIgnoredFiles: stateValues.showRooIgnoredFiles ?? true,
 			showAutoApproveMenu: stateValues.showAutoApproveMenu ?? false, // kilocode_change
-			showTaskTimeline: stateValues.showTaskTimeline ?? false, // kilocode_change
+			showTaskTimeline: stateValues.showTaskTimeline ?? true, // kilocode_change
 			maxReadFileLine: stateValues.maxReadFileLine ?? -1,
 			maxConcurrentFileReads: stateValues.maxConcurrentFileReads ?? 5,
 			historyPreviewCollapsed: stateValues.historyPreviewCollapsed ?? false,

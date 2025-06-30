@@ -1,0 +1,50 @@
+{
+	"info": {
+		"settings_imported": "Nastavení byla úspěšně importována."
+	},
+	"lowCreditWarning": {
+		"title": "Varování o nízkém kreditu!",
+		"message": "Zkontroluj, zda můžeš doplnit bezplatné kredity nebo si koupit další!"
+	},
+	"rules": {
+		"actions": {
+			"delete": "Smazat",
+			"confirmDelete": "Jsi si jistý, že chceš smazat {{filename}}?",
+			"deleted": "Smazáno {{filename}}"
+		},
+		"errors": {
+			"noWorkspaceFound": "Nebyla nalezena složka pracovního prostoru",
+			"fileAlreadyExists": "Soubor {{filename}} již existuje",
+			"failedToCreateRuleFile": "Vytvoření souboru pravidla selhalo.",
+			"failedToDeleteRuleFile": "Smazání souboru pravidla selhalo."
+		},
+		"templates": {
+			"workflow": {
+				"description": "Popis pracovního postupu zde...",
+				"stepsHeader": "## Kroky",
+				"step1": "Krok 1",
+				"step2": "Krok 2"
+			},
+			"rule": {
+				"description": "Popis pravidla zde...",
+				"guidelinesHeader": "## Pokyny",
+				"guideline1": "Pokyn 1",
+				"guideline2": "Pokyn 2"
+			}
+		}
+	},
+	"commitMessage": {
+		"activated": "Generátor commit zpráv Kilo Code aktivován",
+		"gitNotFound": "⚠️ Git repozitář nenalezen nebo git není k dispozici",
+		"gitInitError": "⚠️ Chyba inicializace Git: {{error}}",
+		"generating": "Kilo: Generování commit zprávy...",
+		"analyzingChanges": "Kilo: Analýza připravených změn...",
+		"noStagedChangesRepo": "Kilo: V git repozitáři nebyly nalezeny žádné připravené změny",
+		"noStagedChanges": "Kilo: Nebyly nalezeny žádné připravené změny k analýze",
+		"generated": "Kilo: Commit zpráva vygenerována!",
+		"generationFailed": "Kilo: Generování commit zprávy selhalo: {{errorMessage}}",
+		"tokenRequired": "Pro generování commit zprávy je vyžadován Kilo Code token",
+		"activationFailed": "Kilo: Aktivace poskytovatele commit zpráv selhala: {{error}}",
+		"providerRegistered": "Kilo: Poskytovatel commit zpráv zaregistrován"
+	}
+}

@@ -41,6 +41,7 @@ import { GetModelsOptions } from "../../shared/api"
 import { generateSystemPrompt } from "./generateSystemPrompt"
 import { getCommand } from "../../utils/commands"
 import { toggleWorkflow, toggleRule, createRuleFile, deleteRuleFile } from "./kilorules"
+import { mermaidFixPrompt } from "../prompts/utilities/mermaid" // kilocode_change
 
 const ALLOWED_VSCODE_SETTINGS = new Set(["terminal.integrated.inheritEnv"])
 
@@ -578,7 +579,7 @@ export const webviewMessageHandler = async (
 			await provider.cancelTask()
 			break
 		case "allowedCommands":
-			await provider.context.globalState.update("allowedCommands", message.commands)
+			await updateGlobalState("allowedCommands", message.commands ?? []) // kilocode_change
 
 			// Also update workspace settings.
 			await vscode.workspace
@@ -1809,6 +1810,34 @@ export const webviewMessageHandler = async (
 		case "toggleTaskFavorite":
 			if (message.text) {
 				await provider.toggleTaskFavorite(message.text)
+			}
+			break
+		case "fixMermaidSyntax":
+			if (message.text && message.requestId) {
+				try {
+					const { apiConfiguration } = await provider.getState()
+
+					const prompt = mermaidFixPrompt(message.values?.error || "Unknown syntax error", message.text)
+
+					const fixedCode = await singleCompletionHandler(apiConfiguration, prompt)
+
+					provider.postMessageToWebview({
+						type: "mermaidFixResponse",
+						requestId: message.requestId,
+						success: true,
+						fixedCode: fixedCode?.trim() || null,
+					})
+				} catch (error) {
+					const errorMessage = error instanceof Error ? error.message : "Failed to fix Mermaid syntax"
+					provider.log(`Error fixing Mermaid syntax: ${errorMessage}`)
+
+					provider.postMessageToWebview({
+						type: "mermaidFixResponse",
+						requestId: message.requestId,
+						success: false,
+						error: errorMessage,
+					})
+				}
 			}
 			break
 		// kilocode_change end

@@ -1,0 +1,50 @@
+{
+	"info": {
+		"settings_imported": "Matagumpay na na-import ang mga setting."
+	},
+	"lowCreditWarning": {
+		"title": "Babala sa Mababang Credit!",
+		"message": "Tingnan kung maaari kang mag-top up ng libreng credits o bumili ng iba pa!"
+	},
+	"rules": {
+		"actions": {
+			"delete": "Tanggalin",
+			"confirmDelete": "Sigurado ka bang gusto mong tanggalin ang {{filename}}?",
+			"deleted": "Tinanggal ang {{filename}}"
+		},
+		"errors": {
+			"noWorkspaceFound": "Walang nahanap na workspace folder",
+			"fileAlreadyExists": "Ang file {{filename}} ay umiiral na",
+			"failedToCreateRuleFile": "Nabigo ang paggawa ng rule file.",
+			"failedToDeleteRuleFile": "Nabigo ang pagtanggal ng rule file."
+		},
+		"templates": {
+			"workflow": {
+				"description": "Paglalarawan ng workflow dito...",
+				"stepsHeader": "## Mga Hakbang",
+				"step1": "Hakbang 1",
+				"step2": "Hakbang 2"
+			},
+			"rule": {
+				"description": "Paglalarawan ng panuntunan dito...",
+				"guidelinesHeader": "## Mga Gabay",
+				"guideline1": "Gabay 1",
+				"guideline2": "Gabay 2"
+			}
+		}
+	},
+	"commitMessage": {
+		"activated": "Na-activate ang Kilo Code commit message generator",
+		"gitNotFound": "⚠️ Hindi nahanap ang Git repository o hindi available ang git",
+		"gitInitError": "⚠️ Git initialization error: {{error}}",
+		"generating": "Kilo: Gumagawa ng commit message...",
+		"analyzingChanges": "Kilo: Sinusuri ang mga staged changes...",
+		"noStagedChangesRepo": "Kilo: Walang nahanap na staged changes sa git repository",
+		"noStagedChanges": "Kilo: Walang nahanap na staged changes na susuriin",
+		"generated": "Kilo: Nagawa na ang commit message!",
+		"generationFailed": "Kilo: Nabigo ang paggawa ng commit message: {{errorMessage}}",
+		"tokenRequired": "Kailangan ang Kilo Code token para sa paggawa ng commit message",
+		"activationFailed": "Kilo: Nabigo ang pag-activate ng commit message provider: {{error}}",
+		"providerRegistered": "Kilo: Naka-register na ang commit message provider"
+	}
+}

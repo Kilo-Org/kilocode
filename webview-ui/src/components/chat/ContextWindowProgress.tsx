@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next"
 
 import { formatLargeNumber } from "@/utils/format"
 import { calculateTokenDistribution } from "@/utils/model-utils"
+import { KiloContextWindowProgressTokensUsed } from "../kilocode/chat/KiloContextWindowProgressTokensUsed"
 
 interface ContextWindowProgressProps {
 	contextWindow: number
@@ -52,7 +53,7 @@ export const ContextWindowProgress = ({ contextWindow, contextTokens, maxTokens 
 								data-testid="context-tokens-used"
 							/>
 							{/* Current tokens used - darkest */}
-							<div className="h-full w-full bg-[var(--vscode-foreground)] transition-width duration-300 ease-out" />
+							<KiloContextWindowProgressTokensUsed currentPercent={currentPercent} />
 						</div>
 
 						{/* Container for reserved tokens */}

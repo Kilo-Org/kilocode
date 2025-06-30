@@ -25,6 +25,17 @@
 	"mermaid": {
 		"loading": "Generant diagrama mermaid...",
 		"render_error": "No es pot renderitzar el diagrama",
+		"fixing_syntax": "Corregint la sintaxi de Mermaid...",
+		"fix_syntax_button": "Corregir sintaxi amb IA",
+		"original_code": "Codi original:",
+		"errors": {
+			"unknown_syntax": "Error de sintaxi desconegut",
+			"fix_timeout": "La sol·licitud de correcció de l'IA ha esgotat el temps",
+			"fix_failed": "La correcció de l'IA ha fallat",
+			"fix_attempts": "No s'ha pogut corregir la sintaxi després de {{attempts}} intents. Últim error: {{error}}",
+			"no_fix_provided": "L'IA no ha pogut proporcionar una correcció",
+			"fix_request_failed": "La sol·licitud de correcció ha fallat"
+		},
 		"buttons": {
 			"zoom": "Zoom",
 			"zoomIn": "Ampliar",

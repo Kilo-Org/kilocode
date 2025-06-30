@@ -1,0 +1,23 @@
+{
+	"unknownError": "Άγνωστο σφάλμα",
+	"authenticationFailed": "Αποτυχία δημιουργίας embeddings: Η ταυτοποίηση απέτυχε. Παρακαλώ έλεγξε το API key σου.",
+	"failedWithStatus": "Αποτυχία δημιουργίας embeddings μετά από {{attempts}} προσπάθειες: HTTP {{statusCode}} - {{errorMessage}}",
+	"failedWithError": "Αποτυχία δημιουργίας embeddings μετά από {{attempts}} προσπάθειες: {{errorMessage}}",
+	"failedMaxAttempts": "Αποτυχία δημιουργίας embeddings μετά από {{attempts}} προσπάθειες",
+	"textExceedsTokenLimit": "Το κείμενο στο δείκτη {{index}} υπερβαίνει το μέγιστο όριο token ({{itemTokens}} > {{maxTokens}}). Παράλειψη.",
+	"rateLimitRetry": "Επιτεύχθηκε το όριο ρυθμού, επανάληψη σε {{delayMs}}ms (προσπάθεια {{attempt}}/{{maxRetries}})",
+	"ollama": {
+		"couldNotReadErrorBody": "Δεν ήταν δυνατή η ανάγνωση του error body",
+		"requestFailed": "Το αίτημα Ollama API απέτυχε με κατάσταση {{status}} {{statusText}}: {{errorBody}}",
+		"invalidResponseStructure": "Μη έγκυρη δομή απόκρισης από το Ollama API: το \"embeddings\" array δεν βρέθηκε ή δεν είναι array.",
+		"embeddingFailed": "Το Ollama embedding απέτυχε: {{message}}"
+	},
+	"scanner": {
+		"unknownErrorProcessingFile": "Άγνωστο σφάλμα κατά την επεξεργασία του αρχείου {{filePath}}",
+		"unknownErrorDeletingPoints": "Άγνωστο σφάλμα κατά τη διαγραφή σημείων για {{filePath}}",
+		"failedToProcessBatchWithError": "Αποτυχία επεξεργασίας παρτίδας μετά από {{maxRetries}} προσπάθειες: {{errorMessage}}"
+	},
+	"vectorStore": {
+		"qdrantConnectionFailed": "Αποτυχία σύνδεσης με τη βάση δεδομένων Qdrant vector. Παρακαλώ βεβαιώσου ότι το Qdrant εκτελείται και είναι προσβάσιμο στο {{qdrantUrl}}. Σφάλμα: {{errorMessage}}"
+	}
+}

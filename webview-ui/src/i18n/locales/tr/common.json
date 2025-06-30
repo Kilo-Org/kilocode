@@ -25,6 +25,17 @@
 	"mermaid": {
 		"loading": "Mermaid diyagramı oluşturuluyor...",
 		"render_error": "Diyagram render edilemiyor",
+		"fixing_syntax": "Mermaid sözdizimi düzeltiliyor...",
+		"fix_syntax_button": "Sözdizimini AI ile düzelt",
+		"original_code": "Orijinal kod:",
+		"errors": {
+			"unknown_syntax": "Bilinmeyen sözdizimi hatası",
+			"fix_timeout": "LLM düzeltme isteği zaman aşımına uğradı",
+			"fix_failed": "LLM düzeltme başarısız oldu",
+			"fix_attempts": "{{attempts}} denemeden sonra sözdizimi düzeltilemedi. Son hata: {{error}}",
+			"no_fix_provided": "LLM düzeltme sağlayamadı",
+			"fix_request_failed": "Düzeltme isteği başarısız oldu"
+		},
 		"buttons": {
 			"zoom": "Yakınlaştır",
 			"zoomIn": "Büyüt",

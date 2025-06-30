@@ -1,9 +1,13 @@
 {
 	"welcome": {
-		"greeting": "Kilo Codeはあなたのために何ができますか？",
-		"introText": "私は利用可能な最速のAIモデルでトレーニングされており、あなたのために超高速でコードを生成する準備ができています！",
-		"ctaButton": "Kilo Codeを無料で試す",
-		"manualModeButton": "自分のAPIキーを使う"
+		"greeting": "Kilo Codeへようこそ！",
+		"introText1": "Kilo Codeは無料のオープンソースAIコーディングエージェントです。",
+		"introText2": "Claude 4 Sonnet、Gemini 2.5 Pro、GPT-4.1、その他450以上の最新のAIモデルと連携します。",
+		"introText3": "無料アカウントを作成して、任意のAIモデルで使用できる$20のトークンを取得しましょう。",
+		"ctaButton": "無料アカウントを作成",
+		"manualModeButton": "自分のAPIキーを使う",
+		"alreadySignedUp": "すでに登録済みですか？",
+		"loginText": "こちらからログイン"
 	},
 	"lowCreditWarning": {
 		"addCredit": "クレジットを追加",
@@ -94,7 +98,8 @@
 				"text": "AI応答",
 				"use_mcp_server": "MCPサーバーの使用状況",
 				"tool": "ツール使用",
-				"unknown": "不明なメッセージタイプ"
+				"unknown": "不明なメッセージタイプ",
+				"user": "ユーザーフィードバック"
 			},
 			"clickToScroll": "{{messageType}}を表示 (#{{messageNumber}})"
 		}

@@ -1,0 +1,163 @@
+{
+	"title": "Lägen",
+	"done": "Klar",
+	"modes": {
+		"title": "Lägen",
+		"createNewMode": "Skapa nytt läge",
+		"editModesConfig": "Redigera lägeskonfiguration",
+		"editGlobalModes": "Redigera Global Modes",
+		"editProjectModes": "Redigera Project Modes (.kilocodemodes)",
+		"createModeHelpText": "Lägen är specialiserade personas som anpassar Kilo Codes beteende. <0>Lär dig om att använda lägen</0> eller <1>anpassa lägen.</1>",
+		"selectMode": "Sök lägen"
+	},
+	"apiConfiguration": {
+		"title": "API-konfiguration",
+		"select": "Välj vilken API-konfiguration som ska användas för detta läge"
+	},
+	"tools": {
+		"title": "Tillgängliga verktyg",
+		"builtInModesText": "Verktyg för inbyggda lägen kan inte ändras",
+		"editTools": "Redigera verktyg",
+		"doneEditing": "Klar med redigering",
+		"allowedFiles": "Tillåtna filer:",
+		"toolNames": {
+			"read": "Läsa filer",
+			"edit": "Redigera filer",
+			"browser": "Använda webbläsare",
+			"command": "Köra kommandon",
+			"mcp": "Använda MCP"
+		},
+		"noTools": "Inga"
+	},
+	"roleDefinition": {
+		"title": "Rolldefinition",
+		"resetToDefault": "Återställ till standard",
+		"description": "Definiera Kilo Codes expertis och personlighet för detta läge. Denna beskrivning formar hur Kilo Code presenterar sig själv och närmar sig uppgifter."
+	},
+	"whenToUse": {
+		"title": "När det ska användas (valfritt)",
+		"description": "Beskriv när detta läge ska användas. Detta hjälper Orchestrator att välja rätt läge för en uppgift.",
+		"resetToDefault": "Återställ till standardbeskrivning för 'När det ska användas'"
+	},
+	"customInstructions": {
+		"title": "Lägesspecifika anpassade instruktioner (valfritt)",
+		"resetToDefault": "Återställ till standard",
+		"description": "Lägg till beteenderiktlinjer specifika för {{modeName}}-läget.",
+		"loadFromFile": "Anpassade instruktioner specifika för {{mode}}-läget kan också laddas från mappen <span>.kilocode/rules/</span> i din arbetsyta (.kilocoderules-{{slug}} är föråldrat och kommer snart att sluta fungera)."
+	},
+	"globalCustomInstructions": {
+		"title": "Anpassade instruktioner för alla lägen",
+		"description": "Dessa instruktioner gäller för alla lägen. De tillhandahåller en grunduppsättning beteenden som kan förbättras av lägesspecifika instruktioner nedan. <0>Läs mer</0>",
+		"loadFromFile": "Instruktioner kan också laddas från mappen <span>.kilocode/rules/</span> i din arbetsyta (.kilocoderules är föråldrat och kommer snart att sluta fungera)."
+	},
+	"systemPrompt": {
+		"preview": "Förhandsgranska System Prompt",
+		"copy": "Kopiera system prompt till urklipp",
+		"title": "System Prompt ({{modeName}}-läge)"
+	},
+	"supportPrompts": {
+		"title": "Stödpromptar",
+		"resetPrompt": "Återställ {{promptType}}-prompt till standard",
+		"prompt": "Prompt",
+		"enhance": {
+			"apiConfiguration": "API-konfiguration",
+			"apiConfigDescription": "Du kan välja en API-konfiguration att alltid använda för att förbättra promptar, eller bara använda vad som för närvarande är valt",
+			"useCurrentConfig": "Använd för närvarande vald API-konfiguration",
+			"testPromptPlaceholder": "Ange en prompt för att testa förbättringen",
+			"previewButton": "Förhandsgranska promptförbättring",
+			"testEnhancement": "Testa förbättring"
+		},
+		"types": {
+			"ENHANCE": {
+				"label": "Förbättra Prompt",
+				"description": "Använd promptförbättring för att få skräddarsydda förslag eller förbättringar för dina inmatningar. Detta säkerställer att Kilo Code förstår din avsikt och ger bästa möjliga svar. Tillgänglig via ✨-ikonen i chatten."
+			},
+			"EXPLAIN": {
+				"label": "Förklara kod",
+				"description": "Få detaljerade förklaringar av kodsnuttar, funktioner eller hela filer. Användbart för att förstå komplex kod eller lära sig nya mönster. Tillgänglig i kodåtgärder (glödlampsikonen i editorn) och editorns kontextmeny (högerklicka på markerad kod)."
+			},
+			"FIX": {
+				"label": "Åtgärda problem",
+				"description": "Få hjälp med att identifiera och lösa buggar, fel eller kodkvalitetsproblem. Ger steg-för-steg-vägledning för att åtgärda problem. Tillgänglig i kodåtgärder (glödlampsikonen i editorn) och editorns kontextmeny (högerklicka på markerad kod)."
+			},
+			"IMPROVE": {
+				"label": "Förbättra kod",
+				"description": "Få förslag på kodoptimering, bättre praxis och arkitektoniska förbättringar samtidigt som funktionaliteten bibehålls. Tillgänglig i kodåtgärder (glödlampsikonen i editorn) och editorns kontextmeny (högerklicka på markerad kod)."
+			},
+			"ADD_TO_CONTEXT": {
+				"label": "Lägg till i kontext",
+				"description": "Lägg till kontext till din aktuella uppgift eller konversation. Användbart för att ge ytterligare information eller förtydliganden. Tillgänglig i kodåtgärder (glödlampsikonen i editorn) och editorns kontextmeny (högerklicka på markerad kod)."
+			},
+			"TERMINAL_ADD_TO_CONTEXT": {
+				"label": "Lägg till terminalinnehåll i kontext",
+				"description": "Lägg till terminalutdata till din aktuella uppgift eller konversation. Användbart för att tillhandahålla kommandoutdata eller loggar. Tillgänglig i terminalens kontextmeny (högerklicka på valt terminalinnehåll)."
+			},
+			"TERMINAL_FIX": {
+				"label": "Åtgärda terminalkommando",
+				"description": "Få hjälp med att åtgärda terminalkommandon som misslyckades eller behöver förbättras. Tillgänglig i terminalens kontextmeny (högerklicka på valt terminalinnehåll)."
+			},
+			"TERMINAL_EXPLAIN": {
+				"label": "Förklara terminalkommando",
+				"description": "Få detaljerade förklaringar av terminalkommandon och deras utdata. Tillgänglig i terminalens kontextmeny (högerklicka på valt terminalinnehåll)."
+			},
+			"NEW_TASK": {
+				"label": "Starta ny uppgift",
+				"description": "Starta en ny uppgift med användarinmatning. Tillgänglig i kommandopaletten."
+			},
+			"COMMIT_MESSAGE": {
+				"label": "Generering av commit-meddelande",
+				"description": "Generera beskrivande commit-meddelanden baserat på dina staged git-ändringar. Anpassa prompten för att generera meddelanden som följer ditt arkivs bästa praxis."
+			}
+		}
+	},
+	"advancedSystemPrompt": {
+		"title": "Avancerat: Åsidosätt System Prompt",
+		"description": "<2>⚠️ Varning:</2> Denna avancerade funktion kringgår säkerhetsåtgärder. <1>LÄS DETTA INNAN DU ANVÄNDER!</1>Åsidosätt standard system prompt genom att skapa en fil på <span>.kilocode/system-prompt-{{slug}}</span>."
+	},
+	"createModeDialog": {
+		"title": "Skapa nytt läge",
+		"close": "Stäng",
+		"name": {
+			"label": "Namn",
+			"placeholder": "Ange lägesnamn"
+		},
+		"slug": {
+			"label": "Slug",
+			"description": "Slug används i URL:er och filnamn. Den ska vara i gemener och endast innehålla bokstäver, siffror och bindestreck."
+		},
+		"saveLocation": {
+			"label": "Sparplats",
+			"description": "Välj var detta läge ska sparas. Projektspecifika lägen har företräde framför globala lägen.",
+			"global": {
+				"label": "Global",
+				"description": "Tillgänglig i alla arbetsytor"
+			},
+			"project": {
+				"label": "Projektspecifik (.kilocodemodes)",
+				"description": "Endast tillgänglig i denna arbetsyta, har företräde framför global"
+			}
+		},
+		"roleDefinition": {
+			"label": "Rolldefinition",
+			"description": "Definiera Kilo Codes expertis och personlighet för detta läge."
+		},
+		"whenToUse": {
+			"label": "När det ska användas (valfritt)",
+			"description": "Ge en tydlig beskrivning av när detta läge är mest effektivt och vilka typer av uppgifter det utmärker sig i."
+		},
+		"tools": {
+			"label": "Tillgängliga verktyg",
+			"description": "Välj vilka verktyg detta läge kan använda."
+		},
+		"customInstructions": {
+			"label": "Anpassade instruktioner (valfritt)",
+			"description": "Lägg till beteenderiktlinjer specifika för detta läge."
+		},
+		"buttons": {
+			"cancel": "Avbryt",
+			"create": "Skapa läge"
+		},
+		"deleteMode": "Ta bort läge"
+	},
+	"allFiles": "alla filer"
+}

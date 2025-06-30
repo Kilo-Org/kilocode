@@ -29,7 +29,11 @@ export class KiloCodeErrorBoundary extends React.Component<Props, State> {
 				<h2 className="text-lg font-bold mt-0 mb-2">Something went wrong</h2>
 				<p className="mb-4">
 					We&apos;re sorry for the inconvenience. Please help us improve by reporting this error. You can
-					reach out to us at <a href="mailto:hi@kilocode.ai">hi@kilocode.ai</a> or on{" "}
+					reach out to us on{" "}
+					<a href="https://github.com/Kilo-Org/kilocode/issues" target="_blank" rel="noreferrer">
+						GitHub
+					</a>{" "}
+					or{" "}
 					<a href="https://discord.kilocode.ai" target="_blank" rel="noreferrer">
 						Discord
 					</a>

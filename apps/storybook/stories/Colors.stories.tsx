@@ -50,7 +50,7 @@ const ColorPreviewTable = () => {
 }
 
 const meta: Meta<typeof ColorPreviewTable> = {
-	title: "UI/Colors",
+	title: "Theme",
 	component: ColorPreviewTable,
 	parameters: {
 		layout: "fullscreen",
@@ -67,7 +67,7 @@ export default meta
 type Story = StoryObj<typeof ColorPreviewTable>
 
 export const ColorPreview: Story = {
-	name: "VS Code Color Variables",
+	name: "Colors",
 	parameters: {
 		docs: {
 			description: {

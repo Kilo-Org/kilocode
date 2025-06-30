@@ -1,0 +1,107 @@
+{
+	"welcome": {
+		"greeting": "Καλώς ήρθες στο Kilo Code!",
+		"introText1": "Το Kilo Code είναι ένας δωρεάν, ανοιχτού κώδικα AI coding agent.",
+		"introText2": "Λειτουργεί με τα πιο πρόσφατα μοντέλα AI όπως Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1, και άλλα 450+.",
+		"introText3": "Δημιούργησε έναν δωρεάν λογαριασμό και πάρε $20 σε tokens για χρήση με οποιοδήποτε μοντέλο AI.",
+		"ctaButton": "Δημιουργία δωρεάν λογαριασμού",
+		"manualModeButton": "Χρησιμοποίησε το δικό σου API key",
+		"alreadySignedUp": "Έχεις ήδη εγγραφεί;",
+		"loginText": "Σύνδεση εδώ"
+	},
+	"lowCreditWarning": {
+		"addCredit": "Προσθήκη Credit",
+		"lowBalance": "Το υπόλοιπο Kilo Code σου είναι χαμηλό"
+	},
+	"notifications": {
+		"toolRequest": "Αίτημα εργαλείου σε αναμονή για έγκριση",
+		"browserAction": "Ενέργεια browser σε αναμονή για έγκριση",
+		"command": "Εντολή σε αναμονή για έγκριση"
+	},
+	"settings": {
+		"sections": {
+			"mcp": "MCP Servers"
+		},
+		"provider": {
+			"apiKey": "Kilo Code API Key",
+			"login": "Σύνδεση στο Kilo Code",
+			"logout": "Αποσύνδεση από το Kilo Code"
+		}
+	},
+	"chat": {
+		"condense": {
+			"wantsToCondense": "Το Kilo Code θέλει να συμπυκνώσει τη συνομιλία σου",
+			"condenseConversation": "Συμπύκνωση Συνομιλίας"
+		}
+	},
+	"newTaskPreview": {
+		"task": "Εργασία"
+	},
+	"profile": {
+		"title": "Προφίλ",
+		"dashboard": "Πίνακας Ελέγχου",
+		"logOut": "Αποσύνδεση",
+		"currentBalance": "ΤΡΕΧΟΝ ΥΠΟΛΟΙΠΟ",
+		"loading": "Φόρτωση...",
+		"signUp": {
+			"title": "Εγγραφή στο Kilo Code",
+			"description": "Η εγγραφή στο Kilo Code σου δίνει δωρεάν credits για να ξεκινήσεις. Χρησιμοποίησε τα credits σου για να εξερευνήσεις τις δυνατότητές μας, δοκίμασε τα πιο πρόσφατα και καλύτερα μοντέλα, και βίωσε τα οφέλη του Kilo Code χωρίς καμία δέσμευση.",
+			"termsAndPrivacy": "Συνεχίζοντας, συμφωνείς με τους <termsLink>Όρους Χρήσης</termsLink> και την <privacyLink>Πολιτική Απορρήτου.</privacyLink>"
+		}
+	},
+	"docs": "Τεκμηρίωση",
+	"rules": {
+		"tooltip": "Διαχείριση Kilo Code Rules και Workflows",
+		"ariaLabel": "Kilo Code Rules",
+		"tabs": {
+			"rules": "Rules",
+			"workflows": "Workflows"
+		},
+		"description": {
+			"rules": "Τα Rules σου επιτρέπουν να δώσεις στο Kilo Code οδηγίες που πρέπει να ακολουθεί σε όλες τις λειτουργίες και για όλα τα prompts. Είναι ένας μόνιμος τρόπος να συμπεριλάβεις πλαίσιο και προτιμήσεις για όλες τις συνομιλίες στο workspace σου ή παγκοσμίως.",
+			"workflows": "Τα Workflows είναι ένα προετοιμασμένο πρότυπο για μια συνομιλία. Τα Workflows μπορούν να σου επιτρέψουν να ορίσεις prompts που χρησιμοποιείς συχνά, και μπορούν να περιλαμβάνουν μια σειρά βημάτων για να καθοδηγήσουν το Kilo Code μέσα από επαναλαμβανόμενες εργασίες, όπως η ανάπτυξη μιας υπηρεσίας ή η υποβολή ενός PR. Για να καλέσεις ένα workflow, πληκτρολόγησε",
+			"workflowsInChat": "στη συνομιλία."
+		},
+		"sections": {
+			"globalRules": "Καθολικά Rules",
+			"workspaceRules": "Workspace Rules",
+			"globalWorkflows": "Καθολικά Workflows",
+			"workspaceWorkflows": "Workspace Workflows"
+		},
+		"validation": {
+			"invalidFileExtension": "Επιτρέπονται μόνο .md, .txt ή χωρίς επέκταση αρχείου"
+		},
+		"placeholders": {
+			"workflowName": "workflow-name (.md, .txt ή χωρίς επέκταση)",
+			"ruleName": "rule-name (.md, .txt ή χωρίς επέκταση)"
+		},
+		"newFile": {
+			"newWorkflowFile": "Νέο αρχείο workflow...",
+			"newRuleFile": "Νέο αρχείο rule..."
+		}
+	},
+	"taskTimeline": {
+		"tooltip": {
+			"clickToScroll": "Προβολή {{messageType}} (#{{messageNumber}})",
+			"messageTypes": {
+				"browser_action_launch": "εκκίνηση browser",
+				"browser_action_result": "αποτέλεσμα ενέργειας browser",
+				"browser_action": "ενέργεια browser",
+				"checkpoint_saved": "αποθηκευμένο checkpoint",
+				"command": "εκτέλεση εντολής",
+				"command_output": "έξοδος εντολής",
+				"completion_result": "αποτέλεσμα ολοκλήρωσης",
+				"condense_context": "συμπύκνωση πλαισίου",
+				"error": "μήνυμα σφάλματος",
+				"followup": "ερώτηση παρακολούθησης",
+				"mcp_server_response": "απόκριση MCP server",
+				"reasoning": "συλλογισμός AI",
+				"text": "απόκριση AI",
+				"tool": "χρήση εργαλείου",
+				"unknown": "άγνωστος τύπος μηνύματος",
+				"use_mcp_server": "χρήση MCP server",
+				"user": "σχόλια χρηστών"
+			}
+		}
+	}
+}

@@ -1,0 +1,74 @@
+{
+	"answers": {
+		"yes": "ใช่",
+		"no": "ไม่",
+		"cancel": "ยกเลิก",
+		"remove": "ลบ",
+		"keep": "เก็บไว้"
+	},
+	"number_format": {
+		"thousand_suffix": "k",
+		"million_suffix": "m",
+		"billion_suffix": "b"
+	},
+	"feedback": {
+		"title": "ข้อเสนอแนะ",
+		"description": "เราอยากได้ยินข้อเสนอแนะของคุณหรือช่วยเหลือเกี่ยวกับปัญหาที่คุณกำลังประสบ",
+		"githubIssues": "รายงานปัญหาบน GitHub",
+		"githubDiscussions": "เข้าร่วมการสนทนาบน GitHub",
+		"discord": "เข้าร่วมชุมชน Discord ของเรา",
+		"customerSupport": "ฝ่ายสนับสนุนลูกค้า"
+	},
+	"ui": {
+		"search_placeholder": "ค้นหา..."
+	},
+	"mermaid": {
+		"loading": "กำลังสร้างไดอะแกรม mermaid...",
+		"render_error": "ไม่สามารถแสดงไดอะแกรม",
+		"fixing_syntax": "กำลังแก้ไขไวยากรณ์ Mermaid...",
+		"fix_syntax_button": "แก้ไขไวยากรณ์ด้วย AI",
+		"original_code": "โค้ดต้นฉบับ:",
+		"errors": {
+			"unknown_syntax": "ข้อผิดพลาดทางไวยากรณ์ที่ไม่รู้จัก",
+			"fix_timeout": "คำขอแก้ไข LLM หมดเวลา",
+			"fix_failed": "การแก้ไข LLM ล้มเหลว",
+			"fix_attempts": "ไม่สามารถแก้ไขไวยากรณ์หลังจากพยายาม {{attempts}} ครั้ง ข้อผิดพลาดล่าสุด: {{error}}",
+			"no_fix_provided": "LLM ไม่สามารถให้การแก้ไขได้",
+			"fix_request_failed": "คำขอแก้ไขล้มเหลว"
+		},
+		"buttons": {
+			"zoom": "ซูม",
+			"zoomIn": "ซูมเข้า",
+			"zoomOut": "ซูมออก",
+			"copy": "คัดลอก",
+			"save": "บันทึกรูปภาพ",
+			"viewCode": "ดูโค้ด",
+			"viewDiagram": "ดูไดอะแกรม",
+			"close": "ปิด"
+		},
+		"modal": {
+			"codeTitle": "โค้ด Mermaid"
+		},
+		"tabs": {
+			"diagram": "ไดอะแกรม",
+			"code": "โค้ด"
+		},
+		"feedback": {
+			"imageCopied": "คัดลอกรูปภาพไปยังคลิปบอร์ดแล้ว",
+			"copyError": "เกิดข้อผิดพลาดในการคัดลอกรูปภาพ"
+		}
+	},
+	"file": {
+		"errors": {
+			"invalidDataUri": "รูปแบบ data URI ไม่ถูกต้อง",
+			"copyingImage": "เกิดข้อผิดพลาดในการคัดลอกรูปภาพ: {{error}}",
+			"openingImage": "เกิดข้อผิดพลาดในการเปิดรูปภาพ: {{error}}",
+			"pathNotExists": "ไม่มีเส้นทาง: {{path}}",
+			"couldNotOpen": "ไม่สามารถเปิดไฟล์: {{error}}",
+			"couldNotOpenGeneric": "ไม่สามารถเปิดไฟล์!"
+		},
+		"success": {
+			"imageDataUriCopied": "คัดลอก image data URI ไปยังคลิปบอร์ดแล้ว"
+		}
+	}
+}

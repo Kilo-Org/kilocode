@@ -1,0 +1,23 @@
+{
+	"unknownError": "Hindi kilalang error",
+	"authenticationFailed": "Nabigo ang paggawa ng embeddings: Nabigo ang authentication. Mangyaring suriin ang iyong API key.",
+	"failedWithStatus": "Nabigo ang paggawa ng embeddings pagkatapos ng {{attempts}} pagtatangka: HTTP {{statusCode}} - {{errorMessage}}",
+	"failedWithError": "Nabigo ang paggawa ng embeddings pagkatapos ng {{attempts}} pagtatangka: {{errorMessage}}",
+	"failedMaxAttempts": "Nabigo ang paggawa ng embeddings pagkatapos ng {{attempts}} pagtatangka",
+	"textExceedsTokenLimit": "Ang teksto sa index {{index}} ay lumalampas sa maximum token limit ({{itemTokens}} > {{maxTokens}}). Nilalaktawan.",
+	"rateLimitRetry": "Naabot ang rate limit, susubukan muli sa {{delayMs}}ms (pagtatangka {{attempt}}/{{maxRetries}})",
+	"ollama": {
+		"couldNotReadErrorBody": "Hindi mabasa ang error body",
+		"requestFailed": "Nabigo ang Ollama API request na may status {{status}} {{statusText}}: {{errorBody}}",
+		"invalidResponseStructure": "Invalid na istraktura ng response mula sa Ollama API: \"embeddings\" array ay hindi nahanap o hindi array.",
+		"embeddingFailed": "Nabigo ang Ollama embedding: {{message}}"
+	},
+	"scanner": {
+		"unknownErrorProcessingFile": "Hindi kilalang error sa pagproseso ng file {{filePath}}",
+		"unknownErrorDeletingPoints": "Hindi kilalang error sa pagtanggal ng mga punto para sa {{filePath}}",
+		"failedToProcessBatchWithError": "Nabigo ang pagproseso ng batch pagkatapos ng {{maxRetries}} pagtatangka: {{errorMessage}}"
+	},
+	"vectorStore": {
+		"qdrantConnectionFailed": "Nabigo ang pagkonekta sa Qdrant vector database. Mangyaring siguraduhing ang Qdrant ay tumatakbo at naa-access sa {{qdrantUrl}}. Error: {{errorMessage}}"
+	}
+}

@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next"
 import type { HistoryItem } from "@roo-code/types"
 
 import { vscode } from "@/utils/vscode"
+import { useCopyToClipboard } from "@/utils/clipboard" // kilocode_change - Added copy utility for task prompt
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import {
 	Button,
@@ -30,6 +31,7 @@ export const TaskActions = ({ item, buttonsDisabled }: TaskActionsProps) => {
 	const [shareDropdownOpen, setShareDropdownOpen] = useState(false)
 	const { t } = useTranslation()
 	const { sharingEnabled } = useExtensionState()
+	const { copyWithFeedback, showCopyFeedback } = useCopyToClipboard() // kilocode_change - Added copy utility for task prompt
 
 	const handleShare = (visibility: "organization" | "public") => {
 		vscode.postMessage({
@@ -93,6 +95,16 @@ export const TaskActions = ({ item, buttonsDisabled }: TaskActionsProps) => {
 				disabled={buttonsDisabled}
 				onClick={() => vscode.postMessage({ type: "exportCurrentTask" })}
 			/>
+			{/* kilocode_change start - Added copy button for task prompt */}
+			{item?.task && (
+				<IconButton
+					iconClass={showCopyFeedback ? "codicon-check" : "codicon-copy"}
+					title={t("history:copyPrompt")}
+					disabled={buttonsDisabled || !item}
+					onClick={(e) => copyWithFeedback(item.task, e)}
+				/>
+			)}
+			{/* kilocode_change end */}
 			{!!item?.size && item.size > 0 && (
 				<>
 					<div className="flex items-center">

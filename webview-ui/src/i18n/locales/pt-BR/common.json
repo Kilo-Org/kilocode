@@ -25,6 +25,17 @@
 	"mermaid": {
 		"loading": "Gerando diagrama mermaid...",
 		"render_error": "Não foi possível renderizar o diagrama",
+		"fixing_syntax": "Corrigindo sintaxe do Mermaid...",
+		"fix_syntax_button": "Corrigir sintaxe com IA",
+		"original_code": "Código original:",
+		"errors": {
+			"unknown_syntax": "Erro de sintaxe desconhecido",
+			"fix_timeout": "Tempo limite da solicitação de correção LLM esgotado",
+			"fix_failed": "Falha na correção LLM",
+			"fix_attempts": "Falha ao corrigir sintaxe após {{attempts}} tentativas. Último erro: {{error}}",
+			"no_fix_provided": "LLM falhou em fornecer uma correção",
+			"fix_request_failed": "Falha na solicitação de correção"
+		},
 		"buttons": {
 			"zoom": "Zoom",
 			"zoomIn": "Ampliar",

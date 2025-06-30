@@ -1,0 +1,74 @@
+{
+	"answers": {
+		"yes": "Так",
+		"no": "Ні",
+		"cancel": "Скасувати",
+		"remove": "Видалити",
+		"keep": "Зберегти"
+	},
+	"number_format": {
+		"thousand_suffix": "тис",
+		"million_suffix": "млн",
+		"billion_suffix": "млрд"
+	},
+	"feedback": {
+		"title": "Зворотний зв'язок",
+		"description": "Ми хотіли б почути твій відгук або допомогти з будь-якими проблемами, з якими ти стикаєшся",
+		"githubIssues": "Повідомити про проблему на GitHub",
+		"githubDiscussions": "Приєднатися до обговорень на GitHub",
+		"discord": "Приєднатися до нашої спільноти Discord",
+		"customerSupport": "Служба підтримки"
+	},
+	"ui": {
+		"search_placeholder": "Пошук..."
+	},
+	"mermaid": {
+		"loading": "Створення діаграми mermaid...",
+		"render_error": "Не вдалося відобразити діаграму",
+		"fixing_syntax": "Виправлення синтаксису Mermaid...",
+		"fix_syntax_button": "Виправити синтаксис за допомогою AI",
+		"original_code": "Оригінальний код:",
+		"errors": {
+			"unknown_syntax": "Невідома синтаксична помилка",
+			"fix_timeout": "Час очікування запиту на виправлення LLM вичерпано",
+			"fix_failed": "Виправлення LLM не вдалося",
+			"fix_attempts": "Не вдалося виправити синтаксис після {{attempts}} спроб. Остання помилка: {{error}}",
+			"no_fix_provided": "LLM не надав виправлення",
+			"fix_request_failed": "Запит на виправлення не вдався"
+		},
+		"buttons": {
+			"zoom": "Масштаб",
+			"zoomIn": "Збільшити",
+			"zoomOut": "Зменшити",
+			"copy": "Копіювати",
+			"save": "Зберегти зображення",
+			"viewCode": "Переглянути код",
+			"viewDiagram": "Переглянути діаграму",
+			"close": "Закрити"
+		},
+		"modal": {
+			"codeTitle": "Код Mermaid"
+		},
+		"tabs": {
+			"diagram": "Діаграма",
+			"code": "Код"
+		},
+		"feedback": {
+			"imageCopied": "Зображення скопійовано в буфер обміну",
+			"copyError": "Помилка копіювання зображення"
+		}
+	},
+	"file": {
+		"errors": {
+			"invalidDataUri": "Недійсний формат data URI",
+			"copyingImage": "Помилка копіювання зображення: {{error}}",
+			"openingImage": "Помилка відкриття зображення: {{error}}",
+			"pathNotExists": "Шлях не існує: {{path}}",
+			"couldNotOpen": "Не вдалося відкрити файл: {{error}}",
+			"couldNotOpenGeneric": "Не вдалося відкрити файл!"
+		},
+		"success": {
+			"imageDataUriCopied": "Image data URI скопійовано в буфер обміну"
+		}
+	}
+}

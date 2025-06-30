@@ -5,13 +5,14 @@ import { TaskTimelineMessage } from "./TaskTimelineMessage"
 import { MAX_HEIGHT_PX as TASK_TIMELINE_MAX_HEIGHT_PX } from "../../utils/timeline/calculateTaskTimelineSizes"
 import { consolidateMessagesForTimeline } from "../../utils/timeline/consolidateMessagesForTimeline"
 import { calculateTaskTimelineSizes } from "../../utils/timeline/calculateTaskTimelineSizes"
-import { getTaskTimelineMessageColor } from "../../utils/timeline/taskTimelineTypeRegistry"
+import { getTaskTimelineMessageColor } from "../../utils/messageColors"
 import { TooltipProvider } from "../ui/tooltip"
+import { useExtensionState } from "../../context/ExtensionStateContext"
 
 // We hide the scrollbars for the TaskTimeline by wrapping it in a container with
 // overflow hidden. This hides the scrollbars for the actual Virtuoso element
 // by clipping them out view. This just needs to be greater than the webview scrollbar width.
-const SCROLLBAR_WIDTH_PX = 15
+const SCROLLBAR_WIDTH_PX = 25
 
 interface TaskTimelineProps {
 	groupedMessages: (ClineMessage | ClineMessage[])[]
@@ -20,8 +21,17 @@ interface TaskTimelineProps {
 }
 
 export const TaskTimeline = memo<TaskTimelineProps>(({ groupedMessages, onMessageClick, isTaskActive = false }) => {
+	const { setHoveringTaskTimeline } = useExtensionState()
 	const virtuosoRef = useRef<VirtuosoHandle>(null)
 	const previousGroupedLengthRef = useRef(groupedMessages.length)
+
+	const handleMouseEnter = useCallback(() => {
+		setHoveringTaskTimeline(true)
+	}, [setHoveringTaskTimeline])
+
+	const handleMouseLeave = useCallback(() => {
+		setHoveringTaskTimeline(false)
+	}, [setHoveringTaskTimeline])
 
 	const timelineMessagesData = useMemo(() => {
 		const { processedMessages, messageToOriginalIndex } = consolidateMessagesForTimeline(groupedMessages)
@@ -72,7 +82,11 @@ export const TaskTimeline = memo<TaskTimelineProps>(({ groupedMessages, onMessag
 
 	return (
 		<TooltipProvider>
-			<div className="w-full px-2 overflow-hidden" style={{ height: `${TASK_TIMELINE_MAX_HEIGHT_PX}px` }}>
+			<div
+				className="w-full px-2 overflow-hidden"
+				style={{ height: `${TASK_TIMELINE_MAX_HEIGHT_PX}px` }}
+				onMouseEnter={handleMouseEnter}
+				onMouseLeave={handleMouseLeave}>
 				<Virtuoso
 					ref={virtuosoRef}
 					data={timelineMessagesData}

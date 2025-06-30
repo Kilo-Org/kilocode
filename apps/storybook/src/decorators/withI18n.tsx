@@ -2,6 +2,7 @@ import { useEffect } from "react"
 import type { Decorator } from "@storybook/react"
 import i18n from "../../../../webview-ui/src/i18n/setup"
 import { loadTranslations } from "../../../../webview-ui/src/i18n/setup"
+import TranslationProvider from "@/i18n/TranslationContext"
 
 /**
  * Storybook decorator that sets up i18n for all stories
@@ -13,5 +14,9 @@ export const withI18n: Decorator = (Story) => {
 		i18n.changeLanguage("en") // English
 	}, [])
 
-	return <Story />
+	return (
+		<TranslationProvider>
+			<Story />
+		</TranslationProvider>
+	)
 }

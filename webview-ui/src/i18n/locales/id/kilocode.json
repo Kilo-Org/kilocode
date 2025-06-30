@@ -1,9 +1,13 @@
 {
 	"welcome": {
-		"greeting": "Apa yang bisa Kilo Code lakukan untuk Anda?",
-		"introText": "Saya telah dilatih pada model AI tercepat yang tersedia dan saya siap menghasilkan kode untuk kamu dengan kecepatan warp!",
-		"ctaButton": "Coba Kilo Code gratis",
-		"manualModeButton": "Gunakan API key sendiri"
+		"greeting": "Selamat datang di Kilo Code!",
+		"introText1": "Kilo Code adalah agen coding AI gratis dan open source.",
+		"introText2": "Bekerja dengan model AI terbaru seperti Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1, dan lebih dari 450 model lainnya.",
+		"introText3": "Buat akun gratis dan dapatkan $20 token untuk digunakan dengan model AI apapun.",
+		"ctaButton": "Buat akun gratis",
+		"manualModeButton": "Gunakan API key sendiri",
+		"alreadySignedUp": "Sudah mendaftar?",
+		"loginText": "Masuk di sini"
 	},
 	"lowCreditWarning": {
 		"addCredit": "Tambah Kredit",
@@ -95,7 +99,8 @@
 				"reasoning": "Penalaran AI",
 				"tool": "penggunaan alat",
 				"unknown": "jenis pesan tidak diketahui",
-				"use_mcp_server": "Penggunaan server MCP"
+				"use_mcp_server": "Penggunaan server MCP",
+				"user": "umpan balik pengguna"
 			}
 		}
 	}
