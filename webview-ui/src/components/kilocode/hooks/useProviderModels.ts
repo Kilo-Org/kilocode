@@ -31,7 +31,7 @@ import {
 } from "@roo-code/types"
 import { cerebrasModels, cerebrasDefaultModelId } from "@roo/api"
 import type { ModelRecord, RouterModels } from "@roo/api"
-import { useRouterModels } from "./useRouterModels"
+import { useRouterModels } from "../../ui/hooks/useRouterModels"
 
 const FALLBACK_MODELS = {
 	models: anthropicModels,

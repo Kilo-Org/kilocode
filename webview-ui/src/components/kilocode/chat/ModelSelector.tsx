@@ -4,9 +4,9 @@ import type { ProviderSettings } from "@roo-code/types"
 import { vscode } from "@src/utils/vscode"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { cn } from "@src/lib/utils"
-import { useProviderModels } from "../../ui/hooks/useProviderModels"
 import { prettyModelName } from "../../../utils/prettyModelName"
-import { getModelIdKey, getSelectedModelId } from "../../ui/hooks/useSelectedModel"
+import { useProviderModels } from "../hooks/useProviderModels"
+import { getModelIdKey, getSelectedModelId } from "../hooks/useSelectedModel"
 
 interface ModelSelectorProps {
 	currentApiConfigName?: string

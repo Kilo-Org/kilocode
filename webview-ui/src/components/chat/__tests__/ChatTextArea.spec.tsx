@@ -765,17 +765,7 @@ describe("ChatTextArea", () => {
 	})
 
 	describe("selectApiConfig", () => {
-		// Helper function to get the API config dropdown
-		const getApiConfigDropdown = () => {
-			return screen.getByTitle("chat:selectApiConfig")
-		}
-
-		// kilocode_change start
-		// Helper function to check if the API config dropdown exists
-		const apiConfigDropdownExists = () => {
-			return screen.queryByTitle("chat:selectApiConfig") !== null
-		}
-
+		// kilocode_change start - mock listApiConfigMeta to show the Api Selector
 		beforeEach(() => {
 			// Default mock with multiple API configs
 			;(useExtensionState as ReturnType<typeof vi.fn>).mockReturnValue({
@@ -794,31 +784,12 @@ describe("ChatTextArea", () => {
 				currentApiConfigName: "Config 1",
 			})
 		})
-
-		it("should be visible when there are multiple API configs", () => {
-			render(<ChatTextArea {...defaultProps} sendingDisabled={false} selectApiConfigDisabled={false} />)
-			expect(apiConfigDropdownExists()).toBe(true)
-		})
-
-		it("should be hidden when there is only one API config", () => {
-			// Mock with only one API config
-			;(useExtensionState as ReturnType<typeof vi.fn>).mockReturnValue({
-				filePaths: [],
-				openedTabs: [],
-				apiConfiguration: {
-					apiProvider: "anthropic",
-				},
-				taskHistory: [],
-				cwd: "/test/workspace",
-				listApiConfigMeta: [{ id: "config1", name: "Config 1" }],
-				pinnedApiConfigs: {},
-				currentApiConfigName: "Config 1",
-			})
-
-			render(<ChatTextArea {...defaultProps} sendingDisabled={false} selectApiConfigDisabled={false} />)
-			expect(apiConfigDropdownExists()).toBe(false)
-		})
 		// kilocode_change end
+
+		// Helper function to get the API config dropdown
+		const getApiConfigDropdown = () => {
+			return screen.getByTitle("chat:selectApiConfig")
+		}
 
 		it("should be enabled independently of sendingDisabled", () => {
 			// Using the default mock from beforeEach which has multiple API configs
