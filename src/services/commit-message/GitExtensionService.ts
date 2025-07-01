@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
 import * as path from "path"
 import { execSync } from "child_process"
+import { shouldExcludeFromGitDiff } from "./exclusionUtils"
 
 export interface GitChange {
 	filePath: string
@@ -109,49 +110,76 @@ export class GitExtensionService {
 	}
 
 	/**
-	 * Gets the diff of staged changes
+	 * Gets the diff of staged changes, automatically excluding files based on shouldExcludeFromGitDiff
 	 * @private Internal helper method
 	 */
 	private getStagedDiff(): string {
-		return this.executeGitCommand("git diff --cached")
+		try {
+			const diffs: string[] = []
+			const stagedFiles = this.getStagedFilesList()
+
+			for (const filePath of stagedFiles) {
+				// Filter out excluded files and generate diffs per file
+				if (!shouldExcludeFromGitDiff(filePath)) {
+					const fileDiff = this.getStagedDiffForFile(filePath)
+					if (fileDiff.trim()) {
+						diffs.push(fileDiff)
+					}
+				}
+			}
+
+			return diffs.join("\n")
+		} catch (error) {
+			console.error("Error generating staged diff:", error)
+			return ""
+		}
 	}
 
 	/**
-	 * Gets only the staged files using git diff --cached
-	 * @private Internal helper method
+	 * Gets the list of staged files
+	 * @private Helper method to get staged file names
 	 */
+	private getStagedFilesList(): string[] {
+		try {
+			const statusOutput = this.executeGitCommand("git diff --name-only --cached")
+			return statusOutput
+				.split("\n")
+				.map((line) => line.trim())
+				.filter((line) => line.length > 0)
+		} catch (error) {
+			console.error("Error getting staged files list:", error)
+			return []
+		}
+	}
+
+	/**
+	 * Gets the diff for a specific staged file
+	 * @private Helper method to get diff for individual file
+	 */
+	private getStagedDiffForFile(filePath: string): string {
+		try {
+			// Use proper shell quoting for the file path
+			const quotedPath = `'${filePath.replace(/'/g, "'\"'\"'")}'`
+			const command = `git diff --cached -- ${quotedPath}`
+			return this.executeGitCommand(command)
+		} catch (error) {
+			console.error(`Error getting diff for file ${filePath}:`, error)
+			return ""
+		}
+	}
+
 	private getStagedStatus(): string {
 		return this.executeGitCommand("git diff --name-status --cached")
 	}
 
-	/**
-	 * Gets a summary of staged changes
-	 * @private Internal helper method
-	 */
 	private getStagedSummary(): string {
 		return this.executeGitCommand("git diff --cached --stat")
 	}
 
-	/**
-	 * Gets extended context for complex changes
-	 * @private Internal helper method
-	 */
-	private getExtendedDiff(): string {
-		return this.executeGitCommand("git diff --cached --unified=5")
-	}
-
-	/**
-	 * Gets the current branch name
-	 * @private Internal helper method
-	 */
 	private getCurrentBranch(): string {
 		return this.executeGitCommand("git branch --show-current")
 	}
 
-	/**
-	 * Gets recent commits for context
-	 * @private Internal helper method
-	 */
 	private getRecentCommits(count: number = 5): string {
 		return this.executeGitCommand(`git log --oneline -${count}`)
 	}
