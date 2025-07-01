@@ -27,6 +27,8 @@ export const CheckpointSaved = ({ checkpoint, ...props }: CheckpointSavedProps) 
 		}
 
 		// kilocode_change start
+		// ifFirst is misscalculated by the ShadowCheckpointService because use the lenght of the array of the checkpoint
+		// insead of the from-to attributes and need to be removed from the checkpointShema and calculated on the frontend
 		return {
 			...result.data,
 			isFirst: result.data.from === result.data.to,
