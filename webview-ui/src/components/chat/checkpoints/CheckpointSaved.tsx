@@ -26,7 +26,12 @@ export const CheckpointSaved = ({ checkpoint, ...props }: CheckpointSavedProps) 
 			return undefined
 		}
 
-		return result.data
+		// kilocode_change start
+		return {
+			...result.data,
+			isFirst: result.data.from === result.data.to,
+		}
+		// kilocode_change end
 	}, [checkpoint])
 
 	if (!metadata) {
