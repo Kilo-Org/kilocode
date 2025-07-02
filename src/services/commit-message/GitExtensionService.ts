@@ -136,34 +136,16 @@ export class GitExtensionService {
 		}
 	}
 
-	/**
-	 * Gets the list of staged files
-	 */
 	private getStagedFilesList(): string[] {
-		try {
-			const statusOutput = this.executeGitCommand("git diff --name-only --cached")
-			return statusOutput
-				.split("\n")
-				.map((line) => line.trim())
-				.filter((line) => line.length > 0)
-		} catch (error) {
-			console.error("Error getting staged files list:", error)
-			return []
-		}
+		return this.executeGitCommand("git diff --name-only --cached")
+			.split("\n")
+			.map((line) => line.trim())
+			.filter((line) => line.length > 0)
 	}
 
-	/**
-	 * Gets the diff for a specific staged file
-	 */
 	private getStagedDiffForFile(filePath: string): string {
-		try {
-			// Use proper shell quoting for the file path
-			const quotedPath = `'${filePath.replace(/'/g, "'\"'\"'")}'`
-			return this.executeGitCommand(`git diff --cached -- ${quotedPath}`)
-		} catch (error) {
-			console.error(`Error getting diff for file ${filePath}:`, error)
-			return ""
-		}
+		const quotedPath = `'${filePath.replace(/'/g, "'\"'\"'")}'`
+		return this.executeGitCommand(`git diff --cached -- ${quotedPath}`)
 	}
 
 	private getStagedStatus(): string {
