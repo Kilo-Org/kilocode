@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 import * as path from "path"
 import { execSync } from "child_process"
-import { shouldExcludeFromGitDiff } from "./exclusionUtils"
+import { shouldExcludeLockFile } from "./exclusionUtils"
 
 export interface GitChange {
 	filePath: string
@@ -111,7 +111,6 @@ export class GitExtensionService {
 
 	/**
 	 * Gets the diff of staged changes, automatically excluding files based on shouldExcludeFromGitDiff
-	 * @private Internal helper method
 	 */
 	private getStagedDiff(): string {
 		try {
@@ -119,12 +118,9 @@ export class GitExtensionService {
 			const stagedFiles = this.getStagedFilesList()
 
 			for (const filePath of stagedFiles) {
-				// Filter out excluded files and generate diffs per file
-				if (!shouldExcludeFromGitDiff(filePath)) {
-					const fileDiff = this.getStagedDiffForFile(filePath)
-					if (fileDiff.trim()) {
-						diffs.push(fileDiff)
-					}
+				if (!shouldExcludeLockFile(filePath)) {
+					const diff = this.getStagedDiffForFile(filePath).trim()
+					diffs.push(diff)
 				}
 			}
 
@@ -137,7 +133,6 @@ export class GitExtensionService {
 
 	/**
 	 * Gets the list of staged files
-	 * @private Helper method to get staged file names
 	 */
 	private getStagedFilesList(): string[] {
 		try {
@@ -154,14 +149,12 @@ export class GitExtensionService {
 
 	/**
 	 * Gets the diff for a specific staged file
-	 * @private Helper method to get diff for individual file
 	 */
 	private getStagedDiffForFile(filePath: string): string {
 		try {
 			// Use proper shell quoting for the file path
 			const quotedPath = `'${filePath.replace(/'/g, "'\"'\"'")}'`
-			const command = `git diff --cached -- ${quotedPath}`
-			return this.executeGitCommand(command)
+			return this.executeGitCommand(`git diff --cached -- ${quotedPath}`)
 		} catch (error) {
 			console.error(`Error getting diff for file ${filePath}:`, error)
 			return ""

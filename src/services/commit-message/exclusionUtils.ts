@@ -1,3 +1,6 @@
+import ignore, { Ignore } from "ignore"
+import { normalize } from "path"
+
 const lockFiles: string[] = [
 	// --- JavaScript / Node.js ---
 	"package-lock.json",
@@ -122,22 +125,40 @@ const lockFiles: string[] = [
 	"devcontainer.lock.json", // DevContainer CLI
 ]
 
-export function shouldExcludeFromGitDiff(filename: string): boolean {
-	// Handle exact filename matches
-	if (lockFiles.includes(filename)) {
-		return true
-	}
+const createLockFileIgnoreInstance = (): Ignore => {
+	const ignoreInstance = ignore()
 
-	// Handle directory-based exclusions
+	// Add lock file patterns - use glob patterns to match files in any directory
+	const lockFilePatterns = lockFiles.map((file) => `**/${file}`)
+	ignoreInstance.add(lockFilePatterns)
+
+	// Add directory patterns - use ** to match these directories anywhere in the path
 	const directoryPatterns = [
-		"kotlin-js-store",
-		"elm-stuff",
-		".yarn/cache",
-		".yarn/unplugged",
-		".yarn/build-state.yml",
-		".yarn/install-state.gz",
+		"**/kotlin-js-store",
+		"**/kotlin-js-store/**",
+		"**/elm-stuff",
+		"**/elm-stuff/**",
+		"**/.yarn/cache/**",
+		"**/.yarn/unplugged/**",
+		"**/.yarn/build-state.yml",
+		"**/.yarn/install-state.gz",
 	]
+	ignoreInstance.add(directoryPatterns)
 
-	// Check if filename contains any directory patterns
-	return directoryPatterns.some((pattern) => filename.includes(pattern))
+	return ignoreInstance
+}
+
+const lockFileIgnoreInstance = createLockFileIgnoreInstance() // Singleton ignore instance
+
+/**
+ * Determines if a file should be excluded from git diffs based on lock file patterns.
+ * This function specifically handles package manager lock files and build artifacts
+ * that typically shouldn't be included in commit message generation.
+ *
+ * @param filename - The filename to check (can be a full path or just filename)
+ * @returns boolean - true if the file should be excluded from git diffs
+ */
+export function shouldExcludeLockFile(filePath: string): boolean {
+	const normalizedPath = normalize(filePath)
+	return lockFileIgnoreInstance.ignores(normalizedPath)
 }
