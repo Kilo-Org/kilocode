@@ -769,16 +769,12 @@ describe("ChatTextArea", () => {
 		const getApiConfigDropdown = () => {
 			return screen.getByTitle("chat:selectApiConfig")
 		}
-
 		it("should be enabled independently of sendingDisabled", () => {
-			// Using the default mock from beforeEach which has multiple API configs
 			render(<ChatTextArea {...defaultProps} sendingDisabled={true} selectApiConfigDisabled={false} />)
 			const apiConfigDropdown = getApiConfigDropdown()
 			expect(apiConfigDropdown).not.toHaveAttribute("disabled")
 		})
-
 		it("should be disabled when selectApiConfigDisabled is true", () => {
-			// Using the default mock from beforeEach which has multiple API configs
 			render(<ChatTextArea {...defaultProps} sendingDisabled={true} selectApiConfigDisabled={true} />)
 			const apiConfigDropdown = getApiConfigDropdown()
 			expect(apiConfigDropdown).toHaveAttribute("disabled")
