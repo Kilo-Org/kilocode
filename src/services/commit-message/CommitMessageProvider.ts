@@ -49,6 +49,7 @@ export class CommitMessageProvider {
 			this.generateCommitMessage(),
 		)
 		this.context.subscriptions.push(disposable)
+		this.context.subscriptions.push(this.gitService)
 	}
 
 	/**
@@ -75,7 +76,7 @@ export class CommitMessageProvider {
 						return
 					}
 
-					const gitContextString = this.gitService.getCommitContext(changes)
+					const gitContextString = await this.gitService.getCommitContext(changes)
 					progress.report({ increment: 50, message: t("kilocode:commitMessage.generating") })
 
 					const generatedMessage = await this.callAIForCommitMessage(gitContextString)
@@ -191,5 +192,9 @@ FINAL REMINDER: Your message MUST be COMPLETELY DIFFERENT from the previous mess
 		const withoutQuotes = withoutCodeBlocks.replace(/^["'`]|["'`]$/g, "")
 
 		return withoutQuotes.trim()
+	}
+
+	public dispose() {
+		this.gitService.dispose()
 	}
 }

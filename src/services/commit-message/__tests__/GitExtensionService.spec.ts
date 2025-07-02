@@ -1,8 +1,7 @@
 // npx vitest services/commit-message/__tests__/GitExtensionService.spec.ts
-
+import { execSync } from "child_process"
 import type { Mock } from "vitest"
 import { GitExtensionService } from "../GitExtensionService"
-import { shouldExcludeFromGitDiff } from "../exclusionUtils"
 
 // Mock child_process
 vi.mock("child_process", () => ({
@@ -13,6 +12,12 @@ vi.mock("child_process", () => ({
 vi.mock("vscode", () => ({
 	workspace: {
 		workspaceFolders: [{ uri: { fsPath: "/test/workspace" } }],
+		createFileSystemWatcher: vi.fn(() => ({
+			onDidCreate: vi.fn(),
+			onDidChange: vi.fn(),
+			onDidDelete: vi.fn(),
+			dispose: vi.fn(),
+		})),
 	},
 	extensions: {
 		getExtension: vi.fn(),
@@ -21,9 +26,8 @@ vi.mock("vscode", () => ({
 		clipboard: { writeText: vi.fn() },
 	},
 	window: { showInformationMessage: vi.fn() },
+	RelativePattern: vi.fn().mockImplementation((base, pattern) => ({ base, pattern })),
 }))
-
-import { execSync } from "child_process"
 
 const mockExecSync = execSync as Mock
 
@@ -36,7 +40,7 @@ describe("GitExtensionService", () => {
 	})
 
 	describe("getStagedDiff", () => {
-		it("should generate diffs per file and exclude files using shouldExcludeFromGitDiff", () => {
+		it("should generate diffs per file and exclude files properly", () => {
 			// Mock the staged files list
 			const stagedFiles = ["src/test.ts", "package-lock.json", "src/utils.ts"]
 			const mockFileListOutput = stagedFiles.join("\n")

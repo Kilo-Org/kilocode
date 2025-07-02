@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import * as path from "path"
 import { execSync } from "child_process"
 import { shouldExcludeLockFile } from "./exclusionUtils"
+import { RooIgnoreController } from "../../core/ignore/RooIgnoreController"
 
 export interface GitChange {
 	filePath: string
@@ -13,9 +14,13 @@ export interface GitChange {
  */
 export class GitExtensionService {
 	private workspaceRoot: string | undefined
+	private ignoreController: RooIgnoreController
 
 	constructor() {
-		this.workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+		this.workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd()
+
+		this.ignoreController = new RooIgnoreController(this.workspaceRoot)
+		this.ignoreController.initialize()
 	}
 
 	/**
@@ -118,7 +123,7 @@ export class GitExtensionService {
 			const stagedFiles = this.getStagedFilesList()
 
 			for (const filePath of stagedFiles) {
-				if (!shouldExcludeLockFile(filePath)) {
+				if (this.ignoreController.validateAccess(filePath) && !shouldExcludeLockFile(filePath)) {
 					const diff = this.getStagedDiffForFile(filePath).trim()
 					diffs.push(diff)
 				}
@@ -269,5 +274,9 @@ export class GitExtensionService {
 			default:
 				return "Unknown"
 		}
+	}
+
+	public dispose() {
+		this.ignoreController.dispose()
 	}
 }
