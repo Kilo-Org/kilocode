@@ -985,56 +985,6 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 		const placeholderBottomText = `\n(${t("chat:addContext")}${shouldDisableImages ? `, ${t("chat:dragFiles")}` : `, ${t("chat:dragFilesImages")}`})`
 
-		// kilocode_change start
-		const selectApiConfigOptions = useMemo(() => {
-			return [
-				// Pinned items first.
-				...(listApiConfigMeta || [])
-					.filter((config) => pinnedApiConfigs && pinnedApiConfigs[config.id])
-					.map((config) => ({
-						value: config.id,
-						label: config.name,
-						name: config.name, // Keep name for comparison with currentApiConfigName.
-						type: DropdownOptionType.ITEM,
-						pinned: true,
-					}))
-					.sort((a, b) => a.label.localeCompare(b.label)),
-				// If we have pinned items and unpinned items, add a separator.
-				...(pinnedApiConfigs &&
-				Object.keys(pinnedApiConfigs).length > 0 &&
-				(listApiConfigMeta || []).some((config) => !pinnedApiConfigs[config.id])
-					? [
-							{
-								value: "sep-pinned",
-								label: t("chat:separator"),
-								type: DropdownOptionType.SEPARATOR,
-							},
-						]
-					: []),
-				// Unpinned items sorted alphabetically.
-				...(listApiConfigMeta || [])
-					.filter((config) => !pinnedApiConfigs || !pinnedApiConfigs[config.id])
-					.map((config) => ({
-						value: config.id,
-						label: config.name,
-						name: config.name, // Keep name for comparison with currentApiConfigName.
-						type: DropdownOptionType.ITEM,
-						pinned: false,
-					}))
-					.sort((a, b) => a.label.localeCompare(b.label)),
-				{
-					value: "sep-2",
-					label: t("chat:separator"),
-					type: DropdownOptionType.SEPARATOR,
-				},
-				{
-					value: "settingsButtonClicked",
-					label: t("chat:edit"),
-					type: DropdownOptionType.ACTION,
-				},
-			]
-		}, [t, listApiConfigMeta, pinnedApiConfigs])
-
 		return (
 			<div
 				className={cn(
@@ -1318,15 +1268,59 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						</div>
 
 						{/* kilocode_change start - hide if there is only one profile */}
-						<div className={cn("shrink-0 w-[70px]", selectApiConfigOptions.length < 4 && "hidden")}>
+						<div className={cn("shrink-0 w-[70px]", (listApiConfigMeta?.length ?? 0) < 2 && "hidden")}>
 							{/* kilocode_change end */}
 							<SelectDropdown
 								value={currentConfigId}
 								disabled={selectApiConfigDisabled}
 								title={t("chat:selectApiConfig")}
 								placeholder={displayName}
-								// kilocode_change start
-								options={selectApiConfigOptions}
+								options={[
+									// Pinned items first.
+									...(listApiConfigMeta || [])
+										.filter((config) => pinnedApiConfigs && pinnedApiConfigs[config.id])
+										.map((config) => ({
+											value: config.id,
+											label: config.name,
+											name: config.name, // Keep name for comparison with currentApiConfigName.
+											type: DropdownOptionType.ITEM,
+											pinned: true,
+										}))
+										.sort((a, b) => a.label.localeCompare(b.label)),
+									// If we have pinned items and unpinned items, add a separator.
+									...(pinnedApiConfigs &&
+									Object.keys(pinnedApiConfigs).length > 0 &&
+									(listApiConfigMeta || []).some((config) => !pinnedApiConfigs[config.id])
+										? [
+												{
+													value: "sep-pinned",
+													label: t("chat:separator"),
+													type: DropdownOptionType.SEPARATOR,
+												},
+											]
+										: []),
+									// Unpinned items sorted alphabetically.
+									...(listApiConfigMeta || [])
+										.filter((config) => !pinnedApiConfigs || !pinnedApiConfigs[config.id])
+										.map((config) => ({
+											value: config.id,
+											label: config.name,
+											name: config.name, // Keep name for comparison with currentApiConfigName.
+											type: DropdownOptionType.ITEM,
+											pinned: false,
+										}))
+										.sort((a, b) => a.label.localeCompare(b.label)),
+									{
+										value: "sep-2",
+										label: t("chat:separator"),
+										type: DropdownOptionType.SEPARATOR,
+									},
+									{
+										value: "settingsButtonClicked",
+										label: t("chat:edit"),
+										type: DropdownOptionType.ACTION,
+									},
+								]}
 								onChange={(value) => {
 									if (value === "settingsButtonClicked") {
 										vscode.postMessage({
