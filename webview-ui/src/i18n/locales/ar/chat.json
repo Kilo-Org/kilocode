@@ -116,6 +116,7 @@
 	},
 	"selectMode": "اختر نمط التفاعل",
 	"selectApiConfig": "اختر إعدادات API",
+	"selectModelConfig": "اختر النموذج",
 	"enhancePrompt": "حسّن الموجه بإضافة سياق",
 	"modeSelector": {
 		"title": "الأنماط",
