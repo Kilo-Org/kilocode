@@ -110,6 +110,16 @@ describe("read_file tool with maxReadFileLine setting", () => {
 		mockCline.cwd = "/"
 		mockCline.task = "Test"
 		mockCline.providerRef = mockProvider
+		mockCline.api = {
+			getModel: vi.fn().mockReturnValue({
+				id: "claude-3",
+				info: {
+					contextWindow: 200000,
+				},
+			}),
+			countTokens: vi.fn().mockResolvedValue(100),
+			createMessage: vi.fn().mockResolvedValue({ text: "mock response" }),
+		}
 		mockCline.rooIgnoreController = {
 			validateAccess: vi.fn().mockReturnValue(true),
 		}
@@ -367,6 +377,16 @@ describe("read_file tool XML output structure", () => {
 		mockCline.cwd = "/"
 		mockCline.task = "Test"
 		mockCline.providerRef = mockProvider
+		mockCline.api = {
+			getModel: vi.fn().mockReturnValue({
+				id: "claude-3",
+				info: {
+					contextWindow: 200000,
+				},
+			}),
+			countTokens: vi.fn().mockResolvedValue(100),
+			createMessage: vi.fn().mockResolvedValue({ text: "mock response" }),
+		}
 		mockCline.rooIgnoreController = {
 			validateAccess: vi.fn().mockReturnValue(true),
 		}

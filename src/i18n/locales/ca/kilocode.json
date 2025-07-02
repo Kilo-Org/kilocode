@@ -46,5 +46,10 @@
 		"tokenRequired": "Es requereix el token de Kilo Code per a la generació de missatges de commit",
 		"activationFailed": "Kilo: No s'ha pogut activar el proveïdor de missatges de confirmació: {{error}}",
 		"providerRegistered": "Kilo: S'ha registrat el proveïdor de missatges de confirmació"
+	},
+	"userFeedback": {
+		"message_update_failed": "Ha fallat l'actualització del missatge",
+		"no_checkpoint_found": "No s'ha trobat cap punt de control abans d'aquest missatge",
+		"message_updated": "S'ha actualitzat el missatge correctament"
 	}
 }

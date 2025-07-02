@@ -2,6 +2,11 @@
 	"info": {
 		"settings_imported": "Einstellungen erfolgreich importiert."
 	},
+	"userFeedback": {
+		"message_update_failed": "Fehler beim Aktualisieren der Nachricht",
+		"no_checkpoint_found": "Kein Checkpoint vor dieser Nachricht gefunden",
+		"message_updated": "Nachricht erfolgreich aktualisiert"
+	},
 	"lowCreditWarning": {
 		"title": "Warnung: Niedriges Guthaben!",
 		"message": "Prüfen Sie, ob Sie kostenloses Guthaben aufladen oder mehr kaufen können!"

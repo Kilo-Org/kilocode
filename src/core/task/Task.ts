@@ -1709,7 +1709,8 @@ export class Task extends EventEmitter<ClineEvents> {
 			return SYSTEM_PROMPT(
 				provider.context,
 				this.cwd,
-				(this.api.getModel().info.supportsComputerUse ?? false) && (browserToolEnabled ?? true),
+				// kilocode_change: supports images => supports browser, front-running on https://github.com/RooCodeInc/Roo-Code/pull/5026
+				(this.api.getModel().info.supportsImages ?? false) && (browserToolEnabled ?? true),
 				mcpHub,
 				this.diffStrategy,
 				browserViewportSize,

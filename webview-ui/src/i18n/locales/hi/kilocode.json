@@ -26,6 +26,12 @@
 			"apiKey": "Kilo Code API कुंजी",
 			"login": "Kilo Code में लॉग इन करें",
 			"logout": "Kilo Code से लॉग आउट करें"
+		},
+		"contextManagement": {
+			"allowVeryLargeReads": {
+				"label": "बहुत बड़ी फ़ाइल पढ़ने की अनुमति दें",
+				"description": "जब सक्षम हो, तो Kilo Code बहुत बड़ी फ़ाइल या MCP आउटपुट रीड्स करेगा भले ही संदर्भ विंडो के ओवरफ्लो होने की उच्च संभावना हो (सामग्री का आकार संदर्भ विंडो का >80%)।"
+			}
 		}
 	},
 	"chat": {
@@ -103,5 +109,10 @@
 				"user": "उपयोगकर्ता प्रतिक्रिया"
 			}
 		}
+	},
+	"userFeedback": {
+		"editCancel": "रद्द करें",
+		"send": "भेजें",
+		"restoreAndSend": "पुनर्स्थापित करें और भेजें"
 	}
 }

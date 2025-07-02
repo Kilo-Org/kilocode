@@ -3,10 +3,6 @@ import { parseMentions } from "./index"
 import { UrlContentFetcher } from "../../services/browser/UrlContentFetcher"
 import { FileContextTracker } from "../context-tracking/FileContextTracker"
 
-// kilocode_change begin
-import { parseSlashCommands } from "../slash-commands"
-// kilocode_change end
-
 /**
  * Process mentions in user content, specifically within task and feedback tags
  */
@@ -41,17 +37,17 @@ export async function processUserContentMentions({
 
 			if (block.type === "text") {
 				if (shouldProcessMentions(block.text)) {
-					// kilocode_change begin: pull slash commands from Cline
-					let parsedText = await parseMentions(block.text, cwd, urlContentFetcher, fileContextTracker)
-
-					// when parsing slash commands, we still want to allow the user to provide their desired context
-					parsedText = parseSlashCommands(parsedText)
-
 					return {
 						...block,
-						text: parsedText,
+						text: await parseMentions(
+							block.text,
+							cwd,
+							urlContentFetcher,
+							fileContextTracker,
+							rooIgnoreController,
+							showRooIgnoredFiles,
+						),
 					}
-					// kilocode_change end
 				}
 
 				return block

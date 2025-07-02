@@ -16,7 +16,12 @@
 		"shareWithOrganization": "Dela med organisation",
 		"shareWithOrganizationDescription": "Endast medlemmar i din organisation har åtkomst",
 		"sharePublicly": "Dela offentligt",
-		"sharePubliclyDescription": "Alla med länken har åtkomst"
+		"sharePubliclyDescription": "Alla med länken har åtkomst",
+		"connectToCloud": "Anslut till Cloud",
+		"connectToCloudDescription": "Logga in på Kilo Code Cloud för att dela uppgifter",
+		"sharingDisabledByOrganization": "Delning inaktiverad av organisationen",
+		"shareSuccessOrganization": "Organisationslänk kopierad till urklipp",
+		"shareSuccessPublic": "Offentlig länk kopierad till urklipp"
 	},
 	"history": {
 		"title": "Historik"
@@ -114,6 +119,12 @@
 	"selectModelConfig": "Välj modell",
 	"enhancePrompt": "Förbättra prompt med ytterligare kontext",
 	"enhancePromptDescription": "Knappen 'Förbättra prompt' hjälper till att förbättra din prompt genom att tillhandahålla ytterligare kontext, förtydligande eller omformulering. Prova att skriva en prompt här och klicka på knappen igen för att se hur det fungerar.",
+	"modeSelector": {
+		"title": "Lägen",
+		"marketplace": "Lägesmarknadsplats",
+		"settings": "Lägesinställningar",
+		"description": "Specialiserade personas som anpassar Kilo Codes beteende."
+	},
 	"addImages": "Lägg till bilder i meddelandet",
 	"sendMessage": "Skicka meddelande",
 	"typeMessage": "Skriv ett meddelande...",

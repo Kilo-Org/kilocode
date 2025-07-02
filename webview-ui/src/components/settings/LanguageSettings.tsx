@@ -18,6 +18,12 @@ type LanguageSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	setCachedStateField: SetCachedStateField<"language">
 }
 
+// kilocode_change start: sort languages
+function getSortedLanguages() {
+	return Object.entries(LANGUAGES).toSorted((a, b) => a[0].localeCompare(b[0]))
+}
+// kilocode_change end
+
 export const LanguageSettings = ({ language, setCachedStateField, className, ...props }: LanguageSettingsProps) => {
 	const { t } = useAppTranslation()
 
@@ -37,7 +43,8 @@ export const LanguageSettings = ({ language, setCachedStateField, className, ...
 					</SelectTrigger>
 					<SelectContent>
 						<SelectGroup>
-							{Object.entries(LANGUAGES).map(([code, name]) => (
+							{/* kilocode_change: sort languages */}
+							{getSortedLanguages().map(([code, name]) => (
 								<SelectItem key={code} value={code}>
 									{name}
 									<span className="text-muted-foreground">({code})</span>

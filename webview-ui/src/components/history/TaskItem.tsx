@@ -48,7 +48,11 @@ const TaskItem = ({
 			key={item.id}
 			data-testid={`task-item-${item.id}`}
 			className={cn(
-				"cursor-pointer group bg-vscode-editor-background rounded relative overflow-hidden hover:border-vscode-toolbar-hoverBackground/60",
+				"cursor-pointer group rounded relative overflow-hidden hover:border-vscode-toolbar-hoverBackground/60",
+				{
+					"bg-red-900 text-white": item.fileNotfound, // kilocode_change added this state instead of removing
+					"bg-vscode-editor-background": !item.fileNotfound, //kilocode_change this is the default normally in the regular classname list
+				},
 				className,
 			)}
 			onClick={handleClick}>

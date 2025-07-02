@@ -1,0 +1,16 @@
+{
+	"readFile": {
+		"linesRange": " (من السطر {{start}} إلى {{end}})",
+		"definitionsOnly": " (تعريفات فقط)",
+		"maxLines": " (بحد أقصى {{max}} سطر)"
+	},
+	"toolRepetitionLimitReached": "يبدو أن Kilo Code علق في تكرار نفس العملية ({{toolName}}) أكثر من مرة. هالشي ممكن يدل إن في خلل في الطريقة اللي يتبعها. جرّب تعيد صياغة المهمة، أو وضّح المطلوب بشكل أدق، أو وجّهه لطريقة مختلفة.",
+	"codebaseSearch": {
+		"approval": "جاري البحث عن '{{query}}' داخل الكود..."
+	},
+	"newTask": {
+		"errors": {
+			"policy_restriction": "ما قدرنا ننشئ مهمة جديدة بسبب قيود السياسات."
+		}
+	}
+}

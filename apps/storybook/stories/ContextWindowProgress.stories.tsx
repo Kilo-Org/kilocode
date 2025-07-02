@@ -1,10 +1,18 @@
 import type { Meta, StoryObj } from "@storybook/react"
 
 import { ContextWindowProgress } from "../../../webview-ui/src/components/chat/ContextWindowProgress"
+import { TooltipProvider } from "../../../webview-ui/src/components/ui/tooltip"
 
 const meta = {
 	title: "Chat/ContextWindowProgress",
 	component: ContextWindowProgress,
+	decorators: [
+		(Story) => (
+			<TooltipProvider delayDuration={300}>
+				<Story />
+			</TooltipProvider>
+		),
+	],
 	parameters: {
 		layout: "padded",
 	},

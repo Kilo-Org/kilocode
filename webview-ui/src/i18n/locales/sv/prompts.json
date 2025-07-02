@@ -34,6 +34,11 @@
 		"resetToDefault": "Återställ till standard",
 		"description": "Definiera Kilo Codes expertis och personlighet för detta läge. Denna beskrivning formar hur Kilo Code presenterar sig själv och närmar sig uppgifter."
 	},
+	"description": {
+		"title": "Kort beskrivning (för människor)",
+		"resetToDefault": "Återställ till standardbeskrivning",
+		"description": "En kort beskrivning som visas i lägesselektor rullgardinsmeny."
+	},
 	"whenToUse": {
 		"title": "När det ska användas (valfritt)",
 		"description": "Beskriv när detta läge ska användas. Detta hjälper Orchestrator att välja rätt läge för en uppgift.",
@@ -140,6 +145,10 @@
 		"roleDefinition": {
 			"label": "Rolldefinition",
 			"description": "Definiera Kilo Codes expertis och personlighet för detta läge."
+		},
+		"description": {
+			"label": "Kort beskrivning (för människor)",
+			"description": "En kort beskrivning som visas i lägesselektor rullgardinsmeny."
 		},
 		"whenToUse": {
 			"label": "När det ska användas (valfritt)",

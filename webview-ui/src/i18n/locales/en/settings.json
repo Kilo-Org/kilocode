@@ -406,7 +406,7 @@
 		},
 		"autoCondenseContext": {
 			"name": "Automatically trigger intelligent context condensing",
-			"description": "When enabled, Roo will automatically condense the context when the threshold is reached. When disabled, you can still manually trigger context condensing."
+			"description": "When enabled, Kilo Code will automatically condense the context when the threshold is reached. When disabled, you can still manually trigger context condensing."
 		},
 		"openTabs": {
 			"label": "Open tabs context limit",

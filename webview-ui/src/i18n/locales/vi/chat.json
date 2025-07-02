@@ -16,7 +16,12 @@
 		"shareWithOrganization": "Chia sẻ với tổ chức",
 		"shareWithOrganizationDescription": "Chỉ thành viên tổ chức của bạn mới có thể truy cập",
 		"sharePublicly": "Chia sẻ công khai",
-		"sharePubliclyDescription": "Bất kỳ ai có liên kết đều có thể truy cập"
+		"sharePubliclyDescription": "Bất kỳ ai có liên kết đều có thể truy cập",
+		"connectToCloud": "Kết nối với Cloud",
+		"connectToCloudDescription": "Đăng nhập vào Kilo Code Cloud để chia sẻ tác vụ",
+		"sharingDisabledByOrganization": "Chia sẻ bị tổ chức vô hiệu hóa",
+		"shareSuccessOrganization": "Liên kết tổ chức đã được sao chép vào clipboard",
+		"shareSuccessPublic": "Liên kết công khai đã được sao chép vào clipboard"
 	},
 	"history": {
 		"title": "Lịch Sử"
@@ -113,6 +118,12 @@
 	"dragFiles": "giữ shift để kéo tệp",
 	"dragFilesImages": "giữ shift để kéo tệp/hình ảnh",
 	"enhancePromptDescription": "Nút 'Nâng cao yêu cầu' giúp cải thiện yêu cầu của bạn bằng cách cung cấp ngữ cảnh bổ sung, làm rõ hoặc diễn đạt lại. Hãy thử nhập yêu cầu tại đây và nhấp vào nút một lần nữa để xem cách thức hoạt động.",
+	"modeSelector": {
+		"title": "Chế độ",
+		"marketplace": "Chợ Chế độ",
+		"settings": "Cài đặt Chế độ",
+		"description": "Các nhân cách chuyên biệt điều chỉnh hành vi của Kilo Code."
+	},
 	"errorReadingFile": "Lỗi khi đọc tệp:",
 	"noValidImages": "Không có hình ảnh hợp lệ nào được xử lý",
 	"separator": "Dấu phân cách",

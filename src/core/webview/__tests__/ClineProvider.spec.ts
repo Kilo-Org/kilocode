@@ -5,6 +5,7 @@ import * as vscode from "vscode"
 import axios from "axios"
 
 import { type ProviderSettingsEntry, type ClineMessage, ORGANIZATION_ALLOW_ALL } from "@roo-code/types"
+import { TelemetryService } from "@roo-code/telemetry"
 
 import { ExtensionMessage, ExtensionState } from "../../../shared/ExtensionMessage"
 import { defaultModeSlug } from "../../../shared/modes"
@@ -12,6 +13,7 @@ import { experimentDefault } from "../../../shared/experiments"
 import { setTtsEnabled } from "../../../utils/tts"
 import { ContextProxy } from "../../config/ContextProxy"
 import { Task, TaskOptions } from "../../task/Task"
+import { safeWriteJson } from "../../../utils/safeWriteJson"
 
 import { ClineProvider } from "../ClineProvider"
 
@@ -41,6 +43,8 @@ vi.mock("axios", () => ({
 	get: vi.fn().mockResolvedValue({ data: { data: [] } }),
 	post: vi.fn(),
 }))
+
+vi.mock("../../../utils/safeWriteJson")
 
 vi.mock("@modelcontextprotocol/sdk/types.js", () => ({
 	CallToolResultSchema: {},
@@ -316,6 +320,18 @@ vi.mock("../diff/strategies/multi-search-replace", () => ({
 	})),
 }))
 
+vi.mock("@roo-code/cloud", () => ({
+	CloudService: {
+		hasInstance: vi.fn().mockReturnValue(true),
+		get instance() {
+			return {
+				isAuthenticated: vi.fn().mockReturnValue(false),
+			}
+		},
+	},
+	getRooCodeApiUrl: vi.fn().mockReturnValue("https://app.roocode.com"),
+}))
+
 afterAll(() => {
 	vi.restoreAllMocks()
 })
@@ -537,6 +553,7 @@ describe("ClineProvider", () => {
 			cloudIsAuthenticated: false,
 			sharingEnabled: false,
 			profileThresholds: {},
+			hasOpenedModeSelector: false,
 		}
 
 		const message: ExtensionMessage = {
@@ -1995,11 +2012,8 @@ describe("Project MCP Settings", () => {
 		// Check that fs.mkdir was called with the correct path
 		expect(mockedFs.mkdir).toHaveBeenCalledWith("/test/workspace/.kilocode", { recursive: true })
 
-		// Check that fs.writeFile was called with default content
-		expect(mockedFs.writeFile).toHaveBeenCalledWith(
-			"/test/workspace/.roo/mcp.json",
-			JSON.stringify({ mcpServers: {} }, null, 2),
-		)
+		// Verify file was created with default content
+		expect(safeWriteJson).toHaveBeenCalledWith("/test/workspace/.roo/mcp.json", { mcpServers: {} })
 
 		// Check that openFile was called
 		expect(openFileSpy).toHaveBeenCalledWith("/test/workspace/.kilocode/mcp.json")
@@ -2108,6 +2122,169 @@ vi.mock("../../../api/providers/fetchers/modelCache", () => ({
 	getModels: vi.fn(),
 	flushModels: vi.fn(),
 }))
+
+describe.skip("getTelemetryProperties", () => {
+	// kilocode_change: skip suite
+	let defaultTaskOptions: TaskOptions
+	let provider: ClineProvider
+	let mockContext: vscode.ExtensionContext
+	let mockOutputChannel: vscode.OutputChannel
+	let mockCline: any
+
+	beforeEach(() => {
+		// Reset mocks
+		vi.clearAllMocks()
+
+		// Initialize TelemetryService if not already initialized
+		if (!TelemetryService.hasInstance()) {
+			TelemetryService.createInstance([])
+		}
+
+		// Setup basic mocks
+		mockContext = {
+			globalState: {
+				get: vi.fn().mockImplementation((key: string) => {
+					if (key === "mode") return "code"
+					if (key === "apiProvider") return "anthropic"
+					return undefined
+				}),
+				update: vi.fn(),
+				keys: vi.fn().mockReturnValue([]),
+			},
+			secrets: { get: vi.fn(), store: vi.fn(), delete: vi.fn() },
+			extensionUri: {} as vscode.Uri,
+			globalStorageUri: { fsPath: "/test/path" },
+			extension: { packageJSON: { version: "1.0.0" } },
+		} as unknown as vscode.ExtensionContext
+
+		mockOutputChannel = { appendLine: vi.fn() } as unknown as vscode.OutputChannel
+		provider = new ClineProvider(mockContext, mockOutputChannel, "sidebar", new ContextProxy(mockContext))
+
+		defaultTaskOptions = {
+			context: mockContext,
+			provider,
+			apiConfiguration: {
+				apiProvider: "openrouter",
+			},
+		}
+
+		// Setup Task instance with mocked getModel method
+		mockCline = new Task(defaultTaskOptions)
+		mockCline.api = {
+			getModel: vi.fn().mockReturnValue({
+				id: "claude-sonnet-4-20250514",
+				info: { contextWindow: 200000 },
+			}),
+		}
+	})
+
+	test("includes basic properties in telemetry", async () => {
+		const properties = await provider.getTelemetryProperties()
+
+		expect(properties).toHaveProperty("vscodeVersion")
+		expect(properties).toHaveProperty("platform")
+		expect(properties).toHaveProperty("appVersion", "1.0.0")
+	})
+
+	test("includes model ID from current Cline instance if available", async () => {
+		// Add mock Cline to stack
+		await provider.addClineToStack(mockCline)
+
+		const properties = await provider.getTelemetryProperties()
+
+		expect(properties).toHaveProperty("modelId", "claude-sonnet-4-20250514")
+	})
+
+	describe("cloud authentication telemetry", () => {
+		beforeEach(() => {
+			// Reset all mocks before each test
+			vi.clearAllMocks()
+		})
+
+		test("includes cloud authentication property when user is authenticated", async () => {
+			// Import the CloudService mock and update it
+			const { CloudService } = await import("@roo-code/cloud")
+			const mockCloudService = {
+				isAuthenticated: vi.fn().mockReturnValue(true),
+			}
+
+			// Update the existing mock
+			Object.defineProperty(CloudService, "instance", {
+				get: vi.fn().mockReturnValue(mockCloudService),
+				configurable: true,
+			})
+
+			const properties = await provider.getTelemetryProperties()
+
+			expect(properties).toHaveProperty("cloudIsAuthenticated", true)
+		})
+
+		test("includes cloud authentication property when user is not authenticated", async () => {
+			// Import the CloudService mock and update it
+			const { CloudService } = await import("@roo-code/cloud")
+			const mockCloudService = {
+				isAuthenticated: vi.fn().mockReturnValue(false),
+			}
+
+			// Update the existing mock
+			Object.defineProperty(CloudService, "instance", {
+				get: vi.fn().mockReturnValue(mockCloudService),
+				configurable: true,
+			})
+
+			const properties = await provider.getTelemetryProperties()
+
+			expect(properties).toHaveProperty("cloudIsAuthenticated", false)
+		})
+
+		test("handles CloudService errors gracefully", async () => {
+			// Import the CloudService mock and update it to throw an error
+			const { CloudService } = await import("@roo-code/cloud")
+			Object.defineProperty(CloudService, "instance", {
+				get: vi.fn().mockImplementation(() => {
+					throw new Error("CloudService not available")
+				}),
+				configurable: true,
+			})
+
+			const properties = await provider.getTelemetryProperties()
+
+			// Should still include basic telemetry properties
+			expect(properties).toHaveProperty("vscodeVersion")
+			expect(properties).toHaveProperty("platform")
+			expect(properties).toHaveProperty("appVersion", "1.0.0")
+
+			// Cloud property should be undefined when CloudService is not available
+			expect(properties).toHaveProperty("cloudIsAuthenticated", undefined)
+		})
+
+		test("handles CloudService method errors gracefully", async () => {
+			// Import the CloudService mock and update it
+			const { CloudService } = await import("@roo-code/cloud")
+			const mockCloudService = {
+				isAuthenticated: vi.fn().mockImplementation(() => {
+					throw new Error("Authentication check error")
+				}),
+			}
+
+			// Update the existing mock
+			Object.defineProperty(CloudService, "instance", {
+				get: vi.fn().mockReturnValue(mockCloudService),
+				configurable: true,
+			})
+
+			const properties = await provider.getTelemetryProperties()
+
+			// Should still include basic telemetry properties
+			expect(properties).toHaveProperty("vscodeVersion")
+			expect(properties).toHaveProperty("platform")
+			expect(properties).toHaveProperty("appVersion", "1.0.0")
+
+			// Property that errored should be undefined
+			expect(properties).toHaveProperty("cloudIsAuthenticated", undefined)
+		})
+	})
+})
 
 describe("ClineProvider - Router Models", () => {
 	let provider: ClineProvider

@@ -42,6 +42,10 @@ describe("useMcpToolTool", () => {
 					callTool: vi.fn(),
 				}),
 				postMessageToWebview: vi.fn(),
+				getState: vi.fn().mockResolvedValue({
+					allowVeryLargeReads: false,
+					maxReadFileLine: 1000,
+				}),
 			}),
 		}
 
@@ -53,6 +57,16 @@ describe("useMcpToolTool", () => {
 			ask: vi.fn(),
 			lastMessageTs: 123456789,
 			providerRef: mockProviderRef,
+			api: {
+				getModel: vi.fn().mockReturnValue({
+					id: "claude-3",
+					info: {
+						contextWindow: 200000,
+					},
+				}),
+				countTokens: vi.fn().mockResolvedValue(100),
+				createMessage: vi.fn().mockResolvedValue({ text: "mock response" }),
+			},
 		}
 	})
 
@@ -194,6 +208,10 @@ describe("useMcpToolTool", () => {
 					callTool: vi.fn().mockResolvedValue(mockToolResult),
 				}),
 				postMessageToWebview: vi.fn(),
+				getState: vi.fn().mockResolvedValue({
+					allowVeryLargeReads: false,
+					maxReadFileLine: 1000,
+				}),
 			})
 
 			await useMcpToolTool(

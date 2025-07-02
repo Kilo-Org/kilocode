@@ -46,5 +46,10 @@
 		"tokenRequired": "ต้องใช้ Kilo Code token สำหรับการสร้างข้อความ commit",
 		"activationFailed": "Kilo: ล้มเหลวในการเปิดใช้งานผู้ให้บริการข้อความ commit: {{error}}",
 		"providerRegistered": "Kilo: ลงทะเบียนผู้ให้บริการข้อความ commit แล้ว"
+	},
+	"userFeedback": {
+		"message_update_failed": "ล้มเหลวในการอัปเดตข้อความ",
+		"no_checkpoint_found": "ไม่พบ checkpoint ก่อนข้อความนี้",
+		"message_updated": "อัปเดตข้อความเรียบร้อยแล้ว"
 	}
 }

@@ -2,6 +2,11 @@
 	"info": {
 		"settings_imported": "設定のインポートに成功しました。"
 	},
+	"userFeedback": {
+		"message_update_failed": "メッセージの更新に失敗しました",
+		"no_checkpoint_found": "このメッセージの前にチェックポイントが見つかりませんでした",
+		"message_updated": "メッセージが正常に更新されました"
+	},
 	"lowCreditWarning": {
 		"title": "クレジット残高警告！",
 		"message": "無料クレジットでチャージするか、追加購入できるか確認してください！"

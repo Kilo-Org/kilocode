@@ -1,0 +1,118 @@
+{
+	"welcome": {
+		"greeting": "مرحبًا بك في Kilo Code!",
+		"introText1": "Kilo Code وكيل برمجة مدعوم بالذكاء ومفتوح المصدر ومجاني.",
+		"introText2": "يشتغل مع أحدث نماذج الذكاء مثل Claude 4 Sonnet، Gemini 2.5 Pro، GPT-4.1 وأكثر من 450 نموذج آخر.",
+		"introText3": "أنشئ حساب مجاني وخذ رصيد بقيمة 20 دولار تقدر تستخدمه على أي نموذج.",
+		"ctaButton": "أنشئ حساب مجاني",
+		"manualModeButton": "استخدم مفتاح API الخاص بك",
+		"alreadySignedUp": "مسجل من قبل؟",
+		"loginText": "سجّل دخولك هنا"
+	},
+	"lowCreditWarning": {
+		"addCredit": "شحن الرصيد",
+		"lowBalance": "رصيدك في Kilo Code منخفض"
+	},
+	"notifications": {
+		"toolRequest": "طلب أداة بانتظار الموافقة",
+		"browserAction": "طلب استخدام المتصفح بانتظار الموافقة",
+		"command": "أمر بانتظار الموافقة"
+	},
+	"settings": {
+		"sections": {
+			"mcp": "خوادم MCP"
+		},
+		"provider": {
+			"apiKey": "مفتاح Kilo Code API",
+			"login": "سجّل دخولك في Kilo Code",
+			"logout": "تسجيل الخروج من Kilo Code"
+		},
+		"contextManagement": {
+			"allowVeryLargeReads": {
+				"label": "السماح بقراءة ملفات ضخمة",
+				"description": "إذا تم تفعيله، Kilo Code يقدر يقرأ ملفات ضخمة أو مخرجات MCP حتى لو فيه احتمال يتجاوز حجم السياق (إذا المحتوى تجاوز 80% من حجم السياق)."
+			}
+		}
+	},
+	"chat": {
+		"condense": {
+			"wantsToCondense": "Kilo Code يقترح تلخيص المحادثة",
+			"condenseConversation": "تلخيص المحادثة"
+		}
+	},
+	"newTaskPreview": {
+		"task": "مهمة"
+	},
+	"profile": {
+		"title": "الملف الشخصي",
+		"dashboard": "لوحة التحكم",
+		"logOut": "تسجيل الخروج",
+		"currentBalance": "الرصيد الحالي",
+		"loading": "جاري التحميل...",
+		"signUp": {
+			"title": "سجّل في Kilo Code",
+			"description": "التسجيل يمنحك رصيد مجاني لتبدأ. جرّب المميزات، واستكشف النماذج، واستفد من Kilo Code بدون أي التزام.",
+			"termsAndPrivacy": "بالمتابعة، أنت توافق على <termsLink>شروط الاستخدام</termsLink> و<privacyLink>سياسة الخصوصية</privacyLink>."
+		}
+	},
+	"docs": "التوثيق",
+	"rules": {
+		"tooltip": "إدارة قواعد وسير العمل في Kilo Code",
+		"ariaLabel": "قواعد Kilo Code",
+		"tabs": {
+			"rules": "القواعد",
+			"workflows": "سير العمل"
+		},
+		"description": {
+			"rules": "القواعد تتيح لك تحديد تعليمات يلتزم بها Kilo Code في جميع الأنماط والموجهات. وسيلة ثابتة لإضافة تفضيلاتك وسياقك للمحادثات.",
+			"workflows": "سير العمل هو قالب محادثة جاهز. تقدر تستخدمه لتكرار أوامر أو خطوات مثل رفع خدمة أو تقديم PR. لتشغيل سير عمل، اكتب",
+			"workflowsInChat": "في المحادثة."
+		},
+		"sections": {
+			"globalRules": "قواعد عامة",
+			"workspaceRules": "قواعد مساحة العمل",
+			"globalWorkflows": "سير العمل العام",
+			"workspaceWorkflows": "سير عمل مساحة العمل"
+		},
+		"validation": {
+			"invalidFileExtension": "فقط الملفات بصيغة .md أو .txt أو بدون صيغة مسموحة"
+		},
+		"placeholders": {
+			"workflowName": "اسم-سير-العمل (.md أو .txt أو بدون صيغة)",
+			"ruleName": "اسم-القاعدة (.md أو .txt أو بدون صيغة)"
+		},
+		"newFile": {
+			"newWorkflowFile": "ملف سير عمل جديد...",
+			"newRuleFile": "ملف قاعدة جديدة..."
+		}
+	},
+	"taskTimeline": {
+		"tooltip": {
+			"clickToScroll": "عرض {{messageType}} (رقم {{messageNumber}})",
+			"messageTypes": {
+				"browser_action_launch": "تشغيل المتصفح",
+				"browser_action_result": "نتيجة المتصفح",
+				"browser_action": "إجراء المتصفح",
+				"checkpoint_saved": "تم حفظ نقطة التوقف",
+				"command": "تنفيذ الأمر",
+				"command_output": "ناتج الأمر",
+				"completion_result": "نتيجة الإكمال",
+				"condense_context": "تلخيص السياق",
+				"error": "رسالة خطأ",
+				"followup": "سؤال لاحق",
+				"mcp_server_response": "رد خادم MCP",
+				"reasoning": "تحليل الذكاء",
+				"text": "رد الذكاء",
+				"tool": "استخدام أداة",
+				"user": "رد المستخدم",
+				"unknown": "نوع رسالة غير معروف",
+				"use_mcp_server": "استخدام خادم MCP"
+			}
+		}
+	},
+	"userFeedback": {
+		"editCancel": "إلغاء",
+		"send": "إرسال",
+		"restoreAndSend": "استرجاع وإرسال"
+	}
+}

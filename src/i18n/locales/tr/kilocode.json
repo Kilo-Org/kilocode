@@ -46,5 +46,10 @@
 		"tokenRequired": "Taahhüt (commit) mesajı oluşturmak için Kilo Code token'ı gerekmektedir",
 		"activationFailed": "Kilo: Commit mesaj sağlayıcısı etkinleştirilemedi: {{error}}",
 		"providerRegistered": "Kilo: Bildirim mesajı sağlayıcısı kaydedildi"
+	},
+	"userFeedback": {
+		"message_update_failed": "Mesaj güncellenemedi",
+		"no_checkpoint_found": "Bu mesajdan önce kontrol noktası bulunamadı",
+		"message_updated": "Mesaj güncellendi"
 	}
 }

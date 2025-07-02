@@ -16,7 +16,12 @@
 		"shareWithOrganization": "Compartilhar com organização",
 		"shareWithOrganizationDescription": "Apenas membros da sua organização podem acessar",
 		"sharePublicly": "Compartilhar publicamente",
-		"sharePubliclyDescription": "Qualquer pessoa com o link pode acessar"
+		"sharePubliclyDescription": "Qualquer pessoa com o link pode acessar",
+		"connectToCloud": "Conectar ao Cloud",
+		"connectToCloudDescription": "Entre no Kilo Code Cloud para compartilhar tarefas",
+		"sharingDisabledByOrganization": "Compartilhamento desabilitado pela organização",
+		"shareSuccessOrganization": "Link da organização copiado para a área de transferência",
+		"shareSuccessPublic": "Link público copiado para a área de transferência"
 	},
 	"history": {
 		"title": "Histórico"
@@ -113,6 +118,12 @@
 	"dragFiles": "segure shift para arrastar arquivos",
 	"dragFilesImages": "segure shift para arrastar arquivos/imagens",
 	"enhancePromptDescription": "O botão 'Aprimorar prompt' ajuda a melhorar seu pedido fornecendo contexto adicional, esclarecimentos ou reformulações. Tente digitar um pedido aqui e clique no botão novamente para ver como funciona.",
+	"modeSelector": {
+		"title": "Modos",
+		"marketplace": "Marketplace de Modos",
+		"settings": "Configurações de Modos",
+		"description": "Personas especializadas que adaptam o comportamento do Kilo Code."
+	},
 	"errorReadingFile": "Erro ao ler arquivo:",
 	"noValidImages": "Nenhuma imagem válida foi processada",
 	"separator": "Separador",

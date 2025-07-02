@@ -77,6 +77,16 @@
 			"processExitedWithError": "Le processus Claude Code s'est terminé avec le code {{exitCode}}. Sortie d'erreur : {{output}}",
 			"stoppedWithReason": "Claude Code s'est arrêté pour la raison : {{reason}}",
 			"apiKeyModelPlanMismatch": "Les clés API et les plans d'abonnement permettent différents modèles. Assurez-vous que le modèle sélectionné est inclus dans votre plan."
+		},
+		"geminiCli": {
+			"oauthLoadFailed": "Échec du chargement des identifiants OAuth. Veuillez vous authentifier d'abord : {{error}}",
+			"tokenRefreshFailed": "Échec du renouvellement du token OAuth : {{error}}",
+			"onboardingTimeout": "L'opération d'intégration a expiré après 60 secondes. Veuillez réessayer plus tard.",
+			"projectDiscoveryFailed": "Impossible de découvrir l'ID du projet. Assurez-vous d'être authentifié avec 'gemini auth'.",
+			"rateLimitExceeded": "Limite de débit dépassée. Les limites du niveau gratuit ont été atteintes.",
+			"badRequest": "Requête incorrecte : {{details}}",
+			"apiError": "Erreur API Gemini CLI : {{error}}",
+			"completionError": "Erreur de complétion Gemini CLI : {{error}}"
 		}
 	},
 	"warnings": {
@@ -105,7 +115,9 @@
 	},
 	"tasks": {
 		"canceled": "Erreur de tâche : Elle a été arrêtée et annulée par l'utilisateur.",
-		"deleted": "Échec de la tâche : Elle a été arrêtée et supprimée par l'utilisateur."
+		"deleted": "Échec de la tâche : Elle a été arrêtée et supprimée par l'utilisateur.",
+		"incomplete": "Tâche #{{taskNumber}} (Incomplète)",
+		"no_messages": "Tâche #{{taskNumber}} (Aucun message)"
 	},
 	"storage": {
 		"prompt_custom_path": "Entrez le chemin de stockage personnalisé pour l'historique des conversations, laissez vide pour utiliser l'emplacement par défaut",
@@ -128,10 +140,22 @@
 			}
 		}
 	},
+	"customModes": {
+		"errors": {
+			"yamlParseError": "YAML invalide dans le fichier .roomodes à la ligne {{line}}. Vérifie :\n• L'indentation correcte (utilise des espaces, pas de tabulations)\n• Les guillemets et crochets correspondants\n• La syntaxe YAML valide",
+			"schemaValidationError": "Format invalide des modes personnalisés dans .roomodes :\n{{issues}}",
+			"invalidFormat": "Format invalide des modes personnalisés. Assure-toi que tes paramètres suivent le format YAML correct.",
+			"updateFailed": "Échec de la mise à jour du mode personnalisé : {{error}}",
+			"deleteFailed": "Échec de la suppression du mode personnalisé : {{error}}",
+			"resetFailed": "Échec de la réinitialisation des modes personnalisés : {{error}}",
+			"modeNotFound": "Erreur d'écriture : Mode non trouvé",
+			"noWorkspaceForProject": "Aucun dossier d'espace de travail trouvé pour le mode spécifique au projet"
+		}
+	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "Votre organisation nécessite une authentification Roo Code Cloud. Veuillez vous connecter pour continuer.",
-			"organization_mismatch": "Vous devez être authentifié avec le compte Roo Code Cloud de votre organisation.",
+			"cloud_auth_required": "Votre organisation nécessite une authentification Kilo Code Cloud. Veuillez vous connecter pour continuer.",
+			"organization_mismatch": "Vous devez être authentifié avec le compte Kilo Code Cloud de votre organisation.",
 			"verification_failed": "Impossible de vérifier l'authentification de l'organisation."
 		}
 	}

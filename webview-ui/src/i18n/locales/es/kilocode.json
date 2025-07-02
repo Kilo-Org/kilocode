@@ -26,6 +26,12 @@
 			"apiKey": "Clave API de Kilo Code",
 			"login": "Iniciar sesión en Kilo Code",
 			"logout": "Cerrar sesión de Kilo Code"
+		},
+		"contextManagement": {
+			"allowVeryLargeReads": {
+				"label": "Permitir lecturas de archivos muy grandes",
+				"description": "Cuando está activado, Kilo Code realizará lecturas de archivos o salidas MCP muy grandes aunque exista una alta probabilidad de desbordar la ventana de contexto (tamaño del contenido >80% de la ventana de contexto)."
+			}
 		}
 	},
 	"chat": {
@@ -103,5 +109,10 @@
 				"user": "opinión del usuario"
 			}
 		}
+	},
+	"userFeedback": {
+		"editCancel": "Cancelar",
+		"send": "Enviar",
+		"restoreAndSend": "Restaurar y Enviar"
 	}
 }

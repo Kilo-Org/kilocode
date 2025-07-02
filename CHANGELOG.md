@@ -1,5 +1,78 @@
 # kilo-code
 
+## [v4.49.1]
+
+- [#949](https://github.com/Kilo-Org/kilocode/pull/949) [`1043c8b`](https://github.com/Kilo-Org/kilocode/commit/1043c8b3484bfe18baa0a0267f3a967469a84b4c) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Mermaid diagram toolbar is now light in light mode (bugfix)
+
+- [#945](https://github.com/Kilo-Org/kilocode/pull/945) [`e3580b8`](https://github.com/Kilo-Org/kilocode/commit/e3580b83cdf59cec0e2b0ae22975d87cd0218329) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Improved Arabic translation by AL38lAlmdbeR
+
+## [v4.49.0]
+
+- [#894](https://github.com/Kilo-Org/kilocode/pull/894) [`421d57e`](https://github.com/Kilo-Org/kilocode/commit/421d57e44537b13760551e0a1484aae1e8735bc7) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Kilo Code will no longer process file reads or MCP tool outputs if the estimated size is over 80% of the context window. If this behavior breaks your workflow, it can be re-enabled by checking Settings > Context > Allow very large file reads.
+
+- [#929](https://github.com/Kilo-Org/kilocode/pull/929) [`641d264`](https://github.com/Kilo-Org/kilocode/commit/641d2647d57049b6633664d6f9b31c6986684e00) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Edit and resend user feedback messages
+
+### Patch Changes
+
+- [#938](https://github.com/Kilo-Org/kilocode/pull/938) [`a606053`](https://github.com/Kilo-Org/kilocode/commit/a606053a3b55b140bab9ebc4bf3ae53969380644) Thanks [@markijbema](https://github.com/markijbema)! - Add debugging info for when we cannot read a task file
+
+- [#943](https://github.com/Kilo-Org/kilocode/pull/943) [`8178463`](https://github.com/Kilo-Org/kilocode/commit/81784632209960e93ffedf9c9b08235a12c238d5) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Fix checkpoints do not always include a revert option
+
+## [v4.48.0]
+
+- [#926](https://github.com/Kilo-Org/kilocode/pull/926) [`75b6c80`](https://github.com/Kilo-Org/kilocode/commit/75b6c80878f61f9f5d2b0c7499bee56eb8f09d06) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Arabic translation added (support for right-to-left languages is experimental)
+
+- [#930](https://github.com/Kilo-Org/kilocode/pull/930) [`047b30e`](https://github.com/Kilo-Org/kilocode/commit/047b30ec1ca8b30c86ad7708dea16bf404ed94f8) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Include changes from Roo Code v3.22.4
+
+    - Fix: resolve E2BIG error by passing large prompts via stdin to Claude CLI (thanks @Fovty!)
+    - Add optional mode suggestions to follow-up questions
+    - Restore JSON backwards compatibility for .roomodes files (thanks @daniel-lxs!)
+    - Fix: eliminate XSS vulnerability in CodeBlock component (thanks @KJ7LNW!)
+    - Fix terminal keyboard shortcut error when adding content to context (thanks @MuriloFP!)
+    - Fix checkpoint popover not opening due to StandardTooltip wrapper conflict (thanks @daniel-lxs!)
+    - Fix(i18n): correct gemini cli error translation paths (thanks @daniel-lxs!)
+    - Code Index (Qdrant) recreate services when change configurations (thanks @catrielmuller!)
+    - Fix undefined mcp command (thanks @qdaxb!)
+    - Use upstream_inference_cost for OpenRouter BYOK cost calculation and show cached token count (thanks @chrarnoldus!)
+    - Update maxTokens value for qwen/qwen3-32b model on Groq (thanks @KanTakahiro!)
+    - Standardize tooltip delays to 300ms
+    - Add support for loading rules from a global .kilocode directory (thanks @samhvw8!)
+    - Modes selector improvements (thanks @brunobergher!)
+    - Use safeWriteJson for all JSON file writes to avoid task history corruption (thanks @KJ7LNW!)
+    - Improve YAML error handling when editing modes
+    - Add default task names for empty tasks (thanks @daniel-lxs!)
+    - Improve translation workflow to avoid unnecessary file reads (thanks @KJ7LNW!)
+    - Allow write_to_file to handle newline-only and empty content (thanks @Githubguy132010!)
+    - Address multiple memory leaks in CodeBlock component (thanks @kiwina!)
+    - Memory cleanup (thanks @xyOz-dev!)
+    - Fix port handling bug in code indexing for HTTPS URLs (thanks @benashby!)
+    - Improve Bedrock error handling for throttling and streaming contexts
+    - Handle long Claude code messages (thanks @daniel-lxs!)
+    - Fixes to Claude Code caching and image upload
+    - Disable reasoning budget UI controls for Claude Code provider
+    - Remove temperature parameter for Azure OpenAI reasoning models (thanks @ExactDoug!)
+    - Add VS Code setting to disable quick fix context actions (thanks @OlegOAndreev!)
+
+### Patch Changes
+
+- [#931](https://github.com/Kilo-Org/kilocode/pull/931) [`351ebde`](https://github.com/Kilo-Org/kilocode/commit/351ebdec10833328ec9069ddacb41ea37660eae8) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - The /newtask command now starts a task more reliably.
+
+## [v4.47.0]
+
+- [#905](https://github.com/Kilo-Org/kilocode/pull/905) [`4224ba9`](https://github.com/Kilo-Org/kilocode/commit/4224ba978c4ebd5eeee7bc879bc3d860f36a64fb) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Improve MCP marketplace and installed MCP servers views (thanks Roo Code!)
+
+## [v4.46.0]
+
+- [#921](https://github.com/Kilo-Org/kilocode/pull/921) [`4d0d1ed`](https://github.com/Kilo-Org/kilocode/commit/4d0d1ed6081266a24b3b715f3450a5bd82718dbb) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Enable browser tool for Gemini, GPT and all other models that can read images
+
+### Patch Changes
+
+- [#889](https://github.com/Kilo-Org/kilocode/pull/889) [`7f72a33`](https://github.com/Kilo-Org/kilocode/commit/7f72a33278100f3a7679d7b2761f1380a54bfc90) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Refresh CodeIndex Services (Qdrant) when change the configuration
+
+- [#911](https://github.com/Kilo-Org/kilocode/pull/911) [`ef17629`](https://github.com/Kilo-Org/kilocode/commit/ef17629f278e759345ae4aa4bb3ea27006ff7918) Thanks [@NyxJae](https://github.com/NyxJae)! - Improve Chinese translation: Kilo Code should be a proper noun
+
+- [#910](https://github.com/Kilo-Org/kilocode/pull/910) [`91ce5a6`](https://github.com/Kilo-Org/kilocode/commit/91ce5a649f7b2d9cb0911b3b5c4fcf3a133b420a) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Fix not being able to open Mermaid diagrams in a tab or save them
+
 ## [v4.45.0]
 
 - [#867](https://github.com/Kilo-Org/kilocode/pull/867) [`717823f`](https://github.com/Kilo-Org/kilocode/commit/717823f40419bda32813b3e1f9f357fdabfa89df) Thanks [@Juice10](https://github.com/Juice10)! - Add copy prompt button to task actions. Based on [@vultrnerd's feedback](https://github.com/Kilo-Org/kilocode/discussions/850).

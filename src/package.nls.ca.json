@@ -9,6 +9,7 @@
 	"command.openInNewTab.title": "Obrir en una Nova Pestanya",
 	"command.focusInput.title": "Enfocar Camp d'Entrada",
 	"command.setCustomStoragePath.title": "Establir Ruta d'Emmagatzematge Personalitzada",
+	"command.importSettings.title": "Importar Configuració",
 	"command.terminal.addToContext.title": "Afegir Contingut del Terminal al Context",
 	"command.terminal.fixCommand.title": "Corregir Aquesta Ordre",
 	"command.terminal.explainCommand.title": "Explicar Aquesta Ordre",
@@ -31,5 +32,6 @@
 	"settings.vsCodeLmModelSelector.description": "Configuració per a l'API del model de llenguatge VSCode",
 	"settings.vsCodeLmModelSelector.vendor.description": "El proveïdor del model de llenguatge (p. ex. copilot)",
 	"settings.vsCodeLmModelSelector.family.description": "La família del model de llenguatge (p. ex. gpt-4)",
-	"settings.customStoragePath.description": "Ruta d'emmagatzematge personalitzada. Deixeu-la buida per utilitzar la ubicació predeterminada. Admet rutes absolutes (p. ex. 'D:\\KiloCodeStorage')"
+	"settings.customStoragePath.description": "Ruta d'emmagatzematge personalitzada. Deixeu-la buida per utilitzar la ubicació predeterminada. Admet rutes absolutes (p. ex. 'D:\\KiloCodeStorage')",
+	"settings.enableCodeActions.description": "Habilitar correccions ràpides de Kilo Code."
 }

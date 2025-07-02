@@ -46,5 +46,10 @@
 		"tokenRequired": "Token Kilo Code diperlukan untuk pembuatan pesan commit",
 		"activationFailed": "Kilo: Gagal mengaktifkan penyedia pesan commit: {{error}}",
 		"providerRegistered": "Kilo: Penyedia pesan commit terdaftar"
+	},
+	"userFeedback": {
+		"message_update_failed": "Gagal memperbarui pesan",
+		"no_checkpoint_found": "Tidak ditemukan checkpoint sebelum pesan ini",
+		"message_updated": "Pesan berhasil diperbarui"
 	}
 }

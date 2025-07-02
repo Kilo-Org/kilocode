@@ -26,6 +26,12 @@
 			"apiKey": "Clau API de Kilo Code",
 			"login": "Iniciar sessió a Kilo Code",
 			"logout": "Tancar sessió de Kilo Code"
+		},
+		"contextManagement": {
+			"allowVeryLargeReads": {
+				"label": "Permet lectures de fitxers molt grans",
+				"description": "Quan està activat, Kilo Code realitzarà lectures de fitxers o sortides MCP molt grans encara que hi hagi una alta probabilitat de desbordar la finestra de context (mida del contingut >80% de la finestra de context)."
+			}
 		}
 	},
 	"profile": {
@@ -103,5 +109,10 @@
 			},
 			"clickToScroll": "Veure {{messageType}} (núm. {{messageNumber}})"
 		}
+	},
+	"userFeedback": {
+		"editCancel": "Cancel·lar",
+		"send": "Enviar",
+		"restoreAndSend": "Restaurar i Enviar"
 	}
 }

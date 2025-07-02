@@ -8,10 +8,11 @@ import * as vscode from "vscode"
 import type { ProviderName } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 
-import { importSettings, exportSettings } from "../importExport"
+import { importSettings, importSettingsFromFile, importSettingsWithFeedback, exportSettings } from "../importExport"
 import { ProviderSettingsManager } from "../ProviderSettingsManager"
 import { ContextProxy } from "../ContextProxy"
 import { CustomModesManager } from "../CustomModesManager"
+import { safeWriteJson } from "../../../utils/safeWriteJson"
 
 import type { Mock } from "vitest"
 
@@ -19,6 +20,8 @@ vi.mock("vscode", () => ({
 	window: {
 		showOpenDialog: vi.fn(),
 		showSaveDialog: vi.fn(),
+		showErrorMessage: vi.fn(),
+		showInformationMessage: vi.fn(),
 	},
 	Uri: {
 		file: vi.fn((filePath) => ({ fsPath: filePath })),
@@ -30,10 +33,20 @@ vi.mock("fs/promises", () => ({
 		readFile: vi.fn(),
 		mkdir: vi.fn(),
 		writeFile: vi.fn(),
+		access: vi.fn(),
+		constants: {
+			F_OK: 0,
+			R_OK: 4,
+		},
 	},
 	readFile: vi.fn(),
 	mkdir: vi.fn(),
 	writeFile: vi.fn(),
+	access: vi.fn(),
+	constants: {
+		F_OK: 0,
+		R_OK: 4,
+	},
 }))
 
 vi.mock("os", () => ({
@@ -42,6 +55,8 @@ vi.mock("os", () => ({
 	},
 	homedir: vi.fn(() => "/mock/home"),
 }))
+
+vi.mock("../../../utils/safeWriteJson")
 
 describe("importExport", () => {
 	let mockProviderSettingsManager: ReturnType<typeof vi.mocked<ProviderSettingsManager>>
@@ -93,7 +108,7 @@ describe("importExport", () => {
 				customModesManager: mockCustomModesManager,
 			})
 
-			expect(result).toEqual({ success: false })
+			expect(result).toEqual({ success: false, error: "User cancelled file selection" })
 
 			expect(vscode.window.showOpenDialog).toHaveBeenCalledWith({
 				filters: { JSON: ["json"] },
@@ -143,9 +158,12 @@ describe("importExport", () => {
 			expect(mockProviderSettingsManager.export).toHaveBeenCalled()
 
 			expect(mockProviderSettingsManager.import).toHaveBeenCalledWith({
-				...previousProviderProfiles,
 				currentApiConfigName: "test",
-				apiConfigs: { test: { apiProvider: "openai" as ProviderName, apiKey: "test-key", id: "test-id" } },
+				apiConfigs: {
+					default: { apiProvider: "anthropic" as ProviderName, id: "default-id" },
+					test: { apiProvider: "openai" as ProviderName, apiKey: "test-key", id: "test-id" },
+				},
+				modeApiConfigs: {},
 			})
 
 			expect(mockContextProxy.setValues).toHaveBeenCalledWith({ mode: "code", autoApprovalEnabled: true })
@@ -216,11 +234,12 @@ describe("importExport", () => {
 			expect(fs.readFile).toHaveBeenCalledWith("/mock/path/settings.json", "utf-8")
 			expect(mockProviderSettingsManager.export).toHaveBeenCalled()
 			expect(mockProviderSettingsManager.import).toHaveBeenCalledWith({
-				...previousProviderProfiles,
 				currentApiConfigName: "test",
 				apiConfigs: {
+					default: { apiProvider: "anthropic" as ProviderName, id: "default-id" },
 					test: { apiProvider: "openai" as ProviderName, apiKey: "test-key", id: "test-id" },
 				},
+				modeApiConfigs: {},
 			})
 
 			// Should call setValues with an empty object since globalSettings is missing.
@@ -294,9 +313,11 @@ describe("importExport", () => {
 			})
 
 			expect(result.success).toBe(true)
-			expect(result.providerProfiles?.apiConfigs["openai"]).toBeDefined()
-			expect(result.providerProfiles?.apiConfigs["default"]).toBeDefined()
-			expect(result.providerProfiles?.apiConfigs["default"].apiProvider).toBe("anthropic")
+			if (result.success && "providerProfiles" in result) {
+				expect(result.providerProfiles?.apiConfigs["openai"]).toBeDefined()
+				expect(result.providerProfiles?.apiConfigs["default"]).toBeDefined()
+				expect(result.providerProfiles?.apiConfigs["default"].apiProvider).toBe("anthropic")
+			}
 		})
 
 		it("should call updateCustomMode for each custom mode in config", async () => {
@@ -333,6 +354,87 @@ describe("importExport", () => {
 			customModes.forEach((mode) => {
 				expect(mockCustomModesManager.updateCustomMode).toHaveBeenCalledWith(mode.slug, mode)
 			})
+		})
+
+		it("should import settings from provided file path without showing dialog", async () => {
+			const filePath = "/mock/path/settings.json"
+			const mockFileContent = JSON.stringify({
+				providerProfiles: {
+					currentApiConfigName: "test",
+					apiConfigs: { test: { apiProvider: "openai" as ProviderName, apiKey: "test-key", id: "test-id" } },
+				},
+				globalSettings: { mode: "code", autoApprovalEnabled: true },
+			})
+
+			;(fs.readFile as Mock).mockResolvedValue(mockFileContent)
+			;(fs.access as Mock).mockResolvedValue(undefined) // File exists and is readable
+
+			const previousProviderProfiles = {
+				currentApiConfigName: "default",
+				apiConfigs: { default: { apiProvider: "anthropic" as ProviderName, id: "default-id" } },
+			}
+
+			mockProviderSettingsManager.export.mockResolvedValue(previousProviderProfiles)
+			mockProviderSettingsManager.listConfig.mockResolvedValue([
+				{ name: "test", id: "test-id", apiProvider: "openai" as ProviderName },
+				{ name: "default", id: "default-id", apiProvider: "anthropic" as ProviderName },
+			])
+			mockContextProxy.export.mockResolvedValue({ mode: "code" })
+
+			const result = await importSettingsFromFile(
+				{
+					providerSettingsManager: mockProviderSettingsManager,
+					contextProxy: mockContextProxy,
+					customModesManager: mockCustomModesManager,
+				},
+				vscode.Uri.file(filePath),
+			)
+
+			expect(vscode.window.showOpenDialog).not.toHaveBeenCalled()
+			expect(fs.readFile).toHaveBeenCalledWith(filePath, "utf-8")
+			expect(result.success).toBe(true)
+			expect(mockProviderSettingsManager.import).toHaveBeenCalledWith({
+				currentApiConfigName: "test",
+				apiConfigs: {
+					default: { apiProvider: "anthropic" as ProviderName, id: "default-id" },
+					test: { apiProvider: "openai" as ProviderName, apiKey: "test-key", id: "test-id" },
+				},
+				modeApiConfigs: {},
+			})
+			expect(mockContextProxy.setValues).toHaveBeenCalledWith({ mode: "code", autoApprovalEnabled: true })
+		})
+
+		it("should return error when provided file path does not exist", async () => {
+			const filePath = "/nonexistent/path/settings.json"
+			const accessError = new Error("ENOENT: no such file or directory")
+
+			;(fs.access as Mock).mockRejectedValue(accessError)
+
+			// Create a mock provider for the test
+			const mockProvider = {
+				settingsImportedAt: 0,
+				postStateToWebview: vi.fn().mockResolvedValue(undefined),
+			}
+
+			// Mock the showErrorMessage to capture the error
+			const showErrorMessageSpy = vi.spyOn(vscode.window, "showErrorMessage").mockResolvedValue(undefined)
+
+			await importSettingsWithFeedback(
+				{
+					providerSettingsManager: mockProviderSettingsManager,
+					contextProxy: mockContextProxy,
+					customModesManager: mockCustomModesManager,
+					provider: mockProvider,
+				},
+				filePath,
+			)
+
+			expect(vscode.window.showOpenDialog).not.toHaveBeenCalled()
+			expect(fs.access).toHaveBeenCalledWith(filePath, fs.constants.F_OK | fs.constants.R_OK)
+			expect(fs.readFile).not.toHaveBeenCalled()
+			expect(showErrorMessageSpy).toHaveBeenCalledWith(expect.stringContaining("errors.settings_import_failed"))
+
+			showErrorMessageSpy.mockRestore()
 		})
 	})
 
@@ -384,16 +486,15 @@ describe("importExport", () => {
 			expect(mockContextProxy.export).toHaveBeenCalled()
 			expect(fs.mkdir).toHaveBeenCalledWith("/mock/path", { recursive: true })
 
-			expect(fs.writeFile).toHaveBeenCalledWith(
-				"/mock/path/kilo-code-settings.json",
-				JSON.stringify({ providerProfiles: mockProviderProfiles, globalSettings: mockGlobalSettings }, null, 2),
-				"utf-8",
-			)
+			expect(safeWriteJson).toHaveBeenCalledWith("/mock/path/kilo-code-settings.json", {
+				providerProfiles: mockProviderProfiles,
+				globalSettings: mockGlobalSettings,
+			})
 		})
 
 		it("should include globalSettings when allowedMaxRequests is null", async () => {
 			;(vscode.window.showSaveDialog as Mock).mockResolvedValue({
-				fsPath: "/mock/path/roo-code-settings.json",
+				fsPath: "/mock/path/kilo-code-settings.json",
 			})
 
 			const mockProviderProfiles = {
@@ -417,11 +518,10 @@ describe("importExport", () => {
 				contextProxy: mockContextProxy,
 			})
 
-			expect(fs.writeFile).toHaveBeenCalledWith(
-				"/mock/path/roo-code-settings.json",
-				JSON.stringify({ providerProfiles: mockProviderProfiles, globalSettings: mockGlobalSettings }, null, 2),
-				"utf-8",
-			)
+			expect(safeWriteJson).toHaveBeenCalledWith("/mock/path/kilo-code-settings.json", {
+				providerProfiles: mockProviderProfiles,
+				globalSettings: mockGlobalSettings,
+			})
 		})
 
 		it("should handle errors during the export process", async () => {
@@ -436,7 +536,8 @@ describe("importExport", () => {
 			})
 
 			mockContextProxy.export.mockResolvedValue({ mode: "code" })
-			;(fs.writeFile as Mock).mockRejectedValue(new Error("Write error"))
+			// Simulate an error during the safeWriteJson operation
+			;(safeWriteJson as Mock).mockRejectedValueOnce(new Error("Safe write error"))
 
 			await exportSettings({
 				providerSettingsManager: mockProviderSettingsManager,
@@ -447,8 +548,10 @@ describe("importExport", () => {
 			expect(mockProviderSettingsManager.export).toHaveBeenCalled()
 			expect(mockContextProxy.export).toHaveBeenCalled()
 			expect(fs.mkdir).toHaveBeenCalledWith("/mock/path", { recursive: true })
-			expect(fs.writeFile).toHaveBeenCalled()
+			expect(safeWriteJson).toHaveBeenCalled() // safeWriteJson is called, but it will throw
 			// The error is caught and the function exits silently.
+			// Optionally, ensure no error message was shown if that's part of "silent"
+			// expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
 		})
 
 		it("should handle errors during directory creation", async () => {
@@ -474,7 +577,7 @@ describe("importExport", () => {
 			expect(mockProviderSettingsManager.export).toHaveBeenCalled()
 			expect(mockContextProxy.export).toHaveBeenCalled()
 			expect(fs.mkdir).toHaveBeenCalled()
-			expect(fs.writeFile).not.toHaveBeenCalled() // Should not be called since mkdir failed.
+			expect(safeWriteJson).not.toHaveBeenCalled() // Should not be called since mkdir failed.
 		})
 
 		it("should use the correct default save location", async () => {

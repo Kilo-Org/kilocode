@@ -46,5 +46,10 @@
 		"tokenRequired": "Token Kilo Code jest wymagany do generowania wiadomości commit",
 		"activationFailed": "Kilo: Nie udało się aktywować dostawcy treści commita: {{error}}",
 		"providerRegistered": "Kilo: Zarejestrowano dostawcę wiadomości commit"
+	},
+	"userFeedback": {
+		"message_update_failed": "Nie udało się zaktualizować wiadomości",
+		"no_checkpoint_found": "Nie znaleziono punktu kontrolnego przed tą wiadomością",
+		"message_updated": "Wiadomość pomyślnie zaktualizowana"
 	}
 }

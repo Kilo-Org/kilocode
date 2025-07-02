@@ -77,6 +77,16 @@
 			"processExitedWithError": "Proces Claude Code zakończył się kodem {{exitCode}}. Wyjście błędu: {{output}}",
 			"stoppedWithReason": "Claude Code zatrzymał się z powodu: {{reason}}",
 			"apiKeyModelPlanMismatch": "Klucze API i plany subskrypcji pozwalają na różne modele. Upewnij się, że wybrany model jest zawarty w twoim planie."
+		},
+		"geminiCli": {
+			"oauthLoadFailed": "Nie udało się załadować danych uwierzytelniających OAuth. Najpierw się uwierzytelnij: {{error}}",
+			"tokenRefreshFailed": "Nie udało się odświeżyć tokenu OAuth: {{error}}",
+			"onboardingTimeout": "Operacja wdrażania przekroczyła limit czasu po 60 sekundach. Spróbuj ponownie później.",
+			"projectDiscoveryFailed": "Nie można odkryć ID projektu. Upewnij się, że jesteś uwierzytelniony za pomocą 'gemini auth'.",
+			"rateLimitExceeded": "Przekroczono limit szybkości. Osiągnięto limity darmowego poziomu.",
+			"badRequest": "Nieprawidłowe żądanie: {{details}}",
+			"apiError": "Błąd API Gemini CLI: {{error}}",
+			"completionError": "Błąd uzupełniania Gemini CLI: {{error}}"
 		}
 	},
 	"warnings": {
@@ -105,7 +115,9 @@
 	},
 	"tasks": {
 		"canceled": "Błąd zadania: Zostało zatrzymane i anulowane przez użytkownika.",
-		"deleted": "Niepowodzenie zadania: Zostało zatrzymane i usunięte przez użytkownika."
+		"deleted": "Niepowodzenie zadania: Zostało zatrzymane i usunięte przez użytkownika.",
+		"incomplete": "Zadanie #{{taskNumber}} (Niekompletne)",
+		"no_messages": "Zadanie #{{taskNumber}} (Brak wiadomości)"
 	},
 	"storage": {
 		"prompt_custom_path": "Wprowadź niestandardową ścieżkę przechowywania dla historii konwersacji lub pozostaw puste, aby użyć lokalizacji domyślnej",
@@ -128,10 +140,22 @@
 			}
 		}
 	},
+	"customModes": {
+		"errors": {
+			"yamlParseError": "Nieprawidłowy YAML w pliku .roomodes w linii {{line}}. Sprawdź:\n• Prawidłowe wcięcia (używaj spacji, nie tabulatorów)\n• Pasujące cudzysłowy i nawiasy\n• Prawidłową składnię YAML",
+			"schemaValidationError": "Nieprawidłowy format trybów niestandardowych w .roomodes:\n{{issues}}",
+			"invalidFormat": "Nieprawidłowy format trybów niestandardowych. Upewnij się, że twoje ustawienia są zgodne z prawidłowym formatem YAML.",
+			"updateFailed": "Aktualizacja trybu niestandardowego nie powiodła się: {{error}}",
+			"deleteFailed": "Usunięcie trybu niestandardowego nie powiodło się: {{error}}",
+			"resetFailed": "Resetowanie trybów niestandardowych nie powiodło się: {{error}}",
+			"modeNotFound": "Błąd zapisu: Tryb nie został znaleziony",
+			"noWorkspaceForProject": "Nie znaleziono folderu obszaru roboczego dla trybu specyficznego dla projektu"
+		}
+	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "Twoja organizacja wymaga uwierzytelnienia Roo Code Cloud. Zaloguj się, aby kontynuować.",
-			"organization_mismatch": "Musisz być uwierzytelniony kontem Roo Code Cloud swojej organizacji.",
+			"cloud_auth_required": "Twoja organizacja wymaga uwierzytelnienia Kilo Code Cloud. Zaloguj się, aby kontynuować.",
+			"organization_mismatch": "Musisz być uwierzytelniony kontem Kilo Code Cloud swojej organizacji.",
 			"verification_failed": "Nie można zweryfikować uwierzytelnienia organizacji."
 		}
 	}

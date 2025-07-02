@@ -77,6 +77,16 @@
 			"processExitedWithError": "Claude Code işlemi {{exitCode}} koduyla çıktı. Hata çıktısı: {{output}}",
 			"stoppedWithReason": "Claude Code şu nedenle durdu: {{reason}}",
 			"apiKeyModelPlanMismatch": "API anahtarları ve abonelik planları farklı modellere izin verir. Seçilen modelin planınıza dahil olduğundan emin olun."
+		},
+		"geminiCli": {
+			"oauthLoadFailed": "OAuth kimlik bilgileri yüklenemedi. Lütfen önce kimlik doğrulaması yapın: {{error}}",
+			"tokenRefreshFailed": "OAuth token yenilenemedi: {{error}}",
+			"onboardingTimeout": "Onboarding işlemi 60 saniye sonra zaman aşımına uğradı. Lütfen daha sonra tekrar deneyin.",
+			"projectDiscoveryFailed": "Proje ID'si keşfedilemedi. 'gemini auth' ile kimlik doğrulaması yaptığınızdan emin olun.",
+			"rateLimitExceeded": "Hız sınırı aşıldı. Ücretsiz seviye sınırlarına ulaşıldı.",
+			"badRequest": "Geçersiz istek: {{details}}",
+			"apiError": "Gemini CLI API hatası: {{error}}",
+			"completionError": "Gemini CLI tamamlama hatası: {{error}}"
 		}
 	},
 	"warnings": {
@@ -105,7 +115,9 @@
 	},
 	"tasks": {
 		"canceled": "Görev hatası: Kullanıcı tarafından durduruldu ve iptal edildi.",
-		"deleted": "Görev başarısız: Kullanıcı tarafından durduruldu ve silindi."
+		"deleted": "Görev başarısız: Kullanıcı tarafından durduruldu ve silindi.",
+		"incomplete": "Görev #{{taskNumber}} (Tamamlanmamış)",
+		"no_messages": "Görev #{{taskNumber}} (Mesaj yok)"
 	},
 	"storage": {
 		"prompt_custom_path": "Konuşma geçmişi için özel depolama yolunu girin, varsayılan konumu kullanmak için boş bırakın",
@@ -128,10 +140,22 @@
 			}
 		}
 	},
+	"customModes": {
+		"errors": {
+			"yamlParseError": ".roomodes dosyasının {{line}}. satırında geçersiz YAML. Kontrol et:\n• Doğru girinti (tab değil boşluk kullan)\n• Eşleşen tırnak işaretleri ve parantezler\n• Geçerli YAML sözdizimi",
+			"schemaValidationError": ".roomodes'ta geçersiz özel mod formatı:\n{{issues}}",
+			"invalidFormat": "Geçersiz özel mod formatı. Ayarlarının doğru YAML formatını takip ettiğinden emin ol.",
+			"updateFailed": "Özel mod güncellemesi başarısız: {{error}}",
+			"deleteFailed": "Özel mod silme başarısız: {{error}}",
+			"resetFailed": "Özel modları sıfırlama başarısız: {{error}}",
+			"modeNotFound": "Yazma hatası: Mod bulunamadı",
+			"noWorkspaceForProject": "Proje özel modu için çalışma alanı klasörü bulunamadı"
+		}
+	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "Kuruluşunuz Roo Code Cloud kimlik doğrulaması gerektiriyor. Devam etmek için giriş yapın.",
-			"organization_mismatch": "Kuruluşunuzun Roo Code Cloud hesabıyla kimlik doğrulaması yapmalısınız.",
+			"cloud_auth_required": "Kuruluşunuz Kilo Code Cloud kimlik doğrulaması gerektiriyor. Devam etmek için giriş yapın.",
+			"organization_mismatch": "Kuruluşunuzun Kilo Code Cloud hesabıyla kimlik doğrulaması yapmalısınız.",
 			"verification_failed": "Kuruluş kimlik doğrulaması doğrulanamıyor."
 		}
 	}

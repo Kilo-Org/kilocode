@@ -26,6 +26,12 @@
 			"apiKey": "Chiave API Kilo Code",
 			"login": "Accedi a Kilo Code",
 			"logout": "Disconnetti da Kilo Code"
+		},
+		"contextManagement": {
+			"allowVeryLargeReads": {
+				"label": "Consenti letture di file molto grandi",
+				"description": "Quando abilitato, Kilo Code eseguirà letture di file o output MCP molto grandi anche se c'è un'alta probabilità di superare la finestra di contesto (dimensione del contenuto >80% della finestra di contesto)."
+			}
 		}
 	},
 	"chat": {
@@ -103,5 +109,10 @@
 			},
 			"clickToScroll": "Visualizza {{messageType}} (#{{messageNumber}})"
 		}
+	},
+	"userFeedback": {
+		"editCancel": "Annulla",
+		"send": "Invia",
+		"restoreAndSend": "Ripristina e Invia"
 	}
 }

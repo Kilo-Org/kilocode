@@ -46,5 +46,10 @@
 		"tokenRequired": "Kailangan ang Kilo Code token para sa paggawa ng commit message",
 		"activationFailed": "Kilo: Nabigo ang pag-activate ng commit message provider: {{error}}",
 		"providerRegistered": "Kilo: Naka-register na ang commit message provider"
+	},
+	"userFeedback": {
+		"message_update_failed": "Nabigo ang pag-update ng mensahe",
+		"no_checkpoint_found": "Walang nahanap na checkpoint bago ang mensaheng ito",
+		"message_updated": "Matagumpay na na-update ang mensahe"
 	}
 }

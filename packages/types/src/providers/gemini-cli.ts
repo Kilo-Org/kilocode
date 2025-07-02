@@ -1,3 +1,4 @@
+// kilocode_change new file
 import type { ModelInfo } from "../model.js"
 
 // Gemini CLI models with free tier pricing (all $0)

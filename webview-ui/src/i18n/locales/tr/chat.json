@@ -16,7 +16,12 @@
 		"shareWithOrganization": "Kuruluşla paylaş",
 		"shareWithOrganizationDescription": "Sadece kuruluşunuzun üyeleri erişebilir",
 		"sharePublicly": "Herkese açık paylaş",
-		"sharePubliclyDescription": "Bağlantıya sahip herkes erişebilir"
+		"sharePubliclyDescription": "Bağlantıya sahip herkes erişebilir",
+		"connectToCloud": "Buluta bağlan",
+		"connectToCloudDescription": "Görevleri paylaşmak için Roo Code Cloud'a giriş yap",
+		"sharingDisabledByOrganization": "Paylaşım kuruluş tarafından devre dışı bırakıldı",
+		"shareSuccessOrganization": "Organizasyon bağlantısı panoya kopyalandı",
+		"shareSuccessPublic": "Genel bağlantı panoya kopyalandı"
 	},
 	"history": {
 		"title": "Geçmiş"
@@ -113,6 +118,12 @@
 	"dragFiles": "dosyaları sürüklemek için shift tuşuna basılı tutun",
 	"dragFilesImages": "dosyaları/resimleri sürüklemek için shift tuşuna basılı tutun",
 	"enhancePromptDescription": "'İstemi geliştir' düğmesi, ek bağlam, açıklama veya yeniden ifade sağlayarak isteğinizi iyileştirmeye yardımcı olur. Buraya bir istek yazıp düğmeye tekrar tıklayarak nasıl çalıştığını görebilirsiniz.",
+	"modeSelector": {
+		"title": "Modlar",
+		"marketplace": "Mod Pazaryeri",
+		"settings": "Mod Ayarları",
+		"description": "Roo'nun davranışını özelleştiren uzmanlaşmış kişilikler."
+	},
 	"errorReadingFile": "Dosya okuma hatası:",
 	"noValidImages": "Hiçbir geçerli resim işlenmedi",
 	"separator": "Ayırıcı",

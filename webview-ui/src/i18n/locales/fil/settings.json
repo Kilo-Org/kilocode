@@ -406,7 +406,7 @@
 		},
 		"autoCondenseContext": {
 			"name": "Awtomatikong mag-trigger ng intelligent context condensing",
-			"description": "Kapag naka-enable, awtomatikong ico-condense ng Roo ang context kapag naabot ang threshold. Kapag naka-disable, maaari mo pa ring manu-manong i-trigger ang context condensing."
+			"description": "Kapag naka-enable, awtomatikong ico-condense ng Kilo Code ang context kapag naabot ang threshold. Kapag naka-disable, maaari mo pa ring manu-manong i-trigger ang context condensing."
 		},
 		"openTabs": {
 			"label": "Limitasyon ng context ng mga bukas na tab",

@@ -2,6 +2,11 @@
 	"info": {
 		"settings_imported": "Configuración importada correctamente."
 	},
+	"userFeedback": {
+		"message_update_failed": "Error al actualizar el mensaje",
+		"no_checkpoint_found": "No se encontró ningún punto de control antes de este mensaje",
+		"message_updated": "Mensaje actualizado con éxito"
+	},
 	"lowCreditWarning": {
 		"title": "¡Advertencia de Crédito Bajo!",
 		"message": "¡Comprueba si puedes recargar con créditos gratuitos o comprar más!"

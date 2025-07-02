@@ -26,6 +26,12 @@
 			"apiKey": "API-ключ Kilo Code",
 			"login": "Войти в Kilo Code",
 			"logout": "Выйти из Kilo Code"
+		},
+		"contextManagement": {
+			"allowVeryLargeReads": {
+				"label": "Разрешить чтение очень больших файлов",
+				"description": "При включении Kilo Code будет выполнять чтение очень больших файлов или выводов MCP, даже если существует высокая вероятность переполнения окна контекста (размер содержимого >80% окна контекста)."
+			}
 		}
 	},
 	"chat": {
@@ -103,5 +109,10 @@
 			},
 			"clickToScroll": "Посмотреть {{messageType}} (#{{messageNumber}})"
 		}
+	},
+	"userFeedback": {
+		"editCancel": "Отмена",
+		"send": "Отправить",
+		"restoreAndSend": "Восстановить и отправить"
 	}
 }

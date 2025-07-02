@@ -18,7 +18,7 @@ export const providerNames = [
 	"ollama",
 	"vscode-lm",
 	"lmstudio",
-	"gemini",
+	"gemini", // kilocode_change
 	"gemini-cli",
 	"openai-native",
 	"mistral",
@@ -169,10 +169,12 @@ const geminiSchema = apiModelIdProviderModelSchema.extend({
 	googleGeminiBaseUrl: z.string().optional(),
 })
 
+// kilocode_change start
 const geminiCliSchema = apiModelIdProviderModelSchema.extend({
 	geminiCliOAuthPath: z.string().optional(),
 	geminiCliProjectId: z.string().optional(),
 })
+// kilocode_change end
 
 const openAiNativeSchema = apiModelIdProviderModelSchema.extend({
 	openAiNativeApiKey: z.string().optional(),
@@ -256,7 +258,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	vsCodeLmSchema.merge(z.object({ apiProvider: z.literal("vscode-lm") })),
 	lmStudioSchema.merge(z.object({ apiProvider: z.literal("lmstudio") })),
 	geminiSchema.merge(z.object({ apiProvider: z.literal("gemini") })),
-	geminiCliSchema.merge(z.object({ apiProvider: z.literal("gemini-cli") })),
+	geminiCliSchema.merge(z.object({ apiProvider: z.literal("gemini-cli") })), // kilocode_change
 	openAiNativeSchema.merge(z.object({ apiProvider: z.literal("openai-native") })),
 	mistralSchema.merge(z.object({ apiProvider: z.literal("mistral") })),
 	deepSeekSchema.merge(z.object({ apiProvider: z.literal("deepseek") })),
@@ -287,7 +289,7 @@ export const providerSettingsSchema = z.object({
 	...vsCodeLmSchema.shape,
 	...lmStudioSchema.shape,
 	...geminiSchema.shape,
-	...geminiCliSchema.shape,
+	...geminiCliSchema.shape, // kilocode_change
 	...openAiNativeSchema.shape,
 	...mistralSchema.shape,
 	...deepSeekSchema.shape,

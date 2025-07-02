@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 
 import { ExtensionMessage } from "@roo/ExtensionMessage"
 import TranslationProvider from "./i18n/TranslationContext"
-// import { MarketplaceViewStateManager } from "./components/marketplace/MarketplaceViewStateManager" // kilocode_change: we have our own marketplace
+// import { MarketplaceViewStateManager } from "./components/marketplace/MarketplaceViewStateManager" // kilocode_change: rendered in settings
 
 import { vscode } from "./utils/vscode"
 import { telemetryClient } from "./utils/TelemetryClient"
@@ -15,12 +15,16 @@ import HistoryView from "./components/history/HistoryView"
 import SettingsView, { SettingsViewRef } from "./components/settings/SettingsView"
 import WelcomeView from "./components/kilocode/Welcome/WelcomeView" // kilocode_change
 import ProfileView from "./components/kilocode/profile/ProfileView" // kilocode_change
+// import McpView from "./components/mcp/McpView" kilocode_change: rendered in settings instead
+// import { MarketplaceView } from "./components/marketplace/MarketplaceView" // kilocode_change: rendered in settings
 import ModesView from "./components/modes/ModesView"
 import { HumanRelayDialog } from "./components/human-relay/HumanRelayDialog"
 import BottomControls from "./components/kilocode/BottomControls" // kilocode_change
 // import { AccountView } from "./components/account/AccountView" // kilocode_change: we have our own profile view
 import { useAddNonInteractiveClickListener } from "./components/ui/hooks/useNonInteractiveClick"
 import { KiloCodeErrorBoundary } from "./kilocode/KiloCodeErrorBoundary"
+import { TooltipProvider } from "./components/ui/tooltip"
+import { STANDARD_TOOLTIP_DELAY } from "./components/ui/standard-tooltip"
 
 type Tab = "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "account" | "profile" // kilocode_change: add "profile"
 
@@ -28,6 +32,7 @@ const tabsByMessageAction: Partial<Record<NonNullable<ExtensionMessage["action"]
 	chatButtonClicked: "chat",
 	settingsButtonClicked: "settings",
 	promptsButtonClicked: "modes",
+	mcpButtonClicked: "mcp",
 	historyButtonClicked: "history",
 	profileButtonClicked: "profile",
 	marketplaceButtonClicked: "marketplace",
@@ -49,7 +54,7 @@ const App = () => {
 	} = useExtensionState()
 
 	// Create a persistent state manager
-	// const marketplaceStateManager = useMemo(() => new MarketplaceViewStateManager(), []) // kilocode_change: we have or own marketplace
+	// const marketplaceStateManager = useMemo(() => new MarketplaceViewStateManager(), []) // kilocode_change: rendered in settings
 
 	const [showAnnouncement, setShowAnnouncement] = useState(false)
 	const [tab, setTab] = useState<Tab>("chat")
@@ -75,6 +80,7 @@ const App = () => {
 			}
 
 			setCurrentSection(undefined)
+			setCurrentMarketplaceTab(undefined)
 
 			if (settingsRef.current?.checkUnsaveChanges) {
 				settingsRef.current.checkUnsaveChanges(() => setTab(newTab))
@@ -86,6 +92,7 @@ const App = () => {
 	)
 
 	const [currentSection, setCurrentSection] = useState<string | undefined>(undefined)
+	const [_currentMarketplaceTab, setCurrentMarketplaceTab] = useState<string | undefined>(undefined)
 
 	const onMessage = useCallback(
 		(e: MessageEvent) => {
@@ -107,14 +114,17 @@ const App = () => {
 					const targetTab = message.tab as Tab
 					switchTab(targetTab)
 					setCurrentSection(undefined)
+					setCurrentMarketplaceTab(undefined)
 				} else {
 					// Handle other actions using the mapping
 					const newTab = tabsByMessageAction[message.action]
 					const section = message.values?.section as string | undefined
+					const marketplaceTab = message.values?.marketplaceTab as string | undefined
 
 					if (newTab) {
 						switchTab(newTab)
 						setCurrentSection(section)
+						setCurrentMarketplaceTab(marketplaceTab)
 					}
 				}
 			}
@@ -171,13 +181,14 @@ const App = () => {
 	) : (
 		<>
 			{tab === "modes" && <ModesView onDone={() => switchTab("chat")} />}
+			{/* {tab === "mcp" && <McpView onDone={() => switchTab("chat")} />} kilocode_change: we render this in settings */}
 			{tab === "history" && <HistoryView onDone={() => switchTab("chat")} />}
 			{tab === "settings" && (
 				<SettingsView ref={settingsRef} onDone={() => switchTab("chat")} targetSection={currentSection} /> // kilocode_change
 			)}
 			{/* kilocode_change: add profileview */}
 			{tab === "profile" && <ProfileView onDone={() => switchTab("chat")} />}
-			{/* kilocode_change: we have our own market place */}
+			{/* kilocode_change: rendered in settings */}
 			{/* {tab === "marketplace" && (
 				<MarketplaceView stateManager={marketplaceStateManager} onDone={() => switchTab("chat")} />
 			)} */}
@@ -213,15 +224,21 @@ const App = () => {
 const queryClient = new QueryClient()
 
 const AppWithProviders = () => (
-	<KiloCodeErrorBoundary>
-		<ExtensionStateContextProvider>
-			<TranslationProvider>
-				<QueryClientProvider client={queryClient}>
+	<ExtensionStateContextProvider>
+		<TranslationProvider>
+			<QueryClientProvider client={queryClient}>
+				<TooltipProvider delayDuration={STANDARD_TOOLTIP_DELAY}>
 					<App />
-				</QueryClientProvider>
-			</TranslationProvider>
-		</ExtensionStateContextProvider>
+				</TooltipProvider>
+			</QueryClientProvider>
+		</TranslationProvider>
+	</ExtensionStateContextProvider>
+)
+
+const AppWithKiloCodeErrorBoundary = () => (
+	<KiloCodeErrorBoundary>
+		<AppWithProviders />
 	</KiloCodeErrorBoundary>
 )
 
-export default AppWithProviders
+export default AppWithKiloCodeErrorBoundary // kilocode_change

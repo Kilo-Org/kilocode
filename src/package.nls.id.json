@@ -20,6 +20,7 @@
 	"command.addToContext.title": "Tambahkan ke Konteks",
 	"command.focusInput.title": "Fokus ke Field Input",
 	"command.setCustomStoragePath.title": "Atur Path Penyimpanan Kustom",
+	"command.importSettings.title": "Impor Pengaturan",
 	"command.terminal.addToContext.title": "Tambahkan Konten Terminal ke Konteks",
 	"command.terminal.fixCommand.title": "Perbaiki Perintah Ini",
 	"command.terminal.explainCommand.title": "Jelaskan Perintah Ini",
@@ -29,5 +30,6 @@
 	"settings.vsCodeLmModelSelector.description": "Pengaturan untuk API Model Bahasa VSCode",
 	"settings.vsCodeLmModelSelector.vendor.description": "Vendor dari model bahasa (misalnya copilot)",
 	"settings.vsCodeLmModelSelector.family.description": "Keluarga dari model bahasa (misalnya gpt-4)",
-	"settings.customStoragePath.description": "Path penyimpanan kustom. Biarkan kosong untuk menggunakan lokasi default. Mendukung path absolut (misalnya 'D:\\KiloCodeStorage')"
+	"settings.customStoragePath.description": "Path penyimpanan kustom. Biarkan kosong untuk menggunakan lokasi default. Mendukung path absolut (misalnya 'D:\\KiloCodeStorage')",
+	"settings.enableCodeActions.description": "Aktifkan perbaikan cepat Kilo Code."
 }

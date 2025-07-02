@@ -16,7 +16,12 @@
 		"shareWithOrganization": "Поділитися з організацією",
 		"shareWithOrganizationDescription": "Лише члени твоєї організації мають доступ",
 		"sharePublicly": "Поділитися публічно",
-		"sharePubliclyDescription": "Будь-хто з посиланням має доступ"
+		"sharePubliclyDescription": "Будь-хто з посиланням має доступ",
+		"connectToCloud": "Підключитися до Cloud",
+		"connectToCloudDescription": "Увійдіть до Kilo Code Cloud для обміну завданнями",
+		"sharingDisabledByOrganization": "Обмін вимкнено організацією",
+		"shareSuccessOrganization": "Посилання організації скопійовано до буфера обміну",
+		"shareSuccessPublic": "Публічне посилання скопійовано до буфера обміну"
 	},
 	"history": {
 		"title": "Історія"
@@ -114,6 +119,12 @@
 	"selectModelConfig": "Вибрати модель",
 	"enhancePrompt": "Покращити запит додатковим контекстом",
 	"enhancePromptDescription": "Кнопка 'Покращити запит' допомагає покращити твій запит, надаючи додатковий контекст, роз'яснення або переформулювання. Спробуй ввести запит тут і натиснути кнопку знову, щоб побачити, як це працює.",
+	"modeSelector": {
+		"title": "Режими",
+		"marketplace": "Ринок режимів",
+		"settings": "Налаштування режимів",
+		"description": "Спеціалізовані персони, які налаштовують поведінку Kilo Code."
+	},
 	"addImages": "Додати зображення до повідомлення",
 	"sendMessage": "Надіслати повідомлення",
 	"typeMessage": "Введи повідомлення...",

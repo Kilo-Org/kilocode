@@ -1,8 +1,14 @@
 {
 	"title": "Λογαριασμός",
 	"profilePicture": "Εικόνα προφίλ",
-	"unknownUser": "Άγνωστος Χρήστης",
 	"logOut": "Αποσύνδεση",
 	"testApiAuthentication": "Δοκιμή Ταυτοποίησης API",
-	"signIn": "Σύνδεση στο Roo Code Cloud"
+	"signIn": "Σύνδεση στο Kilo Code Cloud",
+	"connect": "Σύνδεση",
+	"cloudBenefitsTitle": "Σύνδεση στο Kilo Code Cloud",
+	"cloudBenefitsSubtitle": "Συγχρονίστε τα prompts και την τηλεμετρία σας για να ενεργοποιήσετε:",
+	"cloudBenefitHistory": "Online ιστορικό εργασιών",
+	"cloudBenefitSharing": "Λειτουργίες κοινής χρήσης και συνεργασίας",
+	"cloudBenefitMetrics": "Μετρήσεις χρήσης βασισμένες σε εργασίες, tokens και κόστη",
+	"visitCloudWebsite": "Επισκεφτείτε το Kilo Code Cloud"
 }

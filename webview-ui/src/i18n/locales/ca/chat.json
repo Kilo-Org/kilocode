@@ -16,7 +16,12 @@
 		"shareWithOrganization": "Compartir amb l'organització",
 		"shareWithOrganizationDescription": "Només els membres de la teva organització poden accedir",
 		"sharePublicly": "Compartir públicament",
-		"sharePubliclyDescription": "Qualsevol amb l'enllaç pot accedir"
+		"sharePubliclyDescription": "Qualsevol amb l'enllaç pot accedir",
+		"connectToCloud": "Connecta al núvol",
+		"connectToCloudDescription": "Inicia sessió a Kilo Code Cloud per compartir tasques",
+		"sharingDisabledByOrganization": "Compartició deshabilitada per l'organització",
+		"shareSuccessOrganization": "Enllaç d'organització copiat al porta-retalls",
+		"shareSuccessPublic": "Enllaç públic copiat al porta-retalls"
 	},
 	"history": {
 		"title": "Historial"
@@ -113,6 +118,12 @@
 	"dragFiles": "manté premut shift per arrossegar fitxers",
 	"dragFilesImages": "manté premut shift per arrossegar fitxers/imatges",
 	"enhancePromptDescription": "El botó 'Millora la sol·licitud' ajuda a millorar la teva sol·licitud proporcionant context addicional, aclariments o reformulacions. Prova d'escriure una sol·licitud aquí i fes clic al botó de nou per veure com funciona.",
+	"modeSelector": {
+		"title": "Modes",
+		"marketplace": "Marketplace de Modes",
+		"settings": "Configuració de Modes",
+		"description": "Personalitats especialitzades que adapten el comportament de Kilo Code."
+	},
 	"errorReadingFile": "Error en llegir el fitxer:",
 	"noValidImages": "No s'ha processat cap imatge vàlida",
 	"separator": "Separador",

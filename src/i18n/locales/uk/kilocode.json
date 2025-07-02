@@ -46,5 +46,10 @@
 		"tokenRequired": "Для генерації повідомлення коміту потрібен токен Kilo Code",
 		"activationFailed": "Kilo: Не вдалося активувати провайдер повідомлень коміту: {{error}}",
 		"providerRegistered": "Kilo: Провайдер повідомлень коміту зареєстровано"
+	},
+	"userFeedback": {
+		"message_update_failed": "Не вдалося оновити повідомлення",
+		"no_checkpoint_found": "Не знайдено checkpoint перед цим повідомленням",
+		"message_updated": "Повідомлення успішно оновлено"
 	}
 }

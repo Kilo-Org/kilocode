@@ -34,6 +34,11 @@
 		"resetToDefault": "Obnovit výchozí",
 		"description": "Definuj odbornost a osobnost Kilo Code pro tento režim. Tento popis formuje, jak se Kilo Code prezentuje a jak přistupuje k úkolům."
 	},
+	"description": {
+		"title": "Krátký popis (pro lidi)",
+		"resetToDefault": "Obnovit na výchozí popis",
+		"description": "Stručný popis zobrazený v rozbalovacím menu pro výběr režimu."
+	},
 	"whenToUse": {
 		"title": "Kdy použít (volitelné)",
 		"description": "Popiš, kdy by měl být tento režim použit. To pomáhá Orchestrátoru vybrat správný režim pro úkol.",
@@ -140,6 +145,10 @@
 		"roleDefinition": {
 			"label": "Definice role",
 			"description": "Definuj odbornost a osobnost Kilo Code pro tento režim."
+		},
+		"description": {
+			"label": "Krátký popis (pro lidi)",
+			"description": "Stručný popis zobrazený v rozbalovacím menu pro výběr režimu."
 		},
 		"whenToUse": {
 			"label": "Kdy použít (volitelné)",

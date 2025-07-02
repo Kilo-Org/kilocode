@@ -284,6 +284,7 @@ export default function MermaidBlock({ code: originalCode }: MermaidBlockProps) 
 					{/* kilocode_change start switched from ref to dangerouslySetInnerHTML */}
 					<SvgContainer
 						onClick={handleClick}
+						ref={containerRef}
 						$isLoading={isLoading}
 						dangerouslySetInnerHTML={{ __html: svgContent }}
 					/>

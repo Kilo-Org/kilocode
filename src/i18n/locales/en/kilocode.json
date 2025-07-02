@@ -2,6 +2,11 @@
 	"info": {
 		"settings_imported": "Settings imported successfully."
 	},
+	"userFeedback": {
+		"message_update_failed": "Failed to update message",
+		"no_checkpoint_found": "No checkpoint found before this message",
+		"message_updated": "Message updated successfully"
+	},
 	"lowCreditWarning": {
 		"title": "Low Credit Warning!",
 		"message": "Check to see if you can top up with free credits or purchase some more!"

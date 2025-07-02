@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react"
+import { render } from "@/utils/test-utils"
 
 import TranslationProvider, { useAppTranslation } from "../TranslationContext"
 
@@ -20,6 +20,8 @@ vi.mock("react-i18next", () => ({
 				return key
 			},
 			changeLanguage: vi.fn(),
+			language: "en", // kilocode_change
+			dir: () => "ltr", // kilocode_change
 		},
 	}),
 }))
@@ -35,6 +37,8 @@ vi.mock("../setup", () => ({
 			return key
 		},
 		changeLanguage: vi.fn(),
+		language: "en", // kilocode_change
+		dir: () => "ltr", // kilocode_change
 	},
 	loadTranslations: vi.fn(),
 }))

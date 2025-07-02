@@ -77,6 +77,16 @@
 			"processExitedWithError": "Claude Code 程序退出，退出碼：{{exitCode}}。錯誤輸出：{{output}}",
 			"stoppedWithReason": "Claude Code 停止，原因：{{reason}}",
 			"apiKeyModelPlanMismatch": "API 金鑰和訂閱方案允許不同的模型。請確保所選模型包含在您的方案中。"
+		},
+		"geminiCli": {
+			"oauthLoadFailed": "無法載入 OAuth 憑證。請先進行驗證：{{error}}",
+			"tokenRefreshFailed": "無法重新整理 OAuth 權杖：{{error}}",
+			"onboardingTimeout": "新手導引操作在 60 秒後逾時。請稍後再試。",
+			"projectDiscoveryFailed": "無法發現專案 ID。請確保您已使用 'gemini auth' 進行驗證。",
+			"rateLimitExceeded": "超過速率限制。已達到免費層級限制。",
+			"badRequest": "錯誤的請求：{{details}}",
+			"apiError": "Gemini CLI API 錯誤：{{error}}",
+			"completionError": "Gemini CLI 完成錯誤：{{error}}"
 		}
 	},
 	"warnings": {
@@ -105,7 +115,9 @@
 	},
 	"tasks": {
 		"canceled": "工作錯誤：它已被使用者停止並取消。",
-		"deleted": "工作失敗：它已被使用者停止並刪除。"
+		"deleted": "工作失敗：它已被使用者停止並刪除。",
+		"incomplete": "工作 #{{taskNumber}} (未完成)",
+		"no_messages": "工作 #{{taskNumber}} (無訊息)"
 	},
 	"storage": {
 		"prompt_custom_path": "輸入自訂會話歷史儲存路徑，留空以使用預設位置",
@@ -128,10 +140,22 @@
 			}
 		}
 	},
+	"customModes": {
+		"errors": {
+			"yamlParseError": ".roomodes 檔案第 {{line}} 行 YAML 格式無效。請檢查：\n• 正確的縮排（使用空格，不要使用定位字元）\n• 匹配的引號和括號\n• 有效的 YAML 語法",
+			"schemaValidationError": ".roomodes 中自訂模式格式無效：\n{{issues}}",
+			"invalidFormat": "自訂模式格式無效。請確保你的設定遵循正確的 YAML 格式。",
+			"updateFailed": "更新自訂模式失敗：{{error}}",
+			"deleteFailed": "刪除自訂模式失敗：{{error}}",
+			"resetFailed": "重設自訂模式失敗：{{error}}",
+			"modeNotFound": "寫入錯誤：未找到模式",
+			"noWorkspaceForProject": "未找到專案特定模式的工作區資料夾"
+		}
+	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "您的組織需要 Roo Code Cloud 身份驗證。請登入以繼續。",
-			"organization_mismatch": "您必須使用組織的 Roo Code Cloud 帳戶進行身份驗證。",
+			"cloud_auth_required": "您的組織需要 Kilo Code Cloud 身份驗證。請登入以繼續。",
+			"organization_mismatch": "您必須使用組織的 Kilo Code Cloud 帳戶進行身份驗證。",
 			"verification_failed": "無法驗證組織身份驗證。"
 		}
 	}

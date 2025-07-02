@@ -406,7 +406,7 @@
 		},
 		"autoCondenseContext": {
 			"name": "Utlös automatiskt intelligent kontextkondensering",
-			"description": "När den är aktiverad kommer Roo automatiskt att kondensera kontexten när tröskeln uppnås. När den är inaktiverad kan du fortfarande manuellt utlösa kontextkondensering."
+			"description": "När den är aktiverad kommer Kilo Code automatiskt att kondensera kontexten när tröskeln uppnås. När den är inaktiverad kan du fortfarande manuellt utlösa kontextkondensering."
 		},
 		"openTabs": {
 			"label": "Kontextgräns för öppna flikar",

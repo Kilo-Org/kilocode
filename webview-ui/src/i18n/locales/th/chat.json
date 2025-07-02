@@ -16,7 +16,12 @@
 		"shareWithOrganization": "แชร์กับองค์กร",
 		"shareWithOrganizationDescription": "เฉพาะสมาชิกขององค์กรของคุณเท่านั้นที่สามารถเข้าถึงได้",
 		"sharePublicly": "แชร์แบบสาธารณะ",
-		"sharePubliclyDescription": "ทุกคนที่มีลิงก์สามารถเข้าถึงได้"
+		"sharePubliclyDescription": "ทุกคนที่มีลิงก์สามารถเข้าถึงได้",
+		"connectToCloud": "เชื่อมต่อกับ Cloud",
+		"connectToCloudDescription": "เข้าสู่ระบบ Kilo Code Cloud เพื่อแชร์งาน",
+		"sharingDisabledByOrganization": "การแชร์ถูกปิดใช้งานโดยองค์กร",
+		"shareSuccessOrganization": "คัดลอกลิงก์องค์กรไปยังคลิปบอร์ดแล้ว",
+		"shareSuccessPublic": "คัดลอกลิงก์สาธารณะไปยังคลิปบอร์ดแล้ว"
 	},
 	"history": {
 		"title": "ประวัติ"
@@ -114,6 +119,12 @@
 	"selectModelConfig": "เลือกโมเดล",
 	"enhancePrompt": "ปรับปรุงพรอมต์ด้วยบริบทเพิ่มเติม",
 	"enhancePromptDescription": "ปุ่ม 'ปรับปรุงพรอมต์' ช่วยปรับปรุงพรอมต์ของคุณโดยให้บริบทเพิ่มเติม ชี้แจง หรือเขียนใหม่ ลองพิมพ์พรอมต์ที่นี่และคลิกปุ่มอีกครั้งเพื่อดูว่ามันทำงานอย่างไร",
+	"modeSelector": {
+		"title": "โหมด",
+		"marketplace": "ตลาดโหมด",
+		"settings": "การตั้งค่าโหมด",
+		"description": "บุคลิกพิเศษที่ปรับแต่งพฤติกรรมของ Kilo Code"
+	},
 	"addImages": "เพิ่มรูปภาพในข้อความ",
 	"sendMessage": "ส่งข้อความ",
 	"typeMessage": "พิมพ์ข้อความ...",

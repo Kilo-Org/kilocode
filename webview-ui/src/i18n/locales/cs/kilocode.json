@@ -26,6 +26,12 @@
 			"apiKey": "Kilo Code API Key",
 			"login": "Přihlásit se do Kilo Code",
 			"logout": "Odhlásit se z Kilo Code"
+		},
+		"contextManagement": {
+			"allowVeryLargeReads": {
+				"label": "Povolit čtení velmi velkých souborů",
+				"description": "Když je povoleno, Kilo Code provede čtení velmi velkých souborů nebo výstupů MCP i když existuje vysoká pravděpodobnost přetečení kontextového okna (velikost obsahu >80% kontextového okna)."
+			}
 		}
 	},
 	"chat": {
@@ -103,5 +109,10 @@
 				"user": "zpětná vazba uživatele"
 			}
 		}
+	},
+	"userFeedback": {
+		"editCancel": "Zrušit",
+		"send": "Odeslat",
+		"restoreAndSend": "Obnovit a odeslat"
 	}
 }

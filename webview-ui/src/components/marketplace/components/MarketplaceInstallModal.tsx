@@ -195,8 +195,25 @@ export const MarketplaceInstallModal: React.FC<MarketplaceInstallModalProps> = (
 	}
 
 	const handlePostInstallAction = (tab: "mcp" | "modes") => {
-		// Send message to switch to the appropriate tab
-		vscode.postMessage({ type: "switchTab", tab })
+		if (tab === "mcp") {
+			// Navigate to MCP tab
+			window.postMessage(
+				{
+					type: "action",
+					action: "mcpButtonClicked",
+				},
+				"*",
+			)
+		} else {
+			// Navigate to Modes tab
+			window.postMessage(
+				{
+					type: "action",
+					action: "promptsButtonClicked",
+				},
+				"*",
+			)
+		}
 		// Close the modal
 		onClose()
 	}
@@ -359,7 +376,10 @@ export const MarketplaceInstallModal: React.FC<MarketplaceInstallModalProps> = (
 							<Button variant="outline" onClick={onClose}>
 								{t("marketplace:install.done")}
 							</Button>
-							<Button onClick={() => handlePostInstallAction(item.type === "mcp" ? "mcp" : "modes")}>
+							<Button
+								// kilocode_change: only display when item type is modes
+								style={item.type === "mcp" ? { display: "none" } : undefined}
+								onClick={() => handlePostInstallAction(item.type === "mcp" ? "mcp" : "modes")}>
 								{item.type === "mcp"
 									? t("marketplace:install.goToMcp")
 									: t("marketplace:install.goToModes")}

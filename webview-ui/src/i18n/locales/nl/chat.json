@@ -16,7 +16,12 @@
 		"shareWithOrganization": "Delen met organisatie",
 		"shareWithOrganizationDescription": "Alleen leden van je organisatie kunnen toegang krijgen",
 		"sharePublicly": "Openbaar delen",
-		"sharePubliclyDescription": "Iedereen met de link kan toegang krijgen"
+		"sharePubliclyDescription": "Iedereen met de link kan toegang krijgen",
+		"connectToCloud": "Verbind met Cloud",
+		"connectToCloudDescription": "Meld je aan bij Kilo Code Cloud om taken te delen",
+		"sharingDisabledByOrganization": "Delen uitgeschakeld door organisatie",
+		"shareSuccessOrganization": "Organisatielink gekopieerd naar klembord",
+		"shareSuccessPublic": "Openbare link gekopieerd naar klembord"
 	},
 	"history": {
 		"title": "Geschiedenis"
@@ -106,6 +111,12 @@
 	"selectModelConfig": "Selecteer model",
 	"enhancePrompt": "Prompt verbeteren met extra context",
 	"enhancePromptDescription": "De knop 'Prompt verbeteren' helpt je prompt te verbeteren door extra context, verduidelijking of herformulering te bieden. Probeer hier een prompt te typen en klik opnieuw op de knop om te zien hoe het werkt.",
+	"modeSelector": {
+		"title": "Modi",
+		"marketplace": "Modus Marktplaats",
+		"settings": "Modus Instellingen",
+		"description": "Gespecialiseerde persona's die het gedrag van Kilo Code aanpassen."
+	},
 	"addImages": "Afbeeldingen toevoegen aan bericht",
 	"sendMessage": "Bericht verzenden",
 	"typeMessage": "Typ een bericht...",

@@ -48,11 +48,9 @@ interface CompletionUsage {
 	}
 	total_tokens?: number
 	cost?: number
-	// kilocode_change start
 	cost_details?: {
 		upstream_inference_cost?: number
 	}
-	// kilocode_change end
 }
 
 export class OpenRouterHandler extends BaseProvider implements SingleCompletionHandler {
@@ -173,11 +171,9 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 				type: "usage",
 				inputTokens: lastUsage.prompt_tokens || 0,
 				outputTokens: lastUsage.completion_tokens || 0,
-				// Waiting on OpenRouter to figure out what this represents in the Gemini case
-				// and how to best support it.
-				cacheReadTokens: lastUsage.prompt_tokens_details?.cached_tokens, // kilocode_change: uncomment
+				cacheReadTokens: lastUsage.prompt_tokens_details?.cached_tokens,
 				reasoningTokens: lastUsage.completion_tokens_details?.reasoning_tokens,
-				totalCost: (lastUsage.cost_details?.upstream_inference_cost || 0) + (lastUsage.cost || 0), // kilocode_change +upstream_inference_cost
+				totalCost: (lastUsage.cost_details?.upstream_inference_cost || 0) + (lastUsage.cost || 0),
 			}
 		}
 	}

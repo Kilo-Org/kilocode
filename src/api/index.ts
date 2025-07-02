@@ -15,7 +15,7 @@ import {
 	OllamaHandler,
 	LmStudioHandler,
 	GeminiHandler,
-	GeminiCliHandler,
+	GeminiCliHandler, // kilocode_change
 	OpenAiNativeHandler,
 	DeepSeekHandler,
 	MistralHandler,
@@ -93,8 +93,10 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new LmStudioHandler(options)
 		case "gemini":
 			return new GeminiHandler(options)
+		// kilocode_change start
 		case "gemini-cli":
 			return new GeminiCliHandler(options)
+		// kilocode_change end
 		case "openai-native":
 			return new OpenAiNativeHandler(options)
 		case "deepseek":

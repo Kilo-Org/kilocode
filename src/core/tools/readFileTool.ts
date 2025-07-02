@@ -14,6 +14,7 @@ import { readLines } from "../../integrations/misc/read-lines"
 import { extractTextFromFile, addLineNumbers, getSupportedBinaryFormats } from "../../integrations/misc/extract-text"
 import { parseSourceCodeDefinitionsForFile } from "../../services/tree-sitter"
 import { parseXml } from "../../utils/xml"
+import { blockFileReadWhenTooLarge } from "./kilocode"
 
 export function getReadFileToolDescription(blockName: string, blockParams: any): string {
 	// Handle both single path and multiple files via args
@@ -518,6 +519,15 @@ export async function readFileTool(
 
 				// Handle normal file read
 				const content = await extractTextFromFile(fullPath)
+
+				// kilocode_change start: limit output size based on token count
+				const blockResult = await blockFileReadWhenTooLarge(cline, relPath, content)
+				if (blockResult) {
+					updateFileResult(relPath, blockResult)
+					continue
+				}
+				// kilocode_change end
+
 				const lineRangeAttr = ` lines="1-${totalLines}"`
 				let xmlInfo = totalLines > 0 ? `<content${lineRangeAttr}>\n${content}</content>\n` : `<content/>`
 

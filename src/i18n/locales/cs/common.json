@@ -77,6 +77,16 @@
 			"processExitedWithError": "Proces Claude Code skončil s kódem {{exitCode}}. Chybový výstup: {{output}}",
 			"stoppedWithReason": "Claude Code se zastavil s důvodem: {{reason}}",
 			"apiKeyModelPlanMismatch": "API klíče a plány předplatného umožňují různé modely. Ujisti se, že vybraný model je zahrnut v tvém plánu."
+		},
+		"geminiCli": {
+			"oauthLoadFailed": "Nepodařilo se načíst OAuth přihlašovací údaje. Nejprve se prosím autentizujte: {{error}}",
+			"tokenRefreshFailed": "Nepodařilo se obnovit OAuth token: {{error}}",
+			"onboardingTimeout": "Onboarding operace vypršela po 60 sekundách. Zkuste to prosím později.",
+			"projectDiscoveryFailed": "Nepodařilo se objevit ID projektu. Ujistěte se, že jste autentizováni pomocí 'gemini auth'.",
+			"rateLimitExceeded": "Překročen limit rychlosti. Limity bezplatné úrovně byly dosaženy.",
+			"badRequest": "Špatný požadavek: {{details}}",
+			"apiError": "Chyba Gemini CLI API: {{error}}",
+			"completionError": "Chyba dokončení Gemini CLI: {{error}}"
 		}
 	},
 	"warnings": {
@@ -105,7 +115,9 @@
 	},
 	"tasks": {
 		"canceled": "Chyba úlohy: Byla zastavena a zrušena uživatelem.",
-		"deleted": "Selhání úlohy: Byla zastavena a smazána uživatelem."
+		"deleted": "Selhání úlohy: Byla zastavena a smazána uživatelem.",
+		"incomplete": "Úkol #{{taskNumber}} (Neúplný)",
+		"no_messages": "Úkol #{{taskNumber}} (Žádné zprávy)"
 	},
 	"storage": {
 		"prompt_custom_path": "Zadej vlastní cestu úložiště historie konverzací, ponech prázdné pro použití výchozího umístění",
@@ -117,10 +129,22 @@
 		"task_prompt": "Co by měl Kilo Code udělat?",
 		"task_placeholder": "Vytvořit, najít, zeptat se na něco"
 	},
+	"customModes": {
+		"errors": {
+			"yamlParseError": "Neplatný YAML v souboru .roomodes na řádku {{line}}. Zkontroluj prosím:\n• Správné odsazení (použij mezery, ne tabulátory)\n• Odpovídající uvozovky a závorky\n• Platnou YAML syntaxi",
+			"schemaValidationError": "Neplatný formát vlastních režimů v .roomodes:\n{{issues}}",
+			"invalidFormat": "Neplatný formát vlastních režimů. Ujisti se prosím, že tvá nastavení dodržují správný YAML formát.",
+			"updateFailed": "Nepodařilo se aktualizovat vlastní režim: {{error}}",
+			"deleteFailed": "Nepodařilo se smazat vlastní režim: {{error}}",
+			"resetFailed": "Nepodařilo se resetovat vlastní režimy: {{error}}",
+			"modeNotFound": "Chyba zápisu: Režim nebyl nalezen",
+			"noWorkspaceForProject": "Pro projektově specifický režim nebyla nalezena žádná složka workspace"
+		}
+	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "Tvá organizace vyžaduje autentizaci Roo Code Cloud. Prosím přihlas se pro pokračování.",
-			"organization_mismatch": "Musíš být autentizován s účtem Roo Code Cloud tvé organizace.",
+			"cloud_auth_required": "Tvá organizace vyžaduje autentizaci Kilo Code Cloud. Prosím přihlas se pro pokračování.",
+			"organization_mismatch": "Musíš být autentizován s účtem Kilo Code Cloud tvé organizace.",
 			"verification_failed": "Nelze ověřit autentizaci organizace."
 		}
 	}

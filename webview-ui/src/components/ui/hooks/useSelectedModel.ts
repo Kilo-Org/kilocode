@@ -32,6 +32,8 @@ import {
 	glamaDefaultModelId,
 	unboundDefaultModelId,
 	litellmDefaultModelId,
+	claudeCodeDefaultModelId,
+	claudeCodeModels,
 } from "@roo-code/types"
 
 import { cerebrasModels, cerebrasDefaultModelId } from "@roo/api" // kilocode_change
@@ -247,6 +249,12 @@ function getSelectedModel({
 		}
 		// kilocode_change end
 
+		case "claude-code": {
+			// Claude Code models extend anthropic models but with images and prompt caching disabled
+			const id = apiConfiguration.apiModelId ?? claudeCodeDefaultModelId
+			const info = claudeCodeModels[id as keyof typeof claudeCodeModels]
+			return { id, info: { ...openAiModelInfoSaneDefaults, ...info } }
+		}
 		// case "anthropic":
 		// case "human-relay":
 		// case "fake-ai":

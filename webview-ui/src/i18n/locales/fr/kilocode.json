@@ -26,6 +26,12 @@
 			"apiKey": "Clé API Kilo Code",
 			"login": "Se connecter à Kilo Code",
 			"logout": "Se déconnecter de Kilo Code"
+		},
+		"contextManagement": {
+			"allowVeryLargeReads": {
+				"label": "Autoriser les lectures de fichiers très volumineux",
+				"description": "Lorsque cette option est activée, Kilo Code effectuera des lectures de fichiers ou de sorties MCP très volumineuses même s'il existe une forte probabilité de dépasser la fenêtre de contexte (taille du contenu >80% de la fenêtre de contexte)."
+			}
 		}
 	},
 	"chat": {
@@ -103,5 +109,10 @@
 				"user": "commentaires des utilisateurs"
 			}
 		}
+	},
+	"userFeedback": {
+		"editCancel": "Annuler",
+		"send": "Envoyer",
+		"restoreAndSend": "Restaurer et Envoyer"
 	}
 }

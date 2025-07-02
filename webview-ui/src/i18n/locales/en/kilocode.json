@@ -26,6 +26,12 @@
 			"apiKey": "Kilo Code API Key",
 			"login": "Log in at Kilo Code",
 			"logout": "Log out from Kilo Code"
+		},
+		"contextManagement": {
+			"allowVeryLargeReads": {
+				"label": "Allow very large file reads",
+				"description": "When enabled, Kilo Code will perform very large file or MCP output reads even if there is a high chance of overflowing the context window (content size >80% of context window)."
+			}
 		}
 	},
 	"chat": {
@@ -103,5 +109,10 @@
 				"use_mcp_server": "MCP server usage"
 			}
 		}
+	},
+	"userFeedback": {
+		"editCancel": "Cancel",
+		"send": "Send",
+		"restoreAndSend": "Restore & Send"
 	}
 }

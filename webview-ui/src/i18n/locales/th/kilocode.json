@@ -22,6 +22,12 @@
 		"sections": {
 			"mcp": "MCP Servers"
 		},
+		"contextManagement": {
+			"allowVeryLargeReads": {
+				"label": "อนุญาตการอ่านไฟล์ขนาดใหญ่มาก",
+				"description": "เมื่อเปิดใช้งาน Kilo Code จะอ่านไฟล์หรือผลลัพธ์ MCP ที่มีขนาดใหญ่มาก แม้ว่าจะมีโอกาสสูงที่จะล้นหน้าต่างบริบท (ขนาดเนื้อหา >80% ของหน้าต่างบริบท)"
+			}
+		},
 		"provider": {
 			"apiKey": "Kilo Code API Key",
 			"login": "เข้าสู่ระบบที่ Kilo Code",
@@ -103,5 +109,10 @@
 				"user": "ความคิดเห็นของผู้ใช้"
 			}
 		}
+	},
+	"userFeedback": {
+		"editCancel": "ยกเลิก",
+		"send": "ส่ง",
+		"restoreAndSend": "คืนค่าและส่ง"
 	}
 }

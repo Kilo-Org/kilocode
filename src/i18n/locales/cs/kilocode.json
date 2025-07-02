@@ -46,5 +46,10 @@
 		"tokenRequired": "Pro generování commit zprávy je vyžadován Kilo Code token",
 		"activationFailed": "Kilo: Aktivace poskytovatele commit zpráv selhala: {{error}}",
 		"providerRegistered": "Kilo: Poskytovatel commit zpráv zaregistrován"
+	},
+	"userFeedback": {
+		"message_update_failed": "Aktualizace zprávy selhala",
+		"no_checkpoint_found": "Před touto zprávou nebyl nalezen žádný checkpoint",
+		"message_updated": "Zpráva byla úspěšně aktualizována"
 	}
 }

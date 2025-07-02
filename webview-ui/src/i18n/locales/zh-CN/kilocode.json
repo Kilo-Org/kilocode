@@ -22,6 +22,12 @@
 		"sections": {
 			"mcp": "MCP 服务器"
 		},
+		"contextManagement": {
+			"allowVeryLargeReads": {
+				"label": "允许超大文件读取",
+				"description": "启用后，Kilo Code 将执行超大文件或 MCP 输出读取，即使存在高概率溢出上下文窗口（内容大小 >80% 的上下文窗口）。"
+			}
+		},
 		"provider": {
 			"apiKey": "Kilo Code API 密钥",
 			"login": "登录 Kilo Code",
@@ -103,5 +109,10 @@
 			},
 			"clickToScroll": "查看{{messageType}} (#{{messageNumber}})"
 		}
+	},
+	"userFeedback": {
+		"editCancel": "取消",
+		"send": "发送",
+		"restoreAndSend": "恢复并发送"
 	}
 }

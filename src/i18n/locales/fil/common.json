@@ -77,6 +77,16 @@
 			"processExitedWithError": "Ang proseso ng Claude Code ay lumabas gamit ang code {{exitCode}}. Error output: {{output}}",
 			"stoppedWithReason": "Ang Claude Code ay tumigil dahil sa: {{reason}}",
 			"apiKeyModelPlanMismatch": "Ang mga API key at subscription plan ay nagpapahintulot ng iba't ibang mga modelo. Siguraduhing ang napiling modelo ay kasama sa iyong plano."
+		},
+		"geminiCli": {
+			"oauthLoadFailed": "Nabigo ang pag-load ng OAuth credentials. Mangyaring mag-authenticate muna: {{error}}",
+			"tokenRefreshFailed": "Nabigo ang pag-refresh ng OAuth token: {{error}}",
+			"onboardingTimeout": "Ang onboarding operation ay nag-timeout pagkatapos ng 60 segundo. Mangyaring subukan muli mamaya.",
+			"projectDiscoveryFailed": "Hindi nahanap ang project ID. Siguraduhing naka-authenticate ka gamit ang 'gemini auth'.",
+			"rateLimitExceeded": "Nalampasan ang rate limit. Naabot na ang mga limitasyon ng free tier.",
+			"badRequest": "Masamang request: {{details}}",
+			"apiError": "Gemini CLI API error: {{error}}",
+			"completionError": "Gemini CLI completion error: {{error}}"
 		}
 	},
 	"warnings": {
@@ -105,7 +115,9 @@
 	},
 	"tasks": {
 		"canceled": "Task error: Ito ay tinigil at kinansela ng user.",
-		"deleted": "Task failure: Ito ay tinigil at tinanggal ng user."
+		"deleted": "Task failure: Ito ay tinigil at tinanggal ng user.",
+		"incomplete": "Task #{{taskNumber}} (Hindi kumpleto)",
+		"no_messages": "Task #{{taskNumber}} (Walang mga mensahe)"
 	},
 	"storage": {
 		"prompt_custom_path": "Maglagay ng custom conversation history storage path, iwanang blangko para gamitin ang default na lokasyon",
@@ -117,10 +129,22 @@
 		"task_prompt": "Ano ang dapat gawin ng Kilo Code?",
 		"task_placeholder": "Bumuo, maghanap, magtanong ng kahit ano"
 	},
+	"customModes": {
+		"errors": {
+			"yamlParseError": "Hindi valid na YAML sa .roomodes file sa linya {{line}}. Mangyaring tingnan ang:\n• Tamang indentation (gamitin ang mga space, hindi tabs)\n• Nagtutugmang mga quotes at brackets\n• Valid na YAML syntax",
+			"schemaValidationError": "Hindi valid na format ng custom modes sa .roomodes:\n{{issues}}",
+			"invalidFormat": "Hindi valid na format ng custom modes. Mangyaring siguraduhing ang inyong mga setting ay sumusunod sa tamang YAML format.",
+			"updateFailed": "Nabigo ang pag-update ng custom mode: {{error}}",
+			"deleteFailed": "Nabigo ang pag-delete ng custom mode: {{error}}",
+			"resetFailed": "Nabigo ang pag-reset ng mga custom mode: {{error}}",
+			"modeNotFound": "Write error: Hindi nahanap ang mode",
+			"noWorkspaceForProject": "Walang nahanap na workspace folder para sa project-specific mode"
+		}
+	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "Ang iyong organisasyon ay nangangailangan ng Roo Code Cloud authentication. Mangyaring mag-sign in upang magpatuloy.",
-			"organization_mismatch": "Dapat kang ma-authenticate gamit ang Roo Code Cloud account ng iyong organisasyon.",
+			"cloud_auth_required": "Ang iyong organisasyon ay nangangailangan ng Kilo Code Cloud authentication. Mangyaring mag-sign in upang magpatuloy.",
+			"organization_mismatch": "Dapat kang ma-authenticate gamit ang Kilo Code Cloud account ng iyong organisasyon.",
 			"verification_failed": "Hindi ma-verify ang authentication ng organisasyon."
 		}
 	}

@@ -77,6 +77,16 @@
 			"processExitedWithError": "Claude Code Prozess wurde mit Code {{exitCode}} beendet. Fehlerausgabe: {{output}}",
 			"stoppedWithReason": "Claude Code wurde mit Grund gestoppt: {{reason}}",
 			"apiKeyModelPlanMismatch": "API-Schlüssel und Abonnement-Pläne erlauben verschiedene Modelle. Stelle sicher, dass das ausgewählte Modell in deinem Plan enthalten ist."
+		},
+		"geminiCli": {
+			"oauthLoadFailed": "Fehler beim Laden der OAuth-Anmeldedaten. Bitte authentifiziere dich zuerst: {{error}}",
+			"tokenRefreshFailed": "Fehler beim Aktualisieren des OAuth-Tokens: {{error}}",
+			"onboardingTimeout": "Onboarding-Vorgang nach 60 Sekunden abgebrochen. Bitte versuche es später erneut.",
+			"projectDiscoveryFailed": "Projekt-ID konnte nicht ermittelt werden. Stelle sicher, dass du mit 'gemini auth' authentifiziert bist.",
+			"rateLimitExceeded": "Anfragenlimit überschritten. Die Limits des kostenlosen Tarifs wurden erreicht.",
+			"badRequest": "Ungültige Anfrage: {{details}}",
+			"apiError": "Gemini CLI API-Fehler: {{error}}",
+			"completionError": "Gemini CLI Vervollständigungsfehler: {{error}}"
 		}
 	},
 	"warnings": {
@@ -105,7 +115,9 @@
 	},
 	"tasks": {
 		"canceled": "Aufgabenfehler: Die Aufgabe wurde vom Benutzer gestoppt und abgebrochen.",
-		"deleted": "Aufgabenfehler: Die Aufgabe wurde vom Benutzer gestoppt und gelöscht."
+		"deleted": "Aufgabenfehler: Die Aufgabe wurde vom Benutzer gestoppt und gelöscht.",
+		"incomplete": "Aufgabe #{{taskNumber}} (Unvollständig)",
+		"no_messages": "Aufgabe #{{taskNumber}} (Keine Nachrichten)"
 	},
 	"storage": {
 		"prompt_custom_path": "Gib den benutzerdefinierten Speicherpfad für den Gesprächsverlauf ein, leer lassen für Standardspeicherort",
@@ -128,10 +140,22 @@
 			}
 		}
 	},
+	"customModes": {
+		"errors": {
+			"yamlParseError": "Ungültiges YAML in .roomodes-Datei in Zeile {{line}}. Bitte überprüfe:\n• Korrekte Einrückung (verwende Leerzeichen, keine Tabs)\n• Passende Anführungszeichen und Klammern\n• Gültige YAML-Syntax",
+			"schemaValidationError": "Ungültiges Format für benutzerdefinierte Modi in .roomodes:\n{{issues}}",
+			"invalidFormat": "Ungültiges Format für benutzerdefinierte Modi. Bitte stelle sicher, dass deine Einstellungen dem korrekten YAML-Format folgen.",
+			"updateFailed": "Fehler beim Aktualisieren des benutzerdefinierten Modus: {{error}}",
+			"deleteFailed": "Fehler beim Löschen des benutzerdefinierten Modus: {{error}}",
+			"resetFailed": "Fehler beim Zurücksetzen der benutzerdefinierten Modi: {{error}}",
+			"modeNotFound": "Schreibfehler: Modus nicht gefunden",
+			"noWorkspaceForProject": "Kein Arbeitsbereich-Ordner für projektspezifischen Modus gefunden"
+		}
+	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "Deine Organisation erfordert eine Roo Code Cloud-Authentifizierung. Bitte melde dich an, um fortzufahren.",
-			"organization_mismatch": "Du musst mit dem Roo Code Cloud-Konto deiner Organisation authentifiziert sein.",
+			"cloud_auth_required": "Deine Organisation erfordert eine Kilo Code Cloud-Authentifizierung. Bitte melde dich an, um fortzufahren.",
+			"organization_mismatch": "Du musst mit dem Kilo Code Cloud-Konto deiner Organisation authentifiziert sein.",
 			"verification_failed": "Die Organisationsauthentifizierung konnte nicht verifiziert werden."
 		}
 	}

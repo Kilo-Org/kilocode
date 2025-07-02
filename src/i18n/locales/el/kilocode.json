@@ -46,5 +46,10 @@
 		"tokenRequired": "Απαιτείται το token του Kilo Code για τη δημιουργία μηνύματος commit",
 		"activationFailed": "Kilo: Αποτυχία ενεργοποίησης του παρόχου μηνυμάτων commit: {{error}}",
 		"providerRegistered": "Kilo: Ο πάροχος μηνυμάτων commit καταχωρήθηκε"
+	},
+	"userFeedback": {
+		"message_update_failed": "Αποτυχία ενημέρωσης μηνύματος",
+		"no_checkpoint_found": "Δεν βρέθηκε checkpoint πριν από αυτό το μήνυμα",
+		"message_updated": "Το μήνυμα ενημερώθηκε επιτυχώς"
 	}
 }

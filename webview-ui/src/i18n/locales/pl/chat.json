@@ -16,7 +16,12 @@
 		"shareWithOrganization": "Udostępnij organizacji",
 		"shareWithOrganizationDescription": "Tylko członkowie twojej organizacji mogą uzyskać dostęp",
 		"sharePublicly": "Udostępnij publicznie",
-		"sharePubliclyDescription": "Każdy z linkiem może uzyskać dostęp"
+		"sharePubliclyDescription": "Każdy z linkiem może uzyskać dostęp",
+		"connectToCloud": "Połącz z chmurą",
+		"connectToCloudDescription": "Zaloguj się do Kilo Code Cloud, aby udostępniać zadania",
+		"sharingDisabledByOrganization": "Udostępnianie wyłączone przez organizację",
+		"shareSuccessOrganization": "Link organizacji skopiowany do schowka",
+		"shareSuccessPublic": "Link publiczny skopiowany do schowka"
 	},
 	"history": {
 		"title": "Historia"
@@ -113,6 +118,12 @@
 	"dragFiles": "przytrzymaj shift, aby przeciągnąć pliki",
 	"dragFilesImages": "przytrzymaj shift, aby przeciągnąć pliki/obrazy",
 	"enhancePromptDescription": "Przycisk 'Ulepsz podpowiedź' pomaga ulepszyć Twoją prośbę, dostarczając dodatkowy kontekst, wyjaśnienia lub przeformułowania. Spróbuj wpisać prośbę tutaj i kliknij przycisk ponownie, aby zobaczyć, jak to działa.",
+	"modeSelector": {
+		"title": "Tryby",
+		"marketplace": "Marketplace Trybów",
+		"settings": "Ustawienia Trybów",
+		"description": "Wyspecjalizowane persony, które dostosowują zachowanie Kilo Code."
+	},
 	"errorReadingFile": "Błąd odczytu pliku:",
 	"noValidImages": "Nie przetworzono żadnych prawidłowych obrazów",
 	"separator": "Separator",

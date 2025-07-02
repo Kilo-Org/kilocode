@@ -26,6 +26,12 @@
 			"apiKey": "Kilo Code API 키",
 			"login": "Kilo Code에 로그인",
 			"logout": "Kilo Code에서 로그아웃"
+		},
+		"contextManagement": {
+			"allowVeryLargeReads": {
+				"label": "매우 큰 파일 읽기 허용",
+				"description": "활성화되면 Kilo Code는 컨텍스트 창을 오버플로할 가능성이 높더라도 매우 큰 파일이나 MCP 출력 읽기를 수행합니다 (콘텐츠 크기가 컨텍스트 창의 80% 이상)."
+			}
 		}
 	},
 	"chat": {
@@ -103,5 +109,10 @@
 				"user": "사용자 피드백"
 			}
 		}
+	},
+	"userFeedback": {
+		"editCancel": "취소",
+		"send": "보내기",
+		"restoreAndSend": "복원 및 보내기"
 	}
 }

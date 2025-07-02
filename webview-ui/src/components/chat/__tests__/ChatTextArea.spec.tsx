@@ -1,4 +1,4 @@
-import { render, fireEvent, screen } from "@testing-library/react"
+import { render, fireEvent, screen } from "@/utils/test-utils"
 
 import { defaultModeSlug } from "@roo/modes"
 
@@ -764,10 +764,11 @@ describe("ChatTextArea", () => {
 		})
 	})
 
-	describe("selectApiConfig", () => {
+	// kilocode_change: removed in kilcode
+	describe.skip("selectApiConfig", () => {
 		// Helper function to get the API config dropdown
 		const getApiConfigDropdown = () => {
-			return screen.getByTitle("chat:selectApiConfig")
+			return screen.getByTestId("dropdown-trigger")
 		}
 		it("should be enabled independently of sendingDisabled", () => {
 			render(<ChatTextArea {...defaultProps} sendingDisabled={true} selectApiConfigDisabled={false} />)

@@ -9,6 +9,7 @@
 	"command.openInNewTab.title": "在新分頁中開啟",
 	"command.focusInput.title": "聚焦輸入框",
 	"command.setCustomStoragePath.title": "設定自訂儲存路徑",
+	"command.importSettings.title": "匯入設定",
 	"command.terminal.addToContext.title": "將終端內容新增到上下文",
 	"command.terminal.fixCommand.title": "修復此命令",
 	"command.terminal.explainCommand.title": "解釋此命令",
@@ -31,5 +32,6 @@
 	"settings.vsCodeLmModelSelector.description": "VSCode 語言模型 API 的設定",
 	"settings.vsCodeLmModelSelector.vendor.description": "語言模型供應商（例如：copilot）",
 	"settings.vsCodeLmModelSelector.family.description": "語言模型系列（例如：gpt-4）",
-	"settings.customStoragePath.description": "自訂儲存路徑。留空以使用預設位置。支援絕對路徑（例如：'D:\\KiloCodeStorage'）"
+	"settings.customStoragePath.description": "自訂儲存路徑。留空以使用預設位置。支援絕對路徑（例如：'D:\\KiloCodeStorage'）",
+	"settings.enableCodeActions.description": "啟用 Kilo Code 快速修復。"
 }

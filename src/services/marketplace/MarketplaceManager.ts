@@ -198,7 +198,7 @@ export class MarketplaceManager {
 			}
 
 			// Check modes in .roomodes
-			const projectModesPath = path.join(workspaceFolder.uri.fsPath, ".roomodes")
+			const projectModesPath = path.join(workspaceFolder.uri.fsPath, ".kilocodemodes")
 			try {
 				const content = await fs.readFile(projectModesPath, "utf-8")
 				const data = yaml.parse(content)
@@ -216,7 +216,7 @@ export class MarketplaceManager {
 			}
 
 			// Check MCPs in .roo/mcp.json
-			const projectMcpPath = path.join(workspaceFolder.uri.fsPath, ".roo", "mcp.json")
+			const projectMcpPath = path.join(workspaceFolder.uri.fsPath, ".kilocode", "mcp.json")
 			try {
 				const content = await fs.readFile(projectMcpPath, "utf-8")
 				const data = JSON.parse(content)

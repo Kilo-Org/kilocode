@@ -34,6 +34,11 @@
 		"resetToDefault": "Ibalik sa default",
 		"description": "Tukuyin ang kadalubhasaan at personalidad ng Kilo Code para sa mode na ito. Ang paglalarawan na ito ay humuhubog kung paano nagpapakita ang Kilo Code at paano nito nilalapitan ang mga gawain."
 	},
+	"description": {
+		"title": "Maikling paglalarawan (para sa mga tao)",
+		"resetToDefault": "Ibalik sa default na paglalarawan",
+		"description": "Isang maikling paglalarawan na ipinakikita sa mode selector dropdown."
+	},
 	"whenToUse": {
 		"title": "Kailan Gamitin (opsyonal)",
 		"description": "Ilarawan kung kailan dapat gamitin ang mode na ito. Tumutulong ito sa Orchestrator na pumili ng tamang mode para sa isang gawain.",
@@ -140,6 +145,10 @@
 		"roleDefinition": {
 			"label": "Kahulugan ng Role",
 			"description": "Tukuyin ang kadalubhasaan at personalidad ng Kilo Code para sa mode na ito."
+		},
+		"description": {
+			"label": "Maikling paglalarawan (para sa mga tao)",
+			"description": "Isang maikling paglalarawan na ipinakikita sa dropdown menu ng mode selector."
 		},
 		"whenToUse": {
 			"label": "Kailan Gamitin (opsyonal)",

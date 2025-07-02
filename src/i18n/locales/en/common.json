@@ -77,6 +77,16 @@
 			"processExitedWithError": "Claude Code process exited with code {{exitCode}}. Error output: {{output}}",
 			"stoppedWithReason": "Claude Code stopped with reason: {{reason}}",
 			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan."
+		},
+		"geminiCli": {
+			"oauthLoadFailed": "Failed to load OAuth credentials. Please authenticate first: {{error}}",
+			"tokenRefreshFailed": "Failed to refresh OAuth token: {{error}}",
+			"onboardingTimeout": "Onboarding operation timed out after 60 seconds. Please try again later.",
+			"projectDiscoveryFailed": "Could not discover project ID. Make sure you're authenticated with 'gemini auth'.",
+			"rateLimitExceeded": "Rate limit exceeded. Free tier limits have been reached.",
+			"badRequest": "Bad request: {{details}}",
+			"apiError": "Gemini CLI API error: {{error}}",
+			"completionError": "Gemini CLI completion error: {{error}}"
 		}
 	},
 	"warnings": {
@@ -105,7 +115,9 @@
 	},
 	"tasks": {
 		"canceled": "Task error: It was stopped and canceled by the user.",
-		"deleted": "Task failure: It was stopped and deleted by the user."
+		"deleted": "Task failure: It was stopped and deleted by the user.",
+		"incomplete": "Task #{{taskNumber}} (Incomplete)",
+		"no_messages": "Task #{{taskNumber}} (No messages)"
 	},
 	"storage": {
 		"prompt_custom_path": "Enter custom conversation history storage path, leave empty to use default location",
@@ -117,10 +129,22 @@
 		"task_prompt": "What should Kilo Code do?",
 		"task_placeholder": "Build, find, ask something"
 	},
+	"customModes": {
+		"errors": {
+			"yamlParseError": "Invalid YAML in .roomodes file at line {{line}}. Please check for:\n• Proper indentation (use spaces, not tabs)\n• Matching quotes and brackets\n• Valid YAML syntax",
+			"schemaValidationError": "Invalid custom modes format in .roomodes:\n{{issues}}",
+			"invalidFormat": "Invalid custom modes format. Please ensure your settings follow the correct YAML format.",
+			"updateFailed": "Failed to update custom mode: {{error}}",
+			"deleteFailed": "Failed to delete custom mode: {{error}}",
+			"resetFailed": "Failed to reset custom modes: {{error}}",
+			"modeNotFound": "Write error: Mode not found",
+			"noWorkspaceForProject": "No workspace folder found for project-specific mode"
+		}
+	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "Your organization requires Roo Code Cloud authentication. Please sign in to continue.",
-			"organization_mismatch": "You must be authenticated with your organization's Roo Code Cloud account.",
+			"cloud_auth_required": "Your organization requires Kilo Code Cloud authentication. Please sign in to continue.",
+			"organization_mismatch": "You must be authenticated with your organization's Kilo Code Cloud account.",
 			"verification_failed": "Unable to verify organization authentication."
 		}
 	}

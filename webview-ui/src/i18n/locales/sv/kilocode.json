@@ -26,6 +26,12 @@
 			"apiKey": "Kilo Code API-nyckel",
 			"login": "Logga in på Kilo Code",
 			"logout": "Logga ut från Kilo Code"
+		},
+		"contextManagement": {
+			"allowVeryLargeReads": {
+				"label": "Tillåt mycket stora filläsningar",
+				"description": "När aktiverat kommer Kilo Code att utföra mycket stora fil- eller MCP-utdataläsningar även om det finns en hög sannolikhet att överskrida kontextfönstret (innehållsstorlek >80% av kontextfönstret)."
+			}
 		}
 	},
 	"chat": {
@@ -103,5 +109,10 @@
 				"user": "användarfeedback"
 			}
 		}
+	},
+	"userFeedback": {
+		"editCancel": "Avbryt",
+		"send": "Skicka",
+		"restoreAndSend": "Återställ & Skicka"
 	}
 }

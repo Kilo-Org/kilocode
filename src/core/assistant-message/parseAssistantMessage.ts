@@ -23,7 +23,8 @@ export function parseAssistantMessage(assistantMessage: string): AssistantMessag
 			const currentParamValue = accumulator.slice(currentParamValueStartIndex)
 			const paramClosingTag = `</${currentParamName}>`
 			if (currentParamValue.endsWith(paramClosingTag)) {
-				// end of param value
+				// End of param value.
+				// Don't trim content parameters to preserve newlines, but strip first and last newline only
 				let paramValue = currentParamValue.slice(0, -paramClosingTag.length).trim()
 
 				// kilocode_change start
@@ -36,7 +37,10 @@ export function parseAssistantMessage(assistantMessage: string): AssistantMessag
 				}
 				// kilocode_change end
 
-				currentToolUse.params[currentParamName] = paramValue
+				currentToolUse.params[currentParamName] =
+					currentParamName === "content"
+						? paramValue.replace(/^\n/, "").replace(/\n$/, "")
+						: paramValue.trim()
 				currentParamName = undefined
 				continue
 			} else {
@@ -86,9 +90,11 @@ export function parseAssistantMessage(assistantMessage: string): AssistantMessag
 					const contentEndIndex = toolContent.lastIndexOf(contentEndTag)
 
 					if (contentStartIndex !== -1 && contentEndIndex !== -1 && contentEndIndex > contentStartIndex) {
+						// Don't trim content to preserve newlines, but strip first and last newline only
 						currentToolUse.params[contentParamName] = toolContent
 							.slice(contentStartIndex, contentEndIndex)
-							.trim()
+							.replace(/^\n/, "")
+							.replace(/\n$/, "")
 					}
 				}
 
@@ -152,7 +158,10 @@ export function parseAssistantMessage(assistantMessage: string): AssistantMessag
 		// Stream did not complete tool call, add it as partial.
 		if (currentParamName) {
 			// Tool call has a parameter that was not completed.
-			currentToolUse.params[currentParamName] = accumulator.slice(currentParamValueStartIndex).trim()
+			// Don't trim content parameters to preserve newlines, but strip first and last newline only
+			const paramValue = accumulator.slice(currentParamValueStartIndex)
+			currentToolUse.params[currentParamName] =
+				currentParamName === "content" ? paramValue.replace(/^\n/, "").replace(/\n$/, "") : paramValue.trim()
 		}
 
 		contentBlocks.push(currentToolUse)

@@ -77,6 +77,16 @@
 			"processExitedWithError": "กระบวนการ Claude Code ออกด้วยรหัส {{exitCode}} ผลลัพธ์ข้อผิดพลาด: {{output}}",
 			"stoppedWithReason": "Claude Code หยุดด้วยเหตุผล: {{reason}}",
 			"apiKeyModelPlanMismatch": "คีย์ API และแผนการสมัครสมาชิกอนุญาตให้ใช้โมเดลที่แตกต่างกัน ตรวจสอบให้แน่ใจว่าโมเดลที่เลือกรวมอยู่ในแผนของคุณ"
+		},
+		"geminiCli": {
+			"oauthLoadFailed": "ล้มเหลวในการโหลดข้อมูลประจำตัว OAuth กรุณายืนยันตัวตนก่อน: {{error}}",
+			"tokenRefreshFailed": "ล้มเหลวในการรีเฟรช OAuth token: {{error}}",
+			"onboardingTimeout": "การดำเนินการ onboarding หมดเวลาหลังจาก 60 วินาที กรุณาลองอีกครั้งในภายหลัง",
+			"projectDiscoveryFailed": "ไม่สามารถค้นหา project ID ตรวจสอบให้แน่ใจว่าคุณยืนยันตัวตนด้วย 'gemini auth'",
+			"rateLimitExceeded": "เกินขีดจำกัดอัตรา ถึงขีดจำกัดของระดับฟรีแล้ว",
+			"badRequest": "คำขอไม่ถูกต้อง: {{details}}",
+			"apiError": "ข้อผิดพลาด Gemini CLI API: {{error}}",
+			"completionError": "ข้อผิดพลาดการทำงานเสร็จสิ้น Gemini CLI: {{error}}"
 		}
 	},
 	"warnings": {
@@ -105,7 +115,9 @@
 	},
 	"tasks": {
 		"canceled": "ข้อผิดพลาดงาน: ถูกหยุดและยกเลิกโดยผู้ใช้",
-		"deleted": "ความล้มเหลวของงาน: ถูกหยุดและลบโดยผู้ใช้"
+		"deleted": "ความล้มเหลวของงาน: ถูกหยุดและลบโดยผู้ใช้",
+		"incomplete": "งาน #{{taskNumber}} (ไม่สมบูรณ์)",
+		"no_messages": "งาน #{{taskNumber}} (ไม่มีข้อความ)"
 	},
 	"storage": {
 		"prompt_custom_path": "ป้อนเส้นทางจัดเก็บประวัติการสนทนาที่กำหนดเอง เว้นว่างไว้เพื่อใช้ตำแหน่งเริ่มต้น",
@@ -117,10 +129,22 @@
 		"task_prompt": "Kilo Code ควรทำอะไร?",
 		"task_placeholder": "สร้าง ค้นหา ถามอะไรก็ได้"
 	},
+	"customModes": {
+		"errors": {
+			"yamlParseError": "YAML ไม่ถูกต้องในไฟล์ .roomodes ที่บรรทัด {{line}} กรุณาตรวจสอบ:\n• การเยื้องที่ถูกต้อง (ใช้ space ไม่ใช่ tab)\n• เครื่องหมายคำพูดและวงเล็บที่ตรงกัน\n• ไวยากรณ์ YAML ที่ถูกต้อง",
+			"schemaValidationError": "รูปแบบโหมดกำหนดเองไม่ถูกต้องใน .roomodes:\n{{issues}}",
+			"invalidFormat": "รูปแบบโหมดกำหนดเองไม่ถูกต้อง กรุณาตรวจสอบให้แน่ใจว่าการตั้งค่าของคุณเป็นไปตามรูปแบบ YAML ที่ถูกต้อง",
+			"updateFailed": "ล้มเหลวในการอัปเดตโหมดกำหนดเอง: {{error}}",
+			"deleteFailed": "ล้มเหลวในการลบโหมดกำหนดเอง: {{error}}",
+			"resetFailed": "ล้มเหลวในการรีเซ็ตโหมดกำหนดเอง: {{error}}",
+			"modeNotFound": "ข้อผิดพลาดในการเขียน: ไม่พบโหมด",
+			"noWorkspaceForProject": "ไม่พบโฟลเดอร์พื้นที่ทำงานสำหรับโหมดเฉพาะโครงการ"
+		}
+	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "องค์กรของคุณต้องการการยืนยันตัวตน Roo Code Cloud กรุณาลงชื่อเข้าใช้เพื่อดำเนินการต่อ",
-			"organization_mismatch": "คุณต้องยืนยันตัวตนด้วยบัญชี Roo Code Cloud ขององค์กรของคุณ",
+			"cloud_auth_required": "องค์กรของคุณต้องการการยืนยันตัวตน Kilo Code Cloud กรุณาลงชื่อเข้าใช้เพื่อดำเนินการต่อ",
+			"organization_mismatch": "คุณต้องยืนยันตัวตนด้วยบัญชี Kilo Code Cloud ขององค์กรของคุณ",
 			"verification_failed": "ไม่สามารถตรวจสอบการยืนยันตัวตนขององค์กร"
 		}
 	}

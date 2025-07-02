@@ -16,7 +16,12 @@
 		"shareWithOrganization": "Κοινοποίηση στον Οργανισμό",
 		"shareWithOrganizationDescription": "Μόνο τα μέλη του οργανισμού σου έχουν πρόσβαση",
 		"sharePublicly": "Δημόσια Κοινοποίηση",
-		"sharePubliclyDescription": "Οποιοσδήποτε με τον σύνδεσμο έχει πρόσβαση"
+		"sharePubliclyDescription": "Οποιοσδήποτε με τον σύνδεσμο έχει πρόσβαση",
+		"connectToCloud": "Σύνδεση στο Cloud",
+		"connectToCloudDescription": "Συνδέσου στο Kilo Code Cloud για να μοιραστείς εργασίες",
+		"sharingDisabledByOrganization": "Η κοινοποίηση απενεργοποιήθηκε από τον οργανισμό",
+		"shareSuccessOrganization": "Ο σύνδεσμος οργανισμού αντιγράφηκε στο πρόχειρο",
+		"shareSuccessPublic": "Ο δημόσιος σύνδεσμος αντιγράφηκε στο πρόχειρο"
 	},
 	"history": {
 		"title": "Ιστορικό"
@@ -237,6 +242,12 @@
 		"title": "Αυτόματη έγκριση:",
 		"none": "Καμία",
 		"description": "Η αυτόματη έγκριση επιτρέπει στο Kilo Code να εκτελεί ενέργειες χωρίς να ζητά άδεια. Ενεργοποίησε μόνο για ενέργειες που εμπιστεύεσαι πλήρως. Πιο λεπτομερής διαμόρφωση διαθέσιμη στις <settingsLink>Ρυθμίσεις</settingsLink>."
+	},
+	"modeSelector": {
+		"title": "Λειτουργίες",
+		"marketplace": "Marketplace Λειτουργιών",
+		"settings": "Ρυθμίσεις Λειτουργιών",
+		"description": "Εξειδικευμένες προσωπικότητες που προσαρμόζουν τη συμπεριφορά του Roo."
 	},
 	"announcement": {
 		"title": "🎉 Κυκλοφόρησε το Roo Code {{version}}",

@@ -26,6 +26,12 @@
 			"apiKey": "Kilo Code APIキー",
 			"login": "Kilo Codeにログイン",
 			"logout": "Kilo Codeからログアウト"
+		},
+		"contextManagement": {
+			"allowVeryLargeReads": {
+				"label": "非常に大きなファイルの読み取りを許可",
+				"description": "有効にすると、Kilo Codeはコンテキストウィンドウをオーバーフローする可能性が高い場合でも、非常に大きなファイルやMCP出力の読み取りを実行します（コンテンツサイズがコンテキストウィンドウの80%以上）。"
+			}
 		}
 	},
 	"chat": {
@@ -103,5 +109,10 @@
 			},
 			"clickToScroll": "{{messageType}}を表示 (#{{messageNumber}})"
 		}
+	},
+	"userFeedback": {
+		"editCancel": "キャンセル",
+		"send": "送信",
+		"restoreAndSend": "復元して送信"
 	}
 }

@@ -34,6 +34,11 @@
 		"resetToDefault": "Reset ke default",
 		"description": "Tentukan keahlian dan kepribadian Kilo Code untuk mode ini. Deskripsi ini membentuk bagaimana Kilo Code mempresentasikan dirinya dan mendekati tugas."
 	},
+	"description": {
+		"title": "Deskripsi singkat (untuk manusia)",
+		"resetToDefault": "Setel ulang ke deskripsi default",
+		"description": "Deskripsi singkat yang ditampilkan di dropdown pemilih mode."
+	},
 	"whenToUse": {
 		"title": "Kapan Menggunakan (opsional)",
 		"description": "Jelaskan kapan mode ini harus digunakan. Ini membantu Orchestrator memilih mode yang tepat untuk suatu tugas.",
@@ -141,6 +146,10 @@
 			"label": "Definisi Peran",
 			"description": "Tentukan keahlian dan kepribadian Kilo Code untuk mode ini."
 		},
+		"description": {
+			"label": "Deskripsi singkat (untuk manusia)",
+			"description": "Deskripsi singkat yang ditampilkan di dropdown pemilih mode."
+		},
 		"whenToUse": {
 			"label": "Kapan Menggunakan (opsional)",
 			"description": "Berikan deskripsi yang jelas tentang kapan mode ini paling efektif dan jenis tugas apa yang unggul."
@@ -148,6 +157,10 @@
 		"tools": {
 			"label": "Tools yang Tersedia",
 			"description": "Pilih tools mana yang dapat digunakan mode ini."
+		},
+		"description": {
+			"label": "Deskripsi singkat (untuk manusia)",
+			"description": "Deskripsi singkat yang ditampilkan di dropdown pemilih mode."
 		},
 		"customInstructions": {
 			"label": "Instruksi Kustom (opsional)",

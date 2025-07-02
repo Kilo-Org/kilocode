@@ -22,6 +22,12 @@
 		"sections": {
 			"mcp": "MCP 伺服器"
 		},
+		"contextManagement": {
+			"allowVeryLargeReads": {
+				"label": "允許超大檔案讀取",
+				"description": "啟用後，Kilo Code 將執行超大檔案或 MCP 輸出讀取，即使存在高機率溢出上下文視窗（內容大小 >80% 的上下文視窗）。"
+			}
+		},
 		"provider": {
 			"apiKey": "Kilo Code API 金鑰",
 			"login": "登入 Kilo Code",
@@ -103,5 +109,10 @@
 				"user": "用户反馈"
 			}
 		}
+	},
+	"userFeedback": {
+		"editCancel": "取消",
+		"send": "發送",
+		"restoreAndSend": "恢復並發送"
 	}
 }

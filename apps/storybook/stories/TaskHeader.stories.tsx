@@ -2,11 +2,19 @@ import type { Meta, StoryObj } from "@storybook/react"
 import { fn } from "@storybook/test"
 
 import TaskHeader from "../../../webview-ui/src/components/chat/TaskHeader"
+import { TooltipProvider } from "../../../webview-ui/src/components/ui/tooltip"
 import { createTaskHeaderMessages, createMockTask } from "../src/mockData/clineMessages"
 
 const meta = {
 	title: "Chat/TaskHeader",
 	component: TaskHeader,
+	decorators: [
+		(Story) => (
+			<TooltipProvider delayDuration={300}>
+				<Story />
+			</TooltipProvider>
+		),
+	],
 	parameters: {
 		layout: "padded",
 	},
@@ -27,7 +35,6 @@ export const Default: Story = {
 		task: createMockTask(),
 		tokensIn: 1250,
 		tokensOut: 850,
-		doesModelSupportPromptCache: true,
 		cacheWrites: 45,
 		cacheReads: 120,
 		totalCost: 0.15,

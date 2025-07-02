@@ -46,5 +46,10 @@
 		"tokenRequired": "Kilo Code-token krävs för att generera commit-meddelande",
 		"activationFailed": "Kilo: Misslyckades med att aktivera commit-meddelandeleverantör: {{error}}",
 		"providerRegistered": "Kilo: Commit-meddelandeleverantör registrerad"
+	},
+	"userFeedback": {
+		"message_update_failed": "Misslyckades med att uppdatera meddelande",
+		"no_checkpoint_found": "Ingen checkpoint hittades före detta meddelande",
+		"message_updated": "Meddelande uppdaterat"
 	}
 }

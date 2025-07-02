@@ -19,10 +19,11 @@ import {
 	SearchResult,
 } from "@src/utils/context-mentions"
 import { convertToMentionPath } from "@/utils/path-mentions"
-import { SelectDropdown, DropdownOptionType, Button } from "@/components/ui"
+import { SelectDropdown, DropdownOptionType, Button, StandardTooltip } from "@/components/ui"
 // import { normalizeApiConfiguration } from "@/utils/normalizeApiConfiguration" // kilocode_change
 
 import Thumbnails from "../common/Thumbnails"
+// import ModeSelector from "./ModeSelector" // kilocode_change: unused
 import { MAX_IMAGES_PER_MESSAGE } from "./ChatView"
 import ContextMenu from "./ContextMenu"
 import { VolumeX, Pin, Check } from "lucide-react"
@@ -86,6 +87,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			currentApiConfigName,
 			listApiConfigMeta,
 			customModes,
+			// customModePrompts, // kilocode_change: unused
 			cwd,
 			pinnedApiConfigs,
 			togglePinnedApiConfig,
@@ -240,6 +242,8 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				setInputValue(t("chat:enhancePromptDescription"))
 			}
 		}, [inputValue, sendingDisabled, setInputValue, t])
+
+		const allModes = useMemo(() => getAllModes(customModes), [customModes])
 
 		const queryItems = useMemo(() => {
 			return [
@@ -472,7 +476,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 								selectedType,
 								queryItems,
 								fileSearchResults,
-								getAllModes(customModes),
+								allModes,
 							)
 							const optionsLength = options.length
 
@@ -509,7 +513,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							selectedType,
 							queryItems,
 							fileSearchResults,
-							getAllModes(customModes),
+							allModes,
 						)[selectedMenuIndex]
 						if (
 							selectedOption &&
@@ -595,6 +599,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				inputValue,
 				selectedType,
 				queryItems,
+				allModes,
 				fileSearchResults,
 				handleHistoryNavigation,
 				resetHistoryNavigation,
@@ -1067,7 +1072,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 									setSelectedIndex={setSelectedMenuIndex}
 									selectedType={selectedType}
 									queryItems={queryItems}
-									modes={getAllModes(customModes)}
+									modes={allModes}
 									loading={searchLoading}
 									dynamicSearchResults={fileSearchResults}
 								/>
@@ -1227,6 +1232,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					className={cn("flex", "justify-between", "items-center", "mt-auto", "pt-0.5")}>
 					<div className={cn("flex", "items-center", "gap-1", "min-w-0")}>
 						<div className="shrink-0">
+							{/* kilocode_change: SelectDropdown instead of ModeSelector */}
 							<SelectDropdown
 								value={mode}
 								title={t("chat:selectMode")}
@@ -1274,6 +1280,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 								value={currentConfigId}
 								disabled={selectApiConfigDisabled}
 								title={t("chat:selectApiConfig")}
+								disableSearch={false}
 								placeholder={displayName}
 								options={[
 									// Pinned items first.
@@ -1353,8 +1360,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 											<div
 												className={cn("truncate min-w-0 overflow-hidden", {
 													"font-medium": isCurrentConfig,
-												})}
-												title={label}>
+												})}>
 												{label}
 											</div>
 											<div className="flex justify-end w-10 flex-shrink-0">
@@ -1365,24 +1371,25 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 													})}>
 													<Check className="size-3" />
 												</div>
-												<Button
-													variant="ghost"
-													size="icon"
-													title={pinned ? t("chat:unpin") : t("chat:pin")}
-													onClick={(e) => {
-														e.stopPropagation()
-														togglePinnedApiConfig(value)
-														vscode.postMessage({
-															type: "toggleApiConfigPin",
-															text: value,
-														})
-													}}
-													className={cn("size-5", {
-														"hidden group-hover:flex": !pinned,
-														"bg-accent": pinned,
-													})}>
-													<Pin className="size-3 p-0.5 opacity-50" />
-												</Button>
+												<StandardTooltip content={pinned ? t("chat:unpin") : t("chat:pin")}>
+													<Button
+														variant="ghost"
+														size="icon"
+														onClick={(e) => {
+															e.stopPropagation()
+															togglePinnedApiConfig(value)
+															vscode.postMessage({
+																type: "toggleApiConfigPin",
+																text: value,
+															})
+														}}
+														className={cn("size-5", {
+															"hidden group-hover:flex": !pinned,
+															"bg-accent": pinned,
+														})}>
+														<Pin className="size-3 p-0.5 opacity-50" />
+													</Button>
+												</StandardTooltip>
 											</div>
 										</div>
 									)

@@ -421,7 +421,7 @@
 		},
 		"autoCondenseContext": {
 			"name": "Automaticky spouštět inteligentní zhušťování kontextu",
-			"description": "Pokud je povoleno, Roo automaticky zhušťí kontext, když je dosaženo prahové hodnoty. Pokud je zakázáno, můžete stále ručně spouštět zhušťování kontextu."
+			"description": "Pokud je povoleno, Kilo Code automaticky zhušťí kontext, když je dosaženo prahové hodnoty. Pokud je zakázáno, můžete stále ručně spouštět zhušťování kontextu."
 		},
 		"openTabs": {
 			"label": "Limit kontextu otevřených karet",

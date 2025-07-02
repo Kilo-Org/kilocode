@@ -46,5 +46,10 @@
 		"tokenRequired": "커밋 메시지 생성에는 Kilo Code 토큰이 필요합니다",
 		"activationFailed": "Kilo: 커밋 메시지 제공자 활성화 실패: {{error}}",
 		"providerRegistered": "Kilo: 커밋 메시지 제공자가 등록되었습니다"
+	},
+	"userFeedback": {
+		"message_update_failed": "메시지 업데이트에 실패했습니다",
+		"no_checkpoint_found": "이 메시지 이전에 체크포인트를 찾을 수 없습니다",
+		"message_updated": "메시지가 성공적으로 업데이트되었습니다"
 	}
 }

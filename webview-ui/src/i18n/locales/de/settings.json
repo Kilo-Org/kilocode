@@ -319,22 +319,7 @@
 			"placeholder": "Standard: claude"
 		},
 		"geminiCli": {
-			"description": "Dieser Anbieter nutzt OAuth-Authentifizierung über das Gemini CLI-Tool und benötigt keine API-Schlüssel.",
-			"oauthPath": "OAuth-Anmeldedatenpfad (optional)",
-			"oauthPathDescription": "Pfad zur OAuth-Anmeldedatei. Leer lassen, um den Standardspeicherort (~/.gemini/oauth_creds.json) zu verwenden.",
-			"instructions": "Wenn du dich noch nicht authentifiziert hast, führe bitte",
-			"instructionsContinued": "zuerst in deinem Terminal aus.",
-			"setupLink": "Gemini CLI-Einrichtungsanleitung",
-			"requirementsTitle": "Wichtige Anforderungen",
-			"requirement1": "Zuerst musst du das Gemini CLI-Tool installieren",
-			"requirement2": "Dann führe gemini in deinem Terminal aus und stelle sicher, dass du dich mit Google anmeldest",
-			"requirement3": "Funktioniert nur mit persönlichen Google-Konten (nicht mit Google Workspace-Konten)",
-			"requirement4": "Verwendet keine API-Schlüssel - die Authentifizierung erfolgt über OAuth",
-			"requirement5": "Erfordert, dass das Gemini CLI-Tool zuerst installiert und authentifiziert wird",
-			"freeAccess": "Kostenloser Zugang über OAuth-Authentifizierung"
-		},
-		"geminiCli": {
-			"description": "Dieser Provider verwendet OAuth-Authentifizierung des Gemini CLI-Tools und benötigt keine API-Schlüssel.",
+			"description": "Dieser Anbieter verwendet OAuth-Authentifizierung vom Gemini CLI-Tool und benötigt keine API-Schlüssel.",
 			"oauthPath": "OAuth-Anmeldedaten-Pfad (optional)",
 			"oauthPathDescription": "Pfad zur OAuth-Anmeldedaten-Datei. Leer lassen, um den Standardort zu verwenden (~/.gemini/oauth_creds.json).",
 			"instructions": "Falls du dich noch nicht authentifiziert hast, führe bitte",
@@ -346,7 +331,7 @@
 			"requirement3": "Funktioniert nur mit persönlichen Google-Konten (nicht mit Google Workspace-Konten)",
 			"requirement4": "Verwendet keine API-Schlüssel - Authentifizierung wird über OAuth abgewickelt",
 			"requirement5": "Erfordert, dass das Gemini CLI-Tool zuerst installiert und authentifiziert wird",
-			"freeAccess": "Kostenloses Tier-Zugang über OAuth-Authentifizierung"
+			"freeAccess": "Kostenloser Zugang über OAuth-Authentifizierung"
 		}
 	},
 	"browser": {
@@ -415,7 +400,7 @@
 		},
 		"autoCondenseContext": {
 			"name": "Intelligente Kontextkomprimierung automatisch auslösen",
-			"description": "Wenn aktiviert, wird Roo automatisch den Kontext komprimieren, wenn der Schwellenwert erreicht wird. Wenn deaktiviert, können Sie die Kontextkomprimierung weiterhin manuell auslösen."
+			"description": "Wenn aktiviert, wird Kilo Code automatisch den Kontext komprimieren, wenn der Schwellenwert erreicht wird. Wenn deaktiviert, können Sie die Kontextkomprimierung weiterhin manuell auslösen."
 		},
 		"openTabs": {
 			"label": "Geöffnete Tabs Kontextlimit",

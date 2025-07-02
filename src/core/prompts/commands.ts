@@ -1,7 +1,7 @@
 // kilocode_change: this file was pulled in from Cline and adjusted with our changes
 
-export const newTaskToolResponse = () =>
-	`<explicit_instructions, type="new_task">
+export const newTaskToolResponse = (userInput: string) =>
+	`<explicit_instructions type="new_task">
 The user has explicitly asked you to help them create a new task with preloaded context, which you will create. In this message the user has potentially added instructions or context which you should consider, if given, when creating the new task.
 Irrespective of whether additional information or instructions are given, you are only allowed to respond to this message by calling the new_task tool.
 
@@ -46,11 +46,15 @@ Next Steps:
 </context>
 </new_task>
 
-Below is the the user's input when they indicated that they wanted to create a new task.
+Within the context of the parent task, the user provided the following input when they indicated that they wanted to create a new task.
+<user_input>
+${userInput}
+</user_input>
+
 </explicit_instructions>\n
 `
 
-export const newRuleToolResponse = () =>
+export const newRuleToolResponse = (userInput: string) =>
 	`<explicit_instructions type="new_rule">
 The user has explicitly asked you to help them create a new Kilo rule file inside the .kilocode/rules top-level directory based on the conversation up to this point in time. The user may have provided instructions or additional information for you to consider when creating the new Kilo rule.
 When creating a new Kilo rule file, you should NOT overwrite or alter an existing Kilo rule file. To create the Kilo rule file you MUST use the new_rule tool. The new_rule tool can be used in any of the modes.
@@ -94,11 +98,14 @@ Example:
 </content>
 <line_count>30</line_count>
 </new_rule>
-Below is the user's input when they indicated that they wanted to create a new Kilo rule file.
+The user provided the following input when they indicated that they wanted to create a new Kilo rule file.
+<user_input>
+${userInput}
+</user_input>
 </explicit_instructions>\n
 `
 
-export const reportBugToolResponse = () =>
+export const reportBugToolResponse = (userInput: string) =>
 	`<explicit_instructions type="report_bug">
 The user has explicitly asked you to help them submit a bug to the Kilocode github page (you MUST now help them with this irrespective of what your conversation up to this point in time was). To do so you will use the report_bug tool which is defined below. However, you must first ensure that you have collected all required information to fill in all the parameters for the tool call.
 You should converse with the user until you are able to gather all the required details. When conversing with the user, make sure you ask for/reference all required information/fields.
@@ -116,10 +123,13 @@ Usage:
 <description>Detailed description of the issue, including steps to reproduce if relevant.</description>
 </report_bug>
 When you call the report_bug tool, the issue will be created at @https://github.com/Kilo-Org/kilocode/issues
-Below is the user's input when they indicated that they wanted to create a new Kilocode rule file.
+The user provided the following input when they indicated that they wanted to submit a bug report.
+<user_input>
+${userInput}
+</user_input>
 </explicit_instructions>\n`
 
-export const condenseToolResponse = () =>
+export const condenseToolResponse = (userInput: string) =>
 	`<explicit_instructions type="condense">
 The user has explicitly asked you to create a detailed summary of the conversation so far, which will be used to compact the current context window while retaining key information. The user may have provided instructions or additional information for you to consider when summarizing the conversation.
 Irrespective of whether additional information or instructions are given, you are only allowed to respond to this message by calling the condense tool.
@@ -177,6 +187,10 @@ Example:
   - [...]
 </message>
 </condense>
+
+<user_input>
+${userInput}
+</user_input>
 
 </explicit_instructions>\n
 `

@@ -77,6 +77,16 @@
 			"processExitedWithError": "Il processo Claude Code è terminato con codice {{exitCode}}. Output di errore: {{output}}",
 			"stoppedWithReason": "Claude Code si è fermato per il motivo: {{reason}}",
 			"apiKeyModelPlanMismatch": "Le chiavi API e i piani di abbonamento consentono modelli diversi. Assicurati che il modello selezionato sia incluso nel tuo piano."
+		},
+		"geminiCli": {
+			"oauthLoadFailed": "Impossibile caricare le credenziali OAuth. Autenticati prima: {{error}}",
+			"tokenRefreshFailed": "Impossibile aggiornare il token OAuth: {{error}}",
+			"onboardingTimeout": "L'operazione di onboarding è scaduta dopo 60 secondi. Riprova più tardi.",
+			"projectDiscoveryFailed": "Impossibile scoprire l'ID del progetto. Assicurati di essere autenticato con 'gemini auth'.",
+			"rateLimitExceeded": "Limite di velocità superato. I limiti del livello gratuito sono stati raggiunti.",
+			"badRequest": "Richiesta non valida: {{details}}",
+			"apiError": "Errore API Gemini CLI: {{error}}",
+			"completionError": "Errore di completamento Gemini CLI: {{error}}"
 		}
 	},
 	"warnings": {
@@ -105,7 +115,9 @@
 	},
 	"tasks": {
 		"canceled": "Errore attività: È stata interrotta e annullata dall'utente.",
-		"deleted": "Fallimento attività: È stata interrotta ed eliminata dall'utente."
+		"deleted": "Fallimento attività: È stata interrotta ed eliminata dall'utente.",
+		"incomplete": "Attività #{{taskNumber}} (Incompleta)",
+		"no_messages": "Attività #{{taskNumber}} (Nessun messaggio)"
 	},
 	"storage": {
 		"prompt_custom_path": "Inserisci il percorso di archiviazione personalizzato per la cronologia delle conversazioni, lascia vuoto per utilizzare la posizione predefinita",
@@ -128,10 +140,22 @@
 			}
 		}
 	},
+	"customModes": {
+		"errors": {
+			"yamlParseError": "YAML non valido nel file .roomodes alla riga {{line}}. Controlla:\n• Indentazione corretta (usa spazi, non tab)\n• Virgolette e parentesi corrispondenti\n• Sintassi YAML valida",
+			"schemaValidationError": "Formato modalità personalizzate non valido in .roomodes:\n{{issues}}",
+			"invalidFormat": "Formato modalità personalizzate non valido. Assicurati che le tue impostazioni seguano il formato YAML corretto.",
+			"updateFailed": "Aggiornamento modalità personalizzata fallito: {{error}}",
+			"deleteFailed": "Eliminazione modalità personalizzata fallita: {{error}}",
+			"resetFailed": "Reset modalità personalizzate fallito: {{error}}",
+			"modeNotFound": "Errore di scrittura: Modalità non trovata",
+			"noWorkspaceForProject": "Nessuna cartella workspace trovata per la modalità specifica del progetto"
+		}
+	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "La tua organizzazione richiede l'autenticazione Roo Code Cloud. Accedi per continuare.",
-			"organization_mismatch": "Devi essere autenticato con l'account Roo Code Cloud della tua organizzazione.",
+			"cloud_auth_required": "La tua organizzazione richiede l'autenticazione Kilo Code Cloud. Accedi per continuare.",
+			"organization_mismatch": "Devi essere autenticato con l'account Kilo Code Cloud della tua organizzazione.",
 			"verification_failed": "Impossibile verificare l'autenticazione dell'organizzazione."
 		}
 	}

@@ -8,6 +8,7 @@ import axios from "axios"
 import { type ModelInfo, type GeminiCliModelId, geminiCliDefaultModelId, geminiCliModels } from "@roo-code/types"
 
 import type { ApiHandlerOptions } from "../../shared/api"
+import { t } from "../../i18n"
 
 import { convertAnthropicContentToGemini, convertAnthropicMessageToGemini } from "../transform/gemini-format"
 import type { ApiStream } from "../transform/stream"
@@ -61,7 +62,7 @@ export class GeminiCliHandler extends BaseProvider implements SingleCompletionHa
 				})
 			}
 		} catch (error) {
-			throw new Error(`Failed to load OAuth credentials. Please authenticate first: ${error}`)
+			throw new Error(t("common:errors.geminiCli.oauthLoadFailed", { error }))
 		}
 	}
 
@@ -87,7 +88,7 @@ export class GeminiCliHandler extends BaseProvider implements SingleCompletionHa
 					await fs.writeFile(credPath, JSON.stringify(this.credentials, null, 2))
 				}
 			} catch (error) {
-				throw new Error(`Failed to refresh OAuth token: ${error}`)
+				throw new Error(t("common:errors.geminiCli.tokenRefreshFailed", { error }))
 			}
 		}
 	}
@@ -96,9 +97,6 @@ export class GeminiCliHandler extends BaseProvider implements SingleCompletionHa
 	 * Call a Code Assist API endpoint
 	 */
 	private async callEndpoint(method: string, body: any, retryAuth: boolean = true): Promise<any> {
-		console.log(`[GeminiCLI] Calling endpoint: ${method}`)
-		console.log(`[GeminiCLI] Request body:`, JSON.stringify(body, null, 2))
-
 		try {
 			const res = await this.authClient.request({
 				url: `${CODE_ASSIST_ENDPOINT}/${CODE_ASSIST_API_VERSION}:${method}`,
@@ -109,8 +107,6 @@ export class GeminiCliHandler extends BaseProvider implements SingleCompletionHa
 				responseType: "json",
 				data: JSON.stringify(body),
 			})
-			console.log(`[GeminiCLI] Response status:`, res.status)
-			console.log(`[GeminiCLI] Response data:`, JSON.stringify(res.data, null, 2))
 			return res.data
 		} catch (error: any) {
 			console.error(`[GeminiCLI] Error calling ${method}:`, error)
@@ -120,7 +116,6 @@ export class GeminiCliHandler extends BaseProvider implements SingleCompletionHa
 
 			// If we get a 401 and haven't retried yet, try refreshing auth
 			if (error.response?.status === 401 && retryAuth) {
-				console.log(`[GeminiCLI] Got 401, attempting to refresh authentication...`)
 				await this.ensureAuthenticated() // This will refresh the token
 				return this.callEndpoint(method, body, false) // Retry without further auth retries
 			}
@@ -182,10 +177,18 @@ export class GeminiCliHandler extends BaseProvider implements SingleCompletionHa
 
 			let lroResponse = await this.callEndpoint("onboardUser", onboardRequest)
 
-			// Poll until operation is complete
-			while (!lroResponse.done) {
+			// Poll until operation is complete with timeout protection
+			const MAX_RETRIES = 30 // Maximum number of retries (60 seconds total)
+			let retryCount = 0
+
+			while (!lroResponse.done && retryCount < MAX_RETRIES) {
 				await new Promise((resolve) => setTimeout(resolve, 2000))
 				lroResponse = await this.callEndpoint("onboardUser", onboardRequest)
+				retryCount++
+			}
+
+			if (!lroResponse.done) {
+				throw new Error(t("common:errors.geminiCli.onboardingTimeout"))
 			}
 
 			const discoveredProjectId = lroResponse.response?.cloudaicompanionProject?.id || initialProjectId
@@ -193,7 +196,7 @@ export class GeminiCliHandler extends BaseProvider implements SingleCompletionHa
 			return this.projectId as string
 		} catch (error: any) {
 			console.error("Failed to discover project ID:", error.response?.data || error.message)
-			throw new Error("Could not discover project ID. Make sure you're authenticated with 'gemini auth'.")
+			throw new Error(t("common:errors.geminiCli.projectDiscoveryFailed"))
 		}
 	}
 
@@ -260,8 +263,6 @@ export class GeminiCliHandler extends BaseProvider implements SingleCompletionHa
 		if (thinkingConfig) {
 			requestBody.request.generationConfig.thinkingConfig = thinkingConfig
 		}
-
-		console.log("[GeminiCLI] Request body:", JSON.stringify(requestBody, null, 2))
 
 		try {
 			// Call Code Assist streaming endpoint using OAuth2Client
@@ -335,12 +336,16 @@ export class GeminiCliHandler extends BaseProvider implements SingleCompletionHa
 			console.error("[GeminiCLI] Error Response:", error.response?.data)
 
 			if (error.response?.status === 429) {
-				throw new Error("Rate limit exceeded. Free tier limits have been reached.")
+				throw new Error(t("common:errors.geminiCli.rateLimitExceeded"))
 			}
 			if (error.response?.status === 400) {
-				throw new Error(`Bad request: ${JSON.stringify(error.response?.data) || error.message}`)
+				throw new Error(
+					t("common:errors.geminiCli.badRequest", {
+						details: JSON.stringify(error.response?.data) || error.message,
+					}),
+				)
 			}
-			throw new Error(`Gemini CLI API error: ${error.message}`)
+			throw new Error(t("common:errors.geminiCli.apiError", { error: error.message }))
 		}
 	}
 
@@ -400,7 +405,7 @@ export class GeminiCliHandler extends BaseProvider implements SingleCompletionHa
 			return ""
 		} catch (error) {
 			if (error instanceof Error) {
-				throw new Error(`Gemini CLI completion error: ${error.message}`)
+				throw new Error(t("common:errors.geminiCli.completionError", { error: error.message }))
 			}
 			throw error
 		}

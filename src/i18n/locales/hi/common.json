@@ -77,6 +77,16 @@
 			"processExitedWithError": "Claude Code प्रक्रिया कोड {{exitCode}} के साथ समाप्त हुई। त्रुटि आउटपुट: {{output}}",
 			"stoppedWithReason": "Claude Code इस कारण से रुका: {{reason}}",
 			"apiKeyModelPlanMismatch": "API कुंजी और सब्सक्रिप्शन प्लान अलग-अलग मॉडल की अनुमति देते हैं। सुनिश्चित करें कि चयनित मॉडल आपकी योजना में शामिल है।"
+		},
+		"geminiCli": {
+			"oauthLoadFailed": "OAuth क्रेडेंशियल लोड करने में विफल। कृपया पहले प्रमाणीकरण करें: {{error}}",
+			"tokenRefreshFailed": "OAuth टोकन रीफ्रेश करने में विफल: {{error}}",
+			"onboardingTimeout": "ऑनबोर्डिंग ऑपरेशन 60 सेकंड बाद टाइमआउट हो गया। कृपया बाद में पुनः प्रयास करें।",
+			"projectDiscoveryFailed": "प्रोजेक्ट ID खोजने में असमर्थ। सुनिश्चित करें कि आप 'gemini auth' के साथ प्रमाणित हैं।",
+			"rateLimitExceeded": "दर सीमा पार हो गई। मुफ्त टियर की सीमा पहुंच गई है।",
+			"badRequest": "गलत अनुरोध: {{details}}",
+			"apiError": "Gemini CLI API त्रुटि: {{error}}",
+			"completionError": "Gemini CLI पूर्णता त्रुटि: {{error}}"
 		}
 	},
 	"warnings": {
@@ -105,7 +115,9 @@
 	},
 	"tasks": {
 		"canceled": "टास्क त्रुटि: इसे उपयोगकर्ता द्वारा रोका और रद्द किया गया था।",
-		"deleted": "टास्क विफलता: इसे उपयोगकर्ता द्वारा रोका और हटाया गया था।"
+		"deleted": "टास्क विफलता: इसे उपयोगकर्ता द्वारा रोका और हटाया गया था।",
+		"incomplete": "टास्क #{{taskNumber}} (अधूरा)",
+		"no_messages": "टास्क #{{taskNumber}} (कोई संदेश नहीं)"
 	},
 	"storage": {
 		"prompt_custom_path": "वार्तालाप इतिहास के लिए कस्टम स्टोरेज पाथ दर्ज करें, डिफ़ॉल्ट स्थान का उपयोग करने के लिए खाली छोड़ दें",
@@ -128,10 +140,22 @@
 			}
 		}
 	},
+	"customModes": {
+		"errors": {
+			"yamlParseError": ".roomodes फ़ाइल में लाइन {{line}} पर अमान्य YAML। कृपया जांचें:\n• सही इंडेंटेशन (टैब नहीं, स्पेस का उपयोग करें)\n• मैचिंग कोट्स और ब्रैकेट्स\n• वैध YAML सिंटैक्स",
+			"schemaValidationError": ".roomodes में अमान्य कस्टम मोड फॉर्मेट:\n{{issues}}",
+			"invalidFormat": "अमान्य कस्टम मोड फॉर्मेट। कृपया सुनिश्चित करें कि आपकी सेटिंग्स सही YAML फॉर्मेट का पालन करती हैं।",
+			"updateFailed": "कस्टम मोड अपडेट विफल: {{error}}",
+			"deleteFailed": "कस्टम मोड डिलीट विफल: {{error}}",
+			"resetFailed": "कस्टम मोड रीसेट विफल: {{error}}",
+			"modeNotFound": "लेखन त्रुटि: मोड नहीं मिला",
+			"noWorkspaceForProject": "प्रोजेक्ट-विशिष्ट मोड के लिए वर्कस्पेस फ़ोल्डर नहीं मिला"
+		}
+	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "आपके संगठन को Roo Code Cloud प्रमाणीकरण की आवश्यकता है। कृपया जारी रखने के लिए साइन इन करें।",
-			"organization_mismatch": "आपको अपने संगठन के Roo Code Cloud खाते से प्रमाणित होना होगा।",
+			"cloud_auth_required": "आपके संगठन को Kilo Code Cloud प्रमाणीकरण की आवश्यकता है। कृपया जारी रखने के लिए साइन इन करें।",
+			"organization_mismatch": "आपको अपने संगठन के Kilo Code Cloud खाते से प्रमाणित होना होगा।",
 			"verification_failed": "संगठन प्रमाणीकरण सत्यापित करने में असमर्थ।"
 		}
 	}

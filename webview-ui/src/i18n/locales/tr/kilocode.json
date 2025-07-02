@@ -22,6 +22,12 @@
 		"sections": {
 			"mcp": "MCP Sunucuları"
 		},
+		"contextManagement": {
+			"allowVeryLargeReads": {
+				"label": "Çok büyük dosya okumalarına izin ver",
+				"description": "Etkinleştirildiğinde, Kilo Code bağlam penceresini taşma olasılığı yüksek olsa bile çok büyük dosya veya MCP çıktı okumalarını gerçekleştirir (içerik boyutu bağlam penceresinin %80'inden fazla)."
+			}
+		},
 		"provider": {
 			"apiKey": "Kilo Code API Anahtarı",
 			"login": "Kilo Code'a giriş yap",
@@ -103,5 +109,10 @@
 				"user": "kullanıcı geri bildirimi"
 			}
 		}
+	},
+	"userFeedback": {
+		"editCancel": "İptal",
+		"send": "Gönder",
+		"restoreAndSend": "Geri Yükle ve Gönder"
 	}
 }

@@ -320,18 +320,18 @@
 		},
 		"geminiCli": {
 			"description": "Ten dostawca używa uwierzytelniania OAuth z narzędzia Gemini CLI i nie wymaga kluczy API.",
-			"oauthPath": "Ścieżka danych uwierzytelniających OAuth (opcjonalna)",
+			"oauthPath": "Ścieżka danych uwierzytelniających OAuth (opcjonalne)",
 			"oauthPathDescription": "Ścieżka do pliku danych uwierzytelniających OAuth. Pozostaw puste, aby użyć domyślnej lokalizacji (~/.gemini/oauth_creds.json).",
-			"instructions": "Jeśli jeszcze się nie uwierzytelniłeś, uruchom",
-			"instructionsContinued": "w swoim terminalu najpierw.",
+			"instructions": "Jeśli jeszcze się nie uwierzytelniłeś, uruchom najpierw",
+			"instructionsContinued": "w swoim terminalu.",
 			"setupLink": "Instrukcje konfiguracji Gemini CLI",
 			"requirementsTitle": "Ważne wymagania",
 			"requirement1": "Najpierw musisz zainstalować narzędzie Gemini CLI",
 			"requirement2": "Następnie uruchom gemini w swoim terminalu i upewnij się, że logujesz się przez Google",
-			"requirement3": "Działa tylko z osobistymi kontami Google (nie kontami Google Workspace)",
+			"requirement3": "Działa tylko z osobistymi kontami Google (nie z kontami Google Workspace)",
 			"requirement4": "Nie używa kluczy API - uwierzytelnianie jest obsługiwane przez OAuth",
 			"requirement5": "Wymaga, aby narzędzie Gemini CLI było najpierw zainstalowane i uwierzytelnione",
-			"freeAccess": "Dostęp do warstwy bezpłatnej przez uwierzytelnianie OAuth"
+			"freeAccess": "Darmowy dostęp przez uwierzytelnianie OAuth"
 		}
 	},
 	"browser": {
@@ -400,7 +400,7 @@
 		},
 		"autoCondenseContext": {
 			"name": "Automatycznie wyzwalaj inteligentną kondensację kontekstu",
-			"description": "Gdy włączone, Roo automatycznie skondensuje kontekst po osiągnięciu progu. Gdy wyłączone, nadal możesz ręcznie wyzwolić kondensację kontekstu."
+			"description": "Gdy włączone, Kilo Code automatycznie skondensuje kontekst po osiągnięciu progu. Gdy wyłączone, nadal możesz ręcznie wyzwolić kondensację kontekstu."
 		},
 		"openTabs": {
 			"label": "Limit kontekstu otwartych kart",

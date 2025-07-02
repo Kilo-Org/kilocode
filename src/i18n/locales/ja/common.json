@@ -77,6 +77,16 @@
 			"processExitedWithError": "Claude Code プロセスがコード {{exitCode}} で終了しました。エラー出力：{{output}}",
 			"stoppedWithReason": "Claude Code が理由により停止しました：{{reason}}",
 			"apiKeyModelPlanMismatch": "API キーとサブスクリプションプランでは異なるモデルが利用可能です。選択したモデルがプランに含まれていることを確認してください。"
+		},
+		"geminiCli": {
+			"oauthLoadFailed": "OAuth認証情報の読み込みに失敗しました。まず認証してください: {{error}}",
+			"tokenRefreshFailed": "OAuthトークンの更新に失敗しました: {{error}}",
+			"onboardingTimeout": "オンボーディング操作が60秒でタイムアウトしました。後でもう一度お試しください。",
+			"projectDiscoveryFailed": "プロジェクトIDを発見できませんでした。'gemini auth'で認証されていることを確認してください。",
+			"rateLimitExceeded": "レート制限を超過しました。無料プランの制限に達しています。",
+			"badRequest": "不正なリクエスト: {{details}}",
+			"apiError": "Gemini CLI APIエラー: {{error}}",
+			"completionError": "Gemini CLI補完エラー: {{error}}"
 		}
 	},
 	"warnings": {
@@ -105,7 +115,9 @@
 	},
 	"tasks": {
 		"canceled": "タスクエラー：ユーザーによって停止およびキャンセルされました。",
-		"deleted": "タスク失敗：ユーザーによって停止および削除されました。"
+		"deleted": "タスク失敗：ユーザーによって停止および削除されました。",
+		"incomplete": "タスク #{{taskNumber}} (未完了)",
+		"no_messages": "タスク #{{taskNumber}} (メッセージなし)"
 	},
 	"storage": {
 		"prompt_custom_path": "会話履歴のカスタムストレージパスを入力してください。デフォルトの場所を使用する場合は空のままにしてください",
@@ -128,10 +140,22 @@
 			}
 		}
 	},
+	"customModes": {
+		"errors": {
+			"yamlParseError": ".roomodes ファイルの {{line}} 行目で無効な YAML です。以下を確認してください：\n• 正しいインデント（タブではなくスペースを使用）\n• 引用符と括弧の対応\n• 有効な YAML 構文",
+			"schemaValidationError": ".roomodes のカスタムモード形式が無効です：\n{{issues}}",
+			"invalidFormat": "カスタムモード形式が無効です。設定が正しい YAML 形式に従っていることを確認してください。",
+			"updateFailed": "カスタムモードの更新に失敗しました：{{error}}",
+			"deleteFailed": "カスタムモードの削除に失敗しました：{{error}}",
+			"resetFailed": "カスタムモードのリセットに失敗しました：{{error}}",
+			"modeNotFound": "書き込みエラー：モードが見つかりません",
+			"noWorkspaceForProject": "プロジェクト固有モード用のワークスペースフォルダーが見つかりません"
+		}
+	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "あなたの組織では Roo Code Cloud 認証が必要です。続行するにはサインインしてください。",
-			"organization_mismatch": "組織の Roo Code Cloud アカウントで認証する必要があります。",
+			"cloud_auth_required": "あなたの組織では Kilo Code Cloud 認証が必要です。続行するにはサインインしてください。",
+			"organization_mismatch": "組織の Kilo Code Cloud アカウントで認証する必要があります。",
 			"verification_failed": "組織認証の確認ができませんでした。"
 		}
 	}

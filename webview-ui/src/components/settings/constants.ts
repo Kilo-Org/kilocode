@@ -23,7 +23,7 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	bedrock: bedrockModels,
 	deepseek: deepSeekModels,
 	gemini: geminiModels,
-	"gemini-cli": geminiCliModels,
+	"gemini-cli": geminiCliModels, // kilocode_change
 	fireworks: fireworksModels, // kilocode_change
 	mistral: mistralModels,
 	"openai-native": openAiNativeModels,
@@ -41,7 +41,7 @@ export const PROVIDERS = [
 	{ value: "fireworks", label: "Fireworks" }, // kilocode_change
 	{ value: "claude-code", label: "Claude Code" },
 	{ value: "gemini", label: "Google Gemini" },
-	{ value: "gemini-cli", label: "Gemini CLI Provider" },
+	{ value: "gemini-cli", label: "Gemini CLI" },
 	{ value: "deepseek", label: "DeepSeek" },
 	{ value: "openai-native", label: "OpenAI" },
 	{ value: "openai", label: "OpenAI Compatible" },

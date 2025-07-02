@@ -16,7 +16,12 @@
 		"shareWithOrganization": "संगठन के साथ साझा करें",
 		"shareWithOrganizationDescription": "केवल आपके संगठन के सदस्य पहुंच सकते हैं",
 		"sharePublicly": "सार्वजनिक रूप से साझा करें",
-		"sharePubliclyDescription": "लिंक वाला कोई भी व्यक्ति पहुंच सकता है"
+		"sharePubliclyDescription": "लिंक वाला कोई भी व्यक्ति पहुंच सकता है",
+		"connectToCloud": "Cloud से कनेक्ट करें",
+		"connectToCloudDescription": "कार्य साझा करने के लिए Kilo Code Cloud में साइन इन करें",
+		"sharingDisabledByOrganization": "संगठन द्वारा साझाकरण अक्षम किया गया",
+		"shareSuccessOrganization": "संगठन लिंक क्लिपबोर्ड में कॉपी किया गया",
+		"shareSuccessPublic": "सार्वजनिक लिंक क्लिपबोर्ड में कॉपी किया गया"
 	},
 	"history": {
 		"title": "इतिहास"
@@ -113,6 +118,12 @@
 	"dragFiles": "फ़ाइलें खींचने के लिए shift दबाकर रखें",
 	"dragFilesImages": "फ़ाइलें/चित्र खींचने के लिए shift दबाकर रखें",
 	"enhancePromptDescription": "'प्रॉम्प्ट बढ़ाएँ' बटन अतिरिक्त संदर्भ, स्पष्टीकरण या पुनर्विचार प्रदान करके आपके अनुरोध को बेहतर बनाने में मदद करता है। यहां अनुरोध लिखकर देखें और यह कैसे काम करता है यह देखने के लिए बटन पर फिर से क्लिक करें।",
+	"modeSelector": {
+		"title": "मोड्स",
+		"marketplace": "मोड मार्केटप्लेस",
+		"settings": "मोड सेटिंग्स",
+		"description": "विशेष व्यक्तित्व जो Kilo Code के व्यवहार को अनुकूलित करते हैं।"
+	},
 	"errorReadingFile": "फ़ाइल पढ़ने में त्रुटि:",
 	"noValidImages": "कोई मान्य चित्र प्रोसेस नहीं किया गया",
 	"separator": "विभाजक",

@@ -22,6 +22,12 @@
 		"sections": {
 			"mcp": "MCP сервери"
 		},
+		"contextManagement": {
+			"allowVeryLargeReads": {
+				"label": "Дозволити дуже великі читання файлів",
+				"description": "Коли увімкнено, Kilo Code виконуватиме дуже великі читання файлів або виводу MCP, навіть якщо існує висока ймовірність переповнення вікна контексту (розмір вмісту >80% вікна контексту)."
+			}
+		},
 		"provider": {
 			"apiKey": "Kilo Code API Key",
 			"login": "Увійти в Kilo Code",
@@ -103,5 +109,10 @@
 				"user": "відгуки користувача"
 			}
 		}
+	},
+	"userFeedback": {
+		"editCancel": "Скасувати",
+		"send": "Надіслати",
+		"restoreAndSend": "Відновити та надіслати"
 	}
 }

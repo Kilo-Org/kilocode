@@ -26,6 +26,12 @@
 			"apiKey": "API Key Kilo Code",
 			"login": "Masuk ke Kilo Code",
 			"logout": "Keluar dari Kilo Code"
+		},
+		"contextManagement": {
+			"allowVeryLargeReads": {
+				"label": "Izinkan pembacaan file yang sangat besar",
+				"description": "Saat diaktifkan, Kilo Code akan melakukan pembacaan file atau output MCP yang sangat besar meskipun ada kemungkinan tinggi meluapnya jendela konteks (ukuran konten >80% dari jendela konteks)."
+			}
 		}
 	},
 	"chat": {
@@ -103,5 +109,10 @@
 				"user": "umpan balik pengguna"
 			}
 		}
+	},
+	"userFeedback": {
+		"editCancel": "Batal",
+		"send": "Kirim",
+		"restoreAndSend": "Pulihkan & Kirim"
 	}
 }

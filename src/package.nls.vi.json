@@ -9,6 +9,7 @@
 	"command.openInNewTab.title": "Mở trong Tab Mới",
 	"command.focusInput.title": "Tập Trung vào Trường Nhập",
 	"command.setCustomStoragePath.title": "Đặt Đường Dẫn Lưu Trữ Tùy Chỉnh",
+	"command.importSettings.title": "Nhập Cài Đặt",
 	"command.terminal.addToContext.title": "Thêm Nội Dung Terminal vào Ngữ Cảnh",
 	"command.terminal.fixCommand.title": "Sửa Lệnh Này",
 	"command.terminal.explainCommand.title": "Giải Thích Lệnh Này",
@@ -31,5 +32,6 @@
 	"settings.vsCodeLmModelSelector.description": "Cài đặt cho API mô hình ngôn ngữ VSCode",
 	"settings.vsCodeLmModelSelector.vendor.description": "Nhà cung cấp mô hình ngôn ngữ (ví dụ: copilot)",
 	"settings.vsCodeLmModelSelector.family.description": "Họ mô hình ngôn ngữ (ví dụ: gpt-4)",
-	"settings.customStoragePath.description": "Đường dẫn lưu trữ tùy chỉnh. Để trống để sử dụng vị trí mặc định. Hỗ trợ đường dẫn tuyệt đối (ví dụ: 'D:\\KiloCodeStorage')"
+	"settings.customStoragePath.description": "Đường dẫn lưu trữ tùy chỉnh. Để trống để sử dụng vị trí mặc định. Hỗ trợ đường dẫn tuyệt đối (ví dụ: 'D:\\KiloCodeStorage')",
+	"settings.enableCodeActions.description": "Bật sửa lỗi nhanh Kilo Code."
 }

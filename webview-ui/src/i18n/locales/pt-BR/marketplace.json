@@ -1,5 +1,5 @@
 {
-	"title": "Roo Marketplace",
+	"title": "Kilo Code Marketplace",
 	"tabs": {
 		"installed": "Instalado",
 		"settings": "Configurações",
@@ -91,7 +91,7 @@
 		"whatNextMode": "Agora você pode usar este modo. Clique no ícone Modos na barra lateral para trocar de aba.",
 		"done": "Concluído",
 		"goToMcp": "Ir para aba MCP",
-		"goToModes": "Ir para aba Modos",
+		"goToModes": "Ir para configurações de Modos",
 		"moreInfoMcp": "Ver documentação MCP do {{name}}",
 		"validationRequired": "Por favor, forneça um valor para {{paramName}}",
 		"prerequisites": "Pré-requisitos"

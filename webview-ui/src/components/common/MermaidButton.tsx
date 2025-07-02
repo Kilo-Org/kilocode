@@ -7,6 +7,7 @@ import { Modal } from "./Modal"
 import { TabButton } from "./TabButton"
 import { IconButton } from "./IconButton"
 import { ZoomControls } from "./ZoomControls"
+import { StandardTooltip } from "@/components/ui"
 
 const MIN_ZOOM = 0.5
 const MAX_ZOOM = 20
@@ -126,7 +127,8 @@ export function MermaidButton({ containerRef, code, isLoading, svgToPng, childre
 			<div className="relative w-full" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
 				{children}
 				{!isLoading && isHovering && (
-					<div className="absolute bottom-2 right-2 flex gap-1 bg-black/70 rounded p-0.5 z-10 opacity-100 transition-opacity duration-200 ease-in-out">
+					// kilocode_change: bg-black/70 => bg-vscode-editor-background/90 for light mode compatibility
+					<div className="absolute bottom-2 right-2 flex gap-1 bg-vscode-editor-background/90 rounded p-0.5 z-10 opacity-100 transition-opacity duration-200 ease-in-out">
 						<MermaidActionButtons
 							onZoom={handleZoom}
 							onCopy={handleCopy}
@@ -160,11 +162,9 @@ export function MermaidButton({ containerRef, code, isLoading, svgToPng, childre
 					</div>
 
 					<div className="pr-3">
-						<IconButton
-							icon="close"
-							onClick={() => setShowModal(false)}
-							title={t("common:mermaid.buttons.close")}
-						/>
+						<StandardTooltip content={t("common:mermaid.buttons.close")}>
+							<IconButton icon="close" onClick={() => setShowModal(false)} />
+						</StandardTooltip>
 					</div>
 				</div>
 				<div
@@ -222,22 +222,23 @@ export function MermaidButton({ containerRef, code, isLoading, svgToPng, childre
 								zoomInStep={0.2}
 								zoomOutStep={-0.2}
 							/>
-							<IconButton
-								icon={copyFeedback ? "check" : "copy"}
-								onClick={handleCopy}
-								title={t("common:mermaid.buttons.copy")}
-							/>
-							<IconButton icon="save" onClick={handleSave} title={t("common:mermaid.buttons.save")} />
+							<StandardTooltip content={t("common:mermaid.buttons.copy")}>
+								<IconButton icon={copyFeedback ? "check" : "copy"} onClick={handleCopy} />
+							</StandardTooltip>
+							<StandardTooltip content={t("common:mermaid.buttons.save")}>
+								<IconButton icon="save" onClick={handleSave} />
+							</StandardTooltip>
 						</>
 					) : (
-						<IconButton
-							icon={copyFeedback ? "check" : "copy"}
-							onClick={(e) => {
-								e.stopPropagation()
-								copyWithFeedback(code, e)
-							}}
-							title={t("common:mermaid.buttons.copy")}
-						/>
+						<StandardTooltip content={t("common:mermaid.buttons.copy")}>
+							<IconButton
+								icon={copyFeedback ? "check" : "copy"}
+								onClick={(e) => {
+									e.stopPropagation()
+									copyWithFeedback(code, e)
+								}}
+							/>
+						</StandardTooltip>
 					)}
 				</div>
 			</Modal>

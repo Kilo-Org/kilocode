@@ -16,7 +16,12 @@
 		"shareWithOrganization": "Sdílet s organizací",
 		"shareWithOrganizationDescription": "Přístup mají pouze členové tvé organizace",
 		"sharePublicly": "Sdílet veřejně",
-		"sharePubliclyDescription": "Kdokoli s odkazem má přístup"
+		"sharePubliclyDescription": "Kdokoli s odkazem má přístup",
+		"connectToCloud": "Připojit ke cloudu",
+		"connectToCloudDescription": "Přihlaste se do Kilo Code Cloud pro sdílení úkolů",
+		"sharingDisabledByOrganization": "Sdílení zakázáno organizací",
+		"shareSuccessOrganization": "Odkaz organizace zkopírován do schránky",
+		"shareSuccessPublic": "Veřejný odkaz zkopírován do schránky"
 	},
 	"history": {
 		"title": "Historie"
@@ -237,6 +242,12 @@
 		"title": "Automatické schvalování:",
 		"none": "Žádné",
 		"description": "Automatické schvalování umožňuje Kilo Code provádět akce bez žádání o povolení. Zapni pouze pro akce, kterým plně důvěřuješ. Podrobnější konfigurace je dostupná v <settingsLink>Nastavení</settingsLink>."
+	},
+	"modeSelector": {
+		"title": "Režimy",
+		"marketplace": "Tržiště režimů",
+		"settings": "Nastavení režimů",
+		"description": "Specializované persony které přizpůsobují chování Roo."
 	},
 	"announcement": {
 		"title": "🎉 Vydán Roo Code {{version}}",

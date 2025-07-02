@@ -50,7 +50,7 @@ describe("SimpleInstaller", () => {
 			}),
 		}
 
-		it("should install mode when .roomodes file does not exist", async () => {
+		it("should install mode when .kilocodemodes file does not exist", async () => {
 			// Mock file not found error
 			const notFoundError = new Error("File not found") as any
 			notFoundError.code = "ENOENT"
@@ -59,7 +59,7 @@ describe("SimpleInstaller", () => {
 
 			const result = await installer.installItem(mockModeItem, { target: "project" })
 
-			expect(result.filePath).toBe(path.join("/test/workspace", ".roomodes"))
+			expect(result.filePath).toBe(path.join("/test/workspace", ".kilocodemodes"))
 			expect(mockFs.writeFile).toHaveBeenCalled()
 
 			// Verify the written content contains the new mode
@@ -69,7 +69,7 @@ describe("SimpleInstaller", () => {
 			expect(writtenData.customModes[0].slug).toBe("test")
 		})
 
-		it("should install mode when .roomodes contains valid YAML", async () => {
+		it("should install mode when .kilocodemodes contains valid YAML", async () => {
 			const existingContent = yaml.stringify({
 				customModes: [{ slug: "existing", name: "Existing Mode", roleDefinition: "Existing", groups: [] }],
 			})
@@ -89,13 +89,13 @@ describe("SimpleInstaller", () => {
 			expect(writtenData.customModes.find((m: any) => m.slug === "test")).toBeDefined()
 		})
 
-		it("should throw error when .roomodes contains invalid YAML", async () => {
+		it("should throw error when .kilocodemodes contains invalid YAML", async () => {
 			const invalidYaml = "invalid: yaml: content: {"
 
 			mockFs.readFile.mockResolvedValueOnce(invalidYaml)
 
 			await expect(installer.installItem(mockModeItem, { target: "project" })).rejects.toThrow(
-				"Cannot install mode: The .roomodes file contains invalid YAML",
+				"Cannot install mode: The .kilocodemodes file contains invalid YAML",
 			)
 
 			// Should NOT write to file
@@ -143,7 +143,7 @@ describe("SimpleInstaller", () => {
 
 			const result = await installer.installItem(mockMcpItem, { target: "project" })
 
-			expect(result.filePath).toBe(path.join("/test/workspace", ".roo", "mcp.json"))
+			expect(result.filePath).toBe(path.join("/test/workspace", ".kilocode", "mcp.json"))
 			expect(mockFs.writeFile).toHaveBeenCalled()
 
 			// Verify the written content contains the new server
@@ -158,7 +158,7 @@ describe("SimpleInstaller", () => {
 			mockFs.readFile.mockResolvedValueOnce(invalidJson)
 
 			await expect(installer.installItem(mockMcpItem, { target: "project" })).rejects.toThrow(
-				"Cannot install MCP server: The .roo/mcp.json file contains invalid JSON",
+				"Cannot install MCP server: The .kilocode/mcp.json file contains invalid JSON",
 			)
 
 			// Should NOT write to file
@@ -201,13 +201,13 @@ describe("SimpleInstaller", () => {
 			}),
 		}
 
-		it("should throw error when .roomodes contains invalid YAML during removal", async () => {
+		it("should throw error when .kilocodemodes contains invalid YAML during removal", async () => {
 			const invalidYaml = "invalid: yaml: content: {"
 
 			mockFs.readFile.mockResolvedValueOnce(invalidYaml)
 
 			await expect(installer.removeItem(mockModeItem, { target: "project" })).rejects.toThrow(
-				"Cannot remove mode: The .roomodes file contains invalid YAML",
+				"Cannot remove mode: The .kilocodemodes file contains invalid YAML",
 			)
 
 			// Should NOT write to file

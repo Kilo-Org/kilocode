@@ -1,0 +1,151 @@
+{
+	"extension": {
+		"name": "Kilo Code",
+		"description": "أداة ذكاء اصطناعي مفتوحة المصدر تساعدك في تخطيط وبناء وتعديل الأكواد."
+	},
+	"number_format": {
+		"thousand_suffix": "ألف",
+		"million_suffix": "مليون",
+		"billion_suffix": "مليار"
+	},
+	"feedback": {
+		"title": "ملاحظاتك",
+		"description": "نود نسمع رأيك أو نساعدك إذا واجهت أي مشكلة.",
+		"githubIssues": "أبلغ عن مشكلة في GitHub",
+		"githubDiscussions": "انضم لنقاشات GitHub",
+		"discord": "شارك مجتمعنا في ديسكورد",
+		"customerSupport": "الدعم الفني"
+	},
+	"welcome": "ياهلا، {{name}}! عندك {{count}} تنبيه.",
+	"items": {
+		"zero": "ما فيه عناصر",
+		"one": "عنصر واحد",
+		"other": "{{count}} عنصر"
+	},
+	"confirmation": {
+		"reset_state": "متأكد تبي تعيد ضبط الحالة ومساحة التخزين؟ ما تقدر تتراجع بعدها.",
+		"delete_config_profile": "متأكد تبي تحذف هذا الملف التعريفي؟",
+		"delete_custom_mode": "متأكد تبي تحذف هذا الوضع المخصص؟",
+		"delete_message": "وش تبي تحذف؟",
+		"just_this_message": "هذي الرسالة بس",
+		"this_and_subsequent": "هذي وكل اللي بعدها"
+	},
+	"errors": {
+		"invalid_data_uri": "تنسيق البيانات غير صحيح",
+		"error_copying_image": "خطأ أثناء نسخ الصورة: {{errorMessage}}",
+		"error_opening_image": "خطأ أثناء فتح الصورة: {{error}}",
+		"error_saving_image": "خطأ أثناء حفظ الصورة: {{errorMessage}}",
+		"could_not_open_file": "تعذّر فتح الملف: {{errorMessage}}",
+		"could_not_open_file_generic": "ما قدرنا نفتح الملف!",
+		"checkpoint_timeout": "انتهى الوقت أثناء محاولة استرجاع الحالة.",
+		"checkpoint_failed": "فشل في استرجاع الحالة.",
+		"no_workspace": "افتح مجلد مشروع أولاً",
+		"update_support_prompt": "فشل تحديث الرسالة المساعدة",
+		"reset_support_prompt": "فشل إعادة تعيين الرسالة المساعدة",
+		"enhance_prompt": "فشل تحسين الرسالة",
+		"get_system_prompt": "فشل في جلب الرسالة النظامية",
+		"search_commits": "فشل في البحث ضمن الاعتمادات",
+		"save_api_config": "فشل حفظ إعدادات API",
+		"create_api_config": "فشل إنشاء إعدادات API",
+		"rename_api_config": "فشل إعادة تسمية إعدادات API",
+		"load_api_config": "فشل تحميل إعدادات API",
+		"delete_api_config": "فشل حذف إعدادات API",
+		"list_api_config": "فشل عرض قائمة إعدادات API",
+		"update_server_timeout": "فشل تحديث مهلة الخادم",
+		"hmr_not_running": "الخادم المحلي مو شغّال، تحديث HMR ما بيشتغل. شغل `npm run dev` قبل ما تفتح الإضافة.",
+		"retrieve_current_mode": "خطأ: ما قدرنا نسترجع الوضع الحالي.",
+		"failed_delete_repo": "فشل حذف المستودع أو الفرع المرتبط: {{error}}",
+		"failed_remove_directory": "فشل حذف مجلد المهمة: {{error}}",
+		"custom_storage_path_unusable": "مسار التخزين المخصص \"{{path}}\" غير قابل للاستخدام، بنرجع للمسار الافتراضي.",
+		"cannot_access_path": "ما قدرنا نوصل للمسار {{path}}: {{error}}",
+		"settings_import_failed": "فشل في استيراد الإعدادات: {{error}}.",
+		"mistake_limit_guidance": "هذا ممكن يعني إن النموذج ارتكب خطأ أو ما عرف يستخدم الأداة، ممكن تحلها بإرشاد بسيط (مثلاً: \"قسم المهمة لخطوات أصغر\").",
+		"violated_organization_allowlist": "فشل تنفيذ المهمة: الملف التعريفي هذا ما يتوافق مع إعدادات منظمتك",
+		"condense_failed": "فشل تلخيص السياق",
+		"condense_not_enough_messages": "ما فيه رسائل كافية لتلخيص السياق",
+		"condensed_recently": "تم التلخيص قبل شوي؛ بنعدّي هالمرة",
+		"condense_handler_invalid": "المعالج الخاص بتلخيص السياق غير صالح",
+		"condense_context_grew": "السياق زاد بدال ما ينقص؛ بنعدّي هالمرة",
+		"share_task_failed": "فشل في مشاركة المهمة. جرّب مرة ثانية.",
+		"share_no_active_task": "ما فيه مهمة شغالة حالياً",
+		"share_auth_required": "لازم تسجل دخول عشان تشارك المهام.",
+		"share_not_enabled": "مشاركة المهام مو مفعّلة في منظمتك.",
+		"share_task_not_found": "المهمة غير موجودة أو ما عندك صلاحية.",
+		"claudeCode": {
+			"processExited": "عملية Claude Code انتهت بالكود {{exitCode}}.",
+			"errorOutput": "المخرجات الخطأ: {{output}}",
+			"processExitedWithError": "العملية طلعت بكود {{exitCode}}. المخرجات: {{output}}",
+			"stoppedWithReason": "Claude Code توقف والسبب: {{reason}}",
+			"apiKeyModelPlanMismatch": "مفاتيح API وخطط الاشتراك تدعم نماذج مختلفة. تأكد إن النموذج المحدد داخل ضمن خطتك."
+		},
+		"geminiCli": {
+			"oauthLoadFailed": "فشل تحميل بيانات OAuth. لازم تسوي تسجيل دخول أول: {{error}}",
+			"tokenRefreshFailed": "فشل تحديث رمز OAuth: {{error}}",
+			"onboardingTimeout": "انتهى وقت التهيئة بعد ٦٠ ثانية. حاول مرة ثانية.",
+			"projectDiscoveryFailed": "ما قدرنا نكتشف معرف المشروع. تأكد إنك سجلت دخول بـ 'gemini auth'.",
+			"rateLimitExceeded": "تجاوزت الحد المسموح. الحد المجاني تم استهلاكه.",
+			"badRequest": "طلب غير صحيح: {{details}}",
+			"apiError": "خطأ من Gemini CLI: {{error}}",
+			"completionError": "خطأ أثناء الإكمال في Gemini CLI: {{error}}"
+		}
+	},
+	"warnings": {
+		"no_terminal_content": "ما تم تحديد أي محتوى من الطرفية",
+		"missing_task_files": "ملفات المهمة ناقصة. تبي نحذفها من القائمة؟"
+	},
+	"info": {
+		"no_changes": "ما تم العثور على تغييرات.",
+		"clipboard_copy": "تم نسخ الرسالة النظامية إلى الحافظة",
+		"history_cleanup": "تم تنظيف {{count}} مهمة من السجل لأن ملفاتها ناقصة.",
+		"custom_storage_path_set": "تم تعيين مسار تخزين مخصص: {{path}}",
+		"default_storage_path": "رجعنا لاستخدام المسار الافتراضي",
+		"settings_imported": "تم استيراد الإعدادات بنجاح.",
+		"share_link_copied": "تم نسخ رابط المشاركة",
+		"organization_share_link_copied": "تم نسخ رابط مشاركة المنظمة!",
+		"public_share_link_copied": "تم نسخ رابط المشاركة العام!",
+		"image_copied_to_clipboard": "تم نسخ بيانات الصورة إلى الحافظة",
+		"image_saved": "تم حفظ الصورة في {{path}}"
+	},
+	"answers": {
+		"yes": "نعم",
+		"no": "لا",
+		"cancel": "إلغاء",
+		"remove": "احذف",
+		"keep": "احتفظ"
+	},
+	"tasks": {
+		"canceled": "خطأ في المهمة: المستخدم أوقفها وألغى التنفيذ.",
+		"deleted": "فشل المهمة: المستخدم أوقفها وحذفها.",
+		"incomplete": "مهمة رقم {{taskNumber}} (غير مكتملة)",
+		"no_messages": "مهمة رقم {{taskNumber}} (ما فيها رسائل)"
+	},
+	"storage": {
+		"prompt_custom_path": "أدخل مسار مخصص لتخزين محادثاتك، أو خلّه فاضي لاستخدام الموقع الافتراضي",
+		"path_placeholder": "D:\\KiloCodeStorage",
+		"enter_absolute_path": "رجاءً أدخل مسار مطلق (مثال: D:\\KiloCodeStorage أو /home/user/storage)",
+		"enter_valid_path": "رجاءً أدخل مسار صحيح"
+	},
+	"input": {
+		"task_prompt": "وش تبي Kilo Code يسوي؟",
+		"task_placeholder": "ابنِ، ابحث، اسأل عن شي"
+	},
+	"customModes": {
+		"errors": {
+			"yamlParseError": "خطأ في تنسيق YAML في ملف .roomodes عند السطر {{line}}. تحقق من:\n• المسافات (استخدم فراغات مو تبويبات)\n• تنسيق الاقتباسات والأقواس\n• صحة التنسيق العام",
+			"schemaValidationError": "تنسيق أوضاع مخصصة غير صالح في .roomodes:\n{{issues}}",
+			"invalidFormat": "تنسيق الأوضاع المخصصة غير صحيح. تأكد إن الإعدادات بصيغة YAML سليمة.",
+			"updateFailed": "فشل تحديث الوضع المخصص: {{error}}",
+			"deleteFailed": "فشل حذف الوضع المخصص: {{error}}",
+			"resetFailed": "فشل إعادة تعيين الأوضاع المخصصة: {{error}}",
+			"modeNotFound": "خطأ في الكتابة: ما لقينا الوضع المحدد",
+			"noWorkspaceForProject": "ما فيه مجلد مشروع مخصص لهذا الوضع"
+		}
+	},
+	"mdm": {
+		"errors": {
+			"cloud_auth_required": "منظمتك تتطلب تسجيل دخول Kilo Code Cloud. سجل دخولك عشان تكمل.",
+			"organization_mismatch": "لازم تسجل دخول بحساب المنظمة في Kilo Code Cloud.",
+			"verification_failed": "فشل التحقق من تسجيل الدخول للمنظمة."
+		}
+	}
+}

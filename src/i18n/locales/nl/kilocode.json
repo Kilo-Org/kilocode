@@ -46,5 +46,10 @@
 		"tokenRequired": "Kilo Code token is vereist voor het genereren van commit berichten",
 		"activationFailed": "Kilo: Kon berichtverstrekker voor commits niet activeren: {{error}}",
 		"providerRegistered": "Kilo: Commit message provider geregistreerd"
+	},
+	"userFeedback": {
+		"message_update_failed": "Bijwerken van bericht mislukt",
+		"no_checkpoint_found": "Geen checkpoint gevonden voor dit bericht",
+		"message_updated": "Bericht succesvol bijgewerkt"
 	}
 }
