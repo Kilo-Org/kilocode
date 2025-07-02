@@ -1,8 +1,6 @@
 # kilo-code
 
-## 4.49.2
-
-### Patch Changes
+## [v4.49.2]
 
 - [#947](https://github.com/Kilo-Org/kilocode/pull/947) [`eae4b74`](https://github.com/Kilo-Org/kilocode/commit/eae4b74a68720013c30547865ad9423e0154b89a) Thanks [@kamilchm](https://github.com/kamilchm)! - Add support for project id set in env.GOOGLE_CLOUD_PROJECT for Gemini CLI (thanks @kamilchm!)
 
