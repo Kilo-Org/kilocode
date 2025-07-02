@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 import { useRooPortal } from "./hooks/useRooPortal"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui"
 import { StandardTooltip } from "@/components/ui"
+import { IconProps } from "@radix-ui/react-icons/dist/types" // kilocode_change
 
 export enum DropdownOptionType {
 	ITEM = "item",
@@ -39,8 +40,8 @@ export interface SelectDropdownProps {
 	placeholder?: string
 	shortcutText?: string
 	renderItem?: (option: DropdownOption) => React.ReactNode
-	triggerIcon?: React.ForwardRefExoticComponent<IconProps & React.RefAttributes<SVGSVGElement>> | boolean | undefined
 	disableSearch?: boolean
+	triggerIcon?: React.ForwardRefExoticComponent<IconProps & React.RefAttributes<SVGSVGElement>> | boolean | undefined // kilocode_change
 }
 
 export const SelectDropdown = React.memo(
@@ -61,7 +62,7 @@ export const SelectDropdown = React.memo(
 				shortcutText = "",
 				renderItem,
 				disableSearch = false,
-        triggerIcon = CaretUpIcon, // kilocode_change
+				triggerIcon = CaretUpIcon, // kilocode_change
 			},
 			ref,
 		) => {
@@ -207,7 +208,9 @@ export const SelectDropdown = React.memo(
 							: "opacity-90 hover:opacity-100 hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)] cursor-pointer",
 						triggerClassName,
 					)}>
-					<CaretUpIcon className="pointer-events-none opacity-80 flex-shrink-0 size-3" />
+					{/* kilocode_change start */}
+					{TriggerIcon && <TriggerIcon className="pointer-events-none opacity-80 flex-shrink-0 size-3" />}
+					{/* kilocode_change end */}
 
 					{/* kilocode_change start */}
 					{selectedOption?.codicon && (
