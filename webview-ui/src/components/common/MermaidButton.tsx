@@ -127,7 +127,6 @@ export function MermaidButton({ containerRef, code, isLoading, svgToPng, childre
 			<div className="relative w-full" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
 				{children}
 				{!isLoading && isHovering && (
-					// kilocode_change: bg-black/70 => bg-vscode-editor-background/90 for light mode compatibility
 					<div className="absolute bottom-2 right-2 flex gap-1 bg-vscode-editor-background/90 rounded p-0.5 z-10 opacity-100 transition-opacity duration-200 ease-in-out">
 						<MermaidActionButtons
 							onZoom={handleZoom}
