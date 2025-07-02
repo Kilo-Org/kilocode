@@ -765,27 +765,6 @@ describe("ChatTextArea", () => {
 	})
 
 	describe("selectApiConfig", () => {
-		// kilocode_change start - mock listApiConfigMeta to show the Api Selector
-		beforeEach(() => {
-			// Default mock with multiple API configs
-			;(useExtensionState as ReturnType<typeof vi.fn>).mockReturnValue({
-				filePaths: [],
-				openedTabs: [],
-				apiConfiguration: {
-					apiProvider: "anthropic",
-				},
-				taskHistory: [],
-				cwd: "/test/workspace",
-				listApiConfigMeta: [
-					{ id: "config1", name: "Config 1" },
-					{ id: "config2", name: "Config 2" },
-				],
-				pinnedApiConfigs: {},
-				currentApiConfigName: "Config 1",
-			})
-		})
-		// kilocode_change end
-
 		// Helper function to get the API config dropdown
 		const getApiConfigDropdown = () => {
 			return screen.getByTitle("chat:selectApiConfig")
