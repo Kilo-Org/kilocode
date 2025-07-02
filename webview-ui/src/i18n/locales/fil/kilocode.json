@@ -32,6 +32,13 @@
 				"label": "Payagan ang pagbasa ng napakalaking files",
 				"description": "Kapag naka-enable, magsasagawa ang Kilo Code ng pagbasa ng napakalaking files o MCP outputs kahit na may mataas na posibilidad na mag-overflow ang context window (laki ng content >80% ng context window)."
 			}
+		},
+		"systemNotifications": {
+			"label": "Paganahin ang mga System Notification",
+			"description": "Kapag naka-enable, magpapadala ang Kilo Code ng mga system notification para sa mahahalagang pangyayari tulad ng pagkumpleto ng gawain o mga error.",
+			"testButton": "Subukan ang Notification",
+			"testTitle": "Kilo Code",
+			"testMessage": "Ito ay isang test notification mula sa Kilo Code."
 		}
 	},
 	"chat": {

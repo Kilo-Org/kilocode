@@ -30,6 +30,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setShowTaskTimeline: (value: boolean) => void // kilocode_change
 	hoveringTaskTimeline?: boolean // kilocode_change
 	setHoveringTaskTimeline: (value: boolean) => void // kilocode_change
+	systemNotificationsEnabled?: boolean // kilocode_change
+	setSystemNotificationsEnabled: (value: boolean) => void // kilocode_change
 	didHydrateState: boolean
 	showWelcome: boolean
 	theme: any
@@ -493,6 +495,10 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setCustomCondensingPrompt: (value) =>
 			setState((prevState) => ({ ...prevState, customCondensingPrompt: value })),
 		setProfileThresholds: (value) => setState((prevState) => ({ ...prevState, profileThresholds: value })),
+		// kilocode_change start
+		setSystemNotificationsEnabled: (value) =>
+			setState((prevState) => ({ ...prevState, systemNotificationsEnabled: value })),
+		// kilocode_change end
 	}
 
 	return <ExtensionStateContext.Provider value={contextValue}>{children}</ExtensionStateContext.Provider>

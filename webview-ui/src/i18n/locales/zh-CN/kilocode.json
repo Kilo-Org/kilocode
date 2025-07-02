@@ -28,6 +28,13 @@
 				"description": "启用后，Kilo Code 将执行超大文件或 MCP 输出读取，即使存在高概率溢出上下文窗口（内容大小 >80% 的上下文窗口）。"
 			}
 		},
+		"systemNotifications": {
+			"label": "启用系统通知",
+			"description": "启用后 Kilo Code 将发送系统通知，提醒任务完成或错误等重要事件。",
+			"testButton": "测试通知",
+			"testTitle": "Kilo Code",
+			"testMessage": "这是来自 Kilo Code 的测试通知。"
+		},
 		"provider": {
 			"apiKey": "Kilo Code API 密钥",
 			"login": "登录 Kilo Code",

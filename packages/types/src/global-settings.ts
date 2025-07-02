@@ -71,6 +71,7 @@ export const globalSettingsSchema = z.object({
 	ttsSpeed: z.number().optional(),
 	soundEnabled: z.boolean().optional(),
 	soundVolume: z.number().optional(),
+	systemNotificationsEnabled: z.boolean().optional(), // kilocode_change
 
 	maxOpenTabsContext: z.number().optional(),
 	maxWorkspaceFiles: z.number().optional(),
@@ -210,6 +211,7 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 	ttsSpeed: 1,
 	soundEnabled: false,
 	soundVolume: 0.5,
+	systemNotificationsEnabled: true, // kilocode_change
 
 	terminalOutputLineLimit: 500,
 	terminalShellIntegrationTimeout: 30000,

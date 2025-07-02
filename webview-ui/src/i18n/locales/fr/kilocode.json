@@ -32,6 +32,13 @@
 				"label": "Autoriser les lectures de fichiers très volumineux",
 				"description": "Lorsque cette option est activée, Kilo Code effectuera des lectures de fichiers ou de sorties MCP très volumineuses même s'il existe une forte probabilité de dépasser la fenêtre de contexte (taille du contenu >80% de la fenêtre de contexte)."
 			}
+		},
+		"systemNotifications": {
+			"label": "Activer les notifications système",
+			"description": "Lorsque cette option est activée, Kilo Code enverra des notifications système pour les événements importants comme la fin des tâches ou les erreurs.",
+			"testButton": "Tester la notification",
+			"testTitle": "Kilo Code",
+			"testMessage": "Ceci est une notification de test de Kilo Code."
 		}
 	},
 	"chat": {

@@ -1458,6 +1458,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			codebaseIndexConfig,
 			codebaseIndexModels,
 			profileThresholds,
+			systemNotificationsEnabled, // kilocode_change
 		} = await this.getState()
 
 		const machineId = vscode.env.machineId
@@ -1570,6 +1571,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			profileThresholds: profileThresholds ?? {},
 			cloudApiUrl: getRooCodeApiUrl(),
 			hasOpenedModeSelector: this.getGlobalState("hasOpenedModeSelector") ?? false,
+			systemNotificationsEnabled: systemNotificationsEnabled ?? false,
 		}
 	}
 
@@ -1655,7 +1657,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			autoCondenseContextPercent: stateValues.autoCondenseContextPercent ?? 100,
 			taskHistory: stateValues.taskHistory,
 			allowedCommands: stateValues.allowedCommands,
-			soundEnabled: stateValues.soundEnabled ?? false,
+			soundEnabled: stateValues.soundEnabled ?? true,
 			ttsEnabled: stateValues.ttsEnabled ?? false,
 			ttsSpeed: stateValues.ttsSpeed ?? 1.0,
 			diffEnabled: stateValues.diffEnabled ?? true,
@@ -1723,6 +1725,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 				codebaseIndexEmbedderModelId: "",
 			},
 			profileThresholds: stateValues.profileThresholds ?? {},
+			systemNotificationsEnabled: stateValues.systemNotificationsEnabled ?? true,
 		}
 	}
 

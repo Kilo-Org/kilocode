@@ -32,6 +32,13 @@
 				"label": "非常に大きなファイルの読み取りを許可",
 				"description": "有効にすると、Kilo Codeはコンテキストウィンドウをオーバーフローする可能性が高い場合でも、非常に大きなファイルやMCP出力の読み取りを実行します（コンテンツサイズがコンテキストウィンドウの80%以上）。"
 			}
+		},
+		"systemNotifications": {
+			"label": "システム通知を有効にする",
+			"description": "有効にすると、Kilo Codeはタスクの完了やエラーなどの重要なイベントについてシステム通知を送信します。",
+			"testButton": "通知をテスト",
+			"testTitle": "Kilo Code",
+			"testMessage": "これはKilo Codeからのテスト通知です。"
 		}
 	},
 	"chat": {

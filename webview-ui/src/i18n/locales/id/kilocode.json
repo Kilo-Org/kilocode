@@ -32,6 +32,13 @@
 				"label": "Izinkan pembacaan file yang sangat besar",
 				"description": "Saat diaktifkan, Kilo Code akan melakukan pembacaan file atau output MCP yang sangat besar meskipun ada kemungkinan tinggi meluapnya jendela konteks (ukuran konten >80% dari jendela konteks)."
 			}
+		},
+		"systemNotifications": {
+			"label": "Aktifkan Notifikasi Sistem",
+			"description": "Saat diaktifkan, Kilo Code akan mengirim notifikasi sistem untuk kejadian penting seperti penyelesaian tugas atau kesalahan.",
+			"testButton": "Uji Notifikasi",
+			"testTitle": "Kilo Code",
+			"testMessage": "Ini adalah notifikasi uji dari Kilo Code."
 		}
 	},
 	"chat": {

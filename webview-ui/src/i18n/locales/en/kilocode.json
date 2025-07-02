@@ -32,6 +32,13 @@
 				"label": "Allow very large file reads",
 				"description": "When enabled, Kilo Code will perform very large file or MCP output reads even if there is a high chance of overflowing the context window (content size >80% of context window)."
 			}
+		},
+		"systemNotifications": {
+			"label": "Enable System Notifications",
+			"description": "When enabled, Kilo Code will send system notifications for important events like task completion or errors.",
+			"testButton": "Test Notification",
+			"testTitle": "Kilo Code",
+			"testMessage": "This is a test notification from Kilo Code."
 		}
 	},
 	"chat": {

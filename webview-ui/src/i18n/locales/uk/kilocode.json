@@ -32,6 +32,13 @@
 			"apiKey": "Kilo Code API Key",
 			"login": "Увійти в Kilo Code",
 			"logout": "Вийти з Kilo Code"
+		},
+		"systemNotifications": {
+			"label": "Увімкнути системні сповіщення",
+			"description": "Коли увімкнено, Kilo Code надсилатиме системні сповіщення про важливі події, такі як завершення завдання або помилки.",
+			"testButton": "Тестове сповіщення",
+			"testTitle": "Kilo Code",
+			"testMessage": "Це тестове сповіщення від Kilo Code."
 		}
 	},
 	"chat": {

@@ -728,9 +728,18 @@ export const webviewMessageHandler = async (
 			break
 		// kilocode_change begin
 		case "showSystemNotification":
+			const isSystemNotificationsEnabled = getGlobalState("systemNotificationsEnabled")
+			if (!isSystemNotificationsEnabled) {
+				break
+			}
 			if (message.notificationOptions) {
 				showSystemNotification(message.notificationOptions)
 			}
+			break
+		case "systemNotificationsEnabled":
+			const systemNotificationsEnabled = message.bool ?? true
+			await updateGlobalState("systemNotificationsEnabled", systemNotificationsEnabled)
+			await provider.postStateToWebview()
 			break
 		case "openInBrowser":
 			if (message.url) {

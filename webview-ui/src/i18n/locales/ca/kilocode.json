@@ -32,6 +32,13 @@
 				"label": "Permet lectures de fitxers molt grans",
 				"description": "Quan està activat, Kilo Code realitzarà lectures de fitxers o sortides MCP molt grans encara que hi hagi una alta probabilitat de desbordar la finestra de context (mida del contingut >80% de la finestra de context)."
 			}
+		},
+		"systemNotifications": {
+			"label": "Activar notificacions del sistema",
+			"description": "Quan està activat, Kilo Code enviarà notificacions del sistema per a esdeveniments importants com la finalització de tasques o errors.",
+			"testButton": "Provar notificació",
+			"testTitle": "Kilo Code",
+			"testMessage": "Aquesta és una notificació de prova de Kilo Code."
 		}
 	},
 	"profile": {

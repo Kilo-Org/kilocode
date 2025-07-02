@@ -32,6 +32,13 @@
 				"label": "매우 큰 파일 읽기 허용",
 				"description": "활성화되면 Kilo Code는 컨텍스트 창을 오버플로할 가능성이 높더라도 매우 큰 파일이나 MCP 출력 읽기를 수행합니다 (콘텐츠 크기가 컨텍스트 창의 80% 이상)."
 			}
+		},
+		"systemNotifications": {
+			"label": "시스템 알림 활성화",
+			"description": "활성화되면 Kilo Code는 작업 완료나 오류와 같은 중요한 이벤트에 대한 시스템 알림을 보냅니다.",
+			"testButton": "알림 테스트",
+			"testTitle": "Kilo Code",
+			"testMessage": "이것은 Kilo Code의 테스트 알림입니다."
 		}
 	},
 	"chat": {

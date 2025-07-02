@@ -212,6 +212,7 @@ export interface WebviewMessage {
 		| "profileThresholds"
 		| "editMessage" // kilocode_change
 		| "shareTaskSuccess"
+		| "systemNotificationsEnabled" // kilocode_change
 	text?: string
 	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "account"
 	disabled?: boolean

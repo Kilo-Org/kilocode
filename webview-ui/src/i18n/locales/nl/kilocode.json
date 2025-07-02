@@ -32,6 +32,13 @@
 				"label": "Sta zeer grote bestandslezingen toe",
 				"description": "Wanneer ingeschakeld, zal Kilo Code zeer grote bestands- of MCP-outputlezingen uitvoeren, zelfs als er een grote kans is dat het contextvenster overloopt (inhoudsgrootte >80% van het contextvenster)."
 			}
+		},
+		"systemNotifications": {
+			"label": "Systeemmeldingen inschakelen",
+			"description": "Wanneer ingeschakeld, zal Kilo Code systeemmeldingen sturen voor belangrijke gebeurtenissen zoals taakvoltooing of fouten.",
+			"testButton": "Test melding",
+			"testTitle": "Kilo Code",
+			"testMessage": "Dit is een testmelding van Kilo Code."
 		}
 	},
 	"chat": {

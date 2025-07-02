@@ -32,6 +32,13 @@
 			"apiKey": "Kilo Code API Anahtarı",
 			"login": "Kilo Code'a giriş yap",
 			"logout": "Kilo Code'dan çıkış yap"
+		},
+		"systemNotifications": {
+			"label": "Sistem bildirimlerini etkinleştir",
+			"description": "Etkinleştirildiğinde, Kilo Code görev tamamlama veya hatalar gibi önemli olaylar için sistem bildirimleri gönderecektir.",
+			"testButton": "Bildirimi test et",
+			"testTitle": "Kilo Code",
+			"testMessage": "Bu Kilo Code'dan bir test bildirimidir."
 		}
 	},
 	"chat": {

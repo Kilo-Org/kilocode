@@ -32,6 +32,13 @@
 				"label": "Povolit čtení velmi velkých souborů",
 				"description": "Když je povoleno, Kilo Code provede čtení velmi velkých souborů nebo výstupů MCP i když existuje vysoká pravděpodobnost přetečení kontextového okna (velikost obsahu >80% kontextového okna)."
 			}
+		},
+		"systemNotifications": {
+			"label": "Povolit systémová oznámení",
+			"description": "Když je povoleno, Kilo Code bude odesílat systémová oznámení pro důležité události jako dokončení úkolu nebo chyby.",
+			"testButton": "Otestovat oznámení",
+			"testTitle": "Kilo Code",
+			"testMessage": "Toto je testovací oznámení z Kilo Code."
 		}
 	},
 	"chat": {
