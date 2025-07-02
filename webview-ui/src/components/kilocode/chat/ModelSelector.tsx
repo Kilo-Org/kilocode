@@ -66,7 +66,6 @@ export const ModelSelector = ({ currentApiConfigName, apiConfiguration, fallback
 			value={selectedModelId}
 			disabled={disabled}
 			title={t("chat:selectApiConfig")}
-			placeholder={"displayName"}
 			options={options}
 			onChange={onChange}
 			contentClassName="max-h-[300px] overflow-y-auto"

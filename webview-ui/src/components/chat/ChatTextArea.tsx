@@ -1035,8 +1035,6 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			]
 		}, [t, listApiConfigMeta, pinnedApiConfigs])
 
-		console.log("selectApiConfigOptions.length", selectApiConfigOptions.length)
-
 		return (
 			<div
 				className={cn(
@@ -1320,82 +1318,83 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						</div>
 
 						{/* kilocode_change start - hide if there is only one profile */}
-						{selectApiConfigOptions.length >= 4 && (
-							<div className={cn("shrink-0", "w-[70px]")}>
-								<SelectDropdown
-									value={currentConfigId}
-									disabled={selectApiConfigDisabled}
-									title={t("chat:selectApiConfig")}
-									placeholder={displayName}
-									// kilocode_change start
-									options={selectApiConfigOptions}
-									onChange={(value) => {
-										if (value === "settingsButtonClicked") {
-											vscode.postMessage({
-												type: "loadApiConfiguration",
-												text: value,
-												values: { section: "providers" },
-											})
-										} else {
-											vscode.postMessage({ type: "loadApiConfigurationById", text: value })
-										}
-									}}
-									contentClassName="max-h-[300px] overflow-y-auto"
-									triggerClassName={cn(
-										"w-full text-ellipsis overflow-hidden",
-										"bg-[var(--background)] border-[var(--vscode-input-border)] hover:bg-[var(--color-vscode-list-hoverBackground)]",
-									)}
-									itemClassName="group"
-									renderItem={({ type, value, label, pinned }) => {
-										if (type !== DropdownOptionType.ITEM) {
-											return label
-										}
+						<div className={cn("shrink-0 w-[70px]", selectApiConfigOptions.length < 4 && "hidden")}>
+							{/* kilocode_change end */}
+							<SelectDropdown
+								value={currentConfigId}
+								disabled={selectApiConfigDisabled}
+								title={t("chat:selectApiConfig")}
+								placeholder={displayName}
+								// kilocode_change start
+								options={selectApiConfigOptions}
+								onChange={(value) => {
+									if (value === "settingsButtonClicked") {
+										vscode.postMessage({
+											type: "loadApiConfiguration",
+											text: value,
+											values: { section: "providers" },
+										})
+									} else {
+										vscode.postMessage({ type: "loadApiConfigurationById", text: value })
+									}
+								}}
+								contentClassName="max-h-[300px] overflow-y-auto"
+								// kilocode_change start - VSC Theme
+								triggerClassName={cn(
+									"w-full text-ellipsis overflow-hidden",
+									"bg-[var(--background)] border-[var(--vscode-input-border)] hover:bg-[var(--color-vscode-list-hoverBackground)]",
+								)}
+								// kilocode_change end
+								itemClassName="group"
+								renderItem={({ type, value, label, pinned }) => {
+									if (type !== DropdownOptionType.ITEM) {
+										return label
+									}
 
-										const config = listApiConfigMeta?.find((c) => c.id === value)
-										const isCurrentConfig = config?.name === currentApiConfigName
+									const config = listApiConfigMeta?.find((c) => c.id === value)
+									const isCurrentConfig = config?.name === currentApiConfigName
 
-										return (
-											<div className="flex justify-between gap-2 w-full h-5">
-												<div
-													className={cn("truncate min-w-0 overflow-hidden", {
-														"font-medium": isCurrentConfig,
-													})}
-													title={label}>
-													{label}
-												</div>
-												<div className="flex justify-end w-10 flex-shrink-0">
-													<div
-														className={cn("size-5 p-1", {
-															"block group-hover:hidden": !pinned,
-															hidden: !isCurrentConfig,
-														})}>
-														<Check className="size-3" />
-													</div>
-													<Button
-														variant="ghost"
-														size="icon"
-														title={pinned ? t("chat:unpin") : t("chat:pin")}
-														onClick={(e) => {
-															e.stopPropagation()
-															togglePinnedApiConfig(value)
-															vscode.postMessage({
-																type: "toggleApiConfigPin",
-																text: value,
-															})
-														}}
-														className={cn("size-5", {
-															"hidden group-hover:flex": !pinned,
-															"bg-accent": pinned,
-														})}>
-														<Pin className="size-3 p-0.5 opacity-50" />
-													</Button>
-												</div>
+									return (
+										<div className="flex justify-between gap-2 w-full h-5">
+											<div
+												className={cn("truncate min-w-0 overflow-hidden", {
+													"font-medium": isCurrentConfig,
+												})}
+												title={label}>
+												{label}
 											</div>
-										)
-									}}
-								/>
-							</div>
-						)}
+											<div className="flex justify-end w-10 flex-shrink-0">
+												<div
+													className={cn("size-5 p-1", {
+														"block group-hover:hidden": !pinned,
+														hidden: !isCurrentConfig,
+													})}>
+													<Check className="size-3" />
+												</div>
+												<Button
+													variant="ghost"
+													size="icon"
+													title={pinned ? t("chat:unpin") : t("chat:pin")}
+													onClick={(e) => {
+														e.stopPropagation()
+														togglePinnedApiConfig(value)
+														vscode.postMessage({
+															type: "toggleApiConfigPin",
+															text: value,
+														})
+													}}
+													className={cn("size-5", {
+														"hidden group-hover:flex": !pinned,
+														"bg-accent": pinned,
+													})}>
+													<Pin className="size-3 p-0.5 opacity-50" />
+												</Button>
+											</div>
+										</div>
+									)
+								}}
+							/>
+						</div>
 					</div>
 
 					<div
