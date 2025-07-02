@@ -728,7 +728,7 @@ export const webviewMessageHandler = async (
 			break
 		// kilocode_change begin
 		case "showSystemNotification":
-			const isSystemNotificationsEnabled = getGlobalState("systemNotificationsEnabled")
+			const isSystemNotificationsEnabled = getGlobalState("systemNotificationsEnabled") ?? true
 			if (!isSystemNotificationsEnabled) {
 				break
 			}
