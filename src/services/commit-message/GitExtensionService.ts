@@ -13,7 +13,7 @@ export interface GitChange {
  * Utility class for Git operations using direct shell commands
  */
 export class GitExtensionService {
-	private workspaceRoot: string | undefined
+	private workspaceRoot: string
 	private ignoreController: RooIgnoreController
 
 	constructor() {
@@ -28,10 +28,6 @@ export class GitExtensionService {
 	 */
 	public async initialize(): Promise<boolean> {
 		try {
-			if (!this.workspaceRoot) {
-				return false
-			}
-
 			// Check if git is available and we're in a git repository
 			this.executeGitCommand("git rev-parse --is-inside-work-tree")
 			return true
@@ -61,7 +57,7 @@ export class GitExtensionService {
 				const filePath = line.substring(1).trim()
 
 				changes.push({
-					filePath: path.join(this.workspaceRoot || "", filePath),
+					filePath: path.join(this.workspaceRoot, filePath),
 					status: this.getChangeStatusFromCode(statusCode),
 				})
 			}
@@ -104,9 +100,6 @@ export class GitExtensionService {
 	 */
 	public executeGitCommand(command: string): string {
 		try {
-			if (!this.workspaceRoot) {
-				throw new Error("No workspace folder found")
-			}
 			return execSync(command, { cwd: this.workspaceRoot, encoding: "utf8" })
 		} catch (error) {
 			console.error(`Error executing git command: ${command}`, error)
