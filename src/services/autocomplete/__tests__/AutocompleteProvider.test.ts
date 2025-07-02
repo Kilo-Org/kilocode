@@ -1,3 +1,5 @@
+// kilocode_change new file
+
 import * as vscode from "vscode"
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { registerAutocomplete } from "../AutocompleteProvider"

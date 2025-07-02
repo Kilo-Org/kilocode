@@ -1,3 +1,5 @@
+// kilocode_change new file
+
 import * as vscode from "vscode"
 import { buildApiHandler, ApiHandler } from "../../api"
 import { CodeContext, ContextGatherer } from "./ContextGatherer"
