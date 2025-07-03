@@ -141,7 +141,7 @@ function setupAutocomplete(context: vscode.ExtensionContext): vscode.Disposable 
 		const systemPrompt = holeFillerTemplate.getSystemPrompt()
 		const userPrompt = holeFillerTemplate.template(codeContext, document, position, snippets)
 
-		console.log(`🚀🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶\n`, { userPrompt })
+		console.log(`🚀🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶\n`, userPrompt)
 
 		const stream = apiHandler.createMessage(systemPrompt, [
 			{ role: "user", content: [{ type: "text", text: userPrompt }] },
