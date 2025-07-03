@@ -151,7 +151,7 @@ export class GitExtensionService {
 	}
 
 	private getStagedDiffForFile(filePath: string): string {
-		return this.spawnGitWithArgs(["diff", "--cached", "--", `'${filePath}'`])
+		return this.spawnGitWithArgs(["diff", "--cached", "--", filePath])
 	}
 
 	private getStagedStatus(): string {

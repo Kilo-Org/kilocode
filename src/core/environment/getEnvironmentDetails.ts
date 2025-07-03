@@ -19,8 +19,8 @@ import { formatResponse } from "../prompts/responses"
 
 import { Task } from "../task/Task"
 
-import { OpenRouterHandler } from "../../api/providers/openrouter"
-import { KilocodeOpenrouterHandler } from "../../api/providers/kilocode-openrouter"
+import { OpenRouterHandler } from "../../api/providers/openrouter" // kilocode_change
+import { t } from "../../i18n" // kilocode_change
 
 export async function getEnvironmentDetails(cline: Task, includeFileDetails: boolean = false) {
 	let details = ""
@@ -200,12 +200,19 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 
 	// Add context tokens information.
 	const { contextTokens, totalCost } = getApiMetrics(cline.clineMessages)
-	// kilocode_change
+
+	// kilocode_change start
 	// Be sure to fetch the model information before we need it.
-	if (cline.api instanceof OpenRouterHandler || cline.api instanceof KilocodeOpenrouterHandler) {
-		const api = cline.api as OpenRouterHandler
-		await api.fetchModel()
+	if (cline.api instanceof OpenRouterHandler) {
+		try {
+			await cline.api.fetchModel()
+		} catch {
+			await cline.say("error", t("kilocode:notLoggedInError"))
+			return `<environment_details>\n${details.trim()}\n</environment_details>`
+		}
 	}
+	// kilocode_change end
+
 	const { id: modelId, info: modelInfo } = cline.api.getModel()
 	const contextWindow = modelInfo.contextWindow
 
