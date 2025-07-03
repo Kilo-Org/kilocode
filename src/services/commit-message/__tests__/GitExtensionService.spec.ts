@@ -1,11 +1,11 @@
 // npx vitest services/commit-message/__tests__/GitExtensionService.spec.ts
-import { execSync } from "child_process"
+import { spawnSync } from "child_process"
 import type { Mock } from "vitest"
 import { GitExtensionService } from "../GitExtensionService"
 
 // Mock child_process
 vi.mock("child_process", () => ({
-	execSync: vi.fn(),
+	spawnSync: vi.fn(),
 }))
 
 // Mock vscode
@@ -29,14 +29,14 @@ vi.mock("vscode", () => ({
 	RelativePattern: vi.fn().mockImplementation((base, pattern) => ({ base, pattern })),
 }))
 
-const mockExecSync = execSync as Mock
+const mockSpawnSync = spawnSync as Mock
 
 describe("GitExtensionService", () => {
 	let service: GitExtensionService
 
 	beforeEach(() => {
 		service = new GitExtensionService()
-		mockExecSync.mockClear()
+		mockSpawnSync.mockClear()
 	})
 
 	describe("getStagedDiff", () => {
@@ -49,25 +49,41 @@ describe("GitExtensionService", () => {
 			const testTsDiff = "diff --git a/src/test.ts b/src/test.ts\n+added line"
 			const utilsTsDiff = "diff --git a/src/utils.ts b/src/utils.ts\n+added util"
 
-			mockExecSync
-				.mockReturnValueOnce(mockFileListOutput) // git diff --name-only --cached
-				.mockReturnValueOnce(testTsDiff) // git diff --cached -- 'src/test.ts'
-				.mockReturnValueOnce(utilsTsDiff) // git diff --cached -- 'src/utils.ts'
+			mockSpawnSync
+				.mockReturnValueOnce({ status: 0, stdout: mockFileListOutput, stderr: "", error: null }) // git diff --name-only --cached
+				.mockReturnValueOnce({ status: 0, stdout: testTsDiff, stderr: "", error: null }) // git diff --cached -- src/test.ts
+				.mockReturnValueOnce({ status: 0, stdout: utilsTsDiff, stderr: "", error: null }) // git diff --cached -- src/utils.ts
 
 			// Access the private method for testing
 			const getStagedDiff = (service as any).getStagedDiff
 			const result = getStagedDiff.call(service)
 
 			// Should call git diff --name-only --cached first
-			expect(mockExecSync).toHaveBeenNthCalledWith(1, "git diff --name-only --cached", expect.any(Object))
+			expect(mockSpawnSync).toHaveBeenNthCalledWith(
+				1,
+				"git",
+				["diff", "--name-only", "--cached"],
+				expect.any(Object),
+			)
 
 			// Should call git diff for non-excluded files only
-			expect(mockExecSync).toHaveBeenNthCalledWith(2, "git diff --cached -- 'src/test.ts'", expect.any(Object))
-			expect(mockExecSync).toHaveBeenNthCalledWith(3, "git diff --cached -- 'src/utils.ts'", expect.any(Object))
+			expect(mockSpawnSync).toHaveBeenNthCalledWith(
+				2,
+				"git",
+				["diff", "--cached", "--", "src/test.ts"],
+				expect.any(Object),
+			)
+			expect(mockSpawnSync).toHaveBeenNthCalledWith(
+				3,
+				"git",
+				["diff", "--cached", "--", "src/utils.ts"],
+				expect.any(Object),
+			)
 
 			// Should NOT call git diff for package-lock.json (excluded file)
-			expect(mockExecSync).not.toHaveBeenCalledWith(
-				"git diff --cached -- 'package-lock.json'",
+			expect(mockSpawnSync).not.toHaveBeenCalledWith(
+				"git",
+				["diff", "--cached", "--", "package-lock.json"],
 				expect.any(Object),
 			)
 
@@ -76,13 +92,13 @@ describe("GitExtensionService", () => {
 		})
 
 		it("should return empty string when no staged files", () => {
-			mockExecSync.mockReturnValue("") // Empty staged files list
+			mockSpawnSync.mockReturnValue({ status: 0, stdout: "", stderr: "", error: null }) // Empty staged files list
 
 			const getStagedDiff = (service as any).getStagedDiff
 			const result = getStagedDiff.call(service)
 
 			expect(result).toBe("")
-			expect(mockExecSync).toHaveBeenCalledTimes(1)
+			expect(mockSpawnSync).toHaveBeenCalledTimes(1)
 		})
 
 		it("should handle file paths with special characters", () => {
@@ -91,23 +107,25 @@ describe("GitExtensionService", () => {
 			const spaceDiff = "diff --git a/src/file with spaces.ts b/src/file with spaces.ts\n+content"
 			const quoteDiff = "diff --git a/src/file'with'quotes.ts b/src/file'with'quotes.ts\n+content"
 
-			mockExecSync
-				.mockReturnValueOnce(mockFileListOutput)
-				.mockReturnValueOnce(spaceDiff)
-				.mockReturnValueOnce(quoteDiff)
+			mockSpawnSync
+				.mockReturnValueOnce({ status: 0, stdout: mockFileListOutput, stderr: "", error: null })
+				.mockReturnValueOnce({ status: 0, stdout: spaceDiff, stderr: "", error: null })
+				.mockReturnValueOnce({ status: 0, stdout: quoteDiff, stderr: "", error: null })
 
 			const getStagedDiff = (service as any).getStagedDiff
 			const result = getStagedDiff.call(service)
 
-			// Should properly quote file paths
-			expect(mockExecSync).toHaveBeenNthCalledWith(
+			// Should handle file paths with special characters without manual escaping
+			expect(mockSpawnSync).toHaveBeenNthCalledWith(
 				2,
-				"git diff --cached -- 'src/file with spaces.ts'",
+				"git",
+				["diff", "--cached", "--", "src/file with spaces.ts"],
 				expect.any(Object),
 			)
-			expect(mockExecSync).toHaveBeenNthCalledWith(
+			expect(mockSpawnSync).toHaveBeenNthCalledWith(
 				3,
-				"git diff --cached -- 'src/file'\"'\"'with'\"'\"'quotes.ts'",
+				"git",
+				["diff", "--cached", "--", "src/file'with'quotes.ts"],
 				expect.any(Object),
 			)
 

@@ -1,6 +1,6 @@
 import * as vscode from "vscode"
 import * as path from "path"
-import { execSync } from "child_process"
+import { spawnSync } from "child_process"
 import { shouldExcludeLockFile } from "./exclusionUtils"
 import { RooIgnoreController } from "../../core/ignore/RooIgnoreController"
 
@@ -29,7 +29,7 @@ export class GitExtensionService {
 	public async initialize(): Promise<boolean> {
 		try {
 			// Check if git is available and we're in a git repository
-			this.executeGitCommand("git rev-parse --is-inside-work-tree")
+			this.spawnGitWithArgs(["rev-parse", "--is-inside-work-tree"])
 			return true
 		} catch (error) {
 			console.error("Git initialization failed:", error)
@@ -94,15 +94,29 @@ export class GitExtensionService {
 	}
 
 	/**
-	 * Executes a git command and returns the output
-	 * @param command The git command to execute
+	 * Runs a git command with arguments and returns the output
+	 * @param args The git command arguments as an array
 	 * @returns The command output as a string
 	 */
-	public executeGitCommand(command: string): string {
+	public spawnGitWithArgs(args: string[]): string {
 		try {
-			return execSync(command, { cwd: this.workspaceRoot, encoding: "utf8" })
+			const result = spawnSync("git", args, {
+				cwd: this.workspaceRoot,
+				encoding: "utf8",
+				stdio: ["ignore", "pipe", "pipe"],
+			})
+
+			if (result.error) {
+				throw result.error
+			}
+
+			if (result.status !== 0) {
+				throw new Error(`Git command failed with status ${result.status}: ${result.stderr}`)
+			}
+
+			return result.stdout
 		} catch (error) {
-			console.error(`Error executing git command: ${command}`, error)
+			console.error(`Error executing git command: git ${args.join(" ")}`, error)
 			throw error
 		}
 	}
@@ -130,31 +144,30 @@ export class GitExtensionService {
 	}
 
 	private getStagedFilesList(): string[] {
-		return this.executeGitCommand("git diff --name-only --cached")
+		return this.spawnGitWithArgs(["diff", "--name-only", "--cached"])
 			.split("\n")
 			.map((line) => line.trim())
 			.filter((line) => line.length > 0)
 	}
 
 	private getStagedDiffForFile(filePath: string): string {
-		const quotedPath = `'${filePath.replace(/'/g, "'\"'\"'")}'`
-		return this.executeGitCommand(`git diff --cached -- ${quotedPath}`)
+		return this.spawnGitWithArgs(["diff", "--cached", "--", `'${filePath}'`])
 	}
 
 	private getStagedStatus(): string {
-		return this.executeGitCommand("git diff --name-status --cached")
+		return this.spawnGitWithArgs(["diff", "--name-status", "--cached"])
 	}
 
 	private getStagedSummary(): string {
-		return this.executeGitCommand("git diff --cached --stat")
+		return this.spawnGitWithArgs(["diff", "--cached", "--stat"])
 	}
 
 	private getCurrentBranch(): string {
-		return this.executeGitCommand("git branch --show-current")
+		return this.spawnGitWithArgs(["branch", "--show-current"])
 	}
 
 	private getRecentCommits(count: number = 5): string {
-		return this.executeGitCommand(`git log --oneline -${count}`)
+		return this.spawnGitWithArgs(["log", "--oneline", `-${count}`])
 	}
 
 	/**
