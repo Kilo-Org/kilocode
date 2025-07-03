@@ -80,7 +80,7 @@ describe("CommitMessageProvider", () => {
 		mockGitService.initialize = vi.fn().mockResolvedValue(true)
 		mockGitService.gatherStagedChanges = vi.fn()
 		mockGitService.setCommitMessage = vi.fn()
-		mockGitService.executeGitCommand = vi.fn().mockReturnValue("")
+		mockGitService.spawnGitWithArgs = vi.fn().mockReturnValue("")
 		mockGitService.getCommitContext = vi.fn().mockReturnValue("Modified file1.ts, Added file2.ts")
 
 		// Setup singleCompletionHandler mock
