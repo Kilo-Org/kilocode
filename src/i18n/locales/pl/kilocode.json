@@ -6,6 +6,7 @@
 		"title": "Ostrzeżenie o Niskim Kredycie!",
 		"message": "Sprawdź, czy możesz doładować darmowymi kredytami lub kupić więcej!"
 	},
+	"notLoggedInError": "Nie można ukończyć żądania, upewnij się, że jesteś połączony i zalogowany u wybranego dostawcy.",
 	"rules": {
 		"actions": {
 			"delete": "Usuń",

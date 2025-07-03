@@ -11,6 +11,7 @@
 		"title": "余额不足警告！",
 		"message": "请检查是否可以充值免费额度或购买更多额度！"
 	},
+	"notLoggedInError": "无法完成请求，请确保您已连接并使用所选提供商登录。",
 	"rules": {
 		"actions": {
 			"delete": "删除",
