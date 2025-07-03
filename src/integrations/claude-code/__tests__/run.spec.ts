@@ -1,4 +1,4 @@
-import { describe, test, expect, vi, beforeEach } from "vitest"
+import { describe, test, expect, vi, afterEach, beforeEach } from "vitest"
 
 // Mock vscode workspace
 vi.mock("vscode", () => ({
@@ -286,5 +286,89 @@ describe("runClaudeCode", () => {
 		// Clean up
 		consoleErrorSpy.mockRestore()
 		await generator.return(undefined)
+	})
+
+	describe("system prompt truncation", () => {
+		test("should truncate system prompt when memory bank content is detected", async () => {
+			const { runClaudeCode } = await import("../run")
+			
+			const longSystemPrompt = `You are Claude Code, Anthropic's official CLI for Claude.
+You are Kilo Code, a highly skilled software engineer.
+
+RULES
+
+All responses MUST follow specific guidelines.
+
+USER'S CUSTOM INSTRUCTIONS
+
+The following additional instructions are provided by the user, and should be followed to the best of your ability without interfering with the TOOL USE guidelines.
+
+Very long memory bank content that would cause E2BIG errors when passed as command line argument...`.repeat(100)
+
+			const options = {
+				systemPrompt: longSystemPrompt,
+				messages: [{ role: "user" as const, content: "Hello" }],
+			}
+
+			const generator = runClaudeCode(options)
+			
+			// Since we're mocking execa, we can check what arguments were passed
+			await generator.next()
+
+			expect(mockExeca).toHaveBeenCalledWith(
+				"claude",
+				expect.arrayContaining([
+					"-p",
+					"--system-prompt",
+					expect.stringMatching(/^You are Claude Code.*RULES.*All responses MUST follow.*$/s),
+				]),
+				expect.any(Object)
+			)
+
+			// Verify the system prompt was truncated
+			const call = mockExeca.mock.calls[0]
+			const systemPromptArg = call[1][call[1].indexOf("--system-prompt") + 1]
+			expect(systemPromptArg).not.toContain("USER'S CUSTOM INSTRUCTIONS")
+			expect(systemPromptArg.length).toBeLessThan(longSystemPrompt.length)
+		})
+
+		test("should truncate system prompt when it exceeds maximum safe size", async () => {
+			const { runClaudeCode } = await import("../run")
+			
+			const veryLongSystemPrompt = "You are a helpful assistant. ".repeat(2000) // ~60KB
+
+			const options = {
+				systemPrompt: veryLongSystemPrompt,
+				messages: [{ role: "user" as const, content: "Hello" }],
+			}
+
+			const generator = runClaudeCode(options)
+			await generator.next()
+
+			// Verify the system prompt was truncated to safe size
+			const call = mockExeca.mock.calls[0]
+			const systemPromptArg = call[1][call[1].indexOf("--system-prompt") + 1]
+			expect(systemPromptArg.length).toBeLessThanOrEqual(32000)
+			expect(systemPromptArg.length).toBeLessThan(veryLongSystemPrompt.length)
+		})
+
+		test("should not truncate normal-sized system prompts", async () => {
+			const { runClaudeCode } = await import("../run")
+			
+			const normalSystemPrompt = "You are a helpful assistant."
+
+			const options = {
+				systemPrompt: normalSystemPrompt,
+				messages: [{ role: "user" as const, content: "Hello" }],
+			}
+
+			const generator = runClaudeCode(options)
+			await generator.next()
+
+			// Verify the system prompt was not truncated
+			const call = mockExeca.mock.calls[0]
+			const systemPromptArg = call[1][call[1].indexOf("--system-prompt") + 1]
+			expect(systemPromptArg).toBe(normalSystemPrompt)
+		})
 	})
 })
