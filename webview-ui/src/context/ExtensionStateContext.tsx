@@ -117,6 +117,7 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setEnhancementApiConfigId: (value: string) => void
 	commitMessageApiConfigId?: string // kilocode_change
 	setCommitMessageApiConfigId: (value: string) => void // kilocode_change
+	autocompleteApiConfigId?: string // Default empty string for autocomplete API config ID
 	setExperimentEnabled: (id: ExperimentId, enabled: boolean) => void
 	setAutoApprovalEnabled: (value: boolean) => void
 	customModes: ModeConfig[]
@@ -200,6 +201,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		experiments: experimentDefault,
 		enhancementApiConfigId: "",
 		commitMessageApiConfigId: "", // kilocode_change
+		autocompleteApiConfigId: "", // Default empty string for autocomplete API config ID
 		condensingApiConfigId: "", // Default empty string for condensing API config ID
 		customCondensingPrompt: "", // Default empty string for custom condensing prompt
 		hasOpenedModeSelector: false, // Default to false (not opened yet)

@@ -1466,6 +1466,7 @@ export class ClineProvider
 			organizationAllowList,
 			maxConcurrentFileReads,
 			allowVeryLargeReads, // kilocode_change
+			autocompleteApiConfigId, // kilocode_change
 			condensingApiConfigId,
 			customCondensingPrompt,
 			codebaseIndexConfig,
@@ -1570,6 +1571,7 @@ export class ClineProvider
 			cloudIsAuthenticated: cloudIsAuthenticated ?? false,
 			sharingEnabled: sharingEnabled ?? false,
 			organizationAllowList,
+			autocompleteApiConfigId,
 			condensingApiConfigId,
 			customCondensingPrompt,
 			codebaseIndexModels: codebaseIndexModels ?? EMBEDDING_MODEL_PROFILES,
@@ -1739,6 +1741,8 @@ export class ClineProvider
 				codebaseIndexEmbedderModelId: "",
 			},
 			profileThresholds: stateValues.profileThresholds ?? {},
+			// Autocomplete settings
+			autocompleteApiConfigId: stateValues.autocompleteApiConfigId,
 		}
 	}
 
