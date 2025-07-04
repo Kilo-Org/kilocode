@@ -36,7 +36,7 @@
 		"systemNotifications": {
 			"label": "Systeemmeldingen inschakelen",
 			"description": "Wanneer ingeschakeld, zal Kilo Code systeemmeldingen sturen voor belangrijke gebeurtenissen zoals taakvoltooing of fouten.",
-			"testButton": "Test melding",
+			"testButton": "Testmelding",
 			"testTitle": "Kilo Code",
 			"testMessage": "Dit is een testmelding van Kilo Code."
 		}

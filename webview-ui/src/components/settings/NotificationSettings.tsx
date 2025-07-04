@@ -1,4 +1,4 @@
-import { HTMLAttributes } from "react"
+import { HTMLAttributes, useMemo } from "react" // kilocode_change
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
 import { Bell } from "lucide-react"
@@ -44,6 +44,9 @@ export const NotificationSettings = ({
 			},
 		})
 	}
+	const showTestSystemNotification = useMemo(() => {
+		return systemNotificationsEnabled && areSettingsCommitted
+	}, [systemNotificationsEnabled, areSettingsCommitted])
 	// kilocode_change end
 
 	return (
@@ -134,7 +137,7 @@ export const NotificationSettings = ({
 						{t("kilocode:settings.systemNotifications.description")}
 					</div>
 				</div>
-				{systemNotificationsEnabled && (
+				{showTestSystemNotification && (
 					<div className="flex flex-col gap-3 pl-3 border-l-2 border-vscode-button-background">
 						<Button
 							disabled={!areSettingsCommitted}

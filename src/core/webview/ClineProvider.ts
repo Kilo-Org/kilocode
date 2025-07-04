@@ -1657,7 +1657,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			autoCondenseContextPercent: stateValues.autoCondenseContextPercent ?? 100,
 			taskHistory: stateValues.taskHistory,
 			allowedCommands: stateValues.allowedCommands,
-			soundEnabled: stateValues.soundEnabled ?? true,
+			soundEnabled: stateValues.soundEnabled ?? false,
 			ttsEnabled: stateValues.ttsEnabled ?? false,
 			ttsSpeed: stateValues.ttsSpeed ?? 1.0,
 			diffEnabled: stateValues.diffEnabled ?? true,
@@ -1708,6 +1708,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			maxReadFileLine: stateValues.maxReadFileLine ?? -1,
 			maxConcurrentFileReads: stateValues.maxConcurrentFileReads ?? 5,
 			allowVeryLargeReads: stateValues.allowVeryLargeReads ?? false, // kilocode_change
+			systemNotificationsEnabled: stateValues.systemNotificationsEnabled ?? true, // kilocode_change
 			historyPreviewCollapsed: stateValues.historyPreviewCollapsed ?? false,
 			cloudUserInfo,
 			cloudIsAuthenticated,
@@ -1725,7 +1726,6 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 				codebaseIndexEmbedderModelId: "",
 			},
 			profileThresholds: stateValues.profileThresholds ?? {},
-			systemNotificationsEnabled: stateValues.systemNotificationsEnabled ?? true,
 		}
 	}
 

@@ -211,8 +211,8 @@ export interface WebviewMessage {
 		| "telemetrySetting"
 		| "profileThresholds"
 		| "editMessage" // kilocode_change
-		| "shareTaskSuccess"
 		| "systemNotificationsEnabled" // kilocode_change
+		| "shareTaskSuccess"
 	text?: string
 	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "account"
 	disabled?: boolean
