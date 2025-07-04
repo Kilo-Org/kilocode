@@ -73,6 +73,11 @@
 		"title": "Run Command",
 		"tooltip": "Execute this command"
 	},
+	"alwaysAllowCommand": {
+		"title": "Always allow",
+		"tooltip": "Add this command pattern to auto-approved commands",
+		"pattern": "Auto-approve pattern:"
+	},
 	"proceedWhileRunning": {
 		"title": "Proceed While Running",
 		"tooltip": "Continue despite warnings"

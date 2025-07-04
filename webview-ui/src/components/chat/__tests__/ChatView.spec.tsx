@@ -776,6 +776,203 @@ describe("ChatView - Auto Approval Tests", () => {
 			}
 		})
 	})
+
+	describe("Always Allow Command Tests", () => {
+		it("adds command pattern to allowed list when 'Always allow' is clicked", async () => {
+			const { getByText } = renderChatView()
+
+			// First hydrate state with initial task
+			mockPostMessage({
+				autoApprovalEnabled: true,
+				alwaysAllowExecute: false,
+				allowedCommands: [],
+				clineMessages: [
+					{
+						type: "say",
+						say: "task",
+						ts: Date.now() - 2000,
+						text: "Initial task",
+					},
+				],
+			})
+
+			// Then send a command ask message with specific file
+			mockPostMessage({
+				autoApprovalEnabled: true,
+				alwaysAllowExecute: false,
+				allowedCommands: [],
+				clineMessages: [
+					{
+						type: "say",
+						say: "task",
+						ts: Date.now() - 2000,
+						text: "Initial task",
+					},
+					{
+						type: "ask",
+						ask: "command",
+						ts: Date.now(),
+						text: "wc -l foo.txt",
+						partial: false,
+					},
+				],
+			})
+
+			// Wait for the "Always allow" link to appear (using translation key)
+			await waitFor(() => {
+				expect(getByText("chat:alwaysAllowCommand.title")).toBeInTheDocument()
+				// Should show the pattern placeholder (translation key)
+				expect(getByText("chat:alwaysAllowCommand.pattern")).toBeInTheDocument()
+			})
+
+			// Click the "Always allow" link
+			const alwaysAllowLink = getByText("chat:alwaysAllowCommand.title")
+			alwaysAllowLink.click()
+
+			// Verify that the allowedCommands message was sent with pattern (not full command)
+			await waitFor(() => {
+				expect(vscode.postMessage).toHaveBeenCalledWith({
+					type: "allowedCommands",
+					commands: ["wc -l"], // Pattern, not full command
+				})
+			})
+
+			// Verify that the command was approved
+			await waitFor(() => {
+				expect(vscode.postMessage).toHaveBeenCalledWith({
+					type: "askResponse",
+					askResponse: "yesButtonClicked",
+				})
+			})
+		})
+
+		it("handles complex commands with chained operations", async () => {
+			const { getByText } = renderChatView()
+
+			// First hydrate state with initial task
+			mockPostMessage({
+				autoApprovalEnabled: true,
+				alwaysAllowExecute: false,
+				allowedCommands: [],
+				clineMessages: [
+					{
+						type: "say",
+						say: "task",
+						ts: Date.now() - 2000,
+						text: "Initial task",
+					},
+				],
+			})
+
+			// Then send a command ask message with a complex chained command
+			const commandText = "cd /path/to/project && npm install"
+
+			mockPostMessage({
+				autoApprovalEnabled: true,
+				alwaysAllowExecute: false,
+				allowedCommands: [],
+				clineMessages: [
+					{
+						type: "say",
+						say: "task",
+						ts: Date.now() - 2000,
+						text: "Initial task",
+					},
+					{
+						type: "ask",
+						ask: "command",
+						ts: Date.now(),
+						text: commandText,
+						partial: false,
+					},
+				],
+			})
+
+			// Wait for the "Always allow" link to appear (using translation key)
+			await waitFor(() => {
+				expect(getByText("chat:alwaysAllowCommand.title")).toBeInTheDocument()
+				// Should show the pattern placeholder (translation key)
+				expect(getByText("chat:alwaysAllowCommand.pattern")).toBeInTheDocument()
+			})
+
+			// Click the "Always allow" link
+			const alwaysAllowLink = getByText("chat:alwaysAllowCommand.title")
+			alwaysAllowLink.click()
+
+			// Verify that the allowedCommands message was sent with the simplified pattern
+			await waitFor(() => {
+				expect(vscode.postMessage).toHaveBeenCalledWith({
+					type: "allowedCommands",
+					commands: ["cd && npm install"],
+				})
+			})
+		})
+
+		it("only shows 'Always allow' link for command asks", async () => {
+			const { queryByText } = renderChatView()
+
+			// Test with non-command ask types
+			const nonCommandAskTypes = [
+				{ ask: "tool", text: JSON.stringify({ tool: "readFile", path: "test.txt" }) },
+				{ ask: "browser_action_launch", text: JSON.stringify({ action: "launch", url: "http://example.com" }) },
+				{ ask: "completion_result", text: "Task completed successfully" },
+			]
+
+			for (const { ask: askType, text } of nonCommandAskTypes) {
+				vi.clearAllMocks()
+
+				mockPostMessage({
+					autoApprovalEnabled: true,
+					clineMessages: [
+						{
+							type: "say",
+							say: "task",
+							ts: Date.now() - 2000,
+							text: "Initial task",
+						},
+						{
+							type: "ask",
+							ask: askType,
+							ts: Date.now(),
+							text: text,
+							partial: false,
+						},
+					],
+				})
+
+				// Verify "Always allow" link is not present for non-command asks (using translation key)
+				await waitFor(() => {
+					expect(queryByText("chat:alwaysAllowCommand.title")).not.toBeInTheDocument()
+				})
+			}
+
+			// Test with command ask - should show both link and pattern
+			vi.clearAllMocks()
+			mockPostMessage({
+				autoApprovalEnabled: true,
+				clineMessages: [
+					{
+						type: "say",
+						say: "task",
+						ts: Date.now() - 2000,
+						text: "Initial task",
+					},
+					{
+						type: "ask",
+						ask: "command",
+						ts: Date.now(),
+						text: "ls -la",
+						partial: false,
+					},
+				],
+			})
+
+			await waitFor(() => {
+				expect(queryByText("chat:alwaysAllowCommand.title")).toBeInTheDocument()
+				expect(queryByText("chat:alwaysAllowCommand.pattern")).toBeInTheDocument()
+			})
+		})
+	})
 })
 
 describe("ChatView - Sound Playing Tests", () => {
