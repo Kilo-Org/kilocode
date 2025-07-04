@@ -18,6 +18,7 @@
       packages = with pkgs; [
         nodejs_20
         corepack_20
+        libnotify
       ];
     };
   in {

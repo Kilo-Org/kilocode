@@ -1,6 +1,5 @@
 // import { useExtensionState } from "@/context/ExtensionStateContext" // No longer needed
 import React, { useEffect } from "react"
-import { Trans } from "react-i18next"
 import { vscode } from "@/utils/vscode"
 
 import {
@@ -10,21 +9,20 @@ import {
 	WebviewMessage,
 } from "@roo/WebviewMessage"
 import { VSCodeButtonLink } from "@/components/common/VSCodeButtonLink"
-import { VSCodeButton, VSCodeDivider, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
+import { VSCodeButton, VSCodeDivider } from "@vscode/webview-ui-toolkit/react"
 import CountUp from "react-countup"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { useAppTranslation } from "@/i18n/TranslationContext"
-import { getKiloCodeBackendAuthUrl } from "../helpers"
 import { Tab, TabContent, TabHeader } from "@src/components/common/Tab"
-import Logo from "../common/Logo"
 import { Button } from "@src/components/ui"
+import KiloCodeAuth from "../common/KiloCodeAuth"
 
 interface ProfileViewProps {
 	onDone: () => void
 }
 
 const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
-	const { apiConfiguration, currentApiConfigName, uriScheme } = useExtensionState()
+	const { apiConfiguration, currentApiConfigName } = useExtensionState()
 	const { t } = useAppTranslation()
 	const [profileData, setProfileData] = React.useState<ProfileData | undefined | null>(null)
 	const [balance, setBalance] = React.useState<number | null>(null)
@@ -177,23 +175,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 							</div>
 						) : (
 							<div className="flex flex-col items-center pr-3">
-								<Logo />
-
-								<p className="text-center">{t("kilocode:profile.signUp.description")}</p>
-
-								<VSCodeButtonLink href={getKiloCodeBackendAuthUrl(uriScheme)} className="w-full mb-4">
-									{t("kilocode:profile.signUp.title")}
-								</VSCodeButtonLink>
-
-								<p className="text-[var(--vscode-descriptionForeground)] text-xs text-center m-0">
-									<Trans
-										i18nKey="kilocode:profile.signUp.termsAndPrivacy"
-										components={{
-											termsLink: <VSCodeLink href="https://kilocode.ai/terms" />,
-											privacyLink: <VSCodeLink href="https://kilocode.ai/privacy" />,
-										}}
-									/>
-								</p>
+								<KiloCodeAuth className="w-full" />
 							</div>
 						)}
 					</div>

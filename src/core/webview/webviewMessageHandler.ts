@@ -632,6 +632,8 @@ export const webviewMessageHandler = async (
 				if (!exists) {
 					await safeWriteJson(mcpPath, { mcpServers: {} })
 				}
+
+				openFile(mcpPath)
 			} catch (error) {
 				vscode.window.showErrorMessage(t("mcp:errors.create_json", { error: `${error}` }))
 			}
@@ -728,9 +730,18 @@ export const webviewMessageHandler = async (
 			break
 		// kilocode_change begin
 		case "showSystemNotification":
+			const isSystemNotificationsEnabled = getGlobalState("systemNotificationsEnabled") ?? true
+			if (!isSystemNotificationsEnabled) {
+				break
+			}
 			if (message.notificationOptions) {
 				showSystemNotification(message.notificationOptions)
 			}
+			break
+		case "systemNotificationsEnabled":
+			const systemNotificationsEnabled = message.bool ?? true
+			await updateGlobalState("systemNotificationsEnabled", systemNotificationsEnabled)
+			await provider.postStateToWebview()
 			break
 		case "openInBrowser":
 			if (message.url) {

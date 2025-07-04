@@ -194,6 +194,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		codebaseIndexModels,
 		customSupportPrompts,
 		profileThresholds,
+		systemNotificationsEnabled, // kilocode_change
 	} = cachedState
 
 	const apiConfiguration = useMemo(() => cachedState.apiConfiguration ?? {}, [cachedState.apiConfiguration])
@@ -357,6 +358,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			vscode.postMessage({ type: "upsertApiConfiguration", text: currentApiConfigName, apiConfiguration })
 			vscode.postMessage({ type: "codebaseIndexConfig", values: codebaseIndexConfig })
 			vscode.postMessage({ type: "profileThresholds", values: profileThresholds })
+			vscode.postMessage({ type: "systemNotificationsEnabled", bool: systemNotificationsEnabled }) // kilocode_change
 
 			// Update cachedState to match the current state to prevent isChangeDetected from being set back to true
 			setCachedState((prevState) => ({ ...prevState, ...extensionState }))
@@ -715,6 +717,8 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 							ttsSpeed={ttsSpeed}
 							soundEnabled={soundEnabled}
 							soundVolume={soundVolume}
+							systemNotificationsEnabled={systemNotificationsEnabled}
+							areSettingsCommitted={!isChangeDetected}
 							setCachedStateField={setCachedStateField}
 						/>
 					)}

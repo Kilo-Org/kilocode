@@ -1471,6 +1471,7 @@ export class ClineProvider
 			codebaseIndexConfig,
 			codebaseIndexModels,
 			profileThresholds,
+			systemNotificationsEnabled, // kilocode_change
 		} = await this.getState()
 
 		const machineId = vscode.env.machineId
@@ -1583,6 +1584,7 @@ export class ClineProvider
 			profileThresholds: profileThresholds ?? {},
 			cloudApiUrl: getRooCodeApiUrl(),
 			hasOpenedModeSelector: this.getGlobalState("hasOpenedModeSelector") ?? false,
+			systemNotificationsEnabled: systemNotificationsEnabled ?? false,
 		}
 	}
 
@@ -1719,6 +1721,7 @@ export class ClineProvider
 			maxReadFileLine: stateValues.maxReadFileLine ?? -1,
 			maxConcurrentFileReads: stateValues.maxConcurrentFileReads ?? 5,
 			allowVeryLargeReads: stateValues.allowVeryLargeReads ?? false, // kilocode_change
+			systemNotificationsEnabled: stateValues.systemNotificationsEnabled ?? true, // kilocode_change
 			historyPreviewCollapsed: stateValues.historyPreviewCollapsed ?? false,
 			cloudUserInfo,
 			cloudIsAuthenticated,

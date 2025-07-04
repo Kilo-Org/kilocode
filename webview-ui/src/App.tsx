@@ -15,7 +15,7 @@ import HistoryView from "./components/history/HistoryView"
 import SettingsView, { SettingsViewRef } from "./components/settings/SettingsView"
 import WelcomeView from "./components/kilocode/Welcome/WelcomeView" // kilocode_change
 import ProfileView from "./components/kilocode/profile/ProfileView" // kilocode_change
-// import McpView from "./components/mcp/McpView" kilocode_change: rendered in settings instead
+import McpView from "./components/mcp/McpView"
 // import { MarketplaceView } from "./components/marketplace/MarketplaceView" // kilocode_change: rendered in settings
 import ModesView from "./components/modes/ModesView"
 import { HumanRelayDialog } from "./components/human-relay/HumanRelayDialog"
@@ -181,7 +181,7 @@ const App = () => {
 	) : (
 		<>
 			{tab === "modes" && <ModesView onDone={() => switchTab("chat")} />}
-			{/* {tab === "mcp" && <McpView onDone={() => switchTab("chat")} />} kilocode_change: we render this in settings */}
+			{tab === "mcp" && <McpView onDone={() => switchTab("chat")} />}
 			{tab === "history" && <HistoryView onDone={() => switchTab("chat")} />}
 			{tab === "settings" && (
 				<SettingsView ref={settingsRef} onDone={() => switchTab("chat")} targetSection={currentSection} /> // kilocode_change

@@ -32,6 +32,13 @@
 				"label": "Consenti letture di file molto grandi",
 				"description": "Quando abilitato, Kilo Code eseguirà letture di file o output MCP molto grandi anche se c'è un'alta probabilità di superare la finestra di contesto (dimensione del contenuto >80% della finestra di contesto)."
 			}
+		},
+		"systemNotifications": {
+			"label": "Attiva notifiche di sistema",
+			"description": "Quando abilitato, Kilo Code invierà notifiche di sistema per eventi importanti come il completamento di attività o errori.",
+			"testButton": "Testa notifica",
+			"testTitle": "Kilo Code",
+			"testMessage": "Questa è una notifica di test da Kilo Code."
 		}
 	},
 	"chat": {
@@ -48,12 +55,7 @@
 		"dashboard": "Dashboard",
 		"logOut": "Disconnetti",
 		"currentBalance": "SALDO ATTUALE",
-		"loading": "Caricamento...",
-		"signUp": {
-			"title": "Registrati a Kilo Code",
-			"description": "Registrandoti a Kilo Code ottieni crediti gratuiti per iniziare. Usa i tuoi crediti per esplorare le nostre funzionalità, provare i modelli più recenti e migliori, e sperimentare i vantaggi di Kilo Code senza impegno.",
-			"termsAndPrivacy": "Continuando, accetti i <termsLink>Termini di Servizio</termsLink> e la <privacyLink>Politica sulla Privacy.</privacyLink>"
-		}
+		"loading": "Caricamento..."
 	},
 	"docs": "Documentazione",
 	"rules": {
