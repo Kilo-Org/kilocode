@@ -1274,7 +1274,10 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						</div>
 
 						{/* kilocode_change start - hide if there is only one profile */}
-						<div className={cn("shrink-0 w-[70px]", (listApiConfigMeta?.length ?? 0) < 2 && "hidden")}>
+						<div
+							className={cn("flex-1", "min-w-0", "overflow-hidden", {
+								hidden: (listApiConfigMeta?.length ?? 0) < 2,
+							})}>
 							{/* kilocode_change end */}
 							<SelectDropdown
 								value={currentConfigId}
