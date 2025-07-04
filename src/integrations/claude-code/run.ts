@@ -110,10 +110,14 @@ const CLAUDE_CODE_TIMEOUT = 600000 // 10 minutes
 function runProcess({ systemPrompt, messages, path, modelId }: ClaudeCodeOptions) {
 	const claudePath = path || "claude"
 
+	// Truncate system prompt to avoid E2BIG errors
+	// Keep only the role definition part, as Claude Code CLI loads memory bank from CLAUDE.md
+	const truncatedSystemPrompt = truncateSystemPrompt(systemPrompt)
+
 	const args = [
 		"-p",
 		"--system-prompt",
-		systemPrompt,
+		truncatedSystemPrompt,
 		"--verbose",
 		"--output-format",
 		"stream-json",
@@ -197,4 +201,55 @@ function attemptParseChunk(data: string): ClaudeCodeMessage | null {
 		console.error("Error parsing chunk:", error, data.length)
 		return null
 	}
+}
+
+/**
+ * Truncates the system prompt to avoid E2BIG errors when spawning subprocess.
+ * Keeps only the role definition part since Claude Code CLI loads memory bank from CLAUDE.md.
+ *
+ * The system prompt structure typically follows:
+ * 1. Role definition (essential)
+ * 2. Memory bank instructions with content (can be large, not needed for Claude Code CLI)
+ *
+ * @param systemPrompt The full system prompt
+ * @returns Truncated system prompt containing only the role definition
+ */
+function truncateSystemPrompt(systemPrompt: string): string {
+	// Look for common patterns that indicate the start of memory bank content
+	const memoryBankIndicators = [
+		"USER'S CUSTOM INSTRUCTIONS",
+		"The following additional instructions are provided by the user",
+		"# Rules from",
+		"# Memory Bank",
+		"CLAUDE.md",
+		"memory bank",
+		"custom instructions"
+	]
+	
+	// Find the first occurrence of any memory bank indicator
+	let truncationPoint = systemPrompt.length
+	
+	for (const indicator of memoryBankIndicators) {
+		const index = systemPrompt.indexOf(indicator)
+		if (index !== -1 && index < truncationPoint) {
+			truncationPoint = index
+		}
+	}
+	
+	// If we found a truncation point, cut off there
+	if (truncationPoint < systemPrompt.length) {
+		const truncated = systemPrompt.substring(0, truncationPoint).trim()
+		console.log(`System prompt truncated from ${systemPrompt.length} to ${truncated.length} characters`)
+		return truncated
+	}
+	
+	// If no memory bank content found, but still very long, truncate to reasonable size
+	const MAX_SAFE_SIZE = 32000 // Conservative limit to avoid E2BIG
+	if (systemPrompt.length > MAX_SAFE_SIZE) {
+		const truncated = systemPrompt.substring(0, MAX_SAFE_SIZE).trim()
+		console.log(`System prompt truncated from ${systemPrompt.length} to ${truncated.length} characters (size limit)`)
+		return truncated
+	}
+	
+	return systemPrompt
 }
