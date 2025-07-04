@@ -2014,5 +2014,8 @@ export const webviewMessageHandler = async (
 			break
 		}
 		// kilocode_change end
+		case "insertTextToChatArea":
+			provider.postMessageToWebview({ type: "insertTextToChatArea", text: message.text })
+			break
 	}
 }

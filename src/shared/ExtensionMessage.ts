@@ -79,6 +79,7 @@ export interface ExtensionMessage {
 		| "showHumanRelayDialog"
 		| "humanRelayResponse"
 		| "humanRelayCancel"
+		| "insertTextToChatArea" // kilocode_change
 		| "browserToolEnabled"
 		| "browserConnectionResult"
 		| "remoteBrowserEnabled"

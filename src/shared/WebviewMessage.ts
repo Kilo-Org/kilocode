@@ -148,6 +148,7 @@ export interface WebviewMessage {
 		| "maxWorkspaceFiles"
 		| "humanRelayResponse"
 		| "humanRelayCancel"
+		| "insertTextToChatArea" // kilocode_change
 		| "browserToolEnabled"
 		| "showRooIgnoredFiles"
 		| "testBrowserConnection"

@@ -1,7 +1,7 @@
 import { HTMLAttributes } from "react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { Trans } from "react-i18next"
-import { Info, Download, Upload, TriangleAlert } from "lucide-react"
+import { Info, Download, Upload, TriangleAlert, Wand2 } from "lucide-react"
 
 import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 
