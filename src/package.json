@@ -321,7 +321,7 @@
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "kilo-code.promptsButtonClicked",
+					"command": "kilo-code.mcpButtonClicked",
 					"group": "navigation@2",
 					"when": "view == kilo-code.SidebarProvider"
 				},
@@ -347,7 +347,7 @@
 				},
 				{
 					"command": "kilo-code.helpButtonClicked",
-					"group": "navigation@7",
+					"group": "navigation@8",
 					"when": "false && view == kilo-code.SidebarProvider"
 				}
 			],
@@ -358,7 +358,7 @@
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
 				},
 				{
-					"command": "kilo-code.promptsButtonClicked",
+					"command": "kilo-code.mcpButtonClicked",
 					"group": "navigation@2",
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
 				},
