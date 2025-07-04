@@ -1,3 +1,5 @@
+// kilocode_change new file
+
 import * as vscode from "vscode"
 import { buildApiHandler, ApiHandler } from "../../api"
 import { CodeContext, ContextGatherer } from "./ContextGatherer"
@@ -139,7 +141,7 @@ function setupAutocomplete(context: vscode.ExtensionContext): vscode.Disposable 
 		const systemPrompt = holeFillerTemplate.getSystemPrompt()
 		const userPrompt = holeFillerTemplate.template(codeContext, document, position, snippets)
 
-		console.log(`🚀🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶\n`, { userPrompt })
+		console.log(`🚀🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶🧶\n`, userPrompt)
 
 		const stream = apiHandler.createMessage(systemPrompt, [
 			{ role: "user", content: [{ type: "text", text: userPrompt }] },
@@ -207,6 +209,17 @@ function setupAutocomplete(context: vscode.ExtensionContext): vscode.Disposable 
 
 			// Skip providing completions if this was triggered by a backspace operation of if we just accepted a suggestion
 			if (isBackspaceOperation || justAcceptedSuggestion) {
+				return null
+			}
+
+			// Check if we're at the start of a line with only whitespace before cursor
+			const lineText = document.lineAt(position.line).text
+			const textBeforeCursor = lineText.substring(0, position.character)
+
+			// If we're in whitespace at the start of a line (e.g., indenting with tab), don't trigger autocomplete
+			// But allow autocomplete if we're at the end of a line that consists only of whitespace
+			if (textBeforeCursor.trim() === "" && position.character !== lineText.length) {
+				console.log(`🚀⚪ Skipping autocomplete in whitespace at start of line`)
 				return null
 			}
 

@@ -251,6 +251,7 @@ export type ExtensionState = Pick<
 	| "codebaseIndexConfig"
 	| "codebaseIndexModels"
 	| "profileThresholds"
+	| "systemNotificationsEnabled" // kilocode_change
 > & {
 	version: string
 	clineMessages: ClineMessage[]

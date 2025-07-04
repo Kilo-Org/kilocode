@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.49.1",
+	"version": "4.50.0",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -262,6 +262,11 @@
 				"key": "ctrl+shift+k",
 				"mac": "cmd+shift+k",
 				"when": "true"
+			},
+			{
+				"command": "editor.action.inlineSuggest.commit",
+				"key": "tab",
+				"when": "inlineSuggestionVisible && editorTextFocus && !editorTabMovesFocus && !inSnippetMode && !suggestWidgetVisible && editorLangId != 'markdown'"
 			}
 		],
 		"menus": {
@@ -316,7 +321,7 @@
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "kilo-code.promptsButtonClicked",
+					"command": "kilo-code.mcpButtonClicked",
 					"group": "navigation@2",
 					"when": "view == kilo-code.SidebarProvider"
 				},
@@ -342,7 +347,7 @@
 				},
 				{
 					"command": "kilo-code.helpButtonClicked",
-					"group": "navigation@7",
+					"group": "navigation@8",
 					"when": "false && view == kilo-code.SidebarProvider"
 				}
 			],
@@ -353,7 +358,7 @@
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
 				},
 				{
-					"command": "kilo-code.promptsButtonClicked",
+					"command": "kilo-code.mcpButtonClicked",
 					"group": "navigation@2",
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
 				},

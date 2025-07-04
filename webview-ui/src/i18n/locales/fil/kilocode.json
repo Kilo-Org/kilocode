@@ -32,6 +32,13 @@
 				"label": "Payagan ang pagbasa ng napakalaking files",
 				"description": "Kapag naka-enable, magsasagawa ang Kilo Code ng pagbasa ng napakalaking files o MCP outputs kahit na may mataas na posibilidad na mag-overflow ang context window (laki ng content >80% ng context window)."
 			}
+		},
+		"systemNotifications": {
+			"label": "Paganahin ang mga System Notification",
+			"description": "Kapag naka-enable, magpapadala ang Kilo Code ng mga system notification para sa mahahalagang pangyayari tulad ng pagkumpleto ng gawain o mga error.",
+			"testButton": "Subukan ang Notification",
+			"testTitle": "Kilo Code",
+			"testMessage": "Ito ay isang test notification mula sa Kilo Code."
 		}
 	},
 	"chat": {
@@ -48,12 +55,7 @@
 		"dashboard": "Dashboard",
 		"logOut": "Mag-log out",
 		"currentBalance": "KASALUKUYANG BALANSE",
-		"loading": "Nag-lo-load...",
-		"signUp": {
-			"title": "Mag-sign up sa Kilo Code",
-			"description": "Ang pag-sign up sa Kilo Code ay nagbibigay sa iyo ng libreng credits para makapagsimula. Gamitin ang iyong credits para tuklasin ang aming mga feature, subukan ang pinakabago at pinakamahusay na models, at maranasan ang mga benepisyo ng Kilo Code nang walang commitment.",
-			"termsAndPrivacy": "Sa pagpapatuloy, sumasang-ayon ka sa <termsLink>Terms of Service</termsLink> at <privacyLink>Privacy Policy.</privacyLink>"
-		}
+		"loading": "Nag-lo-load..."
 	},
 	"docs": "Docs",
 	"rules": {

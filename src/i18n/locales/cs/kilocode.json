@@ -6,6 +6,7 @@
 		"title": "Varování o nízkém kreditu!",
 		"message": "Zkontroluj, zda můžeš doplnit bezplatné kredity nebo si koupit další!"
 	},
+	"notLoggedInError": "Požadavek nelze dokončit, ujisti se, že jsi připojen a přihlášen u vybraného poskytovatele.",
 	"rules": {
 		"actions": {
 			"delete": "Smazat",

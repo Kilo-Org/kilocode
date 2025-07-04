@@ -66,7 +66,7 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 
 	public override async fetchModel() {
 		if (!this.options.kilocodeToken || !this.options.openRouterBaseUrl) {
-			throw new Error("KiloCode toke + baseUrl is required to fetch models")
+			throw new Error("KiloCode token + baseUrl is required to fetch models")
 		}
 		this.models = await getModels({
 			provider: "kilocode-openrouter",

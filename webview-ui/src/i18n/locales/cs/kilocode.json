@@ -32,6 +32,13 @@
 				"label": "Povolit čtení velmi velkých souborů",
 				"description": "Když je povoleno, Kilo Code provede čtení velmi velkých souborů nebo výstupů MCP i když existuje vysoká pravděpodobnost přetečení kontextového okna (velikost obsahu >80% kontextového okna)."
 			}
+		},
+		"systemNotifications": {
+			"label": "Povolit systémová oznámení",
+			"description": "Když je povoleno, Kilo Code bude odesílat systémová oznámení pro důležité události jako dokončení úkolu nebo chyby.",
+			"testButton": "Otestovat oznámení",
+			"testTitle": "Kilo Code",
+			"testMessage": "Toto je testovací oznámení z Kilo Code."
 		}
 	},
 	"chat": {
@@ -48,12 +55,7 @@
 		"dashboard": "Přehled",
 		"logOut": "Odhlásit se",
 		"currentBalance": "AKTUÁLNÍ ZŮSTATEK",
-		"loading": "Načítání...",
-		"signUp": {
-			"title": "Zaregistruj se v Kilo Code",
-			"description": "Registrace v Kilo Code ti dává bezplatné kredity pro začátek. Použij své kredity k prozkoumání našich funkcí, vyzkoušej nejnovější a nejlepší modely a zažij výhody Kilo Code bez jakýchkoli závazků.",
-			"termsAndPrivacy": "Pokračováním souhlasíš s <termsLink>Podmínkami služby</termsLink> a <privacyLink>Zásadami ochrany osobních údajů.</privacyLink>"
-		}
+		"loading": "Načítání..."
 	},
 	"docs": "Dokumentace",
 	"rules": {

@@ -4,6 +4,7 @@ import * as path from "path"
 import delay from "delay"
 
 import { CommandExecutionStatus } from "@roo-code/types"
+import { TelemetryService } from "@roo-code/telemetry"
 
 import { Task } from "../task/Task"
 
@@ -191,6 +192,7 @@ export async function executeCommand(
 
 	if (terminalProvider === "vscode") {
 		callbacks.onNoShellIntegration = async (error: string) => {
+			TelemetryService.instance.captureShellIntegrationError(cline.taskId)
 			shellIntegrationError = error
 		}
 	}

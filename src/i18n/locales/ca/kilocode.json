@@ -6,6 +6,7 @@
 		"title": "Avís de Crèdit Baix!",
 		"message": "Comprova si pots recarregar amb crèdits gratuïts o comprar-ne més!"
 	},
+	"notLoggedInError": "No es pot completar la sol·licitud, assegura't que estàs connectat i has iniciat sessió amb el proveïdor seleccionat.",
 	"rules": {
 		"actions": {
 			"delete": "Eliminar",

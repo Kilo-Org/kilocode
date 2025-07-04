@@ -32,6 +32,13 @@
 				"label": "السماح بقراءة ملفات ضخمة",
 				"description": "إذا تم تفعيله، Kilo Code يقدر يقرأ ملفات ضخمة أو مخرجات MCP حتى لو فيه احتمال يتجاوز حجم السياق (إذا المحتوى تجاوز 80% من حجم السياق)."
 			}
+		},
+		"systemNotifications": {
+			"label": "تفعيل إشعارات النظام",
+			"description": "عند التفعيل، سيرسل Kilo Code إشعارات النظام للأحداث المهمة مثل إكمال المهام أو الأخطاء.",
+			"testButton": "اختبار الإشعار",
+			"testTitle": "Kilo Code",
+			"testMessage": "هذا إشعار اختباري من Kilo Code."
 		}
 	},
 	"chat": {
@@ -48,12 +55,7 @@
 		"dashboard": "لوحة التحكم",
 		"logOut": "تسجيل الخروج",
 		"currentBalance": "الرصيد الحالي",
-		"loading": "جاري التحميل...",
-		"signUp": {
-			"title": "سجّل في Kilo Code",
-			"description": "التسجيل يمنحك رصيد مجاني لتبدأ. جرّب المميزات، واستكشف النماذج، واستفد من Kilo Code بدون أي التزام.",
-			"termsAndPrivacy": "بالمتابعة، أنت توافق على <termsLink>شروط الاستخدام</termsLink> و<privacyLink>سياسة الخصوصية</privacyLink>."
-		}
+		"loading": "جاري التحميل..."
 	},
 	"docs": "التوثيق",
 	"rules": {

@@ -32,6 +32,13 @@
 				"label": "Permitir leituras de arquivos muito grandes",
 				"description": "Quando ativado, o Kilo Code realizará leituras de arquivos ou saídas MCP muito grandes mesmo que haja uma alta probabilidade de exceder a janela de contexto (tamanho do conteúdo >80% da janela de contexto)."
 			}
+		},
+		"systemNotifications": {
+			"label": "Ativar notificações do sistema",
+			"description": "Quando ativado, o Kilo Code enviará notificações do sistema para eventos importantes como conclusão de tarefas ou erros.",
+			"testButton": "Testar notificação",
+			"testTitle": "Kilo Code",
+			"testMessage": "Esta é uma notificação de teste do Kilo Code."
 		}
 	},
 	"chat": {
@@ -48,12 +55,7 @@
 		"dashboard": "Painel",
 		"logOut": "Sair",
 		"currentBalance": "SALDO ATUAL",
-		"loading": "Carregando...",
-		"signUp": {
-			"title": "Cadastre-se no Kilo Code",
-			"description": "Cadastrar-se no Kilo Code oferece créditos gratuitos para começar. Use seus créditos para explorar nossos recursos, experimentar os modelos mais recentes e melhores, e vivenciar os benefícios do Kilo Code sem compromisso.",
-			"termsAndPrivacy": "Ao continuar, você concorda com os <termsLink>Termos de Serviço</termsLink> e a <privacyLink>Política de Privacidade.</privacyLink>"
-		}
+		"loading": "Carregando..."
 	},
 	"docs": "Documentação",
 	"rules": {
