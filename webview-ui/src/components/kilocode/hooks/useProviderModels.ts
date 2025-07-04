@@ -165,11 +165,8 @@ const getModelsByProvider = ({
 		}
 		case "kilocode": {
 			return {
-				models: {
-					...routerModels["kilocode-openrouter"],
-					...anthropicModels,
-				},
-				defaultModel: "claude-3-7-sonnet-20250219",
+				models: routerModels["kilocode-openrouter"],
+				defaultModel: "anthropic/claude-3.7-sonnet",
 			}
 		}
 		default: {
