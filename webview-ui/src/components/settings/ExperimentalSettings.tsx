@@ -1,7 +1,13 @@
-import { HTMLAttributes } from "react"
+import React, { HTMLAttributes } from "react"
 import { FlaskConical } from "lucide-react"
 
-import type { Experiments, CodebaseIndexConfig, CodebaseIndexModels, ProviderSettings } from "@roo-code/types"
+import type {
+	Experiments,
+	CodebaseIndexConfig,
+	CodebaseIndexModels,
+	ProviderSettings,
+	ProviderSettingsEntry,
+} from "@roo-code/types"
 
 import { EXPERIMENT_IDS, experimentConfigsMap } from "@roo/experiments"
 
@@ -14,6 +20,7 @@ import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
 import { ExperimentalFeature } from "./ExperimentalFeature"
 import { CodeIndexSettings } from "./CodeIndexSettings"
+import { AutocompleteSettings } from "./AutocompleteSettings"
 
 type ExperimentalSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	experiments: Experiments
@@ -25,6 +32,10 @@ type ExperimentalSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	apiConfiguration: ProviderSettings
 	setApiConfigurationField: <K extends keyof ProviderSettings>(field: K, value: ProviderSettings[K]) => void
 	areSettingsCommitted: boolean
+	// Autocomplete settings props
+	autocompleteApiConfigId?: string
+	listApiConfigMeta: ProviderSettingsEntry[]
+	onAutocompleteApiConfigIdChange: (value: string) => void
 }
 
 export const ExperimentalSettings = ({
@@ -36,6 +47,9 @@ export const ExperimentalSettings = ({
 	apiConfiguration,
 	setApiConfigurationField,
 	areSettingsCommitted,
+	autocompleteApiConfigId,
+	listApiConfigMeta,
+	onAutocompleteApiConfigIdChange,
 	className,
 	...props
 }: ExperimentalSettingsProps) => {
@@ -68,17 +82,27 @@ export const ExperimentalSettings = ({
 							)
 						}
 						return (
-							<ExperimentalFeature
-								key={config[0]}
-								experimentKey={config[0]}
-								enabled={experiments[EXPERIMENT_IDS[config[0] as keyof typeof EXPERIMENT_IDS]] ?? false}
-								onChange={(enabled) =>
-									setExperimentEnabled(
-										EXPERIMENT_IDS[config[0] as keyof typeof EXPERIMENT_IDS],
-										enabled,
-									)
-								}
-							/>
+							<React.Fragment key={config[0]}>
+								<ExperimentalFeature
+									experimentKey={config[0]}
+									enabled={
+										experiments[EXPERIMENT_IDS[config[0] as keyof typeof EXPERIMENT_IDS]] ?? false
+									}
+									onChange={(enabled) =>
+										setExperimentEnabled(
+											EXPERIMENT_IDS[config[0] as keyof typeof EXPERIMENT_IDS],
+											enabled,
+										)
+									}
+								/>
+								{config[0] === "AUTOCOMPLETE" && experiments.autocomplete && (
+									<AutocompleteSettings
+										autocompleteApiConfigId={autocompleteApiConfigId}
+										listApiConfigMeta={listApiConfigMeta}
+										onAutocompleteApiConfigIdChange={onAutocompleteApiConfigIdChange}
+									/>
+								)}
+							</React.Fragment>
 						)
 					})}
 

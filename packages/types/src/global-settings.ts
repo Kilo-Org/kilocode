@@ -115,6 +115,8 @@ export const globalSettingsSchema = z.object({
 	historyPreviewCollapsed: z.boolean().optional(),
 	profileThresholds: z.record(z.string(), z.number()).optional(),
 	hasOpenedModeSelector: z.boolean().optional(),
+
+	autocompleteApiConfigId: z.string().optional(), // kilocode_change
 })
 
 export type GlobalSettings = z.infer<typeof globalSettingsSchema>

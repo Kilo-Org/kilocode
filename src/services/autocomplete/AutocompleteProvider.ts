@@ -10,15 +10,13 @@ import { LRUCache } from "lru-cache"
 import { createDebouncedFn } from "./utils/createDebouncedFn"
 import { AutocompleteDecorationAnimation } from "./AutocompleteDecorationAnimation"
 import { isHumanEdit } from "./utils/EditDetectionUtils"
-import { ExperimentId } from "@roo-code/types"
+import { ExperimentId, ProviderSettings } from "@roo-code/types"
 import { ClineProvider } from "../../core/webview/ClineProvider"
+import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 
 export const UI_UPDATE_DEBOUNCE_MS = 250
 export const BAIL_OUT_TOO_MANY_LINES_LIMIT = 100
 export const MAX_COMPLETIONS_PER_CONTEXT = 5 // Per-given prefix/suffix lines, how many different per-line options to cache
-
-// const DEFAULT_MODEL = "mistralai/codestral-2501"
-const DEFAULT_MODEL = "google/gemini-2.5-flash-preview-05-20"
 
 export function processModelResponse(responseText: string): string {
 	const fullMatch = /(<COMPLETION>)?([\s\S]*?)(<\/COMPLETION>|$)/.exec(responseText)
@@ -29,6 +27,35 @@ export function processModelResponse(responseText: string): string {
 		return fullMatch[2].slice(0, -"</COMPLETION>".length)
 	}
 	return fullMatch[2]
+}
+
+/**
+ * Gets the autocomplete provider configuration from settings
+ * Returns the configured provider settings for autocomplete or fallback to defaults
+ */
+async function getAutocompleteConfiguration(
+	providerSettingsManager: ProviderSettingsManager,
+): Promise<ProviderSettings | undefined> {
+	const contextProxy = ContextProxy.instance
+	if (!contextProxy) {
+		return undefined
+	}
+
+	await providerSettingsManager.initialize()
+
+	const autocompleteApiConfigId = contextProxy.getValues().autocompleteApiConfigId
+
+	// If we have a specific API config ID for autocomplete, try to get the profile.
+	if (autocompleteApiConfigId) {
+		try {
+			const providerSettings = await providerSettingsManager.getProfile({ id: autocompleteApiConfigId })
+			return providerSettings
+		} catch (error) {
+			console.error("Failed to get autocomplete profile:", error)
+		}
+	}
+
+	return undefined
 }
 
 /**
@@ -94,21 +121,33 @@ function setupAutocomplete(context: vscode.ExtensionContext): vscode.Disposable 
 		ttl: 1000 * 60 * 60 * 24, // Cache for 24 hours
 	})
 
+	const providerSettingsManager = new ProviderSettingsManager(context)
+
 	// Services
 	const contextGatherer = new ContextGatherer()
 	const animationManager = AutocompleteDecorationAnimation.getInstance()
 
-	// Initialize API handler only if we have a valid token
+	// Initialize API handler with autocomplete configuration
 	let apiHandler: ApiHandler | null = null
-	const kilocodeToken = ContextProxy.instance.getProviderSettings().kilocodeToken
 
-	if (kilocodeToken) {
-		apiHandler = buildApiHandler({
-			apiProvider: "kilocode",
-			kilocodeToken,
-			kilocodeModel: DEFAULT_MODEL,
-		})
+	const updateApiHandler = async (providerSettingsManager: ProviderSettingsManager) => {
+		const autocompleteConfig = await getAutocompleteConfiguration(providerSettingsManager)
+		if (!autocompleteConfig) {
+			console.warn("No autocomplete configuration found, disabling autocomplete.")
+			apiHandler = null
+			return
+		}
+
+		try {
+			apiHandler = buildApiHandler(autocompleteConfig)
+		} catch (error) {
+			console.error("Failed to build API handler for autocomplete:", error)
+			apiHandler = null
+		}
 	}
+
+	// Initialize the API handler
+	updateApiHandler(providerSettingsManager)
 
 	const clearState = () => {
 		vscode.commands.executeCommand("editor.action.inlineSuggest.hide")
@@ -197,15 +236,12 @@ function setupAutocomplete(context: vscode.ExtensionContext): vscode.Disposable 
 		async provideInlineCompletionItems(document, position, context, token) {
 			if (!enabled || !vscode.window.activeTextEditor) return null
 
-			const kilocodeToken = ContextProxy.instance.getProviderSettings().kilocodeToken
-			if (!kilocodeToken) {
+			// Update API handler in case provider configuration has changed
+			await updateApiHandler(providerSettingsManager)
+
+			if (!apiHandler) {
 				return null
 			}
-
-			// Create or recreate the API handler if needed
-			apiHandler =
-				apiHandler ??
-				buildApiHandler({ apiProvider: "kilocode", kilocodeToken: kilocodeToken, kilocodeModel: DEFAULT_MODEL })
 
 			// Skip providing completions if this was triggered by a backspace operation of if we just accepted a suggestion
 			if (isBackspaceOperation || justAcceptedSuggestion) {
@@ -303,11 +339,10 @@ function setupAutocomplete(context: vscode.ExtensionContext): vscode.Disposable 
 			return
 		}
 
-		// Check if kilocode token is set
-		const kilocodeToken = ContextProxy.instance.getProviderSettings().kilocodeToken
-		if (!kilocodeToken) {
+		// Check if API handler is available
+		if (!apiHandler) {
 			statusBar.text = "$(warning) Kilo Complete"
-			statusBar.tooltip = "A valid Kilocode token must be set to use autocomplete"
+			statusBar.tooltip = "No valid autocomplete provider configuration found"
 			return
 		}
 
@@ -318,7 +353,6 @@ Kilo Code Autocomplete
 
 Last completion: $${lastCompletionCost.toFixed(5)}
 Session total cost: ${totalCostFormatted}
-Model: ${DEFAULT_MODEL}\
 `
 	}
 

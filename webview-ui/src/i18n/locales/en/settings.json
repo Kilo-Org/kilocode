@@ -536,7 +536,7 @@
 		},
 		"AUTOCOMPLETE": {
 			"name": "Use experimental \"autocomplete\" feature",
-			"description": "When enabled, Kilo Code will provide inline code suggestions as you type. Requires Kilo Code API Provider."
+			"description": "When enabled, Kilo Code will provide inline code suggestions as you type. Requires you to select a profile for autocompletion."
 		},
 		"CONCURRENT_FILE_READS": {
 			"name": "Enable concurrent file reads",
@@ -554,6 +554,11 @@
 			"name": "Enable concurrent file edits",
 			"description": "When enabled, Kilo Code can edit multiple files in a single request. When disabled, Kilo Code must edit files one at a time. Disabling this can help when working with less capable models or when you want more control over file modifications."
 		}
+	},
+	"autocomplete": {
+		"title": "Autocomplete Configuration",
+		"description": "Configure which profile to use. If left empty, it will try to use ",
+		"profile": "Profile"
 	},
 	"promptCaching": {
 		"label": "Disable prompt caching",
