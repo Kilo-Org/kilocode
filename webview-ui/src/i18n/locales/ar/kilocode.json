@@ -55,12 +55,7 @@
 		"dashboard": "لوحة التحكم",
 		"logOut": "تسجيل الخروج",
 		"currentBalance": "الرصيد الحالي",
-		"loading": "جاري التحميل...",
-		"signUp": {
-			"title": "سجّل في Kilo Code",
-			"description": "التسجيل يمنحك رصيد مجاني لتبدأ. جرّب المميزات، واستكشف النماذج، واستفد من Kilo Code بدون أي التزام.",
-			"termsAndPrivacy": "بالمتابعة، أنت توافق على <termsLink>شروط الاستخدام</termsLink> و<privacyLink>سياسة الخصوصية</privacyLink>."
-		}
+		"loading": "جاري التحميل..."
 	},
 	"docs": "التوثيق",
 	"rules": {

@@ -11,6 +11,7 @@
 		"title": "Aviso de Crédito Baixo!",
 		"message": "Verifique se você pode recarregar com créditos gratuitos ou comprar mais!"
 	},
+	"notLoggedInError": "Não é possível concluir a solicitação, certifique-se de que você está conectado e logado com o provedor selecionado.",
 	"rules": {
 		"actions": {
 			"delete": "Excluir",

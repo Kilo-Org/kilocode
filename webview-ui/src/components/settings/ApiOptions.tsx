@@ -4,7 +4,7 @@ import { useDebounce } from "react-use"
 import { VSCodeButtonLink } from "../common/VSCodeButtonLink"
 import { VSCodeLink, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 
-import { getKiloCodeBackendAuthUrl } from "../kilocode/helpers" // kilocode_change
+import { getKiloCodeBackendSignInUrl } from "../kilocode/helpers" // kilocode_change
 
 import {
 	type ProviderName,
@@ -420,7 +420,7 @@ const ApiOptions = ({
 								</Button>
 							</div>
 						) : (
-							<VSCodeButtonLink variant="secondary" href={getKiloCodeBackendAuthUrl(uriScheme, uiKind)}>
+							<VSCodeButtonLink variant="secondary" href={getKiloCodeBackendSignInUrl(uriScheme, uiKind)}>
 								{t("kilocode:settings.provider.login")}
 							</VSCodeButtonLink>
 						))}

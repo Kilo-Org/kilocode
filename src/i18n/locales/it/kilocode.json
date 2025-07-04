@@ -11,6 +11,7 @@
 		"title": "Avviso Credito Basso!",
 		"message": "Verifica se puoi ricaricare con crediti gratuiti o acquistarne altri!"
 	},
+	"notLoggedInError": "Impossibile completare la richiesta, assicurati di essere connesso e di aver effettuato l'accesso con il provider selezionato.",
 	"rules": {
 		"actions": {
 			"delete": "Elimina",

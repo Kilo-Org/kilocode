@@ -349,6 +349,10 @@ describe("ClineProvider", () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
 
+		if (!TelemetryService.hasInstance()) {
+			TelemetryService.createInstance([])
+		}
+
 		const globalState: Record<string, string | undefined> = {
 			mode: "architect",
 			currentApiConfigName: "current-config",
@@ -2346,9 +2350,9 @@ describe("ClineProvider - Router Models", () => {
 			onDidChangeVisibility: vi.fn().mockImplementation(() => ({ dispose: vi.fn() })),
 		} as unknown as vscode.WebviewView
 
-		// if (!TelemetryService.hasInstance()) {
-		// 	TelemetryService.createInstance([])
-		// }
+		if (!TelemetryService.hasInstance()) {
+			TelemetryService.createInstance([])
+		}
 
 		provider = new ClineProvider(mockContext, mockOutputChannel, "sidebar", new ContextProxy(mockContext))
 	})

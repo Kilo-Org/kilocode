@@ -6,6 +6,7 @@
 		"title": "Düşük Kredi Uyarısı!",
 		"message": "Ücretsiz kredilerle yükleme yapabilir veya daha fazla satın alabilir misiniz kontrol edin!"
 	},
+	"notLoggedInError": "İstek tamamlanamıyor, seçili sağlayıcıya bağlı olduğundan ve oturum açtığından emin ol.",
 	"rules": {
 		"actions": {
 			"delete": "Sil",

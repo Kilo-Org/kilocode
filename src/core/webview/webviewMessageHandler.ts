@@ -632,6 +632,8 @@ export const webviewMessageHandler = async (
 				if (!exists) {
 					await safeWriteJson(mcpPath, { mcpServers: {} })
 				}
+
+				openFile(mcpPath)
 			} catch (error) {
 				vscode.window.showErrorMessage(t("mcp:errors.create_json", { error: `${error}` }))
 			}
@@ -1248,6 +1250,10 @@ export const webviewMessageHandler = async (
 						configToUse,
 						supportPrompt.create("ENHANCE", { userInput: message.text }, customSupportPrompts),
 					)
+
+					// Capture telemetry for prompt enhancement.
+					const currentCline = provider.getCurrentCline()
+					TelemetryService.instance.capturePromptEnhanced(currentCline?.taskId)
 
 					await provider.postMessageToWebview({ type: "enhancedPrompt", text: enhancedPrompt })
 				} catch (error) {

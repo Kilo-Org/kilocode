@@ -11,6 +11,7 @@
 		"title": "Warnung: Niedriges Guthaben!",
 		"message": "Prüfen Sie, ob Sie kostenloses Guthaben aufladen oder mehr kaufen können!"
 	},
+	"notLoggedInError": "Anfrage kann nicht abgeschlossen werden. Stelle sicher, dass du mit dem ausgewählten Anbieter verbunden und angemeldet bist.",
 	"rules": {
 		"actions": {
 			"delete": "Löschen",

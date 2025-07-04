@@ -55,12 +55,7 @@
 		"dashboard": "Instrumentpanel",
 		"logOut": "Logga ut",
 		"currentBalance": "AKTUELLT SALDO",
-		"loading": "Laddar...",
-		"signUp": {
-			"title": "Registrera dig hos Kilo Code",
-			"description": "Att registrera dig hos Kilo Code ger dig gratis krediter för att komma igång. Använd dina krediter för att utforska våra funktioner, prova de senaste och bästa modellerna och uppleva fördelarna med Kilo Code utan några åtaganden.",
-			"termsAndPrivacy": "Genom att fortsätta godkänner du <termsLink>Användarvillkoren</termsLink> och <privacyLink>Integritetspolicyn.</privacyLink>"
-		}
+		"loading": "Laddar..."
 	},
 	"docs": "Dokumentation",
 	"rules": {

@@ -55,12 +55,7 @@
 		"dashboard": "Dashboard",
 		"logOut": "Mag-log out",
 		"currentBalance": "KASALUKUYANG BALANSE",
-		"loading": "Nag-lo-load...",
-		"signUp": {
-			"title": "Mag-sign up sa Kilo Code",
-			"description": "Ang pag-sign up sa Kilo Code ay nagbibigay sa iyo ng libreng credits para makapagsimula. Gamitin ang iyong credits para tuklasin ang aming mga feature, subukan ang pinakabago at pinakamahusay na models, at maranasan ang mga benepisyo ng Kilo Code nang walang commitment.",
-			"termsAndPrivacy": "Sa pagpapatuloy, sumasang-ayon ka sa <termsLink>Terms of Service</termsLink> at <privacyLink>Privacy Policy.</privacyLink>"
-		}
+		"loading": "Nag-lo-load..."
 	},
 	"docs": "Docs",
 	"rules": {
