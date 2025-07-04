@@ -201,6 +201,16 @@
 		"getXaiApiKey": "取得 xAI API 金鑰",
 		"litellmApiKey": "LiteLLM API 金鑰",
 		"litellmBaseUrl": "LiteLLM 基礎 URL",
+		"makehubApiKey": "MakeHub API 金鑰",
+		"getMakehubApiKey": "取得 MakeHub API 金鑰",
+		"makehubPerfRatio": "效能/價格比",
+		"makehubPerfRatioDescription": "控制 MakeHub 在路由到提供商時如何平衡價格和效能。",
+		"makehubPerfRatioLabels": {
+			"price": "價格優化",
+			"balanced": "平衡",
+			"performance": "速度優化"
+		},
+		"noModelsFound": "未找到 {{provider}} 的模型。請確保您的 API 金鑰有效並重新整理模型列表。",
 		"awsCredentials": "AWS 認證",
 		"awsProfile": "AWS Profile",
 		"awsProfileName": "AWS Profile 名稱",
