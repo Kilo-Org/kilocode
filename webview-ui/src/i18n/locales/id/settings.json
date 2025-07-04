@@ -201,6 +201,16 @@
 		"getXaiApiKey": "Dapatkan xAI API Key",
 		"litellmApiKey": "LiteLLM API Key",
 		"litellmBaseUrl": "LiteLLM Base URL",
+		"makehubApiKey": "Kunci API MakeHub",
+		"getMakehubApiKey": "Dapatkan Kunci API MakeHub",
+		"makehubPerfRatio": "Rasio Performa/Harga",
+		"makehubPerfRatioDescription": "Mengontrol bagaimana MakeHub menyeimbangkan antara harga dan performa saat merutekan ke penyedia.",
+		"makehubPerfRatioLabels": {
+			"price": "Dioptimalkan untuk Harga",
+			"balanced": "Seimbang",
+			"performance": "Dioptimalkan untuk Kecepatan"
+		},
+		"noModelsFound": "Tidak ditemukan model untuk {{provider}}. Pastikan kunci API Anda valid dan segarkan daftar model.",
 		"awsCredentials": "AWS Credentials",
 		"awsProfile": "AWS Profile",
 		"awsProfileName": "Nama AWS Profile",
