@@ -179,6 +179,7 @@ export type ToolGroupConfig = {
 export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	execute_command: "run commands",
 	read_file: "read files",
+	read_media: "read media",
 	fetch_instructions: "fetch instructions",
 	write_to_file: "write files",
 	apply_diff: "apply changes",
@@ -205,6 +206,7 @@ export const TOOL_GROUPS: Record<ToolGroup, ToolGroupConfig> = {
 	read: {
 		tools: [
 			"read_file",
+			"read_media",
 			"fetch_instructions",
 			"search_files",
 			"list_files",
