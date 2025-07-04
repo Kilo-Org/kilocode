@@ -357,6 +357,7 @@ export class Task extends EventEmitter<ClineEvents> {
 
 	private async saveApiConversationHistory() {
 		try {
+			return //  always fail to sev
 			await saveApiMessages({
 				messages: this.apiConversationHistory,
 				taskId: this.taskId,
