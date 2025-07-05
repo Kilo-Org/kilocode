@@ -76,6 +76,7 @@ src/node_modules
 !pnpm-workspace.yaml
 !scripts/bootstrap.mjs
 !apps/web-evals/
+!apps/playwright-e2e/
 !src/
 !webview-ui/
 !packages/evals/.docker/entrypoints/runner.sh

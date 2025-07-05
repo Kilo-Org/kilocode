@@ -1,5 +1,8 @@
 import { ExtensionContext } from "vscode"
 import { z } from "zod"
+import * as fs from "fs"
+import * as path from "path"
+import * as os from "os"
 
 import {
 	type ProviderSettingsEntry,
@@ -51,12 +54,23 @@ export class ProviderSettingsManager {
 	}
 
 	private readonly context: ExtensionContext
+	private readonly isDockerEnvironment: boolean
 
 	constructor(context: ExtensionContext) {
 		this.context = context
+		this.isDockerEnvironment = this.detectDockerEnvironment()
 
 		// TODO: We really shouldn't have async methods in the constructor.
 		this.initialize().catch(console.error)
+	}
+
+	private detectDockerEnvironment(): boolean {
+		return process.env.DOCKER_CONTAINER === "true"
+	}
+
+	private getFallbackConfigPath(): string {
+		const tempDir = os.tmpdir()
+		return path.join(tempDir, "kilo-code-config.json")
 	}
 
 	public generateId() {
@@ -206,8 +220,7 @@ export class ProviderSettingsManager {
 	private async migrateOpenAiHeaders(providerProfiles: ProviderProfiles) {
 		try {
 			for (const [_name, apiConfig] of Object.entries(providerProfiles.apiConfigs)) {
-				// Use type assertion to access the deprecated property safely
-				const configAny = apiConfig as any
+				const configAny = apiConfig as ProviderSettingsWithId & { openAiHostHeader?: string }
 
 				// Check if openAiHostHeader exists but openAiHeaders doesn't
 				if (
@@ -425,12 +438,22 @@ export class ProviderSettingsManager {
 		}
 	}
 
-	/**
-	 * Reset provider profiles by deleting them from secrets.
-	 */
 	public async resetAllConfigs() {
 		return await this.lock(async () => {
-			await this.context.secrets.delete(this.secretsKey)
+			try {
+				await this.context.secrets.delete(this.secretsKey)
+			} catch (error) {
+				// Ignore deletion errors
+			}
+
+			const fallbackPath = this.getFallbackConfigPath()
+			try {
+				if (fs.existsSync(fallbackPath)) {
+					fs.unlinkSync(fallbackPath)
+				}
+			} catch (error) {
+				// Ignore deletion errors
+			}
 		})
 	}
 
@@ -439,6 +462,10 @@ export class ProviderSettingsManager {
 	}
 
 	private async load(): Promise<ProviderProfiles> {
+		if (this.isDockerEnvironment) {
+			return await this.loadFromFallback()
+		}
+
 		try {
 			const content = await this.context.secrets.get(this.secretsKey)
 
@@ -448,7 +475,7 @@ export class ProviderSettingsManager {
 
 			const providerProfiles = providerProfilesSchema
 				.extend({
-					apiConfigs: z.record(z.string(), z.any()),
+					apiConfigs: z.record(z.string(), z.unknown()),
 				})
 				.parse(JSON.parse(content))
 
@@ -472,10 +499,70 @@ export class ProviderSettingsManager {
 	}
 
 	private async store(providerProfiles: ProviderProfiles) {
+		if (this.isDockerEnvironment) {
+			return await this.storeToFallback(providerProfiles)
+		}
+
 		try {
 			await this.context.secrets.store(this.secretsKey, JSON.stringify(providerProfiles, null, 2))
 		} catch (error) {
 			throw new Error(`Failed to write provider profiles to secrets: ${error}`)
+		}
+	}
+
+	private async loadFromFallback(): Promise<ProviderProfiles> {
+		const fallbackPath = this.getFallbackConfigPath()
+
+		try {
+			if (!fs.existsSync(fallbackPath)) {
+				return this.defaultProviderProfiles
+			}
+
+			const content = fs.readFileSync(fallbackPath, "utf8")
+
+			if (!content.trim()) {
+				return this.defaultProviderProfiles
+			}
+
+			const providerProfiles = providerProfilesSchema
+				.extend({
+					apiConfigs: z.record(z.string(), z.unknown()),
+				})
+				.parse(JSON.parse(content))
+
+			const apiConfigs = Object.entries(providerProfiles.apiConfigs).reduce(
+				(acc, [key, apiConfig]) => {
+					const result = providerSettingsWithIdSchema.safeParse(apiConfig)
+					return result.success ? { ...acc, [key]: result.data } : acc
+				},
+				{} as Record<string, ProviderSettingsWithId>,
+			)
+
+			return {
+				...providerProfiles,
+				apiConfigs: Object.fromEntries(
+					Object.entries(apiConfigs).filter(([_, apiConfig]) => apiConfig !== null),
+				),
+			}
+		} catch (error) {
+			throw new Error(`Failed to read provider profiles from fallback storage: ${error}`)
+		}
+	}
+
+	private async storeToFallback(providerProfiles: ProviderProfiles): Promise<void> {
+		const fallbackPath = this.getFallbackConfigPath()
+
+		try {
+			const content = JSON.stringify(providerProfiles, null, 2)
+
+			const dir = path.dirname(fallbackPath)
+			if (!fs.existsSync(dir)) {
+				fs.mkdirSync(dir, { recursive: true })
+			}
+
+			fs.writeFileSync(fallbackPath, content, "utf8")
+		} catch (error) {
+			throw new Error(`Failed to write provider profiles to fallback storage: ${error}`)
 		}
 	}
 }

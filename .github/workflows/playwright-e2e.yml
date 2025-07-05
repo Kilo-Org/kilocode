@@ -1,0 +1,76 @@
+name: Playwright E2E Tests
+
+on:
+    pull_request:
+        types: [opened, reopened, ready_for_review, synchronize]
+        branches: [main]
+    push:
+        branches: [main]
+    workflow_dispatch:
+
+# Cancel in-progress jobs when new workflow is triggered
+concurrency:
+    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: true
+
+env:
+    DOCKER_BUILDKIT: 1
+    COMPOSE_DOCKER_CLI_BUILD: 1
+
+jobs:
+    playwright-e2e:
+        runs-on: ubuntu-latest
+        timeout-minutes: 30
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Build Playwright CI image
+              uses: docker/build-push-action@v5
+              with:
+                  context: .
+                  file: apps/playwright-e2e/Dockerfile.playwright-ci
+                  tags: playwright-ci:latest
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
+                  push: false
+                  load: true
+
+            - name: Create test results directory
+              run: mkdir -p ${{ github.workspace }}/apps/playwright-e2e/test-results
+
+            - name: Run Playwright E2E tests
+              run: |
+                  docker run --rm \
+                    -e OPENROUTER_API_KEY="${{ secrets.OPENROUTER_API_KEY }}" \
+                    -v ${{ github.workspace }}/apps/playwright-e2e/test-results:/workspace/apps/playwright-e2e/test-results \
+                    -v ${{ github.workspace }}/apps/playwright-e2e/playwright-report:/workspace/apps/playwright-e2e/playwright-report \
+                    playwright-ci:latest
+
+            - name: Upload test results
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: playwright-test-results-${{ github.run_number }}
+                  path: apps/playwright-e2e/test-results/
+                  retention-days: 7
+
+            - name: Upload Playwright HTML report
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: playwright-html-report-${{ github.run_number }}
+                  path: apps/playwright-e2e/playwright-report/
+                  retention-days: 7
+
+            - name: Comment PR with test results
+              if: always() && github.event_name == 'pull_request'
+              uses: actions/github-script@v7
+              with:
+                  script: |
+                      const { commentPlaywrightResults } = require('./.github/scripts/comment-playwright-results.js');
+                      await commentPlaywrightResults(github, context);

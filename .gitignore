@@ -18,6 +18,7 @@ bin/
 # Test environment
 .test_env
 .vscode-test/
+.docker-cache/
 
 # Docs
 docs/_site/

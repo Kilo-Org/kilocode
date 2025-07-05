@@ -1,0 +1,11 @@
+# Docker-specific pnpm configuration
+# This ensures Docker and host use separate node_modules
+
+# Use a different store location in Docker to avoid conflicts
+store-dir=/workspace/.pnpm-store
+
+# Enable hoisting for better Docker layer caching
+hoist-pattern[]=*
+
+# Disable symlinks for Docker compatibility
+symlink=false

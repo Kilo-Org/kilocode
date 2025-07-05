@@ -141,10 +141,16 @@ export class ContextProxy {
 		// Update cache.
 		this.secretCache[key] = value
 
-		// Write directly to context.
+		if (this.isDockerEnvironment()) {
+			return Promise.resolve()
+		}
 		return value === undefined
 			? this.originalContext.secrets.delete(key)
 			: this.originalContext.secrets.store(key, value)
+	}
+
+	private isDockerEnvironment(): boolean {
+		return process.env.DOCKER_CONTAINER === "true"
 	}
 
 	private getAllSecretState(): SecretState {
@@ -155,7 +161,7 @@ export class ContextProxy {
 	/**
 	 * WorkspaceState
 	 */
-	async updateWorkspaceState(context: vscode.ExtensionContext, key: string, value: any) {
+	async updateWorkspaceState(context: vscode.ExtensionContext, key: string, value: unknown) {
 		await context.workspaceState.update(key, value)
 	}
 

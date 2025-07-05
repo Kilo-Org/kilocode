@@ -1,0 +1,119 @@
+FROM ubuntu:22.04 AS base
+
+# Set non-interactive mode to prevent prompts
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Configure timezone non-interactively
+ENV TZ=America/Los_Angeles
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+# Install dumb-init for proper signal handling
+RUN echo "=== Installing dumb-init ===" && \
+    apt-get update && \
+    apt-get install -y dumb-init && \
+    echo "dumb-init installed successfully"
+
+# Install core utilities
+RUN echo "=== Installing core utilities ===" && \
+    apt-get install -y \
+        curl \
+        wget \
+        git \
+        ca-certificates \
+        gnupg \
+        lsb-release \
+        software-properties-common && \
+    echo "Core utilities installed successfully"
+
+# Install display and GUI support with D-Bus
+RUN echo "=== Installing display and GUI support ===" && \
+    apt-get install -y \
+        xvfb \
+        x11vnc \
+        fluxbox \
+        dbus \
+        dbus-x11 && \
+    echo "Display and GUI support installed successfully"
+
+# Install essential dependencies for VSCode/Electron (no Chrome needed)
+RUN echo "=== Installing VSCode/Electron dependencies ===" && \
+    apt-get install -y \
+        libnss3 \
+        libnspr4 \
+        libatk-bridge2.0-0 \
+        libgtk-3-0 \
+        libgbm1 \
+        libasound2 \
+        libxss1 \
+        libxtst6 \
+        libglib2.0-0 \
+        libdbus-1-3 \
+        libxrandr2 \
+        libxcomposite1 \
+        libxcursor1 \
+        libxi6 \
+        libxext6 \
+        libxrender1 \
+        fonts-liberation \
+        fonts-dejavu-core \
+        fontconfig && \
+    echo "VSCode/Electron dependencies installed successfully"
+
+# Install Electron/VSCode dependencies
+RUN echo "=== Installing Electron/VSCode dependencies ===" && \
+    apt-get install -y \
+        libsecret-1-0 \
+        libnotify4 \
+        libnss3-dev \
+        libatspi2.0-0 && \
+    echo "Electron/VSCode dependencies installed successfully"
+
+# Install Node.js 20.18.1 (exact version from .nvmrc)
+RUN echo "=== Installing Node.js 20.18.1 ===" && \
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    echo "NodeSource repository configured" && \
+    apt-get install -y nodejs=20.18.1-1nodesource1 && \
+    apt-mark hold nodejs && \
+    echo "Node.js $(node --version) installed successfully"
+
+# Install pnpm 10.8.1 (exact version from package.json)
+RUN echo "=== Installing pnpm 10.8.1 ===" && \
+    npm install -g pnpm@10.8.1 && \
+    echo "pnpm $(pnpm --version) installed successfully"
+
+# Create a user that matches GitHub Actions runner (UID 1001)
+RUN echo "=== Creating runner user ===" && \
+    groupadd -g 1001 runner && \
+    useradd -u 1001 -g 1001 -m -s /bin/bash runner && \
+    echo "User runner created with UID/GID 1001"
+
+WORKDIR /workspace
+
+# Copy the entire codebase from build context root
+COPY . .
+
+# Set proper ownership for the workspace
+RUN chown -R runner:runner /workspace
+
+# Set environment variables for Electron/VSCode
+ENV NODE_VERSION=20.18.1
+ENV PNPM_VERSION=10.8.1
+ENV DISPLAY=:99
+ENV DOCKER_CONTAINER=true
+ENV ELECTRON_DISABLE_SANDBOX=false
+ENV ELECTRON_ENABLE_LOGGING=true
+ENV VSCODE_CLI_DATA_DIR=/home/runner/.vscode-cli
+ENV VSCODE_EXTENSIONS=/home/runner/.vscode/extensions
+
+# Copy and set up entrypoint script
+COPY apps/playwright-e2e/docker-entrypoint.sh /usr/local/bin/run-tests.sh
+RUN chmod +x /usr/local/bin/run-tests.sh
+
+# Switch to the runner user
+USER runner
+
+# Use dumb-init as entrypoint for proper signal handling
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+
+# Default command
+CMD ["/usr/local/bin/run-tests.sh"]
