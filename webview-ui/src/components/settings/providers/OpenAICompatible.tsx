@@ -393,6 +393,7 @@ export const OpenAICompatible = ({
 					</div>
 				</div>
 
+				{/* kilocode_change: supports computer use => supports browser
 				<div>
 					<div className="flex items-center gap-1">
 						<Checkbox
@@ -416,6 +417,7 @@ export const OpenAICompatible = ({
 						{t("settings:providers.customModel.computerUse.description")}
 					</div>
 				</div>
+				*/}
 
 				<div>
 					<div className="flex items-center gap-1">
