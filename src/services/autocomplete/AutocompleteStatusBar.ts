@@ -22,7 +22,7 @@ export class AutocompleteStatusBar {
 		this.model = params.model || "default"
 		this.kilocodeToken = params.kilocodeToken
 		this.totalSessionCost = params.totalSessionCost
-		this.totalSessionCost = params.lastCompletionCost
+		this.lastCompletionCost = params.lastCompletionCost
 
 		this.init()
 	}
