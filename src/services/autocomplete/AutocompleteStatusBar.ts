@@ -53,10 +53,11 @@ export class AutocompleteStatusBar {
 	}
 
 	public update(params: AutocompleteStatusBarStateParams) {
-		this.enabled = params.enabled || this.enabled
-		this.kilocodeToken = params.kilocodeToken || this.kilocodeToken
-		this.totalSessionCost = params.totalSessionCost || this.totalSessionCost
-		this.lastCompletionCost = params.lastCompletionCost || this.lastCompletionCost
+		this.enabled = params.enabled !== undefined ? params.enabled : this.enabled
+		this.kilocodeToken = params.kilocodeToken !== undefined ? params.kilocodeToken : this.kilocodeToken
+		this.totalSessionCost = params.totalSessionCost !== undefined ? params.totalSessionCost : this.totalSessionCost
+		this.lastCompletionCost =
+			params.lastCompletionCost !== undefined ? params.lastCompletionCost : this.lastCompletionCost
 		this.render()
 	}
 
