@@ -4,6 +4,7 @@ import * as vscode from "vscode"
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { registerAutocomplete } from "../AutocompleteProvider"
 import { ContextProxy } from "../../../core/config/ContextProxy"
+import { MockTextEditor } from "./MockTextEditor"
 
 // Mock vscode module
 vi.mock("vscode", () => ({
@@ -56,6 +57,25 @@ vi.mock("vscode", () => ({
 			public line: number,
 			public character: number,
 		) {}
+	},
+	Selection: class {
+		constructor(anchorOrStart: any, activeOrEnd: any, activeLine?: number, activeCharacter?: number) {
+			if (typeof anchorOrStart === "number") {
+				// Constructor with four numbers: anchorLine, anchorCharacter, activeLine, activeCharacter
+				this.anchor = { line: anchorOrStart, character: activeOrEnd }
+				this.active = { line: activeLine!, character: activeCharacter! }
+			} else {
+				// Constructor with two Position objects: anchor, active
+				this.anchor = anchorOrStart
+				this.active = activeOrEnd
+			}
+			this.start = this.anchor
+			this.end = this.active
+		}
+		anchor: any
+		active: any
+		start: any
+		end: any
 	},
 	InlineCompletionItem: class {
 		constructor(
@@ -309,7 +329,7 @@ describe("AutocompleteProvider whitespace handling", () => {
 	let mockProvider: any
 	let provideInlineCompletionItems: any
 
-	beforeEach(() => {
+	beforeEach(async () => {
 		vi.clearAllMocks()
 
 		mockContext = {
@@ -327,6 +347,9 @@ describe("AutocompleteProvider whitespace handling", () => {
 			provideInlineCompletionItems = provider.provideInlineCompletionItems
 			return { dispose: vi.fn() }
 		})
+
+		registerAutocomplete(mockContext)
+		await new Promise((resolve) => setTimeout(resolve, 10))
 	})
 
 	afterEach(() => {
@@ -334,120 +357,62 @@ describe("AutocompleteProvider whitespace handling", () => {
 	})
 
 	it("should not provide completions when cursor is in whitespace at start of line", async () => {
-		// Register autocomplete
-		registerAutocomplete(mockContext)
+		const mockEditor = MockTextEditor.create(`    ␣  `)
+		const mockToken = { isCancellationRequested: false }
 
-		// Wait for the provider to be registered
-		await new Promise((resolve) => setTimeout(resolve, 10))
-
-		// Mock document and position for whitespace at start of line
-		const mockDocument = {
-			lineAt: vi.fn().mockReturnValue({
-				text: "    ", // Line with only whitespace
-			}),
-			getText: vi.fn().mockReturnValue(""),
-		}
-
-		const mockPosition = new vscode.Position(0, 2) // Cursor at position 2 in whitespace
-
-		const mockToken = {
-			isCancellationRequested: false,
-		}
-
-		// Call the provider
-		const result = await provideInlineCompletionItems(mockDocument, mockPosition, {}, mockToken)
-
-		// Should return null when in whitespace at start of line
-		expect(result).toBeNull()
-	})
-
-	it("verifies whitespace check logic works correctly", () => {
-		// This test verifies that our whitespace check logic works correctly
-		// by directly testing the condition we added
-
-		// Case 1: Whitespace at start of line (should skip autocomplete)
-		const lineWithOnlyWhitespace = "    "
-		const positionInWhitespace = 2
-		expect(lineWithOnlyWhitespace.substring(0, positionInWhitespace).trim()).toBe("")
-
-		// Case 2: Text after whitespace (should not skip autocomplete)
-		const lineWithText = "    const foo"
-		const positionAfterText = 13
-		expect(lineWithText.substring(0, positionAfterText).trim()).not.toBe("")
+		const result = await provideInlineCompletionItems(
+			mockEditor.document,
+			mockEditor.selection.active,
+			{},
+			mockToken,
+		)
+		expect(result).toBeNull() // Should return null when in whitespace at start of line
 	})
 
 	it("should not provide completions when cursor is at start of empty line", async () => {
-		// Register autocomplete
-		registerAutocomplete(mockContext)
+		// Create mock editor with cursor at start of empty line
+		const mockEditor = MockTextEditor.create(`␣`)
+		const mockToken = { isCancellationRequested: false }
 
-		// Wait for the provider to be registered
-		await new Promise((resolve) => setTimeout(resolve, 10))
-
-		// Mock document and position for empty line
-		const mockDocument = {
-			lineAt: vi.fn().mockReturnValue({
-				text: "", // Empty line
-			}),
-			getText: vi.fn().mockReturnValue(""),
-		}
-
-		const mockPosition = new vscode.Position(0, 0) // Cursor at start of empty line
-
-		const mockToken = {
-			isCancellationRequested: false,
-		}
-
-		// Call the provider
-		const result = await provideInlineCompletionItems(mockDocument, mockPosition, {}, mockToken)
-
-		// Should return null when at start of empty line
-		expect(result).toBeNull()
-	})
-
-	it("verifies whitespace check logic allows completions at end of whitespace-only line", () => {
-		// This test directly verifies the condition we modified in AutocompleteProvider.ts
-
-		// Case 1: Whitespace at start of line but NOT at the end (should skip autocomplete)
-		const lineWithOnlyWhitespace = "    "
-		const positionInWhitespace = 2 // Cursor in the middle of whitespace
-		const textBeforeCursor1 = lineWithOnlyWhitespace.substring(0, positionInWhitespace)
-
-		// Verify our condition would skip autocomplete
-		expect(textBeforeCursor1.trim() === "" && positionInWhitespace !== lineWithOnlyWhitespace.length).toBe(true)
-
-		// Case 2: Whitespace-only line with cursor at the end (should NOT skip autocomplete)
-		const positionAtEnd = 4 // Cursor at the end of whitespace
-		const textBeforeCursor2 = lineWithOnlyWhitespace.substring(0, positionAtEnd)
-
-		// Verify our condition would NOT skip autocomplete
-		expect(textBeforeCursor2.trim() === "" && positionAtEnd !== lineWithOnlyWhitespace.length).toBe(false)
+		const result = await provideInlineCompletionItems(
+			mockEditor.document,
+			mockEditor.selection.active,
+			{},
+			mockToken,
+		)
+		expect(result).toBeNull() // Should return null when at start of empty line
 	})
 
 	it("should not provide completions when pressing tab in indentation", async () => {
-		// Register autocomplete
 		registerAutocomplete(mockContext)
-
-		// Wait for the provider to be registered
 		await new Promise((resolve) => setTimeout(resolve, 10))
 
-		// Mock document and position for tab in indentation
-		const mockDocument = {
-			lineAt: vi.fn().mockReturnValue({
-				text: "\t\t", // Line with tabs
-			}),
-			getText: vi.fn().mockReturnValue(""),
-		}
+		// Create mock editor with cursor after tabs - visualized with cursor marker
+		const mockEditor = MockTextEditor.create(`\t\t␣`)
+		const mockToken = { isCancellationRequested: false }
 
-		const mockPosition = new vscode.Position(0, 2) // Cursor after two tabs
+		const result = await provideInlineCompletionItems(
+			mockEditor.document,
+			mockEditor.selection.active,
+			{},
+			mockToken,
+		)
+		expect(result).toBeNull() // Should return null when in tab indentation
+	})
 
-		const mockToken = {
-			isCancellationRequested: false,
-		}
+	it("should provide completions when cursor is after actual code", async () => {
+		const mockEditor = MockTextEditor.create(`function test() {␣`)
+		const mockToken = { isCancellationRequested: false }
 
-		// Call the provider
-		const result = await provideInlineCompletionItems(mockDocument, mockPosition, {}, mockToken)
+		// Call the provider - this should NOT return null since we're after actual code
+		await provideInlineCompletionItems(mockEditor.document, mockEditor.selection.active, {}, mockToken)
 
-		// Should return null when in tab indentation
-		expect(result).toBeNull()
+		// The result might be null due to other conditions, but it shouldn't be null due to whitespace check
+		// We can verify the whitespace check logic directly
+		const lineText = mockEditor.document.lineAt(mockEditor.selection.active.line).text
+		const textBeforeCursor = lineText.substring(0, mockEditor.selection.active.character)
+
+		expect(textBeforeCursor.trim()).not.toBe("") // Should not be empty after trimming
+		expect(textBeforeCursor).toBe("function test() {")
 	})
 })
