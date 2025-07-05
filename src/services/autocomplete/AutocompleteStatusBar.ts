@@ -72,11 +72,11 @@ export class AutocompleteStatusBar {
 
 	private renderDefault() {
 		const totalCostFormatted = this.humanFormatCost(this.totalSessionCost || 0)
-		const lastCompletionCostFormated = this.lastCompletionCost?.toFixed(5) || 0
+		const lastCompletionCostFormatted = this.lastCompletionCost?.toFixed(5) || 0
 		this.statusBar.text = `$(sparkle) Kilo Complete (${totalCostFormatted})`
 		this.statusBar.tooltip = `\
 Kilo Code Autocomplete
-• Last completion: $${lastCompletionCostFormated}
+• Last completion: $${lastCompletionCostFormatted}
 • Session total cost: ${totalCostFormatted}
 • Model: ${this.model}\
 `
