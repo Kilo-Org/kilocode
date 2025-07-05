@@ -2014,5 +2014,8 @@ export const webviewMessageHandler = async (
 			break
 		}
 		// kilocode_change end
+		case "compactAndSummarizeRequest":
+			await provider.compactAndSummarize(message.text!)
+			break
 	}
 }

@@ -110,6 +110,7 @@ export interface ExtensionMessage {
 		| "marketplaceData"
 		| "mermaidFixResponse" // kilocode_change
 		| "shareTaskSuccess"
+		| "compactAndSummarizeResponse"
 	text?: string
 	payload?: ProfileDataResponsePayload | BalanceDataResponsePayload // kilocode_change: Add payload for profile and balance data
 	action?:

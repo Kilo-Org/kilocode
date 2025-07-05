@@ -53,6 +53,7 @@ describe("TaskHeader", () => {
 		contextTokens: 200,
 		buttonsDisabled: false,
 		handleCondenseContext: vi.fn(),
+		handleCompactAndSummarize: vi.fn(),
 		onClose: vi.fn(),
 		groupedMessages: [],
 	}
