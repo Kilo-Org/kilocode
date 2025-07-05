@@ -46,7 +46,8 @@
 		"generationFailed": "Kilo: Misslyckades med att generera commit-meddelande: {{errorMessage}}",
 		"tokenRequired": "Kilo Code-token krävs för att generera commit-meddelande",
 		"activationFailed": "Kilo: Misslyckades med att aktivera commit-meddelandeleverantör: {{error}}",
-		"providerRegistered": "Kilo: Commit-meddelandeleverantör registrerad"
+		"providerRegistered": "Kilo: Commit-meddelandeleverantör registrerad",
+		"generatingFromUnstaged": "Kilo: Genererar commitmeddelande baserat på dina icke-staged ändringar (det finns inga staged ändringar)"
 	},
 	"userFeedback": {
 		"message_update_failed": "Misslyckades med att uppdatera meddelande",

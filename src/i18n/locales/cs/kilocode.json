@@ -46,7 +46,8 @@
 		"generationFailed": "Kilo: Generování commit zprávy selhalo: {{errorMessage}}",
 		"tokenRequired": "Pro generování commit zprávy je vyžadován Kilo Code token",
 		"activationFailed": "Kilo: Aktivace poskytovatele commit zpráv selhala: {{error}}",
-		"providerRegistered": "Kilo: Poskytovatel commit zpráv zaregistrován"
+		"providerRegistered": "Kilo: Poskytovatel commit zpráv zaregistrován",
+		"generatingFromUnstaged": "Kilo: Generování zprávy commitu na základě vašich nezaznamenaných změn (nejsou zde žádné zaznamenané změny)"
 	},
 	"userFeedback": {
 		"message_update_failed": "Aktualizace zprávy selhala",

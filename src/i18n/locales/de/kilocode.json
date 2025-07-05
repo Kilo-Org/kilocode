@@ -51,6 +51,7 @@
 		"generationFailed": "Kilo: Fehler beim Generieren der Commit-Nachricht: {{errorMessage}}",
 		"tokenRequired": "Kilo Code-Token wird für die Generierung von Commit-Nachrichten benötigt",
 		"activationFailed": "Kilo: Fehler beim Aktivieren des Commit-Nachrichtenanbieters: {{error}}",
-		"providerRegistered": "Kilo: Anbieter für Commit-Nachrichten registriert"
+		"providerRegistered": "Kilo: Anbieter für Commit-Nachrichten registriert",
+		"generatingFromUnstaged": "Kilo: Erstelle Commit-Nachricht basierend auf deinen ungestagten Änderungen (es gibt keine gestagten Änderungen)"
 	}
 }

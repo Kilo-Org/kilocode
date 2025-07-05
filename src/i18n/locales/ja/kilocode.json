@@ -51,6 +51,7 @@
 		"generationFailed": "Kilo: コミットメッセージの生成に失敗しました: {{errorMessage}}",
 		"tokenRequired": "コミットメッセージの生成にはKilo Codeトークンが必要です",
 		"activationFailed": "Kilo: コミットメッセージプロバイダーのアクティベーションに失敗しました: {{error}}",
-		"providerRegistered": "Kilo: コミットメッセージプロバイダーが登録されました"
+		"providerRegistered": "Kilo: コミットメッセージプロバイダーが登録されました",
+		"generatingFromUnstaged": "Kilo: ステージングされていない変更に基づいてコミットメッセージを生成しています（ステージングされた変更はありません）"
 	}
 }

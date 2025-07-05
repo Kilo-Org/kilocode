@@ -46,7 +46,8 @@
 		"generationFailed": "Kilo: Taahhüt mesajı oluşturulamadı: {{errorMessage}}",
 		"tokenRequired": "Taahhüt (commit) mesajı oluşturmak için Kilo Code token'ı gerekmektedir",
 		"activationFailed": "Kilo: Commit mesaj sağlayıcısı etkinleştirilemedi: {{error}}",
-		"providerRegistered": "Kilo: Bildirim mesajı sağlayıcısı kaydedildi"
+		"providerRegistered": "Kilo: Bildirim mesajı sağlayıcısı kaydedildi",
+		"generatingFromUnstaged": "Kilo: Geçici alana eklenmeyen (stage) değişikliklerinize dayanarak commit mesajı oluşturuluyor (hiç geçici alana eklenmiş değişiklik yok)"
 	},
 	"userFeedback": {
 		"message_update_failed": "Mesaj güncellenemedi",

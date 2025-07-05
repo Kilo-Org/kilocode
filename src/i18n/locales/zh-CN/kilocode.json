@@ -51,6 +51,7 @@
 		"generationFailed": "Kilo: 生成提交信息失败：{{errorMessage}}",
 		"tokenRequired": "Kilo: 提交消息生成需要令牌",
 		"activationFailed": "Kilo：激活提交消息提供者失败：{{error}}",
-		"providerRegistered": "Kilo: 提交消息提供程序已注册"
+		"providerRegistered": "Kilo: 提交消息提供程序已注册",
+		"generatingFromUnstaged": "Kilo：根据您的未暂存更改生成提交信息（没有已暂存的更改）"
 	}
 }

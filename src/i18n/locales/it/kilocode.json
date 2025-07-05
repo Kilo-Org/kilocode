@@ -51,6 +51,7 @@
 		"generationFailed": "Kilo: Generazione del messaggio di commit fallita: {{errorMessage}}",
 		"tokenRequired": "Il token Kilo Code è necessario per la generazione del messaggio di commit",
 		"activationFailed": "Kilo: Impossibile attivare il provider dei messaggi di commit: {{error}}",
-		"providerRegistered": "Kilo: Provider di messaggi di commit registrato"
+		"providerRegistered": "Kilo: Provider di messaggi di commit registrato",
+		"generatingFromUnstaged": "Kilo: Generazione del messaggio di commit basato sui tuoi cambiamenti non in area di stage (non ci sono cambiamenti in area di stage)"
 	}
 }

@@ -46,7 +46,8 @@
 		"generationFailed": "Kilo: Mislukt om commit-bericht te genereren: {{errorMessage}}",
 		"tokenRequired": "Kilo Code token is vereist voor het genereren van commit berichten",
 		"activationFailed": "Kilo: Kon berichtverstrekker voor commits niet activeren: {{error}}",
-		"providerRegistered": "Kilo: Commit message provider geregistreerd"
+		"providerRegistered": "Kilo: Commit message provider geregistreerd",
+		"generatingFromUnstaged": "Kilo: Commit-bericht genereren op basis van je niet-gestagede wijzigingen (er zijn geen gestagede wijzigingen)"
 	},
 	"userFeedback": {
 		"message_update_failed": "Bijwerken van bericht mislukt",

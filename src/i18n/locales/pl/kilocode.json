@@ -46,7 +46,8 @@
 		"generationFailed": "Kilo: Nie udało się wygenerować treści commitu: {{errorMessage}}",
 		"tokenRequired": "Token Kilo Code jest wymagany do generowania wiadomości commit",
 		"activationFailed": "Kilo: Nie udało się aktywować dostawcy treści commita: {{error}}",
-		"providerRegistered": "Kilo: Zarejestrowano dostawcę wiadomości commit"
+		"providerRegistered": "Kilo: Zarejestrowano dostawcę wiadomości commit",
+		"generatingFromUnstaged": "Kilo: Generowanie wiadomości zatwierdzenia na podstawie twoich nieprzygotowanych (unstaged) zmian (brak przygotowanych zmian)"
 	},
 	"userFeedback": {
 		"message_update_failed": "Nie udało się zaktualizować wiadomości",

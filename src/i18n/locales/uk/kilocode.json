@@ -46,7 +46,8 @@
 		"generationFailed": "Kilo: Не вдалося згенерувати повідомлення коміту: {{errorMessage}}",
 		"tokenRequired": "Для генерації повідомлення коміту потрібен токен Kilo Code",
 		"activationFailed": "Kilo: Не вдалося активувати провайдер повідомлень коміту: {{error}}",
-		"providerRegistered": "Kilo: Провайдер повідомлень коміту зареєстровано"
+		"providerRegistered": "Kilo: Провайдер повідомлень коміту зареєстровано",
+		"generatingFromUnstaged": "Kilo: Генерація повідомлення коміту на основі ваших незафіксованих змін (немає зафіксованих змін)"
 	},
 	"userFeedback": {
 		"message_update_failed": "Не вдалося оновити повідомлення",
