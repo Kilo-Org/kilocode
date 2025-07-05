@@ -92,6 +92,7 @@ import { parseMentions } from "../mentions" // kilocode_change
 import { parseKiloSlashCommands } from "../slash-commands/kilo" // kilocode_change
 import { GlobalFileNames } from "../../shared/globalFileNames" // kilocode_change
 import { ensureLocalKilorulesDirExists } from "../context/instructions/kilo-rules" // kilocode_change
+import { LogLevel } from "../../services/mcp/kilocode/NotificationService"
 
 export type ClineEvents = {
 	message: [{ action: "created" | "updated"; message: ClineMessage }]
@@ -215,6 +216,16 @@ export class Task extends EventEmitter<ClineEvents> {
 	didAlreadyUseTool = false
 	didCompleteReadingStream = false
 
+	// kilocode_change start
+	getMcpHub() {
+		return this.providerRef.deref()?.getMcpHub()
+	}
+
+	mcpNotificationCallback = async (message: string) => {
+		await this.say("text", message)
+	}
+	// kilocode_change end
+
 	constructor({
 		context, // kilocode_change
 		provider,
@@ -268,6 +279,8 @@ export class Task extends EventEmitter<ClineEvents> {
 		this.globalStoragePath = provider.context.globalStorageUri.fsPath
 		this.diffViewProvider = new DiffViewProvider(this.cwd)
 		this.enableCheckpoints = enableCheckpoints
+
+		this.getMcpHub()?.kiloNotificationService.setNotificationCallback(this.mcpNotificationCallback)
 
 		this.rootTask = rootTask
 		this.parentTask = parentTask
@@ -1113,6 +1126,8 @@ export class Task extends EventEmitter<ClineEvents> {
 		} catch (error) {
 			console.error(`Error saving messages during abort for task ${this.taskId}.${this.instanceId}:`, error)
 		}
+
+		this.getMcpHub()?.kiloNotificationService.clearNotificationCallback(this.mcpNotificationCallback)
 	}
 
 	// Used when a sub-task is launched and the parent task is waiting for it to
