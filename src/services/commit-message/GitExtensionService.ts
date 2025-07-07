@@ -45,11 +45,11 @@ export class GitExtensionService {
 	/**
 	 * Gathers information about changes (staged or unstaged)
 	 */
-	public async gatherChanges(options: GitOptions): Promise<GitChange[] | null> {
+	public async gatherChanges(options: GitOptions): Promise<GitChange[]> {
 		try {
 			const statusOutput = this.getStatus(options)
 			if (!statusOutput.trim()) {
-				return null
+				return []
 			}
 
 			const changes: GitChange[] = []
@@ -67,11 +67,11 @@ export class GitExtensionService {
 				})
 			}
 
-			return changes.length > 0 ? changes : null
+			return changes
 		} catch (error) {
 			const changeType = options.staged ? "staged" : "unstaged"
 			console.error(`Error gathering ${changeType} changes:`, error)
-			return null
+			return []
 		}
 	}
 

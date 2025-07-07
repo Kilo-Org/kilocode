@@ -70,10 +70,10 @@ export class CommitMessageProvider {
 					let staged = true
 					let changes = await this.gitService.gatherChanges({ staged })
 
-					if (!changes || changes.length === 0) {
+					if (changes.length === 0) {
 						staged = false
 						changes = await this.gitService.gatherChanges({ staged })
-						if (!changes || changes.length === 0) {
+						if (changes.length === 0) {
 							vscode.window.showInformationMessage(t("kilocode:commitMessage.noStagedChanges"))
 							return
 						} else {

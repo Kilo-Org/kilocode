@@ -5,12 +5,10 @@ import * as path from "path"
 import type { Mock } from "vitest"
 import { GitExtensionService } from "../GitExtensionService"
 
-// Mock child_process
 vi.mock("child_process", () => ({
 	spawnSync: vi.fn(),
 }))
 
-// Mock vscode
 vi.mock("vscode", () => ({
 	workspace: {
 		workspaceFolders: [{ uri: { fsPath: "/test/workspace" } }],
@@ -162,20 +160,20 @@ describe("GitExtensionService", () => {
 			])
 		})
 
-		it("should return null when no changes", async () => {
+		it("should return empty array when no changes", async () => {
 			mockSpawnSync.mockReturnValue({ status: 0, stdout: "", stderr: "", error: null })
 
 			const result = await service.gatherChanges({ staged: false })
 
-			expect(result).toBeNull()
+			expect(result).toEqual([])
 		})
 
-		it("should return null when git command fails", async () => {
+		it("should return empty array when git command fails", async () => {
 			mockSpawnSync.mockReturnValue({ status: 1, stdout: "", stderr: "error", error: new Error("Git error") })
 
 			const result = await service.gatherChanges({ staged: false })
 
-			expect(result).toBeNull()
+			expect(result).toEqual([])
 		})
 	})
 

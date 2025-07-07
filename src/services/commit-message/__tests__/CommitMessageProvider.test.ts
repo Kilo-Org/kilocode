@@ -140,8 +140,10 @@ describe("CommitMessageProvider", () => {
 		})
 
 		it("should show information message when there are no staged changes", async () => {
-			// Mock no staged changes
-			vi.mocked(mockGitService.gatherChanges).mockResolvedValue(null)
+			// Mock no staged changes - both calls return empty arrays
+			vi.mocked(mockGitService.gatherChanges)
+				.mockResolvedValueOnce([]) // First call for staged changes returns empty
+				.mockResolvedValueOnce([]) // Second call for unstaged changes returns empty
 
 			// Call the method
 			await commitMessageProvider.generateCommitMessage()
@@ -189,11 +191,11 @@ describe("CommitMessageProvider", () => {
 			expect(vi.mocked(mockGitService.setCommitMessage)).not.toHaveBeenCalled()
 		})
 
-		it("should show information message when both staged and unstaged changes are null", async () => {
-			// Mock null staged and unstaged changes
+		it("should show information message when both staged and unstaged changes are empty", async () => {
+			// Mock empty staged and unstaged changes
 			vi.mocked(mockGitService.gatherChanges)
 				.mockResolvedValueOnce([]) // First call for staged changes returns empty
-				.mockResolvedValueOnce(null) // Second call for unstaged changes returns null
+				.mockResolvedValueOnce([]) // Second call for unstaged changes returns empty
 
 			// Call the method
 			await commitMessageProvider.generateCommitMessage()
