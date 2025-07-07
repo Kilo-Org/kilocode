@@ -51,6 +51,7 @@
 		"generationFailed": "Kilo : Échec de génération du message de commit : {{errorMessage}}",
 		"tokenRequired": "Le jeton Kilo Code est requis pour la génération de messages de commit",
 		"activationFailed": "Kilo : Échec de l'activation du fournisseur de messages de commit : {{error}}",
-		"providerRegistered": "Kilo : Fournisseur de messages de commit enregistré"
+		"providerRegistered": "Kilo : Fournisseur de messages de commit enregistré",
+		"generatingFromUnstaged": "Kilo : Génération de message de commit basée sur vos modifications non indexées (il n'y a pas de modifications indexées)"
 	}
 }

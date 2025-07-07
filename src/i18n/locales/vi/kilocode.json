@@ -46,7 +46,8 @@
 		"generationFailed": "Kilo: Không thể tạo thông điệp commit: {{errorMessage}}",
 		"tokenRequired": "Mã token Kilo Code được yêu cầu để tạo thông điệp commit",
 		"activationFailed": "Kilo: Không thể kích hoạt nhà cung cấp tin nhắn commit: {{error}}",
-		"providerRegistered": "Kilo: Đã đăng ký nhà cung cấp thông điệp commit"
+		"providerRegistered": "Kilo: Đã đăng ký nhà cung cấp thông điệp commit",
+		"generatingFromUnstaged": "Kilo: Đang tạo tin nhắn commit dựa trên các thay đổi chưa được staged của bạn (không có thay đổi nào đã được staged)"
 	},
 	"userFeedback": {
 		"message_update_failed": "Không thể cập nhật tin nhắn",

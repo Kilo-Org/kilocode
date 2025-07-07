@@ -46,7 +46,8 @@
 		"generationFailed": "Kilo: Αποτυχία δημιουργίας μηνύματος commit: {{errorMessage}}",
 		"tokenRequired": "Απαιτείται το token του Kilo Code για τη δημιουργία μηνύματος commit",
 		"activationFailed": "Kilo: Αποτυχία ενεργοποίησης του παρόχου μηνυμάτων commit: {{error}}",
-		"providerRegistered": "Kilo: Ο πάροχος μηνυμάτων commit καταχωρήθηκε"
+		"providerRegistered": "Kilo: Ο πάροχος μηνυμάτων commit καταχωρήθηκε",
+		"generatingFromUnstaged": "Kilo: Δημιουργία μηνύματος commit με βάση τις μη ενσωματωμένες (unstaged) αλλαγές σας (δεν υπάρχουν ενσωματωμένες (staged) αλλαγές)"
 	},
 	"userFeedback": {
 		"message_update_failed": "Αποτυχία ενημέρωσης μηνύματος",

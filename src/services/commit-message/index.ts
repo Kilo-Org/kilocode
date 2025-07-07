@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import * as vscode from "vscode"
 import { CommitMessageProvider } from "./CommitMessageProvider"
 import { t } from "../../i18n"

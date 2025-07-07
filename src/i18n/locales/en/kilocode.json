@@ -51,6 +51,7 @@
 		"generationFailed": "Kilo: Failed to generate commit message: {{errorMessage}}",
 		"tokenRequired": "Kilo Code token is required for commit message generation",
 		"activationFailed": "Kilo: Failed to activate commit message provider: {{error}}",
-		"providerRegistered": "Kilo: Commit message provider registered"
+		"providerRegistered": "Kilo: Commit message provider registered",
+		"generatingFromUnstaged": "Kilo: Generating commit message based on your unstaged changes (there are no staged changes)"
 	}
 }

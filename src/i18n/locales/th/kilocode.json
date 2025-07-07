@@ -46,7 +46,8 @@
 		"generationFailed": "Kilo: ล้มเหลวในการสร้างข้อความ commit: {{errorMessage}}",
 		"tokenRequired": "ต้องใช้ Kilo Code token สำหรับการสร้างข้อความ commit",
 		"activationFailed": "Kilo: ล้มเหลวในการเปิดใช้งานผู้ให้บริการข้อความ commit: {{error}}",
-		"providerRegistered": "Kilo: ลงทะเบียนผู้ให้บริการข้อความ commit แล้ว"
+		"providerRegistered": "Kilo: ลงทะเบียนผู้ให้บริการข้อความ commit แล้ว",
+		"generatingFromUnstaged": "Kilo: กำลังสร้างข้อความคอมมิตตามการเปลี่ยนแปลงที่ยังไม่ได้ส่งเข้า staged ของคุณ (ไม่มีการเปลี่ยนแปลงที่อยู่ใน staged)"
 	},
 	"userFeedback": {
 		"message_update_failed": "ล้มเหลวในการอัปเดตข้อความ",

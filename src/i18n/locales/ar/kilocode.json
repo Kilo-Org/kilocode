@@ -51,6 +51,7 @@
 		"generationFailed": "Kilo: فشل في توليد رسالة الاعتماد: {{errorMessage}}",
 		"tokenRequired": "يتطلب توليد الرسالة رمز Kilo Code",
 		"activationFailed": "Kilo: فشل تفعيل مولّد الرسائل: {{error}}",
-		"providerRegistered": "Kilo: تم تسجيل موفر رسائل الاعتماد"
+		"providerRegistered": "Kilo: تم تسجيل موفر رسائل الاعتماد",
+		"generatingFromUnstaged": "كيلو: توليد رسالة الالتزام استنادًا إلى تغييراتك غير المرحّلة (لا توجد تغييرات مرحّلة)"
 	}
 }

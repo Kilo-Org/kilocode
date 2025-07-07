@@ -46,7 +46,8 @@
 		"generationFailed": "Kilo: Nabigo ang paggawa ng commit message: {{errorMessage}}",
 		"tokenRequired": "Kailangan ang Kilo Code token para sa paggawa ng commit message",
 		"activationFailed": "Kilo: Nabigo ang pag-activate ng commit message provider: {{error}}",
-		"providerRegistered": "Kilo: Naka-register na ang commit message provider"
+		"providerRegistered": "Kilo: Naka-register na ang commit message provider",
+		"generatingFromUnstaged": "Kilo: Gumagawa ng mensahe ng commit batay sa iyong mga hindi pa na-stage na mga pagbabago (walang mga na-stage na pagbabago)"
 	},
 	"userFeedback": {
 		"message_update_failed": "Nabigo ang pag-update ng mensahe",

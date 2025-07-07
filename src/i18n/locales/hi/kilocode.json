@@ -46,7 +46,8 @@
 		"generationFailed": "किलो: कमिट संदेश उत्पन्न करने में विफल: {{errorMessage}}",
 		"tokenRequired": "कमिट संदेश निर्माण के लिए किलो कोड टोकन आवश्यक है",
 		"activationFailed": "किलो: कमिट संदेश प्रदाता को सक्रिय करने में विफल: {{error}}",
-		"providerRegistered": "किलो: प्रतिबद्ध संदेश प्रदाता पंजीकृत"
+		"providerRegistered": "किलो: प्रतिबद्ध संदेश प्रदाता पंजीकृत",
+		"generatingFromUnstaged": "किलो: आपके unstaged परिवर्तनों के आधार पर कमिट संदेश तैयार किया जा रहा है (कोई staged परिवर्तन नहीं हैं)"
 	},
 	"userFeedback": {
 		"message_update_failed": "संदेश अपडेट करने में विफल",

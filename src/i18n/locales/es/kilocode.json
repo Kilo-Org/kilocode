@@ -51,6 +51,7 @@
 		"generationFailed": "Kilo: Error al generar el mensaje del commit: {{errorMessage}}",
 		"tokenRequired": "Se requiere el token de Kilo Code para la generación de mensajes de commit",
 		"activationFailed": "Kilo: Error al activar el proveedor de mensajes de commit: {{error}}",
-		"providerRegistered": "Kilo: Proveedor de mensajes de confirmación registrado"
+		"providerRegistered": "Kilo: Proveedor de mensajes de confirmación registrado",
+		"generatingFromUnstaged": "Kilo: Generando mensaje de commit basado en tus cambios sin preparar (no hay cambios preparados)"
 	}
 }
