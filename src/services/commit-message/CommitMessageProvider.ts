@@ -65,19 +65,17 @@ export class CommitMessageProvider {
 			},
 			async (progress) => {
 				try {
-					progress.report({ increment: 25, message: t("kilocode:commitMessage.analyzingChanges") })
-
 					let staged = true
 					let changes = await this.gitService.gatherChanges({ staged })
 
 					if (changes.length === 0) {
 						staged = false
 						changes = await this.gitService.gatherChanges({ staged })
-						if (changes.length === 0) {
-							vscode.window.showInformationMessage(t("kilocode:commitMessage.noStagedChanges"))
-							return
-						} else {
+						if (changes.length > 0) {
 							vscode.window.showInformationMessage(t("kilocode:commitMessage.generatingFromUnstaged"))
+						} else {
+							vscode.window.showInformationMessage(t("kilocode:commitMessage.noChanges"))
+							return
 						}
 					}
 
