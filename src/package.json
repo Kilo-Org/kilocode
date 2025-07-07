@@ -455,7 +455,17 @@
 					"description": "%settings.autoImportSettingsPath.description%"
 				}
 			}
-		}
+		},
+		"codeActions": [
+			{
+				"languages": [
+					"*"
+				],
+				"providedCodeActionKinds": [
+					"vscode.CodeActionKind.QuickFix"
+				]
+			}
+		]
 	},
 	"scripts": {
 		"lint": "eslint . --ext=ts --max-warnings=0",
