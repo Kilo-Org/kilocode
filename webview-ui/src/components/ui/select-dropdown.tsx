@@ -257,7 +257,8 @@ export const SelectDropdown = React.memo(
 							)}
 
 							{/* Dropdown items - Use windowing for large lists */}
-							<div className="max-h-[300px] overflow-y-auto">
+							{/* kilocode_change: different max height: max-h-60 */}
+							<div className="max-h-60 overflow-y-auto">
 								{groupedOptions.length === 0 && searchValue ? (
 									<div className="py-2 px-3 text-sm text-vscode-foreground/70">No results found</div>
 								) : (
