@@ -41,16 +41,12 @@
 	},
 	"commitMessage": {
 		"activated": "Генератор сообщений о коммитах Kilo Code активирован",
-		"gitNotFound": "⚠️ Git-репозиторий не найден или git недоступен",
+		"gitNotFound": "⚠️ Git репозиторий не найден или git недоступен",
 		"gitInitError": "⚠️ Ошибка инициализации Git: {{error}}",
-		"generating": "Kilo: Создание сообщения коммита...",
-		"analyzingChanges": "Kilo: Анализ промежуточных изменений...",
-		"noStagedChangesRepo": "Kilo: Подготовленные изменения не найдены в git-репозитории",
-		"noStagedChanges": "Kilo: Не найдено изменений для анализа",
+		"generating": "Kilo: Генерируется сообщение коммита...",
+		"noChanges": "Kilo: Не найдено изменений для анализа",
 		"generated": "Kilo: Сообщение коммита сгенерировано!",
-		"generationFailed": "Kilo: Не удалось сгенерировать сообщение коммита: {{errorMessage}}",
-		"tokenRequired": "Для генерации сообщения коммита требуется токен Kilo Code",
-		"activationFailed": "Kilo: Не удалось активировать поставщик сообщений фиксации: {{error}}",
-		"providerRegistered": "Kilo: Поставщик сообщений коммита зарегистрирован"
+		"generationFailed": "Kilo: Не удалось создать сообщение коммита: {{errorMessage}}",
+		"generatingFromUnstaged": "Kilo: Генерация сообщения с использованием неподготовленных изменений"
 	}
 }

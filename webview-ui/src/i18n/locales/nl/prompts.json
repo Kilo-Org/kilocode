@@ -4,6 +4,8 @@
 	"modes": {
 		"title": "Modi",
 		"createNewMode": "Nieuwe modus aanmaken",
+		"importMode": "Modus importeren",
+		"noMatchFound": "Geen modi gevonden",
 		"editModesConfig": "Modusconfiguratie bewerken",
 		"editGlobalModes": "Globale modi bewerken",
 		"editProjectModes": "Projectmodi bewerken (.kilocodemodes)",
@@ -49,6 +51,27 @@
 		"resetToDefault": "Terugzetten naar standaard",
 		"description": "Voeg gedragsrichtlijnen toe die specifiek zijn voor de modus {{modeName}}.",
 		"loadFromFile": "Modusspecifieke instructies voor {{mode}} kunnen ook worden geladen uit de map <span>.kilocode/rules-{{slug}}/</span> in je werkruimte (.kilocoderules-{{slug}} en .clinerules-{{slug}} zijn verouderd en werken binnenkort niet meer)."
+	},
+	"exportMode": {
+		"title": "Modus exporteren",
+		"description": "Exporteer deze modus met regels uit de .kilocode/rules-{{slug}}/ map gecombineerd in een deelbaar YAML-bestand. De originele bestanden blijven ongewijzigd.",
+		"exporting": "Exporteren..."
+	},
+	"importMode": {
+		"selectLevel": "Kies waar je deze modus wilt importeren:",
+		"import": "Importeren",
+		"importing": "Importeren...",
+		"global": {
+			"label": "Globaal niveau",
+			"description": "Beschikbaar in alle projecten. Als de geëxporteerde modus regelbestanden bevatte, worden deze opnieuw gemaakt in de globale map .kilocode/rules-{slug}/."
+		},
+		"project": {
+			"label": "Projectniveau",
+			"description": "Alleen beschikbaar in deze werkruimte. Als de geëxporteerde modus regelbestanden bevatte, worden deze opnieuw gemaakt in de map .kilocode/rules-{slug}/."
+		}
+	},
+	"advanced": {
+		"title": "Geavanceerd"
 	},
 	"globalCustomInstructions": {
 		"title": "Aangepaste instructies voor alle modi",

@@ -4,11 +4,13 @@
 	"modes": {
 		"title": "Mga Mode",
 		"createNewMode": "Gumawa ng bagong mode",
+		"importMode": "Mag-import ng Mode",
 		"editModesConfig": "I-edit ang configuration ng mga mode",
 		"editGlobalModes": "I-edit ang Global Modes",
 		"editProjectModes": "I-edit ang Project Modes (.kilocodemodes)",
 		"createModeHelpText": "Ang mga mode ay mga espesyalisadong persona na nag-aayos ng ugali ng Kilo Code. <0>Alamin ang tungkol sa Paggamit ng mga Mode</0> o <1>Pag-customize ng mga Mode.</1>",
-		"selectMode": "Maghanap ng mga mode"
+		"selectMode": "Maghanap ng mga mode",
+		"noMatchFound": "Walang nahanap na mga mode"
 	},
 	"apiConfiguration": {
 		"title": "API Configuration",
@@ -49,6 +51,27 @@
 		"resetToDefault": "Ibalik sa default",
 		"description": "Magdagdag ng mga gabay sa ugali na partikular sa {{modeName}} mode.",
 		"loadFromFile": "Ang mga custom na tagubilin na partikular sa {{mode}} mode ay maaari ring i-load mula sa <span>.kilocode/rules/</span> folder sa iyong workspace (.kilocoderules-{{slug}} ay deprecated at hindi na gagana sa lalong madaling panahon)."
+	},
+	"exportMode": {
+		"title": "I-export ang Mode",
+		"description": "I-export ang mode na ito kasama ang mga rules mula sa .kilocode/rules-{{slug}}/ folder na pinagsama sa isang shareable YAML file. Ang mga orihinal na file ay mananatiling hindi nagbabago.",
+		"exporting": "Nag-e-export..."
+	},
+	"importMode": {
+		"selectLevel": "Piliin kung saan i-import ang mode na ito:",
+		"import": "I-import",
+		"importing": "Nag-i-import...",
+		"global": {
+			"label": "Global Level",
+			"description": "Available sa lahat ng project. Kung ang na-export na mode ay may mga rules file, gagawin ulit ang mga ito sa global .kilocode/rules-{slug}/ folder."
+		},
+		"project": {
+			"label": "Project Level",
+			"description": "Available lang sa workspace na ito. Kung ang na-export na mode ay may mga rules file, gagawin ulit ang mga ito sa .kilocode/rules-{slug}/ folder."
+		}
+	},
+	"advanced": {
+		"title": "Advanced: I-override ang System Prompt"
 	},
 	"globalCustomInstructions": {
 		"title": "Mga Custom na Tagubilin para sa Lahat ng Mode",

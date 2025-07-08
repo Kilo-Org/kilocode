@@ -57,6 +57,10 @@
 		"ollamaUrlLabel": "URL Ollama:",
 		"qdrantUrlLabel": "URL Qdrant",
 		"qdrantKeyLabel": "Chave Qdrant:",
+		"advancedConfigLabel": "Configuração Avançada",
+		"searchMinScoreLabel": "Limite de pontuação de busca",
+		"searchMinScoreDescription": "Pontuação mínima de similaridade (0.0-1.0) necessária para os resultados da busca. Valores mais baixos retornam mais resultados, mas podem ser menos relevantes. Valores mais altos retornam menos resultados, mas mais relevantes.",
+		"searchMinScoreResetTooltip": "Redefinir para o valor padrão (0.4)",
 		"startIndexingButton": "Iniciar Indexação",
 		"clearIndexDataButton": "Limpar Dados de Índice",
 		"unsavedSettingsMessage": "Por favor, salve suas configurações antes de iniciar o processo de indexação.",
@@ -110,6 +114,11 @@
 		"subtasks": {
 			"label": "Subtarefas",
 			"description": "Permitir a criação e conclusão de subtarefas sem exigir aprovação"
+		},
+		"followupQuestions": {
+			"label": "Pergunta",
+			"description": "Selecionar automaticamente a primeira resposta sugerida para perguntas de acompanhamento após o tempo limite configurado",
+			"timeoutLabel": "Tempo de espera antes de selecionar automaticamente a primeira resposta"
 		},
 		"execute": {
 			"label": "Executar",
@@ -590,7 +599,7 @@
 	},
 	"footer": {
 		"feedback": "Se tiver alguma dúvida ou feedback, sinta-se à vontade para abrir um problema em <githubLink>github.com/Kilo-Org/kilocode</githubLink> ou juntar-se a <redditLink>reddit.com/r/kilocode</redditLink> ou <discordLink>kilocode.ai/discord</discordLink>",
-		"support": "Para questões financeiras, entre em contato com o Suporte ao Cliente em <supportLink>hi@kilocode.ai</supportLink>",
+		"support": "Para questões financeiras, entre em contato com o Suporte ao Cliente em <supportLink>https://kilocode.ai/support</supportLink>",
 		"telemetry": {
 			"label": "Permitir relatórios anônimos de erros e uso",
 			"description": "Ajude a melhorar o Kilo Code enviando dados de uso anônimos e relatórios de erros. Nunca são enviados código, prompts ou informações pessoais. Consulte nossa política de privacidade para mais detalhes."

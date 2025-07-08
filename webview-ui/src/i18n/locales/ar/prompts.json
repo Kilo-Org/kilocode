@@ -4,11 +4,13 @@
 	"modes": {
 		"title": "الأنماط",
 		"createNewMode": "إنشاء نمط جديد",
+		"importMode": "استيراد نمط",
 		"editModesConfig": "تعديل إعدادات الأنماط",
 		"editGlobalModes": "تعديل الأنماط العامة",
 		"editProjectModes": "تعديل أنماط المشروع (.kilocodemodes)",
 		"createModeHelpText": "الأنماط تعرّف شخصيات مخصصة تضبط سلوك Kilo Code. <0>تعرف على طريقة استخدام الأنماط</0> أو <1>تخصيصها حسب شغلك</1>.",
-		"selectMode": "بحث في الأنماط"
+		"selectMode": "بحث في الأنماط",
+		"noMatchFound": "لم يتم العثور على أنماط"
 	},
 	"apiConfiguration": {
 		"title": "إعدادات API",
@@ -49,6 +51,27 @@
 		"resetToDefault": "رجّع للوضع الافتراضي",
 		"description": "اكتب تعليمات خاصة لسلوك نمط {{modeName}}.",
 		"loadFromFile": "تقدر تحمل التعليمات من المجلد <span>.kilocode/rules/</span> داخل المشروع (.kilocoderules-{{slug}} بيتوقف قريب)."
+	},
+	"exportMode": {
+		"title": "تصدير النمط",
+		"description": "صدّر هذا النمط مع القواعد من مجلد .kilocode/rules-{{slug}}/ في ملف YAML قابل للمشاركة. الملفات الأصلية تبقى كما هي.",
+		"exporting": "جاري التصدير..."
+	},
+	"importMode": {
+		"selectLevel": "اختر مكان استيراد النمط:",
+		"import": "استيراد",
+		"importing": "جاري الاستيراد...",
+		"global": {
+			"label": "المستوى العام",
+			"description": "متوفر في كل المشاريع. إذا كان النمط المصدّر يحتوي على ملفات قواعد، سيتم إنشاؤها في مجلد .kilocode/rules-{slug}/ العام."
+		},
+		"project": {
+			"label": "مستوى المشروع",
+			"description": "متوفر فقط في هذا المشروع. إذا كان النمط المصدّر يحتوي على ملفات قواعد، سيتم إنشاؤها في مجلد .kilocode/rules-{slug}/."
+		}
+	},
+	"advanced": {
+		"title": "متقدم: تجاوز موجه النظام"
 	},
 	"globalCustomInstructions": {
 		"title": "تعليمات عامة لكل الأنماط",

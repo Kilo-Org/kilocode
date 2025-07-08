@@ -76,6 +76,9 @@ export interface ExtensionMessage {
 		| "autoApprovalEnabled"
 		| "updateCustomMode"
 		| "deleteCustomMode"
+		| "exportModeResult"
+		| "importModeResult"
+		| "checkRulesDirectoryResult"
 		| "currentCheckpointUpdated"
 		| "showHumanRelayDialog"
 		| "humanRelayResponse"
@@ -163,6 +166,7 @@ export interface ExtensionMessage {
 	url?: string // kilocode_change
 	setting?: string
 	value?: any
+	hasContent?: boolean // For checkRulesDirectoryResult
 	items?: MarketplaceItem[]
 	userInfo?: CloudUserInfo
 	organizationAllowList?: OrganizationAllowList
@@ -252,6 +256,7 @@ export type ExtensionState = Pick<
 	| "codebaseIndexConfig"
 	| "codebaseIndexModels"
 	| "profileThresholds"
+	| "systemNotificationsEnabled" // kilocode_change
 > & {
 	version: string
 	clineMessages: ClineMessage[]

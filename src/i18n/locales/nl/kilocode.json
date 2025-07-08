@@ -2,6 +2,11 @@
 	"info": {
 		"settings_imported": "Instellingen succesvol geïmporteerd."
 	},
+	"userFeedback": {
+		"message_update_failed": "Bijwerken van bericht mislukt",
+		"no_checkpoint_found": "Geen checkpoint gevonden voor dit bericht",
+		"message_updated": "Bericht succesvol bijgewerkt"
+	},
 	"lowCreditWarning": {
 		"title": "Waarschuwing: laag krediet!",
 		"message": "Controleer of je kunt opwaarderen met gratis credits of meer kunt kopen!"
@@ -35,22 +40,13 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Kilo Code commit-berichtgenerator geactiveerd",
+		"activated": "Kilo Code commit bericht generator geactiveerd",
 		"gitNotFound": "⚠️ Git repository niet gevonden of git niet beschikbaar",
-		"gitInitError": "⚠️ Git initialisatiefout: {{error}}",
-		"generating": "Kilo: Commit-bericht aan het genereren...",
-		"analyzingChanges": "Kilo: Bezig met het analyseren van gefaseerde wijzigingen...",
-		"noStagedChangesRepo": "Kilo: Geen gefaseerde wijzigingen gevonden in de git repository",
-		"noStagedChanges": "Kilo: Geen gefaseerde wijzigingen gevonden om te analyseren",
-		"generated": "Kilo: Commit-bericht gegenereerd!",
-		"generationFailed": "Kilo: Mislukt om commit-bericht te genereren: {{errorMessage}}",
-		"tokenRequired": "Kilo Code token is vereist voor het genereren van commit berichten",
-		"activationFailed": "Kilo: Kon berichtverstrekker voor commits niet activeren: {{error}}",
-		"providerRegistered": "Kilo: Commit message provider geregistreerd"
-	},
-	"userFeedback": {
-		"message_update_failed": "Bijwerken van bericht mislukt",
-		"no_checkpoint_found": "Geen checkpoint gevonden voor dit bericht",
-		"message_updated": "Bericht succesvol bijgewerkt"
+		"gitInitError": "⚠️ Git-initialisatiefout: {{error}}",
+		"generating": "Kilo: Commitbericht genereren...",
+		"noChanges": "Kilo: Geen wijzigingen gevonden om te analyseren",
+		"generated": "Kilo: Commitbericht gegenereerd!",
+		"generationFailed": "Kilo: Mislukt bij het genereren van een commit-bericht: {{errorMessage}}",
+		"generatingFromUnstaged": "Kilo: Bericht genereren met niet-gecommitteerde wijzigingen"
 	}
 }

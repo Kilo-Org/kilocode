@@ -57,6 +57,10 @@
 		"ollamaUrlLabel": "URL d'Ollama:",
 		"qdrantUrlLabel": "URL de Qdrant",
 		"qdrantKeyLabel": "Clau de Qdrant:",
+		"advancedConfigLabel": "Configuració avançada",
+		"searchMinScoreLabel": "Llindar de puntuació de cerca",
+		"searchMinScoreDescription": "Puntuació mínima de similitud (0.0-1.0) requerida per als resultats de la cerca. Valors més baixos retornen més resultats però poden ser menys rellevants. Valors més alts retornen menys resultats però més rellevants.",
+		"searchMinScoreResetTooltip": "Restablir al valor per defecte (0.4)",
 		"startIndexingButton": "Iniciar indexació",
 		"clearIndexDataButton": "Esborrar dades d'índex",
 		"unsavedSettingsMessage": "Si us plau, deseu la configuració abans d'iniciar el procés d'indexació.",
@@ -110,6 +114,11 @@
 		"subtasks": {
 			"label": "Subtasques",
 			"description": "Permetre la creació i finalització de subtasques sense requerir aprovació"
+		},
+		"followupQuestions": {
+			"label": "Pregunta",
+			"description": "Seleccionar automàticament la primera resposta suggerida per a preguntes de seguiment després del temps d'espera configurat",
+			"timeoutLabel": "Temps d'espera abans de seleccionar automàticament la primera resposta"
 		},
 		"execute": {
 			"label": "Executar",
@@ -590,7 +599,7 @@
 	},
 	"footer": {
 		"feedback": "Si teniu qualsevol pregunta o comentari, no dubteu a obrir un issue a <githubLink>github.com/Kilo-Org/kilocode</githubLink> o unir-vos a <redditLink>reddit.com/r/kilocode</redditLink> o <discordLink>kilocode.ai/discord</discordLink>",
-		"support": "Per a qüestions financeres, poseu-vos en contacte amb el Suport al Client a <supportLink>hi@kilocode.ai</supportLink>",
+		"support": "Per a qüestions financeres, poseu-vos en contacte amb el Suport al Client a <supportLink>https://kilocode.ai/support</supportLink>",
 		"telemetry": {
 			"label": "Permetre informes anònims d'errors i ús",
 			"description": "Ajudeu a millorar Kilo Code enviant dades d'ús anònimes i informes d'errors. Mai s'envia codi, prompts o informació personal. Vegeu la nostra política de privacitat per a més detalls."

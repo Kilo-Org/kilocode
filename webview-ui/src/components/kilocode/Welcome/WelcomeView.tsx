@@ -5,10 +5,10 @@ import { vscode } from "../../../utils/vscode"
 import { Tab, TabContent } from "../../common/Tab"
 import { useAppTranslation } from "../../../i18n/TranslationContext"
 import { ButtonPrimary } from "../common/ButtonPrimary"
-import { ButtonSecondary } from "../common/ButtonSecondary"
 import { ButtonLink } from "../common/ButtonLink"
 import ApiOptions from "../../settings/ApiOptions"
-import { getKiloCodeBackendAuthUrl } from "../helpers"
+import KiloCodeAuth from "../common/KiloCodeAuth"
+import { getKiloCodeBackendSignInUrl } from "../helpers"
 
 const WelcomeView = () => {
 	const { apiConfiguration, currentApiConfigName, setApiConfiguration, uriScheme, uiKind } = useExtensionState()
@@ -35,10 +35,6 @@ const WelcomeView = () => {
 	return (
 		<Tab>
 			<TabContent className="flex flex-col gap-5">
-				<h2 className="m-0 p-0">{t("kilocode:welcome.greeting")}</h2>
-				<div>{t("kilocode:welcome.introText1")}</div>
-				<div>{t("kilocode:welcome.introText2")}</div>
-				<div>{t("kilocode:welcome.introText3")}</div>
 				{manualConfig ? (
 					<>
 						<ApiOptions
@@ -52,38 +48,16 @@ const WelcomeView = () => {
 							hideKiloCodeButton
 						/>
 						{isSettingUpKiloCode ? (
-							<ButtonLink href={getKiloCodeBackendAuthUrl(uriScheme, uiKind)}>
-								{t("kilocode:welcome.ctaButton")}
+							<ButtonLink href={getKiloCodeBackendSignInUrl(uriScheme, uiKind)}>
+								{t("kilocode:settings.provider.login")}
 							</ButtonLink>
 						) : (
 							<ButtonPrimary onClick={handleSubmit}>{t("welcome:start")}</ButtonPrimary>
 						)}
 					</>
 				) : (
-					<div className="bg-vscode-sideBar-background">
-						<div className="flex flex-col gap-5">
-							<ButtonLink
-								href={getKiloCodeBackendAuthUrl(uriScheme, uiKind)}
-								onClick={() => {
-									if (uiKind === "Web") {
-										setManualConfig(true)
-									}
-								}}>
-								{t("kilocode:welcome.ctaButton")}
-							</ButtonLink>
-							<ButtonSecondary onClick={() => setManualConfig(true)}>
-								{t("kilocode:welcome.manualModeButton")}
-							</ButtonSecondary>
-							<div className="text-center text-vscode-descriptionForeground">
-								{t("kilocode:welcome.alreadySignedUp")}{" "}
-								<a
-									href={getKiloCodeBackendAuthUrl(uriScheme, uiKind)}
-									className="underline"
-									style={{ color: "inherit" }}>
-									{t("kilocode:welcome.loginText")}
-								</a>
-							</div>
-						</div>
+					<div className="bg-vscode-sideBar-background p-4">
+						<KiloCodeAuth onManualConfigClick={() => setManualConfig(true)} />
 					</div>
 				)}
 			</TabContent>

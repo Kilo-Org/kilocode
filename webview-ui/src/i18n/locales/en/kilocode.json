@@ -32,6 +32,13 @@
 				"label": "Allow very large file reads",
 				"description": "When enabled, Kilo Code will perform very large file or MCP output reads even if there is a high chance of overflowing the context window (content size >80% of context window)."
 			}
+		},
+		"systemNotifications": {
+			"label": "Enable System Notifications",
+			"description": "When enabled, Kilo Code will send system notifications for important events like task completion or errors.",
+			"testButton": "Test Notification",
+			"testTitle": "Kilo Code",
+			"testMessage": "This is a test notification from Kilo Code."
 		}
 	},
 	"chat": {
@@ -48,12 +55,7 @@
 		"dashboard": "Dashboard",
 		"logOut": "Log out",
 		"currentBalance": "CURRENT BALANCE",
-		"loading": "Loading...",
-		"signUp": {
-			"title": "Sign up with Kilo Code",
-			"description": "Signing up with Kilo Code gives you free credits to get started. Use your credits to explore our features, try out the latest and greatest models, and experience the benefits of Kilo Code without any commitment.",
-			"termsAndPrivacy": "By continuing, you agree to the <termsLink>Terms of Service</termsLink> and <privacyLink>Privacy Policy.</privacyLink>"
-		}
+		"loading": "Loading..."
 	},
 	"docs": "Docs",
 	"rules": {

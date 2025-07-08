@@ -62,15 +62,23 @@
 		"mistake_limit_guidance": "هذا ممكن يعني إن النموذج ارتكب خطأ أو ما عرف يستخدم الأداة، ممكن تحلها بإرشاد بسيط (مثلاً: \"قسم المهمة لخطوات أصغر\").",
 		"violated_organization_allowlist": "فشل تنفيذ المهمة: الملف التعريفي هذا ما يتوافق مع إعدادات منظمتك",
 		"condense_failed": "فشل تلخيص السياق",
-		"condense_not_enough_messages": "ما فيه رسائل كافية لتلخيص السياق",
+		"condense_not_enough_messages": "ما فيه رسائل كافية لتلخيص السياق من {{prevContextTokens}} رمز. لازم {{minimumMessageCount}} رسالة على الأقل، بس متوفر {{messageCount}} رسالة فقط.",
 		"condensed_recently": "تم التلخيص قبل شوي؛ بنعدّي هالمرة",
 		"condense_handler_invalid": "المعالج الخاص بتلخيص السياق غير صالح",
-		"condense_context_grew": "السياق زاد بدال ما ينقص؛ بنعدّي هالمرة",
+		"condense_context_grew": "حجم السياق زاد من {{prevContextTokens}} إلى {{newContextTokens}} رمز أثناء التلخيص؛ بنتجاهل هالمحاولة",
+		"url_timeout": "الموقع أخذ وقت طويل للتحميل (انتهت المهلة). ممكن يكون بسبب اتصال بطيء أو ضغط على الموقع أو إنه مو متاح حالياً. جرّب مرة ثانية أو تأكد من الرابط.",
+		"url_not_found": "ما قدرنا نلقى عنوان الموقع. تأكد من صحة الرابط وجرّب مرة ثانية.",
+		"no_internet": "ما فيه اتصال بالإنترنت. تأكد من اتصال الشبكة وجرّب مرة ثانية.",
+		"url_forbidden": "الوصول للموقع ممنوع. ممكن الموقع يمنع الوصول التلقائي أو يحتاج تسجيل دخول.",
+		"url_page_not_found": "الصفحة غير موجودة. تأكد من صحة الرابط.",
+		"url_fetch_failed": "فشل جلب محتوى الرابط: {{error}}",
+		"url_fetch_error_with_url": "خطأ في جلب محتوى {{url}}: {{error}}",
 		"share_task_failed": "فشل في مشاركة المهمة. جرّب مرة ثانية.",
 		"share_no_active_task": "ما فيه مهمة شغالة حالياً",
 		"share_auth_required": "لازم تسجل دخول عشان تشارك المهام.",
 		"share_not_enabled": "مشاركة المهام مو مفعّلة في منظمتك.",
 		"share_task_not_found": "المهمة غير موجودة أو ما عندك صلاحية.",
+		"mode_import_failed": "فشل استيراد الوضع: {{error}}",
 		"claudeCode": {
 			"processExited": "عملية Claude Code انتهت بالكود {{exitCode}}.",
 			"errorOutput": "المخرجات الخطأ: {{output}}",
@@ -91,7 +99,8 @@
 	},
 	"warnings": {
 		"no_terminal_content": "ما تم تحديد أي محتوى من الطرفية",
-		"missing_task_files": "ملفات المهمة ناقصة. تبي نحذفها من القائمة؟"
+		"missing_task_files": "ملفات المهمة ناقصة. تبي نحذفها من القائمة؟",
+		"auto_import_failed": "فشل الاستيراد التلقائي لإعدادات Kilo Code: {{error}}"
 	},
 	"info": {
 		"no_changes": "ما تم العثور على تغييرات.",
@@ -104,7 +113,10 @@
 		"organization_share_link_copied": "تم نسخ رابط مشاركة المنظمة!",
 		"public_share_link_copied": "تم نسخ رابط المشاركة العام!",
 		"image_copied_to_clipboard": "تم نسخ بيانات الصورة إلى الحافظة",
-		"image_saved": "تم حفظ الصورة في {{path}}"
+		"image_saved": "تم حفظ الصورة في {{path}}",
+		"auto_import_success": "تم استيراد إعدادات Kilo Code تلقائياً من {{filename}}",
+		"mode_exported": "تم تصدير الوضع '{{mode}}' بنجاح",
+		"mode_imported": "تم استيراد الوضع بنجاح"
 	},
 	"answers": {
 		"yes": "نعم",
@@ -131,8 +143,8 @@
 	},
 	"customModes": {
 		"errors": {
-			"yamlParseError": "خطأ في تنسيق YAML في ملف .roomodes عند السطر {{line}}. تحقق من:\n• المسافات (استخدم فراغات مو تبويبات)\n• تنسيق الاقتباسات والأقواس\n• صحة التنسيق العام",
-			"schemaValidationError": "تنسيق أوضاع مخصصة غير صالح في .roomodes:\n{{issues}}",
+			"yamlParseError": "خطأ في تنسيق YAML في ملف .kilocodemodes عند السطر {{line}}. تحقق من:\n• المسافات (استخدم فراغات مو تبويبات)\n• تنسيق الاقتباسات والأقواس\n• صحة التنسيق العام",
+			"schemaValidationError": "تنسيق أوضاع مخصصة غير صالح في .kilocodemodes:\n{{issues}}",
 			"invalidFormat": "تنسيق الأوضاع المخصصة غير صحيح. تأكد إن الإعدادات بصيغة YAML سليمة.",
 			"updateFailed": "فشل تحديث الوضع المخصص: {{error}}",
 			"deleteFailed": "فشل حذف الوضع المخصص: {{error}}",

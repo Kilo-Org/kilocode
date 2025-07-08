@@ -2,6 +2,11 @@
 	"info": {
 		"settings_imported": "設定匯入成功。"
 	},
+	"userFeedback": {
+		"message_update_failed": "更新訊息失敗",
+		"no_checkpoint_found": "在此訊息之前未找到檢查點",
+		"message_updated": "訊息已成功更新"
+	},
 	"lowCreditWarning": {
 		"title": "餘額不足警告！",
 		"message": "請檢查是否可以充值免費額度或購買更多額度！"
@@ -35,22 +40,13 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Kilo: 提交信息生成器已激活",
-		"gitNotFound": "⚠️ Git 仓库未找到或者 git 不可用",
+		"activated": "代码提交消息生成器已激活",
+		"gitNotFound": "⚠️ Git 仓库未找到或 git 不可用",
 		"gitInitError": "⚠️ Git 初始化错误：{{error}}",
 		"generating": "Kilo: 正在生成提交信息...",
-		"analyzingChanges": "Kilo：正在分析暂存的更改...",
-		"noStagedChangesRepo": "Kilo: Git 仓库中未发现已暂存的更改",
-		"noStagedChanges": "Kilo：找不到暂存的更改可供分析",
+		"noChanges": "千羽: 未发现可供分析的变更",
 		"generated": "Kilo：提交信息已生成！",
 		"generationFailed": "Kilo：无法生成提交信息：{{errorMessage}}",
-		"tokenRequired": "Kilo: 提交信息生成需要令牌",
-		"activationFailed": "Kilo: 无法激活提交消息提供者: {{error}}",
-		"providerRegistered": "Kilo: 提交消息提供程序已注册"
-	},
-	"userFeedback": {
-		"message_update_failed": "更新訊息失敗",
-		"no_checkpoint_found": "在此訊息之前未找到檢查點",
-		"message_updated": "訊息已成功更新"
+		"generatingFromUnstaged": "Kilo: 使用未暂存的更改生成消息"
 	}
 }

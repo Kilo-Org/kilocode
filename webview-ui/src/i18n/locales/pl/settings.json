@@ -57,6 +57,10 @@
 		"ollamaUrlLabel": "URL Ollama:",
 		"qdrantUrlLabel": "URL Qdrant",
 		"qdrantKeyLabel": "Klucz Qdrant:",
+		"advancedConfigLabel": "Konfiguracja zaawansowana",
+		"searchMinScoreLabel": "Próg wyniku wyszukiwania",
+		"searchMinScoreDescription": "Minimalny wynik podobieństwa (0.0-1.0) wymagany dla wyników wyszukiwania. Niższe wartości zwracają więcej wyników, ale mogą być mniej trafne. Wyższe wartości zwracają mniej wyników, ale bardziej trafnych.",
+		"searchMinScoreResetTooltip": "Zresetuj do wartości domyślnej (0.4)",
 		"startIndexingButton": "Rozpocznij indeksowanie",
 		"clearIndexDataButton": "Wyczyść dane indeksu",
 		"unsavedSettingsMessage": "Zapisz swoje ustawienia przed rozpoczęciem procesu indeksowania.",
@@ -110,6 +114,11 @@
 		"subtasks": {
 			"label": "Podzadania",
 			"description": "Zezwalaj na tworzenie i ukończenie podzadań bez konieczności zatwierdzania"
+		},
+		"followupQuestions": {
+			"label": "Pytanie",
+			"description": "Automatycznie wybierz pierwszą sugerowaną odpowiedź na pytania uzupełniające po skonfigurowanym limicie czasu",
+			"timeoutLabel": "Czas oczekiwania przed automatycznym wybraniem pierwszej odpowiedzi"
 		},
 		"execute": {
 			"label": "Wykonaj",
@@ -590,7 +599,7 @@
 	},
 	"footer": {
 		"feedback": "Jeśli masz jakiekolwiek pytania lub opinie, śmiało otwórz zgłoszenie na <githubLink>github.com/Kilo-Org/kilocode</githubLink> lub dołącz do <redditLink>reddit.com/r/kilocode</redditLink> lub <discordLink>kilocode.ai/discord</discordLink>",
-		"support": "W sprawach finansowych skontaktuj się z Obsługą Klienta pod adresem <supportLink>hi@kilocode.ai</supportLink>",
+		"support": "W sprawach finansowych skontaktuj się z Obsługą Klienta pod adresem <supportLink>https://kilocode.ai/support</supportLink>",
 		"telemetry": {
 			"label": "Zezwól na anonimowe raportowanie błędów i użycia",
 			"description": "Pomóż ulepszyć Kilo Code, wysyłając anonimowe dane o użytkowaniu i raporty o błędach. Nigdy nie są wysyłane kod, podpowiedzi ani informacje osobiste. Zobacz naszą politykę prywatności, aby uzyskać więcej szczegółów."

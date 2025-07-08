@@ -57,6 +57,10 @@
 		"ollamaUrlLabel": "URL Ollama:",
 		"qdrantUrlLabel": "URL Qdrant",
 		"qdrantKeyLabel": "Ключ Qdrant:",
+		"advancedConfigLabel": "Расширенная конфигурация",
+		"searchMinScoreLabel": "Порог оценки поиска",
+		"searchMinScoreDescription": "Минимальный балл сходства (0.0-1.0), необходимый для результатов поиска. Более низкие значения возвращают больше результатов, но они могут быть менее релевантными. Более высокие значения возвращают меньше результатов, но более релевантных.",
+		"searchMinScoreResetTooltip": "Сбросить к значению по умолчанию (0.4)",
 		"startIndexingButton": "Начать индексацию",
 		"clearIndexDataButton": "Очистить данные индекса",
 		"unsavedSettingsMessage": "Пожалуйста, сохрани настройки перед запуском процесса индексации.",
@@ -110,6 +114,11 @@
 		"subtasks": {
 			"label": "Подзадачи",
 			"description": "Разрешить создание и выполнение подзадач без необходимости одобрения"
+		},
+		"followupQuestions": {
+			"label": "Вопрос",
+			"description": "Автоматически выбирать первый предложенный ответ на дополнительные вопросы после настроенного тайм-аута",
+			"timeoutLabel": "Время ожидания перед автоматическим выбором первого ответа"
 		},
 		"execute": {
 			"label": "Выполнение",
@@ -590,7 +599,7 @@
 	},
 	"footer": {
 		"feedback": "Если у вас есть вопросы или предложения, откройте issue на <githubLink>github.com/Kilo-Org/kilocode</githubLink> или присоединяйтесь к <redditLink>reddit.com/r/kilocode</redditLink> или <discordLink>kilocode.ai/discord</discordLink>",
-		"support": "По финансовым вопросам обращайтесь в службу поддержки по адресу <supportLink>hi@kilocode.ai</supportLink>",
+		"support": "По финансовым вопросам обращайтесь в службу поддержки по адресу <supportLink>https://kilocode.ai/support</supportLink>",
 		"telemetry": {
 			"label": "Разрешить анонимную отправку ошибок и статистики использования",
 			"description": "Помогите улучшить Kilo Code, отправляя анонимные данные об ошибках и использовании. Код, подсказки и личная информация не отправляются. Подробнее — в политике конфиденциальности."

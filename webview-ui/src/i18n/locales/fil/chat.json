@@ -116,6 +116,7 @@
 	},
 	"selectMode": "Pumili ng mode para sa pakikipag-ugnayan",
 	"selectApiConfig": "Pumili ng API configuration",
+	"selectModelConfig": "Pumili ng modelo",
 	"enhancePrompt": "Pahusayin ang prompt gamit ang karagdagang konteksto",
 	"enhancePromptDescription": "Ang button na 'Enhance Prompt' ay tumutulong na mapahusay ang iyong prompt sa pamamagitan ng pagbibigay ng karagdagang konteksto, paglilinaw, o muling pagpapahayag. Subukang mag-type ng prompt dito at i-click muli ang button para makita kung paano ito gumagana.",
 	"modeSelector": {
@@ -207,7 +208,8 @@
 	"codebaseSearch": {
 		"wantsToSearch": "Nais maghanap ng Kilo Code sa codebase para sa <code>{{query}}</code>:",
 		"wantsToSearchWithPath": "Nais maghanap ng Kilo Code sa codebase para sa <code>{{query}}</code> sa <code>{{path}}</code>:",
-		"didSearch": "Nakahanap ng {{count}} resulta para sa <code>{{query}}</code>:"
+		"didSearch": "Nakahanap ng {{count}} resulta para sa <code>{{query}}</code>:",
+		"resultTooltip": "Similarity score: {{score}} (i-click para buksan ang file)"
 	},
 	"commandOutput": "Output ng Command",
 	"response": "Tugon",
@@ -263,7 +265,9 @@
 		"seconds": "{{count}}s"
 	},
 	"followUpSuggest": {
-		"copyToInput": "Kopyahin sa input (katulad ng shift + click)"
+		"copyToInput": "Kopyahin sa input (katulad ng shift + click)",
+		"autoSelectCountdown": "Awtomatikong pipiliin sa {{count}}s",
+		"countdownDisplay": "{{count}}s"
 	},
 	"browser": {
 		"rooWantsToUse": "Nais gamitin ng Kilo Code ang browser:",
@@ -316,5 +320,8 @@
 		"indexed": "Na-index",
 		"error": "Error sa index",
 		"status": "Status ng index"
+	},
+	"versionIndicator": {
+		"ariaLabel": "Bersyon {{version}} - I-click para tingnan ang release notes"
 	}
 }

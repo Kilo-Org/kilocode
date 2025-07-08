@@ -108,6 +108,7 @@
 	},
 	"selectMode": "Interaktionsmodus auswählen",
 	"selectApiConfig": "API-Konfiguration auswählen",
+	"selectModelConfig": "Modell auswählen",
 	"enhancePrompt": "Prompt mit zusätzlichem Kontext verbessern",
 	"addImages": "Bilder zur Nachricht hinzufügen",
 	"sendMessage": "Nachricht senden",
@@ -121,7 +122,7 @@
 		"title": "Modi",
 		"marketplace": "Modus-Marketplace",
 		"settings": "Modus-Einstellungen",
-		"description": "Spezialisierte Personas, die Roos Verhalten anpassen."
+		"description": "Spezialisierte Personas, die Kilo Codes Verhalten anpassen."
 	},
 	"errorReadingFile": "Fehler beim Lesen der Datei:",
 	"noValidImages": "Keine gültigen Bilder wurden verarbeitet",
@@ -240,15 +241,17 @@
 		"tokens": "Tokens"
 	},
 	"followUpSuggest": {
-		"copyToInput": "In Eingabefeld kopieren (oder Shift + Klick)"
+		"copyToInput": "In Eingabefeld kopieren (oder Shift + Klick)",
+		"autoSelectCountdown": "Automatische Auswahl in {{count}}s",
+		"countdownDisplay": "{{count}}s"
 	},
 	"announcement": {
 		"title": "🎉 Roo Code {{version}} veröffentlicht",
-		"description": "Roo Code {{version}} bringt wichtige neue Funktionen und Verbesserungen basierend auf deinem Feedback.",
+		"description": "Roo Code {{version}} bringt mächtige neue Funktionen und bedeutende Verbesserungen, um deinen Entwicklungsworkflow zu verbessern.",
 		"whatsNew": "Was ist neu",
-		"feature1": "<bold>Roo Marketplace Launch</bold>: Der Marketplace ist jetzt live! Entdecke und installiere Modi und MCPs einfacher denn je.",
-		"feature2": "<bold>Gemini 2.5 Modelle</bold>: Unterstützung für neue Gemini 2.5 Pro, Flash und Flash Lite Modelle hinzugefügt.",
-		"feature3": "<bold>Excel-Datei-Unterstützung & mehr</bold>: Excel (.xlsx) Datei-Unterstützung hinzugefügt sowie zahlreiche Fehlerbehebungen und Verbesserungen!",
+		"feature1": "<bold>1-Klick-Aufgaben-Teilen</bold>: Teile deine Aufgaben sofort mit Kollegen und der Community mit einem einzigen Klick.",
+		"feature2": "<bold>Globale .roo-Verzeichnis-Unterstützung</bold>: Lade Regeln und Konfigurationen aus einem globalen .roo-Verzeichnis für konsistente Einstellungen über Projekte hinweg.",
+		"feature3": "<bold>Verbesserte Architect-zu-Code-Übergänge</bold>: Nahtlose Übergaben von der Planung im Architect-Modus zur Implementierung im Code-Modus.",
 		"hideButton": "Ankündigung ausblenden",
 		"detailsDiscussLinks": "Erhalte mehr Details und diskutiere auf <discordLink>Discord</discordLink> und <redditLink>Reddit</redditLink> 🚀"
 	},
@@ -300,7 +303,8 @@
 	"codebaseSearch": {
 		"wantsToSearch": "Kilo Code möchte den Codebase nach <code>{{query}}</code> durchsuchen:",
 		"wantsToSearchWithPath": "Kilo Code möchte den Codebase nach <code>{{query}}</code> in <code>{{path}}</code> durchsuchen:",
-		"didSearch": "{{count}} Ergebnis(se) für <code>{{query}}</code> gefunden:"
+		"didSearch": "{{count}} Ergebnis(se) für <code>{{query}}</code> gefunden:",
+		"resultTooltip": "Ähnlichkeitswert: {{score}} (klicken zum Öffnen der Datei)"
 	},
 	"read-batch": {
 		"approve": {
@@ -316,5 +320,8 @@
 		"indexed": "Indiziert",
 		"error": "Index-Fehler",
 		"status": "Index-Status"
+	},
+	"versionIndicator": {
+		"ariaLabel": "Version {{version}} - Klicken Sie, um die Versionshinweise anzuzeigen"
 	}
 }

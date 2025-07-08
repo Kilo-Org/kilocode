@@ -62,15 +62,23 @@
 		"mistake_limit_guidance": "Questo può indicare un fallimento nel processo di pensiero del modello o l'incapacità di utilizzare correttamente uno strumento, che può essere mitigato con la guida dell'utente (ad es. \"Prova a suddividere l'attività in passaggi più piccoli\").",
 		"violated_organization_allowlist": "Impossibile eseguire l'attività: il profilo corrente viola le impostazioni della tua organizzazione",
 		"condense_failed": "Impossibile condensare il contesto",
-		"condense_not_enough_messages": "Non ci sono abbastanza messaggi per condensare il contesto",
+		"condense_not_enough_messages": "Non ci sono abbastanza messaggi per condensare il contesto di {{prevContextTokens}} token. Sono richiesti almeno {{minimumMessageCount}} messaggi, ma ne sono disponibili solo {{messageCount}}.",
 		"condensed_recently": "Il contesto è stato condensato di recente; questo tentativo viene saltato",
 		"condense_handler_invalid": "Il gestore API per condensare il contesto non è valido",
-		"condense_context_grew": "La dimensione del contesto è aumentata durante la condensazione; questo tentativo viene saltato",
+		"condense_context_grew": "La dimensione del contesto è aumentata da {{prevContextTokens}} a {{newContextTokens}} durante la condensazione; questo tentativo viene saltato",
+		"url_timeout": "Il sito web ha impiegato troppo tempo a caricarsi (timeout). Questo potrebbe essere dovuto a una connessione lenta, un sito web pesante o temporaneamente non disponibile. Puoi riprovare più tardi o verificare se l'URL è corretto.",
+		"url_not_found": "L'indirizzo del sito web non è stato trovato. Verifica se l'URL è corretto e riprova.",
+		"no_internet": "Nessuna connessione internet. Verifica la tua connessione di rete e riprova.",
+		"url_forbidden": "L'accesso a questo sito web è vietato. Il sito potrebbe bloccare l'accesso automatizzato o richiedere autenticazione.",
+		"url_page_not_found": "La pagina non è stata trovata. Verifica se l'URL è corretto.",
+		"url_fetch_failed": "Errore nel recupero del contenuto URL: {{error}}",
+		"url_fetch_error_with_url": "Errore nel recupero del contenuto per {{url}}: {{error}}",
 		"share_task_failed": "Condivisione dell'attività fallita. Riprova.",
 		"share_no_active_task": "Nessuna attività attiva da condividere",
 		"share_auth_required": "Autenticazione richiesta. Accedi per condividere le attività.",
 		"share_not_enabled": "La condivisione delle attività non è abilitata per questa organizzazione.",
 		"share_task_not_found": "Attività non trovata o accesso negato.",
+		"mode_import_failed": "Importazione della modalità non riuscita: {{error}}",
 		"claudeCode": {
 			"processExited": "Il processo Claude Code è terminato con codice {{exitCode}}.",
 			"errorOutput": "Output di errore: {{output}}",
@@ -91,7 +99,8 @@
 	},
 	"warnings": {
 		"no_terminal_content": "Nessun contenuto del terminale selezionato",
-		"missing_task_files": "I file di questa attività sono mancanti. Vuoi rimuoverla dall'elenco delle attività?"
+		"missing_task_files": "I file di questa attività sono mancanti. Vuoi rimuoverla dall'elenco delle attività?",
+		"auto_import_failed": "Importazione automatica delle impostazioni Kilo Code fallita: {{error}}"
 	},
 	"info": {
 		"no_changes": "Nessuna modifica trovata.",
@@ -100,11 +109,14 @@
 		"custom_storage_path_set": "Percorso di archiviazione personalizzato impostato: {{path}}",
 		"default_storage_path": "Tornato al percorso di archiviazione predefinito",
 		"settings_imported": "Impostazioni importate con successo.",
+		"auto_import_success": "Impostazioni Kilo Code importate automaticamente da {{filename}}",
 		"share_link_copied": "Link di condivisione copiato negli appunti",
 		"image_copied_to_clipboard": "URI dati dell'immagine copiato negli appunti",
 		"image_saved": "Immagine salvata in {{path}}",
 		"organization_share_link_copied": "Link di condivisione organizzazione copiato negli appunti!",
-		"public_share_link_copied": "Link di condivisione pubblica copiato negli appunti!"
+		"public_share_link_copied": "Link di condivisione pubblica copiato negli appunti!",
+		"mode_exported": "Modalità '{{mode}}' esportata con successo",
+		"mode_imported": "Modalità importata con successo"
 	},
 	"answers": {
 		"yes": "Sì",
@@ -142,8 +154,8 @@
 	},
 	"customModes": {
 		"errors": {
-			"yamlParseError": "YAML non valido nel file .roomodes alla riga {{line}}. Controlla:\n• Indentazione corretta (usa spazi, non tab)\n• Virgolette e parentesi corrispondenti\n• Sintassi YAML valida",
-			"schemaValidationError": "Formato modalità personalizzate non valido in .roomodes:\n{{issues}}",
+			"yamlParseError": "YAML non valido nel file .kilocodemodes alla riga {{line}}. Controlla:\n• Indentazione corretta (usa spazi, non tab)\n• Virgolette e parentesi corrispondenti\n• Sintassi YAML valida",
+			"schemaValidationError": "Formato modalità personalizzate non valido in .kilocodemodes:\n{{issues}}",
 			"invalidFormat": "Formato modalità personalizzate non valido. Assicurati che le tue impostazioni seguano il formato YAML corretto.",
 			"updateFailed": "Aggiornamento modalità personalizzata fallito: {{error}}",
 			"deleteFailed": "Eliminazione modalità personalizzata fallita: {{error}}",

@@ -62,15 +62,23 @@
 		"mistake_limit_guidance": "To může naznačovat selhání v myšlenkovém procesu modelu nebo neschopnost správně používat nástroj, což lze zmírnit pomocí nějakého vedení uživatele (např. \"Zkus rozdělit úkol na menší kroky\").",
 		"violated_organization_allowlist": "Spuštění úlohy selhalo: aktuální profil porušuje nastavení tvé organizace",
 		"condense_failed": "Zhušťování kontextu selhalo",
-		"condense_not_enough_messages": "Nedostatek zpráv pro zhuštění kontextu",
+		"condense_not_enough_messages": "Nedostatek zpráv pro zhuštění kontextu {{prevContextTokens}} tokenů. Je vyžadováno alespoň {{minimumMessageCount}} zpráv, ale k dispozici je pouze {{messageCount}}.",
 		"condensed_recently": "Kontext byl nedávno zhuštěn; přeskakuji tento pokus",
 		"condense_handler_invalid": "API handler pro zhušťování kontextu je neplatný",
-		"condense_context_grew": "Velikost kontextu se během zhušťování zvětšila; přeskakuji tento pokus",
+		"condense_context_grew": "Velikost kontextu se zvětšila z {{prevContextTokens}} na {{newContextTokens}} během zhušťování; přeskakuji tento pokus",
+		"url_timeout": "Načítání webové stránky trvalo příliš dlouho (vypršel časový limit). Může to být způsobeno pomalým připojením, náročnou webovou stránkou nebo dočasnou nedostupností webu. Můžeš to zkusit později nebo zkontrolovat, zda je URL správná.",
+		"url_not_found": "Webová adresa nebyla nalezena. Zkontroluj prosím, zda je URL správná, a zkus to znovu.",
+		"no_internet": "Žádné internetové připojení. Zkontroluj prosím své síťové připojení a zkus to znovu.",
+		"url_forbidden": "Přístup k této webové stránce je zakázán. Web může blokovat automatizovaný přístup nebo vyžadovat autentizaci.",
+		"url_page_not_found": "Stránka nebyla nalezena. Zkontroluj prosím, zda je URL správná.",
+		"url_fetch_failed": "Načtení obsahu URL selhalo: {{error}}",
+		"url_fetch_error_with_url": "Chyba při načítání obsahu pro {{url}}: {{error}}",
 		"share_task_failed": "Sdílení úlohy selhalo. Zkus to prosím znovu.",
 		"share_no_active_task": "Žádná aktivní úloha ke sdílení",
 		"share_auth_required": "Je vyžadována autentizace. Prosím přihlas se pro sdílení úloh.",
 		"share_not_enabled": "Sdílení úloh není pro tuto organizaci povoleno.",
 		"share_task_not_found": "Úloha nebyla nalezena nebo byl přístup odepřen.",
+		"mode_import_failed": "Import režimu selhal: {{error}}",
 		"claudeCode": {
 			"processExited": "Proces Claude Code skončil s kódem {{exitCode}}.",
 			"errorOutput": "Chybový výstup: {{output}}",
@@ -91,7 +99,8 @@
 	},
 	"warnings": {
 		"no_terminal_content": "Není vybrán žádný obsah terminálu",
-		"missing_task_files": "Soubory této úlohy chybí. Chceš ji odstranit ze seznamu úloh?"
+		"missing_task_files": "Soubory této úlohy chybí. Chceš ji odstranit ze seznamu úloh?",
+		"auto_import_failed": "Automatický import nastavení Kilo Code selhal: {{error}}"
 	},
 	"info": {
 		"no_changes": "Nebyly nalezeny žádné změny.",
@@ -100,11 +109,14 @@
 		"custom_storage_path_set": "Nastavena vlastní cesta úložiště: {{path}}",
 		"default_storage_path": "Návrat k použití výchozí cesty úložiště",
 		"settings_imported": "Nastavení byla úspěšně importována.",
+		"auto_import_success": "Nastavení Kilo Code byla automaticky importována ze souboru {{filename}}",
 		"share_link_copied": "Odkaz pro sdílení zkopírován do schránky",
 		"organization_share_link_copied": "Odkaz pro sdílení organizace zkopírován do schránky!",
 		"public_share_link_copied": "Veřejný odkaz pro sdílení zkopírován do schránky!",
 		"image_copied_to_clipboard": "Image data URI zkopírováno do schránky",
-		"image_saved": "Obrázek uložen do {{path}}"
+		"image_saved": "Obrázek uložen do {{path}}",
+		"mode_exported": "Režim '{{mode}}' byl úspěšně exportován",
+		"mode_imported": "Režim byl úspěšně importován"
 	},
 	"answers": {
 		"yes": "Ano",
@@ -131,8 +143,8 @@
 	},
 	"customModes": {
 		"errors": {
-			"yamlParseError": "Neplatný YAML v souboru .roomodes na řádku {{line}}. Zkontroluj prosím:\n• Správné odsazení (použij mezery, ne tabulátory)\n• Odpovídající uvozovky a závorky\n• Platnou YAML syntaxi",
-			"schemaValidationError": "Neplatný formát vlastních režimů v .roomodes:\n{{issues}}",
+			"yamlParseError": "Neplatný YAML v souboru .kilocodemodes na řádku {{line}}. Zkontroluj prosím:\n• Správné odsazení (použij mezery, ne tabulátory)\n• Odpovídající uvozovky a závorky\n• Platnou YAML syntaxi",
+			"schemaValidationError": "Neplatný formát vlastních režimů v .kilocodemodes:\n{{issues}}",
 			"invalidFormat": "Neplatný formát vlastních režimů. Ujisti se prosím, že tvá nastavení dodržují správný YAML formát.",
 			"updateFailed": "Nepodařilo se aktualizovat vlastní režim: {{error}}",
 			"deleteFailed": "Nepodařilo se smazat vlastní režim: {{error}}",

@@ -116,6 +116,7 @@
 	},
 	"selectMode": "Επίλεξε λειτουργία για αλληλεπίδραση",
 	"selectApiConfig": "Επίλεξε διαμόρφωση API",
+	"selectModelConfig": "Επιλογή μοντέλου",
 	"enhancePrompt": "Βελτίωσε το prompt με επιπλέον περιεχόμενο",
 	"enhancePromptDescription": "Το κουμπί 'Βελτίωση Prompt' βοηθά να βελτιώσεις το prompt σου παρέχοντας επιπλέον περιεχόμενο, διευκρίνιση ή αναδιατύπωση. Δοκίμασε να πληκτρολογήσεις ένα prompt εδώ και κάνε κλικ στο κουμπί ξανά για να δεις πώς λειτουργεί.",
 	"addImages": "Πρόσθεσε εικόνες στο μήνυμα",
@@ -201,7 +202,8 @@
 	"codebaseSearch": {
 		"wantsToSearch": "Το Kilo Code θέλει να αναζητήσει στη βάση κώδικα για <code>{{query}}</code>:",
 		"wantsToSearchWithPath": "Το Kilo Code θέλει να αναζητήσει στη βάση κώδικα για <code>{{query}}</code> στο <code>{{path}}</code>:",
-		"didSearch": "Βρέθηκαν {{count}} αποτέλεσμα(τα) για <code>{{query}}</code>:"
+		"didSearch": "Βρέθηκαν {{count}} αποτέλεσμα(τα) για <code>{{query}}</code>:",
+		"resultTooltip": "Βαθμολογία ομοιότητας: {{score}} (κάνε κλικ για άνοιγμα αρχείου)"
 	},
 	"commandOutput": "Έξοδος Εντολής",
 	"response": "Απάντηση",
@@ -246,7 +248,7 @@
 		"title": "Λειτουργίες",
 		"marketplace": "Marketplace Λειτουργιών",
 		"settings": "Ρυθμίσεις Λειτουργιών",
-		"description": "Εξειδικευμένες προσωπικότητες που προσαρμόζουν τη συμπεριφορά του Roo."
+		"description": "Εξειδικευμένες προσωπικότητες που προσαρμόζουν τη συμπεριφορά του Kilo Code."
 	},
 	"announcement": {
 		"title": "🎉 Κυκλοφόρησε το Roo Code {{version}}",
@@ -263,7 +265,9 @@
 		"seconds": "{{count}}δ"
 	},
 	"followUpSuggest": {
-		"copyToInput": "Αντιγραφή στην είσοδο (όπως shift + κλικ)"
+		"copyToInput": "Αντιγραφή στην είσοδο (όπως shift + κλικ)",
+		"autoSelectCountdown": "Αυτόματη επιλογή σε {{count}}δ",
+		"countdownDisplay": "{{count}}δ"
 	},
 	"browser": {
 		"rooWantsToUse": "Το Kilo Code θέλει να χρησιμοποιήσει τον περιηγητή:",
@@ -316,5 +320,8 @@
 		"indexed": "Δημιουργήθηκε ευρετήριο",
 		"error": "Σφάλμα ευρετηρίου",
 		"status": "Κατάσταση ευρετηρίου"
+	},
+	"versionIndicator": {
+		"ariaLabel": "Έκδοση {{version}} - Κάνε κλικ για προβολή σημειώσεων έκδοσης"
 	}
 }

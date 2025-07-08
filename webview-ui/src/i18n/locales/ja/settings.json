@@ -57,6 +57,10 @@
 		"ollamaUrlLabel": "Ollama URL：",
 		"qdrantUrlLabel": "Qdrant URL",
 		"qdrantKeyLabel": "Qdrantキー：",
+		"advancedConfigLabel": "詳細設定",
+		"searchMinScoreLabel": "検索スコアのしきい値",
+		"searchMinScoreDescription": "検索結果に必要な最小類似度スコア（0.0-1.0）。値を低くするとより多くの結果が返されますが、関連性が低くなる可能性があります。値を高くすると返される結果は少なくなりますが、より関連性が高くなります。",
+		"searchMinScoreResetTooltip": "デフォルト値（0.4）にリセット",
 		"startIndexingButton": "インデックス作成を開始",
 		"clearIndexDataButton": "インデックスデータをクリア",
 		"unsavedSettingsMessage": "インデックス作成プロセスを開始する前に設定を保存してください。",
@@ -110,6 +114,11 @@
 		"subtasks": {
 			"label": "サブタスク",
 			"description": "承認なしでサブタスクの作成と完了を許可"
+		},
+		"followupQuestions": {
+			"label": "質問",
+			"description": "設定された時間が経過すると、フォローアップ質問の最初の提案回答を自動的に選択します",
+			"timeoutLabel": "最初の回答を自動選択するまでの待機時間"
 		},
 		"execute": {
 			"label": "実行",
@@ -590,7 +599,7 @@
 	},
 	"footer": {
 		"feedback": "質問やフィードバックがある場合は、<githubLink>github.com/Kilo-Org/kilocode</githubLink>で問題を開くか、<redditLink>reddit.com/r/kilocode</redditLink>や<discordLink>kilocode.ai/discord</discordLink>に参加してください",
-		"support": "財務に関するご質問は、<supportLink>hi@kilocode.ai</supportLink>のカスタマーサポートまでお問い合わせください",
+		"support": "財務に関するご質問は、<supportLink>https://kilocode.ai/support</supportLink>のカスタマーサポートまでお問い合わせください",
 		"telemetry": {
 			"label": "匿名のエラーと使用状況レポートを許可",
 			"description": "匿名の使用データとエラーレポートを送信してKilo Codeの改善にご協力ください。コード、プロンプト、個人情報が送信されることはありません。詳細については、プライバシーポリシーをご覧ください。"

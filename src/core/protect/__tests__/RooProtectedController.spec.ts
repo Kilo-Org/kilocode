@@ -38,6 +38,12 @@ describe("RooProtectedController", () => {
 			expect(controller.isWriteProtected(".clinerules.md")).toBe(true)
 		})
 
+		it("should protect files in .vscode directory", () => {
+			expect(controller.isWriteProtected(".vscode/settings.json")).toBe(true)
+			expect(controller.isWriteProtected(".vscode/launch.json")).toBe(true)
+			expect(controller.isWriteProtected(".vscode/tasks.json")).toBe(true)
+		})
+
 		it("should not protect other files starting with .roo", () => {
 			expect(controller.isWriteProtected(".roosettings")).toBe(false)
 			expect(controller.isWriteProtected(".rooconfig")).toBe(false)
@@ -108,7 +114,7 @@ describe("RooProtectedController", () => {
 	describe("getProtectionMessage", () => {
 		it("should return appropriate protection message", () => {
 			const message = controller.getProtectionMessage()
-			expect(message).toBe("This is a Roo configuration file and requires approval for modifications")
+			expect(message).toBe("This is a Kilo Code configuration file and requires approval for modifications")
 		})
 	})
 
@@ -139,6 +145,7 @@ describe("RooProtectedController", () => {
 				".roorules*",
 				".clinerules*",
 				".roo/**",
+				".vscode/**",
 				".rooprotected",
 			])
 		})

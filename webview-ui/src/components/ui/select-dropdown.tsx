@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 import { useRooPortal } from "./hooks/useRooPortal"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui"
 import { StandardTooltip } from "@/components/ui"
+import { IconProps } from "@radix-ui/react-icons/dist/types" // kilocode_change
 
 export enum DropdownOptionType {
 	ITEM = "item",
@@ -40,6 +41,7 @@ export interface SelectDropdownProps {
 	shortcutText?: string
 	renderItem?: (option: DropdownOption) => React.ReactNode
 	disableSearch?: boolean
+	triggerIcon?: React.ForwardRefExoticComponent<IconProps & React.RefAttributes<SVGSVGElement>> | boolean | undefined // kilocode_change
 }
 
 export const SelectDropdown = React.memo(
@@ -60,6 +62,7 @@ export const SelectDropdown = React.memo(
 				shortcutText = "",
 				renderItem,
 				disableSearch = false,
+				triggerIcon = CaretUpIcon, // kilocode_change
 			},
 			ref,
 		) => {
@@ -68,6 +71,10 @@ export const SelectDropdown = React.memo(
 			const [searchValue, setSearchValue] = React.useState("")
 			const searchInputRef = React.useRef<HTMLInputElement>(null)
 			const portalContainer = useRooPortal("roo-portal")
+
+			// kilocode_change start
+			const TriggerIcon = triggerIcon === false ? null : triggerIcon === true ? CaretUpIcon : triggerIcon
+			// kilocode_change end
 
 			// Memoize the selected option to prevent unnecessary calculations
 			const selectedOption = React.useMemo(
@@ -201,7 +208,9 @@ export const SelectDropdown = React.memo(
 							: "opacity-90 hover:opacity-100 hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)] cursor-pointer",
 						triggerClassName,
 					)}>
-					<CaretUpIcon className="pointer-events-none opacity-80 flex-shrink-0 size-3" />
+					{/* kilocode_change start */}
+					{TriggerIcon && <TriggerIcon className="pointer-events-none opacity-80 flex-shrink-0 size-3" />}
+					{/* kilocode_change end */}
 
 					{/* kilocode_change start */}
 					{selectedOption?.codicon && (
@@ -248,7 +257,8 @@ export const SelectDropdown = React.memo(
 							)}
 
 							{/* Dropdown items - Use windowing for large lists */}
-							<div className="max-h-[300px] overflow-y-auto">
+							{/* kilocode_change: different max height: max-h-60 */}
+							<div className="max-h-60 overflow-y-auto">
 								{groupedOptions.length === 0 && searchValue ? (
 									<div className="py-2 px-3 text-sm text-vscode-foreground/70">No results found</div>
 								) : (

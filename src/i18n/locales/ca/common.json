@@ -66,10 +66,17 @@
 		"mistake_limit_guidance": "Això pot indicar un error en el procés de pensament del model o la incapacitat d'utilitzar una eina correctament, que es pot mitigar amb orientació de l'usuari (p. ex. \"Prova de dividir la tasca en passos més petits\").",
 		"violated_organization_allowlist": "Ha fallat l'execució de la tasca: el perfil actual infringeix la configuració de la teva organització",
 		"condense_failed": "Ha fallat la condensació del context",
-		"condense_not_enough_messages": "No hi ha prou missatges per condensar el context",
+		"condense_not_enough_messages": "No hi ha prou missatges per condensar el context de {{prevContextTokens}} tokens. Es requereixen almenys {{minimumMessageCount}} missatges, però només n'hi ha {{messageCount}} disponibles.",
 		"condensed_recently": "El context s'ha condensat recentment; s'omet aquest intent",
 		"condense_handler_invalid": "El gestor de l'API per condensar el context no és vàlid",
-		"condense_context_grew": "La mida del context ha augmentat durant la condensació; s'omet aquest intent",
+		"condense_context_grew": "La mida del context ha augmentat de {{prevContextTokens}} a {{newContextTokens}} durant la condensació; s'omet aquest intent",
+		"url_timeout": "El lloc web ha trigat massa a carregar (timeout). Això pot ser degut a una connexió lenta, un lloc web pesat o temporalment no disponible. Pots tornar-ho a provar més tard o comprovar si la URL és correcta.",
+		"url_not_found": "No s'ha pogut trobar l'adreça del lloc web. Comprova si la URL és correcta i torna-ho a provar.",
+		"no_internet": "No hi ha connexió a internet. Comprova la teva connexió de xarxa i torna-ho a provar.",
+		"url_forbidden": "L'accés a aquest lloc web està prohibit. El lloc pot bloquejar l'accés automatitzat o requerir autenticació.",
+		"url_page_not_found": "No s'ha trobat la pàgina. Comprova si la URL és correcta.",
+		"url_fetch_failed": "Error en obtenir el contingut de la URL: {{error}}",
+		"url_fetch_error_with_url": "Error en obtenir contingut per {{url}}: {{error}}",
 		"share_task_failed": "Ha fallat compartir la tasca. Si us plau, torna-ho a provar.",
 		"share_no_active_task": "No hi ha cap tasca activa per compartir",
 		"share_auth_required": "Es requereix autenticació. Si us plau, inicia sessió per compartir tasques.",
@@ -91,11 +98,13 @@
 			"badRequest": "Sol·licitud incorrecta: {{details}}",
 			"apiError": "Error de l'API Gemini CLI: {{error}}",
 			"completionError": "Error de compleció de Gemini CLI: {{error}}"
-		}
+		},
+		"mode_import_failed": "Ha fallat la importació del mode: {{error}}"
 	},
 	"warnings": {
 		"no_terminal_content": "No s'ha seleccionat contingut de terminal",
-		"missing_task_files": "Els fitxers d'aquesta tasca falten. Vols eliminar-la de la llista de tasques?"
+		"missing_task_files": "Els fitxers d'aquesta tasca falten. Vols eliminar-la de la llista de tasques?",
+		"auto_import_failed": "Ha fallat la importació automàtica de la configuració de Kilo Code: {{error}}"
 	},
 	"info": {
 		"no_changes": "No s'han trobat canvis.",
@@ -104,11 +113,14 @@
 		"custom_storage_path_set": "Ruta d'emmagatzematge personalitzada establerta: {{path}}",
 		"default_storage_path": "S'ha reprès l'ús de la ruta d'emmagatzematge predeterminada",
 		"settings_imported": "Configuració importada correctament.",
+		"auto_import_success": "Configuració de Kilo Code importada automàticament des de {{filename}}",
 		"share_link_copied": "Enllaç de compartició copiat al portapapers",
 		"image_copied_to_clipboard": "URI de dades de la imatge copiada al portapapers",
 		"image_saved": "Imatge desada a {{path}}",
 		"organization_share_link_copied": "Enllaç de compartició d'organització copiat al porta-retalls!",
-		"public_share_link_copied": "Enllaç de compartició pública copiat al porta-retalls!"
+		"public_share_link_copied": "Enllaç de compartició pública copiat al porta-retalls!",
+		"mode_exported": "Mode '{{mode}}' exportat correctament",
+		"mode_imported": "Mode importat correctament"
 	},
 	"answers": {
 		"yes": "Sí",
@@ -142,8 +154,8 @@
 	},
 	"customModes": {
 		"errors": {
-			"yamlParseError": "YAML no vàlid al fitxer .roomodes a la línia {{line}}. Comprova:\n• Indentació correcta (utilitza espais, no tabuladors)\n• Cometes i claudàtors coincidents\n• Sintaxi YAML vàlida",
-			"schemaValidationError": "Format de modes personalitzats no vàlid a .roomodes:\n{{issues}}",
+			"yamlParseError": "YAML no vàlid al fitxer .kilocodemodes a la línia {{line}}. Comprova:\n• Indentació correcta (utilitza espais, no tabuladors)\n• Cometes i claudàtors coincidents\n• Sintaxi YAML vàlida",
+			"schemaValidationError": "Format de modes personalitzats no vàlid a .kilocodemodes:\n{{issues}}",
 			"invalidFormat": "Format de modes personalitzats no vàlid. Assegura't que la teva configuració segueix el format YAML correcte.",
 			"updateFailed": "Error en actualitzar el mode personalitzat: {{error}}",
 			"deleteFailed": "Error en eliminar el mode personalitzat: {{error}}",

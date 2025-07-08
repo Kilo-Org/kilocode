@@ -116,6 +116,7 @@
 	},
 	"selectMode": "Vyber režim pro interakci",
 	"selectApiConfig": "Vyber konfiguraci API",
+	"selectModelConfig": "Vybrat model",
 	"enhancePrompt": "Vylepšit prompt s dodatečným kontextem",
 	"enhancePromptDescription": "Tlačítko 'Vylepšit prompt' pomáhá zlepšit tvůj prompt poskytnutím dodatečného kontextu, vyjasnění nebo přeformulování. Zkus sem napsat prompt a znovu kliknout na tlačítko, abys viděl, jak to funguje.",
 	"addImages": "Přidat obrázky do zprávy",
@@ -201,7 +202,8 @@
 	"codebaseSearch": {
 		"wantsToSearch": "Kilo Code chce hledat v kódové základně <code>{{query}}</code>:",
 		"wantsToSearchWithPath": "Kilo Code chce hledat v kódové základně <code>{{query}}</code> v <code>{{path}}</code>:",
-		"didSearch": "Nalezeno {{count}} výsledků pro <code>{{query}}</code>:"
+		"didSearch": "Nalezeno {{count}} výsledků pro <code>{{query}}</code>:",
+		"resultTooltip": "Skóre podobnosti: {{score}} (klikni pro otevření souboru)"
 	},
 	"commandOutput": "Výstup příkazu",
 	"response": "Odpověď",
@@ -246,7 +248,7 @@
 		"title": "Režimy",
 		"marketplace": "Tržiště režimů",
 		"settings": "Nastavení režimů",
-		"description": "Specializované persony které přizpůsobují chování Roo."
+		"description": "Specializované persony které přizpůsobují chování Kilo Code."
 	},
 	"announcement": {
 		"title": "🎉 Vydán Roo Code {{version}}",
@@ -263,7 +265,9 @@
 		"seconds": "{{count}}s"
 	},
 	"followUpSuggest": {
-		"copyToInput": "Kopírovat do vstupu (stejné jako shift + klik)"
+		"copyToInput": "Kopírovat do vstupu (stejné jako shift + klik)",
+		"autoSelectCountdown": "Automatický výběr za {{count}}s",
+		"countdownDisplay": "{{count}}s"
 	},
 	"browser": {
 		"rooWantsToUse": "Kilo Code chce použít prohlížeč:",
@@ -316,5 +320,8 @@
 		"indexed": "Indexováno",
 		"error": "Chyba indexu",
 		"status": "Stav indexu"
+	},
+	"versionIndicator": {
+		"ariaLabel": "Verze {{version}} - Klikni pro zobrazení poznámek k vydání"
 	}
 }

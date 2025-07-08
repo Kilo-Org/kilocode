@@ -2,6 +2,11 @@
 	"info": {
 		"settings_imported": "Pengaturan berhasil diimpor."
 	},
+	"userFeedback": {
+		"message_update_failed": "Gagal memperbarui pesan",
+		"no_checkpoint_found": "Tidak ditemukan checkpoint sebelum pesan ini",
+		"message_updated": "Pesan berhasil diperbarui"
+	},
 	"lowCreditWarning": {
 		"title": "Peringatan Kredit Rendah!",
 		"message": "Periksa apakah kamu bisa mengisi ulang dengan kredit gratis atau beli lebih banyak!"
@@ -35,22 +40,13 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Generator pesan commit Kilo Code telah diaktifkan",
+		"activated": "Generator pesan commit Kilo Code diaktifkan",
 		"gitNotFound": "⚠️ Repositori Git tidak ditemukan atau git tidak tersedia",
 		"gitInitError": "⚠️ Kesalahan inisialisasi Git: {{error}}",
 		"generating": "Kilo: Menghasilkan pesan commit...",
-		"analyzingChanges": "Kilo: Menganalisis perubahan yang dipentaskan...",
-		"noStagedChangesRepo": "Kilo: Tidak ditemukan perubahan yang tertahap di repositori git",
-		"noStagedChanges": "Kilo: Tidak ditemukan perubahan yang dipentaskan untuk dianalisis",
+		"noChanges": "Kilo: Tidak ada perubahan yang ditemukan untuk dianalisis",
 		"generated": "Kilo: Pesan commit telah dibuat!",
 		"generationFailed": "Kilo: Gagal menghasilkan pesan commit: {{errorMessage}}",
-		"tokenRequired": "Token Kilo Code diperlukan untuk pembuatan pesan commit",
-		"activationFailed": "Kilo: Gagal mengaktifkan penyedia pesan commit: {{error}}",
-		"providerRegistered": "Kilo: Penyedia pesan commit terdaftar"
-	},
-	"userFeedback": {
-		"message_update_failed": "Gagal memperbarui pesan",
-		"no_checkpoint_found": "Tidak ditemukan checkpoint sebelum pesan ini",
-		"message_updated": "Pesan berhasil diperbarui"
+		"generatingFromUnstaged": "Kilo: Membuat pesan menggunakan perubahan yang belum di-stage"
 	}
 }

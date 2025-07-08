@@ -62,15 +62,23 @@
 		"mistake_limit_guidance": "Esto puede indicar un fallo en el proceso de pensamiento del modelo o la incapacidad de usar una herramienta correctamente, lo cual puede mitigarse con orientación del usuario (ej. \"Intenta dividir la tarea en pasos más pequeños\").",
 		"violated_organization_allowlist": "Error al ejecutar la tarea: el perfil actual infringe la configuración de tu organización",
 		"condense_failed": "Error al condensar el contexto",
-		"condense_not_enough_messages": "No hay suficientes mensajes para condensar el contexto",
+		"condense_not_enough_messages": "No hay suficientes mensajes para condensar el contexto de {{prevContextTokens}} tokens. Se requieren al menos {{minimumMessageCount}} mensajes, pero solo {{messageCount}} están disponibles.",
 		"condensed_recently": "El contexto se condensó recientemente; se omite este intento",
 		"condense_handler_invalid": "El manejador de API para condensar el contexto no es válido",
-		"condense_context_grew": "El tamaño del contexto aumentó durante la condensación; se omite este intento",
+		"condense_context_grew": "El tamaño del contexto aumentó de {{prevContextTokens}} a {{newContextTokens}} durante la condensación; se omite este intento",
+		"url_timeout": "El sitio web tardó demasiado en cargar (timeout). Esto podría deberse a una conexión lenta, un sitio web pesado o que esté temporalmente no disponible. Puedes intentarlo más tarde o verificar si la URL es correcta.",
+		"url_not_found": "No se pudo encontrar la dirección del sitio web. Por favor verifica si la URL es correcta e inténtalo de nuevo.",
+		"no_internet": "Sin conexión a internet. Por favor verifica tu conexión de red e inténtalo de nuevo.",
+		"url_forbidden": "El acceso a este sitio web está prohibido. El sitio puede bloquear el acceso automatizado o requerir autenticación.",
+		"url_page_not_found": "La página no fue encontrada. Por favor verifica si la URL es correcta.",
+		"url_fetch_failed": "Error al obtener el contenido de la URL: {{error}}",
+		"url_fetch_error_with_url": "Error al obtener contenido para {{url}}: {{error}}",
 		"share_task_failed": "Error al compartir la tarea. Por favor, inténtalo de nuevo.",
 		"share_no_active_task": "No hay tarea activa para compartir",
 		"share_auth_required": "Se requiere autenticación. Por favor, inicia sesión para compartir tareas.",
 		"share_not_enabled": "La compartición de tareas no está habilitada para esta organización.",
 		"share_task_not_found": "Tarea no encontrada o acceso denegado.",
+		"mode_import_failed": "Error al importar el modo: {{error}}",
 		"claudeCode": {
 			"processExited": "El proceso de Claude Code terminó con código {{exitCode}}.",
 			"errorOutput": "Salida de error: {{output}}",
@@ -91,7 +99,8 @@
 	},
 	"warnings": {
 		"no_terminal_content": "No hay contenido de terminal seleccionado",
-		"missing_task_files": "Los archivos de esta tarea faltan. ¿Deseas eliminarla de la lista de tareas?"
+		"missing_task_files": "Los archivos de esta tarea faltan. ¿Deseas eliminarla de la lista de tareas?",
+		"auto_import_failed": "Error al importar automáticamente la configuración de Kilo Code: {{error}}"
 	},
 	"info": {
 		"no_changes": "No se encontraron cambios.",
@@ -100,11 +109,14 @@
 		"custom_storage_path_set": "Ruta de almacenamiento personalizada establecida: {{path}}",
 		"default_storage_path": "Se ha vuelto a usar la ruta de almacenamiento predeterminada",
 		"settings_imported": "Configuración importada correctamente.",
+		"auto_import_success": "Configuración de Kilo Code importada automáticamente desde {{filename}}",
 		"share_link_copied": "Enlace de compartir copiado al portapapeles",
 		"image_copied_to_clipboard": "URI de datos de imagen copiada al portapapeles",
 		"image_saved": "Imagen guardada en {{path}}",
 		"organization_share_link_copied": "¡Enlace de compartición de organización copiado al portapapeles!",
-		"public_share_link_copied": "¡Enlace de compartición pública copiado al portapapeles!"
+		"public_share_link_copied": "¡Enlace de compartición pública copiado al portapapeles!",
+		"mode_exported": "Modo '{{mode}}' exportado correctamente",
+		"mode_imported": "Modo importado correctamente"
 	},
 	"answers": {
 		"yes": "Sí",
@@ -142,8 +154,8 @@
 	},
 	"customModes": {
 		"errors": {
-			"yamlParseError": "YAML inválido en archivo .roomodes en línea {{line}}. Verifica:\n• Indentación correcta (usa espacios, no tabs)\n• Comillas y corchetes coincidentes\n• Sintaxis YAML válida",
-			"schemaValidationError": "Formato inválido de modos personalizados en .roomodes:\n{{issues}}",
+			"yamlParseError": "YAML inválido en archivo .kilocodemodes en línea {{line}}. Verifica:\n• Indentación correcta (usa espacios, no tabs)\n• Comillas y corchetes coincidentes\n• Sintaxis YAML válida",
+			"schemaValidationError": "Formato inválido de modos personalizados en .kilocodemodes:\n{{issues}}",
 			"invalidFormat": "Formato inválido de modos personalizados. Asegúrate de que tu configuración siga el formato YAML correcto.",
 			"updateFailed": "Error al actualizar modo personalizado: {{error}}",
 			"deleteFailed": "Error al eliminar modo personalizado: {{error}}",

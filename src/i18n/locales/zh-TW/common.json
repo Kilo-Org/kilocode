@@ -62,10 +62,17 @@
 		"mistake_limit_guidance": "這可能表明模型思維過程失敗或無法正確使用工具，可透過使用者指導來緩解（例如「嘗試將工作分解為更小的步驟」）。",
 		"violated_organization_allowlist": "執行工作失敗：目前設定檔違反了您的組織設定",
 		"condense_failed": "壓縮上下文失敗",
-		"condense_not_enough_messages": "沒有足夠的訊息來壓縮上下文",
+		"condense_not_enough_messages": "沒有足夠的訊息來壓縮 {{prevContextTokens}} Token 的上下文。至少需要 {{minimumMessageCount}} 則訊息，但只有 {{messageCount}} 則可用。",
 		"condensed_recently": "上下文最近已壓縮；跳過此次嘗試",
 		"condense_handler_invalid": "壓縮上下文的 API 處理程式無效",
-		"condense_context_grew": "壓縮過程中上下文大小增加；跳過此次嘗試",
+		"condense_context_grew": "壓縮過程中上下文大小從 {{prevContextTokens}} 增加到 {{newContextTokens}}；跳過此次嘗試",
+		"url_timeout": "網站載入超時。這可能是由於網路連線緩慢、網站負載過重或暫時無法使用。你可以稍後重試或檢查 URL 是否正確。",
+		"url_not_found": "找不到網站位址。請檢查 URL 是否正確並重試。",
+		"no_internet": "無網路連線。請檢查網路連線並重試。",
+		"url_forbidden": "存取此網站被禁止。該網站可能封鎖自動存取或需要身分驗證。",
+		"url_page_not_found": "找不到頁面。請檢查 URL 是否正確。",
+		"url_fetch_failed": "取得 URL 內容失敗：{{error}}",
+		"url_fetch_error_with_url": "取得 {{url}} 內容時發生錯誤：{{error}}",
 		"share_task_failed": "分享工作失敗。請重試。",
 		"share_no_active_task": "沒有活躍的工作可分享",
 		"share_auth_required": "需要身份驗證。請登入以分享工作。",
@@ -87,11 +94,13 @@
 			"badRequest": "錯誤的請求：{{details}}",
 			"apiError": "Gemini CLI API 錯誤：{{error}}",
 			"completionError": "Gemini CLI 完成錯誤：{{error}}"
-		}
+		},
+		"mode_import_failed": "匯入模式失敗：{{error}}"
 	},
 	"warnings": {
 		"no_terminal_content": "沒有選擇終端機內容",
-		"missing_task_files": "此工作的檔案遺失。您想從工作列表中刪除它嗎？"
+		"missing_task_files": "此工作的檔案遺失。您想從工作列表中刪除它嗎？",
+		"auto_import_failed": "自動匯入 Kilo Code 設定失敗：{{error}}"
 	},
 	"info": {
 		"no_changes": "沒有找到更改。",
@@ -100,11 +109,14 @@
 		"custom_storage_path_set": "自訂儲存路徑已設定：{{path}}",
 		"default_storage_path": "已恢復使用預設儲存路徑",
 		"settings_imported": "設定已成功匯入。",
+		"auto_import_success": "已自動匯入 Kilo Code 設定：{{filename}}",
 		"share_link_copied": "分享連結已複製到剪貼簿",
 		"image_copied_to_clipboard": "圖片資料 URI 已複製到剪貼簿",
 		"image_saved": "圖片已儲存至 {{path}}",
 		"organization_share_link_copied": "組織分享連結已複製到剪貼簿！",
-		"public_share_link_copied": "公開分享連結已複製到剪貼簿！"
+		"public_share_link_copied": "公開分享連結已複製到剪貼簿！",
+		"mode_exported": "模式 '{{mode}}' 已成功匯出",
+		"mode_imported": "模式已成功匯入"
 	},
 	"answers": {
 		"yes": "是",
@@ -142,8 +154,8 @@
 	},
 	"customModes": {
 		"errors": {
-			"yamlParseError": ".roomodes 檔案第 {{line}} 行 YAML 格式無效。請檢查：\n• 正確的縮排（使用空格，不要使用定位字元）\n• 匹配的引號和括號\n• 有效的 YAML 語法",
-			"schemaValidationError": ".roomodes 中自訂模式格式無效：\n{{issues}}",
+			"yamlParseError": ".kilocodemodes 檔案第 {{line}} 行 YAML 格式無效。請檢查：\n• 正確的縮排（使用空格，不要使用定位字元）\n• 匹配的引號和括號\n• 有效的 YAML 語法",
+			"schemaValidationError": ".kilocodemodes 中自訂模式格式無效：\n{{issues}}",
 			"invalidFormat": "自訂模式格式無效。請確保你的設定遵循正確的 YAML 格式。",
 			"updateFailed": "更新自訂模式失敗：{{error}}",
 			"deleteFailed": "刪除自訂模式失敗：{{error}}",

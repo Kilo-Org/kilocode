@@ -48,6 +48,7 @@ mermaid.initialize({
 	startOnLoad: false,
 	securityLevel: "loose",
 	theme: "dark",
+	suppressErrorRendering: true,
 	themeVariables: {
 		...MERMAID_THEME,
 		fontSize: "16px",

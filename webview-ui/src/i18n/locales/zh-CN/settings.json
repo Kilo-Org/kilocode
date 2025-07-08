@@ -58,6 +58,10 @@
 		"ollamaUrlLabel": "Ollama URL：",
 		"qdrantUrlLabel": "Qdrant URL",
 		"qdrantKeyLabel": "Qdrant 密钥：",
+		"advancedConfigLabel": "高级配置",
+		"searchMinScoreLabel": "搜索分数阈值",
+		"searchMinScoreDescription": "搜索结果所需的最低相似度分数（0.0-1.0）。较低的值返回更多结果，但可能不太相关。较高的值返回较少但更相关的结果。",
+		"searchMinScoreResetTooltip": "恢复默认值 (0.4)",
 		"startIndexingButton": "开始索引",
 		"clearIndexDataButton": "清除索引数据",
 		"unsavedSettingsMessage": "请先保存设置再开始索引过程。",
@@ -111,6 +115,11 @@
 		"subtasks": {
 			"label": "子任务",
 			"description": "允许创建和完成子任务而无需批准"
+		},
+		"followupQuestions": {
+			"label": "问题",
+			"description": "在配置的超时时间后自动选择后续问题的第一个建议答案",
+			"timeoutLabel": "自动选择第一个答案前的等待时间"
 		},
 		"execute": {
 			"label": "执行",
@@ -591,7 +600,7 @@
 	},
 	"footer": {
 		"feedback": "如果您有任何问题或反馈，请随时在 <githubLink>github.com/Kilo-Org/kilocode</githubLink> 上提出问题或加入 <redditLink>reddit.com/r/kilocode</redditLink> 或 <discordLink>kilocode.ai/discord</discordLink>",
-		"support": "如有财务问题，请联系客户支持 <supportLink>hi@kilocode.ai</supportLink>",
+		"support": "如有财务问题，请联系客户支持 <supportLink>https://kilocode.ai/support</supportLink>",
 		"telemetry": {
 			"label": "允许匿名数据收集",
 			"description": "匿名收集错误报告和使用数据（不含代码/提示/个人信息），详情见隐私政策"

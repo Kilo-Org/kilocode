@@ -103,10 +103,16 @@ export async function summarizeConversation(
 	const messagesToSummarize = getMessagesSinceLastSummary(messages.slice(0, -N_MESSAGES_TO_KEEP))
 
 	if (messagesToSummarize.length <= 1) {
+		// kilocode_change start
 		const error =
 			messages.length <= N_MESSAGES_TO_KEEP + 1
-				? t("common:errors.condense_not_enough_messages")
+				? t("common:errors.condense_not_enough_messages", {
+						prevContextTokens,
+						messageCount: messages.length,
+						minimumMessageCount: N_MESSAGES_TO_KEEP + 2,
+					})
 				: t("common:errors.condensed_recently")
+		// kilocode_change end
 		return { ...response, error }
 	}
 
@@ -200,7 +206,8 @@ export async function summarizeConversation(
 
 	const newContextTokens = outputTokens + (await apiHandler.countTokens(contextBlocks))
 	if (newContextTokens >= prevContextTokens) {
-		const error = t("common:errors.condense_context_grew")
+		// kilocode_change add numbers
+		const error = t("common:errors.condense_context_grew", { prevContextTokens, newContextTokens })
 		return { ...response, cost, error }
 	}
 	return { messages: newMessages, summary, cost, newContextTokens }

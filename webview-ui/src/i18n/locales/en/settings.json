@@ -57,6 +57,10 @@
 		"ollamaUrlLabel": "Ollama URL:",
 		"qdrantUrlLabel": "Qdrant URL",
 		"qdrantKeyLabel": "Qdrant Key:",
+		"advancedConfigLabel": "Advanced Configuration",
+		"searchMinScoreLabel": "Search Score Threshold",
+		"searchMinScoreDescription": "Minimum similarity score (0.0-1.0) required for search results. Lower values return more results but may be less relevant. Higher values return fewer but more relevant results.",
+		"searchMinScoreResetTooltip": "Reset to default value (0.4)",
 		"startIndexingButton": "Start Indexing",
 		"clearIndexDataButton": "Clear Index Data",
 		"unsavedSettingsMessage": "Please save your settings before starting the indexing process.",
@@ -110,6 +114,11 @@
 		"subtasks": {
 			"label": "Subtasks",
 			"description": "Allow creation and completion of subtasks without requiring approval"
+		},
+		"followupQuestions": {
+			"label": "Question",
+			"description": "Automatically select the first suggested answer for follow-up questions after the configured timeout",
+			"timeoutLabel": "Time to wait before auto-selecting the first answer"
 		},
 		"execute": {
 			"label": "Execute",
@@ -596,7 +605,7 @@
 	},
 	"footer": {
 		"feedback": "If you have any questions or feedback, feel free to open an issue at <githubLink>github.com/Kilo-Org/kilocode</githubLink> or join <redditLink>reddit.com/r/kilocode</redditLink> or <discordLink>kilocode.ai/discord</discordLink>.",
-		"support": "For financial questions, please contact Customer Support at <supportLink>hi@kilocode.ai</supportLink>",
+		"support": "For financial questions, please contact Customer Support at <supportLink>https://kilocode.ai/support</supportLink>",
 		"telemetry": {
 			"label": "Allow anonymous error and usage reporting",
 			"description": "Help improve Kilo Code by sending anonymous usage data and error reports. No code, prompts, or personal information is ever sent. See our privacy policy for more details."

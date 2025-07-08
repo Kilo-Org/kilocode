@@ -42,6 +42,8 @@ export interface WebviewMessage {
 		| "alwaysAllowWriteOutsideWorkspace"
 		| "alwaysAllowWriteProtected"
 		| "alwaysAllowExecute"
+		| "alwaysAllowFollowupQuestions"
+		| "followupAutoApproveTimeoutMs"
 		| "webviewDidLaunch"
 		| "newTask"
 		| "askResponse"
@@ -211,7 +213,14 @@ export interface WebviewMessage {
 		| "telemetrySetting"
 		| "profileThresholds"
 		| "editMessage" // kilocode_change
+		| "systemNotificationsEnabled" // kilocode_change
 		| "shareTaskSuccess"
+		| "exportMode"
+		| "exportModeResult"
+		| "importMode"
+		| "importModeResult"
+		| "checkRulesDirectory"
+		| "checkRulesDirectoryResult"
 	text?: string
 	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "account"
 	disabled?: boolean
@@ -266,6 +275,7 @@ export interface WebviewMessage {
 	mpInstallOptions?: InstallMarketplaceItemOptions
 	config?: Record<string, any> // Add config to the payload
 	visibility?: ShareVisibility // For share visibility
+	hasContent?: boolean // For checkRulesDirectoryResult
 }
 
 // kilocode_change begin

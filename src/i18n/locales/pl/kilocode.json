@@ -2,6 +2,11 @@
 	"info": {
 		"settings_imported": "Ustawienia zostały pomyślnie zaimportowane."
 	},
+	"userFeedback": {
+		"message_update_failed": "Nie udało się zaktualizować wiadomości",
+		"no_checkpoint_found": "Nie znaleziono punktu kontrolnego przed tą wiadomością",
+		"message_updated": "Wiadomość pomyślnie zaktualizowana"
+	},
 	"lowCreditWarning": {
 		"title": "Ostrzeżenie o Niskim Kredycie!",
 		"message": "Sprawdź, czy możesz doładować darmowymi kredytami lub kupić więcej!"
@@ -35,22 +40,13 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Generator wiadomości do zatwierdzeń kodu Kilo aktywowany",
-		"gitNotFound": "⚠️ Nie znaleziono repozytorium Git lub Git jest niedostępny",
+		"activated": "Generator komunikatów dla commitów Kilo Code aktywowany",
+		"gitNotFound": "⚠️ Repozytorium Git nie zostało znalezione lub git jest niedostępny",
 		"gitInitError": "⚠️ Błąd inicjalizacji Git: {{error}}",
-		"generating": "Kilo: Generowanie treści commita...",
-		"analyzingChanges": "Kilo: Analizowanie przygotowanych zmian...",
-		"noStagedChangesRepo": "Kilo: Nie znaleziono przygotowanych zmian w repozytorium git",
-		"noStagedChanges": "Kilo: Nie znaleziono przygotowanych zmian do analizy",
-		"generated": "Kilo: Wygenerowano wiadomość commita!",
-		"generationFailed": "Kilo: Nie udało się wygenerować treści commitu: {{errorMessage}}",
-		"tokenRequired": "Token Kilo Code jest wymagany do generowania wiadomości commit",
-		"activationFailed": "Kilo: Nie udało się aktywować dostawcy treści commita: {{error}}",
-		"providerRegistered": "Kilo: Zarejestrowano dostawcę wiadomości commit"
-	},
-	"userFeedback": {
-		"message_update_failed": "Nie udało się zaktualizować wiadomości",
-		"no_checkpoint_found": "Nie znaleziono punktu kontrolnego przed tą wiadomością",
-		"message_updated": "Wiadomość pomyślnie zaktualizowana"
+		"generating": "Kilo: Generowanie komunikatu zatwierdzenia...",
+		"noChanges": "Kilo: Nie znaleziono żadnych zmian do przeanalizowania",
+		"generated": "Kilo: Wiadomość commitu wygenerowana!",
+		"generationFailed": "Kilo: Nie udało się wygenerować komunikatu zatwierdzenia: {{errorMessage}}",
+		"generatingFromUnstaged": "Kilo: Generowanie wiadomości na podstawie niezatwierdzonych zmian"
 	}
 }

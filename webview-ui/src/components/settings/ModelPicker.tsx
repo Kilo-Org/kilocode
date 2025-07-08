@@ -103,7 +103,7 @@ export const ModelPicker = ({
 
 	const { id: selectedModelId, info: selectedModelInfo } = useSelectedModel(apiConfiguration)
 
-	const [searchValue, setSearchValue] = useState(selectedModelId || "")
+	const [searchValue, setSearchValue] = useState("") // kilocode_change
 
 	const onSelect = useCallback(
 		(modelId: string) => {
@@ -120,7 +120,7 @@ export const ModelPicker = ({
 			}
 
 			// Delay to ensure the popover is closed before setting the search value.
-			selectTimeoutRef.current = setTimeout(() => setSearchValue(modelId), 100)
+			selectTimeoutRef.current = setTimeout(() => setSearchValue(""), 100) // kilocode_change: reset value on select
 		},
 		[modelIdKey, setApiConfigurationField],
 	)
@@ -136,11 +136,11 @@ export const ModelPicker = ({
 					clearTimeout(closeTimeoutRef.current)
 				}
 
-				// Delay to ensure the popover is closed before setting the search value.
-				closeTimeoutRef.current = setTimeout(() => setSearchValue(selectedModelId), 100)
+				// Clear the search value when closing instead of prefilling it
+				closeTimeoutRef.current = setTimeout(() => setSearchValue(""), 100) // kilocode_change: reset value on select
 			}
 		},
-		[selectedModelId],
+		[] /* kilocode_change */,
 	)
 
 	const onClearSearch = useCallback(() => {

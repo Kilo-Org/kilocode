@@ -3,7 +3,7 @@ import { TelemetryEventName, type TelemetryEvent, type ClineMessage } from "@roo
 import { BaseTelemetryClient } from "@roo-code/telemetry"
 
 // import { getRooCodeApiUrl } from "./Config" // kilocode_change
-import { AuthService } from "./AuthService"
+import type { AuthService } from "./auth"
 import { SettingsService } from "./SettingsService"
 
 export class TelemetryClient extends BaseTelemetryClient {

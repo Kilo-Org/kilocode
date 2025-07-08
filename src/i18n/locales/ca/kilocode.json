@@ -2,6 +2,11 @@
 	"info": {
 		"settings_imported": "Configuració importada correctament."
 	},
+	"userFeedback": {
+		"message_update_failed": "Ha fallat l'actualització del missatge",
+		"no_checkpoint_found": "No s'ha trobat cap punt de control abans d'aquest missatge",
+		"message_updated": "S'ha actualitzat el missatge correctament"
+	},
 	"lowCreditWarning": {
 		"title": "Avís de Crèdit Baix!",
 		"message": "Comprova si pots recarregar amb crèdits gratuïts o comprar-ne més!"
@@ -36,21 +41,12 @@
 	},
 	"commitMessage": {
 		"activated": "Generador de missatges de commit de Kilo Code activat",
-		"gitNotFound": "⚠️ Repositori Git no trobat o git no disponible",
+		"gitNotFound": "⚠️ No s'ha trobat el repositori Git o git no està disponible",
 		"gitInitError": "⚠️ Error d'inicialització de Git: {{error}}",
 		"generating": "Kilo: Generant missatge de commit...",
-		"analyzingChanges": "Kilo: Analitzant els canvis preparats...",
-		"noStagedChangesRepo": "Kilo: No s'han trobat canvis preparats al repositori de git",
-		"noStagedChanges": "Kilo: No s'han trobat canvis preparats per analitzar",
-		"generated": "Kilo: Missatge de comissió generat!",
-		"generationFailed": "Kilo: No s'ha pogut generar el missatge de commit: {{errorMessage}}",
-		"tokenRequired": "Es requereix el token de Kilo Code per a la generació de missatges de commit",
-		"activationFailed": "Kilo: No s'ha pogut activar el proveïdor de missatges de confirmació: {{error}}",
-		"providerRegistered": "Kilo: S'ha registrat el proveïdor de missatges de confirmació"
-	},
-	"userFeedback": {
-		"message_update_failed": "Ha fallat l'actualització del missatge",
-		"no_checkpoint_found": "No s'ha trobat cap punt de control abans d'aquest missatge",
-		"message_updated": "S'ha actualitzat el missatge correctament"
+		"noChanges": "Kilo: No s'han trobat canvis per analitzar",
+		"generated": "Kilo: Missatge de commit generat!",
+		"generationFailed": "Kilo: No s'ha pogut generar el missatge de confirmació: {{errorMessage}}",
+		"generatingFromUnstaged": "Kilo: Generant missatge utilitzant canvis no preparats"
 	}
 }

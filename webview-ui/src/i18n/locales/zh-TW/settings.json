@@ -57,6 +57,10 @@
 		"ollamaUrlLabel": "Ollama URL：",
 		"qdrantUrlLabel": "Qdrant URL",
 		"qdrantKeyLabel": "Qdrant 金鑰：",
+		"advancedConfigLabel": "進階設定",
+		"searchMinScoreLabel": "搜尋分數閾值",
+		"searchMinScoreDescription": "搜尋結果所需的最低相似度分數（0.0-1.0）。較低的值會傳回更多結果，但可能較不相關。較高的值會傳回較少但更相關的結果。",
+		"searchMinScoreResetTooltip": "重設為預設值 (0.4)",
 		"startIndexingButton": "開始索引",
 		"clearIndexDataButton": "清除索引資料",
 		"unsavedSettingsMessage": "請先儲存設定再開始索引程序。",
@@ -110,6 +114,11 @@
 		"subtasks": {
 			"label": "子工作",
 			"description": "允許建立和完成子工作而無需核准"
+		},
+		"followupQuestions": {
+			"label": "問題",
+			"description": "在設定的逾時時間後自動選擇後續問題的第一個建議答案",
+			"timeoutLabel": "自動選擇第一個答案前的等待時間"
 		},
 		"execute": {
 			"label": "執行",
@@ -590,7 +599,7 @@
 	},
 	"footer": {
 		"feedback": "若您有任何問題或建議，歡迎至 <githubLink>github.com/Kilo-Org/kilocode</githubLink> 提出 issue，或加入 <redditLink>reddit.com/r/kilocode</redditLink> 或 <discordLink>kilocode.ai/discord</discordLink> 討論。",
-		"support": "如有財務相關問題，請聯絡客戶支援 <supportLink>hi@kilocode.ai</supportLink>",
+		"support": "如有財務相關問題，請聯絡客戶支援 <supportLink>https://kilocode.ai/support</supportLink>",
 		"telemetry": {
 			"label": "允許匿名錯誤與使用情況回報",
 			"description": "透過傳送匿名的使用資料與錯誤回報，協助改善 Kilo Code。我們絕不會傳送您的程式碼、提示或個人資訊。詳細資訊請參閱我們的隱私權政策。"

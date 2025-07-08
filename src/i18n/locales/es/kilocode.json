@@ -40,17 +40,13 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Generador de mensajes de commit Kilo Code activado",
+		"activated": "Generador de mensajes de commit de Kilo Code activado",
 		"gitNotFound": "⚠️ Repositorio Git no encontrado o git no disponible",
 		"gitInitError": "⚠️ Error de inicialización de Git: {{error}}",
-		"generating": "Kilo: Generando mensaje de commit...",
-		"analyzingChanges": "Kilo: Analizando cambios preparados...",
-		"noStagedChangesRepo": "Kilo: No se encontraron cambios preparados en el repositorio git",
-		"noStagedChanges": "Kilo: No se encontraron cambios preparados para analizar",
+		"generating": "Kilo: Generando mensaje de confirmación...",
+		"noChanges": "Kilo: No se encontraron cambios para analizar",
 		"generated": "Kilo: ¡Mensaje de commit generado!",
-		"generationFailed": "Kilo: Error al generar el mensaje del commit: {{errorMessage}}",
-		"tokenRequired": "Se requiere el token de Kilo Code para la generación de mensajes de commit",
-		"activationFailed": "Kilo: Error al activar el proveedor de mensajes de commit: {{error}}",
-		"providerRegistered": "Kilo: Proveedor de mensajes de confirmación registrado"
+		"generationFailed": "Kilo: Error al generar mensaje de confirmación: {{errorMessage}}",
+		"generatingFromUnstaged": "Kilo: Generando mensaje usando cambios no preparados"
 	}
 }

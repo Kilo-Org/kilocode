@@ -57,6 +57,10 @@
 		"ollamaUrlLabel": "Ollama URL:",
 		"qdrantUrlLabel": "Qdrant URL",
 		"qdrantKeyLabel": "Qdrant Key:",
+		"advancedConfigLabel": "Konfigurasi Lanjutan",
+		"searchMinScoreLabel": "Ambang Batas Skor Pencarian",
+		"searchMinScoreDescription": "Skor kesamaan minimum (0.0-1.0) yang diperlukan untuk hasil pencarian. Nilai yang lebih rendah mengembalikan lebih banyak hasil tetapi mungkin kurang relevan. Nilai yang lebih tinggi mengembalikan lebih sedikit hasil tetapi lebih relevan.",
+		"searchMinScoreResetTooltip": "Reset ke nilai default (0.4)",
 		"startIndexingButton": "Mulai Pengindeksan",
 		"clearIndexDataButton": "Hapus Data Indeks",
 		"unsavedSettingsMessage": "Silakan simpan pengaturan kamu sebelum memulai proses pengindeksan.",
@@ -110,6 +114,11 @@
 		"subtasks": {
 			"label": "Subtugas",
 			"description": "Izinkan pembuatan dan penyelesaian subtugas tanpa memerlukan persetujuan"
+		},
+		"followupQuestions": {
+			"label": "Pertanyaan",
+			"description": "Secara otomatis memilih jawaban pertama yang disarankan untuk pertanyaan lanjutan setelah batas waktu yang dikonfigurasi",
+			"timeoutLabel": "Waktu tunggu sebelum otomatis memilih jawaban pertama"
 		},
 		"execute": {
 			"label": "Eksekusi",
@@ -611,7 +620,7 @@
 	},
 	"footer": {
 		"feedback": "Jika kamu punya pertanyaan atau feedback, jangan ragu untuk membuka issue di <githubLink>github.com/Kilo-Org/kilocode</githubLink> atau bergabung <redditLink>reddit.com/r/kilocode</redditLink> atau <discordLink>kilocode.ai/discord</discordLink>",
-		"support": "Untuk pertanyaan keuangan, silakan hubungi Customer Support di <supportLink>hi@kilocode.ai</supportLink>",
+		"support": "Untuk pertanyaan keuangan, silakan hubungi Customer Support di <supportLink>https://kilocode.ai/support</supportLink>",
 		"telemetry": {
 			"label": "Izinkan pelaporan error dan penggunaan anonim",
 			"description": "Bantu tingkatkan Kilo Code dengan mengirim data penggunaan anonim dan laporan error. Tidak ada kode, prompt, atau informasi pribadi yang pernah dikirim. Lihat kebijakan privasi kami untuk detail lebih lanjut."

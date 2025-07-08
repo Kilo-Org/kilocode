@@ -62,15 +62,23 @@
 		"mistake_limit_guidance": "Bu, modelin düşünce sürecindeki bir başarısızlığı veya bir aracı düzgün kullanamama durumunu gösterebilir, bu da kullanıcı rehberliği ile hafifletilebilir (örn. \"Görevi daha küçük adımlara bölmeyi deneyin\").",
 		"violated_organization_allowlist": "Görev yürütülemedi: Geçerli profil kuruluşunuzun ayarlarını ihlal ediyor",
 		"condense_failed": "Bağlam sıkıştırılamadı",
-		"condense_not_enough_messages": "Bağlamı sıkıştırmak için yeterli mesaj yok",
+		"condense_not_enough_messages": "{{prevContextTokens}} token'lık bağlamı sıkıştırmak için yeterli mesaj yok. En az {{minimumMessageCount}} mesaj gerekli, ancak sadece {{messageCount}} mesaj mevcut.",
 		"condensed_recently": "Bağlam yakın zamanda sıkıştırıldı; bu deneme atlanıyor",
 		"condense_handler_invalid": "Bağlamı sıkıştırmak için API işleyicisi geçersiz",
-		"condense_context_grew": "Sıkıştırma sırasında bağlam boyutu arttı; bu deneme atlanıyor",
+		"condense_context_grew": "Sıkıştırma sırasında bağlam boyutu {{prevContextTokens}} token'dan {{newContextTokens}} token'a arttı; bu deneme atlanıyor",
+		"url_timeout": "Web sitesi yüklenmesi çok uzun sürdü (zaman aşımı). Bu yavaş bağlantı, ağır web sitesi veya geçici olarak kullanılamama nedeniyle olabilir. Daha sonra tekrar deneyebilir veya URL'nin doğru olup olmadığını kontrol edebilirsin.",
+		"url_not_found": "Web sitesi adresi bulunamadı. URL'nin doğru olup olmadığını kontrol et ve tekrar dene.",
+		"no_internet": "İnternet bağlantısı yok. Ağ bağlantını kontrol et ve tekrar dene.",
+		"url_forbidden": "Bu web sitesine erişim yasak. Site otomatik erişimi engelliyor veya kimlik doğrulama gerektiriyor olabilir.",
+		"url_page_not_found": "Sayfa bulunamadı. URL'nin doğru olup olmadığını kontrol et.",
+		"url_fetch_failed": "URL içeriği getirme hatası: {{error}}",
+		"url_fetch_error_with_url": "{{url}} için içerik getirme hatası: {{error}}",
 		"share_task_failed": "Görev paylaşılamadı",
 		"share_no_active_task": "Paylaşılacak aktif görev yok",
 		"share_auth_required": "Kimlik doğrulama gerekli. Görevleri paylaşmak için lütfen giriş yapın.",
 		"share_not_enabled": "Bu kuruluş için görev paylaşımı etkinleştirilmemiş.",
 		"share_task_not_found": "Görev bulunamadı veya erişim reddedildi.",
+		"mode_import_failed": "Mod içe aktarılamadı: {{error}}",
 		"claudeCode": {
 			"processExited": "Claude Code işlemi {{exitCode}} koduyla çıktı.",
 			"errorOutput": "Hata çıktısı: {{output}}",
@@ -91,7 +99,8 @@
 	},
 	"warnings": {
 		"no_terminal_content": "Seçili terminal içeriği yok",
-		"missing_task_files": "Bu görevin dosyaları eksik. Görev listesinden kaldırmak istiyor musunuz?"
+		"missing_task_files": "Bu görevin dosyaları eksik. Görev listesinden kaldırmak istiyor musunuz?",
+		"auto_import_failed": "Kilo Code ayarları otomatik olarak içe aktarılamadı: {{error}}"
 	},
 	"info": {
 		"no_changes": "Değişiklik bulunamadı.",
@@ -100,11 +109,14 @@
 		"custom_storage_path_set": "Özel depolama yolu ayarlandı: {{path}}",
 		"default_storage_path": "Varsayılan depolama yoluna geri dönüldü",
 		"settings_imported": "Ayarlar başarıyla içe aktarıldı.",
+		"auto_import_success": "Kilo Code ayarları {{filename}} dosyasından otomatik olarak içe aktarıldı",
 		"share_link_copied": "Paylaşım bağlantısı panoya kopyalandı",
 		"image_copied_to_clipboard": "Resim veri URI'si panoya kopyalandı",
 		"image_saved": "Resim {{path}} konumuna kaydedildi",
 		"organization_share_link_copied": "Kuruluş paylaşım bağlantısı panoya kopyalandı!",
-		"public_share_link_copied": "Herkese açık paylaşım bağlantısı panoya kopyalandı!"
+		"public_share_link_copied": "Herkese açık paylaşım bağlantısı panoya kopyalandı!",
+		"mode_exported": "'{{mode}}' modu başarıyla dışa aktarıldı",
+		"mode_imported": "Mod başarıyla içe aktarıldı"
 	},
 	"answers": {
 		"yes": "Evet",
@@ -142,8 +154,8 @@
 	},
 	"customModes": {
 		"errors": {
-			"yamlParseError": ".roomodes dosyasının {{line}}. satırında geçersiz YAML. Kontrol et:\n• Doğru girinti (tab değil boşluk kullan)\n• Eşleşen tırnak işaretleri ve parantezler\n• Geçerli YAML sözdizimi",
-			"schemaValidationError": ".roomodes'ta geçersiz özel mod formatı:\n{{issues}}",
+			"yamlParseError": ".kilocodemodes dosyasının {{line}}. satırında geçersiz YAML. Kontrol et:\n• Doğru girinti (tab değil boşluk kullan)\n• Eşleşen tırnak işaretleri ve parantezler\n• Geçerli YAML sözdizimi",
+			"schemaValidationError": ".kilocodemodes'ta geçersiz özel mod formatı:\n{{issues}}",
 			"invalidFormat": "Geçersiz özel mod formatı. Ayarlarının doğru YAML formatını takip ettiğinden emin ol.",
 			"updateFailed": "Özel mod güncellemesi başarısız: {{error}}",
 			"deleteFailed": "Özel mod silme başarısız: {{error}}",

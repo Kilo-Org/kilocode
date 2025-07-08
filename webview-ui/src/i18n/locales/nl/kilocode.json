@@ -32,6 +32,13 @@
 				"label": "Sta zeer grote bestandslezingen toe",
 				"description": "Wanneer ingeschakeld, zal Kilo Code zeer grote bestands- of MCP-outputlezingen uitvoeren, zelfs als er een grote kans is dat het contextvenster overloopt (inhoudsgrootte >80% van het contextvenster)."
 			}
+		},
+		"systemNotifications": {
+			"label": "Systeemmeldingen inschakelen",
+			"description": "Wanneer ingeschakeld, zal Kilo Code systeemmeldingen sturen voor belangrijke gebeurtenissen zoals taakvoltooing of fouten.",
+			"testButton": "Testmelding",
+			"testTitle": "Kilo Code",
+			"testMessage": "Dit is een testmelding van Kilo Code."
 		}
 	},
 	"chat": {
@@ -48,12 +55,7 @@
 		"dashboard": "Dashboard",
 		"logOut": "Uitloggen",
 		"currentBalance": "HUIDIG SALDO",
-		"loading": "Laden...",
-		"signUp": {
-			"title": "Aanmelden bij Kilo Code",
-			"description": "Aanmelden bij Kilo Code geeft u gratis credits om te beginnen. Gebruik uw credits om onze functies te verkennen, de nieuwste en beste modellen uit te proberen, en de voordelen van Kilo Code te ervaren zonder verplichtingen.",
-			"termsAndPrivacy": "Door verder te gaan, gaat u akkoord met de <termsLink>Servicevoorwaarden</termsLink> en het <privacyLink>Privacybeleid.</privacyLink>"
-		}
+		"loading": "Laden..."
 	},
 	"docs": "Documentatie",
 	"rules": {

@@ -2,6 +2,11 @@
 	"info": {
 		"settings_imported": "นำเข้าการตั้งค่าเรียบร้อยแล้ว"
 	},
+	"userFeedback": {
+		"message_update_failed": "ล้มเหลวในการอัปเดตข้อความ",
+		"no_checkpoint_found": "ไม่พบ checkpoint ก่อนข้อความนี้",
+		"message_updated": "อัปเดตข้อความเรียบร้อยแล้ว"
+	},
 	"lowCreditWarning": {
 		"title": "คำเตือนเครดิตต่ำ!",
 		"message": "ตรวจสอบดูว่าคุณสามารถเติมเครดิตฟรีหรือซื้อเพิ่มได้หรือไม่!"
@@ -35,22 +40,13 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "เปิดใช้งานตัวสร้างข้อความ commit ของ Kilo Code แล้ว",
-		"gitNotFound": "⚠️ ไม่พบ Git repository หรือ git ไม่พร้อมใช้งาน",
-		"gitInitError": "⚠️ ข้อผิดพลาดการเริ่มต้น Git: {{error}}",
-		"generating": "Kilo: กำลังสร้างข้อความ commit...",
-		"analyzingChanges": "Kilo: กำลังวิเคราะห์การเปลี่ยนแปลงที่ staged...",
-		"noStagedChangesRepo": "Kilo: ไม่พบการเปลี่ยนแปลงที่ staged ใน git repository",
-		"noStagedChanges": "Kilo: ไม่พบการเปลี่ยนแปลงที่ staged เพื่อวิเคราะห์",
-		"generated": "Kilo: สร้างข้อความ commit แล้ว!",
-		"generationFailed": "Kilo: ล้มเหลวในการสร้างข้อความ commit: {{errorMessage}}",
-		"tokenRequired": "ต้องใช้ Kilo Code token สำหรับการสร้างข้อความ commit",
-		"activationFailed": "Kilo: ล้มเหลวในการเปิดใช้งานผู้ให้บริการข้อความ commit: {{error}}",
-		"providerRegistered": "Kilo: ลงทะเบียนผู้ให้บริการข้อความ commit แล้ว"
-	},
-	"userFeedback": {
-		"message_update_failed": "ล้มเหลวในการอัปเดตข้อความ",
-		"no_checkpoint_found": "ไม่พบ checkpoint ก่อนข้อความนี้",
-		"message_updated": "อัปเดตข้อความเรียบร้อยแล้ว"
+		"activated": "เครื่องมือสร้างข้อความการคอมมิตโค้ด Kilo ถูกเปิดใช้งานแล้ว",
+		"gitNotFound": "⚠️ ไม่พบที่เก็บข้อมูล Git หรือไม่มี git",
+		"gitInitError": "⚠️ เกิดข้อผิดพลาดในการเริ่มต้น Git: {{error}}",
+		"generating": "กิโล: กำลังสร้างข้อความคอมมิต...",
+		"noChanges": "กิโล: ไม่พบการเปลี่ยนแปลงให้วิเคราะห์",
+		"generated": "กิโลเมตร: สร้างข้อความคอมมิตแล้ว!",
+		"generationFailed": "กิโล: ไม่สามารถสร้างข้อความคอมมิตได้: {{errorMessage}}",
+		"generatingFromUnstaged": "กิโล: กำลังสร้างข้อความโดยใช้การเปลี่ยนแปลงที่ยังไม่ได้นำเข้าสู่ขั้นตอน"
 	}
 }

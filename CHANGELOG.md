@@ -1,5 +1,74 @@
 # kilo-code
 
+## [v4.52.0]
+
+- [#1084](https://github.com/Kilo-Org/kilocode/pull/1084) [`c97d2f5`](https://github.com/Kilo-Org/kilocode/commit/c97d2f59edd28a875881bf29da616361bfce6fad) Thanks [@hassoncs](https://github.com/hassoncs)! - Generate commit messages based on unstaged changes if there's nothing staged
+
+## [v4.51.2]
+
+- [#1164](https://github.com/Kilo-Org/kilocode/pull/1164) [`ceed4e3`](https://github.com/Kilo-Org/kilocode/commit/ceed4e3191557c6ad6adb91e705cc462edb08ea3) Thanks [@philipvas](https://github.com/philipvas)! - Fix browser mode JSON snippets appearing in chat
+
+## [v4.51.1]
+
+- [#1163](https://github.com/Kilo-Org/kilocode/pull/1163) [`3f0592a`](https://github.com/Kilo-Org/kilocode/commit/3f0592a95282b6f2b6486b31146f322ea3324916) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Context condensing error messages are now more detailed
+
+- [#1165](https://github.com/Kilo-Org/kilocode/pull/1165) [`fe6ed81`](https://github.com/Kilo-Org/kilocode/commit/fe6ed81e73dd666043441c339e040d17dbb12aea) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Fix double scrollbar in dropdowns
+
+- [#1155](https://github.com/Kilo-Org/kilocode/pull/1155) [`2cbd9f8`](https://github.com/Kilo-Org/kilocode/commit/2cbd9f80a3d0f535d9839fefcf4812e0c59eebab) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Customer Support email address link was replaced by a web link, which works more reliably.
+
+## [v4.51.0]
+
+- [#841](https://github.com/Kilo-Org/kilocode/pull/841) [`1615ec7`](https://github.com/Kilo-Org/kilocode/commit/1615ec74cec2198d49cf1cd6942d883c0b717f4f) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Quick model selector on the chatbox
+
+- [#1149](https://github.com/Kilo-Org/kilocode/pull/1149) [`62786a8`](https://github.com/Kilo-Org/kilocode/commit/62786a8d09e42f51ac61c15216a168c172e87785) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Include changes from Roo Code v3.22.6
+
+    - Add timer-based auto approve for follow up questions (thanks @liwilliam2021!)
+    - Add import/export modes functionality
+    - Add persistent version indicator on chat screen
+    - Add automatic configuration import on extension startup (thanks @takakoutso!)
+    - Add user-configurable search score threshold slider for semantic search (thanks @hannesrudolph!)
+    - Add default headers and testing for litellm fetcher (thanks @andrewshu2000!)
+    - Fix consistent cancellation error messages for thinking vs streaming phases
+    - Fix AWS Bedrock cross-region inference profile mapping (thanks @KevinZhao!)
+    - Fix URL loading timeout issues in @ mentions (thanks @MuriloFP!)
+    - Fix API retry exponential backoff capped at 10 minutes (thanks @MuriloFP!)
+    - Fix Qdrant URL field auto-filling with default value (thanks @SannidhyaSah!)
+    - Fix profile context condensation threshold (thanks @PaperBoardOfficial!)
+    - Fix apply_diff tool documentation for multi-file capabilities
+    - Fix cache files excluded from rules compilation (thanks @MuriloFP!)
+    - Add streamlined extension installation and documentation (thanks @devxpain!)
+    - Prevent Architect mode from providing time estimates
+    - Remove context size from environment details
+    - Change default mode to architect for new installations
+    - Suppress Mermaid error rendering
+    - Improve Mermaid buttons with light background in light mode (thanks @chrarnoldus!)
+    - Add .vscode/ to write-protected files/directories
+    - Update AWS Bedrock cross-region inference profile mapping (thanks @KevinZhao!)
+
+## [v4.50.0]
+
+- [#1111](https://github.com/Kilo-Org/kilocode/pull/1111) [`fe40949`](https://github.com/Kilo-Org/kilocode/commit/fe4094938ffc14fdbc19fde874a45d80f0431c6c) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Make MCP server toggles easier accessible with button in the top bar
+
+### Patch Changes
+
+- [#967](https://github.com/Kilo-Org/kilocode/pull/967) [`cd574a5`](https://github.com/Kilo-Org/kilocode/commit/cd574a5d1076c671a7abe2ca5f0f6c45fd524cd7) Thanks [@catrielmuller](https://github.com/catrielmuller)! - System Notification Setting
+
+## [v4.49.5]
+
+- [#1083](https://github.com/Kilo-Org/kilocode/pull/1083) [`d2f5c4f`](https://github.com/Kilo-Org/kilocode/commit/d2f5c4f3448bcf573663a8bef96a044b1f7f287e) Thanks [@IAmABear](https://github.com/IAmABear)! - Fix project mcp settings button not opening file
+
+- [#1107](https://github.com/Kilo-Org/kilocode/pull/1107) [`77cdbc9`](https://github.com/Kilo-Org/kilocode/commit/77cdbc9c3f70393ca9f1de15898a1ef74c107834) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Exclude binary and cache files from rules compilation
+
+## [v4.49.4]
+
+- [#942](https://github.com/Kilo-Org/kilocode/pull/942) [`873e6c8`](https://github.com/Kilo-Org/kilocode/commit/873e6c8f671f5505e6fca8c7ed19ac5e89c73d43) Thanks [@hassoncs](https://github.com/hassoncs)! - Fix auto-generate commit message fails when git diff too large
+
+    Now we automatically exclude lockfiles when generating commit message diffs to avoid overflowing the context window.
+
+- [#956](https://github.com/Kilo-Org/kilocode/pull/956) [`7219c34`](https://github.com/Kilo-Org/kilocode/commit/7219c342501d36b6e85a15ae09f3eed2796d0f7a) Thanks [@markijbema](https://github.com/markijbema)! - do not autocomplete when we are indenting a line
+
+- [#1060](https://github.com/Kilo-Org/kilocode/pull/1060) [`8b149e1`](https://github.com/Kilo-Org/kilocode/commit/8b149e1e54319d2b6737ad7ed5a65ad4e921240f) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Fix model search being prefilled in dropdown to prevent confusion in available models
+
 ## [v4.49.3]
 
 - [#981](https://github.com/Kilo-Org/kilocode/pull/981) [`66a4d0f`](https://github.com/Kilo-Org/kilocode/commit/66a4d0f58821e4321f6c127bbbf95d96450ba054) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - No longer steal focus from the chat text area when a file is being edited.

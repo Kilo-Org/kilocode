@@ -57,6 +57,10 @@
 		"ollamaUrlLabel": "URL Ollama:",
 		"qdrantUrlLabel": "URL Qdrant",
 		"qdrantKeyLabel": "Ключ Qdrant:",
+		"advancedConfigLabel": "Розширена конфігурація",
+		"searchMinScoreLabel": "Поріг оцінки пошуку",
+		"searchMinScoreDescription": "Мінімальна оцінка схожості (0.0-1.0), необхідна для результатів пошуку. Нижчі значення повертають більше результатів, але можуть бути менш релевантними. Вищі значення повертають менше, але більш релевантних результатів.",
+		"searchMinScoreResetTooltip": "Скинути до значення за замовчуванням (0.4)",
 		"startIndexingButton": "Почати індексацію",
 		"clearIndexDataButton": "Очистити дані індексу",
 		"unsavedSettingsMessage": "Будь ласка, збережіть налаштування перед початком процесу індексації.",
@@ -110,6 +114,11 @@
 		"subtasks": {
 			"label": "Підзавдання",
 			"description": "Дозволити створення та виконання підзавдань без необхідності затвердження"
+		},
+		"followupQuestions": {
+			"label": "Питання",
+			"description": "Автоматично вибирати першу запропоновану відповідь на додаткові питання після налаштованого тайм-ауту",
+			"timeoutLabel": "Час очікування перед автоматичним вибором першої відповіді"
 		},
 		"execute": {
 			"label": "Виконати",
@@ -596,7 +605,7 @@
 	},
 	"footer": {
 		"feedback": "Якщо у тебе є питання або відгуки, не соромся відкрити issue на <githubLink>github.com/Kilo-Org/kilocode</githubLink> або приєднатися до <redditLink>reddit.com/r/kilocode</redditLink> або <discordLink>kilocode.ai/discord</discordLink>.",
-		"support": "З фінансових питань звертайся до служби підтримки клієнтів за адресою <supportLink>hi@kilocode.ai</supportLink>",
+		"support": "З фінансових питань звертайся до служби підтримки клієнтів за адресою <supportLink>https://kilocode.ai/support</supportLink>",
 		"telemetry": {
 			"label": "Дозволити анонімне звітування про помилки та використання",
 			"description": "Допоможи покращити Kilo Code, надсилаючи анонімні дані про використання та звіти про помилки. Жоден код, підказки або особиста інформація ніколи не надсилаються. Дивись нашу політику конфіденційності для отримання додаткової інформації."

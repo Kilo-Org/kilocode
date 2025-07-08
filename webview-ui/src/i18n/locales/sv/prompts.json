@@ -8,7 +8,9 @@
 		"editGlobalModes": "Redigera Global Modes",
 		"editProjectModes": "Redigera Project Modes (.kilocodemodes)",
 		"createModeHelpText": "Lägen är specialiserade personas som anpassar Kilo Codes beteende. <0>Lär dig om att använda lägen</0> eller <1>anpassa lägen.</1>",
-		"selectMode": "Sök lägen"
+		"selectMode": "Sök lägen",
+		"importMode": "Importera läge",
+		"noMatchFound": "Inga lägen hittades"
 	},
 	"apiConfiguration": {
 		"title": "API-konfiguration",
@@ -49,6 +51,27 @@
 		"resetToDefault": "Återställ till standard",
 		"description": "Lägg till beteenderiktlinjer specifika för {{modeName}}-läget.",
 		"loadFromFile": "Anpassade instruktioner specifika för {{mode}}-läget kan också laddas från mappen <span>.kilocode/rules/</span> i din arbetsyta (.kilocoderules-{{slug}} är föråldrat och kommer snart att sluta fungera)."
+	},
+	"exportMode": {
+		"title": "Exportera läge",
+		"description": "Exportera detta läge med regler från mappen .kilocode/rules-{{slug}}/ kombinerade till en delbar YAML-fil. De ursprungliga filerna förblir oförändrade.",
+		"exporting": "Exporterar..."
+	},
+	"importMode": {
+		"selectLevel": "Välj var detta läge ska importeras:",
+		"import": "Importera",
+		"importing": "Importerar...",
+		"global": {
+			"label": "Global nivå",
+			"description": "Tillgänglig i alla projekt. Om det exporterade läget innehöll regelfiler kommer de att återskapas i den globala mappen .kilocode/rules-{slug}/."
+		},
+		"project": {
+			"label": "Projektnivå",
+			"description": "Endast tillgänglig i denna arbetsyta. Om det exporterade läget innehöll regelfiler kommer de att återskapas i mappen .kilocode/rules-{slug}/."
+		}
+	},
+	"advanced": {
+		"title": "Avancerat: Åsidosätt System Prompt"
 	},
 	"globalCustomInstructions": {
 		"title": "Anpassade instruktioner för alla lägen",

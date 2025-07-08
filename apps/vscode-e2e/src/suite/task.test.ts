@@ -20,7 +20,7 @@ suite("Kilo Code Task", function () {
 		})
 
 		const taskId = await api.startNewTask({
-			configuration: { mode: "Ask", alwaysAllowModeSwitch: true, autoApprovalEnabled: true },
+			configuration: { mode: "ask", alwaysAllowModeSwitch: true, autoApprovalEnabled: true },
 			text: "Hello world, what is your name? Respond with 'My name is ...'",
 		})
 

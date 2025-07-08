@@ -62,15 +62,23 @@
 		"mistake_limit_guidance": "Ini mungkin menunjukkan kegagalan dalam proses pemikiran model atau ketidakmampuan untuk menggunakan tool dengan benar, yang dapat diatasi dengan beberapa panduan pengguna (misalnya \"Coba bagi tugas menjadi langkah-langkah yang lebih kecil\").",
 		"violated_organization_allowlist": "Gagal menjalankan tugas: profil saat ini melanggar pengaturan organisasi kamu",
 		"condense_failed": "Gagal mengompres konteks",
-		"condense_not_enough_messages": "Tidak cukup pesan untuk mengompres konteks",
+		"condense_not_enough_messages": "Tidak cukup pesan untuk mengompres konteks {{prevContextTokens}} token. Setidaknya {{minimumMessageCount}} pesan diperlukan, tetapi hanya {{messageCount}} yang tersedia.",
 		"condensed_recently": "Konteks baru saja dikompres; melewati percobaan ini",
 		"condense_handler_invalid": "Handler API untuk mengompres konteks tidak valid",
-		"condense_context_grew": "Ukuran konteks bertambah saat mengompres; melewati percobaan ini",
+		"condense_context_grew": "Ukuran konteks bertambah dari {{prevContextTokens}} menjadi {{newContextTokens}} saat mengompres; melewati percobaan ini",
+		"url_timeout": "Situs web membutuhkan waktu terlalu lama untuk dimuat (timeout). Ini bisa disebabkan oleh koneksi lambat, situs web berat, atau sementara tidak tersedia. Kamu bisa mencoba lagi nanti atau memeriksa apakah URL sudah benar.",
+		"url_not_found": "Alamat situs web tidak dapat ditemukan. Silakan periksa apakah URL sudah benar dan coba lagi.",
+		"no_internet": "Tidak ada koneksi internet. Silakan periksa koneksi jaringan kamu dan coba lagi.",
+		"url_forbidden": "Akses ke situs web ini dilarang. Situs mungkin memblokir akses otomatis atau memerlukan autentikasi.",
+		"url_page_not_found": "Halaman tidak ditemukan. Silakan periksa apakah URL sudah benar.",
+		"url_fetch_failed": "Gagal mengambil konten URL: {{error}}",
+		"url_fetch_error_with_url": "Error mengambil konten untuk {{url}}: {{error}}",
 		"share_task_failed": "Gagal membagikan tugas. Silakan coba lagi.",
 		"share_no_active_task": "Tidak ada tugas aktif untuk dibagikan",
 		"share_auth_required": "Autentikasi diperlukan. Silakan masuk untuk berbagi tugas.",
 		"share_not_enabled": "Berbagi tugas tidak diaktifkan untuk organisasi ini.",
 		"share_task_not_found": "Tugas tidak ditemukan atau akses ditolak.",
+		"mode_import_failed": "Gagal mengimpor mode: {{error}}",
 		"claudeCode": {
 			"processExited": "Proses Claude Code keluar dengan kode {{exitCode}}.",
 			"errorOutput": "Output error: {{output}}",
@@ -91,7 +99,8 @@
 	},
 	"warnings": {
 		"no_terminal_content": "Tidak ada konten terminal yang dipilih",
-		"missing_task_files": "File tugas ini hilang. Apakah kamu ingin menghapusnya dari daftar tugas?"
+		"missing_task_files": "File tugas ini hilang. Apakah kamu ingin menghapusnya dari daftar tugas?",
+		"auto_import_failed": "Gagal mengimpor pengaturan Kilo Code secara otomatis: {{error}}"
 	},
 	"info": {
 		"no_changes": "Tidak ada perubahan ditemukan.",
@@ -100,11 +109,14 @@
 		"custom_storage_path_set": "Path penyimpanan kustom diatur: {{path}}",
 		"default_storage_path": "Kembali menggunakan path penyimpanan default",
 		"settings_imported": "Pengaturan berhasil diimpor.",
+		"auto_import_success": "Pengaturan Kilo Code berhasil diimpor secara otomatis dari {{filename}}",
 		"share_link_copied": "Link bagikan disalin ke clipboard",
 		"image_copied_to_clipboard": "Data URI gambar disalin ke clipboard",
 		"image_saved": "Gambar disimpan ke {{path}}",
 		"organization_share_link_copied": "Tautan berbagi organisasi disalin ke clipboard!",
-		"public_share_link_copied": "Tautan berbagi publik disalin ke clipboard!"
+		"public_share_link_copied": "Tautan berbagi publik disalin ke clipboard!",
+		"mode_exported": "Mode '{{mode}}' berhasil diekspor",
+		"mode_imported": "Mode berhasil diimpor"
 	},
 	"answers": {
 		"yes": "Ya",
@@ -142,8 +154,8 @@
 	},
 	"customModes": {
 		"errors": {
-			"yamlParseError": "YAML tidak valid dalam file .roomodes pada baris {{line}}. Silakan periksa:\n• Indentasi yang benar (gunakan spasi, bukan tab)\n• Tanda kutip dan kurung yang cocok\n• Sintaks YAML yang valid",
-			"schemaValidationError": "Format mode kustom tidak valid dalam .roomodes:\n{{issues}}",
+			"yamlParseError": "YAML tidak valid dalam file .kilocodemodes pada baris {{line}}. Silakan periksa:\n• Indentasi yang benar (gunakan spasi, bukan tab)\n• Tanda kutip dan kurung yang cocok\n• Sintaks YAML yang valid",
+			"schemaValidationError": "Format mode kustom tidak valid dalam .kilocodemodes:\n{{issues}}",
 			"invalidFormat": "Format mode kustom tidak valid. Pastikan pengaturan kamu mengikuti format YAML yang benar.",
 			"updateFailed": "Gagal memperbarui mode kustom: {{error}}",
 			"deleteFailed": "Gagal menghapus mode kustom: {{error}}",

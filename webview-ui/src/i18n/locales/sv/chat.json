@@ -116,6 +116,7 @@
 	},
 	"selectMode": "Välj läge för interaktion",
 	"selectApiConfig": "Välj API-konfiguration",
+	"selectModelConfig": "Välj modell",
 	"enhancePrompt": "Förbättra prompt med ytterligare kontext",
 	"enhancePromptDescription": "Knappen 'Förbättra prompt' hjälper till att förbättra din prompt genom att tillhandahålla ytterligare kontext, förtydligande eller omformulering. Prova att skriva en prompt här och klicka på knappen igen för att se hur det fungerar.",
 	"modeSelector": {
@@ -207,7 +208,8 @@
 	"codebaseSearch": {
 		"wantsToSearch": "Kilo Code vill söka i kodbasen efter <code>{{query}}</code>:",
 		"wantsToSearchWithPath": "Kilo Code vill söka i kodbasen efter <code>{{query}}</code> i <code>{{path}}</code>:",
-		"didSearch": "Hittade {{count}} resultat för <code>{{query}}</code>:"
+		"didSearch": "Hittade {{count}} resultat för <code>{{query}}</code>:",
+		"resultTooltip": "Likhetspoäng: {{score}} (klicka för att öppna fil)"
 	},
 	"commandOutput": "Kommandoutdata",
 	"response": "Svar",
@@ -263,7 +265,9 @@
 		"seconds": "{{count}}s"
 	},
 	"followUpSuggest": {
-		"copyToInput": "Kopiera till inmatning (samma som shift + klick)"
+		"copyToInput": "Kopiera till inmatning (samma som shift + klick)",
+		"autoSelectCountdown": "Väljer automatiskt om {{count}}s",
+		"countdownDisplay": "{{count}}s"
 	},
 	"browser": {
 		"rooWantsToUse": "Kilo Code vill använda webbläsaren:",
@@ -316,5 +320,8 @@
 		"indexed": "Indexerat",
 		"error": "Indexfel",
 		"status": "Indexstatus"
+	},
+	"versionIndicator": {
+		"ariaLabel": "Version {{version}} - Klicka för att visa versionsanteckningar"
 	}
 }

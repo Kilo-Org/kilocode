@@ -57,6 +57,10 @@
 		"ollamaUrlLabel": "Ollama-URL:",
 		"qdrantUrlLabel": "Qdrant-URL",
 		"qdrantKeyLabel": "Qdrant-Schlüssel:",
+		"advancedConfigLabel": "Erweiterte Konfiguration",
+		"searchMinScoreLabel": "Suchergebnis-Schwellenwert",
+		"searchMinScoreDescription": "Mindestähnlichkeitswert (0.0-1.0), der für Suchergebnisse erforderlich ist. Niedrigere Werte liefern mehr Ergebnisse, die jedoch möglicherweise weniger relevant sind. Höhere Werte liefern weniger, aber relevantere Ergebnisse.",
+		"searchMinScoreResetTooltip": "Auf Standardwert zurücksetzen (0.4)",
 		"startIndexingButton": "Indexierung starten",
 		"clearIndexDataButton": "Indexdaten löschen",
 		"unsavedSettingsMessage": "Bitte speichere deine Einstellungen, bevor du den Indexierungsprozess startest.",
@@ -110,6 +114,11 @@
 		"subtasks": {
 			"label": "Teilaufgaben",
 			"description": "Erstellung und Abschluss von Unteraufgaben ohne Genehmigung erlauben"
+		},
+		"followupQuestions": {
+			"label": "Frage",
+			"description": "Automatisch die erste vorgeschlagene Antwort für Folgefragen nach der konfigurierten Zeitüberschreitung auswählen",
+			"timeoutLabel": "Wartezeit vor der automatischen Auswahl der ersten Antwort"
 		},
 		"execute": {
 			"label": "Ausführen",
@@ -591,7 +600,7 @@
 	},
 	"footer": {
 		"feedback": "Wenn du Fragen oder Feedback hast, kannst du gerne ein Issue auf <githubLink>github.com/Kilo-Org/kilocode</githubLink> öffnen oder <redditLink>reddit.com/r/kilocode</redditLink> oder <discordLink>kilocode.ai/discord</discordLink> beitreten",
-		"support": "Für finanzielle Fragen wenden Sie sich bitte an den Kundensupport unter <supportLink>hi@kilocode.ai</supportLink>",
+		"support": "Für finanzielle Fragen wenden Sie sich bitte an den Kundensupport unter <supportLink>https://kilocode.ai/support</supportLink>",
 		"telemetry": {
 			"label": "Anonyme Fehler- und Nutzungsberichte zulassen",
 			"description": "Helfen Sie, Kilo Code zu verbessern, indem Sie anonyme Nutzungsdaten und Fehlerberichte senden. Es werden niemals Code, Prompts oder persönliche Informationen gesendet. Weitere Details finden Sie in unserer Datenschutzrichtlinie."

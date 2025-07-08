@@ -32,6 +32,13 @@
 				"label": "Permet lectures de fitxers molt grans",
 				"description": "Quan està activat, Kilo Code realitzarà lectures de fitxers o sortides MCP molt grans encara que hi hagi una alta probabilitat de desbordar la finestra de context (mida del contingut >80% de la finestra de context)."
 			}
+		},
+		"systemNotifications": {
+			"label": "Activar notificacions del sistema",
+			"description": "Quan està activat, Kilo Code enviarà notificacions del sistema per a esdeveniments importants com la finalització de tasques o errors.",
+			"testButton": "Provar notificació",
+			"testTitle": "Kilo Code",
+			"testMessage": "Aquesta és una notificació de prova de Kilo Code."
 		}
 	},
 	"profile": {
@@ -39,12 +46,7 @@
 		"dashboard": "Tauler de control",
 		"logOut": "Tancar sessió",
 		"currentBalance": "SALDO ACTUAL",
-		"loading": "Carregant...",
-		"signUp": {
-			"title": "Registra't a Kilo Code",
-			"description": "Registrar-se a Kilo Code et dona crèdits gratuïts per començar. Utilitza els teus crèdits per explorar les nostres funcions, provar els models més nous i millors, i experimentar els beneficis de Kilo Code sense compromís.",
-			"termsAndPrivacy": "En continuar, acceptes les <termsLink>Condicions del Servei</termsLink> i la <privacyLink>Política de Privacitat.</privacyLink>"
-		}
+		"loading": "Carregant..."
 	},
 	"chat": {
 		"condense": {

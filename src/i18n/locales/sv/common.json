@@ -62,15 +62,23 @@
 		"mistake_limit_guidance": "Detta kan indikera ett fel i modellens tankeprocess eller oförmåga att använda ett verktyg korrekt, vilket kan mildras med viss användarvägledning (t.ex. \"Försök dela upp uppgiften i mindre steg\").",
 		"violated_organization_allowlist": "Misslyckades med att köra uppgift: den aktuella profilen bryter mot din organisations inställningar",
 		"condense_failed": "Misslyckades med att kondensera kontext",
-		"condense_not_enough_messages": "Inte tillräckligt med meddelanden för att kondensera kontext",
+		"condense_not_enough_messages": "Inte tillräckligt med meddelanden för att kondensera kontext på {{prevContextTokens}} tokens. Minst {{minimumMessageCount}} meddelanden krävs, men endast {{messageCount}} är tillgängliga.",
 		"condensed_recently": "Kontext kondenserades nyligen; hoppar över detta försök",
 		"condense_handler_invalid": "API-hanterare för kondensering av kontext är ogiltig",
-		"condense_context_grew": "Kontextstorlek ökade under kondensering; hoppar över detta försök",
+		"condense_context_grew": "Kontextstorlek ökade från {{prevContextTokens}} till {{newContextTokens}} under kondensering; hoppar över detta försök",
+		"url_timeout": "Webbplatsen tog för lång tid att ladda (timeout). Detta kan bero på en långsam anslutning, tung webbplats eller att webbplatsen är tillfälligt otillgänglig. Du kan försöka igen senare eller kontrollera om URL:en är korrekt.",
+		"url_not_found": "Webbplatsadressen kunde inte hittas. Kontrollera om URL:en är korrekt och försök igen.",
+		"no_internet": "Ingen internetanslutning. Kontrollera din nätverksanslutning och försök igen.",
+		"url_forbidden": "Åtkomst till denna webbplats är förbjuden. Webbplatsen kan blockera automatisk åtkomst eller kräva autentisering.",
+		"url_page_not_found": "Sidan hittades inte. Kontrollera om URL:en är korrekt.",
+		"url_fetch_failed": "Misslyckades med att hämta URL-innehåll: {{error}}",
+		"url_fetch_error_with_url": "Fel vid hämtning av innehåll för {{url}}: {{error}}",
 		"share_task_failed": "Misslyckades med att dela uppgift. Försök igen.",
 		"share_no_active_task": "Ingen aktiv uppgift att dela",
 		"share_auth_required": "Autentisering krävs. Logga in för att dela uppgifter.",
 		"share_not_enabled": "Uppgiftsdelning är inte aktiverat för denna organisation.",
 		"share_task_not_found": "Uppgift hittades inte eller åtkomst nekad.",
+		"mode_import_failed": "Misslyckades med att importera läge: {{error}}",
 		"claudeCode": {
 			"processExited": "Claude Code-processen avslutades med kod {{exitCode}}.",
 			"errorOutput": "Felutdata: {{output}}",
@@ -91,7 +99,8 @@
 	},
 	"warnings": {
 		"no_terminal_content": "Inget terminalinnehåll valt",
-		"missing_task_files": "Denna uppgifts filer saknas. Vill du ta bort den från uppgiftslistan?"
+		"missing_task_files": "Denna uppgifts filer saknas. Vill du ta bort den från uppgiftslistan?",
+		"auto_import_failed": "Misslyckades med att automatiskt importera Kilo Code-inställningar: {{error}}"
 	},
 	"info": {
 		"no_changes": "Inga ändringar hittades.",
@@ -100,11 +109,14 @@
 		"custom_storage_path_set": "Anpassad lagringssökväg inställd: {{path}}",
 		"default_storage_path": "Återgick till att använda standardlagringssökväg",
 		"settings_imported": "Inställningar importerades framgångsrikt.",
+		"auto_import_success": "Kilo Code-inställningar importerades automatiskt från {{filename}}",
 		"share_link_copied": "Delningslänk kopierad till urklipp",
 		"organization_share_link_copied": "Organisationsdelningslänk kopierad till urklipp!",
 		"public_share_link_copied": "Offentlig delningslänk kopierad till urklipp!",
 		"image_copied_to_clipboard": "Image data URI kopierad till urklipp",
-		"image_saved": "Bild sparad till {{path}}"
+		"image_saved": "Bild sparad till {{path}}",
+		"mode_exported": "Läge '{{mode}}' exporterades framgångsrikt",
+		"mode_imported": "Läge importerades framgångsrikt"
 	},
 	"answers": {
 		"yes": "Ja",
@@ -131,8 +143,8 @@
 	},
 	"customModes": {
 		"errors": {
-			"yamlParseError": "Ogiltig YAML i .roomodes-filen på rad {{line}}. Kontrollera följande:\n• Korrekt indragning (använd mellanslag, inte tabs)\n• Matchande citattecken och klamrar\n• Giltig YAML-syntax",
-			"schemaValidationError": "Ogiltigt format för anpassade lägen i .roomodes:\n{{issues}}",
+			"yamlParseError": "Ogiltig YAML i .kilocodemodes-filen på rad {{line}}. Kontrollera följande:\n• Korrekt indragning (använd mellanslag, inte tabs)\n• Matchande citattecken och klamrar\n• Giltig YAML-syntax",
+			"schemaValidationError": "Ogiltigt format för anpassade lägen i .kilocodemodes:\n{{issues}}",
 			"invalidFormat": "Ogiltigt format för anpassade lägen. Säkerställ att dina inställningar följer korrekt YAML-format.",
 			"updateFailed": "Misslyckades med att uppdatera anpassat läge: {{error}}",
 			"deleteFailed": "Misslyckades med att ta bort anpassat läge: {{error}}",

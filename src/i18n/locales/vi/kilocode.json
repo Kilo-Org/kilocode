@@ -2,6 +2,11 @@
 	"info": {
 		"settings_imported": "Cài đặt đã được nhập thành công."
 	},
+	"userFeedback": {
+		"message_update_failed": "Không thể cập nhật tin nhắn",
+		"no_checkpoint_found": "Không tìm thấy điểm kiểm tra trước tin nhắn này",
+		"message_updated": "Tin nhắn đã được cập nhật"
+	},
 	"lowCreditWarning": {
 		"title": "Cảnh Báo Tín Dụng Thấp!",
 		"message": "Kiểm tra xem bạn có thể nạp thêm tín dụng miễn phí hoặc mua thêm không!"
@@ -39,18 +44,9 @@
 		"gitNotFound": "⚠️ Không tìm thấy kho lưu trữ Git hoặc git không khả dụng",
 		"gitInitError": "⚠️ Lỗi khởi tạo Git: {{error}}",
 		"generating": "Kilo: Đang tạo tin nhắn commit...",
-		"analyzingChanges": "Kilo: Đang phân tích các thay đổi đã dàn dựng...",
-		"noStagedChangesRepo": "Kilo: Không tìm thấy thay đổi nào đã được staged trong kho git",
-		"noStagedChanges": "Kilo: Không tìm thấy thay đổi đã tổ chức để phân tích",
+		"noChanges": "Kilo: Không tìm thấy thay đổi để phân tích",
 		"generated": "Kilo: Đã tạo thông điệp commit!",
 		"generationFailed": "Kilo: Không thể tạo thông điệp commit: {{errorMessage}}",
-		"tokenRequired": "Mã token Kilo Code được yêu cầu để tạo thông điệp commit",
-		"activationFailed": "Kilo: Không thể kích hoạt nhà cung cấp tin nhắn commit: {{error}}",
-		"providerRegistered": "Kilo: Đã đăng ký nhà cung cấp thông điệp commit"
-	},
-	"userFeedback": {
-		"message_update_failed": "Không thể cập nhật tin nhắn",
-		"no_checkpoint_found": "Không tìm thấy điểm kiểm tra trước tin nhắn này",
-		"message_updated": "Tin nhắn đã được cập nhật"
+		"generatingFromUnstaged": "Kilo: Tạo tin nhắn sử dụng các thay đổi chưa được đưa vào dàn dựng"
 	}
 }

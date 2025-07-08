@@ -2,6 +2,11 @@
 	"info": {
 		"settings_imported": "Inställningar importerades framgångsrikt."
 	},
+	"userFeedback": {
+		"message_update_failed": "Misslyckades med att uppdatera meddelande",
+		"no_checkpoint_found": "Ingen checkpoint hittades före detta meddelande",
+		"message_updated": "Meddelande uppdaterat"
+	},
 	"lowCreditWarning": {
 		"title": "Varning för låg kredit!",
 		"message": "Kontrollera om du kan fylla på med gratis krediter eller köpa fler!"
@@ -35,22 +40,13 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Kilo Code commit-meddelandegenerator aktiverad",
-		"gitNotFound": "⚠️ Git-repository hittades inte eller git är inte tillgängligt",
-		"gitInitError": "⚠️ Git-initieringsfel: {{error}}",
+		"activated": "Kilo Code meddelandegenerator för kodkommittar aktiverad",
+		"gitNotFound": "⚠️ Git-arkiv hittades inte eller git är inte tillgängligt",
+		"gitInitError": "⚠️ Git initialiseringsfel: {{error}}",
 		"generating": "Kilo: Genererar commit-meddelande...",
-		"analyzingChanges": "Kilo: Analyserar förberedda ändringar...",
-		"noStagedChangesRepo": "Kilo: Inga förberedda ändringar hittades i git-repository",
-		"noStagedChanges": "Kilo: Inga förberedda ändringar hittades att analysera",
+		"noChanges": "Kilo: Inga förändringar hittades att analysera",
 		"generated": "Kilo: Commit-meddelande genererat!",
 		"generationFailed": "Kilo: Misslyckades med att generera commit-meddelande: {{errorMessage}}",
-		"tokenRequired": "Kilo Code-token krävs för att generera commit-meddelande",
-		"activationFailed": "Kilo: Misslyckades med att aktivera commit-meddelandeleverantör: {{error}}",
-		"providerRegistered": "Kilo: Commit-meddelandeleverantör registrerad"
-	},
-	"userFeedback": {
-		"message_update_failed": "Misslyckades med att uppdatera meddelande",
-		"no_checkpoint_found": "Ingen checkpoint hittades före detta meddelande",
-		"message_updated": "Meddelande uppdaterat"
+		"generatingFromUnstaged": "Kilo: Genererar meddelande med ej iscensatta ändringar"
 	}
 }

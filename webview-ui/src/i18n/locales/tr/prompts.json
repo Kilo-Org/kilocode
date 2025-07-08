@@ -4,6 +4,8 @@
 	"modes": {
 		"title": "Modlar",
 		"createNewMode": "Yeni mod oluştur",
+		"importMode": "Modu içe aktar",
+		"noMatchFound": "Mod bulunamadı",
 		"editModesConfig": "Mod yapılandırmasını düzenle",
 		"editGlobalModes": "Global modları düzenle",
 		"editProjectModes": "Proje modlarını düzenle (.kilocodemodes)",
@@ -50,10 +52,28 @@
 		"description": "{{modeName}} modu için özel davranış yönergeleri ekleyin.",
 		"loadFromFile": "{{mode}} moduna özgü özel talimatlar ayrıca çalışma alanınızdaki <span>.kilocode/rules/</span> klasöründen yüklenebilir (.kilocoderules-{{slug}} kullanımdan kaldırılmıştır ve yakında çalışmayı durduracaktır)."
 	},
+	"exportMode": {
+		"title": "Modu Dışa Aktar",
+		"description": "Bu modu .kilocode/rules-{{slug}}/ klasöründeki kurallarla birlikte paylaşılabilir bir YAML dosyasına dışa aktar. Orijinal dosyalar değişmeden kalır.",
+		"exporting": "Dışa aktarılıyor..."
+	},
 	"globalCustomInstructions": {
 		"title": "Tüm Modlar için Özel Talimatlar",
 		"description": "Bu talimatlar tüm modlara uygulanır. Aşağıdaki moda özgü talimatlarla geliştirilebilen temel davranış seti sağlarlar. <0>Daha fazla bilgi edinin</0>",
 		"loadFromFile": "Talimatlar ayrıca çalışma alanınızdaki <span>.kilocode/rules/</span> klasöründen de yüklenebilir (.kilocoderules ve .clinerules kullanımdan kaldırılmıştır ve yakında çalışmayı durduracaklardır)."
+	},
+	"importMode": {
+		"selectLevel": "Bu modu nereye içe aktaracağınızı seçin:",
+		"import": "İçe Aktar",
+		"importing": "İçe aktarılıyor...",
+		"global": {
+			"label": "Genel Seviye",
+			"description": "Tüm projelerde kullanılabilir. Dışa aktarılan mod kural dosyaları içeriyorsa, bunlar genel .kilocode/rules-{slug}/ klasöründe yeniden oluşturulur."
+		},
+		"project": {
+			"label": "Proje Seviyesi",
+			"description": "Yalnızca bu çalışma alanında kullanılabilir. Dışa aktarılan mod kural dosyaları içeriyorsa, bunlar .kilocode/rules-{slug}/ klasöründe yeniden oluşturulur."
+		}
 	},
 	"systemPrompt": {
 		"preview": "Sistem promptunu önizle",
@@ -168,5 +188,8 @@
 		},
 		"deleteMode": "Modu sil"
 	},
-	"allFiles": "tüm dosyalar"
+	"allFiles": "tüm dosyalar",
+	"advanced": {
+		"title": "Gelişmiş"
+	}
 }

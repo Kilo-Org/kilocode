@@ -116,6 +116,7 @@
 	},
 	"selectMode": "اختر نمط التفاعل",
 	"selectApiConfig": "اختر إعدادات API",
+	"selectModelConfig": "اختر النموذج",
 	"enhancePrompt": "حسّن الموجه بإضافة سياق",
 	"modeSelector": {
 		"title": "الأنماط",
@@ -207,7 +208,8 @@
 	"codebaseSearch": {
 		"wantsToSearch": "Kilo Code يريد البحث في الكود عن <code>{{query}}</code>:",
 		"wantsToSearchWithPath": "Kilo Code يريد البحث في الكود عن <code>{{query}}</code> في <code>{{path}}</code>:",
-		"didSearch": "تم العثور على {{count}} نتيجة لـ <code>{{query}}</code>:"
+		"didSearch": "تم العثور على {{count}} نتيجة لـ <code>{{query}}</code>:",
+		"resultTooltip": "درجة التشابه: {{score}} (انقر لفتح الملف)"
 	},
 	"commandOutput": "مخرجات الأمر",
 	"response": "الاستجابة",
@@ -263,7 +265,9 @@
 		"seconds": "{{count}}ث"
 	},
 	"followUpSuggest": {
-		"copyToInput": "انسخ إلى الإدخال (Shift + انقر)"
+		"copyToInput": "انسخ إلى الإدخال (Shift + انقر)",
+		"autoSelectCountdown": "سيتم الاختيار تلقائياً خلال {{count}}ث",
+		"countdownDisplay": "{{count}}ث"
 	},
 	"browser": {
 		"rooWantsToUse": "Kilo Code يريد استخدام المتصفح:",
@@ -316,5 +320,8 @@
 		"indexed": "تمت الفهرسة",
 		"error": "خطأ في الفهرسة",
 		"status": "حالة الفهرسة"
+	},
+	"versionIndicator": {
+		"ariaLabel": "الإصدار {{version}} - انقر لعرض ملاحظات الإصدار"
 	}
 }

@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import * as vscode from "vscode"
 import * as path from "path"
 import { spawnSync } from "child_process"
@@ -7,6 +8,10 @@ import { RooIgnoreController } from "../../core/ignore/RooIgnoreController"
 export interface GitChange {
 	filePath: string
 	status: string
+}
+
+export interface GitOptions {
+	staged: boolean
 }
 
 /**
@@ -38,13 +43,13 @@ export class GitExtensionService {
 	}
 
 	/**
-	 * Gathers information about staged changes using git diff --cached
+	 * Gathers information about changes (staged or unstaged)
 	 */
-	public async gatherStagedChanges(): Promise<GitChange[] | null> {
+	public async gatherChanges(options: GitOptions): Promise<GitChange[]> {
 		try {
-			const statusOutput = await this.getStagedStatus()
+			const statusOutput = this.getStatus(options)
 			if (!statusOutput.trim()) {
-				return null
+				return []
 			}
 
 			const changes: GitChange[] = []
@@ -62,10 +67,11 @@ export class GitExtensionService {
 				})
 			}
 
-			return changes.length > 0 ? changes : null
+			return changes
 		} catch (error) {
-			console.error("Error gathering staged changes:", error)
-			return null
+			const changeType = options.staged ? "staged" : "unstaged"
+			console.error(`Error gathering ${changeType} changes:`, error)
+			return []
 		}
 	}
 
@@ -121,45 +127,47 @@ export class GitExtensionService {
 		}
 	}
 
-	/**
-	 * Gets the diff of staged changes, automatically excluding files based on shouldExcludeFromGitDiff
-	 */
-	private getStagedDiff(): string {
+	private getDiffForChanges(options: GitOptions): string {
+		const { staged } = options
 		try {
 			const diffs: string[] = []
-			const stagedFiles = this.getStagedFilesList()
+			const args = staged ? ["diff", "--name-only", "--cached"] : ["diff", "--name-only"]
+			const files = this.spawnGitWithArgs(args)
+				.split("\n")
+				.map((line) => line.trim())
+				.filter((line) => line.length > 0)
 
-			for (const filePath of stagedFiles) {
+			for (const filePath of files) {
 				if (this.ignoreController.validateAccess(filePath) && !shouldExcludeLockFile(filePath)) {
-					const diff = this.getStagedDiffForFile(filePath).trim()
+					const diff = this.getGitDiff(filePath, { staged }).trim()
 					diffs.push(diff)
 				}
 			}
 
 			return diffs.join("\n")
 		} catch (error) {
-			console.error("Error generating staged diff:", error)
+			const changeType = staged ? "staged" : "unstaged"
+			console.error(`Error generating ${changeType} diff:`, error)
 			return ""
 		}
 	}
 
-	private getStagedFilesList(): string[] {
-		return this.spawnGitWithArgs(["diff", "--name-only", "--cached"])
-			.split("\n")
-			.map((line) => line.trim())
-			.filter((line) => line.length > 0)
+	private getStatus(options: GitOptions): string {
+		const { staged } = options
+		const args = staged ? ["diff", "--name-status", "--cached"] : ["diff", "--name-status"]
+		return this.spawnGitWithArgs(args)
 	}
 
-	private getStagedDiffForFile(filePath: string): string {
-		return this.spawnGitWithArgs(["diff", "--cached", "--", filePath])
+	private getSummary(options: GitOptions): string {
+		const { staged } = options
+		const args = staged ? ["diff", "--cached", "--stat"] : ["diff", "--stat"]
+		return this.spawnGitWithArgs(args)
 	}
 
-	private getStagedStatus(): string {
-		return this.spawnGitWithArgs(["diff", "--name-status", "--cached"])
-	}
-
-	private getStagedSummary(): string {
-		return this.spawnGitWithArgs(["diff", "--cached", "--stat"])
+	private getGitDiff(filePath: string, options: GitOptions): string {
+		const { staged } = options
+		const args = staged ? ["diff", "--cached", "--", filePath] : ["diff", "--", filePath]
+		return this.spawnGitWithArgs(args)
 	}
 
 	private getCurrentBranch(): string {
@@ -173,23 +181,26 @@ export class GitExtensionService {
 	/**
 	 * Gets all context needed for commit message generation
 	 */
-	public getCommitContext(changes: GitChange[]): string {
+	public getCommitContext(changes: GitChange[], options: GitOptions): string {
+		const { staged } = options
 		try {
 			// Start building the context with the required sections
 			let context = "## Git Context for Commit Message Generation\n\n"
 
 			// Add full diff - essential for understanding what changed
 			try {
-				const stagedDiff = this.getStagedDiff()
-				context += "### Full Diff of Staged Changes\n```diff\n" + stagedDiff + "\n```\n\n"
+				const diff = this.getDiffForChanges(options)
+				const changeType = staged ? "Staged" : "Unstaged"
+				context += `### Full Diff of ${changeType} Changes\n\`\`\`diff\n` + diff + "\n```\n\n"
 			} catch (error) {
-				context += "### Full Diff of Staged Changes\n```diff\n(No diff available)\n```\n\n"
+				const changeType = staged ? "Staged" : "Unstaged"
+				context += `### Full Diff of ${changeType} Changes\n\`\`\`diff\n(No diff available)\n\`\`\`\n\n`
 			}
 
 			// Add statistical summary - helpful for quick overview
 			try {
-				const stagedSummary = this.getStagedSummary()
-				context += "### Statistical Summary\n```\n" + stagedSummary + "\n```\n\n"
+				const summary = this.getSummary(options)
+				context += "### Statistical Summary\n```\n" + summary + "\n```\n\n"
 			} catch (error) {
 				context += "### Statistical Summary\n```\n(No summary available)\n```\n\n"
 			}

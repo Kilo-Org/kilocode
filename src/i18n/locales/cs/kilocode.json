@@ -2,6 +2,11 @@
 	"info": {
 		"settings_imported": "Nastavení byla úspěšně importována."
 	},
+	"userFeedback": {
+		"message_update_failed": "Aktualizace zprávy selhala",
+		"no_checkpoint_found": "Před touto zprávou nebyl nalezen žádný checkpoint",
+		"message_updated": "Zpráva byla úspěšně aktualizována"
+	},
 	"lowCreditWarning": {
 		"title": "Varování o nízkém kreditu!",
 		"message": "Zkontroluj, zda můžeš doplnit bezplatné kredity nebo si koupit další!"
@@ -35,22 +40,13 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Generátor commit zpráv Kilo Code aktivován",
-		"gitNotFound": "⚠️ Git repozitář nenalezen nebo git není k dispozici",
-		"gitInitError": "⚠️ Chyba inicializace Git: {{error}}",
-		"generating": "Kilo: Generování commit zprávy...",
-		"analyzingChanges": "Kilo: Analýza připravených změn...",
-		"noStagedChangesRepo": "Kilo: V git repozitáři nebyly nalezeny žádné připravené změny",
-		"noStagedChanges": "Kilo: Nebyly nalezeny žádné připravené změny k analýze",
-		"generated": "Kilo: Commit zpráva vygenerována!",
-		"generationFailed": "Kilo: Generování commit zprávy selhalo: {{errorMessage}}",
-		"tokenRequired": "Pro generování commit zprávy je vyžadován Kilo Code token",
-		"activationFailed": "Kilo: Aktivace poskytovatele commit zpráv selhala: {{error}}",
-		"providerRegistered": "Kilo: Poskytovatel commit zpráv zaregistrován"
-	},
-	"userFeedback": {
-		"message_update_failed": "Aktualizace zprávy selhala",
-		"no_checkpoint_found": "Před touto zprávou nebyl nalezen žádný checkpoint",
-		"message_updated": "Zpráva byla úspěšně aktualizována"
+		"activated": "Generátor zpráv pro commit Kilo Code aktivován",
+		"gitNotFound": "⚠️ Git repozitář nebyl nalezen nebo git není dostupný",
+		"gitInitError": "⚠️ Chyba inicializace Gitu: {{error}}",
+		"generating": "Kilo: Generuji zprávu commitu...",
+		"noChanges": "Kilo: Nenalezeny žádné změny k analýze",
+		"generated": "Kilo: Zpráva byla vygenerována!",
+		"generationFailed": "Kilo: Nepodařilo se vygenerovat zprávu commitu: {{errorMessage}}",
+		"generatingFromUnstaged": "Kilo: Generování zprávy s použitím nenapojených změn"
 	}
 }

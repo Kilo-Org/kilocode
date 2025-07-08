@@ -40,15 +40,17 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "تم تفعيل توليد رسالة الاعتماد في Kilo Code",
-		"gitNotFound": "⚠️ ما لقينا مستودع Git أو git مو متوفّر",
+		"activated": "تم تفعيل منشئ رسائل التزام كود كيلو",
+		"gitNotFound": "⚠️ مستودع Git غير موجود أو Git غير متاح",
 		"gitInitError": "⚠️ خطأ في تهيئة Git: {{error}}",
-		"generating": "Kilo: جاري توليد رسالة الاعتماد...",
+		"generating": "كيلو: جارٍ إنشاء رسالة الالتزام...",
+		"noChanges": "كيلو: لم يتم العثور على تغييرات للتحليل",
+		"generated": "كيلو: تم إنشاء رسالة الالتزام!",
+		"generationFailed": "Kilo: فشل في إنشاء رسالة الالتزام: {{errorMessage}}",
+		"generatingFromUnstaged": "كيلو: إنشاء رسالة باستخدام التغييرات غير المرحلة",
 		"analyzingChanges": "Kilo: جاري تحليل التعديلات الجاهزة...",
 		"noStagedChangesRepo": "Kilo: ما فيه تعديلات مضافة في مستودع git",
 		"noStagedChanges": "Kilo: ما فيه تعديلات مضافة لتحليلها",
-		"generated": "Kilo: تم توليد رسالة الاعتماد!",
-		"generationFailed": "Kilo: فشل في توليد رسالة الاعتماد: {{errorMessage}}",
 		"tokenRequired": "يتطلب توليد الرسالة رمز Kilo Code",
 		"activationFailed": "Kilo: فشل تفعيل مولّد الرسائل: {{error}}",
 		"providerRegistered": "Kilo: تم تسجيل موفر رسائل الاعتماد"

@@ -21,7 +21,6 @@ import {
 import { convertToMentionPath } from "@/utils/path-mentions"
 import { SelectDropdown, DropdownOptionType, Button, StandardTooltip } from "@/components/ui"
 // import { normalizeApiConfiguration } from "@/utils/normalizeApiConfiguration" // kilocode_change
-import { useVSCodeTheme } from "@/kilocode/hooks/useVSCodeTheme" // kilocode_change
 
 import Thumbnails from "../common/Thumbnails"
 // import ModeSelector from "./ModeSelector" // kilocode_change: unused
@@ -32,8 +31,6 @@ import { IconButton } from "./IconButton"
 import { IndexingStatusDot } from "./IndexingStatusBadge"
 import { cn } from "@/lib/utils"
 import { usePromptHistory } from "./hooks/usePromptHistory"
-
-import { useSelectedModel } from "../ui/hooks/useSelectedModel"
 
 // kilocode_change start: pull slash commands from Cline
 import SlashCommandMenu from "@/components/chat/SlashCommandMenu"
@@ -94,15 +91,12 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			cwd,
 			pinnedApiConfigs,
 			togglePinnedApiConfig,
-			apiConfiguration, // kilocode_change
 			localWorkflows, // kilocode_change
 			globalWorkflows, // kilocode_change
 			taskHistory,
 			clineMessages,
 			codebaseIndexConfig,
 		} = useExtensionState()
-
-		const currentTheme = useVSCodeTheme() // kilocode_change
 
 		// Find the ID and display text for the currently selected API configuration
 		const { currentConfigId, displayName } = useMemo(() => {
@@ -112,10 +106,6 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				displayName: currentApiConfigName || "", // Use the name directly for display
 			}
 		}, [listApiConfigMeta, currentApiConfigName])
-
-		// kilocode_change start
-		const { id: selectedModelId, provider: selectedProvider } = useSelectedModel(apiConfiguration)
-		// kilocode_change end
 
 		const [gitCommits, setGitCommits] = useState<any[]>([])
 		const [showDropdown, setShowDropdown] = useState(false)
@@ -1275,18 +1265,20 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 									vscode.postMessage({ type: "mode", text: value })
 								}}
 								shortcutText={modeShortcutText}
-								triggerClassName={cn("w-full", {
-									"bg-[#1e1e1e] border-[#333333] hover:bg-[#2d2d2d]":
-										currentTheme === "vscode-dark" || currentTheme === "vscode-high-contrast",
-									"bg-[var(--vscode-input-background)] border-[var(--vscode-input-border)] hover:bg-[var(--vscode-input-hoverBackground)]":
-										currentTheme === "vscode-light",
-								})}
+								// kilocode_change start - VSC Theme
+								triggerClassName={cn(
+									"w-full bg-[var(--background)] border-[var(--vscode-input-border)] hover:bg-[var(--color-vscode-list-hoverBackground)]",
+								)}
+								// kilocode_change end
 							/>
 						</div>
 
-						{/* kilocode_change: fixed width */}
-						{/* API configuration selector - fixed width */}
-						<div className={cn("shrink-0", "w-[70px]")}>
+						{/* kilocode_change start - hide if there is only one profile */}
+						<div
+							className={cn("flex-1", "min-w-0", "overflow-hidden", {
+								hidden: (listApiConfigMeta?.length ?? 0) < 2,
+							})}>
+							{/* kilocode_change end */}
 							<SelectDropdown
 								value={currentConfigId}
 								disabled={selectApiConfigDisabled}
@@ -1351,13 +1343,12 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 									}
 								}}
 								contentClassName="max-h-[300px] overflow-y-auto"
-								// kilocode_change: add different border and background colors
-								triggerClassName={cn("w-full text-ellipsis overflow-hidden", {
-									"bg-[#1e1e1e] border-[#333333] hover:bg-[#2d2d2d]":
-										currentTheme === "vscode-dark" || currentTheme === "vscode-high-contrast",
-									"bg-[var(--vscode-input-background)] border-[var(--vscode-input-border)] hover:bg-[var(--vscode-input-hoverBackground)]":
-										currentTheme === "vscode-light",
-								})}
+								// kilocode_change start - VSC Theme
+								triggerClassName={cn(
+									"w-full text-ellipsis overflow-hidden",
+									"bg-[var(--background)] border-[var(--vscode-input-border)] hover:bg-[var(--color-vscode-list-hoverBackground)]",
+								)}
+								// kilocode_change end
 								itemClassName="group"
 								renderItem={({ type, value, label, pinned }) => {
 									if (type !== DropdownOptionType.ITEM) {
@@ -1408,16 +1399,6 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 								}}
 							/>
 						</div>
-
-						{/* kilocode_change begin: Model display */}
-						<div
-							className="flex items-center mx-2 overflow-hidden"
-							title={`${selectedProvider}:${selectedModelId}`}>
-							<span className="text-xs text-vscode-descriptionForeground opacity-70 truncate">
-								{selectedProvider}:{selectedModelId}
-							</span>
-						</div>
-						{/* kilocode_change end */}
 					</div>
 
 					<div

@@ -62,15 +62,23 @@
 		"mistake_limit_guidance": "To może wskazywać na błąd w procesie myślowym modelu lub niezdolność do prawidłowego użycia narzędzia, co można złagodzić poprzez wskazówki użytkownika (np. \"Spróbuj podzielić zadanie na mniejsze kroki\").",
 		"violated_organization_allowlist": "Nie udało się uruchomić zadania: bieżący profil narusza ustawienia Twojej organizacji",
 		"condense_failed": "Nie udało się skondensować kontekstu",
-		"condense_not_enough_messages": "Za mało wiadomości do skondensowania kontekstu",
+		"condense_not_enough_messages": "Za mało wiadomości do skondensowania kontekstu {{prevContextTokens}} tokenów. Wymagane jest co najmniej {{minimumMessageCount}} wiadomości, ale dostępnych jest tylko {{messageCount}}.",
 		"condensed_recently": "Kontekst został niedawno skondensowany; pomijanie tej próby",
 		"condense_handler_invalid": "Nieprawidłowy handler API do kondensowania kontekstu",
-		"condense_context_grew": "Rozmiar kontekstu wzrósł podczas kondensacji; pomijanie tej próby",
+		"condense_context_grew": "Rozmiar kontekstu wzrósł z {{prevContextTokens}} do {{newContextTokens}} podczas kondensacji; pomijanie tej próby",
+		"url_timeout": "Strona internetowa ładowała się zbyt długo (timeout). Może to być spowodowane wolnym połączeniem, ciężką stroną lub tymczasową niedostępnością. Możesz spróbować ponownie później lub sprawdzić, czy URL jest poprawny.",
+		"url_not_found": "Nie można znaleźć adresu strony internetowej. Sprawdź, czy URL jest poprawny i spróbuj ponownie.",
+		"no_internet": "Brak połączenia z internetem. Sprawdź połączenie sieciowe i spróbuj ponownie.",
+		"url_forbidden": "Dostęp do tej strony internetowej jest zabroniony. Strona może blokować automatyczny dostęp lub wymagać uwierzytelnienia.",
+		"url_page_not_found": "Strona nie została znaleziona. Sprawdź, czy URL jest poprawny.",
+		"url_fetch_failed": "Błąd pobierania zawartości URL: {{error}}",
+		"url_fetch_error_with_url": "Błąd pobierania zawartości dla {{url}}: {{error}}",
 		"share_task_failed": "Nie udało się udostępnić zadania",
 		"share_no_active_task": "Brak aktywnego zadania do udostępnienia",
 		"share_auth_required": "Wymagana autoryzacja. Zaloguj się, aby udostępniać zadania.",
 		"share_not_enabled": "Udostępnianie zadań nie jest włączone dla tej organizacji.",
 		"share_task_not_found": "Zadanie nie znalezione lub dostęp odmówiony.",
+		"mode_import_failed": "Import trybu nie powiódł się: {{error}}",
 		"claudeCode": {
 			"processExited": "Proces Claude Code zakończył się kodem {{exitCode}}.",
 			"errorOutput": "Wyjście błędu: {{output}}",
@@ -91,7 +99,8 @@
 	},
 	"warnings": {
 		"no_terminal_content": "Nie wybrano zawartości terminala",
-		"missing_task_files": "Pliki tego zadania są brakujące. Czy chcesz usunąć je z listy zadań?"
+		"missing_task_files": "Pliki tego zadania są brakujące. Czy chcesz usunąć je z listy zadań?",
+		"auto_import_failed": "Nie udało się automatycznie zaimportować ustawień Kilo Code: {{error}}"
 	},
 	"info": {
 		"no_changes": "Nie znaleziono zmian.",
@@ -100,11 +109,14 @@
 		"custom_storage_path_set": "Ustawiono niestandardową ścieżkę przechowywania: {{path}}",
 		"default_storage_path": "Wznowiono używanie domyślnej ścieżki przechowywania",
 		"settings_imported": "Ustawienia zaimportowane pomyślnie.",
+		"auto_import_success": "Ustawienia Kilo Code zostały automatycznie zaimportowane z {{filename}}",
 		"share_link_copied": "Link udostępniania skopiowany do schowka",
 		"image_copied_to_clipboard": "URI danych obrazu skopiowane do schowka",
 		"image_saved": "Obraz zapisany w {{path}}",
 		"organization_share_link_copied": "Link udostępniania organizacji skopiowany do schowka!",
-		"public_share_link_copied": "Publiczny link udostępniania skopiowany do schowka!"
+		"public_share_link_copied": "Publiczny link udostępniania skopiowany do schowka!",
+		"mode_exported": "Tryb '{{mode}}' pomyślnie wyeksportowany",
+		"mode_imported": "Tryb pomyślnie zaimportowany"
 	},
 	"answers": {
 		"yes": "Tak",
@@ -142,8 +154,8 @@
 	},
 	"customModes": {
 		"errors": {
-			"yamlParseError": "Nieprawidłowy YAML w pliku .roomodes w linii {{line}}. Sprawdź:\n• Prawidłowe wcięcia (używaj spacji, nie tabulatorów)\n• Pasujące cudzysłowy i nawiasy\n• Prawidłową składnię YAML",
-			"schemaValidationError": "Nieprawidłowy format trybów niestandardowych w .roomodes:\n{{issues}}",
+			"yamlParseError": "Nieprawidłowy YAML w pliku .kilocodemodes w linii {{line}}. Sprawdź:\n• Prawidłowe wcięcia (używaj spacji, nie tabulatorów)\n• Pasujące cudzysłowy i nawiasy\n• Prawidłową składnię YAML",
+			"schemaValidationError": "Nieprawidłowy format trybów niestandardowych w .kilocodemodes:\n{{issues}}",
 			"invalidFormat": "Nieprawidłowy format trybów niestandardowych. Upewnij się, że twoje ustawienia są zgodne z prawidłowym formatem YAML.",
 			"updateFailed": "Aktualizacja trybu niestandardowego nie powiodła się: {{error}}",
 			"deleteFailed": "Usunięcie trybu niestandardowego nie powiodło się: {{error}}",

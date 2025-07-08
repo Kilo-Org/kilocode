@@ -2,6 +2,11 @@
 	"info": {
 		"settings_imported": "Налаштування успішно імпортовано."
 	},
+	"userFeedback": {
+		"message_update_failed": "Не вдалося оновити повідомлення",
+		"no_checkpoint_found": "Не знайдено checkpoint перед цим повідомленням",
+		"message_updated": "Повідомлення успішно оновлено"
+	},
 	"lowCreditWarning": {
 		"title": "Попередження про низький кредит!",
 		"message": "Перевір, чи можеш ти поповнити безкоштовними кредитами або придбати більше!"
@@ -35,22 +40,13 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Активовано генератор повідомлень коміту Kilo Code",
+		"activated": "Генератор повідомлень для коміту Kilo Code активовано",
 		"gitNotFound": "⚠️ Git репозиторій не знайдено або git недоступний",
 		"gitInitError": "⚠️ Помилка ініціалізації Git: {{error}}",
 		"generating": "Kilo: Генерація повідомлення коміту...",
-		"analyzingChanges": "Kilo: Аналіз підготовлених змін...",
-		"noStagedChangesRepo": "Kilo: Не знайдено підготовлених змін у git репозиторії",
-		"noStagedChanges": "Kilo: Не знайдено підготовлених змін для аналізу",
+		"noChanges": "Кіло: Не знайдено змін для аналізу",
 		"generated": "Kilo: Повідомлення коміту згенеровано!",
-		"generationFailed": "Kilo: Не вдалося згенерувати повідомлення коміту: {{errorMessage}}",
-		"tokenRequired": "Для генерації повідомлення коміту потрібен токен Kilo Code",
-		"activationFailed": "Kilo: Не вдалося активувати провайдер повідомлень коміту: {{error}}",
-		"providerRegistered": "Kilo: Провайдер повідомлень коміту зареєстровано"
-	},
-	"userFeedback": {
-		"message_update_failed": "Не вдалося оновити повідомлення",
-		"no_checkpoint_found": "Не знайдено checkpoint перед цим повідомленням",
-		"message_updated": "Повідомлення успішно оновлено"
+		"generationFailed": "Kilo: Не вдалося створити повідомлення коміту: {{errorMessage}}",
+		"generatingFromUnstaged": "Кіло: Створення повідомлення з використанням незафіксованих змін"
 	}
 }

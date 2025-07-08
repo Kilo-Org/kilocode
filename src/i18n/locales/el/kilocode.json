@@ -2,6 +2,11 @@
 	"info": {
 		"settings_imported": "Οι ρυθμίσεις εισήχθησαν επιτυχώς."
 	},
+	"userFeedback": {
+		"message_update_failed": "Αποτυχία ενημέρωσης μηνύματος",
+		"no_checkpoint_found": "Δεν βρέθηκε checkpoint πριν από αυτό το μήνυμα",
+		"message_updated": "Το μήνυμα ενημερώθηκε επιτυχώς"
+	},
 	"lowCreditWarning": {
 		"title": "Προειδοποίηση Χαμηλών Πιστώσεων!",
 		"message": "Έλεγξε αν μπορείς να προσθέσεις δωρεάν πιστώσεις ή να αγοράσεις περισσότερες!"
@@ -35,22 +40,13 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Ενεργοποιήθηκε η δημιουργία μηνυμάτων commit του Kilo Code",
-		"gitNotFound": "⚠️ Δεν βρέθηκε αποθετήριο Git ή το git δεν είναι διαθέσιμο",
-		"gitInitError": "⚠️ Σφάλμα αρχικοποίησης Git: {{error}}",
+		"activated": "Εργαλείο δημιουργίας μηνυμάτων commit Kilo Code ενεργοποιήθηκε",
+		"gitNotFound": "⚠️ Το αποθετήριο Git δεν βρέθηκε ή το git δεν είναι διαθέσιμο",
+		"gitInitError": "⚠️ Σφάλμα αρχικοποίησης του Git: {{error}}",
 		"generating": "Kilo: Δημιουργία μηνύματος commit...",
-		"analyzingChanges": "Kilo: Ανάλυση σταδιακών αλλαγών...",
-		"noStagedChangesRepo": "Kilo: Δεν βρέθηκαν σταδιακές αλλαγές στο αποθετήριο git",
-		"noStagedChanges": "Kilo: Δεν βρέθηκαν σταδιακές αλλαγές για ανάλυση",
+		"noChanges": "Kilo: Δεν βρέθηκαν αλλαγές για ανάλυση",
 		"generated": "Kilo: Το μήνυμα commit δημιουργήθηκε!",
 		"generationFailed": "Kilo: Αποτυχία δημιουργίας μηνύματος commit: {{errorMessage}}",
-		"tokenRequired": "Απαιτείται το token του Kilo Code για τη δημιουργία μηνύματος commit",
-		"activationFailed": "Kilo: Αποτυχία ενεργοποίησης του παρόχου μηνυμάτων commit: {{error}}",
-		"providerRegistered": "Kilo: Ο πάροχος μηνυμάτων commit καταχωρήθηκε"
-	},
-	"userFeedback": {
-		"message_update_failed": "Αποτυχία ενημέρωσης μηνύματος",
-		"no_checkpoint_found": "Δεν βρέθηκε checkpoint πριν από αυτό το μήνυμα",
-		"message_updated": "Το μήνυμα ενημερώθηκε επιτυχώς"
+		"generatingFromUnstaged": "Κιλό: Δημιουργία μηνύματος με χρήση μη καταχωρημένων αλλαγών"
 	}
 }

@@ -4,6 +4,8 @@
 	"modes": {
 		"title": "Modalità",
 		"createNewMode": "Crea nuova modalità",
+		"importMode": "Importa modalità",
+		"noMatchFound": "Nessuna modalità trovata",
 		"editModesConfig": "Modifica configurazione modalità",
 		"editGlobalModes": "Modifica modalità globali",
 		"editProjectModes": "Modifica modalità di progetto (.kilocodemodes)",
@@ -49,6 +51,27 @@
 		"resetToDefault": "Ripristina predefiniti",
 		"description": "Aggiungi linee guida comportamentali specifiche per la modalità {{modeName}}.",
 		"loadFromFile": "Le istruzioni personalizzate specifiche per la modalità {{mode}} possono essere caricate anche dalla cartella <span>.kilocode/rules/</span> nel tuo spazio di lavoro (.kilocoderules-{{slug}} è obsoleto e smetterà di funzionare presto)."
+	},
+	"exportMode": {
+		"title": "Esporta modalità",
+		"description": "Esporta questa modalità con le regole dalla cartella .kilocode/rules-{{slug}}/ combinate in un file YAML condivisibile. I file originali rimangono invariati.",
+		"exporting": "Esportazione..."
+	},
+	"importMode": {
+		"selectLevel": "Scegli dove importare questa modalità:",
+		"import": "Importa",
+		"importing": "Importazione...",
+		"global": {
+			"label": "Livello globale",
+			"description": "Disponibile in tutti i progetti. Se la modalità esportata conteneva file di regole, verranno ricreati nella cartella globale .kilocode/rules-{slug}/."
+		},
+		"project": {
+			"label": "Livello di progetto",
+			"description": "Disponibile solo in questo spazio di lavoro. Se la modalità esportata conteneva file di regole, verranno ricreati nella cartella .kilocode/rules-{slug}/."
+		}
+	},
+	"advanced": {
+		"title": "Avanzato"
 	},
 	"globalCustomInstructions": {
 		"title": "Istruzioni personalizzate per tutte le modalità",

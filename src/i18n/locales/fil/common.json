@@ -62,15 +62,23 @@
 		"mistake_limit_guidance": "Ito ay maaaring magpahiwatig ng pagkabigo sa proseso ng pag-iisip ng modelo o kawalan ng kakayahang gumamit ng tool nang maayos, na maaaring mabawasan sa pamamagitan ng ilang gabay ng user (hal. \"Subukang hatiin ang gawain sa mas maliliit na hakbang\").",
 		"violated_organization_allowlist": "Nabigo ang pagpapatakbo ng task: ang kasalukuyang profile ay lumalabag sa iyong mga setting ng organisasyon",
 		"condense_failed": "Nabigo ang pag-condense ng context",
-		"condense_not_enough_messages": "Hindi sapat ang mga mensahe para i-condense ang context",
+		"condense_not_enough_messages": "Hindi sapat ang mga mensahe para i-condense ang context na may {{prevContextTokens}} tokens. Kailangan ng hindi bababa sa {{minimumMessageCount}} mga mensahe, ngunit {{messageCount}} lang ang available.",
 		"condensed_recently": "Ang context ay na-condense kamakailan; nilalaktawan ang pagtatangkang ito",
 		"condense_handler_invalid": "Ang API handler para sa pag-condense ng context ay invalid",
-		"condense_context_grew": "Ang laki ng context ay tumaas habang nag-condense; nilalaktawan ang pagtatangkang ito",
+		"condense_context_grew": "Ang laki ng context ay tumaas mula {{prevContextTokens}} hanggang {{newContextTokens}} habang nag-condense; nilalaktawan ang pagtatangkang ito",
+		"url_timeout": "Ang website ay tumagal nang sobra sa pag-load (timeout). Maaaring dahil ito sa mabagal na koneksyon, mabigat na website, o pansamantalang hindi available ang site. Maaari mong subukan muli mamaya o tingnan kung tama ang URL.",
+		"url_not_found": "Hindi nahanap ang address ng website. Mangyaring tingnan kung tama ang URL at subukan muli.",
+		"no_internet": "Walang koneksyon sa internet. Mangyaring tingnan ang iyong network connection at subukan muli.",
+		"url_forbidden": "Ang access sa website na ito ay ipinagbabawal. Maaaring hinaharangan ng site ang automated access o nangangailangan ng authentication.",
+		"url_page_not_found": "Hindi nahanap ang pahina. Mangyaring tingnan kung tama ang URL.",
+		"url_fetch_failed": "Nabigo ang pagkuha ng nilalaman ng URL: {{error}}",
+		"url_fetch_error_with_url": "Error sa pagkuha ng nilalaman para sa {{url}}: {{error}}",
 		"share_task_failed": "Nabigo ang pagbahagi ng task. Mangyaring subukan muli.",
 		"share_no_active_task": "Walang aktibong task na ibabahagi",
 		"share_auth_required": "Kailangan ng authentication. Mangyaring mag-sign in upang magbahagi ng mga task.",
 		"share_not_enabled": "Ang pagbahagi ng task ay hindi pinagana para sa organisasyong ito.",
 		"share_task_not_found": "Hindi nahanap ang task o tinanggihan ang access.",
+		"mode_import_failed": "Nabigo ang pag-import ng mode: {{error}}",
 		"claudeCode": {
 			"processExited": "Ang proseso ng Claude Code ay lumabas gamit ang code {{exitCode}}.",
 			"errorOutput": "Error output: {{output}}",
@@ -91,7 +99,8 @@
 	},
 	"warnings": {
 		"no_terminal_content": "Walang napiling terminal content",
-		"missing_task_files": "Ang mga file ng task na ito ay nawawala. Gusto mo bang tanggalin ito mula sa listahan ng task?"
+		"missing_task_files": "Ang mga file ng task na ito ay nawawala. Gusto mo bang tanggalin ito mula sa listahan ng task?",
+		"auto_import_failed": "Nabigo ang auto-import ng mga setting ng Kilo Code: {{error}}"
 	},
 	"info": {
 		"no_changes": "Walang nahanap na mga pagbabago.",
@@ -100,11 +109,14 @@
 		"custom_storage_path_set": "Naitakda ang custom storage path: {{path}}",
 		"default_storage_path": "Bumalik sa paggamit ng default storage path",
 		"settings_imported": "Matagumpay na na-import ang mga setting.",
+		"auto_import_success": "Awtomatikong na-import ang mga setting ng Kilo Code mula sa {{filename}}",
 		"share_link_copied": "Nakopya ang share link sa clipboard",
 		"organization_share_link_copied": "Nakopya ang organization share link sa clipboard!",
 		"public_share_link_copied": "Nakopya ang public share link sa clipboard!",
 		"image_copied_to_clipboard": "Nakopya ang image data URI sa clipboard",
-		"image_saved": "Na-save ang larawan sa {{path}}"
+		"image_saved": "Na-save ang larawan sa {{path}}",
+		"mode_exported": "Matagumpay na na-export ang mode '{{mode}}'",
+		"mode_imported": "Matagumpay na na-import ang mode"
 	},
 	"answers": {
 		"yes": "Oo",
@@ -131,8 +143,8 @@
 	},
 	"customModes": {
 		"errors": {
-			"yamlParseError": "Hindi valid na YAML sa .roomodes file sa linya {{line}}. Mangyaring tingnan ang:\n• Tamang indentation (gamitin ang mga space, hindi tabs)\n• Nagtutugmang mga quotes at brackets\n• Valid na YAML syntax",
-			"schemaValidationError": "Hindi valid na format ng custom modes sa .roomodes:\n{{issues}}",
+			"yamlParseError": "Hindi valid na YAML sa .kilocodemodes file sa linya {{line}}. Mangyaring tingnan ang:\n• Tamang indentation (gamitin ang mga space, hindi tabs)\n• Nagtutugmang mga quotes at brackets\n• Valid na YAML syntax",
+			"schemaValidationError": "Hindi valid na format ng custom modes sa .kilocodemodes:\n{{issues}}",
 			"invalidFormat": "Hindi valid na format ng custom modes. Mangyaring siguraduhing ang inyong mga setting ay sumusunod sa tamang YAML format.",
 			"updateFailed": "Nabigo ang pag-update ng custom mode: {{error}}",
 			"deleteFailed": "Nabigo ang pag-delete ng custom mode: {{error}}",

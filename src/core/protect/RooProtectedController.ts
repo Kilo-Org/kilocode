@@ -23,6 +23,7 @@ export class RooProtectedController {
 		".roorules*",
 		".clinerules*",
 		".roo/**",
+		".vscode/**",
 		".rooprotected", // For future use
 	]
 
@@ -87,7 +88,7 @@ export class RooProtectedController {
 	 * Get display message for protected file operations
 	 */
 	getProtectionMessage(): string {
-		return "This is a Roo configuration file and requires approval for modifications"
+		return "This is a Kilo Code configuration file and requires approval for modifications"
 	}
 
 	/**
@@ -96,7 +97,7 @@ export class RooProtectedController {
 	 */
 	getInstructions(): string {
 		const patterns = RooProtectedController.PROTECTED_PATTERNS.join(", ")
-		return `# Protected Files\n\n(The following Roo configuration file patterns are write-protected and always require approval for modifications, regardless of autoapproval settings. When using list_files, you'll notice a ${SHIELD_SYMBOL} next to files that are write-protected.)\n\nProtected patterns: ${patterns}`
+		return `# Protected Files\n\n(The following Kilo Code configuration file patterns are write-protected and always require approval for modifications, regardless of autoapproval settings. When using list_files, you'll notice a ${SHIELD_SYMBOL} next to files that are write-protected.)\n\nProtected patterns: ${patterns}`
 	}
 
 	/**

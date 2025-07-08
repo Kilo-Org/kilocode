@@ -32,6 +32,13 @@
 				"label": "Izinkan pembacaan file yang sangat besar",
 				"description": "Saat diaktifkan, Kilo Code akan melakukan pembacaan file atau output MCP yang sangat besar meskipun ada kemungkinan tinggi meluapnya jendela konteks (ukuran konten >80% dari jendela konteks)."
 			}
+		},
+		"systemNotifications": {
+			"label": "Aktifkan Notifikasi Sistem",
+			"description": "Saat diaktifkan, Kilo Code akan mengirim notifikasi sistem untuk kejadian penting seperti penyelesaian tugas atau kesalahan.",
+			"testButton": "Uji Notifikasi",
+			"testTitle": "Kilo Code",
+			"testMessage": "Ini adalah notifikasi uji dari Kilo Code."
 		}
 	},
 	"chat": {
@@ -48,12 +55,7 @@
 		"dashboard": "Dashboard",
 		"logOut": "Keluar",
 		"currentBalance": "SALDO SAAT INI",
-		"loading": "Memuat...",
-		"signUp": {
-			"title": "Daftar dengan Kilo Code",
-			"description": "Mendaftar dengan Kilo Code memberi kamu kredit gratis untuk memulai. Gunakan kredit kamu untuk menjelajahi fitur kami, mencoba model terbaru dan terbaik, dan merasakan manfaat Kilo Code tanpa komitmen.",
-			"termsAndPrivacy": "Dengan melanjutkan, kamu menyetujui <termsLink>Syarat Layanan</termsLink> dan <privacyLink>Kebijakan Privasi.</privacyLink>"
-		}
+		"loading": "Memuat..."
 	},
 	"docs": "Dokumentasi",
 	"rules": {

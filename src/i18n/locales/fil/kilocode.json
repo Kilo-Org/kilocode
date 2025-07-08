@@ -2,6 +2,11 @@
 	"info": {
 		"settings_imported": "Matagumpay na na-import ang mga setting."
 	},
+	"userFeedback": {
+		"message_update_failed": "Nabigo ang pag-update ng mensahe",
+		"no_checkpoint_found": "Walang nahanap na checkpoint bago ang mensaheng ito",
+		"message_updated": "Matagumpay na na-update ang mensahe"
+	},
 	"lowCreditWarning": {
 		"title": "Babala sa Mababang Credit!",
 		"message": "Tingnan kung maaari kang mag-top up ng libreng credits o bumili ng iba pa!"
@@ -35,22 +40,13 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Na-activate ang Kilo Code commit message generator",
-		"gitNotFound": "⚠️ Hindi nahanap ang Git repository o hindi available ang git",
-		"gitInitError": "⚠️ Git initialization error: {{error}}",
-		"generating": "Kilo: Gumagawa ng commit message...",
-		"analyzingChanges": "Kilo: Sinusuri ang mga staged changes...",
-		"noStagedChangesRepo": "Kilo: Walang nahanap na staged changes sa git repository",
-		"noStagedChanges": "Kilo: Walang nahanap na staged changes na susuriin",
-		"generated": "Kilo: Nagawa na ang commit message!",
-		"generationFailed": "Kilo: Nabigo ang paggawa ng commit message: {{errorMessage}}",
-		"tokenRequired": "Kailangan ang Kilo Code token para sa paggawa ng commit message",
-		"activationFailed": "Kilo: Nabigo ang pag-activate ng commit message provider: {{error}}",
-		"providerRegistered": "Kilo: Naka-register na ang commit message provider"
-	},
-	"userFeedback": {
-		"message_update_failed": "Nabigo ang pag-update ng mensahe",
-		"no_checkpoint_found": "Walang nahanap na checkpoint bago ang mensaheng ito",
-		"message_updated": "Matagumpay na na-update ang mensahe"
+		"activated": "Ang tagalikha ng mensahe ng Kilo Code commit ay aktibo na",
+		"gitNotFound": "⚠️ Hindi nahanap ang Git repository o hindi magagamit ang git",
+		"gitInitError": "⚠️ Error sa pagsisimula ng Git: {{error}}",
+		"generating": "Kilo: Gumagawa ng mensahe ng commit...",
+		"noChanges": "Kilo: Walang nakitang pagbabago upang suriin",
+		"generated": "Kilo: Nagenerahan ang mensahe ng commit!",
+		"generationFailed": "Kilo: Nabigong gumawa ng commit message: {{errorMessage}}",
+		"generatingFromUnstaged": "Kilo: Gumagawa ng mensahe gamit ang mga hindi naka-stage na pagbabago"
 	}
 }

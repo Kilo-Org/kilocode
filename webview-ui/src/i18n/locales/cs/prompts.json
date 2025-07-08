@@ -4,11 +4,13 @@
 	"modes": {
 		"title": "Režimy",
 		"createNewMode": "Vytvořit nový režim",
+		"importMode": "Importovat režim",
 		"editModesConfig": "Upravit konfiguraci režimů",
 		"editGlobalModes": "Upravit Global Modes",
 		"editProjectModes": "Upravit Project Modes (.kilocodemodes)",
 		"createModeHelpText": "Režimy jsou specializované persony, které přizpůsobují chování Kilo Code. <0>Zjisti více o Používání režimů</0> nebo <1>Přizpůsobení režimů.</1>",
-		"selectMode": "Hledat režimy"
+		"selectMode": "Hledat režimy",
+		"noMatchFound": "Žádné režimy nenalezeny"
 	},
 	"apiConfiguration": {
 		"title": "Konfigurace API",
@@ -49,6 +51,27 @@
 		"resetToDefault": "Obnovit výchozí",
 		"description": "Přidej pokyny pro chování specifické pro režim {{modeName}}.",
 		"loadFromFile": "Vlastní instrukce specifické pro režim {{mode}} lze také načíst ze složky <span>.kilocode/rules/</span> ve tvém pracovním prostoru (.kilocoderules-{{slug}} je zastaralé a brzy přestane fungovat)."
+	},
+	"exportMode": {
+		"title": "Exportovat režim",
+		"description": "Exportuj tento režim s pravidly ze složky .kilocode/rules-{{slug}}/ zkombinovanými do sdílitelného YAML souboru. Původní soubory zůstanou nezměněny.",
+		"exporting": "Exportování..."
+	},
+	"importMode": {
+		"selectLevel": "Vyber, kam importovat tento režim:",
+		"import": "Importovat",
+		"importing": "Importování...",
+		"global": {
+			"label": "Globální úroveň",
+			"description": "Dostupné napříč všemi projekty. Pokud exportovaný režim obsahoval soubory pravidel, budou znovu vytvořeny v globální složce .kilocode/rules-{slug}/."
+		},
+		"project": {
+			"label": "Úroveň projektu",
+			"description": "Dostupné pouze v tomto pracovním prostoru. Pokud exportovaný režim obsahoval soubory pravidel, budou znovu vytvořeny ve složce .kilocode/rules-{slug}/."
+		}
+	},
+	"advanced": {
+		"title": "Pokročilé: Přepsat System Prompt"
 	},
 	"globalCustomInstructions": {
 		"title": "Vlastní instrukce pro všechny režimy",

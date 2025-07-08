@@ -57,6 +57,10 @@
 		"ollamaUrlLabel": "URL Ollama :",
 		"qdrantUrlLabel": "URL Qdrant",
 		"qdrantKeyLabel": "Clé Qdrant :",
+		"advancedConfigLabel": "Configuration avancée",
+		"searchMinScoreLabel": "Seuil de score de recherche",
+		"searchMinScoreDescription": "Score de similarité minimum (0.0-1.0) requis pour les résultats de recherche. Des valeurs plus faibles renvoient plus de résultats mais peuvent être moins pertinents. Des valeurs plus élevées renvoient moins de résultats mais plus pertinents.",
+		"searchMinScoreResetTooltip": "Réinitialiser à la valeur par défaut (0.4)",
 		"startIndexingButton": "Démarrer l'indexation",
 		"clearIndexDataButton": "Effacer les données d'index",
 		"unsavedSettingsMessage": "Merci d'enregistrer tes paramètres avant de démarrer le processus d'indexation.",
@@ -110,6 +114,11 @@
 		"subtasks": {
 			"label": "Sous-tâches",
 			"description": "Permettre la création et l'achèvement des sous-tâches sans nécessiter d'approbation"
+		},
+		"followupQuestions": {
+			"label": "Question",
+			"description": "Sélectionner automatiquement la première réponse suggérée pour les questions de suivi après le délai configuré",
+			"timeoutLabel": "Temps d'attente avant la sélection automatique de la première réponse"
 		},
 		"execute": {
 			"label": "Exécuter",
@@ -591,7 +600,7 @@
 	},
 	"footer": {
 		"feedback": "Si vous avez des questions ou des commentaires, n'hésitez pas à ouvrir un problème sur <githubLink>github.com/Kilo-Org/kilocode</githubLink> ou à rejoindre <redditLink>reddit.com/r/kilocode</redditLink> ou <discordLink>kilocode.ai/discord</discordLink>",
-		"support": "Pour les questions financières, veuillez contacter le Support Client à <supportLink>hi@kilocode.ai</supportLink>",
+		"support": "Pour les questions financières, veuillez contacter le Support Client à <supportLink>https://kilocode.ai/support</supportLink>",
 		"telemetry": {
 			"label": "Autoriser les rapports anonymes d'erreurs et d'utilisation",
 			"description": "Aidez à améliorer Kilo Code en envoyant des données d'utilisation anonymes et des rapports d'erreurs. Aucun code, prompt ou information personnelle n'est jamais envoyé. Consultez notre politique de confidentialité pour plus de détails."

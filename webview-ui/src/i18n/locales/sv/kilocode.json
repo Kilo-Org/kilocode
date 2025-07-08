@@ -32,6 +32,13 @@
 				"label": "Tillåt mycket stora filläsningar",
 				"description": "När aktiverat kommer Kilo Code att utföra mycket stora fil- eller MCP-utdataläsningar även om det finns en hög sannolikhet att överskrida kontextfönstret (innehållsstorlek >80% av kontextfönstret)."
 			}
+		},
+		"systemNotifications": {
+			"label": "Aktivera systemnotifikationer",
+			"description": "När aktiverat kommer Kilo Code att skicka systemnotifikationer för viktiga händelser som slutförda uppgifter eller fel.",
+			"testButton": "Testa notifikation",
+			"testTitle": "Kilo Code",
+			"testMessage": "Detta är en testnotifikation från Kilo Code."
 		}
 	},
 	"chat": {
@@ -48,12 +55,7 @@
 		"dashboard": "Instrumentpanel",
 		"logOut": "Logga ut",
 		"currentBalance": "AKTUELLT SALDO",
-		"loading": "Laddar...",
-		"signUp": {
-			"title": "Registrera dig hos Kilo Code",
-			"description": "Att registrera dig hos Kilo Code ger dig gratis krediter för att komma igång. Använd dina krediter för att utforska våra funktioner, prova de senaste och bästa modellerna och uppleva fördelarna med Kilo Code utan några åtaganden.",
-			"termsAndPrivacy": "Genom att fortsätta godkänner du <termsLink>Användarvillkoren</termsLink> och <privacyLink>Integritetspolicyn.</privacyLink>"
-		}
+		"loading": "Laddar..."
 	},
 	"docs": "Dokumentation",
 	"rules": {

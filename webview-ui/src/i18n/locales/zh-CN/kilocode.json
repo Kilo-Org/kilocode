@@ -28,6 +28,13 @@
 				"description": "启用后，Kilo Code 将执行超大文件或 MCP 输出读取，即使存在高概率溢出上下文窗口（内容大小 >80% 的上下文窗口）。"
 			}
 		},
+		"systemNotifications": {
+			"label": "启用系统通知",
+			"description": "启用后 Kilo Code 将发送系统通知，提醒任务完成或错误等重要事件。",
+			"testButton": "测试通知",
+			"testTitle": "Kilo Code",
+			"testMessage": "这是来自 Kilo Code 的测试通知。"
+		},
 		"provider": {
 			"apiKey": "Kilo Code API 密钥",
 			"login": "登录 Kilo Code",
@@ -48,12 +55,7 @@
 		"dashboard": "仪表板",
 		"logOut": "退出登录",
 		"currentBalance": "当前余额",
-		"loading": "加载中...",
-		"signUp": {
-			"title": "注册 Kilo Code",
-			"description": "注册 Kilo Code 可获得免费积分开始使用。使用你的积分探索我们的功能，试用最新最好的模型，无需承诺即可体验 Kilo Code 的优势。",
-			"termsAndPrivacy": "继续即表示你同意<termsLink>服务条款</termsLink>和<privacyLink>隐私政策</privacyLink>。"
-		}
+		"loading": "加载中..."
 	},
 	"docs": "文档",
 	"rules": {
