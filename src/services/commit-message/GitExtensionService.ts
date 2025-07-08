@@ -14,6 +14,10 @@ export interface GitOptions {
 	staged: boolean
 }
 
+export interface GitProgressOptions extends GitOptions {
+	onProgress?: (percentage: number) => void
+}
+
 /**
  * Utility class for Git operations using direct shell commands
  */
@@ -45,7 +49,7 @@ export class GitExtensionService {
 	/**
 	 * Gathers information about changes (staged or unstaged)
 	 */
-	public async gatherChanges(options: GitOptions): Promise<GitChange[]> {
+	public async gatherChanges(options: GitProgressOptions): Promise<GitChange[]> {
 		try {
 			const statusOutput = this.getStatus(options)
 			if (!statusOutput.trim()) {
@@ -127,8 +131,8 @@ export class GitExtensionService {
 		}
 	}
 
-	private getDiffForChanges(options: GitOptions): string {
-		const { staged } = options
+	private async getDiffForChanges(options: GitProgressOptions): Promise<string> {
+		const { staged, onProgress } = options
 		try {
 			const diffs: string[] = []
 			const args = staged ? ["diff", "--name-only", "--cached"] : ["diff", "--name-only"]
@@ -137,10 +141,17 @@ export class GitExtensionService {
 				.map((line) => line.trim())
 				.filter((line) => line.length > 0)
 
+			let processedFiles = 0
 			for (const filePath of files) {
 				if (this.ignoreController.validateAccess(filePath) && !shouldExcludeLockFile(filePath)) {
 					const diff = this.getGitDiff(filePath, { staged }).trim()
 					diffs.push(diff)
+				}
+
+				processedFiles++
+				if (onProgress && files.length > 0) {
+					const percentage = (processedFiles / files.length) * 100
+					onProgress(percentage)
 				}
 			}
 
@@ -181,7 +192,7 @@ export class GitExtensionService {
 	/**
 	 * Gets all context needed for commit message generation
 	 */
-	public getCommitContext(changes: GitChange[], options: GitOptions): string {
+	public async getCommitContext(changes: GitChange[], options: GitProgressOptions): Promise<string> {
 		const { staged } = options
 		try {
 			// Start building the context with the required sections
@@ -189,7 +200,7 @@ export class GitExtensionService {
 
 			// Add full diff - essential for understanding what changed
 			try {
-				const diff = this.getDiffForChanges(options)
+				const diff = await this.getDiffForChanges(options)
 				const changeType = staged ? "Staged" : "Unstaged"
 				context += `### Full Diff of ${changeType} Changes\n\`\`\`diff\n` + diff + "\n```\n\n"
 			} catch (error) {

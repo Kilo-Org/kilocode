@@ -40,7 +40,7 @@ describe("GitExtensionService", () => {
 	})
 
 	describe("getDiffForChanges", () => {
-		it("should generate diffs per file and exclude files properly for staged changes", () => {
+		it("should generate diffs per file and exclude files properly for staged changes", async () => {
 			const stagedFiles = ["src/test.ts", "package-lock.json", "src/utils.ts"]
 			const mockFileListOutput = stagedFiles.join("\n")
 
@@ -53,7 +53,7 @@ describe("GitExtensionService", () => {
 				.mockReturnValueOnce({ status: 0, stdout: utilsTsDiff, stderr: "", error: null })
 
 			const getDiffForChanges = (service as any).getDiffForChanges
-			const result = getDiffForChanges.call(service, { staged: true })
+			const result = await getDiffForChanges.call(service, { staged: true })
 
 			expect(mockSpawnSync).toHaveBeenNthCalledWith(
 				1,
@@ -87,17 +87,17 @@ describe("GitExtensionService", () => {
 			expect(result).toBe(`${testTsDiff}\n${utilsTsDiff}`)
 		})
 
-		it("should return empty string when no staged files", () => {
+		it("should return empty string when no staged files", async () => {
 			mockSpawnSync.mockReturnValue({ status: 0, stdout: "", stderr: "", error: null })
 
 			const getDiffForChanges = (service as any).getDiffForChanges
-			const result = getDiffForChanges.call(service, { staged: true })
+			const result = await getDiffForChanges.call(service, { staged: true })
 
 			expect(result).toBe("")
 			expect(mockSpawnSync).toHaveBeenCalledTimes(1)
 		})
 
-		it("should handle file paths with special characters", () => {
+		it("should handle file paths with special characters", async () => {
 			const stagedFiles = ["src/file with spaces.ts", "src/file'with'quotes.ts"]
 			const mockFileListOutput = stagedFiles.join("\n")
 			const spaceDiff = "diff --git a/src/file with spaces.ts b/src/file with spaces.ts\n+content"
@@ -109,7 +109,7 @@ describe("GitExtensionService", () => {
 				.mockReturnValueOnce({ status: 0, stdout: quoteDiff, stderr: "", error: null })
 
 			const getDiffForChanges = (service as any).getDiffForChanges
-			const result = getDiffForChanges.call(service, { staged: true })
+			const result = await getDiffForChanges.call(service, { staged: true })
 
 			// Should handle file paths with special characters without manual escaping
 			expect(mockSpawnSync).toHaveBeenNthCalledWith(
@@ -177,7 +177,7 @@ describe("GitExtensionService", () => {
 		})
 	})
 
-	it("should generate diffs per file and exclude files properly for unstaged changes", () => {
+	it("should generate diffs per file and exclude files properly for unstaged changes", async () => {
 		const unstagedFiles = ["src/test.ts", "package-lock.json", "src/utils.ts"]
 		const mockFileListOutput = unstagedFiles.join("\n")
 
@@ -190,7 +190,7 @@ describe("GitExtensionService", () => {
 			.mockReturnValueOnce({ status: 0, stdout: utilsTsDiff, stderr: "", error: null })
 
 		const getDiffForChanges = (service as any).getDiffForChanges
-		const result = getDiffForChanges.call(service, { staged: false })
+		const result = await getDiffForChanges.call(service, { staged: false })
 
 		expect(mockSpawnSync).toHaveBeenNthCalledWith(1, "git", ["diff", "--name-only"], expect.any(Object))
 
@@ -202,18 +202,18 @@ describe("GitExtensionService", () => {
 		expect(result).toBe(`${testTsDiff}\n${utilsTsDiff}`)
 	})
 
-	it("should return empty string when no unstaged files", () => {
+	it("should return empty string when no unstaged files", async () => {
 		mockSpawnSync.mockReturnValue({ status: 0, stdout: "", stderr: "", error: null })
 
 		const getDiffForChanges = (service as any).getDiffForChanges
-		const result = getDiffForChanges.call(service, { staged: false })
+		const result = await getDiffForChanges.call(service, { staged: false })
 
 		expect(result).toBe("")
 		expect(mockSpawnSync).toHaveBeenCalledTimes(1)
 	})
 
 	describe("getCommitContext", () => {
-		it("should generate context for staged changes by default", () => {
+		it("should generate context for staged changes by default", async () => {
 			const mockChanges = [{ filePath: "file1.ts", status: "Modified" }]
 
 			mockSpawnSync
@@ -223,13 +223,13 @@ describe("GitExtensionService", () => {
 				.mockReturnValueOnce({ status: 0, stdout: "main", stderr: "", error: null })
 				.mockReturnValueOnce({ status: 0, stdout: "abc123 commit", stderr: "", error: null })
 
-			const result = service.getCommitContext(mockChanges, { staged: true })
+			const result = await service.getCommitContext(mockChanges, { staged: true })
 
 			expect(result).toContain("Full Diff of Staged Changes")
 			expect(result).not.toContain("Full Diff of Unstaged Changes")
 		})
 
-		it("should generate context for unstaged changes when specified", () => {
+		it("should generate context for unstaged changes when specified", async () => {
 			const mockChanges = [{ filePath: "file1.ts", status: "Modified" }]
 
 			mockSpawnSync
@@ -239,7 +239,7 @@ describe("GitExtensionService", () => {
 				.mockReturnValueOnce({ status: 0, stdout: "main", stderr: "", error: null })
 				.mockReturnValueOnce({ status: 0, stdout: "abc123 commit", stderr: "", error: null })
 
-			const result = service.getCommitContext(mockChanges, { staged: false })
+			const result = await service.getCommitContext(mockChanges, { staged: false })
 
 			expect(result).toContain("Full Diff of Unstaged Changes")
 			expect(result).not.toContain("Full Diff of Staged Changes")

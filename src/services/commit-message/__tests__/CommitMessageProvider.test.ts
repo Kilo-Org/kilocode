@@ -110,7 +110,10 @@ describe("CommitMessageProvider", () => {
 
 			expect(vi.mocked(mockGitService.gatherChanges)).toHaveBeenCalledWith({ staged: true })
 			expect(vi.mocked(mockGitService.gatherChanges)).toHaveBeenCalledTimes(1)
-			expect(vi.mocked(mockGitService.getCommitContext)).toHaveBeenCalledWith(mockChanges, { staged: true })
+			expect(vi.mocked(mockGitService.getCommitContext)).toHaveBeenCalledWith(
+				mockChanges,
+				expect.objectContaining({ staged: true }),
+			)
 			expect(singleCompletionHandler).toHaveBeenCalled()
 			expect(vi.mocked(mockGitService.setCommitMessage)).toHaveBeenCalled()
 		})
@@ -166,9 +169,12 @@ describe("CommitMessageProvider", () => {
 
 			expect(vi.mocked(mockGitService.gatherChanges)).toHaveBeenCalledWith({ staged: true })
 			expect(vi.mocked(mockGitService.gatherChanges)).toHaveBeenCalledWith({ staged: false })
-			expect(vi.mocked(mockGitService.getCommitContext)).toHaveBeenCalledWith(mockUnstagedChanges, {
-				staged: false,
-			})
+			expect(vi.mocked(mockGitService.getCommitContext)).toHaveBeenCalledWith(
+				mockUnstagedChanges,
+				expect.objectContaining({
+					staged: false,
+				}),
+			)
 			expect(singleCompletionHandler).toHaveBeenCalled()
 			expect(vi.mocked(mockGitService.setCommitMessage)).toHaveBeenCalled()
 			expect(vscode.window.showInformationMessage).toHaveBeenCalledWith("commitMessage.generatingFromUnstaged")
