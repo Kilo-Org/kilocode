@@ -38,7 +38,8 @@ export const About = ({ telemetrySetting, setTelemetrySetting, className, ...pro
 			</SectionHeader>
 
 			<Section>
-				<div>
+				{/* kilocode_change: inactive for now */}
+				<div style={{ display: "none" }}>
 					<VSCodeCheckbox
 						checked={telemetrySetting === "enabled"}
 						onChange={(e: any) => {
@@ -51,7 +52,7 @@ export const About = ({ telemetrySetting, setTelemetrySetting, className, ...pro
 						<Trans
 							i18nKey="settings:footer.telemetry.description"
 							components={{
-								privacyLink: <VSCodeLink href="https://roocode.com/privacy" />,
+								privacyLink: <VSCodeLink href="https://kilocode.ai/privacy" />,
 							}}
 						/>
 					</p>
