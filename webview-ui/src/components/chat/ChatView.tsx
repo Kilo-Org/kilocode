@@ -31,7 +31,7 @@ import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { useSelectedModel } from "@src/components/ui/hooks/useSelectedModel"
 import { StandardTooltip } from "@src/components/ui"
 
-import TelemetryBanner from "../common/TelemetryBanner"
+// import TelemetryBanner from "../common/TelemetryBanner" // kilocode_change: deactivated for now
 // import VersionIndicator from "../common/VersionIndicator" // kilocode_change: unused
 import { useTaskSearch } from "../history/useTaskSearch"
 import HistoryPreview from "../history/HistoryPreview"
@@ -99,7 +99,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		alwaysAllowSubtasks,
 		alwaysAllowFollowupQuestions,
 		customModes,
-		telemetrySetting,
+		// telemetrySetting, // kilocode_change: deactivated for now
 		hasSystemPromptOverride,
 		historyPreviewCollapsed, // Added historyPreviewCollapsed
 		soundEnabled,
@@ -1578,7 +1578,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					)}
 					<div
 						className={` w-full flex flex-col gap-4 m-auto ${isExpanded && tasks.length > 0 ? "mt-0" : ""} px-3.5 min-[370px]:px-10 pt-5 transition-all duration-300`}>
-						{telemetrySetting === "unset" && <TelemetryBanner />}
+						{/* {telemetrySetting === "unset" && <TelemetryBanner />} kilocode_change: deactivated for now */}
 						{/* Version indicator in top-right corner - only on welcome screen */}
 						{/* kilocode_change: do not show */}
 						{/* <VersionIndicator

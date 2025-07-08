@@ -137,7 +137,7 @@ export async function activate(context: vscode.ExtensionContext) {
 				false,
 			)
 
-			context.globalState.update("telemetrySetting", "enabled")
+			// context.globalState.update("telemetrySetting", "enabled")
 			context.globalState.update("firstInstallCompleted", true)
 		} catch (error) {
 			outputChannel.appendLine(`Error during first-time setup: ${error.message}`)
