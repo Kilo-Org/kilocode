@@ -1,4 +1,5 @@
 import * as React from "react"
+import { telemetryClient } from "../utils/TelemetryClient"
 
 type Props = {
 	children: React.ReactNode
@@ -18,6 +19,10 @@ export class KiloCodeErrorBoundary extends React.Component<Props, State> {
 		return {
 			error: error instanceof Error ? (error.stack ?? error.message) : `${error}`,
 		}
+	}
+
+	componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+		telemetryClient.captureError(error, { errorInfo })
 	}
 
 	render() {

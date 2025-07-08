@@ -33,6 +33,18 @@ class TelemetryClient {
 		return TelemetryClient.instance
 	}
 
+	// kilocode_change start
+	public captureError(error: Error, properties?: Record<string, any>) {
+		if (TelemetryClient.telemetryEnabled) {
+			try {
+				posthog.captureException(error, properties)
+			} catch (_error) {
+				// Silently fail if there's an error capturing an event.
+			}
+		}
+	}
+	// kilocode_change end
+
 	public capture(eventName: string, properties?: Record<string, any>) {
 		if (TelemetryClient.telemetryEnabled) {
 			try {
