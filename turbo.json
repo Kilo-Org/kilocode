@@ -27,6 +27,9 @@
 		"chromatic": {
 			"dependsOn": ["storybook:build"],
 			"cache": false
+		},
+		"playwright": {
+			"cache": false
 		}
 	}
 }

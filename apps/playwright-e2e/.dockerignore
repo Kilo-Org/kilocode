@@ -1,0 +1,65 @@
+# Docker ignore file for simplified Playwright setup
+# Only include essential files for Docker build context
+
+# Node modules (Docker will install minimal deps)
+node_modules/
+*/node_modules/
+**/node_modules/
+
+# Test results and reports (will be generated in Docker)
+test-results/
+playwright-report/
+coverage/
+.nyc_output/
+
+# Cache directories
+.turbo/
+.cache/
+.vite/
+.next/
+.nuxt/
+
+# IDE and editor files
+.vscode/
+.vscode-test/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+pnpm-debug.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Git
+.git/
+.gitignore
+
+# Environment files (except sample)
+.env.local
+.env.*.local
+
+# Package manager lock files (Docker uses npm for minimal deps)
+package-lock.json
