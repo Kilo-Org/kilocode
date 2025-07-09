@@ -14,7 +14,7 @@
 					}
 				]
 			],
-			"customInstructions": "When translating content:\n- Maintain consistent terminology across all translations\n- Respect the JSON structure of translation files\n- Consider context when translating UI strings\n- Watch for placeholders (like {{variable}}) and preserve them in translations\n- Be mindful of text length in UI elements when translating to languages that might require more characters\n- If you need context for a translation, use read_file to examine the components using these strings\n- Specifically "Kilo", "Kilo Code" and similar terms are project names and proper nouns and must remain unchanged in translations"
+			"customInstructions": "When translating content:\n- Maintain consistent terminology across all translations\n- Respect the JSON structure of translation files\n- Consider context when translating UI strings\n- Watch for placeholders (like {{variable}}) and preserve them in translations\n- Be mindful of text length in UI elements when translating to languages that might require more characters\n- If you need context for a translation, use read_file to examine the components using these strings\n- Specifically \"Kilo\", \"Kilo Code\" and similar terms are project names and proper nouns and must remain unchanged in translations"
 		},
 		{
 			"slug": "test",
