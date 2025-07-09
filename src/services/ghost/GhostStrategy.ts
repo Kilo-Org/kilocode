@@ -1,5 +1,6 @@
 import * as vscode from "vscode"
 import { parsePatch } from "diff"
+import { GhostSuggestionEditOperation, GhostSuggestionEditOperationType } from "./types"
 
 export class GhostStrategy {
 	getSystemPrompt() {
@@ -45,137 +46,74 @@ ${document.getText()}\`\`\`
     `
 	}
 
-	parseResponse(response: string): vscode.WorkspaceEdit | null {
-		const workspaceEdit = new vscode.WorkspaceEdit()
+	parseResponse(response: string): GhostSuggestionEditOperation[] {
+		const operations: GhostSuggestionEditOperation[] = []
 		const cleanedResponse = response.replace(/```diff\s*|\s*```/g, "").trim()
 		if (!cleanedResponse) {
-			return null // No valid diff found
+			return [] // No valid diff found
 		}
 		const filePatches = parsePatch(cleanedResponse)
-
 		for (const filePatch of filePatches) {
-			if (!filePatch.newFileName || filePatch.newFileName === "/dev/null") {
+			// Determine the file path from the patch header.
+			// It prefers the new file name, falling back to the old one.
+			// The regex removes the 'a/' or 'b/' prefixes common in git diffs.
+			const filePath = (filePatch.newFileName || filePatch.oldFileName || "").replace(/^[ab]\//, "")
+
+			// If a file path can't be determined (e.g., for /dev/null), skip this patch.
+			if (!filePath || filePath === "/dev/null") {
 				continue
 			}
 
-			// Handle file path properly
-			const fileNameUri = filePatch.newFileName.replace(/^b\//, "")
+			const fileUri = vscode.Uri.file(filePath)
 
-			// Check if the path is already a URI or needs to be converted
-			let fileUri: vscode.Uri
-			if (fileNameUri.startsWith("file://")) {
-				fileUri = vscode.Uri.parse(fileNameUri)
-			} else if (fileNameUri.startsWith("/")) {
-				// Absolute path
-				fileUri = vscode.Uri.file(fileNameUri)
-			} else {
-				// Relative path - assume relative to workspace
-				fileUri = vscode.Uri.file(fileNameUri)
-			}
-
-			// Validate hunks
-			if (!filePatch.hunks || filePatch.hunks.length === 0) {
-				continue
-			}
-
+			// Each file patch contains one or more "hunks," which are contiguous
+			// blocks of changes.
 			for (const hunk of filePatch.hunks) {
-				// Validate hunk
-				if (
-					typeof hunk.oldStart !== "number" ||
-					typeof hunk.newStart !== "number" ||
-					typeof hunk.oldLines !== "number" ||
-					typeof hunk.newLines !== "number"
-				) {
-					continue
-				}
+				let currentOldLineNumber = hunk.oldStart
+				let currentNewLineNumber = hunk.newStart
 
-				// Line numbers in diff are 1-based, VS Code API is 0-based.
-				let originalLineNumber = hunk.oldStart - 1
-				let modifiedLineNumber = hunk.newStart - 1
-
-				// First pass: collect all operations
-				const operations = []
-
-				// Make a copy of line numbers for tracking
-				let currentOriginalLine = originalLineNumber
-				let currentModifiedLine = modifiedLineNumber
-
+				// Iterate over each line within the hunk.
 				for (const line of hunk.lines) {
-					if (!line || line.length === 0) {
-						continue
-					}
+					const operationType = line.charAt(0) as GhostSuggestionEditOperationType
+					const content = line.substring(1)
 
-					const lineType = line[0]
-					const lineContent = line.substring(1)
+					switch (operationType) {
+						// Case 1: The line is an addition.
+						case "+":
+							operations.push({
+								type: "+",
+								fileUri: fileUri,
+								line: currentNewLineNumber - 1,
+								content: content,
+							})
+							// Only increment the new line counter for additions and context lines.
+							currentNewLineNumber++
+							break
 
-					if (lineType !== "+" && lineType !== "-" && lineType !== " ") {
-						continue
-					}
+						// Case 2: The line is a deletion.
+						case "-":
+							operations.push({
+								type: "-",
+								fileUri: fileUri,
+								line: currentOldLineNumber - 1,
+								content: content,
+							})
+							// Only increment the old line counter for deletions and context lines.
+							currentOldLineNumber++
+							break
 
-					const op = {
-						type: lineType,
-						content: lineContent,
-						originalLine: lineType === "+" ? -1 : currentOriginalLine,
-						modifiedLine: lineType === "-" ? -1 : currentModifiedLine,
-					}
-
-					operations.push(op)
-
-					// Update line counters
-					if (lineType === "-" || lineType === " ") {
-						currentOriginalLine++
-					}
-					if (lineType === "+" || lineType === " ") {
-						currentModifiedLine++
-					}
-				}
-
-				for (const op of operations) {
-					if (op.type === "-") {
-						const start = new vscode.Position(op.originalLine, 0)
-						const end = new vscode.Position(op.originalLine + 1, 0)
-						const range = new vscode.Range(start, end)
-						workspaceEdit.delete(fileUri, range)
-					}
-				}
-
-				// Group consecutive additions and apply them as a single edit
-				let groupStart = -1
-				let groupContent = ""
-
-				// Find consecutive additions and group them
-				for (let i = 0; i < operations.length; i++) {
-					const op = operations[i]
-					if (op.type === "+") {
-						// Start a new group if we don't have one
-						if (groupStart === -1) {
-							groupStart = op.modifiedLine
-						}
-
-						// Add content to the group
-						const content = op.content.endsWith("\n") ? op.content : op.content + "\n"
-						groupContent += content
-
-						// If this is the last operation or the next one isn't consecutive, apply the group
-						if (
-							i === operations.length - 1 ||
-							operations[i + 1].type !== "+" ||
-							operations[i + 1].modifiedLine !== op.modifiedLine + 1
-						) {
-							// Apply the group
-							if (groupStart !== -1) {
-								const position = new vscode.Position(groupStart, 0)
-								workspaceEdit.insert(fileUri, position, groupContent)
-
-								// Reset the group
-								groupStart = -1
-								groupContent = ""
-							}
-						}
+						// Case 3: The line is unchanged (context).
+						default:
+							// For context lines, we increment both counters as they exist
+							// in both the old and new versions of the file.
+							currentOldLineNumber++
+							currentNewLineNumber++
+							break
 					}
 				}
 			}
 		}
-		return workspaceEdit
+
+		return operations
 	}
 }

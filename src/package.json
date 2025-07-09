@@ -248,6 +248,31 @@
 					"dark": "assets/icons/kilo-dark.svg"
 				},
 				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.ghostWriter.generateSuggestions",
+				"title": "Kilo Code Ghotst Writer - Generate Suggestions",
+				"category": "Kilo Code Ghost Writer"
+			},
+			{
+				"command": "kilo-code.ghostWriter.displaySuggestions",
+				"title": "Display Suggestions",
+				"category": "Kilo Code Ghost Writer"
+			},
+			{
+				"command": "kilo-code.ghostWriter.cancelSuggestions",
+				"title": "Cancel Suggestions",
+				"category": "Kilo Code Ghost Writer"
+			},
+			{
+				"command": "kilo-code.ghostWriter.applyCurrentSuggestions",
+				"title": "Apply Current Suggestion",
+				"category": "Kilo Code Ghost Writer"
+			},
+			{
+				"command": "kilo-code.ghostWriter.applyAllSuggestions",
+				"title": "Apply All Suggestions",
+				"category": "Kilo Code Ghost Writer"
 			}
 		],
 		"keybindings": [
@@ -267,6 +292,16 @@
 				"command": "editor.action.inlineSuggest.commit",
 				"key": "tab",
 				"when": "inlineSuggestionVisible && editorTextFocus && !editorTabMovesFocus && !inSnippetMode && !suggestWidgetVisible && editorLangId != 'markdown'"
+			},
+			{
+				"command": "kilo-code.ghostWriter.keyTab",
+				"key": "tab",
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode"
+			},
+			{
+				"command": "kilo-code.ghostWriter.keyEscape",
+				"key": "escape",
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode"
 			}
 		],
 		"menus": {

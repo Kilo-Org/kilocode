@@ -19,6 +19,7 @@ export class GhostModel {
 
 	public async generateResponse(systemPrompt: string, userPrompt: string) {
 		if (!this.apiHandler) {
+			console.error("API handler is not initialized")
 			throw new Error("API handler is not initialized. Please check your configuration.")
 		}
 
