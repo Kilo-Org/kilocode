@@ -61,10 +61,10 @@ jobs:
                   OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
                   WORKSPACE_ROOT: ${{ github.workspace }}
 
-            - name: Comment PR with test results
-              if: always() && github.event_name == 'pull_request'
-              uses: actions/github-script@v7
-              with:
-                  script: |
-                      const { commentPlaywrightResults } = require('./.github/scripts/comment-playwright-results.js');
-                      await commentPlaywrightResults(github, context);
+            # - name: Comment PR with test results
+            #   if: always() && github.event_name == 'pull_request'
+            #   uses: actions/github-script@v7
+            #   with:
+            #       script: |
+            #           const { commentPlaywrightResults } = require('./.github/scripts/comment-playwright-results.js');
+            #           await commentPlaywrightResults(github, context);
