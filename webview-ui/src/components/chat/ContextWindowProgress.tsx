@@ -27,14 +27,7 @@ export const ContextWindowProgress = ({ contextWindow, contextTokens, maxTokens 
 	const { currentPercent: currentPercentRaw } = tokenDistribution
 	const { autoCondenseContextPercent } = useExtensionState()
 	const highlightNearLimit = currentPercentRaw >= 50
-	const tooltipContent = useMemo(() => {
-		const currentPercent = Math.round(currentPercentRaw)
-		if (highlightNearLimit) {
-			return t("kilocode:contextWindow.nearLimit", { currentPercent, autoCondenseContextPercent })
-		} else {
-			return t("kilocode:contextWindow.progress", { currentPercent, autoCondenseContextPercent })
-		}
-	}, [autoCondenseContextPercent, highlightNearLimit, currentPercentRaw, t])
+	const currentPercent = Math.round(currentPercentRaw)
 
 	return (
 		<TooltipProvider>
@@ -50,7 +43,11 @@ export const ContextWindowProgress = ({ contextWindow, contextTokens, maxTokens 
 					</div>
 				</TooltipTrigger>
 				<TooltipContent>
-					<div>{tooltipContent}</div>
+					<div>
+						{highlightNearLimit
+							? t("kilocode:contextWindow.nearLimit", { currentPercent, autoCondenseContextPercent })
+							: t("kilocode:contextWindow.progress", { currentPercent, autoCondenseContextPercent })}
+					</div>
 					<div>
 						{t("kilocode:contextWindow.willAutoCondense", {
 							autoCondenseContextPercent,
