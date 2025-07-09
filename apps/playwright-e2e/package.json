@@ -6,12 +6,10 @@
 		"lint": "eslint tests --ext=ts --max-warnings=0",
 		"check-types": "tsc --noEmit",
 		"format": "prettier --write tests",
-		"test:run": "npx dotenvx run -f .env.local -- playwright test",
-		"test:run:verbose": "PLAYWRIGHT_VERBOSE_LOGS=true npx dotenvx run -f .env.local -- playwright test",
-		"test:ci": "pnpm -w bundle && pnpm --filter @roo-code/vscode-webview build && npx playwright test",
-		"test:docker": "node run-docker-playwright.js",
-		"playwright": "npx playwright",
-		"clean": "rimraf test-results .turbo"
+		"playwright": "npx dotenvx run -f .env.local -- playwright test",
+		"playwright:docker": "node run-docker-playwright.js",
+		"playwright:verbose": "PLAYWRIGHT_VERBOSE_LOGS=true npm run playwright",
+		"clean": "rimraf test-results playwright-report .turbo"
 	},
 	"devDependencies": {
 		"@playwright/test": "^1.53.1",
