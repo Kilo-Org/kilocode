@@ -278,7 +278,11 @@ export const createTaskHeaderMessages = (): ClineMessage[] => {
 		{
 			type: "say",
 			say: "api_req_started",
-			text: "Making API request to Claude...",
+			text: JSON.stringify({
+				cost: undefined, // API request in progress
+				provider: "anthropic",
+				model: "claude-3-sonnet-20240229",
+			}),
 		},
 		[500, 1000],
 	)
