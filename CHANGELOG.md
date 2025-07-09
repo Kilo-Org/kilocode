@@ -1,8 +1,6 @@
 # kilo-code
 
-## 4.54.1
-
-### Patch Changes
+## [v4.54.1]
 
 - [#1191](https://github.com/Kilo-Org/kilocode/pull/1191) [`ce2b45a`](https://github.com/Kilo-Org/kilocode/commit/ce2b45aec7845719754f892717f2c2eee548bff2) Thanks [@NyxJae](https://github.com/NyxJae)! - Improve Chinese translations
 
