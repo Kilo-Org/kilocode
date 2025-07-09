@@ -6,6 +6,8 @@ import { singleCompletionHandler } from "../../utils/single-completion-handler"
 import { GitExtensionService, GitChange, GitProgressOptions } from "./GitExtensionService"
 import { supportPrompt } from "../../shared/support-prompt"
 import { t } from "../../i18n"
+import { addCustomInstructions } from "../../core/prompts/sections/custom-instructions"
+import { getWorkspacePath } from "../../utils/path"
 import type { ProviderSettings } from "@roo-code/types"
 
 /**
@@ -147,7 +149,7 @@ export class CommitMessageProvider {
 			}
 		}
 
-		const prompt = this.buildCommitMessagePrompt(gitContextString, customSupportPrompts)
+		const prompt = await this.buildCommitMessagePrompt(gitContextString, customSupportPrompts)
 
 		const response = await singleCompletionHandler(configToUse, prompt)
 
@@ -158,7 +160,26 @@ export class CommitMessageProvider {
 	 * Builds the AI prompt for commit message generation.
 	 * Handles logic for generating different messages when requested for the same changes.
 	 */
-	private buildCommitMessagePrompt(gitContextString: string, customSupportPrompts: Record<string, any>): string {
+	private async buildCommitMessagePrompt(
+		gitContextString: string,
+		customSupportPrompts: Record<string, any>,
+	): Promise<string> {
+		// Load custom instructions including rules
+		const workspacePath = getWorkspacePath()
+		const customInstructions = workspacePath
+			? await addCustomInstructions(
+					"", // no mode-specific instructions for commit
+					"", // no global custom instructions
+					workspacePath,
+					"commit", // mode for commit-specific rules
+					{
+						language: vscode.env.language,
+						localRulesToggleState: this.context.workspaceState.get("localRulesToggles"),
+						globalRulesToggleState: this.context.globalState.get("globalRulesToggles"),
+					},
+				)
+			: ""
+
 		// Check if we should generate a different message than the previous one
 		const shouldGenerateDifferentMessage =
 			this.previousGitContext === gitContextString && this.previousCommitMessage !== null
@@ -186,14 +207,24 @@ FINAL REMINDER: Your message MUST be COMPLETELY DIFFERENT from the previous mess
 
 			return supportPrompt.create(
 				"COMMIT_MESSAGE",
-				{ gitContext: gitContextString },
+				{
+					gitContext: gitContextString,
+					customInstructions: customInstructions || "",
+				},
 				{
 					...customSupportPrompts,
 					COMMIT_MESSAGE: modifiedTemplate,
 				},
 			)
 		} else {
-			return supportPrompt.create("COMMIT_MESSAGE", { gitContext: gitContextString }, customSupportPrompts)
+			return supportPrompt.create(
+				"COMMIT_MESSAGE",
+				{
+					gitContext: gitContextString,
+					customInstructions: customInstructions || "",
+				},
+				customSupportPrompts,
+			)
 		}
 	}
 

@@ -36,6 +36,18 @@ vi.mock("../../../core/config/ContextProxy", () => {
 vi.mock("../../../utils/single-completion-handler")
 vi.mock("../GitExtensionService")
 vi.mock("child_process")
+vi.mock("../../../core/prompts/sections/custom-instructions", () => ({
+	addCustomInstructions: vi.fn().mockResolvedValue(""),
+}))
+vi.mock("../../../utils/path", () => ({
+	getWorkspacePath: vi.fn().mockReturnValue("/mock/workspace"),
+}))
+vi.mock("../../../shared/support-prompt", () => ({
+	supportPrompt: {
+		get: vi.fn().mockReturnValue("Mock commit message template with ${gitContext} and ${customInstructions}"),
+		create: vi.fn().mockReturnValue("Mock generated prompt"),
+	},
+}))
 vi.mock("vscode", () => ({
 	window: {
 		showInformationMessage: vi.fn(),
@@ -47,6 +59,9 @@ vi.mock("vscode", () => ({
 	},
 	commands: {
 		registerCommand: vi.fn(),
+	},
+	env: {
+		language: "en",
 	},
 	ExtensionContext: vi.fn(),
 	OutputChannel: vi.fn(),
@@ -65,7 +80,10 @@ describe("CommitMessageProvider", () => {
 	let mockExecSync: Mock<any>
 
 	beforeEach(async () => {
-		mockContext = {} as vscode.ExtensionContext
+		mockContext = {
+			workspaceState: { get: vi.fn().mockReturnValue(undefined) },
+			globalState: { get: vi.fn().mockReturnValue(undefined) },
+		} as unknown as vscode.ExtensionContext
 		mockOutputChannel = {
 			appendLine: vi.fn(),
 		} as unknown as vscode.OutputChannel
