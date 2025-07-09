@@ -47,6 +47,12 @@ const config: StorybookConfig = {
 			"@src/utils/clipboard": resolve(currentDirname, "../src/mocks/utils"),
 			"@src/utils/highlighter": resolve(currentDirname, "../src/mocks/utils"),
 			"@src/i18n/TranslationContext": resolve(currentDirname, "../src/mocks/utils"),
+			"@roo/ProfileValidator": resolve(currentDirname, "../src/mocks/ProfileValidator"),
+		}
+
+		config.define = {
+			...config.define,
+			"process.env": {}, // Inject a dummy `process.env`
 		}
 
 		// Add Tailwind CSS plugin to process the webview-ui's CSS

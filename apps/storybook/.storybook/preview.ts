@@ -1,10 +1,11 @@
 import type { Preview } from "@storybook/react"
-import isChromatic from "chromatic/isChromatic"
 
 import { withExtensionState } from "../src/decorators/withExtensionState"
 import { withQueryClient } from "../src/decorators/withQueryClient"
 import { withTheme } from "../src/decorators/withTheme"
 import { withI18n } from "../src/decorators/withI18n"
+import { withTooltipProvider } from "../src/decorators/withTooltipProvider"
+import { withFixedContainment } from "../src/decorators/withFixedContainment"
 import { withChromaticDecorator } from "./ChromaticDecorator"
 
 import "./storybook.css"
@@ -44,7 +45,15 @@ const preview: Preview = {
 			},
 		},
 	},
-	decorators: [withI18n, withQueryClient, withExtensionState, withTheme, withChromaticDecorator],
+	decorators: [
+		withI18n,
+		withQueryClient,
+		withExtensionState,
+		withTheme,
+		withTooltipProvider,
+		withFixedContainment,
+		withChromaticDecorator,
+	],
 }
 
 export default preview
