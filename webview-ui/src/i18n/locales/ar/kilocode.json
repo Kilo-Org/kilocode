@@ -117,5 +117,10 @@
 		"editCancel": "إلغاء",
 		"send": "إرسال",
 		"restoreAndSend": "استرجاع وإرسال"
+	},
+	"contextWindow": {
+		"progress": "{{currentPercent}}% من السياق المستخدم",
+		"nearLimit": "⚠️ اقتراب من حد السياق - تم استخدام {{currentPercent}}%",
+		"willAutoCondense": "(سيتم التكثيف تلقائيًا بنسبة {{autoCondenseContextPercent}}%)"
 	}
 }

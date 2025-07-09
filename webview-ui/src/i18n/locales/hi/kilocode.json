@@ -117,5 +117,10 @@
 		"editCancel": "रद्द करें",
 		"send": "भेजें",
 		"restoreAndSend": "पुनर्स्थापित करें और भेजें"
+	},
+	"contextWindow": {
+		"nearLimit": "⚠️ संदर्भ सीमा के पास - {{currentPercent}}% उपयोग किया गया है",
+		"progress": "{{currentPercent}}% संदर्भ का उपयोग किया गया",
+		"willAutoCondense": "({{autoCondenseContextPercent}}% पर स्वतः संघनित हो जाएगा)"
 	}
 }

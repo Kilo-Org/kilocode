@@ -117,5 +117,10 @@
 		"editCancel": "Hủy",
 		"send": "Gửi",
 		"restoreAndSend": "Khôi phục & Gửi"
+	},
+	"contextWindow": {
+		"progress": "{{currentPercent}}% ngữ cảnh đã sử dụng",
+		"nearLimit": "⚠️ Gần đạt giới hạn ngữ cảnh - đã sử dụng {{currentPercent}}%",
+		"willAutoCondense": "(sẽ tự động cô đọng ở mức {{autoCondenseContextPercent}}%)"
 	}
 }

@@ -117,5 +117,10 @@
 		"editCancel": "Zrušit",
 		"send": "Odeslat",
 		"restoreAndSend": "Obnovit a odeslat"
+	},
+	"contextWindow": {
+		"nearLimit": "⚠️ Blížíte se k limitu kontextu - využito {{currentPercent}}%",
+		"progress": "{{currentPercent}}% kontextu využito",
+		"willAutoCondense": "(automaticky zkondenzováno na {{autoCondenseContextPercent}}%)"
 	}
 }

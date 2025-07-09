@@ -2,9 +2,11 @@ import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import { formatLargeNumber } from "@/utils/format"
-import { calculateTokenDistribution } from "@/utils/model-utils"
+import { calculateTokenDistribution, TokenDistributionResult } from "@/utils/model-utils"
 import { KiloContextWindowProgressTokensUsed } from "../kilocode/chat/KiloContextWindowProgressTokensUsed"
 import { StandardTooltip } from "@/components/ui"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip"
+import { useExtensionState } from "@/context/ExtensionStateContext"
 
 interface ContextWindowProgressProps {
 	contextWindow: number
@@ -20,6 +22,57 @@ export const ContextWindowProgress = ({ contextWindow, contextTokens, maxTokens 
 		() => calculateTokenDistribution(contextWindow, contextTokens, maxTokens),
 		[contextWindow, contextTokens, maxTokens],
 	)
+
+	// kilocode_change start - ContextWindowProgressInner split from ContextWindowProgress to wrap with Tooltip
+	const { currentPercent: currentPercentRaw } = tokenDistribution
+	const { autoCondenseContextPercent } = useExtensionState()
+	const highlightNearLimit = currentPercentRaw >= 50
+	const tooltipContent = useMemo(() => {
+		const currentPercent = Math.round(currentPercentRaw)
+		if (highlightNearLimit) {
+			return t("kilocode:contextWindow.nearLimit", { currentPercent, autoCondenseContextPercent })
+		} else {
+			return t("kilocode:contextWindow.progress", { currentPercent, autoCondenseContextPercent })
+		}
+	}, [autoCondenseContextPercent, highlightNearLimit, currentPercentRaw, t])
+
+	return (
+		<TooltipProvider>
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<div className="cursor-help flex flex-1 [&_*]:pointer-events-none">
+						<ContextWindowProgressInner
+							contextWindow={contextWindow}
+							contextTokens={contextTokens}
+							maxTokens={maxTokens}
+							tokenDistribution={tokenDistribution}
+						/>
+					</div>
+				</TooltipTrigger>
+				<TooltipContent>
+					<div>{tooltipContent}</div>
+					<div>
+						{t("kilocode:contextWindow.willAutoCondense", {
+							autoCondenseContextPercent,
+						})}
+					</div>
+				</TooltipContent>
+			</Tooltip>
+		</TooltipProvider>
+	)
+}
+type ContextWindowProgressInnerProps = {
+	tokenDistribution?: TokenDistributionResult
+} & ContextWindowProgressProps
+
+export const ContextWindowProgressInner = ({
+	contextWindow,
+	contextTokens,
+	tokenDistribution,
+}: ContextWindowProgressInnerProps) => {
+	const { t } = useTranslation()
+	if (!tokenDistribution) return null
+	// kilocode_change end - ContextWindowProgressInner split from ContextWindowProgress to wrap with Tooltip
 
 	// Destructure the values we need
 	const { currentPercent, reservedPercent, availableSize, reservedForOutput, availablePercent } = tokenDistribution
@@ -54,6 +107,8 @@ export const ContextWindowProgress = ({ contextWindow, contextTokens, maxTokens 
 		</div>
 	)
 
+	const highlightNearLimit = currentPercent >= 50 // kilocode_change
+
 	return (
 		<>
 			<div className="flex items-center gap-2 flex-1 whitespace-nowrap px-2">
@@ -68,7 +123,7 @@ export const ContextWindowProgress = ({ contextWindow, contextTokens, maxTokens 
 								style={{ width: `${currentPercent}%` }}
 								data-testid="context-tokens-used">
 								{/* Current tokens used - darkest */}
-								<KiloContextWindowProgressTokensUsed currentPercent={currentPercent} />
+								<KiloContextWindowProgressTokensUsed highlightNearLimit={highlightNearLimit} />
 							</div>
 
 							{/* Container for reserved tokens */}

@@ -117,5 +117,10 @@
 		"editCancel": "취소",
 		"send": "보내기",
 		"restoreAndSend": "복원 및 보내기"
+	},
+	"contextWindow": {
+		"nearLimit": "⚠️ 컨텍스트 한도에 근접 - {{currentPercent}}% 사용됨",
+		"progress": "{{currentPercent}}% 컨텍스트 사용됨",
+		"willAutoCondense": "({{autoCondenseContextPercent}}%에서 자동 축소)"
 	}
 }

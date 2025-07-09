@@ -117,5 +117,10 @@
 		"editCancel": "Kanselahin",
 		"send": "Ipadala",
 		"restoreAndSend": "Ibalik at Ipadala"
+	},
+	"contextWindow": {
+		"progress": "{{currentPercent}}% ng konteksto ang nagamit",
+		"nearLimit": "⚠️ Malapit nang maabot ang limit ng konteksto - {{currentPercent}}% ang nagamit na",
+		"willAutoCondense": "(awtomatikong magkokondensa sa {{autoCondenseContextPercent}}%)"
 	}
 }

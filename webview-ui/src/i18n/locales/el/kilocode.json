@@ -117,5 +117,10 @@
 		"editCancel": "Ακύρωση",
 		"send": "Αποστολή",
 		"restoreAndSend": "Επαναφορά & Αποστολή"
+	},
+	"contextWindow": {
+		"nearLimit": "⚠️ Πλησιάζει το όριο περιεχομένου - {{currentPercent}}% σε χρήση",
+		"progress": "{{currentPercent}}% του πλαισίου χρησιμοποιήθηκε",
+		"willAutoCondense": "(θα συμπυκνωθεί αυτόματα στο {{autoCondenseContextPercent}}%)"
 	}
 }

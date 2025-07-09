@@ -117,5 +117,10 @@
 		"editCancel": "ยกเลิก",
 		"send": "ส่ง",
 		"restoreAndSend": "คืนค่าและส่ง"
+	},
+	"contextWindow": {
+		"nearLimit": "⚠️ ใกล้เต็มความจุบริบท - ใช้ไปแล้ว {{currentPercent}}%",
+		"progress": "ใช้บริบทไปแล้ว {{currentPercent}}%",
+		"willAutoCondense": "(จะย่อโดยอัตโนมัติที่ {{autoCondenseContextPercent}}%)"
 	}
 }

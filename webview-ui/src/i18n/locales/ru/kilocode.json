@@ -117,5 +117,10 @@
 		"editCancel": "Отмена",
 		"send": "Отправить",
 		"restoreAndSend": "Восстановить и отправить"
+	},
+	"contextWindow": {
+		"progress": "{{currentPercent}}% контекста использовано",
+		"nearLimit": "⚠️ Приближается предел контекста - использовано {{currentPercent}}%",
+		"willAutoCondense": "(автоматическое сжатие на {{autoCondenseContextPercent}}%)"
 	}
 }

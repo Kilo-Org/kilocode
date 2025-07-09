@@ -13,6 +13,11 @@
 		"addCredit": "Add Credit",
 		"lowBalance": "Your Kilo Code balance is low"
 	},
+	"contextWindow": {
+		"nearLimit": "⚠️ Nearing context limit - {{currentPercent}}% used",
+		"progress": "{{currentPercent}}% of context used",
+		"willAutoCondense": "(will auto-condense at {{autoCondenseContextPercent}}%)"
+	},
 	"notifications": {
 		"toolRequest": "Tool request waiting for approval",
 		"browserAction": "Browser action waiting for approval",

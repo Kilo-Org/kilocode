@@ -117,5 +117,10 @@
 		"editCancel": "Batal",
 		"send": "Kirim",
 		"restoreAndSend": "Pulihkan & Kirim"
+	},
+	"contextWindow": {
+		"nearLimit": "⚠️ Mendekati batas konteks - {{currentPercent}}% terpakai",
+		"progress": "{{currentPercent}}% dari konteks telah digunakan",
+		"willAutoCondense": "(akan secara otomatis diringkas pada {{autoCondenseContextPercent}}%)"
 	}
 }

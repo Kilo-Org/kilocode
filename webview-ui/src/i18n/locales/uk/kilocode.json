@@ -117,5 +117,10 @@
 		"editCancel": "Скасувати",
 		"send": "Надіслати",
 		"restoreAndSend": "Відновити та надіслати"
+	},
+	"contextWindow": {
+		"nearLimit": "⚠️ Наближення до ліміту контексту - використано {{currentPercent}}%",
+		"progress": "{{currentPercent}}% контексту використано",
+		"willAutoCondense": "(автоматично згорнеться на {{autoCondenseContextPercent}}%)"
 	}
 }

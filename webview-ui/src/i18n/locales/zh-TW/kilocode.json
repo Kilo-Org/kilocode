@@ -117,5 +117,10 @@
 		"editCancel": "取消",
 		"send": "發送",
 		"restoreAndSend": "恢復並發送"
+	},
+	"contextWindow": {
+		"nearLimit": "⚠️ 接近上下文限制 - 已使用{{currentPercent}}%",
+		"progress": "{{currentPercent}}% 的上下文已使用",
+		"willAutoCondense": "(将以{{autoCondenseContextPercent}}%自动缩减)"
 	}
 }

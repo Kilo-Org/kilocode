@@ -117,5 +117,10 @@
 		"editCancel": "Avbryt",
 		"send": "Skicka",
 		"restoreAndSend": "Återställ & Skicka"
+	},
+	"contextWindow": {
+		"nearLimit": "⚠️ Närmar sig kontextgräns - {{currentPercent}}% använt",
+		"progress": "{{currentPercent}}% av kontexten använd",
+		"willAutoCondense": "(kommer automatiskt att kondenseras vid {{autoCondenseContextPercent}}%)"
 	}
 }

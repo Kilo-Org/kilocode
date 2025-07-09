@@ -117,5 +117,10 @@
 		"editCancel": "キャンセル",
 		"send": "送信",
 		"restoreAndSend": "復元して送信"
+	},
+	"contextWindow": {
+		"nearLimit": "⚠️ コンテキスト制限に近づいています - {{currentPercent}}% 使用済み",
+		"progress": "コンテキストの{{currentPercent}}%を使用中",
+		"willAutoCondense": "({{autoCondenseContextPercent}}%で自動的に要約されます)"
 	}
 }

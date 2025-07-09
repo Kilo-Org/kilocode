@@ -117,5 +117,10 @@
 		"editCancel": "İptal",
 		"send": "Gönder",
 		"restoreAndSend": "Geri Yükle ve Gönder"
+	},
+	"contextWindow": {
+		"nearLimit": "⚠️ Bağlam sınırına yaklaşılıyor - %{{currentPercent}} kullanıldı",
+		"progress": "Bağlamın {{currentPercent}}%'i kullanıldı",
+		"willAutoCondense": "(otomatik olarak %{{autoCondenseContextPercent}} oranında yoğunlaşacaktır)"
 	}
 }
