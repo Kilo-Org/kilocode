@@ -1,6 +1,6 @@
 import { type Page, type FrameLocator, expect } from "@playwright/test"
 import type { WebviewMessage } from "../../../src/shared/WebviewMessage"
-import { ProviderSettings } from "../../../packages/types/dist/index.cjs"
+import { ProviderSettings } from "@roo-code/types"
 
 const defaultPlaywrightApiConfig = {
 	apiProvider: "openrouter" as const,

@@ -84,6 +84,9 @@ importers:
       '@roo-code/config-typescript':
         specifier: workspace:^
         version: link:../../packages/config-typescript
+      '@roo-code/types':
+        specifier: workspace:^
+        version: link:../../packages/types
       '@types/node':
         specifier: ^22.15.29
         version: 22.15.29
