@@ -453,6 +453,18 @@
 					"type": "string",
 					"default": "",
 					"description": "%settings.autoImportSettingsPath.description%"
+				},
+				"kilo-code.baseUrl": {
+					"type": "string",
+					"default": "https://kilocode.ai",
+					"description": "TEST Base URL for Kilo Code backend services (Advanced)",
+					"scope": "application",
+					"tags": [
+						"advanced",
+						"usesOnlineServices"
+					],
+					"order": 999,
+					"editPresentation": "multilineText"
 				}
 			}
 		}
