@@ -3,7 +3,7 @@
 		"commands": [
 			{
 				"command": "kilo-code.ghostWriter.generateSuggestions",
-				"title": "Kilo Code Ghotst Writer - Generate Suggestions",
+				"title": "Kilo Code Ghost Writer - Generate Suggestions",
 				"category": "Kilo Code Ghost Writer"
 			},
 			{
