@@ -19,6 +19,7 @@ export type TestFixtures = TestOptions & {
 	workbox: Page
 	createProject: () => Promise<string>
 	createTempDir: () => Promise<string>
+	takeScreenshot: (name?: string) => Promise<void>
 }
 
 export const test = base.extend<TestFixtures>({
@@ -150,5 +151,35 @@ export const test = base.extend<TestFixtures>({
 				console.warn(`Failed to cleanup temp dir ${tempDir}:`, error)
 			}
 		}
+	},
+
+	takeScreenshot: async ({ workbox }, use) => {
+		await use(async (name?: string) => {
+			const testInfo = test.info()
+			// Extract test suite from the test file name or use a default
+			const fileName = testInfo.file.split("/").pop()?.replace(".test.ts", "") || "unknown"
+			const testSuite =
+				fileName === "sanity"
+					? "Sanity Tests"
+					: fileName === "chat-with-response"
+						? "Full E2E Test"
+						: fileName
+								.split("-")
+								.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+								.join(" ")
+			const testName = testInfo.title || "Unknown Test"
+
+			// Create a hierarchical name: TestSuite__TestName__ScreenshotName
+			// Using double underscores to clearly separate hierarchy levels
+			const screenshotName = name || `screenshot-${Date.now()}`
+			const hierarchicalName = `${testSuite}__${testName}__${screenshotName}`
+				.replace(/[^a-zA-Z0-9_-]/g, "-") // Replace special chars with dashes, keep underscores
+				.replace(/-+/g, "-") // Replace multiple dashes with single dash
+				.replace(/^-|-$/g, "") // Remove leading/trailing dashes
+
+			const screenshotPath = test.info().outputPath(`${hierarchicalName}.png`)
+			await workbox.screenshot({ path: screenshotPath, fullPage: true })
+			console.log(`📸 Screenshot captured: ${hierarchicalName}`)
+		})
 	},
 })

@@ -9,8 +9,12 @@ type LayoutMode = "row" | "column"
 export const withChromaticDecorator: Decorator = (Story, context) => {
 	const theme = context.globals.theme || "dark"
 	const layout = context.parameters?.chromaticLayout || "row"
+	const disableChromaticDualThemeSnapshot = context.parameters?.disableChromaticDualThemeSnapshot || false
 	return (
-		<ChromaticDecorator theme={theme} layout={layout}>
+		<ChromaticDecorator
+			theme={theme}
+			layout={layout}
+			disableChromaticDualThemeSnapshot={disableChromaticDualThemeSnapshot}>
 			<Story />
 		</ChromaticDecorator>
 	)
@@ -27,17 +31,22 @@ function ChromaticDecorator({
 	children,
 	theme,
 	layout = "row",
+	disableChromaticDualThemeSnapshot = false,
 }: {
 	children: ReactNode
 	theme: string
 	layout?: LayoutMode
+	disableChromaticDualThemeSnapshot?: boolean
 }) {
 	const styles = cn(baseStyles, isChromatic() && chromaticStyles)
 	const themeContainerStyles = cn("flex w-full", layout === "column" ? "flex-col" : "flex-row")
 
+	// If automatic multi-mode snapshotting is disabled, render only the current theme
+	const shouldRenderBothThemes = !disableChromaticDualThemeSnapshot && (isChromatic() || theme === "both")
+
 	return (
 		<div className={styles} data-chromatic={isChromatic() ? "true" : "false"}>
-			{isChromatic() || theme === "both" ? (
+			{shouldRenderBothThemes ? (
 				<div className={themeContainerStyles}>
 					<ThemeModeContainer theme="dark">{children}</ThemeModeContainer>
 					<ThemeModeContainer theme="light">{children}</ThemeModeContainer>

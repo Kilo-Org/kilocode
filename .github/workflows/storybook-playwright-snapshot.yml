@@ -1,4 +1,4 @@
-name: Chromatic Visual Testing
+name: Storybook Playwright Snapshot
 
 on:
     workflow_dispatch:
@@ -8,20 +8,24 @@ on:
         types: [opened, reopened, ready_for_review, synchronize]
         branches: [main]
 
-# Add concurrency to cancel in-progress jobs when a new workflow is triggered
+# Cancel in-progress jobs when new workflow is triggered
 concurrency:
     group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
     cancel-in-progress: true
 
 env:
+    DOCKER_BUILDKIT: 1
+    COMPOSE_DOCKER_CLI_BUILD: 1
     NODE_VERSION: 20.19.2
     PNPM_VERSION: 10.8.1
 
 jobs:
-    chromatic:
+    storybook-playwright-snapshot:
         runs-on: ubuntu-latest
+        timeout-minutes: 45
+
         steps:
-            - name: Checkout code
+            - name: Checkout repository
               uses: actions/checkout@v4
               with:
                   # Chromatic needs full git history for baseline comparison
@@ -32,17 +36,71 @@ jobs:
               with:
                   version: ${{ env.PNPM_VERSION }}
 
-            - name: Setup Node.js
+            - name: Set up Node.js
               uses: actions/setup-node@v4
               with:
                   node-version: ${{ env.NODE_VERSION }}
                   cache: "pnpm"
 
             - name: Install dependencies
-              run: pnpm install
+              run: pnpm install --frozen-lockfile
 
-            - name: Build Storybook
+            - name: Type check Playwright E2E
+              run: |
+                  cd apps/playwright-e2e
+                  pnpm check-types
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Cache Docker layers
+              uses: actions/cache@v4
+              with:
+                  path: /tmp/.buildx-cache
+                  key: ${{ runner.os }}-buildx-${{ hashFiles('apps/playwright-e2e/Dockerfile.playwright-ci') }}
+                  restore-keys: |
+                      ${{ runner.os }}-buildx-
+
+            - name: Run Playwright E2E tests
+              continue-on-error: true
+              run: |
+                  cd apps/playwright-e2e
+                  node run-docker-playwright.js
+              env:
+                  OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+                  WORKSPACE_ROOT: ${{ github.workspace }}
+
+            - name: Extract screenshots for Storybook
+              run: |
+                  echo "=== Extracting Playwright Screenshots for Storybook ==="
+
+                  # Create directory for chromatic screenshots
+                  mkdir -p chromatic-screenshots
+
+                  # Find and copy all PNG files from test results
+                  if [ -d "apps/playwright-e2e/test-results" ]; then
+                      echo "Searching for PNG files in test results..."
+                      find apps/playwright-e2e/test-results -name "*.png" -type f | while read file; do
+                          # Get just the filename without path
+                          filename=$(basename "$file")
+                          echo "Found: $filename"
+                          cp "$file" "chromatic-screenshots/$filename"
+                      done
+                      
+                      echo "Screenshots extracted:"
+                      ls -la chromatic-screenshots/ || echo "No screenshots found"
+                  else
+                      echo "No test-results directory found"
+                  fi
+
+            - name: Generate Screenshot Stories
+              run: pnpm --filter @roo-code/storybook generate-screenshot-stories
+
+            - name: Build Storybook with Screenshots
               run: pnpm --filter @roo-code/storybook build-storybook
+
+            - name: Install Chromatic CLI
+              run: pnpm --filter @roo-code/storybook add -D chromatic
 
             - name: Run Chromatic
               id: chromatic
@@ -55,8 +113,6 @@ jobs:
                   exitOnceUploaded: ${{ github.event_name == 'pull_request' }}
                   # Skip dependabot PRs and renovate PRs using glob patterns
                   skip: "@(dependabot/**|renovate/**)"
-                  # Enable GitHub PR comments integration
-                  token: ${{ secrets.GITHUB_TOKEN }}
                   # Auto-accept changes on main branch to keep it clean
                   autoAcceptChanges: ${{ github.ref == 'refs/heads/main' && 'main' || '' }}
 

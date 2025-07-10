@@ -89,8 +89,7 @@ function killAllChildProcesses() {
 						child.kill("SIGKILL")
 					}
 				}, 5000)
-			} catch (_error) {
-			}
+			} catch (_error) {}
 		}
 
 		activeProcesses.clear()
@@ -103,7 +102,11 @@ function showHelp() {
 🚀 Streamlined Docker Playwright Runner
 
 Usage:
-  node run-docker-playwright.js [playwright-args...]
+  node run-docker-playwright.js [options] [playwright-args...]
+
+Options:
+  --skip-build    Skip Docker image build (assumes image already exists)
+  --help, -h      Show this help message
 
 Examples:
   node run-docker-playwright.js                        # Run all tests
@@ -171,7 +174,7 @@ async function buildDockerImage() {
 			"--cache-from",
 			"type=local,src=/tmp/.buildx-cache",
 			"--cache-to",
-			"type=local,dest=/tmp/.buildx-cache-new,mode=max",
+			"type=local,dest=/tmp/.buildx-cache,mode=max",
 		)
 	}
 
