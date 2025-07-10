@@ -90,7 +90,6 @@ export class GhostWorkspaceEdit {
 			.sort((a, b) => a.line - b.line)
 
 		let lineOffset = 0
-
 		for (const op of fileOperations) {
 			// Calculate the equivalent line in the *original* document.
 			const originalLine = op.line - lineOffset

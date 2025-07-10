@@ -35,18 +35,10 @@ export class GhostCodeActionProvider implements vscode.CodeActionProvider {
 		if (token.isCancellationRequested) {
 			return codeAction
 		}
-
 		// Retrieve the document and range we stored earlier
 		const [uri, range] = codeAction.command!.arguments as [vscode.Uri, vscode.Range]
 		const document = await vscode.workspace.openTextDocument(uri)
-
-		GhostProvider.getInstance().getDocumentStore().storeDocument(document)
-
-		const suggestions = await GhostProvider.getInstance().provideCodeSuggestions(document, range)
-
-		if (suggestions === null) {
-			vscode.window.showErrorMessage("No suggestions available from Ghost.")
-		}
+		await GhostProvider.getInstance().provideCodeActionQuickFix(document, range)
 		return codeAction
 	}
 }
