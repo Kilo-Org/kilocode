@@ -12,7 +12,7 @@ export class GhostCodeActionProvider implements vscode.CodeActionProvider {
 		context: vscode.CodeActionContext,
 		token: vscode.CancellationToken,
 	): vscode.ProviderResult<(vscode.CodeAction | vscode.Command)[]> {
-		GhostProvider.getDocumentStore().storeDocument(document)
+		GhostProvider.getInstance().getDocumentStore().storeDocument(document)
 
 		const action = new vscode.CodeAction(
 			"Kilo Code - Ghost Writer",
@@ -40,9 +40,9 @@ export class GhostCodeActionProvider implements vscode.CodeActionProvider {
 		const [uri, range] = codeAction.command!.arguments as [vscode.Uri, vscode.Range]
 		const document = await vscode.workspace.openTextDocument(uri)
 
-		GhostProvider.getDocumentStore().storeDocument(document)
+		GhostProvider.getInstance().getDocumentStore().storeDocument(document)
 
-		const suggestions = await GhostProvider.provideCodeSuggestions(document, range)
+		const suggestions = await GhostProvider.getInstance().provideCodeSuggestions(document, range)
 
 		if (suggestions === null) {
 			vscode.window.showErrorMessage("No suggestions available from Ghost.")

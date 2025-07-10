@@ -2,7 +2,9 @@ import * as vscode from "vscode"
 import { GhostProvider } from "./GhostProvider"
 import { GhostCodeActionProvider } from "./GhostCodeActionProvider"
 
-export const registerGhost = (context: vscode.ExtensionContext) => {
+export const registerGhostProvider = (context: vscode.ExtensionContext) => {
+	const ghost = GhostProvider.getInstance()
+
 	// Register GhostProvider Commands
 	context.subscriptions.push(
 		vscode.commands.registerCommand("kilocode.ghost.codeActionQuickFix", async () => {
@@ -14,30 +16,30 @@ export const registerGhost = (context: vscode.ExtensionContext) => {
 	context.subscriptions.push(
 		vscode.commands.registerCommand("kilocode.ghost.provideCodeSuggestions", async () => {
 			vscode.window.showInformationMessage("kilocode.ghost.provideCodeSuggestions")
-			//GhostProvider.provideCodeSuggestions(document, range)
+			//ghost.provideCodeSuggestions(document, range)
 		}),
 	)
 	context.subscriptions.push(
 		vscode.commands.registerCommand("kilo-code.ghostWriter.displaySuggestions", async () => {
-			GhostProvider.displaySuggestions()
+			ghost.displaySuggestions()
 		}),
 	)
 	context.subscriptions.push(
 		vscode.commands.registerCommand("kilo-code.ghostWriter.cancelSuggestions", async () => {
-			GhostProvider.cancelSuggestions()
+			ghost.cancelSuggestions()
 		}),
 	)
 	context.subscriptions.push(
 		vscode.commands.registerCommand("kilo-code.ghostWriter.applyAllSuggestions", async () => {
-			GhostProvider.applyAllSuggestions()
+			ghost.applyAllSuggestions()
 		}),
 	)
 
 	// Register GhostProvider Key Bindings
 	context.subscriptions.push(
 		vscode.commands.registerCommand("kilo-code.ghostWriter.keyTab", async () => {
-			if (GhostProvider.isApplyAllSuggestionsEnabled()) {
-				await GhostProvider.applyAllSuggestions()
+			if (ghost.isApplyAllSuggestionsEnabled()) {
+				await ghost.applyAllSuggestions()
 			} else {
 				vscode.commands.executeCommand("tab")
 			}
@@ -45,8 +47,8 @@ export const registerGhost = (context: vscode.ExtensionContext) => {
 	)
 	context.subscriptions.push(
 		vscode.commands.registerCommand("kilo-code.ghostWriter.keyEscape", async () => {
-			if (GhostProvider.isCancelSuggestionsEnabled()) {
-				await GhostProvider.cancelSuggestions()
+			if (ghost.isCancelSuggestionsEnabled()) {
+				await ghost.cancelSuggestions()
 			} else {
 				vscode.commands.executeCommand("escape")
 			}

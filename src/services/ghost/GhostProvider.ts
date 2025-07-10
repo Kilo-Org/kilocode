@@ -30,75 +30,75 @@ export class GhostProvider {
 		return GhostProvider.instance
 	}
 
-	public static getDocumentStore() {
-		return this.getInstance().documentStore
+	public getDocumentStore() {
+		return this.documentStore
 	}
 
-	public static async provideCodeSuggestions(
+	public async provideCodeSuggestions(
 		document: vscode.TextDocument,
 		range: vscode.Range | vscode.Selection,
 	): Promise<void> {
 		// Store the document in the document store
 		this.getDocumentStore().storeDocument(document)
 
-		const systemPrompt = this.getInstance().strategy.getSystemPrompt()
-		const userPrompt = this.getInstance().strategy.getSuggestionPrompt(document, range)
+		const systemPrompt = this.strategy.getSystemPrompt()
+		const userPrompt = this.strategy.getSuggestionPrompt(document, range)
 
-		const response = await this.getInstance().model.generateResponse(systemPrompt, userPrompt)
+		const response = await this.model.generateResponse(systemPrompt, userPrompt)
 
 		console.log("LLM Response", response)
 
 		// First parse the response into edit operations
-		const operations = this.getInstance().strategy.parseResponse(response)
+		const operations = this.strategy.parseResponse(response)
 
-		this.getInstance().pendingSuggestions = operations
+		this.pendingSuggestions = operations
 
 		// Generate placeholder for show the suggestions
-		await this.getInstance().workspaceEdit.applyOperationsPlaceholders(operations)
+		await this.workspaceEdit.applyOperationsPlaceholders(operations)
 
 		// Display the suggestions in the active editor
 		await this.displaySuggestions()
 	}
 
-	public static async displaySuggestions() {
+	public async displaySuggestions() {
 		const editor = vscode.window.activeTextEditor
 		if (!editor) {
 			console.log("No active editor found, returning")
 			return
 		}
 
-		const operations = this.getInstance().pendingSuggestions
-		this.getInstance().decorations.displaySuggestions(operations)
+		const operations = this.pendingSuggestions
+		this.decorations.displaySuggestions(operations)
 	}
 
-	public static isCancelSuggestionsEnabled(): boolean {
-		return this.getInstance().pendingSuggestions.length > 0
+	public isCancelSuggestionsEnabled(): boolean {
+		return this.pendingSuggestions.length > 0
 	}
 
-	public static async cancelSuggestions() {
-		const pendingSuggestions = [...this.getInstance().pendingSuggestions]
+	public async cancelSuggestions() {
+		const pendingSuggestions = [...this.pendingSuggestions]
 		if (pendingSuggestions.length === 0) {
 			return
 		}
 		// Clear the decorations in the active editor
-		this.getInstance().decorations.clearAll()
+		this.decorations.clearAll()
 
-		await this.getInstance().workspaceEdit.revertOperationsPlaceHolder(pendingSuggestions)
+		await this.workspaceEdit.revertOperationsPlaceHolder(pendingSuggestions)
 
 		// Clear the pending suggestions
-		this.getInstance().pendingSuggestions = []
+		this.pendingSuggestions = []
 	}
 
-	public static isApplyAllSuggestionsEnabled(): boolean {
-		return this.getInstance().pendingSuggestions.length > 0
+	public isApplyAllSuggestionsEnabled(): boolean {
+		return this.pendingSuggestions.length > 0
 	}
 
-	public static async applyAllSuggestions() {
-		const pendingSuggestions = [...this.getInstance().pendingSuggestions]
+	public async applyAllSuggestions() {
+		const pendingSuggestions = [...this.pendingSuggestions]
 		if (pendingSuggestions.length === 0) {
 			return
 		}
 		await this.cancelSuggestions()
-		await this.getInstance().workspaceEdit.applyOperations(pendingSuggestions)
+		await this.workspaceEdit.applyOperations(pendingSuggestions)
 	}
 }
