@@ -1,4 +1,4 @@
-import { test } from "./playwright-base-test"
+import { test, type TestFixtures } from "./playwright-base-test"
 import {
 	verifyExtensionInstalled,
 	waitForWebviewText,
@@ -7,7 +7,7 @@ import {
 } from "../helpers/webview-helpers"
 
 test.describe("Full E2E Test", () => {
-	test("should configure credentials and send a message", async ({ workbox: page }) => {
+	test("should configure credentials and send a message", async ({ workbox: page }: TestFixtures) => {
 		await verifyExtensionInstalled(page)
 
 		await waitForWebviewText(page, "Welcome to Kilo Code!")

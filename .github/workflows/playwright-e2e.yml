@@ -41,6 +41,11 @@ jobs:
             - name: Install dependencies
               run: pnpm install --frozen-lockfile
 
+            - name: Type check Playwright E2E
+              run: |
+                  cd apps/playwright-e2e
+                  pnpm check-types
+
             - name: Set up Docker Buildx
               uses: docker/setup-buildx-action@v3
 
