@@ -2,7 +2,7 @@ import { test, expect, type TestFixtures } from "./playwright-base-test"
 import { verifyExtensionInstalled } from "../helpers/webview-helpers"
 
 test.describe("Sanity Tests", () => {
-	test("should launch VS Code with extension installed", async ({ workbox: page }: TestFixtures) => {
+	test("should launch VS Code with extension installed", async ({ workbox: page, takeScreenshot }: TestFixtures) => {
 		await expect(page.locator(".monaco-workbench")).toBeVisible()
 		console.log("✅ VS Code launched successfully")
 
@@ -20,5 +20,7 @@ test.describe("Sanity Tests", () => {
 		console.log("✅ Command palette working")
 
 		await verifyExtensionInstalled(page)
+
+		await takeScreenshot("sanity-extension-loaded")
 	})
 })

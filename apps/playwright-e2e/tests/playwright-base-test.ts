@@ -18,6 +18,7 @@ export type TestFixtures = TestOptions & {
 	workbox: Page
 	createProject: () => Promise<string>
 	createTempDir: () => Promise<string>
+	takeScreenshot: (name?: string) => Promise<void>
 }
 
 export const test = base.extend<TestFixtures>({
@@ -149,5 +150,14 @@ export const test = base.extend<TestFixtures>({
 				console.warn(`Failed to cleanup temp dir ${tempDir}:`, error)
 			}
 		}
+	},
+
+	takeScreenshot: async ({ workbox }, use) => {
+		await use(async (name?: string) => {
+			const screenshotName = name || `screenshot-${Date.now()}`
+			const screenshotPath = test.info().outputPath(`chromatic-${screenshotName}.png`)
+			await workbox.screenshot({ path: screenshotPath, fullPage: true })
+			console.log(`📸 Chromatic screenshot captured: ${screenshotName}`)
+		})
 	},
 })
