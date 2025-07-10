@@ -1,5 +1,5 @@
 import * as vscode from "vscode"
-import { parsePatch, ParsedDiff, Hunk, applyPatch, structuredPatch } from "diff"
+import { parsePatch, ParsedDiff, applyPatch, structuredPatch } from "diff"
 import { GhostSuggestionContext, GhostSuggestionEditOperation, GhostSuggestionEditOperationType } from "./types"
 
 export class GhostStrategy {
