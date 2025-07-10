@@ -66,7 +66,7 @@ const McpView = () => {
 					{/* Content container */}
 					<div style={{ width: "100%" }}>
 						{activeTab === "marketplace" && <MarketplaceView stateManager={marketplaceStateManager} />}
-						{activeTab === "installed" && <RooMcpView hideHeader onDone={() => {}} />}
+						{activeTab === "installed" && <RooMcpView onDone={() => {}} />}
 					</div>
 				</div>
 			</Section>

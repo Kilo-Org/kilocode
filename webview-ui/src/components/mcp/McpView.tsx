@@ -34,10 +34,9 @@ import { McpErrorRow } from "./McpErrorRow"
 
 type McpViewProps = {
 	onDone: () => void
-	hideHeader?: boolean // kilocode_change
 }
 
-const McpView = ({ onDone, hideHeader = false }: McpViewProps) => {
+const McpView = ({ onDone }: McpViewProps) => {
 	const {
 		mcpServers: servers,
 		alwaysAllowMcp,
@@ -51,8 +50,8 @@ const McpView = ({ onDone, hideHeader = false }: McpViewProps) => {
 	return (
 		// kilocode_change: add relative className
 		<Tab className="relative">
-			{/*  kilocode_change: display header conditionally */}
-			<TabHeader style={{ display: hideHeader ? "none" : "flex" }} className="flex justify-between items-center">
+			{/*  kilocode_change: disable header */}
+			<TabHeader style={{ display: "none" }} className="flex justify-between items-center">
 				<h3 className="text-vscode-foreground m-0">{t("mcp:title")}</h3>
 				<Button onClick={onDone}>{t("mcp:done")}</Button>
 			</TabHeader>
