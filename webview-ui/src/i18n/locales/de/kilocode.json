@@ -117,5 +117,9 @@
 		"editCancel": "Abbrechen",
 		"send": "Senden",
 		"restoreAndSend": "Wiederherstellen & Senden"
+	},
+	"queuedMessage": {
+		"autoSendTooltip": "Nachricht wird automatisch gesendet, wenn die aktuelle Aufgabe abgeschlossen ist",
+		"clickToClearTooltip": "Klicken, um Nachricht aus der Warteschlange zu entfernen"
 	}
 }

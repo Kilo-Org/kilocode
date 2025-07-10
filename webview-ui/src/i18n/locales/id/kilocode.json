@@ -117,5 +117,9 @@
 		"editCancel": "Batal",
 		"send": "Kirim",
 		"restoreAndSend": "Pulihkan & Kirim"
+	},
+	"queuedMessage": {
+		"autoSendTooltip": "Pesan akan dikirim secara otomatis ketika tugas saat ini selesai",
+		"clickToClearTooltip": "Klik untuk menghapus pesan dalam antrean"
 	}
 }

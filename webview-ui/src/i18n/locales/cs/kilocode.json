@@ -117,5 +117,9 @@
 		"editCancel": "Zrušit",
 		"send": "Odeslat",
 		"restoreAndSend": "Obnovit a odeslat"
+	},
+	"queuedMessage": {
+		"autoSendTooltip": "Zpráva bude odeslána automaticky po dokončení aktuálního úkolu",
+		"clickToClearTooltip": "Kliknutím smažete zprávu ve frontě"
 	}
 }

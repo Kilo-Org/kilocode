@@ -117,5 +117,9 @@
 		"editCancel": "취소",
 		"send": "보내기",
 		"restoreAndSend": "복원 및 보내기"
+	},
+	"queuedMessage": {
+		"autoSendTooltip": "현재 작업이 완료되면 메시지가 자동으로 전송됩니다",
+		"clickToClearTooltip": "대기 중인 메시지 지우려면 클릭하세요"
 	}
 }

@@ -117,5 +117,9 @@
 		"editCancel": "Cancel·lar",
 		"send": "Enviar",
 		"restoreAndSend": "Restaurar i Enviar"
+	},
+	"queuedMessage": {
+		"clickToClearTooltip": "Feu clic per esborrar el missatge en cua",
+		"autoSendTooltip": "El missatge s'enviarà automàticament quan la tasca actual es completi"
 	}
 }

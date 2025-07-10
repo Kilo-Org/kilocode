@@ -117,5 +117,9 @@
 		"editCancel": "إلغاء",
 		"send": "إرسال",
 		"restoreAndSend": "استرجاع وإرسال"
+	},
+	"queuedMessage": {
+		"clickToClearTooltip": "انقر لمسح الرسالة في قائمة الانتظار",
+		"autoSendTooltip": "سيتم إرسال الرسالة تلقائيا عند اكتمال المهمة الحالية"
 	}
 }

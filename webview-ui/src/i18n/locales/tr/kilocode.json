@@ -117,5 +117,9 @@
 		"editCancel": "İptal",
 		"send": "Gönder",
 		"restoreAndSend": "Geri Yükle ve Gönder"
+	},
+	"queuedMessage": {
+		"autoSendTooltip": "Mevcut görev tamamlandığında mesaj otomatik olarak gönderilecek",
+		"clickToClearTooltip": "Sıradaki mesajı temizlemek için tıklayın"
 	}
 }

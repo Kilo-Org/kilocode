@@ -117,5 +117,9 @@
 		"editCancel": "Kanselahin",
 		"send": "Ipadala",
 		"restoreAndSend": "Ibalik at Ipadala"
+	},
+	"queuedMessage": {
+		"clickToClearTooltip": "I-click para alisin ang naka-queue na mensahe",
+		"autoSendTooltip": "Ang mensahe ay awtomatikong ipapadala kapag natapos na ang kasalukuyang gawain"
 	}
 }

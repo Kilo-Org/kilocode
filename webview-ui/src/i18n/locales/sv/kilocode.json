@@ -117,5 +117,9 @@
 		"editCancel": "Avbryt",
 		"send": "Skicka",
 		"restoreAndSend": "Återställ & Skicka"
+	},
+	"queuedMessage": {
+		"autoSendTooltip": "Meddelande kommer att skickas automatiskt när aktuell uppgift slutförs",
+		"clickToClearTooltip": "Klicka för att rensa köat meddelande"
 	}
 }

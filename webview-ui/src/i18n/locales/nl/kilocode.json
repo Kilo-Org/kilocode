@@ -117,5 +117,9 @@
 		"editCancel": "Annuleren",
 		"send": "Verzenden",
 		"restoreAndSend": "Herstellen & Verzenden"
+	},
+	"queuedMessage": {
+		"clickToClearTooltip": "Klik om bericht in wachtrij te wissen",
+		"autoSendTooltip": "Bericht wordt automatisch verzonden wanneer de huidige taak is voltooid"
 	}
 }

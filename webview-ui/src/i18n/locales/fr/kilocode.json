@@ -117,5 +117,9 @@
 		"editCancel": "Annuler",
 		"send": "Envoyer",
 		"restoreAndSend": "Restaurer et Envoyer"
+	},
+	"queuedMessage": {
+		"clickToClearTooltip": "Cliquer pour effacer le message en file d'attente",
+		"autoSendTooltip": "Le message sera envoyé automatiquement lorsque la tâche actuelle sera terminée"
 	}
 }

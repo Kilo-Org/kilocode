@@ -117,5 +117,9 @@
 		"editCancel": "Hủy",
 		"send": "Gửi",
 		"restoreAndSend": "Khôi phục & Gửi"
+	},
+	"queuedMessage": {
+		"autoSendTooltip": "Tin nhắn sẽ được gửi tự động khi nhiệm vụ hiện tại hoàn thành",
+		"clickToClearTooltip": "Nhấn để xóa tin nhắn trong hàng đợi"
 	}
 }

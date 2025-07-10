@@ -29,6 +29,7 @@ import { buildDocLink } from "@src/utils/docLinks"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { useSelectedModel } from "@src/components/ui/hooks/useSelectedModel"
+import { useQueuedMessageAutoSubmit } from "./hooks/useQueuedMessageAutoSubmit"
 import { StandardTooltip } from "@src/components/ui"
 
 import TelemetryBanner from "../common/TelemetryBanner" // kilocode_change: deactivated for now
@@ -139,6 +140,12 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const textAreaRef = useRef<HTMLTextAreaElement>(null)
 	const [sendingDisabled, setSendingDisabled] = useState(false)
 	const [selectedImages, setSelectedImages] = useState<string[]>([])
+
+	// kilocode_change start: Add queued state management (text stays in input box)
+	const [isInQueuedState, setIsInQueuedState] = useState(false)
+	const clearQueuedState = useCallback(() => void setIsInQueuedState(false), [])
+	const enterQueuedState = useCallback(() => void setIsInQueuedState(true), [])
+	// kilocode_change end: Add queued state management (text stays in input box)
 
 	// we need to hold on to the ask because useEffect > lastMessage will always let us know when an ask comes in and handle it, but by the time handleMessage is called, the last message might not be the ask anymore (it could be a say that followed)
 	const [clineAsk, setClineAsk] = useState<ClineAsk | undefined>(undefined)
@@ -361,7 +368,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							setEnableButtons(true)
 							setPrimaryButtonText(t("chat:resumeTask.title"))
 							setSecondaryButtonText(t("chat:terminate.title"))
-							setDidClickCancel(false) // special case where we reset the cancel button state
+							setDidClickCancel(false) // Reset cancel state when resuming task
 							break
 						case "resume_completed_task":
 							if (!isPartial) {
@@ -516,17 +523,29 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		setSelectedImages([])
 		setClineAsk(undefined)
 		setEnableButtons(false)
+
+		clearQueuedState() // kilocode_change - Clear queued state on chat reset
+
 		// Do not reset mode here as it should persist.
 		// setPrimaryButtonText(undefined)
 		// setSecondaryButtonText(undefined)
 		disableAutoScrollRef.current = false
-	}, [])
+	}, [clearQueuedState])
 
 	const handleSendMessage = useCallback(
 		(text: string, images: string[]) => {
 			text = text.trim()
 
 			if (text || images.length > 0) {
+				// kilocode_change start: Enhanced queued state logic - keep text in input box
+				if (sendingDisabled) {
+					setIsInQueuedState(true)
+					return
+				} else {
+					clearQueuedState()
+				}
+				// kilocode_change end: Enhanced queued state logic - keep text in input box
+
 				if (messagesRef.current.length === 0) {
 					vscode.postMessage({ type: "newTask", text, images })
 				} else if (clineAskRef.current) {
@@ -564,8 +583,24 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				handleChatReset()
 			}
 		},
-		[handleChatReset], // messagesRef and clineAskRef are stable
+		[sendingDisabled, handleChatReset, clearQueuedState], // messagesRef and clineAskRef are stable
 	)
+
+	// kilocode_change start: Add auto-submit logic for queued state with current input value
+	useQueuedMessageAutoSubmit({
+		sendingDisabled,
+		isInQueuedState,
+		inputValue,
+		selectedImages,
+		onAutoSubmit: useCallback(
+			(message: string, images: string[]) => {
+				handleSendMessage(message, images)
+			},
+			[handleSendMessage],
+		),
+		clearQueuedState,
+	})
+	// kilocode_change end: Add auto-submit logic for queued state with current input value
 
 	const handleSetChatBoxMessage = useCallback(
 		(text: string, images: string[]) => {
@@ -583,6 +618,19 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	)
 
 	const startNewTask = useCallback(() => vscode.postMessage({ type: "clearTask" }), [])
+
+	// kilocode_change start: Add interjection handler for Alt/Option + Enter
+	const handleInterjection = useCallback(() => {
+		if (isStreaming) {
+			// Cancel current operation (same as clicking cancel button)
+			vscode.postMessage({ type: "cancelTask" })
+			setDidClickCancel(true)
+
+			// Queue the current message for auto-submission when agent becomes idle
+			enterQueuedState()
+		}
+	}, [isStreaming, enterQueuedState])
+	// kilocode_change end: Add interjection handler for Alt/Option + Enter
 
 	// This logic depends on the useEffect[messages] above to set clineAsk,
 	// after which buttons are shown and we then send an askResponse to the
@@ -1046,9 +1094,16 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			}
 		}
 
+		// kilocode_change start - Reset cancel state
+		// when streaming stops naturally (not via cancellation)
+		if (wasStreaming && !isStreaming && didClickCancel) {
+			setDidClickCancel(false)
+		}
+		// kilocode_change end - Reset cancel state
+
 		// Update previous value.
 		setWasStreaming(isStreaming)
-	}, [isStreaming, lastMessage, wasStreaming, isAutoApproved, messages.length])
+	}, [isStreaming, lastMessage, wasStreaming, isAutoApproved, messages.length, didClickCancel])
 
 	const isBrowserSessionMessage = (message: ClineMessage): boolean => {
 		// Which of visible messages are browser session messages, see above.
@@ -1755,6 +1810,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				mode={mode}
 				setMode={setMode}
 				modeShortcutText={modeShortcutText}
+				onInterjection={handleInterjection} // kilocode_change: Pass interjection handler
 			/>
 			{/* kilocode_change: added settings toggle the profile and model selection */}
 			<BottomControls showApiConfig />

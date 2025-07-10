@@ -117,5 +117,9 @@
 		"editCancel": "ยกเลิก",
 		"send": "ส่ง",
 		"restoreAndSend": "คืนค่าและส่ง"
+	},
+	"queuedMessage": {
+		"clickToClearTooltip": "คลิกเพื่อล้างข้อความที่อยู่ในคิว",
+		"autoSendTooltip": "ข้อความจะถูกส่งโดยอัตโนมัติเมื่องานปัจจุบันเสร็จสมบูรณ์"
 	}
 }

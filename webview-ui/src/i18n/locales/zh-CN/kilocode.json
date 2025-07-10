@@ -117,5 +117,9 @@
 		"editCancel": "取消",
 		"send": "发送",
 		"restoreAndSend": "恢复并发送"
+	},
+	"queuedMessage": {
+		"autoSendTooltip": "当前任务完成后消息将自动发送",
+		"clickToClearTooltip": "点击清除队列中的消息"
 	}
 }

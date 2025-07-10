@@ -1,4 +1,5 @@
 import { render, fireEvent, screen } from "@/utils/test-utils"
+import { vi, describe, it, expect, beforeEach } from "vitest"
 
 import { defaultModeSlug } from "@roo/modes"
 
@@ -763,6 +764,76 @@ describe("ChatTextArea", () => {
 			})
 		})
 	})
+
+	// kilocode_change start: Test Alt+Enter interjection behavior
+	describe("interjection handling", () => {
+		it("should call onInterjection when Alt+Enter is pressed", () => {
+			const onInterjection = vi.fn()
+			const { getByRole } = render(
+				<ChatTextArea {...defaultProps} inputValue="Test message" onInterjection={onInterjection} />,
+			)
+
+			const textarea = getByRole("textbox")
+			fireEvent.keyDown(textarea, { key: "Enter", altKey: true })
+
+			expect(onInterjection).toHaveBeenCalledTimes(1)
+		})
+
+		it("should not call onInterjection when Enter is pressed without Alt", () => {
+			const onInterjection = vi.fn()
+			const { getByRole } = render(
+				<ChatTextArea {...defaultProps} inputValue="Test message" onInterjection={onInterjection} />,
+			)
+
+			const textarea = getByRole("textbox")
+			fireEvent.keyDown(textarea, { key: "Enter" })
+
+			expect(onInterjection).not.toHaveBeenCalled()
+		})
+
+		it("should not call onInterjection when Alt+Enter is pressed during composition", () => {
+			const onInterjection = vi.fn()
+			const { getByRole } = render(
+				<ChatTextArea {...defaultProps} inputValue="Test message" onInterjection={onInterjection} />,
+			)
+
+			const textarea = getByRole("textbox")
+
+			// Create a proper KeyboardEvent with isComposing set to true
+			const keyboardEvent = new KeyboardEvent("keydown", {
+				key: "Enter",
+				altKey: true,
+			})
+
+			// Mock the nativeEvent property to have isComposing: true
+			Object.defineProperty(keyboardEvent, "nativeEvent", {
+				value: { isComposing: true },
+				writable: false,
+			})
+
+			fireEvent(textarea, keyboardEvent)
+
+			expect(onInterjection).not.toHaveBeenCalled()
+		})
+
+		it("should work without onInterjection prop (optional)", () => {
+			const { getByRole } = render(
+				<ChatTextArea
+					{...defaultProps}
+					inputValue="Test message"
+					// onInterjection not provided
+				/>,
+			)
+
+			const textarea = getByRole("textbox")
+
+			// Should not throw error
+			expect(() => {
+				fireEvent.keyDown(textarea, { key: "Enter", altKey: true })
+			}).not.toThrow()
+		})
+	})
+	// kilocode_change end: Test Alt+Enter interjection behavior
 
 	// kilocode_change: removed in kilcode
 	describe.skip("selectApiConfig", () => {

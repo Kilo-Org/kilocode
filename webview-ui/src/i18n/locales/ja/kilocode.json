@@ -117,5 +117,9 @@
 		"editCancel": "キャンセル",
 		"send": "送信",
 		"restoreAndSend": "復元して送信"
+	},
+	"queuedMessage": {
+		"autoSendTooltip": "現在のタスクが完了すると、自動的にメッセージが送信されます",
+		"clickToClearTooltip": "キューに入ったメッセージをクリアするにはクリック"
 	}
 }

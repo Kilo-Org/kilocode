@@ -117,5 +117,9 @@
 		"editCancel": "Annulla",
 		"send": "Invia",
 		"restoreAndSend": "Ripristina e Invia"
+	},
+	"queuedMessage": {
+		"autoSendTooltip": "Il messaggio sarà inviato automaticamente al termine dell'attività corrente",
+		"clickToClearTooltip": "Clicca per cancellare il messaggio in coda"
 	}
 }
