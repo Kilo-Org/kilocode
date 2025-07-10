@@ -1,5 +1,5 @@
 import * as vscode from "vscode"
-import { parsePatch } from "diff"
+import { parsePatch, ParsedDiff, Hunk, applyPatch, structuredPatch } from "diff"
 import { GhostSuggestionContext, GhostSuggestionEditOperation, GhostSuggestionEditOperationType } from "./types"
 
 export class GhostStrategy {
@@ -96,13 +96,46 @@ ${sections.filter(Boolean).join("\n\n")}
 `
 	}
 
-	parseResponse(response: string): GhostSuggestionEditOperation[] {
+	private async FuzzyMatchDiff(diff: string) {
+		const filePatches = parsePatch(diff)
+		for (const filePatch of filePatches) {
+			// If the file patch has no hunks, skip it.
+			if (!filePatch.hunks || filePatch.hunks.length === 0) {
+				continue
+			}
+
+			const filePath = (filePatch.newFileName || filePatch.oldFileName || "").replace(/^[ab]\//, "")
+			if (!filePath || filePath === "/dev/null") {
+				continue
+			}
+
+			const fileUri = vscode.Uri.parse(filePath)
+			const document = await vscode.workspace.openTextDocument(fileUri)
+			if (!document) {
+				continue // Skip if the document cannot be opened
+			}
+			const documentContent = document.getText()
+
+			const newContent = applyPatch(documentContent, diff, {
+				fuzzFactor: 0.75, // Adjust fuzz factor as needed
+			})
+
+			if (!newContent) {
+				continue // Skip if the patch could not be applied
+			}
+
+			filePatch.hunks = structuredPatch(filePath, filePath, documentContent, newContent, "", "").hunks
+		}
+		return filePatches as ParsedDiff[]
+	}
+
+	async parseResponse(response: string): Promise<GhostSuggestionEditOperation[]> {
 		const operations: GhostSuggestionEditOperation[] = []
 		const cleanedResponse = response.replace(/```diff\s*|\s*```/g, "").trim()
 		if (!cleanedResponse) {
 			return [] // No valid diff found
 		}
-		const filePatches = parsePatch(cleanedResponse)
+		const filePatches = await this.FuzzyMatchDiff(cleanedResponse)
 		for (const filePatch of filePatches) {
 			// Determine the file path from the patch header.
 			// It prefers the new file name, falling back to the old one.

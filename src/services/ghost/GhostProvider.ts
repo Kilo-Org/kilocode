@@ -107,8 +107,10 @@ export class GhostProvider {
 					message: "Processing code suggestions...",
 				})
 				// First parse the response into edit operations
-				const operations = this.strategy.parseResponse(response)
+				const operations = await this.strategy.parseResponse(response)
 				this.pendingSuggestions = operations
+
+				console.log("operations", operations)
 
 				if (cancelled) {
 					this.pendingSuggestions = []
