@@ -155,6 +155,7 @@ export const SECRET_STATE_KEYS = [
 	"groqApiKey",
 	"chutesApiKey",
 	"litellmApiKey",
+	"makehubApiKey",
 	"codeIndexOpenAiKey",
 	"codeIndexQdrantApiKey",
 	"kilocodeToken", // kilocode_change

@@ -206,6 +206,16 @@
 		"getXaiApiKey": "احصل على مفتاح xAI",
 		"litellmApiKey": "مفتاح LiteLLM",
 		"litellmBaseUrl": "رابط LiteLLM الأساسي",
+		"makehubApiKey": "مفتاح MakeHub API",
+		"getMakehubApiKey": "احصل على مفتاح MakeHub API",
+		"makehubPerfRatio": "نسبة الأداء/السعر",
+		"makehubPerfRatioDescription": "تتحكم في كيفية موازنة MakeHub بين السعر والأداء عند التوجيه إلى المزودين.",
+		"makehubPerfRatioLabels": {
+			"price": "محسن للسعر",
+			"balanced": "متوازن",
+			"performance": "محسن للسرعة"
+		},
+		"noModelsFound": "لم يتم العثور على نماذج لـ {{provider}}. تأكد من صحة مفتاح API وقم بتحديث قائمة النماذج.",
 		"awsCredentials": "بيانات اعتماد AWS",
 		"awsProfile": "ملف AWS",
 		"awsProfileName": "اسم ملف AWS",

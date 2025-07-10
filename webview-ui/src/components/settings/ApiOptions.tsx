@@ -14,6 +14,7 @@ import {
 	glamaDefaultModelId,
 	unboundDefaultModelId,
 	litellmDefaultModelId,
+	makehubDefaultModelId,
 	openAiNativeDefaultModelId,
 	anthropicDefaultModelId,
 	claudeCodeDefaultModelId,
@@ -57,6 +58,7 @@ import {
 	Groq,
 	LMStudio,
 	LiteLLM,
+	MakeHub,
 	Mistral,
 	Ollama,
 	OpenAI,
@@ -299,6 +301,7 @@ const ApiOptions = ({
 				lmstudio: { field: "lmStudioModelId" },
 				kilocode: { field: "kilocodeModel", default: "claude37" }, // kilocode_change
 				cerebras: { field: "cerebrasModelId", default: cerebrasDefaultModelId }, // kilocode_change
+				makehub: { field: "makehubModelId", default: makehubDefaultModelId },
 			}
 
 			const config = PROVIDER_MODEL_CONFIG[value]
@@ -585,8 +588,16 @@ const ApiOptions = ({
 
 			{selectedProvider === "litellm" && (
 				<LiteLLM
+				apiConfiguration={apiConfiguration}
+				setApiConfigurationField={setApiConfigurationField}
+				organizationAllowList={organizationAllowList}
+				/>
+			)}
+			{selectedProvider === "makehub" && (
+				<MakeHub
 					apiConfiguration={apiConfiguration}
 					setApiConfigurationField={setApiConfigurationField}
+					routerModels={routerModels}
 					organizationAllowList={organizationAllowList}
 					modelValidationError={modelValidationError}
 				/>

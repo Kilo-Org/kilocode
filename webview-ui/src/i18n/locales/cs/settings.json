@@ -206,6 +206,16 @@
 		"getXaiApiKey": "Získat klíč API xAI",
 		"litellmApiKey": "Klíč API LiteLLM",
 		"litellmBaseUrl": "Základní URL LiteLLM",
+		"makehubApiKey": "Klíč API MakeHub",
+		"getMakehubApiKey": "Získat klíč API MakeHub",
+		"makehubPerfRatio": "Poměr výkonu/ceny",
+		"makehubPerfRatioDescription": "Ovládá, jak MakeHub vyvažuje mezi cenou a výkonem při směrování na poskytovatele.",
+		"makehubPerfRatioLabels": {
+			"price": "Optimalizováno na cenu",
+			"balanced": "Vyvážené",
+			"performance": "Optimalizováno na rychlost"
+		},
+		"noModelsFound": "Pro {{provider}} nebyly nalezeny žádné modely. Ujistěte se, že váš klíč API je platný a obnovte seznam modelů.",
 		"awsCredentials": "Přihlašovací údaje AWS",
 		"awsProfile": "Profil AWS",
 		"awsProfileName": "Název profilu AWS",

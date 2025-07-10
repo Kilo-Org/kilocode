@@ -54,6 +54,16 @@ describe("Model Validation Functions", () => {
 		requesty: {},
 		unbound: {},
 		litellm: {},
+		makehub: {
+			"makehub-model": {
+				maxTokens: 2048,
+				contextWindow: 4096,
+				supportsImages: false,
+				supportsPromptCache: true,
+				inputPrice: 0.5,
+				outputPrice: 1.0,
+			},
+		},
 		ollama: {},
 		lmstudio: {},
 	}

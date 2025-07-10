@@ -29,6 +29,7 @@ import {
 	ChutesHandler,
 	LiteLLMHandler,
 	CerebrasHandler, // kilocode_change
+	MakeHubHandler,
 	ClaudeCodeHandler,
 } from "./providers"
 // kilocode_change start
@@ -129,6 +130,9 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 		case "cerebras":
 			return new CerebrasHandler(options)
 		// kilocode_change end
+		case "makehub":
+			return new MakeHubHandler(options)
+
 		default:
 			return new AnthropicHandler(options)
 	}
