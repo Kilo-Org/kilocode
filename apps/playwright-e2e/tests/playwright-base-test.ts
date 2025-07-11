@@ -138,9 +138,20 @@ export const test = base.extend<TestFixtures>({
 	// eslint-disable-next-line no-empty-pattern
 	createTempDir: async ({}, use) => {
 		const tempDirs: string[] = []
+		let counter = 0
+
 		await use(async () => {
-			const tempDirPath = await fs.promises.mkdtemp(path.join(os.tmpdir(), "e2e-test-"))
+			const testInfo = test.info()
+			const fileName = testInfo.file.split("/").pop()?.replace(".test.ts", "") || "unknown"
+			const sanitizedTestName = camelCase(testInfo.title)
+
+			const dirName = `e2e-${fileName}-${sanitizedTestName}-${counter++}`
+			const tempDirPath = path.join(os.tmpdir(), dirName)
 			const tempDir = await fs.promises.realpath(tempDirPath)
+
+			await fs.promises.rm(tempDirPath, { recursive: true })
+			await fs.promises.mkdir(tempDirPath, { recursive: true })
+
 			tempDirs.push(tempDir)
 			return tempDir
 		})
