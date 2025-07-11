@@ -12,9 +12,10 @@ test.describe("E2E Chat Test", () => {
 		await waitForWebviewText(page, "Generate, refactor, and debug code with AI assistance")
 		await takeScreenshot("ready-to-chat")
 
+		await sendMessage(page, "Fill in the blanks for this phrase: 'hello w_r_d'")
+
 		// Don't take any more screenshots after the reponse starts-
 		// llm responses aren't deterministic any capturing the reponse would cause screenshot flakes
-		await sendMessage(page, "Output only the result of '1+1'")
-		await waitForWebviewText(page, "2", 30_000)
+		await waitForWebviewText(page, "hello world", 30_000)
 	})
 })

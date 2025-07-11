@@ -61,7 +61,6 @@ jobs:
                   restore-keys: ${{ runner.os }}-buildx-
 
             - name: Run Playwright E2E tests
-              continue-on-error: true
               run: |
                   cd apps/playwright-e2e
                   node run-docker-playwright.js

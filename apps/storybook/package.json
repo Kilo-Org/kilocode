@@ -7,10 +7,8 @@
 		"generate-screenshot-stories": "node scripts/generate-playwright-screenshot-stories.js",
 		"storybook": "storybook dev -p 6006",
 		"build-storybook": "storybook build --webpack-stats-json",
-		"build-storybook-with-screenshots": "npm run generate-screenshot-stories && npm run build-storybook",
 		"preview": "storybook preview",
 		"chromatic": "chromatic --exit-zero-on-changes --storybook-base-dir=apps/storybook",
-		"chromatic-cli": "chromatic --build-script-name=build-storybook-with-screenshots",
 		"clean": "rimraf storybook-static .turbo stories/generated public/screenshots"
 	},
 	"dependencies": {

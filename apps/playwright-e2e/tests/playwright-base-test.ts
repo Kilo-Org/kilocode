@@ -147,10 +147,19 @@ export const test = base.extend<TestFixtures>({
 
 			const dirName = `e2e-${fileName}-${sanitizedTestName}-${counter++}`
 			const tempDirPath = path.join(os.tmpdir(), dirName)
-			const tempDir = await fs.promises.realpath(tempDirPath)
 
-			await fs.promises.rm(tempDirPath, { recursive: true })
+			// Clean up any existing directory first
+			try {
+				await fs.promises.rm(tempDirPath, { recursive: true })
+			} catch (_error) {
+				// Directory might not exist, which is fine
+			}
+
+			// Create the directory
 			await fs.promises.mkdir(tempDirPath, { recursive: true })
+
+			// Get the real path after directory exists
+			const tempDir = await fs.promises.realpath(tempDirPath)
 
 			tempDirs.push(tempDir)
 			return tempDir
