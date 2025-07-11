@@ -70,37 +70,11 @@ jobs:
                   OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
                   WORKSPACE_ROOT: ${{ github.workspace }}
 
-            - name: Extract screenshots for Storybook
-              run: |
-                  echo "=== Extracting Playwright Screenshots for Storybook ==="
-
-                  # Create directory for chromatic screenshots
-                  mkdir -p chromatic-screenshots
-
-                  # Find and copy all PNG files from test results
-                  if [ -d "apps/playwright-e2e/test-results" ]; then
-                      echo "Searching for PNG files in test results..."
-                      find apps/playwright-e2e/test-results -name "*.png" -type f | while read file; do
-                          # Get just the filename without path
-                          filename=$(basename "$file")
-                          echo "Found: $filename"
-                          cp "$file" "chromatic-screenshots/$filename"
-                      done
-                      
-                      echo "Screenshots extracted:"
-                      ls -la chromatic-screenshots/ || echo "No screenshots found"
-                  else
-                      echo "No test-results directory found"
-                  fi
-
-            - name: Generate Screenshot Stories
+            - name: Generate Stories from Playwright Screenshots
               run: pnpm --filter @roo-code/storybook generate-screenshot-stories
 
-            - name: Build Storybook with Screenshots
+            - name: Build Storybook
               run: pnpm --filter @roo-code/storybook build-storybook
-
-            - name: Install Chromatic CLI
-              run: pnpm --filter @roo-code/storybook add -D chromatic
 
             - name: Run Chromatic
               id: chromatic
