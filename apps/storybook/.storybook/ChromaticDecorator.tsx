@@ -41,8 +41,8 @@ function ChromaticDecorator({
 	const styles = cn(baseStyles, isChromatic() && chromaticStyles)
 	const themeContainerStyles = cn("flex w-full", layout === "column" ? "flex-col" : "flex-row")
 
-	// If automatic multi-mode snapshotting is disabled, render only the current theme
-	const shouldRenderBothThemes = !disableChromaticDualThemeSnapshot && (isChromatic() || theme === "both")
+	// If disableChromaticDualThemeSnapshot is set, render only the current theme
+	const shouldRenderBothThemes = (isChromatic() && !disableChromaticDualThemeSnapshot) || theme === "both"
 
 	return (
 		<div className={styles} data-chromatic={isChromatic() ? "true" : "false"}>
