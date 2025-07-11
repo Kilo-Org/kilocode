@@ -17,6 +17,7 @@ import { AutocompleteStatusBar } from "./AutocompleteStatusBar"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 import { getAutocompleteConfiguration } from "./utils/autocompleteConfig"
 import { t } from "../../i18n"
+import { OpenRouterHandler } from "../../api/providers"
 
 export const UI_UPDATE_DEBOUNCE_MS = 250
 export const BAIL_OUT_TOO_MANY_LINES_LIMIT = 100
@@ -92,6 +93,9 @@ function setupAutocomplete(context: vscode.ExtensionContext): vscode.Disposable 
 		try {
 			const autocompleteConfig = await getAutocompleteConfiguration(providerSettingsManager)
 			apiHandler = autocompleteConfig ? buildApiHandler(autocompleteConfig) : null
+			if (apiHandler instanceof OpenRouterHandler) {
+				await apiHandler.fetchModel()
+			}
 		} catch (error) {
 			console.warn("Failed to update autocomplete API handler:", error)
 			apiHandler = null
