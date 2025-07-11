@@ -320,6 +320,7 @@ export interface ClineSayTool {
 		| "newFileCreated"
 		| "codebaseSearch"
 		| "readFile"
+		| "readMedia"
 		| "fetchInstructions"
 		| "listFilesTopLevel"
 		| "listFilesRecursive"
