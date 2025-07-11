@@ -136,6 +136,11 @@
 			"title": "Requêtes maximales",
 			"description": "Effectuer automatiquement ce nombre de requêtes API avant de demander l'approbation pour continuer la tâche.",
 			"unlimited": "Illimité"
+		},
+		"apiCostLimit": {
+			"title": "Coût API Max",
+			"unlimited": "Illimité",
+			"description": "Dépenser automatiquement jusqu'à ce montant en coûts d'API avant de demander l'autorisation de poursuivre la tâche."
 		}
 	},
 	"providers": {
@@ -553,7 +558,6 @@
 			"name": "Activer le Marketplace",
 			"description": "Lorsque cette option est activée, tu peux installer des MCP et des modes personnalisés depuis le Marketplace."
 		},
-
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Activer les éditions de fichiers concurrentes",
 			"description": "Lorsque cette option est activée, Kilo Code peut éditer plusieurs fichiers en une seule requête. Lorsqu'elle est désactivée, Kilo Code doit éditer les fichiers un par un. Désactiver cette option peut aider lorsque tu travailles avec des modèles moins capables ou lorsque tu veux plus de contrôle sur les modifications de fichiers."

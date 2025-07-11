@@ -136,6 +136,11 @@
 			"title": "Max na Request",
 			"description": "Awtomatikong gumawa ng ganitong daming API request bago humingi ng pag-apruba para magpatuloy sa gawain.",
 			"unlimited": "Walang Hangganan"
+		},
+		"apiCostLimit": {
+			"title": "Pinakamataas na Gastos sa API",
+			"description": "Awtomatikong gumastos hanggang sa halagang ito sa mga gastos ng API bago humingi ng pag-apruba upang magpatuloy sa gawain.",
+			"unlimited": "Walang limitasyon"
 		}
 	},
 	"providers": {

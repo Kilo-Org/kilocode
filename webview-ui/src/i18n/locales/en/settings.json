@@ -136,6 +136,11 @@
 			"title": "Max Requests",
 			"description": "Automatically make this many API requests before asking for approval to continue with the task.",
 			"unlimited": "Unlimited"
+		},
+		"apiCostLimit": {
+			"title": "Max API Cost",
+			"description": "Automatically spend up to this amount on API costs before asking for approval to continue with the task.",
+			"unlimited": "Unlimited"
 		}
 	},
 	"providers": {

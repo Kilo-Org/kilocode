@@ -136,6 +136,11 @@
 			"title": "最大請求數",
 			"description": "在請求批准以繼續執行工作之前，自動發出此數量的 API 請求。",
 			"unlimited": "無限制"
+		},
+		"apiCostLimit": {
+			"title": "最大 API 成本",
+			"description": "在要求批准继续任务之前，自动花费最多这个金额的API成本。",
+			"unlimited": "无限制"
 		}
 	},
 	"providers": {

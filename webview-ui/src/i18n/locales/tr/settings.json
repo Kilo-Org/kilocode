@@ -136,6 +136,11 @@
 			"title": "Maksimum İstek",
 			"description": "Göreve devam etmek için onay istemeden önce bu sayıda API isteği otomatik olarak yap.",
 			"unlimited": "Sınırsız"
+		},
+		"apiCostLimit": {
+			"title": "Maksimum API Maliyeti",
+			"description": "Görevi sürdürmek için onay istemeden önce API maliyetleri için otomatik olarak bu miktara kadar harcama yapın.",
+			"unlimited": "Sınırsız"
 		}
 	},
 	"providers": {

@@ -136,6 +136,11 @@
 			"title": "Maximale verzoeken",
 			"description": "Voer automatisch dit aantal API-verzoeken uit voordat om goedkeuring wordt gevraagd om door te gaan met de taak.",
 			"unlimited": "Onbeperkt"
+		},
+		"apiCostLimit": {
+			"unlimited": "Onbeperkt",
+			"description": "Besteed automatisch tot dit bedrag aan API-kosten voordat er om goedkeuring wordt gevraagd om door te gaan met de taak.",
+			"title": "Maximale API-kosten"
 		}
 	},
 	"providers": {

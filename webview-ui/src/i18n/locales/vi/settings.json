@@ -136,6 +136,11 @@
 			"title": "Số lượng yêu cầu tối đa",
 			"description": "Tự động thực hiện số lượng API request này trước khi yêu cầu phê duyệt để tiếp tục với nhiệm vụ.",
 			"unlimited": "Không giới hạn"
+		},
+		"apiCostLimit": {
+			"title": "Chi phí API Tối đa",
+			"description": "Tự động chi tiêu tối đa số tiền này cho chi phí API trước khi yêu cầu phê duyệt để tiếp tục nhiệm vụ.",
+			"unlimited": "Không giới hạn"
 		}
 	},
 	"providers": {

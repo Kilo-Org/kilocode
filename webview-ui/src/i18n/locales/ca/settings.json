@@ -136,6 +136,11 @@
 			"title": "Màximes Sol·licituds",
 			"description": "Fes aquesta quantitat de sol·licituds API automàticament abans de demanar aprovació per continuar amb la tasca.",
 			"unlimited": "Il·limitat"
+		},
+		"apiCostLimit": {
+			"title": "Cost màxim de l'API",
+			"description": "Gasta automàticament fins a aquesta quantitat en costos d'API abans de demanar aprovació per continuar amb la tasca.",
+			"unlimited": "Il·limitat"
 		}
 	},
 	"providers": {

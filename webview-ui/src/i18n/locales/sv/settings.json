@@ -136,6 +136,11 @@
 			"title": "Max antal förfrågningar",
 			"description": "Gör automatiskt så här många API-förfrågningar innan du ber om godkännande för att fortsätta med uppgiften.",
 			"unlimited": "Obegränsat"
+		},
+		"apiCostLimit": {
+			"title": "Maximal API-kostnad",
+			"description": "Spenderar automatiskt upp till detta belopp för API-kostnader innan den frågar om godkännande för att fortsätta med uppgiften.",
+			"unlimited": "Obegränsad"
 		}
 	},
 	"providers": {

@@ -136,6 +136,11 @@
 			"title": "Maksymalna liczba żądań",
 			"description": "Automatycznie wykonaj tyle żądań API przed poproszeniem o zgodę na kontynuowanie zadania.",
 			"unlimited": "Bez limitu"
+		},
+		"apiCostLimit": {
+			"unlimited": "Bez limitu",
+			"title": "Maksymalny koszt API",
+			"description": "Automatycznie wydawaj do tej kwoty na koszty API przed poproszeniem o zgodę na kontynuowanie zadania."
 		}
 	},
 	"providers": {

@@ -136,6 +136,11 @@
 			"title": "Maximale Anfragen",
 			"description": "Automatisch so viele API-Anfragen stellen, bevor du um die Erlaubnis gebeten wirst, mit der Aufgabe fortzufahren.",
 			"unlimited": "Unbegrenzt"
+		},
+		"apiCostLimit": {
+			"title": "Max API-Kosten",
+			"description": "Automatisch bis zu diesem Betrag für API-Kosten ausgeben, bevor um Genehmigung zur Fortsetzung der Aufgabe gebeten wird.",
+			"unlimited": "Unbegrenzt"
 		}
 	},
 	"providers": {
@@ -553,7 +558,6 @@
 			"name": "Marketplace aktivieren",
 			"description": "Wenn aktiviert, kannst du MCP und benutzerdefinierte Modi aus dem Marketplace installieren und verwalten."
 		},
-
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Gleichzeitige Dateibearbeitungen aktivieren",
 			"description": "Wenn aktiviert, kann Kilo Code mehrere Dateien in einer einzigen Anfrage bearbeiten. Wenn deaktiviert, muss Kilo Code Dateien einzeln bearbeiten. Das Deaktivieren kann helfen, wenn du mit weniger fähigen Modellen arbeitest oder mehr Kontrolle über Dateiänderungen haben möchtest."

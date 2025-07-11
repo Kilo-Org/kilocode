@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import { render, screen, fireEvent } from "@testing-library/react"
 import { vi } from "vitest"
 import { MaxRequestsInput } from "../MaxRequestsInput"

@@ -136,6 +136,11 @@
 			"title": "最大リクエスト数",
 			"description": "タスクを続行するための承認を求める前に、自動的にこの数のAPIリクエストを行います。",
 			"unlimited": "無制限"
+		},
+		"apiCostLimit": {
+			"title": "最大 API コスト",
+			"description": "タスクを続行するための承認を求める前に、API費用としてこの金額まで自動的に使用します。",
+			"unlimited": "無制限"
 		}
 	},
 	"providers": {

@@ -136,6 +136,11 @@
 			"title": "Máximo de Solicitações",
 			"description": "Fazer automaticamente este número de requisições à API antes de pedir aprovação para continuar com a tarefa.",
 			"unlimited": "Ilimitado"
+		},
+		"apiCostLimit": {
+			"title": "Custo Máximo de API",
+			"unlimited": "Ilimitado",
+			"description": "Gastar automaticamente até este limite em custos de API antes de pedir aprovação para continuar com a tarefa."
 		}
 	},
 	"providers": {

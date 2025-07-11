@@ -7,6 +7,7 @@ import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { AutoApproveToggle, AutoApproveSetting, autoApproveSettingsConfig } from "../settings/AutoApproveToggle"
 import { MaxRequestsInput } from "../settings/MaxRequestsInput"
+import { MaxCostInput } from "../settings/MaxCostInput"
 
 interface AutoApproveMenuProps {
 	style?: React.CSSProperties
@@ -28,6 +29,7 @@ const AutoApproveMenu = ({ style }: AutoApproveMenuProps) => {
 		alwaysApproveResubmit,
 		alwaysAllowFollowupQuestions,
 		allowedMaxRequests,
+		allowedMaxCost,
 		setAlwaysAllowReadOnly,
 		setAlwaysAllowWrite,
 		setAlwaysAllowExecute,
@@ -38,6 +40,7 @@ const AutoApproveMenu = ({ style }: AutoApproveMenuProps) => {
 		setAlwaysApproveResubmit,
 		setAlwaysAllowFollowupQuestions,
 		setAllowedMaxRequests,
+		setAllowedMaxCost,
 	} = useExtensionState()
 
 	const { t } = useAppTranslation()
@@ -214,6 +217,10 @@ const AutoApproveMenu = ({ style }: AutoApproveMenuProps) => {
 					<MaxRequestsInput
 						allowedMaxRequests={allowedMaxRequests ?? undefined}
 						onValueChange={(value) => setAllowedMaxRequests(value)}
+					/>
+					<MaxCostInput
+						allowedMaxCost={allowedMaxCost ?? undefined}
+						onValueChange={(value) => setAllowedMaxCost(value)}
 					/>
 					{/* kilocode_change end */}
 				</div>

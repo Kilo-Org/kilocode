@@ -158,6 +158,7 @@ export class Task extends EventEmitter<ClineEvents> {
 	api: ApiHandler
 	private static lastGlobalApiRequestTime?: number
 	private consecutiveAutoApprovedRequestsCount: number = 0
+	private consecutiveAutoApprovedCost: number = 0
 
 	/**
 	 * Reset the global API request timestamp. This should only be used for testing.
@@ -1888,6 +1889,22 @@ export class Task extends EventEmitter<ClineEvents> {
 			// If we get past the promise, it means the user approved and did not start a new task
 			if (response === "yesButtonClicked") {
 				this.consecutiveAutoApprovedRequestsCount = 0
+			}
+		}
+
+		// Check if we've reached the maximum allowed cost
+		const maxCost = state?.allowedMaxCost || Infinity
+		const currentCost = getApiMetrics(this.combineMessages(this.clineMessages.slice(1))).totalCost
+		this.consecutiveAutoApprovedCost = currentCost
+
+		if (this.consecutiveAutoApprovedCost > maxCost) {
+			const { response } = await this.ask(
+				"auto_approval_max_req_reached",
+				JSON.stringify({ count: maxCost.toFixed(2) }),
+			)
+			// If we get past the promise, it means the user approved and did not start a new task
+			if (response === "yesButtonClicked") {
+				this.consecutiveAutoApprovedCost = 0
 			}
 		}
 
