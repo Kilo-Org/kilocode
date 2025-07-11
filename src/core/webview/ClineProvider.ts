@@ -1231,6 +1231,94 @@ export class ClineProvider
 		await this.postMessageToWebview({ type: "condenseTaskContextResponse", text: taskId })
 	}
 
+	/* Compacts and summarizes a task's conversation, then starts a new task with the summary */
+	async compactAndSummarize(taskId: string) {
+		let task: Task | undefined
+		for (let i = this.clineStack.length - 1; i >= 0; i--) {
+			if (this.clineStack[i].taskId === taskId) {
+				task = this.clineStack[i]
+				break
+			}
+		}
+		if (!task) {
+			throw new Error(`Task with id ${taskId} not found in stack`)
+		}
+
+		try {
+			// Get the system prompt and configuration for summarization
+			const systemPrompt = await task.getSystemPrompt()
+			const state = await this.getState()
+			const customCondensingPrompt = state ? (state as any).customCondensingPrompt : undefined
+			const condensingApiConfigId = state ? (state as any).condensingApiConfigId : undefined
+			const listApiConfigMeta = state ? (state as any).listApiConfigMeta : undefined
+
+			// Determine API handler to use for condensing
+			let condensingApiHandler: any | undefined
+			if (condensingApiConfigId && listApiConfigMeta && Array.isArray(listApiConfigMeta)) {
+				const matchingConfig = listApiConfigMeta.find((config: any) => config.id === condensingApiConfigId)
+				if (matchingConfig) {
+					const profile = await this.providerSettingsManager.getProfile({
+						id: condensingApiConfigId,
+					})
+					if (profile && profile.apiProvider) {
+						const { buildApiHandler } = await import("../../api")
+						condensingApiHandler = buildApiHandler(profile)
+					}
+				}
+			}
+
+			// Import the summarizeConversation function
+			const { summarizeConversation } = await import("../condense")
+			const { contextTokens: prevContextTokens } = task.getTokenUsage()
+
+			// Summarize the conversation
+			const { messages, summary, cost, error } = await summarizeConversation(
+				task.apiConversationHistory,
+				task.api,
+				systemPrompt,
+				taskId,
+				prevContextTokens,
+				false, // manual trigger
+				customCondensingPrompt,
+				condensingApiHandler,
+			)
+
+			if (error) {
+				// Show error to user
+				vscode.window.showErrorMessage(`Failed to compact conversation: ${error}`)
+				// Send response to reset UI state
+				await this.postMessageToWebview({ type: "compactAndSummarizeResponse", text: taskId })
+				return
+			}
+
+			// Clear the current task
+			await this.clearTask()
+
+			// Start a new task with the summary as the initial message
+			const summaryText = `Previous conversation summary:\n\n${summary}\n\nPlease continue from where we left off based on this summary.`
+
+			// Initialize a new task with the summary
+			await this.initClineWithTask(summaryText, undefined, undefined, {
+				enableDiff: task.diffEnabled,
+				enableCheckpoints: task.enableCheckpoints,
+				fuzzyMatchThreshold: task.fuzzyMatchThreshold,
+			})
+
+			// Show success notification
+			vscode.window.showInformationMessage(
+				"Successfully compacted conversation and started new chat with summary",
+			)
+
+			// Send success response
+			await this.postMessageToWebview({ type: "compactAndSummarizeResponse", text: taskId })
+		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : String(error)
+			vscode.window.showErrorMessage(`Failed to compact and summarize: ${errorMessage}`)
+			// Send response to reset UI state
+			await this.postMessageToWebview({ type: "compactAndSummarizeResponse", text: taskId })
+		}
+	}
+
 	// this function deletes a task from task hidtory, and deletes it's checkpoints and delete the task folder
 	async deleteTaskWithId(id: string) {
 		try {

@@ -35,6 +35,7 @@ export interface TaskHeaderProps {
 	contextTokens: number
 	buttonsDisabled: boolean
 	handleCondenseContext: (taskId: string) => void
+	handleCompactAndSummarize: (taskId: string) => void
 	onClose: () => void
 	// kilocode_change start
 	groupedMessages: (ClineMessage | ClineMessage[])[]
@@ -53,6 +54,7 @@ const TaskHeader = ({
 	contextTokens,
 	buttonsDisabled,
 	handleCondenseContext,
+	handleCompactAndSummarize,
 	onClose,
 	// kilocode_change start
 	groupedMessages,
@@ -79,6 +81,17 @@ const TaskHeader = ({
 				onClick={() => currentTaskItem && handleCondenseContext(currentTaskItem.id)}
 				className="shrink-0 min-h-[20px] min-w-[20px] p-[2px] cursor-pointer disabled:cursor-not-allowed opacity-85 hover:opacity-100 bg-transparent border-none rounded-md">
 				<FoldVertical size={16} />
+			</button>
+		</StandardTooltip>
+	)
+
+	const compactAndSummarizeButton = (
+		<StandardTooltip content="Compact and summarize conversation, then start new chat">
+			<button
+				disabled={buttonsDisabled}
+				onClick={() => currentTaskItem && handleCompactAndSummarize(currentTaskItem.id)}
+				className="shrink-0 min-h-[20px] min-w-[20px] p-[2px] cursor-pointer disabled:cursor-not-allowed opacity-85 hover:opacity-100 bg-transparent border-none rounded-md">
+				<span className="codicon codicon-package" style={{ fontSize: "16px" }} />
 			</button>
 		</StandardTooltip>
 	)
@@ -140,6 +153,7 @@ const TaskHeader = ({
 								}
 							/>
 							{condenseButton}
+							{compactAndSummarizeButton}
 							<ShareButton item={currentTaskItem} disabled={buttonsDisabled} />
 							{!!totalCost && <VSCodeBadge>${totalCost.toFixed(2)}</VSCodeBadge>}
 						</div>
@@ -198,6 +212,7 @@ const TaskHeader = ({
 										}
 									/>
 									{condenseButton}
+									{compactAndSummarizeButton}
 								</div>
 							)}
 							<div className="flex justify-between items-center h-[20px]">

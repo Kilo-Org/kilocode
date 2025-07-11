@@ -56,6 +56,7 @@ describe("ContextWindowProgress", () => {
 			onClose: vi.fn(),
 			buttonsDisabled: false,
 			handleCondenseContext: vi.fn((_taskId: string) => {}),
+			handleCompactAndSummarize: vi.fn((_taskId: string) => {}),
 			groupedMessages: [], // kilocode_change
 		}
 
