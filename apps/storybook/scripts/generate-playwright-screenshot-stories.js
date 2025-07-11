@@ -3,7 +3,7 @@
 import { readdir, readFile, writeFile, mkdir, copyFile } from "fs/promises"
 import { join, basename } from "path"
 import { fileURLToPath } from "url"
-import { camelCase } from "lodash"
+import { camelCase } from "change-case"
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url))
 const playwrightDir = join(__dirname, "../../playwright-e2e")

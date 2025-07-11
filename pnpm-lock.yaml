@@ -68,12 +68,12 @@ importers:
       chalk:
         specifier: ^5.4.1
         version: 5.4.1
+      change-case:
+        specifier: ^5.4.4
+        version: 5.4.4
       fs-extra:
         specifier: ^11.2.0
         version: 11.3.0
-      lodash:
-        specifier: ^4.17.21
-        version: 4.17.21
       signale:
         specifier: ^1.4.0
         version: 1.4.0
@@ -117,6 +117,9 @@ importers:
       '@vscode/codicons':
         specifier: ^0.0.36
         version: 0.0.36
+      change-case:
+        specifier: ^5.4.4
+        version: 5.4.4
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -5184,6 +5187,9 @@ packages:
   chalk@5.4.1:
     resolution: {integrity: sha512-zgVZuo2WcZgfUEmsn6eO3kINexW8RAE4maiQ8QNs8CtpPCSyMiYsULR3HQYkm3w8FIA3SberyMJMSldGsW+U3w==}
     engines: {node: ^12.17.0 || ^14.13 || >=16.0.0}
+
+  change-case@5.4.4:
+    resolution: {integrity: sha512-HRQyTk2/YPEkt9TnUPbOpr64Uw3KOicFWPVBb+xiHvd6eBx/qPr9xqfBFDT8P2vWsvvz4jbEkfDe71W3VyNu2w==}
 
   char-regex@1.0.2:
     resolution: {integrity: sha512-kWWXztvZ5SBQV+eRgKFeh8q5sLuZY2+8WUIzlxWVTg+oGwY14qylx1KbKzHd8P6ZYkAg0xyIDU9JMHhyJMZ1jw==}
@@ -15435,7 +15441,7 @@ snapshots:
       sirv: 3.0.1
       tinyglobby: 0.2.14
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@20.17.57)(@vitest/ui@3.2.4)(jiti@2.4.2)(jsdom@26.1.0)(lightningcss@1.30.1)(tsx@4.19.4)(yaml@2.8.0)
+      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@22.15.29)(@vitest/ui@3.2.4)(jiti@2.4.2)(jsdom@26.1.0)(lightningcss@1.30.1)(tsx@4.19.4)(yaml@2.8.0)
 
   '@vitest/utils@2.0.5':
     dependencies:
@@ -16110,6 +16116,8 @@ snapshots:
       supports-color: 7.2.0
 
   chalk@5.4.1: {}
+
+  change-case@5.4.4: {}
 
   char-regex@1.0.2: {}
 

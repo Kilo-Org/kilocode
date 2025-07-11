@@ -17,6 +17,7 @@
 		"@radix-ui/react-slot": "^1.1.2",
 		"@tanstack/react-query": "^5.62.7",
 		"@vscode/codicons": "^0.0.36",
+		"change-case": "^5.4.4",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"lucide-react": "^0.513.0",

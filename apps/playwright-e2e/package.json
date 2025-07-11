@@ -24,8 +24,8 @@
 	},
 	"dependencies": {
 		"chalk": "^5.4.1",
+		"change-case": "^5.4.4",
 		"fs-extra": "^11.2.0",
-		"lodash": "^4.17.21",
 		"signale": "^1.4.0"
 	}
 }
