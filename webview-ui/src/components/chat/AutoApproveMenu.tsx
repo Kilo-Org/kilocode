@@ -214,7 +214,6 @@ const AutoApproveMenu = ({ style }: AutoApproveMenuProps) => {
 					<MaxRequestsInput
 						allowedMaxRequests={allowedMaxRequests ?? undefined}
 						onValueChange={(value) => setAllowedMaxRequests(value)}
-						variant="menu"
 					/>
 					{/* kilocode_change end */}
 				</div>

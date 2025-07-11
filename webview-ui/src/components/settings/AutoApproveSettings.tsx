@@ -131,8 +131,6 @@ export const AutoApproveSettings = ({
 				<MaxRequestsInput
 					allowedMaxRequests={allowedMaxRequests}
 					onValueChange={(value) => setCachedStateField("allowedMaxRequests", value)}
-					variant="settings"
-					testId="max-requests-input"
 				/>
 				{/* kilocode_change end */}
 

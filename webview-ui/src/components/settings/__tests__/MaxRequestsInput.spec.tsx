@@ -7,38 +7,19 @@ vi.mock("@/utils/vscode", () => ({
 	vscode: { postMessage: vi.fn() },
 }))
 
-const translations: Record<string, string> = {
-	"settings:autoApprove.apiRequestLimit.title": "Max API Requests",
-	"settings:autoApprove.apiRequestLimit.unlimited": "Unlimited",
-	"settings:autoApprove.apiRequestLimit.description": "Limit the number of API requests",
-}
 vi.mock("react-i18next", () => ({
-	useTranslation: () => ({
-		t: (key: string) => translations[key] || key,
-	}),
-	Trans: ({ i18nKey }: { i18nKey: string; children?: React.ReactNode }) => (
-		<span>{translations[i18nKey] || i18nKey}</span>
-	),
+	useTranslation: () => {
+		const translations: Record<string, string> = {
+			"settings:autoApprove.apiRequestLimit.title": "Max API Requests",
+			"settings:autoApprove.apiRequestLimit.unlimited": "Unlimited",
+			"settings:autoApprove.apiRequestLimit.description": "Limit the number of API requests",
+		}
+		return { t: (key: string) => translations[key] || key }
+	},
 }))
 
 describe("MaxRequestsInput", () => {
 	const mockOnValueChange = vi.fn()
-
-	it("renders with settings variant by default", () => {
-		render(<MaxRequestsInput allowedMaxRequests={10} onValueChange={mockOnValueChange} />)
-
-		expect(screen.getByText("Max API Requests")).toBeInTheDocument()
-		expect(screen.getByText("Limit the number of API requests")).toBeInTheDocument()
-		expect(screen.getByDisplayValue("10")).toBeInTheDocument()
-	})
-
-	it("renders with menu variant styling", () => {
-		render(<MaxRequestsInput allowedMaxRequests={5} onValueChange={mockOnValueChange} variant="menu" />)
-
-		expect(screen.getByText("Max API Requests")).toBeInTheDocument()
-		expect(screen.getByText("Limit the number of API requests")).toBeInTheDocument()
-		expect(screen.getByDisplayValue("5")).toBeInTheDocument()
-	})
 
 	it("shows empty input when allowedMaxRequests is undefined", () => {
 		render(<MaxRequestsInput allowedMaxRequests={undefined} onValueChange={mockOnValueChange} />)
