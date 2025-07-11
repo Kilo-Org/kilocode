@@ -60,9 +60,15 @@ function parseScreenshotName(filename) {
 	if (name.includes("__")) {
 		const parts = name.split("__")
 		if (parts.length >= 3) {
+			// Clean up test name to remove retry suffixes and normalize
+			const cleanTestName = parts[1]
+				.replace(/-retry-\d+$/, '') // Remove retry suffixes
+				.replace(/-\d+$/, '') // Remove numeric suffixes
+				.replace(/^should-/, '') // Remove common test prefixes
+
 			return {
 				testSuite: camelCase(parts[0]),
-				testName: camelCase(parts[1]),
+				testName: camelCase(cleanTestName),
 				screenshotName: camelCase(parts.slice(2).join("__")),
 				hierarchical: true,
 			}
@@ -80,6 +86,7 @@ function parseScreenshotName(filename) {
 
 async function generateScreenshotStories(screenshots) {
 	console.log("📝 Generating Storybook stories from Playwright screenshots...")
+	console.log(`📊 Processing ${screenshots.length} total screenshots`)
 
 	await mkdir(storiesDir, { recursive: true })
 
@@ -87,6 +94,16 @@ async function generateScreenshotStories(screenshots) {
 	const groupedScreenshots = groupScreenshotsByTestSuite(screenshots)
 
 	for (const [testSuite, suiteScreenshots] of Object.entries(groupedScreenshots)) {
+		console.log(`📁 Processing test suite: ${testSuite} (${suiteScreenshots.length} screenshots)`)
+
+		// Log screenshot details for debugging
+		const screenshotNames = suiteScreenshots.map(s => `${s.testName}::${s.screenshotName}`)
+		const uniqueNames = [...new Set(screenshotNames)]
+		if (screenshotNames.length !== uniqueNames.length) {
+			console.log(`⚠️  Found potential duplicates in ${testSuite}:`)
+			console.log(`   Total: ${screenshotNames.length}, Unique: ${uniqueNames.length}`)
+		}
+
 		const storyContent = createStoryContent(testSuite, suiteScreenshots)
 		const storyFileName = `${sanitizeFileName(testSuite)}.stories.tsx`
 		const storyPath = join(storiesDir, storyFileName)
@@ -113,9 +130,14 @@ function sanitizeFileName(name) {
 }
 
 function createStoryContent(testSuite, screenshots) {
-	// Group screenshots by test name within the suite
+	// Group screenshots by test name within the suite, with deduplication
 	const testGroups = screenshots.reduce((acc, screenshot) => {
-		const key = screenshot.testName
+		// Normalize test name to handle retries and variations
+		const normalizedTestName = screenshot.testName
+			.replace(/-retry-\d+$/, '') // Remove retry suffixes
+			.replace(/-\d+$/, '') // Remove numeric suffixes
+
+		const key = normalizedTestName
 		if (!acc[key]) acc[key] = []
 		acc[key].push(screenshot)
 		return acc
@@ -125,7 +147,33 @@ function createStoryContent(testSuite, screenshots) {
 	let storyIndex = 1
 
 	for (const [testName, testScreenshots] of Object.entries(testGroups)) {
+		// Deduplicate screenshots by screenshot name within each test
+		const uniqueScreenshots = new Map()
+
 		for (const screenshot of testScreenshots) {
+			const screenshotKey = screenshot.screenshotName
+			// Keep the most recent screenshot if there are duplicates
+			if (!uniqueScreenshots.has(screenshotKey) ||
+				screenshot.fileName > uniqueScreenshots.get(screenshotKey).fileName) {
+				uniqueScreenshots.set(screenshotKey, screenshot)
+			}
+		}
+
+		// Log deduplication results
+		if (testScreenshots.length !== uniqueScreenshots.size) {
+			console.log(`🔄 Deduplicated ${testName}: ${testScreenshots.length} → ${uniqueScreenshots.size} screenshots`)
+			const duplicateNames = testScreenshots.map(s => s.screenshotName)
+			const duplicateCounts = duplicateNames.reduce((acc, name) => {
+				acc[name] = (acc[name] || 0) + 1
+				return acc
+			}, {})
+			const actualDuplicates = Object.entries(duplicateCounts).filter(([, count]) => count > 1)
+			if (actualDuplicates.length > 0) {
+				console.log(`   Duplicates found: ${actualDuplicates.map(([name, count]) => `${name}(${count})`).join(', ')}`)
+			}
+		}
+
+		for (const screenshot of uniqueScreenshots.values()) {
 			const storyName = `${testName} - ${screenshot.screenshotName}`
 			const exportName = `Story${storyIndex}`
 
