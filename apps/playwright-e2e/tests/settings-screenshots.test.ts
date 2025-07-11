@@ -23,8 +23,8 @@ test.describe("Settings Screenshots", () => {
 		// Wait for the webview to load
 		const webviewFrame = await findWebview(page)
 
-		// Wait for settings view to be visible
-		await expect(webviewFrame.locator('[data-testid="settings-view"]')).toBeVisible({ timeout: 10000 })
+		// Wait for settings view to be visible by checking for the tablist role
+		await expect(webviewFrame.locator('[role="tablist"]')).toBeVisible({ timeout: 10000 })
 		console.log("✅ Settings view loaded")
 
 		// Wait for the tab list to be visible
