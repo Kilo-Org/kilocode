@@ -5,6 +5,7 @@ import * as path from "path"
 import * as os from "os"
 import * as fs from "fs"
 import { fileURLToPath } from "url"
+import { camelCase } from "lodash"
 import { setupConsoleLogging, cleanLogMessage } from "../helpers/console-logging"
 
 // ES module equivalent of __dirname
@@ -158,19 +159,10 @@ export const test = base.extend<TestFixtures>({
 			const testInfo = test.info()
 			// Extract test suite from the test file name or use a default
 			const fileName = testInfo.file.split("/").pop()?.replace(".test.ts", "") || "unknown"
-			const testSuite =
-				fileName === "sanity"
-					? "Sanity Tests"
-					: fileName === "chat-with-response"
-						? "Full E2E Test"
-						: fileName
-								.split("-")
-								.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-								.join(" ")
+			const testSuite = camelCase(fileName).join(" ")
 			const testName = testInfo.title || "Unknown Test"
 
 			// Create a hierarchical name: TestSuite__TestName__ScreenshotName
-			// Using double underscores to clearly separate hierarchy levels
 			const screenshotName = name || `screenshot-${Date.now()}`
 			const hierarchicalName = `${testSuite}__${testName}__${screenshotName}`
 				.replace(/[^a-zA-Z0-9_-]/g, "-") // Replace special chars with dashes, keep underscores

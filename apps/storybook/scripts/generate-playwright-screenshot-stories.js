@@ -3,6 +3,7 @@
 import { readdir, readFile, writeFile, mkdir, copyFile } from "fs/promises"
 import { join, basename } from "path"
 import { fileURLToPath } from "url"
+import { camelCase } from "lodash"
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url))
 const playwrightDir = join(__dirname, "../../playwright-e2e")
@@ -60,9 +61,9 @@ function parseScreenshotName(filename) {
 		const parts = name.split("__")
 		if (parts.length >= 3) {
 			return {
-				testSuite: toCamelCase(parts[0]),
-				testName: toCamelCase(parts[1]),
-				screenshotName: toCamelCase(parts.slice(2).join("__")),
+				testSuite: camelCase(parts[0]),
+				testName: camelCase(parts[1]),
+				screenshotName: camelCase(parts.slice(2).join("__")),
 				hierarchical: true,
 			}
 		}
@@ -72,17 +73,9 @@ function parseScreenshotName(filename) {
 	return {
 		testSuite: "Legacy Tests",
 		testName: "Unknown Test",
-		screenshotName: toCamelCase(name.replace(/-actual$|-expected$/, "")),
+		screenshotName: camelCase(name.replace(/-actual$|-expected$/, "")),
 		hierarchical: false,
 	}
-}
-
-function toCamelCase(str) {
-	return str
-		.split(/[-_\s]+/)
-		.map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-		.join(" ")
-		.trim()
 }
 
 async function generateScreenshotStories(screenshots) {

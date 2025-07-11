@@ -58,8 +58,7 @@ jobs:
               with:
                   path: /tmp/.buildx-cache
                   key: ${{ runner.os }}-buildx-${{ hashFiles('apps/playwright-e2e/Dockerfile.playwright-ci') }}
-                  restore-keys: |
-                      ${{ runner.os }}-buildx-
+                  restore-keys: ${{ runner.os }}-buildx-
 
             - name: Run Playwright E2E tests
               continue-on-error: true
