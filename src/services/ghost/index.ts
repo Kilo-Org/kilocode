@@ -34,6 +34,11 @@ export const registerGhostProvider = (context: vscode.ExtensionContext) => {
 			ghost.applyAllSuggestions()
 		}),
 	)
+	context.subscriptions.push(
+		vscode.commands.registerCommand("kilo-code.ghostWriter.promptCodeSuggestion", async () => {
+			await ghost.promptCodeSuggestion()
+		}),
+	)
 
 	// Register GhostProvider Key Bindings
 	context.subscriptions.push(
@@ -52,6 +57,11 @@ export const registerGhostProvider = (context: vscode.ExtensionContext) => {
 			} else {
 				vscode.commands.executeCommand("escape")
 			}
+		}),
+	)
+	context.subscriptions.push(
+		vscode.commands.registerCommand("kilo-code.ghostWriter.keyCmdI", async () => {
+			await ghost.promptCodeSuggestion()
 		}),
 	)
 

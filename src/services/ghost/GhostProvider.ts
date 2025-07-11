@@ -4,7 +4,7 @@ import { GhostStrategy } from "./GhostStrategy"
 import { GhostModel } from "./GhostModel"
 import { GhostWorkspaceEdit } from "./GhostWorkspaceEdit"
 import { GhostDecorations } from "./GhostDecorations"
-import { GhostSuggestionEditOperation } from "./types"
+import { GhostSuggestionContext, GhostSuggestionEditOperation } from "./types"
 
 export class GhostProvider {
 	private static instance: GhostProvider | null = null
@@ -34,30 +34,98 @@ export class GhostProvider {
 		return this.documentStore
 	}
 
-	public async provideCodeSuggestions(
+	public async promptCodeSuggestion() {
+		const userInput = await vscode.window.showInputBox({
+			prompt: "Kilo Code - Code Suggestion",
+			placeHolder: "e.g., 'refactor this function to be more efficient'",
+		})
+
+		if (!userInput) {
+			return
+		}
+
+		const editor = vscode.window.activeTextEditor
+		if (!editor) {
+			return
+		}
+		const document = editor.document
+		const range = editor.selection.isEmpty ? undefined : editor.selection
+
+		await this.provideCodeSuggestions({
+			document,
+			range,
+			userInput,
+		})
+	}
+
+	public async provideCodeActionQuickFix(
 		document: vscode.TextDocument,
 		range: vscode.Range | vscode.Selection,
 	): Promise<void> {
 		// Store the document in the document store
 		this.getDocumentStore().storeDocument(document)
+		await this.provideCodeSuggestions({
+			document,
+			range,
+		})
+	}
 
-		const systemPrompt = this.strategy.getSystemPrompt()
-		const userPrompt = this.strategy.getSuggestionPrompt(document, range)
+	private async provideCodeSuggestions(context: GhostSuggestionContext): Promise<void> {
+		let cancelled = false
 
-		const response = await this.model.generateResponse(systemPrompt, userPrompt)
+		await vscode.window.withProgress(
+			{
+				location: vscode.ProgressLocation.Notification,
+				title: "Kilo Code",
+				cancellable: true,
+			},
+			async (progress, progressToken) => {
+				progressToken.onCancellationRequested(() => {
+					cancelled = true
+				})
 
-		console.log("LLM Response", response)
+				progress.report({
+					message: "Analyzing your code...",
+				})
+				const systemPrompt = this.strategy.getSystemPrompt()
+				const userPrompt = this.strategy.getSuggestionPrompt(context)
 
-		// First parse the response into edit operations
-		const operations = this.strategy.parseResponse(response)
+				if (cancelled) {
+					return
+				}
+				progress.report({
+					message: "Generating code suggestions...",
+				})
 
-		this.pendingSuggestions = operations
+				const response = await this.model.generateResponse(systemPrompt, userPrompt)
 
-		// Generate placeholder for show the suggestions
-		await this.workspaceEdit.applyOperationsPlaceholders(operations)
+				if (cancelled) {
+					return
+				}
 
-		// Display the suggestions in the active editor
-		await this.displaySuggestions()
+				progress.report({
+					message: "Processing code suggestions...",
+				})
+				// First parse the response into edit operations
+				const operations = await this.strategy.parseResponse(response)
+				this.pendingSuggestions = operations
+
+				console.log("operations", operations)
+
+				if (cancelled) {
+					this.pendingSuggestions = []
+					return
+				}
+
+				progress.report({
+					message: "Showing code suggestions...",
+				})
+				// Generate placeholder for show the suggestions
+				await this.workspaceEdit.applyOperationsPlaceholders(operations)
+				// Display the suggestions in the active editor
+				await this.displaySuggestions()
+			},
+		)
 	}
 
 	public async displaySuggestions() {

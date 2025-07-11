@@ -14,3 +14,9 @@ export interface GhostSuggestionEditOperation {
 	line: number
 	content: string
 }
+
+export interface GhostSuggestionContext {
+	userInput?: string
+	document?: vscode.TextDocument
+	range?: vscode.Range | vscode.Selection
+}

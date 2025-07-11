@@ -1,6 +1,6 @@
 import * as vscode from "vscode"
-import { parsePatch } from "diff"
-import { GhostSuggestionEditOperation, GhostSuggestionEditOperationType } from "./types"
+import { parsePatch, ParsedDiff, applyPatch, structuredPatch } from "diff"
+import { GhostSuggestionContext, GhostSuggestionEditOperation, GhostSuggestionEditOperationType } from "./types"
 
 export class GhostStrategy {
 	getSystemPrompt() {
@@ -13,46 +13,129 @@ export class GhostStrategy {
     * **User Focus (Cursor/Selection):** Pay close attention to the user's current cursor position or selection, as it indicates their immediate area of focus. Suggestions should be highly relevant to this specific location.
 2.  **Predict Subsequent Changes:** Based on the full context, anticipate the follow-up code that would logically be written or modified.
 3.  **Strict Diff Patch Format:** Your entire response **MUST** be a single, valid diff patch. This format is essential for programmatic application. Do not include any conversational text or explanations outside of the diff itself.
-4.  **Keep the file name in the diff patch:** The diff patch must include the absolute path in the file name as is provided. This is crucial for the VS Code API to apply the changes correctly.
-5.  **Propagate Changes:** Ensure consistency across the codebase. If your suggestion involves renaming or altering a signature, generate a patch that updates its definition and all relevant usages in the provided files.
-6.  **Maintain Code Quality:** Your suggested changes must be syntactically correct, stylistically consistent with the existing code, and follow good programming practices.
+4.  **CRITICAL: Hunk Header Accuracy** Your primary output is a diff patch that will be programmatically applied. The \`@@ -a,b +c,d @@\` hunk headers MUST be perfectly accurate. Before outputting the diff, internally verify the starting line number and the line counts for both the original and modified sections. An incorrect hunk header will cause the entire operation to fail. Double-check your calculations.
+5.  **Keep the file name in the diff patch:** The diff patch must include the absolute path in the file name as is provided. This is crucial for the VS Code API to apply the changes correctly.
+6.  **Propagate Changes:** Ensure consistency across the codebase. If your suggestion involves renaming or altering a signature, generate a patch that updates its definition and all relevant usages in the provided files.
+7.  **Maintain Code Quality:** Your suggested changes must be syntactically correct, stylistically consistent with the existing code, and follow good programming practices.
 
 ---`
 	}
 
-	getSuggestionPrompt(document: vscode.TextDocument, range: vscode.Range | vscode.Selection) {
-		const languageId = document.languageId
-		const selectedText = document.getText(range)
-		const cursorLine = range.start.line + 1 // 1-based line number
-		const cursorCharacter = range.start.character + 1 // 1-based character position
-		const documentUri = document.uri.toString()
-		return `[INST]
-I am writing code and need a suggestion for what to write next. Please analyze my current context and generate a diff patch for the code that should be added or changed.
-
-**Recent Changes (Diff):**
-[No recent diff applicable]
-
-**User Focus:**
-Cursor Position: Line ${cursorLine}, Character ${cursorCharacter}
-
-**Selected Text:**
-\`\`\`${languageId}
-${selectedText}\`\`\`
-
-**Current Document: ${documentUri}**
-\`\`\`${languageId}
-${document.getText()}\`\`\`
-[/INST]
-    `
+	private getBaseSuggestionPrompt() {
+		return `I am writing code and need a suggestion for what to write next. Please analyze my current context and generate a diff patch for the code that should be added or changed.`
 	}
 
-	parseResponse(response: string): GhostSuggestionEditOperation[] {
+	private getRecentChangesDiff() {
+		return ""
+		// return `**Recent Changes (Diff):**
+		// [No recent diff applicable]
+		// `
+	}
+
+	private getUserFocusPrompt(context: GhostSuggestionContext) {
+		const { range } = context
+		if (!range) {
+			return ""
+		}
+		const cursorLine = range.start.line + 1 // 1-based line number
+		const cursorCharacter = range.start.character + 1 // 1-based character position
+		return `**User Focus:**
+Cursor Position: Line ${cursorLine}, Character ${cursorCharacter}`
+	}
+
+	private getUserSelectedTextPrompt(context: GhostSuggestionContext) {
+		const { document, range } = context
+		if (!document || !range) {
+			return ""
+		}
+		const selectedText = document.getText(range)
+		const languageId = document.languageId
+		return `**Selected Text:**
+\`\`\`${languageId}
+${selectedText}
+\`\`\``
+	}
+
+	private getUserCurrentDocumentPrompt(context: GhostSuggestionContext) {
+		const { document } = context
+		if (!document) {
+			return ""
+		}
+		const documentUri = document.uri.toString()
+		const languageId = document.languageId
+		return `**Current Document: ${documentUri}**
+\`\`\`${languageId}
+${document.getText()}
+\`\`\``
+	}
+
+	private getUserInputPrompt(context: GhostSuggestionContext) {
+		const { userInput } = context
+		if (!userInput) {
+			return ""
+		}
+		return `**User Input:**
+\`\`\`
+${userInput}
+\`\`\``
+	}
+
+	getSuggestionPrompt(context: GhostSuggestionContext) {
+		const sections = [
+			this.getBaseSuggestionPrompt(),
+			this.getUserInputPrompt(context),
+			this.getRecentChangesDiff(),
+			this.getUserFocusPrompt(context),
+			this.getUserSelectedTextPrompt(context),
+			this.getUserCurrentDocumentPrompt(context),
+		]
+
+		return `[INST]
+${sections.filter(Boolean).join("\n\n")}
+[/INST]
+`
+	}
+
+	private async FuzzyMatchDiff(diff: string) {
+		const filePatches = parsePatch(diff)
+		for (const filePatch of filePatches) {
+			// If the file patch has no hunks, skip it.
+			if (!filePatch.hunks || filePatch.hunks.length === 0) {
+				continue
+			}
+
+			const filePath = (filePatch.newFileName || filePatch.oldFileName || "").replace(/^[ab]\//, "")
+			if (!filePath || filePath === "/dev/null") {
+				continue
+			}
+
+			const fileUri = vscode.Uri.parse(filePath)
+			const document = await vscode.workspace.openTextDocument(fileUri)
+			if (!document) {
+				continue // Skip if the document cannot be opened
+			}
+			const documentContent = document.getText()
+
+			const newContent = applyPatch(documentContent, diff, {
+				fuzzFactor: 0.75, // Adjust fuzz factor as needed
+			})
+
+			if (!newContent) {
+				continue // Skip if the patch could not be applied
+			}
+
+			filePatch.hunks = structuredPatch(filePath, filePath, documentContent, newContent, "", "").hunks
+		}
+		return filePatches as ParsedDiff[]
+	}
+
+	async parseResponse(response: string): Promise<GhostSuggestionEditOperation[]> {
 		const operations: GhostSuggestionEditOperation[] = []
 		const cleanedResponse = response.replace(/```diff\s*|\s*```/g, "").trim()
 		if (!cleanedResponse) {
 			return [] // No valid diff found
 		}
-		const filePatches = parsePatch(cleanedResponse)
+		const filePatches = await this.FuzzyMatchDiff(cleanedResponse)
 		for (const filePatch of filePatches) {
 			// Determine the file path from the patch header.
 			// It prefers the new file name, falling back to the old one.
@@ -64,7 +147,7 @@ ${document.getText()}\`\`\`
 				continue
 			}
 
-			const fileUri = vscode.Uri.file(filePath)
+			const fileUri = vscode.Uri.parse(filePath)
 
 			// Each file patch contains one or more "hunks," which are contiguous
 			// blocks of changes.
