@@ -5,6 +5,9 @@ import { GhostModel } from "./GhostModel"
 import { GhostWorkspaceEdit } from "./GhostWorkspaceEdit"
 import { GhostDecorations } from "./GhostDecorations"
 import { GhostSuggestionContext, GhostSuggestionEditOperation } from "./types"
+import { t } from "../../i18n"
+import { addCustomInstructions } from "../../core/prompts/sections/custom-instructions"
+import { getWorkspacePath } from "../../utils/path"
 
 export class GhostProvider {
 	private static instance: GhostProvider | null = null
@@ -14,8 +17,10 @@ export class GhostProvider {
 	private strategy: GhostStrategy
 	private workspaceEdit: GhostWorkspaceEdit
 	private pendingSuggestions: GhostSuggestionEditOperation[] = []
+	private context: vscode.ExtensionContext
 
-	private constructor() {
+	private constructor(context: vscode.ExtensionContext) {
+		this.context = context
 		this.decorations = new GhostDecorations()
 		this.documentStore = new GhostDocumentStore()
 		this.model = new GhostModel()
@@ -23,9 +28,12 @@ export class GhostProvider {
 		this.workspaceEdit = new GhostWorkspaceEdit()
 	}
 
-	public static getInstance(): GhostProvider {
+	public static getInstance(context?: vscode.ExtensionContext): GhostProvider {
 		if (!GhostProvider.instance) {
-			GhostProvider.instance = new GhostProvider()
+			if (!context) {
+				throw new Error("ExtensionContext is required for first initialization of GhostProvider")
+			}
+			GhostProvider.instance = new GhostProvider(context)
 		}
 		return GhostProvider.instance
 	}
@@ -36,8 +44,8 @@ export class GhostProvider {
 
 	public async promptCodeSuggestion() {
 		const userInput = await vscode.window.showInputBox({
-			prompt: "Kilo Code - Code Suggestion",
-			placeHolder: "e.g., 'refactor this function to be more efficient'",
+			prompt: t("kilocode:ghost.input.title"),
+			placeHolder: t("kilocode:ghost.input.placeholder"),
 		})
 
 		if (!userInput) {
@@ -76,7 +84,7 @@ export class GhostProvider {
 		await vscode.window.withProgress(
 			{
 				location: vscode.ProgressLocation.Notification,
-				title: "Kilo Code",
+				title: t("kilocode:ghost.progress.title"),
 				cancellable: true,
 			},
 			async (progress, progressToken) => {
@@ -85,16 +93,21 @@ export class GhostProvider {
 				})
 
 				progress.report({
-					message: "Analyzing your code...",
+					message: t("kilocode:ghost.progress.analyzing"),
 				})
-				const systemPrompt = this.strategy.getSystemPrompt()
+
+				// Load custom instructions
+				const workspacePath = getWorkspacePath()
+				const customInstructions = await addCustomInstructions("", "", workspacePath, "ghost")
+
+				const systemPrompt = this.strategy.getSystemPrompt(customInstructions)
 				const userPrompt = this.strategy.getSuggestionPrompt(context)
 
 				if (cancelled) {
 					return
 				}
 				progress.report({
-					message: "Generating code suggestions...",
+					message: t("kilocode:ghost.progress.generating"),
 				})
 
 				const response = await this.model.generateResponse(systemPrompt, userPrompt)
@@ -104,7 +117,7 @@ export class GhostProvider {
 				}
 
 				progress.report({
-					message: "Processing code suggestions...",
+					message: t("kilocode:ghost.progress.processing"),
 				})
 				// First parse the response into edit operations
 				const operations = await this.strategy.parseResponse(response)
@@ -118,7 +131,7 @@ export class GhostProvider {
 				}
 
 				progress.report({
-					message: "Showing code suggestions...",
+					message: t("kilocode:ghost.progress.showing"),
 				})
 				// Generate placeholder for show the suggestions
 				await this.workspaceEdit.applyOperationsPlaceholders(operations)

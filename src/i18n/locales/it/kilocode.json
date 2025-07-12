@@ -47,7 +47,9 @@
 		"noChanges": "Kilo: Nessuna modifica trovata da analizzare",
 		"generated": "Kilo: Messaggio di commit generato!",
 		"generationFailed": "Kilo: Impossibile generare il messaggio di commit: {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: Generazione del messaggio usando modifiche non in staging"
+		"generatingFromUnstaged": "Kilo: Generazione del messaggio usando modifiche non in staging",
+		"providerRegistered": "Kilo: Provider di messaggi commit registrato",
+		"activationFailed": "Kilo: Impossibile attivare il generatore di messaggi: {{error}}"
 	},
 	"autocomplete": {
 		"statusBar": {
@@ -68,5 +70,38 @@
 			}
 		},
 		"toggleMessage": "Kilo Completato {{status}}"
+	},
+	"ghost": {
+		"progress": {
+			"analyzing": "Analisi del codice in corso...",
+			"generating": "Generazione di modifiche suggerite...",
+			"showing": "Visualizzazione modifiche suggerite...",
+			"processing": "Elaborazione modifiche suggerite...",
+			"title": "Kilo Code"
+		},
+		"input": {
+			"title": "Codice Kilo: Compito Rapido",
+			"placeholder": "ad es., 'ristruttura questa funzione per renderla più efficiente'"
+		},
+		"commands": {
+			"generateSuggestions": "Codice Kilo: Genera Suggerimenti di Modifica",
+			"promptCodeSuggestion": "Compito Veloce",
+			"cancelSuggestions": "Annulla Modifiche Suggerite",
+			"displaySuggestions": "Mostra Modifiche Suggerite",
+			"applyCurrentSuggestion": "Applica Modifica Attualmente Suggerita",
+			"applyAllSuggestions": "Applica Tutte le Modifiche Suggerite",
+			"category": "Kilo Code"
+		},
+		"codeAction": {
+			"title": "Kilo Code: Modifiche suggerite"
+		},
+		"chatParticipant": {
+			"fullName": "Agente Kilo Code",
+			"name": "Agente",
+			"description": "Posso aiutarti con attività veloci e modifiche suggerite."
+		},
+		"messages": {
+			"provideCodeSuggestions": "Fornendo suggerimenti di codice..."
+		}
 	}
 }

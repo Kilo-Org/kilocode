@@ -47,7 +47,9 @@
 		"noChanges": "किलो: विश्लेषण करने के लिए कोई परिवर्तन नहीं मिला",
 		"generated": "किलो: कमिट मैसेज जनरेट हो गया!",
 		"generationFailed": "किलो: प्रतिबद्धता संदेश उत्पन्न करने में विफल: {{errorMessage}}",
-		"generatingFromUnstaged": "किलो: अपरिवर्तित परिवर्तनों का उपयोग करके संदेश उत्पन्न कर रहा है"
+		"generatingFromUnstaged": "किलो: अपरिवर्तित परिवर्तनों का उपयोग करके संदेश उत्पन्न कर रहा है",
+		"activationFailed": "किलो: संदेश जनरेटर सक्रिय करने में विफल: {{error}}",
+		"providerRegistered": "किलो: कमिट संदेश प्रदाता पंजीकृत"
 	},
 	"autocomplete": {
 		"statusBar": {
@@ -68,5 +70,38 @@
 			}
 		},
 		"toggleMessage": "किलो कम्पलीट {{status}}"
+	},
+	"ghost": {
+		"progress": {
+			"processing": "संपादन सुझावों पर कार्यवाही कर रहे हैं...",
+			"analyzing": "आपके कोड का विश्लेषण किया जा रहा है...",
+			"generating": "सुझाएँ गए संपादन उत्पन्न हो रहे हैं...",
+			"showing": "सुझाए गए संपादन प्रदर्शित किए जा रहे हैं...",
+			"title": "किलो कोड"
+		},
+		"input": {
+			"placeholder": "उदाहरण के लिए, 'इस फंक्शन को अधिक कुशल होने के लिए रीफैक्टर करें'",
+			"title": "किलो कोड: त्वरित कार्य"
+		},
+		"commands": {
+			"cancelSuggestions": "सुझाए गए संपादनों को रद्द करें",
+			"displaySuggestions": "सुझाए गए संपादन दिखाएं",
+			"generateSuggestions": "किलो कोड: सुझाये गए संपादन उत्पन्न करें",
+			"applyCurrentSuggestion": "वर्तमान सुझाए गए संपादन को लागू करें",
+			"category": "किलो कोड",
+			"applyAllSuggestions": "सभी सुझाए गए संपादन लागू करें",
+			"promptCodeSuggestion": "त्वरित कार्य संकेत"
+		},
+		"chatParticipant": {
+			"fullName": "किलो कोड एजेंट",
+			"name": "एजेंट",
+			"description": "मैं आपकी त्वरित कार्यों और सुझाए गए संपादनों में मदद कर सकता हूँ।"
+		},
+		"codeAction": {
+			"title": "किलो कोड: सुझाए गए संपादन"
+		},
+		"messages": {
+			"provideCodeSuggestions": "कोड सुझाव प्रदान किए जा रहे हैं..."
+		}
 	}
 }

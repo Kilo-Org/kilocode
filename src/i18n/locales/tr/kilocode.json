@@ -47,7 +47,9 @@
 		"noChanges": "Kilo: Analiz edilecek değişiklik bulunamadı",
 		"generated": "Kilo: İşleme mesajı oluşturuldu!",
 		"generationFailed": "Kilo: Taahhüt mesajı oluşturulamadı: {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: Evrelenmemiş değişiklikleri kullanarak mesaj oluşturuluyor"
+		"generatingFromUnstaged": "Kilo: Evrelenmemiş değişiklikleri kullanarak mesaj oluşturuluyor",
+		"providerRegistered": "Kilo: İşleme mesaj sağlayıcısı kaydedildi",
+		"activationFailed": "Kilo: Mesaj oluşturucu etkinleştirilemedi: {{error}}"
 	},
 	"autocomplete": {
 		"statusBar": {
@@ -68,5 +70,38 @@
 			}
 		},
 		"toggleMessage": "Kilo Tamamlandı {{status}}"
+	},
+	"ghost": {
+		"progress": {
+			"analyzing": "Kodunuz analiz ediliyor...",
+			"generating": "Düzenleme önerileri oluşturuluyor...",
+			"processing": "Önerilen düzeltmeler işleniyor...",
+			"showing": "Önerilen düzenlemeler görüntüleniyor...",
+			"title": "Kilo Kodu"
+		},
+		"input": {
+			"title": "Kilo Kodu: Hızlı Görev",
+			"placeholder": "örneğin, 'bu fonksiyonu daha verimli olacak şekilde yeniden düzenleyin'"
+		},
+		"commands": {
+			"generateSuggestions": "Kilo Code: Önerilen Düzenlemeleri Oluştur",
+			"displaySuggestions": "Önerilen Düzenlemeleri Göster",
+			"cancelSuggestions": "Önerilen Düzenlemeleri İptal Et",
+			"applyCurrentSuggestion": "Mevcut Önerilen Düzenlemeyi Uygula",
+			"category": "Kilo Kod",
+			"applyAllSuggestions": "Önerilen Düzenlemelerin Tümünü Uygula",
+			"promptCodeSuggestion": "Hızlı Görev İsteği"
+		},
+		"chatParticipant": {
+			"fullName": "Kilo Kod Ajanı",
+			"name": "Temsilci",
+			"description": "Hızlı görevler ve önerilen düzenlemeler konusunda size yardımcı olabilirim."
+		},
+		"codeAction": {
+			"title": "Kilo Kod: Önerilen Düzenlemeler"
+		},
+		"messages": {
+			"provideCodeSuggestions": "Kod önerileri sunuluyor..."
+		}
 	}
 }

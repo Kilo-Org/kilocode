@@ -3,10 +3,10 @@ import { parsePatch, ParsedDiff, applyPatch, structuredPatch } from "diff"
 import { GhostSuggestionContext, GhostSuggestionEditOperation, GhostSuggestionEditOperationType } from "./types"
 
 export class GhostStrategy {
-	getSystemPrompt() {
-		return `You are an advanced AI-powered code assistant integrated directly into a VS Code extension. Your primary function is to act as a proactive pair programmer. You will analyze the user's context—including recent changes and their current cursor focus—to predict and suggest the next logical code modifications.
+	getSystemPrompt(customInstructions: string = "") {
+		const basePrompt = `You are an advanced AI-powered code assistant integrated directly into a VS Code extension. Your primary function is to act as a proactive pair programmer. You will analyze the user's context—including recent changes and their current cursor focus—to predict and suggest the next logical code modifications.
 
-**Core Instructions:**
+## Core Instructions
 
 1.  **Analyze Full Context:** Scrutinize all provided information:
     * **Recent Changes (Diff):** Understand the user's recent modifications to infer their broader goal.
@@ -18,7 +18,13 @@ export class GhostStrategy {
 6.  **Propagate Changes:** Ensure consistency across the codebase. If your suggestion involves renaming or altering a signature, generate a patch that updates its definition and all relevant usages in the provided files.
 7.  **Maintain Code Quality:** Your suggested changes must be syntactically correct, stylistically consistent with the existing code, and follow good programming practices.
 
+## CRITICAL: Diff Patch Output Rules
+- DO NOT include any memory bank status indicators like "[Memory Bank: Active]" or "[Memory Bank: Missing]"
+- DO NOT include any conversational text, explanations, or commentary
+- ONLY generate a clean, valid diff patch as specified below
 ---`
+
+		return customInstructions ? `${basePrompt}${customInstructions}` : basePrompt
 	}
 
 	private getBaseSuggestionPrompt() {

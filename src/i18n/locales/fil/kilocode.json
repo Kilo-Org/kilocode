@@ -47,7 +47,9 @@
 		"noChanges": "Kilo: Walang nakitang pagbabago upang suriin",
 		"generated": "Kilo: Nagenerahan ang mensahe ng commit!",
 		"generationFailed": "Kilo: Nabigong gumawa ng commit message: {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: Gumagawa ng mensahe gamit ang mga hindi naka-stage na pagbabago"
+		"generatingFromUnstaged": "Kilo: Gumagawa ng mensahe gamit ang mga hindi naka-stage na pagbabago",
+		"activationFailed": "Kilo: Nabigo sa pag-activate ng message generator: {{error}}",
+		"providerRegistered": "Kilo: Nakarehistrong provider ng commit message"
 	},
 	"autocomplete": {
 		"statusBar": {
@@ -68,5 +70,38 @@
 			}
 		},
 		"toggleMessage": "Kilo Complete {{status}}"
+	},
+	"ghost": {
+		"progress": {
+			"analyzing": "Sinusuri ang iyong code...",
+			"generating": "Lumilikha ng mga iminumungkahing pagbabago...",
+			"showing": "Nagpapakita ng mga iminumungkahing pag-edit...",
+			"processing": "Pinoproseso ang mga iminumungkahing mga pagbabago...",
+			"title": "Kilo Code"
+		},
+		"input": {
+			"placeholder": "halimbawa, 'i-refactor ang function na ito para maging mas efficient'",
+			"title": "Kilo Code: Mabilisang Gawain"
+		},
+		"commands": {
+			"generateSuggestions": "Kilo Code: Gumawa ng Mga Iminumungkahing Pag-edit",
+			"displaySuggestions": "Ipakita ang mga Iminumungkahing Pag-edit",
+			"category": "Kilo Code",
+			"cancelSuggestions": "Kanselahin ang mga Iminumungkahing Pagbabago",
+			"applyCurrentSuggestion": "I-apply ang Kasalukuyang Iminumungkahing Pag-edit",
+			"promptCodeSuggestion": "Mabilisang Gawain sa Prompt",
+			"applyAllSuggestions": "I-apply ang Lahat ng Iminumungkahing Pag-edit"
+		},
+		"chatParticipant": {
+			"fullName": "Ahente ng Kilo Code",
+			"name": "Ahente",
+			"description": "Matutulungan kita sa mabibilis na gawain at iminumungkahing mga pag-edit."
+		},
+		"codeAction": {
+			"title": "Kilo Code: Mga Iminumungkahing Pagbabago"
+		},
+		"messages": {
+			"provideCodeSuggestions": "Nagbibigay ng mga iminumungkahing code..."
+		}
 	}
 }

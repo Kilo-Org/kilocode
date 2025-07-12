@@ -47,7 +47,9 @@
 		"noChanges": "Kilo: No s'han trobat canvis per analitzar",
 		"generated": "Kilo: Missatge de commit generat!",
 		"generationFailed": "Kilo: No s'ha pogut generar el missatge de confirmació: {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: Generant missatge utilitzant canvis no preparats"
+		"generatingFromUnstaged": "Kilo: Generant missatge utilitzant canvis no preparats",
+		"providerRegistered": "Kilo: Proveïdor de missatges de «commit» registrat",
+		"activationFailed": "Kilo: No s'ha pogut activar el generador de missatges: {{error}}"
 	},
 	"autocomplete": {
 		"statusBar": {
@@ -68,5 +70,38 @@
 			}
 		},
 		"toggleMessage": "Quilòmetre completat {{status}}"
+	},
+	"ghost": {
+		"progress": {
+			"analyzing": "Analitzant el teu codi...",
+			"generating": "Generant suggeriments d'edició...",
+			"processing": "Processant les edicions suggerides...",
+			"showing": "Mostrant edicions suggerides...",
+			"title": "Codi Kilo"
+		},
+		"input": {
+			"title": "Codi Kilo: Tasca Ràpida",
+			"placeholder": "p. ex., 'refactora aquesta funció perquè sigui més eficient'"
+		},
+		"commands": {
+			"generateSuggestions": "Codi Kilo: Genera suggeriments d'edició",
+			"displaySuggestions": "Mostrar Suggeriments d'Edició",
+			"cancelSuggestions": "Cancel·la les edicions suggerides",
+			"applyAllSuggestions": "Aplica totes les edicions suggerides",
+			"applyCurrentSuggestion": "Aplica l'edició suggerida actual",
+			"promptCodeSuggestion": "Petició de Tasca Ràpida",
+			"category": "Codi Kilo"
+		},
+		"codeAction": {
+			"title": "Codi Kilo: Edicions suggerides"
+		},
+		"chatParticipant": {
+			"name": "Agent",
+			"fullName": "Agent de Codi Kilo",
+			"description": "Et puc ajudar amb tasques ràpides i edicions suggerides."
+		},
+		"messages": {
+			"provideCodeSuggestions": "S'estan proporcionant suggeriments de codi..."
+		}
 	}
 }

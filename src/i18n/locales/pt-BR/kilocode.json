@@ -47,7 +47,9 @@
 		"noChanges": "Kilo: Nenhuma alteração encontrada para analisar",
 		"generated": "Kilo: Mensagem de commit gerada!",
 		"generationFailed": "Kilo: Falha ao gerar mensagem de commit: {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: Gerando mensagem usando alterações não preparadas"
+		"generatingFromUnstaged": "Kilo: Gerando mensagem usando alterações não preparadas",
+		"activationFailed": "Kilo: Falha ao ativar o gerador de mensagens: {{error}}",
+		"providerRegistered": "Kilo: Provedor de mensagem de commit registrado"
 	},
 	"autocomplete": {
 		"statusBar": {
@@ -68,5 +70,38 @@
 			}
 		},
 		"toggleMessage": "Kilo Completo {{status}}"
+	},
+	"ghost": {
+		"progress": {
+			"analyzing": "Analisando seu código...",
+			"processing": "Processando sugestões de edição...",
+			"generating": "Gerando edições sugeridas...",
+			"showing": "Exibindo edições sugeridas…",
+			"title": "Código Kilo"
+		},
+		"input": {
+			"title": "Código Kilo: Tarefa Rápida",
+			"placeholder": "p. ex., 'refatore esta função para ser mais eficiente'"
+		},
+		"commands": {
+			"generateSuggestions": "Código Kilo: Gerar Edições Sugeridas",
+			"displaySuggestions": "Exibir Edições Sugeridas",
+			"cancelSuggestions": "Cancelar Edições Sugeridas",
+			"applyAllSuggestions": "Aplicar Todas as Edições Sugeridas",
+			"applyCurrentSuggestion": "Aplicar Edição Sugerida Atual",
+			"promptCodeSuggestion": "Tarefa Rápida",
+			"category": "Código Kilo"
+		},
+		"codeAction": {
+			"title": "Kilo Code: Edições Sugeridas"
+		},
+		"chatParticipant": {
+			"name": "Agente",
+			"fullName": "Agente de Código Kilo",
+			"description": "Posso ajudar você com tarefas rápidas e sugestões de edição."
+		},
+		"messages": {
+			"provideCodeSuggestions": "Sugerindo códigos..."
+		}
 	}
 }

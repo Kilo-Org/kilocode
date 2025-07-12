@@ -47,7 +47,9 @@
 		"noChanges": "Kilo: 未发现可供分析的变更",
 		"generated": "Kilo：提交信息已生成！",
 		"generationFailed": "Kilo：无法生成提交信息：{{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: 使用未暂存的更改生成消息"
+		"generatingFromUnstaged": "Kilo: 使用未暂存的更改生成消息",
+		"activationFailed": "千欧（Kilo）：未能激活消息生成器：{{error}}",
+		"providerRegistered": "Kilo：提交消息提供者已注册"
 	},
 	"autocomplete": {
 		"statusBar": {
@@ -68,5 +70,38 @@
 			}
 		},
 		"toggleMessage": "Kilo自动补全 {{status}}"
+	},
+	"ghost": {
+		"progress": {
+			"generating": "正在生成建议的编辑...",
+			"analyzing": "正在分析您的代码...",
+			"showing": "显示建议的编辑...",
+			"processing": "处理建议的编辑...",
+			"title": "千克码"
+		},
+		"input": {
+			"title": "Kilo Code：快速任务",
+			"placeholder": "例如，\"重构这个函数使其更高效\""
+		},
+		"commands": {
+			"applyCurrentSuggestion": "应用当前建议的编辑",
+			"generateSuggestions": "Kilo Code: 生成建议的修改",
+			"cancelSuggestions": "取消建议的编辑",
+			"displaySuggestions": "显示建议的编辑",
+			"category": "千字代码",
+			"promptCodeSuggestion": "快速任务提示",
+			"applyAllSuggestions": "应用所有建议的编辑"
+		},
+		"codeAction": {
+			"title": "千码：建议的编辑"
+		},
+		"chatParticipant": {
+			"name": "代理",
+			"fullName": "千个代码助理",
+			"description": "我可以帮你处理快速任务和提供建议的编辑。"
+		},
+		"messages": {
+			"provideCodeSuggestions": "正在提供代码建议..."
+		}
 	}
 }

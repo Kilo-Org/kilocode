@@ -47,7 +47,9 @@
 		"noChanges": "Kilo: Nenalezeny žádné změny k analýze",
 		"generated": "Kilo: Zpráva byla vygenerována!",
 		"generationFailed": "Kilo: Nepodařilo se vygenerovat zprávu commitu: {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: Generování zprávy s použitím nenapojených změn"
+		"generatingFromUnstaged": "Kilo: Generování zprávy s použitím nenapojených změn",
+		"activationFailed": "Kilo: Aktivace generátoru zpráv se nezdařila: {{error}}",
+		"providerRegistered": "Kilo: Poskytovatel zpráv commitů zaregistrován"
 	},
 	"autocomplete": {
 		"statusBar": {
@@ -68,5 +70,38 @@
 			}
 		},
 		"toggleMessage": "Kilo hotovo {{status}}"
+	},
+	"ghost": {
+		"progress": {
+			"generating": "Generuji navrhované úpravy...",
+			"analyzing": "Analyzuji váš kód...",
+			"processing": "Zpracování navržených úprav...",
+			"showing": "Zobrazuji navrhované úpravy...",
+			"title": "Kilo Kód"
+		},
+		"input": {
+			"title": "Kilo kód: Rychlý úkol",
+			"placeholder": "např. \"přepracovat tuto funkci, aby byla efektivnější\""
+		},
+		"commands": {
+			"generateSuggestions": "Kilo Code: Generování navrhovaných úprav",
+			"applyCurrentSuggestion": "Použít aktuální navrhovanou úpravu",
+			"displaySuggestions": "Zobrazit navrhované úpravy",
+			"cancelSuggestions": "Zrušit navrhované úpravy",
+			"applyAllSuggestions": "Použít všechny navrhované úpravy",
+			"promptCodeSuggestion": "Rychlý úkol",
+			"category": "Kilo Kód"
+		},
+		"codeAction": {
+			"title": "Kilo kód: Navrhované úpravy"
+		},
+		"chatParticipant": {
+			"name": "Agent",
+			"fullName": "Agentní Systém Kilo Code",
+			"description": "Mohu vám pomoci s rychlými úkoly a navrženými úpravami."
+		},
+		"messages": {
+			"provideCodeSuggestions": "Poskytuji návrhy kódu..."
+		}
 	}
 }

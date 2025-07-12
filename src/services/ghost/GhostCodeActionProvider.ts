@@ -1,5 +1,6 @@
 import * as vscode from "vscode"
 import { GhostProvider } from "./GhostProvider"
+import { t } from "../../i18n"
 
 export class GhostCodeActionProvider implements vscode.CodeActionProvider {
 	public static readonly providedCodeActionKinds = {
@@ -15,7 +16,7 @@ export class GhostCodeActionProvider implements vscode.CodeActionProvider {
 		GhostProvider.getInstance().getDocumentStore().storeDocument(document)
 
 		const action = new vscode.CodeAction(
-			"Kilo Code - Ghost Writer",
+			t("kilocode:ghost.codeAction.title"),
 			GhostCodeActionProvider.providedCodeActionKinds["quickfix"],
 		)
 

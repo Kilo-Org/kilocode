@@ -248,6 +248,36 @@
 					"dark": "assets/icons/kilo-dark.svg"
 				},
 				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.ghostWriter.generateSuggestions",
+				"title": "%ghost.commands.generateSuggestions%",
+				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.ghostWriter.displaySuggestions",
+				"title": "%ghost.commands.displaySuggestions%",
+				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.ghostWriter.cancelSuggestions",
+				"title": "%ghost.commands.cancelSuggestions%",
+				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.ghostWriter.applyCurrentSuggestions",
+				"title": "%ghost.commands.applyCurrentSuggestion%",
+				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.ghostWriter.applyAllSuggestions",
+				"title": "%ghost.commands.applyAllSuggestions%",
+				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.ghostWriter.promptCodeSuggestion",
+				"title": "%ghost.commands.promptCodeSuggestion%",
+				"category": "%configuration.title%"
 			}
 		],
 		"keybindings": [
@@ -267,6 +297,22 @@
 				"command": "editor.action.inlineSuggest.commit",
 				"key": "tab",
 				"when": "inlineSuggestionVisible && editorTextFocus && !editorTabMovesFocus && !inSnippetMode && !suggestWidgetVisible && editorLangId != 'markdown'"
+			},
+			{
+				"command": "kilo-code.ghostWriter.keyTab",
+				"key": "tab",
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode"
+			},
+			{
+				"command": "kilo-code.ghostWriter.keyEscape",
+				"key": "escape",
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode"
+			},
+			{
+				"command": "kilo-code.ghostWriter.keyCmdI",
+				"key": "ctrl+i",
+				"mac": "cmd+i",
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode"
 			}
 		],
 		"menus": {
@@ -455,7 +501,26 @@
 					"description": "%settings.autoImportSettingsPath.description%"
 				}
 			}
-		}
+		},
+		"codeActions": [
+			{
+				"languages": [
+					"*"
+				],
+				"providedCodeActionKinds": [
+					"vscode.CodeActionKind.QuickFix"
+				]
+			}
+		],
+		"chatParticipants": [
+			{
+				"id": "kilocode.ghost-writer",
+				"fullName": "Kilo Code Agent",
+				"name": "Agent",
+				"description": "I can help you with quick tasks and suggested edits.",
+				"isSticky": true
+			}
+		]
 	},
 	"scripts": {
 		"lint": "eslint . --ext=ts --max-warnings=0",

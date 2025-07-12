@@ -47,7 +47,9 @@
 		"noChanges": "킬로: 분석할 변경사항이 없습니다",
 		"generated": "킬로: 커밋 메시지가 생성되었습니다!",
 		"generationFailed": "Kilo: 커밋 메시지 생성 실패: {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: 스테이징되지 않은 변경사항을 사용하여 메시지 생성"
+		"generatingFromUnstaged": "Kilo: 스테이징되지 않은 변경사항을 사용하여 메시지 생성",
+		"activationFailed": "Kilo: 메시지 생성기 활성화 실패: {{error}}",
+		"providerRegistered": "Kilo: 커밋 메시지 제공자가 등록됨"
 	},
 	"autocomplete": {
 		"statusBar": {
@@ -68,5 +70,38 @@
 			}
 		},
 		"toggleMessage": "킬로 완료 {{status}}"
+	},
+	"ghost": {
+		"progress": {
+			"analyzing": "코드 분석 중...",
+			"generating": "수정 제안 생성 중...",
+			"processing": "제안된 편집 처리 중...",
+			"showing": "추천 편집 표시 중...",
+			"title": "킬로 코드"
+		},
+		"input": {
+			"placeholder": "예: '이 함수를 더 효율적으로 리팩터링하세요'",
+			"title": "킬로 코드: 빠른 작업"
+		},
+		"commands": {
+			"displaySuggestions": "추천 편집 표시하기",
+			"generateSuggestions": "킬로 코드: 수정 제안 생성하기",
+			"cancelSuggestions": "제안된 편집 취소",
+			"category": "킬로 코드",
+			"applyAllSuggestions": "제안된 편집 모두 적용",
+			"applyCurrentSuggestion": "현재 제안된 편집 적용",
+			"promptCodeSuggestion": "프롬프트 빠른 작업"
+		},
+		"chatParticipant": {
+			"fullName": "킬로 코드 에이전트",
+			"name": "에이전트",
+			"description": "빠른 작업과 추천 편집을 도와드릴 수 있습니다."
+		},
+		"codeAction": {
+			"title": "킬로 코드: 제안된 편집"
+		},
+		"messages": {
+			"provideCodeSuggestions": "코드 제안 중..."
+		}
 	}
 }

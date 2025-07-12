@@ -47,7 +47,9 @@
 		"noChanges": "Kilo: Không tìm thấy thay đổi để phân tích",
 		"generated": "Kilo: Đã tạo thông điệp commit!",
 		"generationFailed": "Kilo: Không thể tạo thông điệp commit: {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: Tạo tin nhắn sử dụng các thay đổi chưa được đưa vào dàn dựng"
+		"generatingFromUnstaged": "Kilo: Tạo tin nhắn sử dụng các thay đổi chưa được đưa vào dàn dựng",
+		"activationFailed": "Kilo: Không thể kích hoạt trình tạo tin nhắn: {{error}}",
+		"providerRegistered": "Kilo: Đã đăng ký nhà cung cấp thông điệp commit"
 	},
 	"autocomplete": {
 		"statusBar": {
@@ -68,5 +70,38 @@
 			}
 		},
 		"toggleMessage": "Kilo Hoàn thành {{status}}"
+	},
+	"ghost": {
+		"progress": {
+			"generating": "Đang tạo đề xuất chỉnh sửa...",
+			"processing": "Đang xử lý các đề xuất chỉnh sửa...",
+			"analyzing": "Đang phân tích mã của bạn...",
+			"showing": "Đang hiển thị các sửa đổi được đề xuất...",
+			"title": "Kilo Code"
+		},
+		"input": {
+			"title": "Mã Kilo: Nhiệm Vụ Nhanh",
+			"placeholder": "ví dụ, 'cấu trúc lại hàm này để hiệu quả hơn'"
+		},
+		"commands": {
+			"generateSuggestions": "Kilo Code: Tạo Gợi Ý Chỉnh Sửa",
+			"displaySuggestions": "Hiển thị đề xuất chỉnh sửa",
+			"cancelSuggestions": "Hủy Đề Xuất Chỉnh Sửa",
+			"applyCurrentSuggestion": "Áp dụng chỉnh sửa đề xuất hiện tại",
+			"promptCodeSuggestion": "Công việc Nhanh từ Lời nhắc",
+			"applyAllSuggestions": "Áp dụng Tất cả Chỉnh sửa Được Đề xuất",
+			"category": "Kilo Code"
+		},
+		"codeAction": {
+			"title": "Mã Kilo: Gợi ý chỉnh sửa"
+		},
+		"chatParticipant": {
+			"description": "Tôi có thể giúp bạn với các tác vụ nhanh và các chỉnh sửa được đề xuất.",
+			"fullName": "Đại Diện Mã Kilo",
+			"name": "Đại lý"
+		},
+		"messages": {
+			"provideCodeSuggestions": "Đang cung cấp gợi ý mã..."
+		}
 	}
 }

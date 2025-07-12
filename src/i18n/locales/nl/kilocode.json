@@ -47,7 +47,9 @@
 		"noChanges": "Kilo: Geen wijzigingen gevonden om te analyseren",
 		"generated": "Kilo: Commitbericht gegenereerd!",
 		"generationFailed": "Kilo: Mislukt bij het genereren van een commit-bericht: {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: Bericht genereren met niet-gecommitteerde wijzigingen"
+		"generatingFromUnstaged": "Kilo: Bericht genereren met niet-gecommitteerde wijzigingen",
+		"activationFailed": "Kilo: Niet gelukt berichtengenerator te activeren: {{error}}",
+		"providerRegistered": "Kilo: Berichtprovider voor commits geregistreerd"
 	},
 	"autocomplete": {
 		"statusBar": {
@@ -68,5 +70,38 @@
 			}
 		},
 		"toggleMessage": "Kilo Voltooid {{status}}"
+	},
+	"ghost": {
+		"progress": {
+			"analyzing": "Je code wordt geanalyseerd...",
+			"generating": "Suggesties voor bewerkingen genereren...",
+			"showing": "Suggesties voor bewerkingen worden weergegeven...",
+			"processing": "Suggesties voor bewerkingen verwerken...",
+			"title": "Kilo Code"
+		},
+		"input": {
+			"title": "Kilo Code: Snelle Taak",
+			"placeholder": "bijv. 'herstructureer deze functie om efficiënter te zijn'"
+		},
+		"commands": {
+			"displaySuggestions": "Toon voorgestelde aanpassingen",
+			"generateSuggestions": "Kilo Code: Genereer Voorgestelde Aanpassingen",
+			"cancelSuggestions": "Voorgestelde bewerkingen annuleren",
+			"category": "Kilo Code",
+			"applyAllSuggestions": "Pas alle voorgestelde wijzigingen toe",
+			"applyCurrentSuggestion": "Huidige Voorgestelde Bewerking Toepassen",
+			"promptCodeSuggestion": "Prompte Snelle Taak"
+		},
+		"codeAction": {
+			"title": "Kilo Code: Voorgestelde Bewerkingen"
+		},
+		"chatParticipant": {
+			"name": "Agent",
+			"fullName": "Kilo Code Agent",
+			"description": "Ik kan je helpen met snelle taken en voorgestelde bewerkingen."
+		},
+		"messages": {
+			"provideCodeSuggestions": "Code suggesties worden aangeboden..."
+		}
 	}
 }

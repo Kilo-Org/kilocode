@@ -48,12 +48,8 @@
 		"generated": "كيلو: تم إنشاء رسالة الالتزام!",
 		"generationFailed": "Kilo: فشل في إنشاء رسالة الالتزام: {{errorMessage}}",
 		"generatingFromUnstaged": "كيلو: إنشاء رسالة باستخدام التغييرات غير المرحلة",
-		"analyzingChanges": "Kilo: جاري تحليل التعديلات الجاهزة...",
-		"noStagedChangesRepo": "Kilo: ما فيه تعديلات مضافة في مستودع git",
-		"noStagedChanges": "Kilo: ما فيه تعديلات مضافة لتحليلها",
-		"tokenRequired": "يتطلب توليد الرسالة رمز Kilo Code",
-		"activationFailed": "Kilo: فشل تفعيل مولّد الرسائل: {{error}}",
-		"providerRegistered": "Kilo: تم تسجيل موفر رسائل الاعتماد"
+		"activationFailed": "كيلو: فشل في تفعيل مولد الرسائل: {{error}}",
+		"providerRegistered": "كيلو: تم تسجيل مزود رسائل الالتزام"
 	},
 	"autocomplete": {
 		"statusBar": {
@@ -74,5 +70,38 @@
 			}
 		},
 		"toggleMessage": "كيلو كُمبليت {{status}}"
+	},
+	"ghost": {
+		"progress": {
+			"analyzing": "جارِ تحليل الكود الخاص بك...",
+			"showing": "عرض التعديلات المقترحة...",
+			"generating": "جاري توليد التعديلات المقترحة...",
+			"processing": "جارِ معالجة التعديلات المقترحة...",
+			"title": "كيلو كود"
+		},
+		"input": {
+			"title": "كود كيلو: مهمة سريعة",
+			"placeholder": "مثلاً، 'أعد هيكلة هذه الدالة لتكون أكثر كفاءة'"
+		},
+		"commands": {
+			"displaySuggestions": "عرض التعديلات المقترحة",
+			"generateSuggestions": "كود كيلو: توليد تعديلات مقترحة",
+			"applyCurrentSuggestion": "تطبيق التعديل المُقترح الحالي",
+			"cancelSuggestions": "إلغاء التعديلات المقترحة",
+			"promptCodeSuggestion": "مهمة سريعة",
+			"applyAllSuggestions": "تطبيق كافة التعديلات المقترحة",
+			"category": "كيلو كود"
+		},
+		"codeAction": {
+			"title": "كيلو كود: التعديلات المقترحة"
+		},
+		"chatParticipant": {
+			"fullName": "وكيل كيلو كود",
+			"description": "يمكنني مساعدتك بالمهام السريعة والتعديلات المقترحة.",
+			"name": "وكيل"
+		},
+		"messages": {
+			"provideCodeSuggestions": "جارٍ تقديم اقتراحات الرمز..."
+		}
 	}
 }

@@ -47,7 +47,9 @@
 		"noChanges": "キロ: 分析すべき変更は見つかりませんでした",
 		"generated": "Kilo: コミットメッセージが生成されました！",
 		"generationFailed": "Kilo: コミットメッセージの生成に失敗しました: {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: ステージングされていない変更を使用してメッセージを生成中"
+		"generatingFromUnstaged": "Kilo: ステージングされていない変更を使用してメッセージを生成中",
+		"activationFailed": "Kilo: メッセージジェネレーターの起動に失敗しました: {{error}}",
+		"providerRegistered": "Kilo: コミットメッセージプロバイダーが登録されました"
 	},
 	"autocomplete": {
 		"statusBar": {
@@ -68,5 +70,38 @@
 			}
 		},
 		"toggleMessage": "キロ コンプリート {{status}}"
+	},
+	"ghost": {
+		"progress": {
+			"analyzing": "コードを分析中...",
+			"generating": "編集候補を生成中...",
+			"processing": "編集の提案を処理中...",
+			"showing": "提案された編集を表示中...",
+			"title": "キロ・コード"
+		},
+		"input": {
+			"title": "キロコード：クイックタスク",
+			"placeholder": "例：「この関数をより効率的になるようにリファクタリングする」"
+		},
+		"commands": {
+			"displaySuggestions": "提案された編集を表示",
+			"generateSuggestions": "キロコード：推奨編集の生成",
+			"applyCurrentSuggestion": "現在の提案された編集を適用する",
+			"cancelSuggestions": "提案された編集をキャンセル",
+			"category": "キロコード",
+			"applyAllSuggestions": "提案された編集をすべて適用する",
+			"promptCodeSuggestion": "プロンプト クイックタスク"
+		},
+		"chatParticipant": {
+			"fullName": "Kilo Code エージェント",
+			"description": "素早いタスクや提案された編集についてお手伝いできます。",
+			"name": "エージェント"
+		},
+		"codeAction": {
+			"title": "キロ コード: 提案された編集"
+		},
+		"messages": {
+			"provideCodeSuggestions": "コードを提案中..."
+		}
 	}
 }

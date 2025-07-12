@@ -47,7 +47,9 @@
 		"noChanges": "Kilo: Inga förändringar hittades att analysera",
 		"generated": "Kilo: Commit-meddelande genererat!",
 		"generationFailed": "Kilo: Misslyckades med att generera commit-meddelande: {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: Genererar meddelande med ej iscensatta ändringar"
+		"generatingFromUnstaged": "Kilo: Genererar meddelande med ej iscensatta ändringar",
+		"providerRegistered": "Kilo: Meddelandeleverantör för incheckningar registrerad",
+		"activationFailed": "Kilo: Misslyckades med att aktivera meddelandegeneratorn: {{error}}"
 	},
 	"autocomplete": {
 		"statusBar": {
@@ -68,5 +70,38 @@
 			}
 		},
 		"toggleMessage": "Kilo Fullständig {{status}}"
+	},
+	"ghost": {
+		"progress": {
+			"analyzing": "Analyserar din kod...",
+			"generating": "Genererar föreslagna ändringar...",
+			"processing": "Bearbetar föreslagna ändringar...",
+			"showing": "Visar föreslagna ändringar...",
+			"title": "Kilo Kod"
+		},
+		"input": {
+			"title": "Kilo Kod: Snabb Uppgift",
+			"placeholder": "t.ex. 'omstrukturera den här funktionen för att göra den mer effektiv'"
+		},
+		"commands": {
+			"displaySuggestions": "Visa föreslagna redigeringar",
+			"generateSuggestions": "Kilo Code: Generera Föreslagna Ändringar",
+			"cancelSuggestions": "Avbryt föreslagna ändringar",
+			"applyCurrentSuggestion": "Tillämpa nuvarande förslag på ändring",
+			"applyAllSuggestions": "Tillämpa Alla Föreslagna Ändringar",
+			"category": "Kilo Kod",
+			"promptCodeSuggestion": "Snabb uppgift"
+		},
+		"codeAction": {
+			"title": "Kilo-kod: Föreslagna ändringar"
+		},
+		"chatParticipant": {
+			"name": "Agent",
+			"fullName": "Kilo Code Agent",
+			"description": "Jag kan hjälpa dig med snabba uppgifter och föreslagna ändringar."
+		},
+		"messages": {
+			"provideCodeSuggestions": "Ger kodförslag..."
+		}
 	}
 }

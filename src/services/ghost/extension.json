@@ -3,33 +3,33 @@
 		"commands": [
 			{
 				"command": "kilo-code.ghostWriter.generateSuggestions",
-				"title": "Kilo Code Ghost Writer - Generate Suggestions",
-				"category": "Kilo Code Ghost Writer"
+				"title": "Kilo Code: Generate Suggested Edits",
+				"category": "%configuration.title%"
 			},
 			{
 				"command": "kilo-code.ghostWriter.displaySuggestions",
-				"title": "Display Suggestions",
-				"category": "Kilo Code Ghost Writer"
+				"title": "Display Suggested Edits",
+				"category": "%configuration.title%"
 			},
 			{
 				"command": "kilo-code.ghostWriter.cancelSuggestions",
-				"title": "Cancel Suggestions",
-				"category": "Kilo Code Ghost Writer"
+				"title": "Cancel Suggested Edits",
+				"category": "%configuration.title%"
 			},
 			{
 				"command": "kilo-code.ghostWriter.applyCurrentSuggestions",
-				"title": "Apply Current Suggestion",
-				"category": "Kilo Code Ghost Writer"
+				"title": "Apply Current Suggested Edit",
+				"category": "%configuration.title%"
 			},
 			{
 				"command": "kilo-code.ghostWriter.applyAllSuggestions",
-				"title": "Apply All Suggestions",
-				"category": "Kilo Code Ghost Writer"
+				"title": "Apply All Suggested Edits",
+				"category": "%configuration.title%"
 			},
 			{
 				"command": "kilo-code.ghostWriter.promptCodeSuggestion",
-				"title": "Prompt Code Suggestion",
-				"category": "Kilo Code Ghost Writer"
+				"title": "Quick Task",
+				"category": "%configuration.title%"
 			}
 		],
 		"keybindings": [
@@ -59,9 +59,9 @@
 		"chatParticipants": [
 			{
 				"id": "kilocode.ghost-writer",
-				"fullName": "Kilo Code Ghost Writer",
-				"name": "Ghost Writer",
-				"description": "I can help you with code suggestions.",
+				"fullName": "Kilo Code Agent",
+				"name": "Agent",
+				"description": "I can help you with quick tasks and suggested edits.",
 				"isSticky": true
 			}
 		]

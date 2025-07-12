@@ -47,7 +47,9 @@
 		"noChanges": "Кіло: Не знайдено змін для аналізу",
 		"generated": "Kilo: Повідомлення коміту згенеровано!",
 		"generationFailed": "Kilo: Не вдалося створити повідомлення коміту: {{errorMessage}}",
-		"generatingFromUnstaged": "Кіло: Створення повідомлення з використанням незафіксованих змін"
+		"generatingFromUnstaged": "Кіло: Створення повідомлення з використанням незафіксованих змін",
+		"activationFailed": "Kilo: Не вдалося активувати генератор повідомлень: {{error}}",
+		"providerRegistered": "Kilo: Постачальник повідомлень коміту зареєстрований"
 	},
 	"autocomplete": {
 		"statusBar": {
@@ -68,5 +70,38 @@
 			}
 		},
 		"toggleMessage": "Кіло виконано {{status}}"
+	},
+	"ghost": {
+		"progress": {
+			"analyzing": "Аналізуємо ваш код...",
+			"processing": "Обробка запропонованих редагувань...",
+			"generating": "Генерування запропонованих виправлень...",
+			"showing": "Відображення запропонованих змін...",
+			"title": "Кіло Код"
+		},
+		"input": {
+			"title": "Кіло Код: Швидке Завдання",
+			"placeholder": "наприклад, 'переробіть цю функцію, щоб вона була ефективнішою'"
+		},
+		"commands": {
+			"generateSuggestions": "Kilo Code: Створення пропонованих виправлень",
+			"displaySuggestions": "Показати запропоновані редагування",
+			"applyCurrentSuggestion": "Застосувати поточну запропоновану правку",
+			"cancelSuggestions": "Скасувати запропоновані правки",
+			"promptCodeSuggestion": "Швидке Завдання",
+			"category": "Кіло Код",
+			"applyAllSuggestions": "Застосувати всі запропоновані редагування"
+		},
+		"codeAction": {
+			"title": "Кіло Код: Запропоновані правки"
+		},
+		"chatParticipant": {
+			"fullName": "Кіло-код Агент",
+			"description": "Я можу допомогти вам зі швидкими завданнями та запропонувати правки.",
+			"name": "Агент"
+		},
+		"messages": {
+			"provideCodeSuggestions": "Надаємо пропозиції коду..."
+		}
 	}
 }

@@ -1,5 +1,6 @@
 import { ApiHandler, buildApiHandler } from "../../api"
 import { ContextProxy } from "../../core/config/ContextProxy"
+import { t } from "../../i18n"
 
 export class GhostModel {
 	private apiHandler: ApiHandler | null = null

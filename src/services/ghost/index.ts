@@ -1,9 +1,10 @@
 import * as vscode from "vscode"
 import { GhostProvider } from "./GhostProvider"
 import { GhostCodeActionProvider } from "./GhostCodeActionProvider"
+import { t } from "../../i18n"
 
 export const registerGhostProvider = (context: vscode.ExtensionContext) => {
-	const ghost = GhostProvider.getInstance()
+	const ghost = GhostProvider.getInstance(context)
 
 	// Register GhostProvider Commands
 	context.subscriptions.push(
@@ -15,7 +16,7 @@ export const registerGhostProvider = (context: vscode.ExtensionContext) => {
 	// Register GhostProvider Commands
 	context.subscriptions.push(
 		vscode.commands.registerCommand("kilocode.ghost.provideCodeSuggestions", async () => {
-			vscode.window.showInformationMessage("kilocode.ghost.provideCodeSuggestions")
+			vscode.window.showInformationMessage(t("kilocode:ghost.commands.generateSuggestions"))
 			//ghost.provideCodeSuggestions(document, range)
 		}),
 	)

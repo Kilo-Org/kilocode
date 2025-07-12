@@ -47,7 +47,9 @@
 		"noChanges": "Kilo: Δεν βρέθηκαν αλλαγές για ανάλυση",
 		"generated": "Kilo: Το μήνυμα commit δημιουργήθηκε!",
 		"generationFailed": "Kilo: Αποτυχία δημιουργίας μηνύματος commit: {{errorMessage}}",
-		"generatingFromUnstaged": "Κιλό: Δημιουργία μηνύματος με χρήση μη καταχωρημένων αλλαγών"
+		"generatingFromUnstaged": "Κιλό: Δημιουργία μηνύματος με χρήση μη καταχωρημένων αλλαγών",
+		"providerRegistered": "Kilo: Ο πάροχος μηνύματος υποβολής καταχωρήθηκε",
+		"activationFailed": "Kilo: Αποτυχία ενεργοποίησης της γεννήτριας μηνυμάτων: {{error}}"
 	},
 	"autocomplete": {
 		"statusBar": {
@@ -68,5 +70,38 @@
 			}
 		},
 		"toggleMessage": "Κιλό Ολοκληρώθηκε {{status}}"
+	},
+	"ghost": {
+		"progress": {
+			"analyzing": "Ανάλυση του κώδικά σας...",
+			"generating": "Δημιουργία προτεινόμενων επεξεργασιών...",
+			"processing": "Επεξεργασία προτεινόμενων αλλαγών...",
+			"showing": "Εμφάνιση προτεινόμενων αλλαγών...",
+			"title": "Κιλό Κώδικα"
+		},
+		"input": {
+			"title": "Κωδικός Kilo: Γρήγορη Εργασία",
+			"placeholder": "π.χ., 'αναδιοργάνωσε αυτή τη συνάρτηση ώστε να είναι πιο αποδοτική'"
+		},
+		"commands": {
+			"cancelSuggestions": "Ακύρωση Προτεινόμενων Αλλαγών",
+			"generateSuggestions": "Κωδικός Kilo: Δημιουργία Προτεινόμενων Επεξεργασιών",
+			"displaySuggestions": "Προβολή Προτεινόμενων Τροποποιήσεων",
+			"promptCodeSuggestion": "Γρήγορη Εργασία με Prompt",
+			"applyCurrentSuggestion": "Εφαρμογή Τρέχουσας Προτεινόμενης Επεξεργασίας",
+			"category": "Κωδικός Κιλό",
+			"applyAllSuggestions": "Εφαρμογή Όλων των Προτεινόμενων Αλλαγών"
+		},
+		"codeAction": {
+			"title": "Κωδικός Kilo: Προτεινόμενες Αλλαγές"
+		},
+		"chatParticipant": {
+			"name": "Πράκτορας",
+			"fullName": "Πράκτορας Kilo Code",
+			"description": "Μπορώ να σας βοηθήσω με γρήγορες εργασίες και προτεινόμενες διορθώσεις."
+		},
+		"messages": {
+			"provideCodeSuggestions": "Παρέχονται προτάσεις κώδικα..."
+		}
 	}
 }
