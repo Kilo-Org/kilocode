@@ -245,6 +245,112 @@ describe("isToolAllowedForMode", () => {
 			expect(isToolAllowedForMode("browser_action", "architect", [])).toBe(true)
 			expect(isToolAllowedForMode("use_mcp_tool", "architect", [])).toBe(true)
 		})
+
+		it("applies restrictions to all edit tools including search_and_replace and insert_content", () => {
+			// Test search_and_replace with matching file
+			expect(
+				isToolAllowedForMode("search_and_replace", "architect", [], undefined, {
+					path: "test.md",
+					search: "old text",
+					replace: "new text",
+				}),
+			).toBe(true)
+
+			// Test insert_content with matching file
+			expect(
+				isToolAllowedForMode("insert_content", "architect", [], undefined, {
+					path: "test.md",
+					line: "1",
+					content: "# New content",
+				}),
+			).toBe(true)
+
+			// Test search_and_replace with non-matching file - should throw error
+			expect(() =>
+				isToolAllowedForMode("search_and_replace", "architect", [], undefined, {
+					path: "test.py",
+					search: "old text",
+					replace: "new text",
+				}),
+			).toThrow(FileRestrictionError)
+			expect(() =>
+				isToolAllowedForMode("search_and_replace", "architect", [], undefined, {
+					path: "test.py",
+					search: "old text",
+					replace: "new text",
+				}),
+			).toThrow(/Markdown files only/)
+
+			// Test insert_content with non-matching file - should throw error
+			expect(() =>
+				isToolAllowedForMode("insert_content", "architect", [], undefined, {
+					path: "test.py",
+					line: "1",
+					content: "print('hello')",
+				}),
+			).toThrow(FileRestrictionError)
+			expect(() =>
+				isToolAllowedForMode("insert_content", "architect", [], undefined, {
+					path: "test.py",
+					line: "1",
+					content: "print('hello')",
+				}),
+			).toThrow(/Markdown files only/)
+		})
+
+		it("applies restrictions to apply_diff with concurrent file edits (MULTI_FILE_APPLY_DIFF experiment)", () => {
+			// Test apply_diff with args parameter (used when MULTI_FILE_APPLY_DIFF experiment is enabled)
+			// This simulates concurrent/batch file editing
+			const xmlArgs =
+				"<args><file><path>test.md</path><diff><content>- old content\\n+ new content</content></diff></file></args>"
+
+			// Should allow markdown files in architect mode
+			expect(
+				isToolAllowedForMode("apply_diff", "architect", [], undefined, {
+					args: xmlArgs,
+				}),
+			).toBe(true)
+
+			// Test with non-markdown file - should throw error
+			const xmlArgsNonMd =
+				"<args><file><path>test.py</path><diff><content>- old content\\n+ new content</content></diff></file></args>"
+
+			expect(() =>
+				isToolAllowedForMode("apply_diff", "architect", [], undefined, {
+					args: xmlArgsNonMd,
+				}),
+			).toThrow(FileRestrictionError)
+			expect(() =>
+				isToolAllowedForMode("apply_diff", "architect", [], undefined, {
+					args: xmlArgsNonMd,
+				}),
+			).toThrow(/Markdown files only/)
+
+			// Test with multiple files - should allow only markdown files
+			const xmlArgsMultiple =
+				"<args><file><path>readme.md</path><diff><content>- old content\\n+ new content</content></diff></file><file><path>docs.md</path><diff><content>- old content\\n+ new content</content></diff></file></args>"
+
+			expect(
+				isToolAllowedForMode("apply_diff", "architect", [], undefined, {
+					args: xmlArgsMultiple,
+				}),
+			).toBe(true)
+
+			// Test with mixed file types - should throw error for non-markdown
+			const xmlArgsMixed =
+				"<args><file><path>readme.md</path><diff><content>- old content\\n+ new content</content></diff></file><file><path>script.py</path><diff><content>- old content\\n+ new content</content></diff></file></args>"
+
+			expect(() =>
+				isToolAllowedForMode("apply_diff", "architect", [], undefined, {
+					args: xmlArgsMixed,
+				}),
+			).toThrow(FileRestrictionError)
+			expect(() =>
+				isToolAllowedForMode("apply_diff", "architect", [], undefined, {
+					args: xmlArgsMixed,
+				}),
+			).toThrow(/Markdown files only/)
+		})
 	})
 
 	it("handles non-existent modes", () => {
@@ -265,6 +371,14 @@ describe("FileRestrictionError", () => {
 		const error = new FileRestrictionError("Markdown Editor", "\\.md$", undefined, "test.js")
 		expect(error.message).toBe(
 			"This mode (Markdown Editor) can only edit files matching pattern: \\.md$. Got: test.js",
+		)
+		expect(error.name).toBe("FileRestrictionError")
+	})
+
+	it("formats error message with tool name when provided", () => {
+		const error = new FileRestrictionError("Markdown Editor", "\\.md$", undefined, "test.js", "write_to_file")
+		expect(error.message).toBe(
+			"Tool 'write_to_file' in mode 'Markdown Editor' can only edit files matching pattern: \\.md$. Got: test.js",
 		)
 		expect(error.name).toBe("FileRestrictionError")
 	})
@@ -368,6 +482,20 @@ describe("FileRestrictionError", () => {
 		)
 		expect(error.name).toBe("FileRestrictionError")
 	})
+
+	it("formats error message with both tool name and description when provided", () => {
+		const error = new FileRestrictionError(
+			"Markdown Editor",
+			"\\.md$",
+			"Markdown files only",
+			"test.js",
+			"apply_diff",
+		)
+		expect(error.message).toBe(
+			"Tool 'apply_diff' in mode 'Markdown Editor' can only edit files matching pattern: \\.md$ (Markdown files only). Got: test.js",
+		)
+		expect(error.name).toBe("FileRestrictionError")
+	})
 })
 
 describe("getModeSelection", () => {
@@ -443,10 +571,11 @@ describe("getModeSelection", () => {
 		expect(selection.baseInstructions).toBe(newCustomMode.customInstructions)
 	})
 
-	test("should return empty strings if slug does not exist in custom, prompt, or built-in modes", () => {
+	test("should fall back to default mode if slug does not exist in custom, prompt, or built-in modes", () => {
 		const selection = getModeSelection("non-existent-mode", undefined, customModesList)
-		expect(selection.roleDefinition).toBe("")
-		expect(selection.baseInstructions).toBe("")
+		const defaultMode = modes[0] // First mode is the default
+		expect(selection.roleDefinition).toBe(defaultMode.roleDefinition)
+		expect(selection.baseInstructions).toBe(defaultMode.customInstructions || "")
 	})
 
 	test("customMode's properties are used if customMode exists, ignoring promptComponent's properties", () => {

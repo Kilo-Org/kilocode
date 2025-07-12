@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import { OpenAiEmbedder } from "./embedders/openai"
 import { CodeIndexOllamaEmbedder } from "./embedders/ollama"
 import { OpenAICompatibleEmbedder } from "./embedders/openai-compatible"
+import { GeminiEmbedder } from "./embedders/gemini"
 import { EmbedderProvider, getDefaultModelId, getModelDimension } from "../../shared/embeddingModels"
 import { QdrantVectorStore } from "./vector-store/qdrant-client"
 import { codeParser, DirectoryScanner, FileWatcher } from "./processors"
@@ -9,6 +10,7 @@ import { ICodeParser, IEmbedder, IFileWatcher, IVectorStore } from "./interfaces
 import { CodeIndexConfigManager } from "./config-manager"
 import { CacheManager } from "./cache-manager"
 import { Ignore } from "ignore"
+import { t } from "../../i18n"
 
 /**
  * Factory class responsible for creating and configuring code indexing service dependencies.
@@ -29,8 +31,10 @@ export class CodeIndexServiceFactory {
 		const provider = config.embedderProvider as EmbedderProvider
 
 		if (provider === "openai") {
-			if (!config.openAiOptions?.openAiNativeApiKey) {
-				throw new Error("OpenAI configuration missing for embedder creation")
+			const apiKey = config.openAiOptions?.openAiNativeApiKey
+
+			if (!apiKey) {
+				throw new Error(t("embeddings:serviceFactory.openAiConfigMissing"))
 			}
 			return new OpenAiEmbedder({
 				...config.openAiOptions,
@@ -38,7 +42,7 @@ export class CodeIndexServiceFactory {
 			})
 		} else if (provider === "ollama") {
 			if (!config.ollamaOptions?.ollamaBaseUrl) {
-				throw new Error("Ollama configuration missing for embedder creation")
+				throw new Error(t("embeddings:serviceFactory.ollamaConfigMissing"))
 			}
 			return new CodeIndexOllamaEmbedder({
 				...config.ollamaOptions,
@@ -46,16 +50,40 @@ export class CodeIndexServiceFactory {
 			})
 		} else if (provider === "openai-compatible") {
 			if (!config.openAiCompatibleOptions?.baseUrl || !config.openAiCompatibleOptions?.apiKey) {
-				throw new Error("OpenAI Compatible configuration missing for embedder creation")
+				throw new Error(t("embeddings:serviceFactory.openAiCompatibleConfigMissing"))
 			}
 			return new OpenAICompatibleEmbedder(
 				config.openAiCompatibleOptions.baseUrl,
 				config.openAiCompatibleOptions.apiKey,
 				config.modelId,
 			)
+		} else if (provider === "gemini") {
+			if (!config.geminiOptions?.apiKey) {
+				throw new Error(t("embeddings:serviceFactory.geminiConfigMissing"))
+			}
+			return new GeminiEmbedder(config.geminiOptions.apiKey)
 		}
 
-		throw new Error(`Invalid embedder type configured: ${config.embedderProvider}`)
+		throw new Error(
+			t("embeddings:serviceFactory.invalidEmbedderType", { embedderProvider: config.embedderProvider }),
+		)
+	}
+
+	/**
+	 * Validates an embedder instance to ensure it's properly configured.
+	 * @param embedder The embedder instance to validate
+	 * @returns Promise resolving to validation result
+	 */
+	public async validateEmbedder(embedder: IEmbedder): Promise<{ valid: boolean; error?: string }> {
+		try {
+			return await embedder.validateConfiguration()
+		} catch (error) {
+			// If validation throws an exception, preserve the original error message
+			return {
+				valid: false,
+				error: error instanceof Error ? error.message : "embeddings:validation.configurationError",
+			}
+		}
 	}
 
 	/**
@@ -71,30 +99,29 @@ export class CodeIndexServiceFactory {
 
 		let vectorSize: number | undefined
 
-		if (provider === "openai-compatible") {
-			if (config.openAiCompatibleOptions?.modelDimension && config.openAiCompatibleOptions.modelDimension > 0) {
-				vectorSize = config.openAiCompatibleOptions.modelDimension
-			} else {
-				// Fallback if not provided or invalid in openAiCompatibleOptions
-				vectorSize = getModelDimension(provider, modelId)
-			}
+		// First check if a manual dimension is provided (works for all providers)
+		if (config.modelDimension && config.modelDimension > 0) {
+			vectorSize = config.modelDimension
+		} else if (provider === "gemini") {
+			// Gemini's text-embedding-004 has a fixed dimension of 768
+			vectorSize = 768
 		} else {
+			// Fall back to model-specific dimension from profiles
 			vectorSize = getModelDimension(provider, modelId)
 		}
 
-		if (vectorSize === undefined) {
-			let errorMessage = `Could not determine vector dimension for model '${modelId}' with provider '${provider}'. `
+		if (vectorSize === undefined || vectorSize <= 0) {
 			if (provider === "openai-compatible") {
-				errorMessage += `Please ensure the 'Embedding Dimension' is correctly set in the OpenAI-Compatible provider settings.`
+				throw new Error(
+					t("embeddings:serviceFactory.vectorDimensionNotDeterminedOpenAiCompatible", { modelId, provider }),
+				)
 			} else {
-				errorMessage += `Check model profiles or configuration.`
+				throw new Error(t("embeddings:serviceFactory.vectorDimensionNotDetermined", { modelId, provider }))
 			}
-			throw new Error(errorMessage)
 		}
 
 		if (!config.qdrantUrl) {
-			// This check remains important
-			throw new Error("Qdrant URL missing for vector store creation")
+			throw new Error(t("embeddings:serviceFactory.qdrantUrlMissing"))
 		}
 
 		// Assuming constructor is updated: new QdrantVectorStore(workspacePath, url, vectorSize, apiKey?)
@@ -142,7 +169,7 @@ export class CodeIndexServiceFactory {
 		fileWatcher: IFileWatcher
 	} {
 		if (!this.configManager.isFeatureConfigured) {
-			throw new Error("Cannot create services: Code indexing is not properly configured")
+			throw new Error(t("embeddings:serviceFactory.codeIndexingNotConfigured"))
 		}
 
 		const embedder = this.createEmbedder()

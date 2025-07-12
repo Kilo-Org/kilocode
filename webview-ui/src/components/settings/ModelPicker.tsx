@@ -74,7 +74,7 @@ export const ModelPicker = ({
 
 	const { id: selectedModelId, info: selectedModelInfo } = useSelectedModel(apiConfiguration)
 
-	const [searchValue, setSearchValue] = useState("") // kilocode_change
+	const [searchValue, setSearchValue] = useState("")
 
 	const onSelect = useCallback(
 		(modelId: string) => {
@@ -91,28 +91,25 @@ export const ModelPicker = ({
 			}
 
 			// Delay to ensure the popover is closed before setting the search value.
-			selectTimeoutRef.current = setTimeout(() => setSearchValue(""), 100) // kilocode_change: reset value on select
+			selectTimeoutRef.current = setTimeout(() => setSearchValue(""), 100)
 		},
 		[modelIdKey, setApiConfigurationField],
 	)
 
-	const onOpenChange = useCallback(
-		(open: boolean) => {
-			setOpen(open)
+	const onOpenChange = useCallback((open: boolean) => {
+		setOpen(open)
 
-			// Abandon the current search if the popover is closed.
-			if (!open) {
-				// Clear any existing timeout
-				if (closeTimeoutRef.current) {
-					clearTimeout(closeTimeoutRef.current)
-				}
-
-				// Clear the search value when closing instead of prefilling it
-				closeTimeoutRef.current = setTimeout(() => setSearchValue(""), 100) // kilocode_change: reset value on select
+		// Abandon the current search if the popover is closed.
+		if (!open) {
+			// Clear any existing timeout
+			if (closeTimeoutRef.current) {
+				clearTimeout(closeTimeoutRef.current)
 			}
-		},
-		[] /* kilocode_change */,
-	)
+
+			// Clear the search value when closing instead of prefilling it
+			closeTimeoutRef.current = setTimeout(() => setSearchValue(""), 100)
+		}
+	}, [])
 
 	const onClearSearch = useCallback(() => {
 		setSearchValue("")

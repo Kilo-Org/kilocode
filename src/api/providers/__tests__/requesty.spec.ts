@@ -5,6 +5,7 @@ import OpenAI from "openai"
 
 import { RequestyHandler } from "../requesty"
 import { ApiHandlerOptions } from "../../../shared/api"
+import { Package } from "../../../shared/package"
 
 const mockCreate = vitest.fn()
 

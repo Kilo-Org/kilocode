@@ -25,10 +25,12 @@
 	"confirmation": {
 		"reset_state": "Uzantıdaki tüm durumları ve gizli depolamayı sıfırlamak istediğinizden emin misiniz? Bu işlem geri alınamaz.",
 		"delete_config_profile": "Bu yapılandırma profilini silmek istediğinizden emin misiniz?",
-		"delete_custom_mode": "Bu özel modu silmek istediğinizden emin misiniz?",
+		"delete_custom_mode_with_rules": "Bu {scope} modunu silmek istediğinizden emin misiniz?\n\nBu işlem, ilişkili kurallar klasörünü de şu konumdan silecektir:\n{rulesFolderPath}",
 		"delete_message": "Neyi silmek istersiniz?",
-		"just_this_message": "Sadece bu mesajı",
-		"this_and_subsequent": "Bu ve sonraki tüm mesajları"
+		"delete_just_this_message": "Sadece bu mesajı",
+		"delete_this_and_subsequent": "Bu ve sonraki tüm mesajları",
+		"edit_warning": "Bu mesajı düzenlemek konuşmadaki tüm sonraki mesajları silecektir. Devam etmek istiyor musunuz?",
+		"proceed": "Devam et"
 	},
 	"errors": {
 		"invalid_data_uri": "Geçersiz veri URI formatı",
@@ -79,6 +81,7 @@
 		"share_not_enabled": "Bu kuruluş için görev paylaşımı etkinleştirilmemiş.",
 		"share_task_not_found": "Görev bulunamadı veya erişim reddedildi.",
 		"mode_import_failed": "Mod içe aktarılamadı: {{error}}",
+		"delete_rules_folder_failed": "Kurallar klasörü silinemedi: {{rulesFolderPath}}. Hata: {{error}}",
 		"claudeCode": {
 			"processExited": "Claude Code işlemi {{exitCode}} koduyla çıktı.",
 			"errorOutput": "Hata çıktısı: {{output}}",
@@ -121,9 +124,12 @@
 	"answers": {
 		"yes": "Evet",
 		"no": "Hayır",
-		"cancel": "İptal",
 		"remove": "Kaldır",
 		"keep": "Koru"
+	},
+	"buttons": {
+		"save": "Kaydet",
+		"edit": "Düzenle"
 	},
 	"tasks": {
 		"canceled": "Görev hatası: Kullanıcı tarafından durduruldu ve iptal edildi.",
@@ -162,6 +168,10 @@
 			"resetFailed": "Özel modları sıfırlama başarısız: {{error}}",
 			"modeNotFound": "Yazma hatası: Mod bulunamadı",
 			"noWorkspaceForProject": "Proje özel modu için çalışma alanı klasörü bulunamadı"
+		},
+		"scope": {
+			"project": "proje",
+			"global": "küresel"
 		}
 	},
 	"mdm": {
@@ -169,6 +179,14 @@
 			"cloud_auth_required": "Kuruluşunuz Kilo Code Cloud kimlik doğrulaması gerektiriyor. Devam etmek için giriş yapın.",
 			"organization_mismatch": "Kuruluşunuzun Kilo Code Cloud hesabıyla kimlik doğrulaması yapmalısınız.",
 			"verification_failed": "Kuruluş kimlik doğrulaması doğrulanamıyor."
+		}
+	},
+	"prompts": {
+		"deleteMode": {
+			"title": "Özel Modu Sil",
+			"description": "Bu {{scope}} modunu silmek istediğinizden emin misiniz? Bu, {{rulesFolderPath}} adresindeki ilişkili kurallar klasörünü de silecektir",
+			"descriptionNoRules": "Bu özel modu silmek istediğinizden emin misiniz?",
+			"confirm": "Sil"
 		}
 	}
 }

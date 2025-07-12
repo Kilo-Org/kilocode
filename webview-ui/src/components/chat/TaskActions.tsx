@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next"
 import type { HistoryItem } from "@roo-code/types"
 
 import { vscode } from "@/utils/vscode"
-import { useCopyToClipboard } from "@/utils/clipboard" // kilocode_change - Added copy utility for task prompt
+import { useCopyToClipboard } from "@/utils/clipboard"
 
 import { DeleteTaskDialog } from "../history/DeleteTaskDialog"
 import { IconButton } from "./IconButton"
@@ -18,7 +18,7 @@ interface TaskActionsProps {
 export const TaskActions = ({ item, buttonsDisabled }: TaskActionsProps) => {
 	const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null)
 	const { t } = useTranslation()
-	const { copyWithFeedback, showCopyFeedback } = useCopyToClipboard() // kilocode_change - Added copy utility for task prompt
+	const { copyWithFeedback, showCopyFeedback } = useCopyToClipboard()
 
 	return (
 		<div className="flex flex-row gap-1">
@@ -28,16 +28,14 @@ export const TaskActions = ({ item, buttonsDisabled }: TaskActionsProps) => {
 				disabled={buttonsDisabled}
 				onClick={() => vscode.postMessage({ type: "exportCurrentTask" })}
 			/>
-			{/* kilocode_change start - Added copy button for task prompt */}
 			{item?.task && (
 				<IconButton
 					iconClass={showCopyFeedback ? "codicon-check" : "codicon-copy"}
 					title={t("history:copyPrompt")}
-					disabled={buttonsDisabled || !item}
+					disabled={buttonsDisabled}
 					onClick={(e) => copyWithFeedback(item.task, e)}
 				/>
 			)}
-			{/* kilocode_change end */}
 			{!!item?.size && item.size > 0 && (
 				<>
 					<div className="flex items-center">

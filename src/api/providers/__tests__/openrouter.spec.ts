@@ -8,6 +8,7 @@ import OpenAI from "openai"
 
 import { OpenRouterHandler } from "../openrouter"
 import { ApiHandlerOptions } from "../../../shared/api"
+import { Package } from "../../../shared/package"
 
 // Mock dependencies
 vitest.mock("openai")

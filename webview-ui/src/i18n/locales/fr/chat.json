@@ -112,6 +112,7 @@
 	"enhancePrompt": "Améliorer la requête avec un contexte supplémentaire",
 	"addImages": "Ajouter des images au message",
 	"sendMessage": "Envoyer le message",
+	"stopTts": "Arrêter la synthèse vocale",
 	"typeMessage": "Écrivez un message...",
 	"typeTask": "Construire, trouver, demander quelque chose",
 	"addContext": "@ pour ajouter du contexte, / pour changer de mode",
@@ -249,8 +250,8 @@
 		"title": "🎉 Roo Code {{version}} est sortie",
 		"description": "Roo Code {{version}} apporte de puissantes nouvelles fonctionnalités et des améliorations significatives pour améliorer ton flux de travail de développement.",
 		"whatsNew": "Quoi de neuf",
-		"feature1": "<bold>Partage de tâches en 1 clic</bold> : Partage tes tâches instantanément avec tes collègues et la communauté en un seul clic.",
-		"feature2": "<bold>Support du répertoire .roo global</bold> : Charge les règles et configurations depuis un répertoire .roo global pour des paramètres cohérents entre les projets.",
+		"feature1": "<bold>L'indexation de la base de code sort du statut expérimental</bold> : L'indexation complète de la base de code est maintenant stable et prête pour un usage en production avec une recherche améliorée et une meilleure compréhension du contexte.",
+		"feature2": "<bold>Nouvelle fonctionnalité de liste de tâches</bold> : Garde tes tâches sur la bonne voie avec une gestion intégrée des tâches qui t'aide à rester organisé et concentré sur tes objectifs de développement.",
 		"feature3": "<bold>Transitions Architecte vers Code améliorées</bold> : Transferts fluides de la planification en mode Architecte vers l'implémentation en mode Code.",
 		"hideButton": "Masquer l'annonce",
 		"detailsDiscussLinks": "Obtenez plus de détails et participez aux discussions sur <discordLink>Discord</discordLink> et <redditLink>Reddit</redditLink> 🚀"

@@ -37,11 +37,11 @@ import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { filterModels } from "./utils/organizationFilters" // kilocode_change: unused filterProviders
 import {
 	Select,
-	SelectContent,
-	SelectItem,
 	SelectTrigger,
 	SelectValue,
-	Button,
+	SelectContent,
+	SelectItem,
+	SearchableSelect,
 	SelectSeparator,
 } from "@src/components/ui"
 

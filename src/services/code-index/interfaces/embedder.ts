@@ -10,6 +10,13 @@ export interface IEmbedder {
 	 * @returns Promise resolving to an EmbeddingResponse
 	 */
 	createEmbeddings(texts: string[], model?: string): Promise<EmbeddingResponse>
+
+	/**
+	 * Validates the embedder configuration by testing connectivity and credentials.
+	 * @returns Promise resolving to validation result with success status and optional error message
+	 */
+	validateConfiguration(): Promise<{ valid: boolean; error?: string }>
+
 	get embedderInfo(): EmbedderInfo
 }
 
@@ -21,7 +28,7 @@ export interface EmbeddingResponse {
 	}
 }
 
-export type AvailableEmbedders = "openai" | "ollama" | "openai-compatible"
+export type AvailableEmbedders = "openai" | "ollama" | "openai-compatible" | "gemini"
 
 export interface EmbedderInfo {
 	name: AvailableEmbedders

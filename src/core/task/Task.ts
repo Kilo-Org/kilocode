@@ -22,6 +22,7 @@ import {
 	type ToolProgressStatus,
 	type HistoryItem,
 	TelemetryEventName,
+	TodoItem,
 } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 import { CloudService } from "@roo-code/cloud"
@@ -92,6 +93,7 @@ import { parseMentions } from "../mentions" // kilocode_change
 import { parseKiloSlashCommands } from "../slash-commands/kilo" // kilocode_change
 import { GlobalFileNames } from "../../shared/globalFileNames" // kilocode_change
 import { ensureLocalKilorulesDirExists } from "../context/instructions/kilo-rules" // kilocode_change
+import { restoreTodoListForTask } from "../tools/updateTodoListTool"
 
 // Constants
 const MAX_EXPONENTIAL_BACKOFF_SECONDS = 600 // 10 minutes
@@ -134,6 +136,7 @@ type UserContent = Array<Anthropic.ContentBlockParam> // kilocode_change
 export class Task extends EventEmitter<ClineEvents> {
 	private context: vscode.ExtensionContext // kilocode_change
 
+	todoList?: TodoItem[]
 	readonly taskId: string
 	private taskIsFavorited?: boolean // kilocode_change
 	readonly instanceId: string
@@ -396,6 +399,7 @@ export class Task extends EventEmitter<ClineEvents> {
 
 	public async overwriteClineMessages(newMessages: ClineMessage[]) {
 		this.clineMessages = newMessages
+		restoreTodoListForTask(this)
 		await this.saveClineMessages()
 	}
 

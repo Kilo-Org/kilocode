@@ -4,7 +4,7 @@ import { BaseTelemetryClient } from "@roo-code/telemetry"
 
 // import { getRooCodeApiUrl } from "./Config" // kilocode_change
 import type { AuthService } from "./auth"
-import { SettingsService } from "./SettingsService"
+import type { SettingsService } from "./SettingsService"
 
 export class TelemetryClient extends BaseTelemetryClient {
 	constructor(

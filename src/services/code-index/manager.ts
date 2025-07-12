@@ -12,6 +12,7 @@ import { CacheManager } from "./cache-manager"
 import fs from "fs/promises"
 import ignore from "ignore"
 import path from "path"
+import { t } from "../../i18n"
 
 export class CodeIndexManager {
 	// --- Singleton Implementation ---
@@ -26,11 +27,16 @@ export class CodeIndexManager {
 	private _cacheManager: CacheManager | undefined
 
 	public static getInstance(context: vscode.ExtensionContext): CodeIndexManager | undefined {
-		const workspacePath = getWorkspacePath() // Assumes single workspace for now
-
-		if (!workspacePath) {
+		// Use first workspace folder consistently
+		const workspaceFolders = vscode.workspace.workspaceFolders
+		if (!workspaceFolders || workspaceFolders.length === 0) {
 			return undefined
 		}
+
+		// Always use the first workspace folder for consistency across all indexing operations.
+		// This ensures that the same workspace context is used throughout the indexing pipeline,
+		// preventing path resolution errors in multi-workspace scenarios.
+		const workspacePath = workspaceFolders[0].uri.fsPath
 
 		if (!CodeIndexManager.instances.has(workspacePath)) {
 			CodeIndexManager.instances.set(workspacePath, new CodeIndexManager(workspacePath, context))
@@ -113,7 +119,14 @@ export class CodeIndexManager {
 			return { requiresRestart }
 		}
 
-		// 3. CacheManager Initialization
+		// 3. Check if workspace is available
+		const workspacePath = getWorkspacePath()
+		if (!workspacePath) {
+			this._stateManager.setSystemState("Standby", "No workspace folder open")
+			return { requiresRestart }
+		}
+
+		// 4. CacheManager Initialization
 		if (!this._cacheManager) {
 			this._cacheManager = new CacheManager(this.context, this.workspacePath)
 			await this._cacheManager.initialize()
@@ -203,13 +216,16 @@ export class CodeIndexManager {
 
 	/**
 	 * Private helper method to recreate services with current configuration.
-	 * Used by both initialize() and handleExternalSettingsChange().
+	 * Used by both initialize() and handleSettingsChange().
 	 */
 	private async _recreateServices(): Promise<void> {
 		// Stop watcher if it exists
 		if (this._orchestrator) {
 			this.stopWatcher()
 		}
+		// Clear existing services to ensure clean state
+		this._orchestrator = undefined
+		this._searchService = undefined
 
 		// (Re)Initialize service factory
 		this._serviceFactory = new CodeIndexServiceFactory(
@@ -219,7 +235,14 @@ export class CodeIndexManager {
 		)
 
 		const ignoreInstance = ignore()
-		const ignorePath = path.join(getWorkspacePath(), ".gitignore")
+		const workspacePath = getWorkspacePath()
+
+		if (!workspacePath) {
+			this._stateManager.setSystemState("Standby", "")
+			return
+		}
+
+		const ignorePath = path.join(workspacePath, ".gitignore")
 		try {
 			const content = await fs.readFile(ignorePath, "utf8")
 			ignoreInstance.add(content)
@@ -235,6 +258,21 @@ export class CodeIndexManager {
 			this._cacheManager!,
 			ignoreInstance,
 		)
+
+		// Validate embedder configuration before proceeding
+		const validationResult = await this._serviceFactory.validateEmbedder(embedder)
+		if (!validationResult.valid) {
+			const errorMessage = validationResult.error || "Embedder configuration validation failed"
+			// Always attempt translation, use original as fallback
+			let translatedMessage = t(errorMessage)
+			// If translation returns a different value (stripped namespace), use original
+			if (translatedMessage !== errorMessage && !translatedMessage.includes(":")) {
+				translatedMessage = errorMessage
+			}
+
+			this._stateManager.setSystemState("Error", translatedMessage)
+			throw new Error(translatedMessage)
+		}
 
 		// (Re)Initialize orchestrator
 		this._orchestrator = new CodeIndexOrchestrator(
@@ -254,28 +292,34 @@ export class CodeIndexManager {
 			embedder,
 			vectorStore,
 		)
+
+		// Clear any error state after successful recreation
+		this._stateManager.setSystemState("Standby", "")
 	}
 
 	/**
-	 * Handles external settings changes by reloading configuration.
-	 * This method should be called when API provider settings are updated
+	 * Handle code index settings changes.
+	 * This method should be called when code index settings are updated
 	 * to ensure the CodeIndexConfigManager picks up the new configuration.
 	 * If the configuration changes require a restart, the service will be restarted.
 	 */
-	public async handleExternalSettingsChange(): Promise<void> {
+	public async handleSettingsChange(): Promise<void> {
 		if (this._configManager) {
 			const { requiresRestart } = await this._configManager.loadConfiguration()
 
 			const isFeatureEnabled = this.isFeatureEnabled
 			const isFeatureConfigured = this.isFeatureConfigured
 
-			// If configuration changes require a restart and the manager is initialized, recreate services and restart
-			if (requiresRestart && isFeatureEnabled && isFeatureConfigured && this.isInitialized) {
-				// Recreate services with new configuration
-				await this._recreateServices()
-
-				// Start indexing with new services
-				await this.startIndexing()
+			if (requiresRestart && isFeatureEnabled && isFeatureConfigured) {
+				try {
+					// Recreate services with new configuration
+					await this._recreateServices()
+				} catch (error) {
+					// Error state already set in _recreateServices
+					console.error("Failed to recreate services:", error)
+					// Re-throw the error so the caller knows validation failed
+					throw error
+				}
 			}
 		}
 	}
