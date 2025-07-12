@@ -16,7 +16,8 @@
 			"preLaunchTask": "${defaultBuildTask}",
 			"env": {
 				"NODE_ENV": "development",
-				"VSCODE_DEBUG_MODE": "true"
+				"VSCODE_DEBUG_MODE": "true",
+				"KILOCODE_BASE_URL": "http://localhost:3000"
 			},
 			"resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
 			"presentation": {
@@ -43,7 +44,11 @@
 				"VSCODE_DEBUG_MODE": "true"
 			},
 			"resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
-			"presentation": { "hidden": false, "group": "tasks", "order": 1 }
+			"presentation": {
+				"hidden": false,
+				"group": "tasks",
+				"order": 1
+			}
 		}
 	]
 }
