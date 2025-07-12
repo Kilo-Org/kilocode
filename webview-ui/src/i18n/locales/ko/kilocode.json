@@ -46,6 +46,10 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code가 대화를 요약하고자 합니다",
 			"condenseConversation": "대화 요약하기"
+		},
+		"enhancePrompt": {
+			"revertEnhancement": "원래 프롬프트로 되돌리기",
+			"cancelEnhancement": "향상 취소"
 		}
 	},
 	"newTaskPreview": {

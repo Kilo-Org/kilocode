@@ -46,6 +46,10 @@
 		"condense": {
 			"wantsToCondense": "Το Kilo Code θέλει να συμπυκνώσει τη συνομιλία σου",
 			"condenseConversation": "Συμπύκνωση Συνομιλίας"
+		},
+		"enhancePrompt": {
+			"cancelEnhancement": "Ακύρωση βελτίωσης",
+			"revertEnhancement": "Επαναφορά στην αρχική προτροπή"
 		}
 	},
 	"newTaskPreview": {

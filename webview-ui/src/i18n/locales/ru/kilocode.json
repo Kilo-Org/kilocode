@@ -46,6 +46,10 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code хочет сократить твой разговор",
 			"condenseConversation": "Сократить разговор"
+		},
+		"enhancePrompt": {
+			"cancelEnhancement": "Отменить улучшение",
+			"revertEnhancement": "Вернуться к исходной инструкции"
 		}
 	},
 	"newTaskPreview": {

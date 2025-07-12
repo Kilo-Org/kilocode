@@ -144,6 +144,8 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 		const [searchLoading, setSearchLoading] = useState(false)
 		const [searchRequestId, setSearchRequestId] = useState<string>("")
+		const [originalPromptBeforeEnhancement, setOriginalPromptBeforeEnhancement] = useState<string | null>(null)
+		const [enhancedPromptText, setEnhancedPromptText] = useState<string | null>(null)
 
 		// Close dropdown when clicking outside.
 		useEffect(() => {
@@ -163,11 +165,14 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				const message = event.data
 
 				if (message.type === "enhancedPrompt") {
-					if (message.text) {
+					// Only apply enhancement if we have an original prompt stored (not cancelled)
+					if (message.text && originalPromptBeforeEnhancement !== null) {
 						setInputValue(message.text)
+						setEnhancedPromptText(message.text)
 					}
 
 					setIsEnhancingPrompt(false)
+					// Don't clear originalPromptBeforeEnhancement here - we'll need it for potential revert
 				} else if (message.type === "commitSearchResults") {
 					const commits = message.commits.map((commit: any) => ({
 						type: ContextMenuOptionType.Git,
@@ -199,7 +204,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 			window.addEventListener("message", messageHandler)
 			return () => window.removeEventListener("message", messageHandler)
-		}, [setInputValue, searchRequestId])
+		}, [setInputValue, searchRequestId, originalPromptBeforeEnhancement, enhancedPromptText])
 
 		const [isDraggingOver, setIsDraggingOver] = useState(false)
 		// kilocode_change start: pull slash commands from Cline
@@ -248,15 +253,43 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				return
 			}
 
+			// If currently enhancing, cancel the enhancement
+			if (isEnhancingPrompt) {
+				setIsEnhancingPrompt(false)
+				setOriginalPromptBeforeEnhancement(null) // Clear original prompt to ignore any pending response
+				return
+			}
+
 			const trimmedInput = inputValue.trim()
+
+			// Check if we can revert (enhanced text exists, matches current input, and we have original)
+			const canRevert =
+				enhancedPromptText && originalPromptBeforeEnhancement && trimmedInput === enhancedPromptText.trim()
+
+			if (canRevert) {
+				// Revert to original prompt
+				setInputValue(originalPromptBeforeEnhancement)
+				setOriginalPromptBeforeEnhancement(null)
+				setEnhancedPromptText(null)
+				return
+			}
 
 			if (trimmedInput) {
 				setIsEnhancingPrompt(true)
+				setOriginalPromptBeforeEnhancement(trimmedInput) // Store original prompt for potential revert
 				vscode.postMessage({ type: "enhancePrompt" as const, text: trimmedInput })
 			} else {
 				setInputValue(t("chat:enhancePromptDescription"))
 			}
-		}, [inputValue, sendingDisabled, setInputValue, t])
+		}, [
+			inputValue,
+			sendingDisabled,
+			setInputValue,
+			t,
+			isEnhancingPrompt,
+			enhancedPromptText,
+			originalPromptBeforeEnhancement,
+		])
 
 		const allModes = useMemo(() => getAllModes(customModes), [customModes])
 
@@ -1421,11 +1454,42 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						ref={actionButtonsRef}>
 						{codebaseIndexConfig?.codebaseIndexEnabled && <IndexingStatusDot />}
 						<IconButton
-							iconClass={isEnhancingPrompt ? "codicon-loading" : "codicon-sparkle"}
-							title={t("chat:enhancePrompt")}
+							iconClass={(() => {
+								// Debug logging for icon state
+								const canRevert =
+									enhancedPromptText &&
+									originalPromptBeforeEnhancement &&
+									inputValue.trim() === enhancedPromptText.trim()
+
+								console.log("Icon state debug:", {
+									isEnhancingPrompt,
+									hasEnhancedText: !!enhancedPromptText,
+									hasOriginalText: !!originalPromptBeforeEnhancement,
+									inputLength: inputValue.trim().length,
+									enhancedLength: enhancedPromptText?.trim().length,
+									textsMatch: inputValue.trim() === enhancedPromptText?.trim(),
+									canRevert,
+								})
+
+								return isEnhancingPrompt
+									? "codicon-loading"
+									: canRevert
+										? "codicon-debug-step-back"
+										: "codicon-sparkle"
+							})()}
+							title={
+								isEnhancingPrompt
+									? t("kilocode:chat.enhancePrompt.cancelEnhancement")
+									: enhancedPromptText &&
+										  originalPromptBeforeEnhancement &&
+										  inputValue.trim() === enhancedPromptText.trim()
+										? t("kilocode:chat.enhancePrompt.revertEnhancement")
+										: t("chat:enhancePrompt")
+							}
 							disabled={sendingDisabled}
 							isLoading={isEnhancingPrompt}
 							onClick={handleEnhancePrompt}
+							data-testid="enhance-prompt-button"
 						/>
 						<IconButton
 							iconClass="codicon-attach"

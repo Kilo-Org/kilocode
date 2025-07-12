@@ -192,9 +192,13 @@ describe("ChatTextArea", () => {
 		it("should update input value when receiving enhanced prompt", () => {
 			const setInputValue = vi.fn()
 
-			render(<ChatTextArea {...defaultProps} setInputValue={setInputValue} />)
+			render(<ChatTextArea {...defaultProps} setInputValue={setInputValue} inputValue="Original prompt" />)
 
-			// Simulate receiving enhanced prompt message
+			// First simulate clicking the enhance button to set the original prompt
+			const enhanceButton = getEnhancePromptButton()
+			fireEvent.click(enhanceButton)
+
+			// Then simulate receiving enhanced prompt message
 			window.dispatchEvent(
 				new MessageEvent("message", {
 					data: {
@@ -205,6 +209,60 @@ describe("ChatTextArea", () => {
 			)
 
 			expect(setInputValue).toHaveBeenCalledWith("Enhanced test prompt")
+		})
+
+		it("should not update input value when enhancement is cancelled", () => {
+			const setInputValue = vi.fn()
+
+			render(<ChatTextArea {...defaultProps} setInputValue={setInputValue} inputValue="Original prompt" />)
+
+			const enhanceButton = getEnhancePromptButton()
+			fireEvent.click(enhanceButton)
+
+			// Cancel enhancement
+			fireEvent.click(enhanceButton)
+
+			// Simulate receiving enhanced prompt message after cancellation
+			window.dispatchEvent(
+				new MessageEvent("message", {
+					data: {
+						type: "enhancedPrompt",
+						text: "Enhanced test prompt",
+					},
+				}),
+			)
+
+			expect(setInputValue).not.toHaveBeenCalledWith("Enhanced test prompt")
+		})
+
+		it("should revert to original prompt when revert button is clicked", () => {
+			const setInputValue = vi.fn()
+
+			const { rerender } = render(
+				<ChatTextArea {...defaultProps} setInputValue={setInputValue} inputValue="Original prompt" />,
+			)
+
+			const enhanceButton = getEnhancePromptButton()
+			fireEvent.click(enhanceButton)
+
+			window.dispatchEvent(
+				new MessageEvent("message", {
+					data: {
+						type: "enhancedPrompt",
+						text: "Enhanced test prompt",
+					},
+				}),
+			)
+
+			// Re-render with enhanced text to simulate enhancement being applied
+			rerender(<ChatTextArea {...defaultProps} setInputValue={setInputValue} inputValue="Enhanced test prompt" />)
+
+			setInputValue.mockClear()
+
+			// Click revert button
+			fireEvent.click(enhanceButton)
+
+			expect(setInputValue).toHaveBeenCalledWith("Original prompt")
 		})
 	})
 

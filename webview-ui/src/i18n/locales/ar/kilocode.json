@@ -46,6 +46,10 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code يقترح تلخيص المحادثة",
 			"condenseConversation": "تلخيص المحادثة"
+		},
+		"enhancePrompt": {
+			"cancelEnhancement": "إلغاء التحسين",
+			"revertEnhancement": "الرجوع إلى المطالبة الأصلية"
 		}
 	},
 	"newTaskPreview": {

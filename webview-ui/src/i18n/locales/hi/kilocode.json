@@ -46,6 +46,10 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code तुम्हारी बातचीत को संक्षिप्त करना चाहता है",
 			"condenseConversation": "बातचीत संक्षिप्त करें"
+		},
+		"enhancePrompt": {
+			"cancelEnhancement": "वृद्धि रद्द करें",
+			"revertEnhancement": "मूल प्रॉम्प्ट पर वापस जाएँ"
 		}
 	},
 	"newTaskPreview": {

@@ -18,6 +18,7 @@ export type TestFixtures = TestOptions & {
 	workbox: Page
 	createProject: () => Promise<string>
 	createTempDir: () => Promise<string>
+	setupWorkbox: Page
 }
 
 export const test = base.extend<TestFixtures>({
@@ -149,5 +150,11 @@ export const test = base.extend<TestFixtures>({
 				console.warn(`Failed to cleanup temp dir ${tempDir}:`, error)
 			}
 		}
+	},
+
+	setupWorkbox: async ({ workbox }, use) => {
+		const { setupTestEnvironment } = await import("../helpers/test-setup-helpers")
+		await setupTestEnvironment(workbox)
+		await use(workbox)
 	},
 })

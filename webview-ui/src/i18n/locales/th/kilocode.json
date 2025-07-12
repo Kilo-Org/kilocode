@@ -46,6 +46,10 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code ต้องการย่อการสนทนาของคุณ",
 			"condenseConversation": "ย่อการสนทนา"
+		},
+		"enhancePrompt": {
+			"cancelEnhancement": "ยกเลิกการเพิ่มประสิทธิภาพ",
+			"revertEnhancement": "กลับคืนสู่คำแนะนำเริ่มต้น"
 		}
 	},
 	"newTaskPreview": {

@@ -46,6 +46,10 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code quiere condensar tu conversación",
 			"condenseConversation": "Condensar Conversación"
+		},
+		"enhancePrompt": {
+			"cancelEnhancement": "Cancelar mejora",
+			"revertEnhancement": "Volver al mensaje original"
 		}
 	},
 	"newTaskPreview": {

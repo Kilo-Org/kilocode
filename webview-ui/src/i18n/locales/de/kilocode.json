@@ -46,6 +46,10 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code möchte deine Unterhaltung zusammenfassen",
 			"condenseConversation": "Unterhaltung zusammenfassen"
+		},
+		"enhancePrompt": {
+			"revertEnhancement": "Zum ursprünglichen Prompt zurückkehren",
+			"cancelEnhancement": "Verbesserung abbrechen"
 		}
 	},
 	"newTaskPreview": {
