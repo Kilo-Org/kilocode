@@ -113,31 +113,8 @@ const CLAUDE_CODE_TIMEOUT = 600000 // 10 minutes
 function runProcess({ systemPrompt, messages, path: claudePath, modelId }: ClaudeCodeOptions) {
 	const claudeExecutable = claudePath || "claude"
 
-	// Check if system prompt is too long for command line (Windows has ~32KB limit)
-	const maxSystemPromptLength = 30000 // Conservative limit
-	const useFileForSystemPrompt = systemPrompt.length > maxSystemPromptLength
-
-	let tempFile: string | undefined
-
-	if (useFileForSystemPrompt) {
-		// Create a temporary file for the system prompt to avoid command line length limits
-		const tempDir = os.tmpdir()
-		tempFile = path.join(tempDir, `claude-system-prompt-${Date.now()}.txt`)
-
-		// Write system prompt to temporary file synchronously to ensure it exists before process starts
-		try {
-			const fsSync = require("fs")
-			fsSync.writeFileSync(tempFile, systemPrompt, "utf-8")
-		} catch (error) {
-			console.error("Error writing system prompt to temp file:", error)
-			throw new Error(`Failed to create system prompt file: ${error}`)
-		}
-	}
-
 	const args = [
 		"-p",
-		"--system-prompt",
-		useFileForSystemPrompt ? tempFile! : systemPrompt,
 		"--verbose",
 		"--output-format",
 		"stream-json",
@@ -166,16 +143,19 @@ function runProcess({ systemPrompt, messages, path: claudePath, modelId }: Claud
 		timeout: CLAUDE_CODE_TIMEOUT,
 	})
 
-	// Write messages to stdin after process is spawned
-	// This avoids the E2BIG error on Linux when passing large messages as command line arguments
-	// Linux has a per-argument limit of ~128KiB for execve() system calls
-	const messagesJson = JSON.stringify(messages)
+	// Combine system prompt and messages into a single JSON object to pass via stdin
+	// This avoids command line length limits on PowerShell and other systems
+	const combinedInput = {
+		systemPrompt,
+		messages,
+	}
+	const combinedJson = JSON.stringify(combinedInput)
 
 	// Use setImmediate to ensure the process has been spawned before writing to stdin
 	// This prevents potential race conditions where stdin might not be ready
 	setImmediate(() => {
 		try {
-			child.stdin.write(messagesJson, "utf8", (error) => {
+			child.stdin.write(combinedJson, "utf8", (error) => {
 				if (error) {
 					console.error("Error writing to Claude Code stdin:", error)
 					child.kill()
@@ -187,15 +167,6 @@ function runProcess({ systemPrompt, messages, path: claudePath, modelId }: Claud
 			child.kill()
 		}
 	})
-
-	// Clean up the temporary file when the process ends
-	if (tempFile) {
-		child.on("close", () => {
-			fs.unlink(tempFile!).catch((error) => {
-				console.error("Error cleaning up temp file:", error)
-			})
-		})
-	}
 
 	return child
 }

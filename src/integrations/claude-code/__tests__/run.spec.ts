@@ -22,6 +22,7 @@ vi.mock("fs/promises", () => ({
 // Mock fs (synchronous)
 vi.mock("fs", () => ({
 	writeFileSync: vi.fn(),
+	readFileSync: vi.fn((path: string) => "You are a helpful assistant"),
 }))
 
 // Mock os
@@ -155,13 +156,11 @@ describe("runClaudeCode", () => {
 			results.push(chunk)
 		}
 
-		// Verify execa was called with correct arguments (no JSON.stringify(messages) in args)
+		// Verify execa was called with correct arguments (no system prompt in args, no messages in args)
 		expect(mockExeca).toHaveBeenCalledWith(
 			"claude",
 			expect.arrayContaining([
 				"-p",
-				"--system-prompt",
-				"You are a helpful assistant",
 				"--verbose",
 				"--output-format",
 				"stream-json",
@@ -177,12 +176,21 @@ describe("runClaudeCode", () => {
 			}),
 		)
 
-		// Verify the arguments do NOT contain the stringified messages
+		// Verify the arguments do NOT contain the stringified messages or system prompt
 		const [, args] = mockExeca.mock.calls[0]
 		expect(args).not.toContain(JSON.stringify(messages))
+		expect(args).not.toContain("You are a helpful assistant")
 
-		// Verify messages were written to stdin with callback
-		expect(mockStdin.write).toHaveBeenCalledWith(JSON.stringify(messages), "utf8", expect.any(Function))
+		// Verify combined input (system prompt + messages) was written to stdin with callback
+		const expectedCombinedInput = {
+			systemPrompt: "You are a helpful assistant",
+			messages,
+		}
+		expect(mockStdin.write).toHaveBeenCalledWith(
+			JSON.stringify(expectedCombinedInput),
+			"utf8",
+			expect.any(Function),
+		)
 		expect(mockStdin.end).toHaveBeenCalled()
 
 		// Verify we got the expected mock output
