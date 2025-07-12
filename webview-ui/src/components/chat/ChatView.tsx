@@ -1602,7 +1602,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 								}}
 							/>
 						</p>
-						{taskHistory.length > 0 && <IdeaSuggestionsBox />} {/* kilocode_change */}
+						{taskHistory.length === 0 && <IdeaSuggestionsBox />} {/* kilocode_change */}
 						{/* <RooTips cycle={false} /> kilocode_change: do not show */}
 					</div>
 				</div>
