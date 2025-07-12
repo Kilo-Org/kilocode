@@ -113,25 +113,31 @@ const CLAUDE_CODE_TIMEOUT = 600000 // 10 minutes
 function runProcess({ systemPrompt, messages, path: claudePath, modelId }: ClaudeCodeOptions) {
 	const claudeExecutable = claudePath || "claude"
 
-	// Create a temporary file for the system prompt to avoid command line length limits
-	const tempDir = os.tmpdir()
-	const tempFile = path.join(tempDir, `claude-system-prompt-${Date.now()}.txt`)
+	// Check if system prompt is too long for command line (Windows has ~32KB limit)
+	const maxSystemPromptLength = 30000 // Conservative limit
+	const useFileForSystemPrompt = systemPrompt.length > maxSystemPromptLength
 
-	// Write system prompt to temporary file synchronously to ensure it exists before process starts
-	// This is important to avoid race conditions
-	try {
-		// Use synchronous write to ensure file exists before process starts
-		const fsSync = require("fs")
-		fsSync.writeFileSync(tempFile, systemPrompt, "utf-8")
-	} catch (error) {
-		console.error("Error writing system prompt to temp file:", error)
-		throw new Error(`Failed to create system prompt file: ${error}`)
+	let tempFile: string | undefined
+
+	if (useFileForSystemPrompt) {
+		// Create a temporary file for the system prompt to avoid command line length limits
+		const tempDir = os.tmpdir()
+		tempFile = path.join(tempDir, `claude-system-prompt-${Date.now()}.txt`)
+
+		// Write system prompt to temporary file synchronously to ensure it exists before process starts
+		try {
+			const fsSync = require("fs")
+			fsSync.writeFileSync(tempFile, systemPrompt, "utf-8")
+		} catch (error) {
+			console.error("Error writing system prompt to temp file:", error)
+			throw new Error(`Failed to create system prompt file: ${error}`)
+		}
 	}
 
 	const args = [
 		"-p",
-		"--system-prompt-file",
-		tempFile,
+		"--system-prompt",
+		useFileForSystemPrompt ? tempFile! : systemPrompt,
 		"--verbose",
 		"--output-format",
 		"stream-json",
@@ -183,11 +189,13 @@ function runProcess({ systemPrompt, messages, path: claudePath, modelId }: Claud
 	})
 
 	// Clean up the temporary file when the process ends
-	child.on("close", () => {
-		fs.unlink(tempFile).catch((error) => {
-			console.error("Error cleaning up temp file:", error)
+	if (tempFile) {
+		child.on("close", () => {
+			fs.unlink(tempFile!).catch((error) => {
+				console.error("Error cleaning up temp file:", error)
+			})
 		})
-	})
+	}
 
 	return child
 }

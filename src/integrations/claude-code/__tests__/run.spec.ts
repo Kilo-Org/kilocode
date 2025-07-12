@@ -160,8 +160,8 @@ describe("runClaudeCode", () => {
 			"claude",
 			expect.arrayContaining([
 				"-p",
-				"--system-prompt-file",
-				expect.stringMatching(/.*claude-system-prompt-.*\.txt$/),
+				"--system-prompt",
+				"You are a helpful assistant",
 				"--verbose",
 				"--output-format",
 				"stream-json",
