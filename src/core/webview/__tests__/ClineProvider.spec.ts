@@ -2414,6 +2414,7 @@ describe("ClineProvider - Router Models", () => {
 				glama: mockModels,
 				unbound: mockModels,
 				litellm: mockModels,
+				makehub: mockModels,
 				"kilocode-openrouter": mockModels,
 				ollama: {},
 				lmstudio: {},
@@ -2448,6 +2449,7 @@ describe("ClineProvider - Router Models", () => {
 			.mockResolvedValueOnce(mockModels) // glama success
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound fail
 			.mockRejectedValueOnce(new Error("Kilocode-OpenRouter API error")) // kilocode-openrouter fail
+			.mockRejectedValueOnce(new Error("MakeHub API error")) // makehub fail
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm fail
 
 		await messageHandler({ type: "requestRouterModels" })
@@ -2463,6 +2465,7 @@ describe("ClineProvider - Router Models", () => {
 				ollama: {},
 				lmstudio: {},
 				litellm: {},
+				makehub: {},
 				"kilocode-openrouter": {},
 			},
 		})
@@ -2501,6 +2504,13 @@ describe("ClineProvider - Router Models", () => {
 			success: false,
 			error: "LiteLLM connection failed",
 			values: { provider: "litellm" },
+		})
+
+		expect(mockPostMessage).toHaveBeenCalledWith({
+				type: "singleRouterModelFetchResponse",
+				success: false,
+				error: "MakeHub API error",
+				values: { provider: "makehub" },
 		})
 	})
 
@@ -2570,7 +2580,7 @@ describe("ClineProvider - Router Models", () => {
 			}),
 		)
 
-		// Verify response includes empty object for LiteLLM
+// Verify response includes empty object for LiteLLM
 		expect(mockPostMessage).toHaveBeenCalledWith({
 			type: "routerModels",
 			routerModels: {
@@ -2579,6 +2589,7 @@ describe("ClineProvider - Router Models", () => {
 				glama: mockModels,
 				unbound: mockModels,
 				litellm: {},
+				makehub: mockModels,
 				"kilocode-openrouter": mockModels,
 				ollama: {},
 				lmstudio: {},

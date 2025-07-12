@@ -206,6 +206,16 @@
 		"getXaiApiKey": "Hämta xAI API-nyckel",
 		"litellmApiKey": "LiteLLM API-nyckel",
 		"litellmBaseUrl": "LiteLLM bas-URL",
+		"makehubApiKey": "MakeHub API-nyckel",
+		"getMakehubApiKey": "Hämta MakeHub API-nyckel",
+		"makehubPerfRatio": "Prestanda/pris-förhållande",
+		"makehubPerfRatioDescription": "Kontrollerar hur MakeHub balanserar mellan pris och prestanda vid dirigering till leverantörer.",
+		"makehubPerfRatioLabels": {
+			"price": "Prisoptimerad",
+			"balanced": "Balanserad",
+			"performance": "Hastighetsoptimerad"
+		},
+		"noModelsFound": "Inga modeller hittades för {{provider}}. Se till att din API-nyckel är giltig och uppdatera modellistan.",
 		"awsCredentials": "AWS-uppgifter",
 		"awsProfile": "AWS-profil",
 		"awsProfileName": "AWS-profilnamn",

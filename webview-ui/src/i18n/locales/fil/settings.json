@@ -206,6 +206,16 @@
 		"getXaiApiKey": "Kumuha ng xAI API Key",
 		"litellmApiKey": "LiteLLM API Key",
 		"litellmBaseUrl": "LiteLLM Base URL",
+		"makehubApiKey": "MakeHub API Key",
+		"getMakehubApiKey": "Kumuha ng MakeHub API Key",
+		"makehubPerfRatio": "Performance/Price Ratio",
+		"makehubPerfRatioDescription": "Kontrolin kung paano binabalanse ng MakeHub ang presyo at performance kapag nag-route sa mga provider.",
+		"makehubPerfRatioLabels": {
+			"price": "Price Optimized",
+			"balanced": "Balanced",
+			"performance": "Speed Optimized"
+		},
+		"noModelsFound": "Walang nahanap na model para sa {{provider}}. Siguraduhing valid ang iyong API key at i-refresh ang listahan ng mga model.",
 		"awsCredentials": "AWS Credentials",
 		"awsProfile": "AWS Profile",
 		"awsProfileName": "Pangalan ng AWS Profile",
