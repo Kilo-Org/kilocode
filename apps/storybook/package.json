@@ -4,16 +4,18 @@
 	"type": "module",
 	"scripts": {
 		"generate-theme-styles": "node scripts/generate-vscode-themes.js",
+		"generate-screenshot-stories": "node scripts/generate-playwright-screenshot-stories.js",
 		"storybook": "storybook dev -p 6006",
 		"build-storybook": "storybook build --webpack-stats-json",
 		"preview": "storybook preview",
 		"chromatic": "chromatic --exit-zero-on-changes --storybook-base-dir=apps/storybook",
-		"clean": "rimraf storybook-static .turbo"
+		"clean": "rimraf storybook-static .turbo stories/generated public/screenshots"
 	},
 	"dependencies": {
 		"@radix-ui/react-slot": "^1.1.2",
 		"@tanstack/react-query": "^5.62.7",
 		"@vscode/codicons": "^0.0.36",
+		"change-case": "^5.4.4",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"lucide-react": "^0.513.0",
