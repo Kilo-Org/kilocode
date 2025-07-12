@@ -13,10 +13,31 @@ vi.mock("vscode", () => ({
 	},
 }))
 
+// Mock fs/promises
+vi.mock("fs/promises", () => ({
+	writeFile: vi.fn(),
+	unlink: vi.fn(),
+}))
+
+// Mock fs (synchronous)
+vi.mock("fs", () => ({
+	writeFileSync: vi.fn(),
+}))
+
+// Mock os
+vi.mock("os", () => ({
+	tmpdir: vi.fn(() => "/tmp"),
+}))
+
+// Mock path
+vi.mock("path", () => ({
+	join: vi.fn((...args: string[]) => args.join("/")),
+}))
+
 // Mock execa to test stdin behavior
 const mockExeca = vi.fn()
 const mockStdin = {
-	write: vi.fn((data, encoding, callback) => {
+	write: vi.fn((data: any, encoding: any, callback: any) => {
 		// Simulate successful write
 		if (callback) callback(null)
 	}),
@@ -139,8 +160,8 @@ describe("runClaudeCode", () => {
 			"claude",
 			expect.arrayContaining([
 				"-p",
-				"--system-prompt",
-				"You are a helpful assistant",
+				"--system-prompt-file",
+				expect.stringMatching(/.*claude-system-prompt-.*\.txt$/),
 				"--verbose",
 				"--output-format",
 				"stream-json",

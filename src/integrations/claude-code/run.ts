@@ -3,6 +3,9 @@ import type Anthropic from "@anthropic-ai/sdk"
 import { execa } from "execa"
 import { ClaudeCodeMessage } from "./types"
 import readline from "readline"
+import * as fs from "fs/promises"
+import * as os from "os"
+import * as path from "path"
 
 const cwd = vscode.workspace.workspaceFolders?.map((folder) => folder.uri.fsPath).at(0)
 
@@ -107,13 +110,28 @@ const claudeCodeTools = [
 
 const CLAUDE_CODE_TIMEOUT = 600000 // 10 minutes
 
-function runProcess({ systemPrompt, messages, path, modelId }: ClaudeCodeOptions) {
-	const claudePath = path || "claude"
+function runProcess({ systemPrompt, messages, path: claudePath, modelId }: ClaudeCodeOptions) {
+	const claudeExecutable = claudePath || "claude"
+
+	// Create a temporary file for the system prompt to avoid command line length limits
+	const tempDir = os.tmpdir()
+	const tempFile = path.join(tempDir, `claude-system-prompt-${Date.now()}.txt`)
+
+	// Write system prompt to temporary file synchronously to ensure it exists before process starts
+	// This is important to avoid race conditions
+	try {
+		// Use synchronous write to ensure file exists before process starts
+		const fsSync = require("fs")
+		fsSync.writeFileSync(tempFile, systemPrompt, "utf-8")
+	} catch (error) {
+		console.error("Error writing system prompt to temp file:", error)
+		throw new Error(`Failed to create system prompt file: ${error}`)
+	}
 
 	const args = [
 		"-p",
-		"--system-prompt",
-		systemPrompt,
+		"--system-prompt-file",
+		tempFile,
 		"--verbose",
 		"--output-format",
 		"stream-json",
@@ -128,7 +146,7 @@ function runProcess({ systemPrompt, messages, path, modelId }: ClaudeCodeOptions
 		args.push("--model", modelId)
 	}
 
-	const child = execa(claudePath, args, {
+	const child = execa(claudeExecutable, args, {
 		stdin: "pipe",
 		stdout: "pipe",
 		stderr: "pipe",
@@ -162,6 +180,13 @@ function runProcess({ systemPrompt, messages, path, modelId }: ClaudeCodeOptions
 			console.error("Error accessing Claude Code stdin:", error)
 			child.kill()
 		}
+	})
+
+	// Clean up the temporary file when the process ends
+	child.on("close", () => {
+		fs.unlink(tempFile).catch((error) => {
+			console.error("Error cleaning up temp file:", error)
+		})
 	})
 
 	return child
