@@ -66,6 +66,8 @@ export const toolParamNames = [
 	"end_line",
 	"query",
 	"args",
+	"instruction",
+	"edit_snippet",
 ] as const
 
 export type ToolParamName = (typeof toolParamNames)[number]
@@ -170,6 +172,11 @@ export interface SearchAndReplaceToolUse extends ToolUse {
 		Partial<Pick<Record<ToolParamName, string>, "use_regex" | "ignore_case" | "start_line" | "end_line">>
 }
 
+export interface MorphSemanticEditToolUse extends ToolUse {
+	name: "morph_semantic_edit"
+	params: Required<Pick<Record<ToolParamName, string>, "path" | "instruction" | "edit_snippet">>
+}
+
 // Define tool group configuration
 export type ToolGroupConfig = {
 	tools: readonly string[]
@@ -198,6 +205,7 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	report_bug: "report bug", // kilocode_change
 	condense: "condense the current context window", // kilocode_change
 	codebase_search: "codebase search",
+	morph_semantic_edit: "semantic edits with Morph",
 } as const
 
 // Define available tool groups.
@@ -213,7 +221,7 @@ export const TOOL_GROUPS: Record<ToolGroup, ToolGroupConfig> = {
 		],
 	},
 	edit: {
-		tools: ["apply_diff", "write_to_file", "insert_content", "search_and_replace", "new_rule"],
+		tools: ["apply_diff", "write_to_file", "insert_content", "search_and_replace", "new_rule", "morph_semantic_edit"],
 	},
 	browser: {
 		tools: ["browser_action"],

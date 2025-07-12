@@ -4,6 +4,7 @@ export const EXPERIMENT_IDS = {
 	AUTOCOMPLETE: "autocomplete", // kilocode_change
 	MULTI_FILE_APPLY_DIFF: "multiFileApplyDiff",
 	POWER_STEERING: "powerSteering",
+	MORPH_FAST_APPLY: "morphFastApply",
 } as const satisfies Record<string, ExperimentId>
 
 type _AssertExperimentIds = AssertEqual<Equals<ExperimentId, Values<typeof EXPERIMENT_IDS>>>
@@ -18,6 +19,7 @@ export const experimentConfigsMap: Record<ExperimentKey, ExperimentConfig> = {
 	AUTOCOMPLETE: { enabled: false }, // kilocode_change
 	MULTI_FILE_APPLY_DIFF: { enabled: false },
 	POWER_STEERING: { enabled: false },
+	MORPH_FAST_APPLY: { enabled: false },
 }
 
 export const experimentDefault = Object.fromEntries(
