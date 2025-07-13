@@ -21,7 +21,7 @@ import { getLanguageFromPath } from "@src/utils/getLanguageFromPath"
 // import { Button } from "@src/components/ui" // kilocode_change
 
 import { ToolUseBlock, ToolUseBlockHeader } from "../common/ToolUseBlock"
-import CodeAccordian from "../common/CodeAccordian"
+import CodeAccordion from "../common/CodeAccordion"
 import CodeBlock from "../common/CodeBlock"
 import MarkdownBlock from "../common/MarkdownBlock"
 import { ReasoningBlock } from "./ReasoningBlock"
@@ -349,7 +349,7 @@ export const ChatRowContent = ({
 										: t("chat:fileOperations.wantsToEdit")}
 							</span>
 						</div>
-						<CodeAccordian
+						<CodeAccordion
 							path={tool.path}
 							code={tool.content ?? tool.diff}
 							language="diff"
@@ -384,7 +384,7 @@ export const ChatRowContent = ({
 												})}
 							</span>
 						</div>
-						<CodeAccordian
+						<CodeAccordion
 							path={tool.path}
 							code={tool.diff}
 							language="diff"
@@ -415,7 +415,7 @@ export const ChatRowContent = ({
 										: t("chat:fileOperations.didSearchReplace")}
 							</span>
 						</div>
-						<CodeAccordian
+						<CodeAccordion
 							path={tool.path}
 							code={tool.diff}
 							language="diff"
@@ -466,7 +466,7 @@ export const ChatRowContent = ({
 									: t("chat:fileOperations.wantsToCreate")}
 							</span>
 						</div>
-						<CodeAccordian
+						<CodeAccordion
 							path={tool.path}
 							code={tool.content}
 							language={getLanguageFromPath(tool.path || "") || "log"}
@@ -541,7 +541,7 @@ export const ChatRowContent = ({
 							{toolIcon("file-code")}
 							<span style={{ fontWeight: "bold" }}>{t("chat:instructions.wantsToFetch")}</span>
 						</div>
-						<CodeAccordian
+						<CodeAccordion
 							code={tool.content}
 							language="markdown"
 							isLoading={message.partial}
@@ -565,7 +565,7 @@ export const ChatRowContent = ({
 										: t("chat:directoryOperations.didViewTopLevel")}
 							</span>
 						</div>
-						<CodeAccordian
+						<CodeAccordion
 							path={tool.path}
 							code={tool.content}
 							language="shell-session"
@@ -589,7 +589,7 @@ export const ChatRowContent = ({
 										: t("chat:directoryOperations.didViewRecursive")}
 							</span>
 						</div>
-						<CodeAccordian
+						<CodeAccordion
 							path={tool.path}
 							code={tool.content}
 							language="shellsession"
@@ -613,7 +613,7 @@ export const ChatRowContent = ({
 										: t("chat:directoryOperations.didViewDefinitions")}
 							</span>
 						</div>
-						<CodeAccordian
+						<CodeAccordion
 							path={tool.path}
 							code={tool.content}
 							language="markdown"
@@ -651,7 +651,7 @@ export const ChatRowContent = ({
 								)}
 							</span>
 						</div>
-						<CodeAccordian
+						<CodeAccordion
 							path={tool.path! + (tool.filePattern ? `/(${tool.filePattern})` : "")}
 							code={tool.content}
 							language="shellsession"
@@ -984,7 +984,7 @@ export const ChatRowContent = ({
 
 							{isExpanded && (
 								<div style={{ marginTop: "10px" }}>
-									<CodeAccordian
+									<CodeAccordion
 										code={safeJsonParse<any>(message.text)?.request}
 										language="markdown"
 										isExpanded={true}
@@ -1016,7 +1016,7 @@ export const ChatRowContent = ({
 					const tool = safeJsonParse<ClineSayTool>(message.text)
 					return (
 						<div style={{ marginTop: -10, width: "100%" }}>
-							<CodeAccordian
+							<CodeAccordion
 								code={tool?.diff}
 								language="diff"
 								isFeedback={true}

@@ -7,7 +7,7 @@ import { removeLeadingNonAlphanumeric } from "@src/utils/removeLeadingNonAlphanu
 import { ToolUseBlock, ToolUseBlockHeader } from "./ToolUseBlock"
 import CodeBlock from "./CodeBlock"
 
-interface CodeAccordianProps {
+interface CodeAccordionProps {
 	path?: string
 	code?: string
 	language: string
@@ -19,7 +19,7 @@ interface CodeAccordianProps {
 	header?: string
 }
 
-const CodeAccordian = ({
+const CodeAccordion = ({
 	path,
 	code = "",
 	language,
@@ -29,7 +29,7 @@ const CodeAccordian = ({
 	isFeedback,
 	onToggleExpand,
 	header,
-}: CodeAccordianProps) => {
+}: CodeAccordionProps) => {
 	const inferredLanguage = useMemo(() => language ?? (path ? getLanguageFromPath(path) : "txt"), [path, language])
 	const source = useMemo(() => code.trim(), [code])
 	const hasHeader = Boolean(path || isFeedback || header)
@@ -80,4 +80,4 @@ const CodeAccordian = ({
 	)
 }
 
-export default memo(CodeAccordian)
+export default memo(CodeAccordion)

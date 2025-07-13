@@ -52,7 +52,7 @@ vi.mock("@src/components/common/CodeBlock", () => ({
 	CODE_BLOCK_BG_COLOR: "rgb(30, 30, 30)",
 }))
 
-vi.mock("@src/components/common/CodeAccordian", () => ({
+vi.mock("@src/components/common/CodeAccordion", () => ({
 	default: () => null,
 }))
 

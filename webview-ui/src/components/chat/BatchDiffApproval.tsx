@@ -1,5 +1,5 @@
 import React, { memo, useState } from "react"
-import CodeAccordian from "../common/CodeAccordian"
+import CodeAccordion from "../common/CodeAccordion"
 
 interface FileDiff {
 	path: string
@@ -40,7 +40,7 @@ export const BatchDiffApproval = memo(({ files = [], ts }: BatchDiffApprovalProp
 
 					return (
 						<div key={`${file.path}-${ts}`}>
-							<CodeAccordian
+							<CodeAccordion
 								path={file.path}
 								code={combinedDiff}
 								language="diff"
