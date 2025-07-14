@@ -11,7 +11,7 @@
 		"title": "Babala sa Mababang Credit!",
 		"message": "Tingnan kung maaari kang mag-top up ng libreng credits o bumili ng iba pa!"
 	},
-	"notLoggedInError": "Hindi makumpleto ang kahilingan, siguraduhing nakakonekta ka at naka-log in sa napiling provider.",
+	"notLoggedInError": "Hindi makumpleto ang kahilingan, siguraduhing nakakonekta ka at naka-log in sa napiling provider.\n\n{{error}}",
 	"rules": {
 		"actions": {
 			"delete": "Tanggalin",

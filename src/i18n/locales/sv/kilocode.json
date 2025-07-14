@@ -11,7 +11,7 @@
 		"title": "Varning för låg kredit!",
 		"message": "Kontrollera om du kan fylla på med gratis krediter eller köpa fler!"
 	},
-	"notLoggedInError": "Kan inte slutföra begäran, se till att du är ansluten och inloggad med den valda leverantören.",
+	"notLoggedInError": "Kan inte slutföra begäran, se till att du är ansluten och inloggad med den valda leverantören.\n\n{{error}}",
 	"rules": {
 		"actions": {
 			"delete": "Ta bort",

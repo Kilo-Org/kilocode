@@ -11,7 +11,7 @@
 		"title": "Waarschuwing: laag krediet!",
 		"message": "Controleer of je kunt opwaarderen met gratis credits of meer kunt kopen!"
 	},
-	"notLoggedInError": "Kan verzoek niet voltooien, zorg ervoor dat je verbonden bent en ingelogd met de geselecteerde provider.",
+	"notLoggedInError": "Kan verzoek niet voltooien, zorg ervoor dat je verbonden bent en ingelogd met de geselecteerde provider.\n\n{{error}}",
 	"rules": {
 		"actions": {
 			"delete": "Verwijderen",

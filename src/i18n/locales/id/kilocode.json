@@ -11,7 +11,7 @@
 		"title": "Peringatan Kredit Rendah!",
 		"message": "Periksa apakah kamu bisa mengisi ulang dengan kredit gratis atau beli lebih banyak!"
 	},
-	"notLoggedInError": "Tidak dapat menyelesaikan permintaan, pastikan kamu terhubung dan masuk dengan penyedia yang dipilih.",
+	"notLoggedInError": "Tidak dapat menyelesaikan permintaan, pastikan kamu terhubung dan masuk dengan penyedia yang dipilih.\n\n{{error}}",
 	"rules": {
 		"actions": {
 			"delete": "Hapus",

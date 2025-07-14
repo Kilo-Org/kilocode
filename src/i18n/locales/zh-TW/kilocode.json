@@ -11,7 +11,7 @@
 		"title": "餘額不足警告！",
 		"message": "請檢查是否可以充值免費額度或購買更多額度！"
 	},
-	"notLoggedInError": "無法完成請求，請確保你已連接並登入所選的提供者。",
+	"notLoggedInError": "無法完成請求，請確保你已連接並登入所選的提供者。\n\n{{error}}",
 	"rules": {
 		"actions": {
 			"delete": "刪除",

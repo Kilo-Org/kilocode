@@ -11,7 +11,7 @@
 		"title": "Cảnh Báo Tín Dụng Thấp!",
 		"message": "Kiểm tra xem bạn có thể nạp thêm tín dụng miễn phí hoặc mua thêm không!"
 	},
-	"notLoggedInError": "Không thể hoàn thành yêu cầu, hãy đảm bảo bạn đã kết nối và đăng nhập với nhà cung cấp đã chọn.",
+	"notLoggedInError": "Không thể hoàn thành yêu cầu, hãy đảm bảo bạn đã kết nối và đăng nhập với nhà cung cấp đã chọn.\n\n{{error}}",
 	"rules": {
 		"actions": {
 			"delete": "Xóa",
