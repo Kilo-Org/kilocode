@@ -803,6 +803,9 @@ importers:
       fastest-levenshtein:
         specifier: ^1.0.16
         version: 1.0.16
+      fuse.js:
+        specifier: ^7.1.0
+        version: 7.1.0
       fzf:
         specifier: ^0.5.2
         version: 0.5.2
@@ -6719,6 +6722,10 @@ packages:
 
   functions-have-names@1.2.3:
     resolution: {integrity: sha512-xckBUXyTIqT97tq2x2AMb+g163b5JFysYk0x4qxNFwbfQkmNZoiRHb6sPzI9/QV33WeuvVYBUIiD4NzNIyqaRQ==}
+
+  fuse.js@7.1.0:
+    resolution: {integrity: sha512-trLf4SzuuUxfusZADLINj+dE8clK1frKdmqiJNb1Es75fmI5oY6X2mxLVUciLLjxqw/xr72Dhy+lER6dGd02FQ==}
+    engines: {node: '>=10'}
 
   fuzzysort@3.1.0:
     resolution: {integrity: sha512-sR9BNCjBg6LNgwvxlBd0sBABvQitkLzoVY9MYYROQVX/FvfJ4Mai9LsGhDgd8qYdds0bY77VzYd5iuB+v5rwQQ==}
@@ -17732,6 +17739,8 @@ snapshots:
       is-callable: 1.2.7
 
   functions-have-names@1.2.3: {}
+
+  fuse.js@7.1.0: {}
 
   fuzzysort@3.1.0: {}
 

@@ -102,8 +102,23 @@ export class GhostProvider {
 		})
 	}
 
+	private async enhanceContext(context: GhostSuggestionContext): Promise<GhostSuggestionContext> {
+		const editor = vscode.window.activeTextEditor
+		if (!editor) {
+			return context
+		}
+		// Add open files to the context
+		const openFiles = vscode.workspace.textDocuments.filter((doc) => doc.uri.scheme === "file")
+		return {
+			...context,
+			openFiles,
+		}
+	}
+
 	private async provideCodeSuggestions(context: GhostSuggestionContext): Promise<void> {
 		let cancelled = false
+
+		const enhancedContext = await this.enhanceContext(context)
 
 		await vscode.window.withProgress(
 			{
@@ -125,7 +140,7 @@ export class GhostProvider {
 				const customInstructions = await addCustomInstructions("", "", workspacePath, "ghost")
 
 				const systemPrompt = this.strategy.getSystemPrompt(customInstructions)
-				const userPrompt = this.strategy.getSuggestionPrompt(context)
+				const userPrompt = this.strategy.getSuggestionPrompt(enhancedContext)
 
 				if (cancelled) {
 					return
@@ -146,7 +161,7 @@ export class GhostProvider {
 					message: t("kilocode:ghost.progress.processing"),
 				})
 				// First parse the response into edit operations
-				this.suggestions = await this.strategy.parseResponse(response)
+				this.suggestions = await this.strategy.parseResponse(response, enhancedContext)
 
 				if (cancelled) {
 					this.suggestions.clear()
