@@ -106,11 +106,14 @@ ${sections.filter(Boolean).join("\n\n")}
 
 	private async FuzzyMatchDiff(diff: string, context: GhostSuggestionContext) {
 		const openFiles = context.openFiles || []
-		const openFilesUris = openFiles.map((doc) => ({ uri: doc.uri.toString() }))
+		const openFilesUris = openFiles.map((doc) => ({
+			relativePath: vscode.workspace.asRelativePath(doc.uri, false),
+			uri: doc.uri,
+		}))
 		const openFilesRepository = new Fuse(openFilesUris, {
 			includeScore: true,
 			threshold: 0.6,
-			keys: ["uri"],
+			keys: ["relativePath"],
 		})
 
 		const filePatches = parsePatch(diff)
@@ -130,9 +133,7 @@ ${sections.filter(Boolean).join("\n\n")}
 				continue // Skip if no files match the fuzzy search
 			}
 			const bestUriMatch = matchedFiles[0].item.uri
-
-			const fileUri = vscode.Uri.parse(bestUriMatch)
-			const document = await vscode.workspace.openTextDocument(fileUri)
+			const document = await vscode.workspace.openTextDocument(bestUriMatch)
 			if (!document) {
 				continue // Skip if the document cannot be opened
 			}
