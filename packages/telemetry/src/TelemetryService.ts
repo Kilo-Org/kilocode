@@ -135,6 +135,10 @@ export class TelemetryService {
 		})
 	}
 
+	public captureCommitMsgGenerated(): void {
+		this.captureEvent(TelemetryEventName.COMMIT_MSG_GENERATED)
+	}
+
 	public captureSlidingWindowTruncation(taskId: string): void {
 		this.captureEvent(TelemetryEventName.SLIDING_WINDOW_TRUNCATION, { taskId })
 	}
