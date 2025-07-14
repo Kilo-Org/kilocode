@@ -17,6 +17,7 @@ export type ToolGroup = z.infer<typeof toolGroupsSchema>
 export const toolNames = [
 	"execute_command",
 	"read_file",
+	"read_media",
 	"write_to_file",
 	"apply_diff",
 	"insert_content",

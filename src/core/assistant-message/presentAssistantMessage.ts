@@ -24,6 +24,7 @@ import { askFollowupQuestionTool } from "../tools/askFollowupQuestionTool"
 import { switchModeTool } from "../tools/switchModeTool"
 import { attemptCompletionTool } from "../tools/attemptCompletionTool"
 import { newTaskTool } from "../tools/newTaskTool"
+import { readMediaTool } from "../tools/readMediaTool"
 
 import { checkpointSave } from "../checkpoints"
 
@@ -221,7 +222,8 @@ export async function presentAssistantMessage(cline: Task) {
 						return `[${block.name}]`
 					case "condense":
 						return `[${block.name}]`
-					// kilocode_change end
+					case "read_media":
+						return `[${block.name} for '${block.params.path}']`
 				}
 			}
 
@@ -537,9 +539,10 @@ export async function presentAssistantMessage(cline: Task) {
 				case "condense":
 					await condenseTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
-				// kilocode_change end
+				case "read_media":
+					await readMediaTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
+					break
 			}
-			// kilocode_change end
 
 			break
 	}
