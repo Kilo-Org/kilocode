@@ -115,7 +115,7 @@ export class GhostSuggestionsState {
 		this.files.clear()
 	}
 
-	public haveSuggestions(): boolean {
+	public hasSuggestions(): boolean {
 		return this.files.size > 0
 	}
 

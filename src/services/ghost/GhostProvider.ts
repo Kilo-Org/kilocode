@@ -199,12 +199,12 @@ export class GhostProvider {
 	}
 
 	private async updateGlobalContext() {
-		const haveSuggestions = this.suggestions.haveSuggestions()
-		await vscode.commands.executeCommand("setContext", "kilocode.ghost.haveSuggestions", haveSuggestions)
+		const hasSuggestions = this.suggestions.hasSuggestions()
+		await vscode.commands.executeCommand("setContext", "kilocode.ghost.hasSuggestions", hasSuggestions)
 	}
 
 	public havePendingSuggestions(): boolean {
-		return this.suggestions.haveSuggestions()
+		return this.suggestions.hasSuggestions()
 	}
 
 	public async cancelSuggestions() {
