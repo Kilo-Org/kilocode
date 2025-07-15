@@ -1,4 +1,6 @@
-import { render, screen, act } from "@/utils/test-utils"
+// npx jest src/context/__tests__/ExtensionStateContext.test.tsx
+
+import { render, screen, act } from "@testing-library/react"
 
 import { ProviderSettings, ExperimentId } from "@roo-code/types"
 
@@ -144,7 +146,7 @@ describe("ExtensionStateContext", () => {
 
 	it("throws error when used outside provider", () => {
 		// Suppress console.error for this test since we expect an error
-		const consoleSpy = vi.spyOn(console, "error")
+		const consoleSpy = jest.spyOn(console, "error")
 		consoleSpy.mockImplementation(() => {})
 
 		expect(() => {
@@ -237,7 +239,6 @@ describe("mergeExtensionState", () => {
 			maxOpenTabsContext: 20,
 			maxWorkspaceFiles: 100,
 			apiConfiguration: { providerId: "openrouter" } as ProviderSettings,
-			telemetrySetting: "unset",
 			showRooIgnoredFiles: true,
 			renderContext: "sidebar",
 			maxReadFileLine: 500,
@@ -246,10 +247,6 @@ describe("mergeExtensionState", () => {
 			organizationAllowList: { allowAll: true, providers: {} },
 			autoCondenseContext: true,
 			autoCondenseContextPercent: 100,
-			cloudIsAuthenticated: false,
-			sharingEnabled: false,
-			profileThresholds: {},
-			hasOpenedModeSelector: false, // Add the new required property
 		}
 
 		const prevState: ExtensionState = {
