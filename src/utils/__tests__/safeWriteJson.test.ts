@@ -5,6 +5,7 @@ import { Writable } from "stream"
 import { safeWriteJson } from "../safeWriteJson"
 import * as path from "path"
 import * as os from "os"
+import * as vscode from "vscode"
 
 const originalFsPromisesRename = actualFsPromises.rename
 const originalFsPromisesUnlink = actualFsPromises.unlink
@@ -42,6 +43,23 @@ vi.mock("fs", async () => {
 		createWriteStream: vi.fn(actualFs.createWriteStream) as any, // Default to actual, but mockable
 	}
 })
+
+// Mock vscode module - only mock what we use
+vi.mock("vscode", () => ({
+	workspace: {
+		fs: {
+			createDirectory: vi.fn(() => Promise.resolve()),
+			stat: vi.fn(() => Promise.resolve({ type: 2, size: 0, mtime: Date.now(), ctime: Date.now() })), // 2 = FileType.Directory
+		},
+	},
+	Uri: {
+		file: (path: string) => ({ fsPath: path, scheme: "file" }),
+	},
+	FileType: {
+		File: 1,
+		Directory: 2,
+	},
+}))
 
 import * as fs from "fs/promises" // This will now be the mocked version
 

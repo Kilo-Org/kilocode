@@ -1,6 +1,5 @@
 import * as vscode from "vscode"
 import * as path from "path"
-import * as fs from "fs/promises"
 import * as diff from "diff"
 import stripBom from "strip-bom"
 import { XMLBuilder } from "fast-xml-parser"
@@ -60,7 +59,9 @@ export class DiffViewProvider {
 		this.preDiagnostics = vscode.languages.getDiagnostics()
 
 		if (fileExists) {
-			this.originalContent = await fs.readFile(absolutePath, "utf-8")
+			const fileUri = vscode.Uri.file(absolutePath)
+			const fileBytes = await vscode.workspace.fs.readFile(fileUri)
+			this.originalContent = new TextDecoder().decode(fileBytes)
 		} else {
 			this.originalContent = ""
 		}
@@ -71,7 +72,9 @@ export class DiffViewProvider {
 
 		// Make sure the file exists before we open it.
 		if (!fileExists) {
-			await fs.writeFile(absolutePath, "")
+			const fileUri = vscode.Uri.file(absolutePath)
+			const encoder = new TextEncoder()
+			await vscode.workspace.fs.writeFile(fileUri, encoder.encode(""))
 		}
 
 		// If the file was already open, close it (must happen after showing the
@@ -345,11 +348,13 @@ export class DiffViewProvider {
 			}
 
 			await this.closeAllDiffViews()
-			await fs.unlink(absolutePath)
+			const fileUri = vscode.Uri.file(absolutePath)
+			await vscode.workspace.fs.delete(fileUri)
 
 			// Remove only the directories we created, in reverse order.
 			for (let i = this.createdDirs.length - 1; i >= 0; i--) {
-				await fs.rmdir(this.createdDirs[i])
+				const dirUri = vscode.Uri.file(this.createdDirs[i])
+				await vscode.workspace.fs.delete(dirUri)
 			}
 		} else {
 			// Revert document.

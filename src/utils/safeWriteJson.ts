@@ -1,6 +1,7 @@
 import * as fs from "fs/promises"
 import * as fsSync from "fs"
 import * as path from "path"
+import * as vscode from "vscode"
 import * as lockfile from "proper-lockfile"
 import Disassembler from "stream-json/Disassembler"
 import Stringer from "stream-json/Stringer"
@@ -26,12 +27,28 @@ async function safeWriteJson(filePath: string, data: any): Promise<void> {
 	const dirPath = path.dirname(absoluteFilePath)
 
 	// Ensure directory structure exists with improved reliability
+	// Use VS Code API for directory creation (better remote support)
 	try {
-		// Create directory with recursive option
-		await fs.mkdir(dirPath, { recursive: true })
+		const dirUri = vscode.Uri.file(dirPath)
+		// VS Code's createDirectory automatically creates parent directories
+		await vscode.workspace.fs.createDirectory(dirUri)
 
 		// Verify directory exists after creation attempt
-		await fs.access(dirPath)
+		try {
+			const stat = await vscode.workspace.fs.stat(dirUri)
+			if (stat.type !== vscode.FileType.Directory) {
+				throw new Error(`Path exists but is not a directory: ${dirPath}`)
+			}
+		} catch (statError: any) {
+			if (statError.code === "FileNotFound") {
+				throw new Error(`Directory creation failed: ${dirPath}`)
+			}
+			throw statError
+		}
+
+		// Also ensure the directory exists for Node.js operations (for proper-lockfile)
+		// This is needed because proper-lockfile uses Node.js fs internally
+		await fs.mkdir(dirPath, { recursive: true })
 	} catch (dirError: any) {
 		console.error(`Failed to create or access directory for ${absoluteFilePath}:`, dirError)
 		throw dirError
@@ -184,51 +201,23 @@ async function safeWriteJson(filePath: string, data: any): Promise<void> {
  * @param data The data to stream.
  * @returns Promise<void>
  */
-async function _streamDataToFile(targetPath: string, data: any): Promise<void> {
-	// Stream data to avoid high memory usage for large JSON objects.
-	const fileWriteStream = fsSync.createWriteStream(targetPath, { encoding: "utf8" })
-	const disassembler = Disassembler.disassembler()
-	// Output will be compact JSON as standard Stringer is used.
-	const stringer = Stringer.stringer()
+async function _streamDataToFile(filePath: string, data: any): Promise<void> {
+	return new Promise((resolve, reject) => {
+		const writeStream = fsSync.createWriteStream(filePath)
+		const disassembler = Disassembler.disassembler()
+		const stringer = Stringer.stringer()
 
-	return new Promise<void>((resolve, reject) => {
-		let errorOccurred = false
-		const handleError = (_streamName: string) => (err: Error) => {
-			if (!errorOccurred) {
-				errorOccurred = true
-				if (!fileWriteStream.destroyed) {
-					fileWriteStream.destroy(err)
-				}
-				reject(err)
-			}
-		}
+		writeStream.on("error", reject)
+		disassembler.on("error", reject)
+		stringer.on("error", reject)
 
-		disassembler.on("error", handleError("Disassembler"))
-		stringer.on("error", handleError("Stringer"))
-		fileWriteStream.on("error", (err: Error) => {
-			if (!errorOccurred) {
-				errorOccurred = true
-				reject(err)
-			}
-		})
+		writeStream.on("finish", resolve)
 
-		fileWriteStream.on("finish", () => {
-			if (!errorOccurred) {
-				resolve()
-			}
-		})
+		// Connect the stream chain
+		disassembler.pipe(stringer).pipe(writeStream)
 
-		disassembler.pipe(stringer).pipe(fileWriteStream)
-
-		// stream-json's Disassembler might error if `data` is undefined.
-		// JSON.stringify(undefined) would produce the string "undefined" if it's the root value.
-		// Writing 'null' is a safer JSON representation for a root undefined value.
-		if (data === undefined) {
-			disassembler.write(null)
-		} else {
-			disassembler.write(data)
-		}
-		disassembler.end()
+		// Send the data for disassembly and stringification
+		disassembler.end(data)
 	})
 }
 

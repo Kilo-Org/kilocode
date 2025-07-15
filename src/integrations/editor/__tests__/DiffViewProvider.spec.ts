@@ -27,6 +27,8 @@ vi.mock("vscode", () => ({
 		textDocuments: [],
 		fs: {
 			stat: vi.fn(),
+			readFile: vi.fn().mockResolvedValue(new TextEncoder().encode("file content")),
+			delete: vi.fn().mockResolvedValue(undefined),
 		},
 	},
 	window: {

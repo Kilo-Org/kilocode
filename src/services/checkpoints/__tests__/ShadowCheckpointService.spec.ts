@@ -1,11 +1,22 @@
 // npx vitest run src/services/checkpoints/__tests__/ShadowCheckpointService.spec.ts
 
+import { describe, it, expect, beforeEach, afterEach, afterAll, vi, vitest } from "vitest"
 import fs from "fs/promises"
 import path from "path"
 import os from "os"
 import { EventEmitter } from "events"
 
 import { simpleGit, SimpleGit } from "simple-git"
+
+// Mock vscode before importing modules that depend on it
+vi.mock("vscode", () => ({
+	workspace: {
+		workspaceFolders: [],
+	},
+	window: {
+		showErrorMessage: vi.fn(),
+	},
+}))
 
 import { fileExistsAtPath } from "../../../utils/fs"
 import * as fileSearch from "../../../services/search/file-search"
