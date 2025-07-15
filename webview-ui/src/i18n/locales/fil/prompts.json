@@ -191,5 +191,13 @@
 		},
 		"deleteMode": "Tanggalin ang mode"
 	},
-	"allFiles": "lahat ng file"
+	"allFiles": "lahat ng file",
+	"deleteMode": {
+		"title": "Tanggalin ang Mode",
+		"message": "Sigurado ka bang gusto mong tanggalin ang mode na \"{{modeName}}\"?",
+		"rulesFolder": "Ang mode na ito ay may rules folder sa {{folderPath}} na matatanggal din.",
+		"descriptionNoRules": "Sigurado ka bang gusto mong tanggalin ang custom mode na ito?",
+		"confirm": "Tanggalin",
+		"cancel": "Kanselahin"
+	}
 }

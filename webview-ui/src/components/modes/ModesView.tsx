@@ -48,6 +48,7 @@ import {
 	Input,
 	StandardTooltip,
 } from "@src/components/ui"
+import { DeleteModeDialog } from "@src/components/modes/DeleteModeDialog"
 
 // Get all available groups that should show in prompts view
 const availableGroups = (Object.keys(TOOL_GROUPS) as ToolGroup[]).filter((group) => !TOOL_GROUPS[group].alwaysAvailable)
@@ -97,6 +98,13 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 	const [isImporting, setIsImporting] = useState(false)
 	const [showImportDialog, setShowImportDialog] = useState(false)
 	const [hasRulesToExport, setHasRulesToExport] = useState<Record<string, boolean>>({})
+	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+	const [modeToDelete, setModeToDelete] = useState<{
+		slug: string
+		name: string
+		source?: string
+		rulesFolderPath?: string
+	} | null>(null)
 
 	// State for mode selection popover and search
 	const [open, setOpen] = useState(false)
@@ -409,6 +417,14 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 		return () => document.removeEventListener("click", handleClickOutside)
 	}, [showConfigMenu])
 
+	// Use a ref to store the current modeToDelete value
+	const modeToDeleteRef = useRef(modeToDelete)
+
+	// Update the ref whenever modeToDelete changes
+	useEffect(() => {
+		modeToDeleteRef.current = modeToDelete
+	}, [modeToDelete])
+
 	useEffect(() => {
 		const handler = (event: MessageEvent) => {
 			const message = event.data
@@ -440,12 +456,23 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 					...prev,
 					[message.slug]: message.hasContent,
 				}))
+			} else if (message.type === "deleteCustomModeCheck") {
+				// Handle the check response
+				// Use the ref to get the current modeToDelete value
+				const currentModeToDelete = modeToDeleteRef.current
+				if (message.slug && currentModeToDelete && currentModeToDelete.slug === message.slug) {
+					setModeToDelete({
+						...currentModeToDelete,
+						rulesFolderPath: message.rulesFolderPath,
+					})
+					setShowDeleteConfirm(true)
+				}
 			}
 		}
 
 		window.addEventListener("message", handler)
 		return () => window.removeEventListener("message", handler)
-	}, [])
+	}, []) // Empty dependency array - only register once
 
 	const handleAgentReset = (
 		modeSlug: string,
@@ -700,10 +727,20 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 											variant="ghost"
 											size="icon"
 											onClick={() => {
-												vscode.postMessage({
-													type: "deleteCustomMode",
-													slug: visualMode,
-												})
+												const customMode = findModeBySlug(visualMode, customModes)
+												if (customMode) {
+													setModeToDelete({
+														slug: customMode.slug,
+														name: customMode.name,
+														source: customMode.source || "global",
+													})
+													// First check if rules folder exists
+													vscode.postMessage({
+														type: "deleteCustomMode",
+														slug: customMode.slug,
+														checkOnly: true,
+													})
+												}
 											}}>
 											<span className="codicon codicon-trash"></span>
 										</Button>
@@ -1542,6 +1579,24 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 					</div>
 				</div>
 			)}
+
+			{/* Delete Mode Confirmation Dialog */}
+			<DeleteModeDialog
+				open={showDeleteConfirm}
+				onOpenChange={setShowDeleteConfirm}
+				modeToDelete={modeToDelete}
+				onConfirm={() => {
+					if (modeToDelete) {
+						vscode.postMessage({
+							type: "deleteCustomMode",
+							slug: modeToDelete.slug,
+						})
+						setShowDeleteConfirm(false)
+						setModeToDelete(null)
+					}
+				}}
+			/>
+
 			{/* kilocode_change */}
 			<BottomControls />
 		</Tab>

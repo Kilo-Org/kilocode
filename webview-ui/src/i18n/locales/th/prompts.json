@@ -191,5 +191,13 @@
 		},
 		"deleteMode": "ลบโหมด"
 	},
-	"allFiles": "ทุกไฟล์"
+	"allFiles": "ทุกไฟล์",
+	"deleteMode": {
+		"title": "ลบโหมด",
+		"message": "คุณแน่ใจหรือไม่ว่าต้องการลบโหมด \"{{modeName}}\"?",
+		"rulesFolder": "โหมดนี้มีโฟลเดอร์กฎที่ {{folderPath}} ซึ่งจะถูกลบด้วย",
+		"descriptionNoRules": "คุณแน่ใจหรือไม่ว่าต้องการลบโหมดที่กำหนดเองนี้?",
+		"confirm": "ลบ",
+		"cancel": "ยกเลิก"
+	}
 }

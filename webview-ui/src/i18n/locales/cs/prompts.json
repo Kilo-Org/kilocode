@@ -191,5 +191,13 @@
 		},
 		"deleteMode": "Smazat režim"
 	},
-	"allFiles": "všechny soubory"
+	"allFiles": "všechny soubory",
+	"deleteMode": {
+		"title": "Smazat režim",
+		"message": "Opravdu chceš smazat režim \"{{modeName}}\"?",
+		"rulesFolder": "Tento režim má složku pravidel v {{folderPath}}, která bude také smazána.",
+		"descriptionNoRules": "Opravdu chceš smazat tento vlastní režim?",
+		"confirm": "Smazat",
+		"cancel": "Zrušit"
+	}
 }

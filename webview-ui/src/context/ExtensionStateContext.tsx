@@ -150,6 +150,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	autoCondenseContextPercent: number
 	setAutoCondenseContextPercent: (value: number) => void
 	routerModels?: RouterModels
+	alwaysAllowUpdateTodoList?: boolean
+	setAlwaysAllowUpdateTodoList: (value: boolean) => void
 }
 
 export const ExtensionStateContext = createContext<ExtensionStateContextType | undefined>(undefined)
@@ -240,13 +242,16 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		autoCondenseContextPercent: 100,
 		profileThresholds: {},
 		codebaseIndexConfig: {
-			codebaseIndexEnabled: false,
+			codebaseIndexEnabled: true,
 			codebaseIndexQdrantUrl: "http://localhost:6333",
 			codebaseIndexEmbedderProvider: "openai",
 			codebaseIndexEmbedderBaseUrl: "",
 			codebaseIndexEmbedderModelId: "",
+			codebaseIndexSearchMaxResults: undefined,
+			codebaseIndexSearchMinScore: undefined,
 		},
 		codebaseIndexModels: { ollama: {}, openai: {} },
+		alwaysAllowUpdateTodoList: true,
 	})
 
 	const [didHydrateState, setDidHydrateState] = useState(false)
@@ -527,6 +532,10 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setSystemNotificationsEnabled: (value) =>
 			setState((prevState) => ({ ...prevState, systemNotificationsEnabled: value })),
 		// kilocode_change end
+		alwaysAllowUpdateTodoList: state.alwaysAllowUpdateTodoList,
+		setAlwaysAllowUpdateTodoList: (value) => {
+			setState((prevState) => ({ ...prevState, alwaysAllowUpdateTodoList: value }))
+		},
 	}
 
 	return <ExtensionStateContext.Provider value={contextValue}>{children}</ExtensionStateContext.Provider>

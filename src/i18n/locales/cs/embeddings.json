@@ -10,7 +10,12 @@
 		"couldNotReadErrorBody": "Nelze přečíst tělo chyby",
 		"requestFailed": "Požadavek Ollama API selhal se stavem {{status}} {{statusText}}: {{errorBody}}",
 		"invalidResponseStructure": "Neplatná struktura odpovědi z Ollama API: pole \"embeddings\" nebylo nalezeno nebo není polem.",
-		"embeddingFailed": "Ollama embedding selhalo: {{message}}"
+		"embeddingFailed": "Ollama embedding selhalo: {{message}}",
+		"serviceNotRunning": "Ollama služba neběží na {{baseUrl}}",
+		"serviceUnavailable": "Ollama služba není dostupná (stav: {{status}})",
+		"modelNotFound": "Ollama model nebyl nalezen: {{modelId}}",
+		"modelNotEmbeddingCapable": "Ollama model nepodporuje embeddings: {{modelId}}",
+		"hostNotFound": "Ollama host nebyl nalezen: {{baseUrl}}"
 	},
 	"scanner": {
 		"unknownErrorProcessingFile": "Neznámá chyba při zpracování souboru {{filePath}}",
@@ -19,5 +24,29 @@
 	},
 	"vectorStore": {
 		"qdrantConnectionFailed": "Připojení k vektorové databázi Qdrant selhalo. Ujisti se prosím, že Qdrant běží a je přístupný na {{qdrantUrl}}. Chyba: {{errorMessage}}"
+	},
+	"validation": {
+		"authenticationFailed": "Autentizace selhala. Zkontroluj prosím svůj API klíč v nastavení.",
+		"connectionFailed": "Připojení k embedder službě selhalo. Zkontroluj prosím nastavení připojení a ujisti se, že služba běží.",
+		"modelNotAvailable": "Zadaný model není dostupný. Zkontroluj prosím konfiguraci modelu.",
+		"configurationError": "Neplatná konfigurace embedderu. Zkontroluj prosím svá nastavení.",
+		"serviceUnavailable": "Embedder služba není dostupná. Ujisti se prosím, že běží a je přístupná.",
+		"invalidEndpoint": "Neplatný API endpoint. Zkontroluj prosím konfiguraci URL.",
+		"invalidEmbedderConfig": "Neplatná konfigurace embedderu. Zkontroluj prosím svá nastavení.",
+		"invalidApiKey": "Neplatný API klíč. Zkontroluj prosím konfiguraci API klíče.",
+		"invalidBaseUrl": "Neplatná základní URL. Zkontroluj prosím konfiguraci URL.",
+		"invalidModel": "Neplatný model. Zkontroluj prosím konfiguraci modelu.",
+		"invalidResponse": "Neplatná odpověď od embedder služby. Zkontroluj prosím svou konfiguraci."
+	},
+	"serviceFactory": {
+		"openAiConfigMissing": "Chybí konfigurace OpenAI pro vytvoření embedderu",
+		"ollamaConfigMissing": "Chybí konfigurace Ollama pro vytvoření embedderu",
+		"openAiCompatibleConfigMissing": "Chybí konfigurace OpenAI Compatible pro vytvoření embedderu",
+		"geminiConfigMissing": "Chybí konfigurace Gemini pro vytvoření embedderu",
+		"invalidEmbedderType": "Nakonfigurován neplatný typ embedderu: {{embedderProvider}}",
+		"vectorDimensionNotDeterminedOpenAiCompatible": "Nelze určit rozměr vektoru pro model '{{modelId}}' s poskytovatelem '{{provider}}'. Ujisti se prosím, že 'Rozměr Embeddingu' je správně nastaven v nastavení OpenAI-Compatible poskytovatele.",
+		"vectorDimensionNotDetermined": "Nelze určit rozměr vektoru pro model '{{modelId}}' s poskytovatelem '{{provider}}'. Zkontroluj profily modelů nebo konfiguraci.",
+		"qdrantUrlMissing": "Chybí Qdrant URL pro vytvoření vektorového úložiště",
+		"codeIndexingNotConfigured": "Nelze vytvořit služby: Indexování kódu není správně nakonfigurováno"
 	}
 }

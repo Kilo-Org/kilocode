@@ -193,12 +193,11 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		allowVeryLargeReads, // kilocode_change
 		condensingApiConfigId,
 		customCondensingPrompt,
-		codebaseIndexConfig,
-		codebaseIndexModels,
 		customSupportPrompts,
 		profileThresholds,
 		systemNotificationsEnabled, // kilocode_change
 		alwaysAllowFollowupQuestions,
+		alwaysAllowUpdateTodoList,
 		followupAutoApproveTimeoutMs,
 		autocompleteApiConfigId, // kilocode_change
 	} = cachedState
@@ -371,13 +370,13 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			vscode.postMessage({ type: "showTaskTimeline", bool: showTaskTimeline }) // kilocode_change
 			vscode.postMessage({ type: "autocompleteApiConfigId", text: autocompleteApiConfigId }) // kilocode_change
 			vscode.postMessage({ type: "alwaysAllowFollowupQuestions", bool: alwaysAllowFollowupQuestions })
+			vscode.postMessage({ type: "alwaysAllowUpdateTodoList", bool: alwaysAllowUpdateTodoList })
 			vscode.postMessage({ type: "followupAutoApproveTimeoutMs", value: followupAutoApproveTimeoutMs })
 			vscode.postMessage({ type: "condensingApiConfigId", text: condensingApiConfigId || "" })
 			vscode.postMessage({ type: "updateCondensingPrompt", text: customCondensingPrompt || "" })
 			vscode.postMessage({ type: "updateSupportPrompt", values: customSupportPrompts || {} })
 			vscode.postMessage({ type: "upsertApiConfiguration", text: currentApiConfigName, apiConfiguration })
 			vscode.postMessage({ type: "telemetrySetting", text: telemetrySetting })
-			vscode.postMessage({ type: "codebaseIndexConfig", values: codebaseIndexConfig })
 			vscode.postMessage({ type: "profileThresholds", values: profileThresholds })
 			vscode.postMessage({ type: "systemNotificationsEnabled", bool: systemNotificationsEnabled }) // kilocode_change
 
@@ -698,6 +697,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 							alwaysAllowSubtasks={alwaysAllowSubtasks}
 							alwaysAllowExecute={alwaysAllowExecute}
 							alwaysAllowFollowupQuestions={alwaysAllowFollowupQuestions}
+							alwaysAllowUpdateTodoList={alwaysAllowUpdateTodoList}
 							followupAutoApproveTimeoutMs={followupAutoApproveTimeoutMs}
 							allowedCommands={allowedCommands}
 							allowedMaxRequests={allowedMaxRequests ?? undefined}
@@ -793,16 +793,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 
 					{/* Experimental Section */}
 					{activeTab === "experimental" && (
-						<ExperimentalSettings
-							setExperimentEnabled={setExperimentEnabled}
-							experiments={experiments}
-							setCachedStateField={setCachedStateField}
-							codebaseIndexModels={codebaseIndexModels}
-							codebaseIndexConfig={codebaseIndexConfig}
-							apiConfiguration={apiConfiguration}
-							setApiConfigurationField={setApiConfigurationField}
-							areSettingsCommitted={!isChangeDetected}
-						/>
+						<ExperimentalSettings setExperimentEnabled={setExperimentEnabled} experiments={experiments} />
 					)}
 
 					{/* Language Section */}

@@ -191,5 +191,13 @@
 		},
 		"deleteMode": "Ta bort läge"
 	},
-	"allFiles": "alla filer"
+	"allFiles": "alla filer",
+	"deleteMode": {
+		"title": "Ta bort läge",
+		"message": "Är du säker på att du vill ta bort läget \"{{modeName}}\"?",
+		"rulesFolder": "Detta läge har en regelmapp på {{folderPath}} som också kommer att tas bort.",
+		"descriptionNoRules": "Är du säker på att du vill ta bort detta anpassade läge?",
+		"confirm": "Ta bort",
+		"cancel": "Avbryt"
+	}
 }

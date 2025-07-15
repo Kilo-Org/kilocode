@@ -127,6 +127,7 @@
 	},
 	"addImages": "Lägg till bilder i meddelandet",
 	"sendMessage": "Skicka meddelande",
+	"stopTts": "Stoppa text-till-tal",
 	"typeMessage": "Skriv ett meddelande...",
 	"typeTask": "Bygg, hitta, fråga något",
 	"addContext": "@ för att lägga till kontext, / för att byta lägen",

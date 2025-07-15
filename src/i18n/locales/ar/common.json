@@ -25,10 +25,12 @@
 	"confirmation": {
 		"reset_state": "متأكد تبي تعيد ضبط الحالة ومساحة التخزين؟ ما تقدر تتراجع بعدها.",
 		"delete_config_profile": "متأكد تبي تحذف هذا الملف التعريفي؟",
-		"delete_custom_mode": "متأكد تبي تحذف هذا الوضع المخصص؟",
+		"delete_custom_mode_with_rules": "متأكد تبي تحذف هذا الوضع {scope}؟\n\nهذا بيحذف كمان مجلد القواعد المرتبط في:\n{rulesFolderPath}",
 		"delete_message": "وش تبي تحذف؟",
-		"just_this_message": "هذي الرسالة بس",
-		"this_and_subsequent": "هذي وكل اللي بعدها"
+		"edit_warning": "تعديل هذي الرسالة بيحذف كل الرسائل اللي بعدها في المحادثة. تبي تكمل؟",
+		"delete_just_this_message": "هذي الرسالة بس",
+		"delete_this_and_subsequent": "هذي وكل اللي بعدها",
+		"proceed": "كمّل"
 	},
 	"errors": {
 		"invalid_data_uri": "تنسيق البيانات غير صحيح",
@@ -79,6 +81,7 @@
 		"share_not_enabled": "مشاركة المهام مو مفعّلة في منظمتك.",
 		"share_task_not_found": "المهمة غير موجودة أو ما عندك صلاحية.",
 		"mode_import_failed": "فشل استيراد الوضع: {{error}}",
+		"delete_rules_folder_failed": "فشل حذف مجلد القواعد: {{rulesFolderPath}}. الخطأ: {{error}}",
 		"claudeCode": {
 			"processExited": "عملية Claude Code انتهت بالكود {{exitCode}}.",
 			"errorOutput": "المخرجات الخطأ: {{output}}",
@@ -125,6 +128,10 @@
 		"remove": "احذف",
 		"keep": "احتفظ"
 	},
+	"buttons": {
+		"save": "احفظ",
+		"edit": "عدّل"
+	},
 	"tasks": {
 		"canceled": "خطأ في المهمة: المستخدم أوقفها وألغى التنفيذ.",
 		"deleted": "فشل المهمة: المستخدم أوقفها وحذفها.",
@@ -151,6 +158,10 @@
 			"resetFailed": "فشل إعادة تعيين الأوضاع المخصصة: {{error}}",
 			"modeNotFound": "خطأ في الكتابة: ما لقينا الوضع المحدد",
 			"noWorkspaceForProject": "ما فيه مجلد مشروع مخصص لهذا الوضع"
+		},
+		"scope": {
+			"project": "مشروع",
+			"global": "عام"
 		}
 	},
 	"mdm": {
@@ -158,6 +169,14 @@
 			"cloud_auth_required": "منظمتك تتطلب تسجيل دخول Kilo Code Cloud. سجل دخولك عشان تكمل.",
 			"organization_mismatch": "لازم تسجل دخول بحساب المنظمة في Kilo Code Cloud.",
 			"verification_failed": "فشل التحقق من تسجيل الدخول للمنظمة."
+		}
+	},
+	"prompts": {
+		"deleteMode": {
+			"title": "احذف الوضع المخصص",
+			"description": "متأكد تبي تحذف هذا الوضع {{scope}}؟ هذا بيحذف كمان مجلد القواعد المرتبط في: {{rulesFolderPath}}",
+			"descriptionNoRules": "متأكد تبي تحذف هذا الوضع المخصص؟",
+			"confirm": "احذف"
 		}
 	}
 }

@@ -79,6 +79,7 @@ export interface ExtensionMessage {
 		| "exportModeResult"
 		| "importModeResult"
 		| "checkRulesDirectoryResult"
+		| "deleteCustomModeCheck"
 		| "currentCheckpointUpdated"
 		| "showHumanRelayDialog"
 		| "humanRelayResponse"
@@ -115,6 +116,8 @@ export interface ExtensionMessage {
 		| "marketplaceData"
 		| "mermaidFixResponse" // kilocode_change
 		| "shareTaskSuccess"
+		| "codeIndexSettingsSaved"
+		| "codeIndexSecretStatus"
 	text?: string
 	payload?: ProfileDataResponsePayload | BalanceDataResponsePayload // kilocode_change: Add payload for profile and balance data
 	action?:
@@ -181,6 +184,8 @@ export interface ExtensionMessage {
 	marketplaceInstalledMetadata?: MarketplaceInstalledMetadata
 	fixedCode?: string | null // For mermaidFixResponse // kilocode_change
 	visibility?: ShareVisibility
+	rulesFolderPath?: string
+	settings?: any
 }
 
 export type ExtensionState = Pick<
@@ -205,6 +210,7 @@ export type ExtensionState = Pick<
 	| "alwaysAllowModeSwitch"
 	| "alwaysAllowSubtasks"
 	| "alwaysAllowExecute"
+	| "alwaysAllowUpdateTodoList"
 	| "allowedCommands"
 	| "allowedMaxRequests"
 	| "browserToolEnabled"

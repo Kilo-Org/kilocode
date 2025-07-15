@@ -25,10 +25,12 @@
 	"confirmation": {
 		"reset_state": "Sigurado ka bang gusto mong i-reset ang lahat ng state at secret storage sa extension? Hindi ito maaaring bawiin.",
 		"delete_config_profile": "Sigurado ka bang gusto mong tanggalin ang configuration profile na ito?",
-		"delete_custom_mode": "Sigurado ka bang gusto mong tanggalin ang custom mode na ito?",
+		"delete_custom_mode_with_rules": "Sigurado ka bang gusto mong tanggalin ang {scope} mode na ito?\n\nTanggalin din nito ang kaugnay na rules folder sa:\n{rulesFolderPath}",
 		"delete_message": "Ano ang gusto mong tanggalin?",
-		"just_this_message": "Ang mensaheng ito lang",
-		"this_and_subsequent": "Ito at lahat ng kasunod na mga mensahe"
+		"edit_warning": "Ang pag-edit ng mensaheng ito ay magtanggal ng lahat ng kasunod na mga mensahe sa pag-uusap. Gusto mo bang magpatuloy?",
+		"delete_just_this_message": "Ang mensaheng ito lang",
+		"delete_this_and_subsequent": "Ito at lahat ng kasunod na mga mensahe",
+		"proceed": "Magpatuloy"
 	},
 	"errors": {
 		"invalid_data_uri": "Invalid na format ng data URI",
@@ -79,6 +81,7 @@
 		"share_not_enabled": "Ang pagbahagi ng task ay hindi pinagana para sa organisasyong ito.",
 		"share_task_not_found": "Hindi nahanap ang task o tinanggihan ang access.",
 		"mode_import_failed": "Nabigo ang pag-import ng mode: {{error}}",
+		"delete_rules_folder_failed": "Nabigo ang pagtanggal ng rules folder: {{rulesFolderPath}}. Error: {{error}}",
 		"claudeCode": {
 			"processExited": "Ang proseso ng Claude Code ay lumabas gamit ang code {{exitCode}}.",
 			"errorOutput": "Error output: {{output}}",
@@ -125,6 +128,10 @@
 		"remove": "Tanggalin",
 		"keep": "Panatilihin"
 	},
+	"buttons": {
+		"save": "I-save",
+		"edit": "I-edit"
+	},
 	"tasks": {
 		"canceled": "Task error: Ito ay tinigil at kinansela ng user.",
 		"deleted": "Task failure: Ito ay tinigil at tinanggal ng user.",
@@ -151,6 +158,10 @@
 			"resetFailed": "Nabigo ang pag-reset ng mga custom mode: {{error}}",
 			"modeNotFound": "Write error: Hindi nahanap ang mode",
 			"noWorkspaceForProject": "Walang nahanap na workspace folder para sa project-specific mode"
+		},
+		"scope": {
+			"project": "proyekto",
+			"global": "pandaigdig"
 		}
 	},
 	"mdm": {
@@ -158,6 +169,14 @@
 			"cloud_auth_required": "Ang iyong organisasyon ay nangangailangan ng Kilo Code Cloud authentication. Mangyaring mag-sign in upang magpatuloy.",
 			"organization_mismatch": "Dapat kang ma-authenticate gamit ang Kilo Code Cloud account ng iyong organisasyon.",
 			"verification_failed": "Hindi ma-verify ang authentication ng organisasyon."
+		}
+	},
+	"prompts": {
+		"deleteMode": {
+			"title": "Tanggalin ang Custom Mode",
+			"description": "Sigurado ka bang gusto mong tanggalin ang {{scope}} mode na ito? Tanggalin din nito ang kaugnay na rules folder sa: {{rulesFolderPath}}",
+			"descriptionNoRules": "Sigurado ka bang gusto mong tanggalin ang custom mode na ito?",
+			"confirm": "Tanggalin"
 		}
 	}
 }

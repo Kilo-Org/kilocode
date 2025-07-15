@@ -24,6 +24,8 @@ import { TaskTimeline } from "./TaskTimeline"
 import { mentionRegexGlobal } from "@roo/context-mentions"
 
 import { vscode } from "@/utils/vscode" // kilocode_change: pull slash commands from Cline
+// import { Mention } from "./Mention" // kilocode_change
+import { TodoListDisplay } from "./TodoListDisplay"
 
 export interface TaskHeaderProps {
 	task: ClineMessage
@@ -41,6 +43,7 @@ export interface TaskHeaderProps {
 	onMessageClick?: (index: number) => void
 	isTaskActive?: boolean
 	// kilocode_change end
+	todos?: any[]
 }
 
 const TaskHeader = ({
@@ -59,6 +62,7 @@ const TaskHeader = ({
 	onMessageClick,
 	isTaskActive = false,
 	// kilocode_change end
+	todos,
 }: TaskHeaderProps) => {
 	const { t } = useTranslation()
 	const { showTaskTimeline } = useExtensionState() // kilocode_change
@@ -83,11 +87,14 @@ const TaskHeader = ({
 		</StandardTooltip>
 	)
 
+	const hasTodos = todos && Array.isArray(todos) && todos.length > 0
+
 	return (
 		<div className="py-2 px-3">
 			<div
 				className={cn(
-					"rounded-xs p-2.5 flex flex-col relative z-1 border",
+					"p-2.5 flex flex-col gap-1.5 relative z-1 border",
+					hasTodos ? "rounded-t-xs border-b-0" : "rounded-xs",
 					isTaskExpanded
 						? "border-vscode-panel-border text-vscode-foreground"
 						: "border-vscode-panel-border/80 text-vscode-foreground/80",
@@ -251,6 +258,7 @@ const TaskHeader = ({
 					</>
 				)}
 			</div>
+			<TodoListDisplay todos={todos ?? (task as any)?.tool?.todos ?? []} />
 		</div>
 	)
 }

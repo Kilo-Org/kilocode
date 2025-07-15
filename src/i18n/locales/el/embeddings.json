@@ -10,7 +10,12 @@
 		"couldNotReadErrorBody": "Δεν ήταν δυνατή η ανάγνωση του error body",
 		"requestFailed": "Το αίτημα Ollama API απέτυχε με κατάσταση {{status}} {{statusText}}: {{errorBody}}",
 		"invalidResponseStructure": "Μη έγκυρη δομή απόκρισης από το Ollama API: το \"embeddings\" array δεν βρέθηκε ή δεν είναι array.",
-		"embeddingFailed": "Το Ollama embedding απέτυχε: {{message}}"
+		"embeddingFailed": "Το Ollama embedding απέτυχε: {{message}}",
+		"serviceNotRunning": "Η υπηρεσία Ollama δεν εκτελείται στο {{baseUrl}}",
+		"serviceUnavailable": "Η υπηρεσία Ollama δεν είναι διαθέσιμη (κατάσταση: {{status}})",
+		"modelNotFound": "Το μοντέλο Ollama δεν βρέθηκε: {{modelId}}",
+		"modelNotEmbeddingCapable": "Το μοντέλο Ollama δεν υποστηρίζει embedding: {{modelId}}",
+		"hostNotFound": "Ο host Ollama δεν βρέθηκε: {{baseUrl}}"
 	},
 	"scanner": {
 		"unknownErrorProcessingFile": "Άγνωστο σφάλμα κατά την επεξεργασία του αρχείου {{filePath}}",
@@ -19,5 +24,29 @@
 	},
 	"vectorStore": {
 		"qdrantConnectionFailed": "Αποτυχία σύνδεσης με τη βάση δεδομένων Qdrant vector. Παρακαλώ βεβαιώσου ότι το Qdrant εκτελείται και είναι προσβάσιμο στο {{qdrantUrl}}. Σφάλμα: {{errorMessage}}"
+	},
+	"validation": {
+		"authenticationFailed": "Η ταυτοποίηση απέτυχε. Παρακαλώ έλεγξε το API key σου στις ρυθμίσεις.",
+		"connectionFailed": "Αποτυχία σύνδεσης με την υπηρεσία embedder. Παρακαλώ έλεγξε τις ρυθμίσεις σύνδεσής σου και βεβαιώσου ότι η υπηρεσία εκτελείται.",
+		"modelNotAvailable": "Το καθορισμένο μοντέλο δεν είναι διαθέσιμο. Παρακαλώ έλεγξε τη διαμόρφωση του μοντέλου σου.",
+		"configurationError": "Μη έγκυρη διαμόρφωση embedder. Παρακαλώ επανεξέτασε τις ρυθμίσεις σου.",
+		"serviceUnavailable": "Η υπηρεσία embedder δεν είναι διαθέσιμη. Παρακαλώ βεβαιώσου ότι εκτελείται και είναι προσβάσιμη.",
+		"invalidEndpoint": "Μη έγκυρο API endpoint. Παρακαλώ έλεγξε τη διαμόρφωση URL σου.",
+		"invalidEmbedderConfig": "Μη έγκυρη διαμόρφωση embedder. Παρακαλώ έλεγξε τις ρυθμίσεις σου.",
+		"invalidApiKey": "Μη έγκυρο API key. Παρακαλώ έλεγξε τη διαμόρφωση του API key σου.",
+		"invalidBaseUrl": "Μη έγκυρο base URL. Παρακαλώ έλεγξε τη διαμόρφωση URL σου.",
+		"invalidModel": "Μη έγκυρο μοντέλο. Παρακαλώ έλεγξε τη διαμόρφωση του μοντέλου σου.",
+		"invalidResponse": "Μη έγκυρη απόκριση από την υπηρεσία embedder. Παρακαλώ έλεγξε τη διαμόρφωσή σου."
+	},
+	"serviceFactory": {
+		"openAiConfigMissing": "Λείπει η διαμόρφωση OpenAI για τη δημιουργία embedder",
+		"ollamaConfigMissing": "Λείπει η διαμόρφωση Ollama για τη δημιουργία embedder",
+		"openAiCompatibleConfigMissing": "Λείπει η διαμόρφωση OpenAI Compatible για τη δημιουργία embedder",
+		"geminiConfigMissing": "Λείπει η διαμόρφωση Gemini για τη δημιουργία embedder",
+		"invalidEmbedderType": "Μη έγκυρος τύπος embedder διαμορφωμένος: {{embedderProvider}}",
+		"vectorDimensionNotDeterminedOpenAiCompatible": "Δεν ήταν δυνατός ο προσδιορισμός της διάστασης vector για το μοντέλο '{{modelId}}' με τον πάροχο '{{provider}}'. Παρακαλώ βεβαιώσου ότι η 'Διάσταση Embedding' είναι σωστά ρυθμισμένη στις ρυθμίσεις του παρόχου OpenAI-Compatible.",
+		"vectorDimensionNotDetermined": "Δεν ήταν δυνατός ο προσδιορισμός της διάστασης vector για το μοντέλο '{{modelId}}' με τον πάροχο '{{provider}}'. Έλεγξε τα προφίλ μοντέλων ή τη διαμόρφωση.",
+		"qdrantUrlMissing": "Λείπει το Qdrant URL για τη δημιουργία vector store",
+		"codeIndexingNotConfigured": "Δεν είναι δυνατή η δημιουργία υπηρεσιών: Η ευρετηρίαση κώδικα δεν είναι σωστά διαμορφωμένη"
 	}
 }

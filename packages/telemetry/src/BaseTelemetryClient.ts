@@ -46,6 +46,7 @@ export abstract class BaseTelemetryClient implements TelemetryClient {
 				console.error(
 					`Error getting telemetry properties: ${error instanceof Error ? error.message : String(error)}`,
 				)
+				providerProperties.exception = error instanceof Error ? error.stack || error.message : String(error) // kilocode_change
 			}
 		}
 

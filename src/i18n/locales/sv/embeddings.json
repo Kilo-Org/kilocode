@@ -10,7 +10,12 @@
 		"couldNotReadErrorBody": "Kunde inte läsa felmeddelande",
 		"requestFailed": "Ollama API-begäran misslyckades med status {{status}} {{statusText}}: {{errorBody}}",
 		"invalidResponseStructure": "Ogiltig svarsstruktur från Ollama API: \"embeddings\" array hittades inte eller är inte en array.",
-		"embeddingFailed": "Ollama embedding misslyckades: {{message}}"
+		"embeddingFailed": "Ollama embedding misslyckades: {{message}}",
+		"serviceNotRunning": "Ollama-tjänsten körs inte på {{baseUrl}}",
+		"serviceUnavailable": "Ollama-tjänsten är inte tillgänglig (status: {{status}})",
+		"modelNotFound": "Ollama-modell hittades inte: {{modelId}}",
+		"modelNotEmbeddingCapable": "Ollama-modell stöder inte embeddings: {{modelId}}",
+		"hostNotFound": "Ollama-värd hittades inte: {{baseUrl}}"
 	},
 	"scanner": {
 		"unknownErrorProcessingFile": "Okänt fel vid bearbetning av fil {{filePath}}",
@@ -19,5 +24,29 @@
 	},
 	"vectorStore": {
 		"qdrantConnectionFailed": "Misslyckades med att ansluta till Qdrant vektordatabas. Se till att Qdrant körs och är tillgänglig på {{qdrantUrl}}. Fel: {{errorMessage}}"
+	},
+	"validation": {
+		"authenticationFailed": "Autentisering misslyckades. Kontrollera din API-nyckel i inställningarna.",
+		"connectionFailed": "Misslyckades med att ansluta till embedder-tjänsten. Kontrollera dina anslutningsinställningar och se till att tjänsten körs.",
+		"modelNotAvailable": "Den angivna modellen är inte tillgänglig. Kontrollera din modellkonfiguration.",
+		"configurationError": "Ogiltig embedder-konfiguration. Granska dina inställningar.",
+		"serviceUnavailable": "Embedder-tjänsten är inte tillgänglig. Se till att den körs och är tillgänglig.",
+		"invalidEndpoint": "Ogiltig API-endpoint. Kontrollera din URL-konfiguration.",
+		"invalidEmbedderConfig": "Ogiltig embedder-konfiguration. Kontrollera dina inställningar.",
+		"invalidApiKey": "Ogiltig API-nyckel. Kontrollera din API-nyckelkonfiguration.",
+		"invalidBaseUrl": "Ogiltig bas-URL. Kontrollera din URL-konfiguration.",
+		"invalidModel": "Ogiltig modell. Kontrollera din modellkonfiguration.",
+		"invalidResponse": "Ogiltigt svar från embedder-tjänsten. Kontrollera din konfiguration."
+	},
+	"serviceFactory": {
+		"openAiConfigMissing": "OpenAI-konfiguration saknas för embedder-skapande",
+		"ollamaConfigMissing": "Ollama-konfiguration saknas för embedder-skapande",
+		"openAiCompatibleConfigMissing": "OpenAI-kompatibel konfiguration saknas för embedder-skapande",
+		"geminiConfigMissing": "Gemini-konfiguration saknas för embedder-skapande",
+		"invalidEmbedderType": "Ogiltig embedder-typ konfigurerad: {{embedderProvider}}",
+		"vectorDimensionNotDeterminedOpenAiCompatible": "Kunde inte bestämma vektordimension för modell '{{modelId}}' med leverantör '{{provider}}'. Se till att 'Embedding Dimension' är korrekt inställd i OpenAI-kompatibla leverantörsinställningar.",
+		"vectorDimensionNotDetermined": "Kunde inte bestämma vektordimension för modell '{{modelId}}' med leverantör '{{provider}}'. Kontrollera modellprofiler eller konfiguration.",
+		"qdrantUrlMissing": "Qdrant URL saknas för vektorlagerskapande",
+		"codeIndexingNotConfigured": "Kan inte skapa tjänster: Kodindexering är inte korrekt konfigurerad"
 	}
 }

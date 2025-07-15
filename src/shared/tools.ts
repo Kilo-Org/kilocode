@@ -66,6 +66,7 @@ export const toolParamNames = [
 	"end_line",
 	"query",
 	"args",
+	"todos",
 ] as const
 
 export type ToolParamName = (typeof toolParamNames)[number]
@@ -198,6 +199,7 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	report_bug: "report bug", // kilocode_change
 	condense: "condense the current context window", // kilocode_change
 	codebase_search: "codebase search",
+	update_todo_list: "update todo list",
 } as const
 
 // Define available tool groups.
@@ -238,6 +240,7 @@ export const ALWAYS_AVAILABLE_TOOLS: ToolName[] = [
 	"new_task",
 	"report_bug",
 	"condense", // kilocode_Change
+	"update_todo_list",
 ] as const
 
 export type DiffResult =

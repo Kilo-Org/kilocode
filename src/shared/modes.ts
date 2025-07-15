@@ -75,7 +75,7 @@ export const modes: readonly ModeConfig[] = [
 		description: "Plan and design before implementation",
 		groups: ["read", ["edit", { fileRegex: "\\.md$", description: "Markdown files only" }], "browser", "mcp"],
 		customInstructions:
-			"1. Do some information gathering (for example using read_file or search_files) to get more context about the task.\n\n2. You should also ask the user clarifying questions to get a better understanding of the task.\n\n3. Once you've gained more context about the user's request, you should create a detailed plan for how to accomplish the task. Include Mermaid diagrams if they help make your plan clearer.\n\n4. Ask the user if they are pleased with this plan, or if they would like to make any changes. Think of this as a brainstorming session where you can discuss the task and plan the best way to accomplish it.\n\n5. Use the switch_mode tool to request that the user switch to another mode to implement the solution.\n\n**IMPORTANT: Do not provide time estimates for how long tasks will take to complete. Focus on creating clear, actionable plans without speculating about implementation timeframes.**",
+			"1. Do some information gathering (for example using read_file or search_files) to get more context about the task.\n\n2. You should also ask the user clarifying questions to get a better understanding of the task.\n\n3. Once you've gained more context about the user's request, break down the task into clear, actionable steps and create a todo list using the `update_todo_list` tool. Each todo item should be:\n   - Specific and actionable\n   - Listed in logical execution order\n   - Focused on a single, well-defined outcome\n   - Clear enough that another mode could execute it independently\n\n4. As you gather more information or discover new requirements, update the todo list to reflect the current understanding of what needs to be accomplished.\n\n5. Ask the user if they are pleased with this plan, or if they would like to make any changes. Think of this as a brainstorming session where you can discuss the task and refine the todo list. Include Mermaid diagrams if they help clarify complex workflows or system architecture.\n\n6. Use the switch_mode tool to request that the user switch to another mode to implement the solution.\n\n**IMPORTANT: Focus on creating clear, actionable todo lists rather than lengthy markdown documents. Use the todo list as your primary planning tool to track and organize the work that needs to be done.**",
 	},
 	{
 		slug: "code",
@@ -198,31 +198,41 @@ export function findModeBySlug(slug: string, modes: readonly ModeConfig[] | unde
 /**
  * Get the mode selection based on the provided mode slug, prompt component, and custom modes.
  * If a custom mode is found, it takes precedence over the built-in modes.
- * If no custom mode is found, the built-in mode is used.
+ * If no custom mode is found, the built-in mode is used with partial merging from promptComponent.
  * If neither is found, the default mode is used.
  */
 export function getModeSelection(mode: string, promptComponent?: PromptComponent, customModes?: ModeConfig[]) {
 	const customMode = findModeBySlug(mode, customModes)
 	const builtInMode = findModeBySlug(mode, modes)
 
-	const modeToUse = customMode || promptComponent || builtInMode
+	// If we have a custom mode, use it entirely
+	if (customMode) {
+		return {
+			roleDefinition: customMode.roleDefinition || "",
+			baseInstructions: customMode.customInstructions || "",
+			description: customMode.description || "",
+		}
+	}
 
-	const roleDefinition = modeToUse?.roleDefinition || ""
-	const baseInstructions = modeToUse?.customInstructions || ""
-	const description = (customMode || builtInMode)?.description || ""
+	// Otherwise, use built-in mode as base and merge with promptComponent
+	const baseMode = builtInMode || modes[0] // fallback to default mode
 
 	return {
-		roleDefinition,
-		baseInstructions,
-		description,
+		roleDefinition: promptComponent?.roleDefinition || baseMode.roleDefinition || "",
+		baseInstructions: promptComponent?.customInstructions || baseMode.customInstructions || "",
+		description: baseMode.description || "",
 	}
 }
 
+// Edit operation parameters that indicate an actual edit operation
+const EDIT_OPERATION_PARAMS = ["diff", "content", "operations", "search", "replace", "args", "line"] as const
+
 // Custom error class for file restrictions
 export class FileRestrictionError extends Error {
-	constructor(mode: string, pattern: string, description: string | undefined, filePath: string) {
+	constructor(mode: string, pattern: string, description: string | undefined, filePath: string, tool?: string) {
+		const toolInfo = tool ? `Tool '${tool}' in mode '${mode}'` : `This mode (${mode})`
 		super(
-			`This mode (${mode}) can only edit files matching pattern: ${pattern}${description ? ` (${description})` : ""}. Got: ${filePath}`,
+			`${toolInfo} can only edit files matching pattern: ${pattern}${description ? ` (${description})` : ""}. Got: ${filePath}`,
 		)
 		this.name = "FileRestrictionError"
 	}
@@ -281,12 +291,48 @@ export function isToolAllowedForMode(
 		// For the edit group, check file regex if specified
 		if (groupName === "edit" && options.fileRegex) {
 			const filePath = toolParams?.path
-			if (
-				filePath &&
-				(toolParams.diff || toolParams.content || toolParams.operations) &&
-				!doesFileMatchRegex(filePath, options.fileRegex)
-			) {
-				throw new FileRestrictionError(mode.name, options.fileRegex, options.description, filePath)
+			// Check if this is an actual edit operation (not just path-only for streaming)
+			const isEditOperation = EDIT_OPERATION_PARAMS.some((param) => toolParams?.[param])
+
+			// Handle single file path validation
+			if (filePath && isEditOperation && !doesFileMatchRegex(filePath, options.fileRegex)) {
+				throw new FileRestrictionError(mode.name, options.fileRegex, options.description, filePath, tool)
+			}
+
+			// Handle XML args parameter (used by MULTI_FILE_APPLY_DIFF experiment)
+			if (toolParams?.args && typeof toolParams.args === "string") {
+				// Extract file paths from XML args with improved validation
+				try {
+					const filePathMatches = toolParams.args.match(/<path>([^<]+)<\/path>/g)
+					if (filePathMatches) {
+						for (const match of filePathMatches) {
+							// More robust path extraction with validation
+							const pathMatch = match.match(/<path>([^<]+)<\/path>/)
+							if (pathMatch && pathMatch[1]) {
+								const extractedPath = pathMatch[1].trim()
+								// Validate that the path is not empty and doesn't contain invalid characters
+								if (extractedPath && !extractedPath.includes("<") && !extractedPath.includes(">")) {
+									if (!doesFileMatchRegex(extractedPath, options.fileRegex)) {
+										throw new FileRestrictionError(
+											mode.name,
+											options.fileRegex,
+											options.description,
+											extractedPath,
+											tool,
+										)
+									}
+								}
+							}
+						}
+					}
+				} catch (error) {
+					// Re-throw FileRestrictionError as it's an expected validation error
+					if (error instanceof FileRestrictionError) {
+						throw error
+					}
+					// If XML parsing fails, log the error but don't block the operation
+					console.warn(`Failed to parse XML args for file restriction validation: ${error}`)
+				}
 			}
 		}
 

@@ -26,9 +26,12 @@
 		"reset_state": "Är du säker på att du vill återställa all status och hemlig lagring i tillägget? Detta kan inte ångras.",
 		"delete_config_profile": "Är du säker på att du vill ta bort denna konfigurationsprofil?",
 		"delete_custom_mode": "Är du säker på att du vill ta bort detta anpassade läge?",
+		"delete_custom_mode_with_rules": "Är du säker på att du vill ta bort detta {scope} läge?\n\nDetta kommer också att ta bort den associerade regelmappen på:\n{rulesFolderPath}",
 		"delete_message": "Vad vill du ta bort?",
-		"just_this_message": "Bara detta meddelande",
-		"this_and_subsequent": "Detta och alla efterföljande meddelanden"
+		"edit_warning": "Att redigera detta meddelande kommer att ta bort alla efterföljande meddelanden i konversationen. Vill du fortsätta?",
+		"delete_just_this_message": "Bara detta meddelande",
+		"delete_this_and_subsequent": "Detta och alla efterföljande meddelanden",
+		"proceed": "Fortsätt"
 	},
 	"errors": {
 		"invalid_data_uri": "Ogiltigt data URI-format",
@@ -79,6 +82,7 @@
 		"share_not_enabled": "Uppgiftsdelning är inte aktiverat för denna organisation.",
 		"share_task_not_found": "Uppgift hittades inte eller åtkomst nekad.",
 		"mode_import_failed": "Misslyckades med att importera läge: {{error}}",
+		"delete_rules_folder_failed": "Misslyckades med att ta bort regelmapp: {{rulesFolderPath}}. Fel: {{error}}",
 		"claudeCode": {
 			"processExited": "Claude Code-processen avslutades med kod {{exitCode}}.",
 			"errorOutput": "Felutdata: {{output}}",
@@ -125,6 +129,10 @@
 		"remove": "Ta bort",
 		"keep": "Behåll"
 	},
+	"buttons": {
+		"save": "Spara",
+		"edit": "Redigera"
+	},
 	"tasks": {
 		"canceled": "Uppgiftsfel: Den stoppades och avbröts av användaren.",
 		"deleted": "Uppgiftsfel: Den stoppades och togs bort av användaren.",
@@ -151,6 +159,10 @@
 			"resetFailed": "Misslyckades med att återställa anpassade lägen: {{error}}",
 			"modeNotFound": "Skrivfel: Läge hittades inte",
 			"noWorkspaceForProject": "Ingen arbetsyta hittades för projektspecifikt läge"
+		},
+		"scope": {
+			"project": "projekt",
+			"global": "globalt"
 		}
 	},
 	"mdm": {
@@ -158,6 +170,14 @@
 			"cloud_auth_required": "Din organisation kräver Kilo Code Cloud-autentisering. Logga in för att fortsätta.",
 			"organization_mismatch": "Du måste vara autentiserad med din organisations Kilo Code Cloud-konto.",
 			"verification_failed": "Kunde inte verifiera organisationsautentisering."
+		}
+	},
+	"prompts": {
+		"deleteMode": {
+			"title": "Ta bort anpassat läge",
+			"description": "Är du säker på att du vill ta bort detta {{scope}} läge? Detta kommer också att ta bort den associerade regelmappen på: {{rulesFolderPath}}",
+			"descriptionNoRules": "Är du säker på att du vill ta bort detta anpassade läge?",
+			"confirm": "Ta bort"
 		}
 	}
 }

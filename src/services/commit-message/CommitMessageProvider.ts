@@ -8,8 +8,9 @@ import { supportPrompt } from "../../shared/support-prompt"
 import { t } from "../../i18n"
 import { addCustomInstructions } from "../../core/prompts/sections/custom-instructions"
 import { getWorkspacePath } from "../../utils/path"
-import type { ProviderSettings } from "@roo-code/types"
+import { TelemetryEventName, type ProviderSettings } from "@roo-code/types"
 import delay from "delay"
+import { TelemetryService } from "@roo-code/telemetry"
 
 /**
  * Provides AI-powered commit message generation for source control management.
@@ -107,6 +108,7 @@ export class CommitMessageProvider {
 					this.previousGitContext = gitContextString
 					this.previousCommitMessage = generatedMessage
 					this.gitService.setCommitMessage(generatedMessage)
+					TelemetryService.instance.captureEvent(TelemetryEventName.COMMIT_MSG_GENERATED)
 				} catch (error) {
 					const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
 					vscode.window.showErrorMessage(t("kilocode:commitMessage.generationFailed", { errorMessage }))

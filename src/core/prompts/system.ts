@@ -1,11 +1,12 @@
 import * as vscode from "vscode"
 import * as os from "os"
 
-import type { ModeConfig, PromptComponent, CustomModePrompts } from "@roo-code/types"
+import type { ModeConfig, PromptComponent, CustomModePrompts, TodoItem } from "@roo-code/types"
 
 import { Mode, modes, defaultModeSlug, getModeBySlug, getGroupName, getModeSelection } from "../../shared/modes"
 import { DiffStrategy } from "../../shared/tools"
 import { formatLanguage } from "../../shared/language"
+import { isEmpty } from "../../utils/object"
 
 import { McpHub } from "../../services/mcp/McpHub"
 import { CodeIndexManager } from "../../services/code-index/manager"
@@ -26,6 +27,19 @@ import {
 	markdownFormattingSection,
 } from "./sections"
 
+// Helper function to get prompt component, filtering out empty objects
+export function getPromptComponent(
+	customModePrompts: CustomModePrompts | undefined,
+	mode: string,
+): PromptComponent | undefined {
+	const component = customModePrompts?.[mode]
+	// Return undefined if component is empty
+	if (isEmpty(component)) {
+		return undefined
+	}
+	return component
+}
+
 async function generatePrompt(
 	context: vscode.ExtensionContext,
 	cwd: string,
@@ -44,6 +58,7 @@ async function generatePrompt(
 	rooIgnoreInstructions?: string,
 	partialReadsEnabled?: boolean,
 	settings?: Record<string, any>,
+	todoList?: TodoItem[],
 ): Promise<string> {
 	if (!context) {
 		throw new Error("Extension context is required for generating system prompt")
@@ -127,16 +142,10 @@ export const SYSTEM_PROMPT = async (
 	rooIgnoreInstructions?: string,
 	partialReadsEnabled?: boolean,
 	settings?: Record<string, any>,
+	todoList?: TodoItem[],
 ): Promise<string> => {
 	if (!context) {
 		throw new Error("Extension context is required for generating system prompt")
-	}
-
-	const getPromptComponent = (value: unknown) => {
-		if (typeof value === "object" && value !== null) {
-			return value as PromptComponent
-		}
-		return undefined
 	}
 
 	const mode =
@@ -153,7 +162,7 @@ export const SYSTEM_PROMPT = async (
 	const fileCustomSystemPrompt = await loadSystemPromptFile(cwd, mode, variablesForPrompt)
 
 	// Check if it's a custom mode
-	const promptComponent = getPromptComponent(customModePrompts?.[mode])
+	const promptComponent = getPromptComponent(customModePrompts, mode)
 
 	// Get full mode config from custom modes or fall back to built-in modes
 	const currentMode = getModeBySlug(mode, customModes) || modes.find((m) => m.slug === mode) || modes[0]
@@ -203,5 +212,6 @@ ${customInstructions}`
 		rooIgnoreInstructions,
 		partialReadsEnabled,
 		settings,
+		todoList,
 	)
 }
