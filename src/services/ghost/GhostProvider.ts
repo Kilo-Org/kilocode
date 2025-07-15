@@ -33,6 +33,7 @@ export class GhostProvider {
 		this.model = new GhostModel()
 		this.strategy = new GhostStrategy()
 		this.workspaceEdit = new GhostWorkspaceEdit()
+
 		// Register the providers
 		this.codeActionProvider = new GhostCodeActionProvider()
 		this.codeLensProvider = new GhostCodeLensProvider()
@@ -57,7 +58,6 @@ export class GhostProvider {
 			prompt: t("kilocode:ghost.input.title"),
 			placeHolder: t("kilocode:ghost.input.placeholder"),
 		})
-
 		if (!userInput) {
 			return
 		}
@@ -69,11 +69,7 @@ export class GhostProvider {
 		const document = editor.document
 		const range = editor.selection.isEmpty ? undefined : editor.selection
 
-		await this.provideCodeSuggestions({
-			document,
-			range,
-			userInput,
-		})
+		await this.provideCodeSuggestions({ document, range, userInput })
 	}
 
 	public async codeSuggestion() {
@@ -84,10 +80,7 @@ export class GhostProvider {
 		const document = editor.document
 		const range = editor.selection.isEmpty ? undefined : editor.selection
 
-		await this.provideCodeSuggestions({
-			document,
-			range,
-		})
+		await this.provideCodeSuggestions({ document, range })
 	}
 
 	public async provideCodeActionQuickFix(
@@ -96,10 +89,7 @@ export class GhostProvider {
 	): Promise<void> {
 		// Store the document in the document store
 		this.getDocumentStore().storeDocument(document)
-		await this.provideCodeSuggestions({
-			document,
-			range,
-		})
+		await this.provideCodeSuggestions({ document, range })
 	}
 
 	private async enhanceContext(context: GhostSuggestionContext): Promise<GhostSuggestionContext> {
@@ -109,10 +99,7 @@ export class GhostProvider {
 		}
 		// Add open files to the context
 		const openFiles = vscode.workspace.textDocuments.filter((doc) => doc.uri.scheme === "file")
-		return {
-			...context,
-			openFiles,
-		}
+		return { ...context, openFiles }
 	}
 
 	private async provideCodeSuggestions(context: GhostSuggestionContext): Promise<void> {
@@ -133,9 +120,7 @@ export class GhostProvider {
 					cancelled = true
 				})
 
-				progress.report({
-					message: t("kilocode:ghost.progress.analyzing"),
-				})
+				progress.report({ message: t("kilocode:ghost.progress.analyzing") })
 
 				// Load custom instructions
 				const workspacePath = getWorkspacePath()
@@ -143,26 +128,19 @@ export class GhostProvider {
 
 				const systemPrompt = this.strategy.getSystemPrompt(customInstructions)
 				const userPrompt = this.strategy.getSuggestionPrompt(enhancedContext)
-
 				if (cancelled) {
 					return
 				}
-				progress.report({
-					message: t("kilocode:ghost.progress.generating"),
-				})
 
+				progress.report({ message: t("kilocode:ghost.progress.generating") })
 				const response = await this.model.generateResponse(systemPrompt, userPrompt)
-
 				console.log("Ghost response:", response)
-
 				if (cancelled) {
 					return
 				}
 
-				progress.report({
-					message: t("kilocode:ghost.progress.processing"),
-				})
 				// First parse the response into edit operations
+				progress.report({ message: t("kilocode:ghost.progress.processing") })
 				this.suggestions = await this.strategy.parseResponse(response, enhancedContext)
 
 				if (cancelled) {
@@ -170,10 +148,8 @@ export class GhostProvider {
 					await this.render()
 					return
 				}
-				progress.report({
-					message: t("kilocode:ghost.progress.showing"),
-				})
 				// Generate placeholder for show the suggestions
+				progress.report({ message: t("kilocode:ghost.progress.showing") })
 				await this.workspaceEdit.applySuggestionsPlaceholders(this.suggestions)
 				await this.render()
 			},
