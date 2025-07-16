@@ -44,8 +44,8 @@
 		"gitNotFound": "⚠️ Git 저장소를 찾을 수 없거나 git을 사용할 수 없습니다",
 		"gitInitError": "⚠️ Git 초기화 오류: {{error}}",
 		"generating": "Kilo: 커밋 메시지 생성 중...",
-		"noChanges": "킬로: 분석할 변경사항이 없습니다",
-		"generated": "킬로: 커밋 메시지가 생성되었습니다!",
+		"noChanges": "Kilo: 분석할 변경사항이 없습니다",
+		"generated": "Kilo: 커밋 메시지가 생성되었습니다!",
 		"generationFailed": "Kilo: 커밋 메시지 생성 실패: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: 스테이징되지 않은 변경사항을 사용하여 메시지 생성",
 		"activationFailed": "Kilo: 메시지 생성기 활성화 실패: {{error}}",
@@ -53,23 +53,23 @@
 	},
 	"autocomplete": {
 		"statusBar": {
-			"disabled": "$(circle-slash) 킬로 완료",
-			"enabled": "$(sparkle) 킬로 완료",
+			"disabled": "$(circle-slash) Kilo 완료",
+			"enabled": "$(sparkle) Kilo 완료",
 			"tooltip": {
-				"disabled": "킬로 코드 자동완성 (비활성화됨)",
-				"basic": "킬로 코드 자동완성",
+				"disabled": "Kilo Code 자동완성 (비활성화됨)",
+				"basic": "Kilo Code 자동완성",
 				"tokenError": "자동완성을 사용하려면 유효한 토큰을 설정해야 합니다",
 				"sessionTotal": "세션 총 비용:",
 				"lastCompletion": "마지막 완료:",
 				"model": "모델:"
 			},
-			"warning": "$(warning) 킬로 완료",
+			"warning": "$(warning) Kilo 완료",
 			"cost": {
 				"lessThanCent": "<$0.01",
 				"zero": "0원"
 			}
 		},
-		"toggleMessage": "킬로 완료 {{status}}"
+		"toggleMessage": "Kilo 완료 {{status}}"
 	},
 	"ghost": {
 		"progress": {

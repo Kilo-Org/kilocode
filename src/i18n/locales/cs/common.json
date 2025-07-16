@@ -25,10 +25,12 @@
 	"confirmation": {
 		"reset_state": "Jsi si jistý, že chceš resetovat veškerý stav a tajné úložiště v rozšíření? Toto nelze vrátit zpět.",
 		"delete_config_profile": "Jsi si jistý, že chceš smazat tento konfigurační profil?",
-		"delete_custom_mode": "Jsi si jistý, že chceš smazat tento vlastní režim?",
+		"delete_custom_mode_with_rules": "Jsi si jistý, že chceš smazat tento {scope} režim?\n\nToto také smaže související složku pravidel na:\n{rulesFolderPath}",
 		"delete_message": "Co bys chtěl smazat?",
-		"just_this_message": "Pouze tuto zprávu",
-		"this_and_subsequent": "Tuto a všechny následující zprávy"
+		"edit_warning": "Úprava této zprávy smaže všechny následující zprávy v konverzaci. Chceš pokračovat?",
+		"delete_just_this_message": "Pouze tuto zprávu",
+		"delete_this_and_subsequent": "Tuto a všechny následující zprávy",
+		"proceed": "Pokračovat"
 	},
 	"errors": {
 		"invalid_data_uri": "Neplatný formát data URI",
@@ -79,6 +81,7 @@
 		"share_not_enabled": "Sdílení úloh není pro tuto organizaci povoleno.",
 		"share_task_not_found": "Úloha nebyla nalezena nebo byl přístup odepřen.",
 		"mode_import_failed": "Import režimu selhal: {{error}}",
+		"delete_rules_folder_failed": "Smazání složky pravidel selhalo: {{rulesFolderPath}}. Chyba: {{error}}",
 		"claudeCode": {
 			"processExited": "Proces Claude Code skončil s kódem {{exitCode}}.",
 			"errorOutput": "Chybový výstup: {{output}}",
@@ -125,6 +128,10 @@
 		"remove": "Odstranit",
 		"keep": "Ponechat"
 	},
+	"buttons": {
+		"save": "Uložit",
+		"edit": "Upravit"
+	},
 	"tasks": {
 		"canceled": "Chyba úlohy: Byla zastavena a zrušena uživatelem.",
 		"deleted": "Selhání úlohy: Byla zastavena a smazána uživatelem.",
@@ -151,6 +158,10 @@
 			"resetFailed": "Nepodařilo se resetovat vlastní režimy: {{error}}",
 			"modeNotFound": "Chyba zápisu: Režim nebyl nalezen",
 			"noWorkspaceForProject": "Pro projektově specifický režim nebyla nalezena žádná složka workspace"
+		},
+		"scope": {
+			"project": "projekt",
+			"global": "globální"
 		}
 	},
 	"mdm": {
@@ -158,6 +169,14 @@
 			"cloud_auth_required": "Tvá organizace vyžaduje autentizaci Kilo Code Cloud. Prosím přihlas se pro pokračování.",
 			"organization_mismatch": "Musíš být autentizován s účtem Kilo Code Cloud tvé organizace.",
 			"verification_failed": "Nelze ověřit autentizaci organizace."
+		}
+	},
+	"prompts": {
+		"deleteMode": {
+			"title": "Smazat vlastní režim",
+			"description": "Jsi si jistý, že chceš smazat tento {{scope}} režim? Toto také smaže související složku pravidel na: {{rulesFolderPath}}",
+			"descriptionNoRules": "Jsi si jistý, že chceš smazat tento vlastní režim?",
+			"confirm": "Smazat"
 		}
 	}
 }

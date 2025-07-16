@@ -17,7 +17,7 @@ const BottomControls: React.FC<BottomControlsProps> = ({ showApiConfig = false }
 	}
 
 	return (
-		<div className="flex flex-row w-auto items-center justify-between h-[30px] mx-3.5 mb-1 gap-1">
+		<div className="flex flex-row w-auto items-center justify-between h-[30px] mx-3.5 mt-2.5 mb-1 gap-1">
 			<div className="flex flex-item flex-row justify-start gap-1 grow overflow-hidden">
 				{showApiConfig && <BottomApiConfig />}
 			</div>

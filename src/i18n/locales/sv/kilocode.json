@@ -58,7 +58,7 @@
 			"disabled": "$(circle-slash) Kilo Slutfört",
 			"tooltip": {
 				"disabled": "Kilo Code Autocomplete (inaktiverad)",
-				"basic": "Kilo Kod Automatisk komplettering",
+				"basic": "Kilo Code Autocomplete",
 				"tokenError": "En giltig token måste anges för att använda automatisk komplettering",
 				"lastCompletion": "Senaste slutförande:",
 				"sessionTotal": "Sessionens totala kostnad:",

@@ -10,7 +10,12 @@
 		"couldNotReadErrorBody": "Hindi mabasa ang error body",
 		"requestFailed": "Nabigo ang Ollama API request na may status {{status}} {{statusText}}: {{errorBody}}",
 		"invalidResponseStructure": "Invalid na istraktura ng response mula sa Ollama API: \"embeddings\" array ay hindi nahanap o hindi array.",
-		"embeddingFailed": "Nabigo ang Ollama embedding: {{message}}"
+		"embeddingFailed": "Nabigo ang Ollama embedding: {{message}}",
+		"serviceNotRunning": "Ang Ollama service ay hindi tumatakbo sa {{baseUrl}}",
+		"serviceUnavailable": "Ang Ollama service ay hindi available (status: {{status}})",
+		"modelNotFound": "Hindi nahanap ang Ollama model: {{modelId}}",
+		"modelNotEmbeddingCapable": "Ang Ollama model ay hindi capable sa embedding: {{modelId}}",
+		"hostNotFound": "Hindi nahanap ang Ollama host: {{baseUrl}}"
 	},
 	"scanner": {
 		"unknownErrorProcessingFile": "Hindi kilalang error sa pagproseso ng file {{filePath}}",
@@ -19,5 +24,29 @@
 	},
 	"vectorStore": {
 		"qdrantConnectionFailed": "Nabigo ang pagkonekta sa Qdrant vector database. Mangyaring siguraduhing ang Qdrant ay tumatakbo at naa-access sa {{qdrantUrl}}. Error: {{errorMessage}}"
+	},
+	"validation": {
+		"authenticationFailed": "Nabigo ang authentication. Mangyaring suriin ang inyong API key sa mga setting.",
+		"connectionFailed": "Nabigo ang pagkonekta sa embedder service. Mangyaring suriin ang inyong connection settings at siguraduhing ang service ay tumatakbo.",
+		"modelNotAvailable": "Ang tinukoy na model ay hindi available. Mangyaring suriin ang inyong model configuration.",
+		"configurationError": "Invalid na embedder configuration. Mangyaring suriin ang inyong mga setting.",
+		"serviceUnavailable": "Ang embedder service ay hindi available. Mangyaring siguraduhing ito ay tumatakbo at naa-access.",
+		"invalidEndpoint": "Invalid na API endpoint. Mangyaring suriin ang inyong URL configuration.",
+		"invalidEmbedderConfig": "Invalid na embedder configuration. Mangyaring suriin ang inyong mga setting.",
+		"invalidApiKey": "Invalid na API key. Mangyaring suriin ang inyong API key configuration.",
+		"invalidBaseUrl": "Invalid na base URL. Mangyaring suriin ang inyong URL configuration.",
+		"invalidModel": "Invalid na model. Mangyaring suriin ang inyong model configuration.",
+		"invalidResponse": "Invalid na response mula sa embedder service. Mangyaring suriin ang inyong configuration."
+	},
+	"serviceFactory": {
+		"openAiConfigMissing": "Nawawalang OpenAI configuration para sa embedder creation",
+		"ollamaConfigMissing": "Nawawalang Ollama configuration para sa embedder creation",
+		"openAiCompatibleConfigMissing": "Nawawalang OpenAI Compatible configuration para sa embedder creation",
+		"geminiConfigMissing": "Nawawalang Gemini configuration para sa embedder creation",
+		"invalidEmbedderType": "Invalid na embedder type na na-configure: {{embedderProvider}}",
+		"vectorDimensionNotDeterminedOpenAiCompatible": "Hindi ma-determine ang vector dimension para sa model '{{modelId}}' na may provider '{{provider}}'. Mangyaring siguraduhing ang 'Embedding Dimension' ay tamang naka-set sa OpenAI-Compatible provider settings.",
+		"vectorDimensionNotDetermined": "Hindi ma-determine ang vector dimension para sa model '{{modelId}}' na may provider '{{provider}}'. Suriin ang model profiles o configuration.",
+		"qdrantUrlMissing": "Nawawalang Qdrant URL para sa vector store creation",
+		"codeIndexingNotConfigured": "Hindi makagawa ng mga service: Ang code indexing ay hindi tamang na-configure"
 	}
 }

@@ -40,36 +40,40 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "تم تفعيل منشئ رسائل التزام كود كيلو",
+		"activated": "تم تفعيل منشئ رسائل التزام Kilo Code",
 		"gitNotFound": "⚠️ مستودع Git غير موجود أو Git غير متاح",
 		"gitInitError": "⚠️ خطأ في تهيئة Git: {{error}}",
-		"generating": "كيلو: جارٍ إنشاء رسالة الالتزام...",
-		"noChanges": "كيلو: لم يتم العثور على تغييرات للتحليل",
-		"generated": "كيلو: تم إنشاء رسالة الالتزام!",
+		"generating": "Kilo: جارٍ إنشاء رسالة الالتزام...",
+		"noChanges": "Kilo: لم يتم العثور على تغييرات للتحليل",
+		"generated": "Kilo: تم إنشاء رسالة الالتزام!",
 		"generationFailed": "Kilo: فشل في إنشاء رسالة الالتزام: {{errorMessage}}",
-		"generatingFromUnstaged": "كيلو: إنشاء رسالة باستخدام التغييرات غير المرحلة",
-		"activationFailed": "كيلو: فشل في تفعيل مولد الرسائل: {{error}}",
-		"providerRegistered": "كيلو: تم تسجيل مزود رسائل الالتزام"
+		"generatingFromUnstaged": "Kilo: إنشاء رسالة باستخدام التغييرات غير المرحلة",
+		"analyzingChanges": "Kilo: جاري تحليل التعديلات الجاهزة...",
+		"noStagedChangesRepo": "Kilo: ما فيه تعديلات مضافة في مستودع git",
+		"noStagedChanges": "Kilo: ما فيه تعديلات مضافة لتحليلها",
+		"tokenRequired": "يتطلب توليد الرسالة رمز Kilo Code",
+		"activationFailed": "Kilo: فشل تفعيل مولّد الرسائل: {{error}}",
+		"providerRegistered": "Kilo: تم تسجيل موفر رسائل الاعتماد",
 	},
 	"autocomplete": {
 		"statusBar": {
 			"tooltip": {
-				"basic": "كيلو كود الإكمال التلقائي",
-				"disabled": "إكمال تلقائي لكود كيلو (معطل)",
+				"basic": "Kilo Code الإكمال التلقائي",
+				"disabled": "إكمال تلقائي لـ Kilo Code (معطل)",
 				"sessionTotal": "التكلفة الإجمالية للجلسة:",
 				"tokenError": "يجب تعيين رمز صالح لاستخدام الإكمال التلقائي",
 				"lastCompletion": "الإكمال الأخير:",
 				"model": "النموذج:"
 			},
-			"disabled": "$(circle-slash) كيلو مكتمل",
-			"warning": "$(warning) اكتمل كيلو",
-			"enabled": "$(sparkle) كيلو مكتمل",
+			"disabled": "$(circle-slash) Kilo مكتمل",
+			"warning": "$(warning) اكتمل Kilo",
+			"enabled": "$(sparkle) Kilo مكتمل",
 			"cost": {
 				"zero": "0.00 دولار",
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "كيلو كُمبليت {{status}}"
+		"toggleMessage": "Kilo كُمبليت {{status}}"
 	},
 	"ghost": {
 		"progress": {

@@ -57,7 +57,9 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 			id = modelMapping[selectedModel as keyof typeof modelMapping]
 		}
 
-		if (this.models[id]) {
+		if (Object.keys(this.models).length === 0) {
+			throw new Error("Failed to load Kilo Code provider model list.")
+		} else if (this.models[id]) {
 			info = this.models[id]
 		} else {
 			throw new Error(`Unsupported model: ${selectedModel}`)

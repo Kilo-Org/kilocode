@@ -47,16 +47,16 @@
 		"noChanges": "Kilo: Δεν βρέθηκαν αλλαγές για ανάλυση",
 		"generated": "Kilo: Το μήνυμα commit δημιουργήθηκε!",
 		"generationFailed": "Kilo: Αποτυχία δημιουργίας μηνύματος commit: {{errorMessage}}",
-		"generatingFromUnstaged": "Κιλό: Δημιουργία μηνύματος με χρήση μη καταχωρημένων αλλαγών",
+		"generatingFromUnstaged": "Kilo: Δημιουργία μηνύματος με χρήση μη καταχωρημένων αλλαγών",
 		"providerRegistered": "Kilo: Ο πάροχος μηνύματος υποβολής καταχωρήθηκε",
 		"activationFailed": "Kilo: Αποτυχία ενεργοποίησης της γεννήτριας μηνυμάτων: {{error}}"
 	},
 	"autocomplete": {
 		"statusBar": {
-			"warning": "$(warning) Κίλο Ολοκληρώθηκε",
-			"enabled": "$(sparkle) Κιλό Ολοκληρώθηκε",
+			"warning": "$(warning) Kilo Ολοκληρώθηκε",
+			"enabled": "$(sparkle) Kilo Ολοκληρώθηκε",
 			"tooltip": {
-				"basic": "Αυτόματη Συμπλήρωση Κώδικα Kilo",
+				"basic": "Kilo Code Αυτόματη Συμπλήρωση",
 				"tokenError": "Πρέπει να οριστεί ένα έγκυρο διακριτικό για να χρησιμοποιηθεί η αυτόματη συμπλήρωση",
 				"disabled": "Αυτόματη Συμπλήρωση Kilo Code (απενεργοποιημένη)",
 				"sessionTotal": "Συνολικό κόστος συνεδρίας:",
@@ -69,7 +69,7 @@
 				"zero": "0,00 €"
 			}
 		},
-		"toggleMessage": "Κιλό Ολοκληρώθηκε {{status}}"
+		"toggleMessage": "Kilo Ολοκληρώθηκε {{status}}"
 	},
 	"ghost": {
 		"progress": {

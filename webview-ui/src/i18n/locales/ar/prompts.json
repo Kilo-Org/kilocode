@@ -191,5 +191,13 @@
 		},
 		"deleteMode": "حذف النمط"
 	},
-	"allFiles": "كل الملفات"
+	"allFiles": "كل الملفات",
+	"deleteMode": {
+		"title": "حذف النمط",
+		"message": "هل أنت متأكد من حذف النمط \"{{modeName}}\"؟",
+		"rulesFolder": "هذا النمط له مجلد قواعد في {{folderPath}} وسيتم حذفه أيضاً.",
+		"descriptionNoRules": "هل أنت متأكد من حذف هذا النمط المخصص؟",
+		"confirm": "حذف",
+		"cancel": "إلغاء"
+	}
 }

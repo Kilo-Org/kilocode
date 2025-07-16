@@ -121,6 +121,7 @@
 	"enhancePromptDescription": "Tlačítko 'Vylepšit prompt' pomáhá zlepšit tvůj prompt poskytnutím dodatečného kontextu, vyjasnění nebo přeformulování. Zkus sem napsat prompt a znovu kliknout na tlačítko, abys viděl, jak to funguje.",
 	"addImages": "Přidat obrázky do zprávy",
 	"sendMessage": "Odeslat zprávu",
+	"stopTts": "Zastavit převod textu na řeč",
 	"typeMessage": "Napiš zprávu...",
 	"typeTask": "Vytvoř, najdi, zeptej se na něco",
 	"addContext": "@ pro přidání kontextu, / pro přepnutí režimů",

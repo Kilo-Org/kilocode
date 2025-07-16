@@ -56,8 +56,8 @@
 			"enabled": "$(sparkle) Kilo Tamamlandı",
 			"disabled": "$(circle-slash) Kilo Tamamlandı",
 			"tooltip": {
-				"basic": "Kilo Kod Otomatik Tamamlama",
-				"disabled": "Kilo Kod Otomatik Tamamlama (devre dışı)",
+				"basic": "Kilo Code Otomatik Tamamlama",
+				"disabled": "Kilo Code Otomatik Tamamlama (devre dışı)",
 				"tokenError": "Otomatik tamamlama özelliğini kullanmak için geçerli bir belirteç ayarlanmalıdır",
 				"sessionTotal": "Oturum toplam maliyeti:",
 				"lastCompletion": "Son tamamlama:",

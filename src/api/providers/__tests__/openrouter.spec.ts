@@ -8,6 +8,7 @@ import OpenAI from "openai"
 
 import { OpenRouterHandler } from "../openrouter"
 import { ApiHandlerOptions } from "../../../shared/api"
+import { Package } from "../../../shared/package"
 
 // Mock dependencies
 vitest.mock("openai")
@@ -62,7 +63,8 @@ describe("OpenRouterHandler", () => {
 			defaultHeaders: {
 				"HTTP-Referer": "https://kilocode.ai",
 				"X-Title": "Kilo Code",
-				"X-KiloCode-Version": expect.any(String), // kilocode_change
+				"X-KiloCode-Version": Package.version,
+				"User-Agent": `Kilo-Code/${Package.version}`,
 			},
 		})
 	})

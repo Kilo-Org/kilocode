@@ -53,9 +53,9 @@
 	},
 	"autocomplete": {
 		"statusBar": {
-			"enabled": "$(sparkle) Кило Выполнено",
-			"warning": "$(warning) Кило завершено",
-			"disabled": "$(circle-slash) Кило завершено",
+			"enabled": "$(sparkle) Kilo Выполнено",
+			"warning": "$(warning) Kilo завершено",
+			"disabled": "$(circle-slash) Kilo завершено",
 			"tooltip": {
 				"sessionTotal": "Общая стоимость сессии:",
 				"disabled": "Автодополнение Kilo Code (отключено)",
@@ -69,7 +69,7 @@
 				"zero": "0,00 ₽"
 			}
 		},
-		"toggleMessage": "Кило Выполнено {{status}}"
+		"toggleMessage": "Kilo Выполнено {{status}}"
 	},
 	"ghost": {
 		"progress": {

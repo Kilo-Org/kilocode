@@ -10,7 +10,12 @@
 		"couldNotReadErrorBody": "No s'ha pogut llegir el cos de l'error",
 		"requestFailed": "La sol·licitud de l'API d'Ollama ha fallat amb l'estat {{status}} {{statusText}}: {{errorBody}}",
 		"invalidResponseStructure": "Estructura de resposta no vàlida de l'API d'Ollama: no s'ha trobat la matriu \"embeddings\" o no és una matriu.",
-		"embeddingFailed": "La incrustació d'Ollama ha fallat: {{message}}"
+		"embeddingFailed": "La incrustació d'Ollama ha fallat: {{message}}",
+		"serviceNotRunning": "El servei d'Ollama no s'està executant a {{baseUrl}}",
+		"serviceUnavailable": "El servei d'Ollama no està disponible (estat: {{status}})",
+		"modelNotFound": "No s'ha trobat el model d'Ollama: {{modelId}}",
+		"modelNotEmbeddingCapable": "El model d'Ollama no és capaç de fer incrustacions: {{modelId}}",
+		"hostNotFound": "No s'ha trobat l'amfitrió d'Ollama: {{baseUrl}}"
 	},
 	"scanner": {
 		"unknownErrorProcessingFile": "Error desconegut en processar el fitxer {{filePath}}",
@@ -19,5 +24,29 @@
 	},
 	"vectorStore": {
 		"qdrantConnectionFailed": "No s'ha pogut connectar a la base de dades vectorial Qdrant. Assegura't que Qdrant estigui funcionant i sigui accessible a {{qdrantUrl}}. Error: {{errorMessage}}"
+	},
+	"validation": {
+		"authenticationFailed": "Ha fallat l'autenticació. Comproveu la vostra clau d'API a la configuració.",
+		"connectionFailed": "No s'ha pogut connectar al servei d'incrustació. Comproveu la vostra configuració de connexió i assegureu-vos que el servei estigui funcionant.",
+		"modelNotAvailable": "El model especificat no està disponible. Comproveu la vostra configuració de model.",
+		"configurationError": "Configuració d'incrustació no vàlida. Reviseu la vostra configuració.",
+		"serviceUnavailable": "El servei d'incrustació no està disponible. Assegureu-vos que estigui funcionant i sigui accessible.",
+		"invalidEndpoint": "Punt final d'API no vàlid. Comproveu la vostra configuració d'URL.",
+		"invalidEmbedderConfig": "Configuració d'incrustació no vàlida. Comproveu la vostra configuració.",
+		"invalidApiKey": "Clau d'API no vàlida. Comproveu la vostra configuració de clau d'API.",
+		"invalidBaseUrl": "URL base no vàlida. Comproveu la vostra configuració d'URL.",
+		"invalidModel": "Model no vàlid. Comproveu la vostra configuració de model.",
+		"invalidResponse": "Resposta no vàlida del servei d'incrustació. Comproveu la vostra configuració."
+	},
+	"serviceFactory": {
+		"openAiConfigMissing": "Falta la configuració d'OpenAI per crear l'embedder",
+		"ollamaConfigMissing": "Falta la configuració d'Ollama per crear l'embedder",
+		"openAiCompatibleConfigMissing": "Falta la configuració compatible amb OpenAI per crear l'embedder",
+		"geminiConfigMissing": "Falta la configuració de Gemini per crear l'embedder",
+		"invalidEmbedderType": "Tipus d'embedder configurat no vàlid: {{embedderProvider}}",
+		"vectorDimensionNotDeterminedOpenAiCompatible": "No s'ha pogut determinar la dimensió del vector per al model '{{modelId}}' amb el proveïdor '{{provider}}'. Assegura't que la 'Dimensió d'incrustació' estigui configurada correctament als paràmetres del proveïdor compatible amb OpenAI.",
+		"vectorDimensionNotDetermined": "No s'ha pogut determinar la dimensió del vector per al model '{{modelId}}' amb el proveïdor '{{provider}}'. Comprova els perfils del model o la configuració.",
+		"qdrantUrlMissing": "Falta l'URL de Qdrant per crear l'emmagatzematge de vectors",
+		"codeIndexingNotConfigured": "No es poden crear serveis: La indexació de codi no està configurada correctament"
 	}
 }

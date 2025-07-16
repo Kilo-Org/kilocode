@@ -10,7 +10,12 @@
 		"couldNotReadErrorBody": "ما قدرنا نقرأ محتوى الخطأ",
 		"requestFailed": "طلب Ollama API فشل بالحالة {{status}} {{statusText}}: {{errorBody}}",
 		"invalidResponseStructure": "الاستجابة من Ollama API غير صالحة: المصفوفة 'embeddings' مفقودة أو مو مصفوفة.",
-		"embeddingFailed": "فشل إنشاء التضمين في Ollama: {{message}}"
+		"embeddingFailed": "فشل إنشاء التضمين في Ollama: {{message}}",
+		"serviceNotRunning": "خدمة Ollama غير شغّالة على {{baseUrl}}",
+		"serviceUnavailable": "خدمة Ollama غير متوفّرة (الحالة: {{status}})",
+		"modelNotFound": "نموذج Ollama غير موجود: {{modelId}}",
+		"modelNotEmbeddingCapable": "نموذج Ollama لا يدعم التضمين: {{modelId}}",
+		"hostNotFound": "مضيف Ollama غير موجود: {{baseUrl}}"
 	},
 	"scanner": {
 		"unknownErrorProcessingFile": "خطأ غير معروف أثناء معالجة الملف {{filePath}}",
@@ -19,5 +24,29 @@
 	},
 	"vectorStore": {
 		"qdrantConnectionFailed": "فشل الاتصال بقاعدة بيانات المتجهات Qdrant. تأكد أن Qdrant شغّال ومتوفّر على {{qdrantUrl}}. الخطأ: {{errorMessage}}"
+	},
+	"validation": {
+		"authenticationFailed": "فشل التحقق من الهوية. يرجى التحقق من مفتاح الـ API في الإعدادات.",
+		"connectionFailed": "فشل الاتصال بخدمة التضمين. يرجى التحقق من إعدادات الاتصال والتأكد من تشغيل الخدمة.",
+		"modelNotAvailable": "النموذج المحدد غير متوفّر. يرجى التحقق من إعدادات النموذج.",
+		"configurationError": "إعدادات التضمين غير صالحة. يرجى مراجعة الإعدادات.",
+		"serviceUnavailable": "خدمة التضمين غير متوفّرة. يرجى التأكد من تشغيلها وإمكانية الوصول إليها.",
+		"invalidEndpoint": "نقطة نهاية API غير صالحة. يرجى التحقق من إعدادات الرابط.",
+		"invalidEmbedderConfig": "إعدادات التضمين غير صالحة. يرجى التحقق من الإعدادات.",
+		"invalidApiKey": "مفتاح API غير صالح. يرجى التحقق من إعدادات مفتاح الـ API.",
+		"invalidBaseUrl": "الرابط الأساسي غير صالح. يرجى التحقق من إعدادات الرابط.",
+		"invalidModel": "النموذج غير صالح. يرجى التحقق من إعدادات النموذج.",
+		"invalidResponse": "استجابة غير صالحة من خدمة التضمين. يرجى التحقق من الإعدادات."
+	},
+	"serviceFactory": {
+		"openAiConfigMissing": "إعدادات OpenAI مفقودة لإنشاء التضمين",
+		"ollamaConfigMissing": "إعدادات Ollama مفقودة لإنشاء التضمين",
+		"openAiCompatibleConfigMissing": "إعدادات OpenAI المتوافق مفقودة لإنشاء التضمين",
+		"geminiConfigMissing": "إعدادات Gemini مفقودة لإنشاء التضمين",
+		"invalidEmbedderType": "نوع التضمين المُعدّ غير صالح: {{embedderProvider}}",
+		"vectorDimensionNotDeterminedOpenAiCompatible": "لا يمكن تحديد أبعاد المتجه للنموذج '{{modelId}}' مع المزوّد '{{provider}}'. يرجى التأكد من ضبط 'أبعاد التضمين' بشكل صحيح في إعدادات مزوّد OpenAI المتوافق.",
+		"vectorDimensionNotDetermined": "لا يمكن تحديد أبعاد المتجه للنموذج '{{modelId}}' مع المزوّد '{{provider}}'. تحقق من ملفات النموذج أو الإعدادات.",
+		"qdrantUrlMissing": "رابط Qdrant مفقود لإنشاء مخزن المتجهات",
+		"codeIndexingNotConfigured": "لا يمكن إنشاء الخدمات: فهرسة الكود غير مُعدّة بشكل صحيح"
 	}
 }

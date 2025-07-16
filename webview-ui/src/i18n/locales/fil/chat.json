@@ -127,6 +127,7 @@
 	},
 	"addImages": "Magdagdag ng mga larawan sa mensahe",
 	"sendMessage": "Ipadala ang mensahe",
+	"stopTts": "Itigil ang text-to-speech",
 	"typeMessage": "Mag-type ng mensahe...",
 	"typeTask": "Bumuo, maghanap, magtanong ng kahit ano",
 	"addContext": "@ para magdagdag ng konteksto, / para magpalit ng mode",

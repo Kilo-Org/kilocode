@@ -1,5 +1,75 @@
 # kilo-code
 
+## [v4.58.4]
+
+- [#1349](https://github.com/Kilo-Org/kilocode/pull/1349) [`9f5bb71`](https://github.com/Kilo-Org/kilocode/commit/9f5bb715a086676472f7a5674911b45d230cc970) Thanks [@hassoncs](https://github.com/hassoncs)! - Enhance Prompt feature now works with Claude Code provider
+
+## [v4.58.3]
+
+- [#1348](https://github.com/Kilo-Org/kilocode/pull/1348) [`f83d1d7`](https://github.com/Kilo-Org/kilocode/commit/f83d1d76fa5c42b11cf9821d6b577d5af3d60a79) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Add enable/disable toggle for code indexing (thanks @daniel-lxs!)
+
+- [#1328](https://github.com/Kilo-Org/kilocode/pull/1328) [`584225a`](https://github.com/Kilo-Org/kilocode/commit/584225af82a42d840d7daab4a837f1c65ad675fc) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Fixed "Kilo" being inadvertenly translated in some languages (e.g. Кіло, กิโล, キロ)
+
+## [v4.58.2]
+
+- [#1340](https://github.com/Kilo-Org/kilocode/pull/1340) [`1a367c9`](https://github.com/Kilo-Org/kilocode/commit/1a367c943cd423f86c3ab25afe7b43f9d489147b) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Add gemini-embedding-001 model to code-index service (thanks @daniel-lxs!)
+
+## [v4.58.1]
+
+- [#1305](https://github.com/Kilo-Org/kilocode/pull/1305) [`34456ee`](https://github.com/Kilo-Org/kilocode/commit/34456eebad9606e5aaee6bff4991a187e8f99573) Thanks [@cobra91](https://github.com/cobra91)! - French localization has been improved
+
+- [#1332](https://github.com/Kilo-Org/kilocode/pull/1332) [`8863e50`](https://github.com/Kilo-Org/kilocode/commit/8863e505e48f80c3d244427b3249eca122791913) Thanks [@hassoncs](https://github.com/hassoncs)! - Fix max_tokens limit for moonshotai/kimi-k2-instruct on Groq
+
+## [v4.58.0]
+
+- [#1272](https://github.com/Kilo-Org/kilocode/pull/1272) [`8026793`](https://github.com/Kilo-Org/kilocode/commit/80267936053b1fbaf4eaf00ef0cbf770cc619fcf) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Include changes from Roo Code v3.23.6
+
+    - Move codebase indexing out of experimental (thanks @daniel-lxs and @MuriloFP!)
+    - Add todo list tool (thanks @qdaxb!)
+    - Fix code index secret persistence and improve settings UX (thanks @daniel-lxs!)
+    - Add Gemini embedding provider for codebase indexing (thanks @SannidhyaSah!)
+    - Support full endpoint URLs in OpenAI Compatible provider (thanks @SannidhyaSah!)
+    - Add markdown support to codebase indexing (thanks @MuriloFP!)
+    - Add Search/Filter Functionality to API Provider Selection in Settings (thanks @GOODBOY008!)
+    - Add configurable max search results (thanks @MuriloFP!)
+    - Add copy prompt button to task actions (thanks @Juice10 and @vultrnerd!)
+    - Fix insertContentTool to create new files with content (thanks @Ruakij!)
+    - Fix typescript compiler watch path inconsistency (thanks @bbenshalom!)
+    - Use actual max_completion_tokens from OpenRouter API (thanks @shariqriazz!)
+    - Prevent completion sound from replaying when reopening completed tasks (thanks @SannidhyaSah!)
+    - Fix access_mcp_resource fails to handle images correctly (thanks @s97712!)
+    - Prevent chatbox focus loss during automated file editing (thanks @hannesrudolph!)
+    - Resolve intermittent hangs and lack of clear error feedback in apply_diff tool (thanks @lhish!)
+    - Resolve Go duplicate references in tree-sitter queries (thanks @MuriloFP!)
+    - Chat UI consistency and layout shifts (thanks @seedlord!)
+    - Chat index UI enhancements (thanks @MuriloFP!)
+    - Fix model search being prefilled on dropdown (thanks @kevinvandijk!)
+    - Improve chat UI - add camera icon margin and make placeholder non-selectable (thanks @MuriloFP!)
+    - Delete .roo/rules-{mode} folder when custom mode is deleted
+    - Enforce file restrictions for all edit tools in architect mode
+    - Add User-Agent header to API providers
+    - Fix auto question timer unmount (thanks @liwilliam2021!)
+    - Fix new_task tool streaming issue
+    - Optimize file listing when maxWorkspaceFiles is 0 (thanks @daniel-lxs!)
+    - Correct export/import of OpenAI Compatible codebase indexing settings (thanks @MuriloFP!)
+    - Resolve workspace path inconsistency in code indexing for multi-workspace scenarios
+    - Always show the code indexing dot under the chat text area
+    - Fix bug where auto-approval was intermittently failing
+    - Remove erroneous line from announcement modal
+    - Update chat area icons for better discoverability & consistency
+    - Fix a bug that allowed list_files to return directory results that should be excluded by .gitignore
+    - Add an overflow header menu to make the UI a little tidier (thanks @dlab-anton)
+    - Fix a bug the issue where null custom modes configuration files cause a 'Cannot read properties of null' error (thanks @daniel-lxs!)
+    - Replace native title attributes with StandardTooltip component for consistency (thanks @daniel-lxs!)
+    - Fix: use decodeURIComponent in openFile (thanks @vivekfyi!)
+    - Fix(embeddings): Translate error messages before sending to UI (thanks @daniel-lxs!)
+    - Make account tab visible
+    - Grok 4
+
+### Patch Changes
+
+- [#1324](https://github.com/Kilo-Org/kilocode/pull/1324) [`0ff6960`](https://github.com/Kilo-Org/kilocode/commit/0ff69600cefd24190c607ca9001de5e03d7c03a7) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Add Kimi K2 model to Grok (thanks @mrubens)
+
 ## [v4.57.4]
 
 - [#1293](https://github.com/Kilo-Org/kilocode/pull/1293) [`2371a08`](https://github.com/Kilo-Org/kilocode/commit/2371a086199503e68bb8b2a7a909c14da60a2532) Thanks [@Autumnlight02](https://github.com/Autumnlight02)! - A few Mistral models (including devstral) were added.

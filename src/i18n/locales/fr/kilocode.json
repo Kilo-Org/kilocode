@@ -11,7 +11,7 @@
 		"title": "Avertissement de Crédit Faible !",
 		"message": "Vérifiez si vous pouvez recharger avec des crédits gratuits ou en acheter davantage !"
 	},
-	"notLoggedInError": "Impossible de traiter la demande, assure-toi que tu es connecté et identifié auprès du fournisseur sélectionné.\n\n{{error}}",
+	"notLoggedInError": "Impossible de traiter la demande, veuillez vous assurer que vous êtes connecté et identifié auprès du fournisseur sélectionné.\n\n{{error}}",
 	"rules": {
 		"actions": {
 			"delete": "Supprimer",

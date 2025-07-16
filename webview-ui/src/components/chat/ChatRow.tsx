@@ -21,6 +21,7 @@ import { getLanguageFromPath } from "@src/utils/getLanguageFromPath"
 // import { Button } from "@src/components/ui" // kilocode_change
 
 import { ToolUseBlock, ToolUseBlockHeader } from "../common/ToolUseBlock"
+import UpdateTodoListToolBlock from "./UpdateTodoListToolBlock"
 import CodeAccordian from "../common/CodeAccordian"
 import CodeBlock from "../common/CodeBlock"
 import MarkdownBlock from "../common/MarkdownBlock"
@@ -61,6 +62,8 @@ interface ChatRowProps {
 	highlighted?: boolean // kilocode_change: Add highlighted prop
 	onChatReset?: () => void // kilocode_change
 	onFollowUpUnmount?: () => void
+	isFollowUpAnswered?: boolean
+	editable?: boolean
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
@@ -119,18 +122,49 @@ export const ChatRowContent = ({
 	onFollowUpUnmount,
 	onBatchFileResponse,
 	onChatReset, // kilocode_change
+	isFollowUpAnswered,
+	editable,
 }: ChatRowContentProps) => {
 	const { t } = useTranslation()
 	const { apiConfiguration, mcpServers, alwaysAllowMcp, currentCheckpoint } = useExtensionState()
 	const [reasoningCollapsed, setReasoningCollapsed] = useState(true)
 	const [isDiffErrorExpanded, setIsDiffErrorExpanded] = useState(false)
 	const [showCopySuccess, setShowCopySuccess] = useState(false)
+	// const [isEditing, setIsEditing] = useState(false) // kilocode_change
+	// const [editedContent, setEditedContent] = useState("") // kilocode_change
 	const { copyWithFeedback } = useCopyToClipboard()
 
 	// Memoized callback to prevent re-renders caused by inline arrow functions
 	const handleToggleExpand = useCallback(() => {
 		onToggleExpand(message.ts)
 	}, [onToggleExpand, message.ts])
+
+	/* kilocode_change
+	// Handle edit button click
+	const handleEditClick = useCallback(() => {
+		setIsEditing(true)
+		setEditedContent(message.text || "")
+		// Edit mode is now handled entirely in the frontend
+		// No need to notify the backend
+	}, [message.text])
+
+	// Handle cancel edit
+	const handleCancelEdit = useCallback(() => {
+		setIsEditing(false)
+		setEditedContent(message.text || "")
+	}, [message.text])
+
+	// Handle save edit
+	const handleSaveEdit = useCallback(() => {
+		setIsEditing(false)
+		// Send edited message to backend
+		vscode.postMessage({
+			type: "submitEditedMessage",
+			value: message.ts,
+			editedMessageContent: editedContent,
+		})
+	}, [message.ts, editedContent])
+	*/
 
 	const [cost, apiReqCancelReason, apiReqStreamingFailedMessage] = useMemo(() => {
 		if (message.text !== null && message.text !== undefined && message.say === "api_req_started") {
@@ -446,6 +480,21 @@ export const ChatRowContent = ({
 							)}
 						</span>
 					</div>
+				)
+			}
+			case "updateTodoList" as any: {
+				const todos = (tool as any).todos || []
+				return (
+					<UpdateTodoListToolBlock
+						todos={todos}
+						content={(tool as any).content}
+						onChange={(updatedTodos) => {
+							if (typeof vscode !== "undefined" && vscode?.postMessage) {
+								vscode.postMessage({ type: "updateTodoList", payload: { todos: updatedTodos } })
+							}
+						}}
+						editable={editable && isLast}
+					/>
 				)
 			}
 			case "newFileCreated":
@@ -1128,6 +1177,8 @@ export const ChatRowContent = ({
 							</div>
 						</>
 					)
+				case "user_edit_todos":
+					return <UpdateTodoListToolBlock userEdited onChange={() => {}} />
 				default:
 					return (
 						<>
@@ -1257,7 +1308,8 @@ export const ChatRowContent = ({
 								suggestions={followUpData?.suggest}
 								onSuggestionClick={onSuggestionClick}
 								ts={message?.ts}
-								onUnmount={onFollowUpUnmount}
+								onCancelAutoApproval={onFollowUpUnmount}
+								isAnswered={isFollowUpAnswered}
 							/>
 						</>
 					)

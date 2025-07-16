@@ -40,36 +40,36 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "किलो कोड कमिट मैसेज जनरेटर सक्रिय",
+		"activated": "Kilo Code कमिट मैसेज जनरेटर सक्रिय",
 		"gitNotFound": "⚠️ Git रिपॉजिटरी नहीं मिली या git उपलब्ध नहीं है",
 		"gitInitError": "⚠️ गिट इनिशियलाइज़ेशन त्रुटि: {{error}}",
-		"generating": "किलो: कमिट संदेश उत्पन्न कर रहा है...",
-		"noChanges": "किलो: विश्लेषण करने के लिए कोई परिवर्तन नहीं मिला",
-		"generated": "किलो: कमिट मैसेज जनरेट हो गया!",
-		"generationFailed": "किलो: प्रतिबद्धता संदेश उत्पन्न करने में विफल: {{errorMessage}}",
-		"generatingFromUnstaged": "किलो: अपरिवर्तित परिवर्तनों का उपयोग करके संदेश उत्पन्न कर रहा है",
-		"activationFailed": "किलो: संदेश जनरेटर सक्रिय करने में विफल: {{error}}",
+		"generating": "Kilo: कमिट संदेश उत्पन्न कर रहा है...",
+		"noChanges": "Kilo: विश्लेषण करने के लिए कोई परिवर्तन नहीं मिला",
+		"generated": "Kilo: कमिट मैसेज जनरेट हो गया!",
+		"generationFailed": "Kilo: प्रतिबद्धता संदेश उत्पन्न करने में विफल: {{errorMessage}}",
+		"generatingFromUnstaged": "Kilo: अपरिवर्तित परिवर्तनों का उपयोग करके संदेश उत्पन्न कर रहा है",
+    "activationFailed": "किलो: संदेश जनरेटर सक्रिय करने में विफल: {{error}}",
 		"providerRegistered": "किलो: कमिट संदेश प्रदाता पंजीकृत"
 	},
 	"autocomplete": {
 		"statusBar": {
-			"disabled": "$(circle-slash) किलो पूर्ण",
-			"warning": "$(warning) किलो पूरा हुआ",
-			"enabled": "$(sparkle) किलो पूरा हो गया",
+			"disabled": "$(circle-slash) Kilo पूर्ण",
+			"warning": "$(warning) Kilo पूरा हुआ",
+			"enabled": "$(sparkle) Kilo पूरा हो गया",
 			"tooltip": {
-				"basic": "किलो कोड ऑटोकम्प्लीट",
+				"basic": "Kilo Code ऑटोकम्प्लीट",
 				"tokenError": "स्वतः पूर्ण का उपयोग करने के लिए एक वैध टोकन सेट किया जाना चाहिए",
 				"model": "मॉडल:",
 				"sessionTotal": "सत्र की कुल लागत:",
 				"lastCompletion": "अंतिम पूर्णता:",
-				"disabled": "किलो कोड स्वतः पूर्ण (अक्षम)"
+				"disabled": "Kilo Code स्वतः पूर्ण (अक्षम)"
 			},
 			"cost": {
 				"zero": "₹0.00",
 				"lessThanCent": "<₹0.01"
 			}
 		},
-		"toggleMessage": "किलो कम्पलीट {{status}}"
+		"toggleMessage": "Kilo कम्पलीट {{status}}"
 	},
 	"ghost": {
 		"progress": {

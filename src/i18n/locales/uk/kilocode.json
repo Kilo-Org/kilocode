@@ -44,17 +44,17 @@
 		"gitNotFound": "⚠️ Git репозиторій не знайдено або git недоступний",
 		"gitInitError": "⚠️ Помилка ініціалізації Git: {{error}}",
 		"generating": "Kilo: Генерація повідомлення коміту...",
-		"noChanges": "Кіло: Не знайдено змін для аналізу",
+		"noChanges": "Kilo: Не знайдено змін для аналізу",
 		"generated": "Kilo: Повідомлення коміту згенеровано!",
 		"generationFailed": "Kilo: Не вдалося створити повідомлення коміту: {{errorMessage}}",
-		"generatingFromUnstaged": "Кіло: Створення повідомлення з використанням незафіксованих змін",
-		"activationFailed": "Kilo: Не вдалося активувати генератор повідомлень: {{error}}",
+		"generatingFromUnstaged": "Kilo: Створення повідомлення з використанням незафіксованих змін",
+    "activationFailed": "Kilo: Не вдалося активувати генератор повідомлень: {{error}}",
 		"providerRegistered": "Kilo: Постачальник повідомлень коміту зареєстрований"
 	},
 	"autocomplete": {
 		"statusBar": {
-			"enabled": "$(sparkle) Кіло Виконано",
-			"disabled": "$(circle-slash) Кіло завершено",
+			"enabled": "$(sparkle) Kilo Виконано",
+			"disabled": "$(circle-slash) Kilo завершено",
 			"tooltip": {
 				"basic": "Автодоповнення Kilo Code",
 				"tokenError": "Для використання автозаповнення необхідно встановити дійсний токен",
@@ -63,13 +63,13 @@
 				"model": "Модель:",
 				"sessionTotal": "Загальна вартість сеансу:"
 			},
-			"warning": "$(warning) Кіло виконано",
+			"warning": "$(warning) Kilo виконано",
 			"cost": {
 				"zero": "0,00 ₴",
 				"lessThanCent": "<$0,01"
 			}
 		},
-		"toggleMessage": "Кіло виконано {{status}}"
+		"toggleMessage": "Kilo виконано {{status}}"
 	},
 	"ghost": {
 		"progress": {

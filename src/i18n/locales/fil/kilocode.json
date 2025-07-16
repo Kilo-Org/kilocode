@@ -53,7 +53,7 @@
 	},
 	"autocomplete": {
 		"statusBar": {
-			"disabled": "$(circle-slash) Kilometro Kumpleto",
+			"disabled": "$(circle-slash) Kilo Kumpleto",
 			"enabled": "$(sparkle) Kilo Kumpleto",
 			"warning": "$(warning) Kilo Kumpleto",
 			"tooltip": {

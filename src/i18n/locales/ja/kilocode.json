@@ -44,7 +44,7 @@
 		"gitNotFound": "⚠️ Gitリポジトリが見つからないか、gitが利用できません",
 		"gitInitError": "⚠️ Gitの初期化エラー: {{error}}",
 		"generating": "Kilo: コミットメッセージを生成しています...",
-		"noChanges": "キロ: 分析すべき変更は見つかりませんでした",
+		"noChanges": "Kilo: 分析すべき変更は見つかりませんでした",
 		"generated": "Kilo: コミットメッセージが生成されました！",
 		"generationFailed": "Kilo: コミットメッセージの生成に失敗しました: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: ステージングされていない変更を使用してメッセージを生成中",
@@ -53,14 +53,14 @@
 	},
 	"autocomplete": {
 		"statusBar": {
-			"enabled": "$(sparkle) キロ完了",
-			"disabled": "$(circle-slash) キロ コンプリート",
-			"warning": "$(warning) キロ完了",
+			"enabled": "$(sparkle) Kilo完了",
+			"disabled": "$(circle-slash) Kilo コンプリート",
+			"warning": "$(warning) Kilo完了",
 			"tooltip": {
-				"disabled": "キロ コード オートコンプリート (無効)",
+				"disabled": "Kilo Code オートコンプリート (無効)",
 				"tokenError": "オートコンプリートを使用するには有効なトークンを設定する必要があります",
 				"lastCompletion": "最後の回答:",
-				"basic": "キロ コード オートコンプリート",
+				"basic": "Kilo Code オートコンプリート",
 				"model": "モデル:",
 				"sessionTotal": "セッション合計費用:"
 			},
@@ -69,7 +69,7 @@
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "キロ コンプリート {{status}}"
+		"toggleMessage": "Kilo コンプリート {{status}}"
 	},
 	"ghost": {
 		"progress": {

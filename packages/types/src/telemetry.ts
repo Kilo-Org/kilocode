@@ -69,6 +69,7 @@ export enum TelemetryEventName {
 	DIFF_APPLICATION_ERROR = "Diff Application Error",
 	SHELL_INTEGRATION_ERROR = "Shell Integration Error",
 	CONSECUTIVE_MISTAKE_ERROR = "Consecutive Mistake Error",
+	CODE_INDEX_ERROR = "Code Index Error",
 }
 
 /**

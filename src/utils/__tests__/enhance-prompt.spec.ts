@@ -77,10 +77,18 @@ describe("enhancePrompt", () => {
 		)
 	})
 
-	it("throws error for API provider that does not support prompt enhancement", async () => {
+	// kilocode_change start - updated tests to work with createMessage fallback
+	it("falls back to createMessage for API provider without completePrompt", async () => {
+		const mockStream = {
+			async *[Symbol.asyncIterator]() {
+				yield { type: "text", text: "Fallback " }
+				yield { type: "text", text: "response" }
+				yield { type: "usage", totalCost: 0.01 }
+			},
+		}
+
 		;(buildApiHandler as any).mockReturnValue({
-			// No completePrompt method
-			createMessage: vi.fn(),
+			createMessage: vi.fn().mockReturnValue(mockStream),
 			getModel: vi.fn().mockReturnValue({
 				id: "test-model",
 				info: {
@@ -91,10 +99,44 @@ describe("enhancePrompt", () => {
 			}),
 		})
 
-		await expect(singleCompletionHandler(mockApiConfig, "Test prompt")).rejects.toThrow(
-			"The selected API provider does not support prompt enhancement",
-		)
+		const result = await singleCompletionHandler(mockApiConfig, "Test prompt")
+
+		expect(result).toBe("Fallback response")
+		const handler = buildApiHandler(mockApiConfig)
+		expect((handler as any).createMessage).toHaveBeenCalledWith("", [
+			{ role: "user", content: [{ type: "text", text: "Test prompt" }] },
+		])
 	})
+
+	it("handles streaming errors gracefully in fallback mode", async () => {
+		const mockStream = {
+			async *[Symbol.asyncIterator]() {
+				yield { type: "text", text: "Partial " }
+				throw new Error("Stream error")
+			},
+		}
+
+		;(buildApiHandler as any).mockReturnValue({
+			// No completePrompt method
+			createMessage: vi.fn().mockReturnValue(mockStream), // kilocode_change
+			getModel: vi.fn().mockReturnValue({
+				id: "test-model",
+				info: {
+					maxTokens: 4096,
+					contextWindow: 8192,
+					supportsPromptCache: false,
+				},
+			}),
+		})
+
+		await expect(singleCompletionHandler(mockApiConfig, "Test prompt")).rejects.toThrow("Stream error")
+
+		const handler = buildApiHandler(mockApiConfig)
+		expect((handler as any).createMessage).toHaveBeenCalledWith("", [
+			{ role: "user", content: [{ type: "text", text: "Test prompt" }] },
+		])
+	})
+	// kilocode_change end - updated tests to work with createMessage fallback
 
 	it("uses appropriate model based on provider", async () => {
 		const openRouterConfig: ProviderSettings = {
