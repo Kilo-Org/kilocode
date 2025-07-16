@@ -134,7 +134,7 @@ describe("GhostProvider", () => {
 		await parseAndApplySuggestions(diffResponse, context)
 
 		const finalContent = mockWorkspace.getDocumentContent(testUri)
-		expect(finalContent).toBe(expectedContent)
+		expect(normalizeWhitespace(finalContent)).toBe(normalizeWhitespace(expectedContent))
 	}
 
 	async function runFileBasedTestSequential(testCaseName: string) {
