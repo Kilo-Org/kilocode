@@ -13,6 +13,12 @@ export interface CodeIndexConfig {
 	ollamaOptions?: ApiHandlerOptions
 	openAiCompatibleOptions?: { baseUrl: string; apiKey: string }
 	geminiOptions?: { apiKey: string }
+	azureOpenAiOptions?: {
+		azureOpenAiApiKey: string
+		azureOpenAiEndpoint: string
+		azureOpenAiDeploymentName: string
+		azureOpenAiApiVersion?: string
+	}
 	qdrantUrl?: string
 	qdrantApiKey?: string
 	searchMinScore?: number
@@ -33,6 +39,10 @@ export type PreviousConfigSnapshot = {
 	openAiCompatibleBaseUrl?: string
 	openAiCompatibleApiKey?: string
 	geminiApiKey?: string
+	azureOpenAiApiKey?: string
+	azureOpenAiEndpoint?: string
+	azureOpenAiDeploymentName?: string
+	azureOpenAiApiVersion?: string
 	qdrantUrl?: string
 	qdrantApiKey?: string
 }

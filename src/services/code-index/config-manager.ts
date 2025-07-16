@@ -18,6 +18,12 @@ export class CodeIndexConfigManager {
 	private ollamaOptions?: ApiHandlerOptions
 	private openAiCompatibleOptions?: { baseUrl: string; apiKey: string }
 	private geminiOptions?: { apiKey: string }
+	private azureOpenAiOptions?: {
+		azureOpenAiApiKey: string
+		azureOpenAiEndpoint: string
+		azureOpenAiDeploymentName: string
+		azureOpenAiApiVersion?: string
+	}
 	private qdrantUrl?: string = "http://http://127.0.0.1:6333"
 	private qdrantApiKey?: string
 	private searchMinScore?: number
@@ -49,6 +55,9 @@ export class CodeIndexConfigManager {
 			codebaseIndexEmbedderModelId: "",
 			codebaseIndexSearchMinScore: undefined,
 			codebaseIndexSearchMaxResults: undefined,
+			codebaseIndexAzureOpenAiEndpoint: "",
+			codebaseIndexAzureOpenAiDeploymentName: "",
+			codebaseIndexAzureOpenAiApiVersion: "2024-02-01",
 		}
 
 		const {
@@ -61,12 +70,27 @@ export class CodeIndexConfigManager {
 			codebaseIndexSearchMaxResults,
 		} = codebaseIndexConfig
 
+		// Add Azure OpenAI properties to codebaseIndexConfig if they don't exist
+		if (codebaseIndexConfig.codebaseIndexAzureOpenAiEndpoint === undefined) {
+			codebaseIndexConfig.codebaseIndexAzureOpenAiEndpoint = ""
+		}
+		if (codebaseIndexConfig.codebaseIndexAzureOpenAiDeploymentName === undefined) {
+			codebaseIndexConfig.codebaseIndexAzureOpenAiDeploymentName = ""
+		}
+		if (codebaseIndexConfig.codebaseIndexAzureOpenAiApiVersion === undefined) {
+			codebaseIndexConfig.codebaseIndexAzureOpenAiApiVersion = "2024-02-01"
+		}
+
 		const openAiKey = this.contextProxy?.getSecret("codeIndexOpenAiKey") ?? ""
 		const qdrantApiKey = this.contextProxy?.getSecret("codeIndexQdrantApiKey") ?? ""
 		// Fix: Read OpenAI Compatible settings from the correct location within codebaseIndexConfig
 		const openAiCompatibleBaseUrl = codebaseIndexConfig.codebaseIndexOpenAiCompatibleBaseUrl ?? ""
 		const openAiCompatibleApiKey = this.contextProxy?.getSecret("codebaseIndexOpenAiCompatibleApiKey") ?? ""
 		const geminiApiKey = this.contextProxy?.getSecret("codebaseIndexGeminiApiKey") ?? ""
+		const azureOpenAiApiKey = this.contextProxy?.getSecret("codebaseIndexAzureOpenAiApiKey") ?? ""
+		const azureOpenAiEndpoint = codebaseIndexConfig.codebaseIndexAzureOpenAiEndpoint ?? ""
+		const azureOpenAiDeploymentName = codebaseIndexConfig.codebaseIndexAzureOpenAiDeploymentName ?? ""
+		const azureOpenAiApiVersion = codebaseIndexConfig.codebaseIndexAzureOpenAiApiVersion ?? "2024-02-01"
 
 		// Update instance variables with configuration
 		this.codebaseIndexEnabled = codebaseIndexEnabled ?? true
@@ -100,6 +124,8 @@ export class CodeIndexConfigManager {
 			this.embedderProvider = "openai-compatible"
 		} else if (codebaseIndexEmbedderProvider === "gemini") {
 			this.embedderProvider = "gemini"
+		} else if (codebaseIndexEmbedderProvider === "azure-openai") {
+			this.embedderProvider = "azure-openai"
 		} else {
 			this.embedderProvider = "openai"
 		}
@@ -119,6 +145,16 @@ export class CodeIndexConfigManager {
 				: undefined
 
 		this.geminiOptions = geminiApiKey ? { apiKey: geminiApiKey } : undefined
+
+		this.azureOpenAiOptions =
+			azureOpenAiApiKey && azureOpenAiEndpoint && azureOpenAiDeploymentName
+				? {
+						azureOpenAiApiKey,
+						azureOpenAiEndpoint,
+						azureOpenAiDeploymentName,
+						azureOpenAiApiVersion,
+					}
+				: undefined
 	}
 
 	/**
@@ -135,6 +171,12 @@ export class CodeIndexConfigManager {
 			ollamaOptions?: ApiHandlerOptions
 			openAiCompatibleOptions?: { baseUrl: string; apiKey: string }
 			geminiOptions?: { apiKey: string }
+			azureOpenAiOptions?: {
+				azureOpenAiApiKey: string
+				azureOpenAiEndpoint: string
+				azureOpenAiDeploymentName: string
+				azureOpenAiApiVersion?: string
+			}
 			qdrantUrl?: string
 			qdrantApiKey?: string
 			searchMinScore?: number
@@ -153,6 +195,10 @@ export class CodeIndexConfigManager {
 			openAiCompatibleBaseUrl: this.openAiCompatibleOptions?.baseUrl ?? "",
 			openAiCompatibleApiKey: this.openAiCompatibleOptions?.apiKey ?? "",
 			geminiApiKey: this.geminiOptions?.apiKey ?? "",
+			azureOpenAiApiKey: this.azureOpenAiOptions?.azureOpenAiApiKey ?? "",
+			azureOpenAiEndpoint: this.azureOpenAiOptions?.azureOpenAiEndpoint ?? "",
+			azureOpenAiDeploymentName: this.azureOpenAiOptions?.azureOpenAiDeploymentName ?? "",
+			azureOpenAiApiVersion: this.azureOpenAiOptions?.azureOpenAiApiVersion ?? "",
 			qdrantUrl: this.qdrantUrl ?? "",
 			qdrantApiKey: this.qdrantApiKey ?? "",
 		}
@@ -176,6 +222,7 @@ export class CodeIndexConfigManager {
 				ollamaOptions: this.ollamaOptions,
 				openAiCompatibleOptions: this.openAiCompatibleOptions,
 				geminiOptions: this.geminiOptions,
+				azureOpenAiOptions: this.azureOpenAiOptions,
 				qdrantUrl: this.qdrantUrl,
 				qdrantApiKey: this.qdrantApiKey,
 				searchMinScore: this.currentSearchMinScore,
@@ -207,6 +254,13 @@ export class CodeIndexConfigManager {
 			const apiKey = this.geminiOptions?.apiKey
 			const qdrantUrl = this.qdrantUrl
 			const isConfigured = !!(apiKey && qdrantUrl)
+			return isConfigured
+		} else if (this.embedderProvider === "azure-openai") {
+			const apiKey = this.azureOpenAiOptions?.azureOpenAiApiKey
+			const endpoint = this.azureOpenAiOptions?.azureOpenAiEndpoint
+			const deploymentName = this.azureOpenAiOptions?.azureOpenAiDeploymentName
+			const qdrantUrl = this.qdrantUrl
+			const isConfigured = !!(apiKey && endpoint && deploymentName && qdrantUrl)
 			return isConfigured
 		}
 		return false // Should not happen if embedderProvider is always set correctly
@@ -241,6 +295,10 @@ export class CodeIndexConfigManager {
 		const prevOpenAiCompatibleApiKey = prev?.openAiCompatibleApiKey ?? ""
 		const prevModelDimension = prev?.modelDimension
 		const prevGeminiApiKey = prev?.geminiApiKey ?? ""
+		const prevAzureOpenAiApiKey = prev?.azureOpenAiApiKey ?? ""
+		const prevAzureOpenAiEndpoint = prev?.azureOpenAiEndpoint ?? ""
+		const prevAzureOpenAiDeploymentName = prev?.azureOpenAiDeploymentName ?? ""
+		const prevAzureOpenAiApiVersion = prev?.azureOpenAiApiVersion ?? ""
 		const prevQdrantUrl = prev?.qdrantUrl ?? ""
 		const prevQdrantApiKey = prev?.qdrantApiKey ?? ""
 
@@ -277,6 +335,10 @@ export class CodeIndexConfigManager {
 		const currentOpenAiCompatibleApiKey = this.openAiCompatibleOptions?.apiKey ?? ""
 		const currentModelDimension = this.modelDimension
 		const currentGeminiApiKey = this.geminiOptions?.apiKey ?? ""
+		const currentAzureOpenAiApiKey = this.azureOpenAiOptions?.azureOpenAiApiKey ?? ""
+		const currentAzureOpenAiEndpoint = this.azureOpenAiOptions?.azureOpenAiEndpoint ?? ""
+		const currentAzureOpenAiDeploymentName = this.azureOpenAiOptions?.azureOpenAiDeploymentName ?? ""
+		const currentAzureOpenAiApiVersion = this.azureOpenAiOptions?.azureOpenAiApiVersion ?? ""
 		const currentQdrantUrl = this.qdrantUrl ?? ""
 		const currentQdrantApiKey = this.qdrantApiKey ?? ""
 
@@ -291,6 +353,15 @@ export class CodeIndexConfigManager {
 		if (
 			prevOpenAiCompatibleBaseUrl !== currentOpenAiCompatibleBaseUrl ||
 			prevOpenAiCompatibleApiKey !== currentOpenAiCompatibleApiKey
+		) {
+			return true
+		}
+
+		if (
+			prevAzureOpenAiApiKey !== currentAzureOpenAiApiKey ||
+			prevAzureOpenAiEndpoint !== currentAzureOpenAiEndpoint ||
+			prevAzureOpenAiDeploymentName !== currentAzureOpenAiDeploymentName ||
+			prevAzureOpenAiApiVersion !== currentAzureOpenAiApiVersion
 		) {
 			return true
 		}
@@ -351,6 +422,7 @@ export class CodeIndexConfigManager {
 			ollamaOptions: this.ollamaOptions,
 			openAiCompatibleOptions: this.openAiCompatibleOptions,
 			geminiOptions: this.geminiOptions,
+			azureOpenAiOptions: this.azureOpenAiOptions,
 			qdrantUrl: this.qdrantUrl,
 			qdrantApiKey: this.qdrantApiKey,
 			searchMinScore: this.currentSearchMinScore,

@@ -73,6 +73,12 @@ interface LocalCodeIndexSettings {
 	codebaseIndexOpenAiCompatibleBaseUrl?: string
 	codebaseIndexOpenAiCompatibleApiKey?: string
 	codebaseIndexGeminiApiKey?: string
+
+	// Azure OpenAI settings
+	codebaseIndexAzureOpenAiApiKey?: string
+	codebaseIndexAzureOpenAiEndpoint?: string
+	codebaseIndexAzureOpenAiDeploymentName?: string
+	codebaseIndexAzureOpenAiApiVersion?: string
 }
 
 // Validation schema for codebase index settings
@@ -153,6 +159,21 @@ const createValidationSchema = (provider: EmbedderProvider, t: any) => {
 					.min(1, t("settings:codeIndex.validation.modelSelectionRequired")),
 			})
 
+		case "azure-openai":
+			return baseSchema.extend({
+				codebaseIndexAzureOpenAiApiKey: z.string().min(1, t("settings:codeIndex.validation.apiKeyRequired")),
+				codebaseIndexAzureOpenAiEndpoint: z
+					.string()
+					.min(1, t("settings:codeIndex.validation.endpointRequired"))
+					.url(t("settings:codeIndex.validation.invalidEndpointUrl")),
+				codebaseIndexAzureOpenAiDeploymentName: z
+					.string()
+					.min(1, t("settings:codeIndex.validation.deploymentNameRequired")),
+				codebaseIndexEmbedderModelId: z
+					.string()
+					.min(1, t("settings:codeIndex.validation.modelSelectionRequired")),
+			})
+
 		default:
 			return baseSchema
 	}
@@ -198,6 +219,10 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 		codebaseIndexOpenAiCompatibleBaseUrl: "",
 		codebaseIndexOpenAiCompatibleApiKey: "",
 		codebaseIndexGeminiApiKey: "",
+		codebaseIndexAzureOpenAiApiKey: "",
+		codebaseIndexAzureOpenAiEndpoint: "",
+		codebaseIndexAzureOpenAiDeploymentName: "",
+		codebaseIndexAzureOpenAiApiVersion: "2024-02-01",
 	})
 
 	// Initial settings state - stores the settings when popover opens
@@ -248,6 +273,10 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 				codebaseIndexOpenAiCompatibleBaseUrl: codebaseIndexConfig.codebaseIndexOpenAiCompatibleBaseUrl || "",
 				codebaseIndexOpenAiCompatibleApiKey: "",
 				codebaseIndexGeminiApiKey: "",
+				codebaseIndexAzureOpenAiApiKey: "",
+				codebaseIndexAzureOpenAiEndpoint: "",
+				codebaseIndexAzureOpenAiDeploymentName: "",
+				codebaseIndexAzureOpenAiApiVersion: "2024-02-01",
 			}
 			setInitialSettings(settings)
 			setCurrentSettings(settings)
@@ -350,6 +379,14 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 					}
 					if (!prev.codebaseIndexGeminiApiKey || prev.codebaseIndexGeminiApiKey === SECRET_PLACEHOLDER) {
 						updated.codebaseIndexGeminiApiKey = secretStatus.hasGeminiApiKey ? SECRET_PLACEHOLDER : ""
+					}
+					if (
+						!prev.codebaseIndexAzureOpenAiApiKey ||
+						prev.codebaseIndexAzureOpenAiApiKey === SECRET_PLACEHOLDER
+					) {
+						updated.codebaseIndexAzureOpenAiApiKey = secretStatus.hasAzureOpenAiApiKey
+							? SECRET_PLACEHOLDER
+							: ""
 					}
 
 					// Restore custom model settings
@@ -561,7 +598,8 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 	const getAvailableModels = () => {
 		if (!codebaseIndexModels) return []
 
-		const models = codebaseIndexModels[currentSettings.codebaseIndexEmbedderProvider]
+		const models =
+			codebaseIndexModels[currentSettings.codebaseIndexEmbedderProvider as keyof typeof codebaseIndexModels]
 		return models ? Object.keys(models) : []
 	}
 
@@ -693,6 +731,9 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 												<SelectItem value="gemini">
 													{t("settings:codeIndex.geminiProvider")}
 												</SelectItem>
+												<SelectItem value="azure-openai">
+													{t("settings:codeIndex.azureOpenaiProvider")}
+												</SelectItem>
 											</SelectContent>
 										</Select>
 									</div>
@@ -740,7 +781,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 													{getAvailableModels().map((modelId) => {
 														const model =
 															codebaseIndexModels?.[
-																currentSettings.codebaseIndexEmbedderProvider
+																currentSettings.codebaseIndexEmbedderProvider as keyof typeof codebaseIndexModels
 															]?.[modelId]
 														return (
 															<VSCodeOption key={modelId} value={modelId}>
@@ -838,7 +879,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 													{getAvailableModels().map((modelId) => {
 														const model =
 															codebaseIndexModels?.[
-																currentSettings.codebaseIndexEmbedderProvider
+																currentSettings.codebaseIndexEmbedderProvider as keyof typeof codebaseIndexModels
 															]?.[modelId]
 														return (
 															<VSCodeOption key={modelId} value={modelId}>
@@ -1025,6 +1066,151 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 										</>
 									)}
 
+									{currentSettings.codebaseIndexEmbedderProvider === "azure-openai" && (
+										<>
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.azureOpenAIKeyLabel")}
+												</label>
+												<VSCodeTextField
+													type="password"
+													value={currentSettings.codebaseIndexAzureOpenAiApiKey || ""}
+													onInput={(e: any) =>
+														updateSetting("codebaseIndexAzureOpenAiApiKey", e.target.value)
+													}
+													placeholder={t("settings:codeIndex.azureOpenAIKeyPlaceholder")}
+													className={cn("w-full", {
+														"border-red-500": formErrors.codebaseIndexAzureOpenAiApiKey,
+													})}
+												/>
+												{formErrors.codebaseIndexAzureOpenAiApiKey && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexAzureOpenAiApiKey}
+													</p>
+												)}
+											</div>
+
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.azureOpenAIEndpointLabel")}
+												</label>
+												<VSCodeTextField
+													value={currentSettings.codebaseIndexAzureOpenAiEndpoint || ""}
+													onInput={(e: any) =>
+														updateSetting(
+															"codebaseIndexAzureOpenAiEndpoint",
+															e.target.value,
+														)
+													}
+													placeholder={t("settings:codeIndex.azureOpenAIEndpointPlaceholder")}
+													className={cn("w-full", {
+														"border-red-500": formErrors.codebaseIndexAzureOpenAiEndpoint,
+													})}
+												/>
+												{formErrors.codebaseIndexAzureOpenAiEndpoint && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexAzureOpenAiEndpoint}
+													</p>
+												)}
+											</div>
+
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.azureOpenAIDeploymentNameLabel")}
+												</label>
+												<VSCodeTextField
+													value={currentSettings.codebaseIndexAzureOpenAiDeploymentName || ""}
+													onInput={(e: any) =>
+														updateSetting(
+															"codebaseIndexAzureOpenAiDeploymentName",
+															e.target.value,
+														)
+													}
+													placeholder={t(
+														"settings:codeIndex.azureOpenAIDeploymentNamePlaceholder",
+													)}
+													className={cn("w-full", {
+														"border-red-500":
+															formErrors.codebaseIndexAzureOpenAiDeploymentName,
+													})}
+												/>
+												{formErrors.codebaseIndexAzureOpenAiDeploymentName && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexAzureOpenAiDeploymentName}
+													</p>
+												)}
+											</div>
+
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.azureOpenAIApiVersionLabel")}
+												</label>
+												<VSCodeTextField
+													value={
+														currentSettings.codebaseIndexAzureOpenAiApiVersion ||
+														"2024-02-01"
+													}
+													onInput={(e: any) =>
+														updateSetting(
+															"codebaseIndexAzureOpenAiApiVersion",
+															e.target.value,
+														)
+													}
+													placeholder={t(
+														"settings:codeIndex.azureOpenAIApiVersionPlaceholder",
+													)}
+													className={cn("w-full", {
+														"border-red-500": formErrors.codebaseIndexAzureOpenAiApiVersion,
+													})}
+												/>
+												{formErrors.codebaseIndexAzureOpenAiApiVersion && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexAzureOpenAiApiVersion}
+													</p>
+												)}
+											</div>
+
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.modelLabel")}
+												</label>
+												<VSCodeDropdown
+													value={currentSettings.codebaseIndexEmbedderModelId}
+													onChange={(e: any) =>
+														updateSetting("codebaseIndexEmbedderModelId", e.target.value)
+													}
+													className={cn("w-full", {
+														"border-red-500": formErrors.codebaseIndexEmbedderModelId,
+													})}>
+													<VSCodeOption value="">
+														{t("settings:codeIndex.selectModel")}
+													</VSCodeOption>
+													{getAvailableModels().map((modelId) => {
+														const model =
+															codebaseIndexModels?.[
+																currentSettings.codebaseIndexEmbedderProvider as keyof typeof codebaseIndexModels
+															]?.[modelId]
+														return (
+															<VSCodeOption key={modelId} value={modelId}>
+																{modelId}{" "}
+																{model
+																	? t("settings:codeIndex.modelDimensions", {
+																			dimension: model.dimension,
+																		})
+																	: ""}
+															</VSCodeOption>
+														)
+													})}
+												</VSCodeDropdown>
+												{formErrors.codebaseIndexEmbedderModelId && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexEmbedderModelId}
+													</p>
+												)}
+											</div>
+										</>
+									)}
+
 									{currentSettings.codebaseIndexEmbedderProvider === "gemini" && (
 										<>
 											<div className="space-y-2">
@@ -1067,7 +1253,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 													{getAvailableModels().map((modelId) => {
 														const model =
 															codebaseIndexModels?.[
-																currentSettings.codebaseIndexEmbedderProvider
+																currentSettings.codebaseIndexEmbedderProvider as keyof typeof codebaseIndexModels
 															]?.[modelId]
 														return (
 															<VSCodeOption key={modelId} value={modelId}>

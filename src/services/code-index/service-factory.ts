@@ -3,6 +3,7 @@ import { OpenAiEmbedder } from "./embedders/openai"
 import { CodeIndexOllamaEmbedder } from "./embedders/ollama"
 import { OpenAICompatibleEmbedder } from "./embedders/openai-compatible"
 import { GeminiEmbedder } from "./embedders/gemini"
+import { AzureOpenAIEmbedder } from "./embedders/azure-openai"
 import { EmbedderProvider, getDefaultModelId, getModelDimension } from "../../shared/embeddingModels"
 import { QdrantVectorStore } from "./vector-store/qdrant-client"
 import { codeParser, DirectoryScanner, FileWatcher } from "./processors"
@@ -62,6 +63,18 @@ export class CodeIndexServiceFactory {
 				throw new Error(t("embeddings:serviceFactory.geminiConfigMissing"))
 			}
 			return new GeminiEmbedder(config.geminiOptions.apiKey, config.modelId)
+		} else if (provider === "azure-openai") {
+			if (
+				!config.azureOpenAiOptions?.azureOpenAiApiKey ||
+				!config.azureOpenAiOptions?.azureOpenAiEndpoint ||
+				!config.azureOpenAiOptions?.azureOpenAiDeploymentName
+			) {
+				throw new Error(t("embeddings:serviceFactory.azureOpenAiConfigMissing"))
+			}
+			return new AzureOpenAIEmbedder({
+				...config.azureOpenAiOptions,
+				azureOpenAiEmbeddingModelId: config.modelId,
+			})
 		}
 
 		throw new Error(
