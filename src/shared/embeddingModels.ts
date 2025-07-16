@@ -58,7 +58,16 @@ export const EMBEDDING_MODEL_PROFILES: EmbeddingModelProfiles = {
  * @param modelId The specific model ID (e.g., "text-embedding-3-small").
  * @returns The dimension size or undefined if the model is not found.
  */
-export function getModelDimension(provider: EmbedderProvider, modelId: string): number | undefined {
+export function getModelDimension(
+	provider: EmbedderProvider,
+	modelId: string,
+	customDimension?: number,
+): number | undefined {
+	// If a custom dimension is provided, use it (for custom models)
+	if (customDimension !== undefined) {
+		return customDimension
+	}
+
 	const providerProfiles = EMBEDDING_MODEL_PROFILES[provider]
 	if (!providerProfiles) {
 		console.warn(`Provider not found in profiles: ${provider}`)

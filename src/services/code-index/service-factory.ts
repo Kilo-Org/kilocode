@@ -104,7 +104,7 @@ export class CodeIndexServiceFactory {
 			vectorSize = config.modelDimension
 		} else {
 			// Fall back to model-specific dimension from profiles
-			vectorSize = getModelDimension(provider, modelId)
+			vectorSize = getModelDimension(provider, modelId, config.modelDimension)
 		}
 
 		if (vectorSize === undefined || vectorSize <= 0) {
