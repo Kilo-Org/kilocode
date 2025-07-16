@@ -87,9 +87,12 @@ describe("GhostProvider", () => {
 		})
 	})
 
-	// Helper function to normalize whitespace for consistent testing
+	// Helper function to normalize whitespace and line endings
 	function normalizeWhitespace(content: string): string {
-		return content.replace(/\t/g, "  ") // Convert tabs to 2 spaces
+		return content
+			.replace(/\t/g, "  ") // Convert tabs to 2 spaces
+			.replace(/\r\n/g, "\n") // Convert CRLF to LF
+			.replace(/\n/g, "\n") // Normalize line endings
 	}
 
 	// Helper function to set up test document and context
