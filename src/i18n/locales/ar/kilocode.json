@@ -53,7 +53,7 @@
 		"noStagedChanges": "Kilo: ما فيه تعديلات مضافة لتحليلها",
 		"tokenRequired": "يتطلب توليد الرسالة رمز Kilo Code",
 		"activationFailed": "Kilo: فشل تفعيل مولّد الرسائل: {{error}}",
-		"providerRegistered": "Kilo: تم تسجيل موفر رسائل الاعتماد",
+		"providerRegistered": "Kilo: تم تسجيل موفر رسائل الاعتماد"
 	},
 	"autocomplete": {
 		"statusBar": {
