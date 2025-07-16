@@ -87,7 +87,7 @@
 		"ollamaUrlPlaceholder": "http://localhost:11434",
 		"openAiCompatibleBaseUrlPlaceholder": "https://api.example.com",
 		"modelDimensionPlaceholder": "1536",
-		"qdrantUrlPlaceholder": "http://localhost:6333",
+		"qdrantUrlPlaceholder": "http://http://127.0.0.1:6333",
 		"saveError": "保存设置失败",
 		"modelDimensions": "({{dimension}} 维度)",
 		"saveSuccess": "设置保存成功",

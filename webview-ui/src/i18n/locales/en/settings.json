@@ -93,7 +93,7 @@
 		"ollamaUrlPlaceholder": "http://localhost:11434",
 		"openAiCompatibleBaseUrlPlaceholder": "https://api.example.com",
 		"modelDimensionPlaceholder": "1536",
-		"qdrantUrlPlaceholder": "http://localhost:6333",
+		"qdrantUrlPlaceholder": "http://http://127.0.0.1:6333",
 		"saveError": "Failed to save settings",
 		"modelDimensions": "({{dimension}} dimensions)",
 		"saveSuccess": "Settings saved successfully",

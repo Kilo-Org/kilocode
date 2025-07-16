@@ -184,7 +184,7 @@ describe("CodeIndexPopover Validation", () => {
 
 			// First, make a change to enable the save button by modifying the Qdrant URL
 			const qdrantUrlField = screen.getByPlaceholderText(/settings:codeIndex.qdrantUrlPlaceholder/i)
-			fireEvent.change(qdrantUrlField, { target: { value: "http://localhost:6333" } })
+			fireEvent.change(qdrantUrlField, { target: { value: "http://http://127.0.0.1:6333" } })
 
 			// Wait for the save button to become enabled
 			await waitFor(() => {
@@ -213,7 +213,7 @@ describe("CodeIndexPopover Validation", () => {
 
 			// First, make a change to enable the save button
 			const qdrantUrlField = screen.getByPlaceholderText(/settings:codeIndex.qdrantUrlPlaceholder/i)
-			fireEvent.change(qdrantUrlField, { target: { value: "http://localhost:6333" } })
+			fireEvent.change(qdrantUrlField, { target: { value: "http://http://127.0.0.1:6333" } })
 
 			// Set API key but leave model empty
 			const apiKeyField = screen.getByPlaceholderText(/settings:codeIndex.openAiKeyPlaceholder/i)
@@ -298,7 +298,7 @@ describe("CodeIndexPopover Validation", () => {
 
 			// Set required fields to make form valid
 			const qdrantUrlField = screen.getByPlaceholderText(/settings:codeIndex.qdrantUrlPlaceholder/i)
-			fireEvent.change(qdrantUrlField, { target: { value: "http://localhost:6333" } })
+			fireEvent.change(qdrantUrlField, { target: { value: "http://http://127.0.0.1:6333" } })
 
 			const apiKeyField = screen.getByPlaceholderText(/settings:codeIndex.openAiKeyPlaceholder/i)
 			fireEvent.change(apiKeyField, { target: { value: "test-api-key" } })
@@ -358,7 +358,7 @@ describe("CodeIndexPopover Validation", () => {
 
 			// Set valid Qdrant URL
 			if (qdrantField) {
-				simulateInput(qdrantField, "http://localhost:6333")
+				simulateInput(qdrantField, "http://http://127.0.0.1:6333")
 			}
 
 			// Set API key

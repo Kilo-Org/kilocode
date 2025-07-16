@@ -95,7 +95,7 @@ describe("CodeIndexConfigManager", () => {
 				modelId: undefined,
 				openAiOptions: { openAiNativeApiKey: "" },
 				ollamaOptions: { ollamaBaseUrl: "" },
-				qdrantUrl: "http://localhost:6333",
+				qdrantUrl: "http://http://127.0.0.1:6333",
 				qdrantApiKey: "",
 				searchMinScore: 0.4,
 			})
@@ -1352,7 +1352,7 @@ describe("CodeIndexConfigManager", () => {
 			mockContextProxy.getGlobalState.mockReturnValue({
 				codebaseIndexEnabled: false,
 				codebaseIndexEmbedderProvider: "openai",
-				codebaseIndexQdrantUrl: "http://localhost:6333",
+				codebaseIndexQdrantUrl: "http://http://127.0.0.1:6333",
 			})
 			mockContextProxy.getSecret.mockReturnValue(undefined)
 			configManager = new CodeIndexConfigManager(mockContextProxy)
@@ -1364,7 +1364,7 @@ describe("CodeIndexConfigManager", () => {
 			mockContextProxy.getGlobalState.mockReturnValue({
 				codebaseIndexEnabled: true,
 				codebaseIndexEmbedderProvider: "openai",
-				codebaseIndexQdrantUrl: "http://localhost:6333",
+				codebaseIndexQdrantUrl: "http://http://127.0.0.1:6333",
 			})
 			mockContextProxy.getSecret.mockImplementation((key: string) => {
 				if (key === "codeIndexOpenAiKey") return "test-key"
@@ -1382,7 +1382,7 @@ describe("CodeIndexConfigManager", () => {
 			mockContextProxy.getGlobalState.mockReturnValue({
 				codebaseIndexEnabled: true,
 				codebaseIndexEmbedderProvider: "openai",
-				codebaseIndexQdrantUrl: "http://localhost:6333",
+				codebaseIndexQdrantUrl: "http://http://127.0.0.1:6333",
 			})
 			mockContextProxy.getSecret.mockImplementation((key: string) => {
 				if (key === "codeIndexOpenAiKey") return "test-key"
@@ -1395,14 +1395,14 @@ describe("CodeIndexConfigManager", () => {
 				configured: true,
 				embedderProvider: "openai",
 				openAiKey: "test-key",
-				qdrantUrl: "http://localhost:6333",
+				qdrantUrl: "http://http://127.0.0.1:6333",
 			}
 
 			// Update to disabled
 			mockContextProxy.getGlobalState.mockReturnValue({
 				codebaseIndexEnabled: false,
 				codebaseIndexEmbedderProvider: "openai",
-				codebaseIndexQdrantUrl: "http://localhost:6333",
+				codebaseIndexQdrantUrl: "http://http://127.0.0.1:6333",
 			})
 			mockContextProxy.getSecret.mockImplementation((key: string) => {
 				if (key === "codeIndexOpenAiKey") return "test-key"
@@ -1420,7 +1420,7 @@ describe("CodeIndexConfigManager", () => {
 			mockContextProxy.getGlobalState.mockReturnValue({
 				codebaseIndexEnabled: true,
 				codebaseIndexEmbedderProvider: "openai",
-				codebaseIndexQdrantUrl: "http://localhost:6333",
+				codebaseIndexQdrantUrl: "http://http://127.0.0.1:6333",
 			})
 			mockContextProxy.getSecret.mockImplementation((key: string) => {
 				if (key === "codeIndexOpenAiKey") return "test-key"
@@ -1462,7 +1462,7 @@ describe("CodeIndexConfigManager", () => {
 				codebaseIndexEnabled: true,
 				codebaseIndexEmbedderProvider: "ollama",
 				codebaseIndexOllamaBaseUrl: "http://localhost:11434",
-				codebaseIndexQdrantUrl: "http://localhost:6333",
+				codebaseIndexQdrantUrl: "http://http://127.0.0.1:6333",
 			})
 			mockContextProxy.getSecret.mockReturnValue(undefined)
 			configManager = new CodeIndexConfigManager(mockContextProxy)
@@ -1472,7 +1472,7 @@ describe("CodeIndexConfigManager", () => {
 				configured: true,
 				embedderProvider: "openai",
 				openAiKey: "test-key",
-				qdrantUrl: "http://localhost:6333",
+				qdrantUrl: "http://http://127.0.0.1:6333",
 			}
 
 			const result = configManager.doesConfigChangeRequireRestart(previousSnapshot)
@@ -1506,7 +1506,7 @@ describe("CodeIndexConfigManager", () => {
 				codebaseIndexEnabled: true,
 				codebaseIndexEmbedderProvider: "openai",
 				codebaseIndexEmbedderModelId: "text-embedding-ada-002",
-				codebaseIndexQdrantUrl: "http://localhost:6333",
+				codebaseIndexQdrantUrl: "http://http://127.0.0.1:6333",
 				codebaseIndexSearchMinScore: 0.5,
 				codebaseIndexSearchMaxResults: 20,
 			}
@@ -1535,7 +1535,7 @@ describe("CodeIndexConfigManager", () => {
 			mockContextProxy.getGlobalState.mockReturnValue({
 				codebaseIndexEnabled: false,
 				codebaseIndexEmbedderProvider: "openai",
-				codebaseIndexQdrantUrl: "http://localhost:6333",
+				codebaseIndexQdrantUrl: "http://http://127.0.0.1:6333",
 			})
 			mockContextProxy.getSecret.mockReturnValue(undefined)
 			configManager = new CodeIndexConfigManager(mockContextProxy)
@@ -1547,7 +1547,7 @@ describe("CodeIndexConfigManager", () => {
 			mockContextProxy.getGlobalState.mockReturnValue({
 				codebaseIndexEnabled: true,
 				codebaseIndexEmbedderProvider: "openai",
-				codebaseIndexQdrantUrl: "http://localhost:6333",
+				codebaseIndexQdrantUrl: "http://http://127.0.0.1:6333",
 			})
 			mockContextProxy.getSecret.mockImplementation((key: string) => {
 				if (key === "codeIndexOpenAiKey") return "test-key"
@@ -1564,7 +1564,7 @@ describe("CodeIndexConfigManager", () => {
 			mockContextProxy.getGlobalState.mockReturnValue({
 				codebaseIndexEnabled: true,
 				codebaseIndexEmbedderProvider: "openai",
-				codebaseIndexQdrantUrl: "http://localhost:6333",
+				codebaseIndexQdrantUrl: "http://http://127.0.0.1:6333",
 			})
 			mockContextProxy.getSecret.mockImplementation((key: string) => {
 				if (key === "codeIndexOpenAiKey") return "test-key"
@@ -1585,7 +1585,7 @@ describe("CodeIndexConfigManager", () => {
 			mockContextProxy.getGlobalState.mockReturnValue({
 				codebaseIndexEnabled: true,
 				codebaseIndexEmbedderProvider: "openai",
-				codebaseIndexQdrantUrl: "http://localhost:6333",
+				codebaseIndexQdrantUrl: "http://http://127.0.0.1:6333",
 			})
 			mockContextProxy.getSecret.mockImplementation((key: string) => {
 				if (key === "codeIndexOpenAiKey") return "test-key"
@@ -1600,7 +1600,7 @@ describe("CodeIndexConfigManager", () => {
 			mockContextProxy.getGlobalState.mockReturnValue({
 				codebaseIndexEnabled: true,
 				codebaseIndexEmbedderProvider: "openai",
-				codebaseIndexQdrantUrl: "http://localhost:6333",
+				codebaseIndexQdrantUrl: "http://http://127.0.0.1:6333",
 			})
 			mockContextProxy.getSecret.mockReturnValue(undefined)
 
@@ -1613,7 +1613,7 @@ describe("CodeIndexConfigManager", () => {
 				codebaseIndexEnabled: true,
 				codebaseIndexEmbedderProvider: "ollama",
 				codebaseIndexEmbedderBaseUrl: "http://localhost:11434",
-				codebaseIndexQdrantUrl: "http://localhost:6333",
+				codebaseIndexQdrantUrl: "http://http://127.0.0.1:6333",
 			})
 			mockContextProxy.getSecret.mockReturnValue(undefined)
 
