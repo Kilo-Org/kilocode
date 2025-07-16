@@ -2,19 +2,19 @@
 +++ b/function-rename-var-to-const/input.js
 @@ -1,12 +1,13 @@
 -function oldFunction() {
--    var result = 'initial value';
--    var count = 0;
+-  var result = "initial value"
+-  var count = 0
 +function newFunction() {
-+    // Use const instead of var
-+    const result = 'initial value';
-+    const count = 0;
++  // Use const instead of var
++  const result = "initial value"
++  const count = 0
  
--    for (var i = 0; i < 5; i++) {
-+    for (let i = 0; i < 5; i++) {
-         count += i;
-     }
+-  for (var i = 0; i < 5; i++) {
++  for (let i = 0; i < 5; i++) {
+     count += i
+   }
  
-     return result + ' - ' + count;
+   return result + ' - ' + count
  }
  
  function helperFunction() {

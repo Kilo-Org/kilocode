@@ -2,12 +2,12 @@
 +++ b/mixed-addition-deletion/input.js
 @@ -1,6 +1,7 @@
  function processData(data) {
--    // Old validation
--    if (!data) return null;
-+    // New validation with better error handling
-+    if (!data || typeof data !== 'string') {
-+        throw new Error('Invalid data provided');
-+    }
-     
-     return data.toUpperCase();
+-  // Old validation
+-  if (!data) return null;
++  // New validation with better error handling
++  if (!data || typeof data !== "string") {
++    throw new Error("Invalid data provided")
++  }
+ 
+   return data.toUpperCase();
  }

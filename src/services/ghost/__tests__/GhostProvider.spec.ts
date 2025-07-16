@@ -94,7 +94,7 @@ describe("GhostProvider", () => {
 
 	// Helper function to set up test document and context
 	async function setupTestDocument(filename: string, content: string) {
-		const testUri = vscode.Uri.parse(`file:///${filename}`)
+		const testUri = vscode.Uri.parse(`file://${filename}`)
 		mockWorkspace.addDocument(testUri, content)
 		;(vscode.window as any).activeTextEditor = {
 			document: { uri: testUri },
