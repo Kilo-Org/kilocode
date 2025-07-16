@@ -9,6 +9,8 @@ import {
 } from "@aws-sdk/client-bedrock-runtime"
 import { fromIni } from "@aws-sdk/credential-providers"
 import { Anthropic } from "@anthropic-ai/sdk"
+import { readFileSync } from "fs"
+import { Agent as HttpsAgent } from "https"
 
 import {
 	type ModelInfo,
@@ -220,6 +222,23 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 			// Add the endpoint configuration when specified and enabled
 			...(this.options.awsBedrockEndpoint &&
 				this.options.awsBedrockEndpointEnabled && { endpoint: this.options.awsBedrockEndpoint }),
+		}
+
+		let customCa: Buffer | undefined
+		if (this.options.awsCustomCaBundlePath) {
+			try {
+				customCa = readFileSync(this.options.awsCustomCaBundlePath)
+			} catch (error) {
+				logger.error("Failed to read custom CA bundle", {
+					ctx: "bedrock",
+					path: this.options.awsCustomCaBundlePath,
+					error: error instanceof Error ? error.message : String(error),
+				})
+			}
+		}
+
+		if (customCa) {
+		  clientConfig.requestHandler = new HttpsAgent({ ca: customCa })
 		}
 
 		if (this.options.awsUseProfile && this.options.awsProfile) {
