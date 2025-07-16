@@ -2,4 +2,4 @@
 "kilo-code": patch
 ---
 
-Fix Enhance Prompt feature doesn't work with Claude Code provider
+Enhance Prompt feature now works with Claude Code provider

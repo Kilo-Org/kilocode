@@ -1,6 +1,5 @@
 import type { ProviderSettings } from "@roo-code/types"
-
-import { buildApiHandler, SingleCompletionHandler, ApiHandler } from "../api"
+import { buildApiHandler, SingleCompletionHandler, ApiHandler } from "../api" //kilocode_change
 
 /**
  * Enhances a prompt using the configured API without creating a full Cline instance or task history.
@@ -32,16 +31,11 @@ async function streamResponseFromHandler(handler: ApiHandler, promptText: string
 	const stream = handler.createMessage("", [{ role: "user", content: [{ type: "text", text: promptText }] }])
 
 	let response: string = ""
-	try {
-		for await (const chunk of stream) {
-			if (chunk.type === "text") {
-				response += chunk.text
-			}
+	for await (const chunk of stream) {
+		if (chunk.type === "text") {
+			response += chunk.text
 		}
-	} catch (error) {
-		response = ""
 	}
-
 	return response
 }
 // kilocode_change end - streamResponseFromHandler

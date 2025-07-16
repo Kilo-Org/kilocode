@@ -129,8 +129,7 @@ describe("enhancePrompt", () => {
 			}),
 		})
 
-		const result = await singleCompletionHandler(mockApiConfig, "Test prompt")
-		expect(result).toBe("")
+		await expect(singleCompletionHandler(mockApiConfig, "Test prompt")).rejects.toThrow("Stream error")
 
 		const handler = buildApiHandler(mockApiConfig)
 		expect((handler as any).createMessage).toHaveBeenCalledWith("", [
