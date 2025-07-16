@@ -1,0 +1,8 @@
+--- a/line-deletions/input.js
++++ b/line-deletions/input.js
+@@ -1,5 +1,3 @@
+ function greet(name) {
+-    // TODO: Remove this debug log
+-    console.log('Debug: greeting', name);
+     return `Hello, ${name}!`;
+ }

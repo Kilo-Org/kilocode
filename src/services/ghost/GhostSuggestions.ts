@@ -1,5 +1,5 @@
 import * as vscode from "vscode"
-import { GhostSuggestionEditOperation } from "./types"
+import { GhostSuggestionEditOperation, GhostSuggestionEditOperationsOffset } from "./types"
 
 class GhostSuggestionFile {
 	public fileUri: vscode.Uri
@@ -32,6 +32,14 @@ class GhostSuggestionFile {
 		return this.selectedGroup
 	}
 
+	public getSelectedGroupPreviousOperations(): GhostSuggestionEditOperation[] {
+		if (this.selectedGroup === null || this.selectedGroup <= 0) {
+			return []
+		}
+		const previousGroups = this.groups.slice(0, this.selectedGroup)
+		return previousGroups.flat()
+	}
+
 	public getSelectedGroupOperations(): GhostSuggestionEditOperation[] {
 		if (this.selectedGroup === null || this.selectedGroup >= this.groups.length) {
 			return []
@@ -39,14 +47,9 @@ class GhostSuggestionFile {
 		return this.groups[this.selectedGroup]
 	}
 
-	public getPlaceholderOffsetSelectedGroupOperations() {
-		const selectedGroup = this.getSelectedGroup()
-		if (selectedGroup === null) {
-			return { added: 0, removed: 0 }
-		}
-		const previousGroups = this.groups.slice(0, selectedGroup)
-		const operations = previousGroups.flat()
-		return operations.reduce(
+	public getPlaceholderOffsetSelectedGroupOperations(): GhostSuggestionEditOperationsOffset {
+		const operations = this.getSelectedGroupPreviousOperations()
+		const { added, removed } = operations.reduce(
 			(acc, op) => {
 				if (op.type === "+") {
 					return { added: acc.added + 1, removed: acc.removed }
@@ -57,6 +60,7 @@ class GhostSuggestionFile {
 			},
 			{ added: 0, removed: 0 },
 		)
+		return { added, removed, offset: added - removed }
 	}
 
 	public getGroupsOperations(): GhostSuggestionEditOperation[][] {
@@ -68,15 +72,19 @@ class GhostSuggestionFile {
 	}
 
 	public sortGroups() {
-		this.groups.sort((a, b) => {
-			const aLine = a[0].line
-			const bLine = b[0].line
-			return aLine - bLine
-		})
+		this.groups
+			.sort((a, b) => {
+				const aLine = a[0].line
+				const bLine = b[0].line
+				return aLine - bLine
+			})
+			.forEach((group) => {
+				group.sort((a, b) => a.line - b.line)
+			})
 		this.selectedGroup = this.groups.length > 0 ? 0 : null
 	}
 
-	private computeOperationsOffset(group: GhostSuggestionEditOperation[]) {
+	private computeOperationsOffset(group: GhostSuggestionEditOperation[]): GhostSuggestionEditOperationsOffset {
 		const { added, removed } = group.reduce(
 			(acc, op) => {
 				if (op.type === "+") {

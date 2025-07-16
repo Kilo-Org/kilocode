@@ -1,11 +1,35 @@
 import * as vscode from "vscode"
-import { GhostSuggestionEditOperation } from "./types"
+import { GhostSuggestionEditOperation, GhostSuggestionEditOperationsOffset } from "./types"
 import { GhostSuggestionsState } from "./GhostSuggestions"
 
 export class GhostWorkspaceEdit {
 	private locked: boolean = false
 
-	private async applyOperations(documentUri: vscode.Uri, operations: GhostSuggestionEditOperation[]) {
+	private groupOperationsIntoBlocks = <T>(ops: T[], lineKey: keyof T): T[][] => {
+		if (ops.length === 0) {
+			return []
+		}
+		const blocks: T[][] = [[ops[0]]]
+		for (let i = 1; i < ops.length; i++) {
+			const op = ops[i]
+			const lastBlock = blocks[blocks.length - 1]
+			const lastOp = lastBlock[lastBlock.length - 1]
+			if (Number(op[lineKey]) === Number(lastOp[lineKey]) + 1) {
+				lastBlock.push(op)
+			} else if (Number(op[lineKey]) === Number(lastOp[lineKey])) {
+				lastBlock.push(op)
+			} else {
+				blocks.push([op])
+			}
+		}
+		return blocks
+	}
+
+	private async applyOperations(
+		documentUri: vscode.Uri,
+		operations: GhostSuggestionEditOperation[],
+		previousOperations: GhostSuggestionEditOperation[],
+	) {
 		const workspaceEdit = new vscode.WorkspaceEdit()
 		if (operations.length === 0) {
 			return // No operations to apply
@@ -16,35 +40,88 @@ export class GhostWorkspaceEdit {
 			console.log(`Could not open document: ${documentUri.toString()}`)
 			return
 		}
-		const deleteOps = operations.filter((op) => op.type === "-")
-		const insertOps = operations.filter((op) => op.type === "+")
+		// --- 1. Calculate Initial State from Previous Operations ---
+		let originalLineCursor = 0
+		let finalLineCursor = 0
 
-		let delPtr = 0
-		let insPtr = 0
-		let lineOffset = 0
+		if (previousOperations.length > 0) {
+			const prevDeletes = previousOperations.filter((op) => op.type === "-").sort((a, b) => a.line - b.line)
+			const prevInserts = previousOperations.filter((op) => op.type === "+").sort((a, b) => a.line - b.line)
+			let prevDelPtr = 0
+			let prevInsPtr = 0
 
-		while (delPtr < deleteOps.length || insPtr < insertOps.length) {
-			const nextDeleteOriginalLine = deleteOps[delPtr]?.line ?? Infinity
-			const nextInsertOriginalLine = (insertOps[insPtr]?.line ?? Infinity) - lineOffset
+			// "Dry run" the simulation on previous operations to set the cursors accurately.
+			while (prevDelPtr < prevDeletes.length || prevInsPtr < prevInserts.length) {
+				const nextDelLine = prevDeletes[prevDelPtr]?.line ?? Infinity
+				const nextInsLine = prevInserts[prevInsPtr]?.line ?? Infinity
 
-			if (nextDeleteOriginalLine <= nextInsertOriginalLine) {
-				// Process the deletion next
-				const op = deleteOps[delPtr]
-				const range = document.lineAt(op.line).rangeIncludingLineBreak
-				workspaceEdit.delete(documentUri, range)
-
-				lineOffset--
-				delPtr++
-			} else {
-				// Process the insertion next
-				const op = insertOps[insPtr]
-				const position = new vscode.Position(nextInsertOriginalLine, 0)
-				const textToInsert = (op.content || "") + "\n"
-				workspaceEdit.insert(documentUri, position, textToInsert)
-
-				lineOffset++
-				insPtr++
+				if (nextDelLine <= originalLineCursor && nextDelLine !== Infinity) {
+					originalLineCursor++
+					prevDelPtr++
+				} else if (nextInsLine <= finalLineCursor && nextInsLine !== Infinity) {
+					finalLineCursor++
+					prevInsPtr++
+				} else if (nextDelLine === Infinity && nextInsLine === Infinity) {
+					break
+				} else {
+					originalLineCursor++
+					finalLineCursor++
+				}
 			}
+		}
+
+		// --- 2. Translate and Prepare Current Operations ---
+		const currentDeletes = operations.filter((op) => op.type === "-").sort((a, b) => a.line - b.line)
+		const currentInserts = operations.filter((op) => op.type === "+").sort((a, b) => a.line - b.line)
+		const translatedInsertOps: { originalLine: number; content: string }[] = []
+		let currDelPtr = 0
+		let currInsPtr = 0
+
+		// Run the simulation for the new operations, starting from the state calculated above.
+		while (currDelPtr < currentDeletes.length || currInsPtr < currentInserts.length) {
+			const nextDelLine = currentDeletes[currDelPtr]?.line ?? Infinity
+			const nextInsLine = currentInserts[currInsPtr]?.line ?? Infinity
+
+			if (nextDelLine <= originalLineCursor && nextDelLine !== Infinity) {
+				originalLineCursor++
+				currDelPtr++
+			} else if (nextInsLine <= finalLineCursor && nextInsLine !== Infinity) {
+				translatedInsertOps.push({
+					originalLine: originalLineCursor,
+					content: currentInserts[currInsPtr].content || "",
+				})
+				finalLineCursor++
+				currInsPtr++
+			} else if (nextDelLine === Infinity && nextInsLine === Infinity) {
+				break
+			} else {
+				originalLineCursor++
+				finalLineCursor++
+			}
+		}
+
+		// --- 3. Group and Apply Deletions ---
+		const deleteBlocks = this.groupOperationsIntoBlocks(currentDeletes, "line")
+		for (const block of deleteBlocks) {
+			const firstDeleteLine = block[0].line
+			const lastDeleteLine = block[block.length - 1].line
+			const startPosition = new vscode.Position(firstDeleteLine, 0)
+			let endPosition
+
+			if (lastDeleteLine >= document.lineCount - 1) {
+				endPosition = document.lineAt(lastDeleteLine).rangeIncludingLineBreak.end
+			} else {
+				endPosition = new vscode.Position(lastDeleteLine + 1, 0)
+			}
+			workspaceEdit.delete(documentUri, new vscode.Range(startPosition, endPosition))
+		}
+
+		// --- 4. Group and Apply Translated Insertions ---
+		const insertionBlocks = this.groupOperationsIntoBlocks(translatedInsertOps, "originalLine")
+		for (const block of insertionBlocks) {
+			const anchorLine = block[0].originalLine
+			const textToInsert = block.map((op) => op.content).join("\n") + "\n"
+			workspaceEdit.insert(documentUri, new vscode.Position(anchorLine, 0), textToInsert)
 		}
 
 		await vscode.workspace.applyEdit(workspaceEdit)
@@ -121,25 +198,26 @@ export class GhostWorkspaceEdit {
 	}
 
 	private async getActiveFileSelectedOperations(suggestions: GhostSuggestionsState) {
+		const empty = {
+			documentUri: null,
+			operations: [],
+			previousOperations: [],
+		}
 		const editor = vscode.window.activeTextEditor
 		if (!editor) {
-			return {
-				documentUri: null,
-				operations: [],
-			}
+			return empty
 		}
 		const documentUri = editor.document.uri
 		const suggestionsFile = suggestions.getFile(documentUri)
 		if (!suggestionsFile) {
-			return {
-				documentUri: null,
-				operations: [],
-			}
+			return empty
 		}
 		const operations = suggestionsFile.getSelectedGroupOperations()
+		const previousOperations = suggestionsFile.getSelectedGroupPreviousOperations()
 		return {
 			documentUri,
 			operations,
+			previousOperations,
 		}
 	}
 
@@ -154,10 +232,10 @@ export class GhostWorkspaceEdit {
 		this.locked = true
 		const { documentUri, operations } = this.getActiveFileOperations(suggestions)
 		if (!documentUri || operations.length === 0) {
-			console.log("No active document or no operations to apply.")
+			this.locked = false
 			return
 		}
-		await this.applyOperations(documentUri, operations)
+		await this.applyOperations(documentUri, operations, [])
 		this.locked = false
 	}
 
@@ -166,12 +244,12 @@ export class GhostWorkspaceEdit {
 			return
 		}
 		this.locked = true
-		const { documentUri, operations } = await this.getActiveFileSelectedOperations(suggestions)
+		const { documentUri, operations, previousOperations } = await this.getActiveFileSelectedOperations(suggestions)
 		if (!documentUri || operations.length === 0) {
-			console.log("No active document or no selected operations to apply.")
+			this.locked = false
 			return
 		}
-		await this.applyOperations(documentUri, operations)
+		await this.applyOperations(documentUri, operations, previousOperations)
 		this.locked = false
 	}
 
@@ -182,21 +260,7 @@ export class GhostWorkspaceEdit {
 		this.locked = true
 		const { documentUri, operations } = this.getActiveFileOperations(suggestions)
 		if (!documentUri || operations.length === 0) {
-			console.log("No active document or no operations to apply.")
-			return
-		}
-		await this.revertOperationsPlaceholder(documentUri, operations)
-		this.locked = false
-	}
-
-	public async revertSelectedSuggestionsPlaceholder(suggestions: GhostSuggestionsState): Promise<void> {
-		if (this.locked) {
-			return
-		}
-		this.locked = true
-		const { documentUri, operations } = await this.getActiveFileSelectedOperations(suggestions)
-		if (!documentUri || operations.length === 0) {
-			console.log("No active document or no selected operations to apply.")
+			this.locked = false
 			return
 		}
 		await this.revertOperationsPlaceholder(documentUri, operations)
@@ -210,7 +274,7 @@ export class GhostWorkspaceEdit {
 		this.locked = true
 		const { documentUri, operations } = await this.getActiveFileOperations(suggestions)
 		if (!documentUri || operations.length === 0) {
-			console.log("No active document or no operations to apply.")
+			this.locked = false
 			return
 		}
 		await this.applyOperationsPlaceholders(documentUri, operations)

@@ -14,6 +14,12 @@ export interface GhostSuggestionEditOperation {
 	content: string
 }
 
+export interface GhostSuggestionEditOperationsOffset {
+	added: number
+	removed: number
+	offset: number
+}
+
 export interface GhostSuggestionContext {
 	userInput?: string
 	document?: vscode.TextDocument

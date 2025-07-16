@@ -1,0 +1,24 @@
+--- partial-mixed-operations/input.js
++++ partial-mixed-operations/input.js
+@@ -1,14 +1,18 @@
+ function calculateDiscount(price, discountRate) {
++	// Validate inputs
++	if (price < 0 || discountRate < 0) return 0;
+ 	return price * discountRate;
+ }
+ 
+ function applyDiscount(item) {
+ 	const discount = calculateDiscount(item.price, 0.1);
+ 	return {
+ 		...item,
++		originalPrice: item.price,
+ 		discountedPrice: item.price - discount
+ 	};
+ }
+ 
+ function processItems(items) {
++	// Filter out invalid items
++	const validItems = items.filter(item => item && item.price > 0);
+-	return items.map(applyDiscount);
++	return validItems.map(applyDiscount);
+ }

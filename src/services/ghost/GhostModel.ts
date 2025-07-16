@@ -4,7 +4,7 @@ import { t } from "../../i18n"
 
 export class GhostModel {
 	private apiHandler: ApiHandler | null = null
-	private modelName: string = "google/gemini-2.5-flash-preview-05-20"
+	private modelName: string = "google/gemini-2.5-flash"
 
 	constructor() {
 		const kilocodeToken = ContextProxy.instance.getProviderSettings().kilocodeToken
