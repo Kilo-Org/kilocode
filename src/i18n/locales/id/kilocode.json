@@ -47,12 +47,14 @@
 		"noChanges": "Kilo: Tidak ada perubahan yang ditemukan untuk dianalisis",
 		"generated": "Kilo: Pesan commit telah dibuat!",
 		"generationFailed": "Kilo: Gagal menghasilkan pesan commit: {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: Membuat pesan menggunakan perubahan yang belum di-stage"
+		"generatingFromUnstaged": "Kilo: Membuat pesan menggunakan perubahan yang belum di-stage",
+		"activationFailed": "Kilo: Gagal mengaktifkan pembangkit pesan: {{error}}",
+		"providerRegistered": "Kilo: Penyedia pesan commit telah terdaftar"
 	},
 	"autocomplete": {
 		"statusBar": {
-			"disabled": "$(circle-slash) Kilo Selesai",
-			"enabled": "$(sparkle) Kilo Selesai",
+			"disabled": "$(circle-slash) Kilo Autocomplete",
+			"enabled": "$(sparkle) Kilo Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (dinonaktifkan)",
@@ -61,12 +63,45 @@
 				"sessionTotal": "Biaya total sesi:",
 				"model": "Model:"
 			},
-			"warning": "$(warning) Kilo Selesai",
+			"warning": "$(warning) Kilo Autocomplete",
 			"cost": {
 				"zero": "Rp0,00",
 				"lessThanCent": "<Rp0,01"
 			}
 		},
-		"toggleMessage": "Kilo Selesai {{status}}"
+		"toggleMessage": "Kilo Autocomplete {{status}}"
+	},
+	"ghost": {
+		"progress": {
+			"analyzing": "Menganalisis kode Anda...",
+			"generating": "Membuat saran pengeditan...",
+			"processing": "Memproses saran pengeditan...",
+			"showing": "Menampilkan saran pengeditan...",
+			"title": "Kilo Code"
+		},
+		"input": {
+			"title": "Kilo Code: Tugas Cepat",
+			"placeholder": "misalnya, 'refaktor fungsi ini agar lebih efisien'"
+		},
+		"commands": {
+			"cancelSuggestions": "Batalkan Saran Pengeditan",
+			"applyCurrentSuggestion": "Terapkan Saran Pengeditan Saat Ini",
+			"generateSuggestions": "Kilo Code: Hasilkan Saran Penyuntingan",
+			"applyAllSuggestions": "Terapkan Semua Suntingan yang Disarankan",
+			"displaySuggestions": "Tampilkan Saran Pengeditan",
+			"promptCodeSuggestion": "Tugas Cepat Prompt",
+			"category": "Kilo Code"
+		},
+		"codeAction": {
+			"title": "Kilo Code: Saran Penyuntingan"
+		},
+		"chatParticipant": {
+			"fullName": "Kilo Code Agen",
+			"name": "Agen",
+			"description": "Saya dapat membantu Anda dengan tugas cepat dan saran pengeditan."
+		},
+		"messages": {
+			"provideCodeSuggestions": "Memberikan saran kode..."
+		}
 	}
 }

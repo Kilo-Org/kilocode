@@ -30,6 +30,13 @@ export default [
 		},
 	},
 	{
+		files: ["**/__test_cases__/**/*"],
+		rules: {
+			"no-undef": "off",
+			"no-const-assign": "off",
+		},
+	},
+	{
 		ignores: ["webview-ui", "out"],
 	},
 ]

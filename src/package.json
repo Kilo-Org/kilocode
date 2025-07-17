@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.58.4",
+	"version": "4.59.2",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -248,6 +248,41 @@
 					"dark": "assets/icons/kilo-dark.svg"
 				},
 				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.ghost.generateSuggestions",
+				"title": "%ghost.commands.generateSuggestions%",
+				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.ghost.cancelSuggestions",
+				"title": "%ghost.commands.cancelSuggestions%",
+				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.ghost.applyCurrentSuggestions",
+				"title": "%ghost.commands.applyCurrentSuggestion%",
+				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.ghost.applyAllSuggestions",
+				"title": "%ghost.commands.applyAllSuggestions%",
+				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.ghost.promptCodeSuggestion",
+				"title": "%ghost.commands.promptCodeSuggestion%",
+				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.ghost.goToNextSuggestion",
+				"title": "%ghost.commands.goToNextSuggestion%",
+				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.ghost.goToPreviousSuggestion",
+				"title": "%ghost.commands.goToPreviousSuggestion%",
+				"category": "%configuration.title%"
 			}
 		],
 		"keybindings": [
@@ -267,6 +302,38 @@
 				"command": "editor.action.inlineSuggest.commit",
 				"key": "tab",
 				"when": "inlineSuggestionVisible && editorTextFocus && !editorTabMovesFocus && !inSnippetMode && !suggestWidgetVisible && editorLangId != 'markdown'"
+			},
+			{
+				"command": "kilo-code.ghost.applyCurrentSuggestions",
+				"key": "tab",
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.hasSuggestions"
+			},
+			{
+				"command": "kilo-code.ghost.cancelSuggestions",
+				"key": "escape",
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.hasSuggestions"
+			},
+			{
+				"command": "kilo-code.ghost.goToNextSuggestion",
+				"key": "down",
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.hasSuggestions"
+			},
+			{
+				"command": "kilo-code.ghost.goToPreviousSuggestion",
+				"key": "up",
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.hasSuggestions"
+			},
+			{
+				"command": "kilo-code.ghost.promptCodeSuggestion",
+				"key": "ctrl+i",
+				"mac": "cmd+i",
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode"
+			},
+			{
+				"command": "kilo-code.ghost.generateSuggestions",
+				"key": "ctrl+l",
+				"mac": "cmd+l",
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode"
 			}
 		],
 		"menus": {
@@ -455,7 +522,17 @@
 					"description": "%settings.autoImportSettingsPath.description%"
 				}
 			}
-		}
+		},
+		"codeActions": [
+			{
+				"languages": [
+					"*"
+				],
+				"providedCodeActionKinds": [
+					"vscode.CodeActionKind.QuickFix"
+				]
+			}
+		]
 	},
 	"scripts": {
 		"lint": "eslint . --ext=ts --max-warnings=0",
@@ -477,6 +554,7 @@
 		"@anthropic-ai/vertex-sdk": "^0.11.3",
 		"@aws-sdk/client-bedrock-runtime": "^3.812.0",
 		"@aws-sdk/credential-providers": "^3.806.0",
+		"@cerebras/cerebras_cloud_sdk": "^1.35.0",
 		"@google/genai": "^1.0.0",
 		"@lmstudio/sdk": "^1.1.1",
 		"@mistralai/mistralai": "^1.3.6",
@@ -490,7 +568,6 @@
 		"@vscode/codicons": "^0.0.36",
 		"async-mutex": "^0.5.0",
 		"axios": "^1.7.4",
-		"@cerebras/cerebras_cloud_sdk": "^1.35.0",
 		"cheerio": "^1.0.0",
 		"chokidar": "^4.0.1",
 		"clone-deep": "^4.0.1",
@@ -502,14 +579,15 @@
 		"fast-deep-equal": "^3.1.3",
 		"fast-xml-parser": "^5.0.0",
 		"fastest-levenshtein": "^1.0.16",
+		"fuse.js": "^7.1.0",
 		"fzf": "^0.5.2",
 		"get-folder-size": "^5.0.0",
 		"google-auth-library": "^9.15.1",
 		"i18next": "^25.0.0",
 		"ignore": "^7.0.3",
 		"isbinaryfile": "^5.0.2",
-		"lru-cache": "^11.1.0",
 		"lodash.debounce": "^4.0.8",
+		"lru-cache": "^11.1.0",
 		"mammoth": "^1.8.0",
 		"monaco-vscode-textmate-theme-converter": "^0.1.7",
 		"node-cache": "^5.1.2",

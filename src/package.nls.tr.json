@@ -34,5 +34,15 @@
 	"settings.vsCodeLmModelSelector.family.description": "Dil modelinin ailesi (örn: gpt-4)",
 	"settings.customStoragePath.description": "Özel depolama yolu. Varsayılan konumu kullanmak için boş bırakın. Mutlak yolları destekler (örn: 'D:\\KiloCodeStorage')",
 	"settings.enableCodeActions.description": "Kilo Code hızlı düzeltmeleri etkinleştir.",
-	"settings.autoImportSettingsPath.description": "Uzantı başlangıcında otomatik olarak içe aktarılacak bir Kilo Code yapılandırma dosyasının yolu. Mutlak yolları ve ana dizine göreli yolları destekler (ör. '~/Documents/kilo-code-settings.json'). Otomatik içe aktarmayı devre dışı bırakmak için boş bırakın."
+	"settings.autoImportSettingsPath.description": "Uzantı başlangıcında otomatik olarak içe aktarılacak bir Kilo Code yapılandırma dosyasının yolu. Mutlak yolları ve ana dizine göreli yolları destekler (ör. '~/Documents/kilo-code-settings.json'). Otomatik içe aktarmayı devre dışı bırakmak için boş bırakın.",
+	"ghost.input.title": "Onaylamak için 'Enter'a, iptal etmek için 'Escape'e basın",
+	"ghost.input.placeholder": "Ne yapmak istediğinizi açıklayın...",
+	"ghost.commands.generateSuggestions": "Kilo Code: Düzenleme Önerileri Oluştur",
+	"ghost.commands.displaySuggestions": "Düzenleme Önerilerini Göster",
+	"ghost.commands.cancelSuggestions": "Düzenleme Önerilerini İptal Et",
+	"ghost.commands.applyCurrentSuggestion": "Mevcut Düzenleme Önerisini Uygula",
+	"ghost.commands.applyAllSuggestions": "Tüm Düzenleme Önerilerini Uygula",
+	"ghost.commands.promptCodeSuggestion": "Hızlı Görev",
+	"ghost.commands.goToNextSuggestion": "Sonraki Öneriye Git",
+	"ghost.commands.goToPreviousSuggestion": "Önceki Öneriye Git"
 }

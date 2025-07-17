@@ -47,12 +47,14 @@
 		"noChanges": "Kilo: Δεν βρέθηκαν αλλαγές για ανάλυση",
 		"generated": "Kilo: Το μήνυμα commit δημιουργήθηκε!",
 		"generationFailed": "Kilo: Αποτυχία δημιουργίας μηνύματος commit: {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: Δημιουργία μηνύματος με χρήση μη καταχωρημένων αλλαγών"
+		"generatingFromUnstaged": "Kilo: Δημιουργία μηνύματος με χρήση μη καταχωρημένων αλλαγών",
+		"providerRegistered": "Kilo: Ο πάροχος μηνύματος υποβολής καταχωρήθηκε",
+		"activationFailed": "Kilo: Αποτυχία ενεργοποίησης της γεννήτριας μηνυμάτων: {{error}}"
 	},
 	"autocomplete": {
 		"statusBar": {
-			"warning": "$(warning) Kilo Ολοκληρώθηκε",
-			"enabled": "$(sparkle) Kilo Ολοκληρώθηκε",
+			"warning": "$(warning) Kilo Αυτόματη Συμπλήρωση",
+			"enabled": "$(sparkle) Kilo Αυτόματη Συμπλήρωση",
 			"tooltip": {
 				"basic": "Kilo Code Αυτόματη Συμπλήρωση",
 				"tokenError": "Πρέπει να οριστεί ένα έγκυρο διακριτικό για να χρησιμοποιηθεί η αυτόματη συμπλήρωση",
@@ -61,12 +63,45 @@
 				"lastCompletion": "Τελευταία ολοκλήρωση:",
 				"model": "Μοντέλο:"
 			},
-			"disabled": "$(circle-slash) Kilo Ολοκληρώθηκε",
+			"disabled": "$(circle-slash) Kilo Αυτόματη Συμπλήρωση",
 			"cost": {
 				"lessThanCent": "<0,01$",
 				"zero": "0,00 €"
 			}
 		},
-		"toggleMessage": "Kilo Ολοκληρώθηκε {{status}}"
+		"toggleMessage": "Kilo Αυτόματη Συμπλήρωση {{status}}"
+	},
+	"ghost": {
+		"progress": {
+			"analyzing": "Ανάλυση του κώδικά σας...",
+			"generating": "Δημιουργία προτεινόμενων επεξεργασιών...",
+			"processing": "Επεξεργασία προτεινόμενων αλλαγών...",
+			"showing": "Εμφάνιση προτεινόμενων αλλαγών...",
+			"title": "Kilo Code"
+		},
+		"input": {
+			"title": "Kilo Code: Γρήγορη Εργασία",
+			"placeholder": "π.χ., 'αναδιοργάνωσε αυτή τη συνάρτηση ώστε να είναι πιο αποδοτική'"
+		},
+		"commands": {
+			"cancelSuggestions": "Ακύρωση Προτεινόμενων Αλλαγών",
+			"generateSuggestions": "Kilo Code: Δημιουργία Προτεινόμενων Επεξεργασιών",
+			"displaySuggestions": "Προβολή Προτεινόμενων Τροποποιήσεων",
+			"promptCodeSuggestion": "Γρήγορη Εργασία με Prompt",
+			"applyCurrentSuggestion": "Εφαρμογή Τρέχουσας Προτεινόμενης Επεξεργασίας",
+			"category": "Kilo Code",
+			"applyAllSuggestions": "Εφαρμογή Όλων των Προτεινόμενων Αλλαγών"
+		},
+		"codeAction": {
+			"title": "Kilo Code: Προτεινόμενες Αλλαγές"
+		},
+		"chatParticipant": {
+			"name": "Πράκτορας",
+			"fullName": "Πράκτορας Kilo Code",
+			"description": "Μπορώ να σας βοηθήσω με γρήγορες εργασίες και προτεινόμενες διορθώσεις."
+		},
+		"messages": {
+			"provideCodeSuggestions": "Παρέχονται προτάσεις κώδικα..."
+		}
 	}
 }

@@ -10,13 +10,19 @@ export type GhostSuggestionEditOperationType = "+" | "-"
 
 export interface GhostSuggestionEditOperation {
 	type: GhostSuggestionEditOperationType
-	fileUri: vscode.Uri
 	line: number
 	content: string
+}
+
+export interface GhostSuggestionEditOperationsOffset {
+	added: number
+	removed: number
+	offset: number
 }
 
 export interface GhostSuggestionContext {
 	userInput?: string
 	document?: vscode.TextDocument
 	range?: vscode.Range | vscode.Selection
+	openFiles?: vscode.TextDocument[]
 }

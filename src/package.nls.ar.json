@@ -33,5 +33,16 @@
 	"settings.vsCodeLmModelSelector.vendor.description": "مزود نموذج اللغة (مثال: copilot)",
 	"settings.vsCodeLmModelSelector.family.description": "عائلة نموذج اللغة (مثال: gpt-4)",
 	"settings.customStoragePath.description": "مسار تخزين مخصص. خله فاضي عشان يستخدم المسار الافتراضي. يدعم المسارات المطلقة (مثال: 'D:\\KiloCodeStorage')",
-	"settings.enableCodeActions.description": "فعل الإصلاحات السريعة في Kilo Code"
+	"settings.enableCodeActions.description": "فعل الإصلاحات السريعة في Kilo Code",
+	"settings.autoImportSettingsPath.description": "مسار ملف تكوين Kilo Code للاستيراد التلقائي عند بدء تشغيل الإضافة. يدعم المسارات المطلقة والمسارات النسبية لدليل المنزل (مثل '~/Documents/kilo-code-settings.json'). اتركه فارغًا لتعطيل الاستيراد التلقائي.",
+	"ghost.input.title": "اضغط 'Enter' للتأكيد أو 'Escape' للإلغاء",
+	"ghost.input.placeholder": "صف ما تريد فعله...",
+	"ghost.commands.generateSuggestions": "Kilo Code: إنشاء التعديلات المقترحة",
+	"ghost.commands.displaySuggestions": "عرض التعديلات المقترحة",
+	"ghost.commands.cancelSuggestions": "إلغاء التعديلات المقترحة",
+	"ghost.commands.applyCurrentSuggestion": "تطبيق التعديل المقترح الحالي",
+	"ghost.commands.applyAllSuggestions": "تطبيق جميع التعديلات المقترحة",
+	"ghost.commands.promptCodeSuggestion": "مهمة سريعة",
+	"ghost.commands.goToNextSuggestion": "انتقل إلى الاقتراح التالي",
+	"ghost.commands.goToPreviousSuggestion": "انتقل إلى الاقتراح السابق"
 }

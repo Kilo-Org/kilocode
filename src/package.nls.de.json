@@ -34,5 +34,15 @@
 	"settings.vsCodeLmModelSelector.family.description": "Die Familie des Sprachmodells (z.B. gpt-4)",
 	"settings.customStoragePath.description": "Benutzerdefinierter Speicherpfad. Leer lassen, um den Standardspeicherort zu verwenden. Unterstützt absolute Pfade (z.B. 'D:\\KiloCodeStorage')",
 	"settings.enableCodeActions.description": "Kilo Code Schnelle Problembehebung aktivieren.",
-	"settings.autoImportSettingsPath.description": "Pfad zu einer Kilo Code-Konfigurationsdatei, die beim Start der Erweiterung automatisch importiert wird. Unterstützt absolute Pfade und Pfade relativ zum Home-Verzeichnis (z.B. '~/Documents/kilo-code-settings.json'). Leer lassen, um den automatischen Import zu deaktivieren."
+	"settings.autoImportSettingsPath.description": "Pfad zu einer Kilo Code-Konfigurationsdatei, die beim Start der Erweiterung automatisch importiert wird. Unterstützt absolute Pfade und Pfade relativ zum Home-Verzeichnis (z.B. '~/Documents/kilo-code-settings.json'). Leer lassen, um den automatischen Import zu deaktivieren.",
+	"ghost.input.title": "Kilo Code Geisterschreiber",
+	"ghost.input.placeholder": "Beschreiben Sie, was Sie programmieren möchten...",
+	"ghost.commands.generateSuggestions": "Kilo Code: Vorgeschlagene Bearbeitungen Generieren",
+	"ghost.commands.displaySuggestions": "Vorgeschlagene Bearbeitungen Anzeigen",
+	"ghost.commands.cancelSuggestions": "Vorgeschlagene Bearbeitungen Abbrechen",
+	"ghost.commands.applyCurrentSuggestion": "Aktuelle Vorgeschlagene Bearbeitung Anwenden",
+	"ghost.commands.applyAllSuggestions": "Alle Vorgeschlagenen Bearbeitungen Anwenden",
+	"ghost.commands.promptCodeSuggestion": "Schnelle Aufgabe",
+	"ghost.commands.goToNextSuggestion": "Zur Nächsten Vorgeschlagenen Bearbeitung",
+	"ghost.commands.goToPreviousSuggestion": "Zur Vorherigen Vorgeschlagenen Bearbeitung"
 }

@@ -47,26 +47,61 @@
 		"noChanges": "Kilo: Keine Änderungen zum Analysieren gefunden",
 		"generated": "Kilo: Commit-Nachricht generiert!",
 		"generationFailed": "Kilo: Fehler beim Generieren der Commit-Nachricht: {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: Nachricht mit nicht bereitgestellten Änderungen generieren"
+		"generatingFromUnstaged": "Kilo: Nachricht mit nicht bereitgestellten Änderungen generieren",
+		"activationFailed": "Kilo: Der Nachrichtengenerator konnte nicht aktiviert werden: {{error}}",
+		"providerRegistered": "Kilo: Commit-Nachrichtenanbieter registriert"
 	},
 	"autocomplete": {
 		"statusBar": {
-			"disabled": "$(circle-slash) Kilo abgeschlossen",
+			"disabled": "$(circle-slash) Kilo Autovervollständigung",
 			"tooltip": {
-				"basic": "Kilo Code Autocomplete",
+				"basic": "Kilo Code Autovervollständigung",
 				"sessionTotal": "Gesamtkosten der Sitzung:",
-				"disabled": "Kilo Code Autocomplete (deaktiviert)",
+				"disabled": "Kilo Code Autovervollständigung (deaktiviert)",
 				"tokenError": "Ein gültiges Token muss eingestellt werden, um die Autovervollständigung zu verwenden",
 				"lastCompletion": "Letzte Vervollständigung:",
 				"model": "Modell:"
 			},
-			"warning": "$(warning) Kilo Abgeschlossen",
-			"enabled": "$(sparkle) Kilo Abgeschlossen",
+			"warning": "$(warning) Kilo Autovervollständigung",
+			"enabled": "$(sparkle) Kilo Autovervollständigung",
 			"cost": {
 				"lessThanCent": "<0,01 €",
 				"zero": "0,00 €"
 			}
 		},
-		"toggleMessage": "Kilo vollständig {{status}}"
+		"toggleMessage": "Kilo Autovervollständigung {{status}}"
+	},
+	"ghost": {
+		"progress": {
+			"generating": "Generiere vorgeschlagene Änderungen...",
+			"analyzing": "Analysiere deinen Code...",
+			"processing": "Verarbeitung von Änderungsvorschlägen...",
+			"showing": "Zeige Bearbeitungsvorschläge an...",
+			"title": "Kilo Code"
+		},
+		"input": {
+			"title": "Kilo Code: Schnellaufgabe",
+			"placeholder": "z.B. 'diese Funktion umgestalten, um effizienter zu sein'"
+		},
+		"commands": {
+			"generateSuggestions": "Kilo Code: Vorgeschlagene Änderungen generieren",
+			"displaySuggestions": "Vorgeschlagene Änderungen anzeigen",
+			"cancelSuggestions": "Vorgeschlagene Änderungen abbrechen",
+			"applyAllSuggestions": "Alle vorgeschlagenen Änderungen übernehmen",
+			"promptCodeSuggestion": "Schnellaufgabe erstellen",
+			"applyCurrentSuggestion": "Aktuelle Vorgeschlagene Änderung Übernehmen",
+			"category": "Kilo Code"
+		},
+		"chatParticipant": {
+			"name": "Agent",
+			"fullName": "Kilo Code Agent",
+			"description": "Ich kann Ihnen mit schnellen Aufgaben und vorgeschlagenen Änderungen helfen."
+		},
+		"codeAction": {
+			"title": "Kilo Code: Vorgeschlagene Änderungen"
+		},
+		"messages": {
+			"provideCodeSuggestions": "Code-Vorschläge werden bereitgestellt..."
+		}
 	}
 }

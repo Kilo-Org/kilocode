@@ -4,7 +4,13 @@ import { GhostStrategy } from "./GhostStrategy"
 import { GhostModel } from "./GhostModel"
 import { GhostWorkspaceEdit } from "./GhostWorkspaceEdit"
 import { GhostDecorations } from "./GhostDecorations"
-import { GhostSuggestionContext, GhostSuggestionEditOperation } from "./types"
+import { GhostSuggestionContext } from "./types"
+import { t } from "../../i18n"
+import { addCustomInstructions } from "../../core/prompts/sections/custom-instructions"
+import { getWorkspacePath } from "../../utils/path"
+import { GhostSuggestionsState } from "./GhostSuggestions"
+import { GhostCodeActionProvider } from "./GhostCodeActionProvider"
+import { GhostCodeLensProvider } from "./GhostCodeLensProvider"
 
 export class GhostProvider {
 	private static instance: GhostProvider | null = null
@@ -13,19 +19,32 @@ export class GhostProvider {
 	private model: GhostModel
 	private strategy: GhostStrategy
 	private workspaceEdit: GhostWorkspaceEdit
-	private pendingSuggestions: GhostSuggestionEditOperation[] = []
+	private suggestions: GhostSuggestionsState = new GhostSuggestionsState()
+	private context: vscode.ExtensionContext
 
-	private constructor() {
+	// VSCode Providers
+	public codeActionProvider: GhostCodeActionProvider
+	public codeLensProvider: GhostCodeLensProvider
+
+	private constructor(context: vscode.ExtensionContext) {
+		this.context = context
 		this.decorations = new GhostDecorations()
 		this.documentStore = new GhostDocumentStore()
 		this.model = new GhostModel()
 		this.strategy = new GhostStrategy()
 		this.workspaceEdit = new GhostWorkspaceEdit()
+
+		// Register the providers
+		this.codeActionProvider = new GhostCodeActionProvider()
+		this.codeLensProvider = new GhostCodeLensProvider()
 	}
 
-	public static getInstance(): GhostProvider {
+	public static getInstance(context?: vscode.ExtensionContext): GhostProvider {
 		if (!GhostProvider.instance) {
-			GhostProvider.instance = new GhostProvider()
+			if (!context) {
+				throw new Error("ExtensionContext is required for first initialization of GhostProvider")
+			}
+			GhostProvider.instance = new GhostProvider(context)
 		}
 		return GhostProvider.instance
 	}
@@ -36,10 +55,9 @@ export class GhostProvider {
 
 	public async promptCodeSuggestion() {
 		const userInput = await vscode.window.showInputBox({
-			prompt: "Kilo Code - Code Suggestion",
-			placeHolder: "e.g., 'refactor this function to be more efficient'",
+			prompt: t("kilocode:ghost.input.title"),
+			placeHolder: t("kilocode:ghost.input.placeholder"),
 		})
-
 		if (!userInput) {
 			return
 		}
@@ -51,11 +69,18 @@ export class GhostProvider {
 		const document = editor.document
 		const range = editor.selection.isEmpty ? undefined : editor.selection
 
-		await this.provideCodeSuggestions({
-			document,
-			range,
-			userInput,
-		})
+		await this.provideCodeSuggestions({ document, range, userInput })
+	}
+
+	public async codeSuggestion() {
+		const editor = vscode.window.activeTextEditor
+		if (!editor) {
+			return
+		}
+		const document = editor.document
+		const range = editor.selection.isEmpty ? undefined : editor.selection
+
+		await this.provideCodeSuggestions({ document, range })
 	}
 
 	public async provideCodeActionQuickFix(
@@ -64,19 +89,30 @@ export class GhostProvider {
 	): Promise<void> {
 		// Store the document in the document store
 		this.getDocumentStore().storeDocument(document)
-		await this.provideCodeSuggestions({
-			document,
-			range,
-		})
+		await this.provideCodeSuggestions({ document, range })
+	}
+
+	private async enhanceContext(context: GhostSuggestionContext): Promise<GhostSuggestionContext> {
+		const editor = vscode.window.activeTextEditor
+		if (!editor) {
+			return context
+		}
+		// Add open files to the context
+		const openFiles = vscode.workspace.textDocuments.filter((doc) => doc.uri.scheme === "file")
+		return { ...context, openFiles }
 	}
 
 	private async provideCodeSuggestions(context: GhostSuggestionContext): Promise<void> {
+		// Cancel any ongoing suggestions
+		await this.cancelSuggestions()
+
 		let cancelled = false
+		const enhancedContext = await this.enhanceContext(context)
 
 		await vscode.window.withProgress(
 			{
 				location: vscode.ProgressLocation.Notification,
-				title: "Kilo Code",
+				title: t("kilocode:ghost.progress.title"),
 				cancellable: true,
 			},
 			async (progress, progressToken) => {
@@ -84,89 +120,198 @@ export class GhostProvider {
 					cancelled = true
 				})
 
-				progress.report({
-					message: "Analyzing your code...",
-				})
-				const systemPrompt = this.strategy.getSystemPrompt()
-				const userPrompt = this.strategy.getSuggestionPrompt(context)
+				progress.report({ message: t("kilocode:ghost.progress.analyzing") })
 
+				// Load custom instructions
+				const workspacePath = getWorkspacePath()
+				const customInstructions = await addCustomInstructions("", "", workspacePath, "ghost")
+
+				const systemPrompt = this.strategy.getSystemPrompt(customInstructions)
+				const userPrompt = this.strategy.getSuggestionPrompt(enhancedContext)
 				if (cancelled) {
 					return
 				}
-				progress.report({
-					message: "Generating code suggestions...",
-				})
 
+				progress.report({ message: t("kilocode:ghost.progress.generating") })
 				const response = await this.model.generateResponse(systemPrompt, userPrompt)
-
+				console.log("Ghost response:", response)
 				if (cancelled) {
 					return
 				}
 
-				progress.report({
-					message: "Processing code suggestions...",
-				})
 				// First parse the response into edit operations
-				const operations = await this.strategy.parseResponse(response)
-				this.pendingSuggestions = operations
-
-				console.log("operations", operations)
+				progress.report({ message: t("kilocode:ghost.progress.processing") })
+				this.suggestions = await this.strategy.parseResponse(response, enhancedContext)
 
 				if (cancelled) {
-					this.pendingSuggestions = []
+					this.suggestions.clear()
+					await this.render()
 					return
 				}
-
-				progress.report({
-					message: "Showing code suggestions...",
-				})
 				// Generate placeholder for show the suggestions
-				await this.workspaceEdit.applyOperationsPlaceholders(operations)
-				// Display the suggestions in the active editor
-				await this.displaySuggestions()
+				progress.report({ message: t("kilocode:ghost.progress.showing") })
+				await this.workspaceEdit.applySuggestionsPlaceholders(this.suggestions)
+				await this.render()
 			},
 		)
+	}
+
+	private async render() {
+		await this.updateGlobalContext()
+		await this.displaySuggestions()
+		await this.displayCodeLens()
+		await this.moveCursorToSuggestion()
+	}
+
+	public async onDidChangeActiveTextEditor(editor: vscode.TextEditor | undefined) {
+		if (!editor) {
+			return
+		}
+		await this.render()
+	}
+
+	private async moveCursorToSuggestion() {
+		const topLine = this.getSelectedSuggestionLine()
+		if (topLine === null) {
+			return
+		}
+		const editor = vscode.window.activeTextEditor
+		if (!editor) {
+			return
+		}
+		editor.selection = new vscode.Selection(topLine, 0, topLine, 0)
+		editor.revealRange(new vscode.Range(topLine, 0, topLine, 0), vscode.TextEditorRevealType.InCenter)
 	}
 
 	public async displaySuggestions() {
 		const editor = vscode.window.activeTextEditor
 		if (!editor) {
-			console.log("No active editor found, returning")
 			return
 		}
-
-		const operations = this.pendingSuggestions
-		this.decorations.displaySuggestions(operations)
+		this.decorations.displaySuggestions(this.suggestions)
 	}
 
-	public isCancelSuggestionsEnabled(): boolean {
-		return this.pendingSuggestions.length > 0
+	private getSelectedSuggestionLine() {
+		const editor = vscode.window.activeTextEditor
+		if (!editor) {
+			return null
+		}
+		const file = this.suggestions.getFile(editor.document.uri)
+		if (!file) {
+			return null
+		}
+		const selectedGroup = file.getSelectedGroupOperations()
+		if (selectedGroup.length === 0) {
+			return null
+		}
+		const offset = file.getPlaceholderOffsetSelectedGroupOperations()
+		const topOperation = selectedGroup?.length ? selectedGroup[0] : null
+		if (!topOperation) {
+			return null
+		}
+		return topOperation.type === "+" ? topOperation.line + offset.removed : topOperation.line + offset.added
+	}
+
+	private async displayCodeLens() {
+		const topLine = this.getSelectedSuggestionLine()
+		if (topLine === null) {
+			this.codeLensProvider.setSuggestionRange(undefined)
+			return
+		}
+		this.codeLensProvider.setSuggestionRange(new vscode.Range(topLine, 0, topLine, 0))
+	}
+
+	private async updateGlobalContext() {
+		const hasSuggestions = this.suggestions.hasSuggestions()
+		console.log("hasSuggestions", hasSuggestions)
+		await vscode.commands.executeCommand("setContext", "kilocode.ghost.hasSuggestions", hasSuggestions)
+	}
+
+	public hasPendingSuggestions(): boolean {
+		return this.suggestions.hasSuggestions()
 	}
 
 	public async cancelSuggestions() {
-		const pendingSuggestions = [...this.pendingSuggestions]
-		if (pendingSuggestions.length === 0) {
+		if (!this.hasPendingSuggestions() || this.workspaceEdit.isLocked()) {
 			return
 		}
-		// Clear the decorations in the active editor
 		this.decorations.clearAll()
-
-		await this.workspaceEdit.revertOperationsPlaceHolder(pendingSuggestions)
-
-		// Clear the pending suggestions
-		this.pendingSuggestions = []
+		await this.workspaceEdit.revertSuggestionsPlaceholder(this.suggestions)
+		this.suggestions.clear()
+		await this.render()
 	}
 
-	public isApplyAllSuggestionsEnabled(): boolean {
-		return this.pendingSuggestions.length > 0
+	public async applySelectedSuggestions() {
+		if (!this.hasPendingSuggestions() || this.workspaceEdit.isLocked()) {
+			return
+		}
+		const editor = vscode.window.activeTextEditor
+		if (!editor) {
+			console.log("No active editor found, returning")
+			return
+		}
+		const suggestionsFile = this.suggestions.getFile(editor.document.uri)
+		if (!suggestionsFile) {
+			console.log(`No suggestions found for document: ${editor.document.uri.toString()}`)
+			return
+		}
+		if (suggestionsFile.getSelectedGroup() === null) {
+			console.log("No group selected, returning")
+			return
+		}
+		this.decorations.clearAll()
+		await this.workspaceEdit.revertSuggestionsPlaceholder(this.suggestions)
+		await this.workspaceEdit.applySelectedSuggestions(this.suggestions)
+		suggestionsFile.deleteSelectedGroup()
+		this.suggestions.validateFiles()
+		await this.workspaceEdit.applySuggestionsPlaceholders(this.suggestions)
+		await this.render()
 	}
 
 	public async applyAllSuggestions() {
-		const pendingSuggestions = [...this.pendingSuggestions]
-		if (pendingSuggestions.length === 0) {
+		if (!this.hasPendingSuggestions() || this.workspaceEdit.isLocked()) {
 			return
 		}
-		await this.cancelSuggestions()
-		await this.workspaceEdit.applyOperations(pendingSuggestions)
+		this.decorations.clearAll()
+		await this.workspaceEdit.revertSuggestionsPlaceholder(this.suggestions)
+		await this.workspaceEdit.applySuggestions(this.suggestions)
+		this.suggestions.clear()
+		await this.render()
+	}
+
+	public async selectNextSuggestion() {
+		if (!this.hasPendingSuggestions()) {
+			return
+		}
+		const editor = vscode.window.activeTextEditor
+		if (!editor) {
+			console.log("No active editor found, returning")
+			return
+		}
+		const suggestionsFile = this.suggestions.getFile(editor.document.uri)
+		if (!suggestionsFile) {
+			console.log(`No suggestions found for document: ${editor.document.uri.toString()}`)
+			return
+		}
+		suggestionsFile.selectNextGroup()
+		await this.render()
+	}
+
+	public async selectPreviousSuggestion() {
+		if (!this.hasPendingSuggestions()) {
+			return
+		}
+		const editor = vscode.window.activeTextEditor
+		if (!editor) {
+			console.log("No active editor found, returning")
+			return
+		}
+		const suggestionsFile = this.suggestions.getFile(editor.document.uri)
+		if (!suggestionsFile) {
+			console.log(`No suggestions found for document: ${editor.document.uri.toString()}`)
+			return
+		}
+		suggestionsFile.selectPreviousGroup()
+		await this.render()
 	}
 }

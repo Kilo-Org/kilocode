@@ -34,5 +34,15 @@
 	"settings.vsCodeLmModelSelector.family.description": "La família del model de llenguatge (p. ex. gpt-4)",
 	"settings.customStoragePath.description": "Ruta d'emmagatzematge personalitzada. Deixeu-la buida per utilitzar la ubicació predeterminada. Admet rutes absolutes (p. ex. 'D:\\KiloCodeStorage')",
 	"settings.enableCodeActions.description": "Habilitar correccions ràpides de Kilo Code.",
-	"settings.autoImportSettingsPath.description": "Ruta a un fitxer de configuració de Kilo Code per importar automàticament en iniciar l'extensió. Admet rutes absolutes i rutes relatives al directori d'inici (per exemple, '~/Documents/kilo-code-settings.json'). Deixeu-ho en blanc per desactivar la importació automàtica."
+	"settings.autoImportSettingsPath.description": "Ruta a un fitxer de configuració de Kilo Code per importar automàticament en iniciar l'extensió. Admet rutes absolutes i rutes relatives al directori d'inici (per exemple, '~/Documents/kilo-code-settings.json'). Deixeu-ho en blanc per desactivar la importació automàtica.",
+	"ghost.input.title": "Premeu 'Enter' per confirmar o 'Escape' per cancel·lar",
+	"ghost.input.placeholder": "Descriviu què voleu fer...",
+	"ghost.commands.generateSuggestions": "Kilo Code: Generar Edicions Suggerides",
+	"ghost.commands.displaySuggestions": "Mostrar Edicions Suggerides",
+	"ghost.commands.cancelSuggestions": "Cancel·lar Edicions Suggerides",
+	"ghost.commands.applyCurrentSuggestion": "Aplicar Edició Suggerida Actual",
+	"ghost.commands.applyAllSuggestions": "Aplicar Totes les Edicions Suggerides",
+	"ghost.commands.promptCodeSuggestion": "Tasca Ràpida",
+	"ghost.commands.goToNextSuggestion": "Anar al Suggeriment Següent",
+	"ghost.commands.goToPreviousSuggestion": "Anar al Suggeriment Anterior"
 }

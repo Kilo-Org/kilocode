@@ -31,5 +31,18 @@
 	"settings.vsCodeLmModelSelector.description": "Nastavení pro VSCode Language Model API",
 	"settings.vsCodeLmModelSelector.vendor.description": "Dodavatel jazykového modelu (např. copilot)",
 	"settings.vsCodeLmModelSelector.family.description": "Rodina jazykového modelu (např. gpt-4)",
-	"settings.customStoragePath.description": "Vlastní cesta úložiště. Ponechte prázdné pro použití výchozího umístění. Podporuje absolutní cesty (např. 'D:\\KiloCodeStorage')"
+	"settings.customStoragePath.description": "Vlastní cesta úložiště. Ponechte prázdné pro použití výchozího umístění. Podporuje absolutní cesty (např. 'D:\\KiloCodeStorage')",
+	"command.importSettings.title": "Importovat nastavení",
+	"settings.enableCodeActions.description": "Povolit rychlé opravy Kilo Code",
+	"settings.autoImportSettingsPath.description": "Cesta k konfiguračnímu souboru Kilo Code pro automatický import při spuštění rozšíření. Podporuje absolutní cesty a cesty relativní k domovskému adresáři (např. '~/Documents/kilo-code-settings.json'). Ponechte prázdné pro zakázání automatického importu.",
+	"ghost.input.title": "Stiskněte 'Enter' pro potvrzení nebo 'Escape' pro zrušení",
+	"ghost.input.placeholder": "Popište, co chcete udělat...",
+	"ghost.commands.generateSuggestions": "Kilo Code: Generovat Navrhované Úpravy",
+	"ghost.commands.displaySuggestions": "Zobrazit Navrhované Úpravy",
+	"ghost.commands.cancelSuggestions": "Zrušit Navrhované Úpravy",
+	"ghost.commands.applyCurrentSuggestion": "Použít Aktuální Navrženou Úpravu",
+	"ghost.commands.applyAllSuggestions": "Použít Všechny Navrhované Úpravy",
+	"ghost.commands.promptCodeSuggestion": "Rychlý Úkol",
+	"ghost.commands.goToNextSuggestion": "Přejít na Další Návrh",
+	"ghost.commands.goToPreviousSuggestion": "Přejít na Předchozí Návrh"
 }

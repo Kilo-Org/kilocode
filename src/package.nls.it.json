@@ -34,5 +34,15 @@
 	"settings.vsCodeLmModelSelector.family.description": "La famiglia del modello linguistico (es. gpt-4)",
 	"settings.customStoragePath.description": "Percorso di archiviazione personalizzato. Lasciare vuoto per utilizzare la posizione predefinita. Supporta percorsi assoluti (es. 'D:\\KiloCodeStorage')",
 	"settings.enableCodeActions.description": "Abilita correzioni rapide di Kilo Code.",
-	"settings.autoImportSettingsPath.description": "Percorso di un file di configurazione di Kilo Code da importare automaticamente all'avvio dell'estensione. Supporta percorsi assoluti e percorsi relativi alla directory home (ad es. '~/Documents/kilo-code-settings.json'). Lasciare vuoto per disabilitare l'importazione automatica."
+	"settings.autoImportSettingsPath.description": "Percorso di un file di configurazione di Kilo Code da importare automaticamente all'avvio dell'estensione. Supporta percorsi assoluti e percorsi relativi alla directory home (ad es. '~/Documents/kilo-code-settings.json'). Lasciare vuoto per disabilitare l'importazione automatica.",
+	"ghost.input.title": "Scrittore Fantasma Kilo Code",
+	"ghost.input.placeholder": "Descrivi cosa vuoi programmare...",
+	"ghost.commands.generateSuggestions": "Kilo Code: Genera Modifiche Suggerite",
+	"ghost.commands.displaySuggestions": "Visualizza Modifiche Suggerite",
+	"ghost.commands.cancelSuggestions": "Annulla Modifiche Suggerite",
+	"ghost.commands.applyCurrentSuggestion": "Applica Modifica Suggerita Corrente",
+	"ghost.commands.applyAllSuggestions": "Applica Tutte le Modifiche Suggerite",
+	"ghost.commands.promptCodeSuggestion": "Attività Rapida",
+	"ghost.commands.goToNextSuggestion": "Vai alla Prossima Suggerimento",
+	"ghost.commands.goToPreviousSuggestion": "Vai al Suggerimento Precedente"
 }

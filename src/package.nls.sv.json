@@ -31,5 +31,18 @@
 	"settings.vsCodeLmModelSelector.description": "Inställningar för VSCode Language Model API",
 	"settings.vsCodeLmModelSelector.vendor.description": "Leverantören av språkmodellen (t.ex. copilot)",
 	"settings.vsCodeLmModelSelector.family.description": "Familjen av språkmodellen (t.ex. gpt-4)",
-	"settings.customStoragePath.description": "Anpassad lagringssökväg. Lämna tomt för att använda standardplatsen. Stöder absoluta sökvägar (t.ex. 'D:\\KiloCodeStorage')"
+	"settings.customStoragePath.description": "Anpassad lagringssökväg. Lämna tomt för att använda standardplatsen. Stöder absoluta sökvägar (t.ex. 'D:\\KiloCodeStorage')",
+	"command.importSettings.title": "Importera inställningar",
+	"settings.enableCodeActions.description": "Aktivera Kilo Code snabbkorrigeringar.",
+	"settings.autoImportSettingsPath.description": "Sökväg till en Kilo Code-konfigurationsfil som ska importeras automatiskt vid uppstart av tillägget. Stöder absoluta sökvägar och sökvägar relativt till hemkatalogen (t.ex. '~/Documents/kilo-code-settings.json'). Lämna tomt för att inaktivera automatisk import.",
+	"ghost.input.title": "Tryck 'Enter' för att bekräfta eller 'Escape' för att avbryta",
+	"ghost.input.placeholder": "Beskriv vad du vill göra...",
+	"ghost.commands.generateSuggestions": "Kilo Code: Generera Redigeringsförslag",
+	"ghost.commands.displaySuggestions": "Visa Redigeringsförslag",
+	"ghost.commands.cancelSuggestions": "Avbryt Redigeringsförslag",
+	"ghost.commands.applyCurrentSuggestion": "Tillämpa Nuvarande Redigeringsförslag",
+	"ghost.commands.applyAllSuggestions": "Tillämpa Alla Redigeringsförslag",
+	"ghost.commands.promptCodeSuggestion": "Snabb Uppgift",
+	"ghost.commands.goToNextSuggestion": "Gå Till Nästa Förslag",
+	"ghost.commands.goToPreviousSuggestion": "Gå Till Föregående Förslag"
 }

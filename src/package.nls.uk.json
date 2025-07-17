@@ -31,5 +31,18 @@
 	"settings.vsCodeLmModelSelector.description": "Налаштування для VSCode Language Model API",
 	"settings.vsCodeLmModelSelector.vendor.description": "Постачальник мовної моделі (наприклад, copilot)",
 	"settings.vsCodeLmModelSelector.family.description": "Сімейство мовної моделі (наприклад, gpt-4)",
-	"settings.customStoragePath.description": "Власний шлях зберігання. Залиште порожнім, щоб використовувати розташування за замовчуванням. Підтримує абсолютні шляхи (наприклад, 'D:\\KiloCodeStorage')"
+	"settings.customStoragePath.description": "Власний шлях зберігання. Залиште порожнім, щоб використовувати розташування за замовчуванням. Підтримує абсолютні шляхи (наприклад, 'D:\\KiloCodeStorage')",
+	"command.importSettings.title": "Імпортувати налаштування",
+	"settings.enableCodeActions.description": "Увімкнути швидкі виправлення Kilo Code.",
+	"settings.autoImportSettingsPath.description": "Шлях до файлу конфігурації Kilo Code для автоматичного імпорту під час запуску розширення. Підтримує абсолютні шляхи та шляхи відносно домашнього каталогу (наприклад, '~/Documents/kilo-code-settings.json'). Залиште порожнім, щоб вимкнути автоматичний імпорт.",
+	"ghost.input.title": "Натисніть 'Enter' для підтвердження або 'Escape' для скасування",
+	"ghost.input.placeholder": "Опишіть, що ви хочете зробити...",
+	"ghost.commands.generateSuggestions": "Kilo Code: Генерувати Пропозиції Редагування",
+	"ghost.commands.displaySuggestions": "Показати Пропозиції Редагування",
+	"ghost.commands.cancelSuggestions": "Скасувати Пропозиції Редагування",
+	"ghost.commands.applyCurrentSuggestion": "Застосувати Поточну Пропозицію Редагування",
+	"ghost.commands.applyAllSuggestions": "Застосувати Всі Пропозиції Редагування",
+	"ghost.commands.promptCodeSuggestion": "Швидке Завдання",
+	"ghost.commands.goToNextSuggestion": "Перейти до Наступної Пропозиції",
+	"ghost.commands.goToPreviousSuggestion": "Перейти до Попередньої Пропозиції"
 }

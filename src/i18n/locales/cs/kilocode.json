@@ -47,26 +47,61 @@
 		"noChanges": "Kilo: Nenalezeny žádné změny k analýze",
 		"generated": "Kilo: Zpráva byla vygenerována!",
 		"generationFailed": "Kilo: Nepodařilo se vygenerovat zprávu commitu: {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: Generování zprávy s použitím nenapojených změn"
+		"generatingFromUnstaged": "Kilo: Generování zprávy s použitím nenapojených změn",
+		"activationFailed": "Kilo: Aktivace generátoru zpráv se nezdařila: {{error}}",
+		"providerRegistered": "Kilo: Poskytovatel zpráv commitů zaregistrován"
 	},
 	"autocomplete": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Dokončeno",
-			"disabled": "$(circle-slash) Kilo Dokončeno",
+			"enabled": "$(sparkle) Kilo Automatické dokončování",
+			"disabled": "$(circle-slash) Kilo Automatické dokončování",
 			"tooltip": {
 				"tokenError": "Pro použití automatického dokončování musí být nastaven platný token",
-				"basic": "Kilo Code Autocomplete",
+				"basic": "Kilo Code Automatické dokončování",
 				"lastCompletion": "Poslední dokončení:",
 				"model": "Model:",
 				"sessionTotal": "Celkové náklady na relaci:",
-				"disabled": "Kilo Code Autocomplete (deaktivováno)"
+				"disabled": "Kilo Code Automatické dokončování (deaktivováno)"
 			},
-			"warning": "$(warning) Kilo Hotovo",
+			"warning": "$(warning) Kilo Automatické dokončování",
 			"cost": {
 				"zero": "0,00 Kč",
 				"lessThanCent": "<0,01 $"
 			}
 		},
-		"toggleMessage": "Kilo hotovo {{status}}"
+		"toggleMessage": "Kilo Automatické dokončování {{status}}"
+	},
+	"ghost": {
+		"progress": {
+			"generating": "Generuji navrhované úpravy...",
+			"analyzing": "Analyzuji váš kód...",
+			"processing": "Zpracování navržených úprav...",
+			"showing": "Zobrazuji navrhované úpravy...",
+			"title": "Kilo Code"
+		},
+		"input": {
+			"title": "Kilo Code: Rychlý úkol",
+			"placeholder": "např. \"přepracovat tuto funkci, aby byla efektivnější\""
+		},
+		"commands": {
+			"generateSuggestions": "Kilo Code: Generování navrhovaných úprav",
+			"applyCurrentSuggestion": "Použít aktuální navrhovanou úpravu",
+			"displaySuggestions": "Zobrazit navrhované úpravy",
+			"cancelSuggestions": "Zrušit navrhované úpravy",
+			"applyAllSuggestions": "Použít všechny navrhované úpravy",
+			"promptCodeSuggestion": "Rychlý úkol",
+			"category": "Kilo Code"
+		},
+		"codeAction": {
+			"title": "Kilo Code: Navrhované úpravy"
+		},
+		"chatParticipant": {
+			"name": "Agent",
+			"fullName": "Kilo Code Agent",
+			"description": "Mohu vám pomoci s rychlými úkoly a navrženými úpravami."
+		},
+		"messages": {
+			"provideCodeSuggestions": "Poskytuji návrhy kódu..."
+		}
 	}
 }

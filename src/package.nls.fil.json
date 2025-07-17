@@ -31,5 +31,18 @@
 	"settings.vsCodeLmModelSelector.description": "Mga setting para sa VSCode Language Model API",
 	"settings.vsCodeLmModelSelector.vendor.description": "Ang vendor ng language model (hal. copilot)",
 	"settings.vsCodeLmModelSelector.family.description": "Ang family ng language model (hal. gpt-4)",
-	"settings.customStoragePath.description": "Custom storage path. Iwanang blangko para gamitin ang default na lokasyon. Sumusuporta ng absolute paths (hal. 'D:\\KiloCodeStorage')"
+	"settings.customStoragePath.description": "Custom storage path. Iwanang blangko para gamitin ang default na lokasyon. Sumusuporta ng absolute paths (hal. 'D:\\KiloCodeStorage')",
+	"command.importSettings.title": "I-import ang mga Setting",
+	"settings.enableCodeActions.description": "I-enable ang Kilo Code quick fixes",
+	"settings.autoImportSettingsPath.description": "Path sa Kilo Code configuration file na awtomatikong i-import sa extension startup. Sumusuporta ng absolute paths at paths na relative sa home directory (hal. '~/Documents/kilo-code-settings.json'). Iwanang blangko para i-disable ang auto-import.",
+	"ghost.input.title": "Pindutin ang 'Enter' para kumpirmahin o 'Escape' para kanselahin",
+	"ghost.input.placeholder": "Ilarawan kung ano ang gusto mong gawin...",
+	"ghost.commands.generateSuggestions": "Kilo Code: Gumawa ng Mga Iminungkahing Pagbabago",
+	"ghost.commands.displaySuggestions": "Ipakita ang Mga Iminungkahing Pagbabago",
+	"ghost.commands.cancelSuggestions": "Kanselahin ang Mga Iminungkahing Pagbabago",
+	"ghost.commands.applyCurrentSuggestion": "Gamitin ang Kasalukuyang Iminungkahing Pagbabago",
+	"ghost.commands.applyAllSuggestions": "Gamitin ang Lahat ng Iminungkahing Pagbabago",
+	"ghost.commands.promptCodeSuggestion": "Mabilis na Gawain",
+	"ghost.commands.goToNextSuggestion": "Pumunta sa Susunod na Suhestiyon",
+	"ghost.commands.goToPreviousSuggestion": "Pumunta sa Nakaraang Suhestiyon"
 }

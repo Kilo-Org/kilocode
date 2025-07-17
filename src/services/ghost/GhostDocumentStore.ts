@@ -19,6 +19,5 @@ export class GhostDocumentStore {
 		if (item.history.length > this.historyLimit) {
 			item.history.shift() // Remove the oldest snapshot if we exceed the limit
 		}
-		console.log(`Stored document: ${uri}, history length: ${item.history.length}`)
 	}
 }

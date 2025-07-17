@@ -1239,8 +1239,8 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 								</StandardTooltip>
 							</div>
 
-							{/* kilocode_change: position tweaked */}
-							<div className="absolute bottom-2 right-2 z-30">
+							{/* kilocode_change: position tweaked, rtl support */}
+							<div className="absolute bottom-2 end-2 z-30">
 								{/* kilocode_change start */}
 								<IndexingStatusBadge className={cn({ hidden: containerWidth < 235 })} />
 								<StandardTooltip content="Add Context (@)">
@@ -1294,7 +1294,8 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 											sendingDisabled &&
 												"opacity-40 cursor-not-allowed grayscale-[30%] hover:bg-transparent hover:border-[rgba(255,255,255,0.08)] active:bg-transparent",
 										)}>
-										<SendHorizontal className="w-4 h-4" />
+										{/* kilocode_change: rtl */}
+										<SendHorizontal className="w-4 h-4 rtl:-scale-x-100" />
 									</button>
 								</StandardTooltip>
 							</div>

@@ -1,5 +1,32 @@
 # kilo-code
 
+## [v4.59.2]
+
+- [#1364](https://github.com/Kilo-Org/kilocode/pull/1364) [`aaef06f`](https://github.com/Kilo-Org/kilocode/commit/aaef06f9923a31bf1054a06f249ea32d97459c7b) Thanks [@NyxJae](https://github.com/NyxJae)! - Improved some autocomplete-related non-English texts
+
+## [v4.59.1]
+
+- [#1362](https://github.com/Kilo-Org/kilocode/pull/1362) [`08486c4`](https://github.com/Kilo-Org/kilocode/commit/08486c4ac186da2ab7dc02cc8012e77dcae96cce) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Fixed excessive "Kilo Code is having trouble" warnings when the browser tool is scrolling
+
+## [v4.59.0]
+
+- [#1244](https://github.com/Kilo-Org/kilocode/pull/1244) [`8b50f8e`](https://github.com/Kilo-Org/kilocode/commit/8b50f8eb558dc7c3a8667086660ff3c2f5f29788) Thanks [@hassoncs](https://github.com/hassoncs)! - New: Inline Assist Commands
+
+    We've added two new commands that allow you to get AI assistance directly in the code editor. There's no need to start a whole new Kilo task if you just need a quick result. You can even use this while a task is running, speeding up your workflow!
+
+    ⚡️ Quick Inline Tasks (Cmd/Ctl+I)
+    Only need a quick change? Select some code (or don't!) and hit Cmd+I. Describe your goal in plain English ("create a React component with these props", "add error handling to this function"), and get ready-to-use suggestions directly in your editor.
+
+    🧠 Let Kilo Decide (Cmd/Ctl+L)
+    Think the change you need is obvious? Just hit Cmd+L. Kilo will use the surrounding context to offer immediate improvements, keeping you in the flow.
+
+    ⌨️ Live in Your Keyboard
+    Use your arrow keys (↑/↓) to cycle through the options and see a live diff of the changes. Happy with a suggestion? Hit Tab to apply it. That's it. No mouse needed.
+
+### Patch Changes
+
+- [#1359](https://github.com/Kilo-Org/kilocode/pull/1359) [`fbff6cb`](https://github.com/Kilo-Org/kilocode/commit/fbff6cb78472c763b625356dc881ad66c044b0d3) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Fix positioning of send button in RTL languages
+
 ## [v4.58.4]
 
 - [#1349](https://github.com/Kilo-Org/kilocode/pull/1349) [`9f5bb71`](https://github.com/Kilo-Org/kilocode/commit/9f5bb715a086676472f7a5674911b45d230cc970) Thanks [@hassoncs](https://github.com/hassoncs)! - Enhance Prompt feature now works with Claude Code provider

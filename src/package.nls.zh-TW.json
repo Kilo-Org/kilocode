@@ -34,5 +34,15 @@
 	"settings.vsCodeLmModelSelector.family.description": "語言模型系列（例如：gpt-4）",
 	"settings.customStoragePath.description": "自訂儲存路徑。留空以使用預設位置。支援絕對路徑（例如：'D:\\KiloCodeStorage'）",
 	"settings.enableCodeActions.description": "啟用 Kilo Code 快速修復。",
-	"settings.autoImportSettingsPath.description": "Kilo Code 設定檔案的路徑，用於在擴充功能啟動時自動匯入。支援絕對路徑和相對於主目錄的路徑（例如 '~/Documents/kilo-code-settings.json'）。留空以停用自動匯入。"
+	"settings.autoImportSettingsPath.description": "Kilo Code 設定檔案的路徑，用於在擴充功能啟動時自動匯入。支援絕對路徑和相對於主目錄的路徑（例如 '~/Documents/kilo-code-settings.json'）。留空以停用自動匯入。",
+	"ghost.input.title": "按 'Enter' 確認或按 'Escape' 取消",
+	"ghost.input.placeholder": "描述您想要做什麼...",
+	"ghost.commands.generateSuggestions": "Kilo Code: 產生編輯建議",
+	"ghost.commands.displaySuggestions": "顯示編輯建議",
+	"ghost.commands.cancelSuggestions": "取消編輯建議",
+	"ghost.commands.applyCurrentSuggestion": "套用目前編輯建議",
+	"ghost.commands.applyAllSuggestions": "套用所有編輯建議",
+	"ghost.commands.promptCodeSuggestion": "快速任務",
+	"ghost.commands.goToNextSuggestion": "前往下一個建議",
+	"ghost.commands.goToPreviousSuggestion": "前往上一個建議"
 }

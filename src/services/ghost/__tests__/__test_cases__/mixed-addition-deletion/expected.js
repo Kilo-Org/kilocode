@@ -1,0 +1,8 @@
+function processData(data) {
+	// New validation with better error handling
+	if (!data || typeof data !== "string") {
+		throw new Error("Invalid data provided")
+	}
+
+	return data.toUpperCase()
+}

@@ -47,26 +47,61 @@
 		"noChanges": "Kilo: Nenhuma alteração encontrada para analisar",
 		"generated": "Kilo: Mensagem de commit gerada!",
 		"generationFailed": "Kilo: Falha ao gerar mensagem de commit: {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: Gerando mensagem usando alterações não preparadas"
+		"generatingFromUnstaged": "Kilo: Gerando mensagem usando alterações não preparadas",
+		"activationFailed": "Kilo: Falha ao ativar o gerador de mensagens: {{error}}",
+		"providerRegistered": "Kilo: Provedor de mensagem de commit registrado"
 	},
 	"autocomplete": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Completo",
-			"disabled": "$(circle-slash) Kilo Completo",
+			"enabled": "$(sparkle) Kilo Preenchimento automático",
+			"disabled": "$(circle-slash) Kilo Preenchimento automático",
 			"tooltip": {
 				"disabled": "Preenchimento Automático do Kilo Code (desativado)",
 				"tokenError": "Um token válido deve ser definido para usar o preenchimento automático",
-				"basic": "Kilo Code Autocomplete",
+				"basic": "Kilo Code Preenchimento automático",
 				"lastCompletion": "Última conclusão:",
 				"sessionTotal": "Custo total da sessão:",
 				"model": "Modelo:"
 			},
-			"warning": "$(warning) Kilo Completo",
+			"warning": "$(warning) Kilo Preenchimento automático",
 			"cost": {
 				"zero": "R$ 0,00",
 				"lessThanCent": "<R$0,01"
 			}
 		},
-		"toggleMessage": "Kilo Completo {{status}}"
+		"toggleMessage": "Kilo Preenchimento automático {{status}}"
+	},
+	"ghost": {
+		"progress": {
+			"analyzing": "Analisando seu código...",
+			"processing": "Processando sugestões de edição...",
+			"generating": "Gerando edições sugeridas...",
+			"showing": "Exibindo edições sugeridas…",
+			"title": "Kilo Code"
+		},
+		"input": {
+			"title": "Kilo Code: Tarefa Rápida",
+			"placeholder": "p. ex., 'refatore esta função para ser mais eficiente'"
+		},
+		"commands": {
+			"generateSuggestions": "Kilo Code: Gerar Edições Sugeridas",
+			"displaySuggestions": "Exibir Edições Sugeridas",
+			"cancelSuggestions": "Cancelar Edições Sugeridas",
+			"applyAllSuggestions": "Aplicar Todas as Edições Sugeridas",
+			"applyCurrentSuggestion": "Aplicar Edição Sugerida Atual",
+			"promptCodeSuggestion": "Tarefa Rápida",
+			"category": "Kilo Code"
+		},
+		"codeAction": {
+			"title": "Kilo Code: Edições Sugeridas"
+		},
+		"chatParticipant": {
+			"name": "Agente",
+			"fullName": "Kilo Code Agente",
+			"description": "Posso ajudar você com tarefas rápidas e sugestões de edição."
+		},
+		"messages": {
+			"provideCodeSuggestions": "Sugerindo códigos..."
+		}
 	}
 }

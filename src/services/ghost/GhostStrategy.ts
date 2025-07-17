@@ -1,12 +1,14 @@
 import * as vscode from "vscode"
 import { parsePatch, ParsedDiff, applyPatch, structuredPatch } from "diff"
-import { GhostSuggestionContext, GhostSuggestionEditOperation, GhostSuggestionEditOperationType } from "./types"
+import { GhostSuggestionContext, GhostSuggestionEditOperationType } from "./types"
+import { GhostSuggestionsState } from "./GhostSuggestions"
+import Fuse from "fuse.js"
 
 export class GhostStrategy {
-	getSystemPrompt() {
-		return `You are an advanced AI-powered code assistant integrated directly into a VS Code extension. Your primary function is to act as a proactive pair programmer. You will analyze the user's context—including recent changes and their current cursor focus—to predict and suggest the next logical code modifications.
+	getSystemPrompt(customInstructions: string = "") {
+		const basePrompt = `You are an advanced AI-powered code assistant integrated directly into a VS Code extension. Your primary function is to act as a proactive pair programmer. You will analyze the user's context—including recent changes and their current cursor focus—to predict and suggest the next logical code modifications.
 
-**Core Instructions:**
+## Core Instructions
 
 1.  **Analyze Full Context:** Scrutinize all provided information:
     * **Recent Changes (Diff):** Understand the user's recent modifications to infer their broader goal.
@@ -18,7 +20,13 @@ export class GhostStrategy {
 6.  **Propagate Changes:** Ensure consistency across the codebase. If your suggestion involves renaming or altering a signature, generate a patch that updates its definition and all relevant usages in the provided files.
 7.  **Maintain Code Quality:** Your suggested changes must be syntactically correct, stylistically consistent with the existing code, and follow good programming practices.
 
+## CRITICAL: Diff Patch Output Rules
+- DO NOT include any memory bank status indicators like "[Memory Bank: Active]" or "[Memory Bank: Missing]"
+- DO NOT include any conversational text, explanations, or commentary
+- ONLY generate a clean, valid diff patch as specified below
 ---`
+
+		return customInstructions ? `${basePrompt}${customInstructions}` : basePrompt
 	}
 
 	private getBaseSuggestionPrompt() {
@@ -96,7 +104,18 @@ ${sections.filter(Boolean).join("\n\n")}
 `
 	}
 
-	private async FuzzyMatchDiff(diff: string) {
+	private async FuzzyMatchDiff(diff: string, context: GhostSuggestionContext) {
+		const openFiles = context.openFiles || []
+		const openFilesUris = openFiles.map((doc) => ({
+			relativePath: vscode.workspace.asRelativePath(doc.uri, false),
+			uri: doc.uri,
+		}))
+		const openFilesRepository = new Fuse(openFilesUris, {
+			includeScore: true,
+			threshold: 0.6,
+			keys: ["relativePath"],
+		})
+
 		const filePatches = parsePatch(diff)
 		for (const filePatch of filePatches) {
 			// If the file patch has no hunks, skip it.
@@ -109,33 +128,43 @@ ${sections.filter(Boolean).join("\n\n")}
 				continue
 			}
 
-			const fileUri = vscode.Uri.parse(filePath)
-			const document = await vscode.workspace.openTextDocument(fileUri)
+			const matchedFiles = openFilesRepository.search(filePath)
+			if (matchedFiles.length === 0) {
+				continue // Skip if no files match the fuzzy search
+			}
+			const bestUriMatch = matchedFiles[0].item.uri
+			const document = await vscode.workspace.openTextDocument(bestUriMatch)
 			if (!document) {
 				continue // Skip if the document cannot be opened
 			}
 			const documentContent = document.getText()
 
 			const newContent = applyPatch(documentContent, diff, {
-				fuzzFactor: 0.75, // Adjust fuzz factor as needed
+				fuzzFactor: 0.2,
 			})
+
+			console.log("New content after applying patch:", newContent)
 
 			if (!newContent) {
 				continue // Skip if the patch could not be applied
 			}
 
+			// Update the file names in the patch to use the matched URI string
+			const matchedUriString = bestUriMatch.toString()
+			filePatch.oldFileName = matchedUriString
+			filePatch.newFileName = matchedUriString
 			filePatch.hunks = structuredPatch(filePath, filePath, documentContent, newContent, "", "").hunks
 		}
 		return filePatches as ParsedDiff[]
 	}
 
-	async parseResponse(response: string): Promise<GhostSuggestionEditOperation[]> {
-		const operations: GhostSuggestionEditOperation[] = []
+	async parseResponse(response: string, context: GhostSuggestionContext): Promise<GhostSuggestionsState> {
+		const suggestions = new GhostSuggestionsState()
 		const cleanedResponse = response.replace(/```diff\s*|\s*```/g, "").trim()
 		if (!cleanedResponse) {
-			return [] // No valid diff found
+			return suggestions // No valid diff found
 		}
-		const filePatches = await this.FuzzyMatchDiff(cleanedResponse)
+		const filePatches = await this.FuzzyMatchDiff(cleanedResponse, context)
 		for (const filePatch of filePatches) {
 			// Determine the file path from the patch header.
 			// It prefers the new file name, falling back to the old one.
@@ -147,7 +176,11 @@ ${sections.filter(Boolean).join("\n\n")}
 				continue
 			}
 
-			const fileUri = vscode.Uri.parse(filePath)
+			const fileUri = filePath.startsWith("file://")
+				? vscode.Uri.parse(filePath)
+				: vscode.Uri.parse(`file://${filePath}`)
+
+			const suggestionFile = suggestions.addFile(fileUri)
 
 			// Each file patch contains one or more "hunks," which are contiguous
 			// blocks of changes.
@@ -163,9 +196,8 @@ ${sections.filter(Boolean).join("\n\n")}
 					switch (operationType) {
 						// Case 1: The line is an addition.
 						case "+":
-							operations.push({
+							suggestionFile.addOperation({
 								type: "+",
-								fileUri: fileUri,
 								line: currentNewLineNumber - 1,
 								content: content,
 							})
@@ -175,9 +207,8 @@ ${sections.filter(Boolean).join("\n\n")}
 
 						// Case 2: The line is a deletion.
 						case "-":
-							operations.push({
+							suggestionFile.addOperation({
 								type: "-",
-								fileUri: fileUri,
 								line: currentOldLineNumber - 1,
 								content: content,
 							})
@@ -197,6 +228,7 @@ ${sections.filter(Boolean).join("\n\n")}
 			}
 		}
 
-		return operations
+		suggestions.sortGroups()
+		return suggestions
 	}
 }

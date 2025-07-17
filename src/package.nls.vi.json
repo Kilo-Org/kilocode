@@ -34,5 +34,15 @@
 	"settings.vsCodeLmModelSelector.family.description": "Họ mô hình ngôn ngữ (ví dụ: gpt-4)",
 	"settings.customStoragePath.description": "Đường dẫn lưu trữ tùy chỉnh. Để trống để sử dụng vị trí mặc định. Hỗ trợ đường dẫn tuyệt đối (ví dụ: 'D:\\KiloCodeStorage')",
 	"settings.enableCodeActions.description": "Bật sửa lỗi nhanh Kilo Code.",
-	"settings.autoImportSettingsPath.description": "Đường dẫn đến tệp cấu hình RooCode để tự động nhập khi khởi động tiện ích mở rộng. Hỗ trợ đường dẫn tuyệt đối và đường dẫn tương đối đến thư mục chính (ví dụ: '~/Documents/kilo-code-settings.json'). Để trống để tắt tính năng tự động nhập."
+	"settings.autoImportSettingsPath.description": "Đường dẫn đến tệp cấu hình Kilo Code để tự động nhập khi khởi động tiện ích mở rộng. Hỗ trợ đường dẫn tuyệt đối và đường dẫn tương đối đến thư mục chính (ví dụ: '~/Documents/kilo-code-settings.json'). Để trống để tắt tính năng tự động nhập.",
+	"ghost.input.title": "Nhấn 'Enter' để xác nhận hoặc 'Escape' để hủy",
+	"ghost.input.placeholder": "Mô tả những gì bạn muốn làm...",
+	"ghost.commands.generateSuggestions": "Kilo Code: Tạo Gợi Ý Chỉnh Sửa",
+	"ghost.commands.displaySuggestions": "Hiển Thị Gợi Ý Chỉnh Sửa",
+	"ghost.commands.cancelSuggestions": "Hủy Gợi Ý Chỉnh Sửa",
+	"ghost.commands.applyCurrentSuggestion": "Áp Dụng Gợi Ý Chỉnh Sửa Hiện Tại",
+	"ghost.commands.applyAllSuggestions": "Áp Dụng Tất Cả Gợi Ý Chỉnh Sửa",
+	"ghost.commands.promptCodeSuggestion": "Tác Vụ Nhanh",
+	"ghost.commands.goToNextSuggestion": "Đi Đến Gợi Ý Tiếp Theo",
+	"ghost.commands.goToPreviousSuggestion": "Đi Đến Gợi Ý Trước Đó"
 }

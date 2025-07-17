@@ -47,12 +47,14 @@
 		"noChanges": "Kilo: Не знайдено змін для аналізу",
 		"generated": "Kilo: Повідомлення коміту згенеровано!",
 		"generationFailed": "Kilo: Не вдалося створити повідомлення коміту: {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: Створення повідомлення з використанням незафіксованих змін"
+		"generatingFromUnstaged": "Kilo: Створення повідомлення з використанням незафіксованих змін",
+    "activationFailed": "Kilo: Не вдалося активувати генератор повідомлень: {{error}}",
+		"providerRegistered": "Kilo: Постачальник повідомлень коміту зареєстрований"
 	},
 	"autocomplete": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Виконано",
-			"disabled": "$(circle-slash) Kilo завершено",
+			"enabled": "$(sparkle) Kilo Автодоповнення",
+			"disabled": "$(circle-slash) Kilo Автодоповнення",
 			"tooltip": {
 				"basic": "Автодоповнення Kilo Code",
 				"tokenError": "Для використання автозаповнення необхідно встановити дійсний токен",
@@ -61,12 +63,45 @@
 				"model": "Модель:",
 				"sessionTotal": "Загальна вартість сеансу:"
 			},
-			"warning": "$(warning) Kilo виконано",
+			"warning": "$(warning) Kilo Автодоповнення",
 			"cost": {
 				"zero": "0,00 ₴",
 				"lessThanCent": "<$0,01"
 			}
 		},
-		"toggleMessage": "Kilo виконано {{status}}"
+		"toggleMessage": "Kilo Автодоповнення {{status}}"
+	},
+	"ghost": {
+		"progress": {
+			"analyzing": "Аналізуємо ваш код...",
+			"processing": "Обробка запропонованих редагувань...",
+			"generating": "Генерування запропонованих виправлень...",
+			"showing": "Відображення запропонованих змін...",
+			"title": "Kilo Code"
+		},
+		"input": {
+			"title": "Kilo Code: Швидке Завдання",
+			"placeholder": "наприклад, 'переробіть цю функцію, щоб вона була ефективнішою'"
+		},
+		"commands": {
+			"generateSuggestions": "Kilo Code: Створення пропонованих виправлень",
+			"displaySuggestions": "Показати запропоновані редагування",
+			"applyCurrentSuggestion": "Застосувати поточну запропоновану правку",
+			"cancelSuggestions": "Скасувати запропоновані правки",
+			"promptCodeSuggestion": "Швидке Завдання",
+			"category": "Kilo Code",
+			"applyAllSuggestions": "Застосувати всі запропоновані редагування"
+		},
+		"codeAction": {
+			"title": "Kilo Code: Запропоновані правки"
+		},
+		"chatParticipant": {
+			"fullName": "Kilo Code Агент",
+			"description": "Я можу допомогти вам зі швидкими завданнями та запропонувати правки.",
+			"name": "Агент"
+		},
+		"messages": {
+			"provideCodeSuggestions": "Надаємо пропозиції коду..."
+		}
 	}
 }

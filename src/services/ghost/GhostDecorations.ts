@@ -1,36 +1,61 @@
 import * as vscode from "vscode"
-import { GhostSuggestionEditOperation } from "./types"
+import { GhostSuggestionsState } from "./GhostSuggestions"
+
+const ADDITION_DECORATION_OPTIONS: vscode.DecorationRenderOptions = {
+	after: {
+		margin: "0 0 0 0.1em",
+		color: new vscode.ThemeColor("editorInlayHint.foreground"),
+	},
+	isWholeLine: false,
+	overviewRulerColor: new vscode.ThemeColor("diffEditor.insertedTextBackground"),
+	overviewRulerLane: vscode.OverviewRulerLane.Right,
+}
+
+const ADDITION_ACTIVE_DECORATION_OPTIONS: vscode.DecorationRenderOptions = {
+	...ADDITION_DECORATION_OPTIONS,
+	after: {
+		...ADDITION_DECORATION_OPTIONS.after,
+		borderColor: new vscode.ThemeColor("editorInlayHint.foreground"),
+		border: "2px solid",
+		fontWeight: "bold",
+	},
+}
+
+const DELETION_DECORATION_OPTIONS: vscode.DecorationRenderOptions = {
+	isWholeLine: false,
+	textDecoration: "line-through",
+	color: new vscode.ThemeColor("editorInlayHint.foreground"),
+	opacity: "0.8",
+	overviewRulerColor: new vscode.ThemeColor("diffEditor.removedTextBackground"),
+	overviewRulerLane: vscode.OverviewRulerLane.Right,
+}
+
+const DELETION_ACTIVE_DECORATION_OPTIONS: vscode.DecorationRenderOptions = {
+	...DELETION_DECORATION_OPTIONS,
+	borderColor: new vscode.ThemeColor("editorInlayHint.foreground"),
+	borderStyle: "solid",
+	borderWidth: "2px",
+	fontWeight: "bold",
+}
 
 export class GhostDecorations {
 	private additionDecorationType: vscode.TextEditorDecorationType
 	private deletionDecorationType: vscode.TextEditorDecorationType
+	private deletionActiveDecorationType: vscode.TextEditorDecorationType
 
 	constructor() {
-		this.additionDecorationType = vscode.window.createTextEditorDecorationType({
-			after: {
-				margin: "0 0 0 0.1em",
-				color: new vscode.ThemeColor("editorInlayHint.foreground"),
-			},
-			isWholeLine: true,
-			overviewRulerColor: new vscode.ThemeColor("diffEditor.insertedTextBackground"),
-			overviewRulerLane: vscode.OverviewRulerLane.Right,
-		})
-
-		this.deletionDecorationType = vscode.window.createTextEditorDecorationType({
-			isWholeLine: true,
-			textDecoration: "line-through",
-			color: new vscode.ThemeColor("editorInlayHint.foreground"),
-			opacity: "0.8",
-			overviewRulerColor: new vscode.ThemeColor("diffEditor.removedTextBackground"),
-			overviewRulerLane: vscode.OverviewRulerLane.Right,
-		})
+		this.additionDecorationType = vscode.window.createTextEditorDecorationType(ADDITION_DECORATION_OPTIONS)
+		this.deletionDecorationType = vscode.window.createTextEditorDecorationType(DELETION_DECORATION_OPTIONS)
+		this.deletionActiveDecorationType = vscode.window.createTextEditorDecorationType(
+			DELETION_ACTIVE_DECORATION_OPTIONS,
+		)
 	}
 
 	/**
 	 * Displays the ghost suggestions in the active text editor based on the provided operations.
 	 * @param operations An array of edit operations to visualize.
 	 */
-	public displaySuggestions(operations: GhostSuggestionEditOperation[]): void {
+	public displaySuggestions(suggestions: GhostSuggestionsState): void {
 		const editor = vscode.window.activeTextEditor
 		if (!editor) {
 			console.log("No active editor found, returning")
@@ -39,61 +64,94 @@ export class GhostDecorations {
 
 		const additionDecorations: vscode.DecorationOptions[] = []
 		const deletionDecorations: vscode.DecorationOptions[] = []
+		const deletionActiveDecorations: vscode.DecorationOptions[] = []
 
 		const documentUri = editor.document.uri
-		const fileOperations = operations
-			.filter((op) => op.fileUri.toString() === documentUri.toString())
-			.sort((a, b) => a.line - b.line)
-
+		const suggestionsFile = suggestions.getFile(documentUri)
+		if (!suggestionsFile) {
+			console.log(`No suggestions found for document: ${documentUri.toString()}`)
+			return
+		}
+		const fileOperations = suggestions.getFile(documentUri)?.getAllOperations() || []
+		if (fileOperations.length === 0) {
+			console.log("No operations to display, returning")
+			return
+		}
 		let linesAdded = 0
 		let linesRemoved = 0
 
-		for (const op of fileOperations) {
-			if (op.type === "+") {
-				const anchorLine = op.line + linesRemoved
-				if (anchorLine < 0 || anchorLine >= editor.document.lineCount) {
-					continue
+		const groups = suggestionsFile.getGroupsOperations()
+		if (groups.length === 0) {
+			console.log("No groups to display, returning")
+			return
+		}
+
+		for (let groupIndex = 0; groupIndex < groups.length; groupIndex++) {
+			const operations = groups[groupIndex]
+			const selected = groupIndex === suggestionsFile.getSelectedGroup()
+			for (const op of operations) {
+				if (op.type === "+") {
+					const anchorLine = op.line + linesRemoved
+					if (anchorLine < 0 || anchorLine >= editor.document.lineCount) {
+						continue
+					}
+
+					const nextLineInfo = editor.document.lineAt(anchorLine)
+					const position = nextLineInfo.range.start
+					const range = new vscode.Range(position, position)
+
+					// Whitespace in `contentText` collapses. To preserve indentation,
+					// replace leading spaces with non-breaking space characters.
+					const leadingWhitespace = op.content.match(/^\s*/)?.[0] ?? ""
+					const preservedWhitespace = leadingWhitespace.replace(/ /g, "\u00A0")
+					const trimmedContent = op.content.trimStart()
+
+					// Make the ghost text more visible with a clear prefix and formatting
+					// Split the content by newlines to handle multi-line additions properly
+					const contentText = preservedWhitespace + trimmedContent
+
+					const renderOptions: vscode.DecorationRenderOptions = selected
+						? { ...ADDITION_ACTIVE_DECORATION_OPTIONS }
+						: { ...ADDITION_DECORATION_OPTIONS }
+
+					renderOptions.after = {
+						...renderOptions.after,
+						contentText: `${contentText}`,
+					}
+
+					additionDecorations.push({
+						range,
+						renderOptions,
+					})
+					linesAdded++
 				}
 
-				const nextLineInfo = editor.document.lineAt(anchorLine)
-				const position = nextLineInfo.range.start
-				const range = new vscode.Range(position, position)
+				if (op.type === "-") {
+					const anchorLine = op.line + linesAdded
+					if (anchorLine < 0 || anchorLine >= editor.document.lineCount) {
+						continue
+					}
+					const range = editor.document.lineAt(anchorLine).range
 
-				// Whitespace in `contentText` collapses. To preserve indentation,
-				// replace leading spaces with non-breaking space characters.
-				const leadingWhitespace = op.content.match(/^\s*/)?.[0] ?? ""
-				const preservedWhitespace = leadingWhitespace.replace(/ /g, "\u00A0")
-				const trimmedContent = op.content.trimStart()
+					if (selected) {
+						deletionActiveDecorations.push({
+							range,
+						})
+					} else {
+						deletionDecorations.push({
+							range,
+						})
+					}
 
-				// Make the ghost text more visible with a clear prefix and formatting
-				// Split the content by newlines to handle multi-line additions properly
-				const contentText = preservedWhitespace + trimmedContent
-
-				additionDecorations.push({
-					range,
-					renderOptions: {
-						after: {
-							contentText: `${contentText}`,
-						},
-					},
-				})
-				linesAdded++
-			}
-
-			if (op.type === "-") {
-				const anchorLine = op.line + linesAdded
-				if (anchorLine < 0 || anchorLine >= editor.document.lineCount) {
-					continue
+					linesRemoved++
 				}
-				const range = editor.document.lineAt(anchorLine).range
-				deletionDecorations.push({ range })
-				linesRemoved++
 			}
 		}
 
 		// Apply the decorations directly
 		editor.setDecorations(this.additionDecorationType, additionDecorations)
 		editor.setDecorations(this.deletionDecorationType, deletionDecorations)
+		editor.setDecorations(this.deletionActiveDecorationType, deletionActiveDecorations)
 	}
 
 	/**
@@ -104,8 +162,9 @@ export class GhostDecorations {
 		if (!editor) {
 			return
 		}
-		// To clear decorations, set them to an empty array. [1, 7]
+
 		editor.setDecorations(this.additionDecorationType, [])
 		editor.setDecorations(this.deletionDecorationType, [])
+		editor.setDecorations(this.deletionActiveDecorationType, [])
 	}
 }

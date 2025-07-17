@@ -47,26 +47,61 @@
 		"noChanges": "Kilo: No s'han trobat canvis per analitzar",
 		"generated": "Kilo: Missatge de commit generat!",
 		"generationFailed": "Kilo: No s'ha pogut generar el missatge de confirmació: {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: Generant missatge utilitzant canvis no preparats"
+		"generatingFromUnstaged": "Kilo: Generant missatge utilitzant canvis no preparats",
+		"providerRegistered": "Kilo: Proveïdor de missatges de «commit» registrat",
+		"activationFailed": "Kilo: No s'ha pogut activar el generador de missatges: {{error}}"
 	},
 	"autocomplete": {
 		"statusBar": {
-			"warning": "$(warning) Quilogram Completat",
-			"enabled": "$(sparkle) Quilòmetre complet",
+			"warning": "$(warning) Kilo Autocompletat",
+			"enabled": "$(sparkle) Kilo Autocompletat",
 			"tooltip": {
-				"basic": "Autocompletat Kilo Code",
-				"disabled": "Kilo Code Autocomplete (desactivat)",
+				"basic": "Kilo Code Autocompletat",
+				"disabled": "Kilo Code Autocompletat (desactivat)",
 				"tokenError": "Cal establir un token vàlid per utilitzar l'autocompleció",
 				"lastCompletion": "Última compleció:",
 				"sessionTotal": "Cost total de la sessió:",
 				"model": "Model:"
 			},
-			"disabled": "$(circle-slash) Kilo Complet",
+			"disabled": "$(circle-slash) Kilo Autocompletat",
 			"cost": {
 				"zero": "0,00 €",
 				"lessThanCent": "<0,01 €"
 			}
 		},
-		"toggleMessage": "Quilòmetre completat {{status}}"
+		"toggleMessage": "Kilo Autocompletat {{status}}"
+	},
+	"ghost": {
+		"progress": {
+			"analyzing": "Analitzant el teu codi...",
+			"generating": "Generant suggeriments d'edició...",
+			"processing": "Processant les edicions suggerides...",
+			"showing": "Mostrant edicions suggerides...",
+			"title": "Kilo Code"
+		},
+		"input": {
+			"title": "Kilo Code: Tasca Ràpida",
+			"placeholder": "p. ex., 'refactora aquesta funció perquè sigui més eficient'"
+		},
+		"commands": {
+			"generateSuggestions": "Kilo Code: Genera suggeriments d'edició",
+			"displaySuggestions": "Mostrar Suggeriments d'Edició",
+			"cancelSuggestions": "Cancel·la les edicions suggerides",
+			"applyAllSuggestions": "Aplica totes les edicions suggerides",
+			"applyCurrentSuggestion": "Aplica l'edició suggerida actual",
+			"promptCodeSuggestion": "Petició de Tasca Ràpida",
+			"category": "Kilo Code"
+		},
+		"codeAction": {
+			"title": "Kilo Code: Edicions suggerides"
+		},
+		"chatParticipant": {
+			"name": "Agent",
+			"fullName": "Kilo Code Agent",
+			"description": "Et puc ajudar amb tasques ràpides i edicions suggerides."
+		},
+		"messages": {
+			"provideCodeSuggestions": "S'estan proporcionant suggeriments de codi..."
+		}
 	}
 }
