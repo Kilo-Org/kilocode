@@ -38,7 +38,7 @@ import {
 	WandSparkles,
 	SendHorizontal,
 	Paperclip, // kilocode_change
-	RotateCcw,
+	RotateCcw, // kilocode_change
 } from "lucide-react"
 import { IndexingStatusBadge } from "./IndexingStatusBadge"
 import { cn } from "@/lib/utils"
@@ -150,8 +150,10 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 		const [searchLoading, setSearchLoading] = useState(false)
 		const [searchRequestId, setSearchRequestId] = useState<string>("")
+		// kilocode_change start
 		const [originalPromptBeforeEnhancement, setOriginalPromptBeforeEnhancement] = useState<string | null>(null)
 		const [enhancedPromptText, setEnhancedPromptText] = useState<string | null>(null)
+		// kilocode_change end
 
 		// Close dropdown when clicking outside.
 		useEffect(() => {
@@ -171,9 +173,9 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				const message = event.data
 
 				if (message.type === "enhancedPrompt") {
-					if (message.text && originalPromptBeforeEnhancement !== null) {
+					if (message.text) {
 						setInputValue(message.text)
-						setEnhancedPromptText(message.text)
+						setEnhancedPromptText(message.text) // kilocode_change
 					}
 
 					setIsEnhancingPrompt(false)
@@ -208,7 +210,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 			window.addEventListener("message", messageHandler)
 			return () => window.removeEventListener("message", messageHandler)
-		}, [setInputValue, searchRequestId, originalPromptBeforeEnhancement, enhancedPromptText])
+		}, [setInputValue, searchRequestId, originalPromptBeforeEnhancement, enhancedPromptText]) // kilocode_change
 
 		const [isDraggingOver, setIsDraggingOver] = useState(false)
 		// kilocode_change start: pull slash commands from Cline
@@ -264,6 +266,9 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				return
 			}
 
+			const trimmedInput = inputValue.trim()
+
+			// kilocode_change start
 			// If currently enhancing, cancel the enhancement
 			if (isEnhancingPrompt) {
 				setIsEnhancingPrompt(false)
@@ -277,14 +282,16 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				setEnhancedPromptText(null)
 				return
 			}
+			// kilocode_change end
 
-			if (inputValue) {
+			if (trimmedInput) {
 				setIsEnhancingPrompt(true)
-				setOriginalPromptBeforeEnhancement(inputValue) // Store original prompt for potential revert
-				vscode.postMessage({ type: "enhancePrompt" as const, text: inputValue })
+				setOriginalPromptBeforeEnhancement(trimmedInput) // kilocode_change - store original prompt for potential revert
+				vscode.postMessage({ type: "enhancePrompt" as const, text: trimmedInput })
 			} else {
 				setInputValue(t("chat:enhancePromptDescription"))
 			}
+			// kilocode_change start - add isEnhancingPrompt, canRevertToOriginalPrompt, originalPromptBeforeEnhancement
 		}, [
 			inputValue,
 			sendingDisabled,
@@ -294,6 +301,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			canRevertToOriginalPrompt,
 			originalPromptBeforeEnhancement,
 		])
+		// kilocode_change end
 
 		const allModes = useMemo(() => getAllModes(customModes), [customModes])
 
@@ -1042,6 +1050,10 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 		const placeholderBottomText = `\n(${t("chat:addContext")}${shouldDisableImages ? `, ${t("chat:dragFiles")}` : `, ${t("chat:dragFilesImages")}`})`
 
+		// kilocode_change start
+		const buttonState = isEnhancingPrompt ? "cancel" : canRevertToOriginalPrompt() ? "revert" : "enhance"
+		// kilocode_change end
+
 		return (
 			<div
 				className={cn(
@@ -1248,68 +1260,53 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 							{/* kilocode_change: position tweaked */}
 							<div className="absolute top-2 right-2 z-30">
-								{(() => {
-									const buttonState = isEnhancingPrompt
-										? "cancel"
-										: canRevertToOriginalPrompt()
-											? "revert"
-											: "enhance"
-
-									return (
-										<StandardTooltip
-											content={
-												buttonState === "cancel"
-													? t("kilocode:chat.enhancePrompt.cancelEnhancement")
-													: buttonState === "revert"
-														? t("kilocode:chat.enhancePrompt.revertEnhancement")
-														: t("chat:enhancePrompt")
-											}>
-											<button
-												aria-label={
-													buttonState === "cancel"
-														? t("kilocode:chat.enhancePrompt.cancelEnhancement")
-														: buttonState === "revert"
-															? t("kilocode:chat.enhancePrompt.revertEnhancement")
-															: t("chat:enhancePrompt")
-												}
-												disabled={sendingDisabled}
-												onClick={!sendingDisabled ? handleEnhancePrompt : undefined}
-												data-testid="enhance-prompt-button"
-												className={cn(
-													"relative inline-flex items-center justify-center",
-													"bg-transparent border-none p-1.5",
-													"rounded-md min-w-[28px] min-h-[28px]",
-													"opacity-60 hover:opacity-100 text-vscode-descriptionForeground hover:text-vscode-foreground",
-													"transition-all duration-150",
-													"hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)]",
-													"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
-													"active:bg-[rgba(255,255,255,0.1)]",
-													!sendingDisabled && "cursor-pointer",
-													sendingDisabled &&
-														"opacity-40 cursor-not-allowed grayscale-[30%] hover:bg-transparent hover:border-[rgba(255,255,255,0.08)] active:bg-transparent",
-												)}>
-												{(() => {
-													if (buttonState === "cancel") {
-														return (
-															<WandSparkles
-																className={cn(
-																	"w-4 h-4",
-																	isEnhancingPrompt && "animate-spin",
-																)}
-															/>
-														)
-													}
-
-													if (buttonState === "revert") {
-														return <RotateCcw className="w-4 h-4" />
-													}
-
-													return <WandSparkles className="w-4 h-4" />
-												})()}
-											</button>
-										</StandardTooltip>
-									)
-								})()}
+								<StandardTooltip
+									content={
+										// kilocode_change start
+										buttonState === "cancel"
+											? t("kilocode:chat.enhancePrompt.cancelEnhancement")
+											: buttonState === "revert"
+												? t("kilocode:chat.enhancePrompt.revertEnhancement")
+												: t("chat:enhancePrompt")
+										// kilocode_change end
+									}>
+									<button
+										aria-label={
+											// kilocode_change start
+											buttonState === "cancel"
+												? t("kilocode:chat.enhancePrompt.cancelEnhancement")
+												: buttonState === "revert"
+													? t("kilocode:chat.enhancePrompt.revertEnhancement")
+													: t("chat:enhancePrompt")
+											// kilocode_change end
+										}
+										disabled={sendingDisabled}
+										onClick={!sendingDisabled ? handleEnhancePrompt : undefined}
+										data-testid="enhance-prompt-button"
+										className={cn(
+											"relative inline-flex items-center justify-center",
+											"bg-transparent border-none p-1.5",
+											"rounded-md min-w-[28px] min-h-[28px]",
+											"opacity-60 hover:opacity-100 text-vscode-descriptionForeground hover:text-vscode-foreground",
+											"transition-all duration-150",
+											"hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)]",
+											"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
+											"active:bg-[rgba(255,255,255,0.1)]",
+											!sendingDisabled && "cursor-pointer",
+											sendingDisabled &&
+												"opacity-40 cursor-not-allowed grayscale-[30%] hover:bg-transparent hover:border-[rgba(255,255,255,0.08)] active:bg-transparent",
+										)}>
+										{/* kilocode_change start */}
+										{buttonState === "cancel" && (
+											<WandSparkles
+												className={cn("w-4 h-4", isEnhancingPrompt && "animate-spin")}
+											/>
+										)}
+										{buttonState === "revert" && <RotateCcw className="w-4 h-4" />}
+										{buttonState === "enhance" && <WandSparkles className="w-4 h-4" />}
+										{/* kilocode_change end */}
+									</button>
+								</StandardTooltip>
 							</div>
 
 							{/* kilocode_change: position tweaked */}
