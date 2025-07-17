@@ -46,6 +46,10 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code wil je gesprek samenvatten",
 			"condenseConversation": "Gesprek samenvatten"
+		},
+		"enhancePrompt": {
+			"cancelEnhancement": "Verbetering annuleren",
+			"revertEnhancement": "Terugzetten naar oorspronkelijke opdracht"
 		}
 	},
 	"newTaskPreview": {

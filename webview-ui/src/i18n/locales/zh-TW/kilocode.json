@@ -46,6 +46,10 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code 想要壓縮你的對話",
 			"condenseConversation": "壓縮對話"
+		},
+		"enhancePrompt": {
+			"cancelEnhancement": "取消增强功能",
+			"revertEnhancement": "恢复到原始提示"
 		}
 	},
 	"newTaskPreview": {

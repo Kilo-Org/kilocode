@@ -46,6 +46,10 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code muốn tóm tắt cuộc trò chuyện của bạn",
 			"condenseConversation": "Tóm tắt cuộc trò chuyện"
+		},
+		"enhancePrompt": {
+			"cancelEnhancement": "Hủy nâng cấp",
+			"revertEnhancement": "Quay lại lệnh ban đầu"
 		}
 	},
 	"newTaskPreview": {

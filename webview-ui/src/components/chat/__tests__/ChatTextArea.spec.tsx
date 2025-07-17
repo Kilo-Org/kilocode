@@ -193,9 +193,11 @@ describe("ChatTextArea", () => {
 		it("should update input value when receiving enhanced prompt", () => {
 			const setInputValue = vi.fn()
 
-			render(<ChatTextArea {...defaultProps} setInputValue={setInputValue} />)
+			render(<ChatTextArea {...defaultProps} setInputValue={setInputValue} inputValue="Original prompt" />)
 
-			// Simulate receiving enhanced prompt message
+			const enhanceButton = getEnhancePromptButton()
+			fireEvent.click(enhanceButton)
+
 			window.dispatchEvent(
 				new MessageEvent("message", {
 					data: {
@@ -206,6 +208,55 @@ describe("ChatTextArea", () => {
 			)
 
 			expect(setInputValue).toHaveBeenCalledWith("Enhanced test prompt")
+		})
+
+		it("should not update input value when enhancement is cancelled", () => {
+			const setInputValue = vi.fn()
+
+			render(<ChatTextArea {...defaultProps} setInputValue={setInputValue} inputValue="Original prompt" />)
+
+			const enhanceButton = getEnhancePromptButton()
+			fireEvent.click(enhanceButton)
+
+			fireEvent.click(enhanceButton)
+
+			window.dispatchEvent(
+				new MessageEvent("message", {
+					data: {
+						type: "enhancedPrompt",
+						text: "Enhanced test prompt",
+					},
+				}),
+			)
+
+			expect(setInputValue).not.toHaveBeenCalledWith("Enhanced test prompt")
+		})
+
+		it("should revert to original prompt when revert button is clicked", () => {
+			const setInputValue = vi.fn()
+
+			const { rerender } = render(
+				<ChatTextArea {...defaultProps} setInputValue={setInputValue} inputValue="Original prompt" />,
+			)
+
+			const enhanceButton = getEnhancePromptButton()
+			fireEvent.click(enhanceButton)
+
+			window.dispatchEvent(
+				new MessageEvent("message", {
+					data: {
+						type: "enhancedPrompt",
+						text: "Enhanced test prompt",
+					},
+				}),
+			)
+
+			rerender(<ChatTextArea {...defaultProps} setInputValue={setInputValue} inputValue="Enhanced test prompt" />)
+
+			setInputValue.mockClear()
+			fireEvent.click(enhanceButton)
+
+			expect(setInputValue).toHaveBeenCalledWith("Original prompt")
 		})
 	})
 
