@@ -86,7 +86,7 @@
 		"ollamaUrlPlaceholder": "http://localhost:11434",
 		"openAiCompatibleBaseUrlPlaceholder": "https://api.example.com",
 		"modelDimensionPlaceholder": "1536",
-		"qdrantUrlPlaceholder": "http://http://127.0.0.1:6333",
+		"qdrantUrlPlaceholder": "http://127.0.0.1:6333",
 		"saveError": "설정을 저장하지 못했습니다",
 		"modelDimensions": "({{dimension}} 차원)",
 		"saveSuccess": "설정이 성공적으로 저장되었습니다",

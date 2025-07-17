@@ -86,7 +86,7 @@
 		"ollamaUrlPlaceholder": "http://localhost:11434",
 		"openAiCompatibleBaseUrlPlaceholder": "https://api.example.com",
 		"modelDimensionPlaceholder": "1536",
-		"qdrantUrlPlaceholder": "http://http://127.0.0.1:6333",
+		"qdrantUrlPlaceholder": "http://127.0.0.1:6333",
 		"saveError": "सेटिंग्स सहेजने में विफल",
 		"modelDimensions": "({{dimension}} आयाम)",
 		"saveSuccess": "सेटिंग्स सफलतापूर्वक सहेजी गईं",

@@ -234,7 +234,7 @@ describe("QdrantVectorStore", () => {
 						"User-Agent": "Kilo-Code",
 					},
 				})
-				expect((vectorStore as any).qdrantUrl).toBe("http://http://127.0.0.1:6333")
+				expect((vectorStore as any).qdrantUrl).toBe("http://127.0.0.1:6333")
 			})
 
 			it("should handle explicit HTTP URLs correctly", () => {
@@ -294,7 +294,7 @@ describe("QdrantVectorStore", () => {
 						"User-Agent": "Kilo-Code",
 					},
 				})
-				expect((vectorStore as any).qdrantUrl).toBe("http://http://127.0.0.1:6333")
+				expect((vectorStore as any).qdrantUrl).toBe("http://127.0.0.1:6333")
 			})
 
 			it("should handle empty string URL with host-based config", () => {
@@ -308,7 +308,7 @@ describe("QdrantVectorStore", () => {
 						"User-Agent": "Kilo-Code",
 					},
 				})
-				expect((vectorStore as any).qdrantUrl).toBe("http://http://127.0.0.1:6333")
+				expect((vectorStore as any).qdrantUrl).toBe("http://127.0.0.1:6333")
 			})
 
 			it("should handle whitespace-only URL with host-based config", () => {
@@ -322,7 +322,7 @@ describe("QdrantVectorStore", () => {
 						"User-Agent": "Kilo-Code",
 					},
 				})
-				expect((vectorStore as any).qdrantUrl).toBe("http://http://127.0.0.1:6333")
+				expect((vectorStore as any).qdrantUrl).toBe("http://127.0.0.1:6333")
 			})
 		})
 
@@ -347,7 +347,7 @@ describe("QdrantVectorStore", () => {
 		it("should pass the URL pathname as prefix to QdrantClient if not root", () => {
 			const vectorStoreWithPrefix = new QdrantVectorStore(
 				mockWorkspacePath,
-				"http://http://127.0.0.1:6333/some/path",
+				"http://127.0.0.1:6333/some/path",
 				mockVectorSize,
 			)
 			expect(QdrantClient).toHaveBeenLastCalledWith({
@@ -360,13 +360,13 @@ describe("QdrantVectorStore", () => {
 					"User-Agent": "Kilo-Code",
 				},
 			})
-			expect((vectorStoreWithPrefix as any).qdrantUrl).toBe("http://http://127.0.0.1:6333/some/path")
+			expect((vectorStoreWithPrefix as any).qdrantUrl).toBe("http://127.0.0.1:6333/some/path")
 		})
 
 		it("should not pass prefix if the URL pathname is root ('/')", () => {
 			const vectorStoreWithoutPrefix = new QdrantVectorStore(
 				mockWorkspacePath,
-				"http://http://127.0.0.1:6333/",
+				"http://127.0.0.1:6333/",
 				mockVectorSize,
 			)
 			expect(QdrantClient).toHaveBeenLastCalledWith({
@@ -379,7 +379,7 @@ describe("QdrantVectorStore", () => {
 					"User-Agent": "Kilo-Code",
 				},
 			})
-			expect((vectorStoreWithoutPrefix as any).qdrantUrl).toBe("http://http://127.0.0.1:6333/")
+			expect((vectorStoreWithoutPrefix as any).qdrantUrl).toBe("http://127.0.0.1:6333/")
 		})
 
 		it("should handle HTTPS URL with path as prefix", () => {
@@ -404,7 +404,7 @@ describe("QdrantVectorStore", () => {
 		it("should normalize URL pathname by removing trailing slash for prefix", () => {
 			const vectorStoreWithTrailingSlash = new QdrantVectorStore(
 				mockWorkspacePath,
-				"http://http://127.0.0.1:6333/api/",
+				"http://127.0.0.1:6333/api/",
 				mockVectorSize,
 			)
 			expect(QdrantClient).toHaveBeenLastCalledWith({
@@ -417,13 +417,13 @@ describe("QdrantVectorStore", () => {
 					"User-Agent": "Kilo-Code",
 				},
 			})
-			expect((vectorStoreWithTrailingSlash as any).qdrantUrl).toBe("http://http://127.0.0.1:6333/api/")
+			expect((vectorStoreWithTrailingSlash as any).qdrantUrl).toBe("http://127.0.0.1:6333/api/")
 		})
 
 		it("should normalize URL pathname by removing multiple trailing slashes for prefix", () => {
 			const vectorStoreWithMultipleTrailingSlashes = new QdrantVectorStore(
 				mockWorkspacePath,
-				"http://http://127.0.0.1:6333/api///",
+				"http://127.0.0.1:6333/api///",
 				mockVectorSize,
 			)
 			expect(QdrantClient).toHaveBeenLastCalledWith({
@@ -437,14 +437,14 @@ describe("QdrantVectorStore", () => {
 				},
 			})
 			expect((vectorStoreWithMultipleTrailingSlashes as any).qdrantUrl).toBe(
-				"http://http://127.0.0.1:6333/api///",
+				"http://127.0.0.1:6333/api///",
 			)
 		})
 
 		it("should handle multiple path segments correctly for prefix", () => {
 			const vectorStoreWithMultiSegment = new QdrantVectorStore(
 				mockWorkspacePath,
-				"http://http://127.0.0.1:6333/api/v1/qdrant",
+				"http://127.0.0.1:6333/api/v1/qdrant",
 				mockVectorSize,
 			)
 			expect(QdrantClient).toHaveBeenLastCalledWith({
@@ -457,7 +457,7 @@ describe("QdrantVectorStore", () => {
 					"User-Agent": "Kilo-Code",
 				},
 			})
-			expect((vectorStoreWithMultiSegment as any).qdrantUrl).toBe("http://http://127.0.0.1:6333/api/v1/qdrant")
+			expect((vectorStoreWithMultiSegment as any).qdrantUrl).toBe("http://127.0.0.1:6333/api/v1/qdrant")
 		})
 
 		it("should handle complex URL with multiple segments, multiple trailing slashes, query params, and fragment", () => {
@@ -479,7 +479,7 @@ describe("QdrantVectorStore", () => {
 		it("should ignore query parameters and fragments when determining prefix", () => {
 			const vectorStoreWithQueryParams = new QdrantVectorStore(
 				mockWorkspacePath,
-				"http://http://127.0.0.1:6333/api/path?key=value#fragment",
+				"http://127.0.0.1:6333/api/path?key=value#fragment",
 				mockVectorSize,
 			)
 			expect(QdrantClient).toHaveBeenLastCalledWith({
@@ -493,7 +493,7 @@ describe("QdrantVectorStore", () => {
 				},
 			})
 			expect((vectorStoreWithQueryParams as any).qdrantUrl).toBe(
-				"http://http://127.0.0.1:6333/api/path?key=value#fragment",
+				"http://127.0.0.1:6333/api/path?key=value#fragment",
 			)
 		})
 	})

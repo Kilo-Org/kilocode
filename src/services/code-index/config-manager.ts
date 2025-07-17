@@ -24,7 +24,7 @@ export class CodeIndexConfigManager {
 		azureOpenAiDeploymentName: string
 		azureOpenAiApiVersion?: string
 	}
-	private qdrantUrl?: string = "http://http://127.0.0.1:6333"
+	private qdrantUrl?: string = "http://127.0.0.1:6333"
 	private qdrantApiKey?: string
 	private searchMinScore?: number
 	private searchMaxResults?: number
@@ -49,7 +49,7 @@ export class CodeIndexConfigManager {
 		// Load configuration from storage
 		const codebaseIndexConfig = this.contextProxy?.getGlobalState("codebaseIndexConfig") ?? {
 			codebaseIndexEnabled: true,
-			codebaseIndexQdrantUrl: "http://http://127.0.0.1:6333",
+			codebaseIndexQdrantUrl: "http://127.0.0.1:6333",
 			codebaseIndexEmbedderProvider: "openai",
 			codebaseIndexEmbedderBaseUrl: "",
 			codebaseIndexEmbedderModelId: "",

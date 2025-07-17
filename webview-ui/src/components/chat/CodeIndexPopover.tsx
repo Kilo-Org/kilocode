@@ -44,7 +44,7 @@ import type { IndexingStatus } from "@roo/ExtensionMessage"
 import { CODEBASE_INDEX_DEFAULTS } from "@roo-code/types"
 
 // Default URLs for providers
-const DEFAULT_QDRANT_URL = "http://http://127.0.0.1:6333"
+const DEFAULT_QDRANT_URL = "http://127.0.0.1:6333"
 const DEFAULT_OLLAMA_URL = "http://localhost:11434"
 
 interface CodeIndexPopoverProps {

@@ -243,7 +243,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		profileThresholds: {},
 		codebaseIndexConfig: {
 			codebaseIndexEnabled: true,
-			codebaseIndexQdrantUrl: "http://http://127.0.0.1:6333",
+			codebaseIndexQdrantUrl: "http://127.0.0.1:6333",
 			codebaseIndexEmbedderProvider: "openai",
 			codebaseIndexEmbedderBaseUrl: "",
 			codebaseIndexEmbedderModelId: "",

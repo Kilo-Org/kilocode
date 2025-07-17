@@ -342,7 +342,7 @@ describe("CodeIndexServiceFactory", () => {
 			const testConfig = {
 				embedderProvider: "openai",
 				modelId: testModelId,
-				qdrantUrl: "http://http://127.0.0.1:6333",
+				qdrantUrl: "http://127.0.0.1:6333",
 				qdrantApiKey: "test-key",
 			}
 			mockConfigManager.getConfig.mockReturnValue(testConfig as any)
@@ -355,7 +355,7 @@ describe("CodeIndexServiceFactory", () => {
 			expect(mockGetModelDimension).toHaveBeenCalledWith("openai", testModelId)
 			expect(MockedQdrantVectorStore).toHaveBeenCalledWith(
 				"/test/workspace",
-				"http://http://127.0.0.1:6333",
+				"http://127.0.0.1:6333",
 				3072,
 				"test-key",
 			)
@@ -367,7 +367,7 @@ describe("CodeIndexServiceFactory", () => {
 			const testConfig = {
 				embedderProvider: "ollama",
 				modelId: testModelId,
-				qdrantUrl: "http://http://127.0.0.1:6333",
+				qdrantUrl: "http://127.0.0.1:6333",
 				qdrantApiKey: "test-key",
 			}
 			mockConfigManager.getConfig.mockReturnValue(testConfig as any)
@@ -380,7 +380,7 @@ describe("CodeIndexServiceFactory", () => {
 			expect(mockGetModelDimension).toHaveBeenCalledWith("ollama", testModelId)
 			expect(MockedQdrantVectorStore).toHaveBeenCalledWith(
 				"/test/workspace",
-				"http://http://127.0.0.1:6333",
+				"http://127.0.0.1:6333",
 				768,
 				"test-key",
 			)
@@ -392,7 +392,7 @@ describe("CodeIndexServiceFactory", () => {
 			const testConfig = {
 				embedderProvider: "openai-compatible",
 				modelId: testModelId,
-				qdrantUrl: "http://http://127.0.0.1:6333",
+				qdrantUrl: "http://127.0.0.1:6333",
 				qdrantApiKey: "test-key",
 			}
 			mockConfigManager.getConfig.mockReturnValue(testConfig as any)
@@ -405,7 +405,7 @@ describe("CodeIndexServiceFactory", () => {
 			expect(mockGetModelDimension).toHaveBeenCalledWith("openai-compatible", testModelId)
 			expect(MockedQdrantVectorStore).toHaveBeenCalledWith(
 				"/test/workspace",
-				"http://http://127.0.0.1:6333",
+				"http://127.0.0.1:6333",
 				3072,
 				"test-key",
 			)
@@ -423,7 +423,7 @@ describe("CodeIndexServiceFactory", () => {
 					baseUrl: "https://api.example.com/v1",
 					apiKey: "test-api-key",
 				},
-				qdrantUrl: "http://http://127.0.0.1:6333",
+				qdrantUrl: "http://127.0.0.1:6333",
 				qdrantApiKey: "test-key",
 			}
 			mockConfigManager.getConfig.mockReturnValue(testConfig as any)
@@ -436,7 +436,7 @@ describe("CodeIndexServiceFactory", () => {
 			expect(mockGetModelDimension).not.toHaveBeenCalled()
 			expect(MockedQdrantVectorStore).toHaveBeenCalledWith(
 				"/test/workspace",
-				"http://http://127.0.0.1:6333",
+				"http://127.0.0.1:6333",
 				manualDimension,
 				"test-key",
 			)
@@ -452,7 +452,7 @@ describe("CodeIndexServiceFactory", () => {
 					baseUrl: "https://api.example.com/v1",
 					apiKey: "test-key",
 				},
-				qdrantUrl: "http://http://127.0.0.1:6333",
+				qdrantUrl: "http://127.0.0.1:6333",
 				qdrantApiKey: "test-key",
 			}
 			mockConfigManager.getConfig.mockReturnValue(testConfig as any)
@@ -465,7 +465,7 @@ describe("CodeIndexServiceFactory", () => {
 			expect(mockGetModelDimension).toHaveBeenCalledWith("openai-compatible", testModelId)
 			expect(MockedQdrantVectorStore).toHaveBeenCalledWith(
 				"/test/workspace",
-				"http://http://127.0.0.1:6333",
+				"http://127.0.0.1:6333",
 				768,
 				"test-key",
 			)
@@ -482,7 +482,7 @@ describe("CodeIndexServiceFactory", () => {
 					baseUrl: "https://api.example.com/v1",
 					apiKey: "test-api-key",
 				},
-				qdrantUrl: "http://http://127.0.0.1:6333",
+				qdrantUrl: "http://127.0.0.1:6333",
 				qdrantApiKey: "test-key",
 			}
 			mockConfigManager.getConfig.mockReturnValue(testConfig as any)
@@ -504,7 +504,7 @@ describe("CodeIndexServiceFactory", () => {
 					baseUrl: "https://api.example.com/v1",
 					apiKey: "test-key",
 				},
-				qdrantUrl: "http://http://127.0.0.1:6333",
+				qdrantUrl: "http://127.0.0.1:6333",
 				qdrantApiKey: "test-key",
 			}
 			mockConfigManager.getConfig.mockReturnValue(testConfig as any)
@@ -521,7 +521,7 @@ describe("CodeIndexServiceFactory", () => {
 			const testConfig = {
 				embedderProvider: "gemini",
 				modelId: "gemini-embedding-001",
-				qdrantUrl: "http://http://127.0.0.1:6333",
+				qdrantUrl: "http://127.0.0.1:6333",
 				qdrantApiKey: "test-key",
 			}
 			mockConfigManager.getConfig.mockReturnValue(testConfig as any)
@@ -534,7 +534,7 @@ describe("CodeIndexServiceFactory", () => {
 			expect(mockGetModelDimension).toHaveBeenCalledWith("gemini", "gemini-embedding-001")
 			expect(MockedQdrantVectorStore).toHaveBeenCalledWith(
 				"/test/workspace",
-				"http://http://127.0.0.1:6333",
+				"http://127.0.0.1:6333",
 				3072,
 				"test-key",
 			)
@@ -544,7 +544,7 @@ describe("CodeIndexServiceFactory", () => {
 			// Arrange
 			const testConfig = {
 				embedderProvider: "gemini",
-				qdrantUrl: "http://http://127.0.0.1:6333",
+				qdrantUrl: "http://127.0.0.1:6333",
 				qdrantApiKey: "test-key",
 			}
 			mockConfigManager.getConfig.mockReturnValue(testConfig as any)
@@ -559,7 +559,7 @@ describe("CodeIndexServiceFactory", () => {
 			expect(mockGetModelDimension).toHaveBeenCalledWith("gemini", "gemini-embedding-001")
 			expect(MockedQdrantVectorStore).toHaveBeenCalledWith(
 				"/test/workspace",
-				"http://http://127.0.0.1:6333",
+				"http://127.0.0.1:6333",
 				3072,
 				"test-key",
 			)
@@ -570,7 +570,7 @@ describe("CodeIndexServiceFactory", () => {
 			const testConfig = {
 				embedderProvider: "openai",
 				modelId: undefined,
-				qdrantUrl: "http://http://127.0.0.1:6333",
+				qdrantUrl: "http://127.0.0.1:6333",
 				qdrantApiKey: "test-key",
 			}
 			mockConfigManager.getConfig.mockReturnValue(testConfig as any)
@@ -583,7 +583,7 @@ describe("CodeIndexServiceFactory", () => {
 			expect(mockGetModelDimension).toHaveBeenCalledWith("openai", "default-model")
 			expect(MockedQdrantVectorStore).toHaveBeenCalledWith(
 				"/test/workspace",
-				"http://http://127.0.0.1:6333",
+				"http://127.0.0.1:6333",
 				1536,
 				"test-key",
 			)
@@ -594,7 +594,7 @@ describe("CodeIndexServiceFactory", () => {
 			const testConfig = {
 				embedderProvider: "openai",
 				modelId: "unknown-model",
-				qdrantUrl: "http://http://127.0.0.1:6333",
+				qdrantUrl: "http://127.0.0.1:6333",
 				qdrantApiKey: "test-key",
 			}
 			mockConfigManager.getConfig.mockReturnValue(testConfig as any)

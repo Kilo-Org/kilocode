@@ -16,7 +16,7 @@ export class QdrantVectorStore implements IVectorStore {
 
 	private client: QdrantClient
 	private readonly collectionName: string
-	private readonly qdrantUrl: string = "http://http://127.0.0.1:6333"
+	private readonly qdrantUrl: string = "http://127.0.0.1:6333"
 
 	/**
 	 * Creates a new Qdrant vector store
@@ -89,7 +89,7 @@ export class QdrantVectorStore implements IVectorStore {
 	private parseQdrantUrl(url: string | undefined): string {
 		// Handle undefined/null/empty cases
 		if (!url || url.trim() === "") {
-			return "http://http://127.0.0.1:6333"
+			return "http://127.0.0.1:6333"
 		}
 
 		const trimmedUrl = url.trim()
