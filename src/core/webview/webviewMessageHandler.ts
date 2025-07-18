@@ -13,6 +13,7 @@ import {
 	type GlobalState,
 	type ClineMessage,
 	TelemetryEventName,
+	ghostServiceSettingsSchema, // kilocode_change
 } from "@roo-code/types"
 import { CloudService } from "@roo-code/cloud"
 import { TelemetryService } from "@roo-code/telemetry"
@@ -1340,6 +1341,16 @@ export const webviewMessageHandler = async (
 		case "autocompleteApiConfigId":
 			await updateGlobalState("autocompleteApiConfigId", message.text)
 			await provider.postStateToWebview()
+			break
+		case "ghostServiceSettings":
+			if (!message.values) {
+				return
+			}
+			// Validate ghostServiceSettings structure
+			const ghostServiceSettings = ghostServiceSettingsSchema.parse(message.values)
+			await updateGlobalState("ghostServiceSettings", ghostServiceSettings)
+			await provider.postStateToWebview()
+			vscode.commands.executeCommand("kilo-code.ghost.reload")
 			break
 		// kilocode_change end
 		case "condensingApiConfigId":

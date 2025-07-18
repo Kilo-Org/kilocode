@@ -14,12 +14,15 @@ export const registerGhostProvider = (context: vscode.ExtensionContext) => {
 
 	// Register GhostProvider Commands
 	context.subscriptions.push(
+		vscode.commands.registerCommand("kilo-code.ghost.reload", async () => {
+			await ghost.reload()
+		}),
+	)
+	context.subscriptions.push(
 		vscode.commands.registerCommand("kilo-code.ghost.codeActionQuickFix", async () => {
 			return
 		}),
 	)
-
-	// Register GhostProvider Commands
 	context.subscriptions.push(
 		vscode.commands.registerCommand("kilo-code.ghost.generateSuggestions", async () => {
 			ghost.codeSuggestion()

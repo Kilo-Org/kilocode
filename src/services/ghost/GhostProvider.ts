@@ -11,6 +11,9 @@ import { getWorkspacePath } from "../../utils/path"
 import { GhostSuggestionsState } from "./GhostSuggestions"
 import { GhostCodeActionProvider } from "./GhostCodeActionProvider"
 import { GhostCodeLensProvider } from "./GhostCodeLensProvider"
+import { GhostServiceSettings } from "@roo-code/types"
+import { ContextProxy } from "../../core/config/ContextProxy"
+import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 
 export class GhostProvider {
 	private static instance: GhostProvider | null = null
@@ -21,6 +24,8 @@ export class GhostProvider {
 	private workspaceEdit: GhostWorkspaceEdit
 	private suggestions: GhostSuggestionsState = new GhostSuggestionsState()
 	private context: vscode.ExtensionContext
+	private providerSettingsManager: ProviderSettingsManager
+	private settings: GhostServiceSettings | null = null
 
 	// VSCode Providers
 	public codeActionProvider: GhostCodeActionProvider
@@ -30,13 +35,25 @@ export class GhostProvider {
 		this.context = context
 		this.decorations = new GhostDecorations()
 		this.documentStore = new GhostDocumentStore()
-		this.model = new GhostModel()
 		this.strategy = new GhostStrategy()
 		this.workspaceEdit = new GhostWorkspaceEdit()
+		this.providerSettingsManager = new ProviderSettingsManager(context)
+		this.model = new GhostModel()
 
 		// Register the providers
 		this.codeActionProvider = new GhostCodeActionProvider()
 		this.codeLensProvider = new GhostCodeLensProvider()
+
+		void this.reload()
+	}
+
+	private loadSettings() {
+		return ContextProxy.instance?.getValues?.()?.ghostServiceSettings
+	}
+
+	public async reload() {
+		this.settings = this.loadSettings()
+		await this.model.reload(this.settings, this.providerSettingsManager)
 	}
 
 	public static getInstance(context?: vscode.ExtensionContext): GhostProvider {
@@ -133,6 +150,9 @@ export class GhostProvider {
 				}
 
 				progress.report({ message: t("kilocode:ghost.progress.generating") })
+				if (!this.model.loaded) {
+					await this.reload()
+				}
 				const response = await this.model.generateResponse(systemPrompt, userPrompt)
 				console.log("Ghost response:", response)
 				if (cancelled) {
