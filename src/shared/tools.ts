@@ -171,6 +171,12 @@ export interface SearchAndReplaceToolUse extends ToolUse {
 		Partial<Pick<Record<ToolParamName, string>, "use_regex" | "ignore_case" | "start_line" | "end_line">>
 }
 
+export interface VSCLMTUse extends ToolUse {
+	name: "use_vsclmt"
+	tool_name: string
+	arguments?: string
+}
+
 // Define tool group configuration
 export type ToolGroupConfig = {
 	tools: readonly string[]
@@ -187,6 +193,7 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	list_files: "list files",
 	list_code_definition_names: "list definitions",
 	browser_action: "use a browser",
+	use_vsclmt: "use VS Code LM tools",
 	use_mcp_tool: "use mcp tools",
 	access_mcp_resource: "access mcp resources",
 	ask_followup_question: "ask questions",
@@ -223,6 +230,10 @@ export const TOOL_GROUPS: Record<ToolGroup, ToolGroupConfig> = {
 	command: {
 		tools: ["execute_command"],
 	},
+	vsclmt: {
+		tools: ["use_vsclmt"],
+		alwaysAvailable: true,
+	},
 	mcp: {
 		tools: ["use_mcp_tool", "access_mcp_resource"],
 	},
@@ -234,6 +245,7 @@ export const TOOL_GROUPS: Record<ToolGroup, ToolGroupConfig> = {
 
 // Tools that are always available to all modes.
 export const ALWAYS_AVAILABLE_TOOLS: ToolName[] = [
+	"use_vsclmt",
 	"ask_followup_question",
 	"attempt_completion",
 	"switch_mode",
