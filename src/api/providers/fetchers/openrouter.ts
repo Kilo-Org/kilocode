@@ -127,6 +127,7 @@ export async function getOpenRouterModels(
 				const kimi = models[id]
 				kimi.contextWindow = 131_000
 				kimi.maxTokens = 131_000
+				kimi.supportsPromptCache = true
 			}
 			// kilocode_change end
 		}
