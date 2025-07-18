@@ -1725,7 +1725,7 @@ export class ClineProvider
 			enhancementApiConfigId: stateValues.enhancementApiConfigId,
 			commitMessageApiConfigId: stateValues.commitMessageApiConfigId, // kilocode_change
 			autocompleteApiConfigId: stateValues.autocompleteApiConfigId, // kilocode_change
-			ghostServiceSettings: stateValues.ghostServiceSettings ?? {}, // kilocode_changes
+			ghostServiceSettings: stateValues.ghostServiceSettings ?? {}, // kilocode_change
 			experiments: stateValues.experiments ?? experimentDefault,
 			autoApprovalEnabled: stateValues.autoApprovalEnabled ?? true,
 			customModes,
