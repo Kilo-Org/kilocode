@@ -3,7 +3,7 @@ import * as vscode from "vscode"
 import { ContextProxy } from "../../core/config/ContextProxy"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 import { singleCompletionHandler } from "../../utils/single-completion-handler"
-import { GitExtensionService, GitChange, GitProgressOptions } from "./GitExtensionService"
+import { GitExtensionService, GitChange, GitProgressOptions, GitRepository } from "./GitExtensionService"
 import { supportPrompt } from "../../shared/support-prompt"
 import { t } from "../../i18n"
 import { addCustomInstructions } from "../../core/prompts/sections/custom-instructions"
@@ -38,20 +38,15 @@ export class CommitMessageProvider {
 		this.outputChannel.appendLine(t("kilocode:commitMessage.activated"))
 
 		try {
-			// Initialize provider settings manager
 			await this.providerSettingsManager.initialize()
-
-			const initialized = await this.gitService.initialize()
-			if (!initialized) {
-				this.outputChannel.appendLine(t("kilocode:commitMessage.gitNotFound"))
-			}
 		} catch (error) {
 			this.outputChannel.appendLine(t("kilocode:commitMessage.gitInitError", { error }))
 		}
 
 		// Register the command
-		const disposable = vscode.commands.registerCommand("kilo-code.generateCommitMessage", () =>
-			this.generateCommitMessage(),
+		const disposable = vscode.commands.registerCommand(
+			"kilo-code.generateCommitMessage",
+			(commitContext?: GitRepository) => this.generateCommitMessage(commitContext),
 		)
 		this.context.subscriptions.push(disposable)
 		this.context.subscriptions.push(this.gitService)
@@ -60,7 +55,7 @@ export class CommitMessageProvider {
 	/**
 	 * Generates an AI-powered commit message based on staged changes, or unstaged changes if no staged changes exist.
 	 */
-	public async generateCommitMessage(): Promise<void> {
+	public async generateCommitMessage(commitContext?: GitRepository): Promise<void> {
 		await vscode.window.withProgress(
 			{
 				location: vscode.ProgressLocation.SourceControl,
@@ -69,6 +64,8 @@ export class CommitMessageProvider {
 			},
 			async (progress) => {
 				try {
+					this.gitService.configureRepositoryContext(commitContext?.rootUri)
+
 					let staged = true
 					let changes = await this.gitService.gatherChanges({ staged })
 

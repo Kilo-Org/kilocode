@@ -40,7 +40,7 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Kilo Kod taahhüt mesajı oluşturucu etkinleştirildi",
+		"activated": "Kilo Code taahhüt mesajı oluşturucu etkinleştirildi",
 		"gitNotFound": "⚠️ Git deposu bulunamadı veya git kullanılabilir değil",
 		"gitInitError": "⚠️ Git başlatma hatası: {{error}}",
 		"generating": "Kilo: İşlem mesajı oluşturuluyor...",
@@ -53,8 +53,8 @@
 	},
 	"autocomplete": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Tamamlandı",
-			"disabled": "$(circle-slash) Kilo Tamamlandı",
+			"enabled": "$(sparkle) Kilo Otomatik Tamamlama",
+			"disabled": "$(circle-slash) Kilo Otomatik Tamamlama",
 			"tooltip": {
 				"basic": "Kilo Code Otomatik Tamamlama",
 				"disabled": "Kilo Code Otomatik Tamamlama (devre dışı)",
@@ -63,13 +63,13 @@
 				"lastCompletion": "Son tamamlama:",
 				"model": "Model:"
 			},
-			"warning": "$(warning) Kilo Tamamlandı",
+			"warning": "$(warning) Kilo Otomatik Tamamlama",
 			"cost": {
 				"zero": "0,00 ₺",
 				"lessThanCent": "<0,01$"
 			}
 		},
-		"toggleMessage": "Kilo Tamamlandı {{status}}"
+		"toggleMessage": "Kilo Otomatik Tamamlama {{status}}"
 	},
 	"ghost": {
 		"progress": {
@@ -77,10 +77,10 @@
 			"generating": "Düzenleme önerileri oluşturuluyor...",
 			"processing": "Önerilen düzeltmeler işleniyor...",
 			"showing": "Önerilen düzenlemeler görüntüleniyor...",
-			"title": "Kilo Kodu"
+			"title": "Kilo Code"
 		},
 		"input": {
-			"title": "Kilo Kodu: Hızlı Görev",
+			"title": "Kilo Code: Hızlı Görev",
 			"placeholder": "örneğin, 'bu fonksiyonu daha verimli olacak şekilde yeniden düzenleyin'"
 		},
 		"commands": {
@@ -88,17 +88,17 @@
 			"displaySuggestions": "Önerilen Düzenlemeleri Göster",
 			"cancelSuggestions": "Önerilen Düzenlemeleri İptal Et",
 			"applyCurrentSuggestion": "Mevcut Önerilen Düzenlemeyi Uygula",
-			"category": "Kilo Kod",
+			"category": "Kilo Code",
 			"applyAllSuggestions": "Önerilen Düzenlemelerin Tümünü Uygula",
 			"promptCodeSuggestion": "Hızlı Görev İsteği"
 		},
 		"chatParticipant": {
-			"fullName": "Kilo Kod Ajanı",
+			"fullName": "Kilo Code Ajanı",
 			"name": "Temsilci",
 			"description": "Hızlı görevler ve önerilen düzenlemeler konusunda size yardımcı olabilirim."
 		},
 		"codeAction": {
-			"title": "Kilo Kod: Önerilen Düzenlemeler"
+			"title": "Kilo Code: Önerilen Düzenlemeler"
 		},
 		"messages": {
 			"provideCodeSuggestions": "Kod önerileri sunuluyor..."

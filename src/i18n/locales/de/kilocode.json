@@ -53,23 +53,23 @@
 	},
 	"autocomplete": {
 		"statusBar": {
-			"disabled": "$(circle-slash) Kilo abgeschlossen",
+			"disabled": "$(circle-slash) Kilo Autovervollständigung",
 			"tooltip": {
-				"basic": "Kilo Code Autocomplete",
+				"basic": "Kilo Code Autovervollständigung",
 				"sessionTotal": "Gesamtkosten der Sitzung:",
-				"disabled": "Kilo Code Autocomplete (deaktiviert)",
+				"disabled": "Kilo Code Autovervollständigung (deaktiviert)",
 				"tokenError": "Ein gültiges Token muss eingestellt werden, um die Autovervollständigung zu verwenden",
 				"lastCompletion": "Letzte Vervollständigung:",
 				"model": "Modell:"
 			},
-			"warning": "$(warning) Kilo Abgeschlossen",
-			"enabled": "$(sparkle) Kilo Abgeschlossen",
+			"warning": "$(warning) Kilo Autovervollständigung",
+			"enabled": "$(sparkle) Kilo Autovervollständigung",
 			"cost": {
 				"lessThanCent": "<0,01 €",
 				"zero": "0,00 €"
 			}
 		},
-		"toggleMessage": "Kilo vollständig {{status}}"
+		"toggleMessage": "Kilo Autovervollständigung {{status}}"
 	},
 	"ghost": {
 		"progress": {
@@ -80,7 +80,7 @@
 			"title": "Kilo Code"
 		},
 		"input": {
-			"title": "Kilo-Code: Schnellaufgabe",
+			"title": "Kilo Code: Schnellaufgabe",
 			"placeholder": "z.B. 'diese Funktion umgestalten, um effizienter zu sein'"
 		},
 		"commands": {

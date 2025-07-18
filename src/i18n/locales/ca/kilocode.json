@@ -53,23 +53,23 @@
 	},
 	"autocomplete": {
 		"statusBar": {
-			"warning": "$(warning) Quilogram Completat",
-			"enabled": "$(sparkle) Quilòmetre complet",
+			"warning": "$(warning) Kilo Autocompletat",
+			"enabled": "$(sparkle) Kilo Autocompletat",
 			"tooltip": {
-				"basic": "Autocompletat Kilo Code",
-				"disabled": "Kilo Code Autocomplete (desactivat)",
+				"basic": "Kilo Code Autocompletat",
+				"disabled": "Kilo Code Autocompletat (desactivat)",
 				"tokenError": "Cal establir un token vàlid per utilitzar l'autocompleció",
 				"lastCompletion": "Última compleció:",
 				"sessionTotal": "Cost total de la sessió:",
 				"model": "Model:"
 			},
-			"disabled": "$(circle-slash) Kilo Complet",
+			"disabled": "$(circle-slash) Kilo Autocompletat",
 			"cost": {
 				"zero": "0,00 €",
 				"lessThanCent": "<0,01 €"
 			}
 		},
-		"toggleMessage": "Quilòmetre completat {{status}}"
+		"toggleMessage": "Kilo Autocompletat {{status}}"
 	},
 	"ghost": {
 		"progress": {
@@ -77,27 +77,27 @@
 			"generating": "Generant suggeriments d'edició...",
 			"processing": "Processant les edicions suggerides...",
 			"showing": "Mostrant edicions suggerides...",
-			"title": "Codi Kilo"
+			"title": "Kilo Code"
 		},
 		"input": {
-			"title": "Codi Kilo: Tasca Ràpida",
+			"title": "Kilo Code: Tasca Ràpida",
 			"placeholder": "p. ex., 'refactora aquesta funció perquè sigui més eficient'"
 		},
 		"commands": {
-			"generateSuggestions": "Codi Kilo: Genera suggeriments d'edició",
+			"generateSuggestions": "Kilo Code: Genera suggeriments d'edició",
 			"displaySuggestions": "Mostrar Suggeriments d'Edició",
 			"cancelSuggestions": "Cancel·la les edicions suggerides",
 			"applyAllSuggestions": "Aplica totes les edicions suggerides",
 			"applyCurrentSuggestion": "Aplica l'edició suggerida actual",
 			"promptCodeSuggestion": "Petició de Tasca Ràpida",
-			"category": "Codi Kilo"
+			"category": "Kilo Code"
 		},
 		"codeAction": {
-			"title": "Codi Kilo: Edicions suggerides"
+			"title": "Kilo Code: Edicions suggerides"
 		},
 		"chatParticipant": {
 			"name": "Agent",
-			"fullName": "Agent de Codi Kilo",
+			"fullName": "Kilo Code Agent",
 			"description": "Et puc ajudar amb tasques ràpides i edicions suggerides."
 		},
 		"messages": {

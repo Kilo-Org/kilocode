@@ -53,12 +53,12 @@
 	},
 	"autocomplete": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Completado",
-			"disabled": "$(circle-slash) Kilo Completo",
-			"warning": "$(warning) Kilo Completo",
+			"enabled": "$(sparkle) Kilo Autocompletado",
+			"disabled": "$(circle-slash) Kilo Autocompletado",
+			"warning": "$(warning) Kilo Autocompletado",
 			"tooltip": {
-				"disabled": "Autocompletar de Kilo Code (desactivado)",
-				"basic": "Autocompletado de Kilo Code",
+				"disabled": "Kilo Code Autocompletado (desactivado)",
+				"basic": "Kilo Code Autocompletado",
 				"sessionTotal": "Costo total de la sesión:",
 				"lastCompletion": "Última finalización:",
 				"tokenError": "Se debe establecer un token válido para usar el autocompletado",
@@ -69,7 +69,7 @@
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Kilo Completo {{status}}"
+		"toggleMessage": "Kilo Autocompletado {{status}}"
 	},
 	"ghost": {
 		"progress": {
@@ -77,10 +77,10 @@
 			"processing": "Procesando ediciones sugeridas...",
 			"generating": "Generando sugerencias de edición...",
 			"showing": "Mostrando ediciones sugeridas...",
-			"title": "Código Kilo"
+			"title": "Kilo Code"
 		},
 		"input": {
-			"title": "Código Kilo: Tarea Rápida",
+			"title": "Kilo Code: Tarea Rápida",
 			"placeholder": "p. ej., 'refactorizar esta función para que sea más eficiente'"
 		},
 		"commands": {
@@ -93,12 +93,12 @@
 			"applyAllSuggestions": "Aplicar todas las ediciones sugeridas"
 		},
 		"chatParticipant": {
-			"fullName": "Agente de Código Kilo",
+			"fullName": "Kilo Code Agente",
 			"description": "Puedo ayudarte con tareas rápidas y ediciones sugeridas.",
 			"name": "Agente"
 		},
 		"codeAction": {
-			"title": "Código Kilo: Ediciones sugeridas"
+			"title": "Kilo Code: Ediciones sugeridas"
 		},
 		"messages": {
 			"provideCodeSuggestions": "Proporcionando sugerencias de código..."

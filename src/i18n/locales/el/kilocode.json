@@ -53,8 +53,8 @@
 	},
 	"autocomplete": {
 		"statusBar": {
-			"warning": "$(warning) Kilo Ολοκληρώθηκε",
-			"enabled": "$(sparkle) Kilo Ολοκληρώθηκε",
+			"warning": "$(warning) Kilo Αυτόματη Συμπλήρωση",
+			"enabled": "$(sparkle) Kilo Αυτόματη Συμπλήρωση",
 			"tooltip": {
 				"basic": "Kilo Code Αυτόματη Συμπλήρωση",
 				"tokenError": "Πρέπει να οριστεί ένα έγκυρο διακριτικό για να χρησιμοποιηθεί η αυτόματη συμπλήρωση",
@@ -63,13 +63,13 @@
 				"lastCompletion": "Τελευταία ολοκλήρωση:",
 				"model": "Μοντέλο:"
 			},
-			"disabled": "$(circle-slash) Kilo Ολοκληρώθηκε",
+			"disabled": "$(circle-slash) Kilo Αυτόματη Συμπλήρωση",
 			"cost": {
 				"lessThanCent": "<0,01$",
 				"zero": "0,00 €"
 			}
 		},
-		"toggleMessage": "Kilo Ολοκληρώθηκε {{status}}"
+		"toggleMessage": "Kilo Αυτόματη Συμπλήρωση {{status}}"
 	},
 	"ghost": {
 		"progress": {
@@ -77,23 +77,23 @@
 			"generating": "Δημιουργία προτεινόμενων επεξεργασιών...",
 			"processing": "Επεξεργασία προτεινόμενων αλλαγών...",
 			"showing": "Εμφάνιση προτεινόμενων αλλαγών...",
-			"title": "Κιλό Κώδικα"
+			"title": "Kilo Code"
 		},
 		"input": {
-			"title": "Κωδικός Kilo: Γρήγορη Εργασία",
+			"title": "Kilo Code: Γρήγορη Εργασία",
 			"placeholder": "π.χ., 'αναδιοργάνωσε αυτή τη συνάρτηση ώστε να είναι πιο αποδοτική'"
 		},
 		"commands": {
 			"cancelSuggestions": "Ακύρωση Προτεινόμενων Αλλαγών",
-			"generateSuggestions": "Κωδικός Kilo: Δημιουργία Προτεινόμενων Επεξεργασιών",
+			"generateSuggestions": "Kilo Code: Δημιουργία Προτεινόμενων Επεξεργασιών",
 			"displaySuggestions": "Προβολή Προτεινόμενων Τροποποιήσεων",
 			"promptCodeSuggestion": "Γρήγορη Εργασία με Prompt",
 			"applyCurrentSuggestion": "Εφαρμογή Τρέχουσας Προτεινόμενης Επεξεργασίας",
-			"category": "Κωδικός Κιλό",
+			"category": "Kilo Code",
 			"applyAllSuggestions": "Εφαρμογή Όλων των Προτεινόμενων Αλλαγών"
 		},
 		"codeAction": {
-			"title": "Κωδικός Kilo: Προτεινόμενες Αλλαγές"
+			"title": "Kilo Code: Προτεινόμενες Αλλαγές"
 		},
 		"chatParticipant": {
 			"name": "Πράκτορας",

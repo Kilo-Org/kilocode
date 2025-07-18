@@ -53,8 +53,8 @@
 	},
 	"autocomplete": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Виконано",
-			"disabled": "$(circle-slash) Kilo завершено",
+			"enabled": "$(sparkle) Kilo Автодоповнення",
+			"disabled": "$(circle-slash) Kilo Автодоповнення",
 			"tooltip": {
 				"basic": "Автодоповнення Kilo Code",
 				"tokenError": "Для використання автозаповнення необхідно встановити дійсний токен",
@@ -63,13 +63,13 @@
 				"model": "Модель:",
 				"sessionTotal": "Загальна вартість сеансу:"
 			},
-			"warning": "$(warning) Kilo виконано",
+			"warning": "$(warning) Kilo Автодоповнення",
 			"cost": {
 				"zero": "0,00 ₴",
 				"lessThanCent": "<$0,01"
 			}
 		},
-		"toggleMessage": "Kilo виконано {{status}}"
+		"toggleMessage": "Kilo Автодоповнення {{status}}"
 	},
 	"ghost": {
 		"progress": {
@@ -77,10 +77,10 @@
 			"processing": "Обробка запропонованих редагувань...",
 			"generating": "Генерування запропонованих виправлень...",
 			"showing": "Відображення запропонованих змін...",
-			"title": "Кіло Код"
+			"title": "Kilo Code"
 		},
 		"input": {
-			"title": "Кіло Код: Швидке Завдання",
+			"title": "Kilo Code: Швидке Завдання",
 			"placeholder": "наприклад, 'переробіть цю функцію, щоб вона була ефективнішою'"
 		},
 		"commands": {
@@ -89,14 +89,14 @@
 			"applyCurrentSuggestion": "Застосувати поточну запропоновану правку",
 			"cancelSuggestions": "Скасувати запропоновані правки",
 			"promptCodeSuggestion": "Швидке Завдання",
-			"category": "Кіло Код",
+			"category": "Kilo Code",
 			"applyAllSuggestions": "Застосувати всі запропоновані редагування"
 		},
 		"codeAction": {
-			"title": "Кіло Код: Запропоновані правки"
+			"title": "Kilo Code: Запропоновані правки"
 		},
 		"chatParticipant": {
-			"fullName": "Кіло-код Агент",
+			"fullName": "Kilo Code Агент",
 			"description": "Я можу допомогти вам зі швидкими завданнями та запропонувати правки.",
 			"name": "Агент"
 		},

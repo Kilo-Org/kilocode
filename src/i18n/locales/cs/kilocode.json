@@ -53,23 +53,23 @@
 	},
 	"autocomplete": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Dokončeno",
-			"disabled": "$(circle-slash) Kilo Dokončeno",
+			"enabled": "$(sparkle) Kilo Automatické dokončování",
+			"disabled": "$(circle-slash) Kilo Automatické dokončování",
 			"tooltip": {
 				"tokenError": "Pro použití automatického dokončování musí být nastaven platný token",
-				"basic": "Kilo Code Autocomplete",
+				"basic": "Kilo Code Automatické dokončování",
 				"lastCompletion": "Poslední dokončení:",
 				"model": "Model:",
 				"sessionTotal": "Celkové náklady na relaci:",
-				"disabled": "Kilo Code Autocomplete (deaktivováno)"
+				"disabled": "Kilo Code Automatické dokončování (deaktivováno)"
 			},
-			"warning": "$(warning) Kilo Hotovo",
+			"warning": "$(warning) Kilo Automatické dokončování",
 			"cost": {
 				"zero": "0,00 Kč",
 				"lessThanCent": "<0,01 $"
 			}
 		},
-		"toggleMessage": "Kilo hotovo {{status}}"
+		"toggleMessage": "Kilo Automatické dokončování {{status}}"
 	},
 	"ghost": {
 		"progress": {
@@ -77,10 +77,10 @@
 			"analyzing": "Analyzuji váš kód...",
 			"processing": "Zpracování navržených úprav...",
 			"showing": "Zobrazuji navrhované úpravy...",
-			"title": "Kilo Kód"
+			"title": "Kilo Code"
 		},
 		"input": {
-			"title": "Kilo kód: Rychlý úkol",
+			"title": "Kilo Code: Rychlý úkol",
 			"placeholder": "např. \"přepracovat tuto funkci, aby byla efektivnější\""
 		},
 		"commands": {
@@ -90,14 +90,14 @@
 			"cancelSuggestions": "Zrušit navrhované úpravy",
 			"applyAllSuggestions": "Použít všechny navrhované úpravy",
 			"promptCodeSuggestion": "Rychlý úkol",
-			"category": "Kilo Kód"
+			"category": "Kilo Code"
 		},
 		"codeAction": {
-			"title": "Kilo kód: Navrhované úpravy"
+			"title": "Kilo Code: Navrhované úpravy"
 		},
 		"chatParticipant": {
 			"name": "Agent",
-			"fullName": "Agentní Systém Kilo Code",
+			"fullName": "Kilo Code Agent",
 			"description": "Mohu vám pomoci s rychlými úkoly a navrženými úpravami."
 		},
 		"messages": {

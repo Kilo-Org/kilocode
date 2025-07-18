@@ -53,23 +53,23 @@
 	},
 	"autocomplete": {
 		"statusBar": {
-			"disabled": "$(circle-slash) Kilo Ukończone",
-			"enabled": "$(sparkle) Kilo Ukończone",
+			"disabled": "$(circle-slash) Kilo Autouzupełnianie",
+			"enabled": "$(sparkle) Kilo Autouzupełnianie",
 			"tooltip": {
 				"lastCompletion": "Ostatnie zakończenie:",
 				"disabled": "Kilo Code automatyczne uzupełnianie (wyłączone)",
-				"basic": "Kilo Code Autocomplete",
+				"basic": "Kilo Code Autouzupełnianie",
 				"tokenError": "Aby korzystać z autouzupełniania, należy ustawić prawidłowy token",
 				"sessionTotal": "Całkowity koszt sesji:",
 				"model": "Model:"
 			},
-			"warning": "$(warning) Kilo - Wykonane",
+			"warning": "$(warning) Kilo Autouzupełnianie",
 			"cost": {
 				"lessThanCent": "<0,01 zł",
 				"zero": "0,00 zł"
 			}
 		},
-		"toggleMessage": "Kilo Zakończone {{status}}"
+		"toggleMessage": "Kilo Autouzupełnianie {{status}}"
 	},
 	"ghost": {
 		"progress": {
@@ -80,7 +80,7 @@
 			"title": "Kilo Code"
 		},
 		"input": {
-			"title": "Kod Kilo: Szybkie Zadanie",
+			"title": "Kilo Code: Szybkie Zadanie",
 			"placeholder": "np. „zrefaktoruj tę funkcję, aby była bardziej wydajna\""
 		},
 		"commands": {
@@ -93,7 +93,7 @@
 			"category": "Kilo Code"
 		},
 		"codeAction": {
-			"title": "Kod Kilo: Sugerowane edycje"
+			"title": "Kilo Code: Sugerowane edycje"
 		},
 		"chatParticipant": {
 			"name": "Agent",

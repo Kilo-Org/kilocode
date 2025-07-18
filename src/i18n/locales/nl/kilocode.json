@@ -53,23 +53,23 @@
 	},
 	"autocomplete": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Voltooid",
-			"warning": "$(warning) Kilo Voltooid",
+			"enabled": "$(sparkle) Kilo Automatisch aanvullen",
+			"warning": "$(warning) Kilo Automatisch aanvullen",
 			"tooltip": {
-				"basic": "Kilo Code Automatische Aanvulling",
+				"basic": "Kilo Code Automatisch aanvullen",
 				"tokenError": "Een geldige token moet ingesteld worden om automatisch aanvullen te gebruiken",
 				"disabled": "Kilo Code Automatisch aanvullen (uitgeschakeld)",
 				"lastCompletion": "Laatste voltooiing:",
 				"sessionTotal": "Totale sessiekosten:",
 				"model": "Model:"
 			},
-			"disabled": "$(circle-slash) Kilo Voltooid",
+			"disabled": "$(circle-slash) Kilo Automatisch aanvullen",
 			"cost": {
 				"zero": "€ 0,00",
 				"lessThanCent": "<€0,01"
 			}
 		},
-		"toggleMessage": "Kilo Voltooid {{status}}"
+		"toggleMessage": "Kilo Automatisch aanvullen {{status}}"
 	},
 	"ghost": {
 		"progress": {

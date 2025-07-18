@@ -53,9 +53,9 @@
 	},
 	"autocomplete": {
 		"statusBar": {
-			"disabled": "$(circle-slash) Kilo Terminé",
-			"enabled": "$(sparkle) Kilo Terminé",
-			"warning": "$(warning) Kilo Terminé",
+			"disabled": "$(circle-slash) Kilo Autocomplétion",
+			"enabled": "$(sparkle) Kilo Autocomplétion",
+			"warning": "$(warning) Kilo Autocomplétion",
 			"tooltip": {
 				"disabled": "Autocomplétion Kilo Code (désactivée)",
 				"tokenError": "Un jeton valide doit être défini pour utiliser l'autocomplétion",
@@ -69,7 +69,7 @@
 				"zero": "0,00 $"
 			}
 		},
-		"toggleMessage": "Kilo Terminé {{status}}"
+		"toggleMessage": "Kilo Autocomplétion {{status}}"
 	},
 	"ghost": {
 		"progress": {
@@ -80,7 +80,7 @@
 			"title": "Kilo Code"
 		},
 		"input": {
-			"title": "Code Kilo : Tâche Rapide",
+			"title": "Kilo Code : Tâche Rapide",
 			"placeholder": "par ex., 'refactorisez cette fonction pour la rendre plus efficace'"
 		},
 		"commands": {

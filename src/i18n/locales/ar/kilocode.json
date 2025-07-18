@@ -65,15 +65,15 @@
 				"lastCompletion": "الإكمال الأخير:",
 				"model": "النموذج:"
 			},
-			"disabled": "$(circle-slash) Kilo مكتمل",
-			"warning": "$(warning) اكتمل Kilo",
-			"enabled": "$(sparkle) Kilo مكتمل",
+			"disabled": "$(circle-slash) Kilo إكمال تلقائي",
+			"warning": "$(warning) Kilo إكمال تلقائي",
+			"enabled": "$(sparkle) Kilo إكمال تلقائي",
 			"cost": {
 				"zero": "0.00 دولار",
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Kilo كُمبليت {{status}}"
+		"toggleMessage": "Kilo إكمال تلقائي {{status}}"
 	},
 	"ghost": {
 		"progress": {
@@ -81,26 +81,26 @@
 			"showing": "عرض التعديلات المقترحة...",
 			"generating": "جاري توليد التعديلات المقترحة...",
 			"processing": "جارِ معالجة التعديلات المقترحة...",
-			"title": "كيلو كود"
+			"title": "Kilo Code"
 		},
 		"input": {
-			"title": "كود كيلو: مهمة سريعة",
+			"title": "Kilo Code: مهمة سريعة",
 			"placeholder": "مثلاً، 'أعد هيكلة هذه الدالة لتكون أكثر كفاءة'"
 		},
 		"commands": {
 			"displaySuggestions": "عرض التعديلات المقترحة",
-			"generateSuggestions": "كود كيلو: توليد تعديلات مقترحة",
+			"generateSuggestions": "Kilo Code: توليد تعديلات مقترحة",
 			"applyCurrentSuggestion": "تطبيق التعديل المُقترح الحالي",
 			"cancelSuggestions": "إلغاء التعديلات المقترحة",
 			"promptCodeSuggestion": "مهمة سريعة",
 			"applyAllSuggestions": "تطبيق كافة التعديلات المقترحة",
-			"category": "كيلو كود"
+			"category": "Kilo Code"
 		},
 		"codeAction": {
-			"title": "كيلو كود: التعديلات المقترحة"
+			"title": "Kilo Code: التعديلات المقترحة"
 		},
 		"chatParticipant": {
-			"fullName": "وكيل كيلو كود",
+			"fullName": "Kilo Code وكيل",
 			"description": "يمكنني مساعدتك بالمهام السريعة والتعديلات المقترحة.",
 			"name": "وكيل"
 		},

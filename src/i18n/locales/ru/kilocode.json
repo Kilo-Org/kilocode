@@ -48,14 +48,14 @@
 		"generated": "Kilo: Сообщение коммита сгенерировано!",
 		"generationFailed": "Kilo: Не удалось создать сообщение коммита: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: Генерация сообщения с использованием неподготовленных изменений",
-		"activationFailed": "Килобайт: Не удалось активировать генератор сообщений: {{error}}",
+		"activationFailed": "Kilo: Не удалось активировать генератор сообщений: {{error}}",
 		"providerRegistered": "Kilo: Поставщик сообщения коммита зарегистрирован"
 	},
 	"autocomplete": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Выполнено",
-			"warning": "$(warning) Kilo завершено",
-			"disabled": "$(circle-slash) Kilo завершено",
+			"enabled": "$(sparkle) Kilo Автодополнение",
+			"warning": "$(warning) Kilo Автодополнение",
+			"disabled": "$(circle-slash) Kilo Автодополнение",
 			"tooltip": {
 				"sessionTotal": "Общая стоимость сессии:",
 				"disabled": "Автодополнение Kilo Code (отключено)",
@@ -69,7 +69,7 @@
 				"zero": "0,00 ₽"
 			}
 		},
-		"toggleMessage": "Kilo Выполнено {{status}}"
+		"toggleMessage": "Kilo Автодополнение {{status}}"
 	},
 	"ghost": {
 		"progress": {
@@ -77,7 +77,7 @@
 			"generating": "Создание предлагаемых правок...",
 			"processing": "Обработка предлагаемых правок...",
 			"showing": "Отображение предложенных правок...",
-			"title": "Кило Код"
+			"title": "Kilo Code"
 		},
 		"input": {
 			"title": "Kilo Code: Быстрая Задача",
@@ -88,16 +88,16 @@
 			"generateSuggestions": "Kilo Code: Создать Предлагаемые Изменения",
 			"cancelSuggestions": "Отменить предложенные правки",
 			"applyCurrentSuggestion": "Применить текущее предложенное изменение",
-			"category": "Кило Код",
+			"category": "Kilo Code",
 			"applyAllSuggestions": "Применить все предложенные правки",
 			"promptCodeSuggestion": "Быстрое задание"
 		},
 		"codeAction": {
-			"title": "Код Кило: Предлагаемые правки"
+			"title": "Kilo Code: Предлагаемые правки"
 		},
 		"chatParticipant": {
 			"description": "Я могу помочь вам с быстрыми задачами и предложенными изменениями.",
-			"fullName": "Агент Кило Код",
+			"fullName": "Kilo Code Агент",
 			"name": "Агент"
 		},
 		"messages": {

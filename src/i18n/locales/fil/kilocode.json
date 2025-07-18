@@ -53,9 +53,9 @@
 	},
 	"autocomplete": {
 		"statusBar": {
-			"disabled": "$(circle-slash) Kilo Kumpleto",
-			"enabled": "$(sparkle) Kilo Kumpleto",
-			"warning": "$(warning) Kilo Kumpleto",
+			"disabled": "$(circle-slash) Kilo Autocomplete",
+			"enabled": "$(sparkle) Kilo Autocomplete",
+			"warning": "$(warning) Kilo Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (naka-disable)",
@@ -69,7 +69,7 @@
 				"zero": "₱0.00"
 			}
 		},
-		"toggleMessage": "Kilo Complete {{status}}"
+		"toggleMessage": "Kilo Autocomplete {{status}}"
 	},
 	"ghost": {
 		"progress": {

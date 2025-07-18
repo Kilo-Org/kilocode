@@ -53,7 +53,7 @@
 	},
 	"autocomplete": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Completato",
+			"enabled": "$(sparkle) Kilo Autocompletamento",
 			"tooltip": {
 				"basic": "Completamento Automatico Kilo Code",
 				"sessionTotal": "Costo totale della sessione:",
@@ -62,14 +62,14 @@
 				"tokenError": "È necessario impostare un token valido per utilizzare l'autocompletamento",
 				"disabled": "Completamento Automatico Kilo Code (disabilitato)"
 			},
-			"disabled": "$(circle-slash) Kilo Completato",
-			"warning": "$(warning) Kilo Completato",
+			"disabled": "$(circle-slash) Kilo Autocompletamento",
+			"warning": "$(warning) Kilo Autocompletamento",
 			"cost": {
 				"zero": "€0,00",
 				"lessThanCent": "<€0,01"
 			}
 		},
-		"toggleMessage": "Kilo Completato {{status}}"
+		"toggleMessage": "Kilo Autocompletamento {{status}}"
 	},
 	"ghost": {
 		"progress": {
@@ -80,11 +80,11 @@
 			"title": "Kilo Code"
 		},
 		"input": {
-			"title": "Codice Kilo: Compito Rapido",
+			"title": "Kilo Code: Compito Rapido",
 			"placeholder": "ad es., 'ristruttura questa funzione per renderla più efficiente'"
 		},
 		"commands": {
-			"generateSuggestions": "Codice Kilo: Genera Suggerimenti di Modifica",
+			"generateSuggestions": "Kilo Code: Genera Suggerimenti di Modifica",
 			"promptCodeSuggestion": "Compito Veloce",
 			"cancelSuggestions": "Annulla Modifiche Suggerite",
 			"displaySuggestions": "Mostra Modifiche Suggerite",

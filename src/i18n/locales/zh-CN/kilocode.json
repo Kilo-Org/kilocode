@@ -40,7 +40,7 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Kilo: 提交信息生成器已启动",
+		"activated": "Kilo Code: 提交信息生成器已启动",
 		"gitNotFound": "⚠️ Git 仓库未找到或 git 不可用",
 		"gitInitError": "⚠️ Git 初始化错误：{{error}}",
 		"generating": "Kilo: 正在生成提交信息...",
@@ -49,7 +49,7 @@
 		"generationFailed": "Kilo：生成提交信息失败：{{errorMessage}}",
 		"generatingFromUnstaged": "Kilo：使用未暂存的更改生成消息",
 		"providerRegistered": "Kilo：提交消息提供程序已注册",
-		"activationFailed": "千瓦：消息生成器激活失败：{{error}}"
+		"activationFailed": "Kilo：消息生成器激活失败：{{error}}"
 	},
 	"autocomplete": {
 		"statusBar": {
@@ -69,7 +69,7 @@
 				"zero": "¥0.00"
 			}
 		},
-		"toggleMessage": "Kilo自动补全 {{status}}"
+		"toggleMessage": "Kilo 自动补全 {{status}}"
 	},
 	"ghost": {
 		"progress": {
@@ -77,26 +77,26 @@
 			"generating": "正在生成建议修改...",
 			"processing": "正在处理建议的编辑...",
 			"showing": "显示建议的编辑...",
-			"title": "千行代码"
+			"title": "Kilo Code"
 		},
 		"input": {
-			"title": "公里码：快速任务",
+			"title": "Kilo：快速任务",
 			"placeholder": "例如，\"重构这个函数使其更高效\""
 		},
 		"commands": {
 			"displaySuggestions": "显示建议的编辑",
 			"applyCurrentSuggestion": "应用当前建议的编辑",
-			"generateSuggestions": "千行代码：生成建议的编辑",
+			"generateSuggestions": "Kilo：生成建议的编辑",
 			"cancelSuggestions": "取消建议的编辑",
 			"applyAllSuggestions": "应用所有建议的编辑",
 			"promptCodeSuggestion": "快速任务提示",
-			"category": "千字代码"
+			"category": "Kilo Code"
 		},
 		"codeAction": {
-			"title": "千米代码：建议编辑"
+			"title": "Kilo Code：建议编辑"
 		},
 		"chatParticipant": {
-			"fullName": "公里码代理",
+			"fullName": "Kilo Code 代理",
 			"description": "我可以帮助你完成快速任务和提供建议的编辑。",
 			"name": "代理"
 		},

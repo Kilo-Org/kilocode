@@ -53,8 +53,8 @@
 	},
 	"autocomplete": {
 		"statusBar": {
-			"disabled": "$(circle-slash) Kilo 완료",
-			"enabled": "$(sparkle) Kilo 완료",
+			"disabled": "$(circle-slash) Kilo 자동완성",
+			"enabled": "$(sparkle) Kilo 자동완성",
 			"tooltip": {
 				"disabled": "Kilo Code 자동완성 (비활성화됨)",
 				"basic": "Kilo Code 자동완성",
@@ -63,13 +63,13 @@
 				"lastCompletion": "마지막 완료:",
 				"model": "모델:"
 			},
-			"warning": "$(warning) Kilo 완료",
+			"warning": "$(warning) Kilo 자동완성",
 			"cost": {
 				"lessThanCent": "<$0.01",
 				"zero": "0원"
 			}
 		},
-		"toggleMessage": "Kilo 완료 {{status}}"
+		"toggleMessage": "Kilo 자동완성 {{status}}"
 	},
 	"ghost": {
 		"progress": {
@@ -77,28 +77,28 @@
 			"generating": "수정 제안 생성 중...",
 			"processing": "제안된 편집 처리 중...",
 			"showing": "추천 편집 표시 중...",
-			"title": "킬로 코드"
+			"title": "Kilo Code"
 		},
 		"input": {
 			"placeholder": "예: '이 함수를 더 효율적으로 리팩터링하세요'",
-			"title": "킬로 코드: 빠른 작업"
+			"title": "Kilo Code: 빠른 작업"
 		},
 		"commands": {
 			"displaySuggestions": "추천 편집 표시하기",
-			"generateSuggestions": "킬로 코드: 수정 제안 생성하기",
+			"generateSuggestions": "Kilo Code: 수정 제안 생성하기",
 			"cancelSuggestions": "제안된 편집 취소",
-			"category": "킬로 코드",
+			"category": "Kilo Code",
 			"applyAllSuggestions": "제안된 편집 모두 적용",
 			"applyCurrentSuggestion": "현재 제안된 편집 적용",
 			"promptCodeSuggestion": "프롬프트 빠른 작업"
 		},
 		"chatParticipant": {
-			"fullName": "킬로 코드 에이전트",
+			"fullName": "Kilo Code 에이전트",
 			"name": "에이전트",
 			"description": "빠른 작업과 추천 편집을 도와드릴 수 있습니다."
 		},
 		"codeAction": {
-			"title": "킬로 코드: 제안된 편집"
+			"title": "Kilo Code: 제안된 편집"
 		},
 		"messages": {
 			"provideCodeSuggestions": "코드 제안 중..."

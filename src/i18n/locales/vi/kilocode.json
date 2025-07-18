@@ -53,9 +53,9 @@
 	},
 	"autocomplete": {
 		"statusBar": {
-			"enabled": "$(sparkle) Hoàn thành Kilo",
-			"disabled": "$(circle-slash) Hoàn Tất Kilo",
-			"warning": "$(warning) Kilo Hoàn Thành",
+			"enabled": "$(sparkle) Kilo Tự động hoàn thành",
+			"disabled": "$(circle-slash) Kilo Tự động hoàn thành",
+			"warning": "$(warning) Kilo Tự động hoàn thành",
 			"tooltip": {
 				"disabled": "Tự động hoàn thành Kilo Code (đã tắt)",
 				"basic": "Tự động hoàn thiện Kilo Code",
@@ -69,7 +69,7 @@
 				"lessThanCent": "<$0,01"
 			}
 		},
-		"toggleMessage": "Kilo Hoàn thành {{status}}"
+		"toggleMessage": "Kilo Tự động hoàn thành {{status}}"
 	},
 	"ghost": {
 		"progress": {
@@ -80,7 +80,7 @@
 			"title": "Kilo Code"
 		},
 		"input": {
-			"title": "Mã Kilo: Nhiệm Vụ Nhanh",
+			"title": "Kilo Code: Nhiệm Vụ Nhanh",
 			"placeholder": "ví dụ, 'cấu trúc lại hàm này để hiệu quả hơn'"
 		},
 		"commands": {
@@ -93,11 +93,11 @@
 			"category": "Kilo Code"
 		},
 		"codeAction": {
-			"title": "Mã Kilo: Gợi ý chỉnh sửa"
+			"title": "Kilo Code: Gợi ý chỉnh sửa"
 		},
 		"chatParticipant": {
 			"description": "Tôi có thể giúp bạn với các tác vụ nhanh và các chỉnh sửa được đề xuất.",
-			"fullName": "Đại Diện Mã Kilo",
+			"fullName": "Kilo Code Đại lý",
 			"name": "Đại lý"
 		},
 		"messages": {

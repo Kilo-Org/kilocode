@@ -53,8 +53,8 @@
 	},
 	"autocomplete": {
 		"statusBar": {
-			"disabled": "$(circle-slash) Kilo Selesai",
-			"enabled": "$(sparkle) Kilo Selesai",
+			"disabled": "$(circle-slash) Kilo Autocomplete",
+			"enabled": "$(sparkle) Kilo Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (dinonaktifkan)",
@@ -63,13 +63,13 @@
 				"sessionTotal": "Biaya total sesi:",
 				"model": "Model:"
 			},
-			"warning": "$(warning) Kilo Selesai",
+			"warning": "$(warning) Kilo Autocomplete",
 			"cost": {
 				"zero": "Rp0,00",
 				"lessThanCent": "<Rp0,01"
 			}
 		},
-		"toggleMessage": "Kilo Selesai {{status}}"
+		"toggleMessage": "Kilo Autocomplete {{status}}"
 	},
 	"ghost": {
 		"progress": {
@@ -77,7 +77,7 @@
 			"generating": "Membuat saran pengeditan...",
 			"processing": "Memproses saran pengeditan...",
 			"showing": "Menampilkan saran pengeditan...",
-			"title": "Kilo Kode"
+			"title": "Kilo Code"
 		},
 		"input": {
 			"title": "Kilo Code: Tugas Cepat",
@@ -90,13 +90,13 @@
 			"applyAllSuggestions": "Terapkan Semua Suntingan yang Disarankan",
 			"displaySuggestions": "Tampilkan Saran Pengeditan",
 			"promptCodeSuggestion": "Tugas Cepat Prompt",
-			"category": "Kode Kilo"
+			"category": "Kilo Code"
 		},
 		"codeAction": {
-			"title": "Kode Kilo: Saran Penyuntingan"
+			"title": "Kilo Code: Saran Penyuntingan"
 		},
 		"chatParticipant": {
-			"fullName": "Agen Kode Kilo",
+			"fullName": "Kilo Code Agen",
 			"name": "Agen",
 			"description": "Saya dapat membantu Anda dengan tugas cepat dan saran pengeditan."
 		},

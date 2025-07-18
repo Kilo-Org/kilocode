@@ -48,14 +48,14 @@
 		"generated": "Kilo: कमिट मैसेज जनरेट हो गया!",
 		"generationFailed": "Kilo: प्रतिबद्धता संदेश उत्पन्न करने में विफल: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: अपरिवर्तित परिवर्तनों का उपयोग करके संदेश उत्पन्न कर रहा है",
-    "activationFailed": "किलो: संदेश जनरेटर सक्रिय करने में विफल: {{error}}",
+    "activationFailed": "Kilo: संदेश जनरेटर सक्रिय करने में विफल: {{error}}",
 		"providerRegistered": "किलो: कमिट संदेश प्रदाता पंजीकृत"
 	},
 	"autocomplete": {
 		"statusBar": {
-			"disabled": "$(circle-slash) Kilo पूर्ण",
-			"warning": "$(warning) Kilo पूरा हुआ",
-			"enabled": "$(sparkle) Kilo पूरा हो गया",
+			"disabled": "$(circle-slash) Kilo ऑटोकम्प्लीट",
+			"warning": "$(warning) Kilo ऑटोकम्प्लीट",
+			"enabled": "$(sparkle) Kilo ऑटोकम्प्लीट",
 			"tooltip": {
 				"basic": "Kilo Code ऑटोकम्प्लीट",
 				"tokenError": "स्वतः पूर्ण का उपयोग करने के लिए एक वैध टोकन सेट किया जाना चाहिए",
@@ -69,7 +69,7 @@
 				"lessThanCent": "<₹0.01"
 			}
 		},
-		"toggleMessage": "Kilo कम्पलीट {{status}}"
+		"toggleMessage": "Kilo ऑटोकम्प्लीट {{status}}"
 	},
 	"ghost": {
 		"progress": {
@@ -77,28 +77,28 @@
 			"analyzing": "आपके कोड का विश्लेषण किया जा रहा है...",
 			"generating": "सुझाएँ गए संपादन उत्पन्न हो रहे हैं...",
 			"showing": "सुझाए गए संपादन प्रदर्शित किए जा रहे हैं...",
-			"title": "किलो कोड"
+			"title": "Kilo Code"
 		},
 		"input": {
 			"placeholder": "उदाहरण के लिए, 'इस फंक्शन को अधिक कुशल होने के लिए रीफैक्टर करें'",
-			"title": "किलो कोड: त्वरित कार्य"
+			"title": "Kilo Code: त्वरित कार्य"
 		},
 		"commands": {
 			"cancelSuggestions": "सुझाए गए संपादनों को रद्द करें",
 			"displaySuggestions": "सुझाए गए संपादन दिखाएं",
-			"generateSuggestions": "किलो कोड: सुझाये गए संपादन उत्पन्न करें",
+			"generateSuggestions": "Kilo Code: सुझाये गए संपादन उत्पन्न करें",
 			"applyCurrentSuggestion": "वर्तमान सुझाए गए संपादन को लागू करें",
-			"category": "किलो कोड",
+			"category": "Kilo Code",
 			"applyAllSuggestions": "सभी सुझाए गए संपादन लागू करें",
 			"promptCodeSuggestion": "त्वरित कार्य संकेत"
 		},
 		"chatParticipant": {
-			"fullName": "किलो कोड एजेंट",
+			"fullName": "Kilo Code एजेंट",
 			"name": "एजेंट",
 			"description": "मैं आपकी त्वरित कार्यों और सुझाए गए संपादनों में मदद कर सकता हूँ।"
 		},
 		"codeAction": {
-			"title": "किलो कोड: सुझाए गए संपादन"
+			"title": "Kilo Code: सुझाए गए संपादन"
 		},
 		"messages": {
 			"provideCodeSuggestions": "कोड सुझाव प्रदान किए जा रहे हैं..."

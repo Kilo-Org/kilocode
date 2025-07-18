@@ -53,9 +53,9 @@
 	},
 	"autocomplete": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Slutfört",
-			"warning": "$(warning) Kilo Komplett",
-			"disabled": "$(circle-slash) Kilo Slutfört",
+			"enabled": "$(sparkle) Kilo Autocomplete",
+			"warning": "$(warning) Kilo Autocomplete",
+			"disabled": "$(circle-slash) Kilo Autocomplete",
 			"tooltip": {
 				"disabled": "Kilo Code Autocomplete (inaktiverad)",
 				"basic": "Kilo Code Autocomplete",
@@ -69,7 +69,7 @@
 				"lessThanCent": "<0,01 kr"
 			}
 		},
-		"toggleMessage": "Kilo Fullständig {{status}}"
+		"toggleMessage": "Kilo Autocomplete {{status}}"
 	},
 	"ghost": {
 		"progress": {
@@ -77,10 +77,10 @@
 			"generating": "Genererar föreslagna ändringar...",
 			"processing": "Bearbetar föreslagna ändringar...",
 			"showing": "Visar föreslagna ändringar...",
-			"title": "Kilo Kod"
+			"title": "Kilo Code"
 		},
 		"input": {
-			"title": "Kilo Kod: Snabb Uppgift",
+			"title": "Kilo Code: Snabb Uppgift",
 			"placeholder": "t.ex. 'omstrukturera den här funktionen för att göra den mer effektiv'"
 		},
 		"commands": {
@@ -89,11 +89,11 @@
 			"cancelSuggestions": "Avbryt föreslagna ändringar",
 			"applyCurrentSuggestion": "Tillämpa nuvarande förslag på ändring",
 			"applyAllSuggestions": "Tillämpa Alla Föreslagna Ändringar",
-			"category": "Kilo Kod",
+			"category": "Kilo Code",
 			"promptCodeSuggestion": "Snabb uppgift"
 		},
 		"codeAction": {
-			"title": "Kilo-kod: Föreslagna ändringar"
+			"title": "Kilo Code: Föreslagna ändringar"
 		},
 		"chatParticipant": {
 			"name": "Agent",
