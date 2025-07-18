@@ -123,7 +123,9 @@
 		"resetToDefault": "デフォルトにリセット"
 	},
 	"autoApprove": {
-		"description": "Kilo Codeが承認なしで自動的に操作を実行できるようにします。AIを完全に信頼し、関連するセキュリティリスクを理解している場合にのみ、これらの設定を有効にしてください。",
+		"description": "Rooが承認なしで自動的に操作を実行できるようにします。AIを完全に信頼し、関連するセキュリティリスクを理解している場合にのみ、これらの設定を有効にしてください。",
+		"toggleAriaLabel": "自動承認の切り替え",
+		"disabledAriaLabel": "自動承認が無効です - 最初にオプションを選択してください",
 		"readOnly": {
 			"label": "読み取り",
 			"description": "有効にすると、Kilo Codeは承認ボタンをクリックすることなく、自動的にディレクトリの内容を表示してファイルを読み取ります。",
@@ -176,8 +178,12 @@
 			"description": "承認なしで自動的に許可されたターミナルコマンドを実行",
 			"allowedCommands": "許可された自動実行コマンド",
 			"allowedCommandsDescription": "「実行操作を常に承認」が有効な場合に自動実行できるコマンドプレフィックス。すべてのコマンドを許可するには * を追加します（注意して使用してください）。",
+			"deniedCommands": "拒否されたコマンド",
+			"deniedCommandsDescription": "承認を求めることなく自動的に拒否されるコマンドプレフィックス。許可されたコマンドとの競合がある場合、最長プレフィックスマッチが優先されます。すべてのコマンドを拒否するには * を追加します。",
 			"commandPlaceholder": "コマンドプレフィックスを入力（例：'git '）",
-			"addButton": "追加"
+			"deniedCommandPlaceholder": "拒否するコマンドプレフィックスを入力（例：'rm -rf'）",
+			"addButton": "追加",
+			"autoDenied": "プレフィックス `{{prefix}}` を持つコマンドはユーザーによって禁止されています。別のコマンドを実行してこの制限を回避しないでください。"
 		},
 		"showMenu": {
 			"label": "チャットビューに自動承認メニューを表示",
@@ -191,7 +197,8 @@
 			"title": "最大リクエスト数",
 			"description": "タスクを続行するための承認を求める前に、自動的にこの数のAPIリクエストを行います。",
 			"unlimited": "無制限"
-		}
+		},
+		"selectOptionsFirst": "自動承認を有効にするには、以下のオプションを少なくとも1つ選択してください"
 	},
 	"providers": {
 		"providerDocumentation": "{{provider}}のドキュメント",
@@ -372,6 +379,12 @@
 			"label": "レート制限",
 			"description": "APIリクエスト間の最小時間。"
 		},
+		"consecutiveMistakeLimit": {
+			"label": "エラーと繰り返しの制限",
+			"description": "「Rooが問題を抱えています」ダイアログを表示するまでの連続エラーまたは繰り返しアクションの数",
+			"unlimitedDescription": "無制限のリトライが有効です（自動進行）。ダイアログは表示されません。",
+			"warning": "⚠️ 0に設定すると無制限のリトライが可能になり、API使用量が大幅に増加する可能性があります"
+		},
 		"reasoningEffort": {
 			"label": "モデル推論の労力",
 			"high": "高",
@@ -382,7 +395,9 @@
 		"claudeCode": {
 			"pathLabel": "クロードコードパス",
 			"description": "Claude Code CLIへのオプションパス。設定されていない場合、デフォルトは「claude」です。",
-			"placeholder": "デフォルト：claude"
+			"placeholder": "デフォルト：claude",
+			"maxTokensLabel": "最大出力トークン",
+			"maxTokensDescription": "Claude Codeレスポンスの最大出力トークン数。デフォルトは8000です。"
 		},
 		"geminiCli": {
 			"description": "このプロバイダーはGemini CLIツールからのOAuth認証を使用し、APIキーは必要ありません。",
@@ -553,6 +568,9 @@
 			"label": "環境変数を継承",
 			"description": "有効にすると、ターミナルは VSCode の親プロセスから環境変数を継承します。ユーザープロファイルで定義されたシェル統合設定などが含まれます。これは VSCode のグローバル設定 `terminal.integrated.inheritEnv` を直接切り替えます。 <0>詳細情報</0>"
 		}
+	},
+	"advancedSettings": {
+		"title": "詳細設定"
 	},
 	"advanced": {
 		"diff": {

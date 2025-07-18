@@ -23,7 +23,8 @@
 		"failedToProcessBatchWithError": "ล้มเหลวในการประมวลผลแบทช์หลังจาก {{maxRetries}} ครั้ง: {{errorMessage}}"
 	},
 	"vectorStore": {
-		"qdrantConnectionFailed": "ล้มเหลวในการเชื่อมต่อกับฐานข้อมูล Qdrant vector กรุณาตรวจสอบให้แน่ใจว่า Qdrant กำลังทำงานและสามารถเข้าถึงได้ที่ {{qdrantUrl}} ข้อผิดพลาด: {{errorMessage}}"
+		"qdrantConnectionFailed": "ล้มเหลวในการเชื่อมต่อกับฐานข้อมูล Qdrant vector กรุณาตรวจสอบให้แน่ใจว่า Qdrant กำลังทำงานและสามารถเข้าถึงได้ที่ {{qdrantUrl}} ข้อผิดพลาด: {{errorMessage}}",
+		"vectorDimensionMismatch": "ล้มเหลวในการอัปเดตดัชนี vector สำหรับโมเดลใหม่ กรุณาลองล้างดัชนีและเริ่มใหม่อีกครั้ง รายละเอียด: {{errorMessage}}"
 	},
 	"validation": {
 		"authenticationFailed": "การยืนยันตัวตนล้มเหลว กรุณาตรวจสอบ API key ของคุณในการตั้งค่า",
@@ -36,7 +37,9 @@
 		"invalidApiKey": "API key ไม่ถูกต้อง กรุณาตรวจสอบการกำหนดค่า API key ของคุณ",
 		"invalidBaseUrl": "Base URL ไม่ถูกต้อง กรุณาตรวจสอบการกำหนดค่า URL ของคุณ",
 		"invalidModel": "โมเดลไม่ถูกต้อง กรุณาตรวจสอบการกำหนดค่าโมเดลของคุณ",
-		"invalidResponse": "การตอบสนองไม่ถูกต้องจากบริการ embedder กรุณาตรวจสอบการกำหนดค่าของคุณ"
+		"invalidResponse": "การตอบสนองไม่ถูกต้องจากบริการ embedder กรุณาตรวจสอบการกำหนดค่าของคุณ",
+		"apiKeyRequired": "API key จำเป็นสำหรับ embedder นี้",
+		"baseUrlRequired": "Base URL จำเป็นสำหรับ embedder นี้"
 	},
 	"serviceFactory": {
 		"openAiConfigMissing": "การกำหนดค่า OpenAI หายไปสำหรับการสร้าง embedder",

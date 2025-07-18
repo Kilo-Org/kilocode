@@ -57,17 +57,12 @@
 		"openAiKeyLabel": "OpenAI API Key",
 		"openAiKeyPlaceholder": "Ilagay ang inyong OpenAI API key",
 		"openAiCompatibleBaseUrlLabel": "Base URL",
-		"openaiCompatibleBaseUrlLabel": "Base URL:",
-		"openaiCompatibleApiKeyLabel": "API Key:",
 		"openAiCompatibleApiKeyLabel": "API Key",
 		"openAiCompatibleApiKeyPlaceholder": "Ilagay ang inyong API key",
 		"openAiCompatibleModelDimensionLabel": "Embedding Dimension:",
-		"openaiCompatibleModelDimensionLabel": "Embedding Dimension:",
 		"modelDimensionLabel": "Model Dimension",
 		"openAiCompatibleModelDimensionPlaceholder": "hal., 1536",
-		"openaiCompatibleModelDimensionPlaceholder": "hal., 1536",
 		"openAiCompatibleModelDimensionDescription": "Ang embedding dimension (laki ng output) para sa inyong model. Tingnan ang dokumentasyon ng inyong provider para sa value na ito. Mga karaniwang value: 384, 768, 1536, 3072.",
-		"openaiCompatibleModelDimensionDescription": "Ang embedding dimension (laki ng output) para sa inyong model. Tingnan ang dokumentasyon ng inyong provider para sa value na ito. Mga karaniwang value: 384, 768, 1536, 3072.",
 		"modelLabel": "Model",
 		"modelPlaceholder": "Ilagay ang pangalan ng model",
 		"selectModel": "Pumili ng model",
@@ -181,8 +176,12 @@
 			"description": "Awtomatikong i-execute ang mga pinapayagang terminal command nang hindi nangangailangan ng pag-apruba",
 			"allowedCommands": "Mga Pinapayagang Auto-Execute Command",
 			"allowedCommandsDescription": "Mga command prefix na maaaring i-auto-execute kapag naka-enable ang \"Always approve execute operations\". Magdagdag ng * para payagan ang lahat ng command (gamitin nang may pag-iingat).",
+			"deniedCommands": "Mga Ipinagbabawal na Command",
+			"deniedCommandsDescription": "Mga command prefix na awtomatikong ipagkakaila nang hindi humihingi ng pag-apruba. Sa kaso ng mga salungatan sa mga pinapayagang command, ang pinakamahabang prefix match ang magkakaroon ng prayoridad. Magdagdag ng * para ipagbawal ang lahat ng command.",
 			"commandPlaceholder": "Ilagay ang command prefix (hal., 'git ')",
-			"addButton": "Idagdag"
+			"deniedCommandPlaceholder": "Ilagay ang command prefix na ipagbabawal (hal., 'rm -rf')",
+			"addButton": "Idagdag",
+			"autoDenied": "Ang mga command na may prefix na `{{prefix}}` ay ipinagbawal ng user. Huwag i-bypass ang restriction na ito sa pamamagitan ng pagpapatakbo ng ibang command."
 		},
 		"showMenu": {
 			"label": "Ipakita ang auto-approve menu sa chat view",
@@ -196,7 +195,10 @@
 			"title": "Max na Request",
 			"description": "Awtomatikong gumawa ng ganitong daming API request bago humingi ng pag-apruba para magpatuloy sa gawain.",
 			"unlimited": "Walang Hangganan"
-		}
+		},
+		"toggleAriaLabel": "I-toggle ang auto-approval",
+		"disabledAriaLabel": "Naka-disable ang auto-approval - piliin muna ang mga opsyon",
+		"selectOptionsFirst": "Pumili ng hindi bababa sa isang opsyon sa ibaba para ma-enable ang auto-approval"
 	},
 	"providers": {
 		"providerDocumentation": "{{provider}} dokumentasyon",
@@ -245,6 +247,10 @@
 		},
 		"getRequestyApiKey": "Kumuha ng Requesty API Key",
 		"openRouterTransformsText": "I-compress ang mga prompt at message chain sa laki ng context (<a>OpenRouter Transforms</a>)",
+		"anthropic": {
+			"baseUrl": "Base URL",
+			"baseUrlDescription": "I-customize ang base URL para sa Anthropic API"
+		},
 		"anthropicApiKey": "Anthropic API Key",
 		"getAnthropicApiKey": "Kumuha ng Anthropic API Key",
 		"anthropicUseAuthToken": "Ipasa ang Anthropic API Key bilang Authorization header sa halip na X-Api-Key",
@@ -256,6 +262,10 @@
 		"getGroqApiKey": "Kumuha ng Groq API Key",
 		"groqApiKey": "Groq API Key",
 		"getGeminiApiKey": "Kumuha ng Gemini API Key",
+		"openai": {
+			"baseUrl": "Base URL",
+			"baseUrlDescription": "I-customize ang base URL para sa OpenAI API"
+		},
 		"openAiApiKey": "OpenAI API Key",
 		"apiKey": "API Key",
 		"openAiBaseUrl": "Base URL",
@@ -377,6 +387,12 @@
 			"label": "Rate limit",
 			"description": "Minimum na oras sa pagitan ng mga API request."
 		},
+		"consecutiveMistakeLimit": {
+			"label": "Limitasyon ng Error at Pag-uulit",
+			"description": "Bilang ng magkakasunod na error o paulit-ulit na aksyon bago ipakita ang 'Kilo Code is having trouble' dialog",
+			"unlimitedDescription": "Naka-enable ang unlimited retry (auto-proceed). Hindi kailanman lalabas ang dialog.",
+			"warning": "⚠️ Ang pagtatakda sa 0 ay nagbibigay-daan sa unlimited retry na maaaring gumamit ng malaking API usage"
+		},
 		"reasoningEffort": {
 			"label": "Model Reasoning Effort",
 			"high": "Mataas",
@@ -387,7 +403,9 @@
 		"claudeCode": {
 			"pathLabel": "Claude Code Path",
 			"description": "Opsyonal na path sa iyong Claude Code CLI. Default sa 'claude' kung hindi nakatakda.",
-			"placeholder": "Default: claude"
+			"placeholder": "Default: claude",
+			"maxTokensLabel": "Max Output Tokens",
+			"maxTokensDescription": "Maximum na bilang ng output token para sa mga Claude Code response. Default ay 8000."
 		},
 		"geminiCli": {
 			"description": "Ang provider na ito ay gumagamit ng OAuth authentication ng Gemini CLI tool at hindi nangangailangan ng mga API key.",
@@ -564,6 +582,9 @@
 			"label": "Magmana ng mga environment variable",
 			"description": "Kapag naka-enable, magmamana ang terminal ng mga environment variable mula sa parent process ng VSCode, tulad ng mga setting ng shell integration na tinukoy sa user-profile. Direktang nagto-toggle ito ng global na setting ng VSCode na `terminal.integrated.inheritEnv`. <0>Alamin pa</0>"
 		}
+	},
+	"advancedSettings": {
+		"title": "Mga Advanced na Setting"
 	},
 	"advanced": {
 		"diff": {

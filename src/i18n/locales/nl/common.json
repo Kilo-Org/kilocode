@@ -25,12 +25,7 @@
 	"confirmation": {
 		"reset_state": "Weet je zeker dat je alle status en geheime opslag in de extensie wilt resetten? Dit kan niet ongedaan worden gemaakt.",
 		"delete_config_profile": "Weet je zeker dat je dit configuratieprofiel wilt verwijderen?",
-		"delete_custom_mode_with_rules": "Weet je zeker dat je deze {scope}-modus wilt verwijderen?\n\nDit verwijdert ook de bijbehorende regelsmap op:\n{rulesFolderPath}",
-		"delete_message": "Wat wil je verwijderen?",
-		"delete_just_this_message": "Alleen dit bericht",
-		"delete_this_and_subsequent": "Dit en alle volgende berichten",
-		"edit_warning": "Het bewerken van dit bericht zal alle volgende berichten in het gesprek verwijderen. Wil je doorgaan?",
-		"proceed": "Doorgaan"
+		"delete_custom_mode_with_rules": "Weet je zeker dat je deze {scope}-modus wilt verwijderen?\n\nDit verwijdert ook de bijbehorende regelsmap op:\n{rulesFolderPath}"
 	},
 	"errors": {
 		"invalid_data_uri": "Ongeldig data-URI-formaat",
@@ -62,7 +57,7 @@
 		"cannot_access_path": "Kan pad {{path}} niet openen: {{error}}",
 		"settings_import_failed": "Importeren van instellingen mislukt: {{error}}.",
 		"mistake_limit_guidance": "Dit kan duiden op een fout in het denkproces van het model of het onvermogen om een tool correct te gebruiken, wat kan worden verminderd met gebruikersbegeleiding (bijv. \"Probeer de taak op te delen in kleinere stappen\").",
-		"violated_organization_allowlist": "Taak uitvoeren mislukt: het huidige profiel schendt de instellingen van uw organisatie",
+		"violated_organization_allowlist": "Taak uitvoeren mislukt: het huidige profiel is niet compatibel met de instellingen van uw organisatie",
 		"condense_failed": "Comprimeren van context mislukt",
 		"condense_not_enough_messages": "Niet genoeg berichten om context van {{prevContextTokens}} tokens te comprimeren. Minimaal {{minimumMessageCount}} berichten zijn vereist, maar er zijn slechts {{messageCount}} beschikbaar.",
 		"condensed_recently": "Context is recent gecomprimeerd; deze poging wordt overgeslagen",
@@ -75,6 +70,7 @@
 		"url_page_not_found": "De pagina werd niet gevonden. Controleer of de URL correct is.",
 		"url_fetch_failed": "Fout bij ophalen van URL-inhoud: {{error}}",
 		"url_fetch_error_with_url": "Fout bij ophalen van inhoud voor {{url}}: {{error}}",
+		"command_timeout": "Time-out bij uitvoeren van commando na {{seconds}} seconden",
 		"share_task_failed": "Delen van taak mislukt",
 		"share_no_active_task": "Geen actieve taak om te delen",
 		"share_auth_required": "Authenticatie vereist. Log in om taken te delen.",

@@ -50,7 +50,7 @@
 	},
 	"save": {
 		"title": "保存",
-		"tooltip": "保存文件更改"
+		"tooltip": "保存消息更改"
 	},
 	"reject": {
 		"title": "拒绝",
@@ -130,6 +130,7 @@
 	"separator": "分隔符",
 	"edit": "编辑...",
 	"forNextMode": "用于下一个模式",
+	"forPreviousMode": "用于上一个模式",
 	"error": "错误",
 	"diffError": {
 		"title": "编辑失败"
@@ -229,7 +230,10 @@
 	"autoApprove": {
 		"title": "自动批准:",
 		"none": "无",
-		"description": "允许直接执行操作无需确认，请谨慎启用。前往<settingsLink>设置</settingsLink>调整"
+		"description": "允许直接执行操作无需确认，请谨慎启用。前往<settingsLink>设置</settingsLink>调整",
+		"selectOptionsFirst": "选择至少一个下面的选项以启用自动批准",
+		"toggleAriaLabel": "切换自动批准",
+		"disabledAriaLabel": "自动批准已禁用 - 请先选择选项"
 	},
 	"reasoning": {
 		"thinking": "思考中",
@@ -247,8 +251,8 @@
 		"countdownDisplay": "{{count}}秒"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} 已发布",
-		"description": "Roo Code {{version}} 带来强大的新功能和重大改进，提升您的开发工作流程。",
+		"title": "🎉 Kilo Code {{version}} 已发布",
+		"description": "Kilo Code {{version}} 带来强大的新功能和重大改进，提升您的开发工作流程。",
 		"whatsNew": "新特性",
 		"feature1": "<bold>代码库索引从实验阶段正式发布</bold>: 完整的代码库索引现已稳定，可用于生产环境，具备改进的搜索和上下文理解功能。",
 		"feature2": "<bold>新增待办事项列表功能</bold>: 通过集成的待办事项管理保持任务进度，帮助你保持条理并专注于开发目标。",
@@ -288,7 +292,7 @@
 		}
 	},
 	"systemPromptWarning": "警告：自定义系统提示词覆盖已激活。这可能严重破坏功能并导致不可预测的行为。",
-	"profileViolationWarning": "当前配置文件违反了您的组织设置",
+	"profileViolationWarning": "当前配置文件与您的组织设置不兼容",
 	"shellIntegration": {
 		"title": "命令执行警告",
 		"description": "您的命令正在没有 VSCode 终端 shell 集成的情况下执行。要隐藏此警告，您可以在 <settingsLink>Kilo Code 设置</settingsLink>的 <strong>Terminal</strong> 部分禁用 shell 集成，或使用下方链接排查 VSCode 终端集成问题。",
@@ -304,7 +308,8 @@
 	"codebaseSearch": {
 		"wantsToSearch": "Kilo Code 需要搜索代码库: <code>{{query}}</code>",
 		"wantsToSearchWithPath": "Kilo Code 需要在 <code>{{path}}</code> 中搜索: <code>{{query}}</code>",
-		"didSearch": "找到 {{count}} 个结果: <code>{{query}}</code>",
+		"didSearch_one": "找到 1 个结果",
+		"didSearch_other": "找到 {{count}} 个结果",
 		"resultTooltip": "相似度评分: {{score}} (点击打开文件)"
 	},
 	"read-batch": {
@@ -324,5 +329,8 @@
 	},
 	"versionIndicator": {
 		"ariaLabel": "版本 {{version}} - 点击查看发布说明"
+	},
+	"editMessage": {
+		"placeholder": "编辑消息..."
 	}
 }

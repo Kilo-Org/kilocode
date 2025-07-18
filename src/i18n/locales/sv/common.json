@@ -76,6 +76,7 @@
 		"url_page_not_found": "Sidan hittades inte. Kontrollera om URL:en är korrekt.",
 		"url_fetch_failed": "Misslyckades med att hämta URL-innehåll: {{error}}",
 		"url_fetch_error_with_url": "Fel vid hämtning av innehåll för {{url}}: {{error}}",
+		"command_timeout": "Kommandokörning tog för lång tid efter {{seconds}} sekunder",
 		"share_task_failed": "Misslyckades med att dela uppgift. Försök igen.",
 		"share_no_active_task": "Ingen aktiv uppgift att dela",
 		"share_auth_required": "Autentisering krävs. Logga in för att dela uppgifter.",

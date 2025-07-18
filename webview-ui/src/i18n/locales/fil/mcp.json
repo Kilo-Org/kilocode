@@ -1,6 +1,7 @@
 {
 	"title": "MCP Servers",
 	"done": "Tapos na",
+	"marketplace": "MCP Pamilihan",
 	"description": "Ang <0>Model Context Protocol</0> ay nagbibigay-daan sa komunikasyon sa mga lokal na tumatakbong MCP server na nagbibigay ng karagdagang tools at resources para palawakin ang kakayahan ng Kilo Code. Maaari kang gumamit ng <1>mga server na ginawa ng komunidad</1> o hilingin sa Kilo Code na gumawa ng mga bagong tool na partikular sa iyong workflow (hal., \"magdagdag ng tool na kumukuha ng pinakabagong npm docs\").",
 	"instructions": "Mga Tagubilin",
 	"enableToggle": {

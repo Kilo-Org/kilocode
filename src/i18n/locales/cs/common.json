@@ -75,6 +75,7 @@
 		"url_page_not_found": "Stránka nebyla nalezena. Zkontroluj prosím, zda je URL správná.",
 		"url_fetch_failed": "Načtení obsahu URL selhalo: {{error}}",
 		"url_fetch_error_with_url": "Chyba při načítání obsahu pro {{url}}: {{error}}",
+		"command_timeout": "Spuštění příkazu vypršelo po {{seconds}} sekundách",
 		"share_task_failed": "Sdílení úlohy selhalo. Zkus to prosím znovu.",
 		"share_no_active_task": "Žádná aktivní úloha ke sdílení",
 		"share_auth_required": "Je vyžadována autentizace. Prosím přihlas se pro sdílení úloh.",

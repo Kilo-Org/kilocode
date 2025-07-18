@@ -123,7 +123,9 @@
 		"resetToDefault": "기본값으로 재설정"
 	},
 	"autoApprove": {
-		"description": "Kilo Code가 승인 없이 자동으로 작업을 수행할 수 있도록 허용합니다. AI를 완전히 신뢰하고 관련 보안 위험을 이해하는 경우에만 이러한 설정을 활성화하세요.",
+		"description": "Roo가 승인 없이 자동으로 작업을 수행할 수 있도록 허용합니다. AI를 완전히 신뢰하고 관련 보안 위험을 이해하는 경우에만 이러한 설정을 활성화하세요.",
+		"toggleAriaLabel": "자동 승인 전환",
+		"disabledAriaLabel": "자동 승인 비활성화됨 - 먼저 옵션을 선택하세요",
 		"readOnly": {
 			"label": "읽기",
 			"description": "활성화되면 Kilo Code는 승인 버튼을 클릭하지 않고도 자동으로 디렉토리 내용을 보고 파일을 읽습니다.",
@@ -176,8 +178,12 @@
 			"description": "승인 없이 자동으로 허용된 터미널 명령 실행",
 			"allowedCommands": "허용된 자동 실행 명령",
 			"allowedCommandsDescription": "\"실행 작업 항상 승인\"이 활성화되었을 때 자동 실행될 수 있는 명령 접두사. 모든 명령을 허용하려면 * 추가(주의해서 사용)",
+			"deniedCommands": "거부된 명령",
+			"deniedCommandsDescription": "승인을 요청하지 않고 자동으로 거부될 명령 접두사. 허용된 명령과 충돌하는 경우 가장 긴 접두사 일치가 우선됩니다. 모든 명령을 거부하려면 * 추가",
 			"commandPlaceholder": "명령 접두사 입력(예: 'git ')",
-			"addButton": "추가"
+			"deniedCommandPlaceholder": "거부할 명령 접두사 입력(예: 'rm -rf')",
+			"addButton": "추가",
+			"autoDenied": "접두사 `{{prefix}}`를 가진 명령어는 사용자에 의해 금지되었습니다. 다른 명령어를 실행하여 이 제한을 우회하지 마세요."
 		},
 		"showMenu": {
 			"label": "채팅 뷰에 자동 승인 메뉴 표시",
@@ -191,7 +197,8 @@
 			"title": "최대 요청 수",
 			"description": "작업을 계속하기 위한 승인을 요청하기 전에 자동으로 이 수의 API 요청을 수행합니다.",
 			"unlimited": "무제한"
-		}
+		},
+		"selectOptionsFirst": "자동 승인을 활성화하려면 아래에서 하나 이상의 옵션을 선택하세요"
 	},
 	"providers": {
 		"providerDocumentation": "{{provider}} 문서",
@@ -372,6 +379,12 @@
 			"label": "속도 제한",
 			"description": "API 요청 간 최소 시간."
 		},
+		"consecutiveMistakeLimit": {
+			"label": "오류 및 반복 제한",
+			"description": "'Roo에 문제가 발생했습니다' 대화 상자를 표시하기 전의 연속 오류 또는 반복 작업 수",
+			"unlimitedDescription": "무제한 재시도 활성화 (자동 진행). 대화 상자가 나타나지 않습니다.",
+			"warning": "⚠️ 0으로 설정하면 무제한 재시도가 허용되어 상당한 API 사용량이 발생할 수 있습니다"
+		},
 		"reasoningEffort": {
 			"label": "모델 추론 노력",
 			"high": "높음",
@@ -382,7 +395,9 @@
 		"claudeCode": {
 			"pathLabel": "클로드 코드 경로",
 			"description": "Claude Code CLI의 선택적 경로입니다. 설정하지 않으면 'claude'가 기본값입니다.",
-			"placeholder": "기본값: claude"
+			"placeholder": "기본값: claude",
+			"maxTokensLabel": "최대 출력 토큰",
+			"maxTokensDescription": "Claude Code 응답의 최대 출력 토큰 수. 기본값은 8000입니다."
 		},
 		"geminiCli": {
 			"description": "이 공급자는 Gemini CLI 도구의 OAuth 인증을 사용하며 API 키가 필요하지 않습니다.",
@@ -553,6 +568,9 @@
 			"label": "환경 변수 상속",
 			"description": "활성화하면 터미널이 VSCode 부모 프로세스로부터 환경 변수를 상속받습니다. 사용자 프로필에 정의된 셸 통합 설정 등이 포함됩니다. 이는 VSCode 전역 설정 `terminal.integrated.inheritEnv`를 직접 전환합니다. <0>더 알아보기</0>"
 		}
+	},
+	"advancedSettings": {
+		"title": "고급 설정"
 	},
 	"advanced": {
 		"diff": {

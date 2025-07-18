@@ -50,7 +50,7 @@
 	},
 	"save": {
 		"title": "저장",
-		"tooltip": "파일 변경사항 저장"
+		"tooltip": "메시지 변경사항 저장"
 	},
 	"reject": {
 		"title": "거부",
@@ -130,6 +130,7 @@
 	"separator": "구분자",
 	"edit": "편집...",
 	"forNextMode": "다음 모드용",
+	"forPreviousMode": "이전 모드용",
 	"error": "오류",
 	"diffError": {
 		"title": "편집 실패"
@@ -229,7 +230,10 @@
 	"autoApprove": {
 		"title": "자동 승인:",
 		"none": "없음",
-		"description": "자동 승인을 사용하면 Kilo Code가 권한을 요청하지 않고 작업을 수행할 수 있습니다. 완전히 신뢰할 수 있는 작업에만 활성화하세요. 더 자세한 구성은 <settingsLink>설정</settingsLink>에서 사용할 수 있습니다."
+		"description": "자동 승인을 사용하면 Kilo Code가 권한을 요청하지 않고 작업을 수행할 수 있습니다. 완전히 신뢰할 수 있는 작업에만 활성화하세요. 더 자세한 구성은 <settingsLink>설정</settingsLink>에서 사용할 수 있습니다.",
+		"selectOptionsFirst": "자동 승인을 활성화하려면 아래 옵션 중 하나 이상을 선택하세요",
+		"toggleAriaLabel": "자동 승인 전환",
+		"disabledAriaLabel": "자동 승인 비활성화됨 - 먼저 옵션을 선택하세요"
 	},
 	"reasoning": {
 		"thinking": "생각 중",
@@ -247,8 +251,8 @@
 		"countdownDisplay": "{{count}}초"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} 출시",
-		"description": "Roo Code {{version}}은 개발 워크플로우를 향상시키는 강력한 새 기능과 중요한 개선사항을 제공합니다.",
+		"title": "🎉 Kilo Code {{version}} 출시",
+		"description": "Kilo Code {{version}}은 개발 워크플로우를 향상시키는 강력한 새 기능과 중요한 개선사항을 제공합니다.",
 		"whatsNew": "새로운 기능",
 		"feature1": "<bold>코드베이스 인덱싱이 실험 단계에서 졸업</bold>: 전체 코드베이스 인덱싱이 이제 안정적이며 향상된 검색 및 컨텍스트 이해 기능으로 프로덕션 사용이 준비되었습니다.",
 		"feature2": "<bold>새로운 할 일 목록 기능</bold>: 통합된 할 일 관리로 작업을 궤도에 유지하여 개발 목표에 체계적이고 집중된 상태를 유지하세요.",
@@ -288,7 +292,7 @@
 		}
 	},
 	"systemPromptWarning": "경고: 사용자 정의 시스템 프롬프트 재정의가 활성화되었습니다. 이로 인해 기능이 심각하게 손상되고 예측할 수 없는 동작이 발생할 수 있습니다.",
-	"profileViolationWarning": "현재 프로필이 조직 설정을 위반합니다",
+	"profileViolationWarning": "현재 프로필이 조직 설정과 호환되지 않습니다",
 	"shellIntegration": {
 		"title": "명령 실행 경고",
 		"description": "명령이 VSCode 터미널 쉘 통합 없이 실행되고 있습니다. 이 경고를 숨기려면 <settingsLink>Kilo Code 설정</settingsLink>의 <strong>Terminal</strong> 섹션에서 쉘 통합을 비활성화하거나 아래 링크를 사용하여 VSCode 터미널 통합 문제를 해결하세요.",
@@ -302,9 +306,10 @@
 		}
 	},
 	"codebaseSearch": {
-		"wantsToSearch": "Kilo Code가 코드베이스에서 <code>{{query}}</code>을(를) 검색하고 싶어합니다:",
-		"wantsToSearchWithPath": "Kilo Code가 <code>{{path}}</code>에서 <code>{{query}}</code>을(를) 검색하고 싶어합니다:",
-		"didSearch": "<code>{{query}}</code>에 대한 검색 결과 {{count}}개 찾음:",
+		"wantsToSearch": "Roo가 코드베이스에서 <code>{{query}}</code>을(를) 검색하고 싶어합니다:",
+		"wantsToSearchWithPath": "Roo가 <code>{{path}}</code>에서 <code>{{query}}</code>을(를) 검색하고 싶어합니다:",
+		"didSearch_one": "1개의 결과를 찾았습니다",
+		"didSearch_other": "{{count}}개의 결과를 찾았습니다",
 		"resultTooltip": "유사도 점수: {{score}} (클릭하여 파일 열기)"
 	},
 	"read-batch": {
@@ -324,5 +329,8 @@
 	},
 	"versionIndicator": {
 		"ariaLabel": "버전 {{version}} - 릴리스 노트를 보려면 클릭하세요"
+	},
+	"editMessage": {
+		"placeholder": "메시지 편집..."
 	}
 }

@@ -190,10 +190,27 @@ describe("ChatTextArea", () => {
 	})
 
 	describe("enhanced prompt response", () => {
-		it("should update input value when receiving enhanced prompt", () => {
+		it("should update input value using native browser methods when receiving enhanced prompt", () => {
 			const setInputValue = vi.fn()
 
-			render(<ChatTextArea {...defaultProps} setInputValue={setInputValue} />)
+			// Mock document.execCommand
+			const mockExecCommand = vi.fn().mockReturnValue(true)
+			Object.defineProperty(document, "execCommand", {
+				value: mockExecCommand,
+				writable: true,
+			})
+
+			const { container } = render(
+				<ChatTextArea {...defaultProps} setInputValue={setInputValue} inputValue="Original prompt" />,
+			)
+
+			const textarea = container.querySelector("textarea")!
+
+			// Mock textarea methods
+			const mockSelect = vi.fn()
+			const mockFocus = vi.fn()
+			textarea.select = mockSelect
+			textarea.focus = mockFocus
 
 			// Simulate receiving enhanced prompt message
 			window.dispatchEvent(
@@ -205,7 +222,53 @@ describe("ChatTextArea", () => {
 				}),
 			)
 
+			// Verify native browser methods were used
+			expect(mockFocus).toHaveBeenCalled()
+			expect(mockSelect).toHaveBeenCalled()
+			expect(mockExecCommand).toHaveBeenCalledWith("insertText", false, "Enhanced test prompt")
+		})
+
+		it("should fallback to setInputValue when execCommand is not available", () => {
+			const setInputValue = vi.fn()
+
+			// Mock document.execCommand to be undefined (not available)
+			Object.defineProperty(document, "execCommand", {
+				value: undefined,
+				writable: true,
+			})
+
+			render(<ChatTextArea {...defaultProps} setInputValue={setInputValue} inputValue="Original prompt" />)
+
+			// Simulate receiving enhanced prompt message
+			window.dispatchEvent(
+				new MessageEvent("message", {
+					data: {
+						type: "enhancedPrompt",
+						text: "Enhanced test prompt",
+					},
+				}),
+			)
+
+			// Verify fallback to setInputValue was used
 			expect(setInputValue).toHaveBeenCalledWith("Enhanced test prompt")
+		})
+
+		it("should not crash when textarea ref is not available", () => {
+			const setInputValue = vi.fn()
+
+			render(<ChatTextArea {...defaultProps} setInputValue={setInputValue} />)
+
+			// Simulate receiving enhanced prompt message when textarea ref might not be ready
+			expect(() => {
+				window.dispatchEvent(
+					new MessageEvent("message", {
+						data: {
+							type: "enhancedPrompt",
+							text: "Enhanced test prompt",
+						},
+					}),
+				)
+			}).not.toThrow()
 		})
 	})
 
@@ -862,6 +925,56 @@ describe("ChatTextArea", () => {
 			render(<ChatTextArea {...defaultProps} sendingDisabled={true} selectApiConfigDisabled={true} />)
 			const apiConfigDropdown = getApiConfigDropdown()
 			expect(apiConfigDropdown).toHaveAttribute("disabled")
+		})
+	})
+	describe("edit mode integration", () => {
+		it("should render edit mode UI when isEditMode is true", () => {
+			;(useExtensionState as ReturnType<typeof vi.fn>).mockReturnValue({
+				filePaths: [],
+				openedTabs: [],
+				taskHistory: [],
+				cwd: "/test/workspace",
+				customModes: [],
+				customModePrompts: {},
+			})
+
+			render(<ChatTextArea {...defaultProps} isEditMode={true} />)
+
+			// The edit mode UI should be rendered
+			// We can verify this by checking for the presence of elements that are unique to edit mode
+			const cancelButton = screen.getByRole("button", { name: /cancel/i })
+			expect(cancelButton).toBeInTheDocument()
+
+			// Should show save button instead of send button
+			const saveButton = screen.getByRole("button", { name: /save/i })
+			expect(saveButton).toBeInTheDocument()
+
+			// Should not show send button in edit mode
+			const sendButton = screen.queryByRole("button", { name: /send.*message/i })
+			expect(sendButton).not.toBeInTheDocument()
+		})
+
+		it("should not render edit mode UI when isEditMode is false", () => {
+			;(useExtensionState as ReturnType<typeof vi.fn>).mockReturnValue({
+				filePaths: [],
+				openedTabs: [],
+				taskHistory: [],
+				cwd: "/test/workspace",
+			})
+
+			render(<ChatTextArea {...defaultProps} isEditMode={false} />)
+
+			// The edit mode UI should not be rendered
+			const cancelButton = screen.queryByRole("button", { name: /cancel/i })
+			expect(cancelButton).not.toBeInTheDocument()
+
+			// Should show send button when not in edit mode
+			const sendButton = screen.getByRole("button", { name: /send.*message/i })
+			expect(sendButton).toBeInTheDocument()
+
+			// Should not show save button when not in edit mode
+			const saveButton = screen.queryByRole("button", { name: /save/i })
+			expect(saveButton).not.toBeInTheDocument()
 		})
 	})
 })

@@ -93,6 +93,13 @@
 		"title": "Kanselahin",
 		"tooltip": "Kanselahin ang kasalukuyang operasyon"
 	},
+	"editMessage": {
+		"placeholder": "I-edit ang inyong mensahe..."
+	},
+	"searchResults": {
+		"title": "Mga Resulta ng Paghahanap",
+		"noResults": "Walang nahanap na resulta"
+	},
 	"scrollToBottom": "Mag-scroll sa ibaba ng chat",
 	"about": "Gumawa, mag-refactor, at mag-debug ng code gamit ang tulong ng AI. Tingnan ang aming <DocsLink>dokumentasyon</DocsLink> para matuto pa.",
 	"onboarding": "Walang laman ang iyong listahan ng gawain sa workspace na ito.",
@@ -138,6 +145,7 @@
 	"separator": "Separator",
 	"edit": "I-edit...",
 	"forNextMode": "para sa susunod na mode",
+	"forPreviousMode": "para sa nakaraang mode",
 	"apiRequest": {
 		"title": "API Request",
 		"failed": "Nabigo ang API Request",
@@ -209,7 +217,8 @@
 	"codebaseSearch": {
 		"wantsToSearch": "Nais maghanap ng Kilo Code sa codebase para sa <code>{{query}}</code>:",
 		"wantsToSearchWithPath": "Nais maghanap ng Kilo Code sa codebase para sa <code>{{query}}</code> sa <code>{{path}}</code>:",
-		"didSearch": "Nakahanap ng {{count}} resulta para sa <code>{{query}}</code>:",
+		"didSearch_one": "Nakahanap ng 1 resulta",
+		"didSearch_other": "Nakahanap ng {{count}} resulta",
 		"resultTooltip": "Similarity score: {{score}} (i-click para buksan ang file)"
 	},
 	"commandOutput": "Output ng Command",
@@ -249,13 +258,16 @@
 	"autoApprove": {
 		"title": "Auto-approve:",
 		"none": "Wala",
-		"description": "Ang auto-approve ay nagpapahintulot sa Kilo Code na magsagawa ng mga aksyon nang hindi humihingi ng pahintulot. I-enable lamang para sa mga aksyon na lubos mong pinagkakatiwalaan. Mas detalyadong configuration ay available sa <settingsLink>Settings</settingsLink>."
+		"description": "Ang auto-approve ay nagpapahintulot sa Kilo Code na magsagawa ng mga aksyon nang hindi humihingi ng pahintulot. I-enable lamang para sa mga aksyon na lubos mong pinagkakatiwalaan. Mas detalyadong configuration ay available sa <settingsLink>Settings</settingsLink>.",
+		"selectOptionsFirst": "Pumili muna ng kahit isang opsyon sa ibaba para ma-enable ang auto-approval",
+		"toggleAriaLabel": "I-toggle ang auto-approval",
+		"disabledAriaLabel": "Na-disable ang auto-approval - pumili muna ng mga opsyon"
 	},
 	"announcement": {
-		"title": "🎉 Inilabas ang Roo Code {{version}}",
-		"description": "Ang Roo Code {{version}} ay may mga pangunahing bagong feature at pagpapahusay batay sa iyong feedback.",
+		"title": "🎉 Inilabas ang Kilo Code {{version}}",
+		"description": "Ang Kilo Code {{version}} ay may mga pangunahing bagong feature at pagpapahusay batay sa iyong feedback.",
 		"whatsNew": "Ano ang Bago",
-		"feature1": "<bold>Paglulunsad ng Roo Marketplace</bold>: Live na ngayon ang marketplace! Tuklasin at mag-install ng mga mode at MCP nang mas madali kaysa dati.",
+		"feature1": "<bold>Paglulunsad ng Kilo Code Marketplace</bold>: Live na ngayon ang marketplace! Tuklasin at mag-install ng mga mode at MCP nang mas madali kaysa dati.",
 		"feature2": "<bold>Mga Modelo ng Gemini 2.5</bold>: Idinagdag ang suporta para sa mga bagong Gemini 2.5 Pro, Flash, at Flash Lite na modelo.",
 		"feature3": "<bold>Suporta sa Excel File at Iba Pa</bold>: Idinagdag ang suporta sa Excel (.xlsx) file at maraming bug fix at pagpapahusay!",
 		"hideButton": "Itago ang anunsyo",

@@ -124,6 +124,9 @@
 	},
 	"autoApprove": {
 		"description": "Permettre à Kilo Code d'effectuer automatiquement des opérations sans requérir d'approbation. Activez ces paramètres uniquement si vous faites entièrement confiance à l'IA et que vous comprenez les risques de sécurité associés.",
+		"toggleAriaLabel": "Activer/désactiver l'approbation automatique",
+		"disabledAriaLabel": "Approbation automatique désactivée - sélectionnez d'abord les options",
+		"selectOptionsFirst": "Sélectionnez au moins une option ci-dessous pour activer l'approbation automatique",
 		"readOnly": {
 			"label": "Lecture",
 			"description": "Lorsque cette option est activée, Kilo Code affichera automatiquement le contenu des répertoires et lira les fichiers sans que vous ayez à cliquer sur le bouton Approuver.",
@@ -176,8 +179,12 @@
 			"description": "Exécuter automatiquement les commandes de terminal autorisées sans nécessiter d'approbation",
 			"allowedCommands": "Commandes auto-exécutables autorisées",
 			"allowedCommandsDescription": "Préfixes de commandes qui peuvent être auto-exécutés lorsque \"Toujours approuver les opérations d'exécution\" est activé. Ajoutez * pour autoriser toutes les commandes (à utiliser avec précaution).",
+			"deniedCommands": "Commandes refusées",
+			"deniedCommandsDescription": "Préfixes de commandes qui seront automatiquement refusés sans demander d'approbation. En cas de conflit avec les commandes autorisées, la correspondance de préfixe la plus longue prend la priorité. Ajoutez * pour refuser toutes les commandes.",
 			"commandPlaceholder": "Entrez le préfixe de commande (ex. 'git ')",
-			"addButton": "Ajouter"
+			"deniedCommandPlaceholder": "Entrez le préfixe de commande à refuser (ex. 'rm -rf')",
+			"addButton": "Ajouter",
+			"autoDenied": "Les commandes avec le préfixe `{{prefix}}` ont été interdites par l'utilisateur. Ne contourne pas cette restriction en exécutant une autre commande."
 		},
 		"showMenu": {
 			"label": "Afficher le menu d'approbation automatique dans la vue de chat",
@@ -372,6 +379,12 @@
 			"label": "Limite de débit",
 			"description": "Temps minimum entre les requêtes API."
 		},
+		"consecutiveMistakeLimit": {
+			"label": "Limite d'erreurs et de répétitions",
+			"description": "Nombre d'erreurs consécutives ou d'actions répétées avant d'afficher la boîte de dialogue 'Kilo Code a des difficultés'",
+			"unlimitedDescription": "Réessais illimités activés (poursuite automatique). La boîte de dialogue n'apparaîtra jamais.",
+			"warning": "⚠️ Mettre à 0 autorise des réessais illimités, ce qui peut consommer une utilisation importante de l'API"
+		},
 		"reasoningEffort": {
 			"label": "Effort de raisonnement du modèle",
 			"high": "Élevé",
@@ -382,7 +395,9 @@
 		"claudeCode": {
 			"pathLabel": "Chemin du code Claude",
 			"description": "Chemin facultatif vers votre CLI Claude Code. La valeur par défaut est 'claude' si non défini.",
-			"placeholder": "Défaut : claude"
+			"placeholder": "Défaut : claude",
+			"maxTokensLabel": "Jetons de sortie max",
+			"maxTokensDescription": "Nombre maximum de jetons de sortie pour les réponses de Claude Code. La valeur par défaut est 8000."
 		},
 		"geminiCli": {
 			"description": "Ce fournisseur utilise l'authentification OAuth de l'outil Gemini CLI et ne nécessite pas de clés API.",
@@ -553,6 +568,9 @@
 			"label": "Hériter des variables d'environnement",
 			"description": "Lorsqu'activé, le terminal hérite des variables d'environnement du processus parent VSCode, comme les paramètres d'intégration du shell définis dans le profil utilisateur. Cela bascule directement le paramètre global VSCode `terminal.integrated.inheritEnv`. <0>En savoir plus</0>"
 		}
+	},
+	"advancedSettings": {
+		"title": "Paramètres avancés"
 	},
 	"advanced": {
 		"diff": {

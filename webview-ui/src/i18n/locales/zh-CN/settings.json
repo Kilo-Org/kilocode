@@ -125,6 +125,8 @@
 	},
 	"autoApprove": {
 		"description": "允许 Kilo Code 自动执行操作而无需批准。只有在您完全信任 AI 并了解相关安全风险的情况下才启用这些设置。",
+		"toggleAriaLabel": "切换自动批准",
+		"disabledAriaLabel": "自动批准已禁用 - 请先选择选项",
 		"readOnly": {
 			"label": "读取",
 			"description": "启用后，Kilo Code 将自动浏览目录和读取文件内容，无需人工确认。",
@@ -177,8 +179,12 @@
 			"description": "自动执行白名单中的命令而无需批准",
 			"allowedCommands": "命令白名单",
 			"allowedCommandsDescription": "当\"自动批准命令行操作\"启用时可以自动执行的命令前缀。添加 * 以允许所有命令（谨慎使用）。",
+			"deniedCommands": "拒绝的命令",
+			"deniedCommandsDescription": "将自动拒绝的命令前缀，无需用户批准。与允许命令冲突时，最长前缀匹配优先。添加 * 拒绝所有命令。",
 			"commandPlaceholder": "输入命令前缀（例如 'git '）",
-			"addButton": "添加"
+			"deniedCommandPlaceholder": "输入要拒绝的命令前缀（例如 'rm -rf'）",
+			"addButton": "添加",
+			"autoDenied": "前缀为 `{{prefix}}` 的命令已被用户禁止。不要通过运行其他命令来绕过此限制。"
 		},
 		"showMenu": {
 			"label": "在聊天视图中显示自动批准菜单",
@@ -192,7 +198,8 @@
 			"title": "最大请求数",
 			"description": "在请求批准以继续执行任务之前，自动发出此数量的 API 请求。",
 			"unlimited": "无限制"
-		}
+		},
+		"selectOptionsFirst": "请至少选择以下一个选项以启用自动批准"
 	},
 	"providers": {
 		"providerDocumentation": "{{provider}} 文档",
@@ -373,6 +380,12 @@
 			"label": "API 请求频率限制",
 			"description": "设置API请求的最小间隔时间"
 		},
+		"consecutiveMistakeLimit": {
+			"label": "错误和重复限制",
+			"description": "在显示“Roo遇到问题”对话框前允许的连续错误或重复操作次数",
+			"unlimitedDescription": "已启用无限重试（自动继续）。对话框将永远不会出现。",
+			"warning": "⚠️ 设置为 0 允许无限重试，这可能会消耗大量 API 使用量"
+		},
 		"reasoningEffort": {
 			"label": "模型推理强度",
 			"high": "高",
@@ -383,7 +396,9 @@
 		"claudeCode": {
 			"pathLabel": "Claude Code 路径",
 			"description": "您的 Claude Code CLI 的可选路径。如果未设置，则默认为 “claude”。",
-			"placeholder": "默认：claude"
+			"placeholder": "默认：claude",
+			"maxTokensLabel": "最大输出 Token",
+			"maxTokensDescription": "Claude Code 响应的最大输出 Token 数量。默认为 8000。"
 		},
 		"geminiCli": {
 			"description": "此提供商使用 Gemini CLI 工具的 OAuth 身份验证，不需要 API 密钥。",
@@ -554,6 +569,9 @@
 			"label": "继承环境变量",
 			"description": "启用后，终端将从 VSCode 父进程继承环境变量，如用户配置文件中定义的 shell 集成设置。这直接切换 VSCode 全局设置 `terminal.integrated.inheritEnv`。 <0>了解更多</0>"
 		}
+	},
+	"advancedSettings": {
+		"title": "高级设置"
 	},
 	"advanced": {
 		"diff": {

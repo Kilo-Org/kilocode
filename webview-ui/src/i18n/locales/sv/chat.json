@@ -93,6 +93,9 @@
 		"title": "Avbryt",
 		"tooltip": "Avbryt den aktuella operationen"
 	},
+	"editMessage": {
+		"placeholder": "Redigera ditt meddelande..."
+	},
 	"scrollToBottom": "Scrolla till botten av chatten",
 	"about": "Generera, refaktorera och felsök kod med AI-assistans. Kolla in vår <DocsLink>dokumentation</DocsLink> för att lära dig mer.",
 	"onboarding": "Din uppgiftslista i denna arbetsyta är tom.",
@@ -138,6 +141,7 @@
 	"separator": "Separator",
 	"edit": "Redigera...",
 	"forNextMode": "för nästa läge",
+	"forPreviousMode": "för föregående läge",
 	"apiRequest": {
 		"title": "API-förfrågan",
 		"failed": "API-förfrågan misslyckades",
@@ -209,7 +213,8 @@
 	"codebaseSearch": {
 		"wantsToSearch": "Kilo Code vill söka i kodbasen efter <code>{{query}}</code>:",
 		"wantsToSearchWithPath": "Kilo Code vill söka i kodbasen efter <code>{{query}}</code> i <code>{{path}}</code>:",
-		"didSearch": "Hittade {{count}} resultat för <code>{{query}}</code>:",
+		"didSearch_one": "Hittade 1 resultat",
+		"didSearch_other": "Hittade {{count}} resultat",
 		"resultTooltip": "Likhetspoäng: {{score}} (klicka för att öppna fil)"
 	},
 	"commandOutput": "Kommandoutdata",
@@ -249,13 +254,16 @@
 	"autoApprove": {
 		"title": "Auto-godkänn:",
 		"none": "Ingen",
-		"description": "Auto-godkännande låter Kilo Code utföra åtgärder utan att be om tillåtelse. Aktivera endast för åtgärder du helt litar på. Mer detaljerad konfiguration finns i <settingsLink>Inställningar</settingsLink>."
+		"description": "Auto-godkännande låter Kilo Code utföra åtgärder utan att be om tillåtelse. Aktivera endast för åtgärder du helt litar på. Mer detaljerad konfiguration finns i <settingsLink>Inställningar</settingsLink>.",
+		"selectOptionsFirst": "Välj minst ett alternativ nedan för att aktivera auto-godkännande",
+		"toggleAriaLabel": "Växla auto-godkännande",
+		"disabledAriaLabel": "Auto-godkännande inaktiverat - välj alternativ först"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} släppt",
-		"description": "Roo Code {{version}} kommer med stora nya funktioner och förbättringar baserade på din feedback.",
+		"title": "🎉 Kilo Code {{version}} släppt",
+		"description": "Kilo Code {{version}} kommer med stora nya funktioner och förbättringar baserade på din feedback.",
 		"whatsNew": "Vad är nytt",
-		"feature1": "<bold>Roo Marketplace lansering</bold>: Marknadsplatsen är nu live! Upptäck och installera lägen och MCP:er enklare än någonsin.",
+		"feature1": "<bold>Kilo Code Marketplace lansering</bold>: Marknadsplatsen är nu live! Upptäck och installera lägen och MCP:er enklare än någonsin.",
 		"feature2": "<bold>Gemini 2.5-modeller</bold>: Lagt till stöd för nya Gemini 2.5 Pro, Flash och Flash Lite-modeller.",
 		"feature3": "<bold>Excel-filstöd & mer</bold>: Lagt till Excel (.xlsx) filstöd och många buggfixar och förbättringar!",
 		"hideButton": "Dölj meddelande",

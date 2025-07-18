@@ -23,7 +23,8 @@
 		"failedToProcessBatchWithError": "{{maxRetries}} प्रयासों के बाद बैच प्रसंस्करण विफल: {{errorMessage}}"
 	},
 	"vectorStore": {
-		"qdrantConnectionFailed": "Qdrant वेक्टर डेटाबेस से कनेक्ट करने में विफल। कृपया सुनिश्चित करें कि Qdrant चल रहा है और {{qdrantUrl}} पर पहुंच योग्य है। त्रुटि: {{errorMessage}}"
+		"qdrantConnectionFailed": "Qdrant वेक्टर डेटाबेस से कनेक्ट करने में विफल। कृपया सुनिश्चित करें कि Qdrant चल रहा है और {{qdrantUrl}} पर पहुंच योग्य है। त्रुटि: {{errorMessage}}",
+		"vectorDimensionMismatch": "नए मॉडल के लिए वेक्टर इंडेक्स को अपडेट करने में विफल। कृपया इंडेक्स को साफ़ करने और फिर से शुरू करने का प्रयास करें। विवरण: {{errorMessage}}"
 	},
 	"validation": {
 		"authenticationFailed": "प्रमाणीकरण विफल। कृपया सेटिंग्स में अपनी एपीआई कुंजी जांचें।",
@@ -36,7 +37,9 @@
 		"invalidApiKey": "अमान्य एपीआई कुंजी। कृपया अपनी एपीआई कुंजी कॉन्फ़िगरेशन जांचें।",
 		"invalidBaseUrl": "अमान्य बेस यूआरएल। कृपया अपनी यूआरएल कॉन्फ़िगरेशन जांचें।",
 		"invalidModel": "अमान्य मॉडल। कृपया अपनी मॉडल कॉन्फ़िगरेशन जांचें।",
-		"invalidResponse": "एम्बेडर सेवा से अमान्य प्रतिक्रिया। कृपया अपनी कॉन्फ़िगरेशन जांचें।"
+		"invalidResponse": "एम्बेडर सेवा से अमान्य प्रतिक्रिया। कृपया अपनी कॉन्फ़िगरेशन जांचें।",
+		"apiKeyRequired": "इस एम्बेडर के लिए API कुंजी आवश्यक है।",
+		"baseUrlRequired": "इस एम्बेडर के लिए बेस यूआरएल आवश्यक है"
 	},
 	"serviceFactory": {
 		"openAiConfigMissing": "एम्बेडर बनाने के लिए OpenAI कॉन्फ़िगरेशन गायब है",

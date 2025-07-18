@@ -23,7 +23,8 @@
 		"failedToProcessBatchWithError": "Не удалось обработать пакет после {{maxRetries}} попыток: {{errorMessage}}"
 	},
 	"vectorStore": {
-		"qdrantConnectionFailed": "Не удалось подключиться к векторной базе данных Qdrant. Убедитесь, что Qdrant запущен и доступен по адресу {{qdrantUrl}}. Ошибка: {{errorMessage}}"
+		"qdrantConnectionFailed": "Не удалось подключиться к векторной базе данных Qdrant. Убедитесь, что Qdrant запущен и доступен по адресу {{qdrantUrl}}. Ошибка: {{errorMessage}}",
+		"vectorDimensionMismatch": "Не удалось обновить векторный индекс для новой модели. Попробуйте очистить индекс и начать сначала. Подробности: {{errorMessage}}"
 	},
 	"validation": {
 		"authenticationFailed": "Ошибка аутентификации. Проверьте свой ключ API в настройках.",
@@ -36,7 +37,9 @@
 		"invalidApiKey": "Неверный ключ API. Проверьте конфигурацию ключа API.",
 		"invalidBaseUrl": "Неверный базовый URL. Проверьте конфигурацию URL.",
 		"invalidModel": "Неверная модель. Проверьте конфигурацию модели.",
-		"invalidResponse": "Неверный ответ от службы embedder. Проверьте вашу конфигурацию."
+		"invalidResponse": "Неверный ответ от службы embedder. Проверьте вашу конфигурацию.",
+		"apiKeyRequired": "Для этого встраивателя требуется ключ API",
+		"baseUrlRequired": "Для этого встраивателя требуется базовый URL"
 	},
 	"serviceFactory": {
 		"openAiConfigMissing": "Отсутствует конфигурация OpenAI для создания эмбеддера",

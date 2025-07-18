@@ -23,7 +23,8 @@
 		"failedToProcessBatchWithError": "Misslyckades med att bearbeta batch efter {{maxRetries}} försök: {{errorMessage}}"
 	},
 	"vectorStore": {
-		"qdrantConnectionFailed": "Misslyckades med att ansluta till Qdrant vektordatabas. Se till att Qdrant körs och är tillgänglig på {{qdrantUrl}}. Fel: {{errorMessage}}"
+		"qdrantConnectionFailed": "Misslyckades med att ansluta till Qdrant vektordatabas. Se till att Qdrant körs och är tillgänglig på {{qdrantUrl}}. Fel: {{errorMessage}}",
+		"vectorDimensionMismatch": "Misslyckades med att uppdatera vektorindex för ny modell. Försök rensa indexet och börja om. Detaljer: {{errorMessage}}"
 	},
 	"validation": {
 		"authenticationFailed": "Autentisering misslyckades. Kontrollera din API-nyckel i inställningarna.",
@@ -36,7 +37,9 @@
 		"invalidApiKey": "Ogiltig API-nyckel. Kontrollera din API-nyckelkonfiguration.",
 		"invalidBaseUrl": "Ogiltig bas-URL. Kontrollera din URL-konfiguration.",
 		"invalidModel": "Ogiltig modell. Kontrollera din modellkonfiguration.",
-		"invalidResponse": "Ogiltigt svar från embedder-tjänsten. Kontrollera din konfiguration."
+		"invalidResponse": "Ogiltigt svar från embedder-tjänsten. Kontrollera din konfiguration.",
+		"apiKeyRequired": "API-nyckel krävs för denna embedder",
+		"baseUrlRequired": "Bas-URL krävs för denna embedder"
 	},
 	"serviceFactory": {
 		"openAiConfigMissing": "OpenAI-konfiguration saknas för embedder-skapande",

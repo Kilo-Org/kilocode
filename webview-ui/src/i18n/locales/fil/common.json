@@ -70,5 +70,16 @@
 		"success": {
 			"imageDataUriCopied": "Nakopya ang image data URI sa clipboard"
 		}
+	},
+	"confirmation": {
+		"cancel": "Kanselahin",
+		"confirm": "Kumpirmahin",
+		"delete": "Burahin",
+		"deleteMessage": "Burahin ang Mensahe",
+		"deleteWarning": "Ang pagbura sa mensaheng ito ay magbubura din sa lahat ng kasunod na mga mensahe sa pag-uusap. Gusto mo bang magpatuloy?",
+		"editMessage": "I-edit ang Mensahe",
+		"editWarning": "Ang pag-edit sa mensaheng ito ay magbubura din sa lahat ng kasunod na mga mensahe sa pag-uusap. Gusto mo bang magpatuloy?",
+		"proceed": "Magpatuloy",
+		"title": "Kumpirmasyon"
 	}
 }

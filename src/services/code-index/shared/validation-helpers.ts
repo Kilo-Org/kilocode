@@ -2,6 +2,48 @@ import { t } from "../../../i18n"
 import { serializeError } from "serialize-error"
 
 /**
+ * Sanitizes error messages by removing sensitive information like file paths and URLs
+ * @param errorMessage The error message to sanitize
+ * @returns The sanitized error message
+ */
+export function sanitizeErrorMessage(errorMessage: string): string {
+	if (!errorMessage || typeof errorMessage !== "string") {
+		return String(errorMessage)
+	}
+
+	let sanitized = errorMessage
+
+	// Replace URLs first (http, https, ftp, file protocols)
+	// This needs to be done before file paths to avoid partial replacements
+	sanitized = sanitized.replace(
+		/(?:https?|ftp|file):\/\/(?:localhost|[\w\-\.]+)(?::\d+)?(?:\/[\w\-\.\/\?\&\=\#]*)?/gi,
+		"[REDACTED_URL]",
+	)
+
+	// Replace email addresses
+	sanitized = sanitized.replace(/[\w\-\.]+@[\w\-\.]+\.\w+/g, "[REDACTED_EMAIL]")
+
+	// Replace IP addresses (IPv4)
+	sanitized = sanitized.replace(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g, "[REDACTED_IP]")
+
+	// Replace file paths in quotes (handles paths with spaces)
+	sanitized = sanitized.replace(/"[^"]*(?:\/|\\)[^"]*"/g, '"[REDACTED_PATH]"')
+
+	// Replace file paths (Unix and Windows style)
+	// Matches paths like /Users/username/path, C:\Users\path, ./relative/path, ../relative/path
+	sanitized = sanitized.replace(
+		/(?:\/[\w\-\.]+)+(?:\/[\w\-\.\s]*)*|(?:[A-Za-z]:\\[\w\-\.\\]+)|(?:\.{1,2}\/[\w\-\.\/]+)/g,
+		"[REDACTED_PATH]",
+	)
+
+	// Replace port numbers that appear after colons (e.g., :11434, :8080)
+	// Do this after URLs to avoid double replacement
+	sanitized = sanitized.replace(/(?<!REDACTED_URL\]):(\d{2,5})\b/g, ":[REDACTED_PORT]")
+
+	return sanitized
+}
+
+/**
  * HTTP error interface for embedder errors
  */
 export interface HttpError extends Error {
@@ -28,16 +70,16 @@ export function getErrorMessageForStatus(status: number | undefined, embedderTyp
 	switch (status) {
 		case 401:
 		case 403:
-			return "embeddings:validation.authenticationFailed"
+			return t("embeddings:validation.authenticationFailed")
 		case 404:
 			return embedderType === "openai"
-				? "embeddings:validation.modelNotAvailable"
-				: "embeddings:validation.invalidEndpoint"
+				? t("embeddings:validation.modelNotAvailable")
+				: t("embeddings:validation.invalidEndpoint")
 		case 429:
-			return "embeddings:validation.serviceUnavailable"
+			return t("embeddings:validation.serviceUnavailable")
 		default:
 			if (status && status >= 400 && status < 600) {
-				return "embeddings:validation.configurationError"
+				return t("embeddings:validation.configurationError")
 			}
 			return undefined
 	}
@@ -138,11 +180,11 @@ export function handleValidationError(
 			errorMessage.includes("HTTP 0:") ||
 			errorMessage === "No response"
 		) {
-			return { valid: false, error: "embeddings:validation.connectionFailed" }
+			return { valid: false, error: t("embeddings:validation.connectionFailed") }
 		}
 
 		if (errorMessage.includes("Failed to parse response JSON")) {
-			return { valid: false, error: "embeddings:validation.invalidResponse" }
+			return { valid: false, error: t("embeddings:validation.invalidResponse") }
 		}
 	}
 
@@ -152,7 +194,7 @@ export function handleValidationError(
 	}
 
 	// Fallback to generic error
-	return { valid: false, error: "embeddings:validation.configurationError" }
+	return { valid: false, error: t("embeddings:validation.configurationError") }
 }
 
 /**

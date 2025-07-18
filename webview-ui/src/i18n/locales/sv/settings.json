@@ -183,7 +183,11 @@
 			"allowedCommands": "Tillåtna kommandon för automatisk körning",
 			"allowedCommandsDescription": "Kommando-prefix som kan köras automatiskt när \"Godkänn alltid körningsoperationer\" är aktiverat. Lägg till * för att tillåta alla kommandon (använd med försiktighet).",
 			"commandPlaceholder": "Ange kommandoprefix (t.ex. 'git ')",
-			"addButton": "Lägg till"
+			"addButton": "Lägg till",
+			"deniedCommands": "Förbjudna kommandon",
+			"deniedCommandsDescription": "Kommando-prefix som automatiskt kommer att nekas utan att be om godkännande. Vid konflikter med tillåtna kommandon har den längsta prefixmatchningen företräde. Lägg till * för att neka alla kommandon.",
+			"deniedCommandPlaceholder": "Ange kommandoprefix att neka (t.ex. 'rm -rf')",
+			"autoDenied": "Kommandon med prefixet `{{prefix}}` har förbjudits av användaren. Kringgå inte denna begränsning genom att köra ett annat kommando."
 		},
 		"showMenu": {
 			"label": "Visa auto-godkänn-menyn i chattvyn",
@@ -197,7 +201,10 @@
 			"title": "Max antal förfrågningar",
 			"description": "Gör automatiskt så här många API-förfrågningar innan du ber om godkännande för att fortsätta med uppgiften.",
 			"unlimited": "Obegränsat"
-		}
+		},
+		"toggleAriaLabel": "Växla auto-godkännande",
+		"disabledAriaLabel": "Auto-godkännande inaktiverat - välj alternativ först",
+		"selectOptionsFirst": "Välj minst ett alternativ nedan för att aktivera auto-godkännande"
 	},
 	"providers": {
 		"providerDocumentation": "{{provider}} dokumentation",
@@ -378,6 +385,12 @@
 			"label": "Hastighetsbegränsning",
 			"description": "Minsta tid mellan API-förfrågningar."
 		},
+		"consecutiveMistakeLimit": {
+			"label": "Fel- och upprepningsgräns",
+			"description": "Antal på varandra följande fel eller upprepade åtgärder innan dialogrutan 'Kilo Code har problem' visas",
+			"unlimitedDescription": "Obegränsade omförsök aktiverade (fortsätt automatiskt). Dialogrutan kommer aldrig att visas.",
+			"warning": "⚠️ Att ställa in på 0 tillåter obegränsade omförsök vilket kan förbruka betydande API-användning"
+		},
 		"reasoningEffort": {
 			"label": "Modellens resonemangsansträngning",
 			"high": "Hög",
@@ -388,7 +401,9 @@
 		"claudeCode": {
 			"pathLabel": "Sökväg till Claude Code",
 			"description": "Valfri sökväg till din Claude Code CLI. Standard är 'claude' om den inte är inställd.",
-			"placeholder": "Standard: claude"
+			"placeholder": "Standard: claude",
+			"maxTokensLabel": "Max antal utdatatoken",
+			"maxTokensDescription": "Maximalt antal utdatatoken för Claude Code-svar. Standard är 8000."
 		},
 		"geminiCli": {
 			"description": "Den här leverantören använder OAuth-autentisering från Gemini CLI-verktyget och kräver inga API-nycklar.",
@@ -565,6 +580,9 @@
 			"label": "Ärv miljövariabler",
 			"description": "När den är aktiverad kommer terminalen att ärva miljövariabler från VSCode:s överordnade process, till exempel skalintegrationsinställningar som definieras av användarprofilen. Detta växlar direkt VSCode:s globala inställning `terminal.integrated.inheritEnv`. <0>Läs mer</0>"
 		}
+	},
+	"advancedSettings": {
+		"title": "Avancerade inställningar"
 	},
 	"advanced": {
 		"diff": {

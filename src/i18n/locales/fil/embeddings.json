@@ -23,7 +23,8 @@
 		"failedToProcessBatchWithError": "Nabigo ang pagproseso ng batch pagkatapos ng {{maxRetries}} pagtatangka: {{errorMessage}}"
 	},
 	"vectorStore": {
-		"qdrantConnectionFailed": "Nabigo ang pagkonekta sa Qdrant vector database. Mangyaring siguraduhing ang Qdrant ay tumatakbo at naa-access sa {{qdrantUrl}}. Error: {{errorMessage}}"
+		"qdrantConnectionFailed": "Nabigo ang pagkonekta sa Qdrant vector database. Mangyaring siguraduhing ang Qdrant ay tumatakbo at naa-access sa {{qdrantUrl}}. Error: {{errorMessage}}",
+		"vectorDimensionMismatch": "Nabigo ang pag-update ng vector index para sa bagong model. Mangyaring subukang i-clear ang index at magsimula muli. Detalye: {{errorMessage}}"
 	},
 	"validation": {
 		"authenticationFailed": "Nabigo ang authentication. Mangyaring suriin ang inyong API key sa mga setting.",
@@ -36,7 +37,9 @@
 		"invalidApiKey": "Invalid na API key. Mangyaring suriin ang inyong API key configuration.",
 		"invalidBaseUrl": "Invalid na base URL. Mangyaring suriin ang inyong URL configuration.",
 		"invalidModel": "Invalid na model. Mangyaring suriin ang inyong model configuration.",
-		"invalidResponse": "Invalid na response mula sa embedder service. Mangyaring suriin ang inyong configuration."
+		"invalidResponse": "Invalid na response mula sa embedder service. Mangyaring suriin ang inyong configuration.",
+		"apiKeyRequired": "Kailangan ang API key para sa embedder na ito",
+		"baseUrlRequired": "Kailangan ang Base URL para sa embedder na ito"
 	},
 	"serviceFactory": {
 		"openAiConfigMissing": "Nawawalang OpenAI configuration para sa embedder creation",

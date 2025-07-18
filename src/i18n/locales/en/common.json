@@ -25,12 +25,7 @@
 	"confirmation": {
 		"reset_state": "Are you sure you want to reset all state and secret storage in the extension? This cannot be undone.",
 		"delete_config_profile": "Are you sure you want to delete this configuration profile?",
-		"delete_custom_mode_with_rules": "Are you sure you want to delete this {scope} mode?\n\nThis will also delete the associated rules folder at:\n{rulesFolderPath}",
-		"delete_message": "What would you like to delete?",
-		"edit_warning": "Editing this message will delete all subsequent messages in the conversation. Do you want to proceed?",
-		"delete_just_this_message": "Just this message",
-		"delete_this_and_subsequent": "This and all subsequent messages",
-		"proceed": "Proceed"
+		"delete_custom_mode_with_rules": "Are you sure you want to delete this {scope} mode?\n\nThis will also delete the associated rules folder at:\n{rulesFolderPath}"
 	},
 	"errors": {
 		"invalid_data_uri": "Invalid data URI format",
@@ -62,7 +57,7 @@
 		"cannot_access_path": "Cannot access path {{path}}: {{error}}",
 		"settings_import_failed": "Settings import failed: {{error}}.",
 		"mistake_limit_guidance": "This may indicate a failure in the model's thought process or inability to use a tool properly, which can be mitigated with some user guidance (e.g. \"Try breaking down the task into smaller steps\").",
-		"violated_organization_allowlist": "Failed to run task: the current profile violates your organization settings",
+		"violated_organization_allowlist": "Failed to run task: the current profile isn't compatible with your organization settings",
 		"condense_failed": "Failed to condense context",
 		"condense_not_enough_messages": "Not enough messages to condense context of {{prevContextTokens}} tokens. At least {{minimumMessageCount}} messages are required, but only {{messageCount}} are available.",
 		"condensed_recently": "Context was condensed recently; skipping this attempt",
@@ -75,6 +70,7 @@
 		"url_page_not_found": "The page was not found. Please check if the URL is correct.",
 		"url_fetch_failed": "Failed to fetch URL content: {{error}}",
 		"url_fetch_error_with_url": "Error fetching content for {{url}}: {{error}}",
+		"command_timeout": "Command execution timed out after {{seconds}} seconds",
 		"share_task_failed": "Failed to share task. Please try again.",
 		"share_no_active_task": "No active task to share",
 		"share_auth_required": "Authentication required. Please sign in to share tasks.",

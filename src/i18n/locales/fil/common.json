@@ -75,6 +75,7 @@
 		"url_page_not_found": "Hindi nahanap ang pahina. Mangyaring tingnan kung tama ang URL.",
 		"url_fetch_failed": "Nabigo ang pagkuha ng nilalaman ng URL: {{error}}",
 		"url_fetch_error_with_url": "Error sa pagkuha ng nilalaman para sa {{url}}: {{error}}",
+		"command_timeout": "Nag-timeout ang pagpapatupad ng command pagkatapos ng {{seconds}} segundo",
 		"share_task_failed": "Nabigo ang pagbahagi ng task. Mangyaring subukan muli.",
 		"share_no_active_task": "Walang aktibong task na ibabahagi",
 		"share_auth_required": "Kailangan ng authentication. Mangyaring mag-sign in upang magbahagi ng mga task.",

@@ -124,6 +124,8 @@
 	},
 	"autoApprove": {
 		"description": "允許 Kilo Code 無需核准即執行操作。僅在您完全信任 AI 並了解相關安全風險時啟用這些設定。",
+		"toggleAriaLabel": "切換自動核准",
+		"disabledAriaLabel": "自動核准已停用 - 請先選取選項",
 		"readOnly": {
 			"label": "讀取",
 			"description": "啟用後，Kilo Code 將自動檢視目錄內容並讀取檔案，無需點選核准按鈕。",
@@ -176,8 +178,12 @@
 			"description": "自動執行允許的終端機命令而無需核准",
 			"allowedCommands": "允許自動執行的命令",
 			"allowedCommandsDescription": "當「始終核准執行操作」啟用時可以自動執行的命令前綴。新增 * 以允許所有命令（請謹慎使用）。",
+			"deniedCommands": "拒絕的命令",
+			"deniedCommandsDescription": "將自動拒絕的命令前綴，無需使用者核准。與允許命令衝突時，最長前綴匹配優先。新增 * 拒絕所有命令。",
 			"commandPlaceholder": "輸入命令前綴（例如 'git '）",
-			"addButton": "新增"
+			"deniedCommandPlaceholder": "輸入要拒絕的命令前綴（例如 'rm -rf'）",
+			"addButton": "新增",
+			"autoDenied": "前綴為 `{{prefix}}` 的命令已被使用者禁止。不要透過執行其他命令來繞過此限制。"
 		},
 		"showMenu": {
 			"label": "在聊天視圖中顯示自動核准選單",
@@ -191,7 +197,8 @@
 			"title": "最大請求數",
 			"description": "在請求批准以繼續執行工作之前，自動發出此數量的 API 請求。",
 			"unlimited": "無限制"
-		}
+		},
+		"selectOptionsFirst": "請至少選擇以下一個選項以啟用自動核准"
 	},
 	"providers": {
 		"providerDocumentation": "{{provider}} 文件",
@@ -372,6 +379,12 @@
 			"label": "速率限制",
 			"description": "API 請求間的最短時間"
 		},
+		"consecutiveMistakeLimit": {
+			"label": "錯誤和重複限制",
+			"description": "在顯示「Kilo Code 遇到問題」對話方塊前允許的連續錯誤或重複操作次數",
+			"unlimitedDescription": "已啟用無限重試（自動繼續）。對話方塊將永遠不會出現。",
+			"warning": "⚠️ 設定為 0 允許無限重試，這可能會消耗大量 API 使用量"
+		},
 		"reasoningEffort": {
 			"label": "模型推理強度",
 			"high": "高",
@@ -382,7 +395,9 @@
 		"claudeCode": {
 			"pathLabel": "Claude Code 路徑",
 			"description": "可選的 Claude Code CLI 路徑。如果未設定，則預設為 'claude'。",
-			"placeholder": "預設：claude"
+			"placeholder": "預設：claude",
+			"maxTokensLabel": "最大輸出 Token",
+			"maxTokensDescription": "Claude Code 回應的最大輸出 Token 數量。預設為 8000。"
 		},
 		"geminiCli": {
 			"description": "此提供商使用 Gemini CLI 工具的 OAuth 身份驗證，不需要 API 金鑰。",
@@ -553,6 +568,9 @@
 			"label": "繼承環境變數",
 			"description": "啟用後，終端機將從 VSCode 父程序繼承環境變數，如使用者設定檔中定義的 shell 整合設定。這直接切換 VSCode 全域設定 `terminal.integrated.inheritEnv`。 <0>瞭解更多</0>"
 		}
+	},
+	"advancedSettings": {
+		"title": "進階設定"
 	},
 	"advanced": {
 		"diff": {

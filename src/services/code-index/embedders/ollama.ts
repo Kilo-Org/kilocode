@@ -3,7 +3,13 @@ import { EmbedderInfo, EmbeddingResponse, IEmbedder } from "../interfaces"
 import { getModelQueryPrefix } from "../../../shared/embeddingModels"
 import { MAX_ITEM_TOKENS } from "../constants"
 import { t } from "../../../i18n"
-import { withValidationErrorHandling } from "../shared/validation-helpers"
+import { withValidationErrorHandling, sanitizeErrorMessage } from "../shared/validation-helpers"
+import { TelemetryService } from "@roo-code/telemetry"
+import { TelemetryEventName } from "@roo-code/types"
+
+// Timeout constants for Ollama API requests
+const OLLAMA_EMBEDDING_TIMEOUT_MS = 60000 // 60 seconds for embedding requests
+const OLLAMA_VALIDATION_TIMEOUT_MS = 30000 // 30 seconds for validation requests
 
 /**
  * Implements the IEmbedder interface using a local Ollama instance.
@@ -59,7 +65,7 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
 
 			// Add timeout to prevent indefinite hanging
 			const controller = new AbortController()
-			const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+			const timeoutId = setTimeout(() => controller.abort(), OLLAMA_EMBEDDING_TIMEOUT_MS)
 
 			const response = await fetch(url, {
 				method: "POST",
@@ -102,6 +108,13 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
 				embeddings: embeddings,
 			}
 		} catch (error: any) {
+			// Capture telemetry before reformatting the error
+			TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
+				error: sanitizeErrorMessage(error instanceof Error ? error.message : String(error)),
+				stack: error instanceof Error ? sanitizeErrorMessage(error.stack || "") : undefined,
+				location: "OllamaEmbedder:createEmbeddings",
+			})
+
 			// Log the original error for debugging purposes
 			console.error("Ollama embedding failed:", error)
 
@@ -131,7 +144,7 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
 
 				// Add timeout to prevent indefinite hanging
 				const controller = new AbortController()
-				const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
+				const timeoutId = setTimeout(() => controller.abort(), OLLAMA_VALIDATION_TIMEOUT_MS)
 
 				const modelsResponse = await fetch(modelsUrl, {
 					method: "GET",
@@ -188,7 +201,7 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
 
 				// Add timeout for test request too
 				const testController = new AbortController()
-				const testTimeoutId = setTimeout(() => testController.abort(), 5000)
+				const testTimeoutId = setTimeout(() => testController.abort(), OLLAMA_VALIDATION_TIMEOUT_MS)
 
 				const testResponse = await fetch(testUrl, {
 					method: "POST",
@@ -222,16 +235,34 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
 						error?.code === "ECONNREFUSED" ||
 						error?.message?.includes("ECONNREFUSED")
 					) {
+						// Capture telemetry for connection failed error
+						TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
+							error: sanitizeErrorMessage(error instanceof Error ? error.message : String(error)),
+							stack: error instanceof Error ? sanitizeErrorMessage(error.stack || "") : undefined,
+							location: "OllamaEmbedder:validateConfiguration:connectionFailed",
+						})
 						return {
 							valid: false,
 							error: t("embeddings:ollama.serviceNotRunning", { baseUrl: this.baseUrl }),
 						}
 					} else if (error?.code === "ENOTFOUND" || error?.message?.includes("ENOTFOUND")) {
+						// Capture telemetry for host not found error
+						TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
+							error: sanitizeErrorMessage(error instanceof Error ? error.message : String(error)),
+							stack: error instanceof Error ? sanitizeErrorMessage(error.stack || "") : undefined,
+							location: "OllamaEmbedder:validateConfiguration:hostNotFound",
+						})
 						return {
 							valid: false,
 							error: t("embeddings:ollama.hostNotFound", { baseUrl: this.baseUrl }),
 						}
 					} else if (error?.name === "AbortError") {
+						// Capture telemetry for timeout error
+						TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
+							error: sanitizeErrorMessage(error instanceof Error ? error.message : String(error)),
+							stack: error instanceof Error ? sanitizeErrorMessage(error.stack || "") : undefined,
+							location: "OllamaEmbedder:validateConfiguration:timeout",
+						})
 						// Handle timeout
 						return {
 							valid: false,

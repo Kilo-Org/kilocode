@@ -23,7 +23,8 @@
 		"failedToProcessBatchWithError": "فشل في معالجة الدفعة بعد {{maxRetries}} محاولة: {{errorMessage}}"
 	},
 	"vectorStore": {
-		"qdrantConnectionFailed": "فشل الاتصال بقاعدة بيانات المتجهات Qdrant. تأكد أن Qdrant شغّال ومتوفّر على {{qdrantUrl}}. الخطأ: {{errorMessage}}"
+		"qdrantConnectionFailed": "فشل الاتصال بقاعدة بيانات المتجهات Qdrant. تأكد أن Qdrant شغّال ومتوفّر على {{qdrantUrl}}. الخطأ: {{errorMessage}}",
+		"vectorDimensionMismatch": "فشل في تحديث فهرس المتجهات للنموذج الجديد. يرجى محاولة مسح الفهرس والبدء من جديد. التفاصيل: {{errorMessage}}"
 	},
 	"validation": {
 		"authenticationFailed": "فشل التحقق من الهوية. يرجى التحقق من مفتاح الـ API في الإعدادات.",
@@ -36,7 +37,9 @@
 		"invalidApiKey": "مفتاح API غير صالح. يرجى التحقق من إعدادات مفتاح الـ API.",
 		"invalidBaseUrl": "الرابط الأساسي غير صالح. يرجى التحقق من إعدادات الرابط.",
 		"invalidModel": "النموذج غير صالح. يرجى التحقق من إعدادات النموذج.",
-		"invalidResponse": "استجابة غير صالحة من خدمة التضمين. يرجى التحقق من الإعدادات."
+		"invalidResponse": "استجابة غير صالحة من خدمة التضمين. يرجى التحقق من الإعدادات.",
+		"apiKeyRequired": "مفتاح API مطلوب لهذا المضمّن",
+		"baseUrlRequired": "الرابط الأساسي مطلوب لهذا المضمّن"
 	},
 	"serviceFactory": {
 		"openAiConfigMissing": "إعدادات OpenAI مفقودة لإنشاء التضمين",

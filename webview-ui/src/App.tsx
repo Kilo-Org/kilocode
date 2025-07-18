@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import { useEvent } from "react-use"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 
@@ -21,6 +21,7 @@ import ModesView from "./components/modes/ModesView"
 import { HumanRelayDialog } from "./components/human-relay/HumanRelayDialog"
 import BottomControls from "./components/kilocode/BottomControls" // kilocode_change
 // import { AccountView } from "./components/account/AccountView" // kilocode_change: we have our own profile view
+import { DeleteMessageDialog, EditMessageDialog } from "./components/chat/MessageModificationConfirmationDialog"
 import { useAddNonInteractiveClickListener } from "./components/ui/hooks/useNonInteractiveClick"
 import { KiloCodeErrorBoundary } from "./kilocode/KiloCodeErrorBoundary"
 import { TooltipProvider } from "./components/ui/tooltip"
@@ -28,6 +29,29 @@ import { STANDARD_TOOLTIP_DELAY } from "./components/ui/standard-tooltip"
 import { useKiloIdentity } from "./utils/kilocode/useKiloIdentity"
 
 type Tab = "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "account" | "profile" // kilocode_change: add "profile"
+
+interface HumanRelayDialogState {
+	isOpen: boolean
+	requestId: string
+	promptText: string
+}
+
+interface DeleteMessageDialogState {
+	isOpen: boolean
+	messageTs: number
+}
+
+interface EditMessageDialogState {
+	isOpen: boolean
+	messageTs: number
+	text: string
+	images?: string[]
+}
+
+// Memoize dialog components to prevent unnecessary re-renders
+const MemoizedDeleteMessageDialog = React.memo(DeleteMessageDialog)
+const MemoizedEditMessageDialog = React.memo(EditMessageDialog)
+const MemoizedHumanRelayDialog = React.memo(HumanRelayDialog)
 
 const tabsByMessageAction: Partial<Record<NonNullable<ExtensionMessage["action"]>, Tab>> = {
 	chatButtonClicked: "chat",
@@ -61,14 +85,22 @@ const App = () => {
 	const [showAnnouncement, setShowAnnouncement] = useState(false)
 	const [tab, setTab] = useState<Tab>("chat")
 
-	const [humanRelayDialogState, setHumanRelayDialogState] = useState<{
-		isOpen: boolean
-		requestId: string
-		promptText: string
-	}>({
+	const [humanRelayDialogState, setHumanRelayDialogState] = useState<HumanRelayDialogState>({
 		isOpen: false,
 		requestId: "",
 		promptText: "",
+	})
+
+	const [deleteMessageDialogState, setDeleteMessageDialogState] = useState<DeleteMessageDialogState>({
+		isOpen: false,
+		messageTs: 0,
+	})
+
+	const [editMessageDialogState, setEditMessageDialogState] = useState<EditMessageDialogState>({
+		isOpen: false,
+		messageTs: 0,
+		text: "",
+		images: [],
 	})
 
 	const settingsRef = useRef<SettingsViewRef>(null)
@@ -134,6 +166,19 @@ const App = () => {
 			if (message.type === "showHumanRelayDialog" && message.requestId && message.promptText) {
 				const { requestId, promptText } = message
 				setHumanRelayDialogState({ isOpen: true, requestId, promptText })
+			}
+
+			if (message.type === "showDeleteMessageDialog" && message.messageTs) {
+				setDeleteMessageDialogState({ isOpen: true, messageTs: message.messageTs })
+			}
+
+			if (message.type === "showEditMessageDialog" && message.messageTs && message.text) {
+				setEditMessageDialogState({
+					isOpen: true,
+					messageTs: message.messageTs,
+					text: message.text,
+					images: message.images || [],
+				})
 			}
 
 			if (message.type === "acceptInput") {
@@ -213,13 +258,37 @@ const App = () => {
 				showAnnouncement={showAnnouncement}
 				hideAnnouncement={() => setShowAnnouncement(false)}
 			/>
-			<HumanRelayDialog
+			<MemoizedHumanRelayDialog
 				isOpen={humanRelayDialogState.isOpen}
 				requestId={humanRelayDialogState.requestId}
 				promptText={humanRelayDialogState.promptText}
 				onClose={() => setHumanRelayDialogState((prev) => ({ ...prev, isOpen: false }))}
 				onSubmit={(requestId, text) => vscode.postMessage({ type: "humanRelayResponse", requestId, text })}
 				onCancel={(requestId) => vscode.postMessage({ type: "humanRelayCancel", requestId })}
+			/>
+			<MemoizedDeleteMessageDialog
+				open={deleteMessageDialogState.isOpen}
+				onOpenChange={(open) => setDeleteMessageDialogState((prev) => ({ ...prev, isOpen: open }))}
+				onConfirm={() => {
+					vscode.postMessage({
+						type: "deleteMessageConfirm",
+						messageTs: deleteMessageDialogState.messageTs,
+					})
+					setDeleteMessageDialogState((prev) => ({ ...prev, isOpen: false }))
+				}}
+			/>
+			<MemoizedEditMessageDialog
+				open={editMessageDialogState.isOpen}
+				onOpenChange={(open) => setEditMessageDialogState((prev) => ({ ...prev, isOpen: open }))}
+				onConfirm={() => {
+					vscode.postMessage({
+						type: "editMessageConfirm",
+						messageTs: editMessageDialogState.messageTs,
+						text: editMessageDialogState.text,
+						images: editMessageDialogState.images,
+					})
+					setEditMessageDialogState((prev) => ({ ...prev, isOpen: false }))
+				}}
 			/>
 			{/* kilocode_change */}
 			{/* Chat, modes and history view contain their own bottom controls */}

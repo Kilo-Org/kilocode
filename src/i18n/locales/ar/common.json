@@ -75,6 +75,7 @@
 		"url_page_not_found": "الصفحة غير موجودة. تأكد من صحة الرابط.",
 		"url_fetch_failed": "فشل جلب محتوى الرابط: {{error}}",
 		"url_fetch_error_with_url": "خطأ في جلب محتوى {{url}}: {{error}}",
+		"command_timeout": "انتهت مهلة تنفيذ الأمر بعد {{seconds}} ثانية",
 		"share_task_failed": "فشل في مشاركة المهمة. جرّب مرة ثانية.",
 		"share_no_active_task": "ما فيه مهمة شغالة حالياً",
 		"share_auth_required": "لازم تسجل دخول عشان تشارك المهام.",

@@ -23,7 +23,8 @@
 		"failedToProcessBatchWithError": "No s'ha pogut processar el lot després de {{maxRetries}} intents: {{errorMessage}}"
 	},
 	"vectorStore": {
-		"qdrantConnectionFailed": "No s'ha pogut connectar a la base de dades vectorial Qdrant. Assegura't que Qdrant estigui funcionant i sigui accessible a {{qdrantUrl}}. Error: {{errorMessage}}"
+		"qdrantConnectionFailed": "No s'ha pogut connectar a la base de dades vectorial Qdrant. Assegura't que Qdrant estigui funcionant i sigui accessible a {{qdrantUrl}}. Error: {{errorMessage}}",
+		"vectorDimensionMismatch": "No s'ha pogut actualitzar l'índex de vectors per al nou model. Prova d'esborrar l'índex i tornar a començar. Detalls: {{errorMessage}}"
 	},
 	"validation": {
 		"authenticationFailed": "Ha fallat l'autenticació. Comproveu la vostra clau d'API a la configuració.",
@@ -36,7 +37,9 @@
 		"invalidApiKey": "Clau d'API no vàlida. Comproveu la vostra configuració de clau d'API.",
 		"invalidBaseUrl": "URL base no vàlida. Comproveu la vostra configuració d'URL.",
 		"invalidModel": "Model no vàlid. Comproveu la vostra configuració de model.",
-		"invalidResponse": "Resposta no vàlida del servei d'incrustació. Comproveu la vostra configuració."
+		"invalidResponse": "Resposta no vàlida del servei d'incrustació. Comproveu la vostra configuració.",
+		"apiKeyRequired": "Es requereix una clau d'API per a aquest incrustador",
+		"baseUrlRequired": "Es requereix una URL base per a aquest incrustador"
 	},
 	"serviceFactory": {
 		"openAiConfigMissing": "Falta la configuració d'OpenAI per crear l'embedder",

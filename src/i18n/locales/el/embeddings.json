@@ -23,7 +23,8 @@
 		"failedToProcessBatchWithError": "Αποτυχία επεξεργασίας παρτίδας μετά από {{maxRetries}} προσπάθειες: {{errorMessage}}"
 	},
 	"vectorStore": {
-		"qdrantConnectionFailed": "Αποτυχία σύνδεσης με τη βάση δεδομένων Qdrant vector. Παρακαλώ βεβαιώσου ότι το Qdrant εκτελείται και είναι προσβάσιμο στο {{qdrantUrl}}. Σφάλμα: {{errorMessage}}"
+		"qdrantConnectionFailed": "Αποτυχία σύνδεσης με τη βάση δεδομένων Qdrant vector. Παρακαλώ βεβαιώσου ότι το Qdrant εκτελείται και είναι προσβάσιμο στο {{qdrantUrl}}. Σφάλμα: {{errorMessage}}",
+		"vectorDimensionMismatch": "Αποτυχία ενημέρωσης του ευρετηρίου vector για το νέο μοντέλο. Παρακαλώ δοκίμασε να καθαρίσεις το ευρετήριο και να ξεκινήσεις ξανά. Λεπτομέρειες: {{errorMessage}}"
 	},
 	"validation": {
 		"authenticationFailed": "Η ταυτοποίηση απέτυχε. Παρακαλώ έλεγξε το API key σου στις ρυθμίσεις.",
@@ -36,7 +37,9 @@
 		"invalidApiKey": "Μη έγκυρο API key. Παρακαλώ έλεγξε τη διαμόρφωση του API key σου.",
 		"invalidBaseUrl": "Μη έγκυρο base URL. Παρακαλώ έλεγξε τη διαμόρφωση URL σου.",
 		"invalidModel": "Μη έγκυρο μοντέλο. Παρακαλώ έλεγξε τη διαμόρφωση του μοντέλου σου.",
-		"invalidResponse": "Μη έγκυρη απόκριση από την υπηρεσία embedder. Παρακαλώ έλεγξε τη διαμόρφωσή σου."
+		"invalidResponse": "Μη έγκυρη απόκριση από την υπηρεσία embedder. Παρακαλώ έλεγξε τη διαμόρφωσή σου.",
+		"apiKeyRequired": "Απαιτείται API key για αυτόν τον embedder",
+		"baseUrlRequired": "Απαιτείται Base URL για αυτόν τον embedder"
 	},
 	"serviceFactory": {
 		"openAiConfigMissing": "Λείπει η διαμόρφωση OpenAI για τη δημιουργία embedder",

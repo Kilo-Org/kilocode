@@ -45,7 +45,7 @@
 	},
 	"save": {
 		"title": "Save",
-		"tooltip": "Save the file changes"
+		"tooltip": "Save the message changes"
 	},
 	"tokenProgress": {
 		"availableSpace": "Available space: {{amount}} tokens",
@@ -93,6 +93,9 @@
 		"title": "Cancel",
 		"tooltip": "Cancel the current operation"
 	},
+	"editMessage": {
+		"placeholder": "Edit your message..."
+	},
 	"scrollToBottom": "Scroll to bottom of chat",
 	"about": "Generate, refactor, and debug code with AI assistance. Check out our <DocsLink>documentation</DocsLink> to learn more.",
 	"onboarding": "Your task list in this workspace is empty.",
@@ -138,6 +141,7 @@
 	"separator": "Separator",
 	"edit": "Edit...",
 	"forNextMode": "for next mode",
+	"forPreviousMode": "for previous mode",
 	"apiRequest": {
 		"title": "API Request",
 		"failed": "API Request Failed",
@@ -209,7 +213,8 @@
 	"codebaseSearch": {
 		"wantsToSearch": "Kilo Code wants to search the codebase for <code>{{query}}</code>:",
 		"wantsToSearchWithPath": "Kilo Code wants to search the codebase for <code>{{query}}</code> in <code>{{path}}</code>:",
-		"didSearch": "Found {{count}} result(s) for <code>{{query}}</code>:",
+		"didSearch_one": "Found 1 result",
+		"didSearch_other": "Found {{count}} results",
 		"resultTooltip": "Similarity score: {{score}} (click to open file)"
 	},
 	"commandOutput": "Command Output",
@@ -249,11 +254,14 @@
 	"autoApprove": {
 		"title": "Auto-approve:",
 		"none": "None",
-		"description": "Auto-approve allows Kilo Code to perform actions without asking for permission. Only enable for actions you fully trust. More detailed configuration available in <settingsLink>Settings</settingsLink>."
+		"description": "Auto-approve allows Kilo Code to perform actions without asking for permission. Only enable for actions you fully trust. More detailed configuration available in <settingsLink>Settings</settingsLink>.",
+		"selectOptionsFirst": "Select at least one option below to enable auto-approval",
+		"toggleAriaLabel": "Toggle auto-approval",
+		"disabledAriaLabel": "Auto-approval disabled - select options first"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} Released",
-		"description": "Roo Code {{version}} brings powerful new features and significant improvements to enhance your development workflow.",
+		"title": "🎉 Kilo Code {{version}} Released",
+		"description": "Kilo Code {{version}} brings powerful new features and significant improvements to enhance your development workflow.",
 		"whatsNew": "What's New",
 		"feature1": "<bold>Codebase Indexing Graduated from Experimental</bold>: Full codebase indexing is now stable and ready for production use with improved search and context understanding.",
 		"feature2": "<bold>New Todo List Feature</bold>: Keep your tasks on track with integrated todo management that helps you stay organized and focused on your development goals.",
@@ -301,7 +309,7 @@
 		}
 	},
 	"systemPromptWarning": "WARNING: Custom system prompt override active. This can severely break functionality and cause unpredictable behavior.",
-	"profileViolationWarning": "The current profile violates your organization's settings",
+	"profileViolationWarning": "The current profile isn't compatible with your organization's settings",
 	"shellIntegration": {
 		"title": "Command Execution Warning",
 		"description": "Your command is being executed without VSCode terminal shell integration. To suppress this warning you can disable shell integration in the <strong>Terminal</strong> section of the <settingsLink>Kilo Code settings</settingsLink> or troubleshoot VSCode terminal integration using the link below.",

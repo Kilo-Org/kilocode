@@ -45,7 +45,7 @@
 	},
 	"save": {
 		"title": "Opslaan",
-		"tooltip": "Bestandswijzigingen opslaan"
+		"tooltip": "Berichtwijzigingen opslaan"
 	},
 	"tokenProgress": {
 		"availableSpace": "Beschikbare ruimte: {{amount}} tokens",
@@ -130,6 +130,7 @@
 	"separator": "Scheidingsteken",
 	"edit": "Bewerken...",
 	"forNextMode": "voor volgende modus",
+	"forPreviousMode": "voor vorige modus",
 	"apiRequest": {
 		"title": "API-verzoek",
 		"failed": "API-verzoek mislukt",
@@ -229,11 +230,14 @@
 	"autoApprove": {
 		"title": "Automatisch goedkeuren:",
 		"none": "Geen",
-		"description": "Met automatisch goedkeuren kan Kilo Code acties uitvoeren zonder om toestemming te vragen. Schakel dit alleen in voor acties die je volledig vertrouwt. Meer gedetailleerde configuratie beschikbaar in de <settingsLink>Instellingen</settingsLink>."
+		"description": "Met automatisch goedkeuren kan Kilo Code acties uitvoeren zonder om toestemming te vragen. Schakel dit alleen in voor acties die je volledig vertrouwt. Meer gedetailleerde configuratie beschikbaar in de <settingsLink>Instellingen</settingsLink>.",
+		"selectOptionsFirst": "Selecteer hieronder minstens één optie om automatische goedkeuring in te schakelen",
+		"toggleAriaLabel": "Automatisch goedkeuren in-/uitschakelen",
+		"disabledAriaLabel": "Automatisch goedkeuren uitgeschakeld - selecteer eerst opties"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} uitgebracht",
-		"description": "Roo Code {{version}} brengt krachtige nieuwe functies en significante verbeteringen om je ontwikkelingsworkflow te verbeteren.",
+		"title": "🎉 Kilo Code {{version}} uitgebracht",
+		"description": "Kilo Code {{version}} brengt krachtige nieuwe functies en significante verbeteringen om je ontwikkelingsworkflow te verbeteren.",
 		"whatsNew": "Wat is er nieuw",
 		"feature1": "<bold>Codebase Indexering Afgestudeerd van Experimenteel</bold>: Volledige codebase indexering is nu stabiel en klaar voor productiegebruik met verbeterde zoekfunctionaliteit en contextbegrip.",
 		"feature2": "<bold>Nieuwe Todo Lijst Functie</bold>: Houd je taken op koers met geïntegreerd todo-beheer dat je helpt georganiseerd en gefocust te blijven op je ontwikkelingsdoelen.",
@@ -288,7 +292,7 @@
 		}
 	},
 	"systemPromptWarning": "WAARSCHUWING: Aangepaste systeemprompt actief. Dit kan de functionaliteit ernstig verstoren en onvoorspelbaar gedrag veroorzaken.",
-	"profileViolationWarning": "Het huidige profiel schendt de instellingen van uw organisatie",
+	"profileViolationWarning": "Het huidige profiel is niet compatibel met de instellingen van uw organisatie",
 	"shellIntegration": {
 		"title": "Waarschuwing commando-uitvoering",
 		"description": "Je commando wordt uitgevoerd zonder VSCode-terminal shell-integratie. Om deze waarschuwing te onderdrukken kun je shell-integratie uitschakelen in het gedeelte <strong>Terminal</strong> van de <settingsLink>Kilo Code-instellingen</settingsLink> of de VSCode-terminalintegratie oplossen via de onderstaande link.",
@@ -304,7 +308,8 @@
 	"codebaseSearch": {
 		"wantsToSearch": "Kilo Code wil de codebase doorzoeken op <code>{{query}}</code>:",
 		"wantsToSearchWithPath": "Kilo Code wil de codebase doorzoeken op <code>{{query}}</code> in <code>{{path}}</code>:",
-		"didSearch": "{{count}} resultaat/resultaten gevonden voor <code>{{query}}</code>:",
+		"didSearch_one": "1 resultaat gevonden",
+		"didSearch_other": "{{count}} resultaten gevonden",
 		"resultTooltip": "Gelijkenisscore: {{score}} (klik om bestand te openen)"
 	},
 	"read-batch": {
@@ -324,5 +329,8 @@
 	},
 	"versionIndicator": {
 		"ariaLabel": "Versie {{version}} - Klik om release notes te bekijken"
+	},
+	"editMessage": {
+		"placeholder": "Bewerk je bericht..."
 	}
 }

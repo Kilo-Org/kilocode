@@ -83,55 +83,6 @@ export const webviewMessageHandler = async (
 	}
 
 	/**
-	 * Removes just the target message, preserving messages after the next user message
-	 */
-	const removeMessagesJustThis = async (
-		currentCline: any,
-		messageIndex: number,
-		apiConversationHistoryIndex: number,
-	) => {
-		// Find the next user message first
-		const nextUserMessage = currentCline.clineMessages
-			.slice(messageIndex + 1)
-			.find((msg: ClineMessage) => msg.type === "say" && msg.say === "user_feedback")
-
-		// Handle UI messages
-		if (nextUserMessage) {
-			// Find absolute index of next user message
-			const nextUserMessageIndex = currentCline.clineMessages.findIndex(
-				(msg: ClineMessage) => msg === nextUserMessage,
-			)
-
-			// Keep messages before current message and after next user message
-			await currentCline.overwriteClineMessages([
-				...currentCline.clineMessages.slice(0, messageIndex),
-				...currentCline.clineMessages.slice(nextUserMessageIndex),
-			])
-		} else {
-			// If no next user message, keep only messages before current message
-			await currentCline.overwriteClineMessages(currentCline.clineMessages.slice(0, messageIndex))
-		}
-
-		// Handle API messages
-		if (apiConversationHistoryIndex !== -1) {
-			if (nextUserMessage && nextUserMessage.ts) {
-				// Keep messages before current API message and after next user message
-				await currentCline.overwriteApiConversationHistory([
-					...currentCline.apiConversationHistory.slice(0, apiConversationHistoryIndex),
-					...currentCline.apiConversationHistory.filter(
-						(msg: ApiMessage) => msg.ts && msg.ts >= nextUserMessage.ts,
-					),
-				])
-			} else {
-				// If no next user message, keep only messages before current API message
-				await currentCline.overwriteApiConversationHistory(
-					currentCline.apiConversationHistory.slice(0, apiConversationHistoryIndex),
-				)
-			}
-		}
-	}
-
-	/**
 	 * Removes the target message and all subsequent messages
 	 */
 	const removeMessagesThisAndSubsequent = async (
@@ -153,19 +104,19 @@ export const webviewMessageHandler = async (
 	 * Handles message deletion operations with user confirmation
 	 */
 	const handleDeleteOperation = async (messageTs: number): Promise<void> => {
-		const options = [
-			t("common:confirmation.delete_just_this_message"),
-			t("common:confirmation.delete_this_and_subsequent"),
-		]
+		// Send message to webview to show delete confirmation dialog
+		await provider.postMessageToWebview({
+			type: "showDeleteMessageDialog",
+			messageTs,
+		})
+	}
 
-		const answer = await vscode.window.showInformationMessage(
-			t("common:confirmation.delete_message"),
-			{ modal: true },
-			...options,
-		)
-
-		// Only proceed if user selected one of the options and we have a current cline
-		if (answer && options.includes(answer) && provider.getCurrentCline()) {
+	/**
+	 * Handles confirmed message deletion from webview dialog
+	 */
+	const handleDeleteMessageConfirm = async (messageTs: number): Promise<void> => {
+		// Only proceed if we have a current cline
+		if (provider.getCurrentCline()) {
 			const currentCline = provider.getCurrentCline()!
 			const { messageIndex, apiConversationHistoryIndex } = findMessageIndices(messageTs, currentCline)
 
@@ -173,14 +124,8 @@ export const webviewMessageHandler = async (
 				try {
 					const { historyItem } = await provider.getTaskWithId(currentCline.taskId)
 
-					// Check which option the user selected
-					if (answer === options[0]) {
-						// Delete just this message
-						await removeMessagesJustThis(currentCline, messageIndex, apiConversationHistoryIndex)
-					} else if (answer === options[1]) {
-						// Delete this message and all subsequent
-						await removeMessagesThisAndSubsequent(currentCline, messageIndex, apiConversationHistoryIndex)
-					}
+					// Delete this message and all subsequent messages
+					await removeMessagesThisAndSubsequent(currentCline, messageIndex, apiConversationHistoryIndex)
 
 					// Initialize with history item after deletion
 					await provider.initClineWithHistoryItem(historyItem)
@@ -197,15 +142,26 @@ export const webviewMessageHandler = async (
 	/**
 	 * Handles message editing operations with user confirmation
 	 */
-	const handleEditOperation = async (messageTs: number, editedContent: string): Promise<void> => {
-		const answer = await vscode.window.showWarningMessage(
-			t("common:confirmation.edit_warning"),
-			{ modal: true },
-			t("common:confirmation.proceed"),
-		)
+	const handleEditOperation = async (messageTs: number, editedContent: string, images?: string[]): Promise<void> => {
+		// Send message to webview to show edit confirmation dialog
+		await provider.postMessageToWebview({
+			type: "showEditMessageDialog",
+			messageTs,
+			text: editedContent,
+			images,
+		})
+	}
 
-		// Only proceed if user selected "Proceed" and we have a current cline
-		if (answer === t("common:confirmation.proceed") && provider.getCurrentCline()) {
+	/**
+	 * Handles confirmed message editing from webview dialog
+	 */
+	const handleEditMessageConfirm = async (
+		messageTs: number,
+		editedContent: string,
+		images?: string[],
+	): Promise<void> => {
+		// Only proceed if we have a current cline
+		if (provider.getCurrentCline()) {
 			const currentCline = provider.getCurrentCline()!
 
 			// Use findMessageIndices to find messages based on timestamp
@@ -222,6 +178,7 @@ export const webviewMessageHandler = async (
 						type: "askResponse",
 						askResponse: "messageResponse",
 						text: editedContent,
+						images,
 					})
 
 					// Don't initialize with history item for edit operations
@@ -247,11 +204,12 @@ export const webviewMessageHandler = async (
 		messageTs: number,
 		operation: "delete" | "edit",
 		editedContent?: string,
+		images?: string[],
 	): Promise<void> => {
 		if (operation === "delete") {
 			await handleDeleteOperation(messageTs)
 		} else if (operation === "edit" && editedContent) {
-			await handleEditOperation(messageTs, editedContent)
+			await handleEditOperation(messageTs, editedContent, images)
 		}
 	}
 
@@ -432,7 +390,12 @@ export const webviewMessageHandler = async (
 			break
 		case "selectImages":
 			const images = await selectImages()
-			await provider.postMessageToWebview({ type: "selectedImages", images })
+			await provider.postMessageToWebview({
+				type: "selectedImages",
+				images,
+				context: message.context,
+				messageTs: message.messageTs,
+			})
 			break
 		case "exportCurrentTask":
 			const currentTaskId = provider.getCurrentCline()?.taskId
@@ -802,6 +765,22 @@ export const webviewMessageHandler = async (
 			await vscode.workspace
 				.getConfiguration(Package.name)
 				.update("allowedCommands", validCommands, vscode.ConfigurationTarget.Global)
+
+			break
+		}
+		case "deniedCommands": {
+			// Validate and sanitize the commands array
+			const commands = message.commands ?? []
+			const validCommands = Array.isArray(commands)
+				? commands.filter((cmd) => typeof cmd === "string" && cmd.trim().length > 0)
+				: []
+
+			await updateGlobalState("deniedCommands", validCommands)
+
+			// Also update workspace settings.
+			await vscode.workspace
+				.getConfiguration(Package.name)
+				.update("deniedCommands", validCommands, vscode.ConfigurationTarget.Global)
 
 			break
 		}
@@ -1243,7 +1222,12 @@ export const webviewMessageHandler = async (
 				message.value &&
 				message.editedMessageContent
 			) {
-				await handleMessageModificationsOperation(message.value, "edit", message.editedMessageContent)
+				await handleMessageModificationsOperation(
+					message.value,
+					"edit",
+					message.editedMessageContent,
+					message.images,
+				)
 			}
 			break
 		}
@@ -1623,6 +1607,16 @@ export const webviewMessageHandler = async (
 
 					vscode.window.showErrorMessage(t("common:errors.delete_api_config"))
 				}
+			}
+			break
+		case "deleteMessageConfirm":
+			if (message.messageTs) {
+				await handleDeleteMessageConfirm(message.messageTs)
+			}
+			break
+		case "editMessageConfirm":
+			if (message.messageTs && message.text) {
+				await handleEditMessageConfirm(message.messageTs, message.text, message.images)
 			}
 			break
 		case "getListApiConfiguration":

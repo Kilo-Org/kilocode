@@ -2,6 +2,7 @@ import { EventEmitter } from "events"
 import * as vscode from "vscode"
 import fs from "fs/promises"
 import * as path from "path"
+import * as os from "os"
 
 import {
 	RooCodeAPI,
@@ -50,7 +51,7 @@ export class API extends EventEmitter<RooCodeEvents> implements RooCodeAPI {
 				console.log(args)
 			}
 
-			this.logfile = path.join(getWorkspacePath(), "kilo-code-messages.log")
+			this.logfile = path.join(os.tmpdir(), "kilo-code-messages.log")
 		} else {
 			this.log = () => {}
 		}
@@ -124,6 +125,22 @@ export class API extends EventEmitter<RooCodeEvents> implements RooCodeAPI {
 				await vscode.workspace
 					.getConfiguration(Package.name)
 					.update("allowedCommands", configuration.allowedCommands, vscode.ConfigurationTarget.Global)
+			}
+
+			if (configuration.deniedCommands) {
+				await vscode.workspace
+					.getConfiguration(Package.name)
+					.update("deniedCommands", configuration.deniedCommands, vscode.ConfigurationTarget.Global)
+			}
+
+			if (configuration.commandExecutionTimeout !== undefined) {
+				await vscode.workspace
+					.getConfiguration(Package.name)
+					.update(
+						"commandExecutionTimeout",
+						configuration.commandExecutionTimeout,
+						vscode.ConfigurationTarget.Global,
+					)
 			}
 		}
 
@@ -223,9 +240,11 @@ export class API extends EventEmitter<RooCodeEvents> implements RooCodeAPI {
 
 			cline.on("taskCompleted", async (_, tokenUsage, toolUsage) => {
 				let isSubtask = false
+
 				if (cline.rootTask != undefined) {
 					isSubtask = true
 				}
+
 				this.emit(RooCodeEventName.TaskCompleted, cline.taskId, tokenUsage, toolUsage, { isSubtask: isSubtask })
 				this.taskMap.delete(cline.taskId)
 

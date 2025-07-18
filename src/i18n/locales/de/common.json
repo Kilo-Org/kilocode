@@ -25,12 +25,7 @@
 	"confirmation": {
 		"reset_state": "Möchtest du wirklich alle Zustände und geheimen Speicher in der Erweiterung zurücksetzen? Dies kann nicht rückgängig gemacht werden.",
 		"delete_config_profile": "Möchtest du dieses Konfigurationsprofil wirklich löschen?",
-		"delete_custom_mode_with_rules": "Bist du sicher, dass du diesen {scope}-Modus löschen möchtest?\n\nDadurch wird auch der zugehörige Regelordner unter folgender Adresse gelöscht:\n{rulesFolderPath}",
-		"delete_message": "Was möchtest du löschen?",
-		"edit_warning": "Das Bearbeiten dieser Nachricht wird alle nachfolgenden Nachrichten in der Unterhaltung löschen. Möchtest du fortfahren?",
-		"delete_just_this_message": "Nur diese Nachricht",
-		"delete_this_and_subsequent": "Diese und alle nachfolgenden Nachrichten",
-		"proceed": "Fortfahren"
+		"delete_custom_mode_with_rules": "Bist du sicher, dass du diesen {scope}-Modus löschen möchtest?\n\nDadurch wird auch der zugehörige Regelordner unter folgender Adresse gelöscht:\n{rulesFolderPath}"
 	},
 	"errors": {
 		"invalid_data_uri": "Ungültiges Daten-URI-Format",
@@ -62,7 +57,7 @@
 		"cannot_access_path": "Zugriff auf Pfad {{path}} nicht möglich: {{error}}",
 		"settings_import_failed": "Fehler beim Importieren der Einstellungen: {{error}}.",
 		"mistake_limit_guidance": "Dies kann auf einen Fehler im Denkprozess des Modells oder die Unfähigkeit hinweisen, ein Tool richtig zu verwenden, was durch Benutzerführung behoben werden kann (z.B. \"Versuche, die Aufgabe in kleinere Schritte zu unterteilen\").",
-		"violated_organization_allowlist": "Aufgabe konnte nicht ausgeführt werden: Das aktuelle Profil verstößt gegen die Einstellungen deiner Organisation",
+		"violated_organization_allowlist": "Aufgabe konnte nicht ausgeführt werden: Das aktuelle Profil ist nicht kompatibel mit den Einstellungen deiner Organisation",
 		"condense_failed": "Fehler beim Verdichten des Kontexts",
 		"condense_not_enough_messages": "Nicht genügend Nachrichten zum Verdichten des Kontexts von {{prevContextTokens}} Token. Mindestens {{minimumMessageCount}} Nachrichten sind erforderlich, aber nur {{messageCount}} sind verfügbar.",
 		"condensed_recently": "Kontext wurde kürzlich verdichtet; dieser Versuch wird übersprungen",
@@ -75,6 +70,7 @@
 		"url_page_not_found": "Die Seite wurde nicht gefunden. Bitte prüfe, ob die URL korrekt ist.",
 		"url_fetch_failed": "Fehler beim Abrufen des URL-Inhalts: {{error}}",
 		"url_fetch_error_with_url": "Fehler beim Abrufen des Inhalts für {{url}}: {{error}}",
+		"command_timeout": "Zeitüberschreitung bei der Befehlsausführung nach {{seconds}} Sekunden",
 		"share_task_failed": "Teilen der Aufgabe fehlgeschlagen. Bitte versuche es erneut.",
 		"share_no_active_task": "Keine aktive Aufgabe zum Teilen",
 		"share_auth_required": "Authentifizierung erforderlich. Bitte melde dich an, um Aufgaben zu teilen.",

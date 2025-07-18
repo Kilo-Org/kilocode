@@ -25,12 +25,7 @@
 	"confirmation": {
 		"reset_state": "Uzantıdaki tüm durumları ve gizli depolamayı sıfırlamak istediğinizden emin misiniz? Bu işlem geri alınamaz.",
 		"delete_config_profile": "Bu yapılandırma profilini silmek istediğinizden emin misiniz?",
-		"delete_custom_mode_with_rules": "Bu {scope} modunu silmek istediğinizden emin misiniz?\n\nBu işlem, ilişkili kurallar klasörünü de şu konumdan silecektir:\n{rulesFolderPath}",
-		"delete_message": "Neyi silmek istersiniz?",
-		"delete_just_this_message": "Sadece bu mesajı",
-		"delete_this_and_subsequent": "Bu ve sonraki tüm mesajları",
-		"edit_warning": "Bu mesajı düzenlemek konuşmadaki tüm sonraki mesajları silecektir. Devam etmek istiyor musunuz?",
-		"proceed": "Devam et"
+		"delete_custom_mode_with_rules": "Bu {scope} modunu silmek istediğinizden emin misiniz?\n\nBu işlem, ilişkili kurallar klasörünü de şu konumdan silecektir:\n{rulesFolderPath}"
 	},
 	"errors": {
 		"invalid_data_uri": "Geçersiz veri URI formatı",
@@ -62,7 +57,7 @@
 		"cannot_access_path": "{{path}} yoluna erişilemiyor: {{error}}",
 		"settings_import_failed": "Ayarlar içe aktarılamadı: {{error}}.",
 		"mistake_limit_guidance": "Bu, modelin düşünce sürecindeki bir başarısızlığı veya bir aracı düzgün kullanamama durumunu gösterebilir, bu da kullanıcı rehberliği ile hafifletilebilir (örn. \"Görevi daha küçük adımlara bölmeyi deneyin\").",
-		"violated_organization_allowlist": "Görev yürütülemedi: Geçerli profil kuruluşunuzun ayarlarını ihlal ediyor",
+		"violated_organization_allowlist": "Görev yürütülemedi: Geçerli profil kuruluşunuzun ayarlarıyla uyumlu değil",
 		"condense_failed": "Bağlam sıkıştırılamadı",
 		"condense_not_enough_messages": "{{prevContextTokens}} token'lık bağlamı sıkıştırmak için yeterli mesaj yok. En az {{minimumMessageCount}} mesaj gerekli, ancak sadece {{messageCount}} mesaj mevcut.",
 		"condensed_recently": "Bağlam yakın zamanda sıkıştırıldı; bu deneme atlanıyor",
@@ -75,6 +70,7 @@
 		"url_page_not_found": "Sayfa bulunamadı. URL'nin doğru olup olmadığını kontrol et.",
 		"url_fetch_failed": "URL içeriği getirme hatası: {{error}}",
 		"url_fetch_error_with_url": "{{url}} için içerik getirme hatası: {{error}}",
+		"command_timeout": "Komut çalıştırma {{seconds}} saniye sonra zaman aşımına uğradı",
 		"share_task_failed": "Görev paylaşılamadı",
 		"share_no_active_task": "Paylaşılacak aktif görev yok",
 		"share_auth_required": "Kimlik doğrulama gerekli. Görevleri paylaşmak için lütfen giriş yapın.",

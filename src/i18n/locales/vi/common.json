@@ -25,12 +25,7 @@
 	"confirmation": {
 		"reset_state": "Bạn có chắc chắn muốn đặt lại tất cả trạng thái và lưu trữ bí mật trong tiện ích mở rộng không? Hành động này không thể hoàn tác.",
 		"delete_config_profile": "Bạn có chắc chắn muốn xóa hồ sơ cấu hình này không?",
-		"delete_custom_mode_with_rules": "Bạn có chắc chắn muốn xóa chế độ {scope} này không?\n\nThao tác này cũng sẽ xóa thư mục quy tắc liên quan tại:\n{rulesFolderPath}",
-		"delete_message": "Bạn muốn xóa gì?",
-		"delete_just_this_message": "Chỉ tin nhắn này",
-		"delete_this_and_subsequent": "Tin nhắn này và tất cả tin nhắn tiếp theo",
-		"edit_warning": "Chỉnh sửa tin nhắn này sẽ xóa tất cả tin nhắn tiếp theo trong cuộc trò chuyện. Bạn có muốn tiếp tục không?",
-		"proceed": "Tiếp tục"
+		"delete_custom_mode_with_rules": "Bạn có chắc chắn muốn xóa chế độ {scope} này không?\n\nThao tác này cũng sẽ xóa thư mục quy tắc liên quan tại:\n{rulesFolderPath}"
 	},
 	"errors": {
 		"invalid_data_uri": "Định dạng URI dữ liệu không hợp lệ",
@@ -62,7 +57,7 @@
 		"cannot_access_path": "Không thể truy cập đường dẫn {{path}}: {{error}}",
 		"settings_import_failed": "Nhập cài đặt thất bại: {{error}}.",
 		"mistake_limit_guidance": "Điều này có thể cho thấy sự thất bại trong quá trình suy nghĩ của mô hình hoặc không thể sử dụng công cụ đúng cách, có thể được giảm thiểu bằng hướng dẫn của người dùng (ví dụ: \"Hãy thử chia nhỏ nhiệm vụ thành các bước nhỏ hơn\").",
-		"violated_organization_allowlist": "Không thể chạy tác vụ: hồ sơ hiện tại vi phạm cài đặt của tổ chức của bạn",
+		"violated_organization_allowlist": "Không thể chạy tác vụ: hồ sơ hiện tại không tương thích với cài đặt của tổ chức của bạn",
 		"condense_failed": "Không thể nén ngữ cảnh",
 		"condense_not_enough_messages": "Không đủ tin nhắn để nén ngữ cảnh của {{prevContextTokens}} token. Cần ít nhất {{minimumMessageCount}} tin nhắn, nhưng chỉ có {{messageCount}} tin nhắn khả dụng.",
 		"condensed_recently": "Ngữ cảnh đã được nén gần đây; bỏ qua lần thử này",
@@ -75,6 +70,7 @@
 		"url_page_not_found": "Không tìm thấy trang. Vui lòng kiểm tra URL có đúng không.",
 		"url_fetch_failed": "Lỗi lấy nội dung URL: {{error}}",
 		"url_fetch_error_with_url": "Lỗi lấy nội dung cho {{url}}: {{error}}",
+		"command_timeout": "Thực thi lệnh đã hết thời gian chờ sau {{seconds}} giây",
 		"share_task_failed": "Không thể chia sẻ nhiệm vụ",
 		"share_no_active_task": "Không có nhiệm vụ hoạt động để chia sẻ",
 		"share_auth_required": "Cần xác thực. Vui lòng đăng nhập để chia sẻ nhiệm vụ.",

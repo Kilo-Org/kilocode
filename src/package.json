@@ -486,6 +486,21 @@
 					],
 					"description": "%commands.allowedCommands.description%"
 				},
+				"kilo-code.deniedCommands": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"default": [],
+					"description": "%commands.deniedCommands.description%"
+				},
+				"kilo-code.commandExecutionTimeout": {
+					"type": "number",
+					"default": 0,
+					"minimum": 0,
+					"maximum": 600,
+					"description": "%commands.commandExecutionTimeout.description%"
+				},
 				"kilo-code.vsCodeLmModelSelector": {
 					"type": "object",
 					"properties": {

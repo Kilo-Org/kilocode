@@ -25,12 +25,7 @@
 	"confirmation": {
 		"reset_state": "Czy na pewno chcesz zresetować wszystkie stany i tajne magazyny w rozszerzeniu? Tej operacji nie można cofnąć.",
 		"delete_config_profile": "Czy na pewno chcesz usunąć ten profil konfiguracyjny?",
-		"delete_custom_mode_with_rules": "Czy na pewno chcesz usunąć ten tryb {scope}?\n\nSpowoduje to również usunięcie powiązanego folderu reguł pod adresem:\n{rulesFolderPath}",
-		"delete_message": "Co chcesz usunąć?",
-		"delete_just_this_message": "Tylko tę wiadomość",
-		"delete_this_and_subsequent": "Tę i wszystkie kolejne wiadomości",
-		"edit_warning": "Edytowanie tej wiadomości usunie wszystkie kolejne wiadomości w rozmowie. Czy chcesz kontynuować?",
-		"proceed": "Kontynuuj"
+		"delete_custom_mode_with_rules": "Czy na pewno chcesz usunąć ten tryb {scope}?\n\nSpowoduje to również usunięcie powiązanego folderu reguł pod adresem:\n{rulesFolderPath}"
 	},
 	"errors": {
 		"invalid_data_uri": "Nieprawidłowy format URI danych",
@@ -62,7 +57,7 @@
 		"cannot_access_path": "Nie można uzyskać dostępu do ścieżki {{path}}: {{error}}",
 		"settings_import_failed": "Nie udało się zaimportować ustawień: {{error}}.",
 		"mistake_limit_guidance": "To może wskazywać na błąd w procesie myślowym modelu lub niezdolność do prawidłowego użycia narzędzia, co można złagodzić poprzez wskazówki użytkownika (np. \"Spróbuj podzielić zadanie na mniejsze kroki\").",
-		"violated_organization_allowlist": "Nie udało się uruchomić zadania: bieżący profil narusza ustawienia Twojej organizacji",
+		"violated_organization_allowlist": "Nie udało się uruchomić zadania: bieżący profil nie jest kompatybilny z ustawieniami Twojej organizacji",
 		"condense_failed": "Nie udało się skondensować kontekstu",
 		"condense_not_enough_messages": "Za mało wiadomości do skondensowania kontekstu {{prevContextTokens}} tokenów. Wymagane jest co najmniej {{minimumMessageCount}} wiadomości, ale dostępnych jest tylko {{messageCount}}.",
 		"condensed_recently": "Kontekst został niedawno skondensowany; pomijanie tej próby",
@@ -75,6 +70,7 @@
 		"url_page_not_found": "Strona nie została znaleziona. Sprawdź, czy URL jest poprawny.",
 		"url_fetch_failed": "Błąd pobierania zawartości URL: {{error}}",
 		"url_fetch_error_with_url": "Błąd pobierania zawartości dla {{url}}: {{error}}",
+		"command_timeout": "Przekroczono limit czasu wykonania polecenia po {{seconds}} sekundach",
 		"share_task_failed": "Nie udało się udostępnić zadania",
 		"share_no_active_task": "Brak aktywnego zadania do udostępnienia",
 		"share_auth_required": "Wymagana autoryzacja. Zaloguj się, aby udostępniać zadania.",

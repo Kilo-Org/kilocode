@@ -25,12 +25,7 @@
 	"confirmation": {
 		"reset_state": "您确定要重置扩展中的所有状态和密钥存储吗？此操作无法撤消。",
 		"delete_config_profile": "您确定要删除此配置文件吗？",
-		"delete_custom_mode_with_rules": "您确定要删除此 {scope} 模式吗？\n\n这也将删除位于以下位置的关联规则文件夹：\n{rulesFolderPath}",
-		"delete_message": "您想删除什么？",
-		"edit_warning": "编辑此消息将删除对话中的所有后续消息。您要继续吗？",
-		"delete_just_this_message": "仅此消息",
-		"delete_this_and_subsequent": "此消息及所有后续消息",
-		"proceed": "继续"
+		"delete_custom_mode_with_rules": "您确定要删除此 {scope} 模式吗？\n\n这也将删除位于以下位置的关联规则文件夹：\n{rulesFolderPath}"
 	},
 	"errors": {
 		"invalid_mcp_config": "项目MCP配置格式无效",
@@ -67,7 +62,7 @@
 		"cannot_access_path": "无法访问路径 {{path}}：{{error}}",
 		"settings_import_failed": "设置导入失败：{{error}}。",
 		"mistake_limit_guidance": "这可能表明模型思维过程失败或无法正确使用工具，可通过用户指导来缓解（例如\"尝试将任务分解为更小的步骤\"）。",
-		"violated_organization_allowlist": "执行任务失败：当前配置文件违反了您的组织设置",
+		"violated_organization_allowlist": "执行任务失败：当前配置文件与您的组织设置不兼容",
 		"condense_failed": "压缩上下文失败",
 		"condense_not_enough_messages": "消息数量不足，无法压缩 {{prevContextTokens}} Token 的上下文。至少需要 {{minimumMessageCount}} 条消息，但只有 {{messageCount}} 条可用。",
 		"condensed_recently": "上下文最近已压缩；跳过此次尝试",
@@ -80,6 +75,7 @@
 		"url_page_not_found": "页面未找到。请检查 URL 是否正确。",
 		"url_fetch_failed": "获取 URL 内容失败：{{error}}",
 		"url_fetch_error_with_url": "获取 {{url}} 内容时出错：{{error}}",
+		"command_timeout": "命令执行超时，{{seconds}} 秒后",
 		"share_task_failed": "分享任务失败。请重试。",
 		"share_no_active_task": "没有活跃任务可分享",
 		"share_auth_required": "需要身份验证。请登录以分享任务。",

@@ -93,6 +93,14 @@ export const taskPropertiesSchema = z.object({
 	modelId: z.string().optional(),
 	diffStrategy: z.string().optional(),
 	isSubtask: z.boolean().optional(),
+	todos: z
+		.object({
+			total: z.number(),
+			completed: z.number(),
+			inProgress: z.number(),
+			pending: z.number(),
+		})
+		.optional(),
 })
 
 export const gitPropertiesSchema = z.object({
@@ -160,6 +168,7 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 			TelemetryEventName.DIFF_APPLICATION_ERROR,
 			TelemetryEventName.SHELL_INTEGRATION_ERROR,
 			TelemetryEventName.CONSECUTIVE_MISTAKE_ERROR,
+			TelemetryEventName.CODE_INDEX_ERROR,
 			TelemetryEventName.CONTEXT_CONDENSED,
 			TelemetryEventName.SLIDING_WINDOW_TRUNCATION,
 			TelemetryEventName.TAB_SHOWN,

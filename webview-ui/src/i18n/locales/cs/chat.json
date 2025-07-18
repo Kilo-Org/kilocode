@@ -93,6 +93,13 @@
 		"title": "Zrušit",
 		"tooltip": "Zrušit aktuální operaci"
 	},
+	"editMessage": {
+		"placeholder": "Upravit tvou zprávu..."
+	},
+	"searchResults": {
+		"title": "Výsledky vyhledávání",
+		"noResults": "Nebyly nalezeny žádné výsledky"
+	},
 	"scrollToBottom": "Posunout se na konec chatu",
 	"about": "Generuj, refaktoruj a ladí kód s pomocí AI. Podívej se na naši <DocsLink>dokumentaci</DocsLink> pro více informací.",
 	"onboarding": "Tvůj seznam úkolů v tomto pracovním prostoru je prázdný.",
@@ -132,6 +139,7 @@
 	"separator": "Oddělovač",
 	"edit": "Upravit...",
 	"forNextMode": "pro další režim",
+	"forPreviousMode": "pro předchozí režim",
 	"apiRequest": {
 		"title": "API požadavek",
 		"failed": "API požadavek selhal",
@@ -203,7 +211,8 @@
 	"codebaseSearch": {
 		"wantsToSearch": "Kilo Code chce hledat v kódové základně <code>{{query}}</code>:",
 		"wantsToSearchWithPath": "Kilo Code chce hledat v kódové základně <code>{{query}}</code> v <code>{{path}}</code>:",
-		"didSearch": "Nalezeno {{count}} výsledků pro <code>{{query}}</code>:",
+		"didSearch_one": "Nalezen 1 výsledek",
+		"didSearch_other": "Nalezeno {{count}} výsledků",
 		"resultTooltip": "Skóre podobnosti: {{score}} (klikni pro otevření souboru)"
 	},
 	"commandOutput": "Výstup příkazu",
@@ -243,7 +252,10 @@
 	"autoApprove": {
 		"title": "Automatické schvalování:",
 		"none": "Žádné",
-		"description": "Automatické schvalování umožňuje Kilo Code provádět akce bez žádání o povolení. Zapni pouze pro akce, kterým plně důvěřuješ. Podrobnější konfigurace je dostupná v <settingsLink>Nastavení</settingsLink>."
+		"description": "Automatické schvalování umožňuje Kilo Code provádět akce bez žádání o povolení. Zapni pouze pro akce, kterým plně důvěřuješ. Podrobnější konfigurace je dostupná v <settingsLink>Nastavení</settingsLink>.",
+		"selectOptionsFirst": "Nejprve vyber alespoň jednu možnost níže pro povolení automatického schvalování",
+		"toggleAriaLabel": "Přepnout automatické schvalování",
+		"disabledAriaLabel": "Automatické schvalování zakázáno - nejprve vyber možnosti"
 	},
 	"modeSelector": {
 		"title": "Režimy",
@@ -252,10 +264,10 @@
 		"description": "Specializované persony které přizpůsobují chování Kilo Code."
 	},
 	"announcement": {
-		"title": "🎉 Vydán Roo Code {{version}}",
-		"description": "Roo Code {{version}} přináší hlavní nové funkce a vylepšení na základě tvé zpětné vazby.",
+		"title": "🎉 Vydán Kilo Code {{version}}",
+		"description": "Kilo Code {{version}} přináší hlavní nové funkce a vylepšení na základě tvé zpětné vazby.",
 		"whatsNew": "Co je nového",
-		"feature1": "<bold>Spuštění Roo Marketplace</bold>: Tržiště je nyní živé! Objevuj a instaluj režimy a MCP snadněji než kdy dříve.",
+		"feature1": "<bold>Spuštění Kilo Code Marketplace</bold>: Tržiště je nyní živé! Objevuj a instaluj režimy a MCP snadněji než kdy dříve.",
 		"feature2": "<bold>Modely Gemini 2.5</bold>: Přidána podpora pro nové modely Gemini 2.5 Pro, Flash a Flash Lite.",
 		"feature3": "<bold>Podpora souborů Excel a další</bold>: Přidána podpora souborů Excel (.xlsx) a mnoho oprav chyb a vylepšení!",
 		"hideButton": "Skrýt oznámení",

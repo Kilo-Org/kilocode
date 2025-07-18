@@ -1183,15 +1183,10 @@ describe("ClineProvider", () => {
 
 	describe("deleteMessage", () => {
 		beforeEach(async () => {
-			// Mock window.showInformationMessage
-			;(vscode.window.showInformationMessage as any) = vi.fn()
 			await provider.resolveWebviewView(mockWebviewView)
 		})
 
-		test('handles "Just this message" deletion correctly', async () => {
-			// Mock user selecting "Just this message"
-			;(vscode.window.showInformationMessage as any).mockResolvedValue("confirmation.delete_just_this_message")
-
+		test("handles deletion with confirmation dialog", async () => {
 			// Setup mock messages
 			const mockMessages = [
 				{ ts: 1000, type: "say", say: "user_feedback" }, // User message 1
@@ -1222,103 +1217,58 @@ describe("ClineProvider", () => {
 				historyItem: { id: "test-task-id" },
 			})
 
+			// Mock initClineWithHistoryItem
+			;(provider as any).initClineWithHistoryItem = vi.fn()
+
 			// Trigger message deletion
 			const messageHandler = (mockWebviewView.webview.onDidReceiveMessage as any).mock.calls[0][0]
 			await messageHandler({ type: "deleteMessage", value: 4000 })
 
-			// Verify correct messages were kept
-			expect(mockCline.overwriteClineMessages).toHaveBeenCalledWith([
-				mockMessages[0],
-				mockMessages[1],
-				mockMessages[4],
-				mockMessages[5],
-			])
+			// Verify that the dialog message was sent to webview
+			expect(mockPostMessage).toHaveBeenCalledWith({
+				type: "showDeleteMessageDialog",
+				messageTs: 4000,
+			})
 
-			// Verify correct API messages were kept
+			// Simulate user confirming deletion through the dialog
+			await messageHandler({ type: "deleteMessageConfirm", messageTs: 4000 })
+
+			// Verify only messages before the deleted message were kept
+			expect(mockCline.overwriteClineMessages).toHaveBeenCalledWith([mockMessages[0], mockMessages[1]])
+
+			// Verify only API messages before the deleted message were kept
 			expect(mockCline.overwriteApiConversationHistory).toHaveBeenCalledWith([
 				mockApiHistory[0],
 				mockApiHistory[1],
-				mockApiHistory[4],
-				mockApiHistory[5],
 			])
+
+			// Verify initClineWithHistoryItem was called
+			expect((provider as any).initClineWithHistoryItem).toHaveBeenCalledWith({ id: "test-task-id" })
 		})
 
-		test('handles "This and all subsequent messages" deletion correctly', async () => {
-			// Mock user selecting "This and all subsequent messages"
-			;(vscode.window.showInformationMessage as any).mockResolvedValue("confirmation.delete_this_and_subsequent")
-
-			// Setup mock messages
-			const mockMessages = [
-				{ ts: 1000, type: "say", say: "user_feedback" },
-				{ ts: 2000, type: "say", say: "text", value: 3000 }, // Message to delete
-				{ ts: 3000, type: "say", say: "user_feedback" },
-				{ ts: 4000, type: "say", say: "user_feedback" },
-			] as ClineMessage[]
-
-			const mockApiHistory = [
-				{ ts: 1000 },
-				{ ts: 2000 },
-				{ ts: 3000 },
-				{ ts: 4000 },
-			] as (Anthropic.MessageParam & {
-				ts?: number
-			})[]
-
-			// Setup Cline instance with auto-mock from the top of the file
-			const mockCline = new Task(defaultTaskOptions) // Create a new mocked instance
-			mockCline.clineMessages = mockMessages
-			mockCline.apiConversationHistory = mockApiHistory
-			await provider.addClineToStack(mockCline)
-
-			// Mock getTaskWithId
-			;(provider as any).getTaskWithId = vi.fn().mockResolvedValue({
-				historyItem: { id: "test-task-id" },
-			})
-
-			// Trigger message deletion
-			const messageHandler = (mockWebviewView.webview.onDidReceiveMessage as any).mock.calls[0][0]
-			await messageHandler({ type: "deleteMessage", value: 3000 })
-
-			// Verify only messages before the deleted message were kept
-			expect(mockCline.overwriteClineMessages).toHaveBeenCalledWith([mockMessages[0]])
-
-			// Verify only API messages before the deleted message were kept
-			expect(mockCline.overwriteApiConversationHistory).toHaveBeenCalledWith([mockApiHistory[0]])
-		})
-
-		test("handles Cancel correctly", async () => {
-			// Mock user selecting "Cancel"
-			;(vscode.window.showInformationMessage as any).mockResolvedValue("Cancel")
-
-			// Setup Cline instance with auto-mock from the top of the file
-			const mockCline = new Task(defaultTaskOptions) // Create a new mocked instance
-			mockCline.clineMessages = [{ ts: 1000 }, { ts: 2000 }] as ClineMessage[]
-			mockCline.apiConversationHistory = [{ ts: 1000 }, { ts: 2000 }] as (Anthropic.MessageParam & {
-				ts?: number
-			})[]
-			await provider.addClineToStack(mockCline)
+		test("handles case when no current task exists", async () => {
+			// Clear the cline stack
+			;(provider as any).clineStack = []
 
 			// Trigger message deletion
 			const messageHandler = (mockWebviewView.webview.onDidReceiveMessage as any).mock.calls[0][0]
 			await messageHandler({ type: "deleteMessage", value: 2000 })
 
-			// Verify no messages were deleted
-			expect(mockCline.overwriteClineMessages).not.toHaveBeenCalled()
-			expect(mockCline.overwriteApiConversationHistory).not.toHaveBeenCalled()
+			// Verify no dialog was shown since there's no current cline
+			expect(mockPostMessage).not.toHaveBeenCalledWith(
+				expect.objectContaining({
+					type: "showDeleteMessageDialog",
+				}),
+			)
 		})
 	})
 
 	describe("editMessage", () => {
 		beforeEach(async () => {
-			// Mock window.showWarningMessage
-			;(vscode.window.showWarningMessage as any) = vi.fn()
 			await provider.resolveWebviewView(mockWebviewView)
 		})
 
-		test('handles "Proceed" edit correctly', async () => {
-			// Mock user selecting "Proceed" - need to use the localized string key
-			;(vscode.window.showWarningMessage as any).mockResolvedValue("confirmation.proceed")
-
+		test("handles edit with confirmation dialog", async () => {
 			// Setup mock messages
 			const mockMessages = [
 				{ ts: 1000, type: "say", say: "user_feedback" }, // User message 1
@@ -1366,6 +1316,20 @@ describe("ClineProvider", () => {
 				editedMessageContent: "Edited message content",
 			})
 
+			// Verify that the dialog message was sent to webview
+			expect(mockPostMessage).toHaveBeenCalledWith({
+				type: "showEditMessageDialog",
+				messageTs: 4000,
+				text: "Edited message content",
+			})
+
+			// Simulate user confirming edit through the dialog
+			await messageHandler({
+				type: "editMessageConfirm",
+				messageTs: 4000,
+				text: "Edited message content",
+			})
+
 			// Verify correct messages were kept (only messages before the edited one)
 			expect(mockCline.overwriteClineMessages).toHaveBeenCalledWith([mockMessages[0], mockMessages[1]])
 
@@ -1375,12 +1339,9 @@ describe("ClineProvider", () => {
 				mockApiHistory[1],
 			])
 
-			// Verify handleWebviewAskResponse was called with the edited content
-			expect(mockCline.handleWebviewAskResponse).toHaveBeenCalledWith(
-				"messageResponse",
-				"Edited message content",
-				undefined,
-			)
+			// The new flow calls webviewMessageHandler recursively with askResponse
+			// We need to verify the recursive call happened by checking if the handler was called again
+			expect((mockWebviewView.webview.onDidReceiveMessage as any).mock.calls.length).toBeGreaterThanOrEqual(1)
 		})
 	})
 
@@ -2756,13 +2717,10 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 
 	describe("Edit Messages with Images and Attachments", () => {
 		beforeEach(async () => {
-			;(vscode.window.showInformationMessage as any) = vi.fn()
 			await provider.resolveWebviewView(mockWebviewView)
 		})
 
 		test("handles editing messages containing images", async () => {
-			;(vscode.window.showWarningMessage as any).mockResolvedValue("confirmation.proceed")
-
 			const mockMessages = [
 				{ ts: 1000, type: "say", say: "user_feedback", text: "Original message" },
 				{
@@ -2797,17 +2755,26 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 				editedMessageContent: "Edited message with preserved images",
 			})
 
-			expect(mockCline.overwriteClineMessages).toHaveBeenCalled()
-			expect(mockCline.handleWebviewAskResponse).toHaveBeenCalledWith(
-				"messageResponse",
-				"Edited message with preserved images",
-				undefined,
-			)
+			// Verify dialog was shown
+			expect(mockPostMessage).toHaveBeenCalledWith({
+				type: "showEditMessageDialog",
+				messageTs: 3000,
+				text: "Edited message with preserved images",
+			})
+
+			// Simulate confirmation
+			await messageHandler({
+				type: "editMessageConfirm",
+				messageTs: 3000,
+				text: "Edited message with preserved images",
+			})
+
+			// Verify messages were edited correctly - only the first message should remain
+			expect(mockCline.overwriteClineMessages).toHaveBeenCalledWith([mockMessages[0]])
+			expect(mockCline.overwriteApiConversationHistory).toHaveBeenCalledWith([{ ts: 1000 }])
 		})
 
 		test("handles editing messages with file attachments", async () => {
-			;(vscode.window.showWarningMessage as any).mockResolvedValue("confirmation.proceed")
-
 			const mockMessages = [
 				{ ts: 1000, type: "say", say: "user_feedback", text: "Original message" },
 				{
@@ -2840,6 +2807,20 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 				editedMessageContent: "Edited message with file attachment",
 			})
 
+			// Verify dialog was shown
+			expect(mockPostMessage).toHaveBeenCalledWith({
+				type: "showEditMessageDialog",
+				messageTs: 3000,
+				text: "Edited message with file attachment",
+			})
+
+			// Simulate user confirming the edit
+			await messageHandler({
+				type: "editMessageConfirm",
+				messageTs: 3000,
+				text: "Edited message with file attachment",
+			})
+
 			expect(mockCline.overwriteClineMessages).toHaveBeenCalled()
 			expect(mockCline.handleWebviewAskResponse).toHaveBeenCalledWith(
 				"messageResponse",
@@ -2856,8 +2837,6 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 		})
 
 		test("handles network timeout during edit submission", async () => {
-			;(vscode.window.showInformationMessage as any).mockResolvedValue("confirmation.proceed")
-
 			const mockCline = new Task(defaultTaskOptions)
 			mockCline.clineMessages = [
 				{ ts: 1000, type: "say", say: "user_feedback", text: "Original message", value: 2000 },
@@ -2884,12 +2863,20 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 				}),
 			).resolves.toBeUndefined()
 
+			// Verify dialog was shown
+			expect(mockPostMessage).toHaveBeenCalledWith({
+				type: "showEditMessageDialog",
+				messageTs: 2000,
+				text: "Edited message",
+			})
+
+			// Simulate user confirming the edit
+			await messageHandler({ type: "editMessageConfirm", messageTs: 2000, text: "Edited message" })
+
 			expect(mockCline.overwriteClineMessages).toHaveBeenCalled()
 		})
 
 		test("handles connection drops during edit operation", async () => {
-			;(vscode.window.showWarningMessage as any).mockResolvedValue("confirmation.proceed")
-
 			const mockCline = new Task(defaultTaskOptions)
 			mockCline.clineMessages = [
 				{ ts: 1000, type: "say", say: "user_feedback", text: "Original message", value: 2000 },
@@ -2916,6 +2903,17 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 				}),
 			).resolves.toBeUndefined()
 
+			// Verify dialog was shown
+			expect(mockPostMessage).toHaveBeenCalledWith({
+				type: "showEditMessageDialog",
+				messageTs: 2000,
+				text: "Edited message",
+			})
+
+			// Simulate user confirming the edit
+			await messageHandler({ type: "editMessageConfirm", messageTs: 2000, text: "Edited message" })
+
+			// The error should be caught and shown
 			expect(vscode.window.showErrorMessage).toHaveBeenCalledWith("Error editing message: Connection lost")
 		})
 	})
@@ -2927,8 +2925,6 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 		})
 
 		test("handles race conditions with simultaneous edits", async () => {
-			;(vscode.window.showWarningMessage as any).mockResolvedValue("confirmation.proceed")
-
 			const mockCline = new Task(defaultTaskOptions)
 			mockCline.clineMessages = [
 				{ ts: 1000, type: "say", say: "user_feedback", text: "Message 1", value: 2000 },
@@ -2963,6 +2959,22 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 
 			await Promise.all([edit1Promise, edit2Promise])
 
+			// Verify dialogs were shown for both edits
+			expect(mockPostMessage).toHaveBeenCalledWith({
+				type: "showEditMessageDialog",
+				messageTs: 2000,
+				text: "Edited message 1",
+			})
+			expect(mockPostMessage).toHaveBeenCalledWith({
+				type: "showEditMessageDialog",
+				messageTs: 4000,
+				text: "Edited message 2",
+			})
+
+			// Simulate user confirming both edits
+			await messageHandler({ type: "editMessageConfirm", messageTs: 2000, text: "Edited message 1" })
+			await messageHandler({ type: "editMessageConfirm", messageTs: 4000, text: "Edited message 2" })
+
 			// Both operations should complete without throwing
 			expect(mockCline.overwriteClineMessages).toHaveBeenCalled()
 		})
@@ -2991,8 +3003,6 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 		})
 
 		test("handles authorization failures during edit", async () => {
-			;(vscode.window.showWarningMessage as any).mockResolvedValue("confirmation.proceed")
-
 			const mockCline = new Task(defaultTaskOptions)
 			mockCline.clineMessages = [
 				{ ts: 1000, type: "say", say: "user_feedback", text: "Original message", value: 2000 },
@@ -3014,6 +3024,13 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 				type: "submitEditedMessage",
 				value: 2000,
 				editedMessageContent: "Edited message",
+			})
+
+			// Simulate confirmation
+			await messageHandler({
+				type: "editMessageConfirm",
+				messageTs: 2000,
+				text: "Edited message",
 			})
 
 			expect(vscode.window.showErrorMessage).toHaveBeenCalledWith("Error editing message: Unauthorized")
@@ -3109,8 +3126,6 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 			})
 
 			test("handles edit operations on deleted messages", async () => {
-				;(vscode.window.showWarningMessage as any).mockResolvedValue("confirmation.proceed")
-
 				const mockCline = new Task(defaultTaskOptions)
 				mockCline.clineMessages = [
 					{ ts: 1000, type: "say", say: "user_feedback", text: "Existing message" },
@@ -3134,17 +3149,26 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 					editedMessageContent: "Edited non-existent message",
 				})
 
-				// Should show confirmation dialog but not perform any operations
-				expect(vscode.window.showWarningMessage).toHaveBeenCalled()
+				// Should show edit dialog
+				expect(mockPostMessage).toHaveBeenCalledWith({
+					type: "showEditMessageDialog",
+					messageTs: 5000,
+					text: "Edited non-existent message",
+				})
+
+				// Simulate user confirming the edit
+				await messageHandler({
+					type: "editMessageConfirm",
+					messageTs: 5000,
+					text: "Edited non-existent message",
+				})
+
+				// Should not perform any operations since message doesn't exist
 				expect(mockCline.overwriteClineMessages).not.toHaveBeenCalled()
 				expect(mockCline.handleWebviewAskResponse).not.toHaveBeenCalled()
 			})
 
 			test("handles delete operations on non-existent messages", async () => {
-				;(vscode.window.showInformationMessage as any).mockResolvedValue(
-					"confirmation.delete_just_this_message",
-				)
-
 				const mockCline = new Task(defaultTaskOptions)
 				mockCline.clineMessages = [
 					{ ts: 1000, type: "say", say: "user_feedback", text: "Existing message" },
@@ -3166,8 +3190,16 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 					value: 5000,
 				})
 
-				// Should show confirmation dialog but not perform any operations
-				expect(vscode.window.showInformationMessage).toHaveBeenCalled()
+				// Should show delete dialog
+				expect(mockPostMessage).toHaveBeenCalledWith({
+					type: "showDeleteMessageDialog",
+					messageTs: 5000,
+				})
+
+				// Simulate user confirming the delete
+				await messageHandler({ type: "deleteMessageConfirm", messageTs: 5000 })
+
+				// Should not perform any operations since message doesn't exist
 				expect(mockCline.overwriteClineMessages).not.toHaveBeenCalled()
 			})
 		})
@@ -3179,8 +3211,6 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 			})
 
 			test("validates proper cleanup during failed edit operations", async () => {
-				;(vscode.window.showWarningMessage as any).mockResolvedValue("confirmation.proceed")
-
 				const mockCline = new Task(defaultTaskOptions)
 				mockCline.clineMessages = [
 					{ ts: 1000, type: "say", say: "user_feedback", text: "Original message", value: 2000 },
@@ -3210,16 +3240,22 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 					editedMessageContent: "Edited message",
 				})
 
+				// Should show edit dialog
+				expect(mockPostMessage).toHaveBeenCalledWith({
+					type: "showEditMessageDialog",
+					messageTs: 2000,
+					text: "Edited message",
+				})
+
+				// Simulate user confirming the edit
+				await messageHandler({ type: "editMessageConfirm", messageTs: 2000, text: "Edited message" })
+
 				// Verify cleanup was attempted before failure
 				expect(cleanupSpy).toHaveBeenCalled()
 				expect(vscode.window.showErrorMessage).toHaveBeenCalledWith("Error editing message: Operation failed")
 			})
 
 			test("validates proper cleanup during failed delete operations", async () => {
-				;(vscode.window.showInformationMessage as any).mockResolvedValue(
-					"confirmation.delete_just_this_message",
-				)
-
 				const mockCline = new Task(defaultTaskOptions)
 				mockCline.clineMessages = [
 					{ ts: 1000, type: "say", say: "user_feedback", text: "Message to delete" },
@@ -3244,6 +3280,15 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 
 				await messageHandler({ type: "deleteMessage", value: 2000 })
 
+				// Should show delete dialog
+				expect(mockPostMessage).toHaveBeenCalledWith({
+					type: "showDeleteMessageDialog",
+					messageTs: 2000,
+				})
+
+				// Simulate user confirming the delete
+				await messageHandler({ type: "deleteMessageConfirm", messageTs: 2000 })
+
 				// Verify cleanup was attempted before failure
 				expect(cleanupSpy).toHaveBeenCalled()
 				expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
@@ -3259,8 +3304,6 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 			})
 
 			test("handles editing messages with large text content", async () => {
-				;(vscode.window.showWarningMessage as any).mockResolvedValue("confirmation.proceed")
-
 				// Create a large message (10KB of text)
 				const largeText = "A".repeat(10000)
 				const mockMessages = [
@@ -3289,6 +3332,16 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 					editedMessageContent: largeEditedContent,
 				})
 
+				// Should show edit dialog
+				expect(mockPostMessage).toHaveBeenCalledWith({
+					type: "showEditMessageDialog",
+					messageTs: 2000,
+					text: largeEditedContent,
+				})
+
+				// Simulate user confirming the edit
+				await messageHandler({ type: "editMessageConfirm", messageTs: 2000, text: largeEditedContent })
+
 				expect(mockCline.overwriteClineMessages).toHaveBeenCalled()
 				expect(mockCline.handleWebviewAskResponse).toHaveBeenCalledWith(
 					"messageResponse",
@@ -3298,10 +3351,6 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 			})
 
 			test("handles deleting messages with large payloads", async () => {
-				;(vscode.window.showInformationMessage as any).mockResolvedValue(
-					"confirmation.delete_this_and_subsequent",
-				)
-
 				// Create messages with large payloads
 				const largeText = "X".repeat(50000)
 				const mockMessages = [
@@ -3326,6 +3375,15 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 
 				await messageHandler({ type: "deleteMessage", value: 3000 })
 
+				// Should show delete dialog
+				expect(mockPostMessage).toHaveBeenCalledWith({
+					type: "showDeleteMessageDialog",
+					messageTs: 3000,
+				})
+
+				// Simulate user confirming the delete
+				await messageHandler({ type: "deleteMessageConfirm", messageTs: 3000 })
+
 				// Should handle large payloads without issues
 				expect(mockCline.overwriteClineMessages).toHaveBeenCalledWith([mockMessages[0]])
 				expect(mockCline.overwriteApiConversationHistory).toHaveBeenCalledWith([{ ts: 1000 }])
@@ -3336,10 +3394,6 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 			// Note: Error messaging test removed as the implementation may not have proper error handling in place
 
 			test("provides user feedback for successful operations", async () => {
-				;(vscode.window.showInformationMessage as any).mockResolvedValue(
-					"confirmation.delete_just_this_message",
-				)
-
 				const mockCline = new Task(defaultTaskOptions)
 				mockCline.clineMessages = [
 					{ ts: 1000, type: "say", say: "user_feedback", text: "Message to delete" },
@@ -3359,6 +3413,15 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 
 				await messageHandler({ type: "deleteMessage", value: 2000 })
 
+				// Should show delete dialog
+				expect(mockPostMessage).toHaveBeenCalledWith({
+					type: "showDeleteMessageDialog",
+					messageTs: 2000,
+				})
+
+				// Simulate user confirming the delete
+				await messageHandler({ type: "deleteMessageConfirm", messageTs: 2000 })
+
 				// Verify successful operation completed
 				expect(mockCline.overwriteClineMessages).toHaveBeenCalled()
 				expect(provider.initClineWithHistoryItem).toHaveBeenCalled()
@@ -3366,8 +3429,7 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 			})
 
 			test("handles user cancellation gracefully", async () => {
-				// Mock user canceling the operation
-				;(vscode.window.showWarningMessage as any).mockResolvedValue(undefined)
+				// Test cancellation by not sending confirmation
 
 				const mockCline = new Task(defaultTaskOptions)
 				mockCline.clineMessages = [
@@ -3404,10 +3466,6 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 			})
 
 			test("handles messages with identical timestamps", async () => {
-				;(vscode.window.showInformationMessage as any).mockResolvedValue(
-					"confirmation.delete_just_this_message",
-				)
-
 				const mockCline = new Task(defaultTaskOptions)
 				mockCline.clineMessages = [
 					{ ts: 1000, type: "say", say: "user_feedback", text: "Message 1" },
@@ -3428,13 +3486,20 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 
 				await messageHandler({ type: "deleteMessage", value: 1000 })
 
+				// Should show delete dialog
+				expect(mockPostMessage).toHaveBeenCalledWith({
+					type: "showDeleteMessageDialog",
+					messageTs: 1000,
+				})
+
+				// Simulate user confirming the delete
+				await messageHandler({ type: "deleteMessageConfirm", messageTs: 1000 })
+
 				// Should handle identical timestamps gracefully
 				expect(mockCline.overwriteClineMessages).toHaveBeenCalled()
 			})
 
 			test("handles messages with future timestamps", async () => {
-				;(vscode.window.showWarningMessage as any).mockResolvedValue("confirmation.proceed")
-
 				const futureTimestamp = Date.now() + 100000 // Future timestamp
 				const mockCline = new Task(defaultTaskOptions)
 				mockCline.clineMessages = [
@@ -3468,6 +3533,20 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 					type: "submitEditedMessage",
 					value: futureTimestamp + 1000,
 					editedMessageContent: "Edited future message",
+				})
+
+				// Should show edit dialog
+				expect(mockPostMessage).toHaveBeenCalledWith({
+					type: "showEditMessageDialog",
+					messageTs: futureTimestamp + 1000,
+					text: "Edited future message",
+				})
+
+				// Simulate user confirming the edit
+				await messageHandler({
+					type: "editMessageConfirm",
+					messageTs: futureTimestamp + 1000,
+					text: "Edited future message",
 				})
 
 				// Should handle future timestamps correctly

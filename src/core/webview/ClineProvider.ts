@@ -561,6 +561,7 @@ export class ClineProvider
 			enableDiff,
 			enableCheckpoints,
 			fuzzyMatchThreshold,
+			consecutiveMistakeLimit: apiConfiguration.consecutiveMistakeLimit,
 			task,
 			images,
 			experiments,
@@ -598,6 +599,7 @@ export class ClineProvider
 			enableDiff,
 			enableCheckpoints,
 			fuzzyMatchThreshold,
+			consecutiveMistakeLimit: apiConfiguration.consecutiveMistakeLimit,
 			historyItem,
 			experiments,
 			rootTask: historyItem.rootTask,
@@ -1366,6 +1368,31 @@ export class ClineProvider
 	 * with proper validation and deduplication
 	 */
 	private mergeAllowedCommands(globalStateCommands?: string[]): string[] {
+		return this.mergeCommandLists("allowedCommands", "allowed", globalStateCommands)
+	}
+
+	/**
+	 * Merges denied commands from global state and workspace configuration
+	 * with proper validation and deduplication
+	 */
+	private mergeDeniedCommands(globalStateCommands?: string[]): string[] {
+		return this.mergeCommandLists("deniedCommands", "denied", globalStateCommands)
+	}
+
+	/**
+	 * Common utility for merging command lists from global state and workspace configuration.
+	 * Implements the Command Denylist feature's merging strategy with proper validation.
+	 *
+	 * @param configKey - VSCode workspace configuration key
+	 * @param commandType - Type of commands for error logging
+	 * @param globalStateCommands - Commands from global state
+	 * @returns Merged and deduplicated command list
+	 */
+	private mergeCommandLists(
+		configKey: "allowedCommands" | "deniedCommands",
+		commandType: "allowed" | "denied",
+		globalStateCommands?: string[],
+	): string[] {
 		try {
 			// Validate and sanitize global state commands
 			const validGlobalCommands = Array.isArray(globalStateCommands)
@@ -1373,8 +1400,7 @@ export class ClineProvider
 				: []
 
 			// Get workspace configuration commands
-			const workspaceCommands =
-				vscode.workspace.getConfiguration(Package.name).get<string[]>("allowedCommands") || []
+			const workspaceCommands = vscode.workspace.getConfiguration(Package.name).get<string[]>(configKey) || []
 
 			// Validate and sanitize workspace commands
 			const validWorkspaceCommands = Array.isArray(workspaceCommands)
@@ -1387,7 +1413,7 @@ export class ClineProvider
 
 			return mergedCommands
 		} catch (error) {
-			console.error("Error merging allowed commands:", error)
+			console.error(`Error merging ${commandType} commands:`, error)
 			// Return empty array as fallback to prevent crashes
 			return []
 		}
@@ -1404,6 +1430,7 @@ export class ClineProvider
 			alwaysAllowWriteProtected,
 			alwaysAllowExecute,
 			allowedCommands,
+			deniedCommands,
 			alwaysAllowBrowser,
 			alwaysAllowMcp,
 			alwaysAllowModeSwitch,
@@ -1482,6 +1509,7 @@ export class ClineProvider
 		const machineId = vscode.env.machineId
 
 		const mergedAllowedCommands = this.mergeAllowedCommands(allowedCommands)
+		const mergedDeniedCommands = this.mergeDeniedCommands(deniedCommands)
 		const cwd = this.cwd
 
 		// Check if there's a system prompt override for the current mode
@@ -1522,6 +1550,7 @@ export class ClineProvider
 			enableCheckpoints: enableCheckpoints ?? true,
 			shouldShowAnnouncement: false, // kilocode_change
 			allowedCommands: mergedAllowedCommands,
+			deniedCommands: mergedDeniedCommands,
 			soundVolume: soundVolume ?? 0.5,
 			browserViewportSize: browserViewportSize ?? "900x600",
 			screenshotQuality: screenshotQuality ?? 75,
@@ -1588,6 +1617,10 @@ export class ClineProvider
 				codebaseIndexEmbedderProvider: codebaseIndexConfig?.codebaseIndexEmbedderProvider ?? "openai",
 				codebaseIndexEmbedderBaseUrl: codebaseIndexConfig?.codebaseIndexEmbedderBaseUrl ?? "",
 				codebaseIndexEmbedderModelId: codebaseIndexConfig?.codebaseIndexEmbedderModelId ?? "",
+				codebaseIndexEmbedderModelDimension: codebaseIndexConfig?.codebaseIndexEmbedderModelDimension ?? 1536,
+				codebaseIndexOpenAiCompatibleBaseUrl: codebaseIndexConfig?.codebaseIndexOpenAiCompatibleBaseUrl,
+				codebaseIndexSearchMaxResults: codebaseIndexConfig?.codebaseIndexSearchMaxResults,
+				codebaseIndexSearchMinScore: codebaseIndexConfig?.codebaseIndexSearchMinScore,
 			},
 			mdmCompliant: this.checkMdmCompliance(),
 			profileThresholds: profileThresholds ?? {},
@@ -1684,6 +1717,7 @@ export class ClineProvider
 			autoCondenseContextPercent: stateValues.autoCondenseContextPercent ?? 100,
 			taskHistory: stateValues.taskHistory,
 			allowedCommands: stateValues.allowedCommands,
+			deniedCommands: stateValues.deniedCommands,
 			soundEnabled: stateValues.soundEnabled ?? false,
 			ttsEnabled: stateValues.ttsEnabled ?? false,
 			ttsSpeed: stateValues.ttsSpeed ?? 1.0,
@@ -1755,6 +1789,12 @@ export class ClineProvider
 					stateValues.codebaseIndexConfig?.codebaseIndexEmbedderProvider ?? "openai",
 				codebaseIndexEmbedderBaseUrl: stateValues.codebaseIndexConfig?.codebaseIndexEmbedderBaseUrl ?? "",
 				codebaseIndexEmbedderModelId: stateValues.codebaseIndexConfig?.codebaseIndexEmbedderModelId ?? "",
+				codebaseIndexEmbedderModelDimension:
+					stateValues.codebaseIndexConfig?.codebaseIndexEmbedderModelDimension,
+				codebaseIndexOpenAiCompatibleBaseUrl:
+					stateValues.codebaseIndexConfig?.codebaseIndexOpenAiCompatibleBaseUrl,
+				codebaseIndexSearchMaxResults: stateValues.codebaseIndexConfig?.codebaseIndexSearchMaxResults,
+				codebaseIndexSearchMinScore: stateValues.codebaseIndexConfig?.codebaseIndexSearchMinScore,
 			},
 			profileThresholds: stateValues.profileThresholds ?? {},
 		}
@@ -1911,6 +1951,19 @@ export class ClineProvider
 		}
 		// kilocode_change end
 
+		// Calculate todo list statistics
+		const todoList = task?.todoList
+		let todos: { total: number; completed: number; inProgress: number; pending: number } | undefined
+
+		if (todoList && todoList.length > 0) {
+			todos = {
+				total: todoList.length,
+				completed: todoList.filter((todo) => todo.status === "completed").length,
+				inProgress: todoList.filter((todo) => todo.status === "in_progress").length,
+				pending: todoList.filter((todo) => todo.status === "pending").length,
+			}
+		}
+
 		// Return all properties including git info - clients will filter as needed
 		return {
 			appName: packageJSON?.name ?? Package.name,
@@ -1925,6 +1978,7 @@ export class ClineProvider
 			diffStrategy: task?.diffStrategy?.getName(),
 			isSubtask: task ? !!task.parentTask : undefined,
 			cloudIsAuthenticated,
+			...(todos && { todos }),
 			...gitInfo,
 		}
 	}

@@ -5,6 +5,7 @@ import {
 	type ProviderSettingsEntry,
 	providerSettingsSchema,
 	providerSettingsSchemaDiscriminated,
+	DEFAULT_CONSECUTIVE_MISTAKE_LIMIT,
 } from "@roo-code/types"
 
 import { Mode, modes } from "../../shared/modes"
@@ -25,6 +26,7 @@ export const providerProfilesSchema = z.object({
 			rateLimitSecondsMigrated: z.boolean().optional(),
 			diffSettingsMigrated: z.boolean().optional(),
 			openAiHeadersMigrated: z.boolean().optional(),
+			consecutiveMistakeLimitMigrated: z.boolean().optional(),
 		})
 		.optional(),
 })
@@ -47,6 +49,7 @@ export class ProviderSettingsManager {
 			rateLimitSecondsMigrated: true, // Mark as migrated on fresh installs
 			diffSettingsMigrated: true, // Mark as migrated on fresh installs
 			openAiHeadersMigrated: true, // Mark as migrated on fresh installs
+			consecutiveMistakeLimitMigrated: true, // Mark as migrated on fresh installs
 		},
 	}
 
@@ -112,6 +115,7 @@ export class ProviderSettingsManager {
 						rateLimitSecondsMigrated: false,
 						diffSettingsMigrated: false,
 						openAiHeadersMigrated: false,
+						consecutiveMistakeLimitMigrated: false,
 					} // Initialize with default values
 					isDirty = true
 				}
@@ -131,6 +135,12 @@ export class ProviderSettingsManager {
 				if (!providerProfiles.migrations.openAiHeadersMigrated) {
 					await this.migrateOpenAiHeaders(providerProfiles)
 					providerProfiles.migrations.openAiHeadersMigrated = true
+					isDirty = true
+				}
+
+				if (!providerProfiles.migrations.consecutiveMistakeLimitMigrated) {
+					await this.migrateConsecutiveMistakeLimit(providerProfiles)
+					providerProfiles.migrations.consecutiveMistakeLimitMigrated = true
 					isDirty = true
 				}
 
@@ -224,6 +234,18 @@ export class ProviderSettingsManager {
 			}
 		} catch (error) {
 			console.error(`[MigrateOpenAiHeaders] Failed to migrate OpenAI headers:`, error)
+		}
+	}
+
+	private async migrateConsecutiveMistakeLimit(providerProfiles: ProviderProfiles) {
+		try {
+			for (const [name, apiConfig] of Object.entries(providerProfiles.apiConfigs)) {
+				if (apiConfig.consecutiveMistakeLimit == null) {
+					apiConfig.consecutiveMistakeLimit = DEFAULT_CONSECUTIVE_MISTAKE_LIMIT
+				}
+			}
+		} catch (error) {
+			console.error(`[MigrateConsecutiveMistakeLimit] Failed to migrate consecutive mistake limit:`, error)
 		}
 	}
 

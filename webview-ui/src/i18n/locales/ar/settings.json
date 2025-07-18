@@ -122,6 +122,10 @@
 			"modelDimensionMinValue": "بُعد النموذج يجب أن يكون أكبر من 0"
 		}
 	},
+	"autoApproval": {
+		"title": "الموافقة التلقائية",
+		"description": "السماح لـ Kilo Code بتنفيذ العمليات تلقائيًا بدون طلب الموافقة. فعّل هذه الإعدادات فقط إذا كنت تثق بالذكاء الاصطناعي تمامًا وتفهم المخاطر الأمنية المرتبطة."
+	},
 	"autoApprove": {
 		"description": "خلّ Kilo Code ينفذ العمليات تلقائيًا بدون موافقة. فعّلها فقط إذا كنت واثق من الأمان.",
 		"readOnly": {
@@ -176,12 +180,16 @@
 			"description": "تنفيذ أوامر الطرفية المسموحة تلقائيًا",
 			"allowedCommands": "أوامر التنفيذ التلقائي المسموحة",
 			"allowedCommandsDescription": "بادئات الأوامر المسموح بها عند تفعيل \"الموافقة الدائمة على التنفيذ\". أضف * للسماح بكل الأوامر (بحذر).",
+			"deniedCommands": "الأوامر المرفوضة",
+			"deniedCommandsDescription": "بادئات الأوامر التي سيتم رفضها تلقائيًا بدون طلب الموافقة. في حالة التعارض مع الأوامر المسموحة، تأخذ أطول بادئة مطابقة الأولوية. أضف * لرفض جميع الأوامر.",
 			"commandPlaceholder": "أدخل بادئة الأمر (مثال: 'git ')",
-			"addButton": "إضافة"
+			"deniedCommandPlaceholder": "أدخل بادئة الأمر المرفوض (مثال: 'rm -rf')",
+			"addButton": "إضافة",
+			"autoDenied": "الأوامر التي تبدأ بـ `{{prefix}}` محظورة من قبل المستخدم. لا تتجاوز هذا القيد بتشغيل أمر آخر."
 		},
 		"showMenu": {
-			"label": "إظهار قائمة الموافقة التلقائية",
-			"description": "تظهر القائمة أسفل المحادثة للوصول السريع."
+			"label": "إظهار قائمة الموافقة التلقائية في عرض المحادثة",
+			"description": "عند التفعيل، ستظهر قائمة الموافقة التلقائية في أسفل عرض المحادثة، مما يتيح الوصول السريع لإعدادات الموافقة التلقائية"
 		},
 		"updateTodoList": {
 			"label": "المهام",
@@ -191,7 +199,10 @@
 			"title": "أقصى الطلبات",
 			"description": "عدد طلبات API قبل طلب الموافقة.",
 			"unlimited": "غير محدود"
-		}
+		},
+		"toggleAriaLabel": "تبديل الموافقة التلقائية",
+		"disabledAriaLabel": "الموافقة التلقائية معطلة - اختر الخيارات أولاً",
+		"selectOptionsFirst": "اختر خيار واحد على الأقل أدناه لتفعيل الموافقة التلقائية"
 	},
 	"providers": {
 		"providerDocumentation": "توثيق {{provider}}",
@@ -253,6 +264,18 @@
 		"getGeminiApiKey": "احصل على مفتاح Gemini",
 		"openAiApiKey": "مفتاح OpenAI",
 		"apiKey": "مفتاح API",
+		"anthropic": {
+			"baseUrl": "الرابط الأساسي",
+			"baseUrlDescription": "رابط أساسي مخصص لـ Anthropic API (اختياري)"
+		},
+		"openai": {
+			"baseUrl": "الرابط الأساسي",
+			"baseUrlDescription": "رابط أساسي مخصص لـ OpenAI API (اختياري)"
+		},
+		"openrouter": {
+			"baseUrl": "الرابط الأساسي",
+			"baseUrlDescription": "رابط أساسي مخصص لـ OpenRouter API (اختياري)"
+		},
 		"openAiBaseUrl": "الرابط الأساسي",
 		"getOpenAiApiKey": "احصل على مفتاح OpenAI",
 		"mistralApiKey": "مفتاح Mistral",
@@ -372,6 +395,12 @@
 			"label": "معدل الطلب",
 			"description": "أقل وقت بين طلبات API."
 		},
+		"consecutiveMistakeLimit": {
+			"label": "حد الأخطاء والتكرار",
+			"description": "عدد الأخطاء المتتالية أو الإجراءات المتكررة قبل إظهار حوار 'Kilo Code يواجه مشكلة'",
+			"unlimitedDescription": "إعادة المحاولة غير المحدودة مفعلة (المتابعة التلقائية). لن يظهر الحوار أبداً.",
+			"warning": "⚠️ تعيين القيمة إلى 0 يسمح بإعادة المحاولة غير المحدودة مما قد يستهلك استخدام API كبير"
+		},
 		"reasoningEffort": {
 			"label": "جهد الاستنتاج",
 			"high": "عالي",
@@ -382,7 +411,9 @@
 		"claudeCode": {
 			"pathLabel": "مسار Claude Code",
 			"description": "مسار CLI اختياري (الافتراضي 'claude').",
-			"placeholder": "الافتراضي: claude"
+			"placeholder": "الافتراضي: claude",
+			"maxTokensLabel": "أقصى توكنات المخرجات",
+			"maxTokensDescription": "الحد الأقصى لعدد توكنات المخرجات لردود Claude Code. الافتراضي هو 8000."
 		},
 		"geminiCli": {
 			"description": "يستخدم OAuth من أداة Gemini CLI ولا يحتاج مفاتيح.",
@@ -559,6 +590,9 @@
 			"label": "وراثة متغيرات البيئة",
 			"description": "تفعيل يورّث متغيرات بيئة نظامك."
 		}
+	},
+	"advancedSettings": {
+		"title": "الإعدادات المتقدمة"
 	},
 	"advanced": {
 		"diff": {

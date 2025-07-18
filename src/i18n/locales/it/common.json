@@ -25,12 +25,7 @@
 	"confirmation": {
 		"reset_state": "Sei sicuro di voler reimpostare tutti gli stati e l'archiviazione segreta nell'estensione? Questa azione non può essere annullata.",
 		"delete_config_profile": "Sei sicuro di voler eliminare questo profilo di configurazione?",
-		"delete_custom_mode_with_rules": "Sei sicuro di voler eliminare questa modalità {scope}?\n\nQuesto eliminerà anche la cartella delle regole associata in:\n{rulesFolderPath}",
-		"delete_message": "Cosa desideri eliminare?",
-		"edit_warning": "Modificare questo messaggio eliminerà tutti i messaggi successivi nella conversazione. Vuoi continuare?",
-		"delete_just_this_message": "Solo questo messaggio",
-		"delete_this_and_subsequent": "Questo e tutti i messaggi successivi",
-		"proceed": "Continua"
+		"delete_custom_mode_with_rules": "Sei sicuro di voler eliminare questa modalità {scope}?\n\nQuesto eliminerà anche la cartella delle regole associata in:\n{rulesFolderPath}"
 	},
 	"errors": {
 		"invalid_data_uri": "Formato URI dati non valido",
@@ -62,7 +57,7 @@
 		"cannot_access_path": "Impossibile accedere al percorso {{path}}: {{error}}",
 		"settings_import_failed": "Importazione delle impostazioni fallita: {{error}}.",
 		"mistake_limit_guidance": "Questo può indicare un fallimento nel processo di pensiero del modello o l'incapacità di utilizzare correttamente uno strumento, che può essere mitigato con la guida dell'utente (ad es. \"Prova a suddividere l'attività in passaggi più piccoli\").",
-		"violated_organization_allowlist": "Impossibile eseguire l'attività: il profilo corrente viola le impostazioni della tua organizzazione",
+		"violated_organization_allowlist": "Impossibile eseguire l'attività: il profilo corrente non è compatibile con le impostazioni della tua organizzazione",
 		"condense_failed": "Impossibile condensare il contesto",
 		"condense_not_enough_messages": "Non ci sono abbastanza messaggi per condensare il contesto di {{prevContextTokens}} token. Sono richiesti almeno {{minimumMessageCount}} messaggi, ma ne sono disponibili solo {{messageCount}}.",
 		"condensed_recently": "Il contesto è stato condensato di recente; questo tentativo viene saltato",
@@ -75,6 +70,7 @@
 		"url_page_not_found": "La pagina non è stata trovata. Verifica se l'URL è corretto.",
 		"url_fetch_failed": "Errore nel recupero del contenuto URL: {{error}}",
 		"url_fetch_error_with_url": "Errore nel recupero del contenuto per {{url}}: {{error}}",
+		"command_timeout": "Esecuzione del comando scaduta dopo {{seconds}} secondi",
 		"share_task_failed": "Condivisione dell'attività fallita. Riprova.",
 		"share_no_active_task": "Nessuna attività attiva da condividere",
 		"share_auth_required": "Autenticazione richiesta. Accedi per condividere le attività.",

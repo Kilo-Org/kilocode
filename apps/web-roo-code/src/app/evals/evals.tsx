@@ -61,7 +61,7 @@ export function Evals({
 			<div className="flex flex-col gap-4">
 				<div>
 					Roo Code tests each frontier model against{" "}
-					<a href="https://github.com/cte/evals/" className="underline">
+					<a href="https://github.com/RooCodeInc/Roo-Code-Evals" className="underline">
 						a suite of hundreds of exercises
 					</a>{" "}
 					across 5 programming languages with varying difficulty. These results can help you find the right
@@ -203,7 +203,7 @@ export function Evals({
 						</ScatterChart>
 					</ChartContainer>
 					<div className="py-4 text-xs opacity-50">
-						(Note: Very expensive models are exluded from the scatter plot.)
+						(Note: Very expensive models are excluded from the scatter plot.)
 					</div>
 				</TableCaption>
 			</Table>

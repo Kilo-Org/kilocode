@@ -23,7 +23,8 @@
 		"failedToProcessBatchWithError": "Zpracování dávky selhalo po {{maxRetries}} pokusech: {{errorMessage}}"
 	},
 	"vectorStore": {
-		"qdrantConnectionFailed": "Připojení k vektorové databázi Qdrant selhalo. Ujisti se prosím, že Qdrant běží a je přístupný na {{qdrantUrl}}. Chyba: {{errorMessage}}"
+		"qdrantConnectionFailed": "Připojení k vektorové databázi Qdrant selhalo. Ujisti se prosím, že Qdrant běží a je přístupný na {{qdrantUrl}}. Chyba: {{errorMessage}}",
+		"vectorDimensionMismatch": "Aktualizace vektorového indexu pro nový model selhala. Zkus prosím vymazat index a začít znovu. Podrobnosti: {{errorMessage}}"
 	},
 	"validation": {
 		"authenticationFailed": "Autentizace selhala. Zkontroluj prosím svůj API klíč v nastavení.",
@@ -36,7 +37,9 @@
 		"invalidApiKey": "Neplatný API klíč. Zkontroluj prosím konfiguraci API klíče.",
 		"invalidBaseUrl": "Neplatná základní URL. Zkontroluj prosím konfiguraci URL.",
 		"invalidModel": "Neplatný model. Zkontroluj prosím konfiguraci modelu.",
-		"invalidResponse": "Neplatná odpověď od embedder služby. Zkontroluj prosím svou konfiguraci."
+		"invalidResponse": "Neplatná odpověď od embedder služby. Zkontroluj prosím svou konfiguraci.",
+		"apiKeyRequired": "API klíč je vyžadován pro tento embedder",
+		"baseUrlRequired": "Základní URL je vyžadována pro tento embedder"
 	},
 	"serviceFactory": {
 		"openAiConfigMissing": "Chybí konfigurace OpenAI pro vytvoření embedderu",

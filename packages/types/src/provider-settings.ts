@@ -56,12 +56,18 @@ export type ProviderSettingsEntry = z.infer<typeof providerSettingsEntrySchema>
  * ProviderSettings
  */
 
+/**
+ * Default value for consecutive mistake limit
+ */
+export const DEFAULT_CONSECUTIVE_MISTAKE_LIMIT = 3
+
 const baseProviderSettingsSchema = z.object({
 	includeMaxTokens: z.boolean().optional(),
 	diffEnabled: z.boolean().optional(),
 	fuzzyMatchThreshold: z.number().optional(),
 	modelTemperature: z.number().nullish(),
 	rateLimitSeconds: z.number().optional(),
+	consecutiveMistakeLimit: z.number().min(0).optional(),
 
 	// Model reasoning.
 	enableReasoningEffort: z.boolean().optional(),
@@ -90,6 +96,7 @@ const anthropicSchema = apiModelIdProviderModelSchema.extend({
 
 const claudeCodeSchema = apiModelIdProviderModelSchema.extend({
 	claudeCodePath: z.string().optional(),
+	claudeCodeMaxOutputTokens: z.number().int().min(1).max(200000).optional(),
 })
 
 const glamaSchema = baseProviderSettingsSchema.extend({
@@ -327,4 +334,12 @@ export const MODEL_ID_KEYS: Partial<keyof ProviderSettings>[] = [
 export const getModelId = (settings: ProviderSettings): string | undefined => {
 	const modelIdKey = MODEL_ID_KEYS.find((key) => settings[key])
 	return modelIdKey ? (settings[modelIdKey] as string) : undefined
+}
+
+// Providers that use Anthropic-style API protocol
+export const ANTHROPIC_STYLE_PROVIDERS: ProviderName[] = ["anthropic", "claude-code"]
+
+// Helper function to determine API protocol for a provider
+export const getApiProtocol = (provider: ProviderName | undefined): "anthropic" | "openai" => {
+	return provider && ANTHROPIC_STYLE_PROVIDERS.includes(provider) ? "anthropic" : "openai"
 }

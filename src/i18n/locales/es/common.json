@@ -25,12 +25,7 @@
 	"confirmation": {
 		"reset_state": "¿Estás seguro de que deseas restablecer todo el estado y el almacenamiento secreto en la extensión? Esta acción no se puede deshacer.",
 		"delete_config_profile": "¿Estás seguro de que deseas eliminar este perfil de configuración?",
-		"delete_custom_mode_with_rules": "¿Estás seguro de que quieres eliminar este modo {scope}?\n\nEsto también eliminará la carpeta de reglas asociada en:\n{rulesFolderPath}",
-		"delete_message": "¿Qué deseas eliminar?",
-		"edit_warning": "Editar este mensaje eliminará todos los mensajes posteriores en la conversación. ¿Deseas continuar?",
-		"delete_just_this_message": "Solo este mensaje",
-		"delete_this_and_subsequent": "Este y todos los mensajes posteriores",
-		"proceed": "Continuar"
+		"delete_custom_mode_with_rules": "¿Estás seguro de que quieres eliminar este modo {scope}?\n\nEsto también eliminará la carpeta de reglas asociada en:\n{rulesFolderPath}"
 	},
 	"errors": {
 		"invalid_data_uri": "Formato de URI de datos no válido",
@@ -62,7 +57,7 @@
 		"cannot_access_path": "No se puede acceder a la ruta {{path}}: {{error}}",
 		"settings_import_failed": "Error al importar la configuración: {{error}}.",
 		"mistake_limit_guidance": "Esto puede indicar un fallo en el proceso de pensamiento del modelo o la incapacidad de usar una herramienta correctamente, lo cual puede mitigarse con orientación del usuario (ej. \"Intenta dividir la tarea en pasos más pequeños\").",
-		"violated_organization_allowlist": "Error al ejecutar la tarea: el perfil actual infringe la configuración de tu organización",
+		"violated_organization_allowlist": "Error al ejecutar la tarea: el perfil actual no es compatible con la configuración de tu organización",
 		"condense_failed": "Error al condensar el contexto",
 		"condense_not_enough_messages": "No hay suficientes mensajes para condensar el contexto de {{prevContextTokens}} tokens. Se requieren al menos {{minimumMessageCount}} mensajes, pero solo {{messageCount}} están disponibles.",
 		"condensed_recently": "El contexto se condensó recientemente; se omite este intento",
@@ -75,6 +70,7 @@
 		"url_page_not_found": "La página no fue encontrada. Por favor verifica si la URL es correcta.",
 		"url_fetch_failed": "Error al obtener el contenido de la URL: {{error}}",
 		"url_fetch_error_with_url": "Error al obtener contenido para {{url}}: {{error}}",
+		"command_timeout": "La ejecución del comando superó el tiempo de espera de {{seconds}} segundos",
 		"share_task_failed": "Error al compartir la tarea. Por favor, inténtalo de nuevo.",
 		"share_no_active_task": "No hay tarea activa para compartir",
 		"share_auth_required": "Se requiere autenticación. Por favor, inicia sesión para compartir tareas.",

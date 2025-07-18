@@ -124,6 +124,8 @@
 	},
 	"autoApprove": {
 		"description": "Kilo Code'nun onay gerektirmeden otomatik olarak işlemler gerçekleştirmesine izin verin. Bu ayarları yalnızca yapay zekaya tamamen güveniyorsanız ve ilgili güvenlik risklerini anlıyorsanız etkinleştirin.",
+		"toggleAriaLabel": "Otomatik onayı değiştir",
+		"disabledAriaLabel": "Otomatik onay devre dışı - önce seçenekleri belirleyin",
 		"readOnly": {
 			"label": "Okuma",
 			"description": "Etkinleştirildiğinde, Kilo Code otomatik olarak dizin içeriğini görüntüleyecek ve Onayla düğmesine tıklamanıza gerek kalmadan dosyaları okuyacaktır.",
@@ -176,8 +178,12 @@
 			"description": "Onay gerektirmeden otomatik olarak izin verilen terminal komutlarını yürüt",
 			"allowedCommands": "İzin Verilen Otomatik Yürütme Komutları",
 			"allowedCommandsDescription": "\"Yürütme işlemlerini her zaman onayla\" etkinleştirildiğinde otomatik olarak yürütülebilen komut önekleri. Tüm komutlara izin vermek için * ekleyin (dikkatli kullanın).",
+			"deniedCommands": "Reddedilen komutlar",
+			"deniedCommandsDescription": "Onay istenmeden otomatik olarak reddedilecek komut önekleri. İzin verilen komutlarla çakışma durumunda, en uzun önek eşleşmesi öncelik alır. Tüm komutları reddetmek için * ekleyin.",
 			"commandPlaceholder": "Komut öneki girin (örn. 'git ')",
-			"addButton": "Ekle"
+			"deniedCommandPlaceholder": "Reddetmek için komut öneki girin (örn. 'rm -rf')",
+			"addButton": "Ekle",
+			"autoDenied": "`{{prefix}}` önekli komutlar kullanıcı tarafından yasaklandı. Başka bir komut çalıştırarak bu kısıtlamayı aşma."
 		},
 		"showMenu": {
 			"label": "Sohbet görünümünde otomatik onay menüsünü göster",
@@ -191,7 +197,8 @@
 			"title": "Maksimum İstek",
 			"description": "Göreve devam etmek için onay istemeden önce bu sayıda API isteği otomatik olarak yap.",
 			"unlimited": "Sınırsız"
-		}
+		},
+		"selectOptionsFirst": "Otomatik onayı etkinleştirmek için aşağıdan en az bir seçenek seçin"
 	},
 	"providers": {
 		"providerDocumentation": "{{provider}} Dokümantasyonu",
@@ -372,6 +379,12 @@
 			"label": "Hız sınırı",
 			"description": "API istekleri arasındaki minimum süre."
 		},
+		"consecutiveMistakeLimit": {
+			"label": "Hata ve Tekrar Limiti",
+			"description": "'Kilo Code sorun yaşıyor' iletişim kutusunu göstermeden önceki ardışık hata veya tekrarlanan eylem sayısı",
+			"unlimitedDescription": "Sınırsız yeniden deneme etkin (otomatik devam et). Diyalog asla görünmeyecek.",
+			"warning": "⚠️ 0'a ayarlamak, önemli API kullanımına neden olabilecek sınırsız yeniden denemeye izin verir"
+		},
 		"reasoningEffort": {
 			"label": "Model Akıl Yürütme Çabası",
 			"high": "Yüksek",
@@ -382,7 +395,9 @@
 		"claudeCode": {
 			"pathLabel": "Claude Code Yolu",
 			"description": "Claude Code CLI'nize isteğe bağlı yol. Ayarlanmazsa varsayılan olarak 'claude' kullanılır.",
-			"placeholder": "Varsayılan: claude"
+			"placeholder": "Varsayılan: claude",
+			"maxTokensLabel": "Maksimum Çıktı Token sayısı",
+			"maxTokensDescription": "Claude Code yanıtları için maksimum çıktı token sayısı. Varsayılan 8000'dir."
 		},
 		"geminiCli": {
 			"description": "Bu sağlayıcı Gemini CLI aracından OAuth kimlik doğrulaması kullanır ve API anahtarları gerektirmez.",
@@ -553,6 +568,9 @@
 			"label": "Ortam değişkenlerini devral",
 			"description": "Etkinleştirildiğinde, terminal VSCode üst işleminden ortam değişkenlerini devralır, örneğin kullanıcı profilinde tanımlanan kabuk entegrasyon ayarları gibi. Bu, VSCode'un global ayarı olan `terminal.integrated.inheritEnv` değerini doğrudan değiştirir. <0>Daha fazla bilgi</0>"
 		}
+	},
+	"advancedSettings": {
+		"title": "Gelişmiş ayarlar"
 	},
 	"advanced": {
 		"diff": {

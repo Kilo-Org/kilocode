@@ -29,12 +29,7 @@
 	"confirmation": {
 		"reset_state": "Tem certeza de que deseja redefinir todo o estado e armazenamento secreto na extensão? Isso não pode ser desfeito.",
 		"delete_config_profile": "Tem certeza de que deseja excluir este perfil de configuração?",
-		"delete_custom_mode_with_rules": "Tem certeza de que deseja excluir este modo {scope}?\n\nIsso também excluirá a pasta de regras associada em:\n{rulesFolderPath}",
-		"delete_message": "O que você gostaria de excluir?",
-		"delete_just_this_message": "Apenas esta mensagem",
-		"delete_this_and_subsequent": "Esta e todas as mensagens subsequentes",
-		"edit_warning": "Editar esta mensagem excluirá todas as mensagens subsequentes na conversa. Deseja continuar?",
-		"proceed": "Continuar"
+		"delete_custom_mode_with_rules": "Tem certeza de que deseja excluir este modo {scope}?\n\nIsso também excluirá a pasta de regras associada em:\n{rulesFolderPath}"
 	},
 	"errors": {
 		"invalid_data_uri": "Formato de URI de dados inválido",
@@ -66,7 +61,7 @@
 		"cannot_access_path": "Não é possível acessar o caminho {{path}}: {{error}}",
 		"settings_import_failed": "Falha ao importar configurações: {{error}}",
 		"mistake_limit_guidance": "Isso pode indicar uma falha no processo de pensamento do modelo ou incapacidade de usar uma ferramenta adequadamente, o que pode ser mitigado com orientação do usuário (ex. \"Tente dividir a tarefa em etapas menores\").",
-		"violated_organization_allowlist": "Falha ao executar a tarefa: o perfil atual viola as configurações da sua organização",
+		"violated_organization_allowlist": "Falha ao executar a tarefa: o perfil atual não é compatível com as configurações da sua organização",
 		"condense_failed": "Falha ao condensar o contexto",
 		"condense_not_enough_messages": "Não há mensagens suficientes para condensar o contexto de {{prevContextTokens}} tokens. Pelo menos {{minimumMessageCount}} mensagens são necessárias, mas apenas {{messageCount}} estão disponíveis.",
 		"condensed_recently": "O contexto foi condensado recentemente; pulando esta tentativa",
@@ -79,6 +74,7 @@
 		"url_page_not_found": "A página não foi encontrada. Verifique se a URL está correta.",
 		"url_fetch_failed": "Falha ao buscar conteúdo da URL: {{error}}",
 		"url_fetch_error_with_url": "Erro ao buscar conteúdo para {{url}}: {{error}}",
+		"command_timeout": "A execução do comando excedeu o tempo limite após {{seconds}} segundos",
 		"share_task_failed": "Falha ao compartilhar tarefa",
 		"share_no_active_task": "Nenhuma tarefa ativa para compartilhar",
 		"share_auth_required": "Autenticação necessária. Faça login para compartilhar tarefas.",

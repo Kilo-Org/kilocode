@@ -25,12 +25,7 @@
 	"confirmation": {
 		"reset_state": "Êtes-vous sûr de vouloir réinitialiser le global state et le stockage de secrets de l'extension ? Cette action est irréversible.",
 		"delete_config_profile": "Êtes-vous sûr de vouloir supprimer ce profil de configuration ?",
-		"delete_custom_mode_with_rules": "Êtes-vous sûr de vouloir supprimer ce mode {scope} ?\n\nCela supprimera également le dossier de règles associé à l'adresse :\n{rulesFolderPath}",
-		"delete_message": "Que souhaitez-vous supprimer ?",
-		"edit_warning": "Modifier ce message supprimera tous les messages suivants dans la conversation. Voulez-vous continuer ?",
-		"delete_just_this_message": "Uniquement ce message",
-		"delete_this_and_subsequent": "Ce message et tous les messages suivants",
-		"proceed": "Continuer"
+		"delete_custom_mode_with_rules": "Êtes-vous sûr de vouloir supprimer ce mode {scope} ?\n\nCela supprimera également le dossier de règles associé à l'adresse :\n{rulesFolderPath}"
 	},
 	"errors": {
 		"invalid_data_uri": "Format d'URI de données invalide",
@@ -62,7 +57,7 @@
 		"cannot_access_path": "Impossible d'accéder au chemin {{path}} : {{error}}",
 		"settings_import_failed": "Échec de l'importation des paramètres : {{error}}",
 		"mistake_limit_guidance": "Cela peut indiquer un échec dans le processus de réflexion du modèle ou une incapacité à utiliser un outil correctement, ce qui peut être atténué avec des conseils de l'utilisateur (par ex. \"Essaie de diviser la tâche en étapes plus petites\").",
-		"violated_organization_allowlist": "Échec de l'exécution de la tâche : le profil actuel enfreint les paramètres de votre organisation",
+		"violated_organization_allowlist": "Échec de l'exécution de la tâche : le profil actuel n'est pas compatible avec les paramètres de votre organisation",
 		"condense_failed": "Échec de la condensation du contexte",
 		"condense_not_enough_messages": "Pas assez de messages pour condenser le contexte de {{prevContextTokens}} tokens. Au moins {{minimumMessageCount}} messages sont requis, mais seulement {{messageCount}} sont disponibles.",
 		"condensed_recently": "Le contexte a été condensé récemment ; cette tentative est ignorée",
@@ -75,6 +70,7 @@
 		"url_page_not_found": "La page n'a pas été trouvée. Verifier si l'URL est correcte.",
 		"url_fetch_failed": "Échec de récupération du contenu de l'URL : {{error}}",
 		"url_fetch_error_with_url": "Erreur lors de la récupération du contenu pour {{url}} : {{error}}",
+		"command_timeout": "L'exécution de la commande a expiré après {{seconds}} secondes",
 		"share_task_failed": "Échec du partage de la tâche. Veuillez réessayer.",
 		"share_no_active_task": "Aucune tâche active à partager",
 		"share_auth_required": "Authentification requise. Veuillez vous connecter pour partager des tâches.",

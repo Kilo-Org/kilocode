@@ -124,6 +124,8 @@
 	},
 	"autoApprove": {
 		"description": "Permetti a Kilo Code di eseguire automaticamente operazioni senza richiedere approvazione. Abilita queste impostazioni solo se ti fidi completamente dell'IA e comprendi i rischi di sicurezza associati.",
+		"toggleAriaLabel": "Attiva/disattiva approvazione automatica",
+		"disabledAriaLabel": "Approvazione automatica disabilitata - seleziona prima le opzioni",
 		"readOnly": {
 			"label": "Leggi",
 			"description": "Quando abilitato, Kilo Code visualizzerà automaticamente i contenuti della directory e leggerà i file senza richiedere di cliccare sul pulsante Approva.",
@@ -176,8 +178,12 @@
 			"description": "Esegui automaticamente i comandi del terminale consentiti senza richiedere approvazione",
 			"allowedCommands": "Comandi di auto-esecuzione consentiti",
 			"allowedCommandsDescription": "Prefissi di comando che possono essere auto-eseguiti quando \"Approva sempre operazioni di esecuzione\" è abilitato. Aggiungi * per consentire tutti i comandi (usare con cautela).",
+			"deniedCommands": "Comandi negati",
+			"deniedCommandsDescription": "Prefissi di comandi che verranno automaticamente negati senza richiedere approvazione. In caso di conflitti con comandi consentiti, la corrispondenza del prefisso più lungo ha la precedenza. Aggiungi * per negare tutti i comandi.",
 			"commandPlaceholder": "Inserisci prefisso comando (es. 'git ')",
-			"addButton": "Aggiungi"
+			"deniedCommandPlaceholder": "Inserisci prefisso comando da negare (es. 'rm -rf')",
+			"addButton": "Aggiungi",
+			"autoDenied": "I comandi con il prefisso `{{prefix}}` sono stati vietati dall'utente. Non aggirare questa restrizione eseguendo un altro comando."
 		},
 		"showMenu": {
 			"label": "Mostra menu di approvazione automatica nella vista chat",
@@ -191,7 +197,8 @@
 			"title": "Richieste massime",
 			"description": "Esegui automaticamente questo numero di richieste API prima di chiedere l'approvazione per continuare con l'attività.",
 			"unlimited": "Illimitato"
-		}
+		},
+		"selectOptionsFirst": "Seleziona almeno un'opzione qui sotto per abilitare l'approvazione automatica"
 	},
 	"providers": {
 		"providerDocumentation": "Documentazione {{provider}}",
@@ -372,6 +379,12 @@
 			"label": "Limite di frequenza",
 			"description": "Tempo minimo tra le richieste API."
 		},
+		"consecutiveMistakeLimit": {
+			"label": "Limite di errori e ripetizioni",
+			"description": "Numero di errori consecutivi o azioni ripetute prima di mostrare la finestra di dialogo 'Kilo Code sta riscontrando problemi'",
+			"unlimitedDescription": "Tentativi illimitati abilitati (procedi automaticamente). La finestra di dialogo non verrà mai visualizzata.",
+			"warning": "⚠️ L'impostazione a 0 consente tentativi illimitati che possono consumare un notevole utilizzo dell'API"
+		},
 		"reasoningEffort": {
 			"label": "Sforzo di ragionamento del modello",
 			"high": "Alto",
@@ -382,7 +395,9 @@
 		"claudeCode": {
 			"pathLabel": "Percorso Claude Code",
 			"description": "Percorso facoltativo per la tua CLI Claude Code. Predefinito 'claude' se non impostato.",
-			"placeholder": "Predefinito: claude"
+			"placeholder": "Predefinito: claude",
+			"maxTokensLabel": "Token di output massimi",
+			"maxTokensDescription": "Numero massimo di token di output per le risposte di Claude Code. Il valore predefinito è 8000."
 		},
 		"geminiCli": {
 			"description": "Questo provider utilizza l'autenticazione OAuth dallo strumento Gemini CLI e non richiede chiavi API.",
@@ -553,6 +568,9 @@
 			"label": "Eredita variabili d'ambiente",
 			"description": "Quando abilitato, il terminale eredita le variabili d'ambiente dal processo padre di VSCode, come le impostazioni di integrazione della shell definite nel profilo utente. Questo attiva direttamente l'impostazione globale di VSCode `terminal.integrated.inheritEnv`. <0>Scopri di più</0>"
 		}
+	},
+	"advancedSettings": {
+		"title": "Impostazioni avanzate"
 	},
 	"advanced": {
 		"diff": {

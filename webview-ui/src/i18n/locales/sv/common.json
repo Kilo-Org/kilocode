@@ -70,5 +70,12 @@
 		"success": {
 			"imageDataUriCopied": "Image data URI kopierat till urklipp"
 		}
+	},
+	"confirmation": {
+		"deleteMessage": "Ta bort meddelande",
+		"deleteWarning": "Att ta bort detta meddelande kommer att ta bort alla efterföljande meddelanden i konversationen. Vill du fortsätta?",
+		"editMessage": "Redigera meddelande",
+		"editWarning": "Att redigera detta meddelande kommer att ta bort alla efterföljande meddelanden i konversationen. Vill du fortsätta?",
+		"proceed": "Fortsätt"
 	}
 }

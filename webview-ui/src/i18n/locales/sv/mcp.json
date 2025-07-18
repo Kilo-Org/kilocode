@@ -1,6 +1,7 @@
 {
 	"title": "MCP-servrar",
 	"done": "Klar",
+	"marketplace": "MCP Marketplace",
 	"description": "<0>Model Context Protocol</0> möjliggör kommunikation med lokala MCP-servrar som tillhandahåller ytterligare verktyg och resurser för att utöka Kilo Codes kapacitet. Du kan använda <1>servrar skapade av communityn</1> eller be Kilo Code skapa nya verktyg specifikt för ditt arbetsflöde (t.ex. \"lägg till ett verktyg som hämtar de senaste npm docs\").",
 	"instructions": "Instruktioner",
 	"enableToggle": {

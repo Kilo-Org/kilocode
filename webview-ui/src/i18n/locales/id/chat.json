@@ -45,7 +45,7 @@
 	},
 	"save": {
 		"title": "Simpan",
-		"tooltip": "Simpan perubahan file"
+		"tooltip": "Simpan perubahan pesan"
 	},
 	"tokenProgress": {
 		"availableSpace": "Ruang tersedia: {{amount}} token",
@@ -138,6 +138,7 @@
 	"separator": "Pemisah",
 	"edit": "Edit...",
 	"forNextMode": "untuk mode selanjutnya",
+	"forPreviousMode": "untuk mode sebelumnya",
 	"apiRequest": {
 		"title": "Permintaan API",
 		"failed": "Permintaan API Gagal",
@@ -209,7 +210,8 @@
 	"codebaseSearch": {
 		"wantsToSearch": "Kilo Code ingin mencari codebase untuk <code>{{query}}</code>:",
 		"wantsToSearchWithPath": "Kilo Code ingin mencari codebase untuk <code>{{query}}</code> di <code>{{path}}</code>:",
-		"didSearch": "Ditemukan {{count}} hasil untuk <code>{{query}}</code>:",
+		"didSearch_one": "Ditemukan 1 hasil",
+		"didSearch_other": "Ditemukan {{count}} hasil",
 		"resultTooltip": "Skor kemiripan: {{score}} (klik untuk membuka file)"
 	},
 	"commandOutput": "Output Perintah",
@@ -249,11 +251,14 @@
 	"autoApprove": {
 		"title": "Auto-approve:",
 		"none": "Tidak Ada",
-		"description": "Auto-approve memungkinkan Kilo Code melakukan aksi tanpa meminta izin. Hanya aktifkan untuk aksi yang benar-benar kamu percayai. Konfigurasi lebih detail tersedia di <settingsLink>Pengaturan</settingsLink>."
+		"description": "Auto-approve memungkinkan Kilo Code melakukan aksi tanpa meminta izin. Hanya aktifkan untuk aksi yang benar-benar kamu percayai. Konfigurasi lebih detail tersedia di <settingsLink>Pengaturan</settingsLink>.",
+		"selectOptionsFirst": "Pilih setidaknya satu opsi di bawah untuk mengaktifkan persetujuan otomatis",
+		"toggleAriaLabel": "Beralih persetujuan otomatis",
+		"disabledAriaLabel": "Persetujuan otomatis dinonaktifkan - pilih opsi terlebih dahulu"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} Dirilis",
-		"description": "Roo Code {{version}} menghadirkan fitur-fitur baru yang kuat dan peningkatan signifikan untuk meningkatkan alur kerja pengembangan Anda.",
+		"title": "🎉 Kilo Code {{version}} Dirilis",
+		"description": "Kilo Code {{version}} menghadirkan fitur-fitur baru yang kuat dan peningkatan signifikan untuk meningkatkan alur kerja pengembangan Anda.",
 		"whatsNew": "Yang Baru",
 		"feature1": "<bold>Pengindeksan Codebase Lulus dari Eksperimental</bold>: Pengindeksan codebase lengkap kini stabil dan siap untuk penggunaan produksi dengan pencarian yang ditingkatkan dan pemahaman konteks.",
 		"feature2": "<bold>Fitur Daftar Todo Baru</bold>: Jaga tugas Anda tetap pada jalur dengan manajemen todo terintegrasi yang membantu Anda tetap terorganisir dan fokus pada tujuan pengembangan.",
@@ -302,7 +307,7 @@
 		}
 	},
 	"systemPromptWarning": "PERINGATAN: Override system prompt kustom aktif. Ini dapat merusak fungsionalitas secara serius dan menyebabkan perilaku yang tidak terduga.",
-	"profileViolationWarning": "Profil saat ini melanggar pengaturan organisasi kamu",
+	"profileViolationWarning": "Profil saat ini tidak kompatibel dengan pengaturan organisasi kamu",
 	"shellIntegration": {
 		"title": "Peringatan Eksekusi Perintah",
 		"description": "Perintah kamu dijalankan tanpa integrasi shell terminal VSCode. Untuk menekan peringatan ini kamu bisa menonaktifkan integrasi shell di bagian <strong>Terminal</strong> dari <settingsLink>pengaturan Kilo Code</settingsLink> atau troubleshoot integrasi terminal VSCode menggunakan link di bawah.",
@@ -324,5 +329,8 @@
 	},
 	"versionIndicator": {
 		"ariaLabel": "Versi {{version}} - Klik untuk melihat catatan rilis"
+	},
+	"editMessage": {
+		"placeholder": "Edit pesan Anda..."
 	}
 }
