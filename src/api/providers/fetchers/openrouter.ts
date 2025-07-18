@@ -121,6 +121,14 @@ export async function getOpenRouterModels(
 				maxTokens: top_provider?.max_completion_tokens,
 				supportedParameters: supported_parameters,
 			})
+
+			// kilocode_change start
+			if (id == "moonshotai/kimi-k2" && baseURL == "https://kilocode.ai/api/openrouter") {
+				const kimi = models[id]
+				kimi.contextWindow = 131_000
+				kimi.maxTokens = 131_000
+			}
+			// kilocode_change end
 		}
 	} catch (error) {
 		console.error(
