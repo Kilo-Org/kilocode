@@ -38,6 +38,7 @@ import {
 	WandSparkles,
 	SendHorizontal,
 	Paperclip, // kilocode_change
+	RotateCcw, // kilocode_change
 } from "lucide-react"
 import { IndexingStatusBadge } from "./IndexingStatusBadge"
 import { cn } from "@/lib/utils"
@@ -149,6 +150,10 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 		const [searchLoading, setSearchLoading] = useState(false)
 		const [searchRequestId, setSearchRequestId] = useState<string>("")
+		// kilocode_change start
+		const [originalPromptBeforeEnhancement, setOriginalPromptBeforeEnhancement] = useState<string | null>(null)
+		const [enhancedPromptText, setEnhancedPromptText] = useState<string | null>(null)
+		// kilocode_change end
 
 		// Close dropdown when clicking outside.
 		useEffect(() => {
@@ -170,6 +175,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				if (message.type === "enhancedPrompt") {
 					if (message.text) {
 						setInputValue(message.text)
+						setEnhancedPromptText(message.text) // kilocode_change
 					}
 
 					setIsEnhancingPrompt(false)
@@ -204,7 +210,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 			window.addEventListener("message", messageHandler)
 			return () => window.removeEventListener("message", messageHandler)
-		}, [setInputValue, searchRequestId])
+		}, [setInputValue, searchRequestId, originalPromptBeforeEnhancement, enhancedPromptText]) // kilocode_change
 
 		const [isDraggingOver, setIsDraggingOver] = useState(false)
 		// kilocode_change start: pull slash commands from Cline
@@ -248,6 +254,13 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			}
 		}, [selectedType, searchQuery])
 
+		// kilocode_change start
+		const canRevertToOriginalPrompt = useCallback(
+			() => enhancedPromptText && originalPromptBeforeEnhancement && inputValue === enhancedPromptText,
+			[enhancedPromptText, originalPromptBeforeEnhancement, inputValue],
+		)
+		// kilocode_change end
+
 		const handleEnhancePrompt = useCallback(() => {
 			if (sendingDisabled) {
 				return
@@ -255,13 +268,40 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 			const trimmedInput = inputValue.trim()
 
+			// kilocode_change start
+			// If currently enhancing, cancel the enhancement
+			if (isEnhancingPrompt) {
+				setIsEnhancingPrompt(false)
+				setOriginalPromptBeforeEnhancement(null) // Clear original prompt to ignore any pending response
+				return
+			}
+
+			if (canRevertToOriginalPrompt() && originalPromptBeforeEnhancement) {
+				setInputValue(originalPromptBeforeEnhancement)
+				setOriginalPromptBeforeEnhancement(null)
+				setEnhancedPromptText(null)
+				return
+			}
+			// kilocode_change end
+
 			if (trimmedInput) {
 				setIsEnhancingPrompt(true)
+				setOriginalPromptBeforeEnhancement(trimmedInput) // kilocode_change - store original prompt for potential revert
 				vscode.postMessage({ type: "enhancePrompt" as const, text: trimmedInput })
 			} else {
 				setInputValue(t("chat:enhancePromptDescription"))
 			}
-		}, [inputValue, sendingDisabled, setInputValue, t])
+			// kilocode_change start - add isEnhancingPrompt, canRevertToOriginalPrompt, originalPromptBeforeEnhancement
+		}, [
+			inputValue,
+			sendingDisabled,
+			setInputValue,
+			t,
+			isEnhancingPrompt,
+			canRevertToOriginalPrompt,
+			originalPromptBeforeEnhancement,
+		])
+		// kilocode_change end
 
 		const allModes = useMemo(() => getAllModes(customModes), [customModes])
 
@@ -1010,6 +1050,10 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 		const placeholderBottomText = `\n(${t("chat:addContext")}${shouldDisableImages ? `, ${t("chat:dragFiles")}` : `, ${t("chat:dragFilesImages")}`})`
 
+		// kilocode_change start
+		const buttonState = isEnhancingPrompt ? "cancel" : canRevertToOriginalPrompt() ? "revert" : "enhance"
+		// kilocode_change end
+
 		return (
 			<div
 				className={cn(
@@ -1216,11 +1260,29 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 							{/* kilocode_change: position tweaked */}
 							<div className="absolute top-2 right-2 z-30">
-								<StandardTooltip content={t("chat:enhancePrompt")}>
+								<StandardTooltip
+									content={
+										// kilocode_change start
+										buttonState === "cancel"
+											? t("kilocode:chat.enhancePrompt.cancelEnhancement")
+											: buttonState === "revert"
+												? t("kilocode:chat.enhancePrompt.revertEnhancement")
+												: t("chat:enhancePrompt")
+										// kilocode_change end
+									}>
 									<button
-										aria-label={t("chat:enhancePrompt")}
+										aria-label={
+											// kilocode_change start
+											buttonState === "cancel"
+												? t("kilocode:chat.enhancePrompt.cancelEnhancement")
+												: buttonState === "revert"
+													? t("kilocode:chat.enhancePrompt.revertEnhancement")
+													: t("chat:enhancePrompt")
+											// kilocode_change end
+										}
 										disabled={sendingDisabled}
 										onClick={!sendingDisabled ? handleEnhancePrompt : undefined}
+										data-testid="enhance-prompt-button"
 										className={cn(
 											"relative inline-flex items-center justify-center",
 											"bg-transparent border-none p-1.5",
@@ -1234,7 +1296,15 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 											sendingDisabled &&
 												"opacity-40 cursor-not-allowed grayscale-[30%] hover:bg-transparent hover:border-[rgba(255,255,255,0.08)] active:bg-transparent",
 										)}>
-										<WandSparkles className={cn("w-4 h-4", isEnhancingPrompt && "animate-spin")} />
+										{/* kilocode_change start */}
+										{buttonState === "cancel" && (
+											<WandSparkles
+												className={cn("w-4 h-4", isEnhancingPrompt && "animate-spin")}
+											/>
+										)}
+										{buttonState === "revert" && <RotateCcw className="w-4 h-4" />}
+										{buttonState === "enhance" && <WandSparkles className="w-4 h-4" />}
+										{/* kilocode_change end */}
 									</button>
 								</StandardTooltip>
 							</div>

@@ -46,6 +46,10 @@
 		"condense": {
 			"wantsToCondense": "Kilo Codeは会話を要約したいと思っています",
 			"condenseConversation": "会話を要約する"
+		},
+		"enhancePrompt": {
+			"cancelEnhancement": "高度化をキャンセル",
+			"revertEnhancement": "元のプロンプトに戻す"
 		}
 	},
 	"newTaskPreview": {

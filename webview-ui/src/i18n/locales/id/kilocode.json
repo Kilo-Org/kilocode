@@ -46,6 +46,10 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code ingin mengondensasi percakapan kamu",
 			"condenseConversation": "Kondensasi Percakapan"
+		},
+		"enhancePrompt": {
+			"cancelEnhancement": "Batalkan peningkatan",
+			"revertEnhancement": "Kembalikan ke prompt asli"
 		}
 	},
 	"newTaskPreview": {

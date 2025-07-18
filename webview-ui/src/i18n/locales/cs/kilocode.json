@@ -46,6 +46,10 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code chce zkrátit tvou konverzaci",
 			"condenseConversation": "Zkrátit konverzaci"
+		},
+		"enhancePrompt": {
+			"cancelEnhancement": "Zrušit vylepšení",
+			"revertEnhancement": "Vrátit se k původnímu zadání"
 		}
 	},
 	"newTaskPreview": {

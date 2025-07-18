@@ -46,6 +46,10 @@
 		"condense": {
 			"wantsToCondense": "Gusto ng Kilo Code na paikliin ang iyong pag-uusap",
 			"condenseConversation": "Paikliin ang Pag-uusap"
+		},
+		"enhancePrompt": {
+			"cancelEnhancement": "Kanselahin ang pagpapahusay",
+			"revertEnhancement": "Ibalik sa orihinal na prompt"
 		}
 	},
 	"newTaskPreview": {

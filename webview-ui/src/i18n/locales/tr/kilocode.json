@@ -46,6 +46,10 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code konuşmanı özetlemek istiyor",
 			"condenseConversation": "Konuşmayı Özetle"
+		},
+		"enhancePrompt": {
+			"cancelEnhancement": "İyileştirmeyi iptal et",
+			"revertEnhancement": "Orijinal talimata dön"
 		}
 	},
 	"newTaskPreview": {

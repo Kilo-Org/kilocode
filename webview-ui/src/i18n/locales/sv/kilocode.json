@@ -46,6 +46,10 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code vill komprimera din konversation",
 			"condenseConversation": "Komprimera konversation"
+		},
+		"enhancePrompt": {
+			"cancelEnhancement": "Avbryt förbättring",
+			"revertEnhancement": "Återgå till ursprungsfrågan"
 		}
 	},
 	"newTaskPreview": {
