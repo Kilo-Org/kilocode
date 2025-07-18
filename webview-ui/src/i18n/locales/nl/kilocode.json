@@ -130,5 +130,16 @@
 			"idea6": "Genereer kaarten die dynamische content prachtig onthullen bij hovering",
 			"idea7": "Maak een rustgevend interactief sterrenveld dat beweegt met muisgebaren"
 		}
+	},
+	"ghost": {
+		"title": "Inline Assistentie",
+		"settings": {
+			"provider": "Aanbieder",
+			"apiConfigId": {
+				"label": "API-configuratie",
+				"current": "Gebruik de momenteel geselecteerde API-configuratie",
+				"description": "Je kunt een API-configuratie selecteren die altijd wordt gebruikt voor het verbeteren van prompts, of gewoon gebruiken wat er momenteel is geselecteerd"
+			}
+		}
 	}
 }

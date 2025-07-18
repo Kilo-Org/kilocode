@@ -130,5 +130,16 @@
 			"idea6": "Genera tarjetas que revelen contenido dinámico de forma hermosa al pasar el ratón por encima",
 			"idea7": "Crea un campo de estrellas interactivo y relajante que se mueva con gestos del ratón"
 		}
+	},
+	"ghost": {
+		"title": "Asistencia en línea",
+		"settings": {
+			"provider": "Proveedor",
+			"apiConfigId": {
+				"label": "Configuración de API",
+				"current": "Usar la configuración de API seleccionada actualmente",
+				"description": "Puedes seleccionar una configuración de API para usar siempre al mejorar los prompts, o simplemente usar la que está seleccionada actualmente"
+			}
+		}
 	}
 }

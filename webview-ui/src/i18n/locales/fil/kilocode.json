@@ -130,5 +130,16 @@
 			"idea6": "Mag-generate ng mga cards na nagbubunyag ng dynamic content nang maganda kapag nag-hover",
 			"idea7": "Lumikha ng mapayapang interactive starfield na gumagalaw sa mga galaw ng mouse"
 		}
+	},
+	"ghost": {
+		"title": "Inline na Tulong",
+		"settings": {
+			"provider": "Provider",
+			"apiConfigId": {
+				"label": "API Configuration",
+				"current": "Gamitin ang kasalukuyang napiling API configuration",
+				"description": "Maaari kang pumili ng API configuration na palaging gagamitin para sa pagpapahusay ng mga prompt, o gamitin lang kung ano ang kasalukuyang napili"
+			}
+		}
 	}
 }

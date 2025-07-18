@@ -130,5 +130,16 @@
 			"idea6": "Generera kort som vackert avslöjar dynamiskt innehåll när du hovrar över dem",
 			"idea7": "Skapa ett lugnande interaktivt stjärnfält som rör sig med musgester"
 		}
+	},
+	"ghost": {
+		"title": "Inline-assistans",
+		"settings": {
+			"provider": "Leverantör",
+			"apiConfigId": {
+				"label": "API-konfiguration",
+				"current": "Använd den för närvarande valda API-konfigurationen",
+				"description": "Du kan välja en API-konfiguration att alltid använda för att förbättra prompter, eller bara använda vad som för närvarande är valt"
+			}
+		}
 	}
 }

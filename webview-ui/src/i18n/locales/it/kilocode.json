@@ -130,5 +130,16 @@
 			"idea6": "Genera carte che rivelano contenuti dinamici magnificamente quando ci si passa sopra",
 			"idea7": "Crea un campo stellare interattivo rilassante che si muove con i gesti del mouse"
 		}
+	},
+	"ghost": {
+		"title": "Assistenza in linea",
+		"settings": {
+			"provider": "Fornitore",
+			"apiConfigId": {
+				"label": "Configurazione API",
+				"current": "Usa la configurazione API attualmente selezionata",
+				"description": "Puoi selezionare una configurazione API da utilizzare sempre per migliorare i prompt, oppure utilizzare semplicemente quella attualmente selezionata"
+			}
+		}
 	}
 }

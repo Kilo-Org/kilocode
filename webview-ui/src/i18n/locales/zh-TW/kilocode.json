@@ -130,5 +130,16 @@
 			"idea6": "產生在滑鼠停留時優雅展示動態內容的卡片",
 			"idea7": "建立一個寧靜的互動式星空，跟隨滑鼠手勢移動"
 		}
+	},
+	"ghost": {
+		"title": "內聯輔助",
+		"settings": {
+			"provider": "提供者",
+			"apiConfigId": {
+				"label": "API 設定",
+				"current": "使用目前選擇的 API 設定",
+				"description": "你可以選擇一個 API 設定始終用於增強提示詞，或者只使用目前選擇的設定"
+			}
+		}
 	}
 }

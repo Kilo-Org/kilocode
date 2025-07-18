@@ -130,5 +130,16 @@
 			"idea6": "Wygeneruj karty, które pięknie ujawniają dynamiczną zawartość po najechaniu myszą",
 			"idea7": "Stwórz uspokajające interaktywne pole gwiazd, które porusza się wraz z gestami myszy"
 		}
+	},
+	"ghost": {
+		"title": "Pomoc w tekście",
+		"settings": {
+			"provider": "Dostawca",
+			"apiConfigId": {
+				"label": "Konfiguracja API",
+				"current": "Użyj aktualnie wybranej konfiguracji API",
+				"description": "Możesz wybrać konfigurację API, która będzie zawsze używana do ulepszania podpowiedzi, lub po prostu użyć aktualnie wybranej"
+			}
+		}
 	}
 }

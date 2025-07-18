@@ -130,5 +130,16 @@
 			"idea6": "生成在鼠标悬停时优雅展示动态内容的卡片",
 			"idea7": "创建一个宁静的交互式星空，跟随鼠标手势移动"
 		}
+	},
+	"ghost": {
+		"title": "内联辅助",
+		"settings": {
+			"provider": "提供商",
+			"apiConfigId": {
+				"label": "API 配置",
+				"current": "使用当前选择的 API 配置",
+				"description": "你可以选择一个 API 配置始终用于增强提示词，或者只使用当前选择的配置"
+			}
+		}
 	}
 }

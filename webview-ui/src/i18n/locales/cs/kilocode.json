@@ -130,5 +130,16 @@
 			"idea6": "Vygeneruj karty, které krásně odhalí dynamický obsah při najetí myší",
 			"idea7": "Vytvoř uklidňující interaktivní hvězdné pole, které se pohybuje s gesty myši"
 		}
+	},
+	"ghost": {
+		"title": "Inline asistence",
+		"settings": {
+			"provider": "Poskytovatel",
+			"apiConfigId": {
+				"label": "Konfigurace API",
+				"current": "Použít aktuálně vybranou konfiguraci API",
+				"description": "Můžete vybrat konfiguraci API, která se bude vždy používat pro vylepšení promptů, nebo použít tu, která je aktuálně vybrána"
+			}
+		}
 	}
 }
