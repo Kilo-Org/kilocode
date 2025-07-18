@@ -95,21 +95,31 @@ export class TerminalRegistry {
 					}
 
 					if (!terminal.running) {
-						console.error(
+						console.warn(
 							"[TerminalRegistry] Shell execution end event received, but process is not running for terminal:",
 							{ terminalId: terminal?.id, command: process?.command, exitCode: e.exitCode },
 						)
 
+						// Still process the completion even if running state is inconsistent
+						// This helps recover from state inconsistencies
 						terminal.busy = false
+
+						// If there's a process, still signal completion
+						if (process) {
+							terminal.shellExecutionComplete(exitDetails)
+						}
 						return
 					}
 
 					if (!process) {
-						console.error(
+						console.warn(
 							"[TerminalRegistry] Shell execution end event received on running terminal, but process is undefined:",
 							{ terminalId: terminal.id, exitCode: e.exitCode },
 						)
 
+						// Still mark terminal as not busy and not running to recover from inconsistent state
+						terminal.busy = false
+						terminal.running = false
 						return
 					}
 
