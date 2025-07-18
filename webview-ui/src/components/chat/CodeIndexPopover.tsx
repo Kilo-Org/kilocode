@@ -39,11 +39,12 @@ import {
 import { AlertTriangle } from "lucide-react"
 import { useRooPortal } from "@src/components/ui/hooks/useRooPortal"
 import type { EmbedderProvider } from "@roo/embeddingModels"
+import { EMBEDDING_MODEL_PROFILES } from "@roo/embeddingModels"
 import type { IndexingStatus } from "@roo/ExtensionMessage"
 import { CODEBASE_INDEX_DEFAULTS } from "@roo-code/types"
 
 // Default URLs for providers
-const DEFAULT_QDRANT_URL = "http://localhost:6333"
+const DEFAULT_QDRANT_URL = "http://127.0.0.1:6333"
 const DEFAULT_OLLAMA_URL = "http://localhost:11434"
 
 interface CodeIndexPopoverProps {
@@ -62,12 +63,22 @@ interface LocalCodeIndexSettings {
 	codebaseIndexSearchMaxResults?: number
 	codebaseIndexSearchMinScore?: number
 
+	// Custom model settings
+	isCustomModel?: boolean
+	customModelName?: string
+
 	// Secret settings (start empty, will be loaded separately)
 	codeIndexOpenAiKey?: string
 	codeIndexQdrantApiKey?: string
 	codebaseIndexOpenAiCompatibleBaseUrl?: string
 	codebaseIndexOpenAiCompatibleApiKey?: string
 	codebaseIndexGeminiApiKey?: string
+
+	// Azure OpenAI settings
+	codebaseIndexAzureOpenAiApiKey?: string
+	codebaseIndexAzureOpenAiEndpoint?: string
+	codebaseIndexAzureOpenAiDeploymentName?: string
+	codebaseIndexAzureOpenAiApiVersion?: string
 }
 
 // Validation schema for codebase index settings
@@ -91,13 +102,39 @@ const createValidationSchema = (provider: EmbedderProvider, t: any) => {
 			})
 
 		case "ollama":
-			return baseSchema.extend({
-				codebaseIndexEmbedderBaseUrl: z
-					.string()
-					.min(1, t("settings:codeIndex.validation.ollamaBaseUrlRequired"))
-					.url(t("settings:codeIndex.validation.invalidOllamaUrl")),
-				codebaseIndexEmbedderModelId: z.string().min(1, t("settings:codeIndex.validation.modelIdRequired")),
-			})
+			return baseSchema
+				.extend({
+					codebaseIndexEmbedderBaseUrl: z
+						.string()
+						.min(1, t("settings:codeIndex.validation.ollamaBaseUrlRequired"))
+						.url(t("settings:codeIndex.validation.invalidOllamaUrl")),
+					codebaseIndexEmbedderModelId: z.string().min(1, t("settings:codeIndex.validation.modelIdRequired")),
+					codebaseIndexEmbedderModelDimension: z.number().optional(),
+					isCustomModel: z.boolean().optional(),
+					customModelName: z.string().optional(),
+				})
+				.superRefine((data, ctx) => {
+					// If using custom model, validate customModelName and dimension
+					if (data.isCustomModel) {
+						// Custom model name is required
+						if (!data.customModelName) {
+							ctx.addIssue({
+								code: z.ZodIssueCode.custom,
+								message: t("settings:codeIndex.validation.modelIdRequired"),
+								path: ["customModelName"],
+							})
+						}
+
+						// Dimension is required for custom models
+						if (!data.codebaseIndexEmbedderModelDimension) {
+							ctx.addIssue({
+								code: z.ZodIssueCode.custom,
+								message: t("settings:codeIndex.validation.modelDimensionRequired"),
+								path: ["codebaseIndexEmbedderModelDimension"],
+							})
+						}
+					}
+				})
 
 		case "openai-compatible":
 			return baseSchema.extend({
@@ -117,6 +154,21 @@ const createValidationSchema = (provider: EmbedderProvider, t: any) => {
 		case "gemini":
 			return baseSchema.extend({
 				codebaseIndexGeminiApiKey: z.string().min(1, t("settings:codeIndex.validation.geminiApiKeyRequired")),
+				codebaseIndexEmbedderModelId: z
+					.string()
+					.min(1, t("settings:codeIndex.validation.modelSelectionRequired")),
+			})
+
+		case "azure-openai":
+			return baseSchema.extend({
+				codebaseIndexAzureOpenAiApiKey: z.string().min(1, t("settings:codeIndex.validation.apiKeyRequired")),
+				codebaseIndexAzureOpenAiEndpoint: z
+					.string()
+					.min(1, t("settings:codeIndex.validation.endpointRequired"))
+					.url(t("settings:codeIndex.validation.invalidEndpointUrl")),
+				codebaseIndexAzureOpenAiDeploymentName: z
+					.string()
+					.min(1, t("settings:codeIndex.validation.deploymentNameRequired")),
 				codebaseIndexEmbedderModelId: z
 					.string()
 					.min(1, t("settings:codeIndex.validation.modelSelectionRequired")),
@@ -160,11 +212,17 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 		codebaseIndexEmbedderModelDimension: undefined,
 		codebaseIndexSearchMaxResults: CODEBASE_INDEX_DEFAULTS.DEFAULT_SEARCH_RESULTS,
 		codebaseIndexSearchMinScore: CODEBASE_INDEX_DEFAULTS.DEFAULT_SEARCH_MIN_SCORE,
+		isCustomModel: false,
+		customModelName: "",
 		codeIndexOpenAiKey: "",
 		codeIndexQdrantApiKey: "",
 		codebaseIndexOpenAiCompatibleBaseUrl: "",
 		codebaseIndexOpenAiCompatibleApiKey: "",
 		codebaseIndexGeminiApiKey: "",
+		codebaseIndexAzureOpenAiApiKey: "",
+		codebaseIndexAzureOpenAiEndpoint: "",
+		codebaseIndexAzureOpenAiDeploymentName: "",
+		codebaseIndexAzureOpenAiApiVersion: "2024-02-01",
 	})
 
 	// Initial settings state - stores the settings when popover opens
@@ -181,23 +239,44 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 	// Initialize settings from global state
 	useEffect(() => {
 		if (codebaseIndexConfig) {
+			const modelId = codebaseIndexConfig.codebaseIndexEmbedderModelId || ""
+
+			// Check if this is a custom model
+			// For Ollama provider, if the model is not in the predefined list, treat it as custom
+			let isCustom = false
+			let customModelName = ""
+
+			if (codebaseIndexConfig.codebaseIndexEmbedderProvider === "ollama") {
+				const availableModels = Object.keys(EMBEDDING_MODEL_PROFILES.ollama || {})
+				if (modelId && !availableModels.includes(modelId)) {
+					isCustom = true
+					customModelName = modelId
+				}
+			}
+
 			const settings = {
 				codebaseIndexEnabled: codebaseIndexConfig.codebaseIndexEnabled ?? true,
 				codebaseIndexQdrantUrl: codebaseIndexConfig.codebaseIndexQdrantUrl || "",
 				codebaseIndexEmbedderProvider: codebaseIndexConfig.codebaseIndexEmbedderProvider || "openai",
 				codebaseIndexEmbedderBaseUrl: codebaseIndexConfig.codebaseIndexEmbedderBaseUrl || "",
-				codebaseIndexEmbedderModelId: codebaseIndexConfig.codebaseIndexEmbedderModelId || "",
+				codebaseIndexEmbedderModelId: isCustom ? "" : modelId,
 				codebaseIndexEmbedderModelDimension:
 					codebaseIndexConfig.codebaseIndexEmbedderModelDimension || undefined,
 				codebaseIndexSearchMaxResults:
 					codebaseIndexConfig.codebaseIndexSearchMaxResults ?? CODEBASE_INDEX_DEFAULTS.DEFAULT_SEARCH_RESULTS,
 				codebaseIndexSearchMinScore:
 					codebaseIndexConfig.codebaseIndexSearchMinScore ?? CODEBASE_INDEX_DEFAULTS.DEFAULT_SEARCH_MIN_SCORE,
+				isCustomModel: isCustom,
+				customModelName: customModelName,
 				codeIndexOpenAiKey: "",
 				codeIndexQdrantApiKey: "",
 				codebaseIndexOpenAiCompatibleBaseUrl: codebaseIndexConfig.codebaseIndexOpenAiCompatibleBaseUrl || "",
 				codebaseIndexOpenAiCompatibleApiKey: "",
 				codebaseIndexGeminiApiKey: "",
+				codebaseIndexAzureOpenAiApiKey: "",
+				codebaseIndexAzureOpenAiEndpoint: "",
+				codebaseIndexAzureOpenAiDeploymentName: "",
+				codebaseIndexAzureOpenAiApiVersion: "2024-02-01",
 			}
 			setInitialSettings(settings)
 			setCurrentSettings(settings)
@@ -233,15 +312,23 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 			} else if (event.data.type === "codeIndexSettingsSaved") {
 				if (event.data.success) {
 					setSaveStatus("saved")
-					// Update initial settings to match current settings after successful save
-					// This ensures hasUnsavedChanges becomes false
+
+					// Get the current settings with custom model info preserved
 					const savedSettings = { ...currentSettingsRef.current }
+
+					// Make sure the custom model info is preserved
+					if (savedSettings.isCustomModel && savedSettings.customModelName) {
+						// Ensure the model ID is set to empty string when using custom model
+						// This prevents the dropdown from showing the actual model name
+						savedSettings.codebaseIndexEmbedderModelId = ""
+					}
+
 					setInitialSettings(savedSettings)
 					// Also update current settings to maintain consistency
 					setCurrentSettings(savedSettings)
+
 					// Request secret status to ensure we have the latest state
 					// This is important to maintain placeholder display after save
-
 					vscode.postMessage({ type: "requestCodeIndexSecretStatus" })
 
 					setSaveStatus("idle")
@@ -270,6 +357,10 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 				const updateWithSecrets = (prev: LocalCodeIndexSettings): LocalCodeIndexSettings => {
 					const updated = { ...prev }
 
+					// Preserve custom model settings
+					const isCustomModel = prev.isCustomModel
+					const customModelName = prev.customModelName
+
 					// Only update to placeholder if the field is currently empty or already a placeholder
 					// This preserves user input when they're actively editing
 					if (!prev.codeIndexOpenAiKey || prev.codeIndexOpenAiKey === SECRET_PLACEHOLDER) {
@@ -289,6 +380,18 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 					if (!prev.codebaseIndexGeminiApiKey || prev.codebaseIndexGeminiApiKey === SECRET_PLACEHOLDER) {
 						updated.codebaseIndexGeminiApiKey = secretStatus.hasGeminiApiKey ? SECRET_PLACEHOLDER : ""
 					}
+					if (
+						!prev.codebaseIndexAzureOpenAiApiKey ||
+						prev.codebaseIndexAzureOpenAiApiKey === SECRET_PLACEHOLDER
+					) {
+						updated.codebaseIndexAzureOpenAiApiKey = secretStatus.hasAzureOpenAiApiKey
+							? SECRET_PLACEHOLDER
+							: ""
+					}
+
+					// Restore custom model settings
+					updated.isCustomModel = isCustomModel
+					updated.customModelName = customModelName
 
 					return updated
 				}
@@ -369,6 +472,16 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 			}
 		}
 
+		// Special handling for custom model validation
+		if (
+			currentSettings.codebaseIndexEmbedderProvider === "ollama" &&
+			currentSettings.isCustomModel &&
+			currentSettings.customModelName
+		) {
+			// Ensure the model ID is set for validation
+			dataToValidate.codebaseIndexEmbedderModelId = currentSettings.customModelName
+		}
+
 		try {
 			// Validate using the schema
 			schema.parse(dataToValidate)
@@ -433,8 +546,23 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 		// Prepare settings to save
 		const settingsToSave: any = {}
 
+		// Handle custom model for Ollama
+		let modifiedSettings = { ...currentSettings }
+		if (currentSettings.isCustomModel && currentSettings.customModelName) {
+			// Use the custom model name as the actual model ID
+			modifiedSettings = {
+				...modifiedSettings,
+				codebaseIndexEmbedderModelId: currentSettings.customModelName,
+			}
+		}
+
 		// Iterate through all current settings
-		for (const [key, value] of Object.entries(currentSettings)) {
+		for (const [key, value] of Object.entries(modifiedSettings)) {
+			// Skip custom model fields as they're not needed in the backend
+			if (key === "isCustomModel" || key === "customModelName") {
+				continue
+			}
+
 			// For secret fields with placeholder, don't send the placeholder
 			// but also don't send an empty string - just skip the field
 			// This tells the backend to keep the existing secret
@@ -470,7 +598,8 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 	const getAvailableModels = () => {
 		if (!codebaseIndexModels) return []
 
-		const models = codebaseIndexModels[currentSettings.codebaseIndexEmbedderProvider]
+		const models =
+			codebaseIndexModels[currentSettings.codebaseIndexEmbedderProvider as keyof typeof codebaseIndexModels]
 		return models ? Object.keys(models) : []
 	}
 
@@ -602,6 +731,9 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 												<SelectItem value="gemini">
 													{t("settings:codeIndex.geminiProvider")}
 												</SelectItem>
+												<SelectItem value="azure-openai">
+													{t("settings:codeIndex.azureOpenaiProvider")}
+												</SelectItem>
 											</SelectContent>
 										</Select>
 									</div>
@@ -649,7 +781,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 													{getAvailableModels().map((modelId) => {
 														const model =
 															codebaseIndexModels?.[
-																currentSettings.codebaseIndexEmbedderProvider
+																currentSettings.codebaseIndexEmbedderProvider as keyof typeof codebaseIndexModels
 															]?.[modelId]
 														return (
 															<VSCodeOption key={modelId} value={modelId}>
@@ -710,20 +842,44 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 													{t("settings:codeIndex.modelLabel")}
 												</label>
 												<VSCodeDropdown
-													value={currentSettings.codebaseIndexEmbedderModelId}
-													onChange={(e: any) =>
-														updateSetting("codebaseIndexEmbedderModelId", e.target.value)
+													value={
+														currentSettings.isCustomModel
+															? "custom"
+															: currentSettings.codebaseIndexEmbedderModelId
 													}
+													onChange={(e: any) => {
+														const value = e.target.value
+														if (value === "custom") {
+															// Set custom model flag
+															updateSetting("isCustomModel", true)
+															// Clear model ID to avoid confusion
+															updateSetting("codebaseIndexEmbedderModelId", "")
+														} else {
+															// Set regular model
+															updateSetting("isCustomModel", false)
+															updateSetting("codebaseIndexEmbedderModelId", value)
+															// Clear custom fields
+															updateSetting("customModelName", "")
+															// Clear dimension when switching models
+															updateSetting(
+																"codebaseIndexEmbedderModelDimension",
+																undefined,
+															)
+														}
+													}}
 													className={cn("w-full", {
-														"border-red-500": formErrors.codebaseIndexEmbedderModelId,
+														"border-red-500":
+															formErrors.codebaseIndexEmbedderModelId &&
+															!currentSettings.isCustomModel,
 													})}>
 													<VSCodeOption value="">
 														{t("settings:codeIndex.selectModel")}
 													</VSCodeOption>
+													<VSCodeOption value="custom">Custom Model</VSCodeOption>
 													{getAvailableModels().map((modelId) => {
 														const model =
 															codebaseIndexModels?.[
-																currentSettings.codebaseIndexEmbedderProvider
+																currentSettings.codebaseIndexEmbedderProvider as keyof typeof codebaseIndexModels
 															]?.[modelId]
 														return (
 															<VSCodeOption key={modelId} value={modelId}>
@@ -737,12 +893,68 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 														)
 													})}
 												</VSCodeDropdown>
-												{formErrors.codebaseIndexEmbedderModelId && (
-													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
-														{formErrors.codebaseIndexEmbedderModelId}
-													</p>
-												)}
+												{formErrors.codebaseIndexEmbedderModelId &&
+													!currentSettings.isCustomModel && (
+														<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+															{formErrors.codebaseIndexEmbedderModelId}
+														</p>
+													)}
 											</div>
+
+											{currentSettings.isCustomModel && (
+												<>
+													<div className="space-y-2">
+														<label className="text-sm font-medium">Custom Model Name</label>
+														<VSCodeTextField
+															value={currentSettings.customModelName || ""}
+															onInput={(e: any) =>
+																updateSetting("customModelName", e.target.value)
+															}
+															placeholder="Enter model name (e.g., mantis/nomic-embed-code)"
+															className={cn("w-full", {
+																"border-red-500": formErrors.customModelName,
+															})}
+														/>
+														{formErrors.customModelName && (
+															<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+																{formErrors.customModelName}
+															</p>
+														)}
+													</div>
+													<div className="space-y-2">
+														<label className="text-sm font-medium">
+															{t("settings:codeIndex.modelDimensionLabel")}
+														</label>
+														<VSCodeTextField
+															value={
+																currentSettings.codebaseIndexEmbedderModelDimension?.toString() ||
+																""
+															}
+															onInput={(e: any) => {
+																const value = e.target.value
+																	? parseInt(e.target.value)
+																	: undefined
+																updateSetting(
+																	"codebaseIndexEmbedderModelDimension",
+																	value,
+																)
+															}}
+															placeholder={t(
+																"settings:codeIndex.modelDimensionPlaceholder",
+															)}
+															className={cn("w-full", {
+																"border-red-500":
+																	formErrors.codebaseIndexEmbedderModelDimension,
+															})}
+														/>
+														{formErrors.codebaseIndexEmbedderModelDimension && (
+															<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+																{formErrors.codebaseIndexEmbedderModelDimension}
+															</p>
+														)}
+													</div>
+												</>
+											)}
 										</>
 									)}
 
@@ -854,6 +1066,151 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 										</>
 									)}
 
+									{currentSettings.codebaseIndexEmbedderProvider === "azure-openai" && (
+										<>
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.azureOpenAIKeyLabel")}
+												</label>
+												<VSCodeTextField
+													type="password"
+													value={currentSettings.codebaseIndexAzureOpenAiApiKey || ""}
+													onInput={(e: any) =>
+														updateSetting("codebaseIndexAzureOpenAiApiKey", e.target.value)
+													}
+													placeholder={t("settings:codeIndex.azureOpenAIKeyPlaceholder")}
+													className={cn("w-full", {
+														"border-red-500": formErrors.codebaseIndexAzureOpenAiApiKey,
+													})}
+												/>
+												{formErrors.codebaseIndexAzureOpenAiApiKey && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexAzureOpenAiApiKey}
+													</p>
+												)}
+											</div>
+
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.azureOpenAIEndpointLabel")}
+												</label>
+												<VSCodeTextField
+													value={currentSettings.codebaseIndexAzureOpenAiEndpoint || ""}
+													onInput={(e: any) =>
+														updateSetting(
+															"codebaseIndexAzureOpenAiEndpoint",
+															e.target.value,
+														)
+													}
+													placeholder={t("settings:codeIndex.azureOpenAIEndpointPlaceholder")}
+													className={cn("w-full", {
+														"border-red-500": formErrors.codebaseIndexAzureOpenAiEndpoint,
+													})}
+												/>
+												{formErrors.codebaseIndexAzureOpenAiEndpoint && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexAzureOpenAiEndpoint}
+													</p>
+												)}
+											</div>
+
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.azureOpenAIDeploymentNameLabel")}
+												</label>
+												<VSCodeTextField
+													value={currentSettings.codebaseIndexAzureOpenAiDeploymentName || ""}
+													onInput={(e: any) =>
+														updateSetting(
+															"codebaseIndexAzureOpenAiDeploymentName",
+															e.target.value,
+														)
+													}
+													placeholder={t(
+														"settings:codeIndex.azureOpenAIDeploymentNamePlaceholder",
+													)}
+													className={cn("w-full", {
+														"border-red-500":
+															formErrors.codebaseIndexAzureOpenAiDeploymentName,
+													})}
+												/>
+												{formErrors.codebaseIndexAzureOpenAiDeploymentName && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexAzureOpenAiDeploymentName}
+													</p>
+												)}
+											</div>
+
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.azureOpenAIApiVersionLabel")}
+												</label>
+												<VSCodeTextField
+													value={
+														currentSettings.codebaseIndexAzureOpenAiApiVersion ||
+														"2024-02-01"
+													}
+													onInput={(e: any) =>
+														updateSetting(
+															"codebaseIndexAzureOpenAiApiVersion",
+															e.target.value,
+														)
+													}
+													placeholder={t(
+														"settings:codeIndex.azureOpenAIApiVersionPlaceholder",
+													)}
+													className={cn("w-full", {
+														"border-red-500": formErrors.codebaseIndexAzureOpenAiApiVersion,
+													})}
+												/>
+												{formErrors.codebaseIndexAzureOpenAiApiVersion && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexAzureOpenAiApiVersion}
+													</p>
+												)}
+											</div>
+
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.modelLabel")}
+												</label>
+												<VSCodeDropdown
+													value={currentSettings.codebaseIndexEmbedderModelId}
+													onChange={(e: any) =>
+														updateSetting("codebaseIndexEmbedderModelId", e.target.value)
+													}
+													className={cn("w-full", {
+														"border-red-500": formErrors.codebaseIndexEmbedderModelId,
+													})}>
+													<VSCodeOption value="">
+														{t("settings:codeIndex.selectModel")}
+													</VSCodeOption>
+													{getAvailableModels().map((modelId) => {
+														const model =
+															codebaseIndexModels?.[
+																currentSettings.codebaseIndexEmbedderProvider as keyof typeof codebaseIndexModels
+															]?.[modelId]
+														return (
+															<VSCodeOption key={modelId} value={modelId}>
+																{modelId}{" "}
+																{model
+																	? t("settings:codeIndex.modelDimensions", {
+																			dimension: model.dimension,
+																		})
+																	: ""}
+															</VSCodeOption>
+														)
+													})}
+												</VSCodeDropdown>
+												{formErrors.codebaseIndexEmbedderModelId && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexEmbedderModelId}
+													</p>
+												)}
+											</div>
+										</>
+									)}
+
 									{currentSettings.codebaseIndexEmbedderProvider === "gemini" && (
 										<>
 											<div className="space-y-2">
@@ -896,7 +1253,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 													{getAvailableModels().map((modelId) => {
 														const model =
 															codebaseIndexModels?.[
-																currentSettings.codebaseIndexEmbedderProvider
+																currentSettings.codebaseIndexEmbedderProvider as keyof typeof codebaseIndexModels
 															]?.[modelId]
 														return (
 															<VSCodeOption key={modelId} value={modelId}>
