@@ -1580,7 +1580,7 @@ export class ClineProvider
 			sharingEnabled: sharingEnabled ?? false,
 			organizationAllowList,
 			autocompleteApiConfigId, // kilocode_change
-			ghostServiceSettings: ghostServiceSettings ?? {}, // kilocode_changes
+			ghostServiceSettings: ghostServiceSettings ?? {}, // kilocode_change
 			condensingApiConfigId,
 			customCondensingPrompt,
 			codebaseIndexModels: codebaseIndexModels ?? EMBEDDING_MODEL_PROFILES,
