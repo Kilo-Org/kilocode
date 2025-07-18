@@ -130,5 +130,16 @@
 			"idea6": "Gere cards que revelam conteúdo dinâmico de forma bonita quando você passa o mouse sobre eles",
 			"idea7": "Crie um campo de estrelas interativo relaxante que se move com gestos do mouse"
 		}
+	},
+	"ghost": {
+		"title": "Assistência em linha",
+		"settings": {
+			"provider": "Provedor",
+			"apiConfigId": {
+				"label": "Configuração de API",
+				"current": "Usar configuração de API atualmente selecionada",
+				"description": "Você pode selecionar uma configuração de API para sempre usar ao aprimorar prompts, ou simplesmente usar o que está atualmente selecionado"
+			}
+		}
 	}
 }

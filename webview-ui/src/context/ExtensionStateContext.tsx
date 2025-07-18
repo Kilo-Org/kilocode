@@ -8,6 +8,7 @@ import {
 	type ExperimentId,
 	type OrganizationAllowList,
 	ORGANIZATION_ALLOW_ALL,
+	GhostServiceSettings, // kilocode_change
 } from "@roo-code/types"
 
 import { ExtensionMessage, ExtensionState, MarketplaceInstalledMetadata } from "@roo/ExtensionMessage"
@@ -124,6 +125,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setCommitMessageApiConfigId: (value: string) => void // kilocode_change
 	autocompleteApiConfigId?: string // kilocode_change
 	setAutocompleteApiConfigId: (value: string) => void // kilocode_change
+	ghostServiceSettings?: GhostServiceSettings // kilocode_change
+	setGhostServiceSettings: (value: GhostServiceSettings) => void // kilocode_change
 	setExperimentEnabled: (id: ExperimentId, enabled: boolean) => void
 	setAutoApprovalEnabled: (value: boolean) => void
 	customModes: ModeConfig[]
@@ -211,6 +214,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		enhancementApiConfigId: "",
 		commitMessageApiConfigId: "", // kilocode_change
 		autocompleteApiConfigId: "", // kilocode_change
+		ghostServiceSettings: {}, // kilocode_change
 		condensingApiConfigId: "", // Default empty string for condensing API config ID
 		customCondensingPrompt: "", // Default empty string for custom condensing prompt
 		hasOpenedModeSelector: false, // Default to false (not opened yet)
@@ -484,6 +488,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		// kilocode_change start
 		setAutocompleteApiConfigId: (value) =>
 			setState((prevState) => ({ ...prevState, autocompleteApiConfigId: value })),
+		setGhostServiceSettings: (value) => setState((prevState) => ({ ...prevState, ghostServiceSettings: value })),
 		setCommitMessageApiConfigId: (value) =>
 			setState((prevState) => ({ ...prevState, commitMessageApiConfigId: value })),
 		setShowAutoApproveMenu: (value) => setState((prevState) => ({ ...prevState, showAutoApproveMenu: value })),

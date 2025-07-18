@@ -130,5 +130,16 @@
 			"idea6": "Genera targetes que revelin contingut dinàmic de manera bonica quan s'hi passi el ratolí per sobre",
 			"idea7": "Crea un camp d'estrelles interactiu i tranquil que es mogui amb gestos del ratolí"
 		}
+	},
+	"ghost": {
+		"title": "Assistència en línia",
+		"settings": {
+			"provider": "Proveïdor",
+			"apiConfigId": {
+				"label": "Configuració de l'API",
+				"current": "Utilitza la configuració de l'API seleccionada actualment",
+				"description": "Pots seleccionar una configuració de l'API per utilitzar sempre per millorar les indicacions, o simplement utilitzar la que està seleccionada actualment"
+			}
+		}
 	}
 }

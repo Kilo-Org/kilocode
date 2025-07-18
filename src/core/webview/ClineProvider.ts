@@ -1468,6 +1468,7 @@ export class ClineProvider
 			maxConcurrentFileReads,
 			allowVeryLargeReads, // kilocode_change
 			autocompleteApiConfigId, // kilocode_change
+			ghostServiceSettings, // kilocode_changes
 			condensingApiConfigId,
 			customCondensingPrompt,
 			codebaseIndexConfig,
@@ -1579,6 +1580,7 @@ export class ClineProvider
 			sharingEnabled: sharingEnabled ?? false,
 			organizationAllowList,
 			autocompleteApiConfigId, // kilocode_change
+			ghostServiceSettings: ghostServiceSettings ?? {}, // kilocode_change
 			condensingApiConfigId,
 			customCondensingPrompt,
 			codebaseIndexModels: codebaseIndexModels ?? EMBEDDING_MODEL_PROFILES,
@@ -1723,6 +1725,7 @@ export class ClineProvider
 			enhancementApiConfigId: stateValues.enhancementApiConfigId,
 			commitMessageApiConfigId: stateValues.commitMessageApiConfigId, // kilocode_change
 			autocompleteApiConfigId: stateValues.autocompleteApiConfigId, // kilocode_change
+			ghostServiceSettings: stateValues.ghostServiceSettings ?? {}, // kilocode_change
 			experiments: stateValues.experiments ?? experimentDefault,
 			autoApprovalEnabled: stateValues.autoApprovalEnabled ?? true,
 			customModes,

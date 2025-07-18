@@ -130,5 +130,16 @@
 			"idea6": "Fare üzerine geldiğinde dinamik içeriği güzelce ortaya çıkaran kartlar üret",
 			"idea7": "Fare hareketleriyle birlikte hareket eden sakinleştirici etkileşimli yıldız alanı oluştur"
 		}
+	},
+	"ghost": {
+		"title": "Satır İçi Yardım",
+		"settings": {
+			"provider": "Sağlayıcı",
+			"apiConfigId": {
+				"label": "API Yapılandırması",
+				"current": "Şu anda seçili API yapılandırmasını kullan",
+				"description": "İpuçlarını geliştirmek için her zaman kullanılacak bir API yapılandırması seçebilir veya şu anda seçili olanı kullanabilirsin"
+			}
+		}
 	}
 }

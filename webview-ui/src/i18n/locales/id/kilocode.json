@@ -130,5 +130,16 @@
 			"idea6": "Buat kartu yang mengungkap konten dinamis dengan indah saat dihover",
 			"idea7": "Buat starfield interaktif yang menenangkan yang bergerak dengan gerakan mouse"
 		}
+	},
+	"ghost": {
+		"title": "Bantuan Inline",
+		"settings": {
+			"provider": "Penyedia",
+			"apiConfigId": {
+				"label": "Konfigurasi API",
+				"current": "Gunakan konfigurasi API yang dipilih saat ini",
+				"description": "Anda dapat memilih konfigurasi API untuk selalu digunakan dalam meningkatkan prompt, atau cukup gunakan apa yang saat ini dipilih"
+			}
+		}
 	}
 }

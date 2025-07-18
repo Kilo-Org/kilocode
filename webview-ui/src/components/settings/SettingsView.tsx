@@ -22,6 +22,7 @@ import {
 	Globe,
 	Info,
 	Server, // kilocode_change
+	Bot, // kilocode_change
 	MessageSquare,
 	Monitor,
 	LucideIcon,
@@ -73,6 +74,7 @@ import { Section } from "./Section"
 import PromptsSettings from "./PromptsSettings"
 import { cn } from "@/lib/utils"
 import McpView from "../kilocodeMcp/McpView" // kilocode_change
+import { GhostServiceSettingsView } from "../kilocode/settings/GhostServiceSettings" // kilocode_change
 
 export const settingsTabsContainer = "flex flex-1 overflow-hidden [&.narrow_.tab-label]:hidden"
 export const settingsTabList =
@@ -90,6 +92,7 @@ const sectionNames = [
 	"autoApprove",
 	"browser",
 	"checkpoints",
+	"ghost", // kilocode_change
 	"display", // kilocode_change
 	"notifications",
 	"contextManagement",
@@ -199,6 +202,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		alwaysAllowFollowupQuestions,
 		alwaysAllowUpdateTodoList,
 		followupAutoApproveTimeoutMs,
+		ghostServiceSettings, // kilocode_change
 		autocompleteApiConfigId, // kilocode_change
 	} = cachedState
 
@@ -379,6 +383,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			vscode.postMessage({ type: "telemetrySetting", text: telemetrySetting })
 			vscode.postMessage({ type: "profileThresholds", values: profileThresholds })
 			vscode.postMessage({ type: "systemNotificationsEnabled", bool: systemNotificationsEnabled }) // kilocode_change
+			vscode.postMessage({ type: "ghostServiceSettings", values: ghostServiceSettings }) // kilocode_change
 
 			// Update cachedState to match the current state to prevent isChangeDetected from being set back to true
 			setCachedState((prevState) => ({ ...prevState, ...extensionState }))
@@ -476,6 +481,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			{ id: "browser", icon: SquareMousePointer },
 			{ id: "checkpoints", icon: GitBranch },
 			{ id: "display", icon: Monitor }, // kilocode_change
+			{ id: "ghost", icon: Bot }, // kilocode_change
 			{ id: "notifications", icon: Bell },
 			{ id: "contextManagement", icon: Database },
 			{ id: "terminal", icon: SquareTerminal },
@@ -593,7 +599,9 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 									<span className="tab-label">
 										{id === "mcp"
 											? t(`kilocode:settings.sections.mcp`)
-											: t(`settings:sections.${id}`)}
+											: id === "ghost"
+												? t(`kilocode:ghost.title`)
+												: t(`settings:sections.${id}`)}
 									</span>
 								</div>
 							</TabTrigger>
@@ -612,7 +620,9 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 											<p className="m-0">
 												{id === "mcp"
 													? t(`kilocode:settings.sections.mcp`)
-													: t(`settings:sections.${id}`)}
+													: id === "ghost"
+														? t(`kilocode:ghost.title`)
+														: t(`settings:sections.${id}`)}
 											</p>
 										</TooltipContent>
 									</Tooltip>
@@ -729,6 +739,12 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 					{activeTab === "display" && (
 						<DisplaySettings
 							showTaskTimeline={showTaskTimeline}
+							setCachedStateField={setCachedStateField}
+						/>
+					)}
+					{activeTab === "ghost" && (
+						<GhostServiceSettingsView
+							ghostServiceSettings={ghostServiceSettings}
 							setCachedStateField={setCachedStateField}
 						/>
 					)}

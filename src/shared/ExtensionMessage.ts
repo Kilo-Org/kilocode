@@ -259,6 +259,7 @@ export type ExtensionState = Pick<
 	| "globalWorkflowToggles" // kilocode_change
 	| "commitMessageApiConfigId" // kilocode_change
 	| "autocompleteApiConfigId" // kilocode_change
+	| "ghostServiceSettings" // kilocode_change
 	| "condensingApiConfigId"
 	| "customCondensingPrompt"
 	| "codebaseIndexConfig"

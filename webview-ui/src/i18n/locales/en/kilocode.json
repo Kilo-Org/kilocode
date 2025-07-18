@@ -130,5 +130,16 @@
 			"idea6": "Generate cards that reveal dynamic content beautifully when hovered over",
 			"idea7": "Create a calming interactive starfield that moves with mouse gestures"
 		}
+	},
+	"ghost": {
+		"title": "Inline Assist",
+		"settings": {
+			"provider": "Provider",
+			"apiConfigId": {
+				"label": "API Configuration",
+				"current": "Use currently selected API configuration",
+				"description": "You can select an API configuration to always use for enhancing prompts, or just use whatever is currently selected"
+			}
+		}
 	}
 }
