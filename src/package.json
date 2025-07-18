@@ -109,7 +109,8 @@
 				{
 					"id": "kilo-code-ActivityBar",
 					"title": "%views.activitybar.title%",
-					"icon": "assets/icons/kilo.png",
+					"icon": "assets/icons/kilo-light.svg",
+					"darkIcon": "assets/icons/kilo-dark.svg",
 					"when": "isMac"
 				}
 			]
