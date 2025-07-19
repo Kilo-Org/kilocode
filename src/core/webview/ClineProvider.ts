@@ -1821,9 +1821,19 @@ export class ClineProvider
 			return
 		}
 
+		// Logout from Kilo Code provider before resetting (same approach as ProfileView logout)
+		const { apiConfiguration, currentApiConfigName } = await this.getState()
+		if (apiConfiguration.kilocodeToken) {
+			await this.upsertProviderProfile(currentApiConfigName, {
+				...apiConfiguration,
+				kilocodeToken: "",
+			})
+		}
+
 		await this.contextProxy.resetAllState()
 		await this.providerSettingsManager.resetAllConfigs()
 		await this.customModesManager.resetCustomModes()
+
 		await this.removeClineFromStack()
 		await this.postStateToWebview()
 		await this.postMessageToWebview({ type: "action", action: "chatButtonClicked" })
