@@ -10,7 +10,7 @@ test.describe("Full E2E Test", () => {
 	test("should configure credentials and send a message", async ({ workbox: page }: TestFixtures) => {
 		await verifyExtensionInstalled(page)
 
-		await waitForWebviewText(page, "Welcome to Kilo Code!")
+		await waitForWebviewText(page, "Welcome to Code Chief!")
 
 		await configureApiKeyThroughUI(page)
 

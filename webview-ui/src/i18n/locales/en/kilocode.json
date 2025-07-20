@@ -1,8 +1,8 @@
 {
 	"welcome": {
-		"greeting": "Welcome to Kilo Code!",
-		"introText1": "Kilo Code is a free, open source AI coding agent.",
-		"introText2": "It works with the latest AI models like Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1, and 450+ more.",
+		"greeting": "Welcome to Code Chief!",
+		"introText1": "Code Chief is a free, open source AI coding agent.",
+		"introText2": "It works",
 		"introText3": "Create a free account and get $20 worth of tokens to use across any AI model.",
 		"ctaButton": "Create a free account",
 		"manualModeButton": "Use your own API key",
