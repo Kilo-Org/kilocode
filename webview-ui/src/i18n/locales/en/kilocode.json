@@ -138,7 +138,7 @@
 			"apiConfigId": {
 				"label": "API Configuration",
 				"current": "Use currently selected API configuration",
-				"description": "You can select an API configuration to always use for enhancing prompts, or just use whatever is currently selected"
+				"description": "Select an API configuration to use for Inline Assist prompts, or just use whatever is currently selected"
 			}
 		}
 	}
