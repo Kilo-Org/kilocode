@@ -138,7 +138,7 @@
 			"apiConfigId": {
 				"label": "API 設定",
 				"current": "使用目前選擇的 API 設定",
-				"description": "你可以選擇一個 API 設定始終用於增強提示詞，或者只使用目前選擇的設定"
+				"description": "為內聯輔助提示選擇一個 API 設定，或者只使用目前選擇的設定"
 			}
 		}
 	}

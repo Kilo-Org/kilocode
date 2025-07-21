@@ -138,7 +138,7 @@
 			"apiConfigId": {
 				"label": "Konfigurace API",
 				"current": "Použít aktuálně vybranou konfiguraci API",
-				"description": "Můžete vybrat konfiguraci API, která se bude vždy používat pro vylepšení promptů, nebo použít tu, která je aktuálně vybrána"
+				"description": "Vyberte konfiguraci API, kterou chcete použít pro výzvy Inline Assist, nebo prostě použijte tu, která je aktuálně vybrána"
 			}
 		}
 	}

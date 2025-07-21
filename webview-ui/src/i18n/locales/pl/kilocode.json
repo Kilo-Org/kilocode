@@ -138,7 +138,7 @@
 			"apiConfigId": {
 				"label": "Konfiguracja API",
 				"current": "Użyj aktualnie wybranej konfiguracji API",
-				"description": "Możesz wybrać konfigurację API, która będzie zawsze używana do ulepszania podpowiedzi, lub po prostu użyć aktualnie wybranej"
+				"description": "Wybierz konfigurację API do użycia w podpowiedziach Inline Assist lub po prostu użyj tej, która jest aktualnie wybrana"
 			}
 		}
 	}

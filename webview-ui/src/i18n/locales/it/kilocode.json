@@ -138,7 +138,7 @@
 			"apiConfigId": {
 				"label": "Configurazione API",
 				"current": "Usa la configurazione API attualmente selezionata",
-				"description": "Puoi selezionare una configurazione API da utilizzare sempre per migliorare i prompt, oppure utilizzare semplicemente quella attualmente selezionata"
+				"description": "Seleziona una configurazione API da utilizzare per i prompt di Inline Assist, o semplicemente usa quella attualmente selezionata"
 			}
 		}
 	}

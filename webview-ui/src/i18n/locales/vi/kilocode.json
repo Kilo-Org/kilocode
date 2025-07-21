@@ -138,7 +138,7 @@
 			"apiConfigId": {
 				"label": "Cấu hình API",
 				"current": "Sử dụng cấu hình API hiện đang được chọn",
-				"description": "Bạn có thể chọn một cấu hình API để luôn sử dụng cho việc nâng cao gợi ý, hoặc chỉ sử dụng cấu hình hiện đang được chọn"
+				"description": "Chọn một cấu hình API để sử dụng cho các lời nhắc Hỗ trợ nội tuyến hoặc chỉ sử dụng bất cứ thứ gì được chọn hiện tại"
 			}
 		}
 	}

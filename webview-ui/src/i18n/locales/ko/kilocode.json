@@ -138,7 +138,7 @@
 			"apiConfigId": {
 				"label": "API 구성",
 				"current": "현재 선택된 API 구성 사용",
-				"description": "프롬프트 향상을 위해 항상 사용할 API 구성을 선택하거나, 현재 선택된 것을 사용할 수 있습니다"
+				"description": "인라인 지원 프롬프트에 사용할 API 구성을 선택하거나 현재 선택된 것을 사용하세요."
 			}
 		}
 	}

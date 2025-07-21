@@ -138,7 +138,7 @@
 			"apiConfigId": {
 				"label": "Konfigurasi API",
 				"current": "Gunakan konfigurasi API yang dipilih saat ini",
-				"description": "Anda dapat memilih konfigurasi API untuk selalu digunakan dalam meningkatkan prompt, atau cukup gunakan apa yang saat ini dipilih"
+				"description": "Pilih konfigurasi API untuk digunakan untuk prompt Bantuan Inline, atau cukup gunakan apa pun yang saat ini dipilih"
 			}
 		}
 	}

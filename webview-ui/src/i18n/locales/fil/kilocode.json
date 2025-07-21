@@ -138,7 +138,7 @@
 			"apiConfigId": {
 				"label": "API Configuration",
 				"current": "Gamitin ang kasalukuyang napiling API configuration",
-				"description": "Maaari kang pumili ng API configuration na palaging gagamitin para sa pagpapahusay ng mga prompt, o gamitin lang kung ano ang kasalukuyang napili"
+				"description": "Pumili ng configuration ng API na gagamitin para sa mga prompt ng Inline Assist, o gamitin lang ang kasalukuyang napili"
 			}
 		}
 	}

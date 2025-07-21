@@ -138,7 +138,7 @@
 			"apiConfigId": {
 				"label": "API Yapılandırması",
 				"current": "Şu anda seçili API yapılandırmasını kullan",
-				"description": "İpuçlarını geliştirmek için her zaman kullanılacak bir API yapılandırması seçebilir veya şu anda seçili olanı kullanabilirsin"
+				"description": "Satır İçi Yardım istemleri için kullanılacak bir API yapılandırması seçin veya o anda seçili olanı kullanın"
 			}
 		}
 	}
