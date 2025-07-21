@@ -1452,9 +1452,11 @@ export class Task extends EventEmitter<ClineEvents> {
 					// UPDATE: It's better UX to interrupt the request at the
 					// cost of the API cost not being retrieved.
 					if (this.didAlreadyUseTool) {
-						assistantMessage +=
-							"\n\n[Response interrupted by a tool use result. Only one tool may be used at a time and should be placed at the end of the message.]"
-						break
+						//kilocode_change: this is not better UX (reverts https://github.com/cline/cline/commit/69ba0c833e266d5962483e8125bf1f5c67da449b)
+						console.warn("Tool was already used but stream is continuing, this is necessary to get usage.")
+						//assistantMessage +=
+						//	"\n\n[Response interrupted by a tool use result. Only one tool may be used at a time and should be placed at the end of the message.]"
+						//break
 					}
 				}
 			} catch (error) {

@@ -126,7 +126,7 @@ export const ChatRowContent = ({
 	editable,
 }: ChatRowContentProps) => {
 	const { t } = useTranslation()
-	const { apiConfiguration, mcpServers, alwaysAllowMcp, currentCheckpoint } = useExtensionState()
+	const { mcpServers, alwaysAllowMcp, currentCheckpoint } = useExtensionState()
 	const [reasoningCollapsed, setReasoningCollapsed] = useState(true)
 	const [isDiffErrorExpanded, setIsDiffErrorExpanded] = useState(false)
 	const [showCopySuccess, setShowCopySuccess] = useState(false)
@@ -997,15 +997,12 @@ export const ChatRowContent = ({
 								<div style={{ display: "flex", alignItems: "center", gap: "10px", flexGrow: 1 }}>
 									{icon}
 									{title}
-									{/* kilocode_change */}
-									{apiConfiguration?.apiProvider !== "kilocode" && (
-										<VSCodeBadge
-											style={{
-												opacity: cost !== null && cost !== undefined && cost > 0 ? 1 : 0,
-											}}>
-											${Number(cost || 0)?.toFixed(4)}
-										</VSCodeBadge>
-									)}
+									<VSCodeBadge
+										style={{
+											opacity: cost !== null && cost !== undefined && cost > 0 ? 1 : 0,
+										}}>
+										${Number(cost || 0)?.toFixed(4)}
+									</VSCodeBadge>
 								</div>
 								<span className={`codicon codicon-chevron-${isExpanded ? "up" : "down"}`}></span>
 							</div>

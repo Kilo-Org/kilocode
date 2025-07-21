@@ -101,6 +101,12 @@ export async function activate(context: vscode.ExtensionContext) {
 		context.globalState.update("allowedCommands", defaultCommands)
 	}
 
+	// kilocode_change start
+	if (!context.globalState.get("firstInstallCompleted")) {
+		context.globalState.update("telemetrySetting", "enabled")
+	}
+	// kilocode_change end
+
 	const contextProxy = await ContextProxy.getInstance(context)
 	const codeIndexManager = CodeIndexManager.getInstance(context)
 
@@ -132,16 +138,18 @@ export async function activate(context: vscode.ExtensionContext) {
 			await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
 
 			outputChannel.appendLine("Opening Kilo Code walkthrough")
+
+			// this can crash, see:
+			// https://discord.com/channels/1349288496988160052/1395865796026040470
 			await vscode.commands.executeCommand(
 				"workbench.action.openWalkthrough",
 				"kilocode.kilo-code#kiloCodeWalkthrough",
 				false,
 			)
-
-			context.globalState.update("telemetrySetting", "enabled")
-			context.globalState.update("firstInstallCompleted", true)
 		} catch (error) {
 			outputChannel.appendLine(`Error during first-time setup: ${error.message}`)
+		} finally {
+			context.globalState.update("firstInstallCompleted", true)
 		}
 	}
 	// kilocode_change end
