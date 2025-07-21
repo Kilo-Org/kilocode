@@ -3,15 +3,33 @@ import * as vscode from "vscode"
 /**
  * A simulated vscode TextDocument for testing.
  */
-export class MockTextDocument {
+export class MockTextDocument implements vscode.TextDocument {
 	private contentLines: string[]
+	public uri: vscode.Uri
+	public fileName: string
+	public isUntitled: boolean = false
+	public languageId: string = "typescript"
+	public version: number = 1
+	public isDirty: boolean = false
+	public isClosed: boolean = false
+	public eol: vscode.EndOfLine = 1 // vscode.EndOfLine.LF
+	public get encoding(): "utf8" {
+		return "utf8"
+	}
+	public get notebook(): undefined {
+		return undefined
+	}
 
-	constructor(content: string) {
+	constructor(uri: vscode.Uri, content: string) {
+		this.uri = uri
+		this.fileName = uri.fsPath
 		this.contentLines = content.split("\n")
 	}
 
 	updateContent(newContent: string): void {
 		this.contentLines = newContent.split("\n")
+		this.version++
+		this.isDirty = true
 	}
 
 	getText(range?: vscode.Range): string {
@@ -49,21 +67,81 @@ export class MockTextDocument {
 	 * @param lineNumber The zero-based line number
 	 * @returns A simplified TextLine object containing the text and position information
 	 */
-	lineAt(lineNumber: number): vscode.TextLine {
-		if (lineNumber < 0 || lineNumber >= this.contentLines.length) {
-			throw new Error(`Invalid line number: ${lineNumber}`)
+	lineAt(positionOrLine: number | vscode.Position): vscode.TextLine {
+		const line = typeof positionOrLine === "number" ? positionOrLine : positionOrLine.line
+		if (line < 0 || line >= this.contentLines.length) {
+			throw new Error(`Invalid line number: ${line}`)
 		}
 
-		const text = this.contentLines[lineNumber]
-		const range = new vscode.Range(new vscode.Position(lineNumber, 0), new vscode.Position(lineNumber, text.length))
+		const text = this.contentLines[line]
+		const range = new vscode.Range(new vscode.Position(line, 0), new vscode.Position(line, text.length))
 
 		return {
 			text,
 			range,
-			lineNumber,
-			rangeIncludingLineBreak: range,
+			lineNumber: line,
+			rangeIncludingLineBreak: range, // Simplified for mock
 			firstNonWhitespaceCharacterIndex: text.search(/\S|$/),
 			isEmptyOrWhitespace: !/\S/.test(text),
-		} as vscode.TextLine
+		}
+	}
+
+	// Add other required methods with mock implementations
+	offsetAt(position: vscode.Position): number {
+		let offset = 0
+		for (let i = 0; i < position.line; i++) {
+			if (i < this.contentLines.length) {
+				offset += this.contentLines[i].length + 1 // +1 for newline
+			}
+		}
+		offset += position.character
+		return offset
+	}
+
+	positionAt(offset: number): vscode.Position {
+		let currentOffset = 0
+		for (let i = 0; i < this.contentLines.length; i++) {
+			const lineLength = this.contentLines[i].length + 1
+			if (currentOffset + lineLength > offset) {
+				return new vscode.Position(i, offset - currentOffset)
+			}
+			currentOffset += lineLength
+		}
+		// If offset is beyond the end of the document
+		const lastLine = this.contentLines.length - 1
+		const lastLineLength = this.contentLines[lastLine]?.length || 0
+		return new vscode.Position(lastLine, lastLineLength)
+	}
+
+	save(): Promise<boolean> {
+		this.isDirty = false
+		return Promise.resolve(true)
+	}
+
+	getWordRangeAtPosition(position: vscode.Position, regex?: RegExp): vscode.Range | undefined {
+		const line = this.lineAt(position.line)
+		const text = line.text
+		const wordRegex =
+			regex || /(-?\d*\.\d\w*)|([^\`\~\!\@\#\$\%\^\&\*\(\)\-\=\+\[\{\]\}\\\|\;\:\'\"\,\.\<\>\/\?\s]+)/g
+
+		let match
+		while ((match = wordRegex.exec(text)) !== null) {
+			const start = match.index
+			const end = start + match[0].length
+			if (position.character >= start && position.character <= end) {
+				return new vscode.Range(position.line, start, position.line, end)
+			}
+		}
+		return undefined
+	}
+
+	validateRange(range: vscode.Range): vscode.Range {
+		// Simplified validation
+		return range
+	}
+
+	validatePosition(position: vscode.Position): vscode.Position {
+		// Simplified validation
+		return position
 	}
 }

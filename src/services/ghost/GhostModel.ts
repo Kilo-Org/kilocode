@@ -10,7 +10,12 @@ export class GhostModel {
 	private apiConfigId: string | null = null
 	public loaded = false
 
-	constructor() {}
+	constructor(apiHandler: ApiHandler | null = null) {
+		if (apiHandler) {
+			this.apiHandler = apiHandler
+			this.loaded = true
+		}
+	}
 
 	public async reload(settings: GhostServiceSettings, providerSettingsManager: ProviderSettingsManager) {
 		this.apiConfigId = settings?.apiConfigId || null
