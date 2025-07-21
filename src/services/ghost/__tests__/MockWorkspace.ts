@@ -9,7 +9,7 @@ export class MockWorkspace {
 	private appliedEdits: vscode.WorkspaceEdit[] = []
 
 	addDocument(uri: vscode.Uri, content: string): MockTextDocument {
-		const document = new MockTextDocument(content)
+		const document = new MockTextDocument(uri, content)
 		this.documents.set(uri.toString(), document)
 		return document
 	}
@@ -19,7 +19,7 @@ export class MockWorkspace {
 		if (!document) {
 			throw new Error(`Document not found: ${uri.toString()}`)
 		}
-		return document as unknown as vscode.TextDocument
+		return document
 	}
 
 	async applyEdit(workspaceEdit: vscode.WorkspaceEdit): Promise<boolean> {

@@ -25,14 +25,18 @@ export class MockTextEditor {
 
 		if (cursorOffset === -1) {
 			// No cursor marker found - default to position (0,0)
-			this.document = new MockTextDocument(content) as unknown as vscode.TextDocument
+			const uri = vscode.Uri.parse("untitled:mockEditor")
+			this.document = new MockTextDocument(uri, content) as unknown as vscode.TextDocument
 			const defaultPosition = new vscode.Position(0, 0)
 			this.selection = new vscode.Selection(defaultPosition, defaultPosition)
 		} else {
 			// Cursor marker found - remove it and calculate position
 			const cleanContent =
 				content.substring(0, cursorOffset) + content.substring(cursorOffset + CURSOR_MARKER.length)
-			this.document = new MockTextDocument(cleanContent) as unknown as vscode.TextDocument
+
+			const uri = vscode.Uri.parse("untitled:mockEditor")
+			// Create document without cursor marker
+			this.document = new MockTextDocument(uri, cleanContent) as unknown as vscode.TextDocument
 
 			// Calculate line and character for cursor position
 			const beforeCursor = content.substring(0, cursorOffset)

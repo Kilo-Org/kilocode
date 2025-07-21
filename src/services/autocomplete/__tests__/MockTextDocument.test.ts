@@ -1,11 +1,36 @@
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, vi, beforeEach } from "vitest"
 import * as vscode from "vscode"
 import { MockTextDocument } from "./MockTextDocument"
 
+vi.mock("vscode", () => ({
+	EndOfLine: { LF: 1, CRLF: 2 },
+	Uri: {
+		parse: vi.fn((str) => ({
+			fsPath: str,
+			path: str,
+			scheme: "file",
+		})),
+	},
+	Position: class Position {
+		constructor(
+			public line: number,
+			public character: number,
+		) {}
+	},
+	Range: class Range {
+		constructor(
+			public start: vscode.Position,
+			public end: vscode.Position,
+		) {}
+	},
+}))
+
 describe("MockTextDocument", () => {
+	const testUri = vscode.Uri.parse("file:///test.ts")
+
 	describe("constructor and basic properties", () => {
 		it("should create document from single line content", () => {
-			const doc = new MockTextDocument("const x = 1")
+			const doc = new MockTextDocument(testUri, "const x = 1")
 
 			expect(doc.lineCount).toBe(1)
 			expect(doc.getText()).toBe("const x = 1")
@@ -13,21 +38,21 @@ describe("MockTextDocument", () => {
 
 		it("should create document from multi-line content", () => {
 			const content = "function test() {\n    return true\n}"
-			const doc = new MockTextDocument(content)
+			const doc = new MockTextDocument(testUri, content)
 
 			expect(doc.lineCount).toBe(3)
 			expect(doc.getText()).toBe(content)
 		})
 
 		it("should handle empty content", () => {
-			const doc = new MockTextDocument("")
+			const doc = new MockTextDocument(testUri, "")
 
 			expect(doc.lineCount).toBe(1)
 			expect(doc.getText()).toBe("")
 		})
 
 		it("should handle content with only newlines", () => {
-			const doc = new MockTextDocument("\n\n\n")
+			const doc = new MockTextDocument(testUri, "\n\n\n")
 
 			expect(doc.lineCount).toBe(4)
 			expect(doc.getText()).toBe("\n\n\n")
@@ -39,7 +64,7 @@ describe("MockTextDocument", () => {
 		let doc: MockTextDocument
 
 		beforeEach(() => {
-			doc = new MockTextDocument(multiLineContent)
+			doc = new MockTextDocument(testUri, multiLineContent)
 		})
 
 		it("should return full text when no range provided", () => {
@@ -94,7 +119,7 @@ describe("MockTextDocument", () => {
 		let doc: MockTextDocument
 
 		beforeEach(() => {
-			doc = new MockTextDocument(content)
+			doc = new MockTextDocument(testUri, content)
 		})
 
 		it("should return correct line information for first line", () => {
@@ -116,7 +141,7 @@ describe("MockTextDocument", () => {
 		})
 
 		it("should return correct line information for whitespace-only line", () => {
-			const docWithWhitespace = new MockTextDocument("line1\n    \nline3")
+			const docWithWhitespace = new MockTextDocument(testUri, "line1\n    \nline3")
 			const line = docWithWhitespace.lineAt(1)
 
 			expect(line.text).toBe("    ")
@@ -154,7 +179,7 @@ describe("MockTextDocument", () => {
 
 	describe("edge cases and special characters", () => {
 		it("should handle tabs correctly", () => {
-			const doc = new MockTextDocument("\tfunction test() {\n\t\treturn true\n\t}")
+			const doc = new MockTextDocument(testUri, "\tfunction test() {\n\t\treturn true\n\t}")
 
 			expect(doc.lineCount).toBe(3)
 
@@ -168,7 +193,7 @@ describe("MockTextDocument", () => {
 		})
 
 		it("should handle mixed whitespace", () => {
-			const doc = new MockTextDocument("  \t  const x = 1")
+			const doc = new MockTextDocument(testUri, "  \t  const x = 1")
 			const line = doc.lineAt(0)
 
 			expect(line.text).toBe("  \t  const x = 1")
@@ -177,7 +202,7 @@ describe("MockTextDocument", () => {
 		})
 
 		it("should handle unicode characters", () => {
-			const doc = new MockTextDocument("const 🚀 = 'rocket'\nconst 中文 = 'chinese'")
+			const doc = new MockTextDocument(testUri, "const 🚀 = 'rocket'\nconst 中文 = 'chinese'")
 
 			expect(doc.lineCount).toBe(2)
 			expect(doc.lineAt(0).text).toBe("const 🚀 = 'rocket'")
@@ -185,7 +210,7 @@ describe("MockTextDocument", () => {
 		})
 
 		it("should handle Windows line endings (CRLF)", () => {
-			const doc = new MockTextDocument("line1\r\nline2\r\nline3")
+			const doc = new MockTextDocument(testUri, "line1\r\nline2\r\nline3")
 
 			// Note: split("\n") will still work but will include \r in the text
 			expect(doc.lineCount).toBe(3)
@@ -197,7 +222,7 @@ describe("MockTextDocument", () => {
 
 	describe("integration with vscode types", () => {
 		it("should work with vscode.Range for getText", () => {
-			const doc = new MockTextDocument("function test() {\n    return 42\n}")
+			const doc = new MockTextDocument(testUri, "function test() {\n    return 42\n}")
 
 			// Create a range using vscode constructors
 			const start = new vscode.Position(0, 9)
@@ -208,7 +233,7 @@ describe("MockTextDocument", () => {
 		})
 
 		it("should return TextLine compatible with vscode interface", () => {
-			const doc = new MockTextDocument("    const value = 'test'")
+			const doc = new MockTextDocument(testUri, "    const value = 'test'")
 			const line = doc.lineAt(0)
 
 			// Verify it has all required TextLine properties
