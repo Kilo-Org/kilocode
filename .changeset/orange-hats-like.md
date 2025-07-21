@@ -2,4 +2,6 @@
 "kilo-code": patch
 ---
 
-Inline Assist - Settings section // Suport any provider-model
+Adds new Settings page for Inline Assist
+
+You can now select the provider you'd like to use for `Inline Assist` commands
