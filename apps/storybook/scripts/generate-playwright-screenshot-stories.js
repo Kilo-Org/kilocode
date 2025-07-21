@@ -10,15 +10,8 @@ const playwrightDir = join(__dirname, "../../playwright-e2e")
 const storiesDir = join(__dirname, "../stories/generated")
 const testResultsDir = join(playwrightDir, "test-results")
 
-const isScreenshotFile = (filename) =>
-	filename.endsWith(".png") &&
-	(filename.includes("__") || filename.endsWith("-actual.png") || filename.endsWith("-expected.png"))
-
-const cleanTestName = (name) =>
-	name
-		.replace(/-retry-\d+$/, "")
-		.replace(/-\d+$/, "")
-		.replace(/^should-/, "")
+const cleanTestName = (name) => camelCase(name)
+const isScreenshotFile = (filename) => filename.endsWith(".png")
 
 const parseScreenshotName = (filename) => {
 	const name = basename(filename, ".png")
@@ -28,7 +21,7 @@ const parseScreenshotName = (filename) => {
 		if (parts.length >= 3) {
 			return {
 				testSuite: camelCase(parts[0]),
-				testName: camelCase(cleanTestName(parts[1])),
+				testName: cleanTestName(parts[1]),
 				screenshotName: camelCase(parts.slice(2).join("__")),
 				hierarchical: true,
 			}
@@ -36,9 +29,9 @@ const parseScreenshotName = (filename) => {
 	}
 
 	return {
-		testSuite: "Legacy Tests",
-		testName: "Unknown Test",
-		screenshotName: camelCase(name.replace(/-actual$|-expected$/, "")),
+		testSuite: "Playwright Screenshots",
+		testName: "Snapshot Test",
+		screenshotName: camelCase(name),
 		hierarchical: false,
 	}
 }
@@ -75,30 +68,6 @@ const findPlaywrightScreenshots = async () => {
 	}
 }
 
-const deduplicateScreenshots = (screenshots) => {
-	const uniqueScreenshots = new Map()
-
-	screenshots.forEach((screenshot) => {
-		const key = screenshot.screenshotName
-		if (!uniqueScreenshots.has(key) || screenshot.fileName > uniqueScreenshots.get(key).fileName) {
-			uniqueScreenshots.set(key, screenshot)
-		}
-	})
-
-	if (screenshots.length !== uniqueScreenshots.size) {
-		const duplicates = screenshots.reduce((acc, s) => {
-			acc[s.screenshotName] = (acc[s.screenshotName] || 0) + 1
-			return acc
-		}, {})
-		const actualDuplicates = Object.entries(duplicates).filter(([, count]) => count > 1)
-		if (actualDuplicates.length > 0) {
-			console.log(`🔄 Deduplicated: ${actualDuplicates.map(([name, count]) => `${name}(${count})`).join(", ")}`)
-		}
-	}
-
-	return Array.from(uniqueScreenshots.values())
-}
-
 const createStoryContent = (testSuite, screenshots) => {
 	const groupedByTest = screenshots.reduce((acc, screenshot) => {
 		const key = cleanTestName(screenshot.testName)
@@ -111,9 +80,7 @@ const createStoryContent = (testSuite, screenshots) => {
 	const storyExports = []
 
 	Object.entries(groupedByTest).forEach(([testName, testScreenshots]) => {
-		const uniqueScreenshots = deduplicateScreenshots(testScreenshots)
-
-		uniqueScreenshots.forEach((screenshot) => {
+		testScreenshots.forEach((screenshot) => {
 			const storyName = `${testName} - ${screenshot.screenshotName}`
 			storyExports.push(`export const Story${storyIndex} = {
   name: '${storyName}',
@@ -135,15 +102,9 @@ const createStoryContent = (testSuite, screenshots) => {
 	return `import type { Meta, StoryObj } from '@storybook/react'
 
 const meta: Meta = {
-  title: 'E2E Screenshots/${testSuite}',
+  title: 'Playwight Screenshots/${testSuite}',
   parameters: {
     layout: 'fullscreen',
-    docs: {
-      description: {
-        component: 'Screenshots captured from Playwright E2E tests for visual regression testing.',
-      },
-    },
-    chromatic: { disableSnapshot: false },
     disableChromaticDualThemeSnapshot: true,
   },
 }
@@ -173,7 +134,7 @@ const generateScreenshotStories = async (screenshots) => {
 
 	await Promise.all(
 		Object.entries(groupedByTestSuite).map(async ([testSuite, suiteScreenshots]) => {
-			console.log(`📁 Processing ${testSuite}: ${suiteScreenshots.length} screenshots`)
+			console.log(`📁 Processing ${testSuite}: ${suiteScreenshots.length} screenshots...`)
 
 			const storyContent = createStoryContent(testSuite, suiteScreenshots)
 			const storyFileName = `${sanitizeFileName(testSuite)}.stories.tsx`
