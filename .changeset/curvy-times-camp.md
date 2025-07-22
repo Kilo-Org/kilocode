@@ -2,4 +2,4 @@
 "kilo-code": minor
 ---
 
-Inline Assist keybinding configuration on the setting panel
+Add toggles that disable Inline Assist features to the Settings panel
