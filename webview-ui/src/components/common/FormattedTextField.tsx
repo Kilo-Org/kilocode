@@ -30,7 +30,7 @@ function FormattedTextFieldInner<T>(
 	forwardedRef: React.Ref<HTMLInputElement>,
 ) {
 	const handleInput = useCallback(
-		(e: any) => {
+		(e: React.FormEvent<HTMLInputElement>) => {
 			const input = e.target as HTMLInputElement
 
 			if (formatter.filter) {
@@ -48,7 +48,7 @@ function FormattedTextFieldInner<T>(
 	return <DecoratedVSCodeTextField {...restProps} value={displayValue} onInput={handleInput} ref={forwardedRef} />
 }
 
-export const FormattedTextField = forwardRef(FormattedTextFieldInner) as <T>(
+export const FormattedTextField = forwardRef(FormattedTextFieldInner as any) as <T>(
 	props: FormattedTextFieldProps<T> & { ref?: React.Ref<HTMLInputElement> },
 ) => React.ReactElement
 

@@ -1,44 +1,22 @@
 import { cn } from "@/lib/utils"
 import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
-import { forwardRef, useCallback, useRef, ReactNode, ComponentRef } from "react"
+import { forwardRef, useCallback, useRef, ReactNode, ComponentRef, ComponentProps } from "react"
 
 // Type for web components that have shadow DOM
 interface WebComponentWithShadowRoot extends HTMLElement {
 	shadowRoot: ShadowRoot | null
 }
 
-export interface VSCodeTextFieldWithNodesProps {
-	className?: string
-	placeholder?: string
-	value?: string
-	onInput?: (e: any) => void
-	onBlur?: (e: any) => void
-	onKeyDown?: (e: any) => void
-	style?: React.CSSProperties
-	"data-testid"?: string
+export interface VSCodeTextFieldWithNodesProps extends ComponentProps<typeof VSCodeTextField> {
 	leftNodes?: ReactNode[]
 	rightNodes?: ReactNode[]
-	disabled?: boolean
 }
 
 function VSCodeTextFieldWithNodesInner(
 	props: VSCodeTextFieldWithNodesProps,
 	forwardedRef: React.Ref<HTMLInputElement>,
 ) {
-	const {
-		className,
-		placeholder,
-		value,
-		onInput,
-		onBlur,
-		onKeyDown,
-		style,
-		"data-testid": dataTestId,
-		leftNodes,
-		rightNodes,
-		disabled,
-		...restProps
-	} = props
+	const { className, style, "data-testid": dataTestId, leftNodes, rightNodes, ...restProps } = props
 
 	const inputRef = useRef<HTMLInputElement | null>(null)
 	const vscodeFieldRef = useRef<any>(null)
@@ -92,13 +70,7 @@ function VSCodeTextFieldWithNodesInner(
 			)}
 
 			<VSCodeTextField
-				placeholder={placeholder}
-				value={value}
-				onInput={onInput}
-				onBlur={onBlur}
-				onKeyDown={onKeyDown}
 				data-testid={dataTestId}
-				disabled={disabled}
 				ref={handleVSCodeFieldRef}
 				style={{
 					flex: 1,
