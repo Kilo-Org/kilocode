@@ -7,15 +7,9 @@ interface MaxRequestsInputProps {
 	allowedMaxRequests?: number
 	onValueChange: (value: number | undefined) => void
 	className?: string
-	hideDescription?: boolean
 }
 
-export function MaxRequestsInput({
-	allowedMaxRequests,
-	onValueChange,
-	className,
-	hideDescription,
-}: MaxRequestsInputProps) {
+export function MaxRequestsInput({ allowedMaxRequests, onValueChange, className }: MaxRequestsInputProps) {
 	const { t } = useTranslation()
 
 	const handleValueChange = useCallback(
@@ -27,7 +21,7 @@ export function MaxRequestsInput({
 	)
 
 	return (
-		<div className={`flex flex-col gap-3 pl-3 ${className || ""}`}>
+		<div className={`flex flex-col gap-3 pl-3 flex-auto ${className || ""}`}>
 			<div className="flex items-center gap-4 font-bold">
 				<span className="codicon codicon-pulse" />
 				<div>{t("settings:autoApprove.apiRequestLimit.title")}</div>
@@ -42,11 +36,6 @@ export function MaxRequestsInput({
 					data-testid="max-requests-input"
 				/>
 			</div>
-			{!hideDescription && (
-				<div className="text-vscode-descriptionForeground text-sm">
-					{t("settings:autoApprove.apiRequestLimit.description")}
-				</div>
-			)}
 		</div>
 	)
 }

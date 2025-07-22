@@ -9,9 +9,8 @@ vi.mock("@/utils/vscode", () => ({
 vi.mock("react-i18next", () => ({
 	useTranslation: () => {
 		const translations: Record<string, string> = {
-			"settings:autoApprove.apiRequestLimit.title": "Max API Requests",
+			"settings:autoApprove.apiRequestLimit.title": "Max Count",
 			"settings:autoApprove.apiRequestLimit.unlimited": "Unlimited",
-			"settings:autoApprove.apiRequestLimit.description": "Limit the number of API requests",
 		}
 		return { t: (key: string) => translations[key] || key }
 	},

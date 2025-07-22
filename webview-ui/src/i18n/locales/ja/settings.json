@@ -195,15 +195,16 @@
 		},
 		"apiRequestLimit": {
 			"title": "最大リクエスト数",
-			"description": "タスクを続行するための承認を求める前に、自動的にこの数のAPIリクエストを行います。",
 			"unlimited": "無制限"
 		},
 		"apiCostLimit": {
 			"title": "最大 API コスト",
-			"description": "タスクを続行するための承認を求める前に、API費用としてこの金額まで自動的に使用します。",
 			"unlimited": "無制限"
 		},
-		"selectOptionsFirst": "自動承認を有効にするには、以下のオプションを少なくとも1つ選択してください"
+		"selectOptionsFirst": "自動承認を有効にするには、以下のオプションを少なくとも1つ選択してください",
+		"maxLimits": {
+			"description": "これらの制限まで自動的にリクエストを行い、続行の承認を求める前に処理します。"
+		}
 	},
 	"providers": {
 		"providerDocumentation": "{{provider}}のドキュメント",

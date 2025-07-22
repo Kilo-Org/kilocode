@@ -195,15 +195,16 @@
 		},
 		"apiRequestLimit": {
 			"title": "Màximes Sol·licituds",
-			"description": "Fes aquesta quantitat de sol·licituds API automàticament abans de demanar aprovació per continuar amb la tasca.",
 			"unlimited": "Il·limitat"
 		},
 		"apiCostLimit": {
 			"title": "Cost màxim de l'API",
-			"description": "Gasta automàticament fins a aquesta quantitat en costos d'API abans de demanar aprovació per continuar amb la tasca.",
 			"unlimited": "Il·limitat"
 		},
-		"selectOptionsFirst": "Seleccioneu almenys una opció a continuació per activar l'aprovació automàtica"
+		"selectOptionsFirst": "Seleccioneu almenys una opció a continuació per activar l'aprovació automàtica",
+		"maxLimits": {
+			"description": "Realitza sol·licituds automàticament fins a aquests límits abans de demanar aprovació per continuar."
+		}
 	},
 	"providers": {
 		"providerDocumentation": "Documentació de {{provider}}",

@@ -1,4 +1,5 @@
 import React from "react"
+import { useTranslation } from "react-i18next"
 import { MaxRequestsInput } from "./MaxRequestsInput"
 import { MaxCostInput } from "./MaxCostInput"
 
@@ -15,18 +16,16 @@ export const MaxLimitInputs: React.FC<MaxLimitInputsProps> = ({
 	onMaxRequestsChange,
 	onMaxCostChange,
 }) => {
+	const { t } = useTranslation()
+
 	return (
 		<div className="space-y-2">
-			<div className="flex">
-				<MaxRequestsInput
-					allowedMaxRequests={allowedMaxRequests}
-					onValueChange={onMaxRequestsChange}
-					hideDescription
-				/>
-				<MaxCostInput allowedMaxCost={allowedMaxCost} onValueChange={onMaxCostChange} hideDescription />
+			<div className="flex justify-stretch">
+				<MaxRequestsInput allowedMaxRequests={allowedMaxRequests} onValueChange={onMaxRequestsChange} />
+				<MaxCostInput allowedMaxCost={allowedMaxCost} onValueChange={onMaxCostChange} />
 			</div>
 			<div className="text-xs text-vscode-descriptionForeground">
-				Automatically make requests up to these limits before asking for approval to continue.
+				{t("settings:autoApprove.maxLimits.description")}
 			</div>
 		</div>
 	)

@@ -34,7 +34,6 @@ vi.mock("@src/i18n/TranslationContext", () => ({
 				"settings:autoApprove.updateTodoList.label": "Update todo list",
 				"settings:autoApprove.apiRequestLimit.title": "API request limit",
 				"settings:autoApprove.apiRequestLimit.unlimited": "Unlimited",
-				"settings:autoApprove.apiRequestLimit.description": "Limit the number of API requests",
 				"settings:autoApprove.readOnly.outsideWorkspace": "Also allow outside workspace",
 				"settings:autoApprove.write.outsideWorkspace": "Also allow outside workspace",
 				"settings:autoApprove.write.delay": "Delay",

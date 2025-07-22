@@ -196,15 +196,16 @@
 		},
 		"apiRequestLimit": {
 			"title": "最大请求数",
-			"description": "在请求批准以继续执行任务之前，自动发出此数量的 API 请求。",
 			"unlimited": "无限制"
 		},
 		"apiCostLimit": {
 			"title": "最大 API 成本",
-			"description": "在请求批准继续任务前，自动消费最多此数额的API费用。",
 			"unlimited": "无限"
 		},
-		"selectOptionsFirst": "请至少选择以下一个选项以启用自动批准"
+		"selectOptionsFirst": "请至少选择以下一个选项以启用自动批准",
+		"maxLimits": {
+			"description": "在请求批准继续之前，自动发出请求直至达到这些限制。"
+		}
 	},
 	"providers": {
 		"providerDocumentation": "{{provider}} 文档",

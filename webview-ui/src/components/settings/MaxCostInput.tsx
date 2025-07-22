@@ -7,10 +7,9 @@ interface MaxCostInputProps {
 	allowedMaxCost?: number
 	onValueChange: (value: number | undefined) => void
 	className?: string
-	hideDescription?: boolean
 }
 
-export function MaxCostInput({ allowedMaxCost, onValueChange, className, hideDescription }: MaxCostInputProps) {
+export function MaxCostInput({ allowedMaxCost, onValueChange, className }: MaxCostInputProps) {
 	const { t } = useTranslation()
 	const [inputValue, setInputValue] = useState("")
 
@@ -72,7 +71,7 @@ export function MaxCostInput({ allowedMaxCost, onValueChange, className, hideDes
 	)
 
 	return (
-		<div className={`flex flex-col gap-3 pl-3 ${className || ""}`}>
+		<div className={`flex flex-col gap-3 pl-3 flex-auto ${className || ""}`}>
 			<div className="flex items-center gap-4 font-bold">
 				<span className="codicon codicon-credit-card" />
 				<div>{t("settings:autoApprove.apiCostLimit.title")}</div>
@@ -89,11 +88,6 @@ export function MaxCostInput({ allowedMaxCost, onValueChange, className, hideDes
 					leftNodes={[<span key="dollar">$</span>]}
 				/>
 			</div>
-			{!hideDescription && (
-				<div className="text-vscode-descriptionForeground text-sm">
-					{t("settings:autoApprove.apiCostLimit.description")}
-				</div>
-			)}
 		</div>
 	)
 }
