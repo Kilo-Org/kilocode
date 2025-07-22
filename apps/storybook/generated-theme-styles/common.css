@@ -1,0 +1,34 @@
+/* Common design variables - shared between themes */
+
+/* Design System Variables (theme-agnostic) */
+--border-width: 1;
+--corner-radius: 0;
+--corner-radius-round: 2;
+--design-unit: 4;
+--disabled-opacity: 0.4;
+--font-family:
+	-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif, Apple Color Emoji,
+	Segoe UI Emoji, Segoe UI Symbol;
+--font-weight: 400;
+--input-height: 26;
+--input-min-width: 100px;
+--type-ramp-base-font-size: 13px;
+--type-ramp-base-line-height: normal;
+--type-ramp-minus1-font-size: 11px;
+--type-ramp-minus1-line-height: 16px;
+--type-ramp-minus2-font-size: 9px;
+--type-ramp-minus2-line-height: 16px;
+--type-ramp-plus1-font-size: 16px;
+--type-ramp-plus1-line-height: 24px;
+--scrollbarWidth: 10px;
+--scrollbarHeight: 10px;
+
+/* Component Layout Variables (theme-agnostic) */
+--button-icon-corner-radius: 5px;
+--button-icon-outline-offset: 0;
+--button-icon-padding: 3px;
+--button-padding-horizontal: 11px;
+--button-padding-vertical: 4px;
+--checkbox-corner-radius: 3;
+--dropdown-list-max-height: 200px;
+--tag-corner-radius: 2px;
