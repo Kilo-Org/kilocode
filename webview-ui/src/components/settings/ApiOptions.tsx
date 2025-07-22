@@ -87,9 +87,10 @@ import { TemperatureControl } from "./TemperatureControl"
 import { RateLimitSecondsControl } from "./RateLimitSecondsControl"
 import { ConsecutiveMistakeLimitControl } from "./ConsecutiveMistakeLimitControl"
 import { BedrockCustomArn } from "./providers/BedrockCustomArn"
+import { KiloCode } from "../kilocode/settings/providers/KiloCode" // kilocode_change
+import { KiloCodeAdvanced } from "../kilocode/settings/providers/KiloCodeAdvanced" // kilocode_change
 import { buildDocLink } from "@src/utils/docLinks"
 import { cerebrasDefaultModelId } from "@roo/api"
-import { KiloCode } from "../kilocode/settings/providers/KiloCode" // kilocode_change
 
 export interface ApiOptionsProps {
 	uriScheme: string | undefined
@@ -663,6 +664,15 @@ const ApiOptions = ({
 							}
 							onChange={(value) => setApiConfigurationField("consecutiveMistakeLimit", value)}
 						/>
+						{/* kilocode_change start */}
+						{selectedProvider === "kilocode" && (
+							<KiloCodeAdvanced
+								apiConfiguration={apiConfiguration}
+								setApiConfigurationField={setApiConfigurationField}
+								routerModels={routerModels}
+							/>
+						)}
+						{/* kilocode_change end */}
 						{selectedProvider === "openrouter" &&
 							openRouterModelProviders &&
 							Object.keys(openRouterModelProviders).length > 0 && (

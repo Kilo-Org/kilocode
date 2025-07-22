@@ -2,16 +2,10 @@ import { useCallback } from "react"
 import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 import { getKiloCodeBackendSignInUrl } from "../../helpers"
 import { Button } from "@src/components/ui"
-import { ExternalLinkIcon } from "@radix-ui/react-icons"
 import { type ProviderSettings, type OrganizationAllowList } from "@roo-code/types"
 import type { RouterModels } from "@roo/api"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
-import {
-	useOpenRouterModelProviders,
-	OPENROUTER_DEFAULT_PROVIDER_NAME,
-} from "@src/components/ui/hooks/useOpenRouterModelProviders"
 import { VSCodeButtonLink } from "@src/components/common/VSCodeButtonLink"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@src/components/ui"
 import { inputEventTransform } from "../../../settings/transforms"
 import { ModelPicker } from "../../../settings/ModelPicker"
 import { vscode } from "@src/utils/vscode"
@@ -48,19 +42,6 @@ export const KiloCode = ({
 				setApiConfigurationField(field, transform(event as E))
 			},
 		[setApiConfigurationField],
-	)
-
-	const { data: openRouterModelProviders } = useOpenRouterModelProviders(
-		apiConfiguration?.kilocodeModel,
-		undefined,
-		undefined,
-		{
-			enabled:
-				!!apiConfiguration?.kilocodeModel &&
-				routerModels?.openrouter &&
-				Object.keys(routerModels.openrouter).length > 1 &&
-				apiConfiguration.kilocodeModel in routerModels.openrouter,
-		},
 	)
 
 	return (
@@ -118,39 +99,6 @@ export const KiloCode = ({
 				serviceUrl="https://kilocode.ai"
 				organizationAllowList={organizationAllowList}
 			/>
-
-			{openRouterModelProviders && Object.keys(openRouterModelProviders).length > 0 && (
-				<div>
-					<div className="flex items-center gap-1">
-						<label className="block font-medium mb-1">
-							{t("kilocode:settings.provider.providerRouting.title")}
-						</label>
-						<a href={`https://openrouter.ai/${apiConfiguration?.kilocodeModel}/providers`}>
-							<ExternalLinkIcon className="w-4 h-4" />
-						</a>
-					</div>
-					<Select
-						value={apiConfiguration?.openRouterSpecificProvider || OPENROUTER_DEFAULT_PROVIDER_NAME}
-						onValueChange={(value) => setApiConfigurationField("openRouterSpecificProvider", value)}>
-						<SelectTrigger className="w-full">
-							<SelectValue placeholder={t("settings:common.select")} />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value={OPENROUTER_DEFAULT_PROVIDER_NAME}>
-								{OPENROUTER_DEFAULT_PROVIDER_NAME}
-							</SelectItem>
-							{Object.entries(openRouterModelProviders).map(([value, { label }]) => (
-								<SelectItem key={value} value={value}>
-									{label}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-					<div className="text-sm text-vscode-descriptionForeground mt-1">
-						{t("kilocode:settings.provider.providerRouting.description")}
-					</div>
-				</div>
-			)}
 		</>
 	)
 }
