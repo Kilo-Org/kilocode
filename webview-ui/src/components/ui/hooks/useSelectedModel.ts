@@ -45,9 +45,12 @@ import { useOpenRouterModelProviders } from "./useOpenRouterModelProviders"
 
 export const useSelectedModel = (apiConfiguration?: ProviderSettings) => {
 	const provider = apiConfiguration?.apiProvider || "anthropic"
-	const openRouterModelId = provider === "openrouter" ? apiConfiguration?.openRouterModelId : undefined
+	// kilocode_change start
+	let openRouterModelId = provider === "openrouter" ? apiConfiguration?.openRouterModelId : undefined
+	if (provider === "kilocode") {
+		openRouterModelId = apiConfiguration?.kilocodeModel || undefined
+	}
 
-	// kilocode_change start openRouterBaseUrl, apiKey
 	const routerModels = useRouterModels({
 		openRouterBaseUrl: apiConfiguration?.openRouterBaseUrl,
 		openRouterApiKey: apiConfiguration?.apiKey,
@@ -240,7 +243,16 @@ function getSelectedModel({
 					modelEntries.find((model) => model[0].toLowerCase().includes(selectedModelId))
 
 				if (selectedModel) {
-					return { id: selectedModel[0], info: selectedModel[1] }
+					const id = selectedModel[0]
+					let info = selectedModel[1]
+
+					const specificProvider = apiConfiguration.openRouterSpecificProvider
+					if (specificProvider && openRouterModelProviders[specificProvider]) {
+						info = info
+							? { ...info, ...openRouterModelProviders[specificProvider] }
+							: openRouterModelProviders[specificProvider]
+					}
+					return { id, info }
 				}
 			}
 
