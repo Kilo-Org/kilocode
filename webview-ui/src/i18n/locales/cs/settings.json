@@ -200,6 +200,11 @@
 			"description": "Automaticky provést tento počet žádostí API předtím, než požádá o schválení k pokračování v úkolu.",
 			"unlimited": "Neomezeně"
 		},
+		"apiCostLimit": {
+			"description": "Automaticky utratit až tuto částku za náklady na API před vyžádáním souhlasu s pokračováním úkolu.",
+			"unlimited": "Neomezený",
+			"title": "Maximální náklady na API"
+		},
 		"toggleAriaLabel": "Přepnout automatické schválení",
 		"disabledAriaLabel": "Automatické schválení zakázáno - nejprve vyberte možnosti",
 		"selectOptionsFirst": "Vyberte alespoň jednu možnost níže pro povolení automatického schválení"

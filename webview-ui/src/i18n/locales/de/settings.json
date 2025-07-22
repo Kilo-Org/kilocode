@@ -198,6 +198,11 @@
 			"description": "Automatisch so viele API-Anfragen stellen, bevor du um die Erlaubnis gebeten wirst, mit der Aufgabe fortzufahren.",
 			"unlimited": "Unbegrenzt"
 		},
+		"apiCostLimit": {
+			"title": "Max API-Kosten",
+			"description": "Automatisch bis zu diesem Betrag für API-Kosten ausgeben, bevor um Genehmigung zur Fortsetzung der Aufgabe gebeten wird.",
+			"unlimited": "Unbegrenzt"
+		},
 		"selectOptionsFirst": "Wähle mindestens eine Option unten aus, um die automatische Genehmigung zu aktivieren"
 	},
 	"providers": {

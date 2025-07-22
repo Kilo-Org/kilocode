@@ -198,6 +198,11 @@
 			"description": "Secara otomatis membuat sejumlah permintaan API ini sebelum meminta persetujuan untuk melanjutkan tugas.",
 			"unlimited": "Tidak terbatas"
 		},
+		"apiCostLimit": {
+			"title": "Biaya API Maksimum",
+			"description": "Secara otomatis mengeluarkan biaya API hingga jumlah ini sebelum meminta persetujuan untuk melanjutkan tugas.",
+			"unlimited": "Tidak terbatas"
+		},
 		"selectOptionsFirst": "Pilih setidaknya satu opsi di bawah ini untuk mengaktifkan persetujuan otomatis"
 	},
 	"providers": {

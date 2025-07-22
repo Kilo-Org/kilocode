@@ -202,6 +202,11 @@
 		},
 		"toggleAriaLabel": "تبديل الموافقة التلقائية",
 		"disabledAriaLabel": "الموافقة التلقائية معطلة - اختر الخيارات أولاً",
+		"apiCostLimit": {
+			"title": "Cost màxim de l'API",
+			"description": "Gasta automàticament fins a aquesta quantitat en costos d'API abans de demanar aprovació per continuar amb la tasca.",
+			"unlimited": "Il·limitat"
+		},
 		"selectOptionsFirst": "اختر خيار واحد على الأقل أدناه لتفعيل الموافقة التلقائية"
 	},
 	"providers": {
