@@ -18,31 +18,18 @@ const __dirname = path.dirname(__filename)
 function convertThemeToCSS(theme, themeName) {
 	const entries = Object.entries(theme.colors || {})
 
-	// Generate base variables (actual theme colors)
+	// Generate only base variables (actual theme colors) - sorted alphabetically
 	const baseVars = entries
+		.sort(([a], [b]) => a.localeCompare(b))
 		.map(([key, value]) => {
-			const baseVar = `--${key.replace(/\./g, "-")}`
-			return `\t${baseVar}: ${value};`
-		})
-		.join("\n")
-
-	// Generate VSCode delegation variables (reference base variables)
-	const vsCodeVars = entries
-		.map(([key, value]) => {
-			const baseVar = `--${key.replace(/\./g, "-")}`
-			const vsCodeVar = `--vscode-${key.replace(/\./g, "-")}`
-			return `\t${vsCodeVar}: var(${baseVar});`
+			const baseVar = `--vscode-${key.replace(/\./g, "-")}`
+			return `${baseVar}: ${value};`
 		})
 		.join("\n")
 
 	return `/* ${themeName} theme - Generated from VS Code */
-@import '../.storybook/design-system.css';
-
-/* Theme Colors */
-${baseVars}
-
-/* VSCode Variable Delegations */
-${vsCodeVars}`
+/* Theme Colors - Base Variables Only */
+${baseVars}`
 }
 
 // Resolve theme includes using jsonc-parser
