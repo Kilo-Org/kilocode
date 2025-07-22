@@ -1,6 +1,6 @@
 // kilocode_change - new file
-import type { Meta, StoryObj } from "@storybook/react"
-import { fn } from "@storybook/test"
+import type { Meta, StoryObj } from "@storybook/react-vite"
+import { fn } from "storybook/test"
 
 import ChatView from "../../../webview-ui/src/components/chat/ChatView"
 import { createTaskHeaderMessages, createMockTask } from "../src/mockData/clineMessages"

@@ -1,4 +1,4 @@
-import type { Preview } from "@storybook/react"
+import type { Preview } from "@storybook/react-vite"
 
 import { withExtensionState } from "../src/decorators/withExtensionState"
 import { withQueryClient } from "../src/decorators/withQueryClient"

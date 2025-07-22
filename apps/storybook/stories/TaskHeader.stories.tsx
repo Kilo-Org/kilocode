@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react"
-import { fn } from "@storybook/test"
+import type { Meta, StoryObj } from "@storybook/react-vite"
+import { fn } from "storybook/test"
 
 import TaskHeader from "../../../webview-ui/src/components/chat/TaskHeader"
 import { TooltipProvider } from "../../../webview-ui/src/components/ui/tooltip"

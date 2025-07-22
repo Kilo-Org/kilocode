@@ -1,5 +1,5 @@
 import { ReactNode } from "react"
-import type { Decorator } from "@storybook/react"
+import type { Decorator } from "@storybook/react-vite"
 import { cn } from "@/lib/utils"
 import isChromatic from "chromatic/isChromatic"
 

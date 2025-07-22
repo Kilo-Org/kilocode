@@ -26,15 +26,10 @@
 		"tailwindcss": "^4.0.0"
 	},
 	"devDependencies": {
-		"@chromatic-com/storybook": "^3.2.2",
-		"@storybook/addon-essentials": "^8.4.7",
-		"@storybook/addon-interactions": "^8.4.7",
-		"@storybook/addon-links": "^8.4.7",
-		"@storybook/blocks": "^8.4.7",
-		"@storybook/react": "^8.4.7",
-		"@storybook/react-vite": "^8.4.7",
-		"@storybook/test": "^8.4.7",
-		"@storybook/test-runner": "^0.21.2",
+		"@chromatic-com/storybook": "^4.0.1",
+		"@storybook/addon-links": "^9.0.18",
+		"@storybook/react-vite": "^9.0.18",
+		"@storybook/test-runner": "^0.23.0",
 		"@tailwindcss/vite": "^4.0.0",
 		"@types/react": "^18.3.23",
 		"@types/react-dom": "^18.3.5",
@@ -45,9 +40,10 @@
 		"jsonc-parser": "^3.3.1",
 		"node-fetch": "2",
 		"rimraf": "^6.0.1",
-		"storybook": "^8.4.7",
+		"storybook": "^9.0.18",
 		"tailwindcss-animate": "^1.0.7",
 		"typescript": "^5.4.5",
-		"vite": "6.3.5"
+		"vite": "6.3.5",
+		"@storybook/addon-docs": "^9.0.18"
 	}
 }
