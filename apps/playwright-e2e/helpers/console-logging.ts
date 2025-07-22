@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import type { Page } from "@playwright/test"
 
 const shouldIgnoreMessage = (message: string): boolean => {

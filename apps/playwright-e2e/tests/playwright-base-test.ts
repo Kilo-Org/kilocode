@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import { test as base, type Page, _electron } from "@playwright/test"
 export { expect } from "@playwright/test"
 import * as path from "path"

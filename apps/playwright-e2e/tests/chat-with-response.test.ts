@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import { test, type TestFixtures } from "./playwright-base-test"
 import { setupTestEnvironment, sendMessage, waitForWebviewText } from "../helpers"
 

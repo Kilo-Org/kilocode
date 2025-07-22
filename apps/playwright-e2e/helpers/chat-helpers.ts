@@ -1,10 +1,11 @@
+// kilocode_change - new file
 import { type Page } from "@playwright/test"
 import { findWebview } from "./webview-helpers"
 
 export async function getChatInput(page: Page) {
 	const webviewFrame = await findWebview(page)
 	const chatInput = webviewFrame.locator('textarea, input[type="text"]').first()
-	await chatInput.waitFor({ timeout: 10000 })
+	await chatInput.waitFor()
 	return chatInput
 }
 

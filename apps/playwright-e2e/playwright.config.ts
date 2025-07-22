@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import { defineConfig } from "@playwright/test"
 import { TestOptions } from "./tests/playwright-base-test"
 import * as dotenv from "dotenv"
