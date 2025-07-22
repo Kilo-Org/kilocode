@@ -138,7 +138,6 @@
 	"ghost": {
 		"title": "Inline-Unterstützung",
 		"settings": {
-			"keybindings": "Tastenkombinationen",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Schnelle Inline-Aufgabe",
 				"description": "Brauchst du nur eine schnelle Änderung? Wähle etwas Code aus (oder auch nicht!) und drücke Cmd+I. Beschreibe dein Ziel in einfachem Deutsch (\"erstelle eine React-Komponente mit diesen Props\", \"füge Fehlerbehandlung zu dieser Funktion hinzu\") und erhalte mehrere, sofort einsetzbare Vorschläge direkt in deinem Editor. <DocsLink>Siehe Tastenkombination</DocsLink>"

@@ -138,7 +138,6 @@
 	"ghost": {
 		"title": "インライン支援",
 		"settings": {
-			"keybindings": "キーバインド",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "クイックインラインタスク",
 				"description": "ちょっとした変更だけが必要ですか？コードを選択して（または選択せずに！）Cmd+Iを押してください。目標を普通の言葉で説明してください（「これらのpropsを持つReactコンポーネントを作成」、「この関数にエラー処理を追加」など）。すぐに使える複数の提案がエディタ上に表示されます。<DocsLink>ショートカットを見る</DocsLink>"

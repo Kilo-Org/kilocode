@@ -138,7 +138,6 @@
 	"ghost": {
 		"title": "Inline asistence",
 		"settings": {
-			"keybindings": "Klávesové zkratky",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Rychlý inline úkol",
 				"description": "Potřebujete jen rychlou změnu? Vyberte nějaký kód (nebo ne!) a stiskněte Cmd+I. Popište svůj cíl běžnou češtinou (\"vytvořit React komponentu s těmito props\", \"přidat ošetření chyb do této funkce\") a získejte několik připravených návrhů přímo ve svém editoru. <DocsLink>Zobrazit zkratku</DocsLink>"

@@ -138,7 +138,6 @@
 	"ghost": {
 		"title": "内联辅助",
 		"settings": {
-			"keybindings": "键位绑定",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "快速内联任务",
 				"description": "只需要一个快速的调整？选中一些代码（或者不选！）然后按下Cmd+I。用简单的英语描述你的目标（\"创建一个带有这些属性的React组件\"，\"为这个函数添加错误处理\"），然后在编辑器中直接获取多个可立即使用的建议。<DocsLink>查看快捷键</DocsLink>"

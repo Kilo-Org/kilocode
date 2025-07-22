@@ -138,7 +138,6 @@
 	"ghost": {
 		"title": "Bantuan Inline",
 		"settings": {
-			"keybindings": "Tombol Pintas",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Tugas Cepat Sebaris",
 				"description": "Hanya butuh perubahan cepat? Pilih beberapa kode (atau tidak perlu!) dan tekan Cmd+I. Jelaskan tujuan Anda dalam bahasa sehari-hari (\"buat komponen React dengan prop ini\", \"tambahkan penanganan kesalahan ke fungsi ini\"), dan dapatkan beberapa saran siap pakai langsung di editor Anda. <DocsLink>Lihat pintasan</DocsLink>"

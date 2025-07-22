@@ -138,7 +138,6 @@
 	"ghost": {
 		"title": "Assistance en ligne",
 		"settings": {
-			"keybindings": "Raccourcis clavier",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Tâche Rapide en Ligne",
 				"description": "Besoin d'une modification rapide ? Sélectionnez du code (ou pas !) et appuyez sur Cmd+I. Décrivez votre objectif en langage courant (\"créer un composant React avec ces props\", \"ajouter une gestion d'erreurs à cette fonction\"), et obtenez plusieurs suggestions prêtes à l'emploi directement dans votre éditeur. <DocsLink>Voir le raccourci</DocsLink>"

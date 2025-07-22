@@ -138,7 +138,6 @@
 	"ghost": {
 		"title": "Inline Assistentie",
 		"settings": {
-			"keybindings": "Sneltoetsen",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Snelle Inline Taak",
 				"description": "Heb je maar een snelle aanpassing nodig? Selecteer wat code (of niet!) en druk op Cmd+I. Beschrijf je doel in gewoon Nederlands (\"maak een React-component met deze props\", \"voeg foutafhandeling toe aan deze functie\"), en krijg meerdere, direct bruikbare suggesties rechtstreeks in je editor. <DocsLink>Zie sneltoets</DocsLink>"

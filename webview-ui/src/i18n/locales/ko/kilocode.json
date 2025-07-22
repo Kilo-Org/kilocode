@@ -138,7 +138,6 @@
 	"ghost": {
 		"title": "인라인 지원",
 		"settings": {
-			"keybindings": "키 바인딩",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "빠른 인라인 작업",
 				"description": "빠른 변경만 필요하신가요? 코드를 선택하거나(또는 그냥 넘어가도 됩니다!) Cmd+I를 누르세요. 평범한 말로 목표를 설명하세요(\"이러한 props가 있는 React 컴포넌트 만들기\", \"이 함수에 오류 처리 추가하기\"), 그러면 에디터에서 바로 사용할 수 있는 다양한 제안을 받을 수 있습니다. <DocsLink>단축키 보기</DocsLink>"

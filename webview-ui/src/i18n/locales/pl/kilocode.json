@@ -138,7 +138,6 @@
 	"ghost": {
 		"title": "Pomoc w tekście",
 		"settings": {
-			"keybindings": "Skróty klawiszowe",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Szybkie zadanie w tekście",
 				"description": "Potrzebujesz tylko szybkiej zmiany? Zaznacz jakiś kod (albo nie!) i naciśnij Cmd+I. Opisz swój cel zwykłym językiem (\"stwórz komponent React z tymi propsami\", \"dodaj obsługę błędów do tej funkcji\"), i otrzymaj wiele gotowych do użycia sugestii bezpośrednio w swoim edytorze. <DocsLink>Zobacz skrót</DocsLink>"

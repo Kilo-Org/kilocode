@@ -138,7 +138,6 @@
 	"ghost": {
 		"title": "Assistência em linha",
 		"settings": {
-			"keybindings": "Atalhos de Teclado",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Tarefa Rápida em Linha",
 				"description": "Precisa apenas de uma mudança rápida? Selecione algum código (ou não!) e pressione Cmd+I. Descreva seu objetivo em linguagem simples (\"criar um componente React com essas props\", \"adicionar tratamento de erro a esta função\") e receba múltiplas sugestões prontas para uso diretamente no seu editor. <DocsLink>Ver atalho</DocsLink>"

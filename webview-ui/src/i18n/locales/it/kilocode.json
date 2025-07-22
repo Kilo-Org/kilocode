@@ -138,7 +138,6 @@
 	"ghost": {
 		"title": "Assistenza in linea",
 		"settings": {
-			"keybindings": "Scorciatoie da tastiera",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Attività Rapida In Linea",
 				"description": "Hai solo bisogno di una modifica rapida? Seleziona del codice (o anche no!) e premi Cmd+I. Descrivi il tuo obiettivo in linguaggio semplice (\"crea un componente React con queste props\", \"aggiungi la gestione degli errori a questa funzione\") e ottieni molteplici suggerimenti pronti all'uso direttamente nel tuo editor. <DocsLink>Vedi scorciatoia</DocsLink>"

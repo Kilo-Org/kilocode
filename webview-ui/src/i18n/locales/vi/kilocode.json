@@ -138,7 +138,6 @@
 	"ghost": {
 		"title": "Hỗ trợ nội tuyến",
 		"settings": {
-			"keybindings": "Các phím tắt",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Nhiệm vụ nhanh trong dòng",
 				"description": "Chỉ cần thay đổi nhanh? Chọn một đoạn code (hoặc không cần!) và nhấn Cmd+I. Mô tả mục tiêu của bạn bằng ngôn ngữ đơn giản (\"tạo một component React với các props này\", \"thêm xử lý lỗi vào hàm này\"), và nhận nhiều gợi ý sẵn sàng sử dụng ngay trong trình soạn thảo của bạn. <DocsLink>Xem phím tắt</DocsLink>"

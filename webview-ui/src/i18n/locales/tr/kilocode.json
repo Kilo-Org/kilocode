@@ -138,7 +138,6 @@
 	"ghost": {
 		"title": "Satır İçi Yardım",
 		"settings": {
-			"keybindings": "Tuş Atamaları",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Hızlı Satır İçi Görev",
 				"description": "Sadece hızlı bir değişikliğe mi ihtiyacınız var? Biraz kod seçin (ya da seçmeyin!) ve Cmd+I tuşuna basın. Amacınızı sade bir şekilde açıklayın (\"bu prop'larla bir React bileşeni oluştur\", \"bu fonksiyona hata yönetimi ekle\") ve düzenleyicinizde kullanıma hazır birden fazla öneri alın. <DocsLink>Kısayolu gör</DocsLink>"
