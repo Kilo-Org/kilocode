@@ -137,18 +137,20 @@
 			"keybindings": "Tastenkombinationen",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Schnelle Inline-Aufgabe",
-				"description": "Brauchst du nur eine schnelle Änderung? Wähle Code aus (oder auch nicht!) und drücke Cmd+I. Beschreibe dein Ziel in einfachem Englisch (\"erstelle eine React-Komponente mit diesen Props\", \"füge Fehlerbehandlung zu dieser Funktion hinzu\") und erhalte mehrere, sofort einsatzbereite Vorschläge direkt in deinem Editor."
+				"description": "Brauchst du nur eine schnelle Änderung? Wähle etwas Code aus (oder auch nicht!) und drücke Cmd+I. Beschreibe dein Ziel in einfachem Deutsch (\"erstelle eine React-Komponente mit diesen Props\", \"füge Fehlerbehandlung zu dieser Funktion hinzu\") und erhalte mehrere, sofort einsetzbare Vorschläge direkt in deinem Editor. <DocsLink>Siehe Tastenkombination</DocsLink>"
 			},
 			"enableAutoInlineTaskKeybinding": {
-				"label": "Automatische Inline-Aufgabe",
-				"description": "Brauchst du eine schnelle Korrektur, Vervollständigung oder ein Refactoring? Kilo nutzt den umgebenden Kontext, um sofortige Verbesserungen vorzuschlagen und dich im Fluss zu halten."
+				"label": "Auto Inline Aufgabe",
+				"description": "Brauchen Sie eine schnelle Korrektur, Vervollständigung oder Umstrukturierung? Kilo nutzt den umliegenden Kontext, um sofortige Verbesserungen anzubieten und Sie im Flow zu halten. <DocsLink>Tastenkombination anzeigen</DocsLink>"
 			},
 			"provider": "Anbieter",
 			"apiConfigId": {
 				"label": "API-Konfiguration",
 				"current": "Aktuell ausgewählte API-Konfiguration verwenden",
 				"description": "Wähle eine API-Konfiguration für Inline-Assist-Prompts aus oder verwende einfach die aktuell ausgewählte"
-			}
+			},
+			"triggers": "Auslöser",
+			"keybindingDescription": "Inline-Assistenzfunktionen werden durch Befehle ausgelöst. Sie können die <DocsLink>Tastaturkürzel hier konfigurieren</DocsLink>."
 		}
 	}
 }

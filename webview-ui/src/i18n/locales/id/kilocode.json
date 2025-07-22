@@ -136,19 +136,21 @@
 		"settings": {
 			"keybindings": "Tombol Pintas",
 			"enableQuickInlineTaskKeybinding": {
-				"label": "Tugas Inline Cepat",
-				"description": "Hanya butuh perubahan cepat? Pilih beberapa kode (atau tidak!) dan tekan Cmd+I. Jelaskan tujuan Anda dalam bahasa Inggris sederhana (\"buat komponen React dengan props ini\", \"tambahkan penanganan kesalahan ke fungsi ini\"), dan dapatkan beberapa saran siap pakai langsung di editor Anda."
+				"label": "Tugas Cepat Sebaris",
+				"description": "Hanya butuh perubahan cepat? Pilih beberapa kode (atau tidak perlu!) dan tekan Cmd+I. Jelaskan tujuan Anda dalam bahasa sehari-hari (\"buat komponen React dengan prop ini\", \"tambahkan penanganan kesalahan ke fungsi ini\"), dan dapatkan beberapa saran siap pakai langsung di editor Anda. <DocsLink>Lihat pintasan</DocsLink>"
 			},
 			"enableAutoInlineTaskKeybinding": {
-				"label": "Tugas Inline Otomatis",
-				"description": "Butuh perbaikan cepat, penyelesaian, atau refactor? Kilo akan menggunakan konteks sekitar untuk menawarkan perbaikan segera, membuat Anda tetap dalam alur."
+				"label": "Tugas Otomatis Inline",
+				"description": "Butuh perbaikan cepat, penyelesaian, atau refaktor? Kilo akan menggunakan konteks di sekitarnya untuk menawarkan peningkatan langsung, membuat Anda tetap fokus dalam alur kerja. <DocsLink>Lihat pintasan</DocsLink>"
 			},
 			"provider": "Penyedia",
 			"apiConfigId": {
 				"label": "Konfigurasi API",
 				"current": "Gunakan konfigurasi API yang dipilih saat ini",
 				"description": "Pilih konfigurasi API untuk digunakan untuk prompt Bantuan Inline, atau cukup gunakan apa pun yang saat ini dipilih"
-			}
+			},
+			"triggers": "Pemicu",
+			"keybindingDescription": "Fitur Bantuan Inline dipicu oleh perintah. Anda dapat mengonfigurasi <DocsLink>pintasan keyboard di sini</DocsLink>."
 		}
 	}
 }

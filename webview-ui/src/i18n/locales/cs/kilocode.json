@@ -137,18 +137,20 @@
 			"keybindings": "Klávesové zkratky",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Rychlý inline úkol",
-				"description": "Potřebujete jen rychlou změnu? Vyberte nějaký kód (nebo ne!) a stiskněte Cmd+I. Popište svůj cíl jednoduchou angličtinou (\"vytvořte React komponentu s těmito props\", \"přidejte do této funkce zpracování chyb\") a získejte několik hotových návrhů přímo ve vašem editoru."
+				"description": "Potřebujete jen rychlou změnu? Vyberte nějaký kód (nebo ne!) a stiskněte Cmd+I. Popište svůj cíl běžnou češtinou (\"vytvořit React komponentu s těmito props\", \"přidat ošetření chyb do této funkce\") a získejte několik připravených návrhů přímo ve svém editoru. <DocsLink>Zobrazit zkratku</DocsLink>"
 			},
 			"enableAutoInlineTaskKeybinding": {
 				"label": "Automatický inline úkol",
-				"description": "Potřebujete rychlou opravu, dokončení nebo refaktor? Kilo použije okolní kontext k nabídnutí okamžitých vylepšení, abyste zůstali v obraze."
+				"description": "Potřebujete rychlou opravu, doplnění nebo refaktoring? Kilo využije okolní kontext a nabídne okamžitá vylepšení, abyste neztratili tempo. <DocsLink>Zobrazit klávesovou zkratku</DocsLink>"
 			},
 			"provider": "Poskytovatel",
 			"apiConfigId": {
 				"label": "Konfigurace API",
 				"current": "Použít aktuálně vybranou konfiguraci API",
 				"description": "Vyberte konfiguraci API, kterou chcete použít pro výzvy Inline Assist, nebo prostě použijte tu, která je aktuálně vybrána"
-			}
+			},
+			"triggers": "Spouštěče",
+			"keybindingDescription": "Funkce Inline Assist jsou spouštěny příkazy. <DocsLink>Klávesové zkratky si můžete nakonfigurovat zde</DocsLink>."
 		}
 	}
 }

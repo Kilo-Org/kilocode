@@ -137,18 +137,20 @@
 			"keybindings": "Tuş Atamaları",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Hızlı Satır İçi Görev",
-				"description": "Sadece hızlı bir değişikliğe mi ihtiyacınız var? Bir miktar kod seçin (veya seçmeyin!) ve Cmd+I'ya basın. Hedefinizi basit İngilizce ile açıklayın (\"bu proplarla bir React bileşeni oluştur\", \"bu fonksiyona hata yönetimi ekle\") ve doğrudan düzenleyicinizde birden fazla, kullanıma hazır öneri alın."
+				"description": "Sadece hızlı bir değişikliğe mi ihtiyacınız var? Biraz kod seçin (ya da seçmeyin!) ve Cmd+I tuşuna basın. Amacınızı sade bir şekilde açıklayın (\"bu prop'larla bir React bileşeni oluştur\", \"bu fonksiyona hata yönetimi ekle\") ve düzenleyicinizde kullanıma hazır birden fazla öneri alın. <DocsLink>Kısayolu gör</DocsLink>"
 			},
 			"enableAutoInlineTaskKeybinding": {
 				"label": "Otomatik Satır İçi Görev",
-				"description": "Hızlı bir düzeltme, tamamlama veya yeniden düzenlemeye mi ihtiyacınız var? Kilo, sizi akışta tutmak için anında iyileştirmeler sunmak üzere çevredeki bağlamı kullanacaktır."
+				"description": "Hızlı bir düzeltme, tamamlama veya yeniden düzenleme mi gerekiyor? Kilo, çevreleyen bağlamı kullanarak anında iyileştirmeler sunacak, böylece odağınızı kaybetmeyeceksiniz. <DocsLink>Kısayolu gör</DocsLink>"
 			},
 			"provider": "Sağlayıcı",
 			"apiConfigId": {
 				"label": "API Yapılandırması",
 				"current": "Şu anda seçili API yapılandırmasını kullan",
 				"description": "Satır İçi Yardım istemleri için kullanılacak bir API yapılandırması seçin veya o anda seçili olanı kullanın"
-			}
+			},
+			"triggers": "Tetikleyiciler",
+			"keybindingDescription": "Satır içi Yardım özellikleri komutlarla tetiklenir. <DocsLink>Klavye kısayollarını buradan</DocsLink> yapılandırabilirsiniz."
 		}
 	}
 }

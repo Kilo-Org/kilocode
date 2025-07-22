@@ -136,19 +136,21 @@
 		"settings": {
 			"keybindings": "Atalhos de Teclado",
 			"enableQuickInlineTaskKeybinding": {
-				"label": "Tarefa Rápida Inline",
-				"description": "Precisa apenas de uma mudança rápida? Selecione um código (ou não!) e pressione Cmd+I. Descreva seu objetivo em inglês claro (\"crie um componente React com estes props\", \"adicione tratamento de erros a esta função\") e obtenha várias sugestões prontas para uso diretamente no seu editor."
+				"label": "Tarefa Rápida em Linha",
+				"description": "Precisa apenas de uma mudança rápida? Selecione algum código (ou não!) e pressione Cmd+I. Descreva seu objetivo em linguagem simples (\"criar um componente React com essas props\", \"adicionar tratamento de erro a esta função\") e receba múltiplas sugestões prontas para uso diretamente no seu editor. <DocsLink>Ver atalho</DocsLink>"
 			},
 			"enableAutoInlineTaskKeybinding": {
-				"label": "Tarefa Automática Inline",
-				"description": "Precisa de uma correção rápida, conclusão ou refatoração? O Kilo usará o contexto ao redor para oferecer melhorias imediatas, mantendo você no fluxo."
+				"label": "Tarefa Automática em Linha",
+				"description": "Precisa de uma correção rápida, preenchimento ou refatoração? Kilo usará o contexto ao redor para oferecer melhorias imediatas, mantendo seu fluxo de trabalho. <DocsLink>Ver atalho</DocsLink>"
 			},
 			"provider": "Provedor",
 			"apiConfigId": {
 				"label": "Configuração de API",
 				"current": "Usar configuração de API atualmente selecionada",
 				"description": "Selecione uma configuração de API para usar nos prompts do Inline Assist ou apenas use o que estiver selecionado no momento"
-			}
+			},
+			"triggers": "Gatilhos",
+			"keybindingDescription": "Os recursos de Assistência em Linha são acionados por comandos. Você pode configurar os <DocsLink>atalhos de teclado aqui</DocsLink>."
 		}
 	}
 }

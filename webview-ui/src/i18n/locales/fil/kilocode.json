@@ -136,19 +136,21 @@
 		"settings": {
 			"keybindings": "Mga KeyBinding",
 			"enableQuickInlineTaskKeybinding": {
-				"label": "Mabilis na Inline na Gawain",
-				"description": "Kailangan lang ng mabilis na pagbabago? Pumili ng ilang code (o hindi!) at pindutin ang Cmd+I. Ilarawan ang iyong layunin sa simpleng English (\"gumawa ng React component gamit ang mga props na ito\", \"magdagdag ng error handling sa function na ito\"), at makakuha ng maraming, handa nang gamitin na mga mungkahi mismo sa iyong editor."
+				"label": "Mabilisang Inline na Gawain",
+				"description": "Kailangan lang ng mabilis na pagbabago? Pumili ng ilang code (o hindi!) at pindutin ang Cmd+I. Ilarawan ang iyong layunin sa simpleng Tagalog (\"gumawa ng React component na may ganitong props\", \"magdagdag ng error handling sa function na ito\"), at makakakuha ka ng maraming, handang gamitin na mga suhestiyon direkta sa iyong editor. <DocsLink>Tingnan ang shortcut</DocsLink>"
 			},
 			"enableAutoInlineTaskKeybinding": {
 				"label": "Awtomatikong Inline na Gawain",
-				"description": "Kailangan ng mabilis na pag-aayos, pagkumpleto, o refactor? Gagamitin ng Kilo ang nakapalibot na konteksto upang mag-alok ng mga agarang pagpapabuti, na nagpapanatili sa iyo sa daloy."
+				"description": "Kailangan ng mabilisang pag-ayos, pagkumpleto, o pag-refactor? Gagamitin ni Kilo ang nakapalibot na konteksto upang mag-alok ng agarang pagpapabuti, na nagpapanatili sa'yo sa daloy ng paggawa. <DocsLink>Tingnan ang shortcut</DocsLink>"
 			},
 			"provider": "Provider",
 			"apiConfigId": {
 				"label": "API Configuration",
 				"current": "Gamitin ang kasalukuyang napiling API configuration",
 				"description": "Pumili ng configuration ng API na gagamitin para sa mga prompt ng Inline Assist, o gamitin lang ang kasalukuyang napili"
-			}
+			},
+			"triggers": "Mga Trigger",
+			"keybindingDescription": "Ang mga feature ng Inline Assist ay nati-trigger ng mga command. Maaari mong i-configure ang <DocsLink>mga keyboard shortcut dito</DocsLink>."
 		}
 	}
 }

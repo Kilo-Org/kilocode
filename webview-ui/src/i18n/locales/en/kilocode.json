@@ -134,14 +134,15 @@
 	"ghost": {
 		"title": "Inline Assist",
 		"settings": {
-			"keybindings": "KeyBindings",
+			"triggers": "Triggers",
+			"keybindingDescription": "Inline Assist features are triggered by commands. You can configure the <DocsLink>Keyboard Shortcuts here</DocsLink>.",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Quick Inline Task",
-				"description": "Only need a quick change? Select some code (or don't!) and hit Cmd+I. Describe your goal in plain English (\"create a React component with these props\", \"add error handling to this function\"), and get multiple, ready-to-use suggestions right in your editor."
+				"description": "Only need a quick change? Select some code (or don't!) and hit Cmd+I. Describe your goal in plain English (\"create a React component with these props\", \"add error handling to this function\"), and get multiple, ready-to-use suggestions right in your editor. <DocsLink>See shortcut</DocsLink>"
 			},
 			"enableAutoInlineTaskKeybinding": {
 				"label": "Auto Inline Task",
-				"description": "Need a quick fix, completion, or refactor? Kilo will use the surrounding context to offer immediate improvements, keeping you in the flow."
+				"description": "Need a quick fix, completion, or refactor? Kilo will use the surrounding context to offer immediate improvements, keeping you in the flow. <DocsLink>See shortcut</DocsLink>"
 			},
 			"provider": "Provider",
 			"apiConfigId": {

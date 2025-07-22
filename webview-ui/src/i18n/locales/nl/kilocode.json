@@ -137,18 +137,20 @@
 			"keybindings": "Sneltoetsen",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Snelle Inline Taak",
-				"description": "Slechts een snelle wijziging nodig? Selecteer wat code (of niet!) en druk op Cmd+I. Beschrijf je doel in eenvoudig Engels (\"maak een React-component met deze props\", \"voeg foutafhandeling toe aan deze functie\"), en krijg meerdere, kant-en-klare suggesties rechtstreeks in je editor."
+				"description": "Heb je maar een snelle aanpassing nodig? Selecteer wat code (of niet!) en druk op Cmd+I. Beschrijf je doel in gewoon Nederlands (\"maak een React-component met deze props\", \"voeg foutafhandeling toe aan deze functie\"), en krijg meerdere, direct bruikbare suggesties rechtstreeks in je editor. <DocsLink>Zie sneltoets</DocsLink>"
 			},
 			"enableAutoInlineTaskKeybinding": {
 				"label": "Automatische Inline Taak",
-				"description": "Een snelle oplossing, aanvulling of refactor nodig? Kilo gebruikt de omliggende context om onmiddellijke verbeteringen aan te bieden, zodat je in de flow blijft."
+				"description": "Behoefte aan een snelle oplossing, aanvulling of herstructurering? Kilo gebruikt de omringende context om directe verbeteringen aan te bieden, zodat je in je flow blijft. <DocsLink>Bekijk sneltoets</DocsLink>"
 			},
 			"provider": "Aanbieder",
 			"apiConfigId": {
 				"label": "API-configuratie",
 				"current": "Gebruik de momenteel geselecteerde API-configuratie",
 				"description": "Selecteer een API-configuratie om te gebruiken voor Inline Assist-prompts, of gebruik gewoon wat momenteel is geselecteerd"
-			}
+			},
+			"triggers": "Triggers",
+			"keybindingDescription": "Functies binnen Inline Assist worden geactiveerd door commando's. Je kunt de <DocsLink>sneltoetsen hier configureren</DocsLink>."
 		}
 	}
 }

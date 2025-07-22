@@ -136,19 +136,21 @@
 		"settings": {
 			"keybindings": "按鍵綁定",
 			"enableQuickInlineTaskKeybinding": {
-				"label": "快速內嵌任務",
-				"description": "只需要快速變更？選取一些程式碼（或不選！），然後按下 Cmd+I。用簡單的英文描述您的目標（「使用這些 props 建立一個 React 元件」、「為此函式新增錯誤處理」），然後在您的編輯器中立即取得多個可用的建議。"
+				"label": "快速内联任务",
+				"description": "只需要快速修改？选择一些代码（或者不选！）并按下 Cmd+I。用简单的语言描述你的目标（\"创建一个带有这些属性的 React 组件\"，\"为这个函数添加错误处理\"），然后在你的编辑器中获取多个随时可用的建议。<DocsLink>查看快捷键</DocsLink>"
 			},
 			"enableAutoInlineTaskKeybinding": {
-				"label": "自動內嵌任務",
-				"description": "需要快速修復、完成或重構？Kilo 將使用周圍的上下文提供即時改進，讓您保持流暢。"
+				"label": "自动内联任务",
+				"description": "需要快速修复、完成或重构代码？Kilo 将使用周围的上下文提供即时改进，让您保持工作流畅。<DocsLink>查看快捷键</DocsLink>"
 			},
 			"provider": "提供者",
 			"apiConfigId": {
 				"label": "API 設定",
 				"current": "使用目前選擇的 API 設定",
 				"description": "為內聯輔D助提示選擇一個 API 設定，或者只使用目前選擇的設定"
-			}
+			},
+			"triggers": "触发器",
+			"keybindingDescription": "Inline Assist 功能通过命令触发。您可以在<DocsLink>此处配置键盘快捷键</DocsLink>。"
 		}
 	}
 }

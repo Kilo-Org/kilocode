@@ -136,19 +136,21 @@
 		"settings": {
 			"keybindings": "Tangentbordsgenvägar",
 			"enableQuickInlineTaskKeybinding": {
-				"label": "Snabb inline-uppgift",
-				"description": "Behöver du bara en snabb ändring? Markera lite kod (eller inte!) och tryck på Cmd+I. Beskriv ditt mål på enkel engelska (\"skapa en React-komponent med dessa props\", \"lägg till felhantering i den här funktionen\"), och få flera färdiga förslag direkt i din redigerare."
+				"label": "Snabb uppgift i texten",
+				"description": "Behöver du bara en snabb ändring? Markera lite kod (eller låt bli!) och tryck på Cmd+I. Beskriv ditt mål på vanlig svenska (\"skapa en React-komponent med dessa props\", \"lägg till felhantering i den här funktionen\"), och få flera, användningsklara förslag direkt i din editor. <DocsLink>Se genväg</DocsLink>"
 			},
 			"enableAutoInlineTaskKeybinding": {
-				"label": "Automatisk inline-uppgift",
-				"description": "Behöver du en snabb fix, komplettering eller refaktorering? Kilo kommer att använda den omgivande kontexten för att erbjuda omedelbara förbättringar och hålla dig i flödet."
+				"label": "Automatisk Inline-uppgift",
+				"description": "Behöver du en snabb lösning, komplettering eller omfaktorering? Kilo använder sammanhanget runt omkring för att erbjuda omedelbara förbättringar, så att du kan behålla ditt arbetsflöde. <DocsLink>Se genväg</DocsLink>"
 			},
 			"provider": "Leverantör",
 			"apiConfigId": {
 				"label": "API-konfiguration",
 				"current": "Använd den för närvarande valda API-konfigurationen",
 				"description": "Välj en API-konfiguration att använda för Inline Assist-prompter, eller använd bara det som för närvarande är valt"
-			}
+			},
+			"triggers": "Utlösare",
+			"keybindingDescription": "Inline Assist-funktioner aktiveras med kommandon. Du kan konfigurera <DocsLink>kortkommandon här</DocsLink>."
 		}
 	}
 }

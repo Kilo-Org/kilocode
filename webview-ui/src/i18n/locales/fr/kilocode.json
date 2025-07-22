@@ -136,19 +136,21 @@
 		"settings": {
 			"keybindings": "Raccourcis clavier",
 			"enableQuickInlineTaskKeybinding": {
-				"label": "Tâche rapide en ligne",
-				"description": "Besoin d'un changement rapide ? Sélectionnez du code (ou non !) et appuyez sur Cmd+I. Décrivez votre objectif en anglais simple (\"créez un composant React avec ces props\", \"ajoutez la gestion des erreurs à cette fonction\"), et obtenez plusieurs suggestions prêtes à l'emploi directement dans votre éditeur."
+				"label": "Tâche Rapide en Ligne",
+				"description": "Besoin d'une modification rapide ? Sélectionnez du code (ou pas !) et appuyez sur Cmd+I. Décrivez votre objectif en langage courant (\"créer un composant React avec ces props\", \"ajouter une gestion d'erreurs à cette fonction\"), et obtenez plusieurs suggestions prêtes à l'emploi directement dans votre éditeur. <DocsLink>Voir le raccourci</DocsLink>"
 			},
 			"enableAutoInlineTaskKeybinding": {
 				"label": "Tâche automatique en ligne",
-				"description": "Besoin d'une correction rapide, d'une complétion ou d'une refactorisation ? Kilo utilisera le contexte environnant pour proposer des améliorations immédiates, vous maintenant dans le flux."
+				"description": "Besoin d'une correction rapide, d'une complétion ou d'une refactorisation ? Kilo utilisera le contexte environnant pour proposer des améliorations immédiates, vous permettant de rester dans votre flux de travail. <DocsLink>Voir le raccourci</DocsLink>"
 			},
 			"provider": "Fournisseur",
 			"apiConfigId": {
 				"label": "Configuration API",
 				"current": "Utiliser la configuration API actuellement sélectionnée",
 				"description": "Sélectionnez une configuration d'API à utiliser pour les invites d'assistance en ligne, ou utilisez simplement celle qui est actuellement sélectionnée"
-			}
+			},
+			"triggers": "Déclencheurs",
+			"keybindingDescription": "Les fonctionnalités d'Inline Assist sont déclenchées par des commandes. Vous pouvez configurer les <DocsLink>raccourcis clavier ici</DocsLink>."
 		}
 	}
 }

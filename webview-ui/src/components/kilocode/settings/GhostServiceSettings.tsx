@@ -1,5 +1,7 @@
+//kilocode_change - new file
 import { HTMLAttributes } from "react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
+import { Trans } from "react-i18next"
 import { Bot, Webhook, Keyboard } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useExtensionState } from "../../../context/ExtensionStateContext"
@@ -9,6 +11,7 @@ import { GhostServiceSettings } from "@roo-code/types"
 import { SetCachedStateField } from "../../settings/types"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@src/components/ui"
 import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
+import { vscode } from "@/utils/vscode"
 
 type GhostServiceSettingsViewProps = HTMLAttributes<HTMLDivElement> & {
 	ghostServiceSettings: GhostServiceSettings
@@ -47,6 +50,10 @@ export const GhostServiceSettingsView = ({
 		})
 	}
 
+	const openGlobalKeybindings = (filter?: string) => {
+		vscode.postMessage({ type: "openGlobalKeybindings", text: filter })
+	}
+
 	return (
 		<div className={cn("flex flex-col", className)} {...props}>
 			<SectionHeader>
@@ -56,37 +63,73 @@ export const GhostServiceSettingsView = ({
 				</div>
 			</SectionHeader>
 
-			<Section>
-				{/* Enable Service */}
+			<Section className="flex flex-col gap-5">
 				<div className="flex flex-col gap-3">
 					<div className="flex flex-col gap-1">
 						<div className="flex items-center gap-2 font-bold">
 							<Keyboard className="w-4" />
-							<div>{t("kilocode:ghost.settings.keybindings")}</div>
+							<div>{t("kilocode:ghost.settings.triggers")}</div>
 						</div>
 					</div>
-					<div className="flex flex-col gap-3">
+
+					<div className="text-vscode-descriptionForeground text-sm mb-3">
+						<Trans
+							i18nKey="kilocode:ghost.settings.keybindingDescription"
+							components={{
+								DocsLink: (
+									<a
+										href="#"
+										onClick={() => openGlobalKeybindings()}
+										className="text-vscode-textLink hover:text-vscode-textLinkActive cursor-pointer"></a>
+								),
+							}}
+						/>
+					</div>
+
+					<div className="flex flex-col gap-1">
 						<VSCodeCheckbox
 							checked={enableQuickInlineTaskKeybinding || false}
 							onChange={onEnableQuickInlineTaskKeybindingChange}>
 							<span className="font-medium">
-								[Cmd/Ctrl+I] {t("kilocode:ghost.settings.enableQuickInlineTaskKeybinding.label")}
+								{t("kilocode:ghost.settings.enableQuickInlineTaskKeybinding.label")}
 							</span>
 						</VSCodeCheckbox>
 						<div className="text-vscode-descriptionForeground text-sm mt-1">
-							{t("kilocode:ghost.settings.enableQuickInlineTaskKeybinding.description")}
+							<Trans
+								i18nKey="kilocode:ghost.settings.enableQuickInlineTaskKeybinding.description"
+								components={{
+									DocsLink: (
+										<a
+											href="#"
+											onClick={() =>
+												openGlobalKeybindings("kilo-code.ghost.promptCodeSuggestion")
+											}
+											className="text-vscode-textLink hover:text-vscode-textLinkActive cursor-pointer"></a>
+									),
+								}}
+							/>
 						</div>
 					</div>
-					<div className="flex flex-col gap-3">
+					<div className="flex flex-col gap-1">
 						<VSCodeCheckbox
 							checked={enableAutoInlineTaskKeybinding || false}
 							onChange={onEnableAutoInlineTaskKeybindingChange}>
 							<span className="font-medium">
-								[Cmd/Ctrl+L] {t("kilocode:ghost.settings.enableAutoInlineTaskKeybinding.label")}
+								{t("kilocode:ghost.settings.enableAutoInlineTaskKeybinding.label")}
 							</span>
 						</VSCodeCheckbox>
 						<div className="text-vscode-descriptionForeground text-sm mt-1">
-							{t("kilocode:ghost.settings.enableAutoInlineTaskKeybinding.description")}
+							<Trans
+								i18nKey="kilocode:ghost.settings.enableAutoInlineTaskKeybinding.description"
+								components={{
+									DocsLink: (
+										<a
+											href="#"
+											onClick={() => openGlobalKeybindings("kilo-code.ghost.generateSuggestions")}
+											className="text-vscode-textLink hover:text-vscode-textLinkActive cursor-pointer"></a>
+									),
+								}}
+							/>
 						</div>
 					</div>
 				</div>

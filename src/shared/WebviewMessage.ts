@@ -214,6 +214,7 @@ export interface WebviewMessage {
 		| "toggleTaskFavorite" // kilocode_change
 		| "fixMermaidSyntax" // kilocode_change
 		| "mermaidFixResponse" // kilocode_change
+		| "openGlobalKeybindings" // kilocode_change
 		| "openExternal"
 		| "filterMarketplaceItems"
 		| "mcpButtonClicked"

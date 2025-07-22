@@ -137,18 +137,20 @@
 			"keybindings": "Skróty klawiszowe",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Szybkie zadanie w tekście",
-				"description": "Potrzebujesz tylko szybkiej zmiany? Zaznacz kod (lub nie!) i naciśnij Cmd+I. Opisz swój cel w prostym języku angielskim (\"stwórz komponent React z tymi propsami\", \"dodaj obsługę błędów do tej funkcji\"), a otrzymasz wiele gotowych do użycia sugestii bezpośrednio w edytorze."
+				"description": "Potrzebujesz tylko szybkiej zmiany? Zaznacz jakiś kod (albo nie!) i naciśnij Cmd+I. Opisz swój cel zwykłym językiem (\"stwórz komponent React z tymi propsami\", \"dodaj obsługę błędów do tej funkcji\"), i otrzymaj wiele gotowych do użycia sugestii bezpośrednio w swoim edytorze. <DocsLink>Zobacz skrót</DocsLink>"
 			},
 			"enableAutoInlineTaskKeybinding": {
-				"label": "Automatyczne zadanie w tekście",
-				"description": "Potrzebujesz szybkiej poprawki, uzupełnienia lub refaktoryzacji? Kilo użyje otaczającego kontekstu, aby zaoferować natychmiastowe ulepszenia, utrzymując Cię w rytmie pracy."
+				"label": "Zadanie automatyczne w linii",
+				"description": "Potrzebujesz szybkiej poprawki, uzupełnienia lub refaktoryzacji? Kilo użyje otaczającego kontekstu, aby zaproponować natychmiastowe usprawnienia, pozwalając Ci pozostać w stanie flow. <DocsLink>Zobacz skrót</DocsLink>"
 			},
 			"provider": "Dostawca",
 			"apiConfigId": {
 				"label": "Konfiguracja API",
 				"current": "Użyj aktualnie wybranej konfiguracji API",
 				"description": "Wybierz konfigurację API do użycia w podpowiedziach Inline Assist lub po prostu użyj tej, która jest aktualnie wybrana"
-			}
+			},
+			"triggers": "Wyzwalacze",
+			"keybindingDescription": "Funkcje Inline Assist są uruchamiane za pomocą poleceń. Możesz skonfigurować <DocsLink>skróty klawiaturowe tutaj</DocsLink>."
 		}
 	}
 }
