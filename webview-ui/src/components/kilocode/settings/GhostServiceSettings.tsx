@@ -66,7 +66,6 @@ export const GhostServiceSettingsView = ({
 						</div>
 					</div>
 					<div className="flex flex-col gap-3">
-						<span className="font-medium"></span>
 						<VSCodeCheckbox
 							checked={enableQuickInlineTaskKeybinding || false}
 							onChange={onEnableQuickInlineTaskKeybindingChange}>

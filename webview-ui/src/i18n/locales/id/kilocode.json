@@ -134,6 +134,15 @@
 	"ghost": {
 		"title": "Bantuan Inline",
 		"settings": {
+			"keybindings": "Tombol Pintas",
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Tugas Inline Cepat",
+				"description": "Hanya butuh perubahan cepat? Pilih beberapa kode (atau tidak!) dan tekan Cmd+I. Jelaskan tujuan Anda dalam bahasa Inggris sederhana (\"buat komponen React dengan props ini\", \"tambahkan penanganan kesalahan ke fungsi ini\"), dan dapatkan beberapa saran siap pakai langsung di editor Anda."
+			},
+			"enableAutoInlineTaskKeybinding": {
+				"label": "Tugas Inline Otomatis",
+				"description": "Butuh perbaikan cepat, penyelesaian, atau refactor? Kilo akan menggunakan konteks sekitar untuk menawarkan perbaikan segera, membuat Anda tetap dalam alur."
+			},
 			"provider": "Penyedia",
 			"apiConfigId": {
 				"label": "Konfigurasi API",

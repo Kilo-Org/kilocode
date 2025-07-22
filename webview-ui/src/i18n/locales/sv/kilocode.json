@@ -134,6 +134,15 @@
 	"ghost": {
 		"title": "Inline-assistans",
 		"settings": {
+			"keybindings": "Tangentbordsgenvägar",
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Snabb inline-uppgift",
+				"description": "Behöver du bara en snabb ändring? Markera lite kod (eller inte!) och tryck på Cmd+I. Beskriv ditt mål på enkel engelska (\"skapa en React-komponent med dessa props\", \"lägg till felhantering i den här funktionen\"), och få flera färdiga förslag direkt i din redigerare."
+			},
+			"enableAutoInlineTaskKeybinding": {
+				"label": "Automatisk inline-uppgift",
+				"description": "Behöver du en snabb fix, komplettering eller refaktorering? Kilo kommer att använda den omgivande kontexten för att erbjuda omedelbara förbättringar och hålla dig i flödet."
+			},
 			"provider": "Leverantör",
 			"apiConfigId": {
 				"label": "API-konfiguration",

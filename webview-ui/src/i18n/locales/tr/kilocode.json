@@ -134,6 +134,15 @@
 	"ghost": {
 		"title": "Satır İçi Yardım",
 		"settings": {
+			"keybindings": "Tuş Atamaları",
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Hızlı Satır İçi Görev",
+				"description": "Sadece hızlı bir değişikliğe mi ihtiyacınız var? Bir miktar kod seçin (veya seçmeyin!) ve Cmd+I'ya basın. Hedefinizi basit İngilizce ile açıklayın (\"bu proplarla bir React bileşeni oluştur\", \"bu fonksiyona hata yönetimi ekle\") ve doğrudan düzenleyicinizde birden fazla, kullanıma hazır öneri alın."
+			},
+			"enableAutoInlineTaskKeybinding": {
+				"label": "Otomatik Satır İçi Görev",
+				"description": "Hızlı bir düzeltme, tamamlama veya yeniden düzenlemeye mi ihtiyacınız var? Kilo, sizi akışta tutmak için anında iyileştirmeler sunmak üzere çevredeki bağlamı kullanacaktır."
+			},
 			"provider": "Sağlayıcı",
 			"apiConfigId": {
 				"label": "API Yapılandırması",

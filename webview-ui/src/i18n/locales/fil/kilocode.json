@@ -134,6 +134,15 @@
 	"ghost": {
 		"title": "Inline na Tulong",
 		"settings": {
+			"keybindings": "Mga KeyBinding",
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Mabilis na Inline na Gawain",
+				"description": "Kailangan lang ng mabilis na pagbabago? Pumili ng ilang code (o hindi!) at pindutin ang Cmd+I. Ilarawan ang iyong layunin sa simpleng English (\"gumawa ng React component gamit ang mga props na ito\", \"magdagdag ng error handling sa function na ito\"), at makakuha ng maraming, handa nang gamitin na mga mungkahi mismo sa iyong editor."
+			},
+			"enableAutoInlineTaskKeybinding": {
+				"label": "Awtomatikong Inline na Gawain",
+				"description": "Kailangan ng mabilis na pag-aayos, pagkumpleto, o refactor? Gagamitin ng Kilo ang nakapalibot na konteksto upang mag-alok ng mga agarang pagpapabuti, na nagpapanatili sa iyo sa daloy."
+			},
 			"provider": "Provider",
 			"apiConfigId": {
 				"label": "API Configuration",

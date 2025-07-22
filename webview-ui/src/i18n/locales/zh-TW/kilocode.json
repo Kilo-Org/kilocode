@@ -134,11 +134,20 @@
 	"ghost": {
 		"title": "內聯輔助",
 		"settings": {
+			"keybindings": "按鍵綁定",
+			"enableQuickInlineTaskKeybinding": {
+				"label": "快速內嵌任務",
+				"description": "只需要快速變更？選取一些程式碼（或不選！），然後按下 Cmd+I。用簡單的英文描述您的目標（「使用這些 props 建立一個 React 元件」、「為此函式新增錯誤處理」），然後在您的編輯器中立即取得多個可用的建議。"
+			},
+			"enableAutoInlineTaskKeybinding": {
+				"label": "自動內嵌任務",
+				"description": "需要快速修復、完成或重構？Kilo 將使用周圍的上下文提供即時改進，讓您保持流暢。"
+			},
 			"provider": "提供者",
 			"apiConfigId": {
 				"label": "API 設定",
 				"current": "使用目前選擇的 API 設定",
-				"description": "為內聯輔助提示選擇一個 API 設定，或者只使用目前選擇的設定"
+				"description": "為內聯輔D助提示選擇一個 API 設定，或者只使用目前選擇的設定"
 			}
 		}
 	}

@@ -134,6 +134,15 @@
 	"ghost": {
 		"title": "Inline asistence",
 		"settings": {
+			"keybindings": "Klávesové zkratky",
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Rychlý inline úkol",
+				"description": "Potřebujete jen rychlou změnu? Vyberte nějaký kód (nebo ne!) a stiskněte Cmd+I. Popište svůj cíl jednoduchou angličtinou (\"vytvořte React komponentu s těmito props\", \"přidejte do této funkce zpracování chyb\") a získejte několik hotových návrhů přímo ve vašem editoru."
+			},
+			"enableAutoInlineTaskKeybinding": {
+				"label": "Automatický inline úkol",
+				"description": "Potřebujete rychlou opravu, dokončení nebo refaktor? Kilo použije okolní kontext k nabídnutí okamžitých vylepšení, abyste zůstali v obraze."
+			},
 			"provider": "Poskytovatel",
 			"apiConfigId": {
 				"label": "Konfigurace API",

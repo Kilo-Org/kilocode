@@ -134,6 +134,15 @@
 	"ghost": {
 		"title": "Inline Assistentie",
 		"settings": {
+			"keybindings": "Sneltoetsen",
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Snelle Inline Taak",
+				"description": "Slechts een snelle wijziging nodig? Selecteer wat code (of niet!) en druk op Cmd+I. Beschrijf je doel in eenvoudig Engels (\"maak een React-component met deze props\", \"voeg foutafhandeling toe aan deze functie\"), en krijg meerdere, kant-en-klare suggesties rechtstreeks in je editor."
+			},
+			"enableAutoInlineTaskKeybinding": {
+				"label": "Automatische Inline Taak",
+				"description": "Een snelle oplossing, aanvulling of refactor nodig? Kilo gebruikt de omliggende context om onmiddellijke verbeteringen aan te bieden, zodat je in de flow blijft."
+			},
 			"provider": "Aanbieder",
 			"apiConfigId": {
 				"label": "API-configuratie",

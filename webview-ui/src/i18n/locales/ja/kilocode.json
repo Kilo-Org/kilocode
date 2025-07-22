@@ -134,6 +134,15 @@
 	"ghost": {
 		"title": "インライン支援",
 		"settings": {
+			"keybindings": "キーバインド",
+			"enableQuickInlineTaskKeybinding": {
+				"label": "クイックインラインタスク",
+				"description": "ちょっとした変更が必要なだけですか？コードを選択して（または選択せずに！）Cmd+Iを押してください。簡単な英語で目標を説明し（「これらのプロップでReactコンポーネントを作成する」、「この関数にエラー処理を追加する」など）、エディタですぐに使える複数の提案を得ることができます。"
+			},
+			"enableAutoInlineTaskKeybinding": {
+				"label": "自動インラインタスク",
+				"description": "迅速な修正、補完、またはリファクタリングが必要ですか？Kiloは周囲のコンテキストを使用して即座に改善を提案し、フローを維持します。"
+			},
 			"provider": "プロバイダー",
 			"apiConfigId": {
 				"label": "API設定",

@@ -134,6 +134,15 @@
 	"ghost": {
 		"title": "Pomoc w tekście",
 		"settings": {
+			"keybindings": "Skróty klawiszowe",
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Szybkie zadanie w tekście",
+				"description": "Potrzebujesz tylko szybkiej zmiany? Zaznacz kod (lub nie!) i naciśnij Cmd+I. Opisz swój cel w prostym języku angielskim (\"stwórz komponent React z tymi propsami\", \"dodaj obsługę błędów do tej funkcji\"), a otrzymasz wiele gotowych do użycia sugestii bezpośrednio w edytorze."
+			},
+			"enableAutoInlineTaskKeybinding": {
+				"label": "Automatyczne zadanie w tekście",
+				"description": "Potrzebujesz szybkiej poprawki, uzupełnienia lub refaktoryzacji? Kilo użyje otaczającego kontekstu, aby zaoferować natychmiastowe ulepszenia, utrzymując Cię w rytmie pracy."
+			},
 			"provider": "Dostawca",
 			"apiConfigId": {
 				"label": "Konfiguracja API",

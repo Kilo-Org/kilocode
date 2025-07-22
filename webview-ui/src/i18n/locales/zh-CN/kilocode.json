@@ -134,6 +134,15 @@
 	"ghost": {
 		"title": "内联辅助",
 		"settings": {
+			"keybindings": "键位绑定",
+			"enableQuickInlineTaskKeybinding": {
+				"label": "快速内联任务",
+				"description": "只需要快速更改？选择一些代码（或不选！），然后按 Cmd+I。用简单的英语描述你的目标（“用这些 props 创建一个 React 组件”，“为这个函数添加错误处理”），然后在你的编辑器中获得多个即用型建议。"
+			},
+			"enableAutoInlineTaskKeybinding": {
+				"label": "自动内联任务",
+				"description": "需要快速修复、补全或重构？Kilo 将利用周围的上下文提供即时改进，让你保持流畅。"
+			},
 			"provider": "提供商",
 			"apiConfigId": {
 				"label": "API 配置",

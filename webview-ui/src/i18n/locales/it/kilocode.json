@@ -134,6 +134,15 @@
 	"ghost": {
 		"title": "Assistenza in linea",
 		"settings": {
+			"keybindings": "Scorciatoie da tastiera",
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Attività rapida in linea",
+				"description": "Hai solo bisogno di una modifica veloce? Seleziona del codice (o non farlo!) e premi Cmd+I. Descrivi il tuo obiettivo in un inglese semplice (\"crea un componente React con questi props\", \"aggiungi la gestione degli errori a questa funzione\"), e ottieni più suggerimenti pronti all'uso direttamente nel tuo editor."
+			},
+			"enableAutoInlineTaskKeybinding": {
+				"label": "Attività automatica in linea",
+				"description": "Hai bisogno di una correzione rapida, un completamento o un refactoring? Kilo utilizzerà il contesto circostante per offrire miglioramenti immediati, mantenendoti nel flusso."
+			},
 			"provider": "Fornitore",
 			"apiConfigId": {
 				"label": "Configurazione API",
