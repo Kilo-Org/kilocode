@@ -26,7 +26,11 @@
 			"account": "Kilo Code 계정",
 			"apiKey": "Kilo Code API 키",
 			"login": "Kilo Code에 로그인",
-			"logout": "Kilo Code에서 로그아웃"
+			"logout": "Kilo Code에서 로그아웃",
+			"providerRouting": {
+				"title": "Kilo Code - OpenRouter 공급자 라우팅",
+				"description": "Kilo Code는 모델에 가장 적합한 공급자에게 요청을 라우팅합니다. 기본적으로 요청은 가동 시간을 최대화하기 위해 상위 공급자에게 로드 밸런싱됩니다. 그러나 이 모델에 사용할 특정 공급자를 선택할 수 있습니다."
+			}
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {

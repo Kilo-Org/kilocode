@@ -26,7 +26,11 @@
 			"account": "Cuenta de Kilo Code",
 			"apiKey": "Clave API de Kilo Code",
 			"login": "Iniciar sesión en Kilo Code",
-			"logout": "Cerrar sesión de Kilo Code"
+			"logout": "Cerrar sesión de Kilo Code",
+			"providerRouting": {
+				"title": "Kilo Code - Enrutamiento de proveedores de OpenRouter",
+				"description": "Kilo Code enruta las solicitudes a los mejores proveedores disponibles para su modelo. De forma predeterminada, las solicitudes se equilibran en carga entre los principales proveedores para maximizar el tiempo de actividad. Sin embargo, puede elegir un proveedor específico para usar para este modelo."
+			}
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {

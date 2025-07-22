@@ -26,7 +26,11 @@
 			"account": "Account Kilo Code",
 			"apiKey": "Chiave API Kilo Code",
 			"login": "Accedi a Kilo Code",
-			"logout": "Disconnetti da Kilo Code"
+			"logout": "Disconnetti da Kilo Code",
+			"providerRouting": {
+				"title": "Kilo Code - Routing dei provider OpenRouter",
+				"description": "Kilo Code instrada le richieste ai migliori provider disponibili per il tuo modello. Per impostazione predefinita, le richieste vengono bilanciate tra i provider principali per massimizzare i tempi di attività. Tuttavia, puoi scegliere un provider specifico da utilizzare per questo modello."
+			}
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {

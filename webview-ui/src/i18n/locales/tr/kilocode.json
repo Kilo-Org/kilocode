@@ -32,7 +32,11 @@
 			"account": "Kilo Code Hesabı",
 			"apiKey": "Kilo Code API Anahtarı",
 			"login": "Kilo Code'a giriş yap",
-			"logout": "Kilo Code'dan çıkış yap"
+			"logout": "Kilo Code'dan çıkış yap",
+			"providerRouting": {
+				"title": "Kilo Code - OpenRouter Sağlayıcı Yönlendirme",
+				"description": "Kilo Code, modeliniz için en iyi kullanılabilir sağlayıcılara istekleri yönlendirir. Varsayılan olarak, çalışma süresini en üst düzeye çıkarmak için istekler en iyi sağlayıcılar arasında yük dengelenir. Ancak, bu model için kullanılacak belirli bir sağlayıcı seçebilirsiniz."
+			}
 		},
 		"systemNotifications": {
 			"label": "Sistem bildirimlerini etkinleştir",

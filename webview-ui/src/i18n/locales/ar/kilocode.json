@@ -26,7 +26,11 @@
 			"account": "حساب Kilo Code",
 			"apiKey": "مفتاح Kilo Code API",
 			"login": "سجّل دخولك في Kilo Code",
-			"logout": "تسجيل الخروج من Kilo Code"
+			"logout": "تسجيل الخروج من Kilo Code",
+			"providerRouting": {
+				"title": "Kilo Code - توجيه مزود OpenRouter",
+				"description": "يقوم Kilo Code بتوجيه الطلبات إلى أفضل المزودين المتاحين لنموذجك. بشكل افتراضي، يتم موازنة التحميل للطلبات عبر أفضل المزودين لزيادة وقت التشغيل. ومع ذلك، يمكنك اختيار مزود معين لاستخدامه لهذا النموذج."
+			}
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {

@@ -26,7 +26,11 @@
 			"account": "Kilo Code Konto",
 			"apiKey": "Kilo Code API-Schlüssel",
 			"login": "Bei Kilo Code anmelden",
-			"logout": "Von Kilo Code abmelden"
+			"logout": "Von Kilo Code abmelden",
+			"providerRouting": {
+				"title": "Kilo Code - OpenRouter-Anbieter-Routing",
+				"description": "Kilo Code leitet Anfragen an die besten verfügbaren Anbieter für dein Modell weiter. Standardmäßig werden Anfragen über die Top-Anbieter verteilt, um die Betriebszeit zu maximieren. Du kannst jedoch einen bestimmten Anbieter für dieses Modell auswählen."
+			}
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {

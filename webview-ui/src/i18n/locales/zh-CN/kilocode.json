@@ -39,7 +39,11 @@
 			"account": "Kilo Code 账号",
 			"apiKey": "Kilo Code API 密钥",
 			"login": "登录 Kilo Code",
-			"logout": "退出 Kilo Code"
+			"logout": "退出 Kilo Code",
+			"providerRouting": {
+				"title": "Kilo Code - OpenRouter 提供商路由",
+				"description": "Kilo Code 将请求路由到您模型的最佳可用提供商。默认情况下，请求会在顶级提供商之间进行负载均衡，以最大限度地延长正常运行时间。但是，您可以选择要用于此模型的特定提供商。"
+			}
 		}
 	},
 	"chat": {

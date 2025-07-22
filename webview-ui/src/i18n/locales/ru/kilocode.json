@@ -26,7 +26,11 @@
 			"account": "Аккаунт Kilo Code",
 			"apiKey": "API-ключ Kilo Code",
 			"login": "Войти в Kilo Code",
-			"logout": "Выйти из Kilo Code"
+			"logout": "Выйти из Kilo Code",
+			"providerRouting": {
+				"title": "Kilo Code - Маршрутизация провайдеров OpenRouter",
+				"description": "Kilo Code направляет запросы лучшим доступным провайдерам для вашей модели. По умолчанию запросы распределяются между ведущими провайдерами для максимального времени безотказной работы. Однако вы можете выбрать конкретного провайдера для использования с этой моделью."
+			}
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {

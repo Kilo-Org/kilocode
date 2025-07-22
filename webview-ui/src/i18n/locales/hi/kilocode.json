@@ -26,7 +26,11 @@
 			"account": "Kilo Code खाता",
 			"apiKey": "Kilo Code API कुंजी",
 			"login": "Kilo Code में लॉग इन करें",
-			"logout": "Kilo Code से लॉग आउट करें"
+			"logout": "Kilo Code से लॉग आउट करें",
+			"providerRouting": {
+				"title": "Kilo Code - OpenRouter प्रदाता रूटिंग",
+				"description": "Kilo Code आपके मॉडल के लिए सर्वश्रेष्ठ उपलब्ध प्रदाताओं को अनुरोध भेजता है। डिफ़ॉल्ट रूप से, अपटाइम को अधिकतम करने के लिए अनुरोधों को शीर्ष प्रदाताओं के बीच लोड संतुलित किया जाता है। हालाँकि, आप इस मॉडल के लिए उपयोग करने के लिए एक विशिष्ट प्रदाता चुन सकते हैं।"
+			}
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {

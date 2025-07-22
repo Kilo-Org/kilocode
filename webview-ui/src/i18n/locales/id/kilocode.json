@@ -26,7 +26,11 @@
 			"account": "Akun Kilo Code",
 			"apiKey": "API Key Kilo Code",
 			"login": "Masuk ke Kilo Code",
-			"logout": "Keluar dari Kilo Code"
+			"logout": "Keluar dari Kilo Code",
+			"providerRouting": {
+				"title": "Kilo Code - Perutean Penyedia OpenRouter",
+				"description": "Kilo Code merutekan permintaan ke penyedia terbaik yang tersedia untuk model Anda. Secara default, permintaan diseimbangkan bebannya di seluruh penyedia teratas untuk memaksimalkan waktu aktif. Namun, Anda dapat memilih penyedia tertentu untuk digunakan untuk model ini."
+			}
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {
