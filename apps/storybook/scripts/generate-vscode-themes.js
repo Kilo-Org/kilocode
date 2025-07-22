@@ -16,15 +16,33 @@ const __dirname = path.dirname(__filename)
 
 // Convert VS Code theme colors to CSS variables
 function convertThemeToCSS(theme, themeName) {
-    const cssVars = Object.entries(theme.colors || {})
+	const entries = Object.entries(theme.colors || {})
+
+	// Generate base variables (actual theme colors)
+	const baseVars = entries
 		.map(([key, value]) => {
-			// Convert "editor.background" to "--vscode-editor-background"
-			const cssVar = `--vscode-${key.replace(/\./g, "-")}`
-			return `\t${cssVar}: ${value};`
+			const baseVar = `--${key.replace(/\./g, "-")}`
+			return `\t${baseVar}: ${value};`
 		})
 		.join("\n")
 
-	return `/* ${themeName} theme - Generated from VS Code */\n${cssVars}`
+	// Generate VSCode delegation variables (reference base variables)
+	const vsCodeVars = entries
+		.map(([key, value]) => {
+			const baseVar = `--${key.replace(/\./g, "-")}`
+			const vsCodeVar = `--vscode-${key.replace(/\./g, "-")}`
+			return `\t${vsCodeVar}: var(${baseVar});`
+		})
+		.join("\n")
+
+	return `/* ${themeName} theme - Generated from VS Code */
+@import '../.storybook/design-system.css';
+
+/* Theme Colors */
+${baseVars}
+
+/* VSCode Variable Delegations */
+${vsCodeVars}`
 }
 
 // Resolve theme includes using jsonc-parser
