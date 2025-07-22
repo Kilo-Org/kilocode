@@ -1,5 +1,5 @@
+import { setupTestEnvironment } from "../helpers"
 import { test, expect, type TestFixtures } from "./playwright-base-test"
-import { verifyExtensionInstalled } from "../helpers/webview-helpers"
 
 test.describe("Sanity Tests", () => {
 	test("should launch VS Code with extension installed", async ({ workbox: page }: TestFixtures) => {
@@ -19,6 +19,6 @@ test.describe("Sanity Tests", () => {
 		await expect(commandPalette).not.toBeVisible()
 		console.log("✅ Command palette working")
 
-		await verifyExtensionInstalled(page)
+		await setupTestEnvironment(page)
 	})
 })
