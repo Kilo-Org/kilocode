@@ -26,7 +26,11 @@
 			"account": "Conta Kilo Code",
 			"apiKey": "Chave de API do Kilo Code",
 			"login": "Entrar no Kilo Code",
-			"logout": "Sair do Kilo Code"
+			"logout": "Sair do Kilo Code",
+			"providerRouting": {
+				"title": "Kilo Code - Roteamento de Provedor OpenRouter",
+				"description": "O Kilo Code roteia as solicitações para os melhores provedores disponíveis para o seu modelo. Por padrão, as solicitações são balanceadas em carga entre os principais provedores para maximizar o tempo de atividade. No entanto, você pode escolher um provedor específico para usar para este modelo."
+			}
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {

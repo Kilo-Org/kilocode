@@ -1737,6 +1737,7 @@ export class Task extends EventEmitter<ClineEvents> {
 			language,
 			maxConcurrentFileReads,
 			maxReadFileLine,
+			apiConfiguration, // kilocode_change
 		} = state ?? {}
 
 		return await (async () => {
@@ -1766,6 +1767,7 @@ export class Task extends EventEmitter<ClineEvents> {
 				maxReadFileLine !== -1,
 				{
 					maxConcurrentFileReads,
+					todoListEnabled: apiConfiguration?.todoListEnabled, // kilocode_change
 				},
 			)
 		})()

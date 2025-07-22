@@ -27,6 +27,7 @@ export const providerProfilesSchema = z.object({
 			diffSettingsMigrated: z.boolean().optional(),
 			openAiHeadersMigrated: z.boolean().optional(),
 			consecutiveMistakeLimitMigrated: z.boolean().optional(),
+			todoListEnabledMigrated: z.boolean().optional(),
 		})
 		.optional(),
 })
@@ -50,6 +51,7 @@ export class ProviderSettingsManager {
 			diffSettingsMigrated: true, // Mark as migrated on fresh installs
 			openAiHeadersMigrated: true, // Mark as migrated on fresh installs
 			consecutiveMistakeLimitMigrated: true, // Mark as migrated on fresh installs
+			todoListEnabledMigrated: true, // Mark as migrated on fresh installs
 		},
 	}
 
@@ -116,6 +118,7 @@ export class ProviderSettingsManager {
 						diffSettingsMigrated: false,
 						openAiHeadersMigrated: false,
 						consecutiveMistakeLimitMigrated: false,
+						todoListEnabledMigrated: false,
 					} // Initialize with default values
 					isDirty = true
 				}
@@ -141,6 +144,12 @@ export class ProviderSettingsManager {
 				if (!providerProfiles.migrations.consecutiveMistakeLimitMigrated) {
 					await this.migrateConsecutiveMistakeLimit(providerProfiles)
 					providerProfiles.migrations.consecutiveMistakeLimitMigrated = true
+					isDirty = true
+				}
+
+				if (!providerProfiles.migrations.todoListEnabledMigrated) {
+					await this.migrateTodoListEnabled(providerProfiles)
+					providerProfiles.migrations.todoListEnabledMigrated = true
 					isDirty = true
 				}
 
@@ -246,6 +255,18 @@ export class ProviderSettingsManager {
 			}
 		} catch (error) {
 			console.error(`[MigrateConsecutiveMistakeLimit] Failed to migrate consecutive mistake limit:`, error)
+		}
+	}
+
+	private async migrateTodoListEnabled(providerProfiles: ProviderProfiles) {
+		try {
+			for (const [_name, apiConfig] of Object.entries(providerProfiles.apiConfigs)) {
+				if (apiConfig.todoListEnabled === undefined) {
+					apiConfig.todoListEnabled = true
+				}
+			}
+		} catch (error) {
+			console.error(`[MigrateTodoListEnabled] Failed to migrate todo list enabled setting:`, error)
 		}
 	}
 

@@ -26,7 +26,11 @@
 			"account": "Konto Kilo Code",
 			"apiKey": "Klucz API Kilo Code",
 			"login": "Zaloguj się do Kilo Code",
-			"logout": "Wyloguj się z Kilo Code"
+			"logout": "Wyloguj się z Kilo Code",
+			"providerRouting": {
+				"title": "Kilo Code - Routing dostawców OpenRouter",
+				"description": "Kilo Code kieruje żądania do najlepszych dostępnych dostawców dla Twojego modelu. Domyślnie żądania są równoważone obciążeniem między najlepszymi dostawcami, aby zmaksymalizować czas działania. Możesz jednak wybrać konkretnego dostawcę do użycia dla tego modelu."
+			}
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {

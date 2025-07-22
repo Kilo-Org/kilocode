@@ -26,7 +26,11 @@
 			"account": "Kilo Code アカウント",
 			"apiKey": "Kilo Code APIキー",
 			"login": "Kilo Codeにログイン",
-			"logout": "Kilo Codeからログアウト"
+			"logout": "Kilo Codeからログアウト",
+			"providerRouting": {
+				"title": "Kilo Code - OpenRouterプロバイダーのルーティング",
+				"description": "Kilo Codeは、モデルに最適な利用可能なプロバイダーにリクエストをルーティングします。デフォルトでは、稼働時間を最大化するために、リクエストはトッププロバイダー間で負荷分散されます。ただし、このモデルに使用する特定のプロバイダーを選択できます。"
+			}
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {

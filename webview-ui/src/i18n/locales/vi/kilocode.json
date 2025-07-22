@@ -32,7 +32,11 @@
 			"account": "Tài khoản Kilo Code",
 			"apiKey": "Khóa API Kilo Code",
 			"login": "Đăng nhập vào Kilo Code",
-			"logout": "Đăng xuất khỏi Kilo Code"
+			"logout": "Đăng xuất khỏi Kilo Code",
+			"providerRouting": {
+				"title": "Kilo Code - Định tuyến nhà cung cấp OpenRouter",
+				"description": "Kilo Code định tuyến các yêu cầu đến các nhà cung cấp tốt nhất có sẵn cho mô hình của bạn. Theo mặc định, các yêu cầu được cân bằng tải trên các nhà cung cấp hàng đầu để tối đa hóa thời gian hoạt động. Tuy nhiên, bạn có thể chọn một nhà cung cấp cụ thể để sử dụng cho mô hình này."
+			}
 		},
 		"systemNotifications": {
 			"label": "Bật thông báo hệ thống",

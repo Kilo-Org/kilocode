@@ -26,7 +26,11 @@
 			"account": "Kilo Code Account",
 			"apiKey": "Kilo Code API-sleutel",
 			"login": "Inloggen bij Kilo Code",
-			"logout": "Uitloggen bij Kilo Code"
+			"logout": "Uitloggen bij Kilo Code",
+			"providerRouting": {
+				"title": "Kilo Code - OpenRouter Provider Routing",
+				"description": "Kilo Code routeert verzoeken naar de beste beschikbare providers voor uw model. Standaard worden verzoeken verdeeld over de beste providers om de uptime te maximaliseren. U kunt echter een specifieke provider kiezen om voor dit model te gebruiken."
+			}
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {

@@ -626,6 +626,10 @@
 				"label": "Přesnost shody",
 				"description": "Tento posuvník řídí, jak přesně musí sekce kódu odpovídat při aplikaci diffů. Nižší hodnoty umožňují flexibilnější shodu, ale zvyšují riziko nesprávných nahrazení. Používejte hodnoty pod 100% s extrémní opatrností."
 			}
+		},
+		"todoList": {
+			"label": "Povolit nástroj seznamu úkolů",
+			"description": "Pokud je povoleno, Roo může vytvářet a spravovat seznamy úkolů pro sledování průběhu úkolu. To pomáhá organizovat složité úkoly do zvládnutelných kroků."
 		}
 	},
 	"experimental": {

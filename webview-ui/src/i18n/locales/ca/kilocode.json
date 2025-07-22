@@ -26,7 +26,11 @@
 			"account": "Compte de Kilo Code",
 			"apiKey": "Clau API de Kilo Code",
 			"login": "Iniciar sessió a Kilo Code",
-			"logout": "Tancar sessió de Kilo Code"
+			"logout": "Tancar sessió de Kilo Code",
+			"providerRouting": {
+				"title": "Kilo Code - Encaminament de proveïdors OpenRouter",
+				"description": "Kilo Code encamina les sol·licituds als millors proveïdors disponibles per al vostre model. Per defecte, les sol·licituds es distribueixen entre els principals proveïdors per maximitzar el temps de funcionament. No obstant això, podeu triar un proveïdor específic per a aquest model."
+			}
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {

@@ -26,7 +26,11 @@
 			"account": "Účet Kilo Code",
 			"apiKey": "Kilo Code API Key",
 			"login": "Přihlásit se do Kilo Code",
-			"logout": "Odhlásit se z Kilo Code"
+			"logout": "Odhlásit se z Kilo Code",
+			"providerRouting": {
+				"title": "Kilo Code - Směrování poskytovatelů OpenRouter",
+				"description": "Kilo Code směruje požadavky na nejlepší dostupné poskytovatele pro váš model. Ve výchozím nastavení jsou požadavky rozloženy mezi nejlepší poskytovatele, aby se maximalizovala doba provozu. Můžete si však vybrat konkrétního poskytovatele, kterého chcete pro tento model použít."
+			}
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {

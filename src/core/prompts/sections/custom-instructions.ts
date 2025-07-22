@@ -239,6 +239,7 @@ export async function addCustomInstructions(
 		rooIgnoreInstructions?: string
 		localRulesToggleState?: ClineRulesToggles
 		globalRulesToggleState?: ClineRulesToggles
+		settings?: Record<string, any>
 	} = {},
 	// kilocode_change end
 ): Promise<string> {
