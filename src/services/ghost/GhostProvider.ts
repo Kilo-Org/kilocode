@@ -54,6 +54,7 @@ export class GhostProvider {
 	public async reload() {
 		this.settings = this.loadSettings()
 		await this.model.reload(this.settings, this.providerSettingsManager)
+		await this.updateGlobalContext()
 	}
 
 	public static getInstance(context?: vscode.ExtensionContext): GhostProvider {
@@ -243,8 +244,17 @@ export class GhostProvider {
 
 	private async updateGlobalContext() {
 		const hasSuggestions = this.suggestions.hasSuggestions()
-		console.log("hasSuggestions", hasSuggestions)
 		await vscode.commands.executeCommand("setContext", "kilocode.ghost.hasSuggestions", hasSuggestions)
+		await vscode.commands.executeCommand(
+			"setContext",
+			"kilocode.ghost.enableQuickInlineTaskKeybinding",
+			this.settings?.enableQuickInlineTaskKeybinding || false,
+		)
+		await vscode.commands.executeCommand(
+			"setContext",
+			"kilocode.ghost.enableAutoInlineTaskKeybinding",
+			this.settings?.enableAutoInlineTaskKeybinding || false,
+		)
 	}
 
 	public hasPendingSuggestions(): boolean {
