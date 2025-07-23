@@ -186,6 +186,7 @@ export class GhostProvider {
 					cacheWriteTokens,
 					cacheReadTokens,
 					cost,
+					service: "INLINE_ASSIST",
 				})
 
 				if (cancelled) {
