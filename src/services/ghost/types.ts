@@ -1,9 +1,12 @@
 import * as vscode from "vscode"
+import { Node } from "web-tree-sitter"
 
 export interface GhostDocumentStoreItem {
 	uri: string
 	document: vscode.TextDocument
 	history: string[]
+	ast?: ASTContext
+	lastParsedVersion?: number
 }
 
 export type GhostSuggestionEditOperationType = "+" | "-"
@@ -20,9 +23,16 @@ export interface GhostSuggestionEditOperationsOffset {
 	offset: number
 }
 
+export interface ASTContext {
+	rootNode: Node
+	language: string
+}
+
 export interface GhostSuggestionContext {
 	userInput?: string
 	document?: vscode.TextDocument
 	range?: vscode.Range | vscode.Selection
 	openFiles?: vscode.TextDocument[]
+	ast?: ASTContext
+	astNodeAtCursor?: Node
 }

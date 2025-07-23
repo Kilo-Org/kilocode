@@ -44,7 +44,51 @@ export class GhostProvider {
 		this.codeActionProvider = new GhostCodeActionProvider()
 		this.codeLensProvider = new GhostCodeLensProvider()
 
+		// Register document event handlers
+		vscode.workspace.onDidChangeTextDocument(this.onDidChangeTextDocument, this, context.subscriptions)
+		vscode.workspace.onDidOpenTextDocument(this.onDidOpenTextDocument, this, context.subscriptions)
+		vscode.workspace.onDidCloseTextDocument(this.onDidCloseTextDocument, this, context.subscriptions)
+
 		void this.reload()
+	}
+
+	/**
+	 * Handle document close events to clear the AST and free memory
+	 */
+	private onDidCloseTextDocument(document: vscode.TextDocument): void {
+		// Only process file documents
+		if (document.uri.scheme !== "file") {
+			return
+		}
+
+		// Clear the AST for the closed document to free up memory
+		this.documentStore.clearAST(document.uri)
+	}
+
+	/**
+	 * Handle document open events to parse the AST
+	 */
+	private async onDidOpenTextDocument(document: vscode.TextDocument): Promise<void> {
+		// Only process file documents
+		if (document.uri.scheme !== "file") {
+			return
+		}
+
+		// Store the document and parse its AST
+		await this.documentStore.storeDocument(document, true)
+	}
+
+	/**
+	 * Handle document change events to update the AST
+	 */
+	private async onDidChangeTextDocument(event: vscode.TextDocumentChangeEvent): Promise<void> {
+		// Only process file documents
+		if (event.document.uri.scheme !== "file") {
+			return
+		}
+
+		// Store the updated document and parse its AST
+		await this.documentStore.storeDocument(event.document, true)
 	}
 
 	private loadSettings() {
@@ -105,8 +149,8 @@ export class GhostProvider {
 		document: vscode.TextDocument,
 		range: vscode.Range | vscode.Selection,
 	): Promise<void> {
-		// Store the document in the document store
-		this.getDocumentStore().storeDocument(document)
+		// Store the document in the document store and parse its AST
+		await this.getDocumentStore().storeDocument(document, true)
 		await this.provideCodeSuggestions({ document, range })
 	}
 
@@ -115,9 +159,62 @@ export class GhostProvider {
 		if (!editor) {
 			return context
 		}
+
 		// Add open files to the context
 		const openFiles = vscode.workspace.textDocuments.filter((doc) => doc.uri.scheme === "file")
-		return { ...context, openFiles }
+		const enhancedContext = { ...context, openFiles }
+
+		if (!context.range) {
+			context.range = editor.selection
+		}
+
+		// Get AST for the current document if available
+		if (context.document) {
+			try {
+				// Store the document in the document store and parse its AST if needed
+				const document = context.document
+
+				// Check if we need to parse or update the AST
+				if (this.documentStore.needsASTUpdate(document)) {
+					await this.documentStore.storeDocument(document, true)
+				}
+
+				// Get the AST from the document store
+				const ast = this.documentStore.getAST(document.uri)
+
+				console.log("AST", ast)
+
+				if (ast) {
+					// Add the AST to the context
+					enhancedContext.ast = ast
+
+					// If there's a selection or cursor position, find the relevant AST node
+					console.log("Context Range", context.range)
+					if (context.range) {
+						const startPosition = {
+							row: context.range.start.line,
+							column: context.range.start.character,
+						}
+						const endPosition = {
+							row: context.range.end.line,
+							column: context.range.end.character,
+						}
+
+						// Find the smallest node that contains the selection
+						const nodeAtCursor = ast.rootNode.descendantForPosition(startPosition, endPosition)
+						console.log("NodeAtCursor", nodeAtCursor)
+						if (nodeAtCursor) {
+							enhancedContext.astNodeAtCursor = nodeAtCursor
+						}
+					}
+				}
+			} catch (error) {
+				console.error("Error getting AST from document store:", error)
+				// Continue without AST if there's an error
+			}
+		}
+
+		return enhancedContext
 	}
 
 	private async provideCodeSuggestions(context: GhostSuggestionContext): Promise<void> {
@@ -154,6 +251,8 @@ export class GhostProvider {
 				if (!this.model.loaded) {
 					await this.reload()
 				}
+
+				console.log("userPrompt", userPrompt)
 				const response = await this.model.generateResponse(systemPrompt, userPrompt)
 				console.log("Ghost response:", response)
 				if (cancelled) {

@@ -88,6 +88,72 @@ ${userInput}
 \`\`\``
 	}
 
+	private getASTInfoPrompt(context: GhostSuggestionContext) {
+		if (!context.ast) {
+			return ""
+		}
+
+		let astInfo = `**AST Information:**\n`
+
+		// Add language information
+		astInfo += `Language: ${context.ast.language}\n\n`
+
+		// If we have a cursor position with an AST node, include that information
+		if (context.astNodeAtCursor) {
+			const node = context.astNodeAtCursor
+			astInfo += `Current Node Type: ${node.type}\n`
+			astInfo += `Current Node Text: ${node.text.substring(0, 100)}${node.text.length > 100 ? "..." : ""}\n`
+
+			// Include parent context if available
+			if (node.parent) {
+				astInfo += `Parent Node Type: ${node.parent.type}\n`
+
+				// Include siblings for context
+				const siblings = []
+				let sibling = node.previousSibling
+				while (sibling && siblings.length < 3) {
+					siblings.unshift(
+						`${sibling.type}: ${sibling.text.substring(0, 30)}${sibling.text.length > 30 ? "..." : ""}`,
+					)
+					sibling = sibling.previousSibling
+				}
+
+				sibling = node.nextSibling
+				while (sibling && siblings.length < 5) {
+					siblings.push(
+						`${sibling.type}: ${sibling.text.substring(0, 30)}${sibling.text.length > 30 ? "..." : ""}`,
+					)
+					sibling = sibling.nextSibling
+				}
+
+				if (siblings.length > 0) {
+					astInfo += `\nSurrounding Nodes:\n`
+					siblings.forEach((s, i) => {
+						astInfo += `${i + 1}. ${s}\n`
+					})
+				}
+			}
+
+			// Include children for context
+			const children = []
+			for (let i = 0; i < node.childCount && children.length < 5; i++) {
+				const child = node.child(i)
+				if (child) {
+					children.push(`${child.type}: ${child.text.substring(0, 30)}${child.text.length > 30 ? "..." : ""}`)
+				}
+			}
+
+			if (children.length > 0) {
+				astInfo += `\nChild Nodes:\n`
+				children.forEach((c, i) => {
+					astInfo += `${i + 1}. ${c}\n`
+				})
+			}
+		}
+
+		return astInfo
+	}
+
 	getSuggestionPrompt(context: GhostSuggestionContext) {
 		const sections = [
 			this.getBaseSuggestionPrompt(),
@@ -95,6 +161,7 @@ ${userInput}
 			this.getRecentChangesDiff(),
 			this.getUserFocusPrompt(context),
 			this.getUserSelectedTextPrompt(context),
+			this.getASTInfoPrompt(context),
 			this.getUserCurrentDocumentPrompt(context),
 		]
 
