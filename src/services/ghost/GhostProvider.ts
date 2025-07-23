@@ -1,3 +1,4 @@
+import crypto from "crypto"
 import * as vscode from "vscode"
 import { GhostDocumentStore } from "./GhostDocumentStore"
 import { GhostStrategy } from "./GhostStrategy"
