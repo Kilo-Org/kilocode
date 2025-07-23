@@ -1,7 +1,6 @@
 import { GhostServiceSettings } from "@roo-code/types"
 import { ApiHandler, buildApiHandler } from "../../api"
 import { ContextProxy } from "../../core/config/ContextProxy"
-import { t } from "../../i18n"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 import { OpenRouterHandler } from "../../api/providers"
 
@@ -48,13 +47,21 @@ export class GhostModel {
 		])
 
 		let response: string = ""
-		let completionCost = 0
+		let cost = 0
+		let inputTokens = 0
+		let outputTokens = 0
+		let cacheReadTokens = 0
+		let cacheWriteTokens = 0
 		try {
 			for await (const chunk of stream) {
 				if (chunk.type === "text") {
 					response += chunk.text
 				} else if (chunk.type === "usage") {
-					completionCost = chunk.totalCost ?? 0
+					cost = chunk.totalCost ?? 0
+					cacheReadTokens = chunk.cacheReadTokens ?? 0
+					cacheWriteTokens = chunk.cacheWriteTokens ?? 0
+					inputTokens = chunk.inputTokens ?? 0
+					outputTokens = chunk.outputTokens ?? 0
 				}
 			}
 		} catch (error) {
@@ -62,6 +69,13 @@ export class GhostModel {
 			response = ""
 		}
 
-		return response
+		return {
+			response,
+			cost,
+			inputTokens,
+			outputTokens,
+			cacheWriteTokens,
+			cacheReadTokens,
+		}
 	}
 }

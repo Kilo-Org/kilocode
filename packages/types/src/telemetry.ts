@@ -20,6 +20,10 @@ export type TelemetrySetting = z.infer<typeof telemetrySettingsSchema>
 export enum TelemetryEventName {
 	// kilocode_change start
 	COMMIT_MSG_GENERATED = "Commit Message Generated",
+	INLINE_ASSIST_QUICK_TASK = "Inline Assist Quick Task",
+	INLINE_ASSIST_AUTO_TASK = "Inline Assist Auto Task",
+	INLINE_ASSIST_ACCEPT_SUGGESTION = "Inline Assist Accept Suggestion",
+	INLINE_ASSIST_REJECT_SUGGESTION = "Inline Assist Reject Suggestion",
 	// kilocode_change end
 
 	TASK_CREATED = "Task Created",
@@ -137,6 +141,10 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 		type: z.enum([
 			// kilocode_change start
 			TelemetryEventName.COMMIT_MSG_GENERATED,
+			TelemetryEventName.INLINE_ASSIST_QUICK_TASK,
+			TelemetryEventName.INLINE_ASSIST_AUTO_TASK,
+			TelemetryEventName.INLINE_ASSIST_ACCEPT_SUGGESTION,
+			TelemetryEventName.INLINE_ASSIST_REJECT_SUGGESTION,
 			// kilocode_change end
 			TelemetryEventName.TASK_CREATED,
 			TelemetryEventName.TASK_RESTARTED,
