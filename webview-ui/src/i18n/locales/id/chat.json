@@ -318,6 +318,11 @@
 			"title": "Batas Permintaan yang Disetujui Otomatis Tercapai",
 			"description": "Kilo Code telah mencapai batas {{count}} permintaan API yang disetujui otomatis. Apakah kamu ingin mengatur ulang hitungan dan melanjutkan tugas?",
 			"button": "Atur Ulang dan Lanjutkan"
+		},
+		"autoApprovedCostLimitReached": {
+			"title": "Batas Biaya yang Disetujui Otomatis Telah Tercapai",
+			"button": "Atur Ulang dan Lanjutkan",
+			"description": "Kilo Code telah mencapai batas biaya yang disetujui otomatis sebesar ${{count}}. Apakah Anda ingin mengatur ulang biaya dan melanjutkan tugas ini?"
 		}
 	},
 	"indexingStatus": {

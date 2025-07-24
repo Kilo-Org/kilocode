@@ -325,6 +325,11 @@
 			"title": "Dosažen limit automaticky schválených požadavků",
 			"description": "Kilo Code dosáhl automaticky schváleného limitu {{count}} API požadavků. Chceš resetovat počítadlo a pokračovat v úkolu?",
 			"button": "Resetovat a pokračovat"
+		},
+		"autoApprovedCostLimitReached": {
+			"title": "Dosažen limit automaticky schválených nákladů",
+			"description": "Kilo Code dosáhl automaticky schváleného limitu nákladů ${{count}}. Chcete resetovat náklady a pokračovat v úkolu?",
+			"button": "Resetovat a pokračovat"
 		}
 	},
 	"indexingStatus": {
