@@ -171,7 +171,7 @@ describe("GhostStrategy - AST Integration", () => {
 	let strategy: GhostStrategy
 	let mockDocument: MockTextDocument
 	let mockASTContext: ASTContext
-	let mockASTNodeAtCursor: MockNode
+	let mockRangeASTNode: MockNode
 
 	beforeEach(() => {
 		strategy = new GhostStrategy()
@@ -202,7 +202,7 @@ describe("GhostStrategy - AST Integration", () => {
 		})
 
 		// Create the main node with a proper child function
-		mockASTNodeAtCursor = new MockNode({
+		mockRangeASTNode = new MockNode({
 			type: "identifier",
 			text: "test",
 			parent: parentNode,
@@ -217,7 +217,7 @@ describe("GhostStrategy - AST Integration", () => {
 			type: "program",
 			text: "function test() { return true; }",
 		})
-		mockRootNode.descendantForPosition = vi.fn().mockReturnValue(mockASTNodeAtCursor)
+		mockRootNode.descendantForPosition = vi.fn().mockReturnValue(mockRangeASTNode)
 
 		// Create mock AST context
 		mockASTContext = {
@@ -243,7 +243,7 @@ describe("GhostStrategy - AST Integration", () => {
 		it("should include language information when AST is provided", () => {
 			const context: GhostSuggestionContext = {
 				document: mockDocument,
-				ast: mockASTContext,
+				documentAST: mockASTContext,
 			}
 
 			const astInfoPrompt = (strategy as any).getASTInfoPrompt(context)
@@ -254,8 +254,8 @@ describe("GhostStrategy - AST Integration", () => {
 		it("should include node information when astNodeAtCursor is provided", () => {
 			const context: GhostSuggestionContext = {
 				document: mockDocument,
-				ast: mockASTContext,
-				astNodeAtCursor: mockASTNodeAtCursor as any,
+				documentAST: mockASTContext,
+				rangeASTNode: mockRangeASTNode as any,
 			}
 
 			const astInfoPrompt = (strategy as any).getASTInfoPrompt(context)
@@ -266,8 +266,8 @@ describe("GhostStrategy - AST Integration", () => {
 		it("should include parent node information when available", () => {
 			const context: GhostSuggestionContext = {
 				document: mockDocument,
-				ast: mockASTContext,
-				astNodeAtCursor: mockASTNodeAtCursor as any,
+				documentAST: mockASTContext,
+				rangeASTNode: mockRangeASTNode as any,
 			}
 
 			const astInfoPrompt = (strategy as any).getASTInfoPrompt(context)
@@ -277,8 +277,8 @@ describe("GhostStrategy - AST Integration", () => {
 		it("should include sibling nodes when available", () => {
 			const context: GhostSuggestionContext = {
 				document: mockDocument,
-				ast: mockASTContext,
-				astNodeAtCursor: mockASTNodeAtCursor as any,
+				documentAST: mockASTContext,
+				rangeASTNode: mockRangeASTNode as any,
 			}
 
 			const astInfoPrompt = (strategy as any).getASTInfoPrompt(context)
@@ -290,8 +290,8 @@ describe("GhostStrategy - AST Integration", () => {
 		it("should include child nodes when available", () => {
 			const context: GhostSuggestionContext = {
 				document: mockDocument,
-				ast: mockASTContext,
-				astNodeAtCursor: mockASTNodeAtCursor as any,
+				documentAST: mockASTContext,
+				rangeASTNode: mockRangeASTNode as any,
 			}
 
 			const astInfoPrompt = (strategy as any).getASTInfoPrompt(context)
@@ -310,8 +310,8 @@ describe("GhostStrategy - AST Integration", () => {
 
 			const context: GhostSuggestionContext = {
 				document: mockDocument,
-				ast: mockASTContext,
-				astNodeAtCursor: nodeWithLongText as any,
+				documentAST: mockASTContext,
+				rangeASTNode: nodeWithLongText as any,
 			}
 
 			const astInfoPrompt = (strategy as any).getASTInfoPrompt(context)
@@ -323,8 +323,8 @@ describe("GhostStrategy - AST Integration", () => {
 		it("should include AST information in the prompt when available", () => {
 			const context: GhostSuggestionContext = {
 				document: mockDocument,
-				ast: mockASTContext,
-				astNodeAtCursor: mockASTNodeAtCursor as any,
+				documentAST: mockASTContext,
+				rangeASTNode: mockRangeASTNode as any,
 			}
 
 			const prompt = strategy.getSuggestionPrompt(context)
@@ -346,8 +346,8 @@ describe("GhostStrategy - AST Integration", () => {
 			const context: GhostSuggestionContext = {
 				document: mockDocument,
 				range: new vscode.Range(new vscode.Position(0, 9), new vscode.Position(0, 13)),
-				ast: mockASTContext,
-				astNodeAtCursor: mockASTNodeAtCursor as any,
+				documentAST: mockASTContext,
+				rangeASTNode: mockRangeASTNode as any,
 				userInput: "Add a comment",
 			}
 
@@ -374,8 +374,8 @@ describe("GhostStrategy - AST Integration", () => {
 			const context: GhostSuggestionContext = {
 				document: mockDocument,
 				range: new vscode.Range(new vscode.Position(0, 9), new vscode.Position(0, 13)),
-				ast: mockASTContext,
-				astNodeAtCursor: mockASTNodeAtCursor as any,
+				documentAST: mockASTContext,
+				rangeASTNode: mockRangeASTNode as any,
 			}
 
 			const prompt = strategy.getSuggestionPrompt(context)
@@ -450,8 +450,8 @@ describe("GhostStrategy - AST Integration", () => {
 			const context: GhostSuggestionContext = {
 				document: mockDocument,
 				openFiles: [mockDocument],
-				ast: mockASTContext,
-				astNodeAtCursor: mockASTNodeAtCursor as any,
+				documentAST: mockASTContext,
+				rangeASTNode: mockRangeASTNode as any,
 			}
 
 			// Spy on FuzzyMatchDiff to verify AST context is passed through
@@ -461,8 +461,8 @@ describe("GhostStrategy - AST Integration", () => {
 
 			// Verify FuzzyMatchDiff was called with the context including AST
 			expect(fuzzyMatchDiffSpy).toHaveBeenCalledWith(expect.any(String), context)
-			expect((fuzzyMatchDiffSpy.mock.calls[0][1] as any).ast).toBe(mockASTContext) // kilocode_change
-			expect((fuzzyMatchDiffSpy.mock.calls[0][1] as any).astNodeAtCursor).toBe(mockASTNodeAtCursor) // kilocode_change
+			expect((fuzzyMatchDiffSpy.mock.calls[0][1] as any).documentAST).toBe(mockASTContext) // kilocode_change
+			expect((fuzzyMatchDiffSpy.mock.calls[0][1] as any).rangeASTNode).toBe(mockRangeASTNode) // kilocode_change
 		})
 	})
 })

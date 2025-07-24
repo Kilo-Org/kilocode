@@ -14,6 +14,7 @@ import { GhostCodeLensProvider } from "./GhostCodeLensProvider"
 import { GhostServiceSettings } from "@roo-code/types"
 import { ContextProxy } from "../../core/config/ContextProxy"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
+import { GhostContext } from "./GhostContext"
 
 export class GhostProvider {
 	private static instance: GhostProvider | null = null
@@ -26,6 +27,7 @@ export class GhostProvider {
 	private context: vscode.ExtensionContext
 	private providerSettingsManager: ProviderSettingsManager
 	private settings: GhostServiceSettings | null = null
+	private ghostContext: GhostContext
 
 	// VSCode Providers
 	public codeActionProvider: GhostCodeActionProvider
@@ -39,6 +41,7 @@ export class GhostProvider {
 		this.workspaceEdit = new GhostWorkspaceEdit()
 		this.providerSettingsManager = new ProviderSettingsManager(context)
 		this.model = new GhostModel()
+		this.ghostContext = new GhostContext(this.documentStore)
 
 		// Register the providers
 		this.codeActionProvider = new GhostCodeActionProvider()
@@ -154,75 +157,13 @@ export class GhostProvider {
 		await this.provideCodeSuggestions({ document, range })
 	}
 
-	private async enhanceContext(context: GhostSuggestionContext): Promise<GhostSuggestionContext> {
-		const editor = vscode.window.activeTextEditor
-		if (!editor) {
-			return context
-		}
-
-		// Add open files to the context
-		const openFiles = vscode.workspace.textDocuments.filter((doc) => doc.uri.scheme === "file")
-		const enhancedContext = { ...context, openFiles }
-
-		if (!context.range) {
-			context.range = editor.selection
-		}
-
-		// Get AST for the current document if available
-		if (context.document) {
-			try {
-				// Store the document in the document store and parse its AST if needed
-				const document = context.document
-
-				// Check if we need to parse or update the AST
-				if (this.documentStore.needsASTUpdate(document)) {
-					await this.documentStore.storeDocument(document, true)
-				}
-
-				// Get the AST from the document store
-				const ast = this.documentStore.getAST(document.uri)
-
-				console.log("AST", ast)
-
-				if (ast) {
-					// Add the AST to the context
-					enhancedContext.ast = ast
-
-					// If there's a selection or cursor position, find the relevant AST node
-					console.log("Context Range", context.range)
-					if (context.range) {
-						const startPosition = {
-							row: context.range.start.line,
-							column: context.range.start.character,
-						}
-						const endPosition = {
-							row: context.range.end.line,
-							column: context.range.end.character,
-						}
-
-						// Find the smallest node that contains the selection
-						const nodeAtCursor = ast.rootNode.descendantForPosition(startPosition, endPosition)
-						console.log("NodeAtCursor", nodeAtCursor)
-						if (nodeAtCursor) {
-							enhancedContext.astNodeAtCursor = nodeAtCursor
-						}
-					}
-				}
-			} catch (error) {
-				console.error("Error getting AST from document store:", error)
-				// Continue without AST if there's an error
-			}
-		}
-
-		return enhancedContext
-	}
-
-	private async provideCodeSuggestions(context: GhostSuggestionContext): Promise<void> {
+	private async provideCodeSuggestions(initialContext: GhostSuggestionContext): Promise<void> {
 		// Cancel any ongoing suggestions
 		await this.cancelSuggestions()
 
 		let cancelled = false
-		const enhancedContext = await this.enhanceContext(context)
+
+		const context = await this.ghostContext.generate(initialContext)
 
 		await vscode.window.withProgress(
 			{
@@ -242,7 +183,7 @@ export class GhostProvider {
 				const customInstructions = await addCustomInstructions("", "", workspacePath, "ghost")
 
 				const systemPrompt = this.strategy.getSystemPrompt(customInstructions)
-				const userPrompt = this.strategy.getSuggestionPrompt(enhancedContext)
+				const userPrompt = this.strategy.getSuggestionPrompt(context)
 				if (cancelled) {
 					return
 				}
@@ -261,7 +202,7 @@ export class GhostProvider {
 
 				// First parse the response into edit operations
 				progress.report({ message: t("kilocode:ghost.progress.processing") })
-				this.suggestions = await this.strategy.parseResponse(response, enhancedContext)
+				this.suggestions = await this.strategy.parseResponse(response, context)
 
 				if (cancelled) {
 					this.suggestions.clear()

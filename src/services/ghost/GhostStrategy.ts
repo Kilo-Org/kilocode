@@ -89,18 +89,18 @@ ${userInput}
 	}
 
 	private getASTInfoPrompt(context: GhostSuggestionContext) {
-		if (!context.ast) {
+		if (!context.documentAST) {
 			return ""
 		}
 
 		let astInfo = `**AST Information:**\n`
 
 		// Add language information
-		astInfo += `Language: ${context.ast.language}\n\n`
+		astInfo += `Language: ${context.documentAST.language}\n\n`
 
 		// If we have a cursor position with an AST node, include that information
-		if (context.astNodeAtCursor) {
-			const node = context.astNodeAtCursor
+		if (context.rangeASTNode) {
+			const node = context.rangeASTNode
 			astInfo += `Current Node Type: ${node.type}\n`
 			astInfo += `Current Node Text: ${node.text.substring(0, 100)}${node.text.length > 100 ? "..." : ""}\n`
 

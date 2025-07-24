@@ -29,10 +29,11 @@ export interface ASTContext {
 }
 
 export interface GhostSuggestionContext {
-	userInput?: string
 	document?: vscode.TextDocument
-	range?: vscode.Range | vscode.Selection
+	documentAST?: ASTContext
+	editor?: vscode.TextEditor
 	openFiles?: vscode.TextDocument[]
-	ast?: ASTContext
-	astNodeAtCursor?: Node
+	range?: vscode.Range | vscode.Selection
+	rangeASTNode?: Node
+	userInput?: string
 }
