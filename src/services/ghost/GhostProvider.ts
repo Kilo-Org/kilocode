@@ -55,6 +55,8 @@ export class GhostProvider {
 		void this.reload()
 	}
 
+	private async watcherState() {}
+
 	/**
 	 * Handle document close events to clear the AST and free memory
 	 */
@@ -317,16 +319,16 @@ export class GhostProvider {
 		}
 		const editor = vscode.window.activeTextEditor
 		if (!editor) {
-			console.log("No active editor found, returning")
+			await this.cancelSuggestions()
 			return
 		}
 		const suggestionsFile = this.suggestions.getFile(editor.document.uri)
 		if (!suggestionsFile) {
-			console.log(`No suggestions found for document: ${editor.document.uri.toString()}`)
+			await this.cancelSuggestions()
 			return
 		}
 		if (suggestionsFile.getSelectedGroup() === null) {
-			console.log("No group selected, returning")
+			await this.cancelSuggestions()
 			return
 		}
 		this.decorations.clearAll()
@@ -355,12 +357,12 @@ export class GhostProvider {
 		}
 		const editor = vscode.window.activeTextEditor
 		if (!editor) {
-			console.log("No active editor found, returning")
+			await this.cancelSuggestions()
 			return
 		}
 		const suggestionsFile = this.suggestions.getFile(editor.document.uri)
 		if (!suggestionsFile) {
-			console.log(`No suggestions found for document: ${editor.document.uri.toString()}`)
+			await this.cancelSuggestions()
 			return
 		}
 		suggestionsFile.selectNextGroup()
@@ -373,12 +375,12 @@ export class GhostProvider {
 		}
 		const editor = vscode.window.activeTextEditor
 		if (!editor) {
-			console.log("No active editor found, returning")
+			await this.cancelSuggestions()
 			return
 		}
 		const suggestionsFile = this.suggestions.getFile(editor.document.uri)
 		if (!suggestionsFile) {
-			console.log(`No suggestions found for document: ${editor.document.uri.toString()}`)
+			await this.cancelSuggestions()
 			return
 		}
 		suggestionsFile.selectPreviousGroup()
