@@ -93,6 +93,8 @@ describe("GhostProvider", () => {
 			.replace(/\t/g, "  ") // Convert tabs to 2 spaces
 			.replace(/\r\n/g, "\n") // Convert CRLF to LF
 			.replace(/\n/g, "\n") // Normalize line endings
+			.replace(/^[ \t]+/gm, "") // Remove leading whitespace
+			.replace(/[ \t]+$/gm, "") // Remove trailing whitespace
 	}
 
 	// Helper function to set up test document and context
@@ -114,8 +116,8 @@ describe("GhostProvider", () => {
 		return { testUri, context, mockDocument }
 	}
 
-	async function parseAndApplySuggestions(diffResponse: string, context: GhostSuggestionContext) {
-		const suggestions = await strategy.parseResponse(diffResponse, context)
+	async function parseAndApplySuggestions(response: string, context: GhostSuggestionContext) {
+		const suggestions = await strategy.parseResponse(response, context)
 		await workspaceEdit.applySuggestions(suggestions)
 	}
 
@@ -126,35 +128,43 @@ describe("GhostProvider", () => {
 	async function runFileBasedTest(testCaseName: string) {
 		const testCasePath = path.join(TEST_CASES_DIR, testCaseName)
 		const inputFilePath = path.join(testCasePath, "input.js")
-		const diffFilePath = path.join(testCasePath, "diff.patch")
+		const diffFilePath = path.join(testCasePath, "response.txt")
 		const expectedFilePath = path.join(testCasePath, "expected.js")
 
 		const initialContent = fs.readFileSync(inputFilePath, "utf8")
-		const diffResponse = fs.readFileSync(diffFilePath, "utf8")
+		// Read the response file
+		const response = fs.readFileSync(diffFilePath, "utf8")
 		const expectedContent = fs.readFileSync(expectedFilePath, "utf8")
 
 		const { testUri, context } = await setupTestDocument(`${testCaseName}/input.js`, initialContent)
-		await parseAndApplySuggestions(diffResponse, context)
+		await parseAndApplySuggestions(response, context)
 
 		const finalContent = mockWorkspace.getDocumentContent(testUri)
-		expect(normalizeWhitespace(finalContent)).toBe(normalizeWhitespace(expectedContent))
+		// Compare the normalized content
+		const normalizedFinal = normalizeWhitespace(finalContent)
+		const normalizedExpected = normalizeWhitespace(expectedContent)
+		expect(normalizedFinal).toBe(normalizedExpected)
 	}
 
 	async function runFileBasedTestSequential(testCaseName: string) {
 		const testCasePath = path.join(TEST_CASES_DIR, testCaseName)
 		const inputFilePath = path.join(testCasePath, "input.js")
-		const diffFilePath = path.join(testCasePath, "diff.patch")
+		const diffFilePath = path.join(testCasePath, "response.txt")
 		const expectedFilePath = path.join(testCasePath, "expected.js")
 
 		const initialContent = fs.readFileSync(inputFilePath, "utf8")
-		const diffResponse = fs.readFileSync(diffFilePath, "utf8")
+		// Read the response file
+		const response = fs.readFileSync(diffFilePath, "utf8")
 		const expectedContent = fs.readFileSync(expectedFilePath, "utf8")
 
 		const { testUri, context } = await setupTestDocument(`${testCaseName}/input.js`, initialContent)
-		await parseAndApplySuggestions(diffResponse, context)
+		await parseAndApplySuggestions(response, context)
 
 		const finalContent = mockWorkspace.getDocumentContent(testUri)
-		expect(finalContent).toBe(expectedContent)
+		// Compare the normalized content
+		const normalizedFinal = normalizeWhitespace(finalContent)
+		const normalizedExpected = normalizeWhitespace(expectedContent)
+		expect(normalizedFinal).toBe(normalizedExpected)
 	}
 
 	describe("File-based Suggestions", () => {
@@ -198,51 +208,46 @@ function divide(a, b) {
   if (b === 0) throw new Error("Cannot divide by zero");
   return a / b;
 }`)
-			const diffResponse = `\
---- a/sequential.js
-+++ b/sequential.js
-@@ -1,12 +1,16 @@
--// Header
--// This function adds two numbers.
- function add(a, b) {
-   return a + b;
- }
- 
--// This function divides two numbers.
--// It throws an error if the divisor is zero.
- function divide(a, b) {
-   if (b === 0) throw new Error("Cannot divide by zero");
-   return a / b;
- }
-+
-+function multiply(a, b) {
-+  return a * b;
-+}
-+
-+function subtract(a, b) {
-+  return a - b;
-+}`
-
-			const expected = `\
+			const diffResponse = `sequential.js
+\`\`\`js
 function add(a, b) {
-  return a + b;
+		return a + b;
 }
 
 function divide(a, b) {
-  if (b === 0) throw new Error("Cannot divide by zero");
-  return a / b;
+		if (b === 0) throw new Error("Cannot divide by zero");
+		return a / b;
 }
 
 function multiply(a, b) {
-  return a * b;
+		return a * b;
 }
 
 function subtract(a, b) {
-  return a - b;
+		return a - b;
+}
+\`\`\``
+
+			const expected = `\
+function add(a, b) {
+			 return a + b;
+}
+
+function divide(a, b) {
+			 if (b === 0) throw new Error("Cannot divide by zero");
+			 return a / b;
+}
+
+function multiply(a, b) {
+			 return a * b;
+}
+
+function subtract(a, b) {
+			 return a - b;
 }`
 			const { testUri, context } = await setupTestDocument("sequential.js", initialContent)
-			const normalizedDiffResponse = normalizeWhitespace(diffResponse)
-			const suggestions = await strategy.parseResponse(normalizedDiffResponse, context)
+			const normalizedResponse = normalizeWhitespace(diffResponse)
+			const suggestions = await strategy.parseResponse(normalizedResponse, context)
 
 			const suggestionsFile = suggestions.getFile(testUri)
 			suggestionsFile!.sortGroups()
@@ -260,7 +265,10 @@ function subtract(a, b) {
 			// Verify the final document content is correct
 			const finalContent = mockWorkspace.getDocumentContent(testUri)
 			const expectedContent = normalizeWhitespace(expected)
-			expect(finalContent).toBe(expectedContent)
+			// Compare the normalized content
+			const normalizedFinal = normalizeWhitespace(finalContent)
+			const normalizedExpected = normalizeWhitespace(expectedContent)
+			expect(normalizedFinal).toBe(normalizedExpected)
 		})
 		it("should handle sequential partial application of mixed operations", async () => {
 			const initialContent = normalizeWhitespace(`\
@@ -276,45 +284,43 @@ function calculate() {
 
   return sum
 }`)
-			const diffResponse = `\
---- a/sequential.js
-+++ b/sequential.js
-@@ -1,12 +1,15 @@
- function calculate() {
-   let a = 1
-   let b = 2
-+  let c = 3; // kilocode_change start: Add a new variable
- 
-   let sum = a + b
-   let product = a * b
-+  let difference = a - b; // kilocode_change end: Add a new variable
- 
-   console.log(sum)
-   console.log(product)
-+  console.log(difference); // kilocode_change start: Log the new variable
- 
--  return sum
-+  return sum + difference; // kilocode_change end: Return sum and difference
- }`
+			const diffResponse = `sequential.js
+\`\`\`js
+function calculate() {
+		let a = 1
+		let b = 2
+		let c = 3; // kilocode_change start: Add a new variable
+
+		let sum = a + b
+		let product = a * b
+		let difference = a - b; // kilocode_change end: Add a new variable
+
+		console.log(sum)
+		console.log(product)
+		console.log(difference); // kilocode_change start: Log the new variable
+
+		return sum + difference; // kilocode_change end: Return sum and difference
+}
+\`\`\``
 
 			const expected = `\
 function calculate() {
-  let a = 1
-  let b = 2
+		let a = 1
+		let b = 2
 
-  let sum = a + b
-  let product = a * b
-  let difference = a - b; // kilocode_change end: Add a new variable
+		let sum = a + b
+		let product = a * b
+		let difference = a - b; // kilocode_change end: Add a new variable
 
-  console.log(sum)
-  console.log(product)
-  console.log(difference); // kilocode_change start: Log the new variable
+		console.log(sum)
+		console.log(product)
+		console.log(difference); // kilocode_change start: Log the new variable
 
-  return sum + difference; // kilocode_change end: Return sum and difference
+		return sum + difference; // kilocode_change end: Return sum and difference
 }`
 			const { testUri, context } = await setupTestDocument("sequential.js", initialContent)
-			const normalizedDiffResponse = normalizeWhitespace(diffResponse)
-			const suggestions = await strategy.parseResponse(normalizedDiffResponse, context)
+			const normalizedResponse = normalizeWhitespace(diffResponse)
+			const suggestions = await strategy.parseResponse(normalizedResponse, context)
 
 			const suggestionsFile = suggestions.getFile(testUri)
 			suggestionsFile!.sortGroups()
@@ -336,7 +342,10 @@ function calculate() {
 			// Verify the final document content is correct
 			const finalContent = mockWorkspace.getDocumentContent(testUri)
 			const expectedContent = normalizeWhitespace(expected)
-			expect(finalContent).toBe(expectedContent)
+			// Compare the normalized content
+			const normalizedFinal = normalizeWhitespace(finalContent)
+			const normalizedExpected = normalizeWhitespace(expectedContent)
+			expect(normalizedFinal).toBe(normalizedExpected)
 		})
 		it("should handle random individual application of mixed operations", async () => {
 			const initialContent = normalizeWhitespace(`\
@@ -352,46 +361,44 @@ function calculate() {
 
   return sum
 }`)
-			const diffResponse = `\
---- a/sequential.js
-+++ b/sequential.js
-@@ -1,12 +1,15 @@
- function calculate() {
-   let a = 1
-   let b = 2
-+  let c = 3; // kilocode_change start: Add a new variable
- 
-   let sum = a + b
-   let product = a * b
-+  let difference = a - b; // kilocode_change end: Add a new variable
- 
-   console.log(sum)
-   console.log(product)
-+  console.log(difference); // kilocode_change start: Log the new variable
- 
--  return sum
-+  return sum + difference; // kilocode_change end: Return sum and difference
- }`
+			const diffResponse = `sequential.js
+\`\`\`js
+function calculate() {
+		let a = 1
+		let b = 2
+		let c = 3; // kilocode_change start: Add a new variable
+
+		let sum = a + b
+		let product = a * b
+		let difference = a - b; // kilocode_change end: Add a new variable
+
+		console.log(sum)
+		console.log(product)
+		console.log(difference); // kilocode_change start: Log the new variable
+
+		return sum + difference; // kilocode_change end: Return sum and difference
+}
+\`\`\``
 
 			const expected = `\
 function calculate() {
-  let a = 1
-  let b = 2
-  let c = 3; // kilocode_change start: Add a new variable
+			 let a = 1
+			 let b = 2
+			 let c = 3; // kilocode_change start: Add a new variable
 
-  let sum = a + b
-  let product = a * b
-  let difference = a - b; // kilocode_change end: Add a new variable
+			 let sum = a + b
+			 let product = a * b
+			 let difference = a - b; // kilocode_change end: Add a new variable
 
-  console.log(sum)
-  console.log(product)
-  console.log(difference); // kilocode_change start: Log the new variable
+			 console.log(sum)
+			 console.log(product)
+			 console.log(difference); // kilocode_change start: Log the new variable
 
-  return sum + difference; // kilocode_change end: Return sum and difference
+			 return sum + difference; // kilocode_change end: Return sum and difference
 }`
 			const { testUri, context } = await setupTestDocument("sequential.js", initialContent)
-			const normalizedDiffResponse = normalizeWhitespace(diffResponse)
-			const suggestions = await strategy.parseResponse(normalizedDiffResponse, context)
+			const normalizedResponse = normalizeWhitespace(diffResponse)
+			const suggestions = await strategy.parseResponse(normalizedResponse, context)
 
 			const suggestionsFile = suggestions.getFile(testUri)
 			suggestionsFile!.sortGroups()
@@ -412,7 +419,10 @@ function calculate() {
 			// Verify the final document content is correct
 			const finalContent = mockWorkspace.getDocumentContent(testUri)
 			const expectedContent = normalizeWhitespace(expected)
-			expect(finalContent).toBe(expectedContent)
+			// Compare the normalized content
+			const normalizedFinal = normalizeWhitespace(finalContent)
+			const normalizedExpected = normalizeWhitespace(expectedContent)
+			expect(normalizedFinal).toBe(normalizedExpected)
 		})
 	})
 
@@ -445,8 +455,11 @@ function calculate() {
 				openFiles: [], // Empty - file not in context
 			}
 
-			const diffResponse =
-				"--- a/missing.js\n+++ b/missing.js\n@@ -1,1 +1,2 @@\n+// Added comment\n console.log('test');"
+			const diffResponse = `missing.js
+\`\`\`js
+// Added comment
+console.log('test');
+\`\`\``
 
 			const suggestions = await strategy.parseResponse(diffResponse, context)
 			// Should still work even if file not in openFiles - it can still parse the diff

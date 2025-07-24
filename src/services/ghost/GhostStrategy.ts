@@ -190,15 +190,33 @@ ${sections.filter(Boolean).join("\n\n")}
 	async parseResponse(response: string, context: GhostSuggestionContext): Promise<GhostSuggestionsState> {
 		const suggestions = new GhostSuggestionsState()
 
-		// Extract file path and content from the full content format
+		// Check if the response is in the new format (file path + code block)
 		const fullContentMatch = response.match(/^(.+?)\r?\n```[\w-]*\r?\n([\s\S]+?)\r?\n```/m)
 
-		if (!fullContentMatch) {
-			return suggestions // No valid content found
+		// If the response is in the new format
+		if (fullContentMatch) {
+			// Extract file path and new content
+			const [_, filePath, newContent] = fullContentMatch
+
+			// Process the new format
+			return await this.processFullContentFormat(filePath, newContent, context)
 		}
 
-		// Extract file path and new content
-		const [_, filePath, newContent] = fullContentMatch
+		// Check if the response is in the old diff format
+		if (response.includes("--- a/") && response.includes("+++ b/")) {
+			return await this.processDiffFormat(response, context)
+		}
+
+		// No valid format found
+		return suggestions
+	}
+
+	private async processFullContentFormat(
+		filePath: string,
+		newContent: string,
+		context: GhostSuggestionContext,
+	): Promise<GhostSuggestionsState> {
+		const suggestions = new GhostSuggestionsState()
 
 		// Clean up the file path (remove any extra quotes or spaces)
 		const cleanedFilePath = filePath.trim()
@@ -284,6 +302,95 @@ ${sections.filter(Boolean).join("\n\n")}
 						currentOldLineNumber++
 						currentNewLineNumber++
 						break
+				}
+			}
+		}
+
+		suggestions.sortGroups()
+		return suggestions
+	}
+
+	private async processDiffFormat(response: string, context: GhostSuggestionContext): Promise<GhostSuggestionsState> {
+		const suggestions = new GhostSuggestionsState()
+
+		// Parse the diff to extract the file path
+		const filePathMatch = response.match(/\+\+\+ b\/(.+?)$/m)
+		if (!filePathMatch) {
+			return suggestions // No file path found
+		}
+
+		const filePath = filePathMatch[1]
+
+		// Create a URI for the file
+		const fileUri = filePath.startsWith("file://")
+			? vscode.Uri.parse(filePath)
+			: vscode.Uri.parse(`file://${filePath}`)
+
+		// Try to find the matching document in the context
+		const openFiles = context.openFiles || []
+		const matchingDocument = openFiles.find(
+			(doc) =>
+				vscode.workspace.asRelativePath(doc.uri, false) === filePath ||
+				doc.uri.toString() === fileUri.toString(),
+		)
+
+		let documentToUse: vscode.TextDocument | undefined
+		let uriToUse: vscode.Uri = fileUri
+
+		if (matchingDocument) {
+			documentToUse = matchingDocument
+			uriToUse = matchingDocument.uri
+		} else {
+			// If we couldn't find a matching document, try to open the document
+			try {
+				documentToUse = await vscode.workspace.openTextDocument(fileUri)
+			} catch (error) {
+				console.error(`Error opening document ${filePath}:`, error)
+				return suggestions // Return empty suggestions if we can't open the document
+			}
+		}
+
+		if (!documentToUse) {
+			return suggestions // Return empty suggestions if we can't find or open the document
+		}
+
+		// Create a suggestion file
+		const suggestionFile = suggestions.addFile(uriToUse)
+
+		// Parse the diff hunks
+		const hunkMatches = response.matchAll(/@@ -(\d+),(\d+) \+(\d+),(\d+) @@([\s\S]+?)(?=@@ |$)/g)
+
+		for (const hunkMatch of hunkMatches) {
+			const [_, oldStart, oldLength, newStart, newLength, hunkContent] = hunkMatch
+
+			let currentOldLineNumber = parseInt(oldStart)
+			let currentNewLineNumber = parseInt(newStart)
+
+			// Split the hunk content into lines
+			const lines = hunkContent.split("\n").filter((line) => line.length > 0)
+
+			// Process each line in the hunk
+			for (const line of lines) {
+				if (line.startsWith("+")) {
+					// Addition
+					suggestionFile.addOperation({
+						type: "+",
+						line: currentNewLineNumber - 1,
+						content: line.substring(1),
+					})
+					currentNewLineNumber++
+				} else if (line.startsWith("-")) {
+					// Deletion
+					suggestionFile.addOperation({
+						type: "-",
+						line: currentOldLineNumber - 1,
+						content: line.substring(1),
+					})
+					currentOldLineNumber++
+				} else {
+					// Context line
+					currentOldLineNumber++
+					currentNewLineNumber++
 				}
 			}
 		}
