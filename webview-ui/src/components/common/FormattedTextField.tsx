@@ -53,32 +53,6 @@ export const FormattedTextField = forwardRef(FormattedTextFieldInner as any) as 
 ) => React.ReactElement
 
 // Common formatters for reuse
-export const integerFormatter: InputFormatter<number> = {
-	parse: (input: string) => {
-		const value = parseInt(input)
-		return !isNaN(value) && value > 0 ? value : undefined
-	},
-	format: (value: number | undefined) => {
-		return value?.toString() || ""
-	},
-	filter: (input: string) => input.replace(/[^0-9]/g, ""),
-}
-
-export const currencyFormatter: InputFormatter<number> = {
-	parse: (input: string) => {
-		const cleanInput = input.replace(/[$,]/g, "")
-		const value = parseFloat(cleanInput)
-		return !isNaN(value) && value >= 0 ? value : undefined
-	},
-	format: (value: number | undefined) => {
-		if (value === undefined) return ""
-		return value.toFixed(2)
-	},
-	filter: (input: string) => {
-		return input.replace(/[^0-9.$,]/g, "")
-	},
-}
-
 export const unlimitedIntegerFormatter: InputFormatter<number> = {
 	parse: (input: string) => {
 		if (input.trim() === "") return undefined

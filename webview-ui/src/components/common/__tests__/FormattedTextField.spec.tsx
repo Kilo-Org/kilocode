@@ -2,12 +2,7 @@
 import React from "react"
 import { describe, it, expect, vi } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
-import {
-	FormattedTextField,
-	integerFormatter,
-	currencyFormatter,
-	unlimitedIntegerFormatter,
-} from "../FormattedTextField"
+import { FormattedTextField, unlimitedIntegerFormatter } from "../FormattedTextField"
 
 // Mock VSCodeTextField to render as regular HTML input for testing
 vi.mock("@vscode/webview-ui-toolkit/react", () => ({
@@ -23,56 +18,6 @@ vi.mock("@vscode/webview-ui-toolkit/react", () => ({
 }))
 
 describe("FormattedTextField", () => {
-	describe("integerFormatter", () => {
-		it("should parse valid integers", () => {
-			expect(integerFormatter.parse("123")).toBe(123)
-			expect(integerFormatter.parse("1")).toBe(1)
-		})
-
-		it("should return undefined for invalid inputs", () => {
-			expect(integerFormatter.parse("")).toBeUndefined()
-			expect(integerFormatter.parse("0")).toBeUndefined()
-			expect(integerFormatter.parse("-5")).toBeUndefined()
-			expect(integerFormatter.parse("abc")).toBeUndefined()
-		})
-
-		it("should format numbers correctly", () => {
-			expect(integerFormatter.format(123)).toBe("123")
-			expect(integerFormatter.format(undefined)).toBe("")
-		})
-
-		it("should filter non-numeric characters", () => {
-			expect(integerFormatter.filter?.("123abc")).toBe("123")
-			expect(integerFormatter.filter?.("a1b2c3")).toBe("123")
-		})
-	})
-
-	describe("currencyFormatter", () => {
-		it("should parse valid currency values", () => {
-			expect(currencyFormatter.parse("123.45")).toBe(123.45)
-			expect(currencyFormatter.parse("$123.45")).toBe(123.45)
-			expect(currencyFormatter.parse("1,234.56")).toBe(1234.56)
-			expect(currencyFormatter.parse("0")).toBe(0)
-		})
-
-		it("should return undefined for invalid inputs", () => {
-			expect(currencyFormatter.parse("")).toBeUndefined()
-			expect(currencyFormatter.parse("abc")).toBeUndefined()
-			expect(currencyFormatter.parse("-5")).toBeUndefined()
-		})
-
-		it("should format currency correctly", () => {
-			expect(currencyFormatter.format(123.45)).toBe("123.45")
-			expect(currencyFormatter.format(123)).toBe("123.00")
-			expect(currencyFormatter.format(undefined)).toBe("")
-		})
-
-		it("should filter invalid currency characters", () => {
-			expect(currencyFormatter.filter?.("$123.45abc")).toBe("$123.45")
-			expect(currencyFormatter.filter?.("1,234.56xyz")).toBe("1,234.56")
-		})
-	})
-
 	describe("unlimitedIntegerFormatter", () => {
 		it("should parse valid integers", () => {
 			expect(unlimitedIntegerFormatter.parse("123")).toBe(123)
@@ -95,6 +40,11 @@ describe("FormattedTextField", () => {
 			expect(unlimitedIntegerFormatter.format(undefined)).toBe("")
 			expect(unlimitedIntegerFormatter.format(Infinity)).toBe("")
 		})
+
+		it("should filter non-numeric characters", () => {
+			expect(unlimitedIntegerFormatter.filter?.("123abc")).toBe("123")
+			expect(unlimitedIntegerFormatter.filter?.("a1b2c3")).toBe("123")
+		})
 	})
 
 	describe("FormattedTextField component", () => {
@@ -104,7 +54,7 @@ describe("FormattedTextField", () => {
 				<FormattedTextField
 					value={123}
 					onValueChange={mockOnChange}
-					formatter={integerFormatter}
+					formatter={unlimitedIntegerFormatter}
 					data-testid="test-input"
 				/>,
 			)
@@ -119,7 +69,7 @@ describe("FormattedTextField", () => {
 				<FormattedTextField
 					value={123}
 					onValueChange={mockOnChange}
-					formatter={integerFormatter}
+					formatter={unlimitedIntegerFormatter}
 					data-testid="test-input"
 				/>,
 			)
@@ -136,7 +86,7 @@ describe("FormattedTextField", () => {
 				<FormattedTextField
 					value={undefined}
 					onValueChange={mockOnChange}
-					formatter={integerFormatter}
+					formatter={unlimitedIntegerFormatter}
 					data-testid="test-input"
 				/>,
 			)
@@ -155,7 +105,7 @@ describe("FormattedTextField", () => {
 				<FormattedTextField
 					value={undefined}
 					onValueChange={mockOnChange}
-					formatter={integerFormatter}
+					formatter={unlimitedIntegerFormatter}
 					data-testid="test-input"
 				/>,
 			)
