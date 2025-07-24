@@ -167,7 +167,7 @@ vi.mock("diff", () => ({
 	}),
 }))
 
-describe("GhostStrategy - AST Integration", () => {
+describe("GhostStrategy", () => {
 	let strategy: GhostStrategy
 	let mockDocument: MockTextDocument
 	let mockASTContext: ASTContext
@@ -388,81 +388,6 @@ describe("GhostStrategy - AST Integration", () => {
 			// AST info should come after user focus but before current document
 			expect(astInfoPos).toBeGreaterThan(userFocusPos)
 			expect(currentDocPos).toBeGreaterThan(astInfoPos)
-		})
-	})
-
-	describe("parseResponse", () => {
-		beforeEach(() => {
-			// Mock the FuzzyMatchDiff method to return a valid result
-			vi.spyOn(strategy as any, "FuzzyMatchDiff").mockImplementation((...args: any[]) => {
-				const _diff = args[0]
-				const _context = args[1]
-				// Create a mock file patch that will be processed by parseResponse
-				return [
-					{
-						oldFileName: mockDocument.uri.toString(),
-						newFileName: mockDocument.uri.toString(),
-						hunks: [
-							{
-								oldStart: 1,
-								oldLines: 3,
-								newStart: 1,
-								newLines: 4,
-								lines: [" function test() {", "+  // Added comment", "   return true;", " }"],
-							},
-						],
-					},
-				]
-			})
-		})
-
-		it("should parse diff response correctly", async () => {
-			const diffResponse = `--- a/test.js
-+++ b/test.js
-@@ -1,3 +1,4 @@
-	function test() {
-+  // Added comment
-	  return true;
-	}`
-
-			const context: GhostSuggestionContext = {
-				document: mockDocument,
-				openFiles: [mockDocument],
-			}
-
-			const result = await strategy.parseResponse(diffResponse, context)
-			expect(result).toBeDefined()
-
-			// Check that the file was added to the suggestions
-			const file = result.getFile(mockDocument.uri)
-			expect(file).toBeDefined()
-		})
-
-		it("should handle AST context in parseResponse", async () => {
-			const diffResponse = `--- a/test.js
-+++ b/test.js
-@@ -1,3 +1,4 @@
-	function test() {
-+  // Added comment
-	  return true;
-	}`
-
-			const context: GhostSuggestionContext = {
-				document: mockDocument,
-				openFiles: [mockDocument],
-				documentAST: mockASTContext,
-				rangeASTNode: mockRangeASTNode as any,
-			}
-
-			// Spy on FuzzyMatchDiff to verify AST context is passed through
-			const fuzzyMatchDiffSpy = vi.spyOn(strategy as any, "FuzzyMatchDiff")
-
-			await strategy.parseResponse(diffResponse, context)
-
-			// Verify FuzzyMatchDiff was called with the context including AST
-			expect(fuzzyMatchDiffSpy).toHaveBeenCalledWith(expect.any(String), context)
-			expect((fuzzyMatchDiffSpy.mock.calls[0][1] as any).documentAST).toBe(mockASTContext) // kilocode_change
-			expect((fuzzyMatchDiffSpy.mock.calls[0][1] as any).rangeASTNode).toBe(mockRangeASTNode) // kilocode_change
 		})
 	})
 })

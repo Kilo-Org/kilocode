@@ -36,4 +36,5 @@ export interface GhostSuggestionContext {
 	range?: vscode.Range | vscode.Selection
 	rangeASTNode?: Node
 	userInput?: string
+	recentOperations?: string // Stores the diff of the last 10 operations
 }
