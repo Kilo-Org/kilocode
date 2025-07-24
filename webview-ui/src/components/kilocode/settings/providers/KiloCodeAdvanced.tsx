@@ -39,13 +39,10 @@ export const KiloCodeAdvanced = ({
 			return
 		}
 		if (
-			openRouterModelProviders === undefined &&
-			apiConfiguration?.openRouterSpecificProvider !== OPENROUTER_DEFAULT_PROVIDER_NAME
+			(openRouterModelProviders === undefined &&
+				apiConfiguration?.openRouterSpecificProvider !== OPENROUTER_DEFAULT_PROVIDER_NAME) ||
+			!Object.keys(openRouterModelProviders || {}).includes(apiConfiguration?.openRouterSpecificProvider)
 		) {
-			setApiConfigurationField("openRouterSpecificProvider", OPENROUTER_DEFAULT_PROVIDER_NAME)
-			return
-		}
-		if (!Object.keys(openRouterModelProviders || {}).includes(apiConfiguration?.openRouterSpecificProvider)) {
 			setApiConfigurationField("openRouterSpecificProvider", OPENROUTER_DEFAULT_PROVIDER_NAME)
 			return
 		}
