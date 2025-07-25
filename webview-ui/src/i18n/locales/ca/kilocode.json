@@ -155,5 +155,27 @@
 			"triggers": "Activadors",
 			"keybindingDescription": "Les funcions d'Assistència en línia es desencadenen mitjançant ordres. Podeu configurar les <DocsLink>dreceres de teclat aquí</DocsLink>."
 		}
+	},
+	"virtualProvider": {
+		"title": "Configuració del Proveïdor de Reserva per a Quota Virtual",
+		"description": "Configureu una llista de perfils, cadascun amb els seus propis límits de quota. Quan s'assoleixen els límits de quota d'un proveïdor, s'utilitzarà el següent perfil de la llista fins que no en quedi cap.",
+		"profileLabel": "Perfil {{number}}",
+		"primaryProfileLabel": "Perfil {{number}} (Principal)",
+		"moveProfileUp": "Moure perfil cap amunt",
+		"moveProfileDown": "Mou el perfil cap avall",
+		"removeProfile": "Eliminar perfil",
+		"selectProfilePlaceholder": "Selecciona el perfil...",
+		"addProfile": "Afegir perfil",
+		"noProfilesAvailable": "No hi ha perfils de perfil disponibles. Si us plau, configureu primer almenys un perfil de proveïdor no virtual.",
+		"dangerZoneTitle": "Zona de Perill",
+		"dangerZoneDescription": "Aquestes accions són destructives i no es poden desfer.",
+		"clearUsageData": "Esborrar Dades d'Ús",
+		"confirmClearTitle": "Estàs segur?",
+		"confirmClearDescription": "Això eliminarà permanentment totes les dades d'ús emmagatzemades per als proveïdors virtuals. Aquesta acció no es pot desfer.",
+		"perMinute": "Per Minut",
+		"perDay": "Per dia",
+		"perHour": "Per hora",
+		"requestsLabel": "Sol·licituds",
+		"tokensLabel": "Tokens"
 	}
 }

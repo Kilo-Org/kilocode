@@ -14,6 +14,18 @@ import { DIFF_VIEW_URI_SCHEME } from "../../integrations/editor/DiffViewProvider
 
 import { CheckpointServiceOptions, RepoPerTaskCheckpointService } from "../../services/checkpoints"
 
+// kilocode_change start
+import { TelemetryEventName } from "@roo-code/types"
+import { stringifyError } from "../../shared/kilocode/errorUtils"
+
+function reportError(callsite: string, error: unknown) {
+	TelemetryService.instance.captureEvent(TelemetryEventName.CHECKPOINT_FAILURE, {
+		callsite,
+		error: stringifyError(error),
+	})
+}
+// kilocode_change start
+
 export function getCheckpointService(cline: Task) {
 	if (!cline.enableCheckpoints) {
 		return undefined
@@ -87,6 +99,7 @@ export function getCheckpointService(cline: Task) {
 			} catch (err) {
 				log("[Task#getCheckpointService] caught error in on('initialize'), disabling checkpoints")
 				cline.enableCheckpoints = false
+				reportError("getCheckpointService:on('initialize')", err) // kilocode_change
 			}
 		})
 
@@ -101,11 +114,13 @@ export function getCheckpointService(cline: Task) {
 					.catch((err) => {
 						log("[Task#getCheckpointService] caught unexpected error in say('checkpoint_saved')")
 						console.error(err)
+						reportError("getCheckpointService:say('checkpoint_saved')", err) // kilocode_change
 					})
 			} catch (err) {
 				log("[Task#getCheckpointService] caught unexpected error in on('checkpoint'), disabling checkpoints")
 				console.error(err)
 				cline.enableCheckpoints = false
+				reportError("getCheckpointService:on('checkpoint')", err) // kilocode_change
 			}
 		})
 
@@ -114,12 +129,14 @@ export function getCheckpointService(cline: Task) {
 		service.initShadowGit().catch((err) => {
 			log(`[Task#getCheckpointService] initShadowGit -> ${err.message}`)
 			cline.enableCheckpoints = false
+			reportError("getCheckpointService:initShadowGit", err) // kilocode_change
 		})
 
 		return service
 	} catch (err) {
 		log(`[Task#getCheckpointService] ${err.message}`)
 		cline.enableCheckpoints = false
+		reportError("getCheckpointService", err) // kilocode_change
 		return undefined
 	}
 }
@@ -145,6 +162,7 @@ async function getInitializedCheckpointService(
 
 		return service
 	} catch (err) {
+		reportError("getInitializedCheckpointService", err) // kilocode_change
 		return undefined
 	}
 }
@@ -169,6 +187,7 @@ export async function checkpointSave(cline: Task, force = false) {
 	return service.saveCheckpoint(`Task: ${cline.taskId}, Time: ${Date.now()}`, { allowEmpty: force }).catch((err) => {
 		console.error("[Task#checkpointSave] caught unexpected error, disabling checkpoints", err)
 		cline.enableCheckpoints = false
+		reportError("checkpointSave", err) // kilocode_change
 	})
 }
 
@@ -236,6 +255,7 @@ export async function checkpointRestore(cline: Task, { ts, commitHash, mode }: C
 	} catch (err) {
 		provider?.log("[checkpointRestore] disabling checkpoints for this task")
 		cline.enableCheckpoints = false
+		reportError("checkpointRestore", err) // kilocode_change
 	}
 }
 
@@ -289,5 +309,6 @@ export async function checkpointDiff(cline: Task, { ts, previousCommitHash, comm
 		const provider = cline.providerRef.deref()
 		provider?.log("[checkpointDiff] disabling checkpoints for this task")
 		cline.enableCheckpoints = false
+		reportError("checkpointDiff", err) // kilocode_change
 	}
 }

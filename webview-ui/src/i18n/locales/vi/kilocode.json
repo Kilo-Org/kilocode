@@ -155,5 +155,27 @@
 			"triggers": "Các yếu tố kích hoạt",
 			"keybindingDescription": "Các tính năng Trợ giúp Nội tuyến được kích hoạt bằng các lệnh. Bạn có thể cấu hình <DocsLink>phím tắt tại đây</DocsLink>."
 		}
+	},
+	"virtualProvider": {
+		"title": "Cài đặt Nhà Cung Cấp Dự Phòng Hạn Ngạch Ảo",
+		"description": "Định cấu hình danh sách các hồ sơ, mỗi hồ sơ có giới hạn hạn ngạch riêng. Khi một nhà cung cấp đạt đến giới hạn hạn ngạch, hồ sơ tiếp theo trong danh sách sẽ được sử dụng cho đến khi không còn hồ sơ nào.",
+		"profileLabel": "Hồ sơ {{number}}",
+		"primaryProfileLabel": "Hồ sơ {{number}} (Chính)",
+		"moveProfileUp": "Di chuyển hồ sơ lên trên",
+		"moveProfileDown": "Di chuyển hồ sơ xuống",
+		"removeProfile": "Xóa hồ sơ",
+		"selectProfilePlaceholder": "Chọn hồ sơ...",
+		"addProfile": "Thêm hồ sơ",
+		"noProfilesAvailable": "Không có hồ sơ cá nhân nào khả dụng. Vui lòng cấu hình ít nhất một hồ sơ nhà cung cấp không ảo trước.",
+		"dangerZoneTitle": "Vùng Nguy hiểm",
+		"dangerZoneDescription": "Những hành động này có tính phá hoại và không thể hoàn tác.",
+		"clearUsageData": "Xóa Dữ liệu Sử dụng",
+		"confirmClearTitle": "Bạn có chắc chắn?",
+		"confirmClearDescription": "Điều này sẽ xóa vĩnh viễn tất cả dữ liệu sử dụng đã lưu trữ cho các nhà cung cấp ảo. Hành động này không thể hoàn tác.",
+		"tokensLabel": "Token",
+		"perDay": "Mỗi Ngày",
+		"perMinute": "Mỗi Phút",
+		"perHour": "Một Giờ",
+		"requestsLabel": "Yêu cầu"
 	}
 }

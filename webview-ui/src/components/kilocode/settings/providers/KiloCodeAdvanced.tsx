@@ -7,6 +7,7 @@ import {
 	OPENROUTER_DEFAULT_PROVIDER_NAME,
 } from "@src/components/ui/hooks/useOpenRouterModelProviders"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@src/components/ui"
+import { useEffect } from "react"
 
 type KiloCodeAdvancedProps = {
 	apiConfiguration: ProviderSettings
@@ -32,6 +33,20 @@ export const KiloCodeAdvanced = ({
 				apiConfiguration.kilocodeModel in routerModels.openrouter,
 		},
 	)
+
+	useEffect(() => {
+		if (apiConfiguration?.openRouterSpecificProvider === undefined) {
+			return
+		}
+		if (
+			(openRouterModelProviders === undefined &&
+				apiConfiguration?.openRouterSpecificProvider !== OPENROUTER_DEFAULT_PROVIDER_NAME) ||
+			!Object.keys(openRouterModelProviders || {}).includes(apiConfiguration?.openRouterSpecificProvider)
+		) {
+			setApiConfigurationField("openRouterSpecificProvider", OPENROUTER_DEFAULT_PROVIDER_NAME)
+			return
+		}
+	}, [setApiConfigurationField, openRouterModelProviders, apiConfiguration?.openRouterSpecificProvider])
 
 	return (
 		<>

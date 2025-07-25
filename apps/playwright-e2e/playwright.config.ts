@@ -17,21 +17,17 @@ export default defineConfig<void, TestOptions>({
 	expect: { timeout: 30_000 },
 	reporter: process.env.CI ? "html" : "list",
 	workers: process.env.CI ? 2 : 1,
-	retries: process.env.CI ? 3 : 1, // Retry in CI, 1 time locally
+	retries: process.env.CI ? 2 : 0, // Retry in CI, never locally
 	globalSetup: "./playwright.globalSetup",
 	testDir: "./tests",
 	testIgnore: "**/helpers/__tests__/**",
 	outputDir: "./test-results",
 	projects: [
 		// { name: "VSCode insiders", use: { vscodeVersion: "insiders" } },
-		{
-			name: "VSCode stable",
-			use: { vscodeVersion: "stable" },
-		},
+		{ name: "VSCode stable", use: { vscodeVersion: "stable" } },
 	],
 	use: {
 		trace: "on-first-retry",
-		screenshot: "on", // Capture screenshots for all tests
-		video: "retry-with-video", // Record videos for retries
+		video: "retry-with-video", // videos only on retries
 	},
 })

@@ -155,5 +155,27 @@
 			"triggers": "Tetikleyiciler",
 			"keybindingDescription": "Satır içi Yardım özellikleri komutlarla tetiklenir. <DocsLink>Klavye kısayollarını buradan</DocsLink> yapılandırabilirsiniz."
 		}
+	},
+	"virtualProvider": {
+		"title": "Sanal Kota Yedek Sağlayıcı Ayarları",
+		"description": "Her biri kendi kota limitlerine sahip profil listesi yapılandırın. Bir sağlayıcının kota limitlerine ulaşıldığında, hiçbiri kalmayana kadar listedeki bir sonraki profil kullanılacaktır.",
+		"profileLabel": "Profil {{number}}",
+		"primaryProfileLabel": "Profil {{number}} (Birincil)",
+		"moveProfileUp": "Profili yukarı taşı",
+		"moveProfileDown": "Profili aşağı taşı",
+		"removeProfile": "Profili kaldır",
+		"selectProfilePlaceholder": "Profil seç...",
+		"addProfile": "Profil ekle",
+		"noProfilesAvailable": "Kullanılabilir profil yok. Lütfen önce en az bir sanal olmayan sağlayıcı profilini yapılandırın.",
+		"dangerZoneTitle": "Tehlike Bölgesi",
+		"dangerZoneDescription": "Bu eylemler yıkıcıdır ve geri alınamaz.",
+		"clearUsageData": "Kullanım Verilerini Temizle",
+		"confirmClearTitle": "Emin misiniz?",
+		"confirmClearDescription": "Bu, sanal sağlayıcılar için depolanan tüm kullanım verilerini kalıcı olarak silecektir. Bu eylem geri alınamaz.",
+		"perDay": "Günlük",
+		"tokensLabel": "Jetonlar",
+		"perHour": "Saat Başına",
+		"perMinute": "Dakika Başına",
+		"requestsLabel": "İstekler"
 	}
 }

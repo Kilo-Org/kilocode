@@ -155,5 +155,27 @@
 			"triggers": "触发器",
 			"keybindingDescription": "Inline Assist 功能通过命令触发。您可以在<DocsLink>此处配置键盘快捷键</DocsLink>。"
 		}
+	},
+	"virtualProvider": {
+		"title": "虚拟配额回退提供方设置",
+		"description": "配置一个配置文件列表，每个配置文件都有自己的配额限制。当一个提供商的配额限制达到时，将使用列表中的下一个配置文件，直到没有剩余配置文件为止。",
+		"profileLabel": "档案 {{number}}",
+		"primaryProfileLabel": "个人资料 {{number}} (主要)",
+		"moveProfileUp": "将个人资料上移",
+		"moveProfileDown": "下移档案",
+		"removeProfile": "移除个人资料",
+		"selectProfilePlaceholder": "选择个人资料...",
+		"addProfile": "添加资料",
+		"noProfilesAvailable": "没有可用的配置文件。请先配置至少一个非虚拟提供商配置文件。",
+		"dangerZoneTitle": "危險區域",
+		"dangerZoneDescription": "這些操作具有破壞性且無法復原。",
+		"clearUsageData": "清除使用資料",
+		"confirmClearTitle": "確定嗎？",
+		"confirmClearDescription": "這將永久刪除虛擬提供者的所有儲存使用資料。此操作無法復原。",
+		"perMinute": "每分钟",
+		"tokensLabel": "代币",
+		"perDay": "每天",
+		"perHour": "每小时",
+		"requestsLabel": "请求"
 	}
 }

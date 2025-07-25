@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import { SelectDropdown, DropdownOptionType } from "@/components/ui"
-import type { ProviderSettings } from "@roo-code/types"
+import { OPENROUTER_DEFAULT_PROVIDER_NAME, type ProviderSettings } from "@roo-code/types"
 import { vscode } from "@src/utils/vscode"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { cn } from "@src/lib/utils"
@@ -48,6 +48,7 @@ export const ModelSelector = ({ currentApiConfigName, apiConfiguration, fallback
 			apiConfiguration: {
 				...apiConfiguration,
 				[modelIdKey]: value,
+				openRouterSpecificProvider: OPENROUTER_DEFAULT_PROVIDER_NAME,
 			},
 		})
 	}

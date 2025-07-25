@@ -59,5 +59,6 @@ export const PROVIDERS = [
 	{ value: "groq", label: "Groq" },
 	{ value: "chutes", label: "Chutes AI" },
 	{ value: "cerebras", label: "Cerebras" }, // kilocode_change
+	{ value: "virtual-quota-fallback", label: "Virtual Quota Fallback" }, // kilocode_change
 	{ value: "litellm", label: "LiteLLM" },
 ] // .sort((a, b) => a.label.localeCompare(b.label)) // kilocode_change: Sort providers with kilocode first

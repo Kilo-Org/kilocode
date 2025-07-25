@@ -5,6 +5,7 @@ import * as path from "path"
 import * as os from "os"
 import * as fs from "fs"
 import { fileURLToPath } from "url"
+import { camelCase } from "change-case"
 import { setupConsoleLogging, cleanLogMessage } from "../helpers/console-logging"
 
 // ES module equivalent of __dirname
@@ -19,6 +20,7 @@ export type TestFixtures = TestOptions & {
 	workbox: Page
 	createProject: () => Promise<string>
 	createTempDir: () => Promise<string>
+	takeScreenshot: (name?: string) => Promise<void>
 }
 
 export const test = base.extend<TestFixtures>({
@@ -136,9 +138,29 @@ export const test = base.extend<TestFixtures>({
 	// eslint-disable-next-line no-empty-pattern
 	createTempDir: async ({}, use) => {
 		const tempDirs: string[] = []
+		let counter = 0
+
 		await use(async () => {
-			const tempDirPath = await fs.promises.mkdtemp(path.join(os.tmpdir(), "e2e-test-"))
+			const testInfo = test.info()
+			const fileName = testInfo.file.split("/").pop()?.replace(".test.ts", "") || "unknown"
+			const sanitizedTestName = camelCase(testInfo.title)
+
+			const dirName = `e2e-${fileName}-${sanitizedTestName}-${counter++}`
+			const tempDirPath = path.join(os.tmpdir(), dirName)
+
+			// Clean up any existing directory first
+			try {
+				await fs.promises.rm(tempDirPath, { recursive: true })
+			} catch (_error) {
+				// Directory might not exist, which is fine
+			}
+
+			// Create the directory
+			await fs.promises.mkdir(tempDirPath, { recursive: true })
+
+			// Get the real path after directory exists
 			const tempDir = await fs.promises.realpath(tempDirPath)
+
 			tempDirs.push(tempDir)
 			return tempDir
 		})
@@ -150,5 +172,26 @@ export const test = base.extend<TestFixtures>({
 				console.warn(`Failed to cleanup temp dir ${tempDir}:`, error)
 			}
 		}
+	},
+
+	takeScreenshot: async ({ workbox }, use) => {
+		await use(async (name?: string) => {
+			const testInfo = test.info()
+			// Extract test suite from the test file name or use a default
+			const fileName = testInfo.file.split("/").pop()?.replace(".test.ts", "") || "unknown"
+			const testSuite = camelCase(fileName)
+			const testName = testInfo.title || "Unknown Test"
+
+			// Create a hierarchical name: TestSuite__TestName__ScreenshotName
+			const screenshotName = name || `screenshot-${Date.now()}`
+			const hierarchicalName = `${testSuite}__${testName}__${screenshotName}`
+				.replace(/[^a-zA-Z0-9_-]/g, "-") // Replace special chars with dashes, keep underscores
+				.replace(/-+/g, "-") // Replace multiple dashes with single dash
+				.replace(/^-|-$/g, "") // Remove leading/trailing dashes
+
+			const screenshotPath = test.info().outputPath(`${hierarchicalName}.png`)
+			await workbox.screenshot({ path: screenshotPath, fullPage: true })
+			console.log(`📸 Screenshot captured: ${hierarchicalName}`)
+		})
 	},
 })

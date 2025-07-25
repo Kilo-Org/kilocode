@@ -1,5 +1,6 @@
 import * as React from "react"
 import { telemetryClient } from "../utils/TelemetryClient"
+import { stringifyError } from "@roo/kilocode/errorUtils"
 
 type Props = {
 	children: React.ReactNode
@@ -17,7 +18,7 @@ export class KiloCodeErrorBoundary extends React.Component<Props, State> {
 
 	static getDerivedStateFromError(error: unknown) {
 		return {
-			error: error instanceof Error ? (error.stack ?? error.message) : `${error}`,
+			error: stringifyError(error),
 		}
 	}
 

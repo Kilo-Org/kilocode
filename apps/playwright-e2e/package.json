@@ -13,9 +13,9 @@
 	},
 	"devDependencies": {
 		"@playwright/test": "^1.53.1",
-		"@roo-code/types": "workspace:^",
 		"@roo-code/config-eslint": "workspace:^",
 		"@roo-code/config-typescript": "workspace:^",
+		"@roo-code/types": "workspace:^",
 		"@types/node": "^22.15.29",
 		"@vscode/test-electron": "^2.4.0",
 		"dotenv": "^16.4.5",
@@ -24,6 +24,7 @@
 	},
 	"dependencies": {
 		"chalk": "^5.4.1",
+		"change-case": "^5.4.4",
 		"fs-extra": "^11.2.0",
 		"signale": "^1.4.0"
 	}

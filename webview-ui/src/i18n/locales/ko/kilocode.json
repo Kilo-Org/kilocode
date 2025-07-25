@@ -155,5 +155,27 @@
 			"triggers": "트리거",
 			"keybindingDescription": "인라인 어시스트 기능은 명령어로 트리거됩니다. <DocsLink>여기에서 키보드 단축키를 구성</DocsLink>할 수 있습니다."
 		}
+	},
+	"virtualProvider": {
+		"title": "가상 할당량 대체 공급자 설정",
+		"description": "각각 고유한 할당량 제한이 있는 프로필 목록을 구성하세요. 한 제공자의 할당량 제한에 도달하면 남은 프로필이 없을 때까지 목록의 다음 프로필이 사용됩니다.",
+		"profileLabel": "프로필 {{number}}",
+		"primaryProfileLabel": "프로필 {{number}} (주요)",
+		"moveProfileUp": "프로필 위로 이동",
+		"moveProfileDown": "프로필을 아래로 이동",
+		"removeProfile": "프로필 삭제",
+		"selectProfilePlaceholder": "프로필 선택...",
+		"addProfile": "프로필 추가",
+		"noProfilesAvailable": "사용 가능한 프로필이 없습니다. 먼저 하나 이상의 비가상 공급자 프로필을 구성하십시오.",
+		"dangerZoneTitle": "위험 구역",
+		"dangerZoneDescription": "이러한 작업은 파괴적이며 되돌릴 수 없습니다.",
+		"clearUsageData": "사용 데이터 지우기",
+		"confirmClearTitle": "정말 확실합니까?",
+		"confirmClearDescription": "가상 공급자에 대해 저장된 모든 사용 데이터가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.",
+		"tokensLabel": "토큰",
+		"perHour": "시간당",
+		"perDay": "일일당",
+		"requestsLabel": "요청",
+		"perMinute": "분당"
 	}
 }

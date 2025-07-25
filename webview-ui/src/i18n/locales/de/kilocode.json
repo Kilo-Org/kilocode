@@ -155,5 +155,27 @@
 			"triggers": "Auslöser",
 			"keybindingDescription": "Inline-Assistenzfunktionen werden durch Befehle ausgelöst. Sie können die <DocsLink>Tastaturkürzel hier konfigurieren</DocsLink>."
 		}
+	},
+	"virtualProvider": {
+		"title": "Virtuelle Kontingent-Fallback-Anbieter-Einstellungen",
+		"description": "Konfigurieren Sie eine Liste von Profilen, jedes mit eigenen Kontingentbeschränkungen. Wenn die Kontingentbeschränkungen eines Anbieters erreicht sind, wird das nächste Profil in der Liste verwendet, bis keines mehr übrig ist.",
+		"profileLabel": "Profil {{number}}",
+		"primaryProfileLabel": "Profil {{number}} (Primär)",
+		"moveProfileUp": "Profil nach oben verschieben",
+		"moveProfileDown": "Profil nach unten verschieben",
+		"removeProfile": "Profil entfernen",
+		"selectProfilePlaceholder": "Profil auswählen...",
+		"addProfile": "Profil hinzufügen",
+		"noProfilesAvailable": "Keine Profileprofile verfügbar. Bitte konfigurieren Sie zuerst mindestens ein nicht-virtuelles Anbieterprofil.",
+		"dangerZoneTitle": "Gefahrenbereich",
+		"dangerZoneDescription": "Diese Aktionen sind destruktiv und können nicht rückgängig gemacht werden.",
+		"clearUsageData": "Nutzungsdaten löschen",
+		"confirmClearTitle": "Bist du sicher?",
+		"confirmClearDescription": "Dies wird alle gespeicherten Nutzungsdaten für virtuelle Anbieter dauerhaft löschen. Diese Aktion kann nicht rückgängig gemacht werden.",
+		"tokensLabel": "Token",
+		"perHour": "Pro Stunde",
+		"perMinute": "Pro Minute",
+		"requestsLabel": "Anfragen",
+		"perDay": "Pro Tag"
 	}
 }

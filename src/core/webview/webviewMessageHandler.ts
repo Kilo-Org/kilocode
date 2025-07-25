@@ -60,6 +60,7 @@ const ALLOWED_VSCODE_SETTINGS = new Set(["terminal.integrated.inheritEnv"])
 
 import { MarketplaceManager, MarketplaceItemType } from "../../services/marketplace"
 import { setPendingTodoList } from "../tools/updateTodoListTool"
+import { UsageTracker } from "../../utils/usage-tracker"
 
 export const webviewMessageHandler = async (
 	provider: ClineProvider,
@@ -2375,12 +2376,26 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
-		// kilocode_change start
+		// kilocode_change start - add clearUsageData
+		case "clearUsageData": {
+			try {
+				const usageTracker = UsageTracker.getInstance()
+				await usageTracker.clearAllUsageData()
+				vscode.window.showInformationMessage("Usage data has been successfully cleared.")
+			} catch (error) {
+				const errorMessage = error instanceof Error ? error.message : String(error)
+				provider.log(`Error clearing usage data: ${errorMessage}`)
+				vscode.window.showErrorMessage(`Failed to clear usage data: ${errorMessage}`)
+			}
+			break
+		}
+		// kilocode_change start - add toggleTaskFavorite
 		case "toggleTaskFavorite":
 			if (message.text) {
 				await provider.toggleTaskFavorite(message.text)
 			}
 			break
+		// kilocode_change start - add fixMermaidSyntax
 		case "fixMermaidSyntax":
 			if (message.text && message.requestId) {
 				try {

@@ -155,5 +155,27 @@
 			"triggers": "Wyzwalacze",
 			"keybindingDescription": "Funkcje Inline Assist są uruchamiane za pomocą poleceń. Możesz skonfigurować <DocsLink>skróty klawiaturowe tutaj</DocsLink>."
 		}
+	},
+	"virtualProvider": {
+		"title": "Ustawienia Wirtualnego Dostawcy Zapasowego Limitu",
+		"description": "Skonfiguruj listę profili, każdy z własnymi limitami przydziału. Gdy limity przydziału jednego dostawcy zostaną wyczerpane, użyty zostanie następny profil z listy, aż do wyczerpania wszystkich dostępnych.",
+		"profileLabel": "Profil {{number}}",
+		"primaryProfileLabel": "Profil {{number}} (Podstawowy)",
+		"moveProfileUp": "Przesuń profil do góry",
+		"moveProfileDown": "Przenieś profil w dół",
+		"removeProfile": "Usuń profil",
+		"selectProfilePlaceholder": "Wybierz profil...",
+		"addProfile": "Dodaj profil",
+		"noProfilesAvailable": "Brak dostępnych profili. Skonfiguruj najpierw co najmniej jeden profil dostawcy niewirtualnego.",
+		"dangerZoneTitle": "Strefa Niebezpieczna",
+		"dangerZoneDescription": "Te działania są destrukcyjne i nie można ich cofnąć.",
+		"clearUsageData": "Wyczyść Dane Użytkowania",
+		"confirmClearTitle": "Czy jesteś pewien?",
+		"confirmClearDescription": "To trwale usunie wszystkie przechowywane dane użytkowania dla wirtualnych dostawców. Tej akcji nie można cofnąć.",
+		"perMinute": "Na minutę",
+		"tokensLabel": "Tokeny",
+		"perDay": "Dziennie",
+		"perHour": "Za godzinę",
+		"requestsLabel": "Prośby"
 	}
 }

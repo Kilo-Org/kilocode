@@ -155,5 +155,27 @@
 			"triggers": "Spouštěče",
 			"keybindingDescription": "Funkce Inline Assist jsou spouštěny příkazy. <DocsLink>Klávesové zkratky si můžete nakonfigurovat zde</DocsLink>."
 		}
+	},
+	"virtualProvider": {
+		"title": "Nastavení poskytovatele virtuálního kvótového záložního řešení",
+		"description": "Nakonfigurujte seznam profilů, každý s vlastními kvótovými limity. Když jsou dosaženy kvótové limity jednoho poskytovatele, bude použit další profil v seznamu, dokud žádný nezbývá.",
+		"profileLabel": "Profil {{number}}",
+		"primaryProfileLabel": "Profil {{number}} (Primární)",
+		"moveProfileUp": "Posunout profil nahoru",
+		"moveProfileDown": "Posunout profil dolů",
+		"removeProfile": "Odstranit profil",
+		"selectProfilePlaceholder": "Vybrat profil...",
+		"addProfile": "Přidat profil",
+		"noProfilesAvailable": "Žádné profily nejsou k dispozici. Nejprve prosím nakonfigurujte alespoň jeden nevirtualní profil poskytovatele.",
+		"dangerZoneTitle": "Nebezpečná zóna",
+		"dangerZoneDescription": "Tyto akce jsou destruktivní a nelze je vrátit zpět.",
+		"clearUsageData": "Vymazat data o využití",
+		"confirmClearTitle": "Jsi si jistý?",
+		"confirmClearDescription": "Toto trvale smaže všechna uložená data o využití pro virtuální poskytovatele. Tuto akci nelze vrátit zpět.",
+		"tokensLabel": "Tokeny",
+		"perMinute": "Za minutu",
+		"perHour": "Za hodinu",
+		"requestsLabel": "Požadavky",
+		"perDay": "Za den"
 	}
 }

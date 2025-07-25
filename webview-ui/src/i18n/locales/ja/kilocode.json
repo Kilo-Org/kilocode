@@ -155,5 +155,27 @@
 			"triggers": "トリガー",
 			"keybindingDescription": "インラインアシスト機能はコマンドによって起動されます。<DocsLink>キーボードショートカットはこちら</DocsLink>で設定できます。"
 		}
+	},
+	"virtualProvider": {
+		"title": "仮想クォータフォールバックプロバイダー設定",
+		"description": "それぞれ独自のクォータ制限を持つプロファイルのリストを構成します。あるプロバイダーのクォータ制限に達すると、残りがなくなるまでリスト内の次のプロファイルが使用されます。",
+		"profileLabel": "プロフィール {{number}}",
+		"primaryProfileLabel": "プロフィール {{number}} (プライマリ)",
+		"moveProfileUp": "プロフィールを上に移動",
+		"moveProfileDown": "プロフィールを下に移動",
+		"removeProfile": "プロフィールを削除",
+		"selectProfilePlaceholder": "プロフィールを選択...",
+		"addProfile": "プロフィールを追加",
+		"noProfilesAvailable": "利用可能なプロファイルがありません。まず、少なくとも1つの非仮想プロバイダープロファイルを構成してください。",
+		"dangerZoneTitle": "危険ゾーン",
+		"dangerZoneDescription": "これらのアクションは破壊的で、元に戻すことはできません。",
+		"clearUsageData": "使用データをクリア",
+		"confirmClearTitle": "本当によろしいですか？",
+		"confirmClearDescription": "これにより、仮想プロバイダーの保存された使用データがすべて永続的に削除されます。この操作は元に戻すことができません。",
+		"tokensLabel": "トークン",
+		"perMinute": "毎分",
+		"requestsLabel": "リクエスト",
+		"perDay": "1日あたり",
+		"perHour": "1時間あたり"
 	}
 }

@@ -1,11 +1,21 @@
 // kilocode_change - new file
 import { test, type TestFixtures } from "./playwright-base-test"
-import { setupTestEnvironment, sendMessage, waitForWebviewText } from "../helpers"
+import { sendMessage, waitForWebviewText, verifyExtensionInstalled, configureApiKeyThroughUI } from "../helpers"
 
 test.describe("E2E Chat Test", () => {
-	test("should configure credentials and send a message", async ({ workbox: page }: TestFixtures) => {
-		await setupTestEnvironment(page)
-		await sendMessage(page, "Output only the result of '1+1'")
-		await waitForWebviewText(page, "2", 30_000)
+	test("should configure credentials and send a message", async ({ workbox: page, takeScreenshot }: TestFixtures) => {
+		await verifyExtensionInstalled(page)
+		await waitForWebviewText(page, "Welcome to Kilo Code!")
+		await takeScreenshot("welcome")
+
+		await configureApiKeyThroughUI(page)
+		await waitForWebviewText(page, "Generate, refactor, and debug code with AI assistance")
+		await takeScreenshot("ready-to-chat")
+
+		await sendMessage(page, "Fill in the blanks for this phrase: 'hello w_r_d'")
+
+		// Don't take any more screenshots after the reponse starts-
+		// llm responses aren't deterministic any capturing the reponse would cause screenshot flakes
+		await waitForWebviewText(page, "hello world", 30_000)
 	})
 })

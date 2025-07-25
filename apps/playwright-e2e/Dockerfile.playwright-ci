@@ -5,7 +5,10 @@
 FROM mcr.microsoft.com/playwright:v1.53.1-noble
 
 # Install system dependencies (rarely changes - good for caching)
-RUN apt-get update && apt-get install -y \
+# Use BuildKit cache mounts for faster APT operations
+RUN --mount=type=cache,id=apt-cache,target=/var/cache/apt \
+    --mount=type=cache,id=apt-lists,target=/var/lib/apt/lists \
+    apt-get update && apt-get install -y \
     # VSCode dependencies
     libasound2t64 \
     libatk-bridge2.0-0 \
@@ -29,9 +32,7 @@ RUN apt-get update && apt-get install -y \
     # VS Code secrets API support in Docker
     gnome-keyring \
     libsecret-1-0 \
-    libsecret-1-dev \
-    # Clean up
-    && rm -rf /var/lib/apt/lists/*
+    libsecret-1-dev
 
 # Install pnpm globally (rarely changes - good for caching)
 RUN npm install -g pnpm@10.8.1
@@ -47,9 +48,8 @@ ENV NODE_ENV=production \
 # Create workspace directory
 WORKDIR /workspace
 
-# Copy entrypoint script (changes occasionally - separate layer for better caching)
-COPY apps/playwright-e2e/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+# Copy entrypoint script with execute permissions
+COPY --chmod=755 apps/playwright-e2e/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
 # Set entrypoint
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

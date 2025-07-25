@@ -155,5 +155,27 @@
 			"triggers": "Trigger",
 			"keybindingDescription": "Le funzionalità di Inline Assist sono attivate da comandi. Puoi configurare le <DocsLink>scorciatoie da tastiera qui</DocsLink>."
 		}
+	},
+	"virtualProvider": {
+		"title": "Impostazioni Provider di Fallback per Quote Virtuali",
+		"description": "Configura un elenco di profili, ciascuno con i propri limiti di quota. Quando vengono raggiunti i limiti di quota di un provider, verrà utilizzato il profilo successivo nell'elenco fino a quando non ne rimangono più.",
+		"profileLabel": "Profilo {{number}}",
+		"primaryProfileLabel": "Profilo {{number}} (Principale)",
+		"moveProfileUp": "Sposta il profilo in alto",
+		"moveProfileDown": "Sposta il profilo in basso",
+		"removeProfile": "Rimuovi profilo",
+		"selectProfilePlaceholder": "Seleziona profilo...",
+		"addProfile": "Aggiungi profilo",
+		"noProfilesAvailable": "Nessun profilo disponibile. Si prega di configurare prima almeno un profilo di provider non virtuale.",
+		"dangerZoneTitle": "Zona di Pericolo",
+		"dangerZoneDescription": "Queste azioni sono distruttive e non possono essere annullate.",
+		"clearUsageData": "Cancella Dati di Utilizzo",
+		"confirmClearTitle": "Sei sicuro?",
+		"confirmClearDescription": "Questo eliminerà permanentemente tutti i dati di utilizzo memorizzati per i provider virtuali. Questa azione non può essere annullata.",
+		"perMinute": "Al Minuto",
+		"tokensLabel": "Token",
+		"perHour": "All'ora",
+		"perDay": "Al Giorno",
+		"requestsLabel": "Richieste"
 	}
 }

@@ -155,5 +155,27 @@
 			"triggers": "Triggers",
 			"keybindingDescription": "Functies binnen Inline Assist worden geactiveerd door commando's. Je kunt de <DocsLink>sneltoetsen hier configureren</DocsLink>."
 		}
+	},
+	"virtualProvider": {
+		"title": "Virtuele Quota Fallback Provider Instellingen",
+		"description": "Configureer een lijst met profielen, elk met hun eigen quotalimieten. Wanneer de quotalimieten van één provider bereikt zijn, wordt het volgende profiel in de lijst gebruikt totdat er geen meer over zijn.",
+		"profileLabel": "Profiel {{number}}",
+		"primaryProfileLabel": "Profiel {{number}} (Primair)",
+		"moveProfileUp": "Profiel naar boven verplaatsen",
+		"moveProfileDown": "Profiel naar beneden verplaatsen",
+		"removeProfile": "Profiel verwijderen",
+		"selectProfilePlaceholder": "Selecteer profiel...",
+		"addProfile": "Profiel toevoegen",
+		"noProfilesAvailable": "Geen profielprofielen beschikbaar. Configureer eerst ten minste één niet-virtueel providerprofiel.",
+		"dangerZoneTitle": "Gevaarzone",
+		"dangerZoneDescription": "Deze acties zijn destructief en kunnen niet ongedaan worden gemaakt.",
+		"clearUsageData": "Gebruiksgegevens Wissen",
+		"confirmClearTitle": "Weet je het zeker?",
+		"confirmClearDescription": "Dit zal permanent alle opgeslagen gebruiksgegevens voor virtuele providers verwijderen. Deze actie kan niet ongedaan worden gemaakt.",
+		"tokensLabel": "Tokens",
+		"perMinute": "Per Minuut",
+		"perHour": "Per Uur",
+		"perDay": "Per dag",
+		"requestsLabel": "Verzoeken"
 	}
 }

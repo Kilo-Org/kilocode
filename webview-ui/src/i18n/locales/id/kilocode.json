@@ -155,5 +155,27 @@
 			"triggers": "Pemicu",
 			"keybindingDescription": "Fitur Bantuan Inline dipicu oleh perintah. Anda dapat mengonfigurasi <DocsLink>pintasan keyboard di sini</DocsLink>."
 		}
+	},
+	"virtualProvider": {
+		"title": "Pengaturan Penyedia Fallback Kuota Virtual",
+		"description": "Konfigurasikan daftar profil masing-masing dengan batas kuota mereka sendiri. Ketika batas kuota suatu penyedia tercapai, profil berikutnya dalam daftar akan digunakan hingga tidak ada lagi yang tersisa.",
+		"profileLabel": "Profil {{number}}",
+		"primaryProfileLabel": "Profil {{number}} (Utama)",
+		"moveProfileUp": "Naikkan profil",
+		"moveProfileDown": "Pindahkan profil ke bawah",
+		"removeProfile": "Hapus profil",
+		"selectProfilePlaceholder": "Pilih profil...",
+		"addProfile": "Tambahkan profil",
+		"noProfilesAvailable": "Tidak ada profil tersedia. Silakan mengonfigurasi setidaknya satu profil penyedia non-virtual terlebih dahulu.",
+		"dangerZoneTitle": "Zona Bahaya",
+		"dangerZoneDescription": "Tindakan ini bersifat merusak dan tidak dapat dibatalkan.",
+		"clearUsageData": "Hapus Data Penggunaan",
+		"confirmClearTitle": "Apakah Anda yakin?",
+		"confirmClearDescription": "Ini akan menghapus secara permanen semua data penggunaan yang tersimpan untuk penyedia virtual. Tindakan ini tidak dapat dibatalkan.",
+		"tokensLabel": "Token",
+		"perMinute": "Per Menit",
+		"perHour": "Per Jam",
+		"perDay": "Per Hari",
+		"requestsLabel": "Permintaan"
 	}
 }
