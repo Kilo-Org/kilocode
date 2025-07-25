@@ -1,0 +1,7 @@
+line-deletions/input.js
+```js
+function greet(name) {
+	return `Hello, ${name}!`
+}
+
+```

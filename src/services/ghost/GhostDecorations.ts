@@ -16,7 +16,7 @@ const ADDITION_ACTIVE_DECORATION_OPTIONS: vscode.DecorationRenderOptions = {
 	after: {
 		...ADDITION_DECORATION_OPTIONS.after,
 		borderColor: new vscode.ThemeColor("editorInlayHint.foreground"),
-		border: "2px solid",
+		border: "1px solid",
 		fontWeight: "bold",
 	},
 }
@@ -34,7 +34,7 @@ const DELETION_ACTIVE_DECORATION_OPTIONS: vscode.DecorationRenderOptions = {
 	...DELETION_DECORATION_OPTIONS,
 	borderColor: new vscode.ThemeColor("editorInlayHint.foreground"),
 	borderStyle: "solid",
-	borderWidth: "2px",
+	borderWidth: "1px",
 	fontWeight: "bold",
 }
 
