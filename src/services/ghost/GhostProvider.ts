@@ -32,7 +32,7 @@ export class GhostProvider {
 	private ghostContext: GhostContext
 
 	private taskId: string | null = null
-  
+
 	// VSCode Providers
 	public codeActionProvider: GhostCodeActionProvider
 	public codeLensProvider: GhostCodeLensProvider
@@ -84,7 +84,9 @@ export class GhostProvider {
 		}
 
 		// Store the document and parse its AST
-		await this.documentStore.storeDocument(document, true)
+		await this.documentStore.storeDocument({
+			document,
+		})
 	}
 
 	/**
@@ -97,7 +99,7 @@ export class GhostProvider {
 		}
 
 		// Store the updated document and parse its AST
-		await this.documentStore.storeDocument(event.document, true)
+		await this.documentStore.storeDocument({ document: event.document })
 	}
 
 	private loadSettings() {
@@ -170,8 +172,8 @@ export class GhostProvider {
 		document: vscode.TextDocument,
 		range: vscode.Range | vscode.Selection,
 	): Promise<void> {
-		// Store the document in the document store
-		await this.getDocumentStore().storeDocument(document, true)
+		// Store the document in the document store and parse its AST
+		await this.getDocumentStore().storeDocument({ document })
 
 		this.taskId = crypto.randomUUID()
 		TelemetryService.instance.captureEvent(TelemetryEventName.INLINE_ASSIST_AUTO_TASK, {
@@ -216,8 +218,8 @@ export class GhostProvider {
 				if (!this.model.loaded) {
 					await this.reload()
 				}
-	
-  			console.log("userPrompt", userPrompt)
+
+				console.log("userPrompt", userPrompt)
 				const { response, cost, inputTokens, outputTokens, cacheWriteTokens, cacheReadTokens } =
 					await this.model.generateResponse(systemPrompt, userPrompt)
 

@@ -46,7 +46,11 @@ export class GhostContext {
 			return context
 		}
 		if (this.documentStore.needsASTUpdate(context.document)) {
-			await this.documentStore.storeDocument(context.document, true)
+			await this.documentStore.storeDocument({
+				document: context.document,
+				parseAST: true,
+				bypassDebounce: true,
+			})
 		}
 		context.documentAST = this.documentStore.getAST(context.document.uri)
 		return context

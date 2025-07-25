@@ -4,7 +4,8 @@ import { createPatch } from "diff"
 import { GhostDocumentStoreItem, ASTContext } from "./types"
 
 export class GhostDocumentStore {
-	private historyLimit: number = 100 // Limit the number of snapshots to keep
+	private debounceTimers: Map<string, NodeJS.Timeout> = new Map()
+	private historyLimit: number = 20 // Limit the number of snapshots to keep
 	private documentStore: Map<string, GhostDocumentStoreItem> = new Map()
 	private parserInitialized: boolean = false
 
@@ -12,28 +13,65 @@ export class GhostDocumentStore {
 	 * Store a document in the document store and optionally parse its AST
 	 * @param document The document to store
 	 * @param parseAST Whether to parse the AST for this document
+	 * @param bypassDebounce Whether to bypass the debounce mechanism and store immediately
 	 */
-	public async storeDocument(document: vscode.TextDocument, parseAST: boolean = true): Promise<void> {
+	public async storeDocument({
+		document,
+		parseAST = true,
+		bypassDebounce = false,
+	}: {
+		document: vscode.TextDocument
+		parseAST?: boolean
+		bypassDebounce?: boolean
+	}): Promise<void> {
 		const uri = document.uri.toString()
-		if (!this.documentStore.has(uri)) {
-			this.documentStore.set(uri, {
-				uri,
-				document,
-				history: [],
-			})
+		const debounceWait = 500 // 500ms delay
+
+		// Function to perform the actual document storage
+		const performStorage = async () => {
+			if (!this.documentStore.has(uri)) {
+				this.documentStore.set(uri, {
+					uri,
+					document,
+					history: [],
+				})
+			}
+
+			const item = this.documentStore.get(uri)!
+			item.document = document // Update the document reference
+			item.history.push(document.getText())
+			if (item.history.length > this.historyLimit) {
+				item.history.shift() // Remove the oldest snapshot if we exceed the limit
+			}
+
+			// Parse the AST if requested and if the document version has changed.
+			// Corrected conditional logic
+			if (parseAST && (!item.lastParsedVersion || item.lastParsedVersion !== document.version)) {
+				// Assuming parseDocumentAST is an async method in the same class.
+				await this.parseDocumentAST(document)
+			}
+
+			// Once executed, remove the timer from the map.
+			this.debounceTimers.delete(uri)
 		}
 
-		const item = this.documentStore.get(uri)!
-		item.document = document // Update the document reference
-		item.history.push(document.getText())
-		if (item.history.length > this.historyLimit) {
-			item.history.shift() // Remove the oldest snapshot if we exceed the limit
+		// If bypassDebounce is true, execute storage immediately
+		if (bypassDebounce) {
+			await performStorage()
+			return
 		}
 
-		// Parse the AST if requested and if the document version has changed
-		if (parseAST && (!item.lastParsedVersion || item.lastParsedVersion !== document.version)) {
-			await this.parseDocumentAST(document)
+		// Otherwise, use the debounce mechanism
+		// Clear any existing timer for this specific document to reset the debounce period.
+		if (this.debounceTimers.has(uri)) {
+			clearTimeout(this.debounceTimers.get(uri)!)
 		}
+
+		// Set a new timer to execute the storage logic after the specified delay.
+		const timer = setTimeout(performStorage, debounceWait)
+
+		// Store the new timer ID, associating it with the document's URI.
+		this.debounceTimers.set(uri, timer)
 	}
 
 	/**

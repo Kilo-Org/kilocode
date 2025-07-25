@@ -13,7 +13,7 @@ export class GhostCodeActionProvider implements vscode.CodeActionProvider {
 		context: vscode.CodeActionContext,
 		token: vscode.CancellationToken,
 	): vscode.ProviderResult<(vscode.CodeAction | vscode.Command)[]> {
-		GhostProvider.getInstance().getDocumentStore().storeDocument(document)
+		GhostProvider.getInstance().getDocumentStore().storeDocument({ document })
 
 		const action = new vscode.CodeAction(
 			t("kilocode:ghost.codeAction.title"),

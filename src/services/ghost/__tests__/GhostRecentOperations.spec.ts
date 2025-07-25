@@ -28,6 +28,9 @@ vi.mock("vscode", () => ({
 	window: {
 		activeTextEditor: null,
 	},
+	languages: {
+		getDiagnostics: vi.fn().mockReturnValue([]), // Mock getDiagnostics to return empty array
+	},
 	Position: class {
 		constructor(
 			public line: number,
@@ -39,6 +42,12 @@ vi.mock("vscode", () => ({
 			public start: any,
 			public end: any,
 		) {}
+	},
+	DiagnosticSeverity: {
+		Error: 0,
+		Warning: 1,
+		Information: 2,
+		Hint: 3,
 	},
 }))
 
@@ -71,11 +80,11 @@ describe("GhostRecentOperations", () => {
 
 	it("should include recent operations in the prompt when available", async () => {
 		// Store initial document version
-		await documentStore.storeDocument(mockDocument)
+		await documentStore.storeDocument({ document: mockDocument, bypassDebounce: true })
 
 		// Update document content and store again
 		mockDocument.updateContent("test-content-updated")
-		await documentStore.storeDocument(mockDocument)
+		await documentStore.storeDocument({ document: mockDocument, bypassDebounce: true })
 
 		// Create a suggestion context
 		const suggestionContext: GhostSuggestionContext = {
@@ -89,8 +98,8 @@ describe("GhostRecentOperations", () => {
 		const prompt = strategy.getSuggestionPrompt(enrichedContext)
 
 		// Verify that the prompt includes the recent operations
-		expect(prompt).toContain("Recent Changes (Diff):")
-		expect(prompt).toContain("diff")
+		expect(prompt).toContain("**Recent Changes (Diff):**")
+		expect(prompt).toContain("```diff")
 		expect(prompt).toContain("test-content-updated")
 	})
 
@@ -108,7 +117,7 @@ describe("GhostRecentOperations", () => {
 
 		// Verify that the prompt does not include recent operations section
 		// The current document content will still be in the prompt, so we should only check
-		// that the "Recent Changes (Diff):" section is not present
-		expect(prompt.indexOf("Recent Changes (Diff):")).toBe(-1)
+		// that the "**Recent Changes (Diff):**" section is not present
+		expect(prompt.includes("**Recent Changes (Diff):**")).toBe(false)
 	})
 })
