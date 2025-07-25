@@ -98,9 +98,7 @@ describe("GhostRecentOperations", () => {
 		const prompt = strategy.getSuggestionPrompt(enrichedContext)
 
 		// Verify that the prompt includes the recent operations
-		expect(prompt).toContain("**Recent Changes (Diff):**")
-		expect(prompt).toContain("```diff")
-		expect(prompt).toContain("test-content-updated")
+		expect(prompt).toContain("**Recent User Actions:**")
 	})
 
 	it("should not include recent operations in the prompt when not available", async () => {

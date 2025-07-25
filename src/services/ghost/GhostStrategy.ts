@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import { structuredPatch } from "diff"
 import { GhostSuggestionContext, GhostSuggestionEditOperationType } from "./types"
 import { GhostSuggestionsState } from "./GhostSuggestions"
+import { GhostDocumentStore } from "./GhostDocumentStore"
 
 export class GhostStrategy {
 	getSystemPrompt(customInstructions: string = "") {
@@ -45,15 +46,21 @@ You are my expert pair programmer. Analyze my \`Recent Changes (Diff)\` to deter
 `
 	}
 
-	private getRecentChangesDiff(context: GhostSuggestionContext) {
-		if (!context.recentOperations) {
+	private getRecentUserActions(context: GhostSuggestionContext) {
+		if (!context.recentOperations || context.recentOperations.length === 0) {
 			return ""
 		}
+		let result = `**Recent User Actions:**\n\n`
+		context.recentOperations.forEach((group, index) => {
+			result += `${index + 1}. **${group.summary}**\n`
+			group.actions.forEach((action) => {
+				const lineInfo = action.lineRange ? ` (lines ${action.lineRange.start}-${action.lineRange.end})` : ""
+				result += `   - ${action.description}${lineInfo}\n`
+			})
 
-		return `**Recent Changes (Diff):**
-\`\`\`diff
-${context.recentOperations}
-\`\`\``
+			result += "\n"
+		})
+		return result
 	}
 
 	private getUserFocusPrompt(context: GhostSuggestionContext) {
@@ -230,7 +237,7 @@ ${userInput}
 		const sections = [
 			this.getBaseSuggestionPrompt(),
 			this.getUserInputPrompt(context),
-			this.getRecentChangesDiff(context),
+			this.getRecentUserActions(context),
 			this.getUserFocusPrompt(context),
 			this.getUserSelectedTextPrompt(context),
 			this.getASTInfoPrompt(context),
