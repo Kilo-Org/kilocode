@@ -5,7 +5,7 @@ import { GhostDocumentStoreItem, ASTContext } from "./types"
 
 export class GhostDocumentStore {
 	private debounceTimers: Map<string, NodeJS.Timeout> = new Map()
-	private historyLimit: number = 20 // Limit the number of snapshots to keep
+	private historyLimit: number = 10 // Limit the number of snapshots to keep
 	private documentStore: Map<string, GhostDocumentStoreItem> = new Map()
 	private parserInitialized: boolean = false
 
@@ -89,33 +89,47 @@ export class GhostDocumentStore {
 
 			// Initialize the parser if needed
 			if (!this.parserInitialized) {
-				const { Parser } = require("web-tree-sitter")
-				await Parser.init()
-				this.parserInitialized = true
+				try {
+					// Use require for web-tree-sitter as in the original code
+					const { Parser } = require("web-tree-sitter")
+					await Parser.init()
+					this.parserInitialized = true
+				} catch (initError) {
+					console.error("Failed to initialize tree-sitter parser:", initError)
+					return
+				}
 			}
 
 			// Get file extension to determine parser
 			const filePath = document.uri.fsPath
 			const ext = path.extname(filePath).substring(1).toLowerCase()
 
-			// Load the appropriate language parser
-			const { loadRequiredLanguageParsers } = require("../tree-sitter/languageParser")
-			const languageParsers = await loadRequiredLanguageParsers([filePath])
-			const { parser } = languageParsers[ext] || {}
+			try {
+				// Load the appropriate language parser using require
+				const { loadRequiredLanguageParsers } = require("../tree-sitter/languageParser")
+				const languageParsers = await loadRequiredLanguageParsers([filePath])
 
-			if (parser) {
-				// Parse the document content into an AST
-				const documentContent = document.getText()
-				const tree = parser.parse(documentContent)
+				// Add proper type checking
+				const parserInfo = languageParsers[ext] || {}
+				// The parser object from the language parser module
+				const parser = parserInfo.parser
 
-				if (tree) {
-					// Store the AST in the document store
-					item.ast = {
-						rootNode: tree.rootNode,
-						language: ext,
+				if (parser) {
+					// Parse the document content into an AST
+					const documentContent = document.getText()
+					const tree = parser.parse(documentContent)
+
+					if (tree) {
+						// Store the AST in the document store
+						item.ast = {
+							rootNode: tree.rootNode,
+							language: ext,
+						}
+						item.lastParsedVersion = document.version
 					}
-					item.lastParsedVersion = document.version
 				}
+			} catch (parserError) {
+				console.error(`Error loading or using language parser for ${ext}:`, parserError)
 			}
 		} catch (error) {
 			console.error("Error parsing document with tree-sitter:", error)
@@ -172,6 +186,23 @@ export class GhostDocumentStore {
 			item.ast = undefined
 			item.lastParsedVersion = undefined
 		}
+	}
+
+	/**
+	 * Remove a document completely from the store
+	 * @param documentUri The URI of the document to remove
+	 */
+	public removeDocument(documentUri: vscode.Uri): void {
+		const uri = documentUri.toString()
+
+		// Clear any debounce timer for this document
+		if (this.debounceTimers.has(uri)) {
+			clearTimeout(this.debounceTimers.get(uri)!)
+			this.debounceTimers.delete(uri)
+		}
+
+		// Remove the document from the store
+		this.documentStore.delete(uri)
 	}
 
 	/**

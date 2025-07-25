@@ -62,7 +62,7 @@ export class GhostProvider {
 	private async watcherState() {}
 
 	/**
-	 * Handle document close events to clear the AST and free memory
+	 * Handle document close events to remove the document from the store and free memory
 	 */
 	private onDidCloseTextDocument(document: vscode.TextDocument): void {
 		// Only process file documents
@@ -70,8 +70,8 @@ export class GhostProvider {
 			return
 		}
 
-		// Clear the AST for the closed document to free up memory
-		this.documentStore.clearAST(document.uri)
+		// Remove the document completely from the store
+		this.documentStore.removeDocument(document.uri)
 	}
 
 	/**

@@ -596,6 +596,7 @@
 		"i18next": "^25.0.0",
 		"ignore": "^7.0.3",
 		"isbinaryfile": "^5.0.2",
+		"jsondiffpatch": "^0.7.3",
 		"lodash.debounce": "^4.0.8",
 		"lru-cache": "^11.1.0",
 		"mammoth": "^1.8.0",
