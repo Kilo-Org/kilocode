@@ -1,7 +1,6 @@
 import * as vscode from "vscode"
 import { GhostSuggestionContext } from "./types"
 import { GhostDocumentStore } from "./GhostDocumentStore"
-import { createPatch } from "diff"
 
 export class GhostContext {
 	private documentStore: GhostDocumentStore
@@ -73,6 +72,17 @@ export class GhostContext {
 		return context
 	}
 
+	private addDiagnostics(context: GhostSuggestionContext): GhostSuggestionContext {
+		if (!context.document) {
+			return context
+		}
+		const diagnostics = vscode.languages.getDiagnostics(context.document.uri)
+		if (diagnostics && diagnostics.length > 0) {
+			context.diagnostics = diagnostics
+		}
+		return context
+	}
+
 	public async generate(initialContext: GhostSuggestionContext): Promise<GhostSuggestionContext> {
 		let context = initialContext
 		context = this.addEditor(context)
@@ -81,6 +91,7 @@ export class GhostContext {
 		context = await this.addAST(context)
 		context = this.addRangeASTNode(context)
 		context = this.addRecentOperations(context)
+		context = this.addDiagnostics(context)
 		return context
 	}
 }

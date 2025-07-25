@@ -2,7 +2,6 @@ import * as vscode from "vscode"
 import { structuredPatch } from "diff"
 import { GhostSuggestionContext, GhostSuggestionEditOperationType } from "./types"
 import { GhostSuggestionsState } from "./GhostSuggestions"
-import Fuse from "fuse.js"
 
 export class GhostStrategy {
 	getSystemPrompt(customInstructions: string = "") {
@@ -170,6 +169,62 @@ ${userInput}
 		return astInfo
 	}
 
+	private getDiagnosticsPrompt(context: GhostSuggestionContext) {
+		if (!context.diagnostics || context.diagnostics.length === 0) {
+			return ""
+		}
+
+		let diagnosticsInfo = `**Document Diagnostics:**\n`
+
+		// Group diagnostics by severity
+		const errorDiagnostics = context.diagnostics.filter((d) => d.severity === vscode.DiagnosticSeverity.Error)
+		const warningDiagnostics = context.diagnostics.filter((d) => d.severity === vscode.DiagnosticSeverity.Warning)
+		const infoDiagnostics = context.diagnostics.filter((d) => d.severity === vscode.DiagnosticSeverity.Information)
+		const hintDiagnostics = context.diagnostics.filter((d) => d.severity === vscode.DiagnosticSeverity.Hint)
+
+		// Format errors
+		if (errorDiagnostics.length > 0) {
+			diagnosticsInfo += `\nErrors (${errorDiagnostics.length}):\n`
+			errorDiagnostics.forEach((diagnostic, index) => {
+				const line = diagnostic.range.start.line + 1 // 1-based line number
+				const character = diagnostic.range.start.character + 1 // 1-based character position
+				diagnosticsInfo += `${index + 1}. Line ${line}, Char ${character}: ${diagnostic.message}\n`
+			})
+		}
+
+		// Format warnings
+		if (warningDiagnostics.length > 0) {
+			diagnosticsInfo += `\nWarnings (${warningDiagnostics.length}):\n`
+			warningDiagnostics.forEach((diagnostic, index) => {
+				const line = diagnostic.range.start.line + 1 // 1-based line number
+				const character = diagnostic.range.start.character + 1 // 1-based character position
+				diagnosticsInfo += `${index + 1}. Line ${line}, Char ${character}: ${diagnostic.message}\n`
+			})
+		}
+
+		// Format information
+		if (infoDiagnostics.length > 0) {
+			diagnosticsInfo += `\nInformation (${infoDiagnostics.length}):\n`
+			infoDiagnostics.forEach((diagnostic, index) => {
+				const line = diagnostic.range.start.line + 1 // 1-based line number
+				const character = diagnostic.range.start.character + 1 // 1-based character position
+				diagnosticsInfo += `${index + 1}. Line ${line}, Char ${character}: ${diagnostic.message}\n`
+			})
+		}
+
+		// Format hints
+		if (hintDiagnostics.length > 0) {
+			diagnosticsInfo += `\nHints (${hintDiagnostics.length}):\n`
+			hintDiagnostics.forEach((diagnostic, index) => {
+				const line = diagnostic.range.start.line + 1 // 1-based line number
+				const character = diagnostic.range.start.character + 1 // 1-based character position
+				diagnosticsInfo += `${index + 1}. Line ${line}, Char ${character}: ${diagnostic.message}\n`
+			})
+		}
+
+		return diagnosticsInfo
+	}
+
 	getSuggestionPrompt(context: GhostSuggestionContext) {
 		const sections = [
 			this.getBaseSuggestionPrompt(),
@@ -178,6 +233,7 @@ ${userInput}
 			this.getUserFocusPrompt(context),
 			this.getUserSelectedTextPrompt(context),
 			this.getASTInfoPrompt(context),
+			this.getDiagnosticsPrompt(context),
 			this.getUserCurrentDocumentPrompt(context),
 		]
 
@@ -191,7 +247,9 @@ ${sections.filter(Boolean).join("\n\n")}
 		const suggestions = new GhostSuggestionsState()
 
 		// Check if the response is in the new format (file path + code block)
-		const fullContentMatch = response.match(/^(.+?)\r?\n```[\w-]*\r?\n([\s\S]+?)\r?\n```/m)
+		const fullContentMatch = response.match(/^(.+?)\r?\n```[\w-]*\r?\n([\s\S]+?)```/m)
+
+		console.log("fullContentMatch", fullContentMatch)
 
 		// If the response is in the new format
 		if (fullContentMatch) {

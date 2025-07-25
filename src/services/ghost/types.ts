@@ -37,4 +37,5 @@ export interface GhostSuggestionContext {
 	rangeASTNode?: Node
 	userInput?: string
 	recentOperations?: string // Stores the diff of the last 10 operations
+	diagnostics?: vscode.Diagnostic[] // Document diagnostics (errors, warnings, etc.)
 }
