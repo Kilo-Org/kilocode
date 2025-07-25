@@ -2565,6 +2565,24 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
+		case "getUsageData": {
+			if (message.text) {
+				try {
+					const usageTracker = UsageTracker.getInstance()
+					const usageData = usageTracker.getAllUsage(message.text)
+					await provider.postMessageToWebview({
+						type: "usageDataResponse",
+						text: message.text, // profileId
+						values: usageData,
+					})
+				} catch (error) {
+					const errorMessage = error instanceof Error ? error.message : String(error)
+					provider.log(`Error getting usage data: ${errorMessage}`)
+					// Optionally, send an error response back to the webview
+				}
+			}
+			break
+		}
 		// kilocode_change start - add toggleTaskFavorite
 		case "toggleTaskFavorite":
 			if (message.text) {

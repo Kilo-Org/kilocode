@@ -10,7 +10,8 @@ import { ApiStream } from "../transform/stream"
 import type { ApiHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { buildApiHandler } from "../index"
 import { virtualQuotaFallbackProfileDataSchema } from "../../../packages/types/src/provider-settings"
-import { UsageTracker, type UsageWindow } from "../../utils/usage-tracker"
+import { UsageTracker } from "../../utils/usage-tracker"
+import { type UsageWindow } from "@roo-code/types"
 
 type VirtualQuotaFallbackProfile = z.infer<typeof virtualQuotaFallbackProfileDataSchema>
 

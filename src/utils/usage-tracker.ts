@@ -1,25 +1,7 @@
 // kilocode_change - new file
 import type { ExtensionContext, Memento } from "vscode"
+import { AllUsageResult, UsageEvent, UsageResult, UsageType, UsageWindow } from "@roo-code/types"
 import { ContextProxy } from "../core/config/ContextProxy"
-
-export type UsageType = "tokens" | "requests"
-export type UsageWindow = "minute" | "hour" | "day"
-
-export interface UsageEvent {
-	/** The timestamp of the event in milliseconds since epoch. */
-	timestamp: number
-	/** The identifier for the AI provider (e.g., 'ds8f93js'). */
-	providerId: string
-	/** The type of usage. */
-	type: UsageType
-	/** The amount consumed (e.g., number of tokens or 1 for a single request). */
-	count: number
-}
-
-interface UsageResult {
-	tokens: number
-	requests: number
-}
 
 const USAGE_STORAGE_KEY = "kilocode.virtualQuotaFallbackProvider.usage.v1"
 const ONE_MINUTE_MS = 60 * 1000
@@ -118,6 +100,20 @@ export class UsageTracker {
 		)
 
 		return result
+	}
+
+	/**
+	 * Calculates the total usage for a given provider across all time windows.
+	 *
+	 * @param providerId The provider to retrieve usage for.
+	 * @returns An object containing the total number of tokens and requests for each window.
+	 */
+	public getAllUsage(providerId: string): AllUsageResult {
+		return {
+			minute: this.getUsage(providerId, "minute"),
+			hour: this.getUsage(providerId, "hour"),
+			day: this.getUsage(providerId, "day"),
+		}
 	}
 
 	/**
