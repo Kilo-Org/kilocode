@@ -1,5 +1,6 @@
 import * as vscode from "vscode"
 import * as path from "path"
+import { createPatch } from "diff"
 import { GhostDocumentStoreItem, ASTContext } from "./types"
 
 export class GhostDocumentStore {
@@ -143,5 +144,42 @@ export class GhostDocumentStore {
 			item.ast = undefined
 			item.lastParsedVersion = undefined
 		}
+	}
+
+	/**
+	 * Get the last 10 operations performed by the user on a document
+	 * @param document The document to get operations for
+	 * @returns A diff string representing the last 10 operations
+	 */
+	public getRecentOperations(document: vscode.TextDocument): string {
+		if (!document) {
+			return ""
+		}
+
+		const uri = document.uri.toString()
+		const item = this.getDocument(document.uri)
+
+		if (!item || item.history.length < 2) {
+			return ""
+		}
+
+		// Get the last 10 versions (or fewer if not available)
+		const historyLimit = 10
+		const startIdx = Math.max(0, item.history.length - historyLimit)
+		const recentHistory = item.history.slice(startIdx)
+
+		// If we have at least 2 versions, compare the oldest with the newest
+		if (recentHistory.length >= 2) {
+			const oldContent = recentHistory[0]
+			const newContent = recentHistory[recentHistory.length - 1]
+
+			// Generate a diff between the oldest and newest versions
+			const filePath = vscode.workspace.asRelativePath(document.uri)
+			const diffPatch = createPatch(filePath, oldContent, newContent, "Previous version", "Current version")
+
+			return diffPatch
+		}
+
+		return ""
 	}
 }
