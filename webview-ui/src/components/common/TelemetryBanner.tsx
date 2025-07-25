@@ -9,7 +9,7 @@ import { vscode } from "@src/utils/vscode"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 
 const BannerContainer = styled.div`
-	background-color: var(--vscode-banner-background);
+	background-color: var(--vscode-notifications-background);
 	padding: 12px 20px;
 	display: flex;
 	flex-direction: column;
