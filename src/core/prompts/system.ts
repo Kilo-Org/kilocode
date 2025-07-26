@@ -13,7 +13,7 @@ import { CodeIndexManager } from "../../services/code-index/manager"
 
 import { PromptVariables, loadSystemPromptFile } from "./sections/custom-system-prompt"
 
-import { getToolDescriptionsForMode } from "./tools"
+import { getToolDescriptionsForMode, checkMorphAvailability } from "./tools"
 import {
 	getRulesSection,
 	getSystemInfoSection,
@@ -38,6 +38,17 @@ export function getPromptComponent(
 		return undefined
 	}
 	return component
+}
+
+// Helper function to generate morph instructions when available
+function getMorphInstructions(cwd: string, supportsComputerUse: boolean, settings?: Record<string, any>): string {
+	const morphAvailable = checkMorphAvailability({ cwd, supportsComputerUse, settings })
+	return morphAvailable
+		? `
+
+		Morph FastApply is enabled. When making any file edits, you MUST ALWAYS use the \`edit_file\` tool instead of other editing tools like \`write_to_file\`, \`search_and_replace\`, or \`apply_diff\`. The \`edit_file\` tool uses a less intelligent specialized model to apply code edits to files.**
+`
+		: ""
 }
 
 async function generatePrompt(
@@ -80,6 +91,9 @@ async function generatePrompt(
 
 	const codeIndexManager = CodeIndexManager.getInstance(context)
 
+	// Check if Morph is available and add specific instructions
+	const morphInstructions = getMorphInstructions(cwd, supportsComputerUse, settings)
+
 	const basePrompt = `${roleDefinition}
 
 ${markdownFormattingSection()}
@@ -101,6 +115,8 @@ ${getToolDescriptionsForMode(
 )}
 
 ${getToolUseGuidelinesSection(codeIndexManager)}
+
+${morphInstructions}
 
 ${mcpServersSection}
 
@@ -184,10 +200,14 @@ export const SYSTEM_PROMPT = async (
 			{ language: language ?? formatLanguage(vscode.env.language), rooIgnoreInstructions, settings },
 		)
 
+		const morphInstructions = getMorphInstructions(cwd, supportsComputerUse, settings)
+
 		// For file-based prompts, don't include the tool sections
 		return `${roleDefinition}
 
 ${fileCustomSystemPrompt}
+
+${morphInstructions}
 
 ${customInstructions}`
 	}

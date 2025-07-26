@@ -67,6 +67,9 @@ export const toolParamNames = [
 	"query",
 	"args",
 	"todos",
+	"target_file",
+	"instructions",
+	"code_edit",
 ] as const
 
 export type ToolParamName = (typeof toolParamNames)[number]
@@ -171,6 +174,11 @@ export interface SearchAndReplaceToolUse extends ToolUse {
 		Partial<Pick<Record<ToolParamName, string>, "use_regex" | "ignore_case" | "start_line" | "end_line">>
 }
 
+export interface EditFileToolUse extends ToolUse {
+	name: "edit_file"
+	params: Required<Pick<Record<ToolParamName, string>, "target_file" | "instructions" | "code_edit">>
+}
+
 // Define tool group configuration
 export type ToolGroupConfig = {
 	tools: readonly string[]
@@ -183,6 +191,7 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	fetch_instructions: "fetch instructions",
 	write_to_file: "write files",
 	apply_diff: "apply changes",
+	edit_file: "edit file",
 	search_files: "search files",
 	list_files: "list files",
 	list_code_definition_names: "list definitions",
@@ -215,7 +224,7 @@ export const TOOL_GROUPS: Record<ToolGroup, ToolGroupConfig> = {
 		],
 	},
 	edit: {
-		tools: ["apply_diff", "write_to_file", "insert_content", "search_and_replace", "new_rule"],
+		tools: ["apply_diff", "edit_file", "write_to_file", "insert_content", "search_and_replace", "new_rule"],
 	},
 	browser: {
 		tools: ["browser_action"],

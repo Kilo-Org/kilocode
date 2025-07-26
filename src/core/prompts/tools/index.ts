@@ -13,6 +13,7 @@ import { getSearchFilesDescription } from "./search-files"
 import { getListFilesDescription } from "./list-files"
 import { getInsertContentDescription } from "./insert-content"
 import { getSearchAndReplaceDescription } from "./search-and-replace"
+import { getEditFileDescription } from "./edit-file"
 import { getListCodeDefinitionNamesDescription } from "./list-code-definition-names"
 import { getBrowserActionDescription } from "./browser-action"
 import { getAskFollowupQuestionDescription } from "./ask-followup-question"
@@ -24,6 +25,27 @@ import { getNewTaskDescription } from "./new-task"
 import { getCodebaseSearchDescription } from "./codebase-search"
 import { getUpdateTodoListDescription } from "./update-todo-list"
 import { CodeIndexManager } from "../../../services/code-index/manager"
+
+export function checkMorphAvailability(args: ToolArgs): boolean {
+	const { settings } = args
+
+	if (!settings) {
+		return false
+	}
+
+	const morphEnabled = settings.morphEnabled === true
+
+	if (morphEnabled) {
+		const hasMorphApiKey = Boolean(settings.morphApiKey)
+		const hasOpenRouterAccess = settings.apiProvider === "openrouter" && Boolean(settings.openRouterApiKey)
+
+		const isAvailable = hasMorphApiKey || hasOpenRouterAccess
+
+		return isAvailable
+	}
+
+	return false
+}
 
 // Map of tool names to their description functions
 const toolDescriptionMap: Record<string, (args: ToolArgs) => string | undefined> = {
@@ -44,6 +66,7 @@ const toolDescriptionMap: Record<string, (args: ToolArgs) => string | undefined>
 	new_task: (args) => getNewTaskDescription(args),
 	insert_content: (args) => getInsertContentDescription(args),
 	search_and_replace: (args) => getSearchAndReplaceDescription(args),
+	edit_file: () => getEditFileDescription(),
 	apply_diff: (args) =>
 		args.diffStrategy ? args.diffStrategy.getToolDescription({ cwd: args.cwd, toolOptions: args.toolOptions }) : "",
 	update_todo_list: (args) => getUpdateTodoListDescription(args),
@@ -109,6 +132,12 @@ export function getToolDescriptionsForMode(
 		tools.delete("codebase_search")
 	}
 
+	const hasMorphAccess = checkMorphAvailability({ ...args, settings })
+
+	if (!hasMorphAccess) {
+		tools.delete("edit_file")
+	}
+
 	// Conditionally exclude update_todo_list if disabled in settings
 	if (settings?.todoListEnabled === false) {
 		tools.delete("update_todo_list")
@@ -147,5 +176,6 @@ export {
 	getSwitchModeDescription,
 	getInsertContentDescription,
 	getSearchAndReplaceDescription,
+	getEditFileDescription,
 	getCodebaseSearchDescription,
 }

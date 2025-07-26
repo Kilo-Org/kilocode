@@ -11,10 +11,16 @@ import ApiOptions, { ApiOptionsProps } from "../ApiOptions"
 
 // Mock VSCode components
 vi.mock("@vscode/webview-ui-toolkit/react", () => ({
-	VSCodeTextField: ({ children, value, onBlur }: any) => (
+	VSCodeTextField: ({ children, value, onBlur, onInput, type, placeholder, "data-testid": dataTestId }: any) => (
 		<div>
 			{children}
-			<input type="text" value={value} onChange={onBlur} />
+			<input
+				type={type || "text"}
+				value={value}
+				onChange={onInput || onBlur}
+				placeholder={placeholder}
+				data-testid={dataTestId}
+			/>
 		</div>
 	),
 	VSCodeLink: ({ children, href }: any) => <a href={href}>{children}</a>,
@@ -564,6 +570,121 @@ describe("ApiOptions", () => {
 			})
 
 			expect(screen.queryByTestId("litellm-provider")).not.toBeInTheDocument()
+		})
+	})
+
+	describe("Morph settings tests", () => {
+		it("automatically enables Morph when OpenRouter provider is selected", () => {
+			const mockSetApiConfigurationField = vi.fn()
+
+			// Test that when the component is rendered with openrouter provider
+			// and morphEnabled is false, it automatically calls setApiConfigurationField to enable morph
+			renderApiOptions({
+				apiConfiguration: {
+					apiProvider: "openrouter",
+					morphEnabled: false,
+				},
+				setApiConfigurationField: mockSetApiConfigurationField,
+			})
+
+			// The useEffect should automatically call setApiConfigurationField to enable Morph
+			expect(mockSetApiConfigurationField).toHaveBeenCalledWith("morphEnabled", true)
+		})
+
+		it("shows Morph checkbox as checked when OpenRouter is configured with Morph enabled", () => {
+			renderApiOptions({
+				apiConfiguration: {
+					apiProvider: "openrouter",
+					morphEnabled: true, // Already enabled
+				},
+			})
+
+			const morphCheckbox = screen.getByTestId("checkbox-enable-editing-with-morph-fastapply")
+			const checkboxInput = morphCheckbox.querySelector('input[type="checkbox"]') as HTMLInputElement
+			expect(checkboxInput).toBeChecked()
+		})
+
+		it("shows Morph settings checkbox when not in welcome view", () => {
+			renderApiOptions({
+				apiConfiguration: {
+					morphEnabled: false,
+				},
+			})
+
+			const checkbox = screen.getByTestId("checkbox-enable-editing-with-morph-fastapply")
+			expect(checkbox).toBeInTheDocument()
+			expect(checkbox.querySelector('input[type="checkbox"]')).not.toBeChecked()
+		})
+
+		it("shows Morph configuration fields when enabled", () => {
+			const mockSetApiConfigurationField = vi.fn()
+			renderApiOptions({
+				apiConfiguration: {
+					morphEnabled: true,
+					morphApiKey: "test-key",
+				},
+				setApiConfigurationField: mockSetApiConfigurationField,
+			})
+
+			expect(
+				screen
+					.getByTestId("checkbox-enable-editing-with-morph-fastapply")
+					.querySelector('input[type="checkbox"]'),
+			).toBeChecked()
+			expect(screen.getByTestId("morph-api-key")).toHaveValue("test-key")
+		})
+
+		it("calls setApiConfigurationField when Morph enabled checkbox is toggled", () => {
+			const mockSetApiConfigurationField = vi.fn()
+			renderApiOptions({
+				apiConfiguration: {
+					morphEnabled: false,
+				},
+				setApiConfigurationField: mockSetApiConfigurationField,
+			})
+
+			const checkbox = screen.getByTestId(
+				"checkbox-input-enable-editing-with-morph-fastapply",
+			) as HTMLInputElement
+			fireEvent.click(checkbox)
+
+			expect(mockSetApiConfigurationField).toHaveBeenCalledWith("morphEnabled", true)
+		})
+
+		it("calls setApiConfigurationField when Morph API key changes", () => {
+			const mockSetApiConfigurationField = vi.fn()
+			renderApiOptions({
+				apiConfiguration: {
+					morphEnabled: true,
+				},
+				setApiConfigurationField: mockSetApiConfigurationField,
+			})
+
+			const apiKeyInput = screen.getByTestId("morph-api-key") as HTMLInputElement
+			fireEvent.change(apiKeyInput, { target: { value: "new-api-key" } })
+
+			expect(mockSetApiConfigurationField).toHaveBeenCalledWith("morphApiKey", "new-api-key")
+		})
+
+		it("hides Morph configuration fields when disabled", () => {
+			renderApiOptions({
+				apiConfiguration: {
+					morphEnabled: false,
+				},
+			})
+
+			expect(screen.queryByTestId("morph-api-key")).not.toBeInTheDocument()
+		})
+
+		it("does not show Morph settings in welcome view", () => {
+			renderApiOptions({
+				fromWelcomeView: true,
+				apiConfiguration: {
+					morphEnabled: true,
+				},
+			})
+
+			expect(screen.queryByTestId("checkbox-enable-editing-with-morph-fastapply")).not.toBeInTheDocument()
 		})
 	})
 })

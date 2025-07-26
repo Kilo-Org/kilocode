@@ -216,6 +216,11 @@ export class ProviderSettingsManager {
 				if (apiConfig.fuzzyMatchThreshold === undefined) {
 					apiConfig.fuzzyMatchThreshold = fuzzyMatchThreshold
 				}
+				
+				// Enable Morph for OpenRouter users
+				if (apiConfig.apiProvider === "openrouter" && apiConfig.morphEnabled === undefined) {
+					apiConfig.morphEnabled = true
+				}
 			}
 		} catch (error) {
 			console.error(`[MigrateDiffSettings] Failed to migrate diff settings:`, error)
