@@ -196,8 +196,14 @@
 		},
 		"apiRequestLimit": {
 			"title": "Requêtes maximales",
-			"description": "Effectuer automatiquement ce nombre de requêtes API avant de demander l'approbation pour continuer la tâche.",
 			"unlimited": "Illimité"
+		},
+		"apiCostLimit": {
+			"title": "Coût API Max",
+			"unlimited": "Illimité"
+		},
+		"maxLimits": {
+			"description": "Effectuer automatiquement des demandes jusqu'à ces limites avant de demander l'approbation pour continuer."
 		}
 	},
 	"providers": {

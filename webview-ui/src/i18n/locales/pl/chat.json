@@ -303,6 +303,11 @@
 			"title": "Osiągnięto limit automatycznie zatwierdzonych żądań",
 			"description": "Kilo Code osiągnął automatycznie zatwierdzony limit {{count}} żądania/żądań API. Czy chcesz zresetować licznik i kontynuować zadanie?",
 			"button": "Zresetuj i kontynuuj"
+		},
+		"autoApprovedCostLimitReached": {
+			"title": "Osiągnięto limit automatycznie zatwierdzanych kosztów",
+			"button": "Zresetuj i kontynuuj",
+			"description": "Kilo Code osiągnął automatyczny limit kosztów w wysokości ${{count}}. Czy chcesz zresetować koszt i kontynuować zadanie?"
 		}
 	},
 	"codebaseSearch": {

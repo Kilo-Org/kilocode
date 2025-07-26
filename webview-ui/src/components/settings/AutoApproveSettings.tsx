@@ -10,7 +10,7 @@ import { SetCachedStateField } from "./types"
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
 import { AutoApproveToggle } from "./AutoApproveToggle"
-import { MaxRequestsInput } from "./MaxRequestsInput" // kilocode_change
+import { MaxLimitInputs } from "./MaxLimitInputs" // kilocode_change
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { useAutoApprovalState } from "@/hooks/useAutoApprovalState"
 import { useAutoApprovalToggles } from "@/hooks/useAutoApprovalToggles"
@@ -34,6 +34,7 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	followupAutoApproveTimeoutMs?: number
 	allowedCommands?: string[]
 	allowedMaxRequests?: number | undefined // kilocode_change
+	allowedMaxCost?: number | undefined // kilocode_change
 	showAutoApproveMenu?: boolean // kilocode_change
 	deniedCommands?: string[]
 	setCachedStateField: SetCachedStateField<
@@ -54,6 +55,7 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 		| "followupAutoApproveTimeoutMs"
 		| "allowedCommands"
 		| "allowedMaxRequests" // kilocode_change
+		| "allowedMaxCost" // kilocode_change
 		| "showAutoApproveMenu" // kilocode_change
 		| "deniedCommands"
 		| "alwaysAllowUpdateTodoList"
@@ -79,6 +81,7 @@ export const AutoApproveSettings = ({
 	alwaysAllowUpdateTodoList,
 	allowedCommands,
 	allowedMaxRequests, // kilocode_change
+	allowedMaxCost, // kilocode_change
 	showAutoApproveMenu, // kilocode_change
 	deniedCommands,
 	setCachedStateField,
@@ -179,9 +182,11 @@ export const AutoApproveSettings = ({
 					onToggle={(key, value) => setCachedStateField(key, value)}
 				/>
 				{/* kilocode_change start */}
-				<MaxRequestsInput
+				<MaxLimitInputs
 					allowedMaxRequests={allowedMaxRequests}
-					onValueChange={(value) => setCachedStateField("allowedMaxRequests", value)}
+					allowedMaxCost={allowedMaxCost}
+					onMaxRequestsChange={(value) => setCachedStateField("allowedMaxRequests", value)}
+					onMaxCostChange={(value) => setCachedStateField("allowedMaxCost", value)}
 				/>
 				{/* kilocode_change end */}
 

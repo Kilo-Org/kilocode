@@ -197,12 +197,18 @@
 		},
 		"apiRequestLimit": {
 			"title": "Maximální počet žádostí",
-			"description": "Automaticky provést tento počet žádostí API předtím, než požádá o schválení k pokračování v úkolu.",
 			"unlimited": "Neomezeně"
+		},
+		"apiCostLimit": {
+			"unlimited": "Neomezený",
+			"title": "Maximální náklady na API"
 		},
 		"toggleAriaLabel": "Přepnout automatické schválení",
 		"disabledAriaLabel": "Automatické schválení zakázáno - nejprve vyberte možnosti",
-		"selectOptionsFirst": "Vyberte alespoň jednu možnost níže pro povolení automatického schválení"
+		"selectOptionsFirst": "Vyberte alespoň jednu možnost níže pro povolení automatického schválení",
+		"maxLimits": {
+			"description": "Automatické odesílání požadavků až do těchto limitů, než bude vyžadováno schválení k pokračování."
+		}
 	},
 	"providers": {
 		"providerDocumentation": "Dokumentace {{provider}}",

@@ -195,10 +195,16 @@
 		},
 		"apiRequestLimit": {
 			"title": "Solicitudes máximas",
-			"description": "Realizar automáticamente esta cantidad de solicitudes a la API antes de pedir aprobación para continuar con la tarea.",
 			"unlimited": "Ilimitado"
 		},
-		"selectOptionsFirst": "Selecciona al menos una opción a continuación para habilitar la aprobación automática"
+		"apiCostLimit": {
+			"unlimited": "Ilimitado",
+			"title": "Costo máximo de API"
+		},
+		"selectOptionsFirst": "Selecciona al menos una opción a continuación para habilitar la aprobación automática",
+		"maxLimits": {
+			"description": "Realizar automáticamente solicitudes hasta estos límites antes de pedir aprobación para continuar."
+		}
 	},
 	"providers": {
 		"providerDocumentation": "Documentación de {{provider}}",

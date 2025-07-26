@@ -320,6 +320,11 @@
 			"title": "Auto-Approved Request Limit Reached",
 			"description": "Kilo Code has reached the auto-approved limit of {{count}} API request(s). Would you like to reset the count and proceed with the task?",
 			"button": "Reset and Continue"
+		},
+		"autoApprovedCostLimitReached": {
+			"title": "Auto-Approved Cost Limit Reached",
+			"description": "Kilo Code has reached the auto-approved cost limit of ${{count}}. Would you like to reset the cost and proceed with the task?",
+			"button": "Reset and Continue"
 		}
 	},
 	"indexingStatus": {

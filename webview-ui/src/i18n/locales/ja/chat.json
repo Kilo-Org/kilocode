@@ -303,6 +303,11 @@
 			"title": "自動承認リクエスト制限に達しました",
 			"description": "Kilo Codeは{{count}}件のAPI自動承認リクエスト制限に達しました。カウントをリセットしてタスクを続行しますか？",
 			"button": "リセットして続行"
+		},
+		"autoApprovedCostLimitReached": {
+			"title": "自動承認コスト上限に達しました",
+			"description": "Kilo Codeは自動承認コスト上限の${{count}}に達しました。コストをリセットしてタスクを続行しますか？",
+			"button": "リセットして続行"
 		}
 	},
 	"codebaseSearch": {

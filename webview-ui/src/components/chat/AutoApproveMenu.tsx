@@ -6,23 +6,25 @@ import { vscode } from "@src/utils/vscode"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { AutoApproveToggle, AutoApproveSetting, autoApproveSettingsConfig } from "../settings/AutoApproveToggle"
-import { MaxRequestsInput } from "../settings/MaxRequestsInput" // kilocode_change
+import { MaxLimitInputs } from "../settings/MaxLimitInputs" // kilocode_change
 import { StandardTooltip } from "@src/components/ui"
 import { useAutoApprovalState } from "@src/hooks/useAutoApprovalState"
 import { useAutoApprovalToggles } from "@src/hooks/useAutoApprovalToggles"
 
 interface AutoApproveMenuProps {
 	style?: React.CSSProperties
+	initialExpanded?: boolean
 }
 
-const AutoApproveMenu = ({ style }: AutoApproveMenuProps) => {
-	const [isExpanded, setIsExpanded] = useState(false)
+const AutoApproveMenu = ({ style, initialExpanded = false }: AutoApproveMenuProps) => {
+	const [isExpanded, setIsExpanded] = useState(initialExpanded)
 
 	const {
 		autoApprovalEnabled,
 		setAutoApprovalEnabled,
 		alwaysApproveResubmit,
 		allowedMaxRequests,
+		allowedMaxCost,
 		setAlwaysAllowReadOnly,
 		setAlwaysAllowWrite,
 		setAlwaysAllowExecute,
@@ -34,6 +36,7 @@ const AutoApproveMenu = ({ style }: AutoApproveMenuProps) => {
 		setAlwaysAllowFollowupQuestions,
 		setAlwaysAllowUpdateTodoList,
 		setAllowedMaxRequests,
+		setAllowedMaxCost,
 	} = useExtensionState()
 
 	const { t } = useAppTranslation()
@@ -250,9 +253,11 @@ const AutoApproveMenu = ({ style }: AutoApproveMenuProps) => {
 					<AutoApproveToggle {...toggles} onToggle={onAutoApproveToggle} />
 
 					{/* kilocode_change start */}
-					<MaxRequestsInput
+					<MaxLimitInputs
 						allowedMaxRequests={allowedMaxRequests ?? undefined}
-						onValueChange={(value) => setAllowedMaxRequests(value)}
+						allowedMaxCost={allowedMaxCost ?? undefined}
+						onMaxRequestsChange={(value) => setAllowedMaxRequests(value)}
+						onMaxCostChange={(value) => setAllowedMaxCost(value)}
 					/>
 					{/* kilocode_change end */}
 				</div>

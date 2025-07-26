@@ -195,10 +195,16 @@
 		},
 		"apiRequestLimit": {
 			"title": "Maximale Anfragen",
-			"description": "Automatisch so viele API-Anfragen stellen, bevor du um die Erlaubnis gebeten wirst, mit der Aufgabe fortzufahren.",
 			"unlimited": "Unbegrenzt"
 		},
-		"selectOptionsFirst": "Wähle mindestens eine Option unten aus, um die automatische Genehmigung zu aktivieren"
+		"apiCostLimit": {
+			"title": "Max API-Kosten",
+			"unlimited": "Unbegrenzt"
+		},
+		"selectOptionsFirst": "Wähle mindestens eine Option unten aus, um die automatische Genehmigung zu aktivieren",
+		"maxLimits": {
+			"description": "Stellt automatisch Anfragen bis zu diesen Limits, bevor um Genehmigung zur Fortsetzung gebeten wird."
+		}
 	},
 	"providers": {
 		"providerDocumentation": "{{provider}}-Dokumentation",

@@ -303,6 +303,11 @@
 			"title": "已達自動核准請求限制",
 			"description": "Kilo Code 已達到 {{count}} 次 API 請求的自動核准限制。您想要重設計數並繼續工作嗎？",
 			"button": "重設並繼續"
+		},
+		"autoApprovedCostLimitReached": {
+			"button": "重置并继续",
+			"title": "已达到自动批准成本限制",
+			"description": "Kilo Code 已达到自动批准的费用限制 ${{count}}。您是否想重置费用并继续执行任务？"
 		}
 	},
 	"codebaseSearch": {

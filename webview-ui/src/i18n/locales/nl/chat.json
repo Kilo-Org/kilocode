@@ -303,6 +303,11 @@
 			"title": "Limiet voor automatisch goedgekeurde verzoeken bereikt",
 			"description": "Kilo Code heeft de automatisch goedgekeurde limiet van {{count}} API-verzoek(en) bereikt. Wil je de teller resetten en doorgaan met de taak?",
 			"button": "Resetten en doorgaan"
+		},
+		"autoApprovedCostLimitReached": {
+			"title": "Limiet voor Automatisch Goedgekeurde Kosten Bereikt",
+			"button": "Resetten en Doorgaan",
+			"description": "Kilo Code heeft de automatisch goedgekeurde kostenlimiet van ${{count}} bereikt. Wilt u de kosten resetten en doorgaan met de taak?"
 		}
 	},
 	"codebaseSearch": {

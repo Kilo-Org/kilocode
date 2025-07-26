@@ -197,12 +197,18 @@
 		},
 		"apiRequestLimit": {
 			"title": "أقصى الطلبات",
-			"description": "عدد طلبات API قبل طلب الموافقة.",
 			"unlimited": "غير محدود"
 		},
 		"toggleAriaLabel": "تبديل الموافقة التلقائية",
 		"disabledAriaLabel": "الموافقة التلقائية معطلة - اختر الخيارات أولاً",
-		"selectOptionsFirst": "اختر خيار واحد على الأقل أدناه لتفعيل الموافقة التلقائية"
+		"apiCostLimit": {
+			"title": "Cost màxim de l'API",
+			"unlimited": "Il·limitat"
+		},
+		"selectOptionsFirst": "اختر خيار واحد على الأقل أدناه لتفعيل الموافقة التلقائية",
+		"maxLimits": {
+			"description": "قم تلقائياً بإجراء الطلبات حتى هذه الحدود قبل طلب الموافقة للاستمرار."
+		}
 	},
 	"providers": {
 		"providerDocumentation": "توثيق {{provider}}",

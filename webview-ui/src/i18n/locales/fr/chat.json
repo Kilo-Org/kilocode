@@ -303,6 +303,11 @@
 			"title": "Limite de requêtes auto-approuvées atteinte",
 			"description": "Kilo Code a atteint la limite auto-approuvée de {{count}} requête(s) API. Souhaitez-vous réinitialiser le compteur et poursuivre la tâche ?",
 			"button": "Réinitialiser et continuer"
+		},
+		"autoApprovedCostLimitReached": {
+			"title": "Limite de coûts auto-approuvés atteinte",
+			"button": "Réinitialiser et continuer",
+			"description": "Kilo Code a atteint la limite de coût à approbation automatique de ${{count}}. Souhaitez-vous réinitialiser le coût et poursuivre la tâche ?"
 		}
 	},
 	"codebaseSearch": {

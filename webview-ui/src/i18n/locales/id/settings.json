@@ -195,10 +195,16 @@
 		},
 		"apiRequestLimit": {
 			"title": "Permintaan Maks",
-			"description": "Secara otomatis membuat sejumlah permintaan API ini sebelum meminta persetujuan untuk melanjutkan tugas.",
 			"unlimited": "Tidak terbatas"
 		},
-		"selectOptionsFirst": "Pilih setidaknya satu opsi di bawah ini untuk mengaktifkan persetujuan otomatis"
+		"apiCostLimit": {
+			"title": "Biaya API Maksimum",
+			"unlimited": "Tidak terbatas"
+		},
+		"selectOptionsFirst": "Pilih setidaknya satu opsi di bawah ini untuk mengaktifkan persetujuan otomatis",
+		"maxLimits": {
+			"description": "Secara otomatis membuat permintaan hingga batas ini sebelum meminta persetujuan untuk melanjutkan."
+		}
 	},
 	"providers": {
 		"providerDocumentation": "Dokumentasi {{provider}}",
