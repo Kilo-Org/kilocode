@@ -50,6 +50,10 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code хоче стиснути твою розмову",
 			"condenseConversation": "Стиснути розмову"
+		},
+		"enhancePrompt": {
+			"cancelEnhancement": "Скасувати покращення",
+			"revertEnhancement": "Повернутися до початкової підказки"
 		}
 	},
 	"newTaskPreview": {

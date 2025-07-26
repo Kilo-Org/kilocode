@@ -40,14 +40,10 @@ vi.mock("@src/components/ui/hooks/useSelectedModel", () => ({
 		provider: "mock-provider",
 	})),
 }))
+
 // Custom query function to get the enhance prompt button
 const getEnhancePromptButton = () => {
-	return screen.getByRole("button", {
-		name: (_, element) => {
-			// Find the button with the wand sparkles icon (Lucide React)
-			return element.querySelector(".lucide-wand-sparkles") !== null
-		},
-	})
+	return screen.getByTestId("enhance-prompt-button")
 }
 
 describe("ChatTextArea", () => {
@@ -190,7 +186,7 @@ describe("ChatTextArea", () => {
 	})
 
 	describe("enhanced prompt response", () => {
-		it("should update input value using native browser methods when receiving enhanced prompt", () => {
+		it("should update input value using native browser methods when receiving enhanced prompt", async () => {
 			const setInputValue = vi.fn()
 
 			// Mock document.execCommand
@@ -212,6 +208,11 @@ describe("ChatTextArea", () => {
 			textarea.select = mockSelect
 			textarea.focus = mockFocus
 
+			// First simulate clicking the enhance prompt button to set the originalPromptBeforeEnhancement state
+			const enhanceButton = container.querySelector('[aria-label*="enhance"]') as HTMLButtonElement
+			enhanceButton?.click()
+			await new Promise((resolve) => setTimeout(resolve, 0))
+
 			// Simulate receiving enhanced prompt message
 			window.dispatchEvent(
 				new MessageEvent("message", {
@@ -228,7 +229,7 @@ describe("ChatTextArea", () => {
 			expect(mockExecCommand).toHaveBeenCalledWith("insertText", false, "Enhanced test prompt")
 		})
 
-		it("should fallback to setInputValue when execCommand is not available", () => {
+		it("should fallback to setInputValue when execCommand is not available", async () => {
 			const setInputValue = vi.fn()
 
 			// Mock document.execCommand to be undefined (not available)
@@ -237,7 +238,14 @@ describe("ChatTextArea", () => {
 				writable: true,
 			})
 
-			render(<ChatTextArea {...defaultProps} setInputValue={setInputValue} inputValue="Original prompt" />)
+			const { container } = render(
+				<ChatTextArea {...defaultProps} setInputValue={setInputValue} inputValue="Original prompt" />,
+			)
+
+			// First simulate clicking the enhance prompt button to set the originalPromptBeforeEnhancement state
+			const enhanceButton = container.querySelector('[aria-label*="enhance"]') as HTMLButtonElement
+			enhanceButton?.click()
+			await new Promise((resolve) => setTimeout(resolve))
 
 			// Simulate receiving enhanced prompt message
 			window.dispatchEvent(
@@ -269,6 +277,54 @@ describe("ChatTextArea", () => {
 					}),
 				)
 			}).not.toThrow()
+		})
+
+		it("should not update input value when enhancement is cancelled", () => {
+			const setInputValue = vi.fn()
+
+			render(<ChatTextArea {...defaultProps} setInputValue={setInputValue} inputValue="Original prompt" />)
+
+			const enhanceButton = screen.getByTestId("enhance-prompt-button")
+			fireEvent.click(enhanceButton) // Start
+			fireEvent.click(enhanceButton) // Cancel
+
+			window.dispatchEvent(
+				new MessageEvent("message", {
+					data: {
+						type: "enhancedPrompt",
+						text: "Enhanced test prompt",
+					},
+				}),
+			)
+
+			expect(setInputValue).not.toHaveBeenCalledWith("Enhanced test prompt")
+		})
+
+		it("should revert to original prompt when revert button is clicked", () => {
+			const setInputValue = vi.fn()
+
+			const { rerender } = render(
+				<ChatTextArea {...defaultProps} setInputValue={setInputValue} inputValue="Original prompt" />,
+			)
+
+			const enhanceButton = screen.getByTestId("enhance-prompt-button")
+			fireEvent.click(enhanceButton)
+
+			window.dispatchEvent(
+				new MessageEvent("message", {
+					data: {
+						type: "enhancedPrompt",
+						text: "Enhanced test prompt",
+					},
+				}),
+			)
+
+			rerender(<ChatTextArea {...defaultProps} setInputValue={setInputValue} inputValue="Enhanced test prompt" />)
+
+			setInputValue.mockClear()
+			fireEvent.click(enhanceButton)
+
+			expect(setInputValue).toHaveBeenCalledWith("Original prompt")
 		})
 	})
 
