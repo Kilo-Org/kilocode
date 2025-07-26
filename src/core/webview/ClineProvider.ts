@@ -46,6 +46,7 @@ import { Terminal } from "../../integrations/terminal/Terminal"
 import { downloadTask } from "../../integrations/misc/export-markdown"
 import { getTheme } from "../../integrations/theme/getTheme"
 import WorkspaceTracker from "../../integrations/workspace/WorkspaceTracker"
+import { VSCLMToolsService } from "../../services/vsclm/VSCLMToolsService"
 import { McpHub } from "../../services/mcp/McpHub"
 import { McpServerManager } from "../../services/mcp/McpServerManager"
 import { MarketplaceManager } from "../../services/marketplace"
@@ -109,6 +110,7 @@ export class ClineProvider
 	public get workspaceTracker(): WorkspaceTracker | undefined {
 		return this._workspaceTracker
 	}
+	private vsclmtService: VSCLMToolsService
 	protected mcpHub?: McpHub // Change from private to protected
 	private marketplaceManager: MarketplaceManager
 	private mdmService?: MdmService
@@ -150,6 +152,8 @@ export class ClineProvider
 		this.customModesManager = new CustomModesManager(this.context, async () => {
 			await this.postStateToWebview()
 		})
+
+		this.vsclmtService = new VSCLMToolsService(context)
 
 		// Initialize MCP Hub through the singleton manager
 		McpServerManager.getInstance(this.context, this)
@@ -219,6 +223,9 @@ export class ClineProvider
 		return this.clineStack[this.clineStack.length - 1]
 	}
 
+	public getVSCLMToolService(): VSCLMToolsService {
+		return this.vsclmtService
+	}
 	// returns the current clineStack length (how many cline objects are in the stack)
 	getClineStackSize(): number {
 		return this.clineStack.length
