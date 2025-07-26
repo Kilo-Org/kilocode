@@ -2,8 +2,10 @@
 	"default": true,
 	"MD003": { "style": "atx" },
 	"MD007": { "indent": 2 },
-	"MD013": { "line_length": 100 },
+	"MD010": false,
+	"MD013": { "line_length": 150 },
 	"MD024": { "allow_different_nesting": true },
 	"MD033": false,
+	"MD040": false,
 	"MD041": false
 }
