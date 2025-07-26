@@ -586,6 +586,13 @@ export const webviewMessageHandler = async (
 				})
 			}
 
+			// kilocode_start start: contrary to the comment above, this is still necessary
+			modelFetchPromises.push({
+				key: "ollama",
+				options: { provider: "ollama", baseUrl: apiConfiguration.ollamaBaseUrl },
+			})
+			// kilocode_start end
+
 			const results = await Promise.allSettled(
 				modelFetchPromises.map(async ({ key, options }) => {
 					const models = await safeGetModels(options)
