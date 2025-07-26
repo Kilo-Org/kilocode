@@ -30,6 +30,16 @@
 		},
 		"playwright": {
 			"cache": false
+		},
+		"docs:build": {
+			"outputs": ["docs/dist/**"],
+			"inputs": ["docs/**/*.md", "docs/package.json", "docs/scripts/**"]
+		},
+		"docs:validate": {
+			"inputs": ["docs/**/*.md", "docs/scripts/**"]
+		},
+		"docs:check-links": {
+			"inputs": ["docs/**/*.md", "docs/scripts/**"]
 		}
 	}
 }

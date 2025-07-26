@@ -24,7 +24,11 @@
 		"knip": "knip --include files",
 		"update-contributors": "node scripts/update-contributors.js",
 		"evals": "docker compose -f packages/evals/docker-compose.yml --profile server --profile runner up --build --scale runner=0",
-		"playwright": "turbo playwright"
+		"playwright": "turbo playwright",
+		"docs:build": "turbo docs:build --log-order grouped --output-logs new-only",
+		"docs:validate": "turbo docs:validate --log-order grouped --output-logs new-only",
+		"docs:check-links": "turbo docs:check-links --log-order grouped --output-logs new-only",
+		"docs:dev": "cd docs && pnpm dev"
 	},
 	"devDependencies": {
 		"@changesets/changelog-github": "^0.5.1",

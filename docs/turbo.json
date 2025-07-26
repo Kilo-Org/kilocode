@@ -1,0 +1,26 @@
+{
+	"$schema": "https://turbo.build/schema.json",
+	"extends": ["//"],
+	"tasks": {
+		"docs:build": {
+			"outputs": ["dist/**"],
+			"inputs": ["**/*.md", "scripts/**", "package.json", ".markdownlint.json"]
+		},
+		"docs:validate": {
+			"inputs": ["**/*.md", "scripts/**"]
+		},
+		"docs:check-links": {
+			"inputs": ["**/*.md", "scripts/**"]
+		},
+		"build": {
+			"outputs": ["dist/**"],
+			"inputs": ["**/*.md", "scripts/**", "package.json", ".markdownlint.json"]
+		},
+		"lint": {
+			"inputs": ["**/*.md", ".markdownlint.json"]
+		},
+		"format": {
+			"inputs": ["**/*.md"]
+		}
+	}
+}

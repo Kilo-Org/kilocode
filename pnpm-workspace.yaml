@@ -1,6 +1,7 @@
 packages:
   - src
   - webview-ui
+  - docs
   - apps/*
   - packages/*
 
