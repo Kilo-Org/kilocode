@@ -48,6 +48,9 @@
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "Khóa API:",
 		"geminiApiKeyPlaceholder": "Nhập khóa API Gemini của bạn",
+		"mistralProvider": "Mistral",
+		"mistralApiKeyLabel": "Khóa API:",
+		"mistralApiKeyPlaceholder": "Nhập khóa API Mistral của bạn",
 		"openaiCompatibleProvider": "Tương thích OpenAI",
 		"openAiKeyLabel": "Khóa API OpenAI",
 		"openAiKeyPlaceholder": "Nhập khóa API OpenAI của bạn",
@@ -110,6 +113,7 @@
 			"modelIdRequired": "Yêu cầu ID mô hình",
 			"modelDimensionRequired": "Yêu cầu kích thước mô hình",
 			"geminiApiKeyRequired": "Yêu cầu khóa API Gemini",
+			"mistralApiKeyRequired": "Cần có khóa API của Mistral",
 			"ollamaBaseUrlRequired": "Yêu cầu URL cơ sở Ollama",
 			"baseUrlRequired": "Yêu cầu URL cơ sở",
 			"modelDimensionMinValue": "Kích thước mô hình phải lớn hơn 0"
@@ -258,6 +262,9 @@
 		"getChutesApiKey": "Lấy khóa API Chutes",
 		"deepSeekApiKey": "Khóa API DeepSeek",
 		"getDeepSeekApiKey": "Lấy khóa API DeepSeek",
+		"moonshotApiKey": "Khóa API Moonshot",
+		"getMoonshotApiKey": "Lấy khóa API Moonshot",
+		"moonshotBaseUrl": "Điểm vào Moonshot",
 		"geminiApiKey": "Khóa API Gemini",
 		"getGroqApiKey": "Lấy khóa API Groq",
 		"groqApiKey": "Khóa API Groq",
@@ -527,6 +534,10 @@
 		"outputLineLimit": {
 			"label": "Giới hạn đầu ra terminal",
 			"description": "Số dòng tối đa để đưa vào đầu ra terminal khi thực hiện lệnh. Khi vượt quá, các dòng sẽ bị xóa khỏi phần giữa, tiết kiệm token. <0>Tìm hiểu thêm</0>"
+		},
+		"outputCharacterLimit": {
+			"label": "Giới hạn ký tự của terminal",
+			"description": "Số ký tự tối đa để bao gồm trong đầu ra của terminal khi thực thi lệnh. Giới hạn này được ưu tiên hơn giới hạn dòng để ngăn chặn các vấn đề về bộ nhớ do các dòng quá dài. Khi vượt quá, đầu ra sẽ bị cắt bớt. <0>Tìm hiểu thêm</0>"
 		},
 		"shellIntegrationTimeout": {
 			"label": "Thời gian chờ tích hợp shell terminal",

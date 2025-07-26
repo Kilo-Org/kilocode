@@ -41,6 +41,7 @@
 		"could_not_open_file_generic": "Nelze otevřít soubor!",
 		"checkpoint_timeout": "Vypršel časový limit při pokusu o obnovení checkpointu.",
 		"checkpoint_failed": "Obnovení checkpointu selhalo.",
+		"git_not_installed": "Git je vyžadován pro funkci checkpointů. Prosím nainstaluj Git pro aktivaci checkpointů.",
 		"no_workspace": "Nejprve prosím otevři složku projektu",
 		"update_support_prompt": "Aktualizace support promptu selhala",
 		"reset_support_prompt": "Reset support promptu selhal",
@@ -131,7 +132,8 @@
 	},
 	"buttons": {
 		"save": "Uložit",
-		"edit": "Upravit"
+		"edit": "Upravit",
+		"learn_more": "Zjistit více"
 	},
 	"tasks": {
 		"canceled": "Chyba úlohy: Byla zastavena a zrušena uživatelem.",
@@ -178,6 +180,11 @@
 			"description": "Jsi si jistý, že chceš smazat tento {{scope}} režim? Toto také smaže související složku pravidel na: {{rulesFolderPath}}",
 			"descriptionNoRules": "Jsi si jistý, že chceš smazat tento vlastní režim?",
 			"confirm": "Smazat"
+		}
+	},
+	"commands": {
+		"preventCompletionWithOpenTodos": {
+			"description": "Zabránit dokončení úlohy, když jsou v seznamu úkolů neúplné položky"
 		}
 	}
 }

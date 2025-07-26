@@ -48,6 +48,9 @@
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "API Anahtarı:",
 		"geminiApiKeyPlaceholder": "Gemini API anahtarınızı girin",
+		"mistralProvider": "Mistral",
+		"mistralApiKeyLabel": "API Anahtarı:",
+		"mistralApiKeyPlaceholder": "Mistral API anahtarınızı girin",
 		"openaiCompatibleProvider": "OpenAI Uyumlu",
 		"openAiKeyLabel": "OpenAI API Anahtarı",
 		"openAiKeyPlaceholder": "OpenAI API anahtarınızı girin",
@@ -110,6 +113,7 @@
 			"modelIdRequired": "Model kimliği gereklidir",
 			"modelDimensionRequired": "Model boyutu gereklidir",
 			"geminiApiKeyRequired": "Gemini API anahtarı gereklidir",
+			"mistralApiKeyRequired": "Mistral API anahtarı gereklidir",
 			"ollamaBaseUrlRequired": "Ollama temel URL'si gereklidir",
 			"baseUrlRequired": "Temel URL'si gereklidir",
 			"modelDimensionMinValue": "Model boyutu 0'dan büyük olmalıdır"
@@ -258,6 +262,9 @@
 		"getChutesApiKey": "Chutes API Anahtarı Al",
 		"deepSeekApiKey": "DeepSeek API Anahtarı",
 		"getDeepSeekApiKey": "DeepSeek API Anahtarı Al",
+		"moonshotApiKey": "Moonshot API Anahtarı",
+		"getMoonshotApiKey": "Moonshot API Anahtarı Al",
+		"moonshotBaseUrl": "Moonshot Giriş Noktası",
 		"geminiApiKey": "Gemini API Anahtarı",
 		"getGroqApiKey": "Groq API Anahtarı Al",
 		"groqApiKey": "Groq API Anahtarı",
@@ -527,6 +534,10 @@
 		"outputLineLimit": {
 			"label": "Terminal çıktısı sınırı",
 			"description": "Komutları yürütürken terminal çıktısına dahil edilecek maksimum satır sayısı. Aşıldığında, token tasarrufu sağlayarak satırlar ortadan kaldırılacaktır. <0>Daha fazla bilgi</0>"
+		},
+		"outputCharacterLimit": {
+			"label": "Terminal karakter sınırı",
+			"description": "Komutları yürütürken terminal çıktısına dahil edilecek maksimum karakter sayısı. Bu sınır, aşırı uzun satırlardan kaynaklanan bellek sorunlarını önlemek için satır sınırına göre önceliklidir. Aşıldığında, çıktı kesilir. <0>Daha fazla bilgi edinin</0>"
 		},
 		"shellIntegrationTimeout": {
 			"label": "Terminal kabuk entegrasyonu zaman aşımı",

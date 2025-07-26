@@ -53,6 +53,9 @@
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "คีย์ API:",
 		"geminiApiKeyPlaceholder": "ป้อนคีย์ API Gemini ของคุณ",
+		"mistralProvider": "Mistral",
+		"mistralApiKeyLabel": "คีย์ API:",
+		"mistralApiKeyPlaceholder": "ป้อนคีย์ API Mistral ของคุณ",
 		"openaiCompatibleProvider": "เข้ากันได้กับ OpenAI",
 		"openAiKeyLabel": "คีย์ API OpenAI",
 		"openAiKeyPlaceholder": "ป้อนคีย์ API OpenAI ของคุณ",
@@ -117,6 +120,7 @@
 			"modelIdRequired": "จำเป็นต้องมี ID โมเดล",
 			"modelDimensionRequired": "จำเป็นต้องมีมิติโมเดล",
 			"geminiApiKeyRequired": "จำเป็นต้องมีคีย์ API Gemini",
+			"mistralApiKeyRequired": "จำเป็นต้องมีคีย์ API Mistral",
 			"ollamaBaseUrlRequired": "จำเป็นต้องมี URL พื้นฐาน Ollama",
 			"baseUrlRequired": "จำเป็นต้องมี URL พื้นฐาน",
 			"modelDimensionMinValue": "มิติโมเดลต้องมากกว่า 0"
@@ -254,6 +258,9 @@
 		"getChutesApiKey": "รับคีย์ API ของ Chutes",
 		"deepSeekApiKey": "คีย์ API ของ DeepSeek",
 		"getDeepSeekApiKey": "รับคีย์ API ของ DeepSeek",
+		"moonshotApiKey": "คีย์ API ของ Moonshot",
+		"getMoonshotApiKey": "รับคีย์ API ของ Moonshot",
+		"moonshotBaseUrl": "จุดเข้าใช้งาน Moonshot",
 		"geminiApiKey": "คีย์ API ของ Gemini",
 		"getGroqApiKey": "รับคีย์ API ของ Groq",
 		"groqApiKey": "คีย์ API ของ Groq",
@@ -533,6 +540,10 @@
 		"outputLineLimit": {
 			"label": "ขีดจำกัดเอาต์พุตเทอร์มินัล",
 			"description": "จำนวนบรรทัดสูงสุดที่จะรวมไว้ในเอาต์พุตเทอร์มินัลเมื่อรันคำสั่ง เมื่อเกินจำนวนบรรทัดจะถูกลบออกจากตรงกลางเพื่อประหยัดโทเค็น <0>เรียนรู้เพิ่มเติม</0>"
+		},
+		"outputCharacterLimit": {
+			"label": "ขีดจำกัดอักขระเทอร์มินัล",
+			"description": "จำนวนอักขระสูงสุดที่จะรวมไว้ในเอาต์พุตเทอร์มินัลเมื่อรันคำสั่ง ขีดจำกัดนี้มีความสำคัญเหนือขีดจำกัดบรรทัดเพื่อป้องกันปัญหาหน่วยความจำจากบรรทัดที่ยาวมาก เมื่อเกินขีดจำกัด เอาต์พุตจะถูกตัดทอน <0>เรียนรู้เพิ่มเติม</0>"
 		},
 		"shellIntegrationTimeout": {
 			"label": "หมดเวลาการรวมเชลล์เทอร์มินัล",

@@ -5,6 +5,7 @@ import {
 	bedrockModels,
 	claudeCodeModels,
 	deepSeekModels,
+	moonshotModels,
 	geminiModels,
 	geminiCliModels,
 	mistralModels,
@@ -22,6 +23,7 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	"claude-code": claudeCodeModels,
 	bedrock: bedrockModels,
 	deepseek: deepSeekModels,
+	moonshot: moonshotModels,
 	gemini: geminiModels,
 	"gemini-cli": geminiCliModels, // kilocode_change
 	fireworks: fireworksModels, // kilocode_change
@@ -43,6 +45,7 @@ export const PROVIDERS = [
 	{ value: "gemini", label: "Google Gemini" },
 	{ value: "gemini-cli", label: "Gemini CLI" },
 	{ value: "deepseek", label: "DeepSeek" },
+	{ value: "moonshot", label: "Moonshot" },
 	{ value: "openai-native", label: "OpenAI" },
 	{ value: "openai", label: "OpenAI Compatible" },
 	{ value: "vertex", label: "GCP Vertex AI" },

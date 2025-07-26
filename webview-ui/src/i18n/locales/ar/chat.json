@@ -340,5 +340,10 @@
 	},
 	"versionIndicator": {
 		"ariaLabel": "الإصدار {{version}} - انقر لعرض ملاحظات الإصدار"
+	},
+	"rooCloudCTA": {
+		"title": "Roo Code Cloud قريباً!",
+		"description": "شغّل وكلاء Roomote في السحابة، اوصل لمهامك من أي مكان، تعاون مع الآخرين، والمزيد.",
+		"joinWaitlist": "انضم لقائمة الانتظار للحصول على وصول مبكر."
 	}
 }

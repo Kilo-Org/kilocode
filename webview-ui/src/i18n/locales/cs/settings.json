@@ -53,6 +53,9 @@
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "Klíč API:",
 		"geminiApiKeyPlaceholder": "Zadejte svůj klíč API Gemini",
+		"mistralProvider": "Mistral",
+		"mistralApiKeyLabel": "Klíč API:",
+		"mistralApiKeyPlaceholder": "Zadejte svůj klíč API Mistral",
 		"openaiCompatibleProvider": "Kompatibilní s OpenAI",
 		"openAiKeyLabel": "Klíč API OpenAI",
 		"openAiKeyPlaceholder": "Zadejte svůj klíč API OpenAI",
@@ -117,6 +120,7 @@
 			"modelIdRequired": "ID modelu je povinné",
 			"modelDimensionRequired": "Dimenze modelu je povinná",
 			"geminiApiKeyRequired": "Klíč API Gemini je povinný",
+			"mistralApiKeyRequired": "Klíč API Mistral je povinný",
 			"ollamaBaseUrlRequired": "Základní URL Ollama je povinné",
 			"baseUrlRequired": "Základní URL je povinné",
 			"modelDimensionMinValue": "Dimenze modelu musí být větší než 0"
@@ -258,6 +262,9 @@
 		"getChutesApiKey": "Získat klíč API Chutes",
 		"deepSeekApiKey": "Klíč API DeepSeek",
 		"getDeepSeekApiKey": "Získat klíč API DeepSeek",
+		"moonshotApiKey": "Klíč API Moonshot",
+		"getMoonshotApiKey": "Získat klíč API Moonshot",
+		"moonshotBaseUrl": "Vstupní bod Moonshot",
 		"geminiApiKey": "Klíč API Gemini",
 		"getGroqApiKey": "Získat klíč API Groq",
 		"groqApiKey": "Klíč API Groq",
@@ -549,6 +556,10 @@
 		"outputLineLimit": {
 			"label": "Limit výstupu terminálu",
 			"description": "Maximální počet řádků, které se mají zahrnout do výstupu terminálu při provádění příkazů. Při překročení budou řádky odstraněny ze středu, čímž se ušetří tokeny. <0>Dozvědět se více</0>"
+		},
+		"outputCharacterLimit": {
+			"label": "Limit znaků terminálu",
+			"description": "Maximální počet znaků, které se mají zahrnout do výstupu terminálu při provádění příkazů. Tento limit má přednost před limitem řádků, aby se předešlo problémům s pamětí z extrémně dlouhých řádků. Při překročení bude výstup zkrácen. <0>Dozvědět se více</0>"
 		},
 		"shellIntegrationTimeout": {
 			"label": "Časový limit integrace shellu terminálu",

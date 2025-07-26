@@ -336,5 +336,13 @@
 	},
 	"versionIndicator": {
 		"ariaLabel": "Verze {{version}} - Klikni pro zobrazení poznámek k vydání"
+	},
+	"rooCloudCTA": {
+		"title": "Roo Code Cloud přichází brzy!",
+		"description": "Spouštěj vzdálené agenty v cloudu, přistupuj ke svým úkolům odkudkoli, spolupracuj s ostatními a mnoho dalšího.",
+		"joinWaitlist": "Připoj se na čekací listinu pro získání přednostního přístupu."
+	},
+	"editMessage": {
+		"placeholder": "Upravit tvou zprávu..."
 	}
 }

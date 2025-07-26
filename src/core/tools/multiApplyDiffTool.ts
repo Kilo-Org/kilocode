@@ -2,6 +2,7 @@ import path from "path"
 import fs from "fs/promises"
 
 import { TelemetryService } from "@roo-code/telemetry"
+import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
 
 import { ClineSayTool } from "../../shared/ExtensionMessage"
 import { getReadablePath } from "../../utils/path"
@@ -450,7 +451,7 @@ Diff ${i + 1} failed for file: ${relPath}
 Error: ${failPart.error}
 
 Suggested fixes:
-1. Verify the search content exactly matches the file content (including whitespace)
+1. Verify the search content exactly matches the file content (including whitespace and case)
 2. Check for correct indentation and line endings
 3. Use <read_file> to see the current file content
 4. Consider breaking complex changes into smaller diffs
@@ -553,7 +554,11 @@ ${errorDetails ? `\nTechnical details:\n${errorDetails}\n` : ""}
 				}
 
 				// Call saveChanges to update the DiffViewProvider properties
-				await cline.diffViewProvider.saveChanges()
+				const provider = cline.providerRef.deref()
+				const state = await provider?.getState()
+				const diagnosticsEnabled = state?.diagnosticsEnabled ?? true
+				const writeDelayMs = state?.writeDelayMs ?? DEFAULT_WRITE_DELAY_MS
+				await cline.diffViewProvider.saveChanges(diagnosticsEnabled, writeDelayMs)
 
 				// Track file edit operation
 				await cline.fileContextTracker.trackFileContext(relPath, "roo_edited" as RecordSource)

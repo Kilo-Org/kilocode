@@ -9,6 +9,7 @@ import { useCopyToClipboard } from "@/utils/clipboard"
 
 import { DeleteTaskDialog } from "../history/DeleteTaskDialog"
 import { IconButton } from "./IconButton"
+// import { ShareButton } from "./ShareButton" // kilocode_change unused
 
 interface TaskActionsProps {
 	item?: HistoryItem
@@ -22,17 +23,16 @@ export const TaskActions = ({ item, buttonsDisabled }: TaskActionsProps) => {
 
 	return (
 		<div className="flex flex-row gap-1">
+			{/*<ShareButton item={item} disabled={false} /> kilocode_change unused */}
 			<IconButton
 				iconClass="codicon-desktop-download"
 				title={t("chat:task.export")}
-				disabled={buttonsDisabled}
 				onClick={() => vscode.postMessage({ type: "exportCurrentTask" })}
 			/>
 			{item?.task && (
 				<IconButton
 					iconClass={showCopyFeedback ? "codicon-check" : "codicon-copy"}
 					title={t("history:copyPrompt")}
-					disabled={buttonsDisabled}
 					onClick={(e) => copyWithFeedback(item.task, e)}
 				/>
 			)}

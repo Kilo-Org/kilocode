@@ -53,6 +53,9 @@
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "Ключ API:",
 		"geminiApiKeyPlaceholder": "Введіть ваш ключ API Gemini",
+		"mistralProvider": "Mistral",
+		"mistralApiKeyLabel": "Ключ API:",
+		"mistralApiKeyPlaceholder": "Введіть ваш ключ API Mistral",
 		"openaiCompatibleProvider": "Сумісний з OpenAI",
 		"openAiKeyLabel": "Ключ API OpenAI",
 		"openAiKeyPlaceholder": "Введіть ваш ключ API OpenAI",
@@ -123,6 +126,7 @@
 			"modelIdRequired": "ID моделі є обов'язковим",
 			"modelDimensionRequired": "Розмірність моделі є обов'язковою",
 			"geminiApiKeyRequired": "Ключ API Gemini є обов'язковим",
+			"mistralApiKeyRequired": "Ключ API Mistral є обов'язковим",
 			"ollamaBaseUrlRequired": "Базовий URL Ollama є обов'язковим",
 			"baseUrlRequired": "Базовий URL є обов'язковим",
 			"modelDimensionMinValue": "Розмірність моделі повинна бути більше 0"
@@ -260,6 +264,9 @@
 		"getChutesApiKey": "Отримати ключ API Chutes",
 		"deepSeekApiKey": "Ключ API DeepSeek",
 		"getDeepSeekApiKey": "Отримати ключ API DeepSeek",
+		"moonshotApiKey": "Ключ API Moonshot",
+		"getMoonshotApiKey": "Отримати ключ API Moonshot",
+		"moonshotBaseUrl": "Точка входу Moonshot",
 		"geminiApiKey": "Ключ API Gemini",
 		"getGroqApiKey": "Отримати ключ API Groq",
 		"groqApiKey": "Ключ API Groq",
@@ -539,6 +546,10 @@
 		"outputLineLimit": {
 			"label": "Обмеження виводу терміналу",
 			"description": "Максимальна кількість рядків, які включаються до виводу терміналу при виконанні команд. При перевищенні рядки будуть видалені з середини, заощаджуючи токени. <0>Дізнатися більше</0>"
+		},
+		"outputCharacterLimit": {
+			"label": "Обмеження символів терміналу",
+			"description": "Максимальна кількість символів, які включаються до виводу терміналу при виконанні команд. Це обмеження має пріоритет над обмеженням рядків для запобігання проблемам з пам'яттю від надзвичайно довгих рядків. При перевищенні вивід буде обрізано. <0>Дізнатися більше</0>"
 		},
 		"shellIntegrationTimeout": {
 			"label": "Тайм-аут інтеграції оболонки терміналу",

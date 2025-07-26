@@ -53,6 +53,9 @@
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "مفتاح API:",
 		"geminiApiKeyPlaceholder": "أدخل مفتاح Gemini API",
+		"mistralProvider": "Mistral",
+		"mistralApiKeyLabel": "مفتاح API:",
+		"mistralApiKeyPlaceholder": "أدخل مفتاح Mistral API",
 		"openaiCompatibleProvider": "متوافق مع OpenAI",
 		"openAiKeyLabel": "مفتاح OpenAI API",
 		"openAiKeyPlaceholder": "أدخل مفتاح OpenAI API",
@@ -117,6 +120,7 @@
 			"modelIdRequired": "معرّف النموذج مطلوب",
 			"modelDimensionRequired": "بُعد النموذج مطلوب",
 			"geminiApiKeyRequired": "مفتاح Gemini API مطلوب",
+			"mistralApiKeyRequired": "مفتاح Mistral API مطلوب",
 			"ollamaBaseUrlRequired": "رابط Ollama الأساسي مطلوب",
 			"baseUrlRequired": "الرابط الأساسي مطلوب",
 			"modelDimensionMinValue": "بُعد النموذج يجب أن يكون أكبر من 0"
@@ -258,6 +262,9 @@
 		"getChutesApiKey": "احصل على مفتاح Chutes",
 		"deepSeekApiKey": "مفتاح DeepSeek",
 		"getDeepSeekApiKey": "احصل على مفتاح DeepSeek",
+		"moonshotApiKey": "مفتاح Moonshot",
+		"getMoonshotApiKey": "احصل على مفتاح Moonshot",
+		"moonshotBaseUrl": "نقطة دخول Moonshot",
 		"geminiApiKey": "مفتاح Gemini",
 		"getGroqApiKey": "احصل على مفتاح Groq",
 		"groqApiKey": "مفتاح Groq",
@@ -549,6 +556,10 @@
 		"outputLineLimit": {
 			"label": "حد مخرجات الطرفية",
 			"description": "أقصى الأسطر المُدرجة عند تنفيذ الأوامر."
+		},
+		"outputCharacterLimit": {
+			"label": "حد أحرف الطرفية",
+			"description": "أقصى عدد أحرف في مخرجات الطرفية عند تنفيذ الأوامر. هذا الحد له أولوية على حد الأسطر لمنع مشاكل الذاكرة من الأسطر الطويلة جداً. عند التجاوز، سيتم قطع المخرجات. <0>تعرف أكثر</0>"
 		},
 		"shellIntegrationTimeout": {
 			"label": "مهلة تكامل الشل",

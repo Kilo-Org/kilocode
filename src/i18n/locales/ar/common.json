@@ -41,6 +41,7 @@
 		"could_not_open_file_generic": "ما قدرنا نفتح الملف!",
 		"checkpoint_timeout": "انتهى الوقت أثناء محاولة استرجاع الحالة.",
 		"checkpoint_failed": "فشل في استرجاع الحالة.",
+		"git_not_installed": "Git مطلوب لميزة نقاط الحفظ. رجاءً ثبت Git لتفعيل نقاط الحفظ.",
 		"no_workspace": "افتح مجلد مشروع أولاً",
 		"update_support_prompt": "فشل تحديث الرسالة المساعدة",
 		"reset_support_prompt": "فشل إعادة تعيين الرسالة المساعدة",
@@ -131,7 +132,8 @@
 	},
 	"buttons": {
 		"save": "احفظ",
-		"edit": "عدّل"
+		"edit": "عدّل",
+		"learn_more": "اعرف أكثر"
 	},
 	"tasks": {
 		"canceled": "خطأ في المهمة: المستخدم أوقفها وألغى التنفيذ.",
@@ -178,6 +180,11 @@
 			"description": "متأكد تبي تحذف هذا الوضع {{scope}}؟ هذا بيحذف كمان مجلد القواعد المرتبط في: {{rulesFolderPath}}",
 			"descriptionNoRules": "متأكد تبي تحذف هذا الوضع المخصص؟",
 			"confirm": "احذف"
+		}
+	},
+	"commands": {
+		"preventCompletionWithOpenTodos": {
+			"description": "منع إكمال المهمة عند وجود مهام غير مكتملة في قائمة المهام"
 		}
 	}
 }

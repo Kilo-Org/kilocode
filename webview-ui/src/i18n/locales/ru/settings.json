@@ -48,6 +48,9 @@
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "Ключ API:",
 		"geminiApiKeyPlaceholder": "Введите свой API-ключ Gemini",
+		"mistralProvider": "Mistral",
+		"mistralApiKeyLabel": "Ключ API:",
+		"mistralApiKeyPlaceholder": "Введите свой API-ключ Mistral",
 		"openaiCompatibleProvider": "OpenAI-совместимый",
 		"openAiKeyLabel": "Ключ API OpenAI",
 		"openAiKeyPlaceholder": "Введите ваш ключ API OpenAI",
@@ -110,6 +113,7 @@
 			"modelIdRequired": "Требуется идентификатор модели",
 			"modelDimensionRequired": "Требуется размерность модели",
 			"geminiApiKeyRequired": "Требуется ключ API Gemini",
+			"mistralApiKeyRequired": "Требуется API-ключ Mistral",
 			"ollamaBaseUrlRequired": "Требуется базовый URL Ollama",
 			"baseUrlRequired": "Требуется базовый URL",
 			"modelDimensionMinValue": "Размерность модели должна быть больше 0"
@@ -258,6 +262,9 @@
 		"getChutesApiKey": "Получить Chutes API-ключ",
 		"deepSeekApiKey": "DeepSeek API-ключ",
 		"getDeepSeekApiKey": "Получить DeepSeek API-ключ",
+		"moonshotApiKey": "Moonshot API-ключ",
+		"getMoonshotApiKey": "Получить Moonshot API-ключ",
+		"moonshotBaseUrl": "Точка входа Moonshot",
 		"geminiApiKey": "Gemini API-ключ",
 		"getGroqApiKey": "Получить Groq API-ключ",
 		"groqApiKey": "Groq API-ключ",
@@ -527,6 +534,10 @@
 		"outputLineLimit": {
 			"label": "Лимит вывода терминала",
 			"description": "Максимальное количество строк, включаемых в вывод терминала при выполнении команд. При превышении строки из середины будут удаляться для экономии токенов. <0>Подробнее</0>"
+		},
+		"outputCharacterLimit": {
+			"label": "Лимит символов терминала",
+			"description": "Максимальное количество символов для включения в вывод терминала при выполнении команд. Этот лимит имеет приоритет над лимитом строк, чтобы предотвратить проблемы с памятью из-за чрезвычайно длинных строк. При превышении лимита вывод будет усечен. <0>Узнать больше</0>"
 		},
 		"shellIntegrationTimeout": {
 			"label": "Таймаут интеграции оболочки терминала",

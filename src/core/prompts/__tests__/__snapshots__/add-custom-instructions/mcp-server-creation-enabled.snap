@@ -469,7 +469,7 @@ Replace the entire TODO list with an updated checklist reflecting the current st
 </update_todo_list>
 
 **When to Use:**
-- The task involves multiple steps or requires ongoing tracking.
+- The task is complicated or involves multiple steps or requires ongoing tracking.
 - You need to update the status of several todos at once.
 - New actionable items are discovered during task execution.
 - The user requests a todo list or provides multiple tasks.
@@ -519,7 +519,7 @@ The Model Context Protocol (MCP) enables communication between the system and MC
 
 When a server is connected, you can use the server's tools via the `use_mcp_tool` tool, and access the server's resources via the `access_mcp_resource` tool.
 
-(No MCP servers currently connected)
+
 ## Creating an MCP Server
 
 The user may ask you something along the lines of "add a tool" that does some function, in other words to create an MCP server that provides tools and resources that may connect to external APIs for example. If they do, you should obtain detailed instructions on this topic using the fetch_instructions tool, like this:

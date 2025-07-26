@@ -36,6 +36,7 @@
 		"could_not_open_file_generic": "Dosya açılamadı!",
 		"checkpoint_timeout": "Kontrol noktasını geri yüklemeye çalışırken zaman aşımına uğradı.",
 		"checkpoint_failed": "Kontrol noktası geri yüklenemedi.",
+		"git_not_installed": "Kontrol noktaları özelliği için Git gereklidir. Kontrol noktalarını etkinleştirmek için lütfen Git'i yükleyin.",
 		"no_workspace": "Lütfen önce bir proje klasörü açın",
 		"update_support_prompt": "Destek istemi güncellenemedi",
 		"reset_support_prompt": "Destek istemi sıfırlanamadı",
@@ -125,7 +126,8 @@
 	},
 	"buttons": {
 		"save": "Kaydet",
-		"edit": "Düzenle"
+		"edit": "Düzenle",
+		"learn_more": "Daha Fazla Bilgi"
 	},
 	"tasks": {
 		"canceled": "Görev hatası: Kullanıcı tarafından durduruldu ve iptal edildi.",
@@ -183,6 +185,11 @@
 			"description": "Bu {{scope}} modunu silmek istediğinizden emin misiniz? Bu, {{rulesFolderPath}} adresindeki ilişkili kurallar klasörünü de silecektir",
 			"descriptionNoRules": "Bu özel modu silmek istediğinizden emin misiniz?",
 			"confirm": "Sil"
+		}
+	},
+	"commands": {
+		"preventCompletionWithOpenTodos": {
+			"description": "Todo listesinde tamamlanmamış todolar olduğunda görev tamamlanmasını engelle"
 		}
 	}
 }

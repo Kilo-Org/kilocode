@@ -41,6 +41,7 @@
 		"could_not_open_file_generic": "Не вдалося відкрити файл!",
 		"checkpoint_timeout": "Час очікування вичерпано під час спроби відновити checkpoint.",
 		"checkpoint_failed": "Не вдалося відновити checkpoint.",
+		"git_not_installed": "Git потрібен для функції checkpoint. Будь ласка, встанови Git, щоб увімкнути checkpoint.",
 		"no_workspace": "Будь ласка, спочатку відкрий папку проекту",
 		"update_support_prompt": "Не вдалося оновити support prompt",
 		"reset_support_prompt": "Не вдалося скинути support prompt",
@@ -131,7 +132,8 @@
 	},
 	"buttons": {
 		"save": "Зберегти",
-		"edit": "Редагувати"
+		"edit": "Редагувати",
+		"learn_more": "Дізнатися більше"
 	},
 	"tasks": {
 		"canceled": "Помилка завдання: Воно було зупинено та скасовано користувачем.",
@@ -178,6 +180,11 @@
 			"description": "Ти впевнений, що хочеш видалити цей {{scope}} режим? Це також видалить пов'язану папку правил за адресою: {{rulesFolderPath}}",
 			"descriptionNoRules": "Ти впевнений, що хочеш видалити цей користувацький режим?",
 			"confirm": "Видалити"
+		}
+	},
+	"commands": {
+		"preventCompletionWithOpenTodos": {
+			"description": "Запобігти завершенню завдання, коли є незавершені пункти в списку завдань"
 		}
 	}
 }

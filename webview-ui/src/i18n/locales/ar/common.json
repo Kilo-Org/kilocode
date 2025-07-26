@@ -1,4 +1,12 @@
 {
+	"errorBoundary": {
+		"title": "حدث خطأ ما",
+		"reportText": "ساعدنا في التحسين من خلال الإبلاغ عن هذا الخطأ على",
+		"githubText": "صفحة مشاكل GitHub الخاصة بنا",
+		"copyInstructions": "انسخ والصق رسالة الخطأ التالية لتضمينها كجزء من تقريرك:",
+		"errorStack": "مكدس الخطأ:",
+		"componentStack": "مكدس المكونات:"
+	},
 	"answers": {
 		"yes": "نعم",
 		"no": "لا",

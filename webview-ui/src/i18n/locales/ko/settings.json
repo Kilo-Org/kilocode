@@ -48,6 +48,9 @@
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "API 키:",
 		"geminiApiKeyPlaceholder": "Gemini API 키를 입력하세요",
+		"mistralProvider": "Mistral",
+		"mistralApiKeyLabel": "API 키:",
+		"mistralApiKeyPlaceholder": "Mistral API 키를 입력하세요",
 		"openaiCompatibleProvider": "OpenAI 호환",
 		"openAiKeyLabel": "OpenAI API 키",
 		"openAiKeyPlaceholder": "OpenAI API 키를 입력하세요",
@@ -110,6 +113,7 @@
 			"modelIdRequired": "모델 ID가 필요합니다",
 			"modelDimensionRequired": "모델 차원이 필요합니다",
 			"geminiApiKeyRequired": "Gemini API 키가 필요합니다",
+			"mistralApiKeyRequired": "Mistral API 키가 필요합니다",
 			"ollamaBaseUrlRequired": "Ollama 기본 URL이 필요합니다",
 			"baseUrlRequired": "기본 URL이 필요합니다",
 			"modelDimensionMinValue": "모델 차원은 0보다 커야 합니다"
@@ -123,7 +127,7 @@
 		"resetToDefault": "기본값으로 재설정"
 	},
 	"autoApprove": {
-		"description": "Roo가 승인 없이 자동으로 작업을 수행할 수 있도록 허용합니다. AI를 완전히 신뢰하고 관련 보안 위험을 이해하는 경우에만 이러한 설정을 활성화하세요.",
+		"description": "Kilo Code가 승인 없이 자동으로 작업을 수행할 수 있도록 허용합니다. AI를 완전히 신뢰하고 관련 보안 위험을 이해하는 경우에만 이러한 설정을 활성화하세요.",
 		"toggleAriaLabel": "자동 승인 전환",
 		"disabledAriaLabel": "자동 승인 비활성화됨 - 먼저 옵션을 선택하세요",
 		"readOnly": {
@@ -254,6 +258,9 @@
 		"getChutesApiKey": "Chutes API 키 받기",
 		"deepSeekApiKey": "DeepSeek API 키",
 		"getDeepSeekApiKey": "DeepSeek API 키 받기",
+		"moonshotApiKey": "Moonshot API 키",
+		"getMoonshotApiKey": "Moonshot API 키 받기",
+		"moonshotBaseUrl": "Moonshot 엔트리포인트",
 		"geminiApiKey": "Gemini API 키",
 		"getGroqApiKey": "Groq API 키 받기",
 		"groqApiKey": "Groq API 키",
@@ -381,7 +388,7 @@
 		},
 		"consecutiveMistakeLimit": {
 			"label": "오류 및 반복 제한",
-			"description": "'Roo에 문제가 발생했습니다' 대화 상자를 표시하기 전의 연속 오류 또는 반복 작업 수",
+			"description": "'Kilo Code에 문제가 발생했습니다' 대화 상자를 표시하기 전의 연속 오류 또는 반복 작업 수",
 			"unlimitedDescription": "무제한 재시도 활성화 (자동 진행). 대화 상자가 나타나지 않습니다.",
 			"warning": "⚠️ 0으로 설정하면 무제한 재시도가 허용되어 상당한 API 사용량이 발생할 수 있습니다"
 		},
@@ -528,6 +535,10 @@
 			"label": "터미널 출력 제한",
 			"description": "명령 실행 시 터미널 출력에 포함할 최대 라인 수. 초과 시 중간에서 라인이 제거되어 token이 절약됩니다. <0>더 알아보기</0>"
 		},
+		"outputCharacterLimit": {
+			"label": "터미널 문자 제한",
+			"description": "명령을 실행할 때 터미널 출력에 포함할 최대 문자 수입니다. 이 제한은 매우 긴 줄로 인한 메모리 문제를 방지하기 위해 줄 제한보다 우선합니다. 초과하면 출력이 잘립니다. <0>더 알아보기</0>"
+		},
 		"shellIntegrationTimeout": {
 			"label": "터미널 쉘 통합 타임아웃",
 			"description": "명령을 실행하기 전에 쉘 통합이 초기화될 때까지 기다리는 최대 시간. 쉘 시작 시간이 긴 사용자의 경우, 터미널에서 \"Shell Integration Unavailable\" 오류가 표시되면 이 값을 늘려야 할 수 있습니다. <0>더 알아보기</0>"
@@ -596,7 +607,7 @@
 		},
 		"todoList": {
 			"label": "할 일 목록 도구 활성화",
-			"description": "활성화하면 Roo가 작업 진행 상황을 추적하기 위한 할 일 목록을 만들고 관리할 수 있습니다. 이는 복잡한 작업을 관리 가능한 단계로 구성하는 데 도움이 됩니다."
+			"description": "활성화하면 Kilo Code가 작업 진행 상황을 추적하기 위한 할 일 목록을 만들고 관리할 수 있습니다. 이는 복잡한 작업을 관리 가능한 단계로 구성하는 데 도움이 됩니다."
 		}
 	},
 	"experimental": {

@@ -41,6 +41,7 @@
 		"could_not_open_file_generic": "ไม่สามารถเปิดไฟล์!",
 		"checkpoint_timeout": "หมดเวลาเมื่อพยายามกู้คืน checkpoint",
 		"checkpoint_failed": "ล้มเหลวในการกู้คืน checkpoint",
+		"git_not_installed": "ต้องใช้ Git สำหรับฟีเจอร์ checkpoint กรุณาติดตั้ง Git เพื่อเปิดใช้งาน checkpoint",
 		"no_workspace": "กรุณาเปิดโฟลเดอร์โปรเจ็กต์ก่อน",
 		"update_support_prompt": "ล้มเหลวในการอัปเดต support prompt",
 		"reset_support_prompt": "ล้มเหลวในการรีเซ็ต support prompt",
@@ -131,7 +132,8 @@
 	},
 	"buttons": {
 		"save": "บันทึก",
-		"edit": "แก้ไข"
+		"edit": "แก้ไข",
+		"learn_more": "เรียนรู้เพิ่มเติม"
 	},
 	"tasks": {
 		"canceled": "ข้อผิดพลาดงาน: ถูกหยุดและยกเลิกโดยผู้ใช้",
@@ -178,6 +180,11 @@
 			"description": "คุณแน่ใจหรือไม่ว่าต้องการลบโหมด {{scope}} นี้? การดำเนินการนี้จะลบโฟลเดอร์กฎที่เกี่ยวข้องด้วย ที่: {{rulesFolderPath}}",
 			"descriptionNoRules": "คุณแน่ใจหรือไม่ว่าต้องการลบโหมดที่กำหนดเองนี้?",
 			"confirm": "ลบ"
+		}
+	},
+	"commands": {
+		"preventCompletionWithOpenTodos": {
+			"description": "ป้องกันการทำงานเสร็จสิ้นเมื่อมี todo ที่ยังไม่เสร็จในรายการ todo"
 		}
 	}
 }

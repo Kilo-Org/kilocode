@@ -48,6 +48,9 @@
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "Chiave API:",
 		"geminiApiKeyPlaceholder": "Inserisci la tua chiave API Gemini",
+		"mistralProvider": "Mistral",
+		"mistralApiKeyLabel": "Chiave API:",
+		"mistralApiKeyPlaceholder": "Inserisci la tua chiave API Mistral",
 		"openaiCompatibleProvider": "Compatibile con OpenAI",
 		"openAiKeyLabel": "Chiave API OpenAI",
 		"openAiKeyPlaceholder": "Inserisci la tua chiave API OpenAI",
@@ -110,6 +113,7 @@
 			"modelIdRequired": "È richiesto l'ID del modello",
 			"modelDimensionRequired": "È richiesta la dimensione del modello",
 			"geminiApiKeyRequired": "È richiesta la chiave API Gemini",
+			"mistralApiKeyRequired": "La chiave API di Mistral è richiesta",
 			"ollamaBaseUrlRequired": "È richiesto l'URL di base di Ollama",
 			"baseUrlRequired": "È richiesto l'URL di base",
 			"modelDimensionMinValue": "La dimensione del modello deve essere maggiore di 0"
@@ -254,6 +258,9 @@
 		"getChutesApiKey": "Ottieni chiave API Chutes",
 		"deepSeekApiKey": "Chiave API DeepSeek",
 		"getDeepSeekApiKey": "Ottieni chiave API DeepSeek",
+		"moonshotApiKey": "Chiave API Moonshot",
+		"getMoonshotApiKey": "Ottieni chiave API Moonshot",
+		"moonshotBaseUrl": "Punto di ingresso Moonshot",
 		"geminiApiKey": "Chiave API Gemini",
 		"getGroqApiKey": "Ottieni chiave API Groq",
 		"groqApiKey": "Chiave API Groq",
@@ -527,6 +534,10 @@
 		"outputLineLimit": {
 			"label": "Limite output terminale",
 			"description": "Numero massimo di righe da includere nell'output del terminale durante l'esecuzione dei comandi. Quando superato, le righe verranno rimosse dal centro, risparmiando token. <0>Scopri di più</0>"
+		},
+		"outputCharacterLimit": {
+			"label": "Limite di caratteri del terminale",
+			"description": "Numero massimo di caratteri da includere nell'output del terminale durante l'esecuzione dei comandi. Questo limite ha la precedenza sul limite di righe per prevenire problemi di memoria causati da righe estremamente lunghe. Se superato, l'output verrà troncato. <0>Scopri di più</0>"
 		},
 		"shellIntegrationTimeout": {
 			"label": "Timeout integrazione shell del terminale",

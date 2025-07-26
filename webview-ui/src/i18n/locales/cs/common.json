@@ -1,4 +1,12 @@
 {
+	"errorBoundary": {
+		"title": "Něco se pokazilo",
+		"reportText": "Pomoz nám zlepšit se nahlášením této chyby na",
+		"githubText": "naší stránce GitHub Issues",
+		"copyInstructions": "Zkopíruj a vlož následující chybovou zprávu jako součást svého hlášení:",
+		"errorStack": "Stack chyby:",
+		"componentStack": "Stack komponent:"
+	},
 	"answers": {
 		"yes": "Ano",
 		"no": "Ne",
