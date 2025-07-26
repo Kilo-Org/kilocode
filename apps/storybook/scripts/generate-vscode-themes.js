@@ -16,15 +16,20 @@ const __dirname = path.dirname(__filename)
 
 // Convert VS Code theme colors to CSS variables
 function convertThemeToCSS(theme, themeName) {
-    const cssVars = Object.entries(theme.colors || {})
+	const entries = Object.entries(theme.colors || {})
+
+	// Generate only base variables (actual theme colors) - sorted alphabetically
+	const baseVars = entries
+		.sort(([a], [b]) => a.localeCompare(b))
 		.map(([key, value]) => {
-			// Convert "editor.background" to "--vscode-editor-background"
-			const cssVar = `--vscode-${key.replace(/\./g, "-")}`
-			return `\t${cssVar}: ${value};`
+			const baseVar = `--vscode-${key.replace(/\./g, "-")}`
+			return `${baseVar}: ${value};`
 		})
 		.join("\n")
 
-	return `/* ${themeName} theme - Generated from VS Code */\n${cssVars}`
+	return `/* ${themeName} theme - Generated from VS Code */
+/* Theme Colors - Base Variables Only */
+${baseVars}`
 }
 
 // Resolve theme includes using jsonc-parser

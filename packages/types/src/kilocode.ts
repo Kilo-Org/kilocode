@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-export const kilocodeDefaultModelId = "anthropic/claude-3.7-sonnet"
+export const kilocodeDefaultModelId = "anthropic/claude-sonnet-4"
 
 export const ghostServiceSettingsSchema = z
 	.object({
