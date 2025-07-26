@@ -1,6 +1,7 @@
 // kilocode_change - new file
 import { Anthropic } from "@anthropic-ai/sdk"
 import { z } from "zod"
+import * as vscode from "vscode"
 import type { ModelInfo, ProviderSettings } from "@roo-code/types"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 import { ContextProxy } from "../../core/config/ContextProxy"
@@ -154,6 +155,10 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 		// Check handlers in order, selecting the first one under limits
 		for (const { handler, profileId, config } of this.handlers) {
 			if (this.underLimit(config)) {
+				if (this.activeHandler !== handler || this.activeProfileId !== profileId) {
+					// Notify about the handler switch
+					await this.notifyHandlerSwitch(profileId)
+				}
 				this.activeHandler = handler
 				this.activeProfileId = profileId
 				return
@@ -164,6 +169,23 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 		const firstHandler = this.handlers[0]
 		this.activeHandler = firstHandler.handler
 		this.activeProfileId = firstHandler.profileId
+	}
+
+	private async notifyHandlerSwitch(newProfileId: string | undefined): Promise<void> {
+		let message: string
+		if (newProfileId) {
+			try {
+				const profile = await this.settingsManager.getProfile({ id: newProfileId })
+				const providerName = profile.name
+				message = `Switched active provider to: ${providerName}`
+			} catch (error) {
+				console.warn(`Failed to get provider name for ${newProfileId}:`, error)
+				message = `Switched active provider to an unknown profile (ID: ${newProfileId})`
+			}
+		} else {
+			message = "No active provider available. All configured providers are unavailable or over limits."
+		}
+		vscode.window.showInformationMessage(message)
 	}
 
 	/**

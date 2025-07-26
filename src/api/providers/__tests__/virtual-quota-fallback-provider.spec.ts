@@ -2,6 +2,9 @@
 
 // Mock vscode first to avoid import errors
 vitest.mock("vscode", () => ({
+	window: {
+		showInformationMessage: vitest.fn(),
+	},
 	globalState: {
 		get: vitest.fn(),
 		update: vitest.fn(),
@@ -17,6 +20,7 @@ vitest.mock("vscode", () => ({
 	},
 }))
 
+import * as vscode from "vscode"
 import type { ExtensionContext } from "vscode"
 import { ProviderSettingsManager } from "../../../core/config/ProviderSettingsManager"
 import { ContextProxy } from "../../../core/config/ContextProxy"
@@ -266,6 +270,16 @@ describe("VirtualQuotaFallbackProvider", () => {
 		})
 
 		describe("adjustActiveHandler", () => {
+			beforeEach(() => {
+				// kilocode_change start
+				;(mockSettingsManager.getProfile as any).mockImplementation(async ({ id }: { id: string }) => {
+					if (id === "p1") return { id: "p1", name: "primary-profile" }
+					if (id === "p2") return { id: "p2", name: "secondary-profile" }
+					if (id === "p3") return { id: "p3", name: "backup-profile" }
+					return undefined
+				})
+				// kilocode_change end
+			})
 			it("should set first handler as active if it is under limit", async () => {
 				const handler = new VirtualQuotaFallbackHandler({
 					profiles: [mockPrimaryProfile],
@@ -439,7 +453,25 @@ describe("VirtualQuotaFallbackProvider", () => {
 				;(handler as any).activeHandler = undefined
 				expect(() => handler.getModel()).toThrow("No active handler configured")
 			})
+
+			it("should notify about handler switch", async () => {
+				const showInformationMessageSpy = vitest.spyOn(vscode.window, "showInformationMessage")
+
+				const handler = new VirtualQuotaFallbackHandler({
+					profiles: [mockPrimaryProfile],
+				} as any)
+				;(handler as any).handlers = [
+					{ handler: mockPrimaryHandler, profileId: "p1", config: mockPrimaryProfile },
+				]
+
+				// Set initial active handler to something different to trigger a switch
+				;(handler as any).activeProfileId = "initial"
+				;(handler as any).activeHandler = { getModel: () => ({ id: "initial-model" }) }
+
+				await handler.adjustActiveHandler()
+
+				expect(showInformationMessageSpy).toHaveBeenCalledWith("Switched active provider to: primary-profile")
+			})
 		})
 	})
 })
-
