@@ -139,7 +139,7 @@ export const KilocodeNotifications: React.FC = () => {
 									title="Previous notification">
 									<span className="codicon codicon-chevron-left"></span>
 								</button>
-								<span className="text-xs text-vscode-descriptionForeground">
+								<span className="text-xs text-vscode-descriptionForeground whitespace-nowrap">
 									{currentIndex + 1} / {notifications.length}
 								</span>
 								<button
