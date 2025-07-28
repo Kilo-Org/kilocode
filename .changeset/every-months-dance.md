@@ -2,4 +2,4 @@
 "kilo-code": minor
 ---
 
-Enhances Inline Assistant by adding Comprehensive Context Awareness
+Improve Inline Assist suggestions by adding comprehensive context awareness
