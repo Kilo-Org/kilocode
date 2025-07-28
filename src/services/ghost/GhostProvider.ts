@@ -172,18 +172,6 @@ export class GhostProvider {
 		await this.provideCodeSuggestions({ document, range })
 	}
 
-	public async provideCodeActionQuickFix(
-		document: vscode.TextDocument,
-		range: vscode.Range | vscode.Selection,
-	): Promise<void> {
-		this.taskId = crypto.randomUUID()
-		TelemetryService.instance.captureEvent(TelemetryEventName.INLINE_ASSIST_AUTO_TASK, {
-			taskId: this.taskId,
-		})
-
-		await this.provideCodeSuggestions({ document, range })
-	}
-
 	private async provideCodeSuggestions(initialContext: GhostSuggestionContext): Promise<void> {
 		// Cancel any ongoing suggestions
 		await this.cancelSuggestions()
@@ -220,11 +208,8 @@ export class GhostProvider {
 					await this.reload()
 				}
 
-				console.log("userPrompt", userPrompt)
 				const { response, cost, inputTokens, outputTokens, cacheWriteTokens, cacheReadTokens } =
 					await this.model.generateResponse(systemPrompt, userPrompt)
-
-				console.log("Ghost response:", response)
 
 				TelemetryService.instance.captureEvent(TelemetryEventName.LLM_COMPLETION, {
 					taskId: this.taskId,
