@@ -82,6 +82,24 @@
 		},
 		"messages": {
 			"provideCodeSuggestions": "Надаємо пропозиції коду..."
-		}
+		},
+		"statusBar": {
+			"enabled": "$(sparkle) Вбудований асистент Kilo",
+			"disabled": "$(circle-slash) Кіло Вбудована допомога",
+			"tooltip": {
+				"basic": "Кіло Код Вбудована Допомога",
+				"disabled": "Кіло-Код вбудована допомога (вимкнено)",
+				"tokenError": "Для використання Вбудованого помічника необхідно встановити дійсний токен",
+				"lastCompletion": "Остання пропозиція:",
+				"model": "Модель:",
+				"sessionTotal": "Загальна вартість сесії:"
+			},
+			"warning": "$(warning) Kіло вбудована допомога",
+			"cost": {
+				"lessThanCent": "<$0,01",
+				"zero": "0,00 $"
+			}
+		},
+		"toggleMessage": "Вбудована допомога Kilo {{status}}"
 	}
 }

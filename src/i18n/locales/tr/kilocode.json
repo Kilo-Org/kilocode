@@ -82,6 +82,24 @@
 		},
 		"messages": {
 			"provideCodeSuggestions": "Kod önerileri sunuluyor..."
-		}
+		},
+		"statusBar": {
+			"enabled": "$(sparkle) Kilo Satır İçi Yardım",
+			"warning": "$(warning) Kilo Satır İçi Asistan",
+			"disabled": "$(circle-slash) Kilo Satır İçi Yardımı",
+			"tooltip": {
+				"basic": "Kilo Code Satır İçi Yardım",
+				"tokenError": "Satır İçi Yardım'ı kullanmak için geçerli bir belirteç ayarlanmalıdır",
+				"lastCompletion": "Son öneri:",
+				"sessionTotal": "Oturum toplam maliyeti:",
+				"disabled": "Kilo Kod Satır İçi Yardım (devre dışı)",
+				"model": "Model:"
+			},
+			"cost": {
+				"zero": "0,00 ₺",
+				"lessThanCent": "<$0,01"
+			}
+		},
+		"toggleMessage": "Kilo Satır İçi Yardımcı {{status}}"
 	}
 }

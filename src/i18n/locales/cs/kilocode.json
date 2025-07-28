@@ -82,6 +82,24 @@
 		},
 		"messages": {
 			"provideCodeSuggestions": "Poskytuji návrhy kódu..."
-		}
+		},
+		"statusBar": {
+			"disabled": "$(circle-slash) Inline asistent Kilo",
+			"enabled": "$(sparkle) Kilo Inline Asistent",
+			"warning": "$(warning) Inline asistence Kilo",
+			"tooltip": {
+				"disabled": "Kilo Code Inline Assist (deaktivováno)",
+				"basic": "Inline asistent Kilo Code",
+				"tokenError": "Pro použití Inline Assist je nutné nastavit platný token",
+				"sessionTotal": "Celková cena sezení:",
+				"model": "Model:",
+				"lastCompletion": "Poslední návrh:"
+			},
+			"cost": {
+				"zero": "0,00 Kč",
+				"lessThanCent": "<0,01 $"
+			}
+		},
+		"toggleMessage": "Kilo Inline Assist {{status}}"
 	}
 }

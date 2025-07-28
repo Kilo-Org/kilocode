@@ -82,6 +82,24 @@
 		},
 		"messages": {
 			"provideCodeSuggestions": "Code suggesties worden aangeboden..."
-		}
+		},
+		"statusBar": {
+			"disabled": "$(circle-slash) Kilo Inline Assist",
+			"enabled": "$(sparkle) Kilo Inline Hulp",
+			"warning": "$(warning) Kilo Inline Assist",
+			"tooltip": {
+				"basic": "Kilo Code Inline Assist",
+				"disabled": "Kilo Code Inline Assist (uitgeschakeld)",
+				"lastCompletion": "Laatste suggestie:",
+				"tokenError": "Een geldig token moet ingesteld zijn om Inline Assist te gebruiken",
+				"sessionTotal": "Totale sessiekosten:",
+				"model": "Model:"
+			},
+			"cost": {
+				"zero": "€0,00",
+				"lessThanCent": "<€0,01"
+			}
+		},
+		"toggleMessage": "Kilo Inline Assist {{status}}"
 	}
 }

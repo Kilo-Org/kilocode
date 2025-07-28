@@ -86,6 +86,24 @@
 		},
 		"messages": {
 			"provideCodeSuggestions": "جارٍ تقديم اقتراحات الرمز..."
-		}
+		},
+		"statusBar": {
+			"warning": "$(warning) مساعد كيلو المباشر",
+			"disabled": "$(circle-slash) مساعدة كيلو المضمنة",
+			"tooltip": {
+				"disabled": "مساعد كيلو كود المضمّن (معطّل)",
+				"basic": "مساعد رمز كيلو المدمج",
+				"lastCompletion": "الاقتراح الأخير:",
+				"model": "النموذج:",
+				"tokenError": "يجب تعيين رمز صالح لاستخدام المساعد المضمن",
+				"sessionTotal": "التكلفة الإجمالية للجلسة:"
+			},
+			"enabled": "$(sparkle) مساعد كيلو المضمّن",
+			"cost": {
+				"lessThanCent": "<$0.01",
+				"zero": "$٠٫٠٠"
+			}
+		},
+		"toggleMessage": "المساعد المضمن Kilo {{status}}"
 	}
 }

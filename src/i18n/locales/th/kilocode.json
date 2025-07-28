@@ -82,6 +82,24 @@
 		},
 		"messages": {
 			"provideCodeSuggestions": "กำลังเสนอคำแนะนำเกี่ยวกับโค้ด..."
-		}
+		},
+		"statusBar": {
+			"enabled": "$(sparkle) ผู้ช่วยอัจฉริยะในแบบ Kilo",
+			"warning": "⚠️ Kilo Inline Assist",
+			"disabled": "$(circle-slash) Kilo Inline Assist",
+			"tooltip": {
+				"basic": "การช่วยเหลือแบบอินไลน์ Kilo Code",
+				"disabled": "Kilo Code Inline Assist (ปิดใช้งาน)",
+				"sessionTotal": "ค่าใช้จ่ายรวมของเซสชัน:",
+				"lastCompletion": "ข้อเสนอแนะสุดท้าย:",
+				"tokenError": "จำเป็นต้องตั้งค่าโทเค็นที่ถูกต้องเพื่อใช้ Inline Assist",
+				"model": "โมเดล:"
+			},
+			"cost": {
+				"zero": "฿0.00",
+				"lessThanCent": "<฿0.35"
+			}
+		},
+		"toggleMessage": "Kilo Inline Assist {{status}}"
 	}
 }

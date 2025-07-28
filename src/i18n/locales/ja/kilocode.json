@@ -82,6 +82,24 @@
 		},
 		"messages": {
 			"provideCodeSuggestions": "コードを提案中..."
-		}
+		},
+		"statusBar": {
+			"disabled": "$(circle-slash) キロ インライン アシスト",
+			"warning": "$(warning) キロ インライン アシスト",
+			"enabled": "$(sparkle) Kilo インライン アシスト",
+			"tooltip": {
+				"basic": "キロ コード インライン アシスト",
+				"disabled": "Kilo Code インラインアシスト（無効）",
+				"tokenError": "インラインアシストを使用するには有効なトークンを設定する必要があります",
+				"lastCompletion": "最後の提案:",
+				"sessionTotal": "セッション合計費用:",
+				"model": "モデル:"
+			},
+			"cost": {
+				"zero": "¥0",
+				"lessThanCent": "<$0.01"
+			}
+		},
+		"toggleMessage": "キロインラインアシスト {{status}}"
 	}
 }

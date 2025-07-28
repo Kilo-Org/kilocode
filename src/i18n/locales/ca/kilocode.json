@@ -82,6 +82,24 @@
 		},
 		"messages": {
 			"provideCodeSuggestions": "S'estan proporcionant suggeriments de codi..."
-		}
+		},
+		"statusBar": {
+			"enabled": "$(sparkle) Assistència en línia de Kilo",
+			"disabled": "$(circle-slash) Kilo Inline Assist",
+			"warning": "$(warning) Assistència de Kilo en línia",
+			"tooltip": {
+				"disabled": "Assistència en línia de Kilo Code (desactivat)",
+				"basic": "Assistència en línia Kilo Code",
+				"tokenError": "S'ha d'establir un token vàlid per utilitzar l'Assistència Integrada",
+				"lastCompletion": "Última suggerència:",
+				"sessionTotal": "Cost total de la sessió:",
+				"model": "Model:"
+			},
+			"cost": {
+				"zero": "0,00 €",
+				"lessThanCent": "<0,01 €"
+			}
+		},
+		"toggleMessage": "Assistència en línia Kilo {{status}}"
 	}
 }

@@ -82,6 +82,24 @@
 		},
 		"messages": {
 			"provideCodeSuggestions": "Предлагаю код..."
-		}
+		},
+		"statusBar": {
+			"enabled": "$(sparkle) Кило Встроенный Ассистент",
+			"disabled": "$(circle-slash) Встроенный помощник Kilo",
+			"warning": "$(warning) Килобайт Встроенный Ассистент",
+			"tooltip": {
+				"disabled": "Kilo Code Inline Assist (отключено)",
+				"lastCompletion": "Последнее предложение:",
+				"basic": "Встроенная помощь Kilo Code",
+				"tokenError": "Для использования Inline Assist должен быть установлен действительный токен",
+				"sessionTotal": "Общая стоимость сессии:",
+				"model": "Модель:"
+			},
+			"cost": {
+				"zero": "0,00 $",
+				"lessThanCent": "<$0,01"
+			}
+		},
+		"toggleMessage": "Встроенная помощь Kilo {{status}}"
 	}
 }

@@ -82,6 +82,24 @@
 		},
 		"messages": {
 			"provideCodeSuggestions": "Memberikan saran kode..."
-		}
+		},
+		"statusBar": {
+			"enabled": "$(sparkle) Bantuan Inline Kilo",
+			"disabled": "$(circle-slash) Bantuan Sebaris Kilo",
+			"warning": "$(warning) Kilo Inline Assist",
+			"tooltip": {
+				"basic": "Bantuan Inline Kilo Code",
+				"disabled": "Kilo Code Inline Assist (dinonaktifkan)",
+				"tokenError": "Token yang valid harus ditetapkan untuk menggunakan Inline Assist",
+				"sessionTotal": "Total biaya sesi:",
+				"model": "Model:",
+				"lastCompletion": "Saran terakhir:"
+			},
+			"cost": {
+				"lessThanCent": "<Rp0,01",
+				"zero": "Rp 0,00"
+			}
+		},
+		"toggleMessage": "Kilo Inline Assist {{status}}"
 	}
 }

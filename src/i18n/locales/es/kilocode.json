@@ -82,6 +82,24 @@
 		},
 		"messages": {
 			"provideCodeSuggestions": "Proporcionando sugerencias de código..."
-		}
+		},
+		"statusBar": {
+			"enabled": "$(sparkle) Asistente Integrado Kilo",
+			"warning": "$(warning) Asistencia Integrada Kilo",
+			"disabled": "$(circle-slash) Asistencia en línea Kilo",
+			"tooltip": {
+				"disabled": "Asistente Integrado Kilo Code (desactivado)",
+				"basic": "Asistencia Integrada Kilo Code",
+				"tokenError": "Se debe establecer un token válido para usar Inline Assist",
+				"lastCompletion": "Última sugerencia:",
+				"model": "Modelo:",
+				"sessionTotal": "Costo total de la sesión:"
+			},
+			"cost": {
+				"zero": "$0.00",
+				"lessThanCent": "<$0.01"
+			}
+		},
+		"toggleMessage": "Asistente Integrado Kilo {{status}}"
 	}
 }

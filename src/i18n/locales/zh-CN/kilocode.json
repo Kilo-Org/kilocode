@@ -82,6 +82,24 @@
 		},
 		"messages": {
 			"provideCodeSuggestions": "正在提供代码建议..."
-		}
+		},
+		"statusBar": {
+			"enabled": "$(sparkle) Kilo 内嵌助手",
+			"disabled": "$(circle-slash) Kilo 内联辅助",
+			"tooltip": {
+				"basic": "千行代码内联协助",
+				"disabled": "Kilo Code 行内辅助（已禁用）",
+				"lastCompletion": "最后建议：",
+				"tokenError": "必须设置有效令牌才能使用行内助手",
+				"sessionTotal": "会话总费用：",
+				"model": "模型："
+			},
+			"warning": "$(warning) Kilo 内联助手",
+			"cost": {
+				"zero": "¥0.00",
+				"lessThanCent": "<¥0.07"
+			}
+		},
+		"toggleMessage": "K1内联助手 {{status}}"
 	}
 }
