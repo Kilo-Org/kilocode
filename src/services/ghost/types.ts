@@ -64,7 +64,7 @@ export interface ASTContext {
 }
 
 export interface GhostSuggestionContext {
-	document?: vscode.TextDocument
+	document: vscode.TextDocument
 	documentAST?: ASTContext
 	editor?: vscode.TextEditor
 	openFiles?: vscode.TextDocument[]

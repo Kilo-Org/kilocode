@@ -2,7 +2,6 @@ import * as vscode from "vscode"
 import { structuredPatch } from "diff"
 import { GhostSuggestionContext, GhostSuggestionEditOperationType } from "./types"
 import { GhostSuggestionsState } from "./GhostSuggestions"
-import { GhostDocumentStore } from "./GhostDocumentStore"
 
 export class GhostStrategy {
 	getSystemPrompt(customInstructions: string = "") {
@@ -254,18 +253,22 @@ ${sections.filter(Boolean).join("\n\n")}
 	async parseResponse(response: string, context: GhostSuggestionContext): Promise<GhostSuggestionsState> {
 		const suggestions = new GhostSuggestionsState()
 
-		// Check if the response is in the new format (file path + code block)
+		// Check for code block formats: with or without file path
 		const fullContentMatch = response.match(/^(.+?)\r?\n```[\w-]*\r?\n([\s\S]+?)```/m)
+		const codeBlockMatch = response.match(/^```[\w-]*\r?\n([\s\S]+?)```$/m)
 
-		console.log("fullContentMatch", fullContentMatch)
-
-		// If the response is in the new format
 		if (fullContentMatch) {
-			// Extract file path and new content
 			const [_, filePath, newContent] = fullContentMatch
-
-			// Process the new format
 			return await this.processFullContentFormat(filePath, newContent, context)
+		}
+
+		if (codeBlockMatch) {
+			const [_, newContent] = codeBlockMatch
+			return await this.processFullContentFormat(
+				vscode.workspace.asRelativePath(context.document.uri, false),
+				newContent,
+				context,
+			)
 		}
 
 		// Check if the response is in the old diff format

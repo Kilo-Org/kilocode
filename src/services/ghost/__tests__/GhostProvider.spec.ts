@@ -241,10 +241,11 @@ describe("GhostProvider", () => {
 
 		it("should handle file not found in context", async () => {
 			const initialContent = `console.log('test');`
-			await setupTestDocument("missing.js", initialContent)
+			const { mockDocument } = await setupTestDocument("missing.js", initialContent)
 
 			// Create context without the file in openFiles
 			const context: GhostSuggestionContext = {
+				document: mockDocument, // Add dummy document as active document
 				openFiles: [], // Empty - file not in context
 			}
 

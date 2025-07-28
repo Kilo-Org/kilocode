@@ -390,4 +390,20 @@ describe("GhostStrategy", () => {
 			expect(currentDocPos).toBeGreaterThan(astInfoPos)
 		})
 	})
+
+	describe("parseResponse", () => {
+		it("should handle code block without file path", async () => {
+			const responseWithoutFilePath = `\`\`\`javascript
+function add(a, b) {
+		  return a + b;
+}
+\`\`\``
+			const context: GhostSuggestionContext = {
+				document: mockDocument,
+			}
+
+			const result = await strategy.parseResponse(responseWithoutFilePath, context)
+			expect(result.hasSuggestions()).toBe(true)
+		})
+	})
 })
