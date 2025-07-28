@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 import { t } from "../../i18n"
 
-interface AutocompleteStatusBarStateParams {
+interface GhostStatusBarStateProps {
 	enabled?: boolean
 	model?: string
 	hasValidToken?: boolean
@@ -9,7 +9,7 @@ interface AutocompleteStatusBarStateParams {
 	lastCompletionCost?: number
 }
 
-export class AutocompleteStatusBar {
+export class GhostStatusBar {
 	statusBar: vscode.StatusBarItem
 	enabled: boolean
 	model: string
@@ -17,7 +17,7 @@ export class AutocompleteStatusBar {
 	totalSessionCost?: number
 	lastCompletionCost?: number
 
-	constructor(params: AutocompleteStatusBarStateParams) {
+	constructor(params: GhostStatusBarStateProps) {
 		this.statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100)
 		this.enabled = params.enabled || false
 		this.model = params.model || "default"
@@ -53,7 +53,7 @@ export class AutocompleteStatusBar {
 		return `$${cost.toFixed(2)}`
 	}
 
-	public update(params: AutocompleteStatusBarStateParams) {
+	public update(params: GhostStatusBarStateProps) {
 		this.enabled = params.enabled !== undefined ? params.enabled : this.enabled
 		this.model = params.model !== undefined ? params.model : this.model
 		this.hasValidToken = params.hasValidToken !== undefined ? params.hasValidToken : this.hasValidToken

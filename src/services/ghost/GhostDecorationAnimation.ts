@@ -5,8 +5,8 @@ export const UI_SHOW_LOADING_DELAY_MS = 150
 /**
  * Manages the animated decoration for autocomplete loading indicator
  */
-export class AutocompleteDecorationAnimation {
-	private static instance: AutocompleteDecorationAnimation
+export class GhostDecorationAnimation {
+	private static instance: GhostDecorationAnimation
 	private animationInitialWaitTimer: NodeJS.Timeout | null = null
 	private animationInterval: NodeJS.Timeout | null = null
 	private decorationType: vscode.TextEditorDecorationType
@@ -28,11 +28,11 @@ export class AutocompleteDecorationAnimation {
 		})
 	}
 
-	public static getInstance(): AutocompleteDecorationAnimation {
-		if (!AutocompleteDecorationAnimation.instance) {
-			AutocompleteDecorationAnimation.instance = new AutocompleteDecorationAnimation()
+	public static getInstance(): GhostDecorationAnimation {
+		if (!GhostDecorationAnimation.instance) {
+			GhostDecorationAnimation.instance = new GhostDecorationAnimation()
 		}
-		return AutocompleteDecorationAnimation.instance
+		return GhostDecorationAnimation.instance
 	}
 
 	/**

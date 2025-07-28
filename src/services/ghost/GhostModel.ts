@@ -78,4 +78,16 @@ export class GhostModel {
 			cacheReadTokens,
 		}
 	}
+
+	public getModelName(): string | null {
+		if (!this.apiHandler) {
+			return null
+		}
+		// Extract model name from API handler
+		return this.apiHandler.getModel().id ?? "unknown"
+	}
+
+	public hasValidCredentials(): boolean {
+		return this.apiHandler !== null && this.loaded
+	}
 }

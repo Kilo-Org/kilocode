@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest"
 import * as vscode from "vscode"
 import { GhostDocumentStore } from "../GhostDocumentStore"
-import { MockTextDocument } from "../../autocomplete/__tests__/MockTextDocument"
 import { ASTContext } from "../types"
+import { MockTextDocument } from "../../mocking/MockTextDocument"
 
 // Mock vscode
 vi.mock("vscode", () => ({

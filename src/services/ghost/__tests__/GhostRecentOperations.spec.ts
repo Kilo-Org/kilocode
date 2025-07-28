@@ -4,7 +4,7 @@ import { GhostContext } from "../GhostContext"
 import { GhostDocumentStore } from "../GhostDocumentStore"
 import { GhostStrategy } from "../GhostStrategy"
 import { GhostSuggestionContext } from "../types"
-import { MockTextDocument } from "../../autocomplete/__tests__/MockTextDocument"
+import { MockTextDocument } from "../../mocking/MockTextDocument"
 
 // Mock vscode
 vi.mock("vscode", () => ({

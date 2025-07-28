@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from "vitest"
 import * as vscode from "vscode"
 import { GhostStrategy } from "../GhostStrategy"
 import { GhostSuggestionContext, ASTContext } from "../types"
-import { MockTextDocument } from "../../autocomplete/__tests__/MockTextDocument"
+import { MockTextDocument } from "../../mocking/MockTextDocument"
 
 // Create a mock Node class for testing
 class MockNode {
