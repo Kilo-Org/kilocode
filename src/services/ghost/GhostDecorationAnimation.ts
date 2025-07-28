@@ -3,7 +3,7 @@ import * as vscode from "vscode"
 export const UI_SHOW_LOADING_DELAY_MS = 150
 
 /**
- * Manages the animated decoration for autocomplete loading indicator
+ * Manages the animated decoration for ghost suggestions loading indicator
  */
 export class GhostDecorationAnimation {
 	private static instance: GhostDecorationAnimation
