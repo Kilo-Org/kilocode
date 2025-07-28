@@ -126,8 +126,6 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setEnhancementApiConfigId: (value: string) => void
 	commitMessageApiConfigId?: string // kilocode_change
 	setCommitMessageApiConfigId: (value: string) => void // kilocode_change
-	autocompleteApiConfigId?: string // kilocode_change
-	setAutocompleteApiConfigId: (value: string) => void // kilocode_change
 	ghostServiceSettings?: GhostServiceSettings // kilocode_change
 	setGhostServiceSettings: (value: GhostServiceSettings) => void // kilocode_change
 	setExperimentEnabled: (id: ExperimentId, enabled: boolean) => void
@@ -218,7 +216,6 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		experiments: experimentDefault,
 		enhancementApiConfigId: "",
 		commitMessageApiConfigId: "", // kilocode_change
-		autocompleteApiConfigId: "", // kilocode_change
 		ghostServiceSettings: {}, // kilocode_change
 		condensingApiConfigId: "", // Default empty string for condensing API config ID
 		customCondensingPrompt: "", // Default empty string for custom condensing prompt
@@ -494,8 +491,6 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setEnhancementApiConfigId: (value) =>
 			setState((prevState) => ({ ...prevState, enhancementApiConfigId: value })),
 		// kilocode_change start
-		setAutocompleteApiConfigId: (value) =>
-			setState((prevState) => ({ ...prevState, autocompleteApiConfigId: value })),
 		setGhostServiceSettings: (value) => setState((prevState) => ({ ...prevState, ghostServiceSettings: value })),
 		setCommitMessageApiConfigId: (value) =>
 			setState((prevState) => ({ ...prevState, commitMessageApiConfigId: value })),

@@ -150,7 +150,6 @@ export interface WebviewMessage {
 		| "systemPrompt"
 		| "enhancementApiConfigId"
 		| "commitMessageApiConfigId" // kilocode_change
-		| "autocompleteApiConfigId" // kilocode_change
 		| "ghostServiceSettings" // kilocode_change
 		| "updateExperimental"
 		| "autoApprovalEnabled"
