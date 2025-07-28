@@ -31,7 +31,7 @@ export class GhostStatusBar {
 	private init() {
 		this.statusBar.text = t("kilocode:autocomplete.statusBar.enabled")
 		this.statusBar.tooltip = t("kilocode:autocomplete.statusBar.tooltip.basic")
-		this.statusBar.command = "kilo-code.toggleAutocomplete"
+		// this.statusBar.command = "kilo-code.toggleAutocomplete" // Removed click handler
 		this.show()
 	}
 
