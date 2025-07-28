@@ -633,10 +633,6 @@
 			"name": "Use experimental \"power steering\" mode",
 			"description": "When enabled, Kilo Code will remind the model about the details of its current mode definition more frequently. This will lead to stronger adherence to role definitions and custom instructions, but will use more tokens per message."
 		},
-		"AUTOCOMPLETE": {
-			"name": "Use experimental \"autocomplete\" feature",
-			"description": "When enabled, Kilo Code will provide inline code suggestions as you type. Requires Kilo Code API Provider."
-		},
 		"CONCURRENT_FILE_READS": {
 			"name": "Enable concurrent file reads",
 			"description": "When enabled, Kilo Code can read multiple files in a single request. When disabled, Kilo Code must read files one at a time. Disabling this can help when working with less capable models or when you want more control over file access."

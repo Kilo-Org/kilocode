@@ -264,7 +264,6 @@ describe("mergeExtensionState", () => {
 			experiments: {
 				powerSteering: true,
 				marketplace: false,
-				autocomplete: true,
 				disableCompletionCommand: false,
 				concurrentFileReads: true,
 				multiFileApplyDiff: true,
@@ -281,7 +280,6 @@ describe("mergeExtensionState", () => {
 		expect(result.experiments).toEqual({
 			powerSteering: true,
 			marketplace: false,
-			autocomplete: true,
 			disableCompletionCommand: false,
 			concurrentFileReads: true,
 			multiFileApplyDiff: true,

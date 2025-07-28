@@ -660,10 +660,6 @@
 			"name": "Použít experimentální režim \"posilovače řízení\"",
 			"description": "Pokud je povoleno, Kilo Code bude modelu častěji připomínat podrobnosti jeho aktuální definice režimu. To povede k silnějšímu dodržování definic rolí a vlastních instrukcí, ale použije více tokenů na zprávu."
 		},
-		"AUTOCOMPLETE": {
-			"name": "Použít experimentální funkci \"automatického doplňování\"",
-			"description": "Pokud je povoleno, Kilo Code bude poskytovat návrhy kódu přímo při psaní. Vyžaduje Kilo Code API Provider."
-		},
 		"CONCURRENT_FILE_READS": {
 			"name": "Povolit souběžné čtení souborů",
 			"description": "Pokud je povoleno, Kilo Code může číst více souborů v jednom požadavku. Pokud je zakázáno, Kilo Code musí číst soubory jeden po druhém. Zakázání může pomoci při práci s méně schopnými modely nebo když chcete mít větší kontrolu nad přístupem k souborům."

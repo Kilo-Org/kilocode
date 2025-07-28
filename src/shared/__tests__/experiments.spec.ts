@@ -14,17 +14,6 @@ describe("experiments", () => {
 		})
 	})
 
-	// kilocode_change start
-	describe("AUTOCOMPLETE", () => {
-		it("is configured correctly", () => {
-			expect(EXPERIMENT_IDS.AUTOCOMPLETE).toBe("autocomplete")
-			expect(experimentConfigsMap.AUTOCOMPLETE).toMatchObject({
-				enabled: false,
-			})
-		})
-	})
-	// kilocode_change end
-
 	describe("MULTI_FILE_APPLY_DIFF", () => {
 		it("is configured correctly", () => {
 			expect(EXPERIMENT_IDS.MULTI_FILE_APPLY_DIFF).toBe("multiFileApplyDiff")
@@ -37,7 +26,6 @@ describe("experiments", () => {
 	describe("isEnabled", () => {
 		it("returns false when POWER_STEERING experiment is not enabled", () => {
 			const experiments: Record<ExperimentId, boolean> = {
-				autocomplete: false,
 				powerSteering: false,
 				multiFileApplyDiff: false,
 			}
@@ -46,7 +34,6 @@ describe("experiments", () => {
 
 		it("returns true when experiment POWER_STEERING is enabled", () => {
 			const experiments: Record<ExperimentId, boolean> = {
-				autocomplete: true,
 				powerSteering: true,
 				multiFileApplyDiff: false,
 			}
@@ -55,7 +42,6 @@ describe("experiments", () => {
 
 		it("returns false when experiment is not present", () => {
 			const experiments: Record<ExperimentId, boolean> = {
-				autocomplete: false,
 				powerSteering: false,
 				multiFileApplyDiff: false,
 			}

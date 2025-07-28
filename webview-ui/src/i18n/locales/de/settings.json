@@ -627,10 +627,6 @@
 			"name": "Experimentellen \"Power Steering\"-Modus verwenden",
 			"description": "Wenn aktiviert, erinnert Kilo Code das Modell häufiger an die Details seiner aktuellen Modusdefinition. Dies führt zu einer stärkeren Einhaltung von Rollendefinitionen und benutzerdefinierten Anweisungen, verbraucht aber mehr Token pro Nachricht."
 		},
-		"AUTOCOMPLETE": {
-			"name": "Experimentelle \"Autovervollständigungs\"-Funktion verwenden",
-			"description": "Wenn aktiviert, bietet Kilo Code während der Eingabe Inline-Code-Vorschläge an."
-		},
 		"CONCURRENT_FILE_READS": {
 			"name": "Gleichzeitiges Lesen von Dateien aktivieren",
 			"description": "Wenn aktiviert, kann Kilo Code mehrere Dateien in einer einzigen Anfrage lesen. Wenn deaktiviert, muss Kilo Code Dateien einzeln lesen. Das Deaktivieren kann hilfreich sein, wenn mit weniger fähigen Modellen gearbeitet wird oder wenn du mehr Kontrolle über den Dateizugriff haben möchtest."
