@@ -54,6 +54,7 @@ export const test = base.extend<TestFixtures>({
 				"--disable-updates",
 				"--skip-welcome",
 				"--skip-release-notes",
+				"--skip-getting-started",
 				"--disable-workspace-trust",
 				"--disable-telemetry",
 				"--disable-crash-reporter",

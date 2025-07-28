@@ -172,9 +172,6 @@ export class GhostProvider {
 		document: vscode.TextDocument,
 		range: vscode.Range | vscode.Selection,
 	): Promise<void> {
-		// Store the document in the document store and parse its AST
-		await this.getDocumentStore().storeDocument({ document })
-
 		this.taskId = crypto.randomUUID()
 		TelemetryService.instance.captureEvent(TelemetryEventName.INLINE_ASSIST_AUTO_TASK, {
 			taskId: this.taskId,

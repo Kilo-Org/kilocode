@@ -10,12 +10,13 @@ test.describe("E2E Chat Test", () => {
 
 		await configureApiKeyThroughUI(page)
 		await waitForWebviewText(page, "Generate, refactor, and debug code with AI assistance")
-		await takeScreenshot("ready-to-chat")
 
-		await sendMessage(page, "Fill in the blanks for this phrase: 'hello w_r_d'")
+		await page.waitForTimeout(1000) // Let the page settle to avoid flakey screenshots
+		await takeScreenshot("ready-to-chat")
 
 		// Don't take any more screenshots after the reponse starts-
 		// llm responses aren't deterministic any capturing the reponse would cause screenshot flakes
+		await sendMessage(page, "Fill in the blanks for this phrase: 'hello w_r_d'")
 		await waitForWebviewText(page, "hello world", 30_000)
 	})
 })

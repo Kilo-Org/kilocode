@@ -3,6 +3,11 @@ import * as path from "path"
 import { createPatch, parsePatch, structuredPatch } from "diff"
 import { GhostDocumentStoreItem, ASTContext, UserAction, UserActionType, UserActionGroup } from "./types"
 
+export const GHOST_DOCUMENT_STORE_LIMITS = {
+	MAX_DOCUMENTS: 50, // Limit the number of documents to keep
+	MAX_HISTORY_PER_DOCUMENT: 50, // Limit the number of snapshots per document to keep
+} as const
+
 export class GhostDocumentStore {
 	private debounceTimers: Map<string, NodeJS.Timeout> = new Map()
 	private historyLimit: number = 10 // Limit the number of snapshots to keep

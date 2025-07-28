@@ -571,6 +571,7 @@ export const webviewMessageHandler = async (
 					key: "kilocode-openrouter",
 					options: { provider: "kilocode-openrouter", kilocodeToken: apiConfiguration.kilocodeToken },
 				},
+				{ key: "ollama", options: { provider: "ollama", baseUrl: apiConfiguration.ollamaBaseUrl } },
 			]
 			// kilocode_change end
 

@@ -34,6 +34,7 @@ import {
 	litellmDefaultModelId,
 	claudeCodeDefaultModelId,
 	claudeCodeModels,
+	kilocodeDefaultModelId,
 } from "@roo-code/types"
 
 import { cerebrasModels, cerebrasDefaultModelId } from "@roo/api" // kilocode_change
@@ -258,8 +259,8 @@ function getSelectedModel({
 
 			// Fallback to anthropic model if no match found
 			return {
-				id: "anthropic/claude-3.7-sonnet",
-				info: routerModels["kilocode-openrouter"]["anthropic/claude-3.7-sonnet"],
+				id: kilocodeDefaultModelId,
+				info: routerModels["kilocode-openrouter"][kilocodeDefaultModelId],
 			}
 		}
 		// kilocode_change end

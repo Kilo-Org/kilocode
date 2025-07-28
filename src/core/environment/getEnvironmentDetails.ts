@@ -24,6 +24,7 @@ import { formatReminderSection } from "./reminder"
 import { OpenRouterHandler } from "../../api/providers/openrouter"
 import { TelemetryService } from "@roo-code/telemetry"
 import { t } from "../../i18n"
+import { KilocodeOllamaHandler } from "../../api/providers/kilocode-ollama"
 // kilocode_change end
 
 export async function getEnvironmentDetails(cline: Task, includeFileDetails: boolean = false) {
@@ -197,7 +198,7 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 
 	// kilocode_change start
 	// Be sure to fetch the model information before we need it.
-	if (cline.api instanceof OpenRouterHandler) {
+	if (cline.api instanceof OpenRouterHandler || cline.api instanceof KilocodeOllamaHandler) {
 		try {
 			await cline.api.fetchModel()
 		} catch (e) {

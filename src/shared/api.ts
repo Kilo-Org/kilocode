@@ -59,15 +59,27 @@ export const fireworksDefaultModelId: FireworksModelId = "accounts/fireworks/mod
 // kilocode_change start
 // Cerebras
 // https://inference-docs.cerebras.ai/api-reference/models
+
+// Cerebras AI Inference Model Definitions - Updated July 2025
+
 export const cerebrasModels = {
 	"llama-4-scout-17b-16e-instruct": {
-		maxTokens: 8192,
-		contextWindow: 8192,
+		maxTokens: 32768,
+		contextWindow: 32768,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0, // set if usage-based price appears
+		outputPrice: 0,
+		description: "Meta Llama 4 Scout (17B), next-generation model for fast instruction-following. ~2,600+ tokens/sec.",
+	},
+	"llama-4-maverick-400b": {
+		maxTokens: 128000,
+		contextWindow: 128000,
 		supportsImages: false,
 		supportsPromptCache: false,
 		inputPrice: 0,
 		outputPrice: 0,
-		description: "Fast inference model with ~2700 tokens/s",
+		description: "Meta Llama 4 Maverick (400B), ultra-large model, real-time inference at ~2,500 tokens/sec.",
 	},
 	"llama3.1-8b": {
 		maxTokens: 8192,
@@ -76,7 +88,7 @@ export const cerebrasModels = {
 		supportsPromptCache: false,
 		inputPrice: 0,
 		outputPrice: 0,
-		description: "Efficient model with ~2100 tokens/s",
+		description: "Meta Llama 3.1-8B, efficient 8B parameter model. ~2,100 tokens/sec.",
 	},
 	"llama-3.3-70b": {
 		maxTokens: 8192,
@@ -85,16 +97,34 @@ export const cerebrasModels = {
 		supportsPromptCache: false,
 		inputPrice: 0,
 		outputPrice: 0,
-		description: "Powerful model with ~2600 tokens/s",
+		description: "Meta Llama 3.3-70B, powerful 70B parameter model. ~2,600 tokens/sec.",
 	},
-	"qwen-3-32b": {
+	"llama3.1-405b": {
+		maxTokens: 128000,
+		contextWindow: 128000,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0,
+		outputPrice: 0,
+		description: "Meta Llama 3.1-405B, ultra-large 405B parameter model, real-time inference at ~969 tokens/sec.",
+	},
+	"qwen3-32b": {
 		maxTokens: 16382,
 		contextWindow: 16382,
 		supportsImages: false,
 		supportsPromptCache: false,
 		inputPrice: 0,
 		outputPrice: 0,
-		description: "SOTA coding performance with ~2500 tokens/s",
+		description: "Qwen3-32B, top-tier open-source coding and reasoning model. ~2,500 tokens/sec.",
+	},
+	"qwen3-235b": {
+		maxTokens: 131072,
+		contextWindow: 131072,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0,
+		outputPrice: 0,
+		description: "Qwen3-235B, full context AI model with 131K context, real-time reasoning. ~1,400 tokens/sec.",
 	},
 	"deepseek-r1-distill-llama-70b": {
 		maxTokens: 8192,
@@ -103,11 +133,12 @@ export const cerebrasModels = {
 		supportsPromptCache: false,
 		inputPrice: 0,
 		outputPrice: 0,
-		description: "Advanced reasoning model with ~2300 tokens/s (private preview)",
+		description: "DeepSeek R1 Distill Llama 70B (private preview), advanced distilled reasoning model. ~2,300 tokens/sec.",
 	},
 } as const satisfies Record<string, ModelInfo>
+
 export type CerebrasModelId = keyof typeof cerebrasModels
-export const cerebrasDefaultModelId: CerebrasModelId = "llama3.1-8b"
+export const cerebrasDefaultModelId: CerebrasModelId = "llama-4-scout-17b-16e-instruct"
 
 // kilocode_change end
 

@@ -2458,7 +2458,7 @@ describe("ClineProvider - Router Models", () => {
 				unbound: mockModels,
 				litellm: mockModels,
 				"kilocode-openrouter": mockModels,
-				ollama: {},
+				ollama: mockModels, // kilocode_change
 				lmstudio: {},
 			},
 		})
@@ -2491,6 +2491,7 @@ describe("ClineProvider - Router Models", () => {
 			.mockResolvedValueOnce(mockModels) // glama success
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound fail
 			.mockRejectedValueOnce(new Error("Kilocode-OpenRouter API error")) // kilocode-openrouter fail
+			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm fail
 
 		await messageHandler({ type: "requestRouterModels" })
@@ -2623,7 +2624,7 @@ describe("ClineProvider - Router Models", () => {
 				unbound: mockModels,
 				litellm: {},
 				"kilocode-openrouter": mockModels,
-				ollama: {},
+				ollama: mockModels, // kilocode_change
 				lmstudio: {},
 			},
 		})

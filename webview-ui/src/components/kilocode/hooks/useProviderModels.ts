@@ -28,6 +28,7 @@ import {
 	glamaDefaultModelId,
 	unboundDefaultModelId,
 	litellmDefaultModelId,
+	kilocodeDefaultModelId,
 } from "@roo-code/types"
 import { cerebrasModels, cerebrasDefaultModelId } from "@roo/api"
 import type { ModelRecord, RouterModels } from "@roo/api"
@@ -166,7 +167,7 @@ const getModelsByProvider = ({
 		case "kilocode": {
 			return {
 				models: routerModels["kilocode-openrouter"],
-				defaultModel: "anthropic/claude-3.7-sonnet",
+				defaultModel: kilocodeDefaultModelId,
 			}
 		}
 		default: {

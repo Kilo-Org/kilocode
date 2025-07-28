@@ -28,7 +28,10 @@ export class PostHogTelemetryClient extends BaseTelemetryClient {
 			debug,
 		)
 
-		this.client = new PostHog(process.env.KILOCODE_POSTHOG_API_KEY || "", { host: "https://us.i.posthog.com" })
+		this.client = new PostHog(process.env.KILOCODE_POSTHOG_API_KEY || "", {
+			host: "https://us.i.posthog.com",
+			disableGeoip: false, // kilocode_change
+		})
 	}
 
 	/**
