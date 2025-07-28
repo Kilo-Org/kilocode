@@ -115,8 +115,6 @@ export const KilocodeNotifications: React.FC = () => {
 		setCurrentIndex((prev) => (prev - 1 + notifications.length) % notifications.length)
 	}
 
-	console.info(isKilocodeProvider, loading, error, notifications.length)
-
 	// Don't render if not Kilocode provider or no notifications
 	if (!isKilocodeProvider || loading || error || notifications.length === 0) {
 		return null
@@ -170,27 +168,6 @@ export const KilocodeNotifications: React.FC = () => {
 						className="text-sm">
 						{currentNotification.action.actionText}
 					</VSCodeButton>
-				)}
-
-				{/* Other notifications preview */}
-				{notifications.length > 1 && (
-					<div className="mt-4 pt-3 border-t border-vscode-panel-border">
-						<div className="flex gap-2 overflow-x-auto">
-							{notifications.map((notification, index) => (
-								<button
-									key={notification.id}
-									onClick={() => setCurrentIndex(index)}
-									className={`flex-shrink-0 text-xs px-2 py-1 rounded ${
-										index === currentIndex
-											? "bg-vscode-button-background text-vscode-button-foreground"
-											: "bg-vscode-editor-background text-vscode-descriptionForeground hover:bg-vscode-list-hoverBackground"
-									}`}
-									title={notification.title}>
-									{notification.title}
-								</button>
-							))}
-						</div>
-					</div>
 				)}
 			</div>
 		</div>
