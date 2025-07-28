@@ -56,6 +56,7 @@ import { showSystemNotification } from "@/kilocode/helpers" // kilocode_change
 // import ProfileViolationWarning from "./ProfileViolationWarning" kilocode_change: unused
 import { CheckpointWarning } from "./CheckpointWarning"
 import { IdeaSuggestionsBox } from "../kilocode/chat/IdeaSuggestionsBox" // kilocode_change
+import { KilocodeNotifications } from "../kilocode/KilocodeNotifications" // kilocode_change
 import { getLatestTodo } from "@roo/todo"
 
 export interface ChatViewProps {
@@ -1801,6 +1802,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 								}}
 							/>
 						</p>
+						<KilocodeNotifications /> {/* kilocode_change: Show notifications for Kilocode users */}
 						{taskHistory.length === 0 && <IdeaSuggestionsBox />} {/* kilocode_change */}
 						{/*<div className="mb-2.5">
 							<RooTips cycle={false} />

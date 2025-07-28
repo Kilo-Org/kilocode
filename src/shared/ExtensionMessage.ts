@@ -120,6 +120,7 @@ export interface ExtensionMessage {
 		| "codeIndexSecretStatus"
 		| "showDeleteMessageDialog"
 		| "showEditMessageDialog"
+		| "kilocodeNotificationsResponse"
 	text?: string
 	payload?: ProfileDataResponsePayload | BalanceDataResponsePayload // kilocode_change: Add payload for profile and balance data
 	action?:
@@ -190,6 +191,15 @@ export interface ExtensionMessage {
 	settings?: any
 	messageTs?: number
 	context?: string
+	notifications?: Array<{
+		id: string
+		title: string
+		message: string
+		action?: {
+			actionText: string
+			actionURL: string
+		}
+	}>
 }
 
 export type ExtensionState = Pick<
