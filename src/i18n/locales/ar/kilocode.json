@@ -55,26 +55,6 @@
 		"activationFailed": "Kilo: فشل تفعيل مولّد الرسائل: {{error}}",
 		"providerRegistered": "Kilo: تم تسجيل موفر رسائل الاعتماد"
 	},
-	"autocomplete": {
-		"statusBar": {
-			"tooltip": {
-				"basic": "Kilo Code الإكمال التلقائي",
-				"disabled": "إكمال تلقائي لـ Kilo Code (معطل)",
-				"sessionTotal": "التكلفة الإجمالية للجلسة:",
-				"tokenError": "يجب تعيين رمز صالح لاستخدام الإكمال التلقائي",
-				"lastCompletion": "الإكمال الأخير:",
-				"model": "النموذج:"
-			},
-			"disabled": "$(circle-slash) Kilo إكمال تلقائي",
-			"warning": "$(warning) Kilo إكمال تلقائي",
-			"enabled": "$(sparkle) Kilo إكمال تلقائي",
-			"cost": {
-				"zero": "0.00 دولار",
-				"lessThanCent": "<$0.01"
-			}
-		},
-		"toggleMessage": "Kilo إكمال تلقائي {{status}}"
-	},
 	"ghost": {
 		"progress": {
 			"analyzing": "جارِ تحليل الكود الخاص بك...",

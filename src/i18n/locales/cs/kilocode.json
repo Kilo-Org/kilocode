@@ -51,26 +51,6 @@
 		"activationFailed": "Kilo: Aktivace generátoru zpráv se nezdařila: {{error}}",
 		"providerRegistered": "Kilo: Poskytovatel zpráv commitů zaregistrován"
 	},
-	"autocomplete": {
-		"statusBar": {
-			"enabled": "$(sparkle) Kilo Automatické dokončování",
-			"disabled": "$(circle-slash) Kilo Automatické dokončování",
-			"tooltip": {
-				"tokenError": "Pro použití automatického dokončování musí být nastaven platný token",
-				"basic": "Kilo Code Automatické dokončování",
-				"lastCompletion": "Poslední dokončení:",
-				"model": "Model:",
-				"sessionTotal": "Celkové náklady na relaci:",
-				"disabled": "Kilo Code Automatické dokončování (deaktivováno)"
-			},
-			"warning": "$(warning) Kilo Automatické dokončování",
-			"cost": {
-				"zero": "0,00 Kč",
-				"lessThanCent": "<0,01 $"
-			}
-		},
-		"toggleMessage": "Kilo Automatické dokončování {{status}}"
-	},
 	"ghost": {
 		"progress": {
 			"generating": "Generuji navrhované úpravy...",

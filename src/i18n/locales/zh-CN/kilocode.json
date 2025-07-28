@@ -51,26 +51,6 @@
 		"providerRegistered": "Kilo：提交消息提供程序已注册",
 		"activationFailed": "Kilo：消息生成器激活失败：{{error}}"
 	},
-	"autocomplete": {
-		"statusBar": {
-			"warning": "$(warning) Kilo自动补全",
-			"enabled": "$(sparkle) Kilo自动补全",
-			"disabled": "$(circle-slash) Kilo自动补全已禁用",
-			"tooltip": {
-				"disabled": "Kilo自动补全（已禁用）",
-				"lastCompletion": "上一次完成：",
-				"sessionTotal": "会话总费用：",
-				"basic": "Kilo自动补全",
-				"tokenError": "必须设置有效令牌才能使用自动完成功能",
-				"model": "模型："
-			},
-			"cost": {
-				"lessThanCent": "<$0.01",
-				"zero": "¥0.00"
-			}
-		},
-		"toggleMessage": "Kilo 自动补全 {{status}}"
-	},
 	"ghost": {
 		"progress": {
 			"analyzing": "正在分析您的代码...",

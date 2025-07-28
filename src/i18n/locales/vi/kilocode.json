@@ -51,26 +51,6 @@
 		"activationFailed": "Kilo: Không thể kích hoạt trình tạo tin nhắn: {{error}}",
 		"providerRegistered": "Kilo: Đã đăng ký nhà cung cấp thông điệp commit"
 	},
-	"autocomplete": {
-		"statusBar": {
-			"enabled": "$(sparkle) Kilo Tự động hoàn thành",
-			"disabled": "$(circle-slash) Kilo Tự động hoàn thành",
-			"warning": "$(warning) Kilo Tự động hoàn thành",
-			"tooltip": {
-				"disabled": "Tự động hoàn thành Kilo Code (đã tắt)",
-				"basic": "Tự động hoàn thiện Kilo Code",
-				"tokenError": "Phải thiết lập một token hợp lệ để sử dụng tính năng tự động hoàn thành",
-				"lastCompletion": "Lượt hoàn thành cuối cùng:",
-				"model": "Mô hình:",
-				"sessionTotal": "Tổng chi phí phiên:"
-			},
-			"cost": {
-				"zero": "0₫",
-				"lessThanCent": "<$0,01"
-			}
-		},
-		"toggleMessage": "Kilo Tự động hoàn thành {{status}}"
-	},
 	"ghost": {
 		"progress": {
 			"generating": "Đang tạo đề xuất chỉnh sửa...",

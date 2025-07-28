@@ -51,16 +51,16 @@
 		"activationFailed": "Kilo: Failed to activate message generator: {{error}}",
 		"providerRegistered": "Kilo: Commit message provider registered"
 	},
-	"autocomplete": {
+	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Complete",
-			"disabled": "$(circle-slash) Kilo Complete",
-			"warning": "$(warning) Kilo Complete",
+			"enabled": "$(sparkle) Kilo Inline Assist",
+			"disabled": "$(circle-slash) Kilo Inline Assist",
+			"warning": "$(warning) Kilo Inline Assist",
 			"tooltip": {
-				"basic": "Kilo Code Autocomplete",
-				"disabled": "Kilo Code Autocomplete (disabled)",
-				"tokenError": "A valid token must be set to use autocomplete",
-				"lastCompletion": "Last completion:",
+				"basic": "Kilo Code Inline Assist",
+				"disabled": "Kilo Code Inline Assist (disabled)",
+				"tokenError": "A valid token must be set to use Inline Assist",
+				"lastCompletion": "Last suggestion:",
 				"sessionTotal": "Session total cost:",
 				"model": "Model:"
 			},
@@ -69,9 +69,7 @@
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Kilo Complete {{status}}"
-	},
-	"ghost": {
+		"toggleMessage": "Kilo Inline Assist {{status}}",
 		"progress": {
 			"title": "Kilo Code",
 			"analyzing": "Analyzing your code...",

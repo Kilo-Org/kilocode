@@ -51,26 +51,6 @@
 		"providerRegistered": "Kilo: İşleme mesaj sağlayıcısı kaydedildi",
 		"activationFailed": "Kilo: Mesaj oluşturucu etkinleştirilemedi: {{error}}"
 	},
-	"autocomplete": {
-		"statusBar": {
-			"enabled": "$(sparkle) Kilo Otomatik Tamamlama",
-			"disabled": "$(circle-slash) Kilo Otomatik Tamamlama",
-			"tooltip": {
-				"basic": "Kilo Code Otomatik Tamamlama",
-				"disabled": "Kilo Code Otomatik Tamamlama (devre dışı)",
-				"tokenError": "Otomatik tamamlama özelliğini kullanmak için geçerli bir belirteç ayarlanmalıdır",
-				"sessionTotal": "Oturum toplam maliyeti:",
-				"lastCompletion": "Son tamamlama:",
-				"model": "Model:"
-			},
-			"warning": "$(warning) Kilo Otomatik Tamamlama",
-			"cost": {
-				"zero": "0,00 ₺",
-				"lessThanCent": "<0,01$"
-			}
-		},
-		"toggleMessage": "Kilo Otomatik Tamamlama {{status}}"
-	},
 	"ghost": {
 		"progress": {
 			"analyzing": "Kodunuz analiz ediliyor...",

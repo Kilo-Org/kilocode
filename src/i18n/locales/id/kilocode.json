@@ -51,26 +51,6 @@
 		"activationFailed": "Kilo: Gagal mengaktifkan pembangkit pesan: {{error}}",
 		"providerRegistered": "Kilo: Penyedia pesan commit telah terdaftar"
 	},
-	"autocomplete": {
-		"statusBar": {
-			"disabled": "$(circle-slash) Kilo Autocomplete",
-			"enabled": "$(sparkle) Kilo Autocomplete",
-			"tooltip": {
-				"basic": "Kilo Code Autocomplete",
-				"disabled": "Kilo Code Autocomplete (dinonaktifkan)",
-				"tokenError": "Token yang valid harus ditetapkan untuk menggunakan autocomplete",
-				"lastCompletion": "Penyelesaian terakhir:",
-				"sessionTotal": "Biaya total sesi:",
-				"model": "Model:"
-			},
-			"warning": "$(warning) Kilo Autocomplete",
-			"cost": {
-				"zero": "Rp0,00",
-				"lessThanCent": "<Rp0,01"
-			}
-		},
-		"toggleMessage": "Kilo Autocomplete {{status}}"
-	},
 	"ghost": {
 		"progress": {
 			"analyzing": "Menganalisis kode Anda...",

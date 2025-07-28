@@ -440,11 +440,6 @@ export class GhostProvider {
 		})
 	}
 
-	private isEnabled(): boolean {
-		// Ghost service is enabled if we have settings and a loaded model
-		return this.settings !== null && this.model.loaded
-	}
-
 	private getCurrentModelName(): string {
 		if (!this.model.loaded) {
 			return "loading..."
@@ -468,7 +463,7 @@ export class GhostProvider {
 		}
 
 		this.statusBar.update({
-			enabled: this.isEnabled(),
+			enabled: true,
 			model: this.getCurrentModelName(),
 			hasValidToken: this.hasValidApiToken(),
 			totalSessionCost: this.sessionCost,
