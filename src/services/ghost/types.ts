@@ -25,14 +25,7 @@ export interface UserAction {
 	affectedSymbol?: string // Function/variable/class name if applicable
 	scope?: string // Function/class/namespace containing the change
 	timestamp?: number // When the action occurred
-}
-
-/**
- * Represents a collection of user actions that form a logical group
- */
-export interface UserActionGroup {
-	actions: UserAction[]
-	summary: string // High-level description of the group of actions
+	content?: string // The actual content that was added, deleted, or modified
 }
 
 export interface GhostDocumentStoreItem {
@@ -41,7 +34,7 @@ export interface GhostDocumentStoreItem {
 	history: string[]
 	ast?: ASTContext
 	lastParsedVersion?: number
-	recentActions?: UserActionGroup[] // Store recent meaningful actions
+	recentActions?: UserAction[]
 }
 
 export type GhostSuggestionEditOperationType = "+" | "-"
@@ -71,6 +64,6 @@ export interface GhostSuggestionContext {
 	range?: vscode.Range | vscode.Selection
 	rangeASTNode?: Node
 	userInput?: string
-	recentOperations?: UserActionGroup[] // Stores meaningful user actions instead of raw diff
+	recentOperations?: UserAction[] // Stores meaningful user actions instead of raw diff
 	diagnostics?: vscode.Diagnostic[] // Document diagnostics (errors, warnings, etc.)
 }

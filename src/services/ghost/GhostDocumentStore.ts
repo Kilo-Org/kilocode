@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 import * as path from "path"
-import { createPatch, parsePatch, structuredPatch } from "diff"
-import { GhostDocumentStoreItem, ASTContext, UserAction, UserActionType, UserActionGroup } from "./types"
+import { structuredPatch } from "diff"
+import { GhostDocumentStoreItem, ASTContext, UserAction, UserActionType } from "./types"
 
 export const GHOST_DOCUMENT_STORE_LIMITS = {
 	MAX_DOCUMENTS: 50, // Limit the number of documents to keep
@@ -389,6 +389,7 @@ export class GhostDocumentStore {
 			},
 			affectedSymbol,
 			scope,
+			content: joinedLines,
 		}
 	}
 
@@ -452,6 +453,7 @@ export class GhostDocumentStore {
 			},
 			affectedSymbol,
 			scope,
+			content: joinedLines,
 		}
 	}
 
@@ -522,6 +524,7 @@ export class GhostDocumentStore {
 			},
 			affectedSymbol,
 			scope,
+			content: addedText, // For modifications, show the new content
 		}
 	}
 
@@ -539,90 +542,11 @@ export class GhostDocumentStore {
 	}
 
 	/**
-	 * Groups individual actions into logical groups
-	 * @param actions List of individual user actions
-	 * @returns Grouped actions with summaries
-	 */
-	private groupUserActions(actions: UserAction[]): UserActionGroup[] {
-		if (actions.length === 0) {
-			return []
-		}
-
-		// Simple grouping strategy: group by type and proximity
-		const groups: UserActionGroup[] = []
-		let currentGroup: UserAction[] = [actions[0]]
-		let currentType = actions[0].type
-
-		for (let i = 1; i < actions.length; i++) {
-			const action = actions[i]
-
-			// If the action is of the same type and close to the previous one, add to current group
-			const prevAction = currentGroup[currentGroup.length - 1]
-			const isClose =
-				action.lineRange && prevAction.lineRange && action.lineRange.start - prevAction.lineRange.end <= 3
-
-			if (action.type === currentType && isClose) {
-				currentGroup.push(action)
-			} else {
-				// Create a summary for the current group
-				groups.push({
-					actions: [...currentGroup],
-					summary: this.createGroupSummary(currentGroup),
-				})
-
-				// Start a new group
-				currentGroup = [action]
-				currentType = action.type
-			}
-		}
-
-		// Add the last group
-		groups.push({
-			actions: [...currentGroup],
-			summary: this.createGroupSummary(currentGroup),
-		})
-
-		return groups
-	}
-
-	/**
-	 * Creates a summary for a group of related actions
-	 * @param actions The actions in the group
-	 * @returns A summary string
-	 */
-	private createGroupSummary(actions: UserAction[]): string {
-		if (actions.length === 0) {
-			return "No changes"
-		}
-
-		if (actions.length === 1) {
-			return actions[0].description
-		}
-
-		const type = actions[0].type
-
-		switch (type) {
-			case UserActionType.ADDITION:
-				return `Added ${actions.length} code blocks`
-			case UserActionType.DELETION:
-				return `Deleted ${actions.length} code blocks`
-			case UserActionType.MODIFICATION:
-				return `Modified ${actions.length} code blocks`
-			case UserActionType.REFACTOR:
-				return `Refactored ${actions.length} code elements`
-			case UserActionType.FORMAT:
-				return `Reformatted ${actions.length} code blocks`
-			default:
-				return `Made ${actions.length} changes`
-		}
-	}
-
-	/**
 	 * Get the last 10 operations performed by the user on a document as meaningful actions
 	 * @param document The document to get operations for
 	 * @returns A collection of user action groups representing meaningful changes
 	 */
-	public getRecentOperations(document: vscode.TextDocument): UserActionGroup[] {
+	public getRecentOperations(document: vscode.TextDocument): UserAction[] {
 		if (!document) {
 			return []
 		}
@@ -632,11 +556,6 @@ export class GhostDocumentStore {
 
 		if (!item || item.history.length < 2) {
 			return []
-		}
-
-		// If we already have analyzed actions and they're up to date, return them
-		if (item.recentActions && item.recentActions.length > 0) {
-			return item.recentActions
 		}
 
 		// Get the last 10 versions (or fewer if not available)
@@ -658,13 +577,7 @@ export class GhostDocumentStore {
 				allActions.push(...actions)
 			}
 
-			// Group the actions into logical units
-			const actionGroups = this.groupUserActions(allActions)
-
-			// Store the analyzed actions in the document item for future use
-			item.recentActions = actionGroups
-
-			return actionGroups
+			return allActions
 		}
 
 		return []
