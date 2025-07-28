@@ -98,6 +98,10 @@ export class GhostProvider {
 			return
 		}
 
+		if (this.workspaceEdit.isLocked()) {
+			return
+		}
+
 		// Store the updated document and parse its AST
 		await this.documentStore.storeDocument({ document: event.document })
 	}

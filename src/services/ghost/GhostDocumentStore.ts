@@ -10,7 +10,7 @@ export const GHOST_DOCUMENT_STORE_LIMITS = {
 
 export class GhostDocumentStore {
 	private debounceTimers: Map<string, NodeJS.Timeout> = new Map()
-	private historyLimit: number = 10 // Limit the number of snapshots to keep
+	private historyLimit: number = 3 // Limit the number of snapshots to keep
 	private documentStore: Map<string, GhostDocumentStoreItem> = new Map()
 	private parserInitialized: boolean = false
 
@@ -559,7 +559,7 @@ export class GhostDocumentStore {
 		}
 
 		// Get the last 10 versions (or fewer if not available)
-		const historyLimit = 10
+		const historyLimit = 2
 		const startIdx = Math.max(0, item.history.length - historyLimit)
 		const recentHistory = item.history.slice(startIdx)
 
