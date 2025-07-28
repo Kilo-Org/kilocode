@@ -33,15 +33,22 @@ You are a proactive collaborator who completes in-progress work and cleans up th
     
 	* **Full Document & File Path:** Scan the entire document and use its file path to understand its place in the project.
 
-3.  **Strict Full-Content Output Format:** Your entire response **MUST** follow this format precisely:
-    * **Line 1:** The full, relative path of the file being modified. You **MUST** use the file path provided in the user's context.
-    * **Line 2 onwards:** A single markdown code block containing the complete, updated content of that file.
+3.  **Strict JSON Array Output Format:** Your entire response **MUST** be a valid JSON array containing objects with the following structure:
+    * Each object must have exactly two properties: "path" and "content"
+    * "path": The full file URI (e.g., "file:///absolute/path/to/file.tsx")
+    * "content": The complete, updated content of that file with proper JSON escaping (quotes as \", newlines as \n, etc.)
     * **Example:**
-      \`src/components/ui/Button.tsx\`
-      \`\`\`tsx
-      //... entire new file content...
+      \`\`\`json
+      [
+        {
+          "path": "file:///Users/catrielmuller/Dev/KiloOrg/example/projects/react/src/App.tsx",
+          "content": "import React from 'react';\\n\\nfunction App() {\\n  return <div>Hello World</div>;\\n}\\n\\nexport default App;"
+        }
+      ]
       \`\`\`
-    * Do not include any conversational text, explanations, or any text outside of this required format.
+    * Do not include any conversational text, explanations, or any text outside of this required JSON format.
+    * Ensure all special characters in the content are properly escaped according to JSON standards.
+    * **Important**: Preserve the exact formatting of the input document, including any empty last lines. If the input document ends with an empty line, your output content must also end with an empty line (represented as \\n at the end).
 `
 
 		return customInstructions ? `${basePrompt}${customInstructions}` : basePrompt
@@ -56,7 +63,7 @@ Analyze my recent code modifications to infer my underlying intent. Based on tha
 1.  **Infer Intent:** First, analyze the \`Recent Changes (Diff)\` to form a hypothesis about my goal.
 2.  **Identify All Impacts:** Based on the inferred intent, scan the \`Current Document\` to find every piece of code that is affected. This includes component usages, variables, and related text or comments that are now obsolete.
 3.  **Fix Document Diagnostics:** If the \`Current Document\` has diagnostics, assume they are now obsolete due to the changes. Remove or update them as necessary.
-3.  **Generate Full File Content:** Your response must start with the exact file path provided in the \`File Path\` context below. Follow it immediately with a single markdown code block containing the entire, updated content of the file.
+3.  **Generate JSON Array Response:** Your response must be a valid JSON array containing objects with "path" and "content" properties. The "path" must be the full file URI, and "content" must contain the entire, updated content of the file. **Important**: Preserve the exact formatting of the input document, including any empty last lines.
 
 # Context
 `
@@ -273,7 +280,31 @@ ${sections.filter(Boolean).join("\n\n")}
 	async parseResponse(response: string, context: GhostSuggestionContext): Promise<GhostSuggestionsState> {
 		const suggestions = new GhostSuggestionsState()
 
-		// Fist, check for a resopnse with a filePath
+		// First, try to parse as JSON array format (direct JSON)
+		try {
+			const jsonResponse = JSON.parse(response.trim())
+			if (Array.isArray(jsonResponse)) {
+				return await this.processJsonArrayFormat(jsonResponse, context)
+			}
+		} catch (error) {
+			// Not valid JSON, continue with other formats
+		}
+
+		// Second, try to extract JSON from markdown code blocks
+		const jsonCodeBlockMatch = response.match(/```json\s*\r?\n([\s\S]*?)\r?\n```/m)
+		if (jsonCodeBlockMatch) {
+			try {
+				const jsonContent = jsonCodeBlockMatch[1].trim()
+				const jsonResponse = JSON.parse(jsonContent)
+				if (Array.isArray(jsonResponse)) {
+					return await this.processJsonArrayFormat(jsonResponse, context)
+				}
+			} catch (error) {
+				console.warn("Failed to parse JSON from code block:", error)
+			}
+		}
+
+		// Fallback: check for a response with a filePath (legacy format)
 		const fullContentMatch = response.match(/^(.+?)\r?\n```[\w-]*\r?\n([\s\S]+?)```/m)
 		if (fullContentMatch) {
 			const [_, filePath, newContent] = fullContentMatch
@@ -295,6 +326,117 @@ ${sections.filter(Boolean).join("\n\n")}
 		}
 
 		// No valid format found
+		return suggestions
+	}
+
+	private async processJsonArrayFormat(
+		jsonArray: Array<{ path: string; content: string }>,
+		context: GhostSuggestionContext,
+	): Promise<GhostSuggestionsState> {
+		const suggestions = new GhostSuggestionsState()
+
+		for (const fileObj of jsonArray) {
+			if (!fileObj.path || typeof fileObj.content !== "string") {
+				console.warn("Invalid JSON object format: missing path or content")
+				continue
+			}
+
+			// Parse the file URI
+			let fileUri: vscode.Uri
+			try {
+				fileUri = vscode.Uri.parse(fileObj.path)
+			} catch (error) {
+				console.error(`Error parsing file URI ${fileObj.path}:`, error)
+				continue
+			}
+
+			// Try to find the matching document in the context
+			const openFiles = context.openFiles || []
+			const matchingDocument = openFiles.find(
+				(doc) =>
+					doc.uri.toString() === fileUri.toString() ||
+					vscode.workspace.asRelativePath(doc.uri, false) === vscode.workspace.asRelativePath(fileUri, false),
+			)
+
+			let documentToUse: vscode.TextDocument | undefined
+			let uriToUse: vscode.Uri = fileUri
+
+			if (matchingDocument) {
+				documentToUse = matchingDocument
+				uriToUse = matchingDocument.uri
+			} else {
+				// If we couldn't find a matching document, try to open the document
+				try {
+					documentToUse = await vscode.workspace.openTextDocument(fileUri)
+				} catch (error) {
+					console.error(`Error opening document ${fileObj.path}:`, error)
+					continue // Skip this file if we can't open it
+				}
+			}
+
+			if (!documentToUse) {
+				continue // Skip this file if we can't find or open the document
+			}
+
+			// Get the current content of the file
+			const currentContent = documentToUse.getText()
+
+			// The content from JSON is already properly unescaped by JSON.parse()
+			// No additional processing needed for escaped characters
+			const newContent = fileObj.content
+
+			// Generate a diff between the current content and the new content
+			const relativePath = vscode.workspace.asRelativePath(uriToUse, false)
+			const patch = structuredPatch(relativePath, relativePath, currentContent, newContent, "", "")
+
+			// Create a suggestion file
+			const suggestionFile = suggestions.addFile(uriToUse)
+
+			// Process each hunk in the patch
+			for (const hunk of patch.hunks) {
+				let currentOldLineNumber = hunk.oldStart
+				let currentNewLineNumber = hunk.newStart
+
+				// Iterate over each line within the hunk
+				for (const line of hunk.lines) {
+					const operationType = line.charAt(0) as GhostSuggestionEditOperationType
+					const content = line.substring(1)
+
+					switch (operationType) {
+						// Case 1: The line is an addition
+						case "+":
+							suggestionFile.addOperation({
+								type: "+",
+								line: currentNewLineNumber - 1,
+								content: content,
+							})
+							// Only increment the new line counter for additions and context lines
+							currentNewLineNumber++
+							break
+
+						// Case 2: The line is a deletion
+						case "-":
+							suggestionFile.addOperation({
+								type: "-",
+								line: currentOldLineNumber - 1,
+								content: content,
+							})
+							// Only increment the old line counter for deletions and context lines
+							currentOldLineNumber++
+							break
+
+						// Case 3: The line is unchanged (context)
+						default:
+							// For context lines, we increment both counters
+							currentOldLineNumber++
+							currentNewLineNumber++
+							break
+					}
+				}
+			}
+		}
+
+		suggestions.sortGroups()
 		return suggestions
 	}
 
