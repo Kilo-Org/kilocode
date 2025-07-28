@@ -203,7 +203,6 @@ export async function activate(context: vscode.ExtensionContext) {
 		}),
 	)
 
-	registerAutocomplete(context) // kilocode_change
 	registerGhostProvider(context) // kilocode_change
 	registerCommitMessageProvider(context, outputChannel) // kilocode_change
 	registerCodeActions(context)
