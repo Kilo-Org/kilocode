@@ -1790,7 +1790,11 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 						<RooHero /> */}
 						{telemetrySetting === "unset" && <TelemetryBanner />}
-						<KilocodeNotifications /> {/* kilocode_change: Show notifications for Kilocode users */}
+						{
+							telemetrySetting !== "unset" && (
+								<KilocodeNotifications />
+							) /* kilocode_change: Show notifications for Kilocode users */
+						}
 						<p className="text-vscode-editor-foreground leading-tight font-vscode-font-family text-center text-balance max-w-[380px] mx-auto my-0">
 							<Trans
 								i18nKey="chat:about"
