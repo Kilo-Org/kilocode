@@ -111,6 +111,11 @@ vi.mock("vscode", () => ({
 			}
 			return uri.toString().replace("file:///", "")
 		}),
+		openTextDocument: vi.fn().mockImplementation((uri) => {
+			// Return a mock document for any URI
+			const mockDoc = new MockTextDocument(uri, "function test() {\n  return true;\n}")
+			return Promise.resolve(mockDoc)
+		}),
 	},
 }))
 

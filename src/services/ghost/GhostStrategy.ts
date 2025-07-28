@@ -253,22 +253,20 @@ ${sections.filter(Boolean).join("\n\n")}
 	async parseResponse(response: string, context: GhostSuggestionContext): Promise<GhostSuggestionsState> {
 		const suggestions = new GhostSuggestionsState()
 
-		// Check for code block formats: with or without file path
+		// Fist, check for a resopnse with a filePath
 		const fullContentMatch = response.match(/^(.+?)\r?\n```[\w-]*\r?\n([\s\S]+?)```/m)
-		const codeBlockMatch = response.match(/^```[\w-]*\r?\n([\s\S]+?)```$/m)
-
 		if (fullContentMatch) {
 			const [_, filePath, newContent] = fullContentMatch
 			return await this.processFullContentFormat(filePath, newContent, context)
 		}
 
-		if (codeBlockMatch) {
-			const [_, newContent] = codeBlockMatch
-			return await this.processFullContentFormat(
-				vscode.workspace.asRelativePath(context.document.uri, false),
-				newContent,
-				context,
-			)
+		// If the LLM response didn't include a filePath, fallback to assuming
+		// the file to modify is the context.document
+		const contentMatchNoFilePath = response.match(/^```[\w-]*\r?\n([\s\S]+?)```$/m)
+		if (contentMatchNoFilePath) {
+			const [_, newContent] = contentMatchNoFilePath
+			const relativeFilePath = vscode.workspace.asRelativePath(context.document.uri, false)
+			return await this.processFullContentFormat(relativeFilePath, newContent, context)
 		}
 
 		// Check if the response is in the old diff format
