@@ -51,12 +51,29 @@ vi.mock("vscode", () => ({
 	},
 }))
 
-// Mock diff
-vi.mock("diff", () => ({
-	createPatch: vi.fn().mockImplementation((filePath, oldContent, newContent) => {
-		return `--- a/${filePath}\n+++ b/${filePath}\n@@ -1,1 +1,1 @@\n-${oldContent}\n+${newContent}`
-	}),
-}))
+// Mock diff - using importOriginal as recommended in the error message
+vi.mock("diff", async (importOriginal) => {
+	// Create a mock module with the functions we need
+	return {
+		createPatch: vi.fn().mockImplementation((filePath, oldContent, newContent) => {
+			return `--- a/${filePath}\n+++ b/${filePath}\n@@ -1,1 +1,1 @@\n-${oldContent}\n+${newContent}`
+		}),
+		structuredPatch: vi.fn().mockImplementation((oldFileName, newFileName, oldContent, newContent) => {
+			return {
+				hunks: [
+					{
+						oldStart: 1,
+						oldLines: 1,
+						newStart: 1,
+						newLines: 1,
+						lines: [`-${oldContent}`, `+${newContent}`],
+					},
+				],
+			}
+		}),
+		parsePatch: vi.fn().mockReturnValue([]),
+	}
+})
 
 describe("GhostRecentOperations", () => {
 	let documentStore: GhostDocumentStore
@@ -94,10 +111,14 @@ describe("GhostRecentOperations", () => {
 		// Generate context with recent operations
 		const enrichedContext = await context.generate(suggestionContext)
 
+		// Verify that recent operations were added to the context
+		expect(enrichedContext.recentOperations).toBeDefined()
+		expect(enrichedContext.recentOperations?.length).toBeGreaterThan(0)
+
 		// Generate prompt
 		const prompt = strategy.getSuggestionPrompt(enrichedContext)
 
-		// Verify that the prompt includes the recent operations
+		// Verify that the prompt includes the recent operations section
 		expect(prompt).toContain("**Recent User Actions:**")
 	})
 
