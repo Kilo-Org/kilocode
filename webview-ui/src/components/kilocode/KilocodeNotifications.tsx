@@ -124,52 +124,49 @@ export const KilocodeNotifications: React.FC = () => {
 
 	return (
 		<div className="kilocode-notifications mx-auto max-w-[600px] mb-4">
-			<div className="bg-vscode-editor-background border border-vscode-panel-border rounded-lg p-4">
-				{/* Header with navigation */}
-				<div className="flex items-center justify-between mb-3">
-					<h3 className="text-sm font-medium text-vscode-foreground">{currentNotification.title}</h3>
-					<div className="flex items-center gap-2">
-						{notifications.length > 1 && (
-							<>
-								<button
-									onClick={goToPrevious}
-									className="text-vscode-descriptionForeground hover:text-vscode-foreground p-1"
-									title="Previous notification">
-									<span className="codicon codicon-chevron-left"></span>
-								</button>
-								<span className="text-xs text-vscode-descriptionForeground whitespace-nowrap">
-									{currentIndex + 1} / {notifications.length}
-								</span>
-								<button
-									onClick={goToNext}
-									className="text-vscode-descriptionForeground hover:text-vscode-foreground p-1"
-									title="Next notification">
-									<span className="codicon codicon-chevron-right"></span>
-								</button>
-							</>
-						)}
-						<button
-							onClick={() => handleDismiss(currentNotification.id)}
-							className="text-vscode-descriptionForeground hover:text-vscode-foreground p-1"
-							title="Dismiss notification">
-							<span className="codicon codicon-close"></span>
-						</button>
-					</div>
+			<div className="bg-vscode-editor-background border border-vscode-panel-border rounded-lg p-3 gap-3">
+				<div className="flex items-center justify-between">
+					<h3 className="text-sm font-medium text-vscode-foreground m-0">{currentNotification.title}</h3>
+					<button
+						onClick={() => handleDismiss(currentNotification.id)}
+						className="text-vscode-descriptionForeground hover:text-vscode-foreground p-1"
+						title="Dismiss notification">
+						<span className="codicon codicon-close"></span>
+					</button>
 				</div>
 
-				{/* Message */}
-				<p className="text-sm text-vscode-descriptionForeground mb-3">{currentNotification.message}</p>
+				<p className="text-sm text-vscode-descriptionForeground">{currentNotification.message}</p>
 
-				{/* Action button */}
 				{currentNotification.action && (
-					<VSCodeButton
-						appearance="primary"
-						onClick={() => handleAction(currentNotification.action!)}
-						className="text-sm">
-						{currentNotification.action.actionText}
-					</VSCodeButton>
+					<div className="flex items-center justify-end">
+						<VSCodeButton
+							appearance="primary"
+							onClick={() => handleAction(currentNotification.action!)}
+							className="text-sm">
+							{currentNotification.action.actionText}
+						</VSCodeButton>
+					</div>
 				)}
 			</div>
+			{notifications.length > 1 && (
+				<div className="flex items-center justify-end pt-2">
+					<button
+						onClick={goToPrevious}
+						className="text-vscode-descriptionForeground hover:text-vscode-foreground p-1 inline-flex items-center"
+						title="Previous notification">
+						<span className="codicon codicon-chevron-left"></span>
+					</button>
+					<span className="text-xs text-vscode-descriptionForeground whitespace-nowrap">
+						{currentIndex + 1} / {notifications.length}
+					</span>
+					<button
+						onClick={goToNext}
+						className="text-vscode-descriptionForeground hover:text-vscode-foreground p-1 inline-flex items-center"
+						title="Next notification">
+						<span className="codicon codicon-chevron-right"></span>
+					</button>
+				</div>
+			)}
 		</div>
 	)
 }
