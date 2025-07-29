@@ -43,6 +43,7 @@ const BaseConfigSchema = z.object({
 	disabled: z.boolean().optional(),
 	timeout: z.number().min(1).max(3600).optional().default(60),
 	alwaysAllow: z.array(z.string()).default([]),
+	disabledTools: z.array(z.string()).default([]),
 	watchPaths: z.array(z.string()).optional(), // paths to watch for changes and restart server
 })
 
@@ -137,8 +138,7 @@ export class McpHub {
 		this.refCount--
 		console.log(`McpHub: Client unregistered. Ref count: ${this.refCount}`)
 		if (this.refCount <= 0) {
-			console.log("McpHub: Last client unregistered. Disposing hub.")
-			await this.dispose()
+			console.log("McpHub: Last client unregistered. Disposing hub.")			
 		}
 	}
 
@@ -1284,27 +1284,85 @@ export class McpHub {
 			throw error // Re-throw to ensure the error is properly handled
 		}
 	}
-
-	async dispose(): Promise<void> {
-		// Prevent multiple disposals
-		if (this.isDisposed) {
-			console.log("McpHub: Already disposed.")
-			return
-		}
-		console.log("McpHub: Disposing...")
-		this.isDisposed = true
-		this.removeAllFileWatchers()
-		for (const connection of this.connections) {
-			try {
-				await this.deleteConnection(connection.server.name, connection.server.source)
-			} catch (error) {
-				console.error(`Failed to close connection for ${connection.server.name}:`, error)
+async toggleToolDisabled(
+		serverName: string,
+		source: "global" | "project",
+		toolName: string,
+		disabled: boolean,
+	): Promise<void> {
+		try {
+			// Find the connection with matching name and source
+			const connection = this.findConnection(serverName, source)
+			if (!connection) {
+				throw new Error(`Server ${serverName} with source ${source} not found`)
 			}
+
+			// Determine the correct config path based on the source
+			let configPath: string
+			if (source === "project") {
+				// Get project MCP config path
+				const projectMcpPath = await this.getProjectMcpPath()
+				if (!projectMcpPath) {
+					throw new Error("Project MCP configuration file not found")
+				}
+				configPath = projectMcpPath
+			} else {
+				// Get global MCP settings path
+				configPath = await this.getMcpSettingsFilePath()
+			}
+
+			// Normalize path for cross-platform compatibility
+			const normalizedPath = process.platform === "win32" ? configPath.replace(/\\/g, "/") : configPath
+
+			// Read the appropriate config file
+			const content = await fs.readFile(normalizedPath, "utf-8")
+			const config = JSON.parse(content)
+
+			// Initialize mcpServers if it doesn't exist
+			if (!config.mcpServers) {
+				config.mcpServers = {}
+			}
+
+			// Initialize server config if it doesn't exist
+			if (!config.mcpServers[serverName]) {
+				config.mcpServers[serverName] = {
+					type: "stdio",
+					command: "node",
+					args: [], // Default to an empty array; can be set later if needed
+				}
+			}
+
+			// Initialize disabledTools if it doesn't exist
+			if (!config.mcpServers[serverName].disabledTools) {
+				config.mcpServers[serverName].disabledTools = []
+			}
+
+			const disabledTools = config.mcpServers[serverName].disabledTools
+			console.log("HERE!!!!")
+			const toolIndex = disabledTools.indexOf(toolName)
+
+			if (disabled && toolIndex === -1) {
+				// Add tool to disabled list
+				disabledTools.push(toolName)
+			} else if (!disabled && toolIndex !== -1) {
+				// Remove tool from disabled list
+				disabledTools.splice(toolIndex, 1)
+			}
+
+			// Write updated config back to file
+			await fs.writeFile(normalizedPath, JSON.stringify(config, null, 2))
+
+			// Update the tools list to reflect the change
+			if (connection) {
+				// Explicitly pass the source to ensure we're updating the correct server's tools
+				connection.server.tools = await this.fetchToolsList(serverName, source)
+				await this.notifyWebviewOfServerChanges()
+			}
+		} catch (error) {
+			this.showErrorMessage(`Failed to update disabled settings for tool ${toolName}`, error)
+			throw error // Re-throw to ensure the error is properly handled
 		}
-		this.connections = []
-		if (this.settingsWatcher) {
-			this.settingsWatcher.dispose()
-		}
-		this.disposables.forEach((d) => d.dispose())
-	}
+}
+
+
 }

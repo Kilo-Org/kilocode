@@ -123,7 +123,6 @@ const createMockMcpHub = (): McpHub =>
 		getServers: () => [],
 		getMcpServersPath: async () => "/mock/mcp/path",
 		getMcpSettingsFilePath: async () => "/mock/settings/path",
-		dispose: async () => {},
 		// Add other required public methods with no-op implementations
 		restartConnection: async () => {},
 		readResource: async () => ({ contents: [] }),
@@ -135,7 +134,7 @@ const createMockMcpHub = (): McpHub =>
 	}) as unknown as McpHub
 
 describe("SYSTEM_PROMPT", () => {
-	let mockMcpHub: McpHub
+	let mockMcpHub: McpHub | undefined
 	let experiments: Record<string, boolean> | undefined
 
 	beforeAll(() => {
@@ -169,9 +168,7 @@ describe("SYSTEM_PROMPT", () => {
 
 	afterEach(async () => {
 		// Clean up any McpHub instances
-		if (mockMcpHub) {
-			await mockMcpHub.dispose()
-		}
+		mockMcpHub = undefined
 	})
 
 	it("should maintain consistent system prompt", async () => {

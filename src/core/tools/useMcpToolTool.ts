@@ -88,7 +88,7 @@ export async function useMcpToolTool(
 			const toolResultPretty =
 				(toolResult?.isError ? "Error:\n" : "") +
 					toolResult?.content
-						.map((item) => {
+					.map((item): any => {
 							if (item.type === "text") {
 								return item.text
 							}

@@ -70,7 +70,6 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setRequestDelaySeconds: (value: number) => void
 	setCurrentApiConfigName: (value: string) => void
 	setListApiConfigMeta: (value: ProviderSettingsEntry[]) => void
-	mode: Mode
 	setMode: (value: Mode) => void
 	setCustomModePrompts: (value: CustomModePrompts) => void
 	setCustomSupportPrompts: (value: CustomSupportPrompts) => void

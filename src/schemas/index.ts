@@ -35,6 +35,7 @@ export const providerNames = [
 	"groq",
 	"chutes",
 	"litellm",
+	"claude-code",
 ] as const
 
 export const providerNamesSchema = z.enum(providerNames)
@@ -503,6 +504,11 @@ const litellmSchema = baseProviderSettingsSchema.extend({
 	litellmModelId: z.string().optional(),
 })
 
+const claudeCodeSchema = apiModelIdProviderModelSchema.extend({
+	claudeCodePath: z.string().optional(),
+	claudeCodeMaxOutputTokens: z.number().optional(),
+})
+
 // kilocode_change start
 const kilocodeSchema = baseProviderSettingsSchema.extend({
 	kilocodeToken: z.string().optional(),
@@ -536,6 +542,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	groqSchema.merge(z.object({ apiProvider: z.literal("groq") })),
 	chutesSchema.merge(z.object({ apiProvider: z.literal("chutes") })),
 	litellmSchema.merge(z.object({ apiProvider: z.literal("litellm") })),
+	claudeCodeSchema.merge(z.object({ apiProvider: z.literal("claude-code") })),
 	kilocodeSchema.merge(z.object({ apiProvider: z.literal("kilocode") })), // kilocode_change
 	defaultSchema,
 ])
@@ -565,6 +572,7 @@ export const providerSettingsSchema = z
 	.merge(groqSchema)
 	.merge(chutesSchema)
 	.merge(litellmSchema)
+	.merge(claudeCodeSchema)
 	.merge(kilocodeSchema) // kilocode_change
 
 export type ProviderSettings = z.infer<typeof providerSettingsSchema>
@@ -672,6 +680,9 @@ const providerSettingsRecord: ProviderSettingsRecord = {
 	litellmBaseUrl: undefined,
 	litellmApiKey: undefined,
 	litellmModelId: undefined,
+	// Claude Code
+	claudeCodePath: undefined,
+	claudeCodeMaxOutputTokens: undefined,
 }
 
 export const PROVIDER_SETTINGS_KEYS = Object.keys(providerSettingsRecord) as Keys<ProviderSettings>[]

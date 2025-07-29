@@ -12,7 +12,7 @@ import {
 	ClineSayBrowserAction,
 	ClineSayTool,
 	ExtensionMessage,
-} from "../../lib/ExtensionMessage"
+} from "@roo/shared/ExtensionMessage"
 import { McpServer, McpTool } from "../../lib/mcp"
 import { findLast } from "@/lib/array"
 import { combineApiRequests } from "../../lib/combineApiRequests"

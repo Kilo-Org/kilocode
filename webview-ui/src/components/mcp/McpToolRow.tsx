@@ -28,6 +28,7 @@ const McpToolRow = ({ tool, serverName, serverSource, alwaysAllowMcp }: McpToolR
 			key={tool.name}
 			style={{
 				padding: "3px 0",
+				opacity: tool.disabled ? 0.6 : 1,
 			}}>
 			<div
 				data-testid="tool-row-container"
@@ -37,11 +38,66 @@ const McpToolRow = ({ tool, serverName, serverSource, alwaysAllowMcp }: McpToolR
 					<span className="codicon codicon-symbol-method" style={{ marginRight: "6px" }}></span>
 					<span style={{ fontWeight: 500 }}>{tool.name}</span>
 				</div>
-				{serverName && alwaysAllowMcp && (
-					<VSCodeCheckbox checked={tool.alwaysAllow} onChange={handleAlwaysAllowChange} data-tool={tool.name}>
-						{t("mcp:tool.alwaysAllow")}
-					</VSCodeCheckbox>
-				)}
+				<div style={{ display: "flex", alignItems: "center" }}>
+					{serverName && alwaysAllowMcp && (
+						<VSCodeCheckbox checked={tool.alwaysAllow} onChange={handleAlwaysAllowChange} data-tool={tool.name}>
+							{t("mcp:tool.alwaysAllow")}
+						</VSCodeCheckbox>
+					)}
+					{serverName && (
+						<div
+							role="switch"
+							aria-checked={!tool.disabled}
+							tabIndex={0}
+							style={{
+								width: "20px",
+								height: "10px",
+								backgroundColor: tool.disabled
+									? "var(--vscode-titleBar-inactiveForeground)"
+									: "var(--vscode-button-background)",
+								borderRadius: "5px",
+								position: "relative",
+								cursor: "pointer",
+								transition: "background-color 0.2s",
+								opacity: tool.disabled ? 0.4 : 0.8,
+								marginLeft: "10px"
+							}}
+							onClick={() => {
+								vscode.postMessage({
+									type: "toggleMcpTool",
+									serverName: serverName,
+									source: serverSource || "global",
+									toolName: tool.name,
+									disabled: !tool.disabled
+								})
+							}}
+							onKeyDown={(e) => {
+								if (e.key === "Enter" || e.key === " ") {
+									e.preventDefault()
+									vscode.postMessage({
+										type: "toggleMcpTool",
+										serverName: serverName,
+										source: serverSource || "global",
+										toolName: tool.name,
+										disabled: !tool.disabled
+									})
+								}
+							}}>
+							<div
+								style={{
+									width: "6px",
+									height: "6px",
+									backgroundColor: "var(--vscode-titleBar-activeForeground)",
+									borderRadius: "50%",
+									position: "absolute",
+									top: "2px",
+									left: tool.disabled ? "2px" : "12px",
+									transition: "left 0.2s",
+								}}
+							/>
+						</div>
+					)}
+				</div>
 			</div>
 			{tool.description && (
 				<div

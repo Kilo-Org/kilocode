@@ -474,6 +474,23 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			await updateGlobalState("mcpEnabled", mcpEnabled)
 			await provider.postStateToWebview()
 			break
+		case "toggleMcpTool": {
+			try {
+				await provider
+					.getMcpHub()
+					?.toggleToolDisabled(
+						message.serverName!,
+						message.source as "global" | "project",
+						message.toolName!,
+						message.disabled!
+					)
+			} catch (error) {
+				provider.log(
+					`Failed to toggle MCP tool ${message.toolName}: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
+				)
+			}
+			break
+		}
 		case "enableMcpServerCreation":
 			await updateGlobalState("enableMcpServerCreation", message.bool ?? true)
 			await provider.postStateToWebview()

@@ -41,3 +41,10 @@ logs
 
 # kilocode_change
 .history/
+.kilocode/mcp.json
+cline_docs/activeContext.md
+cline_docs/files.md
+cline_docs/productContext.md
+cline_docs/progress.md
+cline_docs/systemPatterns.md
+cline_docs/techContext.md

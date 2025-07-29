@@ -34,6 +34,7 @@ import {
 	Anthropic,
 	Bedrock,
 	Chutes,
+	ClaudeCode,
 	DeepSeek,
 	Gemini,
 	Glama,
@@ -194,13 +195,15 @@ const ApiOptions = ({
 	}, [apiConfiguration, routerModels, setErrorMessage])
 
 	const selectedProviderModels = useMemo(
-		() =>
-			MODELS_BY_PROVIDER[selectedProvider]
-				? Object.keys(MODELS_BY_PROVIDER[selectedProvider]).map((modelId) => ({
-						value: modelId,
-						label: modelId,
-					}))
-				: [],
+		() => {
+			if (!selectedProvider) return []
+			const models = MODELS_BY_PROVIDER[selectedProvider as keyof typeof MODELS_BY_PROVIDER]
+			if (!models) return []
+			return Object.keys(models).map((modelId) => ({
+				value: modelId,
+				label: modelId,
+			}))
+		},
 		[selectedProvider],
 	)
 
@@ -419,6 +422,10 @@ const ApiOptions = ({
 
 			{selectedProvider === "anthropic" && (
 				<Anthropic apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
+			)}
+
+			{selectedProvider === "claude-code" && (
+				<ClaudeCode apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
 
 			{selectedProvider === "openai-native" && (

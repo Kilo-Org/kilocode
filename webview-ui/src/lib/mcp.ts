@@ -11,5 +11,6 @@ export interface McpServer {
  */
 export interface McpTool {
   name: string;
+  disabled?: boolean;
   // Add other properties as needed
 }

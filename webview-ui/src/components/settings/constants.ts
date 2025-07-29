@@ -12,6 +12,7 @@ import {
 	xaiModels,
 	groqModels,
 	chutesModels,
+	claudeCodeModels,
 } from "@roo/shared/api"
 
 export { REASONING_MODELS, PROMPT_CACHING_MODELS } from "@roo/shared/api"
@@ -30,12 +31,14 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	xai: xaiModels,
 	groq: groqModels,
 	chutes: chutesModels,
+	"claude-code": claudeCodeModels,
 }
 
 export const PROVIDERS = [
 	{ value: "kilocode", label: "Kilo Code" },
 	{ value: "openrouter", label: "OpenRouter" },
 	{ value: "anthropic", label: "Anthropic" },
+	{ value: "claude-code", label: "Claude Code" },
 	{ value: "fireworks", label: "Fireworks" }, // kilocode_change
 	{ value: "gemini", label: "Google Gemini" },
 	{ value: "deepseek", label: "DeepSeek" },

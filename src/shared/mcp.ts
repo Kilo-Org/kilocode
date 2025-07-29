@@ -24,6 +24,7 @@ export type McpTool = {
 	description?: string
 	inputSchema?: object
 	alwaysAllow?: boolean
+	disabled?: boolean
 }
 
 export type McpResource = {

@@ -1,27 +1,25 @@
 /**
  * Types for extension messages.
  */
-export type ClineAsk = {
-  type: "ask";
-  ts: number;
-  ask?: "command" | "followup" | "command_output" | "completion_result" | "tool" | "api_req_failed" | "resume_task" | "resume_completed_task" | "mistake_limit_reached" | "browser_action_launch" | "use_mcp_server" | "payment_required_prompt";
-  // Add other properties as needed
-};
+export type ClineAsk = "command" | "followup" | "command_output" | "completion_result" | "tool" | "api_req_failed" | "resume_task" | "resume_completed_task" | "mistake_limit_reached" | "browser_action_launch" | "use_mcp_server" | "payment_required_prompt";
+
+export type ClineSay = "error" | "api_req_started" | "api_req_finished" | "api_req_retried" | "api_req_retry_delayed" | "api_req_deleted" | "text" | "reasoning" | "completion_result" | "user_feedback" | "user_feedback_diff" | "command_output" | "shell_integration_warning" | "browser_action" | "browser_action_result" | "mcp_server_request_started" | "mcp_server_response" | "subtask_result" | "checkpoint_saved" | "rooignore_error" | "diff_error" | "tool" | "payment_required_prompt";
 
 export type ClineMessage = {
   type: "ask" | "say";
   ts: number;
-  ask?: "command" | "followup" | "command_output" | "completion_result" | "tool" | "api_req_failed" | "resume_task" | "resume_completed_task" | "mistake_limit_reached" | "browser_action_launch" | "use_mcp_server" | "payment_required_prompt";
-  say?: "command_output" | "completion_result" | "api_req_started" | "browser_action" | "error" | "text" | "api_req_finished" | "api_req_retried" | "api_req_retry_delayed" | "api_req_deleted" | "tool" | "other" | "api_req_timeout" | "api_req_timeout_reached" | "api_req_timeout_reset" | "api_req_timeout_expired" | "payment_required_prompt" | "low_credit_warning" | "reasoning" | "user_feedback" | "user_feedback_diff" | "shell_integration_warning" | "browser_action_result";
+  ask?: ClineAsk;
+  say?: ClineSay;
   text?: string;
   images?: string[];
   partial?: boolean;
+  reasoning?: string;
+  conversationHistoryIndex?: number;
+  checkpoint?: Record<string, unknown>;
   progressStatus?: {
-    current?: number;
-    total?: number;
-    // Add other properties as needed
+    icon?: string;
+    text?: string;
   };
-  // Add other properties as needed
 };
 
 export type ClineSayBrowserAction = {

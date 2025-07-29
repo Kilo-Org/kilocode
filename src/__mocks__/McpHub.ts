@@ -5,6 +5,7 @@ export class McpHub {
 	constructor() {
 		this.toggleToolAlwaysAllow = jest.fn()
 		this.callTool = jest.fn()
+		this.dispose = jest.fn()
 	}
 
 	async toggleToolAlwaysAllow(_serverName: string, _toolName: string, _shouldAllow: boolean): Promise<void> {
@@ -13,5 +14,9 @@ export class McpHub {
 
 	async callTool(_serverName: string, _toolName: string, _toolArguments?: Record<string, unknown>): Promise<any> {
 		return Promise.resolve({ result: "success" })
+	}
+
+	async dispose(): Promise<void> {
+		return Promise.resolve()
 	}
 }

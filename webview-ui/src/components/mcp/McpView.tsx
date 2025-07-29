@@ -47,7 +47,7 @@ const McpView = ({ onDone }: McpViewProps) => {
 	const { t } = useAppTranslation()
 
 	return (
-		<Tab>
+		<Tab style={{ fontFamily: 'Tektur, sans-serif' }}>
 			<TabHeader className="flex justify-between items-center">
 				<h3 className="text-vscode-foreground m-0">{t("mcp:title")}</h3>
 				<Button onClick={onDone}>{t("mcp:done")}</Button>

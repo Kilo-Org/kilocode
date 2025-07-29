@@ -73,8 +73,7 @@ export class McpServerManager {
 	 * Clean up the singleton instance and all its resources.
 	 */
 	static async cleanup(context: vscode.ExtensionContext): Promise<void> {
-		if (this.instance) {
-			await this.instance.dispose()
+		if (this.instance) {			
 			this.instance = null
 			await context.globalState.update(this.GLOBAL_STATE_KEY, undefined)
 		}

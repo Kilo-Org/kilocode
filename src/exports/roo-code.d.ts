@@ -31,6 +31,7 @@ type GlobalSettings = {
 							| "groq"
 							| "chutes"
 							| "litellm"
+							| "claude-code"
 					  )
 					| undefined
 		  }[]
@@ -200,6 +201,7 @@ type ProviderSettings = {
 				| "groq"
 				| "chutes"
 				| "litellm"
+				| "claude-code"
 		  )
 		| undefined
 	includeMaxTokens?: boolean | undefined
@@ -318,6 +320,8 @@ type ProviderSettings = {
 	litellmBaseUrl?: string | undefined
 	litellmApiKey?: string | undefined
 	litellmModelId?: string | undefined
+	claudeCodePath?: string | undefined
+	claudeCodeMaxOutputTokens?: number | undefined
 }
 
 type ProviderSettingsEntry = {
@@ -348,6 +352,7 @@ type ProviderSettingsEntry = {
 				| "groq"
 				| "chutes"
 				| "litellm"
+				| "claude-code"
 		  )
 		| undefined
 }

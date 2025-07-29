@@ -80,6 +80,7 @@ export interface WebviewMessage {
 		| "restartMcpServer"
 		| "toggleToolAlwaysAllow"
 		| "toggleMcpServer"
+		| "toggleMcpTool"
 		| "updateMcpTimeout"
 		| "fuzzyMatchThreshold"
 		| "writeDelayMs"

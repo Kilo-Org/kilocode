@@ -26,6 +26,7 @@ import { GroqHandler } from "./providers/groq"
 import { ChutesHandler } from "./providers/chutes"
 import { LiteLLMHandler } from "./providers/litellm"
 import { KilocodeOpenrouterHandler } from "./providers/kilocode-openrouter"
+import { ClaudeCodeHandler } from "./providers/claude-code"
 
 export interface SingleCompletionHandler {
 	completePrompt(prompt: string): Promise<string>
@@ -101,6 +102,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new ChutesHandler(options)
 		case "litellm":
 			return new LiteLLMHandler(options)
+		case "claude-code":
+			return new ClaudeCodeHandler(options)
 		default:
 			return new AnthropicHandler(options)
 	}
