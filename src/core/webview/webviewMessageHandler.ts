@@ -2570,7 +2570,6 @@ export const webviewMessageHandler = async (
 				const kilocodeToken = apiConfiguration?.kilocodeToken
 
 				if (!kilocodeToken || apiConfiguration?.apiProvider !== "kilocode") {
-					// Not using Kilocode provider or no token
 					provider.postMessageToWebview({
 						type: "kilocodeNotificationsResponse",
 						notifications: [],
@@ -2583,7 +2582,7 @@ export const webviewMessageHandler = async (
 						Authorization: `Bearer ${kilocodeToken}`,
 						"Content-Type": "application/json",
 					},
-					timeout: 5000, // 5 second timeout
+					timeout: 5000,
 				})
 
 				provider.postMessageToWebview({
@@ -2592,7 +2591,6 @@ export const webviewMessageHandler = async (
 				})
 			} catch (error: any) {
 				provider.log(`Error fetching Kilocode notifications: ${error.message}`)
-				// Send empty array on error to avoid breaking the UI
 				provider.postMessageToWebview({
 					type: "kilocodeNotificationsResponse",
 					notifications: [],
