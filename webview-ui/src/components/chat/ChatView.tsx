@@ -1780,7 +1780,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						</div>
 					)}
 					{/* kilocode_change start: changed the classes to support notifications */}
-					<div className={` w-full h-full flex flex-col gap-4 px-3.5 transition-all duration-300`}>
+					<div className="w-full h-full flex flex-col gap-4 px-3.5 transition-all duration-300">
 						{/* kilocode_change end */}
 						{/* Version indicator in top-right corner - only on welcome screen */}
 						{/* kilocode_change: do not show */}
