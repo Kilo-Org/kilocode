@@ -98,6 +98,7 @@ import { parseKiloSlashCommands } from "../slash-commands/kilo" // kilocode_chan
 import { GlobalFileNames } from "../../shared/globalFileNames" // kilocode_change
 import { ensureLocalKilorulesDirExists } from "../context/instructions/kilo-rules" // kilocode_change
 import { restoreTodoListForTask } from "../tools/updateTodoListTool"
+import { reportExcessiveRecursion, yieldPromise } from "../kilocode"
 
 // Constants
 const MAX_EXPONENTIAL_BACKOFF_SECONDS = 600 // 10 minutes
@@ -1182,7 +1183,9 @@ export class Task extends EventEmitter<ClineEvents> {
 	public async recursivelyMakeClineRequests(
 		userContent: Anthropic.Messages.ContentBlockParam[],
 		includeFileDetails: boolean = false,
+		recursionDepth: number = 0, // kilocode_change
 	): Promise<boolean> {
+		reportExcessiveRecursion(this.recursivelyMakeClineRequests.name, recursionDepth) // kilocode_change
 		if (this.abort) {
 			throw new Error(`[KiloCode#recursivelyMakeClineRequests] task ${this.taskId}.${this.instanceId} aborted`)
 		}
@@ -1774,7 +1777,15 @@ export class Task extends EventEmitter<ClineEvents> {
 					this.consecutiveMistakeCount++
 				}
 
-				const recDidEndLoop = await this.recursivelyMakeClineRequests(this.userMessageContent)
+				// kilocode_change start: prevent excessive recursion
+				// e.g. https://github.com/RooCodeInc/Roo-Code/issues/5601#issuecomment-3120612488
+				await yieldPromise()
+				const recDidEndLoop = await this.recursivelyMakeClineRequests(
+					this.userMessageContent,
+					undefined,
+					recursionDepth + 1,
+				)
+				// kilocode_change end
 				didEndLoop = recDidEndLoop
 			} else {
 				// If there's no assistant_responses, that means we got no text

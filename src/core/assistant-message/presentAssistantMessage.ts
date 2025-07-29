@@ -37,6 +37,7 @@ import { condenseTool } from "../tools/condenseTool" // kilocode_change
 import { codebaseSearchTool } from "../tools/codebaseSearchTool"
 import { experiments, EXPERIMENT_IDS } from "../../shared/experiments"
 import { applyDiffToolLegacy } from "../tools/applyDiffTool"
+import { reportExcessiveRecursion, yieldPromise } from "../kilocode"
 
 /**
  * Processes and presents assistant message content to the user interface.
@@ -55,7 +56,9 @@ import { applyDiffToolLegacy } from "../tools/applyDiffTool"
  * as it becomes available.
  */
 
-export async function presentAssistantMessage(cline: Task) {
+export async function presentAssistantMessage(cline: Task, recursionDepth: number = 0 /*kilocode_change*/) {
+	reportExcessiveRecursion(presentAssistantMessage.name, recursionDepth) // kilocode_change
+
 	if (cline.abort) {
 		throw new Error(`[Task#presentAssistantMessage] task ${cline.taskId}.${cline.instanceId} aborted`)
 	}
@@ -596,13 +599,19 @@ export async function presentAssistantMessage(cline: Task) {
 		if (cline.currentStreamingContentIndex < cline.assistantMessageContent.length) {
 			// There are already more content blocks to stream, so we'll call
 			// this function ourselves.
-			presentAssistantMessage(cline)
+			// kilocode_change start: prevent excessive recursion
+			await yieldPromise()
+			await presentAssistantMessage(cline, recursionDepth + 1)
+			// kilocode_change end
 			return
 		}
 	}
 
 	// Block is partial, but the read stream may have finished.
 	if (cline.presentAssistantMessageHasPendingUpdates) {
-		presentAssistantMessage(cline)
+		// kilocode_change start: prevent excessive recursion
+		await yieldPromise()
+		await presentAssistantMessage(cline, recursionDepth + 1)
+		// kilocode_change end
 	}
 }
