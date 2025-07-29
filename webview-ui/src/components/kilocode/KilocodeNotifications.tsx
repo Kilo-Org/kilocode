@@ -52,11 +52,11 @@ export const KilocodeNotifications: React.FC = () => {
 	}
 
 	const goToNext = () => {
-		setCurrentIndex((prev) => (prev + 1) % notifications.length)
+		setCurrentIndex((prev) => (prev + 1) % filteredNotifications.length)
 	}
 
 	const goToPrevious = () => {
-		setCurrentIndex((prev) => (prev - 1 + notifications.length) % notifications.length)
+		setCurrentIndex((prev) => (prev - 1 + filteredNotifications.length) % filteredNotifications.length)
 	}
 
 	const dismissNotificationId = (id: string) => {
@@ -106,7 +106,7 @@ export const KilocodeNotifications: React.FC = () => {
 						<span className="codicon codicon-chevron-left"></span>
 					</button>
 					<span className="text-xs text-vscode-descriptionForeground whitespace-nowrap">
-						{currentIndex + 1} / {notifications.length}
+						{currentIndex + 1} / {filteredNotifications.length}
 					</span>
 					<button
 						onClick={goToNext}
