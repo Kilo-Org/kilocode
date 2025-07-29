@@ -100,6 +100,11 @@
 				"lessThanCent": "<0,01 €"
 			}
 		},
-		"toggleMessage": "Assistència en línia Kilo {{status}}"
+		"toggleMessage": "Assistència en línia Kilo {{status}}",
+		"incompatibilityExtensionPopup": {
+			"message": "L'Assistència en línia de Kilo Code està bloquejada per un conflicte amb GitHub Copilot. Per solucionar-ho, has de desactivar els suggeriments en línia de Copilot.",
+			"disableCopilot": "Desactivar Copilot",
+			"disableInlineAssist": "Desactivar Assistència en línia"
+		}
 	}
 }
