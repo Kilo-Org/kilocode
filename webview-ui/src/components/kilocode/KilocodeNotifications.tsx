@@ -38,7 +38,7 @@ export const KilocodeNotifications: React.FC = () => {
 		return () => {
 			window.removeEventListener("message", handleMessage)
 		}
-	}, [dismissedNotificationIds])
+	}, [currentIndex, filteredNotifications.length, dismissedNotificationIds])
 
 	useEffect(() => {
 		vscode.postMessage({ type: "fetchKilocodeNotifications" })
