@@ -51,26 +51,6 @@
 		"activationFailed": "Kilo: Niet gelukt berichtengenerator te activeren: {{error}}",
 		"providerRegistered": "Kilo: Berichtprovider voor commits geregistreerd"
 	},
-	"autocomplete": {
-		"statusBar": {
-			"enabled": "$(sparkle) Kilo Automatisch aanvullen",
-			"warning": "$(warning) Kilo Automatisch aanvullen",
-			"tooltip": {
-				"basic": "Kilo Code Automatisch aanvullen",
-				"tokenError": "Een geldige token moet ingesteld worden om automatisch aanvullen te gebruiken",
-				"disabled": "Kilo Code Automatisch aanvullen (uitgeschakeld)",
-				"lastCompletion": "Laatste voltooiing:",
-				"sessionTotal": "Totale sessiekosten:",
-				"model": "Model:"
-			},
-			"disabled": "$(circle-slash) Kilo Automatisch aanvullen",
-			"cost": {
-				"zero": "€ 0,00",
-				"lessThanCent": "<€0,01"
-			}
-		},
-		"toggleMessage": "Kilo Automatisch aanvullen {{status}}"
-	},
 	"ghost": {
 		"progress": {
 			"analyzing": "Je code wordt geanalyseerd...",
@@ -102,6 +82,24 @@
 		},
 		"messages": {
 			"provideCodeSuggestions": "Code suggesties worden aangeboden..."
-		}
+		},
+		"statusBar": {
+			"disabled": "$(circle-slash) Kilo Inline Assist",
+			"enabled": "$(sparkle) Kilo Inline Hulp",
+			"warning": "$(warning) Kilo Inline Assist",
+			"tooltip": {
+				"basic": "Kilo Code Inline Assist",
+				"disabled": "Kilo Code Inline Assist (uitgeschakeld)",
+				"lastCompletion": "Laatste suggestie:",
+				"tokenError": "Een geldig token moet ingesteld zijn om Inline Assist te gebruiken",
+				"sessionTotal": "Totale sessiekosten:",
+				"model": "Model:"
+			},
+			"cost": {
+				"zero": "€0,00",
+				"lessThanCent": "<€0,01"
+			}
+		},
+		"toggleMessage": "Kilo Inline Assist {{status}}"
 	}
 }

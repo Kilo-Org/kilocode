@@ -51,26 +51,6 @@
 		"activationFailed": "Kilo: 메시지 생성기 활성화 실패: {{error}}",
 		"providerRegistered": "Kilo: 커밋 메시지 제공자가 등록됨"
 	},
-	"autocomplete": {
-		"statusBar": {
-			"disabled": "$(circle-slash) Kilo 자동완성",
-			"enabled": "$(sparkle) Kilo 자동완성",
-			"tooltip": {
-				"disabled": "Kilo Code 자동완성 (비활성화됨)",
-				"basic": "Kilo Code 자동완성",
-				"tokenError": "자동완성을 사용하려면 유효한 토큰을 설정해야 합니다",
-				"sessionTotal": "세션 총 비용:",
-				"lastCompletion": "마지막 완료:",
-				"model": "모델:"
-			},
-			"warning": "$(warning) Kilo 자동완성",
-			"cost": {
-				"lessThanCent": "<$0.01",
-				"zero": "0원"
-			}
-		},
-		"toggleMessage": "Kilo 자동완성 {{status}}"
-	},
 	"ghost": {
 		"progress": {
 			"analyzing": "코드 분석 중...",
@@ -102,6 +82,24 @@
 		},
 		"messages": {
 			"provideCodeSuggestions": "코드 제안 중..."
-		}
+		},
+		"statusBar": {
+			"enabled": "$(sparkle) 킬로 인라인 어시스트",
+			"disabled": "$(circle-slash) 킬로 인라인 어시스트",
+			"warning": "$(warning) 킬로 인라인 어시스트",
+			"tooltip": {
+				"disabled": "킬로 코드 인라인 어시스트 (비활성화됨)",
+				"basic": "킬로 코드 인라인 어시스트",
+				"lastCompletion": "마지막 제안:",
+				"tokenError": "인라인 어시스트를 사용하려면 유효한 토큰이 설정되어야 합니다",
+				"sessionTotal": "세션 총 비용:",
+				"model": "모델:"
+			},
+			"cost": {
+				"zero": "₩0.00",
+				"lessThanCent": "<$0.01"
+			}
+		},
+		"toggleMessage": "Kilo 인라인 어시스트 {{status}}"
 	}
 }

@@ -36,6 +36,7 @@
 		"could_not_open_file_generic": "Impossibile aprire il file!",
 		"checkpoint_timeout": "Timeout durante il tentativo di ripristinare il checkpoint.",
 		"checkpoint_failed": "Impossibile ripristinare il checkpoint.",
+		"git_not_installed": "Git è richiesto per la funzione di checkpoint. Per favore, installa Git per abilitare i checkpoint.",
 		"no_workspace": "Per favore, apri prima una cartella di progetto",
 		"update_support_prompt": "Errore durante l'aggiornamento del messaggio di supporto",
 		"reset_support_prompt": "Errore durante il ripristino del messaggio di supporto",
@@ -125,7 +126,8 @@
 	},
 	"buttons": {
 		"save": "Salva",
-		"edit": "Modifica"
+		"edit": "Modifica",
+		"learn_more": "Scopri di più"
 	},
 	"tasks": {
 		"canceled": "Errore attività: È stata interrotta e annullata dall'utente.",
@@ -183,6 +185,11 @@
 			"description": "Sei sicuro di voler eliminare questa modalità {{scope}}? Questo eliminerà anche la cartella delle regole associata a: {{rulesFolderPath}}",
 			"descriptionNoRules": "Sei sicuro di voler eliminare questa modalità personalizzata?",
 			"confirm": "Elimina"
+		}
+	},
+	"commands": {
+		"preventCompletionWithOpenTodos": {
+			"description": "Impedire il completamento delle attività quando ci sono todo incompleti nella lista dei todo"
 		}
 	}
 }

@@ -60,15 +60,39 @@ type ShellToken = string | { op: string } | { command: string }
 
 /**
  * Split a command string into individual sub-commands by
- * chaining operators (&&, ||, ;, or |).
+ * chaining operators (&&, ||, ;, or |) and newlines.
  *
  * Uses shell-quote to properly handle:
  * - Quoted strings (preserves quotes)
  * - Subshell commands ($(cmd) or `cmd`)
  * - PowerShell redirections (2>&1)
  * - Chain operators (&&, ||, ;, |)
+ * - Newlines as command separators
  */
 export function parseCommand(command: string): string[] {
+	if (!command?.trim()) return []
+
+	// Split by newlines first (handle different line ending formats)
+	// This regex splits on \r\n (Windows), \n (Unix), or \r (old Mac)
+	const lines = command.split(/\r\n|\r|\n/)
+	const allCommands: string[] = []
+
+	for (const line of lines) {
+		// Skip empty lines
+		if (!line.trim()) continue
+
+		// Process each line through the existing parsing logic
+		const lineCommands = parseCommandLine(line)
+		allCommands.push(...lineCommands)
+	}
+
+	return allCommands
+}
+
+/**
+ * Parse a single line of commands (internal helper function)
+ */
+function parseCommandLine(command: string): string[] {
 	if (!command?.trim()) return []
 
 	// Storage for replaced content
@@ -76,6 +100,10 @@ export function parseCommand(command: string): string[] {
 	const subshells: string[] = []
 	const quotes: string[] = []
 	const arrayIndexing: string[] = []
+	const arithmeticExpressions: string[] = []
+	const variables: string[] = []
+	const parameterExpansions: string[] = []
+	const processSubstitutions: string[] = []
 
 	// First handle PowerShell redirections by temporarily replacing them
 	let processedCommand = command.replace(/\d*>&\d*/g, (match) => {
@@ -83,10 +111,37 @@ export function parseCommand(command: string): string[] {
 		return `__REDIR_${redirections.length - 1}__`
 	})
 
-	// Handle array indexing expressions: ${array[...]} pattern and partial expressions
-	processedCommand = processedCommand.replace(/\$\{[^}]*\[[^\]]*(\]([^}]*\})?)?/g, (match) => {
-		arrayIndexing.push(match)
-		return `__ARRAY_${arrayIndexing.length - 1}__`
+	// Handle arithmetic expressions: $((...)) pattern
+	// Match the entire arithmetic expression including nested parentheses
+	processedCommand = processedCommand.replace(/\$\(\([^)]*(?:\)[^)]*)*\)\)/g, (match) => {
+		arithmeticExpressions.push(match)
+		return `__ARITH_${arithmeticExpressions.length - 1}__`
+	})
+
+	// Handle parameter expansions: ${...} patterns (including array indexing)
+	// This covers ${var}, ${var:-default}, ${var:+alt}, ${#var}, ${var%pattern}, etc.
+	processedCommand = processedCommand.replace(/\$\{[^}]+\}/g, (match) => {
+		parameterExpansions.push(match)
+		return `__PARAM_${parameterExpansions.length - 1}__`
+	})
+
+	// Handle process substitutions: <(...) and >(...)
+	processedCommand = processedCommand.replace(/[<>]\([^)]+\)/g, (match) => {
+		processSubstitutions.push(match)
+		return `__PROCSUB_${processSubstitutions.length - 1}__`
+	})
+
+	// Handle simple variable references: $varname pattern
+	// This prevents shell-quote from splitting $count into separate tokens
+	processedCommand = processedCommand.replace(/\$[a-zA-Z_][a-zA-Z0-9_]*/g, (match) => {
+		variables.push(match)
+		return `__VAR_${variables.length - 1}__`
+	})
+
+	// Handle special bash variables: $?, $!, $#, $$, $@, $*, $-, $0-$9
+	processedCommand = processedCommand.replace(/\$[?!#$@*\-0-9]/g, (match) => {
+		variables.push(match)
+		return `__VAR_${variables.length - 1}__`
 	})
 
 	// Then handle subshell commands
@@ -106,7 +161,40 @@ export function parseCommand(command: string): string[] {
 		return `__QUOTE_${quotes.length - 1}__`
 	})
 
-	const tokens = parse(processedCommand) as ShellToken[]
+	let tokens: ShellToken[]
+	try {
+		tokens = parse(processedCommand) as ShellToken[]
+	} catch (error: any) {
+		// If shell-quote fails to parse, fall back to simple splitting
+		console.warn("shell-quote parse error:", error.message, "for command:", processedCommand)
+
+		// Simple fallback: split by common operators
+		const fallbackCommands = processedCommand
+			.split(/(?:&&|\|\||;|\|)/)
+			.map((cmd) => cmd.trim())
+			.filter((cmd) => cmd.length > 0)
+
+		// Restore all placeholders for each command
+		return fallbackCommands.map((cmd) => {
+			let result = cmd
+			// Restore quotes
+			result = result.replace(/__QUOTE_(\d+)__/g, (_, i) => quotes[parseInt(i)])
+			// Restore redirections
+			result = result.replace(/__REDIR_(\d+)__/g, (_, i) => redirections[parseInt(i)])
+			// Restore array indexing expressions
+			result = result.replace(/__ARRAY_(\d+)__/g, (_, i) => arrayIndexing[parseInt(i)])
+			// Restore arithmetic expressions
+			result = result.replace(/__ARITH_(\d+)__/g, (_, i) => arithmeticExpressions[parseInt(i)])
+			// Restore parameter expansions
+			result = result.replace(/__PARAM_(\d+)__/g, (_, i) => parameterExpansions[parseInt(i)])
+			// Restore process substitutions
+			result = result.replace(/__PROCSUB_(\d+)__/g, (_, i) => processSubstitutions[parseInt(i)])
+			// Restore variable references
+			result = result.replace(/__VAR_(\d+)__/g, (_, i) => variables[parseInt(i)])
+			return result
+		})
+	}
+
 	const commands: string[] = []
 	let currentCommand: string[] = []
 
@@ -151,6 +239,14 @@ export function parseCommand(command: string): string[] {
 		result = result.replace(/__REDIR_(\d+)__/g, (_, i) => redirections[parseInt(i)])
 		// Restore array indexing expressions
 		result = result.replace(/__ARRAY_(\d+)__/g, (_, i) => arrayIndexing[parseInt(i)])
+		// Restore arithmetic expressions
+		result = result.replace(/__ARITH_(\d+)__/g, (_, i) => arithmeticExpressions[parseInt(i)])
+		// Restore parameter expansions
+		result = result.replace(/__PARAM_(\d+)__/g, (_, i) => parameterExpansions[parseInt(i)])
+		// Restore process substitutions
+		result = result.replace(/__PROCSUB_(\d+)__/g, (_, i) => processSubstitutions[parseInt(i)])
+		// Restore variable references
+		result = result.replace(/__VAR_(\d+)__/g, (_, i) => variables[parseInt(i)])
 		return result
 	})
 }
@@ -280,56 +376,6 @@ export function isAutoDeniedSingleCommand(
 }
 
 /**
- * Check if a command string should be auto-approved.
- * Only blocks subshell attempts if there's a denylist configured.
- * Requires all sub-commands to be auto-approved.
- */
-export function isAutoApprovedCommand(command: string, allowedCommands: string[], deniedCommands?: string[]): boolean {
-	if (!command?.trim()) return true
-
-	// Only block subshell execution attempts if there's a denylist configured
-	if ((command.includes("$(") || command.includes("`")) && deniedCommands?.length) {
-		return false
-	}
-
-	// Parse into sub-commands (split by &&, ||, ;, |)
-	const subCommands = parseCommand(command)
-
-	// Ensure every sub-command is auto-approved
-	return subCommands.every((cmd) => {
-		// Remove simple PowerShell-like redirections (e.g. 2>&1) before checking
-		const cmdWithoutRedirection = cmd.replace(/\d*>&\d*/, "").trim()
-
-		return isAutoApprovedSingleCommand(cmdWithoutRedirection, allowedCommands, deniedCommands)
-	})
-}
-
-/**
- * Check if a command string should be auto-denied.
- * Only blocks subshell attempts if there's a denylist configured.
- * Auto-denies if any sub-command is auto-denied.
- */
-export function isAutoDeniedCommand(command: string, allowedCommands: string[], deniedCommands?: string[]): boolean {
-	if (!command?.trim()) return false
-
-	// Only block subshell execution attempts if there's a denylist configured
-	if ((command.includes("$(") || command.includes("`")) && deniedCommands?.length) {
-		return true
-	}
-
-	// Parse into sub-commands (split by &&, ||, ;, |)
-	const subCommands = parseCommand(command)
-
-	// Auto-deny if any sub-command is auto-denied
-	return subCommands.some((cmd) => {
-		// Remove simple PowerShell-like redirections (e.g. 2>&1) before checking
-		const cmdWithoutRedirection = cmd.replace(/\d*>&\d*/, "").trim()
-
-		return isAutoDeniedSingleCommand(cmdWithoutRedirection, allowedCommands, deniedCommands)
-	})
-}
-
-/**
  * Command approval decision types
  */
 export type CommandDecision = "auto_approve" | "auto_deny" | "ask_user"
@@ -384,9 +430,12 @@ export function getCommandDecision(
 ): CommandDecision {
 	if (!command?.trim()) return "auto_approve"
 
-	// Only block subshell execution attempts if there's a denylist configured
+	// Check if subshells contain denied prefixes
 	if ((command.includes("$(") || command.includes("`")) && deniedCommands?.length) {
-		return "auto_deny"
+		const mainCommandLower = command.toLowerCase()
+		if (deniedCommands.some((denied) => mainCommandLower.includes(denied.toLowerCase()))) {
+			return "auto_deny"
+		}
 	}
 
 	// Parse into sub-commands (split by &&, ||, ;, |)

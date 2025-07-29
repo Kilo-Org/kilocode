@@ -51,26 +51,6 @@
 		"activationFailed": "Kilo: Falha ao ativar o gerador de mensagens: {{error}}",
 		"providerRegistered": "Kilo: Provedor de mensagem de commit registrado"
 	},
-	"autocomplete": {
-		"statusBar": {
-			"enabled": "$(sparkle) Kilo Preenchimento automático",
-			"disabled": "$(circle-slash) Kilo Preenchimento automático",
-			"tooltip": {
-				"disabled": "Preenchimento Automático do Kilo Code (desativado)",
-				"tokenError": "Um token válido deve ser definido para usar o preenchimento automático",
-				"basic": "Kilo Code Preenchimento automático",
-				"lastCompletion": "Última conclusão:",
-				"sessionTotal": "Custo total da sessão:",
-				"model": "Modelo:"
-			},
-			"warning": "$(warning) Kilo Preenchimento automático",
-			"cost": {
-				"zero": "R$ 0,00",
-				"lessThanCent": "<R$0,01"
-			}
-		},
-		"toggleMessage": "Kilo Preenchimento automático {{status}}"
-	},
 	"ghost": {
 		"progress": {
 			"analyzing": "Analisando seu código...",
@@ -102,6 +82,24 @@
 		},
 		"messages": {
 			"provideCodeSuggestions": "Sugerindo códigos..."
-		}
+		},
+		"statusBar": {
+			"warning": "$(warning) Assistência Kilo em linha",
+			"disabled": "$(circle-slash) Assistência em linha à venda",
+			"enabled": "$(sparkle) Assistente Integrado Kilo",
+			"tooltip": {
+				"basic": "Assistência em Linha Kilo Code",
+				"disabled": "Kilo Code Assistência Inline (desativada)",
+				"lastCompletion": "Última sugestão:",
+				"sessionTotal": "Custo total da sessão:",
+				"tokenError": "Um token válido deve ser definido para usar o Assistente Integrado",
+				"model": "Modelo:"
+			},
+			"cost": {
+				"zero": "R$ 0,00",
+				"lessThanCent": "<$0,01"
+			}
+		},
+		"toggleMessage": "Assistente em Linha Kilo {{status}}"
 	}
 }

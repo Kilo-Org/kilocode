@@ -1,4 +1,12 @@
 {
+	"errorBoundary": {
+		"title": "เกิดข้อผิดพลาดบางอย่าง",
+		"reportText": "โปรดช่วยเราปรับปรุงโดยรายงานข้อผิดพลาดนี้ที่",
+		"githubText": "หน้า GitHub Issues ของเรา",
+		"copyInstructions": "คัดลอกและวางข้อความข้อผิดพลาดต่อไปนี้เพื่อรวมไว้ในการส่งของคุณ:",
+		"errorStack": "Error Stack:",
+		"componentStack": "Component Stack:"
+	},
 	"answers": {
 		"yes": "ใช่",
 		"no": "ไม่",

@@ -53,6 +53,9 @@
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "API-Schlüssel:",
 		"geminiApiKeyPlaceholder": "Geben Sie Ihren Gemini-API-Schlüssel ein",
+		"mistralProvider": "Mistral",
+		"mistralApiKeyLabel": "API-Schlüssel:",
+		"mistralApiKeyPlaceholder": "Gib deinen Mistral-API-Schlüssel ein",
 		"openaiCompatibleProvider": "OpenAI-kompatibel",
 		"openAiKeyLabel": "OpenAI API-Schlüssel",
 		"openAiKeyPlaceholder": "Gib deinen OpenAI API-Schlüssel ein",
@@ -110,6 +113,7 @@
 			"modelIdRequired": "Modell-ID ist erforderlich",
 			"modelDimensionRequired": "Modellabmessung ist erforderlich",
 			"geminiApiKeyRequired": "Gemini-API-Schlüssel ist erforderlich",
+			"mistralApiKeyRequired": "Mistral-API-Schlüssel ist erforderlich",
 			"ollamaBaseUrlRequired": "Ollama-Basis-URL ist erforderlich",
 			"baseUrlRequired": "Basis-URL ist erforderlich",
 			"modelDimensionMinValue": "Modellabmessung muss größer als 0 sein"
@@ -254,6 +258,9 @@
 		"getChutesApiKey": "Chutes API-Schlüssel erhalten",
 		"deepSeekApiKey": "DeepSeek API-Schlüssel",
 		"getDeepSeekApiKey": "DeepSeek API-Schlüssel erhalten",
+		"moonshotApiKey": "Moonshot API-Schlüssel",
+		"getMoonshotApiKey": "Moonshot API-Schlüssel erhalten",
+		"moonshotBaseUrl": "Moonshot-Einstiegspunkt",
 		"geminiApiKey": "Gemini API-Schlüssel",
 		"getGroqApiKey": "Groq API-Schlüssel erhalten",
 		"groqApiKey": "Groq API-Schlüssel",
@@ -528,6 +535,10 @@
 			"label": "Terminal-Ausgabelimit",
 			"description": "Maximale Anzahl von Zeilen, die in der Terminal-Ausgabe bei der Ausführung von Befehlen enthalten sein sollen. Bei Überschreitung werden Zeilen aus der Mitte entfernt, wodurch Token gespart werden. <0>Mehr erfahren</0>"
 		},
+		"outputCharacterLimit": {
+			"label": "Terminal-Zeichenlimit",
+			"description": "Maximale Anzahl von Zeichen, die in die Terminalausgabe bei der Ausführung von Befehlen aufgenommen werden sollen. Dieses Limit hat Vorrang vor dem Zeilenlimit, um Speicherprobleme durch extrem lange Zeilen zu vermeiden. Bei Überschreitung wird die Ausgabe abgeschnitten. <0>Mehr erfahren</0>"
+		},
 		"shellIntegrationTimeout": {
 			"label": "Terminal-Shell-Integrationszeit-Limit",
 			"description": "Maximale Wartezeit für die Shell-Integration, bevor Befehle ausgeführt werden. Für Benutzer mit langen Shell-Startzeiten musst du diesen Wert möglicherweise erhöhen, wenn du Fehler vom Typ \"Shell Integration Unavailable\" im Terminal siehst. <0>Mehr erfahren</0>"
@@ -615,10 +626,6 @@
 		"POWER_STEERING": {
 			"name": "Experimentellen \"Power Steering\"-Modus verwenden",
 			"description": "Wenn aktiviert, erinnert Kilo Code das Modell häufiger an die Details seiner aktuellen Modusdefinition. Dies führt zu einer stärkeren Einhaltung von Rollendefinitionen und benutzerdefinierten Anweisungen, verbraucht aber mehr Token pro Nachricht."
-		},
-		"AUTOCOMPLETE": {
-			"name": "Experimentelle \"Autovervollständigungs\"-Funktion verwenden",
-			"description": "Wenn aktiviert, bietet Kilo Code während der Eingabe Inline-Code-Vorschläge an."
 		},
 		"CONCURRENT_FILE_READS": {
 			"name": "Gleichzeitiges Lesen von Dateien aktivieren",

@@ -51,26 +51,6 @@
 		"providerRegistered": "Kilo: Fournisseur de messages de commit enregistré",
 		"activationFailed": "Kilo : Échec d'activation du générateur de messages : {{error}}"
 	},
-	"autocomplete": {
-		"statusBar": {
-			"disabled": "$(circle-slash) Kilo Autocomplétion",
-			"enabled": "$(sparkle) Kilo Autocomplétion",
-			"warning": "$(warning) Kilo Autocomplétion",
-			"tooltip": {
-				"disabled": "Autocomplétion Kilo Code (désactivée)",
-				"tokenError": "Un jeton valide doit être défini pour utiliser l'autocomplétion",
-				"sessionTotal": "Coût total de la séance :",
-				"basic": "Autocomplétion Kilo Code",
-				"lastCompletion": "Dernière complétion :",
-				"model": "Modèle :"
-			},
-			"cost": {
-				"lessThanCent": "<0,01 $",
-				"zero": "0,00 $"
-			}
-		},
-		"toggleMessage": "Kilo Autocomplétion {{status}}"
-	},
 	"ghost": {
 		"progress": {
 			"generating": "Génération de suggestions de modifications...",
@@ -102,6 +82,24 @@
 		},
 		"messages": {
 			"provideCodeSuggestions": "Suggestions de code en cours..."
-		}
+		},
+		"statusBar": {
+			"disabled": "$(circle-slash) Assistance intégrée Kilo",
+			"tooltip": {
+				"basic": "Assistance Intégrée Kilo Code",
+				"disabled": "Kilo Code Assistance en ligne (désactivée)",
+				"tokenError": "Un jeton valide doit être défini pour utiliser Inline Assist",
+				"sessionTotal": "Coût total de la session :",
+				"lastCompletion": "Dernière suggestion:",
+				"model": "Modèle :"
+			},
+			"warning": "$(warning) Assistant intégré Kilo",
+			"enabled": "$(sparkle) Assistance intégrée Kilo",
+			"cost": {
+				"zero": "0,00 $",
+				"lessThanCent": "<0,01 $"
+			}
+		},
+		"toggleMessage": "Assistance intégrée Kilo {{status}}"
 	}
 }

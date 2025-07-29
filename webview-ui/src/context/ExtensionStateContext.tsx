@@ -107,6 +107,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setScreenshotQuality: (value: number) => void
 	terminalOutputLineLimit?: number
 	setTerminalOutputLineLimit: (value: number) => void
+	terminalOutputCharacterLimit?: number
+	setTerminalOutputCharacterLimit: (value: number) => void
 	mcpEnabled: boolean
 	setMcpEnabled: (value: boolean) => void
 	enableMcpServerCreation: boolean
@@ -125,9 +127,7 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setEnhancementApiConfigId: (value: string) => void
 	commitMessageApiConfigId?: string // kilocode_change
 	setCommitMessageApiConfigId: (value: string) => void // kilocode_change
-	autocompleteApiConfigId?: string // kilocode_change
 	markNotificationAsDismissed: (notificationId: string) => void // kilocode_change
-	setAutocompleteApiConfigId: (value: string) => void // kilocode_change
 	ghostServiceSettings?: GhostServiceSettings // kilocode_change
 	setGhostServiceSettings: (value: GhostServiceSettings) => void // kilocode_change
 	setExperimentEnabled: (id: ExperimentId, enabled: boolean) => void
@@ -202,6 +202,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		browserViewportSize: "900x600",
 		screenshotQuality: 75,
 		terminalOutputLineLimit: 500,
+		terminalOutputCharacterLimit: 50000,
 		terminalShellIntegrationTimeout: 4000,
 		mcpEnabled: true,
 		enableMcpServerCreation: false,
@@ -218,7 +219,6 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		enhancementApiConfigId: "",
 		dismissedNotificationIds: [], // kilocode_change
 		commitMessageApiConfigId: "", // kilocode_change
-		autocompleteApiConfigId: "", // kilocode_change
 		ghostServiceSettings: {}, // kilocode_change
 		condensingApiConfigId: "", // Default empty string for condensing API config ID
 		customCondensingPrompt: "", // Default empty string for custom condensing prompt
@@ -474,6 +474,8 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setScreenshotQuality: (value) => setState((prevState) => ({ ...prevState, screenshotQuality: value })),
 		setTerminalOutputLineLimit: (value) =>
 			setState((prevState) => ({ ...prevState, terminalOutputLineLimit: value })),
+		setTerminalOutputCharacterLimit: (value) =>
+			setState((prevState) => ({ ...prevState, terminalOutputCharacterLimit: value })),
 		setTerminalShellIntegrationTimeout: (value) =>
 			setState((prevState) => ({ ...prevState, terminalShellIntegrationTimeout: value })),
 		setTerminalShellIntegrationDisabled: (value) =>
@@ -500,8 +502,6 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 				}
 			})
 		},
-		setAutocompleteApiConfigId: (value) =>
-			setState((prevState) => ({ ...prevState, autocompleteApiConfigId: value })),
 		setGhostServiceSettings: (value) => setState((prevState) => ({ ...prevState, ghostServiceSettings: value })),
 		setCommitMessageApiConfigId: (value) =>
 			setState((prevState) => ({ ...prevState, commitMessageApiConfigId: value })),

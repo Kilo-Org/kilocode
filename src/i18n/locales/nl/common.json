@@ -36,6 +36,7 @@
 		"could_not_open_file_generic": "Kon bestand niet openen!",
 		"checkpoint_timeout": "Time-out bij het herstellen van checkpoint.",
 		"checkpoint_failed": "Herstellen van checkpoint mislukt.",
+		"git_not_installed": "Git is vereist voor de checkpoint-functie. Installeer Git om checkpoints in te schakelen.",
 		"no_workspace": "Open eerst een projectmap",
 		"update_support_prompt": "Bijwerken van ondersteuningsprompt mislukt",
 		"reset_support_prompt": "Resetten van ondersteuningsprompt mislukt",
@@ -125,7 +126,8 @@
 	},
 	"buttons": {
 		"save": "Opslaan",
-		"edit": "Bewerken"
+		"edit": "Bewerken",
+		"learn_more": "Meer informatie"
 	},
 	"tasks": {
 		"canceled": "Taakfout: gestopt en geannuleerd door gebruiker.",
@@ -183,6 +185,11 @@
 			"description": "Weet je zeker dat je deze {{scope}}-modus wilt verwijderen? Dit zal ook de bijbehorende regelsmap op {{rulesFolderPath}} verwijderen",
 			"descriptionNoRules": "Weet je zeker dat je deze aangepaste modus wilt verwijderen?",
 			"confirm": "Verwijderen"
+		}
+	},
+	"commands": {
+		"preventCompletionWithOpenTodos": {
+			"description": "Voorkom taakafronding wanneer er onvolledige todos in de todolijst staan"
 		}
 	}
 }

@@ -36,6 +36,7 @@
 		"could_not_open_file_generic": "파일을 열 수 없습니다!",
 		"checkpoint_timeout": "체크포인트 복원을 시도하는 중 시간 초과되었습니다.",
 		"checkpoint_failed": "체크포인트 복원에 실패했습니다.",
+		"git_not_installed": "체크포인트 기능을 사용하려면 Git이 필요합니다. 체크포인트를 활성화하려면 Git을 설치하세요.",
 		"no_workspace": "먼저 프로젝트 폴더를 열어주세요",
 		"update_support_prompt": "지원 프롬프트 업데이트에 실패했습니다",
 		"reset_support_prompt": "지원 프롬프트 재설정에 실패했습니다",
@@ -125,7 +126,8 @@
 	},
 	"buttons": {
 		"save": "저장",
-		"edit": "편집"
+		"edit": "편집",
+		"learn_more": "더 알아보기"
 	},
 	"tasks": {
 		"canceled": "작업 오류: 사용자에 의해 중지 및 취소되었습니다.",
@@ -183,6 +185,11 @@
 			"description": "이 {{scope}} 모드를 삭제하시겠습니까? 이렇게 하면 {{rulesFolderPath}}의 관련 규칙 폴더도 삭제됩니다.",
 			"descriptionNoRules": "이 사용자 정의 모드를 삭제하시겠습니까?",
 			"confirm": "삭제"
+		}
+	},
+	"commands": {
+		"preventCompletionWithOpenTodos": {
+			"description": "할 일 목록에 미완료된 할 일이 있을 때 작업 완료를 방지"
 		}
 	}
 }

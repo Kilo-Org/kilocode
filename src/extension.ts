@@ -26,7 +26,6 @@ import { DIFF_VIEW_URI_SCHEME } from "./integrations/editor/DiffViewProvider"
 import { TerminalRegistry } from "./integrations/terminal/TerminalRegistry"
 import { McpServerManager } from "./services/mcp/McpServerManager"
 import { CodeIndexManager } from "./services/code-index/manager"
-import { registerAutocomplete } from "./services/autocomplete/AutocompleteProvider"
 import { registerCommitMessageProvider } from "./services/commit-message"
 import { MdmService } from "./services/mdm/MdmService"
 import { migrateSettings } from "./utils/migrateSettings"
@@ -204,7 +203,6 @@ export async function activate(context: vscode.ExtensionContext) {
 		}),
 	)
 
-	registerAutocomplete(context) // kilocode_change
 	registerGhostProvider(context) // kilocode_change
 	registerCommitMessageProvider(context, outputChannel) // kilocode_change
 	registerCodeActions(context)

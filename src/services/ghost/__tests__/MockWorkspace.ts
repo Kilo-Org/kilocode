@@ -1,5 +1,5 @@
 import * as vscode from "vscode"
-import { MockTextDocument } from "../../autocomplete/__tests__/MockTextDocument"
+import { MockTextDocument } from "../../mocking/MockTextDocument"
 
 /**
  * Mock implementation of the key VSCode workspace APIs needed for testing GhostWorkspaceEdit

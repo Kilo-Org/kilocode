@@ -51,26 +51,6 @@
 		"activationFailed": "Kilo: Der Nachrichtengenerator konnte nicht aktiviert werden: {{error}}",
 		"providerRegistered": "Kilo: Commit-Nachrichtenanbieter registriert"
 	},
-	"autocomplete": {
-		"statusBar": {
-			"disabled": "$(circle-slash) Kilo Autovervollständigung",
-			"tooltip": {
-				"basic": "Kilo Code Autovervollständigung",
-				"sessionTotal": "Gesamtkosten der Sitzung:",
-				"disabled": "Kilo Code Autovervollständigung (deaktiviert)",
-				"tokenError": "Ein gültiges Token muss eingestellt werden, um die Autovervollständigung zu verwenden",
-				"lastCompletion": "Letzte Vervollständigung:",
-				"model": "Modell:"
-			},
-			"warning": "$(warning) Kilo Autovervollständigung",
-			"enabled": "$(sparkle) Kilo Autovervollständigung",
-			"cost": {
-				"lessThanCent": "<0,01 €",
-				"zero": "0,00 €"
-			}
-		},
-		"toggleMessage": "Kilo Autovervollständigung {{status}}"
-	},
 	"ghost": {
 		"progress": {
 			"generating": "Generiere vorgeschlagene Änderungen...",
@@ -102,6 +82,24 @@
 		},
 		"messages": {
 			"provideCodeSuggestions": "Code-Vorschläge werden bereitgestellt..."
-		}
+		},
+		"statusBar": {
+			"disabled": "$(circle-slash) Kilo Inline-Unterstützung",
+			"warning": "$(warning) Kilo Inline Assist",
+			"enabled": "$(sparkle) Kilo Inline Assistent",
+			"tooltip": {
+				"basic": "Kilo Code Inline-Unterstützung",
+				"disabled": "Kilo Code Inline-Hilfe (deaktiviert)",
+				"tokenError": "Ein gültiges Token muss festgelegt werden, um Inline-Unterstützung zu nutzen",
+				"lastCompletion": "Letzter Vorschlag:",
+				"sessionTotal": "Gesamtkosten der Sitzung:",
+				"model": "Modell:"
+			},
+			"cost": {
+				"zero": "0,00 €",
+				"lessThanCent": "<0,01 €"
+			}
+		},
+		"toggleMessage": "Kilo Inline Assist {{status}}"
 	}
 }

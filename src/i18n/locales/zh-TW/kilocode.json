@@ -51,26 +51,6 @@
 		"activationFailed": "Kilo：未能激活消息生成器：{{error}}",
 		"providerRegistered": "Kilo：提交消息提供者已注册"
 	},
-	"autocomplete": {
-		"statusBar": {
-			"disabled": "$(circle-slash) Kilo 自动补全",
-			"enabled": "$(sparkle) Kilo 自动补全",
-			"tooltip": {
-				"basic": "Kilo自动补全",
-				"lastCompletion": "上次完成：",
-				"disabled": "Kilo自动补全（已禁用）",
-				"sessionTotal": "会话总费用:",
-				"tokenError": "必须设置有效令牌才能使用自动完成功能",
-				"model": "模型："
-			},
-			"warning": "$(warning) Kilo自动补全",
-			"cost": {
-				"lessThanCent": "<$0.01",
-				"zero": "¥0.00"
-			}
-		},
-		"toggleMessage": "Kilo 自动补全 {{status}}"
-	},
 	"ghost": {
 		"progress": {
 			"generating": "正在生成建议的编辑...",
@@ -102,6 +82,24 @@
 		},
 		"messages": {
 			"provideCodeSuggestions": "正在提供代码建议..."
-		}
+		},
+		"statusBar": {
+			"enabled": "$(sparkle) Kilo 行内助手",
+			"warning": "$(warning) 千行内嵌助手",
+			"disabled": "$(circle-slash) 千字节内联辅助",
+			"tooltip": {
+				"disabled": "Kilo 代码内联辅助（已禁用）",
+				"basic": "千行代码内联辅助",
+				"tokenError": "必须设置有效的令牌才能使用内联辅助",
+				"lastCompletion": "最后的建议：",
+				"model": "模型：",
+				"sessionTotal": "会话总费用："
+			},
+			"cost": {
+				"zero": "0.00 美元",
+				"lessThanCent": "<$0.01"
+			}
+		},
+		"toggleMessage": "Kilo 内嵌式助手 {{status}}"
 	}
 }

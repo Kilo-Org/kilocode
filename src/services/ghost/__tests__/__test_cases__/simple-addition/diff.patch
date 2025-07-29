@@ -1,7 +1,0 @@
---- a/simple-addition/input.js
-+++ b/simple-addition/input.js
-@@ -1,3 +1,4 @@
- function add(a, b) {
-+  // Add two numbers
-   return a + b;
- }

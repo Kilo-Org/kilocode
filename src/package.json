@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.65.3",
+	"version": "4.67.0",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -44,6 +44,7 @@
 		"llama",
 		"Kilo Code",
 		"kilocode",
+		"roo code",
 		"roocode"
 	],
 	"activationEvents": [
@@ -297,6 +298,11 @@
 				"command": "editor.action.inlineSuggest.commit",
 				"key": "tab",
 				"when": "inlineSuggestionVisible && editorTextFocus && !editorTabMovesFocus && !inSnippetMode && !suggestWidgetVisible && editorLangId != 'markdown'"
+			},
+			{
+				"command": "kilo-code.ghost.applyAllSuggestions",
+				"key": "shift+tab",
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.hasSuggestions"
 			},
 			{
 				"command": "kilo-code.ghost.applyCurrentSuggestions",

@@ -48,28 +48,8 @@
 		"generated": "Kilo: สร้างข้อความคอมมิตแล้ว!",
 		"generationFailed": "Kilo: ไม่สามารถสร้างข้อความคอมมิตได้: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: กำลังสร้างข้อความโดยใช้การเปลี่ยนแปลงที่ยังไม่ได้นำเข้าสู่ขั้นตอน",
-    "activationFailed": "Kilo: ล้มเหลวในการเปิดใช้งานตัวสร้างข้อความ: {{error}}",
+		"activationFailed": "Kilo: ล้มเหลวในการเปิดใช้งานตัวสร้างข้อความ: {{error}}",
 		"providerRegistered": "Kilo: ลงทะเบียนผู้ให้บริการข้อความคอมมิตแล้ว"
-	},
-	"autocomplete": {
-		"statusBar": {
-			"warning": "$(warning) Kilo เติมคำอัตโนมัติ",
-			"enabled": "$(sparkle) Kilo เติมคำอัตโนมัติ",
-			"disabled": "$(circle-slash) Kilo เติมคำอัตโนมัติ",
-			"tooltip": {
-				"lastCompletion": "การป้อนข้อมูลล่าสุด:",
-				"disabled": "คำสั่งอัตโนมัติของ Kilo Code (ปิดการใช้งาน)",
-				"tokenError": "ต้องตั้งค่าโทเค็นที่ถูกต้องเพื่อใช้การเติมข้อความอัตโนมัติ",
-				"basic": "การเติมคำอัตโนมัติ Kilo Code",
-				"model": "โมเดล:",
-				"sessionTotal": "ค่าใช้จ่ายรวมของเซสชัน:"
-			},
-			"cost": {
-				"zero": "฿0.00",
-				"lessThanCent": "<฿0.01"
-			}
-		},
-		"toggleMessage": "Kilo เติมคำอัตโนมัติ {{status}}"
 	},
 	"ghost": {
 		"progress": {
@@ -102,6 +82,24 @@
 		},
 		"messages": {
 			"provideCodeSuggestions": "กำลังเสนอคำแนะนำเกี่ยวกับโค้ด..."
-		}
+		},
+		"statusBar": {
+			"enabled": "$(sparkle) ผู้ช่วยอัจฉริยะในแบบ Kilo",
+			"warning": "⚠️ Kilo Inline Assist",
+			"disabled": "$(circle-slash) Kilo Inline Assist",
+			"tooltip": {
+				"basic": "การช่วยเหลือแบบอินไลน์ Kilo Code",
+				"disabled": "Kilo Code Inline Assist (ปิดใช้งาน)",
+				"sessionTotal": "ค่าใช้จ่ายรวมของเซสชัน:",
+				"lastCompletion": "ข้อเสนอแนะสุดท้าย:",
+				"tokenError": "จำเป็นต้องตั้งค่าโทเค็นที่ถูกต้องเพื่อใช้ Inline Assist",
+				"model": "โมเดล:"
+			},
+			"cost": {
+				"zero": "฿0.00",
+				"lessThanCent": "<฿0.35"
+			}
+		},
+		"toggleMessage": "Kilo Inline Assist {{status}}"
 	}
 }

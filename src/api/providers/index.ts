@@ -5,6 +5,7 @@ export { CerebrasHandler } from "./cerebras" // kilocode_change
 export { ChutesHandler } from "./chutes"
 export { ClaudeCodeHandler } from "./claude-code"
 export { DeepSeekHandler } from "./deepseek"
+export { MoonshotHandler } from "./moonshot"
 export { FakeAIHandler } from "./fake-ai"
 export { GeminiHandler } from "./gemini"
 export { GeminiCliHandler } from "./gemini-cli"

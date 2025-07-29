@@ -51,26 +51,6 @@
 		"providerRegistered": "Kilo: Proveïdor de missatges de «commit» registrat",
 		"activationFailed": "Kilo: No s'ha pogut activar el generador de missatges: {{error}}"
 	},
-	"autocomplete": {
-		"statusBar": {
-			"warning": "$(warning) Kilo Autocompletat",
-			"enabled": "$(sparkle) Kilo Autocompletat",
-			"tooltip": {
-				"basic": "Kilo Code Autocompletat",
-				"disabled": "Kilo Code Autocompletat (desactivat)",
-				"tokenError": "Cal establir un token vàlid per utilitzar l'autocompleció",
-				"lastCompletion": "Última compleció:",
-				"sessionTotal": "Cost total de la sessió:",
-				"model": "Model:"
-			},
-			"disabled": "$(circle-slash) Kilo Autocompletat",
-			"cost": {
-				"zero": "0,00 €",
-				"lessThanCent": "<0,01 €"
-			}
-		},
-		"toggleMessage": "Kilo Autocompletat {{status}}"
-	},
 	"ghost": {
 		"progress": {
 			"analyzing": "Analitzant el teu codi...",
@@ -102,6 +82,24 @@
 		},
 		"messages": {
 			"provideCodeSuggestions": "S'estan proporcionant suggeriments de codi..."
-		}
+		},
+		"statusBar": {
+			"enabled": "$(sparkle) Assistència en línia de Kilo",
+			"disabled": "$(circle-slash) Kilo Inline Assist",
+			"warning": "$(warning) Assistència de Kilo en línia",
+			"tooltip": {
+				"disabled": "Assistència en línia de Kilo Code (desactivat)",
+				"basic": "Assistència en línia Kilo Code",
+				"tokenError": "S'ha d'establir un token vàlid per utilitzar l'Assistència Integrada",
+				"lastCompletion": "Última suggerència:",
+				"sessionTotal": "Cost total de la sessió:",
+				"model": "Model:"
+			},
+			"cost": {
+				"zero": "0,00 €",
+				"lessThanCent": "<0,01 €"
+			}
+		},
+		"toggleMessage": "Assistència en línia Kilo {{status}}"
 	}
 }

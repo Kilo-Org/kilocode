@@ -36,6 +36,7 @@
 		"could_not_open_file_generic": "Tidak dapat membuka file!",
 		"checkpoint_timeout": "Timeout saat mencoba memulihkan checkpoint.",
 		"checkpoint_failed": "Gagal memulihkan checkpoint.",
+		"git_not_installed": "Git diperlukan untuk fitur checkpoint. Silakan instal Git untuk mengaktifkan checkpoint.",
 		"no_workspace": "Silakan buka folder proyek terlebih dahulu",
 		"update_support_prompt": "Gagal memperbarui support prompt",
 		"reset_support_prompt": "Gagal mereset support prompt",
@@ -125,7 +126,8 @@
 	},
 	"buttons": {
 		"save": "Simpan",
-		"edit": "Edit"
+		"edit": "Edit",
+		"learn_more": "Pelajari Lebih Lanjut"
 	},
 	"tasks": {
 		"canceled": "Error tugas: Dihentikan dan dibatalkan oleh pengguna.",
@@ -183,6 +185,11 @@
 			"description": "Anda yakin ingin menghapus mode {{scope}} ini? Ini juga akan menghapus folder aturan terkait di: {{rulesFolderPath}}",
 			"descriptionNoRules": "Anda yakin ingin menghapus mode kustom ini?",
 			"confirm": "Hapus"
+		}
+	},
+	"commands": {
+		"preventCompletionWithOpenTodos": {
+			"description": "Mencegah penyelesaian tugas ketika ada todo yang belum selesai dalam daftar todo"
 		}
 	}
 }

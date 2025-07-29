@@ -51,26 +51,6 @@
 		"activationFailed": "Kilo: Aktivace generátoru zpráv se nezdařila: {{error}}",
 		"providerRegistered": "Kilo: Poskytovatel zpráv commitů zaregistrován"
 	},
-	"autocomplete": {
-		"statusBar": {
-			"enabled": "$(sparkle) Kilo Automatické dokončování",
-			"disabled": "$(circle-slash) Kilo Automatické dokončování",
-			"tooltip": {
-				"tokenError": "Pro použití automatického dokončování musí být nastaven platný token",
-				"basic": "Kilo Code Automatické dokončování",
-				"lastCompletion": "Poslední dokončení:",
-				"model": "Model:",
-				"sessionTotal": "Celkové náklady na relaci:",
-				"disabled": "Kilo Code Automatické dokončování (deaktivováno)"
-			},
-			"warning": "$(warning) Kilo Automatické dokončování",
-			"cost": {
-				"zero": "0,00 Kč",
-				"lessThanCent": "<0,01 $"
-			}
-		},
-		"toggleMessage": "Kilo Automatické dokončování {{status}}"
-	},
 	"ghost": {
 		"progress": {
 			"generating": "Generuji navrhované úpravy...",
@@ -102,6 +82,24 @@
 		},
 		"messages": {
 			"provideCodeSuggestions": "Poskytuji návrhy kódu..."
-		}
+		},
+		"statusBar": {
+			"disabled": "$(circle-slash) Inline asistent Kilo",
+			"enabled": "$(sparkle) Kilo Inline Asistent",
+			"warning": "$(warning) Inline asistence Kilo",
+			"tooltip": {
+				"disabled": "Kilo Code Inline Assist (deaktivováno)",
+				"basic": "Inline asistent Kilo Code",
+				"tokenError": "Pro použití Inline Assist je nutné nastavit platný token",
+				"sessionTotal": "Celková cena sezení:",
+				"model": "Model:",
+				"lastCompletion": "Poslední návrh:"
+			},
+			"cost": {
+				"zero": "0,00 Kč",
+				"lessThanCent": "<0,01 $"
+			}
+		},
+		"toggleMessage": "Kilo Inline Assist {{status}}"
 	}
 }

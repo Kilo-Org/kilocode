@@ -18,6 +18,7 @@ import {
 	GeminiCliHandler, // kilocode_change
 	OpenAiNativeHandler,
 	DeepSeekHandler,
+	MoonshotHandler,
 	MistralHandler,
 	VsCodeLmHandler,
 	UnboundHandler,
@@ -103,6 +104,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new OpenAiNativeHandler(options)
 		case "deepseek":
 			return new DeepSeekHandler(options)
+		case "moonshot":
+			return new MoonshotHandler(options)
 		case "vscode-lm":
 			return new VsCodeLmHandler(options)
 		case "mistral":
@@ -134,6 +137,7 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new CerebrasHandler(options)
 		// kilocode_change end
 		default:
+			apiProvider satisfies "gemini-cli" | undefined
 			return new AnthropicHandler(options)
 	}
 }

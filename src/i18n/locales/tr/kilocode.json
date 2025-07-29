@@ -51,26 +51,6 @@
 		"providerRegistered": "Kilo: İşleme mesaj sağlayıcısı kaydedildi",
 		"activationFailed": "Kilo: Mesaj oluşturucu etkinleştirilemedi: {{error}}"
 	},
-	"autocomplete": {
-		"statusBar": {
-			"enabled": "$(sparkle) Kilo Otomatik Tamamlama",
-			"disabled": "$(circle-slash) Kilo Otomatik Tamamlama",
-			"tooltip": {
-				"basic": "Kilo Code Otomatik Tamamlama",
-				"disabled": "Kilo Code Otomatik Tamamlama (devre dışı)",
-				"tokenError": "Otomatik tamamlama özelliğini kullanmak için geçerli bir belirteç ayarlanmalıdır",
-				"sessionTotal": "Oturum toplam maliyeti:",
-				"lastCompletion": "Son tamamlama:",
-				"model": "Model:"
-			},
-			"warning": "$(warning) Kilo Otomatik Tamamlama",
-			"cost": {
-				"zero": "0,00 ₺",
-				"lessThanCent": "<0,01$"
-			}
-		},
-		"toggleMessage": "Kilo Otomatik Tamamlama {{status}}"
-	},
 	"ghost": {
 		"progress": {
 			"analyzing": "Kodunuz analiz ediliyor...",
@@ -102,6 +82,24 @@
 		},
 		"messages": {
 			"provideCodeSuggestions": "Kod önerileri sunuluyor..."
-		}
+		},
+		"statusBar": {
+			"enabled": "$(sparkle) Kilo Satır İçi Yardım",
+			"warning": "$(warning) Kilo Satır İçi Asistan",
+			"disabled": "$(circle-slash) Kilo Satır İçi Yardımı",
+			"tooltip": {
+				"basic": "Kilo Code Satır İçi Yardım",
+				"tokenError": "Satır İçi Yardım'ı kullanmak için geçerli bir belirteç ayarlanmalıdır",
+				"lastCompletion": "Son öneri:",
+				"sessionTotal": "Oturum toplam maliyeti:",
+				"disabled": "Kilo Kod Satır İçi Yardım (devre dışı)",
+				"model": "Model:"
+			},
+			"cost": {
+				"zero": "0,00 ₺",
+				"lessThanCent": "<$0,01"
+			}
+		},
+		"toggleMessage": "Kilo Satır İçi Yardımcı {{status}}"
 	}
 }

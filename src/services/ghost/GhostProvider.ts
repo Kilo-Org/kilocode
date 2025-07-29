@@ -6,6 +6,7 @@ import { GhostModel } from "./GhostModel"
 import { GhostWorkspaceEdit } from "./GhostWorkspaceEdit"
 import { GhostDecorations } from "./GhostDecorations"
 import { GhostSuggestionContext } from "./types"
+import { GhostStatusBar } from "./GhostStatusBar"
 import { t } from "../../i18n"
 import { addCustomInstructions } from "../../core/prompts/sections/custom-instructions"
 import { getWorkspacePath } from "../../utils/path"
@@ -15,6 +16,7 @@ import { GhostCodeLensProvider } from "./GhostCodeLensProvider"
 import { GhostServiceSettings, TelemetryEventName } from "@roo-code/types"
 import { ContextProxy } from "../../core/config/ContextProxy"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
+import { GhostContext } from "./GhostContext"
 import { TelemetryService } from "@roo-code/telemetry"
 
 export class GhostProvider {
@@ -28,7 +30,14 @@ export class GhostProvider {
 	private context: vscode.ExtensionContext
 	private providerSettingsManager: ProviderSettingsManager
 	private settings: GhostServiceSettings | null = null
+	private ghostContext: GhostContext
+
 	private taskId: string | null = null
+
+	// Status bar integration
+	private statusBar: GhostStatusBar | null = null
+	private sessionCost: number = 0
+	private lastCompletionCost: number = 0
 
 	// VSCode Providers
 	public codeActionProvider: GhostCodeActionProvider
@@ -42,12 +51,67 @@ export class GhostProvider {
 		this.workspaceEdit = new GhostWorkspaceEdit()
 		this.providerSettingsManager = new ProviderSettingsManager(context)
 		this.model = new GhostModel()
+		this.ghostContext = new GhostContext(this.documentStore)
+
+		this.initializeStatusBar()
 
 		// Register the providers
 		this.codeActionProvider = new GhostCodeActionProvider()
 		this.codeLensProvider = new GhostCodeLensProvider()
 
+		// Register document event handlers
+		vscode.workspace.onDidChangeTextDocument(this.onDidChangeTextDocument, this, context.subscriptions)
+		vscode.workspace.onDidOpenTextDocument(this.onDidOpenTextDocument, this, context.subscriptions)
+		vscode.workspace.onDidCloseTextDocument(this.onDidCloseTextDocument, this, context.subscriptions)
+
 		void this.reload()
+	}
+
+	private async watcherState() {}
+
+	/**
+	 * Handle document close events to remove the document from the store and free memory
+	 */
+	private onDidCloseTextDocument(document: vscode.TextDocument): void {
+		// Only process file documents
+		if (document.uri.scheme !== "file") {
+			return
+		}
+
+		// Remove the document completely from the store
+		this.documentStore.removeDocument(document.uri)
+	}
+
+	/**
+	 * Handle document open events to parse the AST
+	 */
+	private async onDidOpenTextDocument(document: vscode.TextDocument): Promise<void> {
+		// Only process file documents
+		if (document.uri.scheme !== "file") {
+			return
+		}
+
+		// Store the document and parse its AST
+		await this.documentStore.storeDocument({
+			document,
+		})
+	}
+
+	/**
+	 * Handle document change events to update the AST
+	 */
+	private async onDidChangeTextDocument(event: vscode.TextDocumentChangeEvent): Promise<void> {
+		// Only process file documents
+		if (event.document.uri.scheme !== "file") {
+			return
+		}
+
+		if (this.workspaceEdit.isLocked()) {
+			return
+		}
+
+		// Store the updated document and parse its AST
+		await this.documentStore.storeDocument({ document: event.document })
 	}
 
 	private loadSettings() {
@@ -58,6 +122,7 @@ export class GhostProvider {
 		this.settings = this.loadSettings()
 		await this.model.reload(this.settings, this.providerSettingsManager)
 		await this.updateGlobalContext()
+		this.updateStatusBar()
 	}
 
 	public static getInstance(context?: vscode.ExtensionContext): GhostProvider {
@@ -116,37 +181,13 @@ export class GhostProvider {
 		await this.provideCodeSuggestions({ document, range })
 	}
 
-	public async provideCodeActionQuickFix(
-		document: vscode.TextDocument,
-		range: vscode.Range | vscode.Selection,
-	): Promise<void> {
-		// Store the document in the document store
-		// this.getDocumentStore().storeDocument(document)
-
-		this.taskId = crypto.randomUUID()
-		TelemetryService.instance.captureEvent(TelemetryEventName.INLINE_ASSIST_AUTO_TASK, {
-			taskId: this.taskId,
-		})
-
-		await this.provideCodeSuggestions({ document, range })
-	}
-
-	private async enhanceContext(context: GhostSuggestionContext): Promise<GhostSuggestionContext> {
-		const editor = vscode.window.activeTextEditor
-		if (!editor) {
-			return context
-		}
-		// Add open files to the context
-		const openFiles = vscode.workspace.textDocuments.filter((doc) => doc.uri.scheme === "file")
-		return { ...context, openFiles }
-	}
-
-	private async provideCodeSuggestions(context: GhostSuggestionContext): Promise<void> {
+	private async provideCodeSuggestions(initialContext: GhostSuggestionContext): Promise<void> {
 		// Cancel any ongoing suggestions
 		await this.cancelSuggestions()
 
 		let cancelled = false
-		const enhancedContext = await this.enhanceContext(context)
+
+		const context = await this.ghostContext.generate(initialContext)
 
 		await vscode.window.withProgress(
 			{
@@ -166,7 +207,7 @@ export class GhostProvider {
 				const customInstructions = await addCustomInstructions("", "", workspacePath, "ghost")
 
 				const systemPrompt = this.strategy.getSystemPrompt(customInstructions)
-				const userPrompt = this.strategy.getSuggestionPrompt(enhancedContext)
+				const userPrompt = this.strategy.getSuggestionPrompt(context)
 				if (cancelled) {
 					return
 				}
@@ -175,9 +216,11 @@ export class GhostProvider {
 				if (!this.model.loaded) {
 					await this.reload()
 				}
+
 				const { response, cost, inputTokens, outputTokens, cacheWriteTokens, cacheReadTokens } =
 					await this.model.generateResponse(systemPrompt, userPrompt)
-				console.log("Ghost response:", response)
+
+				this.updateCostTracking(cost)
 
 				TelemetryService.instance.captureEvent(TelemetryEventName.LLM_COMPLETION, {
 					taskId: this.taskId,
@@ -195,7 +238,7 @@ export class GhostProvider {
 
 				// First parse the response into edit operations
 				progress.report({ message: t("kilocode:ghost.progress.processing") })
-				this.suggestions = await this.strategy.parseResponse(response, enhancedContext)
+				this.suggestions = await this.strategy.parseResponse(response, context)
 
 				if (cancelled) {
 					this.suggestions.clear()
@@ -313,16 +356,16 @@ export class GhostProvider {
 		}
 		const editor = vscode.window.activeTextEditor
 		if (!editor) {
-			console.log("No active editor found, returning")
+			await this.cancelSuggestions()
 			return
 		}
 		const suggestionsFile = this.suggestions.getFile(editor.document.uri)
 		if (!suggestionsFile) {
-			console.log(`No suggestions found for document: ${editor.document.uri.toString()}`)
+			await this.cancelSuggestions()
 			return
 		}
 		if (suggestionsFile.getSelectedGroup() === null) {
-			console.log("No group selected, returning")
+			await this.cancelSuggestions()
 			return
 		}
 		TelemetryService.instance.captureEvent(TelemetryEventName.INLINE_ASSIST_ACCEPT_SUGGESTION, {
@@ -341,6 +384,9 @@ export class GhostProvider {
 		if (!this.hasPendingSuggestions() || this.workspaceEdit.isLocked()) {
 			return
 		}
+		TelemetryService.instance.captureEvent(TelemetryEventName.INLINE_ASSIST_ACCEPT_SUGGESTION, {
+			taskId: this.taskId,
+		})
 		this.decorations.clearAll()
 		await this.workspaceEdit.revertSuggestionsPlaceholder(this.suggestions)
 		await this.workspaceEdit.applySuggestions(this.suggestions)
@@ -354,12 +400,12 @@ export class GhostProvider {
 		}
 		const editor = vscode.window.activeTextEditor
 		if (!editor) {
-			console.log("No active editor found, returning")
+			await this.cancelSuggestions()
 			return
 		}
 		const suggestionsFile = this.suggestions.getFile(editor.document.uri)
 		if (!suggestionsFile) {
-			console.log(`No suggestions found for document: ${editor.document.uri.toString()}`)
+			await this.cancelSuggestions()
 			return
 		}
 		suggestionsFile.selectNextGroup()
@@ -372,15 +418,61 @@ export class GhostProvider {
 		}
 		const editor = vscode.window.activeTextEditor
 		if (!editor) {
-			console.log("No active editor found, returning")
+			await this.cancelSuggestions()
 			return
 		}
 		const suggestionsFile = this.suggestions.getFile(editor.document.uri)
 		if (!suggestionsFile) {
-			console.log(`No suggestions found for document: ${editor.document.uri.toString()}`)
+			await this.cancelSuggestions()
 			return
 		}
 		suggestionsFile.selectPreviousGroup()
 		await this.render()
+	}
+
+	private initializeStatusBar() {
+		this.statusBar = new GhostStatusBar({
+			enabled: false,
+			model: "loading...",
+			hasValidToken: false,
+			totalSessionCost: 0,
+			lastCompletionCost: 0,
+		})
+	}
+
+	private getCurrentModelName(): string {
+		if (!this.model.loaded) {
+			return "loading..."
+		}
+		return this.model.getModelName() ?? "unknown"
+	}
+
+	private hasValidApiToken(): boolean {
+		return this.model.loaded && this.model.hasValidCredentials()
+	}
+
+	private updateCostTracking(cost: number) {
+		this.lastCompletionCost = cost
+		this.sessionCost += cost
+		this.updateStatusBar()
+	}
+
+	private updateStatusBar() {
+		if (!this.statusBar) {
+			return
+		}
+
+		this.statusBar.update({
+			enabled: true,
+			model: this.getCurrentModelName(),
+			hasValidToken: this.hasValidApiToken(),
+			totalSessionCost: this.sessionCost,
+			lastCompletionCost: this.lastCompletionCost,
+		})
+	}
+
+	public dispose() {
+		this.statusBar?.dispose()
+		this.statusBar = null
 	}
 }

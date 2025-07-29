@@ -1,5 +1,48 @@
 # kilo-code
 
+## [v4.67.0]
+
+- [#1484](https://github.com/Kilo-Org/kilocode/pull/1484) [`8294250`](https://github.com/Kilo-Org/kilocode/commit/8294250662f15c819f68781b507cb0e35a29b71b) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Improve Inline Assist suggestions by adding comprehensive context awareness
+
+## [v4.66.0]
+
+- [#1539](https://github.com/Kilo-Org/kilocode/pull/1539) [`fd3679b`](https://github.com/Kilo-Org/kilocode/commit/fd3679b56b1b72ca41d70b30d805c94d377f3626) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Ollama models now use and report the correct context window size.
+
+- [#1510](https://github.com/Kilo-Org/kilocode/pull/1510) [`ee48df4`](https://github.com/Kilo-Org/kilocode/commit/ee48df43fb460a1fbaa9e4f5a11ce45172bf63e3) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Include changes from Roo Code v3.23.19
+
+    - Fix configurable delay for diagnostics to prevent premature error reporting
+    - Add command timeout allowlist
+    - Add description and whenToUse fields to custom modes in .roomodes (thanks @RandalSchwartz!)
+    - Fix Claude model detection by name for API protocol selection (thanks @daniel-lxs!)
+    - Optional setting to prevent completion with open todos
+    - Add global rate limiting for OpenAI-compatible embeddings (thanks @daniel-lxs!)
+    - Add batch limiting to code indexer (thanks @daniel-lxs!)
+    - Add: Moonshot provider (thanks @CellenLee!)
+    - Add: Qwen/Qwen3-235B-A22B-Instruct-2507 model to Chutes AI provider
+    - Fix: move context condensing prompt to Prompts section (thanks @SannidhyaSah!)
+    - Add: jump icon for newly created files
+    - Fix: add character limit to prevent terminal output context explosion
+    - Fix: resolve global mode export not including rules files
+    - Add: auto-omit MCP content when no servers are configured
+    - Fix: sort symlinked rules files by symlink names, not target names
+    - Docs: clarify when to use update_todo_list tool
+    - Add: Mistral embedding provider (thanks @SannidhyaSah!)
+    - Fix: add run parameter to vitest command in rules (thanks @KJ7LNW!)
+    - Update: the max_tokens fallback logic in the sliding window
+    - Fix: Bedrock and Vertext token counting improvements (thanks @daniel-lxs!)
+    - Add: llama-4-maverick model to Vertex AI provider (thanks @MuriloFP!)
+    - Fix: properly distinguish between user cancellations and API failures
+    - Fix: add case sensitivity mention to suggested fixes in apply_diff error message
+    - Fix: Resolve 'Bad substitution' error in command parsing (#5978 by @KJ7LNW, PR by @daniel-lxs)
+    - Fix: Add ErrorBoundary component for better error handling (#5731 by @elianiva, PR by @KJ7LNW)
+    - Improve: Use SIGKILL for command execution timeouts in the "execa" variant (thanks @cte!)
+    - Split commands on newlines when evaluating auto-approve
+    - Smarter auto-deny of commands
+
+### Patch Changes
+
+- [#1550](https://github.com/Kilo-Org/kilocode/pull/1550) [`48b0d78`](https://github.com/Kilo-Org/kilocode/commit/48b0d78ea9282f4447e5c57262d727b2bc621e50) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - A visual indication is now provided whenever the cost of an API Request could not be retrieved
+
 ## [v4.65.3]
 
 - [#1544](https://github.com/Kilo-Org/kilocode/pull/1544) [`758d4ad`](https://github.com/Kilo-Org/kilocode/commit/758d4addb361ae9bc7eb3ba3a98f37a298f8d60d) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Improvements to token and cost usage reporting

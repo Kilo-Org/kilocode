@@ -48,28 +48,8 @@
 		"generated": "Kilo: Повідомлення коміту згенеровано!",
 		"generationFailed": "Kilo: Не вдалося створити повідомлення коміту: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: Створення повідомлення з використанням незафіксованих змін",
-    "activationFailed": "Kilo: Не вдалося активувати генератор повідомлень: {{error}}",
+		"activationFailed": "Kilo: Не вдалося активувати генератор повідомлень: {{error}}",
 		"providerRegistered": "Kilo: Постачальник повідомлень коміту зареєстрований"
-	},
-	"autocomplete": {
-		"statusBar": {
-			"enabled": "$(sparkle) Kilo Автодоповнення",
-			"disabled": "$(circle-slash) Kilo Автодоповнення",
-			"tooltip": {
-				"basic": "Автодоповнення Kilo Code",
-				"tokenError": "Для використання автозаповнення необхідно встановити дійсний токен",
-				"disabled": "Kilo Code Автозаповнення (вимкнено)",
-				"lastCompletion": "Останнє завершення:",
-				"model": "Модель:",
-				"sessionTotal": "Загальна вартість сеансу:"
-			},
-			"warning": "$(warning) Kilo Автодоповнення",
-			"cost": {
-				"zero": "0,00 ₴",
-				"lessThanCent": "<$0,01"
-			}
-		},
-		"toggleMessage": "Kilo Автодоповнення {{status}}"
 	},
 	"ghost": {
 		"progress": {
@@ -102,6 +82,24 @@
 		},
 		"messages": {
 			"provideCodeSuggestions": "Надаємо пропозиції коду..."
-		}
+		},
+		"statusBar": {
+			"enabled": "$(sparkle) Вбудований асистент Kilo",
+			"disabled": "$(circle-slash) Кіло Вбудована допомога",
+			"tooltip": {
+				"basic": "Кіло Код Вбудована Допомога",
+				"disabled": "Кіло-Код вбудована допомога (вимкнено)",
+				"tokenError": "Для використання Вбудованого помічника необхідно встановити дійсний токен",
+				"lastCompletion": "Остання пропозиція:",
+				"model": "Модель:",
+				"sessionTotal": "Загальна вартість сесії:"
+			},
+			"warning": "$(warning) Kіло вбудована допомога",
+			"cost": {
+				"lessThanCent": "<$0,01",
+				"zero": "0,00 $"
+			}
+		},
+		"toggleMessage": "Вбудована допомога Kilo {{status}}"
 	}
 }

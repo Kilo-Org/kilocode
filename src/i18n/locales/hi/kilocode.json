@@ -48,28 +48,8 @@
 		"generated": "Kilo: कमिट मैसेज जनरेट हो गया!",
 		"generationFailed": "Kilo: प्रतिबद्धता संदेश उत्पन्न करने में विफल: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: अपरिवर्तित परिवर्तनों का उपयोग करके संदेश उत्पन्न कर रहा है",
-    "activationFailed": "Kilo: संदेश जनरेटर सक्रिय करने में विफल: {{error}}",
+		"activationFailed": "Kilo: संदेश जनरेटर सक्रिय करने में विफल: {{error}}",
 		"providerRegistered": "किलो: कमिट संदेश प्रदाता पंजीकृत"
-	},
-	"autocomplete": {
-		"statusBar": {
-			"disabled": "$(circle-slash) Kilo ऑटोकम्प्लीट",
-			"warning": "$(warning) Kilo ऑटोकम्प्लीट",
-			"enabled": "$(sparkle) Kilo ऑटोकम्प्लीट",
-			"tooltip": {
-				"basic": "Kilo Code ऑटोकम्प्लीट",
-				"tokenError": "स्वतः पूर्ण का उपयोग करने के लिए एक वैध टोकन सेट किया जाना चाहिए",
-				"model": "मॉडल:",
-				"sessionTotal": "सत्र की कुल लागत:",
-				"lastCompletion": "अंतिम पूर्णता:",
-				"disabled": "Kilo Code स्वतः पूर्ण (अक्षम)"
-			},
-			"cost": {
-				"zero": "₹0.00",
-				"lessThanCent": "<₹0.01"
-			}
-		},
-		"toggleMessage": "Kilo ऑटोकम्प्लीट {{status}}"
 	},
 	"ghost": {
 		"progress": {
@@ -102,6 +82,24 @@
 		},
 		"messages": {
 			"provideCodeSuggestions": "कोड सुझाव प्रदान किए जा रहे हैं..."
-		}
+		},
+		"statusBar": {
+			"enabled": "$(sparkle) किलो इनलाइन सहायता",
+			"disabled": "$(circle-slash) किलो इनलाइन असिस्ट",
+			"warning": "$(warning) किलो इनलाइन सहायता",
+			"tooltip": {
+				"basic": "किलो कोड इनलाइन सहायता",
+				"disabled": "किलो कोड इनलाइन असिस्ट (अक्षम)",
+				"tokenError": "इनलाइन असिस्ट का उपयोग करने के लिए एक वैध टोकन सेट किया जाना चाहिए",
+				"lastCompletion": "अंतिम सुझाव:",
+				"model": "मॉडल:",
+				"sessionTotal": "सत्र की कुल लागत:"
+			},
+			"cost": {
+				"zero": "₹0.00",
+				"lessThanCent": "<₹0.01"
+			}
+		},
+		"toggleMessage": "किलो इनलाइन सहायता {{status}}"
 	}
 }

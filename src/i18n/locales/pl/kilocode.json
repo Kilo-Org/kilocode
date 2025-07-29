@@ -51,26 +51,6 @@
 		"activationFailed": "Kilo: Nie udało się aktywować generatora wiadomości: {{error}}",
 		"providerRegistered": "Kilo: Zarejestrowano dostawcę komunikatów commit"
 	},
-	"autocomplete": {
-		"statusBar": {
-			"disabled": "$(circle-slash) Kilo Autouzupełnianie",
-			"enabled": "$(sparkle) Kilo Autouzupełnianie",
-			"tooltip": {
-				"lastCompletion": "Ostatnie zakończenie:",
-				"disabled": "Kilo Code automatyczne uzupełnianie (wyłączone)",
-				"basic": "Kilo Code Autouzupełnianie",
-				"tokenError": "Aby korzystać z autouzupełniania, należy ustawić prawidłowy token",
-				"sessionTotal": "Całkowity koszt sesji:",
-				"model": "Model:"
-			},
-			"warning": "$(warning) Kilo Autouzupełnianie",
-			"cost": {
-				"lessThanCent": "<0,01 zł",
-				"zero": "0,00 zł"
-			}
-		},
-		"toggleMessage": "Kilo Autouzupełnianie {{status}}"
-	},
 	"ghost": {
 		"progress": {
 			"analyzing": "Analizowanie twojego kodu...",
@@ -102,6 +82,24 @@
 		},
 		"messages": {
 			"provideCodeSuggestions": "Generowanie sugestii kodu..."
-		}
+		},
+		"statusBar": {
+			"enabled": "$(sparkle) Kilo Inline Assist",
+			"warning": "$(warning) Asystent Inline Kilo",
+			"disabled": "$(circle-slash) Kilo Pomoc Liniowa",
+			"tooltip": {
+				"basic": "Asystent Kodowania Kilo",
+				"disabled": "Pomoc Kilo Code Inline (wyłączona)",
+				"tokenError": "Aby korzystać z Asystenta Inline, należy ustawić prawidłowy token",
+				"lastCompletion": "Ostatnia sugestia:",
+				"sessionTotal": "Całkowity koszt sesji:",
+				"model": "Model:"
+			},
+			"cost": {
+				"zero": "0,00 zł",
+				"lessThanCent": "<0,01 $"
+			}
+		},
+		"toggleMessage": "Pomoc Kilo Inline {{status}}"
 	}
 }

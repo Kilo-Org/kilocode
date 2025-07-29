@@ -9,6 +9,7 @@ import TranslationProvider from "./i18n/TranslationContext"
 import { vscode } from "./utils/vscode"
 import { telemetryClient } from "./utils/TelemetryClient"
 import { TelemetryEventName } from "@roo-code/types"
+import { initializeSourceMaps, exposeSourceMapsForDebugging } from "./utils/sourceMapInitializer"
 import { ExtensionStateContextProvider, useExtensionState } from "./context/ExtensionStateContext"
 import ChatView, { ChatViewRef } from "./components/chat/ChatView"
 import HistoryView from "./components/history/HistoryView"
@@ -20,10 +21,10 @@ import McpView from "./components/mcp/McpView"
 import ModesView from "./components/modes/ModesView"
 import { HumanRelayDialog } from "./components/human-relay/HumanRelayDialog"
 import BottomControls from "./components/kilocode/BottomControls" // kilocode_change
-// import { AccountView } from "./components/account/AccountView" // kilocode_change: we have our own profile view
 import { DeleteMessageDialog, EditMessageDialog } from "./components/chat/MessageModificationConfirmationDialog"
+import ErrorBoundary from "./components/ErrorBoundary"
+// import { AccountView } from "./components/account/AccountView" // kilocode_change: we have our own profile view
 import { useAddNonInteractiveClickListener } from "./components/ui/hooks/useNonInteractiveClick"
-import { KiloCodeErrorBoundary } from "./kilocode/KiloCodeErrorBoundary"
 import { TooltipProvider } from "./components/ui/tooltip"
 import { STANDARD_TOOLTIP_DELAY } from "./components/ui/standard-tooltip"
 import { useKiloIdentity } from "./utils/kilocode/useKiloIdentity"
@@ -210,6 +211,20 @@ const App = () => {
 	// Tell the extension that we are ready to receive messages.
 	useEffect(() => vscode.postMessage({ type: "webviewDidLaunch" }), [])
 
+	// Initialize source map support for better error reporting
+	useEffect(() => {
+		// Initialize source maps for better error reporting in production
+		initializeSourceMaps()
+
+		// Expose source map debugging utilities in production
+		if (process.env.NODE_ENV === "production") {
+			exposeSourceMapsForDebugging()
+		}
+
+		// Log initialization for debugging
+		console.debug("App initialized with source map support")
+	}, [])
+
 	// Focus the WebView when non-interactive content is clicked (only in editor/tab mode)
 	useAddNonInteractiveClickListener(
 		useCallback(() => {
@@ -304,21 +319,17 @@ const App = () => {
 const queryClient = new QueryClient()
 
 const AppWithProviders = () => (
-	<ExtensionStateContextProvider>
-		<TranslationProvider>
-			<QueryClientProvider client={queryClient}>
-				<TooltipProvider delayDuration={STANDARD_TOOLTIP_DELAY}>
-					<App />
-				</TooltipProvider>
-			</QueryClientProvider>
-		</TranslationProvider>
-	</ExtensionStateContextProvider>
+	<ErrorBoundary>
+		<ExtensionStateContextProvider>
+			<TranslationProvider>
+				<QueryClientProvider client={queryClient}>
+					<TooltipProvider delayDuration={STANDARD_TOOLTIP_DELAY}>
+						<App />
+					</TooltipProvider>
+				</QueryClientProvider>
+			</TranslationProvider>
+		</ExtensionStateContextProvider>
+	</ErrorBoundary>
 )
 
-const AppWithKiloCodeErrorBoundary = () => (
-	<KiloCodeErrorBoundary>
-		<AppWithProviders />
-	</KiloCodeErrorBoundary>
-)
-
-export default AppWithKiloCodeErrorBoundary // kilocode_change
+export default AppWithProviders

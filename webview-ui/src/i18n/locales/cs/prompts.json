@@ -95,10 +95,19 @@
 			"previewButton": "Náhled vylepšení promptu",
 			"testEnhancement": "Otestovat vylepšení"
 		},
+		"condense": {
+			"apiConfiguration": "Konfigurace API pro kondenzaci kontextu",
+			"apiConfigDescription": "Vyber, kterou konfiguraci API použít pro operace kondenzace kontextu. Ponech nevybrané pro použití aktuálně aktivní konfigurace.",
+			"useCurrentConfig": "Použít aktuálně vybranou konfiguraci API"
+		},
 		"types": {
 			"ENHANCE": {
 				"label": "Vylepšit Prompt",
 				"description": "Použij vylepšení promptu k získání přizpůsobených návrhů nebo vylepšení pro tvé vstupy. To zajišťuje, že Kilo Code rozumí tvému záměru a poskytuje nejlepší možné odpovědi. Dostupné přes ikonu ✨ v chatu."
+			},
+			"CONDENSE": {
+				"label": "Kondenzace kontextu",
+				"description": "Konfiguruj, jak je kontext konverzace kondenzován pro správu limitů tokenů. Tento prompt se používá pro manuální i automatické operace kondenzace kontextu."
 			},
 			"EXPLAIN": {
 				"label": "Vysvětlit kód",
@@ -175,7 +184,7 @@
 		},
 		"whenToUse": {
 			"label": "Kdy použít (volitelné)",
-			"description": "Poskytni jasný popis, kdy je tento režim nejúčinnější a v jakých typech úkolů vyniká."
+			"description": "Popiš, kdy by měl být tento režim použit. To pomáhá Orchestrátoru vybrat správný režim pro úkol."
 		},
 		"tools": {
 			"label": "Dostupné nástroje",

@@ -51,26 +51,6 @@
 		"providerRegistered": "Kilo：提交消息提供程序已注册",
 		"activationFailed": "Kilo：消息生成器激活失败：{{error}}"
 	},
-	"autocomplete": {
-		"statusBar": {
-			"warning": "$(warning) Kilo自动补全",
-			"enabled": "$(sparkle) Kilo自动补全",
-			"disabled": "$(circle-slash) Kilo自动补全已禁用",
-			"tooltip": {
-				"disabled": "Kilo自动补全（已禁用）",
-				"lastCompletion": "上一次完成：",
-				"sessionTotal": "会话总费用：",
-				"basic": "Kilo自动补全",
-				"tokenError": "必须设置有效令牌才能使用自动完成功能",
-				"model": "模型："
-			},
-			"cost": {
-				"lessThanCent": "<$0.01",
-				"zero": "¥0.00"
-			}
-		},
-		"toggleMessage": "Kilo 自动补全 {{status}}"
-	},
 	"ghost": {
 		"progress": {
 			"analyzing": "正在分析您的代码...",
@@ -102,6 +82,24 @@
 		},
 		"messages": {
 			"provideCodeSuggestions": "正在提供代码建议..."
-		}
+		},
+		"statusBar": {
+			"enabled": "$(sparkle) Kilo 内嵌助手",
+			"disabled": "$(circle-slash) Kilo 内联辅助",
+			"tooltip": {
+				"basic": "千行代码内联协助",
+				"disabled": "Kilo Code 行内辅助（已禁用）",
+				"lastCompletion": "最后建议：",
+				"tokenError": "必须设置有效令牌才能使用行内助手",
+				"sessionTotal": "会话总费用：",
+				"model": "模型："
+			},
+			"warning": "$(warning) Kilo 内联助手",
+			"cost": {
+				"zero": "¥0.00",
+				"lessThanCent": "<¥0.07"
+			}
+		},
+		"toggleMessage": "K1内联助手 {{status}}"
 	}
 }

@@ -51,26 +51,6 @@
 		"activationFailed": "Kilo: Không thể kích hoạt trình tạo tin nhắn: {{error}}",
 		"providerRegistered": "Kilo: Đã đăng ký nhà cung cấp thông điệp commit"
 	},
-	"autocomplete": {
-		"statusBar": {
-			"enabled": "$(sparkle) Kilo Tự động hoàn thành",
-			"disabled": "$(circle-slash) Kilo Tự động hoàn thành",
-			"warning": "$(warning) Kilo Tự động hoàn thành",
-			"tooltip": {
-				"disabled": "Tự động hoàn thành Kilo Code (đã tắt)",
-				"basic": "Tự động hoàn thiện Kilo Code",
-				"tokenError": "Phải thiết lập một token hợp lệ để sử dụng tính năng tự động hoàn thành",
-				"lastCompletion": "Lượt hoàn thành cuối cùng:",
-				"model": "Mô hình:",
-				"sessionTotal": "Tổng chi phí phiên:"
-			},
-			"cost": {
-				"zero": "0₫",
-				"lessThanCent": "<$0,01"
-			}
-		},
-		"toggleMessage": "Kilo Tự động hoàn thành {{status}}"
-	},
 	"ghost": {
 		"progress": {
 			"generating": "Đang tạo đề xuất chỉnh sửa...",
@@ -102,6 +82,24 @@
 		},
 		"messages": {
 			"provideCodeSuggestions": "Đang cung cấp gợi ý mã..."
-		}
+		},
+		"statusBar": {
+			"disabled": "$(circle-slash) Trợ lý Nội tuyến Kilo",
+			"warning": "$(warning) Kilo Trợ giúp Nội tuyến",
+			"enabled": "$(sparkle) Kilo Trợ lý Nội tuyến",
+			"tooltip": {
+				"disabled": "Trợ lý mã nhúng Kilo (đã tắt)",
+				"basic": "Hỗ Trợ Soạn Thảo Mã Trong Dòng Kilo",
+				"tokenError": "Phải thiết lập một token hợp lệ để sử dụng Inline Assist",
+				"lastCompletion": "Gợi ý cuối cùng:",
+				"sessionTotal": "Tổng chi phí phiên:",
+				"model": "Mô hình:"
+			},
+			"cost": {
+				"zero": "0₫",
+				"lessThanCent": "<0,01$"
+			}
+		},
+		"toggleMessage": "Trợ lý nội tuyến Kilo {{status}}"
 	}
 }

@@ -48,6 +48,9 @@
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "Khóa API:",
 		"geminiApiKeyPlaceholder": "Nhập khóa API Gemini của bạn",
+		"mistralProvider": "Mistral",
+		"mistralApiKeyLabel": "Khóa API:",
+		"mistralApiKeyPlaceholder": "Nhập khóa API Mistral của bạn",
 		"openaiCompatibleProvider": "Tương thích OpenAI",
 		"openAiKeyLabel": "Khóa API OpenAI",
 		"openAiKeyPlaceholder": "Nhập khóa API OpenAI của bạn",
@@ -110,6 +113,7 @@
 			"modelIdRequired": "Yêu cầu ID mô hình",
 			"modelDimensionRequired": "Yêu cầu kích thước mô hình",
 			"geminiApiKeyRequired": "Yêu cầu khóa API Gemini",
+			"mistralApiKeyRequired": "Cần có khóa API của Mistral",
 			"ollamaBaseUrlRequired": "Yêu cầu URL cơ sở Ollama",
 			"baseUrlRequired": "Yêu cầu URL cơ sở",
 			"modelDimensionMinValue": "Kích thước mô hình phải lớn hơn 0"
@@ -258,6 +262,9 @@
 		"getChutesApiKey": "Lấy khóa API Chutes",
 		"deepSeekApiKey": "Khóa API DeepSeek",
 		"getDeepSeekApiKey": "Lấy khóa API DeepSeek",
+		"moonshotApiKey": "Khóa API Moonshot",
+		"getMoonshotApiKey": "Lấy khóa API Moonshot",
+		"moonshotBaseUrl": "Điểm vào Moonshot",
 		"geminiApiKey": "Khóa API Gemini",
 		"getGroqApiKey": "Lấy khóa API Groq",
 		"groqApiKey": "Khóa API Groq",
@@ -528,6 +535,10 @@
 			"label": "Giới hạn đầu ra terminal",
 			"description": "Số dòng tối đa để đưa vào đầu ra terminal khi thực hiện lệnh. Khi vượt quá, các dòng sẽ bị xóa khỏi phần giữa, tiết kiệm token. <0>Tìm hiểu thêm</0>"
 		},
+		"outputCharacterLimit": {
+			"label": "Giới hạn ký tự của terminal",
+			"description": "Số ký tự tối đa để bao gồm trong đầu ra của terminal khi thực thi lệnh. Giới hạn này được ưu tiên hơn giới hạn dòng để ngăn chặn các vấn đề về bộ nhớ do các dòng quá dài. Khi vượt quá, đầu ra sẽ bị cắt bớt. <0>Tìm hiểu thêm</0>"
+		},
 		"shellIntegrationTimeout": {
 			"label": "Thời gian chờ tích hợp shell terminal",
 			"description": "Thời gian tối đa để chờ tích hợp shell khởi tạo trước khi thực hiện lệnh. Đối với người dùng có thời gian khởi động shell dài, giá trị này có thể cần được tăng lên nếu bạn thấy lỗi \"Shell Integration Unavailable\" trong terminal. <0>Tìm hiểu thêm</0>"
@@ -615,10 +626,6 @@
 		"POWER_STEERING": {
 			"name": "Sử dụng chế độ \"power steering\" thử nghiệm",
 			"description": "Khi được bật, Kilo Code sẽ nhắc nhở mô hình về chi tiết định nghĩa chế độ hiện tại thường xuyên hơn. Điều này sẽ dẫn đến việc tuân thủ chặt chẽ hơn các định nghĩa vai trò và hướng dẫn tùy chỉnh, nhưng sẽ sử dụng nhiều token hơn cho mỗi tin nhắn."
-		},
-		"AUTOCOMPLETE": {
-			"name": "Sử dụng tính năng \"tự động hoàn thành\" thử nghiệm",
-			"description": "Khi được bật, Kilo Code sẽ cung cấp các gợi ý mã nội tuyến khi bạn nhập."
 		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Sử dụng công cụ diff đa khối thử nghiệm",

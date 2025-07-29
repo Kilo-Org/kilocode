@@ -7,11 +7,11 @@ import { execa } from "execa"
 
 import {
 	type TaskEvent,
+	type ClineSay,
 	TaskCommandName,
 	RooCodeEventName,
 	IpcMessageType,
 	EVALS_SETTINGS,
-	EVALS_TIMEOUT,
 } from "@roo-code/types"
 import { IpcClient } from "@roo-code/ipc"
 
@@ -42,7 +42,7 @@ export const processTask = async ({ taskId, logger }: { taskId: number; logger?:
 	const task = await findTask(taskId)
 	const { language, exercise } = task
 	const run = await findRun(task.runId)
-	await registerRunner({ runId: run.id, taskId })
+	await registerRunner({ runId: run.id, taskId, timeoutSeconds: (run.timeout || 5) * 60 })
 
 	const containerized = isDockerContainer()
 
@@ -210,6 +210,15 @@ export const runTask = async ({ run, task, publish, logger }: RunTaskOptions) =>
 		log: [RooCodeEventName.TaskTokenUsageUpdated, RooCodeEventName.TaskAskResponded],
 	}
 
+	const loggableSays: ClineSay[] = [
+		"error",
+		"command_output",
+		"rooignore_error",
+		"diff_error",
+		"condense_context",
+		"condense_context_error",
+	]
+
 	client.on(IpcMessageType.TaskEvent, async (taskEvent) => {
 		const { eventName, payload } = taskEvent
 
@@ -222,7 +231,9 @@ export const runTask = async ({ run, task, publish, logger }: RunTaskOptions) =>
 		// For message events we only log non-partial messages.
 		if (
 			!ignoreEvents.log.includes(eventName) &&
-			(eventName !== RooCodeEventName.Message || payload[0].message.partial !== true)
+			(eventName !== RooCodeEventName.Message ||
+				(payload[0].message.say && loggableSays.includes(payload[0].message.say)) ||
+				payload[0].message.partial !== true)
 		) {
 			logger.info(`${eventName} ->`, payload)
 		}
@@ -304,9 +315,10 @@ export const runTask = async ({ run, task, publish, logger }: RunTaskOptions) =>
 	})
 
 	try {
+		const timeoutMs = (run.timeout || 5) * 60 * 1_000 // Convert minutes to milliseconds
 		await pWaitFor(() => !!taskFinishedAt || !!taskAbortedAt || isClientDisconnected, {
 			interval: 1_000,
-			timeout: EVALS_TIMEOUT,
+			timeout: timeoutMs,
 		})
 	} catch (_error) {
 		taskTimedOut = true

@@ -51,26 +51,6 @@
 		"activationFailed": "Kilo: Не удалось активировать генератор сообщений: {{error}}",
 		"providerRegistered": "Kilo: Поставщик сообщения коммита зарегистрирован"
 	},
-	"autocomplete": {
-		"statusBar": {
-			"enabled": "$(sparkle) Kilo Автодополнение",
-			"warning": "$(warning) Kilo Автодополнение",
-			"disabled": "$(circle-slash) Kilo Автодополнение",
-			"tooltip": {
-				"sessionTotal": "Общая стоимость сессии:",
-				"disabled": "Автодополнение Kilo Code (отключено)",
-				"model": "Модель:",
-				"tokenError": "Для использования автозаполнения должен быть установлен действительный токен",
-				"lastCompletion": "Последнее завершение:",
-				"basic": "Автодополнение Kilo Code"
-			},
-			"cost": {
-				"lessThanCent": "<$0,01",
-				"zero": "0,00 ₽"
-			}
-		},
-		"toggleMessage": "Kilo Автодополнение {{status}}"
-	},
 	"ghost": {
 		"progress": {
 			"analyzing": "Анализирую ваш код...",
@@ -102,6 +82,24 @@
 		},
 		"messages": {
 			"provideCodeSuggestions": "Предлагаю код..."
-		}
+		},
+		"statusBar": {
+			"enabled": "$(sparkle) Кило Встроенный Ассистент",
+			"disabled": "$(circle-slash) Встроенный помощник Kilo",
+			"warning": "$(warning) Килобайт Встроенный Ассистент",
+			"tooltip": {
+				"disabled": "Kilo Code Inline Assist (отключено)",
+				"lastCompletion": "Последнее предложение:",
+				"basic": "Встроенная помощь Kilo Code",
+				"tokenError": "Для использования Inline Assist должен быть установлен действительный токен",
+				"sessionTotal": "Общая стоимость сессии:",
+				"model": "Модель:"
+			},
+			"cost": {
+				"zero": "0,00 $",
+				"lessThanCent": "<$0,01"
+			}
+		},
+		"toggleMessage": "Встроенная помощь Kilo {{status}}"
 	}
 }
