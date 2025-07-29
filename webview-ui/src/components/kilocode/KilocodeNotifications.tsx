@@ -19,7 +19,7 @@ export const KilocodeNotifications: React.FC = () => {
 	const { dismissedNotificationIds } = useExtensionState()
 	const [notifications, setNotifications] = useState<Notification[]>([])
 	const filteredNotifications = notifications.filter(
-		(notification) => !dismissedNotificationIds.includes(notification.id),
+		(notification) => !(dismissedNotificationIds || []).includes(notification.id),
 	)
 	const [currentIndex, setCurrentIndex] = useState(0)
 

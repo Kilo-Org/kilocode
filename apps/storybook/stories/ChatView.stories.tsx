@@ -54,6 +54,7 @@ export const Default: Story = {
 				allowAll: true,
 				providers: {},
 			},
+			dismissedNotificationIds: [], // Add this for consistency
 			currentTaskItem: {
 				id: "task-1",
 				ts: Date.now(),
@@ -170,6 +171,7 @@ export const EmptyWithNotificationsAndHistory: Story = {
 				allowAll: true,
 				providers: {},
 			},
+			dismissedNotificationIds: [], // Add this to fix the undefined error
 			currentTaskItem: null, // No current task
 			taskHistory: [
 				{
