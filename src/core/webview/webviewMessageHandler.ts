@@ -54,7 +54,7 @@ import { generateSystemPrompt } from "./generateSystemPrompt"
 import { getCommand } from "../../utils/commands"
 import { toggleWorkflow, toggleRule, createRuleFile, deleteRuleFile } from "./kilorules"
 import { mermaidFixPrompt } from "../prompts/utilities/mermaid" // kilocode_change
-import { editMessageHandler } from "../kilocode/webview/webviewMessageHandlerUtils" // kilocode_change
+import { editMessageHandler, fetchKilocodeNotificationsHandler } from "../kilocode/webview/webviewMessageHandlerUtils" // kilocode_change
 
 const ALLOWED_VSCODE_SETTINGS = new Set(["terminal.integrated.inheritEnv"])
 
@@ -2565,37 +2565,7 @@ export const webviewMessageHandler = async (
 			break
 		}
 		case "fetchKilocodeNotifications": {
-			try {
-				const { apiConfiguration } = await provider.getState()
-				const kilocodeToken = apiConfiguration?.kilocodeToken
-
-				if (!kilocodeToken || apiConfiguration?.apiProvider !== "kilocode") {
-					provider.postMessageToWebview({
-						type: "kilocodeNotificationsResponse",
-						notifications: [],
-					})
-					break
-				}
-
-				const response = await axios.get("https://kilocode.ai/api/users/notifications", {
-					headers: {
-						Authorization: `Bearer ${kilocodeToken}`,
-						"Content-Type": "application/json",
-					},
-					timeout: 5000,
-				})
-
-				provider.postMessageToWebview({
-					type: "kilocodeNotificationsResponse",
-					notifications: response.data?.notifications || [],
-				})
-			} catch (error: any) {
-				provider.log(`Error fetching Kilocode notifications: ${error.message}`)
-				provider.postMessageToWebview({
-					type: "kilocodeNotificationsResponse",
-					notifications: [],
-				})
-			}
+			await fetchKilocodeNotificationsHandler(provider)
 			break
 		}
 		case "dismissNotificationId": {
