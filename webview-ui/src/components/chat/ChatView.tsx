@@ -1779,8 +1779,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							</div>
 						</div>
 					)}
-					<div
-						className={` w-full flex flex-col gap-4 m-auto ${isExpanded && tasks.length > 0 ? "mt-0" : ""} px-3.5 ${/* kilocode_change: fixed padding min-[370px]:px-10 pt-5 */ ""} transition-all duration-300`}>
+					{/* kilocode_change start: changed the classes to support notifications */}
+					<div className={` w-full h-full flex flex-col gap-4 px-3.5 transition-all duration-300`}>
+						{/* kilocode_change end */}
 						{/* Version indicator in top-right corner - only on welcome screen */}
 						{/* kilocode_change: do not show */}
 						{/* <VersionIndicator
@@ -1792,25 +1793,32 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						{telemetrySetting === "unset" && <TelemetryBanner />}
 						{/* kilocode_change start: Add Notifications */}
 						{telemetrySetting !== "unset" && <KilocodeNotifications />}
+						<div className="flex flex-col gap-4 flex-grow justify-center">
+							{/* kilocode_change end */}
+							<p className="text-vscode-editor-foreground leading-tight font-vscode-font-family text-center text-balance max-w-[380px] mx-auto my-0">
+								<Trans
+									i18nKey="chat:about"
+									components={{
+										DocsLink: (
+											<a
+												href={buildDocLink("", "welcome")}
+												target="_blank"
+												rel="noopener noreferrer">
+												the docs
+											</a>
+										),
+									}}
+								/>
+							</p>
+							{taskHistory.length === 0 && <IdeaSuggestionsBox />} {/* kilocode_change */}
+							{/*<div className="mb-2.5">
+									<RooTips cycle={false} />
+								</div> kilocode_change: do not show */}
+							{/* Show the task history preview if expanded and tasks exist */}
+							{taskHistory.length > 0 && isExpanded && <HistoryPreview />}
+							{/* kilocode_change start: Add Notifications */}
+						</div>
 						{/* kilocode_change end */}
-						<p className="text-vscode-editor-foreground leading-tight font-vscode-font-family text-center text-balance max-w-[380px] mx-auto my-0">
-							<Trans
-								i18nKey="chat:about"
-								components={{
-									DocsLink: (
-										<a href={buildDocLink("", "welcome")} target="_blank" rel="noopener noreferrer">
-											the docs
-										</a>
-									),
-								}}
-							/>
-						</p>
-						{taskHistory.length === 0 && <IdeaSuggestionsBox />} {/* kilocode_change */}
-						{/*<div className="mb-2.5">
-							<RooTips cycle={false} />
-						</div> kilocode_change: do not show */}
-						{/* Show the task history preview if expanded and tasks exist */}
-						{taskHistory.length > 0 && isExpanded && <HistoryPreview />}
 					</div>
 				</div>
 			)}
