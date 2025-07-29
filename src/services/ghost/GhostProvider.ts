@@ -18,6 +18,7 @@ import { ContextProxy } from "../../core/config/ContextProxy"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 import { GhostContext } from "./GhostContext"
 import { TelemetryService } from "@roo-code/telemetry"
+import { ClineProvider } from "../../core/webview/ClineProvider"
 
 export class GhostProvider {
 	private static instance: GhostProvider | null = null
@@ -28,6 +29,7 @@ export class GhostProvider {
 	private workspaceEdit: GhostWorkspaceEdit
 	private suggestions: GhostSuggestionsState = new GhostSuggestionsState()
 	private context: vscode.ExtensionContext
+	private cline: ClineProvider
 	private providerSettingsManager: ProviderSettingsManager
 	private settings: GhostServiceSettings | null = null
 	private ghostContext: GhostContext
@@ -43,8 +45,9 @@ export class GhostProvider {
 	public codeActionProvider: GhostCodeActionProvider
 	public codeLensProvider: GhostCodeLensProvider
 
-	private constructor(context: vscode.ExtensionContext) {
+	private constructor(context: vscode.ExtensionContext, cline: ClineProvider) {
 		this.context = context
+		this.cline = cline
 		this.decorations = new GhostDecorations()
 		this.documentStore = new GhostDocumentStore()
 		this.strategy = new GhostStrategy()
@@ -118,6 +121,14 @@ export class GhostProvider {
 		return ContextProxy.instance?.getValues?.()?.ghostServiceSettings
 	}
 
+	private async saveSettings() {
+		if (!this.settings) {
+			return
+		}
+		await ContextProxy.instance?.setValues?.({ ghostServiceSettings: this.settings })
+		await this.cline.postStateToWebview()
+	}
+
 	public async reload() {
 		this.settings = this.loadSettings()
 		await this.model.reload(this.settings, this.providerSettingsManager)
@@ -125,12 +136,12 @@ export class GhostProvider {
 		this.updateStatusBar()
 	}
 
-	public static getInstance(context?: vscode.ExtensionContext): GhostProvider {
+	public static getInstance(context: vscode.ExtensionContext, cline: ClineProvider): GhostProvider {
 		if (!GhostProvider.instance) {
 			if (!context) {
 				throw new Error("ExtensionContext is required for first initialization of GhostProvider")
 			}
-			GhostProvider.instance = new GhostProvider(context)
+			GhostProvider.instance = new GhostProvider(context, cline)
 		}
 		return GhostProvider.instance
 	}
@@ -474,5 +485,38 @@ export class GhostProvider {
 	public dispose() {
 		this.statusBar?.dispose()
 		this.statusBar = null
+	}
+
+	public async disable() {
+		this.settings = {
+			...this.settings,
+			enableAutoInlineTaskKeybinding: false,
+			enableQuickInlineTaskKeybinding: false,
+		}
+		await this.saveSettings()
+		await this.updateGlobalContext()
+	}
+
+	public async enable() {
+		this.settings = {
+			...this.settings,
+			enableAutoInlineTaskKeybinding: true,
+			enableQuickInlineTaskKeybinding: true,
+		}
+		await this.saveSettings()
+		await this.updateGlobalContext()
+	}
+
+	public async showIncompatibilityExtensionPopup() {
+		const message = t("kilocode:ghost.incompatibilityExtensionPopup.message")
+		const disableCopilot = t("kilocode:ghost.incompatibilityExtensionPopup.disableCopilot")
+		const disableInlineAssist = t("kilocode:ghost.incompatibilityExtensionPopup.disableInlineAssist")
+		const response = await vscode.window.showErrorMessage(message, disableCopilot, disableInlineAssist)
+
+		if (response === disableCopilot) {
+			await vscode.commands.executeCommand<any>("github.copilot.completions.disable")
+		} else if (response === disableInlineAssist) {
+			await vscode.commands.executeCommand<any>("kilo-code.ghost.disable")
+		}
 	}
 }

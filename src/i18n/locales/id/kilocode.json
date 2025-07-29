@@ -4,22 +4,22 @@
 	},
 	"userFeedback": {
 		"message_update_failed": "Gagal memperbarui pesan",
-		"no_checkpoint_found": "Tidak ditemukan checkpoint sebelum pesan ini",
+		"no_checkpoint_found": "Tidak ada titik pemeriksaan yang ditemukan sebelum pesan ini",
 		"message_updated": "Pesan berhasil diperbarui"
 	},
 	"lowCreditWarning": {
 		"title": "Peringatan Kredit Rendah!",
-		"message": "Periksa apakah kamu bisa mengisi ulang dengan kredit gratis atau beli lebih banyak!"
+		"message": "Periksa apakah Anda dapat menambah kredit gratis atau membeli lebih banyak!"
 	},
-	"notLoggedInError": "Tidak dapat menyelesaikan permintaan, pastikan kamu terhubung dan masuk dengan penyedia yang dipilih.\n\n{{error}}",
+	"notLoggedInError": "Tidak dapat menyelesaikan permintaan, pastikan Anda terhubung dan masuk dengan penyedia yang dipilih.\n\n{{error}}",
 	"rules": {
 		"actions": {
 			"delete": "Hapus",
-			"confirmDelete": "Apakah kamu yakin ingin menghapus {{filename}}?",
-			"deleted": "{{filename}} telah dihapus"
+			"confirmDelete": "Apakah Anda yakin ingin menghapus {{filename}}?",
+			"deleted": "{{filename}} dihapus"
 		},
 		"errors": {
-			"noWorkspaceFound": "Folder workspace tidak ditemukan",
+			"noWorkspaceFound": "Tidak ada folder ruang kerja yang ditemukan",
 			"fileAlreadyExists": "File {{filename}} sudah ada",
 			"failedToCreateRuleFile": "Gagal membuat file aturan.",
 			"failedToDeleteRuleFile": "Gagal menghapus file aturan."
@@ -27,7 +27,7 @@
 		"templates": {
 			"workflow": {
 				"description": "Deskripsi alur kerja di sini...",
-				"stepsHeader": "## Langkah-langkah",
+				"stepsHeader": "## Langkah",
 				"step1": "Langkah 1",
 				"step2": "Langkah 2"
 			},
@@ -40,66 +40,71 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Generator pesan commit Kilo Code diaktifkan",
+		"activated": "Generator pesan komit Kilo Code diaktifkan",
 		"gitNotFound": "⚠️ Repositori Git tidak ditemukan atau git tidak tersedia",
 		"gitInitError": "⚠️ Kesalahan inisialisasi Git: {{error}}",
-		"generating": "Kilo: Menghasilkan pesan commit...",
+		"generating": "Kilo: Menghasilkan pesan komit...",
 		"noChanges": "Kilo: Tidak ada perubahan yang ditemukan untuk dianalisis",
-		"generated": "Kilo: Pesan commit telah dibuat!",
-		"generationFailed": "Kilo: Gagal menghasilkan pesan commit: {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: Membuat pesan menggunakan perubahan yang belum di-stage",
-		"activationFailed": "Kilo: Gagal mengaktifkan pembangkit pesan: {{error}}",
-		"providerRegistered": "Kilo: Penyedia pesan commit telah terdaftar"
+		"generated": "Kilo: Pesan komit dihasilkan!",
+		"generationFailed": "Kilo: Gagal menghasilkan pesan komit: {{errorMessage}}",
+		"generatingFromUnstaged": "Kilo: Menghasilkan pesan menggunakan perubahan yang belum ditahapkan",
+		"activationFailed": "Kilo: Gagal mengaktifkan generator pesan: {{error}}",
+		"providerRegistered": "Kilo: Penyedia pesan komit terdaftar"
 	},
 	"ghost": {
+		"statusBar": {
+			"enabled": "$(sparkle) Bantuan Dalam Baris Kilo",
+			"disabled": "$(circle-slash) Bantuan Dalam Baris Kilo",
+			"warning": "$(warning) Bantuan Dalam Baris Kilo",
+			"tooltip": {
+				"basic": "Bantuan Dalam Baris Kilo Code",
+				"disabled": "Bantuan Dalam Baris Kilo Code (dinonaktifkan)",
+				"tokenError": "Token yang valid harus diatur untuk menggunakan Bantuan Dalam Baris",
+				"lastCompletion": "Saran terakhir:",
+				"sessionTotal": "Total biaya sesi:",
+				"model": "Model:"
+			},
+			"cost": {
+				"zero": "$0.00",
+				"lessThanCent": "<$0.01"
+			}
+		},
+		"toggleMessage": "Bantuan Dalam Baris Kilo {{status}}",
 		"progress": {
+			"title": "Kilo Code",
 			"analyzing": "Menganalisis kode Anda...",
-			"generating": "Membuat saran pengeditan...",
+			"generating": "Menghasilkan saran pengeditan...",
 			"processing": "Memproses saran pengeditan...",
-			"showing": "Menampilkan saran pengeditan...",
-			"title": "Kilo Code"
+			"showing": "Menampilkan saran pengeditan..."
 		},
 		"input": {
 			"title": "Kilo Code: Tugas Cepat",
-			"placeholder": "misalnya, 'refaktor fungsi ini agar lebih efisien'"
+			"placeholder": "misalnya, 'refactor fungsi ini agar lebih efisien'"
 		},
 		"commands": {
+			"generateSuggestions": "Kilo Code: Hasilkan Saran Pengeditan",
+			"displaySuggestions": "Tampilkan Saran Pengeditan",
 			"cancelSuggestions": "Batalkan Saran Pengeditan",
 			"applyCurrentSuggestion": "Terapkan Saran Pengeditan Saat Ini",
-			"generateSuggestions": "Kilo Code: Hasilkan Saran Penyuntingan",
-			"applyAllSuggestions": "Terapkan Semua Suntingan yang Disarankan",
-			"displaySuggestions": "Tampilkan Saran Pengeditan",
-			"promptCodeSuggestion": "Tugas Cepat Prompt",
+			"applyAllSuggestions": "Terapkan Semua Saran Pengeditan",
+			"promptCodeSuggestion": "Tugas Cepat",
 			"category": "Kilo Code"
 		},
 		"codeAction": {
-			"title": "Kilo Code: Saran Penyuntingan"
+			"title": "Kilo Code: Saran Pengeditan"
 		},
 		"chatParticipant": {
-			"fullName": "Kilo Code Agen",
+			"fullName": "Agen Kilo Code",
 			"name": "Agen",
-			"description": "Saya dapat membantu Anda dengan tugas cepat dan saran pengeditan."
+			"description": "Saya dapat membantu Anda dengan tugas-tugas cepat dan saran pengeditan."
 		},
 		"messages": {
-			"provideCodeSuggestions": "Memberikan saran kode..."
+			"provideCodeSuggestions": "Menyediakan saran kode..."
 		},
-		"statusBar": {
-			"enabled": "$(sparkle) Bantuan Inline Kilo",
-			"disabled": "$(circle-slash) Bantuan Sebaris Kilo",
-			"warning": "$(warning) Kilo Inline Assist",
-			"tooltip": {
-				"basic": "Bantuan Inline Kilo Code",
-				"disabled": "Kilo Code Inline Assist (dinonaktifkan)",
-				"tokenError": "Token yang valid harus ditetapkan untuk menggunakan Inline Assist",
-				"sessionTotal": "Total biaya sesi:",
-				"model": "Model:",
-				"lastCompletion": "Saran terakhir:"
-			},
-			"cost": {
-				"lessThanCent": "<Rp0,01",
-				"zero": "Rp 0,00"
-			}
-		},
-		"toggleMessage": "Kilo Inline Assist {{status}}"
+		"incompatibilityExtensionPopup": {
+			"message": "Bantuan Dalam Baris Kilo Code diblokir oleh konflik dengan GitHub Copilot. Untuk memperbaikinya, Anda harus menonaktifkan saran dalam baris Copilot.",
+			"disableCopilot": "Nonaktifkan Copilot",
+			"disableInlineAssist": "Nonaktifkan Bantuan Dalam Baris"
+		}
 	}
 }

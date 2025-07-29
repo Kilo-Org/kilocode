@@ -3,26 +3,26 @@
 		"settings_imported": "Cài đặt đã được nhập thành công."
 	},
 	"userFeedback": {
-		"message_update_failed": "Không thể cập nhật tin nhắn",
-		"no_checkpoint_found": "Không tìm thấy điểm kiểm tra trước tin nhắn này",
-		"message_updated": "Tin nhắn đã được cập nhật"
+		"message_update_failed": "Cập nhật tin nhắn thất bại",
+		"no_checkpoint_found": "Không tìm thấy điểm kiểm tra nào trước tin nhắn này",
+		"message_updated": "Tin nhắn đã được cập nhật thành công"
 	},
 	"lowCreditWarning": {
-		"title": "Cảnh Báo Tín Dụng Thấp!",
-		"message": "Kiểm tra xem bạn có thể nạp thêm tín dụng miễn phí hoặc mua thêm không!"
+		"title": "Cảnh báo Tín dụng Thấp!",
+		"message": "Hãy kiểm tra xem bạn có thể nạp thêm tín dụng miễn phí hoặc mua thêm không!"
 	},
-	"notLoggedInError": "Không thể hoàn thành yêu cầu, hãy đảm bảo bạn đã kết nối và đăng nhập với nhà cung cấp đã chọn.\n\n{{error}}",
+	"notLoggedInError": "Không thể hoàn thành yêu cầu, hãy đảm bảo bạn đã kết nối và đăng nhập bằng nhà cung cấp đã chọn.\n\n{{error}}",
 	"rules": {
 		"actions": {
 			"delete": "Xóa",
 			"confirmDelete": "Bạn có chắc chắn muốn xóa {{filename}} không?",
-			"deleted": "Đã xóa {{filename}}"
+			"deleted": "{{filename}} đã bị xóa"
 		},
 		"errors": {
-			"noWorkspaceFound": "Không tìm thấy thư mục workspace",
+			"noWorkspaceFound": "Không tìm thấy thư mục không gian làm việc",
 			"fileAlreadyExists": "Tệp {{filename}} đã tồn tại",
-			"failedToCreateRuleFile": "Không thể tạo tệp quy tắc.",
-			"failedToDeleteRuleFile": "Không thể xóa tệp quy tắc."
+			"failedToCreateRuleFile": "Tạo tệp quy tắc không thành công.",
+			"failedToDeleteRuleFile": "Xóa tệp quy tắc không thành công."
 		},
 		"templates": {
 			"workflow": {
@@ -40,66 +40,71 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Trình tạo thông điệp commit Kilo Code đã được kích hoạt",
+		"activated": "Trình tạo thông báo commit Kilo Code đã được kích hoạt",
 		"gitNotFound": "⚠️ Không tìm thấy kho lưu trữ Git hoặc git không khả dụng",
 		"gitInitError": "⚠️ Lỗi khởi tạo Git: {{error}}",
-		"generating": "Kilo: Đang tạo tin nhắn commit...",
-		"noChanges": "Kilo: Không tìm thấy thay đổi để phân tích",
-		"generated": "Kilo: Đã tạo thông điệp commit!",
-		"generationFailed": "Kilo: Không thể tạo thông điệp commit: {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: Tạo tin nhắn sử dụng các thay đổi chưa được đưa vào dàn dựng",
-		"activationFailed": "Kilo: Không thể kích hoạt trình tạo tin nhắn: {{error}}",
-		"providerRegistered": "Kilo: Đã đăng ký nhà cung cấp thông điệp commit"
+		"generating": "Kilo: Đang tạo thông báo commit...",
+		"noChanges": "Kilo: Không tìm thấy thay đổi nào để phân tích",
+		"generated": "Kilo: Đã tạo thông báo commit!",
+		"generationFailed": "Kilo: Tạo thông báo commit không thành công: {{errorMessage}}",
+		"generatingFromUnstaged": "Kilo: Đang tạo thông báo bằng các thay đổi chưa được chuẩn bị",
+		"activationFailed": "Kilo: Kích hoạt trình tạo thông báo không thành công: {{error}}",
+		"providerRegistered": "Kilo: Nhà cung cấp thông báo commit đã được đăng ký"
 	},
 	"ghost": {
-		"progress": {
-			"generating": "Đang tạo đề xuất chỉnh sửa...",
-			"processing": "Đang xử lý các đề xuất chỉnh sửa...",
-			"analyzing": "Đang phân tích mã của bạn...",
-			"showing": "Đang hiển thị các sửa đổi được đề xuất...",
-			"title": "Kilo Code"
-		},
-		"input": {
-			"title": "Kilo Code: Nhiệm Vụ Nhanh",
-			"placeholder": "ví dụ, 'cấu trúc lại hàm này để hiệu quả hơn'"
-		},
-		"commands": {
-			"generateSuggestions": "Kilo Code: Tạo Gợi Ý Chỉnh Sửa",
-			"displaySuggestions": "Hiển thị đề xuất chỉnh sửa",
-			"cancelSuggestions": "Hủy Đề Xuất Chỉnh Sửa",
-			"applyCurrentSuggestion": "Áp dụng chỉnh sửa đề xuất hiện tại",
-			"promptCodeSuggestion": "Công việc Nhanh từ Lời nhắc",
-			"applyAllSuggestions": "Áp dụng Tất cả Chỉnh sửa Được Đề xuất",
-			"category": "Kilo Code"
-		},
-		"codeAction": {
-			"title": "Kilo Code: Gợi ý chỉnh sửa"
-		},
-		"chatParticipant": {
-			"description": "Tôi có thể giúp bạn với các tác vụ nhanh và các chỉnh sửa được đề xuất.",
-			"fullName": "Kilo Code Đại lý",
-			"name": "Đại lý"
-		},
-		"messages": {
-			"provideCodeSuggestions": "Đang cung cấp gợi ý mã..."
-		},
 		"statusBar": {
-			"disabled": "$(circle-slash) Trợ lý Nội tuyến Kilo",
-			"warning": "$(warning) Kilo Trợ giúp Nội tuyến",
-			"enabled": "$(sparkle) Kilo Trợ lý Nội tuyến",
+			"enabled": "$(sparkle) Kilo Inline Assist",
+			"disabled": "$(circle-slash) Kilo Inline Assist",
+			"warning": "$(warning) Kilo Inline Assist",
 			"tooltip": {
-				"disabled": "Trợ lý mã nhúng Kilo (đã tắt)",
-				"basic": "Hỗ Trợ Soạn Thảo Mã Trong Dòng Kilo",
-				"tokenError": "Phải thiết lập một token hợp lệ để sử dụng Inline Assist",
-				"lastCompletion": "Gợi ý cuối cùng:",
+				"basic": "Kilo Code Inline Assist",
+				"disabled": "Kilo Code Inline Assist (đã tắt)",
+				"tokenError": "Phải đặt một token hợp lệ để sử dụng Inline Assist",
+				"lastCompletion": "Đề xuất cuối cùng:",
 				"sessionTotal": "Tổng chi phí phiên:",
 				"model": "Mô hình:"
 			},
 			"cost": {
-				"zero": "0₫",
-				"lessThanCent": "<0,01$"
+				"zero": "$0.00",
+				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Trợ lý nội tuyến Kilo {{status}}"
+		"toggleMessage": "Kilo Inline Assist {{status}}",
+		"progress": {
+			"title": "Kilo Code",
+			"analyzing": "Đang phân tích mã của bạn...",
+			"generating": "Đang tạo các chỉnh sửa được đề xuất...",
+			"processing": "Đang xử lý các chỉnh sửa được đề xuất...",
+			"showing": "Đang hiển thị các chỉnh sửa được đề xuất..."
+		},
+		"input": {
+			"title": "Kilo Code: Nhiệm vụ Nhanh",
+			"placeholder": "ví dụ: 'tái cấu trúc hàm này để hiệu quả hơn'"
+		},
+		"commands": {
+			"generateSuggestions": "Kilo Code: Tạo các chỉnh sửa được đề xuất",
+			"displaySuggestions": "Hiển thị các chỉnh sửa được đề xuất",
+			"cancelSuggestions": "Hủy các chỉnh sửa được đề xuất",
+			"applyCurrentSuggestion": "Áp dụng chỉnh sửa được đề xuất hiện tại",
+			"applyAllSuggestions": "Áp dụng tất cả các chỉnh sửa được đề xuất",
+			"promptCodeSuggestion": "Nhiệm vụ Nhanh",
+			"category": "Kilo Code"
+		},
+		"codeAction": {
+			"title": "Kilo Code: Chỉnh sửa được đề xuất"
+		},
+		"chatParticipant": {
+			"fullName": "Kilo Code Agent",
+			"name": "Agent",
+			"description": "Tôi có thể giúp bạn với các nhiệm vụ nhanh chóng và các chỉnh sửa được đề xuất."
+		},
+		"messages": {
+			"provideCodeSuggestions": "Đang cung cấp các đề xuất mã..."
+		},
+		"incompatibilityExtensionPopup": {
+			"message": "Kilo Code Inline Assist bị chặn bởi xung đột với GitHub Copilot. Để khắc phục điều này, bạn phải tắt các đề xuất nội dòng của Copilot.",
+			"disableCopilot": "Tắt Copilot",
+			"disableInlineAssist": "Tắt Trợ lý Nội dòng"
+		}
 	}
 }

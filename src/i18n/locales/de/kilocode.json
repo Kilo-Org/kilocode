@@ -52,12 +52,30 @@
 		"providerRegistered": "Kilo: Commit-Nachrichtenanbieter registriert"
 	},
 	"ghost": {
+		"statusBar": {
+			"enabled": "$(sparkle) Kilo Inline Assist",
+			"disabled": "$(circle-slash) Kilo Inline Assist",
+			"warning": "$(warning) Kilo Inline Assist",
+			"tooltip": {
+				"basic": "Kilo Code Inline-Unterstützung",
+				"disabled": "Kilo Code Inline-Hilfe (deaktiviert)",
+				"tokenError": "Ein gültiges Token muss festgelegt werden, um Inline-Unterstützung zu nutzen",
+				"lastCompletion": "Letzter Vorschlag:",
+				"sessionTotal": "Gesamtkosten der Sitzung:",
+				"model": "Modell:"
+			},
+			"cost": {
+				"zero": "0,00 €",
+				"lessThanCent": "<0,01 €"
+			}
+		},
+		"toggleMessage": "Kilo Inline Assist {{status}}",
 		"progress": {
-			"generating": "Generiere vorgeschlagene Änderungen...",
+			"title": "Kilo Code",
 			"analyzing": "Analysiere deinen Code...",
+			"generating": "Generiere vorgeschlagene Änderungen...",
 			"processing": "Verarbeitung von Änderungsvorschlägen...",
-			"showing": "Zeige Bearbeitungsvorschläge an...",
-			"title": "Kilo Code"
+			"showing": "Zeige Bearbeitungsvorschläge an..."
 		},
 		"input": {
 			"title": "Kilo Code: Schnellaufgabe",
@@ -83,23 +101,10 @@
 		"messages": {
 			"provideCodeSuggestions": "Code-Vorschläge werden bereitgestellt..."
 		},
-		"statusBar": {
-			"disabled": "$(circle-slash) Kilo Inline-Unterstützung",
-			"warning": "$(warning) Kilo Inline Assist",
-			"enabled": "$(sparkle) Kilo Inline Assistent",
-			"tooltip": {
-				"basic": "Kilo Code Inline-Unterstützung",
-				"disabled": "Kilo Code Inline-Hilfe (deaktiviert)",
-				"tokenError": "Ein gültiges Token muss festgelegt werden, um Inline-Unterstützung zu nutzen",
-				"lastCompletion": "Letzter Vorschlag:",
-				"sessionTotal": "Gesamtkosten der Sitzung:",
-				"model": "Modell:"
-			},
-			"cost": {
-				"zero": "0,00 €",
-				"lessThanCent": "<0,01 €"
-			}
-		},
-		"toggleMessage": "Kilo Inline Assist {{status}}"
+		"incompatibilityExtensionPopup": {
+			"message": "Die Kilo Code Inline Assist wird durch einen Konflikt mit GitHub Copilot blockiert. Um dies zu beheben, musst du die Inline-Vorschläge von Copilot deaktivieren.",
+			"disableCopilot": "Copilot deaktivieren",
+			"disableInlineAssist": "Inline Assist deaktivieren"
+		}
 	}
 }

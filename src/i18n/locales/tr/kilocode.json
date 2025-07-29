@@ -3,15 +3,15 @@
 		"settings_imported": "Ayarlar başarıyla içe aktarıldı."
 	},
 	"userFeedback": {
-		"message_update_failed": "Mesaj güncellenemedi",
+		"message_update_failed": "Mesaj güncellemesi başarısız oldu",
 		"no_checkpoint_found": "Bu mesajdan önce kontrol noktası bulunamadı",
-		"message_updated": "Mesaj güncellendi"
+		"message_updated": "Mesaj başarıyla güncellendi"
 	},
 	"lowCreditWarning": {
 		"title": "Düşük Kredi Uyarısı!",
-		"message": "Ücretsiz kredilerle yükleme yapabilir veya daha fazla satın alabilir misiniz kontrol edin!"
+		"message": "Ücretsiz kredilerle yükleme yapıp yapamayacağınızı veya daha fazla satın alıp alamayacağınızı kontrol edin!"
 	},
-	"notLoggedInError": "İstek tamamlanamıyor, seçili sağlayıcıya bağlı olduğundan ve oturum açtığından emin ol.\n\n{{error}}",
+	"notLoggedInError": "İstek tamamlanamıyor, seçili sağlayıcıyla bağlantı kurduğunuzdan ve oturum açtığınızdan emin olun.\n\n{{error}}",
 	"rules": {
 		"actions": {
 			"delete": "Sil",
@@ -40,66 +40,71 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Kilo Code taahhüt mesajı oluşturucu etkinleştirildi",
-		"gitNotFound": "⚠️ Git deposu bulunamadı veya git kullanılabilir değil",
+		"activated": "Kilo Code commit mesajı oluşturucu etkinleştirildi",
+		"gitNotFound": "⚠️ Git deposu bulunamadı veya git kullanılamıyor",
 		"gitInitError": "⚠️ Git başlatma hatası: {{error}}",
-		"generating": "Kilo: İşlem mesajı oluşturuluyor...",
+		"generating": "Kilo: Commit mesajı oluşturuluyor...",
 		"noChanges": "Kilo: Analiz edilecek değişiklik bulunamadı",
-		"generated": "Kilo: İşleme mesajı oluşturuldu!",
-		"generationFailed": "Kilo: Taahhüt mesajı oluşturulamadı: {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: Evrelenmemiş değişiklikleri kullanarak mesaj oluşturuluyor",
-		"providerRegistered": "Kilo: İşleme mesaj sağlayıcısı kaydedildi",
-		"activationFailed": "Kilo: Mesaj oluşturucu etkinleştirilemedi: {{error}}"
+		"generated": "Kilo: Commit mesajı oluşturuldu!",
+		"generationFailed": "Kilo: Commit mesajı oluşturulamadı: {{errorMessage}}",
+		"generatingFromUnstaged": "Kilo: Hazırlanmamış değişikliklerle mesaj oluşturuluyor",
+		"activationFailed": "Kilo: Mesaj oluşturucu etkinleştirilemedi: {{error}}",
+		"providerRegistered": "Kilo: Commit mesajı sağlayıcısı kaydedildi"
 	},
 	"ghost": {
+		"statusBar": {
+			"enabled": "$(sparkle) Kilo Satır İçi Yardım",
+			"disabled": "$(circle-slash) Kilo Satır İçi Yardım",
+			"warning": "$(warning) Kilo Satır İçi Yardım",
+			"tooltip": {
+				"basic": "Kilo Code Satır İçi Yardım",
+				"disabled": "Kilo Code Satır İçi Yardım (devre dışı)",
+				"tokenError": "Satır İçi Yardım'ı kullanmak için geçerli bir belirteç ayarlanmalıdır",
+				"lastCompletion": "Son öneri:",
+				"sessionTotal": "Oturum toplam maliyeti:",
+				"model": "Model:"
+			},
+			"cost": {
+				"zero": "$0.00",
+				"lessThanCent": "<$0.01"
+			}
+		},
+		"toggleMessage": "Kilo Satır İçi Yardım {{status}}",
 		"progress": {
+			"title": "Kilo Code",
 			"analyzing": "Kodunuz analiz ediliyor...",
-			"generating": "Düzenleme önerileri oluşturuluyor...",
-			"processing": "Önerilen düzeltmeler işleniyor...",
-			"showing": "Önerilen düzenlemeler görüntüleniyor...",
-			"title": "Kilo Code"
+			"generating": "Önerilen düzenlemeler oluşturuluyor...",
+			"processing": "Önerilen düzenlemeler işleniyor...",
+			"showing": "Önerilen düzenlemeler gösteriliyor..."
 		},
 		"input": {
 			"title": "Kilo Code: Hızlı Görev",
-			"placeholder": "örneğin, 'bu fonksiyonu daha verimli olacak şekilde yeniden düzenleyin'"
+			"placeholder": "örn. 'bu fonksiyonu daha verimli hale getirmek için yeniden düzenle'"
 		},
 		"commands": {
-			"generateSuggestions": "Kilo Code: Önerilen Düzenlemeleri Oluştur",
+			"generateSuggestions": "Kilo Code: Önerilen Düzenlemeler Oluştur",
 			"displaySuggestions": "Önerilen Düzenlemeleri Göster",
 			"cancelSuggestions": "Önerilen Düzenlemeleri İptal Et",
-			"applyCurrentSuggestion": "Mevcut Önerilen Düzenlemeyi Uygula",
-			"category": "Kilo Code",
-			"applyAllSuggestions": "Önerilen Düzenlemelerin Tümünü Uygula",
-			"promptCodeSuggestion": "Hızlı Görev İsteği"
-		},
-		"chatParticipant": {
-			"fullName": "Kilo Code Ajanı",
-			"name": "Temsilci",
-			"description": "Hızlı görevler ve önerilen düzenlemeler konusunda size yardımcı olabilirim."
+			"applyCurrentSuggestion": "Geçerli Önerilen Düzenlemeyi Uygula",
+			"applyAllSuggestions": "Tüm Önerilen Düzenlemeleri Uygula",
+			"promptCodeSuggestion": "Hızlı Görev",
+			"category": "Kilo Code"
 		},
 		"codeAction": {
 			"title": "Kilo Code: Önerilen Düzenlemeler"
 		},
+		"chatParticipant": {
+			"fullName": "Kilo Code Ajanı",
+			"name": "Ajan",
+			"description": "Hızlı görevler ve önerilen düzenlemeler konusunda size yardımcı olabilirim."
+		},
 		"messages": {
-			"provideCodeSuggestions": "Kod önerileri sunuluyor..."
+			"provideCodeSuggestions": "Kod önerileri sağlanıyor..."
 		},
-		"statusBar": {
-			"enabled": "$(sparkle) Kilo Satır İçi Yardım",
-			"warning": "$(warning) Kilo Satır İçi Asistan",
-			"disabled": "$(circle-slash) Kilo Satır İçi Yardımı",
-			"tooltip": {
-				"basic": "Kilo Code Satır İçi Yardım",
-				"tokenError": "Satır İçi Yardım'ı kullanmak için geçerli bir belirteç ayarlanmalıdır",
-				"lastCompletion": "Son öneri:",
-				"sessionTotal": "Oturum toplam maliyeti:",
-				"disabled": "Kilo Kod Satır İçi Yardım (devre dışı)",
-				"model": "Model:"
-			},
-			"cost": {
-				"zero": "0,00 ₺",
-				"lessThanCent": "<$0,01"
-			}
-		},
-		"toggleMessage": "Kilo Satır İçi Yardımcı {{status}}"
+		"incompatibilityExtensionPopup": {
+			"message": "Kilo Code Satır İçi Yardım, GitHub Copilot ile çakışma nedeniyle engelleniyor. Bunu düzeltmek için Copilot'un satır içi önerilerini devre dışı bırakmalısınız.",
+			"disableCopilot": "Copilot'u Devre Dışı Bırak",
+			"disableInlineAssist": "Satır İçi Yardım'ı Devre Dışı Bırak"
+		}
 	}
 }

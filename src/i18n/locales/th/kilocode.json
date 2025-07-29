@@ -1,32 +1,32 @@
 {
 	"info": {
-		"settings_imported": "นำเข้าการตั้งค่าเรียบร้อยแล้ว"
+		"settings_imported": "การตั้งค่าถูกนำเข้าสำเร็จแล้ว"
 	},
 	"userFeedback": {
-		"message_update_failed": "ล้มเหลวในการอัปเดตข้อความ",
-		"no_checkpoint_found": "ไม่พบ checkpoint ก่อนข้อความนี้",
-		"message_updated": "อัปเดตข้อความเรียบร้อยแล้ว"
+		"message_update_failed": "อัปเดตข้อความล้มเหลว",
+		"no_checkpoint_found": "ไม่พบจุดตรวจสอบก่อนข้อความนี้",
+		"message_updated": "ข้อความได้รับการอัปเดตเรียบร้อยแล้ว"
 	},
 	"lowCreditWarning": {
-		"title": "คำเตือนเครดิตต่ำ!",
-		"message": "ตรวจสอบดูว่าคุณสามารถเติมเครดิตฟรีหรือซื้อเพิ่มได้หรือไม่!"
+		"title": "คำเตือนเครดิตเหลือน้อย!",
+		"message": "ตรวจสอบว่าคุณสามารถเติมเครดิตฟรีหรือซื้อเพิ่มได้หรือไม่!"
 	},
-	"notLoggedInError": "ไม่สามารถดำเนินการคำขอได้ ตรวจสอบให้แน่ใจว่าคุณเชื่อมต่อและเข้าสู่ระบบกับผู้ให้บริการที่เลือก\n\n{{error}}",
+	"notLoggedInError": "ไม่สามารถดำเนินการตามคำขอได้ โปรดตรวจสอบว่าคุณได้เชื่อมต่อและเข้าสู่ระบบด้วยผู้ให้บริการที่เลือกแล้ว\n\n{{error}}",
 	"rules": {
 		"actions": {
 			"delete": "ลบ",
 			"confirmDelete": "คุณแน่ใจหรือไม่ว่าต้องการลบ {{filename}}?",
-			"deleted": "ลบ {{filename}} แล้ว"
+			"deleted": "{{filename}} ถูกลบแล้ว"
 		},
 		"errors": {
-			"noWorkspaceFound": "ไม่พบโฟลเดอร์ workspace",
+			"noWorkspaceFound": "ไม่พบโฟลเดอร์พื้นที่ทำงาน",
 			"fileAlreadyExists": "ไฟล์ {{filename}} มีอยู่แล้ว",
-			"failedToCreateRuleFile": "ล้มเหลวในการสร้างไฟล์กฎ",
-			"failedToDeleteRuleFile": "ล้มเหลวในการลบไฟล์กฎ"
+			"failedToCreateRuleFile": "สร้างไฟล์กฎไม่สำเร็จ",
+			"failedToDeleteRuleFile": "ลบไฟล์กฎไม่สำเร็จ"
 		},
 		"templates": {
 			"workflow": {
-				"description": "คำอธิบาย workflow ที่นี่...",
+				"description": "คำอธิบายเวิร์กโฟลว์ที่นี่...",
 				"stepsHeader": "## ขั้นตอน",
 				"step1": "ขั้นตอนที่ 1",
 				"step2": "ขั้นตอนที่ 2"
@@ -40,66 +40,71 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "เครื่องมือสร้างข้อความการคอมมิตโค้ด Kilo ถูกเปิดใช้งานแล้ว",
-		"gitNotFound": "⚠️ ไม่พบที่เก็บข้อมูล Git หรือไม่มี git",
-		"gitInitError": "⚠️ เกิดข้อผิดพลาดในการเริ่มต้น Git: {{error}}",
+		"activated": "ตัวสร้างข้อความคอมมิต Kilo Code เปิดใช้งานแล้ว",
+		"gitNotFound": "⚠️ ไม่พบที่เก็บ Git หรือ git ไม่พร้อมใช้งาน",
+		"gitInitError": "⚠️ ข้อผิดพลาดในการเริ่มต้น Git: {{error}}",
 		"generating": "Kilo: กำลังสร้างข้อความคอมมิต...",
-		"noChanges": "Kilo: ไม่พบการเปลี่ยนแปลงให้วิเคราะห์",
+		"noChanges": "Kilo: ไม่พบการเปลี่ยนแปลงใดๆ สำหรับการวิเคราะห์",
 		"generated": "Kilo: สร้างข้อความคอมมิตแล้ว!",
-		"generationFailed": "Kilo: ไม่สามารถสร้างข้อความคอมมิตได้: {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: กำลังสร้างข้อความโดยใช้การเปลี่ยนแปลงที่ยังไม่ได้นำเข้าสู่ขั้นตอน",
-		"activationFailed": "Kilo: ล้มเหลวในการเปิดใช้งานตัวสร้างข้อความ: {{error}}",
-		"providerRegistered": "Kilo: ลงทะเบียนผู้ให้บริการข้อความคอมมิตแล้ว"
+		"generationFailed": "Kilo: สร้างข้อความคอมมิตไม่สำเร็จ: {{errorMessage}}",
+		"generatingFromUnstaged": "Kilo: กำลังสร้างข้อความโดยใช้การเปลี่ยนแปลงที่ยังไม่ได้จัดเก็บ",
+		"activationFailed": "Kilo: เปิดใช้งานตัวสร้างข้อความไม่สำเร็จ: {{error}}",
+		"providerRegistered": "Kilo: ผู้ให้บริการข้อความคอมมิตลงทะเบียนแล้ว"
 	},
 	"ghost": {
+		"statusBar": {
+			"enabled": "$(sparkle) Kilo Inline Assist",
+			"disabled": "$(circle-slash) Kilo Inline Assist",
+			"warning": "$(warning) Kilo Inline Assist",
+			"tooltip": {
+				"basic": "Kilo Code Inline Assist",
+				"disabled": "Kilo Code Inline Assist (ปิดใช้งาน)",
+				"tokenError": "ต้องตั้งค่าโทเค็นที่ถูกต้องเพื่อใช้ Inline Assist",
+				"lastCompletion": "คำแนะนำล่าสุด:",
+				"sessionTotal": "ค่าใช้จ่ายเซสชันทั้งหมด:",
+				"model": "โมเดล:"
+			},
+			"cost": {
+				"zero": "$0.00",
+				"lessThanCent": "<$0.01"
+			}
+		},
+		"toggleMessage": "Kilo Inline Assist {{status}}",
 		"progress": {
-			"generating": "กำลังสร้างคำแนะนำการแก้ไข...",
+			"title": "Kilo Code",
 			"analyzing": "กำลังวิเคราะห์โค้ดของคุณ...",
-			"processing": "กำลังประมวลผลข้อแก้ไขที่แนะนำ...",
-			"showing": "กำลังแสดงข้อเสนอแนะในการแก้ไข...",
-			"title": "Kilo Code"
+			"generating": "กำลังสร้างการแก้ไขที่แนะนำ...",
+			"processing": "กำลังประมวลผลการแก้ไขที่แนะนำ...",
+			"showing": "กำลังแสดงการแก้ไขที่แนะนำ..."
 		},
 		"input": {
 			"title": "Kilo Code: งานด่วน",
-			"placeholder": "เช่น 'ปรับโครงสร้างฟังก์ชันนี้ให้มีประสิทธิภาพมากขึ้น'"
+			"placeholder": "เช่น 'ปรับปรุงฟังก์ชันนี้ให้มีประสิทธิภาพมากขึ้น'"
 		},
 		"commands": {
 			"generateSuggestions": "Kilo Code: สร้างการแก้ไขที่แนะนำ",
-			"displaySuggestions": "แสดงคำแนะนำการแก้ไข",
-			"applyCurrentSuggestion": "ใช้การแก้ไขที่แนะนำในปัจจุบัน",
+			"displaySuggestions": "แสดงการแก้ไขที่แนะนำ",
 			"cancelSuggestions": "ยกเลิกการแก้ไขที่แนะนำ",
+			"applyCurrentSuggestion": "ใช้การแก้ไขที่แนะนำปัจจุบัน",
 			"applyAllSuggestions": "ใช้การแก้ไขที่แนะนำทั้งหมด",
-			"category": "Kilo Code",
-			"promptCodeSuggestion": "งานด่วนพร้อมคำแนะนำ"
+			"promptCodeSuggestion": "งานด่วน",
+			"category": "Kilo Code"
 		},
 		"codeAction": {
 			"title": "Kilo Code: การแก้ไขที่แนะนำ"
 		},
 		"chatParticipant": {
-			"fullName": "Kilo Code เอเจนท์",
-			"name": "ตัวแทน",
-			"description": "ฉันสามารถช่วยคุณในการทำงานที่รวดเร็วและแนะนำการแก้ไขได้"
+			"fullName": "Kilo Code Agent",
+			"name": "Agent",
+			"description": "ฉันสามารถช่วยคุณเกี่ยวกับงานด่วนและการแก้ไขที่แนะนำได้"
 		},
 		"messages": {
-			"provideCodeSuggestions": "กำลังเสนอคำแนะนำเกี่ยวกับโค้ด..."
+			"provideCodeSuggestions": "กำลังให้คำแนะนำโค้ด..."
 		},
-		"statusBar": {
-			"enabled": "$(sparkle) ผู้ช่วยอัจฉริยะในแบบ Kilo",
-			"warning": "⚠️ Kilo Inline Assist",
-			"disabled": "$(circle-slash) Kilo Inline Assist",
-			"tooltip": {
-				"basic": "การช่วยเหลือแบบอินไลน์ Kilo Code",
-				"disabled": "Kilo Code Inline Assist (ปิดใช้งาน)",
-				"sessionTotal": "ค่าใช้จ่ายรวมของเซสชัน:",
-				"lastCompletion": "ข้อเสนอแนะสุดท้าย:",
-				"tokenError": "จำเป็นต้องตั้งค่าโทเค็นที่ถูกต้องเพื่อใช้ Inline Assist",
-				"model": "โมเดล:"
-			},
-			"cost": {
-				"zero": "฿0.00",
-				"lessThanCent": "<฿0.35"
-			}
-		},
-		"toggleMessage": "Kilo Inline Assist {{status}}"
+		"incompatibilityExtensionPopup": {
+			"message": "Kilo Code Inline Assist ถูกบล็อกโดยความขัดแย้งกับ GitHub Copilot หากต้องการแก้ไขปัญหานี้ คุณต้องปิดใช้งานคำแนะนำในบรรทัดของ Copilot",
+			"disableCopilot": "ปิดใช้งาน Copilot",
+			"disableInlineAssist": "ปิดใช้งาน Inline Assist"
+		}
 	}
 }

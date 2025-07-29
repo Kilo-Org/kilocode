@@ -97,6 +97,11 @@
 			"fullName": "Kilo Code Agent",
 			"name": "Agent",
 			"description": "I can help you with quick tasks and suggested edits."
+		},
+		"incompatibilityExtensionPopup": {
+			"message": "The Kilo Code Inline Assist is being blocked by a conflict with GitHub Copilot. To fix this, you must disable Copilot's inline suggestions.",
+			"disableCopilot": "Disable Copilot",
+			"disableInlineAssist": "Disable Inline Assist"
 		}
 	}
 }

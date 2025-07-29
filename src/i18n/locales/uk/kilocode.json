@@ -4,22 +4,22 @@
 	},
 	"userFeedback": {
 		"message_update_failed": "Не вдалося оновити повідомлення",
-		"no_checkpoint_found": "Не знайдено checkpoint перед цим повідомленням",
+		"no_checkpoint_found": "Контрольну точку перед цим повідомленням не знайдено",
 		"message_updated": "Повідомлення успішно оновлено"
 	},
 	"lowCreditWarning": {
-		"title": "Попередження про низький кредит!",
-		"message": "Перевір, чи можеш ти поповнити безкоштовними кредитами або придбати більше!"
+		"title": "Попередження про низький баланс!",
+		"message": "Перевірте, чи можете ви поповнити баланс безкоштовними кредитами або купити більше!"
 	},
-	"notLoggedInError": "Не вдається виконати запит, переконайся, що ти підключений і увійшов з обраним провайдером.\n\n{{error}}",
+	"notLoggedInError": "Не вдалося виконати запит, переконайтеся, що ви підключені та увійшли до системи з вибраним постачальником.\n\n{{error}}",
 	"rules": {
 		"actions": {
 			"delete": "Видалити",
-			"confirmDelete": "Ти впевнений, що хочеш видалити {{filename}}?",
-			"deleted": "Видалено {{filename}}"
+			"confirmDelete": "Ви впевнені, що хочете видалити {{filename}}?",
+			"deleted": "{{filename}} видалено"
 		},
 		"errors": {
-			"noWorkspaceFound": "Не знайдено папку робочої області",
+			"noWorkspaceFound": "Папку робочої області не знайдено",
 			"fileAlreadyExists": "Файл {{filename}} вже існує",
 			"failedToCreateRuleFile": "Не вдалося створити файл правила.",
 			"failedToDeleteRuleFile": "Не вдалося видалити файл правила."
@@ -40,66 +40,71 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Генератор повідомлень для коміту Kilo Code активовано",
-		"gitNotFound": "⚠️ Git репозиторій не знайдено або git недоступний",
+		"activated": "Генератор повідомлень коммітів Kilo Code активовано",
+		"gitNotFound": "⚠️ Репозиторій Git не знайдено або git недоступний",
 		"gitInitError": "⚠️ Помилка ініціалізації Git: {{error}}",
-		"generating": "Kilo: Генерація повідомлення коміту...",
-		"noChanges": "Kilo: Не знайдено змін для аналізу",
-		"generated": "Kilo: Повідомлення коміту згенеровано!",
-		"generationFailed": "Kilo: Не вдалося створити повідомлення коміту: {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: Створення повідомлення з використанням незафіксованих змін",
+		"generating": "Kilo: Генерування повідомлення комміту...",
+		"noChanges": "Kilo: Змін для аналізу не знайдено",
+		"generated": "Kilo: Повідомлення комміту згенеровано!",
+		"generationFailed": "Kilo: Помилка генерації повідомлення комміту: {{errorMessage}}",
+		"generatingFromUnstaged": "Kilo: Генерація повідомлення з використанням незафіксованих змін",
 		"activationFailed": "Kilo: Не вдалося активувати генератор повідомлень: {{error}}",
-		"providerRegistered": "Kilo: Постачальник повідомлень коміту зареєстрований"
+		"providerRegistered": "Kilo: Постачальник повідомлень коммітів зареєстровано"
 	},
 	"ghost": {
+		"statusBar": {
+			"enabled": "$(sparkle) Вбудована допомога Kilo",
+			"disabled": "$(circle-slash) Вбудована допомога Kilo",
+			"warning": "$(warning) Вбудована допомога Kilo",
+			"tooltip": {
+				"basic": "Вбудована допомога Kilo Code",
+				"disabled": "Вбудована допомога Kilo Code (вимкнено)",
+				"tokenError": "Для використання вбудованої допомоги необхідно встановити дійсний токен",
+				"lastCompletion": "Остання пропозиція:",
+				"sessionTotal": "Загальна вартість сесії:",
+				"model": "Модель:"
+			},
+			"cost": {
+				"zero": "$0.00",
+				"lessThanCent": "<$0.01"
+			}
+		},
+		"toggleMessage": "Вбудована допомога Kilo {{status}}",
 		"progress": {
-			"analyzing": "Аналізуємо ваш код...",
-			"processing": "Обробка запропонованих редагувань...",
-			"generating": "Генерування запропонованих виправлень...",
-			"showing": "Відображення запропонованих змін...",
-			"title": "Kilo Code"
+			"title": "Kilo Code",
+			"analyzing": "Аналіз вашого коду...",
+			"generating": "Генерація запропонованих правок...",
+			"processing": "Обробка запропонованих правок...",
+			"showing": "Відображення запропонованих правок..."
 		},
 		"input": {
-			"title": "Kilo Code: Швидке Завдання",
-			"placeholder": "наприклад, 'переробіть цю функцію, щоб вона була ефективнішою'"
+			"title": "Kilo Code: Швидке завдання",
+			"placeholder": "наприклад, 'рефакторити цю функцію, щоб зробити її ефективнішою'"
 		},
 		"commands": {
-			"generateSuggestions": "Kilo Code: Створення пропонованих виправлень",
-			"displaySuggestions": "Показати запропоновані редагування",
-			"applyCurrentSuggestion": "Застосувати поточну запропоновану правку",
+			"generateSuggestions": "Kilo Code: Згенерувати запропоновані правки",
+			"displaySuggestions": "Показати запропоновані правки",
 			"cancelSuggestions": "Скасувати запропоновані правки",
-			"promptCodeSuggestion": "Швидке Завдання",
-			"category": "Kilo Code",
-			"applyAllSuggestions": "Застосувати всі запропоновані редагування"
+			"applyCurrentSuggestion": "Застосувати поточну запропоновану правку",
+			"applyAllSuggestions": "Застосувати всі запропоновані правки",
+			"promptCodeSuggestion": "Швидке завдання",
+			"category": "Kilo Code"
 		},
 		"codeAction": {
 			"title": "Kilo Code: Запропоновані правки"
 		},
 		"chatParticipant": {
-			"fullName": "Kilo Code Агент",
-			"description": "Я можу допомогти вам зі швидкими завданнями та запропонувати правки.",
-			"name": "Агент"
+			"fullName": "Агент Kilo Code",
+			"name": "Агент",
+			"description": "Я можу допомогти вам зі швидкими завданнями та запропонованими правками."
 		},
 		"messages": {
-			"provideCodeSuggestions": "Надаємо пропозиції коду..."
+			"provideCodeSuggestions": "Надання пропозицій коду..."
 		},
-		"statusBar": {
-			"enabled": "$(sparkle) Вбудований асистент Kilo",
-			"disabled": "$(circle-slash) Кіло Вбудована допомога",
-			"tooltip": {
-				"basic": "Кіло Код Вбудована Допомога",
-				"disabled": "Кіло-Код вбудована допомога (вимкнено)",
-				"tokenError": "Для використання Вбудованого помічника необхідно встановити дійсний токен",
-				"lastCompletion": "Остання пропозиція:",
-				"model": "Модель:",
-				"sessionTotal": "Загальна вартість сесії:"
-			},
-			"warning": "$(warning) Kіло вбудована допомога",
-			"cost": {
-				"lessThanCent": "<$0,01",
-				"zero": "0,00 $"
-			}
-		},
-		"toggleMessage": "Вбудована допомога Kilo {{status}}"
+		"incompatibilityExtensionPopup": {
+			"message": "Вбудована допомога Kilo Code блокується конфліктом із GitHub Copilot. Щоб вирішити цю проблему, вам потрібно вимкнути вбудовані пропозиції Copilot.",
+			"disableCopilot": "Вимкнути Copilot",
+			"disableInlineAssist": "Вимкнути вбудовану допомогу"
+		}
 	}
 }

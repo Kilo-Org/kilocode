@@ -1,105 +1,110 @@
 {
 	"info": {
-		"settings_imported": "設定のインポートに成功しました。"
+		"settings_imported": "設定が正常にインポートされました。"
 	},
 	"userFeedback": {
 		"message_update_failed": "メッセージの更新に失敗しました",
-		"no_checkpoint_found": "このメッセージの前にチェックポイントが見つかりませんでした",
+		"no_checkpoint_found": "このメッセージより前のチェックポイントが見つかりません",
 		"message_updated": "メッセージが正常に更新されました"
 	},
 	"lowCreditWarning": {
-		"title": "クレジット残高警告！",
-		"message": "無料クレジットでチャージするか、追加購入できるか確認してください！"
+		"title": "クレジット残高低下警告！",
+		"message": "無料クレジットでチャージできるか、または購入できるか確認してください！"
 	},
 	"notLoggedInError": "リクエストを完了できません。選択したプロバイダーに接続してログインしていることを確認してください。\n\n{{error}}",
 	"rules": {
 		"actions": {
 			"delete": "削除",
-			"confirmDelete": "{{filename}}を削除してもよろしいですか？",
-			"deleted": "{{filename}}を削除しました"
+			"confirmDelete": "{{filename}} を削除してもよろしいですか？",
+			"deleted": "{{filename}} を削除しました"
 		},
 		"errors": {
-			"noWorkspaceFound": "ワークスペースフォルダが見つかりません",
-			"fileAlreadyExists": "ファイル{{filename}}は既に存在します",
+			"noWorkspaceFound": "ワークスペースフォルダーが見つかりません",
+			"fileAlreadyExists": "ファイル {{filename}} は既に存在します",
 			"failedToCreateRuleFile": "ルールファイルの作成に失敗しました。",
 			"failedToDeleteRuleFile": "ルールファイルの削除に失敗しました。"
 		},
 		"templates": {
 			"workflow": {
-				"description": "ワークフローの説明をここに...",
+				"description": "ワークフローの説明をここに入力...",
 				"stepsHeader": "## ステップ",
-				"step1": "ステップ1",
-				"step2": "ステップ2"
+				"step1": "ステップ 1",
+				"step2": "ステップ 2"
 			},
 			"rule": {
-				"description": "ルールの説明をここに...",
+				"description": "ルールの説明をここに入力...",
 				"guidelinesHeader": "## ガイドライン",
-				"guideline1": "ガイドライン1",
-				"guideline2": "ガイドライン2"
+				"guideline1": "ガイドライン 1",
+				"guideline2": "ガイドライン 2"
 			}
 		}
 	},
 	"commitMessage": {
-		"activated": "Kilo Codeコミットメッセージ生成器が起動しました",
-		"gitNotFound": "⚠️ Gitリポジトリが見つからないか、gitが利用できません",
-		"gitInitError": "⚠️ Gitの初期化エラー: {{error}}",
-		"generating": "Kilo: コミットメッセージを生成しています...",
-		"noChanges": "Kilo: 分析すべき変更は見つかりませんでした",
+		"activated": "Kilo Code コミットメッセージジェネレーターがアクティブになりました",
+		"gitNotFound": "⚠️ Git リポジトリが見つからないか、git が利用できません",
+		"gitInitError": "⚠️ Git 初期化エラー: {{error}}",
+		"generating": "Kilo: コミットメッセージを生成中...",
+		"noChanges": "Kilo: 分析する変更が見つかりません",
 		"generated": "Kilo: コミットメッセージが生成されました！",
 		"generationFailed": "Kilo: コミットメッセージの生成に失敗しました: {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: ステージングされていない変更を使用してメッセージを生成中",
-		"activationFailed": "Kilo: メッセージジェネレーターの起動に失敗しました: {{error}}",
+		"generatingFromUnstaged": "Kilo: ステージされていない変更を使用してメッセージを生成中",
+		"activationFailed": "Kilo: メッセージジェネレーターのアクティブ化に失敗しました: {{error}}",
 		"providerRegistered": "Kilo: コミットメッセージプロバイダーが登録されました"
 	},
 	"ghost": {
+		"statusBar": {
+			"enabled": "$(sparkle) Kilo インラインアシスト",
+			"disabled": "$(circle-slash) Kilo インラインアシスト",
+			"warning": "$(warning) Kilo インラインアシスト",
+			"tooltip": {
+				"basic": "Kilo Code インラインアシスト",
+				"disabled": "Kilo Code インラインアシスト (無効)",
+				"tokenError": "インラインアシストを使用するには有効なトークンを設定する必要があります",
+				"lastCompletion": "最後の提案:",
+				"sessionTotal": "セッション合計コスト:",
+				"model": "モデル:"
+			},
+			"cost": {
+				"zero": "$0.00",
+				"lessThanCent": "<$0.01"
+			}
+		},
+		"toggleMessage": "Kilo インラインアシスト {{status}}",
 		"progress": {
+			"title": "Kilo Code",
 			"analyzing": "コードを分析中...",
-			"generating": "編集候補を生成中...",
-			"processing": "編集の提案を処理中...",
-			"showing": "提案された編集を表示中...",
-			"title": "Kilo Code"
+			"generating": "提案された編集を生成中...",
+			"processing": "提案された編集を処理中...",
+			"showing": "提案された編集を表示中..."
 		},
 		"input": {
-			"title": "Kilo Code：クイックタスク",
-			"placeholder": "例：「この関数をより効率的になるようにリファクタリングする」"
+			"title": "Kilo Code: クイックタスク",
+			"placeholder": "例: 'この関数をより効率的にリファクタリングする'"
 		},
 		"commands": {
+			"generateSuggestions": "Kilo Code: 提案された編集を生成",
 			"displaySuggestions": "提案された編集を表示",
-			"generateSuggestions": "Kilo Code：推奨編集の生成",
-			"applyCurrentSuggestion": "現在の提案された編集を適用する",
 			"cancelSuggestions": "提案された編集をキャンセル",
-			"category": "Kilo Code",
-			"applyAllSuggestions": "提案された編集をすべて適用する",
-			"promptCodeSuggestion": "プロンプト クイックタスク"
-		},
-		"chatParticipant": {
-			"fullName": "Kilo Code エージェント",
-			"description": "素早いタスクや提案された編集についてお手伝いできます。",
-			"name": "エージェント"
+			"applyCurrentSuggestion": "現在の提案された編集を適用",
+			"applyAllSuggestions": "すべての提案された編集を適用",
+			"promptCodeSuggestion": "クイックタスク",
+			"category": "Kilo Code"
 		},
 		"codeAction": {
 			"title": "Kilo Code: 提案された編集"
 		},
+		"chatParticipant": {
+			"fullName": "Kilo Code エージェント",
+			"name": "エージェント",
+			"description": "クイックタスクや提案された編集をお手伝いできます。"
+		},
 		"messages": {
-			"provideCodeSuggestions": "コードを提案中..."
+			"provideCodeSuggestions": "コードの提案を提供中..."
 		},
-		"statusBar": {
-			"disabled": "$(circle-slash) キロ インライン アシスト",
-			"warning": "$(warning) キロ インライン アシスト",
-			"enabled": "$(sparkle) Kilo インライン アシスト",
-			"tooltip": {
-				"basic": "キロ コード インライン アシスト",
-				"disabled": "Kilo Code インラインアシスト（無効）",
-				"tokenError": "インラインアシストを使用するには有効なトークンを設定する必要があります",
-				"lastCompletion": "最後の提案:",
-				"sessionTotal": "セッション合計費用:",
-				"model": "モデル:"
-			},
-			"cost": {
-				"zero": "¥0",
-				"lessThanCent": "<$0.01"
-			}
-		},
-		"toggleMessage": "キロインラインアシスト {{status}}"
+		"incompatibilityExtensionPopup": {
+			"message": "Kilo Code Inline Assist は GitHub Copilot との競合によりブロックされています。これを解決するには、Copilot のインライン提案を無効にする必要があります。",
+			"disableCopilot": "Copilot を無効にする",
+			"disableInlineAssist": "インライン アシストを無効にする"
+		}
 	}
 }

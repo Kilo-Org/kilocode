@@ -10,8 +10,8 @@ import { Section } from "../../settings/Section"
 import { GhostServiceSettings } from "@roo-code/types"
 import { SetCachedStateField } from "../../settings/types"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@src/components/ui"
-import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
 import { vscode } from "@/utils/vscode"
+import { ControlledCheckbox } from "../common/ControlledCheckbox"
 
 type GhostServiceSettingsViewProps = HTMLAttributes<HTMLDivElement> & {
 	ghostServiceSettings: GhostServiceSettings
@@ -25,21 +25,20 @@ export const GhostServiceSettingsView = ({
 	...props
 }: GhostServiceSettingsViewProps) => {
 	const { t } = useAppTranslation()
-
 	const { apiConfigId, enableQuickInlineTaskKeybinding, enableAutoInlineTaskKeybinding } = ghostServiceSettings || {}
 	const { listApiConfigMeta } = useExtensionState()
 
-	const onEnableQuickInlineTaskKeybindingChange = (e: any) => {
+	const onEnableQuickInlineTaskKeybindingChange = (newValue: boolean) => {
 		setCachedStateField("ghostServiceSettings", {
 			...ghostServiceSettings,
-			enableQuickInlineTaskKeybinding: e.target.checked,
+			enableQuickInlineTaskKeybinding: newValue,
 		})
 	}
 
-	const onEnableAutoInlineTaskKeybindingChange = (e: any) => {
+	const onEnableAutoInlineTaskKeybindingChange = (newValue: boolean) => {
 		setCachedStateField("ghostServiceSettings", {
 			...ghostServiceSettings,
-			enableAutoInlineTaskKeybinding: e.target.checked,
+			enableAutoInlineTaskKeybinding: newValue,
 		})
 	}
 
@@ -87,13 +86,13 @@ export const GhostServiceSettingsView = ({
 					</div>
 
 					<div className="flex flex-col gap-1">
-						<VSCodeCheckbox
+						<ControlledCheckbox
 							checked={enableQuickInlineTaskKeybinding || false}
 							onChange={onEnableQuickInlineTaskKeybindingChange}>
 							<span className="font-medium">
 								{t("kilocode:ghost.settings.enableQuickInlineTaskKeybinding.label")}
 							</span>
-						</VSCodeCheckbox>
+						</ControlledCheckbox>
 						<div className="text-vscode-descriptionForeground text-sm mt-1">
 							<Trans
 								i18nKey="kilocode:ghost.settings.enableQuickInlineTaskKeybinding.description"
@@ -111,13 +110,13 @@ export const GhostServiceSettingsView = ({
 						</div>
 					</div>
 					<div className="flex flex-col gap-1">
-						<VSCodeCheckbox
+						<ControlledCheckbox
 							checked={enableAutoInlineTaskKeybinding || false}
 							onChange={onEnableAutoInlineTaskKeybindingChange}>
 							<span className="font-medium">
 								{t("kilocode:ghost.settings.enableAutoInlineTaskKeybinding.label")}
 							</span>
-						</VSCodeCheckbox>
+						</ControlledCheckbox>
 						<div className="text-vscode-descriptionForeground text-sm mt-1">
 							<Trans
 								i18nKey="kilocode:ghost.settings.enableAutoInlineTaskKeybinding.description"

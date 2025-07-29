@@ -8,10 +8,10 @@
 		"message_updated": "Message mis à jour avec succès"
 	},
 	"lowCreditWarning": {
-		"title": "Avertissement de Crédit Faible !",
-		"message": "Vérifiez si vous pouvez recharger avec des crédits gratuits ou en acheter davantage !"
+		"title": "Alerte de Crédit Faible !",
+		"message": "Vérifiez si vous pouvez ajouter des crédits gratuits ou en acheter davantage !"
 	},
-	"notLoggedInError": "Impossible de traiter la demande, veuillez vous assurer que vous êtes connecté et identifié auprès du fournisseur sélectionné.\n\n{{error}}",
+	"notLoggedInError": "Impossible de terminer la demande, assurez-vous d'être connecté et identifié avec le fournisseur sélectionné.\n\n{{error}}",
 	"rules": {
 		"actions": {
 			"delete": "Supprimer",
@@ -26,80 +26,85 @@
 		},
 		"templates": {
 			"workflow": {
-				"description": "Description du flux de travail ici...",
+				"description": "Description du workflow ici...",
 				"stepsHeader": "## Étapes",
 				"step1": "Étape 1",
 				"step2": "Étape 2"
 			},
 			"rule": {
 				"description": "Description de la règle ici...",
-				"guidelinesHeader": "## Directives",
-				"guideline1": "Directive 1",
-				"guideline2": "Directive 2"
+				"guidelinesHeader": "## Lignes directrices",
+				"guideline1": "Ligne directrice 1",
+				"guideline2": "Ligne directrice 2"
 			}
 		}
 	},
 	"commitMessage": {
-		"activated": "Générateur de message de commit Kilo Code activé",
+		"activated": "Générateur de messages de commit Kilo Code activé",
 		"gitNotFound": "⚠️ Dépôt Git introuvable ou git non disponible",
 		"gitInitError": "⚠️ Erreur d'initialisation Git : {{error}}",
 		"generating": "Kilo : Génération du message de commit...",
-		"noChanges": "Kilo : Aucune modification trouvée à analyser",
+		"noChanges": "Kilo : Aucun changement trouvé à analyser",
 		"generated": "Kilo : Message de commit généré !",
-		"generationFailed": "Kilo: Échec de génération du message de commit : {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo : Génération du message à partir des modifications non indexées",
-		"providerRegistered": "Kilo: Fournisseur de messages de commit enregistré",
-		"activationFailed": "Kilo : Échec d'activation du générateur de messages : {{error}}"
+		"generationFailed": "Kilo : Échec de la génération du message de commit : {{errorMessage}}",
+		"generatingFromUnstaged": "Kilo : Génération du message à partir des modifications non préparées",
+		"activationFailed": "Kilo : Échec de l'activation du générateur de messages : {{error}}",
+		"providerRegistered": "Kilo : Fournisseur de messages de commit enregistré"
 	},
 	"ghost": {
+		"statusBar": {
+			"enabled": "$(sparkle) Assistance en ligne Kilo",
+			"disabled": "$(circle-slash) Assistance en ligne Kilo",
+			"warning": "$(warning) Assistance en ligne Kilo",
+			"tooltip": {
+				"basic": "Assistance en ligne Kilo Code",
+				"disabled": "Assistance en ligne Kilo Code (désactivée)",
+				"tokenError": "Un jeton valide doit être défini pour utiliser l'assistance en ligne",
+				"lastCompletion": "Dernière suggestion :",
+				"sessionTotal": "Coût total de la session :",
+				"model": "Modèle :"
+			},
+			"cost": {
+				"zero": "0,00 €",
+				"lessThanCent": "<0,01 €"
+			}
+		},
+		"toggleMessage": "Assistance en ligne Kilo {{status}}",
 		"progress": {
-			"generating": "Génération de suggestions de modifications...",
+			"title": "Kilo Code",
+			"analyzing": "Analyse de votre code...",
+			"generating": "Génération des modifications suggérées...",
 			"processing": "Traitement des modifications suggérées...",
-			"analyzing": "Analyse de votre code en cours...",
-			"showing": "Affichage des modifications suggérées...",
-			"title": "Kilo Code"
+			"showing": "Affichage des modifications suggérées..."
 		},
 		"input": {
-			"title": "Kilo Code : Tâche Rapide",
-			"placeholder": "par ex., 'refactorisez cette fonction pour la rendre plus efficace'"
+			"title": "Kilo Code : Tâche rapide",
+			"placeholder": "par ex., 'refactoriser cette fonction pour la rendre plus efficace'"
 		},
 		"commands": {
-			"generateSuggestions": "Kilo Code : Générer des suggestions de modifications",
+			"generateSuggestions": "Kilo Code : Générer des modifications suggérées",
 			"displaySuggestions": "Afficher les modifications suggérées",
+			"cancelSuggestions": "Annuler les modifications suggérées",
 			"applyCurrentSuggestion": "Appliquer la modification suggérée actuelle",
 			"applyAllSuggestions": "Appliquer toutes les modifications suggérées",
-			"cancelSuggestions": "Annuler les modifications suggérées",
-			"promptCodeSuggestion": "Tâche Rapide d'Invite",
+			"promptCodeSuggestion": "Tâche rapide",
 			"category": "Kilo Code"
-		},
-		"chatParticipant": {
-			"name": "Agent",
-			"fullName": "Agent Kilo Code",
-			"description": "Je peux vous aider avec des tâches rapides et des modifications suggérées."
 		},
 		"codeAction": {
 			"title": "Kilo Code : Modifications suggérées"
 		},
+		"chatParticipant": {
+			"fullName": "Agent Kilo Code",
+			"name": "Agent",
+			"description": "Je peux vous aider avec des tâches rapides et des modifications suggérées."
+		},
 		"messages": {
-			"provideCodeSuggestions": "Suggestions de code en cours..."
+			"provideCodeSuggestions": "Fourniture des suggestions de code..."
 		},
-		"statusBar": {
-			"disabled": "$(circle-slash) Assistance intégrée Kilo",
-			"tooltip": {
-				"basic": "Assistance Intégrée Kilo Code",
-				"disabled": "Kilo Code Assistance en ligne (désactivée)",
-				"tokenError": "Un jeton valide doit être défini pour utiliser Inline Assist",
-				"sessionTotal": "Coût total de la session :",
-				"lastCompletion": "Dernière suggestion:",
-				"model": "Modèle :"
-			},
-			"warning": "$(warning) Assistant intégré Kilo",
-			"enabled": "$(sparkle) Assistance intégrée Kilo",
-			"cost": {
-				"zero": "0,00 $",
-				"lessThanCent": "<0,01 $"
-			}
-		},
-		"toggleMessage": "Assistance intégrée Kilo {{status}}"
+		"incompatibilityExtensionPopup": {
+			"message": "L'assistance en ligne de Kilo Code est bloquée par un conflit avec GitHub Copilot. Pour résoudre ce problème, vous devez désactiver les suggestions en ligne de Copilot.",
+			"disableCopilot": "Désactiver Copilot",
+			"disableInlineAssist": "Désactiver l'assistance en ligne"
+		}
 	}
 }

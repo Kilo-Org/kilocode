@@ -1,38 +1,38 @@
 {
 	"info": {
-		"settings_imported": "設定匯入成功。"
+		"settings_imported": "設定已成功匯入。"
 	},
 	"userFeedback": {
 		"message_update_failed": "更新訊息失敗",
-		"no_checkpoint_found": "在此訊息之前未找到檢查點",
+		"no_checkpoint_found": "在此訊息之前找不到檢查點",
 		"message_updated": "訊息已成功更新"
 	},
 	"lowCreditWarning": {
-		"title": "餘額不足警告！",
-		"message": "請檢查是否可以充值免費額度或購買更多額度！"
+		"title": "警告：信用額度低！",
+		"message": "檢查您是否可以透過免費信用額度儲值或購買更多額度！"
 	},
-	"notLoggedInError": "無法完成請求，請確保你已連接並登入所選的提供者。\n\n{{error}}",
+	"notLoggedInError": "無法完成請求，請確保您已連線並使用所選供應商登入。\n\n{{error}}",
 	"rules": {
 		"actions": {
 			"delete": "刪除",
-			"confirmDelete": "確定要刪除 {{filename}} 嗎？",
-			"deleted": "已刪除 {{filename}}"
+			"confirmDelete": "您確定要刪除 {{filename}} 嗎？",
+			"deleted": "{{filename}} 已刪除"
 		},
 		"errors": {
-			"noWorkspaceFound": "未找到工作區資料夾",
+			"noWorkspaceFound": "找不到工作區資料夾",
 			"fileAlreadyExists": "檔案 {{filename}} 已存在",
 			"failedToCreateRuleFile": "建立規則檔案失敗。",
 			"failedToDeleteRuleFile": "刪除規則檔案失敗。"
 		},
 		"templates": {
 			"workflow": {
-				"description": "工作流程描述在此...",
+				"description": "工作流程說明在此...",
 				"stepsHeader": "## 步驟",
 				"step1": "步驟 1",
 				"step2": "步驟 2"
 			},
 			"rule": {
-				"description": "規則描述在此...",
+				"description": "規則說明在此...",
 				"guidelinesHeader": "## 指導原則",
 				"guideline1": "指導原則 1",
 				"guideline2": "指導原則 2"
@@ -40,66 +40,71 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Kilo Code: 代码提交消息生成器已激活",
-		"gitNotFound": "⚠️ Git 仓库未找到或 git 不可用",
-		"gitInitError": "⚠️ Git 初始化错误：{{error}}",
-		"generating": "Kilo: 正在生成提交信息...",
-		"noChanges": "Kilo: 未发现可供分析的变更",
-		"generated": "Kilo：提交信息已生成！",
-		"generationFailed": "Kilo：无法生成提交信息：{{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: 使用未暂存的更改生成消息",
-		"activationFailed": "Kilo：未能激活消息生成器：{{error}}",
-		"providerRegistered": "Kilo：提交消息提供者已注册"
+		"activated": "Kilo Code Commit 訊息產生器已啟用",
+		"gitNotFound": "⚠️找不到 Git 儲存庫或 Git 不可用",
+		"gitInitError": "⚠️ Git 初始化錯誤：{{error}}",
+		"generating": "Kilo：正在產生 Commit 訊息...",
+		"noChanges": "Kilo：找不到可供分析的變更",
+		"generated": "Kilo：Commit 訊息已產生！",
+		"generationFailed": "Kilo：產生 Commit 訊息失敗：{{errorMessage}}",
+		"generatingFromUnstaged": "Kilo：使用未暫存的變更產生訊息",
+		"activationFailed": "Kilo：啟用訊息產生器失敗：{{error}}",
+		"providerRegistered": "Kilo：Commit 訊息提供者已註冊"
 	},
 	"ghost": {
-		"progress": {
-			"generating": "正在生成建议的编辑...",
-			"analyzing": "正在分析您的代码...",
-			"showing": "显示建议的编辑...",
-			"processing": "处理建议的编辑...",
-			"title": "Kilo Code"
-		},
-		"input": {
-			"title": "Kilo Code：快速任务",
-			"placeholder": "例如，\"重构这个函数使其更高效\""
-		},
-		"commands": {
-			"applyCurrentSuggestion": "应用当前建议的编辑",
-			"generateSuggestions": "Kilo Code: 生成建议的修改",
-			"cancelSuggestions": "取消建议的编辑",
-			"displaySuggestions": "显示建议的编辑",
-			"category": "Kilo Code",
-			"promptCodeSuggestion": "快速任务提示",
-			"applyAllSuggestions": "应用所有建议的编辑"
-		},
-		"codeAction": {
-			"title": "Kilo Code：建议的编辑"
-		},
-		"chatParticipant": {
-			"name": "代理",
-			"fullName": "Kilo Code 代理",
-			"description": "我可以帮你处理快速任务和提供建议的编辑。"
-		},
-		"messages": {
-			"provideCodeSuggestions": "正在提供代码建议..."
-		},
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo 行内助手",
-			"warning": "$(warning) 千行内嵌助手",
-			"disabled": "$(circle-slash) 千字节内联辅助",
+			"enabled": "$(sparkle) Kilo Inline Assist",
+			"disabled": "$(circle-slash) Kilo Inline Assist",
+			"warning": "$(warning) Kilo Inline Assist",
 			"tooltip": {
-				"disabled": "Kilo 代码内联辅助（已禁用）",
-				"basic": "千行代码内联辅助",
-				"tokenError": "必须设置有效的令牌才能使用内联辅助",
-				"lastCompletion": "最后的建议：",
-				"model": "模型：",
-				"sessionTotal": "会话总费用："
+				"basic": "Kilo Code Inline Assist",
+				"disabled": "Kilo Code Inline Assist (已停用)",
+				"tokenError": "必須設定有效的 token 才能使用 Inline Assist",
+				"lastCompletion": "最後建議：",
+				"sessionTotal": "工作階段總費用：",
+				"model": "模型："
 			},
 			"cost": {
-				"zero": "0.00 美元",
+				"zero": "$0.00",
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Kilo 内嵌式助手 {{status}}"
+		"toggleMessage": "Kilo Inline Assist {{status}}",
+		"progress": {
+			"title": "Kilo Code",
+			"analyzing": "正在分析您的程式碼...",
+			"generating": "正在產生建議的編輯...",
+			"processing": "正在處理建議的編輯...",
+			"showing": "正在顯示建議的編輯..."
+		},
+		"input": {
+			"title": "Kilo Code：快速任務",
+			"placeholder": "例如：'重構此函數以提高效率'"
+		},
+		"commands": {
+			"generateSuggestions": "Kilo Code：產生建議的編輯",
+			"displaySuggestions": "顯示建議的編輯",
+			"cancelSuggestions": "取消建議的編輯",
+			"applyCurrentSuggestion": "套用目前的建議編輯",
+			"applyAllSuggestions": "套用所有建議的編輯",
+			"promptCodeSuggestion": "快速任務",
+			"category": "Kilo Code"
+		},
+		"codeAction": {
+			"title": "Kilo Code：建議的編輯"
+		},
+		"chatParticipant": {
+			"fullName": "Kilo Code Agent",
+			"name": "Agent",
+			"description": "我可以協助您處理快速任務和建議的編輯。"
+		},
+		"messages": {
+			"provideCodeSuggestions": "正在提供程式碼建議..."
+		},
+		"incompatibilityExtensionPopup": {
+			"message": "Kilo Code Inline Assist 被 GitHub Copilot 的衝突所阻擋。為了解決此問題，您必須停用 Copilot 的內嵌建議。",
+			"disableCopilot": "停用 Copilot",
+			"disableInlineAssist": "停用 Inline Assist"
+		}
 	}
 }

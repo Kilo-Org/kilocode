@@ -1,17 +1,17 @@
 {
 	"info": {
-		"settings_imported": "설정을 성공적으로 가져왔습니다."
+		"settings_imported": "설정이 성공적으로 가져와졌습니다."
 	},
 	"userFeedback": {
-		"message_update_failed": "메시지 업데이트에 실패했습니다",
-		"no_checkpoint_found": "이 메시지 이전에 체크포인트를 찾을 수 없습니다",
+		"message_update_failed": "메시지 업데이트 실패",
+		"no_checkpoint_found": "이 메시지 이전의 체크포인트가 없습니다",
 		"message_updated": "메시지가 성공적으로 업데이트되었습니다"
 	},
 	"lowCreditWarning": {
 		"title": "크레딧 부족 경고!",
-		"message": "무료 크레딧으로 충전하거나 추가 구매가 가능한지 확인하세요!"
+		"message": "무료 크레딧으로 충전하거나 더 구매할 수 있는지 확인하세요!"
 	},
-	"notLoggedInError": "요청을 완료할 수 없어. 선택한 제공자에 연결되어 있고 로그인되어 있는지 확인해.\n\n{{error}}",
+	"notLoggedInError": "요청을 완료할 수 없습니다. 선택한 공급자와 연결되어 로그인했는지 확인하세요.\n\n{{error}}",
 	"rules": {
 		"actions": {
 			"delete": "삭제",
@@ -19,87 +19,92 @@
 			"deleted": "{{filename}}이(가) 삭제되었습니다"
 		},
 		"errors": {
-			"noWorkspaceFound": "워크스페이스 폴더를 찾을 수 없습니다",
+			"noWorkspaceFound": "작업 영역 폴더를 찾을 수 없습니다",
 			"fileAlreadyExists": "파일 {{filename}}이(가) 이미 존재합니다",
 			"failedToCreateRuleFile": "규칙 파일 생성에 실패했습니다.",
 			"failedToDeleteRuleFile": "규칙 파일 삭제에 실패했습니다."
 		},
 		"templates": {
 			"workflow": {
-				"description": "워크플로우 설명을 여기에...",
+				"description": "워크플로 설명 입력...",
 				"stepsHeader": "## 단계",
-				"step1": "1단계",
-				"step2": "2단계"
+				"step1": "단계 1",
+				"step2": "단계 2"
 			},
 			"rule": {
-				"description": "규칙 설명을 여기에...",
-				"guidelinesHeader": "## 가이드라인",
-				"guideline1": "가이드라인 1",
-				"guideline2": "가이드라인 2"
+				"description": "규칙 설명 입력...",
+				"guidelinesHeader": "## 지침",
+				"guideline1": "지침 1",
+				"guideline2": "지침 2"
 			}
 		}
 	},
 	"commitMessage": {
-		"activated": "Kilo Code 커밋 메시지 생성기가 활성화되었습니다",
+		"activated": "Kilo Code 커밋 메시지 생성기 활성화됨",
 		"gitNotFound": "⚠️ Git 저장소를 찾을 수 없거나 git을 사용할 수 없습니다",
 		"gitInitError": "⚠️ Git 초기화 오류: {{error}}",
 		"generating": "Kilo: 커밋 메시지 생성 중...",
-		"noChanges": "Kilo: 분석할 변경사항이 없습니다",
+		"noChanges": "Kilo: 분석할 변경 사항이 없습니다",
 		"generated": "Kilo: 커밋 메시지가 생성되었습니다!",
 		"generationFailed": "Kilo: 커밋 메시지 생성 실패: {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: 스테이징되지 않은 변경사항을 사용하여 메시지 생성",
+		"generatingFromUnstaged": "Kilo: 스테이징되지 않은 변경 사항으로 메시지 생성 중",
 		"activationFailed": "Kilo: 메시지 생성기 활성화 실패: {{error}}",
-		"providerRegistered": "Kilo: 커밋 메시지 제공자가 등록됨"
+		"providerRegistered": "Kilo: 커밋 메시지 공급자 등록됨"
 	},
 	"ghost": {
-		"progress": {
-			"analyzing": "코드 분석 중...",
-			"generating": "수정 제안 생성 중...",
-			"processing": "제안된 편집 처리 중...",
-			"showing": "추천 편집 표시 중...",
-			"title": "Kilo Code"
-		},
-		"input": {
-			"placeholder": "예: '이 함수를 더 효율적으로 리팩터링하세요'",
-			"title": "Kilo Code: 빠른 작업"
-		},
-		"commands": {
-			"displaySuggestions": "추천 편집 표시하기",
-			"generateSuggestions": "Kilo Code: 수정 제안 생성하기",
-			"cancelSuggestions": "제안된 편집 취소",
-			"category": "Kilo Code",
-			"applyAllSuggestions": "제안된 편집 모두 적용",
-			"applyCurrentSuggestion": "현재 제안된 편집 적용",
-			"promptCodeSuggestion": "프롬프트 빠른 작업"
-		},
-		"chatParticipant": {
-			"fullName": "Kilo Code 에이전트",
-			"name": "에이전트",
-			"description": "빠른 작업과 추천 편집을 도와드릴 수 있습니다."
-		},
-		"codeAction": {
-			"title": "Kilo Code: 제안된 편집"
-		},
-		"messages": {
-			"provideCodeSuggestions": "코드 제안 중..."
-		},
 		"statusBar": {
-			"enabled": "$(sparkle) 킬로 인라인 어시스트",
-			"disabled": "$(circle-slash) 킬로 인라인 어시스트",
-			"warning": "$(warning) 킬로 인라인 어시스트",
+			"enabled": "$(sparkle) Kilo 인라인 지원",
+			"disabled": "$(circle-slash) Kilo 인라인 지원",
+			"warning": "$(warning) Kilo 인라인 지원",
 			"tooltip": {
-				"disabled": "킬로 코드 인라인 어시스트 (비활성화됨)",
-				"basic": "킬로 코드 인라인 어시스트",
+				"basic": "Kilo Code 인라인 지원",
+				"disabled": "Kilo Code 인라인 지원 (비활성화됨)",
+				"tokenError": "인라인 지원을 사용하려면 유효한 토큰을 설정해야 합니다",
 				"lastCompletion": "마지막 제안:",
-				"tokenError": "인라인 어시스트를 사용하려면 유효한 토큰이 설정되어야 합니다",
 				"sessionTotal": "세션 총 비용:",
 				"model": "모델:"
 			},
 			"cost": {
-				"zero": "₩0.00",
+				"zero": "$0.00",
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Kilo 인라인 어시스트 {{status}}"
+		"toggleMessage": "Kilo 인라인 지원 {{status}}",
+		"progress": {
+			"title": "Kilo Code",
+			"analyzing": "코드 분석 중...",
+			"generating": "제안된 편집 생성 중...",
+			"processing": "제안된 편집 처리 중...",
+			"showing": "제안된 편집 표시 중..."
+		},
+		"input": {
+			"title": "Kilo Code: 빠른 작업",
+			"placeholder": "예: '이 함수를 더 효율적으로 리팩토링'"
+		},
+		"commands": {
+			"generateSuggestions": "Kilo Code: 제안된 편집 생성",
+			"displaySuggestions": "제안된 편집 표시",
+			"cancelSuggestions": "제안된 편집 취소",
+			"applyCurrentSuggestion": "현재 제안된 편집 적용",
+			"applyAllSuggestions": "모든 제안된 편집 적용",
+			"promptCodeSuggestion": "빠른 작업",
+			"category": "Kilo Code"
+		},
+		"codeAction": {
+			"title": "Kilo Code: 제안된 편집"
+		},
+		"chatParticipant": {
+			"fullName": "Kilo Code 에이전트",
+			"name": "에이전트",
+			"description": "빠른 작업 및 제안된 편집에 도움을 드릴 수 있습니다."
+		},
+		"messages": {
+			"provideCodeSuggestions": "코드 제안 제공 중..."
+		},
+		"incompatibilityExtensionPopup": {
+			"message": "Kilo Code 인라인 지원은 GitHub Copilot과의 충돌로 인해 차단되었습니다. 이 문제를 해결하려면 Copilot의 인라인 제안을 비활성화해야 합니다.",
+			"disableCopilot": "Copilot 비활성화",
+			"disableInlineAssist": "인라인 지원 비활성화"
+		}
 	}
 }

@@ -52,6 +52,24 @@
 		"activationFailed": "Kilo：消息生成器激活失败：{{error}}"
 	},
 	"ghost": {
+		"statusBar": {
+			"enabled": "$(sparkle) Kilo 内嵌助手",
+			"disabled": "$(circle-slash) Kilo 内联辅助",
+			"warning": "$(warning) Kilo 内联助手",
+			"tooltip": {
+				"basic": "千行代码内联协助",
+				"disabled": "Kilo Code 行内辅助（已禁用）",
+				"lastCompletion": "最后建议：",
+				"tokenError": "必须设置有效令牌才能使用行内助手",
+				"sessionTotal": "会话总费用：",
+				"model": "模型："
+			},
+			"cost": {
+				"zero": "¥0.00",
+				"lessThanCent": "<¥0.07"
+			}
+		},
+		"toggleMessage": "K1内联助手 {{status}}",
 		"progress": {
 			"analyzing": "正在分析您的代码...",
 			"generating": "正在生成建议修改...",
@@ -83,23 +101,10 @@
 		"messages": {
 			"provideCodeSuggestions": "正在提供代码建议..."
 		},
-		"statusBar": {
-			"enabled": "$(sparkle) Kilo 内嵌助手",
-			"disabled": "$(circle-slash) Kilo 内联辅助",
-			"tooltip": {
-				"basic": "千行代码内联协助",
-				"disabled": "Kilo Code 行内辅助（已禁用）",
-				"lastCompletion": "最后建议：",
-				"tokenError": "必须设置有效令牌才能使用行内助手",
-				"sessionTotal": "会话总费用：",
-				"model": "模型："
-			},
-			"warning": "$(warning) Kilo 内联助手",
-			"cost": {
-				"zero": "¥0.00",
-				"lessThanCent": "<¥0.07"
-			}
-		},
-		"toggleMessage": "K1内联助手 {{status}}"
+		"incompatibilityExtensionPopup": {
+			"message": "Kilo Code Inline Assist 被 GitHub Copilot 的冲突阻止了。要解决此问题，你需要禁用 Copilot 的内联建议。",
+			"disableCopilot": "禁用 Copilot",
+			"disableInlineAssist": "禁用 Inline Assist"
+		}
 	}
 }
