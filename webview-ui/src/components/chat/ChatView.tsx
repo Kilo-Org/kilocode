@@ -1797,24 +1797,34 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 						<RooHero /> */}
 						{telemetrySetting === "unset" && <TelemetryBanner />}
-						<p className="text-vscode-editor-foreground leading-tight font-vscode-font-family text-center text-balance max-w-[380px] mx-auto my-0">
-							<Trans
-								i18nKey="chat:about"
-								components={{
-									DocsLink: (
-										<a href={buildDocLink("", "welcome")} target="_blank" rel="noopener noreferrer">
-											the docs
-										</a>
-									),
-								}}
-							/>
-						</p>
-						{taskHistory.length === 0 && <IdeaSuggestionsBox />} {/* kilocode_change */}
-						{/*<div className="mb-2.5">
-							{cloudIsAuthenticated || taskHistory.length < 4 ? <RooTips /> : <RooCloudCTA />}
-						</div> kilocode_change: do not show */}
-						{/* Show the task history preview if expanded and tasks exist */}
-						{taskHistory.length > 0 && isExpanded && <HistoryPreview />}
+						{/* kilocode_change start: KilocodeNotifications + Layout fixes */}
+						{telemetrySetting !== "unset" && <KilocodeNotifications />}
+						<div className="flex flex-grow flex-col justify-center gap-4">
+							{/* kilocode_change end */}
+							<p className="text-vscode-editor-foreground leading-tight font-vscode-font-family text-center text-balance max-w-[380px] mx-auto my-0">
+								<Trans
+									i18nKey="chat:about"
+									components={{
+										DocsLink: (
+											<a
+												href={buildDocLink("", "welcome")}
+												target="_blank"
+												rel="noopener noreferrer">
+												the docs
+											</a>
+										),
+									}}
+								/>
+							</p>
+							{taskHistory.length === 0 && <IdeaSuggestionsBox />} {/* kilocode_change */}
+							{/*<div className="mb-2.5">
+								{cloudIsAuthenticated || taskHistory.length < 4 ? <RooTips /> : <RooCloudCTA />}
+							</div> kilocode_change: do not show */}
+							{/* Show the task history preview if expanded and tasks exist */}
+							{taskHistory.length > 0 && isExpanded && <HistoryPreview />}
+							{/* kilocode_change start: KilocodeNotifications + Layout fixes */}
+						</div>
+						{/* kilocode_change end */}
 					</div>
 				</div>
 			)}
