@@ -119,6 +119,14 @@ function validateModelsAndKeysProvided(apiConfiguration: ProviderSettings): stri
 			}
 			break
 		// kilocode_change end
+		case "huggingface":
+			if (!apiConfiguration.huggingFaceApiKey) {
+				return i18next.t("settings:validation.apiKey")
+			}
+			if (!apiConfiguration.huggingFaceModelId) {
+				return i18next.t("settings:validation.modelId")
+			}
+			break
 	}
 
 	return undefined
@@ -183,6 +191,8 @@ function getModelIdForProvider(apiConfiguration: ProviderSettings, provider: str
 		case "vscode-lm":
 			// vsCodeLmModelSelector is an object, not a string
 			return apiConfiguration.vsCodeLmModelSelector?.id
+		case "huggingface":
+			return apiConfiguration.huggingFaceModelId
 		default:
 			return apiConfiguration.apiModelId
 	}

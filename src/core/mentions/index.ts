@@ -80,6 +80,9 @@ export async function parseMentions(
 	fileContextTracker?: FileContextTracker,
 	rooIgnoreController?: RooIgnoreController,
 	showRooIgnoredFiles: boolean = true,
+	includeDiagnosticMessages: boolean = true,
+	maxDiagnosticMessages: number = 50,
+	maxReadFileLine?: number,
 ): Promise<string> {
 	const mentions: Set<string> = new Set()
 	let parsedText = text.replace(mentionRegexGlobal, (match, mention) => {
@@ -147,7 +150,13 @@ export async function parseMentions(
 		} else if (mention.startsWith("/")) {
 			const mentionPath = mention.slice(1)
 			try {
-				const content = await getFileOrFolderContent(mentionPath, cwd, rooIgnoreController, showRooIgnoredFiles)
+				const content = await getFileOrFolderContent(
+					mentionPath,
+					cwd,
+					rooIgnoreController,
+					showRooIgnoredFiles,
+					maxReadFileLine,
+				)
 				if (mention.endsWith("/")) {
 					parsedText += `\n\n<folder_content path="${mentionPath}">\n${content}\n</folder_content>`
 				} else {
@@ -165,7 +174,7 @@ export async function parseMentions(
 			}
 		} else if (mention === "problems") {
 			try {
-				const problems = await getWorkspaceProblems(cwd)
+				const problems = await getWorkspaceProblems(cwd, includeDiagnosticMessages, maxDiagnosticMessages)
 				parsedText += `\n\n<workspace_diagnostics>\n${problems}\n</workspace_diagnostics>`
 			} catch (error) {
 				parsedText += `\n\n<workspace_diagnostics>\nError fetching diagnostics: ${error.message}\n</workspace_diagnostics>`
@@ -210,6 +219,7 @@ async function getFileOrFolderContent(
 	cwd: string,
 	rooIgnoreController?: any,
 	showRooIgnoredFiles: boolean = true,
+	maxReadFileLine?: number,
 ): Promise<string> {
 	const unescapedPath = unescapeSpaces(mentionPath)
 	const absPath = path.resolve(cwd, unescapedPath)
@@ -222,7 +232,7 @@ async function getFileOrFolderContent(
 				return `(File ${mentionPath} is ignored by .kilocodeignore)`
 			}
 			try {
-				const content = await extractTextFromFile(absPath)
+				const content = await extractTextFromFile(absPath, maxReadFileLine)
 				return content
 			} catch (error) {
 				return `(Failed to read contents of ${mentionPath}): ${error.message}`
@@ -262,7 +272,7 @@ async function getFileOrFolderContent(
 									if (isBinary) {
 										return undefined
 									}
-									const content = await extractTextFromFile(absoluteFilePath)
+									const content = await extractTextFromFile(absoluteFilePath, maxReadFileLine)
 									return `<file_content path="${filePath.toPosix()}">\n${content}\n</file_content>`
 								} catch (error) {
 									return undefined
@@ -286,12 +296,18 @@ async function getFileOrFolderContent(
 	}
 }
 
-async function getWorkspaceProblems(cwd: string): Promise<string> {
+async function getWorkspaceProblems(
+	cwd: string,
+	includeDiagnosticMessages: boolean = true,
+	maxDiagnosticMessages: number = 50,
+): Promise<string> {
 	const diagnostics = vscode.languages.getDiagnostics()
 	const result = await diagnosticsToProblemsString(
 		diagnostics,
 		[vscode.DiagnosticSeverity.Error, vscode.DiagnosticSeverity.Warning],
 		cwd,
+		includeDiagnosticMessages,
+		maxDiagnosticMessages,
 	)
 	if (!result) {
 		return "No errors or warnings detected."

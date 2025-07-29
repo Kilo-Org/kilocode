@@ -268,6 +268,19 @@
 		"geminiApiKey": "Gemini API Anahtarı",
 		"getGroqApiKey": "Groq API Anahtarı Al",
 		"groqApiKey": "Groq API Anahtarı",
+		"getHuggingFaceApiKey": "Hugging Face API Anahtarı Al",
+		"huggingFaceApiKey": "Hugging Face API Anahtarı",
+		"huggingFaceModelId": "Model ID",
+		"huggingFaceLoading": "Yükleniyor...",
+		"huggingFaceModelsCount": "({{count}} model)",
+		"huggingFaceSelectModel": "Bir model seç...",
+		"huggingFaceSearchModels": "Modelleri ara...",
+		"huggingFaceNoModelsFound": "Model bulunamadı",
+		"huggingFaceProvider": "Sağlayıcı",
+		"huggingFaceProviderAuto": "Otomatik",
+		"huggingFaceSelectProvider": "Bir sağlayıcı seç...",
+		"huggingFaceSearchProviders": "Sağlayıcıları ara...",
+		"huggingFaceNoProvidersFound": "Sağlayıcı bulunamadı",
 		"getGeminiApiKey": "Gemini API Anahtarı Al",
 		"openAiApiKey": "OpenAI API Anahtarı",
 		"apiKey": "API Anahtarı",
@@ -283,6 +296,7 @@
 		"litellmBaseUrl": "LiteLLM Temel URL",
 		"awsCredentials": "AWS Kimlik Bilgileri",
 		"awsProfile": "AWS Profili",
+		"awsApiKey": "Amazon Bedrock API Anahtarı",
 		"awsProfileName": "AWS Profil Adı",
 		"awsAccessKey": "AWS Erişim Anahtarı",
 		"awsSecretKey": "AWS Gizli Anahtarı",
@@ -511,6 +525,23 @@
 		"maxConcurrentFileReads": {
 			"label": "Eşzamanlı dosya okuma sınırı",
 			"description": "'read_file' aracının aynı anda işleyebileceği maksimum dosya sayısı. Daha yüksek değerler birden çok küçük dosyanın okunmasını hızlandırabilir ancak bellek kullanımını artırır."
+		},
+		"diagnostics": {
+			"includeMessages": {
+				"label": "Tanı mesajlarını otomatik olarak bağlama dahil et",
+				"description": "Etkinleştirildiğinde, düzenlenen dosyalardan tanı mesajları (hatalar) otomatik olarak bağlama dahil edilecektir. @problems kullanarak tüm çalışma alanı tanı mesajlarını her zaman manuel olarak dahil edebilirsiniz."
+			},
+			"maxMessages": {
+				"label": "Maksimum tanı mesajı",
+				"description": "Dosya başına dahil edilecek maksimum tanı mesajı sayısı. Bu sınır hem otomatik dahil etme (onay kutusu etkinleştirildiğinde) hem de manuel @problems bahisleri için geçerlidir. Daha yüksek değerler daha fazla bağlam sağlar ancak jeton kullanımını artırır.",
+				"resetTooltip": "Varsayılan değere sıfırla (50)",
+				"unlimited": "Sınırsız tanı mesajları",
+				"unlimitedLabel": "Sınırsız"
+			},
+			"delayAfterWrite": {
+				"label": "Potansiyel sorunları tespit etmek için tanılamaya izin vermek üzere yazmalardan sonra gecikme",
+				"description": "Devam etmeden önce dosya yazımlarından sonra beklenecek süre, tanılama araçlarının değişiklikleri işlemesine ve sorunları tespit etmesine olanak tanır."
+			}
 		},
 		"condensingThreshold": {
 			"label": "Sıkıştırma Tetikleme Eşiği",
@@ -756,5 +787,8 @@
 		}
 	},
 	"includeMaxOutputTokens": "Maksimum çıktı tokenlerini dahil et",
-	"includeMaxOutputTokensDescription": "API isteklerinde maksimum çıktı token parametresini gönder. Bazı sağlayıcılar bunu desteklemeyebilir."
+	"includeMaxOutputTokensDescription": "API isteklerinde maksimum çıktı token parametresini gönder. Bazı sağlayıcılar bunu desteklemeyebilir.",
+	"limitMaxTokensDescription": "Yanıttaki maksimum token sayısını sınırla",
+	"maxOutputTokensLabel": "Maksimum çıktı tokenları",
+	"maxTokensGenerateDescription": "Yanıtta oluşturulacak maksimum token sayısı"
 }

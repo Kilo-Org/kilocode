@@ -36,6 +36,7 @@
 	"settings.customStoragePath.description": "Path penyimpanan kustom. Biarkan kosong untuk menggunakan lokasi default. Mendukung path absolut (misalnya 'D:\\KiloCodeStorage')",
 	"settings.enableCodeActions.description": "Aktifkan perbaikan cepat Kilo Code.",
 	"settings.autoImportSettingsPath.description": "Path ke file konfigurasi Kilo Code untuk diimpor secara otomatis saat ekstensi dimulai. Mendukung path absolut dan path relatif terhadap direktori home (misalnya '~/Documents/kilo-code-settings.json'). Biarkan kosong untuk menonaktifkan impor otomatis.",
+	"settings.useAgentRules.description": "Aktifkan pemuatan file AGENTS.md untuk aturan khusus agen (lihat https://agent-rules.org/)",
 	"command.generateCommitMessage.title": "Buat Pesan Commit dengan Kilo",
 	"command.profile.title": "Profil",
 	"ghost.input.title": "Tekan 'Enter' untuk konfirmasi atau 'Escape' untuk membatalkan",

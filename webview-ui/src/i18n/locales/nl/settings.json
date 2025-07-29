@@ -265,6 +265,19 @@
 		"getGroqApiKey": "Groq API-sleutel ophalen",
 		"groqApiKey": "Groq API-sleutel",
 		"getGeminiApiKey": "Gemini API-sleutel ophalen",
+		"getHuggingFaceApiKey": "Hugging Face API-sleutel ophalen",
+		"huggingFaceApiKey": "Hugging Face API-sleutel",
+		"huggingFaceModelId": "Model ID",
+		"huggingFaceLoading": "Laden...",
+		"huggingFaceModelsCount": "({{count}} modellen)",
+		"huggingFaceSelectModel": "Selecteer een model...",
+		"huggingFaceSearchModels": "Zoek modellen...",
+		"huggingFaceNoModelsFound": "Geen modellen gevonden",
+		"huggingFaceProvider": "Provider",
+		"huggingFaceProviderAuto": "Automatisch",
+		"huggingFaceSelectProvider": "Selecteer een provider...",
+		"huggingFaceSearchProviders": "Zoek providers...",
+		"huggingFaceNoProvidersFound": "Geen providers gevonden",
 		"apiKey": "API-sleutel",
 		"openAiApiKey": "OpenAI API-sleutel",
 		"openAiBaseUrl": "Basis-URL",
@@ -279,6 +292,7 @@
 		"litellmBaseUrl": "LiteLLM basis-URL",
 		"awsCredentials": "AWS-inloggegevens",
 		"awsProfile": "AWS-profiel",
+		"awsApiKey": "Amazon Bedrock API-sleutel",
 		"awsProfileName": "AWS-profielnaam",
 		"awsAccessKey": "AWS-toegangssleutel",
 		"awsSecretKey": "AWS-geheime sleutel",
@@ -511,6 +525,23 @@
 		"maxConcurrentFileReads": {
 			"label": "Limiet gelijktijdige bestandslezingen",
 			"description": "Maximum aantal bestanden dat de 'read_file' tool tegelijkertijd kan verwerken. Hogere waarden kunnen het lezen van meerdere kleine bestanden versnellen maar verhogen het geheugengebruik."
+		},
+		"diagnostics": {
+			"includeMessages": {
+				"label": "Automatisch diagnostiek opnemen in context",
+				"description": "Indien ingeschakeld, worden diagnostische berichten (fouten) van bewerkte bestanden automatisch opgenomen in de context. Je kunt altijd handmatig alle werkruimte-diagnostiek opnemen met @problems."
+			},
+			"maxMessages": {
+				"label": "Maximale diagnostische berichten",
+				"description": "Maximaal aantal diagnostische berichten dat per bestand moet worden opgenomen. Deze limiet geldt voor zowel automatische opname (wanneer checkbox is ingeschakeld) als handmatige @problems vermeldingen. Hogere waarden bieden meer context maar verhogen het tokengebruik.",
+				"resetTooltip": "Reset naar standaardwaarde (50)",
+				"unlimited": "Onbeperkte diagnostische berichten",
+				"unlimitedLabel": "Onbeperkt"
+			},
+			"delayAfterWrite": {
+				"label": "Vertraging na het schrijven om diagnostiek potentiële problemen te laten detecteren",
+				"description": "Wachttijd na het schrijven van bestanden voordat u doorgaat, zodat diagnostische hulpmiddelen wijzigingen kunnen verwerken en problemen kunnen detecteren."
+			}
 		},
 		"condensingThreshold": {
 			"label": "Compressie trigger drempelwaarde",
@@ -756,5 +787,8 @@
 		}
 	},
 	"includeMaxOutputTokens": "Maximale output tokens opnemen",
-	"includeMaxOutputTokensDescription": "Stuur maximale output tokens parameter in API-verzoeken. Sommige providers ondersteunen dit mogelijk niet."
+	"includeMaxOutputTokensDescription": "Stuur maximale output tokens parameter in API-verzoeken. Sommige providers ondersteunen dit mogelijk niet.",
+	"limitMaxTokensDescription": "Beperk het maximale aantal tokens in het antwoord",
+	"maxOutputTokensLabel": "Maximale output tokens",
+	"maxTokensGenerateDescription": "Maximale tokens om te genereren in het antwoord"
 }

@@ -71,7 +71,9 @@
 			"removeProjectTooltip": "ลบจากโปรเจ็กต์ปัจจุบัน",
 			"removeGlobalTooltip": "ลบจากการตั้งค่า global",
 			"actionsMenuLabel": "การดำเนินการเพิ่มเติม"
-		}
+		},
+		"removeFailed": "ไม่สามารถลบรายการ: {{error}}",
+		"unknownError": "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ"
 	},
 	"install": {
 		"title": "ติดตั้ง {{name}}",
@@ -124,6 +126,19 @@
 			"emojiName": "อักขระอีโมจิอาจทำให้เกิดปัญหาการแสดงผล",
 			"maxSources": "อนุญาตสูงสุด {{max}} sources"
 		}
+	},
+	"removeConfirm": {
+		"mode": {
+			"title": "ลบ Mode",
+			"message": "คุณแน่ใจหรือไม่ว่าต้องการลบ mode \"{{modeName}}\"?",
+			"rulesWarning": "การกระทำนี้จะลบไฟล์กฎที่เกี่ยวข้องกับ mode นี้ด้วย"
+		},
+		"mcp": {
+			"title": "ลบ MCP Server",
+			"message": "คุณแน่ใจหรือไม่ว่าต้องการลบ MCP server \"{{mcpName}}\"?"
+		},
+		"cancel": "ยกเลิก",
+		"confirm": "ลบ"
 	},
 	"footer": {
 		"issueText": "พบปัญหากับรายการ marketplace หรือมีข้อเสนอแนะสำหรับรายการใหม่? <0>เปิด GitHub issue</0> เพื่อแจ้งให้เราทราบ!"

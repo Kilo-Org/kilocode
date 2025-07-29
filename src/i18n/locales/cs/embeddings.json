@@ -52,5 +52,14 @@
 		"vectorDimensionNotDetermined": "Nelze určit rozměr vektoru pro model '{{modelId}}' s poskytovatelem '{{provider}}'. Zkontroluj profily modelů nebo konfiguraci.",
 		"qdrantUrlMissing": "Chybí Qdrant URL pro vytvoření vektorového úložiště",
 		"codeIndexingNotConfigured": "Nelze vytvořit služby: Indexování kódu není správně nakonfigurováno"
+	},
+	"orchestrator": {
+		"indexingFailedNoBlocks": "Indexování selhalo: Žádné bloky kódu nebyly úspěšně zaindexovány. To obvykle naznačuje problém s konfigurací embedderu.",
+		"indexingFailedCritical": "Indexování selhalo: Žádné bloky kódu nebyly úspěšně zaindexovány navzdory nalezení souborů ke zpracování. To naznačuje kritickou chybu embedderu.",
+		"fileWatcherStarted": "Pozorovatel souborů byl spuštěn.",
+		"fileWatcherStopped": "Pozorovatel souborů byl zastaven.",
+		"failedDuringInitialScan": "Selhalo během úvodního skenování: {{errorMessage}}",
+		"unknownError": "Neznámá chyba",
+		"indexingRequiresWorkspace": "Indexování vyžaduje otevřenou složku workspace"
 	}
 }

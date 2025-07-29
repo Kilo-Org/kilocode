@@ -264,6 +264,19 @@
 		"geminiApiKey": "Clé API Gemini",
 		"getGroqApiKey": "Obtenir la clé API Groq",
 		"groqApiKey": "Clé API Groq",
+		"getHuggingFaceApiKey": "Obtenir la clé API Hugging Face",
+		"huggingFaceApiKey": "Clé API Hugging Face",
+		"huggingFaceModelId": "ID du modèle",
+		"huggingFaceLoading": "Chargement...",
+		"huggingFaceModelsCount": "({{count}} modèles)",
+		"huggingFaceSelectModel": "Sélectionner un modèle...",
+		"huggingFaceSearchModels": "Rechercher des modèles...",
+		"huggingFaceNoModelsFound": "Aucun modèle trouvé",
+		"huggingFaceProvider": "Fournisseur",
+		"huggingFaceProviderAuto": "Automatique",
+		"huggingFaceSelectProvider": "Sélectionner un fournisseur...",
+		"huggingFaceSearchProviders": "Rechercher des fournisseurs...",
+		"huggingFaceNoProvidersFound": "Aucun fournisseur trouvé",
 		"getGeminiApiKey": "Obtenir la clé API Gemini",
 		"openAiApiKey": "Clé API OpenAI",
 		"apiKey": "Clé API",
@@ -279,6 +292,7 @@
 		"litellmBaseUrl": "URL de base LiteLLM",
 		"awsCredentials": "Identifiants AWS",
 		"awsProfile": "Profil AWS",
+		"awsApiKey": "Clé API Amazon Bedrock",
 		"awsProfileName": "Nom du profil AWS",
 		"awsAccessKey": "Clé d'accès AWS",
 		"awsSecretKey": "Clé secrète AWS",
@@ -511,6 +525,22 @@
 		"maxConcurrentFileReads": {
 			"label": "Limite de lectures simultanées",
 			"description": "Nombre maximum de fichiers que l'outil 'read_file' peut traiter simultanément. Des valeurs plus élevées peuvent accélérer la lecture de plusieurs petits fichiers mais augmentent l'utilisation de la mémoire."
+		},
+		"diagnostics": {
+			"includeMessages": {
+				"label": "Inclure automatiquement les diagnostics dans le contexte",
+				"description": "Lorsque cette option est activée, les messages de diagnostic (erreurs) des fichiers modifiés seront automatiquement inclus dans le contexte. Vous pouvez toujours inclure manuellement tous les diagnostics de l'espace de travail en utilisant @problems."
+			},
+			"maxMessages": {
+				"label": "Nombre maximum de messages de diagnostic",
+				"description": "Nombre maximum de messages de diagnostic à inclure par fichier. Cette limite s'applique à la fois à l'inclusion automatique (lorsque la case est cochée) et aux mentions manuelles @problems. Des valeurs plus élevées fournissent plus de contexte mais augmentent l'utilisation des jetons.",
+				"resetTooltip": "Réinitialiser à la valeur par défaut (50)",
+				"unlimitedLabel": "Illimité"
+			},
+			"delayAfterWrite": {
+				"label": "Délai après les écritures pour permettre aux diagnostics de détecter les problèmes potentiels",
+				"description": "Temps d'attente après les écritures de fichiers avant de continuer, permettant aux outils de diagnostic de traiter les modifications et de détecter les problèmes."
+			}
 		},
 		"condensingThreshold": {
 			"label": "Seuil de condensation du contexte",
@@ -756,5 +786,8 @@
 		}
 	},
 	"includeMaxOutputTokens": "Inclure les tokens de sortie maximum",
-	"includeMaxOutputTokensDescription": "Envoyer le paramètre de tokens de sortie maximum dans les requêtes API. Certains fournisseurs peuvent ne pas supporter cela."
+	"includeMaxOutputTokensDescription": "Envoyer le paramètre de tokens de sortie maximum dans les requêtes API. Certains fournisseurs peuvent ne pas supporter cela.",
+	"limitMaxTokensDescription": "Limiter le nombre maximum de tokens dans la réponse",
+	"maxOutputTokensLabel": "Tokens de sortie maximum",
+	"maxTokensGenerateDescription": "Tokens maximum à générer dans la réponse"
 }

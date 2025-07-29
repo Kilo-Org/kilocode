@@ -160,11 +160,17 @@
 			"deleteFailed": "فشل حذف الوضع المخصص: {{error}}",
 			"resetFailed": "فشل إعادة تعيين الأوضاع المخصصة: {{error}}",
 			"modeNotFound": "خطأ في الكتابة: ما لقينا الوضع المحدد",
-			"noWorkspaceForProject": "ما فيه مجلد مشروع مخصص لهذا الوضع"
+			"noWorkspaceForProject": "ما فيه مجلد مشروع مخصص لهذا الوضع",
+			"rulesCleanupFailed": "تم حذف الوضع بنجاح، لكن فشل حذف مجلد القواعد في {{rulesFolderPath}}. قد تحتاج لحذفه يدوياً."
 		},
 		"scope": {
 			"project": "مشروع",
 			"global": "عام"
+		}
+	},
+	"marketplace": {
+		"mode": {
+			"rulesCleanupFailed": "تم إزالة الوضع بنجاح، لكن فشل حذف مجلد القواعد في {{rulesFolderPath}}. قد تحتاج لحذفه يدوياً."
 		}
 	},
 	"mdm": {

@@ -57,6 +57,7 @@ import { showSystemNotification } from "@/kilocode/helpers" // kilocode_change
 // import ProfileViolationWarning from "./ProfileViolationWarning" kilocode_change: unused
 import { CheckpointWarning } from "./CheckpointWarning"
 import { IdeaSuggestionsBox } from "../kilocode/chat/IdeaSuggestionsBox" // kilocode_change
+import { KilocodeNotifications } from "../kilocode/KilocodeNotifications" // kilocode_change
 import { getLatestTodo } from "@roo/todo"
 import { buildDocLink } from "@/utils/docLinks"
 
@@ -1784,8 +1785,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							</div>
 						</div>
 					)}
-					<div
-						className={` w-full flex flex-col gap-4 m-auto ${isExpanded && tasks.length > 0 ? "mt-0" : ""} px-3.5 min-[370px]:px-10 pt-5 transition-all duration-300`}>
+					{/* kilocode_change start: changed the classes to support notifications */}
+					<div className="w-full h-full flex flex-col gap-4 px-3.5 transition-all duration-300">
+						{/* kilocode_change end */}
 						{/* Version indicator in top-right corner - only on welcome screen */}
 						{/* kilocode_change: do not show */}
 						{/* <VersionIndicator
@@ -1795,24 +1797,34 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 						<RooHero /> */}
 						{telemetrySetting === "unset" && <TelemetryBanner />}
-						<p className="text-vscode-editor-foreground leading-tight font-vscode-font-family text-center text-balance max-w-[380px] mx-auto my-0">
-							<Trans
-								i18nKey="chat:about"
-								components={{
-									DocsLink: (
-										<a href={buildDocLink("", "welcome")} target="_blank" rel="noopener noreferrer">
-											the docs
-										</a>
-									),
-								}}
-							/>
-						</p>
-						{taskHistory.length === 0 && <IdeaSuggestionsBox />} {/* kilocode_change */}
-						{/*<div className="mb-2.5">
-							{cloudIsAuthenticated || taskHistory.length < 4 ? <RooTips /> : <RooCloudCTA />}
-						</div> kilocode_change: do not show */}
-						{/* Show the task history preview if expanded and tasks exist */}
-						{taskHistory.length > 0 && isExpanded && <HistoryPreview />}
+						{/* kilocode_change start: KilocodeNotifications + Layout fixes */}
+						{telemetrySetting !== "unset" && <KilocodeNotifications />}
+						<div className="flex flex-grow flex-col justify-center gap-4">
+							{/* kilocode_change end */}
+							<p className="text-vscode-editor-foreground leading-tight font-vscode-font-family text-center text-balance max-w-[380px] mx-auto my-0">
+								<Trans
+									i18nKey="chat:about"
+									components={{
+										DocsLink: (
+											<a
+												href={buildDocLink("", "welcome")}
+												target="_blank"
+												rel="noopener noreferrer">
+												the docs
+											</a>
+										),
+									}}
+								/>
+							</p>
+							{taskHistory.length === 0 && <IdeaSuggestionsBox />} {/* kilocode_change */}
+							{/*<div className="mb-2.5">
+								{cloudIsAuthenticated || taskHistory.length < 4 ? <RooTips /> : <RooCloudCTA />}
+							</div> kilocode_change: do not show */}
+							{/* Show the task history preview if expanded and tasks exist */}
+							{taskHistory.length > 0 && isExpanded && <HistoryPreview />}
+							{/* kilocode_change start: KilocodeNotifications + Layout fixes */}
+						</div>
+						{/* kilocode_change end */}
 					</div>
 				</div>
 			)}

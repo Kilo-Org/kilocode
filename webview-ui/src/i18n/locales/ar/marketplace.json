@@ -71,7 +71,9 @@
 			"removeProjectTooltip": "إزالة من المشروع الحالي",
 			"removeGlobalTooltip": "إزالة من الإعداد العام",
 			"actionsMenuLabel": "خيارات إضافية"
-		}
+		},
+		"removeFailed": "فشل في إزالة العنصر: {{error}}",
+		"unknownError": "حدث خطأ غير معروف"
 	},
 	"install": {
 		"title": "تثبيت {{name}}",
@@ -124,6 +126,19 @@
 			"emojiName": "الإيموجي ممكن يسبب مشاكل بالعرض",
 			"maxSources": "الحد الأقصى {{max}} من المصادر"
 		}
+	},
+	"removeConfirm": {
+		"mode": {
+			"title": "إزالة النمط",
+			"message": "متأكد تبي تحذف النمط \"{{modeName}}\"؟",
+			"rulesWarning": "هذا بيحذف كمان أي ملفات قواعد مرتبطة بهذا النمط."
+		},
+		"mcp": {
+			"title": "إزالة خادم MCP",
+			"message": "متأكد تبي تحذف خادم MCP \"{{mcpName}}\"؟"
+		},
+		"cancel": "إلغاء",
+		"confirm": "إزالة"
 	},
 	"footer": {
 		"issueText": "واجهت مشكلة أو عندك اقتراح لسوق العناصر؟ <0>افتح تذكرة على GitHub</0> وعطنا خبر!"

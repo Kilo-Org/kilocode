@@ -268,6 +268,19 @@
 		"geminiApiKey": "Clau API de Gemini",
 		"getGroqApiKey": "Obtenir clau API de Groq",
 		"groqApiKey": "Clau API de Groq",
+		"getHuggingFaceApiKey": "Obtenir clau API de Hugging Face",
+		"huggingFaceApiKey": "Clau API de Hugging Face",
+		"huggingFaceModelId": "ID del model",
+		"huggingFaceLoading": "Carregant...",
+		"huggingFaceModelsCount": "({{count}} models)",
+		"huggingFaceSelectModel": "Selecciona un model...",
+		"huggingFaceSearchModels": "Cerca models...",
+		"huggingFaceNoModelsFound": "No s'han trobat models",
+		"huggingFaceProvider": "Proveïdor",
+		"huggingFaceProviderAuto": "Automàtic",
+		"huggingFaceSelectProvider": "Selecciona un proveïdor...",
+		"huggingFaceSearchProviders": "Cerca proveïdors...",
+		"huggingFaceNoProvidersFound": "No s'han trobat proveïdors",
 		"getGeminiApiKey": "Obtenir clau API de Gemini",
 		"openAiApiKey": "Clau API d'OpenAI",
 		"apiKey": "Clau API",
@@ -283,6 +296,7 @@
 		"litellmBaseUrl": "URL base de LiteLLM",
 		"awsCredentials": "Credencials d'AWS",
 		"awsProfile": "Perfil d'AWS",
+		"awsApiKey": "Clau d'API d'Amazon Bedrock",
 		"awsProfileName": "Nom del perfil d'AWS",
 		"awsAccessKey": "Clau d'accés d'AWS",
 		"awsSecretKey": "Clau secreta d'AWS",
@@ -511,6 +525,22 @@
 		"maxConcurrentFileReads": {
 			"label": "Límit de lectures simultànies",
 			"description": "Nombre màxim de fitxers que l'eina 'read_file' pot processar simultàniament. Els valors més alts poden accelerar la lectura de múltiples fitxers petits però augmenten l'ús de memòria."
+		},
+		"diagnostics": {
+			"includeMessages": {
+				"label": "Inclou automàticament diagnòstics al context",
+				"description": "Quan està activat, els missatges de diagnòstic (errors) dels fitxers editats s'inclouran automàticament al context. Sempre pots incloure manualment tots els diagnòstics de l'espai de treball utilitzant @problems."
+			},
+			"maxMessages": {
+				"label": "Màxim de missatges de diagnòstic",
+				"description": "Nombre màxim de missatges de diagnòstic a incloure per fitxer. Aquest límit s'aplica tant a la inclusió automàtica (quan la casella està activada) com a les mencions manuals de @problems. Valors més alts proporcionen més context però augmenten l'ús de tokens.",
+				"resetTooltip": "Restablir al valor per defecte (50)",
+				"unlimitedLabel": "Il·limitat"
+			},
+			"delayAfterWrite": {
+				"label": "Retard després d'escriptures per permetre que els diagnòstics detectin possibles problemes",
+				"description": "Temps d'espera després d'escriptures de fitxers abans de continuar, permetent que les eines de diagnòstic processin els canvis i detectin problemes."
+			}
 		},
 		"condensingThreshold": {
 			"label": "Llindar d'activació de condensació",
@@ -756,5 +786,8 @@
 		}
 	},
 	"includeMaxOutputTokens": "Incloure tokens màxims de sortida",
-	"includeMaxOutputTokensDescription": "Enviar el paràmetre de tokens màxims de sortida a les sol·licituds API. Alguns proveïdors poden no admetre això."
+	"includeMaxOutputTokensDescription": "Enviar el paràmetre de tokens màxims de sortida a les sol·licituds API. Alguns proveïdors poden no admetre això.",
+	"limitMaxTokensDescription": "Limitar el nombre màxim de tokens en la resposta",
+	"maxOutputTokensLabel": "Tokens màxims de sortida",
+	"maxTokensGenerateDescription": "Tokens màxims a generar en la resposta"
 }

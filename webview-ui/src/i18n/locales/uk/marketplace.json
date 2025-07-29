@@ -71,7 +71,9 @@
 			"removeProjectTooltip": "Видалити з поточного проекту",
 			"removeGlobalTooltip": "Видалити з глобальної конфігурації",
 			"actionsMenuLabel": "Більше дій"
-		}
+		},
+		"removeFailed": "Не вдалося видалити елемент: {{error}}",
+		"unknownError": "Сталася невідома помилка"
 	},
 	"install": {
 		"title": "Встановити {{name}}",
@@ -124,6 +126,19 @@
 			"emojiName": "Символи емодзі можуть спричинити проблеми з відображенням",
 			"maxSources": "Дозволено максимум {{max}} джерел"
 		}
+	},
+	"removeConfirm": {
+		"mode": {
+			"title": "Видалити Mode",
+			"message": "Ти впевнений, що хочеш видалити mode \"{{modeName}}\"?",
+			"rulesWarning": "Це також видалить усі пов'язані файли правил для цього mode."
+		},
+		"mcp": {
+			"title": "Видалити MCP Server",
+			"message": "Ти впевнений, що хочеш видалити MCP server \"{{mcpName}}\"?"
+		},
+		"cancel": "Скасувати",
+		"confirm": "Видалити"
 	},
 	"footer": {
 		"issueText": "Знайшов проблему з елементом marketplace або маєш пропозиції щодо нових? <0>Відкрий GitHub issue</0>, щоб повідомити нам!"

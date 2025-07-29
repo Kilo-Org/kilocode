@@ -218,6 +218,22 @@
 		"resultTooltip": "คะแนนความคล้ายคลึง: {{score}} (คลิกเพื่อเปิดไฟล์)"
 	},
 	"commandOutput": "ผลลัพธ์คำสั่ง",
+	"commandExecution": {
+		"running": "กำลังทำงาน",
+		"pid": "PID: {{pid}}",
+		"exited": "ออกแล้ว ({{exitCode}})",
+		"manageCommands": "จัดการสิทธิ์คำสั่ง",
+		"commandManagementDescription": "จัดการสิทธิ์คำสั่ง: คลิก ✓ เพื่ออนุญาตให้ทำงานอัตโนมัติ ✗ เพื่อปฏิเสธการทำงาน รูปแบบสามารถเปิด/ปิดหรือลบออกจากรายการได้ <settingsLink>ดูการตั้งค่าทั้งหมด</settingsLink>",
+		"addToAllowed": "เพิ่มลงในรายการที่อนุญาต",
+		"removeFromAllowed": "ลบออกจากรายการที่อนุญาต",
+		"addToDenied": "เพิ่มลงในรายการที่ปฏิเสธ",
+		"removeFromDenied": "ลบออกจากรายการที่ปฏิเสธ",
+		"abortCommand": "ยกเลิกการทำงานของคำสั่ง",
+		"expandOutput": "ขยายผลลัพธ์",
+		"collapseOutput": "ยุบผลลัพธ์",
+		"expandManagement": "ขยายส่วนจัดการคำสั่ง",
+		"collapseManagement": "ยุบส่วนจัดการคำสั่ง"
+	},
 	"response": "การตอบสนอง",
 	"arguments": "อาร์กิวเมนต์",
 	"mcp": {

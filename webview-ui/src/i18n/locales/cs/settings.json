@@ -270,6 +270,20 @@
 		"groqApiKey": "Klíč API Groq",
 		"getGeminiApiKey": "Získat klíč API Gemini",
 		"openAiApiKey": "Klíč API OpenAI",
+		"getHuggingFaceApiKey": "Získat klíč API Hugging Face",
+		"huggingFaceApiKey": "Klíč API Hugging Face",
+		"huggingFaceModelId": "ID modelu",
+		"huggingFaceLoading": "Načítání...",
+		"huggingFaceModelsCount": "({{count}} modelů)",
+		"huggingFaceSelectModel": "Vyberte model...",
+		"huggingFaceSearchModels": "Hledat modely...",
+		"huggingFaceNoModelsFound": "Nenalezeny žádné modely",
+		"huggingFaceProvider": "Poskytovatel",
+		"huggingFaceProviderAuto": "Automaticky",
+		"huggingFaceSelectProvider": "Vyberte poskytovatele...",
+		"huggingFaceSearchProviders": "Hledat poskytovatele...",
+		"huggingFaceNoProvidersFound": "Nenalezeni žádní poskytovatelé",
+		"awsApiKey": "Klíč API Amazon Bedrock",
 		"apiKey": "Klíč API",
 		"anthropic": {
 			"baseUrl": "Základní URL",
@@ -542,6 +556,22 @@
 			"profileDescription": "Vlastní prahová hodnota pouze pro tento profil (přepisuje globální výchozí)",
 			"inheritDescription": "Tento profil dědí globální výchozí prahovou hodnotu ({{threshold}}%)",
 			"usesGlobal": "(používá globální {{threshold}}%)"
+		},
+		"diagnostics": {
+			"includeMessages": {
+				"label": "Automaticky zahrnout diagnostiky do kontextu",
+				"description": "Pokud je povoleno, diagnostické zprávy (chyby) z upravovaných souborů budou automaticky zahrnuty do kontextu. Vždy můžete ručně zahrnout všechny diagnostiky pracovního prostoru pomocí @problems."
+			},
+			"maxMessages": {
+				"label": "Maximální počet diagnostických zpráv",
+				"description": "Omezuje počet diagnostických zpráv (chyby, varování) zahrnutých do kontextu. Když je nastaveno, zobrazí se pouze tento počet diagnostik s upřednostněním chyb před varováními. Nastavte na 0 pro neomezené diagnostiky.",
+				"resetTooltip": "Obnovit na výchozí hodnotu (50)",
+				"unlimitedLabel": "Neomezeně"
+			},
+			"delayAfterWrite": {
+				"label": "Zpoždění po zápisu, aby diagnostika mohla detekovat potenciální problémy",
+				"description": "Doba čekání po zápisu souborů před pokračováním, což umožňuje diagnostickým nástrojům zpracovat změny a detekovat problémy."
+			}
 		}
 	},
 	"terminal": {
@@ -782,6 +812,9 @@
 		"customArn": "Vlastní ARN",
 		"useCustomArn": "Použít vlastní ARN..."
 	},
+	"limitMaxTokensDescription": "Omezit maximální počet tokenů v odpovědi",
+	"maxOutputTokensLabel": "Maximální počet výstupních tokenů",
+	"maxTokensGenerateDescription": "Maximální počet tokenů k vygenerování v odpovědi",
 	"includeMaxOutputTokens": "Zahrnout maximální počet výstupních tokenů",
 	"includeMaxOutputTokensDescription": "Odeslat parametr maximálního počtu výstupních tokenů v požadavcích API. Někteří poskytovatelé to nemusí podporovat."
 }

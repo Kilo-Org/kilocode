@@ -216,6 +216,22 @@
 		"resultTooltip": "Skóre podobnosti: {{score}} (klikni pro otevření souboru)"
 	},
 	"commandOutput": "Výstup příkazu",
+	"commandExecution": {
+		"running": "Běží",
+		"pid": "PID: {{pid}}",
+		"exited": "Ukončeno ({{exitCode}})",
+		"manageCommands": "Spravovat oprávnění příkazů",
+		"commandManagementDescription": "Spravovat oprávnění příkazů: Klikni ✓ pro povolení automatického spuštění, ✗ pro zamítnutí spuštění. Vzory lze zapnout/vypnout nebo odstranit ze seznamů. <settingsLink>Zobrazit všechna nastavení</settingsLink>",
+		"addToAllowed": "Přidat do seznamu povolených",
+		"removeFromAllowed": "Odstranit ze seznamu povolených",
+		"addToDenied": "Přidat do seznamu zamítnutých",
+		"removeFromDenied": "Odstranit ze seznamu zamítnutých",
+		"abortCommand": "Přerušit provádění příkazu",
+		"expandOutput": "Rozbalit výstup",
+		"collapseOutput": "Sbalit výstup",
+		"expandManagement": "Rozbalit sekci správy příkazů",
+		"collapseManagement": "Sbalit sekci správy příkazů"
+	},
 	"response": "Odpověď",
 	"arguments": "Argumenty",
 	"mcp": {

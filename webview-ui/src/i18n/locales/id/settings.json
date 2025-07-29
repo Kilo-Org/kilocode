@@ -268,7 +268,20 @@
 		"geminiApiKey": "Gemini API Key",
 		"getGroqApiKey": "Dapatkan Groq API Key",
 		"groqApiKey": "Groq API Key",
+		"getHuggingFaceApiKey": "Dapatkan Kunci API Hugging Face",
+		"huggingFaceApiKey": "Kunci API Hugging Face",
+		"huggingFaceModelId": "ID Model",
 		"getGeminiApiKey": "Dapatkan Gemini API Key",
+		"huggingFaceLoading": "Memuat...",
+		"huggingFaceModelsCount": "({{count}} model)",
+		"huggingFaceSelectModel": "Pilih model...",
+		"huggingFaceSearchModels": "Cari model...",
+		"huggingFaceNoModelsFound": "Tidak ada model ditemukan",
+		"huggingFaceProvider": "Penyedia",
+		"huggingFaceProviderAuto": "Otomatis",
+		"huggingFaceSelectProvider": "Pilih penyedia...",
+		"huggingFaceSearchProviders": "Cari penyedia...",
+		"huggingFaceNoProvidersFound": "Tidak ada penyedia ditemukan",
 		"openAiApiKey": "OpenAI API Key",
 		"apiKey": "API Key",
 		"openAiBaseUrl": "Base URL",
@@ -283,6 +296,7 @@
 		"litellmBaseUrl": "LiteLLM Base URL",
 		"awsCredentials": "AWS Credentials",
 		"awsProfile": "AWS Profile",
+		"awsApiKey": "Kunci API Amazon Bedrock",
 		"awsProfileName": "Nama AWS Profile",
 		"awsAccessKey": "AWS Access Key",
 		"awsSecretKey": "AWS Secret Key",
@@ -489,6 +503,23 @@
 		"autoCondenseContext": {
 			"name": "Secara otomatis memicu kondensasi konteks cerdas",
 			"description": "Ketika diaktifkan, Kilo Code akan secara otomatis mengondensasi konteks ketika ambang batas tercapai. Ketika dinonaktifkan, kamu masih dapat memicu kondensasi konteks secara manual."
+		},
+		"diagnostics": {
+			"includeMessages": {
+				"label": "Secara otomatis sertakan diagnostik dalam konteks",
+				"description": "Ketika diaktifkan, pesan diagnostik (error) dari file yang diedit akan secara otomatis disertakan dalam konteks. Kamu selalu dapat menyertakan semua diagnostik workspace secara manual menggunakan @problems."
+			},
+			"maxMessages": {
+				"label": "Pesan diagnostik maksimum",
+				"description": "Jumlah maksimum pesan diagnostik yang akan disertakan per file. Batas ini berlaku untuk penyertaan otomatis (ketika checkbox diaktifkan) dan penyebutan manual @problems. Nilai yang lebih tinggi memberikan lebih banyak konteks tetapi meningkatkan penggunaan token.",
+				"resetTooltip": "Reset ke nilai default (50)",
+				"unlimited": "Pesan diagnostik tidak terbatas",
+				"unlimitedLabel": "Tak terbatas"
+			},
+			"delayAfterWrite": {
+				"label": "Tunda setelah penulisan untuk memungkinkan diagnostik mendeteksi potensi masalah",
+				"description": "Waktu tunggu setelah penulisan file sebelum melanjutkan, memungkinkan alat diagnostik untuk memproses perubahan dan mendeteksi masalah."
+			}
 		},
 		"condensingThreshold": {
 			"label": "Ambang Batas Pemicu Kondensasi",
@@ -777,5 +808,8 @@
 		}
 	},
 	"includeMaxOutputTokens": "Sertakan token output maksimum",
-	"includeMaxOutputTokensDescription": "Kirim parameter token output maksimum dalam permintaan API. Beberapa provider mungkin tidak mendukung ini."
+	"includeMaxOutputTokensDescription": "Kirim parameter token output maksimum dalam permintaan API. Beberapa provider mungkin tidak mendukung ini.",
+	"limitMaxTokensDescription": "Batasi jumlah maksimum token dalam respons",
+	"maxOutputTokensLabel": "Token output maksimum",
+	"maxTokensGenerateDescription": "Token maksimum untuk dihasilkan dalam respons"
 }

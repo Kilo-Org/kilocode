@@ -38,6 +38,7 @@
 	"settings.customStoragePath.description": "自定义存储路径。留空以使用默认位置。支持绝对路径（例如：'D:\\KiloCodeStorage'）",
 	"settings.enableCodeActions.description": "启用 Kilo Code 快速修复",
 	"settings.autoImportSettingsPath.description": "Kilo Code 配置文件的路径，用于在扩展启动时自动导入。支持绝对路径和相对于主目录的路径（例如 '~/Documents/kilo-code-settings.json'）。留空以禁用自动导入。",
+	"settings.useAgentRules.description": "为特定于代理的规则启用 AGENTS.md 文件的加载（请参阅 https://agent-rules.org/）",
 	"ghost.input.title": "Kilo Code 幽灵写手",
 	"ghost.input.placeholder": "描述您想要编程的内容...",
 	"ghost.commands.generateSuggestions": "Kilo Code：生成建议编辑",

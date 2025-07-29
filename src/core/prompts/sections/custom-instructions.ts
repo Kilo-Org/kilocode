@@ -20,6 +20,8 @@ import { Dirent } from "fs"
 
 import { isLanguage } from "@roo-code/types"
 
+import type { SystemPromptSettings } from "../types"
+
 import { LANGUAGES } from "../../../shared/language"
 import { ClineRulesToggles } from "../../../shared/cline-rules" // kilocode_change
 import { getRooDirectoriesForCwd } from "../../../services/roo-config"
@@ -247,6 +249,22 @@ export async function loadRuleFiles(cwd: string): Promise<string> {
 	return ""
 }
 
+/**
+ * Load AGENTS.md file from the project root if it exists
+ */
+async function loadAgentRulesFile(cwd: string): Promise<string> {
+	try {
+		const agentsPath = path.join(cwd, "AGENTS.md")
+		const content = await safeReadFile(agentsPath)
+		if (content) {
+			return `# Agent Rules Standard (AGENTS.md):\n${content}`
+		}
+	} catch (err) {
+		// Silently ignore errors - AGENTS.md is optional
+	}
+	return ""
+}
+
 export async function addCustomInstructions(
 	modeCustomInstructions: string,
 	globalCustomInstructions: string,
@@ -258,7 +276,7 @@ export async function addCustomInstructions(
 		rooIgnoreInstructions?: string
 		localRulesToggleState?: ClineRulesToggles
 		globalRulesToggleState?: ClineRulesToggles
-		settings?: Record<string, any>
+		settings?: SystemPromptSettings
 	} = {},
 	// kilocode_change end
 ): Promise<string> {
@@ -332,6 +350,14 @@ export async function addCustomInstructions(
 		rules.push(options.rooIgnoreInstructions)
 	}
 
+	// Add AGENTS.md content if enabled (default: true)
+	if (options.settings?.useAgentRules !== false) {
+		const agentRulesContent = await loadAgentRulesFile(cwd)
+		if (agentRulesContent && agentRulesContent.trim()) {
+			rules.push(agentRulesContent.trim())
+		}
+	}
+
 	// kilocode_change start: rule toggles
 	if (hasAnyToggles(options.localRulesToggleState) || hasAnyToggles(options.globalRulesToggleState)) {
 		const genericRuleContent =
@@ -353,6 +379,12 @@ export async function addCustomInstructions(
 		if (genericRuleContent) {
 			rules.push(genericRuleContent)
 		}
+	}
+
+	// Add generic rules
+	const genericRuleContent = await loadRuleFiles(cwd)
+	if (genericRuleContent && genericRuleContent.trim()) {
+		rules.push(genericRuleContent.trim())
 	}
 	// kilocode_change end
 

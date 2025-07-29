@@ -25,6 +25,7 @@ export class RooProtectedController {
 		".roo/**",
 		".vscode/**",
 		".rooprotected", // For future use
+		"AGENTS.md",
 	]
 
 	constructor(cwd: string) {

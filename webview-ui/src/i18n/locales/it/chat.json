@@ -199,6 +199,22 @@
 		"didViewDefinitionsOutsideWorkspace": "Kilo Code ha visualizzato i nomi delle definizioni di codice sorgente utilizzate in questa directory (fuori dall'area di lavoro):"
 	},
 	"commandOutput": "Output del comando",
+	"commandExecution": {
+		"running": "In esecuzione",
+		"pid": "PID: {{pid}}",
+		"exited": "Terminato ({{exitCode}})",
+		"manageCommands": "Gestisci autorizzazioni comandi",
+		"commandManagementDescription": "Gestisci le autorizzazioni dei comandi: fai clic su ✓ per consentire l'esecuzione automatica, ✗ per negare l'esecuzione. I pattern possono essere attivati/disattivati o rimossi dagli elenchi. <settingsLink>Visualizza tutte le impostazioni</settingsLink>",
+		"addToAllowed": "Aggiungi all'elenco consentiti",
+		"removeFromAllowed": "Rimuovi dall'elenco consentiti",
+		"addToDenied": "Aggiungi all'elenco negati",
+		"removeFromDenied": "Rimuovi dall'elenco negati",
+		"abortCommand": "Interrompi esecuzione comando",
+		"expandOutput": "Espandi output",
+		"collapseOutput": "Comprimi output",
+		"expandManagement": "Espandi la sezione di gestione dei comandi",
+		"collapseManagement": "Comprimi la sezione di gestione dei comandi"
+	},
 	"response": "Risposta",
 	"arguments": "Argomenti",
 	"mcp": {
@@ -254,9 +270,9 @@
 		"title": "🎉 Rilasciato Kilo Code {{version}}",
 		"description": "Kilo Code {{version}} porta nuove potenti funzionalità e miglioramenti significativi per potenziare il tuo flusso di lavoro di sviluppo.",
 		"whatsNew": "Novità",
-		"feature1": "<bold>Indicizzazione Codebase Promossa da Sperimentale</bold>: L'indicizzazione completa del codebase è ora stabile e pronta per l'uso in produzione con ricerca migliorata e comprensione del contesto.",
-		"feature2": "<bold>Nuova Funzione Lista Todo</bold>: Mantieni i tuoi task in carreggiata con la gestione integrata dei todo che ti aiuta a rimanere organizzato e concentrato sui tuoi obiettivi di sviluppo.",
-		"feature3": "<bold>Transizioni Migliorate da Architetto a Codice</bold>: Trasferimenti fluidi dalla pianificazione in modalità Architetto all'implementazione in modalità Codice.",
+		"feature1": "<bold>Provider Hugging Face</bold>: Accedi a tantissimi ottimi modelli open source direttamente tramite il nuovo provider Hugging Face con integrazione perfetta e selezione dei modelli.",
+		"feature2": "<bold>Controlli Comando Inline</bold>: Nuovi controlli di approvazione automatica e rifiuto per l'esecuzione dei comandi ti danno controllo preciso sulle operazioni del terminale con permessi personalizzabili.",
+		"feature3": "<bold>Supporto Regole AGENTS.md</bold>: Aggiunge il supporto per un file AGENTS.md standard della comunità nella radice del progetto.",
 		"hideButton": "Nascondi annuncio",
 		"detailsDiscussLinks": "Ottieni maggiori dettagli e partecipa alle discussioni su <discordLink>Discord</discordLink> e <redditLink>Reddit</redditLink> 🚀"
 	},

@@ -52,5 +52,14 @@
 		"vectorDimensionNotDetermined": "ไม่สามารถกำหนดมิติเวกเตอร์สำหรับโมเดล '{{modelId}}' กับผู้ให้บริการ '{{provider}}' ตรวจสอบโปรไฟล์โมเดลหรือการกำหนดค่า",
 		"qdrantUrlMissing": "Qdrant URL หายไปสำหรับการสร้าง vector store",
 		"codeIndexingNotConfigured": "ไม่สามารถสร้างบริการ: การจัดทำดัชนีโค้ดไม่ได้กำหนดค่าอย่างถูกต้อง"
+	},
+	"orchestrator": {
+		"indexingFailedNoBlocks": "การจัดทำดัชนีล้มเหลว: ไม่มีบล็อกโค้ดใดที่ถูกจัดทำดัชนีสำเร็จ ซึ่งมักหมายถึงปัญหาการกำหนดค่า embedder",
+		"indexingFailedCritical": "การจัดทำดัชนีล้มเหลว: ไม่มีบล็อกโค้ดใดที่ถูกจัดทำดัชนีสำเร็จแม้ว่าจะพบไฟล์ที่ต้องประมวลผล ซึ่งแสดงถึงความล้มเหลวที่สำคัญของ embedder",
+		"fileWatcherStarted": "เริ่มต้นตัวติดตามไฟล์แล้ว",
+		"fileWatcherStopped": "หยุดตัวติดตามไฟล์แล้ว",
+		"failedDuringInitialScan": "ล้มเหลวระหว่างการสแกนเริ่มต้น: {{errorMessage}}",
+		"unknownError": "ข้อผิดพลาดที่ไม่ทราบสาเหตุ",
+		"indexingRequiresWorkspace": "การจัดทำดัชนีต้องการโฟลเดอร์พื้นที่ทำงานที่เปิดอยู่"
 	}
 }

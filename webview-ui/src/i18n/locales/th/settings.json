@@ -266,6 +266,20 @@
 		"groqApiKey": "คีย์ API ของ Groq",
 		"getGeminiApiKey": "รับคีย์ API ของ Gemini",
 		"openAiApiKey": "คีย์ API ของ OpenAI",
+		"getHuggingFaceApiKey": "รับคีย์ API ของ Hugging Face",
+		"huggingFaceApiKey": "คีย์ API ของ Hugging Face",
+		"huggingFaceModelId": "รหัสโมเดล",
+		"huggingFaceLoading": "กำลังโหลด...",
+		"huggingFaceModelsCount": "({{count}} โมเดล)",
+		"huggingFaceSelectModel": "เลือกโมเดล...",
+		"huggingFaceSearchModels": "ค้นหาโมเดล...",
+		"huggingFaceNoModelsFound": "ไม่พบโมเดล",
+		"huggingFaceProvider": "ผู้ให้บริการ",
+		"huggingFaceProviderAuto": "อัตโนมัติ",
+		"huggingFaceSelectProvider": "เลือกผู้ให้บริการ...",
+		"huggingFaceSearchProviders": "ค้นหาผู้ให้บริการ...",
+		"huggingFaceNoProvidersFound": "ไม่พบผู้ให้บริการ",
+		"awsApiKey": "คีย์ API ของ Amazon Bedrock",
 		"apiKey": "คีย์ API",
 		"openAiBaseUrl": "URL พื้นฐาน",
 		"getOpenAiApiKey": "รับคีย์ API ของ OpenAI",
@@ -526,6 +540,22 @@
 			"profileDescription": "เกณฑ์ที่กำหนดเองสำหรับโปรไฟล์นี้เท่านั้น (แทนที่ค่าเริ่มต้นสากล)",
 			"inheritDescription": "โปรไฟล์นี้สืบทอดเกณฑ์เริ่มต้นสากล ({{threshold}}%)",
 			"usesGlobal": "(ใช้ค่าสากล {{threshold}}%)"
+		},
+		"diagnostics": {
+			"includeMessages": {
+				"label": "รวมข้อความการวินิจฉัยในบริบทโดยอัตโนมัติ",
+				"description": "เมื่อเปิดใช้งาน ข้อความการวินิจฉัย (ข้อผิดพลาด) จากไฟล์ที่แก้ไขจะถูกรวมในบริบทโดยอัตโนมัติ คุณสามารถรวมการวินิจฉัยพื้นที่ทำงานทั้งหมดด้วยตนเองได้เสมอโดยใช้ @problems"
+			},
+			"maxMessages": {
+				"label": "ข้อความการวินิจฉัยสูงสุด",
+				"description": "จำกัดจำนวนข้อความการวินิจฉัย (ข้อผิดพลาด คำเตือน) ที่รวมในบริบท เมื่อตั้งค่าแล้ว จะแสดงการวินิจฉัยเพียงจำนวนนี้เท่านั้น โดยให้ความสำคัญกับข้อผิดพลาดมากกว่าคำเตือน ตั้งค่าเป็น 0 สำหรับการวินิจฉัยไม่จำกัด",
+				"resetTooltip": "รีเซ็ตเป็นค่าเริ่มต้น (50)",
+				"unlimitedLabel": "ไม่จำกัด"
+			},
+			"delayAfterWrite": {
+				"label": "หน่วงเวลาหลังการเขียนเพื่อให้การวินิจฉัยตรวจจับปัญหาที่อาจเกิดขึ้น",
+				"description": "เวลารอหลังการเขียนไฟล์ก่อนดำเนินการต่อ ช่วยให้เครื่องมือวินิจฉัยประมวลผลการเปลี่ยนแปลงและตรวจจับปัญหา"
+			}
 		}
 	},
 	"terminal": {
@@ -755,6 +785,9 @@
 		"customArn": "ARN ที่กำหนดเอง",
 		"useCustomArn": "ใช้ ARN ที่กำหนดเอง..."
 	},
+	"limitMaxTokensDescription": "จำกัดจำนวนโทเค็นสูงสุดในการตอบกลับ",
+	"maxOutputTokensLabel": "โทเค็นเอาต์พุตสูงสุด",
+	"maxTokensGenerateDescription": "จำนวนโทเค็นสูงสุดที่จะสร้างในการตอบกลับ",
 	"includeMaxOutputTokens": "รวมโทเค็นเอาต์พุตสูงสุด",
 	"includeMaxOutputTokensDescription": "ส่งพารามิเตอร์โทเค็นเอาต์พุตสูงสุดในคำขอ API ผู้ให้บริการบางรายอาจไม่รองรับสิ่งนี้"
 }

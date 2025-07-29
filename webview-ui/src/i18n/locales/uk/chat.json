@@ -218,6 +218,22 @@
 		"resultTooltip": "Оцінка схожості: {{score}} (клікни для відкриття файлу)"
 	},
 	"commandOutput": "Вивід команди",
+	"commandExecution": {
+		"running": "Виконується",
+		"pid": "PID: {{pid}}",
+		"exited": "Завершено ({{exitCode}})",
+		"manageCommands": "Керування дозволами команд",
+		"commandManagementDescription": "Керування дозволами команд: Натисни ✓, щоб дозволити автоматичне виконання, ✗, щоб заборонити виконання. Шаблони можна вмикати/вимикати або видаляти зі списків. <settingsLink>Переглянути всі налаштування</settingsLink>",
+		"addToAllowed": "Додати до списку дозволених",
+		"removeFromAllowed": "Видалити зі списку дозволених",
+		"addToDenied": "Додати до списку заборонених",
+		"removeFromDenied": "Видалити зі списку заборонених",
+		"abortCommand": "Перервати виконання команди",
+		"expandOutput": "Розгорнути вивід",
+		"collapseOutput": "Згорнути вивід",
+		"expandManagement": "Розгорнути розділ керування командами",
+		"collapseManagement": "Згорнути розділ керування командами"
+	},
 	"response": "Відповідь",
 	"arguments": "Аргументи",
 	"mcp": {

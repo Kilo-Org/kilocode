@@ -38,6 +38,7 @@
 	"settings.customStoragePath.description": "Đường dẫn lưu trữ tùy chỉnh. Để trống để sử dụng vị trí mặc định. Hỗ trợ đường dẫn tuyệt đối (ví dụ: 'D:\\KiloCodeStorage')",
 	"settings.enableCodeActions.description": "Bật sửa lỗi nhanh Kilo Code.",
 	"settings.autoImportSettingsPath.description": "Đường dẫn đến tệp cấu hình Kilo Code để tự động nhập khi khởi động tiện ích mở rộng. Hỗ trợ đường dẫn tuyệt đối và đường dẫn tương đối đến thư mục chính (ví dụ: '~/Documents/kilo-code-settings.json'). Để trống để tắt tính năng tự động nhập.",
+	"settings.useAgentRules.description": "Bật tải tệp AGENTS.md cho các quy tắc dành riêng cho tác nhân (xem https://agent-rules.org/)",
 	"ghost.input.title": "Nhấn 'Enter' để xác nhận hoặc 'Escape' để hủy",
 	"ghost.input.placeholder": "Mô tả những gì bạn muốn làm...",
 	"ghost.commands.generateSuggestions": "Kilo Code: Tạo Gợi Ý Chỉnh Sửa",

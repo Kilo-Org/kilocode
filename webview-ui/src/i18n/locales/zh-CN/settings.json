@@ -269,6 +269,19 @@
 		"geminiApiKey": "Gemini API 密钥",
 		"getGroqApiKey": "获取 Groq API 密钥",
 		"groqApiKey": "Groq API 密钥",
+		"getHuggingFaceApiKey": "获取 Hugging Face API 密钥",
+		"huggingFaceApiKey": "Hugging Face API 密钥",
+		"huggingFaceModelId": "模型 ID",
+		"huggingFaceLoading": "加载中...",
+		"huggingFaceModelsCount": "({{count}} 个模型)",
+		"huggingFaceSelectModel": "选择模型...",
+		"huggingFaceSearchModels": "搜索模型...",
+		"huggingFaceNoModelsFound": "未找到模型",
+		"huggingFaceProvider": "提供商",
+		"huggingFaceProviderAuto": "自动",
+		"huggingFaceSelectProvider": "选择提供商...",
+		"huggingFaceSearchProviders": "搜索提供商...",
+		"huggingFaceNoProvidersFound": "未找到提供商",
 		"getGeminiApiKey": "获取 Gemini API 密钥",
 		"openAiApiKey": "OpenAI API 密钥",
 		"apiKey": "API 密钥",
@@ -284,6 +297,7 @@
 		"litellmBaseUrl": "LiteLLM 基础 URL",
 		"awsCredentials": "AWS 凭证",
 		"awsProfile": "AWS 配置文件",
+		"awsApiKey": "Amazon Bedrock API 密钥",
 		"awsProfileName": "AWS 配置文件名称",
 		"awsAccessKey": "AWS 访问密钥",
 		"awsSecretKey": "AWS 密钥",
@@ -512,6 +526,23 @@
 		"maxConcurrentFileReads": {
 			"label": "并发文件读取限制",
 			"description": "read_file 工具可以同时处理的最大文件数。较高的值可能会加快读取多个小文件的速度，但会增加内存使用量。"
+		},
+		"diagnostics": {
+			"includeMessages": {
+				"label": "自动在上下文中包含诊断",
+				"description": "启用后，来自已编辑文件的诊断消息（错误）将自动包含在上下文中。您始终可以使用 @problems 手动包含所有工作区诊断。"
+			},
+			"maxMessages": {
+				"label": "最大诊断消息数",
+				"description": "每个文件包含的最大诊断消息数。此限制适用于自动包含（启用复选框时）和手动 @problems 提及。较高的值提供更多上下文，但会增加令牌使用量。",
+				"resetTooltip": "重置为默认值 (50)",
+				"unlimited": "无限制诊断消息",
+				"unlimitedLabel": "无限制"
+			},
+			"delayAfterWrite": {
+				"label": "写入后延迟以允许诊断程序检测潜在问题",
+				"description": "在继续之前写入文件后等待的时间，允许诊断工具处理更改并检测问题。"
+			}
 		},
 		"condensingThreshold": {
 			"label": "压缩触发阈值",
@@ -761,5 +792,8 @@
 		}
 	},
 	"includeMaxOutputTokens": "包含最大输出 Token 数",
-	"includeMaxOutputTokensDescription": "在 API 请求中发送最大输出 Token 参数。某些提供商可能不支持此功能。"
+	"includeMaxOutputTokensDescription": "在 API 请求中发送最大输出 Token 参数。某些提供商可能不支持此功能。",
+	"limitMaxTokensDescription": "限制响应中的最大 Token 数量",
+	"maxOutputTokensLabel": "最大输出 Token 数",
+	"maxTokensGenerateDescription": "响应中生成的最大 Token 数"
 }

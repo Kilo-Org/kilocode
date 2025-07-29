@@ -199,6 +199,22 @@
 		"didViewDefinitionsOutsideWorkspace": "Kilo Code ha vist noms de definicions de codi font utilitzats en aquest directori (fora de l'espai de treball):"
 	},
 	"commandOutput": "Sortida de l'ordre",
+	"commandExecution": {
+		"running": "Executant",
+		"pid": "PID: {{pid}}",
+		"exited": "Finalitzat ({{exitCode}})",
+		"manageCommands": "Gestiona els permisos de les ordres",
+		"commandManagementDescription": "Gestiona els permisos de les ordres: Fes clic a ✓ per permetre l'execució automàtica, ✗ per denegar l'execució. Els patrons es poden activar/desactivar o eliminar de les llistes. <settingsLink>Mostra tots els paràmetres</settingsLink>",
+		"addToAllowed": "Afegeix a la llista de permesos",
+		"removeFromAllowed": "Elimina de la llista de permesos",
+		"addToDenied": "Afegeix a la llista de denegats",
+		"removeFromDenied": "Elimina de la llista de denegats",
+		"abortCommand": "Interromp l'execució de l'ordre",
+		"expandOutput": "Amplia la sortida",
+		"collapseOutput": "Redueix la sortida",
+		"expandManagement": "Amplia la secció de gestió d'ordres",
+		"collapseManagement": "Redueix la secció de gestió d'ordres"
+	},
 	"response": "Resposta",
 	"arguments": "Arguments",
 	"mcp": {
@@ -254,9 +270,9 @@
 		"title": "🎉 Kilo Code {{version}} Llançat",
 		"description": "Kilo Code {{version}} porta noves funcions potents i millores significatives per millorar el vostre flux de treball de desenvolupament.",
 		"whatsNew": "Novetats",
-		"feature1": "<bold>Indexació de Base de Codi Graduada d'Experimental</bold>: La indexació completa de la base de codi ara és estable i està llesta per a ús en producció amb cerca millorada i comprensió del context.",
-		"feature2": "<bold>Nova Funcionalitat de Llista de Tasques Pendents</bold>: Mantingueu les vostres tasques en el bon camí amb gestió integrada de tasques pendents que us ajuda a mantenir-vos organitzats i centrats en els vostres objectius de desenvolupament.",
-		"feature3": "<bold>Transicions Millorades d'Arquitecte a Codi</bold>: Transferències fluides de la planificació en mode Arquitecte a la implementació en mode Codi.",
+		"feature1": "<bold>Proveïdor de Hugging Face</bold>: Accedeix a molts models de codi obert excel·lents directament a través del nou proveïdor de Hugging Face amb integració perfecta i selecció de models.",
+		"feature2": "<bold>Controls de Comandament en Línia</bold>: Nous controls d'aprovació automàtica i denegació per a l'execució de comandaments et donen control precís sobre les operacions de terminal amb permisos personalitzables.",
+		"feature3": "<bold>Suport per a Regles AGENTS.md</bold>: Afegeix suport per a un fitxer AGENTS.md estàndard de la comunitat a l'arrel del projecte.",
 		"hideButton": "Amaga l'anunci",
 		"detailsDiscussLinks": "Obtén més detalls i uneix-te a les discussions a <discordLink>Discord</discordLink> i <redditLink>Reddit</redditLink> 🚀"
 	},

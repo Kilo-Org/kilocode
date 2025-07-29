@@ -52,5 +52,14 @@
 		"vectorDimensionNotDetermined": "لا يمكن تحديد أبعاد المتجه للنموذج '{{modelId}}' مع المزوّد '{{provider}}'. تحقق من ملفات النموذج أو الإعدادات.",
 		"qdrantUrlMissing": "رابط Qdrant مفقود لإنشاء مخزن المتجهات",
 		"codeIndexingNotConfigured": "لا يمكن إنشاء الخدمات: فهرسة الكود غير مُعدّة بشكل صحيح"
+	},
+	"orchestrator": {
+		"indexingFailedNoBlocks": "فشلت الفهرسة: لم يتم فهرسة أي كتل كود بنجاح. هذا عادة يشير إلى مشكلة في إعدادات المضمّن.",
+		"indexingFailedCritical": "فشلت الفهرسة: لم يتم فهرسة أي كتل كود بنجاح رغم العثور على ملفات للمعالجة. هذا يشير إلى فشل حرج في المضمّن.",
+		"fileWatcherStarted": "تم بدء مراقب الملفات.",
+		"fileWatcherStopped": "تم إيقاف مراقب الملفات.",
+		"failedDuringInitialScan": "فشل أثناء المسح الأولي: {{errorMessage}}",
+		"unknownError": "خطأ غير معروف",
+		"indexingRequiresWorkspace": "الفهرسة تتطلب مجلد مشروع مفتوح"
 	}
 }

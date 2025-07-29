@@ -222,6 +222,22 @@
 		"noResults": "لا توجد نتائج"
 	},
 	"commandOutput": "مخرجات الأمر",
+	"commandExecution": {
+		"running": "قيد التشغيل",
+		"pid": "معرف العملية: {{pid}}",
+		"exited": "تم الإنهاء ({{exitCode}})",
+		"manageCommands": "أدارة صلاحيات الأوامر",
+		"commandManagementDescription": "أدارة صلاحيات الأوامر: انقر ✓ للسماح بالتنفيذ التلقائي، ✗ لرفض التنفيذ. يمكن تشغيل/إيقاف الأنماط أو حذفها من القوائم. <settingsLink>عرض جميع الإعدادات</settingsLink>",
+		"addToAllowed": "أضف إلى قائمة المسموح",
+		"removeFromAllowed": "احذف من قائمة المسموح",
+		"addToDenied": "أضف إلى قائمة المرفوض",
+		"removeFromDenied": "احذف من قائمة المرفوض",
+		"abortCommand": "إلغاء تنفيذ الأمر",
+		"expandOutput": "توسيع المخرجات",
+		"collapseOutput": "طي المخرجات",
+		"expandManagement": "توسيع قسم إدارة الأوامر",
+		"collapseManagement": "طي قسم إدارة الأوامر"
+	},
 	"response": "الاستجابة",
 	"arguments": "المعطيات",
 	"mcp": {

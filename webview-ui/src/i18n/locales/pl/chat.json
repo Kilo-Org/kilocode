@@ -199,6 +199,22 @@
 		"didViewDefinitionsOutsideWorkspace": "Kilo Code zobaczył nazwy definicji kodu źródłowego używane w tym katalogu (poza obszarem roboczym):"
 	},
 	"commandOutput": "Wyjście polecenia",
+	"commandExecution": {
+		"running": "Wykonywanie",
+		"pid": "PID: {{pid}}",
+		"exited": "Zakończono ({{exitCode}})",
+		"manageCommands": "Zarządzaj uprawnieniami poleceń",
+		"commandManagementDescription": "Zarządzaj uprawnieniami poleceń: Kliknij ✓, aby zezwolić na automatyczne wykonanie, ✗, aby odmówić wykonania. Wzorce można włączać/wyłączać lub usuwać z listy. <settingsLink>Zobacz wszystkie ustawienia</settingsLink>",
+		"addToAllowed": "Dodaj do listy dozwolonych",
+		"removeFromAllowed": "Usuń z listy dozwolonych",
+		"addToDenied": "Dodaj do listy odrzuconych",
+		"removeFromDenied": "Usuń z listy odrzuconych",
+		"abortCommand": "Przerwij wykonywanie polecenia",
+		"expandOutput": "Rozwiń wyjście",
+		"collapseOutput": "Zwiń wyjście",
+		"expandManagement": "Rozwiń sekcję zarządzania poleceniami",
+		"collapseManagement": "Zwiń sekcję zarządzania poleceniami"
+	},
 	"response": "Odpowiedź",
 	"arguments": "Argumenty",
 	"mcp": {
@@ -254,9 +270,9 @@
 		"title": "🎉 Kilo Code {{version}} wydany",
 		"description": "Kilo Code {{version}} wprowadza potężne nowe funkcje i znaczące ulepszenia, aby ulepszyć Twój przepływ pracy programistycznej.",
 		"whatsNew": "Co nowego",
-		"feature1": "<bold>Indeksowanie bazy kodu ukończone z fazy eksperymentalnej</bold>: Pełne indeksowanie bazy kodu jest teraz stabilne i gotowe do użytku produkcyjnego z ulepszonymi funkcjami wyszukiwania i rozumienia kontekstu.",
-		"feature2": "<bold>Nowa funkcja listy zadań</bold>: Utrzymuj swoje zadania na właściwym torze dzięki zintegrowanemu zarządzaniu zadaniami, które pomaga ci pozostać zorganizowanym i skupionym na celach rozwojowych.",
-		"feature3": "<bold>Ulepszone przejścia z Architekta do Kodu</bold>: Płynne transfery z planowania w trybie Architekta do implementacji w trybie Kodu.",
+		"feature1": "<bold>Dostawca Hugging Face</bold>: Uzyskaj dostęp do mnóstwa wspaniałych modeli open source bezpośrednio przez nowego dostawcę Hugging Face z bezproblemową integracją i wyborem modeli.",
+		"feature2": "<bold>Kontrole Poleceń Inline</bold>: Nowe kontrole automatycznego zatwierdzania i odrzucania dla wykonywania poleceń dają ci precyzyjną kontrolę nad operacjami terminala z konfigurowalnymi uprawnieniami.",
+		"feature3": "<bold>Wsparcie Reguł AGENTS.md</bold>: Dodaje wsparcie dla standardowego pliku AGENTS.md społeczności w katalogu głównym projektu.",
 		"hideButton": "Ukryj ogłoszenie",
 		"detailsDiscussLinks": "Uzyskaj więcej szczegółów i dołącz do dyskusji na <discordLink>Discord</discordLink> i <redditLink>Reddit</redditLink> 🚀"
 	},

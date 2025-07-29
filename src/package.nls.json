@@ -39,6 +39,7 @@
 	"settings.customStoragePath.description": "Custom storage path. Leave empty to use the default location. Supports absolute paths (e.g. 'D:\\KiloCodeStorage')",
 	"settings.enableCodeActions.description": "Enable Kilo Code quick fixes",
 	"settings.autoImportSettingsPath.description": "Path to a Kilo Code configuration file to automatically import on extension startup. Supports absolute paths and paths relative to the home directory (e.g. '~/Documents/kilo-code-settings.json'). Leave empty to disable auto-import.",
+	"settings.useAgentRules.description": "Enable loading of AGENTS.md files for agent-specific rules (see https://agent-rules.org/)",
 	"ghost.input.title": "Press 'Enter' to confirm or 'Escape' to cancel",
 	"ghost.input.placeholder": "Describe what you want to do...",
 	"ghost.commands.generateSuggestions": "Generate Suggested Edits",

@@ -199,6 +199,22 @@
 		"didViewDefinitionsOutsideWorkspace": "Kilo Code bu dizinde (çalışma alanı dışında) kullanılan kaynak kod tanımlama isimlerini görüntüledi:"
 	},
 	"commandOutput": "Komut Çıktısı",
+	"commandExecution": {
+		"running": "Çalışıyor",
+		"pid": "PID: {{pid}}",
+		"exited": "Çıkıldı ({{exitCode}})",
+		"manageCommands": "Komut İzinlerini Yönet",
+		"commandManagementDescription": "Komut izinlerini yönetin: Otomatik yürütmeye izin vermek için ✓'e, yürütmeyi reddetmek için ✗'e tıklayın. Desenler açılıp kapatılabilir veya listelerden kaldırılabilir. <settingsLink>Tüm ayarları görüntüle</settingsLink>",
+		"addToAllowed": "İzin verilenler listesine ekle",
+		"removeFromAllowed": "İzin verilenler listesinden kaldır",
+		"addToDenied": "Reddedilenler listesine ekle",
+		"removeFromDenied": "Reddedilenler listesinden kaldır",
+		"abortCommand": "Komut yürütmeyi iptal et",
+		"expandOutput": "Çıktıyı genişlet",
+		"collapseOutput": "Çıktıyı daralt",
+		"expandManagement": "Komut yönetimi bölümünü genişlet",
+		"collapseManagement": "Komut yönetimi bölümünü daralt"
+	},
 	"response": "Yanıt",
 	"arguments": "Argümanlar",
 	"mcp": {
@@ -254,9 +270,9 @@
 		"title": "🎉 Kilo Code {{version}} Yayınlandı",
 		"description": "Kilo Code {{version}}, geliştirme iş akışınızı geliştirmek için güçlü yeni özellikler ve önemli iyileştirmeler getiriyor.",
 		"whatsNew": "Yenilikler",
-		"feature1": "<bold>Kod Tabanı İndeksleme Deneysel Aşamadan Mezun Oldu</bold>: Tam kod tabanı indeksleme artık kararlı ve geliştirilmiş arama ve bağlam anlayışı ile üretim kullanımına hazır.",
-		"feature2": "<bold>Yeni Yapılacaklar Listesi Özelliği</bold>: Görevlerinizi yolunda tutmak için entegre yapılacaklar yönetimi ile organize kalın ve geliştirme hedeflerinize odaklanın.",
-		"feature3": "<bold>Geliştirilmiş Mimar'dan Kod'a Geçişler</bold>: Mimar modunda planlamadan Kod modunda uygulamaya sorunsuz aktarımlar.",
+		"feature1": "<bold>Hugging Face Sağlayıcısı</bold>: Yeni Hugging Face sağlayıcısı aracılığıyla sorunsuz entegrasyon ve model seçimi ile tonlarca harika açık kaynak modeline doğrudan erişin.",
+		"feature2": "<bold>Satır İçi Komut Kontrolleri</bold>: Komut yürütme için yeni otomatik onay ve reddetme kontrolleri, özelleştirilebilir izinlerle terminal işlemleri üzerinde hassas kontrol sağlar.",
+		"feature3": "<bold>AGENTS.md Kuralları Desteği</bold>: Projenin kökünde topluluk standardı AGENTS.md dosyası için destek ekler.",
 		"hideButton": "Duyuruyu gizle",
 		"detailsDiscussLinks": "<discordLink>Discord</discordLink> ve <redditLink>Reddit</redditLink>'te daha fazla ayrıntı alın ve tartışmalara katılın 🚀"
 	},

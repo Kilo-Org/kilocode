@@ -38,6 +38,7 @@
 	"settings.customStoragePath.description": "Caminho de armazenamento personalizado. Deixe vazio para usar o local padrão. Suporta caminhos absolutos (ex: 'D:\\KiloCodeStorage')",
 	"settings.enableCodeActions.description": "Habilitar correções rápidas do Kilo Code.",
 	"settings.autoImportSettingsPath.description": "Caminho para um arquivo de configuração do Kilo Code para importar automaticamente na inicialização da extensão. Suporta caminhos absolutos e caminhos relativos ao diretório inicial (por exemplo, '~/Documents/kilo-code-settings.json'). Deixe em branco para desativar a importação automática.",
+	"settings.useAgentRules.description": "Habilita o carregamento de arquivos AGENTS.md para regras específicas do agente (consulte https://agent-rules.org/)",
 	"ghost.input.title": "Pressione 'Enter' para confirmar ou 'Escape' para cancelar",
 	"ghost.input.placeholder": "Descreva o que você quer fazer...",
 	"ghost.commands.generateSuggestions": "Kilo Code: Gerar Sugestões de Edição",

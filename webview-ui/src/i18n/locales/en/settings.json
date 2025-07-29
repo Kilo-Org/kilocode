@@ -264,6 +264,19 @@
 		"geminiApiKey": "Gemini API Key",
 		"getGroqApiKey": "Get Groq API Key",
 		"groqApiKey": "Groq API Key",
+		"getHuggingFaceApiKey": "Get Hugging Face API Key",
+		"huggingFaceApiKey": "Hugging Face API Key",
+		"huggingFaceModelId": "Model ID",
+		"huggingFaceLoading": "Loading...",
+		"huggingFaceModelsCount": "({{count}} models)",
+		"huggingFaceSelectModel": "Select a model...",
+		"huggingFaceSearchModels": "Search models...",
+		"huggingFaceNoModelsFound": "No models found",
+		"huggingFaceProvider": "Provider",
+		"huggingFaceProviderAuto": "Auto",
+		"huggingFaceSelectProvider": "Select a provider...",
+		"huggingFaceSearchProviders": "Search providers...",
+		"huggingFaceNoProvidersFound": "No providers found",
 		"getGeminiApiKey": "Get Gemini API Key",
 		"openAiApiKey": "OpenAI API Key",
 		"apiKey": "API Key",
@@ -279,6 +292,7 @@
 		"litellmBaseUrl": "LiteLLM Base URL",
 		"awsCredentials": "AWS Credentials",
 		"awsProfile": "AWS Profile",
+		"awsApiKey": "Amazon Bedrock API Key",
 		"awsProfileName": "AWS Profile Name",
 		"awsAccessKey": "AWS Access Key",
 		"awsSecretKey": "AWS Secret Key",
@@ -518,6 +532,22 @@
 			"lines": "lines",
 			"always_full_read": "Always read entire file"
 		},
+		"diagnostics": {
+			"includeMessages": {
+				"label": "Automatically include diagnostics in context",
+				"description": "When enabled, diagnostic messages (errors) from edited files will be automatically included in the context. You can always manually include all workspace diagnostics using @problems."
+			},
+			"maxMessages": {
+				"label": "Maximum diagnostic messages",
+				"description": "Limits the number of diagnostic messages (errors, warnings) included in the context. When set, only this many diagnostics will be shown, prioritizing errors over warnings. Set to 0 for unlimited diagnostics.",
+				"resetTooltip": "Reset to default value (50)",
+				"unlimitedLabel": "Unlimited"
+			},
+			"delayAfterWrite": {
+				"label": "Delay after writes to allow diagnostics to detect potential problems",
+				"description": "Time to wait after file writes before proceeding, allowing diagnostic tools to process changes and detect issues."
+			}
+		},
 		"condensingThreshold": {
 			"label": "Condensing Trigger Threshold",
 			"selectProfile": "Configure threshold for profile",
@@ -756,5 +786,8 @@
 		"useCustomArn": "Use custom ARN..."
 	},
 	"includeMaxOutputTokens": "Include max output tokens",
-	"includeMaxOutputTokensDescription": "Send max output tokens parameter in API requests. Some providers may not support this."
+	"includeMaxOutputTokensDescription": "Send max output tokens parameter in API requests. Some providers may not support this.",
+	"limitMaxTokensDescription": "Limit the maximum number of tokens in the response",
+	"maxOutputTokensLabel": "Max output tokens",
+	"maxTokensGenerateDescription": "Maximum tokens to generate in response"
 }

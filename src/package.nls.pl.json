@@ -38,6 +38,7 @@
 	"settings.customStoragePath.description": "Niestandardowa ścieżka przechowywania. Pozostaw puste, aby użyć domyślnej lokalizacji. Obsługuje ścieżki bezwzględne (np. 'D:\\KiloCodeStorage')",
 	"settings.enableCodeActions.description": "Włącz szybkie poprawki Kilo Code.",
 	"settings.autoImportSettingsPath.description": "Ścieżka do pliku konfiguracyjnego Kilo Code, który ma być automatycznie importowany podczas uruchamiania rozszerzenia. Obsługuje ścieżki bezwzględne i ścieżki względne do katalogu domowego (np. '~/Documents/kilo-code-settings.json'). Pozostaw puste, aby wyłączyć automatyczne importowanie.",
+	"settings.useAgentRules.description": "Włącz wczytywanie plików AGENTS.md dla reguł specyficznych dla agenta (zobacz https://agent-rules.org/)",
 	"ghost.input.title": "Naciśnij 'Enter' aby potwierdzić lub 'Escape' aby anulować",
 	"ghost.input.placeholder": "Opisz co chcesz zrobić...",
 	"ghost.commands.generateSuggestions": "Kilo Code: Generuj Sugestie Edycji",

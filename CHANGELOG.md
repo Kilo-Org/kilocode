@@ -1,5 +1,33 @@
 # kilo-code
 
+## [v4.68.0]
+
+- [#1579](https://github.com/Kilo-Org/kilocode/pull/1579) [`4e5d90a`](https://github.com/Kilo-Org/kilocode/commit/4e5d90a78b99ed5dca750446733aef36d3381680) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Include changes from Roo Code v3.24.0
+
+    - Add Hugging Face provider with support for open source models (thanks @TGlide!)
+    - Add terminal command permissions UI to chat interface
+    - Add support for Agent Rules standard via AGENTS.md (thanks @sgryphon!)
+    - Add settings to control diagnostic messages
+    - Fix auto-approve checkbox to be toggled at any time (thanks @KJ7LNW!)
+    - Add efficiency warning for single SEARCH/REPLACE blocks in apply_diff (thanks @KJ7LNW!)
+    - Fix respect maxReadFileLine setting for file mentions to prevent context exhaustion (thanks @sebinseban!)
+    - Fix Ollama API URL normalization by removing trailing slashes (thanks @Naam!)
+    - Fix restore list styles for markdown lists in chat interface (thanks @village-way!)
+    - Add support for bedrock api keys
+    - Add confirmation dialog and proper cleanup for marketplace mode removal
+    - Fix cancel auto-approve timer when editing follow-up suggestion (thanks @hassoncs!)
+    - Fix add error message when no workspace folder is open for code indexing
+
+### Patch Changes
+
+- [#1561](https://github.com/Kilo-Org/kilocode/pull/1561) [`b3b024f`](https://github.com/Kilo-Org/kilocode/commit/b3b024f670c8b98921d3fc02c626a21c18be0a52) Thanks [@RSO](https://github.com/RSO)! - Added notifications from kilocode backend
+
+- [#1574](https://github.com/Kilo-Org/kilocode/pull/1574) [`2ac061e`](https://github.com/Kilo-Org/kilocode/commit/2ac061ed83ef68f429e113f94f6d72be47fe4389) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Improve the styles for the Inline Assist suggestion previews
+
+- [#1581](https://github.com/Kilo-Org/kilocode/pull/1581) [`abf9898`](https://github.com/Kilo-Org/kilocode/commit/abf9898fa1e4e37bdb65ba3abad5c2a7ea78db45) Thanks [@hassoncs](https://github.com/hassoncs)! - Fix 'failure to apply changes to files' when Git diff views are open
+
+- [#1575](https://github.com/Kilo-Org/kilocode/pull/1575) [`3442152`](https://github.com/Kilo-Org/kilocode/commit/34421525994cfa794744a4f969e8eded5cf14d47) Thanks [@hassoncs](https://github.com/hassoncs)! - Attempt to fix the 'kilo icon missing' bug by switching back to PNG icons
+
 ## [v4.67.0]
 
 - [#1484](https://github.com/Kilo-Org/kilocode/pull/1484) [`8294250`](https://github.com/Kilo-Org/kilocode/commit/8294250662f15c819f68781b507cb0e35a29b71b) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Improve Inline Assist suggestions by adding comprehensive context awareness

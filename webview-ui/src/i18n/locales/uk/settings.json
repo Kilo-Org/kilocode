@@ -272,6 +272,20 @@
 		"groqApiKey": "Ключ API Groq",
 		"getGeminiApiKey": "Отримати ключ API Gemini",
 		"openAiApiKey": "Ключ API OpenAI",
+		"getHuggingFaceApiKey": "Отримати ключ API Hugging Face",
+		"huggingFaceApiKey": "Ключ API Hugging Face",
+		"huggingFaceModelId": "ID моделі",
+		"huggingFaceLoading": "Завантаження...",
+		"huggingFaceModelsCount": "({{count}} моделей)",
+		"huggingFaceSelectModel": "Виберіть модель...",
+		"huggingFaceSearchModels": "Пошук моделей...",
+		"huggingFaceNoModelsFound": "Моделі не знайдено",
+		"huggingFaceProvider": "Постачальник",
+		"huggingFaceProviderAuto": "Автоматично",
+		"huggingFaceSelectProvider": "Виберіть постачальника...",
+		"huggingFaceSearchProviders": "Пошук постачальників...",
+		"huggingFaceNoProvidersFound": "Постачальників не знайдено",
+		"awsApiKey": "Ключ API Amazon Bedrock",
 		"apiKey": "Ключ API",
 		"openAiBaseUrl": "Базовий URL",
 		"getOpenAiApiKey": "Отримати ключ API OpenAI",
@@ -532,6 +546,22 @@
 			"profileDescription": "Власний поріг лише для цього профілю (перевизначає глобальний за замовчуванням)",
 			"inheritDescription": "Цей профіль успадковує глобальний поріг за замовчуванням ({{threshold}}%)",
 			"usesGlobal": "(використовує глобальний {{threshold}}%)"
+		},
+		"diagnostics": {
+			"includeMessages": {
+				"label": "Автоматично включати діагностику в контекст",
+				"description": "Коли увімкнено, діагностичні повідомлення (помилки) з відредагованих файлів будуть автоматично включені в контекст. Ви завжди можете вручну включити всю діагностику робочого простору, використовуючи @problems."
+			},
+			"maxMessages": {
+				"label": "Максимальна кількість діагностичних повідомлень",
+				"description": "Обмежує кількість діагностичних повідомлень (помилки, попередження), включених у контекст. Коли встановлено, буде показано лише цю кількість діагностики, надаючи пріоритет помилкам над попередженнями. Встановіть 0 для необмеженої діагностики.",
+				"resetTooltip": "Скинути до значення за замовчуванням (50)",
+				"unlimitedLabel": "Необмежено"
+			},
+			"delayAfterWrite": {
+				"label": "Затримка після запису для дозволу діагностиці виявити потенційні проблеми",
+				"description": "Час очікування після запису файлів перед продовженням, дозволяючи діагностичним інструментам обробити зміни та виявити проблеми."
+			}
 		}
 	},
 	"terminal": {
@@ -761,6 +791,9 @@
 		"customArn": "Власний ARN",
 		"useCustomArn": "Використовувати власний ARN..."
 	},
+	"limitMaxTokensDescription": "Обмежити максимальну кількість токенів у відповіді",
+	"maxOutputTokensLabel": "Максимальні вихідні токени",
+	"maxTokensGenerateDescription": "Максимальна кількість токенів для генерації у відповіді",
 	"includeMaxOutputTokens": "Включити макс. вихідні токени",
 	"includeMaxOutputTokensDescription": "Надсилати параметр макс. вихідних токенів у запитах API. Деякі провайдери можуть не підтримувати це."
 }

@@ -54,7 +54,7 @@ import { generateSystemPrompt } from "./generateSystemPrompt"
 import { getCommand } from "../../utils/commands"
 import { toggleWorkflow, toggleRule, createRuleFile, deleteRuleFile } from "./kilorules"
 import { mermaidFixPrompt } from "../prompts/utilities/mermaid" // kilocode_change
-import { editMessageHandler } from "../kilocode/webview/webviewMessageHandlerUtils" // kilocode_change
+import { editMessageHandler, fetchKilocodeNotificationsHandler } from "../kilocode/webview/webviewMessageHandlerUtils" // kilocode_change
 
 const ALLOWED_VSCODE_SETTINGS = new Set(["terminal.integrated.inheritEnv"])
 
@@ -706,6 +706,22 @@ export const webviewMessageHandler = async (
 			// TODO: Cache like we do for OpenRouter, etc?
 			provider.postMessageToWebview({ type: "vsCodeLmModels", vsCodeLmModels })
 			break
+		case "requestHuggingFaceModels":
+			try {
+				const { getHuggingFaceModelsWithMetadata } = await import("../../api/providers/fetchers/huggingface")
+				const huggingFaceModelsResponse = await getHuggingFaceModelsWithMetadata()
+				provider.postMessageToWebview({
+					type: "huggingFaceModels",
+					huggingFaceModels: huggingFaceModelsResponse.models,
+				})
+			} catch (error) {
+				console.error("Failed to fetch Hugging Face models:", error)
+				provider.postMessageToWebview({
+					type: "huggingFaceModels",
+					huggingFaceModels: [],
+				})
+			}
+			break
 		case "openImage":
 			openImage(message.text!, { values: message.values })
 			break
@@ -1322,6 +1338,16 @@ export const webviewMessageHandler = async (
 		case "maxConcurrentFileReads":
 			const valueToSave = message.value // Capture the value intended for saving
 			await updateGlobalState("maxConcurrentFileReads", valueToSave)
+			await provider.postStateToWebview()
+			break
+		case "includeDiagnosticMessages":
+			// Only apply default if the value is truly undefined (not false)
+			const includeValue = message.bool !== undefined ? message.bool : true
+			await updateGlobalState("includeDiagnosticMessages", includeValue)
+			await provider.postStateToWebview()
+			break
+		case "maxDiagnosticMessages":
+			await updateGlobalState("maxDiagnosticMessages", message.value ?? 50)
 			await provider.postStateToWebview()
 			break
 		case "setHistoryPreviewCollapsed": // Add the new case handler
@@ -2337,6 +2363,19 @@ export const webviewMessageHandler = async (
 							}
 						}
 					}
+				} else {
+					// No workspace open - send error status
+					provider.log("Cannot save code index settings: No workspace folder open")
+					await provider.postMessageToWebview({
+						type: "indexingStatusUpdate",
+						values: {
+							systemStatus: "Error",
+							message: t("embeddings:orchestrator.indexingRequiresWorkspace"),
+							processedItems: 0,
+							totalItems: 0,
+							currentItemUnit: "items",
+						},
+					})
 				}
 			} catch (error) {
 				provider.log(`Error saving code index settings: ${error.message || error}`)
@@ -2350,7 +2389,22 @@ export const webviewMessageHandler = async (
 		}
 
 		case "requestIndexingStatus": {
-			const status = provider.codeIndexManager!.getCurrentStatus()
+			const manager = provider.codeIndexManager
+			if (!manager) {
+				// No workspace open - send error status
+				provider.postMessageToWebview({
+					type: "indexingStatusUpdate",
+					values: {
+						systemStatus: "Error",
+						message: t("embeddings:orchestrator.indexingRequiresWorkspace"),
+						processedItems: 0,
+						totalItems: 0,
+						currentItemUnit: "items",
+					},
+				})
+				return
+			}
+			const status = manager.getCurrentStatus()
 			provider.postMessageToWebview({
 				type: "indexingStatusUpdate",
 				values: status,
@@ -2381,7 +2435,22 @@ export const webviewMessageHandler = async (
 		}
 		case "startIndexing": {
 			try {
-				const manager = provider.codeIndexManager!
+				const manager = provider.codeIndexManager
+				if (!manager) {
+					// No workspace open - send error status
+					provider.postMessageToWebview({
+						type: "indexingStatusUpdate",
+						values: {
+							systemStatus: "Error",
+							message: t("embeddings:orchestrator.indexingRequiresWorkspace"),
+							processedItems: 0,
+							totalItems: 0,
+							currentItemUnit: "items",
+						},
+					})
+					provider.log("Cannot start indexing: No workspace folder open")
+					return
+				}
 				if (manager.isFeatureEnabled && manager.isFeatureConfigured) {
 					if (!manager.isInitialized) {
 						await manager.initialize(provider.contextProxy)
@@ -2396,7 +2465,18 @@ export const webviewMessageHandler = async (
 		}
 		case "clearIndexData": {
 			try {
-				const manager = provider.codeIndexManager!
+				const manager = provider.codeIndexManager
+				if (!manager) {
+					provider.log("Cannot clear index data: No workspace folder open")
+					provider.postMessageToWebview({
+						type: "indexCleared",
+						values: {
+							success: false,
+							error: t("embeddings:orchestrator.indexingRequiresWorkspace"),
+						},
+					})
+					return
+				}
 				await manager.clearIndexData()
 				provider.postMessageToWebview({ type: "indexCleared", values: { success: true } })
 			} catch (error) {
@@ -2523,8 +2603,45 @@ export const webviewMessageHandler = async (
 				try {
 					await marketplaceManager.removeInstalledMarketplaceItem(message.mpItem, message.mpInstallOptions)
 					await provider.postStateToWebview()
+
+					// Send success message to webview
+					provider.postMessageToWebview({
+						type: "marketplaceRemoveResult",
+						success: true,
+						slug: message.mpItem.id,
+					})
 				} catch (error) {
 					console.error(`Error removing marketplace item: ${error}`)
+
+					// Show error message to user
+					vscode.window.showErrorMessage(
+						`Failed to remove marketplace item: ${error instanceof Error ? error.message : String(error)}`,
+					)
+
+					// Send error message to webview
+					provider.postMessageToWebview({
+						type: "marketplaceRemoveResult",
+						success: false,
+						error: error instanceof Error ? error.message : String(error),
+						slug: message.mpItem.id,
+					})
+				}
+			} else {
+				// MarketplaceManager not available or missing required parameters
+				const errorMessage = !marketplaceManager
+					? "Marketplace manager is not available"
+					: "Missing required parameters for marketplace item removal"
+				console.error(errorMessage)
+
+				vscode.window.showErrorMessage(errorMessage)
+
+				if (message.mpItem?.id) {
+					provider.postMessageToWebview({
+						type: "marketplaceRemoveResult",
+						success: false,
+						error: errorMessage,
+						slug: message.mpItem.id,
+					})
 				}
 			}
 			break
@@ -2562,6 +2679,21 @@ export const webviewMessageHandler = async (
 		// kilocode_change start
 		case "editMessage": {
 			await editMessageHandler(provider, message)
+			break
+		}
+		case "fetchKilocodeNotifications": {
+			await fetchKilocodeNotificationsHandler(provider)
+			break
+		}
+		case "dismissNotificationId": {
+			if (!message.notificationId) {
+				break
+			}
+
+			const dismissedNotificationIds = getGlobalState("dismissedNotificationIds") || []
+
+			await updateGlobalState("dismissedNotificationIds", [...dismissedNotificationIds, message.notificationId])
+			await provider.postStateToWebview()
 			break
 		}
 		// kilocode_change end

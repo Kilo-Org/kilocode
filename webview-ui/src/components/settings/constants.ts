@@ -60,6 +60,7 @@ export const PROVIDERS = [
 	{ value: "human-relay", label: "Human Relay" },
 	{ value: "xai", label: "xAI (Grok)" },
 	{ value: "groq", label: "Groq" },
+	{ value: "huggingface", label: "Hugging Face" },
 	{ value: "chutes", label: "Chutes AI" },
 	{ value: "cerebras", label: "Cerebras" }, // kilocode_change
 	{ value: "virtual-quota-fallback", label: "Virtual Quota Fallback" }, // kilocode_change

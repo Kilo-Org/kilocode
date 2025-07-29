@@ -4,6 +4,7 @@ import { ClineProvider } from "../../webview/ClineProvider"
 import { t } from "../../../i18n"
 import { WebviewMessage } from "../../../shared/WebviewMessage"
 import { Task } from "../../task/Task"
+import axios from "axios"
 
 // Helper function to delete messages for resending
 const deleteMessagesForResend = async (cline: Task, originalMessageIndex: number, originalMessageTs: number) => {
@@ -65,6 +66,40 @@ const resendMessageSequence = async (
 	await newCline.handleWebviewAskResponse("messageResponse", editedText, images)
 
 	return true
+}
+
+export const fetchKilocodeNotificationsHandler = async (provider: ClineProvider) => {
+	try {
+		const { apiConfiguration } = await provider.getState()
+		const kilocodeToken = apiConfiguration?.kilocodeToken
+
+		if (!kilocodeToken || apiConfiguration?.apiProvider !== "kilocode") {
+			provider.postMessageToWebview({
+				type: "kilocodeNotificationsResponse",
+				notifications: [],
+			})
+			return
+		}
+
+		const response = await axios.get("https://kilocode.ai/api/users/notifications", {
+			headers: {
+				Authorization: `Bearer ${kilocodeToken}`,
+				"Content-Type": "application/json",
+			},
+			timeout: 5000,
+		})
+
+		provider.postMessageToWebview({
+			type: "kilocodeNotificationsResponse",
+			notifications: response.data?.notifications || [],
+		})
+	} catch (error: any) {
+		provider.log(`Error fetching Kilocode notifications: ${error.message}`)
+		provider.postMessageToWebview({
+			type: "kilocodeNotificationsResponse",
+			notifications: [],
+		})
+	}
 }
 
 export const editMessageHandler = async (provider: ClineProvider, message: WebviewMessage) => {

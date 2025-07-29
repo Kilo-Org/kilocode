@@ -160,11 +160,17 @@
 			"deleteFailed": "Nepodařilo se smazat vlastní režim: {{error}}",
 			"resetFailed": "Nepodařilo se resetovat vlastní režimy: {{error}}",
 			"modeNotFound": "Chyba zápisu: Režim nebyl nalezen",
-			"noWorkspaceForProject": "Pro projektově specifický režim nebyla nalezena žádná složka workspace"
+			"noWorkspaceForProject": "Pro projektově specifický režim nebyla nalezena žádná složka workspace",
+			"rulesCleanupFailed": "Režim byl úspěšně smazán, ale nepodařilo se smazat složku pravidel v {{rulesFolderPath}}. Možná ji budete muset smazat ručně."
 		},
 		"scope": {
 			"project": "projekt",
 			"global": "globální"
+		}
+	},
+	"marketplace": {
+		"mode": {
+			"rulesCleanupFailed": "Režim byl úspěšně odstraněn, ale nepodařilo se smazat složku pravidel v {{rulesFolderPath}}. Možná ji budete muset smazat ručně."
 		}
 	},
 	"mdm": {

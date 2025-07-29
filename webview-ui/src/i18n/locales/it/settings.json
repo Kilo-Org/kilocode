@@ -264,6 +264,19 @@
 		"geminiApiKey": "Chiave API Gemini",
 		"getGroqApiKey": "Ottieni chiave API Groq",
 		"groqApiKey": "Chiave API Groq",
+		"getHuggingFaceApiKey": "Ottieni chiave API Hugging Face",
+		"huggingFaceApiKey": "Chiave API Hugging Face",
+		"huggingFaceModelId": "ID modello",
+		"huggingFaceLoading": "Caricamento...",
+		"huggingFaceModelsCount": "({{count}} modelli)",
+		"huggingFaceSelectModel": "Seleziona un modello...",
+		"huggingFaceSearchModels": "Cerca modelli...",
+		"huggingFaceNoModelsFound": "Nessun modello trovato",
+		"huggingFaceProvider": "Provider",
+		"huggingFaceProviderAuto": "Automatico",
+		"huggingFaceSelectProvider": "Seleziona un provider...",
+		"huggingFaceSearchProviders": "Cerca provider...",
+		"huggingFaceNoProvidersFound": "Nessun provider trovato",
 		"getGeminiApiKey": "Ottieni chiave API Gemini",
 		"openAiApiKey": "Chiave API OpenAI",
 		"apiKey": "Chiave API",
@@ -279,6 +292,7 @@
 		"litellmBaseUrl": "URL base LiteLLM",
 		"awsCredentials": "Credenziali AWS",
 		"awsProfile": "Profilo AWS",
+		"awsApiKey": "Chiave API Amazon Bedrock",
 		"awsProfileName": "Nome profilo AWS",
 		"awsAccessKey": "Chiave di accesso AWS",
 		"awsSecretKey": "Chiave segreta AWS",
@@ -511,6 +525,23 @@
 		"maxConcurrentFileReads": {
 			"label": "Limite letture simultanee",
 			"description": "Numero massimo di file che lo strumento 'read_file' può elaborare contemporaneamente. Valori più alti possono velocizzare la lettura di più file piccoli ma aumentano l'utilizzo della memoria."
+		},
+		"diagnostics": {
+			"includeMessages": {
+				"label": "Includi automaticamente la diagnostica nel contesto",
+				"description": "Quando abilitato, i messaggi diagnostici (errori) dai file modificati verranno automaticamente inclusi nel contesto. Puoi sempre includere manualmente tutta la diagnostica del workspace usando @problems."
+			},
+			"maxMessages": {
+				"label": "Numero massimo di messaggi diagnostici",
+				"description": "Numero massimo di messaggi diagnostici da includere per file. Questo limite si applica sia all'inclusione automatica (quando la casella è abilitata) che alle menzioni manuali di @problems. Valori più alti forniscono più contesto ma aumentano l'utilizzo dei token.",
+				"resetTooltip": "Ripristina al valore predefinito (50)",
+				"unlimited": "Messaggi diagnostici illimitati",
+				"unlimitedLabel": "Illimitato"
+			},
+			"delayAfterWrite": {
+				"label": "Ritardo dopo le scritture per consentire alla diagnostica di rilevare potenziali problemi",
+				"description": "Tempo di attesa dopo la scrittura dei file prima di procedere, consentendo agli strumenti di diagnostica di elaborare le modifiche e rilevare i problemi."
+			}
 		},
 		"condensingThreshold": {
 			"label": "Soglia di attivazione condensazione",
@@ -756,5 +787,8 @@
 		}
 	},
 	"includeMaxOutputTokens": "Includi token di output massimi",
-	"includeMaxOutputTokensDescription": "Invia il parametro dei token di output massimi nelle richieste API. Alcuni provider potrebbero non supportarlo."
+	"includeMaxOutputTokensDescription": "Invia il parametro dei token di output massimi nelle richieste API. Alcuni provider potrebbero non supportarlo.",
+	"limitMaxTokensDescription": "Limita il numero massimo di token nella risposta",
+	"maxOutputTokensLabel": "Token di output massimi",
+	"maxTokensGenerateDescription": "Token massimi da generare nella risposta"
 }

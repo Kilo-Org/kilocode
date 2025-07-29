@@ -38,6 +38,7 @@
 	"settings.customStoragePath.description": "Пользовательский путь хранения. Оставьте пустым для использования пути по умолчанию. Поддерживает абсолютные пути (например, 'D:\\KiloCodeStorage')",
 	"settings.enableCodeActions.description": "Включить быстрые исправления Kilo Code.",
 	"settings.autoImportSettingsPath.description": "Путь к файлу конфигурации Kilo Code для автоматического импорта при запуске расширения. Поддерживает абсолютные пути и пути относительно домашнего каталога (например, '~/Documents/kilo-code-settings.json'). Оставьте пустым, чтобы отключить автоматический импорт.",
+	"settings.useAgentRules.description": "Включить загрузку файлов AGENTS.md для специфичных для агента правил (см. https://agent-rules.org/)",
 	"ghost.input.title": "Нажмите 'Enter' для подтверждения или 'Escape' для отмены",
 	"ghost.input.placeholder": "Опишите, что вы хотите сделать...",
 	"ghost.commands.generateSuggestions": "Kilo Code: Генерировать Предлагаемые Правки",

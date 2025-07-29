@@ -21,7 +21,6 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	alwaysAllowWrite?: boolean
 	alwaysAllowWriteOutsideWorkspace?: boolean
 	alwaysAllowWriteProtected?: boolean
-	writeDelayMs: number
 	alwaysAllowBrowser?: boolean
 	alwaysApproveResubmit?: boolean
 	requestDelaySeconds: number
@@ -42,7 +41,6 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 		| "alwaysAllowWrite"
 		| "alwaysAllowWriteOutsideWorkspace"
 		| "alwaysAllowWriteProtected"
-		| "writeDelayMs"
 		| "alwaysAllowBrowser"
 		| "alwaysApproveResubmit"
 		| "requestDelaySeconds"
@@ -66,7 +64,6 @@ export const AutoApproveSettings = ({
 	alwaysAllowWrite,
 	alwaysAllowWriteOutsideWorkspace,
 	alwaysAllowWriteProtected,
-	writeDelayMs,
 	alwaysAllowBrowser,
 	alwaysApproveResubmit,
 	requestDelaySeconds,
@@ -243,22 +240,6 @@ export const AutoApproveSettings = ({
 							</VSCodeCheckbox>
 							<div className="text-vscode-descriptionForeground text-sm mt-1 mb-3">
 								{t("settings:autoApprove.write.protected.description")}
-							</div>
-						</div>
-						<div>
-							<div className="flex items-center gap-2">
-								<Slider
-									min={0}
-									max={5000}
-									step={100}
-									value={[writeDelayMs]}
-									onValueChange={([value]) => setCachedStateField("writeDelayMs", value)}
-									data-testid="write-delay-slider"
-								/>
-								<span className="w-20">{writeDelayMs}ms</span>
-							</div>
-							<div className="text-vscode-descriptionForeground text-sm mt-1">
-								{t("settings:autoApprove.write.delayLabel")}
 							</div>
 						</div>
 					</div>

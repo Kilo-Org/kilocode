@@ -38,6 +38,7 @@
 	"settings.customStoragePath.description": "Özel depolama yolu. Varsayılan konumu kullanmak için boş bırakın. Mutlak yolları destekler (örn: 'D:\\KiloCodeStorage')",
 	"settings.enableCodeActions.description": "Kilo Code hızlı düzeltmeleri etkinleştir.",
 	"settings.autoImportSettingsPath.description": "Uzantı başlangıcında otomatik olarak içe aktarılacak bir Kilo Code yapılandırma dosyasının yolu. Mutlak yolları ve ana dizine göreli yolları destekler (ör. '~/Documents/kilo-code-settings.json'). Otomatik içe aktarmayı devre dışı bırakmak için boş bırakın.",
+	"settings.useAgentRules.description": "Aracıya özgü kurallar için AGENTS.md dosyalarının yüklenmesini etkinleştirin (bkz. https://agent-rules.org/)",
 	"ghost.input.title": "Onaylamak için 'Enter'a, iptal etmek için 'Escape'e basın",
 	"ghost.input.placeholder": "Ne yapmak istediğinizi açıklayın...",
 	"ghost.commands.generateSuggestions": "Kilo Code: Düzenleme Önerileri Oluştur",

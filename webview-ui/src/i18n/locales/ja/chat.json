@@ -199,6 +199,22 @@
 		"didViewDefinitionsOutsideWorkspace": "Kilo Codeはこのディレクトリ（ワークスペース外）で使用されているソースコード定義名を表示しました:"
 	},
 	"commandOutput": "コマンド出力",
+	"commandExecution": {
+		"running": "実行中",
+		"pid": "PID: {{pid}}",
+		"exited": "終了しました ({{exitCode}})",
+		"manageCommands": "コマンド権限の管理",
+		"commandManagementDescription": "コマンドの権限を管理します：✓ をクリックして自動実行を許可し、✗ をクリックして実行を拒否します。パターンはオン/オフの切り替えやリストからの削除が可能です。<settingsLink>すべての設定を表示</settingsLink>",
+		"addToAllowed": "許可リストに追加",
+		"removeFromAllowed": "許可リストから削除",
+		"addToDenied": "拒否リストに追加",
+		"removeFromDenied": "拒否リストから削除",
+		"abortCommand": "コマンドの実行を中止",
+		"expandOutput": "出力を展開",
+		"collapseOutput": "出力を折りたたむ",
+		"expandManagement": "コマンド管理セクションを展開",
+		"collapseManagement": "コマンド管理セクションを折りたたむ"
+	},
 	"response": "応答",
 	"arguments": "引数",
 	"mcp": {
@@ -254,9 +270,9 @@
 		"title": "🎉 Kilo Code {{version}} リリース",
 		"description": "Kilo Code {{version}}は、開発ワークフローを向上させる強力な新機能と重要な改善をもたらします。",
 		"whatsNew": "新機能",
-		"feature1": "<bold>コードベースインデックス機能が実験段階を卒業</bold>: 完全なコードベースインデックス機能が安定し、改善された検索とコンテキスト理解により本番環境での使用が可能になりました。",
-		"feature2": "<bold>新しいTodoリスト機能</bold>: 統合されたTodo管理でタスクを軌道に乗せ、開発目標に整理され集中した状態を維持できます。",
-		"feature3": "<bold>改善されたアーキテクトからコードへの移行</bold>: アーキテクトモードでの計画からコードモードでの実装へのシームレスな引き継ぎ。",
+		"feature1": "<bold>Hugging Face プロバイダー</bold>: 新しいHugging Faceプロバイダーを通じて、シームレスな統合とモデル選択により、多数の優れたオープンソースモデルに直接アクセスできます。",
+		"feature2": "<bold>インラインコマンドコントロール</bold>: コマンド実行のための新しい自動承認と拒否コントロールにより、カスタマイズ可能な権限でターミナル操作を正確に制御できます。",
+		"feature3": "<bold>AGENTS.mdルールサポート</bold>: プロジェクトルートにコミュニティ標準のAGENTS.mdファイルのサポートを追加します。",
 		"hideButton": "通知を非表示",
 		"detailsDiscussLinks": "詳細は<discordLink>Discord</discordLink>と<redditLink>Reddit</redditLink>でご確認・ディスカッションください 🚀"
 	},

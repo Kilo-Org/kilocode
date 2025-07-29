@@ -270,6 +270,20 @@
 		"groqApiKey": "مفتاح Groq",
 		"getGeminiApiKey": "احصل على مفتاح Gemini",
 		"openAiApiKey": "مفتاح OpenAI",
+		"getHuggingFaceApiKey": "احصل على مفتاح Hugging Face API",
+		"huggingFaceApiKey": "مفتاح Hugging Face API",
+		"huggingFaceModelId": "معرّف النموذج",
+		"huggingFaceLoading": "جارٍ التحميل...",
+		"huggingFaceModelsCount": "({{count}} نموذج)",
+		"huggingFaceSelectModel": "اختر نموذج...",
+		"huggingFaceSearchModels": "البحث في النماذج...",
+		"huggingFaceNoModelsFound": "لم يتم العثور على نماذج",
+		"huggingFaceProvider": "المزوّد",
+		"huggingFaceProviderAuto": "تلقائي",
+		"huggingFaceSelectProvider": "اختر مزوّد...",
+		"huggingFaceSearchProviders": "البحث في المزوّدين...",
+		"huggingFaceNoProvidersFound": "لم يتم العثور على مزوّدين",
+		"awsApiKey": "مفتاح Amazon Bedrock API",
 		"apiKey": "مفتاح API",
 		"anthropic": {
 			"baseUrl": "الرابط الأساسي",
@@ -542,6 +556,22 @@
 			"profileDescription": "نسبة مخصصة لهذا الملف فقط.",
 			"inheritDescription": "هذا الملف يرث النسبة العامة ({{threshold}}%)",
 			"usesGlobal": "(يستخدم {{threshold}}% عام)"
+		},
+		"diagnostics": {
+			"includeMessages": {
+				"label": "تضمين رسائل التشخيص تلقائيًا في السياق",
+				"description": "عند التفعيل، سيتم تضمين رسائل التشخيص (الأخطاء) من الملفات المُحررة تلقائيًا في السياق. يمكنك دائمًا تضمين جميع تشخيصات مساحة العمل يدويًا باستخدام @problems."
+			},
+			"maxMessages": {
+				"label": "أقصى عدد رسائل التشخيص",
+				"description": "يحدد عدد رسائل التشخيص (أخطاء، تحذيرات) المُدرجة في السياق. عند التعيين، سيتم عرض هذا العدد فقط من التشخيصات، مع إعطاء الأولوية للأخطاء على التحذيرات. اضبط على 0 للتشخيصات غير المحدودة.",
+				"resetTooltip": "إعادة للقيمة الافتراضية (50)",
+				"unlimitedLabel": "غير محدود"
+			},
+			"delayAfterWrite": {
+				"label": "تأخير بعد الكتابة للسماح للتشخيصات باكتشاف المشاكل المحتملة",
+				"description": "الوقت للانتظار بعد كتابة الملفات قبل المتابعة، مما يسمح لأدوات التشخيص بمعالجة التغييرات واكتشاف المشاكل."
+			}
 		}
 	},
 	"terminal": {
@@ -771,6 +801,9 @@
 		"customArn": "ARN مخصص",
 		"useCustomArn": "استخدام ARN مخصص..."
 	},
+	"limitMaxTokensDescription": "تحديد أقصى عدد توكنات في الرد",
+	"maxOutputTokensLabel": "أقصى توكنات المخرجات",
+	"maxTokensGenerateDescription": "أقصى عدد توكنات يتم توليدها في الرد",
 	"includeMaxOutputTokens": "إرسال حد المخرجات",
 	"includeMaxOutputTokensDescription": "يُرسل max_output_tokens في الطلب. بعض المزوّدين ما يدعمونه."
 }

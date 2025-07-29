@@ -226,7 +226,7 @@
 		"noProviderMatchFound": "कोई प्रदाता नहीं मिला",
 		"noMatchFound": "कोई मिलान प्रोफ़ाइल नहीं मिला",
 		"vscodeLmDescription": "VS कोड भाषा मॉडल API आपको अन्य VS कोड एक्सटेंशन (जैसे GitHub Copilot) द्वारा प्रदान किए गए मॉडल चलाने की अनुमति देता है। शुरू करने का सबसे आसान तरीका VS कोड मार्केटप्लेस से Copilot और Copilot चैट एक्सटेंशन इंस्टॉल करना है।",
-		"awsCustomArnUse": "आप जिस मॉडल का उपयोग करना चाहते हैं, उसके लिए एक वैध AWS बेडरॉक ARN दर्ज करें। प्रारूप उदाहरण:",
+		"awsCustomArnUse": "आप जिस मॉडल का उपयोग करना चाहते हैं, उसके लिए एक वैध Amazon बेडरॉक ARN दर्ज करें। प्रारूप उदाहरण:",
 		"awsCustomArnDesc": "सुनिश्चित करें कि ARN में क्षेत्र ऊपर चयनित AWS क्षेत्र से मेल खाता है।",
 		"openRouterApiKey": "OpenRouter API कुंजी",
 		"getOpenRouterApiKey": "OpenRouter API कुंजी प्राप्त करें",
@@ -268,6 +268,19 @@
 		"geminiApiKey": "Gemini API कुंजी",
 		"getGroqApiKey": "Groq API कुंजी प्राप्त करें",
 		"groqApiKey": "Groq API कुंजी",
+		"getHuggingFaceApiKey": "Hugging Face API कुंजी प्राप्त करें",
+		"huggingFaceApiKey": "Hugging Face API कुंजी",
+		"huggingFaceModelId": "मॉडल ID",
+		"huggingFaceLoading": "लोड हो रहा है...",
+		"huggingFaceModelsCount": "({{count}} मॉडल)",
+		"huggingFaceSelectModel": "एक मॉडल चुनें...",
+		"huggingFaceSearchModels": "मॉडल खोजें...",
+		"huggingFaceNoModelsFound": "कोई मॉडल नहीं मिला",
+		"huggingFaceProvider": "प्रदाता",
+		"huggingFaceProviderAuto": "स्वचालित",
+		"huggingFaceSelectProvider": "एक प्रदाता चुनें...",
+		"huggingFaceSearchProviders": "प्रदाता खोजें...",
+		"huggingFaceNoProvidersFound": "कोई प्रदाता नहीं मिला",
 		"getGeminiApiKey": "Gemini API कुंजी प्राप्त करें",
 		"openAiApiKey": "OpenAI API कुंजी",
 		"apiKey": "API कुंजी",
@@ -283,6 +296,7 @@
 		"litellmBaseUrl": "LiteLLM आधार URL",
 		"awsCredentials": "AWS क्रेडेंशियल्स",
 		"awsProfile": "AWS प्रोफाइल",
+		"awsApiKey": "Amazon बेडरॉक API कुंजी",
 		"awsProfileName": "AWS प्रोफाइल नाम",
 		"awsAccessKey": "AWS एक्सेस कुंजी",
 		"awsSecretKey": "AWS सीक्रेट कुंजी",
@@ -511,6 +525,23 @@
 		"maxConcurrentFileReads": {
 			"label": "एक साथ फ़ाइल पढ़ने की सीमा",
 			"description": "'read_file' टूल द्वारा एक साथ प्रोसेस की जा सकने वाली अधिकतम फ़ाइलों की संख्या। उच्च मान कई छोटी फ़ाइलों को पढ़ने की गति बढ़ा सकते हैं लेकिन मेमोरी उपयोग बढ़ा देते हैं।"
+		},
+		"diagnostics": {
+			"includeMessages": {
+				"label": "स्वचालित रूप से संदर्भ में डायग्नोस्टिक शामिल करें",
+				"description": "जब सक्षम होता है, तो संपादित फ़ाइलों से डायग्नोस्टिक संदेश (त्रुटियां) स्वचालित रूप से संदर्भ में शामिल किए जाएंगे। आप हमेशा @problems का उपयोग करके सभी कार्यक्षेत्र डायग्नोस्टिक को मैन्युअल रूप से शामिल कर सकते हैं।"
+			},
+			"maxMessages": {
+				"label": "अधिकतम डायग्नोस्टिक संदेश",
+				"description": "प्रति फ़ाइल शामिल किए जाने वाले डायग्नोस्टिक संदेशों की अधिकतम संख्या। यह सीमा स्वचालित समावेशन (जब चेकबॉक्स सक्षम है) और मैन्युअल @problems उल्लेख दोनों पर लागू होती है। उच्च मान अधिक संदर्भ प्रदान करते हैं लेकिन टोकन उपयोग बढ़ाते हैं।",
+				"resetTooltip": "डिफ़ॉल्ट मान पर रीसेट करें (50)",
+				"unlimited": "असीमित डायग्नोस्टिक संदेश",
+				"unlimitedLabel": "असीमित"
+			},
+			"delayAfterWrite": {
+				"label": "संभावित समस्याओं का पता लगाने के लिए डायग्नोस्टिक्स को अनुमति देने के लिए लिखने के बाद देरी",
+				"description": "फ़ाइल लिखने के बाद आगे बढ़ने से पहले प्रतीक्षा करने का समय, डायग्नोस्टिक टूल को परिवर्तनों को संसाधित करने और समस्याओं का पता लगाने की अनुमति देता है।"
+			}
 		},
 		"condensingThreshold": {
 			"label": "संघनन ट्रिगर सीमा",
@@ -756,5 +787,8 @@
 		}
 	},
 	"includeMaxOutputTokens": "अधिकतम आउटपुट टोकन शामिल करें",
-	"includeMaxOutputTokensDescription": "API अनुरोधों में अधिकतम आउटपुट टोकन पैरामीटर भेजें। कुछ प्रदाता इसका समर्थन नहीं कर सकते हैं।"
+	"includeMaxOutputTokensDescription": "API अनुरोधों में अधिकतम आउटपुट टोकन पैरामीटर भेजें। कुछ प्रदाता इसका समर्थन नहीं कर सकते हैं।",
+	"limitMaxTokensDescription": "प्रतिक्रिया में टोकन की अधिकतम संख्या सीमित करें",
+	"maxOutputTokensLabel": "अधिकतम आउटपुट टोकन",
+	"maxTokensGenerateDescription": "प्रतिक्रिया में उत्पन्न करने के लिए अधिकतम टोकन"
 }

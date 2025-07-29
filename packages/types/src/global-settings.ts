@@ -74,6 +74,17 @@ export const globalSettingsSchema = z.object({
 	maxConcurrentFileReads: z.number().optional(),
 	allowVeryLargeReads: z.boolean().optional(), // kilocode_change
 
+	/**
+	 * Whether to include diagnostic messages (errors, warnings) in tool outputs
+	 * @default true
+	 */
+	includeDiagnosticMessages: z.boolean().optional(),
+	/**
+	 * Maximum number of diagnostic messages to include in tool outputs
+	 * @default 50
+	 */
+	maxDiagnosticMessages: z.number().optional(),
+
 	browserToolEnabled: z.boolean().optional(),
 	browserViewportSize: z.string().optional(),
 	showAutoApproveMenu: z.boolean().optional(), // kilocode_change
@@ -136,6 +147,7 @@ export const globalSettingsSchema = z.object({
 	customModePrompts: customModePromptsSchema.optional(),
 	customSupportPrompts: customSupportPromptsSchema.optional(),
 	enhancementApiConfigId: z.string().optional(),
+	dismissedNotificationIds: z.string().array().optional(), // kilocode_change
 	commitMessageApiConfigId: z.string().optional(), // kilocode_change
 	ghostServiceSettings: ghostServiceSettingsSchema, // kilocode_change
 	historyPreviewCollapsed: z.boolean().optional(),
@@ -165,6 +177,7 @@ export const SECRET_STATE_KEYS = [
 	"glamaApiKey",
 	"openRouterApiKey",
 	"awsAccessKey",
+	"awsApiKey",
 	"awsSecretKey",
 	"awsSessionToken",
 	"openAiApiKey",
@@ -185,6 +198,7 @@ export const SECRET_STATE_KEYS = [
 	"codebaseIndexOpenAiCompatibleApiKey",
 	"codebaseIndexGeminiApiKey",
 	"codebaseIndexMistralApiKey",
+	"huggingFaceApiKey",
 ] as const satisfies readonly (keyof ProviderSettings)[]
 export type SecretState = Pick<ProviderSettings, (typeof SECRET_STATE_KEYS)[number]>
 
@@ -248,6 +262,7 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 	ttsSpeed: 1,
 	soundEnabled: false,
 	soundVolume: 0.5,
+	dismissedNotificationIds: [], // kilocode_change
 	systemNotificationsEnabled: true, // kilocode_change
 	ghostServiceSettings: {}, // kilocode_change
 
@@ -275,6 +290,9 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 	maxWorkspaceFiles: 200,
 	showRooIgnoredFiles: true,
 	maxReadFileLine: -1, // -1 to enable full file reading.
+
+	includeDiagnosticMessages: true,
+	maxDiagnosticMessages: 50,
 
 	language: "en",
 	telemetrySetting: "enabled",

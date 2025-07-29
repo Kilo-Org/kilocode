@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react"
+import { memo, useCallback, useMemo, useState } from "react"
 import { Trans } from "react-i18next"
 import { VSCodeCheckbox, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 
@@ -130,11 +130,6 @@ const AutoApproveMenu = ({ style }: AutoApproveMenuProps) => {
 		setIsExpanded((prev) => !prev)
 	}, [])
 
-	// Disable main checkbox while menu is open or no options selected
-	const isCheckboxDisabled = useMemo(() => {
-		return !hasEnabledOptions || isExpanded
-	}, [hasEnabledOptions, isExpanded])
-
 	const enabledActionsList = Object.entries(toggles)
 		.filter(([_key, value]) => !!value)
 		.map(([key]) => t(autoApproveSettingsConfig[key as AutoApproveSetting].labelKey))
@@ -179,7 +174,7 @@ const AutoApproveMenu = ({ style }: AutoApproveMenuProps) => {
 						content={!hasEnabledOptions ? t("chat:autoApprove.selectOptionsFirst") : undefined}>
 						<VSCodeCheckbox
 							checked={effectiveAutoApprovalEnabled}
-							disabled={isCheckboxDisabled}
+							disabled={!hasEnabledOptions}
 							aria-label={
 								hasEnabledOptions
 									? t("chat:autoApprove.toggleAriaLabel")
@@ -261,4 +256,4 @@ const AutoApproveMenu = ({ style }: AutoApproveMenuProps) => {
 	)
 }
 
-export default AutoApproveMenu
+export default memo(AutoApproveMenu)
