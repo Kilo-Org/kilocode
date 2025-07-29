@@ -100,7 +100,10 @@ export const KilocodeNotifications: React.FC = () => {
 	}
 
 	const handleAction = (action: NotificationAction) => {
-		window.open(action.actionURL, "_blank")
+		vscode.postMessage({
+			type: "openInBrowser",
+			url: action.actionURL,
+		})
 	}
 
 	const goToNext = () => {
