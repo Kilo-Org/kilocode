@@ -34,6 +34,7 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setHoveringTaskTimeline: (value: boolean) => void // kilocode_change
 	systemNotificationsEnabled?: boolean // kilocode_change
 	setSystemNotificationsEnabled: (value: boolean) => void // kilocode_change
+	dismissedNotificationIds: string[] // kilocode_change
 	didHydrateState: boolean
 	showWelcome: boolean
 	theme: any
@@ -495,7 +496,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 			setState((prevState) => {
 				return {
 					...prevState,
-					dismissedNotificationIds: [notificationId, ...prevState.dismissedNotificationIds],
+					dismissedNotificationIds: [notificationId, ...(prevState.dismissedNotificationIds || [])],
 				}
 			})
 		},
@@ -549,6 +550,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		// kilocode_change start
 		setSystemNotificationsEnabled: (value) =>
 			setState((prevState) => ({ ...prevState, systemNotificationsEnabled: value })),
+		dismissedNotificationIds: state.dismissedNotificationIds || [], // kilocode_change
 		// kilocode_change end
 		alwaysAllowUpdateTodoList: state.alwaysAllowUpdateTodoList,
 		setAlwaysAllowUpdateTodoList: (value) => {

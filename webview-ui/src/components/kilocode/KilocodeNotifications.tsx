@@ -16,7 +16,7 @@ interface Notification {
 }
 
 export const KilocodeNotifications: React.FC = () => {
-	const { apiConfiguration, dismissedNotificationIds, markNotificationAsDismissed } = useExtensionState()
+	const { apiConfiguration, dismissedNotificationIds } = useExtensionState()
 	const [notifications, setNotifications] = useState<Notification[]>([])
 	const filteredNotifications = notifications.filter(
 		(notification) => !dismissedNotificationIds.includes(notification.id),
@@ -110,8 +110,10 @@ export const KilocodeNotifications: React.FC = () => {
 					<h3 className="text-sm font-medium text-vscode-foreground m-0">{currentNotification.title}</h3>
 					<button
 						onClick={() => {
-							console.info("Test", currentNotification.id)
-							markNotificationAsDismissed(currentNotification.id)
+							vscode.postMessage({
+								type: "dismissNotificationId",
+								notificationId: currentNotification.id,
+							})
 						}}
 						className="text-vscode-descriptionForeground hover:text-vscode-foreground p-1"
 						title="Dismiss notification">

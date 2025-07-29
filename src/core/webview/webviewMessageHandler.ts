@@ -2566,6 +2566,17 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
+		case "dismissNotificationId": {
+			if (!message.notificationId) {
+				break
+			}
+
+			const dismissedNotificationIds = getGlobalState("dismissedNotificationIds") || []
+
+			await updateGlobalState("dismissedNotificationIds", [...dismissedNotificationIds, message.notificationId])
+			await provider.postStateToWebview()
+			break
+		}
 		// kilocode_change end
 		case "insertTextToChatArea":
 			provider.postMessageToWebview({ type: "insertTextToChatArea", text: message.text })
