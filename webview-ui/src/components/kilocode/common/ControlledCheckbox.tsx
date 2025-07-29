@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
+import { flushSync } from "react-dom"
 
 export const ControlledCheckbox = ({
 	checked,
@@ -18,9 +19,9 @@ export const ControlledCheckbox = ({
 			setIsUpdatingFromProp(true)
 			setLocalChecked(checked)
 			// Reset the flag after a short delay to ensure the render has completed
-			setTimeout(() => {
+			flushSync(() => {
 				setIsUpdatingFromProp(false)
-			}, 100)
+			})
 		}
 	}, [checked, localChecked])
 

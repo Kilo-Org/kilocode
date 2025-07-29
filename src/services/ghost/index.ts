@@ -1,10 +1,9 @@
 import * as vscode from "vscode"
 import { GhostProvider } from "./GhostProvider"
-import { t } from "../../i18n"
 import { ClineProvider } from "../../core/webview/ClineProvider"
 
 export const registerGhostProvider = (context: vscode.ExtensionContext, cline: ClineProvider) => {
-	const ghost = GhostProvider.getInstance(context, cline)
+	const ghost = GhostProvider.initialize(context, cline)
 
 	// Register Windows Events
 	context.subscriptions.push(

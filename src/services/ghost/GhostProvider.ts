@@ -126,7 +126,7 @@ export class GhostProvider {
 			return
 		}
 		await ContextProxy.instance?.setValues?.({ ghostServiceSettings: this.settings })
-		await this.cline.postStateToWebview()
+		await this.cline.postStateToWebview
 	}
 
 	public async reload() {
@@ -136,12 +136,17 @@ export class GhostProvider {
 		this.updateStatusBar()
 	}
 
-	public static getInstance(context: vscode.ExtensionContext, cline: ClineProvider): GhostProvider {
+	public static initialize(context: vscode.ExtensionContext, cline: ClineProvider): GhostProvider {
+		if (GhostProvider.instance) {
+			throw new Error("GhostProvider is already initialized. Use getInstance() instead.")
+		}
+		GhostProvider.instance = new GhostProvider(context, cline)
+		return GhostProvider.instance
+	}
+
+	public static getInstance(): GhostProvider {
 		if (!GhostProvider.instance) {
-			if (!context) {
-				throw new Error("ExtensionContext is required for first initialization of GhostProvider")
-			}
-			GhostProvider.instance = new GhostProvider(context, cline)
+			throw new Error("GhostProvider is not initialized. Call initialize() first.")
 		}
 		return GhostProvider.instance
 	}
