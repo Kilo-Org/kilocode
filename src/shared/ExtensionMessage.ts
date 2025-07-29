@@ -191,6 +191,7 @@ export interface ExtensionMessage {
 	settings?: any
 	messageTs?: number
 	context?: string
+	// kilocode_change start: Notifications
 	notifications?: Array<{
 		id: string
 		title: string
@@ -200,6 +201,7 @@ export interface ExtensionMessage {
 			actionURL: string
 		}
 	}>
+	// kilocode_change end
 }
 
 export type ExtensionState = Pick<
