@@ -22,10 +22,10 @@
 			"type": "shell",
 			"command": "npx",
 			"args": ["nodemon", "--watch", "pnpm-lock.yaml", "--exec", "pnpm install"],
-			"group": "build",
+			"group": "none",
 			"isBackground": true,
 			"presentation": {
-				"group": "watch",
+				"group": "none",
 				"reveal": "always"
 			},
 			"problemMatcher": {
@@ -86,11 +86,11 @@
 			"dependsOn": ["watch:pnpm"],
 			"type": "shell",
 			"command": "npx turbo watch:tsc",
-			"group": "build",
+			"group": "none",
 			"problemMatcher": "$tsc-watch",
 			"isBackground": true,
 			"presentation": {
-				"group": "watch",
+				"group": "none",
 				"reveal": "always"
 			}
 		},
