@@ -2530,7 +2530,6 @@ export const webviewMessageHandler = async (
 			await editMessageHandler(provider, message)
 			break
 		}
-		// kilocode_change end
 		case "fetchKilocodeNotifications": {
 			try {
 				const { apiConfiguration } = await provider.getState()
@@ -2567,6 +2566,7 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
+		// kilocode_change end
 		case "insertTextToChatArea":
 			provider.postMessageToWebview({ type: "insertTextToChatArea", text: message.text })
 			break
