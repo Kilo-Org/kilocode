@@ -15,10 +15,6 @@ interface Notification {
 	action?: NotificationAction
 }
 
-interface NotificationsResponse {
-	notifications: Notification[]
-}
-
 export const KilocodeNotifications: React.FC = () => {
 	const { apiConfiguration } = useExtensionState()
 	const [notifications, setNotifications] = useState<Notification[]>([])
@@ -123,7 +119,7 @@ export const KilocodeNotifications: React.FC = () => {
 	const currentNotification = notifications[currentIndex]
 
 	return (
-		<div className="kilocode-notifications mx-auto max-w-[600px] mb-4">
+		<div className="kilocode-notifications flex flex-col mb-4">
 			<div className="bg-vscode-editor-background border border-vscode-panel-border rounded-lg p-3 gap-3">
 				<div className="flex items-center justify-between">
 					<h3 className="text-sm font-medium text-vscode-foreground m-0">{currentNotification.title}</h3>
