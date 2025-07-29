@@ -117,6 +117,7 @@ export const globalSettingsSchema = z.object({
 	customModePrompts: customModePromptsSchema.optional(),
 	customSupportPrompts: customSupportPromptsSchema.optional(),
 	enhancementApiConfigId: z.string().optional(),
+	dismissedNotificationIds: z.string().array(), // kilocode_change
 	autocompleteApiConfigId: z.string().optional(), // kilocode_change
 	commitMessageApiConfigId: z.string().optional(), // kilocode_change
 	ghostServiceSettings: ghostServiceSettingsSchema, // kilocode_change
@@ -226,6 +227,7 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 	ttsSpeed: 1,
 	soundEnabled: false,
 	soundVolume: 0.5,
+	dismissedNotificationIds: [], // kilocode_change
 	systemNotificationsEnabled: true, // kilocode_change
 	ghostServiceSettings: {}, // kilocode_change
 

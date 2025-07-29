@@ -125,6 +125,7 @@ export interface ExtensionStateContextType extends ExtensionState {
 	commitMessageApiConfigId?: string // kilocode_change
 	setCommitMessageApiConfigId: (value: string) => void // kilocode_change
 	autocompleteApiConfigId?: string // kilocode_change
+	markNotificationAsDismissed: (notificationId: string) => void // kilocode_change
 	setAutocompleteApiConfigId: (value: string) => void // kilocode_change
 	ghostServiceSettings?: GhostServiceSettings // kilocode_change
 	setGhostServiceSettings: (value: GhostServiceSettings) => void // kilocode_change
@@ -214,6 +215,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		customSupportPrompts: {},
 		experiments: experimentDefault,
 		enhancementApiConfigId: "",
+		dismissedNotificationIds: [], // kilocode_change
 		commitMessageApiConfigId: "", // kilocode_change
 		autocompleteApiConfigId: "", // kilocode_change
 		ghostServiceSettings: {}, // kilocode_change
@@ -489,6 +491,14 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setEnhancementApiConfigId: (value) =>
 			setState((prevState) => ({ ...prevState, enhancementApiConfigId: value })),
 		// kilocode_change start
+		markNotificationAsDismissed: (notificationId) => {
+			setState((prevState) => {
+				return {
+					...prevState,
+					dismissedNotificationIds: [notificationId, ...prevState.dismissedNotificationIds],
+				}
+			})
+		},
 		setAutocompleteApiConfigId: (value) =>
 			setState((prevState) => ({ ...prevState, autocompleteApiConfigId: value })),
 		setGhostServiceSettings: (value) => setState((prevState) => ({ ...prevState, ghostServiceSettings: value })),

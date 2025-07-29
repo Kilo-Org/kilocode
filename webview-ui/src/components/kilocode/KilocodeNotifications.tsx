@@ -16,25 +16,18 @@ interface Notification {
 }
 
 export const KilocodeNotifications: React.FC = () => {
-	const { apiConfiguration } = useExtensionState()
+	const { apiConfiguration, dismissedNotificationIds, markNotificationAsDismissed } = useExtensionState()
 	const [notifications, setNotifications] = useState<Notification[]>([])
+	const filteredNotifications = notifications.filter(
+		(notification) => !dismissedNotificationIds.includes(notification.id),
+	)
 	const [loading, setLoading] = useState(false)
 	const [error, setError] = useState<string | null>(null)
 	const [currentIndex, setCurrentIndex] = useState(0)
-	const [dismissedNotifications, setDismissedNotifications] = useState<Set<string>>(new Set())
 	const messageListenerRef = useRef<((event: MessageEvent) => void) | null>(null)
 
 	// Only fetch if provider is kilocode
 	const isKilocodeProvider = apiConfiguration?.apiProvider === "kilocode"
-
-	// Load dismissed IDs from localStorage on mount
-	useEffect(() => {
-		const activeDismissed = localStorage.getItem("kilocode-dismissed-notifications")
-		const dismissedIds = activeDismissed
-			? new Set<string>(JSON.parse(activeDismissed) as string[])
-			: new Set<string>()
-		setDismissedNotifications(dismissedIds)
-	}, [])
 
 	// Set up message listener for notifications response
 	useEffect(() => {
@@ -49,7 +42,7 @@ export const KilocodeNotifications: React.FC = () => {
 			if (message.type === "kilocodeNotificationsResponse") {
 				// Filter out dismissed notifications
 				const activeNotifications = (message.notifications || []).filter(
-					(n: Notification) => !dismissedNotifications.has(n.id),
+					(n: Notification) => !dismissedNotificationIds.includes(n.id),
 				)
 				setNotifications(activeNotifications)
 				setLoading(false)
@@ -59,13 +52,15 @@ export const KilocodeNotifications: React.FC = () => {
 		messageListenerRef.current = handleMessage
 		window.addEventListener("message", handleMessage)
 
+		setCurrentIndex(Math.max(0, Math.min(currentIndex, filteredNotifications.length - 1)))
+
 		// Cleanup on unmount
 		return () => {
 			if (messageListenerRef.current) {
 				window.removeEventListener("message", messageListenerRef.current)
 			}
 		}
-	}, [dismissedNotifications])
+	}, [dismissedNotificationIds])
 
 	// Fetch notifications when provider changes
 	useEffect(() => {
@@ -81,23 +76,6 @@ export const KilocodeNotifications: React.FC = () => {
 		// Request notifications from backend
 		vscode.postMessage({ type: "fetchKilocodeNotifications" })
 	}, [isKilocodeProvider])
-
-	const handleDismiss = (notificationId: string) => {
-		const newDismissed = new Set(dismissedNotifications)
-		newDismissed.add(notificationId)
-		setDismissedNotifications(newDismissed)
-
-		// Save to localStorage
-		localStorage.setItem("kilocode-dismissed-notifications", JSON.stringify(Array.from(newDismissed)))
-
-		// Remove from current notifications
-		setNotifications((prev) => prev.filter((n) => n.id !== notificationId))
-
-		// Adjust current index if needed
-		if (currentIndex >= notifications.length - 1) {
-			setCurrentIndex(Math.max(0, notifications.length - 2))
-		}
-	}
 
 	const handleAction = (action: NotificationAction) => {
 		vscode.postMessage({
@@ -119,7 +97,11 @@ export const KilocodeNotifications: React.FC = () => {
 		return null
 	}
 
-	const currentNotification = notifications[currentIndex]
+	const currentNotification = filteredNotifications[currentIndex]
+
+	if (!currentNotification) {
+		return null // No current notification to display
+	}
 
 	return (
 		<div className="kilocode-notifications flex flex-col mb-4">
@@ -127,7 +109,10 @@ export const KilocodeNotifications: React.FC = () => {
 				<div className="flex items-center justify-between">
 					<h3 className="text-sm font-medium text-vscode-foreground m-0">{currentNotification.title}</h3>
 					<button
-						onClick={() => handleDismiss(currentNotification.id)}
+						onClick={() => {
+							console.info("Test", currentNotification.id)
+							markNotificationAsDismissed(currentNotification.id)
+						}}
 						className="text-vscode-descriptionForeground hover:text-vscode-foreground p-1"
 						title="Dismiss notification">
 						<span className="codicon codicon-close"></span>
@@ -147,7 +132,7 @@ export const KilocodeNotifications: React.FC = () => {
 					</div>
 				)}
 			</div>
-			{notifications.length > 1 && (
+			{filteredNotifications.length > 1 && (
 				<div className="flex items-center justify-end pt-2">
 					<button
 						onClick={goToPrevious}
