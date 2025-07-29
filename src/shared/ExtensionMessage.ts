@@ -120,7 +120,7 @@ export interface ExtensionMessage {
 		| "codeIndexSecretStatus"
 		| "showDeleteMessageDialog"
 		| "showEditMessageDialog"
-		| "kilocodeNotificationsResponse"
+		| "kilocodeNotificationsResponse" // kilocode_change
 	text?: string
 	payload?: ProfileDataResponsePayload | BalanceDataResponsePayload // kilocode_change: Add payload for profile and balance data
 	action?:
