@@ -2,4 +2,4 @@
 "kilo-code": minor
 ---
 
-Inline Assist - Github Copilot incompatibility warning
+Add warning when Github Copilot conflicts with Kilo's Inline Assist keyboard commands
