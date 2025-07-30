@@ -42,6 +42,13 @@ export const test = base.extend<TestFixtures>({
 
 		const electronApp = await _electron.launch({
 			executablePath: vscodePath,
+			env: {
+				...process.env,
+				VSCODE_DISABLE_CRASH_REPORTING: "1",
+				VSCODE_SKIP_GETTING_STARTED: "1",
+				VSCODE_DISABLE_WORKSPACE_TRUST: "1",
+				ELECTRON_DISABLE_SECURITY_WARNINGS: "1",
+			},
 			args: [
 				"--no-sandbox",
 				"--disable-gpu-sandbox",
@@ -60,6 +67,15 @@ export const test = base.extend<TestFixtures>({
 				"--disable-crash-reporter",
 				"--enable-logging",
 				"--log-level=0",
+				"--disable-extensions-except=kilocode.kilo-code",
+				"--disable-extension-recommendations",
+				"--disable-extension-update-check",
+				"--disable-default-apps",
+				"--disable-background-timer-throttling",
+				"--disable-backgrounding-occluded-windows",
+				"--disable-renderer-backgrounding",
+				"--disable-features=TranslateUI",
+				"--disable-component-extensions-with-background-pages",
 				`--extensionDevelopmentPath=${path.resolve(__dirname, "..", "..", "..", "src")}`,
 				`--extensions-dir=${path.join(defaultCachePath, "extensions")}`,
 				`--user-data-dir=${path.join(defaultCachePath, "user-data")}`,
