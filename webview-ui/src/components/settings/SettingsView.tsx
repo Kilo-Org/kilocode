@@ -87,8 +87,8 @@ export const settingsTabTriggerActive = "opacity-100 border-vscode-focusBorder b
 export interface SettingsViewRef {
 	checkUnsaveChanges: (then: () => void) => void
 }
-
-const sectionNames = [
+// kilocode_change
+const baseSectionNames = [
 	"providers",
 	"autoApprove",
 	"browser",
@@ -105,7 +105,7 @@ const sectionNames = [
 	"about",
 ] as const
 
-type SectionName = (typeof sectionNames)[number]
+type SectionName = (typeof baseSectionNames)[number] // kilocode_change
 
 type SettingsViewProps = {
 	onDone: () => void
@@ -118,6 +118,17 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 	const extensionState = useExtensionState()
 	const { currentApiConfigName, listApiConfigMeta, uriScheme, settingsImportedAt } = extensionState
 	const { uiKind } = extensionState // kilocode_change
+
+	// kilocode_change start: filter out ghost section based on experiment
+	const sectionNames = useMemo(() => {
+		return baseSectionNames.filter((section) => {
+			if (section === "ghost") {
+				return extensionState.experiments?.inlineAssist === true
+			}
+			return true
+		})
+	}, [extensionState.experiments?.inlineAssist])
+	// kilocode_change end
 
 	const [isDiscardDialogShow, setDiscardDialogShow] = useState(false)
 	const [isChangeDetected, setChangeDetected] = useState(false)
@@ -516,7 +527,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		if (targetSection && sectionNames.includes(targetSection as SectionName)) {
 			setActiveTab(targetSection as SectionName)
 		}
-	}, [targetSection])
+	}, [sectionNames, targetSection]) // kilocode_change
 
 	// Function to scroll the active tab into view for vertical layout
 	const scrollToActiveTab = useCallback(() => {

@@ -267,6 +267,7 @@ describe("mergeExtensionState", () => {
 				disableCompletionCommand: false,
 				concurrentFileReads: true,
 				multiFileApplyDiff: true,
+				inlineAssist: false, // kilocode_change
 			} as Record<ExperimentId, boolean>,
 		}
 
@@ -283,6 +284,7 @@ describe("mergeExtensionState", () => {
 			disableCompletionCommand: false,
 			concurrentFileReads: true,
 			multiFileApplyDiff: true,
+			inlineAssist: false, // kilocode_change
 		})
 	})
 })

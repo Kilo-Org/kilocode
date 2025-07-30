@@ -1,8 +1,16 @@
+// kilocode_change - new file
 import * as vscode from "vscode"
 import { GhostProvider } from "./GhostProvider"
 import { t } from "../../i18n"
+import { ClineProvider } from "../../core/webview/ClineProvider"
+import { experiments, EXPERIMENT_IDS } from "../../shared/experiments"
 
-export const registerGhostProvider = (context: vscode.ExtensionContext) => {
+export const registerGhostProvider = async (context: vscode.ExtensionContext, provider: ClineProvider) => {
+	const state = await provider.getState()
+	if (!experiments.isEnabled(state.experiments ?? {}, EXPERIMENT_IDS.INLINE_ASSIST)) {
+		return
+	}
+
 	const ghost = GhostProvider.getInstance(context)
 
 	// Register Windows Events
