@@ -694,6 +694,10 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Aktifkan edit file bersamaan",
 			"description": "Ketika diaktifkan, Kilo Code dapat mengedit beberapa file dalam satu permintaan. Ketika dinonaktifkan, Kilo Code harus mengedit file satu per satu. Menonaktifkan ini dapat membantu saat bekerja dengan model yang kurang mampu atau ketika kamu ingin kontrol lebih terhadap modifikasi file."
+		},
+		"INLINE_ASSIST": {
+			"name": "Bantuan Inline",
+			"description": "Aktifkan fitur Inline Assist untuk saran dan perbaikan kode cepat langsung di editor Anda. Termasuk Quick Inline Task (Cmd+I) untuk perubahan terarah dan Auto Inline Task untuk perbaikan kontekstual."
 		}
 	},
 	"promptCaching": {

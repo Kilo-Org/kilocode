@@ -678,6 +678,10 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Enable concurrent file edits",
 			"description": "When enabled, Kilo Code can edit multiple files in a single request. When disabled, Kilo Code must edit files one at a time. Disabling this can help when working with less capable models or when you want more control over file modifications."
+		},
+		"INLINE_ASSIST": {
+			"name": "Inline Assist",
+			"description": "Enable Inline Assist features for quick code suggestions and improvements directly in your editor. Includes Quick Inline Task (Cmd+I) for targeted changes and Auto Inline Task for contextual improvements."
 		}
 	},
 	"promptCaching": {

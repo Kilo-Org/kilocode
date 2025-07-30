@@ -673,6 +673,10 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Bật chỉnh sửa tệp đồng thời",
 			"description": "Khi được bật, Kilo Code có thể chỉnh sửa nhiều tệp trong một yêu cầu duy nhất. Khi bị tắt, Kilo Code phải chỉnh sửa từng tệp một. Tắt tính năng này có thể hữu ích khi làm việc với các mô hình kém khả năng hơn hoặc khi bạn muốn kiểm soát nhiều hơn đối với các thay đổi tệp."
+		},
+		"INLINE_ASSIST": {
+			"name": "Trợ lý Nội dòng",
+			"description": "Bật tính năng Trợ giúp nội tuyến (Inline Assist) để nhận gợi ý và cải tiến mã nhanh chóng ngay trong trình soạn thảo của bạn. Bao gồm Tác vụ nội tuyến nhanh (Cmd+I) cho những thay đổi có mục tiêu và Tác vụ nội tuyến tự động cho những cải tiến theo ngữ cảnh."
 		}
 	},
 	"promptCaching": {

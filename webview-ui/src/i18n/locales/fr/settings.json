@@ -672,6 +672,10 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Activer les éditions de fichiers concurrentes",
 			"description": "Lorsque cette option est activée, Kilo Code peut éditer plusieurs fichiers en une seule requête. Lorsqu'elle est désactivée, Kilo Code doit éditer les fichiers un par un. Désactiver cette option peut aider lorsque tu travailles avec des modèles moins capables ou lorsque tu veux plus de contrôle sur les modifications de fichiers."
+		},
+		"INLINE_ASSIST": {
+			"name": "Assistance en ligne",
+			"description": "Activez les fonctionnalités d'assistance en ligne pour des suggestions et améliorations de code rapides directement dans votre éditeur. Inclut la Tâche rapide en ligne (Cmd+I) pour des modifications ciblées et la Tâche automatique en ligne pour des améliorations contextuelles."
 		}
 	},
 	"promptCaching": {

@@ -673,6 +673,10 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Włącz równoczesne edycje plików",
 			"description": "Gdy włączone, Kilo Code może edytować wiele plików w jednym żądaniu. Gdy wyłączone, Kilo Code musi edytować pliki jeden po drugim. Wyłączenie tego może pomóc podczas pracy z mniej zdolnymi modelami lub gdy chcesz mieć większą kontrolę nad modyfikacjami plików."
+		},
+		"INLINE_ASSIST": {
+			"name": "Pomoc w linii",
+			"description": "Włącz funkcje Asystenta Inline, aby uzyskać szybkie sugestie i usprawnienia kodu bezpośrednio w edytorze. Zawiera Szybkie Zadanie Inline (Cmd+I) do ukierunkowanych zmian oraz Automatyczne Zadanie Inline do kontekstowych usprawnień."
 		}
 	},
 	"promptCaching": {

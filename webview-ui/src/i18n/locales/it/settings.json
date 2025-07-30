@@ -673,6 +673,10 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Abilita modifiche di file concorrenti",
 			"description": "Quando abilitato, Kilo Code può modificare più file in una singola richiesta. Quando disabilitato, Kilo Code deve modificare i file uno alla volta. Disabilitare questa opzione può aiutare quando lavori con modelli meno capaci o quando vuoi più controllo sulle modifiche dei file."
+		},
+		"INLINE_ASSIST": {
+			"name": "Assistenza Inline",
+			"description": "Abilita le funzionalità di Assistenza in Linea per suggerimenti e miglioramenti rapidi del codice direttamente nel tuo editor. Include Attività Rapida in Linea (Cmd+I) per modifiche mirate e Attività Automatica in Linea per miglioramenti contestuali."
 		}
 	},
 	"promptCaching": {

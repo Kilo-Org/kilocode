@@ -673,6 +673,10 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Gelijktijdige bestandsbewerkingen inschakelen",
 			"description": "Wanneer ingeschakeld, kan Kilo Code meerdere bestanden in één verzoek bewerken. Wanneer uitgeschakeld, moet Kilo Code bestanden één voor één bewerken. Het uitschakelen hiervan kan helpen wanneer je werkt met minder capabele modellen of wanneer je meer controle wilt over bestandswijzigingen."
+		},
+		"INLINE_ASSIST": {
+			"name": "Inline Ondersteuning",
+			"description": "Schakel Inline Assist-functies in voor snelle codevoorstellen en verbeteringen direct in uw editor. Bevat Quick Inline Task (Cmd+I) voor gerichte wijzigingen en Auto Inline Task voor contextuele verbeteringen."
 		}
 	},
 	"promptCaching": {

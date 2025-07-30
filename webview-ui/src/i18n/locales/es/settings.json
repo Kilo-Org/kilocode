@@ -672,6 +672,10 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Habilitar ediciones de archivos concurrentes",
 			"description": "Cuando está habilitado, Kilo Code puede editar múltiples archivos en una sola solicitud. Cuando está deshabilitado, Kilo Code debe editar archivos de uno en uno. Deshabilitar esto puede ayudar cuando trabajas con modelos menos capaces o cuando quieres más control sobre las modificaciones de archivos."
+		},
+		"INLINE_ASSIST": {
+			"name": "Asistencia Integrada",
+			"description": "Habilita las funciones de Asistencia en línea para obtener sugerencias y mejoras de código rápidas directamente en tu editor. Incluye Tarea rápida en línea (Cmd+I) para cambios específicos y Tarea automática en línea para mejoras contextuales."
 		}
 	},
 	"promptCaching": {

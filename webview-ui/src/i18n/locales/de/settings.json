@@ -672,6 +672,10 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Gleichzeitige Dateibearbeitungen aktivieren",
 			"description": "Wenn aktiviert, kann Kilo Code mehrere Dateien in einer einzigen Anfrage bearbeiten. Wenn deaktiviert, muss Kilo Code Dateien einzeln bearbeiten. Das Deaktivieren kann hilfreich sein, wenn mit weniger fähigen Modellen gearbeitet wird oder wenn du mehr Kontrolle über Dateiänderungen haben möchtest."
+		},
+		"INLINE_ASSIST": {
+			"name": "Inline-Unterstützung",
+			"description": "Aktivieren Sie Inline-Assist-Funktionen für schnelle Code-Vorschläge und -Verbesserungen direkt in Ihrem Editor. Beinhaltet Quick Inline Task (Cmd+I) für gezielte Änderungen und Auto Inline Task für kontextbezogene Verbesserungen."
 		}
 	},
 	"promptCaching": {

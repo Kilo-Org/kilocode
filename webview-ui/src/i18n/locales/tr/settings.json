@@ -673,6 +673,10 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Eşzamanlı dosya düzenlemelerini etkinleştir",
 			"description": "Etkinleştirildiğinde, Kilo Code tek bir istekte birden fazla dosyayı düzenleyebilir. Devre dışı bırakıldığında, Kilo Code dosyaları tek tek düzenlemek zorundadır. Bunu devre dışı bırakmak, daha az yetenekli modellerle çalışırken veya dosya değişiklikleri üzerinde daha fazla kontrol istediğinde yardımcı olabilir."
+		},
+		"INLINE_ASSIST": {
+			"name": "Satır İçi Asistan",
+			"description": "Düzenleyicinizde doğrudan hızlı kod önerileri ve iyileştirmeleri için Satır İçi Yardımcı özelliklerini etkinleştirin. Hedeflenen değişiklikler için Hızlı Satır İçi Görev (Cmd+I) ve bağlamsal iyileştirmeler için Otomatik Satır İçi Görev içerir."
 		}
 	},
 	"promptCaching": {
