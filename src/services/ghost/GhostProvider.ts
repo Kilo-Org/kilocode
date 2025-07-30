@@ -78,7 +78,7 @@ export class GhostProvider {
 	 */
 	private onDidCloseTextDocument(document: vscode.TextDocument): void {
 		// Only process file documents
-		if (document.uri.scheme !== "file") {
+		if (!this.enabled || document.uri.scheme !== "file") {
 			return
 		}
 
@@ -91,7 +91,7 @@ export class GhostProvider {
 	 */
 	private async onDidOpenTextDocument(document: vscode.TextDocument): Promise<void> {
 		// Only process file documents
-		if (document.uri.scheme !== "file") {
+		if (!this.enabled || document.uri.scheme !== "file") {
 			return
 		}
 
@@ -106,7 +106,7 @@ export class GhostProvider {
 	 */
 	private async onDidChangeTextDocument(event: vscode.TextDocumentChangeEvent): Promise<void> {
 		// Only process file documents
-		if (event.document.uri.scheme !== "file") {
+		if (!this.enabled || event.document.uri.scheme !== "file") {
 			return
 		}
 
