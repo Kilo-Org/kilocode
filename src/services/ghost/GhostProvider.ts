@@ -30,6 +30,7 @@ export class GhostProvider {
 	private workspaceEdit: GhostWorkspaceEdit
 	private suggestions: GhostSuggestionsState = new GhostSuggestionsState()
 	private context: vscode.ExtensionContext
+	private cline: ClineProvider
 	private providerSettingsManager: ProviderSettingsManager
 	private settings: GhostServiceSettings | null = null
 	private ghostContext: GhostContext
@@ -46,8 +47,9 @@ export class GhostProvider {
 	public codeActionProvider: GhostCodeActionProvider
 	public codeLensProvider: GhostCodeLensProvider
 
-	private constructor(context: vscode.ExtensionContext) {
+	private constructor(context: vscode.ExtensionContext, cline: ClineProvider) {
 		this.context = context
+		this.cline = cline
 		this.decorations = new GhostDecorations()
 		this.documentStore = new GhostDocumentStore()
 		this.strategy = new GhostStrategy()
@@ -120,8 +122,22 @@ export class GhostProvider {
 
 	private loadSettings() {
 		const state = ContextProxy.instance?.getValues?.()
-		this.enabled = experiments.isEnabled(state.experiments ?? {}, EXPERIMENT_IDS.INLINE_ASSIST)
+		const experimentEnabled = experiments.isEnabled(state.experiments ?? {}, EXPERIMENT_IDS.INLINE_ASSIST)
+		if (this.enabled && !experimentEnabled) {
+			this.disable()
+		}
+		if (!this.enabled && experimentEnabled) {
+			this.enable()
+		}
 		return state.ghostServiceSettings
+	}
+
+	private async saveSettings() {
+		if (!this.settings) {
+			return
+		}
+		await ContextProxy.instance?.setValues?.({ ghostServiceSettings: this.settings })
+		await this.cline.postStateToWebview()
 	}
 
 	public async reload() {
@@ -131,12 +147,17 @@ export class GhostProvider {
 		this.updateStatusBar()
 	}
 
-	public static getInstance(context?: vscode.ExtensionContext): GhostProvider {
+	public static initialize(context: vscode.ExtensionContext, cline: ClineProvider): GhostProvider {
+		if (GhostProvider.instance) {
+			throw new Error("GhostProvider is already initialized. Use getInstance() instead.")
+		}
+		GhostProvider.instance = new GhostProvider(context, cline)
+		return GhostProvider.instance
+	}
+
+	public static getInstance(): GhostProvider {
 		if (!GhostProvider.instance) {
-			if (!context) {
-				throw new Error("ExtensionContext is required for first initialization of GhostProvider")
-			}
-			GhostProvider.instance = new GhostProvider(context)
+			throw new Error("GhostProvider is not initialized. Call initialize() first.")
 		}
 		return GhostProvider.instance
 	}
@@ -355,9 +376,6 @@ export class GhostProvider {
 	}
 
 	public async cancelSuggestions() {
-		if (!this.enabled) {
-			return
-		}
 		if (!this.hasPendingSuggestions() || this.workspaceEdit.isLocked()) {
 			return
 		}
@@ -509,5 +527,41 @@ export class GhostProvider {
 	public dispose() {
 		this.statusBar?.dispose()
 		this.statusBar = null
+	}
+
+	public async disable() {
+		this.settings = {
+			...this.settings,
+			enableAutoInlineTaskKeybinding: false,
+			enableQuickInlineTaskKeybinding: false,
+		}
+		this.dispose()
+		await this.cancelSuggestions()
+		await this.saveSettings()
+		await this.updateGlobalContext()
+	}
+
+	public async enable() {
+		this.settings = {
+			...this.settings,
+			enableAutoInlineTaskKeybinding: true,
+			enableQuickInlineTaskKeybinding: true,
+		}
+		this.updateStatusBar()
+		await this.saveSettings()
+		await this.updateGlobalContext()
+	}
+
+	public async showIncompatibilityExtensionPopup() {
+		const message = t("kilocode:ghost.incompatibilityExtensionPopup.message")
+		const disableCopilot = t("kilocode:ghost.incompatibilityExtensionPopup.disableCopilot")
+		const disableInlineAssist = t("kilocode:ghost.incompatibilityExtensionPopup.disableInlineAssist")
+		const response = await vscode.window.showErrorMessage(message, disableCopilot, disableInlineAssist)
+
+		if (response === disableCopilot) {
+			await vscode.commands.executeCommand<any>("github.copilot.completions.disable")
+		} else if (response === disableInlineAssist) {
+			await vscode.commands.executeCommand<any>("kilo-code.ghost.disable")
+		}
 	}
 }

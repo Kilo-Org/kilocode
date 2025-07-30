@@ -52,10 +52,28 @@
 		"activationFailed": "Kilo: Error al activar el generador de mensajes: {{error}}"
 	},
 	"ghost": {
+		"statusBar": {
+			"enabled": "$(sparkle) Asistente Integrado Kilo",
+			"disabled": "$(circle-slash) Asistencia en línea Kilo",
+			"warning": "$(warning) Asistencia Integrada Kilo",
+			"tooltip": {
+				"basic": "Asistencia Integrada Kilo Code",
+				"disabled": "Asistente Integrado Kilo Code (desactivado)",
+				"tokenError": "Se debe establecer un token válido para usar Inline Assist",
+				"lastCompletion": "Última sugerencia:",
+				"sessionTotal": "Costo total de la sesión:",
+				"model": "Modelo:"
+			},
+			"cost": {
+				"zero": "$0.00",
+				"lessThanCent": "<$0.01"
+			}
+		},
+		"toggleMessage": "Asistente Integrado Kilo {{status}}",
 		"progress": {
 			"analyzing": "Analizando su código...",
-			"processing": "Procesando ediciones sugeridas...",
 			"generating": "Generando sugerencias de edición...",
+			"processing": "Procesando ediciones sugeridas...",
 			"showing": "Mostrando ediciones sugeridas...",
 			"title": "Kilo Code"
 		},
@@ -68,38 +86,25 @@
 			"cancelSuggestions": "Cancelar Ediciones Sugeridas",
 			"generateSuggestions": "Kilo Code: Generar Ediciones Sugeridas",
 			"applyCurrentSuggestion": "Aplicar edición sugerida actual",
+			"applyAllSuggestions": "Aplicar todas las ediciones sugeridas",
 			"promptCodeSuggestion": "Tarea Rápida de Prompt",
-			"category": "Kilo Code",
-			"applyAllSuggestions": "Aplicar todas las ediciones sugeridas"
+			"category": "Kilo Code"
+		},
+		"codeAction": {
+			"title": "Kilo Code: Ediciones sugeridas"
 		},
 		"chatParticipant": {
 			"fullName": "Kilo Code Agente",
 			"description": "Puedo ayudarte con tareas rápidas y ediciones sugeridas.",
 			"name": "Agente"
 		},
-		"codeAction": {
-			"title": "Kilo Code: Ediciones sugeridas"
-		},
 		"messages": {
 			"provideCodeSuggestions": "Proporcionando sugerencias de código..."
 		},
-		"statusBar": {
-			"enabled": "$(sparkle) Asistente Integrado Kilo",
-			"warning": "$(warning) Asistencia Integrada Kilo",
-			"disabled": "$(circle-slash) Asistencia en línea Kilo",
-			"tooltip": {
-				"disabled": "Asistente Integrado Kilo Code (desactivado)",
-				"basic": "Asistencia Integrada Kilo Code",
-				"tokenError": "Se debe establecer un token válido para usar Inline Assist",
-				"lastCompletion": "Última sugerencia:",
-				"model": "Modelo:",
-				"sessionTotal": "Costo total de la sesión:"
-			},
-			"cost": {
-				"zero": "$0.00",
-				"lessThanCent": "<$0.01"
-			}
-		},
-		"toggleMessage": "Asistente Integrado Kilo {{status}}"
+		"incompatibilityExtensionPopup": {
+			"message": "La Asistencia Integrada de Kilo Code está siendo bloqueada por un conflicto con GitHub Copilot. Para solucionar esto, debes deshabilitar las sugerencias integradas de Copilot.",
+			"disableCopilot": "Deshabilitar Copilot",
+			"disableInlineAssist": "Deshabilitar Asistencia Integrada"
+		}
 	}
 }

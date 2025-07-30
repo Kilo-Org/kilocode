@@ -3,26 +3,26 @@
 		"settings_imported": "Instellingen succesvol geïmporteerd."
 	},
 	"userFeedback": {
-		"message_update_failed": "Bijwerken van bericht mislukt",
-		"no_checkpoint_found": "Geen checkpoint gevonden voor dit bericht",
+		"message_update_failed": "Bericht bijwerken mislukt",
+		"no_checkpoint_found": "Geen controlepunt gevonden vóór dit bericht",
 		"message_updated": "Bericht succesvol bijgewerkt"
 	},
 	"lowCreditWarning": {
-		"title": "Waarschuwing: laag krediet!",
-		"message": "Controleer of je kunt opwaarderen met gratis credits of meer kunt kopen!"
+		"title": "Waarschuwing Laag Saldo!",
+		"message": "Kijk of je kunt opwaarderen met gratis tegoeden of meer kunt kopen!"
 	},
-	"notLoggedInError": "Kan verzoek niet voltooien, zorg ervoor dat je verbonden bent en ingelogd met de geselecteerde provider.\n\n{{error}}",
+	"notLoggedInError": "Kan verzoek niet voltooien, zorg ervoor dat u verbonden bent en bent aangemeld bij de geselecteerde provider.\n\n{{error}}",
 	"rules": {
 		"actions": {
 			"delete": "Verwijderen",
-			"confirmDelete": "Weet je zeker dat je {{filename}} wilt verwijderen?",
+			"confirmDelete": "Weet u zeker dat u {{filename}} wilt verwijderen?",
 			"deleted": "{{filename}} verwijderd"
 		},
 		"errors": {
-			"noWorkspaceFound": "Geen werkruimte map gevonden",
+			"noWorkspaceFound": "Geen werkruimtemap gevonden",
 			"fileAlreadyExists": "Bestand {{filename}} bestaat al",
-			"failedToCreateRuleFile": "Kon regelbestand niet aanmaken.",
-			"failedToDeleteRuleFile": "Kon regelbestand niet verwijderen."
+			"failedToCreateRuleFile": "Regelbestand kon niet worden gemaakt.",
+			"failedToDeleteRuleFile": "Regelbestand kon niet worden verwijderd."
 		},
 		"templates": {
 			"workflow": {
@@ -34,72 +34,77 @@
 			"rule": {
 				"description": "Regel beschrijving hier...",
 				"guidelinesHeader": "## Richtlijnen",
-				"guideline1": "Richtlijn 1",
-				"guideline2": "Richtlijn 2"
+				"guideline1": "Rijlijn 1",
+				"guideline2": "Rijlijn 2"
 			}
 		}
 	},
 	"commitMessage": {
 		"activated": "Kilo Code commit bericht generator geactiveerd",
-		"gitNotFound": "⚠️ Git repository niet gevonden of git niet beschikbaar",
+		"gitNotFound": "⚠️ Git-repository niet gevonden of git niet beschikbaar",
 		"gitInitError": "⚠️ Git-initialisatiefout: {{error}}",
-		"generating": "Kilo: Commitbericht genereren...",
+		"generating": "Kilo: Commit bericht genereren...",
 		"noChanges": "Kilo: Geen wijzigingen gevonden om te analyseren",
-		"generated": "Kilo: Commitbericht gegenereerd!",
-		"generationFailed": "Kilo: Mislukt bij het genereren van een commit-bericht: {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: Bericht genereren met niet-gecommitteerde wijzigingen",
-		"activationFailed": "Kilo: Niet gelukt berichtengenerator te activeren: {{error}}",
-		"providerRegistered": "Kilo: Berichtprovider voor commits geregistreerd"
+		"generated": "Kilo: Commit bericht gegenereerd!",
+		"generationFailed": "Kilo: Fout bij het genereren van commit bericht: {{errorMessage}}",
+		"generatingFromUnstaged": "Kilo: Bericht genereren met niet-gestage wijzigingen",
+		"activationFailed": "Kilo: Fout bij het activeren van berichtgenerator: {{error}}",
+		"providerRegistered": "Kilo: Commit bericht provider geregistreerd"
 	},
 	"ghost": {
+		"statusBar": {
+			"enabled": "$(sparkle) Kilo In-line Assistent",
+			"disabled": "$(circle-slash) Kilo In-line Assistent",
+			"warning": "$(warning) Kilo In-line Assistent",
+			"tooltip": {
+				"basic": "Kilo Code In-line Assistent",
+				"disabled": "Kilo Code In-line Assistent (uitgeschakeld)",
+				"tokenError": "Een geldig token moet zijn ingesteld om In-line Assistent te gebruiken",
+				"lastCompletion": "Laatste suggestie:",
+				"sessionTotal": "Totale sessiekosten:",
+				"model": "Model:"
+			},
+			"cost": {
+				"zero": "$0.00",
+				"lessThanCent": "<$0.01"
+			}
+		},
+		"toggleMessage": "Kilo In-line Assistent {{status}}",
 		"progress": {
-			"analyzing": "Je code wordt geanalyseerd...",
+			"title": "Kilo Code",
+			"analyzing": "Uw code analyseren...",
 			"generating": "Suggesties voor bewerkingen genereren...",
-			"showing": "Suggesties voor bewerkingen worden weergegeven...",
 			"processing": "Suggesties voor bewerkingen verwerken...",
-			"title": "Kilo Code"
+			"showing": "Suggesties voor bewerkingen weergeven..."
 		},
 		"input": {
 			"title": "Kilo Code: Snelle Taak",
-			"placeholder": "bijv. 'herstructureer deze functie om efficiënter te zijn'"
+			"placeholder": "bijv. 'refactor deze functie om deze efficiënter te maken'"
 		},
 		"commands": {
-			"displaySuggestions": "Toon voorgestelde aanpassingen",
-			"generateSuggestions": "Kilo Code: Genereer Voorgestelde Aanpassingen",
-			"cancelSuggestions": "Voorgestelde bewerkingen annuleren",
-			"category": "Kilo Code",
-			"applyAllSuggestions": "Pas alle voorgestelde wijzigingen toe",
+			"generateSuggestions": "Kilo Code: Genereer Voorgestelde Bewerkingen",
+			"displaySuggestions": "Voorgestelde Bewerkingen Weergeven",
+			"cancelSuggestions": "Voorgestelde Bewerkingen Annuleren",
 			"applyCurrentSuggestion": "Huidige Voorgestelde Bewerking Toepassen",
-			"promptCodeSuggestion": "Prompte Snelle Taak"
+			"applyAllSuggestions": "Alle Voorgestelde Bewerkingen Toepassen",
+			"promptCodeSuggestion": "Snelle Taak",
+			"category": "Kilo Code"
 		},
 		"codeAction": {
 			"title": "Kilo Code: Voorgestelde Bewerkingen"
 		},
 		"chatParticipant": {
-			"name": "Agent",
 			"fullName": "Kilo Code Agent",
-			"description": "Ik kan je helpen met snelle taken en voorgestelde bewerkingen."
+			"name": "Agent",
+			"description": "Ik kan u helpen met snelle taken en voorgestelde bewerkingen."
 		},
 		"messages": {
-			"provideCodeSuggestions": "Code suggesties worden aangeboden..."
+			"provideCodeSuggestions": "Code suggesties worden verstrekt..."
 		},
-		"statusBar": {
-			"disabled": "$(circle-slash) Kilo Inline Assist",
-			"enabled": "$(sparkle) Kilo Inline Hulp",
-			"warning": "$(warning) Kilo Inline Assist",
-			"tooltip": {
-				"basic": "Kilo Code Inline Assist",
-				"disabled": "Kilo Code Inline Assist (uitgeschakeld)",
-				"lastCompletion": "Laatste suggestie:",
-				"tokenError": "Een geldig token moet ingesteld zijn om Inline Assist te gebruiken",
-				"sessionTotal": "Totale sessiekosten:",
-				"model": "Model:"
-			},
-			"cost": {
-				"zero": "€0,00",
-				"lessThanCent": "<€0,01"
-			}
-		},
-		"toggleMessage": "Kilo Inline Assist {{status}}"
+		"incompatibilityExtensionPopup": {
+			"message": "De Kilo Code In-line Assistent wordt geblokkeerd door een conflict met GitHub Copilot. Om dit op te lossen, moet u de in-line suggesties van Copilot uitschakelen.",
+			"disableCopilot": "Copilot uitschakelen",
+			"disableInlineAssist": "In-line Assistent uitschakelen"
+		}
 	}
 }

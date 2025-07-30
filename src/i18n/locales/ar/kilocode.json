@@ -104,6 +104,11 @@
 				"zero": "$٠٫٠٠"
 			}
 		},
-		"toggleMessage": "المساعد المضمن Kilo {{status}}"
+		"toggleMessage": "المساعد المضمن Kilo {{status}}",
+		"incompatibilityExtensionPopup": {
+			"message": "يتم حظر مساعد كيلو كود المضمّن بسبب تعارض مع GitHub Copilot. لإصلاح هذا، يجب عليك تعطيل اقتراحات Copilot المضمنة.",
+			"disableCopilot": "تعطيل Copilot",
+			"disableInlineAssist": "تعطيل المساعد المضمّن"
+		}
 	}
 }

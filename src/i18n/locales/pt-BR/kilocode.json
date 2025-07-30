@@ -11,7 +11,7 @@
 		"title": "Aviso de Crédito Baixo!",
 		"message": "Verifique se você pode recarregar com créditos gratuitos ou comprar mais!"
 	},
-	"notLoggedInError": "Não é possível concluir a solicitação, certifique-se de que você está conectado e logado com o provedor selecionado.\n\n{{error}}",
+	"notLoggedInError": "Não é possível concluir a solicitação, certifique-se de que está conectado e logado com o provedor selecionado.\n\n{{error}}",
 	"rules": {
 		"actions": {
 			"delete": "Excluir",
@@ -27,9 +27,9 @@
 		"templates": {
 			"workflow": {
 				"description": "Descrição do fluxo de trabalho aqui...",
-				"stepsHeader": "## Passos",
-				"step1": "Passo 1",
-				"step2": "Passo 2"
+				"stepsHeader": "## Etapas",
+				"step1": "Etapa 1",
+				"step2": "Etapa 2"
 			},
 			"rule": {
 				"description": "Descrição da regra aqui...",
@@ -40,35 +40,53 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Gerador de mensagens de commit do Kilo Code ativado",
-		"gitNotFound": "⚠️ Repositório Git não encontrado ou git não disponível",
+		"activated": "Gerador de mensagens de commit Kilo Code ativado",
+		"gitNotFound": "⚠️ Repositório Git não encontrado ou git indisponível",
 		"gitInitError": "⚠️ Erro de inicialização do Git: {{error}}",
 		"generating": "Kilo: Gerando mensagem de commit...",
-		"noChanges": "Kilo: Nenhuma alteração encontrada para analisar",
+		"noChanges": "Kilo: Nenhuma alteração encontrada para análise",
 		"generated": "Kilo: Mensagem de commit gerada!",
 		"generationFailed": "Kilo: Falha ao gerar mensagem de commit: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: Gerando mensagem usando alterações não preparadas",
 		"activationFailed": "Kilo: Falha ao ativar o gerador de mensagens: {{error}}",
-		"providerRegistered": "Kilo: Provedor de mensagem de commit registrado"
+		"providerRegistered": "Kilo: Provedor de mensagens de commit registrado"
 	},
 	"ghost": {
+		"statusBar": {
+			"enabled": "$(sparkle) Assistente Inline Kilo",
+			"disabled": "$(circle-slash) Assistente Inline Kilo",
+			"warning": "$(warning) Assistente Inline Kilo",
+			"tooltip": {
+				"basic": "Assistente Inline Kilo Code",
+				"disabled": "Assistente Inline Kilo Code (desativado)",
+				"tokenError": "Um token válido deve ser definido para usar o Assistente Inline",
+				"lastCompletion": "Última sugestão:",
+				"sessionTotal": "Custo total da sessão:",
+				"model": "Modelo:"
+			},
+			"cost": {
+				"zero": "$0.00",
+				"lessThanCent": "<$0.01"
+			}
+		},
+		"toggleMessage": "Assistente Inline Kilo {{status}}",
 		"progress": {
+			"title": "Kilo Code",
 			"analyzing": "Analisando seu código...",
-			"processing": "Processando sugestões de edição...",
 			"generating": "Gerando edições sugeridas...",
-			"showing": "Exibindo edições sugeridas…",
-			"title": "Kilo Code"
+			"processing": "Processando edições sugeridas...",
+			"showing": "Exibindo edições sugeridas..."
 		},
 		"input": {
 			"title": "Kilo Code: Tarefa Rápida",
-			"placeholder": "p. ex., 'refatore esta função para ser mais eficiente'"
+			"placeholder": "ex. 'refatorar esta função para torná-la mais eficiente'"
 		},
 		"commands": {
 			"generateSuggestions": "Kilo Code: Gerar Edições Sugeridas",
 			"displaySuggestions": "Exibir Edições Sugeridas",
 			"cancelSuggestions": "Cancelar Edições Sugeridas",
-			"applyAllSuggestions": "Aplicar Todas as Edições Sugeridas",
 			"applyCurrentSuggestion": "Aplicar Edição Sugerida Atual",
+			"applyAllSuggestions": "Aplicar Todas as Edições Sugeridas",
 			"promptCodeSuggestion": "Tarefa Rápida",
 			"category": "Kilo Code"
 		},
@@ -76,30 +94,17 @@
 			"title": "Kilo Code: Edições Sugeridas"
 		},
 		"chatParticipant": {
+			"fullName": "Agente Kilo Code",
 			"name": "Agente",
-			"fullName": "Kilo Code Agente",
-			"description": "Posso ajudar você com tarefas rápidas e sugestões de edição."
+			"description": "Posso ajudá-lo com tarefas rápidas e edições sugeridas."
 		},
 		"messages": {
-			"provideCodeSuggestions": "Sugerindo códigos..."
+			"provideCodeSuggestions": "Fornecendo sugestões de código..."
 		},
-		"statusBar": {
-			"warning": "$(warning) Assistência Kilo em linha",
-			"disabled": "$(circle-slash) Assistência em linha à venda",
-			"enabled": "$(sparkle) Assistente Integrado Kilo",
-			"tooltip": {
-				"basic": "Assistência em Linha Kilo Code",
-				"disabled": "Kilo Code Assistência Inline (desativada)",
-				"lastCompletion": "Última sugestão:",
-				"sessionTotal": "Custo total da sessão:",
-				"tokenError": "Um token válido deve ser definido para usar o Assistente Integrado",
-				"model": "Modelo:"
-			},
-			"cost": {
-				"zero": "R$ 0,00",
-				"lessThanCent": "<$0,01"
-			}
-		},
-		"toggleMessage": "Assistente em Linha Kilo {{status}}"
+		"incompatibilityExtensionPopup": {
+			"message": "O Assistente Inline do Kilo Code está sendo bloqueado por um conflito com o GitHub Copilot. Para corrigir isso, você deve desabilitar as sugestões inline do Copilot.",
+			"disableCopilot": "Desabilitar Copilot",
+			"disableInlineAssist": "Desabilitar Assistente Inline"
+		}
 	}
 }

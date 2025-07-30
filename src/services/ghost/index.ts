@@ -1,9 +1,10 @@
 // kilocode_change - new file
 import * as vscode from "vscode"
 import { GhostProvider } from "./GhostProvider"
+import { ClineProvider } from "../../core/webview/ClineProvider"
 
-export const registerGhostProvider = async (context: vscode.ExtensionContext) => {
-	const ghost = GhostProvider.getInstance(context)
+export const registerGhostProvider = (context: vscode.ExtensionContext, cline: ClineProvider) => {
+	const ghost = GhostProvider.initialize(context, cline)
 
 	// Register Windows Events
 	context.subscriptions.push(
@@ -56,6 +57,21 @@ export const registerGhostProvider = async (context: vscode.ExtensionContext) =>
 	context.subscriptions.push(
 		vscode.commands.registerCommand("kilo-code.ghost.goToPreviousSuggestion", async () => {
 			await ghost.selectPreviousSuggestion()
+		}),
+	)
+	context.subscriptions.push(
+		vscode.commands.registerCommand("kilo-code.ghost.showIncompatibilityExtensionPopup", async () => {
+			await ghost.showIncompatibilityExtensionPopup()
+		}),
+	)
+	context.subscriptions.push(
+		vscode.commands.registerCommand("kilo-code.ghost.enable", async () => {
+			await ghost.enable()
+		}),
+	)
+	context.subscriptions.push(
+		vscode.commands.registerCommand("kilo-code.ghost.disable", async () => {
+			await ghost.disable()
 		}),
 	)
 

@@ -9,13 +9,13 @@
 	},
 	"lowCreditWarning": {
 		"title": "कम क्रेडिट चेतावनी!",
-		"message": "जांचें कि क्या आप मुफ्त क्रेडिट से टॉप अप कर सकते हैं या अधिक खरीद सकते हैं!"
+		"message": "जांचें कि क्या आप मुफ्त क्रेडिट के साथ टॉप-अप कर सकते हैं या और खरीद सकते हैं!"
 	},
-	"notLoggedInError": "अनुरोध पूरा नहीं कर सकते, सुनिश्चित करें कि आप चयनित प्रदाता से कनेक्ट और लॉग इन हैं।\n\n{{error}}",
+	"notLoggedInError": "अनुरोध पूरा नहीं किया जा सकता है, सुनिश्चित करें कि आप चयनित प्रदाता के साथ जुड़े और लॉग इन हैं।\n\n{{error}}",
 	"rules": {
 		"actions": {
 			"delete": "हटाएं",
-			"confirmDelete": "क्या आप वाकई {{filename}} को हटाना चाहते हैं?",
+			"confirmDelete": "क्या आप वाकई {{filename}} हटाना चाहते हैं?",
 			"deleted": "{{filename}} हटा दिया गया"
 		},
 		"errors": {
@@ -40,66 +40,71 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Kilo Code कमिट मैसेज जनरेटर सक्रिय",
-		"gitNotFound": "⚠️ Git रिपॉजिटरी नहीं मिली या git उपलब्ध नहीं है",
-		"gitInitError": "⚠️ गिट इनिशियलाइज़ेशन त्रुटि: {{error}}",
+		"activated": "Kilo Code कमिट संदेश जनरेटर सक्रिय",
+		"gitNotFound": "⚠️ Git रिपॉजिटरी नहीं मिली या Git उपलब्ध नहीं है",
+		"gitInitError": "⚠️ Git इनिशियलाइज़ेशन त्रुटि: {{error}}",
 		"generating": "Kilo: कमिट संदेश उत्पन्न कर रहा है...",
-		"noChanges": "Kilo: विश्लेषण करने के लिए कोई परिवर्तन नहीं मिला",
-		"generated": "Kilo: कमिट मैसेज जनरेट हो गया!",
-		"generationFailed": "Kilo: प्रतिबद्धता संदेश उत्पन्न करने में विफल: {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: अपरिवर्तित परिवर्तनों का उपयोग करके संदेश उत्पन्न कर रहा है",
+		"noChanges": "Kilo: विश्लेषण के लिए कोई बदलाव नहीं मिला",
+		"generated": "Kilo: कमिट संदेश उत्पन्न हुआ!",
+		"generationFailed": "Kilo: कमिट संदेश उत्पन्न करने में विफल: {{errorMessage}}",
+		"generatingFromUnstaged": "Kilo: अनस्टेज किए गए परिवर्तनों का उपयोग करके संदेश उत्पन्न कर रहा है",
 		"activationFailed": "Kilo: संदेश जनरेटर सक्रिय करने में विफल: {{error}}",
-		"providerRegistered": "किलो: कमिट संदेश प्रदाता पंजीकृत"
+		"providerRegistered": "Kilo: कमिट संदेश प्रदाता पंजीकृत"
 	},
 	"ghost": {
+		"statusBar": {
+			"enabled": "$(sparkle) Kilo इनलाइन सहायता",
+			"disabled": "$(circle-slash) Kilo इनलाइन सहायता",
+			"warning": "$(warning) Kilo इनलाइन सहायता",
+			"tooltip": {
+				"basic": "Kilo Code इनलाइन सहायता",
+				"disabled": "Kilo Code इनलाइन सहायता (अक्षम)",
+				"tokenError": "इनलाइन सहायता का उपयोग करने के लिए एक वैध टोकन सेट होना चाहिए",
+				"lastCompletion": "अंतिम सुझाव:",
+				"sessionTotal": "सत्र कुल लागत:",
+				"model": "मॉडल:"
+			},
+			"cost": {
+				"zero": "$0.00",
+				"lessThanCent": "<$0.01"
+			}
+		},
+		"toggleMessage": "Kilo इनलाइन सहायता {{status}}",
 		"progress": {
-			"processing": "संपादन सुझावों पर कार्यवाही कर रहे हैं...",
-			"analyzing": "आपके कोड का विश्लेषण किया जा रहा है...",
-			"generating": "सुझाएँ गए संपादन उत्पन्न हो रहे हैं...",
-			"showing": "सुझाए गए संपादन प्रदर्शित किए जा रहे हैं...",
-			"title": "Kilo Code"
+			"title": "Kilo Code",
+			"analyzing": "आपका कोड विश्लेषण कर रहा है...",
+			"generating": "सुझाए गए संपादन उत्पन्न कर रहा है...",
+			"processing": "सुझाए गए संपादन संसाधित कर रहा है...",
+			"showing": "सुझाए गए संपादन प्रदर्शित कर रहा है..."
 		},
 		"input": {
-			"placeholder": "उदाहरण के लिए, 'इस फंक्शन को अधिक कुशल होने के लिए रीफैक्टर करें'",
-			"title": "Kilo Code: त्वरित कार्य"
+			"title": "Kilo Code: त्वरित कार्य",
+			"placeholder": "जैसे, 'इस फ़ंक्शन को अधिक कुशल बनाने के लिए रीफैक्टर करें'"
 		},
 		"commands": {
-			"cancelSuggestions": "सुझाए गए संपादनों को रद्द करें",
-			"displaySuggestions": "सुझाए गए संपादन दिखाएं",
-			"generateSuggestions": "Kilo Code: सुझाये गए संपादन उत्पन्न करें",
-			"applyCurrentSuggestion": "वर्तमान सुझाए गए संपादन को लागू करें",
-			"category": "Kilo Code",
+			"generateSuggestions": "Kilo Code: सुझाए गए संपादन उत्पन्न करें",
+			"displaySuggestions": "सुझाए गए संपादन प्रदर्शित करें",
+			"cancelSuggestions": "सुझाए गए संपादन रद्द करें",
+			"applyCurrentSuggestion": "वर्तमान सुझाए गए संपादन लागू करें",
 			"applyAllSuggestions": "सभी सुझाए गए संपादन लागू करें",
-			"promptCodeSuggestion": "त्वरित कार्य संकेत"
-		},
-		"chatParticipant": {
-			"fullName": "Kilo Code एजेंट",
-			"name": "एजेंट",
-			"description": "मैं आपकी त्वरित कार्यों और सुझाए गए संपादनों में मदद कर सकता हूँ।"
+			"promptCodeSuggestion": "त्वरित कार्य",
+			"category": "Kilo Code"
 		},
 		"codeAction": {
 			"title": "Kilo Code: सुझाए गए संपादन"
 		},
+		"chatParticipant": {
+			"fullName": "Kilo Code एजेंट",
+			"name": "एजेंट",
+			"description": "मैं त्वरित कार्यों और सुझाए गए संपादनों में आपकी सहायता कर सकता हूँ।"
+		},
 		"messages": {
 			"provideCodeSuggestions": "कोड सुझाव प्रदान किए जा रहे हैं..."
 		},
-		"statusBar": {
-			"enabled": "$(sparkle) किलो इनलाइन सहायता",
-			"disabled": "$(circle-slash) किलो इनलाइन असिस्ट",
-			"warning": "$(warning) किलो इनलाइन सहायता",
-			"tooltip": {
-				"basic": "किलो कोड इनलाइन सहायता",
-				"disabled": "किलो कोड इनलाइन असिस्ट (अक्षम)",
-				"tokenError": "इनलाइन असिस्ट का उपयोग करने के लिए एक वैध टोकन सेट किया जाना चाहिए",
-				"lastCompletion": "अंतिम सुझाव:",
-				"model": "मॉडल:",
-				"sessionTotal": "सत्र की कुल लागत:"
-			},
-			"cost": {
-				"zero": "₹0.00",
-				"lessThanCent": "<₹0.01"
-			}
-		},
-		"toggleMessage": "किलो इनलाइन सहायता {{status}}"
+		"incompatibilityExtensionPopup": {
+			"message": "Kilo Code Inline Assist GitHub Copilot के साथ टकराव के कारण अवरुद्ध हो रहा है। इसे ठीक करने के लिए, आपको Copilot के इनलाइन सुझावों को अक्षम करना होगा।",
+			"disableCopilot": "Copilot अक्षम करें",
+			"disableInlineAssist": "Inline Assist अक्षम करें"
+		}
 	}
 }

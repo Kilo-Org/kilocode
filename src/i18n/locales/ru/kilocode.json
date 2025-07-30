@@ -9,17 +9,17 @@
 	},
 	"lowCreditWarning": {
 		"title": "Предупреждение о низком балансе!",
-		"message": "Проверьте, можете ли вы пополнить счет бесплатными кредитами или приобрести дополнительные!"
+		"message": "Проверьте, можете ли вы пополнить баланс бесплатными кредитами или купить больше!"
 	},
-	"notLoggedInError": "Не удается выполнить запрос, убедитесь, что вы подключены и вошли в систему с выбранным провайдером.\n\n{{error}}",
+	"notLoggedInError": "Невозможно выполнить запрос, убедитесь, что вы подключены и вошли в систему с выбранным поставщиком.\n\n{{error}}",
 	"rules": {
 		"actions": {
 			"delete": "Удалить",
 			"confirmDelete": "Вы уверены, что хотите удалить {{filename}}?",
-			"deleted": "{{filename}} удален"
+			"deleted": "{{filename}} удалено"
 		},
 		"errors": {
-			"noWorkspaceFound": "Папка рабочего пространства не найдена",
+			"noWorkspaceFound": "Папка рабочей области не найдена",
 			"fileAlreadyExists": "Файл {{filename}} уже существует",
 			"failedToCreateRuleFile": "Не удалось создать файл правила.",
 			"failedToDeleteRuleFile": "Не удалось удалить файл правила."
@@ -33,73 +33,78 @@
 			},
 			"rule": {
 				"description": "Описание правила здесь...",
-				"guidelinesHeader": "## Руководящие принципы",
-				"guideline1": "Принцип 1",
-				"guideline2": "Принцип 2"
+				"guidelinesHeader": "## Рекомендации",
+				"guideline1": "Рекомендация 1",
+				"guideline2": "Рекомендация 2"
 			}
 		}
 	},
 	"commitMessage": {
-		"activated": "Генератор сообщений о коммитах Kilo Code активирован",
-		"gitNotFound": "⚠️ Git репозиторий не найден или git недоступен",
+		"activated": "Генератор сообщений коммитов Kilo Code активирован",
+		"gitNotFound": "⚠️ Репозиторий Git не найден или git недоступен",
 		"gitInitError": "⚠️ Ошибка инициализации Git: {{error}}",
-		"generating": "Kilo: Генерируется сообщение коммита...",
-		"noChanges": "Kilo: Не найдено изменений для анализа",
+		"generating": "Kilo: Генерация сообщения коммита...",
+		"noChanges": "Kilo: Изменения для анализа не найдены",
 		"generated": "Kilo: Сообщение коммита сгенерировано!",
-		"generationFailed": "Kilo: Не удалось создать сообщение коммита: {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: Генерация сообщения с использованием неподготовленных изменений",
+		"generationFailed": "Kilo: Ошибка генерации сообщения коммита: {{errorMessage}}",
+		"generatingFromUnstaged": "Kilo: Генерация сообщения с использованием незафиксированных изменений",
 		"activationFailed": "Kilo: Не удалось активировать генератор сообщений: {{error}}",
-		"providerRegistered": "Kilo: Поставщик сообщения коммита зарегистрирован"
+		"providerRegistered": "Kilo: Поставщик сообщений коммитов зарегистрирован"
 	},
 	"ghost": {
+		"statusBar": {
+			"enabled": "$(sparkle) Встроенная помощь Kilo",
+			"disabled": "$(circle-slash) Встроенная помощь Kilo",
+			"warning": "$(warning) Встроенная помощь Kilo",
+			"tooltip": {
+				"basic": "Встроенная помощь Kilo Code",
+				"disabled": "Встроенная помощь Kilo Code (отключена)",
+				"tokenError": "Для использования встроенной помощи необходимо установить действительный токен",
+				"lastCompletion": "Последнее предложение:",
+				"sessionTotal": "Общая стоимость сессии:",
+				"model": "Модель:"
+			},
+			"cost": {
+				"zero": "$0.00",
+				"lessThanCent": "<$0.01"
+			}
+		},
+		"toggleMessage": "Встроенная помощь Kilo {{status}}",
 		"progress": {
-			"analyzing": "Анализирую ваш код...",
-			"generating": "Создание предлагаемых правок...",
+			"title": "Kilo Code",
+			"analyzing": "Анализ вашего кода...",
+			"generating": "Генерация предлагаемых правок...",
 			"processing": "Обработка предлагаемых правок...",
-			"showing": "Отображение предложенных правок...",
-			"title": "Kilo Code"
+			"showing": "Отображение предлагаемых правок..."
 		},
 		"input": {
-			"title": "Kilo Code: Быстрая Задача",
-			"placeholder": "напр., 'переработать эту функцию, чтобы сделать её более эффективной'"
+			"title": "Kilo Code: Быстрая задача",
+			"placeholder": "например, 'рефакторить эту функцию, чтобы сделать ее более эффективной'"
 		},
 		"commands": {
+			"generateSuggestions": "Kilo Code: Сгенерировать предлагаемые правки",
 			"displaySuggestions": "Показать предлагаемые правки",
-			"generateSuggestions": "Kilo Code: Создать Предлагаемые Изменения",
-			"cancelSuggestions": "Отменить предложенные правки",
-			"applyCurrentSuggestion": "Применить текущее предложенное изменение",
-			"category": "Kilo Code",
+			"cancelSuggestions": "Отменить предлагаемые правки",
+			"applyCurrentSuggestion": "Применить текущую предложенную правку",
 			"applyAllSuggestions": "Применить все предложенные правки",
-			"promptCodeSuggestion": "Быстрое задание"
+			"promptCodeSuggestion": "Быстрая задача",
+			"category": "Kilo Code"
 		},
 		"codeAction": {
 			"title": "Kilo Code: Предлагаемые правки"
 		},
 		"chatParticipant": {
-			"description": "Я могу помочь вам с быстрыми задачами и предложенными изменениями.",
-			"fullName": "Kilo Code Агент",
-			"name": "Агент"
+			"fullName": "Агент Kilo Code",
+			"name": "Агент",
+			"description": "Я могу помочь вам с быстрыми задачами и предлагаемыми правками."
 		},
 		"messages": {
-			"provideCodeSuggestions": "Предлагаю код..."
+			"provideCodeSuggestions": "Предоставление предложений кода..."
 		},
-		"statusBar": {
-			"enabled": "$(sparkle) Кило Встроенный Ассистент",
-			"disabled": "$(circle-slash) Встроенный помощник Kilo",
-			"warning": "$(warning) Килобайт Встроенный Ассистент",
-			"tooltip": {
-				"disabled": "Kilo Code Inline Assist (отключено)",
-				"lastCompletion": "Последнее предложение:",
-				"basic": "Встроенная помощь Kilo Code",
-				"tokenError": "Для использования Inline Assist должен быть установлен действительный токен",
-				"sessionTotal": "Общая стоимость сессии:",
-				"model": "Модель:"
-			},
-			"cost": {
-				"zero": "0,00 $",
-				"lessThanCent": "<$0,01"
-			}
-		},
-		"toggleMessage": "Встроенная помощь Kilo {{status}}"
+		"incompatibilityExtensionPopup": {
+			"message": "Встроенная помощь Kilo Code блокируется конфликтом с GitHub Copilot. Чтобы исправить это, вам необходимо отключить встроенные предложения Copilot.",
+			"disableCopilot": "Отключить Copilot",
+			"disableInlineAssist": "Отключить встроенную помощь"
+		}
 	}
 }

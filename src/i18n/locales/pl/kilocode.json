@@ -1,22 +1,22 @@
 {
 	"info": {
-		"settings_imported": "Ustawienia zostały pomyślnie zaimportowane."
+		"settings_imported": "Ustawienia zaimportowano pomyślnie."
 	},
 	"userFeedback": {
-		"message_update_failed": "Nie udało się zaktualizować wiadomości",
+		"message_update_failed": "Aktualizacja wiadomości nie powiodła się",
 		"no_checkpoint_found": "Nie znaleziono punktu kontrolnego przed tą wiadomością",
 		"message_updated": "Wiadomość pomyślnie zaktualizowana"
 	},
 	"lowCreditWarning": {
-		"title": "Ostrzeżenie o Niskim Kredycie!",
-		"message": "Sprawdź, czy możesz doładować darmowymi kredytami lub kupić więcej!"
+		"title": "Ostrzeżenie o niskim saldzie!",
+		"message": "Sprawdź, czy możesz doładować darmowymi środkami lub kupić więcej!"
 	},
 	"notLoggedInError": "Nie można ukończyć żądania, upewnij się, że jesteś połączony i zalogowany u wybranego dostawcy.\n\n{{error}}",
 	"rules": {
 		"actions": {
 			"delete": "Usuń",
 			"confirmDelete": "Czy na pewno chcesz usunąć {{filename}}?",
-			"deleted": "Usunięto {{filename}}"
+			"deleted": "{{filename}} usunięto"
 		},
 		"errors": {
 			"noWorkspaceFound": "Nie znaleziono folderu obszaru roboczego",
@@ -40,66 +40,71 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Generator komunikatów dla commitów Kilo Code aktywowany",
-		"gitNotFound": "⚠️ Repozytorium Git nie zostało znalezione lub git jest niedostępny",
+		"activated": "Generator wiadomości commit Kilo Code aktywowany",
+		"gitNotFound": "⚠️ Nie znaleziono repozytorium Git lub git jest niedostępny",
 		"gitInitError": "⚠️ Błąd inicjalizacji Git: {{error}}",
-		"generating": "Kilo: Generowanie komunikatu zatwierdzenia...",
-		"noChanges": "Kilo: Nie znaleziono żadnych zmian do przeanalizowania",
-		"generated": "Kilo: Wiadomość commitu wygenerowana!",
-		"generationFailed": "Kilo: Nie udało się wygenerować komunikatu zatwierdzenia: {{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: Generowanie wiadomości na podstawie niezatwierdzonych zmian",
+		"generating": "Kilo: Generowanie wiadomości commit...",
+		"noChanges": "Kilo: Nie znaleziono zmian do analizy",
+		"generated": "Kilo: Wiadomość commit wygenerowana!",
+		"generationFailed": "Kilo: Nie udało się wygenerować wiadomości commit: {{errorMessage}}",
+		"generatingFromUnstaged": "Kilo: Generowanie wiadomości przy użyciu niezatwierdzonych zmian",
 		"activationFailed": "Kilo: Nie udało się aktywować generatora wiadomości: {{error}}",
-		"providerRegistered": "Kilo: Zarejestrowano dostawcę komunikatów commit"
+		"providerRegistered": "Kilo: Zarejestrowano dostawcę wiadomości commit"
 	},
 	"ghost": {
-		"progress": {
-			"analyzing": "Analizowanie twojego kodu...",
-			"processing": "Przetwarzanie sugerowanych zmian...",
-			"generating": "Generowanie sugerowanych zmian...",
-			"showing": "Wyświetlanie sugerowanych poprawek...",
-			"title": "Kilo Code"
-		},
-		"input": {
-			"title": "Kilo Code: Szybkie Zadanie",
-			"placeholder": "np. „zrefaktoruj tę funkcję, aby była bardziej wydajna\""
-		},
-		"commands": {
-			"displaySuggestions": "Wyświetl sugerowane poprawki",
-			"cancelSuggestions": "Anuluj sugerowane zmiany",
-			"applyCurrentSuggestion": "Zastosuj bieżącą sugerowaną edycję",
-			"applyAllSuggestions": "Zastosuj wszystkie sugerowane poprawki",
-			"generateSuggestions": "Kilo Code: Generowanie Sugerowanych Poprawek",
-			"promptCodeSuggestion": "Szybkie zadanie",
-			"category": "Kilo Code"
-		},
-		"codeAction": {
-			"title": "Kilo Code: Sugerowane edycje"
-		},
-		"chatParticipant": {
-			"name": "Agent",
-			"fullName": "Agent Kilo Code",
-			"description": "Mogę pomóc Ci w szybkich zadaniach i zasugerować poprawki."
-		},
-		"messages": {
-			"provideCodeSuggestions": "Generowanie sugestii kodu..."
-		},
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Inline Assist",
+			"enabled": "$(sparkle) Asystent Inline Kilo",
+			"disabled": "$(circle-slash) Asystent Inline Kilo",
 			"warning": "$(warning) Asystent Inline Kilo",
-			"disabled": "$(circle-slash) Kilo Pomoc Liniowa",
 			"tooltip": {
-				"basic": "Asystent Kodowania Kilo",
-				"disabled": "Pomoc Kilo Code Inline (wyłączona)",
-				"tokenError": "Aby korzystać z Asystenta Inline, należy ustawić prawidłowy token",
+				"basic": "Asystent Inline Kilo Code",
+				"disabled": "Asystent Inline Kilo Code (wyłączony)",
+				"tokenError": "Musisz ustawić prawidłowy token, aby korzystać z Asystenta Inline",
 				"lastCompletion": "Ostatnia sugestia:",
 				"sessionTotal": "Całkowity koszt sesji:",
 				"model": "Model:"
 			},
 			"cost": {
-				"zero": "0,00 zł",
-				"lessThanCent": "<0,01 $"
+				"zero": "$0.00",
+				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Pomoc Kilo Inline {{status}}"
+		"toggleMessage": "Asystent Inline Kilo {{status}}",
+		"progress": {
+			"title": "Kilo Code",
+			"analyzing": "Analizowanie Twojego kodu...",
+			"generating": "Generowanie sugerowanych edycji...",
+			"processing": "Przetwarzanie sugerowanych edycji...",
+			"showing": "Wyświetlanie sugerowanych edycji..."
+		},
+		"input": {
+			"title": "Kilo Code: Szybkie Zadanie",
+			"placeholder": "np. 'refaktoryzuj tę funkcję, aby była bardziej wydajna'"
+		},
+		"commands": {
+			"generateSuggestions": "Kilo Code: Generuj Sugerowane Edycje",
+			"displaySuggestions": "Wyświetl Sugerowane Edycje",
+			"cancelSuggestions": "Anuluj Sugerowane Edycje",
+			"applyCurrentSuggestion": "Zastosuj Bieżącą Sugerowaną Edycję",
+			"applyAllSuggestions": "Zastosuj Wszystkie Sugerowane Edycje",
+			"promptCodeSuggestion": "Szybkie Zadanie",
+			"category": "Kilo Code"
+		},
+		"codeAction": {
+			"title": "Kilo Code: Sugerowane Edycje"
+		},
+		"chatParticipant": {
+			"fullName": "Agent Kilo Code",
+			"name": "Agent",
+			"description": "Mogę pomóc w szybkich zadaniach i sugerowanych edycjach."
+		},
+		"messages": {
+			"provideCodeSuggestions": "Dostarczanie sugestii kodu..."
+		},
+		"incompatibilityExtensionPopup": {
+			"message": "Asystent Kilo Code Inline jest blokowany przez konflikt z GitHub Copilot. Aby to naprawić, musisz wyłączyć sugestie inline Copilota.",
+			"disableCopilot": "Wyłącz Copilota",
+			"disableInlineAssist": "Wyłącz Asystenta Inline"
+		}
 	}
 }
