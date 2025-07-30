@@ -3,6 +3,8 @@ import { type Page, type FrameLocator, expect } from "@playwright/test"
 import type { WebviewMessage } from "../../../src/shared/WebviewMessage"
 import { ProviderSettings } from "@roo-code/types"
 
+const modifier = process.platform === "darwin" ? "Meta" : "Control"
+
 const defaultPlaywrightApiConfig = {
 	apiProvider: "openrouter" as const,
 	openRouterApiKey: process.env.OPENROUTER_API_KEY,
@@ -82,4 +84,17 @@ export async function configureApiKeyThroughUI(page: Page): Promise<void> {
 	await submitButton.waitFor()
 	await submitButton.click()
 	console.log("✅ Provider configured!")
+}
+
+export async function closeAllTabs(page: Page): Promise<void> {
+	const labelNameElements = page.locator(".tab a.label-name")
+	const count = await labelNameElements.count()
+	if (count > 0) {
+		// Close all editor tabs using the default keyboard command
+		await page.keyboard.press(`${modifier}+K`)
+		await page.keyboard.press(`${modifier}+W`)
+
+		const dismissedLabelNameElements = page.locator(".tab a.label-name")
+		await expect(dismissedLabelNameElements).not.toBeVisible()
+	}
 }

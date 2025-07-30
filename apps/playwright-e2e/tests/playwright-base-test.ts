@@ -7,6 +7,7 @@ import * as fs from "fs"
 import { fileURLToPath } from "url"
 import { camelCase } from "change-case"
 import { setupConsoleLogging, cleanLogMessage } from "../helpers/console-logging"
+import { closeAllTabs } from "../helpers"
 
 // ES module equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url)
@@ -33,6 +34,8 @@ export const test = base.extend<TestFixtures>({
 		}
 
 		const defaultCachePath = await createTempDir()
+		const userDataDir = path.join(defaultCachePath, "user-data")
+		seedUserSettings(userDataDir)
 
 		// Use the pre-downloaded VS Code from global setup
 		const vscodePath = process.env.VSCODE_EXECUTABLE_PATH
@@ -78,7 +81,7 @@ export const test = base.extend<TestFixtures>({
 				"--disable-component-extensions-with-background-pages",
 				`--extensionDevelopmentPath=${path.resolve(__dirname, "..", "..", "..", "src")}`,
 				`--extensions-dir=${path.join(defaultCachePath, "extensions")}`,
-				`--user-data-dir=${path.join(defaultCachePath, "user-data")}`,
+				`--user-data-dir=${userDataDir}`,
 				"--enable-proposed-api=kilocode.kilo-code",
 				await createProject(),
 			],
@@ -193,6 +196,8 @@ export const test = base.extend<TestFixtures>({
 
 	takeScreenshot: async ({ workbox }, use) => {
 		await use(async (name?: string) => {
+			await closeAllTabs(workbox)
+
 			const testInfo = test.info()
 			// Extract test suite from the test file name or use a default
 			const fileName = testInfo.file.split("/").pop()?.replace(".test.ts", "") || "unknown"
@@ -212,3 +217,19 @@ export const test = base.extend<TestFixtures>({
 		})
 	},
 })
+
+function seedUserSettings(userDataDir: string) {
+	const userDir = path.join(userDataDir, "User")
+	const settingsPath = path.join(userDir, "settings.json")
+	fs.mkdirSync(userDir, { recursive: true })
+
+	const settings = {
+		"workbench.startupEditor": "none", // <- hides Get Started
+		"workbench.tips.enabled": false,
+		"update.showReleaseNotes": false,
+		"extensions.ignoreRecommendations": true,
+		"telemetry.telemetryLevel": "off",
+	}
+
+	fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2))
+}
