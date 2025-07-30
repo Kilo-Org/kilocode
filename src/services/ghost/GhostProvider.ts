@@ -56,7 +56,7 @@ export class GhostProvider {
 		this.model = new GhostModel()
 		this.ghostContext = new GhostContext(this.documentStore)
 
-		this.checkEnabled()
+		this.loadSettings()
 		this.initializeStatusBar()
 
 		// Register the providers
@@ -69,11 +69,6 @@ export class GhostProvider {
 		vscode.workspace.onDidCloseTextDocument(this.onDidCloseTextDocument, this, context.subscriptions)
 
 		void this.reload()
-	}
-
-	private async checkEnabled() {
-		const state = ContextProxy.instance?.getValues?.()
-		this.enabled = experiments.isEnabled(state.experiments ?? {}, EXPERIMENT_IDS.INLINE_ASSIST)
 	}
 
 	private async watcherState() {}
@@ -124,12 +119,13 @@ export class GhostProvider {
 	}
 
 	private loadSettings() {
-		return ContextProxy.instance?.getValues?.()?.ghostServiceSettings
+		const state = ContextProxy.instance?.getValues?.()
+		this.enabled = experiments.isEnabled(state.experiments ?? {}, EXPERIMENT_IDS.INLINE_ASSIST)
+		return state.ghostServiceSettings
 	}
 
 	public async reload() {
 		this.settings = this.loadSettings()
-		await this.checkEnabled()
 		await this.model.reload(this.settings, this.providerSettingsManager)
 		await this.updateGlobalContext()
 		this.updateStatusBar()
