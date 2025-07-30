@@ -87,14 +87,14 @@ export async function configureApiKeyThroughUI(page: Page): Promise<void> {
 }
 
 export async function closeAllTabs(page: Page): Promise<void> {
-	const labelNameElements = page.locator(".tab a.label-name")
-	const count = await labelNameElements.count()
+	const tabs = page.locator(".tab a.label-name")
+	const count = await tabs.count()
 	if (count > 0) {
-		// Close all editor tabs using the default keyboard command
+		// Close all editor tabs using the default keyboard command [Cmd+K Cmd+W]
 		await page.keyboard.press(`${modifier}+K`)
 		await page.keyboard.press(`${modifier}+W`)
 
-		const dismissedLabelNameElements = page.locator(".tab a.label-name")
-		await expect(dismissedLabelNameElements).not.toBeVisible()
+		const dismissedTabs = page.locator(".tab a.label-name")
+		await expect(dismissedTabs).not.toBeVisible()
 	}
 }
