@@ -203,7 +203,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		}),
 	)
 
-	registerGhostProvider(context, provider) // kilocode_change
+	registerGhostProvider(context) // kilocode_change
 	registerCommitMessageProvider(context, outputChannel) // kilocode_change
 	registerCodeActions(context)
 	registerTerminalActions(context)

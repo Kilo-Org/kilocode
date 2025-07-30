@@ -18,6 +18,8 @@ import { ContextProxy } from "../../core/config/ContextProxy"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 import { GhostContext } from "./GhostContext"
 import { TelemetryService } from "@roo-code/telemetry"
+import { ClineProvider } from "../../core/webview/ClineProvider"
+import { experiments, EXPERIMENT_IDS } from "../../shared/experiments"
 
 export class GhostProvider {
 	private static instance: GhostProvider | null = null
@@ -32,6 +34,7 @@ export class GhostProvider {
 	private settings: GhostServiceSettings | null = null
 	private ghostContext: GhostContext
 
+	private enabled: boolean = false
 	private taskId: string | null = null
 
 	// Status bar integration
@@ -53,6 +56,7 @@ export class GhostProvider {
 		this.model = new GhostModel()
 		this.ghostContext = new GhostContext(this.documentStore)
 
+		this.checkEnabled()
 		this.initializeStatusBar()
 
 		// Register the providers
@@ -65,6 +69,11 @@ export class GhostProvider {
 		vscode.workspace.onDidCloseTextDocument(this.onDidCloseTextDocument, this, context.subscriptions)
 
 		void this.reload()
+	}
+
+	private async checkEnabled() {
+		const state = ContextProxy.instance?.getValues?.()
+		this.enabled = experiments.isEnabled(state.experiments ?? {}, EXPERIMENT_IDS.INLINE_ASSIST)
 	}
 
 	private async watcherState() {}
@@ -120,6 +129,7 @@ export class GhostProvider {
 
 	public async reload() {
 		this.settings = this.loadSettings()
+		await this.checkEnabled()
 		await this.model.reload(this.settings, this.providerSettingsManager)
 		await this.updateGlobalContext()
 		this.updateStatusBar()
@@ -135,11 +145,10 @@ export class GhostProvider {
 		return GhostProvider.instance
 	}
 
-	public getDocumentStore() {
-		return this.documentStore
-	}
-
 	public async promptCodeSuggestion() {
+		if (!this.enabled) {
+			return
+		}
 		this.taskId = crypto.randomUUID()
 
 		TelemetryService.instance.captureEvent(TelemetryEventName.INLINE_ASSIST_QUICK_TASK, {
@@ -165,6 +174,9 @@ export class GhostProvider {
 	}
 
 	public async codeSuggestion() {
+		if (!this.enabled) {
+			return
+		}
 		const editor = vscode.window.activeTextEditor
 		if (!editor) {
 			return
@@ -261,6 +273,9 @@ export class GhostProvider {
 	}
 
 	public async onDidChangeActiveTextEditor(editor: vscode.TextEditor | undefined) {
+		if (!this.enabled) {
+			return
+		}
 		if (!editor) {
 			return
 		}
@@ -281,6 +296,9 @@ export class GhostProvider {
 	}
 
 	public async displaySuggestions() {
+		if (!this.enabled) {
+			return
+		}
 		const editor = vscode.window.activeTextEditor
 		if (!editor) {
 			return
@@ -334,10 +352,16 @@ export class GhostProvider {
 	}
 
 	public hasPendingSuggestions(): boolean {
+		if (!this.enabled) {
+			return false
+		}
 		return this.suggestions.hasSuggestions()
 	}
 
 	public async cancelSuggestions() {
+		if (!this.enabled) {
+			return
+		}
 		if (!this.hasPendingSuggestions() || this.workspaceEdit.isLocked()) {
 			return
 		}
@@ -351,6 +375,9 @@ export class GhostProvider {
 	}
 
 	public async applySelectedSuggestions() {
+		if (!this.enabled) {
+			return
+		}
 		if (!this.hasPendingSuggestions() || this.workspaceEdit.isLocked()) {
 			return
 		}
@@ -381,6 +408,9 @@ export class GhostProvider {
 	}
 
 	public async applyAllSuggestions() {
+		if (!this.enabled) {
+			return
+		}
 		if (!this.hasPendingSuggestions() || this.workspaceEdit.isLocked()) {
 			return
 		}
@@ -395,6 +425,9 @@ export class GhostProvider {
 	}
 
 	public async selectNextSuggestion() {
+		if (!this.enabled) {
+			return
+		}
 		if (!this.hasPendingSuggestions()) {
 			return
 		}
@@ -413,6 +446,9 @@ export class GhostProvider {
 	}
 
 	public async selectPreviousSuggestion() {
+		if (!this.enabled) {
+			return
+		}
 		if (!this.hasPendingSuggestions()) {
 			return
 		}
@@ -431,6 +467,9 @@ export class GhostProvider {
 	}
 
 	private initializeStatusBar() {
+		if (!this.enabled) {
+			return
+		}
 		this.statusBar = new GhostStatusBar({
 			enabled: false,
 			model: "loading...",
@@ -459,10 +498,10 @@ export class GhostProvider {
 
 	private updateStatusBar() {
 		if (!this.statusBar) {
-			return
+			this.initializeStatusBar()
 		}
 
-		this.statusBar.update({
+		this.statusBar?.update({
 			enabled: true,
 			model: this.getCurrentModelName(),
 			hasValidToken: this.hasValidApiToken(),
