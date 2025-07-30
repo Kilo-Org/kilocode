@@ -52,6 +52,55 @@ async function loadLanguage(langName: string, sourceDirectory?: string) {
 
 let isParserInitialized = false
 
+class ParserCacheManager {
+	private static instance: ParserCacheManager | null = null
+	private parserCache = new Map<string, { parser: ParserT; query: QueryT }>()
+	private usageCount = new Map<string, number>()
+
+	public static getInstance(): ParserCacheManager {
+		if (!ParserCacheManager.instance) {
+			ParserCacheManager.instance = new ParserCacheManager()
+		}
+		return ParserCacheManager.instance
+	}
+
+	public getParser(key: string): { parser: ParserT; query: QueryT } | undefined {
+		const cached = this.parserCache.get(key)
+		if (cached) {
+			this.usageCount.set(key, (this.usageCount.get(key) || 0) + 1)
+		}
+		return cached
+	}
+
+	public setParser(key: string, parser: { parser: ParserT; query: QueryT }): void {
+		this.parserCache.set(key, parser)
+		this.usageCount.set(key, 1)
+	}
+
+	public disposeParser(key: string): void {
+		const usage = this.usageCount.get(key) || 0
+		if (usage <= 1) {
+			this.parserCache.delete(key)
+			this.usageCount.delete(key)
+		} else {
+			this.usageCount.set(key, usage - 1)
+		}
+	}
+
+	public disposeAll(): void {
+		this.parserCache.clear()
+		this.usageCount.clear()
+	}
+
+	public getStats(): { cacheSize: number; totalUsage: number } {
+		const totalUsage = Array.from(this.usageCount.values()).reduce((sum, count) => sum + count, 0)
+		return {
+			cacheSize: this.parserCache.size,
+			totalUsage,
+		}
+	}
+}
+
 /*
 Using node bindings for tree-sitter is problematic in vscode extensions 
 because of incompatibility with electron. Going the .wasm route has the 
@@ -91,7 +140,16 @@ export async function loadRequiredLanguageParsers(filesToParse: string[], source
 	const extensionsToLoad = new Set(filesToParse.map((file) => path.extname(file).toLowerCase().slice(1)))
 	const parsers: LanguageParser = {}
 
+	const cacheManager = ParserCacheManager.getInstance()
+
 	for (const ext of extensionsToLoad) {
+		const cacheKey = `${ext}-${sourceDirectory || "default"}`
+
+		const cached = cacheManager.getParser(cacheKey)
+		if (cached) {
+			parsers[ext] = cached
+			continue
+		}
 		let language: LanguageT
 		let query: QueryT
 		let parserKey = ext // Default to using extension as key
@@ -224,8 +282,36 @@ export async function loadRequiredLanguageParsers(filesToParse: string[], source
 
 		const parser = new Parser()
 		parser.setLanguage(language)
-		parsers[parserKey] = { parser, query }
+		const parserObject = { parser, query }
+
+		cacheManager.setParser(cacheKey, parserObject)
+
+		parsers[parserKey] = parserObject
 	}
 
 	return parsers
+}
+
+/**
+ * Dispose of a parser from the cache
+ * @param extension File extension
+ * @param sourceDirectory Source directory (optional)
+ */
+export function disposeParser(extension: string, sourceDirectory?: string): void {
+	const cacheKey = `${extension}-${sourceDirectory || "default"}`
+	ParserCacheManager.getInstance().disposeParser(cacheKey)
+}
+
+/**
+ * Dispose of all parsers from the cache
+ */
+export function disposeAllParsers(): void {
+	ParserCacheManager.getInstance().disposeAll()
+}
+
+/**
+ * Get cache statistics for monitoring
+ */
+export function getParserCacheStats(): { cacheSize: number; totalUsage: number } {
+	return ParserCacheManager.getInstance().getStats()
 }

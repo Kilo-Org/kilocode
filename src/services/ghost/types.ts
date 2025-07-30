@@ -35,6 +35,7 @@ export interface GhostDocumentStoreItem {
 	ast?: ASTContext
 	lastParsedVersion?: number
 	recentActions?: UserAction[]
+	lastAccessed: number
 }
 
 export type GhostSuggestionEditOperationType = "+" | "-"

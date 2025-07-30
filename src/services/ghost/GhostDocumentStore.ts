@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import * as path from "path"
 import { structuredPatch } from "diff"
 import { GhostDocumentStoreItem, ASTContext, UserAction, UserActionType } from "./types"
+import { DocumentStoreMemoryOptimizer } from "./MemoryOptimizer"
 
 export const GHOST_DOCUMENT_STORE_LIMITS = {
 	MAX_DOCUMENTS: 50, // Limit the number of documents to keep
@@ -13,6 +14,9 @@ export class GhostDocumentStore {
 	private historyLimit: number = 3 // Limit the number of snapshots to keep
 	private documentStore: Map<string, GhostDocumentStoreItem> = new Map()
 	private parserInitialized: boolean = false
+
+	private readonly MAX_AST_FILE_SIZE = 5 * 1024 * 1024
+	private readonly MAX_AST_LINE_COUNT = 10000
 
 	/**
 	 * Store a document in the document store and optionally parse its AST
@@ -30,7 +34,7 @@ export class GhostDocumentStore {
 		bypassDebounce?: boolean
 	}): Promise<void> {
 		const uri = document.uri.toString()
-		const debounceWait = 500 // 500ms delay
+		const debounceWait = bypassDebounce ? 0 : DocumentStoreMemoryOptimizer.getDebounceTime(document)
 
 		// Function to perform the actual document storage
 		const performStorage = async () => {
@@ -39,20 +43,25 @@ export class GhostDocumentStore {
 					uri,
 					document,
 					history: [],
+					lastAccessed: Date.now(),
 				})
 			}
 
 			const item = this.documentStore.get(uri)!
-			item.document = document // Update the document reference
+			item.document = document
+			item.lastAccessed = Date.now()
 			item.history.push(document.getText())
 			if (item.history.length > this.historyLimit) {
 				item.history.shift() // Remove the oldest snapshot if we exceed the limit
 			}
 
-			// Parse the AST if requested and if the document version has changed.
-			// Corrected conditional logic
+			DocumentStoreMemoryOptimizer.enforceLRULimit(
+				this.documentStore,
+				GHOST_DOCUMENT_STORE_LIMITS.MAX_DOCUMENTS,
+				(uri) => this.removeDocument(vscode.Uri.parse(uri)),
+			)
+
 			if (parseAST && (!item.lastParsedVersion || item.lastParsedVersion !== document.version)) {
-				// Assuming parseDocumentAST is an async method in the same class.
 				await this.parseDocumentAST(document)
 			}
 
@@ -89,6 +98,12 @@ export class GhostDocumentStore {
 			const item = this.documentStore.get(uri)
 
 			if (!item) {
+				return
+			}
+
+			if (
+				!DocumentStoreMemoryOptimizer.shouldParseAST(document, this.MAX_AST_FILE_SIZE, this.MAX_AST_LINE_COUNT)
+			) {
 				return
 			}
 
@@ -150,6 +165,9 @@ export class GhostDocumentStore {
 	public getAST(documentUri: vscode.Uri): ASTContext | undefined {
 		const uri = documentUri.toString()
 		const item = this.documentStore.get(uri)
+		if (item) {
+			item.lastAccessed = Date.now() // Update access time
+		}
 		return item?.ast
 	}
 
@@ -160,7 +178,11 @@ export class GhostDocumentStore {
 	 */
 	public getDocument(documentUri: vscode.Uri): GhostDocumentStoreItem | undefined {
 		const uri = documentUri.toString()
-		return this.documentStore.get(uri)
+		const item = this.documentStore.get(uri)
+		if (item) {
+			item.lastAccessed = Date.now() // Update access time
+		}
+		return item
 	}
 
 	/**

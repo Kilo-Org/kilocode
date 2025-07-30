@@ -42,6 +42,7 @@ import {
 } from "./activate"
 import { initializeI18n } from "./i18n"
 import { registerGhostProvider } from "./services/ghost" // kilocode_change
+import { registerMemoryCommands } from "./services/memory/commands" // kilocode_change
 
 /**
  * Built using https://github.com/microsoft/vscode-webview-ui-toolkit
@@ -204,6 +205,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	)
 
 	registerGhostProvider(context) // kilocode_change
+	registerMemoryCommands(context) // kilocode_change
 	registerCommitMessageProvider(context, outputChannel) // kilocode_change
 	registerCodeActions(context)
 	registerTerminalActions(context)
