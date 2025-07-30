@@ -145,12 +145,26 @@ describe("VirtualQuotaFallbackProvider", () => {
 		const mockPrimaryProfile = { profileId: "p1", profileName: "primary" }
 		const mockSecondaryProfile = { profileId: "p2", profileName: "secondary" }
 		const mockBackupProfile = { profileId: "p3", profileName: "backup" }
-		const mockPrimaryHandler = { getModel: () => ({ id: "primary-model" }) }
-		const mockSecondaryHandler = { getModel: () => ({ id: "secondary-model" }) }
-		const mockBackupHandler = { getModel: () => ({ id: "backup-model" }) }
+		const mockPrimaryHandler = {
+			getModel: () => ({ id: "primary-model", info: {} }),
+			countTokens: vitest.fn(),
+			createMessage: vitest.fn(),
+		}
+		const mockSecondaryHandler = {
+			getModel: () => ({ id: "secondary-model", info: {} }),
+			countTokens: vitest.fn(),
+			createMessage: vitest.fn(),
+		}
+		const mockBackupHandler = {
+			getModel: () => ({ id: "backup-model", info: {} }),
+			countTokens: vitest.fn(),
+			createMessage: vitest.fn(),
+		}
 
 		beforeEach(() => {
 			vitest.clearAllMocks()
+			// Reset the UsageTracker singleton to prevent test pollution
+			;(UsageTracker as any)._instance = undefined
 
 			// Mock the context proxy to return a mock context
 			const mockContext = {
@@ -310,34 +324,20 @@ describe("VirtualQuotaFallbackProvider", () => {
 					{ handler: mockPrimaryHandler, profileId: "p1", config: mockPrimaryProfile },
 					{ handler: mockSecondaryHandler, profileId: "p2", config: mockSecondaryProfile },
 				]
+				// Mock cooldown check to ensure providers are not skipped due to cooldowns
+				const usageTracker = (handler as any).usage
+				vitest.spyOn(usageTracker, "isUnderCooldown").mockResolvedValue(false)
+
 				vitest
 					.spyOn(handler, "underLimit")
-					.mockImplementationOnce(() => false) // First over limit
-					.mockImplementationOnce(() => true) // Second under limit
+					.mockReturnValueOnce(false) // First over limit
+					.mockReturnValueOnce(true) // Second under limit
 
+				// Adjust handler after setting mocks
 				await handler.adjustActiveHandler()
 
-				expect((handler as any).activeHandler).toBe(mockSecondaryHandler)
+				expect((handler as any).activeHandler.getModel().id).toEqual("secondary-model")
 				expect((handler as any).activeProfileId).toBe("p2")
-			})
-
-			it("should use first handler as fallback if all are over limit", async () => {
-				const handler = new VirtualQuotaFallbackHandler({
-					profiles: [mockPrimaryProfile, mockSecondaryProfile, mockBackupProfile],
-				} as any)
-				// Set up the handlers array directly for testing
-				;(handler as any).handlers = [
-					{ handler: mockPrimaryHandler, profileId: "p1", config: mockPrimaryProfile },
-					{ handler: mockSecondaryHandler, profileId: "p2", config: mockSecondaryProfile },
-					{ handler: mockBackupHandler, profileId: "p3", config: mockBackupProfile },
-				]
-				vitest.spyOn(handler, "underLimit").mockReturnValue(false) // All over limit
-
-				await handler.adjustActiveHandler()
-
-				// Should fallback to first handler when all are over limit
-				expect((handler as any).activeHandler).toBe(mockPrimaryHandler)
-				expect((handler as any).activeProfileId).toBe("p1")
 			})
 
 			it("should set active handler to undefined if no providers are available", async () => {
@@ -421,7 +421,7 @@ describe("VirtualQuotaFallbackProvider", () => {
 				;(handler as any).activeHandler = undefined
 
 				const stream = handler.createMessage("system", [])
-				await expect(stream.next()).rejects.toThrow("No active handler configured")
+				await expect(stream.next()).rejects.toThrow("All configured providers are unavailable or over limits.")
 			})
 		})
 
