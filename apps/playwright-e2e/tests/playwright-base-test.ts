@@ -47,7 +47,6 @@ export const test = base.extend<TestFixtures>({
 			executablePath: vscodePath,
 			env: {
 				...process.env,
-				VSCODE_DISABLE_CRASH_REPORTING: "1",
 				VSCODE_SKIP_GETTING_STARTED: "1",
 				VSCODE_DISABLE_WORKSPACE_TRUST: "1",
 				ELECTRON_DISABLE_SECURITY_WARNINGS: "1",
@@ -75,9 +74,7 @@ export const test = base.extend<TestFixtures>({
 				"--disable-extension-update-check",
 				"--disable-default-apps",
 				"--disable-background-timer-throttling",
-				"--disable-backgrounding-occluded-windows",
 				"--disable-renderer-backgrounding",
-				"--disable-features=TranslateUI",
 				"--disable-component-extensions-with-background-pages",
 				`--extensionDevelopmentPath=${path.resolve(__dirname, "..", "..", "..", "src")}`,
 				`--extensions-dir=${path.join(defaultCachePath, "extensions")}`,
@@ -224,7 +221,7 @@ function seedUserSettings(userDataDir: string) {
 	fs.mkdirSync(userDir, { recursive: true })
 
 	const settings = {
-		"workbench.startupEditor": "none", // <- hides Get Started
+		"workbench.startupEditor": "none", // hides 'Get Started'
 		"workbench.tips.enabled": false,
 		"update.showReleaseNotes": false,
 		"extensions.ignoreRecommendations": true,
