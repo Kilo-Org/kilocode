@@ -4,7 +4,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite"
 import { fn } from "storybook/test"
 
 import ChatView from "../../../webview-ui/src/components/chat/ChatView"
-import { createTaskHeaderMessages, createMockTask } from "../src/mockData/clineMessages"
+import { createTaskHeaderMessages, createMockTask, BASE_TIMESTAMP } from "../src/mockData/clineMessages"
 
 const meta = {
 	title: "Chat/ChatView",
@@ -57,7 +57,7 @@ export const Default: Story = {
 			dismissedNotificationIds: [], // Add this for consistency
 			currentTaskItem: {
 				id: "task-1",
-				ts: Date.now(),
+				ts: BASE_TIMESTAMP,
 				task: "Create a React component with TypeScript",
 				tokensIn: 1250,
 				tokensOut: 850,
@@ -74,7 +74,7 @@ export const Default: Story = {
 			taskHistory: [
 				{
 					id: "task-1",
-					ts: Date.now() - 3600000,
+					ts: BASE_TIMESTAMP - 3600000, // 1 hour ago
 					task: "Previous completed task",
 					tokensIn: 800,
 					tokensOut: 600,
@@ -176,7 +176,7 @@ export const EmptyWithNotificationsAndHistory: Story = {
 			taskHistory: [
 				{
 					id: "task-1",
-					ts: Date.now() - 7200000, // 2 hours ago
+					ts: BASE_TIMESTAMP - 7200000, // 2 hours ago
 					task: "Create a responsive navigation component with TypeScript",
 					tokensIn: 1850,
 					tokensOut: 1200,
@@ -192,7 +192,7 @@ export const EmptyWithNotificationsAndHistory: Story = {
 				},
 				{
 					id: "task-2",
-					ts: Date.now() - 3600000, // 1 hour ago
+					ts: BASE_TIMESTAMP - 3600000, // 1 hour ago
 					task: "Debug authentication flow and fix login issues",
 					tokensIn: 950,
 					tokensOut: 720,

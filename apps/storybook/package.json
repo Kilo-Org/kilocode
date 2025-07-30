@@ -12,6 +12,7 @@
 		"clean": "rimraf storybook-static .turbo stories/generated public/screenshots"
 	},
 	"dependencies": {
+		"@roo-code/types": "workspace:^",
 		"@radix-ui/react-slot": "^1.1.2",
 		"@tanstack/react-query": "^5.62.7",
 		"@vscode/codicons": "^0.0.36",
