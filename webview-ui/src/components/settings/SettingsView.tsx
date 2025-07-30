@@ -87,8 +87,7 @@ export const settingsTabTriggerActive = "opacity-100 border-vscode-focusBorder b
 export interface SettingsViewRef {
 	checkUnsaveChanges: (then: () => void) => void
 }
-// kilocode_change
-const baseSectionNames = [
+const sectionNames = [
 	"providers",
 	"autoApprove",
 	"browser",
@@ -105,7 +104,7 @@ const baseSectionNames = [
 	"about",
 ] as const
 
-type SectionName = (typeof baseSectionNames)[number] // kilocode_change
+type SectionName = (typeof sectionNames)[number] // kilocode_change
 
 type SettingsViewProps = {
 	onDone: () => void
@@ -118,17 +117,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 	const extensionState = useExtensionState()
 	const { currentApiConfigName, listApiConfigMeta, uriScheme, settingsImportedAt } = extensionState
 	const { uiKind } = extensionState // kilocode_change
-
-	// kilocode_change start: filter out ghost section based on experiment
-	const sectionNames = useMemo(() => {
-		return baseSectionNames.filter((section) => {
-			if (section === "ghost") {
-				return extensionState.experiments?.inlineAssist === true
-			}
-			return true
-		})
-	}, [extensionState.experiments?.inlineAssist])
-	// kilocode_change end
 
 	const [isDiscardDialogShow, setDiscardDialogShow] = useState(false)
 	const [isChangeDetected, setChangeDetected] = useState(false)
@@ -509,7 +497,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			{ id: "browser", icon: SquareMousePointer },
 			{ id: "checkpoints", icon: GitBranch },
 			{ id: "display", icon: Monitor }, // kilocode_change
-			{ id: "ghost", icon: Bot }, // kilocode_change
+			...(extensionState.experiments?.inlineAssist ? [{ id: "ghost" as const, icon: Bot }] : []), // kilocode_change
 			{ id: "notifications", icon: Bell },
 			{ id: "contextManagement", icon: Database },
 			{ id: "terminal", icon: SquareTerminal },
@@ -519,7 +507,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			{ id: "mcp", icon: Server },
 			{ id: "about", icon: Info },
 		],
-		[], // No dependencies needed now
+		[extensionState.experiments?.inlineAssist], // kilocode_change
 	)
 
 	// Update target section logic to set active tab
@@ -527,7 +515,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		if (targetSection && sectionNames.includes(targetSection as SectionName)) {
 			setActiveTab(targetSection as SectionName)
 		}
-	}, [sectionNames, targetSection]) // kilocode_change
+	}, [targetSection]) // kilocode_change
 
 	// Function to scroll the active tab into view for vertical layout
 	const scrollToActiveTab = useCallback(() => {
