@@ -129,6 +129,7 @@ export class GhostProvider {
 		if (!this.enabled && experimentEnabled) {
 			this.enable()
 		}
+		this.enabled = experimentEnabled
 		return state.ghostServiceSettings
 	}
 
@@ -524,9 +525,13 @@ export class GhostProvider {
 		})
 	}
 
-	public dispose() {
+	private disposeStatusBar() {
 		this.statusBar?.dispose()
 		this.statusBar = null
+	}
+
+	public dispose() {
+		this.disposeStatusBar()
 	}
 
 	public async disable() {
@@ -535,7 +540,7 @@ export class GhostProvider {
 			enableAutoInlineTaskKeybinding: false,
 			enableQuickInlineTaskKeybinding: false,
 		}
-		this.dispose()
+		this.disposeStatusBar()
 		await this.cancelSuggestions()
 		await this.saveSettings()
 		await this.updateGlobalContext()
