@@ -1653,7 +1653,7 @@ export class Task extends EventEmitter<ClineEvents> {
 				TelemetryService.instance.captureException(error, {
 					abandoned: this.abandoned,
 					abort: this.abort,
-					source: "recursivelyMakeClineRequests",
+					context: "recursivelyMakeClineRequests",
 				})
 				// kilocode_change end
 

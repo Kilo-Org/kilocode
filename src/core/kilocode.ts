@@ -3,10 +3,7 @@ import { TelemetryEventName } from "@roo-code/types"
 
 export function reportExcessiveRecursion(functionName: string, recursionDepth: number) {
 	if (recursionDepth > 10 && Number.isInteger(Math.log10(recursionDepth))) {
-		const memory = { ...process.memoryUsage() }
-		const props = { functionName, recursionDepth, memory }
-		TelemetryService.instance.captureEvent(TelemetryEventName.EXCESSIVE_RECURSION, props)
-		console.warn("Excessive recursion", props)
+		TelemetryService.instance.captureEvent(TelemetryEventName.EXCESSIVE_RECURSION, { functionName, recursionDepth })
 	}
 }
 

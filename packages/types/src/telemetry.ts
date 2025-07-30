@@ -26,6 +26,7 @@ export enum TelemetryEventName {
 	INLINE_ASSIST_REJECT_SUGGESTION = "Inline Assist Reject Suggestion",
 	CHECKPOINT_FAILURE = "Checkpoint Failure",
 	EXCESSIVE_RECURSION = "Excessive Recursion",
+	NOTIFICATION_CLICKED = "Notification Clicked",
 	// kilocode_change end
 
 	TASK_CREATED = "Task Created",

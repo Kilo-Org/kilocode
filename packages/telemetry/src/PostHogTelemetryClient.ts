@@ -100,7 +100,16 @@ export class PostHogTelemetryClient extends BaseTelemetryClient {
 	// kilocode_change start
 	public override captureException(error: Error, properties?: Record<string | number, unknown>): void {
 		if (this.isTelemetryEnabled()) {
-			this.client.captureException(error, this.distinctId, properties)
+			let providerProperties = {}
+			try {
+				providerProperties = this.providerRef?.deref()?.getTelemetryProperties() || {}
+			} catch (error) {
+				console.error("Error getting provider properties", error)
+			}
+			this.client.captureException(error, this.distinctId, {
+				...(providerProperties || {}),
+				...(properties || {}),
+			})
 		}
 	}
 

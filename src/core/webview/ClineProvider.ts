@@ -76,6 +76,7 @@ import { getWorkspaceGitInfo } from "../../utils/git"
 import { McpDownloadResponse, McpMarketplaceCatalog } from "../../shared/kilocode/mcp" //kilocode_change
 import { McpServer } from "../../shared/mcp" // kilocode_change
 import { OpenRouterHandler } from "../../api/providers" // kilocode_change
+import { stringifyError } from "../../shared/kilocode/errorUtils"
 
 /**
  * https://github.com/microsoft/vscode-webview-ui-toolkit-samples/blob/main/default/weather-webview/src/providers/WeatherViewProvider.ts
@@ -1972,7 +1973,17 @@ export class ClineProvider
 				}
 			} catch (error) {
 				return {
-					exception: error instanceof Error ? error.stack || error.message : String(error),
+					modelException: stringifyError(error),
+				}
+			}
+		}
+
+		function getMemory() {
+			try {
+				return { memory: { ...process.memoryUsage() } }
+			} catch (error) {
+				return {
+					memoryException: stringifyError(error),
 				}
 			}
 		}
@@ -2002,6 +2013,7 @@ export class ClineProvider
 			mode,
 			apiProvider: apiConfiguration?.apiProvider,
 			...(await getModelId()), // kilocode_change
+			...getMemory(), // kilocode_change
 			diffStrategy: task?.diffStrategy?.getName(),
 			isSubtask: task ? !!task.parentTask : undefined,
 			cloudIsAuthenticated,
