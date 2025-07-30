@@ -27,6 +27,7 @@ export enum TelemetryEventName {
 	CHECKPOINT_FAILURE = "Checkpoint Failure",
 	EXCESSIVE_RECURSION = "Excessive Recursion",
 	NOTIFICATION_CLICKED = "Notification Clicked",
+	MEMORY_USAGE = "Memory Usage",
 	// kilocode_change end
 
 	TASK_CREATED = "Task Created",
@@ -148,6 +149,7 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 			TelemetryEventName.INLINE_ASSIST_AUTO_TASK,
 			TelemetryEventName.INLINE_ASSIST_ACCEPT_SUGGESTION,
 			TelemetryEventName.INLINE_ASSIST_REJECT_SUGGESTION,
+			TelemetryEventName.MEMORY_USAGE,
 			// kilocode_change end
 			TelemetryEventName.TASK_CREATED,
 			TelemetryEventName.TASK_RESTARTED,
@@ -210,6 +212,16 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 ])
 
 export type RooCodeTelemetryEvent = z.infer<typeof rooCodeTelemetryEventSchema>
+
+
+// kilocode_change start
+export interface MemoryMetrics {
+	heapUsed: number
+	heapTotal: number
+	external: number
+	rss: number
+}
+// kilocode_change end
 
 /**
  * TelemetryEventSubscription

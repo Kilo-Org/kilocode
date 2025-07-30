@@ -202,7 +202,10 @@ describe("PostHogTelemetryClient", () => {
 				properties: { customProp: "value" },
 			})
 
-			expect(result).toEqual({ customProp: "value" })
+			expect(result).toEqual({
+				customProp: "value",
+				exception: expect.stringContaining("Error: Provider error"),
+			})
 			expect(consoleErrorSpy).toHaveBeenCalledWith(
 				expect.stringContaining("Error getting telemetry properties: Provider error"),
 			)

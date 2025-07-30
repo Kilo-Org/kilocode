@@ -27,6 +27,7 @@ import { TerminalRegistry } from "./integrations/terminal/TerminalRegistry"
 import { McpServerManager } from "./services/mcp/McpServerManager"
 import { CodeIndexManager } from "./services/code-index/manager"
 import { registerCommitMessageProvider } from "./services/commit-message"
+import { registerMemoryService } from "./services/memory" // kilocode_change
 import { MdmService } from "./services/mdm/MdmService"
 import { migrateSettings } from "./utils/migrateSettings"
 import { checkAndRunAutoLaunchingTask as checkAndRunAutoLaunchingTask } from "./utils/autoLaunchingTask"
@@ -205,6 +206,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	registerGhostProvider(context, provider) // kilocode_change
 	registerCommitMessageProvider(context, outputChannel) // kilocode_change
+	registerMemoryService(context) // kilocode_change
 	registerCodeActions(context)
 	registerTerminalActions(context)
 

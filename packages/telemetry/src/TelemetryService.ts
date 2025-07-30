@@ -238,6 +238,12 @@ export class TelemetryService {
 		this.captureEvent(TelemetryEventName.TITLE_BUTTON_CLICKED, { button })
 	}
 
+	// kilocode_change start
+	public captureMemoryUsage(memoryMetrics: import("@roo-code/types").MemoryMetrics): void {
+		this.captureEvent(TelemetryEventName.MEMORY_USAGE, memoryMetrics)
+	}
+	// kilocode_change end
+
 	/**
 	 * Checks if telemetry is currently enabled
 	 * @returns Whether telemetry is enabled
