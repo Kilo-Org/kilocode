@@ -89,7 +89,7 @@ function killAllChildProcesses() {
 						child.kill("SIGKILL")
 					}
 				}, 5000)
-			} catch (_error) {}
+			} catch (_error) { }
 		}
 
 		activeProcesses.clear()
@@ -120,10 +120,21 @@ if (process.argv.includes("--help") || process.argv.includes("-h")) {
 async function validateEnvironment() {
 	log.status("Validating environment...")
 
-	if (!process.env.OPENROUTER_API_KEY) {
+	// Check if API key is required based on cache mode
+	const cacheMode = process.env.NETWORK_CACHE_MODE || "minimal"
+	if (!process.env.OPENROUTER_API_KEY && cacheMode !== "none") {
 		log.error("OPENROUTER_API_KEY environment variable is not set")
 		console.log('Please set it with: export OPENROUTER_API_KEY="your-api-key-here"')
+		console.log(`Or use NETWORK_CACHE_MODE=none to run tests with cached responses only`)
 		process.exit(1)
+	}
+
+	if (cacheMode === "none") {
+		log.info("Running in cache-only mode (no API key required)")
+		// Set a dummy API key that will sanitize to match HAR file signatures
+		// This will become "Bearer sk-[REDACTED]" after sanitization
+		process.env.OPENROUTER_API_KEY = "sk-dummy-key-for-cache-matching"
+		log.info("Set dummy API key for HAR cache matching")
 	}
 
 	try {

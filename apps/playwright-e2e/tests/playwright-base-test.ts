@@ -7,6 +7,7 @@ import * as fs from "fs"
 import { fileURLToPath } from "url"
 import { camelCase } from "change-case"
 import { setupConsoleLogging, cleanLogMessage } from "../helpers/console-logging"
+import { NetworkCache } from "../helpers/network-cache"
 
 // ES module equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url)
@@ -21,15 +22,20 @@ export type TestFixtures = TestOptions & {
 	createProject: () => Promise<string>
 	createTempDir: () => Promise<string>
 	takeScreenshot: (name?: string) => Promise<void>
+	networkCache: NetworkCache
 }
 
 export const test = base.extend<TestFixtures>({
 	vscodeVersion: ["stable", { option: true }],
 
-	workbox: async ({ createProject, createTempDir }, use) => {
-		// Fail early if OPENROUTER_API_KEY is not set
-		if (!process.env.OPENROUTER_API_KEY) {
-			throw new Error("OPENROUTER_API_KEY environment variable is required for Playwright tests")
+	workbox: async ({ createProject, createTempDir, networkCache }, use) => {
+		// Check if API key is required based on cache mode
+		const cacheMode = process.env.NETWORK_CACHE_MODE || "minimal"
+		if (!process.env.OPENROUTER_API_KEY && cacheMode !== "none") {
+			throw new Error(
+				`OPENROUTER_API_KEY environment variable is required for cache mode "${cacheMode}". ` +
+					`Use NETWORK_CACHE_MODE=none to run tests with cached responses only.`,
+			)
 		}
 
 		const defaultCachePath = await createTempDir()
@@ -70,6 +76,10 @@ export const test = base.extend<TestFixtures>({
 
 		const workbox = await electronApp.firstWindow()
 
+		// Setup network caching for this test
+		const testName = test.info().title.replace(/[^a-zA-Z0-9-_]/g, "_")
+		await networkCache.setupPageRecording(workbox, testName)
+
 		// Setup pass-through logs for the core process and the webview
 		if (process.env.PLAYWRIGHT_VERBOSE_LOGS === "true") {
 			electronApp.process().stdout?.on("data", (data) => {
@@ -106,6 +116,31 @@ export const test = base.extend<TestFixtures>({
 		console.log("✅ VS Code workbox ready for testing")
 
 		await use(workbox)
+
+		// Sanitize and verify HAR file after test completion
+		const harPath = networkCache.getHarPath(testName)
+		// Wait a bit for HAR file to be written
+		await new Promise((resolve) => setTimeout(resolve, 1000))
+
+		// Sanitize the HAR file
+		await networkCache.sanitizeHarFile(harPath)
+
+		// Verify sanitization was successful
+		if (fs.existsSync(harPath)) {
+			const { sanitized, violations } = await networkCache.verifyHarSanitization(harPath)
+
+			if (violations > 0) {
+				throw new Error(
+					`🚨 SECURITY VIOLATION: Found ${violations} unsanitized API keys in HAR file ${path.basename(harPath)}. ` +
+						`This HAR file is NOT safe to commit to version control!`,
+				)
+			}
+
+			if (sanitized > 0) {
+				console.log(`🔒 Verified ${sanitized} API keys are properly sanitized in ${path.basename(harPath)}`)
+			}
+		}
+
 		await electronApp.close()
 
 		try {
@@ -194,5 +229,13 @@ export const test = base.extend<TestFixtures>({
 			await workbox.screenshot({ path: screenshotPath, fullPage: true })
 			console.log(`📸 Screenshot captured: ${hierarchicalName}`)
 		})
+	},
+
+	networkCache: async ({ workbox: _workbox }, use) => {
+		const cache = new NetworkCache({
+			updateMode: (process.env.NETWORK_CACHE_MODE as "full" | "minimal" | "none") || "minimal",
+			urlPattern: "**/api/**",
+		})
+		await use(cache)
 	},
 })

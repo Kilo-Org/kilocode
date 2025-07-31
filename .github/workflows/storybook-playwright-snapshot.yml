@@ -70,12 +70,14 @@ jobs:
                   key: ${{ runner.os }}-buildx-${{ hashFiles('apps/playwright-e2e/Dockerfile.playwright-ci') }}
                   restore-keys: ${{ runner.os }}-buildx-
 
-            - name: Run Playwright E2E tests
+            - name: Run Playwright E2E tests (using cached HAR files)
               run: |
                   cd apps/playwright-e2e
                   node run-docker-playwright.js
               env:
-                  OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+                  # Use cache-only mode - no API key needed since we use committed HAR files
+                  # Note: OPENROUTER_API_KEY intentionally omitted - tests run from cached responses
+                  NETWORK_CACHE_MODE: none
                   WORKSPACE_ROOT: ${{ github.workspace }}
 
             - name: Generate Stories from Playwright Screenshots

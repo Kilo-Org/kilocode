@@ -8,3 +8,6 @@ screenshots/
 .env.local
 .build/
 .docker-cache/
+
+# Network cache - ignore random JSON files created by HAR recording
+network-cache/*.json
