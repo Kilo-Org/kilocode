@@ -18,6 +18,7 @@ env:
     COMPOSE_DOCKER_CLI_BUILD: 1
     NODE_VERSION: 20.19.2
     PNPM_VERSION: 10.8.1
+    SECRETS_SET: ${{ secrets.OPENROUTER_API_KEY != '' }}
     TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
     TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
@@ -71,6 +72,7 @@ jobs:
                   restore-keys: ${{ runner.os }}-buildx-
 
             - name: Run Playwright E2E tests
+              if: ${{ env.SECRETS_SET }}
               run: |
                   cd apps/playwright-e2e
                   node run-docker-playwright.js
