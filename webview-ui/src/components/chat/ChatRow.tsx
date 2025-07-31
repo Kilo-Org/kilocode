@@ -1036,7 +1036,7 @@ export const ChatRowContent = ({
 											<StandardTooltip content="The API Provider did not provide any cost data or the request was canceled.">
 												<VSCodeBadge className="whitespace-nowrap">
 													<span className="codicon codicon-warning pr-1"></span>
-													no data
+													cost unknown
 												</VSCodeBadge>
 											</StandardTooltip>
 										)
