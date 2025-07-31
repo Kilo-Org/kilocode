@@ -4,12 +4,12 @@ import { verifyExtensionInstalled, findWebview, upsertApiConfiguration } from ".
 test.describe("Settings Screenshots", () => {
 	test("should take screenshots of all settings tabs", async ({ workbox: page, takeScreenshot }: TestFixtures) => {
 		await verifyExtensionInstalled(page)
-
 		await upsertApiConfiguration(page)
 
-		// Open the settings
+		// Open the settings then move the mouse to avoid triggering the tooltip
 		page.locator('[aria-label*="Settings"], [title*="Settings"]').first().click()
-		await page.mouse.move(0, 0) // Move the mouse to (0, 0) to avoid triggering the tooltip!
+		await page.mouse.move(0, 0)
+		await page.mouse.click(0, 0)
 
 		const webviewFrame = await findWebview(page)
 		await expect(webviewFrame.locator('[role="tablist"]')).toBeVisible({ timeout: 10000 })
