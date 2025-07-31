@@ -174,7 +174,7 @@ Please provide:
 3. Expected output and behavior`,
 	},
 	TERMINAL_GENERATE: {
-		template: `Generate a terminal command based on this description: \${userInput}
+		template: `Generate a terminal command based on this description: "\${userInput}"
 
 Context:
 - Operating System: \${operatingSystem}
@@ -187,8 +187,7 @@ Requirements:
 3. Use common command-line tools and best practices
 4. Consider the current working directory context
 5. Return only the raw command that can be executed directly
-
-Description: \${userInput}`,
+`,
 	},
 	NEW_TASK: {
 		template: `\${userInput}`,
