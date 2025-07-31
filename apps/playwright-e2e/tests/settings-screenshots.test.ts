@@ -1,8 +1,8 @@
 import { test, expect, type TestFixtures } from "./playwright-base-test"
 import { verifyExtensionInstalled, findWebview, upsertApiConfiguration } from "../helpers/webview-helpers"
 
-test.describe("Settings Screenshots", () => {
-	test("should take screenshots of all settings tabs", async ({ workbox: page, takeScreenshot }: TestFixtures) => {
+test.describe("Settings", () => {
+	test("settings tab screenshot", async ({ workbox: page, takeScreenshot }: TestFixtures) => {
 		await verifyExtensionInstalled(page)
 		await upsertApiConfiguration(page)
 
@@ -36,7 +36,7 @@ test.describe("Settings Screenshots", () => {
 			const sectionId = testId?.replace("tab-", "") || `section-${i}`
 
 			console.log(`📸 Taking screenshot of tab: ${tabName} (${sectionId})`)
-			await takeScreenshot(`settings-${sectionId}-${tabName.toLowerCase().replace(/\s+/g, "-")}`)
+			await takeScreenshot(`${i}-settings-${sectionId}-${tabName.toLowerCase().replace(/\s+/g, "-")}`)
 		}
 
 		console.log("✅ All settings tabs screenshots completed")
