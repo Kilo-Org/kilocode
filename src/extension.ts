@@ -212,7 +212,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	vscode.commands.executeCommand(`${Package.name}.activationCompleted`)
 
 	// Implements the `RooCodeAPI` interface.
-	const socketPath = process.env.ROO_CODE_IPC_SOCKET_PATH
+	const socketPath = process.env.KILO_IPC_SOCKET_PATH ?? process.env.ROO_CODE_IPC_SOCKET_PATH // kilocode_change
 	const enableLogging = typeof socketPath === "string"
 
 	// Watch the core files and automatically reload the extension host.
