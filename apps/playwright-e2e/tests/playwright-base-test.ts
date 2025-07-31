@@ -191,9 +191,16 @@ export const test = base.extend<TestFixtures>({
 		}
 	},
 
-	takeScreenshot: async ({ workbox }, use) => {
+	takeScreenshot: async ({ workbox: page }, use) => {
 		await use(async (name?: string) => {
-			await closeAllTabs(workbox)
+			await closeAllTabs(page)
+
+			const activatingStatus = page.locator("text=Activating Extensions")
+			const activatingStatusCount = await activatingStatus.count()
+			if (activatingStatusCount > 0) {
+				console.log("⌛️ Waiting for `Activating Extensions` to go away...")
+				await activatingStatus.waitFor({ state: "hidden", timeout: 10000 })
+			}
 
 			const testInfo = test.info()
 			// Extract test suite from the test file name or use a default
@@ -209,7 +216,7 @@ export const test = base.extend<TestFixtures>({
 				.replace(/^-|-$/g, "") // Remove leading/trailing dashes
 
 			const screenshotPath = test.info().outputPath(`${hierarchicalName}.png`)
-			await workbox.screenshot({ path: screenshotPath, fullPage: true })
+			await page.screenshot({ path: screenshotPath, fullPage: true })
 			console.log(`📸 Screenshot captured: ${hierarchicalName}`)
 		})
 	},
