@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Trans, useTranslation } from "react-i18next"
 import { VSCodeButton, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 import { PlusIcon, TrashIcon } from "@radix-ui/react-icons"
@@ -8,6 +8,7 @@ import { type ProviderSettings, type ProviderSettingsEntry } from "@roo-code/typ
 import { vscode } from "@src/utils/vscode"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@src/components/ui"
+import { Progress } from "@src/components/ui/progress"
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -19,6 +20,7 @@ import {
 	AlertDialogTitle,
 } from "@src/components/ui/alert-dialog"
 import { inputEventTransform } from "../transforms"
+import { AllUsageResult } from "@roo-code/types"
 
 type VirtualQuotaFallbackProviderProps = {
 	apiConfiguration: ProviderSettings
@@ -296,6 +298,27 @@ export const VirtualQuotaFallbackProvider = ({
 }
 
 const VirtualLimitInputs = ({ profile, index, onProfileChange }: LimitInputsProps) => {
+	const [usage, setUsage] = useState<AllUsageResult | null>(null)
+	const { t } = useTranslation("kilocode")
+
+	useEffect(() => {
+		if (profile.profileId) {
+			vscode.postMessage({ type: "getUsageData", text: profile.profileId })
+		}
+
+		const handleMessage = (event: MessageEvent) => {
+			const message = event.data
+			if (message.type === "usageDataResponse" && message.text === profile.profileId) {
+				setUsage(message.values)
+			}
+		}
+
+		window.addEventListener("message", handleMessage)
+		return () => {
+			window.removeEventListener("message", handleMessage)
+		}
+	}, [profile.profileId])
+
 	const handleLimitChange = useCallback(
 		(limitKey: keyof NonNullable<VirtualQuotaFallbackProviderData["profileLimits"]>) => (event: unknown) => {
 			const value = inputEventTransform(event)
@@ -317,6 +340,7 @@ const VirtualLimitInputs = ({ profile, index, onProfileChange }: LimitInputsProp
 
 	return (
 		<div className="space-y-4 p-2 rounded-md mt-2">
+			<UsageProgress limits={profile.profileLimits} usage={usage} t={t} />
 			{/* Tokens Row */}
 			<div>
 				<label className="block text-sm font-medium mb-2">
@@ -394,6 +418,88 @@ const VirtualLimitInputs = ({ profile, index, onProfileChange }: LimitInputsProp
 					</div>
 				</div>
 			</div>
+		</div>
+	)
+}
+
+const UsageProgress = ({
+	limits,
+	usage,
+}: {
+	limits: VirtualQuotaFallbackProviderData["profileLimits"]
+	usage: AllUsageResult | null
+	t: (key: string) => string
+}) => {
+	if (!usage || !limits) {
+		return null
+	}
+
+	const progressBars = [
+		{
+			label: "TPM",
+			current: usage.minute.tokens,
+			limit: limits.tokensPerMinute,
+		},
+		{
+			label: "TPH",
+			current: usage.hour.tokens,
+			limit: limits.tokensPerHour,
+		},
+		{
+			label: "TPD",
+			current: usage.day.tokens,
+			limit: limits.tokensPerDay,
+		},
+		{
+			label: "RPM",
+			current: usage.minute.requests,
+			limit: limits.requestsPerMinute,
+		},
+		{
+			label: "RPH",
+			current: usage.hour.requests,
+			limit: limits.requestsPerHour,
+		},
+		{
+			label: "RPD",
+			current: usage.day.requests,
+			limit: limits.requestsPerDay,
+		},
+	].filter((bar) => bar.limit && bar.limit > 0)
+
+	if (progressBars.length === 0) {
+		return null
+	}
+
+	return (
+		<div className="grid grid-cols-3 gap-4 mb-4">
+			{progressBars.map((bar, index) => (
+				<UsageProgressBar key={index} label={bar.label} currentValue={bar.current} limitValue={bar.limit!} />
+			))}
+		</div>
+	)
+}
+
+const UsageProgressBar = ({
+	label,
+	currentValue,
+	limitValue,
+}: {
+	label: string
+	currentValue: number
+	limitValue: number
+}) => {
+	const percentage = limitValue > 0 ? (currentValue / limitValue) * 100 : 0
+
+	return (
+		<div>
+			<div className="text-xs text-vscode-descriptionForeground mb-1 flex justify-between">
+				<span className="whitespace-nowrap">{label}</span>
+				<span className="whitespace-nowrap">
+					{currentValue} / {limitValue}
+				</span>
+			</div>
+			<Progress value={percentage} className="[&>div]:bg-vscode-button-background" />
 		</div>
 	)
 }

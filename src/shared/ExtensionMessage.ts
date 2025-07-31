@@ -54,90 +54,91 @@ export interface LanguageModelChatSelector {
 // 'settingsButtonClicked' or 'hello'. Webview will hold state.
 export interface ExtensionMessage {
 	type:
-		| "action"
-		| "state"
-		| "selectedImages"
-		| "theme"
-		| "workspaceUpdated"
-		| "invoke"
-		| "messageUpdated"
-		| "mcpServers"
-		| "enhancedPrompt"
-		| "commitSearchResults"
-		| "listApiConfig"
-		| "routerModels"
-		| "openAiModels"
-		| "ollamaModels"
-		| "lmStudioModels"
-		| "vsCodeLmModels"
-		| "huggingFaceModels"
-		| "vsCodeLmApiAvailable"
-		| "updatePrompt"
-		| "systemPrompt"
-		| "autoApprovalEnabled"
-		| "updateCustomMode"
-		| "deleteCustomMode"
-		| "exportModeResult"
-		| "importModeResult"
-		| "checkRulesDirectoryResult"
-		| "deleteCustomModeCheck"
-		| "currentCheckpointUpdated"
-		| "showHumanRelayDialog"
-		| "humanRelayResponse"
-		| "humanRelayCancel"
-		| "insertTextToChatArea" // kilocode_change
-		| "browserToolEnabled"
-		| "browserConnectionResult"
-		| "remoteBrowserEnabled"
-		| "ttsStart"
-		| "ttsStop"
-		| "maxReadFileLine"
-		| "fileSearchResults"
-		| "toggleApiConfigPin"
-		| "mcpMarketplaceCatalog" // kilocode_change
-		| "mcpDownloadDetails" // kilocode_change
-		| "showSystemNotification" // kilocode_change
-		| "openInBrowser" // kilocode_change
-		| "acceptInput"
-		| "focusChatInput" // kilocode_change
-		| "setHistoryPreviewCollapsed"
-		| "commandExecutionStatus"
-		| "mcpExecutionStatus"
-		| "vsCodeSetting"
-		| "profileDataResponse" // kilocode_change
-		| "balanceDataResponse" // kilocode_change
-		| "authenticatedUser"
-		| "condenseTaskContextResponse"
-		| "singleRouterModelFetchResponse"
-		| "indexingStatusUpdate"
-		| "indexCleared"
-		| "codebaseIndexConfig"
-		| "rulesData" // kilocode_change
-		| "marketplaceInstallResult"
-		| "marketplaceRemoveResult"
-		| "marketplaceData"
-		| "mermaidFixResponse" // kilocode_change
-		| "shareTaskSuccess"
-		| "codeIndexSettingsSaved"
-		| "codeIndexSecretStatus"
-		| "showDeleteMessageDialog"
-		| "showEditMessageDialog"
-		| "kilocodeNotificationsResponse" // kilocode_change
+	| "action"
+	| "state"
+	| "selectedImages"
+	| "theme"
+	| "workspaceUpdated"
+	| "invoke"
+	| "messageUpdated"
+	| "mcpServers"
+	| "enhancedPrompt"
+	| "commitSearchResults"
+	| "listApiConfig"
+	| "routerModels"
+	| "openAiModels"
+	| "ollamaModels"
+	| "lmStudioModels"
+	| "vsCodeLmModels"
+	| "huggingFaceModels"
+	| "vsCodeLmApiAvailable"
+	| "updatePrompt"
+	| "systemPrompt"
+	| "autoApprovalEnabled"
+	| "updateCustomMode"
+	| "deleteCustomMode"
+	| "exportModeResult"
+	| "importModeResult"
+	| "checkRulesDirectoryResult"
+	| "deleteCustomModeCheck"
+	| "currentCheckpointUpdated"
+	| "showHumanRelayDialog"
+	| "humanRelayResponse"
+	| "humanRelayCancel"
+	| "insertTextToChatArea" // kilocode_change
+	| "browserToolEnabled"
+	| "browserConnectionResult"
+	| "remoteBrowserEnabled"
+	| "ttsStart"
+	| "ttsStop"
+	| "maxReadFileLine"
+	| "fileSearchResults"
+	| "toggleApiConfigPin"
+	| "mcpMarketplaceCatalog" // kilocode_change
+	| "mcpDownloadDetails" // kilocode_change
+	| "showSystemNotification" // kilocode_change
+	| "openInBrowser" // kilocode_change
+	| "acceptInput"
+	| "focusChatInput" // kilocode_change
+	| "setHistoryPreviewCollapsed"
+	| "commandExecutionStatus"
+	| "mcpExecutionStatus"
+	| "vsCodeSetting"
+	| "profileDataResponse" // kilocode_change
+	| "balanceDataResponse" // kilocode_change
+	| "authenticatedUser"
+	| "condenseTaskContextResponse"
+	| "singleRouterModelFetchResponse"
+	| "indexingStatusUpdate"
+	| "indexCleared"
+	| "codebaseIndexConfig"
+	| "rulesData" // kilocode_change
+	| "marketplaceInstallResult"
+	| "marketplaceRemoveResult"
+	| "marketplaceData"
+	| "mermaidFixResponse" // kilocode_change
+	| "shareTaskSuccess"
+	| "codeIndexSettingsSaved"
+	| "codeIndexSecretStatus"
+	| "showDeleteMessageDialog"
+	| "showEditMessageDialog"
+	| "kilocodeNotificationsResponse" // kilocode_change
+	| "usageDataResponse" // kilocode_change
 	text?: string
 	payload?: ProfileDataResponsePayload | BalanceDataResponsePayload // kilocode_change: Add payload for profile and balance data
 	action?:
-		| "chatButtonClicked"
-		| "mcpButtonClicked"
-		| "settingsButtonClicked"
-		| "historyButtonClicked"
-		| "promptsButtonClicked"
-		| "profileButtonClicked" // kilocode_change
-		| "marketplaceButtonClicked"
-		| "accountButtonClicked"
-		| "didBecomeVisible"
-		| "focusInput"
-		| "switchTab"
-		| "focusChatInput" // kilocode_change
+	| "chatButtonClicked"
+	| "mcpButtonClicked"
+	| "settingsButtonClicked"
+	| "historyButtonClicked"
+	| "promptsButtonClicked"
+	| "profileButtonClicked" // kilocode_change
+	| "marketplaceButtonClicked"
+	| "accountButtonClicked"
+	| "didBecomeVisible"
+	| "focusInput"
+	| "switchTab"
+	| "focusChatInput" // kilocode_change
 	invoke?: "newChat" | "sendMessage" | "primaryButtonClick" | "secondaryButtonClick" | "setChatBoxMessage"
 	state?: ExtensionState
 	images?: string[]
@@ -363,21 +364,21 @@ export type ExtensionState = Pick<
 
 export interface ClineSayTool {
 	tool:
-		| "editedExistingFile"
-		| "appliedDiff"
-		| "newFileCreated"
-		| "codebaseSearch"
-		| "readFile"
-		| "fetchInstructions"
-		| "listFilesTopLevel"
-		| "listFilesRecursive"
-		| "listCodeDefinitionNames"
-		| "searchFiles"
-		| "switchMode"
-		| "newTask"
-		| "finishTask"
-		| "searchAndReplace"
-		| "insertContent"
+	| "editedExistingFile"
+	| "appliedDiff"
+	| "newFileCreated"
+	| "codebaseSearch"
+	| "readFile"
+	| "fetchInstructions"
+	| "listFilesTopLevel"
+	| "listFilesRecursive"
+	| "listCodeDefinitionNames"
+	| "searchFiles"
+	| "switchMode"
+	| "newTask"
+	| "finishTask"
+	| "searchAndReplace"
+	| "insertContent"
 	path?: string
 	diff?: string
 	content?: string

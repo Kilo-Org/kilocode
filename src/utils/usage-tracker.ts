@@ -1,27 +1,10 @@
 // kilocode_change - new file
 import type { ExtensionContext, Memento } from "vscode"
+import { AllUsageResult, UsageEvent, UsageResult, UsageType, UsageWindow } from "@roo-code/types"
 import { ContextProxy } from "../core/config/ContextProxy"
 
-export type UsageType = "tokens" | "requests"
-export type UsageWindow = "minute" | "hour" | "day"
-
-export interface UsageEvent {
-	/** The timestamp of the event in milliseconds since epoch. */
-	timestamp: number
-	/** The identifier for the AI provider (e.g., 'ds8f93js'). */
-	providerId: string
-	/** The type of usage. */
-	type: UsageType
-	/** The amount consumed (e.g., number of tokens or 1 for a single request). */
-	count: number
-}
-
-interface UsageResult {
-	tokens: number
-	requests: number
-}
-
 const USAGE_STORAGE_KEY = "kilocode.virtualQuotaFallbackProvider.usage.v1"
+const COOLDOWNS_STORAGE_KEY = "kilocode.virtualQuotaFallbackProvider.cooldowns.v1"
 const ONE_MINUTE_MS = 60 * 1000
 const ONE_HOUR_MS = 60 * ONE_MINUTE_MS
 const ONE_DAY_MS = 24 * ONE_HOUR_MS
@@ -121,6 +104,20 @@ export class UsageTracker {
 	}
 
 	/**
+	 * Calculates the total usage for a given provider across all time windows.
+	 *
+	 * @param providerId The provider to retrieve usage for.
+	 * @returns An object containing the total number of tokens and requests for each window.
+	 */
+	public getAllUsage(providerId: string): AllUsageResult {
+		return {
+			minute: this.getUsage(providerId, "minute"),
+			hour: this.getUsage(providerId, "hour"),
+			day: this.getUsage(providerId, "day"),
+		}
+	}
+
+	/**
 	 * Retrieves all events from storage and filters out any that are older
 	 * than the longest tracking window (1 day). This prevents the storage
 	 * from growing indefinitely.
@@ -137,5 +134,62 @@ export class UsageTracker {
 	 */
 	public async clearAllUsageData(): Promise<void> {
 		await this.memento.update(USAGE_STORAGE_KEY, undefined)
+		await this.memento.update(COOLDOWNS_STORAGE_KEY, undefined)
+	}
+
+	/**
+	 * Sets a cooldown period for a specific provider.
+	 * @param providerId The ID of the provider to put on cooldown.
+	 * @param durationMs The duration of the cooldown in milliseconds.
+	 */
+	public async setCooldown(providerId: string, durationMs: number): Promise<void> {
+		const cooldownUntil = Date.now() + durationMs
+		const allCooldowns = await this.getPrunedCooldowns()
+		allCooldowns[providerId] = cooldownUntil
+		await this.memento.update(COOLDOWNS_STORAGE_KEY, allCooldowns)
+	}
+
+	/**
+	 * Checks if a provider is currently under a cooldown.
+	 * @param providerId The ID of the provider to check.
+	 * @returns True if the provider is on cooldown, false otherwise.
+	 */
+	public async isUnderCooldown(providerId: string): Promise<boolean> {
+		const allCooldowns = await this.getPrunedCooldowns()
+		const cooldownUntil = allCooldowns[providerId]
+
+		if (cooldownUntil && Date.now() < cooldownUntil) {
+			console.debug(
+				`Provider ${providerId} is under cooldown. Cooldown expires at: ${new Date(
+					cooldownUntil,
+				).toLocaleTimeString()}`,
+			)
+			return true
+		}
+
+		return false
+	}
+
+	/**
+	 * Retrieves all cooldowns from storage and filters out expired ones.
+	 */
+	private async getPrunedCooldowns(): Promise<{ [key: string]: number }> {
+		const allCooldowns = this.memento.get<{ [key: string]: number }>(COOLDOWNS_STORAGE_KEY, {})
+		const now = Date.now()
+		const prunedCooldowns: { [key: string]: number } = {}
+
+		for (const [providerId, cooldownUntil] of Object.entries(allCooldowns)) {
+			if (cooldownUntil > now) {
+				prunedCooldowns[providerId] = cooldownUntil
+			}
+		}
+
+		// Asynchronously update storage with the pruned list, but don't wait for it
+		// to avoid blocking the check.
+		if (Object.keys(prunedCooldowns).length !== Object.keys(allCooldowns).length) {
+			this.memento.update(COOLDOWNS_STORAGE_KEY, prunedCooldowns)
+		}
+
+		return prunedCooldowns
 	}
 }
