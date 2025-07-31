@@ -1,4 +1,4 @@
-import type { Decorator } from "@storybook/react"
+import type { Decorator } from "@storybook/react-vite"
 import { useEffect } from "react"
 
 // Decorator to handle theme switching by applying the data-theme attribute to the body

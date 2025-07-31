@@ -88,7 +88,6 @@
 		"@roo-code/config-typescript": "workspace:^",
 		"@storybook/addon-essentials": "^8.4.7",
 		"@storybook/addon-interactions": "^8.4.7",
-		"@storybook/react": "^8.4.7",
 		"@storybook/react-vite": "^8.4.7",
 		"@storybook/testing-library": "^0.2.2",
 		"@testing-library/jest-dom": "^6.6.3",
