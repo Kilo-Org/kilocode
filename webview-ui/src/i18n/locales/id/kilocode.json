@@ -44,6 +44,16 @@
 			"testButton": "Uji Notifikasi",
 			"testTitle": "Kilo Code",
 			"testMessage": "Ini adalah notifikasi uji dari Kilo Code."
+		},
+		"terminal": {
+			"commandGenerator": {
+				"apiConfigId": {
+					"label": "Konfigurasi API",
+					"current": "Gunakan Konfigurasi Saat Ini",
+					"description": "Pilih konfigurasi API mana yang akan digunakan untuk menghasilkan perintah terminal. Biarkan sebagai 'Gunakan Konfigurasi Saat Ini' untuk menggunakan pengaturan default Anda."
+				},
+				"provider": "Penyedia Pembuat Perintah Terminal"
+			}
 		}
 	},
 	"chat": {

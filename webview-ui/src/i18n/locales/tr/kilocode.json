@@ -44,6 +44,16 @@
 			"testButton": "Bildirimi test et",
 			"testTitle": "Kilo Code",
 			"testMessage": "Bu Kilo Code'dan bir test bildirimidir."
+		},
+		"terminal": {
+			"commandGenerator": {
+				"provider": "Terminal Komut Oluşturucu Sağlayıcısı",
+				"apiConfigId": {
+					"current": "Mevcut Yapılandırmayı Kullan",
+					"label": "API Yapılandırması",
+					"description": "Terminal komutlarını oluşturmak için hangi API yapılandırmasını kullanacağınızı seçin. Varsayılan ayarlarınızı kullanmak için 'Mevcut Yapılandırmayı Kullan' olarak bırakın."
+				}
+			}
 		}
 	},
 	"chat": {

@@ -106,5 +106,20 @@
 			"disableCopilot": "Nonaktifkan Copilot",
 			"disableInlineAssist": "Nonaktifkan Bantuan Dalam Baris"
 		}
+	},
+	"terminalCommandGenerator": {
+		"inputPlaceholder": "mis., matikan proses yang berjalan di port 3001, temukan file besar, dll",
+		"noActiveTerminal": "Kilo: Tidak ada terminal aktif yang ditemukan. Silakan buka terminal terlebih dahulu.",
+		"inputPrompt": "Kilo: Jelaskan perintah yang ingin Anda hasilkan",
+		"generatingProgress": "Kilo: Menghasilkan perintah terminal...",
+		"generationFailed": "Kilo: Gagal menghasilkan perintah: {{error}}",
+		"commandGenerated": "Kilo: Perintah yang dihasilkan: {{command}}",
+		"warningDialog": {
+			"title": "Peringatan Keamanan Terminal",
+			"okButton": "Saya Mengerti",
+			"message": "Periksa kembali semua perintah yang dihasilkan sebelum menjalankannya. Tindakan terminal tidak selalu dapat dibatalkan—menjalankan perintah yang belum diverifikasi dapat mengakibatkan kehilangan data atau kerusakan sistem yang tidak dapat dipulihkan. Tinjau dan pahami perintah sepenuhnya sebelum melanjutkan!",
+			"cancelButton": "Batal"
+		},
+		"tipMessage": "Kilo: Tekan {{shortcut}} untuk menghasilkan perintah terminal"
 	}
 }

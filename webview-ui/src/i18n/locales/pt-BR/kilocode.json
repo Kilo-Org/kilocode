@@ -44,6 +44,16 @@
 			"testButton": "Testar notificação",
 			"testTitle": "Kilo Code",
 			"testMessage": "Esta é uma notificação de teste do Kilo Code."
+		},
+		"terminal": {
+			"commandGenerator": {
+				"provider": "Provedor de Gerador de Comandos de Terminal",
+				"apiConfigId": {
+					"label": "Configuração da API",
+					"current": "Usar Configuração Atual",
+					"description": "Selecione qual configuração de API usar para gerar comandos de terminal. Deixe como 'Usar configuração atual' para usar suas configurações padrão."
+				}
+			}
 		}
 	},
 	"chat": {

@@ -23,6 +23,7 @@
 	"command.terminal.addToContext.title": "Додати вміст терміналу до контексту",
 	"command.terminal.fixCommand.title": "Виправити цю команду",
 	"command.terminal.explainCommand.title": "Пояснити цю команду",
+	"command.terminal.generateCommand.title": "Kilo Code: Генерувати команду терміналу",
 	"command.acceptInput.title": "Прийняти введення/пропозицію",
 	"command.generateCommitMessage.title": "Згенерувати повідомлення коміту за допомогою Kilo",
 	"command.profile.title": "Профіль",

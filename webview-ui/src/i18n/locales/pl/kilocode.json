@@ -44,6 +44,16 @@
 			"testButton": "Testuj powiadomienie",
 			"testTitle": "Kilo Code",
 			"testMessage": "To jest testowe powiadomienie z Kilo Code."
+		},
+		"terminal": {
+			"commandGenerator": {
+				"provider": "Dostawca Generatora Poleceń Terminala",
+				"apiConfigId": {
+					"label": "Konfiguracja API",
+					"description": "Wybierz, której konfiguracji API użyć do generowania poleceń terminalowych. Pozostaw jako 'Użyj bieżącej konfiguracji', aby zastosować domyślne ustawienia.",
+					"current": "Użyj bieżącej konfiguracji"
+				}
+			}
 		}
 	},
 	"chat": {

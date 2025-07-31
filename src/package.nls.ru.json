@@ -24,6 +24,7 @@
 	"command.terminal.addToContext.title": "Добавить содержимое терминала в контекст",
 	"command.terminal.fixCommand.title": "Исправить эту команду",
 	"command.terminal.explainCommand.title": "Объяснить эту команду",
+	"command.terminal.generateCommand.title": "Kilo Code: Генерировать команду терминала",
 	"command.acceptInput.title": "Принять ввод/предложение",
 	"command.generateCommitMessage.title": "Сгенерировать сообщение коммита с Kilo",
 	"command.profile.title": "Профиль",

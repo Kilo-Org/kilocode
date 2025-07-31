@@ -149,6 +149,7 @@ export const globalSettingsSchema = z.object({
 	enhancementApiConfigId: z.string().optional(),
 	dismissedNotificationIds: z.string().array().optional(), // kilocode_change
 	commitMessageApiConfigId: z.string().optional(), // kilocode_change
+	terminalCommandApiConfigId: z.string().optional(), // kilocode_change
 	ghostServiceSettings: ghostServiceSettingsSchema, // kilocode_change
 	historyPreviewCollapsed: z.boolean().optional(),
 	profileThresholds: z.record(z.string(), z.number()).optional(),

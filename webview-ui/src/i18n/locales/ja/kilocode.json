@@ -44,6 +44,16 @@
 			"testButton": "通知をテスト",
 			"testTitle": "Kilo Code",
 			"testMessage": "これはKilo Codeからのテスト通知です。"
+		},
+		"terminal": {
+			"commandGenerator": {
+				"apiConfigId": {
+					"label": "API設定",
+					"description": "ターミナルコマンドの生成に使用するAPI設定を選択してください。デフォルト設定を使用する場合は「現在の設定を使用」のままにしてください。",
+					"current": "現在の設定を使用"
+				},
+				"provider": "ターミナルコマンドジェネレータープロバイダー"
+			}
 		}
 	},
 	"chat": {

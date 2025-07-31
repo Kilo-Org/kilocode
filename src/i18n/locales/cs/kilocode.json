@@ -106,5 +106,20 @@
 			"disableCopilot": "Deaktivovat Copilot",
 			"disableInlineAssist": "Deaktivovat Inline asistenta"
 		}
+	},
+	"terminalCommandGenerator": {
+		"inputPrompt": "Kilo: Popište příkaz, který chcete vygenerovat",
+		"noActiveTerminal": "Kilo: Nebyl nalezen žádný aktivní terminál. Nejprve prosím otevřete terminál.",
+		"inputPlaceholder": "např. ukončit proces běžící na portu 3001, najít velké soubory atd.",
+		"generatingProgress": "Kilo: Generuji příkaz terminálu...",
+		"generationFailed": "Kilo: Příkaz se nepodařilo vygenerovat: {{error}}",
+		"commandGenerated": "Kilo: Vygenerovaný příkaz: {{command}}",
+		"warningDialog": {
+			"title": "Bezpečnostní Upozornění Terminálu",
+			"okButton": "Rozumím",
+			"message": "Dvakrát zkontrolujte všechny vygenerované příkazy před jejich spuštěním. Akce v terminálu nelze vždy vrátit zpět – spuštění neověřených příkazů může vést k nevratné ztrátě dat nebo poškození systému. Před pokračováním si příkaz důkladně projděte a ujistěte se, že mu rozumíte!",
+			"cancelButton": "Zrušit"
+		},
+		"tipMessage": "Kilo: Stiskněte {{shortcut}} pro generování příkazů v terminálu"
 	}
 }

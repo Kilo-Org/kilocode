@@ -23,6 +23,7 @@
 	"command.terminal.addToContext.title": "Přidat obsah terminálu do kontextu",
 	"command.terminal.fixCommand.title": "Opravit tento příkaz",
 	"command.terminal.explainCommand.title": "Vysvětlit tento příkaz",
+	"command.terminal.generateCommand.title": "Kilo Code: Generovat příkaz terminálu",
 	"command.acceptInput.title": "Přijmout vstup/návrh",
 	"command.generateCommitMessage.title": "Vygenerovat zprávu commitu pomocí Kilo",
 	"command.profile.title": "Profil",

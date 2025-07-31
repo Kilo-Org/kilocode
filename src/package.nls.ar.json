@@ -24,6 +24,7 @@
 	"command.terminal.addToContext.title": "إضافة ناتج الطرفية إلى السياق الحالي",
 	"command.terminal.fixCommand.title": "صلح هذا الأمر",
 	"command.terminal.explainCommand.title": "شرح هذا الأمر",
+	"command.terminal.generateCommand.title": "Kilo Code: إنشاء أمر الطرفية",
 	"command.acceptInput.title": "اعتماد الإدخال أو الاقتراح",
 	"command.generateCommitMessage.title": "توليد رسالة الاعتماد بواسطة Kilo",
 	"command.profile.title": "الملف الشخصي",

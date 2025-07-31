@@ -1478,6 +1478,7 @@ export class ClineProvider
 			customSupportPrompts,
 			enhancementApiConfigId,
 			commitMessageApiConfigId, // kilocode_change
+			terminalCommandApiConfigId, // kilocode_change
 			autoApprovalEnabled,
 			customModes,
 			experiments,
@@ -1588,6 +1589,7 @@ export class ClineProvider
 			customSupportPrompts: customSupportPrompts ?? {},
 			enhancementApiConfigId,
 			commitMessageApiConfigId, // kilocode_change
+			terminalCommandApiConfigId, // kilocode_change
 			autoApprovalEnabled: autoApprovalEnabled ?? true,
 			customModes,
 			experiments: experiments ?? experimentDefault,
@@ -1770,6 +1772,7 @@ export class ClineProvider
 			customSupportPrompts: stateValues.customSupportPrompts ?? {},
 			enhancementApiConfigId: stateValues.enhancementApiConfigId,
 			commitMessageApiConfigId: stateValues.commitMessageApiConfigId, // kilocode_change
+			terminalCommandApiConfigId: stateValues.terminalCommandApiConfigId, // kilocode_change
 			ghostServiceSettings: stateValues.ghostServiceSettings ?? {}, // kilocode_change
 			experiments: stateValues.experiments ?? experimentDefault,
 			autoApprovalEnabled: stateValues.autoApprovalEnabled ?? true,

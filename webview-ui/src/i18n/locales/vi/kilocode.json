@@ -44,6 +44,16 @@
 			"testButton": "Kiểm tra thông báo",
 			"testTitle": "Kilo Code",
 			"testMessage": "Đây là thông báo kiểm tra từ Kilo Code."
+		},
+		"terminal": {
+			"commandGenerator": {
+				"provider": "Nhà Cung Cấp Trình Tạo Lệnh Dòng Lệnh",
+				"apiConfigId": {
+					"description": "Chọn cấu hình API nào để sử dụng cho việc tạo lệnh terminal. Để là 'Sử Dụng Cấu Hình Hiện Tại' để dùng cài đặt mặc định của bạn.",
+					"current": "Sử dụng Cấu hình Hiện tại",
+					"label": "Cấu hình API"
+				}
+			}
 		}
 	},
 	"chat": {

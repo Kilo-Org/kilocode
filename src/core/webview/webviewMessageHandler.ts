@@ -1373,11 +1373,19 @@ export const webviewMessageHandler = async (
 			await updateGlobalState("enhancementApiConfigId", message.text)
 			await provider.postStateToWebview()
 			break
-		// kilocode_change start
+		// kilocode_change start - commitMessageApiConfigId
 		case "commitMessageApiConfigId":
 			await updateGlobalState("commitMessageApiConfigId", message.text)
 			await provider.postStateToWebview()
 			break
+		// kilocode_change end - commitMessageApiConfigId
+		// kilocode_change start - terminalCommandApiConfigId
+		case "terminalCommandApiConfigId":
+			await updateGlobalState("terminalCommandApiConfigId", message.text)
+			await provider.postStateToWebview()
+			break
+		// kilocode_change end - terminalCommandApiConfigId
+		// kilocode_change start - ghostServiceSettings
 		case "ghostServiceSettings":
 			if (!message.values) {
 				return
@@ -1388,7 +1396,7 @@ export const webviewMessageHandler = async (
 			await provider.postStateToWebview()
 			vscode.commands.executeCommand("kilo-code.ghost.reload")
 			break
-		// kilocode_change end
+		// kilocode_change end - ghostServiceSettings
 		case "condensingApiConfigId":
 			await updateGlobalState("condensingApiConfigId", message.text)
 			await provider.postStateToWebview()

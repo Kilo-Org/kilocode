@@ -44,6 +44,16 @@
 			"testButton": "Provar notificació",
 			"testTitle": "Kilo Code",
 			"testMessage": "Aquesta és una notificació de prova de Kilo Code."
+		},
+		"terminal": {
+			"commandGenerator": {
+				"provider": "Proveïdor de Generador de Comandes de Terminal",
+				"apiConfigId": {
+					"label": "Configuració de l'API",
+					"description": "Seleccioneu quina configuració d'API voleu utilitzar per generar ordres de terminal. Deixeu-ho com a 'Utilitza la configuració actual' per utilitzar la configuració predeterminada.",
+					"current": "Utilitza la configuració actual"
+				}
+			}
 		}
 	},
 	"profile": {

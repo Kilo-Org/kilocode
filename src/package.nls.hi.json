@@ -13,6 +13,7 @@
 	"command.terminal.addToContext.title": "टर्मिनल सामग्री को संदर्भ में जोड़ें",
 	"command.terminal.fixCommand.title": "यह कमांड ठीक करें",
 	"command.terminal.explainCommand.title": "यह कमांड समझाएं",
+	"command.terminal.generateCommand.title": "Kilo Code: टर्मिनल कमांड जेनरेट करें",
 	"command.acceptInput.title": "इनपुट/सुझाव स्वीकारें",
 	"command.generateCommitMessage.title": "Kilo के साथ कमिट संदेश जेनरेट करें",
 	"views.activitybar.title": "Kilo Code",

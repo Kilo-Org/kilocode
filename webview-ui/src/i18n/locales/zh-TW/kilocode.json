@@ -44,6 +44,16 @@
 				"title": "Kilo Code - OpenRouter 提供者路由",
 				"description": "Kilo Code 將請求路由到您模型的最佳可用提供者。預設情況下，請求會在頂級提供者之間進行負載平衡，以最大化正常執行時間。但是，您可以選擇要用於此模型的特定提供者。"
 			}
+		},
+		"terminal": {
+			"commandGenerator": {
+				"apiConfigId": {
+					"label": "API 配置",
+					"description": "选择用于生成终端命令的API配置。选择\"使用当前配置\"则使用您的默认设置。",
+					"current": "使用当前配置"
+				},
+				"provider": "终端命令生成器提供程序"
+			}
 		}
 	},
 	"chat": {

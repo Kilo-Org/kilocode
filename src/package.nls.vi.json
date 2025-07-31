@@ -13,6 +13,7 @@
 	"command.terminal.addToContext.title": "Thêm Nội Dung Terminal vào Ngữ Cảnh",
 	"command.terminal.fixCommand.title": "Sửa Lệnh Này",
 	"command.terminal.explainCommand.title": "Giải Thích Lệnh Này",
+	"command.terminal.generateCommand.title": "Kilo Code: Tạo Lệnh Terminal",
 	"command.acceptInput.title": "Chấp Nhận Đầu Vào/Gợi Ý",
 	"command.generateCommitMessage.title": "Tạo Thông Điệp Commit với Kilo",
 	"views.activitybar.title": "Kilo Code",

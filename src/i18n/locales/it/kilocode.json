@@ -106,5 +106,20 @@
 			"disableCopilot": "Disabilita Copilot",
 			"disableInlineAssist": "Disabilita Assistenza in Linea"
 		}
+	},
+	"terminalCommandGenerator": {
+		"inputPlaceholder": "ad es., terminare il processo in esecuzione sulla porta 3001, trovare file di grandi dimensioni, ecc.",
+		"inputPrompt": "Kilo: Descrivi il comando che vuoi generare",
+		"noActiveTerminal": "Kilo: Nessun terminale attivo trovato. Apri prima un terminale.",
+		"generatingProgress": "Kilo: Generazione del comando del terminale in corso...",
+		"commandGenerated": "Kilo: Comando generato: {{command}}",
+		"generationFailed": "Kilo: Impossibile generare il comando: {{error}}",
+		"warningDialog": {
+			"title": "Avviso di Sicurezza del Terminale",
+			"okButton": "Ho Capito",
+			"message": "Controlla attentamente tutti i comandi generati prima di eseguirli. Le azioni nel terminale non possono sempre essere annullate—eseguire comandi non verificati può causare una perdita di dati irreversibile o danni al sistema. Esamina e comprendi completamente il comando prima di procedere!",
+			"cancelButton": "Annulla"
+		},
+		"tipMessage": "Kilo: Premi {{shortcut}} per generare comandi del terminale"
 	}
 }

@@ -12,6 +12,7 @@ import { ExtensionMessage } from "@roo/ExtensionMessage"
 import { cn } from "@/lib/utils"
 import { Slider } from "@/components/ui"
 
+import { TerminalCommandGeneratorSettings } from "./TerminalCommandGeneratorSettings" // kilocode_change
 import { SetCachedStateField } from "./types"
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
@@ -28,6 +29,7 @@ type TerminalSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	terminalZshP10k?: boolean
 	terminalZdotdir?: boolean
 	terminalCompressProgressBar?: boolean
+	terminalCommandApiConfigId?: string // kilocode_change
 	setCachedStateField: SetCachedStateField<
 		| "terminalOutputLineLimit"
 		| "terminalOutputCharacterLimit"
@@ -40,6 +42,7 @@ type TerminalSettingsProps = HTMLAttributes<HTMLDivElement> & {
 		| "terminalZshP10k"
 		| "terminalZdotdir"
 		| "terminalCompressProgressBar"
+		| "terminalCommandApiConfigId" // kilocode_change
 	>
 }
 
@@ -55,6 +58,7 @@ export const TerminalSettings = ({
 	terminalZshP10k,
 	terminalZdotdir,
 	terminalCompressProgressBar,
+	terminalCommandApiConfigId, // kilocode_change
 	setCachedStateField,
 	className,
 	...props
@@ -186,7 +190,6 @@ export const TerminalSettings = ({
 						</div>
 					</div>
 				</div>
-
 				{/* Advanced Settings */}
 				<div className="flex flex-col gap-3">
 					<div className="flex flex-col gap-1">
@@ -437,6 +440,12 @@ export const TerminalSettings = ({
 						)}
 					</div>
 				</div>
+				{/* kilocode_change start */}
+				<TerminalCommandGeneratorSettings
+					terminalCommandApiConfigId={terminalCommandApiConfigId}
+					setCachedStateField={setCachedStateField}
+				/>
+				{/* kilocode_change end */}
 			</Section>
 		</div>
 	)

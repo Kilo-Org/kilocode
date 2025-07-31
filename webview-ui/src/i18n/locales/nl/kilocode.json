@@ -44,6 +44,16 @@
 			"testButton": "Testmelding",
 			"testTitle": "Kilo Code",
 			"testMessage": "Dit is een testmelding van Kilo Code."
+		},
+		"terminal": {
+			"commandGenerator": {
+				"provider": "Terminal Opdrachtregel Generator Provider",
+				"apiConfigId": {
+					"label": "API Configuratie",
+					"description": "Selecteer welke API-configuratie u wilt gebruiken voor het genereren van terminalopdrachten. Laat dit op 'Gebruik huidige configuratie' staan om uw standaardinstellingen te gebruiken.",
+					"current": "Gebruik huidige configuratie"
+				}
+			}
 		}
 	},
 	"chat": {

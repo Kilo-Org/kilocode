@@ -151,6 +151,7 @@ export interface WebviewMessage {
 		| "systemPrompt"
 		| "enhancementApiConfigId"
 		| "commitMessageApiConfigId" // kilocode_change
+		| "terminalCommandApiConfigId" // kilocode_change
 		| "ghostServiceSettings" // kilocode_change
 		| "updateExperimental"
 		| "autoApprovalEnabled"

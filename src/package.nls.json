@@ -24,6 +24,7 @@
 	"command.terminal.addToContext.title": "Add Terminal Content to Context",
 	"command.terminal.fixCommand.title": "Fix This Command",
 	"command.terminal.explainCommand.title": "Explain This Command",
+	"command.terminal.generateCommand.title": "Kilo Code: Generate Terminal Command",
 	"command.acceptInput.title": "Accept Input/Suggestion",
 	"command.generateCommitMessage.title": "Generate Commit Message with Kilo",
 	"command.profile.title": "Profile",

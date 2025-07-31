@@ -13,6 +13,7 @@
 	"command.terminal.addToContext.title": "터미널 내용을 컨텍스트에 추가",
 	"command.terminal.fixCommand.title": "이 명령어 수정",
 	"command.terminal.explainCommand.title": "이 명령어 설명",
+	"command.terminal.generateCommand.title": "Kilo Code: 터미널 명령어 생성",
 	"command.acceptInput.title": "입력/제안 수락",
 	"command.generateCommitMessage.title": "Kilo로 커밋 메시지 생성",
 	"views.activitybar.title": "Kilo Code",

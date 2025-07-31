@@ -44,6 +44,16 @@
 			"testButton": "Otestovat oznámení",
 			"testTitle": "Kilo Code",
 			"testMessage": "Toto je testovací oznámení z Kilo Code."
+		},
+		"terminal": {
+			"commandGenerator": {
+				"apiConfigId": {
+					"current": "Použít aktuální konfiguraci",
+					"label": "Konfigurace API",
+					"description": "Vyberte, kterou konfiguraci API chcete použít pro generování příkazů do terminálu. Pokud chcete použít výchozí nastavení, ponechte 'Použít aktuální konfiguraci'."
+				},
+				"provider": "Poskytovatel generátoru terminálových příkazů"
+			}
 		}
 	},
 	"chat": {
