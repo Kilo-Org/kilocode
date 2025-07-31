@@ -4,7 +4,6 @@ import { t } from "../../i18n"
 
 /**
  * Service that displays welcome messages in newly opened terminals
- * by sending echo commands directly to the terminal
  */
 export class TerminalWelcomeService {
 	private disposables: vscode.Disposable[] = []
@@ -22,7 +21,6 @@ export class TerminalWelcomeService {
 		const onDidOpenTerminal = vscode.window.onDidOpenTerminal((terminal) => {
 			this.handleTerminalOpened(terminal)
 		})
-
 		this.disposables.push(onDidOpenTerminal)
 
 		vscode.window.terminals.forEach((terminal) => {
@@ -31,34 +29,18 @@ export class TerminalWelcomeService {
 	}
 
 	private handleTerminalOpened(terminal: vscode.Terminal): void {
-		if (this.shownTerminals.has(terminal)) {
+		// Don't show the tip if it's a Kilo terminal or they've seen it before
+		if (this.shownTerminals.has(terminal) || terminal.name !== "Kilo Code") {
 			return
 		}
-
-		if (this.isExtensionTerminal(terminal)) {
-			return
-		}
-
 		this.shownTerminals.add(terminal)
-
-		setTimeout(() => {
-			this.showWelcomeMessage(terminal)
-		}, 500)
+		setTimeout(() => this.showWelcomeMessage(terminal), 500)
 
 		const onDidCloseTerminal = vscode.window.onDidCloseTerminal((closedTerminal) => {
-			if (closedTerminal === terminal) {
-				this.shownTerminals.delete(terminal)
-				onDidCloseTerminal.dispose()
-			}
+			this.shownTerminals.delete(terminal)
+			onDidCloseTerminal.dispose()
 		})
-
 		this.disposables.push(onDidCloseTerminal)
-	}
-
-	private isExtensionTerminal(terminal: vscode.Terminal): boolean {
-		const name = terminal.name.toLowerCase()
-		const extensionTerminalNames = ["kilo code", "kilocode", "extension host", "task", "git", "npm", "yarn", "pnpm"]
-		return extensionTerminalNames.some((extName) => name.includes(extName))
 	}
 
 	private showWelcomeMessage(terminal: vscode.Terminal): void {

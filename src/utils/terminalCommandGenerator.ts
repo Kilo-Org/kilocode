@@ -106,7 +106,12 @@ async function executeCommandGeneration(
 	)
 }
 
-async function buildTerminalContext(activeTerminal: vscode.Terminal) {
+async function buildTerminalContext(activeTerminal: vscode.Terminal): Promise<{
+	operatingSystem: string
+	currentDirectory: string
+	shell: string
+	terminalHistory: string
+}> {
 	const terminalHistory = await getTerminalHistory()
 
 	return {
