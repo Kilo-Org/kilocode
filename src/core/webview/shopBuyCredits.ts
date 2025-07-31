@@ -4,6 +4,7 @@ import axios from "axios"
 import { WebviewMessage } from "../../shared/WebviewMessage"
 import { ClineProvider } from "./ClineProvider"
 import * as vscode from "vscode"
+import { getKiloBaseUriFromToken } from "../../utils/kilocode-token"
 
 export async function shopBuyCredits(provider: ClineProvider, message: WebviewMessage) {
 	console.log("shopBuyCredits message received", message)
@@ -20,7 +21,7 @@ export async function shopBuyCredits(provider: ClineProvider, message: WebviewMe
 		const source = uiKind === "Web" ? "web" : uriScheme
 
 		const response = await axios.post(
-			`https://kilocode.ai/payments/topup?origin=extension&source=${source}&amount=${credits}`,
+			`${getKiloBaseUriFromToken(kilocodeToken)}/payments/topup?origin=extension&source=${source}&amount=${credits}`,
 			{},
 			{
 				headers: {
