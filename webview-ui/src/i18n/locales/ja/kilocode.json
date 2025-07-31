@@ -4,7 +4,7 @@
 		"introText1": "Kilo Codeは無料のオープンソースAIコーディングエージェントです。",
 		"introText2": "Claude 4 Sonnet、Gemini 2.5 Pro、GPT-4.1、その他450以上の最新のAIモデルと連携します。",
 		"introText3": "無料アカウントを作成して、任意のAIモデルで使用できる$20のトークンを取得しましょう。",
-		"ctaButton": "無料アカウントを作成",
+		"ctaButton": "始める",
 		"manualModeButton": "自分のAPIキーを使う",
 		"alreadySignedUp": "すでに登録済みですか？",
 		"loginText": "こちらからログイン"
