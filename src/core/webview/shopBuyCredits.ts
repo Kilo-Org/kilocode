@@ -7,7 +7,6 @@ import * as vscode from "vscode"
 import { getKiloBaseUriFromToken } from "../../utils/kilocode-token"
 
 export async function shopBuyCredits(provider: ClineProvider, message: WebviewMessage) {
-	console.log("shopBuyCredits message received", message)
 	try {
 		const { apiConfiguration } = await provider.getState()
 		const kilocodeToken = apiConfiguration?.kilocodeToken
