@@ -218,6 +218,7 @@ export interface WebviewMessage {
 		| "setHistoryPreviewCollapsed"
 		| "clearUsageData" // kilocode_change
 		| "showTaskTimeline" // kilocode_change
+		| "hideCostBelowThreshold" // kilocode_change
 		| "toggleTaskFavorite" // kilocode_change
 		| "fixMermaidSyntax" // kilocode_change
 		| "mermaidFixResponse" // kilocode_change
