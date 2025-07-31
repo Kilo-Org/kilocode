@@ -2,4 +2,4 @@
 "kilo-code": patch
 ---
 
-Simplify the Wellcome/Login screen
+Simplify the Welcome/Login screen
