@@ -5,6 +5,8 @@ import { WebviewMessage } from "../../shared/WebviewMessage"
 import { ClineProvider } from "./ClineProvider"
 import * as vscode from "vscode"
 import { getKiloBaseUriFromToken } from "../../utils/kilocode-token"
+import { TelemetryService } from "@roo-code/telemetry"
+import { TelemetryEventName } from "@roo-code/types"
 
 export async function shopBuyCredits(provider: ClineProvider, message: WebviewMessage) {
 	try {
@@ -36,6 +38,8 @@ export async function shopBuyCredits(provider: ClineProvider, message: WebviewMe
 			return
 		}
 		await vscode.env.openExternal(vscode.Uri.parse(response.headers.location))
+
+		TelemetryService.instance.captureEvent(TelemetryEventName.BUY_CREDITS, { credits })
 	} catch (error: any) {
 		// Handle axios errors that might include redirect information
 		if (error.response?.status === 303 && error.response?.headers?.location) {
@@ -52,5 +56,9 @@ export async function shopBuyCredits(provider: ClineProvider, message: WebviewMe
 		const errorMessage = error.response?.data?.message || error.message || "Failed to initiate payment"
 		provider.log(`Error redirecting to payment page: ${errorMessage}`)
 		vscode.window.showErrorMessage(`Payment error: ${errorMessage}`)
+
+		if (error instanceof Error) {
+			TelemetryService.instance.captureException(error, { context: "shopBuyCredits" })
+		}
 	}
 }
