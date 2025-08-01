@@ -83,7 +83,7 @@ export const ModelInfoView = ({
 		!kiloCodeTrustsThePricing && selectedModelId && (
 			<span className="font-medium">
 				<a href={`https://openrouter.ai/${selectedModelId}`} className="text-vscode-link">
-					Discover model pricing and capabilities
+					{t("kilocode:pricing.discoverModelPricing")}
 				</a>
 			</span>
 		),
