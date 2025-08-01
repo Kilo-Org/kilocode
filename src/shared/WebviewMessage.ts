@@ -197,6 +197,7 @@ export interface WebviewMessage {
 		| "fetchBalanceDataRequest" // kilocode_change
 		| "shopBuyCredits" // kilocode_change
 		| "balanceDataResponse" // kilocode_change
+		| "updateProfileData" // kilocode_change
 		| "condense" // kilocode_change
 		| "toggleWorkflow" // kilocode_change
 		| "refreshRules" // kilocode_change

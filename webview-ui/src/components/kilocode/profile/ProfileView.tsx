@@ -58,6 +58,13 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 					setBalance(null)
 				}
 				setIsLoadingBalance(false)
+			} else if (message.type === "updateProfileData") {
+				vscode.postMessage({
+					type: "fetchProfileDataRequest",
+				})
+				vscode.postMessage({
+					type: "fetchBalanceDataRequest",
+				})
 			}
 		}
 
