@@ -13,6 +13,11 @@
 		"addCredit": "크레딧 추가",
 		"lowBalance": "Kilo Code 잔액이 부족합니다"
 	},
+	"pricing": {
+		"costUnknown": "비용 알 수 없음",
+		"costUnknownDescription": "API 제공자가 비용 데이터를 제공하지 않았거나 요청이 취소되었습니다.",
+		"discoverModelPricing": "모델 가격 및 기능 알아보기"
+	},
 	"notifications": {
 		"toolRequest": "도구 요청 승인 대기 중",
 		"browserAction": "브라우저 작업 승인 대기 중",
@@ -44,6 +49,16 @@
 			"testButton": "알림 테스트",
 			"testTitle": "Kilo Code",
 			"testMessage": "이것은 Kilo Code의 테스트 알림입니다."
+		},
+		"terminal": {
+			"commandGenerator": {
+				"provider": "터미널 명령어 생성기 제공자",
+				"apiConfigId": {
+					"description": "터미널 명령어 생성에 사용할 API 구성을 선택하세요. 기본 설정을 사용하려면 '현재 구성 사용'으로 두세요.",
+					"label": "API 구성",
+					"current": "현재 설정 사용"
+				}
+			}
 		}
 	},
 	"chat": {

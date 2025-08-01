@@ -106,5 +106,20 @@
 			"disableCopilot": "Wyłącz Copilota",
 			"disableInlineAssist": "Wyłącz Asystenta Inline"
 		}
+	},
+	"terminalCommandGenerator": {
+		"inputPrompt": "Kilo: Opisz polecenie, które chcesz wygenerować",
+		"inputPlaceholder": "np. zakończ proces działający na porcie 3001, znajdź duże pliki, itp.",
+		"generatingProgress": "Kilo: Generowanie polecenia terminala...",
+		"generationFailed": "Kilo: Nie udało się wygenerować polecenia: {{error}}",
+		"commandGenerated": "Kilo: Wygenerowane polecenie: {{command}}",
+		"noActiveTerminal": "Kilo: Nie znaleziono aktywnego terminala. Proszę najpierw otworzyć terminal.",
+		"warningDialog": {
+			"title": "Ostrzeżenie o Bezpieczeństwie Terminala",
+			"okButton": "Rozumiem",
+			"message": "Dokładnie sprawdzaj wszystkie wygenerowane polecenia przed ich uruchomieniem. Działań wykonanych w terminalu nie zawsze można cofnąć – uruchamianie niezweryfikowanych poleceń może spowodować nieodwracalną utratę danych lub uszkodzenie systemu. Przejrzyj i zrozum polecenie w całości zanim przejdziesz dalej!",
+			"cancelButton": "Anuluj"
+		},
+		"tipMessage": "Kilo: Naciśnij {{shortcut}}, aby wygenerować polecenia terminala"
 	}
 }

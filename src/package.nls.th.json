@@ -23,6 +23,7 @@
 	"command.terminal.addToContext.title": "เพิ่มเนื้อหาเทอร์มินัลไปยังบริบท",
 	"command.terminal.fixCommand.title": "แก้ไขคำสั่งนี้",
 	"command.terminal.explainCommand.title": "อธิบายคำสั่งนี้",
+	"command.terminal.generateCommand.title": "Kilo Code: สร้างคำสั่ง Terminal",
 	"command.acceptInput.title": "ยอมรับอินพุต/คำแนะนำ",
 	"command.generateCommitMessage.title": "สร้างข้อความ Commit ด้วย Kilo",
 	"command.profile.title": "โปรไฟล์",

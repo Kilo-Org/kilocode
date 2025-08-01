@@ -79,6 +79,8 @@ const baseProviderSettingsSchema = z.object({
 	modelMaxTokens: z.number().optional(),
 	modelMaxThinkingTokens: z.number().optional(),
 
+	morphApiKey: z.string().optional(), // kilocode_change: Morph fast apply
+
 	// // kilocode_change start
 	// kilocodeToken: z.string().optional(),
 	// kilocodeModel: z.string().optional(),

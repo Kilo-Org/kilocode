@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.70.2",
+	"version": "4.71.0",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -219,7 +219,12 @@
 			{
 				"command": "kilo-code.terminalExplainCommand",
 				"title": "%command.terminal.explainCommand.title%",
-				"category": "%extension.displayName%"
+				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.generateTerminalCommand",
+				"title": "%command.terminal.generateCommand.title%",
+				"category": "%configuration.title%"
 			},
 			{
 				"command": "kilo-code.setCustomStoragePath",
@@ -347,6 +352,11 @@
 				"key": "ctrl+i",
 				"mac": "cmd+i",
 				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.enableQuickInlineTaskKeybinding && github.copilot.completions.enabled"
+			},
+			{
+				"command": "kilo-code.generateTerminalCommand",
+				"key": "ctrl+shift+g",
+				"mac": "cmd+shift+g"
 			}
 		],
 		"menus": {

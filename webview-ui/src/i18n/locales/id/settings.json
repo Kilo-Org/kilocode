@@ -695,6 +695,13 @@
 			"name": "Aktifkan edit file bersamaan",
 			"description": "Ketika diaktifkan, Kilo Code dapat mengedit beberapa file dalam satu permintaan. Ketika dinonaktifkan, Kilo Code harus mengedit file satu per satu. Menonaktifkan ini dapat membantu saat bekerja dengan model yang kurang mampu atau ketika kamu ingin kontrol lebih terhadap modifikasi file."
 		},
+		"MORPH_FAST_APPLY": {
+			"name": "Aktifkan Morph Fast Apply",
+			"description": "Ketika diaktifkan, Kilo Code dapat mengedit file menggunakan Morph Fast Apply.",
+			"apiKey": "Kunci API Morph (opsional)",
+			"placeholder": "Masukkan kunci API Morph Anda (opsional)",
+			"warning": "Jika Anda tidak mengonfigurasi kunci API Morph, Anda masih dapat menggunakan Fast Apply dengan Kilo Code atau OpenRouter. Akun Anda akan ditagih untuk penggunaan model, ini saat ini tidak ditampilkan di UI ekstensi."
+		},
 		"INLINE_ASSIST": {
 			"name": "Bantuan Inline",
 			"description": "Aktifkan fitur Inline Assist untuk saran dan perbaikan kode cepat langsung di editor Anda. Termasuk Quick Inline Task (Cmd+I) untuk perubahan terarah dan Auto Inline Task untuk perbaikan kontekstual."

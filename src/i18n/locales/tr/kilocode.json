@@ -106,5 +106,20 @@
 			"disableCopilot": "Copilot'u Devre Dışı Bırak",
 			"disableInlineAssist": "Satır İçi Yardım'ı Devre Dışı Bırak"
 		}
+	},
+	"terminalCommandGenerator": {
+		"noActiveTerminal": "Kilo: Aktif terminal bulunamadı. Lütfen önce bir terminal açın.",
+		"inputPrompt": "Kilo: Oluşturmak istediğiniz komutu açıklayın",
+		"inputPlaceholder": "örn., 3001 portunda çalışan işlemi sonlandır, büyük dosyaları bul, vb.",
+		"generatingProgress": "Kilo: Uçbirim komutu oluşturuluyor...",
+		"commandGenerated": "Kilo: Oluşturulan komut: {{command}}",
+		"generationFailed": "Kilo: Komut oluşturulamadı: {{error}}",
+		"warningDialog": {
+			"title": "Uçbirim Güvenlik Uyarısı",
+			"okButton": "Anlıyorum",
+			"message": "Oluşturulan tüm komutları çalıştırmadan önce iki kez kontrol edin. Terminal eylemleri her zaman geri alınamaz— doğrulanmamış komutları çalıştırmak geri döndürülemez veri kaybına veya sistem hasarına neden olabilir. İlerlemeden önce komutu tamamen inceleyin ve anlayın!",
+			"cancelButton": "İptal"
+		},
+		"tipMessage": "Kilo: Terminal komutları oluşturmak için {{shortcut}} tuşuna basın"
 	}
 }

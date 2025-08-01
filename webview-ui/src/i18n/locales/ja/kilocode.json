@@ -13,6 +13,11 @@
 		"addCredit": "クレジットを追加",
 		"lowBalance": "Kilo Codeの残高が少なくなっています"
 	},
+	"pricing": {
+		"costUnknown": "コスト不明",
+		"costUnknownDescription": "APIプロバイダーがコストデータを提供しなかったか、リクエストがキャンセルされました。",
+		"discoverModelPricing": "モデルの価格と機能を確認"
+	},
 	"notifications": {
 		"toolRequest": "ツールのリクエストが承認待ちです",
 		"browserAction": "ブラウザのアクションが承認待ちです",
@@ -44,6 +49,16 @@
 			"testButton": "通知をテスト",
 			"testTitle": "Kilo Code",
 			"testMessage": "これはKilo Codeからのテスト通知です。"
+		},
+		"terminal": {
+			"commandGenerator": {
+				"apiConfigId": {
+					"label": "API設定",
+					"description": "ターミナルコマンドの生成に使用するAPI設定を選択してください。デフォルト設定を使用する場合は「現在の設定を使用」のままにしてください。",
+					"current": "現在の設定を使用"
+				},
+				"provider": "ターミナルコマンドジェネレータープロバイダー"
+			}
 		}
 	},
 	"chat": {

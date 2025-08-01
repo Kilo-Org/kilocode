@@ -43,6 +43,7 @@ type SupportPromptType =
 	| "TERMINAL_ADD_TO_CONTEXT"
 	| "TERMINAL_FIX"
 	| "TERMINAL_EXPLAIN"
+	| "TERMINAL_GENERATE" // kilocode_change
 	| "NEW_TASK"
 	| "COMMIT_MESSAGE" // kilocode_change
 
@@ -171,6 +172,22 @@ Please provide:
 1. What the command does
 2. Explanation of each part/flag
 3. Expected output and behavior`,
+	},
+	TERMINAL_GENERATE: {
+		template: `Generate a terminal command based on this description: "\${userInput}"
+
+Context:
+- Operating System: \${operatingSystem}
+- Current Directory: \${currentDirectory}
+- Shell: \${shell}
+
+Requirements:
+1. Generate ONLY the command, no explanations or formatting
+2. Ensure the command is safe and appropriate
+3. Use common command-line tools and best practices
+4. Consider the current working directory context
+5. Return only the raw command that can be executed directly
+`,
 	},
 	NEW_TASK: {
 		template: `\${userInput}`,

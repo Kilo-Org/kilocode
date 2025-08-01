@@ -674,6 +674,13 @@
 			"name": "동시 파일 편집 활성화",
 			"description": "활성화하면 Kilo Code가 단일 요청으로 여러 파일을 편집할 수 있습니다. 비활성화하면 Kilo Code는 파일을 하나씩 편집해야 합니다. 이 기능을 비활성화하면 덜 강력한 모델로 작업하거나 파일 수정에 대한 더 많은 제어가 필요할 때 도움이 됩니다."
 		},
+		"MORPH_FAST_APPLY": {
+			"name": "Morph Fast Apply 활성화",
+			"description": "활성화하면 Kilo Code가 Morph Fast Apply를 사용하여 파일을 편집할 수 있습니다.",
+			"apiKey": "Morph API 키 (선택사항)",
+			"placeholder": "Morph API 키를 입력하세요 (선택사항)",
+			"warning": "Morph API 키를 구성하지 않으면 Kilo Code 또는 OpenRouter로 Fast Apply를 계속 사용할 수 있습니다. 계정에 모델 사용량에 대한 요금이 청구되며, 이는 현재 확장 프로그램 UI에 표시되지 않습니다."
+		},
 		"INLINE_ASSIST": {
 			"name": "인라인 어시스트",
 			"description": "에디터에서 직접 빠른 코드 제안 및 개선을 위해 인라인 어시스트 기능을 활성화하세요. 대상 변경을 위한 빠른 인라인 태스크(Cmd+I)와 상황에 맞는 개선을 위한 자동 인라인 태스크가 포함되어 있습니다."

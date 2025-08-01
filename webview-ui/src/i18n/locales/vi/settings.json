@@ -674,6 +674,13 @@
 			"name": "Bật chỉnh sửa tệp đồng thời",
 			"description": "Khi được bật, Kilo Code có thể chỉnh sửa nhiều tệp trong một yêu cầu duy nhất. Khi bị tắt, Kilo Code phải chỉnh sửa từng tệp một. Tắt tính năng này có thể hữu ích khi làm việc với các mô hình kém khả năng hơn hoặc khi bạn muốn kiểm soát nhiều hơn đối với các thay đổi tệp."
 		},
+		"MORPH_FAST_APPLY": {
+			"name": "Bật Morph Fast Apply",
+			"description": "Khi được bật, Kilo Code có thể chỉnh sửa tệp bằng Morph Fast Apply.",
+			"apiKey": "Khóa API Morph (tùy chọn)",
+			"placeholder": "Nhập khóa API Morph của bạn (tùy chọn)",
+			"warning": "Nếu bạn không cấu hình khóa API Morph, bạn vẫn có thể sử dụng Fast Apply với Kilo Code hoặc OpenRouter. Tài khoản của bạn sẽ bị tính phí cho việc sử dụng mô hình, điều này hiện không được hiển thị trong giao diện tiện ích mở rộng."
+		},
 		"INLINE_ASSIST": {
 			"name": "Trợ lý Nội dòng",
 			"description": "Bật tính năng Trợ giúp nội tuyến (Inline Assist) để nhận gợi ý và cải tiến mã nhanh chóng ngay trong trình soạn thảo của bạn. Bao gồm Tác vụ nội tuyến nhanh (Cmd+I) cho những thay đổi có mục tiêu và Tác vụ nội tuyến tự động cho những cải tiến theo ngữ cảnh."

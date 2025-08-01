@@ -13,6 +13,7 @@
 	"command.terminal.addToContext.title": "Terminal İçeriğini Bağlama Ekle",
 	"command.terminal.fixCommand.title": "Bu Komutu Düzelt",
 	"command.terminal.explainCommand.title": "Bu Komutu Açıkla",
+	"command.terminal.generateCommand.title": "Kilo Code: Terminal Komutu Oluştur",
 	"command.acceptInput.title": "Girişi/Öneriyi Kabul Et",
 	"command.generateCommitMessage.title": "Kilo ile Commit Mesajı Oluştur",
 	"views.activitybar.title": "Kilo Code",

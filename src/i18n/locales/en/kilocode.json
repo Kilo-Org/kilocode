@@ -103,5 +103,20 @@
 			"disableCopilot": "Disable Copilot",
 			"disableInlineAssist": "Disable Inline Assist"
 		}
+	},
+	"terminalCommandGenerator": {
+		"tipMessage": "Kilo: Press {{shortcut}} to generate terminal commands",
+		"inputPrompt": "Kilo: Describe the command you want to generate",
+		"inputPlaceholder": "e.g., kill the process running on port 3001, find large files, etc",
+		"noActiveTerminal": "Kilo: No active terminal found. Please open a terminal first.",
+		"generatingProgress": "Kilo: Generating terminal command...",
+		"commandGenerated": "Kilo: Generated command: {{command}}",
+		"generationFailed": "Kilo: Failed to generate command: {{error}}",
+		"warningDialog": {
+			"title": "Terminal Safety Warning",
+			"message": "Double-check all generated commands before running them. Terminal actions cannot always be undone— running unverified commands can result in irreversible data loss or system damage. Review and understand the command completely before proceeding!",
+			"okButton": "I Understand",
+			"cancelButton": "Cancel"
+		}
 	}
 }

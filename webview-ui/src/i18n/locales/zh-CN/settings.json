@@ -679,6 +679,13 @@
 			"name": "启用并发文件编辑",
 			"description": "启用后 Kilo Code 可在单个请求中编辑多个文件。禁用后 Kilo Code 必须逐个编辑文件。禁用此功能有助于使用能力较弱的模型或需要更精确控制文件修改时。"
 		},
+		"MORPH_FAST_APPLY": {
+			"name": "启用 Morph Fast Apply",
+			"description": "启用后 Kilo Code 可使用 Morph Fast Apply 编辑文件。",
+			"apiKey": "Morph API 密钥（可选）",
+			"placeholder": "输入您的 Morph API 密钥（可选）",
+			"warning": "如果您未配置 Morph API 密钥，仍可通过 Kilo Code 或 OpenRouter 使用 Fast Apply。您的账户将承担模型使用费用，目前扩展界面中不会显示此费用。"
+		},
 		"INLINE_ASSIST": {
 			"name": "内嵌助手",
 			"description": "启用内联辅助功能，在您的编辑器中直接获取快速代码建议和改进。包括用于定向更改的快速内联任务（Cmd+I）和用于上下文相关改进的自动内联任务。"

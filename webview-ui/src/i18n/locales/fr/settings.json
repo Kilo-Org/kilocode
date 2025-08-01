@@ -673,6 +673,13 @@
 			"name": "Activer les éditions de fichiers concurrentes",
 			"description": "Lorsque cette option est activée, Kilo Code peut éditer plusieurs fichiers en une seule requête. Lorsqu'elle est désactivée, Kilo Code doit éditer les fichiers un par un. Désactiver cette option peut aider lorsque tu travailles avec des modèles moins capables ou lorsque tu veux plus de contrôle sur les modifications de fichiers."
 		},
+		"MORPH_FAST_APPLY": {
+			"name": "Activer Morph Fast Apply",
+			"description": "Lorsque cette option est activée, Kilo Code peut éditer des fichiers en utilisant Morph Fast Apply.",
+			"apiKey": "Clé API Morph (optionnel)",
+			"placeholder": "Entrez votre clé API Morph (optionnel)",
+			"warning": "Si vous ne configurez pas de clé API Morph, vous pouvez toujours utiliser Fast Apply avec Kilo Code ou OpenRouter. Votre compte sera facturé pour l'utilisation du modèle, ceci n'est actuellement pas affiché dans l'interface de l'extension."
+		},
 		"INLINE_ASSIST": {
 			"name": "Assistance en ligne",
 			"description": "Activez les fonctionnalités d'assistance en ligne pour des suggestions et améliorations de code rapides directement dans votre éditeur. Inclut la Tâche rapide en ligne (Cmd+I) pour des modifications ciblées et la Tâche automatique en ligne pour des améliorations contextuelles."

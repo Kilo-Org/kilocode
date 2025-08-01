@@ -24,6 +24,7 @@
 	"command.terminal.addToContext.title": "Tambahkan Konten Terminal ke Konteks",
 	"command.terminal.fixCommand.title": "Perbaiki Perintah Ini",
 	"command.terminal.explainCommand.title": "Jelaskan Perintah Ini",
+	"command.terminal.generateCommand.title": "Kilo Code: Buat Perintah Terminal",
 	"command.acceptInput.title": "Terima Input/Saran",
 	"configuration.title": "Kilo Code",
 	"commands.allowedCommands.description": "Perintah yang dapat dijalankan secara otomatis ketika 'Selalu setujui operasi eksekusi' diaktifkan",

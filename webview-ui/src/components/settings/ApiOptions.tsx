@@ -354,16 +354,24 @@ const ApiOptions = ({
 		if (!name) {
 			return undefined
 		}
-		
-		{/* kilocode_change start */}
+
+		// kilocode_change start
 		// Providers that don't have documentation pages yet
-		const excludedProviders = ["fireworks", "gemini-cli", "moonshot", "chutes", "cerebras", "virtual-quota-fallback", "litellm"]
+		const excludedProviders = [
+			"fireworks",
+			"gemini-cli",
+			"moonshot",
+			"chutes",
+			"cerebras",
+			"virtual-quota-fallback",
+			"litellm",
+		]
 
 		// Skip documentation link when the provider is excluded because documentation is not available
 		if (excludedProviders.includes(selectedProvider)) {
 			return undefined
 		}
-		{/* kilocode_change end */}
+		// kilocode_change end
 
 		// Get the URL slug - use custom mapping if available, otherwise use the provider key.
 		const slugs: Record<string, string> = {

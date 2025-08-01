@@ -1,7 +1,13 @@
 import * as vscode from "vscode"
 import * as os from "os"
 
-import type { ModeConfig, PromptComponent, CustomModePrompts, TodoItem } from "@roo-code/types"
+import type {
+	ModeConfig,
+	PromptComponent,
+	CustomModePrompts,
+	TodoItem,
+	Experiments, // kilocode_change
+} from "@roo-code/types"
 
 import type { SystemPromptSettings } from "./types"
 
@@ -28,6 +34,7 @@ import {
 	addCustomInstructions,
 	markdownFormattingSection,
 } from "./sections"
+import { getMorphInstructions } from "./tools/edit-file" // kilocode_change: Morph fast apply
 
 // Helper function to get prompt component, filtering out empty objects
 export function getPromptComponent(
@@ -109,7 +116,7 @@ ${getToolDescriptionsForMode(
 
 ${getToolUseGuidelinesSection(codeIndexManager)}
 
-${mcpServersSection}
+${getMorphInstructions(experiments) /* kilocode_change: newlines are returned by function */}${mcpServersSection}
 
 ${getCapabilitiesSection(cwd, supportsComputerUse, shouldIncludeMcp ? mcpHub : undefined, effectiveDiffStrategy, codeIndexManager)}
 
@@ -144,7 +151,7 @@ export const SYSTEM_PROMPT = async (
 	customModes?: ModeConfig[],
 	globalCustomInstructions?: string,
 	diffEnabled?: boolean,
-	experiments?: Record<string, boolean>,
+	experiments?: Experiments, // kilocode_change: type
 	enableMcpServerCreation?: boolean,
 	language?: string,
 	rooIgnoreInstructions?: string,
@@ -200,7 +207,7 @@ export const SYSTEM_PROMPT = async (
 
 ${fileCustomSystemPrompt}
 
-${customInstructions}`
+${getMorphInstructions(experiments) /* kilocode_change: Morph fast apply */}${customInstructions}`
 	}
 
 	// If diff is disabled, don't pass the diffStrategy

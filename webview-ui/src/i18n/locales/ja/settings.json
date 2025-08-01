@@ -674,6 +674,13 @@
 			"name": "同時ファイル編集を有効にする",
 			"description": "有効にすると、Kilo Codeは単一のリクエストで複数のファイルを編集できます。無効にすると、Kilo Codeはファイルを一つずつ編集する必要があります。これを無効にすることで、能力の低いモデルで作業する場合や、ファイル変更をより細かく制御したい場合に役立ちます。"
 		},
+		"MORPH_FAST_APPLY": {
+			"name": "Morph Fast Applyを有効にする",
+			"description": "有効にすると、Kilo CodeはMorph Fast Applyを使用してファイルを編集できます。",
+			"apiKey": "Morph APIキー（オプション）",
+			"placeholder": "Morph APIキーを入力してください（オプション）",
+			"warning": "Morph APIキーを設定しない場合でも、Kilo CodeまたはOpenRouterでFast Applyを使用できます。アカウントにモデル使用料金が請求されますが、現在この料金は拡張機能のUIには表示されません。"
+		},
 		"INLINE_ASSIST": {
 			"name": "インラインアシスト",
 			"description": "エディタ内で直接コードの提案や改善を行う、インラインアシスト機能を有効にします。ターゲットを絞った変更のためのクイックインラインタスク（Cmd+I）や、文脈に応じた改善のための自動インラインタスクが含まれます。"

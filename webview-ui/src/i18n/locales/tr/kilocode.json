@@ -13,6 +13,11 @@
 		"addCredit": "Kredi Ekle",
 		"lowBalance": "Kilo Code bakiyeniz düşük"
 	},
+	"pricing": {
+		"costUnknown": "maliyet bilinmiyor",
+		"costUnknownDescription": "API Sağlayıcısı herhangi bir maliyet verisi sağlamadı veya istek iptal edildi.",
+		"discoverModelPricing": "Model fiyatlandırması ve yeteneklerini keşfedin"
+	},
 	"notifications": {
 		"toolRequest": "Araç isteği onay bekliyor",
 		"browserAction": "Tarayıcı eylemi onay bekliyor",
@@ -44,6 +49,16 @@
 			"testButton": "Bildirimi test et",
 			"testTitle": "Kilo Code",
 			"testMessage": "Bu Kilo Code'dan bir test bildirimidir."
+		},
+		"terminal": {
+			"commandGenerator": {
+				"provider": "Terminal Komut Oluşturucu Sağlayıcısı",
+				"apiConfigId": {
+					"current": "Mevcut Yapılandırmayı Kullan",
+					"label": "API Yapılandırması",
+					"description": "Terminal komutlarını oluşturmak için hangi API yapılandırmasını kullanacağınızı seçin. Varsayılan ayarlarınızı kullanmak için 'Mevcut Yapılandırmayı Kullan' olarak bırakın."
+				}
+			}
 		}
 	},
 	"chat": {

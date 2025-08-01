@@ -59,6 +59,7 @@ export const commandIds = [
 	"focusChatInput", // kilocode_change
 	"importSettings", // kilocode_change
 	"exportSettings", // kilocode_change
+	"generateTerminalCommand", // kilocode_change
 	"focusPanel",
 ] as const
 

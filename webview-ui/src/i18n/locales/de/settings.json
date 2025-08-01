@@ -673,6 +673,13 @@
 			"name": "Gleichzeitige Dateibearbeitungen aktivieren",
 			"description": "Wenn aktiviert, kann Kilo Code mehrere Dateien in einer einzigen Anfrage bearbeiten. Wenn deaktiviert, muss Kilo Code Dateien einzeln bearbeiten. Das Deaktivieren kann hilfreich sein, wenn mit weniger fähigen Modellen gearbeitet wird oder wenn du mehr Kontrolle über Dateiänderungen haben möchtest."
 		},
+		"MORPH_FAST_APPLY": {
+			"name": "Morph Fast Apply aktivieren",
+			"description": "Wenn aktiviert, kann Kilo Code Dateien mit Morph Fast Apply bearbeiten.",
+			"apiKey": "Morph API-Schlüssel (optional)",
+			"placeholder": "Gib deinen Morph API-Schlüssel ein (optional)",
+			"warning": "Wenn du keinen Morph API-Schlüssel konfigurierst, kannst du Fast Apply trotzdem mit Kilo Code oder OpenRouter verwenden. Dein Konto wird für die Modellnutzung belastet, dies wird derzeit nicht in der Erweiterungs-UI angezeigt."
+		},
 		"INLINE_ASSIST": {
 			"name": "Inline-Unterstützung",
 			"description": "Aktivieren Sie Inline-Assist-Funktionen für schnelle Code-Vorschläge und -Verbesserungen direkt in Ihrem Editor. Beinhaltet Quick Inline Task (Cmd+I) für gezielte Änderungen und Auto Inline Task für kontextbezogene Verbesserungen."

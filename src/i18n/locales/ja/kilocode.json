@@ -106,5 +106,20 @@
 			"disableCopilot": "Copilot を無効にする",
 			"disableInlineAssist": "インライン アシストを無効にする"
 		}
+	},
+	"terminalCommandGenerator": {
+		"inputPrompt": "キロ: 生成したいコマンドを説明してください",
+		"commandGenerated": "キロ：生成されたコマンド：{{command}}",
+		"inputPlaceholder": "例えば、ポート3001で実行中のプロセスを終了する、大きなファイルを見つける、など",
+		"generatingProgress": "Kilo: ターミナルコマンドを生成中...",
+		"noActiveTerminal": "Kilo: アクティブな端末が見つかりません。まず端末を開いてください。",
+		"generationFailed": "Kilo: コマンドの生成に失敗しました: {{error}}",
+		"warningDialog": {
+			"title": "ターミナル安全警告",
+			"okButton": "理解しました",
+			"message": "生成されたコマンドはすべて実行前に二重確認してください。ターミナル操作は常に元に戻せるとは限りません—未検証のコマンドを実行すると、取り返しのつかないデータ損失やシステム損傷を引き起こす可能性があります。実行前にコマンドを完全に確認し理解してください！",
+			"cancelButton": "キャンセル"
+		},
+		"tipMessage": "Kilo: {{shortcut}}を押してターミナルコマンドを生成"
 	}
 }

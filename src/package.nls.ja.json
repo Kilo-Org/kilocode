@@ -24,6 +24,7 @@
 	"command.terminal.addToContext.title": "ターミナルの内容をコンテキストに追加",
 	"command.terminal.fixCommand.title": "このコマンドを修正",
 	"command.terminal.explainCommand.title": "このコマンドを説明",
+	"command.terminal.generateCommand.title": "Kilo Code: ターミナルコマンドを生成",
 	"command.acceptInput.title": "入力/提案を承認",
 	"command.generateCommitMessage.title": "Kiloでコミットメッセージを生成",
 	"command.profile.title": "プロフィール",

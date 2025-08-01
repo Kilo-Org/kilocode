@@ -13,6 +13,11 @@
 		"addCredit": "Add Credit",
 		"lowBalance": "Your Kilo Code balance is low"
 	},
+	"pricing": {
+		"costUnknown": "cost unknown",
+		"costUnknownDescription": "The API Provider did not provide any cost data or the request was canceled.",
+		"discoverModelPricing": "Discover model pricing and capabilities"
+	},
 	"notifications": {
 		"toolRequest": "Tool request waiting for approval",
 		"browserAction": "Browser action waiting for approval",
@@ -44,6 +49,16 @@
 			"testButton": "Test Notification",
 			"testTitle": "Kilo Code",
 			"testMessage": "This is a test notification from Kilo Code."
+		},
+		"terminal": {
+			"commandGenerator": {
+				"provider": "Terminal Command Generator Provider",
+				"apiConfigId": {
+					"label": "API Configuration",
+					"description": "Select which API configuration to use for generating terminal commands. Leave as 'Use Current Configuration' to use your default settings.",
+					"current": "Use Current Configuration"
+				}
+			}
 		}
 	},
 	"chat": {

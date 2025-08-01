@@ -106,5 +106,20 @@
 			"disableCopilot": "Tắt Copilot",
 			"disableInlineAssist": "Tắt Trợ lý Nội dòng"
 		}
+	},
+	"terminalCommandGenerator": {
+		"inputPrompt": "Kilo: Mô tả lệnh bạn muốn tạo",
+		"generatingProgress": "Kilo: Đang tạo lệnh terminal...",
+		"inputPlaceholder": "ví dụ: tắt tiến trình đang chạy trên cổng 3001, tìm các tệp tin lớn, v.v.",
+		"noActiveTerminal": "Kilo: Không tìm thấy terminal đang hoạt động. Vui lòng mở terminal trước.",
+		"commandGenerated": "Kilo: Lệnh đã tạo: {{command}}",
+		"generationFailed": "Kilo: Không thể tạo lệnh: {{error}}",
+		"warningDialog": {
+			"okButton": "Tôi Hiểu",
+			"title": "Cảnh Báo An Toàn Thiết Bị Đầu Cuối",
+			"message": "Kiểm tra kỹ lưỡng tất cả các lệnh được tạo ra trước khi chạy chúng. Các thao tác trên terminal không phải lúc nào cũng có thể hoàn tác — việc chạy các lệnh chưa được xác minh có thể dẫn đến mất dữ liệu không thể khôi phục hoặc làm hỏng hệ thống. Hãy xem xét và hiểu rõ hoàn toàn lệnh trước khi tiếp tục!",
+			"cancelButton": "Hủy"
+		},
+		"tipMessage": "Kilo: Nhấn {{shortcut}} để tạo lệnh terminal"
 	}
 }

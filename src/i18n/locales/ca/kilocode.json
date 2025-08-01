@@ -106,5 +106,20 @@
 			"disableCopilot": "Desactivar Copilot",
 			"disableInlineAssist": "Desactivar Assistència en línia"
 		}
+	},
+	"terminalCommandGenerator": {
+		"inputPrompt": "Kilo: Descriu l'ordre que vols generar",
+		"generatingProgress": "Kilo: Generant ordre de terminal...",
+		"noActiveTerminal": "Kilo: No s'ha trobat cap terminal actiu. Si us plau, obriu primer un terminal.",
+		"inputPlaceholder": "p. ex., matar el procés que s'executa al port 3001, trobar fitxers grans, etc.",
+		"commandGenerated": "Kilo: Ordre generada: {{command}}",
+		"generationFailed": "Kilo: Error en generar l'ordre: {{error}}",
+		"warningDialog": {
+			"title": "Advertència de Seguretat del Terminal",
+			"message": "Comproveu detingudament totes les comandes generades abans d'executar-les. Les accions al terminal no sempre es poden desfer — executar comandes sense verificar pot provocar la pèrdua irreversible de dades o danys al sistema. Reviseu i entengueu completament la comanda abans de continuar!",
+			"okButton": "Ho entenc",
+			"cancelButton": "Cancel·lar"
+		},
+		"tipMessage": "Kilo: Premeu {{shortcut}} per a generar ordres del terminal"
 	}
 }

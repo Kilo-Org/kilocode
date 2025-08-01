@@ -16,6 +16,7 @@ import { CodeIndexManager } from "../services/code-index/manager"
 import { importSettingsWithFeedback } from "../core/config/importExport"
 import { MdmService } from "../services/mdm/MdmService"
 import { t } from "../i18n"
+import { generateTerminalCommand } from "../utils/terminalCommandGenerator" // kilocode_change
 
 /**
  * Helper to get the visible ClineProvider instance or log if not found.
@@ -242,6 +243,7 @@ const getCommandsMap = ({ context, outputChannel }: RegisterCommandOptions): Rec
 			outputChannel.appendLine(`Error in focusChatInput: ${error}`)
 		}
 	},
+	generateTerminalCommand: async () => await generateTerminalCommand({ outputChannel, context }), // kilocode_change
 	exportSettings: async () => {
 		const visibleProvider = getVisibleProviderOrLog(outputChannel)
 		if (!visibleProvider) return

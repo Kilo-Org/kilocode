@@ -24,6 +24,7 @@
 	"command.terminal.addToContext.title": "Terminalinhoud aan Context Toevoegen",
 	"command.terminal.fixCommand.title": "Repareer Dit Commando",
 	"command.terminal.explainCommand.title": "Leg Dit Commando Uit",
+	"command.terminal.generateCommand.title": "Kilo Code: Genereer Terminal Commando",
 	"command.acceptInput.title": "Invoer/Suggestie Accepteren",
 	"command.generateCommitMessage.title": "Genereer commit bericht met Kilo",
 	"command.profile.title": "Profiel",

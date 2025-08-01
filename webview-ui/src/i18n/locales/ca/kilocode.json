@@ -13,6 +13,11 @@
 		"addCredit": "Afegir crèdit",
 		"lowBalance": "El teu saldo de Kilo Code és baix"
 	},
+	"pricing": {
+		"costUnknown": "cost desconegut",
+		"costUnknownDescription": "El proveïdor de l'API no va proporcionar cap dada de cost o la sol·licitud va ser cancel·lada.",
+		"discoverModelPricing": "Descobreix els preus i capacitats del model"
+	},
 	"notifications": {
 		"toolRequest": "Sol·licitud d'eina pendent d'aprovació",
 		"browserAction": "Acció del navegador pendent d'aprovació",
@@ -44,6 +49,16 @@
 			"testButton": "Provar notificació",
 			"testTitle": "Kilo Code",
 			"testMessage": "Aquesta és una notificació de prova de Kilo Code."
+		},
+		"terminal": {
+			"commandGenerator": {
+				"provider": "Proveïdor de Generador de Comandes de Terminal",
+				"apiConfigId": {
+					"label": "Configuració de l'API",
+					"description": "Seleccioneu quina configuració d'API voleu utilitzar per generar ordres de terminal. Deixeu-ho com a 'Utilitza la configuració actual' per utilitzar la configuració predeterminada.",
+					"current": "Utilitza la configuració actual"
+				}
+			}
 		}
 	},
 	"profile": {

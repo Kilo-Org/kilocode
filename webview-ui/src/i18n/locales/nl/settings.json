@@ -674,6 +674,13 @@
 			"name": "Gelijktijdige bestandsbewerkingen inschakelen",
 			"description": "Wanneer ingeschakeld, kan Kilo Code meerdere bestanden in één verzoek bewerken. Wanneer uitgeschakeld, moet Kilo Code bestanden één voor één bewerken. Het uitschakelen hiervan kan helpen wanneer je werkt met minder capabele modellen of wanneer je meer controle wilt over bestandswijzigingen."
 		},
+		"MORPH_FAST_APPLY": {
+			"name": "Morph Fast Apply inschakelen",
+			"description": "Wanneer ingeschakeld, kan Kilo Code bestanden bewerken met Morph Fast Apply.",
+			"apiKey": "Morph API-sleutel (optioneel)",
+			"placeholder": "Voer je Morph API-sleutel in (optioneel)",
+			"warning": "Als je geen Morph API-sleutel configureert, kun je Fast Apply nog steeds gebruiken met Kilo Code of OpenRouter. Je account wordt gefactureerd voor modelgebruik, dit wordt momenteel niet weergegeven in de extensie-UI."
+		},
 		"INLINE_ASSIST": {
 			"name": "Inline Ondersteuning",
 			"description": "Schakel Inline Assist-functies in voor snelle codevoorstellen en verbeteringen direct in uw editor. Bevat Quick Inline Task (Cmd+I) voor gerichte wijzigingen en Auto Inline Task voor contextuele verbeteringen."

@@ -13,6 +13,7 @@
 	"command.terminal.addToContext.title": "Aggiungi Contenuto del Terminale al Contesto",
 	"command.terminal.fixCommand.title": "Correggi Questo Comando",
 	"command.terminal.explainCommand.title": "Spiega Questo Comando",
+	"command.terminal.generateCommand.title": "Kilo Code: Genera Comando Terminale",
 	"command.acceptInput.title": "Accetta Input/Suggerimento",
 	"command.generateCommitMessage.title": "Genera messaggio di commit con Kilo",
 	"views.activitybar.title": "Kilo Code",

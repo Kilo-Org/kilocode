@@ -106,5 +106,20 @@
 			"disableCopilot": "Copilot deaktivieren",
 			"disableInlineAssist": "Inline Assist deaktivieren"
 		}
+	},
+	"terminalCommandGenerator": {
+		"inputPrompt": "Kilo: Beschreibe den Befehl, den du generieren möchtest",
+		"generatingProgress": "Kilo: Terminal-Befehl wird generiert...",
+		"noActiveTerminal": "Kilo: Kein aktives Terminal gefunden. Bitte öffnen Sie zuerst ein Terminal.",
+		"inputPlaceholder": "z.B. den Prozess beenden, der auf Port 3001 läuft, große Dateien finden, usw.",
+		"generationFailed": "Kilo: Fehler beim Generieren des Befehls: {{error}}",
+		"commandGenerated": "Kilo: Generierter Befehl: {{command}}",
+		"warningDialog": {
+			"okButton": "Ich verstehe",
+			"title": "Sicherheitswarnung für das Terminal",
+			"message": "Überprüfen Sie alle generierten Befehle doppelt, bevor Sie sie ausführen. Terminal-Aktionen können nicht immer rückgängig gemacht werden - das Ausführen ungeprüfter Befehle kann zu irreversiblem Datenverlust oder Systemschäden führen. Überprüfen und verstehen Sie den Befehl vollständig, bevor Sie fortfahren!",
+			"cancelButton": "Abbrechen"
+		},
+		"tipMessage": "Kilo: Drücken Sie {{shortcut}}, um Terminal-Befehle zu generieren"
 	}
 }

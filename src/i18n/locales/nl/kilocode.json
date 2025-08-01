@@ -106,5 +106,20 @@
 			"disableCopilot": "Copilot uitschakelen",
 			"disableInlineAssist": "In-line Assistent uitschakelen"
 		}
+	},
+	"terminalCommandGenerator": {
+		"inputPrompt": "Kilo: Beschrijf het commando dat je wilt genereren",
+		"noActiveTerminal": "Kilo: Geen actieve terminal gevonden. Open eerst een terminal.",
+		"inputPlaceholder": "bijv., dood het proces dat draait op poort 3001, zoek grote bestanden, enz",
+		"generatingProgress": "Kilo: Terminal opdracht genereren...",
+		"commandGenerated": "Kilo: Gegenereerd commando: {{command}}",
+		"generationFailed": "Kilo: Opdracht genereren mislukt: {{error}}",
+		"warningDialog": {
+			"title": "Waarschuwing Terminalveiligheid",
+			"okButton": "Ik begrijp",
+			"message": "Controleer alle gegenereerde commando's dubbel voordat je ze uitvoert. Acties in de terminal kunnen niet altijd worden teruggedraaid— het uitvoeren van niet-geverifieerde commando's kan resulteren in onherstelbaar dataverlies of beschadiging van het systeem. Bekijk en begrijp het commando volledig voordat je verdergaat!",
+			"cancelButton": "Annuleren"
+		},
+		"tipMessage": "Kilo: Druk op {{shortcut}} om terminalopdrachten te genereren"
 	}
 }

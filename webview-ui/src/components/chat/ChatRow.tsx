@@ -1033,10 +1033,10 @@ export const ChatRowContent = ({
 									{
 										// kilocode_change start
 										!cost && usageMissing && (
-											<StandardTooltip content="The API Provider did not provide any cost data or the request was canceled.">
+											<StandardTooltip content={t("kilocode:pricing.costUnknownDescription")}>
 												<VSCodeBadge className="whitespace-nowrap">
 													<span className="codicon codicon-warning pr-1"></span>
-													no data
+													{t("kilocode:pricing.costUnknown")}
 												</VSCodeBadge>
 											</StandardTooltip>
 										)

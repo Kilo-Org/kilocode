@@ -673,6 +673,13 @@
 			"name": "Habilita edicions de fitxers concurrents",
 			"description": "Quan està activat, Kilo Code pot editar múltiples fitxers en una sola petició. Quan està desactivat, Kilo Code ha d'editar fitxers d'un en un. Desactivar això pot ajudar quan es treballa amb models menys capaços o quan vols més control sobre les modificacions de fitxers."
 		},
+		"MORPH_FAST_APPLY": {
+			"name": "Habilitar Morph Fast Apply",
+			"description": "Quan està habilitat, Kilo Code pot editar fitxers utilitzant Morph Fast Apply.",
+			"apiKey": "Clau API de Morph (opcional)",
+			"placeholder": "Introduïu la vostra clau API de Morph (opcional)",
+			"warning": "Si no configureu una clau API de Morph, encara podeu utilitzar Fast Apply amb Kilo Code o OpenRouter. El vostre compte serà facturat per l'ús del model, això actualment no es mostra a la interfície de l'extensió."
+		},
 		"INLINE_ASSIST": {
 			"name": "Assistència en línia",
 			"description": "Activa les funcions d'assistència en línia per obtenir suggeriments i millores de codi ràpides directament al teu editor. Inclou la Tasca ràpida en línia (Cmd+I) per a canvis específics i la Tasca automàtica en línia per a millores contextuals."

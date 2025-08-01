@@ -13,6 +13,11 @@
 		"addCredit": "Guthaben hinzufügen",
 		"lowBalance": "Ihr Kilo Code Guthaben ist niedrig"
 	},
+	"pricing": {
+		"costUnknown": "Kosten unbekannt",
+		"costUnknownDescription": "Der API-Anbieter hat keine Kostendaten bereitgestellt oder die Anfrage wurde abgebrochen.",
+		"discoverModelPricing": "Modellpreise und -funktionen entdecken"
+	},
 	"notifications": {
 		"toolRequest": "Werkzeuganfrage wartet auf Genehmigung",
 		"browserAction": "Browseraktion wartet auf Genehmigung",
@@ -44,6 +49,16 @@
 			"testButton": "Benachrichtigung testen",
 			"testTitle": "Kilo Code",
 			"testMessage": "Dies ist eine Testbenachrichtigung von Kilo Code."
+		},
+		"terminal": {
+			"commandGenerator": {
+				"provider": "Generator für Terminal-Befehle",
+				"apiConfigId": {
+					"label": "API-Konfiguration",
+					"current": "Aktuelle Konfiguration verwenden",
+					"description": "Wählen Sie aus, welche API-Konfiguration für die Generierung von Terminal-Befehlen verwendet werden soll. Belassen Sie es bei \"Aktuelle Konfiguration verwenden\", um Ihre Standardeinstellungen zu nutzen."
+				}
+			}
 		}
 	},
 	"chat": {

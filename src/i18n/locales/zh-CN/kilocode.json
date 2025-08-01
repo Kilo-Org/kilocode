@@ -106,5 +106,20 @@
 			"disableCopilot": "禁用 Copilot",
 			"disableInlineAssist": "禁用 Inline Assist"
 		}
+	},
+	"terminalCommandGenerator": {
+		"inputPrompt": "千克：描述您想要生成的命令",
+		"inputPlaceholder": "例如，终止在3001端口上运行的进程，查找大文件等",
+		"noActiveTerminal": "Kilo：未找到活动终端。请先打开一个终端。",
+		"generatingProgress": "Kilo：正在生成终端命令...",
+		"commandGenerated": "千瓦：生成的命令：{{command}}",
+		"generationFailed": "Kilo：命令生成失败：{{error}}",
+		"warningDialog": {
+			"title": "终端安全警告",
+			"message": "在运行生成的命令之前请再次检查。终端操作并非总是可以撤销——运行未经验证的命令可能导致不可逆转的数据丢失或系统损坏。在继续操作前，请完全理解并检查命令！",
+			"okButton": "我明白",
+			"cancelButton": "取消"
+		},
+		"tipMessage": "千重奏: 按下 {{shortcut}} 生成终端命令"
 	}
 }
