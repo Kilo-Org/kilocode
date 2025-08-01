@@ -13,6 +13,11 @@
 		"addCredit": "Dodaj kredyt",
 		"lowBalance": "Twój stan konta Kilo Code jest niski"
 	},
+	"pricing": {
+		"costUnknown": "koszt nieznany",
+		"costUnknownDescription": "Dostawca API nie podał żadnych danych o kosztach lub żądanie zostało anulowane.",
+		"discoverModelPricing": "Odkryj ceny i możliwości modeli"
+	},
 	"notifications": {
 		"toolRequest": "Żądanie narzędzia oczekuje na zatwierdzenie",
 		"browserAction": "Akcja przeglądarki oczekuje na zatwierdzenie",

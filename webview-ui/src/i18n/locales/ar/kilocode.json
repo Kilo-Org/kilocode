@@ -13,6 +13,11 @@
 		"addCredit": "شحن الرصيد",
 		"lowBalance": "رصيدك في Kilo Code منخفض"
 	},
+	"pricing": {
+		"costUnknown": "التكلفة غير معروفة",
+		"costUnknownDescription": "لم يقدم مزود واجهة برمجة التطبيقات أي بيانات تكلفة أو تم إلغاء الطلب.",
+		"discoverModelPricing": "اكتشف أسعار النماذج وقدراتها"
+	},
 	"notifications": {
 		"toolRequest": "طلب أداة بانتظار الموافقة",
 		"browserAction": "طلب استخدام المتصفح بانتظار الموافقة",

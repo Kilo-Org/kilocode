@@ -13,6 +13,11 @@
 		"addCredit": "크레딧 추가",
 		"lowBalance": "Kilo Code 잔액이 부족합니다"
 	},
+	"pricing": {
+		"costUnknown": "비용 알 수 없음",
+		"costUnknownDescription": "API 제공자가 비용 데이터를 제공하지 않았거나 요청이 취소되었습니다.",
+		"discoverModelPricing": "모델 가격 및 기능 알아보기"
+	},
 	"notifications": {
 		"toolRequest": "도구 요청 승인 대기 중",
 		"browserAction": "브라우저 작업 승인 대기 중",

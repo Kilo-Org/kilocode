@@ -13,6 +13,11 @@
 		"addCredit": "เติมเครดิต",
 		"lowBalance": "ยอดเงิน Kilo Code ของคุณเหลือน้อย"
 	},
+	"pricing": {
+		"costUnknown": "ค่าใช้จ่ายไม่ทราบ",
+		"costUnknownDescription": "ผู้ให้บริการ API ไม่ได้ให้ข้อมูลค่าใช้จ่าย หรือคำขอถูกยกเลิก",
+		"discoverModelPricing": "ค้นหาราคาและความสามารถของโมเดล"
+	},
 	"notifications": {
 		"toolRequest": "คำขอใช้เครื่องมือรอการอนุมัติ",
 		"browserAction": "การดำเนินการของเบราว์เซอร์รอการอนุมัติ",

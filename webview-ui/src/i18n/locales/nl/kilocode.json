@@ -13,6 +13,11 @@
 		"addCredit": "Krediet toevoegen",
 		"lowBalance": "Uw Kilo Code-saldo is laag"
 	},
+	"pricing": {
+		"costUnknown": "kosten onbekend",
+		"costUnknownDescription": "De API-provider heeft geen kostengegevens verstrekt of het verzoek is geannuleerd.",
+		"discoverModelPricing": "Ontdek modelprijzen en mogelijkheden"
+	},
 	"notifications": {
 		"toolRequest": "Toolverzoek wacht op goedkeuring",
 		"browserAction": "Browseractie wacht op goedkeuring",
