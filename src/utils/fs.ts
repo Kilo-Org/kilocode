@@ -76,34 +76,30 @@ const OS_GENERATED_FILES = [
  * @returns A promise that resolves to an array of absolute file paths.
  * @throws Error if the directory cannot be read.
  */
-export const readDirectory = async (directoryPath: string, excludedPaths: string[][] = []) => {
-	try {
-		const filePaths = await fs
-			.readdir(directoryPath, { withFileTypes: true, recursive: true })
-			.then((entries) => entries.filter((entry) => !OS_GENERATED_FILES.includes(entry.name)))
-			.then((entries) => entries.filter((entry) => entry.isFile()))
-			.then((files) => files.map((file) => path.resolve(file.parentPath, file.name)))
-			.then((filePaths) =>
-				filePaths.filter((filePath) => {
-					if (excludedPaths.length === 0) {
-						return true
-					}
-
-					for (const excludedPathList of excludedPaths) {
-						const pathToSearchFor = path.sep + excludedPathList.join(path.sep) + path.sep
-						if (filePath.includes(pathToSearchFor)) {
-							return false
-						}
-					}
-
-					return true
-				}),
-			)
-
-		return filePaths
-	} catch {
-		throw new Error(`Error reading directory at ${directoryPath}`)
-	}
+export const readDirectory = async (directoryPath: string, excludedPaths: string[][] = []): Promise<string[]> => {
+    const filePaths: string[] = [];
+    async function walk(currentPath: string) {
+        let entries: fs.Dirent[];
+        try {
+            entries = await fs.readdir(currentPath, { withFileTypes: true });
+        } catch {
+            throw new Error(`Error reading directory at ${directoryPath}`);
+        }
+        for (const entry of entries) {
+            if (OS_GENERATED_FILES.includes(entry.name)) continue;
+            const fullPath = path.join(currentPath, entry.name);
+            const relative = path.relative(directoryPath, fullPath);
+            if (excludedPaths.some((p) => relative.includes(path.join(...p)))) continue;
+            if (entry.isDirectory()) {
+                await walk(fullPath);
+            } else if (entry.isFile()) {
+                filePaths.push(fullPath);
+            }
+        }
+    }
+    await walk(directoryPath);
+    return filePaths;
 }
+
 
 // kilocode_change end
