@@ -615,6 +615,16 @@ export class ClineProvider
 
 	public async postMessageToWebview(message: ExtensionMessage) {
 		await this.view?.webview.postMessage(message)
+
+		// Forward all messages to Code-Chief-Remote so it can broadcast over WebSocket.
+		try {
+			await vscode.commands.executeCommand("code-chief-remote.broadcast", {
+				source: "kilo",
+				message,
+			})
+		} catch {
+			// Ignore if the bridge extension isn’t installed or the command is missing.
+		}
 	}
 
 	private async getHMRHtmlContent(webview: vscode.Webview): Promise<string> {
