@@ -1,24 +1,24 @@
 {
 	"greeting": "Kilo Code 能為您做什麼？",
 	"task": {
-		"title": "工作",
+		"title": "任務",
 		"seeMore": "顯示更多",
 		"seeLess": "顯示較少",
-		"tokens": "Tokens:",
+		"tokens": "Token 用量:",
 		"cache": "快取：",
 		"apiCost": "API 費用：",
 		"contextWindow": "上下文長度：",
-		"closeAndStart": "關閉現有工作並開始一項新的工作",
-		"export": "匯出工作紀錄",
-		"delete": "刪除工作（按住 Shift 並點選可跳過確認）",
+		"closeAndStart": "關閉現有任務並開始一項新的任務",
+		"export": "匯出任務歷史",
+		"delete": "刪除任務（按住 Shift 並點選可跳過確認）",
 		"condenseContext": "智慧壓縮上下文",
-		"share": "分享工作",
+		"share": "分享任務",
 		"shareWithOrganization": "與組織分享",
 		"shareWithOrganizationDescription": "僅組織成員可存取",
 		"sharePublicly": "公開分享",
 		"sharePubliclyDescription": "任何擁有連結的人都可存取",
 		"connectToCloud": "連接到雲端",
-		"connectToCloudDescription": "登入 Kilo Code Cloud 以分享工作",
+		"connectToCloudDescription": "登入 Kilo Code Cloud 以分享任務",
 		"sharingDisabledByOrganization": "組織已停用分享功能",
 		"shareSuccessOrganization": "組織連結已複製到剪貼簿",
 		"shareSuccessPublic": "公開連結已複製到剪貼簿"
@@ -29,8 +29,8 @@
 	"unpin": "取消置頂",
 	"pin": "置頂",
 	"tokenProgress": {
-		"availableSpace": "可用空間：{{amount}} tokens",
-		"tokensUsed": "已使用 tokens: {{used}} / {{total}}",
+		"availableSpace": "可用: {{amount}} tokens",
+		"tokensUsed": "已使用: {{used}} / {{total}} tokens",
 		"reservedForResponse": "為模型回應保留：{{amount}} tokens"
 	},
 	"retry": {
@@ -56,7 +56,7 @@
 		"title": "拒絕",
 		"tooltip": "拒絕此操作"
 	},
-	"completeSubtaskAndReturn": "完成子工作並返回",
+	"completeSubtaskAndReturn": "完成子任務並返回",
 	"approve": {
 		"title": "核准",
 		"tooltip": "核准此操作"
@@ -74,12 +74,12 @@
 		"tooltip": "終止目前的指令"
 	},
 	"resumeTask": {
-		"title": "繼續工作",
-		"tooltip": "繼續目前的工作"
+		"title": "繼續任務",
+		"tooltip": "繼續目前的任務"
 	},
 	"terminate": {
 		"title": "終止",
-		"tooltip": "結束目前的工作"
+		"tooltip": "結束目前的任務"
 	},
 	"cancel": {
 		"title": "取消",
@@ -87,7 +87,7 @@
 	},
 	"scrollToBottom": "捲動至對話框底部",
 	"about": "透過 AI 輔助產生、重構和偵錯程式碼。查看我們的 <DocsLink>說明文件</DocsLink> 以瞭解更多資訊。",
-	"onboarding": "<strong>您在此工作區中的工作清單是空的。</strong> 請在下方輸入工作以開始。 不確定如何開始？ 在 <DocsLink>說明文件</DocsLink> 中閱讀更多關於 Kilo Code 能為您做什麼的資訊。",
+	"onboarding": "<strong>此工作區中的任務清單是空的。</strong> 請在下方輸入任務以開始。不確定如何開始？ 在 <DocsLink>說明文件</DocsLink> 中閱讀更多關於 Kilo Code 能為您做什麼的資訊。",
 	"rooTips": {
 		"boomerangTasks": {
 			"title": "任務編排",
@@ -123,7 +123,7 @@
 		"title": "模式",
 		"marketplace": "模式市集",
 		"settings": "模式設定",
-		"description": "專門定制Kilo Code行為的角色。"
+		"description": "專門定制 Kilo Code 行為的角色。"
 	},
 	"errorReadingFile": "讀取檔案時發生錯誤：",
 	"noValidImages": "未處理到任何有效圖片",
@@ -152,7 +152,7 @@
 			"restore": "還原檢查點",
 			"restoreFiles": "還原檔案",
 			"restoreFilesDescription": "將您的專案檔案還原到此時的快照。",
-			"restoreFilesAndTask": "還原檔案和工作",
+			"restoreFilesAndTask": "還原檔案和任務",
 			"confirm": "確認",
 			"cancel": "取消",
 			"cannotUndo": "此操作無法復原。",
@@ -228,18 +228,18 @@
 		"didSwitchWithReason": "Kilo Code 已切換至 <code>{{mode}}</code> 模式，原因：{{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Kilo Code 想要在 <code>{{mode}}</code> 模式下建立新的子工作：",
-		"wantsToFinish": "Kilo Code 想要完成此子工作",
-		"newTaskContent": "子工作指示",
-		"completionContent": "子工作已完成",
-		"resultContent": "子工作結果",
-		"defaultResult": "請繼續下一個工作。",
-		"completionInstructions": "子工作已完成！您可以檢閱結果並提出修正或下一步建議。如果一切看起來良好，請確認以將結果傳回主工作。"
+		"wantsToCreate": "Kilo Code 想要在 <code>{{mode}}</code> 模式下建立新的子任務：",
+		"wantsToFinish": "Kilo Code 想要完成此子任務",
+		"newTaskContent": "子任務指示",
+		"completionContent": "子任務已完成",
+		"resultContent": "子任務結果",
+		"defaultResult": "請繼續下一個任務。",
+		"completionInstructions": "子任務已完成！您可以檢閱結果並提出修正或下一步建議。如果一切看起來良好，請確認以將結果傳回主任務。"
 	},
 	"questions": {
 		"hasQuestion": "Kilo Code 有一個問題："
 	},
-	"taskCompleted": "工作完成",
+	"taskCompleted": "任務完成",
 	"powershell": {
 		"issues": "看起來您遇到了 Windows PowerShell 的問題，請參考此處"
 	},
@@ -268,7 +268,7 @@
 	},
 	"announcement": {
 		"title": "🎉 Kilo Code {{version}} 已發布",
-		"description": "Kilo Code {{version}} 帶來強大的新功能和重大改進，提升您的開發工作流程。",
+		"description": "Kilo Code {{version}} 帶來強大的新功能和重大改進，提升您的開發任務流程。",
 		"whatsNew": "新功能",
 		"feature1": "<bold>Hugging Face 提供者</bold>：透過新的 Hugging Face 提供者直接存取大量優秀的開源模型，具備無縫整合和模型選擇功能。",
 		"feature2": "<bold>內嵌命令控制</bold>：新的自動核准和拒絕命令執行控制，為您提供對終端機操作的精確控制和可自訂權限。",

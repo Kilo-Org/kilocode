@@ -113,7 +113,7 @@
 		"inputPrompt": "Kilo: 생성하고 싶은 명령어를 설명하세요",
 		"inputPlaceholder": "예시, 포트 3001에서 실행 중인 프로세스 종료, 대용량 파일 찾기 등",
 		"commandGenerated": "Kilo: 생성된 명령어: {{command}}",
-		"generationFailed": "킬로: 명령어 생성 실패: {{error}}",
+		"generationFailed": "Kilo: 명령어 생성 실패: {{error}}",
 		"warningDialog": {
 			"title": "터미널 안전 경고",
 			"okButton": "이해했습니다",

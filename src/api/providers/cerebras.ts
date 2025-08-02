@@ -27,11 +27,16 @@ export class CerebrasHandler implements ApiHandler {
 	}
 
 	async *createMessage(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): ApiStream {
+		// Helper function to filter out thinking tags from content
+		const filterThinkingTags = (content: string): string => {
+			return content.replace(/<think>[\s\S]*?<\/think>/g, "").trim()
+		}
+
 		// Convert Anthropic messages to Cerebras format
 		const cerebrasMessages: Array<{
 			role: "system" | "user" | "assistant"
 			content: string
-		}> = [{ role: "system", content: systemPrompt }]
+		}> = [{ role: "system", content: filterThinkingTags(systemPrompt) }]
 
 		// Convert Anthropic messages to Cerebras format
 		for (const message of messages) {
@@ -40,26 +45,26 @@ export class CerebrasHandler implements ApiHandler {
 					? message.content
 							.map((block) => {
 								if (block.type === "text") {
-									return block.text
+									return filterThinkingTags(block.text)
 								} else if (block.type === "image") {
 									return "[Image content not supported in Cerebras]"
 								}
 								return ""
 							})
 							.join("\n")
-					: message.content
+					: filterThinkingTags(message.content)
 				cerebrasMessages.push({ role: "user", content })
 			} else if (message.role === "assistant") {
 				const content = Array.isArray(message.content)
 					? message.content
 							.map((block) => {
 								if (block.type === "text") {
-									return block.text
+									return filterThinkingTags(block.text)
 								}
 								return ""
 							})
 							.join("\n")
-					: message.content || ""
+					: filterThinkingTags(message.content || "")
 				cerebrasMessages.push({ role: "assistant", content })
 			}
 		}
@@ -144,11 +149,15 @@ export class CerebrasHandler implements ApiHandler {
 		const modelId = this.options.apiModelId
 		if (modelId && modelId in cerebrasModels) {
 			const id = modelId as CerebrasModelId
-			return { id, info: cerebrasModels[id] }
+			// Handle -free routing: strip -free suffix for API call but keep original model info
+			const apiModelId = id.endsWith("-free") ? id.replace("-free", "") : id
+			return { id: apiModelId, info: cerebrasModels[id] }
 		}
+		const defaultId = cerebrasDefaultModelId
+		const apiModelId = defaultId.endsWith("-free") ? defaultId.replace("-free", "") : defaultId
 		return {
-			id: cerebrasDefaultModelId,
-			info: cerebrasModels[cerebrasDefaultModelId],
+			id: apiModelId,
+			info: cerebrasModels[defaultId],
 		}
 	}
 

@@ -13,6 +13,11 @@
 		"addCredit": "Tambah Kredit",
 		"lowBalance": "Saldo Kilo Code kamu rendah"
 	},
+	"pricing": {
+		"costUnknown": "biaya tidak diketahui",
+		"costUnknownDescription": "Penyedia API tidak memberikan data biaya atau permintaan dibatalkan.",
+		"discoverModelPricing": "Temukan harga dan kemampuan model"
+	},
 	"notifications": {
 		"toolRequest": "Permintaan tool menunggu persetujuan",
 		"browserAction": "Aksi browser menunggu persetujuan",

@@ -85,17 +85,17 @@
 		"resetPrompt": "將 {{promptType}} 提示詞重設為預設值",
 		"prompt": "提示詞",
 		"enhance": {
-			"apiConfiguration": "API 設定",
-			"apiConfigDescription": "您可以選擇一個固定的 API 設定用於增強提示詞，或使用目前選擇的設定",
-			"useCurrentConfig": "使用目前選擇的 API 設定",
+			"apiConfiguration": "API 設定檔",
+			"apiConfigDescription": "您可以選擇一個固定的 API 設定檔用於增強提示詞，或使用目前選擇的設定",
+			"useCurrentConfig": "使用目前選擇的 API 設定檔",
 			"testPromptPlaceholder": "輸入提示詞以測試增強效果",
 			"previewButton": "預覽提示詞增強",
 			"testEnhancement": "測試增強"
 		},
 		"condense": {
-			"apiConfiguration": "用於上下文壓縮的 API 設定",
-			"apiConfigDescription": "選取用於上下文壓縮作業的 API 設定。保留未選取狀態以使用目前作用中的設定。",
-			"useCurrentConfig": "使用當前選取的 API 設定"
+			"apiConfiguration": "用於上下文壓縮的 API 設定檔",
+			"apiConfigDescription": "選取用於上下文壓縮作業的 API 設定檔。保留未選取狀態以使用目前作用中的設定。",
+			"useCurrentConfig": "使用當前選取的 API 設定檔"
 		},
 		"types": {
 			"ENHANCE": {
@@ -104,7 +104,7 @@
 			},
 			"CONDENSE": {
 				"label": "上下文壓縮",
-				"description": "設定如何壓縮對話上下文以管理權杖限制。此提示用於手動和自動上下文壓縮作業。"
+				"description": "設定如何壓縮對話上下文以管理 Token 限制。此提示用於手動和自動上下文壓縮作業。"
 			},
 			"EXPLAIN": {
 				"label": "解釋程式碼",

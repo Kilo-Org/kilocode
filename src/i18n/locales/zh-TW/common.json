@@ -23,7 +23,7 @@
 		"other": "{{count}}個項目"
 	},
 	"confirmation": {
-		"reset_state": "您確定要重設擴充套件中的所有狀態和金鑰儲存嗎？此操作無法復原。",
+		"reset_state": "您確定要重設延伸模組中的所有狀態和金鑰儲存嗎？此操作無法復原。",
 		"delete_config_profile": "您確定要刪除此設定檔案嗎？",
 		"delete_custom_mode_with_rules": "您確定要刪除此 {scope} 模式嗎？\n\n這也將刪除位於以下位置的關聯規則資料夾：\n{rulesFolderPath}"
 	},
@@ -53,12 +53,12 @@
 		"hmr_not_running": "本機開發伺服器沒有執行，HMR 將不起作用。請在啟動擴充套件前執行'npm run dev'以啟用 HMR。",
 		"retrieve_current_mode": "從狀態中檢索目前模式失敗。",
 		"failed_delete_repo": "刪除關聯的影子倉庫或分支失敗：{{error}}",
-		"failed_remove_directory": "刪除工作目錄失敗：{{error}}",
+		"failed_remove_directory": "刪除任務目錄失敗：{{error}}",
 		"custom_storage_path_unusable": "自訂儲存路徑 \"{{path}}\" 無法使用，將使用預設路徑",
 		"cannot_access_path": "無法存取路徑 {{path}}：{{error}}",
 		"settings_import_failed": "設定匯入失敗：{{error}}。",
-		"mistake_limit_guidance": "這可能表明模型思維過程失敗或無法正確使用工具，可透過使用者指導來緩解（例如「嘗試將工作分解為更小的步驟」）。",
-		"violated_organization_allowlist": "執行工作失敗：目前設定檔與您的組織設定不相容",
+		"mistake_limit_guidance": "這可能表明模型思維過程失敗或無法正確使用工具，可透過使用者指導來緩解（例如「嘗試將任務分解為更小的步驟」）。",
+		"violated_organization_allowlist": "執行任務失敗：目前設定檔與您的組織設定不相容",
 		"condense_failed": "壓縮上下文失敗",
 		"condense_not_enough_messages": "沒有足夠的訊息來壓縮 {{prevContextTokens}} Token 的上下文。至少需要 {{minimumMessageCount}} 則訊息，但只有 {{messageCount}} 則可用。",
 		"condensed_recently": "上下文最近已壓縮；跳過此次嘗試",
@@ -72,11 +72,11 @@
 		"url_fetch_failed": "取得 URL 內容失敗：{{error}}",
 		"url_fetch_error_with_url": "取得 {{url}} 內容時發生錯誤：{{error}}",
 		"command_timeout": "命令執行超時，{{seconds}} 秒後",
-		"share_task_failed": "分享工作失敗。請重試。",
-		"share_no_active_task": "沒有活躍的工作可分享",
-		"share_auth_required": "需要身份驗證。請登入以分享工作。",
-		"share_not_enabled": "此組織未啟用工作分享功能。",
-		"share_task_not_found": "未找到工作或存取被拒絕。",
+		"share_task_failed": "分享任務失敗。請重試。",
+		"share_no_active_task": "沒有活躍的任務可分享",
+		"share_auth_required": "需要身份驗證。請登入以分享任務。",
+		"share_not_enabled": "此組織未啟用任務分享功能。",
+		"share_task_not_found": "未找到任務或存取被拒絕。",
 		"delete_rules_folder_failed": "刪除規則資料夾失敗: {{rulesFolderPath}}。錯誤: {{error}}",
 		"claudeCode": {
 			"processExited": "Claude Code 程序退出，退出碼：{{exitCode}}。",
@@ -99,13 +99,13 @@
 	},
 	"warnings": {
 		"no_terminal_content": "沒有選擇終端機內容",
-		"missing_task_files": "此工作的檔案遺失。您想從工作列表中刪除它嗎？",
+		"missing_task_files": "此任務的檔案遺失。您想從任務列表中刪除它嗎？",
 		"auto_import_failed": "自動匯入 Kilo Code 設定失敗：{{error}}"
 	},
 	"info": {
 		"no_changes": "沒有找到更改。",
 		"clipboard_copy": "系統訊息已成功複製到剪貼簿",
-		"history_cleanup": "已從歷史記錄中清理{{count}}個缺少檔案的工作。",
+		"history_cleanup": "已從歷史記錄中清理{{count}}個缺少檔案的任務。",
 		"custom_storage_path_set": "自訂儲存路徑已設定：{{path}}",
 		"default_storage_path": "已恢復使用預設儲存路徑",
 		"settings_imported": "設定已成功匯入。",
@@ -130,20 +130,20 @@
 		"learn_more": "了解更多"
 	},
 	"tasks": {
-		"canceled": "工作錯誤：它已被使用者停止並取消。",
-		"deleted": "工作失敗：它已被使用者停止並刪除。",
-		"incomplete": "工作 #{{taskNumber}} (未完成)",
-		"no_messages": "工作 #{{taskNumber}} (無訊息)"
+		"canceled": "任務錯誤：它已被使用者停止並取消。",
+		"deleted": "任務失敗：它已被使用者停止並刪除。",
+		"incomplete": "任務 #{{taskNumber}} (未完成)",
+		"no_messages": "任務 #{{taskNumber}} (無訊息)"
 	},
 	"storage": {
-		"prompt_custom_path": "輸入自訂會話歷史儲存路徑，留空以使用預設位置",
+		"prompt_custom_path": "輸入自定義對話記錄儲存路徑，留空以使用預設位置",
 		"path_placeholder": "D:\\KiloCodeStorage",
 		"enter_absolute_path": "請輸入絕對路徑（例如 D:\\KiloCodeStorage 或 /home/user/storage）",
 		"enter_valid_path": "請輸入有效的路徑"
 	},
 	"input": {
-		"task_prompt": "讓 Kilo Code 做什麼？",
-		"task_placeholder": "在這裡輸入工作"
+		"task_prompt": "Kilo Code 該做什麼？",
+		"task_placeholder": "在這裡輸入任務"
 	},
 	"settings": {
 		"providers": {
@@ -195,7 +195,7 @@
 	},
 	"commands": {
 		"preventCompletionWithOpenTodos": {
-			"description": "當待辦事項清單中有未完成的待辦事項時阻止工作完成"
+			"description": "當待辦事項清單中有未完成的待辦事項時阻止任務完成"
 		}
 	}
 }

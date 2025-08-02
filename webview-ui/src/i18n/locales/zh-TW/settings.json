@@ -32,7 +32,7 @@
 		"experimental": "實驗性",
 		"language": "語言",
 		"about": "關於 Kilo Code",
-		"display": "显示"
+		"display": "顯示"
 	},
 	"prompts": {
 		"description": "設定用於快速操作的支援提示詞，如增強提示詞、解釋程式碼和修復問題。這些提示詞幫助 Kilo Code 為常見開發工作提供更好的支援。"
@@ -41,13 +41,13 @@
 		"title": "程式碼庫索引",
 		"enableLabel": "啟用程式碼庫索引",
 		"enableDescription": "啟用程式碼索引以改進搜尋和上下文理解",
-		"profileLabel": "嵌入提供者",
-		"selectProfilePlaceholder": "選擇提供者",
+		"profileLabel": "嵌入供應商",
+		"selectProfilePlaceholder": "選擇供應商",
 		"openaiProvider": "OpenAI",
 		"ollamaProvider": "Ollama",
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "API 金鑰：",
-		"geminiApiKeyPlaceholder": "輸入您的Gemini API金鑰",
+		"geminiApiKeyPlaceholder": "輸入您的 Gemini API 金鑰",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API 金鑰：",
 		"mistralApiKeyPlaceholder": "輸入您的 Mistral API 金鑰",
@@ -60,7 +60,7 @@
 		"openAiCompatibleModelDimensionLabel": "嵌入維度：",
 		"modelDimensionLabel": "模型維度",
 		"openAiCompatibleModelDimensionPlaceholder": "例如，1536",
-		"openAiCompatibleModelDimensionDescription": "模型的嵌入維度（輸出大小）。請查閱您的提供商文件獲取此值。常見值：384、768、1536、3072。",
+		"openAiCompatibleModelDimensionDescription": "模型的嵌入維度（輸出大小）。請查閱您的供應商文件獲取此值。常見值：384、768、1536、3072。",
 		"modelLabel": "模型",
 		"selectModelPlaceholder": "選擇模型",
 		"ollamaUrlLabel": "Ollama URL：",
@@ -79,7 +79,7 @@
 		"statusTitle": "狀態",
 		"settingsTitle": "索引設定",
 		"disabledMessage": "程式碼庫索引目前已停用。請在全域設定中啟用以設定索引選項。",
-		"embedderProviderLabel": "嵌入器提供者",
+		"embedderProviderLabel": "嵌入器供應商",
 		"modelPlaceholder": "輸入模型名稱",
 		"selectModel": "選擇模型",
 		"ollamaBaseUrlLabel": "Ollama 基礎 URL",
@@ -169,8 +169,8 @@
 			"description": "自動在不同模式之間切換而無需核准"
 		},
 		"subtasks": {
-			"label": "子工作",
-			"description": "允許建立和完成子工作而無需核准"
+			"label": "子任務",
+			"description": "允許建立和完成子任務而無需核准"
 		},
 		"followupQuestions": {
 			"label": "問題",
@@ -276,11 +276,11 @@
 		"huggingFaceSelectModel": "選擇模型...",
 		"huggingFaceSearchModels": "搜尋模型...",
 		"huggingFaceNoModelsFound": "找不到模型",
-		"huggingFaceProvider": "提供者",
+		"huggingFaceProvider": "供應商",
 		"huggingFaceProviderAuto": "自動",
-		"huggingFaceSelectProvider": "選擇提供者...",
-		"huggingFaceSearchProviders": "搜尋提供者...",
-		"huggingFaceNoProvidersFound": "找不到提供者",
+		"huggingFaceSelectProvider": "選擇供應商...",
+		"huggingFaceSearchProviders": "搜尋供應商...",
+		"huggingFaceNoProvidersFound": "找不到供應商",
 		"getGeminiApiKey": "取得 Gemini API 金鑰",
 		"openAiApiKey": "OpenAI API 金鑰",
 		"apiKey": "API 金鑰",
@@ -342,7 +342,7 @@
 		"unboundApiKey": "Unbound API 金鑰",
 		"getUnboundApiKey": "取得 Unbound API 金鑰",
 		"unboundRefreshModelsSuccess": "模型列表已更新！您現在可以從最新模型中選擇。",
-		"unboundInvalidApiKey": "無效的API金鑰。請檢查您的API金鑰並重試。",
+		"unboundInvalidApiKey": "無效的 API 金鑰。請檢查您的 API 金鑰並重試。",
 		"humanRelay": {
 			"description": "不需要 API 金鑰，但使用者需要協助將資訊複製並貼上到網頁聊天 AI。",
 			"instructions": "使用期間會彈出對話框，並自動將目前訊息複製到剪貼簿。您需要將這些內容貼上到網頁版 AI（如 ChatGPT 或 Claude），然後將 AI 的回覆複製回對話框並點選確認按鈕。"
@@ -421,7 +421,7 @@
 			"maxTokensDescription": "Claude Code 回應的最大輸出 Token 數量。預設為 8000。"
 		},
 		"geminiCli": {
-			"description": "此提供商使用 Gemini CLI 工具的 OAuth 身份驗證，不需要 API 金鑰。",
+			"description": "此供應商使用 Gemini CLI 工具的 OAuth 身份驗證，不需要 API 金鑰。",
 			"oauthPath": "OAuth 憑證路徑（可選）",
 			"oauthPathDescription": "OAuth 憑證檔案的路徑。留空以使用預設位置（~/.gemini/oauth_creds.json）。",
 			"instructions": "如果您尚未進行身份驗證，請先執行",
@@ -518,7 +518,7 @@
 		},
 		"maxReadFile": {
 			"label": "檔案讀取自動截斷閾值",
-			"description": "當模型未指定起始/結束值時，Kilo Code 讀取的行數。如果此數值小於檔案總行數，Kilo Code 將產生程式碼定義的行號索引。特殊情況：-1 指示 Kilo Code 讀取整個檔案（不建立索引），0 指示不讀取任何行並僅提供行索引以取得最小上下文。較低的值可最小化初始上下文使用，允許後續精確的行範圍讀取。明確指定起始/結束的請求不受此設定限制。 <0>瞭解更多</0>",
+			"description": "當模型未指定起始/結束值時，Kilo Code 讀取的行數。如果此數值小於檔案總行數，Kilo Code 將產生程式碼定義的行號索引。特殊情況：-1 指示 Kilo Code 讀取整個檔案（不建立索引）；0 指示不讀取任何行並僅提供行索引以取得最小上下文。較低的值可最大限度地減少初始上下文的使用，從而實現精確的後續行範圍讀取。明確指定起始/結束的請求不受此設定限制。",
 			"lines": "行",
 			"always_full_read": "始終讀取整個檔案"
 		},
@@ -533,7 +533,7 @@
 			},
 			"maxMessages": {
 				"label": "最大診斷訊息數",
-				"description": "每個檔案包含的最大診斷訊息數。此限制適用於自動包含（當核取方塊啟用時）和手動 @problems 提及。較高的值提供更多上下文，但會增加權杖使用量。",
+				"description": "每個檔案包含的最大診斷訊息數。此限制適用於自動包含（當核取方塊啟用時）和手動 @problems 提及。較高的值提供更多上下文，但會增加 token 使用量。",
 				"resetTooltip": "重設為預設值 (50)",
 				"unlimited": "無限制診斷訊息",
 				"unlimitedLabel": "無限制"
@@ -546,10 +546,10 @@
 		"condensingThreshold": {
 			"label": "壓縮觸發閾值",
 			"selectProfile": "設定檔案閾值",
-			"defaultProfile": "全域預設（所有檔案）",
-			"defaultDescription": "當上下文達到此百分比時，將自動為所有檔案壓縮，除非它們有自訂設定",
-			"profileDescription": "僅此檔案的自訂閾值（覆蓋全域預設）",
-			"inheritDescription": "此檔案繼承全域預設閾值（{{threshold}}%）",
+			"defaultProfile": "全域預設（所有設定檔）",
+			"defaultDescription": "當上下文達到此百分比時，將自動壓縮上下文，可被自定義設定檔覆蓋",
+			"profileDescription": "僅此設定檔的自訂閾值（覆蓋全域預設）",
+			"inheritDescription": "此設定檔繼承全域預設閾值（{{threshold}}%）",
 			"usesGlobal": "（使用全域 {{threshold}}%）"
 		}
 	},
@@ -676,14 +676,14 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "啟用 Morph Fast Apply",
-			"description": "啟用後，Kilo Code 可使用 Morph Fast Apply 編輯檔案。",
+			"description": "啟用後，Kilo Code 可使用 Morph Fast Apply 模型編輯檔案。",
 			"apiKey": "Morph API 金鑰（選用）",
 			"placeholder": "輸入您的 Morph API 金鑰（選用）",
-			"warning": "如果您未設定 Morph API 金鑰，仍可透過 Kilo Code 或 OpenRouter 使用 Fast Apply。您的帳戶將被收取模型使用費用，目前擴充套件 UI 中不會顯示此費用。"
+			"warning": "如果您未設定 Morph API 金鑰，仍可透過 Kilo Code 或 OpenRouter 使用 Morph Fast Apply。您的帳戶將被收取模型使用費用，目前延伸模組 UI 中不會顯示此費用。"
 		},
 		"INLINE_ASSIST": {
-			"name": "内联助手",
-			"description": "启用内联辅助功能，在您的编辑器中直接获取快速代码建议和改进。包括快速内联任务（Cmd+I）用于定向更改和自动内联任务用于上下文相关的改进。"
+			"name": "行內輔助",
+			"description": "啟用行內輔助功能，可直接在編輯器中快速取得程式碼建議和改進。其中包括用於定向修改的快速行內任務 (Cmd+I) 和用於情境改進的自動行內任務。"
 		}
 	},
 	"promptCaching": {
@@ -693,7 +693,7 @@
 	"temperature": {
 		"useCustom": "使用自訂溫度",
 		"description": "控制模型回應的隨機性",
-		"rangeDescription": "較高值使輸出更隨機，較低值更確定"
+		"rangeDescription": "較高值使輸出更隨機，較低值更穩定"
 	},
 	"modelInfo": {
 		"supportsImages": "支援影像",
@@ -793,8 +793,8 @@
 	},
 	"display": {
 		"taskTimeline": {
-			"label": "显示任务时间轴",
-			"description": "显示任务消息的可视化时间线，按类型着色，让您能够快速查看任务进度并回滚到任务历史中的特定点。"
+			"label": "顯示任務時間軸",
+			"description": "顯示任務訊息的視覺化時間軸，按類型著色，讓您能夠快速查看任務進度並回滾到任務歷史中的特定節點。"
 		},
 		"costThreshold": {
 			"description": "仅显示超过此金额的请求费用。当详细信息面板打开时，费用始终可见。",
@@ -803,7 +803,7 @@
 		}
 	},
 	"includeMaxOutputTokens": "包含最大輸出 Token 數",
-	"includeMaxOutputTokensDescription": "在 API 請求中傳送最大輸出 Token 參數。某些提供商可能不支援此功能。",
+	"includeMaxOutputTokensDescription": "在 API 請求中傳送最大輸出 Token 參數。某些供應商可能不支援此功能。",
 	"limitMaxTokensDescription": "限制回應中的最大 Token 數量",
 	"maxOutputTokensLabel": "最大輸出 Token 數",
 	"maxTokensGenerateDescription": "回應中產生的最大 Token 數"

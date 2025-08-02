@@ -13,6 +13,11 @@
 		"addCredit": "क्रेडिट जोड़ें",
 		"lowBalance": "आपका Kilo Code बैलेंस कम है"
 	},
+	"pricing": {
+		"costUnknown": "लागत अज्ञात",
+		"costUnknownDescription": "API प्रदाता ने कोई लागत डेटा प्रदान नहीं किया या अनुरोध रद्द कर दिया गया।",
+		"discoverModelPricing": "मॉडल मूल्य निर्धारण और क्षमताओं की खोज करें"
+	},
 	"notifications": {
 		"toolRequest": "उपकरण अनुरोध अनुमोदन की प्रतीक्षा कर रहा है",
 		"browserAction": "ब्राउज़र कार्रवाई अनुमोदन की प्रतीक्षा कर रही है",

@@ -88,17 +88,17 @@
 			"provideCodeSuggestions": "جارٍ تقديم اقتراحات الرمز..."
 		},
 		"statusBar": {
-			"warning": "$(warning) مساعد كيلو المباشر",
-			"disabled": "$(circle-slash) مساعدة كيلو المضمنة",
+			"warning": "$(warning) مساعد Kilo المباشر",
+			"disabled": "$(circle-slash) مساعدة Kilo المضمنة",
 			"tooltip": {
-				"disabled": "مساعد كيلو كود المضمّن (معطّل)",
-				"basic": "مساعد رمز كيلو المدمج",
+				"disabled": "مساعد Kilo كود المضمّن (معطّل)",
+				"basic": "مساعد رمز Kilo المدمج",
 				"lastCompletion": "الاقتراح الأخير:",
 				"model": "النموذج:",
 				"tokenError": "يجب تعيين رمز صالح لاستخدام المساعد المضمن",
 				"sessionTotal": "التكلفة الإجمالية للجلسة:"
 			},
-			"enabled": "$(sparkle) مساعد كيلو المضمّن",
+			"enabled": "$(sparkle) مساعد Kilo المضمّن",
 			"cost": {
 				"lessThanCent": "<$0.01",
 				"zero": "$٠٫٠٠"
@@ -106,24 +106,24 @@
 		},
 		"toggleMessage": "المساعد المضمن Kilo {{status}}",
 		"incompatibilityExtensionPopup": {
-			"message": "يتم حظر مساعد كيلو كود المضمّن بسبب تعارض مع GitHub Copilot. لإصلاح هذا، يجب عليك تعطيل اقتراحات Copilot المضمنة.",
+			"message": "يتم حظر مساعد Kilo كود المضمّن بسبب تعارض مع GitHub Copilot. لإصلاح هذا، يجب عليك تعطيل اقتراحات Copilot المضمنة.",
 			"disableCopilot": "تعطيل Copilot",
 			"disableInlineAssist": "تعطيل المساعد المضمّن"
 		}
 	},
 	"terminalCommandGenerator": {
-		"inputPrompt": "كيلو: وصف الأمر الذي ترغب في توليده",
-		"generatingProgress": "كيلو: جاري توليد الأمر الطرفي...",
-		"noActiveTerminal": "كيلو: لا يوجد طرفية نشطة. يرجى فتح طرفية أولاً.",
-		"commandGenerated": "كيلو: الأمر الذي تم إنشاؤه: {{command}}",
+		"inputPrompt": "Kilo: وصف الأمر الذي ترغب في توليده",
+		"generatingProgress": "Kilo: جاري توليد الأمر الطرفي...",
+		"noActiveTerminal": "Kilo: لا يوجد طرفية نشطة. يرجى فتح طرفية أولاً.",
+		"commandGenerated": "Kilo: الأمر الذي تم إنشاؤه: {{command}}",
 		"inputPlaceholder": "مثلًا، إنهاء العملية التي تعمل على المنفذ 3001، إيجاد الملفات الكبيرة، إلخ",
-		"generationFailed": "كيلو: فشل في إنشاء الأمر: {{error}}",
+		"generationFailed": "Kilo: فشل في إنشاء الأمر: {{error}}",
 		"warningDialog": {
 			"okButton": "أفهم",
 			"title": "تحذير أمان للمحطة",
 			"message": "تحقق مرة أخرى من جميع الأوامر التي تم إنشاؤها قبل تنفيذها. لا يمكن دائمًا التراجع عن الإجراءات التي تتم في نافذة الطرفية - فتنفيذ أوامر غير موثوقة قد يؤدي إلى فقدان البيانات بشكل لا رجعة فيه أو تلف النظام. راجع وافهم الأمر بشكل كامل قبل المتابعة!",
 			"cancelButton": "إلغاء"
 		},
-		"tipMessage": "كيلو: اضغط {{shortcut}} لإنشاء أوامر الطرفية"
+		"tipMessage": "Kilo: اضغط {{shortcut}} لإنشاء أوامر الطرفية"
 	}
 }

@@ -122,7 +122,6 @@ function convertToOllamaMessages(anthropicMessages: Anthropic.Messages.MessagePa
 interface OllamaHandlerOptions {
 	ollamaBaseUrl?: string
 	ollamaModelId?: string
-	requestTimeoutMs?: number
 }
 
 export class KilocodeOllamaHandler extends BaseProvider {
@@ -153,19 +152,10 @@ export class KilocodeOllamaHandler extends BaseProvider {
 			...convertToOllamaMessages(messages),
 		]
 
-		const timeoutMs = this.options.requestTimeoutMs || 300_000
 		try {
-			// Create a promise that rejects after timeout
-			const timeoutPromise = new Promise<never>((_, reject) => {
-				setTimeout(
-					() => reject(new Error(`Ollama request timed out after ${timeoutMs / 1000} seconds`)),
-					timeoutMs,
-				)
-			})
-
 			// Create the actual API request promise
 			const model = this.getModel()
-			const apiPromise = client.chat({
+			const stream = await client.chat({
 				model: model.id,
 				messages: ollamaMessages,
 				stream: true,
@@ -173,9 +163,6 @@ export class KilocodeOllamaHandler extends BaseProvider {
 					num_ctx: model.info.contextWindow,
 				},
 			})
-
-			// Race the API request against the timeout
-			const stream = await Promise.race([apiPromise, timeoutPromise])
 
 			try {
 				for await (const chunk of stream) {
@@ -200,11 +187,6 @@ export class KilocodeOllamaHandler extends BaseProvider {
 				throw new Error(`Ollama stream processing error: ${streamError.message || "Unknown error"}`)
 			}
 		} catch (error) {
-			// Check if it's a timeout error
-			if (error.message && error.message.includes("timed out")) {
-				throw new Error(`Ollama request timed out after ${timeoutMs / 1000} seconds`)
-			}
-
 			// Enhance error reporting
 			const statusCode = error.status || error.statusCode
 			const errorMessage = error.message || "Unknown error"

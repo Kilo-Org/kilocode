@@ -13,6 +13,11 @@
 		"addCredit": "Додати кредит",
 		"lowBalance": "Твій баланс Kilo Code низький"
 	},
+	"pricing": {
+		"costUnknown": "вартість невідома",
+		"costUnknownDescription": "API провайдер не надав дані про вартість або запит було скасовано.",
+		"discoverModelPricing": "Дізнатися про ціни та можливості моделі"
+	},
 	"notifications": {
 		"toolRequest": "Запит інструменту очікує на схвалення",
 		"browserAction": "Дія браузера очікує на схвалення",

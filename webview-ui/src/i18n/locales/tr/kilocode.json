@@ -13,6 +13,11 @@
 		"addCredit": "Kredi Ekle",
 		"lowBalance": "Kilo Code bakiyeniz düşük"
 	},
+	"pricing": {
+		"costUnknown": "maliyet bilinmiyor",
+		"costUnknownDescription": "API Sağlayıcısı herhangi bir maliyet verisi sağlamadı veya istek iptal edildi.",
+		"discoverModelPricing": "Model fiyatlandırması ve yeteneklerini keşfedin"
+	},
 	"notifications": {
 		"toolRequest": "Araç isteği onay bekliyor",
 		"browserAction": "Tarayıcı eylemi onay bekliyor",

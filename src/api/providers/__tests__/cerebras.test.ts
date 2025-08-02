@@ -35,12 +35,12 @@ describe("CerebrasHandler", () => {
 
 	test("should return default model when no model is specified", () => {
 		const model = handler.getModel()
-		expect(model.id).toBe(cerebrasDefaultModelId)
+		expect(model.id).toBe(cerebrasDefaultModelId.replace("-free", ""))
 		expect(model.info).toEqual(cerebrasModels[cerebrasDefaultModelId])
 	})
 
 	test("should return specified model when valid model is provided", () => {
-		const testModelId: CerebrasModelId = "llama3.1-8b"
+		const testModelId: CerebrasModelId = "qwen-3-32b"
 		const handlerWithModel = new CerebrasHandler({
 			apiModelId: testModelId,
 			cerebrasApiKey: "test-cerebras-api-key",
@@ -104,7 +104,7 @@ describe("CerebrasHandler", () => {
 	})
 
 	test("createMessage should pass correct parameters to Cerebras client", async () => {
-		const modelId: CerebrasModelId = "llama3.1-8b"
+		const modelId: CerebrasModelId = "qwen-3-32b"
 		const handlerWithModel = new CerebrasHandler({ apiModelId: modelId, cerebrasApiKey: "test-cerebras-api-key" })
 
 		mockCreate.mockImplementationOnce(() => {

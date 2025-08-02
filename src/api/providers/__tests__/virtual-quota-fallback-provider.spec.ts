@@ -109,7 +109,9 @@ describe("VirtualQuotaFallbackProvider", () => {
 		})
 
 		it("should prune old events when consuming", async () => {
-			const now = Date.now()
+			const now = 1000000000000 // Fixed timestamp to avoid race conditions
+			const dateNowSpy = vitest.spyOn(Date, "now").mockReturnValue(now)
+
 			const oneDayMs = 24 * 60 * 60 * 1000
 			const oldEvent: UsageEvent = {
 				timestamp: now - oneDayMs - 1000,
@@ -125,6 +127,8 @@ describe("VirtualQuotaFallbackProvider", () => {
 			const updatedEvents = (mockContext.globalState.update as any).mock.calls[0][1]
 			expect(updatedEvents.find((e: UsageEvent) => e.timestamp === oldEvent.timestamp)).toBeUndefined()
 			expect(updatedEvents.find((e: UsageEvent) => e.timestamp === newEvent.timestamp)).toBeDefined()
+
+			dateNowSpy.mockRestore()
 		})
 
 		it("should clear all usage data", async () => {

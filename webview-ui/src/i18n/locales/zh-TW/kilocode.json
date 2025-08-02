@@ -13,6 +13,11 @@
 		"addCredit": "添加額度",
 		"lowBalance": "你的 Kilo Code 餘額不足"
 	},
+	"pricing": {
+		"costUnknown": "費用未知",
+		"costUnknownDescription": "API 提供商未提供任何費用資料或請求已取消。",
+		"discoverModelPricing": "了解模型定價和功能"
+	},
 	"notifications": {
 		"toolRequest": "工具請求等待核准",
 		"browserAction": "瀏覽器動作等待核准",
@@ -41,18 +46,18 @@
 			"login": "登入 Kilo Code",
 			"logout": "登出 Kilo Code",
 			"providerRouting": {
-				"title": "Kilo Code - OpenRouter 提供者路由",
-				"description": "Kilo Code 將請求路由到您模型的最佳可用提供者。預設情況下，請求會在頂級提供者之間進行負載平衡，以最大化正常執行時間。但是，您可以選擇要用於此模型的特定提供者。"
+				"title": "Kilo Code - OpenRouter 供應商路由",
+				"description": "Kilo Code 將請求路由到您模型的最佳可用供應商。預設情況下，請求會在頂級供應商之間進行負載平衡，以最大化正常執行時間。但是，您可以選擇要用於此模型的特定供應商。"
 			}
 		},
 		"terminal": {
 			"commandGenerator": {
 				"apiConfigId": {
-					"label": "API 配置",
-					"description": "选择用于生成终端命令的API配置。选择\"使用当前配置\"则使用您的默认设置。",
-					"current": "使用当前配置"
+					"label": "API 設定檔",
+					"description": "選擇用於產生終端命令的 API 設定檔。選擇\"使用目前設定檔\"則使用您的預設設定檔。",
+					"current": "使用目前設定檔"
 				},
-				"provider": "终端命令生成器提供程序"
+				"provider": "終端機命令產生器供應商"
 			}
 		}
 	},
@@ -153,46 +158,46 @@
 		}
 	},
 	"ghost": {
-		"title": "內聯輔助",
+		"title": "行內輔助",
 		"settings": {
 			"enableQuickInlineTaskKeybinding": {
-				"label": "快速内联任务",
-				"description": "只需要快速修改？选择一些代码（或者不选！）并按下 Cmd+I。用简单的语言描述你的目标（\"创建一个带有这些属性的 React 组件\"，\"为这个函数添加错误处理\"），然后在你的编辑器中获取多个随时可用的建议。<DocsLink>查看快捷键</DocsLink>"
+				"label": "快速行內任務",
+				"description": "只需要快速修改？選擇一些程式碼（或不選！）並按下 Cmd+I。用簡單的語言描述你的目標（\"建立一個帶有這些屬性的 React 元件\"，\"為這個函數添加錯誤處理\"），然後在你的編輯器中取得多個隨時可用的建議。 <DocsLink>查看快捷鍵</DocsLink>"
 			},
 			"enableAutoInlineTaskKeybinding": {
-				"label": "自动内联任务",
-				"description": "需要快速修复、完成或重构代码？Kilo 将使用周围的上下文提供即时改进，让您保持工作流畅。<DocsLink>查看快捷键</DocsLink>"
+				"label": "自動行內任務",
+				"description": "需要快速修復、完成或重構程式碼？ Kilo 將使用周圍的上下文提供即時改進，讓您保持工作流暢。 <DocsLink>查看快捷鍵</DocsLink>"
 			},
-			"provider": "提供者",
+			"provider": "供應商",
 			"apiConfigId": {
 				"label": "API 設定",
 				"current": "使用目前選擇的 API 設定",
-				"description": "為內聯輔D助提示選擇一個 API 設定，或者只使用目前選擇的設定"
+				"description": "為行內輔助提示選擇一個 API 設定，或者只使用目前選擇的設定"
 			},
-			"triggers": "触发器",
-			"keybindingDescription": "Inline Assist 功能通过命令触发。您可以在<DocsLink>此处配置键盘快捷键</DocsLink>。"
+			"triggers": "觸發器",
+			"keybindingDescription": "行內輔助功能透過指令觸發。您可以在<DocsLink>此處設定鍵盤快速鍵</DocsLink>。"
 		}
 	},
 	"virtualProvider": {
-		"title": "虚拟配额回退提供方设置",
-		"description": "配置一个配置文件列表，每个配置文件都有自己的配额限制。当一个提供商的配额限制达到时，将使用列表中的下一个配置文件，直到没有剩余配置文件为止。",
-		"profileLabel": "档案 {{number}}",
-		"primaryProfileLabel": "个人资料 {{number}} (主要)",
-		"moveProfileUp": "将个人资料上移",
-		"moveProfileDown": "下移档案",
-		"removeProfile": "移除个人资料",
-		"selectProfilePlaceholder": "选择个人资料...",
-		"addProfile": "添加资料",
-		"noProfilesAvailable": "没有可用的配置文件。请先配置至少一个非虚拟提供商配置文件。",
+		"title": "虛擬配額回滾供應商設定",
+		"description": "建立一個設定檔清單，每個設定檔都有各自的配額限制。當一個供應商的配額達到上限時，將使用清單中的下一個設定檔，直到沒有剩餘的設定檔為止。",
+		"profileLabel": "設定檔 {{number}}",
+		"primaryProfileLabel": "設定檔 {{number}} (主要)",
+		"moveProfileUp": "向上移動設定檔",
+		"moveProfileDown": "向下移動設定檔",
+		"removeProfile": "移除設定檔",
+		"selectProfilePlaceholder": "選擇設定檔...",
+		"addProfile": "新增設定檔",
+		"noProfilesAvailable": "沒有可用的設定檔。請先設定至少一個非虛擬提供者設定檔。",
 		"dangerZoneTitle": "危險區域",
 		"dangerZoneDescription": "這些操作具有破壞性且無法復原。",
 		"clearUsageData": "清除使用資料",
 		"confirmClearTitle": "確定嗎？",
 		"confirmClearDescription": "這將永久刪除虛擬提供者的所有儲存使用資料。此操作無法復原。",
-		"perMinute": "每分钟",
-		"tokensLabel": "代币",
+		"perMinute": "每分鐘",
+		"tokensLabel": "Tokens",
 		"perDay": "每天",
-		"perHour": "每小时",
-		"requestsLabel": "请求"
+		"perHour": "每小時",
+		"requestsLabel": "請求"
 	}
 }

@@ -53,12 +53,12 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo 内嵌助手",
+			"enabled": "$(sparkle) Kilo 内联辅助",
 			"disabled": "$(circle-slash) Kilo 内联辅助",
-			"warning": "$(warning) Kilo 内联助手",
+			"warning": "$(warning) Kilo 内联辅助",
 			"tooltip": {
-				"basic": "千行代码内联协助",
-				"disabled": "Kilo Code 行内辅助（已禁用）",
+				"basic": "Kilo Code 内联辅助",
+				"disabled": "Kilo Code 内联辅助",
 				"lastCompletion": "最后建议：",
 				"tokenError": "必须设置有效令牌才能使用行内助手",
 				"sessionTotal": "会话总费用：",
@@ -69,7 +69,7 @@
 				"lessThanCent": "<¥0.07"
 			}
 		},
-		"toggleMessage": "K1内联助手 {{status}}",
+		"toggleMessage": "Kilo 内联辅助 {{status}}",
 		"progress": {
 			"analyzing": "正在分析您的代码...",
 			"generating": "正在生成建议修改...",
@@ -102,17 +102,17 @@
 			"provideCodeSuggestions": "正在提供代码建议..."
 		},
 		"incompatibilityExtensionPopup": {
-			"message": "Kilo Code Inline Assist 被 GitHub Copilot 的冲突阻止了。要解决此问题，你需要禁用 Copilot 的内联建议。",
+			"message": "Kilo Code 内联辅助 被 GitHub Copilot 的冲突阻止了。要解决此问题，你需要禁用 Copilot 的内联辅助。",
 			"disableCopilot": "禁用 Copilot",
-			"disableInlineAssist": "禁用 Inline Assist"
+			"disableInlineAssist": "禁用 内联辅助"
 		}
 	},
 	"terminalCommandGenerator": {
-		"inputPrompt": "千克：描述您想要生成的命令",
+		"inputPrompt": "Kilo：描述您想要生成的命令",
 		"inputPlaceholder": "例如，终止在3001端口上运行的进程，查找大文件等",
 		"noActiveTerminal": "Kilo：未找到活动终端。请先打开一个终端。",
 		"generatingProgress": "Kilo：正在生成终端命令...",
-		"commandGenerated": "千瓦：生成的命令：{{command}}",
+		"commandGenerated": "Kilo：生成的命令：{{command}}",
 		"generationFailed": "Kilo：命令生成失败：{{error}}",
 		"warningDialog": {
 			"title": "终端安全警告",
@@ -120,6 +120,6 @@
 			"okButton": "我明白",
 			"cancelButton": "取消"
 		},
-		"tipMessage": "千重奏: 按下 {{shortcut}} 生成终端命令"
+		"tipMessage": "Kilo Code: 按下 {{shortcut}} 生成终端命令"
 	}
 }

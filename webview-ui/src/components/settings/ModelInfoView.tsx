@@ -25,6 +25,14 @@ export const ModelInfoView = ({
 }: ModelInfoViewProps) => {
 	const { t } = useAppTranslation()
 
+	// kilocode_change start
+	const kiloCodeTrustsThePricing =
+		(apiProvider !== "kilocode" && apiProvider !== "openrouter") ||
+		selectedModelId.startsWith("anthropic/") ||
+		selectedModelId.startsWith("openai/") ||
+		selectedModelId.startsWith("google/")
+	// kilocode_change end
+
 	const infoItems = [
 		<ModelInfoSupportsItem
 			isSupported={modelInfo?.supportsImages ?? false}
@@ -48,29 +56,36 @@ export const ModelInfoView = ({
 				{modelInfo.maxTokens?.toLocaleString()} tokens
 			</>
 		),
-		modelInfo?.inputPrice !== undefined && modelInfo.inputPrice > 0 && (
+		kiloCodeTrustsThePricing && modelInfo?.inputPrice !== undefined && modelInfo.inputPrice > 0 && (
 			<>
 				<span className="font-medium">{t("settings:modelInfo.inputPrice")}:</span>{" "}
 				{formatPrice(modelInfo.inputPrice)} / 1M tokens
 			</>
 		),
-		modelInfo?.outputPrice !== undefined && modelInfo.outputPrice > 0 && (
+		kiloCodeTrustsThePricing && modelInfo?.outputPrice !== undefined && modelInfo.outputPrice > 0 && (
 			<>
 				<span className="font-medium">{t("settings:modelInfo.outputPrice")}:</span>{" "}
 				{formatPrice(modelInfo.outputPrice)} / 1M tokens
 			</>
 		),
-		modelInfo?.supportsPromptCache && modelInfo.cacheReadsPrice && (
+		kiloCodeTrustsThePricing && modelInfo?.supportsPromptCache && modelInfo.cacheReadsPrice && (
 			<>
 				<span className="font-medium">{t("settings:modelInfo.cacheReadsPrice")}:</span>{" "}
 				{formatPrice(modelInfo.cacheReadsPrice || 0)} / 1M tokens
 			</>
 		),
-		modelInfo?.supportsPromptCache && modelInfo.cacheWritesPrice && (
+		kiloCodeTrustsThePricing && modelInfo?.supportsPromptCache && modelInfo.cacheWritesPrice && (
 			<>
 				<span className="font-medium">{t("settings:modelInfo.cacheWritesPrice")}:</span>{" "}
 				{formatPrice(modelInfo.cacheWritesPrice || 0)} / 1M tokens
 			</>
+		),
+		!kiloCodeTrustsThePricing && selectedModelId && (
+			<span className="font-medium">
+				<a href={`https://openrouter.ai/${selectedModelId}`} className="text-vscode-link">
+					{t("kilocode:pricing.discoverModelPricing")}
+				</a>
+			</span>
 		),
 		apiProvider === "gemini" && (
 			<span className="italic">

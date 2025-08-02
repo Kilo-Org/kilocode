@@ -13,6 +13,11 @@
 		"addCredit": "添加额度",
 		"lowBalance": "你的 Kilo Code 余额不足"
 	},
+	"pricing": {
+		"costUnknown": "费用未知",
+		"costUnknownDescription": "API 提供商未提供任何费用数据或请求已取消。",
+		"discoverModelPricing": "了解模型定价和功能"
+	},
 	"notifications": {
 		"toolRequest": "工具请求等待批准",
 		"browserAction": "浏览器操作等待批准",

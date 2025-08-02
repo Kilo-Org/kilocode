@@ -13,6 +13,11 @@
 		"addCredit": "クレジットを追加",
 		"lowBalance": "Kilo Codeの残高が少なくなっています"
 	},
+	"pricing": {
+		"costUnknown": "コスト不明",
+		"costUnknownDescription": "APIプロバイダーがコストデータを提供しなかったか、リクエストがキャンセルされました。",
+		"discoverModelPricing": "モデルの価格と機能を確認"
+	},
 	"notifications": {
 		"toolRequest": "ツールのリクエストが承認待ちです",
 		"browserAction": "ブラウザのアクションが承認待ちです",

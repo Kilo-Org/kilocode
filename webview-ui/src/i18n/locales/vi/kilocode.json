@@ -13,6 +13,11 @@
 		"addCredit": "Thêm tín dụng",
 		"lowBalance": "Số dư Kilo Code của bạn thấp"
 	},
+	"pricing": {
+		"costUnknown": "chi phí không xác định",
+		"costUnknownDescription": "Nhà cung cấp API không cung cấp dữ liệu chi phí hoặc yêu cầu đã bị hủy.",
+		"discoverModelPricing": "Khám phá giá cả và khả năng của mô hình"
+	},
 	"notifications": {
 		"toolRequest": "Yêu cầu công cụ đang chờ phê duyệt",
 		"browserAction": "Hành động trình duyệt đang chờ phê duyệt",

@@ -108,12 +108,12 @@
 		}
 	},
 	"terminalCommandGenerator": {
-		"inputPrompt": "Кіло: Опишіть команду, яку ви хочете згенерувати",
+		"inputPrompt": "Kilo: Опишіть команду, яку ви хочете згенерувати",
 		"inputPlaceholder": "напр., завершити процес на порту 3001, знайти великі файли і т.д.",
 		"noActiveTerminal": "Kilo: Не знайдено активного терміналу. Будь ласка, спочатку відкрийте термінал.",
-		"generatingProgress": "Кіло: Генерування команди терміналу...",
-		"commandGenerated": "Кіло: Згенерована команда: {{command}}",
-		"generationFailed": "Кіло: Не вдалося згенерувати команду: {{error}}",
+		"generatingProgress": "Kilo: Генерування команди терміналу...",
+		"commandGenerated": "Kilo: Згенерована команда: {{command}}",
+		"generationFailed": "Kilo: Не вдалося згенерувати команду: {{error}}",
 		"warningDialog": {
 			"title": "Попередження щодо Безпеки Терміналу",
 			"okButton": "Я розумію",

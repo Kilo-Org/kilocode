@@ -13,6 +13,11 @@
 		"addCredit": "Přidat kredit",
 		"lowBalance": "Tvůj Kilo Code zůstatek je nízký"
 	},
+	"pricing": {
+		"costUnknown": "neznámé náklady",
+		"costUnknownDescription": "Poskytovatel API neposkytl žádné údaje o nákladech nebo byl požadavek zrušen.",
+		"discoverModelPricing": "Objevte ceny a možnosti modelů"
+	},
 	"notifications": {
 		"toolRequest": "Požadavek na nástroj čeká na schválení",
 		"browserAction": "Akce prohlížeče čeká na schválení",

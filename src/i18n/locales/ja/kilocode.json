@@ -108,8 +108,8 @@
 		}
 	},
 	"terminalCommandGenerator": {
-		"inputPrompt": "キロ: 生成したいコマンドを説明してください",
-		"commandGenerated": "キロ：生成されたコマンド：{{command}}",
+		"inputPrompt": "Kilo: 生成したいコマンドを説明してください",
+		"commandGenerated": "Kilo：生成されたコマンド：{{command}}",
 		"inputPlaceholder": "例えば、ポート3001で実行中のプロセスを終了する、大きなファイルを見つける、など",
 		"generatingProgress": "Kilo: ターミナルコマンドを生成中...",
 		"noActiveTerminal": "Kilo: アクティブな端末が見つかりません。まず端末を開いてください。",
