@@ -114,8 +114,8 @@
 	"sendMessage": "傳送訊息",
 	"stopTts": "停止文字轉語音",
 	"typeMessage": "輸入訊息...",
-	"typeTask": "構建、查找、詢問",
-	"addContext": "輸入 @ 新增內容，輸入 / 切換模式",
+	"typeTask": "在此處輸入您的工作...",
+	"addContext": "輸入 @ 新增內容，輸入 / 執行指令",
 	"dragFiles": "按住 Shift 鍵拖曳檔案",
 	"dragFilesImages": "按住 Shift 鍵拖曳檔案/圖片",
 	"enhancePromptDescription": "「增強提示」按鈕透過提供額外內容、說明或重新表述來幫助改進您的請求。嘗試在此處輸入請求，然後再次點選按鈕以了解其運作方式。",
@@ -123,7 +123,9 @@
 		"title": "模式",
 		"marketplace": "模式市集",
 		"settings": "模式設定",
-		"description": "專門定制 Kilo Code 行為的角色。"
+		"description": "專門定制 Kilo Code 行為的角色。",
+		"searchPlaceholder": "搜尋模式...",
+		"noResults": "沒有找到結果"
 	},
 	"errorReadingFile": "讀取檔案時發生錯誤：",
 	"noValidImages": "未處理到任何有效圖片",
@@ -270,9 +272,9 @@
 		"title": "🎉 Kilo Code {{version}} 已發布",
 		"description": "Kilo Code {{version}} 帶來強大的新功能和重大改進，提升您的開發任務流程。",
 		"whatsNew": "新功能",
-		"feature1": "<bold>Hugging Face 提供者</bold>：透過新的 Hugging Face 提供者直接存取大量優秀的開源模型，具備無縫整合和模型選擇功能。",
-		"feature2": "<bold>內嵌命令控制</bold>：新的自動核准和拒絕命令執行控制，為您提供對終端機操作的精確控制和可自訂權限。",
-		"feature3": "<bold>AGENTS.md 規則支援</bold>：新增對專案根目錄中社群標準 AGENTS.md 檔案的支援。",
+		"feature1": "<bold>訊息佇列</bold>：在 Roo 工作時將多個訊息排入佇列，讓您可以不間斷地繼續規劃工作流程。",
+		"feature2": "<bold>自訂斜線命令</bold>：建立個人化斜線命令，快速存取常用提示和工作流程，具備完整的 UI 管理功能。",
+		"feature3": "<bold>增強的 Gemini 工具</bold>：新的 URL 上下文和 Google 搜尋基礎功能為 Gemini 模型提供即時網路資訊和增強的研究能力。",
 		"hideButton": "隱藏公告",
 		"detailsDiscussLinks": "在 <discordLink>Discord</discordLink> 和 <redditLink>Reddit</redditLink> 取得更多詳細資訊並參與討論 🚀"
 	},
@@ -353,5 +355,30 @@
 	},
 	"editMessage": {
 		"placeholder": "編輯訊息..."
+	},
+	"command": {
+		"triggerDescription": "觸發 {{name}} 命令"
+	},
+	"slashCommands": {
+		"tooltip": "管理斜線指令",
+		"title": "斜線指令",
+		"description": "建立自訂斜線指令，快速存取常用提示詞和工作流程。<DocsLink>說明文件</DocsLink>",
+		"globalCommands": "全域指令",
+		"workspaceCommands": "工作區指令",
+		"globalCommand": "全域指令",
+		"editCommand": "編輯指令",
+		"deleteCommand": "刪除指令",
+		"newGlobalCommandPlaceholder": "新增全域指令...",
+		"newWorkspaceCommandPlaceholder": "新增工作區指令...",
+		"deleteDialog": {
+			"title": "刪除指令",
+			"description": "確定要刪除指令 \"{{name}}\" 嗎？此動作無法復原。",
+			"cancel": "取消",
+			"confirm": "刪除"
+		}
+	},
+	"queuedMessages": {
+		"title": "佇列訊息:",
+		"clickToEdit": "點擊編輯訊息"
 	}
 }

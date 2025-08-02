@@ -5,6 +5,7 @@ export const EXPERIMENT_IDS = {
 	MULTI_FILE_APPLY_DIFF: "multiFileApplyDiff",
 	POWER_STEERING: "powerSteering",
 	INLINE_ASSIST: "inlineAssist", // kilocode_change
+	PREVENT_FOCUS_DISRUPTION: "preventFocusDisruption",
 } as const satisfies Record<string, ExperimentId>
 
 type _AssertExperimentIds = AssertEqual<Equals<ExperimentId, Values<typeof EXPERIMENT_IDS>>>
@@ -20,6 +21,7 @@ export const experimentConfigsMap: Record<ExperimentKey, ExperimentConfig> = {
 	MULTI_FILE_APPLY_DIFF: { enabled: false },
 	POWER_STEERING: { enabled: false },
 	INLINE_ASSIST: { enabled: false }, // kilocode_change
+	PREVENT_FOCUS_DISRUPTION: { enabled: false },
 }
 
 export const experimentDefault = Object.fromEntries(

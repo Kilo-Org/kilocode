@@ -262,12 +262,16 @@
 		"getChutesApiKey": "Získat klíč API Chutes",
 		"deepSeekApiKey": "Klíč API DeepSeek",
 		"getDeepSeekApiKey": "Získat klíč API DeepSeek",
+		"doubaoApiKey": "Klíč API Doubao",
+		"getDoubaoApiKey": "Získat klíč API Doubao",
 		"moonshotApiKey": "Klíč API Moonshot",
 		"getMoonshotApiKey": "Získat klíč API Moonshot",
 		"moonshotBaseUrl": "Vstupní bod Moonshot",
 		"geminiApiKey": "Klíč API Gemini",
 		"getGroqApiKey": "Získat klíč API Groq",
 		"groqApiKey": "Klíč API Groq",
+		"getSambaNovaApiKey": "Získat klíč API SambaNova",
+		"sambaNovaApiKey": "Klíč API SambaNova",
 		"getGeminiApiKey": "Získat klíč API Gemini",
 		"openAiApiKey": "Klíč API OpenAI",
 		"getHuggingFaceApiKey": "Získat klíč API Hugging Face",
@@ -325,6 +329,16 @@
 		"cacheUsageNote": "Poznámka: Pokud nevidíte využití mezipaměti, zkuste vybrat jiný model a poté znovu vybrat požadovaný model.",
 		"vscodeLmModel": "Jazykový model",
 		"vscodeLmWarning": "Poznámka: Jedná se o velmi experimentální integraci a podpora poskytovatele se bude lišit. Pokud se zobrazí chyba, že model není podporován, jedná se o problém na straně poskytovatele.",
+		"geminiParameters": {
+			"urlContext": {
+				"title": "Povolit kontext URL",
+				"description": "Umožňuje Gemini číst propojené stránky pro extrakci, porovnání a syntézu jejich obsahu do informovaných odpovědí."
+			},
+			"groundingSearch": {
+				"title": "Povolit ukotvení s vyhledáváním Google",
+				"description": "Připojuje Gemini k webovým datům v reálném čase pro přesné, aktuální odpovědi s ověřitelnými citacemi."
+			}
+		},
 		"googleCloudSetup": {
 			"title": "Chcete-li používat Google Cloud Vertex AI, musíte:",
 			"step1": "1. Vytvořit účet Google Cloud, povolit rozhraní Vertex AI API a povolit požadované modely Claude.",
@@ -570,8 +584,18 @@
 			},
 			"delayAfterWrite": {
 				"label": "Zpoždění po zápisu, aby diagnostika mohla detekovat potenciální problémy",
-				"description": "Doba čekání po zápisu souborů před pokračováním, což umožňuje diagnostickým nástrojům zpracovat změny a detekovat problémy."
+				"description": "Čas čekání po zápisu souborů před pokračováním (v milisekundách). Vyšší hodnoty mohou zlepšit přesnost, ale zpomalují detekci chyb."
 			}
+		},
+		"maxImageFileSize": {
+			"label": "Maximální velikost souboru obrázku",
+			"mb": "MB",
+			"description": "Maximální velikost (v MB) pro soubory obrázků, které mohou být zahrnuty do požadavků. Větší soubory budou automaticky změněny na menší velikost."
+		},
+		"maxTotalImageSize": {
+			"label": "Maximální celková velikost obrázků",
+			"mb": "MB",
+			"description": "Maximální kumulativní limit velikosti (v MB) pro všechny obrázky v jednom požadavku. Při překročení budou obrázky změněny na menší velikost, aby se vešly do tohoto limitu."
 		}
 	},
 	"terminal": {
@@ -716,6 +740,10 @@
 		"INLINE_ASSIST": {
 			"name": "Inline pomoc",
 			"description": "Povolte funkce Inline Assist pro rychlé návrhy a vylepšení kódu přímo ve vašem editoru. Zahrnuje Rychlý inline úkol (Cmd+I) pro cílené změny a Automatický inline úkol pro kontextová vylepšení."
+		},
+		"PREVENT_FOCUS_DISRUPTION": {
+			"name": "Úpravy na pozadí",
+			"description": "Zabránit narušení zaměření editoru, když je povoleno. Úpravy souborů probíhají na pozadí bez otevírání diff zobrazení nebo krádeže zaměření. Můžete pokračovat v práci bez přerušení, zatímco Kilo Code provádí změny. Soubory mohou být otevřeny bez zaměření pro zachycení diagnostiky nebo zůstat zcela zavřené."
 		}
 	},
 	"promptCaching": {

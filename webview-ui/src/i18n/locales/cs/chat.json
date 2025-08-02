@@ -277,7 +277,9 @@
 		"title": "Režimy",
 		"marketplace": "Tržiště režimů",
 		"settings": "Nastavení režimů",
-		"description": "Specializované persony které přizpůsobují chování Kilo Code."
+		"description": "Specializované persony které přizpůsobují chování Kilo Code.",
+		"searchPlaceholder": "Hledat režimy...",
+		"noResults": "Nebyly nalezeny žádné výsledky"
 	},
 	"announcement": {
 		"title": "🎉 Vydán Kilo Code {{version}}",
@@ -357,6 +359,31 @@
 		"title": "Roo Code Cloud přichází brzy!",
 		"description": "Spouštěj vzdálené agenty v cloudu, přistupuj ke svým úkolům odkudkoli, spolupracuj s ostatními a mnoho dalšího.",
 		"joinWaitlist": "Připoj se na čekací listinu pro získání přednostního přístupu."
+	},
+	"command": {
+		"triggerDescription": "Spustit příkaz {{name}}"
+	},
+	"slashCommands": {
+		"tooltip": "Spravovat slash příkazy",
+		"title": "Slash příkazy",
+		"description": "Vytvoř vlastní slash příkazy pro rychlý přístup k často používaným promptům a pracovním postupům. <DocsLink>Dokumentace</DocsLink>",
+		"globalCommands": "Globální příkazy",
+		"workspaceCommands": "Příkazy pracovního prostoru",
+		"globalCommand": "Globální příkaz",
+		"editCommand": "Upravit příkaz",
+		"deleteCommand": "Smazat příkaz",
+		"newGlobalCommandPlaceholder": "Nový globální příkaz...",
+		"newWorkspaceCommandPlaceholder": "Nový příkaz pracovního prostoru...",
+		"deleteDialog": {
+			"title": "Smazat příkaz",
+			"description": "Jsi si jistý, že chceš smazat příkaz \"{{name}}\"? Tuto akci nelze vrátit zpět.",
+			"cancel": "Zrušit",
+			"confirm": "Smazat"
+		}
+	},
+	"queuedMessages": {
+		"title": "Zprávy ve frontě:",
+		"clickToEdit": "Klikni pro úpravu zprávy"
 	},
 	"editMessage": {
 		"placeholder": "Upravit tvou zprávu..."

@@ -125,7 +125,9 @@
 		"title": "الأنماط",
 		"marketplace": "سوق الأنماط",
 		"settings": "إعدادات الأنماط",
-		"description": "شخصيات متخصصة تضبط سلوك Kilo Code."
+		"description": "شخصيات متخصصة تضبط سلوك Kilo Code.",
+		"searchPlaceholder": "ابحث في الأنماط...",
+		"noResults": "لا توجد نتائج"
 	},
 	"enhancePromptDescription": "زر «حسّن الموجه» يطوّر موجهك بإضافة سياق أو توضيح أو إعادة صياغة. جرّب اكتب موجه هنا ثم اضغط الزر مرة ثانية وشوف النتيجة.",
 	"addImages": "أضف صور للرسالة",
@@ -361,5 +363,30 @@
 		"title": "Roo Code Cloud قريباً!",
 		"description": "شغّل وكلاء Roomote في السحابة، اوصل لمهامك من أي مكان، تعاون مع الآخرين، والمزيد.",
 		"joinWaitlist": "انضم لقائمة الانتظار للحصول على وصول مبكر."
+	},
+	"command": {
+		"triggerDescription": "تشغيل الأمر {{name}}"
+	},
+	"slashCommands": {
+		"tooltip": "إدارة أوامر الشرطة المائلة",
+		"title": "أوامر الشرطة المائلة",
+		"description": "أنشئ أوامر شرطة مائلة مخصصة للوصول السريع للموجهات وسير العمل المستخدمة بكثرة. <DocsLink>التوثيق</DocsLink>",
+		"globalCommands": "الأوامر العامة",
+		"workspaceCommands": "أوامر مساحة العمل",
+		"globalCommand": "أمر عام",
+		"editCommand": "تعديل الأمر",
+		"deleteCommand": "حذف الأمر",
+		"newGlobalCommandPlaceholder": "أمر عام جديد...",
+		"newWorkspaceCommandPlaceholder": "أمر مساحة عمل جديد...",
+		"deleteDialog": {
+			"title": "حذف الأمر",
+			"description": "متأكد تبي تحذف الأمر \"{{name}}\"؟ هذا الإجراء ما يمكن التراجع عنه.",
+			"cancel": "إلغاء",
+			"confirm": "حذف"
+		}
+	},
+	"queuedMessages": {
+		"title": "الرسائل في الطابور:",
+		"clickToEdit": "انقر لتعديل الرسالة"
 	}
 }

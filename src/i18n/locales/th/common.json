@@ -84,6 +84,13 @@
 		"share_task_not_found": "ไม่พบงานหรือการเข้าถึงถูกปฏิเสธ",
 		"mode_import_failed": "ล้มเหลวในการนำเข้าโหมด: {{error}}",
 		"delete_rules_folder_failed": "ล้มเหลวในการลบโฟลเดอร์กฎ: {{rulesFolderPath}} ข้อผิดพลาด: {{error}}",
+		"command_not_found": "ไม่พบคำสั่ง '{{name}}'",
+		"open_command_file": "ล้มเหลวในการเปิดไฟล์คำสั่ง",
+		"delete_command": "ล้มเหลวในการลบคำสั่ง",
+		"no_workspace_for_project_command": "ไม่พบโฟลเดอร์พื้นที่ทำงานสำหรับคำสั่งโครงการ",
+		"command_already_exists": "คำสั่ง \"{{commandName}}\" มีอยู่แล้ว",
+		"create_command_failed": "ล้มเหลวในการสร้างคำสั่ง",
+		"command_template_content": "---\ndescription: \"คำอธิบายสั้นๆ ว่าคำสั่งนี้ทำอะไร\"\n---\n\nนี่คือคำสั่ง slash ใหม่ แก้ไขไฟล์นี้เพื่อปรับแต่งพฤติกรรมของคำสั่ง",
 		"claudeCode": {
 			"processExited": "กระบวนการ Claude Code ออกด้วยรหัส {{exitCode}}",
 			"errorOutput": "ผลลัพธ์ข้อผิดพลาด: {{output}}",
@@ -100,6 +107,11 @@
 			"badRequest": "คำขอไม่ถูกต้อง: {{details}}",
 			"apiError": "ข้อผิดพลาด Gemini CLI API: {{error}}",
 			"completionError": "ข้อผิดพลาดการทำงานเสร็จสิ้น Gemini CLI: {{error}}"
+		},
+		"gemini": {
+			"generate_stream": "ข้อผิดพลาดในการสร้างสตรีมบริบท Gemini: {{error}}",
+			"generate_complete_prompt": "ข้อผิดพลาดการทำงานเสร็จสิ้น Gemini: {{error}}",
+			"sources": "แหล่งที่มา:"
 		}
 	},
 	"warnings": {

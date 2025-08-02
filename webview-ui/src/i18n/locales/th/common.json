@@ -28,7 +28,8 @@
 		"customerSupport": "ฝ่ายสนับสนุนลูกค้า"
 	},
 	"ui": {
-		"search_placeholder": "ค้นหา..."
+		"search_placeholder": "ค้นหา...",
+		"no_results": "ไม่พบผลลัพธ์"
 	},
 	"mermaid": {
 		"loading": "กำลังสร้างไดอะแกรม mermaid...",

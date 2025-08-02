@@ -262,12 +262,16 @@
 		"getChutesApiKey": "احصل على مفتاح Chutes",
 		"deepSeekApiKey": "مفتاح DeepSeek",
 		"getDeepSeekApiKey": "احصل على مفتاح DeepSeek",
+		"doubaoApiKey": "مفتاح Doubao",
+		"getDoubaoApiKey": "احصل على مفتاح Doubao",
 		"moonshotApiKey": "مفتاح Moonshot",
 		"getMoonshotApiKey": "احصل على مفتاح Moonshot",
 		"moonshotBaseUrl": "نقطة دخول Moonshot",
 		"geminiApiKey": "مفتاح Gemini",
 		"getGroqApiKey": "احصل على مفتاح Groq",
 		"groqApiKey": "مفتاح Groq",
+		"getSambaNovaApiKey": "احصل على مفتاح SambaNova",
+		"sambaNovaApiKey": "مفتاح SambaNova",
 		"getGeminiApiKey": "احصل على مفتاح Gemini",
 		"openAiApiKey": "مفتاح OpenAI",
 		"getHuggingFaceApiKey": "احصل على مفتاح Hugging Face API",
@@ -323,6 +327,16 @@
 		"enablePromptCaching": "تفعيل تخزين الموجهات",
 		"enablePromptCachingTitle": "تسريع الأداء وتقليل التكلفة.",
 		"cacheUsageNote": "إذا ما تشوف استخدام الكاش، اختر نموذج مختلف ثم ارجع.",
+		"geminiParameters": {
+			"urlContext": {
+				"title": "تفعيل سياق URL",
+				"description": "يسمح لـ Gemini بقراءة الصفحات المرتبطة لاستخراج ومقارنة وتجميع محتواها في ردود مدروسة."
+			},
+			"groundingSearch": {
+				"title": "تفعيل التأسيس مع بحث Google",
+				"description": "يربط Gemini ببيانات الويب الحية للحصول على إجابات دقيقة ومحدثة مع استشهادات قابلة للتحقق."
+			}
+		},
 		"vscodeLmModel": "نموذج اللغة",
 		"vscodeLmWarning": "الميزة تجريبية جدًا والدعم يختلف حسب المزوّد.",
 		"googleCloudSetup": {
@@ -548,6 +562,16 @@
 			"lines": "أسطر",
 			"always_full_read": "دومًا اقرأ الملف كامل"
 		},
+		"maxImageFileSize": {
+			"label": "أقصى حجم ملف صورة",
+			"mb": "ميجابايت",
+			"description": "الحد الأقصى لحجم (بالميجابايت) لملفات الصور التي يمكن معالجتها بواسطة أداة قراءة الملفات."
+		},
+		"maxTotalImageSize": {
+			"label": "أقصى حجم إجمالي للصور",
+			"mb": "ميجابايت",
+			"description": "الحد الأقصى التراكمي للحجم (بالميجابايت) لجميع الصور المعالجة في عملية read_file واحدة. عند قراءة صور متعددة، يُضاف حجم كل صورة للإجمالي. إذا كان تضمين صورة أخرى سيتجاوز هذا الحد، فسيتم تخطيها."
+		},
 		"condensingThreshold": {
 			"label": "نسبة التفعيل",
 			"selectProfile": "اضبط النسبة للملف",
@@ -705,6 +729,10 @@
 		"INLINE_ASSIST": {
 			"name": "المساعد المضمّن",
 			"description": "تفعيل ميزات المساعدة المضمنة للحصول على اقتراحات وتحسينات سريعة للكود مباشرة في محرر النصوص الخاص بك. يتضمن ذلك مهمة مضمنة سريعة (Cmd+I) للتغييرات المستهدفة ومهمة مضمنة تلقائية للتحسينات السياقية."
+		},
+		"PREVENT_FOCUS_DISRUPTION": {
+			"name": "التحرير في الخلفية",
+			"description": "منع تعطيل تركيز المحرر عند التفعيل. تحدث تعديلات الملفات في الخلفية دون فتح عروض diff أو سرقة التركيز. يمكنك الاستمرار في العمل دون انقطاع بينما يقوم Kilo Code بإجراء التغييرات. يمكن فتح الملفات دون تركيز لالتقاط التشخيصات أو إبقاؤها مغلقة تماماً."
 		}
 	},
 	"promptCaching": {

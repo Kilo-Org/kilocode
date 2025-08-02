@@ -126,7 +126,9 @@
 		"title": "โหมด",
 		"marketplace": "ตลาดโหมด",
 		"settings": "การตั้งค่าโหมด",
-		"description": "บุคลิกพิเศษที่ปรับแต่งพฤติกรรมของ Kilo Code"
+		"description": "บุคลิกพิเศษที่ปรับแต่งพฤติกรรมของ Kilo Code",
+		"searchPlaceholder": "ค้นหาโหมด...",
+		"noResults": "ไม่พบผลลัพธ์"
 	},
 	"addImages": "เพิ่มรูปภาพในข้อความ",
 	"sendMessage": "ส่งข้อความ",
@@ -353,5 +355,30 @@
 		"title": "Roo Code Cloud เปิดตัวเร็วๆ นี้!",
 		"description": "รันเอเจนต์ Roomote ในคลาวด์ เข้าถึงงานของคุณจากทุกที่ ทำงานร่วมกับผู้อื่น และอื่นๆ อีกมากมาย",
 		"joinWaitlist": "เข้าร่วมรายชื่อรอเพื่อรับสิทธิ์เข้าถึงก่อนใคร"
+	},
+	"command": {
+		"triggerDescription": "เรียกใช้คำสั่ง {{name}}"
+	},
+	"slashCommands": {
+		"tooltip": "จัดการคำสั่งแบบ slash",
+		"title": "คำสั่งแบบ Slash",
+		"description": "สร้างคำสั่งแบบ slash ที่กำหนดเองเพื่อเข้าถึงพรอมต์และเวิร์กโฟลว์ที่ใช้บ่อยได้อย่างรวดเร็ว <DocsLink>เอกสาร</DocsLink>",
+		"globalCommands": "คำสั่งทั่วไป",
+		"workspaceCommands": "คำสั่งเวิร์กสเปซ",
+		"globalCommand": "คำสั่งทั่วไป",
+		"editCommand": "แก้ไขคำสั่ง",
+		"deleteCommand": "ลบคำสั่ง",
+		"newGlobalCommandPlaceholder": "คำสั่งทั่วไปใหม่...",
+		"newWorkspaceCommandPlaceholder": "คำสั่งเวิร์กสเปซใหม่...",
+		"deleteDialog": {
+			"title": "ลบคำสั่ง",
+			"description": "คุณแน่ใจหรือไม่ว่าต้องการลบคำสั่ง \"{{name}}\"? การดำเนินการนี้ไม่สามารถยกเลิกได้",
+			"cancel": "ยกเลิก",
+			"confirm": "ลบ"
+		}
+	},
+	"queuedMessages": {
+		"title": "ข้อความในคิว:",
+		"clickToEdit": "คลิกเพื่อแก้ไขข้อความ"
 	}
 }

@@ -35,6 +35,10 @@
 		},
 		"none": "بدون"
 	},
+	"sections": {
+		"organizationMcps": "خوادم MCP الخاصة بـ {{organization}}",
+		"marketplace": "السوق"
+	},
 	"type-group": {
 		"modes": "الأنماط",
 		"mcps": "خوادم MCP"

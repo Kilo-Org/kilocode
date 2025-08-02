@@ -28,7 +28,8 @@
 		"customerSupport": "Zákaznická podpora"
 	},
 	"ui": {
-		"search_placeholder": "Hledat..."
+		"search_placeholder": "Hledat...",
+		"no_results": "Nebyly nalezeny žádné výsledky"
 	},
 	"mermaid": {
 		"loading": "Vytváření diagramu mermaid...",

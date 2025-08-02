@@ -91,6 +91,13 @@
 		},
 		"mode_import_failed": "Не вдалося імпортувати режим: {{error}}",
 		"delete_rules_folder_failed": "Не вдалося видалити папку правил: {{rulesFolderPath}}. Помилка: {{error}}",
+		"command_not_found": "Команду '{{name}}' не знайдено",
+		"open_command_file": "Не вдалося відкрити файл команди",
+		"delete_command": "Не вдалося видалити команду",
+		"no_workspace_for_project_command": "Не знайдено папку робочого простору для команди проекту",
+		"command_already_exists": "Команда \"{{commandName}}\" вже існує",
+		"create_command_failed": "Не вдалося створити команду",
+		"command_template_content": "---\ndescription: \"Короткий опис того, що робить ця команда\"\n---\n\nЦе нова slash команда. Відредагуйте цей файл, щоб налаштувати поведінку команди.",
 		"geminiCli": {
 			"oauthLoadFailed": "Не вдалося завантажити OAuth дані для входу. Будь ласка, спочатку автентифікуйся: {{error}}",
 			"tokenRefreshFailed": "Не вдалося оновити OAuth token: {{error}}",
@@ -100,6 +107,11 @@
 			"badRequest": "Неправильний запит: {{details}}",
 			"apiError": "Помилка Gemini CLI API: {{error}}",
 			"completionError": "Помилка завершення Gemini CLI: {{error}}"
+		},
+		"gemini": {
+			"generate_stream": "Помилка генерації контекстного потоку Gemini: {{error}}",
+			"generate_complete_prompt": "Помилка завершення Gemini: {{error}}",
+			"sources": "Джерела:"
 		}
 	},
 	"warnings": {

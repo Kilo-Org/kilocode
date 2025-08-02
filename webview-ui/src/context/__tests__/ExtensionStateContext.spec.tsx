@@ -250,6 +250,8 @@ describe("mergeExtensionState", () => {
 			sharingEnabled: false,
 			profileThresholds: {},
 			hasOpenedModeSelector: false, // Add the new required property
+			maxImageFileSize: 5,
+			maxTotalImageSize: 20,
 		}
 
 		const prevState: ExtensionState = {
@@ -265,6 +267,7 @@ describe("mergeExtensionState", () => {
 				powerSteering: true,
 				multiFileApplyDiff: true,
 				inlineAssist: false, // kilocode_change
+				preventFocusDisruption: false,
 				morphFastApply: false, // kilocode_change
 			},
 		}
@@ -280,6 +283,7 @@ describe("mergeExtensionState", () => {
 			powerSteering: true,
 			multiFileApplyDiff: true,
 			inlineAssist: false, // kilocode_change
+			preventFocusDisruption: false,
 			morphFastApply: false, // kilocode_change
 		})
 	})

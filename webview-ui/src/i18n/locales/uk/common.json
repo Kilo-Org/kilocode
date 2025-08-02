@@ -28,7 +28,8 @@
 		"customerSupport": "Служба підтримки"
 	},
 	"ui": {
-		"search_placeholder": "Пошук..."
+		"search_placeholder": "Пошук...",
+		"no_results": "Результатів не знайдено"
 	},
 	"mermaid": {
 		"loading": "Створення діаграми mermaid...",

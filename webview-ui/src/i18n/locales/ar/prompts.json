@@ -93,7 +93,9 @@
 			"useCurrentConfig": "استخدم الإعداد الحالي",
 			"testPromptPlaceholder": "اكتب موجه لاختبار التحسين",
 			"previewButton": "عرض تحسين الموجه",
-			"testEnhancement": "اختبار التحسين"
+			"testEnhancement": "اختبار التحسين",
+			"includeTaskHistory": "تضمين تاريخ المهمة كسياق",
+			"includeTaskHistoryDescription": "عند التفعيل، آخر 10 رسائل من المحادثة الحالية ستُضمّن كسياق عند تحسين الموجهات، مما يساعد في توليد اقتراحات أكثر صلة ووعياً بالسياق."
 		},
 		"condense": {
 			"apiConfiguration": "إعدادات API لضغط السياق",

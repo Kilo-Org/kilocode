@@ -84,6 +84,13 @@
 		"share_task_not_found": "المهمة غير موجودة أو ما عندك صلاحية.",
 		"mode_import_failed": "فشل استيراد الوضع: {{error}}",
 		"delete_rules_folder_failed": "فشل حذف مجلد القواعد: {{rulesFolderPath}}. الخطأ: {{error}}",
+		"command_not_found": "الأمر '{{name}}' غير موجود",
+		"open_command_file": "فشل فتح ملف الأمر",
+		"delete_command": "فشل حذف الأمر",
+		"no_workspace_for_project_command": "لم يتم العثور على مجلد مشروع لأمر المشروع",
+		"command_already_exists": "الأمر \"{{commandName}}\" موجود بالفعل",
+		"create_command_failed": "فشل إنشاء الأمر",
+		"command_template_content": "---\ndescription: \"وصف مختصر لما يفعله هذا الأمر\"\n---\n\nهذا أمر جديد. عدّل هذا الملف لتخصيص سلوك الأمر.",
 		"claudeCode": {
 			"processExited": "عملية Claude Code انتهت بالكود {{exitCode}}.",
 			"errorOutput": "المخرجات الخطأ: {{output}}",
@@ -100,6 +107,11 @@
 			"badRequest": "طلب غير صحيح: {{details}}",
 			"apiError": "خطأ من Gemini CLI: {{error}}",
 			"completionError": "خطأ أثناء الإكمال في Gemini CLI: {{error}}"
+		},
+		"gemini": {
+			"generate_stream": "خطأ في تدفق السياق من Gemini: {{error}}",
+			"generate_complete_prompt": "خطأ في إكمال Gemini: {{error}}",
+			"sources": "المصادر:"
 		}
 	},
 	"warnings": {

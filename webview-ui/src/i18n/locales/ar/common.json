@@ -28,7 +28,8 @@
 		"customerSupport": "الدعم الفني"
 	},
 	"ui": {
-		"search_placeholder": "ابحث..."
+		"search_placeholder": "ابحث...",
+		"no_results": "لا توجد نتائج"
 	},
 	"mermaid": {
 		"loading": "جاري توليد مخطط Mermaid...",

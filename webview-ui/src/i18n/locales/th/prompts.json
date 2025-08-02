@@ -93,7 +93,9 @@
 			"useCurrentConfig": "ใช้การตั้งค่า API ที่เลือกอยู่ในปัจจุบัน",
 			"testPromptPlaceholder": "ใส่ prompt เพื่อทดสอบการปรับปรุง",
 			"previewButton": "ดูตัวอย่างการปรับปรุง Prompt",
-			"testEnhancement": "ทดสอบการปรับปรุง"
+			"testEnhancement": "ทดสอบการปรับปรุง",
+			"includeTaskHistory": "รวมประวัติงานเป็น context",
+			"includeTaskHistoryDescription": "เมื่อเปิดใช้งาน ข้อความ 10 ข้อความล่าสุดจากการสนทนาปัจจุบันจะถูกรวมเป็น context เมื่อปรับปรุง prompt ช่วยสร้างคำแนะนำที่เกี่ยวข้องและตระหนักถึง context มากขึ้น"
 		},
 		"condense": {
 			"apiConfiguration": "การตั้งค่า API สำหรับการย่อ Context",

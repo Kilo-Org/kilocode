@@ -23,6 +23,7 @@ import {
 	Button,
 	SelectSeparator, // kilocode_change
 } from "@src/components/ui"
+import { useEscapeKey } from "@src/hooks/useEscapeKey"
 
 import { ModelInfoView } from "./ModelInfoView"
 import { ApiErrorMessage } from "./ApiErrorMessage"
@@ -137,6 +138,9 @@ export const ModelPicker = ({
 			}
 		}
 	}, [])
+
+	// Use the shared ESC key handler hook
+	useEscapeKey(open, () => setOpen(false))
 
 	return (
 		<>

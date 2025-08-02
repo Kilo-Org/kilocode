@@ -28,7 +28,8 @@
 		"customerSupport": "Soporte al Cliente"
 	},
 	"ui": {
-		"search_placeholder": "Buscar..."
+		"search_placeholder": "Buscar...",
+		"no_results": "No se encontraron resultados"
 	},
 	"mermaid": {
 		"loading": "Generando diagrama mermaid...",

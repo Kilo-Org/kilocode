@@ -93,7 +93,9 @@
 			"useCurrentConfig": "Použít aktuálně vybranou konfiguraci API",
 			"testPromptPlaceholder": "Zadej prompt pro otestování vylepšení",
 			"previewButton": "Náhled vylepšení promptu",
-			"testEnhancement": "Otestovat vylepšení"
+			"testEnhancement": "Otestovat vylepšení",
+			"includeTaskHistory": "Zahrnout historii úkolů jako kontext",
+			"includeTaskHistoryDescription": "Když je povoleno, posledních 10 zpráv z aktuální konverzace bude zahrnuto jako kontext při vylepšování promptů, což pomáhá generovat relevantnější a kontextově uvědomělé návrhy."
 		},
 		"condense": {
 			"apiConfiguration": "Konfigurace API pro kondenzaci kontextu",

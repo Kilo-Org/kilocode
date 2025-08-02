@@ -22,6 +22,15 @@ import { ProfileDataResponsePayload, BalanceDataResponsePayload } from "./Webvie
 import { ClineRulesToggles } from "./cline-rules" // kilocode_change
 import type { MarketplaceItem } from "@roo-code/types"
 
+// Command interface for frontend/backend communication
+export interface Command {
+	name: string
+	source: "global" | "project"
+	filePath?: string
+	description?: string
+	argumentHint?: string
+}
+
 // Type for marketplace installed metadata
 export interface MarketplaceInstalledMetadata {
 	project: Record<string, { type: string }>
@@ -124,6 +133,8 @@ export interface ExtensionMessage {
 		| "showDeleteMessageDialog"
 		| "showEditMessageDialog"
 		| "kilocodeNotificationsResponse" // kilocode_change
+		| "commands"
+		| "insertTextIntoTextarea"
 	text?: string
 	payload?: ProfileDataResponsePayload | BalanceDataResponsePayload // kilocode_change: Add payload for profile and balance data
 	action?:
@@ -204,8 +215,10 @@ export interface ExtensionMessage {
 	globalWorkflows?: ClineRulesToggles
 	localWorkflows?: ClineRulesToggles
 	marketplaceItems?: MarketplaceItem[]
+	organizationMcps?: MarketplaceItem[]
 	marketplaceInstalledMetadata?: MarketplaceInstalledMetadata
 	fixedCode?: string | null // For mermaidFixResponse // kilocode_change
+	errors?: string[]
 	visibility?: ShareVisibility
 	rulesFolderPath?: string
 	settings?: any
@@ -222,6 +235,7 @@ export interface ExtensionMessage {
 		}
 	}>
 	// kilocode_change end
+	commands?: Command[]
 }
 
 export type ExtensionState = Pick<
@@ -328,6 +342,8 @@ export type ExtensionState = Pick<
 	showRooIgnoredFiles: boolean // Whether to show .kilocodeignore'd files in listings
 	maxReadFileLine: number // Maximum number of lines to read from a file before truncating
 	showAutoApproveMenu: boolean // kilocode_change: Whether to show the auto-approve menu in the chat view
+	maxImageFileSize: number // Maximum size of image files to process in MB
+	maxTotalImageSize: number // Maximum total size for all images in a single read operation in MB
 
 	experiments: Experiments // Map of experiment IDs to their enabled state
 
@@ -353,6 +369,7 @@ export type ExtensionState = Pick<
 	cloudApiUrl?: string
 	sharingEnabled: boolean
 	organizationAllowList: OrganizationAllowList
+	organizationSettingsVersion?: number
 
 	autoCondenseContext: boolean
 	autoCondenseContextPercent: number

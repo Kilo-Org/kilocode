@@ -114,8 +114,8 @@
 	"sendMessage": "Envoyer le message",
 	"stopTts": "Arrêter la synthèse vocale",
 	"typeMessage": "Écrivez un message...",
-	"typeTask": "Construire, trouver, demander quelque chose",
-	"addContext": "@ pour ajouter du contexte, / pour changer de mode",
+	"typeTask": "Écrivez votre tâche ici...",
+	"addContext": "@ pour ajouter du contexte, / pour les commandes",
 	"dragFiles": "maintenir Maj pour glisser des fichiers",
 	"dragFilesImages": "maintenir Maj pour glisser des fichiers/images",
 	"enhancePromptDescription": "Le bouton 'Améliorer la requête' aide à améliorer votre demande en fournissant un contexte supplémentaire, des clarifications ou des reformulations. Essayez de taper une demande ici et cliquez à nouveau sur le bouton pour voir comment cela fonctionne.",
@@ -123,7 +123,9 @@
 		"title": "Modes",
 		"marketplace": "Marketplace de Modes",
 		"settings": "Paramètres des Modes",
-		"description": "Personas spécialisés qui adaptent le comportement de Kilo Code."
+		"description": "Personas spécialisés qui adaptent le comportement de Kilo Code.",
+		"searchPlaceholder": "Rechercher des modes...",
+		"noResults": "Aucun résultat trouvé"
 	},
 	"errorReadingFile": "Erreur lors de la lecture du fichier :",
 	"noValidImages": "Aucune image valide n'a été traitée",
@@ -270,9 +272,9 @@
 		"title": "🎉 Kilo Code {{version}} est sortie",
 		"description": "Kilo Code {{version}} apporte de puissantes nouvelles fonctionnalités et des améliorations significatives pour améliorer ton flux de travail de développement.",
 		"whatsNew": "Quoi de neuf",
-		"feature1": "<bold>Fournisseur Hugging Face</bold> : Accédez à des tonnes d'excellents modèles open source directement via le nouveau fournisseur Hugging Face avec une intégration transparente et une sélection de modèles.",
-		"feature2": "<bold>Contrôles de Commande en Ligne</bold> : De nouveaux contrôles d'approbation automatique et de refus pour l'exécution de commandes vous donnent un contrôle précis sur les opérations de terminal avec des permissions personnalisables.",
-		"feature3": "<bold>Support des Règles AGENTS.md</bold> : Ajoute le support d'un fichier AGENTS.md standard de la communauté à la racine du projet.",
+		"feature1": "<bold>File d'Attente de Messages</bold> : Mettez en file d'attente plusieurs messages pendant que Roo travaille, vous permettant de continuer à planifier votre flux de travail sans interruption.",
+		"feature2": "<bold>Commandes Slash Personnalisées</bold> : Créez des commandes slash personnalisées pour un accès rapide aux prompts et flux de travail fréquemment utilisés, avec une gestion complète de l'interface utilisateur.",
+		"feature3": "<bold>Outils Gemini Améliorés</bold> : De nouvelles capacités de contexte d'URL et de fondation de recherche Google fournissent aux modèles Gemini des informations web en temps réel et des capacités de recherche améliorées.",
 		"hideButton": "Masquer l'annonce",
 		"detailsDiscussLinks": "Obtenez plus de détails et participez aux discussions sur <discordLink>Discord</discordLink> et <redditLink>Reddit</redditLink> 🚀"
 	},
@@ -353,5 +355,30 @@
 	},
 	"editMessage": {
 		"placeholder": "Modifiez votre message..."
+	},
+	"command": {
+		"triggerDescription": "Déclencher la commande {{name}}"
+	},
+	"slashCommands": {
+		"tooltip": "Gérer les commandes slash",
+		"title": "Commandes Slash",
+		"description": "Créez des commandes slash personnalisées pour accéder rapidement aux prompts et flux de travail fréquemment utilisés. <DocsLink>Documentation</DocsLink>",
+		"globalCommands": "Commandes Globales",
+		"workspaceCommands": "Commandes de l'Espace de Travail",
+		"globalCommand": "Commande globale",
+		"editCommand": "Modifier la commande",
+		"deleteCommand": "Supprimer la commande",
+		"newGlobalCommandPlaceholder": "Nouvelle commande globale...",
+		"newWorkspaceCommandPlaceholder": "Nouvelle commande de l'espace de travail...",
+		"deleteDialog": {
+			"title": "Supprimer la commande",
+			"description": "Êtes-vous sûr de vouloir supprimer la commande \"{{name}}\" ? Cette action ne peut pas être annulée.",
+			"cancel": "Annuler",
+			"confirm": "Supprimer"
+		}
+	},
+	"queuedMessages": {
+		"title": "Messages en file d'attente :",
+		"clickToEdit": "Cliquez pour modifier le message"
 	}
 }

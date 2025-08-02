@@ -18,6 +18,7 @@ export const historyItemSchema = z.object({
 	workspace: z.string().optional(),
 	isFavorited: z.boolean().optional(), // kilocode_change
 	fileNotfound: z.boolean().optional(), // kilocode_change
+	mode: z.string().optional(),
 })
 
 export type HistoryItem = z.infer<typeof historyItemSchema>

@@ -84,6 +84,13 @@
 		"share_task_not_found": "Úloha nebyla nalezena nebo byl přístup odepřen.",
 		"mode_import_failed": "Import režimu selhal: {{error}}",
 		"delete_rules_folder_failed": "Smazání složky pravidel selhalo: {{rulesFolderPath}}. Chyba: {{error}}",
+		"command_not_found": "Příkaz '{{name}}' nebyl nalezen",
+		"open_command_file": "Nepodařilo se otevřít soubor příkazu",
+		"delete_command": "Nepodařilo se smazat příkaz",
+		"no_workspace_for_project_command": "Pro projektový příkaz nebyla nalezena žádná složka workspace",
+		"command_already_exists": "Příkaz \"{{commandName}}\" již existuje",
+		"create_command_failed": "Nepodařilo se vytvořit příkaz",
+		"command_template_content": "---\ndescription: \"Stručný popis toho, co tento příkaz dělá\"\n---\n\nToto je nový slash příkaz. Upravte tento soubor pro přizpůsobení chování příkazu.",
 		"claudeCode": {
 			"processExited": "Proces Claude Code skončil s kódem {{exitCode}}.",
 			"errorOutput": "Chybový výstup: {{output}}",
@@ -100,6 +107,11 @@
 			"badRequest": "Špatný požadavek: {{details}}",
 			"apiError": "Chyba Gemini CLI API: {{error}}",
 			"completionError": "Chyba dokončení Gemini CLI: {{error}}"
+		},
+		"gemini": {
+			"generate_stream": "Chyba generování kontextového proudu Gemini: {{error}}",
+			"generate_complete_prompt": "Chyba dokončení Gemini: {{error}}",
+			"sources": "Zdroje:"
 		}
 	},
 	"warnings": {

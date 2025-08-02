@@ -114,8 +114,8 @@
 	"sendMessage": "メッセージを送信",
 	"stopTts": "テキスト読み上げを停止",
 	"typeMessage": "メッセージを入力...",
-	"typeTask": "構築、検索、質問する",
-	"addContext": "コンテキスト追加は@、モード切替は/",
+	"typeTask": "ここにタスクを入力...",
+	"addContext": "コンテキスト追加は@、コマンドは/",
 	"dragFiles": "ファイルをドラッグするにはShiftキーを押したまま",
 	"dragFilesImages": "ファイル/画像をドラッグするにはShiftキーを押したまま",
 	"enhancePromptDescription": "「プロンプトを強化」ボタンは、追加コンテキスト、説明、または言い換えを提供することで、リクエストを改善します。ここにリクエストを入力し、ボタンを再度クリックして動作を確認してください。",
@@ -123,7 +123,9 @@
 		"title": "モード",
 		"marketplace": "モードマーケットプレイス",
 		"settings": "モード設定",
-		"description": "Kilo Codeの動作をカスタマイズする専門的なペルソナ。"
+		"description": "Kilo Codeの動作をカスタマイズする専門的なペルソナ。",
+		"searchPlaceholder": "モードを検索...",
+		"noResults": "結果が見つかりません"
 	},
 	"errorReadingFile": "ファイル読み込みエラー:",
 	"noValidImages": "有効な画像が処理されませんでした",
@@ -270,9 +272,9 @@
 		"title": "🎉 Kilo Code {{version}} リリース",
 		"description": "Kilo Code {{version}}は、開発ワークフローを向上させる強力な新機能と重要な改善をもたらします。",
 		"whatsNew": "新機能",
-		"feature1": "<bold>Hugging Face プロバイダー</bold>: 新しいHugging Faceプロバイダーを通じて、シームレスな統合とモデル選択により、多数の優れたオープンソースモデルに直接アクセスできます。",
-		"feature2": "<bold>インラインコマンドコントロール</bold>: コマンド実行のための新しい自動承認と拒否コントロールにより、カスタマイズ可能な権限でターミナル操作を正確に制御できます。",
-		"feature3": "<bold>AGENTS.mdルールサポート</bold>: プロジェクトルートにコミュニティ標準のAGENTS.mdファイルのサポートを追加します。",
+		"feature1": "<bold>メッセージキュー</bold>: Rooが作業中に複数のメッセージをキューに入れ、ワークフローの計画を中断することなく続行できます。",
+		"feature2": "<bold>カスタムスラッシュコマンド</bold>: よく使用するプロンプトやワークフローへの迅速なアクセスのために、パーソナライズされたスラッシュコマンドを作成し、完全なUI管理を提供します。",
+		"feature3": "<bold>強化されたGeminiツール</bold>: 新しいURLコンテキストとGoogle検索グラウンディング機能により、Geminiモデルにリアルタイムのウェブ情報と強化された研究能力を提供します。",
 		"hideButton": "通知を非表示",
 		"detailsDiscussLinks": "詳細は<discordLink>Discord</discordLink>と<redditLink>Reddit</redditLink>でご確認・ディスカッションください 🚀"
 	},
@@ -353,5 +355,30 @@
 	},
 	"editMessage": {
 		"placeholder": "メッセージを編集..."
+	},
+	"command": {
+		"triggerDescription": "{{name}}コマンドをトリガー"
+	},
+	"slashCommands": {
+		"tooltip": "スラッシュコマンドを管理",
+		"title": "スラッシュコマンド",
+		"description": "よく使用するプロンプトやワークフローに素早くアクセスするためのカスタムスラッシュコマンドを作成します。<DocsLink>ドキュメント</DocsLink>",
+		"globalCommands": "グローバルコマンド",
+		"workspaceCommands": "ワークスペースコマンド",
+		"globalCommand": "グローバルコマンド",
+		"editCommand": "コマンドを編集",
+		"deleteCommand": "コマンドを削除",
+		"newGlobalCommandPlaceholder": "新しいグローバルコマンド...",
+		"newWorkspaceCommandPlaceholder": "新しいワークスペースコマンド...",
+		"deleteDialog": {
+			"title": "コマンドを削除",
+			"description": "\"{{name}}\" コマンドを削除してもよろしいですか？この操作は元に戻せません。",
+			"cancel": "キャンセル",
+			"confirm": "削除"
+		}
+	},
+	"queuedMessages": {
+		"title": "キューメッセージ:",
+		"clickToEdit": "クリックしてメッセージを編集"
 	}
 }
