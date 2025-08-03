@@ -620,24 +620,29 @@ export class ClineProvider
 		try {
 			const compact: any = (() => {
 				if (message.type === "insertTextToChatArea") {
-					return { type: message.type, text: (message as any).text }
+					return { type: "assistant", text: (message as any).text }
 				}
 				if (message.type === "messageUpdated") {
-					// clineMessage may have different shape; grab relevant parts
 					const cm: any = (message as any).clineMessage ?? {}
+					// Skip interim/streaming messages
+					if (cm.partial === true) {
+						return null
+					}
 					return {
-						type: message.type,
+						type: "assistant",
+						id: cm.id ?? undefined,
 						text: cm.content ?? cm.text ?? JSON.stringify(cm),
-						role: cm.role,
 					}
 				}
-				return { type: message.type }
+				return null
 			})()
 
-			await vscode.commands.executeCommand("code-chief-remote.broadcast", {
-				source: "kilo",
-				message: compact,
-			})
+			if (compact) {
+				await vscode.commands.executeCommand("code-chief-remote.broadcast", {
+					source: "kilo",
+					message: compact,
+				})
+			}
 		} catch {
 			// Ignore if the bridge extension isn’t installed or the command is missing.
 		}
