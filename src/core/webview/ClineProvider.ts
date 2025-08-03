@@ -1054,8 +1054,22 @@ export class ClineProvider
 		const rootTask = cline.rootTask
 		const parentTask = cline.parentTask
 
+		// kilocode_change start - immediate cancellation for API requests
+		// Mark as abandoned immediately to prevent hanging on API requests
+		cline.abandoned = true
+
+		// Immediately abort any running terminal processes
+		if (cline.terminalProcess) {
+			try {
+				cline.terminalProcess.abort()
+			} catch (error) {
+				console.error("Error aborting terminal process:", error)
+			}
+		}
+
 		cline.abortTask()
 
+		// Reduce wait time from 3 seconds to 500ms for faster cancellation
 		await pWaitFor(
 			() =>
 				this.getCurrentCline()! === undefined ||
@@ -1066,10 +1080,10 @@ export class ClineProvider
 				// etc).
 				this.getCurrentCline()!.isWaitingForFirstChunk,
 			{
-				timeout: 3_000,
+				timeout: 500, // Reduced from 3000ms to 500ms
 			},
 		).catch(() => {
-			console.error("Failed to abort task")
+			console.error("Failed to abort task gracefully, forcing immediate termination")
 		})
 
 		if (this.getCurrentCline()) {
@@ -1078,6 +1092,7 @@ export class ClineProvider
 			// streaming request.
 			this.getCurrentCline()!.abandoned = true
 		}
+		// kilocode_change end
 
 		// Clears task again, so we need to abortTask manually above.
 		await this.initClineWithHistoryItem({ ...historyItem, rootTask, parentTask })

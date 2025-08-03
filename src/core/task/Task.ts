@@ -207,6 +207,9 @@ export class Task extends EventEmitter<TaskEvents> {
 	pausedModeSlug: string = defaultModeSlug
 	private pauseInterval: NodeJS.Timeout | undefined
 
+	// kilocode_change: Add AbortController for immediate API request cancellation
+	private currentApiAbortController?: AbortController
+
 	// API
 	readonly apiConfiguration: ProviderSettings
 	api: ApiHandler
@@ -1284,6 +1287,30 @@ export class Task extends EventEmitter<TaskEvents> {
 		this.abort = true
 		this.emit("taskAborted")
 
+		// kilocode_change start - immediately abort API requests and terminal processes
+		// Immediately abort any ongoing API request
+		if (this.currentApiAbortController) {
+			try {
+				console.log(`[Task] Aborting API request for task ${this.taskId}.${this.instanceId}`)
+				this.currentApiAbortController.abort()
+				this.currentApiAbortController = undefined
+			} catch (error) {
+				console.error(`Error aborting API request for task ${this.taskId}.${this.instanceId}:`, error)
+			}
+		}
+
+		// Immediately abort any running terminal processes
+		if (this.terminalProcess) {
+			try {
+				console.log(`[Task] Aborting terminal process for task ${this.taskId}.${this.instanceId}`)
+				this.terminalProcess.abort()
+				this.terminalProcess = undefined
+			} catch (error) {
+				console.error(`Error aborting terminal process for task ${this.taskId}.${this.instanceId}:`, error)
+			}
+		}
+		// kilocode_change end
+
 		try {
 			this.dispose() // Call the centralized dispose method
 		} catch (error) {
@@ -1306,7 +1333,8 @@ export class Task extends EventEmitter<TaskEvents> {
 	public async waitForResume() {
 		await new Promise<void>((resolve) => {
 			this.pauseInterval = setInterval(() => {
-				if (!this.isPaused) {
+				// kilocode_change: check for abort to allow immediate cancellation
+				if (!this.isPaused || this.abort) {
 					clearInterval(this.pauseInterval)
 					this.pauseInterval = undefined
 					resolve()
@@ -1630,8 +1658,13 @@ export class Task extends EventEmitter<TaskEvents> {
 						}
 					}
 
-					if (this.abort) {
-						console.log(`aborting stream, this.abandoned = ${this.abandoned}`)
+					if (
+						this.abort ||
+						(this.currentApiAbortController && this.currentApiAbortController.signal.aborted)
+					) {
+						console.log(
+							`aborting stream, this.abort = ${this.abort}, abortController.aborted = ${this.currentApiAbortController?.signal.aborted}, this.abandoned = ${this.abandoned}`,
+						)
 
 						if (!this.abandoned) {
 							// Only need to gracefully abort if this instance
@@ -1860,6 +1893,15 @@ export class Task extends EventEmitter<TaskEvents> {
 				}
 			} finally {
 				this.isStreaming = false
+
+				// kilocode_change start - clean up AbortController when streaming ends
+				if (this.currentApiAbortController) {
+					console.log(
+						`[Task] Cleaning up AbortController after streaming ends for task ${this.taskId}.${this.instanceId}`,
+					)
+					this.currentApiAbortController = undefined
+				}
+				// kilocode_change end
 			}
 
 			// kilocode_change: pending upstream pr https://github.com/RooCodeInc/Roo-Code/pull/6122
@@ -2289,6 +2331,15 @@ export class Task extends EventEmitter<TaskEvents> {
 			taskId: this.taskId,
 		}
 
+		// kilocode_change start - create AbortController for immediate cancellation
+		// Clean up any previous AbortController
+		if (this.currentApiAbortController) {
+			this.currentApiAbortController.abort()
+		}
+		this.currentApiAbortController = new AbortController()
+		console.log(`[Task] Created AbortController for API request task ${this.taskId}.${this.instanceId}`)
+		// kilocode_change end
+
 		const stream = this.api.createMessage(systemPrompt, cleanConversationHistory, metadata)
 		const iterator = stream[Symbol.asyncIterator]()
 
@@ -2300,6 +2351,15 @@ export class Task extends EventEmitter<TaskEvents> {
 			this.isWaitingForFirstChunk = false
 			// note that this api_req_failed ask is unique in that we only present this option if the api hasn't streamed any content yet (ie it fails on the first chunk due), as it would allow them to hit a retry button. However if the api failed mid-stream, it could be in any arbitrary state where some tools may have executed, so that error is handled differently and requires cancelling the task entirely.
 		} catch (error) {
+			// kilocode_change start - clean up AbortController on error
+			if (this.currentApiAbortController) {
+				console.log(
+					`[Task] Cleaning up AbortController after API request error for task ${this.taskId}.${this.instanceId}`,
+				)
+				this.currentApiAbortController = undefined
+			}
+			// kilocode_change end
+
 			// kilocode_change start
 			// Check for payment required error from KiloCode provider
 			if ((error as any).status === 402 && apiConfiguration?.apiProvider === "kilocode") {
@@ -2410,6 +2470,15 @@ export class Task extends EventEmitter<TaskEvents> {
 		// effectively passes along all subsequent chunks from the original
 		// stream.
 		yield* iterator
+
+		// kilocode_change start - clean up AbortController after successful completion
+		if (this.currentApiAbortController) {
+			console.log(
+				`[Task] Cleaning up AbortController after API request completion for task ${this.taskId}.${this.instanceId}`,
+			)
+			this.currentApiAbortController = undefined
+		}
+		// kilocode_change end
 	}
 
 	// Checkpoints
