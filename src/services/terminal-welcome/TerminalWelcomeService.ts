@@ -7,7 +7,7 @@ import { t } from "../../i18n"
  */
 export class TerminalWelcomeService {
 	private disposables: vscode.Disposable[] = []
-	private shownTerminals = new Set<vscode.Terminal>()
+	private tipShownThisSession = false
 
 	constructor(private context: vscode.ExtensionContext) {}
 
@@ -29,18 +29,12 @@ export class TerminalWelcomeService {
 	}
 
 	private handleTerminalOpened(terminal: vscode.Terminal): void {
-		// Don't show the tip if it's a Kilo terminal or they've seen it before
-		if (this.shownTerminals.has(terminal) || terminal.name !== "Kilo Code") {
-			return
+		if (this.tipShownThisSession) {
+			return // Don't show the tip if already shown this session
 		}
-		this.shownTerminals.add(terminal)
-		setTimeout(() => this.showWelcomeMessage(terminal), 500)
 
-		const onDidCloseTerminal = vscode.window.onDidCloseTerminal((closedTerminal) => {
-			this.shownTerminals.delete(terminal)
-			onDidCloseTerminal.dispose()
-		})
-		this.disposables.push(onDidCloseTerminal)
+		this.tipShownThisSession = true // kilocode_change: Mark as shown for this session
+		setTimeout(() => this.showWelcomeMessage(terminal), 500)
 	}
 
 	private showWelcomeMessage(terminal: vscode.Terminal): void {
@@ -58,6 +52,5 @@ export class TerminalWelcomeService {
 	public dispose(): void {
 		this.disposables.forEach((disposable) => disposable.dispose())
 		this.disposables = []
-		this.shownTerminals.clear()
 	}
 }
