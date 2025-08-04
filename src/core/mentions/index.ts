@@ -88,11 +88,14 @@ export async function parseMentions(
 	const mentions: Set<string> = new Set()
 	const commandMentions: Set<string> = new Set()
 
+	// kilocode_change start - disable commands
+	let parsedText = text
 	// First pass: extract command mentions (starting with /)
-	let parsedText = text.replace(commandRegexGlobal, (match, commandName) => {
-		commandMentions.add(commandName)
-		return `Command '${commandName}' (see below for command content)`
-	})
+	// let parsedText = text.replace(commandRegexGlobal, (match, commandName) => {
+	// 	commandMentions.add(commandName)
+	// 	return `Command '${commandName}' (see below for command content)`
+	// })
+	// kilocode_change end - disable commands
 
 	// Second pass: handle regular mentions
 	parsedText = parsedText.replace(mentionRegexGlobal, (match, mention) => {
