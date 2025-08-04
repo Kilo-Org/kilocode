@@ -156,7 +156,7 @@ function runProcess({
 	maxOutputTokens,
 }: ClaudeCodeOptions & { maxOutputTokens?: number }) {
 	const claudePath = path || "claude"
-	const isWindows = os.platform() === "win32"
+	// const isWindows = os.platform() === "win32" kilocode_change
 
 	// Build args based on platform
 	const args = ["-p"]
@@ -202,17 +202,7 @@ function runProcess({
 		timeout: CLAUDE_CODE_TIMEOUT,
 	})
 
-	// Prepare stdin data: Windows gets both system prompt & messages (avoids 8191 char limit),
-	// other platforms get messages only (avoids Linux E2BIG error from ~128KiB execve limit)
-	let stdinData: string
-	if (isWindows) {
-		stdinData = JSON.stringify({
-			systemPrompt,
-			messages,
-		})
-	} else {
-		stdinData = JSON.stringify(messages)
-	}
+	const stdinData = JSON.stringify(messages) // kilocode_change
 
 	// Use setImmediate to ensure process is spawned before writing (prevents stdin race conditions)
 	setImmediate(() => {
