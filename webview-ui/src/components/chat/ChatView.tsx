@@ -675,7 +675,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			sendingDisabled ||
 			messageQueue.length === 0 ||
 			isProcessingQueueRef.current ||
-			clineAsk === "api_req_failed"
+			clineAsk !== "completion_result"
 		) {
 			return
 		}
