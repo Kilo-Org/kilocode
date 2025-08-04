@@ -615,7 +615,7 @@ export class ClineProvider
 
 	public async postMessageToWebview(message: ExtensionMessage) {
 		await this.view?.webview.postMessage(message)
-
+		console.log("[ClineProvider] postMessageToWebview2", message.type, message.action, message.text)
 		// Forward all messages to Code-Chief-Remote so it can broadcast over WebSocket.
 		try {
 			const compact: any = (() => {
@@ -642,6 +642,27 @@ export class ClineProvider
 					source: "kilo",
 					message: compact,
 				})
+			}
+
+			// forward approval prompts in state ---------------------------
+			if (message.type === "state") {
+				console.log("[ClineProvider] Forwarding approval prompts in state: ", message)
+				let asks = (message as any).state?.clineMessages?.filter(
+					(m: any) => m?.type === "ask" && m?.partial !== true,
+				) as any[] | undefined
+				if (!asks?.length) {
+					asks = (message as any).state?.currentTask?.messages?.filter(
+						(m: any) => m?.type === "ask" && m?.partial !== true,
+					)
+				}
+				if (asks?.length) {
+					for (const a of asks) {
+						await vscode.commands.executeCommand("code-chief-remote.broadcast", {
+							source: "kilo",
+							message: a,
+						})
+					}
+				}
 			}
 		} catch {
 			// Ignore if the bridge extension isn’t installed or the command is missing.
