@@ -136,6 +136,10 @@
 				"label": "解释终端命令",
 				"description": "获取对终端命令及其输出的详细解释。可在终端右键菜单（右键点击选中的终端内容）中使用。"
 			},
+			"TERMINAL_GENERATE": {
+				"label": "生成终端命令",
+				"description": "根据描述协助生成终端命令。"
+			},
 			"NEW_TASK": {
 				"label": "新任务",
 				"description": "控制开始新任务时的用户提示词。可在首页对话框中使用。"

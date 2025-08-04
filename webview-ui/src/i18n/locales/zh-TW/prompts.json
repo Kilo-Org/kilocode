@@ -136,6 +136,10 @@
 				"label": "說明終端機命令",
 				"description": "取得終端機命令及其輸出的詳細說明。可在終端機內容選單（選取終端機內容後按右鍵）使用。"
 			},
+			"TERMINAL_GENERATE": {
+				"label": "產生終端機命令",
+				"description": "根據描述協助產生終端機命令。"
+			},
 			"NEW_TASK": {
 				"label": "開始新任務",
 				"description": "開始一個新的任務。可在命令選擇區使用。"
