@@ -139,6 +139,10 @@
 				"label": "Vysvětlit příkaz terminálu",
 				"description": "Získej podrobná vysvětlení příkazů terminálu a jejich výstupů. Dostupné v kontextové nabídce terminálu (pravé tlačítko na vybraném obsahu terminálu)."
 			},
+			"TERMINAL_GENERATE": {
+				"label": "Generovat příkaz terminálu",
+				"description": "Pomáhá generovat příkazy terminálu na základě popisu."
+			},
 			"NEW_TASK": {
 				"label": "Začít nový úkol",
 				"description": "Začni nový úkol se vstupem uživatele. Dostupné v paletě příkazů."

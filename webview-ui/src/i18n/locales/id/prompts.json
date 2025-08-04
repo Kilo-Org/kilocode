@@ -139,6 +139,10 @@
 				"label": "Jelaskan Perintah Terminal",
 				"description": "Dapatkan penjelasan detail tentang perintah terminal dan outputnya. Tersedia di menu konteks terminal (klik kanan pada konten terminal yang dipilih)."
 			},
+			"TERMINAL_GENERATE": {
+				"label": "Buat Perintah Terminal",
+				"description": "Bantu membuat perintah terminal berdasarkan deskripsi."
+			},
 			"NEW_TASK": {
 				"label": "Mulai Tugas Baru",
 				"description": "Mulai tugas baru dengan input pengguna. Tersedia di Command Palette."

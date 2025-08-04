@@ -139,6 +139,10 @@
 				"label": "Expliquer la commande du terminal",
 				"description": "Obtenez des explications détaillées sur les commandes du terminal et leurs sorties. Disponible dans le menu contextuel du terminal (clic droit sur le contenu sélectionné du terminal)."
 			},
+			"TERMINAL_GENERATE": {
+				"label": "Générer une commande de terminal",
+				"description": "Aide à générer des commandes de terminal basées sur la description."
+			},
 			"NEW_TASK": {
 				"label": "Démarrer une nouvelle tâche",
 				"description": "Démarre une nouvelle tâche avec ton entrée. Disponible dans la palette de commandes."

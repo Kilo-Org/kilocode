@@ -136,6 +136,10 @@
 				"label": "Giải thích lệnh terminal",
 				"description": "Nhận giải thích chi tiết về lệnh terminal và đầu ra của chúng. Có sẵn trong menu ngữ cảnh terminal (nhấp chuột phải vào nội dung terminal đã chọn)."
 			},
+			"TERMINAL_GENERATE": {
+				"label": "Tạo lệnh terminal",
+				"description": "Hỗ trợ tạo lệnh terminal dựa trên mô tả."
+			},
 			"NEW_TASK": {
 				"label": "Bắt đầu tác vụ mới",
 				"description": "Bắt đầu tác vụ mới với nội dung đã nhập. Có sẵn trong bảng lệnh."

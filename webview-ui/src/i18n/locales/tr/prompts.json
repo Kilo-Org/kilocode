@@ -136,6 +136,10 @@
 				"label": "Terminal Komutunu Açıkla",
 				"description": "Terminal komutları ve çıktıları hakkında ayrıntılı açıklamalar alın. Terminal bağlam menüsünde (seçili terminal içeriğine sağ tıklayın) kullanılabilir."
 			},
+			"TERMINAL_GENERATE": {
+				"label": "Terminal komutu oluştur",
+				"description": "Açıklamaya dayalı terminal komutları oluşturma konusunda yardım alın."
+			},
 			"NEW_TASK": {
 				"label": "Yeni Görev Başlat",
 				"description": "Girdiyle yeni bir görev başlat. Komut paletinde kullanılabilir."

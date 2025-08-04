@@ -139,6 +139,10 @@
 				"label": "อธิบาย Terminal Command",
 				"description": "รับคำอธิบายโดยละเอียดของ terminal command และ output ของมัน ใช้ได้ในเมนูบริบทของ terminal (คลิกขวาที่เนื้อหา terminal ที่เลือก)"
 			},
+			"TERMINAL_GENERATE": {
+				"label": "สร้าง Terminal Command",
+				"description": "ช่วยสร้าง terminal command ตามคำอธิบายที่ให้มา"
+			},
 			"NEW_TASK": {
 				"label": "เริ่มงานใหม่",
 				"description": "เริ่มงานใหม่ด้วย user input ใช้ได้ใน Command Palette"
