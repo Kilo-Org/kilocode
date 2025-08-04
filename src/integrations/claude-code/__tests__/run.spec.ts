@@ -1,9 +1,58 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest"
 
 // Mock os module
-vi.mock("os", () => ({
-	platform: vi.fn(() => "darwin"), // Default to non-Windows
-}))
+// kilocode_change start
+vi.mock("os", async () => {
+	const actual = await vi.importActual("os")
+	return {
+		...actual,
+		platform: vi.fn(() => "darwin"), // Default to non-Windows
+		tmpdir: vi.fn(() => "/mock/tmp/dir"),
+	}
+})
+
+// Mock fs/promises module
+const mockWriteFile = vi.fn().mockResolvedValue(undefined)
+const mockUnlink = vi.fn().mockResolvedValue(undefined)
+const mockReadFile = vi.fn().mockResolvedValue("mocked system prompt content")
+
+vi.mock("node:fs/promises", async (importOriginal) => {
+	const actual = (await importOriginal()) as any
+	return {
+		...actual,
+		default: {
+			writeFile: mockWriteFile,
+			unlink: mockUnlink,
+			readFile: mockReadFile,
+		},
+		writeFile: mockWriteFile,
+		unlink: mockUnlink,
+		readFile: mockReadFile,
+	}
+})
+
+// Mock crypto for UUID generation
+const mockRandomUUID = vi.fn(() => "3af3dd36-2332-43a2-9d57-41af7e4c9453")
+
+vi.mock("node:crypto", async () => {
+	const actual = await vi.importActual("node:crypto")
+	return {
+		...actual,
+		randomUUID: mockRandomUUID,
+	}
+})
+
+// Mock path module
+const mockPathJoin = vi.fn((dir: string, filename: string) => `${dir}/${filename}`)
+
+vi.mock("node:path", async () => {
+	const actual = await vi.importActual("node:path")
+	return {
+		...actual,
+		join: mockPathJoin,
+	}
+})
+// kilocode_change end
 
 // Mock vscode workspace
 vi.mock("vscode", () => ({
@@ -95,11 +144,22 @@ describe("runClaudeCode", () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
 		mockExeca.mockReturnValue(createMockProcess())
+		// kilocode_change start
+		// Reset mock functions
+		mockWriteFile.mockResolvedValue(undefined)
+		mockUnlink.mockResolvedValue(undefined)
+		mockReadFile.mockResolvedValue("mocked system prompt content")
+		mockRandomUUID.mockReturnValue("3af3dd36-2332-43a2-9d57-41af7e4c9453")
+		mockPathJoin.mockImplementation((dir: string, filename: string) => `${dir}/${filename}`)
+		// kilocode_change end
 		// Mock setImmediate to run synchronously in tests
 		vi.spyOn(global, "setImmediate").mockImplementation((callback: any) => {
 			callback()
 			return {} as any
 		})
+		// kilocode_change Reset the module cache to ensure fresh imports
+		vi.resetModules()
+		// kilocode_change end
 	})
 
 	afterEach(() => {
@@ -124,7 +184,6 @@ describe("runClaudeCode", () => {
 	})
 
 	test("should handle platform-specific stdin behavior", async () => {
-		const { runClaudeCode } = await import("../run")
 		const messages = [{ role: "user" as const, content: "Hello world!" }]
 		const systemPrompt = "You are a helpful assistant"
 		const options = {
@@ -136,19 +195,27 @@ describe("runClaudeCode", () => {
 		const os = await import("os")
 		vi.mocked(os.platform).mockReturnValue("win32")
 
+		// kilocode_change start
+		// Import the module after setting up mocks
+		const { runClaudeCode } = await import("../run")
 		const generator = runClaudeCode(options)
-		const results = []
-		for await (const chunk of generator) {
-			results.push(chunk)
-		}
-
-		// On Windows, should NOT have --system-prompt in args
+		// Consume at least one item to trigger process spawn
+		await generator.next()
+		// Clean up the generator
+		await generator.return(undefined)
 		const [, args] = mockExeca.mock.calls[0]
-		expect(args).not.toContain("--system-prompt")
-
+		expect(args).toContain("--system-prompt-file")
 		// Should pass both system prompt and messages via stdin
 		const expectedStdinData = JSON.stringify({ systemPrompt, messages })
 		expect(mockStdin.write).toHaveBeenCalledWith(expectedStdinData, "utf8", expect.any(Function))
+
+		// Verify that writeFile was called to create temp file
+		expect(mockWriteFile).toHaveBeenCalledWith(
+			expect.stringContaining("kilocode-system-prompt-"),
+			systemPrompt,
+			"utf8",
+		)
+		// kilocode_change end
 
 		// Reset mocks for non-Windows test
 		vi.clearAllMocks()
@@ -157,7 +224,12 @@ describe("runClaudeCode", () => {
 		// Test on non-Windows
 		vi.mocked(os.platform).mockReturnValue("darwin")
 
-		const generator2 = runClaudeCode(options)
+		// kilocode_change start
+		// Re-import to get fresh module with new platform setting
+		vi.resetModules()
+		const { runClaudeCode: runClaudeCode2 } = await import("../run")
+		const generator2 = runClaudeCode2(options)
+		// kilocode_change end
 		const results2 = []
 		for await (const chunk of generator2) {
 			results2.push(chunk)
