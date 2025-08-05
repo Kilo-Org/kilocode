@@ -20,7 +20,7 @@ import {
 	AlertDialogTitle,
 } from "@src/components/ui/alert-dialog"
 import { inputEventTransform } from "../transforms"
-import { AllUsageResult } from "@roo-code/types"
+import { UsageResultByDuration } from "@roo-code/types"
 
 type VirtualQuotaFallbackProviderProps = {
 	apiConfiguration: ProviderSettings
@@ -298,7 +298,7 @@ export const VirtualQuotaFallbackProvider = ({
 }
 
 const VirtualLimitInputs = ({ profile, index, onProfileChange }: LimitInputsProps) => {
-	const [usage, setUsage] = useState<AllUsageResult | null>(null)
+	const [usage, setUsage] = useState<UsageResultByDuration | null>(null)
 	const { t } = useTranslation("kilocode")
 
 	useEffect(() => {
@@ -427,7 +427,7 @@ const UsageProgress = ({
 	usage,
 }: {
 	limits: VirtualQuotaFallbackProviderData["profileLimits"]
-	usage: AllUsageResult | null
+	usage: UsageResultByDuration | null
 	t: (key: string) => string
 }) => {
 	if (!usage || !limits) {

@@ -31,7 +31,7 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 	private settingsManager: ProviderSettingsManager
 	private settings: ProviderSettings
 
-	private handlers: HandlerConfig[] = []
+	private handlerConfigs: HandlerConfig[] = []
 	private activeHandler: ApiHandler | undefined
 	private activeProfileId: string | undefined
 	private usage: UsageTracker
@@ -73,27 +73,25 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 			throw new Error("All configured providers are unavailable or over limits.")
 		}
 
-		const handler = this.activeHandler
-		const profileId = this.activeProfileId
-		const handlerConfig = this.handlers.find((h) => h.profileId === profileId)
+		const activeHandlerConfig = this.handlerConfigs.find(({ profileId }) => profileId === this.activeProfileId)
 
 		try {
 			// Track request consumption
-			await this.usage.consume(profileId, "requests", 1)
-			const stream = handler.createMessage(systemPrompt, messages, metadata)
+			await this.usage.consume(this.activeProfileId, "requests", 1)
+			const stream = this.activeHandler.createMessage(systemPrompt, messages, metadata)
 			for await (const chunk of stream) {
 				if (chunk.type === "usage") {
 					const totalTokens = (chunk.inputTokens || 0) + (chunk.outputTokens || 0)
 					if (totalTokens > 0) {
-						await this.usage.consume(profileId, "tokens", totalTokens)
+						await this.usage.consume(this.activeProfileId, "tokens", totalTokens)
 					}
 				}
 				yield chunk
 			}
 		} catch (error) {
-			console.error(`Provider ${handlerConfig?.config.profileName} failed:`, error)
+			console.error(`Provider ${activeHandlerConfig?.config.profileName} failed:`, error)
 			// Set a 10-minute cooldown using the centralized usage tracker
-			await this.usage.setCooldown(profileId, 10 * 60 * 1000)
+			await this.usage.setCooldown(this.activeProfileId, 10 * 60 * 1000)
 			// Rethrow the error to be handled by the caller, as requested
 			throw error
 		}
@@ -107,15 +105,14 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 			// before initialization now `pWaitFor` it to be complete.
 			throw new Error("No active handler configured - ensure initialize() was called and profiles are available")
 		}
-		const model = this.activeHandler.getModel()
-		return model
+		return this.activeHandler.getModel()
 	}
 
 	/**
 	 * Loads and validates the configured profiles from settings
 	 */
 	private async loadConfiguredProfiles(): Promise<void> {
-		this.handlers = []
+		this.handlerConfigs = []
 
 		const profiles = this.settings.profiles || []
 		const handlerPromises = profiles.map(async (profile, index) => {
@@ -146,7 +143,7 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 		})
 
 		const results = await Promise.all(handlerPromises)
-		this.handlers = results.filter((handler): handler is HandlerConfig => handler !== null)
+		this.handlerConfigs = results.filter((handler): handler is HandlerConfig => handler !== null)
 
 		await this.adjustActiveHandler()
 	}
@@ -155,14 +152,14 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 	 * Adjusts which handler is currently the active handler by selecting the first one under limits.
 	 */
 	async adjustActiveHandler(): Promise<void> {
-		if (this.handlers.length === 0) {
+		if (this.handlerConfigs.length === 0) {
 			this.activeHandler = undefined
 			this.activeProfileId = undefined
 			return
 		}
 
 		// Find the first available handler that is under limit and not on cooldown
-		for (const { handler, profileId, config } of this.handlers) {
+		for (const { handler, profileId, config } of this.handlerConfigs) {
 			const isUnderCooldown = await this.usage.isUnderCooldown(profileId)
 			if (isUnderCooldown) {
 				continue

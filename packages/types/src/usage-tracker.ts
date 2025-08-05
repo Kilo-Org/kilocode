@@ -17,7 +17,7 @@ export interface UsageResult {
 	requests: number
 }
 
-export interface AllUsageResult {
+export interface UsageResultByDuration {
 	minute: UsageResult
 	hour: UsageResult
 	day: UsageResult

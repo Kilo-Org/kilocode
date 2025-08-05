@@ -115,6 +115,7 @@ export interface ExtensionMessage {
 		| "vsCodeSetting"
 		| "profileDataResponse" // kilocode_change
 		| "balanceDataResponse" // kilocode_change
+		| "updateProfileData" // kilocode_change
 		| "authenticatedUser"
 		| "condenseTaskContextResponse"
 		| "singleRouterModelFetchResponse"
@@ -138,18 +139,18 @@ export interface ExtensionMessage {
 	text?: string
 	payload?: ProfileDataResponsePayload | BalanceDataResponsePayload // kilocode_change: Add payload for profile and balance data
 	action?:
-	| "chatButtonClicked"
-	| "mcpButtonClicked"
-	| "settingsButtonClicked"
-	| "historyButtonClicked"
-	| "promptsButtonClicked"
-	| "profileButtonClicked" // kilocode_change
-	| "marketplaceButtonClicked"
-	| "accountButtonClicked"
-	| "didBecomeVisible"
-	| "focusInput"
-	| "switchTab"
-	| "focusChatInput" // kilocode_change
+		| "chatButtonClicked"
+		| "mcpButtonClicked"
+		| "settingsButtonClicked"
+		| "historyButtonClicked"
+		| "promptsButtonClicked"
+		| "profileButtonClicked" // kilocode_change
+		| "marketplaceButtonClicked"
+		| "accountButtonClicked"
+		| "didBecomeVisible"
+		| "focusInput"
+		| "switchTab"
+		| "focusChatInput" // kilocode_change
 	invoke?: "newChat" | "sendMessage" | "primaryButtonClick" | "secondaryButtonClick" | "setChatBoxMessage"
 	state?: ExtensionState
 	images?: string[]
@@ -381,21 +382,21 @@ export type ExtensionState = Pick<
 
 export interface ClineSayTool {
 	tool:
-	| "editedExistingFile"
-	| "appliedDiff"
-	| "newFileCreated"
-	| "codebaseSearch"
-	| "readFile"
-	| "fetchInstructions"
-	| "listFilesTopLevel"
-	| "listFilesRecursive"
-	| "listCodeDefinitionNames"
-	| "searchFiles"
-	| "switchMode"
-	| "newTask"
-	| "finishTask"
-	| "searchAndReplace"
-	| "insertContent"
+		| "editedExistingFile"
+		| "appliedDiff"
+		| "newFileCreated"
+		| "codebaseSearch"
+		| "readFile"
+		| "fetchInstructions"
+		| "listFilesTopLevel"
+		| "listFilesRecursive"
+		| "listCodeDefinitionNames"
+		| "searchFiles"
+		| "switchMode"
+		| "newTask"
+		| "finishTask"
+		| "searchAndReplace"
+		| "insertContent"
 	path?: string
 	diff?: string
 	content?: string

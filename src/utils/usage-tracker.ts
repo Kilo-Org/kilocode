@@ -1,6 +1,6 @@
 // kilocode_change - new file
 import type { ExtensionContext, Memento } from "vscode"
-import { AllUsageResult, UsageEvent, UsageResult, UsageType, UsageWindow } from "@roo-code/types"
+import { UsageResultByDuration, UsageEvent, UsageResult, UsageType, UsageWindow } from "@roo-code/types"
 import { ContextProxy } from "../core/config/ContextProxy"
 
 const USAGE_STORAGE_KEY = "kilocode.virtualQuotaFallbackProvider.usage.v1"
@@ -109,7 +109,7 @@ export class UsageTracker {
 	 * @param providerId The provider to retrieve usage for.
 	 * @returns An object containing the total number of tokens and requests for each window.
 	 */
-	public getAllUsage(providerId: string): AllUsageResult {
+	public getAllUsage(providerId: string): UsageResultByDuration {
 		return {
 			minute: this.getUsage(providerId, "minute"),
 			hour: this.getUsage(providerId, "hour"),
@@ -174,8 +174,8 @@ export class UsageTracker {
 	 * Retrieves all cooldowns from storage and filters out expired ones.
 	 */
 	private async getPrunedCooldowns(): Promise<{ [key: string]: number }> {
-		const allCooldowns = this.memento.get<{ [key: string]: number }>(COOLDOWNS_STORAGE_KEY, {})
 		const now = Date.now()
+		const allCooldowns = this.memento.get<{ [key: string]: number }>(COOLDOWNS_STORAGE_KEY, {})
 		const prunedCooldowns: { [key: string]: number } = {}
 
 		for (const [providerId, cooldownUntil] of Object.entries(allCooldowns)) {

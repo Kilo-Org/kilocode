@@ -2174,9 +2174,9 @@ export const webviewMessageHandler = async (
 				}
 				await vscode.env.openExternal(vscode.Uri.parse(response.headers.location))
 			} catch (error: any) {
-				const errorMessage = error?.message || "Unknown error";
-				const errorStack = error?.stack ? ` Stack: ${error.stack}` : "";
-				provider.log(`Error redirecting to payment page: ${errorMessage}.${errorStack}`);
+				const errorMessage = error?.message || "Unknown error"
+				const errorStack = error?.stack ? ` Stack: ${error.stack}` : ""
+				provider.log(`Error redirecting to payment page: ${errorMessage}.${errorStack}`)
 				provider.postMessageToWebview({
 					type: "updateProfileData",
 				})
@@ -2578,7 +2578,6 @@ export const webviewMessageHandler = async (
 				} catch (error) {
 					const errorMessage = error instanceof Error ? error.message : String(error)
 					provider.log(`Error getting usage data: ${errorMessage}`)
-					// Optionally, send an error response back to the webview
 				}
 			}
 			break
