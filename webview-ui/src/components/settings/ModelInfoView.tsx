@@ -122,7 +122,9 @@ export const ModelInfoView = ({
 					setIsExpanded={setIsDescriptionExpanded}
 				/>
 			)}
-			{isKiloCodeFreeModel && !isOpenRouterKeySet && <KiloCodeFreeModelLink uriScheme={uriScheme} />}
+			{isKiloCodeFreeModel && !isOpenRouterKeySet && (
+				<KiloCodeFreeModelLink modelId={selectedModelId} uriScheme={uriScheme} />
+			)}
 			<div className="text-sm text-vscode-descriptionForeground">
 				{infoItems.map((item, index) => (
 					<div key={index}>{item}</div>
