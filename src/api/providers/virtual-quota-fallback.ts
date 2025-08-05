@@ -44,10 +44,6 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 		this.initialize()
 	}
 
-	/**
-	 * Initialize the handler by loading configured profiles.
-	 * Must be called after construction before using the handler.
-	 */
 	async initialize(): Promise<void> {
 		if (!this.isInitialized) {
 			await this.loadConfiguredProfiles()
@@ -73,12 +69,10 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 			throw new Error("All configured providers are unavailable or over limits.")
 		}
 
-		const activeHandlerConfig = this.handlerConfigs.find(({ profileId }) => profileId === this.activeProfileId)
+		await this.usage.consume(this.activeProfileId, "requests", 1)
 
+		const stream = this.activeHandler.createMessage(systemPrompt, messages, metadata)
 		try {
-			// Track request consumption
-			await this.usage.consume(this.activeProfileId, "requests", 1)
-			const stream = this.activeHandler.createMessage(systemPrompt, messages, metadata)
 			for await (const chunk of stream) {
 				if (chunk.type === "usage") {
 					const totalTokens = (chunk.inputTokens || 0) + (chunk.outputTokens || 0)
@@ -89,28 +83,18 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 				yield chunk
 			}
 		} catch (error) {
-			console.error(`Provider ${activeHandlerConfig?.config.profileName} failed:`, error)
-			// Set a 10-minute cooldown using the centralized usage tracker
 			await this.usage.setCooldown(this.activeProfileId, 10 * 60 * 1000)
-			// Rethrow the error to be handled by the caller, as requested
 			throw error
 		}
 	}
 
 	getModel(): { id: string; info: ModelInfo } {
 		if (!this.activeHandler) {
-			// This is a synchronous method, so we can't await adjustActiveHandler.
-			// However, if the handler isn't initialized, activeHandler will be undefined,
-			// and this check correctly throws an error. The async methods that CAN be called
-			// before initialization now `pWaitFor` it to be complete.
 			throw new Error("No active handler configured - ensure initialize() was called and profiles are available")
 		}
 		return this.activeHandler.getModel()
 	}
 
-	/**
-	 * Loads and validates the configured profiles from settings
-	 */
 	private async loadConfiguredProfiles(): Promise<void> {
 		this.handlerConfigs = []
 
@@ -125,8 +109,6 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 				const apiHandler = buildApiHandler(profileSettings)
 
 				if (apiHandler) {
-					// If the handler is an OpenRouter-based provider, we must initialize it
-					// upfront to ensure its model list is populated before it's used.
 					if (apiHandler instanceof OpenRouterHandler) {
 						await apiHandler.fetchModel()
 					}
@@ -148,9 +130,6 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 		await this.adjustActiveHandler()
 	}
 
-	/**
-	 * Adjusts which handler is currently the active handler by selecting the first one under limits.
-	 */
 	async adjustActiveHandler(): Promise<void> {
 		if (this.handlerConfigs.length === 0) {
 			this.activeHandler = undefined
@@ -158,7 +137,6 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 			return
 		}
 
-		// Find the first available handler that is under limit and not on cooldown
 		for (const { handler, profileId, config } of this.handlerConfigs) {
 			const isUnderCooldown = await this.usage.isUnderCooldown(profileId)
 			if (isUnderCooldown) {
@@ -175,16 +153,14 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 			}
 			this.activeHandler = handler
 			this.activeProfileId = profileId
-			return // Found an active handler
+			return
 		}
 
-		// If no handler is available, set active handler to undefined and notify
 		if (this.activeProfileId) {
 			await this.notifyHandlerSwitch(undefined)
 		}
 		this.activeHandler = undefined
 		this.activeProfileId = undefined
-		console.warn("No available provider found. Active handler is now undefined.")
 	}
 
 	private async notifyHandlerSwitch(newProfileId: string | undefined): Promise<void> {
@@ -204,9 +180,6 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 		vscode.window.showInformationMessage(message)
 	}
 
-	/**
-	 * Checks if a profile is under its configured limits
-	 */
 	underLimit(profileData: VirtualQuotaFallbackProfile): boolean {
 		const { profileId, profileLimits: limits } = profileData
 
@@ -215,11 +188,8 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 		}
 
 		if (!limits) {
-			// Profile exists but has no limits set, so it can always be used
 			return true
 		}
-
-		// Check limits for each time window
 		const timeWindows: Array<{ window: UsageWindow; requests?: number; tokens?: number }> = [
 			{ window: "minute", requests: limits.requestsPerMinute, tokens: limits.tokensPerMinute },
 			{ window: "hour", requests: limits.requestsPerHour, tokens: limits.tokensPerHour },

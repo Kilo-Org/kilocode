@@ -2565,6 +2565,7 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
+		// kilocode_change start - add getUsageData
 		case "getUsageData": {
 			if (message.text) {
 				try {
@@ -2572,7 +2573,7 @@ export const webviewMessageHandler = async (
 					const usageData = usageTracker.getAllUsage(message.text)
 					await provider.postMessageToWebview({
 						type: "usageDataResponse",
-						text: message.text, // profileId
+						text: message.text,
 						values: usageData,
 					})
 				} catch (error) {
@@ -2582,6 +2583,7 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
+		// kilocode_change end - add getUsageData
 		// kilocode_change start - add toggleTaskFavorite
 		case "toggleTaskFavorite":
 			if (message.text) {
