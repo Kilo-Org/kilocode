@@ -36,7 +36,8 @@
 				"title": "Kilo Code - OpenRouter Provider Routing",
 				"description": "Kilo Code routes requests to the best available providers for your model. By default, requests are load balanced across the top providers to maximize uptime. However, you can choose a specific provider to use for this model."
 			},
-			"automaticFetch": "The latest models are automatically available in Kilo Code. If you're unsure which model to choose, Kilo Code works best with the recommended models listed at the top in <strong>bold face</strong>."
+			"automaticFetch": "The latest models are automatically available in Kilo Code. If you're unsure which model to choose, Kilo Code works best with the recommended models listed at the top in <strong>bold face</strong>.",
+			"freeModelLink": "This free model has a higher rate limit with a personal OpenRouter account!"
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {
