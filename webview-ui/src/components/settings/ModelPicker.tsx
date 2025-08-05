@@ -49,6 +49,7 @@ interface ModelPickerProps {
 	setApiConfigurationField: <K extends keyof ProviderSettings>(field: K, value: ProviderSettings[K]) => void
 	organizationAllowList: OrganizationAllowList
 	errorMessage?: string
+	uriScheme?: string // kilocode_change
 }
 
 export const ModelPicker = ({
@@ -61,6 +62,7 @@ export const ModelPicker = ({
 	setApiConfigurationField,
 	// organizationAllowList, // kilocode_change: unused
 	errorMessage,
+	uriScheme, // kilocode_change
 }: ModelPickerProps) => {
 	const { t } = useAppTranslation()
 
@@ -235,6 +237,7 @@ export const ModelPicker = ({
 					isDescriptionExpanded={isDescriptionExpanded}
 					setIsDescriptionExpanded={setIsDescriptionExpanded}
 					isOpenRouterKeySet={Boolean(apiConfiguration.openRouterApiKey) /* kilocode_change */}
+					uriScheme={uriScheme /* kilocode_change */}
 				/>
 			)}
 			<div className="text-sm text-vscode-descriptionForeground">

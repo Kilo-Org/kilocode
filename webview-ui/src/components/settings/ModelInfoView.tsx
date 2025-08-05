@@ -35,13 +35,13 @@ export const ModelInfoView = ({
 	const { t } = useAppTranslation()
 
 	// kilocode_change start
-	const isKiloCodeFree = apiProvider === "kilocode" && selectedModelId.endsWith(":free")
+	const isKiloCodeFreeModel = apiProvider === "kilocode" && selectedModelId.endsWith(":free")
 	const kiloCodeTrustsThePricing =
 		(apiProvider !== "kilocode" && apiProvider !== "openrouter") ||
 		selectedModelId.startsWith("anthropic/") ||
 		selectedModelId.startsWith("openai/") ||
 		selectedModelId.startsWith("google/") ||
-		isKiloCodeFree
+		isKiloCodeFreeModel
 	// kilocode_change end
 
 	const infoItems = [
@@ -122,7 +122,7 @@ export const ModelInfoView = ({
 					setIsExpanded={setIsDescriptionExpanded}
 				/>
 			)}
-			{isKiloCodeFree && <KiloCodeFreeModelLink uriScheme={uriScheme} isOpenRouterKeySet={isOpenRouterKeySet} />}
+			{isKiloCodeFreeModel && !isOpenRouterKeySet && <KiloCodeFreeModelLink uriScheme={uriScheme} />}
 			<div className="text-sm text-vscode-descriptionForeground">
 				{infoItems.map((item, index) => (
 					<div key={index}>{item}</div>

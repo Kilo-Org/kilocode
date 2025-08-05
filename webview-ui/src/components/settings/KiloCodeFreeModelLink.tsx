@@ -1,21 +1,25 @@
 import { getOpenRouterAuthUrl } from "@/oauth/urls"
 import { t } from "i18next"
 import { VSCodeButtonLink } from "../common/VSCodeButtonLink"
+import { telemetryClient } from "@/utils/TelemetryClient"
+import { TelemetryEventName } from "@roo-code/types"
 
-export const KiloCodeFreeModelLink = (props: { uriScheme?: string; isOpenRouterKeySet: boolean }) => {
+export const KiloCodeFreeModelLink = (props: { uriScheme?: string }) => {
 	return (
 		<div className="bg-vscode-editor-background border p-3 shadow-sm text-center">
 			<div className="text-vscode-descriptionForeground">
 				This free model has a higher rate limit with a personal OpenRouter account!
 			</div>
-			{!props.isOpenRouterKeySet && (
-				<VSCodeButtonLink
-					href={getOpenRouterAuthUrl(props.uriScheme)}
-					appearance="primary"
-					className="mt-3 w-full">
-					{t("settings:providers.getOpenRouterApiKey")}
-				</VSCodeButtonLink>
-			)}
+			<VSCodeButtonLink
+				href={getOpenRouterAuthUrl(props.uriScheme)}
+				appearance="primary"
+				className="mt-3 w-full"
+				onClick={() => {
+					console.warn("OPENROUTER_FREE_MODEL_LINK_CLICKED")
+					telemetryClient.capture(TelemetryEventName.OPENROUTER_FREE_MODEL_LINK_CLICKED)
+				}}>
+				{t("settings:providers.getOpenRouterApiKey")}
+			</VSCodeButtonLink>
 		</div>
 	)
 }

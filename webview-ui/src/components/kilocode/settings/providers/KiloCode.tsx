@@ -98,6 +98,7 @@ export const KiloCode = ({
 				serviceName="Kilo Code"
 				serviceUrl="https://kilocode.ai"
 				organizationAllowList={organizationAllowList}
+				uriScheme={uriScheme}
 			/>
 		</>
 	)
