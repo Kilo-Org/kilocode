@@ -234,6 +234,7 @@ export const ModelPicker = ({
 					modelInfo={selectedModelInfo}
 					isDescriptionExpanded={isDescriptionExpanded}
 					setIsDescriptionExpanded={setIsDescriptionExpanded}
+					isOpenRouterKeySet={Boolean(apiConfiguration.openRouterApiKey) /* kilocode_change */}
 				/>
 			)}
 			<div className="text-sm text-vscode-descriptionForeground">

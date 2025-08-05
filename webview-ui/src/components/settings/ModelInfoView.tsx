@@ -7,6 +7,7 @@ import { cn } from "@src/lib/utils"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 
 import { ModelDescriptionMarkdown } from "./ModelDescriptionMarkdown"
+import { KiloCodeFreeModelLink } from "./KiloCodeFreeModelLink"
 
 type ModelInfoViewProps = {
 	apiProvider?: string
@@ -14,6 +15,10 @@ type ModelInfoViewProps = {
 	modelInfo?: ModelInfo
 	isDescriptionExpanded: boolean
 	setIsDescriptionExpanded: (isExpanded: boolean) => void
+	// kilocode_change start
+	isOpenRouterKeySet: boolean
+	uriScheme?: string
+	// kilocode_change end
 }
 
 export const ModelInfoView = ({
@@ -22,15 +27,21 @@ export const ModelInfoView = ({
 	modelInfo,
 	isDescriptionExpanded,
 	setIsDescriptionExpanded,
+	// kilocode_change start
+	isOpenRouterKeySet,
+	uriScheme,
+	// kilocode_change end
 }: ModelInfoViewProps) => {
 	const { t } = useAppTranslation()
 
 	// kilocode_change start
+	const isKiloCodeFree = apiProvider === "kilocode" && selectedModelId.endsWith(":free")
 	const kiloCodeTrustsThePricing =
 		(apiProvider !== "kilocode" && apiProvider !== "openrouter") ||
 		selectedModelId.startsWith("anthropic/") ||
 		selectedModelId.startsWith("openai/") ||
-		selectedModelId.startsWith("google/")
+		selectedModelId.startsWith("google/") ||
+		isKiloCodeFree
 	// kilocode_change end
 
 	const infoItems = [
@@ -111,6 +122,7 @@ export const ModelInfoView = ({
 					setIsExpanded={setIsDescriptionExpanded}
 				/>
 			)}
+			{isKiloCodeFree && <KiloCodeFreeModelLink uriScheme={uriScheme} isOpenRouterKeySet={isOpenRouterKeySet} />}
 			<div className="text-sm text-vscode-descriptionForeground">
 				{infoItems.map((item, index) => (
 					<div key={index}>{item}</div>
