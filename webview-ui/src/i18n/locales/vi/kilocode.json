@@ -42,7 +42,8 @@
 				"title": "Kilo Code - Định tuyến nhà cung cấp OpenRouter",
 				"description": "Kilo Code định tuyến các yêu cầu đến các nhà cung cấp tốt nhất có sẵn cho mô hình của bạn. Theo mặc định, các yêu cầu được cân bằng tải trên các nhà cung cấp hàng đầu để tối đa hóa thời gian hoạt động. Tuy nhiên, bạn có thể chọn một nhà cung cấp cụ thể để sử dụng cho mô hình này."
 			},
-			"automaticFetch": "Các mô hình mới nhất được tự động cung cấp trong Kilo Code. Nếu bạn không chắc chắn nên chọn mô hình nào, Kilo Code hoạt động tốt nhất với các mô hình được khuyến nghị được liệt kê ở đầu bằng <strong>chữ đậm</strong>."
+			"automaticFetch": "Các mô hình mới nhất được tự động cung cấp trong Kilo Code. Nếu bạn không chắc chắn nên chọn mô hình nào, Kilo Code hoạt động tốt nhất với các mô hình được khuyến nghị được liệt kê ở đầu bằng <strong>chữ đậm</strong>.",
+			"freeModelLink": "Mô hình miễn phí này có giới hạn tốc độ cao hơn với tài khoản OpenRouter cá nhân!"
 		},
 		"systemNotifications": {
 			"label": "Bật thông báo hệ thống",

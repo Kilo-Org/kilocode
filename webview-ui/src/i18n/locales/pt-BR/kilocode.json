@@ -36,7 +36,8 @@
 			"providerRouting": {
 				"title": "Kilo Code - Roteamento de Provedor OpenRouter",
 				"description": "O Kilo Code roteia as solicitações para os melhores provedores disponíveis para o seu modelo. Por padrão, as solicitações são balanceadas em carga entre os principais provedores para maximizar o tempo de atividade. No entanto, você pode escolher um provedor específico para usar para este modelo."
-			}
+			},
+			"freeModelLink": "Este modelo gratuito tem um limite de taxa mais alto com uma conta pessoal do OpenRouter!"
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {

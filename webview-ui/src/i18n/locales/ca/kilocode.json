@@ -33,6 +33,7 @@
 			"login": "Iniciar sessió a Kilo Code",
 			"logout": "Tancar sessió de Kilo Code",
 			"automaticFetch": "Els models més recents estan disponibles automàticament a Kilo Code. Si no estàs segur de quin model triar, Kilo Code funciona millor amb els models recomanats que apareixen a la part superior en <strong>negreta</strong>.",
+			"freeModelLink": "Aquest model gratuït té un límit de velocitat més alt amb un compte personal d'OpenRouter!",
 			"providerRouting": {
 				"title": "Kilo Code - Encaminament de proveïdors OpenRouter",
 				"description": "Kilo Code encamina les sol·licituds als millors proveïdors disponibles per al vostre model. Per defecte, les sol·licituds es distribueixen entre els principals proveïdors per maximitzar el temps de funcionament. No obstant això, podeu triar un proveïdor específic per a aquest model."

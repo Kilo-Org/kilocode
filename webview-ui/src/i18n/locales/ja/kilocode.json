@@ -36,7 +36,8 @@
 				"title": "Kilo Code - OpenRouterプロバイダーのルーティング",
 				"description": "Kilo Codeは、モデルに最適な利用可能なプロバイダーにリクエストをルーティングします。デフォルトでは、稼働時間を最大化するために、リクエストはトッププロバイダー間で負荷分散されます。ただし、このモデルに使用する特定のプロバイダーを選択できます。"
 			},
-			"automaticFetch": "最新のモデルはKilo Codeで自動的に利用可能になります。どのモデルを選択すべきかわからない場合は、上部に<strong>太字</strong>で表示されている推奨モデルでKilo Codeが最適に動作します。"
+			"automaticFetch": "最新のモデルはKilo Codeで自動的に利用可能になります。どのモデルを選択すべきかわからない場合は、上部に<strong>太字</strong>で表示されている推奨モデルでKilo Codeが最適に動作します。",
+			"freeModelLink": "この無料モデルは、個人のOpenRouterアカウントでより高いレート制限があります！"
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {

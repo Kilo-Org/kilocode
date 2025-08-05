@@ -36,7 +36,8 @@
 			"providerRouting": {
 				"title": "Kilo Code - Routing dostawców OpenRouter",
 				"description": "Kilo Code kieruje żądania do najlepszych dostępnych dostawców dla Twojego modelu. Domyślnie żądania są równoważone obciążeniem między najlepszymi dostawcami, aby zmaksymalizować czas działania. Możesz jednak wybrać konkretnego dostawcę do użycia dla tego modelu."
-			}
+			},
+			"freeModelLink": "Ten darmowy model ma wyższy limit zapytań z osobistym kontem OpenRouter!"
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {

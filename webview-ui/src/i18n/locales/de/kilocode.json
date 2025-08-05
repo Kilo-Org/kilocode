@@ -33,6 +33,7 @@
 			"login": "Bei Kilo Code anmelden",
 			"logout": "Von Kilo Code abmelden",
 			"automaticFetch": "Die neuesten Modelle sind automatisch in Kilo Code verfügbar. Wenn du dir nicht sicher bist, welches Modell du wählen sollst, funktioniert Kilo Code am besten mit den empfohlenen Modellen, die oben in <strong>fetter Schrift</strong> aufgeführt sind.",
+			"freeModelLink": "Dieses kostenlose Modell hat ein höheres Ratenlimit mit einem persönlichen OpenRouter-Konto!",
 			"providerRouting": {
 				"title": "Kilo Code - OpenRouter-Anbieter-Routing",
 				"description": "Kilo Code leitet Anfragen an die besten verfügbaren Anbieter für dein Modell weiter. Standardmäßig werden Anfragen über die Top-Anbieter verteilt, um die Betriebszeit zu maximieren. Du kannst jedoch einen bestimmten Anbieter für dieses Modell auswählen."

@@ -39,6 +39,7 @@
 			"login": "Kilo Code'a giriş yap",
 			"logout": "Kilo Code'dan çıkış yap",
 			"automaticFetch": "En son modeller Kilo Code'da otomatik olarak kullanılabilir. Hangi modeli seçeceğinizden emin değilseniz, Kilo Code en üstte <strong>kalın yazı</strong> ile listelenen önerilen modellerle en iyi şekilde çalışır.",
+			"freeModelLink": "Bu ücretsiz model kişisel OpenRouter hesabı ile daha yüksek hız limitine sahiptir!",
 			"providerRouting": {
 				"title": "Kilo Code - OpenRouter Sağlayıcı Yönlendirme",
 				"description": "Kilo Code, modeliniz için en iyi kullanılabilir sağlayıcılara istekleri yönlendirir. Varsayılan olarak, çalışma süresini en üst düzeye çıkarmak için istekler en iyi sağlayıcılar arasında yük dengelenir. Ancak, bu model için kullanılacak belirli bir sağlayıcı seçebilirsiniz."

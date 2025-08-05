@@ -49,7 +49,8 @@
 				"title": "Kilo Code - OpenRouter 供應商路由",
 				"description": "Kilo Code 將請求路由到您模型的最佳可用供應商。預設情況下，請求會在頂級供應商之間進行負載平衡，以最大化正常執行時間。但是，您可以選擇要用於此模型的特定供應商。"
 			},
-			"automaticFetch": "最新模型會自動在 Kilo Code 中提供。如果您不確定要選擇哪個模型，Kilo Code 與列在頂部<strong>粗體</strong>顯示的推薦模型搭配使用效果最佳。"
+			"automaticFetch": "最新模型會自動在 Kilo Code 中提供。如果您不確定要選擇哪個模型，Kilo Code 與列在頂部<strong>粗體</strong>顯示的推薦模型搭配使用效果最佳。",
+			"freeModelLink": "此免費模型使用個人 OpenRouter 帳戶具有更高的 API 請求頻率限制！"
 		},
 		"terminal": {
 			"commandGenerator": {

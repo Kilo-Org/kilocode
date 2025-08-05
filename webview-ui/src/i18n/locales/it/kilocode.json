@@ -33,6 +33,7 @@
 			"login": "Accedi a Kilo Code",
 			"logout": "Disconnetti da Kilo Code",
 			"automaticFetch": "I modelli più recenti sono automaticamente disponibili in Kilo Code. Se non sei sicuro di quale modello scegliere, Kilo Code funziona meglio con i modelli consigliati elencati in alto in <strong>grassetto</strong>.",
+			"freeModelLink": "Questo modello gratuito ha un limite di velocità più alto con un account OpenRouter personale!",
 			"providerRouting": {
 				"title": "Kilo Code - Routing dei provider OpenRouter",
 				"description": "Kilo Code instrada le richieste ai migliori provider disponibili per il tuo modello. Per impostazione predefinita, le richieste vengono bilanciate tra i provider principali per massimizzare i tempi di attività. Tuttavia, puoi scegliere un provider specifico da utilizzare per questo modello."
