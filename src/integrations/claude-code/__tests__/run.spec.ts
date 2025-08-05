@@ -205,8 +205,8 @@ describe("runClaudeCode", () => {
 		await generator.return(undefined)
 		const [, args] = mockExeca.mock.calls[0]
 		expect(args).toContain("--system-prompt-file")
-		// Should pass both system prompt and messages via stdin
-		const expectedStdinData = JSON.stringify({ systemPrompt, messages })
+		// When using system prompt file, should only pass messages via stdin
+		const expectedStdinData = JSON.stringify(messages)
 		expect(mockStdin.write).toHaveBeenCalledWith(expectedStdinData, "utf8", expect.any(Function))
 
 		// Verify that writeFile was called to create temp file
