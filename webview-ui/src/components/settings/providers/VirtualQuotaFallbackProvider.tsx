@@ -7,8 +7,7 @@ import { ChevronUp, ChevronDown } from "lucide-react"
 import { type ProviderSettings, type ProviderSettingsEntry } from "@roo-code/types"
 import { vscode } from "@src/utils/vscode"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@src/components/ui"
-import { Progress } from "@src/components/ui/progress"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, LabeledProgress } from "@src/components/ui"
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -299,7 +298,6 @@ export const VirtualQuotaFallbackProvider = ({
 
 const VirtualLimitInputs = ({ profile, index, onProfileChange }: LimitInputsProps) => {
 	const [usage, setUsage] = useState<UsageResultByDuration | null>(null)
-	const { t } = useTranslation("kilocode")
 
 	useEffect(() => {
 		if (profile.profileId) {
@@ -334,13 +332,32 @@ const VirtualLimitInputs = ({ profile, index, onProfileChange }: LimitInputsProp
 		[profile, index, onProfileChange],
 	)
 
+	const renderProgressBarForLimit = useCallback(
+		(
+			limitType: keyof NonNullable<VirtualQuotaFallbackProviderData["profileLimits"]>,
+			usageKey: "tokens" | "requests",
+			duration: "minute" | "hour" | "day",
+		) => {
+			const limit = profile.profileLimits?.[limitType]
+			if (!limit || !usage) return null
+
+			const current = usage[duration][usageKey]
+
+			return (
+				<div className="mt-1">
+					<LabeledProgress label="" currentValue={current} limitValue={limit} />
+				</div>
+			)
+		},
+		[profile.profileLimits, usage],
+	)
+
 	if (!profile.profileId) {
 		return null
 	}
 
 	return (
 		<div className="space-y-4 p-2 rounded-md mt-2">
-			<UsageProgress limits={profile.profileLimits} usage={usage} t={t} />
 			{/* Tokens Row */}
 			<div>
 				<label className="block text-sm font-medium mb-2">
@@ -356,6 +373,7 @@ const VirtualLimitInputs = ({ profile, index, onProfileChange }: LimitInputsProp
 							onInput={handleLimitChange("tokensPerMinute")}
 							className="w-full"
 						/>
+						{renderProgressBarForLimit("tokensPerMinute", "tokens", "minute")}
 					</div>
 					<div>
 						<label className="block text-xs text-vscode-descriptionForeground mb-1">
@@ -366,6 +384,7 @@ const VirtualLimitInputs = ({ profile, index, onProfileChange }: LimitInputsProp
 							onInput={handleLimitChange("tokensPerHour")}
 							className="w-full"
 						/>
+						{renderProgressBarForLimit("tokensPerHour", "tokens", "hour")}
 					</div>
 					<div>
 						<label className="block text-xs text-vscode-descriptionForeground mb-1">
@@ -376,6 +395,7 @@ const VirtualLimitInputs = ({ profile, index, onProfileChange }: LimitInputsProp
 							onInput={handleLimitChange("tokensPerDay")}
 							className="w-full"
 						/>
+						{renderProgressBarForLimit("tokensPerDay", "tokens", "day")}
 					</div>
 				</div>
 			</div>
@@ -395,6 +415,7 @@ const VirtualLimitInputs = ({ profile, index, onProfileChange }: LimitInputsProp
 							onInput={handleLimitChange("requestsPerMinute")}
 							className="w-full"
 						/>
+						{renderProgressBarForLimit("requestsPerMinute", "requests", "minute")}
 					</div>
 					<div>
 						<label className="block text-xs text-vscode-descriptionForeground mb-1">
@@ -405,6 +426,7 @@ const VirtualLimitInputs = ({ profile, index, onProfileChange }: LimitInputsProp
 							onInput={handleLimitChange("requestsPerHour")}
 							className="w-full"
 						/>
+						{renderProgressBarForLimit("requestsPerHour", "requests", "hour")}
 					</div>
 					<div>
 						<label className="block text-xs text-vscode-descriptionForeground mb-1">
@@ -415,91 +437,10 @@ const VirtualLimitInputs = ({ profile, index, onProfileChange }: LimitInputsProp
 							onInput={handleLimitChange("requestsPerDay")}
 							className="w-full"
 						/>
+						{renderProgressBarForLimit("requestsPerDay", "requests", "day")}
 					</div>
 				</div>
 			</div>
-		</div>
-	)
-}
-
-const UsageProgress = ({
-	limits,
-	usage,
-}: {
-	limits: VirtualQuotaFallbackProviderData["profileLimits"]
-	usage: UsageResultByDuration | null
-	t: (key: string) => string
-}) => {
-	if (!usage || !limits) {
-		return null
-	}
-
-	const progressBars = [
-		{
-			label: "TPM",
-			current: usage.minute.tokens,
-			limit: limits.tokensPerMinute,
-		},
-		{
-			label: "TPH",
-			current: usage.hour.tokens,
-			limit: limits.tokensPerHour,
-		},
-		{
-			label: "TPD",
-			current: usage.day.tokens,
-			limit: limits.tokensPerDay,
-		},
-		{
-			label: "RPM",
-			current: usage.minute.requests,
-			limit: limits.requestsPerMinute,
-		},
-		{
-			label: "RPH",
-			current: usage.hour.requests,
-			limit: limits.requestsPerHour,
-		},
-		{
-			label: "RPD",
-			current: usage.day.requests,
-			limit: limits.requestsPerDay,
-		},
-	].filter((bar) => bar.limit && bar.limit > 0)
-
-	if (progressBars.length === 0) {
-		return null
-	}
-
-	return (
-		<div className="grid grid-cols-3 gap-4 mb-4">
-			{progressBars.map((bar, index) => (
-				<UsageProgressBar key={index} label={bar.label} currentValue={bar.current} limitValue={bar.limit!} />
-			))}
-		</div>
-	)
-}
-
-const UsageProgressBar = ({
-	label,
-	currentValue,
-	limitValue,
-}: {
-	label: string
-	currentValue: number
-	limitValue: number
-}) => {
-	const percentage = limitValue > 0 ? (currentValue / limitValue) * 100 : 0
-
-	return (
-		<div>
-			<div className="text-xs text-vscode-descriptionForeground mb-1 flex justify-between">
-				<span className="whitespace-nowrap">{label}</span>
-				<span className="whitespace-nowrap">
-					{currentValue} / {limitValue}
-				</span>
-			</div>
-			<Progress value={percentage} className="[&>div]:bg-vscode-button-background" />
 		</div>
 	)
 }

@@ -108,6 +108,65 @@ export const WithQuotas: Story = {
 			],
 		} as ProviderSettings,
 	},
+	play: async () => {
+		// Mock usage data responses for progress bars
+		const mockUsageData = {
+			"anthropic-1": {
+				minute: { tokens: 45, requests: 1 },
+				hour: { tokens: 2300, requests: 23 },
+				day: { tokens: 12000, requests: 120 },
+			},
+			"openai-1": {
+				minute: { tokens: 120, requests: 2 },
+				hour: { tokens: 6000, requests: 60 },
+				day: { tokens: 45000, requests: 450 },
+			},
+		}
+
+		// Mock the message system
+		const originalAddEventListener = window.addEventListener
+		const originalPostMessage = window.postMessage
+
+		window.addEventListener = (type: string, listener: any) => {
+			if (type === "message") {
+				// Simulate usage data responses
+				setTimeout(() => {
+					Object.entries(mockUsageData).forEach(([profileId, values]) => {
+						listener({
+							data: {
+								type: "usageDataResponse",
+								text: profileId,
+								values,
+							},
+						})
+					})
+				}, 100)
+			}
+			return originalAddEventListener.call(window, type, listener)
+		}
+
+		// Mock vscode.postMessage
+		if (typeof window !== "undefined" && (window as any).vscode) {
+			const originalVscodePostMessage = (window as any).vscode.postMessage
+			;(window as any).vscode.postMessage = (message: any) => {
+				if (message.type === "getUsageData") {
+					// Simulate async response
+					setTimeout(() => {
+						window.dispatchEvent(
+							new MessageEvent("message", {
+								data: {
+									type: "usageDataResponse",
+									text: message.text,
+									values: mockUsageData[message.text as keyof typeof mockUsageData],
+								},
+							}),
+						)
+					}, 50)
+				}
+				return originalVscodePostMessage?.call((window as any).vscode, message)
+			}
+		}
+	},
 }
 
 export const NoAvailableProviders: Story = {
