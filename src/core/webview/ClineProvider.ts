@@ -102,6 +102,8 @@ export class ClineProvider
 	private static activeInstances: Set<ClineProvider> = new Set()
 	private disposables: vscode.Disposable[] = []
 	private webviewDisposables: vscode.Disposable[] = []
+	// Track which approval prompts have been forwarded to Code-Chief-Remote so we don’t send duplicates.
+	private readonly _broadcastedAskIds = new Set<string | number>()
 	private view?: vscode.WebviewView | vscode.WebviewPanel
 	private clineStack: Task[] = []
 	private codeIndexStatusSubscription?: vscode.Disposable
@@ -657,6 +659,13 @@ export class ClineProvider
 				}
 				if (asks?.length) {
 					for (const a of asks) {
+						const uniqueId = (a as any).id ?? (a as any).ts
+						if (uniqueId && this._broadcastedAskIds.has(uniqueId)) {
+							continue // already forwarded
+						}
+						if (uniqueId) {
+							this._broadcastedAskIds.add(uniqueId)
+						}
 						await vscode.commands.executeCommand("code-chief-remote.broadcast", {
 							source: "kilo",
 							message: a,

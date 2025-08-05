@@ -161,6 +161,43 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	registerCommands({ context, outputChannel, provider })
 
+	// Remote mobile Approve/Reject commands
+	context.subscriptions.push(
+		vscode.commands.registerCommand("kilo.approveAction", async (actionId: string) => {
+			const prov = ClineProvider.getVisibleInstance()
+			const cline = prov?.getCurrentCline()
+			if (!cline) {
+				return false
+			}
+			try {
+				outputChannel.appendLine(`[approveAction] actionId=${actionId}`)
+				await cline.handleWebviewAskResponse("yesButtonClicked")
+				return true
+			} catch (err) {
+				outputChannel.appendLine(`[approveAction] ${String(err)}`)
+				return false
+			}
+		}),
+	)
+
+	context.subscriptions.push(
+		vscode.commands.registerCommand("kilo.rejectAction", async (actionId: string) => {
+			const prov = ClineProvider.getVisibleInstance()
+			const cline = prov?.getCurrentCline()
+			if (!cline) {
+				return false
+			}
+			try {
+				outputChannel.appendLine(`[rejectAction] actionId=${actionId}`)
+				await cline.handleWebviewAskResponse("noButtonClicked")
+				return true
+			} catch (err) {
+				outputChannel.appendLine(`[rejectAction] ${String(err)}`)
+				return false
+			}
+		}),
+	)
+
 	/**
 	 * We use the text document content provider API to show the left side for diff
 	 * view by creating a virtual document for the original content. This makes it
