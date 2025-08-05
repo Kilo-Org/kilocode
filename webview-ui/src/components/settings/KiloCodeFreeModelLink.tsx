@@ -1,10 +1,18 @@
 import { getOpenRouterAuthUrl } from "@/oauth/urls"
 import { VSCodeButtonLink } from "../common/VSCodeButtonLink"
 import { telemetryClient } from "@/utils/TelemetryClient"
-import { TelemetryEventName } from "@roo-code/types"
+import { ProviderSettings, TelemetryEventName } from "@roo-code/types"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 
-export const KiloCodeFreeModelLink = ({ modelId, uriScheme }: { modelId: string; uriScheme?: string }) => {
+export const KiloCodeFreeModelLink = ({
+	setApiConfigurationField,
+	modelId,
+	uriScheme,
+}: {
+	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
+	modelId: string
+	uriScheme?: string
+}) => {
 	const { t } = useAppTranslation()
 	const href = getOpenRouterAuthUrl(uriScheme)
 	return (
@@ -15,6 +23,8 @@ export const KiloCodeFreeModelLink = ({ modelId, uriScheme }: { modelId: string;
 				appearance="primary"
 				className="mt-3 w-full"
 				onClick={() => {
+					setApiConfigurationField("apiProvider", "openrouter")
+					setApiConfigurationField("openRouterModelId", modelId)
 					telemetryClient.capture(TelemetryEventName.OPENROUTER_FREE_MODEL_LINK_CLICKED, {
 						modelId,
 						href,

@@ -1,6 +1,9 @@
 import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 
-import type { ModelInfo } from "@roo-code/types"
+import type {
+	ModelInfo,
+	ProviderSettings, // kilocode_change
+} from "@roo-code/types"
 
 import { formatPrice } from "@src/utils/formatPrice"
 import { cn } from "@src/lib/utils"
@@ -17,6 +20,7 @@ type ModelInfoViewProps = {
 	setIsDescriptionExpanded: (isExpanded: boolean) => void
 	// kilocode_change start
 	isOpenRouterKeySet: boolean
+	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
 	uriScheme?: string
 	// kilocode_change end
 }
@@ -29,6 +33,7 @@ export const ModelInfoView = ({
 	setIsDescriptionExpanded,
 	// kilocode_change start
 	isOpenRouterKeySet,
+	setApiConfigurationField,
 	uriScheme,
 	// kilocode_change end
 }: ModelInfoViewProps) => {
@@ -123,7 +128,11 @@ export const ModelInfoView = ({
 				/>
 			)}
 			{isKiloCodeFreeModel && !isOpenRouterKeySet && (
-				<KiloCodeFreeModelLink modelId={selectedModelId} uriScheme={uriScheme} />
+				<KiloCodeFreeModelLink
+					setApiConfigurationField={setApiConfigurationField}
+					modelId={selectedModelId}
+					uriScheme={uriScheme}
+				/>
 			)}
 			<div className="text-sm text-vscode-descriptionForeground">
 				{infoItems.map((item, index) => (

@@ -680,6 +680,7 @@ const ApiOptions = ({
 						modelInfo={selectedModelInfo}
 						isDescriptionExpanded={isDescriptionExpanded}
 						setIsDescriptionExpanded={setIsDescriptionExpanded}
+						setApiConfigurationField={setApiConfigurationField /* kilocode_change */}
 						isOpenRouterKeySet={Boolean(apiConfiguration.openRouterApiKey) /* kilocode_change */}
 						uriScheme={uriScheme /* kilocode_change */}
 					/>
