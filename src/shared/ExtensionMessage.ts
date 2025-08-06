@@ -133,6 +133,7 @@ export interface ExtensionMessage {
 		| "showDeleteMessageDialog"
 		| "showEditMessageDialog"
 		| "kilocodeNotificationsResponse" // kilocode_change
+		| "usageDataResponse" // kilocode_change
 		| "commands"
 		| "insertTextIntoTextarea"
 	text?: string

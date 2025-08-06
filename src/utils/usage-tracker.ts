@@ -1,27 +1,10 @@
 // kilocode_change - new file
 import type { ExtensionContext, Memento } from "vscode"
+import { UsageResultByDuration, UsageEvent, UsageResult, UsageType, UsageWindow } from "@roo-code/types"
 import { ContextProxy } from "../core/config/ContextProxy"
 
-export type UsageType = "tokens" | "requests"
-export type UsageWindow = "minute" | "hour" | "day"
-
-export interface UsageEvent {
-	/** The timestamp of the event in milliseconds since epoch. */
-	timestamp: number
-	/** The identifier for the AI provider (e.g., 'ds8f93js'). */
-	providerId: string
-	/** The type of usage. */
-	type: UsageType
-	/** The amount consumed (e.g., number of tokens or 1 for a single request). */
-	count: number
-}
-
-interface UsageResult {
-	tokens: number
-	requests: number
-}
-
 const USAGE_STORAGE_KEY = "kilocode.virtualQuotaFallbackProvider.usage.v1"
+const COOLDOWNS_STORAGE_KEY = "kilocode.virtualQuotaFallbackProvider.cooldowns.v1"
 const ONE_MINUTE_MS = 60 * 1000
 const ONE_HOUR_MS = 60 * ONE_MINUTE_MS
 const ONE_DAY_MS = 24 * ONE_HOUR_MS
@@ -30,15 +13,10 @@ export class UsageTracker {
 	private static _instance: UsageTracker
 	private memento: Memento
 
-	// Private constructor to enforce singleton pattern
 	private constructor(context: ExtensionContext) {
 		this.memento = context.globalState
 	}
 
-	/**
-	 * Initializes the singleton instance of the UsageTracker.
-	 * @param context The extension context provided by VS Code.
-	 */
 	public static initialize(context: ExtensionContext): UsageTracker {
 		if (!UsageTracker._instance) {
 			UsageTracker._instance = new UsageTracker(context)
@@ -53,14 +31,6 @@ export class UsageTracker {
 		return UsageTracker._instance
 	}
 
-	/**
-	 * Records a usage event.
-	 * This data is added to a list in the global state. Old data is automatically pruned.
-	 *
-	 * @param providerId The unique identifier of the AI provider.
-	 * @param type The type of usage, either "tokens" or "requests".
-	 * @param count The number of tokens or requests to record.
-	 */
 	public async consume(providerId: string, type: UsageType, count: number): Promise<void> {
 		const newEvent: UsageEvent = {
 			timestamp: Date.now(),
@@ -75,13 +45,6 @@ export class UsageTracker {
 		await this.memento.update(USAGE_STORAGE_KEY, allEvents)
 	}
 
-	/**
-	 * Calculates the total usage for a given provider over a specified sliding window.
-	 *
-	 * @param providerId The provider to retrieve usage for.
-	 * @param window The time window to calculate usage within ('minute', 'hour', 'day').
-	 * @returns An object containing the total number of tokens and requests.
-	 */
 	public getUsage(providerId: string, window: UsageWindow): UsageResult {
 		const now = Date.now()
 		let startTime: number
@@ -98,7 +61,6 @@ export class UsageTracker {
 				break
 		}
 
-		// Get pruned events to improve memory efficiency
 		const allEvents = this.getPrunedEvents()
 
 		const relevantEvents = allEvents.filter(
@@ -120,11 +82,14 @@ export class UsageTracker {
 		return result
 	}
 
-	/**
-	 * Retrieves all events from storage and filters out any that are older
-	 * than the longest tracking window (1 day). This prevents the storage
-	 * from growing indefinitely.
-	 */
+	public getAllUsage(providerId: string): UsageResultByDuration {
+		return {
+			minute: this.getUsage(providerId, "minute"),
+			hour: this.getUsage(providerId, "hour"),
+			day: this.getUsage(providerId, "day"),
+		}
+	}
+
 	private getPrunedEvents(): UsageEvent[] {
 		const allEvents = this.memento.get<UsageEvent[]>(USAGE_STORAGE_KEY, [])
 		const cutoff = Date.now() - ONE_DAY_MS
@@ -132,10 +97,44 @@ export class UsageTracker {
 		return prunedEvents
 	}
 
-	/**
-	 * A utility method to completely clear all tracked usage data.
-	 */
 	public async clearAllUsageData(): Promise<void> {
 		await this.memento.update(USAGE_STORAGE_KEY, undefined)
+		await this.memento.update(COOLDOWNS_STORAGE_KEY, undefined)
+	}
+
+	public async setCooldown(providerId: string, durationMs: number): Promise<void> {
+		const cooldownUntil = Date.now() + durationMs
+		const allCooldowns = await this.getPrunedCooldowns()
+		allCooldowns[providerId] = cooldownUntil
+		await this.memento.update(COOLDOWNS_STORAGE_KEY, allCooldowns)
+	}
+
+	public async isUnderCooldown(providerId: string): Promise<boolean> {
+		const allCooldowns = await this.getPrunedCooldowns()
+		const cooldownUntil = allCooldowns[providerId]
+
+		if (cooldownUntil && Date.now() < cooldownUntil) {
+			return true
+		}
+
+		return false
+	}
+
+	private async getPrunedCooldowns(): Promise<{ [key: string]: number }> {
+		const now = Date.now()
+		const allCooldowns = this.memento.get<{ [key: string]: number }>(COOLDOWNS_STORAGE_KEY, {})
+		const prunedCooldowns: { [key: string]: number } = {}
+
+		for (const [providerId, cooldownUntil] of Object.entries(allCooldowns)) {
+			if (cooldownUntil > now) {
+				prunedCooldowns[providerId] = cooldownUntil
+			}
+		}
+
+		if (Object.keys(prunedCooldowns).length !== Object.keys(allCooldowns).length) {
+			this.memento.update(COOLDOWNS_STORAGE_KEY, prunedCooldowns)
+		}
+
+		return prunedCooldowns
 	}
 }

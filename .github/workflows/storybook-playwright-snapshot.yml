@@ -72,7 +72,7 @@ jobs:
                   restore-keys: ${{ runner.os }}-buildx-
 
             - name: Run Playwright E2E tests
-              if: ${{ env.SECRETS_SET }}
+              if: ${{ env.SECRETS_SET == 'true' }}
               run: |
                   cd apps/playwright-e2e
                   node run-docker-playwright.js

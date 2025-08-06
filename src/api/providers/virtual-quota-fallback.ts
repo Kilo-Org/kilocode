@@ -6,11 +6,14 @@ import type { ModelInfo, ProviderSettings } from "@roo-code/types"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 import { ContextProxy } from "../../core/config/ContextProxy"
 import { ApiStream } from "../transform/stream"
+import pWaitFor from "p-wait-for"
 
 import type { ApiHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { buildApiHandler } from "../index"
 import { virtualQuotaFallbackProfileDataSchema } from "../../../packages/types/src/provider-settings"
-import { UsageTracker, type UsageWindow } from "../../utils/usage-tracker"
+import { OpenRouterHandler } from "./openrouter"
+import { UsageTracker } from "../../utils/usage-tracker"
+import { type UsageWindow } from "@roo-code/types"
 
 type VirtualQuotaFallbackProfile = z.infer<typeof virtualQuotaFallbackProfileDataSchema>
 
@@ -28,7 +31,7 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 	private settingsManager: ProviderSettingsManager
 	private settings: ProviderSettings
 
-	private handlers: HandlerConfig[] = []
+	private handlerConfigs: HandlerConfig[] = []
 	private activeHandler: ApiHandler | undefined
 	private activeProfileId: string | undefined
 	private usage: UsageTracker
@@ -37,14 +40,10 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 	constructor(options: ProviderSettings) {
 		this.settings = options
 		this.settingsManager = new ProviderSettingsManager(ContextProxy.instance.rawContext)
-		this.usage = UsageTracker.initialize(ContextProxy.instance.rawContext)
+		this.usage = UsageTracker.getInstance()
 		this.initialize()
 	}
 
-	/**
-	 * Initialize the handler by loading configured profiles.
-	 * Must be called after construction before using the handler.
-	 */
 	async initialize(): Promise<void> {
 		if (!this.isInitialized) {
 			await this.loadConfiguredProfiles()
@@ -53,7 +52,7 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 	}
 
 	async countTokens(content: Array<Anthropic.Messages.ContentBlockParam>): Promise<number> {
-		await this.initialize()
+		await pWaitFor(() => this.isInitialized)
 		await this.adjustActiveHandler()
 		return this.activeHandler?.countTokens(content) ?? 0
 	}
@@ -63,39 +62,29 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 		messages: Anthropic.Messages.MessageParam[],
 		metadata?: ApiHandlerCreateMessageMetadata,
 	): ApiStream {
-		await this.initialize()
+		await pWaitFor(() => this.isInitialized)
 		await this.adjustActiveHandler()
 
 		if (!this.activeHandler || !this.activeProfileId) {
-			throw new Error("No active handler configured - ensure profiles are available and properly configured")
+			throw new Error("All configured providers are unavailable or over limits.")
 		}
 
-		// Get the provider name for the active handler
-		let providerName = "unknown"
-		try {
-			const profile = await this.settingsManager.getProfile({ id: this.activeProfileId })
-			providerName = profile.name
-		} catch (error) {
-			console.warn(`Failed to get provider name for ${this.activeProfileId}:`, error)
-		}
-
-		// Track request consumption - one request per createMessage call
 		await this.usage.consume(this.activeProfileId, "requests", 1)
 
-		// Intercept the stream to track token usage
-		for await (const chunk of this.activeHandler.createMessage(systemPrompt, messages, metadata)) {
-			// Track token consumption when we receive usage information
-			if (chunk.type === "usage" && this.usage && this.activeProfileId) {
-				try {
+		const stream = this.activeHandler.createMessage(systemPrompt, messages, metadata)
+		try {
+			for await (const chunk of stream) {
+				if (chunk.type === "usage") {
 					const totalTokens = (chunk.inputTokens || 0) + (chunk.outputTokens || 0)
 					if (totalTokens > 0) {
 						await this.usage.consume(this.activeProfileId, "tokens", totalTokens)
 					}
-				} catch (error) {
-					console.warn("Failed to track token consumption:", error)
 				}
+				yield chunk
 			}
-			yield chunk
+		} catch (error) {
+			await this.usage.setCooldown(this.activeProfileId, 10 * 60 * 1000)
+			throw error
 		}
 	}
 
@@ -103,15 +92,11 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 		if (!this.activeHandler) {
 			throw new Error("No active handler configured - ensure initialize() was called and profiles are available")
 		}
-		const model = this.activeHandler.getModel()
-		return model
+		return this.activeHandler.getModel()
 	}
 
-	/**
-	 * Loads and validates the configured profiles from settings
-	 */
 	private async loadConfiguredProfiles(): Promise<void> {
-		this.handlers = []
+		this.handlerConfigs = []
 
 		const profiles = this.settings.profiles || []
 		const handlerPromises = profiles.map(async (profile, index) => {
@@ -124,6 +109,9 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 				const apiHandler = buildApiHandler(profileSettings)
 
 				if (apiHandler) {
+					if (apiHandler instanceof OpenRouterHandler) {
+						await apiHandler.fetchModel()
+					}
 					return {
 						handler: apiHandler,
 						profileId: profile.profileId,
@@ -137,38 +125,42 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 		})
 
 		const results = await Promise.all(handlerPromises)
-		this.handlers = results.filter((handler): handler is HandlerConfig => handler !== null)
+		this.handlerConfigs = results.filter((handler): handler is HandlerConfig => handler !== null)
 
 		await this.adjustActiveHandler()
 	}
 
-	/**
-	 * Adjusts which handler is currently the active handler by selecting the first one under limits.
-	 */
 	async adjustActiveHandler(): Promise<void> {
-		if (this.handlers.length === 0) {
+		if (this.handlerConfigs.length === 0) {
 			this.activeHandler = undefined
 			this.activeProfileId = undefined
 			return
 		}
 
-		// Check handlers in order, selecting the first one under limits
-		for (const { handler, profileId, config } of this.handlers) {
-			if (this.underLimit(config)) {
-				if (this.activeHandler !== handler || this.activeProfileId !== profileId) {
-					// Notify about the handler switch
-					await this.notifyHandlerSwitch(profileId)
-				}
-				this.activeHandler = handler
-				this.activeProfileId = profileId
-				return
+		for (const { handler, profileId, config } of this.handlerConfigs) {
+			const isUnderCooldown = await this.usage.isUnderCooldown(profileId)
+			if (isUnderCooldown) {
+				continue
 			}
+
+			const isUnderLimit = this.underLimit(config)
+			if (!isUnderLimit) {
+				continue
+			}
+
+			if (this.activeHandler !== handler || this.activeProfileId !== profileId) {
+				await this.notifyHandlerSwitch(profileId)
+			}
+			this.activeHandler = handler
+			this.activeProfileId = profileId
+			return
 		}
 
-		// If all handlers are over limits, use the first one as fallback
-		const firstHandler = this.handlers[0]
-		this.activeHandler = firstHandler.handler
-		this.activeProfileId = firstHandler.profileId
+		if (this.activeProfileId) {
+			await this.notifyHandlerSwitch(undefined)
+		}
+		this.activeHandler = undefined
+		this.activeProfileId = undefined
 	}
 
 	private async notifyHandlerSwitch(newProfileId: string | undefined): Promise<void> {
@@ -188,9 +180,6 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 		vscode.window.showInformationMessage(message)
 	}
 
-	/**
-	 * Checks if a profile is under its configured limits
-	 */
 	underLimit(profileData: VirtualQuotaFallbackProfile): boolean {
 		const { profileId, profileLimits: limits } = profileData
 
@@ -199,11 +188,8 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 		}
 
 		if (!limits) {
-			// Profile exists but has no limits set, so it can always be used
 			return true
 		}
-
-		// Check limits for each time window
 		const timeWindows: Array<{ window: UsageWindow; requests?: number; tokens?: number }> = [
 			{ window: "minute", requests: limits.requestsPerMinute, tokens: limits.tokensPerMinute },
 			{ window: "hour", requests: limits.requestsPerHour, tokens: limits.tokensPerHour },

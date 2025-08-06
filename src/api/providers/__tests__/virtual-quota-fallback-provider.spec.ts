@@ -26,7 +26,8 @@ import { ProviderSettingsManager } from "../../../core/config/ProviderSettingsMa
 import { ContextProxy } from "../../../core/config/ContextProxy"
 import { buildApiHandler } from "../../index"
 import { VirtualQuotaFallbackHandler } from "../virtual-quota-fallback"
-import { UsageEvent, UsageTracker } from "../../../utils/usage-tracker"
+import { UsageTracker } from "../../../utils/usage-tracker"
+import { UsageEvent } from "@roo-code/types"
 
 // Mock dependencies
 vitest.mock("../../../core/config/ProviderSettingsManager")
@@ -144,14 +145,26 @@ describe("VirtualQuotaFallbackProvider", () => {
 		const mockPrimaryProfile = { profileId: "p1", profileName: "primary" }
 		const mockSecondaryProfile = { profileId: "p2", profileName: "secondary" }
 		const mockBackupProfile = { profileId: "p3", profileName: "backup" }
-		const mockPrimaryHandler = { getModel: () => ({ id: "primary-model" }) }
-		const mockSecondaryHandler = { getModel: () => ({ id: "secondary-model" }) }
-		const mockBackupHandler = { getModel: () => ({ id: "backup-model" }) }
+		const mockPrimaryHandler = {
+			getModel: () => ({ id: "primary-model", info: {} }),
+			countTokens: vitest.fn(),
+			createMessage: vitest.fn(),
+		}
+		const mockSecondaryHandler = {
+			getModel: () => ({ id: "secondary-model", info: {} }),
+			countTokens: vitest.fn(),
+			createMessage: vitest.fn(),
+		}
+		const mockBackupHandler = {
+			getModel: () => ({ id: "backup-model", info: {} }),
+			countTokens: vitest.fn(),
+			createMessage: vitest.fn(),
+		}
 
 		beforeEach(() => {
 			vitest.clearAllMocks()
+			;(UsageTracker as any)._instance = undefined
 
-			// Mock the context proxy to return a mock context
 			const mockContext = {
 				globalState: {
 					get: vitest.fn().mockReturnValue([]),
@@ -198,14 +211,14 @@ describe("VirtualQuotaFallbackProvider", () => {
 			expect(buildApiHandler).toHaveBeenCalled()
 
 			// Internal properties are used to verify handlers are set in the new array structure
-			const handlers = (handler as any).handlers
-			expect(handlers).toHaveLength(3)
-			expect(handlers[0].handler).toBe(mockPrimaryHandler)
-			expect(handlers[0].profileId).toBe("p1")
-			expect(handlers[1].handler).toBe(mockSecondaryHandler)
-			expect(handlers[1].profileId).toBe("p2")
-			expect(handlers[2].handler).toBe(mockBackupHandler)
-			expect(handlers[2].profileId).toBe("p3")
+			const handlerConfigs = (handler as any).handlerConfigs
+			expect(handlerConfigs).toHaveLength(3)
+			expect(handlerConfigs[0].handler).toBe(mockPrimaryHandler)
+			expect(handlerConfigs[0].profileId).toBe("p1")
+			expect(handlerConfigs[1].handler).toBe(mockSecondaryHandler)
+			expect(handlerConfigs[1].profileId).toBe("p2")
+			expect(handlerConfigs[2].handler).toBe(mockBackupHandler)
+			expect(handlerConfigs[2].profileId).toBe("p3")
 		})
 
 		it("should handle errors when a provider fails to load", async () => {
@@ -229,13 +242,12 @@ describe("VirtualQuotaFallbackProvider", () => {
 			// Explicitly call initialize since constructor no longer does this automatically
 			await handler.initialize()
 
-			// Check the new array structure - only successful handlers should be loaded
-			const handlers = (handler as any).handlers
-			expect(handlers).toHaveLength(2) // Only primary and backup loaded
-			expect(handlers[0].handler).toBe(mockPrimaryHandler)
-			expect(handlers[0].profileId).toBe("p1")
-			expect(handlers[1].handler).toBe(mockBackupHandler)
-			expect(handlers[1].profileId).toBe("p3")
+			const handlerConfigs = (handler as any).handlerConfigs
+			expect(handlerConfigs).toHaveLength(2)
+			expect(handlerConfigs[0].handler).toBe(mockPrimaryHandler)
+			expect(handlerConfigs[0].profileId).toBe("p1")
+			expect(handlerConfigs[1].handler).toBe(mockBackupHandler)
+			expect(handlerConfigs[1].profileId).toBe("p3")
 			expect(consoleErrorSpy).toHaveBeenCalledWith(
 				"❌ Failed to load profile 2 (secondary): Error: Failed to load profile",
 			)
@@ -288,10 +300,11 @@ describe("VirtualQuotaFallbackProvider", () => {
 				const handler = new VirtualQuotaFallbackHandler({
 					profiles: [mockPrimaryProfile],
 				} as any)
-				// Set up the handlers array directly for testing
-				;(handler as any).handlers = [
+				;(handler as any).handlerConfigs = [
 					{ handler: mockPrimaryHandler, profileId: "p1", config: mockPrimaryProfile },
 				]
+				const usageTracker = (handler as any).usage
+				vitest.spyOn(usageTracker, "isUnderCooldown").mockResolvedValue(false)
 				vitest.spyOn(handler, "underLimit").mockReturnValue(true)
 
 				await handler.adjustActiveHandler()
@@ -304,45 +317,24 @@ describe("VirtualQuotaFallbackProvider", () => {
 				const handler = new VirtualQuotaFallbackHandler({
 					profiles: [mockPrimaryProfile, mockSecondaryProfile],
 				} as any)
-				// Set up the handlers array directly for testing
-				;(handler as any).handlers = [
+				;(handler as any).handlerConfigs = [
 					{ handler: mockPrimaryHandler, profileId: "p1", config: mockPrimaryProfile },
 					{ handler: mockSecondaryHandler, profileId: "p2", config: mockSecondaryProfile },
 				]
-				vitest
-					.spyOn(handler, "underLimit")
-					.mockImplementationOnce(() => false) // First over limit
-					.mockImplementationOnce(() => true) // Second under limit
+				const usageTracker = (handler as any).usage
+				vitest.spyOn(usageTracker, "isUnderCooldown").mockResolvedValue(false)
+
+				vitest.spyOn(handler, "underLimit").mockReturnValueOnce(false).mockReturnValueOnce(true)
 
 				await handler.adjustActiveHandler()
 
-				expect((handler as any).activeHandler).toBe(mockSecondaryHandler)
+				expect((handler as any).activeHandler.getModel().id).toEqual("secondary-model")
 				expect((handler as any).activeProfileId).toBe("p2")
-			})
-
-			it("should use first handler as fallback if all are over limit", async () => {
-				const handler = new VirtualQuotaFallbackHandler({
-					profiles: [mockPrimaryProfile, mockSecondaryProfile, mockBackupProfile],
-				} as any)
-				// Set up the handlers array directly for testing
-				;(handler as any).handlers = [
-					{ handler: mockPrimaryHandler, profileId: "p1", config: mockPrimaryProfile },
-					{ handler: mockSecondaryHandler, profileId: "p2", config: mockSecondaryProfile },
-					{ handler: mockBackupHandler, profileId: "p3", config: mockBackupProfile },
-				]
-				vitest.spyOn(handler, "underLimit").mockReturnValue(false) // All over limit
-
-				await handler.adjustActiveHandler()
-
-				// Should fallback to first handler when all are over limit
-				expect((handler as any).activeHandler).toBe(mockPrimaryHandler)
-				expect((handler as any).activeProfileId).toBe("p1")
 			})
 
 			it("should set active handler to undefined if no providers are available", async () => {
 				const handler = new VirtualQuotaFallbackHandler({} as any)
-				// Ensure handlers array is empty
-				;(handler as any).handlers = []
+				;(handler as any).handlerConfigs = []
 				await handler.adjustActiveHandler()
 				expect((handler as any).activeHandler).toBeUndefined()
 				expect((handler as any).activeProfileId).toBeUndefined()
@@ -359,9 +351,13 @@ describe("VirtualQuotaFallbackProvider", () => {
 			const handler = new VirtualQuotaFallbackHandler({
 				profiles: [mockPrimaryProfile],
 			} as any)
-			;(handler as any).handlers = [{ handler: mockPrimaryHandler, profileId: "p1", config: mockPrimaryProfile }]
+			;(handler as any).handlerConfigs = [
+				{ handler: mockPrimaryHandler, profileId: "p1", config: mockPrimaryProfile },
+			]
 
-			// Set initial active handler to something different to trigger a switch
+			const usageTracker = (handler as any).usage
+			vitest.spyOn(usageTracker, "isUnderCooldown").mockResolvedValue(false)
+			vitest.spyOn(handler, "underLimit").mockReturnValue(true)
 			;(handler as any).activeProfileId = "initial"
 			;(handler as any).activeHandler = { getModel: () => ({ id: "initial-model" }) }
 			await handler.adjustActiveHandler()
@@ -420,7 +416,7 @@ describe("VirtualQuotaFallbackProvider", () => {
 				;(handler as any).activeHandler = undefined
 
 				const stream = handler.createMessage("system", [])
-				await expect(stream.next()).rejects.toThrow("No active handler configured")
+				await expect(stream.next()).rejects.toThrow("All configured providers are unavailable or over limits.")
 			})
 		})
 
