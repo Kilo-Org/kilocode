@@ -1,3 +1,4 @@
+/* eslint-disable no-control-regex */
 import * as vscode from "vscode"
 import { structuredPatch } from "diff"
 import { GhostSuggestionContext, GhostSuggestionEditOperationType } from "./types"
@@ -41,7 +42,7 @@ When you see incomplete code, be creative and helpful - infer the user's intent 
 4.  **Strict JSON Array Output Format:** Your entire response **MUST** be a valid JSON array containing objects with the following structure:
     * Each object must have exactly two properties: "path" and "content"
     * "path": The full file URI (e.g., "file:///absolute/path/to/file.tsx")
-    * "content": The complete, updated content of that file with proper JSON escaping (quotes as \", newlines as \n, etc.)
+    * "content": The complete, updated content of that file with proper JSON ESCAPING (quotes as \", newlines as \n, etc.)
     * **Example:**
       \`\`\`json
       [
@@ -283,6 +284,121 @@ ${sections.filter(Boolean).join("\n\n")}
 `
 	}
 
+	private safeJsonParse(jsonContent: string): any {
+		try {
+			// First, try direct parsing
+			return JSON.parse(jsonContent)
+		} catch (error) {
+			// If direct parsing fails, try to fix common issues with escaped content
+			try {
+				// More robust approach: manually parse and fix the JSON structure
+				let fixedContent = jsonContent
+
+				// First, try to find and fix the content field using a more comprehensive approach
+				// This handles cases where the content spans multiple lines and contains unescaped quotes
+				const arrayMatch = fixedContent.match(/^\s*\[\s*([\s\S]*)\s*\]\s*$/)
+				if (arrayMatch) {
+					const arrayContent = arrayMatch[1]
+
+					// Split by objects (looking for },{ pattern but being careful about content)
+					const objects = []
+					let currentObject = ""
+					let braceCount = 0
+					let inString = false
+					let escapeNext = false
+
+					for (let i = 0; i < arrayContent.length; i++) {
+						const char = arrayContent[i]
+
+						if (escapeNext) {
+							escapeNext = false
+							currentObject += char
+							continue
+						}
+
+						if (char === "\\") {
+							escapeNext = true
+							currentObject += char
+							continue
+						}
+
+						if (char === '"' && !escapeNext) {
+							inString = !inString
+						}
+
+						if (!inString) {
+							if (char === "{") {
+								braceCount++
+							} else if (char === "}") {
+								braceCount--
+								if (braceCount === 0) {
+									currentObject += char
+									objects.push(currentObject.trim())
+									currentObject = ""
+									// Skip comma and whitespace
+									while (i + 1 < arrayContent.length && /[,\s]/.test(arrayContent[i + 1])) {
+										i++
+									}
+									continue
+								}
+							}
+						}
+
+						currentObject += char
+					}
+
+					// Process any remaining object
+					if (currentObject.trim()) {
+						objects.push(currentObject.trim())
+					}
+
+					// Now fix each object
+					const fixedObjects = objects.map((objStr) => {
+						// Extract path and content fields
+						const pathMatch = objStr.match(/"path":\s*"([^"]*)"/)
+						const contentMatch = objStr.match(/"content":\s*"([\s\S]*?)"\s*(?=\s*\})/s)
+
+						if (pathMatch && contentMatch) {
+							const path = pathMatch[1]
+							const content = contentMatch[1]
+
+							// First, unescape any existing escapes to get the raw content
+							const unescapedContent = content
+								.replace(/\\"/g, '"') // Unescape quotes
+								.replace(/\\\\/g, "\\") // Unescape backslashes
+								.replace(/\\n/g, "\n") // Unescape newlines
+								.replace(/\\r/g, "\r") // Unescape carriage returns
+								.replace(/\\t/g, "\t") // Unescape tabs
+
+							// Then properly escape for JSON parsing
+							const escapedContent = unescapedContent
+								.replace(/\\/g, "\\\\") // Escape backslashes first
+								.replace(/"/g, '\\"') // Escape quotes
+								.replace(/\n/g, "\\n") // Escape newlines
+								.replace(/\r/g, "\\r") // Escape carriage returns
+								.replace(/\t/g, "\\t") // Escape tabs
+								.replace(/[\x00-\x1f\x7f-\x9f]/g, (char: string) => {
+									// Escape all control characters
+									return "\\u" + ("0000" + char.charCodeAt(0).toString(16)).slice(-4)
+								})
+
+							return `{"path": "${path}", "content": "${escapedContent}"}`
+						}
+
+						return objStr
+					})
+
+					fixedContent = `[${fixedObjects.join(", ")}]`
+				}
+
+				return JSON.parse(fixedContent)
+			} catch (secondError) {
+				// If both attempts fail, throw the original error
+				throw error
+			}
+		}
+	}
+
 	async parseResponse(response: string, context: GhostSuggestionContext): Promise<GhostSuggestionsState> {
 		const suggestions = new GhostSuggestionsState()
 
@@ -301,7 +417,9 @@ ${sections.filter(Boolean).join("\n\n")}
 		if (jsonCodeBlockMatch) {
 			try {
 				const jsonContent = jsonCodeBlockMatch[1].trim()
-				const jsonResponse = JSON.parse(jsonContent)
+
+				// Try to parse the JSON content with better error handling
+				const jsonResponse = this.safeJsonParse(jsonContent)
 				if (Array.isArray(jsonResponse)) {
 					return await this.processJsonArrayFormat(jsonResponse, context)
 				}
