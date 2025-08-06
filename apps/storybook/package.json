@@ -3,7 +3,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"generate-theme-styles": "node scripts/generate-vscode-themes.js",
+		"generate-theme-styles": "node ../playwright-e2e/scripts/extract-vscode-variables.js",
 		"generate-screenshot-stories": "node scripts/generate-playwright-screenshot-stories.js",
 		"storybook": "storybook dev -p 6006",
 		"build-storybook": "storybook build --webpack-stats-json",
