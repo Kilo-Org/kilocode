@@ -4,7 +4,7 @@
 		"introText1": "Kilo Code là một agent lập trình AI miễn phí và mã nguồn mở.",
 		"introText2": "Hoạt động với các mô hình AI mới nhất như Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1, và hơn 450 mô hình khác.",
 		"introText3": "Tạo tài khoản miễn phí và nhận token trị giá $20 để sử dụng với bất kỳ mô hình AI nào.",
-		"ctaButton": "Tạo tài khoản miễn phí",
+		"ctaButton": "Bắt đầu",
 		"manualModeButton": "Sử dụng khóa API của riêng bạn",
 		"alreadySignedUp": "Đã đăng ký?",
 		"loginText": "Đăng nhập tại đây"
@@ -12,6 +12,11 @@
 	"lowCreditWarning": {
 		"addCredit": "Thêm tín dụng",
 		"lowBalance": "Số dư Kilo Code của bạn thấp"
+	},
+	"pricing": {
+		"costUnknown": "chi phí không xác định",
+		"costUnknownDescription": "Nhà cung cấp API không cung cấp dữ liệu chi phí hoặc yêu cầu đã bị hủy.",
+		"discoverModelPricing": "Khám phá giá cả và khả năng của mô hình"
 	},
 	"notifications": {
 		"toolRequest": "Yêu cầu công cụ đang chờ phê duyệt",
@@ -32,7 +37,12 @@
 			"account": "Tài khoản Kilo Code",
 			"apiKey": "Khóa API Kilo Code",
 			"login": "Đăng nhập vào Kilo Code",
-			"logout": "Đăng xuất khỏi Kilo Code"
+			"logout": "Đăng xuất khỏi Kilo Code",
+			"providerRouting": {
+				"title": "Kilo Code - Định tuyến nhà cung cấp OpenRouter",
+				"description": "Kilo Code định tuyến các yêu cầu đến các nhà cung cấp tốt nhất có sẵn cho mô hình của bạn. Theo mặc định, các yêu cầu được cân bằng tải trên các nhà cung cấp hàng đầu để tối đa hóa thời gian hoạt động. Tuy nhiên, bạn có thể chọn một nhà cung cấp cụ thể để sử dụng cho mô hình này."
+			},
+			"automaticFetch": "Các mô hình mới nhất được tự động cung cấp trong Kilo Code. Nếu bạn không chắc chắn nên chọn mô hình nào, Kilo Code hoạt động tốt nhất với các mô hình được khuyến nghị được liệt kê ở đầu bằng <strong>chữ đậm</strong>."
 		},
 		"systemNotifications": {
 			"label": "Bật thông báo hệ thống",
@@ -40,6 +50,16 @@
 			"testButton": "Kiểm tra thông báo",
 			"testTitle": "Kilo Code",
 			"testMessage": "Đây là thông báo kiểm tra từ Kilo Code."
+		},
+		"terminal": {
+			"commandGenerator": {
+				"provider": "Nhà Cung Cấp Trình Tạo Lệnh Dòng Lệnh",
+				"apiConfigId": {
+					"description": "Chọn cấu hình API nào để sử dụng cho việc tạo lệnh terminal. Để là 'Sử Dụng Cấu Hình Hiện Tại' để dùng cài đặt mặc định của bạn.",
+					"current": "Sử dụng Cấu hình Hiện tại",
+					"label": "Cấu hình API"
+				}
+			}
 		}
 	},
 	"chat": {
@@ -56,7 +76,14 @@
 		"dashboard": "Bảng điều khiển",
 		"logOut": "Đăng xuất",
 		"currentBalance": "SỐ DƯ HIỆN TẠI",
-		"loading": "Đang tải..."
+		"loading": "Đang tải...",
+		"shop": {
+			"title": "Mua Tín dụng",
+			"popular": "Phổ biến",
+			"credits": "tín dụng",
+			"action": "Mua Ngay",
+			"viewAll": "Xem tất cả tùy chọn giá"
+		}
 	},
 	"docs": "Tài liệu",
 	"rules": {
@@ -130,5 +157,57 @@
 			"idea6": "Tạo các thẻ tiết lộ nội dung động một cách đẹp mắt khi di chuột qua",
 			"idea7": "Tạo một trường sao tương tác êm dịu di chuyển theo cử chỉ chuột"
 		}
+	},
+	"ghost": {
+		"title": "Hỗ trợ nội tuyến",
+		"settings": {
+			"autoTrigger": "Kích hoạt tự động",
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Nhiệm vụ nhanh trong dòng",
+				"description": "Chỉ cần thay đổi nhanh? Chọn một đoạn code (hoặc không cần!) và nhấn Cmd+I. Mô tả mục tiêu của bạn bằng ngôn ngữ đơn giản (\"tạo một component React với các props này\", \"thêm xử lý lỗi vào hàm này\"), và nhận nhiều gợi ý sẵn sàng sử dụng ngay trong trình soạn thảo của bạn. <DocsLink>Xem phím tắt</DocsLink>"
+			},
+			"enableAutoTrigger": {
+				"label": "Bật kích hoạt tự động",
+				"description": "Khi được bật, Kilo Code sẽ tự động kích hoạt Trợ lý nội tuyến khi bạn ngừng gõ. Điều này có thể hữu ích cho các sửa lỗi và gợi ý nhanh."
+			},
+			"autoTriggerDelay": {
+				"label": "Độ trễ kích hoạt tự động",
+				"description": "Độ trễ tính bằng giây trước khi Kilo Code kích hoạt Trợ lý nội tuyến sau khi bạn ngừng gõ. Độ trễ thấp hơn có nghĩa là gợi ý nhanh hơn nhưng có thể tốn nhiều tài nguyên hơn."
+			},
+			"enableSmartInlineTaskKeybinding": {
+				"label": "Tác vụ thông minh nội tuyến",
+				"description": "Cần sửa nhanh, hoàn thiện hay cấu trúc lại code? Kilo sẽ sử dụng ngữ cảnh xung quanh để đưa ra các cải tiến ngay lập tức, giúp bạn duy trì nhịp độ làm việc. <DocsLink>Xem phím tắt</DocsLink>"
+			},
+			"provider": "Nhà cung cấp",
+			"apiConfigId": {
+				"label": "Cấu hình API",
+				"current": "Sử dụng cấu hình API hiện đang được chọn",
+				"description": "Chọn một cấu hình API để sử dụng cho các lời nhắc Hỗ trợ nội tuyến hoặc chỉ sử dụng bất cứ thứ gì được chọn hiện tại"
+			},
+			"triggers": "Các yếu tố kích hoạt",
+			"keybindingDescription": "Các tính năng Trợ giúp Nội tuyến được kích hoạt bằng các lệnh. Bạn có thể cấu hình <DocsLink>phím tắt tại đây</DocsLink>."
+		}
+	},
+	"virtualProvider": {
+		"title": "Cài đặt Nhà Cung Cấp Dự Phòng Hạn Ngạch Ảo",
+		"description": "Định cấu hình danh sách các hồ sơ, mỗi hồ sơ có giới hạn hạn ngạch riêng. Khi một nhà cung cấp đạt đến giới hạn hạn ngạch, hồ sơ tiếp theo trong danh sách sẽ được sử dụng cho đến khi không còn hồ sơ nào.",
+		"profileLabel": "Hồ sơ {{number}}",
+		"primaryProfileLabel": "Hồ sơ {{number}} (Chính)",
+		"moveProfileUp": "Di chuyển hồ sơ lên trên",
+		"moveProfileDown": "Di chuyển hồ sơ xuống",
+		"removeProfile": "Xóa hồ sơ",
+		"selectProfilePlaceholder": "Chọn hồ sơ...",
+		"addProfile": "Thêm hồ sơ",
+		"noProfilesAvailable": "Không có hồ sơ cá nhân nào khả dụng. Vui lòng cấu hình ít nhất một hồ sơ nhà cung cấp không ảo trước.",
+		"dangerZoneTitle": "Vùng Nguy hiểm",
+		"dangerZoneDescription": "Những hành động này có tính phá hoại và không thể hoàn tác.",
+		"clearUsageData": "Xóa Dữ liệu Sử dụng",
+		"confirmClearTitle": "Bạn có chắc chắn?",
+		"confirmClearDescription": "Điều này sẽ xóa vĩnh viễn tất cả dữ liệu sử dụng đã lưu trữ cho các nhà cung cấp ảo. Hành động này không thể hoàn tác.",
+		"tokensLabel": "Token",
+		"perDay": "Mỗi Ngày",
+		"perMinute": "Mỗi Phút",
+		"perHour": "Một Giờ",
+		"requestsLabel": "Yêu cầu"
 	}
 }

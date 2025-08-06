@@ -45,14 +45,17 @@
 		"enableDescription": "Habilita la indexación de código para mejorar la búsqueda y la comprensión del contexto",
 		"settingsTitle": "Configuración de indexación",
 		"disabledMessage": "La indexación de código está actualmente deshabilitada. Habilítala en la configuración global para configurar las opciones de indexación.",
-		"providerLabel": "Proveedor de embeddings",
+		"profileLabel": "Proveedor de embeddings",
 		"embedderProviderLabel": "Proveedor de embedder",
-		"selectProviderPlaceholder": "Seleccionar proveedor",
+		"selectProfilePlaceholder": "Seleccionar proveedor",
 		"openaiProvider": "OpenAI",
 		"ollamaProvider": "Ollama",
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "Clave API:",
 		"geminiApiKeyPlaceholder": "Introduce tu clave de API de Gemini",
+		"mistralProvider": "Mistral",
+		"mistralApiKeyLabel": "Clave API:",
+		"mistralApiKeyPlaceholder": "Introduce tu clave de API de Mistral",
 		"openaiCompatibleProvider": "Compatible con OpenAI",
 		"openAiKeyLabel": "Clave API de OpenAI",
 		"openAiKeyPlaceholder": "Introduce tu clave API de OpenAI",
@@ -110,6 +113,7 @@
 			"modelIdRequired": "Se requiere el ID del modelo",
 			"modelDimensionRequired": "Se requiere la dimensión del modelo",
 			"geminiApiKeyRequired": "Se requiere la clave API de Gemini",
+			"mistralApiKeyRequired": "Se requiere la clave de API de Mistral",
 			"ollamaBaseUrlRequired": "Se requiere la URL base de Ollama",
 			"baseUrlRequired": "Se requiere la URL base",
 			"modelDimensionMinValue": "La dimensión del modelo debe ser mayor que 0"
@@ -124,6 +128,8 @@
 	},
 	"autoApprove": {
 		"description": "Permitir que Kilo Code realice operaciones automáticamente sin requerir aprobación. Habilite esta configuración solo si confía plenamente en la IA y comprende los riesgos de seguridad asociados.",
+		"toggleAriaLabel": "Alternar aprobación automática",
+		"disabledAriaLabel": "Aprobación automática desactivada: seleccione primero las opciones",
 		"readOnly": {
 			"label": "Lectura",
 			"description": "Cuando está habilitado, Kilo Code verá automáticamente el contenido del directorio y leerá archivos sin que necesite hacer clic en el botón Aprobar.",
@@ -176,8 +182,12 @@
 			"description": "Ejecutar automáticamente comandos de terminal permitidos sin requerir aprobación",
 			"allowedCommands": "Comandos de auto-ejecución permitidos",
 			"allowedCommandsDescription": "Prefijos de comandos que pueden ser ejecutados automáticamente cuando \"Aprobar siempre operaciones de ejecución\" está habilitado. Añade * para permitir todos los comandos (usar con precaución).",
+			"deniedCommands": "Comandos denegados",
+			"deniedCommandsDescription": "Prefijos de comandos que serán automáticamente denegados sin pedir aprobación. En caso de conflictos con comandos permitidos, la coincidencia de prefijo más larga tiene prioridad. Añade * para denegar todos los comandos.",
 			"commandPlaceholder": "Ingrese prefijo de comando (ej. 'git ')",
-			"addButton": "Añadir"
+			"deniedCommandPlaceholder": "Ingrese prefijo de comando a denegar (ej. 'rm -rf')",
+			"addButton": "Añadir",
+			"autoDenied": "Los comandos con el prefijo `{{prefix}}` han sido prohibidos por el usuario. No eludes esta restricción ejecutando otro comando."
 		},
 		"showMenu": {
 			"label": "Mostrar menú de aprobación automática en la vista de chat",
@@ -191,7 +201,8 @@
 			"title": "Solicitudes máximas",
 			"description": "Realizar automáticamente esta cantidad de solicitudes a la API antes de pedir aprobación para continuar con la tarea.",
 			"unlimited": "Ilimitado"
-		}
+		},
+		"selectOptionsFirst": "Selecciona al menos una opción a continuación para habilitar la aprobación automática"
 	},
 	"providers": {
 		"providerDocumentation": "Documentación de {{provider}}",
@@ -247,9 +258,35 @@
 		"getChutesApiKey": "Obtener clave API de Chutes",
 		"deepSeekApiKey": "Clave API de DeepSeek",
 		"getDeepSeekApiKey": "Obtener clave API de DeepSeek",
+		"doubaoApiKey": "Clave API de Doubao",
+		"getDoubaoApiKey": "Obtener clave API de Doubao",
+		"fireworksApiKey": "Clave API de Fireworks",
+		"getFireworksApiKey": "Obtener clave API de Fireworks",
+		"zaiApiKey": "Clave API de Z.AI",
+		"getZaiApiKey": "Obtener clave API de Z.AI",
+		"bigModelApiKey": "Clave API de BigModel",
+		"getBigModelApiKey": "Obtener clave API de BigModel",
+		"moonshotApiKey": "Clave API de Moonshot",
+		"getMoonshotApiKey": "Obtener clave API de Moonshot",
+		"moonshotBaseUrl": "Punto de entrada de Moonshot",
 		"geminiApiKey": "Clave API de Gemini",
 		"getGroqApiKey": "Obtener clave API de Groq",
 		"groqApiKey": "Clave API de Groq",
+		"getSambaNovaApiKey": "Obtener clave API de SambaNova",
+		"sambaNovaApiKey": "Clave API de SambaNova",
+		"getHuggingFaceApiKey": "Obtener clave API de Hugging Face",
+		"huggingFaceApiKey": "Clave API de Hugging Face",
+		"huggingFaceModelId": "ID del modelo",
+		"huggingFaceLoading": "Cargando...",
+		"huggingFaceModelsCount": "({{count}} modelos)",
+		"huggingFaceSelectModel": "Seleccionar un modelo...",
+		"huggingFaceSearchModels": "Buscar modelos...",
+		"huggingFaceNoModelsFound": "No se encontraron modelos",
+		"huggingFaceProvider": "Proveedor",
+		"huggingFaceProviderAuto": "Automático",
+		"huggingFaceSelectProvider": "Seleccionar un proveedor...",
+		"huggingFaceSearchProviders": "Buscar proveedores...",
+		"huggingFaceNoProvidersFound": "No se encontraron proveedores",
 		"getGeminiApiKey": "Obtener clave API de Gemini",
 		"openAiApiKey": "Clave API de OpenAI",
 		"apiKey": "Clave API",
@@ -265,6 +302,7 @@
 		"litellmBaseUrl": "URL base de LiteLLM",
 		"awsCredentials": "Credenciales de AWS",
 		"awsProfile": "Perfil de AWS",
+		"awsApiKey": "Clave de API de Amazon Bedrock",
 		"awsProfileName": "Nombre del perfil de AWS",
 		"awsAccessKey": "Clave de acceso de AWS",
 		"awsSecretKey": "Clave secreta de AWS",
@@ -281,6 +319,17 @@
 		"cacheUsageNote": "Nota: Si no ve el uso del caché, intente seleccionar un modelo diferente y luego seleccionar nuevamente su modelo deseado.",
 		"vscodeLmModel": "Modelo de lenguaje",
 		"vscodeLmWarning": "Nota: Esta es una integración muy experimental y el soporte del proveedor variará. Si recibe un error sobre un modelo no compatible, es un problema del proveedor.",
+		"geminiParameters": {
+			"urlContext": {
+				"title": "Habilitar contexto de URL",
+				"description": "Permite que Gemini acceda y procese URLs para contexto adicional al generar respuestas. Útil para tareas que requieren análisis de contenido web."
+			},
+			"groundingSearch": {
+				"title": "Habilitar grounding con búsqueda en Google",
+				"description": "Permite que Gemini busque en Google información actual y fundamente las respuestas en datos en tiempo real. Útil para consultas que requieren información actualizada."
+			}
+		},
+
 		"googleCloudSetup": {
 			"title": "Para usar Google Cloud Vertex AI, necesita:",
 			"step1": "1. Crear una cuenta de Google Cloud, habilitar la API de Vertex AI y habilitar los modelos Claude deseados.",
@@ -372,6 +421,12 @@
 			"label": "Límite de tasa",
 			"description": "Tiempo mínimo entre solicitudes de API."
 		},
+		"consecutiveMistakeLimit": {
+			"label": "Límite de errores y repeticiones",
+			"description": "Número de errores consecutivos o acciones repetidas antes de mostrar el diálogo 'Kilo Code está teniendo problemas'",
+			"unlimitedDescription": "Reintentos ilimitados habilitados (proceder automáticamente). El diálogo nunca aparecerá.",
+			"warning": "⚠️ Establecer en 0 permite reintentos ilimitados que pueden consumir un uso significativo de la API"
+		},
 		"reasoningEffort": {
 			"label": "Esfuerzo de razonamiento del modelo",
 			"high": "Alto",
@@ -382,7 +437,9 @@
 		"claudeCode": {
 			"pathLabel": "Ruta de Claude Code",
 			"description": "Ruta opcional a su CLI de Claude Code. Por defecto, es 'claude' si no se establece.",
-			"placeholder": "Por defecto: claude"
+			"placeholder": "Por defecto: claude",
+			"maxTokensLabel": "Tokens máximos de salida",
+			"maxTokensDescription": "Número máximo de tokens de salida para las respuestas de Claude Code. El valor predeterminado es 8000."
 		},
 		"geminiCli": {
 			"description": "Este proveedor usa autenticación OAuth de la herramienta Gemini CLI y no requiere claves API.",
@@ -490,6 +547,32 @@
 			"label": "Límite de lecturas simultáneas",
 			"description": "Número máximo de archivos que la herramienta 'read_file' puede procesar simultáneamente. Valores más altos pueden acelerar la lectura de múltiples archivos pequeños pero aumentan el uso de memoria."
 		},
+		"maxImageFileSize": {
+			"label": "Tamaño máximo de archivo de imagen",
+			"mb": "MB",
+			"description": "Tamaño máximo (en MB) para archivos de imagen que pueden ser procesados por la herramienta de lectura de archivos."
+		},
+		"maxTotalImageSize": {
+			"label": "Tamaño total máximo de imágenes",
+			"mb": "MB",
+			"description": "Límite de tamaño acumulativo máximo (en MB) para todas las imágenes procesadas en una sola operación read_file. Al leer múltiples imágenes, el tamaño de cada imagen se suma al total. Si incluir otra imagen excedería este límite, será omitida."
+		},
+		"diagnostics": {
+			"includeMessages": {
+				"label": "Incluir automáticamente diagnósticos en el contexto",
+				"description": "Cuando está habilitado, los mensajes de diagnóstico (errores) de los archivos editados se incluirán automáticamente en el contexto. Siempre puedes incluir manualmente todos los diagnósticos del espacio de trabajo usando @problems."
+			},
+			"maxMessages": {
+				"label": "Máximo de mensajes de diagnóstico",
+				"description": "Número máximo de mensajes de diagnóstico a incluir por archivo. Este límite se aplica tanto a la inclusión automática (cuando la casilla está habilitada) como a las menciones manuales de @problems. Valores más altos proporcionan más contexto pero aumentan el uso de tokens.",
+				"resetTooltip": "Restablecer al valor predeterminado (50)",
+				"unlimitedLabel": "Ilimitado"
+			},
+			"delayAfterWrite": {
+				"label": "Retraso después de escrituras para permitir que los diagnósticos detecten problemas potenciales",
+				"description": "Tiempo de espera después de escrituras de archivos antes de continuar, permitiendo que las herramientas de diagnóstico procesen cambios y detecten problemas."
+			}
+		},
 		"condensingThreshold": {
 			"label": "Umbral de condensación de contexto",
 			"selectProfile": "Configurar umbral para perfil",
@@ -512,6 +595,10 @@
 		"outputLineLimit": {
 			"label": "Límite de salida de terminal",
 			"description": "Número máximo de líneas a incluir en la salida del terminal al ejecutar comandos. Cuando se excede, se eliminarán líneas del medio, ahorrando token. <0>Más información</0>"
+		},
+		"outputCharacterLimit": {
+			"label": "Límite de caracteres del terminal",
+			"description": "Número máximo de caracteres a incluir en la salida del terminal al ejecutar comandos. Este límite tiene prioridad sobre el límite de líneas para evitar problemas de memoria con líneas extremadamente largas. Cuando se excede, la salida se truncará. <0>Aprende más</0>"
 		},
 		"shellIntegrationTimeout": {
 			"label": "Tiempo de espera de integración del shell del terminal",
@@ -554,6 +641,9 @@
 			"description": "Cuando está habilitado, el terminal hereda las variables de entorno del proceso padre de VSCode, como la configuración de integración del shell definida en el perfil del usuario. Esto alterna directamente la configuración global de VSCode `terminal.integrated.inheritEnv`. <0>Más información</0>"
 		}
 	},
+	"advancedSettings": {
+		"title": "Configuración avanzada"
+	},
 	"advanced": {
 		"diff": {
 			"label": "Habilitar edición a través de diffs",
@@ -575,6 +665,10 @@
 				"label": "Precisión de coincidencia",
 				"description": "Este control deslizante controla cuán precisamente deben coincidir las secciones de código al aplicar diffs. Valores más bajos permiten coincidencias más flexibles pero aumentan el riesgo de reemplazos incorrectos. Use valores por debajo del 100% con extrema precaución."
 			}
+		},
+		"todoList": {
+			"label": "Habilitar herramienta de lista de tareas",
+			"description": "Cuando está habilitado, Kilo Code puede crear y gestionar listas de tareas para hacer seguimiento del progreso. Esto ayuda a organizar tareas complejas en pasos manejables."
 		}
 	},
 	"experimental": {
@@ -594,10 +688,6 @@
 			"name": "Usar modo experimental de \"dirección asistida\"",
 			"description": "Cuando está habilitado, Kilo Code recordará al modelo los detalles de su definición de modo actual con más frecuencia. Esto llevará a una mayor adherencia a las definiciones de roles e instrucciones personalizadas, pero usará más tokens por mensaje."
 		},
-		"AUTOCOMPLETE": {
-			"name": "Usar la función experimental de \"autocompletar\"",
-			"description": "Cuando está activado, Kilo Code proporcionará sugerencias de código en línea mientras escribes."
-		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Usar herramienta experimental de diff de bloques múltiples",
 			"description": "Cuando está habilitado, Kilo Code usará la herramienta de diff de bloques múltiples. Esto intentará actualizar múltiples bloques de código en el archivo en una sola solicitud."
@@ -613,6 +703,21 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Habilitar ediciones de archivos concurrentes",
 			"description": "Cuando está habilitado, Kilo Code puede editar múltiples archivos en una sola solicitud. Cuando está deshabilitado, Kilo Code debe editar archivos de uno en uno. Deshabilitar esto puede ayudar cuando trabajas con modelos menos capaces o cuando quieres más control sobre las modificaciones de archivos."
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "Habilitar Morph Fast Apply",
+			"description": "Cuando está habilitado, Kilo Code puede editar archivos usando Morph Fast Apply.",
+			"apiKey": "Clave API de Morph (opcional)",
+			"placeholder": "Introduce tu clave API de Morph (opcional)",
+			"warning": "Si no configuras una clave API de Morph, aún puedes usar Fast Apply con Kilo Code u OpenRouter. Tu cuenta será facturada por el uso del modelo, esto actualmente no se muestra en la interfaz de la extensión."
+		},
+		"INLINE_ASSIST": {
+			"name": "Asistencia Integrada",
+			"description": "Habilita las funciones de Asistencia en línea para obtener sugerencias y mejoras de código rápidas directamente en tu editor. Incluye Tarea rápida en línea (Cmd+I) para cambios específicos y Tarea automática en línea para mejoras contextuales."
+		},
+		"PREVENT_FOCUS_DISRUPTION": {
+			"name": "Edición en segundo plano",
+			"description": "Previene la interrupción del foco del editor cuando está habilitado. Las ediciones de archivos ocurren en segundo plano sin abrir vistas de diferencias o robar el foco. Puedes continuar trabajando sin interrupciones mientras Kilo Code realiza cambios. Los archivos pueden abrirse sin foco para capturar diagnósticos o mantenerse completamente cerrados."
 		}
 	},
 	"promptCaching": {
@@ -648,7 +753,7 @@
 		}
 	},
 	"modelPicker": {
-		"automaticFetch": "La extensión obtiene automáticamente la lista más reciente de modelos disponibles en <serviceLink>{{serviceName}}</serviceLink>. Si no está seguro de qué modelo elegir, Kilo Code funciona mejor con <defaultModelLink>{{defaultModelId}}</defaultModelLink>. También puede buscar \"free\" para opciones sin costo actualmente disponibles.",
+		"automaticFetch": "La extensión obtiene automáticamente la lista más reciente de modelos disponibles en <serviceLink>{{serviceName}}</serviceLink>. Si no está seguro de qué modelo elegir, Kilo Code funciona mejor con <defaultModelLink>{{defaultModelId}}</defaultModelLink>.",
 		"label": "Modelo",
 		"searchPlaceholder": "Buscar",
 		"noMatchFound": "No se encontraron coincidencias",
@@ -727,5 +832,8 @@
 		}
 	},
 	"includeMaxOutputTokens": "Incluir tokens máximos de salida",
-	"includeMaxOutputTokensDescription": "Enviar parámetro de tokens máximos de salida en solicitudes API. Algunos proveedores pueden no soportar esto."
+	"includeMaxOutputTokensDescription": "Enviar parámetro de tokens máximos de salida en solicitudes API. Algunos proveedores pueden no soportar esto.",
+	"limitMaxTokensDescription": "Limitar el número máximo de tokens en la respuesta",
+	"maxOutputTokensLabel": "Tokens máximos de salida",
+	"maxTokensGenerateDescription": "Tokens máximos a generar en la respuesta"
 }

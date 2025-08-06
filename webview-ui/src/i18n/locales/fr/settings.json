@@ -45,14 +45,17 @@
 		"enableDescription": "Activer l'indexation du code pour une recherche et une compréhension du contexte améliorées",
 		"settingsTitle": "Paramètres d'indexation",
 		"disabledMessage": "L'indexation de la base de code est actuellement désactivée. Activez-la dans les paramètres globaux pour configurer les options d'indexation.",
-		"providerLabel": "Fournisseur d'embeddings",
+		"profileLabel": "Fournisseur d'embeddings",
 		"embedderProviderLabel": "Fournisseur d'embedder",
-		"selectProviderPlaceholder": "Sélectionner un fournisseur",
+		"selectProfilePlaceholder": "Sélectionner un fournisseur",
 		"openaiProvider": "OpenAI",
 		"ollamaProvider": "Ollama",
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "Clé API :",
 		"geminiApiKeyPlaceholder": "Entrez votre clé API Gemini",
+		"mistralProvider": "Mistral",
+		"mistralApiKeyLabel": "Clé d'API:",
+		"mistralApiKeyPlaceholder": "Entrez votre clé d'API Mistral",
 		"openaiCompatibleProvider": "Compatible OpenAI",
 		"openAiKeyLabel": "Clé API OpenAI",
 		"openAiKeyPlaceholder": "Entrez votre clé API OpenAI",
@@ -110,6 +113,7 @@
 			"modelIdRequired": "L'ID du modèle est requis",
 			"modelDimensionRequired": "La dimension du modèle est requise",
 			"geminiApiKeyRequired": "La clé API Gemini est requise",
+			"mistralApiKeyRequired": "La clé API Mistral est requise",
 			"ollamaBaseUrlRequired": "L'URL de base Ollama est requise",
 			"baseUrlRequired": "L'URL de base est requise",
 			"modelDimensionMinValue": "La dimension du modèle doit être supérieure à 0"
@@ -124,6 +128,9 @@
 	},
 	"autoApprove": {
 		"description": "Permettre à Kilo Code d'effectuer automatiquement des opérations sans requérir d'approbation. Activez ces paramètres uniquement si vous faites entièrement confiance à l'IA et que vous comprenez les risques de sécurité associés.",
+		"toggleAriaLabel": "Activer/désactiver l'approbation automatique",
+		"disabledAriaLabel": "Approbation automatique désactivée - sélectionnez d'abord les options",
+		"selectOptionsFirst": "Sélectionnez au moins une option ci-dessous pour activer l'approbation automatique",
 		"readOnly": {
 			"label": "Lecture",
 			"description": "Lorsque cette option est activée, Kilo Code affichera automatiquement le contenu des répertoires et lira les fichiers sans que vous ayez à cliquer sur le bouton Approuver.",
@@ -176,8 +183,12 @@
 			"description": "Exécuter automatiquement les commandes de terminal autorisées sans nécessiter d'approbation",
 			"allowedCommands": "Commandes auto-exécutables autorisées",
 			"allowedCommandsDescription": "Préfixes de commandes qui peuvent être auto-exécutés lorsque \"Toujours approuver les opérations d'exécution\" est activé. Ajoutez * pour autoriser toutes les commandes (à utiliser avec précaution).",
+			"deniedCommands": "Commandes refusées",
+			"deniedCommandsDescription": "Préfixes de commandes qui seront automatiquement refusés sans demander d'approbation. En cas de conflit avec les commandes autorisées, la correspondance de préfixe la plus longue prend la priorité. Ajoutez * pour refuser toutes les commandes.",
 			"commandPlaceholder": "Entrez le préfixe de commande (ex. 'git ')",
-			"addButton": "Ajouter"
+			"deniedCommandPlaceholder": "Entrez le préfixe de commande à refuser (ex. 'rm -rf')",
+			"addButton": "Ajouter",
+			"autoDenied": "Les commandes avec le préfixe `{{prefix}}` ont été interdites par l'utilisateur. Ne contourne pas cette restriction en exécutant une autre commande."
 		},
 		"showMenu": {
 			"label": "Afficher le menu d'approbation automatique dans la vue de chat",
@@ -247,9 +258,35 @@
 		"getChutesApiKey": "Obtenir la clé API Chutes",
 		"deepSeekApiKey": "Clé API DeepSeek",
 		"getDeepSeekApiKey": "Obtenir la clé API DeepSeek",
+		"doubaoApiKey": "Clé API Doubao",
+		"getDoubaoApiKey": "Obtenir la clé API Doubao",
+		"fireworksApiKey": "Clé API Fireworks",
+		"getFireworksApiKey": "Obtenir la clé API Fireworks",
+		"zaiApiKey": "Clé API Z.AI",
+		"getZaiApiKey": "Obtenir la clé API Z.AI",
+		"bigModelApiKey": "Clé API BigModel",
+		"getBigModelApiKey": "Obtenir la clé API BigModel",
+		"moonshotApiKey": "Clé API Moonshot",
+		"getMoonshotApiKey": "Obtenir la clé API Moonshot",
+		"moonshotBaseUrl": "Point d'entrée Moonshot",
 		"geminiApiKey": "Clé API Gemini",
 		"getGroqApiKey": "Obtenir la clé API Groq",
 		"groqApiKey": "Clé API Groq",
+		"getSambaNovaApiKey": "Obtenir la clé API SambaNova",
+		"sambaNovaApiKey": "Clé API SambaNova",
+		"getHuggingFaceApiKey": "Obtenir la clé API Hugging Face",
+		"huggingFaceApiKey": "Clé API Hugging Face",
+		"huggingFaceModelId": "ID du modèle",
+		"huggingFaceLoading": "Chargement...",
+		"huggingFaceModelsCount": "({{count}} modèles)",
+		"huggingFaceSelectModel": "Sélectionner un modèle...",
+		"huggingFaceSearchModels": "Rechercher des modèles...",
+		"huggingFaceNoModelsFound": "Aucun modèle trouvé",
+		"huggingFaceProvider": "Fournisseur",
+		"huggingFaceProviderAuto": "Automatique",
+		"huggingFaceSelectProvider": "Sélectionner un fournisseur...",
+		"huggingFaceSearchProviders": "Rechercher des fournisseurs...",
+		"huggingFaceNoProvidersFound": "Aucun fournisseur trouvé",
 		"getGeminiApiKey": "Obtenir la clé API Gemini",
 		"openAiApiKey": "Clé API OpenAI",
 		"apiKey": "Clé API",
@@ -265,6 +302,7 @@
 		"litellmBaseUrl": "URL de base LiteLLM",
 		"awsCredentials": "Identifiants AWS",
 		"awsProfile": "Profil AWS",
+		"awsApiKey": "Clé API Amazon Bedrock",
 		"awsProfileName": "Nom du profil AWS",
 		"awsAccessKey": "Clé d'accès AWS",
 		"awsSecretKey": "Clé secrète AWS",
@@ -281,6 +319,17 @@
 		"cacheUsageNote": "Remarque : Si vous ne voyez pas l'utilisation du cache, essayez de sélectionner un modèle différent puis de sélectionner à nouveau votre modèle souhaité.",
 		"vscodeLmModel": "Modèle de langage",
 		"vscodeLmWarning": "Remarque : Il s'agit d'une intégration très expérimentale et le support des fournisseurs variera. Si vous recevez une erreur concernant un modèle non pris en charge, c'est un problème du côté du fournisseur.",
+		"geminiParameters": {
+			"urlContext": {
+				"title": "Activer le contexte d'URL",
+				"description": "Permet à Gemini d'accéder et de traiter les URL pour un contexte supplémentaire lors de la génération des réponses. Utile pour les tâches nécessitant l'analyse de contenu web."
+			},
+			"groundingSearch": {
+				"title": "Activer la mise en contexte via la recherche Google",
+				"description": "Permet à Gemini d'effectuer des recherches sur Google pour obtenir des informations actuelles et fonder les réponses sur des données en temps réel. Utile pour les requêtes nécessitant des informations à jour."
+			}
+		},
+
 		"googleCloudSetup": {
 			"title": "Pour utiliser Google Cloud Vertex AI, vous devez :",
 			"step1": "1. Créer un compte Google Cloud, activer l'API Vertex AI et activer les modèles Claude souhaités.",
@@ -372,6 +421,12 @@
 			"label": "Limite de débit",
 			"description": "Temps minimum entre les requêtes API."
 		},
+		"consecutiveMistakeLimit": {
+			"label": "Limite d'erreurs et de répétitions",
+			"description": "Nombre d'erreurs consécutives ou d'actions répétées avant d'afficher la boîte de dialogue 'Kilo Code a des difficultés'",
+			"unlimitedDescription": "Réessais illimités activés (poursuite automatique). La boîte de dialogue n'apparaîtra jamais.",
+			"warning": "⚠️ Mettre à 0 autorise des réessais illimités, ce qui peut consommer une utilisation importante de l'API"
+		},
 		"reasoningEffort": {
 			"label": "Effort de raisonnement du modèle",
 			"high": "Élevé",
@@ -382,7 +437,9 @@
 		"claudeCode": {
 			"pathLabel": "Chemin du code Claude",
 			"description": "Chemin facultatif vers votre CLI Claude Code. La valeur par défaut est 'claude' si non défini.",
-			"placeholder": "Défaut : claude"
+			"placeholder": "Défaut : claude",
+			"maxTokensLabel": "Jetons de sortie max",
+			"maxTokensDescription": "Nombre maximum de jetons de sortie pour les réponses de Claude Code. La valeur par défaut est 8000."
 		},
 		"geminiCli": {
 			"description": "Ce fournisseur utilise l'authentification OAuth de l'outil Gemini CLI et ne nécessite pas de clés API.",
@@ -490,6 +547,32 @@
 			"label": "Limite de lectures simultanées",
 			"description": "Nombre maximum de fichiers que l'outil 'read_file' peut traiter simultanément. Des valeurs plus élevées peuvent accélérer la lecture de plusieurs petits fichiers mais augmentent l'utilisation de la mémoire."
 		},
+		"maxImageFileSize": {
+			"label": "Taille maximale des fichiers d'image",
+			"mb": "MB",
+			"description": "Taille maximale (en MB) pour les fichiers d'image qui peuvent être traités par l'outil de lecture de fichier."
+		},
+		"maxTotalImageSize": {
+			"label": "Taille totale maximale des images",
+			"mb": "MB",
+			"description": "Limite de taille cumulée maximale (en MB) pour toutes les images traitées dans une seule opération read_file. Lors de la lecture de plusieurs images, la taille de chaque image est ajoutée au total. Si l'inclusion d'une autre image dépasserait cette limite, elle sera ignorée."
+		},
+		"diagnostics": {
+			"includeMessages": {
+				"label": "Inclure automatiquement les diagnostics dans le contexte",
+				"description": "Lorsque cette option est activée, les messages de diagnostic (erreurs) des fichiers modifiés seront automatiquement inclus dans le contexte. Vous pouvez toujours inclure manuellement tous les diagnostics de l'espace de travail en utilisant @problems."
+			},
+			"maxMessages": {
+				"label": "Nombre maximum de messages de diagnostic",
+				"description": "Nombre maximum de messages de diagnostic à inclure par fichier. Cette limite s'applique à la fois à l'inclusion automatique (lorsque la case est cochée) et aux mentions manuelles @problems. Des valeurs plus élevées fournissent plus de contexte mais augmentent l'utilisation des jetons.",
+				"resetTooltip": "Réinitialiser à la valeur par défaut (50)",
+				"unlimitedLabel": "Illimité"
+			},
+			"delayAfterWrite": {
+				"label": "Délai après les écritures pour permettre aux diagnostics de détecter les problèmes potentiels",
+				"description": "Temps d'attente après les écritures de fichiers avant de continuer, permettant aux outils de diagnostic de traiter les modifications et de détecter les problèmes."
+			}
+		},
 		"condensingThreshold": {
 			"label": "Seuil de condensation du contexte",
 			"selectProfile": "Configurer le seuil pour le profil",
@@ -512,6 +595,10 @@
 		"outputLineLimit": {
 			"label": "Limite de sortie du terminal",
 			"description": "Nombre maximum de lignes à inclure dans la sortie du terminal lors de l'exécution de commandes. Lorsque ce nombre est dépassé, les lignes seront supprimées du milieu, économisant des token. <0>En savoir plus</0>"
+		},
+		"outputCharacterLimit": {
+			"label": "Limite de caractères du terminal",
+			"description": "Nombre maximum de caractères à inclure dans la sortie du terminal lors de l'exécution de commandes. Cette limite prévaut sur la limite de lignes pour éviter les problèmes de mémoire avec des lignes extrêmement longues. Lorsque cette limite est dépassée, la sortie sera tronquée. <0>En savoir plus</0>"
 		},
 		"shellIntegrationTimeout": {
 			"label": "Délai d'intégration du shell du terminal",
@@ -554,6 +641,9 @@
 			"description": "Lorsqu'activé, le terminal hérite des variables d'environnement du processus parent VSCode, comme les paramètres d'intégration du shell définis dans le profil utilisateur. Cela bascule directement le paramètre global VSCode `terminal.integrated.inheritEnv`. <0>En savoir plus</0>"
 		}
 	},
+	"advancedSettings": {
+		"title": "Paramètres avancés"
+	},
 	"advanced": {
 		"diff": {
 			"label": "Activer l'édition via des diffs",
@@ -575,6 +665,10 @@
 				"label": "Précision de correspondance",
 				"description": "Ce curseur contrôle la précision avec laquelle les sections de code doivent correspondre lors de l'application des diffs. Des valeurs plus basses permettent des correspondances plus flexibles mais augmentent le risque de remplacements incorrects. Utilisez des valeurs inférieures à 100 % avec une extrême prudence."
 			}
+		},
+		"todoList": {
+			"label": "Activer l'outil de liste de tâches",
+			"description": "Lorsqu'activé, Kilo Code peut créer et gérer des listes de tâches pour suivre la progression. Cela aide à organiser les tâches complexes en étapes gérables."
 		}
 	},
 	"experimental": {
@@ -594,10 +688,6 @@
 			"name": "Utiliser le mode \"direction assistée\" expérimental",
 			"description": "Lorsqu'il est activé, Kilo Code rappellera plus fréquemment au modèle les détails de sa définition de mode actuelle. Cela conduira à une adhérence plus forte aux définitions de rôles et aux instructions personnalisées, mais utilisera plus de tokens par message."
 		},
-		"AUTOCOMPLETE": {
-			"name": "Utiliser la fonctionnalité expérimentale de \"saisie semi-automatique\"",
-			"description": "Lorsque cette option est activée, Kilo Code fournira des suggestions de code en ligne pendant que vous tapez."
-		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Utiliser l'outil diff multi-blocs expérimental",
 			"description": "Lorsqu'il est activé, Kilo Code utilisera l'outil diff multi-blocs. Cela tentera de mettre à jour plusieurs blocs de code dans le fichier en une seule requête."
@@ -613,6 +703,21 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Activer les éditions de fichiers concurrentes",
 			"description": "Lorsque cette option est activée, Kilo Code peut éditer plusieurs fichiers en une seule requête. Lorsqu'elle est désactivée, Kilo Code doit éditer les fichiers un par un. Désactiver cette option peut aider lorsque tu travailles avec des modèles moins capables ou lorsque tu veux plus de contrôle sur les modifications de fichiers."
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "Activer Morph Fast Apply",
+			"description": "Lorsque cette option est activée, Kilo Code peut éditer des fichiers en utilisant Morph Fast Apply.",
+			"apiKey": "Clé API Morph (optionnel)",
+			"placeholder": "Entrez votre clé API Morph (optionnel)",
+			"warning": "Si vous ne configurez pas de clé API Morph, vous pouvez toujours utiliser Fast Apply avec Kilo Code ou OpenRouter. Votre compte sera facturé pour l'utilisation du modèle, ceci n'est actuellement pas affiché dans l'interface de l'extension."
+		},
+		"INLINE_ASSIST": {
+			"name": "Assistance en ligne",
+			"description": "Activez les fonctionnalités d'assistance en ligne pour des suggestions et améliorations de code rapides directement dans votre éditeur. Inclut la Tâche rapide en ligne (Cmd+I) pour des modifications ciblées et la Tâche automatique en ligne pour des améliorations contextuelles."
+		},
+		"PREVENT_FOCUS_DISRUPTION": {
+			"name": "Édition en arrière-plan",
+			"description": "Empêche la perturbation du focus de l'éditeur lorsqu'activé. Les modifications de fichiers se font en arrière-plan sans ouvrir de vues de différences ou voler le focus. Vous pouvez continuer à travailler sans interruption pendant que Kilo Code effectue des changements. Les fichiers peuvent être ouverts sans focus pour capturer les diagnostics ou rester complètement fermés."
 		}
 	},
 	"promptCaching": {
@@ -648,7 +753,7 @@
 		}
 	},
 	"modelPicker": {
-		"automaticFetch": "L'extension récupère automatiquement la liste la plus récente des modèles disponibles sur <serviceLink>{{serviceName}}</serviceLink>. Si vous ne savez pas quel modèle choisir, Kilo Code fonctionne mieux avec <defaultModelLink>{{defaultModelId}}</defaultModelLink>. Vous pouvez également rechercher \"free\" pour les options gratuites actuellement disponibles.",
+		"automaticFetch": "L'extension récupère automatiquement la liste la plus récente des modèles disponibles sur <serviceLink>{{serviceName}}</serviceLink>. Si vous ne savez pas quel modèle choisir, Kilo Code fonctionne mieux avec <defaultModelLink>{{defaultModelId}}</defaultModelLink>.",
 		"label": "Modèle",
 		"searchPlaceholder": "Rechercher",
 		"noMatchFound": "Aucune correspondance trouvée",
@@ -727,5 +832,8 @@
 		}
 	},
 	"includeMaxOutputTokens": "Inclure les tokens de sortie maximum",
-	"includeMaxOutputTokensDescription": "Envoyer le paramètre de tokens de sortie maximum dans les requêtes API. Certains fournisseurs peuvent ne pas supporter cela."
+	"includeMaxOutputTokensDescription": "Envoyer le paramètre de tokens de sortie maximum dans les requêtes API. Certains fournisseurs peuvent ne pas supporter cela.",
+	"limitMaxTokensDescription": "Limiter le nombre maximum de tokens dans la réponse",
+	"maxOutputTokensLabel": "Tokens de sortie maximum",
+	"maxTokensGenerateDescription": "Tokens maximum à générer dans la réponse"
 }

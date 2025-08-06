@@ -1,4 +1,12 @@
 {
+	"errorBoundary": {
+		"title": "เกิดข้อผิดพลาดบางอย่าง",
+		"reportText": "โปรดช่วยเราปรับปรุงโดยรายงานข้อผิดพลาดนี้ที่",
+		"githubText": "หน้า GitHub Issues ของเรา",
+		"copyInstructions": "คัดลอกและวางข้อความข้อผิดพลาดต่อไปนี้เพื่อรวมไว้ในการส่งของคุณ:",
+		"errorStack": "Error Stack:",
+		"componentStack": "Component Stack:"
+	},
 	"answers": {
 		"yes": "ใช่",
 		"no": "ไม่",
@@ -20,7 +28,8 @@
 		"customerSupport": "ฝ่ายสนับสนุนลูกค้า"
 	},
 	"ui": {
-		"search_placeholder": "ค้นหา..."
+		"search_placeholder": "ค้นหา...",
+		"no_results": "ไม่พบผลลัพธ์"
 	},
 	"mermaid": {
 		"loading": "กำลังสร้างไดอะแกรม mermaid...",
@@ -70,5 +79,12 @@
 		"success": {
 			"imageDataUriCopied": "คัดลอก image data URI ไปยังคลิปบอร์ดแล้ว"
 		}
+	},
+	"confirmation": {
+		"deleteMessage": "ลบข้อความ",
+		"deleteWarning": "การลบข้อความนี้จะลบข้อความที่ตามมาทั้งหมดในการสนทนา คุณต้องการดำเนินการต่อหรือไม่?",
+		"editMessage": "แก้ไขข้อความ",
+		"editWarning": "การแก้ไขข้อความนี้จะลบข้อความที่ตามมาทั้งหมดในการสนทนา คุณต้องการดำเนินการต่อหรือไม่?",
+		"proceed": "ดำเนินการต่อ"
 	}
 }

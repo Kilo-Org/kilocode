@@ -11,7 +11,7 @@
 		"title": "Aviso de Crédito Baixo!",
 		"message": "Verifique se você pode recarregar com créditos gratuitos ou comprar mais!"
 	},
-	"notLoggedInError": "Não é possível concluir a solicitação, certifique-se de que você está conectado e logado com o provedor selecionado.\n\n{{error}}",
+	"notLoggedInError": "Não é possível concluir a solicitação, certifique-se de que está conectado e logado com o provedor selecionado.\n\n{{error}}",
 	"rules": {
 		"actions": {
 			"delete": "Excluir",
@@ -27,9 +27,9 @@
 		"templates": {
 			"workflow": {
 				"description": "Descrição do fluxo de trabalho aqui...",
-				"stepsHeader": "## Passos",
-				"step1": "Passo 1",
-				"step2": "Passo 2"
+				"stepsHeader": "## Etapas",
+				"step1": "Etapa 1",
+				"step2": "Etapa 2"
 			},
 			"rule": {
 				"description": "Descrição da regra aqui...",
@@ -40,68 +40,86 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Gerador de mensagens de commit do Kilo Code ativado",
-		"gitNotFound": "⚠️ Repositório Git não encontrado ou git não disponível",
+		"activated": "Gerador de mensagens de commit Kilo Code ativado",
+		"gitNotFound": "⚠️ Repositório Git não encontrado ou git indisponível",
 		"gitInitError": "⚠️ Erro de inicialização do Git: {{error}}",
 		"generating": "Kilo: Gerando mensagem de commit...",
-		"noChanges": "Kilo: Nenhuma alteração encontrada para analisar",
+		"noChanges": "Kilo: Nenhuma alteração encontrada para análise",
 		"generated": "Kilo: Mensagem de commit gerada!",
 		"generationFailed": "Kilo: Falha ao gerar mensagem de commit: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: Gerando mensagem usando alterações não preparadas",
 		"activationFailed": "Kilo: Falha ao ativar o gerador de mensagens: {{error}}",
-		"providerRegistered": "Kilo: Provedor de mensagem de commit registrado"
+		"providerRegistered": "Kilo: Provedor de mensagens de commit registrado"
 	},
-	"autocomplete": {
+	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Completo",
-			"disabled": "$(circle-slash) Kilo Completo",
+			"enabled": "$(sparkle) Assistente Inline Kilo",
+			"disabled": "$(circle-slash) Assistente Inline Kilo",
+			"warning": "$(warning) Assistente Inline Kilo",
 			"tooltip": {
-				"disabled": "Preenchimento Automático do Kilo Code (desativado)",
-				"tokenError": "Um token válido deve ser definido para usar o preenchimento automático",
-				"basic": "Kilo Code Autocomplete",
-				"lastCompletion": "Última conclusão:",
+				"basic": "Assistente Inline Kilo Code",
+				"disabled": "Assistente Inline Kilo Code (desativado)",
+				"tokenError": "Um token válido deve ser definido para usar o Assistente Inline",
+				"lastCompletion": "Última sugestão:",
 				"sessionTotal": "Custo total da sessão:",
 				"model": "Modelo:"
 			},
-			"warning": "$(warning) Kilo Completo",
 			"cost": {
-				"zero": "R$ 0,00",
-				"lessThanCent": "<R$0,01"
+				"zero": "$0.00",
+				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Kilo Completo {{status}}"
-	},
-	"ghost": {
+		"toggleMessage": "Assistente Inline Kilo {{status}}",
 		"progress": {
+			"title": "Kilo Code",
 			"analyzing": "Analisando seu código...",
-			"processing": "Processando sugestões de edição...",
 			"generating": "Gerando edições sugeridas...",
-			"showing": "Exibindo edições sugeridas…",
-			"title": "Código Kilo"
+			"processing": "Processando edições sugeridas...",
+			"showing": "Exibindo edições sugeridas..."
 		},
 		"input": {
-			"title": "Código Kilo: Tarefa Rápida",
-			"placeholder": "p. ex., 'refatore esta função para ser mais eficiente'"
+			"title": "Kilo Code: Tarefa Rápida",
+			"placeholder": "ex. 'refatorar esta função para torná-la mais eficiente'"
 		},
 		"commands": {
-			"generateSuggestions": "Código Kilo: Gerar Edições Sugeridas",
+			"generateSuggestions": "Kilo Code: Gerar Edições Sugeridas",
 			"displaySuggestions": "Exibir Edições Sugeridas",
 			"cancelSuggestions": "Cancelar Edições Sugeridas",
-			"applyAllSuggestions": "Aplicar Todas as Edições Sugeridas",
 			"applyCurrentSuggestion": "Aplicar Edição Sugerida Atual",
+			"applyAllSuggestions": "Aplicar Todas as Edições Sugeridas",
 			"promptCodeSuggestion": "Tarefa Rápida",
-			"category": "Código Kilo"
+			"category": "Kilo Code"
 		},
 		"codeAction": {
 			"title": "Kilo Code: Edições Sugeridas"
 		},
 		"chatParticipant": {
+			"fullName": "Agente Kilo Code",
 			"name": "Agente",
-			"fullName": "Agente de Código Kilo",
-			"description": "Posso ajudar você com tarefas rápidas e sugestões de edição."
+			"description": "Posso ajudá-lo com tarefas rápidas e edições sugeridas."
 		},
 		"messages": {
-			"provideCodeSuggestions": "Sugerindo códigos..."
+			"provideCodeSuggestions": "Fornecendo sugestões de código..."
+		},
+		"incompatibilityExtensionPopup": {
+			"message": "O Assistente Inline do Kilo Code está sendo bloqueado por um conflito com o GitHub Copilot. Para corrigir isso, você deve desabilitar as sugestões inline do Copilot.",
+			"disableCopilot": "Desabilitar Copilot",
+			"disableInlineAssist": "Desabilitar Assistente Inline"
 		}
+	},
+	"terminalCommandGenerator": {
+		"inputPrompt": "Kilo: Descreva o comando que você deseja gerar",
+		"noActiveTerminal": "Kilo: Nenhum terminal ativo encontrado. Por favor, abra um terminal primeiro.",
+		"inputPlaceholder": "por exemplo, matar o processo rodando na porta 3001, encontrar arquivos grandes, etc",
+		"generatingProgress": "Kilo: Gerando comando de terminal...",
+		"commandGenerated": "Kilo: Comando gerado: {{command}}",
+		"generationFailed": "Kilo: Falha ao gerar comando: {{error}}",
+		"warningDialog": {
+			"title": "Aviso de Segurança do Terminal",
+			"message": "Verifique novamente todos os comandos gerados antes de executá-los. Ações no terminal nem sempre podem ser desfeitas — executar comandos não verificados pode resultar em perda irreversível de dados ou danos ao sistema. Revise e compreenda o comando completamente antes de prosseguir!",
+			"okButton": "Eu entendo",
+			"cancelButton": "Cancelar"
+		},
+		"tipMessage": "Kilo: Pressione {{shortcut}} para gerar comandos de terminal"
 	}
 }

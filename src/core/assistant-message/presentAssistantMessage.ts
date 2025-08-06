@@ -14,6 +14,7 @@ import { writeToFileTool } from "../tools/writeToFileTool"
 import { applyDiffTool } from "../tools/multiApplyDiffTool"
 import { insertContentTool } from "../tools/insertContentTool"
 import { searchAndReplaceTool } from "../tools/searchAndReplaceTool"
+import { editFileTool } from "../tools/editFileTool" // kilocode_change: Morph fast apply
 import { listCodeDefinitionNamesTool } from "../tools/listCodeDefinitionNamesTool"
 import { searchFilesTool } from "../tools/searchFilesTool"
 import { browserActionTool } from "../tools/browserActionTool"
@@ -37,6 +38,7 @@ import { condenseTool } from "../tools/condenseTool" // kilocode_change
 import { codebaseSearchTool } from "../tools/codebaseSearchTool"
 import { experiments, EXPERIMENT_IDS } from "../../shared/experiments"
 import { applyDiffToolLegacy } from "../tools/applyDiffTool"
+import { reportExcessiveRecursion, yieldPromise } from "../kilocode"
 
 /**
  * Processes and presents assistant message content to the user interface.
@@ -55,7 +57,9 @@ import { applyDiffToolLegacy } from "../tools/applyDiffTool"
  * as it becomes available.
  */
 
-export async function presentAssistantMessage(cline: Task) {
+export async function presentAssistantMessage(cline: Task, recursionDepth: number = 0 /*kilocode_change*/) {
+	reportExcessiveRecursion("presentAssistantMessage", recursionDepth) // kilocode_change
+
 	if (cline.abort) {
 		throw new Error(`[Task#presentAssistantMessage] task ${cline.taskId}.${cline.instanceId} aborted`)
 	}
@@ -191,6 +195,10 @@ export async function presentAssistantMessage(cline: Task) {
 						return `[${block.name} for '${block.params.path}']`
 					case "search_and_replace":
 						return `[${block.name} for '${block.params.path}']`
+					// kilocode_change start: Morph fast apply
+					case "edit_file":
+						return `[${block.name} for '${block.params.target_file}']`
+					// kilocode_change end
 					case "list_files":
 						return `[${block.name} for '${block.params.path}']`
 					case "list_code_definition_names":
@@ -460,6 +468,11 @@ export async function presentAssistantMessage(cline: Task) {
 				case "search_and_replace":
 					await searchAndReplaceTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
+				// kilocode_change start: Morph fast apply
+				case "edit_file":
+					await editFileTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
+					break
+				// kilocode_change end
 				case "read_file":
 					await readFileTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 
@@ -596,13 +609,19 @@ export async function presentAssistantMessage(cline: Task) {
 		if (cline.currentStreamingContentIndex < cline.assistantMessageContent.length) {
 			// There are already more content blocks to stream, so we'll call
 			// this function ourselves.
-			presentAssistantMessage(cline)
+			// kilocode_change start: prevent excessive recursion
+			await yieldPromise()
+			await presentAssistantMessage(cline, recursionDepth + 1)
+			// kilocode_change end
 			return
 		}
 	}
 
 	// Block is partial, but the read stream may have finished.
 	if (cline.presentAssistantMessageHasPendingUpdates) {
-		presentAssistantMessage(cline)
+		// kilocode_change start: prevent excessive recursion
+		await yieldPromise()
+		await presentAssistantMessage(cline, recursionDepth + 1)
+		// kilocode_change end
 	}
 }

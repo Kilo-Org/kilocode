@@ -41,6 +41,7 @@
 		"could_not_open_file_generic": "Nelze otevřít soubor!",
 		"checkpoint_timeout": "Vypršel časový limit při pokusu o obnovení checkpointu.",
 		"checkpoint_failed": "Obnovení checkpointu selhalo.",
+		"git_not_installed": "Git je vyžadován pro funkci checkpointů. Prosím nainstaluj Git pro aktivaci checkpointů.",
 		"no_workspace": "Nejprve prosím otevři složku projektu",
 		"update_support_prompt": "Aktualizace support promptu selhala",
 		"reset_support_prompt": "Reset support promptu selhal",
@@ -75,6 +76,7 @@
 		"url_page_not_found": "Stránka nebyla nalezena. Zkontroluj prosím, zda je URL správná.",
 		"url_fetch_failed": "Načtení obsahu URL selhalo: {{error}}",
 		"url_fetch_error_with_url": "Chyba při načítání obsahu pro {{url}}: {{error}}",
+		"command_timeout": "Spuštění příkazu vypršelo po {{seconds}} sekundách",
 		"share_task_failed": "Sdílení úlohy selhalo. Zkus to prosím znovu.",
 		"share_no_active_task": "Žádná aktivní úloha ke sdílení",
 		"share_auth_required": "Je vyžadována autentizace. Prosím přihlas se pro sdílení úloh.",
@@ -82,6 +84,13 @@
 		"share_task_not_found": "Úloha nebyla nalezena nebo byl přístup odepřen.",
 		"mode_import_failed": "Import režimu selhal: {{error}}",
 		"delete_rules_folder_failed": "Smazání složky pravidel selhalo: {{rulesFolderPath}}. Chyba: {{error}}",
+		"command_not_found": "Příkaz '{{name}}' nebyl nalezen",
+		"open_command_file": "Nepodařilo se otevřít soubor příkazu",
+		"delete_command": "Nepodařilo se smazat příkaz",
+		"no_workspace_for_project_command": "Pro projektový příkaz nebyla nalezena žádná složka workspace",
+		"command_already_exists": "Příkaz \"{{commandName}}\" již existuje",
+		"create_command_failed": "Nepodařilo se vytvořit příkaz",
+		"command_template_content": "---\ndescription: \"Stručný popis toho, co tento příkaz dělá\"\n---\n\nToto je nový slash příkaz. Upravte tento soubor pro přizpůsobení chování příkazu.",
 		"claudeCode": {
 			"processExited": "Proces Claude Code skončil s kódem {{exitCode}}.",
 			"errorOutput": "Chybový výstup: {{output}}",
@@ -98,6 +107,11 @@
 			"badRequest": "Špatný požadavek: {{details}}",
 			"apiError": "Chyba Gemini CLI API: {{error}}",
 			"completionError": "Chyba dokončení Gemini CLI: {{error}}"
+		},
+		"gemini": {
+			"generate_stream": "Chyba generování kontextového proudu Gemini: {{error}}",
+			"generate_complete_prompt": "Chyba dokončení Gemini: {{error}}",
+			"sources": "Zdroje:"
 		}
 	},
 	"warnings": {
@@ -130,7 +144,8 @@
 	},
 	"buttons": {
 		"save": "Uložit",
-		"edit": "Upravit"
+		"edit": "Upravit",
+		"learn_more": "Zjistit více"
 	},
 	"tasks": {
 		"canceled": "Chyba úlohy: Byla zastavena a zrušena uživatelem.",
@@ -157,11 +172,17 @@
 			"deleteFailed": "Nepodařilo se smazat vlastní režim: {{error}}",
 			"resetFailed": "Nepodařilo se resetovat vlastní režimy: {{error}}",
 			"modeNotFound": "Chyba zápisu: Režim nebyl nalezen",
-			"noWorkspaceForProject": "Pro projektově specifický režim nebyla nalezena žádná složka workspace"
+			"noWorkspaceForProject": "Pro projektově specifický režim nebyla nalezena žádná složka workspace",
+			"rulesCleanupFailed": "Režim byl úspěšně smazán, ale nepodařilo se smazat složku pravidel v {{rulesFolderPath}}. Možná ji budete muset smazat ručně."
 		},
 		"scope": {
 			"project": "projekt",
 			"global": "globální"
+		}
+	},
+	"marketplace": {
+		"mode": {
+			"rulesCleanupFailed": "Režim byl úspěšně odstraněn, ale nepodařilo se smazat složku pravidel v {{rulesFolderPath}}. Možná ji budete muset smazat ručně."
 		}
 	},
 	"mdm": {
@@ -177,6 +198,11 @@
 			"description": "Jsi si jistý, že chceš smazat tento {{scope}} režim? Toto také smaže související složku pravidel na: {{rulesFolderPath}}",
 			"descriptionNoRules": "Jsi si jistý, že chceš smazat tento vlastní režim?",
 			"confirm": "Smazat"
+		}
+	},
+	"commands": {
+		"preventCompletionWithOpenTodos": {
+			"description": "Zabránit dokončení úlohy, když jsou v seznamu úkolů neúplné položky"
 		}
 	}
 }

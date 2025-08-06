@@ -1,4 +1,12 @@
 {
+	"errorBoundary": {
+		"title": "Đã xảy ra lỗi",
+		"reportText": "Vui lòng giúp chúng tôi cải thiện bằng cách báo cáo lỗi này trên",
+		"githubText": "trang GitHub Issues của chúng tôi",
+		"copyInstructions": "Sao chép và dán thông báo lỗi sau đây để đưa vào báo cáo của bạn:",
+		"errorStack": "Stack lỗi:",
+		"componentStack": "Stack thành phần:"
+	},
 	"answers": {
 		"yes": "Có",
 		"no": "Không",
@@ -20,7 +28,8 @@
 		"customerSupport": "Hỗ trợ khách hàng"
 	},
 	"ui": {
-		"search_placeholder": "Tìm kiếm..."
+		"search_placeholder": "Tìm kiếm...",
+		"no_results": "Không tìm thấy kết quả nào"
 	},
 	"mermaid": {
 		"loading": "Đang tạo biểu đồ mermaid...",
@@ -70,5 +79,12 @@
 		"success": {
 			"imageDataUriCopied": "URI dữ liệu hình ảnh đã được sao chép vào clipboard"
 		}
+	},
+	"confirmation": {
+		"deleteMessage": "Xóa Tin Nhắn",
+		"deleteWarning": "Xóa tin nhắn này sẽ xóa tất cả các tin nhắn tiếp theo trong cuộc trò chuyện. Bạn có muốn tiếp tục không?",
+		"editMessage": "Chỉnh Sửa Tin Nhắn",
+		"editWarning": "Chỉnh sửa tin nhắn này sẽ xóa tất cả các tin nhắn tiếp theo trong cuộc trò chuyện. Bạn có muốn tiếp tục không?",
+		"proceed": "Tiếp Tục"
 	}
 }

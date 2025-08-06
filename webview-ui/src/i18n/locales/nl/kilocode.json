@@ -4,7 +4,7 @@
 		"introText1": "Kilo Code is een gratis, open source AI coding agent.",
 		"introText2": "Het werkt met de nieuwste AI modellen zoals Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1, en meer dan 450 andere.",
 		"introText3": "Maak een gratis account aan en krijg $20 aan tokens om te gebruiken met elk AI model.",
-		"ctaButton": "Maak gratis account aan",
+		"ctaButton": "Aan de slag",
 		"manualModeButton": "Gebruik je eigen API-sleutel",
 		"alreadySignedUp": "Al aangemeld?",
 		"loginText": "Log hier in"
@@ -12,6 +12,11 @@
 	"lowCreditWarning": {
 		"addCredit": "Krediet toevoegen",
 		"lowBalance": "Uw Kilo Code-saldo is laag"
+	},
+	"pricing": {
+		"costUnknown": "kosten onbekend",
+		"costUnknownDescription": "De API-provider heeft geen kostengegevens verstrekt of het verzoek is geannuleerd.",
+		"discoverModelPricing": "Ontdek modelprijzen en mogelijkheden"
 	},
 	"notifications": {
 		"toolRequest": "Toolverzoek wacht op goedkeuring",
@@ -26,7 +31,12 @@
 			"account": "Kilo Code Account",
 			"apiKey": "Kilo Code API-sleutel",
 			"login": "Inloggen bij Kilo Code",
-			"logout": "Uitloggen bij Kilo Code"
+			"logout": "Uitloggen bij Kilo Code",
+			"automaticFetch": "De nieuwste modellen zijn automatisch beschikbaar in Kilo Code. Als je niet zeker weet welk model je moet kiezen, werkt Kilo Code het beste met de aanbevolen modellen die bovenaan in <strong>vetgedrukte tekst</strong> staan.",
+			"providerRouting": {
+				"title": "Kilo Code - OpenRouter Provider Routing",
+				"description": "Kilo Code routeert verzoeken naar de beste beschikbare providers voor uw model. Standaard worden verzoeken verdeeld over de beste providers om de uptime te maximaliseren. U kunt echter een specifieke provider kiezen om voor dit model te gebruiken."
+			}
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {
@@ -40,6 +50,16 @@
 			"testButton": "Testmelding",
 			"testTitle": "Kilo Code",
 			"testMessage": "Dit is een testmelding van Kilo Code."
+		},
+		"terminal": {
+			"commandGenerator": {
+				"provider": "Terminal Opdrachtregel Generator Provider",
+				"apiConfigId": {
+					"label": "API Configuratie",
+					"description": "Selecteer welke API-configuratie u wilt gebruiken voor het genereren van terminalopdrachten. Laat dit op 'Gebruik huidige configuratie' staan om uw standaardinstellingen te gebruiken.",
+					"current": "Gebruik huidige configuratie"
+				}
+			}
 		}
 	},
 	"chat": {
@@ -56,7 +76,14 @@
 		"dashboard": "Dashboard",
 		"logOut": "Uitloggen",
 		"currentBalance": "HUIDIG SALDO",
-		"loading": "Laden..."
+		"loading": "Laden...",
+		"shop": {
+			"title": "Credits Kopen",
+			"popular": "Populair",
+			"credits": "credits",
+			"action": "Nu Kopen",
+			"viewAll": "Alle prijs opties bekijken"
+		}
 	},
 	"docs": "Documentatie",
 	"rules": {
@@ -130,5 +157,61 @@
 			"idea6": "Genereer kaarten die dynamische content prachtig onthullen bij hovering",
 			"idea7": "Maak een rustgevend interactief sterrenveld dat beweegt met muisgebaren"
 		}
+	},
+	"ghost": {
+		"title": "Inline Assistentie",
+		"settings": {
+			"autoTrigger": "Automatische Trigger",
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Snelle Inline Taak",
+				"description": "Heb je maar een snelle aanpassing nodig? Selecteer wat code (of niet!) en druk op Cmd+I. Beschrijf je doel in gewoon Nederlands (\"maak een React-component met deze props\", \"voeg foutafhandeling toe aan deze functie\"), en krijg meerdere, direct bruikbare suggesties rechtstreeks in je editor. <DocsLink>Zie sneltoets</DocsLink>"
+			},
+			"enableAutoInlineTaskKeybinding": {
+				"label": "Automatische Inline Taak",
+				"description": "Behoefte aan een snelle oplossing, aanvulling of herstructurering? Kilo gebruikt de omringende context om directe verbeteringen aan te bieden, zodat je in je flow blijft. <DocsLink>Bekijk sneltoets</DocsLink>"
+			},
+			"enableAutoTrigger": {
+				"label": "Automatische Trigger Inschakelen",
+				"description": "Wanneer ingeschakeld, zal Kilo Code automatisch Inline Assist activeren wanneer je stopt met typen. Dit kan handig zijn voor snelle fixes en suggesties."
+			},
+			"autoTriggerDelay": {
+				"label": "Automatische Trigger Vertraging",
+				"description": "De vertraging in seconden voordat Kilo Code Inline Assist activeert nadat je stopt met typen. Een kortere vertraging betekent snellere suggesties, maar kan meer resources gebruiken."
+			},
+			"enableSmartInlineTaskKeybinding": {
+				"label": "Slimme Inline Taak",
+				"description": "Heb je een snelle fix, aanvulling of refactoring nodig? Kilo gebruikt de omringende context om directe verbeteringen aan te bieden, zodat je in de flow blijft. <DocsLink>Bekijk sneltoets</DocsLink>"
+			},
+			"provider": "Aanbieder",
+			"apiConfigId": {
+				"label": "API-configuratie",
+				"current": "Gebruik de momenteel geselecteerde API-configuratie",
+				"description": "Selecteer een API-configuratie om te gebruiken voor Inline Assist-prompts, of gebruik gewoon wat momenteel is geselecteerd"
+			},
+			"triggers": "Triggers",
+			"keybindingDescription": "Functies binnen Inline Assist worden geactiveerd door commando's. Je kunt de <DocsLink>sneltoetsen hier configureren</DocsLink>."
+		}
+	},
+	"virtualProvider": {
+		"title": "Virtuele Quota Fallback Provider Instellingen",
+		"description": "Configureer een lijst met profielen, elk met hun eigen quotalimieten. Wanneer de quotalimieten van één provider bereikt zijn, wordt het volgende profiel in de lijst gebruikt totdat er geen meer over zijn.",
+		"profileLabel": "Profiel {{number}}",
+		"primaryProfileLabel": "Profiel {{number}} (Primair)",
+		"moveProfileUp": "Profiel naar boven verplaatsen",
+		"moveProfileDown": "Profiel naar beneden verplaatsen",
+		"removeProfile": "Profiel verwijderen",
+		"selectProfilePlaceholder": "Selecteer profiel...",
+		"addProfile": "Profiel toevoegen",
+		"noProfilesAvailable": "Geen profielprofielen beschikbaar. Configureer eerst ten minste één niet-virtueel providerprofiel.",
+		"dangerZoneTitle": "Gevaarzone",
+		"dangerZoneDescription": "Deze acties zijn destructief en kunnen niet ongedaan worden gemaakt.",
+		"clearUsageData": "Gebruiksgegevens Wissen",
+		"confirmClearTitle": "Weet je het zeker?",
+		"confirmClearDescription": "Dit zal permanent alle opgeslagen gebruiksgegevens voor virtuele providers verwijderen. Deze actie kan niet ongedaan worden gemaakt.",
+		"tokensLabel": "Tokens",
+		"perMinute": "Per Minuut",
+		"perHour": "Per Uur",
+		"perDay": "Per dag",
+		"requestsLabel": "Verzoeken"
 	}
 }

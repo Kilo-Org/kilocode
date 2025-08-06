@@ -4,7 +4,7 @@
 		"introText1": "Kilo Code je bezplatný open source AI coding agent.",
 		"introText2": "Funguje s nejnovějšími AI modely jako Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1 a více než 450 dalšími.",
 		"introText3": "Vytvoř si bezplatný účet a získej $20 v tokenech pro použití s jakýmkoli AI modelem.",
-		"ctaButton": "Vytvořit bezplatný účet",
+		"ctaButton": "Začít",
 		"manualModeButton": "Použij vlastní API key",
 		"alreadySignedUp": "Už jsi registrovaný?",
 		"loginText": "Přihlas se zde"
@@ -12,6 +12,11 @@
 	"lowCreditWarning": {
 		"addCredit": "Přidat kredit",
 		"lowBalance": "Tvůj Kilo Code zůstatek je nízký"
+	},
+	"pricing": {
+		"costUnknown": "neznámé náklady",
+		"costUnknownDescription": "Poskytovatel API neposkytl žádné údaje o nákladech nebo byl požadavek zrušen.",
+		"discoverModelPricing": "Objevte ceny a možnosti modelů"
 	},
 	"notifications": {
 		"toolRequest": "Požadavek na nástroj čeká na schválení",
@@ -26,7 +31,12 @@
 			"account": "Účet Kilo Code",
 			"apiKey": "Kilo Code API Key",
 			"login": "Přihlásit se do Kilo Code",
-			"logout": "Odhlásit se z Kilo Code"
+			"logout": "Odhlásit se z Kilo Code",
+			"automaticFetch": "Nejnovější modely jsou v Kilo Code automaticky dostupné. Pokud si nejste jisti, který model zvolit, Kilo Code funguje nejlépe s doporučenými modely uvedenými nahoře <strong>tučně</strong>.",
+			"providerRouting": {
+				"title": "Kilo Code - Směrování poskytovatelů OpenRouter",
+				"description": "Kilo Code směruje požadavky na nejlepší dostupné poskytovatele pro váš model. Ve výchozím nastavení jsou požadavky rozloženy mezi nejlepší poskytovatele, aby se maximalizovala doba provozu. Můžete si však vybrat konkrétního poskytovatele, kterého chcete pro tento model použít."
+			}
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {
@@ -40,6 +50,16 @@
 			"testButton": "Otestovat oznámení",
 			"testTitle": "Kilo Code",
 			"testMessage": "Toto je testovací oznámení z Kilo Code."
+		},
+		"terminal": {
+			"commandGenerator": {
+				"apiConfigId": {
+					"current": "Použít aktuální konfiguraci",
+					"label": "Konfigurace API",
+					"description": "Vyberte, kterou konfiguraci API chcete použít pro generování příkazů do terminálu. Pokud chcete použít výchozí nastavení, ponechte 'Použít aktuální konfiguraci'."
+				},
+				"provider": "Poskytovatel generátoru terminálových příkazů"
+			}
 		}
 	},
 	"chat": {
@@ -56,7 +76,14 @@
 		"dashboard": "Přehled",
 		"logOut": "Odhlásit se",
 		"currentBalance": "AKTUÁLNÍ ZŮSTATEK",
-		"loading": "Načítání..."
+		"loading": "Načítání...",
+		"shop": {
+			"title": "Koupit kredity",
+			"popular": "Populární",
+			"credits": "kredity",
+			"action": "Koupit nyní",
+			"viewAll": "Zobrazit všechny cenové možnosti"
+		}
 	},
 	"docs": "Dokumentace",
 	"rules": {
@@ -130,5 +157,61 @@
 			"idea6": "Vygeneruj karty, které krásně odhalí dynamický obsah při najetí myší",
 			"idea7": "Vytvoř uklidňující interaktivní hvězdné pole, které se pohybuje s gesty myši"
 		}
+	},
+	"ghost": {
+		"title": "Inline asistence",
+		"settings": {
+			"autoTrigger": "Automatické spuštění",
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Rychlý inline úkol",
+				"description": "Potřebujete jen rychlou změnu? Vyberte nějaký kód (nebo ne!) a stiskněte Cmd+I. Popište svůj cíl běžnou češtinou (\"vytvořit React komponentu s těmito props\", \"přidat ošetření chyb do této funkce\") a získejte několik připravených návrhů přímo ve svém editoru. <DocsLink>Zobrazit zkratku</DocsLink>"
+			},
+			"enableAutoInlineTaskKeybinding": {
+				"label": "Automatický inline úkol",
+				"description": "Potřebujete rychlou opravu, doplnění nebo refaktoring? Kilo využije okolní kontext a nabídne okamžitá vylepšení, abyste neztratili tempo. <DocsLink>Zobrazit klávesovou zkratku</DocsLink>"
+			},
+			"enableAutoTrigger": {
+				"label": "Povolit automatické spuštění",
+				"description": "Když je povoleno, Kilo Code automaticky spustí Inline Assist, když přestaneš psát. To může být užitečné pro rychlé opravy a návrhy."
+			},
+			"autoTriggerDelay": {
+				"label": "Zpoždění automatického spuštění",
+				"description": "Zpoždění v sekundách před tím, než Kilo Code spustí Inline Assist poté, co přestaneš psát. Kratší zpoždění znamená rychlejší návrhy, ale může být náročnější na zdroje."
+			},
+			"enableSmartInlineTaskKeybinding": {
+				"label": "Chytrý inline úkol",
+				"description": "Potřebuješ rychlou opravu, dokončení nebo refaktoring? Kilo použije okolní kontext k nabídnutí okamžitých vylepšení, což tě udrží v pracovním tempu. <DocsLink>Zobrazit zkratku</DocsLink>"
+			},
+			"provider": "Poskytovatel",
+			"apiConfigId": {
+				"label": "Konfigurace API",
+				"current": "Použít aktuálně vybranou konfiguraci API",
+				"description": "Vyberte konfiguraci API, kterou chcete použít pro výzvy Inline Assist, nebo prostě použijte tu, která je aktuálně vybrána"
+			},
+			"triggers": "Spouštěče",
+			"keybindingDescription": "Funkce Inline Assist jsou spouštěny příkazy. <DocsLink>Klávesové zkratky si můžete nakonfigurovat zde</DocsLink>."
+		}
+	},
+	"virtualProvider": {
+		"title": "Nastavení poskytovatele virtuálního kvótového záložního řešení",
+		"description": "Nakonfigurujte seznam profilů, každý s vlastními kvótovými limity. Když jsou dosaženy kvótové limity jednoho poskytovatele, bude použit další profil v seznamu, dokud žádný nezbývá.",
+		"profileLabel": "Profil {{number}}",
+		"primaryProfileLabel": "Profil {{number}} (Primární)",
+		"moveProfileUp": "Posunout profil nahoru",
+		"moveProfileDown": "Posunout profil dolů",
+		"removeProfile": "Odstranit profil",
+		"selectProfilePlaceholder": "Vybrat profil...",
+		"addProfile": "Přidat profil",
+		"noProfilesAvailable": "Žádné profily nejsou k dispozici. Nejprve prosím nakonfigurujte alespoň jeden nevirtualní profil poskytovatele.",
+		"dangerZoneTitle": "Nebezpečná zóna",
+		"dangerZoneDescription": "Tyto akce jsou destruktivní a nelze je vrátit zpět.",
+		"clearUsageData": "Vymazat data o využití",
+		"confirmClearTitle": "Jsi si jistý?",
+		"confirmClearDescription": "Toto trvale smaže všechna uložená data o využití pro virtuální poskytovatele. Tuto akci nelze vrátit zpět.",
+		"tokensLabel": "Tokeny",
+		"perMinute": "Za minutu",
+		"perHour": "Za hodinu",
+		"requestsLabel": "Požadavky",
+		"perDay": "Za den"
 	}
 }

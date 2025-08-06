@@ -26,7 +26,6 @@ import { DIFF_VIEW_URI_SCHEME } from "./integrations/editor/DiffViewProvider"
 import { TerminalRegistry } from "./integrations/terminal/TerminalRegistry"
 import { McpServerManager } from "./services/mcp/McpServerManager"
 import { CodeIndexManager } from "./services/code-index/manager"
-import { registerAutocomplete } from "./services/autocomplete/AutocompleteProvider"
 import { registerCommitMessageProvider } from "./services/commit-message"
 import { MdmService } from "./services/mdm/MdmService"
 import { migrateSettings } from "./utils/migrateSettings"
@@ -43,6 +42,7 @@ import {
 } from "./activate"
 import { initializeI18n } from "./i18n"
 import { registerGhostProvider } from "./services/ghost" // kilocode_change
+import { TerminalWelcomeService } from "./services/terminal-welcome/TerminalWelcomeService" // kilocode_change
 
 /**
  * Built using https://github.com/microsoft/vscode-webview-ui-toolkit
@@ -101,6 +101,12 @@ export async function activate(context: vscode.ExtensionContext) {
 		context.globalState.update("allowedCommands", defaultCommands)
 	}
 
+	// kilocode_change start
+	if (!context.globalState.get("firstInstallCompleted")) {
+		context.globalState.update("telemetrySetting", "enabled")
+	}
+	// kilocode_change end
+
 	const contextProxy = await ContextProxy.getInstance(context)
 	const codeIndexManager = CodeIndexManager.getInstance(context)
 
@@ -132,16 +138,18 @@ export async function activate(context: vscode.ExtensionContext) {
 			await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
 
 			outputChannel.appendLine("Opening Kilo Code walkthrough")
+
+			// this can crash, see:
+			// https://discord.com/channels/1349288496988160052/1395865796026040470
 			await vscode.commands.executeCommand(
 				"workbench.action.openWalkthrough",
 				"kilocode.kilo-code#kiloCodeWalkthrough",
 				false,
 			)
-
-			context.globalState.update("telemetrySetting", "enabled")
-			context.globalState.update("firstInstallCompleted", true)
 		} catch (error) {
 			outputChannel.appendLine(`Error during first-time setup: ${error.message}`)
+		} finally {
+			context.globalState.update("firstInstallCompleted", true)
 		}
 	}
 	// kilocode_change end
@@ -233,17 +241,17 @@ export async function activate(context: vscode.ExtensionContext) {
 		}),
 	)
 
-	registerAutocomplete(context) // kilocode_change
-	registerGhostProvider(context) // kilocode_change
+	registerGhostProvider(context, provider) // kilocode_change
 	registerCommitMessageProvider(context, outputChannel) // kilocode_change
 	registerCodeActions(context)
 	registerTerminalActions(context)
+	TerminalWelcomeService.register(context) // kilocode_change
 
 	// Allows other extensions to activate once Kilo Code is ready.
 	vscode.commands.executeCommand(`${Package.name}.activationCompleted`)
 
 	// Implements the `RooCodeAPI` interface.
-	const socketPath = process.env.ROO_CODE_IPC_SOCKET_PATH
+	const socketPath = process.env.KILO_IPC_SOCKET_PATH ?? process.env.ROO_CODE_IPC_SOCKET_PATH // kilocode_change
 	const enableLogging = typeof socketPath === "string"
 
 	// Watch the core files and automatically reload the extension host.

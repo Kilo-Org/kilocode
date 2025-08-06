@@ -1,6 +1,7 @@
 import { OpenAICompatibleEmbedder } from "./openai-compatible"
 import { IEmbedder, EmbeddingResponse, EmbedderInfo } from "../interfaces/embedder"
 import { GEMINI_MAX_ITEM_TOKENS } from "../constants"
+import { t } from "../../../i18n"
 import { TelemetryEventName } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 
@@ -25,7 +26,7 @@ export class GeminiEmbedder implements IEmbedder {
 	 */
 	constructor(apiKey: string, modelId?: string) {
 		if (!apiKey) {
-			throw new Error("API key is required for Gemini embedder")
+			throw new Error(t("embeddings:validation.apiKeyRequired"))
 		}
 
 		// Use provided model or default
@@ -66,9 +67,18 @@ export class GeminiEmbedder implements IEmbedder {
 	 * @returns Promise resolving to validation result with success status and optional error message
 	 */
 	async validateConfiguration(): Promise<{ valid: boolean; error?: string }> {
-		// Delegate validation to the OpenAI-compatible embedder
-		// The error messages will be specific to Gemini since we're using Gemini's base URL
-		return this.openAICompatibleEmbedder.validateConfiguration()
+		try {
+			// Delegate validation to the OpenAI-compatible embedder
+			// The error messages will be specific to Gemini since we're using Gemini's base URL
+			return await this.openAICompatibleEmbedder.validateConfiguration()
+		} catch (error) {
+			TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
+				error: error instanceof Error ? error.message : String(error),
+				stack: error instanceof Error ? error.stack : undefined,
+				location: "GeminiEmbedder:validateConfiguration",
+			})
+			throw error
+		}
 	}
 
 	/**

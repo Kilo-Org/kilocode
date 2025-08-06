@@ -4,7 +4,7 @@
 		"introText1": "Kilo Code to darmowy, otwartoźródłowy agent kodowania AI.",
 		"introText2": "Współpracuje z najnowszymi modelami AI, takimi jak Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1 i ponad 450 innymi.",
 		"introText3": "Stwórz darmowe konto i otrzymaj tokeny o wartości $20 do wykorzystania z dowolnym modelem AI.",
-		"ctaButton": "Stwórz darmowe konto",
+		"ctaButton": "Rozpocznij",
 		"manualModeButton": "Użyj własnego klucza API",
 		"alreadySignedUp": "Już zarejestrowany?",
 		"loginText": "Zaloguj się tutaj"
@@ -12,6 +12,11 @@
 	"lowCreditWarning": {
 		"addCredit": "Dodaj kredyt",
 		"lowBalance": "Twój stan konta Kilo Code jest niski"
+	},
+	"pricing": {
+		"costUnknown": "koszt nieznany",
+		"costUnknownDescription": "Dostawca API nie podał żadnych danych o kosztach lub żądanie zostało anulowane.",
+		"discoverModelPricing": "Odkryj ceny i możliwości modeli"
 	},
 	"notifications": {
 		"toolRequest": "Żądanie narzędzia oczekuje na zatwierdzenie",
@@ -26,7 +31,12 @@
 			"account": "Konto Kilo Code",
 			"apiKey": "Klucz API Kilo Code",
 			"login": "Zaloguj się do Kilo Code",
-			"logout": "Wyloguj się z Kilo Code"
+			"logout": "Wyloguj się z Kilo Code",
+			"automaticFetch": "Najnowsze modele są automatycznie dostępne w Kilo Code. Jeśli nie jesteś pewien, który model wybrać, Kilo Code działa najlepiej z zalecanymi modelami wymienionymi na górze <strong>pogrubioną czcionką</strong>.",
+			"providerRouting": {
+				"title": "Kilo Code - Routing dostawców OpenRouter",
+				"description": "Kilo Code kieruje żądania do najlepszych dostępnych dostawców dla Twojego modelu. Domyślnie żądania są równoważone obciążeniem między najlepszymi dostawcami, aby zmaksymalizować czas działania. Możesz jednak wybrać konkretnego dostawcę do użycia dla tego modelu."
+			}
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {
@@ -40,6 +50,16 @@
 			"testButton": "Testuj powiadomienie",
 			"testTitle": "Kilo Code",
 			"testMessage": "To jest testowe powiadomienie z Kilo Code."
+		},
+		"terminal": {
+			"commandGenerator": {
+				"provider": "Dostawca Generatora Poleceń Terminala",
+				"apiConfigId": {
+					"label": "Konfiguracja API",
+					"description": "Wybierz, której konfiguracji API użyć do generowania poleceń terminalowych. Pozostaw jako 'Użyj bieżącej konfiguracji', aby zastosować domyślne ustawienia.",
+					"current": "Użyj bieżącej konfiguracji"
+				}
+			}
 		}
 	},
 	"chat": {
@@ -56,7 +76,14 @@
 		"dashboard": "Panel kontrolny",
 		"logOut": "Wyloguj się",
 		"currentBalance": "AKTUALNY STAN KONTA",
-		"loading": "Ładowanie..."
+		"loading": "Ładowanie...",
+		"shop": {
+			"title": "Kup Kredyty",
+			"popular": "Popularne",
+			"credits": "kredyty",
+			"action": "Kup Teraz",
+			"viewAll": "Zobacz wszystkie opcje cenowe"
+		}
 	},
 	"docs": "Dokumentacja",
 	"rules": {
@@ -130,5 +157,61 @@
 			"idea6": "Wygeneruj karty, które pięknie ujawniają dynamiczną zawartość po najechaniu myszą",
 			"idea7": "Stwórz uspokajające interaktywne pole gwiazd, które porusza się wraz z gestami myszy"
 		}
+	},
+	"ghost": {
+		"title": "Pomoc w tekście",
+		"settings": {
+			"autoTrigger": "Automatyczne wyzwalanie",
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Szybkie zadanie w tekście",
+				"description": "Potrzebujesz tylko szybkiej zmiany? Zaznacz jakiś kod (albo nie!) i naciśnij Cmd+I. Opisz swój cel zwykłym językiem (\"stwórz komponent React z tymi propsami\", \"dodaj obsługę błędów do tej funkcji\"), i otrzymaj wiele gotowych do użycia sugestii bezpośrednio w swoim edytorze. <DocsLink>Zobacz skrót</DocsLink>"
+			},
+			"enableAutoInlineTaskKeybinding": {
+				"label": "Zadanie automatyczne w linii",
+				"description": "Potrzebujesz szybkiej poprawki, uzupełnienia lub refaktoryzacji? Kilo użyje otaczającego kontekstu, aby zaproponować natychmiastowe usprawnienia, pozwalając Ci pozostać w stanie flow. <DocsLink>Zobacz skrót</DocsLink>"
+			},
+			"enableAutoTrigger": {
+				"label": "Włącz automatyczne wyzwalanie",
+				"description": "Gdy włączone, Kilo Code automatycznie uruchomi Inline Assist, gdy przestaniesz pisać. Może to być przydatne do szybkich poprawek i sugestii."
+			},
+			"autoTriggerDelay": {
+				"label": "Opóźnienie automatycznego wyzwalania",
+				"description": "Opóźnienie w sekundach przed uruchomieniem Inline Assist przez Kilo Code po zakończeniu pisania. Krótsze opóźnienie oznacza szybsze sugestie, ale może być bardziej wymagające dla zasobów."
+			},
+			"enableSmartInlineTaskKeybinding": {
+				"label": "Inteligentne zadanie w tekście",
+				"description": "Potrzebujesz szybkiej poprawki, uzupełnienia lub refaktoryzacji? Kilo użyje otaczającego kontekstu, aby zaoferować natychmiastowe ulepszenia, utrzymując cię w przepływie. <DocsLink>Zobacz skrót</DocsLink>"
+			},
+			"provider": "Dostawca",
+			"apiConfigId": {
+				"label": "Konfiguracja API",
+				"current": "Użyj aktualnie wybranej konfiguracji API",
+				"description": "Wybierz konfigurację API do użycia w podpowiedziach Inline Assist lub po prostu użyj tej, która jest aktualnie wybrana"
+			},
+			"triggers": "Wyzwalacze",
+			"keybindingDescription": "Funkcje Inline Assist są uruchamiane za pomocą poleceń. Możesz skonfigurować <DocsLink>skróty klawiaturowe tutaj</DocsLink>."
+		}
+	},
+	"virtualProvider": {
+		"title": "Ustawienia Wirtualnego Dostawcy Zapasowego Limitu",
+		"description": "Skonfiguruj listę profili, każdy z własnymi limitami przydziału. Gdy limity przydziału jednego dostawcy zostaną wyczerpane, użyty zostanie następny profil z listy, aż do wyczerpania wszystkich dostępnych.",
+		"profileLabel": "Profil {{number}}",
+		"primaryProfileLabel": "Profil {{number}} (Podstawowy)",
+		"moveProfileUp": "Przesuń profil do góry",
+		"moveProfileDown": "Przenieś profil w dół",
+		"removeProfile": "Usuń profil",
+		"selectProfilePlaceholder": "Wybierz profil...",
+		"addProfile": "Dodaj profil",
+		"noProfilesAvailable": "Brak dostępnych profili. Skonfiguruj najpierw co najmniej jeden profil dostawcy niewirtualnego.",
+		"dangerZoneTitle": "Strefa Niebezpieczna",
+		"dangerZoneDescription": "Te działania są destrukcyjne i nie można ich cofnąć.",
+		"clearUsageData": "Wyczyść Dane Użytkowania",
+		"confirmClearTitle": "Czy jesteś pewien?",
+		"confirmClearDescription": "To trwale usunie wszystkie przechowywane dane użytkowania dla wirtualnych dostawców. Tej akcji nie można cofnąć.",
+		"perMinute": "Na minutę",
+		"tokensLabel": "Tokeny",
+		"perDay": "Dziennie",
+		"perHour": "Za godzinę",
+		"requestsLabel": "Prośby"
 	}
 }

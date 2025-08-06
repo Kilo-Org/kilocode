@@ -13,6 +13,9 @@ export async function processUserContentMentions({
 	fileContextTracker,
 	rooIgnoreController,
 	showRooIgnoredFiles = true,
+	includeDiagnosticMessages = true,
+	maxDiagnosticMessages = 50,
+	maxReadFileLine,
 }: {
 	userContent: Anthropic.Messages.ContentBlockParam[]
 	cwd: string
@@ -20,6 +23,9 @@ export async function processUserContentMentions({
 	fileContextTracker: FileContextTracker
 	rooIgnoreController?: any
 	showRooIgnoredFiles?: boolean
+	includeDiagnosticMessages?: boolean
+	maxDiagnosticMessages?: number
+	maxReadFileLine?: number
 }) {
 	// Process userContent array, which contains various block types:
 	// TextBlockParam, ImageBlockParam, ToolUseBlockParam, and ToolResultBlockParam.
@@ -33,7 +39,11 @@ export async function processUserContentMentions({
 	// should parse mentions).
 	return Promise.all(
 		userContent.map(async (block) => {
-			const shouldProcessMentions = (text: string) => text.includes("<task>") || text.includes("<feedback>")
+			const shouldProcessMentions = (text: string) =>
+				text.includes("<task>") ||
+				text.includes("<feedback>") ||
+				text.includes("<answer>") ||
+				text.includes("<user_message>")
 
 			if (block.type === "text") {
 				if (shouldProcessMentions(block.text)) {
@@ -46,6 +56,9 @@ export async function processUserContentMentions({
 							fileContextTracker,
 							rooIgnoreController,
 							showRooIgnoredFiles,
+							includeDiagnosticMessages,
+							maxDiagnosticMessages,
+							maxReadFileLine,
 						),
 					}
 				}
@@ -63,6 +76,9 @@ export async function processUserContentMentions({
 								fileContextTracker,
 								rooIgnoreController,
 								showRooIgnoredFiles,
+								includeDiagnosticMessages,
+								maxDiagnosticMessages,
+								maxReadFileLine,
 							),
 						}
 					}
@@ -81,6 +97,9 @@ export async function processUserContentMentions({
 										fileContextTracker,
 										rooIgnoreController,
 										showRooIgnoredFiles,
+										includeDiagnosticMessages,
+										maxDiagnosticMessages,
+										maxReadFileLine,
 									),
 								}
 							}

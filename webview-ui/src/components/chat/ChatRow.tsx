@@ -1,4 +1,5 @@
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { appendImages } from "@src/utils/imageUtils"
 import { McpExecution } from "./McpExecution"
 import { useSize } from "react-use"
 import { useTranslation, Trans } from "react-i18next"
@@ -6,6 +7,7 @@ import deepEqual from "fast-deep-equal"
 import { VSCodeBadge, VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 
 import type { ClineMessage } from "@roo-code/types"
+// import { Mode } from "@roo/modes" // kilocode_change
 
 import { ClineApiReqInfo, ClineAskUseMcpServer, ClineSayTool } from "@roo/ExtensionMessage"
 import { COMMAND_OUTPUT_STRING } from "@roo/combineCommandSequences"
@@ -19,6 +21,9 @@ import { vscode } from "@src/utils/vscode"
 import { removeLeadingNonAlphanumeric } from "@src/utils/removeLeadingNonAlphanumeric"
 import { getLanguageFromPath } from "@src/utils/getLanguageFromPath"
 // import { Button } from "@src/components/ui" // kilocode_change
+
+// import ChatTextArea from "./ChatTextArea" // kilocode_change
+import { MAX_IMAGES_PER_MESSAGE } from "./ChatView"
 
 import { ToolUseBlock, ToolUseBlockHeader } from "../common/ToolUseBlock"
 import UpdateTodoListToolBlock from "./UpdateTodoListToolBlock"
@@ -48,6 +53,7 @@ import { CondenseContextErrorRow, CondensingContextRow, ContextCondenseRow } fro
 import CodebaseSearchResultsDisplay from "./CodebaseSearchResultsDisplay"
 import { cn } from "@/lib/utils"
 import { KiloChatRowUserFeedback } from "../kilocode/chat/KiloChatRowUserFeedback" // kilocode_change
+import { StandardTooltip } from "../ui" // kilocode_change
 
 interface ChatRowProps {
 	message: ClineMessage
@@ -126,13 +132,28 @@ export const ChatRowContent = ({
 	editable,
 }: ChatRowContentProps) => {
 	const { t } = useTranslation()
-	const { apiConfiguration, mcpServers, alwaysAllowMcp, currentCheckpoint } = useExtensionState()
+	const { mcpServers, alwaysAllowMcp, currentCheckpoint } = useExtensionState()
 	const [reasoningCollapsed, setReasoningCollapsed] = useState(true)
 	const [isDiffErrorExpanded, setIsDiffErrorExpanded] = useState(false)
 	const [showCopySuccess, setShowCopySuccess] = useState(false)
-	// const [isEditing, setIsEditing] = useState(false) // kilocode_change
+	const [isEditing, _setIsEditing] = useState(false) // kilocode_change
 	// const [editedContent, setEditedContent] = useState("") // kilocode_change
+	// const [editMode, setEditMode] = useState<Mode>(mode || "code") // kilocode_change
+	const [_editImages, setEditImages] = useState<string[]>([]) // kilocode_change
 	const { copyWithFeedback } = useCopyToClipboard()
+
+	// Handle message events for image selection during edit mode
+	useEffect(() => {
+		const handleMessage = (event: MessageEvent) => {
+			const msg = event.data
+			if (msg.type === "selectedImages" && msg.context === "edit" && msg.messageTs === message.ts && isEditing) {
+				setEditImages((prevImages) => appendImages(prevImages, msg.images, MAX_IMAGES_PER_MESSAGE))
+			}
+		}
+
+		window.addEventListener("message", handleMessage)
+		return () => window.removeEventListener("message", handleMessage)
+	}, [isEditing, message.ts])
 
 	// Memoized callback to prevent re-renders caused by inline arrow functions
 	const handleToggleExpand = useCallback(() => {
@@ -144,15 +165,19 @@ export const ChatRowContent = ({
 	const handleEditClick = useCallback(() => {
 		setIsEditing(true)
 		setEditedContent(message.text || "")
+		setEditImages(message.images || [])
+		setEditMode(mode || "code")
 		// Edit mode is now handled entirely in the frontend
 		// No need to notify the backend
-	}, [message.text])
+	}, [message.text, message.images, mode])
 
 	// Handle cancel edit
 	const handleCancelEdit = useCallback(() => {
 		setIsEditing(false)
 		setEditedContent(message.text || "")
-	}, [message.text])
+		setEditImages(message.images || [])
+		setEditMode(mode || "code")
+	}, [message.text, message.images, mode])
 
 	// Handle save edit
 	const handleSaveEdit = useCallback(() => {
@@ -162,14 +187,21 @@ export const ChatRowContent = ({
 			type: "submitEditedMessage",
 			value: message.ts,
 			editedMessageContent: editedContent,
+			images: editImages,
 		})
-	}, [message.ts, editedContent])
+	}, [message.ts, editedContent, editImages])
+
+	// Handle image selection for editing
+	const handleSelectImages = useCallback(() => {
+		vscode.postMessage({ type: "selectImages", context: "edit", messageTs: message.ts })
+	}, [message.ts])
 	*/
 
-	const [cost, apiReqCancelReason, apiReqStreamingFailedMessage] = useMemo(() => {
+	// kilocode_change: usageMissing
+	const [cost, usageMissing, apiReqCancelReason, apiReqStreamingFailedMessage] = useMemo(() => {
 		if (message.text !== null && message.text !== undefined && message.say === "api_req_started") {
 			const info = safeJsonParse<ClineApiReqInfo>(message.text)
-			return [info?.cost, info?.cancelReason, info?.streamingFailedMessage]
+			return [info?.cost, info?.usageMissing, info?.cancelReason, info?.streamingFailedMessage]
 		}
 
 		return [undefined, undefined, undefined]
@@ -522,6 +554,7 @@ export const ChatRowContent = ({
 							isLoading={message.partial}
 							isExpanded={isExpanded}
 							onToggleExpand={handleToggleExpand}
+							onJumpToFile={() => vscode.postMessage({ type: "openFile", text: "./" + tool.path })}
 						/>
 					</>
 				)
@@ -997,15 +1030,22 @@ export const ChatRowContent = ({
 								<div style={{ display: "flex", alignItems: "center", gap: "10px", flexGrow: 1 }}>
 									{icon}
 									{title}
-									{/* kilocode_change */}
-									{apiConfiguration?.apiProvider !== "kilocode" && (
-										<VSCodeBadge
-											style={{
-												opacity: cost !== null && cost !== undefined && cost > 0 ? 1 : 0,
-											}}>
-											${Number(cost || 0)?.toFixed(4)}
-										</VSCodeBadge>
-									)}
+									{
+										// kilocode_change start
+										!cost && usageMissing && (
+											<StandardTooltip content={t("kilocode:pricing.costUnknownDescription")}>
+												<VSCodeBadge className="whitespace-nowrap">
+													<span className="codicon codicon-warning pr-1"></span>
+													{t("kilocode:pricing.costUnknown")}
+												</VSCodeBadge>
+											</StandardTooltip>
+										)
+										// kilocode_change end
+									}
+									<VSCodeBadge
+										style={{ opacity: cost !== null && cost !== undefined && cost > 0 ? 1 : 0 }}>
+										${Number(cost || 0)?.toFixed(4)}
+									</VSCodeBadge>
 								</div>
 								<span className={`codicon codicon-chevron-${isExpanded ? "up" : "down"}`}></span>
 							</div>
@@ -1143,9 +1183,10 @@ export const ChatRowContent = ({
 						return <div>Error displaying search results.</div>
 					}
 
-					const { query = "", results = [] } = parsed?.content || {}
+					const { results = [] } = parsed?.content || {}
 
-					return <CodebaseSearchResultsDisplay query={query} results={results} />
+					return <CodebaseSearchResultsDisplay results={results} />
+				// kilocode_change start: upstream pr https://github.com/RooCodeInc/Roo-Code/pull/5452
 				case "browser_action_result":
 					// This should not normally be rendered here as browser_action_result messages
 					// should be grouped into browser sessions and rendered by BrowserSessionRow.
@@ -1177,6 +1218,7 @@ export const ChatRowContent = ({
 							</div>
 						</>
 					)
+				// kilocode_change end
 				case "user_edit_todos":
 					return <UpdateTodoListToolBlock userEdited onChange={() => {}} />
 				default:

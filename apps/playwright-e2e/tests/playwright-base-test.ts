@@ -1,10 +1,13 @@
+// kilocode_change - new file
 import { test as base, type Page, _electron } from "@playwright/test"
 export { expect } from "@playwright/test"
 import * as path from "path"
 import * as os from "os"
 import * as fs from "fs"
 import { fileURLToPath } from "url"
+import { camelCase } from "change-case"
 import { setupConsoleLogging, cleanLogMessage } from "../helpers/console-logging"
+import { closeAllTabs, closeAllToastNotifications, waitForAllExtensionActivation } from "../helpers"
 
 // ES module equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url)
@@ -18,6 +21,7 @@ export type TestFixtures = TestOptions & {
 	workbox: Page
 	createProject: () => Promise<string>
 	createTempDir: () => Promise<string>
+	takeScreenshot: (name?: string) => Promise<void>
 }
 
 export const test = base.extend<TestFixtures>({
@@ -30,6 +34,8 @@ export const test = base.extend<TestFixtures>({
 		}
 
 		const defaultCachePath = await createTempDir()
+		const userDataDir = path.join(defaultCachePath, "user-data")
+		seedUserSettings(userDataDir)
 
 		// Use the pre-downloaded VS Code from global setup
 		const vscodePath = process.env.VSCODE_EXECUTABLE_PATH
@@ -39,6 +45,12 @@ export const test = base.extend<TestFixtures>({
 
 		const electronApp = await _electron.launch({
 			executablePath: vscodePath,
+			env: {
+				...process.env,
+				VSCODE_SKIP_GETTING_STARTED: "1",
+				VSCODE_DISABLE_WORKSPACE_TRUST: "1",
+				ELECTRON_DISABLE_SECURITY_WARNINGS: "1",
+			},
 			args: [
 				"--no-sandbox",
 				"--disable-gpu-sandbox",
@@ -51,14 +63,22 @@ export const test = base.extend<TestFixtures>({
 				"--disable-updates",
 				"--skip-welcome",
 				"--skip-release-notes",
+				"--skip-getting-started",
 				"--disable-workspace-trust",
 				"--disable-telemetry",
 				"--disable-crash-reporter",
 				"--enable-logging",
 				"--log-level=0",
+				"--disable-extensions-except=kilocode.kilo-code",
+				"--disable-extension-recommendations",
+				"--disable-extension-update-check",
+				"--disable-default-apps",
+				"--disable-background-timer-throttling",
+				"--disable-renderer-backgrounding",
+				"--disable-component-extensions-with-background-pages",
 				`--extensionDevelopmentPath=${path.resolve(__dirname, "..", "..", "..", "src")}`,
 				`--extensions-dir=${path.join(defaultCachePath, "extensions")}`,
-				`--user-data-dir=${path.join(defaultCachePath, "user-data")}`,
+				`--user-data-dir=${userDataDir}`,
 				"--enable-proposed-api=kilocode.kilo-code",
 				await createProject(),
 			],
@@ -135,9 +155,29 @@ export const test = base.extend<TestFixtures>({
 	// eslint-disable-next-line no-empty-pattern
 	createTempDir: async ({}, use) => {
 		const tempDirs: string[] = []
+		let counter = 0
+
 		await use(async () => {
-			const tempDirPath = await fs.promises.mkdtemp(path.join(os.tmpdir(), "e2e-test-"))
+			const testInfo = test.info()
+			const fileName = testInfo.file.split("/").pop()?.replace(".test.ts", "") || "unknown"
+			const sanitizedTestName = camelCase(testInfo.title)
+
+			const dirName = `e2e-${fileName}-${sanitizedTestName}-${counter++}`
+			const tempDirPath = path.join(os.tmpdir(), dirName)
+
+			// Clean up any existing directory first
+			try {
+				await fs.promises.rm(tempDirPath, { recursive: true })
+			} catch (_error) {
+				// Directory might not exist, which is fine
+			}
+
+			// Create the directory
+			await fs.promises.mkdir(tempDirPath, { recursive: true })
+
+			// Get the real path after directory exists
 			const tempDir = await fs.promises.realpath(tempDirPath)
+
 			tempDirs.push(tempDir)
 			return tempDir
 		})
@@ -150,4 +190,45 @@ export const test = base.extend<TestFixtures>({
 			}
 		}
 	},
+
+	takeScreenshot: async ({ workbox: page }, use) => {
+		await use(async (name?: string) => {
+			await waitForAllExtensionActivation(page)
+			await closeAllTabs(page)
+			await closeAllToastNotifications(page)
+
+			// Extract test suite from the test file name or use a default
+			const testInfo = test.info()
+			const fileName = testInfo.file.split("/").pop()?.replace(".test.ts", "") || "unknown"
+			const testName = testInfo.title || "Unknown Test"
+			const testSuite = camelCase(fileName)
+
+			// Create a hierarchical name: TestSuite__TestName__ScreenshotName
+			const screenshotName = name || `screenshot-${Date.now()}`
+			const hierarchicalName = `${testSuite}__${testName}__${screenshotName}`
+				.replace(/[^a-zA-Z0-9_-]/g, "-") // Replace special chars with dashes, keep underscores
+				.replace(/-+/g, "-") // Replace multiple dashes with single dash
+				.replace(/^-|-$/g, "") // Remove leading/trailing dashes
+
+			const screenshotPath = test.info().outputPath(`${hierarchicalName}.png`)
+			await page.screenshot({ path: screenshotPath, fullPage: true })
+			console.log(`📸 Screenshot captured: ${hierarchicalName}`)
+		})
+	},
 })
+
+function seedUserSettings(userDataDir: string) {
+	const userDir = path.join(userDataDir, "User")
+	const settingsPath = path.join(userDir, "settings.json")
+	fs.mkdirSync(userDir, { recursive: true })
+
+	const settings = {
+		"workbench.startupEditor": "none", // hides 'Get Started'
+		"workbench.tips.enabled": false,
+		"update.showReleaseNotes": false,
+		"extensions.ignoreRecommendations": true,
+		"telemetry.telemetryLevel": "off",
+	}
+
+	fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2))
+}

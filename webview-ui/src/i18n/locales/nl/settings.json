@@ -41,13 +41,16 @@
 		"title": "Codebase indexering",
 		"enableLabel": "Codebase indexering inschakelen",
 		"enableDescription": "Code-indexering inschakelen voor verbeterde zoekresultaten en contextbegrip",
-		"providerLabel": "Embeddings provider",
-		"selectProviderPlaceholder": "Selecteer provider",
+		"profileLabel": "Embeddings provider",
+		"selectProfilePlaceholder": "Selecteer provider",
 		"openaiProvider": "OpenAI",
 		"ollamaProvider": "Ollama",
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "API-sleutel:",
 		"geminiApiKeyPlaceholder": "Voer uw Gemini API-sleutel in",
+		"mistralProvider": "Mistral",
+		"mistralApiKeyLabel": "API-sleutel:",
+		"mistralApiKeyPlaceholder": "Voer uw Mistral API-sleutel in",
 		"openaiCompatibleProvider": "OpenAI-compatibel",
 		"openAiKeyLabel": "OpenAI API-sleutel",
 		"openAiKeyPlaceholder": "Voer uw OpenAI API-sleutel in",
@@ -110,6 +113,7 @@
 			"modelIdRequired": "Model-ID is vereist",
 			"modelDimensionRequired": "Modelafmeting is vereist",
 			"geminiApiKeyRequired": "Gemini API-sleutel is vereist",
+			"mistralApiKeyRequired": "Mistral API-sleutel is vereist",
 			"ollamaBaseUrlRequired": "Ollama basis-URL is vereist",
 			"baseUrlRequired": "Basis-URL is vereist",
 			"modelDimensionMinValue": "Modelafmeting moet groter zijn dan 0"
@@ -124,6 +128,8 @@
 	},
 	"autoApprove": {
 		"description": "Sta Kilo Code toe om automatisch handelingen uit te voeren zonder goedkeuring. Schakel deze instellingen alleen in als je de AI volledig vertrouwt en de bijbehorende beveiligingsrisico's begrijpt.",
+		"toggleAriaLabel": "Automatisch goedkeuren in-/uitschakelen",
+		"disabledAriaLabel": "Automatisch goedkeuren uitgeschakeld - selecteer eerst opties",
 		"readOnly": {
 			"label": "Lezen",
 			"description": "Indien ingeschakeld, bekijkt Kilo Code automatisch de inhoud van mappen en leest bestanden zonder dat je op de Goedkeuren-knop hoeft te klikken.",
@@ -176,8 +182,12 @@
 			"description": "Automatisch toegestane terminalcommando's uitvoeren zonder goedkeuring",
 			"allowedCommands": "Toegestane automatisch uit te voeren commando's",
 			"allowedCommandsDescription": "Commando-prefixen die automatisch kunnen worden uitgevoerd als 'Altijd goedkeuren voor uitvoeren' is ingeschakeld. Voeg * toe om alle commando's toe te staan (gebruik met voorzichtigheid).",
+			"deniedCommands": "Geweigerde commando's",
+			"deniedCommandsDescription": "Commando-prefixen die automatisch worden geweigerd zonder om goedkeuring te vragen. Bij conflicten met toegestane commando's heeft de langste prefixovereenkomst voorrang. Voeg * toe om alle commando's te weigeren.",
 			"commandPlaceholder": "Voer commando-prefix in (bijv. 'git ')",
-			"addButton": "Toevoegen"
+			"deniedCommandPlaceholder": "Voer te weigeren commando-prefix in (bijv. 'rm -rf')",
+			"addButton": "Toevoegen",
+			"autoDenied": "Commando's met het prefix `{{prefix}}` zijn verboden door de gebruiker. Omzeil deze beperking niet door een ander commando uit te voeren."
 		},
 		"showMenu": {
 			"label": "Menu voor automatisch goedkeuren weergeven in chatweergave",
@@ -191,7 +201,8 @@
 			"title": "Maximale verzoeken",
 			"description": "Voer automatisch dit aantal API-verzoeken uit voordat om goedkeuring wordt gevraagd om door te gaan met de taak.",
 			"unlimited": "Onbeperkt"
-		}
+		},
+		"selectOptionsFirst": "Selecteer ten minste één optie hieronder om automatische goedkeuring in te schakelen"
 	},
 	"providers": {
 		"providerDocumentation": "{{provider}} documentatie",
@@ -247,10 +258,36 @@
 		"getChutesApiKey": "Chutes API-sleutel ophalen",
 		"deepSeekApiKey": "DeepSeek API-sleutel",
 		"getDeepSeekApiKey": "DeepSeek API-sleutel ophalen",
+		"doubaoApiKey": "Doubao API-sleutel",
+		"getDoubaoApiKey": "Doubao API-sleutel ophalen",
+		"fireworksApiKey": "Fireworks API-sleutel",
+		"getFireworksApiKey": "Fireworks API-sleutel ophalen",
+		"zaiApiKey": "Z.AI API-sleutel",
+		"getZaiApiKey": "Z.AI API-sleutel ophalen",
+		"bigModelApiKey": "BigModel API-sleutel",
+		"getBigModelApiKey": "BigModel API-sleutel ophalen",
+		"moonshotApiKey": "Moonshot API-sleutel",
+		"getMoonshotApiKey": "Moonshot API-sleutel ophalen",
+		"moonshotBaseUrl": "Moonshot-ingangspunt",
 		"geminiApiKey": "Gemini API-sleutel",
 		"getGroqApiKey": "Groq API-sleutel ophalen",
 		"groqApiKey": "Groq API-sleutel",
+		"getSambaNovaApiKey": "SambaNova API-sleutel ophalen",
+		"sambaNovaApiKey": "SambaNova API-sleutel",
 		"getGeminiApiKey": "Gemini API-sleutel ophalen",
+		"getHuggingFaceApiKey": "Hugging Face API-sleutel ophalen",
+		"huggingFaceApiKey": "Hugging Face API-sleutel",
+		"huggingFaceModelId": "Model ID",
+		"huggingFaceLoading": "Laden...",
+		"huggingFaceModelsCount": "({{count}} modellen)",
+		"huggingFaceSelectModel": "Selecteer een model...",
+		"huggingFaceSearchModels": "Zoek modellen...",
+		"huggingFaceNoModelsFound": "Geen modellen gevonden",
+		"huggingFaceProvider": "Provider",
+		"huggingFaceProviderAuto": "Automatisch",
+		"huggingFaceSelectProvider": "Selecteer een provider...",
+		"huggingFaceSearchProviders": "Zoek providers...",
+		"huggingFaceNoProvidersFound": "Geen providers gevonden",
 		"apiKey": "API-sleutel",
 		"openAiApiKey": "OpenAI API-sleutel",
 		"openAiBaseUrl": "Basis-URL",
@@ -265,6 +302,7 @@
 		"litellmBaseUrl": "LiteLLM basis-URL",
 		"awsCredentials": "AWS-inloggegevens",
 		"awsProfile": "AWS-profiel",
+		"awsApiKey": "Amazon Bedrock API-sleutel",
 		"awsProfileName": "AWS-profielnaam",
 		"awsAccessKey": "AWS-toegangssleutel",
 		"awsSecretKey": "AWS-geheime sleutel",
@@ -281,6 +319,17 @@
 		"cacheUsageNote": "Let op: als je geen cachegebruik ziet, probeer dan een ander model te selecteren en vervolgens weer je gewenste model.",
 		"vscodeLmModel": "Taalmodel",
 		"vscodeLmWarning": "Let op: dit is een zeer experimentele integratie en ondersteuning door providers kan variëren. Krijg je een foutmelding dat een model niet wordt ondersteund, dan ligt dat aan de provider.",
+		"geminiParameters": {
+			"urlContext": {
+				"title": "URL-context inschakelen",
+				"description": "Staat Gemini toe om URL's te openen en te verwerken voor extra context bij het genereren van antwoorden. Handig voor taken die webinhoudsanalyse vereisen."
+			},
+			"groundingSearch": {
+				"title": "Grounding met Google-zoekopdracht inschakelen",
+				"description": "Staat Gemini toe om Google te doorzoeken voor actuele informatie en antwoorden op realtime gegevens te baseren. Handig voor vragen die actuele informatie vereisen."
+			}
+		},
+
 		"googleCloudSetup": {
 			"title": "Om Google Cloud Vertex AI te gebruiken, moet je:",
 			"step1": "1. Maak een Google Cloud-account aan, schakel de Vertex AI API in en activeer de gewenste Claude-modellen.",
@@ -372,6 +421,12 @@
 			"label": "Snelheidslimiet",
 			"description": "Minimale tijd tussen API-verzoeken."
 		},
+		"consecutiveMistakeLimit": {
+			"label": "Fout- & Herhalingslimiet",
+			"description": "Aantal opeenvolgende fouten of herhaalde acties voordat het dialoogvenster 'Kilo Code ondervindt problemen' wordt weergegeven",
+			"unlimitedDescription": "Onbeperkt aantal nieuwe pogingen ingeschakeld (automatisch doorgaan). Het dialoogvenster zal nooit verschijnen.",
+			"warning": "⚠️ Instellen op 0 staat onbeperkte nieuwe pogingen toe, wat aanzienlijk API-gebruik kan verbruiken"
+		},
 		"reasoningEffort": {
 			"label": "Model redeneervermogen",
 			"high": "Hoog",
@@ -382,7 +437,9 @@
 		"claudeCode": {
 			"pathLabel": "Claude Code Pad",
 			"description": "Optioneel pad naar uw Claude Code CLI. Standaard 'claude' als niet ingesteld.",
-			"placeholder": "Standaard: claude"
+			"placeholder": "Standaard: claude",
+			"maxTokensLabel": "Max Output Tokens",
+			"maxTokensDescription": "Maximaal aantal output-tokens voor Claude Code-reacties. Standaard is 8000."
 		},
 		"geminiCli": {
 			"description": "Deze provider gebruikt OAuth-authenticatie van de Gemini CLI-tool en vereist geen API-sleutels.",
@@ -490,6 +547,33 @@
 			"label": "Limiet gelijktijdige bestandslezingen",
 			"description": "Maximum aantal bestanden dat de 'read_file' tool tegelijkertijd kan verwerken. Hogere waarden kunnen het lezen van meerdere kleine bestanden versnellen maar verhogen het geheugengebruik."
 		},
+		"maxImageFileSize": {
+			"label": "Maximum afbeeldingsbestandsgrootte",
+			"mb": "MB",
+			"description": "Maximale grootte (in MB) voor afbeeldingsbestanden die kunnen worden verwerkt door de read file tool."
+		},
+		"maxTotalImageSize": {
+			"label": "Maximale totale afbeeldingsgrootte",
+			"mb": "MB",
+			"description": "Maximale cumulatieve groottelimiet (in MB) voor alle afbeeldingen die in één read_file-bewerking worden verwerkt. Bij het lezen van meerdere afbeeldingen wordt de grootte van elke afbeelding bij het totaal opgeteld. Als het toevoegen van een andere afbeelding deze limiet zou overschrijden, wordt deze overgeslagen."
+		},
+		"diagnostics": {
+			"includeMessages": {
+				"label": "Automatisch diagnostiek opnemen in context",
+				"description": "Indien ingeschakeld, worden diagnostische berichten (fouten) van bewerkte bestanden automatisch opgenomen in de context. Je kunt altijd handmatig alle werkruimte-diagnostiek opnemen met @problems."
+			},
+			"maxMessages": {
+				"label": "Maximale diagnostische berichten",
+				"description": "Maximaal aantal diagnostische berichten dat per bestand moet worden opgenomen. Deze limiet geldt voor zowel automatische opname (wanneer checkbox is ingeschakeld) als handmatige @problems vermeldingen. Hogere waarden bieden meer context maar verhogen het tokengebruik.",
+				"resetTooltip": "Reset naar standaardwaarde (50)",
+				"unlimited": "Onbeperkte diagnostische berichten",
+				"unlimitedLabel": "Onbeperkt"
+			},
+			"delayAfterWrite": {
+				"label": "Vertraging na het schrijven om diagnostiek potentiële problemen te laten detecteren",
+				"description": "Wachttijd na het schrijven van bestanden voordat u doorgaat, zodat diagnostische hulpmiddelen wijzigingen kunnen verwerken en problemen kunnen detecteren."
+			}
+		},
 		"condensingThreshold": {
 			"label": "Compressie trigger drempelwaarde",
 			"selectProfile": "Drempelwaarde voor profiel configureren",
@@ -512,6 +596,10 @@
 		"outputLineLimit": {
 			"label": "Terminaluitvoerlimiet",
 			"description": "Maximaal aantal regels dat wordt opgenomen in de terminaluitvoer bij het uitvoeren van commando's. Overtollige regels worden uit het midden verwijderd om tokens te besparen. <0>Meer informatie</0>"
+		},
+		"outputCharacterLimit": {
+			"label": "Tekenlimiet terminal",
+			"description": "Maximaal aantal tekens dat moet worden opgenomen in de terminaluitvoer bij het uitvoeren van commando's. Deze limiet heeft voorrang op de regellimiet om geheugenproblemen door extreem lange regels te voorkomen. Bij overschrijding wordt de uitvoer afgekapt. <0>Meer informatie</0>"
 		},
 		"shellIntegrationTimeout": {
 			"label": "Terminal shell-integratie timeout",
@@ -554,6 +642,9 @@
 			"description": "Indien ingeschakeld, neemt de terminal omgevingsvariabelen over van het bovenliggende VSCode-proces, zoals shell-integratie-instellingen uit het gebruikersprofiel. Dit schakelt direct de VSCode-instelling `terminal.integrated.inheritEnv` om. <0>Meer informatie</0>"
 		}
 	},
+	"advancedSettings": {
+		"title": "Geavanceerde instellingen"
+	},
 	"advanced": {
 		"diff": {
 			"label": "Bewerken via diffs inschakelen",
@@ -575,6 +666,10 @@
 				"label": "Matchnauwkeurigheid",
 				"description": "Deze schuifregelaar bepaalt hoe nauwkeurig codeblokken moeten overeenkomen bij het toepassen van diffs. Lagere waarden laten flexibelere matching toe maar verhogen het risico op verkeerde vervangingen. Gebruik waarden onder 100% met uiterste voorzichtigheid."
 			}
+		},
+		"todoList": {
+			"label": "Takenlijst-tool inschakelen",
+			"description": "Wanneer ingeschakeld, kan Kilo Code takenlijsten maken en beheren om de voortgang van taken bij te houden. Dit helpt complexe taken te organiseren in beheersbare stappen."
 		}
 	},
 	"experimental": {
@@ -594,10 +689,6 @@
 			"name": "Experimentele 'power steering'-modus gebruiken",
 			"description": "Indien ingeschakeld, herinnert Kilo Code het model vaker aan de details van de huidige modusdefinitie. Dit leidt tot sterkere naleving van roldefinities en aangepaste instructies, maar gebruikt meer tokens per bericht."
 		},
-		"AUTOCOMPLETE": {
-			"name": "Gebruik experimentele \"automatisch aanvullen\"-functie",
-			"description": "Indien ingeschakeld, zal Kilo Code inline codesuggesties geven terwijl je typt."
-		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Experimentele multi-block diff-tool gebruiken",
 			"description": "Indien ingeschakeld, gebruikt Kilo Code de multi-block diff-tool. Hiermee wordt geprobeerd meerdere codeblokken in het bestand in één verzoek bij te werken."
@@ -613,6 +704,21 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Gelijktijdige bestandsbewerkingen inschakelen",
 			"description": "Wanneer ingeschakeld, kan Kilo Code meerdere bestanden in één verzoek bewerken. Wanneer uitgeschakeld, moet Kilo Code bestanden één voor één bewerken. Het uitschakelen hiervan kan helpen wanneer je werkt met minder capabele modellen of wanneer je meer controle wilt over bestandswijzigingen."
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "Morph Fast Apply inschakelen",
+			"description": "Wanneer ingeschakeld, kan Kilo Code bestanden bewerken met Morph Fast Apply.",
+			"apiKey": "Morph API-sleutel (optioneel)",
+			"placeholder": "Voer je Morph API-sleutel in (optioneel)",
+			"warning": "Als je geen Morph API-sleutel configureert, kun je Fast Apply nog steeds gebruiken met Kilo Code of OpenRouter. Je account wordt gefactureerd voor modelgebruik, dit wordt momenteel niet weergegeven in de extensie-UI."
+		},
+		"INLINE_ASSIST": {
+			"name": "Inline Ondersteuning",
+			"description": "Schakel Inline Assist-functies in voor snelle codevoorstellen en verbeteringen direct in uw editor. Bevat Quick Inline Task (Cmd+I) voor gerichte wijzigingen en Auto Inline Task voor contextuele verbeteringen."
+		},
+		"PREVENT_FOCUS_DISRUPTION": {
+			"name": "Achtergrondbewerking",
+			"description": "Voorkomt editor focus verstoring wanneer ingeschakeld. Bestandsbewerkingen gebeuren op de achtergrond zonder diff-weergaven te openen of focus te stelen. Je kunt ononderbroken doorwerken terwijl Roo wijzigingen aanbrengt. Bestanden kunnen zonder focus worden geopend om diagnostiek vast te leggen of volledig gesloten blijven."
 		}
 	},
 	"promptCaching": {
@@ -648,7 +754,7 @@
 		}
 	},
 	"modelPicker": {
-		"automaticFetch": "De extensie haalt automatisch de nieuwste lijst met modellen op van <serviceLink>{{serviceName}}</serviceLink>. Weet je niet welk model je moet kiezen? Kilo Code werkt het beste met <defaultModelLink>{{defaultModelId}}</defaultModelLink>. Je kunt ook zoeken op 'free' voor gratis opties die nu beschikbaar zijn.",
+		"automaticFetch": "De extensie haalt automatisch de nieuwste lijst met modellen op van <serviceLink>{{serviceName}}</serviceLink>. Weet je niet welk model je moet kiezen? Kilo Code werkt het beste met <defaultModelLink>{{defaultModelId}}</defaultModelLink>.",
 		"label": "Model",
 		"searchPlaceholder": "Zoeken",
 		"noMatchFound": "Geen overeenkomsten gevonden",
@@ -727,5 +833,8 @@
 		}
 	},
 	"includeMaxOutputTokens": "Maximale output tokens opnemen",
-	"includeMaxOutputTokensDescription": "Stuur maximale output tokens parameter in API-verzoeken. Sommige providers ondersteunen dit mogelijk niet."
+	"includeMaxOutputTokensDescription": "Stuur maximale output tokens parameter in API-verzoeken. Sommige providers ondersteunen dit mogelijk niet.",
+	"limitMaxTokensDescription": "Beperk het maximale aantal tokens in het antwoord",
+	"maxOutputTokensLabel": "Maximale output tokens",
+	"maxTokensGenerateDescription": "Maximale tokens om te genereren in het antwoord"
 }

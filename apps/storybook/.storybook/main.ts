@@ -1,7 +1,10 @@
+import { createRequire } from "node:module"
 import type { StorybookConfig } from "@storybook/react-vite"
-import { resolve, dirname } from "path"
+import { resolve, dirname, join } from "path"
 import { readFileSync } from "fs"
 import { fileURLToPath } from "url"
+
+const require = createRequire(import.meta.url)
 
 // Read and parse the webview-ui tsconfig.json to get path mappings
 const currentDirname = dirname(fileURLToPath(import.meta.url))
@@ -26,11 +29,15 @@ const createAliasesFromTsConfig = () => {
 	return aliases
 }
 
+function getAbsolutePath(value: string): any {
+	return dirname(require.resolve(join(value, "package.json")))
+}
+
 const config: StorybookConfig = {
 	stories: ["../stories/**/*.stories.@(js|jsx|mjs|ts|tsx)"],
-	addons: ["@storybook/addon-links", "@storybook/addon-essentials", "@storybook/addon-interactions"],
+	addons: [getAbsolutePath("@storybook/addon-links"), getAbsolutePath("@storybook/addon-docs")],
 	framework: {
-		name: "@storybook/react-vite",
+		name: getAbsolutePath("@storybook/react-vite"),
 		options: {},
 	},
 	viteFinal: async (config) => {

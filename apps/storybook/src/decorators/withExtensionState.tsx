@@ -1,4 +1,4 @@
-import type { Decorator } from "@storybook/react"
+import type { Decorator } from "@storybook/react-vite"
 import { ExtensionStateContext } from "../../../../webview-ui/src/context/ExtensionStateContext"
 import { createExtensionStateMock } from "../utils/createExtensionStateMock"
 

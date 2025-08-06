@@ -1,11 +1,12 @@
 import { ApiHandlerOptions, ModelRecord } from "../../shared/api"
-import { OpenRouterHandler } from "./openrouter"
+import { CompletionUsage, OpenRouterHandler } from "./openrouter"
 import { getModelParams } from "../transform/model-params"
 import { getModels } from "./fetchers/modelCache"
-import { DEEP_SEEK_DEFAULT_TEMPERATURE } from "@roo-code/types"
+import { DEEP_SEEK_DEFAULT_TEMPERATURE, kilocodeDefaultModelId } from "@roo-code/types"
 import { getKiloBaseUriFromToken } from "../../utils/kilocode-token"
 import { ApiHandlerCreateMessageMetadata } from ".."
 import OpenAI from "openai"
+import { getModelEndpoints } from "./fetchers/modelEndpointCache"
 
 /**
  * A custom OpenRouter handler that overrides the getModel function
@@ -35,12 +36,20 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 			: undefined
 	}
 
+	override getTotalCost(lastUsage: CompletionUsage): number {
+		// https://github.com/Kilo-Org/kilocode-backend/blob/eb3d382df1e933a089eea95b9c4387db0c676e35/src/lib/processUsage.ts#L281
+		if (lastUsage.is_byok) {
+			return lastUsage.cost_details?.upstream_inference_cost || 0
+		}
+		return lastUsage.cost || 0
+	}
+
 	override getModel() {
 		let id
 		let info
 		let defaultTemperature = 0
 
-		const selectedModel = this.options.kilocodeModel ?? "gemini25"
+		const selectedModel = this.options.kilocodeModel ?? kilocodeDefaultModelId
 
 		// Map the selected model to the corresponding OpenRouter model ID
 		// legacy mapping
@@ -65,6 +74,11 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 			throw new Error(`Unsupported model: ${selectedModel}`)
 		}
 
+		// If a specific provider is requested, use the endpoint for that provider.
+		if (this.options.openRouterSpecificProvider && this.endpoints[this.options.openRouterSpecificProvider]) {
+			info = this.endpoints[this.options.openRouterSpecificProvider]
+		}
+
 		const isDeepSeekR1 = id.startsWith("deepseek/deepseek-r1") || id === "perplexity/sonar-reasoning"
 
 		const params = getModelParams({
@@ -82,10 +96,21 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 		if (!this.options.kilocodeToken || !this.options.openRouterBaseUrl) {
 			throw new Error("KiloCode token + baseUrl is required to fetch models")
 		}
-		this.models = await getModels({
-			provider: "kilocode-openrouter",
-			kilocodeToken: this.options.kilocodeToken,
-		})
+
+		const [models, endpoints] = await Promise.all([
+			getModels({
+				provider: "kilocode-openrouter",
+				kilocodeToken: this.options.kilocodeToken,
+			}),
+			getModelEndpoints({
+				router: "openrouter",
+				modelId: this.options.kilocodeModel,
+				endpoint: this.options.openRouterSpecificProvider,
+			}),
+		])
+
+		this.models = models
+		this.endpoints = endpoints
 		return this.getModel()
 	}
 }

@@ -90,12 +90,23 @@
 			"useCurrentConfig": "Şu anda seçili API yapılandırmasını kullan",
 			"testPromptPlaceholder": "Geliştirmeyi test etmek için bir prompt girin",
 			"previewButton": "Prompt geliştirmesini önizle",
-			"testEnhancement": "Geliştirmeyi test et"
+			"testEnhancement": "Geliştirmeyi test et",
+			"includeTaskHistory": "Görev geçmişini bağlam olarak dahil et",
+			"includeTaskHistoryDescription": "Etkinleştirildiğinde, mevcut konuşmanın son 10 mesajı promptları geliştirirken bağlam olarak dahil edilecek ve daha alakalı ve bağlam farkında öneriler üretmeye yardımcı olacaktır."
+		},
+		"condense": {
+			"apiConfiguration": "Bağlam Yoğunlaştırma için API Yapılandırması",
+			"apiConfigDescription": "Bağlam yoğunlaştırma işlemleri için hangi API yapılandırmasının kullanılacağını seçin. Geçerli etkin yapılandırmayı kullanmak için seçilmemiş bırakın.",
+			"useCurrentConfig": "Şu anda seçili olan API yapılandırmasını kullan"
 		},
 		"types": {
 			"ENHANCE": {
 				"label": "Promptu Geliştir",
 				"description": "Girdileriniz için özel öneriler veya iyileştirmeler almak için prompt geliştirmeyi kullanın. Bu, Kilo Code'nun niyetinizi anlamasını ve mümkün olan en iyi yanıtları sağlamasını garanti eder. Sohbetteki ✨ simgesi aracılığıyla kullanılabilir."
+			},
+			"CONDENSE": {
+				"label": "Bağlam Yoğunlaştırma",
+				"description": "Jeton sınırlarını yönetmek için konuşma bağlamının nasıl yoğunlaştırılacağını yapılandırın. Bu istem, hem manuel hem de otomatik bağlam yoğunlaştırma işlemleri için kullanılır."
 			},
 			"EXPLAIN": {
 				"label": "Kodu Açıkla",
@@ -124,6 +135,10 @@
 			"TERMINAL_EXPLAIN": {
 				"label": "Terminal Komutunu Açıkla",
 				"description": "Terminal komutları ve çıktıları hakkında ayrıntılı açıklamalar alın. Terminal bağlam menüsünde (seçili terminal içeriğine sağ tıklayın) kullanılabilir."
+			},
+			"TERMINAL_GENERATE": {
+				"label": "Terminal komutu oluştur",
+				"description": "Açıklamaya dayalı terminal komutları oluşturma konusunda yardım alın."
 			},
 			"NEW_TASK": {
 				"label": "Yeni Görev Başlat",

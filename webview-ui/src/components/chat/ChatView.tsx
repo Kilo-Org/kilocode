@@ -3,12 +3,12 @@ import { useDeepCompareEffect, useEvent, useMount } from "react-use"
 import debounce from "debounce"
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso"
 import removeMd from "remove-markdown"
-import { Trans } from "react-i18next"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import useSound from "use-sound"
 import { LRUCache } from "lru-cache"
 
 import { useDebounceEffect } from "@src/utils/useDebounceEffect"
+import { appendImages } from "@src/utils/imageUtils"
 
 import type { ClineAsk, ClineMessage } from "@roo-code/types"
 
@@ -24,12 +24,22 @@ import { getAllModes } from "@roo/modes"
 import { ProfileValidator } from "@roo/ProfileValidator"
 
 import { vscode } from "@src/utils/vscode"
-import { validateCommand } from "@src/utils/command-validation"
-import { buildDocLink } from "@src/utils/docLinks"
+import {
+	getCommandDecision,
+	CommandDecision,
+	findLongestPrefixMatch,
+	parseCommand,
+} from "@src/utils/command-validation"
+import { Trans, useTranslation } from "react-i18next"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { useSelectedModel } from "@src/components/ui/hooks/useSelectedModel"
+// import RooHero from "@src/components/welcome/RooHero" // kilocode_change: unused
+// import RooTips from "@src/components/welcome/RooTips" // kilocode_change: unused
+// import RooCloudCTA from "@src/components/welcome/RooCloudCTA" // kilocode_change: unused
 import { StandardTooltip } from "@src/components/ui"
+import { useAutoApprovalState } from "@src/hooks/useAutoApprovalState"
+import { useAutoApprovalToggles } from "@src/hooks/useAutoApprovalToggles"
 
 import TelemetryBanner from "../common/TelemetryBanner" // kilocode_change: deactivated for now
 // import VersionIndicator from "../common/VersionIndicator" // kilocode_change: unused
@@ -47,7 +57,11 @@ import { showSystemNotification } from "@/kilocode/helpers" // kilocode_change
 // import ProfileViolationWarning from "./ProfileViolationWarning" kilocode_change: unused
 import { CheckpointWarning } from "./CheckpointWarning"
 import { IdeaSuggestionsBox } from "../kilocode/chat/IdeaSuggestionsBox" // kilocode_change
+import { KilocodeNotifications } from "../kilocode/KilocodeNotifications" // kilocode_change
+import QueuedMessages from "./QueuedMessages"
 import { getLatestTodo } from "@roo/todo"
+import { QueuedMessage } from "@roo-code/types"
+import { buildDocLink } from "@/utils/docLinks"
 
 export interface ChatViewProps {
 	isHidden: boolean
@@ -74,7 +88,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		return w.AUDIO_BASE_URI || ""
 	})
 	const { t } = useAppTranslation()
-	const modeShortcutText = `${isMac ? "⌘" : "Ctrl"} + . ${t("chat:forNextMode")}`
+	const { t: tSettings } = useTranslation("settings")
+	const modeShortcutText = `${isMac ? "⌘" : "Ctrl"} + . ${t("chat:forNextMode")}, ${isMac ? "⌘" : "Ctrl"} + Shift + . ${t("chat:forPreviousMode")}`
 	const {
 		clineMessages: messages,
 		currentTaskItem,
@@ -91,6 +106,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		alwaysAllowExecute,
 		alwaysAllowMcp,
 		allowedCommands,
+		deniedCommands,
 		writeDelayMs,
 		followupAutoApproveTimeoutMs,
 		mode,
@@ -107,6 +123,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		historyPreviewCollapsed, // Added historyPreviewCollapsed
 		soundEnabled,
 		soundVolume,
+		// cloudIsAuthenticated, // kilocode_change
 	} = useExtensionState()
 
 	const messagesRef = useRef(messages)
@@ -146,6 +163,10 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const textAreaRef = useRef<HTMLTextAreaElement>(null)
 	const [sendingDisabled, setSendingDisabled] = useState(false)
 	const [selectedImages, setSelectedImages] = useState<string[]>([])
+	const [messageQueue, setMessageQueue] = useState<QueuedMessage[]>([])
+	const isProcessingQueueRef = useRef(false)
+	const retryCountRef = useRef<Map<string, number>>(new Map())
+	const MAX_RETRY_ATTEMPTS = 3
 
 	// we need to hold on to the ask because useEffect > lastMessage will always let us know when an ask comes in and handle it, but by the time handleMessage is called, the last message might not be the ask anymore (it could be a say that followed)
 	const [clineAsk, setClineAsk] = useState<ClineAsk | undefined>(undefined)
@@ -452,6 +473,11 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		}
 		// Reset user response flag for new task
 		userRespondedRef.current = false
+
+		// Clear message queue when starting a new task
+		setMessageQueue([])
+		// Clear retry counts
+		retryCountRef.current.clear()
 	}, [task?.ts])
 
 	useEffect(() => {
@@ -551,57 +577,150 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		disableAutoScrollRef.current = false
 	}, [])
 
+	/**
+	 * Handles sending messages to the extension
+	 * @param text - The message text to send
+	 * @param images - Array of image data URLs to send with the message
+	 * @param fromQueue - Internal flag indicating if this message is being sent from the queue (prevents re-queueing)
+	 */
 	const handleSendMessage = useCallback(
-		(text: string, images: string[]) => {
-			text = text.trim()
+		(text: string, images: string[], fromQueue = false) => {
+			try {
+				text = text.trim()
 
-			if (text || images.length > 0) {
-				// Mark that user has responded - this prevents any pending auto-approvals
-				userRespondedRef.current = true
+				if (text || images.length > 0) {
+					if (sendingDisabled && !fromQueue) {
+						// Generate a more unique ID using timestamp + random component
+						const messageId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+						setMessageQueue((prev) => [...prev, { id: messageId, text, images }])
+						setInputValue("")
+						setSelectedImages([])
+						return
+					}
+					// Mark that user has responded - this prevents any pending auto-approvals
+					userRespondedRef.current = true
 
-				if (messagesRef.current.length === 0) {
-					vscode.postMessage({ type: "newTask", text, images })
-				} else if (clineAskRef.current) {
-					if (clineAskRef.current === "followup") {
-						markFollowUpAsAnswered()
+					if (messagesRef.current.length === 0) {
+						vscode.postMessage({ type: "newTask", text, images })
+					} else if (clineAskRef.current) {
+						if (clineAskRef.current === "followup") {
+							markFollowUpAsAnswered()
+						}
+
+						// Use clineAskRef.current
+						switch (
+							clineAskRef.current // Use clineAskRef.current
+						) {
+							case "followup":
+							case "tool":
+							case "browser_action_launch":
+							case "command": // User can provide feedback to a tool or command use.
+							case "command_output": // User can send input to command stdin.
+							case "use_mcp_server":
+							case "completion_result": // If this happens then the user has feedback for the completion result.
+							case "resume_task":
+							case "resume_completed_task":
+							case "mistake_limit_reached":
+								vscode.postMessage({
+									type: "askResponse",
+									askResponse: "messageResponse",
+									text,
+									images,
+								})
+								break
+							// kilocode_change start
+							case "report_bug":
+								vscode.postMessage({
+									type: "askResponse",
+									askResponse: "messageResponse",
+									text,
+									images,
+								})
+								break
+							case "condense":
+								vscode.postMessage({
+									type: "askResponse",
+									askResponse: "messageResponse",
+									text,
+									images,
+								})
+								break
+							// kilocode_change end
+							// There is no other case that a textfield should be enabled.
+						}
+					} else {
+						// This is a new message in an ongoing task.
+						vscode.postMessage({ type: "askResponse", askResponse: "messageResponse", text, images })
 					}
 
-					// Use clineAskRef.current
-					switch (
-						clineAskRef.current // Use clineAskRef.current
-					) {
-						case "followup":
-						case "tool":
-						case "browser_action_launch":
-						case "command": // User can provide feedback to a tool or command use.
-						case "command_output": // User can send input to command stdin.
-						case "use_mcp_server":
-						case "completion_result": // If this happens then the user has feedback for the completion result.
-						case "resume_task":
-						case "resume_completed_task":
-						case "mistake_limit_reached":
-						case "report_bug":
-							vscode.postMessage({ type: "askResponse", askResponse: "messageResponse", text, images })
-							break
-						// kilocode_change start
-						case "condense":
-							vscode.postMessage({
-								type: "askResponse",
-								askResponse: "messageResponse",
-								text,
-								images,
-							})
-							break
-						// kilocode_change end
-						// There is no other case that a textfield should be enabled.
-					}
+					handleChatReset()
 				}
-
-				handleChatReset()
+			} catch (error) {
+				console.error("Error in handleSendMessage:", error)
+				// If this was a queued message, we should handle it differently
+				if (fromQueue) {
+					throw error // Re-throw to be caught by the queue processor
+				}
+				// For direct sends, we could show an error to the user
+				// but for now we'll just log it
 			}
 		},
-		[handleChatReset, markFollowUpAsAnswered], // messagesRef and clineAskRef are stable
+		[handleChatReset, markFollowUpAsAnswered, sendingDisabled], // messagesRef and clineAskRef are stable
 	)
+
+	useEffect(() => {
+		// Early return if conditions aren't met
+		// Also don't process queue if there's an API error (clineAsk === "api_req_failed")
+		if (
+			sendingDisabled ||
+			messageQueue.length === 0 ||
+			isProcessingQueueRef.current ||
+			clineAsk !== "completion_result"
+		) {
+			return
+		}
+
+		// Mark as processing immediately to prevent race conditions
+		isProcessingQueueRef.current = true
+
+		// Process the first message in the queue
+		const [nextMessage, ...remaining] = messageQueue
+
+		// Update queue immediately to prevent duplicate processing
+		setMessageQueue(remaining)
+
+		// Process the message
+		Promise.resolve()
+			.then(() => {
+				handleSendMessage(nextMessage.text, nextMessage.images, true)
+				// Clear retry count on success
+				retryCountRef.current.delete(nextMessage.id)
+			})
+			.catch((error) => {
+				console.error("Failed to send queued message:", error)
+
+				// Get current retry count
+				const retryCount = retryCountRef.current.get(nextMessage.id) || 0
+
+				// Only re-add if under retry limit
+				if (retryCount < MAX_RETRY_ATTEMPTS) {
+					retryCountRef.current.set(nextMessage.id, retryCount + 1)
+					// Re-add the message to the end of the queue
+					setMessageQueue((current) => [...current, nextMessage])
+				} else {
+					console.error(`Message ${nextMessage.id} failed after ${MAX_RETRY_ATTEMPTS} attempts, discarding`)
+					retryCountRef.current.delete(nextMessage.id)
+				}
+			})
+			.finally(() => {
+				isProcessingQueueRef.current = false
+			})
+
+		// Cleanup function to handle component unmount
+		return () => {
+			isProcessingQueueRef.current = false
+		}
+	}, [sendingDisabled, messageQueue, handleSendMessage, clineAsk])
 
 	const handleSetChatBoxMessage = useCallback(
 		(text: string, images: string[]) => {
@@ -617,6 +736,18 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		},
 		[inputValue, selectedImages],
 	)
+
+	// Cleanup retry count map on unmount
+	useEffect(() => {
+		// Store refs in variables to avoid stale closure issues
+		const retryCountMap = retryCountRef.current
+		const isProcessingRef = isProcessingQueueRef
+
+		return () => {
+			retryCountMap.clear()
+			isProcessingRef.current = false
+		}
+	}, [])
 
 	const startNewTask = useCallback(() => vscode.postMessage({ type: "clearTask" }), [])
 
@@ -647,12 +778,12 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							text: trimmedInput,
 							images: images,
 						})
+						// Clear input state after sending
+						setInputValue("")
+						setSelectedImages([])
 					} else {
 						vscode.postMessage({ type: "askResponse", askResponse: "yesButtonClicked" })
 					}
-					// Clear input state after sending
-					setInputValue("")
-					setSelectedImages([])
 					break
 				case "completion_result":
 				case "resume_completed_task":
@@ -710,13 +841,13 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							text: trimmedInput,
 							images: images,
 						})
+						// Clear input state after sending
+						setInputValue("")
+						setSelectedImages([])
 					} else {
 						// Responds to the API with a "This operation failed" and lets it try again
 						vscode.postMessage({ type: "askResponse", askResponse: "noButtonClicked" })
 					}
-					// Clear input state after sending
-					setInputValue("")
-					setSelectedImages([])
 					break
 				case "command_output":
 					vscode.postMessage({ type: "terminalOperation", terminalOperation: "abort" })
@@ -735,8 +866,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 	const selectImages = useCallback(() => vscode.postMessage({ type: "selectImages" }), [])
 
-	const shouldDisableImages =
-		!model?.supportsImages || sendingDisabled || selectedImages.length >= MAX_IMAGES_PER_MESSAGE
+	const shouldDisableImages = !model?.supportsImages || selectedImages.length >= MAX_IMAGES_PER_MESSAGE
 
 	const handleMessage = useCallback(
 		(e: MessageEvent) => {
@@ -750,13 +880,17 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 								textAreaRef.current?.focus()
 							}
 							break
+						case "focusInput":
+							textAreaRef.current?.focus()
+							break
 					}
 					break
 				case "selectedImages":
-					const newImages = message.images ?? []
-					if (newImages.length > 0) {
+					// Only handle selectedImages if it's not for editing context
+					// When context is "edit", ChatRow will handle the images
+					if (message.context !== "edit") {
 						setSelectedImages((prevImages) =>
-							[...prevImages, ...newImages].slice(0, MAX_IMAGES_PER_MESSAGE),
+							appendImages(prevImages, message.images, MAX_IMAGES_PER_MESSAGE),
 						)
 					}
 					break
@@ -949,13 +1083,22 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		[mcpServers],
 	)
 
-	// Check if a command message is allowed.
+	// Get the command decision using unified validation logic
+	const getCommandDecisionForMessage = useCallback(
+		(message: ClineMessage | undefined): CommandDecision => {
+			if (message?.type !== "ask") return "ask_user"
+			return getCommandDecision(message.text || "", allowedCommands || [], deniedCommands || [])
+		},
+		[allowedCommands, deniedCommands],
+	)
+
+	// Check if a command message should be auto-approved.
 	const isAllowedCommand = useCallback(
 		(message: ClineMessage | undefined): boolean => {
-			if (message?.type !== "ask") return false
 			// kilocode_change start wrap in try/catch
+			if (message?.type !== "ask") return false
 			try {
-				return validateCommand(message.text || "", allowedCommands || [])
+				return getCommandDecisionForMessage(message) === "auto_approve"
 			} catch (e) {
 				// shell-quote sometimes throws a "Bad substitution" error
 				console.error("Cannot validate command, auto-approve denied.", e)
@@ -963,12 +1106,49 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			}
 			// kilocode_change end
 		},
-		[allowedCommands],
+		[getCommandDecisionForMessage],
 	)
+
+	// Check if a command message should be auto-denied.
+	const isDeniedCommand = useCallback(
+		(message: ClineMessage | undefined): boolean => {
+			return getCommandDecisionForMessage(message) === "auto_deny"
+		},
+		[getCommandDecisionForMessage],
+	)
+
+	// Helper function to get the denied prefix for a command
+	const getDeniedPrefix = useCallback(
+		(command: string): string | null => {
+			if (!command || !deniedCommands?.length) return null
+
+			// Parse the command into sub-commands and check each one
+			const subCommands = parseCommand(command)
+			for (const cmd of subCommands) {
+				const deniedMatch = findLongestPrefixMatch(cmd, deniedCommands)
+				if (deniedMatch) {
+					return deniedMatch
+				}
+			}
+			return null
+		},
+		[deniedCommands],
+	)
+
+	// Create toggles object for useAutoApprovalState hook
+	const autoApprovalToggles = useAutoApprovalToggles()
+
+	const { hasEnabledOptions } = useAutoApprovalState(autoApprovalToggles, autoApprovalEnabled)
 
 	const isAutoApproved = useCallback(
 		(message: ClineMessage | undefined) => {
+			// First check if auto-approval is enabled AND we have at least one permission
 			if (!autoApprovalEnabled || !message || message.type !== "ask") {
+				return false
+			}
+
+			// Use the hook's result instead of duplicating the logic
+			if (!hasEnabledOptions) {
 				return false
 			}
 
@@ -1045,6 +1225,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		},
 		[
 			autoApprovalEnabled,
+			hasEnabledOptions,
 			alwaysAllowBrowser,
 			alwaysAllowReadOnly,
 			alwaysAllowReadOnlyOutsideWorkspace,
@@ -1124,6 +1305,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		}
 
 		visibleMessages.forEach((message) => {
+			// kilocode_change start: upstream pr https://github.com/RooCodeInc/Roo-Code/pull/5452
 			// Special handling for browser_action_result - ensure it's always in a browser session
 			if (message.say === "browser_action_result" && !isInBrowserSession) {
 				isInBrowserSession = true
@@ -1135,6 +1317,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				isInBrowserSession = true
 				currentGroup = []
 			}
+			// kilocode_change end
 
 			if (message.ask === "browser_action_launch") {
 				// Complete existing browser session if any.
@@ -1165,6 +1348,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 				if (isBrowserSessionMessage(message)) {
 					currentGroup.push(message)
+
+					// kilocode_change start: upstream pr https://github.com/RooCodeInc/Roo-Code/pull/5452
 					if (message.say === "browser_action_result") {
 						// Check if the previous browser_action was a close action
 						const lastBrowserAction = [...currentGroup].reverse().find((m) => m.say === "browser_action")
@@ -1175,6 +1360,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							}
 						}
 					}
+					// kilocode_change end
 				} else {
 					// complete existing browser session if any
 					endBrowserSession()
@@ -1472,7 +1658,32 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			return
 		}
 
-		const autoApprove = async () => {
+		const autoApproveOrReject = async () => {
+			// Check for auto-reject first (commands that should be denied)
+			if (lastMessage?.ask === "command" && isDeniedCommand(lastMessage)) {
+				// Get the denied prefix for the localized message
+				const deniedPrefix = getDeniedPrefix(lastMessage.text || "")
+				if (deniedPrefix) {
+					// Create the localized auto-deny message and send it with the rejection
+					const autoDenyMessage = tSettings("autoApprove.execute.autoDenied", { prefix: deniedPrefix })
+
+					vscode.postMessage({
+						type: "askResponse",
+						askResponse: "noButtonClicked",
+						text: autoDenyMessage,
+					})
+				} else {
+					// Auto-reject denied commands immediately if no prefix found
+					vscode.postMessage({ type: "askResponse", askResponse: "noButtonClicked" })
+				}
+
+				setSendingDisabled(true)
+				setClineAsk(undefined)
+				setEnableButtons(false)
+				return
+			}
+
+			// Then check for auto-approve
 			if (lastMessage?.ask && isAutoApproved(lastMessage)) {
 				// Special handling for follow-up questions
 				if (lastMessage.ask === "followup") {
@@ -1522,7 +1733,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				setEnableButtons(false)
 			}
 		}
-		autoApprove()
+		autoApproveOrReject()
 
 		return () => {
 			if (autoApproveTimeoutRef.current) {
@@ -1544,6 +1755,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		alwaysAllowMcp,
 		messages,
 		allowedCommands,
+		deniedCommands,
 		mcpServers,
 		isAutoApproved,
 		lastMessage,
@@ -1551,6 +1763,10 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		isWriteToolAction,
 		alwaysAllowFollowupQuestions,
 		handleSuggestionClickInRow,
+		isAllowedCommand,
+		isDeniedCommand,
+		getDeniedPrefix,
+		tSettings,
 	])
 
 	// Function to handle mode switching
@@ -1562,16 +1778,33 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		switchToMode(allModes[nextModeIndex].slug)
 	}, [mode, customModes, switchToMode])
 
+	// Function to handle switching to previous mode
+	const switchToPreviousMode = useCallback(() => {
+		const allModes = getAllModes(customModes)
+		const currentModeIndex = allModes.findIndex((m) => m.slug === mode)
+		const previousModeIndex = (currentModeIndex - 1 + allModes.length) % allModes.length
+		// Update local state and notify extension to sync mode change
+		switchToMode(allModes[previousModeIndex].slug)
+	}, [mode, customModes, switchToMode])
+
 	// Add keyboard event handler
 	const handleKeyDown = useCallback(
 		(event: KeyboardEvent) => {
-			// Check for Command + . (period)
+			// Check for Command/Ctrl + Period (with or without Shift)
+			// Using event.key to respect keyboard layouts (e.g., Dvorak)
 			if ((event.metaKey || event.ctrlKey) && event.key === ".") {
 				event.preventDefault() // Prevent default browser behavior
-				switchToNextMode()
+
+				if (event.shiftKey) {
+					// Shift + Period = Previous mode
+					switchToPreviousMode()
+				} else {
+					// Just Period = Next mode
+					switchToNextMode()
+				}
 			}
 		},
-		[switchToNextMode],
+		[switchToNextMode, switchToPreviousMode],
 	)
 
 	// Add event listener
@@ -1611,7 +1844,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const areButtonsVisible = showScrollToBottom || primaryButtonText || secondaryButtonText || isStreaming
 
 	return (
-		<div className={isHidden ? "hidden" : "fixed top-0 left-0 right-0 bottom-0 flex flex-col overflow-hidden"}>
+		<div
+			data-testid="chat-view"
+			className={isHidden ? "hidden" : "fixed top-0 left-0 right-0 bottom-0 flex flex-col overflow-hidden"}>
 			{(showAnnouncement || showAnnouncementModal) && (
 				<Announcement
 					hideAnnouncement={() => {
@@ -1672,9 +1907,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							</div>
 						</div>
 					)}
-					<div
-						className={` w-full flex flex-col gap-4 m-auto ${isExpanded && tasks.length > 0 ? "mt-0" : ""} px-3.5 min-[370px]:px-10 pt-5 transition-all duration-300`}>
-						{telemetrySetting === "unset" && <TelemetryBanner />}
+					{/* kilocode_change start: changed the classes to support notifications */}
+					<div className="w-full h-full flex flex-col gap-4 px-3.5 transition-all duration-300">
+						{/* kilocode_change end */}
 						{/* Version indicator in top-right corner - only on welcome screen */}
 						{/* kilocode_change: do not show */}
 						{/* <VersionIndicator
@@ -1683,22 +1918,35 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						/>
 
 						<RooHero /> */}
-						{/* Show the task history preview if expanded and tasks exist */}
-						{taskHistory.length > 0 && isExpanded && <HistoryPreview />}
-						<p className="text-vscode-editor-foreground leading-tight font-vscode-font-family text-center text-balance max-w-[380px] mx-auto">
-							<Trans
-								i18nKey="chat:about"
-								components={{
-									DocsLink: (
-										<a href={buildDocLink("", "welcome")} target="_blank" rel="noopener noreferrer">
-											the docs
-										</a>
-									),
-								}}
-							/>
-						</p>
-						{taskHistory.length === 0 && <IdeaSuggestionsBox />} {/* kilocode_change */}
-						{/* <RooTips cycle={false} /> kilocode_change: do not show */}
+						{telemetrySetting === "unset" && <TelemetryBanner />}
+						{/* kilocode_change start: KilocodeNotifications + Layout fixes */}
+						{telemetrySetting !== "unset" && <KilocodeNotifications />}
+						<div className="flex flex-grow flex-col justify-center gap-4">
+							{/* kilocode_change end */}
+							<p className="text-vscode-editor-foreground leading-tight font-vscode-font-family text-center text-balance max-w-[380px] mx-auto my-0">
+								<Trans
+									i18nKey="chat:about"
+									components={{
+										DocsLink: (
+											<a
+												href={buildDocLink("", "welcome")}
+												target="_blank"
+												rel="noopener noreferrer">
+												the docs
+											</a>
+										),
+									}}
+								/>
+							</p>
+							{taskHistory.length === 0 && <IdeaSuggestionsBox />} {/* kilocode_change */}
+							{/*<div className="mb-2.5">
+								{cloudIsAuthenticated || taskHistory.length < 4 ? <RooTips /> : <RooCloudCTA />}
+							</div> kilocode_change: do not show */}
+							{/* Show the task history preview if expanded and tasks exist */}
+							{taskHistory.length > 0 && isExpanded && <HistoryPreview />}
+							{/* kilocode_change start: KilocodeNotifications + Layout fixes */}
+						</div>
+						{/* kilocode_change end */}
 					</div>
 				</div>
 			)}
@@ -1733,7 +1981,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							key={task.ts} // trick to make sure virtuoso re-renders when task changes, and we use initialTopMostItemIndex to start at the bottom
 							className="scrollable grow overflow-y-scroll mb-1"
 							// increasing top by 3_000 to prevent jumping around when user collapses a row
-							increaseViewportBy={{ top: 3_000, bottom: Number.MAX_SAFE_INTEGER }} // hack to make sure the last message is always rendered to get truly perfect scroll to bottom animation when new messages are added (Number.MAX_SAFE_INTEGER is safe for arithmetic operations, which is all virtuoso uses this value for in src/sizeRangeSystem.ts)
+							increaseViewportBy={{ top: 400, bottom: 400 }} // kilocode_change: use more modest numbers to see if they reduce gray screen incidence
 							data={groupedMessages} // messages is the raw format returned by extension, modifiedMessages is the manipulated structure that combines certain messages of related type, and visibleMessages is the filtered structure that removes messages that should not be rendered
 							itemContent={itemContent}
 							atBottomStateChange={(isAtBottom) => {
@@ -1801,7 +2049,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 												appearance="primary"
 												disabled={!enableButtons}
 												className={secondaryButtonText ? "flex-1 mr-[6px]" : "flex-[2] mr-0"}
-												onClick={() => handlePrimaryButtonClick(inputValue, selectedImages)}>
+												onClick={() => handlePrimaryButtonClick()}>
 												{primaryButtonText}
 											</VSCodeButton>
 										</StandardTooltip>
@@ -1823,7 +2071,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 												appearance="secondary"
 												disabled={!enableButtons && !(isStreaming && !didClickCancel)}
 												className={isStreaming ? "flex-[2] ml-0" : "flex-1 ml-[6px]"}
-												onClick={() => handleSecondaryButtonClick(inputValue, selectedImages)}>
+												onClick={() => handleSecondaryButtonClick()}>
 												{isStreaming ? t("chat:cancel.title") : secondaryButtonText}
 											</VSCodeButton>
 										</StandardTooltip>
@@ -1835,6 +2083,13 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				</>
 			)}
 
+			<QueuedMessages
+				queue={messageQueue}
+				onRemove={(index) => setMessageQueue((prev) => prev.filter((_, i) => i !== index))}
+				onUpdate={(index, newText) => {
+					setMessageQueue((prev) => prev.map((msg, i) => (i === index ? { ...msg, text: newText } : msg)))
+				}}
+			/>
 			<ChatTextArea
 				ref={textAreaRef}
 				inputValue={inputValue}

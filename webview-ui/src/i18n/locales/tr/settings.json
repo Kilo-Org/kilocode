@@ -41,13 +41,16 @@
 		"title": "Kod Tabanı İndeksleme",
 		"enableLabel": "Kod Tabanı İndekslemeyi Etkinleştir",
 		"enableDescription": "Geliştirilmiş arama ve bağlam anlayışı için kod indekslemeyi etkinleştirin",
-		"providerLabel": "Gömme Sağlayıcısı",
-		"selectProviderPlaceholder": "Sağlayıcı seç",
+		"profileLabel": "Gömme Sağlayıcısı",
+		"selectProfilePlaceholder": "Sağlayıcı seç",
 		"openaiProvider": "OpenAI",
 		"ollamaProvider": "Ollama",
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "API Anahtarı:",
 		"geminiApiKeyPlaceholder": "Gemini API anahtarınızı girin",
+		"mistralProvider": "Mistral",
+		"mistralApiKeyLabel": "API Anahtarı:",
+		"mistralApiKeyPlaceholder": "Mistral API anahtarınızı girin",
 		"openaiCompatibleProvider": "OpenAI Uyumlu",
 		"openAiKeyLabel": "OpenAI API Anahtarı",
 		"openAiKeyPlaceholder": "OpenAI API anahtarınızı girin",
@@ -110,6 +113,7 @@
 			"modelIdRequired": "Model kimliği gereklidir",
 			"modelDimensionRequired": "Model boyutu gereklidir",
 			"geminiApiKeyRequired": "Gemini API anahtarı gereklidir",
+			"mistralApiKeyRequired": "Mistral API anahtarı gereklidir",
 			"ollamaBaseUrlRequired": "Ollama temel URL'si gereklidir",
 			"baseUrlRequired": "Temel URL'si gereklidir",
 			"modelDimensionMinValue": "Model boyutu 0'dan büyük olmalıdır"
@@ -124,6 +128,8 @@
 	},
 	"autoApprove": {
 		"description": "Kilo Code'nun onay gerektirmeden otomatik olarak işlemler gerçekleştirmesine izin verin. Bu ayarları yalnızca yapay zekaya tamamen güveniyorsanız ve ilgili güvenlik risklerini anlıyorsanız etkinleştirin.",
+		"toggleAriaLabel": "Otomatik onayı değiştir",
+		"disabledAriaLabel": "Otomatik onay devre dışı - önce seçenekleri belirleyin",
 		"readOnly": {
 			"label": "Okuma",
 			"description": "Etkinleştirildiğinde, Kilo Code otomatik olarak dizin içeriğini görüntüleyecek ve Onayla düğmesine tıklamanıza gerek kalmadan dosyaları okuyacaktır.",
@@ -176,8 +182,12 @@
 			"description": "Onay gerektirmeden otomatik olarak izin verilen terminal komutlarını yürüt",
 			"allowedCommands": "İzin Verilen Otomatik Yürütme Komutları",
 			"allowedCommandsDescription": "\"Yürütme işlemlerini her zaman onayla\" etkinleştirildiğinde otomatik olarak yürütülebilen komut önekleri. Tüm komutlara izin vermek için * ekleyin (dikkatli kullanın).",
+			"deniedCommands": "Reddedilen komutlar",
+			"deniedCommandsDescription": "Onay istenmeden otomatik olarak reddedilecek komut önekleri. İzin verilen komutlarla çakışma durumunda, en uzun önek eşleşmesi öncelik alır. Tüm komutları reddetmek için * ekleyin.",
 			"commandPlaceholder": "Komut öneki girin (örn. 'git ')",
-			"addButton": "Ekle"
+			"deniedCommandPlaceholder": "Reddetmek için komut öneki girin (örn. 'rm -rf')",
+			"addButton": "Ekle",
+			"autoDenied": "`{{prefix}}` önekli komutlar kullanıcı tarafından yasaklandı. Başka bir komut çalıştırarak bu kısıtlamayı aşma."
 		},
 		"showMenu": {
 			"label": "Sohbet görünümünde otomatik onay menüsünü göster",
@@ -191,7 +201,8 @@
 			"title": "Maksimum İstek",
 			"description": "Göreve devam etmek için onay istemeden önce bu sayıda API isteği otomatik olarak yap.",
 			"unlimited": "Sınırsız"
-		}
+		},
+		"selectOptionsFirst": "Otomatik onayı etkinleştirmek için aşağıdan en az bir seçenek seçin"
 	},
 	"providers": {
 		"providerDocumentation": "{{provider}} Dokümantasyonu",
@@ -251,9 +262,35 @@
 		"getChutesApiKey": "Chutes API Anahtarı Al",
 		"deepSeekApiKey": "DeepSeek API Anahtarı",
 		"getDeepSeekApiKey": "DeepSeek API Anahtarı Al",
+		"doubaoApiKey": "Doubao API Anahtarı",
+		"getDoubaoApiKey": "Doubao API Anahtarı Al",
+		"fireworksApiKey": "Fireworks API Anahtarı",
+		"getFireworksApiKey": "Fireworks API Anahtarı Al",
+		"zaiApiKey": "Z.AI API Anahtarı",
+		"getZaiApiKey": "Z.AI API Anahtarı Al",
+		"bigModelApiKey": "BigModel API Anahtarı",
+		"getBigModelApiKey": "BigModel API Anahtarı Al",
+		"moonshotApiKey": "Moonshot API Anahtarı",
+		"getMoonshotApiKey": "Moonshot API Anahtarı Al",
+		"moonshotBaseUrl": "Moonshot Giriş Noktası",
 		"geminiApiKey": "Gemini API Anahtarı",
 		"getGroqApiKey": "Groq API Anahtarı Al",
 		"groqApiKey": "Groq API Anahtarı",
+		"getSambaNovaApiKey": "SambaNova API Anahtarı Al",
+		"sambaNovaApiKey": "SambaNova API Anahtarı",
+		"getHuggingFaceApiKey": "Hugging Face API Anahtarı Al",
+		"huggingFaceApiKey": "Hugging Face API Anahtarı",
+		"huggingFaceModelId": "Model ID",
+		"huggingFaceLoading": "Yükleniyor...",
+		"huggingFaceModelsCount": "({{count}} model)",
+		"huggingFaceSelectModel": "Bir model seç...",
+		"huggingFaceSearchModels": "Modelleri ara...",
+		"huggingFaceNoModelsFound": "Model bulunamadı",
+		"huggingFaceProvider": "Sağlayıcı",
+		"huggingFaceProviderAuto": "Otomatik",
+		"huggingFaceSelectProvider": "Bir sağlayıcı seç...",
+		"huggingFaceSearchProviders": "Sağlayıcıları ara...",
+		"huggingFaceNoProvidersFound": "Sağlayıcı bulunamadı",
 		"getGeminiApiKey": "Gemini API Anahtarı Al",
 		"openAiApiKey": "OpenAI API Anahtarı",
 		"apiKey": "API Anahtarı",
@@ -269,6 +306,7 @@
 		"litellmBaseUrl": "LiteLLM Temel URL",
 		"awsCredentials": "AWS Kimlik Bilgileri",
 		"awsProfile": "AWS Profili",
+		"awsApiKey": "Amazon Bedrock API Anahtarı",
 		"awsProfileName": "AWS Profil Adı",
 		"awsAccessKey": "AWS Erişim Anahtarı",
 		"awsSecretKey": "AWS Gizli Anahtarı",
@@ -285,6 +323,17 @@
 		"cacheUsageNote": "Not: Önbellek kullanımını görmüyorsanız, farklı bir model seçip ardından istediğiniz modeli tekrar seçmeyi deneyin.",
 		"vscodeLmModel": "Dil Modeli",
 		"vscodeLmWarning": "Not: Bu çok deneysel bir entegrasyondur ve sağlayıcı desteği değişebilir. Bir modelin desteklenmediğine dair bir hata alırsanız, bu sağlayıcı tarafındaki bir sorundur.",
+		"geminiParameters": {
+			"urlContext": {
+				"title": "URL bağlamını etkinleştir",
+				"description": "Yanıtlar oluşturulurken ek bağlam için Gemini'nin URL'lere erişmesine ve işlemesine izin verir. Web içeriği analizi gerektiren görevler için faydalıdır."
+			},
+			"groundingSearch": {
+				"title": "Google Aramasıyla Grounding Etkinleştir",
+				"description": "Gemini'nin güncel bilgileri almak için Google'da arama yapmasına ve yanıtları gerçek zamanlı verilere dayandırmasına izin verir. Güncel bilgi gerektiren sorgular için kullanışlıdır."
+			}
+		},
+
 		"googleCloudSetup": {
 			"title": "Google Cloud Vertex AI'yi kullanmak için şunları yapmanız gerekir:",
 			"step1": "1. Google Cloud hesabı oluşturun, Vertex AI API'sini etkinleştirin ve istediğiniz Claude modellerini etkinleştirin.",
@@ -372,6 +421,12 @@
 			"label": "Hız sınırı",
 			"description": "API istekleri arasındaki minimum süre."
 		},
+		"consecutiveMistakeLimit": {
+			"label": "Hata ve Tekrar Limiti",
+			"description": "'Kilo Code sorun yaşıyor' iletişim kutusunu göstermeden önceki ardışık hata veya tekrarlanan eylem sayısı",
+			"unlimitedDescription": "Sınırsız yeniden deneme etkin (otomatik devam et). Diyalog asla görünmeyecek.",
+			"warning": "⚠️ 0'a ayarlamak, önemli API kullanımına neden olabilecek sınırsız yeniden denemeye izin verir"
+		},
 		"reasoningEffort": {
 			"label": "Model Akıl Yürütme Çabası",
 			"high": "Yüksek",
@@ -382,7 +437,9 @@
 		"claudeCode": {
 			"pathLabel": "Claude Code Yolu",
 			"description": "Claude Code CLI'nize isteğe bağlı yol. Ayarlanmazsa varsayılan olarak 'claude' kullanılır.",
-			"placeholder": "Varsayılan: claude"
+			"placeholder": "Varsayılan: claude",
+			"maxTokensLabel": "Maksimum Çıktı Token sayısı",
+			"maxTokensDescription": "Claude Code yanıtları için maksimum çıktı token sayısı. Varsayılan 8000'dir."
 		},
 		"geminiCli": {
 			"description": "Bu sağlayıcı Gemini CLI aracından OAuth kimlik doğrulaması kullanır ve API anahtarları gerektirmez.",
@@ -490,6 +547,23 @@
 			"label": "Eşzamanlı dosya okuma sınırı",
 			"description": "'read_file' aracının aynı anda işleyebileceği maksimum dosya sayısı. Daha yüksek değerler birden çok küçük dosyanın okunmasını hızlandırabilir ancak bellek kullanımını artırır."
 		},
+		"diagnostics": {
+			"includeMessages": {
+				"label": "Tanı mesajlarını otomatik olarak bağlama dahil et",
+				"description": "Etkinleştirildiğinde, düzenlenen dosyalardan tanı mesajları (hatalar) otomatik olarak bağlama dahil edilecektir. @problems kullanarak tüm çalışma alanı tanı mesajlarını her zaman manuel olarak dahil edebilirsiniz."
+			},
+			"maxMessages": {
+				"label": "Maksimum tanı mesajı",
+				"description": "Dosya başına dahil edilecek maksimum tanı mesajı sayısı. Bu sınır hem otomatik dahil etme (onay kutusu etkinleştirildiğinde) hem de manuel @problems bahisleri için geçerlidir. Daha yüksek değerler daha fazla bağlam sağlar ancak jeton kullanımını artırır.",
+				"resetTooltip": "Varsayılan değere sıfırla (50)",
+				"unlimited": "Sınırsız tanı mesajları",
+				"unlimitedLabel": "Sınırsız"
+			},
+			"delayAfterWrite": {
+				"label": "Potansiyel sorunları tespit etmek için tanılamaya izin vermek üzere yazmalardan sonra gecikme",
+				"description": "Devam etmeden önce dosya yazımlarından sonra beklenecek süre, tanılama araçlarının değişiklikleri işlemesine ve sorunları tespit etmesine olanak tanır."
+			}
+		},
 		"condensingThreshold": {
 			"label": "Sıkıştırma Tetikleme Eşiği",
 			"selectProfile": "Profil için eşik yapılandır",
@@ -498,6 +572,16 @@
 			"profileDescription": "Sadece bu profil için özel eşik (küresel varsayılanı geçersiz kılar)",
 			"inheritDescription": "Bu profil küresel varsayılan eşiği miras alır ({{threshold}}%)",
 			"usesGlobal": "(küresel {{threshold}}% kullanır)"
+		},
+		"maxImageFileSize": {
+			"label": "Maksimum görüntü dosyası boyutu",
+			"mb": "MB",
+			"description": "Dosya okuma aracı tarafından işlenebilecek görüntü dosyaları için maksimum boyut (MB cinsinden)."
+		},
+		"maxTotalImageSize": {
+			"label": "Maksimum toplam görüntü boyutu",
+			"mb": "MB",
+			"description": "Tek bir read_file işleminde işlenen tüm görüntüler için maksimum kümülatif boyut sınırı (MB cinsinden). Birden çok görüntü okurken, her görüntünün boyutu toplama eklenir. Başka bir görüntü eklemek bu sınırı aşacaksa, atlanacaktır."
 		}
 	},
 	"terminal": {
@@ -512,6 +596,10 @@
 		"outputLineLimit": {
 			"label": "Terminal çıktısı sınırı",
 			"description": "Komutları yürütürken terminal çıktısına dahil edilecek maksimum satır sayısı. Aşıldığında, token tasarrufu sağlayarak satırlar ortadan kaldırılacaktır. <0>Daha fazla bilgi</0>"
+		},
+		"outputCharacterLimit": {
+			"label": "Terminal karakter sınırı",
+			"description": "Komutları yürütürken terminal çıktısına dahil edilecek maksimum karakter sayısı. Bu sınır, aşırı uzun satırlardan kaynaklanan bellek sorunlarını önlemek için satır sınırına göre önceliklidir. Aşıldığında, çıktı kesilir. <0>Daha fazla bilgi edinin</0>"
 		},
 		"shellIntegrationTimeout": {
 			"label": "Terminal kabuk entegrasyonu zaman aşımı",
@@ -554,6 +642,9 @@
 			"description": "Etkinleştirildiğinde, terminal VSCode üst işleminden ortam değişkenlerini devralır, örneğin kullanıcı profilinde tanımlanan kabuk entegrasyon ayarları gibi. Bu, VSCode'un global ayarı olan `terminal.integrated.inheritEnv` değerini doğrudan değiştirir. <0>Daha fazla bilgi</0>"
 		}
 	},
+	"advancedSettings": {
+		"title": "Gelişmiş ayarlar"
+	},
 	"advanced": {
 		"diff": {
 			"label": "Diff'ler aracılığıyla düzenlemeyi etkinleştir",
@@ -575,6 +666,10 @@
 				"label": "Eşleşme hassasiyeti",
 				"description": "Bu kaydırıcı, diff'ler uygulanırken kod bölümlerinin ne kadar hassas bir şekilde eşleşmesi gerektiğini kontrol eder. Daha düşük değerler daha esnek eşleşmeye izin verir ancak yanlış değiştirme riskini artırır. %100'ün altındaki değerleri son derece dikkatli kullanın."
 			}
+		},
+		"todoList": {
+			"label": "Yapılacaklar listesi aracını etkinleştir",
+			"description": "Etkinleştirildiğinde, Kilo Code görev ilerlemesini takip etmek için yapılacaklar listeleri oluşturabilir ve yönetebilir. Bu, karmaşık görevleri yönetilebilir adımlara organize etmeye yardımcı olur."
 		}
 	},
 	"experimental": {
@@ -594,10 +689,6 @@
 			"name": "Deneysel \"güç direksiyon\" modunu kullan",
 			"description": "Etkinleştirildiğinde, Kilo Code modele geçerli mod tanımının ayrıntılarını daha sık hatırlatacaktır. Bu, rol tanımlarına ve özel talimatlara daha güçlü uyum sağlayacak, ancak mesaj başına daha fazla token kullanacaktır."
 		},
-		"AUTOCOMPLETE": {
-			"name": "Deneysel \"otomatik tamamlama\" özelliğini kullan",
-			"description": "Etkinleştirildiğinde, Kilo Code siz yazarken satır içi kod önerileri sunar."
-		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Deneysel çoklu blok diff aracını kullan",
 			"description": "Etkinleştirildiğinde, Kilo Code çoklu blok diff aracını kullanacaktır. Bu, tek bir istekte dosyadaki birden fazla kod bloğunu güncellemeye çalışacaktır."
@@ -613,6 +704,21 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Eşzamanlı dosya düzenlemelerini etkinleştir",
 			"description": "Etkinleştirildiğinde, Kilo Code tek bir istekte birden fazla dosyayı düzenleyebilir. Devre dışı bırakıldığında, Kilo Code dosyaları tek tek düzenlemek zorundadır. Bunu devre dışı bırakmak, daha az yetenekli modellerle çalışırken veya dosya değişiklikleri üzerinde daha fazla kontrol istediğinde yardımcı olabilir."
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "Morph Fast Apply'ı etkinleştir",
+			"description": "Etkinleştirildiğinde, Kilo Code dosyaları Morph Fast Apply kullanarak düzenleyebilir.",
+			"apiKey": "Morph API anahtarı (isteğe bağlı)",
+			"placeholder": "Morph API anahtarınızı girin (isteğe bağlı)",
+			"warning": "Bir Morph API anahtarı yapılandırmazsanız, Fast Apply'ı yine de Kilo Code veya OpenRouter ile kullanabilirsiniz. Hesabınızdan model kullanımı için ücret alınacaktır, bu şu anda uzantı arayüzünde gösterilmemektedir."
+		},
+		"INLINE_ASSIST": {
+			"name": "Satır İçi Asistan",
+			"description": "Düzenleyicinizde doğrudan hızlı kod önerileri ve iyileştirmeleri için Satır İçi Yardımcı özelliklerini etkinleştirin. Hedeflenen değişiklikler için Hızlı Satır İçi Görev (Cmd+I) ve bağlamsal iyileştirmeler için Otomatik Satır İçi Görev içerir."
+		},
+		"PREVENT_FOCUS_DISRUPTION": {
+			"name": "Arka plan düzenleme",
+			"description": "Etkinleştirildiğinde editör odak kesintisini önler. Dosya düzenlemeleri diff görünümlerini açmadan veya odağı çalmadan arka planda gerçekleşir. Kilo Code değişiklikler yaparken kesintisiz çalışmaya devam edebilirsiniz. Dosyalar tanılamayı yakalamak için odaksız açılabilir veya tamamen kapalı kalabilir."
 		}
 	},
 	"promptCaching": {
@@ -648,7 +754,7 @@
 		}
 	},
 	"modelPicker": {
-		"automaticFetch": "Uzantı <serviceLink>{{serviceName}}</serviceLink> üzerinde bulunan mevcut modellerin en güncel listesini otomatik olarak alır. Hangi modeli seçeceğinizden emin değilseniz, Kilo Code <defaultModelLink>{{defaultModelId}}</defaultModelLink> ile en iyi şekilde çalışır. Şu anda mevcut olan ücretsiz seçenekleri bulmak için \"free\" araması da yapabilirsiniz.",
+		"automaticFetch": "Uzantı <serviceLink>{{serviceName}}</serviceLink> üzerinde bulunan mevcut modellerin en güncel listesini otomatik olarak alır. Hangi modeli seçeceğinizden emin değilseniz, Kilo Code <defaultModelLink>{{defaultModelId}}</defaultModelLink> ile en iyi şekilde çalışır.",
 		"label": "Model",
 		"searchPlaceholder": "Ara",
 		"noMatchFound": "Eşleşme bulunamadı",
@@ -727,5 +833,8 @@
 		}
 	},
 	"includeMaxOutputTokens": "Maksimum çıktı tokenlerini dahil et",
-	"includeMaxOutputTokensDescription": "API isteklerinde maksimum çıktı token parametresini gönder. Bazı sağlayıcılar bunu desteklemeyebilir."
+	"includeMaxOutputTokensDescription": "API isteklerinde maksimum çıktı token parametresini gönder. Bazı sağlayıcılar bunu desteklemeyebilir.",
+	"limitMaxTokensDescription": "Yanıttaki maksimum token sayısını sınırla",
+	"maxOutputTokensLabel": "Maksimum çıktı tokenları",
+	"maxTokensGenerateDescription": "Yanıtta oluşturulacak maksimum token sayısı"
 }

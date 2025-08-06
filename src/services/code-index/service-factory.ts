@@ -3,6 +3,7 @@ import { OpenAiEmbedder } from "./embedders/openai"
 import { CodeIndexOllamaEmbedder } from "./embedders/ollama"
 import { OpenAICompatibleEmbedder } from "./embedders/openai-compatible"
 import { GeminiEmbedder } from "./embedders/gemini"
+import { MistralEmbedder } from "./embedders/mistral"
 import { EmbedderProvider, getDefaultModelId, getModelDimension } from "../../shared/embeddingModels"
 import { QdrantVectorStore } from "./vector-store/qdrant-client"
 import { codeParser, DirectoryScanner, FileWatcher } from "./processors"
@@ -11,6 +12,8 @@ import { CodeIndexConfigManager } from "./config-manager"
 import { CacheManager } from "./cache-manager"
 import { Ignore } from "ignore"
 import { t } from "../../i18n"
+import { TelemetryService } from "@roo-code/telemetry"
+import { TelemetryEventName } from "@roo-code/types"
 
 /**
  * Factory class responsible for creating and configuring code indexing service dependencies.
@@ -62,6 +65,11 @@ export class CodeIndexServiceFactory {
 				throw new Error(t("embeddings:serviceFactory.geminiConfigMissing"))
 			}
 			return new GeminiEmbedder(config.geminiOptions.apiKey, config.modelId)
+		} else if (provider === "mistral") {
+			if (!config.mistralOptions?.apiKey) {
+				throw new Error(t("embeddings:serviceFactory.mistralConfigMissing"))
+			}
+			return new MistralEmbedder(config.mistralOptions.apiKey, config.modelId)
 		}
 
 		throw new Error(
@@ -78,6 +86,13 @@ export class CodeIndexServiceFactory {
 		try {
 			return await embedder.validateConfiguration()
 		} catch (error) {
+			// Capture telemetry for the error
+			TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
+				error: error instanceof Error ? error.message : String(error),
+				stack: error instanceof Error ? error.stack : undefined,
+				location: "validateEmbedder",
+			})
+
 			// If validation throws an exception, preserve the original error message
 			return {
 				valid: false,
@@ -99,12 +114,12 @@ export class CodeIndexServiceFactory {
 
 		let vectorSize: number | undefined
 
-		// First check if a manual dimension is provided (works for all providers)
-		if (config.modelDimension && config.modelDimension > 0) {
+		// First try to get the model-specific dimension from profiles
+		vectorSize = getModelDimension(provider, modelId)
+
+		// Only use manual dimension if model doesn't have a built-in dimension
+		if (!vectorSize && config.modelDimension && config.modelDimension > 0) {
 			vectorSize = config.modelDimension
-		} else {
-			// Fall back to model-specific dimension from profiles
-			vectorSize = getModelDimension(provider, modelId)
 		}
 
 		if (vectorSize === undefined || vectorSize <= 0) {

@@ -13,8 +13,8 @@
 		"selectMode": "搜尋模式"
 	},
 	"apiConfiguration": {
-		"title": "API 設定",
-		"select": "選擇要用於此模式的 API 設定"
+		"title": "API 設定檔",
+		"select": "選擇要用於此模式的 API 設定檔"
 	},
 	"tools": {
 		"title": "可用工具",
@@ -85,17 +85,28 @@
 		"resetPrompt": "將 {{promptType}} 提示詞重設為預設值",
 		"prompt": "提示詞",
 		"enhance": {
-			"apiConfiguration": "API 設定",
-			"apiConfigDescription": "您可以選擇一個固定的 API 設定用於增強提示詞，或使用目前選擇的設定",
-			"useCurrentConfig": "使用目前選擇的 API 設定",
+			"apiConfiguration": "API 設定檔",
+			"apiConfigDescription": "您可以選擇一個固定的 API 設定檔用於增強提示詞，或使用目前選擇的設定檔",
+			"useCurrentConfig": "使用目前選擇的 API 設定檔",
 			"testPromptPlaceholder": "輸入提示詞以測試增強效果",
 			"previewButton": "預覽提示詞增強",
-			"testEnhancement": "測試增強"
+			"testEnhancement": "測試增強",
+			"includeTaskHistory": "包含工作歷史作為內容",
+			"includeTaskHistoryDescription": "啟用後，目前對話的最後 10 則訊息將作為內容包含在增強提示詞時，有助於產生更相關和內容感知的建議。"
+		},
+		"condense": {
+			"apiConfiguration": "用於上下文壓縮的 API 設定檔",
+			"apiConfigDescription": "選取用於上下文壓縮作業的 API 設定檔。保留未選取狀態以使用目前作用中的設定檔。",
+			"useCurrentConfig": "使用目前選取的 API 設定檔"
 		},
 		"types": {
 			"ENHANCE": {
 				"label": "增強提示詞",
 				"description": "使用提示詞增強功能取得針對您輸入的客製化建議或改進。這確保 Kilo Code 能理解您的意圖並提供最佳的回應。可透過聊天中的 ✨ 圖示使用。"
+			},
+			"CONDENSE": {
+				"label": "上下文壓縮",
+				"description": "設定如何壓縮對話上下文以管理 token 限制。此提示用於手動和自動上下文壓縮作業。"
 			},
 			"EXPLAIN": {
 				"label": "解釋程式碼",
@@ -125,13 +136,17 @@
 				"label": "說明終端機命令",
 				"description": "取得終端機命令及其輸出的詳細說明。可在終端機內容選單（選取終端機內容後按右鍵）使用。"
 			},
+			"TERMINAL_GENERATE": {
+				"label": "產生終端機命令",
+				"description": "根據描述協助產生終端機命令。"
+			},
 			"NEW_TASK": {
-				"label": "開始新工作",
-				"description": "開始一個新的工作。可在命令選擇區使用。"
+				"label": "開始新任務",
+				"description": "開始一個新的任務。可在命令選擇區使用。"
 			},
 			"COMMIT_MESSAGE": {
-				"label": "提交信息生成",
-				"description": "根据您已暂存的git变更生成描述性的提交信息。自定义提示以生成遵循您仓库最佳实践的信息。"
+				"label": "產生提交訊息",
+				"description": "根據暫存的 git 變更產生描述性提交訊息。自定義提示以產生遵循儲存庫最佳實踐的訊息。"
 			}
 		}
 	},

@@ -14,6 +14,21 @@ import { telemetrySettingsSchema } from "./telemetry.js"
 import { modeConfigSchema } from "./mode.js"
 import { customModePromptsSchema, customSupportPromptsSchema } from "./mode.js"
 import { languagesSchema } from "./vscode.js"
+import { ghostServiceSettingsSchema } from "./kilocode.js" // kilocode_change
+
+/**
+ * Default delay in milliseconds after writes to allow diagnostics to detect potential problems.
+ * This delay is particularly important for Go and other languages where tools like goimports
+ * need time to automatically clean up unused imports.
+ */
+export const DEFAULT_WRITE_DELAY_MS = 1000
+
+/**
+ * Default terminal output character limit constant.
+ * This provides a reasonable default that aligns with typical terminal usage
+ * while preventing context window explosions from extremely long lines.
+ */
+export const DEFAULT_TERMINAL_OUTPUT_CHARACTER_LIMIT = 50_000
 
 /**
  * GlobalSettings
@@ -37,7 +52,7 @@ export const globalSettingsSchema = z.object({
 	alwaysAllowWrite: z.boolean().optional(),
 	alwaysAllowWriteOutsideWorkspace: z.boolean().optional(),
 	alwaysAllowWriteProtected: z.boolean().optional(),
-	writeDelayMs: z.number().optional(),
+	writeDelayMs: z.number().min(0).optional(),
 	alwaysAllowBrowser: z.boolean().optional(),
 	alwaysApproveResubmit: z.boolean().optional(),
 	requestDelaySeconds: z.number().optional(),
@@ -49,11 +64,26 @@ export const globalSettingsSchema = z.object({
 	followupAutoApproveTimeoutMs: z.number().optional(),
 	alwaysAllowUpdateTodoList: z.boolean().optional(),
 	allowedCommands: z.array(z.string()).optional(),
+	deniedCommands: z.array(z.string()).optional(),
+	commandExecutionTimeout: z.number().optional(),
+	commandTimeoutAllowlist: z.array(z.string()).optional(),
+	preventCompletionWithOpenTodos: z.boolean().optional(),
 	allowedMaxRequests: z.number().nullish(),
 	autoCondenseContext: z.boolean().optional(),
 	autoCondenseContextPercent: z.number().optional(),
 	maxConcurrentFileReads: z.number().optional(),
 	allowVeryLargeReads: z.boolean().optional(), // kilocode_change
+
+	/**
+	 * Whether to include diagnostic messages (errors, warnings) in tool outputs
+	 * @default true
+	 */
+	includeDiagnosticMessages: z.boolean().optional(),
+	/**
+	 * Maximum number of diagnostic messages to include in tool outputs
+	 * @default 50
+	 */
+	maxDiagnosticMessages: z.number().optional(),
 
 	browserToolEnabled: z.boolean().optional(),
 	browserViewportSize: z.string().optional(),
@@ -80,8 +110,11 @@ export const globalSettingsSchema = z.object({
 	maxWorkspaceFiles: z.number().optional(),
 	showRooIgnoredFiles: z.boolean().optional(),
 	maxReadFileLine: z.number().optional(),
+	maxImageFileSize: z.number().optional(),
+	maxTotalImageSize: z.number().optional(),
 
 	terminalOutputLineLimit: z.number().optional(),
+	terminalOutputCharacterLimit: z.number().optional(),
 	terminalShellIntegrationTimeout: z.number().optional(),
 	terminalShellIntegrationDisabled: z.boolean().optional(),
 	terminalCommandDelay: z.number().optional(),
@@ -91,6 +124,8 @@ export const globalSettingsSchema = z.object({
 	terminalZshP10k: z.boolean().optional(),
 	terminalZdotdir: z.boolean().optional(),
 	terminalCompressProgressBar: z.boolean().optional(),
+
+	diagnosticsEnabled: z.boolean().optional(),
 
 	rateLimitSeconds: z.number().optional(),
 	diffEnabled: z.boolean().optional(),
@@ -114,8 +149,11 @@ export const globalSettingsSchema = z.object({
 	customModePrompts: customModePromptsSchema.optional(),
 	customSupportPrompts: customSupportPromptsSchema.optional(),
 	enhancementApiConfigId: z.string().optional(),
-	autocompleteApiConfigId: z.string().optional(), // kilocode_change
+	dismissedNotificationIds: z.string().array().optional(), // kilocode_change
 	commitMessageApiConfigId: z.string().optional(), // kilocode_change
+	terminalCommandApiConfigId: z.string().optional(), // kilocode_change
+	ghostServiceSettings: ghostServiceSettingsSchema, // kilocode_change
+	includeTaskHistoryInEnhance: z.boolean().optional(),
 	historyPreviewCollapsed: z.boolean().optional(),
 	profileThresholds: z.record(z.string(), z.number()).optional(),
 	hasOpenedModeSelector: z.boolean().optional(),
@@ -143,12 +181,14 @@ export const SECRET_STATE_KEYS = [
 	"glamaApiKey",
 	"openRouterApiKey",
 	"awsAccessKey",
+	"awsApiKey",
 	"awsSecretKey",
 	"awsSessionToken",
 	"openAiApiKey",
 	"geminiApiKey",
 	"openAiNativeApiKey",
 	"deepSeekApiKey",
+	"moonshotApiKey",
 	"mistralApiKey",
 	"unboundApiKey",
 	"requestyApiKey",
@@ -158,9 +198,17 @@ export const SECRET_STATE_KEYS = [
 	"litellmApiKey",
 	"codeIndexOpenAiKey",
 	"codeIndexQdrantApiKey",
-	"kilocodeToken", // kilocode_change
+	// kilocode_change start
+	"kilocodeToken",
+	"zaiApiKey",
+	"bigModelApiKey",
+	// kilocode_change end
 	"codebaseIndexOpenAiCompatibleApiKey",
 	"codebaseIndexGeminiApiKey",
+	"codebaseIndexMistralApiKey",
+	"huggingFaceApiKey",
+	"sambaNovaApiKey",
+	"fireworksApiKey",
 ] as const satisfies readonly (keyof ProviderSettings)[]
 export type SecretState = Pick<ProviderSettings, (typeof SECRET_STATE_KEYS)[number]>
 
@@ -189,7 +237,7 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 	apiProvider: "openrouter",
 	openRouterUseMiddleOutTransform: false,
 
-	lastShownAnnouncementId: "may-29-2025-3-19",
+	lastShownAnnouncementId: "jul-09-2025-3-23-0",
 
 	pinnedApiConfigs: {},
 
@@ -211,6 +259,9 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 	alwaysAllowUpdateTodoList: true,
 	followupAutoApproveTimeoutMs: 0,
 	allowedCommands: ["*"],
+	commandExecutionTimeout: 20,
+	commandTimeoutAllowlist: [],
+	preventCompletionWithOpenTodos: false,
 
 	browserToolEnabled: false,
 	browserViewportSize: "900x600",
@@ -221,9 +272,12 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 	ttsSpeed: 1,
 	soundEnabled: false,
 	soundVolume: 0.5,
+	dismissedNotificationIds: [], // kilocode_change
 	systemNotificationsEnabled: true, // kilocode_change
+	ghostServiceSettings: {}, // kilocode_change
 
 	terminalOutputLineLimit: 500,
+	terminalOutputCharacterLimit: DEFAULT_TERMINAL_OUTPUT_CHARACTER_LIMIT,
 	terminalShellIntegrationTimeout: 30000,
 	terminalCommandDelay: 0,
 	terminalPowershellCounter: false,
@@ -233,6 +287,8 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 	terminalZdotdir: true,
 	terminalCompressProgressBar: true,
 	terminalShellIntegrationDisabled: true,
+
+	diagnosticsEnabled: true,
 
 	diffEnabled: true,
 	fuzzyMatchThreshold: 1,
@@ -245,12 +301,15 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 	showRooIgnoredFiles: true,
 	maxReadFileLine: -1, // -1 to enable full file reading.
 
+	includeDiagnosticMessages: true,
+	maxDiagnosticMessages: 50,
+
 	language: "en",
 	telemetrySetting: "enabled",
 
 	mcpEnabled: false,
 
-	mode: "code",
+	mode: "code", // "architect",
 
 	customModes: [],
 }

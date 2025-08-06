@@ -22,10 +22,10 @@
 			"type": "shell",
 			"command": "npx",
 			"args": ["nodemon", "--watch", "pnpm-lock.yaml", "--exec", "pnpm install"],
-			"group": "build",
+			"group": "none",
 			"isBackground": true,
 			"presentation": {
-				"group": "watch",
+				"group": "none",
 				"reveal": "always"
 			},
 			"problemMatcher": {
@@ -86,11 +86,11 @@
 			"dependsOn": ["watch:pnpm"],
 			"type": "shell",
 			"command": "npx turbo watch:tsc",
-			"group": "build",
+			"group": "none",
 			"problemMatcher": "$tsc-watch",
 			"isBackground": true,
 			"presentation": {
-				"group": "watch",
+				"group": "none",
 				"reveal": "always"
 			}
 		},
@@ -115,6 +115,21 @@
 				"reveal": "always",
 				"panel": "new"
 			}
+		},
+		{
+			"label": "install-dev-extension",
+			"type": "shell",
+			"command": "pnpm i && npm run build && code --install-extension \"$(ls -1v bin/kilo-code-*.vsix | tail -n1)\"",
+			"group": "build",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			},
+			"problemMatcher": []
 		}
 	]
 }

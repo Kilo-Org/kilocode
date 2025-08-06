@@ -8,6 +8,8 @@ import {
 	bedrockModels,
 	deepSeekDefaultModelId,
 	deepSeekModels,
+	moonshotDefaultModelId,
+	moonshotModels,
 	geminiDefaultModelId,
 	geminiModels,
 	geminiCliDefaultModelId,
@@ -21,6 +23,12 @@ import {
 	vertexModels,
 	xaiDefaultModelId,
 	xaiModels,
+	// kilocode_change start
+	zaiModels,
+	zaiDefaultModelId,
+	bigModelModels,
+	bigModelDefaultModelId,
+	// kilocode_change end
 	groqModels,
 	groqDefaultModelId,
 	chutesModels,
@@ -34,6 +42,13 @@ import {
 	litellmDefaultModelId,
 	claudeCodeDefaultModelId,
 	claudeCodeModels,
+	kilocodeDefaultModelId,
+	sambaNovaModels,
+	sambaNovaDefaultModelId,
+	doubaoModels,
+	doubaoDefaultModelId,
+	fireworksDefaultModelId,
+	fireworksModels,
 } from "@roo-code/types"
 
 import { cerebrasModels, cerebrasDefaultModelId } from "@roo/api" // kilocode_change
@@ -45,9 +60,12 @@ import { useOpenRouterModelProviders } from "./useOpenRouterModelProviders"
 
 export const useSelectedModel = (apiConfiguration?: ProviderSettings) => {
 	const provider = apiConfiguration?.apiProvider || "anthropic"
-	const openRouterModelId = provider === "openrouter" ? apiConfiguration?.openRouterModelId : undefined
+	// kilocode_change start
+	let openRouterModelId = provider === "openrouter" ? apiConfiguration?.openRouterModelId : undefined
+	if (provider === "kilocode") {
+		openRouterModelId = apiConfiguration?.kilocodeModel || undefined
+	}
 
-	// kilocode_change start openRouterBaseUrl, apiKey
 	const routerModels = useRouterModels({
 		openRouterBaseUrl: apiConfiguration?.openRouterBaseUrl,
 		openRouterApiKey: apiConfiguration?.apiKey,
@@ -136,9 +154,31 @@ function getSelectedModel({
 			const info = xaiModels[id as keyof typeof xaiModels]
 			return info ? { id, info } : { id, info: undefined }
 		}
+		// kilocode_change start
+		case "zai": {
+			const id = apiConfiguration.apiModelId ?? zaiDefaultModelId
+			const info = zaiModels[id as keyof typeof zaiModels]
+			return info ? { id, info } : { id, info: undefined }
+		}
+		case "bigmodel": {
+			const id = apiConfiguration.apiModelId ?? bigModelDefaultModelId
+			const info = bigModelModels[id as keyof typeof bigModelModels]
+			return { id, info }
+		}
+		// kilocode_change end
 		case "groq": {
 			const id = apiConfiguration.apiModelId ?? groqDefaultModelId
 			const info = groqModels[id as keyof typeof groqModels]
+			return { id, info }
+		}
+		case "huggingface": {
+			const id = apiConfiguration.huggingFaceModelId ?? "meta-llama/Llama-3.3-70B-Instruct"
+			const info = {
+				maxTokens: 8192,
+				contextWindow: 131072,
+				supportsImages: false,
+				supportsPromptCache: false,
+			}
 			return { id, info }
 		}
 		case "chutes": {
@@ -184,6 +224,16 @@ function getSelectedModel({
 		case "deepseek": {
 			const id = apiConfiguration.apiModelId ?? deepSeekDefaultModelId
 			const info = deepSeekModels[id as keyof typeof deepSeekModels]
+			return { id, info }
+		}
+		case "doubao": {
+			const id = apiConfiguration.apiModelId ?? doubaoDefaultModelId
+			const info = doubaoModels[id as keyof typeof doubaoModels]
+			return { id, info }
+		}
+		case "moonshot": {
+			const id = apiConfiguration.apiModelId ?? moonshotDefaultModelId
+			const info = moonshotModels[id as keyof typeof moonshotModels]
 			return { id, info }
 		}
 		case "openai-native": {
@@ -240,14 +290,36 @@ function getSelectedModel({
 					modelEntries.find((model) => model[0].toLowerCase().includes(selectedModelId))
 
 				if (selectedModel) {
-					return { id: selectedModel[0], info: selectedModel[1] }
+					const id = selectedModel[0]
+					let info = selectedModel[1]
+
+					const specificProvider = apiConfiguration.openRouterSpecificProvider
+					if (specificProvider && openRouterModelProviders[specificProvider]) {
+						info = info
+							? { ...info, ...openRouterModelProviders[specificProvider] }
+							: openRouterModelProviders[specificProvider]
+					}
+					return { id, info }
 				}
 			}
 
 			// Fallback to anthropic model if no match found
 			return {
-				id: "anthropic/claude-3.7-sonnet",
-				info: routerModels["kilocode-openrouter"]["anthropic/claude-3.7-sonnet"],
+				id: kilocodeDefaultModelId,
+				info: routerModels["kilocode-openrouter"][kilocodeDefaultModelId],
+			}
+		}
+		case "fireworks": {
+			const id = apiConfiguration.apiModelId ?? fireworksDefaultModelId
+			const info = fireworksModels[id as keyof typeof fireworksModels]
+			return { id, info }
+		}
+		case "virtual-quota-fallback": {
+			return {
+				id: apiConfiguration.apiModelId ?? anthropicDefaultModelId,
+				info: anthropicModels[
+					(apiConfiguration.apiModelId ?? anthropicDefaultModelId) as keyof typeof anthropicModels
+				],
 			}
 		}
 		// kilocode_change end
@@ -258,10 +330,16 @@ function getSelectedModel({
 			const info = claudeCodeModels[id as keyof typeof claudeCodeModels]
 			return { id, info: { ...openAiModelInfoSaneDefaults, ...info } }
 		}
+		case "sambanova": {
+			const id = apiConfiguration.apiModelId ?? sambaNovaDefaultModelId
+			const info = sambaNovaModels[id as keyof typeof sambaNovaModels]
+			return { id, info }
+		}
 		// case "anthropic":
 		// case "human-relay":
 		// case "fake-ai":
 		default: {
+			provider satisfies "anthropic" | "human-relay" | "fake-ai"
 			const id = apiConfiguration.apiModelId ?? anthropicDefaultModelId
 			const info = anthropicModels[id as keyof typeof anthropicModels]
 			return { id, info }

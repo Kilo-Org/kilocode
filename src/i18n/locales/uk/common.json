@@ -41,6 +41,7 @@
 		"could_not_open_file_generic": "Не вдалося відкрити файл!",
 		"checkpoint_timeout": "Час очікування вичерпано під час спроби відновити checkpoint.",
 		"checkpoint_failed": "Не вдалося відновити checkpoint.",
+		"git_not_installed": "Git потрібен для функції checkpoint. Будь ласка, встанови Git, щоб увімкнути checkpoint.",
 		"no_workspace": "Будь ласка, спочатку відкрий папку проекту",
 		"update_support_prompt": "Не вдалося оновити support prompt",
 		"reset_support_prompt": "Не вдалося скинути support prompt",
@@ -75,6 +76,7 @@
 		"url_page_not_found": "Сторінку не знайдено. Будь ласка, перевір правильність URL.",
 		"url_fetch_failed": "Не вдалося отримати вміст URL: {{error}}",
 		"url_fetch_error_with_url": "Помилка отримання вмісту для {{url}}: {{error}}",
+		"command_timeout": "Виконання команди перевищило час очікування після {{seconds}} секунд",
 		"share_task_failed": "Не вдалося поділитися завданням. Будь ласка, спробуй ще раз.",
 		"share_no_active_task": "Немає активного завдання для поділу",
 		"share_auth_required": "Потрібна автентифікація. Будь ласка, увійди, щоб поділитися завданнями.",
@@ -89,6 +91,13 @@
 		},
 		"mode_import_failed": "Не вдалося імпортувати режим: {{error}}",
 		"delete_rules_folder_failed": "Не вдалося видалити папку правил: {{rulesFolderPath}}. Помилка: {{error}}",
+		"command_not_found": "Команду '{{name}}' не знайдено",
+		"open_command_file": "Не вдалося відкрити файл команди",
+		"delete_command": "Не вдалося видалити команду",
+		"no_workspace_for_project_command": "Не знайдено папку робочого простору для команди проекту",
+		"command_already_exists": "Команда \"{{commandName}}\" вже існує",
+		"create_command_failed": "Не вдалося створити команду",
+		"command_template_content": "---\ndescription: \"Короткий опис того, що робить ця команда\"\n---\n\nЦе нова slash команда. Відредагуйте цей файл, щоб налаштувати поведінку команди.",
 		"geminiCli": {
 			"oauthLoadFailed": "Не вдалося завантажити OAuth дані для входу. Будь ласка, спочатку автентифікуйся: {{error}}",
 			"tokenRefreshFailed": "Не вдалося оновити OAuth token: {{error}}",
@@ -98,6 +107,11 @@
 			"badRequest": "Неправильний запит: {{details}}",
 			"apiError": "Помилка Gemini CLI API: {{error}}",
 			"completionError": "Помилка завершення Gemini CLI: {{error}}"
+		},
+		"gemini": {
+			"generate_stream": "Помилка генерації контекстного потоку Gemini: {{error}}",
+			"generate_complete_prompt": "Помилка завершення Gemini: {{error}}",
+			"sources": "Джерела:"
 		}
 	},
 	"warnings": {
@@ -130,7 +144,8 @@
 	},
 	"buttons": {
 		"save": "Зберегти",
-		"edit": "Редагувати"
+		"edit": "Редагувати",
+		"learn_more": "Дізнатися більше"
 	},
 	"tasks": {
 		"canceled": "Помилка завдання: Воно було зупинено та скасовано користувачем.",
@@ -157,11 +172,17 @@
 			"deleteFailed": "Не вдалося видалити користувацький режим: {{error}}",
 			"resetFailed": "Не вдалося скинути користувацькі режими: {{error}}",
 			"modeNotFound": "Помилка запису: Режим не знайдено",
-			"noWorkspaceForProject": "Не знайдено папку робочого простору для режиму конкретного проекту"
+			"noWorkspaceForProject": "Не знайдено папку робочого простору для режиму конкретного проекту",
+			"rulesCleanupFailed": "Режим успішно видалено, але не вдалося видалити папку правил в {{rulesFolderPath}}. Можливо, вам доведеться видалити її вручну."
 		},
 		"scope": {
 			"project": "проект",
 			"global": "глобальний"
+		}
+	},
+	"marketplace": {
+		"mode": {
+			"rulesCleanupFailed": "Режим успішно видалено, але не вдалося видалити папку правил в {{rulesFolderPath}}. Можливо, вам доведеться видалити її вручну."
 		}
 	},
 	"mdm": {
@@ -177,6 +198,11 @@
 			"description": "Ти впевнений, що хочеш видалити цей {{scope}} режим? Це також видалить пов'язану папку правил за адресою: {{rulesFolderPath}}",
 			"descriptionNoRules": "Ти впевнений, що хочеш видалити цей користувацький режим?",
 			"confirm": "Видалити"
+		}
+	},
+	"commands": {
+		"preventCompletionWithOpenTodos": {
+			"description": "Запобігти завершенню завдання, коли є незавершені пункти в списку завдань"
 		}
 	}
 }

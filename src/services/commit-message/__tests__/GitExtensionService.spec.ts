@@ -13,14 +13,26 @@ vi.mock("vscode", () => ({
 	workspace: {
 		workspaceFolders: [{ uri: { fsPath: "/test/workspace" } }],
 		createFileSystemWatcher: vi.fn(() => ({
-			onDidCreate: vi.fn(),
-			onDidChange: vi.fn(),
-			onDidDelete: vi.fn(),
+			onDidCreate: vi.fn(() => ({ dispose: vi.fn() })),
+			onDidChange: vi.fn(() => ({ dispose: vi.fn() })),
+			onDidDelete: vi.fn(() => ({ dispose: vi.fn() })),
 			dispose: vi.fn(),
 		})),
 	},
 	extensions: {
-		getExtension: vi.fn(),
+		getExtension: vi.fn(() => ({
+			isActive: true,
+			exports: {
+				getAPI: vi.fn(() => ({
+					repositories: [
+						{
+							rootUri: { fsPath: "/test/workspace" },
+							inputBox: { value: "" },
+						},
+					],
+				})),
+			},
+		})),
 	},
 	env: {
 		clipboard: { writeText: vi.fn() },
@@ -36,6 +48,7 @@ describe("GitExtensionService", () => {
 
 	beforeEach(() => {
 		service = new GitExtensionService()
+		service.configureRepositoryContext()
 		mockSpawnSync.mockClear()
 	})
 

@@ -4,7 +4,7 @@
 		"introText1": "Kilo Code adalah agen coding AI gratis dan open source.",
 		"introText2": "Bekerja dengan model AI terbaru seperti Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1, dan lebih dari 450 model lainnya.",
 		"introText3": "Buat akun gratis dan dapatkan $20 token untuk digunakan dengan model AI apapun.",
-		"ctaButton": "Buat akun gratis",
+		"ctaButton": "Mulai",
 		"manualModeButton": "Gunakan API key sendiri",
 		"alreadySignedUp": "Sudah mendaftar?",
 		"loginText": "Masuk di sini"
@@ -12,6 +12,11 @@
 	"lowCreditWarning": {
 		"addCredit": "Tambah Kredit",
 		"lowBalance": "Saldo Kilo Code kamu rendah"
+	},
+	"pricing": {
+		"costUnknown": "biaya tidak diketahui",
+		"costUnknownDescription": "Penyedia API tidak memberikan data biaya atau permintaan dibatalkan.",
+		"discoverModelPricing": "Temukan harga dan kemampuan model"
 	},
 	"notifications": {
 		"toolRequest": "Permintaan tool menunggu persetujuan",
@@ -26,7 +31,12 @@
 			"account": "Akun Kilo Code",
 			"apiKey": "API Key Kilo Code",
 			"login": "Masuk ke Kilo Code",
-			"logout": "Keluar dari Kilo Code"
+			"logout": "Keluar dari Kilo Code",
+			"automaticFetch": "Model terbaru tersedia secara otomatis di Kilo Code. Jika Anda tidak yakin model mana yang harus dipilih, Kilo Code bekerja paling baik dengan model yang direkomendasikan yang tercantum di bagian atas dengan <strong>huruf tebal</strong>.",
+			"providerRouting": {
+				"title": "Kilo Code - Perutean Penyedia OpenRouter",
+				"description": "Kilo Code merutekan permintaan ke penyedia terbaik yang tersedia untuk model Anda. Secara default, permintaan diseimbangkan bebannya di seluruh penyedia teratas untuk memaksimalkan waktu aktif. Namun, Anda dapat memilih penyedia tertentu untuk digunakan untuk model ini."
+			}
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {
@@ -40,6 +50,16 @@
 			"testButton": "Uji Notifikasi",
 			"testTitle": "Kilo Code",
 			"testMessage": "Ini adalah notifikasi uji dari Kilo Code."
+		},
+		"terminal": {
+			"commandGenerator": {
+				"apiConfigId": {
+					"label": "Konfigurasi API",
+					"current": "Gunakan Konfigurasi Saat Ini",
+					"description": "Pilih konfigurasi API mana yang akan digunakan untuk menghasilkan perintah terminal. Biarkan sebagai 'Gunakan Konfigurasi Saat Ini' untuk menggunakan pengaturan default Anda."
+				},
+				"provider": "Penyedia Pembuat Perintah Terminal"
+			}
 		}
 	},
 	"chat": {
@@ -56,7 +76,14 @@
 		"dashboard": "Dashboard",
 		"logOut": "Keluar",
 		"currentBalance": "SALDO SAAT INI",
-		"loading": "Memuat..."
+		"loading": "Memuat...",
+		"shop": {
+			"title": "Beli Kredit",
+			"popular": "Populer",
+			"credits": "kredit",
+			"action": "Beli Sekarang",
+			"viewAll": "Lihat semua opsi harga"
+		}
 	},
 	"docs": "Dokumentasi",
 	"rules": {
@@ -130,5 +157,61 @@
 			"idea6": "Buat kartu yang mengungkap konten dinamis dengan indah saat dihover",
 			"idea7": "Buat starfield interaktif yang menenangkan yang bergerak dengan gerakan mouse"
 		}
+	},
+	"ghost": {
+		"title": "Bantuan Inline",
+		"settings": {
+			"autoTrigger": "Pemicu Otomatis",
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Tugas Cepat Sebaris",
+				"description": "Hanya butuh perubahan cepat? Pilih beberapa kode (atau tidak perlu!) dan tekan Cmd+I. Jelaskan tujuan Anda dalam bahasa sehari-hari (\"buat komponen React dengan prop ini\", \"tambahkan penanganan kesalahan ke fungsi ini\"), dan dapatkan beberapa saran siap pakai langsung di editor Anda. <DocsLink>Lihat pintasan</DocsLink>"
+			},
+			"enableAutoInlineTaskKeybinding": {
+				"label": "Tugas Otomatis Inline",
+				"description": "Butuh perbaikan cepat, penyelesaian, atau refaktor? Kilo akan menggunakan konteks di sekitarnya untuk menawarkan peningkatan langsung, membuat Anda tetap fokus dalam alur kerja. <DocsLink>Lihat pintasan</DocsLink>"
+			},
+			"enableAutoTrigger": {
+				"label": "Aktifkan Pemicu Otomatis",
+				"description": "Saat diaktifkan, Kilo Code akan secara otomatis memicu Bantuan Inline ketika kamu berhenti mengetik. Ini bisa berguna untuk perbaikan dan saran cepat."
+			},
+			"autoTriggerDelay": {
+				"label": "Penundaan Pemicu Otomatis",
+				"description": "Penundaan dalam detik sebelum Kilo Code memicu Bantuan Inline setelah kamu berhenti mengetik. Penundaan yang lebih singkat berarti saran lebih cepat, tetapi mungkin lebih intensif sumber daya."
+			},
+			"enableSmartInlineTaskKeybinding": {
+				"label": "Tugas Inline Pintar",
+				"description": "Butuh perbaikan cepat, penyelesaian, atau refaktor? Kilo akan menggunakan konteks sekitar untuk menawarkan perbaikan segera, menjaga kamu tetap dalam alur. <DocsLink>Lihat pintasan</DocsLink>"
+			},
+			"provider": "Penyedia",
+			"apiConfigId": {
+				"label": "Konfigurasi API",
+				"current": "Gunakan konfigurasi API yang dipilih saat ini",
+				"description": "Pilih konfigurasi API untuk digunakan untuk prompt Bantuan Inline, atau cukup gunakan apa pun yang saat ini dipilih"
+			},
+			"triggers": "Pemicu",
+			"keybindingDescription": "Fitur Bantuan Inline dipicu oleh perintah. Anda dapat mengonfigurasi <DocsLink>pintasan keyboard di sini</DocsLink>."
+		}
+	},
+	"virtualProvider": {
+		"title": "Pengaturan Penyedia Fallback Kuota Virtual",
+		"description": "Konfigurasikan daftar profil masing-masing dengan batas kuota mereka sendiri. Ketika batas kuota suatu penyedia tercapai, profil berikutnya dalam daftar akan digunakan hingga tidak ada lagi yang tersisa.",
+		"profileLabel": "Profil {{number}}",
+		"primaryProfileLabel": "Profil {{number}} (Utama)",
+		"moveProfileUp": "Naikkan profil",
+		"moveProfileDown": "Pindahkan profil ke bawah",
+		"removeProfile": "Hapus profil",
+		"selectProfilePlaceholder": "Pilih profil...",
+		"addProfile": "Tambahkan profil",
+		"noProfilesAvailable": "Tidak ada profil tersedia. Silakan mengonfigurasi setidaknya satu profil penyedia non-virtual terlebih dahulu.",
+		"dangerZoneTitle": "Zona Bahaya",
+		"dangerZoneDescription": "Tindakan ini bersifat merusak dan tidak dapat dibatalkan.",
+		"clearUsageData": "Hapus Data Penggunaan",
+		"confirmClearTitle": "Apakah Anda yakin?",
+		"confirmClearDescription": "Ini akan menghapus secara permanen semua data penggunaan yang tersimpan untuk penyedia virtual. Tindakan ini tidak dapat dibatalkan.",
+		"tokensLabel": "Token",
+		"perMinute": "Per Menit",
+		"perHour": "Per Jam",
+		"perDay": "Per Hari",
+		"requestsLabel": "Permintaan"
 	}
 }

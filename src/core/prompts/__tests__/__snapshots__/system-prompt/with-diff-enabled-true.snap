@@ -167,7 +167,7 @@ Examples:
 </list_code_definition_names>
 
 ## apply_diff
-Description: Request to apply targeted modifications to an existing file by searching for specific sections of content and replacing them. This tool is ideal for precise, surgical edits when you know the exact content to change. It helps maintain proper indentation and formatting.
+Description: Request to apply PRECISE, TARGETED modifications to an existing file by searching for specific sections of content and replacing them. This tool is for SURGICAL EDITS ONLY - specific changes to existing code.
 You can perform multiple distinct search and replace operations within a single `apply_diff` call by providing multiple SEARCH/REPLACE blocks in the `diff` parameter. This is the preferred way to make several targeted changes efficiently.
 The SEARCH section must exactly match existing content including whitespace and indentation.
 If you're not confident in the exact content to search for, use the read_file tool first to get the exact content.
@@ -508,7 +508,7 @@ Replace the entire TODO list with an updated checklist reflecting the current st
 </update_todo_list>
 
 **When to Use:**
-- The task involves multiple steps or requires ongoing tracking.
+- The task is complicated or involves multiple steps or requires ongoing tracking.
 - You need to update the status of several todos at once.
 - New actionable items are discovered during task execution.
 - The user requests a todo list or provides multiple tasks.
@@ -577,7 +577,7 @@ RULES
 - Before using the execute_command tool, you must first think about the SYSTEM INFORMATION context provided to understand the user's environment and tailor your commands to ensure they are compatible with their system. You must also consider if the command you need to run should be executed in a specific directory outside of the current working directory '/test/path', and if so prepend with `cd`'ing into that directory && then executing the command (as one command since you are stuck operating from '/test/path'). For example, if you needed to run `npm install` in a project outside of '/test/path', you would need to prepend with a `cd` i.e. pseudocode for this would be `cd (path to project) && (command, in this case npm install)`.
 - When using the search_files tool, craft your regex patterns carefully to balance specificity and flexibility. Based on the user's task you may use it to find code patterns, TODO comments, function definitions, or any text-based information across the project. The results include context, so analyze the surrounding code to better understand the matches. Leverage the search_files tool in combination with other tools for more comprehensive analysis. For example, use it to find specific code patterns, then use read_file to examine the full context of interesting matches before using apply_diff or write_to_file to make informed changes.
 - When creating a new project (such as an app, website, or any software project), organize all new files within a dedicated project directory unless the user specifies otherwise. Use appropriate file paths when writing files, as the write_to_file tool will automatically create any necessary directories. Structure the project logically, adhering to best practices for the specific type of project being created. Unless otherwise specified, new projects should be easily run without additional setup, for example most projects can be built in HTML, CSS, and JavaScript - which you can open in a browser.
-- For editing files, you have access to these tools: apply_diff (for replacing lines in existing files), write_to_file (for creating new files or complete file rewrites), insert_content (for adding lines to files), search_and_replace (for finding and replacing individual pieces of text).
+- For editing files, you have access to these tools: apply_diff (for surgical edits - targeted changes to specific lines or functions), write_to_file (for creating new files or complete file rewrites), insert_content (for adding lines to files), search_and_replace (for finding and replacing individual pieces of text).
 - The insert_content tool adds lines of text to files at a specific line number, such as adding a new function to a JavaScript file or inserting a new route in a Python file. Use line number 0 to append at the end of the file, or any positive number to insert before that line.
 - The search_and_replace tool finds and replaces text or regex in files. This tool allows you to search for a specific regex pattern or text and replace it with another value. Be cautious when using this tool to ensure you are replacing the correct text. It can support multiple operations at once.
 - You should always prefer using other editing tools over write_to_file when making changes to existing files since write_to_file is much slower and cannot handle large files.
@@ -633,7 +633,7 @@ Language Preference:
 You should always speak and think in the "en" language.
 
 Mode-specific Instructions:
-1. Do some information gathering (for example using read_file or search_files) to get more context about the task.
+1. Do some information gathering (using provided tools) to get more context about the task.
 
 2. You should also ask the user clarifying questions to get a better understanding of the task.
 
@@ -643,11 +643,15 @@ Mode-specific Instructions:
    - Focused on a single, well-defined outcome
    - Clear enough that another mode could execute it independently
 
+   **Note:** If the `update_todo_list` tool is not available, write the plan to a markdown file (e.g., `plan.md` or `todo.md`) instead.
+
 4. As you gather more information or discover new requirements, update the todo list to reflect the current understanding of what needs to be accomplished.
 
-5. Ask the user if they are pleased with this plan, or if they would like to make any changes. Think of this as a brainstorming session where you can discuss the task and refine the todo list. Include Mermaid diagrams if they help clarify complex workflows or system architecture.
+5. Ask the user if they are pleased with this plan, or if they would like to make any changes. Think of this as a brainstorming session where you can discuss the task and refine the todo list.
 
-6. Use the switch_mode tool to request that the user switch to another mode to implement the solution.
+6. Include Mermaid diagrams if they help clarify complex workflows or system architecture. Please avoid using double quotes ("") and parentheses () inside square brackets ([]) in Mermaid diagrams, as this can cause parsing errors.
+
+7. Use the switch_mode tool to request that the user switch to another mode to implement the solution.
 
 **IMPORTANT: Focus on creating clear, actionable todo lists rather than lengthy markdown documents. Use the todo list as your primary planning tool to track and organize the work that needs to be done.**
 

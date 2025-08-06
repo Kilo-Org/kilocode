@@ -54,12 +54,14 @@ const readFileMock = vi.fn()
 const statMock = vi.fn()
 const readdirMock = vi.fn()
 const readlinkMock = vi.fn()
+const lstatMock = vi.fn()
 
 // Replace fs functions with our mocks
 fs.readFile = readFileMock as any
 fs.stat = statMock as any
 fs.readdir = readdirMock as any
 fs.readlink = readlinkMock as any
+fs.lstat = lstatMock as any
 
 // Mock process.cwd
 const originalCwd = process.cwd
@@ -628,6 +630,274 @@ describe("addCustomInstructions", () => {
 		expect(result).toContain("Rules from .kilocoderules-test-mode:\nmode specific rules")
 	})
 
+	it("should load AGENTS.md when settings.useAgentRules is true", async () => {
+		// Simulate no .roo/rules-test-mode directory
+		statMock.mockRejectedValueOnce({ code: "ENOENT" })
+
+		// Mock lstat to indicate AGENTS.md is NOT a symlink
+		lstatMock.mockImplementation((filePath: PathLike) => {
+			const pathStr = filePath.toString()
+			if (pathStr.endsWith("AGENTS.md")) {
+				return Promise.resolve({
+					isSymbolicLink: vi.fn().mockReturnValue(false),
+				})
+			}
+			return Promise.reject({ code: "ENOENT" })
+		})
+
+		readFileMock.mockImplementation((filePath: PathLike) => {
+			const pathStr = filePath.toString()
+			if (pathStr.endsWith("AGENTS.md")) {
+				return Promise.resolve("Agent rules from AGENTS.md file")
+			}
+			return Promise.reject({ code: "ENOENT" })
+		})
+
+		const result = await addCustomInstructions(
+			"mode instructions",
+			"global instructions",
+			"/fake/path",
+			"test-mode",
+			{ settings: { maxConcurrentFileReads: 5, todoListEnabled: true, useAgentRules: true } },
+		)
+
+		expect(result).toContain("# Agent Rules Standard (AGENTS.md):")
+		expect(result).toContain("Agent rules from AGENTS.md file")
+		expect(readFileMock).toHaveBeenCalledWith(expect.stringContaining("AGENTS.md"), "utf-8")
+	})
+
+	it("should not load AGENTS.md when settings.useAgentRules is false", async () => {
+		// Simulate no .roo/rules-test-mode directory
+		statMock.mockRejectedValueOnce({ code: "ENOENT" })
+
+		readFileMock.mockImplementation((filePath: PathLike) => {
+			const pathStr = filePath.toString()
+			if (pathStr.endsWith("AGENTS.md")) {
+				return Promise.resolve("Agent rules from AGENTS.md file")
+			}
+			return Promise.reject({ code: "ENOENT" })
+		})
+
+		const result = await addCustomInstructions(
+			"mode instructions",
+			"global instructions",
+			"/fake/path",
+			"test-mode",
+			{ settings: { maxConcurrentFileReads: 5, todoListEnabled: true, useAgentRules: false } },
+		)
+
+		expect(result).not.toContain("# Agent Rules Standard (AGENTS.md):")
+		expect(result).not.toContain("Agent rules from AGENTS.md file")
+	})
+
+	it("should load AGENTS.md by default when settings.useAgentRules is undefined", async () => {
+		// Simulate no .roo/rules-test-mode directory
+		statMock.mockRejectedValueOnce({ code: "ENOENT" })
+
+		// Mock lstat to indicate AGENTS.md is NOT a symlink
+		lstatMock.mockImplementation((filePath: PathLike) => {
+			const pathStr = filePath.toString()
+			if (pathStr.endsWith("AGENTS.md")) {
+				return Promise.resolve({
+					isSymbolicLink: vi.fn().mockReturnValue(false),
+				})
+			}
+			return Promise.reject({ code: "ENOENT" })
+		})
+
+		readFileMock.mockImplementation((filePath: PathLike) => {
+			const pathStr = filePath.toString()
+			if (pathStr.endsWith("AGENTS.md")) {
+				return Promise.resolve("Agent rules from AGENTS.md file")
+			}
+			return Promise.reject({ code: "ENOENT" })
+		})
+
+		const result = await addCustomInstructions(
+			"mode instructions",
+			"global instructions",
+			"/fake/path",
+			"test-mode",
+			{}, // No settings.useAgentRules specified
+		)
+
+		expect(result).toContain("# Agent Rules Standard (AGENTS.md):")
+		expect(result).toContain("Agent rules from AGENTS.md file")
+		expect(readFileMock).toHaveBeenCalledWith(expect.stringContaining("AGENTS.md"), "utf-8")
+	})
+
+	it("should handle missing AGENTS.md gracefully", async () => {
+		// Simulate no .roo/rules-test-mode directory
+		statMock.mockRejectedValueOnce({ code: "ENOENT" })
+
+		readFileMock.mockRejectedValue({ code: "ENOENT" })
+
+		const result = await addCustomInstructions(
+			"mode instructions",
+			"global instructions",
+			"/fake/path",
+			"test-mode",
+			{ settings: { maxConcurrentFileReads: 5, todoListEnabled: true, useAgentRules: true } },
+		)
+
+		expect(result).toContain("Global Instructions:\nglobal instructions")
+		expect(result).toContain("Mode-specific Instructions:\nmode instructions")
+		expect(result).not.toContain("# Agent Rules Standard (AGENTS.md):")
+	})
+
+	it("should include AGENTS.md content along with other rules", async () => {
+		// Simulate no .roo/rules-test-mode directory
+		statMock.mockRejectedValueOnce({ code: "ENOENT" })
+
+		// Mock lstat to indicate AGENTS.md is NOT a symlink
+		lstatMock.mockImplementation((filePath: PathLike) => {
+			const pathStr = filePath.toString()
+			if (pathStr.endsWith("AGENTS.md")) {
+				return Promise.resolve({
+					isSymbolicLink: vi.fn().mockReturnValue(false),
+				})
+			}
+			return Promise.reject({ code: "ENOENT" })
+		})
+
+		readFileMock.mockImplementation((filePath: PathLike) => {
+			const pathStr = filePath.toString()
+			if (pathStr.endsWith("AGENTS.md")) {
+				return Promise.resolve("Agent rules content")
+			}
+			if (pathStr.endsWith(".roorules")) {
+				return Promise.resolve("Roo rules content")
+			}
+			return Promise.reject({ code: "ENOENT" })
+		})
+
+		const result = await addCustomInstructions(
+			"mode instructions",
+			"global instructions",
+			"/fake/path",
+			"test-mode",
+			{ settings: { maxConcurrentFileReads: 5, todoListEnabled: true, useAgentRules: true } },
+		)
+
+		// Should contain both AGENTS.md and .roorules content
+		expect(result).toContain("# Agent Rules Standard (AGENTS.md):")
+		expect(result).toContain("Agent rules content")
+		expect(result).toContain("# Rules from .roorules:")
+		expect(result).toContain("Roo rules content")
+	})
+
+	it("should follow symlinks when loading AGENTS.md", async () => {
+		// Simulate no .roo/rules-test-mode directory
+		statMock.mockRejectedValueOnce({ code: "ENOENT" })
+
+		// Mock lstat to indicate AGENTS.md is a symlink
+		lstatMock.mockImplementation((filePath: PathLike) => {
+			const pathStr = filePath.toString()
+			if (pathStr.endsWith("AGENTS.md")) {
+				return Promise.resolve({
+					isSymbolicLink: vi.fn().mockReturnValue(true),
+				})
+			}
+			return Promise.reject({ code: "ENOENT" })
+		})
+
+		// Mock readlink to return the symlink target
+		readlinkMock.mockImplementation((filePath: PathLike) => {
+			const pathStr = filePath.toString()
+			if (pathStr.endsWith("AGENTS.md")) {
+				return Promise.resolve("../actual-agents-file.md")
+			}
+			return Promise.reject({ code: "ENOENT" })
+		})
+
+		// Mock stat to indicate the resolved target is a file
+		statMock.mockImplementation((filePath: PathLike) => {
+			const pathStr = filePath.toString()
+			const normalizedPath = pathStr.replace(/\\/g, "/")
+			if (normalizedPath.endsWith("actual-agents-file.md")) {
+				return Promise.resolve({
+					isFile: vi.fn().mockReturnValue(true),
+				})
+			}
+			return Promise.reject({ code: "ENOENT" })
+		})
+
+		// Mock readFile to return content from the resolved path
+		readFileMock.mockImplementation((filePath: PathLike) => {
+			const pathStr = filePath.toString()
+			const normalizedPath = pathStr.replace(/\\/g, "/")
+			if (normalizedPath.endsWith("actual-agents-file.md")) {
+				return Promise.resolve("Agent rules from symlinked file")
+			}
+			return Promise.reject({ code: "ENOENT" })
+		})
+
+		const result = await addCustomInstructions(
+			"mode instructions",
+			"global instructions",
+			"/fake/path",
+			"test-mode",
+			{ settings: { maxConcurrentFileReads: 5, todoListEnabled: true, useAgentRules: true } },
+		)
+
+		expect(result).toContain("# Agent Rules Standard (AGENTS.md):")
+		expect(result).toContain("Agent rules from symlinked file")
+
+		// Verify lstat was called to check if it's a symlink
+		expect(lstatMock).toHaveBeenCalledWith(expect.stringContaining("AGENTS.md"))
+
+		// Verify readlink was called to resolve the symlink
+		expect(readlinkMock).toHaveBeenCalledWith(expect.stringContaining("AGENTS.md"))
+
+		// Verify the resolved path was read
+		expect(readFileMock).toHaveBeenCalledWith(expect.stringContaining("actual-agents-file.md"), "utf-8")
+	})
+
+	it("should handle AGENTS.md as a regular file when not a symlink", async () => {
+		// Simulate no .roo/rules-test-mode directory
+		statMock.mockRejectedValueOnce({ code: "ENOENT" })
+
+		// Mock lstat to indicate AGENTS.md is NOT a symlink
+		lstatMock.mockImplementation((filePath: PathLike) => {
+			const pathStr = filePath.toString()
+			if (pathStr.endsWith("AGENTS.md")) {
+				return Promise.resolve({
+					isSymbolicLink: vi.fn().mockReturnValue(false),
+				})
+			}
+			return Promise.reject({ code: "ENOENT" })
+		})
+
+		// Mock readFile to return content directly from AGENTS.md
+		readFileMock.mockImplementation((filePath: PathLike) => {
+			const pathStr = filePath.toString()
+			if (pathStr.endsWith("AGENTS.md")) {
+				return Promise.resolve("Agent rules from regular file")
+			}
+			return Promise.reject({ code: "ENOENT" })
+		})
+
+		const result = await addCustomInstructions(
+			"mode instructions",
+			"global instructions",
+			"/fake/path",
+			"test-mode",
+			{ settings: { maxConcurrentFileReads: 5, todoListEnabled: true, useAgentRules: true } },
+		)
+
+		expect(result).toContain("# Agent Rules Standard (AGENTS.md):")
+		expect(result).toContain("Agent rules from regular file")
+
+		// Verify lstat was called
+		expect(lstatMock).toHaveBeenCalledWith(expect.stringContaining("AGENTS.md"))
+
+		// Verify readlink was NOT called since it's not a symlink
+		expect(readlinkMock).not.toHaveBeenCalledWith(expect.stringContaining("AGENTS.md"))
+
+		// Verify the file was read directly
+		expect(readFileMock).toHaveBeenCalledWith(expect.stringContaining("AGENTS.md"), "utf-8")
+	})
+
 	it("should return empty string when no instructions provided", async () => {
 		// Simulate no .kilocode/rules directory
 		statMock.mockRejectedValueOnce({ code: "ENOENT" })
@@ -1149,6 +1419,157 @@ describe("Rules directory reading", () => {
 		expect(result).toContain("content of file2")
 		expect(result).toContain(`# Rules from ${expectedFile3Path}:`)
 		expect(result).toContain("content of file3")
+	})
+
+	it("should return files in alphabetical order by filename", async () => {
+		// Simulate .roo/rules directory exists
+		statMock.mockResolvedValueOnce({
+			isDirectory: vi.fn().mockReturnValue(true),
+		} as any)
+
+		// Simulate listing files in non-alphabetical order to test sorting
+		readdirMock.mockResolvedValueOnce([
+			{ name: "zebra.txt", isFile: () => true, parentPath: "/fake/path/.roo/rules" },
+			{ name: "alpha.txt", isFile: () => true, parentPath: "/fake/path/.roo/rules" },
+			{ name: "Beta.txt", isFile: () => true, parentPath: "/fake/path/.roo/rules" }, // Test case-insensitive sorting
+		] as any)
+
+		statMock.mockImplementation((path) => {
+			return Promise.resolve({
+				isFile: vi.fn().mockReturnValue(true),
+			}) as any
+		})
+
+		readFileMock.mockImplementation((filePath: PathLike) => {
+			const pathStr = filePath.toString()
+			const normalizedPath = pathStr.replace(/\\/g, "/")
+			if (normalizedPath === "/fake/path/.roo/rules/zebra.txt") {
+				return Promise.resolve("zebra content")
+			}
+			if (normalizedPath === "/fake/path/.roo/rules/alpha.txt") {
+				return Promise.resolve("alpha content")
+			}
+			if (normalizedPath === "/fake/path/.roo/rules/Beta.txt") {
+				return Promise.resolve("beta content")
+			}
+			return Promise.reject({ code: "ENOENT" })
+		})
+
+		const result = await loadRuleFiles("/fake/path")
+
+		// Files should appear in alphabetical order: alpha.txt, Beta.txt, zebra.txt
+		const alphaIndex = result.indexOf("alpha content")
+		const betaIndex = result.indexOf("beta content")
+		const zebraIndex = result.indexOf("zebra content")
+
+		expect(alphaIndex).toBeLessThan(betaIndex)
+		expect(betaIndex).toBeLessThan(zebraIndex)
+
+		// Verify the expected file paths are in the result
+		const expectedAlphaPath =
+			process.platform === "win32" ? "\\fake\\path\\.roo\\rules\\alpha.txt" : "/fake/path/.roo/rules/alpha.txt"
+		const expectedBetaPath =
+			process.platform === "win32" ? "\\fake\\path\\.roo\\rules\\Beta.txt" : "/fake/path/.roo/rules/Beta.txt"
+		const expectedZebraPath =
+			process.platform === "win32" ? "\\fake\\path\\.roo\\rules\\zebra.txt" : "/fake/path/.roo/rules/zebra.txt"
+
+		expect(result).toContain(`# Rules from ${expectedAlphaPath}:`)
+		expect(result).toContain(`# Rules from ${expectedBetaPath}:`)
+		expect(result).toContain(`# Rules from ${expectedZebraPath}:`)
+	})
+
+	it("should sort symlinks by their symlink names, not target names", async () => {
+		// Reset mocks
+		statMock.mockReset()
+		readdirMock.mockReset()
+		readlinkMock.mockReset()
+		readFileMock.mockReset()
+
+		// First call: check if .roo/rules directory exists
+		statMock.mockResolvedValueOnce({
+			isDirectory: vi.fn().mockReturnValue(true),
+		} as any)
+
+		// Simulate listing files with symlinks that point to files with different names
+		readdirMock.mockResolvedValueOnce([
+			{
+				name: "01-first.link",
+				isFile: () => false,
+				isSymbolicLink: () => true,
+				parentPath: "/fake/path/.roo/rules",
+			},
+			{
+				name: "02-second.link",
+				isFile: () => false,
+				isSymbolicLink: () => true,
+				parentPath: "/fake/path/.roo/rules",
+			},
+			{
+				name: "03-third.link",
+				isFile: () => false,
+				isSymbolicLink: () => true,
+				parentPath: "/fake/path/.roo/rules",
+			},
+		] as any)
+
+		// Mock readlink to return target paths that would sort differently than symlink names
+		readlinkMock
+			.mockResolvedValueOnce("../../targets/zzz-last.txt") // 01-first.link -> zzz-last.txt
+			.mockResolvedValueOnce("../../targets/aaa-first.txt") // 02-second.link -> aaa-first.txt
+			.mockResolvedValueOnce("../../targets/mmm-middle.txt") // 03-third.link -> mmm-middle.txt
+
+		// Set up stat mock for the remaining calls
+		statMock.mockImplementation((path) => {
+			const normalizedPath = path.toString().replace(/\\/g, "/")
+			// Target files exist and are files
+			if (normalizedPath.endsWith(".txt")) {
+				return Promise.resolve({
+					isFile: vi.fn().mockReturnValue(true),
+					isDirectory: vi.fn().mockReturnValue(false),
+				} as any)
+			}
+			return Promise.resolve({
+				isFile: vi.fn().mockReturnValue(false),
+				isDirectory: vi.fn().mockReturnValue(false),
+			} as any)
+		})
+
+		readFileMock.mockImplementation((filePath: PathLike) => {
+			const pathStr = filePath.toString()
+			const normalizedPath = pathStr.replace(/\\/g, "/")
+			if (normalizedPath.endsWith("zzz-last.txt")) {
+				return Promise.resolve("content from zzz-last.txt")
+			}
+			if (normalizedPath.endsWith("aaa-first.txt")) {
+				return Promise.resolve("content from aaa-first.txt")
+			}
+			if (normalizedPath.endsWith("mmm-middle.txt")) {
+				return Promise.resolve("content from mmm-middle.txt")
+			}
+			return Promise.reject({ code: "ENOENT" })
+		})
+
+		const result = await loadRuleFiles("/fake/path")
+
+		// Content should appear in order of symlink names (01-first, 02-second, 03-third)
+		// NOT in order of target names (aaa-first, mmm-middle, zzz-last)
+		const firstIndex = result.indexOf("content from zzz-last.txt") // from 01-first.link
+		const secondIndex = result.indexOf("content from aaa-first.txt") // from 02-second.link
+		const thirdIndex = result.indexOf("content from mmm-middle.txt") // from 03-third.link
+
+		// All content should be found
+		expect(firstIndex).toBeGreaterThan(-1)
+		expect(secondIndex).toBeGreaterThan(-1)
+		expect(thirdIndex).toBeGreaterThan(-1)
+
+		// And they should be in the order of symlink names, not target names
+		expect(firstIndex).toBeLessThan(secondIndex)
+		expect(secondIndex).toBeLessThan(thirdIndex)
+
+		// Verify the target paths are shown (not symlink paths)
+		expect(result).toContain("zzz-last.txt")
+		expect(result).toContain("aaa-first.txt")
+		expect(result).toContain("mmm-middle.txt")
 	})
 
 	it("should handle empty file list gracefully", async () => {

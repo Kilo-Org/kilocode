@@ -15,14 +15,14 @@
 		"drizzle-kit:production": "dotenvx run -f .env.production -- tsx node_modules/drizzle-kit/bin.cjs",
 		"db:generate": "pnpm drizzle-kit generate",
 		"db:migrate": "pnpm drizzle-kit migrate",
-		"db:push": "pnpm drizzle-kit push",
-		"db:test:push": "pnpm drizzle-kit:test push",
-		"db:production:push": "pnpm drizzle-kit:production push",
-		"db:start": "docker compose up -d db",
-		"db:stop": "docker compose down db",
-		"redis:start": "docker compose up -d redis",
-		"redis:stop": "docker compose down redis",
-		"services:start": "docker compose up -d db redis"
+		"db:migrate:production": "pnpm drizzle-kit:production migrate",
+		"db:push:test": "pnpm drizzle-kit:test push",
+		"db:up": "dotenvx run -f .env.development .env.local -- docker compose up -d db",
+		"db:down": "dotenvx run -f .env.development .env.local -- docker compose down db",
+		"redis:up": "dotenvx run -f .env.development .env.local -- docker compose up -d redis",
+		"redis:down": "dotenvx run -f .env.development .env.local -- docker compose down redis",
+		"services:up": "dotenvx run -f .env.development .env.local -- docker compose up -d db redis",
+		"services:down": "dotenvx run -f .env.development .env.local -- docker compose down db redis"
 	},
 	"dependencies": {
 		"@roo-code/ipc": "workspace:^",

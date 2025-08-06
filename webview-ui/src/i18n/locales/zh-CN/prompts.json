@@ -90,12 +90,23 @@
 			"useCurrentConfig": "使用当前选择的API配置",
 			"testPromptPlaceholder": "输入提示词以测试增强效果",
 			"previewButton": "测试提示词增强",
-			"testEnhancement": "测试增强"
+			"testEnhancement": "测试增强",
+			"includeTaskHistory": "包含任务历史作为上下文",
+			"includeTaskHistoryDescription": "启用后，当前对话的最后 10 条消息将作为上下文包含在增强提示词时，有助于生成更相关和上下文感知的建议。"
+		},
+		"condense": {
+			"apiConfiguration": "用于上下文压缩的 API 配置",
+			"apiConfigDescription": "选择用于上下文压缩操作的 API 配置。保留未选择状态以使用当前活动的配置。",
+			"useCurrentConfig": "使用当前选中的 API 配置"
 		},
 		"types": {
 			"ENHANCE": {
 				"label": "增强提示词",
 				"description": "优化提示获取更好回答（点击✨使用）"
+			},
+			"CONDENSE": {
+				"label": "上下文压缩",
+				"description": "配置如何压缩对话上下文以管理令牌限制。此提示用于手动和自动上下文压缩操作。"
 			},
 			"EXPLAIN": {
 				"label": "解释代码",
@@ -124,6 +135,10 @@
 			"TERMINAL_EXPLAIN": {
 				"label": "解释终端命令",
 				"description": "获取对终端命令及其输出的详细解释。可在终端右键菜单（右键点击选中的终端内容）中使用。"
+			},
+			"TERMINAL_GENERATE": {
+				"label": "生成终端命令",
+				"description": "根据描述协助生成终端命令。"
 			},
 			"NEW_TASK": {
 				"label": "新任务",

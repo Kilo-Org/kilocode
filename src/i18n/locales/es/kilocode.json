@@ -51,36 +51,34 @@
 		"providerRegistered": "Kilo: Proveedor de mensajes de confirmación registrado",
 		"activationFailed": "Kilo: Error al activar el generador de mensajes: {{error}}"
 	},
-	"autocomplete": {
+	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Completado",
-			"disabled": "$(circle-slash) Kilo Completo",
-			"warning": "$(warning) Kilo Completo",
+			"enabled": "$(sparkle) Asistente Integrado Kilo",
+			"disabled": "$(circle-slash) Asistencia en línea Kilo",
+			"warning": "$(warning) Asistencia Integrada Kilo",
 			"tooltip": {
-				"disabled": "Autocompletar de Kilo Code (desactivado)",
-				"basic": "Autocompletado de Kilo Code",
+				"basic": "Asistencia Integrada Kilo Code",
+				"disabled": "Asistente Integrado Kilo Code (desactivado)",
+				"tokenError": "Se debe establecer un token válido para usar Inline Assist",
+				"lastCompletion": "Última sugerencia:",
 				"sessionTotal": "Costo total de la sesión:",
-				"lastCompletion": "Última finalización:",
-				"tokenError": "Se debe establecer un token válido para usar el autocompletado",
 				"model": "Modelo:"
 			},
 			"cost": {
-				"zero": "$0,00",
+				"zero": "$0.00",
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Kilo Completo {{status}}"
-	},
-	"ghost": {
+		"toggleMessage": "Asistente Integrado Kilo {{status}}",
 		"progress": {
 			"analyzing": "Analizando su código...",
-			"processing": "Procesando ediciones sugeridas...",
 			"generating": "Generando sugerencias de edición...",
+			"processing": "Procesando ediciones sugeridas...",
 			"showing": "Mostrando ediciones sugeridas...",
-			"title": "Código Kilo"
+			"title": "Kilo Code"
 		},
 		"input": {
-			"title": "Código Kilo: Tarea Rápida",
+			"title": "Kilo Code: Tarea Rápida",
 			"placeholder": "p. ej., 'refactorizar esta función para que sea más eficiente'"
 		},
 		"commands": {
@@ -88,20 +86,40 @@
 			"cancelSuggestions": "Cancelar Ediciones Sugeridas",
 			"generateSuggestions": "Kilo Code: Generar Ediciones Sugeridas",
 			"applyCurrentSuggestion": "Aplicar edición sugerida actual",
+			"applyAllSuggestions": "Aplicar todas las ediciones sugeridas",
 			"promptCodeSuggestion": "Tarea Rápida de Prompt",
-			"category": "Kilo Code",
-			"applyAllSuggestions": "Aplicar todas las ediciones sugeridas"
+			"category": "Kilo Code"
+		},
+		"codeAction": {
+			"title": "Kilo Code: Ediciones sugeridas"
 		},
 		"chatParticipant": {
-			"fullName": "Agente de Código Kilo",
+			"fullName": "Kilo Code Agente",
 			"description": "Puedo ayudarte con tareas rápidas y ediciones sugeridas.",
 			"name": "Agente"
 		},
-		"codeAction": {
-			"title": "Código Kilo: Ediciones sugeridas"
-		},
 		"messages": {
 			"provideCodeSuggestions": "Proporcionando sugerencias de código..."
+		},
+		"incompatibilityExtensionPopup": {
+			"message": "La Asistencia Integrada de Kilo Code está siendo bloqueada por un conflicto con GitHub Copilot. Para solucionar esto, debes deshabilitar las sugerencias integradas de Copilot.",
+			"disableCopilot": "Deshabilitar Copilot",
+			"disableInlineAssist": "Deshabilitar Asistencia Integrada"
 		}
+	},
+	"terminalCommandGenerator": {
+		"inputPrompt": "Kilo: Describe el comando que quieres generar",
+		"noActiveTerminal": "Kilo: No se encontró ningún terminal activo. Por favor abra un terminal primero.",
+		"inputPlaceholder": "p. ej., matar el proceso que se ejecuta en el puerto 3001, encontrar archivos grandes, etc.",
+		"generatingProgress": "Kilo: Generando comando de terminal...",
+		"commandGenerated": "Kilo: Comando generado: {{command}}",
+		"generationFailed": "Kilo: Error al generar el comando: {{error}}",
+		"warningDialog": {
+			"title": "Advertencia de Seguridad de Terminal",
+			"okButton": "Entiendo",
+			"message": "Verifique dos veces todos los comandos generados antes de ejecutarlos. Las acciones en terminal no siempre se pueden deshacer: ejecutar comandos sin verificar puede resultar en pérdida irreversible de datos o daños al sistema. ¡Revise y comprenda completamente el comando antes de continuar!",
+			"cancelButton": "Cancelar"
+		},
+		"tipMessage": "Kilo: Presiona {{shortcut}} para generar comandos de terminal"
 	}
 }

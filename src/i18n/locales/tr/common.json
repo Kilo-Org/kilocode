@@ -25,12 +25,7 @@
 	"confirmation": {
 		"reset_state": "Uzantıdaki tüm durumları ve gizli depolamayı sıfırlamak istediğinizden emin misiniz? Bu işlem geri alınamaz.",
 		"delete_config_profile": "Bu yapılandırma profilini silmek istediğinizden emin misiniz?",
-		"delete_custom_mode_with_rules": "Bu {scope} modunu silmek istediğinizden emin misiniz?\n\nBu işlem, ilişkili kurallar klasörünü de şu konumdan silecektir:\n{rulesFolderPath}",
-		"delete_message": "Neyi silmek istersiniz?",
-		"delete_just_this_message": "Sadece bu mesajı",
-		"delete_this_and_subsequent": "Bu ve sonraki tüm mesajları",
-		"edit_warning": "Bu mesajı düzenlemek konuşmadaki tüm sonraki mesajları silecektir. Devam etmek istiyor musunuz?",
-		"proceed": "Devam et"
+		"delete_custom_mode_with_rules": "Bu {scope} modunu silmek istediğinizden emin misiniz?\n\nBu işlem, ilişkili kurallar klasörünü de şu konumdan silecektir:\n{rulesFolderPath}"
 	},
 	"errors": {
 		"invalid_data_uri": "Geçersiz veri URI formatı",
@@ -41,6 +36,7 @@
 		"could_not_open_file_generic": "Dosya açılamadı!",
 		"checkpoint_timeout": "Kontrol noktasını geri yüklemeye çalışırken zaman aşımına uğradı.",
 		"checkpoint_failed": "Kontrol noktası geri yüklenemedi.",
+		"git_not_installed": "Kontrol noktaları özelliği için Git gereklidir. Kontrol noktalarını etkinleştirmek için lütfen Git'i yükleyin.",
 		"no_workspace": "Lütfen önce bir proje klasörü açın",
 		"update_support_prompt": "Destek istemi güncellenemedi",
 		"reset_support_prompt": "Destek istemi sıfırlanamadı",
@@ -62,7 +58,7 @@
 		"cannot_access_path": "{{path}} yoluna erişilemiyor: {{error}}",
 		"settings_import_failed": "Ayarlar içe aktarılamadı: {{error}}.",
 		"mistake_limit_guidance": "Bu, modelin düşünce sürecindeki bir başarısızlığı veya bir aracı düzgün kullanamama durumunu gösterebilir, bu da kullanıcı rehberliği ile hafifletilebilir (örn. \"Görevi daha küçük adımlara bölmeyi deneyin\").",
-		"violated_organization_allowlist": "Görev yürütülemedi: Geçerli profil kuruluşunuzun ayarlarını ihlal ediyor",
+		"violated_organization_allowlist": "Görev yürütülemedi: Geçerli profil kuruluşunuzun ayarlarıyla uyumlu değil",
 		"condense_failed": "Bağlam sıkıştırılamadı",
 		"condense_not_enough_messages": "{{prevContextTokens}} token'lık bağlamı sıkıştırmak için yeterli mesaj yok. En az {{minimumMessageCount}} mesaj gerekli, ancak sadece {{messageCount}} mesaj mevcut.",
 		"condensed_recently": "Bağlam yakın zamanda sıkıştırıldı; bu deneme atlanıyor",
@@ -75,6 +71,7 @@
 		"url_page_not_found": "Sayfa bulunamadı. URL'nin doğru olup olmadığını kontrol et.",
 		"url_fetch_failed": "URL içeriği getirme hatası: {{error}}",
 		"url_fetch_error_with_url": "{{url}} için içerik getirme hatası: {{error}}",
+		"command_timeout": "Komut çalıştırma {{seconds}} saniye sonra zaman aşımına uğradı",
 		"share_task_failed": "Görev paylaşılamadı",
 		"share_no_active_task": "Paylaşılacak aktif görev yok",
 		"share_auth_required": "Kimlik doğrulama gerekli. Görevleri paylaşmak için lütfen giriş yapın.",
@@ -82,6 +79,13 @@
 		"share_task_not_found": "Görev bulunamadı veya erişim reddedildi.",
 		"mode_import_failed": "Mod içe aktarılamadı: {{error}}",
 		"delete_rules_folder_failed": "Kurallar klasörü silinemedi: {{rulesFolderPath}}. Hata: {{error}}",
+		"command_not_found": "'{{name}}' komutu bulunamadı",
+		"open_command_file": "Komut dosyası açılamadı",
+		"delete_command": "Komut silinemedi",
+		"no_workspace_for_project_command": "Proje komutu için çalışma alanı klasörü bulunamadı",
+		"command_already_exists": "\"{{commandName}}\" komutu zaten mevcut",
+		"create_command_failed": "Komut oluşturulamadı",
+		"command_template_content": "---\ndescription: \"Bu komutun ne yaptığının kısa açıklaması\"\n---\n\nBu yeni bir slash komutudur. Komut davranışını özelleştirmek için bu dosyayı düzenleyin.",
 		"claudeCode": {
 			"processExited": "Claude Code işlemi {{exitCode}} koduyla çıktı.",
 			"errorOutput": "Hata çıktısı: {{output}}",
@@ -98,6 +102,11 @@
 			"badRequest": "Geçersiz istek: {{details}}",
 			"apiError": "Gemini CLI API hatası: {{error}}",
 			"completionError": "Gemini CLI tamamlama hatası: {{error}}"
+		},
+		"gemini": {
+			"generate_stream": "Gemini oluşturma bağlam akışı hatası: {{error}}",
+			"generate_complete_prompt": "Gemini tamamlama hatası: {{error}}",
+			"sources": "Kaynaklar:"
 		}
 	},
 	"warnings": {
@@ -129,7 +138,8 @@
 	},
 	"buttons": {
 		"save": "Kaydet",
-		"edit": "Düzenle"
+		"edit": "Düzenle",
+		"learn_more": "Daha Fazla Bilgi"
 	},
 	"tasks": {
 		"canceled": "Görev hatası: Kullanıcı tarafından durduruldu ve iptal edildi.",
@@ -167,11 +177,17 @@
 			"deleteFailed": "Özel mod silme başarısız: {{error}}",
 			"resetFailed": "Özel modları sıfırlama başarısız: {{error}}",
 			"modeNotFound": "Yazma hatası: Mod bulunamadı",
-			"noWorkspaceForProject": "Proje özel modu için çalışma alanı klasörü bulunamadı"
+			"noWorkspaceForProject": "Proje özel modu için çalışma alanı klasörü bulunamadı",
+			"rulesCleanupFailed": "Mod başarıyla silindi, ancak {{rulesFolderPath}} konumundaki kurallar klasörü silinemedi. Manuel olarak silmeniz gerekebilir."
 		},
 		"scope": {
 			"project": "proje",
 			"global": "küresel"
+		}
+	},
+	"marketplace": {
+		"mode": {
+			"rulesCleanupFailed": "Mod başarıyla kaldırıldı, ancak {{rulesFolderPath}} konumundaki kurallar klasörü silinemedi. Manuel olarak silmeniz gerekebilir."
 		}
 	},
 	"mdm": {
@@ -187,6 +203,11 @@
 			"description": "Bu {{scope}} modunu silmek istediğinizden emin misiniz? Bu, {{rulesFolderPath}} adresindeki ilişkili kurallar klasörünü de silecektir",
 			"descriptionNoRules": "Bu özel modu silmek istediğinizden emin misiniz?",
 			"confirm": "Sil"
+		}
+	},
+	"commands": {
+		"preventCompletionWithOpenTodos": {
+			"description": "Todo listesinde tamamlanmamış todolar olduğunda görev tamamlanmasını engelle"
 		}
 	}
 }

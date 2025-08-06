@@ -25,12 +25,7 @@
 	"confirmation": {
 		"reset_state": "क्या आप वाकई एक्सटेंशन में सभी स्टेट और गुप्त स्टोरेज रीसेट करना चाहते हैं? इसे पूर्ववत नहीं किया जा सकता है।",
 		"delete_config_profile": "क्या आप वाकई इस कॉन्फ़िगरेशन प्रोफ़ाइल को हटाना चाहते हैं?",
-		"delete_custom_mode_with_rules": "क्या आप वाकई इस {scope} मोड को हटाना चाहते हैं?\n\nयह संबंधित नियम फ़ोल्डर को भी यहाँ हटा देगा:\n{rulesFolderPath}",
-		"delete_message": "आप क्या हटाना चाहते हैं?",
-		"edit_warning": "इस संदेश को संपादित करने से बातचीत के सभी बाद के संदेश हट जाएंगे। क्या आप जारी रखना चाहते हैं?",
-		"delete_just_this_message": "सिर्फ यह संदेश",
-		"delete_this_and_subsequent": "यह और सभी बाद के संदेश",
-		"proceed": "जारी रखें"
+		"delete_custom_mode_with_rules": "क्या आप वाकई इस {scope} मोड को हटाना चाहते हैं?\n\nयह संबंधित नियम फ़ोल्डर को भी यहाँ हटा देगा:\n{rulesFolderPath}"
 	},
 	"errors": {
 		"invalid_data_uri": "अमान्य डेटा URI फॉर्मेट",
@@ -41,6 +36,7 @@
 		"could_not_open_file_generic": "फ़ाइल नहीं खोली जा सकी!",
 		"checkpoint_timeout": "चेकपॉइंट को पुनर्स्थापित करने का प्रयास करते समय टाइमआउट हो गया।",
 		"checkpoint_failed": "चेकपॉइंट पुनर्स्थापित करने में विफल।",
+		"git_not_installed": "चेकपॉइंट सुविधा के लिए Git आवश्यक है। कृपया चेकपॉइंट সক্ষম करने के लिए Git इंस्टॉल करें।",
 		"no_workspace": "कृपया पहले प्रोजेक्ट फ़ोल्डर खोलें",
 		"update_support_prompt": "सपोर्ट प्रॉम्प्ट अपडेट करने में विफल",
 		"reset_support_prompt": "सपोर्ट प्रॉम्प्ट रीसेट करने में विफल",
@@ -62,7 +58,7 @@
 		"cannot_access_path": "पाथ {{path}} तक पहुंच नहीं पा रहे हैं: {{error}}",
 		"settings_import_failed": "सेटिंग्स इम्पोर्ट करने में विफल: {{error}}।",
 		"mistake_limit_guidance": "यह मॉडल की सोच प्रक्रिया में विफलता या किसी टूल का सही उपयोग न कर पाने का संकेत हो सकता है, जिसे उपयोगकर्ता के मार्गदर्शन से ठीक किया जा सकता है (जैसे \"कार्य को छोटे चरणों में बांटने की कोशिश करें\")।",
-		"violated_organization_allowlist": "कार्य चलाने में विफल: वर्तमान प्रोफ़ाइल आपके संगठन की सेटिंग्स का उल्लंघन करती है",
+		"violated_organization_allowlist": "कार्य चलाने में विफल: वर्तमान प्रोफ़ाइल आपके संगठन की सेटिंग्स के साथ संगत नहीं है",
 		"condense_failed": "संदर्भ को संक्षिप्त करने में विफल",
 		"condense_not_enough_messages": "{{prevContextTokens}} टोकन के संदर्भ को संक्षिप्त करने के लिए पर्याप्त संदेश नहीं हैं। कम से कम {{minimumMessageCount}} संदेश आवश्यक हैं, लेकिन केवल {{messageCount}} उपलब्ध हैं।",
 		"condensed_recently": "संदर्भ हाल ही में संक्षिप्त किया गया था; इस प्रयास को छोड़ा जा रहा है",
@@ -75,6 +71,7 @@
 		"url_page_not_found": "पेज नहीं मिला। कृपया जांचें कि URL सही है।",
 		"url_fetch_failed": "URL सामग्री प्राप्त करने में त्रुटि: {{error}}",
 		"url_fetch_error_with_url": "{{url}} के लिए सामग्री प्राप्त करने में त्रुटि: {{error}}",
+		"command_timeout": "कमांड निष्पादन {{seconds}} सेकंड के बाद समय समाप्त हो गया",
 		"share_task_failed": "कार्य साझा करने में विफल। कृपया पुनः प्रयास करें।",
 		"share_no_active_task": "साझा करने के लिए कोई सक्रिय कार्य नहीं",
 		"share_auth_required": "प्रमाणीकरण आवश्यक है। कार्य साझा करने के लिए कृपया साइन इन करें।",
@@ -82,6 +79,13 @@
 		"share_task_not_found": "कार्य नहीं मिला या पहुंच अस्वीकृत।",
 		"mode_import_failed": "मोड आयात करने में विफल: {{error}}",
 		"delete_rules_folder_failed": "नियम फ़ोल्डर हटाने में विफल: {{rulesFolderPath}}। त्रुटि: {{error}}",
+		"command_not_found": "कमांड '{{name}}' नहीं मिला",
+		"open_command_file": "कमांड फ़ाइल खोलने में विफल",
+		"delete_command": "कमांड हटाने में विफल",
+		"no_workspace_for_project_command": "प्रोजेक्ट कमांड के लिए वर्कस्पेस फ़ोल्डर नहीं मिला",
+		"command_already_exists": "कमांड \"{{commandName}}\" पहले से मौजूद है",
+		"create_command_failed": "कमांड बनाने में विफल",
+		"command_template_content": "---\ndescription: \"इस कमांड के कार्य का संक्षिप्त विवरण\"\n---\n\nयह एक नया स्लैश कमांड है। कमांड व्यवहार को कस्टमाइज़ करने के लिए इस फ़ाइल को संपादित करें।",
 		"claudeCode": {
 			"processExited": "Claude Code प्रक्रिया कोड {{exitCode}} के साथ समाप्त हुई।",
 			"errorOutput": "त्रुटि आउटपुट: {{output}}",
@@ -98,6 +102,11 @@
 			"badRequest": "गलत अनुरोध: {{details}}",
 			"apiError": "Gemini CLI API त्रुटि: {{error}}",
 			"completionError": "Gemini CLI पूर्णता त्रुटि: {{error}}"
+		},
+		"gemini": {
+			"generate_stream": "जेमिनी जनरेट कॉन्टेक्स्ट स्ट्रीम त्रुटि: {{error}}",
+			"generate_complete_prompt": "जेमिनी समापन त्रुटि: {{error}}",
+			"sources": "स्रोत:"
 		}
 	},
 	"warnings": {
@@ -129,7 +138,8 @@
 	},
 	"buttons": {
 		"save": "सहेजें",
-		"edit": "संपादित करें"
+		"edit": "संपादित करें",
+		"learn_more": "और अधिक जानें"
 	},
 	"tasks": {
 		"canceled": "टास्क त्रुटि: इसे उपयोगकर्ता द्वारा रोका और रद्द किया गया था।",
@@ -167,11 +177,17 @@
 			"deleteFailed": "कस्टम मोड डिलीट विफल: {{error}}",
 			"resetFailed": "कस्टम मोड रीसेट विफल: {{error}}",
 			"modeNotFound": "लेखन त्रुटि: मोड नहीं मिला",
-			"noWorkspaceForProject": "प्रोजेक्ट-विशिष्ट मोड के लिए वर्कस्पेस फ़ोल्डर नहीं मिला"
+			"noWorkspaceForProject": "प्रोजेक्ट-विशिष्ट मोड के लिए वर्कस्पेस फ़ोल्डर नहीं मिला",
+			"rulesCleanupFailed": "मोड सफलतापूर्वक हटा दिया गया, लेकिन {{rulesFolderPath}} पर नियम फ़ोल्डर को हटाने में विफल रहा। आपको इसे मैन्युअल रूप से हटाना पड़ सकता है।"
 		},
 		"scope": {
 			"project": "परियोजना",
 			"global": "वैश्विक"
+		}
+	},
+	"marketplace": {
+		"mode": {
+			"rulesCleanupFailed": "मोड सफलतापूर्वक हटा दिया गया, लेकिन {{rulesFolderPath}} पर नियम फ़ोल्डर को हटाने में विफल रहा। आपको इसे मैन्युअल रूप से हटाना पड़ सकता है।"
 		}
 	},
 	"mdm": {
@@ -187,6 +203,11 @@
 			"description": "क्या आप वाकई इस {{scope}} मोड को हटाना चाहते हैं? यह संबंधित नियम फ़ोल्डर को भी {{rulesFolderPath}} पर हटा देगा",
 			"descriptionNoRules": "क्या आप वाकई इस कस्टम मोड को हटाना चाहते हैं?",
 			"confirm": "हटाएं"
+		}
+	},
+	"commands": {
+		"preventCompletionWithOpenTodos": {
+			"description": "जब टूडू सूची में अधूरे टूडू हों तो कार्य पूर्ण होने से रोकें"
 		}
 	}
 }

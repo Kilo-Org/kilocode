@@ -93,12 +93,23 @@
 			"useCurrentConfig": "Use currently selected API configuration",
 			"testPromptPlaceholder": "Enter a prompt to test the enhancement",
 			"previewButton": "Preview Prompt Enhancement",
-			"testEnhancement": "Test Enhancement"
+			"testEnhancement": "Test Enhancement",
+			"includeTaskHistory": "Include task history as context",
+			"includeTaskHistoryDescription": "When enabled, the last 10 messages from the current conversation will be included as context when enhancing prompts, helping to generate more relevant and context-aware suggestions."
+		},
+		"condense": {
+			"apiConfiguration": "API Configuration for Context Condensing",
+			"apiConfigDescription": "Select which API configuration to use for context condensing operations. Leave unselected to use the current active configuration.",
+			"useCurrentConfig": "Use currently selected API configuration"
 		},
 		"types": {
 			"ENHANCE": {
 				"label": "Enhance Prompt",
 				"description": "Use prompt enhancement to get tailored suggestions or improvements for your inputs. This ensures Kilo Code understands your intent and provides the best possible responses. Available via the ✨ icon in chat."
+			},
+			"CONDENSE": {
+				"label": "Context Condensing",
+				"description": "Configure how conversation context is condensed to manage token limits. This prompt is used for both manual and automatic context condensing operations."
 			},
 			"EXPLAIN": {
 				"label": "Explain Code",
@@ -127,6 +138,10 @@
 			"TERMINAL_EXPLAIN": {
 				"label": "Explain Terminal Command",
 				"description": "Get detailed explanations of terminal commands and their outputs. Available in the terminal context menu (right-click on selected terminal content)."
+			},
+			"TERMINAL_GENERATE": {
+				"label": "Generate terminal command",
+				"description": "Help generate terminal commands based on description."
 			},
 			"NEW_TASK": {
 				"label": "Start New Task",

@@ -17,6 +17,12 @@ import {
 	vertexModels,
 	xaiDefaultModelId,
 	xaiModels,
+	// kilocode_change start
+	zaiDefaultModelId,
+	zaiModels,
+	bigModelDefaultModelId,
+	bigModelModels,
+	// kilocode_change end
 	groqModels,
 	groqDefaultModelId,
 	chutesModels,
@@ -28,6 +34,7 @@ import {
 	glamaDefaultModelId,
 	unboundDefaultModelId,
 	litellmDefaultModelId,
+	kilocodeDefaultModelId,
 } from "@roo-code/types"
 import { cerebrasModels, cerebrasDefaultModelId } from "@roo/api"
 import type { ModelRecord, RouterModels } from "@roo/api"
@@ -82,6 +89,20 @@ const getModelsByProvider = ({
 				defaultModel: xaiDefaultModelId,
 			}
 		}
+		// kilocode_change start
+		case "zai": {
+			return {
+				models: zaiModels,
+				defaultModel: zaiDefaultModelId,
+			}
+		}
+		case "bigmodel": {
+			return {
+				models: bigModelModels,
+				defaultModel: bigModelDefaultModelId,
+			}
+		}
+		// kilocode_change end
 		case "groq": {
 			return {
 				models: groqModels,
@@ -166,7 +187,7 @@ const getModelsByProvider = ({
 		case "kilocode": {
 			return {
 				models: routerModels["kilocode-openrouter"],
-				defaultModel: "anthropic/claude-3.7-sonnet",
+				defaultModel: kilocodeDefaultModelId,
 			}
 		}
 		default: {

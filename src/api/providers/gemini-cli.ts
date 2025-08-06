@@ -4,6 +4,7 @@ import * as fs from "fs/promises"
 import * as path from "path"
 import * as os from "os"
 import axios from "axios"
+import dotenvx from "@dotenvx/dotenvx"
 
 import { type ModelInfo, type GeminiCliModelId, geminiCliDefaultModelId, geminiCliModels } from "@roo-code/types"
 
@@ -141,6 +142,20 @@ export class GeminiCliHandler extends BaseProvider implements SingleCompletionHa
 
 		// Lookup for the project id from the env variable
 		// with a fallback to a default project ID (can be anything for personal OAuth)
+		const envPath = this.options.geminiCliOAuthPath || path.join(os.homedir(), ".gemini", ".env")
+
+		const { parsed, error } = dotenvx.config({ path: envPath })
+
+		if (error) {
+			console.warn("[GeminiCLI] .env file not found or invalid format, proceeding with default project ID")
+		}
+
+		// If the project ID was in the .env file, use it and return early.
+		if (parsed?.GOOGLE_CLOUD_PROJECT) {
+			this.projectId = parsed.GOOGLE_CLOUD_PROJECT
+			return this.projectId
+		}
+
 		const initialProjectId = process.env.GOOGLE_CLOUD_PROJECT ?? "default"
 
 		// Prepare client metadata

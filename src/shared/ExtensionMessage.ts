@@ -22,6 +22,15 @@ import { ProfileDataResponsePayload, BalanceDataResponsePayload } from "./Webvie
 import { ClineRulesToggles } from "./cline-rules" // kilocode_change
 import type { MarketplaceItem } from "@roo-code/types"
 
+// Command interface for frontend/backend communication
+export interface Command {
+	name: string
+	source: "global" | "project"
+	filePath?: string
+	description?: string
+	argumentHint?: string
+}
+
 // Type for marketplace installed metadata
 export interface MarketplaceInstalledMetadata {
 	project: Record<string, { type: string }>
@@ -70,6 +79,7 @@ export interface ExtensionMessage {
 		| "ollamaModels"
 		| "lmStudioModels"
 		| "vsCodeLmModels"
+		| "huggingFaceModels"
 		| "vsCodeLmApiAvailable"
 		| "updatePrompt"
 		| "systemPrompt"
@@ -105,6 +115,7 @@ export interface ExtensionMessage {
 		| "vsCodeSetting"
 		| "profileDataResponse" // kilocode_change
 		| "balanceDataResponse" // kilocode_change
+		| "updateProfileData" // kilocode_change
 		| "authenticatedUser"
 		| "condenseTaskContextResponse"
 		| "singleRouterModelFetchResponse"
@@ -113,11 +124,18 @@ export interface ExtensionMessage {
 		| "codebaseIndexConfig"
 		| "rulesData" // kilocode_change
 		| "marketplaceInstallResult"
+		| "marketplaceRemoveResult"
 		| "marketplaceData"
 		| "mermaidFixResponse" // kilocode_change
 		| "shareTaskSuccess"
 		| "codeIndexSettingsSaved"
 		| "codeIndexSecretStatus"
+		| "showDeleteMessageDialog"
+		| "showEditMessageDialog"
+		| "kilocodeNotificationsResponse" // kilocode_change
+		| "usageDataResponse" // kilocode_change
+		| "commands"
+		| "insertTextIntoTextarea"
 	text?: string
 	payload?: ProfileDataResponsePayload | BalanceDataResponsePayload // kilocode_change: Add payload for profile and balance data
 	action?:
@@ -148,6 +166,23 @@ export interface ExtensionMessage {
 	ollamaModels?: string[]
 	lmStudioModels?: string[]
 	vsCodeLmModels?: { vendor?: string; family?: string; version?: string; id?: string }[]
+	huggingFaceModels?: Array<{
+		id: string
+		object: string
+		created: number
+		owned_by: string
+		providers: Array<{
+			provider: string
+			status: "live" | "staging" | "error"
+			supports_tools?: boolean
+			supports_structured_output?: boolean
+			context_length?: number
+			pricing?: {
+				input: number
+				output: number
+			}
+		}>
+	}>
 	mcpServers?: McpServer[]
 	commits?: GitCommit[]
 	listApiConfig?: ProviderSettingsEntry[]
@@ -181,11 +216,27 @@ export interface ExtensionMessage {
 	globalWorkflows?: ClineRulesToggles
 	localWorkflows?: ClineRulesToggles
 	marketplaceItems?: MarketplaceItem[]
+	organizationMcps?: MarketplaceItem[]
 	marketplaceInstalledMetadata?: MarketplaceInstalledMetadata
 	fixedCode?: string | null // For mermaidFixResponse // kilocode_change
+	errors?: string[]
 	visibility?: ShareVisibility
 	rulesFolderPath?: string
 	settings?: any
+	messageTs?: number
+	context?: string
+	// kilocode_change start: Notifications
+	notifications?: Array<{
+		id: string
+		title: string
+		message: string
+		action?: {
+			actionText: string
+			actionURL: string
+		}
+	}>
+	// kilocode_change end
+	commands?: Command[]
 }
 
 export type ExtensionState = Pick<
@@ -212,6 +263,7 @@ export type ExtensionState = Pick<
 	| "alwaysAllowExecute"
 	| "alwaysAllowUpdateTodoList"
 	| "allowedCommands"
+	| "deniedCommands"
 	| "allowedMaxRequests"
 	| "browserToolEnabled"
 	| "browserViewportSize"
@@ -231,6 +283,7 @@ export type ExtensionState = Pick<
 	| "maxConcurrentFileReads" // Optional in GlobalSettings, required here.
 	| "allowVeryLargeReads" // kilocode_change
 	| "terminalOutputLineLimit"
+	| "terminalOutputCharacterLimit"
 	| "terminalShellIntegrationTimeout"
 	| "terminalShellIntegrationDisabled"
 	| "terminalCommandDelay"
@@ -240,6 +293,7 @@ export type ExtensionState = Pick<
 	| "terminalZshP10k"
 	| "terminalZdotdir"
 	| "terminalCompressProgressBar"
+	| "diagnosticsEnabled"
 	| "diffEnabled"
 	| "fuzzyMatchThreshold"
 	// | "experiments" // Optional in GlobalSettings, required here.
@@ -258,13 +312,17 @@ export type ExtensionState = Pick<
 	| "localRulesToggles" // kilocode_change
 	| "globalWorkflowToggles" // kilocode_change
 	| "commitMessageApiConfigId" // kilocode_change
-	| "autocompleteApiConfigId" // kilocode_change
+	| "terminalCommandApiConfigId" // kilocode_change
+	| "dismissedNotificationIds" // kilocode_change
+	| "ghostServiceSettings" // kilocode_change
 	| "condensingApiConfigId"
 	| "customCondensingPrompt"
 	| "codebaseIndexConfig"
 	| "codebaseIndexModels"
 	| "profileThresholds"
 	| "systemNotificationsEnabled" // kilocode_change
+	| "includeDiagnosticMessages"
+	| "maxDiagnosticMessages"
 > & {
 	version: string
 	clineMessages: ClineMessage[]
@@ -285,6 +343,8 @@ export type ExtensionState = Pick<
 	showRooIgnoredFiles: boolean // Whether to show .kilocodeignore'd files in listings
 	maxReadFileLine: number // Maximum number of lines to read from a file before truncating
 	showAutoApproveMenu: boolean // kilocode_change: Whether to show the auto-approve menu in the chat view
+	maxImageFileSize: number // Maximum size of image files to process in MB
+	maxTotalImageSize: number // Maximum total size for all images in a single read operation in MB
 
 	experiments: Experiments // Map of experiment IDs to their enabled state
 
@@ -310,6 +370,7 @@ export type ExtensionState = Pick<
 	cloudApiUrl?: string
 	sharingEnabled: boolean
 	organizationAllowList: OrganizationAllowList
+	organizationSettingsVersion?: number
 
 	autoCondenseContext: boolean
 	autoCondenseContextPercent: number
@@ -418,8 +479,10 @@ export interface ClineApiReqInfo {
 	cacheWrites?: number
 	cacheReads?: number
 	cost?: number
+	usageMissing?: boolean // kilocode_change
 	cancelReason?: ClineApiReqCancelReason
 	streamingFailedMessage?: string
+	apiProtocol?: "anthropic" | "openai"
 }
 
 export type ClineApiReqCancelReason = "streaming_failed" | "user_cancelled"

@@ -29,12 +29,7 @@
 	"confirmation": {
 		"reset_state": "Tem certeza de que deseja redefinir todo o estado e armazenamento secreto na extensão? Isso não pode ser desfeito.",
 		"delete_config_profile": "Tem certeza de que deseja excluir este perfil de configuração?",
-		"delete_custom_mode_with_rules": "Tem certeza de que deseja excluir este modo {scope}?\n\nIsso também excluirá a pasta de regras associada em:\n{rulesFolderPath}",
-		"delete_message": "O que você gostaria de excluir?",
-		"delete_just_this_message": "Apenas esta mensagem",
-		"delete_this_and_subsequent": "Esta e todas as mensagens subsequentes",
-		"edit_warning": "Editar esta mensagem excluirá todas as mensagens subsequentes na conversa. Deseja continuar?",
-		"proceed": "Continuar"
+		"delete_custom_mode_with_rules": "Tem certeza de que deseja excluir este modo {scope}?\n\nIsso também excluirá a pasta de regras associada em:\n{rulesFolderPath}"
 	},
 	"errors": {
 		"invalid_data_uri": "Formato de URI de dados inválido",
@@ -45,6 +40,7 @@
 		"could_not_open_file_generic": "Não foi possível abrir o arquivo!",
 		"checkpoint_timeout": "Tempo esgotado ao tentar restaurar o ponto de verificação.",
 		"checkpoint_failed": "Falha ao restaurar o ponto de verificação.",
+		"git_not_installed": "O Git é necessário para o recurso de checkpoints. Por favor, instale o Git para habilitar os checkpoints.",
 		"no_workspace": "Por favor, abra primeiro uma pasta de projeto",
 		"update_support_prompt": "Falha ao atualizar o prompt de suporte",
 		"reset_support_prompt": "Falha ao redefinir o prompt de suporte",
@@ -66,7 +62,7 @@
 		"cannot_access_path": "Não é possível acessar o caminho {{path}}: {{error}}",
 		"settings_import_failed": "Falha ao importar configurações: {{error}}",
 		"mistake_limit_guidance": "Isso pode indicar uma falha no processo de pensamento do modelo ou incapacidade de usar uma ferramenta adequadamente, o que pode ser mitigado com orientação do usuário (ex. \"Tente dividir a tarefa em etapas menores\").",
-		"violated_organization_allowlist": "Falha ao executar a tarefa: o perfil atual viola as configurações da sua organização",
+		"violated_organization_allowlist": "Falha ao executar a tarefa: o perfil atual não é compatível com as configurações da sua organização",
 		"condense_failed": "Falha ao condensar o contexto",
 		"condense_not_enough_messages": "Não há mensagens suficientes para condensar o contexto de {{prevContextTokens}} tokens. Pelo menos {{minimumMessageCount}} mensagens são necessárias, mas apenas {{messageCount}} estão disponíveis.",
 		"condensed_recently": "O contexto foi condensado recentemente; pulando esta tentativa",
@@ -79,6 +75,7 @@
 		"url_page_not_found": "A página não foi encontrada. Verifique se a URL está correta.",
 		"url_fetch_failed": "Falha ao buscar conteúdo da URL: {{error}}",
 		"url_fetch_error_with_url": "Erro ao buscar conteúdo para {{url}}: {{error}}",
+		"command_timeout": "A execução do comando excedeu o tempo limite após {{seconds}} segundos",
 		"share_task_failed": "Falha ao compartilhar tarefa",
 		"share_no_active_task": "Nenhuma tarefa ativa para compartilhar",
 		"share_auth_required": "Autenticação necessária. Faça login para compartilhar tarefas.",
@@ -86,6 +83,13 @@
 		"share_task_not_found": "Tarefa não encontrada ou acesso negado.",
 		"mode_import_failed": "Falha ao importar o modo: {{error}}",
 		"delete_rules_folder_failed": "Falha ao excluir pasta de regras: {{rulesFolderPath}}. Erro: {{error}}",
+		"command_not_found": "Comando '{{name}}' não encontrado",
+		"open_command_file": "Falha ao abrir arquivo de comando",
+		"delete_command": "Falha ao excluir comando",
+		"no_workspace_for_project_command": "Nenhuma pasta de workspace encontrada para comando de projeto",
+		"command_already_exists": "Comando \"{{commandName}}\" já existe",
+		"create_command_failed": "Falha ao criar comando",
+		"command_template_content": "---\ndescription: \"Breve descrição do que este comando faz\"\n---\n\nEste é um novo comando slash. Edite este arquivo para personalizar o comportamento do comando.",
 		"claudeCode": {
 			"processExited": "O processo Claude Code saiu com código {{exitCode}}.",
 			"errorOutput": "Saída de erro: {{output}}",
@@ -102,6 +106,11 @@
 			"badRequest": "Solicitação inválida: {{details}}",
 			"apiError": "Erro da API Gemini CLI: {{error}}",
 			"completionError": "Erro de conclusão do Gemini CLI: {{error}}"
+		},
+		"gemini": {
+			"generate_stream": "Erro de fluxo de contexto de geração do Gemini: {{error}}",
+			"generate_complete_prompt": "Erro de conclusão do Gemini: {{error}}",
+			"sources": "Fontes:"
 		}
 	},
 	"warnings": {
@@ -133,7 +142,8 @@
 	},
 	"buttons": {
 		"save": "Salvar",
-		"edit": "Editar"
+		"edit": "Editar",
+		"learn_more": "Saiba Mais"
 	},
 	"tasks": {
 		"canceled": "Erro na tarefa: Foi interrompida e cancelada pelo usuário.",
@@ -167,11 +177,17 @@
 			"deleteFailed": "Falha ao excluir modo personalizado: {{error}}",
 			"resetFailed": "Falha ao redefinir modos personalizados: {{error}}",
 			"modeNotFound": "Erro de escrita: Modo não encontrado",
-			"noWorkspaceForProject": "Nenhuma pasta de workspace encontrada para modo específico do projeto"
+			"noWorkspaceForProject": "Nenhuma pasta de workspace encontrada para modo específico do projeto",
+			"rulesCleanupFailed": "O modo foi excluído com sucesso, mas falhou ao excluir a pasta de regras em {{rulesFolderPath}}. Você pode precisar excluí-la manualmente."
 		},
 		"scope": {
 			"project": "projeto",
 			"global": "global"
+		}
+	},
+	"marketplace": {
+		"mode": {
+			"rulesCleanupFailed": "O modo foi removido com sucesso, mas falhou ao excluir a pasta de regras em {{rulesFolderPath}}. Você pode precisar excluí-la manualmente."
 		}
 	},
 	"mdm": {
@@ -187,6 +203,11 @@
 			"description": "Tem certeza de que deseja excluir este modo {{scope}}? Isso também excluirá a pasta de regras associada em: {{rulesFolderPath}}",
 			"descriptionNoRules": "Tem certeza de que deseja excluir este modo personalizado?",
 			"confirm": "Excluir"
+		}
+	},
+	"commands": {
+		"preventCompletionWithOpenTodos": {
+			"description": "Impedir a conclusão de tarefas quando há todos incompletos na lista de todos"
 		}
 	}
 }

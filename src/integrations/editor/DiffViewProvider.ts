@@ -4,6 +4,7 @@ import * as fs from "fs/promises"
 import * as diff from "diff"
 import stripBom from "strip-bom"
 import { XMLBuilder } from "fast-xml-parser"
+import delay from "delay"
 
 import { createDirectoriesForFile } from "../../utils/fs"
 import { arePathsEqual, getReadablePath } from "../../utils/path"
@@ -11,6 +12,7 @@ import { formatResponse } from "../../core/prompts/responses"
 import { diagnosticsToProblemsString, getNewDiagnostics } from "../diagnostics"
 import { ClineSayTool } from "../../shared/ExtensionMessage"
 import { Task } from "../../core/task/Task"
+import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
 
 import { DecorationController } from "./DecorationController"
 
@@ -34,8 +36,14 @@ export class DiffViewProvider {
 	private activeLineController?: DecorationController
 	private streamedLines: string[] = []
 	private preDiagnostics: [vscode.Uri, vscode.Diagnostic[]][] = []
+	private taskRef: WeakRef<Task>
 
-	constructor(private cwd: string) {}
+	constructor(
+		private cwd: string,
+		task: Task,
+	) {
+		this.taskRef = new WeakRef(task)
+	}
 
 	async open(relPath: string): Promise<void> {
 		this.relPath = relPath
@@ -179,7 +187,10 @@ export class DiffViewProvider {
 		}
 	}
 
-	async saveChanges(): Promise<{
+	async saveChanges(
+		diagnosticsEnabled: boolean = true,
+		writeDelayMs: number = DEFAULT_WRITE_DELAY_MS,
+	): Promise<{
 		newProblemsMessage: string | undefined
 		userEdits: string | undefined
 		finalContent: string | undefined
@@ -214,18 +225,43 @@ export class DiffViewProvider {
 		// and can address them accordingly. If problems don't change immediately after
 		// applying a fix, won't be notified, which is generally fine since the
 		// initial fix is usually correct and it may just take time for linters to catch up.
-		const postDiagnostics = vscode.languages.getDiagnostics()
 
-		const newProblems = await diagnosticsToProblemsString(
-			getNewDiagnostics(this.preDiagnostics, postDiagnostics),
-			[
-				vscode.DiagnosticSeverity.Error, // only including errors since warnings can be distracting (if user wants to fix warnings they can use the @problems mention)
-			],
-			this.cwd,
-		) // Will be empty string if no errors.
+		let newProblemsMessage = ""
 
-		const newProblemsMessage =
-			newProblems.length > 0 ? `\n\nNew problems detected after saving the file:\n${newProblems}` : ""
+		if (diagnosticsEnabled) {
+			// Add configurable delay to allow linters time to process and clean up issues
+			// like unused imports (especially important for Go and other languages)
+			// Ensure delay is non-negative
+			const safeDelayMs = Math.max(0, writeDelayMs)
+
+			try {
+				await delay(safeDelayMs)
+			} catch (error) {
+				// Log error but continue - delay failure shouldn't break the save operation
+				console.warn(`Failed to apply write delay: ${error}`)
+			}
+
+			const postDiagnostics = vscode.languages.getDiagnostics()
+
+			// Get diagnostic settings from state
+			const task = this.taskRef.deref()
+			const state = await task?.providerRef.deref()?.getState()
+			const includeDiagnosticMessages = state?.includeDiagnosticMessages ?? true
+			const maxDiagnosticMessages = state?.maxDiagnosticMessages ?? 50
+
+			const newProblems = await diagnosticsToProblemsString(
+				getNewDiagnostics(this.preDiagnostics, postDiagnostics),
+				[
+					vscode.DiagnosticSeverity.Error, // only including errors since warnings can be distracting (if user wants to fix warnings they can use the @problems mention)
+				],
+				this.cwd,
+				includeDiagnosticMessages,
+				maxDiagnosticMessages,
+			) // Will be empty string if no errors.
+
+			newProblemsMessage =
+				newProblems.length > 0 ? `\n\nNew problems detected after saving the file:\n${newProblems}` : ""
+		}
 
 		// If the edited content has different EOL characters, we don't want to
 		// show a diff with all the EOL differences.
@@ -591,5 +627,100 @@ export class DiffViewProvider {
 		this.activeLineController = undefined
 		this.streamedLines = []
 		this.preDiagnostics = []
+	}
+
+	/**
+	 * Directly save content to a file without showing diff view
+	 * Used when preventFocusDisruption experiment is enabled
+	 *
+	 * @param relPath - Relative path to the file
+	 * @param content - Content to write to the file
+	 * @param openFile - Whether to show the file in editor (false = open in memory only for diagnostics)
+	 * @returns Result of the save operation including any new problems detected
+	 */
+	async saveDirectly(
+		relPath: string,
+		content: string,
+		openFile: boolean = true,
+		diagnosticsEnabled: boolean = true,
+		writeDelayMs: number = DEFAULT_WRITE_DELAY_MS,
+	): Promise<{
+		newProblemsMessage: string | undefined
+		userEdits: string | undefined
+		finalContent: string | undefined
+	}> {
+		const absolutePath = path.resolve(this.cwd, relPath)
+
+		// Get diagnostics before editing the file
+		this.preDiagnostics = vscode.languages.getDiagnostics()
+
+		// Write the content directly to the file
+		await createDirectoriesForFile(absolutePath)
+		await fs.writeFile(absolutePath, content, "utf-8")
+
+		// Open the document to ensure diagnostics are loaded
+		// When openFile is false (PREVENT_FOCUS_DISRUPTION enabled), we only open in memory
+		if (openFile) {
+			// Show the document in the editor
+			await vscode.window.showTextDocument(vscode.Uri.file(absolutePath), {
+				preview: false,
+				preserveFocus: true,
+			})
+		} else {
+			// Just open the document in memory to trigger diagnostics without showing it
+			const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(absolutePath))
+
+			// Save the document to ensure VSCode recognizes it as saved and triggers diagnostics
+			if (doc.isDirty) {
+				await doc.save()
+			}
+
+			// Force a small delay to ensure diagnostics are triggered
+			await new Promise((resolve) => setTimeout(resolve, 100))
+		}
+
+		let newProblemsMessage = ""
+
+		if (diagnosticsEnabled) {
+			// Add configurable delay to allow linters time to process
+			const safeDelayMs = Math.max(0, writeDelayMs)
+
+			try {
+				await delay(safeDelayMs)
+			} catch (error) {
+				console.warn(`Failed to apply write delay: ${error}`)
+			}
+
+			const postDiagnostics = vscode.languages.getDiagnostics()
+
+			// Get diagnostic settings from state
+			const task = this.taskRef.deref()
+			const state = await task?.providerRef.deref()?.getState()
+			const includeDiagnosticMessages = state?.includeDiagnosticMessages ?? true
+			const maxDiagnosticMessages = state?.maxDiagnosticMessages ?? 50
+
+			const newProblems = await diagnosticsToProblemsString(
+				getNewDiagnostics(this.preDiagnostics, postDiagnostics),
+				[vscode.DiagnosticSeverity.Error],
+				this.cwd,
+				includeDiagnosticMessages,
+				maxDiagnosticMessages,
+			)
+
+			newProblemsMessage =
+				newProblems.length > 0 ? `\n\nNew problems detected after saving the file:\n${newProblems}` : ""
+		}
+
+		// Store the results for formatFileWriteResponse
+		this.newProblemsMessage = newProblemsMessage
+		this.userEdits = undefined
+		this.relPath = relPath
+		this.newContent = content
+
+		return {
+			newProblemsMessage,
+			userEdits: undefined,
+			finalContent: content,
+		}
 	}
 }

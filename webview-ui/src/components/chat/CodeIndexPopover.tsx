@@ -38,6 +38,7 @@ import {
 } from "@src/components/ui"
 import { AlertTriangle } from "lucide-react"
 import { useRooPortal } from "@src/components/ui/hooks/useRooPortal"
+import { useEscapeKey } from "@src/hooks/useEscapeKey"
 import type { EmbedderProvider } from "@roo/embeddingModels"
 import type { IndexingStatus } from "@roo/ExtensionMessage"
 import { CODEBASE_INDEX_DEFAULTS } from "@roo-code/types"
@@ -68,6 +69,7 @@ interface LocalCodeIndexSettings {
 	codebaseIndexOpenAiCompatibleBaseUrl?: string
 	codebaseIndexOpenAiCompatibleApiKey?: string
 	codebaseIndexGeminiApiKey?: string
+	codebaseIndexMistralApiKey?: string
 }
 
 // Validation schema for codebase index settings
@@ -97,6 +99,10 @@ const createValidationSchema = (provider: EmbedderProvider, t: any) => {
 					.min(1, t("settings:codeIndex.validation.ollamaBaseUrlRequired"))
 					.url(t("settings:codeIndex.validation.invalidOllamaUrl")),
 				codebaseIndexEmbedderModelId: z.string().min(1, t("settings:codeIndex.validation.modelIdRequired")),
+				codebaseIndexEmbedderModelDimension: z
+					.number()
+					.min(1, t("settings:codeIndex.validation.modelDimensionRequired"))
+					.optional(),
 			})
 
 		case "openai-compatible":
@@ -117,6 +123,14 @@ const createValidationSchema = (provider: EmbedderProvider, t: any) => {
 		case "gemini":
 			return baseSchema.extend({
 				codebaseIndexGeminiApiKey: z.string().min(1, t("settings:codeIndex.validation.geminiApiKeyRequired")),
+				codebaseIndexEmbedderModelId: z
+					.string()
+					.min(1, t("settings:codeIndex.validation.modelSelectionRequired")),
+			})
+
+		case "mistral":
+			return baseSchema.extend({
+				codebaseIndexMistralApiKey: z.string().min(1, t("settings:codeIndex.validation.mistralApiKeyRequired")),
 				codebaseIndexEmbedderModelId: z
 					.string()
 					.min(1, t("settings:codeIndex.validation.modelSelectionRequired")),
@@ -165,6 +179,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 		codebaseIndexOpenAiCompatibleBaseUrl: "",
 		codebaseIndexOpenAiCompatibleApiKey: "",
 		codebaseIndexGeminiApiKey: "",
+		codebaseIndexMistralApiKey: "",
 	})
 
 	// Initial settings state - stores the settings when popover opens
@@ -198,6 +213,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 				codebaseIndexOpenAiCompatibleBaseUrl: codebaseIndexConfig.codebaseIndexOpenAiCompatibleBaseUrl || "",
 				codebaseIndexOpenAiCompatibleApiKey: "",
 				codebaseIndexGeminiApiKey: "",
+				codebaseIndexMistralApiKey: "",
 			}
 			setInitialSettings(settings)
 			setCurrentSettings(settings)
@@ -289,6 +305,9 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 					if (!prev.codebaseIndexGeminiApiKey || prev.codebaseIndexGeminiApiKey === SECRET_PLACEHOLDER) {
 						updated.codebaseIndexGeminiApiKey = secretStatus.hasGeminiApiKey ? SECRET_PLACEHOLDER : ""
 					}
+					if (!prev.codebaseIndexMistralApiKey || prev.codebaseIndexMistralApiKey === SECRET_PLACEHOLDER) {
+						updated.codebaseIndexMistralApiKey = secretStatus.hasMistralApiKey ? SECRET_PLACEHOLDER : ""
+					}
 
 					return updated
 				}
@@ -360,7 +379,8 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 				if (
 					key === "codeIndexOpenAiKey" ||
 					key === "codebaseIndexOpenAiCompatibleApiKey" ||
-					key === "codebaseIndexGeminiApiKey"
+					key === "codebaseIndexGeminiApiKey" ||
+					key === "codebaseIndexMistralApiKey"
 				) {
 					dataToValidate[key] = "placeholder-valid"
 				}
@@ -420,6 +440,9 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 			setOpen(false)
 		})
 	}, [checkUnsavedChanges])
+
+	// Use the shared ESC key handler hook - respects unsaved changes logic
+	useEscapeKey(open, handlePopoverClose)
 
 	const handleSaveSettings = () => {
 		// Validate settings before saving
@@ -505,7 +528,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 						<p className="my-0 pr-4 text-sm w-full">
 							<Trans i18nKey="settings:codeIndex.description">
 								<VSCodeLink
-									href={buildDocLink("features/experimental/codebase-indexing", "settings")}
+									href={buildDocLink("features/codebase-indexing", "settings")}
 									style={{ display: "inline" }}
 								/>
 							</Trans>
@@ -602,6 +625,9 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 												<SelectItem value="gemini">
 													{t("settings:codeIndex.geminiProvider")}
 												</SelectItem>
+												<SelectItem value="mistral">
+													{t("settings:codeIndex.mistralProvider")}
+												</SelectItem>
 											</SelectContent>
 										</Select>
 									</div>
@@ -643,7 +669,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 													className={cn("w-full", {
 														"border-red-500": formErrors.codebaseIndexEmbedderModelId,
 													})}>
-													<VSCodeOption value="">
+													<VSCodeOption value="" className="p-2">
 														{t("settings:codeIndex.selectModel")}
 													</VSCodeOption>
 													{getAvailableModels().map((modelId) => {
@@ -652,7 +678,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 																currentSettings.codebaseIndexEmbedderProvider
 															]?.[modelId]
 														return (
-															<VSCodeOption key={modelId} value={modelId}>
+															<VSCodeOption key={modelId} value={modelId} className="p-2">
 																{modelId}{" "}
 																{model
 																	? t("settings:codeIndex.modelDimensions", {
@@ -709,37 +735,47 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 												<label className="text-sm font-medium">
 													{t("settings:codeIndex.modelLabel")}
 												</label>
-												<VSCodeDropdown
-													value={currentSettings.codebaseIndexEmbedderModelId}
-													onChange={(e: any) =>
+												<VSCodeTextField
+													value={currentSettings.codebaseIndexEmbedderModelId || ""}
+													onInput={(e: any) =>
 														updateSetting("codebaseIndexEmbedderModelId", e.target.value)
 													}
+													placeholder={t("settings:codeIndex.modelPlaceholder")}
 													className={cn("w-full", {
 														"border-red-500": formErrors.codebaseIndexEmbedderModelId,
-													})}>
-													<VSCodeOption value="">
-														{t("settings:codeIndex.selectModel")}
-													</VSCodeOption>
-													{getAvailableModels().map((modelId) => {
-														const model =
-															codebaseIndexModels?.[
-																currentSettings.codebaseIndexEmbedderProvider
-															]?.[modelId]
-														return (
-															<VSCodeOption key={modelId} value={modelId}>
-																{modelId}{" "}
-																{model
-																	? t("settings:codeIndex.modelDimensions", {
-																			dimension: model.dimension,
-																		})
-																	: ""}
-															</VSCodeOption>
-														)
 													})}
-												</VSCodeDropdown>
+												/>
 												{formErrors.codebaseIndexEmbedderModelId && (
 													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
 														{formErrors.codebaseIndexEmbedderModelId}
+													</p>
+												)}
+											</div>
+
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.modelDimensionLabel")}
+												</label>
+												<VSCodeTextField
+													value={
+														currentSettings.codebaseIndexEmbedderModelDimension?.toString() ||
+														""
+													}
+													onInput={(e: any) => {
+														const value = e.target.value
+															? parseInt(e.target.value, 10) || undefined
+															: undefined
+														updateSetting("codebaseIndexEmbedderModelDimension", value)
+													}}
+													placeholder={t("settings:codeIndex.modelDimensionPlaceholder")}
+													className={cn("w-full", {
+														"border-red-500":
+															formErrors.codebaseIndexEmbedderModelDimension,
+													})}
+												/>
+												{formErrors.codebaseIndexEmbedderModelDimension && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexEmbedderModelDimension}
 													</p>
 												)}
 											</div>
@@ -835,7 +871,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 													}
 													onInput={(e: any) => {
 														const value = e.target.value
-															? parseInt(e.target.value)
+															? parseInt(e.target.value, 10) || undefined
 															: undefined
 														updateSetting("codebaseIndexEmbedderModelDimension", value)
 													}}
@@ -890,7 +926,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 													className={cn("w-full", {
 														"border-red-500": formErrors.codebaseIndexEmbedderModelId,
 													})}>
-													<VSCodeOption value="">
+													<VSCodeOption value="" className="p-2">
 														{t("settings:codeIndex.selectModel")}
 													</VSCodeOption>
 													{getAvailableModels().map((modelId) => {
@@ -899,7 +935,72 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 																currentSettings.codebaseIndexEmbedderProvider
 															]?.[modelId]
 														return (
-															<VSCodeOption key={modelId} value={modelId}>
+															<VSCodeOption key={modelId} value={modelId} className="p-2">
+																{modelId}{" "}
+																{model
+																	? t("settings:codeIndex.modelDimensions", {
+																			dimension: model.dimension,
+																		})
+																	: ""}
+															</VSCodeOption>
+														)
+													})}
+												</VSCodeDropdown>
+												{formErrors.codebaseIndexEmbedderModelId && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexEmbedderModelId}
+													</p>
+												)}
+											</div>
+										</>
+									)}
+
+									{currentSettings.codebaseIndexEmbedderProvider === "mistral" && (
+										<>
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.mistralApiKeyLabel")}
+												</label>
+												<VSCodeTextField
+													type="password"
+													value={currentSettings.codebaseIndexMistralApiKey || ""}
+													onInput={(e: any) =>
+														updateSetting("codebaseIndexMistralApiKey", e.target.value)
+													}
+													placeholder={t("settings:codeIndex.mistralApiKeyPlaceholder")}
+													className={cn("w-full", {
+														"border-red-500": formErrors.codebaseIndexMistralApiKey,
+													})}
+												/>
+												{formErrors.codebaseIndexMistralApiKey && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexMistralApiKey}
+													</p>
+												)}
+											</div>
+
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.modelLabel")}
+												</label>
+												<VSCodeDropdown
+													value={currentSettings.codebaseIndexEmbedderModelId}
+													onChange={(e: any) =>
+														updateSetting("codebaseIndexEmbedderModelId", e.target.value)
+													}
+													className={cn("w-full", {
+														"border-red-500": formErrors.codebaseIndexEmbedderModelId,
+													})}>
+													<VSCodeOption value="" className="p-2">
+														{t("settings:codeIndex.selectModel")}
+													</VSCodeOption>
+													{getAvailableModels().map((modelId) => {
+														const model =
+															codebaseIndexModels?.[
+																currentSettings.codebaseIndexEmbedderProvider
+															]?.[modelId]
+														return (
+															<VSCodeOption key={modelId} value={modelId} className="p-2">
 																{modelId}{" "}
 																{model
 																	? t("settings:codeIndex.modelDimensions", {

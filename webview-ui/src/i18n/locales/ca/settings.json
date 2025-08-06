@@ -41,13 +41,16 @@
 		"title": "Indexació de codi",
 		"enableLabel": "Habilitar indexació de codi",
 		"enableDescription": "Habilita la indexació de codi per millorar la cerca i la comprensió del context",
-		"providerLabel": "Proveïdor d'embeddings",
-		"selectProviderPlaceholder": "Seleccionar proveïdor",
+		"profileLabel": "Proveïdor d'embeddings",
+		"selectProfilePlaceholder": "Seleccionar proveïdor",
 		"openaiProvider": "OpenAI",
 		"ollamaProvider": "Ollama",
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "Clau API:",
 		"geminiApiKeyPlaceholder": "Introduïu la vostra clau d'API de Gemini",
+		"mistralProvider": "Mistral",
+		"mistralApiKeyLabel": "Clau de l'API:",
+		"mistralApiKeyPlaceholder": "Introduïu la vostra clau de l'API de Mistral",
 		"openaiCompatibleProvider": "Compatible amb OpenAI",
 		"openAiKeyLabel": "Clau API OpenAI",
 		"openAiKeyPlaceholder": "Introduïu la vostra clau API OpenAI",
@@ -110,6 +113,7 @@
 			"modelIdRequired": "Cal un ID de model",
 			"modelDimensionRequired": "Cal una dimensió de model",
 			"geminiApiKeyRequired": "Cal una clau d'API de Gemini",
+			"mistralApiKeyRequired": "La clau de l'API de Mistral és requerida",
 			"ollamaBaseUrlRequired": "Cal una URL base d'Ollama",
 			"baseUrlRequired": "Cal una URL base",
 			"modelDimensionMinValue": "La dimensió del model ha de ser superior a 0"
@@ -124,6 +128,8 @@
 	},
 	"autoApprove": {
 		"description": "Permet que Kilo Code realitzi operacions automàticament sense requerir aprovació. Activeu aquesta configuració només si confieu plenament en la IA i enteneu els riscos de seguretat associats.",
+		"toggleAriaLabel": "Commuta l'aprovació automàtica",
+		"disabledAriaLabel": "Aprovació automàtica desactivada: seleccioneu primer les opcions",
 		"readOnly": {
 			"label": "Llegir",
 			"description": "Quan està activat, Kilo Code veurà automàticament el contingut del directori i llegirà fitxers sense que calgui fer clic al botó Aprovar.",
@@ -176,8 +182,12 @@
 			"description": "Executar automàticament comandes de terminal permeses sense requerir aprovació",
 			"allowedCommands": "Comandes d'auto-execució permeses",
 			"allowedCommandsDescription": "Prefixos de comandes que poden ser executats automàticament quan \"Aprovar sempre operacions d'execució\" està habilitat. Afegeix * per permetre totes les comandes (usar amb precaució).",
+			"deniedCommands": "Comandes denegades",
+			"deniedCommandsDescription": "Prefixos de comandes que es rebutjaran automàticament sense requerir aprovació. En cas de conflicte amb comandes permeses, la coincidència de prefix més llarga té prioritat. Afegeix * per denegar totes les comandes.",
 			"commandPlaceholder": "Introduïu prefix de comanda (ex. 'git ')",
-			"addButton": "Afegir"
+			"deniedCommandPlaceholder": "Introduïu prefix de comanda a denegar (ex. 'rm -rf')",
+			"addButton": "Afegir",
+			"autoDenied": "Les comandes amb el prefix `{{prefix}}` han estat prohibides per l'usuari. No eludeixis aquesta restricció executant una altra comanda."
 		},
 		"showMenu": {
 			"label": "Mostrar menú d'aprovació automàtica a la vista de xat",
@@ -191,7 +201,8 @@
 			"title": "Màximes Sol·licituds",
 			"description": "Fes aquesta quantitat de sol·licituds API automàticament abans de demanar aprovació per continuar amb la tasca.",
 			"unlimited": "Il·limitat"
-		}
+		},
+		"selectOptionsFirst": "Seleccioneu almenys una opció a continuació per activar l'aprovació automàtica"
 	},
 	"providers": {
 		"providerDocumentation": "Documentació de {{provider}}",
@@ -251,9 +262,35 @@
 		"getChutesApiKey": "Obtenir clau API de Chutes",
 		"deepSeekApiKey": "Clau API de DeepSeek",
 		"getDeepSeekApiKey": "Obtenir clau API de DeepSeek",
+		"doubaoApiKey": "Clau API de Doubao",
+		"getDoubaoApiKey": "Obtenir clau API de Doubao",
+		"fireworksApiKey": "Clau API de Fireworks",
+		"getFireworksApiKey": "Obtenir clau API de Fireworks",
+		"zaiApiKey": "Clau API de Z.AI",
+		"getZaiApiKey": "Obtenir clau API de Z.AI",
+		"bigModelApiKey": "Clau API de BigModel",
+		"getBigModelApiKey": "Obtenir clau API de BigModel",
+		"moonshotApiKey": "Clau API de Moonshot",
+		"getMoonshotApiKey": "Obtenir clau API de Moonshot",
+		"moonshotBaseUrl": "Punt d'entrada de Moonshot",
 		"geminiApiKey": "Clau API de Gemini",
 		"getGroqApiKey": "Obtenir clau API de Groq",
 		"groqApiKey": "Clau API de Groq",
+		"getSambaNovaApiKey": "Obtenir clau API de SambaNova",
+		"sambaNovaApiKey": "Clau API de SambaNova",
+		"getHuggingFaceApiKey": "Obtenir clau API de Hugging Face",
+		"huggingFaceApiKey": "Clau API de Hugging Face",
+		"huggingFaceModelId": "ID del model",
+		"huggingFaceLoading": "Carregant...",
+		"huggingFaceModelsCount": "({{count}} models)",
+		"huggingFaceSelectModel": "Selecciona un model...",
+		"huggingFaceSearchModels": "Cerca models...",
+		"huggingFaceNoModelsFound": "No s'han trobat models",
+		"huggingFaceProvider": "Proveïdor",
+		"huggingFaceProviderAuto": "Automàtic",
+		"huggingFaceSelectProvider": "Selecciona un proveïdor...",
+		"huggingFaceSearchProviders": "Cerca proveïdors...",
+		"huggingFaceNoProvidersFound": "No s'han trobat proveïdors",
 		"getGeminiApiKey": "Obtenir clau API de Gemini",
 		"openAiApiKey": "Clau API d'OpenAI",
 		"apiKey": "Clau API",
@@ -269,6 +306,7 @@
 		"litellmBaseUrl": "URL base de LiteLLM",
 		"awsCredentials": "Credencials d'AWS",
 		"awsProfile": "Perfil d'AWS",
+		"awsApiKey": "Clau d'API d'Amazon Bedrock",
 		"awsProfileName": "Nom del perfil d'AWS",
 		"awsAccessKey": "Clau d'accés d'AWS",
 		"awsSecretKey": "Clau secreta d'AWS",
@@ -285,6 +323,17 @@
 		"cacheUsageNote": "Nota: Si no veieu l'ús de la caché, proveu de seleccionar un model diferent i després tornar a seleccionar el model desitjat.",
 		"vscodeLmModel": "Model de llenguatge",
 		"vscodeLmWarning": "Nota: Aquesta és una integració molt experimental i el suport del proveïdor variarà. Si rebeu un error sobre un model no compatible, és un problema del proveïdor.",
+
+		"geminiParameters": {
+			"urlContext": {
+				"title": "Activa el context d'URL",
+				"description": "Permet a Gemini llegir pàgines enllaçades per extreure, comparar i sintetitzar el seu contingut en respostes informades."
+			},
+			"groundingSearch": {
+				"title": "Activa la Fonamentació amb la Cerca de Google",
+				"description": "Connecta Gemini a dades web en temps real per a respostes precises i actualitzades amb citacions verificables."
+			}
+		},
 		"googleCloudSetup": {
 			"title": "Per utilitzar Google Cloud Vertex AI, necessiteu:",
 			"step1": "1. Crear un compte de Google Cloud, habilitar l'API de Vertex AI i habilitar els models Claude necessaris.",
@@ -372,6 +421,12 @@
 			"label": "Límit de freqüència",
 			"description": "Temps mínim entre sol·licituds d'API."
 		},
+		"consecutiveMistakeLimit": {
+			"label": "Límit d'errors i repeticions",
+			"description": "Nombre d'errors consecutius o accions repetides abans de mostrar el diàleg 'En Kilo Code està tenint problemes'",
+			"unlimitedDescription": "Reintents il·limitats habilitats (procediment automàtic). El diàleg no apareixerà mai.",
+			"warning": "⚠️ Establir a 0 permet reintents il·limitats que poden consumir un ús significatiu de l'API"
+		},
 		"reasoningEffort": {
 			"label": "Esforç de raonament del model",
 			"high": "Alt",
@@ -382,7 +437,9 @@
 		"claudeCode": {
 			"pathLabel": "Ruta del Codi Claude",
 			"description": "Ruta opcional al teu CLI de Claude Code. Per defecte, 'claude' si no s'estableix.",
-			"placeholder": "Per defecte: claude"
+			"placeholder": "Per defecte: claude",
+			"maxTokensLabel": "Tokens màxims de sortida",
+			"maxTokensDescription": "Nombre màxim de tokens de sortida per a les respostes de Claude Code. El valor per defecte és 8000."
 		},
 		"geminiCli": {
 			"description": "Aquest proveïdor utilitza l'autenticació OAuth de l'eina Gemini CLI i no requereix claus d'API.",
@@ -490,6 +547,22 @@
 			"label": "Límit de lectures simultànies",
 			"description": "Nombre màxim de fitxers que l'eina 'read_file' pot processar simultàniament. Els valors més alts poden accelerar la lectura de múltiples fitxers petits però augmenten l'ús de memòria."
 		},
+		"diagnostics": {
+			"includeMessages": {
+				"label": "Inclou automàticament diagnòstics al context",
+				"description": "Quan està activat, els missatges de diagnòstic (errors) dels fitxers editats s'inclouran automàticament al context. Sempre pots incloure manualment tots els diagnòstics de l'espai de treball utilitzant @problems."
+			},
+			"maxMessages": {
+				"label": "Màxim de missatges de diagnòstic",
+				"description": "Nombre màxim de missatges de diagnòstic a incloure per fitxer. Aquest límit s'aplica tant a la inclusió automàtica (quan la casella està activada) com a les mencions manuals de @problems. Valors més alts proporcionen més context però augmenten l'ús de tokens.",
+				"resetTooltip": "Restablir al valor per defecte (50)",
+				"unlimitedLabel": "Il·limitat"
+			},
+			"delayAfterWrite": {
+				"label": "Retard després d'escriptures per permetre que els diagnòstics detectin possibles problemes",
+				"description": "Temps d'espera després d'escriptures de fitxers abans de continuar, permetent que les eines de diagnòstic processin els canvis i detectin problemes."
+			}
+		},
 		"condensingThreshold": {
 			"label": "Llindar d'activació de condensació",
 			"selectProfile": "Configura el llindar per al perfil",
@@ -498,6 +571,16 @@
 			"profileDescription": "Llindar personalitzat només per a aquest perfil (substitueix el per defecte global)",
 			"inheritDescription": "Aquest perfil hereta el llindar per defecte global ({{threshold}}%)",
 			"usesGlobal": "(utilitza global {{threshold}}%)"
+		},
+		"maxImageFileSize": {
+			"label": "Mida màxima d'arxiu d'imatge",
+			"mb": "MB",
+			"description": "Mida màxima (en MB) per a arxius d'imatge que poden ser processats per l'eina de lectura d'arxius."
+		},
+		"maxTotalImageSize": {
+			"label": "Mida total màxima d'imatges",
+			"mb": "MB",
+			"description": "Límit de mida acumulativa màxima (en MB) per a totes les imatges processades en una sola operació read_file. Quan es llegeixen múltiples imatges, la mida de cada imatge s'afegeix al total. Si incloure una altra imatge excediria aquest límit, serà omesa."
 		}
 	},
 	"terminal": {
@@ -512,6 +595,10 @@
 		"outputLineLimit": {
 			"label": "Límit de sortida de terminal",
 			"description": "Nombre màxim de línies a incloure a la sortida del terminal en executar comandes. Quan s'excedeix, s'eliminaran línies del mig, estalviant token. <0>Més informació</0>"
+		},
+		"outputCharacterLimit": {
+			"label": "Límit de caràcters del terminal",
+			"description": "Nombre màxim de caràcters a incloure en la sortida del terminal en executar ordres. Aquest límit té precedència sobre el límit de línies per evitar problemes de memòria amb línies extremadament llargues. Quan se superi, la sortida es truncarà. <0>Més informació</0>"
 		},
 		"shellIntegrationTimeout": {
 			"label": "Temps d'espera d'integració de shell del terminal",
@@ -554,6 +641,9 @@
 			"description": "Quan està habilitat, el terminal hereta les variables d'entorn del procés pare de VSCode, com ara la configuració d'integració del shell definida al perfil d'usuari. Això commuta directament la configuració global de VSCode `terminal.integrated.inheritEnv`. <0>Més informació</0>"
 		}
 	},
+	"advancedSettings": {
+		"title": "Configuració avançada"
+	},
 	"advanced": {
 		"diff": {
 			"label": "Habilitar edició mitjançant diffs",
@@ -575,6 +665,10 @@
 				"label": "Precisió de coincidència",
 				"description": "Aquest control lliscant controla amb quina precisió han de coincidir les seccions de codi en aplicar diffs. Valors més baixos permeten coincidències més flexibles però augmenten el risc de reemplaçaments incorrectes. Utilitzeu valors per sota del 100% amb extrema precaució."
 			}
+		},
+		"todoList": {
+			"label": "Habilitar eina de llista de tasques",
+			"description": "Quan està habilitat, Kilo Code pot crear i gestionar llistes de tasques per fer el seguiment del progrés de les tasques. Això ajuda a organitzar tasques complexes en passos manejables."
 		}
 	},
 	"experimental": {
@@ -594,10 +688,6 @@
 			"name": "Utilitzar mode \"direcció assistida\" experimental",
 			"description": "Quan està activat, Kilo Code recordarà al model els detalls de la seva definició de mode actual amb més freqüència. Això portarà a una adherència més forta a les definicions de rol i instruccions personalitzades, però utilitzarà més tokens per missatge."
 		},
-		"AUTOCOMPLETE": {
-			"name": "Utilitza la funció experimental d'\"autocompletar\"",
-			"description": "Quan està activat, Kilo Code proporcionarà suggeriments de codi en línia mentre escrius."
-		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Utilitzar eina diff de blocs múltiples experimental",
 			"description": "Quan està activat, Kilo Code utilitzarà l'eina diff de blocs múltiples. Això intentarà actualitzar múltiples blocs de codi a l'arxiu en una sola petició."
@@ -613,6 +703,21 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Habilita edicions de fitxers concurrents",
 			"description": "Quan està activat, Kilo Code pot editar múltiples fitxers en una sola petició. Quan està desactivat, Kilo Code ha d'editar fitxers d'un en un. Desactivar això pot ajudar quan es treballa amb models menys capaços o quan vols més control sobre les modificacions de fitxers."
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "Habilitar Morph Fast Apply",
+			"description": "Quan està habilitat, Kilo Code pot editar fitxers utilitzant Morph Fast Apply.",
+			"apiKey": "Clau API de Morph (opcional)",
+			"placeholder": "Introduïu la vostra clau API de Morph (opcional)",
+			"warning": "Si no configureu una clau API de Morph, encara podeu utilitzar Fast Apply amb Kilo Code o OpenRouter. El vostre compte serà facturat per l'ús del model, això actualment no es mostra a la interfície de l'extensió."
+		},
+		"INLINE_ASSIST": {
+			"name": "Assistència en línia",
+			"description": "Activa les funcions d'assistència en línia per obtenir suggeriments i millores de codi ràpides directament al teu editor. Inclou la Tasca ràpida en línia (Cmd+I) per a canvis específics i la Tasca automàtica en línia per a millores contextuals."
+		},
+		"PREVENT_FOCUS_DISRUPTION": {
+			"name": "Edició en segon pla",
+			"description": "Quan s'activa, evita la interrupció del focus de l'editor. Les edicions de fitxers es produeixen en segon pla sense obrir la vista diff o robar el focus. Pots continuar treballant sense interrupcions mentre Kilo Code fa canvis. Els fitxers poden obrir-se sense focus per capturar diagnòstics o romandre completament tancats."
 		}
 	},
 	"promptCaching": {
@@ -648,7 +753,7 @@
 		}
 	},
 	"modelPicker": {
-		"automaticFetch": "L'extensió obté automàticament la llista més recent de models disponibles a <serviceLink>{{serviceName}}</serviceLink>. Si no esteu segur de quin model triar, Kilo Code funciona millor amb <defaultModelLink>{{defaultModelId}}</defaultModelLink>. També podeu cercar \"free\" per a opcions gratuïtes actualment disponibles.",
+		"automaticFetch": "L'extensió obté automàticament la llista més recent de models disponibles a <serviceLink>{{serviceName}}</serviceLink>. Si no esteu segur de quin model triar, Kilo Code funciona millor amb <defaultModelLink>{{defaultModelId}}</defaultModelLink>.",
 		"label": "Model",
 		"searchPlaceholder": "Cerca",
 		"noMatchFound": "No s'ha trobat cap coincidència",
@@ -727,5 +832,8 @@
 		}
 	},
 	"includeMaxOutputTokens": "Incloure tokens màxims de sortida",
-	"includeMaxOutputTokensDescription": "Enviar el paràmetre de tokens màxims de sortida a les sol·licituds API. Alguns proveïdors poden no admetre això."
+	"includeMaxOutputTokensDescription": "Enviar el paràmetre de tokens màxims de sortida a les sol·licituds API. Alguns proveïdors poden no admetre això.",
+	"limitMaxTokensDescription": "Limitar el nombre màxim de tokens en la resposta",
+	"maxOutputTokensLabel": "Tokens màxims de sortida",
+	"maxTokensGenerateDescription": "Tokens màxims a generar en la resposta"
 }

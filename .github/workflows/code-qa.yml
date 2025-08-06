@@ -11,6 +11,8 @@ on:
 env:
     NODE_VERSION: 20.19.2
     PNPM_VERSION: 10.8.1
+    TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+    TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
 jobs:
     compile:
@@ -27,6 +29,13 @@ jobs:
               with:
                   node-version: ${{ env.NODE_VERSION }}
                   cache: "pnpm"
+            - name: Turbo cache setup
+              uses: actions/cache@v4
+              with:
+                  path: .turbo
+                  key: ${{ runner.os }}-turbo-${{ github.sha }}
+                  restore-keys: |
+                      ${{ runner.os }}-turbo-
             - name: Install dependencies
               run: pnpm install
             - name: Build
@@ -50,6 +59,13 @@ jobs:
               with:
                   node-version: "18"
                   cache: "pnpm"
+            - name: Turbo cache setup
+              uses: actions/cache@v4
+              with:
+                  path: .turbo
+                  key: ${{ runner.os }}-turbo-${{ github.sha }}
+                  restore-keys: |
+                      ${{ runner.os }}-turbo-
             - name: Install dependencies
               run: pnpm install
             - name: Verify all translations are complete
@@ -72,6 +88,13 @@ jobs:
               with:
                   node-version: ${{ env.NODE_VERSION }}
                   cache: "pnpm"
+            - name: Turbo cache setup
+              uses: actions/cache@v4
+              with:
+                  path: .turbo
+                  key: ${{ runner.os }}-turbo-${{ github.sha }}
+                  restore-keys: |
+                      ${{ runner.os }}-turbo-
             - name: Install dependencies
               run: pnpm install
             - name: Build (to build and copy WASM files)
@@ -97,6 +120,13 @@ jobs:
               with:
                   node-version: "18"
                   cache: "pnpm"
+            - name: Turbo cache setup
+              uses: actions/cache@v4
+              with:
+                  path: .turbo
+                  key: ${{ runner.os }}-turbo-${{ github.sha }}
+                  restore-keys: |
+                      ${{ runner.os }}-turbo-
             - name: Install dependencies
               run: pnpm install
             - name: Run unit tests

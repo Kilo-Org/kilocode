@@ -51,6 +51,10 @@ export class ContextProxy {
 		return this._isInitialized
 	}
 
+	public get rawContext(): vscode.ExtensionContext {
+		return this.originalContext
+	}
+
 	public async initialize() {
 		for (const key of GLOBAL_STATE_KEYS) {
 			try {

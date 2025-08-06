@@ -322,6 +322,75 @@ describe("Cline", () => {
 			expect(cline.diffStrategy).toBeDefined()
 		})
 
+		it("should use default consecutiveMistakeLimit when not provided", () => {
+			const cline = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				task: "test task",
+				startTask: false,
+				context: mockExtensionContext, // kilocode_change
+			})
+
+			expect(cline.consecutiveMistakeLimit).toBe(3)
+		})
+
+		it("should respect provided consecutiveMistakeLimit", () => {
+			const cline = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				consecutiveMistakeLimit: 5,
+				task: "test task",
+				startTask: false,
+				context: mockExtensionContext, // kilocode_change
+			})
+
+			expect(cline.consecutiveMistakeLimit).toBe(5)
+		})
+
+		it("should keep consecutiveMistakeLimit of 0 as 0 for unlimited", () => {
+			const cline = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				consecutiveMistakeLimit: 0,
+				task: "test task",
+				startTask: false,
+				context: mockExtensionContext, // kilocode_change
+			})
+
+			expect(cline.consecutiveMistakeLimit).toBe(0)
+		})
+
+		it("should pass 0 to ToolRepetitionDetector for unlimited mode", () => {
+			const cline = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				consecutiveMistakeLimit: 0,
+				task: "test task",
+				startTask: false,
+				context: mockExtensionContext, // kilocode_change
+			})
+
+			// The toolRepetitionDetector should be initialized with 0 for unlimited mode
+			expect(cline.toolRepetitionDetector).toBeDefined()
+			// Verify the limit remains as 0
+			expect(cline.consecutiveMistakeLimit).toBe(0)
+		})
+
+		it("should pass consecutiveMistakeLimit to ToolRepetitionDetector", () => {
+			const cline = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				consecutiveMistakeLimit: 5,
+				task: "test task",
+				startTask: false,
+				context: mockExtensionContext, // kilocode_change
+			})
+
+			// The toolRepetitionDetector should be initialized with the same limit
+			expect(cline.toolRepetitionDetector).toBeDefined()
+			expect(cline.consecutiveMistakeLimit).toBe(5)
+		})
+
 		it("should require either task or historyItem", () => {
 			expect(() => {
 				new Task({ provider: mockProvider, apiConfiguration: mockApiConfig, context: mockExtensionContext })
@@ -1349,11 +1418,112 @@ describe("Cline", () => {
 					enableDiff: false,
 					task: "test task",
 					startTask: false,
-					context: mockExtensionContext,
+					context: mockExtensionContext, // kilocode_change
 				})
 
 				expect(task.diffEnabled).toBe(false)
 				expect(task.diffStrategy).toBeUndefined()
+			})
+		})
+
+		describe("getApiProtocol", () => {
+			it("should determine API protocol based on provider and model", async () => {
+				// Test with Anthropic provider
+				const anthropicConfig = {
+					...mockApiConfig,
+					apiProvider: "anthropic" as const,
+					apiModelId: "gpt-4",
+				}
+				const anthropicTask = new Task({
+					provider: mockProvider,
+					apiConfiguration: anthropicConfig,
+					task: "test task",
+					startTask: false,
+					context: mockExtensionContext, // kilocode_change
+				})
+				// Should use anthropic protocol even with non-claude model
+				expect(anthropicTask.apiConfiguration.apiProvider).toBe("anthropic")
+
+				// Test with OpenRouter provider and Claude model
+				const openrouterClaudeConfig = {
+					apiProvider: "openrouter" as const,
+					openRouterModelId: "anthropic/claude-3-opus",
+				}
+				const openrouterClaudeTask = new Task({
+					provider: mockProvider,
+					apiConfiguration: openrouterClaudeConfig,
+					task: "test task",
+					startTask: false,
+					context: mockExtensionContext, // kilocode_change
+				})
+				expect(openrouterClaudeTask.apiConfiguration.apiProvider).toBe("openrouter")
+
+				// Test with OpenRouter provider and non-Claude model
+				const openrouterGptConfig = {
+					apiProvider: "openrouter" as const,
+					openRouterModelId: "openai/gpt-4",
+				}
+				const openrouterGptTask = new Task({
+					provider: mockProvider,
+					apiConfiguration: openrouterGptConfig,
+					task: "test task",
+					startTask: false,
+					context: mockExtensionContext, // kilocode_change
+				})
+				expect(openrouterGptTask.apiConfiguration.apiProvider).toBe("openrouter")
+
+				// Test with various Claude model formats
+				const claudeModelFormats = [
+					"claude-3-opus",
+					"Claude-3-Sonnet",
+					"CLAUDE-instant",
+					"anthropic/claude-3-haiku",
+					"some-provider/claude-model",
+				]
+
+				for (const modelId of claudeModelFormats) {
+					const config = {
+						apiProvider: "openai" as const,
+						openAiModelId: modelId,
+					}
+					const task = new Task({
+						provider: mockProvider,
+						apiConfiguration: config,
+						task: "test task",
+						startTask: false,
+						context: mockExtensionContext, // kilocode_change
+					})
+					// Verify the model ID contains claude (case-insensitive)
+					expect(modelId.toLowerCase()).toContain("claude")
+				}
+			})
+
+			it("should handle edge cases for API protocol detection", async () => {
+				// Test with undefined provider
+				const undefinedProviderConfig = {
+					apiModelId: "claude-3-opus",
+				}
+				const undefinedProviderTask = new Task({
+					provider: mockProvider,
+					apiConfiguration: undefinedProviderConfig,
+					task: "test task",
+					startTask: false,
+					context: mockExtensionContext, // kilocode_change
+				})
+				expect(undefinedProviderTask.apiConfiguration.apiProvider).toBeUndefined()
+
+				// Test with no model ID
+				const noModelConfig = {
+					apiProvider: "openai" as const,
+				}
+				const noModelTask = new Task({
+					provider: mockProvider,
+					apiConfiguration: noModelConfig,
+					task: "test task",
+					startTask: false,
+					context: mockExtensionContext, // kilocode_change
+				})
+				expect(noModelTask.apiConfiguration.apiProvider).toBe("openai")
 			})
 		})
 	})

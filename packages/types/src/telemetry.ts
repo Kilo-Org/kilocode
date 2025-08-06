@@ -20,6 +20,14 @@ export type TelemetrySetting = z.infer<typeof telemetrySettingsSchema>
 export enum TelemetryEventName {
 	// kilocode_change start
 	COMMIT_MSG_GENERATED = "Commit Message Generated",
+	INLINE_ASSIST_QUICK_TASK = "Inline Assist Quick Task",
+	INLINE_ASSIST_AUTO_TASK = "Inline Assist Auto Task",
+	INLINE_ASSIST_ACCEPT_SUGGESTION = "Inline Assist Accept Suggestion",
+	INLINE_ASSIST_REJECT_SUGGESTION = "Inline Assist Reject Suggestion",
+	CHECKPOINT_FAILURE = "Checkpoint Failure",
+	EXCESSIVE_RECURSION = "Excessive Recursion",
+	NOTIFICATION_CLICKED = "Notification Clicked",
+	WEBVIEW_MEMORY_USAGE = "Webview Memory Usage",
 	// kilocode_change end
 
 	TASK_CREATED = "Task Created",
@@ -93,6 +101,14 @@ export const taskPropertiesSchema = z.object({
 	modelId: z.string().optional(),
 	diffStrategy: z.string().optional(),
 	isSubtask: z.boolean().optional(),
+	todos: z
+		.object({
+			total: z.number(),
+			completed: z.number(),
+			inProgress: z.number(),
+			pending: z.number(),
+		})
+		.optional(),
 })
 
 export const gitPropertiesSchema = z.object({
@@ -128,8 +144,14 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 	z.object({
 		type: z.enum([
 			// kilocode_change start
-			TelemetryEventName.COMMIT_MSG_GENERATED,
+			TelemetryEventName.COMMIT_MSG_GENERATED, // kilocode_change
+			TelemetryEventName.INLINE_ASSIST_QUICK_TASK, // kilocode_change
+			TelemetryEventName.INLINE_ASSIST_AUTO_TASK, // kilocode_change
+			TelemetryEventName.INLINE_ASSIST_ACCEPT_SUGGESTION, // kilocode_change
+			TelemetryEventName.INLINE_ASSIST_REJECT_SUGGESTION, // kilocode_change
+			TelemetryEventName.WEBVIEW_MEMORY_USAGE, // kilocode_change
 			// kilocode_change end
+
 			TelemetryEventName.TASK_CREATED,
 			TelemetryEventName.TASK_RESTARTED,
 			TelemetryEventName.TASK_COMPLETED,
@@ -160,6 +182,7 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 			TelemetryEventName.DIFF_APPLICATION_ERROR,
 			TelemetryEventName.SHELL_INTEGRATION_ERROR,
 			TelemetryEventName.CONSECUTIVE_MISTAKE_ERROR,
+			TelemetryEventName.CODE_INDEX_ERROR,
 			TelemetryEventName.CONTEXT_CONDENSED,
 			TelemetryEventName.SLIDING_WINDOW_TRUNCATION,
 			TelemetryEventName.TAB_SHOWN,

@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react"
+import type { Meta, StoryObj } from "@storybook/react-vite"
 
 import { ContextWindowProgress } from "../../../webview-ui/src/components/chat/ContextWindowProgress"
 import { TooltipProvider } from "../../../webview-ui/src/components/ui/tooltip"

@@ -82,6 +82,16 @@ const Announcement = ({ hideAnnouncement }: AnnouncementProps) => {
 								}}
 							/>
 						</li>
+						<li>
+							•{" "}
+							<Trans
+								i18nKey="chat:announcement.feature3"
+								components={{
+									bold: <b />,
+									code: <code />,
+								}}
+							/>
+						</li>
 					</ul>
 					<Trans
 						i18nKey="chat:announcement.detailsDiscussLinks"
@@ -109,11 +119,11 @@ const DiscordLink = () => (
 
 const RedditLink = () => (
 	<VSCodeLink
-		href="https://reddit.com/r/RooCode"
+		href="https://reddit.com/r/kilocode"
 		onClick={(e) => {
 			e.preventDefault()
 			window.postMessage(
-				{ type: "action", action: "openExternal", data: { url: "https://reddit.com/r/RooCode" } },
+				{ type: "action", action: "openExternal", data: { url: "https://reddit.com/r/kilocode" } },
 				"*",
 			)
 		}}>

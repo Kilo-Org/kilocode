@@ -25,12 +25,7 @@
 	"confirmation": {
 		"reset_state": "¿Estás seguro de que deseas restablecer todo el estado y el almacenamiento secreto en la extensión? Esta acción no se puede deshacer.",
 		"delete_config_profile": "¿Estás seguro de que deseas eliminar este perfil de configuración?",
-		"delete_custom_mode_with_rules": "¿Estás seguro de que quieres eliminar este modo {scope}?\n\nEsto también eliminará la carpeta de reglas asociada en:\n{rulesFolderPath}",
-		"delete_message": "¿Qué deseas eliminar?",
-		"edit_warning": "Editar este mensaje eliminará todos los mensajes posteriores en la conversación. ¿Deseas continuar?",
-		"delete_just_this_message": "Solo este mensaje",
-		"delete_this_and_subsequent": "Este y todos los mensajes posteriores",
-		"proceed": "Continuar"
+		"delete_custom_mode_with_rules": "¿Estás seguro de que quieres eliminar este modo {scope}?\n\nEsto también eliminará la carpeta de reglas asociada en:\n{rulesFolderPath}"
 	},
 	"errors": {
 		"invalid_data_uri": "Formato de URI de datos no válido",
@@ -41,6 +36,7 @@
 		"could_not_open_file_generic": "¡No se pudo abrir el archivo!",
 		"checkpoint_timeout": "Se agotó el tiempo al intentar restaurar el punto de control.",
 		"checkpoint_failed": "Error al restaurar el punto de control.",
+		"git_not_installed": "Git es necesario para la función de puntos de control. Por favor, instala Git para activar los puntos de control.",
 		"no_workspace": "Por favor, abre primero una carpeta de proyecto",
 		"update_support_prompt": "Error al actualizar el mensaje de soporte",
 		"reset_support_prompt": "Error al restablecer el mensaje de soporte",
@@ -62,7 +58,7 @@
 		"cannot_access_path": "No se puede acceder a la ruta {{path}}: {{error}}",
 		"settings_import_failed": "Error al importar la configuración: {{error}}.",
 		"mistake_limit_guidance": "Esto puede indicar un fallo en el proceso de pensamiento del modelo o la incapacidad de usar una herramienta correctamente, lo cual puede mitigarse con orientación del usuario (ej. \"Intenta dividir la tarea en pasos más pequeños\").",
-		"violated_organization_allowlist": "Error al ejecutar la tarea: el perfil actual infringe la configuración de tu organización",
+		"violated_organization_allowlist": "Error al ejecutar la tarea: el perfil actual no es compatible con la configuración de tu organización",
 		"condense_failed": "Error al condensar el contexto",
 		"condense_not_enough_messages": "No hay suficientes mensajes para condensar el contexto de {{prevContextTokens}} tokens. Se requieren al menos {{minimumMessageCount}} mensajes, pero solo {{messageCount}} están disponibles.",
 		"condensed_recently": "El contexto se condensó recientemente; se omite este intento",
@@ -75,6 +71,7 @@
 		"url_page_not_found": "La página no fue encontrada. Por favor verifica si la URL es correcta.",
 		"url_fetch_failed": "Error al obtener el contenido de la URL: {{error}}",
 		"url_fetch_error_with_url": "Error al obtener contenido para {{url}}: {{error}}",
+		"command_timeout": "La ejecución del comando superó el tiempo de espera de {{seconds}} segundos",
 		"share_task_failed": "Error al compartir la tarea. Por favor, inténtalo de nuevo.",
 		"share_no_active_task": "No hay tarea activa para compartir",
 		"share_auth_required": "Se requiere autenticación. Por favor, inicia sesión para compartir tareas.",
@@ -82,6 +79,13 @@
 		"share_task_not_found": "Tarea no encontrada o acceso denegado.",
 		"mode_import_failed": "Error al importar el modo: {{error}}",
 		"delete_rules_folder_failed": "Error al eliminar la carpeta de reglas: {{rulesFolderPath}}. Error: {{error}}",
+		"command_not_found": "Comando '{{name}}' no encontrado",
+		"open_command_file": "Error al abrir el archivo de comandos",
+		"delete_command": "Error al eliminar el comando",
+		"no_workspace_for_project_command": "No se encontró carpeta de espacio de trabajo para comando de proyecto",
+		"command_already_exists": "El comando \"{{commandName}}\" ya existe",
+		"create_command_failed": "Error al crear comando",
+		"command_template_content": "---\ndescription: \"Breve descripción de lo que hace este comando\"\n---\n\nEste es un nuevo comando slash. Edita este archivo para personalizar el comportamiento del comando.",
 		"claudeCode": {
 			"processExited": "El proceso de Claude Code terminó con código {{exitCode}}.",
 			"errorOutput": "Salida de error: {{output}}",
@@ -98,6 +102,11 @@
 			"badRequest": "Solicitud incorrecta: {{details}}",
 			"apiError": "Error de API de Gemini CLI: {{error}}",
 			"completionError": "Error de completado de Gemini CLI: {{error}}"
+		},
+		"gemini": {
+			"generate_stream": "Error del stream de contexto de generación de Gemini: {{error}}",
+			"generate_complete_prompt": "Error de finalización de Gemini: {{error}}",
+			"sources": "Fuentes:"
 		}
 	},
 	"warnings": {
@@ -129,7 +138,8 @@
 	},
 	"buttons": {
 		"save": "Guardar",
-		"edit": "Editar"
+		"edit": "Editar",
+		"learn_more": "Más información"
 	},
 	"tasks": {
 		"canceled": "Error de tarea: Fue detenida y cancelada por el usuario.",
@@ -167,11 +177,17 @@
 			"deleteFailed": "Error al eliminar modo personalizado: {{error}}",
 			"resetFailed": "Error al restablecer modos personalizados: {{error}}",
 			"modeNotFound": "Error de escritura: Modo no encontrado",
-			"noWorkspaceForProject": "No se encontró carpeta de espacio de trabajo para modo específico del proyecto"
+			"noWorkspaceForProject": "No se encontró carpeta de espacio de trabajo para modo específico del proyecto",
+			"rulesCleanupFailed": "El modo se eliminó correctamente, pero no se pudo eliminar la carpeta de reglas en {{rulesFolderPath}}. Es posible que debas eliminarla manualmente."
 		},
 		"scope": {
 			"project": "proyecto",
 			"global": "global"
+		}
+	},
+	"marketplace": {
+		"mode": {
+			"rulesCleanupFailed": "El modo se eliminó correctamente, pero no se pudo eliminar la carpeta de reglas en {{rulesFolderPath}}. Es posible que debas eliminarla manually."
 		}
 	},
 	"mdm": {
@@ -187,6 +203,11 @@
 			"description": "¿Estás seguro de que quieres eliminar este modo {{scope}}? Esto también eliminará la carpeta de reglas asociada en: {{rulesFolderPath}}",
 			"descriptionNoRules": "¿Estás seguro de que quieres eliminar este modo personalizado?",
 			"confirm": "Eliminar"
+		}
+	},
+	"commands": {
+		"preventCompletionWithOpenTodos": {
+			"description": "Prevenir la finalización de tareas cuando hay todos incompletos en la lista de todos"
 		}
 	}
 }

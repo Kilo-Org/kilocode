@@ -158,6 +158,7 @@ export const clineMessageSchema = z.object({
 	progressStatus: toolProgressStatusSchema.optional(),
 	contextCondense: contextCondenseSchema.optional(),
 	isProtected: z.boolean().optional(),
+	apiProtocol: z.union([z.literal("openai"), z.literal("anthropic")]).optional(),
 })
 
 export type ClineMessage = z.infer<typeof clineMessageSchema>
@@ -176,3 +177,19 @@ export const tokenUsageSchema = z.object({
 })
 
 export type TokenUsage = z.infer<typeof tokenUsageSchema>
+
+/**
+ * QueuedMessage
+ */
+
+/**
+ * Represents a message that is queued to be sent when sending is enabled
+ */
+export interface QueuedMessage {
+	/** Unique identifier for the queued message */
+	id: string
+	/** The text content of the message */
+	text: string
+	/** Array of image data URLs attached to the message */
+	images: string[]
+}

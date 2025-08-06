@@ -3,7 +3,8 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.59.2",
+
+	"version": "4.77.0",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -44,6 +45,7 @@
 		"llama",
 		"Kilo Code",
 		"kilocode",
+		"roo code",
 		"roocode"
 	],
 	"activationEvents": [
@@ -110,6 +112,7 @@
 					"id": "kilo-code-ActivityBar",
 					"title": "%views.activitybar.title%",
 					"icon": "assets/icons/kilo.png",
+					"darkIcon": "assets/icons/kilo-dark.png",
 					"when": "isMac"
 				}
 			]
@@ -217,7 +220,12 @@
 			{
 				"command": "kilo-code.terminalExplainCommand",
 				"title": "%command.terminal.explainCommand.title%",
-				"category": "%extension.displayName%"
+				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.generateTerminalCommand",
+				"title": "%command.terminal.generateCommand.title%",
+				"category": "%configuration.title%"
 			},
 			{
 				"command": "kilo-code.setCustomStoragePath",
@@ -293,20 +301,24 @@
 				"when": "true"
 			},
 			{
-				"command": "kilo-code.directFocusChatInput",
-				"key": "ctrl+shift+k",
-				"mac": "cmd+shift+k",
-				"when": "true"
-			},
-			{
 				"command": "editor.action.inlineSuggest.commit",
 				"key": "tab",
 				"when": "inlineSuggestionVisible && editorTextFocus && !editorTabMovesFocus && !inSnippetMode && !suggestWidgetVisible && editorLangId != 'markdown'"
 			},
 			{
+				"command": "kilo-code.ghost.applyAllSuggestions",
+				"key": "shift+tab",
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.hasSuggestions"
+			},
+			{
 				"command": "kilo-code.ghost.applyCurrentSuggestions",
 				"key": "tab",
 				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.hasSuggestions"
+			},
+			{
+				"command": "kilo-code.ghost.cancelRequest",
+				"key": "escape",
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.isProcessing"
 			},
 			{
 				"command": "kilo-code.ghost.cancelSuggestions",
@@ -327,13 +339,30 @@
 				"command": "kilo-code.ghost.promptCodeSuggestion",
 				"key": "ctrl+i",
 				"mac": "cmd+i",
-				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode"
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.enableQuickInlineTaskKeybinding && !github.copilot.completions.enabled"
 			},
 			{
 				"command": "kilo-code.ghost.generateSuggestions",
 				"key": "ctrl+l",
 				"mac": "cmd+l",
-				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode"
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.enableSmartInlineTaskKeybinding && !github.copilot.completions.enabled"
+			},
+			{
+				"command": "kilo-code.ghost.showIncompatibilityExtensionPopup",
+				"key": "ctrl+l",
+				"mac": "cmd+l",
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.enableSmartInlineTaskKeybinding && github.copilot.completions.enabled"
+			},
+			{
+				"command": "kilo-code.ghost.showIncompatibilityExtensionPopup",
+				"key": "ctrl+i",
+				"mac": "cmd+i",
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.enableQuickInlineTaskKeybinding && github.copilot.completions.enabled"
+			},
+			{
+				"command": "kilo-code.generateTerminalCommand",
+				"key": "ctrl+shift+g",
+				"mac": "cmd+shift+g"
 			}
 		],
 		"menus": {
@@ -492,6 +521,21 @@
 					],
 					"description": "%commands.allowedCommands.description%"
 				},
+				"kilo-code.deniedCommands": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"default": [],
+					"description": "%commands.deniedCommands.description%"
+				},
+				"kilo-code.commandExecutionTimeout": {
+					"type": "number",
+					"default": 0,
+					"minimum": 0,
+					"maximum": 600,
+					"description": "%commands.commandExecutionTimeout.description%"
+				},
 				"kilo-code.vsCodeLmModelSelector": {
 					"type": "object",
 					"properties": {
@@ -520,6 +564,11 @@
 					"type": "string",
 					"default": "",
 					"description": "%settings.autoImportSettingsPath.description%"
+				},
+				"kilo-code.useAgentRules": {
+					"type": "boolean",
+					"default": true,
+					"description": "%settings.useAgentRules.description%"
 				}
 			}
 		},
@@ -546,7 +595,7 @@
 		"publish:marketplace": "vsce publish --no-dependencies && ovsx publish --no-dependencies",
 		"watch:bundle": "pnpm bundle --watch",
 		"watch:tsc": "cd .. && tsc --noEmit --watch --project src/tsconfig.json",
-		"clean": "rimraf README.md CHANGELOG.md LICENSE dist mock .turbo"
+		"clean": "rimraf README.md CHANGELOG.md LICENSE dist logs mock .turbo"
 	},
 	"dependencies": {
 		"@anthropic-ai/bedrock-sdk": "^0.22.0",
@@ -583,15 +632,17 @@
 		"fzf": "^0.5.2",
 		"get-folder-size": "^5.0.0",
 		"google-auth-library": "^9.15.1",
+		"gray-matter": "^4.0.3",
 		"i18next": "^25.0.0",
 		"ignore": "^7.0.3",
 		"isbinaryfile": "^5.0.2",
 		"lodash.debounce": "^4.0.8",
 		"lru-cache": "^11.1.0",
-		"mammoth": "^1.8.0",
+		"mammoth": "^1.9.1",
 		"monaco-vscode-textmate-theme-converter": "^0.1.7",
 		"node-cache": "^5.1.2",
 		"node-ipc": "^12.0.0",
+		"ollama": "^0.5.16",
 		"openai": "^5.0.0",
 		"os-name": "^6.0.0",
 		"p-limit": "^6.2.0",
@@ -617,6 +668,7 @@
 		"tmp": "^0.2.3",
 		"tree-sitter-wasms": "^0.1.12",
 		"turndown": "^7.2.0",
+		"undici": "^7.13.0",
 		"uri-js": "^4.4.1",
 		"uuid": "^11.1.0",
 		"vscode-material-icons": "^0.1.1",

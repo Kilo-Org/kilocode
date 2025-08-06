@@ -71,6 +71,14 @@ describe("insertContentTool", () => {
 			cwd: "/",
 			consecutiveMistakeCount: 0,
 			didEditFile: false,
+			providerRef: {
+				deref: vi.fn().mockReturnValue({
+					getState: vi.fn().mockResolvedValue({
+						diagnosticsEnabled: true,
+						writeDelayMs: 1000,
+					}),
+				}),
+			},
 			rooIgnoreController: {
 				validateAccess: vi.fn().mockReturnValue(true),
 			},
@@ -88,6 +96,7 @@ describe("insertContentTool", () => {
 					finalContent: "final content",
 				}),
 				scrollToFirstDiff: vi.fn(),
+				updateDiagnosticSettings: vi.fn(),
 				pushToolWriteResult: vi.fn().mockImplementation(async function (
 					this: any,
 					task: any,

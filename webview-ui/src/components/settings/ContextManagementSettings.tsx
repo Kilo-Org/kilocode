@@ -1,99 +1,68 @@
 import { HTMLAttributes } from "react"
 import React from "react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
-import { VSCodeCheckbox, VSCodeTextArea } from "@vscode/webview-ui-toolkit/react"
+import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
 import { Database, FoldVertical } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Slider } from "@/components/ui"
+import { Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Slider, Button } from "@/components/ui"
 
 import { SetCachedStateField } from "./types"
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
 import { vscode } from "@/utils/vscode"
 
-const SUMMARY_PROMPT = `\
-Your task is to create a detailed summary of the conversation so far, paying close attention to the user's explicit requests and your previous actions.
-This summary should be thorough in capturing technical details, code patterns, and architectural decisions that would be essential for continuing with the conversation and supporting any continuing tasks.
-
-Your summary should be structured as follows:
-Context: The context to continue the conversation with. If applicable based on the current task, this should include:
-  1. Previous Conversation: High level details about what was discussed throughout the entire conversation with the user. This should be written to allow someone to be able to follow the general overarching conversation flow.
-  2. Current Work: Describe in detail what was being worked on prior to this request to summarize the conversation. Pay special attention to the more recent messages in the conversation.
-  3. Key Technical Concepts: List all important technical concepts, technologies, coding conventions, and frameworks discussed, which might be relevant for continuing with this work.
-  4. Relevant Files and Code: If applicable, enumerate specific files and code sections examined, modified, or created for the task continuation. Pay special attention to the most recent messages and changes.
-  5. Problem Solving: Document problems solved thus far and any ongoing troubleshooting efforts.
-  6. Pending Tasks and Next Steps: Outline all pending tasks that you have explicitly been asked to work on, as well as list the next steps you will take for all outstanding work, if applicable. Include code snippets where they add clarity. For any next steps, include direct quotes from the most recent conversation showing exactly what task you were working on and where you left off. This should be verbatim to ensure there's no information loss in context between tasks.
-
-Example summary structure:
-1. Previous Conversation:
-  [Detailed description]
-2. Current Work:
-  [Detailed description]
-3. Key Technical Concepts:
-  - [Concept 1]
-  - [Concept 2]
-  - [...]
-4. Relevant Files and Code:
-  - [File Name 1]
-	- [Summary of why this file is important]
-	- [Summary of the changes made to this file, if any]
-	- [Important Code Snippet]
-  - [File Name 2]
-	- [Important Code Snippet]
-  - [...]
-5. Problem Solving:
-  [Detailed description]
-6. Pending Tasks and Next Steps:
-  - [Task 1 details & next steps]
-  - [Task 2 details & next steps]
-  - [...]
-
-Output only the summary of the conversation so far, without any additional commentary or explanation.
-`
-
 type ContextManagementSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	autoCondenseContext: boolean
 	autoCondenseContextPercent: number
-	condensingApiConfigId?: string
-	customCondensingPrompt?: string
 	listApiConfigMeta: any[]
 	maxOpenTabsContext: number
 	maxWorkspaceFiles: number
 	showRooIgnoredFiles?: boolean
 	maxReadFileLine?: number
+	maxImageFileSize?: number
+	maxTotalImageSize?: number
 	maxConcurrentFileReads?: number
 	allowVeryLargeReads?: boolean // kilocode_change
 	profileThresholds?: Record<string, number>
+	includeDiagnosticMessages?: boolean
+	maxDiagnosticMessages?: number
+	writeDelayMs: number
 	setCachedStateField: SetCachedStateField<
 		| "autoCondenseContext"
 		| "autoCondenseContextPercent"
-		| "condensingApiConfigId"
-		| "customCondensingPrompt"
 		| "maxOpenTabsContext"
 		| "maxWorkspaceFiles"
 		| "showRooIgnoredFiles"
 		| "maxReadFileLine"
+		| "maxImageFileSize"
+		| "maxTotalImageSize"
 		| "maxConcurrentFileReads"
 		| "allowVeryLargeReads" // kilocode_change
 		| "profileThresholds"
+		| "includeDiagnosticMessages"
+		| "maxDiagnosticMessages"
+		| "writeDelayMs"
 	>
 }
 
 export const ContextManagementSettings = ({
 	autoCondenseContext,
 	autoCondenseContextPercent,
-	condensingApiConfigId,
-	customCondensingPrompt,
 	listApiConfigMeta,
 	maxOpenTabsContext,
 	maxWorkspaceFiles,
 	showRooIgnoredFiles,
 	setCachedStateField,
 	maxReadFileLine,
+	maxImageFileSize,
+	maxTotalImageSize,
 	maxConcurrentFileReads,
 	allowVeryLargeReads, // kilocode_change
 	profileThresholds = {},
+	includeDiagnosticMessages,
+	maxDiagnosticMessages,
+	writeDelayMs,
 	className,
 	...props
 }: ContextManagementSettingsProps) => {
@@ -259,6 +228,151 @@ export const ContextManagementSettings = ({
 					</div>
 				</div>
 				{/*kilocode_change end*/}
+
+				<div>
+					<div className="flex flex-col gap-2">
+						<span className="font-medium">{t("settings:contextManagement.maxImageFileSize.label")}</span>
+						<div className="flex items-center gap-4">
+							<Input
+								type="number"
+								pattern="[0-9]*"
+								className="w-24 bg-vscode-input-background text-vscode-input-foreground border border-vscode-input-border px-2 py-1 rounded text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+								value={maxImageFileSize ?? 5}
+								min={1}
+								max={100}
+								onChange={(e) => {
+									const newValue = parseInt(e.target.value, 10)
+									if (!isNaN(newValue) && newValue >= 1 && newValue <= 100) {
+										setCachedStateField("maxImageFileSize", newValue)
+									}
+								}}
+								onClick={(e) => e.currentTarget.select()}
+								data-testid="max-image-file-size-input"
+							/>
+							<span>{t("settings:contextManagement.maxImageFileSize.mb")}</span>
+						</div>
+					</div>
+					<div className="text-vscode-descriptionForeground text-sm mt-2">
+						{t("settings:contextManagement.maxImageFileSize.description")}
+					</div>
+				</div>
+
+				<div>
+					<div className="flex flex-col gap-2">
+						<span className="font-medium">{t("settings:contextManagement.maxTotalImageSize.label")}</span>
+						<div className="flex items-center gap-4">
+							<Input
+								type="number"
+								pattern="[0-9]*"
+								className="w-24 bg-vscode-input-background text-vscode-input-foreground border border-vscode-input-border px-2 py-1 rounded text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+								value={maxTotalImageSize ?? 20}
+								min={1}
+								max={500}
+								onChange={(e) => {
+									const newValue = parseInt(e.target.value, 10)
+									if (!isNaN(newValue) && newValue >= 1 && newValue <= 500) {
+										setCachedStateField("maxTotalImageSize", newValue)
+									}
+								}}
+								onClick={(e) => e.currentTarget.select()}
+								data-testid="max-total-image-size-input"
+							/>
+							<span>{t("settings:contextManagement.maxTotalImageSize.mb")}</span>
+						</div>
+					</div>
+					<div className="text-vscode-descriptionForeground text-sm mt-2">
+						{t("settings:contextManagement.maxTotalImageSize.description")}
+					</div>
+				</div>
+
+				<div>
+					<VSCodeCheckbox
+						checked={includeDiagnosticMessages}
+						onChange={(e: any) => setCachedStateField("includeDiagnosticMessages", e.target.checked)}
+						data-testid="include-diagnostic-messages-checkbox">
+						<label className="block font-medium mb-1">
+							{t("settings:contextManagement.diagnostics.includeMessages.label")}
+						</label>
+					</VSCodeCheckbox>
+					<div className="text-vscode-descriptionForeground text-sm mt-1 mb-3">
+						{t("settings:contextManagement.diagnostics.includeMessages.description")}
+					</div>
+				</div>
+
+				<div>
+					<span className="block font-medium mb-1">
+						{t("settings:contextManagement.diagnostics.maxMessages.label")}
+					</span>
+					<div className="flex items-center gap-2">
+						<Slider
+							min={1}
+							max={100}
+							step={1}
+							value={[
+								maxDiagnosticMessages !== undefined && maxDiagnosticMessages <= 0
+									? 100
+									: (maxDiagnosticMessages ?? 50),
+							]}
+							onValueChange={([value]) => {
+								// When slider reaches 100, set to -1 (unlimited)
+								setCachedStateField("maxDiagnosticMessages", value === 100 ? -1 : value)
+							}}
+							data-testid="max-diagnostic-messages-slider"
+							aria-label={t("settings:contextManagement.diagnostics.maxMessages.label")}
+							aria-valuemin={1}
+							aria-valuemax={100}
+							aria-valuenow={
+								maxDiagnosticMessages !== undefined && maxDiagnosticMessages <= 0
+									? 100
+									: (maxDiagnosticMessages ?? 50)
+							}
+							aria-valuetext={
+								(maxDiagnosticMessages !== undefined && maxDiagnosticMessages <= 0) ||
+								maxDiagnosticMessages === 100
+									? t("settings:contextManagement.diagnostics.maxMessages.unlimitedLabel")
+									: `${maxDiagnosticMessages ?? 50} ${t("settings:contextManagement.diagnostics.maxMessages.label")}`
+							}
+						/>
+						<span className="w-20 text-sm font-medium">
+							{(maxDiagnosticMessages !== undefined && maxDiagnosticMessages <= 0) ||
+							maxDiagnosticMessages === 100
+								? t("settings:contextManagement.diagnostics.maxMessages.unlimitedLabel")
+								: (maxDiagnosticMessages ?? 50)}
+						</span>
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={() => setCachedStateField("maxDiagnosticMessages", 50)}
+							title={t("settings:contextManagement.diagnostics.maxMessages.resetTooltip")}
+							className="p-1 h-6 w-6"
+							disabled={maxDiagnosticMessages === 50}>
+							<span className="codicon codicon-discard" />
+						</Button>
+					</div>
+					<div className="text-vscode-descriptionForeground text-sm mt-1">
+						{t("settings:contextManagement.diagnostics.maxMessages.description")}
+					</div>
+				</div>
+
+				<div>
+					<span className="block font-medium mb-1">
+						{t("settings:contextManagement.diagnostics.delayAfterWrite.label")}
+					</span>
+					<div className="flex items-center gap-2">
+						<Slider
+							min={0}
+							max={5000}
+							step={100}
+							value={[writeDelayMs]}
+							onValueChange={([value]) => setCachedStateField("writeDelayMs", value)}
+							data-testid="write-delay-slider"
+						/>
+						<span className="w-20">{writeDelayMs}ms</span>
+					</div>
+					<div className="text-vscode-descriptionForeground text-sm mt-1">
+						{t("settings:contextManagement.diagnostics.delayAfterWrite.description")}
+					</div>
+				</div>
 			</Section>
 			<Section className="pt-2">
 				<VSCodeCheckbox
@@ -336,91 +450,6 @@ export const ContextManagementSettings = ({
 											threshold: autoCondenseContextPercent,
 										})
 									: t("settings:contextManagement.condensingThreshold.profileDescription")}
-							</div>
-						</div>
-
-						{/* API Configuration Selection */}
-						<div>
-							<div className="flex items-center gap-4 font-bold">
-								<span className="codicon codicon-settings-gear" />
-								<div>{t("settings:contextManagement.condensingApiConfiguration.label")}</div>
-							</div>
-							<div>
-								<div className="text-[13px] text-vscode-descriptionForeground mb-2">
-									{t("settings:contextManagement.condensingApiConfiguration.description")}
-								</div>
-								<Select
-									value={condensingApiConfigId || "-"}
-									onValueChange={(value) => {
-										const newConfigId = value === "-" ? "" : value
-										setCachedStateField("condensingApiConfigId", newConfigId)
-										vscode.postMessage({
-											type: "condensingApiConfigId",
-											text: newConfigId,
-										})
-									}}
-									data-testid="condensing-api-config-select">
-									<SelectTrigger className="w-full">
-										<SelectValue
-											placeholder={t(
-												"settings:contextManagement.condensingApiConfiguration.useCurrentConfig",
-											)}
-										/>
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="-">
-											{t(
-												"settings:contextManagement.condensingApiConfiguration.useCurrentConfig",
-											)}
-										</SelectItem>
-										{(listApiConfigMeta || []).map((config) => (
-											<SelectItem key={config.id} value={config.id}>
-												{config.name}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</div>
-						</div>
-
-						{/* Custom Prompt Section */}
-						<div>
-							<div className="flex items-center gap-4 font-bold">
-								<span className="codicon codicon-edit" />
-								<div>{t("settings:contextManagement.customCondensingPrompt.label")}</div>
-							</div>
-							<div>
-								<div className="text-[13px] text-vscode-descriptionForeground mb-2">
-									{t("settings:contextManagement.customCondensingPrompt.description")}
-								</div>
-								<VSCodeTextArea
-									resize="vertical"
-									value={customCondensingPrompt || SUMMARY_PROMPT}
-									onChange={(e) => {
-										const value = (e.target as HTMLTextAreaElement).value
-										setCachedStateField("customCondensingPrompt", value)
-										vscode.postMessage({
-											type: "updateCondensingPrompt",
-											text: value,
-										})
-									}}
-									rows={8}
-									className="w-full font-mono text-sm"
-								/>
-								<div className="mt-2">
-									<Button
-										variant="secondary"
-										size="sm"
-										onClick={() => {
-											setCachedStateField("customCondensingPrompt", SUMMARY_PROMPT)
-											vscode.postMessage({
-												type: "updateCondensingPrompt",
-												text: SUMMARY_PROMPT,
-											})
-										}}>
-										{t("settings:contextManagement.customCondensingPrompt.reset")}
-									</Button>
-								</div>
 							</div>
 						</div>
 					</div>

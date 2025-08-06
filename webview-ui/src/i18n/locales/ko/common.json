@@ -1,4 +1,12 @@
 {
+	"errorBoundary": {
+		"title": "문제가 발생했습니다",
+		"reportText": "이 오류를 보고하여 개선에 도움을 주세요",
+		"githubText": "GitHub 이슈 페이지",
+		"copyInstructions": "다음 오류 메시지를 복사하여 보고서에 포함해 주세요:",
+		"errorStack": "오류 스택:",
+		"componentStack": "컴포넌트 스택:"
+	},
 	"answers": {
 		"yes": "예",
 		"no": "아니오",
@@ -20,7 +28,8 @@
 		"customerSupport": "고객 지원"
 	},
 	"ui": {
-		"search_placeholder": "검색..."
+		"search_placeholder": "검색...",
+		"no_results": "결과를 찾을 수 없습니다"
 	},
 	"mermaid": {
 		"loading": "머메이드 다이어그램 생성 중...",
@@ -70,5 +79,12 @@
 		"success": {
 			"imageDataUriCopied": "이미지 데이터 URI가 클립보드에 복사됨"
 		}
+	},
+	"confirmation": {
+		"deleteMessage": "메시지 삭제",
+		"deleteWarning": "이 메시지를 삭제하면 대화의 모든 후속 메시지가 삭제됩니다. 계속하시겠습니까?",
+		"editMessage": "메시지 편집",
+		"editWarning": "이 메시지를 편집하면 대화의 모든 후속 메시지가 삭제됩니다. 계속하시겠습니까?",
+		"proceed": "계속"
 	}
 }

@@ -9,7 +9,8 @@ import { vscode } from "@src/utils/vscode"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 
 const BannerContainer = styled.div`
-	background-color: var(--vscode-banner-background);
+	border: 1px solid var(--vscode-checkbox-border); // kilocode_change
+	background-color: var(--vscode-editorSuggestWidget-background); // kilocode_change
 	padding: 12px 20px;
 	display: flex;
 	flex-direction: column;
@@ -57,7 +58,7 @@ const TelemetryBanner = () => {
 					<Trans
 						i18nKey="welcome:telemetry.anonymousTelemetry"
 						components={{
-							privacyLink: <VSCodeLink href="https://roocode.com/privacy" />,
+							privacyLink: <VSCodeLink href="https://kilocode.ai/privacy" />,
 						}}
 					/>
 					<div className="mt-1">

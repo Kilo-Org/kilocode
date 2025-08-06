@@ -1,14 +1,13 @@
 import React, { Fragment, memo, useCallback, useEffect, useMemo, useState } from "react" // kilocode_change Fragment
 import { convertHeadersToObject } from "./utils/headers"
 import { useDebounce } from "react-use"
-import { VSCodeButtonLink } from "../common/VSCodeButtonLink"
-import { VSCodeLink, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
-
-import { getKiloCodeBackendSignInUrl } from "../kilocode/helpers" // kilocode_change
+import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
+import { ExternalLinkIcon } from "@radix-ui/react-icons"
 
 import {
 	type ProviderName,
 	type ProviderSettings,
+	DEFAULT_CONSECUTIVE_MISTAKE_LIMIT,
 	openRouterDefaultModelId,
 	requestyDefaultModelId,
 	glamaDefaultModelId,
@@ -16,16 +15,25 @@ import {
 	litellmDefaultModelId,
 	openAiNativeDefaultModelId,
 	anthropicDefaultModelId,
+	doubaoDefaultModelId,
 	claudeCodeDefaultModelId,
 	geminiDefaultModelId,
 	geminiCliDefaultModelId,
 	deepSeekDefaultModelId,
+	moonshotDefaultModelId,
 	mistralDefaultModelId,
 	xaiDefaultModelId,
+	// kilocode_change start
+	zaiDefaultModelId,
+	bigModelDefaultModelId,
+	// kilocode_change end
 	groqDefaultModelId,
 	chutesDefaultModelId,
 	bedrockDefaultModelId,
 	vertexDefaultModelId,
+	kilocodeDefaultModelId,
+	sambaNovaDefaultModelId,
+	fireworksDefaultModelId,
 } from "@roo-code/types"
 
 import { vscode } from "@src/utils/vscode"
@@ -34,7 +42,11 @@ import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { useRouterModels } from "@src/components/ui/hooks/useRouterModels"
 import { useSelectedModel } from "@src/components/ui/hooks/useSelectedModel"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
-import { filterModels } from "./utils/organizationFilters" // kilocode_change: unused filterProviders
+import {
+	useOpenRouterModelProviders,
+	OPENROUTER_DEFAULT_PROVIDER_NAME,
+} from "@src/components/ui/hooks/useOpenRouterModelProviders"
+import { filterModels } from "./utils/organizationFilters"
 import {
 	Select,
 	SelectTrigger,
@@ -43,7 +55,9 @@ import {
 	SelectItem,
 	// SearchableSelect, // kilocode_change
 	SelectSeparator,
-	Button, // kilocode_change
+	Collapsible,
+	CollapsibleTrigger,
+	CollapsibleContent,
 } from "@src/components/ui"
 
 import {
@@ -52,35 +66,49 @@ import {
 	Chutes,
 	ClaudeCode,
 	DeepSeek,
+	Doubao,
 	Gemini,
 	GeminiCli,
 	Glama,
 	Groq,
+	HuggingFace,
 	LMStudio,
 	LiteLLM,
 	Mistral,
+	Moonshot,
 	Ollama,
 	OpenAI,
 	OpenAICompatible,
 	OpenRouter,
 	Requesty,
+	SambaNova,
 	Unbound,
 	Vertex,
 	VSCodeLM,
 	XAI,
-	Cerebras, // kilocode_change
+	// kilocode_change start
+	ZAI,
+	BigModel,
+	Cerebras,
+	VirtualQuotaFallbackProvider,
+	// kilocode_change end
+	Fireworks,
 } from "./providers"
 
 import { MODELS_BY_PROVIDER, PROVIDERS } from "./constants"
 import { inputEventTransform, noTransform } from "./transforms"
-import { ModelPicker } from "./ModelPicker"
+// import { ModelPicker } from "./ModelPicker" // kilocode_change
 import { ModelInfoView } from "./ModelInfoView"
 import { ApiErrorMessage } from "./ApiErrorMessage"
 import { ThinkingBudget } from "./ThinkingBudget"
 import { DiffSettingsControl } from "./DiffSettingsControl"
+import { TodoListSettingsControl } from "./TodoListSettingsControl"
 import { TemperatureControl } from "./TemperatureControl"
 import { RateLimitSecondsControl } from "./RateLimitSecondsControl"
+import { ConsecutiveMistakeLimitControl } from "./ConsecutiveMistakeLimitControl"
 import { BedrockCustomArn } from "./providers/BedrockCustomArn"
+import { KiloCode } from "../kilocode/settings/providers/KiloCode" // kilocode_change
+import { KiloCodeAdvanced } from "../kilocode/settings/providers/KiloCodeAdvanced" // kilocode_change
 import { buildDocLink } from "@src/utils/docLinks"
 import { cerebrasDefaultModelId } from "@roo/api"
 
@@ -142,6 +170,7 @@ const ApiOptions = ({
 	)
 
 	const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
+	const [isAdvancedSettingsOpen, setIsAdvancedSettingsOpen] = useState(false)
 
 	const handleInputChange = useCallback(
 		<K extends keyof ProviderSettings, E>(
@@ -167,12 +196,25 @@ const ApiOptions = ({
 	})
 	// kilocode_change end
 
+	const { data: openRouterModelProviders } = useOpenRouterModelProviders(
+		apiConfiguration?.openRouterModelId,
+		apiConfiguration?.openRouterBaseUrl,
+		apiConfiguration?.openRouterApiKey,
+		{
+			enabled:
+				!!apiConfiguration?.openRouterModelId &&
+				routerModels?.openrouter &&
+				Object.keys(routerModels.openrouter).length > 1 &&
+				apiConfiguration.openRouterModelId in routerModels.openrouter,
+		},
+	)
+
 	// Update `apiModelId` whenever `selectedModelId` changes.
 	useEffect(() => {
-		if (selectedModelId) {
+		if (selectedModelId && apiConfiguration.apiModelId !== selectedModelId) {
 			setApiConfigurationField("apiModelId", selectedModelId)
 		}
-	}, [selectedModelId, setApiConfigurationField])
+	}, [selectedModelId, setApiConfigurationField, apiConfiguration.apiModelId])
 
 	// Debounced refresh model updates, only executed 250ms after the user
 	// stops typing.
@@ -289,17 +331,25 @@ const ApiOptions = ({
 				gemini: { field: "apiModelId", default: geminiDefaultModelId },
 				"gemini-cli": { field: "apiModelId", default: geminiCliDefaultModelId },
 				deepseek: { field: "apiModelId", default: deepSeekDefaultModelId },
+				doubao: { field: "apiModelId", default: doubaoDefaultModelId },
+				moonshot: { field: "apiModelId", default: moonshotDefaultModelId },
 				mistral: { field: "apiModelId", default: mistralDefaultModelId },
 				xai: { field: "apiModelId", default: xaiDefaultModelId },
 				groq: { field: "apiModelId", default: groqDefaultModelId },
 				chutes: { field: "apiModelId", default: chutesDefaultModelId },
 				bedrock: { field: "apiModelId", default: bedrockDefaultModelId },
 				vertex: { field: "apiModelId", default: vertexDefaultModelId },
+				sambanova: { field: "apiModelId", default: sambaNovaDefaultModelId },
 				openai: { field: "openAiModelId" },
 				ollama: { field: "ollamaModelId" },
 				lmstudio: { field: "lmStudioModelId" },
-				kilocode: { field: "kilocodeModel", default: "claude37" }, // kilocode_change
-				cerebras: { field: "cerebrasModelId", default: cerebrasDefaultModelId }, // kilocode_change
+				// kilocode_change start
+				zai: { field: "apiModelId", default: zaiDefaultModelId },
+				bigmodel: { field: "apiModelId", default: bigModelDefaultModelId },
+				kilocode: { field: "kilocodeModel", default: kilocodeDefaultModelId },
+				cerebras: { field: "cerebrasModelId", default: cerebrasDefaultModelId },
+				// kilocode_change end
+				fireworks: { field: "apiModelId", default: fireworksDefaultModelId },
 			}
 
 			const config = PROVIDER_MODEL_CONFIG[value]
@@ -325,6 +375,25 @@ const ApiOptions = ({
 		if (!name) {
 			return undefined
 		}
+
+		// kilocode_change start
+		// Providers that don't have documentation pages yet
+		const excludedProviders = [
+			"gemini-cli",
+			"moonshot",
+			"chutes",
+			"cerebras",
+			"virtual-quota-fallback",
+			"litellm",
+			"zai",
+			"bigmodel",
+		]
+
+		// Skip documentation link when the provider is excluded because documentation is not available
+		if (excludedProviders.includes(selectedProvider)) {
+			return undefined
+		}
+		// kilocode_change end
 
 		// Get the URL slug - use custom mapping if available, otherwise use the provider key.
 		const slugs: Record<string, string> = {
@@ -373,91 +442,21 @@ const ApiOptions = ({
 
 			{/* kilocode_change start */}
 			{selectedProvider === "kilocode" && (
-				<>
-					<div style={{ marginTop: "0px" }} className="text-sm text-vscode-descriptionForeground -mt-2">
-						You get $20 for free!
-					</div>
-					<div>
-						<label className="block font-medium -mb-2">{t("kilocode:settings.provider.account")}</label>
-					</div>
-					{!hideKiloCodeButton &&
-						(apiConfiguration.kilocodeToken ? (
-							<div>
-								<Button
-									variant="secondary"
-									onClick={async () => {
-										setApiConfigurationField("kilocodeToken", "")
-
-										vscode.postMessage({
-											type: "upsertApiConfiguration",
-											text: currentApiConfigName,
-											apiConfiguration: {
-												...apiConfiguration,
-												kilocodeToken: "",
-											},
-										})
-									}}>
-									{t("kilocode:settings.provider.logout")}
-								</Button>
-							</div>
-						) : (
-							<VSCodeButtonLink variant="secondary" href={getKiloCodeBackendSignInUrl(uriScheme, uiKind)}>
-								{t("kilocode:settings.provider.login")}
-							</VSCodeButtonLink>
-						))}
-
-					<VSCodeTextField
-						value={apiConfiguration?.kilocodeToken || ""}
-						type="password"
-						onInput={handleInputChange("kilocodeToken")}
-						placeholder={t("kilocode:settings.provider.apiKey")}
-						className="w-full">
-						<div className="flex justify-between items-center mb-1">
-							<label className="block font-medium">{t("kilocode:settings.provider.apiKey")}</label>
-						</div>
-					</VSCodeTextField>
-
-					<ModelPicker
-						apiConfiguration={apiConfiguration}
-						setApiConfigurationField={setApiConfigurationField}
-						defaultModelId="claude37"
-						models={routerModels?.["kilocode-openrouter"] ?? {}}
-						modelIdKey="kilocodeModel"
-						serviceName="Kilo Code"
-						serviceUrl="https://kilocode.ai"
-						organizationAllowList={organizationAllowList}
-					/>
-				</>
+				<KiloCode
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+					hideKiloCodeButton={hideKiloCodeButton}
+					currentApiConfigName={currentApiConfigName}
+					routerModels={routerModels}
+					organizationAllowList={organizationAllowList}
+					uriScheme={uriScheme}
+					uiKind={uiKind}
+				/>
 			)}
 			{/* kilocode_change end */}
 
 			{selectedProvider === "fireworks" && (
-				<div>
-					<VSCodeTextField
-						value={apiConfiguration?.fireworksApiKey || ""}
-						style={{ width: "100%" }}
-						type="password"
-						onInput={handleInputChange("fireworksApiKey")}
-						placeholder="Enter API Key...">
-						<span style={{ fontWeight: 500 }}>Fireworks API Key</span>
-					</VSCodeTextField>
-					<p
-						style={{
-							fontSize: "12px",
-							marginTop: 3,
-							color: "var(--vscode-descriptionForeground)",
-						}}>
-						This key is stored locally and only used to make API requests from this extension.
-						{!apiConfiguration?.fireworksApiKey && (
-							<>
-								<br />
-								<br />
-								Get your API key from{" "}
-								<VSCodeLink href="https://fireworks.ai/account/api-keys">Fireworks</VSCodeLink>.
-							</>
-						)}
-					</p>
-				</div>
+				<Fireworks apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
 
 			{selectedProvider === "openrouter" && (
@@ -534,7 +533,11 @@ const ApiOptions = ({
 			)}
 
 			{selectedProvider === "gemini" && (
-				<Gemini apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
+				<Gemini
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+					fromWelcomeView={fromWelcomeView}
+				/>
 			)}
 
 			{selectedProvider === "gemini-cli" && (
@@ -558,6 +561,14 @@ const ApiOptions = ({
 				<DeepSeek apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
 
+			{selectedProvider === "doubao" && (
+				<Doubao apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
+			)}
+
+			{selectedProvider === "moonshot" && (
+				<Moonshot apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
+			)}
+
 			{selectedProvider === "vscode-lm" && (
 				<VSCodeLM apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
@@ -574,13 +585,31 @@ const ApiOptions = ({
 				<Groq apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
 
+			{selectedProvider === "huggingface" && (
+				<HuggingFace apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
+			)}
+
 			{selectedProvider === "chutes" && (
 				<Chutes apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
 
 			{/* kilocode_change start */}
+			{selectedProvider === "zai" && (
+				<ZAI apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
+			)}
+
+			{selectedProvider === "bigmodel" && (
+				<BigModel apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
+			)}
+
 			{selectedProvider === "cerebras" && (
 				<Cerebras apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
+			)}
+			{selectedProvider === "virtual-quota-fallback" && (
+				<VirtualQuotaFallbackProvider
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+				/>
 			)}
 			{/* kilocode_change end */}
 
@@ -591,6 +620,10 @@ const ApiOptions = ({
 					organizationAllowList={organizationAllowList}
 					modelValidationError={modelValidationError}
 				/>
+			)}
+
+			{selectedProvider === "sambanova" && (
+				<SambaNova apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
 
 			{selectedProvider === "human-relay" && (
@@ -659,22 +692,91 @@ const ApiOptions = ({
 			/>
 
 			{!fromWelcomeView && (
-				<>
-					<DiffSettingsControl
-						diffEnabled={apiConfiguration.diffEnabled}
-						fuzzyMatchThreshold={apiConfiguration.fuzzyMatchThreshold}
-						onChange={(field, value) => setApiConfigurationField(field, value)}
-					/>
-					<TemperatureControl
-						value={apiConfiguration.modelTemperature}
-						onChange={handleInputChange("modelTemperature", noTransform)}
-						maxValue={2}
-					/>
-					<RateLimitSecondsControl
-						value={apiConfiguration.rateLimitSeconds || 0}
-						onChange={(value) => setApiConfigurationField("rateLimitSeconds", value)}
-					/>
-				</>
+				<Collapsible open={isAdvancedSettingsOpen} onOpenChange={setIsAdvancedSettingsOpen}>
+					<CollapsibleTrigger className="flex items-center gap-1 w-full cursor-pointer hover:opacity-80 mb-2">
+						<span className={`codicon codicon-chevron-${isAdvancedSettingsOpen ? "down" : "right"}`}></span>
+						<span className="font-medium">{t("settings:advancedSettings.title")}</span>
+					</CollapsibleTrigger>
+					<CollapsibleContent className="space-y-3">
+						<TodoListSettingsControl
+							todoListEnabled={apiConfiguration.todoListEnabled}
+							onChange={(field, value) => setApiConfigurationField(field, value)}
+						/>
+						<DiffSettingsControl
+							diffEnabled={apiConfiguration.diffEnabled}
+							fuzzyMatchThreshold={apiConfiguration.fuzzyMatchThreshold}
+							onChange={(field, value) => setApiConfigurationField(field, value)}
+						/>
+						<TemperatureControl
+							value={apiConfiguration.modelTemperature}
+							onChange={handleInputChange("modelTemperature", noTransform)}
+							maxValue={2}
+						/>
+						<RateLimitSecondsControl
+							value={apiConfiguration.rateLimitSeconds || 0}
+							onChange={(value) => setApiConfigurationField("rateLimitSeconds", value)}
+						/>
+						<ConsecutiveMistakeLimitControl
+							value={
+								apiConfiguration.consecutiveMistakeLimit !== undefined
+									? apiConfiguration.consecutiveMistakeLimit
+									: DEFAULT_CONSECUTIVE_MISTAKE_LIMIT
+							}
+							onChange={(value) => setApiConfigurationField("consecutiveMistakeLimit", value)}
+						/>
+						{/* kilocode_change start */}
+						{selectedProvider === "kilocode" && (
+							<KiloCodeAdvanced
+								apiConfiguration={apiConfiguration}
+								setApiConfigurationField={setApiConfigurationField}
+								routerModels={routerModels}
+							/>
+						)}
+						{/* kilocode_change end */}
+						{selectedProvider === "openrouter" &&
+							openRouterModelProviders &&
+							Object.keys(openRouterModelProviders).length > 0 && (
+								<div>
+									<div className="flex items-center gap-1">
+										<label className="block font-medium mb-1">
+											{t("settings:providers.openRouter.providerRouting.title")}
+										</label>
+										<a href={`https://openrouter.ai/${selectedModelId}/providers`}>
+											<ExternalLinkIcon className="w-4 h-4" />
+										</a>
+									</div>
+									<Select
+										value={
+											apiConfiguration?.openRouterSpecificProvider ||
+											OPENROUTER_DEFAULT_PROVIDER_NAME
+										}
+										onValueChange={(value) =>
+											setApiConfigurationField("openRouterSpecificProvider", value)
+										}>
+										<SelectTrigger className="w-full">
+											<SelectValue placeholder={t("settings:common.select")} />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value={OPENROUTER_DEFAULT_PROVIDER_NAME}>
+												{OPENROUTER_DEFAULT_PROVIDER_NAME}
+											</SelectItem>
+											{Object.entries(openRouterModelProviders).map(([value, { label }]) => (
+												<SelectItem key={value} value={value}>
+													{label}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+									<div className="text-sm text-vscode-descriptionForeground mt-1">
+										{t("settings:providers.openRouter.providerRouting.description")}{" "}
+										<a href="https://openrouter.ai/docs/features/provider-routing">
+											{t("settings:providers.openRouter.providerRouting.learnMore")}.
+										</a>
+									</div>
+								</div>
+							)}
+					</CollapsibleContent>
+				</Collapsible>
 			)}
 		</div>
 	)

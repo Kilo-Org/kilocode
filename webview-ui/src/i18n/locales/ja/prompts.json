@@ -93,12 +93,23 @@
 			"useCurrentConfig": "現在選択されているAPI設定を使用",
 			"testPromptPlaceholder": "強化をテストするプロンプトを入力してください",
 			"previewButton": "プロンプト強化のプレビュー",
-			"testEnhancement": "強化をテスト"
+			"testEnhancement": "強化をテスト",
+			"includeTaskHistory": "タスク履歴をコンテキストとして含める",
+			"includeTaskHistoryDescription": "有効にすると、現在の会話の最後の10メッセージがプロンプト強化時にコンテキストとして含まれ、より関連性が高くコンテキストを意識した提案の生成に役立ちます。"
+		},
+		"condense": {
+			"apiConfiguration": "コンテキスト圧縮のためのAPI構成",
+			"apiConfigDescription": "コンテキスト圧縮操作に使用するAPI構成を選択します。現在アクティブな構成を使用するには、選択しないままにします。",
+			"useCurrentConfig": "現在選択されているAPI構成を使用する"
 		},
 		"types": {
 			"ENHANCE": {
 				"label": "プロンプトを強化",
 				"description": "プロンプト強化を使用して、入力に合わせたカスタマイズされた提案や改善を得ることができます。これにより、Kilo Codeがあなたの意図を理解し、最適な回答を提供できます。チャットの✨アイコンから利用できます。"
+			},
+			"CONDENSE": {
+				"label": "コンテキスト圧縮",
+				"description": "トークン制限を管理するために会話のコンテキストを圧縮する方法を設定します。このプロンプトは、手動および自動のコンテキスト圧縮操作の両方に使用されます。"
 			},
 			"EXPLAIN": {
 				"label": "コードを説明",
@@ -127,6 +138,10 @@
 			"TERMINAL_EXPLAIN": {
 				"label": "ターミナルコマンドを説明",
 				"description": "ターミナルコマンドとその出力の詳細な説明を得ることができます。ターミナルのコンテキストメニュー（選択したターミナルの内容で右クリック）から利用できます。"
+			},
+			"TERMINAL_GENERATE": {
+				"label": "ターミナルコマンドを生成",
+				"description": "説明に基づいてターミナルコマンドの生成を支援します。"
 			},
 			"NEW_TASK": {
 				"label": "新しいタスクを開始",

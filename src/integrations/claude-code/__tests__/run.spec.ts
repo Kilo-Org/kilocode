@@ -1,8 +1,57 @@
-import { describe, test, expect, vi, beforeEach } from "vitest"
+import { describe, test, expect, vi, beforeEach, afterEach } from "vitest"
 
+// Mock os module
 // kilocode_change start
-import os from "os"
-const isWindows = os.platform() === "win32"
+vi.mock("os", async () => {
+	const actual = await vi.importActual("os")
+	return {
+		...actual,
+		platform: vi.fn(() => "darwin"), // Default to non-Windows
+		tmpdir: vi.fn(() => "/mock/tmp/dir"),
+	}
+})
+
+// Mock fs/promises module
+const mockWriteFile = vi.fn().mockResolvedValue(undefined)
+const mockUnlink = vi.fn().mockResolvedValue(undefined)
+const mockReadFile = vi.fn().mockResolvedValue("mocked system prompt content")
+
+vi.mock("node:fs/promises", async (importOriginal) => {
+	const actual = (await importOriginal()) as any
+	return {
+		...actual,
+		default: {
+			writeFile: mockWriteFile,
+			unlink: mockUnlink,
+			readFile: mockReadFile,
+		},
+		writeFile: mockWriteFile,
+		unlink: mockUnlink,
+		readFile: mockReadFile,
+	}
+})
+
+// Mock crypto for UUID generation
+const mockRandomUUID = vi.fn(() => "3af3dd36-2332-43a2-9d57-41af7e4c9453")
+
+vi.mock("node:crypto", async () => {
+	const actual = await vi.importActual("node:crypto")
+	return {
+		...actual,
+		randomUUID: mockRandomUUID,
+	}
+})
+
+// Mock path module
+const mockPathJoin = vi.fn((dir: string, filename: string) => `${dir}/${filename}`)
+
+vi.mock("node:path", async () => {
+	const actual = await vi.importActual("node:path")
+	return {
+		...actual,
+		join: mockPathJoin,
+	}
+})
 // kilocode_change end
 
 // Mock vscode workspace
@@ -95,11 +144,22 @@ describe("runClaudeCode", () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
 		mockExeca.mockReturnValue(createMockProcess())
+		// kilocode_change start
+		// Reset mock functions
+		mockWriteFile.mockResolvedValue(undefined)
+		mockUnlink.mockResolvedValue(undefined)
+		mockReadFile.mockResolvedValue("mocked system prompt content")
+		mockRandomUUID.mockReturnValue("3af3dd36-2332-43a2-9d57-41af7e4c9453")
+		mockPathJoin.mockImplementation((dir: string, filename: string) => `${dir}/${filename}`)
+		// kilocode_change end
 		// Mock setImmediate to run synchronously in tests
 		vi.spyOn(global, "setImmediate").mockImplementation((callback: any) => {
 			callback()
 			return {} as any
 		})
+		// kilocode_change Reset the module cache to ensure fresh imports
+		vi.resetModules()
+		// kilocode_change end
 	})
 
 	afterEach(() => {
@@ -123,57 +183,65 @@ describe("runClaudeCode", () => {
 		expect(typeof result[Symbol.asyncIterator]).toBe("function")
 	})
 
-	// kilocode_change start: skip on Windows
-	test.skipIf(isWindows)("should use stdin instead of command line arguments for messages", async () => {
-		const { runClaudeCode } = await import("../run")
+	test("should handle platform-specific stdin behavior", async () => {
 		const messages = [{ role: "user" as const, content: "Hello world!" }]
+		const systemPrompt = "You are a helpful assistant"
 		const options = {
-			systemPrompt: "You are a helpful assistant",
+			systemPrompt,
 			messages,
 		}
 
-		const generator = runClaudeCode(options)
+		// Test on Windows
+		const os = await import("os")
+		vi.mocked(os.platform).mockReturnValue("win32")
 
-		// Consume the generator to completion
-		const results = []
-		for await (const chunk of generator) {
-			results.push(chunk)
+		// kilocode_change start
+		// Import the module after setting up mocks
+		const { runClaudeCode } = await import("../run")
+		const generator = runClaudeCode(options)
+		// Consume at least one item to trigger process spawn
+		await generator.next()
+		// Clean up the generator
+		await generator.return(undefined)
+		const [, args] = mockExeca.mock.calls[0]
+		expect(args).toContain("--system-prompt-file")
+		// When using system prompt file, should only pass messages via stdin
+		const expectedStdinData = JSON.stringify(messages)
+		expect(mockStdin.write).toHaveBeenCalledWith(expectedStdinData, "utf8", expect.any(Function))
+
+		// Verify that writeFile was called to create temp file
+		expect(mockWriteFile).toHaveBeenCalledWith(
+			expect.stringContaining("kilocode-system-prompt-"),
+			systemPrompt,
+			"utf8",
+		)
+		// kilocode_change end
+
+		// Reset mocks for non-Windows test
+		vi.clearAllMocks()
+		mockExeca.mockReturnValue(createMockProcess())
+
+		// Test on non-Windows
+		vi.mocked(os.platform).mockReturnValue("darwin")
+
+		// kilocode_change start
+		// Re-import to get fresh module with new platform setting
+		vi.resetModules()
+		const { runClaudeCode: runClaudeCode2 } = await import("../run")
+		const generator2 = runClaudeCode2(options)
+		// kilocode_change end
+		const results2 = []
+		for await (const chunk of generator2) {
+			results2.push(chunk)
 		}
 
-		// Verify execa was called with correct arguments (no JSON.stringify(messages) in args)
-		expect(mockExeca).toHaveBeenCalledWith(
-			"claude",
-			expect.arrayContaining([
-				"-p",
-				"--system-prompt",
-				"You are a helpful assistant",
-				"--verbose",
-				"--output-format",
-				"stream-json",
-				"--disallowedTools",
-				expect.any(String),
-				"--max-turns",
-				"1",
-			]),
-			expect.objectContaining({
-				stdin: "pipe",
-				stdout: "pipe",
-				stderr: "pipe",
-			}),
-		)
+		// On non-Windows, should have --system-prompt in args
+		const [, args2] = mockExeca.mock.calls[0]
+		expect(args2).toContain("--system-prompt")
+		expect(args2).toContain(systemPrompt)
 
-		// Verify the arguments do NOT contain the stringified messages
-		const [, args] = mockExeca.mock.calls[0]
-		expect(args).not.toContain(JSON.stringify(messages))
-
-		// Verify messages were written to stdin with callback
+		// Should only pass messages via stdin
 		expect(mockStdin.write).toHaveBeenCalledWith(JSON.stringify(messages), "utf8", expect.any(Function))
-		expect(mockStdin.end).toHaveBeenCalled()
-
-		// Verify we got the expected mock output
-		expect(results).toHaveLength(2)
-		expect(results[0]).toEqual({ type: "text", text: "Hello" })
-		expect(results[1]).toEqual({ type: "text", text: " world" })
 	})
 
 	test("should include model parameter when provided", async () => {

@@ -1,4 +1,12 @@
 {
+	"errorBoundary": {
+		"title": "Something went wrong",
+		"reportText": "Please help us improve by reporting this error on",
+		"githubText": "our GitHub Issues page",
+		"copyInstructions": "Copy and paste the following error message to include it as part of your submission:",
+		"errorStack": "Error Stack:",
+		"componentStack": "Component Stack:"
+	},
 	"answers": {
 		"yes": "Yes",
 		"no": "No",
@@ -20,7 +28,8 @@
 		"customerSupport": "Customer Support"
 	},
 	"ui": {
-		"search_placeholder": "Search..."
+		"search_placeholder": "Search...",
+		"no_results": "No results found"
 	},
 	"mermaid": {
 		"loading": "Generating mermaid diagram...",
@@ -70,5 +79,12 @@
 		"success": {
 			"imageDataUriCopied": "Image data URI copied to clipboard"
 		}
+	},
+	"confirmation": {
+		"deleteMessage": "Delete Message",
+		"deleteWarning": "Deleting this message will delete all subsequent messages in the conversation. Do you want to proceed?",
+		"editMessage": "Edit Message",
+		"editWarning": "Editing this message will delete all subsequent messages in the conversation. Do you want to proceed?",
+		"proceed": "Proceed"
 	}
 }

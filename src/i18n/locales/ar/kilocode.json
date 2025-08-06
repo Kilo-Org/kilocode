@@ -55,57 +55,75 @@
 		"activationFailed": "Kilo: فشل تفعيل مولّد الرسائل: {{error}}",
 		"providerRegistered": "Kilo: تم تسجيل موفر رسائل الاعتماد"
 	},
-	"autocomplete": {
-		"statusBar": {
-			"tooltip": {
-				"basic": "Kilo Code الإكمال التلقائي",
-				"disabled": "إكمال تلقائي لـ Kilo Code (معطل)",
-				"sessionTotal": "التكلفة الإجمالية للجلسة:",
-				"tokenError": "يجب تعيين رمز صالح لاستخدام الإكمال التلقائي",
-				"lastCompletion": "الإكمال الأخير:",
-				"model": "النموذج:"
-			},
-			"disabled": "$(circle-slash) Kilo مكتمل",
-			"warning": "$(warning) اكتمل Kilo",
-			"enabled": "$(sparkle) Kilo مكتمل",
-			"cost": {
-				"zero": "0.00 دولار",
-				"lessThanCent": "<$0.01"
-			}
-		},
-		"toggleMessage": "Kilo كُمبليت {{status}}"
-	},
 	"ghost": {
 		"progress": {
 			"analyzing": "جارِ تحليل الكود الخاص بك...",
 			"showing": "عرض التعديلات المقترحة...",
 			"generating": "جاري توليد التعديلات المقترحة...",
 			"processing": "جارِ معالجة التعديلات المقترحة...",
-			"title": "كيلو كود"
+			"title": "Kilo Code"
 		},
 		"input": {
-			"title": "كود كيلو: مهمة سريعة",
+			"title": "Kilo Code: مهمة سريعة",
 			"placeholder": "مثلاً، 'أعد هيكلة هذه الدالة لتكون أكثر كفاءة'"
 		},
 		"commands": {
 			"displaySuggestions": "عرض التعديلات المقترحة",
-			"generateSuggestions": "كود كيلو: توليد تعديلات مقترحة",
+			"generateSuggestions": "Kilo Code: توليد تعديلات مقترحة",
 			"applyCurrentSuggestion": "تطبيق التعديل المُقترح الحالي",
 			"cancelSuggestions": "إلغاء التعديلات المقترحة",
 			"promptCodeSuggestion": "مهمة سريعة",
 			"applyAllSuggestions": "تطبيق كافة التعديلات المقترحة",
-			"category": "كيلو كود"
+			"category": "Kilo Code"
 		},
 		"codeAction": {
-			"title": "كيلو كود: التعديلات المقترحة"
+			"title": "Kilo Code: التعديلات المقترحة"
 		},
 		"chatParticipant": {
-			"fullName": "وكيل كيلو كود",
+			"fullName": "Kilo Code وكيل",
 			"description": "يمكنني مساعدتك بالمهام السريعة والتعديلات المقترحة.",
 			"name": "وكيل"
 		},
 		"messages": {
 			"provideCodeSuggestions": "جارٍ تقديم اقتراحات الرمز..."
+		},
+		"statusBar": {
+			"warning": "$(warning) مساعد Kilo المباشر",
+			"disabled": "$(circle-slash) مساعدة Kilo المضمنة",
+			"tooltip": {
+				"disabled": "مساعد Kilo كود المضمّن (معطّل)",
+				"basic": "مساعد رمز Kilo المدمج",
+				"lastCompletion": "الاقتراح الأخير:",
+				"model": "النموذج:",
+				"tokenError": "يجب تعيين رمز صالح لاستخدام المساعد المضمن",
+				"sessionTotal": "التكلفة الإجمالية للجلسة:"
+			},
+			"enabled": "$(sparkle) مساعد Kilo المضمّن",
+			"cost": {
+				"lessThanCent": "<$0.01",
+				"zero": "$٠٫٠٠"
+			}
+		},
+		"toggleMessage": "المساعد المضمن Kilo {{status}}",
+		"incompatibilityExtensionPopup": {
+			"message": "يتم حظر مساعد Kilo كود المضمّن بسبب تعارض مع GitHub Copilot. لإصلاح هذا، يجب عليك تعطيل اقتراحات Copilot المضمنة.",
+			"disableCopilot": "تعطيل Copilot",
+			"disableInlineAssist": "تعطيل المساعد المضمّن"
 		}
+	},
+	"terminalCommandGenerator": {
+		"inputPrompt": "Kilo: وصف الأمر الذي ترغب في توليده",
+		"generatingProgress": "Kilo: جاري توليد الأمر الطرفي...",
+		"noActiveTerminal": "Kilo: لا يوجد طرفية نشطة. يرجى فتح طرفية أولاً.",
+		"commandGenerated": "Kilo: الأمر الذي تم إنشاؤه: {{command}}",
+		"inputPlaceholder": "مثلًا، إنهاء العملية التي تعمل على المنفذ 3001، إيجاد الملفات الكبيرة، إلخ",
+		"generationFailed": "Kilo: فشل في إنشاء الأمر: {{error}}",
+		"warningDialog": {
+			"okButton": "أفهم",
+			"title": "تحذير أمان للمحطة",
+			"message": "تحقق مرة أخرى من جميع الأوامر التي تم إنشاؤها قبل تنفيذها. لا يمكن دائمًا التراجع عن الإجراءات التي تتم في نافذة الطرفية - فتنفيذ أوامر غير موثوقة قد يؤدي إلى فقدان البيانات بشكل لا رجعة فيه أو تلف النظام. راجع وافهم الأمر بشكل كامل قبل المتابعة!",
+			"cancelButton": "إلغاء"
+		},
+		"tipMessage": "Kilo: اضغط {{shortcut}} لإنشاء أوامر الطرفية"
 	}
 }

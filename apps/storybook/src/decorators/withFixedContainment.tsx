@@ -1,4 +1,4 @@
-import type { Decorator } from "@storybook/react"
+import type { Decorator } from "@storybook/react-vite"
 
 // Wraps stories with an element that will "contain" any `position: fixed` elements
 // the `translate-0` is a noop, but causes any children to be contained in this element.

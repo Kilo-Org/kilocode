@@ -51,36 +51,16 @@
 		"activationFailed": "Kilo: Aktivace generátoru zpráv se nezdařila: {{error}}",
 		"providerRegistered": "Kilo: Poskytovatel zpráv commitů zaregistrován"
 	},
-	"autocomplete": {
-		"statusBar": {
-			"enabled": "$(sparkle) Kilo Dokončeno",
-			"disabled": "$(circle-slash) Kilo Dokončeno",
-			"tooltip": {
-				"tokenError": "Pro použití automatického dokončování musí být nastaven platný token",
-				"basic": "Kilo Code Autocomplete",
-				"lastCompletion": "Poslední dokončení:",
-				"model": "Model:",
-				"sessionTotal": "Celkové náklady na relaci:",
-				"disabled": "Kilo Code Autocomplete (deaktivováno)"
-			},
-			"warning": "$(warning) Kilo Hotovo",
-			"cost": {
-				"zero": "0,00 Kč",
-				"lessThanCent": "<0,01 $"
-			}
-		},
-		"toggleMessage": "Kilo hotovo {{status}}"
-	},
 	"ghost": {
 		"progress": {
 			"generating": "Generuji navrhované úpravy...",
 			"analyzing": "Analyzuji váš kód...",
 			"processing": "Zpracování navržených úprav...",
 			"showing": "Zobrazuji navrhované úpravy...",
-			"title": "Kilo Kód"
+			"title": "Kilo Code"
 		},
 		"input": {
-			"title": "Kilo kód: Rychlý úkol",
+			"title": "Kilo Code: Rychlý úkol",
 			"placeholder": "např. \"přepracovat tuto funkci, aby byla efektivnější\""
 		},
 		"commands": {
@@ -90,18 +70,56 @@
 			"cancelSuggestions": "Zrušit navrhované úpravy",
 			"applyAllSuggestions": "Použít všechny navrhované úpravy",
 			"promptCodeSuggestion": "Rychlý úkol",
-			"category": "Kilo Kód"
+			"category": "Kilo Code"
 		},
 		"codeAction": {
-			"title": "Kilo kód: Navrhované úpravy"
+			"title": "Kilo Code: Navrhované úpravy"
 		},
 		"chatParticipant": {
 			"name": "Agent",
-			"fullName": "Agentní Systém Kilo Code",
+			"fullName": "Kilo Code Agent",
 			"description": "Mohu vám pomoci s rychlými úkoly a navrženými úpravami."
 		},
 		"messages": {
 			"provideCodeSuggestions": "Poskytuji návrhy kódu..."
+		},
+		"statusBar": {
+			"disabled": "$(circle-slash) Inline asistent Kilo",
+			"enabled": "$(sparkle) Kilo Inline Asistent",
+			"warning": "$(warning) Inline asistence Kilo",
+			"tooltip": {
+				"disabled": "Kilo Code Inline Assist (deaktivováno)",
+				"basic": "Inline asistent Kilo Code",
+				"tokenError": "Pro použití Inline Assist je nutné nastavit platný token",
+				"sessionTotal": "Celková cena sezení:",
+				"model": "Model:",
+				"lastCompletion": "Poslední návrh:"
+			},
+			"cost": {
+				"zero": "0,00 Kč",
+				"lessThanCent": "<0,01 $"
+			}
+		},
+		"toggleMessage": "Kilo Inline Assist {{status}}",
+		"incompatibilityExtensionPopup": {
+			"message": "Inline asistent Kilo Code je blokován kvůli konfliktu s GitHub Copilot. Pro vyřešení tohoto problému musíš deaktivovat inline návrhy Copilotu.",
+			"disableCopilot": "Deaktivovat Copilot",
+			"disableInlineAssist": "Deaktivovat Inline asistenta"
 		}
+	},
+	"terminalCommandGenerator": {
+		"inputPrompt": "Kilo: Popište příkaz, který chcete vygenerovat",
+		"noActiveTerminal": "Kilo: Nebyl nalezen žádný aktivní terminál. Nejprve prosím otevřete terminál.",
+		"inputPlaceholder": "např. ukončit proces běžící na portu 3001, najít velké soubory atd.",
+		"generatingProgress": "Kilo: Generuji příkaz terminálu...",
+		"generationFailed": "Kilo: Příkaz se nepodařilo vygenerovat: {{error}}",
+		"commandGenerated": "Kilo: Vygenerovaný příkaz: {{command}}",
+		"warningDialog": {
+			"title": "Bezpečnostní Upozornění Terminálu",
+			"okButton": "Rozumím",
+			"message": "Dvakrát zkontrolujte všechny vygenerované příkazy před jejich spuštěním. Akce v terminálu nelze vždy vrátit zpět – spuštění neověřených příkazů může vést k nevratné ztrátě dat nebo poškození systému. Před pokračováním si příkaz důkladně projděte a ujistěte se, že mu rozumíte!",
+			"cancelButton": "Zrušit"
+		},
+		"tipMessage": "Kilo: Stiskněte {{shortcut}} pro generování příkazů v terminálu"
 	}
 }

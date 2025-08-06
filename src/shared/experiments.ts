@@ -1,9 +1,11 @@
 import type { AssertEqual, Equals, Keys, Values, ExperimentId, Experiments } from "@roo-code/types"
 
 export const EXPERIMENT_IDS = {
-	AUTOCOMPLETE: "autocomplete", // kilocode_change
+	MORPH_FAST_APPLY: "morphFastApply", // kilocode_change
 	MULTI_FILE_APPLY_DIFF: "multiFileApplyDiff",
 	POWER_STEERING: "powerSteering",
+	INLINE_ASSIST: "inlineAssist", // kilocode_change
+	PREVENT_FOCUS_DISRUPTION: "preventFocusDisruption",
 } as const satisfies Record<string, ExperimentId>
 
 type _AssertExperimentIds = AssertEqual<Equals<ExperimentId, Values<typeof EXPERIMENT_IDS>>>
@@ -15,9 +17,11 @@ interface ExperimentConfig {
 }
 
 export const experimentConfigsMap: Record<ExperimentKey, ExperimentConfig> = {
-	AUTOCOMPLETE: { enabled: false }, // kilocode_change
+	MORPH_FAST_APPLY: { enabled: false }, // kilocode_change
 	MULTI_FILE_APPLY_DIFF: { enabled: false },
 	POWER_STEERING: { enabled: false },
+	INLINE_ASSIST: { enabled: false }, // kilocode_change
+	PREVENT_FOCUS_DISRUPTION: { enabled: false },
 }
 
 export const experimentDefault = Object.fromEntries(

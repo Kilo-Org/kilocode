@@ -89,8 +89,7 @@ function killAllChildProcesses() {
 						child.kill("SIGKILL")
 					}
 				}, 5000)
-			} catch (_error) {
-			}
+			} catch (_error) {}
 		}
 
 		activeProcesses.clear()
@@ -171,7 +170,7 @@ async function buildDockerImage() {
 			"--cache-from",
 			"type=local,src=/tmp/.buildx-cache",
 			"--cache-to",
-			"type=local,dest=/tmp/.buildx-cache-new,mode=max",
+			"type=local,dest=/tmp/.buildx-cache,mode=max",
 		)
 	}
 

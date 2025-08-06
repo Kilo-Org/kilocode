@@ -11,13 +11,15 @@ export type GroqModelId =
 	| "qwen/qwen3-32b"
 	| "deepseek-r1-distill-llama-70b"
 	| "moonshotai/kimi-k2-instruct"
+	| "openai/gpt-oss-120b"
+	| "openai/gpt-oss-20b"
 
 export const groqDefaultModelId: GroqModelId = "llama-3.3-70b-versatile" // Defaulting to Llama3 70B Versatile
 
 export const groqModels = {
 	// Models based on API response: https://api.groq.com/openai/v1/models
 	"llama-3.1-8b-instant": {
-		maxTokens: 131072,
+		maxTokens: 8192,
 		contextWindow: 131072,
 		supportsImages: false,
 		supportsPromptCache: false,
@@ -26,7 +28,7 @@ export const groqModels = {
 		description: "Meta Llama 3.1 8B Instant model, 128K context.",
 	},
 	"llama-3.3-70b-versatile": {
-		maxTokens: 32768,
+		maxTokens: 8192,
 		contextWindow: 131072,
 		supportsImages: false,
 		supportsPromptCache: false,
@@ -53,7 +55,7 @@ export const groqModels = {
 		description: "Meta Llama 4 Maverick 17B Instruct model, 128K context.",
 	},
 	"mistral-saba-24b": {
-		maxTokens: 32768,
+		maxTokens: 8192,
 		contextWindow: 32768,
 		supportsImages: false,
 		supportsPromptCache: false,
@@ -62,7 +64,7 @@ export const groqModels = {
 		description: "Mistral Saba 24B model, 32K context.",
 	},
 	"qwen-qwq-32b": {
-		maxTokens: 131072,
+		maxTokens: 8192,
 		contextWindow: 131072,
 		supportsImages: false,
 		supportsPromptCache: false,
@@ -71,7 +73,7 @@ export const groqModels = {
 		description: "Alibaba Qwen QwQ 32B model, 128K context.",
 	},
 	"qwen/qwen3-32b": {
-		maxTokens: 40960,
+		maxTokens: 8192,
 		contextWindow: 131072,
 		supportsImages: false,
 		supportsPromptCache: false,
@@ -80,7 +82,7 @@ export const groqModels = {
 		description: "Alibaba Qwen 3 32B model, 128K context.",
 	},
 	"deepseek-r1-distill-llama-70b": {
-		maxTokens: 131072,
+		maxTokens: 8192,
 		contextWindow: 131072,
 		supportsImages: false,
 		supportsPromptCache: false,
@@ -97,4 +99,22 @@ export const groqModels = {
 		outputPrice: 3.0,
 		description: "Moonshot AI Kimi K2 Instruct 1T model, 128K context.",
 	},
+	"openai/gpt-oss-120b": {
+		maxTokens: 32768,
+		contextWindow: 131072,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0.15,
+		outputPrice: 0.75,
+		description: "GPT-OSS 120B is OpenAI's flagship open source model, built on a Mixture-of-Experts (MoE) architecture with 20 billion parameters and 128 experts.",
+	},
+	"openai/gpt-oss-20b": {
+		maxTokens: 32768,
+		contextWindow: 131072,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0.10,
+		outputPrice: 0.50,
+		description: "GPT-OSS 20B is OpenAI's flagship open source model, built on a Mixture-of-Experts (MoE) architecture with 20 billion parameters and 32 experts.",
+	}
 } as const satisfies Record<string, ModelInfo>

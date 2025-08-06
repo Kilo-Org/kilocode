@@ -14,15 +14,7 @@ export const mistralModels = {
 		inputPrice: 2.0,
 		outputPrice: 5.0,
 	},
-	"magistral-small-latest": {
-		maxTokens: 40_960,
-		contextWindow: 40_960,
-		supportsImages: false,
-		supportsPromptCache: false,
-		inputPrice: 0.5,
-		outputPrice: 1.5,
-	},
-	"mistral-medium-latest": {
+	"devstral-medium-latest": {
 		maxTokens: 131_000,
 		contextWindow: 131_000,
 		supportsImages: true,
@@ -30,7 +22,7 @@ export const mistralModels = {
 		inputPrice: 0.4,
 		outputPrice: 2.0,
 	},
-	"devstral-medium-latest": {
+	"mistral-medium-latest": {
 		maxTokens: 131_000,
 		contextWindow: 131_000,
 		supportsImages: true,
@@ -70,7 +62,6 @@ export const mistralModels = {
 		inputPrice: 0.04,
 		outputPrice: 0.04,
 	},
-	// kilocode_change start
 	"mistral-small-latest": {
 		maxTokens: 32_000,
 		contextWindow: 32_000,
@@ -78,6 +69,15 @@ export const mistralModels = {
 		supportsPromptCache: false,
 		inputPrice: 0.2,
 		outputPrice: 0.6,
+	},
+	//kilocode_change
+	"magistral-small-latest": {
+		maxTokens: 40_960,
+		contextWindow: 40_960,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0.5,
+		outputPrice: 1.5,
 	},
 	"devstral-small-latest": {
 		maxTokens: 131_000,

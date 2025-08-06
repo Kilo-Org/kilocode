@@ -69,6 +69,16 @@ vi.mock("@vscode/webview-ui-toolkit/react", () => ({
 		<input type="radio" value={value} checked={checked} onChange={onChange} />
 	),
 	VSCodeRadioGroup: ({ children, onChange }: any) => <div onChange={onChange}>{children}</div>,
+	VSCodeTextArea: ({ value, onChange, rows, className, "data-testid": dataTestId }: any) => (
+		<textarea
+			value={value}
+			onChange={onChange}
+			rows={rows}
+			className={className}
+			data-testid={dataTestId}
+			role="textbox"
+		/>
+	),
 }))
 
 vi.mock("../../../components/common/Tab", () => ({
@@ -200,6 +210,20 @@ vi.mock("@/components/ui", () => ({
 		<button data-testid="alert-dialog-cancel" onClick={onClick}>
 			{children}
 		</button>
+	),
+	// Add Collapsible components
+	Collapsible: ({ children, open }: any) => (
+		<div className="collapsible-mock" data-open={open}>
+			{children}
+		</div>
+	),
+	CollapsibleTrigger: ({ children, className, onClick }: any) => (
+		<div className={`collapsible-trigger-mock ${className || ""}`} onClick={onClick}>
+			{children}
+		</div>
+	),
+	CollapsibleContent: ({ children, className }: any) => (
+		<div className={`collapsible-content-mock ${className || ""}`}>{children}</div>
 	),
 }))
 

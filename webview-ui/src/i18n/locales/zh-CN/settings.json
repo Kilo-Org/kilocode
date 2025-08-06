@@ -46,14 +46,17 @@
 		"enableDescription": "启用代码索引以改进搜索和上下文理解",
 		"settingsTitle": "索引设置",
 		"disabledMessage": "代码库索引当前已禁用。在全局设置中启用它以配置索引选项。",
-		"providerLabel": "嵌入提供商",
+		"profileLabel": "嵌入提供商",
 		"embedderProviderLabel": "嵌入器提供商",
-		"selectProviderPlaceholder": "选择提供商",
+		"selectProfilePlaceholder": "选择提供商",
 		"openaiProvider": "OpenAI",
 		"ollamaProvider": "Ollama",
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "API 密钥：",
 		"geminiApiKeyPlaceholder": "输入您的Gemini API密钥",
+		"mistralProvider": "Mistral",
+		"mistralApiKeyLabel": "API 密钥:",
+		"mistralApiKeyPlaceholder": "输入您的 Mistral API 密钥",
 		"openaiCompatibleProvider": "OpenAI 兼容",
 		"openAiKeyLabel": "OpenAI API 密钥",
 		"openAiKeyPlaceholder": "输入你的 OpenAI API 密钥",
@@ -111,6 +114,7 @@
 			"modelIdRequired": "需要模型 ID",
 			"modelDimensionRequired": "需要模型维度",
 			"geminiApiKeyRequired": "需要 Gemini API 密钥",
+			"mistralApiKeyRequired": "需要 Mistral API 密钥",
 			"ollamaBaseUrlRequired": "需要 Ollama 基础 URL",
 			"baseUrlRequired": "需要基础 URL",
 			"modelDimensionMinValue": "模型维度必须大于 0"
@@ -125,6 +129,8 @@
 	},
 	"autoApprove": {
 		"description": "允许 Kilo Code 自动执行操作而无需批准。只有在您完全信任 AI 并了解相关安全风险的情况下才启用这些设置。",
+		"toggleAriaLabel": "切换自动批准",
+		"disabledAriaLabel": "自动批准已禁用 - 请先选择选项",
 		"readOnly": {
 			"label": "读取",
 			"description": "启用后，Kilo Code 将自动浏览目录和读取文件内容，无需人工确认。",
@@ -177,8 +183,12 @@
 			"description": "自动执行白名单中的命令而无需批准",
 			"allowedCommands": "命令白名单",
 			"allowedCommandsDescription": "当\"自动批准命令行操作\"启用时可以自动执行的命令前缀。添加 * 以允许所有命令（谨慎使用）。",
+			"deniedCommands": "拒绝的命令",
+			"deniedCommandsDescription": "将自动拒绝的命令前缀，无需用户批准。与允许命令冲突时，最长前缀匹配优先。添加 * 拒绝所有命令。",
 			"commandPlaceholder": "输入命令前缀（例如 'git '）",
-			"addButton": "添加"
+			"deniedCommandPlaceholder": "输入要拒绝的命令前缀（例如 'rm -rf'）",
+			"addButton": "添加",
+			"autoDenied": "前缀为 `{{prefix}}` 的命令已被用户禁止。不要通过运行其他命令来绕过此限制。"
 		},
 		"showMenu": {
 			"label": "在聊天视图中显示自动批准菜单",
@@ -192,7 +202,8 @@
 			"title": "最大请求数",
 			"description": "在请求批准以继续执行任务之前，自动发出此数量的 API 请求。",
 			"unlimited": "无限制"
-		}
+		},
+		"selectOptionsFirst": "请至少选择以下一个选项以启用自动批准"
 	},
 	"providers": {
 		"providerDocumentation": "{{provider}} 文档",
@@ -252,9 +263,35 @@
 		"getChutesApiKey": "获取 Chutes API 密钥",
 		"deepSeekApiKey": "DeepSeek API 密钥",
 		"getDeepSeekApiKey": "获取 DeepSeek API 密钥",
+		"doubaoApiKey": "豆包 API 密钥",
+		"getDoubaoApiKey": "获取豆包 API 密钥",
+		"fireworksApiKey": "Fireworks API 密钥",
+		"getFireworksApiKey": "获取 Fireworks API 密钥",
+		"zaiApiKey": "Z.AI API 密钥",
+		"getZaiApiKey": "获取 Z.AI API 密钥",
+		"bigModelApiKey": "BigModel API 密钥",
+		"getBigModelApiKey": "获取 BigModel API 密钥",
+		"moonshotApiKey": "Moonshot API 密钥",
+		"getMoonshotApiKey": "获取 Moonshot API 密钥",
+		"moonshotBaseUrl": "Moonshot 服务站点",
 		"geminiApiKey": "Gemini API 密钥",
 		"getGroqApiKey": "获取 Groq API 密钥",
 		"groqApiKey": "Groq API 密钥",
+		"getSambaNovaApiKey": "获取 SambaNova API 密钥",
+		"sambaNovaApiKey": "SambaNova API 密钥",
+		"getHuggingFaceApiKey": "获取 Hugging Face API 密钥",
+		"huggingFaceApiKey": "Hugging Face API 密钥",
+		"huggingFaceModelId": "模型 ID",
+		"huggingFaceLoading": "加载中...",
+		"huggingFaceModelsCount": "({{count}} 个模型)",
+		"huggingFaceSelectModel": "选择模型...",
+		"huggingFaceSearchModels": "搜索模型...",
+		"huggingFaceNoModelsFound": "未找到模型",
+		"huggingFaceProvider": "提供商",
+		"huggingFaceProviderAuto": "自动",
+		"huggingFaceSelectProvider": "选择提供商...",
+		"huggingFaceSearchProviders": "搜索提供商...",
+		"huggingFaceNoProvidersFound": "未找到提供商",
 		"getGeminiApiKey": "获取 Gemini API 密钥",
 		"openAiApiKey": "OpenAI API 密钥",
 		"apiKey": "API 密钥",
@@ -270,6 +307,7 @@
 		"litellmBaseUrl": "LiteLLM 基础 URL",
 		"awsCredentials": "AWS 凭证",
 		"awsProfile": "AWS 配置文件",
+		"awsApiKey": "Amazon Bedrock API 密钥",
 		"awsProfileName": "AWS 配置文件名称",
 		"awsAccessKey": "AWS 访问密钥",
 		"awsSecretKey": "AWS 密钥",
@@ -286,6 +324,17 @@
 		"cacheUsageNote": "提示：若未显示缓存使用情况，请切换模型后重新选择",
 		"vscodeLmModel": "VSCode LM 模型",
 		"vscodeLmWarning": "注意：这是一个非常实验性的集成，提供商支持会有所不同。如果您收到有关不支持模型的错误，则这是提供商方面的问题。",
+
+		"geminiParameters": {
+			"urlContext": {
+				"title": "启用 URL 上下文",
+				"description": "让 Gemini 读取链接的页面以提取、比较和综合其内容，从而提供明智的答复。"
+			},
+			"groundingSearch": {
+				"title": "启用 Google 搜索基础",
+				"description": "将 Gemini 连接到实时网络数据，以获得包含可验证引用的准确、最新的答案。"
+			}
+		},
 		"googleCloudSetup": {
 			"title": "要使用 Google Cloud Vertex AI，您需要：",
 			"step1": "1. 注册Google Cloud账号并启用Vertex AI API",
@@ -373,6 +422,12 @@
 			"label": "API 请求频率限制",
 			"description": "设置API请求的最小间隔时间"
 		},
+		"consecutiveMistakeLimit": {
+			"label": "错误和重复限制",
+			"description": "在显示\"Kilo Code遇到问题\"对话框前允许的连续错误或重复操作次数",
+			"unlimitedDescription": "已启用无限重试（自动继续）。对话框将永远不会出现。",
+			"warning": "⚠️ 设置为 0 允许无限重试，这可能会消耗大量 API 使用量"
+		},
 		"reasoningEffort": {
 			"label": "模型推理强度",
 			"high": "高",
@@ -383,7 +438,9 @@
 		"claudeCode": {
 			"pathLabel": "Claude Code 路径",
 			"description": "您的 Claude Code CLI 的可选路径。如果未设置，则默认为 “claude”。",
-			"placeholder": "默认：claude"
+			"placeholder": "默认：claude",
+			"maxTokensLabel": "最大输出 Token",
+			"maxTokensDescription": "Claude Code 响应的最大输出 Token 数量。默认为 8000。"
 		},
 		"geminiCli": {
 			"description": "此提供商使用 Gemini CLI 工具的 OAuth 身份验证，不需要 API 密钥。",
@@ -491,6 +548,23 @@
 			"label": "并发文件读取限制",
 			"description": "read_file 工具可以同时处理的最大文件数。较高的值可能会加快读取多个小文件的速度，但会增加内存使用量。"
 		},
+		"diagnostics": {
+			"includeMessages": {
+				"label": "自动在上下文中包含诊断",
+				"description": "启用后，来自已编辑文件的诊断消息（错误）将自动包含在上下文中。您始终可以使用 @problems 手动包含所有工作区诊断。"
+			},
+			"maxMessages": {
+				"label": "最大诊断消息数",
+				"description": "每个文件包含的最大诊断消息数。此限制适用于自动包含（启用复选框时）和手动 @problems 提及。较高的值提供更多上下文，但会增加令牌使用量。",
+				"resetTooltip": "重置为默认值 (50)",
+				"unlimited": "无限制诊断消息",
+				"unlimitedLabel": "无限制"
+			},
+			"delayAfterWrite": {
+				"label": "写入后延迟以允许诊断程序检测潜在问题",
+				"description": "在继续之前写入文件后等待的时间，允许诊断工具处理更改并检测问题。"
+			}
+		},
 		"condensingThreshold": {
 			"label": "压缩触发阈值",
 			"selectProfile": "配置配置文件阈值",
@@ -499,6 +573,16 @@
 			"profileDescription": "仅此配置文件的自定义阈值（覆盖全局默认）",
 			"inheritDescription": "此配置文件继承全局默认阈值（{{threshold}}%）",
 			"usesGlobal": "（使用全局 {{threshold}}%）"
+		},
+		"maxImageFileSize": {
+			"label": "最大图像文件大小",
+			"mb": "MB",
+			"description": "read file工具可以处理的图像文件的最大大小（以MB为单位）。"
+		},
+		"maxTotalImageSize": {
+			"label": "图片总大小上限",
+			"mb": "MB",
+			"description": "单次 read_file 操作中处理的所有图片的最大累计大小限制（MB）。读取多张图片时，每张图片的大小会累加到总大小中。如果包含另一张图片会超过此限制，则会跳过该图片。"
 		}
 	},
 	"terminal": {
@@ -513,6 +597,10 @@
 		"outputLineLimit": {
 			"label": "终端输出限制",
 			"description": "执行命令时在终端输出中包含的最大行数。超过时将从中间删除行，节省 token。 <0>了解更多</0>"
+		},
+		"outputCharacterLimit": {
+			"label": "终端字符限制",
+			"description": "执行命令时在终端输出中包含的最大字符数。此限制优先于行数限制，以防止因行过长而导致的内存问题。超出后，输出将被截断。 <0>了解更多</0>"
 		},
 		"shellIntegrationTimeout": {
 			"label": "终端初始化等待时间",
@@ -555,6 +643,9 @@
 			"description": "启用后，终端将从 VSCode 父进程继承环境变量，如用户配置文件中定义的 shell 集成设置。这直接切换 VSCode 全局设置 `terminal.integrated.inheritEnv`。 <0>了解更多</0>"
 		}
 	},
+	"advancedSettings": {
+		"title": "高级设置"
+	},
 	"advanced": {
 		"diff": {
 			"label": "启用diff更新",
@@ -576,6 +667,10 @@
 				"label": "匹配精度",
 				"description": "控制代码匹配的精确程度。数值越低匹配越宽松（容错率高但风险大），建议保持100%以确保安全。"
 			}
+		},
+		"todoList": {
+			"label": "启用任务清单工具",
+			"description": "启用后，Kilo Code 可以创建和管理任务清单来跟踪任务进度。这有助于将复杂任务组织成可管理的步骤。"
 		}
 	},
 	"experimental": {
@@ -614,6 +709,21 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "启用并发文件编辑",
 			"description": "启用后 Kilo Code 可在单个请求中编辑多个文件。禁用后 Kilo Code 必须逐个编辑文件。禁用此功能有助于使用能力较弱的模型或需要更精确控制文件修改时。"
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "启用 Morph Fast Apply",
+			"description": "启用后 Kilo Code 可使用 Morph Fast Apply 编辑文件。",
+			"apiKey": "Morph API 密钥（可选）",
+			"placeholder": "输入您的 Morph API 密钥（可选）",
+			"warning": "如果您未配置 Morph API 密钥，仍可通过 Kilo Code 或 OpenRouter 使用 Fast Apply。您的账户将承担模型使用费用，目前扩展界面中不会显示此费用。"
+		},
+		"INLINE_ASSIST": {
+			"name": "内嵌助手",
+			"description": "启用内联辅助功能，在您的编辑器中直接获取快速代码建议和改进。包括用于定向更改的快速内联任务（Cmd+I）和用于上下文相关改进的自动内联任务。"
+		},
+		"PREVENT_FOCUS_DISRUPTION": {
+			"name": "后台编辑",
+			"description": "启用后防止编辑器焦点干扰。文件编辑在后台进行，不会打开差异视图或抢夺焦点。你可以在 Roo 进行更改时继续不受干扰地工作。文件可以在不获取焦点的情况下打开以捕获诊断信息，或保持完全关闭状态。"
 		}
 	},
 	"promptCaching": {
@@ -649,7 +759,7 @@
 		}
 	},
 	"modelPicker": {
-		"automaticFetch": "自动获取 <serviceLink>{{serviceName}}</serviceLink> 上可用的最新模型列表。如果您不确定选择哪个模型，Kilo Code 与 <defaultModelLink>{{defaultModelId}}</defaultModelLink> 配合最佳。您还可以搜索\"free\"以查找当前可用的免费选项。",
+		"automaticFetch": "自动获取 <serviceLink>{{serviceName}}</serviceLink> 上可用的最新模型列表。如果您不确定选择哪个模型，Kilo Code 与 <defaultModelLink>{{defaultModelId}}</defaultModelLink> 配合最佳。",
 		"label": "模型",
 		"searchPlaceholder": "搜索",
 		"noMatchFound": "未找到匹配项",
@@ -728,5 +838,8 @@
 		}
 	},
 	"includeMaxOutputTokens": "包含最大输出 Token 数",
-	"includeMaxOutputTokensDescription": "在 API 请求中发送最大输出 Token 参数。某些提供商可能不支持此功能。"
+	"includeMaxOutputTokensDescription": "在 API 请求中发送最大输出 Token 参数。某些提供商可能不支持此功能。",
+	"limitMaxTokensDescription": "限制响应中的最大 Token 数量",
+	"maxOutputTokensLabel": "最大输出 Token 数",
+	"maxTokensGenerateDescription": "响应中生成的最大 Token 数"
 }

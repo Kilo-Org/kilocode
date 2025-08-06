@@ -45,14 +45,17 @@
 		"enableDescription": "Enable code indexing for improved search and context understanding",
 		"settingsTitle": "Indexing Settings",
 		"disabledMessage": "Codebase indexing is currently disabled. Enable it in the global settings to configure indexing options.",
-		"providerLabel": "Embeddings Provider",
+		"profileLabel": "Embeddings Provider",
 		"embedderProviderLabel": "Embedder Provider",
-		"selectProviderPlaceholder": "Select provider",
+		"selectProfilePlaceholder": "Select provider",
 		"openaiProvider": "OpenAI",
 		"ollamaProvider": "Ollama",
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "API Key:",
 		"geminiApiKeyPlaceholder": "Enter your Gemini API key",
+		"mistralProvider": "Mistral",
+		"mistralApiKeyLabel": "API Key:",
+		"mistralApiKeyPlaceholder": "Enter your Mistral API key",
 		"openaiCompatibleProvider": "OpenAI Compatible",
 		"openAiKeyLabel": "OpenAI API Key",
 		"openAiKeyPlaceholder": "Enter your OpenAI API key",
@@ -117,6 +120,7 @@
 			"modelIdRequired": "Model ID is required",
 			"modelDimensionRequired": "Model dimension is required",
 			"geminiApiKeyRequired": "Gemini API key is required",
+			"mistralApiKeyRequired": "Mistral API key is required",
 			"ollamaBaseUrlRequired": "Ollama base URL is required",
 			"baseUrlRequired": "Base URL is required",
 			"modelDimensionMinValue": "Model dimension must be greater than 0"
@@ -176,8 +180,12 @@
 			"description": "Automatically execute allowed terminal commands without requiring approval",
 			"allowedCommands": "Allowed Auto-Execute Commands",
 			"allowedCommandsDescription": "Command prefixes that can be auto-executed when \"Always approve execute operations\" is enabled. Add * to allow all commands (use with caution).",
+			"deniedCommands": "Denied Commands",
+			"deniedCommandsDescription": "Command prefixes that will be automatically denied without asking for approval. In case of conflicts with allowed commands, the longest prefix match takes precedence. Add * to deny all commands.",
 			"commandPlaceholder": "Enter command prefix (e.g., 'git ')",
-			"addButton": "Add"
+			"deniedCommandPlaceholder": "Enter command prefix to deny (e.g., 'rm -rf')",
+			"addButton": "Add",
+			"autoDenied": "Commands with the prefix `{{prefix}}` have been forbidden by the user. Do not bypass this restriction by running another command."
 		},
 		"showMenu": {
 			"label": "Show auto-approve menu in chat view",
@@ -191,7 +199,10 @@
 			"title": "Max Requests",
 			"description": "Automatically make this many API requests before asking for approval to continue with the task.",
 			"unlimited": "Unlimited"
-		}
+		},
+		"toggleAriaLabel": "Toggle auto-approval",
+		"disabledAriaLabel": "Auto-approval disabled - select options first",
+		"selectOptionsFirst": "Select at least one option below to enable auto-approval"
 	},
 	"providers": {
 		"providerDocumentation": "{{provider}} documentation",
@@ -247,9 +258,35 @@
 		"getChutesApiKey": "Get Chutes API Key",
 		"deepSeekApiKey": "DeepSeek API Key",
 		"getDeepSeekApiKey": "Get DeepSeek API Key",
+		"doubaoApiKey": "Doubao API Key",
+		"getDoubaoApiKey": "Get Doubao API Key",
+		"fireworksApiKey": "Fireworks API Key",
+		"getFireworksApiKey": "Get Fireworks API Key",
+		"zaiApiKey": "Z.AI API Key",
+		"getZaiApiKey": "Get Z.AI API Key",
+		"bigModelApiKey": "BigModel API Key",
+		"getBigModelApiKey": "Get BigModel API Key",
+		"moonshotApiKey": "Moonshot API Key",
+		"getMoonshotApiKey": "Get Moonshot API Key",
+		"moonshotBaseUrl": "Moonshot Entrypoint",
 		"geminiApiKey": "Gemini API Key",
 		"getGroqApiKey": "Get Groq API Key",
 		"groqApiKey": "Groq API Key",
+		"getSambaNovaApiKey": "Get SambaNova API Key",
+		"sambaNovaApiKey": "SambaNova API Key",
+		"getHuggingFaceApiKey": "Get Hugging Face API Key",
+		"huggingFaceApiKey": "Hugging Face API Key",
+		"huggingFaceModelId": "Model ID",
+		"huggingFaceLoading": "Loading...",
+		"huggingFaceModelsCount": "({{count}} models)",
+		"huggingFaceSelectModel": "Select a model...",
+		"huggingFaceSearchModels": "Search models...",
+		"huggingFaceNoModelsFound": "No models found",
+		"huggingFaceProvider": "Provider",
+		"huggingFaceProviderAuto": "Auto",
+		"huggingFaceSelectProvider": "Select a provider...",
+		"huggingFaceSearchProviders": "Search providers...",
+		"huggingFaceNoProvidersFound": "No providers found",
 		"getGeminiApiKey": "Get Gemini API Key",
 		"openAiApiKey": "OpenAI API Key",
 		"apiKey": "API Key",
@@ -265,6 +302,7 @@
 		"litellmBaseUrl": "LiteLLM Base URL",
 		"awsCredentials": "AWS Credentials",
 		"awsProfile": "AWS Profile",
+		"awsApiKey": "Amazon Bedrock API Key",
 		"awsProfileName": "AWS Profile Name",
 		"awsAccessKey": "AWS Access Key",
 		"awsSecretKey": "AWS Secret Key",
@@ -281,6 +319,16 @@
 		"cacheUsageNote": "Note: If you don't see cache usage, try selecting a different model and then selecting your desired model again.",
 		"vscodeLmModel": "Language Model",
 		"vscodeLmWarning": "Note: This is a very experimental integration and provider support will vary. If you get an error about a model not being supported, that's an issue on the provider's end.",
+		"geminiParameters": {
+			"urlContext": {
+				"title": "Enable URL context",
+				"description": "Lets Gemini read linked pages to extract, compare, and synthesize their content into informed responses."
+			},
+			"groundingSearch": {
+				"title": "Enable Grounding with Google search",
+				"description": "Connects Gemini to real‑time web data for accurate, up‑to‑date answers with verifiable citations."
+			}
+		},
 		"googleCloudSetup": {
 			"title": "To use Google Cloud Vertex AI, you need to:",
 			"step1": "1. Create a Google Cloud account, enable the Vertex AI API & enable the desired Claude models.",
@@ -372,6 +420,12 @@
 			"label": "Rate limit",
 			"description": "Minimum time between API requests."
 		},
+		"consecutiveMistakeLimit": {
+			"label": "Error & Repetition Limit",
+			"description": "Number of consecutive errors or repeated actions before showing 'Kilo Code is having trouble' dialog",
+			"unlimitedDescription": "Unlimited retries enabled (auto-proceed). The dialog will never appear.",
+			"warning": "⚠️ Setting to 0 allows unlimited retries which may consume significant API usage"
+		},
 		"reasoningEffort": {
 			"label": "Model Reasoning Effort",
 			"high": "High",
@@ -382,7 +436,9 @@
 		"claudeCode": {
 			"pathLabel": "Claude Code Path",
 			"description": "Optional path to your Claude Code CLI. Defaults to 'claude' if not set.",
-			"placeholder": "Default: claude"
+			"placeholder": "Default: claude",
+			"maxTokensLabel": "Max Output Tokens",
+			"maxTokensDescription": "Maximum number of output tokens for Claude Code responses. Default is 8000."
 		},
 		"geminiCli": {
 			"description": "This provider uses OAuth authentication from the Gemini CLI tool and does not require API keys.",
@@ -496,6 +552,32 @@
 			"lines": "lines",
 			"always_full_read": "Always read entire file"
 		},
+		"maxImageFileSize": {
+			"label": "Max image file size",
+			"mb": "MB",
+			"description": "Maximum size (in MB) for image files that can be processed by the read file tool."
+		},
+		"maxTotalImageSize": {
+			"label": "Max total image size",
+			"mb": "MB",
+			"description": "Maximum cumulative size limit (in MB) for all images processed in a single read_file operation. When reading multiple images, each image's size is added to the total. If including another image would exceed this limit, it will be skipped."
+		},
+		"diagnostics": {
+			"includeMessages": {
+				"label": "Automatically include diagnostics in context",
+				"description": "When enabled, diagnostic messages (errors) from edited files will be automatically included in the context. You can always manually include all workspace diagnostics using @problems."
+			},
+			"maxMessages": {
+				"label": "Maximum diagnostic messages",
+				"description": "Limits the number of diagnostic messages (errors, warnings) included in the context. When set, only this many diagnostics will be shown, prioritizing errors over warnings. Set to 0 for unlimited diagnostics.",
+				"resetTooltip": "Reset to default value (50)",
+				"unlimitedLabel": "Unlimited"
+			},
+			"delayAfterWrite": {
+				"label": "Delay after writes to allow diagnostics to detect potential problems",
+				"description": "Time to wait after file writes before proceeding, allowing diagnostic tools to process changes and detect issues."
+			}
+		},
 		"condensingThreshold": {
 			"label": "Condensing Trigger Threshold",
 			"selectProfile": "Configure threshold for profile",
@@ -518,6 +600,10 @@
 		"outputLineLimit": {
 			"label": "Terminal output limit",
 			"description": "Maximum number of lines to include in terminal output when executing commands. When exceeded lines will be removed from the middle, saving tokens. <0>Learn more</0>"
+		},
+		"outputCharacterLimit": {
+			"label": "Terminal character limit",
+			"description": "Maximum number of characters to include in terminal output when executing commands. This limit takes precedence over the line limit to prevent memory issues from extremely long lines. When exceeded, output will be truncated. <0>Learn more</0>"
 		},
 		"shellIntegrationTimeout": {
 			"label": "Terminal shell integration timeout",
@@ -560,6 +646,9 @@
 			"description": "When enabled, the terminal will inherit environment variables from VSCode's parent process, such as user-profile-defined shell integration settings. This directly toggles VSCode global setting `terminal.integrated.inheritEnv`. <0>Learn more</0>"
 		}
 	},
+	"advancedSettings": {
+		"title": "Advanced settings"
+	},
 	"advanced": {
 		"diff": {
 			"label": "Enable editing through diffs",
@@ -581,6 +670,10 @@
 				"label": "Match precision",
 				"description": "This slider controls how precisely code sections must match when applying diffs. Lower values allow more flexible matching but increase the risk of incorrect replacements. Use values below 100% with extreme caution."
 			}
+		},
+		"todoList": {
+			"label": "Enable todo list tool",
+			"description": "When enabled, Kilo Code can create and manage todo lists to track task progress. This helps organize complex tasks into manageable steps."
 		}
 	},
 	"experimental": {
@@ -600,10 +693,6 @@
 			"name": "Use experimental \"power steering\" mode",
 			"description": "When enabled, Kilo Code will remind the model about the details of its current mode definition more frequently. This will lead to stronger adherence to role definitions and custom instructions, but will use more tokens per message."
 		},
-		"AUTOCOMPLETE": {
-			"name": "Use experimental \"autocomplete\" feature",
-			"description": "When enabled, Kilo Code will provide inline code suggestions as you type. Requires Kilo Code API Provider."
-		},
 		"CONCURRENT_FILE_READS": {
 			"name": "Enable concurrent file reads",
 			"description": "When enabled, Kilo Code can read multiple files in a single request. When disabled, Kilo Code must read files one at a time. Disabling this can help when working with less capable models or when you want more control over file access."
@@ -619,6 +708,21 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Enable concurrent file edits",
 			"description": "When enabled, Kilo Code can edit multiple files in a single request. When disabled, Kilo Code must edit files one at a time. Disabling this can help when working with less capable models or when you want more control over file modifications."
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "Enable Morph Fast Apply",
+			"description": "When enabled, Kilo Code can edit files using Morph Fast Apply.",
+			"apiKey": "Morph API key (optional)",
+			"placeholder": "Enter your Morph API key (optional)",
+			"warning": "If you do not configure a Morph API key, you can still use Fast Apply with Kilo Code or OpenRouter. Your account will be billed for model usage, this is currently not shown in the extension UI."
+		},
+		"INLINE_ASSIST": {
+			"name": "Inline Assist",
+			"description": "Enable Inline Assist features for quick code suggestions and improvements directly in your editor. Includes Quick Inline Task (Cmd+I) for targeted changes and Auto Inline Task for contextual improvements."
+		},
+		"PREVENT_FOCUS_DISRUPTION": {
+			"name": "Background editing",
+			"description": "Prevent editor focus disruption when enabled. File edits happen in the background without opening diff views or stealing focus. You can continue working uninterrupted while Kilo Code makes changes. Files can be opened without focus to capture diagnostics or kept closed entirely."
 		}
 	},
 	"promptCaching": {
@@ -654,7 +758,7 @@
 		}
 	},
 	"modelPicker": {
-		"automaticFetch": "The extension automatically fetches the latest list of models available on <serviceLink>{{serviceName}}</serviceLink>. If you're unsure which model to choose, Kilo Code works best with <defaultModelLink>{{defaultModelId}}</defaultModelLink>. You can also try searching \"free\" for no-cost options currently available.",
+		"automaticFetch": "The extension automatically fetches the latest list of models available on <serviceLink>{{serviceName}}</serviceLink>. If you're unsure which model to choose, Kilo Code works best with <defaultModelLink>{{defaultModelId}}</defaultModelLink>.",
 		"label": "Model",
 		"searchPlaceholder": "Search",
 		"noMatchFound": "No match found",
@@ -727,5 +831,8 @@
 		"useCustomArn": "Use custom ARN..."
 	},
 	"includeMaxOutputTokens": "Include max output tokens",
-	"includeMaxOutputTokensDescription": "Send max output tokens parameter in API requests. Some providers may not support this."
+	"includeMaxOutputTokensDescription": "Send max output tokens parameter in API requests. Some providers may not support this.",
+	"limitMaxTokensDescription": "Limit the maximum number of tokens in the response",
+	"maxOutputTokensLabel": "Max output tokens",
+	"maxTokensGenerateDescription": "Maximum tokens to generate in response"
 }

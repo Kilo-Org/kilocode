@@ -5,6 +5,15 @@ import { CodeIndexOllamaEmbedder } from "../ollama"
 // Mock fetch
 global.fetch = vitest.fn() as MockedFunction<typeof fetch>
 
+// Mock TelemetryService
+vitest.mock("@roo-code/telemetry", () => ({
+	TelemetryService: {
+		instance: {
+			captureEvent: vitest.fn(),
+		},
+	},
+}))
+
 // Mock i18n
 vitest.mock("../../../../i18n", () => ({
 	t: (key: string, params?: Record<string, any>) => {
@@ -70,6 +79,90 @@ describe("CodeIndexOllamaEmbedder", () => {
 		it("should use default values when not provided", () => {
 			const embedderWithDefaults = new CodeIndexOllamaEmbedder({})
 			expect(embedderWithDefaults.embedderInfo.name).toBe("ollama")
+		})
+
+		it("should normalize URLs with trailing slashes", async () => {
+			// Create embedder with URL that has a trailing slash
+			const embedderWithTrailingSlash = new CodeIndexOllamaEmbedder({
+				ollamaBaseUrl: "http://localhost:11434/",
+				ollamaModelId: "nomic-embed-text",
+			})
+
+			// Mock successful /api/tags call to test the normalized URL
+			mockFetch.mockImplementationOnce(() =>
+				Promise.resolve({
+					ok: true,
+					status: 200,
+					json: () => Promise.resolve({ models: [{ name: "nomic-embed-text" }] }),
+				} as Response),
+			)
+
+			// Call a method that uses the baseUrl
+			await embedderWithTrailingSlash.validateConfiguration()
+
+			// Verify the URL used in the fetch call doesn't have a trailing slash
+			expect(mockFetch).toHaveBeenCalledWith(
+				"http://localhost:11434/api/tags",
+				expect.objectContaining({
+					method: "GET",
+				}),
+			)
+		})
+
+		it("should not modify URLs without trailing slashes", async () => {
+			// Create embedder with URL that doesn't have a trailing slash
+			const embedderWithoutTrailingSlash = new CodeIndexOllamaEmbedder({
+				ollamaBaseUrl: "http://localhost:11434",
+				ollamaModelId: "nomic-embed-text",
+			})
+
+			// Mock successful /api/tags call
+			mockFetch.mockImplementationOnce(() =>
+				Promise.resolve({
+					ok: true,
+					status: 200,
+					json: () => Promise.resolve({ models: [{ name: "nomic-embed-text" }] }),
+				} as Response),
+			)
+
+			// Call a method that uses the baseUrl
+			await embedderWithoutTrailingSlash.validateConfiguration()
+
+			// Verify the URL used in the fetch call is correct
+			expect(mockFetch).toHaveBeenCalledWith(
+				"http://localhost:11434/api/tags",
+				expect.objectContaining({
+					method: "GET",
+				}),
+			)
+		})
+
+		it("should handle multiple trailing slashes", async () => {
+			// Create embedder with URL that has multiple trailing slashes
+			const embedderWithMultipleTrailingSlashes = new CodeIndexOllamaEmbedder({
+				ollamaBaseUrl: "http://localhost:11434///",
+				ollamaModelId: "nomic-embed-text",
+			})
+
+			// Mock successful /api/tags call
+			mockFetch.mockImplementationOnce(() =>
+				Promise.resolve({
+					ok: true,
+					status: 200,
+					json: () => Promise.resolve({ models: [{ name: "nomic-embed-text" }] }),
+				} as Response),
+			)
+
+			// Call a method that uses the baseUrl
+			await embedderWithMultipleTrailingSlashes.validateConfiguration()
+
+			// Verify the URL used in the fetch call doesn't have trailing slashes
+			expect(mockFetch).toHaveBeenCalledWith(
+				"http://localhost:11434/api/tags",
+				expect.objectContaining({
+					method: "GET",
+				}),
+			)
 		})
 	})
 

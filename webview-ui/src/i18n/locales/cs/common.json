@@ -1,4 +1,12 @@
 {
+	"errorBoundary": {
+		"title": "Něco se pokazilo",
+		"reportText": "Pomoz nám zlepšit se nahlášením této chyby na",
+		"githubText": "naší stránce GitHub Issues",
+		"copyInstructions": "Zkopíruj a vlož následující chybovou zprávu jako součást svého hlášení:",
+		"errorStack": "Stack chyby:",
+		"componentStack": "Stack komponent:"
+	},
 	"answers": {
 		"yes": "Ano",
 		"no": "Ne",
@@ -20,7 +28,8 @@
 		"customerSupport": "Zákaznická podpora"
 	},
 	"ui": {
-		"search_placeholder": "Hledat..."
+		"search_placeholder": "Hledat...",
+		"no_results": "Nebyly nalezeny žádné výsledky"
 	},
 	"mermaid": {
 		"loading": "Vytváření diagramu mermaid...",
@@ -70,5 +79,16 @@
 		"success": {
 			"imageDataUriCopied": "Image data URI zkopírováno do schránky"
 		}
+	},
+	"confirmation": {
+		"cancel": "Zrušit",
+		"confirm": "Potvrdit",
+		"delete": "Smazat",
+		"deleteMessage": "Smazat zprávu",
+		"deleteWarning": "Smazáním této zprávy se smažou všechny následující zprávy v konverzaci. Chceš pokračovat?",
+		"editMessage": "Upravit zprávu",
+		"editWarning": "Úpravou této zprávy se smažou všechny následující zprávy v konverzaci. Chceš pokračovat?",
+		"proceed": "Pokračovat",
+		"title": "Potvrzení"
 	}
 }

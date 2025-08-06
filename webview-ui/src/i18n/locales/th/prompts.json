@@ -93,12 +93,23 @@
 			"useCurrentConfig": "ใช้การตั้งค่า API ที่เลือกอยู่ในปัจจุบัน",
 			"testPromptPlaceholder": "ใส่ prompt เพื่อทดสอบการปรับปรุง",
 			"previewButton": "ดูตัวอย่างการปรับปรุง Prompt",
-			"testEnhancement": "ทดสอบการปรับปรุง"
+			"testEnhancement": "ทดสอบการปรับปรุง",
+			"includeTaskHistory": "รวมประวัติงานเป็น context",
+			"includeTaskHistoryDescription": "เมื่อเปิดใช้งาน ข้อความ 10 ข้อความล่าสุดจากการสนทนาปัจจุบันจะถูกรวมเป็น context เมื่อปรับปรุง prompt ช่วยสร้างคำแนะนำที่เกี่ยวข้องและตระหนักถึง context มากขึ้น"
+		},
+		"condense": {
+			"apiConfiguration": "การตั้งค่า API สำหรับการย่อ Context",
+			"apiConfigDescription": "เลือกการตั้งค่า API ที่จะใช้สำหรับการดำเนินการย่อ context หากไม่เลือก จะใช้การตั้งค่าที่ใช้งานอยู่ในปัจจุบัน",
+			"useCurrentConfig": "ใช้การตั้งค่า API ที่เลือกอยู่ในปัจจุบัน"
 		},
 		"types": {
 			"ENHANCE": {
 				"label": "ปรับปรุง Prompt",
 				"description": "ใช้การปรับปรุง prompt เพื่อรับคำแนะนำหรือการปรับปรุงที่เหมาะสมสำหรับข้อมูลของคุณ ช่วยให้ Kilo Code เข้าใจเจตนาของคุณและให้คำตอบที่ดีที่สุด ใช้ได้ผ่านไอคอน ✨ ในแชท"
+			},
+			"CONDENSE": {
+				"label": "การย่อ Context",
+				"description": "ตั้งค่าวิธีการย่อ context ของการสนทนาเพื่อจัดการขีดจำกัด token prompt นี้ใช้สำหรับการดำเนินการย่อ context ทั้งแบบแมนนวลและอัตโนมัติ"
 			},
 			"EXPLAIN": {
 				"label": "อธิบายโค้ด",
@@ -127,6 +138,10 @@
 			"TERMINAL_EXPLAIN": {
 				"label": "อธิบาย Terminal Command",
 				"description": "รับคำอธิบายโดยละเอียดของ terminal command และ output ของมัน ใช้ได้ในเมนูบริบทของ terminal (คลิกขวาที่เนื้อหา terminal ที่เลือก)"
+			},
+			"TERMINAL_GENERATE": {
+				"label": "สร้าง Terminal Command",
+				"description": "ช่วยสร้าง terminal command ตามคำอธิบายที่ให้มา"
 			},
 			"NEW_TASK": {
 				"label": "เริ่มงานใหม่",
@@ -175,7 +190,7 @@
 		},
 		"whenToUse": {
 			"label": "เมื่อใดควรใช้ (ไม่บังคับ)",
-			"description": "ให้คำอธิบายที่ชัดเจนว่าโหมดนี้มีประสิทธิภาพที่สุดเมื่อใดและเก่งในงานประเภทใด"
+			"description": "อธิบายว่าควรใช้โหมดนี้เมื่อใด ช่วยให้ Orchestrator เลือกโหมดที่เหมาะสมสำหรับงาน"
 		},
 		"tools": {
 			"label": "เครื่องมือที่ใช้ได้",

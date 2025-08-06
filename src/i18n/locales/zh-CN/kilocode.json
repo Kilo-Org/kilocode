@@ -40,7 +40,7 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Kilo: 提交信息生成器已启动",
+		"activated": "Kilo Code: 提交信息生成器已启动",
 		"gitNotFound": "⚠️ Git 仓库未找到或 git 不可用",
 		"gitInitError": "⚠️ Git 初始化错误：{{error}}",
 		"generating": "Kilo: 正在生成提交信息...",
@@ -49,59 +49,77 @@
 		"generationFailed": "Kilo：生成提交信息失败：{{errorMessage}}",
 		"generatingFromUnstaged": "Kilo：使用未暂存的更改生成消息",
 		"providerRegistered": "Kilo：提交消息提供程序已注册",
-		"activationFailed": "千瓦：消息生成器激活失败：{{error}}"
+		"activationFailed": "Kilo：消息生成器激活失败：{{error}}"
 	},
-	"autocomplete": {
+	"ghost": {
 		"statusBar": {
-			"warning": "$(warning) Kilo自动补全",
-			"enabled": "$(sparkle) Kilo自动补全",
-			"disabled": "$(circle-slash) Kilo自动补全已禁用",
+			"enabled": "$(sparkle) Kilo 内联辅助",
+			"disabled": "$(circle-slash) Kilo 内联辅助",
+			"warning": "$(warning) Kilo 内联辅助",
 			"tooltip": {
-				"disabled": "Kilo自动补全（已禁用）",
-				"lastCompletion": "上一次完成：",
+				"basic": "Kilo Code 内联辅助",
+				"disabled": "Kilo Code 内联辅助",
+				"lastCompletion": "最后建议：",
+				"tokenError": "必须设置有效令牌才能使用行内助手",
 				"sessionTotal": "会话总费用：",
-				"basic": "Kilo自动补全",
-				"tokenError": "必须设置有效令牌才能使用自动完成功能",
 				"model": "模型："
 			},
 			"cost": {
-				"lessThanCent": "<$0.01",
-				"zero": "¥0.00"
+				"zero": "¥0.00",
+				"lessThanCent": "<¥0.07"
 			}
 		},
-		"toggleMessage": "Kilo自动补全 {{status}}"
-	},
-	"ghost": {
+		"toggleMessage": "Kilo 内联辅助 {{status}}",
 		"progress": {
 			"analyzing": "正在分析您的代码...",
 			"generating": "正在生成建议修改...",
 			"processing": "正在处理建议的编辑...",
 			"showing": "显示建议的编辑...",
-			"title": "千行代码"
+			"title": "Kilo Code"
 		},
 		"input": {
-			"title": "公里码：快速任务",
+			"title": "Kilo：快速任务",
 			"placeholder": "例如，\"重构这个函数使其更高效\""
 		},
 		"commands": {
 			"displaySuggestions": "显示建议的编辑",
 			"applyCurrentSuggestion": "应用当前建议的编辑",
-			"generateSuggestions": "千行代码：生成建议的编辑",
+			"generateSuggestions": "Kilo：生成建议的编辑",
 			"cancelSuggestions": "取消建议的编辑",
 			"applyAllSuggestions": "应用所有建议的编辑",
 			"promptCodeSuggestion": "快速任务提示",
-			"category": "千字代码"
+			"category": "Kilo Code"
 		},
 		"codeAction": {
-			"title": "千米代码：建议编辑"
+			"title": "Kilo Code：建议编辑"
 		},
 		"chatParticipant": {
-			"fullName": "公里码代理",
+			"fullName": "Kilo Code 代理",
 			"description": "我可以帮助你完成快速任务和提供建议的编辑。",
 			"name": "代理"
 		},
 		"messages": {
 			"provideCodeSuggestions": "正在提供代码建议..."
+		},
+		"incompatibilityExtensionPopup": {
+			"message": "Kilo Code 内联辅助 被 GitHub Copilot 的冲突阻止了。要解决此问题，你需要禁用 Copilot 的内联辅助。",
+			"disableCopilot": "禁用 Copilot",
+			"disableInlineAssist": "禁用 内联辅助"
 		}
+	},
+	"terminalCommandGenerator": {
+		"inputPrompt": "Kilo：描述您想要生成的命令",
+		"inputPlaceholder": "例如，终止在3001端口上运行的进程，查找大文件等",
+		"noActiveTerminal": "Kilo：未找到活动终端。请先打开一个终端。",
+		"generatingProgress": "Kilo：正在生成终端命令...",
+		"commandGenerated": "Kilo：生成的命令：{{command}}",
+		"generationFailed": "Kilo：命令生成失败：{{error}}",
+		"warningDialog": {
+			"title": "终端安全警告",
+			"message": "在运行生成的命令之前请再次检查。终端操作并非总是可以撤销——运行未经验证的命令可能导致不可逆转的数据丢失或系统损坏。在继续操作前，请完全理解并检查命令！",
+			"okButton": "我明白",
+			"cancelButton": "取消"
+		},
+		"tipMessage": "Kilo Code: 按下 {{shortcut}} 生成终端命令"
 	}
 }

@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import { downloadAndUnzipVSCode } from "@vscode/test-electron/out/download.js"
 import * as path from "path"
 import * as fs from "fs"

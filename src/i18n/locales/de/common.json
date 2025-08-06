@@ -25,12 +25,7 @@
 	"confirmation": {
 		"reset_state": "Möchtest du wirklich alle Zustände und geheimen Speicher in der Erweiterung zurücksetzen? Dies kann nicht rückgängig gemacht werden.",
 		"delete_config_profile": "Möchtest du dieses Konfigurationsprofil wirklich löschen?",
-		"delete_custom_mode_with_rules": "Bist du sicher, dass du diesen {scope}-Modus löschen möchtest?\n\nDadurch wird auch der zugehörige Regelordner unter folgender Adresse gelöscht:\n{rulesFolderPath}",
-		"delete_message": "Was möchtest du löschen?",
-		"edit_warning": "Das Bearbeiten dieser Nachricht wird alle nachfolgenden Nachrichten in der Unterhaltung löschen. Möchtest du fortfahren?",
-		"delete_just_this_message": "Nur diese Nachricht",
-		"delete_this_and_subsequent": "Diese und alle nachfolgenden Nachrichten",
-		"proceed": "Fortfahren"
+		"delete_custom_mode_with_rules": "Bist du sicher, dass du diesen {scope}-Modus löschen möchtest?\n\nDadurch wird auch der zugehörige Regelordner unter folgender Adresse gelöscht:\n{rulesFolderPath}"
 	},
 	"errors": {
 		"invalid_data_uri": "Ungültiges Daten-URI-Format",
@@ -41,6 +36,7 @@
 		"could_not_open_file_generic": "Datei konnte nicht geöffnet werden!",
 		"checkpoint_timeout": "Zeitüberschreitung beim Versuch, den Checkpoint wiederherzustellen.",
 		"checkpoint_failed": "Fehler beim Wiederherstellen des Checkpoints.",
+		"git_not_installed": "Git ist für die Checkpoint-Funktion erforderlich. Bitte installiere Git, um Checkpoints zu aktivieren.",
 		"no_workspace": "Bitte öffne zuerst einen Projektordner",
 		"update_support_prompt": "Fehler beim Aktualisieren der Support-Nachricht",
 		"reset_support_prompt": "Fehler beim Zurücksetzen der Support-Nachricht",
@@ -62,7 +58,7 @@
 		"cannot_access_path": "Zugriff auf Pfad {{path}} nicht möglich: {{error}}",
 		"settings_import_failed": "Fehler beim Importieren der Einstellungen: {{error}}.",
 		"mistake_limit_guidance": "Dies kann auf einen Fehler im Denkprozess des Modells oder die Unfähigkeit hinweisen, ein Tool richtig zu verwenden, was durch Benutzerführung behoben werden kann (z.B. \"Versuche, die Aufgabe in kleinere Schritte zu unterteilen\").",
-		"violated_organization_allowlist": "Aufgabe konnte nicht ausgeführt werden: Das aktuelle Profil verstößt gegen die Einstellungen deiner Organisation",
+		"violated_organization_allowlist": "Aufgabe konnte nicht ausgeführt werden: Das aktuelle Profil ist nicht kompatibel mit den Einstellungen deiner Organisation",
 		"condense_failed": "Fehler beim Verdichten des Kontexts",
 		"condense_not_enough_messages": "Nicht genügend Nachrichten zum Verdichten des Kontexts von {{prevContextTokens}} Token. Mindestens {{minimumMessageCount}} Nachrichten sind erforderlich, aber nur {{messageCount}} sind verfügbar.",
 		"condensed_recently": "Kontext wurde kürzlich verdichtet; dieser Versuch wird übersprungen",
@@ -75,6 +71,7 @@
 		"url_page_not_found": "Die Seite wurde nicht gefunden. Bitte prüfe, ob die URL korrekt ist.",
 		"url_fetch_failed": "Fehler beim Abrufen des URL-Inhalts: {{error}}",
 		"url_fetch_error_with_url": "Fehler beim Abrufen des Inhalts für {{url}}: {{error}}",
+		"command_timeout": "Zeitüberschreitung bei der Befehlsausführung nach {{seconds}} Sekunden",
 		"share_task_failed": "Teilen der Aufgabe fehlgeschlagen. Bitte versuche es erneut.",
 		"share_no_active_task": "Keine aktive Aufgabe zum Teilen",
 		"share_auth_required": "Authentifizierung erforderlich. Bitte melde dich an, um Aufgaben zu teilen.",
@@ -82,6 +79,13 @@
 		"share_task_not_found": "Aufgabe nicht gefunden oder Zugriff verweigert.",
 		"mode_import_failed": "Fehler beim Importieren des Modus: {{error}}",
 		"delete_rules_folder_failed": "Fehler beim Löschen des Regelordners: {{rulesFolderPath}}. Fehler: {{error}}",
+		"command_not_found": "Befehl '{{name}}' nicht gefunden",
+		"open_command_file": "Fehler beim Öffnen der Befehlsdatei",
+		"delete_command": "Fehler beim Löschen des Befehls",
+		"no_workspace_for_project_command": "Kein Arbeitsbereich-Ordner für Projektbefehl gefunden",
+		"command_already_exists": "Befehl \"{{commandName}}\" existiert bereits",
+		"create_command_failed": "Fehler beim Erstellen des Befehls",
+		"command_template_content": "---\ndescription: \"Kurze Beschreibung dessen, was dieser Befehl macht\"\n---\n\nDies ist ein neuer Slash-Befehl. Bearbeite diese Datei, um das Befehlsverhalten anzupassen.",
 		"claudeCode": {
 			"processExited": "Claude Code Prozess wurde mit Code {{exitCode}} beendet.",
 			"errorOutput": "Fehlerausgabe: {{output}}",
@@ -98,6 +102,11 @@
 			"badRequest": "Ungültige Anfrage: {{details}}",
 			"apiError": "Gemini CLI API-Fehler: {{error}}",
 			"completionError": "Gemini CLI Vervollständigungsfehler: {{error}}"
+		},
+		"gemini": {
+			"generate_stream": "Fehler beim Generieren des Kontext-Streams von Gemini: {{error}}",
+			"generate_complete_prompt": "Fehler bei der Vervollständigung durch Gemini: {{error}}",
+			"sources": "Quellen:"
 		}
 	},
 	"warnings": {
@@ -129,7 +138,8 @@
 	},
 	"buttons": {
 		"save": "Speichern",
-		"edit": "Bearbeiten"
+		"edit": "Bearbeiten",
+		"learn_more": "Mehr erfahren"
 	},
 	"tasks": {
 		"canceled": "Aufgabenfehler: Die Aufgabe wurde vom Benutzer gestoppt und abgebrochen.",
@@ -167,11 +177,17 @@
 			"deleteFailed": "Fehler beim Löschen des benutzerdefinierten Modus: {{error}}",
 			"resetFailed": "Fehler beim Zurücksetzen der benutzerdefinierten Modi: {{error}}",
 			"modeNotFound": "Schreibfehler: Modus nicht gefunden",
-			"noWorkspaceForProject": "Kein Arbeitsbereich-Ordner für projektspezifischen Modus gefunden"
+			"noWorkspaceForProject": "Kein Arbeitsbereich-Ordner für projektspezifischen Modus gefunden",
+			"rulesCleanupFailed": "Der Modus wurde erfolgreich gelöscht, aber der Regelordner unter {{rulesFolderPath}} konnte nicht gelöscht werden. Möglicherweise musst du ihn manuell löschen."
 		},
 		"scope": {
 			"project": "projekt",
 			"global": "global"
+		}
+	},
+	"marketplace": {
+		"mode": {
+			"rulesCleanupFailed": "Der Modus wurde erfolgreich entfernt, aber der Regelordner unter {{rulesFolderPath}} konnte nicht gelöscht werden. Möglicherweise musst du ihn manuell löschen."
 		}
 	},
 	"mdm": {
@@ -187,6 +203,11 @@
 			"description": "Bist du sicher, dass du diesen {{scope}}-Modus löschen möchtest? Dadurch wird auch der zugehörige Regelordner unter {{rulesFolderPath}} gelöscht",
 			"descriptionNoRules": "Bist du sicher, dass du diesen benutzerdefinierten Modus löschen möchtest?",
 			"confirm": "Löschen"
+		}
+	},
+	"commands": {
+		"preventCompletionWithOpenTodos": {
+			"description": "Aufgabenabschluss verhindern, wenn unvollständige Todos in der Todo-Liste vorhanden sind"
 		}
 	}
 }

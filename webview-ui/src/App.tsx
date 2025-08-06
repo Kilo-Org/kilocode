@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import { useEvent } from "react-use"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 
@@ -9,6 +9,7 @@ import TranslationProvider from "./i18n/TranslationContext"
 import { vscode } from "./utils/vscode"
 import { telemetryClient } from "./utils/TelemetryClient"
 import { TelemetryEventName } from "@roo-code/types"
+import { initializeSourceMaps, exposeSourceMapsForDebugging } from "./utils/sourceMapInitializer"
 import { ExtensionStateContextProvider, useExtensionState } from "./context/ExtensionStateContext"
 import ChatView, { ChatViewRef } from "./components/chat/ChatView"
 import HistoryView from "./components/history/HistoryView"
@@ -20,14 +21,39 @@ import McpView from "./components/mcp/McpView"
 import ModesView from "./components/modes/ModesView"
 import { HumanRelayDialog } from "./components/human-relay/HumanRelayDialog"
 import BottomControls from "./components/kilocode/BottomControls" // kilocode_change
+import { MemoryService } from "./services/MemoryService" // kilocode_change
+import { DeleteMessageDialog, EditMessageDialog } from "./components/chat/MessageModificationConfirmationDialog"
+import ErrorBoundary from "./components/ErrorBoundary"
 // import { AccountView } from "./components/account/AccountView" // kilocode_change: we have our own profile view
 import { useAddNonInteractiveClickListener } from "./components/ui/hooks/useNonInteractiveClick"
-import { KiloCodeErrorBoundary } from "./kilocode/KiloCodeErrorBoundary"
 import { TooltipProvider } from "./components/ui/tooltip"
 import { STANDARD_TOOLTIP_DELAY } from "./components/ui/standard-tooltip"
 import { useKiloIdentity } from "./utils/kilocode/useKiloIdentity"
 
 type Tab = "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "account" | "profile" // kilocode_change: add "profile"
+
+interface HumanRelayDialogState {
+	isOpen: boolean
+	requestId: string
+	promptText: string
+}
+
+interface DeleteMessageDialogState {
+	isOpen: boolean
+	messageTs: number
+}
+
+interface EditMessageDialogState {
+	isOpen: boolean
+	messageTs: number
+	text: string
+	images?: string[]
+}
+
+// Memoize dialog components to prevent unnecessary re-renders
+const MemoizedDeleteMessageDialog = React.memo(DeleteMessageDialog)
+const MemoizedEditMessageDialog = React.memo(EditMessageDialog)
+const MemoizedHumanRelayDialog = React.memo(HumanRelayDialog)
 
 const tabsByMessageAction: Partial<Record<NonNullable<ExtensionMessage["action"]>, Tab>> = {
 	chatButtonClicked: "chat",
@@ -61,14 +87,22 @@ const App = () => {
 	const [showAnnouncement, setShowAnnouncement] = useState(false)
 	const [tab, setTab] = useState<Tab>("chat")
 
-	const [humanRelayDialogState, setHumanRelayDialogState] = useState<{
-		isOpen: boolean
-		requestId: string
-		promptText: string
-	}>({
+	const [humanRelayDialogState, setHumanRelayDialogState] = useState<HumanRelayDialogState>({
 		isOpen: false,
 		requestId: "",
 		promptText: "",
+	})
+
+	const [deleteMessageDialogState, setDeleteMessageDialogState] = useState<DeleteMessageDialogState>({
+		isOpen: false,
+		messageTs: 0,
+	})
+
+	const [editMessageDialogState, setEditMessageDialogState] = useState<EditMessageDialogState>({
+		isOpen: false,
+		messageTs: 0,
+		text: "",
+		images: [],
 	})
 
 	const settingsRef = useRef<SettingsViewRef>(null)
@@ -136,6 +170,19 @@ const App = () => {
 				setHumanRelayDialogState({ isOpen: true, requestId, promptText })
 			}
 
+			if (message.type === "showDeleteMessageDialog" && message.messageTs) {
+				setDeleteMessageDialogState({ isOpen: true, messageTs: message.messageTs })
+			}
+
+			if (message.type === "showEditMessageDialog" && message.messageTs && message.text) {
+				setEditMessageDialogState({
+					isOpen: true,
+					messageTs: message.messageTs,
+					text: message.text,
+					images: message.images || [],
+				})
+			}
+
 			if (message.type === "acceptInput") {
 				chatViewRef.current?.acceptInput()
 			}
@@ -158,12 +205,32 @@ const App = () => {
 	useEffect(() => {
 		if (didHydrateState) {
 			telemetryClient.updateTelemetryState(telemetrySetting, telemetryKey, telemetryDistinctId)
+
+			// kilocode_change start
+			const memoryService = new MemoryService()
+			memoryService.start()
+			return () => memoryService.stop()
+			// kilocode_change end
 		}
 	}, [telemetrySetting, telemetryKey, telemetryDistinctId, didHydrateState])
 	// kilocode_change end
 
 	// Tell the extension that we are ready to receive messages.
 	useEffect(() => vscode.postMessage({ type: "webviewDidLaunch" }), [])
+
+	// Initialize source map support for better error reporting
+	useEffect(() => {
+		// Initialize source maps for better error reporting in production
+		initializeSourceMaps()
+
+		// Expose source map debugging utilities in production
+		if (process.env.NODE_ENV === "production") {
+			exposeSourceMapsForDebugging()
+		}
+
+		// Log initialization for debugging
+		console.debug("App initialized with source map support")
+	}, [])
 
 	// Focus the WebView when non-interactive content is clicked (only in editor/tab mode)
 	useAddNonInteractiveClickListener(
@@ -213,13 +280,37 @@ const App = () => {
 				showAnnouncement={showAnnouncement}
 				hideAnnouncement={() => setShowAnnouncement(false)}
 			/>
-			<HumanRelayDialog
+			<MemoizedHumanRelayDialog
 				isOpen={humanRelayDialogState.isOpen}
 				requestId={humanRelayDialogState.requestId}
 				promptText={humanRelayDialogState.promptText}
 				onClose={() => setHumanRelayDialogState((prev) => ({ ...prev, isOpen: false }))}
 				onSubmit={(requestId, text) => vscode.postMessage({ type: "humanRelayResponse", requestId, text })}
 				onCancel={(requestId) => vscode.postMessage({ type: "humanRelayCancel", requestId })}
+			/>
+			<MemoizedDeleteMessageDialog
+				open={deleteMessageDialogState.isOpen}
+				onOpenChange={(open) => setDeleteMessageDialogState((prev) => ({ ...prev, isOpen: open }))}
+				onConfirm={() => {
+					vscode.postMessage({
+						type: "deleteMessageConfirm",
+						messageTs: deleteMessageDialogState.messageTs,
+					})
+					setDeleteMessageDialogState((prev) => ({ ...prev, isOpen: false }))
+				}}
+			/>
+			<MemoizedEditMessageDialog
+				open={editMessageDialogState.isOpen}
+				onOpenChange={(open) => setEditMessageDialogState((prev) => ({ ...prev, isOpen: open }))}
+				onConfirm={() => {
+					vscode.postMessage({
+						type: "editMessageConfirm",
+						messageTs: editMessageDialogState.messageTs,
+						text: editMessageDialogState.text,
+						images: editMessageDialogState.images,
+					})
+					setEditMessageDialogState((prev) => ({ ...prev, isOpen: false }))
+				}}
 			/>
 			{/* kilocode_change */}
 			{/* Chat, modes and history view contain their own bottom controls */}
@@ -235,21 +326,17 @@ const App = () => {
 const queryClient = new QueryClient()
 
 const AppWithProviders = () => (
-	<ExtensionStateContextProvider>
-		<TranslationProvider>
-			<QueryClientProvider client={queryClient}>
-				<TooltipProvider delayDuration={STANDARD_TOOLTIP_DELAY}>
-					<App />
-				</TooltipProvider>
-			</QueryClientProvider>
-		</TranslationProvider>
-	</ExtensionStateContextProvider>
+	<ErrorBoundary>
+		<ExtensionStateContextProvider>
+			<TranslationProvider>
+				<QueryClientProvider client={queryClient}>
+					<TooltipProvider delayDuration={STANDARD_TOOLTIP_DELAY}>
+						<App />
+					</TooltipProvider>
+				</QueryClientProvider>
+			</TranslationProvider>
+		</ExtensionStateContextProvider>
+	</ErrorBoundary>
 )
 
-const AppWithKiloCodeErrorBoundary = () => (
-	<KiloCodeErrorBoundary>
-		<AppWithProviders />
-	</KiloCodeErrorBoundary>
-)
-
-export default AppWithKiloCodeErrorBoundary // kilocode_change
+export default AppWithProviders

@@ -20,6 +20,9 @@ export async function processKiloUserContentMentions({
 	fileContextTracker,
 	rooIgnoreController,
 	showRooIgnoredFiles = true,
+	includeDiagnosticMessages = true,
+	maxDiagnosticMessages = 50,
+	maxReadFileLine,
 }: {
 	context: vscode.ExtensionContext // kilocode_change
 	userContent: Anthropic.Messages.ContentBlockParam[]
@@ -28,6 +31,9 @@ export async function processKiloUserContentMentions({
 	fileContextTracker: FileContextTracker
 	rooIgnoreController?: any
 	showRooIgnoredFiles: boolean
+	includeDiagnosticMessages?: boolean
+	maxDiagnosticMessages?: number
+	maxReadFileLine?: number
 }): Promise<[Anthropic.Messages.ContentBlockParam[], boolean]> {
 	// Track if we need to check kilorules file
 	let needsRulesFileCheck = false
@@ -63,6 +69,9 @@ export async function processKiloUserContentMentions({
 							fileContextTracker,
 							rooIgnoreController,
 							showRooIgnoredFiles,
+							includeDiagnosticMessages,
+							maxDiagnosticMessages,
+							maxReadFileLine,
 						)
 
 						// when parsing slash commands, we still want to allow the user to provide their desired context
@@ -96,6 +105,9 @@ export async function processKiloUserContentMentions({
 									fileContextTracker,
 									rooIgnoreController,
 									showRooIgnoredFiles,
+									includeDiagnosticMessages,
+									maxDiagnosticMessages,
+									maxReadFileLine,
 								),
 							}
 						}
@@ -114,6 +126,9 @@ export async function processKiloUserContentMentions({
 											fileContextTracker,
 											rooIgnoreController,
 											showRooIgnoredFiles,
+											includeDiagnosticMessages,
+											maxDiagnosticMessages,
+											maxReadFileLine,
 										),
 									}
 								}

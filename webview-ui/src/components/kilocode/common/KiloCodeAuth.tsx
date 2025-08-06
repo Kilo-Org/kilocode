@@ -3,7 +3,7 @@ import { ButtonLink } from "./ButtonLink"
 import { ButtonSecondary } from "./ButtonSecondary"
 import Logo from "./Logo"
 import { useAppTranslation } from "@/i18n/TranslationContext"
-import { getKiloCodeBackendSignInUrl, getKiloCodeBackendSignUpUrl } from "../helpers"
+import { getKiloCodeBackendSignUpUrl } from "../helpers"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 
 interface KiloCodeAuthProps {
@@ -41,16 +41,6 @@ const KiloCodeAuth: React.FC<KiloCodeAuthProps> = ({ onManualConfigClick, classN
 						{t("kilocode:welcome.manualModeButton")}
 					</ButtonSecondary>
 				)}
-
-				<div className="text-center text-vscode-descriptionForeground">
-					{t("kilocode:welcome.alreadySignedUp")}{" "}
-					<a
-						href={getKiloCodeBackendSignInUrl(uriScheme, uiKind)}
-						className="underline"
-						style={{ color: "inherit" }}>
-						{t("kilocode:welcome.loginText")}
-					</a>
-				</div>
 			</div>
 		</div>
 	)

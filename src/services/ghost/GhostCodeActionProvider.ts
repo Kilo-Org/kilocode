@@ -13,15 +13,12 @@ export class GhostCodeActionProvider implements vscode.CodeActionProvider {
 		context: vscode.CodeActionContext,
 		token: vscode.CancellationToken,
 	): vscode.ProviderResult<(vscode.CodeAction | vscode.Command)[]> {
-		GhostProvider.getInstance().getDocumentStore().storeDocument(document)
-
 		const action = new vscode.CodeAction(
 			t("kilocode:ghost.codeAction.title"),
 			this.providedCodeActionKinds["quickfix"],
 		)
-
 		action.command = {
-			command: "kilo-code.ghost.codeActionQuickFix",
+			command: "kilo-code.ghost.generateSuggestions",
 			title: "",
 			arguments: [document.uri, range],
 		}
@@ -36,10 +33,6 @@ export class GhostCodeActionProvider implements vscode.CodeActionProvider {
 		if (token.isCancellationRequested) {
 			return codeAction
 		}
-		// Retrieve the document and range we stored earlier
-		const [uri, range] = codeAction.command!.arguments as [vscode.Uri, vscode.Range]
-		const document = await vscode.workspace.openTextDocument(uri)
-		await GhostProvider.getInstance().provideCodeActionQuickFix(document, range)
 		return codeAction
 	}
 }

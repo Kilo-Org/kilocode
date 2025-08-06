@@ -93,12 +93,23 @@
 			"useCurrentConfig": "Usar configuração de API atualmente selecionada",
 			"testPromptPlaceholder": "Digite um prompt para testar o aprimoramento",
 			"previewButton": "Visualizar aprimoramento do prompt",
-			"testEnhancement": "Testar aprimoramento"
+			"testEnhancement": "Testar aprimoramento",
+			"includeTaskHistory": "Incluir histórico de tarefas como contexto",
+			"includeTaskHistoryDescription": "Quando habilitado, as últimas 10 mensagens da conversa atual serão incluídas como contexto ao aprimorar prompts, ajudando a gerar sugestões mais relevantes e conscientes do contexto."
+		},
+		"condense": {
+			"apiConfiguration": "Configuração da API para condensação de contexto",
+			"apiConfigDescription": "Selecione qual configuração de API usar para operações de condensação de contexto. Deixe desmarcado para usar a configuração ativa atual.",
+			"useCurrentConfig": "Usar a configuração de API selecionada no momento"
 		},
 		"types": {
 			"ENHANCE": {
 				"label": "Aprimorar Prompt",
 				"description": "Use o aprimoramento de prompt para obter sugestões ou melhorias personalizadas para suas entradas. Isso garante que o Kilo Code entenda sua intenção e forneça as melhores respostas possíveis. Disponível através do ícone ✨ no chat."
+			},
+			"CONDENSE": {
+				"label": "Condensação de Contexto",
+				"description": "Configure como o contexto da conversa é condensado para gerenciar os limites de token. Este prompt é usado para operações de condensação de contexto manuais e automáticas."
 			},
 			"EXPLAIN": {
 				"label": "Explicar Código",
@@ -127,6 +138,10 @@
 			"TERMINAL_EXPLAIN": {
 				"label": "Explicar Comando do Terminal",
 				"description": "Obtenha explicações detalhadas de comandos de terminal e suas saídas. Disponível no menu de contexto do terminal (clique direito no conteúdo selecionado do terminal)."
+			},
+			"TERMINAL_GENERATE": {
+				"label": "Gerar comando de terminal",
+				"description": "Ajuda a gerar comandos de terminal baseados na descrição."
 			},
 			"NEW_TASK": {
 				"label": "Iniciar Nova Tarefa",

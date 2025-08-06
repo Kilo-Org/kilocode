@@ -1,6 +1,12 @@
 import { DiffViewProvider, DIFF_VIEW_URI_SCHEME, DIFF_VIEW_LABEL_CHANGES } from "../DiffViewProvider"
 import * as vscode from "vscode"
 import * as path from "path"
+import delay from "delay"
+
+// Mock delay
+vi.mock("delay", () => ({
+	default: vi.fn().mockResolvedValue(undefined),
+}))
 
 // Mock fs/promises
 vi.mock("fs/promises", () => ({
@@ -24,6 +30,10 @@ vi.mock("vscode", () => ({
 	workspace: {
 		applyEdit: vi.fn(),
 		onDidOpenTextDocument: vi.fn(() => ({ dispose: vi.fn() })),
+		openTextDocument: vi.fn().mockResolvedValue({
+			isDirty: false,
+			save: vi.fn().mockResolvedValue(undefined),
+		}),
 		textDocuments: [],
 		fs: {
 			stat: vi.fn(),
@@ -44,6 +54,12 @@ vi.mock("vscode", () => ({
 	},
 	languages: {
 		getDiagnostics: vi.fn(() => []),
+	},
+	DiagnosticSeverity: {
+		Error: 0,
+		Warning: 1,
+		Information: 2,
+		Hint: 3,
 	},
 	WorkspaceEdit: vi.fn().mockImplementation(() => ({
 		replace: vi.fn(),
@@ -89,6 +105,7 @@ describe("DiffViewProvider", () => {
 	let diffViewProvider: DiffViewProvider
 	const mockCwd = "/mock/cwd"
 	let mockWorkspaceEdit: { replace: any; delete: any }
+	let mockTask: any
 
 	beforeEach(() => {
 		vi.clearAllMocks()
@@ -98,7 +115,19 @@ describe("DiffViewProvider", () => {
 		}
 		vi.mocked(vscode.WorkspaceEdit).mockImplementation(() => mockWorkspaceEdit as any)
 
-		diffViewProvider = new DiffViewProvider(mockCwd)
+		// Create a mock Task instance
+		mockTask = {
+			providerRef: {
+				deref: vi.fn().mockReturnValue({
+					getState: vi.fn().mockResolvedValue({
+						includeDiagnosticMessages: true,
+						maxDiagnosticMessages: 50,
+					}),
+				}),
+			},
+		}
+
+		diffViewProvider = new DiffViewProvider(mockCwd, mockTask)
 		// Mock the necessary properties and methods
 		;(diffViewProvider as any).relPath = "test.txt"
 		;(diffViewProvider as any).activeDiffEditor = {
@@ -325,6 +354,167 @@ describe("DiffViewProvider", () => {
 			expect(
 				closedTabs.find((t) => t.label === `file4.ts: ${DIFF_VIEW_LABEL_CHANGES} (Editable)` && t.isDirty),
 			).toBeUndefined()
+		})
+	})
+
+	describe("saveDirectly method", () => {
+		beforeEach(() => {
+			// Mock vscode functions
+			vi.mocked(vscode.window.showTextDocument).mockResolvedValue({} as any)
+			vi.mocked(vscode.languages.getDiagnostics).mockReturnValue([])
+		})
+
+		it("should write content directly to file without opening diff view", async () => {
+			const mockDelay = vi.mocked(delay)
+			mockDelay.mockClear()
+
+			const result = await diffViewProvider.saveDirectly("test.ts", "new content", true, true, 2000)
+
+			// Verify file was written
+			const fs = await import("fs/promises")
+			expect(fs.writeFile).toHaveBeenCalledWith(`${mockCwd}/test.ts`, "new content", "utf-8")
+
+			// Verify file was opened without focus
+			expect(vscode.window.showTextDocument).toHaveBeenCalledWith(
+				expect.objectContaining({ fsPath: `${mockCwd}/test.ts` }),
+				{ preview: false, preserveFocus: true },
+			)
+
+			// Verify diagnostics were checked after delay
+			expect(mockDelay).toHaveBeenCalledWith(2000)
+			expect(vscode.languages.getDiagnostics).toHaveBeenCalled()
+
+			// Verify result
+			expect(result.newProblemsMessage).toBe("")
+			expect(result.userEdits).toBeUndefined()
+			expect(result.finalContent).toBe("new content")
+		})
+
+		it("should not open file when openWithoutFocus is false", async () => {
+			await diffViewProvider.saveDirectly("test.ts", "new content", false, true, 1000)
+
+			// Verify file was written
+			const fs = await import("fs/promises")
+			expect(fs.writeFile).toHaveBeenCalledWith(`${mockCwd}/test.ts`, "new content", "utf-8")
+
+			// Verify file was NOT opened
+			expect(vscode.window.showTextDocument).not.toHaveBeenCalled()
+		})
+
+		it("should skip diagnostics when diagnosticsEnabled is false", async () => {
+			const mockDelay = vi.mocked(delay)
+			mockDelay.mockClear()
+			vi.mocked(vscode.languages.getDiagnostics).mockClear()
+
+			await diffViewProvider.saveDirectly("test.ts", "new content", true, false, 1000)
+
+			// Verify file was written
+			const fs = await import("fs/promises")
+			expect(fs.writeFile).toHaveBeenCalledWith(`${mockCwd}/test.ts`, "new content", "utf-8")
+
+			// Verify delay was NOT called
+			expect(mockDelay).not.toHaveBeenCalled()
+			// getDiagnostics is called once for pre-diagnostics, but not for post-diagnostics
+			expect(vscode.languages.getDiagnostics).toHaveBeenCalledTimes(1)
+		})
+
+		it("should handle negative delay values", async () => {
+			const mockDelay = vi.mocked(delay)
+			mockDelay.mockClear()
+
+			await diffViewProvider.saveDirectly("test.ts", "new content", true, true, -500)
+
+			// Verify delay was called with 0 (safe minimum)
+			expect(mockDelay).toHaveBeenCalledWith(0)
+		})
+
+		it("should store results for formatFileWriteResponse", async () => {
+			await diffViewProvider.saveDirectly("test.ts", "new content", true, true, 1000)
+
+			// Verify internal state was updated
+			expect((diffViewProvider as any).newProblemsMessage).toBe("")
+			expect((diffViewProvider as any).userEdits).toBeUndefined()
+			expect((diffViewProvider as any).relPath).toBe("test.ts")
+			expect((diffViewProvider as any).newContent).toBe("new content")
+		})
+	})
+
+	describe("saveChanges method with diagnostic settings", () => {
+		beforeEach(() => {
+			// Setup common mocks for saveChanges tests
+			;(diffViewProvider as any).relPath = "test.ts"
+			;(diffViewProvider as any).newContent = "new content"
+			;(diffViewProvider as any).activeDiffEditor = {
+				document: {
+					getText: vi.fn().mockReturnValue("new content"),
+					isDirty: false,
+					save: vi.fn().mockResolvedValue(undefined),
+				},
+			}
+			;(diffViewProvider as any).preDiagnostics = []
+
+			// Mock vscode functions
+			vi.mocked(vscode.window.showTextDocument).mockResolvedValue({} as any)
+			vi.mocked(vscode.languages.getDiagnostics).mockReturnValue([])
+		})
+
+		it("should apply diagnostic delay when diagnosticsEnabled is true", async () => {
+			const mockDelay = vi.mocked(delay)
+			mockDelay.mockClear()
+
+			// Mock closeAllDiffViews
+			;(diffViewProvider as any).closeAllDiffViews = vi.fn().mockResolvedValue(undefined)
+
+			const result = await diffViewProvider.saveChanges(true, 3000)
+
+			// Verify delay was called with correct duration
+			expect(mockDelay).toHaveBeenCalledWith(3000)
+			expect(vscode.languages.getDiagnostics).toHaveBeenCalled()
+			expect(result.newProblemsMessage).toBe("")
+		})
+
+		it("should skip diagnostics when diagnosticsEnabled is false", async () => {
+			const mockDelay = vi.mocked(delay)
+			mockDelay.mockClear()
+
+			// Mock closeAllDiffViews
+			;(diffViewProvider as any).closeAllDiffViews = vi.fn().mockResolvedValue(undefined)
+
+			const result = await diffViewProvider.saveChanges(false, 2000)
+
+			// Verify delay was NOT called and diagnostics were NOT checked
+			expect(mockDelay).not.toHaveBeenCalled()
+			expect(vscode.languages.getDiagnostics).not.toHaveBeenCalled()
+			expect(result.newProblemsMessage).toBe("")
+		})
+
+		it("should use default values when no parameters provided", async () => {
+			const mockDelay = vi.mocked(delay)
+			mockDelay.mockClear()
+
+			// Mock closeAllDiffViews
+			;(diffViewProvider as any).closeAllDiffViews = vi.fn().mockResolvedValue(undefined)
+
+			const result = await diffViewProvider.saveChanges()
+
+			// Verify default behavior (enabled=true, delay=2000ms)
+			expect(mockDelay).toHaveBeenCalledWith(1000)
+			expect(vscode.languages.getDiagnostics).toHaveBeenCalled()
+			expect(result.newProblemsMessage).toBe("")
+		})
+
+		it("should handle custom delay values", async () => {
+			const mockDelay = vi.mocked(delay)
+			mockDelay.mockClear()
+
+			// Mock closeAllDiffViews
+			;(diffViewProvider as any).closeAllDiffViews = vi.fn().mockResolvedValue(undefined)
+
+			const result = await diffViewProvider.saveChanges(true, 5000)
+
+			// Verify custom delay was used
+			expect(mockDelay).toHaveBeenCalledWith(5000)
+			expect(vscode.languages.getDiagnostics).toHaveBeenCalled()
 		})
 	})
 })

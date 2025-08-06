@@ -1,9 +1,8 @@
 import * as path from "path"
+import * as vscode from "vscode"
 import os from "os"
 import crypto from "crypto"
 import EventEmitter from "events"
-
-import * as vscode from "vscode" // kilocode_change:
 
 import { Anthropic } from "@anthropic-ai/sdk"
 import delay from "delay"
@@ -20,9 +19,12 @@ import {
 	type ClineMessage,
 	type ClineSay,
 	type ToolProgressStatus,
+	DEFAULT_CONSECUTIVE_MISTAKE_LIMIT,
 	type HistoryItem,
 	TelemetryEventName,
 	TodoItem,
+	getApiProtocol,
+	getModelId,
 } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 import { CloudService } from "@roo-code/cloud"
@@ -95,11 +97,11 @@ import { parseKiloSlashCommands } from "../slash-commands/kilo" // kilocode_chan
 import { GlobalFileNames } from "../../shared/globalFileNames" // kilocode_change
 import { ensureLocalKilorulesDirExists } from "../context/instructions/kilo-rules" // kilocode_change
 import { restoreTodoListForTask } from "../tools/updateTodoListTool"
+import { reportExcessiveRecursion, yieldPromise } from "../kilocode"
 
-// Constants
 const MAX_EXPONENTIAL_BACKOFF_SECONDS = 600 // 10 minutes
 
-export type ClineEvents = {
+export type TaskEvents = {
 	message: [{ action: "created" | "updated"; message: ClineMessage }]
 	taskStarted: []
 	taskModeSwitched: [taskId: string, mode: string]
@@ -111,6 +113,10 @@ export type ClineEvents = {
 	taskCompleted: [taskId: string, tokenUsage: TokenUsage, toolUsage: ToolUsage]
 	taskTokenUsageUpdated: [taskId: string, tokenUsage: TokenUsage]
 	taskToolFailed: [taskId: string, tool: ToolName, error: string]
+}
+
+export type TaskEventHandlers = {
+	[K in keyof TaskEvents]: (...args: TaskEvents[K]) => void | Promise<void>
 }
 
 export type TaskOptions = {
@@ -129,12 +135,12 @@ export type TaskOptions = {
 	rootTask?: Task
 	parentTask?: Task
 	taskNumber?: number
-	onCreated?: (cline: Task) => void
+	onCreated?: (task: Task) => void
 }
 
 type UserContent = Array<Anthropic.ContentBlockParam> // kilocode_change
 
-export class Task extends EventEmitter<ClineEvents> {
+export class Task extends EventEmitter<TaskEvents> {
 	private context: vscode.ExtensionContext // kilocode_change
 
 	todoList?: TodoItem[]
@@ -142,10 +148,54 @@ export class Task extends EventEmitter<ClineEvents> {
 	private taskIsFavorited?: boolean // kilocode_change
 	readonly instanceId: string
 
-	readonly rootTask: Task | undefined = undefined
-	readonly parentTask: Task | undefined = undefined
+	readonly rootTask: Task | undefined
+	readonly parentTask: Task | undefined
 	readonly taskNumber: number
 	readonly workspacePath: string
+
+	/**
+	 * The mode associated with this task. Persisted across sessions
+	 * to maintain user context when reopening tasks from history.
+	 *
+	 * ## Lifecycle
+	 *
+	 * ### For new tasks:
+	 * 1. Initially `undefined` during construction
+	 * 2. Asynchronously initialized from provider state via `initializeTaskMode()`
+	 * 3. Falls back to `defaultModeSlug` if provider state is unavailable
+	 *
+	 * ### For history items:
+	 * 1. Immediately set from `historyItem.mode` during construction
+	 * 2. Falls back to `defaultModeSlug` if mode is not stored in history
+	 *
+	 * ## Important
+	 * This property should NOT be accessed directly until `taskModeReady` promise resolves.
+	 * Use `getTaskMode()` for async access or `taskMode` getter for sync access after initialization.
+	 *
+	 * @private
+	 * @see {@link getTaskMode} - For safe async access
+	 * @see {@link taskMode} - For sync access after initialization
+	 * @see {@link waitForModeInitialization} - To ensure initialization is complete
+	 */
+	private _taskMode: string | undefined
+
+	/**
+	 * Promise that resolves when the task mode has been initialized.
+	 * This ensures async mode initialization completes before the task is used.
+	 *
+	 * ## Purpose
+	 * - Prevents race conditions when accessing task mode
+	 * - Ensures provider state is properly loaded before mode-dependent operations
+	 * - Provides a synchronization point for async initialization
+	 *
+	 * ## Resolution timing
+	 * - For history items: Resolves immediately (sync initialization)
+	 * - For new tasks: Resolves after provider state is fetched (async initialization)
+	 *
+	 * @private
+	 * @see {@link waitForModeInitialization} - Public method to await this promise
+	 */
+	private taskModeReady: Promise<void>
 
 	providerRef: WeakRef<ClineProvider>
 	private readonly globalStoragePath: string
@@ -229,7 +279,7 @@ export class Task extends EventEmitter<ClineEvents> {
 		enableDiff = false,
 		enableCheckpoints = true,
 		fuzzyMatchThreshold = 1.0,
-		consecutiveMistakeLimit = 3,
+		consecutiveMistakeLimit = DEFAULT_CONSECUTIVE_MISTAKE_LIMIT,
 		task,
 		images,
 		historyItem,
@@ -248,10 +298,11 @@ export class Task extends EventEmitter<ClineEvents> {
 
 		this.taskId = historyItem ? historyItem.id : crypto.randomUUID()
 		this.taskIsFavorited = historyItem?.isFavorited // kilocode_change
-		// normal use-case is usually retry similar history task with new workspace
+		// Normal use-case is usually retry similar history task with new workspace.
 		this.workspacePath = parentTask
 			? parentTask.workspacePath
 			: getWorkspacePath(path.join(os.homedir(), "Documents")) // kilocode_change: use Documents instead of Desktop as default
+
 		this.instanceId = crypto.randomUUID().slice(0, 8)
 		this.taskNumber = -1
 
@@ -270,28 +321,36 @@ export class Task extends EventEmitter<ClineEvents> {
 		this.browserSession = new BrowserSession(provider.context)
 		this.diffEnabled = enableDiff
 		this.fuzzyMatchThreshold = fuzzyMatchThreshold
-		this.consecutiveMistakeLimit = consecutiveMistakeLimit
+		this.consecutiveMistakeLimit = consecutiveMistakeLimit ?? DEFAULT_CONSECUTIVE_MISTAKE_LIMIT
 		this.providerRef = new WeakRef(provider)
 		this.globalStoragePath = provider.context.globalStorageUri.fsPath
-		this.diffViewProvider = new DiffViewProvider(this.cwd)
+		this.diffViewProvider = new DiffViewProvider(this.cwd, this)
 		this.enableCheckpoints = enableCheckpoints
 
 		this.rootTask = rootTask
 		this.parentTask = parentTask
 		this.taskNumber = taskNumber
 
+		// Store the task's mode when it's created.
+		// For history items, use the stored mode; for new tasks, we'll set it
+		// after getting state.
 		if (historyItem) {
+			this._taskMode = historyItem.mode || defaultModeSlug
+			this.taskModeReady = Promise.resolve()
 			TelemetryService.instance.captureTaskRestarted(this.taskId)
 		} else {
+			// For new tasks, don't set the mode yet - wait for async initialization.
+			this._taskMode = undefined
+			this.taskModeReady = this.initializeTaskMode(provider)
 			TelemetryService.instance.captureTaskCreated(this.taskId)
 		}
 
-		// Only set up diff strategy if diff is enabled
+		// Only set up diff strategy if diff is enabled.
 		if (this.diffEnabled) {
-			// Default to old strategy, will be updated if experiment is enabled
+			// Default to old strategy, will be updated if experiment is enabled.
 			this.diffStrategy = new MultiSearchReplaceDiffStrategy(this.fuzzyMatchThreshold)
 
-			// Check experiment asynchronously and update strategy if needed
+			// Check experiment asynchronously and update strategy if needed.
 			provider.getState().then((state) => {
 				const isMultiFileApplyDiffEnabled = experiments.isEnabled(
 					state.experiments ?? {},
@@ -328,6 +387,128 @@ export class Task extends EventEmitter<ClineEvents> {
 		return context
 	}
 	// kilocode_change end
+	/**
+	 * Initialize the task mode from the provider state.
+	 * This method handles async initialization with proper error handling.
+	 *
+	 * ## Flow
+	 * 1. Attempts to fetch the current mode from provider state
+	 * 2. Sets `_taskMode` to the fetched mode or `defaultModeSlug` if unavailable
+	 * 3. Handles errors gracefully by falling back to default mode
+	 * 4. Logs any initialization errors for debugging
+	 *
+	 * ## Error handling
+	 * - Network failures when fetching provider state
+	 * - Provider not yet initialized
+	 * - Invalid state structure
+	 *
+	 * All errors result in fallback to `defaultModeSlug` to ensure task can proceed.
+	 *
+	 * @private
+	 * @param provider - The ClineProvider instance to fetch state from
+	 * @returns Promise that resolves when initialization is complete
+	 */
+	private async initializeTaskMode(provider: ClineProvider): Promise<void> {
+		try {
+			const state = await provider.getState()
+			this._taskMode = state?.mode || defaultModeSlug
+		} catch (error) {
+			// If there's an error getting state, use the default mode
+			this._taskMode = defaultModeSlug
+			// Use the provider's log method for better error visibility
+			const errorMessage = `Failed to initialize task mode: ${error instanceof Error ? error.message : String(error)}`
+			provider.log(errorMessage)
+		}
+	}
+
+	/**
+	 * Wait for the task mode to be initialized before proceeding.
+	 * This method ensures that any operations depending on the task mode
+	 * will have access to the correct mode value.
+	 *
+	 * ## When to use
+	 * - Before accessing mode-specific configurations
+	 * - When switching between tasks with different modes
+	 * - Before operations that depend on mode-based permissions
+	 *
+	 * ## Example usage
+	 * ```typescript
+	 * // Wait for mode initialization before mode-dependent operations
+	 * await task.waitForModeInitialization();
+	 * const mode = task.taskMode; // Now safe to access synchronously
+	 *
+	 * // Or use with getTaskMode() for a one-liner
+	 * const mode = await task.getTaskMode(); // Internally waits for initialization
+	 * ```
+	 *
+	 * @returns Promise that resolves when the task mode is initialized
+	 * @public
+	 */
+	public async waitForModeInitialization(): Promise<void> {
+		return this.taskModeReady
+	}
+
+	/**
+	 * Get the task mode asynchronously, ensuring it's properly initialized.
+	 * This is the recommended way to access the task mode as it guarantees
+	 * the mode is available before returning.
+	 *
+	 * ## Async behavior
+	 * - Internally waits for `taskModeReady` promise to resolve
+	 * - Returns the initialized mode or `defaultModeSlug` as fallback
+	 * - Safe to call multiple times - subsequent calls return immediately if already initialized
+	 *
+	 * ## Example usage
+	 * ```typescript
+	 * // Safe async access
+	 * const mode = await task.getTaskMode();
+	 * console.log(`Task is running in ${mode} mode`);
+	 *
+	 * // Use in conditional logic
+	 * if (await task.getTaskMode() === 'architect') {
+	 *   // Perform architect-specific operations
+	 * }
+	 * ```
+	 *
+	 * @returns Promise resolving to the task mode string
+	 * @public
+	 */
+	public async getTaskMode(): Promise<string> {
+		await this.taskModeReady
+		return this._taskMode || defaultModeSlug
+	}
+
+	/**
+	 * Get the task mode synchronously. This should only be used when you're certain
+	 * that the mode has already been initialized (e.g., after waitForModeInitialization).
+	 *
+	 * ## When to use
+	 * - In synchronous contexts where async/await is not available
+	 * - After explicitly waiting for initialization via `waitForModeInitialization()`
+	 * - In event handlers or callbacks where mode is guaranteed to be initialized
+	 *
+	 * ## Example usage
+	 * ```typescript
+	 * // After ensuring initialization
+	 * await task.waitForModeInitialization();
+	 * const mode = task.taskMode; // Safe synchronous access
+	 *
+	 * // In an event handler after task is started
+	 * task.on('taskStarted', () => {
+	 *   console.log(`Task started in ${task.taskMode} mode`); // Safe here
+	 * });
+	 * ```
+	 *
+	 * @throws {Error} If the mode hasn't been initialized yet
+	 * @returns The task mode string
+	 * @public
+	 */
+	public get taskMode(): string {
+		if (this._taskMode === undefined) {
+			throw new Error("Task mode accessed before initialization. Use getTaskMode() or wait for taskModeReady.")
+		}
+		return this._taskMode
+	}
 
 	static create(options: TaskOptions): [Task, Promise<void>] {
 		const instance = new Task({ ...options, startTask: false })
@@ -433,6 +614,7 @@ export class Task extends EventEmitter<ClineEvents> {
 				taskNumber: this.taskNumber,
 				globalStoragePath: this.globalStoragePath,
 				workspace: this.cwd,
+				mode: this._taskMode || defaultModeSlug, // Use the task's own mode, not the current provider mode
 			})
 
 			this.emit("taskTokenUsageUpdated", this.taskId, tokenUsage)
@@ -1011,30 +1193,24 @@ export class Task extends EventEmitter<ClineEvents> {
 			return "just now"
 		})()
 
-		const lastTaskResumptionIndex = newUserContent.findIndex(
-			(x) => x.type === "text" && x.text.startsWith("[TASK RESUMPTION]"),
-		)
-		if (lastTaskResumptionIndex !== -1) {
-			newUserContent.splice(lastTaskResumptionIndex, newUserContent.length - lastTaskResumptionIndex)
+		if (responseText) {
+			newUserContent.push({
+				type: "text",
+				text: `\n\nNew instructions for task continuation:\n<user_message>\n${responseText}\n</user_message>`,
+			})
 		}
-
-		const wasRecent = lastClineMessage?.ts && Date.now() - lastClineMessage.ts < 30_000
-
-		newUserContent.push({
-			type: "text",
-			text:
-				`[TASK RESUMPTION] This task was interrupted ${agoText}. It may or may not be complete, so please reassess the task context. Be aware that the project state may have changed since then. If the task has not been completed, retry the last step before interruption and proceed with completing the task.\n\nNote: If you previously attempted a tool use that the user did not provide a result for, you should assume the tool use was not successful and assess whether you should retry. If the last tool was a browser_action, the browser has been closed and you must launch a new browser if needed.${
-					wasRecent
-						? "\n\nIMPORTANT: If the last tool use was a write_to_file that was interrupted, the file was reverted back to its original state before the interrupted edit, and you do NOT need to re-read the file as you already have its up-to-date contents."
-						: ""
-				}` +
-				(responseText
-					? `\n\nNew instructions for task continuation:\n<user_message>\n${responseText}\n</user_message>`
-					: ""),
-		})
 
 		if (responseImages && responseImages.length > 0) {
 			newUserContent.push(...formatResponse.imageBlocks(responseImages))
+		}
+
+		// Ensure we have at least some content to send to the API
+		// If newUserContent is empty, add a minimal resumption message
+		if (newUserContent.length === 0) {
+			newUserContent.push({
+				type: "text",
+				text: "[TASK RESUMPTION] Resuming task...",
+			})
 		}
 
 		await this.overwriteApiConversationHistory(modifiedApiConversationHistory)
@@ -1078,7 +1254,7 @@ export class Task extends EventEmitter<ClineEvents> {
 			}
 		} catch (error) {
 			console.error("Error disposing RooIgnoreController:", error)
-			// This is the critical one for the leak fix
+			// This is the critical one for the leak fix.
 		}
 
 		try {
@@ -1088,7 +1264,7 @@ export class Task extends EventEmitter<ClineEvents> {
 		}
 
 		try {
-			// If we're not streaming then `abortStream` won't be called
+			// If we're not streaming then `abortStream` won't be called.
 			if (this.isStreaming && this.diffViewProvider.isEditing) {
 				this.diffViewProvider.revertChanges().catch(console.error)
 			}
@@ -1179,12 +1355,14 @@ export class Task extends EventEmitter<ClineEvents> {
 	public async recursivelyMakeClineRequests(
 		userContent: Anthropic.Messages.ContentBlockParam[],
 		includeFileDetails: boolean = false,
+		recursionDepth: number = 0, // kilocode_change
 	): Promise<boolean> {
+		reportExcessiveRecursion("recursivelyMakeClineRequests", recursionDepth) // kilocode_change
 		if (this.abort) {
 			throw new Error(`[KiloCode#recursivelyMakeClineRequests] task ${this.taskId}.${this.instanceId} aborted`)
 		}
 
-		if (this.consecutiveMistakeCount >= this.consecutiveMistakeLimit) {
+		if (this.consecutiveMistakeLimit > 0 && this.consecutiveMistakeCount >= this.consecutiveMistakeLimit) {
 			const { response, text, images } = await this.ask(
 				"mistake_limit_reached",
 				t("common:errors.mistake_limit_guidance"),
@@ -1234,15 +1412,26 @@ export class Task extends EventEmitter<ClineEvents> {
 		// top-down build file structure of project which for large projects can
 		// take a few seconds. For the best UX we show a placeholder api_req_started
 		// message with a loading spinner as this happens.
+
+		// Determine API protocol based on provider and model
+		const modelId = getModelId(this.apiConfiguration)
+		const apiProtocol = getApiProtocol(this.apiConfiguration.apiProvider, modelId)
+
 		await this.say(
 			"api_req_started",
 			JSON.stringify({
 				request:
 					userContent.map((block) => formatContentBlockToMarkdown(block)).join("\n\n") + "\n\nLoading...",
+				apiProtocol,
 			}),
 		)
 
-		const { showRooIgnoredFiles = true } = (await this.providerRef.deref()?.getState()) ?? {}
+		const {
+			showRooIgnoredFiles = true,
+			includeDiagnosticMessages = true,
+			maxDiagnosticMessages = 50,
+			maxReadFileLine = -1,
+		} = (await this.providerRef.deref()?.getState()) ?? {}
 
 		const [parsedUserContent, needsRulesFileCheck] = await processKiloUserContentMentions({
 			context: this.context, // kilocode_change
@@ -1252,6 +1441,9 @@ export class Task extends EventEmitter<ClineEvents> {
 			fileContextTracker: this.fileContextTracker,
 			rooIgnoreController: this.rooIgnoreController,
 			showRooIgnoredFiles,
+			includeDiagnosticMessages,
+			maxDiagnosticMessages,
+			maxReadFileLine,
 		})
 
 		if (needsRulesFileCheck) {
@@ -1279,6 +1471,7 @@ export class Task extends EventEmitter<ClineEvents> {
 
 		this.clineMessages[lastApiReqIndex].text = JSON.stringify({
 			request: finalUserContent.map((block) => formatContentBlockToMarkdown(block)).join("\n\n"),
+			apiProtocol,
 		} satisfies ClineApiReqInfo)
 
 		await this.saveClineMessages()
@@ -1290,6 +1483,7 @@ export class Task extends EventEmitter<ClineEvents> {
 			let inputTokens = 0
 			let outputTokens = 0
 			let totalCost: number | undefined
+			let usageMissing = false // kilocode_change
 
 			// We can't use `api_req_finished` anymore since it's a unique case
 			// where it could come after a streaming message (i.e. in the middle
@@ -1299,8 +1493,15 @@ export class Task extends EventEmitter<ClineEvents> {
 			// of prices in tasks from history (it's worth removing a few months
 			// from now).
 			const updateApiReqMsg = (cancelReason?: ClineApiReqCancelReason, streamingFailedMessage?: string) => {
+				// kilocode_change start: pending upstream pr https://github.com/RooCodeInc/Roo-Code/pull/6122
+				if (lastApiReqIndex < 0 || !this.clineMessages[lastApiReqIndex]) {
+					return
+				}
+				// kilocode_change end
+
+				const existingData = JSON.parse(this.clineMessages[lastApiReqIndex].text || "{}")
 				this.clineMessages[lastApiReqIndex].text = JSON.stringify({
-					...JSON.parse(this.clineMessages[lastApiReqIndex].text || "{}"),
+					...existingData,
 					tokensIn: inputTokens,
 					tokensOut: outputTokens,
 					cacheWrites: cacheWriteTokens,
@@ -1314,6 +1515,7 @@ export class Task extends EventEmitter<ClineEvents> {
 							cacheWriteTokens,
 							cacheReadTokens,
 						),
+					usageMissing, // kilocode_change
 					cancelReason,
 					streamingFailedMessage,
 				} satisfies ClineApiReqInfo)
@@ -1384,7 +1586,13 @@ export class Task extends EventEmitter<ClineEvents> {
 			this.isStreaming = true
 
 			try {
-				for await (const chunk of stream) {
+				// kilocode change: use manual iterator instead of for ... of
+				const iterator = stream[Symbol.asyncIterator]()
+				let item = await iterator.next()
+				while (!item.done) {
+					const chunk = item.value
+					item = await iterator.next()
+
 					if (!chunk) {
 						// Sometimes chunk is undefined, no idea that can cause
 						// it, but this workaround seems to fix it.
@@ -1457,7 +1665,171 @@ export class Task extends EventEmitter<ClineEvents> {
 						break
 					}
 				}
+
+				// kilocode_change start: pending upstream pr https://github.com/RooCodeInc/Roo-Code/pull/6122
+				// Create a copy of current token values to avoid race conditions
+				const currentTokens = {
+					input: inputTokens,
+					output: outputTokens,
+					cacheWrite: cacheWriteTokens,
+					cacheRead: cacheReadTokens,
+					total: totalCost,
+				}
+
+				const drainStreamInBackgroundToFindAllUsage = async (apiReqIndex: number) => {
+					const timeoutMs = 30_000
+					const startTime = performance.now()
+
+					// Local variables to accumulate usage data without affecting the main flow
+					let bgInputTokens = currentTokens.input
+					let bgOutputTokens = currentTokens.output
+					let bgCacheWriteTokens = currentTokens.cacheWrite
+					let bgCacheReadTokens = currentTokens.cacheRead
+					let bgTotalCost = currentTokens.total
+
+					const refreshApiReqMsg = async (messageIndex: number) => {
+						// Update the API request message with the latest usage data
+						updateApiReqMsg()
+						await this.saveClineMessages()
+
+						// Update the specific message in the webview
+						const apiReqMessage = this.clineMessages[messageIndex]
+						if (apiReqMessage) {
+							await this.updateClineMessage(apiReqMessage)
+						}
+					}
+
+					// Helper function to capture telemetry and update messages
+					const captureUsageData = async (
+						tokens: {
+							input: number
+							output: number
+							cacheWrite: number
+							cacheRead: number
+							total?: number
+						},
+						messageIndex: number = apiReqIndex,
+					) => {
+						if (tokens.input > 0 || tokens.output > 0 || tokens.cacheWrite > 0 || tokens.cacheRead > 0) {
+							// Update the shared variables atomically
+							inputTokens = tokens.input
+							outputTokens = tokens.output
+							cacheWriteTokens = tokens.cacheWrite
+							cacheReadTokens = tokens.cacheRead
+							totalCost = tokens.total
+
+							await refreshApiReqMsg(messageIndex)
+
+							// Capture telemetry
+							TelemetryService.instance.captureLlmCompletion(this.taskId, {
+								inputTokens: tokens.input,
+								outputTokens: tokens.output,
+								cacheWriteTokens: tokens.cacheWrite,
+								cacheReadTokens: tokens.cacheRead,
+								cost:
+									tokens.total ??
+									calculateApiCostAnthropic(
+										this.api.getModel().info,
+										tokens.input,
+										tokens.output,
+										tokens.cacheWrite,
+										tokens.cacheRead,
+									),
+							})
+						}
+					}
+
+					try {
+						const modelId = this.api.getModel().id
+						let chunkCount = 0
+						while (!item.done) {
+							// Check for timeout
+							const time = performance.now() - startTime
+							if (this.abort || time > timeoutMs) {
+								console.warn(
+									`[Background Usage Collection] Cancelled after ${time}ms for model: ${modelId}, processed ${chunkCount} chunks`,
+								)
+								await iterator.return(undefined)
+								break
+							}
+
+							const chunk = item.value
+							item = await iterator.next()
+							chunkCount++
+
+							if (chunk && chunk.type === "usage") {
+								bgInputTokens += chunk.inputTokens
+								bgOutputTokens += chunk.outputTokens
+								bgCacheWriteTokens += chunk.cacheWriteTokens ?? 0
+								bgCacheReadTokens += chunk.cacheReadTokens ?? 0
+								bgTotalCost = chunk.totalCost
+							}
+						}
+
+						if (
+							bgInputTokens > 0 ||
+							bgOutputTokens > 0 ||
+							bgCacheWriteTokens > 0 ||
+							bgCacheReadTokens > 0
+						) {
+							// We have some usage data even if we didn't find a usage chunk
+							await captureUsageData(
+								{
+									input: bgInputTokens,
+									output: bgOutputTokens,
+									cacheWrite: bgCacheWriteTokens,
+									cacheRead: bgCacheReadTokens,
+									total: bgTotalCost,
+								},
+								lastApiReqIndex,
+							)
+						} else {
+							console.warn(
+								`[Background Usage Collection] Suspicious: request ${apiReqIndex} is complete, but no usage info was found. Model: ${modelId}`,
+							)
+							usageMissing = true
+							await refreshApiReqMsg(apiReqIndex)
+						}
+					} catch (error) {
+						console.error("Error draining stream for usage data:", error)
+						// Still try to capture whatever usage data we have collected so far
+						if (
+							bgInputTokens > 0 ||
+							bgOutputTokens > 0 ||
+							bgCacheWriteTokens > 0 ||
+							bgCacheReadTokens > 0
+						) {
+							await captureUsageData(
+								{
+									input: bgInputTokens,
+									output: bgOutputTokens,
+									cacheWrite: bgCacheWriteTokens,
+									cacheRead: bgCacheReadTokens,
+									total: bgTotalCost,
+								},
+								lastApiReqIndex,
+							)
+						} else {
+							usageMissing = true
+							await refreshApiReqMsg(apiReqIndex)
+						}
+					}
+				}
+
+				// Start the background task and handle any errors
+				drainStreamInBackgroundToFindAllUsage(lastApiReqIndex).catch((error) => {
+					console.error("Background usage collection failed:", error)
+				})
+				// kilocode_change end
 			} catch (error) {
+				// kilocode_change start
+				TelemetryService.instance.captureException(error, {
+					abandoned: this.abandoned,
+					abort: this.abort,
+					context: "recursivelyMakeClineRequests",
+				})
+				// kilocode_change end
+
 				// Abandoned happens when extension is no longer waiting for the
 				// Cline instance to finish aborting (error is thrown here when
 				// any function in the for loop throws due to this.abort).
@@ -1466,15 +1838,17 @@ export class Task extends EventEmitter<ClineEvents> {
 					// could be in (i.e. could have streamed some tools the user
 					// may have executed), so we just resort to replicating a
 					// cancel task.
-					this.abortTask()
 
-					// Check if this was a user-initiated cancellation
-					// If this.abort is true, it means the user clicked cancel, so we should
+					// Check if this was a user-initiated cancellation BEFORE calling abortTask
+					// If this.abort is already true, it means the user clicked cancel, so we should
 					// treat this as "user_cancelled" rather than "streaming_failed"
 					const cancelReason = this.abort ? "user_cancelled" : "streaming_failed"
 					const streamingFailedMessage = this.abort
 						? undefined
 						: (error.message ?? JSON.stringify(serializeError(error), null, 2))
+
+					// Now call abortTask after determining the cancel reason
+					await this.abortTask()
 
 					await abortStream(cancelReason, streamingFailedMessage)
 
@@ -1488,23 +1862,24 @@ export class Task extends EventEmitter<ClineEvents> {
 				this.isStreaming = false
 			}
 
-			if (inputTokens > 0 || outputTokens > 0 || cacheWriteTokens > 0 || cacheReadTokens > 0) {
-				TelemetryService.instance.captureLlmCompletion(this.taskId, {
-					inputTokens,
-					outputTokens,
-					cacheWriteTokens,
-					cacheReadTokens,
-					cost:
-						totalCost ??
-						calculateApiCostAnthropic(
-							this.api.getModel().info,
-							inputTokens,
-							outputTokens,
-							cacheWriteTokens,
-							cacheReadTokens,
-						),
-				})
-			}
+			// kilocode_change: pending upstream pr https://github.com/RooCodeInc/Roo-Code/pull/6122
+			//if (inputTokens > 0 || outputTokens > 0 || cacheWriteTokens > 0 || cacheReadTokens > 0) {
+			//	TelemetryService.instance.captureLlmCompletion(this.taskId, {
+			//		inputTokens,
+			//		outputTokens,
+			//		cacheWriteTokens,
+			//		cacheReadTokens,
+			//		cost:
+			//			totalCost ??
+			//			calculateApiCostAnthropic(
+			//				this.api.getModel().info,
+			//				inputTokens,
+			//				outputTokens,
+			//				cacheWriteTokens,
+			//				cacheReadTokens,
+			//			),
+			//	})
+			//}
 
 			// Need to call here in case the stream was aborted.
 			if (this.abort || this.abandoned) {
@@ -1582,7 +1957,15 @@ export class Task extends EventEmitter<ClineEvents> {
 					this.consecutiveMistakeCount++
 				}
 
-				const recDidEndLoop = await this.recursivelyMakeClineRequests(this.userMessageContent)
+				// kilocode_change start: prevent excessive recursion
+				// e.g. https://github.com/RooCodeInc/Roo-Code/issues/5601#issuecomment-3120612488
+				await yieldPromise()
+				const recDidEndLoop = await this.recursivelyMakeClineRequests(
+					this.userMessageContent,
+					undefined,
+					recursionDepth + 1,
+				)
+				// kilocode_change end
 				didEndLoop = recDidEndLoop
 			} else {
 				// If there's no assistant_responses, that means we got no text
@@ -1728,6 +2111,7 @@ export class Task extends EventEmitter<ClineEvents> {
 			language,
 			maxConcurrentFileReads,
 			maxReadFileLine,
+			apiConfiguration,
 		} = state ?? {}
 
 		return await (async () => {
@@ -1756,7 +2140,9 @@ export class Task extends EventEmitter<ClineEvents> {
 				rooIgnoreInstructions,
 				maxReadFileLine !== -1,
 				{
-					maxConcurrentFileReads,
+					maxConcurrentFileReads: maxConcurrentFileReads ?? 5,
+					todoListEnabled: apiConfiguration?.todoListEnabled ?? true,
+					useAgentRules: vscode.workspace.getConfiguration("roo-cline").get<boolean>("useAgentRules") ?? true,
 				},
 			)
 		})()
@@ -1764,6 +2150,7 @@ export class Task extends EventEmitter<ClineEvents> {
 
 	public async *attemptApiRequest(retryAttempt: number = 0): ApiStream {
 		const state = await this.providerRef.deref()?.getState()
+
 		const {
 			apiConfiguration,
 			autoApprovalEnabled,
@@ -1775,21 +2162,24 @@ export class Task extends EventEmitter<ClineEvents> {
 			profileThresholds = {},
 		} = state ?? {}
 
-		// Get condensing configuration for automatic triggers
+		// Get condensing configuration for automatic triggers.
 		const customCondensingPrompt = state?.customCondensingPrompt
 		const condensingApiConfigId = state?.condensingApiConfigId
 		const listApiConfigMeta = state?.listApiConfigMeta
 
-		// Determine API handler to use for condensing
+		// Determine API handler to use for condensing.
 		let condensingApiHandler: ApiHandler | undefined
+
 		if (condensingApiConfigId && listApiConfigMeta && Array.isArray(listApiConfigMeta)) {
-			// Using type assertion for the id property to avoid implicit any
+			// Using type assertion for the id property to avoid implicit any.
 			const matchingConfig = listApiConfigMeta.find((config: any) => config.id === condensingApiConfigId)
+
 			if (matchingConfig) {
 				const profile = await this.providerRef.deref()?.providerSettingsManager.getProfile({
 					id: condensingApiConfigId,
 				})
-				// Ensure profile and apiProvider exist before trying to build handler
+
+				// Ensure profile and apiProvider exist before trying to build handler.
 				if (profile && profile.apiProvider) {
 					condensingApiHandler = buildApiHandler(profile)
 				}

@@ -1376,7 +1376,7 @@ describe("CustomModesManager", () => {
 	})
 
 	describe("exportModeWithRules", () => {
-		it("should return error when no workspace is available", async () => {
+		it("should return error when mode is not found and no workspace is available", async () => {
 			// Create a fresh manager instance to avoid cache issues
 			const freshManager = new CustomModesManager(mockContext, mockOnUpdate)
 
@@ -1394,7 +1394,7 @@ describe("CustomModesManager", () => {
 			const result = await freshManager.exportModeWithRules("test-mode")
 
 			expect(result.success).toBe(false)
-			expect(result.error).toBe("No workspace found")
+			expect(result.error).toBe("Mode not found")
 		})
 
 		it("should return error when mode is not found", async () => {
@@ -1573,6 +1573,191 @@ describe("CustomModesManager", () => {
 			// Should still succeed even if file read fails
 			expect(result.success).toBe(true)
 			expect(result.yaml).toContain("test-mode")
+		})
+
+		it("should successfully export global mode with rules from global .roo directory", async () => {
+			// Mock a global mode
+			const globalMode = {
+				slug: "global-test-mode",
+				name: "Global Test Mode",
+				roleDefinition: "Global Test Role",
+				groups: ["read"],
+				source: "global",
+			}
+
+			// Create a fresh manager instance to avoid cache issues
+			const freshManager = new CustomModesManager(mockContext, mockOnUpdate)
+
+			;(fs.readFile as Mock).mockImplementation(async (path: string) => {
+				if (path === mockSettingsPath) {
+					return yaml.stringify({ customModes: [globalMode] })
+				}
+				if (path.includes("rules-global-test-mode") && path.includes("rule1.md")) {
+					return "Global rule content"
+				}
+				throw new Error("File not found")
+			})
+			;(fileExistsAtPath as Mock).mockImplementation(async (path: string) => {
+				return path === mockSettingsPath
+			})
+			;(fs.stat as Mock).mockImplementation(async (path: string) => {
+				if (path.includes("rules-global-test-mode")) {
+					return { isDirectory: () => true }
+				}
+				throw new Error("Directory not found")
+			})
+			;(fs.readdir as Mock).mockImplementation(async (path: string) => {
+				if (path.includes("rules-global-test-mode")) {
+					return [{ name: "rule1.md", isFile: () => true }]
+				}
+				return []
+			})
+
+			const result = await freshManager.exportModeWithRules("global-test-mode")
+
+			expect(result.success).toBe(true)
+			expect(result.yaml).toContain("global-test-mode")
+			expect(result.yaml).toContain("Global Test Mode")
+			expect(result.yaml).toContain("Global rule content")
+		})
+
+		it("should successfully export global mode without rules when global rules directory doesn't exist", async () => {
+			// Mock a global mode
+			const globalMode = {
+				slug: "global-test-mode",
+				name: "Global Test Mode",
+				roleDefinition: "Global Test Role",
+				groups: ["read"],
+				source: "global",
+			}
+
+			// Create a fresh manager instance to avoid cache issues
+			const freshManager = new CustomModesManager(mockContext, mockOnUpdate)
+
+			;(fs.readFile as Mock).mockImplementation(async (path: string) => {
+				if (path === mockSettingsPath) {
+					return yaml.stringify({ customModes: [globalMode] })
+				}
+				throw new Error("File not found")
+			})
+			;(fileExistsAtPath as Mock).mockImplementation(async (path: string) => {
+				return path === mockSettingsPath
+			})
+			;(fs.stat as Mock).mockRejectedValue(new Error("Directory not found"))
+
+			const result = await freshManager.exportModeWithRules("global-test-mode")
+
+			expect(result.success).toBe(true)
+			expect(result.yaml).toContain("global-test-mode")
+			expect(result.yaml).toContain("Global Test Mode")
+			// Should not contain rulesFiles since no rules directory exists
+			expect(result.yaml).not.toContain("rulesFiles")
+		})
+
+		it("should handle global mode export when workspace is not available", async () => {
+			// Mock a global mode
+			const globalMode = {
+				slug: "global-test-mode",
+				name: "Global Test Mode",
+				roleDefinition: "Global Test Role",
+				groups: ["read"],
+				source: "global",
+			}
+
+			// Create a fresh manager instance to avoid cache issues
+			const freshManager = new CustomModesManager(mockContext, mockOnUpdate)
+
+			// Mock no workspace folders
+			;(vscode.workspace as any).workspaceFolders = []
+			;(getWorkspacePath as Mock).mockReturnValue(null)
+			;(fs.readFile as Mock).mockImplementation(async (path: string) => {
+				if (path === mockSettingsPath) {
+					return yaml.stringify({ customModes: [globalMode] })
+				}
+				if (path.includes("rules-global-test-mode") && path.includes("rule1.md")) {
+					return "Global rule content"
+				}
+				throw new Error("File not found")
+			})
+			;(fileExistsAtPath as Mock).mockImplementation(async (path: string) => {
+				return path === mockSettingsPath
+			})
+			;(fs.stat as Mock).mockImplementation(async (path: string) => {
+				if (path.includes("rules-global-test-mode")) {
+					return { isDirectory: () => true }
+				}
+				throw new Error("Directory not found")
+			})
+			;(fs.readdir as Mock).mockImplementation(async (path: string) => {
+				if (path.includes("rules-global-test-mode")) {
+					return [{ name: "rule1.md", isFile: () => true }]
+				}
+				return []
+			})
+
+			const result = await freshManager.exportModeWithRules("global-test-mode")
+
+			// Should succeed even without workspace since it's a global mode
+			expect(result.success).toBe(true)
+			expect(result.yaml).toContain("global-test-mode")
+			expect(result.yaml).toContain("Global rule content")
+		})
+
+		it("should normalize paths to use forward slashes in exported YAML", async () => {
+			const roomodesContent = {
+				customModes: [
+					{
+						slug: "test-mode",
+						name: "Test Mode",
+						roleDefinition: "Test Role",
+						groups: ["read"],
+					},
+				],
+			}
+
+			;(fileExistsAtPath as Mock).mockImplementation(async (path: string) => {
+				return path === mockRoomodes
+			})
+			;(fs.readFile as Mock).mockImplementation(async (path: string) => {
+				if (path === mockRoomodes) {
+					return yaml.stringify(roomodesContent)
+				}
+				if (path.includes("rules-test-mode")) {
+					return "Rule content"
+				}
+				throw new Error("File not found")
+			})
+			;(fs.stat as Mock).mockResolvedValue({ isDirectory: () => true })
+
+			// Mock readdir to return entries with subdirectories
+			;(fs.readdir as Mock).mockResolvedValue([
+				{ name: "rule1.md", isFile: () => true },
+				{ name: "rule2.md", isFile: () => true },
+			])
+
+			const result = await manager.exportModeWithRules("test-mode")
+
+			expect(result.success).toBe(true)
+
+			// Parse the YAML to check the paths
+			const exportedData = yaml.parse(result.yaml!)
+			const rulesFiles = exportedData.customModes[0].rulesFiles
+
+			// Verify that all paths use forward slashes
+			expect(rulesFiles).toBeDefined()
+			expect(rulesFiles.length).toBe(2)
+
+			// Check that all paths use forward slashes and do NOT include the rules-{slug} prefix
+			rulesFiles.forEach((file: any) => {
+				expect(file.relativePath).not.toContain("\\")
+				// The PR excludes the rules-{slug} folder from paths
+				expect(file.relativePath).not.toMatch(/^rules-test-mode\//)
+				// Files should be at the root level now
+				expect(file.relativePath).toMatch(/^rule\d+\.md$/)
+			})
+
+			// Ensure no backslashes in the entire exported YAML
+			expect(result.yaml).not.toContain("\\")
 		})
 	})
 })

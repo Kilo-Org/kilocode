@@ -51,36 +51,34 @@
 		"activationFailed": "Kilo: Der Nachrichtengenerator konnte nicht aktiviert werden: {{error}}",
 		"providerRegistered": "Kilo: Commit-Nachrichtenanbieter registriert"
 	},
-	"autocomplete": {
+	"ghost": {
 		"statusBar": {
-			"disabled": "$(circle-slash) Kilo abgeschlossen",
+			"enabled": "$(sparkle) Kilo Inline Assist",
+			"disabled": "$(circle-slash) Kilo Inline Assist",
+			"warning": "$(warning) Kilo Inline Assist",
 			"tooltip": {
-				"basic": "Kilo Code Autocomplete",
+				"basic": "Kilo Code Inline-Unterstützung",
+				"disabled": "Kilo Code Inline-Hilfe (deaktiviert)",
+				"tokenError": "Ein gültiges Token muss festgelegt werden, um Inline-Unterstützung zu nutzen",
+				"lastCompletion": "Letzter Vorschlag:",
 				"sessionTotal": "Gesamtkosten der Sitzung:",
-				"disabled": "Kilo Code Autocomplete (deaktiviert)",
-				"tokenError": "Ein gültiges Token muss eingestellt werden, um die Autovervollständigung zu verwenden",
-				"lastCompletion": "Letzte Vervollständigung:",
 				"model": "Modell:"
 			},
-			"warning": "$(warning) Kilo Abgeschlossen",
-			"enabled": "$(sparkle) Kilo Abgeschlossen",
 			"cost": {
-				"lessThanCent": "<0,01 €",
-				"zero": "0,00 €"
+				"zero": "0,00 €",
+				"lessThanCent": "<0,01 €"
 			}
 		},
-		"toggleMessage": "Kilo vollständig {{status}}"
-	},
-	"ghost": {
+		"toggleMessage": "Kilo Inline Assist {{status}}",
 		"progress": {
-			"generating": "Generiere vorgeschlagene Änderungen...",
+			"title": "Kilo Code",
 			"analyzing": "Analysiere deinen Code...",
+			"generating": "Generiere vorgeschlagene Änderungen...",
 			"processing": "Verarbeitung von Änderungsvorschlägen...",
-			"showing": "Zeige Bearbeitungsvorschläge an...",
-			"title": "Kilo Code"
+			"showing": "Zeige Bearbeitungsvorschläge an..."
 		},
 		"input": {
-			"title": "Kilo-Code: Schnellaufgabe",
+			"title": "Kilo Code: Schnellaufgabe",
 			"placeholder": "z.B. 'diese Funktion umgestalten, um effizienter zu sein'"
 		},
 		"commands": {
@@ -102,6 +100,26 @@
 		},
 		"messages": {
 			"provideCodeSuggestions": "Code-Vorschläge werden bereitgestellt..."
+		},
+		"incompatibilityExtensionPopup": {
+			"message": "Die Kilo Code Inline Assist wird durch einen Konflikt mit GitHub Copilot blockiert. Um dies zu beheben, musst du die Inline-Vorschläge von Copilot deaktivieren.",
+			"disableCopilot": "Copilot deaktivieren",
+			"disableInlineAssist": "Inline Assist deaktivieren"
 		}
+	},
+	"terminalCommandGenerator": {
+		"inputPrompt": "Kilo: Beschreibe den Befehl, den du generieren möchtest",
+		"generatingProgress": "Kilo: Terminal-Befehl wird generiert...",
+		"noActiveTerminal": "Kilo: Kein aktives Terminal gefunden. Bitte öffnen Sie zuerst ein Terminal.",
+		"inputPlaceholder": "z.B. den Prozess beenden, der auf Port 3001 läuft, große Dateien finden, usw.",
+		"generationFailed": "Kilo: Fehler beim Generieren des Befehls: {{error}}",
+		"commandGenerated": "Kilo: Generierter Befehl: {{command}}",
+		"warningDialog": {
+			"okButton": "Ich verstehe",
+			"title": "Sicherheitswarnung für das Terminal",
+			"message": "Überprüfen Sie alle generierten Befehle doppelt, bevor Sie sie ausführen. Terminal-Aktionen können nicht immer rückgängig gemacht werden - das Ausführen ungeprüfter Befehle kann zu irreversiblem Datenverlust oder Systemschäden führen. Überprüfen und verstehen Sie den Befehl vollständig, bevor Sie fortfahren!",
+			"cancelButton": "Abbrechen"
+		},
+		"tipMessage": "Kilo: Drücken Sie {{shortcut}}, um Terminal-Befehle zu generieren"
 	}
 }

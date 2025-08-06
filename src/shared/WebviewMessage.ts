@@ -41,6 +41,7 @@ export interface WebviewMessage {
 		| "getListApiConfiguration"
 		| "customInstructions"
 		| "allowedCommands"
+		| "deniedCommands"
 		| "alwaysAllowReadOnly"
 		| "alwaysAllowReadOnlyOutsideWorkspace"
 		| "alwaysAllowWrite"
@@ -76,6 +77,7 @@ export interface WebviewMessage {
 		| "requestOllamaModels"
 		| "requestLmStudioModels"
 		| "requestVsCodeLmModels"
+		| "requestHuggingFaceModels"
 		| "openImage"
 		| "saveImage"
 		| "openFile"
@@ -116,12 +118,16 @@ export interface WebviewMessage {
 		| "updateMcpTimeout"
 		| "fuzzyMatchThreshold"
 		| "writeDelayMs"
+		| "diagnosticsEnabled"
 		| "enhancePrompt"
 		| "enhancedPrompt"
 		| "draggedImages"
 		| "deleteMessage"
+		| "deleteMessageConfirm"
 		| "submitEditedMessage"
+		| "editMessageConfirm"
 		| "terminalOutputLineLimit"
+		| "terminalOutputCharacterLimit"
 		| "terminalShellIntegrationTimeout"
 		| "terminalShellIntegrationDisabled"
 		| "terminalCommandDelay"
@@ -145,7 +151,9 @@ export interface WebviewMessage {
 		| "systemPrompt"
 		| "enhancementApiConfigId"
 		| "commitMessageApiConfigId" // kilocode_change
-		| "autocompleteApiConfigId" // kilocode_change
+		| "terminalCommandApiConfigId" // kilocode_change
+		| "ghostServiceSettings" // kilocode_change
+		| "includeTaskHistoryInEnhance"
 		| "updateExperimental"
 		| "autoApprovalEnabled"
 		| "updateCustomMode"
@@ -169,8 +177,12 @@ export interface WebviewMessage {
 		| "remoteBrowserEnabled"
 		| "language"
 		| "maxReadFileLine"
+		| "maxImageFileSize"
+		| "maxTotalImageSize"
 		| "maxConcurrentFileReads"
 		| "allowVeryLargeReads" // kilocode_change
+		| "includeDiagnosticMessages"
+		| "maxDiagnosticMessages"
 		| "searchFiles"
 		| "setHistoryPreviewCollapsed"
 		| "showFeedbackOptions" // kilocode_change
@@ -186,7 +198,9 @@ export interface WebviewMessage {
 		| "fetchProfileDataRequest" // kilocode_change
 		| "profileDataResponse" // kilocode_change
 		| "fetchBalanceDataRequest" // kilocode_change
+		| "shopBuyCredits" // kilocode_change
 		| "balanceDataResponse" // kilocode_change
+		| "updateProfileData" // kilocode_change
 		| "condense" // kilocode_change
 		| "toggleWorkflow" // kilocode_change
 		| "refreshRules" // kilocode_change
@@ -206,10 +220,14 @@ export interface WebviewMessage {
 		| "focusPanelRequest"
 		| "profileThresholds"
 		| "setHistoryPreviewCollapsed"
+		| "clearUsageData" // kilocode_change
+		| "getUsageData" // kilocode_change
+		| "usageDataResponse" // kilocode_change
 		| "showTaskTimeline" // kilocode_change
 		| "toggleTaskFavorite" // kilocode_change
 		| "fixMermaidSyntax" // kilocode_change
 		| "mermaidFixResponse" // kilocode_change
+		| "openGlobalKeybindings" // kilocode_change
 		| "openExternal"
 		| "filterMarketplaceItems"
 		| "mcpButtonClicked"
@@ -224,6 +242,7 @@ export interface WebviewMessage {
 		| "profileThresholds"
 		| "editMessage" // kilocode_change
 		| "systemNotificationsEnabled" // kilocode_change
+		| "dismissNotificationId" // kilocode_change
 		| "shareTaskSuccess"
 		| "exportMode"
 		| "exportModeResult"
@@ -233,10 +252,17 @@ export interface WebviewMessage {
 		| "checkRulesDirectoryResult"
 		| "saveCodeIndexSettingsAtomic"
 		| "requestCodeIndexSecretStatus"
+		| "fetchKilocodeNotifications"
+		| "requestCommands"
+		| "openCommandFile"
+		| "deleteCommand"
+		| "createCommand"
+		| "insertTextIntoTextarea"
 	text?: string
 	editedMessageContent?: string
 	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "account"
 	disabled?: boolean
+	context?: string
 	dataUri?: string
 	askResponse?: ClineAskResponse
 	apiConfiguration?: ProviderSettings
@@ -260,6 +286,7 @@ export interface WebviewMessage {
 	isGlobal?: boolean // kilocode_change
 	filename?: string // kilocode_change
 	ruleType?: string // kilocode_change
+	notificationId?: string // kilocode_change
 	// kilocode_change end
 	serverName?: string
 	toolName?: string
@@ -281,6 +308,7 @@ export interface WebviewMessage {
 	ids?: string[]
 	hasSystemPromptOverride?: boolean
 	terminalOperation?: "continue" | "abort"
+	messageTs?: number
 	historyPreviewCollapsed?: boolean
 	filters?: { type?: string; search?: string; tags?: string[] }
 	url?: string // For openExternal
@@ -294,7 +322,7 @@ export interface WebviewMessage {
 		// Global state settings
 		codebaseIndexEnabled: boolean
 		codebaseIndexQdrantUrl: string
-		codebaseIndexEmbedderProvider: "openai" | "ollama" | "openai-compatible" | "gemini"
+		codebaseIndexEmbedderProvider: "openai" | "ollama" | "openai-compatible" | "gemini" | "mistral"
 		codebaseIndexEmbedderBaseUrl?: string
 		codebaseIndexEmbedderModelId: string
 		codebaseIndexEmbedderModelDimension?: number // Generic dimension for all providers
@@ -307,6 +335,7 @@ export interface WebviewMessage {
 		codeIndexQdrantApiKey?: string
 		codebaseIndexOpenAiCompatibleApiKey?: string
 		codebaseIndexGeminiApiKey?: string
+		codebaseIndexMistralApiKey?: string
 	}
 }
 

@@ -4,7 +4,7 @@
 		"introText1": "Kilo Code é um agente de codificação AI gratuito e de código aberto.",
 		"introText2": "Funciona com os mais recentes modelos de IA como Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1, e mais de 450 outros.",
 		"introText3": "Crie uma conta gratuita e receba $20 em tokens para usar com qualquer modelo de IA.",
-		"ctaButton": "Criar conta gratuita",
+		"ctaButton": "Começar",
 		"manualModeButton": "Use sua própria chave de API",
 		"alreadySignedUp": "Já se cadastrou?",
 		"loginText": "Faça login aqui"
@@ -12,6 +12,11 @@
 	"lowCreditWarning": {
 		"addCredit": "Adicionar crédito",
 		"lowBalance": "Seu saldo do Kilo Code está baixo"
+	},
+	"pricing": {
+		"costUnknown": "custo desconhecido",
+		"costUnknownDescription": "O Provedor de API não forneceu dados de custo ou a solicitação foi cancelada.",
+		"discoverModelPricing": "Descobrir preços e capacidades do modelo"
 	},
 	"notifications": {
 		"toolRequest": "Solicitação de ferramenta aguardando aprovação",
@@ -26,7 +31,12 @@
 			"account": "Conta Kilo Code",
 			"apiKey": "Chave de API do Kilo Code",
 			"login": "Entrar no Kilo Code",
-			"logout": "Sair do Kilo Code"
+			"logout": "Sair do Kilo Code",
+			"automaticFetch": "Os modelos mais recentes estão automaticamente disponíveis no Kilo Code. Se você não tem certeza de qual modelo escolher, o Kilo Code funciona melhor com os modelos recomendados listados no topo em <strong>negrito</strong>.",
+			"providerRouting": {
+				"title": "Kilo Code - Roteamento de Provedor OpenRouter",
+				"description": "O Kilo Code roteia as solicitações para os melhores provedores disponíveis para o seu modelo. Por padrão, as solicitações são balanceadas em carga entre os principais provedores para maximizar o tempo de atividade. No entanto, você pode escolher um provedor específico para usar para este modelo."
+			}
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {
@@ -40,6 +50,16 @@
 			"testButton": "Testar notificação",
 			"testTitle": "Kilo Code",
 			"testMessage": "Esta é uma notificação de teste do Kilo Code."
+		},
+		"terminal": {
+			"commandGenerator": {
+				"provider": "Provedor de Gerador de Comandos de Terminal",
+				"apiConfigId": {
+					"label": "Configuração da API",
+					"current": "Usar Configuração Atual",
+					"description": "Selecione qual configuração de API usar para gerar comandos de terminal. Deixe como 'Usar configuração atual' para usar suas configurações padrão."
+				}
+			}
 		}
 	},
 	"chat": {
@@ -56,7 +76,14 @@
 		"dashboard": "Painel",
 		"logOut": "Sair",
 		"currentBalance": "SALDO ATUAL",
-		"loading": "Carregando..."
+		"loading": "Carregando...",
+		"shop": {
+			"title": "Comprar Créditos",
+			"popular": "Popular",
+			"credits": "créditos",
+			"action": "Comprar Agora",
+			"viewAll": "Ver todas as opções de preço"
+		}
 	},
 	"docs": "Documentação",
 	"rules": {
@@ -130,5 +157,61 @@
 			"idea6": "Gere cards que revelam conteúdo dinâmico de forma bonita quando você passa o mouse sobre eles",
 			"idea7": "Crie um campo de estrelas interativo relaxante que se move com gestos do mouse"
 		}
+	},
+	"ghost": {
+		"title": "Assistência em linha",
+		"settings": {
+			"autoTrigger": "Gatilho Automático",
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Tarefa Rápida em Linha",
+				"description": "Precisa apenas de uma mudança rápida? Selecione algum código (ou não!) e pressione Cmd+I. Descreva seu objetivo em linguagem simples (\"criar um componente React com essas props\", \"adicionar tratamento de erro a esta função\") e receba múltiplas sugestões prontas para uso diretamente no seu editor. <DocsLink>Ver atalho</DocsLink>"
+			},
+			"enableAutoInlineTaskKeybinding": {
+				"label": "Tarefa Automática em Linha",
+				"description": "Precisa de uma correção rápida, preenchimento ou refatoração? Kilo usará o contexto ao redor para oferecer melhorias imediatas, mantendo seu fluxo de trabalho. <DocsLink>Ver atalho</DocsLink>"
+			},
+			"enableAutoTrigger": {
+				"label": "Ativar Gatilho Automático",
+				"description": "Quando ativado, o Kilo Code acionará automaticamente a Assistência em Linha quando você parar de digitar. Isso pode ser útil para correções e sugestões rápidas."
+			},
+			"autoTriggerDelay": {
+				"label": "Atraso do Gatilho Automático",
+				"description": "O atraso em segundos antes do Kilo Code acionar a Assistência em Linha após você parar de digitar. Um atraso menor significa sugestões mais rápidas, mas pode ser mais intensivo em recursos."
+			},
+			"enableSmartInlineTaskKeybinding": {
+				"label": "Tarefa Inteligente em Linha",
+				"description": "Precisa de uma correção rápida, completar ou refatorar? O Kilo usará o contexto ao redor para oferecer melhorias imediatas, mantendo você no fluxo. <DocsLink>Ver atalho</DocsLink>"
+			},
+			"provider": "Provedor",
+			"apiConfigId": {
+				"label": "Configuração de API",
+				"current": "Usar configuração de API atualmente selecionada",
+				"description": "Selecione uma configuração de API para usar nos prompts do Inline Assist ou apenas use o que estiver selecionado no momento"
+			},
+			"triggers": "Gatilhos",
+			"keybindingDescription": "Os recursos de Assistência em Linha são acionados por comandos. Você pode configurar os <DocsLink>atalhos de teclado aqui</DocsLink>."
+		}
+	},
+	"virtualProvider": {
+		"title": "Configurações de Provedor de Reserva para Cota Virtual",
+		"description": "Configure uma lista de perfis, cada um com seus próprios limites de cota. Quando os limites de cota de um provedor são atingidos, o próximo perfil na lista será usado até que não haja mais nenhum.",
+		"profileLabel": "Perfil {{number}}",
+		"primaryProfileLabel": "Perfil {{number}} (Principal)",
+		"moveProfileUp": "Mover perfil para cima",
+		"moveProfileDown": "Mover perfil para baixo",
+		"removeProfile": "Remover perfil",
+		"selectProfilePlaceholder": "Selecionar perfil...",
+		"addProfile": "Adicionar perfil",
+		"noProfilesAvailable": "Nenhum perfil de perfis disponível. Por favor, configure pelo menos um perfil de provedor não-virtual primeiro.",
+		"dangerZoneTitle": "Zona de Perigo",
+		"dangerZoneDescription": "Essas ações são destrutivas e não podem ser desfeitas.",
+		"clearUsageData": "Limpar Dados de Uso",
+		"confirmClearTitle": "Tem certeza?",
+		"confirmClearDescription": "Isso excluirá permanentemente todos os dados de uso armazenados para provedores virtuais. Esta ação não pode ser desfeita.",
+		"perDay": "Por Dia",
+		"tokensLabel": "Tokens",
+		"requestsLabel": "Solicitações",
+		"perMinute": "Por Minuto",
+		"perHour": "Por Hora"
 	}
 }

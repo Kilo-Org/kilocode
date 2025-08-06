@@ -23,7 +23,8 @@
 		"failedToProcessBatchWithError": "فشل في معالجة الدفعة بعد {{maxRetries}} محاولة: {{errorMessage}}"
 	},
 	"vectorStore": {
-		"qdrantConnectionFailed": "فشل الاتصال بقاعدة بيانات المتجهات Qdrant. تأكد أن Qdrant شغّال ومتوفّر على {{qdrantUrl}}. الخطأ: {{errorMessage}}"
+		"qdrantConnectionFailed": "فشل الاتصال بقاعدة بيانات المتجهات Qdrant. تأكد أن Qdrant شغّال ومتوفّر على {{qdrantUrl}}. الخطأ: {{errorMessage}}",
+		"vectorDimensionMismatch": "فشل في تحديث فهرس المتجهات للنموذج الجديد. يرجى محاولة مسح الفهرس والبدء من جديد. التفاصيل: {{errorMessage}}"
 	},
 	"validation": {
 		"authenticationFailed": "فشل التحقق من الهوية. يرجى التحقق من مفتاح الـ API في الإعدادات.",
@@ -36,17 +37,29 @@
 		"invalidApiKey": "مفتاح API غير صالح. يرجى التحقق من إعدادات مفتاح الـ API.",
 		"invalidBaseUrl": "الرابط الأساسي غير صالح. يرجى التحقق من إعدادات الرابط.",
 		"invalidModel": "النموذج غير صالح. يرجى التحقق من إعدادات النموذج.",
-		"invalidResponse": "استجابة غير صالحة من خدمة التضمين. يرجى التحقق من الإعدادات."
+		"invalidResponse": "استجابة غير صالحة من خدمة التضمين. يرجى التحقق من الإعدادات.",
+		"apiKeyRequired": "مفتاح API مطلوب لهذا المضمّن",
+		"baseUrlRequired": "الرابط الأساسي مطلوب لهذا المضمّن"
 	},
 	"serviceFactory": {
 		"openAiConfigMissing": "إعدادات OpenAI مفقودة لإنشاء التضمين",
 		"ollamaConfigMissing": "إعدادات Ollama مفقودة لإنشاء التضمين",
 		"openAiCompatibleConfigMissing": "إعدادات OpenAI المتوافق مفقودة لإنشاء التضمين",
 		"geminiConfigMissing": "إعدادات Gemini مفقودة لإنشاء التضمين",
+		"mistralConfigMissing": "إعدادات Mistral مفقودة لإنشاء التضمين",
 		"invalidEmbedderType": "نوع التضمين المُعدّ غير صالح: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "لا يمكن تحديد أبعاد المتجه للنموذج '{{modelId}}' مع المزوّد '{{provider}}'. يرجى التأكد من ضبط 'أبعاد التضمين' بشكل صحيح في إعدادات مزوّد OpenAI المتوافق.",
 		"vectorDimensionNotDetermined": "لا يمكن تحديد أبعاد المتجه للنموذج '{{modelId}}' مع المزوّد '{{provider}}'. تحقق من ملفات النموذج أو الإعدادات.",
 		"qdrantUrlMissing": "رابط Qdrant مفقود لإنشاء مخزن المتجهات",
 		"codeIndexingNotConfigured": "لا يمكن إنشاء الخدمات: فهرسة الكود غير مُعدّة بشكل صحيح"
+	},
+	"orchestrator": {
+		"indexingFailedNoBlocks": "فشلت الفهرسة: لم يتم فهرسة أي كتل كود بنجاح. هذا عادة يشير إلى مشكلة في إعدادات المضمّن.",
+		"indexingFailedCritical": "فشلت الفهرسة: لم يتم فهرسة أي كتل كود بنجاح رغم العثور على ملفات للمعالجة. هذا يشير إلى فشل حرج في المضمّن.",
+		"fileWatcherStarted": "تم بدء مراقب الملفات.",
+		"fileWatcherStopped": "تم إيقاف مراقب الملفات.",
+		"failedDuringInitialScan": "فشل أثناء المسح الأولي: {{errorMessage}}",
+		"unknownError": "خطأ غير معروف",
+		"indexingRequiresWorkspace": "الفهرسة تتطلب مجلد مشروع مفتوح"
 	}
 }

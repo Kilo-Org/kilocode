@@ -1,4 +1,12 @@
 {
+	"errorBoundary": {
+		"title": "حدث خطأ ما",
+		"reportText": "ساعدنا في التحسين من خلال الإبلاغ عن هذا الخطأ على",
+		"githubText": "صفحة مشاكل GitHub الخاصة بنا",
+		"copyInstructions": "انسخ والصق رسالة الخطأ التالية لتضمينها كجزء من تقريرك:",
+		"errorStack": "مكدس الخطأ:",
+		"componentStack": "مكدس المكونات:"
+	},
 	"answers": {
 		"yes": "نعم",
 		"no": "لا",
@@ -20,7 +28,8 @@
 		"customerSupport": "الدعم الفني"
 	},
 	"ui": {
-		"search_placeholder": "ابحث..."
+		"search_placeholder": "ابحث...",
+		"no_results": "لا توجد نتائج"
 	},
 	"mermaid": {
 		"loading": "جاري توليد مخطط Mermaid...",
@@ -70,5 +79,16 @@
 		"success": {
 			"imageDataUriCopied": "تم نسخ رابط بيانات الصورة للحافظة"
 		}
+	},
+	"confirmation": {
+		"cancel": "إلغاء",
+		"confirm": "تأكيد",
+		"delete": "حذف",
+		"deleteMessage": "حذف الرسالة",
+		"deleteWarning": "حذف هذه الرسالة سيحذف جميع الرسائل اللاحقة في المحادثة. هل تريد المتابعة؟",
+		"editMessage": "تعديل الرسالة",
+		"editWarning": "تعديل هذه الرسالة سيحذف جميع الرسائل اللاحقة في المحادثة. هل تريد المتابعة؟",
+		"proceed": "متابعة",
+		"title": "تأكيد"
 	}
 }

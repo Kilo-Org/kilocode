@@ -1,5 +1,5 @@
 import { useEffect } from "react"
-import type { Decorator } from "@storybook/react"
+import type { Decorator } from "@storybook/react-vite"
 import i18n from "../../../../webview-ui/src/i18n/setup"
 import { loadTranslations } from "../../../../webview-ui/src/i18n/setup"
 import TranslationProvider from "@/i18n/TranslationContext"

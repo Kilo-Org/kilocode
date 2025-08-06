@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
 import * as path from "path"
 import * as fs from "fs/promises"
+import * as os from "os"
 
 import * as yaml from "yaml"
 import stripBom from "strip-bom"
@@ -401,6 +402,14 @@ export class CustomModesManager {
 
 	public async updateCustomMode(slug: string, config: ModeConfig): Promise<void> {
 		try {
+			// Validate the mode configuration before saving
+			const validationResult = modeConfigSchema.safeParse(config)
+			if (!validationResult.success) {
+				const errors = validationResult.error.errors.map((e) => e.message).join(", ")
+				logger.error(`Invalid mode configuration for ${slug}`, { errors: validationResult.error.errors })
+				throw new Error(`Invalid mode configuration: ${errors}`)
+			}
+
 			const isProjectMode = config.source === "project"
 			let targetPath: string
 
@@ -493,7 +502,7 @@ export class CustomModesManager {
 		await this.onUpdate()
 	}
 
-	public async deleteCustomMode(slug: string): Promise<void> {
+	public async deleteCustomMode(slug: string, fromMarketplace = false): Promise<void> {
 		try {
 			const settingsPath = await this.getCustomModesFilePath()
 			const roomodesPath = await this.getWorkspaceRoomodes()
@@ -509,6 +518,9 @@ export class CustomModesManager {
 				throw new Error(t("common:customModes.errors.modeNotFound"))
 			}
 
+			// Determine which mode to use for rules folder path calculation
+			const modeToDelete = projectMode || globalMode
+
 			await this.queueWrite(async () => {
 				// Delete from project first if it exists there
 				if (projectMode && roomodesPath) {
@@ -520,6 +532,11 @@ export class CustomModesManager {
 					await this.updateModesInFile(settingsPath, (modes) => modes.filter((m) => m.slug !== slug))
 				}
 
+				// Delete associated rules folder
+				if (modeToDelete) {
+					await this.deleteRulesFolder(slug, modeToDelete, fromMarketplace)
+				}
+
 				// Clear cache when modes are deleted
 				this.clearCache()
 				await this.refreshMergedState()
@@ -527,6 +544,54 @@ export class CustomModesManager {
 		} catch (error) {
 			const errorMessage = error instanceof Error ? error.message : String(error)
 			vscode.window.showErrorMessage(t("common:customModes.errors.deleteFailed", { error: errorMessage }))
+		}
+	}
+
+	/**
+	 * Deletes the rules folder for a specific mode
+	 * @param slug - The mode slug
+	 * @param mode - The mode configuration to determine the scope
+	 */
+	private async deleteRulesFolder(slug: string, mode: ModeConfig, fromMarketplace = false): Promise<void> {
+		try {
+			// Determine the scope based on source (project or global)
+			const scope = mode.source || "global"
+
+			// Determine the rules folder path
+			let rulesFolderPath: string
+			if (scope === "project") {
+				const workspacePath = getWorkspacePath()
+				if (workspacePath) {
+					rulesFolderPath = path.join(workspacePath, ".roo", `rules-${slug}`)
+				} else {
+					return // No workspace, can't delete project rules
+				}
+			} else {
+				// Global scope - use OS home directory
+				const homeDir = os.homedir()
+				rulesFolderPath = path.join(homeDir, ".roo", `rules-${slug}`)
+			}
+
+			// Check if the rules folder exists and delete it
+			const rulesFolderExists = await fileExistsAtPath(rulesFolderPath)
+			if (rulesFolderExists) {
+				try {
+					await fs.rm(rulesFolderPath, { recursive: true, force: true })
+					logger.info(`Deleted rules folder for mode ${slug}: ${rulesFolderPath}`)
+				} catch (error) {
+					logger.error(`Failed to delete rules folder for mode ${slug}: ${error}`)
+					// Notify the user about the failure
+					const messageKey = fromMarketplace
+						? "common:marketplace.mode.rulesCleanupFailed"
+						: "common:customModes.errors.rulesCleanupFailed"
+					vscode.window.showWarningMessage(t(messageKey, { rulesFolderPath }))
+					// Continue even if folder deletion fails
+				}
+			}
+		} catch (error) {
+			logger.error(`Error deleting rules folder for mode ${slug}`, {
+				error: error instanceof Error ? error.message : String(error),
+			})
 		}
 	}
 
@@ -550,51 +615,57 @@ export class CustomModesManager {
 	 */
 	public async checkRulesDirectoryHasContent(slug: string): Promise<boolean> {
 		try {
-			// Get workspace path
-			const workspacePath = getWorkspacePath()
-			if (!workspacePath) {
-				return false
-			}
+			// First, find the mode to determine its source
+			const allModes = await this.getCustomModes()
+			const mode = allModes.find((m) => m.slug === slug)
 
-			// Check if .roomodes file exists and contains this mode
-			// This ensures we can only consolidate rules for modes that have been customized
-			const roomodesPath = path.join(workspacePath, ROOMODES_FILENAME)
-			try {
-				const roomodesExists = await fileExistsAtPath(roomodesPath)
-				if (roomodesExists) {
-					const roomodesContent = await fs.readFile(roomodesPath, "utf-8")
-					const roomodesData = yaml.parse(roomodesContent)
-					const roomodesModes = roomodesData?.customModes || []
-
-					// Check if this specific mode exists in .roomodes
-					const modeInRoomodes = roomodesModes.find((m: any) => m.slug === slug)
-					if (!modeInRoomodes) {
-						return false // Mode not customized in .roomodes, cannot consolidate
-					}
-				} else {
-					// If no .roomodes file exists, check if it's in global custom modes
-					const allModes = await this.getCustomModes()
-					const mode = allModes.find((m) => m.slug === slug)
-
-					if (!mode) {
-						return false // Not a custom mode, cannot consolidate
-					}
+			if (!mode) {
+				// If not in custom modes, check if it's in .roomodes (project-specific)
+				const workspacePath = getWorkspacePath()
+				if (!workspacePath) {
+					return false
 				}
-			} catch (error) {
-				// If we can't read .roomodes, fall back to checking custom modes
-				const allModes = await this.getCustomModes()
-				const mode = allModes.find((m) => m.slug === slug)
 
-				if (!mode) {
-					return false // Not a custom mode, cannot consolidate
+				const roomodesPath = path.join(workspacePath, ROOMODES_FILENAME)
+				try {
+					const roomodesExists = await fileExistsAtPath(roomodesPath)
+					if (roomodesExists) {
+						const roomodesContent = await fs.readFile(roomodesPath, "utf-8")
+						const roomodesData = yaml.parse(roomodesContent)
+						const roomodesModes = roomodesData?.customModes || []
+
+						// Check if this specific mode exists in .roomodes
+						const modeInRoomodes = roomodesModes.find((m: any) => m.slug === slug)
+						if (!modeInRoomodes) {
+							return false // Mode not found anywhere
+						}
+					} else {
+						return false // No .roomodes file and not in custom modes
+					}
+				} catch (error) {
+					return false // Cannot read .roomodes and not in custom modes
 				}
 			}
 
-			// Check for .roo/rules-{slug}/ directory
-			const modeRulesDir = path.join(
-				getProjectRooDirectoryForCwd(workspacePath), // kilocode_change
-				`rules-${slug}`,
-			)
+			// Determine the correct rules directory based on mode source
+			let modeRulesDir: string
+			const isGlobalMode = mode?.source === "global"
+
+			if (isGlobalMode) {
+				// For global modes, check in global .roo directory
+				const globalRooDir = getGlobalRooDirectory()
+				modeRulesDir = path.join(globalRooDir, `rules-${slug}`)
+			} else {
+				// For project modes, check in workspace .roo directory
+				const workspacePath = getWorkspacePath()
+				if (!workspacePath) {
+					return false
+				}
+				modeRulesDir = path.join(
+					getProjectRooDirectoryForCwd(workspacePath) /* kilocode_change */,
+					`rules-${slug}`,
+				)
+			}
 
 			try {
 				const stats = await fs.stat(modeRulesDir)
@@ -650,24 +721,23 @@ export class CustomModesManager {
 
 			// If mode not found in custom modes, check if it's a built-in mode that has been customized
 			if (!mode) {
+				// Only check workspace-based modes if workspace is available
 				const workspacePath = getWorkspacePath()
-				if (!workspacePath) {
-					return { success: false, error: "No workspace found" }
-				}
+				if (workspacePath) {
+					const roomodesPath = path.join(workspacePath, ROOMODES_FILENAME)
+					try {
+						const roomodesExists = await fileExistsAtPath(roomodesPath)
+						if (roomodesExists) {
+							const roomodesContent = await fs.readFile(roomodesPath, "utf-8")
+							const roomodesData = yaml.parse(roomodesContent)
+							const roomodesModes = roomodesData?.customModes || []
 
-				const roomodesPath = path.join(workspacePath, ROOMODES_FILENAME)
-				try {
-					const roomodesExists = await fileExistsAtPath(roomodesPath)
-					if (roomodesExists) {
-						const roomodesContent = await fs.readFile(roomodesPath, "utf-8")
-						const roomodesData = yaml.parse(roomodesContent)
-						const roomodesModes = roomodesData?.customModes || []
-
-						// Find the mode in .roomodes
-						mode = roomodesModes.find((m: any) => m.slug === slug)
+							// Find the mode in .roomodes
+							mode = roomodesModes.find((m: any) => m.slug === slug)
+						}
+					} catch (error) {
+						// Continue to check built-in modes
 					}
-				} catch (error) {
-					// Continue to check built-in modes
 				}
 
 				// If still not found, check if it's a built-in mode
@@ -682,17 +752,25 @@ export class CustomModesManager {
 				}
 			}
 
-			// Get workspace path
-			const workspacePath = getWorkspacePath()
-			if (!workspacePath) {
-				return { success: false, error: "No workspace found" }
+			// Determine the base directory based on mode source
+			const isGlobalMode = mode.source === "global"
+			let baseDir: string
+			if (isGlobalMode) {
+				// For global modes, use the global .roo directory
+				baseDir = getGlobalRooDirectory()
+			} else {
+				// For project modes, use the workspace directory
+				const workspacePath = getWorkspacePath()
+				if (!workspacePath) {
+					return { success: false, error: "No workspace found" }
+				}
+				baseDir = workspacePath
 			}
 
-			// Check for .roo/rules-{slug}/ directory
-			const modeRulesDir = path.join(
-				getProjectRooDirectoryForCwd(workspacePath), // kilocode_change
-				`rules-${slug}`,
-			)
+			// Check for .roo/rules-{slug}/ directory (or rules-{slug}/ for global)
+			const modeRulesDir = isGlobalMode
+				? path.join(baseDir, `rules-${slug}`)
+				: path.join(getProjectRooDirectoryForCwd(baseDir) /* kilocode_change */, `rules-${slug}`)
 
 			let rulesFiles: RuleFile[] = []
 			try {
@@ -707,12 +785,12 @@ export class CustomModesManager {
 							const filePath = path.join(modeRulesDir, entry.name)
 							const content = await fs.readFile(filePath, "utf-8")
 							if (content.trim()) {
-								// Calculate relative path from .roo directory
-								const relativePath = path.relative(
-									getProjectRooDirectoryForCwd(workspacePath), // kilocode_change
-									filePath,
-								)
-								rulesFiles.push({ relativePath, content: content.trim() })
+								// Calculate relative path from within the rules directory
+								// This excludes the rules-{slug} folder from the path
+								const relativePath = path.relative(modeRulesDir, filePath)
+								// Normalize path to use forward slashes for cross-platform compatibility
+								const normalizedRelativePath = relativePath.replace(/\\/g, "/")
+								rulesFiles.push({ relativePath: normalizedRelativePath, content: content.trim() })
 							}
 						}
 					}
@@ -753,6 +831,87 @@ export class CustomModesManager {
 			const errorMessage = error instanceof Error ? error.message : String(error)
 			logger.error("Failed to export mode with rules", { slug, error: errorMessage })
 			return { success: false, error: errorMessage }
+		}
+	}
+
+	/**
+	 * Helper method to import rules files for a mode
+	 * @param importMode - The mode being imported
+	 * @param rulesFiles - The rules files to import
+	 * @param source - The import source ("global" or "project")
+	 */
+	private async importRulesFiles(
+		importMode: ExportedModeConfig,
+		rulesFiles: RuleFile[],
+		source: "global" | "project",
+	): Promise<void> {
+		// Determine base directory and rules folder path based on source
+		let baseDir: string
+		let rulesFolderPath: string
+
+		if (source === "global") {
+			baseDir = getGlobalRooDirectory()
+			rulesFolderPath = path.join(baseDir, `rules-${importMode.slug}`)
+		} else {
+			const workspacePath = getWorkspacePath()
+			baseDir = getProjectRooDirectoryForCwd(workspacePath) // kilocode_change
+			rulesFolderPath = path.join(baseDir, `rules-${importMode.slug}`)
+		}
+
+		// Always remove the existing rules folder for this mode if it exists
+		// This ensures that if the imported mode has no rules, the folder is cleaned up
+		try {
+			await fs.rm(rulesFolderPath, { recursive: true, force: true })
+			logger.info(`Removed existing ${source} rules folder for mode ${importMode.slug}`)
+		} catch (error) {
+			// It's okay if the folder doesn't exist
+			logger.debug(`No existing ${source} rules folder to remove for mode ${importMode.slug}`)
+		}
+
+		// Only proceed with file creation if there are rules files to import
+		if (!rulesFiles || !Array.isArray(rulesFiles) || rulesFiles.length === 0) {
+			return
+		}
+
+		// Import the new rules files with path validation
+		for (const ruleFile of rulesFiles) {
+			if (ruleFile.relativePath && ruleFile.content) {
+				// Validate the relative path to prevent path traversal attacks
+				const normalizedRelativePath = path.normalize(ruleFile.relativePath)
+
+				// Ensure the path doesn't contain traversal sequences
+				if (normalizedRelativePath.includes("..") || path.isAbsolute(normalizedRelativePath)) {
+					logger.error(`Invalid file path detected: ${ruleFile.relativePath}`)
+					continue // Skip this file but continue with others
+				}
+
+				// Check if path starts with a rules-* folder (old export format)
+				let cleanedRelativePath = normalizedRelativePath
+				const rulesMatch = normalizedRelativePath.match(/^rules-[^\/\\]+[\/\\]/)
+				if (rulesMatch) {
+					// Strip the entire rules-* folder reference for backwards compatibility
+					cleanedRelativePath = normalizedRelativePath.substring(rulesMatch[0].length)
+					logger.info(`Detected old export format, stripping ${rulesMatch[0]} from path`)
+				}
+
+				// Use the rules folder path instead of base directory
+				const targetPath = path.join(rulesFolderPath, cleanedRelativePath)
+				const normalizedTargetPath = path.normalize(targetPath)
+				const expectedBasePath = path.normalize(rulesFolderPath)
+
+				// Ensure the resolved path stays within the rules folder
+				if (!normalizedTargetPath.startsWith(expectedBasePath)) {
+					logger.error(`Path traversal attempt detected: ${ruleFile.relativePath}`)
+					continue // Skip this file but continue with others
+				}
+
+				// Ensure directory exists
+				const targetDir = path.dirname(targetPath)
+				await fs.mkdir(targetDir, { recursive: true })
+
+				// Write the file
+				await fs.writeFile(targetPath, ruleFile.content, "utf-8")
+			}
 		}
 	}
 
@@ -822,106 +981,8 @@ export class CustomModesManager {
 					source: source, // Use the provided source parameter
 				})
 
-				// Handle project-level imports
-				if (source === "project") {
-					const workspacePath = getWorkspacePath()
-
-					// Always remove the existing rules folder for this mode if it exists
-					// This ensures that if the imported mode has no rules, the folder is cleaned up
-					const rulesFolderPath = path.join(
-						getProjectRooDirectoryForCwd(workspacePath), // kilocode_change
-						`rules-${importMode.slug}`,
-					)
-					try {
-						await fs.rm(rulesFolderPath, { recursive: true, force: true })
-						logger.info(`Removed existing rules folder for mode ${importMode.slug}`)
-					} catch (error) {
-						// It's okay if the folder doesn't exist
-						logger.debug(`No existing rules folder to remove for mode ${importMode.slug}`)
-					}
-
-					// Only create new rules files if they exist in the import
-					if (rulesFiles && Array.isArray(rulesFiles) && rulesFiles.length > 0) {
-						// Import the new rules files with path validation
-						for (const ruleFile of rulesFiles) {
-							if (ruleFile.relativePath && ruleFile.content) {
-								// Validate the relative path to prevent path traversal attacks
-								const normalizedRelativePath = path.normalize(ruleFile.relativePath)
-
-								// Ensure the path doesn't contain traversal sequences
-								if (normalizedRelativePath.includes("..") || path.isAbsolute(normalizedRelativePath)) {
-									logger.error(`Invalid file path detected: ${ruleFile.relativePath}`)
-									continue // Skip this file but continue with others
-								}
-
-								const targetPath = path.join(
-									getProjectRooDirectoryForCwd(workspacePath), // kilocode_change
-									normalizedRelativePath,
-								)
-								const normalizedTargetPath = path.normalize(targetPath)
-								const expectedBasePath = path.normalize(getProjectRooDirectoryForCwd(workspacePath)) // kilocode_change
-
-								// Ensure the resolved path stays within the .roo directory
-								if (!normalizedTargetPath.startsWith(expectedBasePath)) {
-									logger.error(`Path traversal attempt detected: ${ruleFile.relativePath}`)
-									continue // Skip this file but continue with others
-								}
-
-								// Ensure directory exists
-								const targetDir = path.dirname(targetPath)
-								await fs.mkdir(targetDir, { recursive: true })
-
-								// Write the file
-								await fs.writeFile(targetPath, ruleFile.content, "utf-8")
-							}
-						}
-					}
-				} else if (source === "global" && rulesFiles && Array.isArray(rulesFiles)) {
-					// For global imports, preserve the rules files structure in the global .roo directory
-					const globalRooDir = getGlobalRooDirectory()
-
-					// Always remove the existing rules folder for this mode if it exists
-					// This ensures that if the imported mode has no rules, the folder is cleaned up
-					const rulesFolderPath = path.join(globalRooDir, `rules-${importMode.slug}`)
-					try {
-						await fs.rm(rulesFolderPath, { recursive: true, force: true })
-						logger.info(`Removed existing global rules folder for mode ${importMode.slug}`)
-					} catch (error) {
-						// It's okay if the folder doesn't exist
-						logger.debug(`No existing global rules folder to remove for mode ${importMode.slug}`)
-					}
-
-					// Import the new rules files with path validation
-					for (const ruleFile of rulesFiles) {
-						if (ruleFile.relativePath && ruleFile.content) {
-							// Validate the relative path to prevent path traversal attacks
-							const normalizedRelativePath = path.normalize(ruleFile.relativePath)
-
-							// Ensure the path doesn't contain traversal sequences
-							if (normalizedRelativePath.includes("..") || path.isAbsolute(normalizedRelativePath)) {
-								logger.error(`Invalid file path detected: ${ruleFile.relativePath}`)
-								continue // Skip this file but continue with others
-							}
-
-							const targetPath = path.join(globalRooDir, normalizedRelativePath)
-							const normalizedTargetPath = path.normalize(targetPath)
-							const expectedBasePath = path.normalize(globalRooDir)
-
-							// Ensure the resolved path stays within the global .roo directory
-							if (!normalizedTargetPath.startsWith(expectedBasePath)) {
-								logger.error(`Path traversal attempt detected: ${ruleFile.relativePath}`)
-								continue // Skip this file but continue with others
-							}
-
-							// Ensure directory exists
-							const targetDir = path.dirname(targetPath)
-							await fs.mkdir(targetDir, { recursive: true })
-
-							// Write the file
-							await fs.writeFile(targetPath, ruleFile.content, "utf-8")
-						}
-					}
-				}
+				// Import rules files (this also handles cleanup of existing rules folders)
+				await this.importRulesFiles(importMode, rulesFiles || [], source)
 			}
 
 			// Refresh the modes after import

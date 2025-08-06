@@ -41,13 +41,16 @@
 		"title": "코드베이스 인덱싱",
 		"enableLabel": "코드베이스 인덱싱 활성화",
 		"enableDescription": "향상된 검색 및 컨텍스트 이해를 위해 코드 인덱싱 활성화",
-		"providerLabel": "임베딩 제공자",
-		"selectProviderPlaceholder": "제공자 선택",
+		"profileLabel": "임베딩 제공자",
+		"selectProfilePlaceholder": "제공자 선택",
 		"openaiProvider": "OpenAI",
 		"ollamaProvider": "Ollama",
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "API 키:",
 		"geminiApiKeyPlaceholder": "Gemini API 키를 입력하세요",
+		"mistralProvider": "Mistral",
+		"mistralApiKeyLabel": "API 키:",
+		"mistralApiKeyPlaceholder": "Mistral API 키를 입력하세요",
 		"openaiCompatibleProvider": "OpenAI 호환",
 		"openAiKeyLabel": "OpenAI API 키",
 		"openAiKeyPlaceholder": "OpenAI API 키를 입력하세요",
@@ -110,6 +113,7 @@
 			"modelIdRequired": "모델 ID가 필요합니다",
 			"modelDimensionRequired": "모델 차원이 필요합니다",
 			"geminiApiKeyRequired": "Gemini API 키가 필요합니다",
+			"mistralApiKeyRequired": "Mistral API 키가 필요합니다",
 			"ollamaBaseUrlRequired": "Ollama 기본 URL이 필요합니다",
 			"baseUrlRequired": "기본 URL이 필요합니다",
 			"modelDimensionMinValue": "모델 차원은 0보다 커야 합니다"
@@ -124,6 +128,8 @@
 	},
 	"autoApprove": {
 		"description": "Kilo Code가 승인 없이 자동으로 작업을 수행할 수 있도록 허용합니다. AI를 완전히 신뢰하고 관련 보안 위험을 이해하는 경우에만 이러한 설정을 활성화하세요.",
+		"toggleAriaLabel": "자동 승인 전환",
+		"disabledAriaLabel": "자동 승인 비활성화됨 - 먼저 옵션을 선택하세요",
 		"readOnly": {
 			"label": "읽기",
 			"description": "활성화되면 Kilo Code는 승인 버튼을 클릭하지 않고도 자동으로 디렉토리 내용을 보고 파일을 읽습니다.",
@@ -176,8 +182,12 @@
 			"description": "승인 없이 자동으로 허용된 터미널 명령 실행",
 			"allowedCommands": "허용된 자동 실행 명령",
 			"allowedCommandsDescription": "\"실행 작업 항상 승인\"이 활성화되었을 때 자동 실행될 수 있는 명령 접두사. 모든 명령을 허용하려면 * 추가(주의해서 사용)",
+			"deniedCommands": "거부된 명령",
+			"deniedCommandsDescription": "승인을 요청하지 않고 자동으로 거부될 명령 접두사. 허용된 명령과 충돌하는 경우 가장 긴 접두사 일치가 우선됩니다. 모든 명령을 거부하려면 * 추가",
 			"commandPlaceholder": "명령 접두사 입력(예: 'git ')",
-			"addButton": "추가"
+			"deniedCommandPlaceholder": "거부할 명령 접두사 입력(예: 'rm -rf')",
+			"addButton": "추가",
+			"autoDenied": "접두사 `{{prefix}}`를 가진 명령어는 사용자에 의해 금지되었습니다. 다른 명령어를 실행하여 이 제한을 우회하지 마세요."
 		},
 		"showMenu": {
 			"label": "채팅 뷰에 자동 승인 메뉴 표시",
@@ -191,7 +201,8 @@
 			"title": "최대 요청 수",
 			"description": "작업을 계속하기 위한 승인을 요청하기 전에 자동으로 이 수의 API 요청을 수행합니다.",
 			"unlimited": "무제한"
-		}
+		},
+		"selectOptionsFirst": "자동 승인을 활성화하려면 아래에서 하나 이상의 옵션을 선택하세요"
 	},
 	"providers": {
 		"providerDocumentation": "{{provider}} 문서",
@@ -247,10 +258,36 @@
 		"getChutesApiKey": "Chutes API 키 받기",
 		"deepSeekApiKey": "DeepSeek API 키",
 		"getDeepSeekApiKey": "DeepSeek API 키 받기",
+		"doubaoApiKey": "Doubao API 키",
+		"getDoubaoApiKey": "Doubao API 키 받기",
+		"fireworksApiKey": "Fireworks API 키",
+		"getFireworksApiKey": "Fireworks API 키 받기",
+		"zaiApiKey": "Z.AI API 키",
+		"getZaiApiKey": "Z.AI API 키 받기",
+		"bigModelApiKey": "BigModel API 키",
+		"getBigModelApiKey": "BigModel API 키 받기",
+		"moonshotApiKey": "Moonshot API 키",
+		"getMoonshotApiKey": "Moonshot API 키 받기",
+		"moonshotBaseUrl": "Moonshot 엔트리포인트",
 		"geminiApiKey": "Gemini API 키",
 		"getGroqApiKey": "Groq API 키 받기",
 		"groqApiKey": "Groq API 키",
+		"getSambaNovaApiKey": "SambaNova API 키 받기",
+		"sambaNovaApiKey": "SambaNova API 키",
 		"getGeminiApiKey": "Gemini API 키 받기",
+		"getHuggingFaceApiKey": "Hugging Face API 키 받기",
+		"huggingFaceApiKey": "Hugging Face API 키",
+		"huggingFaceModelId": "모델 ID",
+		"huggingFaceLoading": "로딩 중...",
+		"huggingFaceModelsCount": "({{count}}개 모델)",
+		"huggingFaceSelectModel": "모델 선택...",
+		"huggingFaceSearchModels": "모델 검색...",
+		"huggingFaceNoModelsFound": "모델을 찾을 수 없음",
+		"huggingFaceProvider": "제공자",
+		"huggingFaceProviderAuto": "자동",
+		"huggingFaceSelectProvider": "제공자 선택...",
+		"huggingFaceSearchProviders": "제공자 검색...",
+		"huggingFaceNoProvidersFound": "제공자를 찾을 수 없음",
 		"apiKey": "API 키",
 		"openAiApiKey": "OpenAI API 키",
 		"openAiBaseUrl": "기본 URL",
@@ -265,6 +302,7 @@
 		"litellmBaseUrl": "LiteLLM 기본 URL",
 		"awsCredentials": "AWS 자격 증명",
 		"awsProfile": "AWS 프로필",
+		"awsApiKey": "Amazon Bedrock API 키",
 		"awsProfileName": "AWS 프로필 이름",
 		"awsAccessKey": "AWS 액세스 키",
 		"awsSecretKey": "AWS 시크릿 키",
@@ -281,6 +319,17 @@
 		"cacheUsageNote": "참고: 캐시 사용이 표시되지 않는 경우, 다른 모델을 선택한 다음 원하는 모델을 다시 선택해 보세요.",
 		"vscodeLmModel": "언어 모델",
 		"vscodeLmWarning": "참고: 이는 매우 실험적인 통합이며, 공급자 지원은 다를 수 있습니다. 모델이 지원되지 않는다는 오류가 발생하면, 이는 공급자 측의 문제입니다.",
+		"geminiParameters": {
+			"urlContext": {
+				"title": "URL 컨텍스트 활성화",
+				"description": "응답을 생성할 때 추가 컨텍스트를 위해 Gemini가 URL에 액세스하고 처리할 수 있도록 합니다. 웹 콘텐츠 분석이 필요한 작업에 유용합니다."
+			},
+			"groundingSearch": {
+				"title": "Google 검색과 함께 근거 지정 활성화",
+				"description": "Gemini가 최신 정보를 얻기 위해 Google을 검색하고 응답을 실시간 데이터에 근거하도록 합니다. 최신 정보가 필요한 쿼리에 유용합니다."
+			}
+		},
+
 		"googleCloudSetup": {
 			"title": "Google Cloud Vertex AI를 사용하려면:",
 			"step1": "1. Google Cloud 계정을 만들고, Vertex AI API를 활성화하고, 원하는 Claude 모델을 활성화하세요.",
@@ -372,6 +421,12 @@
 			"label": "속도 제한",
 			"description": "API 요청 간 최소 시간."
 		},
+		"consecutiveMistakeLimit": {
+			"label": "오류 및 반복 제한",
+			"description": "'Kilo Code에 문제가 발생했습니다' 대화 상자를 표시하기 전의 연속 오류 또는 반복 작업 수",
+			"unlimitedDescription": "무제한 재시도 활성화 (자동 진행). 대화 상자가 나타나지 않습니다.",
+			"warning": "⚠️ 0으로 설정하면 무제한 재시도가 허용되어 상당한 API 사용량이 발생할 수 있습니다"
+		},
 		"reasoningEffort": {
 			"label": "모델 추론 노력",
 			"high": "높음",
@@ -382,7 +437,9 @@
 		"claudeCode": {
 			"pathLabel": "클로드 코드 경로",
 			"description": "Claude Code CLI의 선택적 경로입니다. 설정하지 않으면 'claude'가 기본값입니다.",
-			"placeholder": "기본값: claude"
+			"placeholder": "기본값: claude",
+			"maxTokensLabel": "최대 출력 토큰",
+			"maxTokensDescription": "Claude Code 응답의 최대 출력 토큰 수. 기본값은 8000입니다."
 		},
 		"geminiCli": {
 			"description": "이 공급자는 Gemini CLI 도구의 OAuth 인증을 사용하며 API 키가 필요하지 않습니다.",
@@ -490,6 +547,23 @@
 			"label": "동시 파일 읽기 제한",
 			"description": "read_file 도구가 동시에 처리할 수 있는 최대 파일 수입니다. 높은 값은 여러 작은 파일을 읽는 속도를 높일 수 있지만 메모리 사용량이 증가합니다."
 		},
+		"diagnostics": {
+			"includeMessages": {
+				"label": "진단을 자동으로 컨텍스트에 포함",
+				"description": "활성화되면 편집된 파일의 진단 메시지(오류)가 자동으로 컨텍스트에 포함됩니다. @problems를 사용하여 언제든지 모든 워크스페이스 진단을 수동으로 포함할 수 있습니다."
+			},
+			"maxMessages": {
+				"label": "최대 진단 메시지",
+				"description": "파일당 포함할 최대 진단 메시지 수입니다. 이 제한은 자동 포함(체크박스가 활성화된 경우)과 수동 @problems 언급 모두에 적용됩니다. 값이 높을수록 더 많은 컨텍스트를 제공하지만 토큰 사용량이 증가합니다.",
+				"resetTooltip": "기본값(50)으로 재설정",
+				"unlimited": "무제한 진단 메시지",
+				"unlimitedLabel": "무제한"
+			},
+			"delayAfterWrite": {
+				"label": "진단이 잠재적인 문제를 감지할 수 있도록 쓰기 후 지연",
+				"description": "파일 쓰기 후 계속 진행하기 전에 대기하는 시간으로, 진단 도구가 변경 사항을 처리하고 문제를 감지할 수 있도록 합니다."
+			}
+		},
 		"condensingThreshold": {
 			"label": "압축 트리거 임계값",
 			"selectProfile": "프로필 임계값 구성",
@@ -498,6 +572,16 @@
 			"profileDescription": "이 프로필만을 위한 사용자 정의 임계값 (글로벌 기본값 재정의)",
 			"inheritDescription": "이 프로필은 글로벌 기본 임계값을 상속합니다 ({{threshold}}%)",
 			"usesGlobal": "(글로벌 {{threshold}}% 사용)"
+		},
+		"maxImageFileSize": {
+			"label": "최대 이미지 파일 크기",
+			"mb": "MB",
+			"description": "read file 도구로 처리할 수 있는 이미지 파일의 최대 크기(MB 단위)입니다."
+		},
+		"maxTotalImageSize": {
+			"label": "최대 총 이미지 크기",
+			"mb": "MB",
+			"description": "단일 read_file 작업에서 처리되는 모든 이미지의 최대 누적 크기 제한(MB 단위)입니다. 여러 이미지를 읽을 때 각 이미지의 크기가 총계에 추가됩니다. 다른 이미지를 포함하면 이 제한을 초과하는 경우 해당 이미지는 건너뜁니다."
 		}
 	},
 	"terminal": {
@@ -512,6 +596,10 @@
 		"outputLineLimit": {
 			"label": "터미널 출력 제한",
 			"description": "명령 실행 시 터미널 출력에 포함할 최대 라인 수. 초과 시 중간에서 라인이 제거되어 token이 절약됩니다. <0>더 알아보기</0>"
+		},
+		"outputCharacterLimit": {
+			"label": "터미널 문자 제한",
+			"description": "명령을 실행할 때 터미널 출력에 포함할 최대 문자 수입니다. 이 제한은 매우 긴 줄로 인한 메모리 문제를 방지하기 위해 줄 제한보다 우선합니다. 초과하면 출력이 잘립니다. <0>더 알아보기</0>"
 		},
 		"shellIntegrationTimeout": {
 			"label": "터미널 쉘 통합 타임아웃",
@@ -554,6 +642,9 @@
 			"description": "활성화하면 터미널이 VSCode 부모 프로세스로부터 환경 변수를 상속받습니다. 사용자 프로필에 정의된 셸 통합 설정 등이 포함됩니다. 이는 VSCode 전역 설정 `terminal.integrated.inheritEnv`를 직접 전환합니다. <0>더 알아보기</0>"
 		}
 	},
+	"advancedSettings": {
+		"title": "고급 설정"
+	},
 	"advanced": {
 		"diff": {
 			"label": "diff를 통한 편집 활성화",
@@ -575,6 +666,10 @@
 				"label": "일치 정확도",
 				"description": "이 슬라이더는 diff를 적용할 때 코드 섹션이 얼마나 정확하게 일치해야 하는지 제어합니다. 낮은 값은 더 유연한 일치를 허용하지만 잘못된 교체 위험이 증가합니다. 100% 미만의 값은 극도로 주의해서 사용하세요."
 			}
+		},
+		"todoList": {
+			"label": "할 일 목록 도구 활성화",
+			"description": "활성화하면 Kilo Code가 작업 진행 상황을 추적하기 위한 할 일 목록을 만들고 관리할 수 있습니다. 이는 복잡한 작업을 관리 가능한 단계로 구성하는 데 도움이 됩니다."
 		}
 	},
 	"experimental": {
@@ -594,10 +689,6 @@
 			"name": "실험적 \"파워 스티어링\" 모드 사용",
 			"description": "활성화하면 Kilo Code가 현재 모드 정의의 세부 정보를 모델에 더 자주 상기시킵니다. 이로 인해 역할 정의 및 사용자 지정 지침에 대한 준수가 강화되지만 메시지당 더 많은 token이 사용됩니다."
 		},
-		"AUTOCOMPLETE": {
-			"name": "실험적인 \"자동 완성\" 기능 사용",
-			"description": "활성화하면 입력할 때 Kilo Code가 인라인 코드 제안을 제공합니다."
-		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "실험적 다중 블록 diff 도구 사용",
 			"description": "활성화하면 Kilo Code가 다중 블록 diff 도구를 사용합니다. 이것은 하나의 요청에서 파일의 여러 코드 블록을 업데이트하려고 시도합니다."
@@ -613,6 +704,21 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "동시 파일 편집 활성화",
 			"description": "활성화하면 Kilo Code가 단일 요청으로 여러 파일을 편집할 수 있습니다. 비활성화하면 Kilo Code는 파일을 하나씩 편집해야 합니다. 이 기능을 비활성화하면 덜 강력한 모델로 작업하거나 파일 수정에 대한 더 많은 제어가 필요할 때 도움이 됩니다."
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "Morph Fast Apply 활성화",
+			"description": "활성화하면 Kilo Code가 Morph Fast Apply를 사용하여 파일을 편집할 수 있습니다.",
+			"apiKey": "Morph API 키 (선택사항)",
+			"placeholder": "Morph API 키를 입력하세요 (선택사항)",
+			"warning": "Morph API 키를 구성하지 않으면 Kilo Code 또는 OpenRouter로 Fast Apply를 계속 사용할 수 있습니다. 계정에 모델 사용량에 대한 요금이 청구되며, 이는 현재 확장 프로그램 UI에 표시되지 않습니다."
+		},
+		"INLINE_ASSIST": {
+			"name": "인라인 어시스트",
+			"description": "에디터에서 직접 빠른 코드 제안 및 개선을 위해 인라인 어시스트 기능을 활성화하세요. 대상 변경을 위한 빠른 인라인 태스크(Cmd+I)와 상황에 맞는 개선을 위한 자동 인라인 태스크가 포함되어 있습니다."
+		},
+		"PREVENT_FOCUS_DISRUPTION": {
+			"name": "백그라운드 편집",
+			"description": "활성화하면 편집기 포커스 방해를 방지합니다. 파일 편집이 diff 뷰를 열거나 포커스를 빼앗지 않고 백그라운드에서 수행됩니다. Roo가 변경사항을 적용하는 동안 방해받지 않고 계속 작업할 수 있습니다. 파일은 진단을 캡처하기 위해 포커스 없이 열거나 완전히 닫힌 상태로 유지할 수 있습니다."
 		}
 	},
 	"promptCaching": {
@@ -648,7 +754,7 @@
 		}
 	},
 	"modelPicker": {
-		"automaticFetch": "확장 프로그램은 <serviceLink>{{serviceName}}</serviceLink>에서 사용 가능한 최신 모델 목록을 자동으로 가져옵니다. 어떤 모델을 선택해야 할지 확실하지 않다면, Kilo Code는 <defaultModelLink>{{defaultModelId}}</defaultModelLink>로 가장 잘 작동합니다. 현재 사용 가능한 무료 옵션을 찾으려면 \"free\"를 검색해 볼 수도 있습니다.",
+		"automaticFetch": "확장 프로그램은 <serviceLink>{{serviceName}}</serviceLink>에서 사용 가능한 최신 모델 목록을 자동으로 가져옵니다. 어떤 모델을 선택해야 할지 확실하지 않다면, Kilo Code는 <defaultModelLink>{{defaultModelId}}</defaultModelLink>로 가장 잘 작동합니다.",
 		"label": "모델",
 		"searchPlaceholder": "검색",
 		"noMatchFound": "일치하는 항목 없음",
@@ -727,5 +833,8 @@
 		}
 	},
 	"includeMaxOutputTokens": "최대 출력 토큰 포함",
-	"includeMaxOutputTokensDescription": "API 요청에서 최대 출력 토큰 매개변수를 전송합니다. 일부 제공업체는 이를 지원하지 않을 수 있습니다."
+	"includeMaxOutputTokensDescription": "API 요청에서 최대 출력 토큰 매개변수를 전송합니다. 일부 제공업체는 이를 지원하지 않을 수 있습니다.",
+	"limitMaxTokensDescription": "응답에서 최대 토큰 수 제한",
+	"maxOutputTokensLabel": "최대 출력 토큰",
+	"maxTokensGenerateDescription": "응답에서 생성할 최대 토큰 수"
 }

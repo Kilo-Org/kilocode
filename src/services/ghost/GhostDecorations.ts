@@ -4,10 +4,12 @@ import { GhostSuggestionsState } from "./GhostSuggestions"
 const ADDITION_DECORATION_OPTIONS: vscode.DecorationRenderOptions = {
 	after: {
 		margin: "0 0 0 0.1em",
-		color: new vscode.ThemeColor("editorInlayHint.foreground"),
+		color: new vscode.ThemeColor("editor.background"),
+		backgroundColor: new vscode.ThemeColor("editorGutter.addedBackground"),
 	},
+	opacity: "0.8",
 	isWholeLine: false,
-	overviewRulerColor: new vscode.ThemeColor("diffEditor.insertedTextBackground"),
+	overviewRulerColor: new vscode.ThemeColor("editorGutter.addedBackground"),
 	overviewRulerLane: vscode.OverviewRulerLane.Right,
 }
 
@@ -15,26 +17,26 @@ const ADDITION_ACTIVE_DECORATION_OPTIONS: vscode.DecorationRenderOptions = {
 	...ADDITION_DECORATION_OPTIONS,
 	after: {
 		...ADDITION_DECORATION_OPTIONS.after,
-		borderColor: new vscode.ThemeColor("editorInlayHint.foreground"),
-		border: "2px solid",
+		borderColor: new vscode.ThemeColor("editorGutter.addedSecondaryBackground"),
+		border: "1px solid",
 		fontWeight: "bold",
 	},
 }
 
 const DELETION_DECORATION_OPTIONS: vscode.DecorationRenderOptions = {
 	isWholeLine: false,
-	textDecoration: "line-through",
-	color: new vscode.ThemeColor("editorInlayHint.foreground"),
+	color: new vscode.ThemeColor("editor.background"),
+	backgroundColor: new vscode.ThemeColor("editorGutter.deletedBackground"),
 	opacity: "0.8",
-	overviewRulerColor: new vscode.ThemeColor("diffEditor.removedTextBackground"),
+	overviewRulerColor: new vscode.ThemeColor("editorGutter.deletedBackground"),
 	overviewRulerLane: vscode.OverviewRulerLane.Right,
 }
 
 const DELETION_ACTIVE_DECORATION_OPTIONS: vscode.DecorationRenderOptions = {
 	...DELETION_DECORATION_OPTIONS,
-	borderColor: new vscode.ThemeColor("editorInlayHint.foreground"),
+	borderColor: new vscode.ThemeColor("editorGutter.deletedSecondaryBackground"),
 	borderStyle: "solid",
-	borderWidth: "2px",
+	borderWidth: "1px",
 	fontWeight: "bold",
 }
 

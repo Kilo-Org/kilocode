@@ -1,38 +1,38 @@
 {
 	"info": {
-		"settings_imported": "設定匯入成功。"
+		"settings_imported": "設定已成功匯入。"
 	},
 	"userFeedback": {
 		"message_update_failed": "更新訊息失敗",
-		"no_checkpoint_found": "在此訊息之前未找到檢查點",
+		"no_checkpoint_found": "在此訊息之前找不到檢查點",
 		"message_updated": "訊息已成功更新"
 	},
 	"lowCreditWarning": {
-		"title": "餘額不足警告！",
-		"message": "請檢查是否可以充值免費額度或購買更多額度！"
+		"title": "警告：信用額度低！",
+		"message": "檢查您是否可以透過免費信用額度儲值或購買更多額度！"
 	},
-	"notLoggedInError": "無法完成請求，請確保你已連接並登入所選的提供者。\n\n{{error}}",
+	"notLoggedInError": "無法完成請求，請確保您已連線並使用所選供應商登入。\n\n{{error}}",
 	"rules": {
 		"actions": {
 			"delete": "刪除",
-			"confirmDelete": "確定要刪除 {{filename}} 嗎？",
-			"deleted": "已刪除 {{filename}}"
+			"confirmDelete": "您確定要刪除 {{filename}} 嗎？",
+			"deleted": "{{filename}} 已刪除"
 		},
 		"errors": {
-			"noWorkspaceFound": "未找到工作區資料夾",
+			"noWorkspaceFound": "找不到工作區資料夾",
 			"fileAlreadyExists": "檔案 {{filename}} 已存在",
 			"failedToCreateRuleFile": "建立規則檔案失敗。",
 			"failedToDeleteRuleFile": "刪除規則檔案失敗。"
 		},
 		"templates": {
 			"workflow": {
-				"description": "工作流程描述在此...",
+				"description": "工作流程說明在此...",
 				"stepsHeader": "## 步驟",
 				"step1": "步驟 1",
 				"step2": "步驟 2"
 			},
 			"rule": {
-				"description": "規則描述在此...",
+				"description": "規則說明在此...",
 				"guidelinesHeader": "## 指導原則",
 				"guideline1": "指導原則 1",
 				"guideline2": "指導原則 2"
@@ -40,68 +40,86 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Kilo: 代码提交消息生成器已激活",
-		"gitNotFound": "⚠️ Git 仓库未找到或 git 不可用",
-		"gitInitError": "⚠️ Git 初始化错误：{{error}}",
-		"generating": "Kilo: 正在生成提交信息...",
-		"noChanges": "Kilo: 未发现可供分析的变更",
-		"generated": "Kilo：提交信息已生成！",
-		"generationFailed": "Kilo：无法生成提交信息：{{errorMessage}}",
-		"generatingFromUnstaged": "Kilo: 使用未暂存的更改生成消息",
-		"activationFailed": "千欧（Kilo）：未能激活消息生成器：{{error}}",
-		"providerRegistered": "Kilo：提交消息提供者已注册"
-	},
-	"autocomplete": {
-		"statusBar": {
-			"disabled": "$(circle-slash) Kilo自动补全",
-			"enabled": "$(sparkle) Kilo自动补全",
-			"tooltip": {
-				"basic": "Kilo自动补全",
-				"lastCompletion": "上次完成：",
-				"disabled": "Kilo自动补全（已禁用）",
-				"sessionTotal": "会话总费用:",
-				"tokenError": "必须设置有效令牌才能使用自动完成功能",
-				"model": "模型："
-			},
-			"warning": "$(warning) Kilo自动补全",
-			"cost": {
-				"lessThanCent": "<$0.01",
-				"zero": "¥0.00"
-			}
-		},
-		"toggleMessage": "Kilo自动补全 {{status}}"
+		"activated": "Kilo Code Commit 訊息產生器已啟用",
+		"gitNotFound": "⚠️找不到 Git 儲存庫或 Git 不可用",
+		"gitInitError": "⚠️ Git 初始化錯誤：{{error}}",
+		"generating": "Kilo：正在產生 Commit 訊息...",
+		"noChanges": "Kilo：找不到可供分析的變更",
+		"generated": "Kilo：Commit 訊息已產生！",
+		"generationFailed": "Kilo：產生 Commit 訊息失敗：{{errorMessage}}",
+		"generatingFromUnstaged": "Kilo：使用未暫存的變更產生訊息",
+		"activationFailed": "Kilo：啟用訊息產生器失敗：{{error}}",
+		"providerRegistered": "Kilo：Commit 訊息提供者已註冊"
 	},
 	"ghost": {
+		"statusBar": {
+			"enabled": "$(sparkle) Kilo 行內輔助",
+			"disabled": "$(circle-slash) Kilo 行內輔助",
+			"warning": "$(warning) Kilo 行內輔助",
+			"tooltip": {
+				"basic": "Kilo Code 行內輔助",
+				"disabled": "Kilo Code 行內輔助 (已停用)",
+				"tokenError": "必須設定有效的令牌才能使用行內輔助",
+				"lastCompletion": "最後建議：",
+				"sessionTotal": "工作階段總費用：",
+				"model": "模型："
+			},
+			"cost": {
+				"zero": "$0.00",
+				"lessThanCent": "<$0.01"
+			}
+		},
+		"toggleMessage": "Kilo 行內輔助 {{status}}",
 		"progress": {
-			"generating": "正在生成建议的编辑...",
-			"analyzing": "正在分析您的代码...",
-			"showing": "显示建议的编辑...",
-			"processing": "处理建议的编辑...",
-			"title": "千克码"
+			"title": "Kilo Code",
+			"analyzing": "正在分析您的程式碼...",
+			"generating": "正在產生建議的編輯...",
+			"processing": "正在處理建議的編輯...",
+			"showing": "正在顯示建議的編輯..."
 		},
 		"input": {
-			"title": "Kilo Code：快速任务",
-			"placeholder": "例如，\"重构这个函数使其更高效\""
+			"title": "Kilo Code：快速任務",
+			"placeholder": "例如：'重構此函數以提高效率'"
 		},
 		"commands": {
-			"applyCurrentSuggestion": "应用当前建议的编辑",
-			"generateSuggestions": "Kilo Code: 生成建议的修改",
-			"cancelSuggestions": "取消建议的编辑",
-			"displaySuggestions": "显示建议的编辑",
-			"category": "千字代码",
-			"promptCodeSuggestion": "快速任务提示",
-			"applyAllSuggestions": "应用所有建议的编辑"
+			"generateSuggestions": "Kilo Code：產生建議的編輯",
+			"displaySuggestions": "顯示建議的編輯",
+			"cancelSuggestions": "取消建議的編輯",
+			"applyCurrentSuggestion": "套用目前的建議編輯",
+			"applyAllSuggestions": "套用所有建議的編輯",
+			"promptCodeSuggestion": "快速任務",
+			"category": "Kilo Code"
 		},
 		"codeAction": {
-			"title": "千码：建议的编辑"
+			"title": "Kilo Code：建議的編輯"
 		},
 		"chatParticipant": {
-			"name": "代理",
-			"fullName": "千个代码助理",
-			"description": "我可以帮你处理快速任务和提供建议的编辑。"
+			"fullName": "Kilo Code Agent",
+			"name": "Agent",
+			"description": "我可以幫助您處理快速任務和建議的編輯。"
 		},
 		"messages": {
-			"provideCodeSuggestions": "正在提供代码建议..."
+			"provideCodeSuggestions": "正在提供程式碼建議..."
+		},
+		"incompatibilityExtensionPopup": {
+			"message": "Kilo Code 行內輔助被 GitHub Copilot 的衝突所阻擋。為了解決此問題，您必須停用 Copilot 的內嵌建議。",
+			"disableCopilot": "停用 Copilot",
+			"disableInlineAssist": "停用行內輔助"
+		}
+	},
+	"terminalCommandGenerator": {
+		"tipMessage": "Kilo：按下 {{shortcut}} 產生終端機指令",
+		"noActiveTerminal": "Kilo: 找不到活動的終端機。請先開啟一個終端機",
+		"inputPrompt": "Kilo：描述您想要產生的指令",
+		"inputPlaceholder": "例如，結束在連接埠 3001 上執行的行程，尋找大檔案等",
+		"generatingProgress": "Kilo：正在產生終端機指令...",
+		"commandGenerated": "Kilo：產生的指令：{{command}}",
+		"generationFailed": "Kilo：指令產生失敗：{{error}}",
+		"warningDialog": {
+			"title": "終端機安全警告",
+			"okButton": "我明白",
+			"message": "執行前請仔細檢查所有產生的指令。終端機操作並非都可撤銷－執行未經驗證的指令可能導致不可逆的資料遺失或系統損壞。在繼續操作前，請完整審核並瞭解指令內容！",
+			"cancelButton": "取消"
 		}
 	}
 }

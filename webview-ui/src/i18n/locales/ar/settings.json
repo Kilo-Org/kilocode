@@ -45,14 +45,17 @@
 		"enableDescription": "تفعيل فهرسة الكود لتحسين البحث وفهم السياق",
 		"settingsTitle": "إعدادات الفهرسة",
 		"disabledMessage": "فهرسة الكود معطلة حاليًا. فعّلها في الإعدادات العامة لضبط خيارات الفهرسة.",
-		"providerLabel": "موفّر التضمين",
+		"profileLabel": "موفّر التضمين",
 		"embedderProviderLabel": "موفّر التضمين",
-		"selectProviderPlaceholder": "اختر المزوّد",
+		"selectProfilePlaceholder": "اختر المزوّد",
 		"openaiProvider": "OpenAI",
 		"ollamaProvider": "Ollama",
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "مفتاح API:",
 		"geminiApiKeyPlaceholder": "أدخل مفتاح Gemini API",
+		"mistralProvider": "Mistral",
+		"mistralApiKeyLabel": "مفتاح API:",
+		"mistralApiKeyPlaceholder": "أدخل مفتاح Mistral API",
 		"openaiCompatibleProvider": "متوافق مع OpenAI",
 		"openAiKeyLabel": "مفتاح OpenAI API",
 		"openAiKeyPlaceholder": "أدخل مفتاح OpenAI API",
@@ -117,10 +120,15 @@
 			"modelIdRequired": "معرّف النموذج مطلوب",
 			"modelDimensionRequired": "بُعد النموذج مطلوب",
 			"geminiApiKeyRequired": "مفتاح Gemini API مطلوب",
+			"mistralApiKeyRequired": "مفتاح Mistral API مطلوب",
 			"ollamaBaseUrlRequired": "رابط Ollama الأساسي مطلوب",
 			"baseUrlRequired": "الرابط الأساسي مطلوب",
 			"modelDimensionMinValue": "بُعد النموذج يجب أن يكون أكبر من 0"
 		}
+	},
+	"autoApproval": {
+		"title": "الموافقة التلقائية",
+		"description": "السماح لـ Kilo Code بتنفيذ العمليات تلقائيًا بدون طلب الموافقة. فعّل هذه الإعدادات فقط إذا كنت تثق بالذكاء الاصطناعي تمامًا وتفهم المخاطر الأمنية المرتبطة."
 	},
 	"autoApprove": {
 		"description": "خلّ Kilo Code ينفذ العمليات تلقائيًا بدون موافقة. فعّلها فقط إذا كنت واثق من الأمان.",
@@ -176,12 +184,16 @@
 			"description": "تنفيذ أوامر الطرفية المسموحة تلقائيًا",
 			"allowedCommands": "أوامر التنفيذ التلقائي المسموحة",
 			"allowedCommandsDescription": "بادئات الأوامر المسموح بها عند تفعيل \"الموافقة الدائمة على التنفيذ\". أضف * للسماح بكل الأوامر (بحذر).",
+			"deniedCommands": "الأوامر المرفوضة",
+			"deniedCommandsDescription": "بادئات الأوامر التي سيتم رفضها تلقائيًا بدون طلب الموافقة. في حالة التعارض مع الأوامر المسموحة، تأخذ أطول بادئة مطابقة الأولوية. أضف * لرفض جميع الأوامر.",
 			"commandPlaceholder": "أدخل بادئة الأمر (مثال: 'git ')",
-			"addButton": "إضافة"
+			"deniedCommandPlaceholder": "أدخل بادئة الأمر المرفوض (مثال: 'rm -rf')",
+			"addButton": "إضافة",
+			"autoDenied": "الأوامر التي تبدأ بـ `{{prefix}}` محظورة من قبل المستخدم. لا تتجاوز هذا القيد بتشغيل أمر آخر."
 		},
 		"showMenu": {
-			"label": "إظهار قائمة الموافقة التلقائية",
-			"description": "تظهر القائمة أسفل المحادثة للوصول السريع."
+			"label": "إظهار قائمة الموافقة التلقائية في عرض المحادثة",
+			"description": "عند التفعيل، ستظهر قائمة الموافقة التلقائية في أسفل عرض المحادثة، مما يتيح الوصول السريع لإعدادات الموافقة التلقائية"
 		},
 		"updateTodoList": {
 			"label": "المهام",
@@ -191,7 +203,10 @@
 			"title": "أقصى الطلبات",
 			"description": "عدد طلبات API قبل طلب الموافقة.",
 			"unlimited": "غير محدود"
-		}
+		},
+		"toggleAriaLabel": "تبديل الموافقة التلقائية",
+		"disabledAriaLabel": "الموافقة التلقائية معطلة - اختر الخيارات أولاً",
+		"selectOptionsFirst": "اختر خيار واحد على الأقل أدناه لتفعيل الموافقة التلقائية"
 	},
 	"providers": {
 		"providerDocumentation": "توثيق {{provider}}",
@@ -247,12 +262,51 @@
 		"getChutesApiKey": "احصل على مفتاح Chutes",
 		"deepSeekApiKey": "مفتاح DeepSeek",
 		"getDeepSeekApiKey": "احصل على مفتاح DeepSeek",
+		"doubaoApiKey": "مفتاح Doubao",
+		"getDoubaoApiKey": "احصل على مفتاح Doubao",
+		"fireworksApiKey": "مفتاح Fireworks",
+		"getFireworksApiKey": "احصل على مفتاح Fireworks",
+		"zaiApiKey": "مفتاح Z.AI",
+		"getZaiApiKey": "احصل على مفتاح Z.AI",
+		"bigModelApiKey": "مفتاح BigModel",
+		"getBigModelApiKey": "احصل على مفتاح BigModel",
+		"moonshotApiKey": "مفتاح Moonshot",
+		"getMoonshotApiKey": "احصل على مفتاح Moonshot",
+		"moonshotBaseUrl": "نقطة دخول Moonshot",
 		"geminiApiKey": "مفتاح Gemini",
 		"getGroqApiKey": "احصل على مفتاح Groq",
 		"groqApiKey": "مفتاح Groq",
+		"getSambaNovaApiKey": "احصل على مفتاح SambaNova",
+		"sambaNovaApiKey": "مفتاح SambaNova",
 		"getGeminiApiKey": "احصل على مفتاح Gemini",
 		"openAiApiKey": "مفتاح OpenAI",
+		"getHuggingFaceApiKey": "احصل على مفتاح Hugging Face API",
+		"huggingFaceApiKey": "مفتاح Hugging Face API",
+		"huggingFaceModelId": "معرّف النموذج",
+		"huggingFaceLoading": "جارٍ التحميل...",
+		"huggingFaceModelsCount": "({{count}} نموذج)",
+		"huggingFaceSelectModel": "اختر نموذج...",
+		"huggingFaceSearchModels": "البحث في النماذج...",
+		"huggingFaceNoModelsFound": "لم يتم العثور على نماذج",
+		"huggingFaceProvider": "المزوّد",
+		"huggingFaceProviderAuto": "تلقائي",
+		"huggingFaceSelectProvider": "اختر مزوّد...",
+		"huggingFaceSearchProviders": "البحث في المزوّدين...",
+		"huggingFaceNoProvidersFound": "لم يتم العثور على مزوّدين",
+		"awsApiKey": "مفتاح Amazon Bedrock API",
 		"apiKey": "مفتاح API",
+		"anthropic": {
+			"baseUrl": "الرابط الأساسي",
+			"baseUrlDescription": "رابط أساسي مخصص لـ Anthropic API (اختياري)"
+		},
+		"openai": {
+			"baseUrl": "الرابط الأساسي",
+			"baseUrlDescription": "رابط أساسي مخصص لـ OpenAI API (اختياري)"
+		},
+		"openrouter": {
+			"baseUrl": "الرابط الأساسي",
+			"baseUrlDescription": "رابط أساسي مخصص لـ OpenRouter API (اختياري)"
+		},
 		"openAiBaseUrl": "الرابط الأساسي",
 		"getOpenAiApiKey": "احصل على مفتاح OpenAI",
 		"mistralApiKey": "مفتاح Mistral",
@@ -279,6 +333,16 @@
 		"enablePromptCaching": "تفعيل تخزين الموجهات",
 		"enablePromptCachingTitle": "تسريع الأداء وتقليل التكلفة.",
 		"cacheUsageNote": "إذا ما تشوف استخدام الكاش، اختر نموذج مختلف ثم ارجع.",
+		"geminiParameters": {
+			"urlContext": {
+				"title": "تفعيل سياق URL",
+				"description": "يسمح لـ Gemini بقراءة الصفحات المرتبطة لاستخراج ومقارنة وتجميع محتواها في ردود مدروسة."
+			},
+			"groundingSearch": {
+				"title": "تفعيل التأسيس مع بحث Google",
+				"description": "يربط Gemini ببيانات الويب الحية للحصول على إجابات دقيقة ومحدثة مع استشهادات قابلة للتحقق."
+			}
+		},
 		"vscodeLmModel": "نموذج اللغة",
 		"vscodeLmWarning": "الميزة تجريبية جدًا والدعم يختلف حسب المزوّد.",
 		"googleCloudSetup": {
@@ -372,6 +436,12 @@
 			"label": "معدل الطلب",
 			"description": "أقل وقت بين طلبات API."
 		},
+		"consecutiveMistakeLimit": {
+			"label": "حد الأخطاء والتكرار",
+			"description": "عدد الأخطاء المتتالية أو الإجراءات المتكررة قبل إظهار حوار 'Kilo Code يواجه مشكلة'",
+			"unlimitedDescription": "إعادة المحاولة غير المحدودة مفعلة (المتابعة التلقائية). لن يظهر الحوار أبداً.",
+			"warning": "⚠️ تعيين القيمة إلى 0 يسمح بإعادة المحاولة غير المحدودة مما قد يستهلك استخدام API كبير"
+		},
 		"reasoningEffort": {
 			"label": "جهد الاستنتاج",
 			"high": "عالي",
@@ -382,7 +452,9 @@
 		"claudeCode": {
 			"pathLabel": "مسار Claude Code",
 			"description": "مسار CLI اختياري (الافتراضي 'claude').",
-			"placeholder": "الافتراضي: claude"
+			"placeholder": "الافتراضي: claude",
+			"maxTokensLabel": "أقصى توكنات المخرجات",
+			"maxTokensDescription": "الحد الأقصى لعدد توكنات المخرجات لردود Claude Code. الافتراضي هو 8000."
 		},
 		"geminiCli": {
 			"description": "يستخدم OAuth من أداة Gemini CLI ولا يحتاج مفاتيح.",
@@ -496,6 +568,16 @@
 			"lines": "أسطر",
 			"always_full_read": "دومًا اقرأ الملف كامل"
 		},
+		"maxImageFileSize": {
+			"label": "أقصى حجم ملف صورة",
+			"mb": "ميجابايت",
+			"description": "الحد الأقصى لحجم (بالميجابايت) لملفات الصور التي يمكن معالجتها بواسطة أداة قراءة الملفات."
+		},
+		"maxTotalImageSize": {
+			"label": "أقصى حجم إجمالي للصور",
+			"mb": "ميجابايت",
+			"description": "الحد الأقصى التراكمي للحجم (بالميجابايت) لجميع الصور المعالجة في عملية read_file واحدة. عند قراءة صور متعددة، يُضاف حجم كل صورة للإجمالي. إذا كان تضمين صورة أخرى سيتجاوز هذا الحد، فسيتم تخطيها."
+		},
 		"condensingThreshold": {
 			"label": "نسبة التفعيل",
 			"selectProfile": "اضبط النسبة للملف",
@@ -504,6 +586,22 @@
 			"profileDescription": "نسبة مخصصة لهذا الملف فقط.",
 			"inheritDescription": "هذا الملف يرث النسبة العامة ({{threshold}}%)",
 			"usesGlobal": "(يستخدم {{threshold}}% عام)"
+		},
+		"diagnostics": {
+			"includeMessages": {
+				"label": "تضمين رسائل التشخيص تلقائيًا في السياق",
+				"description": "عند التفعيل، سيتم تضمين رسائل التشخيص (الأخطاء) من الملفات المُحررة تلقائيًا في السياق. يمكنك دائمًا تضمين جميع تشخيصات مساحة العمل يدويًا باستخدام @problems."
+			},
+			"maxMessages": {
+				"label": "أقصى عدد رسائل التشخيص",
+				"description": "يحدد عدد رسائل التشخيص (أخطاء، تحذيرات) المُدرجة في السياق. عند التعيين، سيتم عرض هذا العدد فقط من التشخيصات، مع إعطاء الأولوية للأخطاء على التحذيرات. اضبط على 0 للتشخيصات غير المحدودة.",
+				"resetTooltip": "إعادة للقيمة الافتراضية (50)",
+				"unlimitedLabel": "غير محدود"
+			},
+			"delayAfterWrite": {
+				"label": "تأخير بعد الكتابة للسماح للتشخيصات باكتشاف المشاكل المحتملة",
+				"description": "الوقت للانتظار بعد كتابة الملفات قبل المتابعة، مما يسمح لأدوات التشخيص بمعالجة التغييرات واكتشاف المشاكل."
+			}
 		}
 	},
 	"terminal": {
@@ -518,6 +616,10 @@
 		"outputLineLimit": {
 			"label": "حد مخرجات الطرفية",
 			"description": "أقصى الأسطر المُدرجة عند تنفيذ الأوامر."
+		},
+		"outputCharacterLimit": {
+			"label": "حد أحرف الطرفية",
+			"description": "أقصى عدد أحرف في مخرجات الطرفية عند تنفيذ الأوامر. هذا الحد له أولوية على حد الأسطر لمنع مشاكل الذاكرة من الأسطر الطويلة جداً. عند التجاوز، سيتم قطع المخرجات. <0>تعرف أكثر</0>"
 		},
 		"shellIntegrationTimeout": {
 			"label": "مهلة تكامل الشل",
@@ -560,6 +662,9 @@
 			"description": "تفعيل يورّث متغيرات بيئة نظامك."
 		}
 	},
+	"advancedSettings": {
+		"title": "الإعدادات المتقدمة"
+	},
 	"advanced": {
 		"diff": {
 			"label": "التعديل عبر Diff",
@@ -581,6 +686,10 @@
 				"label": "دقة المطابقة",
 				"description": "تحكّم في دقة مطابقة الأقسام."
 			}
+		},
+		"todoList": {
+			"label": "تفعيل أداة قائمة المهام",
+			"description": "عند التفعيل، يمكن لـ Kilo Code إنشاء وإدارة قوائم المهام لتتبع تقدم المهام. هذا يساعد في تنظيم المهام المعقدة إلى خطوات قابلة للإدارة."
 		}
 	},
 	"experimental": {
@@ -600,10 +709,6 @@
 			"name": "وضع \"التحكم القوي\" التجريبي",
 			"description": "يذكّر النموذج بتعليمات النمط بشكل أقوى (يستهلك توكنات أكثر)."
 		},
-		"AUTOCOMPLETE": {
-			"name": "ميزة إكمال فوري تجريبية",
-			"description": "تعرض اقتراحات كود فورية أثناء الكتابة."
-		},
 		"CONCURRENT_FILE_READS": {
 			"name": "قراءة ملفات متزامنة",
 			"description": "يقرأ عدة ملفات في طلب واحد."
@@ -619,6 +724,21 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "تعديلات ملفات متزامنة",
 			"description": "يحرر عدة ملفات في طلب واحد."
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "تفعيل Morph Fast Apply",
+			"description": "عند التفعيل، يمكن لـ Kilo Code تحرير الملفات باستخدام Morph Fast Apply.",
+			"apiKey": "مفتاح Morph API (اختياري)",
+			"placeholder": "أدخل مفتاح Morph API (اختياري)",
+			"warning": "إذا لم تقم بتكوين مفتاح Morph API، يمكنك لا تزال استخدام Fast Apply مع Kilo Code أو OpenRouter. سيتم تحصيل رسوم من حسابك لاستخدام النموذج، هذا غير مُعرض حاليًا في واجهة الإضافة."
+		},
+		"INLINE_ASSIST": {
+			"name": "المساعد المضمّن",
+			"description": "تفعيل ميزات المساعدة المضمنة للحصول على اقتراحات وتحسينات سريعة للكود مباشرة في محرر النصوص الخاص بك. يتضمن ذلك مهمة مضمنة سريعة (Cmd+I) للتغييرات المستهدفة ومهمة مضمنة تلقائية للتحسينات السياقية."
+		},
+		"PREVENT_FOCUS_DISRUPTION": {
+			"name": "التحرير في الخلفية",
+			"description": "منع تعطيل تركيز المحرر عند التفعيل. تحدث تعديلات الملفات في الخلفية دون فتح عروض diff أو سرقة التركيز. يمكنك الاستمرار في العمل دون انقطاع بينما يقوم Kilo Code بإجراء التغييرات. يمكن فتح الملفات دون تركيز لالتقاط التشخيصات أو إبقاؤها مغلقة تماماً."
 		}
 	},
 	"promptCaching": {
@@ -654,7 +774,7 @@
 		}
 	},
 	"modelPicker": {
-		"automaticFetch": "الإضافة تجيب أحدث النماذج من <serviceLink>{{serviceName}}</serviceLink>. إذا متردد، Kilo Code يعمل أفضل مع <defaultModelLink>{{defaultModelId}}</defaultModelLink>. جرّب كلمة \"free\" للخيارات المجانية.",
+		"automaticFetch": "الإضافة تجلب تلقائياً أحدث قائمة بالنماذج المتاحة على <serviceLink>{{serviceName}}</serviceLink>. إذا كنت غير متأكد من النموذج الذي تختاره، فإن Kilo Code يعمل بشكل أفضل مع <defaultModelLink>{{defaultModelId}}</defaultModelLink>.",
 		"label": "النموذج",
 		"searchPlaceholder": "بحث",
 		"noMatchFound": "ما فيه تطابق",
@@ -726,6 +846,9 @@
 		"customArn": "ARN مخصص",
 		"useCustomArn": "استخدام ARN مخصص..."
 	},
+	"limitMaxTokensDescription": "تحديد أقصى عدد توكنات في الرد",
+	"maxOutputTokensLabel": "أقصى توكنات المخرجات",
+	"maxTokensGenerateDescription": "أقصى عدد توكنات يتم توليدها في الرد",
 	"includeMaxOutputTokens": "إرسال حد المخرجات",
 	"includeMaxOutputTokensDescription": "يُرسل max_output_tokens في الطلب. بعض المزوّدين ما يدعمونه."
 }

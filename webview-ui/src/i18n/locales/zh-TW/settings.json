@@ -32,7 +32,7 @@
 		"experimental": "實驗性",
 		"language": "語言",
 		"about": "關於 Kilo Code",
-		"display": "显示"
+		"display": "顯示"
 	},
 	"prompts": {
 		"description": "設定用於快速操作的支援提示詞，如增強提示詞、解釋程式碼和修復問題。這些提示詞幫助 Kilo Code 為常見開發工作提供更好的支援。"
@@ -41,13 +41,16 @@
 		"title": "程式碼庫索引",
 		"enableLabel": "啟用程式碼庫索引",
 		"enableDescription": "啟用程式碼索引以改進搜尋和上下文理解",
-		"providerLabel": "嵌入提供者",
-		"selectProviderPlaceholder": "選擇提供者",
+		"profileLabel": "嵌入供應商",
+		"selectProfilePlaceholder": "選擇供應商",
 		"openaiProvider": "OpenAI",
 		"ollamaProvider": "Ollama",
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "API 金鑰：",
-		"geminiApiKeyPlaceholder": "輸入您的Gemini API金鑰",
+		"geminiApiKeyPlaceholder": "輸入您的 Gemini API 金鑰",
+		"mistralProvider": "Mistral",
+		"mistralApiKeyLabel": "API 金鑰：",
+		"mistralApiKeyPlaceholder": "輸入您的 Mistral API 金鑰",
 		"openaiCompatibleProvider": "OpenAI 相容",
 		"openAiKeyLabel": "OpenAI API 金鑰",
 		"openAiKeyPlaceholder": "輸入您的 OpenAI API 金鑰",
@@ -57,7 +60,7 @@
 		"openAiCompatibleModelDimensionLabel": "嵌入維度：",
 		"modelDimensionLabel": "模型維度",
 		"openAiCompatibleModelDimensionPlaceholder": "例如，1536",
-		"openAiCompatibleModelDimensionDescription": "模型的嵌入維度（輸出大小）。請查閱您的提供商文件獲取此值。常見值：384、768、1536、3072。",
+		"openAiCompatibleModelDimensionDescription": "模型的嵌入維度（輸出大小）。請查閱您的供應商文件獲取此值。常見值：384、768、1536、3072。",
 		"modelLabel": "模型",
 		"selectModelPlaceholder": "選擇模型",
 		"ollamaUrlLabel": "Ollama URL：",
@@ -76,7 +79,7 @@
 		"statusTitle": "狀態",
 		"settingsTitle": "索引設定",
 		"disabledMessage": "程式碼庫索引目前已停用。請在全域設定中啟用以設定索引選項。",
-		"embedderProviderLabel": "嵌入器提供者",
+		"embedderProviderLabel": "嵌入模型供應商",
 		"modelPlaceholder": "輸入模型名稱",
 		"selectModel": "選擇模型",
 		"ollamaBaseUrlLabel": "Ollama 基礎 URL",
@@ -110,6 +113,7 @@
 			"modelIdRequired": "需要模型 ID",
 			"modelDimensionRequired": "需要模型維度",
 			"geminiApiKeyRequired": "需要 Gemini API 金鑰",
+			"mistralApiKeyRequired": "需要 Mistral API 金鑰",
 			"ollamaBaseUrlRequired": "需要 Ollama 基礎 URL",
 			"baseUrlRequired": "需要基礎 URL",
 			"modelDimensionMinValue": "模型維度必須大於 0"
@@ -124,6 +128,8 @@
 	},
 	"autoApprove": {
 		"description": "允許 Kilo Code 無需核准即執行操作。僅在您完全信任 AI 並了解相關安全風險時啟用這些設定。",
+		"toggleAriaLabel": "切換自動核准",
+		"disabledAriaLabel": "自動核准已停用 - 請先選取選項",
 		"readOnly": {
 			"label": "讀取",
 			"description": "啟用後，Kilo Code 將自動檢視目錄內容並讀取檔案，無需點選核准按鈕。",
@@ -163,8 +169,8 @@
 			"description": "自動在不同模式之間切換而無需核准"
 		},
 		"subtasks": {
-			"label": "子工作",
-			"description": "允許建立和完成子工作而無需核准"
+			"label": "子任務",
+			"description": "允許建立和完成子任務而無需核准"
 		},
 		"followupQuestions": {
 			"label": "問題",
@@ -176,8 +182,12 @@
 			"description": "自動執行允許的終端機命令而無需核准",
 			"allowedCommands": "允許自動執行的命令",
 			"allowedCommandsDescription": "當「始終核准執行操作」啟用時可以自動執行的命令前綴。新增 * 以允許所有命令（請謹慎使用）。",
+			"deniedCommands": "拒絕的命令",
+			"deniedCommandsDescription": "將自動拒絕的命令前綴，無需使用者核准。與允許命令衝突時，最長前綴匹配優先。新增 * 拒絕所有命令。",
 			"commandPlaceholder": "輸入命令前綴（例如 'git '）",
-			"addButton": "新增"
+			"deniedCommandPlaceholder": "輸入要拒絕的命令前綴（例如 'rm -rf'）",
+			"addButton": "新增",
+			"autoDenied": "前綴為 `{{prefix}}` 的命令已被使用者禁止。不要透過執行其他命令來繞過此限制。"
 		},
 		"showMenu": {
 			"label": "在聊天視圖中顯示自動核准選單",
@@ -191,7 +201,8 @@
 			"title": "最大請求數",
 			"description": "在請求批准以繼續執行工作之前，自動發出此數量的 API 請求。",
 			"unlimited": "無限制"
-		}
+		},
+		"selectOptionsFirst": "請至少選擇以下一個選項以啟用自動核准"
 	},
 	"providers": {
 		"providerDocumentation": "{{provider}} 文件",
@@ -251,9 +262,35 @@
 		"getChutesApiKey": "取得 Chutes API 金鑰",
 		"deepSeekApiKey": "DeepSeek API 金鑰",
 		"getDeepSeekApiKey": "取得 DeepSeek API 金鑰",
+		"doubaoApiKey": "豆包 API 金鑰",
+		"getDoubaoApiKey": "取得豆包 API 金鑰",
+		"fireworksApiKey": "Fireworks API 金鑰",
+		"getFireworksApiKey": "取得 Fireworks API 金鑰",
+		"zaiApiKey": "Z.AI API 金鑰",
+		"getZaiApiKey": "取得 Z.AI API 金鑰",
+		"bigModelApiKey": "BigModel API 金鑰",
+		"getBigModelApiKey": "取得 BigModel API 金鑰",
+		"moonshotApiKey": "Moonshot API 金鑰",
+		"getMoonshotApiKey": "取得 Moonshot API 金鑰",
+		"moonshotBaseUrl": "Moonshot 服務站點",
 		"geminiApiKey": "Gemini API 金鑰",
 		"getGroqApiKey": "取得 Groq API 金鑰",
 		"groqApiKey": "Groq API 金鑰",
+		"getSambaNovaApiKey": "取得 SambaNova API 金鑰",
+		"sambaNovaApiKey": "SambaNova API 金鑰",
+		"getHuggingFaceApiKey": "取得 Hugging Face API 金鑰",
+		"huggingFaceApiKey": "Hugging Face API 金鑰",
+		"huggingFaceModelId": "模型 ID",
+		"huggingFaceLoading": "載入中...",
+		"huggingFaceModelsCount": "({{count}} 個模型)",
+		"huggingFaceSelectModel": "選擇模型...",
+		"huggingFaceSearchModels": "搜尋模型...",
+		"huggingFaceNoModelsFound": "找不到模型",
+		"huggingFaceProvider": "供應商",
+		"huggingFaceProviderAuto": "自動",
+		"huggingFaceSelectProvider": "選擇供應商...",
+		"huggingFaceSearchProviders": "搜尋供應商...",
+		"huggingFaceNoProvidersFound": "找不到供應商",
 		"getGeminiApiKey": "取得 Gemini API 金鑰",
 		"openAiApiKey": "OpenAI API 金鑰",
 		"apiKey": "API 金鑰",
@@ -269,6 +306,7 @@
 		"litellmBaseUrl": "LiteLLM 基礎 URL",
 		"awsCredentials": "AWS 認證",
 		"awsProfile": "AWS Profile",
+		"awsApiKey": "Amazon Bedrock API 金鑰",
 		"awsProfileName": "AWS Profile 名稱",
 		"awsAccessKey": "AWS Access Key",
 		"awsSecretKey": "AWS Secret Key",
@@ -285,6 +323,17 @@
 		"cacheUsageNote": "注意：如果您沒有看到快取使用情況，請嘗試選擇其他模型，然後重新選擇您想要的模型。",
 		"vscodeLmModel": "語言模型",
 		"vscodeLmWarning": "注意：此整合功能仍處於實驗階段，各供應商的支援程度可能不同。如果出現模型不支援的錯誤，通常是供應商方面的問題。",
+
+		"geminiParameters": {
+			"urlContext": {
+				"title": "啟用 URL 上下文",
+				"description": "讓 Gemini 讀取連結的頁面以提取、比較和綜合其內容，從而提供明智的答覆。"
+			},
+			"groundingSearch": {
+				"title": "啟用 Google 搜尋基礎",
+				"description": "將 Gemini 連接到即時網路數據，以獲得包含可驗證引用的準確、最新的答案。"
+			}
+		},
 		"googleCloudSetup": {
 			"title": "要使用 Google Cloud Vertex AI，您需要：",
 			"step1": "1. 建立 Google Cloud 帳戶，啟用 Vertex AI API 並啟用所需的 Claude 模型。",
@@ -314,7 +363,7 @@
 		"unboundApiKey": "Unbound API 金鑰",
 		"getUnboundApiKey": "取得 Unbound API 金鑰",
 		"unboundRefreshModelsSuccess": "模型列表已更新！您現在可以從最新模型中選擇。",
-		"unboundInvalidApiKey": "無效的API金鑰。請檢查您的API金鑰並重試。",
+		"unboundInvalidApiKey": "無效的 API 金鑰。請檢查您的 API 金鑰並重試。",
 		"humanRelay": {
 			"description": "不需要 API 金鑰，但使用者需要協助將資訊複製並貼上到網頁聊天 AI。",
 			"instructions": "使用期間會彈出對話框，並自動將目前訊息複製到剪貼簿。您需要將這些內容貼上到網頁版 AI（如 ChatGPT 或 Claude），然後將 AI 的回覆複製回對話框並點選確認按鈕。"
@@ -372,6 +421,12 @@
 			"label": "速率限制",
 			"description": "API 請求間的最短時間"
 		},
+		"consecutiveMistakeLimit": {
+			"label": "錯誤和重複限制",
+			"description": "在顯示「Kilo Code 遇到問題」對話方塊前允許的連續錯誤或重複操作次數",
+			"unlimitedDescription": "已啟用無限重試（自動繼續）。對話方塊將永遠不會出現。",
+			"warning": "⚠️ 設定為 0 允許無限重試，這可能會消耗大量 API 使用量"
+		},
 		"reasoningEffort": {
 			"label": "模型推理強度",
 			"high": "高",
@@ -382,10 +437,12 @@
 		"claudeCode": {
 			"pathLabel": "Claude Code 路徑",
 			"description": "可選的 Claude Code CLI 路徑。如果未設定，則預設為 'claude'。",
-			"placeholder": "預設：claude"
+			"placeholder": "預設：claude",
+			"maxTokensLabel": "最大輸出 Token",
+			"maxTokensDescription": "Claude Code 回應的最大輸出 Token 數量。預設為 8000。"
 		},
 		"geminiCli": {
-			"description": "此提供商使用 Gemini CLI 工具的 OAuth 身份驗證，不需要 API 金鑰。",
+			"description": "此供應商使用 Gemini CLI 工具的 OAuth 身份驗證，不需要 API 金鑰。",
 			"oauthPath": "OAuth 憑證路徑（可選）",
 			"oauthPathDescription": "OAuth 憑證檔案的路徑。留空以使用預設位置（~/.gemini/oauth_creds.json）。",
 			"instructions": "如果您尚未進行身份驗證，請先執行",
@@ -482,7 +539,7 @@
 		},
 		"maxReadFile": {
 			"label": "檔案讀取自動截斷閾值",
-			"description": "當模型未指定起始/結束值時，Kilo Code 讀取的行數。如果此數值小於檔案總行數，Kilo Code 將產生程式碼定義的行號索引。特殊情況：-1 指示 Kilo Code 讀取整個檔案（不建立索引），0 指示不讀取任何行並僅提供行索引以取得最小上下文。較低的值可最小化初始上下文使用，允許後續精確的行範圍讀取。明確指定起始/結束的請求不受此設定限制。 <0>瞭解更多</0>",
+			"description": "當模型未指定起始/結束值時，Kilo Code 讀取的行數。如果此數值小於檔案總行數，Kilo Code 將產生程式碼定義的行號索引。特殊情況：-1 指示 Kilo Code 讀取整個檔案（不建立索引）；0 指示不讀取任何行並僅提供行索引以取得最小上下文。較低的值可最大限度地減少初始上下文的使用，從而實現精確的後續行範圍讀取。明確指定起始/結束的請求不受此設定限制。",
 			"lines": "行",
 			"always_full_read": "始終讀取整個檔案"
 		},
@@ -490,14 +547,41 @@
 			"label": "並行檔案讀取限制",
 			"description": "read_file 工具可以同時處理的最大檔案數。較高的值可能會加快讀取多個小檔案的速度，但會增加記憶體使用量。"
 		},
+		"diagnostics": {
+			"includeMessages": {
+				"label": "自動在上下文中包含診斷",
+				"description": "啟用後，來自已編輯檔案的診斷訊息（錯誤）將自動包含在上下文中。您隨時可以使用 @problems 手動包含所有工作區診斷。"
+			},
+			"maxMessages": {
+				"label": "最大診斷訊息數",
+				"description": "每個檔案包含的最大診斷訊息數。此限制適用於自動包含（當核取方塊啟用時）和手動 @problems 提及。較高的值提供更多上下文，但會增加 token 使用量。",
+				"resetTooltip": "重設為預設值 (50)",
+				"unlimited": "無限制診斷訊息",
+				"unlimitedLabel": "無限制"
+			},
+			"delayAfterWrite": {
+				"label": "寫入後延遲以允許診斷程式偵測潛在問題",
+				"description": "在繼續之前寫入檔案後等待的時間，允許診斷工具處理變更並偵測問題。"
+			}
+		},
 		"condensingThreshold": {
 			"label": "壓縮觸發閾值",
 			"selectProfile": "設定檔案閾值",
-			"defaultProfile": "全域預設（所有檔案）",
-			"defaultDescription": "當上下文達到此百分比時，將自動為所有檔案壓縮，除非它們有自訂設定",
-			"profileDescription": "僅此檔案的自訂閾值（覆蓋全域預設）",
-			"inheritDescription": "此檔案繼承全域預設閾值（{{threshold}}%）",
+			"defaultProfile": "全域預設（所有設定檔）",
+			"defaultDescription": "當上下文達到此百分比時，將自動壓縮上下文，可被自定義設定檔覆蓋",
+			"profileDescription": "僅此設定檔的自訂閾值（覆蓋全域預設）",
+			"inheritDescription": "此設定檔繼承全域預設閾值（{{threshold}}%）",
 			"usesGlobal": "（使用全域 {{threshold}}%）"
+		},
+		"maxImageFileSize": {
+			"label": "最大圖像檔案大小",
+			"mb": "MB",
+			"description": "read file工具可以處理的圖像檔案的最大大小（以MB為單位）。"
+		},
+		"maxTotalImageSize": {
+			"label": "圖片總大小上限",
+			"mb": "MB",
+			"description": "單次 read_file 操作中處理的所有圖片的最大累計大小限制（MB）。讀取多張圖片時，每張圖片的大小會累加到總大小中。如果包含另一張圖片會超過此限制，則會跳過該圖片。"
 		}
 	},
 	"terminal": {
@@ -512,6 +596,10 @@
 		"outputLineLimit": {
 			"label": "終端機輸出行數限制",
 			"description": "執行命令時終端機輸出的最大行數。超過此限制時，會從中間移除多餘的行數，以節省 token 用量。 <0>瞭解更多</0>"
+		},
+		"outputCharacterLimit": {
+			"label": "終端機字元限制",
+			"description": "執行指令時在終端輸出中包含的最大字元數。此限制優先於行數限制，以防止因行過長而導致的記憶體問題。超過後，輸出將被截斷。 <0>了解更多</0>"
 		},
 		"shellIntegrationTimeout": {
 			"label": "終端機 Shell 整合逾時",
@@ -554,6 +642,9 @@
 			"description": "啟用後，終端機將從 VSCode 父程序繼承環境變數，如使用者設定檔中定義的 shell 整合設定。這直接切換 VSCode 全域設定 `terminal.integrated.inheritEnv`。 <0>瞭解更多</0>"
 		}
 	},
+	"advancedSettings": {
+		"title": "進階設定"
+	},
 	"advanced": {
 		"diff": {
 			"label": "透過差異比對編輯",
@@ -575,6 +666,10 @@
 				"label": "比對精確度",
 				"description": "此滑桿控制套用差異時程式碼區段的比對精確度。較低的數值允許更彈性的比對，但也會增加錯誤取代的風險。使用低於 100% 的數值時請特別謹慎。"
 			}
+		},
+		"todoList": {
+			"label": "啟用待辦事項清單工具",
+			"description": "啟用後，Kilo Code 可以建立和管理待辦事項清單來追蹤任務進度。這有助於將複雜任務組織成可管理的步驟。"
 		}
 	},
 	"experimental": {
@@ -594,10 +689,6 @@
 			"name": "使用實驗性「動力輔助」模式",
 			"description": "啟用後，Kilo Code 將更頻繁地提醒模型目前模式的詳細設定。這能讓模型更嚴格遵守角色定義和自訂指令，但每則訊息會使用更多 token。"
 		},
-		"AUTOCOMPLETE": {
-			"name": "使用實驗性「自動完成」功能",
-			"description": "啟用後，Kilo Code 會在您輸入時提供內嵌程式碼建議。"
-		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "使用實驗性多區塊差異比對工具",
 			"description": "啟用後，Kilo Code 將使用多區塊差異比對工具，嘗試在單一請求中更新檔案內的多個程式碼區塊。"
@@ -613,6 +704,21 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "啟用並行檔案編輯",
 			"description": "啟用後 Kilo Code 可在單個請求中編輯多個檔案。停用後 Kilo Code 必須逐個編輯檔案。停用此功能有助於使用能力較弱的模型或需要更精確控制檔案修改時。"
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "啟用 Morph Fast Apply",
+			"description": "啟用後，Kilo Code 可使用 Morph Fast Apply 模型編輯檔案。",
+			"apiKey": "Morph API 金鑰（選用）",
+			"placeholder": "輸入您的 Morph API 金鑰（選用）",
+			"warning": "如果您未設定 Morph API 金鑰，仍可透過 Kilo Code 或 OpenRouter 使用 Morph Fast Apply。您的帳戶將被收取模型使用費用，目前延伸模組 UI 中不會顯示此費用。"
+		},
+		"INLINE_ASSIST": {
+			"name": "行內輔助",
+			"description": "啟用行內輔助功能，可直接在編輯器中快速取得程式碼建議和改進。其中包括用於定向修改的快速行內任務 (Cmd+I) 和用於情境改進的自動行內任務。"
+		},
+		"PREVENT_FOCUS_DISRUPTION": {
+			"name": "背景編輯",
+			"description": "啟用後可防止編輯器焦點中斷。檔案編輯會在背景進行，不會開啟 diff 檢視或搶奪焦點。您可以在 Kilo Code 進行變更時繼續不受干擾地工作。檔案可能會在不獲得焦點的情況下開啟以捕獲診斷，或保持完全關閉。"
 		}
 	},
 	"promptCaching": {
@@ -622,7 +728,7 @@
 	"temperature": {
 		"useCustom": "使用自訂溫度",
 		"description": "控制模型回應的隨機性",
-		"rangeDescription": "較高值使輸出更隨機，較低值更確定"
+		"rangeDescription": "較高值使輸出更隨機，較低值更穩定"
 	},
 	"modelInfo": {
 		"supportsImages": "支援影像",
@@ -648,7 +754,7 @@
 		}
 	},
 	"modelPicker": {
-		"automaticFetch": "此擴充功能會自動從 <serviceLink>{{serviceName}}</serviceLink> 取得最新的可用模型清單。如果不確定要選哪個模型，建議使用 <defaultModelLink>{{defaultModelId}}</defaultModelLink>，這是與 Kilo Code 最佳搭配的模型。您也可以搜尋「free」來檢視目前可用的免費選項。",
+		"automaticFetch": "此擴充功能會自動從 <serviceLink>{{serviceName}}</serviceLink> 取得最新的可用模型清單。如果不確定要選哪個模型，建議使用 <defaultModelLink>{{defaultModelId}}</defaultModelLink>，這是與 Kilo Code 最佳搭配的模型。",
 		"label": "模型",
 		"searchPlaceholder": "搜尋",
 		"noMatchFound": "找不到符合的項目",
@@ -722,10 +828,13 @@
 	},
 	"display": {
 		"taskTimeline": {
-			"label": "显示任务时间轴",
-			"description": "显示任务消息的可视化时间线，按类型着色，让您能够快速查看任务进度并回滚到任务历史中的特定点。"
+			"label": "顯示任務時間軸",
+			"description": "顯示任務訊息的視覺化時間軸，按類型著色，讓您能夠快速查看任務進度並回滾到任務歷史中的特定節點。"
 		}
 	},
 	"includeMaxOutputTokens": "包含最大輸出 Token 數",
-	"includeMaxOutputTokensDescription": "在 API 請求中傳送最大輸出 Token 參數。某些提供商可能不支援此功能。"
+	"includeMaxOutputTokensDescription": "在 API 請求中傳送最大輸出 Token 參數。某些供應商可能不支援此功能。",
+	"limitMaxTokensDescription": "限制回應中的最大 Token 數量",
+	"maxOutputTokensLabel": "最大輸出 Token 數",
+	"maxTokensGenerateDescription": "回應中產生的最大 Token 數"
 }

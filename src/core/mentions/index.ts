@@ -4,7 +4,7 @@ import * as path from "path"
 import * as vscode from "vscode"
 import { isBinaryFile } from "isbinaryfile"
 
-import { mentionRegexGlobal, unescapeSpaces } from "../../shared/context-mentions"
+import { mentionRegexGlobal, commandRegexGlobal, unescapeSpaces } from "../../shared/context-mentions"
 
 import { getCommitInfo, getWorkingState } from "../../utils/git"
 import { getWorkspacePath } from "../../utils/path"
@@ -18,6 +18,7 @@ import { UrlContentFetcher } from "../../services/browser/UrlContentFetcher"
 import { FileContextTracker } from "../context-tracking/FileContextTracker"
 
 import { RooIgnoreController } from "../ignore/RooIgnoreController"
+import { getCommand } from "../../services/command/commands"
 
 import { t } from "../../i18n"
 
@@ -80,9 +81,24 @@ export async function parseMentions(
 	fileContextTracker?: FileContextTracker,
 	rooIgnoreController?: RooIgnoreController,
 	showRooIgnoredFiles: boolean = true,
+	includeDiagnosticMessages: boolean = true,
+	maxDiagnosticMessages: number = 50,
+	maxReadFileLine?: number,
 ): Promise<string> {
 	const mentions: Set<string> = new Set()
-	let parsedText = text.replace(mentionRegexGlobal, (match, mention) => {
+	const commandMentions: Set<string> = new Set()
+
+	// kilocode_change start - disable commands
+	let parsedText = text
+	// First pass: extract command mentions (starting with /)
+	// let parsedText = text.replace(commandRegexGlobal, (match, commandName) => {
+	// 	commandMentions.add(commandName)
+	// 	return `Command '${commandName}' (see below for command content)`
+	// })
+	// kilocode_change end - disable commands
+
+	// Second pass: handle regular mentions
+	parsedText = parsedText.replace(mentionRegexGlobal, (match, mention) => {
 		mentions.add(mention)
 		if (mention.startsWith("http")) {
 			return `'${mention}' (see below for site content)`
@@ -147,7 +163,13 @@ export async function parseMentions(
 		} else if (mention.startsWith("/")) {
 			const mentionPath = mention.slice(1)
 			try {
-				const content = await getFileOrFolderContent(mentionPath, cwd, rooIgnoreController, showRooIgnoredFiles)
+				const content = await getFileOrFolderContent(
+					mentionPath,
+					cwd,
+					rooIgnoreController,
+					showRooIgnoredFiles,
+					maxReadFileLine,
+				)
 				if (mention.endsWith("/")) {
 					parsedText += `\n\n<folder_content path="${mentionPath}">\n${content}\n</folder_content>`
 				} else {
@@ -165,7 +187,7 @@ export async function parseMentions(
 			}
 		} else if (mention === "problems") {
 			try {
-				const problems = await getWorkspaceProblems(cwd)
+				const problems = await getWorkspaceProblems(cwd, includeDiagnosticMessages, maxDiagnosticMessages)
 				parsedText += `\n\n<workspace_diagnostics>\n${problems}\n</workspace_diagnostics>`
 			} catch (error) {
 				parsedText += `\n\n<workspace_diagnostics>\nError fetching diagnostics: ${error.message}\n</workspace_diagnostics>`
@@ -194,6 +216,25 @@ export async function parseMentions(
 		}
 	}
 
+	// Process command mentions
+	for (const commandName of commandMentions) {
+		try {
+			const command = await getCommand(cwd, commandName)
+			if (command) {
+				let commandOutput = ""
+				if (command.description) {
+					commandOutput += `Description: ${command.description}\n\n`
+				}
+				commandOutput += command.content
+				parsedText += `\n\n<command name="${commandName}">\n${commandOutput}\n</command>`
+			} else {
+				parsedText += `\n\n<command name="${commandName}">\nCommand '${commandName}' not found. Available commands can be found in .roo/commands/ or ~/.roo/commands/\n</command>`
+			}
+		} catch (error) {
+			parsedText += `\n\n<command name="${commandName}">\nError loading command '${commandName}': ${error.message}\n</command>`
+		}
+	}
+
 	if (urlMention) {
 		try {
 			await urlContentFetcher.closeBrowser()
@@ -210,6 +251,7 @@ async function getFileOrFolderContent(
 	cwd: string,
 	rooIgnoreController?: any,
 	showRooIgnoredFiles: boolean = true,
+	maxReadFileLine?: number,
 ): Promise<string> {
 	const unescapedPath = unescapeSpaces(mentionPath)
 	const absPath = path.resolve(cwd, unescapedPath)
@@ -222,7 +264,7 @@ async function getFileOrFolderContent(
 				return `(File ${mentionPath} is ignored by .kilocodeignore)`
 			}
 			try {
-				const content = await extractTextFromFile(absPath)
+				const content = await extractTextFromFile(absPath, maxReadFileLine)
 				return content
 			} catch (error) {
 				return `(Failed to read contents of ${mentionPath}): ${error.message}`
@@ -262,7 +304,7 @@ async function getFileOrFolderContent(
 									if (isBinary) {
 										return undefined
 									}
-									const content = await extractTextFromFile(absoluteFilePath)
+									const content = await extractTextFromFile(absoluteFilePath, maxReadFileLine)
 									return `<file_content path="${filePath.toPosix()}">\n${content}\n</file_content>`
 								} catch (error) {
 									return undefined
@@ -286,12 +328,18 @@ async function getFileOrFolderContent(
 	}
 }
 
-async function getWorkspaceProblems(cwd: string): Promise<string> {
+async function getWorkspaceProblems(
+	cwd: string,
+	includeDiagnosticMessages: boolean = true,
+	maxDiagnosticMessages: number = 50,
+): Promise<string> {
 	const diagnostics = vscode.languages.getDiagnostics()
 	const result = await diagnosticsToProblemsString(
 		diagnostics,
 		[vscode.DiagnosticSeverity.Error, vscode.DiagnosticSeverity.Warning],
 		cwd,
+		includeDiagnosticMessages,
+		maxDiagnosticMessages,
 	)
 	if (!result) {
 		return "No errors or warnings detected."

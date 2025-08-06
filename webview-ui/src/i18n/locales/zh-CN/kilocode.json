@@ -4,7 +4,7 @@
 		"introText1": "Kilo Code 是一个免费的开源 AI 编程代理。",
 		"introText2": "它适用于最新的 AI 模型，如 Claude 4 Sonnet、Gemini 2.5 Pro、GPT-4.1 以及 450 多个其他模型。",
 		"introText3": "创建免费账户，获得价值 20 美元的 token，可用于任何 AI 模型。",
-		"ctaButton": "创建免费账户",
+		"ctaButton": "开始使用",
 		"manualModeButton": "使用你自己的 API 密钥",
 		"alreadySignedUp": "已经注册了？",
 		"loginText": "在此登录"
@@ -12,6 +12,11 @@
 	"lowCreditWarning": {
 		"addCredit": "添加额度",
 		"lowBalance": "你的 Kilo Code 余额不足"
+	},
+	"pricing": {
+		"costUnknown": "费用未知",
+		"costUnknownDescription": "API 提供商未提供任何费用数据或请求已取消。",
+		"discoverModelPricing": "了解模型定价和功能"
 	},
 	"notifications": {
 		"toolRequest": "工具请求等待批准",
@@ -39,7 +44,22 @@
 			"account": "Kilo Code 账号",
 			"apiKey": "Kilo Code API 密钥",
 			"login": "登录 Kilo Code",
-			"logout": "退出 Kilo Code"
+			"logout": "退出 Kilo Code",
+			"automaticFetch": "最新模型在 Kilo Code 中自动可用。如果您不确定选择哪个模型，Kilo Code 与顶部<strong>粗体</strong>显示的推荐模型配合最佳。",
+			"providerRouting": {
+				"title": "Kilo Code - OpenRouter 提供商路由",
+				"description": "Kilo Code 将请求路由到您模型的最佳可用提供商。默认情况下，请求会在顶级提供商之间进行负载均衡，以最大限度地延长正常运行时间。但是，您可以选择要用于此模型的特定提供商。"
+			}
+		},
+		"terminal": {
+			"commandGenerator": {
+				"apiConfigId": {
+					"label": "API 配置",
+					"current": "使用当前配置",
+					"description": "选择要用于生成终端命令的 API 配置。选择\"使用当前配置\"以使用您的默认设置。"
+				},
+				"provider": "终端命令生成器提供者"
+			}
 		}
 	},
 	"chat": {
@@ -56,7 +76,14 @@
 		"dashboard": "仪表板",
 		"logOut": "退出登录",
 		"currentBalance": "当前余额",
-		"loading": "加载中..."
+		"loading": "加载中...",
+		"shop": {
+			"title": "购买 Credits",
+			"popular": "热门",
+			"credits": "Credits",
+			"action": "立即购买",
+			"viewAll": "查看所有价格选项"
+		}
 	},
 	"docs": "文档",
 	"rules": {
@@ -130,5 +157,57 @@
 			"idea6": "生成在鼠标悬停时优雅展示动态内容的卡片",
 			"idea7": "创建一个宁静的交互式星空，跟随鼠标手势移动"
 		}
+	},
+	"ghost": {
+		"title": "内联辅助",
+		"settings": {
+			"autoTrigger": "自动触发",
+			"enableQuickInlineTaskKeybinding": {
+				"label": "快速内联任务",
+				"description": "只需要一个快速的调整？选中一些代码（或者不选！）然后按下Cmd+I。用简单的英语描述你的目标（\"创建一个带有这些属性的React组件\"，\"为这个函数添加错误处理\"），然后在编辑器中直接获取多个可立即使用的建议。<DocsLink>查看快捷键</DocsLink>"
+			},
+			"enableAutoTrigger": {
+				"label": "启用自动触发",
+				"description": "启用后，当你停止输入时，Kilo Code 将自动触发内联助手。这对于快速修复和建议很有用。"
+			},
+			"autoTriggerDelay": {
+				"label": "自动触发延迟",
+				"description": "在你停止输入后，Kilo Code 触发内联助手之前的延迟秒数。较低的延迟意味着更快的建议，但可能会更消耗资源。"
+			},
+			"enableSmartInlineTaskKeybinding": {
+				"label": "智能内联任务",
+				"description": "需要快速修复、完成或重构代码？Kilo 将使用周围的上下文提供即时改进，让您保持工作流畅。<DocsLink>查看快捷键</DocsLink>"
+			},
+			"provider": "提供商",
+			"apiConfigId": {
+				"label": "API 配置",
+				"current": "使用当前选择的 API 配置",
+				"description": "为内联辅助提示选择一个 API 配置，或者只使用当前选择的配置"
+			},
+			"triggers": "触发器",
+			"keybindingDescription": "内联助手功能由命令触发。您可以在<DocsLink>这里配置键盘快捷键</DocsLink>。"
+		}
+	},
+	"virtualProvider": {
+		"title": "虚拟配额回退提供商设置",
+		"description": "配置一个包含多个配置文件的列表，每个配置文件都有自己的配额限制。当一个提供商的配额限制达到后，将使用列表中的下一个配置文件，直到所有配置文件都用尽。",
+		"profileLabel": "个人资料 {{number}}",
+		"primaryProfileLabel": "个人资料 {{number}} (主要)",
+		"moveProfileUp": "向上移动个人资料",
+		"moveProfileDown": "下移个人资料",
+		"removeProfile": "移除个人资料",
+		"selectProfilePlaceholder": "选择个人资料...",
+		"addProfile": "添加简介",
+		"noProfilesAvailable": "没有配置文件可用。请先配置至少一个非虚拟提供商配置文件。",
+		"dangerZoneTitle": "危险区域",
+		"dangerZoneDescription": "这些操作具有破坏性且无法撤销。",
+		"clearUsageData": "清除使用数据",
+		"confirmClearTitle": "确定吗？",
+		"confirmClearDescription": "这将永久删除虚拟提供商的所有存储使用数据。此操作无法撤销。",
+		"perHour": "每小时",
+		"tokensLabel": "代币",
+		"perDay": "每天",
+		"requestsLabel": "请求",
+		"perMinute": "每分钟"
 	}
 }

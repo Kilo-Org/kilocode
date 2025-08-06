@@ -1,7 +1,10 @@
 import { HTMLAttributes } from "react"
 import { FlaskConical } from "lucide-react"
 
-import type { Experiments } from "@roo-code/types"
+import type {
+	Experiments,
+	ProviderSettings, // kilocode_change
+} from "@roo-code/types"
 
 import { EXPERIMENT_IDS, experimentConfigsMap } from "@roo/experiments"
 
@@ -12,17 +15,21 @@ import { SetExperimentEnabled } from "./types"
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
 import { ExperimentalFeature } from "./ExperimentalFeature"
-import AutocompletePromptSettings from "./AutocompletePromptSettings" // kilocode_change
+import { MorphSettings } from "./MorphSettings" // kilocode_change
 
 type ExperimentalSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	experiments: Experiments
 	setExperimentEnabled: SetExperimentEnabled
+	apiConfiguration: ProviderSettings // kilocode_change
+	setApiConfigurationField: <K extends keyof ProviderSettings>(field: K, value: ProviderSettings[K]) => void // kilocode_change
 }
 
 export const ExperimentalSettings = ({
 	experiments,
 	setExperimentEnabled,
 	className,
+	apiConfiguration, // kilocode_change
+	setApiConfigurationField, // kilocode_change
 	...props
 }: ExperimentalSettingsProps) => {
 	const { t } = useAppTranslation()
@@ -53,7 +60,8 @@ export const ExperimentalSettings = ({
 								/>
 							)
 						}
-						if (config[0] === "AUTOCOMPLETE") {
+						// kilocode_change start
+						if (config[0] === "MORPH_FAST_APPLY") {
 							const enabled =
 								experiments[EXPERIMENT_IDS[config[0] as keyof typeof EXPERIMENT_IDS]] ?? false
 							return (
@@ -69,10 +77,16 @@ export const ExperimentalSettings = ({
 											)
 										}
 									/>
-									{enabled && <AutocompletePromptSettings />}
+									{enabled && (
+										<MorphSettings
+											apiConfiguration={apiConfiguration}
+											setApiConfigurationField={setApiConfigurationField}
+										/>
+									)}
 								</>
 							)
 						}
+						// kilocode_change end
 						return (
 							<ExperimentalFeature
 								key={config[0]}

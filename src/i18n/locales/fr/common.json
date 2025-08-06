@@ -25,12 +25,7 @@
 	"confirmation": {
 		"reset_state": "Êtes-vous sûr de vouloir réinitialiser le global state et le stockage de secrets de l'extension ? Cette action est irréversible.",
 		"delete_config_profile": "Êtes-vous sûr de vouloir supprimer ce profil de configuration ?",
-		"delete_custom_mode_with_rules": "Êtes-vous sûr de vouloir supprimer ce mode {scope} ?\n\nCela supprimera également le dossier de règles associé à l'adresse :\n{rulesFolderPath}",
-		"delete_message": "Que souhaitez-vous supprimer ?",
-		"edit_warning": "Modifier ce message supprimera tous les messages suivants dans la conversation. Voulez-vous continuer ?",
-		"delete_just_this_message": "Uniquement ce message",
-		"delete_this_and_subsequent": "Ce message et tous les messages suivants",
-		"proceed": "Continuer"
+		"delete_custom_mode_with_rules": "Êtes-vous sûr de vouloir supprimer ce mode {scope} ?\n\nCela supprimera également le dossier de règles associé à l'adresse :\n{rulesFolderPath}"
 	},
 	"errors": {
 		"invalid_data_uri": "Format d'URI de données invalide",
@@ -41,6 +36,7 @@
 		"could_not_open_file_generic": "Impossible d'ouvrir le fichier !",
 		"checkpoint_timeout": "Expiration du délai lors de la tentative de rétablissement du checkpoint.",
 		"checkpoint_failed": "Échec du rétablissement du checkpoint.",
+		"git_not_installed": "Git est requis pour la fonctionnalité des points de contrôle. Veuillez installer Git pour activer les points de contrôle.",
 		"no_workspace": "Veuillez d'abord ouvrir un espace de travail",
 		"update_support_prompt": "Erreur lors de la mise à jour du prompt de support",
 		"reset_support_prompt": "Erreur lors de la réinitialisation du prompt de support",
@@ -62,7 +58,7 @@
 		"cannot_access_path": "Impossible d'accéder au chemin {{path}} : {{error}}",
 		"settings_import_failed": "Échec de l'importation des paramètres : {{error}}",
 		"mistake_limit_guidance": "Cela peut indiquer un échec dans le processus de réflexion du modèle ou une incapacité à utiliser un outil correctement, ce qui peut être atténué avec des conseils de l'utilisateur (par ex. \"Essaie de diviser la tâche en étapes plus petites\").",
-		"violated_organization_allowlist": "Échec de l'exécution de la tâche : le profil actuel enfreint les paramètres de votre organisation",
+		"violated_organization_allowlist": "Échec de l'exécution de la tâche : le profil actuel n'est pas compatible avec les paramètres de votre organisation",
 		"condense_failed": "Échec de la condensation du contexte",
 		"condense_not_enough_messages": "Pas assez de messages pour condenser le contexte de {{prevContextTokens}} tokens. Au moins {{minimumMessageCount}} messages sont requis, mais seulement {{messageCount}} sont disponibles.",
 		"condensed_recently": "Le contexte a été condensé récemment ; cette tentative est ignorée",
@@ -75,6 +71,7 @@
 		"url_page_not_found": "La page n'a pas été trouvée. Verifier si l'URL est correcte.",
 		"url_fetch_failed": "Échec de récupération du contenu de l'URL : {{error}}",
 		"url_fetch_error_with_url": "Erreur lors de la récupération du contenu pour {{url}} : {{error}}",
+		"command_timeout": "L'exécution de la commande a expiré après {{seconds}} secondes",
 		"share_task_failed": "Échec du partage de la tâche. Veuillez réessayer.",
 		"share_no_active_task": "Aucune tâche active à partager",
 		"share_auth_required": "Authentification requise. Veuillez vous connecter pour partager des tâches.",
@@ -82,6 +79,13 @@
 		"share_task_not_found": "Tâche non trouvée ou accès refusé.",
 		"mode_import_failed": "Échec de l'importation du mode : {{error}}",
 		"delete_rules_folder_failed": "Échec de la suppression du dossier de règles : {{rulesFolderPath}}. Erreur : {{error}}",
+		"command_not_found": "Commande '{{name}}' introuvable",
+		"open_command_file": "Échec de l'ouverture du fichier de commande",
+		"delete_command": "Échec de la suppression de la commande",
+		"no_workspace_for_project_command": "Aucun dossier d'espace de travail trouvé pour la commande de projet",
+		"command_already_exists": "La commande \"{{commandName}}\" existe déjà",
+		"create_command_failed": "Échec de la création de la commande",
+		"command_template_content": "---\ndescription: \"Brève description de ce que fait cette commande\"\n---\n\nCeci est une nouvelle commande slash. Modifie ce fichier pour personnaliser le comportement de la commande.",
 		"claudeCode": {
 			"processExited": "Le processus Claude Code s'est terminé avec le code {{exitCode}}.",
 			"errorOutput": "Sortie d'erreur : {{output}}",
@@ -98,6 +102,11 @@
 			"badRequest": "Requête incorrecte : {{details}}",
 			"apiError": "Erreur API Gemini CLI : {{error}}",
 			"completionError": "Erreur de complétion Gemini CLI : {{error}}"
+		},
+		"gemini": {
+			"generate_stream": "Erreur du flux de contexte de génération Gemini : {{error}}",
+			"generate_complete_prompt": "Erreur d'achèvement de Gemini : {{error}}",
+			"sources": "Sources :"
 		}
 	},
 	"warnings": {
@@ -129,7 +138,8 @@
 	},
 	"buttons": {
 		"save": "Enregistrer",
-		"edit": "Modifier"
+		"edit": "Modifier",
+		"learn_more": "En savoir plus"
 	},
 	"tasks": {
 		"canceled": "Erreur de tâche : Elle a été arrêtée et annulée par l'utilisateur.",
@@ -167,11 +177,17 @@
 			"deleteFailed": "Échec de la suppression du mode personnalisé : {{error}}",
 			"resetFailed": "Échec de la réinitialisation des modes personnalisés : {{error}}",
 			"modeNotFound": "Erreur d'écriture : Mode non trouvé",
-			"noWorkspaceForProject": "Aucun dossier d'espace de travail trouvé pour le mode spécifique au projet"
+			"noWorkspaceForProject": "Aucun dossier d'espace de travail trouvé pour le mode spécifique au projet",
+			"rulesCleanupFailed": "Le mode a été supprimé avec succès, mais la suppression du dossier de règles à l'adresse {{rulesFolderPath}} a échoué. Vous devrez peut-être le supprimer manuellement."
 		},
 		"scope": {
 			"project": "projet",
 			"global": "global"
+		}
+	},
+	"marketplace": {
+		"mode": {
+			"rulesCleanupFailed": "Le mode a été supprimé avec succès, mais la suppression du dossier de règles à l'adresse {{rulesFolderPath}} a échoué. Vous devrez peut-être le supprimer manuellement."
 		}
 	},
 	"mdm": {
@@ -187,6 +203,11 @@
 			"description": "Êtes-vous sûr de vouloir supprimer ce mode {{scope}} ? Cela supprimera également le dossier de règles associé à l'adresse : {{rulesFolderPath}}",
 			"descriptionNoRules": "Êtes-vous sûr de vouloir supprimer ce mode personnalisé ?",
 			"confirm": "Supprimer"
+		}
+	},
+	"commands": {
+		"preventCompletionWithOpenTodos": {
+			"description": "Empêcher la finalisation des tâches lorsqu'il y a des todos incomplets dans la liste de todos"
 		}
 	}
 }

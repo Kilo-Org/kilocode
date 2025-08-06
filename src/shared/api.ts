@@ -1,108 +1,115 @@
-import { type ModelInfo, type ProviderSettings, ANTHROPIC_DEFAULT_MAX_TOKENS } from "@roo-code/types"
+import {
+	type ModelInfo,
+	type ProviderSettings,
+	ANTHROPIC_DEFAULT_MAX_TOKENS,
+	CLAUDE_CODE_DEFAULT_MAX_OUTPUT_TOKENS,
+} from "@roo-code/types"
 
 // ApiHandlerOptions
 
 export type ApiHandlerOptions = Omit<ProviderSettings, "apiProvider">
 
 // kilocode_change start
-// Fireworks
-// https://fireworks.ai/models
-// TODO: Add support for all Fireworks models, currently only supports DeepSeek's serverless models
-
-export const fireworksModels = {
-	"accounts/fireworks/models/deepseek-r1": {
-		maxTokens: 16384,
-		contextWindow: 160000,
-		supportsImages: false,
-		supportsPromptCache: true,
-		inputPrice: 3.0,
-		outputPrice: 8.0,
-	},
-
-	"accounts/fireworks/models/deepseek-v3": {
-		maxTokens: 16384,
-		contextWindow: 128_000,
-		supportsImages: false,
-		supportsPromptCache: true,
-		inputPrice: 0.9,
-		outputPrice: 0.9,
-	},
-
-	"accounts/fireworks/models/llama4-scout-instruct-basic": {
-		maxTokens: 16_384,
-		contextWindow: 128_000,
-		supportsImages: true,
-		supportsPromptCache: true,
-		inputPrice: 0.15,
-		outputPrice: 0.6,
-	},
-
-	"accounts/fireworks/models/llama4-maverick-instruct-basic": {
-		maxTokens: 16_384,
-		contextWindow: 1_000_000,
-		supportsImages: true,
-		supportsPromptCache: true,
-		inputPrice: 0.22,
-		outputPrice: 0.88,
-	},
-} as const satisfies Record<string, ModelInfo>
-
-export type FireworksModelId = keyof typeof fireworksModels
-export const fireworksDefaultModelId: FireworksModelId = "accounts/fireworks/models/llama4-maverick-instruct-basic"
-// kilocode_change end
-
-// kilocode_change start
 // Cerebras
 // https://inference-docs.cerebras.ai/api-reference/models
+
+// Cerebras AI Inference Model Definitions - Updated August 2025
+
 export const cerebrasModels = {
+	"gpt-oss-120b": {
+		maxTokens: 65536,
+		contextWindow: 65536,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0.25,
+		outputPrice: 0.69,
+		description: "OpenAI's GPT-OSS model with ~3000 tokens/s",
+	},
 	"llama-4-scout-17b-16e-instruct": {
 		maxTokens: 8192,
 		contextWindow: 8192,
 		supportsImages: false,
 		supportsPromptCache: false,
-		inputPrice: 0,
-		outputPrice: 0,
-		description: "Fast inference model with ~2700 tokens/s",
+		inputPrice: 0.65,
+		outputPrice: 0.85,
+		description: "Llama 4 Scout with ~2600 tokens/s",
+	},
+	"llama-4-maverick-17b-128e-instruct": {
+		maxTokens: 8192,
+		contextWindow: 8192,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0.20,
+		outputPrice: 0.60,
+		description: "Llama 4 Maverick with ~1500 tokens/s",
 	},
 	"llama3.1-8b": {
 		maxTokens: 8192,
 		contextWindow: 8192,
 		supportsImages: false,
 		supportsPromptCache: false,
-		inputPrice: 0,
-		outputPrice: 0,
-		description: "Efficient model with ~2100 tokens/s",
+		inputPrice: 0.10,
+		outputPrice: 0.10,
+		description: "Fast and efficient model with ~2200 tokens/s",
 	},
 	"llama-3.3-70b": {
-		maxTokens: 8192,
-		contextWindow: 8192,
+		maxTokens: 65536,
+		contextWindow: 65536,
 		supportsImages: false,
 		supportsPromptCache: false,
-		inputPrice: 0,
-		outputPrice: 0,
-		description: "Powerful model with ~2600 tokens/s",
+		inputPrice: 0.85,
+		outputPrice: 1.20,
+		description: "Powerful model with ~2100 tokens/s",
 	},
 	"qwen-3-32b": {
-		maxTokens: 16382,
-		contextWindow: 16382,
+		maxTokens: 65536,
+		contextWindow: 65536,
 		supportsImages: false,
 		supportsPromptCache: false,
-		inputPrice: 0,
-		outputPrice: 0,
-		description: "SOTA coding performance with ~2500 tokens/s",
+		inputPrice: 0.40,
+		outputPrice: 0.80,
+		description: "SOTA coding performance with ~2600 tokens/s",
+	},
+	"qwen-3-235b-a22b-instruct-2507": {
+		maxTokens: 64000,
+		contextWindow: 64000,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0.60,
+		outputPrice: 1.20,
+		description: "Intelligent model with ~1400 tokens/s",
+	},
+	"qwen-3-235b-a22b-thinking-2507": {
+		maxTokens: 65536,
+		contextWindow: 65536,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0.60,
+		outputPrice: 1.20,
+		description: "SOTA performance with ~1700 tokens/s",
+	},
+	"qwen-3-coder-480b": {
+		maxTokens: 65536,
+		contextWindow: 65536,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 2.00,
+		outputPrice: 2.00,
+		description: "SOTA coding model with ~2000 tokens/s",
 	},
 	"deepseek-r1-distill-llama-70b": {
-		maxTokens: 8192,
-		contextWindow: 8192,
+		maxTokens: 65536,
+		contextWindow: 65536,
 		supportsImages: false,
 		supportsPromptCache: false,
-		inputPrice: 0,
-		outputPrice: 0,
-		description: "Advanced reasoning model with ~2300 tokens/s (private preview)",
+		inputPrice: 2.20,
+		outputPrice: 2.50,
+		description: "Deepseek R1 Distill with ~2600 tokens/s",
 	},
 } as const satisfies Record<string, ModelInfo>
+
 export type CerebrasModelId = keyof typeof cerebrasModels
-export const cerebrasDefaultModelId: CerebrasModelId = "llama3.1-8b"
+export const cerebrasDefaultModelId: CerebrasModelId = "gpt-oss-120b"
 
 // kilocode_change end
 
@@ -164,30 +171,49 @@ export const getModelMaxOutputTokens = ({
 	modelId,
 	model,
 	settings,
+	format,
 }: {
 	modelId: string
 	model: ModelInfo
 	settings?: ProviderSettings
+	format?: "anthropic" | "openai" | "gemini" | "openrouter"
 }): number | undefined => {
+	// Check for Claude Code specific max output tokens setting
+	if (settings?.apiProvider === "claude-code") {
+		return settings.claudeCodeMaxOutputTokens || CLAUDE_CODE_DEFAULT_MAX_OUTPUT_TOKENS
+	}
+
 	if (shouldUseReasoningBudget({ model, settings })) {
 		return settings?.modelMaxTokens || DEFAULT_HYBRID_REASONING_MODEL_MAX_TOKENS
 	}
 
-	const isAnthropicModel = modelId.includes("claude")
+	const isAnthropicContext =
+		modelId.includes("claude") ||
+		format === "anthropic" ||
+		(format === "openrouter" && modelId.startsWith("anthropic/"))
 
-	// For "Hybrid" reasoning models, we should discard the model's actual
-	// `maxTokens` value if we're not using reasoning. We do this for Anthropic
-	// models only for now. Should we do this for Gemini too?
-	if (model.supportsReasoningBudget && isAnthropicModel) {
+	// For "Hybrid" reasoning models, discard the model's actual maxTokens for Anthropic contexts
+	if (model.supportsReasoningBudget && isAnthropicContext) {
 		return ANTHROPIC_DEFAULT_MAX_TOKENS
 	}
 
-	// If maxTokens is 0 or undefined or the full context window, fall back to 20% of context window
+	// For Anthropic contexts, always ensure a maxTokens value is set
+	if (isAnthropicContext && (!model.maxTokens || model.maxTokens === 0)) {
+		return ANTHROPIC_DEFAULT_MAX_TOKENS
+	}
+
+	// If model has explicit maxTokens and it's not the full context window, use it
 	if (model.maxTokens && model.maxTokens !== model.contextWindow) {
 		return model.maxTokens
-	} else {
-		return Math.ceil(model.contextWindow * 0.2)
 	}
+
+	// For non-Anthropic formats without explicit maxTokens, return undefined
+	if (format) {
+		return undefined
+	}
+
+	// Default fallback
+	return ANTHROPIC_DEFAULT_MAX_TOKENS
 }
 
 // GetModelsOptions

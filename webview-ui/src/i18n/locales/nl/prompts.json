@@ -93,12 +93,23 @@
 			"useCurrentConfig": "Huidige API-configuratie gebruiken",
 			"testPromptPlaceholder": "Voer een prompt in om de verbetering te testen",
 			"previewButton": "Voorbeeld promptverbetering",
-			"testEnhancement": "Test verbetering"
+			"testEnhancement": "Test verbetering",
+			"includeTaskHistory": "Taakgeschiedenis als context opnemen",
+			"includeTaskHistoryDescription": "Wanneer ingeschakeld, worden de laatste 10 berichten van het huidige gesprek opgenomen als context bij het verbeteren van prompts, wat helpt bij het genereren van meer relevante en contextbewuste suggesties."
+		},
+		"condense": {
+			"apiConfiguration": "API-configuratie voor contextcondensatie",
+			"apiConfigDescription": "Selecteer welke API-configuratie moet worden gebruikt voor contextcondensatiebewerkingen. Laat leeg om de huidige actieve configuratie te gebruiken.",
+			"useCurrentConfig": "Gebruik de momenteel geselecteerde API-configuratie"
 		},
 		"types": {
 			"ENHANCE": {
 				"label": "Prompt verbeteren",
 				"description": "Gebruik promptverbetering om op maat gemaakte suggesties of verbeteringen voor je invoer te krijgen. Zo begrijpt Kilo Code je intentie en krijg je de best mogelijke antwoorden. Beschikbaar via het ✨-icoon in de chat."
+			},
+			"CONDENSE": {
+				"label": "Contextcondensatie",
+				"description": "Configureer hoe de gesprekscontext wordt gecondenseerd om tokenlimieten te beheren.Deze prompt wordt gebruikt voor zowel handmatige als automatische contextcondensatiebewerkingen."
 			},
 			"EXPLAIN": {
 				"label": "Code uitleggen",
@@ -127,6 +138,10 @@
 			"TERMINAL_EXPLAIN": {
 				"label": "Terminalcommando uitleggen",
 				"description": "Krijg gedetailleerde uitleg over terminalcommando's en hun uitvoer. Beschikbaar in het terminalcontextmenu (rechtsklik op geselecteerde terminalinhoud)."
+			},
+			"TERMINAL_GENERATE": {
+				"label": "Terminalcommando genereren",
+				"description": "Help bij het genereren van terminalcommando's op basis van beschrijving."
 			},
 			"NEW_TASK": {
 				"label": "Nieuwe taak starten",

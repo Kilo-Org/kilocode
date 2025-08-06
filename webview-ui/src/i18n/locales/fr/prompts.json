@@ -93,12 +93,23 @@
 			"useCurrentConfig": "Utiliser la configuration API actuellement sélectionnée",
 			"testPromptPlaceholder": "Entrez un prompt pour tester l'amélioration",
 			"previewButton": "Aperçu de l'amélioration du prompt",
-			"testEnhancement": "Tester l'amélioration"
+			"testEnhancement": "Tester l'amélioration",
+			"includeTaskHistory": "Inclure l'historique des tâches comme contexte",
+			"includeTaskHistoryDescription": "Lorsque activé, les 10 derniers messages de la conversation actuelle seront inclus comme contexte lors de l'amélioration des prompts, aidant à générer des suggestions plus pertinentes et conscientes du contexte."
+		},
+		"condense": {
+			"apiConfiguration": "Configuration de l'API pour la condensation du contexte",
+			"apiConfigDescription": "Sélectionnez la configuration d'API à utiliser pour les opérations de condensation de contexte. Laissez non sélectionné pour utiliser la configuration active actuelle.",
+			"useCurrentConfig": "Utiliser la configuration d'API actuellement sélectionnée"
 		},
 		"types": {
 			"ENHANCE": {
 				"label": "Améliorer le prompt",
 				"description": "Utilisez l'amélioration de prompt pour obtenir des suggestions ou des améliorations personnalisées pour vos entrées. Cela garantit que Kilo Code comprend votre intention et fournit les meilleures réponses possibles. Disponible via l'icône ✨ dans le chat."
+			},
+			"CONDENSE": {
+				"label": "Condensation du contexte",
+				"description": "Configurez la manière dont le contexte de la conversation est condensé pour gérer les limites de jetons. Ce prompt est utilisé pour les opérations de condensation de contexte manuelles et automatiques."
 			},
 			"EXPLAIN": {
 				"label": "Expliquer le code",
@@ -127,6 +138,10 @@
 			"TERMINAL_EXPLAIN": {
 				"label": "Expliquer la commande du terminal",
 				"description": "Obtenez des explications détaillées sur les commandes du terminal et leurs sorties. Disponible dans le menu contextuel du terminal (clic droit sur le contenu sélectionné du terminal)."
+			},
+			"TERMINAL_GENERATE": {
+				"label": "Générer une commande de terminal",
+				"description": "Aide à générer des commandes de terminal basées sur la description."
 			},
 			"NEW_TASK": {
 				"label": "Démarrer une nouvelle tâche",

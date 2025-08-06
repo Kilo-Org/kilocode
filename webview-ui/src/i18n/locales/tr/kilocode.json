@@ -4,7 +4,7 @@
 		"introText1": "Kilo Code ücretsiz, açık kaynaklı bir AI kodlama ajanıdır.",
 		"introText2": "Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1 ve 450+ diğer en yeni AI modelleri ile çalışır.",
 		"introText3": "Ücretsiz hesap oluşturun ve herhangi bir AI modeli ile kullanabilceğiniz $20 değerinde token alın.",
-		"ctaButton": "Ücretsiz hesap oluştur",
+		"ctaButton": "Başla",
 		"manualModeButton": "Kendi API anahtarınızı kullanın",
 		"alreadySignedUp": "Zaten kaydoldunuz mu?",
 		"loginText": "Buradan giriş yapın"
@@ -12,6 +12,11 @@
 	"lowCreditWarning": {
 		"addCredit": "Kredi Ekle",
 		"lowBalance": "Kilo Code bakiyeniz düşük"
+	},
+	"pricing": {
+		"costUnknown": "maliyet bilinmiyor",
+		"costUnknownDescription": "API Sağlayıcısı herhangi bir maliyet verisi sağlamadı veya istek iptal edildi.",
+		"discoverModelPricing": "Model fiyatlandırması ve yeteneklerini keşfedin"
 	},
 	"notifications": {
 		"toolRequest": "Araç isteği onay bekliyor",
@@ -32,7 +37,12 @@
 			"account": "Kilo Code Hesabı",
 			"apiKey": "Kilo Code API Anahtarı",
 			"login": "Kilo Code'a giriş yap",
-			"logout": "Kilo Code'dan çıkış yap"
+			"logout": "Kilo Code'dan çıkış yap",
+			"automaticFetch": "En son modeller Kilo Code'da otomatik olarak kullanılabilir. Hangi modeli seçeceğinizden emin değilseniz, Kilo Code en üstte <strong>kalın yazı</strong> ile listelenen önerilen modellerle en iyi şekilde çalışır.",
+			"providerRouting": {
+				"title": "Kilo Code - OpenRouter Sağlayıcı Yönlendirme",
+				"description": "Kilo Code, modeliniz için en iyi kullanılabilir sağlayıcılara istekleri yönlendirir. Varsayılan olarak, çalışma süresini en üst düzeye çıkarmak için istekler en iyi sağlayıcılar arasında yük dengelenir. Ancak, bu model için kullanılacak belirli bir sağlayıcı seçebilirsiniz."
+			}
 		},
 		"systemNotifications": {
 			"label": "Sistem bildirimlerini etkinleştir",
@@ -40,6 +50,16 @@
 			"testButton": "Bildirimi test et",
 			"testTitle": "Kilo Code",
 			"testMessage": "Bu Kilo Code'dan bir test bildirimidir."
+		},
+		"terminal": {
+			"commandGenerator": {
+				"provider": "Terminal Komut Oluşturucu Sağlayıcısı",
+				"apiConfigId": {
+					"current": "Mevcut Yapılandırmayı Kullan",
+					"label": "API Yapılandırması",
+					"description": "Terminal komutlarını oluşturmak için hangi API yapılandırmasını kullanacağınızı seçin. Varsayılan ayarlarınızı kullanmak için 'Mevcut Yapılandırmayı Kullan' olarak bırakın."
+				}
+			}
 		}
 	},
 	"chat": {
@@ -56,7 +76,14 @@
 		"dashboard": "Kontrol Paneli",
 		"logOut": "Çıkış Yap",
 		"currentBalance": "MEVCUT BAKİYE",
-		"loading": "Yükleniyor..."
+		"loading": "Yükleniyor...",
+		"shop": {
+			"title": "Kredi Satın Al",
+			"popular": "Popüler",
+			"credits": "kredi",
+			"action": "Şimdi Satın Al",
+			"viewAll": "Tüm fiyatlandırma seçeneklerini göster"
+		}
 	},
 	"docs": "Belgeler",
 	"rules": {
@@ -130,5 +157,61 @@
 			"idea6": "Fare üzerine geldiğinde dinamik içeriği güzelce ortaya çıkaran kartlar üret",
 			"idea7": "Fare hareketleriyle birlikte hareket eden sakinleştirici etkileşimli yıldız alanı oluştur"
 		}
+	},
+	"ghost": {
+		"title": "Satır İçi Yardım",
+		"settings": {
+			"autoTrigger": "Otomatik Tetikleyici",
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Hızlı Satır İçi Görev",
+				"description": "Sadece hızlı bir değişikliğe mi ihtiyacınız var? Biraz kod seçin (ya da seçmeyin!) ve Cmd+I tuşuna basın. Amacınızı sade bir şekilde açıklayın (\"bu prop'larla bir React bileşeni oluştur\", \"bu fonksiyona hata yönetimi ekle\") ve düzenleyicinizde kullanıma hazır birden fazla öneri alın. <DocsLink>Kısayolu gör</DocsLink>"
+			},
+			"enableAutoInlineTaskKeybinding": {
+				"label": "Otomatik Satır İçi Görev",
+				"description": "Hızlı bir düzeltme, tamamlama veya yeniden düzenleme mi gerekiyor? Kilo, çevreleyen bağlamı kullanarak anında iyileştirmeler sunacak, böylece odağınızı kaybetmeyeceksiniz. <DocsLink>Kısayolu gör</DocsLink>"
+			},
+			"enableAutoTrigger": {
+				"label": "Otomatik Tetikleyiciyi Etkinleştir",
+				"description": "Etkinleştirildiğinde, yazmayı bıraktığında Kilo Code otomatik olarak Satır İçi Yardımı tetikler. Bu, hızlı düzeltmeler ve öneriler için yararlı olabilir."
+			},
+			"autoTriggerDelay": {
+				"label": "Otomatik Tetikleyici Gecikmesi",
+				"description": "Yazmayı bıraktıktan sonra Kilo Code'un Satır İçi Yardımı tetiklemeden önceki saniye cinsinden gecikme. Daha kısa gecikme daha hızlı öneriler anlamına gelir, ancak daha fazla kaynak kullanabilir."
+			},
+			"enableSmartInlineTaskKeybinding": {
+				"label": "Akıllı Satır İçi Görev",
+				"description": "Hızlı bir düzeltme, tamamlama veya yeniden düzenlemeye mi ihtiyacın var? Kilo, anında iyileştirmeler sunmak için çevredeki bağlamı kullanır ve seni akışta tutar. <DocsLink>Kısayolu gör</DocsLink>"
+			},
+			"provider": "Sağlayıcı",
+			"apiConfigId": {
+				"label": "API Yapılandırması",
+				"current": "Şu anda seçili API yapılandırmasını kullan",
+				"description": "Satır İçi Yardım istemleri için kullanılacak bir API yapılandırması seçin veya o anda seçili olanı kullanın"
+			},
+			"triggers": "Tetikleyiciler",
+			"keybindingDescription": "Satır içi Yardım özellikleri komutlarla tetiklenir. <DocsLink>Klavye kısayollarını buradan</DocsLink> yapılandırabilirsiniz."
+		}
+	},
+	"virtualProvider": {
+		"title": "Sanal Kota Yedek Sağlayıcı Ayarları",
+		"description": "Her biri kendi kota limitlerine sahip profil listesi yapılandırın. Bir sağlayıcının kota limitlerine ulaşıldığında, hiçbiri kalmayana kadar listedeki bir sonraki profil kullanılacaktır.",
+		"profileLabel": "Profil {{number}}",
+		"primaryProfileLabel": "Profil {{number}} (Birincil)",
+		"moveProfileUp": "Profili yukarı taşı",
+		"moveProfileDown": "Profili aşağı taşı",
+		"removeProfile": "Profili kaldır",
+		"selectProfilePlaceholder": "Profil seç...",
+		"addProfile": "Profil ekle",
+		"noProfilesAvailable": "Kullanılabilir profil yok. Lütfen önce en az bir sanal olmayan sağlayıcı profilini yapılandırın.",
+		"dangerZoneTitle": "Tehlike Bölgesi",
+		"dangerZoneDescription": "Bu eylemler yıkıcıdır ve geri alınamaz.",
+		"clearUsageData": "Kullanım Verilerini Temizle",
+		"confirmClearTitle": "Emin misiniz?",
+		"confirmClearDescription": "Bu, sanal sağlayıcılar için depolanan tüm kullanım verilerini kalıcı olarak silecektir. Bu eylem geri alınamaz.",
+		"perDay": "Günlük",
+		"tokensLabel": "Jetonlar",
+		"perHour": "Saat Başına",
+		"perMinute": "Dakika Başına",
+		"requestsLabel": "İstekler"
 	}
 }

@@ -21,6 +21,7 @@ export interface DropdownOption {
 	value: string
 	label: string
 	codicon?: string // kilocode_change
+	description?: string // kilocode_change
 	disabled?: boolean
 	type?: DropdownOptionType
 	pinned?: boolean
@@ -31,6 +32,7 @@ export interface SelectDropdownProps {
 	options: DropdownOption[]
 	onChange: (value: string) => void
 	disabled?: boolean
+	initiallyOpen?: boolean // kilocode_change
 	title?: string
 	triggerClassName?: string
 	contentClassName?: string
@@ -52,6 +54,7 @@ export const SelectDropdown = React.memo(
 				options,
 				onChange,
 				disabled = false,
+				initiallyOpen = false, // kilocode_change
 				title = "",
 				triggerClassName = "",
 				contentClassName = "",
@@ -67,7 +70,7 @@ export const SelectDropdown = React.memo(
 			ref,
 		) => {
 			const { t } = useTranslation()
-			const [open, setOpen] = React.useState(false)
+			const [open, setOpen] = React.useState(initiallyOpen) // kilocode_change
 			const [searchValue, setSearchValue] = React.useState("")
 			const searchInputRef = React.useRef<HTMLInputElement>(null)
 			const portalContainer = useRooPortal("roo-portal")
@@ -296,7 +299,7 @@ export const SelectDropdown = React.memo(
 													key={itemKey}
 													onClick={() => !option.disabled && handleSelect(option.value)}
 													className={cn(
-														"px-3 py-1.5 text-sm cursor-pointer flex items-center",
+														"text-sm cursor-pointer flex items-center", // kilocode_change
 														option.disabled
 															? "opacity-50 cursor-not-allowed"
 															: "hover:bg-vscode-list-hoverBackground",
@@ -311,19 +314,28 @@ export const SelectDropdown = React.memo(
 													) : (
 														<>
 															{/* kilocode_change start */}
-															<span
-																slot="start"
-																style={{ fontSize: "12px" }}
-																className={cn(
-																	"codicon opacity-80 mr-1.5",
-																	option.codicon,
+															<div className="flex items-center flex-1 py-1.5 px-3 hover:bg-vscode-list-hoverBackground">
+																<span
+																	slot="start"
+																	style={{ fontSize: "14px" }}
+																	className={cn(
+																		"codicon opacity-80 mr-2",
+																		option.codicon,
+																	)}
+																/>
+																<div className="flex-1">
+																	<div>{option.label}</div>
+																	{option.description && (
+																		<div className="text-[11px] opacity-50 mt-0.5">
+																			{option.description}
+																		</div>
+																	)}
+																</div>
+																{/* kilocode_change end */}
+																{option.value === value && (
+																	<Check className="ml-auto size-4 p-0.5" />
 																)}
-															/>
-															{/* kilocode_change end */}
-															<span>{option.label}</span>
-															{option.value === value && (
-																<Check className="ml-auto size-4 p-0.5" />
-															)}
+															</div>
 														</>
 													)}
 												</div>

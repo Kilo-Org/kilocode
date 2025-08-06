@@ -2,6 +2,7 @@ import path from "path"
 import fs from "fs/promises"
 
 import { TelemetryService } from "@roo-code/telemetry"
+import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
 
 import { ClineSayTool } from "../../shared/ExtensionMessage"
 import { getReadablePath } from "../../utils/path"
@@ -450,7 +451,7 @@ Diff ${i + 1} failed for file: ${relPath}
 Error: ${failPart.error}
 
 Suggested fixes:
-1. Verify the search content exactly matches the file content (including whitespace)
+1. Verify the search content exactly matches the file content (including whitespace and case)
 2. Check for correct indentation and line endings
 3. Use <read_file> to see the current file content
 4. Consider breaking complex changes into smaller diffs
@@ -506,11 +507,15 @@ ${errorDetails ? `\nTechnical details:\n${errorDetails}\n` : ""}
 				cline.consecutiveMistakeCount = 0
 				cline.consecutiveMistakeCountForApplyDiff.delete(relPath)
 
-				// Show diff view before asking for approval (only for single file or after batch approval)
-				cline.diffViewProvider.editType = "modify"
-				await cline.diffViewProvider.open(relPath)
-				await cline.diffViewProvider.update(originalContent!, true)
-				cline.diffViewProvider.scrollToFirstDiff()
+				// Check if preventFocusDisruption experiment is enabled
+				const provider = cline.providerRef.deref()
+				const state = await provider?.getState()
+				const diagnosticsEnabled = state?.diagnosticsEnabled ?? true
+				const writeDelayMs = state?.writeDelayMs ?? DEFAULT_WRITE_DELAY_MS
+				const isPreventFocusDisruptionEnabled = experiments.isEnabled(
+					state?.experiments ?? {},
+					EXPERIMENT_IDS.PREVENT_FOCUS_DISRUPTION,
+				)
 
 				// For batch operations, we've already gotten approval
 				const isWriteProtected = cline.rooProtectedController?.isWriteProtected(relPath) || false
@@ -520,9 +525,10 @@ ${errorDetails ? `\nTechnical details:\n${errorDetails}\n` : ""}
 					isProtected: isWriteProtected,
 				}
 
-				// If single file, ask for approval
+				// If single file, handle based on PREVENT_FOCUS_DISRUPTION setting
 				let didApprove = true
 				if (operationsToApprove.length === 1) {
+					// Prepare common data for single file operation
 					const diffContents = diffItems.map((item) => item.content).join("\n\n")
 					const operationMessage = JSON.stringify({
 						...sharedMessageProps,
@@ -530,7 +536,6 @@ ${errorDetails ? `\nTechnical details:\n${errorDetails}\n` : ""}
 					} satisfies ClineSayTool)
 
 					let toolProgressStatus
-
 					if (cline.diffStrategy && cline.diffStrategy.getProgressStatus) {
 						toolProgressStatus = cline.diffStrategy.getProgressStatus(
 							{
@@ -541,19 +546,70 @@ ${errorDetails ? `\nTechnical details:\n${errorDetails}\n` : ""}
 						)
 					}
 
-					// Check if file is write-protected
+					// Set up diff view
+					cline.diffViewProvider.editType = "modify"
+
+					// Show diff view if focus disruption prevention is disabled
+					if (!isPreventFocusDisruptionEnabled) {
+						await cline.diffViewProvider.open(relPath)
+						await cline.diffViewProvider.update(originalContent!, true)
+						cline.diffViewProvider.scrollToFirstDiff()
+					} else {
+						// For direct save, we still need to set originalContent
+						cline.diffViewProvider.originalContent = await fs.readFile(absolutePath, "utf-8")
+					}
+
+					// Ask for approval (same for both flows)
 					const isWriteProtected = cline.rooProtectedController?.isWriteProtected(relPath) || false
 					didApprove = await askApproval("tool", operationMessage, toolProgressStatus, isWriteProtected)
-				}
 
-				if (!didApprove) {
-					await cline.diffViewProvider.revertChanges()
-					results.push(`Changes to ${relPath} were not approved by user`)
-					continue
-				}
+					if (!didApprove) {
+						// Revert changes if diff view was shown
+						if (!isPreventFocusDisruptionEnabled) {
+							await cline.diffViewProvider.revertChanges()
+						}
+						results.push(`Changes to ${relPath} were not approved by user`)
+						continue
+					}
 
-				// Call saveChanges to update the DiffViewProvider properties
-				await cline.diffViewProvider.saveChanges()
+					// Save the changes
+					if (isPreventFocusDisruptionEnabled) {
+						// Direct file write without diff view or opening the file
+						await cline.diffViewProvider.saveDirectly(
+							relPath,
+							originalContent!,
+							false,
+							diagnosticsEnabled,
+							writeDelayMs,
+						)
+					} else {
+						// Call saveChanges to update the DiffViewProvider properties
+						await cline.diffViewProvider.saveChanges(diagnosticsEnabled, writeDelayMs)
+					}
+				} else {
+					// Batch operations - already approved above
+					if (isPreventFocusDisruptionEnabled) {
+						// Direct file write without diff view or opening the file
+						cline.diffViewProvider.editType = "modify"
+						cline.diffViewProvider.originalContent = await fs.readFile(absolutePath, "utf-8")
+						await cline.diffViewProvider.saveDirectly(
+							relPath,
+							originalContent!,
+							false,
+							diagnosticsEnabled,
+							writeDelayMs,
+						)
+					} else {
+						// Original behavior with diff view
+						cline.diffViewProvider.editType = "modify"
+						await cline.diffViewProvider.open(relPath)
+						await cline.diffViewProvider.update(originalContent!, true)
+						cline.diffViewProvider.scrollToFirstDiff()
+
+						// Call saveChanges to update the DiffViewProvider properties
+						await cline.diffViewProvider.saveChanges(diagnosticsEnabled, writeDelayMs)
+					}
+				}
 
 				// Track file edit operation
 				await cline.fileContextTracker.trackFileContext(relPath, "roo_edited" as RecordSource)
@@ -596,8 +652,22 @@ ${errorDetails ? `\nTechnical details:\n${errorDetails}\n` : ""}
 			await cline.say("diff_error", allDiffErrors.join("\n"))
 		}
 
+		// Check for single SEARCH/REPLACE block warning
+		let totalSearchBlocks = 0
+		for (const operation of operations) {
+			for (const diffItem of operation.diff) {
+				const searchBlocks = (diffItem.content.match(/<<<<<<< SEARCH/g) || []).length
+				totalSearchBlocks += searchBlocks
+			}
+		}
+
+		const singleBlockNotice =
+			totalSearchBlocks === 1
+				? "\n<notice>Making multiple related changes in a single apply_diff is more efficient. If other changes are needed in this file, please include them as additional SEARCH/REPLACE blocks.</notice>"
+				: ""
+
 		// Push the final result combining all operation results
-		pushToolResult(results.join("\n\n"))
+		pushToolResult(results.join("\n\n") + singleBlockNotice)
 		return
 	} catch (error) {
 		await handleError("applying diff", error)

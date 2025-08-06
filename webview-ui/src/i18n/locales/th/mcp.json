@@ -1,6 +1,7 @@
 {
 	"title": "MCP Servers",
 	"done": "เสร็จสิ้น",
+	"marketplace": "MCP Marketplace",
 	"description": "<0>Model Context Protocol</0> ช่วยให้สามารถสื่อสารกับ MCP servers ที่ทำงานในเครื่องซึ่งให้เครื่องมือและทรัพยากรเพิ่มเติมเพื่อขยายความสามารถของ Kilo Code คุณสามารถใช้ <1>servers ที่สร้างโดยชุมชน</1> หรือขอให้ Kilo Code สร้างเครื่องมือใหม่ที่เฉพาะเจาะจงกับ workflow ของคุณ (เช่น \"เพิ่มเครื่องมือที่ดึง npm docs ล่าสุด\")",
 	"instructions": "คำแนะนำ",
 	"enableToggle": {

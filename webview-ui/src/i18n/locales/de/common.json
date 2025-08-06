@@ -1,4 +1,12 @@
 {
+	"errorBoundary": {
+		"title": "Etwas ist schiefgelaufen",
+		"reportText": "Bitte hilf uns, besser zu werden, indem du diesen Fehler meldest auf",
+		"githubText": "unserer GitHub Issues-Seite",
+		"copyInstructions": "Kopiere die folgende Fehlermeldung und füge sie deiner Meldung bei:",
+		"errorStack": "Fehler-Stack:",
+		"componentStack": "Komponenten-Stack:"
+	},
 	"answers": {
 		"yes": "Ja",
 		"no": "Nein",
@@ -20,7 +28,8 @@
 		"customerSupport": "Kundensupport"
 	},
 	"ui": {
-		"search_placeholder": "Suchen..."
+		"search_placeholder": "Suchen...",
+		"no_results": "Keine Ergebnisse gefunden"
 	},
 	"mermaid": {
 		"loading": "Mermaid-Diagramm wird generiert...",
@@ -70,5 +79,12 @@
 		"success": {
 			"imageDataUriCopied": "Bild-Daten-URI in die Zwischenablage kopiert"
 		}
+	},
+	"confirmation": {
+		"deleteMessage": "Nachricht löschen",
+		"deleteWarning": "Das Löschen dieser Nachricht wird alle nachfolgenden Nachrichten in der Unterhaltung löschen. Möchtest du fortfahren?",
+		"editMessage": "Nachricht bearbeiten",
+		"editWarning": "Das Bearbeiten dieser Nachricht wird alle nachfolgenden Nachrichten in der Unterhaltung löschen. Möchtest du fortfahren?",
+		"proceed": "Fortfahren"
 	}
 }

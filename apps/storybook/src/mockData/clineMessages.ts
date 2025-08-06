@@ -1,4 +1,4 @@
-import type { ClineMessage } from "../../../../src/exports/types"
+import { ClineMessage } from "@roo-code/types"
 import { randomInterval } from "../utils/randomUtils"
 
 // Fixed base timestamp for consistent snapshots (January 1, 2024, 12:00:00 UTC)

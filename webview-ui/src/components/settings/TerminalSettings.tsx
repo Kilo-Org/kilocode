@@ -12,12 +12,14 @@ import { ExtensionMessage } from "@roo/ExtensionMessage"
 import { cn } from "@/lib/utils"
 import { Slider } from "@/components/ui"
 
+import { TerminalCommandGeneratorSettings } from "./TerminalCommandGeneratorSettings" // kilocode_change
 import { SetCachedStateField } from "./types"
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
 
 type TerminalSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	terminalOutputLineLimit?: number
+	terminalOutputCharacterLimit?: number
 	terminalShellIntegrationTimeout?: number
 	terminalShellIntegrationDisabled?: boolean
 	terminalCommandDelay?: number
@@ -27,8 +29,10 @@ type TerminalSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	terminalZshP10k?: boolean
 	terminalZdotdir?: boolean
 	terminalCompressProgressBar?: boolean
+	terminalCommandApiConfigId?: string // kilocode_change
 	setCachedStateField: SetCachedStateField<
 		| "terminalOutputLineLimit"
+		| "terminalOutputCharacterLimit"
 		| "terminalShellIntegrationTimeout"
 		| "terminalShellIntegrationDisabled"
 		| "terminalCommandDelay"
@@ -38,11 +42,13 @@ type TerminalSettingsProps = HTMLAttributes<HTMLDivElement> & {
 		| "terminalZshP10k"
 		| "terminalZdotdir"
 		| "terminalCompressProgressBar"
+		| "terminalCommandApiConfigId" // kilocode_change
 	>
 }
 
 export const TerminalSettings = ({
 	terminalOutputLineLimit,
+	terminalOutputCharacterLimit,
 	terminalShellIntegrationTimeout,
 	terminalShellIntegrationDisabled,
 	terminalCommandDelay,
@@ -52,6 +58,7 @@ export const TerminalSettings = ({
 	terminalZshP10k,
 	terminalZdotdir,
 	terminalCompressProgressBar,
+	terminalCommandApiConfigId, // kilocode_change
 	setCachedStateField,
 	className,
 	...props
@@ -130,6 +137,36 @@ export const TerminalSettings = ({
 							</div>
 						</div>
 						<div>
+							<label className="block font-medium mb-1">
+								{t("settings:terminal.outputCharacterLimit.label")}
+							</label>
+							<div className="flex items-center gap-2">
+								<Slider
+									min={1000}
+									max={100000}
+									step={1000}
+									value={[terminalOutputCharacterLimit ?? 50000]}
+									onValueChange={([value]) =>
+										setCachedStateField("terminalOutputCharacterLimit", value)
+									}
+									data-testid="terminal-output-character-limit-slider"
+								/>
+								<span className="w-16">{terminalOutputCharacterLimit ?? 50000}</span>
+							</div>
+							<div className="text-vscode-descriptionForeground text-sm mt-1">
+								<Trans i18nKey="settings:terminal.outputCharacterLimit.description">
+									<VSCodeLink
+										href={buildDocLink(
+											"features/shell-integration#terminal-output-limit",
+											"settings_terminal_output_character_limit",
+										)}
+										style={{ display: "inline" }}>
+										{" "}
+									</VSCodeLink>
+								</Trans>
+							</div>
+						</div>
+						<div>
 							<VSCodeCheckbox
 								checked={terminalCompressProgressBar ?? true}
 								onChange={(e: any) =>
@@ -153,7 +190,6 @@ export const TerminalSettings = ({
 						</div>
 					</div>
 				</div>
-
 				{/* Advanced Settings */}
 				<div className="flex flex-col gap-3">
 					<div className="flex flex-col gap-1">
@@ -196,7 +232,7 @@ export const TerminalSettings = ({
 
 						<div>
 							<VSCodeCheckbox
-								checked={terminalShellIntegrationDisabled ?? false}
+								checked={terminalShellIntegrationDisabled ?? true /* kilocode_change: default */}
 								onChange={(e: any) =>
 									setCachedStateField("terminalShellIntegrationDisabled", e.target.checked)
 								}>
@@ -404,6 +440,12 @@ export const TerminalSettings = ({
 						)}
 					</div>
 				</div>
+				{/* kilocode_change start */}
+				<TerminalCommandGeneratorSettings
+					terminalCommandApiConfigId={terminalCommandApiConfigId}
+					setCachedStateField={setCachedStateField}
+				/>
+				{/* kilocode_change end */}
 			</Section>
 		</div>
 	)

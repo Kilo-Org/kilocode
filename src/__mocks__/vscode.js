@@ -10,8 +10,8 @@ const mockDisposable = {
 }
 
 const mockUri = {
-	file: (path) => ({ fsPath: path, path, scheme: "file" }),
-	parse: (path) => ({ fsPath: path, path, scheme: "file" }),
+	file: (path) => ({ fsPath: path, path, scheme: "file", toString: () => path }),
+	parse: (path) => ({ fsPath: path, path, scheme: "file", toString: () => path }),
 }
 
 const mockRange = class {

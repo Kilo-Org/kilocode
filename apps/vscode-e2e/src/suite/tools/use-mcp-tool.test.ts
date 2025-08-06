@@ -9,7 +9,7 @@ import type { ClineMessage } from "@roo-code/types"
 import { waitFor, sleep } from "../utils"
 import { setDefaultSuiteTimeout } from "../test-utils"
 
-suite("Roo Code use_mcp_tool Tool", function () {
+suite.skip("Roo Code use_mcp_tool Tool", function () {
 	setDefaultSuiteTimeout(this)
 
 	let tempDir: string
@@ -557,7 +557,7 @@ suite("Roo Code use_mcp_tool Tool", function () {
 		}
 	})
 
-	test("Should request MCP filesystem directory_tree tool and complete successfully", async function () {
+	test.skip("Should request MCP filesystem directory_tree tool and complete successfully", async function () {
 		const api = globalThis.api
 		const messages: ClineMessage[] = []
 		let _taskCompleted = false

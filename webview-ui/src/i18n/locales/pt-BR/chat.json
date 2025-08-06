@@ -50,7 +50,7 @@
 	},
 	"save": {
 		"title": "Salvar",
-		"tooltip": "Salvar as alterações do arquivo"
+		"tooltip": "Salvar as alterações da mensagem"
 	},
 	"reject": {
 		"title": "Rejeitar",
@@ -114,8 +114,8 @@
 	"sendMessage": "Enviar mensagem",
 	"stopTts": "Parar conversão de texto em fala",
 	"typeMessage": "Digite uma mensagem...",
-	"typeTask": "Construir, encontrar, perguntar algo",
-	"addContext": "@ para adicionar contexto, / para alternar modos",
+	"typeTask": "Digite sua tarefa aqui...",
+	"addContext": "@ para adicionar contexto, / para comandos",
 	"dragFiles": "segure shift para arrastar arquivos",
 	"dragFilesImages": "segure shift para arrastar arquivos/imagens",
 	"enhancePromptDescription": "O botão 'Aprimorar prompt' ajuda a melhorar seu pedido fornecendo contexto adicional, esclarecimentos ou reformulações. Tente digitar um pedido aqui e clique no botão novamente para ver como funciona.",
@@ -123,13 +123,16 @@
 		"title": "Modos",
 		"marketplace": "Marketplace de Modos",
 		"settings": "Configurações de Modos",
-		"description": "Personas especializadas que adaptam o comportamento do Kilo Code."
+		"description": "Personas especializadas que adaptam o comportamento do Roo.",
+		"searchPlaceholder": "Pesquisar modos...",
+		"noResults": "Nenhum resultado encontrado"
 	},
 	"errorReadingFile": "Erro ao ler arquivo:",
 	"noValidImages": "Nenhuma imagem válida foi processada",
 	"separator": "Separador",
 	"edit": "Editar...",
 	"forNextMode": "para o próximo modo",
+	"forPreviousMode": "para o modo anterior",
 	"error": "Erro",
 	"diffError": {
 		"title": "Edição mal-sucedida"
@@ -198,6 +201,22 @@
 		"didViewDefinitionsOutsideWorkspace": "Kilo Code visualizou nomes de definição de código-fonte usados neste diretório (fora do espaço de trabalho):"
 	},
 	"commandOutput": "Saída do comando",
+	"commandExecution": {
+		"running": "Executando",
+		"pid": "PID: {{pid}}",
+		"exited": "Encerrado ({{exitCode}})",
+		"manageCommands": "Gerenciar Permissões de Comando",
+		"commandManagementDescription": "Gerencie as permissões de comando: Clique em ✓ para permitir a execução automática, ✗ para negar a execução. Os padrões podem ser ativados/desativados ou removidos das listas. <settingsLink>Ver todas as configurações</settingsLink>",
+		"addToAllowed": "Adicionar à lista de permitidos",
+		"removeFromAllowed": "Remover da lista de permitidos",
+		"addToDenied": "Adicionar à lista de negados",
+		"removeFromDenied": "Remover da lista de negados",
+		"abortCommand": "Abortar execução do comando",
+		"expandOutput": "Expandir saída",
+		"collapseOutput": "Recolher saída",
+		"expandManagement": "Expandir seção de gerenciamento de comandos",
+		"collapseManagement": "Recolher seção de gerenciamento de comandos"
+	},
 	"response": "Resposta",
 	"arguments": "Argumentos",
 	"mcp": {
@@ -229,7 +248,10 @@
 	"autoApprove": {
 		"title": "Aprovação automática:",
 		"none": "Nenhuma",
-		"description": "A aprovação automática permite que o Kilo Code execute ações sem pedir permissão. Ative apenas para ações nas quais você confia totalmente. Configuração mais detalhada disponível nas <settingsLink>Configurações</settingsLink>."
+		"description": "A aprovação automática permite que o Kilo Code execute ações sem pedir permissão. Ative apenas para ações nas quais você confia totalmente. Configuração mais detalhada disponível nas <settingsLink>Configurações</settingsLink>.",
+		"selectOptionsFirst": "Selecione pelo menos uma opção abaixo para ativar a aprovação automática",
+		"toggleAriaLabel": "Alternar aprovação automática",
+		"disabledAriaLabel": "Aprovação automática desativada - selecione as opções primeiro"
 	},
 	"reasoning": {
 		"thinking": "Pensando",
@@ -247,12 +269,12 @@
 		"countdownDisplay": "{{count}}s"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} Lançado",
-		"description": "Roo Code {{version}} traz novos recursos poderosos e melhorias significativas para aprimorar seu fluxo de trabalho de desenvolvimento.",
+		"title": "🎉 Kilo Code {{version}} Lançado",
+		"description": "Kilo Code {{version}} traz novos recursos poderosos e melhorias significativas para aprimorar seu fluxo de trabalho de desenvolvimento.",
 		"whatsNew": "O que há de novo",
-		"feature1": "<bold>Indexação de Base de Código Graduada do Experimental</bold>: A indexação completa da base de código agora é estável e pronta para uso em produção com busca aprimorada e compreensão de contexto.",
-		"feature2": "<bold>Nova Funcionalidade de Lista de Tarefas</bold>: Mantenha suas tarefas no caminho certo com gerenciamento integrado de tarefas que ajuda você a se manter organizado e focado em seus objetivos de desenvolvimento.",
-		"feature3": "<bold>Transições Aprimoradas de Arquiteto para Código</bold>: Transferências suaves do planejamento no modo Arquiteto para implementação no modo Código.",
+		"feature1": "<bold>Fila de Mensagens</bold>: Coloque várias mensagens na fila enquanto o Roo está trabalhando, permitindo que você continue planejando seu fluxo de trabalho sem interrupção.",
+		"feature2": "<bold>Comandos de Barra Personalizados</bold>: Crie comandos de barra personalizados para acesso rápido a prompts e fluxos de trabalho usados frequentemente, com gerenciamento completo da interface do usuário.",
+		"feature3": "<bold>Ferramentas Gemini Aprimoradas</bold>: Novas capacidades de contexto de URL e fundamentação de pesquisa do Google fornecem aos modelos Gemini informações web em tempo real e capacidades de pesquisa aprimoradas.",
 		"hideButton": "Ocultar anúncio",
 		"detailsDiscussLinks": "Obtenha mais detalhes e participe da discussão no <discordLink>Discord</discordLink> e <redditLink>Reddit</redditLink> 🚀"
 	},
@@ -288,7 +310,7 @@
 		}
 	},
 	"systemPromptWarning": "AVISO: Substituição personalizada de instrução do sistema ativa. Isso pode comprometer gravemente a funcionalidade e causar comportamento imprevisível.",
-	"profileViolationWarning": "O perfil atual viola as configurações da sua organização",
+	"profileViolationWarning": "O perfil atual não é compatível com as configurações da sua organização",
 	"shellIntegration": {
 		"title": "Aviso de execução de comando",
 		"description": "Seu comando está sendo executado sem a integração de shell do terminal VSCode. Para suprimir este aviso, você pode desativar a integração de shell na seção <strong>Terminal</strong> das <settingsLink>configurações do Kilo Code</settingsLink> ou solucionar problemas de integração do terminal VSCode usando o link abaixo.",
@@ -304,7 +326,8 @@
 	"codebaseSearch": {
 		"wantsToSearch": "Kilo Code quer pesquisar na base de código por <code>{{query}}</code>:",
 		"wantsToSearchWithPath": "Kilo Code quer pesquisar na base de código por <code>{{query}}</code> em <code>{{path}}</code>:",
-		"didSearch": "Encontrado {{count}} resultado(s) para <code>{{query}}</code>:",
+		"didSearch_one": "Encontrado 1 resultado",
+		"didSearch_other": "Encontrados {{count}} resultados",
 		"resultTooltip": "Pontuação de similaridade: {{score}} (clique para abrir o arquivo)"
 	},
 	"read-batch": {
@@ -324,5 +347,38 @@
 	},
 	"versionIndicator": {
 		"ariaLabel": "Versão {{version}} - Clique para ver as notas de lançamento"
+	},
+	"rooCloudCTA": {
+		"title": "Roo Code Cloud chegará em breve!",
+		"description": "Execute agentes remotos na nuvem, acesse suas tarefas de qualquer lugar, colabore com outros e muito mais.",
+		"joinWaitlist": "Junte-se à lista de espera para obter acesso antecipado."
+	},
+	"editMessage": {
+		"placeholder": "Edite sua mensagem..."
+	},
+	"command": {
+		"triggerDescription": "Acionar o comando {{name}}"
+	},
+	"slashCommands": {
+		"tooltip": "Gerenciar comandos de barra",
+		"title": "Comandos de Barra",
+		"description": "Crie comandos de barra personalizados para acesso rápido a prompts e fluxos de trabalho usados com frequência. <DocsLink>Documentação</DocsLink>",
+		"globalCommands": "Comandos Globais",
+		"workspaceCommands": "Comandos do Espaço de Trabalho",
+		"globalCommand": "Comando global",
+		"editCommand": "Editar comando",
+		"deleteCommand": "Excluir comando",
+		"newGlobalCommandPlaceholder": "Novo comando global...",
+		"newWorkspaceCommandPlaceholder": "Novo comando do espaço de trabalho...",
+		"deleteDialog": {
+			"title": "Excluir Comando",
+			"description": "Tem certeza de que deseja excluir o comando \"{{name}}\"? Esta ação não pode ser desfeita.",
+			"cancel": "Cancelar",
+			"confirm": "Excluir"
+		}
+	},
+	"queuedMessages": {
+		"title": "Mensagens na fila:",
+		"clickToEdit": "Clique para editar a mensagem"
 	}
 }

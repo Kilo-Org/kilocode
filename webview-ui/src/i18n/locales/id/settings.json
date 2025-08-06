@@ -41,13 +41,16 @@
 		"title": "Pengindeksan Codebase",
 		"enableLabel": "Aktifkan Pengindeksan Codebase",
 		"enableDescription": "Aktifkan pengindeksan kode untuk pencarian dan pemahaman konteks yang lebih baik",
-		"providerLabel": "Provider Embeddings",
-		"selectProviderPlaceholder": "Pilih provider",
+		"profileLabel": "Provider Embeddings",
+		"selectProfilePlaceholder": "Pilih provider",
 		"openaiProvider": "OpenAI",
 		"ollamaProvider": "Ollama",
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "API Key:",
 		"geminiApiKeyPlaceholder": "Masukkan kunci API Gemini Anda",
+		"mistralProvider": "Mistral",
+		"mistralApiKeyLabel": "Kunci API:",
+		"mistralApiKeyPlaceholder": "Masukkan kunci API Mistral Anda",
 		"openaiCompatibleProvider": "OpenAI Compatible",
 		"openAiKeyLabel": "OpenAI API Key",
 		"openAiKeyPlaceholder": "Masukkan kunci API OpenAI kamu",
@@ -110,6 +113,7 @@
 			"modelIdRequired": "ID Model diperlukan",
 			"modelDimensionRequired": "Dimensi model diperlukan",
 			"geminiApiKeyRequired": "Kunci API Gemini diperlukan",
+			"mistralApiKeyRequired": "Kunci API Mistral diperlukan",
 			"ollamaBaseUrlRequired": "URL dasar Ollama diperlukan",
 			"baseUrlRequired": "URL dasar diperlukan",
 			"modelDimensionMinValue": "Dimensi model harus lebih besar dari 0"
@@ -124,6 +128,8 @@
 	},
 	"autoApprove": {
 		"description": "Izinkan Kilo Code untuk secara otomatis melakukan operasi tanpa memerlukan persetujuan. Aktifkan pengaturan ini hanya jika kamu sepenuhnya mempercayai AI dan memahami risiko keamanan yang terkait.",
+		"toggleAriaLabel": "Beralih persetujuan otomatis",
+		"disabledAriaLabel": "Persetujuan otomatis dinonaktifkan - pilih opsi terlebih dahulu",
 		"readOnly": {
 			"label": "Baca",
 			"description": "Ketika diaktifkan, Kilo Code akan secara otomatis melihat konten direktori dan membaca file tanpa memerlukan kamu mengklik tombol Setujui.",
@@ -176,8 +182,12 @@
 			"description": "Secara otomatis mengeksekusi perintah terminal yang diizinkan tanpa memerlukan persetujuan",
 			"allowedCommands": "Perintah Auto-Execute yang Diizinkan",
 			"allowedCommandsDescription": "Prefix perintah yang dapat di-auto-execute ketika \"Selalu setujui operasi eksekusi\" diaktifkan. Tambahkan * untuk mengizinkan semua perintah (gunakan dengan hati-hati).",
+			"deniedCommands": "Perintah yang ditolak",
+			"deniedCommandsDescription": "Prefix perintah yang akan ditolak secara otomatis tanpa memerlukan persetujuan. Dalam kasus konflik dengan perintah yang diizinkan, pencocokan prefix terpanjang diprioritaskan. Tambahkan * untuk menolak semua perintah.",
 			"commandPlaceholder": "Masukkan prefix perintah (misalnya, 'git ')",
-			"addButton": "Tambah"
+			"deniedCommandPlaceholder": "Masukkan prefix perintah untuk ditolak (misalnya, 'rm -rf')",
+			"addButton": "Tambah",
+			"autoDenied": "Perintah dengan awalan `{{prefix}}` telah dilarang oleh pengguna. Jangan menghindari pembatasan ini dengan menjalankan perintah lain."
 		},
 		"showMenu": {
 			"label": "Tampilkan menu auto-approve di tampilan chat",
@@ -191,7 +201,8 @@
 			"title": "Permintaan Maks",
 			"description": "Secara otomatis membuat sejumlah permintaan API ini sebelum meminta persetujuan untuk melanjutkan tugas.",
 			"unlimited": "Tidak terbatas"
-		}
+		},
+		"selectOptionsFirst": "Pilih setidaknya satu opsi di bawah ini untuk mengaktifkan persetujuan otomatis"
 	},
 	"providers": {
 		"providerDocumentation": "Dokumentasi {{provider}}",
@@ -251,10 +262,36 @@
 		"getChutesApiKey": "Dapatkan Chutes API Key",
 		"deepSeekApiKey": "DeepSeek API Key",
 		"getDeepSeekApiKey": "Dapatkan DeepSeek API Key",
+		"doubaoApiKey": "Kunci API Doubao",
+		"getDoubaoApiKey": "Dapatkan Kunci API Doubao",
+		"fireworksApiKey": "Kunci API Fireworks",
+		"getFireworksApiKey": "Dapatkan Kunci API Fireworks",
+		"zaiApiKey": "Kunci API Z.AI",
+		"getZaiApiKey": "Dapatkan Kunci API Z.AI",
+		"bigModelApiKey": "Kunci API BigModel",
+		"getBigModelApiKey": "Dapatkan Kunci API BigModel",
+		"moonshotApiKey": "Kunci API Moonshot",
+		"getMoonshotApiKey": "Dapatkan Kunci API Moonshot",
+		"moonshotBaseUrl": "Titik Masuk Moonshot",
 		"geminiApiKey": "Gemini API Key",
 		"getGroqApiKey": "Dapatkan Groq API Key",
 		"groqApiKey": "Groq API Key",
+		"getSambaNovaApiKey": "Dapatkan SambaNova API Key",
+		"sambaNovaApiKey": "SambaNova API Key",
+		"getHuggingFaceApiKey": "Dapatkan Kunci API Hugging Face",
+		"huggingFaceApiKey": "Kunci API Hugging Face",
+		"huggingFaceModelId": "ID Model",
 		"getGeminiApiKey": "Dapatkan Gemini API Key",
+		"huggingFaceLoading": "Memuat...",
+		"huggingFaceModelsCount": "({{count}} model)",
+		"huggingFaceSelectModel": "Pilih model...",
+		"huggingFaceSearchModels": "Cari model...",
+		"huggingFaceNoModelsFound": "Tidak ada model ditemukan",
+		"huggingFaceProvider": "Penyedia",
+		"huggingFaceProviderAuto": "Otomatis",
+		"huggingFaceSelectProvider": "Pilih penyedia...",
+		"huggingFaceSearchProviders": "Cari penyedia...",
+		"huggingFaceNoProvidersFound": "Tidak ada penyedia ditemukan",
 		"openAiApiKey": "OpenAI API Key",
 		"apiKey": "API Key",
 		"openAiBaseUrl": "Base URL",
@@ -269,6 +306,7 @@
 		"litellmBaseUrl": "LiteLLM Base URL",
 		"awsCredentials": "AWS Credentials",
 		"awsProfile": "AWS Profile",
+		"awsApiKey": "Kunci API Amazon Bedrock",
 		"awsProfileName": "Nama AWS Profile",
 		"awsAccessKey": "AWS Access Key",
 		"awsSecretKey": "AWS Secret Key",
@@ -285,6 +323,17 @@
 		"cacheUsageNote": "Catatan: Jika kamu tidak melihat penggunaan cache, coba pilih model yang berbeda lalu pilih model yang kamu inginkan lagi.",
 		"vscodeLmModel": "Model Bahasa",
 		"vscodeLmWarning": "Catatan: Ini adalah integrasi yang sangat eksperimental dan dukungan provider akan bervariasi. Jika kamu mendapat error tentang model yang tidak didukung, itu adalah masalah di sisi provider.",
+		"geminiParameters": {
+			"urlContext": {
+				"title": "Aktifkan konteks URL",
+				"description": "Memungkinkan Gemini mengakses dan memproses URL untuk konteks tambahan saat menghasilkan respons. Berguna untuk tugas yang memerlukan analisis konten web."
+			},
+			"groundingSearch": {
+				"title": "Aktifkan Grounding dengan Pencarian Google",
+				"description": "Memungkinkan Gemini mencari informasi terkini di Google dan mendasarkan respons pada data waktu nyata. Berguna untuk kueri yang memerlukan informasi terkini."
+			}
+		},
+
 		"googleCloudSetup": {
 			"title": "Untuk menggunakan Google Cloud Vertex AI, kamu perlu:",
 			"step1": "1. Buat akun Google Cloud, aktifkan Vertex AI API & aktifkan model Claude yang diinginkan.",
@@ -372,6 +421,12 @@
 			"label": "Rate limit",
 			"description": "Waktu minimum antara permintaan API."
 		},
+		"consecutiveMistakeLimit": {
+			"label": "Batas Kesalahan & Pengulangan",
+			"description": "Jumlah kesalahan berturut-turut atau tindakan berulang sebelum menampilkan dialog 'Kilo Code mengalami masalah'",
+			"unlimitedDescription": "Percobaan ulang tak terbatas diaktifkan (lanjut otomatis). Dialog tidak akan pernah muncul.",
+			"warning": "⚠️ Mengatur ke 0 memungkinkan percobaan ulang tak terbatas yang dapat menghabiskan penggunaan API yang signifikan"
+		},
 		"reasoningEffort": {
 			"label": "Upaya Reasoning Model",
 			"high": "Tinggi",
@@ -382,7 +437,9 @@
 		"claudeCode": {
 			"pathLabel": "Jalur Kode Claude",
 			"description": "Jalur opsional ke Claude Code CLI Anda. Defaultnya adalah 'claude' jika tidak diatur.",
-			"placeholder": "Default: claude"
+			"placeholder": "Default: claude",
+			"maxTokensLabel": "Token Output Maks",
+			"maxTokensDescription": "Jumlah maksimum token output untuk respons Claude Code. Default adalah 8000."
 		},
 		"geminiCli": {
 			"description": "Penyedia ini menggunakan autentikasi OAuth dari alat Gemini CLI dan tidak memerlukan kunci API.",
@@ -468,6 +525,23 @@
 			"name": "Secara otomatis memicu kondensasi konteks cerdas",
 			"description": "Ketika diaktifkan, Kilo Code akan secara otomatis mengondensasi konteks ketika ambang batas tercapai. Ketika dinonaktifkan, kamu masih dapat memicu kondensasi konteks secara manual."
 		},
+		"diagnostics": {
+			"includeMessages": {
+				"label": "Secara otomatis sertakan diagnostik dalam konteks",
+				"description": "Ketika diaktifkan, pesan diagnostik (error) dari file yang diedit akan secara otomatis disertakan dalam konteks. Kamu selalu dapat menyertakan semua diagnostik workspace secara manual menggunakan @problems."
+			},
+			"maxMessages": {
+				"label": "Pesan diagnostik maksimum",
+				"description": "Jumlah maksimum pesan diagnostik yang akan disertakan per file. Batas ini berlaku untuk penyertaan otomatis (ketika checkbox diaktifkan) dan penyebutan manual @problems. Nilai yang lebih tinggi memberikan lebih banyak konteks tetapi meningkatkan penggunaan token.",
+				"resetTooltip": "Reset ke nilai default (50)",
+				"unlimited": "Pesan diagnostik tidak terbatas",
+				"unlimitedLabel": "Tak terbatas"
+			},
+			"delayAfterWrite": {
+				"label": "Tunda setelah penulisan untuk memungkinkan diagnostik mendeteksi potensi masalah",
+				"description": "Waktu tunggu setelah penulisan file sebelum melanjutkan, memungkinkan alat diagnostik untuk memproses perubahan dan mendeteksi masalah."
+			}
+		},
 		"condensingThreshold": {
 			"label": "Ambang Batas Pemicu Kondensasi",
 			"selectProfile": "Konfigurasi ambang batas untuk profil",
@@ -498,6 +572,16 @@
 			"description": "Kilo Code membaca sejumlah baris ini ketika model menghilangkan nilai start/end. Jika angka ini kurang dari total file, Kilo Code menghasilkan indeks nomor baris dari definisi kode. Kasus khusus: -1 menginstruksikan Kilo Code untuk membaca seluruh file (tanpa indexing), dan 0 menginstruksikannya untuk tidak membaca baris dan hanya menyediakan indeks baris untuk konteks minimal. Nilai yang lebih rendah meminimalkan penggunaan konteks awal, memungkinkan pembacaan rentang baris yang tepat selanjutnya. Permintaan start/end eksplisit tidak dibatasi oleh pengaturan ini.",
 			"lines": "baris",
 			"always_full_read": "Selalu baca seluruh file"
+		},
+		"maxImageFileSize": {
+			"label": "Ukuran file gambar maksimum",
+			"mb": "MB",
+			"description": "Ukuran maksimum (dalam MB) untuk file gambar yang dapat diproses oleh alat baca file."
+		},
+		"maxTotalImageSize": {
+			"label": "Ukuran total gambar maksimum",
+			"mb": "MB",
+			"description": "Batas ukuran kumulatif maksimum (dalam MB) untuk semua gambar yang diproses dalam satu operasi read_file. Saat membaca beberapa gambar, ukuran setiap gambar ditambahkan ke total. Jika menyertakan gambar lain akan melebihi batas ini, gambar tersebut akan dilewati."
 		}
 	},
 	"terminal": {
@@ -512,6 +596,10 @@
 		"outputLineLimit": {
 			"label": "Batas output terminal",
 			"description": "Jumlah maksimum baris yang disertakan dalam output terminal saat mengeksekusi perintah. Ketika terlampaui, baris akan dihapus dari tengah, menghemat token. <0>Pelajari lebih lanjut</0>"
+		},
+		"outputCharacterLimit": {
+			"label": "Batas karakter terminal",
+			"description": "Jumlah maksimum karakter yang akan disertakan dalam output terminal saat menjalankan perintah. Batas ini lebih diutamakan daripada batas baris untuk mencegah masalah memori dari baris yang sangat panjang. Ketika terlampaui, output akan dipotong. <0>Pelajari lebih lanjut</0>"
 		},
 		"shellIntegrationTimeout": {
 			"label": "Timeout integrasi shell terminal",
@@ -554,6 +642,9 @@
 			"description": "Ketika diaktifkan, terminal akan mewarisi variabel environment dari proses parent VSCode, seperti pengaturan integrasi shell yang didefinisikan user-profile. Ini secara langsung mengalihkan pengaturan global VSCode `terminal.integrated.inheritEnv`. <0>Pelajari lebih lanjut</0>"
 		}
 	},
+	"advancedSettings": {
+		"title": "Pengaturan lanjutan"
+	},
 	"advanced": {
 		"diff": {
 			"label": "Aktifkan editing melalui diff",
@@ -575,6 +666,10 @@
 				"label": "Presisi pencocokan",
 				"description": "Slider ini mengontrol seberapa tepat bagian kode harus cocok saat menerapkan diff. Nilai yang lebih rendah memungkinkan pencocokan yang lebih fleksibel tetapi meningkatkan risiko penggantian yang salah. Gunakan nilai di bawah 100% dengan sangat hati-hati."
 			}
+		},
+		"todoList": {
+			"label": "Aktifkan alat daftar tugas",
+			"description": "Saat diaktifkan, Kilo Code dapat membuat dan mengelola daftar tugas untuk melacak kemajuan tugas. Ini membantu mengatur tugas kompleks menjadi langkah-langkah yang dapat dikelola."
 		}
 	},
 	"experimental": {
@@ -615,10 +710,6 @@
 			"name": "Gunakan mode \"power steering\" eksperimental",
 			"description": "Ketika diaktifkan, Kilo Code akan mengingatkan model tentang detail definisi mode saat ini lebih sering. Ini akan menghasilkan kepatuhan yang lebih kuat terhadap definisi peran dan instruksi kustom, tetapi akan menggunakan lebih banyak token per pesan."
 		},
-		"AUTOCOMPLETE": {
-			"name": "Gunakan fitur \"autocomplete\" eksperimental",
-			"description": "Ketika diaktifkan, Kilo Code akan memberikan saran kode inline saat kamu mengetik. Memerlukan Kilo Code API Provider."
-		},
 		"CONCURRENT_FILE_READS": {
 			"name": "Aktifkan pembacaan file bersamaan",
 			"description": "Ketika diaktifkan, Kilo Code dapat membaca beberapa file dalam satu permintaan. Ketika dinonaktifkan, Kilo Code harus membaca file satu per satu. Menonaktifkan ini dapat membantu saat bekerja dengan model yang kurang mampu atau ketika kamu ingin kontrol lebih terhadap akses file."
@@ -634,6 +725,21 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Aktifkan edit file bersamaan",
 			"description": "Ketika diaktifkan, Kilo Code dapat mengedit beberapa file dalam satu permintaan. Ketika dinonaktifkan, Kilo Code harus mengedit file satu per satu. Menonaktifkan ini dapat membantu saat bekerja dengan model yang kurang mampu atau ketika kamu ingin kontrol lebih terhadap modifikasi file."
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "Aktifkan Morph Fast Apply",
+			"description": "Ketika diaktifkan, Kilo Code dapat mengedit file menggunakan Morph Fast Apply.",
+			"apiKey": "Kunci API Morph (opsional)",
+			"placeholder": "Masukkan kunci API Morph Anda (opsional)",
+			"warning": "Jika Anda tidak mengonfigurasi kunci API Morph, Anda masih dapat menggunakan Fast Apply dengan Kilo Code atau OpenRouter. Akun Anda akan ditagih untuk penggunaan model, ini saat ini tidak ditampilkan di UI ekstensi."
+		},
+		"INLINE_ASSIST": {
+			"name": "Bantuan Inline",
+			"description": "Aktifkan fitur Inline Assist untuk saran dan perbaikan kode cepat langsung di editor Anda. Termasuk Quick Inline Task (Cmd+I) untuk perubahan terarah dan Auto Inline Task untuk perbaikan kontekstual."
+		},
+		"PREVENT_FOCUS_DISRUPTION": {
+			"name": "Pengeditan Latar Belakang",
+			"description": "Ketika diaktifkan, mencegah gangguan fokus editor. Pengeditan file terjadi di latar belakang tanpa membuka tampilan diff atau mencuri fokus. Anda dapat terus bekerja tanpa gangguan saat Kilo Code melakukan perubahan. File mungkin dibuka tanpa fokus untuk menangkap diagnostik atau tetap tertutup sepenuhnya."
 		}
 	},
 	"promptCaching": {
@@ -669,7 +775,7 @@
 		}
 	},
 	"modelPicker": {
-		"automaticFetch": "Ekstensi secara otomatis mengambil daftar model terbaru yang tersedia di <serviceLink>{{serviceName}}</serviceLink>. Jika kamu tidak yakin model mana yang harus dipilih, Kilo Code bekerja terbaik dengan <defaultModelLink>{{defaultModelId}}</defaultModelLink>. Kamu juga dapat mencoba mencari \"free\" untuk opsi tanpa biaya yang saat ini tersedia.",
+		"automaticFetch": "Ekstensi secara otomatis mengambil daftar model terbaru yang tersedia di <serviceLink>{{serviceName}}</serviceLink>. Jika kamu tidak yakin model mana yang harus dipilih, Kilo Code bekerja terbaik dengan <defaultModelLink>{{defaultModelId}}</defaultModelLink>.",
 		"label": "Model",
 		"searchPlaceholder": "Cari",
 		"noMatchFound": "Tidak ada yang cocok ditemukan",
@@ -748,5 +854,8 @@
 		}
 	},
 	"includeMaxOutputTokens": "Sertakan token output maksimum",
-	"includeMaxOutputTokensDescription": "Kirim parameter token output maksimum dalam permintaan API. Beberapa provider mungkin tidak mendukung ini."
+	"includeMaxOutputTokensDescription": "Kirim parameter token output maksimum dalam permintaan API. Beberapa provider mungkin tidak mendukung ini.",
+	"limitMaxTokensDescription": "Batasi jumlah maksimum token dalam respons",
+	"maxOutputTokensLabel": "Token output maksimum",
+	"maxTokensGenerateDescription": "Token maksimum untuk dihasilkan dalam respons"
 }

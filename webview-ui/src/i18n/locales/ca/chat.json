@@ -50,7 +50,7 @@
 	},
 	"save": {
 		"title": "Desar",
-		"tooltip": "Desa els canvis del fitxer"
+		"tooltip": "Desa els canvis del missatge"
 	},
 	"reject": {
 		"title": "Rebutjar",
@@ -114,8 +114,8 @@
 	"sendMessage": "Envia el missatge",
 	"stopTts": "Atura la síntesi de veu",
 	"typeMessage": "Escriu un missatge...",
-	"typeTask": "Construeix, cerca, pregunta alguna cosa",
-	"addContext": "@ per afegir context, / per canviar de mode",
+	"typeTask": "Escriu la teva tasca aquí...",
+	"addContext": "@ per afegir context, / per a comandes",
 	"dragFiles": "manté premut shift per arrossegar fitxers",
 	"dragFilesImages": "manté premut shift per arrossegar fitxers/imatges",
 	"enhancePromptDescription": "El botó 'Millora la sol·licitud' ajuda a millorar la teva sol·licitud proporcionant context addicional, aclariments o reformulacions. Prova d'escriure una sol·licitud aquí i fes clic al botó de nou per veure com funciona.",
@@ -123,13 +123,16 @@
 		"title": "Modes",
 		"marketplace": "Marketplace de Modes",
 		"settings": "Configuració de Modes",
-		"description": "Personalitats especialitzades que adapten el comportament de Kilo Code."
+		"description": "Personalitats especialitzades que adapten el comportament de Kilo Code.",
+		"searchPlaceholder": "Cerca modes...",
+		"noResults": "No s'han trobat resultats"
 	},
 	"errorReadingFile": "Error en llegir el fitxer:",
 	"noValidImages": "No s'ha processat cap imatge vàlida",
 	"separator": "Separador",
 	"edit": "Edita...",
 	"forNextMode": "per al següent mode",
+	"forPreviousMode": "per al mode anterior",
 	"error": "Error",
 	"diffError": {
 		"title": "Edició fallida"
@@ -198,6 +201,22 @@
 		"didViewDefinitionsOutsideWorkspace": "Kilo Code ha vist noms de definicions de codi font utilitzats en aquest directori (fora de l'espai de treball):"
 	},
 	"commandOutput": "Sortida de l'ordre",
+	"commandExecution": {
+		"running": "Executant",
+		"pid": "PID: {{pid}}",
+		"exited": "Finalitzat ({{exitCode}})",
+		"manageCommands": "Gestiona els permisos de les ordres",
+		"commandManagementDescription": "Gestiona els permisos de les ordres: Fes clic a ✓ per permetre l'execució automàtica, ✗ per denegar l'execució. Els patrons es poden activar/desactivar o eliminar de les llistes. <settingsLink>Mostra tots els paràmetres</settingsLink>",
+		"addToAllowed": "Afegeix a la llista de permesos",
+		"removeFromAllowed": "Elimina de la llista de permesos",
+		"addToDenied": "Afegeix a la llista de denegats",
+		"removeFromDenied": "Elimina de la llista de denegats",
+		"abortCommand": "Interromp l'execució de l'ordre",
+		"expandOutput": "Amplia la sortida",
+		"collapseOutput": "Redueix la sortida",
+		"expandManagement": "Amplia la secció de gestió d'ordres",
+		"collapseManagement": "Redueix la secció de gestió d'ordres"
+	},
 	"response": "Resposta",
 	"arguments": "Arguments",
 	"mcp": {
@@ -229,7 +248,10 @@
 	"autoApprove": {
 		"title": "Aprovació automàtica:",
 		"none": "Cap",
-		"description": "L'aprovació automàtica permet a Kilo Code realitzar accions sense demanar permís. Activa-la només per a accions en les que confies plenament. Configuració més detallada disponible a la <settingsLink>Configuració</settingsLink>."
+		"description": "L'aprovació automàtica permet a Kilo Code realitzar accions sense demanar permís. Activa-la només per a accions en les que confies plenament. Configuració més detallada disponible a la <settingsLink>Configuració</settingsLink>.",
+		"selectOptionsFirst": "Selecciona almenys una opció a continuació per activar l'aprovació automàtica",
+		"toggleAriaLabel": "Commuta l'aprovació automàtica",
+		"disabledAriaLabel": "Aprovació automàtica desactivada: seleccioneu primer les opcions"
 	},
 	"reasoning": {
 		"thinking": "Pensant",
@@ -247,12 +269,12 @@
 		"countdownDisplay": "{{count}}s"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} Llançat",
-		"description": "Roo Code {{version}} porta noves funcions potents i millores significatives per millorar el vostre flux de treball de desenvolupament.",
+		"title": "🎉 Kilo Code {{version}} Llançat",
+		"description": "Kilo Code {{version}} porta noves funcions potents i millores significatives per millorar el vostre flux de treball de desenvolupament.",
 		"whatsNew": "Novetats",
-		"feature1": "<bold>Indexació de Base de Codi Graduada d'Experimental</bold>: La indexació completa de la base de codi ara és estable i està llesta per a ús en producció amb cerca millorada i comprensió del context.",
-		"feature2": "<bold>Nova Funcionalitat de Llista de Tasques Pendents</bold>: Mantingueu les vostres tasques en el bon camí amb gestió integrada de tasques pendents que us ajuda a mantenir-vos organitzats i centrats en els vostres objectius de desenvolupament.",
-		"feature3": "<bold>Transicions Millorades d'Arquitecte a Codi</bold>: Transferències fluides de la planificació en mode Arquitecte a la implementació en mode Codi.",
+		"feature1": "<bold>Cua de Missatges</bold>: Posa en cua múltiples missatges mentre Roo està treballant, permetent-te continuar planificant el teu flux de treball sense interrupcions.",
+		"feature2": "<bold>Comandaments de Barra Personalitzats</bold>: Crea comandaments de barra personalitzats per a accés ràpid a prompts i fluxos de treball utilitzats freqüentment, amb gestió completa de la interfície d'usuari.",
+		"feature3": "<bold>Eines Gemini Millorades</bold>: Noves capacitats de context d'URL i fonamentació de cerca de Google proporcionen als models Gemini informació web en temps real i capacitats de recerca millorades.",
 		"hideButton": "Amaga l'anunci",
 		"detailsDiscussLinks": "Obtén més detalls i uneix-te a les discussions a <discordLink>Discord</discordLink> i <redditLink>Reddit</redditLink> 🚀"
 	},
@@ -288,7 +310,7 @@
 		}
 	},
 	"systemPromptWarning": "ADVERTÈNCIA: S'ha activat una substitució personalitzada d'instruccions del sistema. Això pot trencar greument la funcionalitat i causar un comportament impredictible.",
-	"profileViolationWarning": "El perfil actual infringeix la configuració de la teva organització",
+	"profileViolationWarning": "El perfil actual no és compatible amb la configuració de la teva organització",
 	"shellIntegration": {
 		"title": "Advertència d'execució d'ordres",
 		"description": "La teva ordre s'està executant sense la integració de shell del terminal VSCode. Per suprimir aquest advertiment, pots desactivar la integració de shell a la secció <strong>Terminal</strong> de la <settingsLink>configuració de Kilo Code</settingsLink> o solucionar problemes d'integració del terminal VSCode utilitzant l'enllaç a continuació.",
@@ -304,7 +326,8 @@
 	"codebaseSearch": {
 		"wantsToSearch": "Kilo Code vol cercar a la base de codi <code>{{query}}</code>:",
 		"wantsToSearchWithPath": "Kilo Code vol cercar a la base de codi <code>{{query}}</code> a <code>{{path}}</code>:",
-		"didSearch": "S'han trobat {{count}} resultat(s) per a <code>{{query}}</code>:",
+		"didSearch_one": "S'ha trobat 1 resultat",
+		"didSearch_other": "S'han trobat {{count}} resultats",
 		"resultTooltip": "Puntuació de similitud: {{score}} (fes clic per obrir el fitxer)"
 	},
 	"read-batch": {
@@ -324,5 +347,38 @@
 	},
 	"versionIndicator": {
 		"ariaLabel": "Versió {{version}} - Feu clic per veure les notes de llançament"
+	},
+	"rooCloudCTA": {
+		"title": "Roo Code Cloud arribarà aviat!",
+		"description": "Executa agents remots al núvol, accedeix a les teves tasques des de qualsevol lloc, col·labora amb altres i molt més.",
+		"joinWaitlist": "Uneix-te a la llista d'espera per obtenir accés anticipat."
+	},
+	"editMessage": {
+		"placeholder": "Edita el teu missatge..."
+	},
+	"command": {
+		"triggerDescription": "Activa la comanda {{name}}"
+	},
+	"slashCommands": {
+		"tooltip": "Gestionar ordres de barra",
+		"title": "Ordres de Barra",
+		"description": "Crea ordres de barra personalitzades per accedir ràpidament a indicacions i fluxos de treball utilitzats amb freqüència. <DocsLink>Documentació</DocsLink>",
+		"globalCommands": "Ordres Globals",
+		"workspaceCommands": "Ordres de l'Espai de Treball",
+		"globalCommand": "Ordre global",
+		"editCommand": "Editar ordre",
+		"deleteCommand": "Eliminar ordre",
+		"newGlobalCommandPlaceholder": "Nova ordre global...",
+		"newWorkspaceCommandPlaceholder": "Nova ordre de l'espai de treball...",
+		"deleteDialog": {
+			"title": "Eliminar Ordre",
+			"description": "Estàs segur que vols eliminar l'ordre \"{{name}}\"? Aquesta acció no es pot desfer.",
+			"cancel": "Cancel·lar",
+			"confirm": "Eliminar"
+		}
+	},
+	"queuedMessages": {
+		"title": "Missatges en cua:",
+		"clickToEdit": "Feu clic per editar el missatge"
 	}
 }

@@ -40,6 +40,7 @@ type OpenRouterChatCompletionParams = OpenAI.Chat.ChatCompletionCreateParams & {
 // See `OpenAI.Chat.Completions.ChatCompletionChunk["usage"]`
 // `CompletionsAPI.CompletionUsage`
 // See also: https://openrouter.ai/docs/use-cases/usage-accounting
+export // kilocode_change
 interface CompletionUsage {
 	completion_tokens?: number
 	completion_tokens_details?: {
@@ -51,6 +52,7 @@ interface CompletionUsage {
 	}
 	total_tokens?: number
 	cost?: number
+	is_byok?: boolean // kilocode_change
 	cost_details?: {
 		upstream_inference_cost?: number
 	}
@@ -75,6 +77,10 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 	// kilocode_change start
 	customRequestOptions(_metadata?: ApiHandlerCreateMessageMetadata): OpenAI.RequestOptions | undefined {
 		return undefined
+	}
+
+	getTotalCost(lastUsage: CompletionUsage): number {
+		return (lastUsage.cost_details?.upstream_inference_cost || 0) + (lastUsage.cost || 0)
 	}
 	// kilocode_change end
 
@@ -186,7 +192,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 				outputTokens: lastUsage.completion_tokens || 0,
 				cacheReadTokens: lastUsage.prompt_tokens_details?.cached_tokens,
 				reasoningTokens: lastUsage.completion_tokens_details?.reasoning_tokens,
-				totalCost: (lastUsage.cost_details?.upstream_inference_cost || 0) + (lastUsage.cost || 0),
+				totalCost: this.getTotalCost(lastUsage), // kilocode_change
 			}
 		}
 	}

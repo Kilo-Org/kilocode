@@ -4,7 +4,7 @@
 		"introText1": "Code Chief is a free, open source AI coding agent.",
 		"introText2": "It works",
 		"introText3": "Create a free account and get $20 worth of tokens to use across any AI model.",
-		"ctaButton": "Create a free account",
+		"ctaButton": "Get Started",
 		"manualModeButton": "Use your own API key",
 		"alreadySignedUp": "Already signed up?",
 		"loginText": "Log in here"
@@ -12,6 +12,11 @@
 	"lowCreditWarning": {
 		"addCredit": "Add Credit",
 		"lowBalance": "Your Kilo Code balance is low"
+	},
+	"pricing": {
+		"costUnknown": "cost unknown",
+		"costUnknownDescription": "The API Provider did not provide any cost data or the request was canceled.",
+		"discoverModelPricing": "Discover model pricing and capabilities"
 	},
 	"notifications": {
 		"toolRequest": "Tool request waiting for approval",
@@ -26,7 +31,12 @@
 			"account": "Kilo Code Account",
 			"apiKey": "Kilo Code API Key",
 			"login": "Log in at Kilo Code",
-			"logout": "Log out from Kilo Code"
+			"logout": "Log out from Kilo Code",
+			"providerRouting": {
+				"title": "Kilo Code - OpenRouter Provider Routing",
+				"description": "Kilo Code routes requests to the best available providers for your model. By default, requests are load balanced across the top providers to maximize uptime. However, you can choose a specific provider to use for this model."
+			},
+			"automaticFetch": "The latest models are automatically available in Kilo Code. If you're unsure which model to choose, Kilo Code works best with the recommended models listed at the top in <strong>bold face</strong>."
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {
@@ -40,6 +50,16 @@
 			"testButton": "Test Notification",
 			"testTitle": "Kilo Code",
 			"testMessage": "This is a test notification from Kilo Code."
+		},
+		"terminal": {
+			"commandGenerator": {
+				"provider": "Terminal Command Generator Provider",
+				"apiConfigId": {
+					"label": "API Configuration",
+					"description": "Select which API configuration to use for generating terminal commands. Leave as 'Use Current Configuration' to use your default settings.",
+					"current": "Use Current Configuration"
+				}
+			}
 		}
 	},
 	"chat": {
@@ -56,7 +76,14 @@
 		"dashboard": "Dashboard",
 		"logOut": "Log out",
 		"currentBalance": "CURRENT BALANCE",
-		"loading": "Loading..."
+		"loading": "Loading...",
+		"shop": {
+			"title": "Buy Credits",
+			"popular": "Popular",
+			"credits": "credits",
+			"action": "Buy Now",
+			"viewAll": "View all pricing options"
+		}
 	},
 	"docs": "Docs",
 	"rules": {
@@ -130,5 +157,57 @@
 			"idea6": "Generate cards that reveal dynamic content beautifully when hovered over",
 			"idea7": "Create a calming interactive starfield that moves with mouse gestures"
 		}
+	},
+	"ghost": {
+		"title": "Inline Assist",
+		"settings": {
+			"autoTrigger": "Auto Trigger",
+			"triggers": "Triggers",
+			"keybindingDescription": "Inline Assist features are triggered by commands. You can configure the <DocsLink>Keyboard Shortcuts here</DocsLink>.",
+			"enableAutoTrigger": {
+				"label": "Enable Auto Trigger",
+				"description": "When enabled, Kilo Code will automatically trigger Inline Assist when you stop typing. This can be useful for quick fixes and suggestions."
+			},
+			"autoTriggerDelay": {
+				"label": "Auto Trigger Delay",
+				"description": "The delay in seconds before Kilo Code triggers Inline Assist after you stop typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
+			},
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Quick Inline Task",
+				"description": "Only need a quick change? Select some code (or don't!) and hit Cmd+I. Describe your goal in plain English (\"create a React component with these props\", \"add error handling to this function\"), and get multiple, ready-to-use suggestions right in your editor. <DocsLink>See shortcut</DocsLink>"
+			},
+			"enableSmartInlineTaskKeybinding": {
+				"label": "Smart Inline Task",
+				"description": "Need a quick fix, completion, or refactor? Kilo will use the surrounding context to offer immediate improvements, keeping you in the flow. <DocsLink>See shortcut</DocsLink>"
+			},
+			"provider": "Provider",
+			"apiConfigId": {
+				"label": "API Configuration",
+				"current": "Use currently selected API configuration",
+				"description": "Select an API configuration to use for Inline Assist prompts, or just use whatever is currently selected"
+			}
+		}
+	},
+	"virtualProvider": {
+		"title": "Virtual Quota Fallback Provider Settings",
+		"description": "Configure a list of profiles each with their own quota limits. When one provider's quota limits are reached, the next profile in the list will be used until none remain.",
+		"profileLabel": "Profile {{number}}",
+		"primaryProfileLabel": "Profile {{number}} (Primary)",
+		"moveProfileUp": "Move profile up",
+		"moveProfileDown": "Move profile down",
+		"removeProfile": "Remove profile",
+		"selectProfilePlaceholder": "Select profile...",
+		"addProfile": "Add profile",
+		"noProfilesAvailable": "No profile profiles available. Please configure at least one non-virtual provider profile first.",
+		"tokensLabel": "Tokens",
+		"perMinute": "Per Minute",
+		"perHour": "Per Hour",
+		"perDay": "Per Day",
+		"requestsLabel": "Requests",
+		"dangerZoneTitle": "Danger Zone",
+		"dangerZoneDescription": "These actions are destructive and cannot be undone.",
+		"clearUsageData": "Clear Usage Data",
+		"confirmClearTitle": "Are you sure?",
+		"confirmClearDescription": "This will permanently delete all stored usage data for virtual providers. This action cannot be undone."
 	}
 }

@@ -93,12 +93,23 @@
 			"useCurrentConfig": "Użyj aktualnie wybranej konfiguracji API",
 			"testPromptPlaceholder": "Wprowadź podpowiedź, aby przetestować ulepszenie",
 			"previewButton": "Podgląd ulepszenia podpowiedzi",
-			"testEnhancement": "Testuj ulepszenie"
+			"testEnhancement": "Testuj ulepszenie",
+			"includeTaskHistory": "Uwzględnij historię zadań jako kontekst",
+			"includeTaskHistoryDescription": "Gdy włączone, ostatnie 10 wiadomości z bieżącej rozmowy zostanie uwzględnione jako kontekst podczas ulepszania podpowiedzi, pomagając generować bardziej trafne i świadome kontekstu sugestie."
+		},
+		"condense": {
+			"apiConfiguration": "Konfiguracja API do kondensacji kontekstu",
+			"apiConfigDescription": "Wybierz, której konfiguracji API użyć do operacji kondensacji kontekstu. Pozostaw niewybrane, aby użyć bieżącej aktywnej konfiguracji.",
+			"useCurrentConfig": "Użyj aktualnie wybranej konfiguracji API"
 		},
 		"types": {
 			"ENHANCE": {
 				"label": "Ulepsz podpowiedź",
 				"description": "Użyj ulepszenia podpowiedzi, aby uzyskać dostosowane sugestie lub ulepszenia dla swoich danych wejściowych. Zapewnia to, że Kilo Code rozumie Twoje intencje i dostarcza najlepsze możliwe odpowiedzi. Dostępne za pośrednictwem ikony ✨ w czacie."
+			},
+			"CONDENSE": {
+				"label": "Kondensacja kontekstu",
+				"description": "Skonfiguruj, w jaki sposób kontekst rozmowy jest kondensowany w celu zarządzania limitami tokenów. Ten monit jest używany zarówno do ręcznych, jak i automatycznych operacji kondensacji kontekstu."
 			},
 			"EXPLAIN": {
 				"label": "Wyjaśnij kod",
@@ -127,6 +138,10 @@
 			"TERMINAL_EXPLAIN": {
 				"label": "Wyjaśnij polecenie terminala",
 				"description": "Uzyskaj szczegółowe wyjaśnienia poleceń terminala i ich wyników. Dostępne w menu kontekstowym terminala (prawy przycisk myszy na wybranej zawartości terminala)."
+			},
+			"TERMINAL_GENERATE": {
+				"label": "Generuj polecenie terminala",
+				"description": "Pomaga generować polecenia terminala na podstawie opisu."
 			},
 			"NEW_TASK": {
 				"label": "Rozpocznij nowe zadanie",

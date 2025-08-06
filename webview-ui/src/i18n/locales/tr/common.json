@@ -1,4 +1,12 @@
 {
+	"errorBoundary": {
+		"title": "Bir şeyler yanlış gitti",
+		"reportText": "Bu hatayı bildirerek iyileştirmemize yardımcı olun",
+		"githubText": "GitHub Issues sayfamızda",
+		"copyInstructions": "Gönderiminize dahil etmek için aşağıdaki hata mesajını kopyalayıp yapıştırın:",
+		"errorStack": "Hata Yığını:",
+		"componentStack": "Bileşen Yığını:"
+	},
 	"answers": {
 		"yes": "Evet",
 		"no": "Hayır",
@@ -20,7 +28,8 @@
 		"customerSupport": "Müşteri Desteği"
 	},
 	"ui": {
-		"search_placeholder": "Ara..."
+		"search_placeholder": "Ara...",
+		"no_results": "Sonuç bulunamadı"
 	},
 	"mermaid": {
 		"loading": "Mermaid diyagramı oluşturuluyor...",
@@ -70,5 +79,12 @@
 		"success": {
 			"imageDataUriCopied": "Görsel veri URI'si panoya kopyalandı"
 		}
+	},
+	"confirmation": {
+		"deleteMessage": "Mesajı Sil",
+		"deleteWarning": "Bu mesajı silmek, konuşmadaki sonraki tüm mesajları da silecektir. Devam etmek istiyor musun?",
+		"editMessage": "Mesajı Düzenle",
+		"editWarning": "Bu mesajı düzenlemek, konuşmadaki sonraki tüm mesajları da silecektir. Devam etmek istiyor musun?",
+		"proceed": "Devam Et"
 	}
 }

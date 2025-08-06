@@ -1,4 +1,12 @@
 {
+	"errorBoundary": {
+		"title": "Algo deu errado",
+		"reportText": "Ajude-nos a melhorar relatando este erro em",
+		"githubText": "nossa página de Issues no GitHub",
+		"copyInstructions": "Copie e cole a seguinte mensagem de erro para incluí-la como parte do seu relatório:",
+		"errorStack": "Pilha de Erro:",
+		"componentStack": "Pilha de Componentes:"
+	},
 	"number_format": {
 		"thousand_suffix": "k",
 		"million_suffix": "m",
@@ -20,7 +28,8 @@
 		"keep": "Manter"
 	},
 	"ui": {
-		"search_placeholder": "Pesquisar..."
+		"search_placeholder": "Pesquisar...",
+		"no_results": "Nenhum resultado encontrado"
 	},
 	"mermaid": {
 		"loading": "Gerando diagrama mermaid...",
@@ -70,5 +79,12 @@
 		"success": {
 			"imageDataUriCopied": "URI de dados da imagem copiada para a área de transferência"
 		}
+	},
+	"confirmation": {
+		"deleteMessage": "Excluir Mensagem",
+		"deleteWarning": "Excluir esta mensagem irá excluir todas as mensagens subsequentes na conversa. Deseja prosseguir?",
+		"editMessage": "Editar Mensagem",
+		"editWarning": "Editar esta mensagem irá excluir todas as mensagens subsequentes na conversa. Deseja prosseguir?",
+		"proceed": "Prosseguir"
 	}
 }
