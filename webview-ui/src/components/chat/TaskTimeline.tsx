@@ -1,4 +1,4 @@
-import { memo, useRef, useEffect, useCallback, useMemo } from "react"
+import { memo, useRef, forwardRef, useEffect, useCallback, useMemo } from "react"
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso"
 import type { ClineMessage } from "@roo-code/types"
 import { TaskTimelineMessage } from "./TaskTimelineMessage"
@@ -19,6 +19,25 @@ interface TaskTimelineProps {
 	onMessageClick?: (index: number) => void
 	isTaskActive?: boolean
 }
+
+const HorizontalScroller = forwardRef<HTMLDivElement, any>(({ style, children, ...props }, ref) => (
+	<div
+		{...props}
+		ref={ref}
+		style={{
+			...style,
+			overflowX: "auto",
+			overflowY: "hidden",
+			willChange: "transform",
+		}}
+		onWheel={(e) => {
+			e.preventDefault() // stop the default vertical scroll
+			// scrollLeft by the vertical wheel amount:
+			;(ref as React.MutableRefObject<HTMLDivElement>).current!.scrollLeft += e.deltaY
+		}}>
+		{children}
+	</div>
+))
 
 export const TaskTimeline = memo<TaskTimelineProps>(({ groupedMessages, onMessageClick, isTaskActive = false }) => {
 	const { setHoveringTaskTimeline } = useExtensionState()
@@ -90,6 +109,7 @@ export const TaskTimeline = memo<TaskTimelineProps>(({ groupedMessages, onMessag
 				<Virtuoso
 					ref={virtuosoRef}
 					data={timelineMessagesData}
+					components={{ Scroller: HorizontalScroller }}
 					itemContent={itemContent}
 					horizontalDirection={true}
 					initialTopMostItemIndex={timelineMessagesData.length - 1}
