@@ -2,7 +2,6 @@
 import { memo, useRef, useState } from "react"
 import { useWindowSize } from "react-use"
 import { useTranslation } from "react-i18next"
-import { VSCodeBadge } from "@vscode/webview-ui-toolkit/react"
 import { CloudUpload, CloudDownload, FoldVertical } from "lucide-react"
 import { validateSlashCommand } from "@/utils/slash-commands"
 
@@ -141,7 +140,7 @@ const KiloTaskHeader = ({
 							/>
 							{condenseButton}
 							<ShareButton item={currentTaskItem} disabled={buttonsDisabled} />
-							{!!totalCost && <VSCodeBadge>${totalCost.toFixed(2)}</VSCodeBadge>}
+							{!!totalCost && <span>${totalCost.toFixed(2)}</span>}
 						</div>
 					</div>
 				)}
