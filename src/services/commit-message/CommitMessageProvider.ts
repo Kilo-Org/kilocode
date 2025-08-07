@@ -125,7 +125,6 @@ export class CommitMessageProvider {
 		const maxIncrement = 1.0 // Start with bigger increments
 		const minIncrement = 0.05 // Minimum increment to keep progress moving
 
-		// Start interval timer to update the progress while we wait for the response
 		// Use exponential decay: start with larger increments, decrease as we approach the limit
 		// Formula: increment = remainingProgress^2 * maxIncrement + minIncrement
 		const progressInterval = setInterval(() => {
@@ -169,7 +168,6 @@ export class CommitMessageProvider {
 		gitContextChunks: string[],
 		progress: vscode.Progress<{ increment?: number; message?: string }>,
 	): Promise<string> {
-		// Map phase: Generate commit messages for each chunk
 		progress.report({ message: t("kilocode:commitMessage.analyzingChunks") })
 
 		const chunkSummaries: string[] = []
@@ -179,7 +177,6 @@ export class CommitMessageProvider {
 			chunkSummaries.push(`Chunk ${i + 1}: ${chunkMessage}`)
 		}
 
-		// Reduce phase: Combine chunk summaries into final commit message
 		progress.report({ message: t("kilocode:commitMessage.combining") })
 
 		const combinedContext = `## Combined Analysis from Multiple Chunks

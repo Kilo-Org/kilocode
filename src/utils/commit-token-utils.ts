@@ -3,7 +3,7 @@ import { buildApiHandler } from "../api"
 import { ContextProxy } from "../core/config/ContextProxy"
 
 /**
- * Estimates token count for text content using the existing token counting infrastructure
+ * Estimates token count for text content
  */
 export async function estimateTokenCount(text: string): Promise<number> {
 	if (!text || text.trim().length === 0) {
@@ -24,13 +24,12 @@ export function getContextWindow(): number {
 		const apiHandler = buildApiHandler(apiConfiguration)
 		return apiHandler.getModel().info.contextWindow || 200000
 	} catch (error) {
-		console.warn("Failed to get context window, using default:", error)
 		return 200000
 	}
 }
 
 /**
- * Checks if the given text would exceed the context window threshold
+ * Checks if text exceeds the context window threshold
  */
 export async function exceedsContextThreshold(text: string, threshold: number = 0.95): Promise<boolean> {
 	const tokenCount = await estimateTokenCount(text)
@@ -50,17 +49,14 @@ export async function chunkDiffByFiles(
 	const contextWindow = getContextWindow()
 	const targetChunkSize = Math.floor(contextWindow * targetChunkRatio)
 
-	// Check if the entire diff fits in one chunk
 	const totalTokens = await estimateTokenCount(diffText)
 	if (totalTokens <= targetChunkSize) {
 		return { chunks: [diffText], wasChunked: false }
 	}
 
-	// Split by files using git diff format
 	const fileChunks: string[] = []
 	const fileDiffs = diffText.split(/^diff --git /m).filter((chunk) => chunk.trim())
 
-	// If we only have one file, we can't chunk further
 	if (fileDiffs.length <= 1) {
 		return { chunks: [diffText], wasChunked: false }
 	}
@@ -72,7 +68,6 @@ export async function chunkDiffByFiles(
 		const fullFileDiff = fileDiff.startsWith("a/") ? `diff --git ${fileDiff}` : fileDiff
 		const fileTokens = await estimateTokenCount(fullFileDiff)
 
-		// If adding this file would exceed the target, start a new chunk
 		if (currentChunkTokens + fileTokens > targetChunkSize && currentChunk) {
 			fileChunks.push(currentChunk.trim())
 			currentChunk = fullFileDiff
@@ -83,7 +78,6 @@ export async function chunkDiffByFiles(
 		}
 	}
 
-	// Add the last chunk if it has content
 	if (currentChunk.trim()) {
 		fileChunks.push(currentChunk.trim())
 	}

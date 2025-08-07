@@ -215,18 +215,15 @@ export class GitExtensionService {
 			// Start building the context with the required sections
 			let context = "## Git Context for Commit Message Generation\n\n"
 
-			// Add full diff - essential for understanding what changed
 			let diff = ""
 			try {
 				diff = await this.getDiffForChanges(options)
 				const changeType = staged ? "Staged" : "Unstaged"
 
-				// Check if chunking is enabled and needed
 				if (enableChunking && diff && (await exceedsContextThreshold(diff))) {
 					const chunkResult = await chunkDiffByFiles(diff, chunkRatio)
 
 					if (chunkResult.wasChunked) {
-						// Return array of chunked contexts for map-reduce processing
 						const chunkedContexts: string[] = []
 
 						for (const chunk of chunkResult.chunks) {
@@ -241,14 +238,12 @@ export class GitExtensionService {
 					}
 				}
 
-				// Single context - no chunking needed
 				context += `### Full Diff of ${changeType} Changes\n\`\`\`diff\n` + diff + "\n```\n\n"
 			} catch (error) {
 				const changeType = staged ? "Staged" : "Unstaged"
 				context += `### Full Diff of ${changeType} Changes\n\`\`\`diff\n(No diff available)\n\`\`\`\n\n`
 			}
 
-			// Add statistical summary - helpful for quick overview
 			try {
 				const summary = this.getSummary(options)
 				context += "### Statistical Summary\n```\n" + summary + "\n```\n\n"
@@ -256,39 +251,32 @@ export class GitExtensionService {
 				context += "### Statistical Summary\n```\n(No summary available)\n```\n\n"
 			}
 
-			// Add contextual information
 			context += await this.getRepositoryContext()
 
 			return context
 		} catch (error) {
-			console.error("Error generating commit context:", error)
 			return "## Error generating commit context\n\nUnable to gather complete context for commit message generation."
 		}
 	}
 
-	/**
-	 * Gets repository contextual information (branch, recent commits)
-	 */
 	private async getRepositoryContext(): Promise<string> {
 		let context = "### Repository Context\n\n"
 
-		// Show current branch
 		try {
 			const currentBranch = this.getCurrentBranch()
 			if (currentBranch) {
 				context += "**Current branch:** `" + currentBranch.trim() + "`\n\n"
 			}
-		} catch (error) {
+		} catch {
 			// Skip if not available
 		}
 
-		// Show recent commits for context
 		try {
 			const recentCommits = this.getRecentCommits()
 			if (recentCommits) {
 				context += "**Recent commits:**\n```\n" + recentCommits + "\n```\n"
 			}
-		} catch (error) {
+		} catch {
 			// Skip if not available
 		}
 
