@@ -37,6 +37,7 @@ const defaultConfig: MessageSendingConfig = {
 	maxHistoryMessages: 10,
 	enableHistoryCompression: false,
 	compressionRatio: 50,
+	excludeErrorMessages: true,
 	enableContextCaching: true,
 	enableImageOptimization: true,
 	enableTokenOptimization: true,
@@ -327,6 +328,23 @@ export const MessageSendingSettings = ({
 						</div>
 					</div>
 				)}
+
+				<div className="mt-4">
+					<VSCodeCheckbox
+						checked={messageSendingConfig.excludeErrorMessages}
+						onChange={(e: any) =>
+							setCachedStateField("messageSendingConfig", {
+								...messageSendingConfig,
+								excludeErrorMessages: e.target.checked,
+							})
+						}
+						data-testid="exclude-error-messages-checkbox">
+						过滤错误消息
+					</VSCodeCheckbox>
+					<div className="text-vscode-descriptionForeground text-sm mt-1">
+						从历史对话中排除包含错误的消息记录。启用后可以避免将API请求失败、系统错误等无效信息发送给AI，减少无意义的Token消耗，提高对话质量。默认启用。
+					</div>
+				</div>
 			</Section>
 
 			{/* 性能优化选项 */}

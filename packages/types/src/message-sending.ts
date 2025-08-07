@@ -20,6 +20,7 @@ export const messageSendingConfigSchema = z.object({
 	maxHistoryMessages: z.number().optional(),
 	enableHistoryCompression: z.boolean().optional(),
 	compressionRatio: z.number().optional(),
+	excludeErrorMessages: z.boolean().optional(), // 过滤包含错误的历史消息
 
 	// Performance optimization
 	enableContextCaching: z.boolean().optional(),

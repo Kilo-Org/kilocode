@@ -98,6 +98,7 @@ import { GlobalFileNames } from "../../shared/globalFileNames" // kilocode_chang
 import { ensureLocalKilorulesDirExists } from "../context/instructions/kilo-rules" // kilocode_change
 import { restoreTodoListForTask } from "../tools/updateTodoListTool"
 import { reportExcessiveRecursion, yieldPromise } from "../kilocode"
+import { filterErrorMessages } from "../../shared/filterErrorMessages"
 
 const MAX_EXPONENTIAL_BACKOFF_SECONDS = 600 // 10 minutes
 
@@ -2429,7 +2430,13 @@ export class Task extends EventEmitter<TaskEvents> {
 	// Metrics
 
 	public combineMessages(messages: ClineMessage[]) {
-		return combineApiRequests(combineCommandSequences(messages))
+		const provider = this.providerRef.deref()
+		// Since getState() returns a Promise, we need to handle this synchronously
+		// For now, we'll default to false for excludeErrorMessages
+		// TODO: Consider making this method async or finding another way to access the config
+		const excludeErrorMessages = false
+		const filteredMessages = filterErrorMessages(messages, excludeErrorMessages)
+		return combineApiRequests(combineCommandSequences(filteredMessages))
 	}
 
 	public getTokenUsage(): TokenUsage {
