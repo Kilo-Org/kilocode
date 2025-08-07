@@ -1,9 +1,9 @@
 {
-	"name": "kilo-code-cfq",
+	"name": "kilo-code",
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
-	"publisher": "cfq",
-	"version": "4.77.1-cfq",
+	"publisher": "kilocode",
+	"version": "4.77.1",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",

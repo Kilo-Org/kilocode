@@ -24,6 +24,7 @@ import {
 	Server, // kilocode_change
 	Bot, // kilocode_change
 	MessageSquare,
+	Send, // kilocode_change
 	Monitor,
 	LucideIcon,
 } from "lucide-react"
@@ -213,6 +214,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		includeDiagnosticMessages,
 		maxDiagnosticMessages,
 		includeTaskHistoryInEnhance,
+		messageSendingConfig, // kilocode_change
 	} = cachedState
 
 	const apiConfiguration = useMemo(() => cachedState.apiConfiguration ?? {}, [cachedState.apiConfiguration])
@@ -511,7 +513,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			{ id: "notifications", icon: Bell },
 			{ id: "contextManagement", icon: Database },
 			{ id: "terminal", icon: SquareTerminal },
-			{ id: "messageSending", icon: MessageSquare }, // kilocode_change
+			{ id: "messageSending", icon: Send }, // kilocode_change
 			{ id: "prompts", icon: MessageSquare },
 			{ id: "experimental", icon: FlaskConical },
 			{ id: "language", icon: Globe },
@@ -833,7 +835,10 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 
 					{/* Message Sending Section */}
 					{activeTab === "messageSending" && (
-						<MessageSendingSettings setCachedStateField={setCachedStateField} />
+						<MessageSendingSettings
+							messageSendingConfig={messageSendingConfig}
+							setCachedStateField={setCachedStateField}
+						/>
 					)}
 
 					{/* Prompts Section */}
