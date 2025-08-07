@@ -40,51 +40,44 @@
 		"description": "配置消息发送优化选项，包括智能模板、内容控制、历史管理和性能优化，以提升与AI的交互效率。",
 		"smartTemplate": {
 			"title": "智能模板选择",
+			"description": "根据消息内容和上下文自动选择最优的消息模板，提高发送效率和质量。启用后可以根据不同场景自动优化消息结构，减少不必要的Token消耗。",
 			"enable": "启用智能模板",
-			"enableDescription": "根据上下文自动选择最适合的消息模板",
-			"templateSelection": "模板选择",
+			"selectTemplate": "选择模板",
+			"selectPlaceholder": "请选择模板",
 			"customTemplate": "自定义模板",
-			"customTemplatePlaceholder": "输入自定义模板内容...",
-			"tokenSaving": "Token节省显示",
-			"tokenSavingDescription": "显示使用智能模板节省的Token数量"
+			"customPlaceholder": "输入自定义模板",
+			"showTokenSavings": "显示Token节省量"
 		},
 		"contentControl": {
 			"title": "内容控制选项",
 			"includeSystemPrompt": "包含系统提示词",
-			"includeSystemPromptDescription": "在消息中包含系统级提示词",
-			"includeHistory": "包含对话历史",
-			"includeHistoryDescription": "在消息中包含之前的对话历史",
+			"includeConversationHistory": "包含对话历史",
 			"includeFileContext": "包含文件上下文",
-			"includeFileContextDescription": "在消息中包含相关文件的上下文信息",
-			"includeCodeContext": "包含代码上下文",
-			"includeCodeContextDescription": "在消息中包含相关代码的上下文信息"
+			"includeCodeContext": "包含代码上下文"
 		},
 		"historyManagement": {
 			"title": "历史消息管理",
-			"maxHistoryMessages": "最大历史消息数量",
-			"maxHistoryMessagesDescription": "保留的最大历史消息数量",
-			"enableHistoryCompression": "启用历史压缩",
-			"enableHistoryCompressionDescription": "自动压缩较旧的历史消息以节省空间",
+			"maxMessages": "最大历史消息数量",
+			"maxMessagesDescription": "设置包含在请求中的最大历史消息数量。数值越大，AI对话上下文越完整，但Token消耗也越多。建议根据对话复杂度调整：简单问答设置5-10条，复杂讨论设置15-30条。",
+			"enableCompression": "启用历史压缩",
+			"compressionDescription": "智能压缩历史消息以减少Token使用量。启用后系统会保留关键信息并压缩冗余内容，可以在保持上下文的同时显著降低成本。适合长对话场景。",
 			"compressionRatio": "压缩比例",
-			"compressionRatioDescription": "历史消息的压缩比例（百分比）"
+			"compressionRatioDescription": "设置历史消息的压缩程度，百分比越高压缩越强。高压缩率（70-90%）可大幅节省Token但可能丢失细节，低压缩率（10-30%）保留更多信息但节省有限。建议根据对话重要性调整。"
 		},
-		"performanceOptimization": {
-			"title": "性能优化选项",
+		"performance": {
+			"title": "性能优化",
 			"enableContextCaching": "启用上下文缓存",
-			"enableContextCachingDescription": "缓存常用上下文以提高响应速度",
-			"enableImageOptimization": "启用图片优化",
-			"enableImageOptimizationDescription": "自动优化图片大小和质量",
+			"enableImageOptimization": "启用图像优化",
 			"enableTokenOptimization": "启用Token优化",
-			"enableTokenOptimizationDescription": "优化消息内容以减少Token使用",
-			"maxRequestTokens": "最大请求Token数量",
-			"maxRequestTokensDescription": "单次请求的最大Token数量限制"
+			"maxTokensPerRequest": "每次请求最大Token数",
+			"maxTokensDescription": "设置单次请求的最大Token限制。较低的值（1000-4000）适合简单问答，成本低但可能截断复杂内容；较高的值（8000-32000）适合复杂分析，功能完整但成本较高。"
 		},
-		"realTimePreview": {
+		"preview": {
 			"title": "实时预览",
-			"enablePreview": "启用实时预览",
-			"enablePreviewDescription": "实时显示消息内容和Token使用情况",
+			"enableRealTimePreview": "启用实时预览",
+			"previewDescription": "在发送前预览消息内容和结构。启用后可以在发送前查看完整的消息内容、Token数量和预估成本，帮助优化消息质量并控制费用。",
 			"showEstimatedCost": "显示预估成本",
-			"showEstimatedCostDescription": "显示基于Token使用量的预估API成本"
+			"costDescription": "显示基于Token使用量的预估API成本。启用后可以实时了解每次请求的大概费用，帮助合理控制使用成本并优化消息内容。成本计算基于当前模型的定价。"
 		}
 	},
 	"prompts": {
