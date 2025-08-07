@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils"
 import { Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Slider } from "@/components/ui"
 
 import { SetCachedStateField } from "./types"
-import { MessageSendingConfig } from "./MessageSendingConfig"
+import { MessageSendingConfig } from "@roo-code/types"
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
 
@@ -266,7 +266,7 @@ export const MessageSendingSettings = ({
 							min={1}
 							max={50}
 							step={1}
-							value={[messageSendingConfig.maxHistoryMessages]}
+							value={[messageSendingConfig.maxHistoryMessages ?? 10]}
 							onValueChange={([value]) =>
 								setCachedStateField("messageSendingConfig", {
 									...messageSendingConfig,
@@ -275,7 +275,7 @@ export const MessageSendingSettings = ({
 							}
 							data-testid="max-history-messages-slider"
 						/>
-						<span className="w-10">{messageSendingConfig.maxHistoryMessages}</span>
+						<span className="w-10">{messageSendingConfig.maxHistoryMessages ?? 10}</span>
 					</div>
 					<div className="text-vscode-descriptionForeground text-sm mt-1">
 						设置包含在新消息中的历史消息数量上限。较少的消息数（1-10）可以降低Token消耗和成本，但可能丢失重要上下文；较多的消息数（20-50）能保持完整的对话连贯性，但会显著增加Token使用量和响应时间。
@@ -311,7 +311,7 @@ export const MessageSendingSettings = ({
 								min={10}
 								max={90}
 								step={5}
-								value={[messageSendingConfig.compressionRatio]}
+								value={[messageSendingConfig.compressionRatio ?? 50]}
 								onValueChange={([value]) =>
 									setCachedStateField("messageSendingConfig", {
 										...messageSendingConfig,
@@ -320,7 +320,7 @@ export const MessageSendingSettings = ({
 								}
 								data-testid="compression-ratio-slider"
 							/>
-							<span className="w-10">{messageSendingConfig.compressionRatio}%</span>
+							<span className="w-10">{messageSendingConfig.compressionRatio ?? 50}%</span>
 						</div>
 						<div className="text-vscode-descriptionForeground text-sm mt-1">
 							设置历史消息的压缩程度。较低的比例（10%-30%）会进行更激进的压缩，大幅减少Token但可能丢失更多细节；较高的比例（60%-90%）保留更多原始信息，压缩效果有限但信息完整性更好。
@@ -392,14 +392,14 @@ export const MessageSendingSettings = ({
 				<div className="mt-4">
 					<span className="block font-medium mb-1">
 						{t("settings:messageSending.performance.maxTokensPerRequest")} (
-						{messageSendingConfig.maxTokensPerRequest.toLocaleString()})
+						{(messageSendingConfig.maxTokensPerRequest ?? 4000).toLocaleString()})
 					</span>
 					<div className="flex items-center gap-2">
 						<Slider
 							min={1000}
 							max={32000}
 							step={1000}
-							value={[messageSendingConfig.maxTokensPerRequest]}
+							value={[messageSendingConfig.maxTokensPerRequest ?? 4000]}
 							onValueChange={([value]) =>
 								setCachedStateField("messageSendingConfig", {
 									...messageSendingConfig,
@@ -408,7 +408,7 @@ export const MessageSendingSettings = ({
 							}
 							data-testid="max-tokens-per-request-slider"
 						/>
-						<span className="w-16">{messageSendingConfig.maxTokensPerRequest}</span>
+						<span className="w-16">{messageSendingConfig.maxTokensPerRequest ?? 4000}</span>
 					</div>
 					<div className="text-vscode-descriptionForeground text-sm mt-1">
 						设置单次请求的最大Token限制。较低的值（1000-4000）适合简单问答，成本低但可能截断复杂内容；较高的值（8000-32000）适合复杂分析，功能完整但成本较高。建议根据使用场景和预算进行调整。

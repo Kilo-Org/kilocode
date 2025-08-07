@@ -1406,6 +1406,14 @@ export const webviewMessageHandler = async (
 			vscode.commands.executeCommand("kilo-code.ghost.reload")
 			break
 		// kilocode_change end
+		case "messageSendingConfig":
+			if (!message.values) {
+				return
+			}
+			// Save messageSendingConfig to global state
+			await updateGlobalState("messageSendingConfig", message.values)
+			await provider.postStateToWebview()
+			break
 		case "includeTaskHistoryInEnhance":
 			await updateGlobalState("includeTaskHistoryInEnhance", message.bool ?? false)
 			await provider.postStateToWebview()

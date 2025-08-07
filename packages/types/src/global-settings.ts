@@ -15,6 +15,7 @@ import { modeConfigSchema } from "./mode.js"
 import { customModePromptsSchema, customSupportPromptsSchema } from "./mode.js"
 import { languagesSchema } from "./vscode.js"
 import { ghostServiceSettingsSchema } from "./kilocode.js" // kilocode_change
+import { messageSendingConfigSchema } from "./message-sending.js"
 
 /**
  * Default delay in milliseconds after writes to allow diagnostics to detect potential problems.
@@ -159,6 +160,7 @@ export const globalSettingsSchema = z.object({
 	hasOpenedModeSelector: z.boolean().optional(),
 	lastModeExportPath: z.string().optional(),
 	lastModeImportPath: z.string().optional(),
+	messageSendingConfig: messageSendingConfigSchema.optional(),
 })
 
 export type GlobalSettings = z.infer<typeof globalSettingsSchema>

@@ -569,6 +569,25 @@ describe("ClineProvider", () => {
 			profileThresholds: {},
 			hasOpenedModeSelector: false,
 			diagnosticsEnabled: true,
+			messageSendingConfig: {
+				useSmartTemplate: true,
+				selectedTemplate: "balanced",
+				customTemplate: "",
+				showTokenSavings: true,
+				includeSystemPrompt: true,
+				includeConversationHistory: true,
+				includeFileContext: true,
+				includeCodeContext: true,
+				maxHistoryMessages: 10,
+				enableHistoryCompression: false,
+				compressionRatio: 50,
+				enableContextCaching: true,
+				enableImageOptimization: true,
+				enableTokenOptimization: true,
+				maxTokensPerRequest: 4000,
+				enableRealTimePreview: true,
+				showEstimatedCost: true,
+			},
 		}
 
 		const message: ExtensionMessage = {

@@ -10,8 +10,8 @@ import type {
 	OrganizationAllowList,
 	CloudUserInfo,
 	ShareVisibility,
+	MessageSendingConfig,
 } from "@roo-code/types"
-import { MessageSendingConfig } from "../../webview-ui/src/components/settings/MessageSendingConfig"
 
 import { GitCommit } from "../utils/git"
 
@@ -324,6 +324,7 @@ export type ExtensionState = Pick<
 	| "systemNotificationsEnabled" // kilocode_change
 	| "includeDiagnosticMessages"
 	| "maxDiagnosticMessages"
+	| "messageSendingConfig"
 > & {
 	version: string
 	clineMessages: ClineMessage[]

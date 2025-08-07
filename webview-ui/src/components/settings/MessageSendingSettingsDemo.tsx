@@ -1,6 +1,6 @@
 import React, { useState } from "react"
 import { MessageSendingSettings } from "./MessageSendingSettings"
-import { MessageSendingConfig } from "./MessageSendingConfig"
+import { MessageSendingConfig } from "@roo-code/types"
 
 // 默认配置
 const defaultConfig: MessageSendingConfig = {

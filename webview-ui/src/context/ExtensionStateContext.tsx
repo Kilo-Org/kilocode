@@ -25,7 +25,7 @@ import { McpMarketplaceCatalog } from "../../../src/shared/kilocode/mcp" // kilo
 import { vscode } from "@src/utils/vscode"
 import { convertTextMateToHljs } from "@src/utils/textMateToHljs"
 import { ClineRulesToggles } from "@roo/cline-rules" // kilocode_change
-import { MessageSendingConfig } from "../components/settings/MessageSendingConfig"
+import { MessageSendingConfig } from "@roo-code/types"
 
 export interface ExtensionStateContextType extends ExtensionState {
 	historyPreviewCollapsed?: boolean // Add the new state property

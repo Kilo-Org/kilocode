@@ -1583,6 +1583,7 @@ export class ClineProvider
 			includeDiagnosticMessages,
 			maxDiagnosticMessages,
 			includeTaskHistoryInEnhance,
+			messageSendingConfig,
 		} = await this.getState()
 
 		const telemetryKey = process.env.KILOCODE_POSTHOG_API_KEY
@@ -1718,6 +1719,7 @@ export class ClineProvider
 			includeDiagnosticMessages: includeDiagnosticMessages ?? true,
 			maxDiagnosticMessages: maxDiagnosticMessages ?? 50,
 			includeTaskHistoryInEnhance: includeTaskHistoryInEnhance ?? false,
+			messageSendingConfig,
 		}
 	}
 
@@ -1912,6 +1914,26 @@ export class ClineProvider
 			maxDiagnosticMessages: stateValues.maxDiagnosticMessages ?? 50,
 			// Add includeTaskHistoryInEnhance setting
 			includeTaskHistoryInEnhance: stateValues.includeTaskHistoryInEnhance ?? false,
+			// Add messageSendingConfig with default values
+			messageSendingConfig: stateValues.messageSendingConfig ?? {
+				useSmartTemplate: true,
+				selectedTemplate: "balanced",
+				customTemplate: "",
+				showTokenSavings: true,
+				includeSystemPrompt: true,
+				includeConversationHistory: true,
+				includeFileContext: true,
+				includeCodeContext: true,
+				maxHistoryMessages: 10,
+				enableHistoryCompression: false,
+				compressionRatio: 50,
+				enableContextCaching: true,
+				enableImageOptimization: true,
+				enableTokenOptimization: true,
+				maxTokensPerRequest: 4000,
+				enableRealTimePreview: true,
+				showEstimatedCost: true,
+			},
 		}
 	}
 
