@@ -31,7 +31,7 @@ export const MessageSendingSettingsDemo = () => {
 	const [config, setConfig] = useState<MessageSendingConfig>(defaultConfig)
 
 	// 模拟 SetCachedStateField 函数
-	const setCachedStateField = (field: "messageSendingConfig", value: MessageSendingConfig) => {
+	const setCachedStateField = (_field: "messageSendingConfig", value: MessageSendingConfig) => {
 		setConfig(value)
 	}
 

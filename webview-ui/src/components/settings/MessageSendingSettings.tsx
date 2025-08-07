@@ -5,7 +5,7 @@ import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
 import { MessageSquare, Zap, History, Settings } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Slider, Button } from "@/components/ui"
+import { Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Slider } from "@/components/ui"
 
 import { SetCachedStateField } from "./types"
 import { MessageSendingConfig } from "./MessageSendingConfig"
