@@ -6,6 +6,17 @@ export type OpenAiNativeModelId = keyof typeof openAiNativeModels
 export const openAiNativeDefaultModelId: OpenAiNativeModelId = "gpt-4.1"
 
 export const openAiNativeModels = {
+	// kilocode_change start
+	"gpt-5": {
+		maxTokens: 32_768,
+		contextWindow: 1_047_576,
+		supportsImages: true,
+		supportsPromptCache: true,
+		inputPrice: 2,
+		outputPrice: 8,
+		cacheReadsPrice: 0.5,
+	},
+	// kilocode_change end
 	"gpt-4.1": {
 		maxTokens: 32_768,
 		contextWindow: 1_047_576,
