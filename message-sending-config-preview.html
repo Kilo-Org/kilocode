@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>消息发送优化配置 - 预览效果</title>
+    <style>
+        :root {
+            --vscode-editor-background: #1e1e1e;
+            --vscode-editor-foreground: #d4d4d4;
+            --vscode-sideBar-background: #252526;
+            --vscode-input-background: #3c3c3c;
+            --vscode-input-foreground: #cccccc;
+            --vscode-input-border: #3c3c3c;
+            --vscode-panel-border: #2d2d30;
+            --vscode-descriptionForeground: #9d9d9d;
+            --vscode-button-background: #0e639c;
+            --vscode-button-foreground: #ffffff;
+            --vscode-checkbox-background: #3c3c3c;
+            --vscode-checkbox-border: #3c3c3c;
+            --vscode-dropdown-background: #3c3c3c;
+            --vscode-dropdown-border: #3c3c3c;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--vscode-editor-background);
+            color: var(--vscode-editor-foreground);
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #569cd6;
+        }
+
+        .header p {
+            color: var(--vscode-descriptionForeground);
+            font-size: 1.1rem;
+        }
+
+        .config-panel {
+            background-color: var(--vscode-sideBar-background);
+            border: 1px solid var(--vscode-panel-border);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .section {
+            margin-bottom: 24px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--vscode-panel-border);
+        }
+
+        .section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .section-header h3 {
+            font-size: 1.2rem;
+            color: #569cd6;
+        }
+
+        .icon {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .form-group .description {
+            color: var(--vscode-descriptionForeground);
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .checkbox {
+            width: 16px;
+            height: 16px;
+            background-color: var(--vscode-checkbox-background);
+            border: 1px solid var(--vscode-checkbox-border);
+            border-radius: 3px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .checkbox.checked {
+            background-color: #007acc;
+            border-color: #007acc;
+        }
+
+        .checkbox.checked::after {
+            content: '✓';
+            position: absolute;
+            top: -2px;
+            left: 2px;
+            color: white;
+            font-size: 12px;
+        }
+
+        .select {
+            width: 100%;
+            padding: 8px 12px;
+            background-color: var(--vscode-dropdown-background);
+            border: 1px solid var(--vscode-dropdown-border);
+            border-radius: 4px;
+            color: var(--vscode-input-foreground);
+            font-size: 14px;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .slider {
+            flex: 1;
+            height: 4px;
+            background-color: var(--vscode-input-border);
+            border-radius: 2px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .slider-track {
+            height: 100%;
+            background-color: #007acc;
+            border-radius: 2px;
+            position: relative;
+        }
+
+        .slider-thumb {
+            width: 16px;
+            height: 16px;
+            background-color: #007acc;
+            border-radius: 50%;
+            position: absolute;
+            top: -6px;
+            right: -8px;
+            cursor: pointer;
+        }
+
+        .slider-value {
+            min-width: 30px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .textarea {
+            width: 100%;
+            height: 120px;
+            padding: 12px;
+            background-color: var(--vscode-input-background);
+            border: 1px solid var(--vscode-input-border);
+            border-radius: 4px;
+            color: var(--vscode-input-foreground);
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            resize: vertical;
+        }
+
+        .button {
+            padding: 8px 16px;
+            background-color: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .button:hover {
+            background-color: #1177bb;
+        }
+
+        .button.outline {
+            background-color: transparent;
+            border: 1px solid var(--vscode-input-border);
+            color: var(--vscode-editor-foreground);
+        }
+
+        .button.outline:hover {
+            background-color: var(--vscode-input-background);
+        }
+
+        .template-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .template-option:hover {
+            background-color: var(--vscode-input-background);
+        }
+
+        .template-option.selected {
+            background-color: #007acc20;
+            border: 1px solid #007acc;
+        }
+
+        .savings-display {
+            background-color: var(--vscode-editor-background);
+            border: 1px solid var(--vscode-input-border);
+            border-radius: 6px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .savings-percentage {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #4ec9b0;
+            margin: 8px 0;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+        }
+
+        .preview-section {
+            background-color: var(--vscode-editor-background);
+            border: 1px solid var(--vscode-input-border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .preview-section h3 {
+            color: #569cd6;
+            margin-bottom: 12px;
+        }
+
+        .config-preview {
+            background-color: var(--vscode-input-background);
+            border-radius: 4px;
+            padding: 12px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+
+        .feature-list {
+            list-style: none;
+        }
+
+        .feature-list li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .feature-list li::before {
+            content: '•';
+            color: #4ec9b0;
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+        }
+
+        .disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>消息发送优化配置</h1>
+            <p>新增的配置页面，帮助用户优化消息发送机制，减少Token使用量，提升响应速度</p>
+        </div>
+
+        <div class="config-panel">
+            <!-- 基础配置 -->
+            <div class="section">
+                <div class="section-header">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <h3>消息发送优化</h3>
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <div class="checkbox checked" id="enabledCheckbox"></div>
+                        <label>启用消息发送优化</label>
+                    </div>
+                    <div class="description">启用后可根据配置优化消息内容，减少Token消耗</div>
+                </div>
+
+                <div class="form-group" id="templateSection">
+                    <label>发送模板</label>
+                    <select class="select" id="templateSelect">
+                        <option value="minimal">🚀 最小化模板 - 最大化Token节省</option>
+                        <option value="standard" selected>⚙️ 标准模板 - 平衡性能与功能</option>
+                        <option value="full">🧠 完整模板 - 保持完整上下文</option>
+                        <option value="custom">🔧 自定义模板 - 手动配置选项</option>
+                    </select>
+                    <div class="description">选择预设模板快速配置消息发送策略</div>
+                </div>
+
+                <!-- Token节省预估 -->
+                <div class="savings-display">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px;">
+                        <svg class="icon" style="color: #4ec9b0;" viewBox="0 0 24 24">
+                            <polygon points="13,2 3,14 12,14 11,22 21,10 12,10"/>
+                        </svg>
+                        <span style="font-weight: 500;">预估Token节省</span>
+                    </div>
+                    <div class="savings-percentage" id="savingsPercentage">25%</div>
+                    <div style="color: var(--vscode-descriptionForeground); font-size: 0.9rem;">
+                        相比完整模式可节省的Token使用量
+                    </div>
+                </div>
+            </div>
+
+            <!-- 内容包含选项 -->
+            <div class="section" id="contentSection">
+                <div class="section-header">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    </svg>
+                    <h3>内容包含选项</h3>
+                </div>
+
+                <div class="grid">
+                    <div class="checkbox-group">
+                        <div class="checkbox checked" data-option="includeSystemPrompt"></div>
+                        <label>包含系统提示词</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <div class="checkbox checked" data-option="includeConversationHistory"></div>
+                        <label>包含对话历史</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <div class="checkbox checked" data-option="includeEnvironmentDetails"></div>
+                        <label>包含环境详情</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <div class="checkbox checked" data-option="includeToolDescriptions"></div>
+                        <label>包含工具描述</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <div class="checkbox checked" data-option="includeMcpStatus"></div>
+                        <label>包含MCP状态</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <div class="checkbox checked" data-option="includeRooIgnoreInstructions"></div>
+                        <label>包含RooIgnore指令</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 历史消息配置 -->
+            <div class="section">
+                <div class="section-header">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12,6 12,12 16,14"/>
+                    </svg>
+                    <h3>历史消息配置</h3>
+                </div>
+
+                <div class="form-group">
+                    <label>最大历史消息数量</label>
+                    <div class="slider-container">
+                        <div class="slider" id="historySlider">
+                            <div class="slider-track" style="width: 20%;">
+                                <div class="slider-thumb"></div>
+                            </div>
+                        </div>
+                        <div class="slider-value" id="historyValue">20</div>
+                    </div>
+                    <div class="description">限制发送的历史消息数量，减少Token使用</div>
+                </div>
+
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <div class="checkbox" id="compressionCheckbox"></div>
+                        <label>启用历史压缩</label>
+                    </div>
+                    <div class="description">自动压缩较早的对话历史为摘要</div>
+                </div>
+
+                <div class="form-group disabled" id="compressionThresholdSection">
+                    <label>压缩阈值</label>
+                    <div class="slider-container">
+                        <div class="slider">
+                            <div class="slider-track" style="width: 20%;">
+                                <div class="slider-thumb"></div>
+                            </div>
+                        </div>
+                        <div class="slider-value">10</div>
+                    </div>
+                    <div class="description">当历史消息超过此数量时开始压缩</div>
+                </div>
+            </div>
+
+            <!-- 性能优化选项 -->
+            <div class="section">
+                <div class="section-header">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <polygon points="13,2 3,14 12,14 11,22 21,10 12,10"/>
+                    </svg>
+                    <h3>性能优化选项</h3>
+                </div>
+
+                <div class="grid">
+                    <div class="checkbox-group">
+                        <div class="checkbox" data-option="enableContextCaching"></div>
+                        <div>
+                            <div style="font-weight: 500;">启用上下文缓存</div>
+                            <div style="font-size: 0.9rem; color: var(--vscode-descriptionForeground);">缓存重复的上下文内容</div>
+                        </div>
+                    </div>
+                    <div class="checkbox-group">
+                        <div class="checkbox" data-option="enableImageOptimization"></div>
+                        <div>
+                            <div style="font-weight: 500;">启用图片优化</div>
+                            <div style="font-size: 0.9rem; color: var(--vscode-descriptionForeground);">自动压缩和优化图片</div>
+                        </div>
+                    </div>
+                    <div class="checkbox-group">
+                        <div class="checkbox" data-option="enableTokenOptimization"></div>
+                        <div>
+                            <div style="font-weight: 500;">启用Token优化</div>
+                            <div style="font-size: 0.9rem; color: var(--vscode-descriptionForeground);">智能压缩和去重内容</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 重置按钮 -->
+            <div class="section">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-weight: 500;">重置配置</div>
+                        <div style="font-size: 0.9rem; color: var(--vscode-descriptionForeground);">恢复到默认设置</div>
+                    </div>
+                    <button class="button outline" onclick="resetToStandard()">重置为标准模板</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 配置预览 -->
+        <div class="preview-section">
+            <h3>当前配置预览</h3>
+            <div class="config-preview" id="configPreview"></div>
+        </div>
+
+        <!-- 功能说明 -->
+        <div class="preview-section">
+            <h3>主要功能特点</h3>
+            <ul class="feature-list">
+                <li><strong>预设模板</strong>：提供最小化、标准、完整三种预设模板，快速配置</li>
+                <li><strong>内容控制</strong>：可选择性包含系统提示词、对话历史、环境详情等内容</li>
+                <li><strong>历史管理</strong>：限制历史消息数量，支持自动压缩</li>
+                <li><strong>性能优化</strong>：启用上下文缓存、图片优化、Token优化等功能</li>
+                <li><strong>实时预估</strong>：显示Token节省百分比，帮助用户了解优化效果</li>
+                <li><strong>智能配置</strong>：根据不同使用场景自动调整最优参数</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // 配置状态
+        let config = {
+            enabled: true,
+            template: 'standard',
+            includeSystemPrompt: true,
+            includeConversationHistory: true,
+            includeEnvironmentDetails: true,
+            includeToolDescriptions: true,
+            includeMcpStatus: true,
+            includeRooIgnoreInstructions: true,
+            maxHistoryMessages: 20,
+            historyCompressionEnabled: false,
+            historyCompressionThreshold: 10,
+            systemPromptTemplate: 'full',
+            customSystemPrompt: '',
+            enableContextCaching: false,
+            enableImageOptimization: false,
+            enableTokenOptimization: false
+        };
+
+        // 预设模板
+        const templates = {
+            minimal: {
+                includeSystemPrompt: true,
+                includeConversationHistory: false,
+                includeEnvironmentDetails: false,
+                includeToolDescriptions: false,
+                includeMcpStatus: false,
+                includeRooIgnoreInstructions: false,
+                maxHistoryMessages: 1,
+                systemPromptTemplate: 'minimal',
+                enableTokenOptimization: true
+            },
+            standard: {
+                includeSystemPrompt: true,
+                includeConversationHistory: true,
+                includeEnvironmentDetails: true,
+                includeToolDescriptions: true,
+                includeMcpStatus: true,
+                includeRooIgnoreInstructions: true,
+                maxHistoryMessages: 20,
+                systemPromptTemplate: 'full',
+                enableTokenOptimization: false
+            },
+            full: {
+                includeSystemPrompt: true,
+                includeConversationHistory: true,
+                includeEnvironmentDetails: true,
+                includeToolDescriptions: true,
+                includeMcpStatus: true,
+                includeRooIgnoreInstructions: true,
+                maxHistoryMessages: 50,
+                systemPromptTemplate: 'full',
+                enableTokenOptimization: false
+            }
+        };
+
+        // 计算Token节省
+        function calculateTokenSavings() {
+            let savings = 0;
+            if (!config.includeConversationHistory) savings += 40;
+            if (!config.includeEnvironmentDetails) savings += 15;
+            if (!config.includeToolDescriptions) savings += 20;
+            if (config.maxHistoryMessages < 20) savings += 15;
+            if (config.enableTokenOptimization) savings += 10;
+            return Math.min(savings, 70);
+        }
+
+        // 更新UI
+        function updateUI() {
+            // 更新Token节省显示
+            document.getElementById('savingsPercentage').textContent = calculateTokenSavings() + '%';
+            
+            // 更新配置预览
+            document.getElementById('configPreview').textContent = JSON.stringify(config, null, 2);
+            
+            // 更新复选框状态
+            document.querySelectorAll('.checkbox[data-option]').forEach(checkbox => {
+                const option = checkbox.getAttribute('data-option');
+                if (config[option]) {
+                    checkbox.classList.add('checked');
+                } else {
+                    checkbox.classList.remove('checked');
+                }
+            });
+            
+            // 更新启用状态
+            const enabledCheckbox = document.getElementById('enabledCheckbox');
+            if (config.enabled) {
+                enabledCheckbox.classList.add('checked');
+                document.getElementById('templateSection').classList.remove('disabled');
+                document.getElementById('contentSection').style.display = config.template === 'custom' ? 'block' : 'none';
+            } else {
+                enabledCheckbox.classList.remove('checked');
+                document.getElementById('templateSection').classList.add('disabled');
+                document.getElementById('contentSection').style.display = 'none';
+            }
+            
+            // 更新模板选择
+            document.getElementById('templateSelect').value = config.template;
+            
+            // 更新历史消息滑块
+            const historySlider = document.getElementById('historySlider').querySelector('.slider-track');
+            const historyValue = document.getElementById('historyValue');
+            const percentage = (config.maxHistoryMessages / 100) * 100;
+            historySlider.style.width = percentage + '%';
+            historyValue.textContent = config.maxHistoryMessages;
+            
+            // 更新压缩设置
+            const compressionCheckbox = document.getElementById('compressionCheckbox');
+            const compressionSection = document.getElementById('compressionThresholdSection');
+            if (config.historyCompressionEnabled) {
+                compressionCheckbox.classList.add('checked');
+                compressionSection.classList.remove('disabled');
+            } else {
+                compressionCheckbox.classList.remove('checked');
+                compressionSection.classList.add('disabled');
+            }
+        }
+
+        // 应用模板
+        function applyTemplate(templateName) {
+            if (templateName === 'custom') {
+                config.template = 'custom';
+            } else {
+                const template = templates[templateName];
+                if (template) {
+                    config = { ...config, template: templateName, ...template };
+                }
+            }
+            updateUI();
+        }
+
+        // 重置为标准模板
+        function resetToStandard() {
+            applyTemplate('standard');
+        }
+
+        // 事件监听器
+        document.addEventListener('DOMContentLoaded', function() {
+            // 启用复选框
+            document.getElementById('enabledCheckbox').addEventListener('click', function() {
+                config.enabled = !config.enabled;
+                updateUI();
+            });
+            
+            // 模板选择
+            document.getElementById('templateSelect').addEventListener('change', function() {
+                applyTemplate(this.value);
+            });
+            
+            // 内容选项复选框
+            document.querySelectorAll('.checkbox[data-option]').forEach(checkbox => {
+                checkbox.addEventListener('click', function() {
+                    const option = this.getAttribute('data-option');
+                    config[option] = !config[option];
+                    updateUI();
+                });
+            });
+            
+            // 历史压缩复选框
+            document.getElementById('compressionCheckbox').addEventListener('click', function() {
+                config.historyCompressionEnabled = !config.historyCompressionEnabled;
+                updateUI();
+            });
+            
+            // 历史消息滑块
+            document.getElementById('historySlider').addEventListener('click', function(e) {
+                const rect = this.getBoundingClientRect();
+                const percentage = (e.clientX - rect.left) / rect.width;
+                config.maxHistoryMessages = Math.round(percentage * 100);
+                updateUI();
+            });
+            
+            // 初始化UI
+            updateUI();
+        });
+    </script>
+</body>
+</html>

@@ -11,6 +11,7 @@ import type {
 	CloudUserInfo,
 	ShareVisibility,
 } from "@roo-code/types"
+import { MessageSendingConfig } from "../../webview-ui/src/components/settings/MessageSendingConfig"
 
 import { GitCommit } from "../utils/git"
 
@@ -378,6 +379,7 @@ export type ExtensionState = Pick<
 	marketplaceInstalledMetadata?: { project: Record<string, any>; global: Record<string, any> }
 	profileThresholds: Record<string, number>
 	hasOpenedModeSelector: boolean
+	messageSendingConfig: MessageSendingConfig
 }
 
 export interface ClineSayTool {

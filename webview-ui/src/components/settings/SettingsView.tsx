@@ -72,6 +72,7 @@ import { LanguageSettings } from "./LanguageSettings"
 import { About } from "./About"
 import { Section } from "./Section"
 import PromptsSettings from "./PromptsSettings"
+import { MessageSendingSettings } from "./MessageSendingSettings" // kilocode_change
 import { cn } from "@/lib/utils"
 import McpView from "../kilocodeMcp/McpView" // kilocode_change
 import deepEqual from "fast-deep-equal" // kilocode_change
@@ -97,6 +98,7 @@ const sectionNames = [
 	"notifications",
 	"contextManagement",
 	"terminal",
+	"messageSending", // kilocode_change
 	"prompts",
 	"experimental",
 	"language",
@@ -509,6 +511,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			{ id: "notifications", icon: Bell },
 			{ id: "contextManagement", icon: Database },
 			{ id: "terminal", icon: SquareTerminal },
+			{ id: "messageSending", icon: MessageSquare }, // kilocode_change
 			{ id: "prompts", icon: MessageSquare },
 			{ id: "experimental", icon: FlaskConical },
 			{ id: "language", icon: Globe },
@@ -826,6 +829,11 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 							terminalCommandApiConfigId={terminalCommandApiConfigId} // kilocode_change
 							setCachedStateField={setCachedStateField}
 						/>
+					)}
+
+					{/* Message Sending Section */}
+					{activeTab === "messageSending" && (
+						<MessageSendingSettings setCachedStateField={setCachedStateField} />
 					)}
 
 					{/* Prompts Section */}

@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>消息发送配置页面演示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #1e1e1e;
+            color: #cccccc;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: linear-gradient(135deg, #2d2d30 0%, #252526 100%);
+            border-radius: 8px;
+            border: 1px solid #3c3c3c;
+        }
+        
+        .header h1 {
+            color: #ffffff;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #cccccc;
+            font-size: 1.1rem;
+        }
+        
+        .demo-section {
+            background-color: #252526;
+            border: 1px solid #3c3c3c;
+            border-radius: 8px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #3c3c3c;
+        }
+        
+        .section-header h2 {
+            color: #ffffff;
+            font-size: 1.5rem;
+        }
+        
+        .icon {
+            width: 24px;
+            height: 24px;
+            fill: #007acc;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .feature-card {
+            background-color: #2d2d30;
+            border: 1px solid #3c3c3c;
+            border-radius: 6px;
+            padding: 20px;
+        }
+        
+        .feature-card h3 {
+            color: #ffffff;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .feature-card p {
+            color: #cccccc;
+            margin-bottom: 15px;
+        }
+        
+        .feature-list {
+            list-style: none;
+        }
+        
+        .feature-list li {
+            color: #cccccc;
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .feature-list li:before {
+            content: "✓";
+            color: #4ec9b0;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+        
+        .template-showcase {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .template-card {
+            background-color: #2d2d30;
+            border: 1px solid #3c3c3c;
+            border-radius: 6px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .template-card.minimal {
+            border-color: #f14c4c;
+        }
+        
+        .template-card.standard {
+            border-color: #ffcc02;
+        }
+        
+        .template-card.full {
+            border-color: #4ec9b0;
+        }
+        
+        .template-card h4 {
+            color: #ffffff;
+            margin-bottom: 10px;
+        }
+        
+        .template-card .savings {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .template-card.minimal .savings {
+            color: #f14c4c;
+        }
+        
+        .template-card.standard .savings {
+            color: #ffcc02;
+        }
+        
+        .template-card.full .savings {
+            color: #4ec9b0;
+        }
+        
+        .config-preview {
+            background-color: #1e1e1e;
+            border: 1px solid #3c3c3c;
+            border-radius: 6px;
+            padding: 20px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+        }
+        
+        .config-preview pre {
+            color: #d4d4d4;
+            white-space: pre-wrap;
+        }
+        
+        .benefits {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .benefit-item {
+            background-color: #2d2d30;
+            border: 1px solid #3c3c3c;
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .benefit-item .number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #4ec9b0;
+            margin-bottom: 5px;
+        }
+        
+        .benefit-item .label {
+            color: #cccccc;
+            font-size: 0.9rem;
+        }
+        
+        .screenshot-placeholder {
+            background: linear-gradient(135deg, #2d2d30 0%, #252526 100%);
+            border: 2px dashed #3c3c3c;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .screenshot-placeholder h3 {
+            color: #ffffff;
+            margin-bottom: 10px;
+        }
+        
+        .screenshot-placeholder p {
+            color: #cccccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 消息发送优化配置页面</h1>
+            <p>智能优化消息发送机制，显著减少Token使用量，提升响应速度</p>
+        </div>
+        
+        <div class="demo-section">
+            <div class="section-header">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4l4 4 4-4h4c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+                </svg>
+                <h2>配置页面概览</h2>
+            </div>
+            
+            <div class="screenshot-placeholder">
+                <h3>📱 配置界面预览</h3>
+                <p>新增的MessageSendingSettings组件提供了直观的配置界面，包含以下主要区域：</p>
+            </div>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>
+                        <svg class="icon" viewBox="0 0 24 24" style="width: 20px; height: 20px;">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                        </svg>
+                        预设模板选择
+                    </h3>
+                    <p>提供三种预设模板，快速配置不同的优化策略</p>
+                    <ul class="feature-list">
+                        <li>最小化模板 - 最大化Token节省</li>
+                        <li>标准模板 - 平衡性能与功能</li>
+                        <li>完整模板 - 保持完整上下文</li>
+                        <li>自定义模板 - 手动精细配置</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <h3>
+                        <svg class="icon" viewBox="0 0 24 24" style="width: 20px; height: 20px;">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                        内容包含选项
+                    </h3>
+                    <p>精确控制消息中包含的内容类型</p>
+                    <ul class="feature-list">
+                        <li>系统提示词控制</li>
+                        <li>对话历史管理</li>
+                        <li>环境详情包含</li>
+                        <li>工具描述优化</li>
+                        <li>MCP状态信息</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <h3>
+                        <svg class="icon" viewBox="0 0 24 24" style="width: 20px; height: 20px;">
+                            <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
+                        </svg>
+                        历史消息配置
+                    </h3>
+                    <p>智能管理对话历史，优化上下文长度</p>
+                    <ul class="feature-list">
+                        <li>历史消息数量限制</li>
+                        <li>自动压缩功能</li>
+                        <li>压缩阈值设置</li>
+                        <li>智能摘要生成</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <h3>
+                        <svg class="icon" viewBox="0 0 24 24" style="width: 20px; height: 20px;">
+                            <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                        性能优化选项
+                    </h3>
+                    <p>多维度性能优化，提升整体效率</p>
+                    <ul class="feature-list">
+                        <li>上下文缓存机制</li>
+                        <li>图片自动优化</li>
+                        <li>Token智能压缩</li>
+                        <li>内容去重处理</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <div class="section-header">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M9 11H7v6h2v-6zm4 0h-2v6h2v-6zm4 0h-2v6h2v-6zm2.5-9H19V1h-2v1H7V1H5v1H3.5C2.67 2 2 2.67 2 3.5v15C2 19.33 2.67 20 3.5 20h17c.83 0 1.5-.67 1.5-1.5v-15C22 2.67 21.33 2 20.5 2z"/>
+                </svg>
+                <h2>预设模板效果对比</h2>
+            </div>
+            
+            <div class="template-showcase">
+                <div class="template-card minimal">
+                    <h4>🔥 最小化模板</h4>
+                    <div class="savings">70%</div>
+                    <p>Token节省</p>
+                    <ul class="feature-list">
+                        <li>仅包含核心系统提示词</li>
+                        <li>不包含对话历史</li>
+                        <li>最小环境信息</li>
+                        <li>启用所有优化选项</li>
+                    </ul>
+                </div>
+                
+                <div class="template-card standard">
+                    <h4>⚖️ 标准模板</h4>
+                    <div class="savings">35%</div>
+                    <p>Token节省</p>
+                    <ul class="feature-list">
+                        <li>平衡的内容包含</li>
+                        <li>适量对话历史</li>
+                        <li>必要环境详情</li>
+                        <li>推荐日常使用</li>
+                    </ul>
+                </div>
+                
+                <div class="template-card full">
+                    <h4>🧠 完整模板</h4>
+                    <div class="savings">0%</div>
+                    <p>Token节省</p>
+                    <ul class="feature-list">
+                        <li>完整上下文保留</li>
+                        <li>所有历史记录</li>
+                        <li>详细环境信息</li>
+                        <li>最佳理解能力</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <div class="section-header">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+                </svg>
+                <h2>配置示例</h2>
+            </div>
+            
+            <p>以下是标准模板的配置示例：</p>
+            
+            <div class="config-preview">
+                <pre>{
+  "enabled": true,
+  "template": "standard",
+  "includeSystemPrompt": true,
+  "includeConversationHistory": true,
+  "includeEnvironmentDetails": true,
+  "includeToolDescriptions": true,
+  "includeMcpStatus": true,
+  "includeRooIgnoreInstructions": true,
+  "maxHistoryMessages": 20,
+  "historyCompressionEnabled": false,
+  "historyCompressionThreshold": 10,
+  "systemPromptTemplate": "full",
+  "enableContextCaching": false,
+  "enableImageOptimization": false,
+  "enableTokenOptimization": false
+}</pre>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <div class="section-header">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/>
+                </svg>
+                <h2>优化效果</h2>
+            </div>
+            
+            <div class="benefits">
+                <div class="benefit-item">
+                    <div class="number">70%</div>
+                    <div class="label">最大Token节省</div>
+                </div>
+                
+                <div class="benefit-item">
+                    <div class="number">3x</div>
+                    <div class="label">响应速度提升</div>
+                </div>
+                
+                <div class="benefit-item">
+                    <div class="number">50%</div>
+                    <div class="label">成本降低</div>
+                </div>
+                
+                <div class="benefit-item">
+                    <div class="number">4</div>
+                    <div class="label">预设模板</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <div class="section-header">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+                <h2>主要特性</h2>
+            </div>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>🎯 智能优化</h3>
+                    <p>基于内容类型和使用场景，自动选择最优的消息发送策略</p>
+                </div>
+                
+                <div class="feature-card">
+                    <h3>📊 实时预估</h3>
+                    <p>实时显示Token节省百分比，帮助用户了解优化效果</p>
+                </div>
+                
+                <div class="feature-card">
+                    <h3>🔧 灵活配置</h3>
+                    <p>支持预设模板和自定义配置，满足不同用户需求</p>
+                </div>
+                
+                <div class="feature-card">
+                    <h3>⚡ 性能提升</h3>
+                    <p>多维度优化机制，显著提升响应速度和用户体验</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

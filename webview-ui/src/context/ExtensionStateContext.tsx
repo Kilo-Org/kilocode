@@ -25,6 +25,7 @@ import { McpMarketplaceCatalog } from "../../../src/shared/kilocode/mcp" // kilo
 import { vscode } from "@src/utils/vscode"
 import { convertTextMateToHljs } from "@src/utils/textMateToHljs"
 import { ClineRulesToggles } from "@roo/cline-rules" // kilocode_change
+import { MessageSendingConfig } from "../components/settings/MessageSendingConfig"
 
 export interface ExtensionStateContextType extends ExtensionState {
 	historyPreviewCollapsed?: boolean // Add the new state property
@@ -170,6 +171,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setMaxDiagnosticMessages: (value: number) => void
 	includeTaskHistoryInEnhance?: boolean
 	setIncludeTaskHistoryInEnhance: (value: boolean) => void
+	messageSendingConfig: MessageSendingConfig
+	setMessageSendingConfig: (value: MessageSendingConfig) => void
 }
 
 export const ExtensionStateContext = createContext<ExtensionStateContextType | undefined>(undefined)
@@ -278,6 +281,25 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		alwaysAllowUpdateTodoList: true,
 		includeDiagnosticMessages: true,
 		maxDiagnosticMessages: 50,
+		messageSendingConfig: {
+			useSmartTemplate: true,
+			selectedTemplate: "balanced",
+			customTemplate: "",
+			showTokenSavings: true,
+			includeSystemPrompt: true,
+			includeConversationHistory: true,
+			includeFileContext: true,
+			includeCodeContext: true,
+			maxHistoryMessages: 10,
+			enableHistoryCompression: false,
+			compressionRatio: 50,
+			enableContextCaching: true,
+			enableImageOptimization: true,
+			enableTokenOptimization: true,
+			maxTokensPerRequest: 4000,
+			enableRealTimePreview: true,
+			showEstimatedCost: true,
+		},
 	})
 
 	const [didHydrateState, setDidHydrateState] = useState(false)
@@ -597,6 +619,28 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		},
 		includeTaskHistoryInEnhance,
 		setIncludeTaskHistoryInEnhance,
+		messageSendingConfig: state.messageSendingConfig || {
+			useSmartTemplate: true,
+			selectedTemplate: "balanced",
+			customTemplate: "",
+			showTokenSavings: true,
+			includeSystemPrompt: true,
+			includeConversationHistory: true,
+			includeFileContext: true,
+			includeCodeContext: true,
+			maxHistoryMessages: 10,
+			enableHistoryCompression: false,
+			compressionRatio: 50,
+			enableContextCaching: true,
+			enableImageOptimization: true,
+			enableTokenOptimization: true,
+			maxTokensPerRequest: 4000,
+			enableRealTimePreview: true,
+			showEstimatedCost: true,
+		},
+		setMessageSendingConfig: (value) => {
+			setState((prevState) => ({ ...prevState, messageSendingConfig: value }))
+		},
 	}
 
 	return <ExtensionStateContext.Provider value={contextValue}>{children}</ExtensionStateContext.Provider>

@@ -28,12 +28,64 @@
 		"notifications": "通知",
 		"contextManagement": "上下文",
 		"terminal": "终端",
+		"messageSending": "消息发送",
 		"prompts": "提示词",
 		"experimental": "实验性",
 		"language": "语言",
 		"about": "关于 Kilo Code",
 		"mcp": "MCP 服务器",
 		"display": "显示"
+	},
+	"messageSending": {
+		"description": "配置消息发送优化选项，包括智能模板、内容控制、历史管理和性能优化，以提升与AI的交互效率。",
+		"smartTemplate": {
+			"title": "智能模板选择",
+			"enable": "启用智能模板",
+			"enableDescription": "根据上下文自动选择最适合的消息模板",
+			"templateSelection": "模板选择",
+			"customTemplate": "自定义模板",
+			"customTemplatePlaceholder": "输入自定义模板内容...",
+			"tokenSaving": "Token节省显示",
+			"tokenSavingDescription": "显示使用智能模板节省的Token数量"
+		},
+		"contentControl": {
+			"title": "内容控制选项",
+			"includeSystemPrompt": "包含系统提示词",
+			"includeSystemPromptDescription": "在消息中包含系统级提示词",
+			"includeHistory": "包含对话历史",
+			"includeHistoryDescription": "在消息中包含之前的对话历史",
+			"includeFileContext": "包含文件上下文",
+			"includeFileContextDescription": "在消息中包含相关文件的上下文信息",
+			"includeCodeContext": "包含代码上下文",
+			"includeCodeContextDescription": "在消息中包含相关代码的上下文信息"
+		},
+		"historyManagement": {
+			"title": "历史消息管理",
+			"maxHistoryMessages": "最大历史消息数量",
+			"maxHistoryMessagesDescription": "保留的最大历史消息数量",
+			"enableHistoryCompression": "启用历史压缩",
+			"enableHistoryCompressionDescription": "自动压缩较旧的历史消息以节省空间",
+			"compressionRatio": "压缩比例",
+			"compressionRatioDescription": "历史消息的压缩比例（百分比）"
+		},
+		"performanceOptimization": {
+			"title": "性能优化选项",
+			"enableContextCaching": "启用上下文缓存",
+			"enableContextCachingDescription": "缓存常用上下文以提高响应速度",
+			"enableImageOptimization": "启用图片优化",
+			"enableImageOptimizationDescription": "自动优化图片大小和质量",
+			"enableTokenOptimization": "启用Token优化",
+			"enableTokenOptimizationDescription": "优化消息内容以减少Token使用",
+			"maxRequestTokens": "最大请求Token数量",
+			"maxRequestTokensDescription": "单次请求的最大Token数量限制"
+		},
+		"realTimePreview": {
+			"title": "实时预览",
+			"enablePreview": "启用实时预览",
+			"enablePreviewDescription": "实时显示消息内容和Token使用情况",
+			"showEstimatedCost": "显示预估成本",
+			"showEstimatedCostDescription": "显示基于Token使用量的预估API成本"
+		}
 	},
 	"prompts": {
 		"description": "配置用于快速操作的支持提示词，如增强提示词、解释代码和修复问题。这些提示词帮助 Kilo Code 为常见开发任务提供更好的支持。"
