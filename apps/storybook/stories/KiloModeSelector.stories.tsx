@@ -32,7 +32,7 @@ const KiloModeSelectorWrapper = (props: WrapperProps) => {
 }
 
 const meta: Meta<typeof KiloModeSelectorWrapper> = {
-	title: "Components/KiloModeSelector",
+	title: "Chat/KiloModeSelector",
 	component: KiloModeSelectorWrapper,
 	decorators: [withI18n, withTheme, withTooltipProvider],
 }
