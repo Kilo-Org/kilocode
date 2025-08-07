@@ -94,15 +94,16 @@ export class CommitMessageProvider {
 						}
 					}
 
-					const gitContextString = await this.gitService.getCommitContext(changes, {
+					const gitContext = await this.gitService.getCommitContext(changes, {
 						staged,
 						onProgress: onDiffProgress,
+						enableChunking: true,
 					})
 
-					const generatedMessage = await this.callAIForCommitMessageWithProgress(gitContextString, progress)
+					const generatedMessage = await this.callAIForCommitMessageWithProgress(gitContext, progress)
 
 					// Store the current context and message for future reference
-					this.previousGitContext = gitContextString
+					this.previousGitContext = Array.isArray(gitContext) ? gitContext.join("\n---\n") : gitContext
 					this.previousCommitMessage = generatedMessage
 					this.gitService.setCommitMessage(generatedMessage)
 					TelemetryService.instance.captureEvent(TelemetryEventName.COMMIT_MSG_GENERATED)
@@ -116,7 +117,7 @@ export class CommitMessageProvider {
 	}
 
 	private async callAIForCommitMessageWithProgress(
-		gitContextString: string,
+		gitContext: string | string[],
 		progress: vscode.Progress<{ increment?: number; message?: string }>,
 	): Promise<string> {
 		let totalProgressUsed = 0
@@ -124,7 +125,7 @@ export class CommitMessageProvider {
 		const maxIncrement = 1.0 // Start with bigger increments
 		const minIncrement = 0.05 // Minimum increment to keep progress moving
 
-		// Start interval timer to update the progress while we wait for the reponse
+		// Start interval timer to update the progress while we wait for the response
 		// Use exponential decay: start with larger increments, decrease as we approach the limit
 		// Formula: increment = remainingProgress^2 * maxIncrement + minIncrement
 		const progressInterval = setInterval(() => {
@@ -140,7 +141,15 @@ export class CommitMessageProvider {
 		}, 100)
 
 		try {
-			const message = await this.callAIForCommitMessage(gitContextString)
+			let message: string
+
+			if (Array.isArray(gitContext)) {
+				// Map-reduce workflow for chunked contexts
+				message = await this.processChunkedContext(gitContext, progress)
+			} else {
+				// Single context processing
+				message = await this.callAIForCommitMessage(gitContext)
+			}
 
 			// Now, animate the bar to 100% to make it look nicer :)
 			for (let i = 0; i < maxProgress - totalProgressUsed; i++) {
@@ -151,6 +160,38 @@ export class CommitMessageProvider {
 		} finally {
 			clearInterval(progressInterval) // Always clear when done
 		}
+	}
+
+	/**
+	 * Processes chunked git context using map-reduce pattern
+	 */
+	private async processChunkedContext(
+		gitContextChunks: string[],
+		progress: vscode.Progress<{ increment?: number; message?: string }>,
+	): Promise<string> {
+		// Map phase: Generate commit messages for each chunk
+		progress.report({ message: t("kilocode:commitMessage.analyzingChunks") })
+
+		const chunkSummaries: string[] = []
+		for (let i = 0; i < gitContextChunks.length; i++) {
+			const chunk = gitContextChunks[i]
+			const chunkMessage = await this.callAIForCommitMessage(chunk)
+			chunkSummaries.push(`Chunk ${i + 1}: ${chunkMessage}`)
+		}
+
+		// Reduce phase: Combine chunk summaries into final commit message
+		progress.report({ message: t("kilocode:commitMessage.combining") })
+
+		const combinedContext = `## Combined Analysis from Multiple Chunks
+
+The following commit message suggestions were generated from different parts of the changes:
+
+${chunkSummaries.join("\n\n")}
+
+## Instructions
+Based on the above chunk analyses, generate a single, cohesive conventional commit message that best represents the overall changes. Focus on the most significant change while ensuring the message follows conventional commit format.`
+
+		return await this.callAIForCommitMessage(combinedContext)
 	}
 
 	/**

@@ -1,308 +1,321 @@
-// kilocode_change - new file
+import { describe, it, expect, vi, beforeEach } from "vitest"
 import * as vscode from "vscode"
 import { CommitMessageProvider } from "../CommitMessageProvider"
 import { GitExtensionService, GitChange } from "../GitExtensionService"
-import { singleCompletionHandler } from "../../../utils/single-completion-handler"
-import type { Mock } from "vitest"
+import { ContextProxy } from "../../../core/config/ContextProxy"
+import { ProviderSettingsManager } from "../../../core/config/ProviderSettingsManager"
+import * as singleCompletionHandler from "../../../utils/single-completion-handler"
 
 // Mock dependencies
-vi.mock("../../../core/config/ContextProxy", () => {
-	const mockContextProxy = {
-		getProviderSettings: vi.fn().mockReturnValue({
-			kilocodeToken: "mock-token",
-		}),
-		getValue: vi.fn().mockImplementation((key: string) => {
-			switch (key) {
-				case "commitMessageApiConfigId":
-					return undefined
-				case "listApiConfigMeta":
-					return []
-				case "customSupportPrompts":
-					return {}
-				default:
-					return undefined
-			}
-		}),
-	}
-
-	return {
-		ContextProxy: {
-			get instance() {
-				return mockContextProxy
-			},
-		},
-	}
-})
-vi.mock("../../../utils/single-completion-handler")
-vi.mock("../GitExtensionService")
-vi.mock("child_process")
-vi.mock("../../../core/prompts/sections/custom-instructions", () => ({
-	addCustomInstructions: vi.fn().mockResolvedValue(""),
-}))
-vi.mock("../../../utils/path", () => ({
-	getWorkspacePath: vi.fn().mockReturnValue("/mock/workspace"),
-}))
-vi.mock("../../../shared/support-prompt", () => ({
-	supportPrompt: {
-		get: vi.fn().mockReturnValue("Mock commit message template with ${gitContext} and ${customInstructions}"),
-		create: vi.fn().mockReturnValue("Mock generated prompt"),
-	},
-}))
 vi.mock("vscode", () => ({
+	ProgressLocation: {
+		SourceControl: 1,
+	},
 	window: {
+		withProgress: vi.fn(),
 		showInformationMessage: vi.fn(),
 		showErrorMessage: vi.fn(),
-		withProgress: vi.fn().mockImplementation((_, callback) => callback({ report: vi.fn() })),
-	},
-	workspace: {
-		workspaceFolders: [{ uri: { fsPath: "/mock/workspace" } }],
 	},
 	commands: {
 		registerCommand: vi.fn(),
 	},
+	workspace: {
+		workspaceFolders: [],
+	},
 	env: {
 		language: "en",
 	},
-	ExtensionContext: vi.fn(),
-	OutputChannel: vi.fn(),
-	ProgressLocation: {
-		SourceControl: 1,
-		Window: 2,
-		Notification: 3,
+}))
+vi.mock("../GitExtensionService")
+vi.mock("../../../core/config/ContextProxy")
+vi.mock("../../../core/config/ProviderSettingsManager")
+vi.mock("../../../utils/single-completion-handler")
+vi.mock("../../../i18n", () => ({
+	t: vi.fn((key: string) => key),
+}))
+vi.mock("../../../core/prompts/sections/custom-instructions", () => ({
+	addCustomInstructions: vi.fn().mockResolvedValue(""),
+}))
+vi.mock("../../../utils/path", () => ({
+	getWorkspacePath: vi.fn().mockReturnValue("/test/workspace"),
+}))
+vi.mock("@roo-code/telemetry", () => ({
+	TelemetryService: {
+		instance: {
+			captureEvent: vi.fn(),
+		},
 	},
 }))
 
+const mockGitService = vi.mocked(GitExtensionService)
+const mockContextProxy = vi.mocked(ContextProxy)
+const mockProviderSettingsManager = vi.mocked(ProviderSettingsManager)
+const mockSingleCompletionHandler = vi.mocked(singleCompletionHandler.singleCompletionHandler)
+
 describe("CommitMessageProvider", () => {
-	let commitMessageProvider: CommitMessageProvider
+	let provider: CommitMessageProvider
 	let mockContext: vscode.ExtensionContext
 	let mockOutputChannel: vscode.OutputChannel
-	let mockGitService: GitExtensionService
-	let mockExecSync: Mock<any>
+	let mockGitServiceInstance: any
+	let mockProgress: vscode.Progress<{ increment?: number; message?: string }>
 
-	beforeEach(async () => {
+	beforeEach(() => {
+		vi.clearAllMocks()
+
 		mockContext = {
-			workspaceState: { get: vi.fn().mockReturnValue(undefined) },
-			globalState: { get: vi.fn().mockReturnValue(undefined) },
-		} as unknown as vscode.ExtensionContext
+			subscriptions: [],
+			workspaceState: {
+				get: vi.fn(),
+			},
+			globalState: {
+				get: vi.fn(),
+			},
+		} as any
+
 		mockOutputChannel = {
 			appendLine: vi.fn(),
-		} as unknown as vscode.OutputChannel
+		} as any
 
-		// Mock child_process.execSync
-		mockExecSync = vi.fn()
-		const childProcessMock = await vi.importMock("child_process")
-		;(childProcessMock as any).execSync = mockExecSync
+		mockProgress = {
+			report: vi.fn(),
+		}
 
-		// Setup GitExtensionService mock
-		mockGitService = new GitExtensionService()
-		mockGitService.gatherChanges = vi.fn()
-		mockGitService.setCommitMessage = vi.fn()
-		mockGitService.spawnGitWithArgs = vi.fn().mockReturnValue("")
-		mockGitService.configureRepositoryContext = vi.fn()
-		mockGitService.getCommitContext = vi.fn().mockReturnValue("Modified file1.ts, Added file2.ts")
+		mockGitServiceInstance = {
+			configureRepositoryContext: vi.fn(),
+			gatherChanges: vi.fn(),
+			getCommitContext: vi.fn(),
+			setCommitMessage: vi.fn(),
+			dispose: vi.fn(),
+		}
 
-		// Setup singleCompletionHandler mock
-		vi.mocked(singleCompletionHandler).mockResolvedValue(
-			"feat(commit): implement conventional commit message generator",
+		mockGitService.mockImplementation(() => mockGitServiceInstance)
+
+		mockProviderSettingsManager.mockImplementation(
+			() =>
+				({
+					initialize: vi.fn(),
+					getProfile: vi.fn(),
+				}) as any,
 		)
 
-		// Create CommitMessageProvider instance
-		commitMessageProvider = new CommitMessageProvider(mockContext, mockOutputChannel)
-		;(commitMessageProvider as any).gitService = mockGitService
-	})
+		Object.defineProperty(mockContextProxy, "instance", {
+			value: {
+				getProviderSettings: vi.fn().mockReturnValue({}),
+				getValue: vi.fn().mockReturnValue(undefined),
+			},
+			writable: true,
+		})
 
-	afterEach(() => {
-		vi.clearAllMocks()
+		provider = new CommitMessageProvider(mockContext, mockOutputChannel)
 	})
 
 	describe("generateCommitMessage", () => {
-		it("should generate a commit message based on staged changes", async () => {
-			const mockChanges: GitChange[] = [
-				{ filePath: "file1.ts", status: "Modified" },
-				{ filePath: "file2.ts", status: "Added" },
-			]
-			vi.mocked(mockGitService.gatherChanges).mockResolvedValue(mockChanges)
+		const mockChanges: GitChange[] = [
+			{ filePath: "/test/file1.ts", status: "Modified" },
+			{ filePath: "/test/file2.ts", status: "Added" },
+		]
 
-			// Call the method
-			await commitMessageProvider.generateCommitMessage()
+		beforeEach(() => {
+			mockGitServiceInstance.gatherChanges.mockResolvedValue(mockChanges)
+			mockSingleCompletionHandler.mockResolvedValue("feat: add new feature")
+		})
 
-			expect(vi.mocked(mockGitService.gatherChanges)).toHaveBeenCalledWith({ staged: true })
-			expect(vi.mocked(mockGitService.gatherChanges)).toHaveBeenCalledTimes(1)
-			expect(vi.mocked(mockGitService.getCommitContext)).toHaveBeenCalledWith(
+		it("should handle single context (no chunking)", async () => {
+			const singleContext = "## Git Context\n### Full Diff\n```diff\n+added line\n```"
+			mockGitServiceInstance.getCommitContext.mockResolvedValue(singleContext)
+
+			// Mock vscode.window.withProgress
+			const mockWithProgress = vi.fn().mockImplementation(async (options, callback) => {
+				return await callback(mockProgress)
+			})
+			vi.mocked(vscode.window).withProgress = mockWithProgress
+
+			await provider.generateCommitMessage()
+
+			expect(mockGitServiceInstance.getCommitContext).toHaveBeenCalledWith(
 				mockChanges,
-				expect.objectContaining({ staged: true }),
-			)
-			expect(singleCompletionHandler).toHaveBeenCalled()
-			expect(vi.mocked(mockGitService.setCommitMessage)).toHaveBeenCalled()
-		})
-
-		it("should handle code blocks and formatting in AI responses", async () => {
-			vi.mocked(mockGitService.gatherChanges).mockResolvedValue([{ filePath: "file.ts", status: "Modified" }])
-
-			// Mock AI response with code blocks
-			vi.mocked(singleCompletionHandler).mockResolvedValue("```\nfeat(core): add feature\n```")
-
-			// Call the method
-			await commitMessageProvider.generateCommitMessage()
-
-			// Verify code blocks are removed
-			expect(vi.mocked(mockGitService.setCommitMessage)).toHaveBeenCalledWith("feat(core): add feature")
-		})
-
-		it("should show error message when generation fails", async () => {
-			vi.mocked(mockGitService.gatherChanges).mockResolvedValue([{ filePath: "file.ts", status: "Modified" }])
-			vi.mocked(singleCompletionHandler).mockRejectedValue(new Error("API error"))
-
-			// Call the method
-			await commitMessageProvider.generateCommitMessage()
-
-			// Verify error handling
-			expect(vscode.window.showErrorMessage).toHaveBeenCalled()
-		})
-
-		it("should show information message when there are no staged changes", async () => {
-			// Mock no staged changes - both calls return empty arrays
-			vi.mocked(mockGitService.gatherChanges)
-				.mockResolvedValueOnce([]) // First call for staged changes returns empty
-				.mockResolvedValueOnce([]) // Second call for unstaged changes returns empty
-
-			// Call the method
-			await commitMessageProvider.generateCommitMessage()
-
-			// Verify that it shows the appropriate message and doesn't proceed
-			expect(vscode.window.showInformationMessage).toHaveBeenCalled()
-			expect(vi.mocked(mockGitService.getCommitContext)).not.toHaveBeenCalled()
-			expect(singleCompletionHandler).not.toHaveBeenCalled()
-			expect(vi.mocked(mockGitService.setCommitMessage)).not.toHaveBeenCalled()
-		})
-
-		it("should generate commit message based on unstaged changes when no staged changes exist", async () => {
-			const mockUnstagedChanges: GitChange[] = [
-				{ filePath: "file1.ts", status: "Modified" },
-				{ filePath: "file2.ts", status: "Added" },
-			]
-			vi.mocked(mockGitService.gatherChanges).mockResolvedValueOnce([]).mockResolvedValueOnce(mockUnstagedChanges)
-
-			await commitMessageProvider.generateCommitMessage()
-
-			expect(vi.mocked(mockGitService.gatherChanges)).toHaveBeenCalledWith({ staged: true })
-			expect(vi.mocked(mockGitService.gatherChanges)).toHaveBeenCalledWith({ staged: false })
-			expect(vi.mocked(mockGitService.getCommitContext)).toHaveBeenCalledWith(
-				mockUnstagedChanges,
 				expect.objectContaining({
-					staged: false,
+					staged: true,
+					enableChunking: true,
 				}),
 			)
-			expect(singleCompletionHandler).toHaveBeenCalled()
-			expect(vi.mocked(mockGitService.setCommitMessage)).toHaveBeenCalled()
-			expect(vscode.window.showInformationMessage).toHaveBeenCalledWith("commitMessage.generatingFromUnstaged")
+			expect(mockSingleCompletionHandler).toHaveBeenCalledTimes(1)
+			expect(mockGitServiceInstance.setCommitMessage).toHaveBeenCalledWith("feat: add new feature")
 		})
 
-		it("should show information message when both staged and unstaged changes are empty", async () => {
-			// Mock empty staged and unstaged changes arrays
-			vi.mocked(mockGitService.gatherChanges)
-				.mockResolvedValueOnce([]) // First call for staged changes returns empty
-				.mockResolvedValueOnce([]) // Second call for unstaged changes returns empty
+		it("should handle chunked context (map-reduce)", async () => {
+			const chunkedContext = [
+				"## Git Context\n### Chunk 1\n```diff\n+file1 changes\n```",
+				"## Git Context\n### Chunk 2\n```diff\n+file2 changes\n```",
+			]
+			mockGitServiceInstance.getCommitContext.mockResolvedValue(chunkedContext)
 
-			// Call the method
-			await commitMessageProvider.generateCommitMessage()
+			// Mock AI responses for chunks and final combination
+			mockSingleCompletionHandler
+				.mockResolvedValueOnce("feat(file1): update file1")
+				.mockResolvedValueOnce("feat(file2): add file2")
+				.mockResolvedValueOnce("feat: update files and add new functionality")
 
-			// Verify that it shows the appropriate message and doesn't proceed
-			expect(vi.mocked(mockGitService.gatherChanges)).toHaveBeenCalledWith({ staged: true })
-			expect(vi.mocked(mockGitService.gatherChanges)).toHaveBeenCalledWith({ staged: false })
-			expect(vi.mocked(mockGitService.getCommitContext)).not.toHaveBeenCalled()
-			expect(singleCompletionHandler).not.toHaveBeenCalled()
-			expect(vi.mocked(mockGitService.setCommitMessage)).not.toHaveBeenCalled()
-		})
-
-		it("should show information message when both staged and unstaged changes are empty", async () => {
-			// Mock empty staged and unstaged changes
-			vi.mocked(mockGitService.gatherChanges)
-				.mockResolvedValueOnce([]) // First call for staged changes returns empty
-				.mockResolvedValueOnce([]) // Second call for unstaged changes returns empty
-
-			// Call the method
-			await commitMessageProvider.generateCommitMessage()
-
-			// Verify that it shows the appropriate message and doesn't proceed
-			expect(vi.mocked(mockGitService.gatherChanges)).toHaveBeenCalledWith({ staged: true })
-			expect(vi.mocked(mockGitService.gatherChanges)).toHaveBeenCalledWith({ staged: false })
-			expect(vi.mocked(mockGitService.getCommitContext)).not.toHaveBeenCalled()
-			expect(singleCompletionHandler).not.toHaveBeenCalled()
-			expect(vi.mocked(mockGitService.setCommitMessage)).not.toHaveBeenCalled()
-		})
-
-		it("should use custom API config when commitMessageApiConfigId is set", async () => {
-			const mockChanges: GitChange[] = [{ filePath: "file.ts", status: "Modified" }]
-			vi.mocked(mockGitService.gatherChanges).mockResolvedValue(mockChanges)
-
-			// Mock custom API config
-			const customApiConfig = { apiProvider: "openai", apiKey: "custom-key" }
-			const mockProviderSettingsManager = {
-				getProfile: vi.fn().mockResolvedValue({ name: "Custom Config", ...customApiConfig }),
-			}
-			;(commitMessageProvider as any).providerSettingsManager = mockProviderSettingsManager
-
-			// Update the ContextProxy mock to return custom config ID
-			const { ContextProxy: MockedContextProxy } = (await vi.importMock(
-				"../../../core/config/ContextProxy",
-			)) as any
-			const mockInstance = MockedContextProxy.instance
-			mockInstance.getValue.mockImplementation((key: string) => {
-				switch (key) {
-					case "commitMessageApiConfigId":
-						return "custom-config-id"
-					case "listApiConfigMeta":
-						return [{ id: "custom-config-id", name: "Custom Config" }]
-					case "customSupportPrompts":
-						return {}
-					default:
-						return undefined
-				}
+			const mockWithProgress = vi.fn().mockImplementation(async (options, callback) => {
+				return await callback(mockProgress)
 			})
+			vi.mocked(vscode.window).withProgress = mockWithProgress
 
-			await commitMessageProvider.generateCommitMessage()
+			await provider.generateCommitMessage()
 
-			// Verify custom config was used
-			expect(mockProviderSettingsManager.getProfile).toHaveBeenCalledWith({ id: "custom-config-id" })
-			expect(singleCompletionHandler).toHaveBeenCalledWith(customApiConfig, expect.any(String))
+			expect(mockSingleCompletionHandler).toHaveBeenCalledTimes(3) // 2 chunks + 1 final
+			expect(mockProgress.report).toHaveBeenCalledWith({ message: "kilocode:commitMessage.analyzingChunks" })
+			expect(mockProgress.report).toHaveBeenCalledWith({ message: "kilocode:commitMessage.combining" })
+			expect(mockGitServiceInstance.setCommitMessage).toHaveBeenCalledWith(
+				"feat: update files and add new functionality",
+			)
 		})
 
-		it("should fall back to default config when custom API config fails to load", async () => {
-			const mockChanges: GitChange[] = [{ filePath: "file.ts", status: "Modified" }]
-			vi.mocked(mockGitService.gatherChanges).mockResolvedValue(mockChanges)
+		it("should handle unstaged changes when no staged changes exist", async () => {
+			mockGitServiceInstance.gatherChanges
+				.mockResolvedValueOnce([]) // No staged changes
+				.mockResolvedValueOnce(mockChanges) // Unstaged changes
 
-			// Mock provider settings manager to throw error
-			const mockProviderSettingsManager = {
-				getProfile: vi.fn().mockRejectedValue(new Error("Config not found")),
-			}
-			;(commitMessageProvider as any).providerSettingsManager = mockProviderSettingsManager
+			const singleContext = "## Git Context\n### Full Diff\n```diff\n+added line\n```"
+			mockGitServiceInstance.getCommitContext.mockResolvedValue(singleContext)
 
-			// Update the ContextProxy mock to return invalid config ID
-			const { ContextProxy: MockedContextProxy } = (await vi.importMock(
-				"../../../core/config/ContextProxy",
-			)) as any
-			const mockInstance = MockedContextProxy.instance
-			mockInstance.getValue.mockImplementation((key: string) => {
-				switch (key) {
-					case "commitMessageApiConfigId":
-						return "invalid-config-id"
-					case "listApiConfigMeta":
-						return [{ id: "custom-config-id", name: "Custom Config" }]
-					case "customSupportPrompts":
-						return {}
-					default:
-						return undefined
-				}
+			const mockWithProgress = vi.fn().mockImplementation(async (options, callback) => {
+				return await callback(mockProgress)
 			})
+			vi.mocked(vscode.window).withProgress = mockWithProgress
 
-			const defaultConfig = { kilocodeToken: "mock-token" }
-			mockInstance.getProviderSettings.mockReturnValue(defaultConfig)
+			await provider.generateCommitMessage()
 
-			await commitMessageProvider.generateCommitMessage()
+			expect(mockGitServiceInstance.gatherChanges).toHaveBeenCalledTimes(2)
+			expect(mockGitServiceInstance.getCommitContext).toHaveBeenCalledWith(
+				mockChanges,
+				expect.objectContaining({
+					staged: false,
+					enableChunking: true,
+				}),
+			)
+		})
 
-			// Verify fallback to default config
-			expect(singleCompletionHandler).toHaveBeenCalledWith(defaultConfig, expect.any(String))
+		it("should show information message when generating from unstaged changes", async () => {
+			mockGitServiceInstance.gatherChanges.mockResolvedValueOnce([]).mockResolvedValueOnce(mockChanges)
+
+			const singleContext = "## Git Context\n### Full Diff\n```diff\n+added line\n```"
+			mockGitServiceInstance.getCommitContext.mockResolvedValue(singleContext)
+
+			const mockShowInformationMessage = vi.fn()
+			vi.mocked(vscode.window).showInformationMessage = mockShowInformationMessage
+
+			const mockWithProgress = vi.fn().mockImplementation(async (options, callback) => {
+				return await callback(mockProgress)
+			})
+			vi.mocked(vscode.window).withProgress = mockWithProgress
+
+			await provider.generateCommitMessage()
+
+			expect(mockShowInformationMessage).toHaveBeenCalledWith("kilocode:commitMessage.generatingFromUnstaged")
+		})
+
+		it("should show message when no changes exist", async () => {
+			mockGitServiceInstance.gatherChanges.mockResolvedValueOnce([]).mockResolvedValueOnce([])
+
+			const mockShowInformationMessage = vi.fn()
+			vi.mocked(vscode.window).showInformationMessage = mockShowInformationMessage
+
+			const mockWithProgress = vi.fn().mockImplementation(async (options, callback) => {
+				return await callback(mockProgress)
+			})
+			vi.mocked(vscode.window).withProgress = mockWithProgress
+
+			await provider.generateCommitMessage()
+
+			expect(mockShowInformationMessage).toHaveBeenCalledWith("kilocode:commitMessage.noChanges")
+			expect(mockSingleCompletionHandler).not.toHaveBeenCalled()
+		})
+
+		it("should handle errors gracefully", async () => {
+			mockGitServiceInstance.gatherChanges.mockRejectedValue(new Error("Git error"))
+
+			const mockShowErrorMessage = vi.fn()
+			vi.mocked(vscode.window).showErrorMessage = mockShowErrorMessage
+
+			const mockWithProgress = vi.fn().mockImplementation(async (options, callback) => {
+				return await callback(mockProgress)
+			})
+			vi.mocked(vscode.window).withProgress = mockWithProgress
+
+			await provider.generateCommitMessage()
+
+			expect(mockShowErrorMessage).toHaveBeenCalledWith(
+				expect.stringContaining("kilocode:commitMessage.generationFailed"),
+			)
+		})
+
+		it("should store context and message for future reference", async () => {
+			const singleContext = "## Git Context\n### Full Diff\n```diff\n+added line\n```"
+			mockGitServiceInstance.getCommitContext.mockResolvedValue(singleContext)
+
+			const mockWithProgress = vi.fn().mockImplementation(async (options, callback) => {
+				return await callback(mockProgress)
+			})
+			vi.mocked(vscode.window).withProgress = mockWithProgress
+
+			await provider.generateCommitMessage()
+
+			// Access private properties for testing
+			const previousGitContext = (provider as any).previousGitContext
+			const previousCommitMessage = (provider as any).previousCommitMessage
+
+			expect(previousGitContext).toBe(singleContext)
+			expect(previousCommitMessage).toBe("feat: add new feature")
+		})
+
+		it("should handle chunked context storage correctly", async () => {
+			const chunkedContext = ["## Git Context\n### Chunk 1", "## Git Context\n### Chunk 2"]
+			mockGitServiceInstance.getCommitContext.mockResolvedValue(chunkedContext)
+
+			mockSingleCompletionHandler
+				.mockResolvedValueOnce("feat(file1): update file1")
+				.mockResolvedValueOnce("feat(file2): add file2")
+				.mockResolvedValueOnce("feat: combined message")
+
+			const mockWithProgress = vi.fn().mockImplementation(async (options, callback) => {
+				return await callback(mockProgress)
+			})
+			vi.mocked(vscode.window).withProgress = mockWithProgress
+
+			await provider.generateCommitMessage()
+
+			const previousGitContext = (provider as any).previousGitContext
+			expect(previousGitContext).toBe(chunkedContext.join("\n---\n"))
+		})
+	})
+
+	describe("processChunkedContext", () => {
+		it("should process multiple chunks and combine results", async () => {
+			const chunks = [
+				"## Git Context\n### Chunk 1\n```diff\n+file1 changes\n```",
+				"## Git Context\n### Chunk 2\n```diff\n+file2 changes\n```",
+			]
+
+			mockSingleCompletionHandler
+				.mockResolvedValueOnce("feat(auth): add login functionality")
+				.mockResolvedValueOnce("feat(ui): update button styles")
+				.mockResolvedValueOnce("feat: add login functionality and update UI")
+
+			// Access private method for testing
+			const processChunkedContext = (provider as any).processChunkedContext.bind(provider)
+			const result = await processChunkedContext(chunks, mockProgress)
+
+			expect(mockSingleCompletionHandler).toHaveBeenCalledTimes(3)
+			expect(mockProgress.report).toHaveBeenCalledWith({ message: "kilocode:commitMessage.analyzingChunks" })
+			expect(mockProgress.report).toHaveBeenCalledWith({ message: "kilocode:commitMessage.combining" })
+			expect(result).toBe("feat: add login functionality and update UI")
+
+			// Verify the combined context includes chunk summaries
+			const combinedCall = mockSingleCompletionHandler.mock.calls[2][1]
+			expect(combinedCall).toContain("## Combined Analysis from Multiple Chunks")
+			expect(combinedCall).toContain("Chunk 1: feat(auth): add login functionality")
+			expect(combinedCall).toContain("Chunk 2: feat(ui): update button styles")
 		})
 	})
 })

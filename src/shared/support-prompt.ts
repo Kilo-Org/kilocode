@@ -196,7 +196,7 @@ Requirements:
 	COMMIT_MESSAGE: {
 		template: `# Conventional Commit Message Generator
 ## System Instructions
-You are an expert Git commit message generator that creates conventional commit messages based on staged changes. Analyze the provided git diff output and generate appropriate conventional commit messages following the specification.
+You are an expert Git commit message generator that creates conventional commit messages based on staged changes. Analyze the provided context (either git diff output or pre-processed change summaries) and generate appropriate conventional commit messages following the specification.
 
 \${customInstructions}
 

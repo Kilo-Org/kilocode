@@ -4,6 +4,7 @@ import * as path from "path"
 import { spawnSync } from "child_process"
 import { shouldExcludeLockFile } from "./exclusionUtils"
 import { RooIgnoreController } from "../../core/ignore/RooIgnoreController"
+import { exceedsContextThreshold, chunkDiffByFiles } from "../../utils/commit-token-utils"
 
 export interface GitChange {
 	filePath: string
@@ -16,6 +17,8 @@ export interface GitOptions {
 
 export interface GitProgressOptions extends GitOptions {
 	onProgress?: (percentage: number) => void
+	enableChunking?: boolean
+	chunkRatio?: number
 }
 
 export interface GitRepository {
@@ -206,16 +209,39 @@ export class GitExtensionService {
 	/**
 	 * Gets all context needed for commit message generation
 	 */
-	public async getCommitContext(changes: GitChange[], options: GitProgressOptions): Promise<string> {
-		const { staged } = options
+	public async getCommitContext(changes: GitChange[], options: GitProgressOptions): Promise<string | string[]> {
+		const { staged, enableChunking = true, chunkRatio = 0.4 } = options
 		try {
 			// Start building the context with the required sections
 			let context = "## Git Context for Commit Message Generation\n\n"
 
 			// Add full diff - essential for understanding what changed
+			let diff = ""
 			try {
-				const diff = await this.getDiffForChanges(options)
+				diff = await this.getDiffForChanges(options)
 				const changeType = staged ? "Staged" : "Unstaged"
+
+				// Check if chunking is enabled and needed
+				if (enableChunking && diff && (await exceedsContextThreshold(diff))) {
+					const chunkResult = await chunkDiffByFiles(diff, chunkRatio)
+
+					if (chunkResult.wasChunked) {
+						// Return array of chunked contexts for map-reduce processing
+						const chunkedContexts: string[] = []
+
+						for (const chunk of chunkResult.chunks) {
+							let chunkContext = context
+							chunkContext +=
+								`### Full Diff of ${changeType} Changes (Chunk)\n\`\`\`diff\n` + chunk + "\n```\n\n"
+							chunkContext += await this.getRepositoryContext()
+							chunkedContexts.push(chunkContext)
+						}
+
+						return chunkedContexts
+					}
+				}
+
+				// Single context - no chunking needed
 				context += `### Full Diff of ${changeType} Changes\n\`\`\`diff\n` + diff + "\n```\n\n"
 			} catch (error) {
 				const changeType = staged ? "Staged" : "Unstaged"
@@ -231,33 +257,42 @@ export class GitExtensionService {
 			}
 
 			// Add contextual information
-			context += "### Repository Context\n\n"
-
-			// Show current branch
-			try {
-				const currentBranch = this.getCurrentBranch()
-				if (currentBranch) {
-					context += "**Current branch:** `" + currentBranch.trim() + "`\n\n"
-				}
-			} catch (error) {
-				// Skip if not available
-			}
-
-			// Show recent commits for context
-			try {
-				const recentCommits = this.getRecentCommits()
-				if (recentCommits) {
-					context += "**Recent commits:**\n```\n" + recentCommits + "\n```\n"
-				}
-			} catch (error) {
-				// Skip if not available
-			}
+			context += await this.getRepositoryContext()
 
 			return context
 		} catch (error) {
 			console.error("Error generating commit context:", error)
 			return "## Error generating commit context\n\nUnable to gather complete context for commit message generation."
 		}
+	}
+
+	/**
+	 * Gets repository contextual information (branch, recent commits)
+	 */
+	private async getRepositoryContext(): Promise<string> {
+		let context = "### Repository Context\n\n"
+
+		// Show current branch
+		try {
+			const currentBranch = this.getCurrentBranch()
+			if (currentBranch) {
+				context += "**Current branch:** `" + currentBranch.trim() + "`\n\n"
+			}
+		} catch (error) {
+			// Skip if not available
+		}
+
+		// Show recent commits for context
+		try {
+			const recentCommits = this.getRecentCommits()
+			if (recentCommits) {
+				context += "**Recent commits:**\n```\n" + recentCommits + "\n```\n"
+			}
+		} catch (error) {
+			// Skip if not available
+		}
+
+		return context
 	}
 
 	/**
