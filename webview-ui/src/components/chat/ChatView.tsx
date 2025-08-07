@@ -49,7 +49,8 @@ import Announcement from "./Announcement"
 import BrowserSessionRow from "./BrowserSessionRow"
 import ChatRow from "./ChatRow"
 import ChatTextArea from "./ChatTextArea"
-import TaskHeader from "./TaskHeader"
+// import TaskHeader from "./TaskHeader"// kilocode_change
+import KiloTaskHeader from "../kilocode/KiloTaskHeader" // kilocode_change
 import AutoApproveMenu from "./AutoApproveMenu"
 import BottomControls from "../kilocode/BottomControls" // kilocode_change
 import SystemPromptWarning from "./SystemPromptWarning"
@@ -1890,7 +1891,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			)}
 			{task ? (
 				<>
-					<TaskHeader
+					{/* kilocode_change start */}
+					{/* <TaskHeader
 						task={task}
 						tokensIn={apiMetrics.totalTokensIn}
 						tokensOut={apiMetrics.totalTokensOut}
@@ -1900,14 +1902,25 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						contextTokens={apiMetrics.contextTokens}
 						buttonsDisabled={sendingDisabled}
 						handleCondenseContext={handleCondenseContext}
-						// kilocode_change start
+						todos={latestTodos}
+					/> */}
+					<KiloTaskHeader
+						task={task}
+						tokensIn={apiMetrics.totalTokensIn}
+						tokensOut={apiMetrics.totalTokensOut}
+						cacheWrites={apiMetrics.totalCacheWrites}
+						cacheReads={apiMetrics.totalCacheReads}
+						totalCost={apiMetrics.totalCost}
+						contextTokens={apiMetrics.contextTokens}
+						buttonsDisabled={sendingDisabled}
+						handleCondenseContext={handleCondenseContext}
 						onClose={handleTaskCloseButtonClick}
 						groupedMessages={groupedMessages}
 						onMessageClick={handleMessageClick}
 						isTaskActive={sendingDisabled}
-						// kilocode_change end
 						todos={latestTodos}
 					/>
+					{/* kilocode_change start */}
 
 					{hasSystemPromptOverride && (
 						<div className="px-3">

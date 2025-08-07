@@ -1,6 +1,6 @@
 import React, { useState } from "react"
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import KiloModeSelector from "../../../webview-ui/src/components/chat/KiloModeSelector"
+import KiloModeSelector from "../../../webview-ui/src/components/kilocode/KiloModeSelector"
 import { Mode } from "@roo/modes"
 import { DEFAULT_MODES } from "@roo-code/types"
 import { withI18n } from "../src/decorators/withI18n"
