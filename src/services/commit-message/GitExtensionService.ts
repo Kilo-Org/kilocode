@@ -209,7 +209,7 @@ export class GitExtensionService {
 	/**
 	 * Gets all context needed for commit message generation
 	 */
-	public async getCommitContext(changes: GitChange[], options: GitProgressOptions): Promise<string | string[]> {
+	public async getCommitContext(_changes: GitChange[], options: GitProgressOptions): Promise<string | string[]> {
 		const { staged, enableChunking = true, chunkRatio = 0.4 } = options
 		try {
 			// Start building the context with the required sections

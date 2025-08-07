@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { estimateTokenCount, getContextWindow, exceedsContextThreshold, chunkDiffByFiles } from "../commit-token-utils"
 import * as countTokensModule from "../countTokens"

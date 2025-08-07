@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { GitExtensionService, GitChange, GitProgressOptions } from "../GitExtensionService"
 import * as commitTokenUtils from "../../../utils/commit-token-utils"

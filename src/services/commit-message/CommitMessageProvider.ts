@@ -3,7 +3,7 @@ import * as vscode from "vscode"
 import { ContextProxy } from "../../core/config/ContextProxy"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 import { singleCompletionHandler } from "../../utils/single-completion-handler"
-import { GitExtensionService, GitChange, GitProgressOptions, GitRepository } from "./GitExtensionService"
+import { GitExtensionService, GitRepository } from "./GitExtensionService"
 import { supportPrompt } from "../../shared/support-prompt"
 import { t } from "../../i18n"
 import { addCustomInstructions } from "../../core/prompts/sections/custom-instructions"
@@ -199,7 +199,8 @@ Based on the above chunk analyses, generate a single, cohesive conventional comm
 		const apiConfiguration = contextProxy.getProviderSettings()
 		const commitMessageApiConfigId = contextProxy.getValue("commitMessageApiConfigId")
 		const listApiConfigMeta = contextProxy.getValue("listApiConfigMeta") || []
-		const customSupportPrompts = contextProxy.getValue("customSupportPrompts") || {}
+		const customSupportPrompts =
+			(contextProxy.getValue("customSupportPrompts") as Record<string, string> | undefined) || {}
 
 		// Try to get commit message config first, fall back to current config.
 		let configToUse: ProviderSettings = apiConfiguration
@@ -235,7 +236,7 @@ Based on the above chunk analyses, generate a single, cohesive conventional comm
 	 */
 	private async buildCommitMessagePrompt(
 		gitContextString: string,
-		customSupportPrompts: Record<string, any>,
+		customSupportPrompts: Record<string, string>,
 	): Promise<string> {
 		// Load custom instructions including rules
 		const workspacePath = getWorkspacePath()
