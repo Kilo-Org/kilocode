@@ -72,6 +72,7 @@ export default defineConfig(({ mode }) => {
 		"process.env.VSCODE_TEXTMATE_DEBUG": JSON.stringify(process.env.VSCODE_TEXTMATE_DEBUG),
 		"process.env.PKG_NAME": JSON.stringify(pkg.name),
 		"process.env.PKG_VERSION": JSON.stringify(pkg.version),
+		"process.env.PKG_BUILD_NUMBER": JSON.stringify(pkg.buildNumber),
 		"process.env.PKG_OUTPUT_CHANNEL": JSON.stringify("Kilo-Code"),
 		...(gitSha ? { "process.env.PKG_SHA": JSON.stringify(gitSha) } : {}),
 	}
@@ -140,7 +141,7 @@ export default defineConfig(({ mode }) => {
 						// into a single chunk. The 'channel.js' error often points to dagre.
 						if (
 							id.includes("node_modules/mermaid") ||
-							id.includes("node_modules/dagre") || // dagre is a common dep for graph layout
+							id.includes("node_modules/dagre-d3-es") || // dagre-d3-es is a common dep for graph layout
 							id.includes("node_modules/cytoscape") // another potential graph lib
 							// Add other known large mermaid dependencies if identified
 						) {
@@ -177,7 +178,6 @@ export default defineConfig(({ mode }) => {
 		optimizeDeps: {
 			include: [
 				"mermaid",
-				"dagre", // Explicitly include dagre for pre-bundling
 				// Add other known large mermaid dependencies if identified
 			],
 			exclude: ["@vscode/codicons", "vscode-oniguruma", "shiki", "vscode" /*kilocode_change*/],

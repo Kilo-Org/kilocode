@@ -6,6 +6,20 @@ import { Info, Download, Upload, TriangleAlert } from "lucide-react"
 import { VSCodeCheckbox, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 
 import { Package } from "@roo/package"
+
+// 生成详细版本号格式：version (YYYYMMDD.001)
+const getDetailedVersion = () => {
+	const today = new Date()
+	const year = today.getFullYear()
+	const month = String(today.getMonth() + 1).padStart(2, "0")
+	const day = String(today.getDate()).padStart(2, "0")
+	const dateStr = `${year}${month}${day}`
+
+	// 使用Package.buildNumber作为流水号
+	const serialNumber = Package.buildNumber || "001"
+
+	return `${Package.version} (${dateStr}.${serialNumber})`
+}
 import { TelemetrySetting } from "@roo/TelemetrySetting"
 
 import { vscode } from "@/utils/vscode"
@@ -28,8 +42,8 @@ export const About = ({ telemetrySetting, setTelemetrySetting, className, ...pro
 			<SectionHeader
 				description={
 					Package.sha
-						? `Version: ${Package.version} (${Package.sha.slice(0, 8)})`
-						: `Version: ${Package.version}`
+						? `Version: ${getDetailedVersion()} (${Package.sha.slice(0, 8)})`
+						: `Version: ${getDetailedVersion()}`
 				}>
 				<div className="flex items-center gap-2">
 					<Info className="w-4" />

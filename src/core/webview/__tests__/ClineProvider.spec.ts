@@ -575,6 +575,7 @@ describe("ClineProvider", () => {
 				customTemplate: "",
 				showTokenSavings: true,
 				includeSystemPrompt: true,
+				systemInstruction: "",
 				includeConversationHistory: true,
 				includeFileContext: true,
 				includeCodeContext: true,

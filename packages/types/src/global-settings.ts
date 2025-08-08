@@ -161,6 +161,7 @@ export const globalSettingsSchema = z.object({
 	lastModeExportPath: z.string().optional(),
 	lastModeImportPath: z.string().optional(),
 	messageSendingConfig: messageSendingConfigSchema.optional(),
+	compactMode: z.boolean().optional(),
 })
 
 export type GlobalSettings = z.infer<typeof globalSettingsSchema>

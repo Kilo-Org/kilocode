@@ -44,6 +44,8 @@ const PromptsSettings = ({
 		setCustomCondensingPrompt,
 		includeTaskHistoryInEnhance: contextIncludeTaskHistoryInEnhance,
 		setIncludeTaskHistoryInEnhance: contextSetIncludeTaskHistoryInEnhance,
+		compactMode,
+		setCompactMode,
 	} = useExtensionState()
 
 	// Use props if provided, otherwise fall back to context
@@ -284,6 +286,26 @@ const PromptsSettings = ({
 					{/* kilocode_change start */}
 					{activeSupportOption === "COMMIT_MESSAGE" && <CommitMessagePromptSettings />}
 					{/* kilocode_change end */}
+				</div>
+			</Section>
+
+			<Section>
+				<div>
+					<VSCodeCheckbox
+						checked={compactMode || false}
+						onChange={(e: any) => {
+							const value = e.target.checked
+							setCompactMode(value)
+							vscode.postMessage({
+								type: "compactMode",
+								bool: value,
+							})
+						}}>
+						<span className="font-medium">{t("settings:prompts.compactMode.label")}</span>
+					</VSCodeCheckbox>
+					<div className="text-vscode-descriptionForeground text-sm mt-1">
+						{t("settings:prompts.compactMode.description")}
+					</div>
 				</div>
 			</Section>
 		</div>

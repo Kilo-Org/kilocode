@@ -25,5 +25,5 @@
 			"@roo/*": ["../src/shared/*"]
 		}
 	},
-	"include": ["src", "../src/shared", "vitest.setup.ts"]
+	"include": ["src", "../src/shared", "vitest.setup.ts", "src/types/global.d.ts"]
 }

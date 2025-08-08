@@ -114,6 +114,9 @@ export interface ExtensionMessage {
 		| "commandExecutionStatus"
 		| "mcpExecutionStatus"
 		| "vsCodeSetting"
+		| "systemPromptComponentPreview"
+		| "systemPromptComponentEdit"
+		| "systemPromptComponentSaved"
 		| "profileDataResponse" // kilocode_change
 		| "balanceDataResponse" // kilocode_change
 		| "updateProfileData" // kilocode_change
@@ -226,6 +229,7 @@ export interface ExtensionMessage {
 	settings?: any
 	messageTs?: number
 	context?: string
+	content?: string // For system prompt component content
 	// kilocode_change start: Notifications
 	notifications?: Array<{
 		id: string
@@ -325,6 +329,7 @@ export type ExtensionState = Pick<
 	| "includeDiagnosticMessages"
 	| "maxDiagnosticMessages"
 	| "messageSendingConfig"
+	| "compactMode"
 > & {
 	version: string
 	clineMessages: ClineMessage[]

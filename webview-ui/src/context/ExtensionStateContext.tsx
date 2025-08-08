@@ -173,6 +173,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setIncludeTaskHistoryInEnhance: (value: boolean) => void
 	messageSendingConfig: MessageSendingConfig
 	setMessageSendingConfig: (value: MessageSendingConfig) => void
+	compactMode?: boolean
+	setCompactMode: (value: boolean) => void
 }
 
 export const ExtensionStateContext = createContext<ExtensionStateContextType | undefined>(undefined)
@@ -287,6 +289,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 			customTemplate: "",
 			showTokenSavings: true,
 			includeSystemPrompt: true,
+			systemInstruction: "",
 			includeConversationHistory: true,
 			includeFileContext: true,
 			includeCodeContext: true,
@@ -300,6 +303,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 			enableRealTimePreview: true,
 			showEstimatedCost: true,
 		},
+		compactMode: false,
 	})
 
 	const [didHydrateState, setDidHydrateState] = useState(false)
@@ -458,7 +462,18 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 
 	useEffect(() => {
 		vscode.postMessage({ type: "webviewDidLaunch" })
-	}, [])
+
+		// Fallback for standalone web environment
+		// If no response from VSCode extension within 2 seconds, initialize state
+		const fallbackTimer = setTimeout(() => {
+			if (!didHydrateState) {
+				setDidHydrateState(true)
+				setShowWelcome(true) // Show welcome in standalone mode
+			}
+		}, 2000)
+
+		return () => clearTimeout(fallbackTimer)
+	}, [didHydrateState])
 
 	const contextValue: ExtensionStateContextType = {
 		...state,
@@ -641,6 +656,8 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setMessageSendingConfig: (value) => {
 			setState((prevState) => ({ ...prevState, messageSendingConfig: value }))
 		},
+		compactMode: state.compactMode,
+		setCompactMode: (value) => setState((prevState) => ({ ...prevState, compactMode: value })),
 	}
 
 	return <ExtensionStateContext.Provider value={contextValue}>{children}</ExtensionStateContext.Provider>

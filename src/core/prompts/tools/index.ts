@@ -26,6 +26,33 @@ import { getCodebaseSearchDescription } from "./codebase-search"
 import { getUpdateTodoListDescription } from "./update-todo-list"
 import { CodeIndexManager } from "../../../services/code-index/manager"
 
+// Compact tool descriptions for simplified mode
+function getCompactToolDescription(toolName: string): string {
+	const compactDescriptions: Record<string, string> = {
+		execute_command: "Execute shell commands",
+		read_file: "Read file contents",
+		fetch_instructions: "Get task instructions",
+		write_to_file: "Write content to file",
+		search_files: "Search for files",
+		list_files: "List directory contents",
+		list_code_definition_names: "List code definitions",
+		browser_action: "Perform browser actions",
+		ask_followup_question: "Ask clarifying questions",
+		attempt_completion: "Complete the task",
+		use_mcp_tool: "Use MCP tools",
+		access_mcp_resource: "Access MCP resources",
+		codebase_search: "Search codebase",
+		switch_mode: "Switch operation mode",
+		new_task: "Create new task",
+		insert_content: "Insert content into file",
+		search_and_replace: "Search and replace text",
+		edit_file: "Edit file with fast apply",
+		apply_diff: "Apply diff changes",
+		update_todo_list: "Update todo list",
+	}
+	return compactDescriptions[toolName] || "Tool description"
+}
+
 // Map of tool names to their description functions
 const toolDescriptionMap: Record<string, (args: ToolArgs) => string | undefined> = {
 	execute_command: (args) => getExecuteCommandDescription(args),
@@ -63,6 +90,7 @@ export function getToolDescriptionsForMode(
 	experiments?: Record<string, boolean>,
 	partialReadsEnabled?: boolean,
 	settings?: Record<string, any>,
+	compactMode?: boolean,
 ): string {
 	const config = getModeConfig(mode, customModes)
 	const args: ToolArgs = {
@@ -122,6 +150,14 @@ export function getToolDescriptionsForMode(
 	}
 
 	// Map tool descriptions for allowed tools
+	if (compactMode) {
+		// Simplified tool descriptions for compact mode
+		const compactDescriptions = Array.from(tools).map((toolName) => {
+			return `- ${toolName}: ${getCompactToolDescription(toolName)}`
+		})
+		return compactDescriptions.join("\n")
+	}
+
 	const descriptions = Array.from(tools).map((toolName) => {
 		const descriptionFn = toolDescriptionMap[toolName]
 		if (!descriptionFn) {

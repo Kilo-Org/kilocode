@@ -229,6 +229,7 @@ export interface WebviewMessage {
 		| "fixMermaidSyntax" // kilocode_change
 		| "mermaidFixResponse" // kilocode_change
 		| "openGlobalKeybindings" // kilocode_change
+		| "compactMode" // kilocode_change
 		| "openExternal"
 		| "filterMarketplaceItems"
 		| "mcpButtonClicked"
@@ -259,6 +260,10 @@ export interface WebviewMessage {
 		| "deleteCommand"
 		| "createCommand"
 		| "insertTextIntoTextarea"
+		| "updateSystemPromptComponentConfig"
+		| "previewSystemPromptComponent"
+		| "editSystemPromptComponent"
+		| "saveSystemPromptComponent"
 	text?: string
 	editedMessageContent?: string
 	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "account"
@@ -320,7 +325,7 @@ export interface WebviewMessage {
 	hasContent?: boolean // For checkRulesDirectoryResult
 	checkOnly?: boolean // For deleteCustomMode check
 	codeIndexSettings?: {
-		// Global state settings
+		// Settings for code indexing
 		codebaseIndexEnabled: boolean
 		codebaseIndexQdrantUrl: string
 		codebaseIndexEmbedderProvider: "openai" | "ollama" | "openai-compatible" | "gemini" | "mistral"
@@ -331,13 +336,16 @@ export interface WebviewMessage {
 		codebaseIndexSearchMaxResults?: number
 		codebaseIndexSearchMinScore?: number
 
-		// Secret settings
+		// Secrets for code indexing
 		codeIndexOpenAiKey?: string
 		codeIndexQdrantApiKey?: string
 		codebaseIndexOpenAiCompatibleApiKey?: string
 		codebaseIndexGeminiApiKey?: string
 		codebaseIndexMistralApiKey?: string
 	}
+	// System prompt component fields
+	componentType?: string
+	content?: string
 }
 
 // kilocode_change begin

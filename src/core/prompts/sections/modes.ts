@@ -26,7 +26,7 @@ ${allModes
 			description = mode.whenToUse.replace(/\n/g, "\n    ")
 		} else {
 			// Fallback to the first sentence of roleDefinition if whenToUse is not available
-			description = mode.roleDefinition.split(".")[0]
+			description = mode.roleDefinition ? mode.roleDefinition.split(".")[0] : mode.name
 		}
 		return `  * "${mode.name}" mode (${mode.slug}) - ${description}`
 	})

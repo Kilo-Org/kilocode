@@ -119,7 +119,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 	// Direct update functions
 	const updateAgentPrompt = useCallback(
 		(mode: Mode, promptData: PromptComponent) => {
-			const existingPrompt = customModePrompts?.[mode] as PromptComponent
+			const existingPrompt = customModePrompts?.[mode]
 			const updatedPrompt = { ...existingPrompt, ...promptData }
 
 			// Only include properties that differ from defaults
@@ -495,7 +495,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 		type: "roleDefinition" | "description" | "whenToUse" | "customInstructions",
 	) => {
 		// Only reset for built-in modes
-		const existingPrompt = customModePrompts?.[modeSlug] as PromptComponent
+		const existingPrompt = customModePrompts?.[modeSlug]
 		const updatedPrompt = { ...existingPrompt }
 		delete updatedPrompt[type] // Remove the field entirely to ensure it reloads from defaults
 
@@ -831,7 +831,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 							resize="vertical"
 							value={(() => {
 								const customMode = findModeBySlug(visualMode, customModes)
-								const prompt = customModePrompts?.[visualMode] as PromptComponent
+								const prompt = customModePrompts?.[visualMode]
 								return (
 									customMode?.roleDefinition ??
 									prompt?.roleDefinition ??
@@ -890,7 +890,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 						<VSCodeTextField
 							value={(() => {
 								const customMode = findModeBySlug(visualMode, customModes)
-								const prompt = customModePrompts?.[visualMode] as PromptComponent
+								const prompt = customModePrompts?.[visualMode]
 								return customMode?.description ?? prompt?.description ?? getDescription(visualMode)
 							})()}
 							onChange={(e) => {
@@ -945,7 +945,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 							resize="vertical"
 							value={(() => {
 								const customMode = findModeBySlug(visualMode, customModes)
-								const prompt = customModePrompts?.[visualMode] as PromptComponent
+								const prompt = customModePrompts?.[visualMode]
 								return customMode?.whenToUse ?? prompt?.whenToUse ?? getWhenToUse(visualMode)
 							})()}
 							onChange={(e) => {
@@ -1100,7 +1100,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 							resize="vertical"
 							value={(() => {
 								const customMode = findModeBySlug(visualMode, customModes)
-								const prompt = customModePrompts?.[visualMode] as PromptComponent
+								const prompt = customModePrompts?.[visualMode]
 								return (
 									customMode?.customInstructions ??
 									prompt?.customInstructions ??
@@ -1121,7 +1121,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 									})
 								} else {
 									// For built-in modes, update the prompts
-									const existingPrompt = customModePrompts?.[visualMode] as PromptComponent
+									const existingPrompt = customModePrompts?.[visualMode]
 									updateAgentPrompt(visualMode, {
 										...existingPrompt,
 										customInstructions: value.trim(),
@@ -1240,7 +1240,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 						<button
 							onClick={() => setIsSystemPromptDisclosureOpen(!isSystemPromptDisclosureOpen)}
 							className="flex items-center text-xs text-vscode-foreground hover:text-vscode-textLink-foreground focus:outline-none"
-							aria-expanded={isSystemPromptDisclosureOpen}>
+							{...{ "aria-expanded": isSystemPromptDisclosureOpen ? "true" : "false" }}>
 							<span
 								className={`codicon codicon-${isSystemPromptDisclosureOpen ? "chevron-down" : "chevron-right"} mr-1`}></span>
 							<span>{t("prompts:advanced.title")}</span>

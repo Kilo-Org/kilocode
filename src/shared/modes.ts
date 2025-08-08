@@ -143,10 +143,22 @@ export function getModeSelection(mode: string, promptComponent?: PromptComponent
 	// Otherwise, use built-in mode as base and merge with promptComponent
 	const baseMode = builtInMode || modes[0] // fallback to default mode
 
+	// Use promptComponent values if they exist and are not empty, otherwise fall back to baseMode
+	// Use optional chaining to safely access baseMode properties
+	const roleDefinition =
+		promptComponent?.roleDefinition && promptComponent.roleDefinition.trim() !== ""
+			? promptComponent.roleDefinition
+			: baseMode?.roleDefinition || ""
+
+	const baseInstructions =
+		promptComponent?.customInstructions && promptComponent.customInstructions.trim() !== ""
+			? promptComponent.customInstructions
+			: baseMode?.customInstructions || ""
+
 	return {
-		roleDefinition: promptComponent?.roleDefinition || baseMode.roleDefinition || "",
-		baseInstructions: promptComponent?.customInstructions || baseMode.customInstructions || "",
-		description: baseMode.description || "",
+		roleDefinition,
+		baseInstructions,
+		description: baseMode?.description || "",
 	}
 }
 
@@ -335,7 +347,10 @@ export async function getFullModeDetails(
 	// Return mode with any overrides applied
 	return {
 		...baseMode,
-		roleDefinition: promptComponent?.roleDefinition || baseMode.roleDefinition,
+		roleDefinition:
+			promptComponent?.roleDefinition && promptComponent.roleDefinition.trim() !== ""
+				? promptComponent.roleDefinition
+				: baseMode.roleDefinition,
 		whenToUse: baseWhenToUse,
 		description: baseDescription,
 		customInstructions: fullCustomInstructions,

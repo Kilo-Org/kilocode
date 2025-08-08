@@ -42,7 +42,7 @@ import { useAutoApprovalState } from "@src/hooks/useAutoApprovalState"
 import { useAutoApprovalToggles } from "@src/hooks/useAutoApprovalToggles"
 
 import TelemetryBanner from "../common/TelemetryBanner" // kilocode_change: deactivated for now
-// import VersionIndicator from "../common/VersionIndicator" // kilocode_change: unused
+import VersionIndicator from "../common/VersionIndicator" // kilocode_change: re-enabled for version display
 import { useTaskSearch } from "../history/useTaskSearch"
 import HistoryPreview from "../history/HistoryPreview"
 import Announcement from "./Announcement"
@@ -1911,13 +1911,13 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					<div className="w-full h-full flex flex-col gap-4 px-3.5 transition-all duration-300">
 						{/* kilocode_change end */}
 						{/* Version indicator in top-right corner - only on welcome screen */}
-						{/* kilocode_change: do not show */}
-						{/* <VersionIndicator
+						{/* kilocode_change: re-enabled for version display */}
+						<VersionIndicator
 							onClick={() => setShowAnnouncementModal(true)}
 							className="absolute top-2 right-3 z-10"
 						/>
 
-						<RooHero /> */}
+						{/* <RooHero /> */}
 						{telemetrySetting === "unset" && <TelemetryBanner />}
 						{/* kilocode_change start: KilocodeNotifications + Layout fixes */}
 						{telemetrySetting !== "unset" && <KilocodeNotifications />}

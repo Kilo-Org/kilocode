@@ -11,7 +11,7 @@ import { WebviewMessage } from "@roo/WebviewMessage"
  * dev server by using native web browser features that mock the functionality
  * enabled by acquireVsCodeApi.
  */
-class VSCodeAPIWrapper {
+export class VSCodeAPIWrapper {
 	private readonly vsCodeApi: WebviewApi<unknown> | undefined
 
 	constructor() {
@@ -84,6 +84,21 @@ export const vscode = new VSCodeAPIWrapper()
 // to post messages directly so we can setup provider credentials
 // without having to go through the Settings UI in every test.
 if (typeof window !== "undefined") {
-	;(window as unknown as { vscode: VSCodeAPIWrapper }).vscode = vscode
+	try {
+		// Use Object.defineProperty to avoid readonly property assignment error
+		Object.defineProperty(window, "vscode", {
+			value: vscode,
+			writable: false,
+			configurable: true,
+		})
+	} catch (error) {
+		// Fallback: if defineProperty fails, try direct assignment
+		console.warn("Could not define vscode property on window:", error)
+		try {
+			;(window as any).vscode = vscode
+		} catch (assignError) {
+			console.warn("Could not assign vscode to window:", assignError)
+		}
+	}
 }
 // kilocode_change end

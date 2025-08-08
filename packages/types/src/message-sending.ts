@@ -12,6 +12,7 @@ export const messageSendingConfigSchema = z.object({
 
 	// Content inclusion options
 	includeSystemPrompt: z.boolean().optional(),
+	systemInstruction: z.string().optional(), // 自定义系统指令
 	includeConversationHistory: z.boolean().optional(),
 	includeFileContext: z.boolean().optional(),
 	includeCodeContext: z.boolean().optional(),

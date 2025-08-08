@@ -1335,6 +1335,10 @@ export const webviewMessageHandler = async (
 			await updateGlobalState("allowVeryLargeReads", message.bool ?? false)
 			await provider.postStateToWebview()
 			break
+		case "compactMode":
+			await updateGlobalState("compactMode", message.bool ?? false)
+			await provider.postStateToWebview()
+			break
 		// kilocode_change end
 		case "maxImageFileSize":
 			await updateGlobalState("maxImageFileSize", message.value)
@@ -2979,6 +2983,114 @@ export const webviewMessageHandler = async (
 					type: "insertTextIntoTextarea",
 					text: text,
 				})
+			}
+			break
+		}
+		case "updateSystemPromptComponentConfig": {
+			const { componentType, config } = message
+			if (componentType && config) {
+				// Save component configuration
+				try {
+					const { saveSystemPromptComponentsConfig, getSystemPromptComponentsConfig } = await import(
+						"../prompts/sections/custom-prompt-components"
+					)
+					const currentConfig = getSystemPromptComponentsConfig(provider.context)
+					const updatedConfig = {
+						...currentConfig,
+						[componentType]: config,
+					}
+					await saveSystemPromptComponentsConfig(provider.context, updatedConfig)
+				} catch (error) {
+					provider.log(`Error updating system prompt component config: ${error}`)
+				}
+			}
+			break
+		}
+		case "previewSystemPromptComponent": {
+			const { componentType } = message
+			if (componentType) {
+				try {
+					const { loadCustomPromptComponent, getSystemPromptComponentsConfig } = await import(
+						"../prompts/sections/custom-prompt-components"
+					)
+					const config = getSystemPromptComponentsConfig(provider.context)
+					const componentConfig = config[componentType as keyof typeof config]
+					const content = await loadCustomPromptComponent(
+						provider.cwd || process.cwd(),
+						componentType as any,
+						componentConfig,
+					)
+					await provider.postMessageToWebview({
+						type: "systemPromptComponentPreview",
+						content: content || "",
+					})
+				} catch (error) {
+					provider.log(`Error previewing system prompt component: ${error}`)
+					await provider.postMessageToWebview({
+						type: "systemPromptComponentPreview",
+						content: `Error loading component: ${error.message}`,
+					})
+				}
+			}
+			break
+		}
+		case "editSystemPromptComponent": {
+			const { componentType } = message
+			if (componentType) {
+				try {
+					const { loadCustomPromptComponent, getSystemPromptComponentsConfig } = await import(
+						"../prompts/sections/custom-prompt-components"
+					)
+					const config = getSystemPromptComponentsConfig(provider.context)
+					const componentConfig = config[componentType as keyof typeof config]
+					const content = await loadCustomPromptComponent(
+						provider.cwd || process.cwd(),
+						componentType as any,
+						componentConfig,
+					)
+					await provider.postMessageToWebview({
+						type: "systemPromptComponentEdit",
+						content: content || "",
+					})
+				} catch (error) {
+					provider.log(`Error loading system prompt component for edit: ${error}`)
+					await provider.postMessageToWebview({
+						type: "systemPromptComponentEdit",
+						content: `Error loading component: ${error.message}`,
+					})
+				}
+			}
+			break
+		}
+		case "saveSystemPromptComponent": {
+			const { componentType, content } = message
+			if (componentType && content !== undefined) {
+				try {
+					const { getSystemPromptComponentsConfig } = await import(
+						"../prompts/sections/custom-prompt-components"
+					)
+					const { getComponentPath } = await import("../prompts/types/system-prompt-components")
+					const config = getSystemPromptComponentsConfig(provider.context)
+					const componentConfig = config[componentType as keyof typeof config]
+					const filePath = path.resolve(
+						provider.cwd || process.cwd(),
+						getComponentPath(componentConfig, componentType as any),
+					)
+
+					// Ensure directory exists
+					const dir = path.dirname(filePath)
+					await fs.mkdir(dir, { recursive: true })
+
+					// Write content to file
+					await fs.writeFile(filePath, content, "utf8")
+
+					await provider.postMessageToWebview({
+						type: "systemPromptComponentSaved",
+					})
+				} catch (error) {
+					provider.log(`Error saving system prompt component: ${error}`)
+					vscode.window.showErrorMessage(`Failed to save component: ${error.message}`)
+				}
 			}
 			break
 		}

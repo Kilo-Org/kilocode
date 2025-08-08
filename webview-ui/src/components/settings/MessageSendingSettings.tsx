@@ -31,6 +31,7 @@ const defaultConfig: MessageSendingConfig = {
 	customTemplate: "",
 	showTokenSavings: true,
 	includeSystemPrompt: true,
+	systemInstruction: "",
 	includeConversationHistory: true,
 	includeFileContext: true,
 	includeCodeContext: true,
@@ -196,6 +197,28 @@ export const MessageSendingSettings = ({
 						<div className="text-vscode-descriptionForeground text-sm mt-1">
 							在消息中包含系统级别的提示词。启用后可以提供更准确的上下文信息，但会增加Token使用量。适用于需要特定行为指导的场景。
 						</div>
+
+						{/* 自定义系统指令输入框 */}
+						{messageSendingConfig.includeSystemPrompt && (
+							<div className="mt-3 pl-3 border-l-2 border-vscode-button-background">
+								<span className="block font-medium mb-2">自定义系统指令</span>
+								<textarea
+									className="w-full min-h-[80px] p-2 text-sm bg-vscode-input-background border border-vscode-input-border rounded text-vscode-input-foreground placeholder-vscode-input-placeholderForeground resize-vertical"
+									value={messageSendingConfig.systemInstruction || ""}
+									onChange={(e) =>
+										setCachedStateField("messageSendingConfig", {
+											...messageSendingConfig,
+											systemInstruction: e.target.value,
+										})
+									}
+									placeholder="输入自定义的系统指令，例如：请用中文回答，保持简洁明了的风格..."
+									data-testid="system-instruction-textarea"
+								/>
+								<div className="text-vscode-descriptionForeground text-sm mt-1">
+									自定义系统指令将会添加到系统提示词中，用于指导AI的行为和回答风格。可以设置语言偏好、回答格式、专业领域要求等。留空则使用默认系统提示词。
+								</div>
+							</div>
+						)}
 					</div>
 
 					<div>

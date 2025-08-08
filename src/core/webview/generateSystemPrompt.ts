@@ -65,6 +65,9 @@ export const generateSystemPrompt = async (provider: ClineProvider, message: Web
 	// and browser tools are enabled in settings
 	const canUseBrowserTool = modelSupportsComputerUse && modeSupportsBrowser && (browserToolEnabled ?? true)
 
+	// Check if compact mode should be enabled (e.g., based on settings or API limits)
+	const compactMode = vscode.workspace.getConfiguration("roo-cline").get<boolean>("compactMode") ?? false
+
 	const systemPrompt = await SYSTEM_PROMPT(
 		provider.context,
 		cwd,
@@ -87,6 +90,9 @@ export const generateSystemPrompt = async (provider: ClineProvider, message: Web
 			todoListEnabled: apiConfiguration?.todoListEnabled ?? true,
 			useAgentRules: vscode.workspace.getConfiguration("roo-cline").get<boolean>("useAgentRules") ?? true,
 		},
+		undefined, // todoList
+		compactMode, // Add compact mode support
+		undefined, // componentsConfig
 	)
 
 	return systemPrompt

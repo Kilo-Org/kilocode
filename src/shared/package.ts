@@ -2,7 +2,7 @@
  * Package
  */
 
-import { publisher, name, version } from "../package.json"
+import { publisher, name, version, buildNumber } from "../package.json"
 
 // These ENV variables can be defined by ESBuild when building the extension
 // in order to override the values in package.json. This allows us to build
@@ -14,6 +14,7 @@ export const Package = {
 	publisher,
 	name: process.env.PKG_NAME || name,
 	version: process.env.PKG_VERSION || version,
+	buildNumber: process.env.PKG_BUILD_NUMBER || buildNumber,
 	outputChannel: process.env.PKG_OUTPUT_CHANNEL || "Kilo-Code",
 	sha: process.env.PKG_SHA,
 } as const

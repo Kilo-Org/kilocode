@@ -246,17 +246,17 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 		language: language ?? formatLanguage(vscode.env.language),
 	})
 
-	const currentMode = modeDetails.slug ?? mode // kilocode_change: don't try to use non-existent modes
+	const currentMode = modeDetails?.slug ?? mode // kilocode_change: don't try to use non-existent modes
 
 	details += `\n\n# Current Mode\n`
 	details += `<slug>${currentMode}</slug>\n`
-	details += `<name>${modeDetails.name}</name>\n`
+	details += `<name>${modeDetails?.name ?? "Unknown"}</name>\n`
 	details += `<model>${modelId}</model>\n`
 
 	if (Experiments.isEnabled(experiments ?? {}, EXPERIMENT_IDS.POWER_STEERING)) {
-		details += `<role>${modeDetails.roleDefinition}</role>\n`
+		details += `<role>${modeDetails?.roleDefinition ?? ""}</role>\n`
 
-		if (modeDetails.customInstructions) {
+		if (modeDetails?.customInstructions) {
 			details += `<custom_instructions>${modeDetails.customInstructions}</custom_instructions>\n`
 		}
 	}
