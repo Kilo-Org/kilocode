@@ -3,6 +3,7 @@ import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import { safeJsonParse } from "@roo/safeJsonParse"
 import { useCopyToClipboard } from "@src/utils/clipboard"
 import { vscode } from "@src/utils/vscode"
+import "./ApiRequestModal.css"
 
 interface ApiRequestModalProps {
 	isOpen: boolean
@@ -22,7 +23,12 @@ interface ApiDataRecord {
 	updatedAt: string
 }
 
-export const ApiRequestModal: React.FC<ApiRequestModalProps> = ({ isOpen, onClose, messageText, messageId }) => {
+export const ApiRequestModal: React.FC<ApiRequestModalProps> = ({
+	isOpen,
+	onClose,
+	messageText,
+	messageId: _messageId,
+}) => {
 	const [activeTab, setActiveTab] = useState<"request" | "response">("request")
 	const [apiData, setApiData] = useState<ApiDataRecord | null>(null)
 	const [loading, setLoading] = useState(false)
@@ -53,41 +59,45 @@ export const ApiRequestModal: React.FC<ApiRequestModalProps> = ({ isOpen, onClos
 	)
 	const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0, posX: 0, posY: 0 })
 
-	// 尝试从ApiDataStorage获取完整数据
+	// 加载API数据
 	useEffect(() => {
-		if (isOpen && messageId) {
+		if (isOpen && _messageId) {
 			setLoading(true)
 			setError(null)
 			setApiData(null)
-			console.log(`Requesting API data for messageId: ${messageId}`)
-			vscode.postMessage({
-				type: "getApiData",
-				messageId: messageId,
-			})
-		}
-	}, [isOpen, messageId])
 
-	// 监听来自后端的API数据响应
+			// 只使用messageId加载API数据
+			vscode.postMessage({
+				type: "loadApiDataByMessageId",
+				text: JSON.stringify({
+					messageId: _messageId,
+				}),
+			})
+		} else if (isOpen && !_messageId) {
+			setLoading(false)
+			setError("缺少messageId参数")
+		}
+	}, [isOpen, _messageId])
+
+	// 监听来自extension的API数据响应
 	useEffect(() => {
 		const handleMessage = (event: MessageEvent) => {
 			const message = event.data
 			if (message.type === "apiDataResponse") {
-				console.log("Received apiDataResponse:", message)
 				setLoading(false)
-
-				if (message.error) {
-					console.error("API data error:", message.error)
-					setError(message.error)
-					setApiData(null)
-				} else {
+				if (message.apiData) {
 					setApiData(message.apiData)
 					setError(null)
+				} else {
+					setError("未找到API数据")
 				}
 			}
 		}
 
 		window.addEventListener("message", handleMessage)
-		return () => window.removeEventListener("message", handleMessage)
+		return () => {
+			window.removeEventListener("message", handleMessage)
+		}
 	}, [])
 
 	// 拖动事件处理
@@ -265,48 +275,24 @@ export const ApiRequestModal: React.FC<ApiRequestModalProps> = ({ isOpen, onClos
 	// }
 
 	return (
-		<div
-			style={{
-				position: "fixed",
-				top: 0,
-				left: 0,
-				right: 0,
-				bottom: 0,
-				backgroundColor: "rgba(0, 0, 0, 0.5)",
-				zIndex: 999999,
-			}}>
+		<div className="api-request-modal-backdrop">
 			<div
 				ref={modalRef}
-				style={{
-					position: "absolute",
-					top: `${position.y}px`,
-					left: `${position.x}px`,
-					width: `${size.width}px`,
-					height: `${size.height}px`,
-					backgroundColor: "var(--vscode-editor-background)",
-					border: "1px solid var(--vscode-editorGroup-border)",
-					borderRadius: "8px",
-					display: "flex",
-					flexDirection: "column",
-					overflow: "hidden",
-					boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
-				}}
+				className="api-request-modal"
+				style={
+					{
+						"--modal-top": `${position.y}px`,
+						"--modal-left": `${position.x}px`,
+						"--modal-width": `${size.width}px`,
+						"--modal-height": `${size.height}px`,
+					} as React.CSSProperties
+				}
 				onClick={(e) => e.stopPropagation()}>
 				{/* Header */}
 				<div
-					style={{
-						display: "flex",
-						justifyContent: "space-between",
-						alignItems: "center",
-						padding: "16px",
-						borderBottom: "1px solid var(--vscode-editorGroup-border)",
-						cursor: isDragging ? "grabbing" : "grab",
-						userSelect: "none",
-					}}
+					className={`api-request-modal-header ${isDragging ? "dragging" : ""}`}
 					onMouseDown={handleMouseDown}>
-					<h3 style={{ margin: 0, color: "var(--vscode-foreground)", pointerEvents: "none" }}>
-						API 请求详情
-					</h3>
+					<h3 className="api-request-modal-title">API 请求详情</h3>
 					<VSCodeButton
 						appearance="icon"
 						onClick={(e) => {
@@ -314,106 +300,42 @@ export const ApiRequestModal: React.FC<ApiRequestModalProps> = ({ isOpen, onClos
 							onClose()
 						}}
 						title="关闭"
-						style={{ pointerEvents: "auto" }}>
+						className="api-request-modal-close-button">
 						<span className="codicon codicon-close"></span>
 					</VSCodeButton>
 				</div>
 
 				{/* Tabs */}
-				<div
-					style={{
-						display: "flex",
-						borderBottom: "1px solid var(--vscode-editorGroup-border)",
-					}}>
+				<div className="api-request-modal-tabs">
 					<button
-						style={{
-							padding: "12px 24px",
-							border: "none",
-							background: activeTab === "request" ? "var(--vscode-tab-activeBackground)" : "transparent",
-							color:
-								activeTab === "request"
-									? "var(--vscode-tab-activeForeground)"
-									: "var(--vscode-tab-inactiveForeground)",
-							cursor: "pointer",
-							borderBottom:
-								activeTab === "request"
-									? "2px solid var(--vscode-focusBorder)"
-									: "2px solid transparent",
-						}}
+						className={`api-request-modal-tab ${activeTab === "request" ? "active" : ""}`}
 						onClick={() => setActiveTab("request")}>
 						请求信息
 					</button>
 					<button
-						style={{
-							padding: "12px 24px",
-							border: "none",
-							background: activeTab === "response" ? "var(--vscode-tab-activeBackground)" : "transparent",
-							color:
-								activeTab === "response"
-									? "var(--vscode-tab-activeForeground)"
-									: "var(--vscode-tab-inactiveForeground)",
-							cursor: "pointer",
-							borderBottom:
-								activeTab === "response"
-									? "2px solid var(--vscode-focusBorder)"
-									: "2px solid transparent",
-						}}
+						className={`api-request-modal-tab ${activeTab === "response" ? "active" : ""}`}
 						onClick={() => setActiveTab("response")}>
 						响应信息
 					</button>
 				</div>
 
 				{/* Content */}
-				<div
-					style={{
-						flex: 1,
-						overflow: "auto",
-						padding: "16px",
-						height: "calc(100% - 120px)",
-						display: "flex",
-						flexDirection: "column",
-					}}>
-					{loading && (
-						<div
-							style={{
-								color: "var(--vscode-descriptionForeground)",
-								textAlign: "center",
-								padding: "40px",
-							}}>
-							正在加载API数据...
-						</div>
-					)}
+				<div className="api-request-modal-content">
+					{loading && <div className="api-request-modal-loading">正在加载API数据...</div>}
 
 					{error && (
-						<div
-							style={{
-								color: "var(--vscode-errorForeground)",
-								textAlign: "center",
-								padding: "40px",
-								border: "1px solid var(--vscode-inputValidation-errorBorder)",
-								backgroundColor: "var(--vscode-inputValidation-errorBackground)",
-								borderRadius: "4px",
-								margin: "16px 0",
-							}}>
-							<div style={{ fontWeight: "bold", marginBottom: "8px" }}>加载API数据失败</div>
+						<div className="api-request-modal-error">
+							<div className="api-request-modal-error-title">加载API数据失败</div>
 							<div>{error}</div>
 						</div>
 					)}
 
 					{!loading && !error && activeTab === "request" && (
-						<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+						<div className="api-request-modal-section">
 							{requestData ? (
-								<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-									<div
-										style={{
-											display: "flex",
-											justifyContent: "space-between",
-											alignItems: "center",
-											marginBottom: "12px",
-										}}>
-										<span style={{ fontWeight: "bold", color: "var(--vscode-foreground)" }}>
-											请求详情:
-										</span>
+								<div className="api-request-modal-section">
+									<div className="api-request-modal-section-header">
+										<span className="api-request-modal-section-title">请求详情:</span>
 										<VSCodeButton
 											appearance="icon"
 											onClick={() => copyWithFeedback(JSON.stringify(requestData, null, 2))}
@@ -422,51 +344,22 @@ export const ApiRequestModal: React.FC<ApiRequestModalProps> = ({ isOpen, onClos
 												className={`codicon ${showCopyFeedback ? "codicon-check" : "codicon-copy"}`}></span>
 										</VSCodeButton>
 									</div>
-									<pre
-										style={{
-											backgroundColor: "var(--vscode-textCodeBlock-background)",
-											padding: "12px",
-											borderRadius: "4px",
-											overflow: "auto",
-											flex: 1,
-											minHeight: 0,
-											fontFamily: "var(--vscode-editor-font-family)",
-											fontSize: "var(--vscode-editor-font-size)",
-											color: "var(--vscode-foreground)",
-											whiteSpace: "pre-wrap",
-											wordBreak: "break-word",
-											margin: 0,
-										}}>
+									<pre className="api-request-modal-code-block">
 										{JSON.stringify(requestData, null, 2)}
 									</pre>
 								</div>
 							) : (
-								<div
-									style={{
-										color: "var(--vscode-descriptionForeground)",
-										textAlign: "center",
-										padding: "40px",
-									}}>
-									暂无请求信息
-								</div>
+								<div className="api-request-modal-empty-state">暂无请求信息</div>
 							)}
 						</div>
 					)}
 
 					{!loading && !error && activeTab === "response" && (
-						<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+						<div className="api-request-modal-section">
 							{errorMessage ? (
-								<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-									<div
-										style={{
-											display: "flex",
-											justifyContent: "space-between",
-											alignItems: "center",
-											marginBottom: "12px",
-										}}>
-										<span style={{ fontWeight: "bold", color: "var(--vscode-errorForeground)" }}>
-											错误信息:
-										</span>
+								<div className="api-request-modal-section">
+									<div className="api-request-modal-section-header">
+										<span className="api-request-modal-section-title error">错误信息:</span>
 										<VSCodeButton
 											appearance="icon"
 											onClick={() =>
@@ -481,39 +374,16 @@ export const ApiRequestModal: React.FC<ApiRequestModalProps> = ({ isOpen, onClos
 												className={`codicon ${showCopyFeedback ? "codicon-check" : "codicon-copy"}`}></span>
 										</VSCodeButton>
 									</div>
-									<pre
-										style={{
-											backgroundColor: "var(--vscode-inputValidation-errorBackground)",
-											border: "1px solid var(--vscode-inputValidation-errorBorder)",
-											padding: "12px",
-											borderRadius: "4px",
-											overflow: "auto",
-											flex: 1,
-											minHeight: 0,
-											fontFamily: "var(--vscode-editor-font-family)",
-											fontSize: "var(--vscode-editor-font-size)",
-											color: "var(--vscode-errorForeground)",
-											whiteSpace: "pre-wrap",
-											wordBreak: "break-word",
-											margin: 0,
-										}}>
+									<pre className="api-request-modal-code-block error">
 										{typeof errorMessage === "string"
 											? errorMessage
 											: JSON.stringify(errorMessage, null, 2)}
 									</pre>
 								</div>
 							) : responseData ? (
-								<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-									<div
-										style={{
-											display: "flex",
-											justifyContent: "space-between",
-											alignItems: "center",
-											marginBottom: "12px",
-										}}>
-										<span style={{ fontWeight: "bold", color: "var(--vscode-foreground)" }}>
-											响应详情:
-										</span>
+								<div className="api-request-modal-section">
+									<div className="api-request-modal-section-header">
+										<span className="api-request-modal-section-title">响应详情:</span>
 										<VSCodeButton
 											appearance="icon"
 											onClick={() => copyWithFeedback(JSON.stringify(responseData, null, 2))}
@@ -522,33 +392,12 @@ export const ApiRequestModal: React.FC<ApiRequestModalProps> = ({ isOpen, onClos
 												className={`codicon ${showCopyFeedback ? "codicon-check" : "codicon-copy"}`}></span>
 										</VSCodeButton>
 									</div>
-									<pre
-										style={{
-											backgroundColor: "var(--vscode-textCodeBlock-background)",
-											padding: "12px",
-											borderRadius: "4px",
-											overflow: "auto",
-											flex: 1,
-											minHeight: 0,
-											fontFamily: "var(--vscode-editor-font-family)",
-											fontSize: "var(--vscode-editor-font-size)",
-											color: "var(--vscode-foreground)",
-											whiteSpace: "pre-wrap",
-											wordBreak: "break-word",
-											margin: 0,
-										}}>
+									<pre className="api-request-modal-code-block">
 										{JSON.stringify(responseData, null, 2)}
 									</pre>
 								</div>
 							) : (
-								<div
-									style={{
-										color: "var(--vscode-descriptionForeground)",
-										textAlign: "center",
-										padding: "40px",
-									}}>
-									暂无响应信息
-								</div>
+								<div className="api-request-modal-empty-state">暂无响应信息</div>
 							)}
 						</div>
 					)}
@@ -557,136 +406,56 @@ export const ApiRequestModal: React.FC<ApiRequestModalProps> = ({ isOpen, onClos
 				{/* Resize Handles - 四个角和四条边 */}
 				{/* 右下角 */}
 				<div
-					style={{
-						position: "absolute",
-						bottom: 0,
-						right: 0,
-						width: "20px",
-						height: "20px",
-						cursor: "nw-resize",
-						backgroundImage: `linear-gradient(-45deg, transparent 0%, transparent 30%, var(--vscode-editorGroup-border) 30%, var(--vscode-editorGroup-border) 35%, transparent 35%, transparent 65%, var(--vscode-editorGroup-border) 65%, var(--vscode-editorGroup-border) 70%, transparent 70%)`,
-						backgroundSize: "8px 8px",
-						backgroundRepeat: "repeat",
-						borderBottomRightRadius: "8px",
-						zIndex: 1001,
-					}}
+					className="api-request-modal-resize-handle corner se"
 					onMouseDown={(e) => handleResizeMouseDown(e, "se")}
 					title="拖动调整窗口大小"
 				/>
 
 				{/* 左下角 */}
 				<div
-					style={{
-						position: "absolute",
-						bottom: 0,
-						left: 0,
-						width: "20px",
-						height: "20px",
-						cursor: "ne-resize",
-						backgroundImage: `linear-gradient(45deg, transparent 0%, transparent 30%, var(--vscode-editorGroup-border) 30%, var(--vscode-editorGroup-border) 35%, transparent 35%, transparent 65%, var(--vscode-editorGroup-border) 65%, var(--vscode-editorGroup-border) 70%, transparent 70%)`,
-						backgroundSize: "8px 8px",
-						backgroundRepeat: "repeat",
-						borderBottomLeftRadius: "8px",
-						zIndex: 1001,
-					}}
+					className="api-request-modal-resize-handle corner sw"
 					onMouseDown={(e) => handleResizeMouseDown(e, "sw")}
 					title="拖动调整窗口大小"
 				/>
 
 				{/* 右上角 */}
 				<div
-					style={{
-						position: "absolute",
-						top: 0,
-						right: 0,
-						width: "20px",
-						height: "20px",
-						cursor: "ne-resize",
-						backgroundImage: `linear-gradient(45deg, transparent 0%, transparent 30%, var(--vscode-editorGroup-border) 30%, var(--vscode-editorGroup-border) 35%, transparent 35%, transparent 65%, var(--vscode-editorGroup-border) 65%, var(--vscode-editorGroup-border) 70%, transparent 70%)`,
-						backgroundSize: "8px 8px",
-						backgroundRepeat: "repeat",
-						borderTopRightRadius: "8px",
-						zIndex: 1001,
-					}}
+					className="api-request-modal-resize-handle corner ne"
 					onMouseDown={(e) => handleResizeMouseDown(e, "ne")}
 					title="拖动调整窗口大小"
 				/>
 
 				{/* 左上角 */}
 				<div
-					style={{
-						position: "absolute",
-						top: 0,
-						left: 0,
-						width: "20px",
-						height: "20px",
-						cursor: "nw-resize",
-						backgroundImage: `linear-gradient(-45deg, transparent 0%, transparent 30%, var(--vscode-editorGroup-border) 30%, var(--vscode-editorGroup-border) 35%, transparent 35%, transparent 65%, var(--vscode-editorGroup-border) 65%, var(--vscode-editorGroup-border) 70%, transparent 70%)`,
-						backgroundSize: "8px 8px",
-						backgroundRepeat: "repeat",
-						borderTopLeftRadius: "8px",
-						zIndex: 1001,
-					}}
+					className="api-request-modal-resize-handle corner nw"
 					onMouseDown={(e) => handleResizeMouseDown(e, "nw")}
 					title="拖动调整窗口大小"
 				/>
 
 				{/* 上边 */}
 				<div
-					style={{
-						position: "absolute",
-						top: 0,
-						left: "20px",
-						right: "20px",
-						height: "4px",
-						cursor: "n-resize",
-						zIndex: 1001,
-					}}
+					className="api-request-modal-resize-handle n"
 					onMouseDown={(e) => handleResizeMouseDown(e, "n")}
 					title="拖动调整窗口高度"
 				/>
 
 				{/* 下边 */}
 				<div
-					style={{
-						position: "absolute",
-						bottom: 0,
-						left: "20px",
-						right: "20px",
-						height: "4px",
-						cursor: "s-resize",
-						zIndex: 1001,
-					}}
+					className="api-request-modal-resize-handle s"
 					onMouseDown={(e) => handleResizeMouseDown(e, "s")}
 					title="拖动调整窗口高度"
 				/>
 
 				{/* 左边 */}
 				<div
-					style={{
-						position: "absolute",
-						left: 0,
-						top: "20px",
-						bottom: "20px",
-						width: "4px",
-						cursor: "w-resize",
-						zIndex: 1001,
-					}}
+					className="api-request-modal-resize-handle w"
 					onMouseDown={(e) => handleResizeMouseDown(e, "w")}
 					title="拖动调整窗口宽度"
 				/>
 
 				{/* 右边 */}
 				<div
-					style={{
-						position: "absolute",
-						right: 0,
-						top: "20px",
-						bottom: "20px",
-						width: "4px",
-						cursor: "e-resize",
-						zIndex: 1001,
-					}}
+					className="api-request-modal-resize-handle e"
 					onMouseDown={(e) => handleResizeMouseDown(e, "e")}
 					title="拖动调整窗口宽度"
 				/>

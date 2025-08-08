@@ -56,6 +56,7 @@ import { getCommand } from "../../utils/commands"
 import { toggleWorkflow, toggleRule, createRuleFile, deleteRuleFile } from "./kilorules"
 import { mermaidFixPrompt } from "../prompts/utilities/mermaid" // kilocode_change
 import { editMessageHandler, fetchKilocodeNotificationsHandler } from "../kilocode/webview/webviewMessageHandlerUtils" // kilocode_change
+import { readCompleteApiData, apiDataExists, readCompleteApiDataByMessageId } from "../../shared/apiDataStorage" // kilocode_change
 
 const ALLOWED_VSCODE_SETTINGS = new Set(["terminal.integrated.inheritEnv"])
 
@@ -400,6 +401,7 @@ export const webviewMessageHandler = async (
 				messageTs: message.messageTs,
 			})
 			break
+
 		case "exportCurrentTask":
 			const currentTaskId = provider.getCurrentCline()?.taskId
 			if (currentTaskId) {
@@ -3094,62 +3096,96 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
-		// kilocode_change start - add getApiData
-		case "getApiData": {
-			if (message.messageId) {
+		case "loadApiData":
+			if (message.text) {
+				const { taskId, messageId } = JSON.parse(message.text)
 				try {
-					console.log(`Handling getApiData request for messageId: ${message.messageId}`)
-					const currentCline = provider.getCurrentCline()
-
-					if (!currentCline) {
-						console.log("No current Cline instance found")
-						await provider.postMessageToWebview({
-							type: "apiDataResponse",
-							apiData: null,
-							error: "No active task found",
-						})
-						return
-					}
-
-					if (!currentCline.apiDataStorage) {
-						console.log("ApiDataStorage not found on current Cline instance")
-						await provider.postMessageToWebview({
-							type: "apiDataResponse",
-							apiData: null,
-							error: "API data storage not available",
-						})
-						return
-					}
-
-					console.log(`Fetching API data for messageId: ${message.messageId}`)
-					const apiData = await currentCline.apiDataStorage.getByMessageId(message.messageId)
-					console.log(`API data fetch result:`, apiData)
-
+					const completeApiData = await readCompleteApiData(
+						provider.context.globalStorageUri.fsPath,
+						taskId,
+						messageId,
+					)
+					// Convert CompleteApiData to the expected format
+					const apiData = completeApiData.metadata
+						? {
+								messageId: completeApiData.metadata.messageId,
+								taskId: completeApiData.metadata.taskId,
+								requestData: completeApiData.request
+									? JSON.stringify(completeApiData.request)
+									: undefined,
+								responseData: completeApiData.response
+									? JSON.stringify(completeApiData.response)
+									: undefined,
+								createdAt: new Date(completeApiData.metadata.createdAt).toISOString(),
+								updatedAt: new Date(completeApiData.metadata.updatedAt).toISOString(),
+							}
+						: null
 					await provider.postMessageToWebview({
 						type: "apiDataResponse",
-						apiData: apiData,
+						apiData,
 					})
 				} catch (error) {
-					console.error(`Error getting API data for messageId ${message.messageId}:`, error)
-					provider.log(
-						`Error getting API data: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
-					)
+					provider.log(`Error loading API data: ${error}`)
 					await provider.postMessageToWebview({
 						type: "apiDataResponse",
 						apiData: null,
-						error: error instanceof Error ? error.message : String(error),
 					})
 				}
-			} else {
-				console.log("getApiData called without messageId")
-				await provider.postMessageToWebview({
-					type: "apiDataResponse",
-					apiData: null,
-					error: "No message ID provided",
-				})
 			}
 			break
-		}
-		// kilocode_change end - add getApiData
+		case "loadApiDataByMessageId":
+			if (message.text) {
+				const { messageId } = JSON.parse(message.text)
+				try {
+					const completeApiData = await readCompleteApiDataByMessageId(
+						provider.context.globalStorageUri.fsPath,
+						messageId,
+					)
+					// Convert CompleteApiData to the expected format
+					const apiData = completeApiData.metadata
+						? {
+								messageId: completeApiData.metadata.messageId,
+								taskId: completeApiData.metadata.taskId,
+								requestData: completeApiData.request
+									? JSON.stringify(completeApiData.request)
+									: undefined,
+								responseData: completeApiData.response
+									? JSON.stringify(completeApiData.response)
+									: undefined,
+								createdAt: new Date(completeApiData.metadata.createdAt).toISOString(),
+								updatedAt: new Date(completeApiData.metadata.updatedAt).toISOString(),
+							}
+						: null
+					await provider.postMessageToWebview({
+						type: "apiDataResponse",
+						apiData,
+					})
+				} catch (error) {
+					provider.log(`Error loading API data by messageId: ${error}`)
+					await provider.postMessageToWebview({
+						type: "apiDataResponse",
+						apiData: null,
+					})
+				}
+			}
+			break
+		case "checkApiDataExists":
+			if (message.text) {
+				const { taskId, messageId } = JSON.parse(message.text)
+				try {
+					const exists = await apiDataExists(provider.context.globalStorageUri.fsPath, taskId, messageId)
+					await provider.postMessageToWebview({
+						type: "apiDataExistsResponse",
+						value: exists,
+					})
+				} catch (error) {
+					provider.log(`Error checking API data existence: ${error}`)
+					await provider.postMessageToWebview({
+						type: "apiDataExistsResponse",
+						value: false,
+					})
+				}
+			}
+			break
 	}
 }

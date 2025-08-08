@@ -139,6 +139,7 @@ export interface ExtensionMessage {
 		| "kilocodeNotificationsResponse" // kilocode_change
 		| "usageDataResponse" // kilocode_change
 		| "apiDataResponse" // kilocode_change: Response with API data from storage
+		| "apiDataExistsResponse" // kilocode_change: Response for API data existence check
 		| "commands"
 		| "insertTextIntoTextarea"
 	text?: string

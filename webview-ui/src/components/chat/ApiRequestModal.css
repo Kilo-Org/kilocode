@@ -1,0 +1,268 @@
+.api-request-modal-backdrop {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: rgba(0, 0, 0, 0.5);
+	z-index: 999999;
+}
+
+.api-request-modal {
+	position: absolute;
+	top: var(--modal-top, 50px);
+	left: var(--modal-left, 50px);
+	width: var(--modal-width, 800px);
+	height: var(--modal-height, 600px);
+	background-color: var(--vscode-editor-background);
+	border: 1px solid var(--vscode-editorGroup-border);
+	border-radius: 8px;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.api-request-modal-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 16px;
+	border-bottom: 1px solid var(--vscode-editorGroup-border);
+	cursor: grab;
+	user-select: none;
+}
+
+.api-request-modal-header.dragging {
+	cursor: grabbing;
+}
+
+.api-request-modal-title {
+	margin: 0;
+	color: var(--vscode-foreground);
+	pointer-events: none;
+}
+
+.api-request-modal-close-button {
+	pointer-events: auto;
+}
+
+.api-request-modal-tabs {
+	display: flex;
+	border-bottom: 1px solid var(--vscode-editorGroup-border);
+}
+
+.api-request-modal-tab {
+	padding: 12px 24px;
+	border: none;
+	background: transparent;
+	color: var(--vscode-tab-inactiveForeground);
+	cursor: pointer;
+	border-bottom: 2px solid transparent;
+}
+
+.api-request-modal-tab.active {
+	background: var(--vscode-tab-activeBackground);
+	color: var(--vscode-tab-activeForeground);
+	border-bottom: 2px solid var(--vscode-focusBorder);
+}
+
+.api-request-modal-content {
+	flex: 1;
+	overflow: auto;
+	padding: 16px;
+	height: calc(100% - 120px);
+	display: flex;
+	flex-direction: column;
+}
+
+.api-request-modal-loading {
+	color: var(--vscode-descriptionForeground);
+	text-align: center;
+	padding: 40px;
+}
+
+.api-request-modal-error {
+	color: var(--vscode-errorForeground);
+	text-align: center;
+	padding: 40px;
+	border: 1px solid var(--vscode-inputValidation-errorBorder);
+	background-color: var(--vscode-inputValidation-errorBackground);
+	border-radius: 4px;
+	margin: 16px 0;
+}
+
+.api-request-modal-error-title {
+	font-weight: bold;
+	margin-bottom: 8px;
+}
+
+.api-request-modal-section {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+}
+
+.api-request-modal-section-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 12px;
+}
+
+.api-request-modal-section-title {
+	font-weight: bold;
+	color: var(--vscode-foreground);
+}
+
+.api-request-modal-section-title.error {
+	color: var(--vscode-errorForeground);
+}
+
+.api-request-modal-code-block {
+	background-color: var(--vscode-textCodeBlock-background);
+	padding: 12px;
+	border-radius: 4px;
+	overflow: auto;
+	flex: 1;
+	min-height: 0;
+	font-family: var(--vscode-editor-font-family);
+	font-size: var(--vscode-editor-font-size);
+	color: var(--vscode-foreground);
+	white-space: pre-wrap;
+	word-break: break-word;
+	margin: 0;
+}
+
+.api-request-modal-code-block.error {
+	background-color: var(--vscode-inputValidation-errorBackground);
+	border: 1px solid var(--vscode-inputValidation-errorBorder);
+	color: var(--vscode-errorForeground);
+}
+
+.api-request-modal-empty-state {
+	color: var(--vscode-descriptionForeground);
+	text-align: center;
+	padding: 40px;
+}
+
+/* Resize handles */
+.api-request-modal-resize-handle {
+	position: absolute;
+	z-index: 1001;
+}
+
+.api-request-modal-resize-handle.corner {
+	width: 20px;
+	height: 20px;
+	background-size: 8px 8px;
+	background-repeat: repeat;
+}
+
+.api-request-modal-resize-handle.se {
+	bottom: 0;
+	right: 0;
+	cursor: nw-resize;
+	background-image: linear-gradient(
+		-45deg,
+		transparent 0%,
+		transparent 30%,
+		var(--vscode-editorGroup-border) 30%,
+		var(--vscode-editorGroup-border) 35%,
+		transparent 35%,
+		transparent 65%,
+		var(--vscode-editorGroup-border) 65%,
+		var(--vscode-editorGroup-border) 70%,
+		transparent 70%
+	);
+	border-bottom-right-radius: 8px;
+}
+
+.api-request-modal-resize-handle.sw {
+	bottom: 0;
+	left: 0;
+	cursor: ne-resize;
+	background-image: linear-gradient(
+		45deg,
+		transparent 0%,
+		transparent 30%,
+		var(--vscode-editorGroup-border) 30%,
+		var(--vscode-editorGroup-border) 35%,
+		transparent 35%,
+		transparent 65%,
+		var(--vscode-editorGroup-border) 65%,
+		var(--vscode-editorGroup-border) 70%,
+		transparent 70%
+	);
+	border-bottom-left-radius: 8px;
+}
+
+.api-request-modal-resize-handle.ne {
+	top: 0;
+	right: 0;
+	cursor: ne-resize;
+	background-image: linear-gradient(
+		45deg,
+		transparent 0%,
+		transparent 30%,
+		var(--vscode-editorGroup-border) 30%,
+		var(--vscode-editorGroup-border) 35%,
+		transparent 35%,
+		transparent 65%,
+		var(--vscode-editorGroup-border) 65%,
+		var(--vscode-editorGroup-border) 70%,
+		transparent 70%
+	);
+	border-top-right-radius: 8px;
+}
+
+.api-request-modal-resize-handle.nw {
+	top: 0;
+	left: 0;
+	cursor: nw-resize;
+	background-image: linear-gradient(
+		-45deg,
+		transparent 0%,
+		transparent 30%,
+		var(--vscode-editorGroup-border) 30%,
+		var(--vscode-editorGroup-border) 35%,
+		transparent 35%,
+		transparent 65%,
+		var(--vscode-editorGroup-border) 65%,
+		var(--vscode-editorGroup-border) 70%,
+		transparent 70%
+	);
+	border-top-left-radius: 8px;
+}
+
+.api-request-modal-resize-handle.n {
+	top: 0;
+	left: 20px;
+	right: 20px;
+	height: 4px;
+	cursor: n-resize;
+}
+
+.api-request-modal-resize-handle.s {
+	bottom: 0;
+	left: 20px;
+	right: 20px;
+	height: 4px;
+	cursor: s-resize;
+}
+
+.api-request-modal-resize-handle.w {
+	left: 0;
+	top: 20px;
+	bottom: 20px;
+	width: 4px;
+	cursor: w-resize;
+}
+
+.api-request-modal-resize-handle.e {
+	right: 0;
+	top: 20px;
+	bottom: 20px;
+	width: 4px;
+	cursor: e-resize;
+}

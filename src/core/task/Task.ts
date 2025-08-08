@@ -99,7 +99,7 @@ import { ensureLocalKilorulesDirExists } from "../context/instructions/kilo-rule
 import { restoreTodoListForTask } from "../tools/updateTodoListTool"
 import { reportExcessiveRecursion, yieldPromise } from "../kilocode"
 import { filterErrorMessages } from "../../shared/filterErrorMessages"
-import { ApiDataStorage } from "../../services/api-data-storage"
+import { saveApiRequestData, saveApiResponseData, saveApiMetadata } from "../../shared/apiDataStorage"
 
 const MAX_EXPONENTIAL_BACKOFF_SECONDS = 600 // 10 minutes
 
@@ -233,9 +233,6 @@ export class Task extends EventEmitter<TaskEvents> {
 	// Computer User
 	browserSession: BrowserSession
 
-	// API Data Storage
-	apiDataStorage: ApiDataStorage
-
 	// Editing
 	diffViewProvider: DiffViewProvider
 	diffStrategy?: DiffStrategy
@@ -325,13 +322,6 @@ export class Task extends EventEmitter<TaskEvents> {
 		this.urlContentFetcher = new UrlContentFetcher(provider.context)
 		this.browserSession = new BrowserSession(provider.context)
 		this.globalStoragePath = provider.context.globalStorageUri.fsPath
-		this.apiDataStorage = new ApiDataStorage(provider.context)
-
-		// Initialize ApiDataStorage asynchronously but don't block constructor
-		// The initialize method will be called when needed and handles concurrent calls
-		this.apiDataStorage.initialize().catch((error) => {
-			console.error("Failed to initialize ApiDataStorage during construction:", error)
-		})
 		this.diffEnabled = enableDiff
 		this.fuzzyMatchThreshold = fuzzyMatchThreshold
 		this.consecutiveMistakeLimit = consecutiveMistakeLimit ?? DEFAULT_CONSECUTIVE_MISTAKE_LIMIT
@@ -1276,12 +1266,6 @@ export class Task extends EventEmitter<TaskEvents> {
 		}
 
 		try {
-			this.apiDataStorage.close()
-		} catch (error) {
-			console.error("Error closing API data storage:", error)
-		}
-
-		try {
 			// If we're not streaming then `abortStream` won't be called.
 			if (this.isStreaming && this.diffViewProvider.isEditing) {
 				this.diffViewProvider.revertChanges().catch(console.error)
@@ -1435,7 +1419,8 @@ export class Task extends EventEmitter<TaskEvents> {
 		const modelId = getModelId(this.apiConfiguration)
 		const apiProtocol = getApiProtocol(this.apiConfiguration.apiProvider, modelId)
 
-		const apiReqStartedMessage = await this.say(
+		const requestTimestamp = Date.now()
+		await this.say(
 			"api_req_started",
 			JSON.stringify({
 				request:
@@ -1444,19 +1429,15 @@ export class Task extends EventEmitter<TaskEvents> {
 			}),
 		)
 
-		// Save API request data to database
+		// Save API request data to file
 		try {
-			const requestContent = userContent.map((block) => formatContentBlockToMarkdown(block)).join("\n\n")
-			const lastMessage = this.clineMessages[this.clineMessages.length - 1]
-			if (lastMessage && lastMessage.ts) {
-				await this.apiDataStorage.saveRequestData(lastMessage.ts.toString(), this.taskId, {
-					content: requestContent,
-					timestamp: new Date().toISOString(),
-					apiProtocol,
-					provider: this.apiConfiguration.apiProvider,
-					model: getModelId(this.apiConfiguration),
-				})
-			}
+			await saveApiRequestData(this.globalStoragePath, this.taskId, requestTimestamp.toString(), {
+				method: "POST",
+				body: userContent.map((block) => formatContentBlockToMarkdown(block)).join("\n\n"),
+				timestamp: requestTimestamp,
+				model: getModelId(this.apiConfiguration),
+				temperature: this.apiConfiguration.apiModelId?.includes("claude") ? 0.7 : undefined,
+			})
 		} catch (error) {
 			console.error("Failed to save API request data:", error)
 		}
@@ -1557,9 +1538,12 @@ export class Task extends EventEmitter<TaskEvents> {
 					streamingFailedMessage,
 				} satisfies ClineApiReqInfo)
 
-				// Save response data to database
+				// Save API metadata to file
 				try {
-					this.apiDataStorage.saveResponseData(this.clineMessages[lastApiReqIndex].ts.toString(), {
+					const messageId = this.clineMessages[lastApiReqIndex].ts.toString()
+					saveApiMetadata(this.globalStoragePath, this.taskId, messageId, {
+						messageId,
+						taskId: this.taskId,
 						tokensIn: inputTokens,
 						tokensOut: outputTokens,
 						cacheWrites: cacheWriteTokens,
@@ -1568,9 +1552,13 @@ export class Task extends EventEmitter<TaskEvents> {
 						usageMissing,
 						cancelReason,
 						streamingFailedMessage,
+						createdAt: Date.now(),
+						updatedAt: Date.now(),
+					}).catch((error) => {
+						console.error("Failed to save API metadata:", error)
 					})
 				} catch (error) {
-					console.error("Failed to save response data to database:", error)
+					console.error("Failed to save API metadata:", error)
 				}
 			}
 
@@ -1976,6 +1964,24 @@ export class Task extends EventEmitter<TaskEvents> {
 			let didEndLoop = false
 
 			if (assistantMessage.length > 0) {
+				// Save API response data to file
+				try {
+					await saveApiResponseData(
+						this.globalStoragePath,
+						this.taskId,
+						this.clineMessages[lastApiReqIndex].ts.toString(),
+						{
+							body: assistantMessage,
+							timestamp: Date.now(),
+							tokensIn: inputTokens,
+							tokensOut: outputTokens,
+							cost: totalCost,
+						},
+					)
+				} catch (error) {
+					console.error("Failed to save API response data:", error)
+				}
+
 				await this.addToApiConversationHistory({
 					role: "assistant",
 					content: [{ type: "text", text: assistantMessage }],
@@ -2353,21 +2359,6 @@ export class Task extends EventEmitter<TaskEvents> {
 			this.isWaitingForFirstChunk = false
 			// note that this api_req_failed ask is unique in that we only present this option if the api hasn't streamed any content yet (ie it fails on the first chunk due), as it would allow them to hit a retry button. However if the api failed mid-stream, it could be in any arbitrary state where some tools may have executed, so that error is handled differently and requires cancelling the task entirely.
 		} catch (error) {
-			// Save error message to database
-			const lastApiReqIndex = findLastIndex(this.clineMessages, (m) => m.say === "api_req_started")
-			if (lastApiReqIndex !== -1) {
-				try {
-					const errorMessage = error.message || JSON.stringify(serializeError(error), null, 2)
-					await this.apiDataStorage.saveErrorMessage(
-						this.clineMessages[lastApiReqIndex].ts.toString(),
-						this.taskId,
-						errorMessage,
-					)
-				} catch (saveError) {
-					console.error("Failed to save error message to database:", saveError)
-				}
-			}
-
 			// kilocode_change start
 			// Check for payment required error from KiloCode provider
 			if ((error as any).status === 402 && apiConfiguration?.apiProvider === "kilocode") {
