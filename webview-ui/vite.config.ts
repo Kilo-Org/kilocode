@@ -72,7 +72,7 @@ export default defineConfig(({ mode }) => {
 		"process.env.VSCODE_TEXTMATE_DEBUG": JSON.stringify(process.env.VSCODE_TEXTMATE_DEBUG),
 		"process.env.PKG_NAME": JSON.stringify(pkg.name),
 		"process.env.PKG_VERSION": JSON.stringify(pkg.version),
-		"process.env.PKG_BUILD_NUMBER": JSON.stringify(pkg.buildNumber),
+		//"process.env.PKG_BUILD_NUMBER": JSON.stringify(pkg.buildNumber), // 移除此行，buildNumber将通过模块导入实时更新
 		"process.env.PKG_OUTPUT_CHANNEL": JSON.stringify("Kilo-Code"),
 		...(gitSha ? { "process.env.PKG_SHA": JSON.stringify(gitSha) } : {}),
 	}

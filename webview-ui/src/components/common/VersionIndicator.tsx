@@ -1,6 +1,7 @@
 import React from "react"
 import { useTranslation } from "react-i18next"
 import { Package } from "@roo/package"
+import { buildNumber } from "@/utils/buildInfo"
 
 interface VersionIndicatorProps {
 	onClick: () => void
@@ -15,8 +16,8 @@ const getDetailedVersion = () => {
 	const day = String(today.getDate()).padStart(2, "0")
 	const dateStr = `${year}${month}${day}`
 
-	// 使用Package.buildNumber作为流水号
-	const serialNumber = Package.buildNumber || "001"
+	// 使用buildNumber作为流水号
+	const serialNumber = buildNumber || "001"
 
 	return `${Package.version} (${dateStr}.${serialNumber})`
 }

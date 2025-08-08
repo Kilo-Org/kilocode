@@ -44,6 +44,27 @@
 			},
 			"resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
 			"presentation": { "hidden": false, "group": "tasks", "order": 1 }
+		},
+		{
+			"name": "Run Extension (Full Build)",
+			"type": "extensionHost",
+			"request": "launch",
+			"runtimeExecutable": "${execPath}",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceFolder}/src",
+				"--disable-extensions",
+				//"${workspaceFolder}/launch"
+				"/Users/chenfengqing/1-share-disk/disk/e/WEDev/WeDev/demo/cfqlilei-git/cline"
+			],
+			"sourceMaps": true,
+			"outFiles": ["${workspaceFolder}/dist/**/*.js"],
+			"preLaunchTask": "full-build-and-debug",
+			"env": {
+				"NODE_ENV": "development",
+				"VSCODE_DEBUG_MODE": "true"
+			},
+			"resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
+			"presentation": { "hidden": false, "group": "tasks", "order": 1 }
 		}
 	]
 }

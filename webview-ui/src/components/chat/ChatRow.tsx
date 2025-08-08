@@ -133,14 +133,17 @@ export const ChatRowContent = ({
 }: ChatRowContentProps) => {
 	const { t } = useTranslation()
 	const { mcpServers, alwaysAllowMcp, currentCheckpoint } = useExtensionState()
+	const { copyWithFeedback } = useCopyToClipboard()
 	const [reasoningCollapsed, setReasoningCollapsed] = useState(true)
 	const [isDiffErrorExpanded, setIsDiffErrorExpanded] = useState(false)
+	const [showDetailedError, setShowDetailedError] = useState(false) // kilocode_change: 添加详细错误信息显示状态
+	const [showRequestInfo, setShowRequestInfo] = useState(false) // kilocode_change: 添加显示请求信息状态
+	const [showResponseInfo, setShowResponseInfo] = useState(false) // kilocode_change: 添加显示返回信息状态
 	const [showCopySuccess, setShowCopySuccess] = useState(false)
 	const [isEditing, _setIsEditing] = useState(false) // kilocode_change
 	// const [editedContent, setEditedContent] = useState("") // kilocode_change
 	// const [editMode, setEditMode] = useState<Mode>(mode || "code") // kilocode_change
 	const [_editImages, setEditImages] = useState<string[]>([]) // kilocode_change
-	const { copyWithFeedback } = useCopyToClipboard()
 
 	// Handle message events for image selection during edit mode
 	useEffect(() => {
@@ -1047,6 +1050,28 @@ export const ChatRowContent = ({
 										${Number(cost || 0)?.toFixed(4)}
 									</VSCodeBadge>
 								</div>
+								{/* kilocode_change start: 添加显示请求和返回信息的按钮 */}
+								<div style={{ display: "flex", alignItems: "center", gap: "4px", marginRight: "8px" }}>
+									<VSCodeButton
+										appearance="icon"
+										onClick={(e) => {
+											e.stopPropagation()
+											setShowRequestInfo(!showRequestInfo)
+										}}
+										title="显示请求信息">
+										<span className="codicon codicon-arrow-up"></span>
+									</VSCodeButton>
+									<VSCodeButton
+										appearance="icon"
+										onClick={(e) => {
+											e.stopPropagation()
+											setShowResponseInfo(!showResponseInfo)
+										}}
+										title="显示返回信息">
+										<span className="codicon codicon-arrow-down"></span>
+									</VSCodeButton>
+								</div>
+								{/* kilocode_change end */}
 								<span className={`codicon codicon-chevron-${isExpanded ? "up" : "down"}`}></span>
 							</div>
 							{(((cost === null || cost === undefined) && apiRequestFailedMessage) ||
@@ -1068,6 +1093,190 @@ export const ChatRowContent = ({
 											</>
 										)}
 									</p>
+									{/* kilocode_change start: 添加显示详细错误信息的按钮 */}
+									{apiRequestFailedMessage && (
+										<div style={{ marginTop: "8px" }}>
+											<VSCodeButton
+												appearance="secondary"
+												onClick={() => setShowDetailedError(!showDetailedError)}>
+												<span
+													className={`codicon codicon-chevron-${showDetailedError ? "up" : "down"}`}
+													style={{ marginRight: "4px" }}></span>
+												显示详细错误信息
+											</VSCodeButton>
+										</div>
+									)}
+									{/* 显示详细错误信息 */}
+									{showDetailedError && apiRequestFailedMessage && (
+										<div
+											style={{
+												marginTop: "8px",
+												padding: "12px",
+												backgroundColor: "var(--vscode-editor-background)",
+												border: "1px solid var(--vscode-editorGroup-border)",
+												borderRadius: "4px",
+												fontFamily: "var(--vscode-editor-font-family)",
+												fontSize: "var(--vscode-editor-font-size)",
+												whiteSpace: "pre-wrap",
+												wordBreak: "break-word",
+												overflowWrap: "anywhere",
+												maxHeight: "300px",
+												overflow: "auto",
+											}}>
+											<div
+												style={{
+													display: "flex",
+													justifyContent: "space-between",
+													alignItems: "center",
+													marginBottom: "8px",
+												}}>
+												<span
+													style={{
+														fontWeight: "bold",
+														color: "var(--vscode-errorForeground)",
+													}}>
+													详细错误信息:
+												</span>
+												<VSCodeButton
+													appearance="icon"
+													onClick={() => copyWithFeedback(apiRequestFailedMessage)}
+													title="复制错误信息">
+													<span className="codicon codicon-copy"></span>
+												</VSCodeButton>
+											</div>
+											<div style={{ color: "var(--vscode-errorForeground)" }}>
+												{apiRequestFailedMessage}
+											</div>
+										</div>
+									)}
+									{/* 显示请求信息 */}
+									{showRequestInfo &&
+										message.text &&
+										(() => {
+											const requestData = safeJsonParse<any>(message.text)?.request
+											return requestData ? (
+												<div
+													style={{
+														marginTop: "8px",
+														padding: "12px",
+														backgroundColor: "var(--vscode-editor-background)",
+														border: "1px solid var(--vscode-editorGroup-border)",
+														borderRadius: "4px",
+														fontFamily: "var(--vscode-editor-font-family)",
+														fontSize: "var(--vscode-editor-font-size)",
+														whiteSpace: "pre-wrap",
+														wordBreak: "break-word",
+														overflowWrap: "anywhere",
+														maxHeight: "300px",
+														overflow: "auto",
+													}}>
+													<div
+														style={{
+															display: "flex",
+															justifyContent: "space-between",
+															alignItems: "center",
+															marginBottom: "8px",
+														}}>
+														<span
+															style={{
+																fontWeight: "bold",
+																color: "var(--vscode-foreground)",
+															}}>
+															请求信息:
+														</span>
+														<VSCodeButton
+															appearance="icon"
+															onClick={() =>
+																copyWithFeedback(JSON.stringify(requestData, null, 2))
+															}
+															title="复制请求信息">
+															<span className="codicon codicon-copy"></span>
+														</VSCodeButton>
+													</div>
+													<div style={{ color: "var(--vscode-foreground)" }}>
+														{JSON.stringify(requestData, null, 2)}
+													</div>
+												</div>
+											) : null
+										})()}
+									{/* 显示返回信息 */}
+									{showResponseInfo &&
+										(() => {
+											// 尝试从不同来源获取响应信息
+											const responseData =
+												apiRequestFailedMessage ||
+												(message.text && safeJsonParse<any>(message.text)?.response) ||
+												(message.text && safeJsonParse<any>(message.text)?.error)
+											return responseData ? (
+												<div
+													style={{
+														marginTop: "8px",
+														padding: "12px",
+														backgroundColor: "var(--vscode-editor-background)",
+														border: "1px solid var(--vscode-editorGroup-border)",
+														borderRadius: "4px",
+														fontFamily: "var(--vscode-editor-font-family)",
+														fontSize: "var(--vscode-editor-font-size)",
+														whiteSpace: "pre-wrap",
+														wordBreak: "break-word",
+														overflowWrap: "anywhere",
+														maxHeight: "300px",
+														overflow: "auto",
+													}}>
+													<div
+														style={{
+															display: "flex",
+															justifyContent: "space-between",
+															alignItems: "center",
+															marginBottom: "8px",
+														}}>
+														<span
+															style={{
+																fontWeight: "bold",
+																color: "var(--vscode-foreground)",
+															}}>
+															返回信息:
+														</span>
+														<VSCodeButton
+															appearance="icon"
+															onClick={() =>
+																copyWithFeedback(
+																	typeof responseData === "string"
+																		? responseData
+																		: JSON.stringify(responseData, null, 2),
+																)
+															}
+															title="复制返回信息">
+															<span className="codicon codicon-copy"></span>
+														</VSCodeButton>
+													</div>
+													<div
+														style={{
+															color: apiRequestFailedMessage
+																? "var(--vscode-errorForeground)"
+																: "var(--vscode-foreground)",
+														}}>
+														{typeof responseData === "string"
+															? responseData
+															: JSON.stringify(responseData, null, 2)}
+													</div>
+												</div>
+											) : (
+												<div
+													style={{
+														marginTop: "8px",
+														padding: "12px",
+														backgroundColor: "var(--vscode-editor-background)",
+														border: "1px solid var(--vscode-editorGroup-border)",
+														borderRadius: "4px",
+														color: "var(--vscode-descriptionForeground)",
+														fontStyle: "italic",
+													}}>
+													暂无返回信息
+												</div>
+											)
+										})()}
+									{/* kilocode_change end */}
 								</>
 							)}
 

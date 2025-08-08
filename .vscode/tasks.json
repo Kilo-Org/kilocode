@@ -130,6 +130,46 @@
 				"clear": false
 			},
 			"problemMatcher": []
+		},
+		{
+			"label": "build:webview-ui",
+			"type": "shell",
+			"command": "pnpm -C webview-ui run build",
+			"group": "build",
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"clear": true,
+				"showReuseMessage": false
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "build:extension-bundle",
+			"type": "shell",
+			"command": "pnpm -C src bundle",
+			"group": "build",
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"clear": true,
+				"showReuseMessage": false
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "full-build-and-debug",
+			"dependsOn": ["build:webview-ui", "build:extension-bundle"],
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			},
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"clear": true,
+				"showReuseMessage": false
+			}
 		}
 	]
 }

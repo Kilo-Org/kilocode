@@ -6,6 +6,8 @@ import { Info, Download, Upload, TriangleAlert } from "lucide-react"
 import { VSCodeCheckbox, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 
 import { Package } from "@roo/package"
+import { buildNumber } from "@/utils/buildInfo"
+import { TelemetrySetting } from "@roo/TelemetrySetting"
 
 // 生成详细版本号格式：version (YYYYMMDD.001)
 const getDetailedVersion = () => {
@@ -15,12 +17,11 @@ const getDetailedVersion = () => {
 	const day = String(today.getDate()).padStart(2, "0")
 	const dateStr = `${year}${month}${day}`
 
-	// 使用Package.buildNumber作为流水号
-	const serialNumber = Package.buildNumber || "001"
+	// 使用buildNumber作为流水号
+	const serialNumber = buildNumber || "001"
 
 	return `${Package.version} (${dateStr}.${serialNumber})`
 }
-import { TelemetrySetting } from "@roo/TelemetrySetting"
 
 import { vscode } from "@/utils/vscode"
 import { cn } from "@/lib/utils"
