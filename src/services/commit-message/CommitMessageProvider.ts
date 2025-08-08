@@ -188,6 +188,9 @@ ${chunkSummaries.join("\n\n")}
 ## Instructions
 Based on the above chunk analyses, generate a single, cohesive conventional commit message that best represents the overall changes. Focus on the most significant change while ensuring the message follows conventional commit format.`
 
+		// 🚀 Log the combined context for debugging
+		console.log("🚀 Combined Context from Multiple Chunks:", combinedContext)
+
 		return await this.callAIForCommitMessage(combinedContext)
 	}
 
@@ -225,7 +228,13 @@ Based on the above chunk analyses, generate a single, cohesive conventional comm
 
 		const prompt = await this.buildCommitMessagePrompt(gitContextString, customSupportPrompts)
 
+		// 🚀 Log the commit message prompt for debugging
+		console.log("🚀 Commit Message Prompt:", prompt)
+
 		const response = await singleCompletionHandler(configToUse, prompt)
+
+		// 🚀 Log the AI response for debugging
+		console.log("🚀 Commit Message AI Response:", response)
 
 		return this.extractCommitMessage(response)
 	}

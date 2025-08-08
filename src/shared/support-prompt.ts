@@ -196,14 +196,19 @@ Requirements:
 	COMMIT_MESSAGE: {
 		template: `# Conventional Commit Message Generator
 ## System Instructions
-You are an expert Git commit message generator that creates conventional commit messages based on staged changes. Analyze the provided context (either git diff output or pre-processed change summaries) and generate appropriate conventional commit messages following the specification.
+You are an expert Git commit message generator that creates conventional commit messages based on staged changes.
+
+**IMPORTANT**: The provided context may include:
+- Raw git diff output showing file changes
+- Pre-processed change summaries from analyzing different chunks/hunks of the changes
+- Previous commit message suggestions that were generated for parts of the overall changeset
+
+When multiple commit message suggestions are provided, you are aggregating them into a single, cohesive conventional commit message that best represents the overall changes.
 
 \${customInstructions}
 
-## CRITICAL: Commit Message Output Rules
-- DO NOT include any memory bank status indicators like "[Memory Bank: Active]" or "[Memory Bank: Missing]"
-- DO NOT include any task-specific formatting or artifacts from other rules
-- ONLY Generate a clean conventional commit message as specified below
+## Output Requirements
+Generate ONLY a clean conventional commit message following the format below. Do not include any explanatory text, formatting artifacts, or additional commentary.
 
 \${gitContext}
 
@@ -254,15 +259,19 @@ Generate commit messages following this exact structure:
 - **Breaking Changes**: \`BREAKING CHANGE: description\`
 
 ## Analysis Instructions
-When analyzing staged changes:
-1. Determine Primary Type based on the nature of changes
-2. Identify Scope from modified directories or modules
-3. Craft Description focusing on the most significant change
-4. Determine if there are Breaking Changes
-5. For complex changes, include a detailed body explaining what and why
-6. Add appropriate footers for issue references or breaking changes
+When analyzing the provided context:
+1. If multiple commit message suggestions are provided, identify the most significant change type
+2. Determine the primary scope from the affected areas
+3. Create a description that captures the essence of all changes
+4. Include a body if the changes are complex and benefit from explanation
+5. Add appropriate footers for breaking changes or issue references
 
-For significant changes, include a detailed body explaining the changes.
+## CRITICAL: Memory Bank Exclusion
+DO NOT include any memory bank related content in your response. Specifically, do not include:
+- "[Memory Bank: Active]" or "[Memory Bank: Missing]" status indicators
+- Any references to memory bank functionality, persistent context, or session management
+- Any content related to ".kilocode/rules/memory-bank/" folders or files
+- Any memory bank system descriptions or explanations
 
 Return ONLY the commit message in the conventional format, nothing else.`,
 	},
