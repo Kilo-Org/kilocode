@@ -2,8 +2,8 @@ import * as esbuild from "esbuild"
 import * as fs from "fs"
 import * as path from "path"
 import { fileURLToPath } from "url"
-import process from "node:process"
-import * as console from "node:console"
+import process from "process"
+import * as console from "console"
 
 import { copyPaths, copyWasms, copyLocales, setupLocaleWatcher } from "@roo-code/build"
 
@@ -43,6 +43,7 @@ async function main() {
 	 * @type {import('esbuild').Plugin[]}
 	 */
 	const plugins = [
+
 		{
 			name: "copyFiles",
 			setup(build) {
@@ -103,7 +104,52 @@ async function main() {
 		plugins,
 		entryPoints: ["extension.ts"],
 		outfile: "dist/extension.js",
-		external: ["vscode"],
+		external: [
+			"vscode",
+			"node:*",
+			"node:fs",
+			"node:path",
+			"node:crypto",
+			"node:http",
+			"node:https",
+			"node:stream",
+			"node:buffer",
+			"node:util",
+			"node:events",
+			"node:process",
+			"node:os",
+			"node:child_process",
+			"node:readline",
+			"node:assert",
+			"node:net",
+			"node:tls",
+			"node:querystring",
+			"node:url",
+			"node:zlib",
+			"node:perf_hooks",
+			"node:worker_threads",
+			"node:async_hooks",
+			"node:console",
+			"node:dns",
+			"node:timers/promises",
+			"node:fs/promises",
+			"node:stream/promises",
+			"node:stream/web",
+			"node:string_decoder",
+			"node:tty",
+			"node:v8",
+			"node:sqlite",
+			"node:util/types",
+			"node:diagnostics_channel",
+			"node:http2",
+			// 外部化可能有问题的依赖项
+			"node-ipc",
+			"sqlite3",
+			"puppeteer-core",
+			"puppeteer-chromium-resolver",
+			"say",
+			"sound-play"
+		],
 	}
 
 	/**

@@ -1055,6 +1055,7 @@ export const ChatRowContent = ({
 									<VSCodeButton
 										appearance="icon"
 										onClick={(e) => {
+											console.log("Request info button clicked, current state:", showRequestInfo)
 											e.stopPropagation()
 											setShowRequestInfo(!showRequestInfo)
 										}}
@@ -1064,6 +1065,10 @@ export const ChatRowContent = ({
 									<VSCodeButton
 										appearance="icon"
 										onClick={(e) => {
+											console.log(
+												"Response info button clicked, current state:",
+												showResponseInfo,
+											)
 											e.stopPropagation()
 											setShowResponseInfo(!showResponseInfo)
 										}}

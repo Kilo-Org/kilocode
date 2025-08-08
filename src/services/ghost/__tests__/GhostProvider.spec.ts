@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest"
-import * as fs from "node:fs"
-import * as path from "node:path"
+import * as fs from "fs"
+import * as path from "path"
 import { MockWorkspace } from "./MockWorkspace"
 import * as vscode from "vscode"
 import { GhostStrategy } from "../GhostStrategy"

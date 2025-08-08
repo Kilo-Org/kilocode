@@ -16,7 +16,7 @@ const mockWriteFile = vi.fn().mockResolvedValue(undefined)
 const mockUnlink = vi.fn().mockResolvedValue(undefined)
 const mockReadFile = vi.fn().mockResolvedValue("mocked system prompt content")
 
-vi.mock("node:fs/promises", async (importOriginal) => {
+vi.mock("fs/promises", async (importOriginal) => {
 	const actual = (await importOriginal()) as any
 	return {
 		...actual,
@@ -34,8 +34,8 @@ vi.mock("node:fs/promises", async (importOriginal) => {
 // Mock crypto for UUID generation
 const mockRandomUUID = vi.fn(() => "3af3dd36-2332-43a2-9d57-41af7e4c9453")
 
-vi.mock("node:crypto", async () => {
-	const actual = await vi.importActual("node:crypto")
+vi.mock("crypto", async () => {
+	const actual = await vi.importActual("crypto")
 	return {
 		...actual,
 		randomUUID: mockRandomUUID,
@@ -45,8 +45,8 @@ vi.mock("node:crypto", async () => {
 // Mock path module
 const mockPathJoin = vi.fn((dir: string, filename: string) => `${dir}/${filename}`)
 
-vi.mock("node:path", async () => {
-	const actual = await vi.importActual("node:path")
+vi.mock("path", async () => {
+	const actual = await vi.importActual("path")
 	return {
 		...actual,
 		join: mockPathJoin,

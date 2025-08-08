@@ -1,45 +1,46 @@
 #!/bin/bash
 
-echo "🔍 Debugging Kilo Code Extension Commands"
-echo "========================================"
+# Kilo Code Extension Debug Script
+# This script compiles the extension and launches it in Trae for debugging
 
-# 检查扩展是否安装
-echo "📦 Checking installed extensions..."
-trae --list-extensions --show-versions | grep -i kilo
+set -e  # Exit on any error
 
-echo ""
-echo "🔧 Testing command availability..."
+echo "🔧 Starting Kilo Code extension debug process..."
 
-# 尝试获取所有可用命令
-echo "Getting all available commands..."
-trae --help | grep -i command
+# Get the script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+echo "📁 Working directory: $SCRIPT_DIR"
 
-echo ""
-echo "🎯 Testing specific command execution..."
+# Change to the project root
+cd "$SCRIPT_DIR"
 
-# 创建一个简单的测试文件来触发扩展激活
-echo "console.log('test');" > test-activation.js
+# Step 1: Clean and rebuild the project
+echo "🧹 Cleaning and rebuilding the project..."
+pnpm run bundle
 
-echo "📝 Created test file to trigger extension activation"
-echo "Now opening Trae with the test file..."
+if [ $? -ne 0 ]; then
+    echo "❌ Build failed! Please check the errors above."
+    exit 1
+fi
 
-# 打开文件以触发扩展激活
-trae test-activation.js &
-TRAE_PID=$!
+echo "✅ Build completed successfully!"
 
-echo "🚀 Trae started with PID: $TRAE_PID"
-echo "Waiting 5 seconds for extension to activate..."
-sleep 5
+# Step 2: Check if extension.js exists and is recent
+EXTENSION_JS="$SCRIPT_DIR/src/dist/extension.js"
+if [ ! -f "$EXTENSION_JS" ]; then
+    echo "❌ extension.js not found at $EXTENSION_JS"
+    exit 1
+fi
 
-echo "✅ Extension should now be activated"
-echo "📋 Manual test steps:"
-echo "1. In Trae, press Cmd+Shift+P to open Command Palette"
-echo "2. Type 'kilo-code.settingsButtonClicked'"
-echo "3. Check if the command appears in the list"
-echo "4. Execute the command and verify it works"
+echo "📦 Extension bundle found: $EXTENSION_JS"
+echo "📅 Bundle timestamp: $(stat -f "%Sm" "$EXTENSION_JS")"
 
-echo ""
-echo "🧹 Cleaning up..."
-rm -f test-activation.js
+# Step 3: Launch Trae with the extension
+echo "🚀 Launching Trae with Kilo Code extension..."
+echo "📍 Extension path: $SCRIPT_DIR/src"
 
-echo "✨ Debug script completed"
+# Launch Trae in extension development mode
+code --extensionDevelopmentPath="$SCRIPT_DIR/src" --new-window --verbose
+
+echo "🎉 Trae launched! Check the new window for the Kilo Code extension."
+echo "💡 If you encounter issues, check the Developer Console (Help > Toggle Developer Tools)"

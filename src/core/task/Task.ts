@@ -99,6 +99,7 @@ import { ensureLocalKilorulesDirExists } from "../context/instructions/kilo-rule
 import { restoreTodoListForTask } from "../tools/updateTodoListTool"
 import { reportExcessiveRecursion, yieldPromise } from "../kilocode"
 import { filterErrorMessages } from "../../shared/filterErrorMessages"
+import { ApiDataStorage } from "../../services/api-data-storage"
 
 const MAX_EXPONENTIAL_BACKOFF_SECONDS = 600 // 10 minutes
 
@@ -232,6 +233,9 @@ export class Task extends EventEmitter<TaskEvents> {
 	// Computer User
 	browserSession: BrowserSession
 
+	// API Data Storage
+	apiDataStorage: ApiDataStorage
+
 	// Editing
 	diffViewProvider: DiffViewProvider
 	diffStrategy?: DiffStrategy
@@ -320,11 +324,17 @@ export class Task extends EventEmitter<TaskEvents> {
 
 		this.urlContentFetcher = new UrlContentFetcher(provider.context)
 		this.browserSession = new BrowserSession(provider.context)
+		this.globalStoragePath = provider.context.globalStorageUri.fsPath
+		this.apiDataStorage = new ApiDataStorage(provider.context)
+
+		// Initialize ApiDataStorage asynchronously
+		this.apiDataStorage.initialize().catch((error) => {
+			console.error("Failed to initialize ApiDataStorage:", error)
+		})
 		this.diffEnabled = enableDiff
 		this.fuzzyMatchThreshold = fuzzyMatchThreshold
 		this.consecutiveMistakeLimit = consecutiveMistakeLimit ?? DEFAULT_CONSECUTIVE_MISTAKE_LIMIT
 		this.providerRef = new WeakRef(provider)
-		this.globalStoragePath = provider.context.globalStorageUri.fsPath
 		this.diffViewProvider = new DiffViewProvider(this.cwd, this)
 		this.enableCheckpoints = enableCheckpoints
 
@@ -1265,6 +1275,12 @@ export class Task extends EventEmitter<TaskEvents> {
 		}
 
 		try {
+			this.apiDataStorage.close()
+		} catch (error) {
+			console.error("Error closing API data storage:", error)
+		}
+
+		try {
 			// If we're not streaming then `abortStream` won't be called.
 			if (this.isStreaming && this.diffViewProvider.isEditing) {
 				this.diffViewProvider.revertChanges().catch(console.error)
@@ -1418,7 +1434,7 @@ export class Task extends EventEmitter<TaskEvents> {
 		const modelId = getModelId(this.apiConfiguration)
 		const apiProtocol = getApiProtocol(this.apiConfiguration.apiProvider, modelId)
 
-		await this.say(
+		const apiReqStartedMessage = await this.say(
 			"api_req_started",
 			JSON.stringify({
 				request:
@@ -1426,6 +1442,23 @@ export class Task extends EventEmitter<TaskEvents> {
 				apiProtocol,
 			}),
 		)
+
+		// Save API request data to database
+		try {
+			const requestContent = userContent.map((block) => formatContentBlockToMarkdown(block)).join("\n\n")
+			const lastMessage = this.clineMessages[this.clineMessages.length - 1]
+			if (lastMessage && lastMessage.ts) {
+				await this.apiDataStorage.saveRequestData(lastMessage.ts.toString(), this.taskId, {
+					content: requestContent,
+					timestamp: new Date().toISOString(),
+					apiProtocol,
+					provider: this.apiConfiguration.apiProvider,
+					model: getModelId(this.apiConfiguration),
+				})
+			}
+		} catch (error) {
+			console.error("Failed to save API request data:", error)
+		}
 
 		const {
 			showRooIgnoredFiles = true,
@@ -1501,25 +1534,43 @@ export class Task extends EventEmitter<TaskEvents> {
 				// kilocode_change end
 
 				const existingData = JSON.parse(this.clineMessages[lastApiReqIndex].text || "{}")
+				const calculatedCost =
+					totalCost ??
+					calculateApiCostAnthropic(
+						this.api.getModel().info,
+						inputTokens,
+						outputTokens,
+						cacheWriteTokens,
+						cacheReadTokens,
+					)
+
 				this.clineMessages[lastApiReqIndex].text = JSON.stringify({
 					...existingData,
 					tokensIn: inputTokens,
 					tokensOut: outputTokens,
 					cacheWrites: cacheWriteTokens,
 					cacheReads: cacheReadTokens,
-					cost:
-						totalCost ??
-						calculateApiCostAnthropic(
-							this.api.getModel().info,
-							inputTokens,
-							outputTokens,
-							cacheWriteTokens,
-							cacheReadTokens,
-						),
+					cost: calculatedCost,
 					usageMissing, // kilocode_change
 					cancelReason,
 					streamingFailedMessage,
 				} satisfies ClineApiReqInfo)
+
+				// Save response data to database
+				try {
+					this.apiDataStorage.saveResponseData(this.clineMessages[lastApiReqIndex].ts.toString(), {
+						tokensIn: inputTokens,
+						tokensOut: outputTokens,
+						cacheWrites: cacheWriteTokens,
+						cacheReads: cacheReadTokens,
+						cost: calculatedCost,
+						usageMissing,
+						cancelReason,
+						streamingFailedMessage,
+					})
+				} catch (error) {
+					console.error("Failed to save response data to database:", error)
+				}
 			}
 
 			const abortStream = async (cancelReason: ClineApiReqCancelReason, streamingFailedMessage?: string) => {

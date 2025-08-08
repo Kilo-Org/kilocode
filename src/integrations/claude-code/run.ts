@@ -6,9 +6,9 @@ import readline from "readline"
 import { CLAUDE_CODE_DEFAULT_MAX_OUTPUT_TOKENS } from "@roo-code/types"
 import * as os from "os"
 // kilocode_change start
-import path from "node:path"
-import crypto from "node:crypto"
-import fs from "node:fs/promises"
+import path from "path"
+import crypto from "crypto"
+import fs from "fs/promises"
 
 export const MAX_SYSTEM_PROMPT_LENGTH = 65536
 // kilocode_change end
