@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import { safeJsonParse } from "@roo/safeJsonParse"
 import { useCopyToClipboard } from "@src/utils/clipboard"
@@ -27,6 +27,30 @@ export const ApiRequestModal: React.FC<ApiRequestModalProps> = ({ isOpen, onClos
 	const [loading, setLoading] = useState(false)
 	const [error, setError] = useState<string | null>(null)
 	const { copyWithFeedback, showCopyFeedback } = useCopyToClipboard()
+
+	// 拖动相关状态
+	const [position, setPosition] = useState({ x: 70, y: 100 })
+	const [isDragging, setIsDragging] = useState(false)
+	const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+	const modalRef = useRef<HTMLDivElement>(null)
+
+	// 计算初始尺寸：当前视口减去边距
+	const getInitialSize = () => {
+		const viewportWidth = window.innerWidth
+		const viewportHeight = window.innerHeight
+		return {
+			width: Math.max(300, viewportWidth - 140), // 左右边距70px * 2
+			height: Math.max(300, viewportHeight - 200), // 上下边距100px * 2
+		}
+	}
+
+	// 尺寸调整相关状态
+	const [size, setSize] = useState(getInitialSize)
+	const [isResizing, setIsResizing] = useState(false)
+	const [resizeDirection, setResizeDirection] = useState<"se" | "sw" | "ne" | "nw" | "n" | "s" | "e" | "w" | null>(
+		null,
+	)
+	const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0, posX: 0, posY: 0 })
 
 	// 尝试从ApiDataStorage获取完整数据
 	useEffect(() => {
@@ -65,6 +89,135 @@ export const ApiRequestModal: React.FC<ApiRequestModalProps> = ({ isOpen, onClos
 		return () => window.removeEventListener("message", handleMessage)
 	}, [])
 
+	// 拖动事件处理
+	const handleMouseDown = (e: React.MouseEvent) => {
+		setIsDragging(true)
+		setDragStart({
+			x: e.clientX - position.x,
+			y: e.clientY - position.y,
+		})
+	}
+
+	// 尺寸调整事件处理
+	const handleResizeMouseDown = (
+		e: React.MouseEvent,
+		direction: "se" | "sw" | "ne" | "nw" | "n" | "s" | "e" | "w",
+	) => {
+		e.stopPropagation()
+		setIsResizing(true)
+		setResizeDirection(direction)
+		setResizeStart({
+			x: e.clientX,
+			y: e.clientY,
+			width: size.width,
+			height: size.height,
+			posX: position.x,
+			posY: position.y,
+		})
+	}
+
+	useEffect(() => {
+		const handleMouseMove = (e: MouseEvent) => {
+			if (isDragging) {
+				const newX = e.clientX - dragStart.x
+				const newY = e.clientY - dragStart.y
+
+				// 限制拖动范围，确保窗口不会完全移出视口
+				const maxX = window.innerWidth - 200 // 至少保留200px可见
+				const maxY = window.innerHeight - 100 // 至少保留100px可见
+
+				setPosition({
+					x: Math.max(0, Math.min(newX, maxX)),
+					y: Math.max(0, Math.min(newY, maxY)),
+				})
+			}
+
+			if (isResizing && resizeDirection) {
+				const deltaX = e.clientX - resizeStart.x
+				const deltaY = e.clientY - resizeStart.y
+
+				let newWidth = resizeStart.width
+				let newHeight = resizeStart.height
+				let newX = resizeStart.posX
+				let newY = resizeStart.posY
+
+				switch (resizeDirection) {
+					case "se": // 右下角
+						newWidth = Math.max(300, Math.min(window.innerWidth - position.x, resizeStart.width + deltaX))
+						newHeight = Math.max(
+							300,
+							Math.min(window.innerHeight - position.y, resizeStart.height + deltaY),
+						)
+						break
+					case "sw": // 左下角
+						newWidth = Math.max(300, resizeStart.width - deltaX)
+						newHeight = Math.max(
+							300,
+							Math.min(window.innerHeight - position.y, resizeStart.height + deltaY),
+						)
+						newX = Math.min(resizeStart.posX + deltaX, resizeStart.posX + resizeStart.width - 300)
+						break
+					case "ne": // 右上角
+						newWidth = Math.max(300, Math.min(window.innerWidth - position.x, resizeStart.width + deltaX))
+						newHeight = Math.max(300, resizeStart.height - deltaY)
+						newY = Math.min(resizeStart.posY + deltaY, resizeStart.posY + resizeStart.height - 300)
+						break
+					case "nw": // 左上角
+						newWidth = Math.max(300, resizeStart.width - deltaX)
+						newHeight = Math.max(300, resizeStart.height - deltaY)
+						newX = Math.min(resizeStart.posX + deltaX, resizeStart.posX + resizeStart.width - 300)
+						newY = Math.min(resizeStart.posY + deltaY, resizeStart.posY + resizeStart.height - 300)
+						break
+					case "n": // 上边
+						newHeight = Math.max(300, resizeStart.height - deltaY)
+						newY = Math.min(resizeStart.posY + deltaY, resizeStart.posY + resizeStart.height - 300)
+						break
+					case "s": // 下边
+						newHeight = Math.max(
+							300,
+							Math.min(window.innerHeight - position.y, resizeStart.height + deltaY),
+						)
+						break
+					case "e": // 右边
+						newWidth = Math.max(300, Math.min(window.innerWidth - position.x, resizeStart.width + deltaX))
+						break
+					case "w": // 左边
+						newWidth = Math.max(300, resizeStart.width - deltaX)
+						newX = Math.min(resizeStart.posX + deltaX, resizeStart.posX + resizeStart.width - 300)
+						break
+				}
+
+				// 确保窗口不会超出视口边界
+				newX = Math.max(0, Math.min(newX, window.innerWidth - newWidth))
+				newY = Math.max(0, Math.min(newY, window.innerHeight - newHeight))
+
+				setSize({ width: newWidth, height: newHeight })
+				if (resizeDirection === "sw" || resizeDirection === "nw" || resizeDirection === "w") {
+					setPosition((prev) => ({ ...prev, x: newX }))
+				}
+				if (resizeDirection === "ne" || resizeDirection === "nw" || resizeDirection === "n") {
+					setPosition((prev) => ({ ...prev, y: newY }))
+				}
+			}
+		}
+
+		const handleMouseUp = () => {
+			setIsDragging(false)
+			setIsResizing(false)
+			setResizeDirection(null)
+		}
+
+		if (isDragging || isResizing) {
+			document.addEventListener("mousemove", handleMouseMove)
+			document.addEventListener("mouseup", handleMouseUp)
+
+			return () => {
+				document.removeEventListener("mousemove", handleMouseMove)
+				document.removeEventListener("mouseup", handleMouseUp)
+			}
+		}
+	}, [isDragging, isResizing, dragStart, resizeStart, position, size, resizeDirection])
+
 	if (!isOpen) return null
 
 	// 解析数据：优先使用ApiDataStorage的数据，回退到messageText
@@ -94,37 +247,39 @@ export const ApiRequestModal: React.FC<ApiRequestModalProps> = ({ isOpen, onClos
 		responseData = parsedData?.response
 	}
 
-	const handleBackdropClick = (e: React.MouseEvent) => {
-		if (e.target === e.currentTarget) {
-			onClose()
-		}
-	}
+	// 移除点击背景关闭功能，只能通过关闭按钮关闭
+	// const handleBackdropClick = (e: React.MouseEvent) => {
+	// 	if (e.target === e.currentTarget) {
+	// 		onClose()
+	// 	}
+	// }
 
 	return (
 		<div
 			style={{
 				position: "fixed",
-				top: "100px",
-				left: "70px",
-				right: "70px",
-				bottom: "100px",
+				top: 0,
+				left: 0,
+				right: 0,
+				bottom: 0,
 				backgroundColor: "rgba(0, 0, 0, 0.5)",
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "center",
-				zIndex: 1000,
-			}}
-			onClick={handleBackdropClick}>
+				zIndex: 999999,
+			}}>
 			<div
+				ref={modalRef}
 				style={{
+					position: "absolute",
+					top: `${position.y}px`,
+					left: `${position.x}px`,
+					width: `${size.width}px`,
+					height: `${size.height}px`,
 					backgroundColor: "var(--vscode-editor-background)",
 					border: "1px solid var(--vscode-editorGroup-border)",
 					borderRadius: "8px",
-					width: "100%",
-					height: "100%",
 					display: "flex",
 					flexDirection: "column",
 					overflow: "hidden",
+					boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
 				}}
 				onClick={(e) => e.stopPropagation()}>
 				{/* Header */}
@@ -135,9 +290,21 @@ export const ApiRequestModal: React.FC<ApiRequestModalProps> = ({ isOpen, onClos
 						alignItems: "center",
 						padding: "16px",
 						borderBottom: "1px solid var(--vscode-editorGroup-border)",
-					}}>
-					<h3 style={{ margin: 0, color: "var(--vscode-foreground)" }}>API 请求详情</h3>
-					<VSCodeButton appearance="icon" onClick={onClose} title="关闭">
+						cursor: isDragging ? "grabbing" : "grab",
+						userSelect: "none",
+					}}
+					onMouseDown={handleMouseDown}>
+					<h3 style={{ margin: 0, color: "var(--vscode-foreground)", pointerEvents: "none" }}>
+						API 请求详情
+					</h3>
+					<VSCodeButton
+						appearance="icon"
+						onClick={(e) => {
+							e.stopPropagation()
+							onClose()
+						}}
+						title="关闭"
+						style={{ pointerEvents: "auto" }}>
 						<span className="codicon codicon-close"></span>
 					</VSCodeButton>
 				</div>
@@ -319,6 +486,143 @@ export const ApiRequestModal: React.FC<ApiRequestModalProps> = ({ isOpen, onClos
 						</div>
 					)}
 				</div>
+
+				{/* Resize Handles - 四个角和四条边 */}
+				{/* 右下角 */}
+				<div
+					style={{
+						position: "absolute",
+						bottom: 0,
+						right: 0,
+						width: "20px",
+						height: "20px",
+						cursor: "nw-resize",
+						backgroundImage: `linear-gradient(-45deg, transparent 0%, transparent 30%, var(--vscode-editorGroup-border) 30%, var(--vscode-editorGroup-border) 35%, transparent 35%, transparent 65%, var(--vscode-editorGroup-border) 65%, var(--vscode-editorGroup-border) 70%, transparent 70%)`,
+						backgroundSize: "8px 8px",
+						backgroundRepeat: "repeat",
+						borderBottomRightRadius: "8px",
+						zIndex: 1001,
+					}}
+					onMouseDown={(e) => handleResizeMouseDown(e, "se")}
+					title="拖动调整窗口大小"
+				/>
+
+				{/* 左下角 */}
+				<div
+					style={{
+						position: "absolute",
+						bottom: 0,
+						left: 0,
+						width: "20px",
+						height: "20px",
+						cursor: "ne-resize",
+						backgroundImage: `linear-gradient(45deg, transparent 0%, transparent 30%, var(--vscode-editorGroup-border) 30%, var(--vscode-editorGroup-border) 35%, transparent 35%, transparent 65%, var(--vscode-editorGroup-border) 65%, var(--vscode-editorGroup-border) 70%, transparent 70%)`,
+						backgroundSize: "8px 8px",
+						backgroundRepeat: "repeat",
+						borderBottomLeftRadius: "8px",
+						zIndex: 1001,
+					}}
+					onMouseDown={(e) => handleResizeMouseDown(e, "sw")}
+					title="拖动调整窗口大小"
+				/>
+
+				{/* 右上角 */}
+				<div
+					style={{
+						position: "absolute",
+						top: 0,
+						right: 0,
+						width: "20px",
+						height: "20px",
+						cursor: "ne-resize",
+						backgroundImage: `linear-gradient(45deg, transparent 0%, transparent 30%, var(--vscode-editorGroup-border) 30%, var(--vscode-editorGroup-border) 35%, transparent 35%, transparent 65%, var(--vscode-editorGroup-border) 65%, var(--vscode-editorGroup-border) 70%, transparent 70%)`,
+						backgroundSize: "8px 8px",
+						backgroundRepeat: "repeat",
+						borderTopRightRadius: "8px",
+						zIndex: 1001,
+					}}
+					onMouseDown={(e) => handleResizeMouseDown(e, "ne")}
+					title="拖动调整窗口大小"
+				/>
+
+				{/* 左上角 */}
+				<div
+					style={{
+						position: "absolute",
+						top: 0,
+						left: 0,
+						width: "20px",
+						height: "20px",
+						cursor: "nw-resize",
+						backgroundImage: `linear-gradient(-45deg, transparent 0%, transparent 30%, var(--vscode-editorGroup-border) 30%, var(--vscode-editorGroup-border) 35%, transparent 35%, transparent 65%, var(--vscode-editorGroup-border) 65%, var(--vscode-editorGroup-border) 70%, transparent 70%)`,
+						backgroundSize: "8px 8px",
+						backgroundRepeat: "repeat",
+						borderTopLeftRadius: "8px",
+						zIndex: 1001,
+					}}
+					onMouseDown={(e) => handleResizeMouseDown(e, "nw")}
+					title="拖动调整窗口大小"
+				/>
+
+				{/* 上边 */}
+				<div
+					style={{
+						position: "absolute",
+						top: 0,
+						left: "20px",
+						right: "20px",
+						height: "4px",
+						cursor: "n-resize",
+						zIndex: 1001,
+					}}
+					onMouseDown={(e) => handleResizeMouseDown(e, "n")}
+					title="拖动调整窗口高度"
+				/>
+
+				{/* 下边 */}
+				<div
+					style={{
+						position: "absolute",
+						bottom: 0,
+						left: "20px",
+						right: "20px",
+						height: "4px",
+						cursor: "s-resize",
+						zIndex: 1001,
+					}}
+					onMouseDown={(e) => handleResizeMouseDown(e, "s")}
+					title="拖动调整窗口高度"
+				/>
+
+				{/* 左边 */}
+				<div
+					style={{
+						position: "absolute",
+						left: 0,
+						top: "20px",
+						bottom: "20px",
+						width: "4px",
+						cursor: "w-resize",
+						zIndex: 1001,
+					}}
+					onMouseDown={(e) => handleResizeMouseDown(e, "w")}
+					title="拖动调整窗口宽度"
+				/>
+
+				{/* 右边 */}
+				<div
+					style={{
+						position: "absolute",
+						right: 0,
+						top: "20px",
+						bottom: "20px",
+						width: "4px",
+						cursor: "e-resize",
+						zIndex: 1001,
+					}}
+					onMouseDown={(e) => handleResizeMouseDown(e, "e")}
+					title="拖动调整窗口宽度"
+				/>
 			</div>
 		</div>
 	)
