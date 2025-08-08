@@ -1,0 +1,487 @@
+/* ChatRow component styles */
+
+/* Header styles */
+.header-style {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 10px;
+	word-break: break-word;
+}
+
+/* Font weight styles */
+.font-weight-bold {
+	font-weight: bold;
+}
+
+/* Paragraph styles */
+.p-style {
+	margin: 0;
+	white-space: pre-wrap;
+	word-break: break-word;
+	overflow-wrap: anywhere;
+}
+
+/* Color styles */
+.color-normal {
+	color: var(--vscode-foreground);
+}
+
+.color-error {
+	color: var(--vscode-errorForeground);
+}
+
+.color-success {
+	color: var(--vscode-charts-green);
+}
+
+.color-warning {
+	color: var(--vscode-editorWarning-foreground);
+	margin-bottom: -1.5px;
+}
+
+.color-vscode-foreground {
+	color: var(--vscode-foreground);
+}
+
+/* Icon styles */
+.icon-margin-bottom {
+	margin-bottom: -1.5px;
+}
+
+.font-size-16 {
+	font-size: 16px;
+}
+
+/* Layout styles */
+.flex-grow-1 {
+	flex-grow: 1;
+}
+
+.flex-center {
+	display: flex;
+	align-items: center;
+}
+
+.flex-center-gap {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.flex-center-gap-4 {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.flex-center-gap-8 {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.flex-center-gap-10-grow {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-grow: 1;
+}
+
+/* Margin and padding styles */
+.margin-bottom-10 {
+	margin-bottom: 10px;
+}
+
+.margin-top-8 {
+	margin-top: 8px;
+}
+
+.margin-top-10 {
+	margin-top: 10px;
+}
+
+.margin-top-neg-10 {
+	margin-top: -10px;
+}
+
+.margin-right-4 {
+	margin-right: 4px;
+}
+
+.margin-right-8 {
+	margin-right: 8px;
+}
+
+.padding-top-10 {
+	padding-top: 10px;
+}
+
+.padding-top-10-bottom-15 {
+	padding-top: 10px;
+	padding-bottom: 15px;
+}
+
+.padding-12-16-bg-editor {
+	padding: 12px 16px;
+	background-color: var(--vscode-editor-background);
+}
+
+/* Font size styles */
+.font-size-13-5 {
+	font-size: 13.5px;
+	margin: 1px 0;
+}
+
+/* Subtasks completion styles */
+.subtasks-completion-header {
+	padding: 9px 10px 9px 14px;
+	background-color: var(--vscode-badge-background);
+	border-bottom: 1px solid var(--vscode-editorGroup-border);
+	font-weight: bold;
+	font-size: var(--vscode-font-size);
+	color: var(--vscode-badge-foreground);
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.subtasks-completion-content {
+	padding: 12px 16px;
+	background-color: var(--vscode-editor-background);
+}
+
+/* Width styles */
+.width-100 {
+	width: 100%;
+}
+
+/* Opacity styles */
+.opacity-conditional {
+	opacity: var(--chat-row-opacity, 1); /* Default to 1 if variable not set */
+}
+
+/* Text decoration styles */
+.text-underline {
+	color: inherit;
+	text-decoration: underline;
+}
+
+/* Cursor styles */
+.cursor-pointer {
+	cursor: pointer;
+}
+
+/* Word break styles */
+.word-break-word {
+	word-break: break-word;
+}
+
+/* Flex item styles */
+.flex-items-center {
+	display: flex;
+	align-items: center;
+}
+
+.flex-items-center-gap-10 {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.flex-items-center-gap-10-margin-bottom-10 {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 10px;
+	word-break: break-word;
+}
+
+/* New task styles */
+.new-task-container {
+	margin-top: 4px;
+	background-color: var(--vscode-badge-background);
+	border: 1px solid var(--vscode-badge-background);
+	border-radius: 4px 4px 0 0;
+	overflow: hidden;
+	margin-bottom: 2px;
+}
+
+.new-task-header {
+	padding: 9px 10px 9px 14px;
+	background-color: var(--vscode-badge-background);
+	border-bottom: 1px solid var(--vscode-editorGroup-border);
+	font-weight: bold;
+	font-size: var(--vscode-font-size);
+	color: var(--vscode-badge-foreground);
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+/* Finish task styles */
+.finish-task-container {
+	margin-top: 4px;
+	background-color: var(--vscode-editor-background);
+	border: 1px solid var(--vscode-badge-background);
+	border-radius: 4px;
+	overflow: hidden;
+	margin-bottom: 8px;
+}
+
+.finish-task-content {
+	padding: 12px 16px;
+	background-color: var(--vscode-editor-background);
+}
+
+/* Diff error styles */
+.diff-error-container {
+	margin-top: 0px;
+	overflow: hidden;
+	margin-bottom: 8px;
+}
+
+.diff-error-header {
+	font-weight: normal;
+	font-size: var(--vscode-font-size);
+	color: var(--vscode-editor-foreground);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	cursor: pointer;
+}
+
+.diff-error-header-expanded {
+	border-bottom: 1px solid var(--vscode-editorGroup-border);
+}
+
+.diff-error-header-content {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-grow: 1;
+}
+
+.diff-error-warning-icon {
+	color: var(--vscode-editorWarning-foreground);
+	opacity: 0.8;
+	font-size: 16px;
+	margin-bottom: -1.5px;
+}
+
+.diff-error-button-container {
+	display: flex;
+	align-items: center;
+}
+
+.diff-error-copy-button {
+	padding: 3px;
+	height: 24px;
+	margin-right: 4px;
+	color: var(--vscode-editor-foreground);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: transparent;
+}
+
+/* Icon container styles */
+.icon-container {
+	width: 16px;
+	height: 16px;
+	justify-content: center;
+}
+
+/* Flex grow styles */
+.flex-grow {
+	flex-grow: 1;
+}
+
+/* Flex container styles */
+.flex-container-gap-10 {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-grow: 1;
+}
+
+.flex-container-gap-4 {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	margin-right: 8px;
+}
+
+/* Additional margin styles */
+.margin-top-minus-10 {
+	margin-top: -10px;
+	width: 100%;
+}
+
+/* Additional color styles */
+.color-green {
+	color: var(--vscode-charts-green);
+	padding-top: 10px;
+}
+
+/* Additional padding styles */
+.padding-12-16 {
+	padding: 12px 16px;
+	background-color: var(--vscode-editor-background);
+}
+
+/* Flex grow styles */
+.flex-grow {
+	flex-grow: 1;
+}
+
+/* Font size styles */
+.font-size-13-5 {
+	font-size: 13.5px;
+	margin: 1px 0;
+}
+
+/* ChatRow component base styles */
+.chat-row-base {
+	padding: 10px 15px 10px 15px; /* px-[15px] py-[10px] pr-[6px] */
+	position: relative;
+}
+
+/* Dynamic color styles for icons */
+.color-normal {
+	color: var(--vscode-foreground);
+}
+
+.color-error {
+	color: var(--vscode-errorForeground);
+}
+
+.color-success {
+	color: var(--vscode-charts-green);
+}
+
+.color-cancelled {
+	color: var(--vscode-descriptionForeground);
+}
+
+/* Flexbox and layout styles */
+.flex-align-center-gap-10-grow {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-grow: 1;
+}
+
+.flex-align-center-gap-4-mr-8 {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	margin-right: 8px;
+}
+
+/* Margin and padding styles */
+.mt-8 {
+	margin-top: 8px;
+}
+
+.mr-4 {
+	margin-right: 4px;
+}
+
+.pt-10 {
+	padding-top: 10px;
+}
+
+.pb-15 {
+	padding-bottom: 15px;
+}
+
+/* Diff error content styles */
+.diff-error-content-padding {
+	padding: 8px;
+	background-color: var(--vscode-editor-background);
+	border-top: none;
+}
+
+/* Subtask result styles */
+.subtask-result-container {
+	margin-top: 0px;
+	background-color: var(--vscode-badge-background);
+	border: 1px solid var(--vscode-badge-background);
+	border-radius: 0 0 4px 4px;
+	overflow: hidden;
+	margin-bottom: 8px;
+}
+
+.subtask-result-header {
+	padding: 9px 10px 9px 14px;
+	background-color: var(--vscode-badge-background);
+	border-bottom: 1px solid var(--vscode-editorGroup-border);
+	font-weight: bold;
+	font-size: var(--vscode-font-size);
+	color: var(--vscode-badge-foreground);
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.subtask-result-content {
+	padding: 12px 16px;
+	background-color: var(--vscode-editor-background);
+}
+
+/* Detailed error styles */
+.detailed-error-container {
+	margin-top: 8px;
+	padding: 12px;
+	background-color: var(--vscode-editor-background);
+	border: 1px solid var(--vscode-editorGroup-border);
+	border-radius: 4px;
+	font-family: var(--vscode-editor-font-family);
+	font-size: var(--vscode-editor-font-size);
+	white-space: pre-wrap;
+	word-break: break-word;
+	overflow-wrap: anywhere;
+	max-height: 300px;
+	overflow: auto;
+}
+
+.detailed-error-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 8px;
+}
+
+.detailed-error-title {
+	font-weight: bold;
+	color: var(--vscode-errorForeground);
+}
+
+.detailed-error-message {
+	color: var(--vscode-errorForeground);
+}
+
+/* Condense icon style */
+.condense-icon-style {
+	color: var(--vscode-foreground);
+	margin-bottom: -1.5px;
+}
+
+/* Browser action error box */
+.browser-action-error-box {
+	color: var(--vscode-errorForeground);
+	font-family: monospace;
+	font-size: 12px;
+	padding: 8px;
+	background-color: var(--vscode-editor-background);
+	border: 1px solid var(--vscode-editorError-border);
+	border-radius: 4px;
+	margin-bottom: 8px;
+}
+
+/* User feedback diff container */
+.user-feedback-diff-container {
+	margin-top: -10px;
+	width: 100%;
+}

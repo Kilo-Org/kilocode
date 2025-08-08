@@ -1,0 +1,576 @@
+/* External styles to replace inline CSS */
+
+/* Display utilities */
+.display-inline {
+	display: inline;
+}
+
+.display-flex {
+	display: flex;
+}
+
+.display-none {
+	display: none;
+}
+
+.display-block {
+	display: block;
+}
+
+/* Flex utilities */
+.flex-1 {
+	flex: 1;
+}
+
+.flex-column {
+	flex-direction: column;
+}
+
+.flex-row {
+	flex-direction: row;
+}
+
+.align-center {
+	align-items: center;
+}
+
+.justify-center {
+	justify-content: center;
+}
+
+.justify-between {
+	justify-content: space-between;
+}
+
+.justify-end {
+	justify-content: flex-end;
+}
+
+.flex-shrink-0 {
+	flex-shrink: 0;
+}
+
+.flex-grow-1 {
+	flex-grow: 1;
+}
+
+/* Gap utilities */
+.gap-2 {
+	gap: 2px;
+}
+
+.gap-4 {
+	gap: 4px;
+}
+
+.gap-6 {
+	gap: 6px;
+}
+
+.gap-8 {
+	gap: 8px;
+}
+
+.gap-10 {
+	gap: 10px;
+}
+
+.gap-12 {
+	gap: 12px;
+}
+
+.gap-16 {
+	gap: 16px;
+}
+
+/* Margin utilities */
+.margin-0 {
+	margin: 0;
+}
+
+.margin-top-4 {
+	margin-top: 4px;
+}
+
+.margin-top-8 {
+	margin-top: 8px;
+}
+
+.margin-top-10 {
+	margin-top: 10px;
+}
+
+.margin-bottom-4 {
+	margin-bottom: 4px;
+}
+
+.margin-bottom-8 {
+	margin-bottom: 8px;
+}
+
+.margin-bottom-10 {
+	margin-bottom: 10px;
+}
+
+.margin-bottom-12 {
+	margin-bottom: 12px;
+}
+
+.margin-bottom-15 {
+	margin-bottom: 15px;
+}
+
+.margin-bottom-16 {
+	margin-bottom: 16px;
+}
+
+.margin-bottom-20 {
+	margin-bottom: 20px;
+}
+
+.margin-bottom-negative-10 {
+	margin-bottom: -10px;
+}
+
+.margin-bottom-negative-15 {
+	margin-bottom: -1.5px;
+}
+
+.margin-right-4 {
+	margin-right: 4px;
+}
+
+.margin-right-6 {
+	margin-right: 6px;
+}
+
+.margin-right-8 {
+	margin-right: 8px;
+}
+
+.margin-left-4 {
+	margin-left: 4px;
+}
+
+.margin-left-8 {
+	margin-left: 8px;
+}
+
+/* Padding utilities */
+.padding-0 {
+	padding: 0;
+}
+
+.padding-6 {
+	padding: 6px;
+}
+
+.padding-10 {
+	padding: 10px;
+}
+
+.padding-12 {
+	padding: 12px;
+}
+
+.padding-16 {
+	padding: 16px;
+}
+
+.padding-top-10 {
+	padding-top: 10px;
+}
+
+.padding-bottom-15 {
+	padding-bottom: 15px;
+}
+
+.padding-left-0 {
+	padding-left: 0;
+}
+
+/* Width and height utilities */
+.width-100 {
+	width: 100%;
+}
+
+.width-calc-100-minus-20 {
+	width: calc(100% - 20px);
+}
+
+.height-20 {
+	height: 20px;
+}
+
+.height-100 {
+	height: 100%;
+}
+
+.min-height-unset {
+	min-height: unset;
+}
+
+/* Font utilities */
+.font-weight-500 {
+	font-weight: 500;
+}
+
+.font-weight-bold {
+	font-weight: bold;
+}
+
+.font-size-11 {
+	font-size: 11px;
+}
+
+.font-size-12 {
+	font-size: 12px;
+}
+
+.font-size-13 {
+	font-size: 13px;
+}
+
+.font-size-14 {
+	font-size: 14px;
+}
+
+.font-size-16 {
+	font-size: 16px;
+}
+
+.font-size-18 {
+	font-size: 18px;
+}
+
+.font-size-80 {
+	font-size: 80px;
+}
+
+.font-size-vscode-editor {
+	font-size: var(--vscode-editor-font-size);
+}
+
+/* Line height utilities */
+.line-height-12 {
+	line-height: 1.2;
+}
+
+/* Color utilities */
+.color-inherit {
+	color: inherit;
+}
+
+.color-vscode-foreground {
+	color: var(--vscode-foreground);
+}
+
+.color-vscode-background {
+	color: var(--vscode-background);
+}
+
+.color-vscode-description {
+	color: var(--vscode-descriptionForeground);
+}
+
+.color-vscode-error {
+	color: var(--vscode-errorForeground);
+}
+
+.color-vscode-warning {
+	color: var(--vscode-editorWarning-foreground);
+}
+
+.color-vscode-success {
+	color: var(--vscode-charts-green);
+}
+
+.color-vscode-link {
+	color: var(--vscode-textLink-foreground);
+}
+
+.color-blue-400 {
+	color: #60a5fa;
+}
+
+.color-error {
+	color: var(--vscode-errorForeground);
+}
+
+.color-normal {
+	color: var(--vscode-foreground);
+}
+
+.color-success {
+	color: var(--vscode-charts-green);
+}
+
+.color-warning {
+	color: var(--vscode-editorWarning-foreground);
+}
+
+/* Background utilities */
+.bg-vscode-editor {
+	background-color: var(--vscode-editor-background);
+}
+
+.bg-vscode-textblock {
+	background-color: var(--vscode-textCodeBlock-background);
+}
+
+/* Border utilities */
+.border-left-2 {
+	border-left: 2px solid;
+}
+
+.border-radius-4 {
+	border-radius: 4px;
+}
+
+/* Position utilities */
+.position-relative {
+	position: relative;
+}
+
+.position-absolute {
+	position: absolute;
+}
+
+/* Transform utilities */
+.transform-scale-055 {
+	transform: scale(0.55);
+}
+
+.transform-origin-center {
+	transform-origin: center;
+}
+
+/* Overflow utilities */
+.overflow-auto {
+	overflow: auto;
+}
+
+.overflow-hidden {
+	overflow: hidden;
+}
+
+.overflow-x-auto {
+	overflow-x: auto;
+}
+
+/* Text utilities */
+.text-decoration-underline {
+	text-decoration: underline;
+}
+
+.text-align-left {
+	text-align: left;
+}
+
+.word-break-all {
+	word-break: break-all;
+}
+
+.word-break-word {
+	word-break: break-word;
+}
+
+.word-wrap-anywhere {
+	overflow-wrap: anywhere;
+}
+
+.word-wrap-break-word {
+	word-wrap: break-word;
+}
+
+/* List utilities */
+.list-style-none {
+	list-style: none;
+}
+
+/* Opacity utilities */
+.opacity-0 {
+	opacity: 0;
+}
+
+.opacity-08 {
+	opacity: 0.8;
+}
+
+.opacity-1 {
+	opacity: 1;
+}
+
+/* Cursor utilities */
+.cursor-pointer {
+	cursor: pointer;
+}
+
+/* Specific component styles */
+.api-modal-style {
+	/* This will be used for ApiRequestModal specific styling */
+}
+
+.icon-margin-bottom {
+	margin-bottom: -1.5px;
+}
+
+/* Header style utility */
+.header-style {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 10px;
+	word-break: break-word;
+}
+
+/* Paragraph style utility */
+.p-style {
+	margin: 0;
+	white-space: pre-wrap;
+	word-break: break-word;
+	overflow-wrap: anywhere;
+}
+
+/* Icon container styles */
+.icon-container-16 {
+	width: 16px;
+	height: 16px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+/* Font size utilities */
+.font-size-16 {
+	font-size: 16px;
+}
+
+.max-width-200 {
+	max-width: 200px;
+}
+
+.image-preview-container {
+	width: 128px;
+	height: 128px;
+	flex-shrink: 0;
+}
+
+.full-page-screenshot {
+	/* For full page screenshot styles */
+}
+
+/* Specific measurements */
+.width-14 {
+	width: 14px;
+}
+
+.height-14 {
+	height: 14px;
+}
+
+.margin-10-6-10-15 {
+	margin: 10px 6px 10px 15px;
+}
+
+.padding-10-0 {
+	padding: 10px 0;
+}
+
+.padding-12-16 {
+	padding: 12px 16px;
+}
+
+.padding-10-6-10-15 {
+	padding: 10px 6px 10px 15px;
+}
+
+.padding-20-20-5 {
+	padding: 20px 20px 5px;
+}
+
+.padding-0-10-10-10 {
+	padding: 0 10px 10px 10px;
+}
+
+.margin-0-10-10-10 {
+	margin: 0 10px 10px 10px;
+}
+
+/* Specific flex combinations */
+.flex-center {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.flex-column-gap-8 {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.flex-column-gap-10 {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.flex-column-gap-12 {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.flex-align-center-gap-4 {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.flex-align-center-gap-6 {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.flex-align-center-gap-8 {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.flex-align-center-gap-10 {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.flex-between-center {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+/* Top positioning */
+.top-100-percent {
+	top: 100%;
+}
+
+.left-0 {
+	left: 0;
+}
+
+/* Z-index utilities */
+.z-10 {
+	z-index: 10;
+}
+
+/* Sticky positioning */
+.sticky {
+	position: sticky;
+}
+
+.top-0 {
+	top: 0;
+}
