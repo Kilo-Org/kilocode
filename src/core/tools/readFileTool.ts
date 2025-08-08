@@ -94,7 +94,7 @@ export async function readFileTool(
 	const legacyEndLineStr: string | undefined = block.params.end_line
 
 	// Check if the current model supports images at the beginning
-	const modelInfo = cline.api.getModel().info
+	const modelInfo = (await cline.api.fetchModel()).info // kilocode_change: await
 	const supportsImages = modelInfo.supportsImages ?? false
 
 	// Handle partial message first
@@ -670,7 +670,8 @@ export async function readFileTool(
 		const allImages = [...feedbackImages, ...fileImageUrls]
 
 		// Re-check if the model supports images before including them, in case it changed during execution.
-		const finalModelSupportsImages = cline.api.getModel().info.supportsImages ?? false
+		// kilocode_change: await
+		const finalModelSupportsImages = (await cline.api.fetchModel()).info.supportsImages ?? false
 		const imagesToInclude = finalModelSupportsImages ? allImages : []
 
 		// Push the result with appropriate formatting

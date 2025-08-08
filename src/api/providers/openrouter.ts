@@ -197,7 +197,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		}
 	}
 
-	public async fetchModel() {
+	public override async /*kilocode_change: override*/ fetchModel() {
 		const [models, endpoints] = await Promise.all([
 			getModels({ provider: "openrouter" }),
 			getModelEndpoints({

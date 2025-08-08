@@ -55,7 +55,7 @@ export abstract class RouterProvider extends BaseProvider {
 		})
 	}
 
-	public async fetchModel() {
+	public override async /* kilocode_change: override */ fetchModel() {
 		this.models = await getModels({ provider: this.name, apiKey: this.client.apiKey, baseUrl: this.client.baseURL })
 		return this.getModel()
 	}

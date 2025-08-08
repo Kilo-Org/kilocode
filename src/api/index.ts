@@ -60,7 +60,9 @@ export interface ApiHandler {
 		metadata?: ApiHandlerCreateMessageMetadata,
 	): ApiStream
 
-	getModel(): { id: string; info: ModelInfo }
+	// getModel(): { id: string; info: ModelInfo } // kilocode_change
+
+	fetchModel(): Promise<{ id: string; info: ModelInfo }> // kilocode_change
 
 	/**
 	 * Counts tokens for content blocks

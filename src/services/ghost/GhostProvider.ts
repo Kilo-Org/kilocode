@@ -534,31 +534,31 @@ export class GhostProvider {
 		})
 	}
 
-	private getCurrentModelName(): string {
+	private async getCurrentModelName(): Promise<string> {
 		if (!this.model.loaded) {
 			return "loading..."
 		}
-		return this.model.getModelName() ?? "unknown"
+		return (await this.model.getModelName()) ?? "unknown"
 	}
 
 	private hasValidApiToken(): boolean {
 		return this.model.loaded && this.model.hasValidCredentials()
 	}
 
-	private updateCostTracking(cost: number) {
+	private async updateCostTracking(cost: number) {
 		this.lastCompletionCost = cost
 		this.sessionCost += cost
-		this.updateStatusBar()
+		await this.updateStatusBar()
 	}
 
-	private updateStatusBar() {
+	private async updateStatusBar() {
 		if (!this.statusBar) {
 			this.initializeStatusBar()
 		}
 
 		this.statusBar?.update({
 			enabled: true,
-			model: this.getCurrentModelName(),
+			model: await this.getCurrentModelName(),
 			hasValidToken: this.hasValidApiToken(),
 			totalSessionCost: this.sessionCost,
 			lastCompletionCost: this.lastCompletionCost,

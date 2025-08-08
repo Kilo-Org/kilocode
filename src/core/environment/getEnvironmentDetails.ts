@@ -210,23 +210,7 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 	// Add context tokens information.
 	const { contextTokens, totalCost } = getApiMetrics(cline.clineMessages)
 
-	// kilocode_change start
-	// Be sure to fetch the model information before we need it.
-	if (cline.api instanceof OpenRouterHandler || cline.api instanceof KilocodeOllamaHandler) {
-		try {
-			await cline.api.fetchModel()
-		} catch (e) {
-			TelemetryService.instance.captureException(e, { context: "getEnvironmentDetails" })
-			await cline.say(
-				"error",
-				t("kilocode:notLoggedInError", { error: e instanceof Error ? e.message : String(e) }),
-			)
-			return `<environment_details>\n${details.trim()}\n</environment_details>`
-		}
-	}
-	// kilocode_change end
-
-	const { id: modelId, info: modelInfo } = cline.api.getModel()
+	const { id: modelId, info: modelInfo } = await cline.api.fetchModel() // kilocode_change: await
 
 	details += `\n\n# Current Cost\n${totalCost !== null ? `$${totalCost.toFixed(2)}` : "(Not available)"}`
 

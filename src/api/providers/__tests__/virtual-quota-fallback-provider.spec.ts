@@ -456,13 +456,13 @@ describe("VirtualQuotaFallbackProvider", () => {
 			})
 		})
 
-		describe("getModel", () => {
-			it("should delegate to the active handler", () => {
+		describe("fetchModel", () => {
+			it("should delegate to the active handler", async () => {
 				const handler = new VirtualQuotaFallbackHandler({} as any)
 				const getModelMock = vitest.fn().mockReturnValue({ id: "test-model" })
 				;(handler as any).activeHandler = { getModel: getModelMock }
 
-				const result = handler.getModel()
+				const result = await handler.fetchModel()
 
 				expect(getModelMock).toHaveBeenCalled()
 				expect(result).toEqual({ id: "test-model" })
@@ -471,7 +471,7 @@ describe("VirtualQuotaFallbackProvider", () => {
 			it("should throw an error if no active handler", () => {
 				const handler = new VirtualQuotaFallbackHandler({} as any)
 				;(handler as any).activeHandler = undefined
-				expect(() => handler.getModel()).toThrow("No active handler configured")
+				expect(async () => await handler.fetchModel()).toThrow("No active handler configured")
 			})
 		})
 	})

@@ -25,7 +25,8 @@ export async function applyDiffToolLegacy(
 	const relPath: string | undefined = block.params.path
 	let diffContent: string | undefined = block.params.diff
 
-	if (diffContent && !cline.api.getModel().id.includes("claude")) {
+	// kilocode_change: await
+	if (diffContent && !(await cline.api.fetchModel()).id.includes("claude")) {
 		diffContent = unescapeHtmlEntities(diffContent)
 	}
 

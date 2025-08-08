@@ -5,12 +5,15 @@ import { ModelInfo } from "@roo-code/types"
 import { ApiHandler } from "../index"
 import { ApiStream } from "../transform/stream"
 import { countTokens } from "../../utils/countTokens"
+import { BaseProvider } from "./base-provider"
 
-export class CerebrasHandler implements ApiHandler {
+export class CerebrasHandler extends BaseProvider implements ApiHandler {
 	private options: ApiHandlerOptions
 	private client: Cerebras
 
 	constructor(options: ApiHandlerOptions) {
+		super()
+
 		this.options = options
 
 		// Clean and validate the API key
@@ -172,7 +175,7 @@ export class CerebrasHandler implements ApiHandler {
 		return inputCost + outputCost
 	}
 
-	async countTokens(content: Anthropic.Messages.ContentBlockParam[]): Promise<number> {
+	override async countTokens(content: Anthropic.Messages.ContentBlockParam[]): Promise<number> {
 		if (content.length === 0) {
 			return 0
 		}

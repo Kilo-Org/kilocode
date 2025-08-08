@@ -10,12 +10,16 @@ describe("maybeRemoveImageBlocks", () => {
 	// Mock ApiHandler factory function
 	const createMockApiHandler = (supportsImages: boolean): ApiHandler => {
 		return {
-			getModel: vitest.fn().mockReturnValue({
-				id: "test-model",
-				info: {
-					supportsImages,
-				} as ModelInfo,
-			}),
+			// kilocode_change start
+			fetchModel: vitest.fn().mockReturnValue(
+				Promise.resolve({
+					id: "test-model",
+					info: {
+						supportsImages,
+					} as ModelInfo,
+				}),
+			),
+			// kilocode_change end
 			createMessage: vitest.fn(),
 			countTokens: vitest.fn(),
 		}
@@ -71,7 +75,7 @@ describe("maybeRemoveImageBlocks", () => {
 		const result = maybeRemoveImageBlocks(messages, apiHandler)
 
 		expect(result).toEqual(messages)
-		expect(apiHandler.getModel).toHaveBeenCalled()
+		expect(apiHandler.fetchModel).toHaveBeenCalled() // kilocode_change
 	})
 
 	it("should not modify image blocks when API handler supports images", () => {
@@ -100,7 +104,7 @@ describe("maybeRemoveImageBlocks", () => {
 
 		// Should not modify the messages since the API handler supports images
 		expect(result).toEqual(messages)
-		expect(apiHandler.getModel).toHaveBeenCalled()
+		expect(apiHandler.fetchModel).toHaveBeenCalled() // kilocode_change
 	})
 
 	it("should convert image blocks to text descriptions when API handler doesn't support images", () => {
@@ -143,7 +147,7 @@ describe("maybeRemoveImageBlocks", () => {
 				],
 			},
 		])
-		expect(apiHandler.getModel).toHaveBeenCalled()
+		expect(apiHandler.fetchModel).toHaveBeenCalled() // kilocode_change
 	})
 
 	it("should handle mixed content messages with multiple text and image blocks", () => {
@@ -206,7 +210,7 @@ describe("maybeRemoveImageBlocks", () => {
 				],
 			},
 		])
-		expect(apiHandler.getModel).toHaveBeenCalled()
+		expect(apiHandler.fetchModel).toHaveBeenCalled() // kilocode_change
 	})
 
 	it("should handle multiple messages with image blocks", () => {
@@ -287,7 +291,7 @@ describe("maybeRemoveImageBlocks", () => {
 				],
 			},
 		])
-		expect(apiHandler.getModel).toHaveBeenCalled()
+		expect(apiHandler.fetchModel).toHaveBeenCalled() // kilocode_change
 	})
 
 	it("should preserve additional message properties", () => {
@@ -334,6 +338,6 @@ describe("maybeRemoveImageBlocks", () => {
 				isSummary: true,
 			},
 		])
-		expect(apiHandler.getModel).toHaveBeenCalled()
+		expect(apiHandler.fetchModel).toHaveBeenCalled() // kilocode_change
 	})
 })

@@ -202,7 +202,7 @@ export class KilocodeOllamaHandler extends BaseProvider {
 		}
 	}
 
-	async fetchModel() {
+	override async fetchModel() {
 		this.models = await getModels({ provider: "ollama", baseUrl: this.options.ollamaBaseUrl })
 		return this.getModel()
 	}

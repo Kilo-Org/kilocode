@@ -412,7 +412,8 @@ Original error: ${errorMessage}`
 				let formattedError = ""
 
 				// Pre-process all diff items for HTML entity unescaping if needed
-				const processedDiffItems = !cline.api.getModel().id.includes("claude")
+				// kilocode_change: await
+				const processedDiffItems = !(await cline.api.fetchModel()).id.includes("claude")
 					? diffItems.map((item) => ({
 							...item,
 							content: item.content ? unescapeHtmlEntities(item.content) : item.content,

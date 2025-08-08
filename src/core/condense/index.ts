@@ -130,9 +130,10 @@ export async function summarizeConversation(
 		content: "Summarize the conversation so far, as described in the prompt instructions.",
 	}
 
-	const requestMessages = maybeRemoveImageBlocks([...messagesToSummarize, finalRequestMessage], apiHandler).map(
-		({ role, content }) => ({ role, content }),
-	)
+	// kilocode_change: await
+	const requestMessages = (
+		await maybeRemoveImageBlocks([...messagesToSummarize, finalRequestMessage], apiHandler)
+	).map(({ role, content }) => ({ role, content }))
 
 	// Note: this doesn't need to be a stream, consider using something like apiHandler.completePrompt
 	// Use custom prompt if provided and non-empty, otherwise use the default SUMMARY_PROMPT

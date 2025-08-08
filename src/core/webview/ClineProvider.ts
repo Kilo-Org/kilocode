@@ -2068,11 +2068,7 @@ export class ClineProvider
 		// kilocode_change start
 		async function getModelId() {
 			try {
-				if (task?.api instanceof OpenRouterHandler) {
-					return { modelId: (await task.api.fetchModel()).id }
-				} else {
-					return { modelId: task?.api?.getModel().id }
-				}
+				return { modelId: (await task?.api.fetchModel())?.id }
 			} catch (error) {
 				return {
 					modelException: stringifyError(error),

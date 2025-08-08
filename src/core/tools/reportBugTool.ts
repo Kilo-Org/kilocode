@@ -51,7 +51,7 @@ export async function reportBugTool(
 			const kilocodeVersion =
 				vscode.extensions.getExtension("kilocode.kilo-code")?.packageJSON.version || "Unknown"
 			const systemInfo = `VSCode: ${vscode.version}, Node.js: ${process.version}, Architecture: ${os.arch()}`
-			const providerAndModel = `${(await cline.providerRef.deref()?.contextProxy.getGlobalState("apiProvider")) as string} / ${cline.api.getModel().id}`
+			const providerAndModel = `${(await cline.providerRef.deref()?.contextProxy.getGlobalState("apiProvider")) as string} / ${(await cline.api.fetchModel()).id}`
 
 			// Ask user for confirmation
 			const bugReportData = JSON.stringify({

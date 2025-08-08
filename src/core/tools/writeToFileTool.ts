@@ -83,7 +83,8 @@ export async function writeToFileTool(
 		newContent = newContent.split("\n").slice(0, -1).join("\n")
 	}
 
-	if (!cline.api.getModel().id.includes("claude")) {
+	// kilocode_change: await
+	if (!(await cline.api.fetchModel()).id.includes("claude")) {
 		newContent = unescapeHtmlEntities(newContent)
 	}
 
