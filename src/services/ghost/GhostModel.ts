@@ -16,6 +16,10 @@ export class GhostModel {
 		}
 	}
 
+	public getApiConfigId() {
+		return this.apiConfigId
+	}
+
 	public async reload(settings: GhostServiceSettings, providerSettingsManager: ProviderSettingsManager) {
 		this.apiConfigId = settings?.apiConfigId || null
 		const defaultApiConfigId = ContextProxy.instance?.getValues?.()?.currentApiConfigName || ""
