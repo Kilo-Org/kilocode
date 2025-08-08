@@ -2353,6 +2353,21 @@ export class Task extends EventEmitter<TaskEvents> {
 			this.isWaitingForFirstChunk = false
 			// note that this api_req_failed ask is unique in that we only present this option if the api hasn't streamed any content yet (ie it fails on the first chunk due), as it would allow them to hit a retry button. However if the api failed mid-stream, it could be in any arbitrary state where some tools may have executed, so that error is handled differently and requires cancelling the task entirely.
 		} catch (error) {
+			// Save error message to database
+			const lastApiReqIndex = findLastIndex(this.clineMessages, (m) => m.say === "api_req_started")
+			if (lastApiReqIndex !== -1) {
+				try {
+					const errorMessage = error.message || JSON.stringify(serializeError(error), null, 2)
+					await this.apiDataStorage.saveErrorMessage(
+						this.clineMessages[lastApiReqIndex].ts.toString(),
+						this.taskId,
+						errorMessage,
+					)
+				} catch (saveError) {
+					console.error("Failed to save error message to database:", saveError)
+				}
+			}
+
 			// kilocode_change start
 			// Check for payment required error from KiloCode provider
 			if ((error as any).status === 402 && apiConfiguration?.apiProvider === "kilocode") {

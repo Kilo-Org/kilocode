@@ -9,6 +9,7 @@ export interface ApiDataRecord {
 	taskId: string
 	requestData?: string
 	responseData?: string
+	errorMessage?: string
 	createdAt: string
 	updatedAt: string
 }
@@ -94,6 +95,7 @@ export class ApiDataStorage {
 					task_id TEXT NOT NULL,
 					request_data TEXT,
 					response_data TEXT,
+					error_message TEXT,
 					created_at TEXT NOT NULL,
 					updated_at TEXT NOT NULL
 				)
@@ -248,8 +250,8 @@ export class ApiDataStorage {
 			}
 
 			const sql = `
-				INSERT INTO api_data (message_id, task_id, request_data, response_data, created_at, updated_at)
-				VALUES (?, ?, ?, ?, ?, ?)
+				INSERT INTO api_data (message_id, task_id, request_data, response_data, error_message, created_at, updated_at)
+				VALUES (?, ?, ?, ?, ?, ?, ?)
 			`
 
 			this.db.run(
@@ -259,6 +261,7 @@ export class ApiDataStorage {
 					record.taskId,
 					record.requestData || null,
 					record.responseData || null,
+					record.errorMessage || null,
 					record.createdAt,
 					record.updatedAt,
 				],
@@ -297,6 +300,43 @@ export class ApiDataStorage {
 	}
 
 	/**
+	 * 更新记录
+	 */
+	private updateRecord(record: Partial<ApiDataRecord> & { messageId: string; taskId: string }): Promise<void> {
+		return new Promise((resolve, reject) => {
+			if (!this.db) {
+				reject(new Error("Database not initialized"))
+				return
+			}
+
+			const sql = `
+				UPDATE api_data 
+				SET request_data = ?, response_data = ?, error_message = ?, updated_at = ?
+				WHERE message_id = ? AND task_id = ?
+			`
+
+			this.db.run(
+				sql,
+				[
+					record.requestData || null,
+					record.responseData || null,
+					record.errorMessage || null,
+					record.updatedAt,
+					record.messageId,
+					record.taskId,
+				],
+				(err: Error | null) => {
+					if (err) {
+						reject(err)
+					} else {
+						resolve()
+					}
+				},
+			)
+		})
+	}
+
+	/**
 	 * 更新响应数据
 	 */
 	private updateResponseData(messageId: string, responseData: string): Promise<void> {
@@ -310,6 +350,46 @@ export class ApiDataStorage {
 			const now = new Date().toISOString()
 
 			this.db.run(sql, [responseData, now, messageId], (err: Error | null) => {
+				if (err) {
+					reject(err)
+				} else {
+					resolve()
+				}
+			})
+		})
+	}
+
+	/**
+	 * 保存错误信息
+	 */
+	async saveErrorMessage(messageId: string, taskId: string, errorMessage: string): Promise<void> {
+		if (!this.isInitialized) {
+			await this.initialize()
+		}
+
+		try {
+			const errorMessageStr = JSON.stringify(errorMessage)
+			await this.updateErrorMessage(messageId, errorMessageStr)
+		} catch (error) {
+			console.error("Failed to save error message:", error)
+			// 不抛出错误，避免影响正常API调用
+		}
+	}
+
+	/**
+	 * 更新错误信息
+	 */
+	private updateErrorMessage(messageId: string, errorMessage: string): Promise<void> {
+		return new Promise((resolve, reject) => {
+			if (!this.db) {
+				reject(new Error("Database not initialized"))
+				return
+			}
+
+			const sql = "UPDATE api_data SET error_message = ?, updated_at = ? WHERE message_id = ?"
+			const now = new Date().toISOString()
+
+			this.db.run(sql, [errorMessage, now, messageId], (err: Error | null) => {
 				if (err) {
 					reject(err)
 				} else {

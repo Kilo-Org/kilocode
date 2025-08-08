@@ -17,6 +17,7 @@ interface ApiDataRecord {
 	taskId: string
 	requestData?: string
 	responseData?: string
+	errorMessage?: string
 	createdAt: string
 	updatedAt: string
 }
@@ -223,6 +224,7 @@ export const ApiRequestModal: React.FC<ApiRequestModalProps> = ({ isOpen, onClos
 	// 解析数据：优先使用ApiDataStorage的数据，回退到messageText
 	let requestData: any = null
 	let responseData: any = null
+	let errorMessage: string | null = null
 
 	if (apiData) {
 		// 使用ApiDataStorage的数据
@@ -238,6 +240,14 @@ export const ApiRequestModal: React.FC<ApiRequestModalProps> = ({ isOpen, onClos
 				responseData = JSON.parse(apiData.responseData)
 			} catch (e) {
 				console.error("Failed to parse response data:", e)
+			}
+		}
+		if (apiData.errorMessage) {
+			try {
+				errorMessage = JSON.parse(apiData.errorMessage)
+			} catch (_e) {
+				// 如果解析失败，直接使用原始字符串
+				errorMessage = apiData.errorMessage
 			}
 		}
 	} else {
@@ -354,7 +364,15 @@ export const ApiRequestModal: React.FC<ApiRequestModalProps> = ({ isOpen, onClos
 				</div>
 
 				{/* Content */}
-				<div style={{ flex: 1, overflow: "auto", padding: "16px", maxHeight: "calc(100% - 120px)" }}>
+				<div
+					style={{
+						flex: 1,
+						overflow: "auto",
+						padding: "16px",
+						height: "calc(100% - 120px)",
+						display: "flex",
+						flexDirection: "column",
+					}}>
 					{loading && (
 						<div
 							style={{
@@ -383,9 +401,9 @@ export const ApiRequestModal: React.FC<ApiRequestModalProps> = ({ isOpen, onClos
 					)}
 
 					{!loading && !error && activeTab === "request" && (
-						<div>
+						<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
 							{requestData ? (
-								<div>
+								<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
 									<div
 										style={{
 											display: "flex",
@@ -410,7 +428,8 @@ export const ApiRequestModal: React.FC<ApiRequestModalProps> = ({ isOpen, onClos
 											padding: "12px",
 											borderRadius: "4px",
 											overflow: "auto",
-											maxHeight: "400px",
+											flex: 1,
+											minHeight: 0,
 											fontFamily: "var(--vscode-editor-font-family)",
 											fontSize: "var(--vscode-editor-font-size)",
 											color: "var(--vscode-foreground)",
@@ -435,9 +454,56 @@ export const ApiRequestModal: React.FC<ApiRequestModalProps> = ({ isOpen, onClos
 					)}
 
 					{!loading && !error && activeTab === "response" && (
-						<div>
-							{responseData ? (
-								<div>
+						<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+							{errorMessage ? (
+								<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+									<div
+										style={{
+											display: "flex",
+											justifyContent: "space-between",
+											alignItems: "center",
+											marginBottom: "12px",
+										}}>
+										<span style={{ fontWeight: "bold", color: "var(--vscode-errorForeground)" }}>
+											错误信息:
+										</span>
+										<VSCodeButton
+											appearance="icon"
+											onClick={() =>
+												copyWithFeedback(
+													typeof errorMessage === "string"
+														? errorMessage
+														: JSON.stringify(errorMessage, null, 2),
+												)
+											}
+											title={showCopyFeedback ? "已复制!" : "复制错误信息"}>
+											<span
+												className={`codicon ${showCopyFeedback ? "codicon-check" : "codicon-copy"}`}></span>
+										</VSCodeButton>
+									</div>
+									<pre
+										style={{
+											backgroundColor: "var(--vscode-inputValidation-errorBackground)",
+											border: "1px solid var(--vscode-inputValidation-errorBorder)",
+											padding: "12px",
+											borderRadius: "4px",
+											overflow: "auto",
+											flex: 1,
+											minHeight: 0,
+											fontFamily: "var(--vscode-editor-font-family)",
+											fontSize: "var(--vscode-editor-font-size)",
+											color: "var(--vscode-errorForeground)",
+											whiteSpace: "pre-wrap",
+											wordBreak: "break-word",
+											margin: 0,
+										}}>
+										{typeof errorMessage === "string"
+											? errorMessage
+											: JSON.stringify(errorMessage, null, 2)}
+									</pre>
+								</div>
+							) : responseData ? (
+								<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
 									<div
 										style={{
 											display: "flex",
@@ -462,7 +528,8 @@ export const ApiRequestModal: React.FC<ApiRequestModalProps> = ({ isOpen, onClos
 											padding: "12px",
 											borderRadius: "4px",
 											overflow: "auto",
-											maxHeight: "400px",
+											flex: 1,
+											minHeight: 0,
 											fontFamily: "var(--vscode-editor-font-family)",
 											fontSize: "var(--vscode-editor-font-size)",
 											color: "var(--vscode-foreground)",
