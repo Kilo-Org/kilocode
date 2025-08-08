@@ -1,0 +1,61 @@
+{
+	"name": "@kilo-code/cli",
+	"version": "0.1.0",
+	"description": "Standalone CLI version of Kilo Code AI agent",
+	"type": "module",
+	"main": "dist/index.js",
+	"bin": {
+		"kilo-cli": "./bin/kilo-cli"
+	},
+	"scripts": {
+		"build": "node esbuild.config.js",
+		"dev": "node esbuild.config.js watch",
+		"watch": "nodemon --watch ../vscode-mock/dist --watch src --ext js,ts --exec \"pnpm run build\"",
+		"watch:full": "concurrently --kill-others \"cd ../vscode-mock && pnpm run dev\" \"pnpm run dev\"",
+		"test": "vitest",
+		"lint": "eslint src/**/*.ts",
+		"clean": "rimraf dist"
+	},
+	"keywords": [
+		"ai",
+		"agent",
+		"cli",
+		"automation",
+		"coding-assistant"
+	],
+	"author": "Kilo Code Team",
+	"license": "MIT",
+	"dependencies": {
+		"@anthropic-ai/sdk": "^0.51.0",
+		"@kilo-code/vscode-mock": "workspace:*",
+		"@roo-code/telemetry": "workspace:*",
+		"@vscode/ripgrep": "^1.15.9",
+		"chalk": "^4.1.2",
+		"commander": "^12.0.0",
+		"dotenv": "^16.4.0",
+		"fs-extra": "^11.2.0",
+		"ini": "^4.1.1",
+		"inquirer": "^9.2.15",
+		"ora": "^8.0.1",
+		"tiktoken": "^1.0.21",
+		"toml": "^3.0.0",
+		"yaml": "^2.4.0",
+		"zod": "^3.22.4"
+	},
+	"devDependencies": {
+		"@roo-code/config-eslint": "workspace:^",
+		"@types/fs-extra": "^11.0.4",
+		"@types/inquirer": "^9.0.7",
+		"@types/node": "^20.0.0",
+		"concurrently": "^8.2.2",
+		"esbuild": "^0.25.0",
+		"nodemon": "^3.0.2",
+		"openai": "^5.0.0",
+		"rimraf": "^6.0.1",
+		"typescript": "^5.4.5",
+		"vitest": "^2.0.0"
+	},
+	"engines": {
+		"node": ">=18.0.0"
+	}
+}

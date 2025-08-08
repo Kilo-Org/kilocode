@@ -8,7 +8,7 @@ const modifier = process.platform === "darwin" ? "Meta" : "Control"
 const defaultPlaywrightApiConfig = {
 	apiProvider: "openrouter" as const,
 	openRouterApiKey: process.env.OPENROUTER_API_KEY,
-	openRouterModelId: "openai/gpt-4o-mini",
+	openRouterModelId: "anthropic/claude-sonnet-4",
 }
 
 export async function findWebview(workbox: Page): Promise<FrameLocator> {

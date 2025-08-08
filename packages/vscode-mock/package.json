@@ -1,0 +1,54 @@
+{
+	"name": "@kilo-code/vscode-mock",
+	"version": "0.1.0",
+	"description": "VS Code API mocking package for Kilo Code CLI and testing",
+	"type": "module",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"scripts": {
+		"build": "npm run clean && esbuild src/index.ts --bundle --platform=node --target=node18 --outfile=dist/index.js --format=cjs --external:@roo-code/telemetry",
+		"build:types": "tsc --emitDeclarationOnly",
+		"build:full": "npm run build && npm run build:types",
+		"dev": "esbuild src/index.ts --bundle --platform=node --target=node18 --outfile=dist/index.js --format=cjs --watch --external:@roo-code/telemetry",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"lint": "eslint src/**/*.ts",
+		"clean": "rimraf dist"
+	},
+	"keywords": [
+		"vscode",
+		"mock",
+		"testing",
+		"cli"
+	],
+	"author": "Kilo Code Team",
+	"license": "MIT",
+	"dependencies": {
+		"fs-extra": "^11.2.0",
+		"glob": "^10.3.10",
+		"chalk": "^5.3.0",
+		"inquirer": "^9.2.0",
+		"ora": "^8.0.0",
+		"chokidar": "^3.6.0",
+		"cosmiconfig": "^9.0.0",
+		"winston": "^3.11.0",
+		"cli-progress": "^3.12.0",
+		"yaml": "^2.3.4",
+		"which": "^4.0.0",
+		"@roo-code/telemetry": "workspace:*"
+	},
+	"devDependencies": {
+		"@roo-code/config-eslint": "workspace:^",
+		"@types/fs-extra": "^11.0.4",
+		"@types/inquirer": "^9.0.7",
+		"@types/node": "^20.0.0",
+		"@types/which": "^3.0.3",
+		"esbuild": "^0.25.0",
+		"rimraf": "^6.0.1",
+		"typescript": "^5.4.5",
+		"vitest": "^2.0.0"
+	},
+	"engines": {
+		"node": ">=18.0.0"
+	}
+}

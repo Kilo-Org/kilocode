@@ -36,6 +36,8 @@ logs
 .vite-port
 
 # kilocode_change
+.kilo-cli-global-storage
+**/.kilo-cli-global-storage
 .history/
 .aider*
 .docker-cache/
