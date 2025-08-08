@@ -31,6 +31,7 @@ import { checkExistKey } from "../../shared/checkExistApiConfig"
 import { experimentDefault } from "../../shared/experiments"
 import { Terminal } from "../../integrations/terminal/Terminal"
 import { openFile } from "../../integrations/misc/open-file"
+import { CodeIndexManager } from "../../services/code-index/manager"
 import { openImage, saveImage } from "../../integrations/misc/image-handler"
 import { selectImages } from "../../integrations/misc/process-images"
 import { getTheme } from "../../integrations/theme/getTheme"
@@ -351,6 +352,10 @@ export const webviewMessageHandler = async (
 			await updateGlobalState("allowedMaxRequests", message.value)
 			await provider.postStateToWebview()
 			break
+		case "allowedMaxCost":
+			await updateGlobalState("allowedMaxCost", message.value)
+			await provider.postStateToWebview()
+			break
 		case "alwaysAllowSubtasks":
 			await updateGlobalState("alwaysAllowSubtasks", message.bool)
 			await provider.postStateToWebview()
@@ -617,7 +622,7 @@ export const webviewMessageHandler = async (
 					} else if (routerName === "lmstudio" && Object.keys(result.value.models).length > 0) {
 						provider.postMessageToWebview({
 							type: "lmStudioModels",
-							lmStudioModels: Object.keys(result.value.models),
+							lmStudioModels: result.value.models,
 						})
 					}
 				} else {
@@ -681,7 +686,7 @@ export const webviewMessageHandler = async (
 				if (Object.keys(lmStudioModels).length > 0) {
 					provider.postMessageToWebview({
 						type: "lmStudioModels",
-						lmStudioModels: Object.keys(lmStudioModels),
+						lmStudioModels: lmStudioModels,
 					})
 				}
 			} catch (error) {
@@ -928,7 +933,21 @@ export const webviewMessageHandler = async (
 		}
 		case "mcpEnabled":
 			const mcpEnabled = message.bool ?? true
+			const currentMcpEnabled = getGlobalState("mcpEnabled") ?? true
+
+			// Always update the state to ensure consistency
 			await updateGlobalState("mcpEnabled", mcpEnabled)
+
+			// Only refresh MCP connections if the value actually changed
+			// This prevents expensive MCP server refresh operations when saving unrelated settings
+			if (currentMcpEnabled !== mcpEnabled) {
+				// Delegate MCP enable/disable logic to McpHub
+				const mcpHubInstance = provider.getMcpHub()
+				if (mcpHubInstance) {
+					await mcpHubInstance.handleMcpEnabledChange(mcpEnabled)
+				}
+			}
+
 			await provider.postStateToWebview()
 			break
 		case "enableMcpServerCreation":
@@ -2371,13 +2390,14 @@ export const webviewMessageHandler = async (
 				// Update webview state
 				await provider.postStateToWebview()
 
-				// Then handle validation and initialization
-				if (provider.codeIndexManager) {
+				// Then handle validation and initialization for the current workspace
+				const currentCodeIndexManager = provider.getCurrentWorkspaceCodeIndexManager()
+				if (currentCodeIndexManager) {
 					// If embedder provider changed, perform proactive validation
 					if (embedderProviderChanged) {
 						try {
 							// Force handleSettingsChange which will trigger validation
-							await provider.codeIndexManager.handleSettingsChange()
+							await currentCodeIndexManager.handleSettingsChange()
 						} catch (error) {
 							// Validation failed - the error state is already set by handleSettingsChange
 							provider.log(
@@ -2386,7 +2406,7 @@ export const webviewMessageHandler = async (
 							// Send validation error to webview
 							await provider.postMessageToWebview({
 								type: "indexingStatusUpdate",
-								values: provider.codeIndexManager.getCurrentStatus(),
+								values: currentCodeIndexManager.getCurrentStatus(),
 							})
 							// Exit early - don't try to start indexing with invalid configuration
 							break
@@ -2394,7 +2414,7 @@ export const webviewMessageHandler = async (
 					} else {
 						// No provider change, just handle settings normally
 						try {
-							await provider.codeIndexManager.handleSettingsChange()
+							await currentCodeIndexManager.handleSettingsChange()
 						} catch (error) {
 							// Log but don't fail - settings are saved
 							provider.log(
@@ -2407,10 +2427,10 @@ export const webviewMessageHandler = async (
 					await new Promise((resolve) => setTimeout(resolve, 200))
 
 					// Auto-start indexing if now enabled and configured
-					if (provider.codeIndexManager.isFeatureEnabled && provider.codeIndexManager.isFeatureConfigured) {
-						if (!provider.codeIndexManager.isInitialized) {
+					if (currentCodeIndexManager.isFeatureEnabled && currentCodeIndexManager.isFeatureConfigured) {
+						if (!currentCodeIndexManager.isInitialized) {
 							try {
-								await provider.codeIndexManager.initialize(provider.contextProxy)
+								await currentCodeIndexManager.initialize(provider.contextProxy)
 								provider.log(`Code index manager initialized after settings save`)
 							} catch (error) {
 								provider.log(
@@ -2419,7 +2439,7 @@ export const webviewMessageHandler = async (
 								// Send error status to webview
 								await provider.postMessageToWebview({
 									type: "indexingStatusUpdate",
-									values: provider.codeIndexManager.getCurrentStatus(),
+									values: currentCodeIndexManager.getCurrentStatus(),
 								})
 							}
 						}
@@ -2450,7 +2470,7 @@ export const webviewMessageHandler = async (
 		}
 
 		case "requestIndexingStatus": {
-			const manager = provider.codeIndexManager
+			const manager = provider.getCurrentWorkspaceCodeIndexManager()
 			if (!manager) {
 				// No workspace open - send error status
 				provider.postMessageToWebview({
@@ -2461,11 +2481,23 @@ export const webviewMessageHandler = async (
 						processedItems: 0,
 						totalItems: 0,
 						currentItemUnit: "items",
+						workerspacePath: undefined,
 					},
 				})
 				return
 			}
-			const status = manager.getCurrentStatus()
+
+			const status = manager
+				? manager.getCurrentStatus()
+				: {
+						systemStatus: "Standby",
+						message: "No workspace folder open",
+						processedItems: 0,
+						totalItems: 0,
+						currentItemUnit: "items",
+						workspacePath: undefined,
+					}
+
 			provider.postMessageToWebview({
 				type: "indexingStatusUpdate",
 				values: status,
@@ -2496,7 +2528,7 @@ export const webviewMessageHandler = async (
 		}
 		case "startIndexing": {
 			try {
-				const manager = provider.codeIndexManager
+				const manager = provider.getCurrentWorkspaceCodeIndexManager()
 				if (!manager) {
 					// No workspace open - send error status
 					provider.postMessageToWebview({
@@ -2517,7 +2549,15 @@ export const webviewMessageHandler = async (
 						await manager.initialize(provider.contextProxy)
 					}
 
+					// startIndexing now handles error recovery internally
 					manager.startIndexing()
+
+					// If startIndexing recovered from error, we need to reinitialize
+					if (!manager.isInitialized) {
+						await manager.initialize(provider.contextProxy)
+						// Try starting again after initialization
+						manager.startIndexing()
+					}
 				}
 			} catch (error) {
 				provider.log(`Error starting indexing: ${error instanceof Error ? error.message : String(error)}`)
@@ -2526,7 +2566,7 @@ export const webviewMessageHandler = async (
 		}
 		case "clearIndexData": {
 			try {
-				const manager = provider.codeIndexManager
+				const manager = provider.getCurrentWorkspaceCodeIndexManager()
 				if (!manager) {
 					provider.log("Cannot clear index data: No workspace folder open")
 					provider.postMessageToWebview({

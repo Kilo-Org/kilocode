@@ -128,6 +128,7 @@
 	},
 	"autoApprove": {
 		"description": "Izinkan Kilo Code untuk secara otomatis melakukan operasi tanpa memerlukan persetujuan. Aktifkan pengaturan ini hanya jika kamu sepenuhnya mempercayai AI dan memahami risiko keamanan yang terkait.",
+		"enabled": "Auto-Approve Diaktifkan",
 		"toggleAriaLabel": "Beralih persetujuan otomatis",
 		"disabledAriaLabel": "Persetujuan otomatis dinonaktifkan - pilih opsi terlebih dahulu",
 		"readOnly": {
@@ -202,7 +203,14 @@
 			"description": "Secara otomatis membuat sejumlah permintaan API ini sebelum meminta persetujuan untuk melanjutkan tugas.",
 			"unlimited": "Tidak terbatas"
 		},
-		"selectOptionsFirst": "Pilih setidaknya satu opsi di bawah ini untuk mengaktifkan persetujuan otomatis"
+		"selectOptionsFirst": "Pilih setidaknya satu opsi di bawah ini untuk mengaktifkan persetujuan otomatis",
+		"apiCostLimit": {
+			"title": "Biaya Maksimal",
+			"unlimited": "Tidak Terbatas"
+		},
+		"maxLimits": {
+			"description": "Secara otomatis membuat permintaan hingga batas ini sebelum meminta persetujuan untuk melanjutkan."
+		}
 	},
 	"providers": {
 		"providerDocumentation": "Dokumentasi {{provider}}",
@@ -231,10 +239,6 @@
 		"openRouterApiKey": "OpenRouter API Key",
 		"getOpenRouterApiKey": "Dapatkan OpenRouter API Key",
 		"apiKeyStorageNotice": "API key disimpan dengan aman di Secret Storage VSCode",
-		"cerebras": {
-			"apiKey": "Cerebras API Key",
-			"getApiKey": "Dapatkan Cerebras API Key"
-		},
 		"glamaApiKey": "Glama API Key",
 		"getGlamaApiKey": "Dapatkan Glama API Key",
 		"useCustomBaseUrl": "Gunakan base URL kustom",
@@ -258,21 +262,25 @@
 		"anthropicApiKey": "Anthropic API Key",
 		"getAnthropicApiKey": "Dapatkan Anthropic API Key",
 		"anthropicUseAuthToken": "Kirim Anthropic API Key sebagai Authorization header alih-alih X-Api-Key",
+		"cerebrasApiKey": "Cerebras API Key",
+		"getCerebrasApiKey": "Dapatkan Cerebras API Key",
 		"chutesApiKey": "Chutes API Key",
 		"getChutesApiKey": "Dapatkan Chutes API Key",
+		"fireworksApiKey": "Fireworks API Key",
+		"getFireworksApiKey": "Dapatkan Fireworks API Key",
 		"deepSeekApiKey": "DeepSeek API Key",
 		"getDeepSeekApiKey": "Dapatkan DeepSeek API Key",
 		"doubaoApiKey": "Kunci API Doubao",
 		"getDoubaoApiKey": "Dapatkan Kunci API Doubao",
-		"fireworksApiKey": "Kunci API Fireworks",
-		"getFireworksApiKey": "Dapatkan Kunci API Fireworks",
-		"zaiApiKey": "Kunci API Z.AI",
-		"getZaiApiKey": "Dapatkan Kunci API Z.AI",
 		"bigModelApiKey": "Kunci API BigModel",
 		"getBigModelApiKey": "Dapatkan Kunci API BigModel",
 		"moonshotApiKey": "Kunci API Moonshot",
 		"getMoonshotApiKey": "Dapatkan Kunci API Moonshot",
 		"moonshotBaseUrl": "Titik Masuk Moonshot",
+		"zaiApiKey": "Kunci API Z AI",
+		"getZaiApiKey": "Dapatkan Kunci API Z AI",
+		"zaiEntrypoint": "Titik Masuk Z AI",
+		"zaiEntrypointDescription": "Silakan pilih titik masuk API yang sesuai berdasarkan lokasi Anda. Jika Anda berada di China, pilih open.bigmodel.cn. Jika tidak, pilih api.z.ai.",
 		"geminiApiKey": "Gemini API Key",
 		"getGroqApiKey": "Dapatkan Groq API Key",
 		"groqApiKey": "Groq API Key",
@@ -333,7 +341,6 @@
 				"description": "Memungkinkan Gemini mencari informasi terkini di Google dan mendasarkan respons pada data waktu nyata. Berguna untuk kueri yang memerlukan informasi terkini."
 			}
 		},
-
 		"googleCloudSetup": {
 			"title": "Untuk menggunakan Google Cloud Vertex AI, kamu perlu:",
 			"step1": "1. Buat akun Google Cloud, aktifkan Vertex AI API & aktifkan model Claude yang diinginkan.",
@@ -740,6 +747,10 @@
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Pengeditan Latar Belakang",
 			"description": "Ketika diaktifkan, mencegah gangguan fokus editor. Pengeditan file terjadi di latar belakang tanpa membuka tampilan diff atau mencuri fokus. Anda dapat terus bekerja tanpa gangguan saat Kilo Code melakukan perubahan. File mungkin dibuka tanpa fokus untuk menangkap diagnostik atau tetap tertutup sepenuhnya."
+		},
+		"ASSISTANT_MESSAGE_PARSER": {
+			"name": "Gunakan parser pesan baru",
+			"description": "Aktifkan parser pesan streaming eksperimental yang meningkatkan kinerja untuk respons panjang dengan memproses pesan lebih efisien."
 		}
 	},
 	"promptCaching": {

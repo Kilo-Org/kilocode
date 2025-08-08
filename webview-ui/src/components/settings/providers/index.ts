@@ -1,5 +1,6 @@
 export { Anthropic } from "./Anthropic"
 export { Bedrock } from "./Bedrock"
+export { Cerebras } from "./Cerebras"
 export { Chutes } from "./Chutes"
 export { ClaudeCode } from "./ClaudeCode"
 export { DeepSeek } from "./DeepSeek"
@@ -23,10 +24,9 @@ export { Vertex } from "./Vertex"
 export { VSCodeLM } from "./VSCodeLM"
 export { XAI } from "./XAI"
 // kilocode_change start
-export { ZAI } from "./ZAI"
 export { BigModel } from "./BigModel"
 export { VirtualQuotaFallbackProvider } from "./VirtualQuotaFallbackProvider"
-export { Cerebras } from "./Cerebras"
 // kilocode_change end
+export { ZAi } from "./ZAi"
 export { LiteLLM } from "./LiteLLM"
 export { Fireworks } from "./Fireworks"

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite"
 import TelemetryBanner from "../../../webview-ui/src/components/common/TelemetryBanner"
 
 const meta = {
-	title: "Component/TelemetryBanner",
+	title: "Components/TelemetryBanner",
 	component: TelemetryBanner,
 	tags: ["autodocs"],
 } satisfies Meta<typeof TelemetryBanner>

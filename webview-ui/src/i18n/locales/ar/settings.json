@@ -132,6 +132,7 @@
 	},
 	"autoApprove": {
 		"description": "خلّ Kilo Code ينفذ العمليات تلقائيًا بدون موافقة. فعّلها فقط إذا كنت واثق من الأمان.",
+		"enabled": "الموافقة التلقائية مفعلة",
 		"readOnly": {
 			"label": "قراءة",
 			"description": "يسمح لـ Kilo Code يعرض المجلدات ويقرأ الملفات تلقائي.",
@@ -201,8 +202,14 @@
 		},
 		"apiRequestLimit": {
 			"title": "أقصى الطلبات",
-			"description": "عدد طلبات API قبل طلب الموافقة.",
 			"unlimited": "غير محدود"
+		},
+		"apiCostLimit": {
+			"title": "أقصى تكلفة",
+			"unlimited": "غير محدود"
+		},
+		"maxLimits": {
+			"description": "تنفيذ الطلبات تلقائيًا حتى هذه الحدود قبل طلب الموافقة للمتابعة."
 		},
 		"toggleAriaLabel": "تبديل الموافقة التلقائية",
 		"disabledAriaLabel": "الموافقة التلقائية معطلة - اختر الخيارات أولاً",
@@ -258,6 +265,8 @@
 		"anthropicApiKey": "مفتاح Anthropic",
 		"getAnthropicApiKey": "احصل على مفتاح Anthropic",
 		"anthropicUseAuthToken": "إرسال المفتاح في ترويسة Authorization بدل X-Api-Key",
+		"cerebrasApiKey": "مفتاح Cerebras API",
+		"getCerebrasApiKey": "احصل على مفتاح Cerebras API",
 		"chutesApiKey": "مفتاح Chutes",
 		"getChutesApiKey": "احصل على مفتاح Chutes",
 		"deepSeekApiKey": "مفتاح DeepSeek",
@@ -273,6 +282,8 @@
 		"moonshotApiKey": "مفتاح Moonshot",
 		"getMoonshotApiKey": "احصل على مفتاح Moonshot",
 		"moonshotBaseUrl": "نقطة دخول Moonshot",
+		"zaiEntrypoint": "نقطة دخول Z AI",
+		"zaiEntrypointDescription": "يرجى اختيار نقطة دخول API المناسبة حسب موقعك. إذا كنت في الصين، اختر open.bigmodel.cn. وإلا، اختر api.z.ai.",
 		"geminiApiKey": "مفتاح Gemini",
 		"getGroqApiKey": "احصل على مفتاح Groq",
 		"groqApiKey": "مفتاح Groq",
@@ -385,10 +396,6 @@
 				"description": "OpenRouter يوازن الطلبات على أفضل مزوّد. تقدر تختار مزوّد محدد.",
 				"learnMore": "تعرف أكثر"
 			}
-		},
-		"cerebras": {
-			"apiKey": "مفتاح Cerebras",
-			"getApiKey": "احصل على مفتاح Cerebras"
 		},
 		"customModel": {
 			"capabilities": "اضبط قدرات وتسعير النموذج المتوافق مع OpenAI.",
@@ -739,6 +746,10 @@
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "التحرير في الخلفية",
 			"description": "منع تعطيل تركيز المحرر عند التفعيل. تحدث تعديلات الملفات في الخلفية دون فتح عروض diff أو سرقة التركيز. يمكنك الاستمرار في العمل دون انقطاع بينما يقوم Kilo Code بإجراء التغييرات. يمكن فتح الملفات دون تركيز لالتقاط التشخيصات أو إبقاؤها مغلقة تماماً."
+		},
+		"ASSISTANT_MESSAGE_PARSER": {
+			"name": "استخدام محلل الرسائل الجديد",
+			"description": "تفعيل محلل الرسائل التجريبي المتدفق الذي يوفر تحسينات كبيرة في الأداء للاستجابات الطويلة من المساعد من خلال معالجة الرسائل بكفاءة أكبر."
 		}
 	},
 	"promptCaching": {

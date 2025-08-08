@@ -128,6 +128,7 @@
 	},
 	"autoApprove": {
 		"description": "Kilo Codeが承認なしで自動的に操作を実行できるようにします。AIを完全に信頼し、関連するセキュリティリスクを理解している場合にのみ、これらの設定を有効にしてください。",
+		"enabled": "自動承認が有効",
 		"toggleAriaLabel": "自動承認の切り替え",
 		"disabledAriaLabel": "自動承認が無効です - 最初にオプションを選択してください",
 		"readOnly": {
@@ -202,7 +203,14 @@
 			"description": "タスクを続行するための承認を求める前に、自動的にこの数のAPIリクエストを行います。",
 			"unlimited": "無制限"
 		},
-		"selectOptionsFirst": "自動承認を有効にするには、以下のオプションを少なくとも1つ選択してください"
+		"selectOptionsFirst": "自動承認を有効にするには、以下のオプションを少なくとも1つ選択してください",
+		"apiCostLimit": {
+			"unlimited": "無制限",
+			"title": "最大料金"
+		},
+		"maxLimits": {
+			"description": "これらの上限まで自動的にリクエストを行い、その後継続の承認を求めます。"
+		}
 	},
 	"providers": {
 		"providerDocumentation": "{{provider}}のドキュメント",
@@ -254,21 +262,25 @@
 		"anthropicApiKey": "Anthropic APIキー",
 		"getAnthropicApiKey": "Anthropic APIキーを取得",
 		"anthropicUseAuthToken": "Anthropic APIキーをX-Api-Keyの代わりにAuthorizationヘッダーとして渡す",
+		"cerebrasApiKey": "Cerebras APIキー",
+		"getCerebrasApiKey": "Cerebras APIキーを取得",
 		"chutesApiKey": "Chutes APIキー",
 		"getChutesApiKey": "Chutes APIキーを取得",
+		"fireworksApiKey": "Fireworks APIキー",
+		"getFireworksApiKey": "Fireworks APIキーを取得",
 		"deepSeekApiKey": "DeepSeek APIキー",
 		"getDeepSeekApiKey": "DeepSeek APIキーを取得",
 		"doubaoApiKey": "Doubao APIキー",
 		"getDoubaoApiKey": "Doubao APIキーを取得",
-		"fireworksApiKey": "Fireworks APIキー",
-		"getFireworksApiKey": "Fireworks APIキーを取得",
-		"zaiApiKey": "Z.AI APIキー",
-		"getZaiApiKey": "Z.AI APIキーを取得",
 		"bigModelApiKey": "BigModel APIキー",
 		"getBigModelApiKey": "BigModel APIキーを取得",
 		"moonshotApiKey": "Moonshot APIキー",
 		"getMoonshotApiKey": "Moonshot APIキーを取得",
 		"moonshotBaseUrl": "Moonshot エントリーポイント",
+		"zaiApiKey": "Z AI APIキー",
+		"getZaiApiKey": "Z AI APIキーを取得",
+		"zaiEntrypoint": "Z AI エントリーポイント",
+		"zaiEntrypointDescription": "お住まいの地域に応じて適切な API エントリーポイントを選択してください。中国にお住まいの場合は open.bigmodel.cn を選択してください。それ以外の場合は api.z.ai を選択してください。",
 		"geminiApiKey": "Gemini APIキー",
 		"getGroqApiKey": "Groq APIキーを取得",
 		"groqApiKey": "Groq APIキー",
@@ -329,7 +341,6 @@
 				"description": "GeminiがGoogleを検索して最新情報を取得し、リアルタイムデータに基づいて応答をグラウンディングできるようにします。最新情報が必要なクエリに便利です。"
 			}
 		},
-
 		"googleCloudSetup": {
 			"title": "Google Cloud Vertex AIを使用するには：",
 			"step1": "1. Google Cloudアカウントを作成し、Vertex AI APIを有効にして、希望するClaudeモデルを有効にします。",
@@ -370,10 +381,6 @@
 				"description": "OpenRouterはあなたのモデルに最適な利用可能なプロバイダーにリクエストを転送します。デフォルトでは、稼働時間を最大化するために、リクエストはトッププロバイダー間でロードバランスされます。ただし、このモデルに使用する特定のプロバイダーを選択することもできます。",
 				"learnMore": "プロバイダールーティングについて詳しく知る"
 			}
-		},
-		"cerebras": {
-			"apiKey": "Cerebras APIキー",
-			"getApiKey": "Cerebras APIキーを取得"
 		},
 		"customModel": {
 			"capabilities": "カスタムOpenAI互換モデルの機能と価格を設定します。モデルの機能はKilo Codeのパフォーマンスに影響を与える可能性があるため、慎重に指定してください。",
@@ -719,6 +726,10 @@
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "バックグラウンド編集",
 			"description": "有効にすると、エディターのフォーカス中断を防ぎます。ファイル編集は差分ビューを開いたりフォーカスを奪ったりすることなく、バックグラウンドで行われます。Rooが変更を行っている間も中断されることなく作業を続けることができます。ファイルは診断をキャプチャするためにフォーカスなしで開くか、完全に閉じたままにできます。"
+		},
+		"ASSISTANT_MESSAGE_PARSER": {
+			"name": "新しいメッセージパーサーを使う",
+			"description": "実験的なストリーミングメッセージパーサーを有効にします。長い回答をより効率的に処理し、遅延を減らします。"
 		}
 	},
 	"promptCaching": {

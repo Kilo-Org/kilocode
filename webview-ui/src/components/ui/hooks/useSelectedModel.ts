@@ -6,6 +6,8 @@ import {
 	anthropicModels,
 	bedrockDefaultModelId,
 	bedrockModels,
+	cerebrasDefaultModelId,
+	cerebrasModels,
 	deepSeekDefaultModelId,
 	deepSeekModels,
 	moonshotDefaultModelId,
@@ -24,8 +26,6 @@ import {
 	xaiDefaultModelId,
 	xaiModels,
 	// kilocode_change start
-	zaiModels,
-	zaiDefaultModelId,
 	bigModelModels,
 	bigModelDefaultModelId,
 	// kilocode_change end
@@ -47,16 +47,19 @@ import {
 	sambaNovaDefaultModelId,
 	doubaoModels,
 	doubaoDefaultModelId,
-	fireworksDefaultModelId,
+	internationalZAiDefaultModelId,
+	mainlandZAiDefaultModelId,
+	internationalZAiModels,
+	mainlandZAiModels,
 	fireworksModels,
+	fireworksDefaultModelId,
 } from "@roo-code/types"
 
-import { cerebrasModels, cerebrasDefaultModelId } from "@roo/api" // kilocode_change
-
-import type { RouterModels } from "@roo/api"
+import type { ModelRecord, RouterModels } from "@roo/api"
 
 import { useRouterModels } from "./useRouterModels"
 import { useOpenRouterModelProviders } from "./useOpenRouterModelProviders"
+import { useLmStudioModels } from "./useLmStudioModels"
 
 export const useSelectedModel = (apiConfiguration?: ProviderSettings) => {
 	const provider = apiConfiguration?.apiProvider || "anthropic"
@@ -76,9 +79,12 @@ export const useSelectedModel = (apiConfiguration?: ProviderSettings) => {
 		apiConfiguration?.apiKey,
 	)
 	// kilocode_change end
+	const lmStudioModelId = provider === "lmstudio" ? apiConfiguration?.lmStudioModelId : undefined
+	const lmStudioModels = useLmStudioModels(lmStudioModelId)
 
 	const { id, info } =
 		apiConfiguration &&
+		(typeof lmStudioModelId === "undefined" || typeof lmStudioModels.data !== "undefined") &&
 		typeof routerModels.data !== "undefined" &&
 		typeof openRouterModelProviders.data !== "undefined"
 			? getSelectedModel({
@@ -86,6 +92,7 @@ export const useSelectedModel = (apiConfiguration?: ProviderSettings) => {
 					apiConfiguration,
 					routerModels: routerModels.data,
 					openRouterModelProviders: openRouterModelProviders.data,
+					lmStudioModels: lmStudioModels.data,
 				})
 			: { id: anthropicDefaultModelId, info: undefined }
 
@@ -93,8 +100,14 @@ export const useSelectedModel = (apiConfiguration?: ProviderSettings) => {
 		provider,
 		id,
 		info,
-		isLoading: routerModels.isLoading || openRouterModelProviders.isLoading,
-		isError: routerModels.isError || openRouterModelProviders.isError,
+		isLoading:
+			routerModels.isLoading ||
+			openRouterModelProviders.isLoading ||
+			(apiConfiguration?.lmStudioModelId && lmStudioModels!.isLoading),
+		isError:
+			routerModels.isError ||
+			openRouterModelProviders.isError ||
+			(apiConfiguration?.lmStudioModelId && lmStudioModels!.isError),
 	}
 }
 
@@ -103,11 +116,13 @@ function getSelectedModel({
 	apiConfiguration,
 	routerModels,
 	openRouterModelProviders,
+	lmStudioModels,
 }: {
 	provider: ProviderName
 	apiConfiguration: ProviderSettings
 	routerModels: RouterModels
 	openRouterModelProviders: Record<string, ModelInfo>
+	lmStudioModels: ModelRecord | undefined
 }): { id: string; info: ModelInfo | undefined } {
 	// the `undefined` case are used to show the invalid selection to prevent
 	// users from seeing the default model if their selection is invalid
@@ -155,11 +170,6 @@ function getSelectedModel({
 			return info ? { id, info } : { id, info: undefined }
 		}
 		// kilocode_change start
-		case "zai": {
-			const id = apiConfiguration.apiModelId ?? zaiDefaultModelId
-			const info = zaiModels[id as keyof typeof zaiModels]
-			return info ? { id, info } : { id, info: undefined }
-		}
 		case "bigmodel": {
 			const id = apiConfiguration.apiModelId ?? bigModelDefaultModelId
 			const info = bigModelModels[id as keyof typeof bigModelModels]
@@ -186,12 +196,6 @@ function getSelectedModel({
 			const info = chutesModels[id as keyof typeof chutesModels]
 			return { id, info }
 		}
-		// kilocode_change start
-		case "cerebras": {
-			const id = apiConfiguration.apiModelId ?? cerebrasDefaultModelId
-			const info = cerebrasModels[id as keyof typeof cerebrasModels]
-			return info ? { id, info } : { id: cerebrasDefaultModelId, info: cerebrasModels[cerebrasDefaultModelId] }
-		} // kilocode_change end
 		case "bedrock": {
 			const id = apiConfiguration.apiModelId ?? bedrockDefaultModelId
 			const info = bedrockModels[id as keyof typeof bedrockModels]
@@ -236,6 +240,14 @@ function getSelectedModel({
 			const info = moonshotModels[id as keyof typeof moonshotModels]
 			return { id, info }
 		}
+		case "zai": {
+			const isChina = apiConfiguration.zaiApiLine === "china"
+			const models = isChina ? mainlandZAiModels : internationalZAiModels
+			const defaultModelId = isChina ? mainlandZAiDefaultModelId : internationalZAiDefaultModelId
+			const id = apiConfiguration.apiModelId ?? defaultModelId
+			const info = models[id as keyof typeof models]
+			return { id, info }
+		}
 		case "openai-native": {
 			const id = apiConfiguration.apiModelId ?? openAiNativeDefaultModelId
 			const info = openAiNativeModels[id as keyof typeof openAiNativeModels]
@@ -261,7 +273,7 @@ function getSelectedModel({
 		}
 		case "lmstudio": {
 			const id = apiConfiguration.lmStudioModelId ?? ""
-			const info = routerModels.lmstudio && routerModels.lmstudio[id]
+			const info = lmStudioModels && lmStudioModels[apiConfiguration.lmStudioModelId!]
 			return {
 				id,
 				info: info || undefined,
@@ -329,6 +341,11 @@ function getSelectedModel({
 			const id = apiConfiguration.apiModelId ?? claudeCodeDefaultModelId
 			const info = claudeCodeModels[id as keyof typeof claudeCodeModels]
 			return { id, info: { ...openAiModelInfoSaneDefaults, ...info } }
+		}
+		case "cerebras": {
+			const id = apiConfiguration.apiModelId ?? cerebrasDefaultModelId
+			const info = cerebrasModels[id as keyof typeof cerebrasModels]
+			return { id, info }
 		}
 		case "sambanova": {
 			const id = apiConfiguration.apiModelId ?? sambaNovaDefaultModelId

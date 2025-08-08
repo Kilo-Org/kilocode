@@ -48,12 +48,7 @@ export /*kilocode_change*/ async function readModels(router: RouterName): Promis
  */
 export const getModels = async (options: GetModelsOptions): Promise<ModelRecord> => {
 	const { provider } = options
-
-	// kilocode_change start: cacheKey
-	const cacheKey = JSON.stringify(options)
-	let models = memoryCache.get<ModelRecord>(cacheKey)
-	// kilocode_cache end
-
+	let models = getModelsFromCache(provider)
 	if (models) {
 		return models
 	}
@@ -107,7 +102,7 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 		}
 
 		// Cache the fetched models (even if empty, to signify a successful fetch with no models)
-		memoryCache.set(cacheKey, models) // kilocode_change: cacheKey
+		memoryCache.set(provider, models)
 
 		/* kilocode_change: skip useless file IO
 		await writeModels(provider, models).catch((err) =>
@@ -136,4 +131,8 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
  */
 export const flushModels = async (router: RouterName) => {
 	memoryCache.del(router)
+}
+
+export function getModelsFromCache(provider: string) {
+	return memoryCache.get<ModelRecord>(provider)
 }

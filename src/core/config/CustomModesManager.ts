@@ -405,9 +405,13 @@ export class CustomModesManager {
 			// Validate the mode configuration before saving
 			const validationResult = modeConfigSchema.safeParse(config)
 			if (!validationResult.success) {
-				const errors = validationResult.error.errors.map((e) => e.message).join(", ")
-				logger.error(`Invalid mode configuration for ${slug}`, { errors: validationResult.error.errors })
-				throw new Error(`Invalid mode configuration: ${errors}`)
+				const errorMessages = validationResult.error.errors
+					.map((err) => `${err.path.join(".")}: ${err.message}`)
+					.join(", ")
+				const errorMessage = `Invalid mode configuration: ${errorMessages}`
+				logger.error("Mode validation failed", { slug, errors: validationResult.error.errors })
+				vscode.window.showErrorMessage(t("common:customModes.errors.updateFailed", { error: errorMessage }))
+				return
 			}
 
 			const isProjectMode = config.source === "project"

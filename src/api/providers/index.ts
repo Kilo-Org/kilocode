@@ -1,7 +1,7 @@
 export { AnthropicVertexHandler } from "./anthropic-vertex"
 export { AnthropicHandler } from "./anthropic"
 export { AwsBedrockHandler } from "./bedrock"
-export { CerebrasHandler } from "./cerebras" // kilocode_change
+export { CerebrasHandler } from "./cerebras"
 export { ChutesHandler } from "./chutes"
 export { ClaudeCodeHandler } from "./claude-code"
 export { DeepSeekHandler } from "./deepseek"
@@ -27,9 +27,9 @@ export { UnboundHandler } from "./unbound"
 export { VertexHandler } from "./vertex"
 // kilocode_change start
 export { VirtualQuotaFallbackHandler } from "./virtual-quota-fallback"
-export { ZAIHandler } from "./zai"
 export { BigModelHandler } from "./bigmodel"
 // kilocode_change end
 export { VsCodeLmHandler } from "./vscode-lm"
 export { XAIHandler } from "./xai"
+export { ZAiHandler } from "./zai"
 export { FireworksHandler } from "./fireworks"

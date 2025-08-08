@@ -10,11 +10,14 @@ import pWaitFor from "p-wait-for"
 import * as vscode from "vscode"
 
 import {
+	type TaskProviderLike,
+	type TaskProviderEvents,
 	type GlobalState,
 	type ProviderName,
 	type ProviderSettings,
 	type RooCodeSettings,
 	type ProviderSettingsEntry,
+	type ProviderSettingsWithId,
 	type TelemetryProperties,
 	type TelemetryPropertiesProvider,
 	type CodeActionId,
@@ -23,6 +26,7 @@ import {
 	type TerminalActionPromptType,
 	type HistoryItem,
 	type CloudUserInfo,
+	RooCodeEventName,
 	requestyDefaultModelId,
 	openRouterDefaultModelId,
 	glamaDefaultModelId,
@@ -33,8 +37,6 @@ import {
 import { TelemetryService } from "@roo-code/telemetry"
 import { CloudService, getRooCodeApiUrl } from "@roo-code/cloud"
 
-import { t } from "../../i18n"
-import { setPanel } from "../../activate/registerCommands"
 import { Package } from "../../shared/package"
 import { findLast } from "../../shared/array"
 import { supportPrompt } from "../../shared/support-prompt"
@@ -43,10 +45,15 @@ import { ExtensionMessage, MarketplaceInstalledMetadata } from "../../shared/Ext
 import { Mode, defaultModeSlug, getModeBySlug } from "../../shared/modes"
 import { experimentDefault } from "../../shared/experiments"
 import { formatLanguage } from "../../shared/language"
+import { WebviewMessage } from "../../shared/WebviewMessage"
+import { EMBEDDING_MODEL_PROFILES } from "../../shared/embeddingModels"
+import { ProfileValidator } from "../../shared/ProfileValidator"
+
 import { Terminal } from "../../integrations/terminal/Terminal"
 import { downloadTask } from "../../integrations/misc/export-markdown"
 import { getTheme } from "../../integrations/theme/getTheme"
 import WorkspaceTracker from "../../integrations/workspace/WorkspaceTracker"
+
 import { McpHub } from "../../services/mcp/McpHub"
 import { McpServerManager } from "../../services/mcp/McpServerManager"
 import { MarketplaceManager } from "../../services/marketplace"
@@ -54,41 +61,46 @@ import { ShadowCheckpointService } from "../../services/checkpoints/ShadowCheckp
 import { CodeIndexManager } from "../../services/code-index/manager"
 import type { IndexProgressUpdate } from "../../services/code-index/interfaces/manager"
 import { MdmService } from "../../services/mdm/MdmService"
+
 import { fileExistsAtPath } from "../../utils/fs"
 import { setTtsEnabled, setTtsSpeed } from "../../utils/tts"
+import { getWorkspaceGitInfo } from "../../utils/git"
+import { getWorkspacePath } from "../../utils/path"
+
+import { setPanel } from "../../activate/registerCommands"
+
+import { t } from "../../i18n"
+
+import { buildApiHandler } from "../../api"
+import { forceFullModelDetailsLoad, hasLoadedFullDetails } from "../../api/providers/fetchers/lmstudio"
+
 import { ContextProxy } from "../config/ContextProxy"
 import { getEnabledRules } from "./kilorules"
 import { ProviderSettingsManager } from "../config/ProviderSettingsManager"
 import { CustomModesManager } from "../config/CustomModesManager"
-import { buildApiHandler } from "../../api"
 import { Task, TaskOptions } from "../task/Task"
+import { getSystemPromptFilePath } from "../prompts/sections/custom-system-prompt"
+
+import { webviewMessageHandler } from "./webviewMessageHandler"
 import { getNonce } from "./getNonce"
 import { getUri } from "./getUri"
-import { getSystemPromptFilePath } from "../prompts/sections/custom-system-prompt"
-import { getWorkspacePath } from "../../utils/path"
-import { webviewMessageHandler } from "./webviewMessageHandler"
-import { WebviewMessage } from "../../shared/WebviewMessage"
-import { EMBEDDING_MODEL_PROFILES } from "../../shared/embeddingModels"
-import { ProfileValidator } from "../../shared/ProfileValidator"
-import { getWorkspaceGitInfo } from "../../utils/git"
 
-import { McpDownloadResponse, McpMarketplaceCatalog } from "../../shared/kilocode/mcp" //kilocode_change
-import { McpServer } from "../../shared/mcp" // kilocode_change
-import { OpenRouterHandler } from "../../api/providers" // kilocode_change
+//kilocode_change start
+import { McpDownloadResponse, McpMarketplaceCatalog } from "../../shared/kilocode/mcp"
+import { McpServer } from "../../shared/mcp"
+import { OpenRouterHandler } from "../../api/providers"
 import { stringifyError } from "../../shared/kilocode/errorUtils"
+import isWsl from "is-wsl"
+// kilocode_change end
 
 /**
  * https://github.com/microsoft/vscode-webview-ui-toolkit-samples/blob/main/default/weather-webview/src/providers/WeatherViewProvider.ts
  * https://github.com/KumarVariable/vscode-extension-sidebar-html/blob/master/src/customSidebarViewProvider.ts
  */
 
-export type ClineProviderEvents = {
-	taskCreated: [task: Task]
-}
-
 export class ClineProvider
-	extends EventEmitter<ClineProviderEvents>
-	implements vscode.WebviewViewProvider, TelemetryPropertiesProvider
+	extends EventEmitter<TaskProviderEvents>
+	implements vscode.WebviewViewProvider, TelemetryPropertiesProvider, TaskProviderLike
 {
 	// Used in package.json as the view's id. This value cannot be changed due
 	// to how VSCode caches views based on their id, and updating the id would
@@ -101,6 +113,7 @@ export class ClineProvider
 	private view?: vscode.WebviewView | vscode.WebviewPanel
 	private clineStack: Task[] = []
 	private codeIndexStatusSubscription?: vscode.Disposable
+	private currentWorkspaceManager?: CodeIndexManager
 	private _workspaceTracker?: WorkspaceTracker // workSpaceTracker read-only for access outside this class
 	public get workspaceTracker(): WorkspaceTracker | undefined {
 		return this._workspaceTracker
@@ -120,7 +133,6 @@ export class ClineProvider
 		private readonly outputChannel: vscode.OutputChannel,
 		private readonly renderContext: "sidebar" | "editor" = "sidebar",
 		public readonly contextProxy: ContextProxy,
-		public readonly codeIndexManager?: CodeIndexManager,
 		mdmService?: MdmService,
 	) {
 		super()
@@ -128,7 +140,6 @@ export class ClineProvider
 		this.log("ClineProvider instantiated")
 		ClineProvider.activeInstances.add(this)
 
-		this.codeIndexManager = codeIndexManager
 		this.mdmService = mdmService
 		this.updateGlobalState("codebaseIndexModels", EMBEDDING_MODEL_PROFILES)
 
@@ -158,22 +169,114 @@ export class ClineProvider
 			})
 
 		this.marketplaceManager = new MarketplaceManager(this.context, this.customModesManager)
+
+		// Initialize Roo Code Cloud profile sync.
+		this.initializeCloudProfileSync().catch((error) => {
+			this.log(`Failed to initialize cloud profile sync: ${error}`)
+		})
 	}
 
-	// Adds a new Cline instance to clineStack, marking the start of a new task.
+	/**
+	 * Initialize cloud profile synchronization
+	 */
+	private async initializeCloudProfileSync() {
+		try {
+			// Check if authenticated and sync profiles
+			if (CloudService.hasInstance() && CloudService.instance.isAuthenticated()) {
+				await this.syncCloudProfiles()
+			}
+
+			// Set up listener for future updates
+			if (CloudService.hasInstance()) {
+				CloudService.instance.on("settings-updated", this.handleCloudSettingsUpdate)
+			}
+		} catch (error) {
+			this.log(`Error in initializeCloudProfileSync: ${error}`)
+		}
+	}
+
+	/**
+	 * Handle cloud settings updates
+	 */
+	private handleCloudSettingsUpdate = async () => {
+		try {
+			await this.syncCloudProfiles()
+		} catch (error) {
+			this.log(`Error handling cloud settings update: ${error}`)
+		}
+	}
+
+	/**
+	 * Synchronize cloud profiles with local profiles
+	 */
+	private async syncCloudProfiles() {
+		try {
+			const settings = CloudService.instance.getOrganizationSettings()
+			if (!settings?.providerProfiles) {
+				return
+			}
+
+			const currentApiConfigName = this.getGlobalState("currentApiConfigName")
+			const result = await this.providerSettingsManager.syncCloudProfiles(
+				settings.providerProfiles,
+				currentApiConfigName,
+			)
+
+			if (result.hasChanges) {
+				// Update list
+				await this.updateGlobalState("listApiConfigMeta", await this.providerSettingsManager.listConfig())
+
+				if (result.activeProfileChanged && result.activeProfileId) {
+					// Reload full settings for new active profile
+					const profile = await this.providerSettingsManager.getProfile({
+						id: result.activeProfileId,
+					})
+					await this.activateProviderProfile({ name: profile.name })
+				}
+
+				await this.postStateToWebview()
+			}
+		} catch (error) {
+			this.log(`Error syncing cloud profiles: ${error}`)
+		}
+	}
+
+	// Adds a new Task instance to clineStack, marking the start of a new task.
 	// The instance is pushed to the top of the stack (LIFO order).
 	// When the task is completed, the top instance is removed, reactivating the previous task.
-	async addClineToStack(cline: Task) {
-		console.log(`[subtasks] adding task ${cline.taskId}.${cline.instanceId} to stack`)
+	async addClineToStack(task: Task) {
+		console.log(`[subtasks] adding task ${task.taskId}.${task.instanceId} to stack`)
 
 		// Add this cline instance into the stack that represents the order of all the called tasks.
-		this.clineStack.push(cline)
+		this.clineStack.push(task)
+		task.emit(RooCodeEventName.TaskFocused)
+
+		// Perform special setup provider specific tasks.
+		await this.performPreparationTasks(task)
 
 		// Ensure getState() resolves correctly.
 		const state = await this.getState()
 
 		if (!state || typeof state.mode !== "string") {
 			throw new Error(t("common:errors.retrieve_current_mode"))
+		}
+	}
+
+	async performPreparationTasks(cline: Task) {
+		// LMStudio: We need to force model loading in order to read its context
+		// size; we do it now since we're starting a task with that model selected.
+		if (cline.apiConfiguration && cline.apiConfiguration.apiProvider === "lmstudio") {
+			try {
+				if (!hasLoadedFullDetails(cline.apiConfiguration.lmStudioModelId!)) {
+					await forceFullModelDetailsLoad(
+						cline.apiConfiguration.lmStudioBaseUrl ?? "http://localhost:1234",
+						cline.apiConfiguration.lmStudioModelId!,
+					)
+				}
+			} catch (error) {
+				this.log(`Failed to load full model details for LM Studio: ${error}`)
+				vscode.window.showErrorMessage(error.message)
+			}
 		}
 	}
 
@@ -185,24 +288,26 @@ export class ClineProvider
 		}
 
 		// Pop the top Cline instance from the stack.
-		let cline = this.clineStack.pop()
+		let task = this.clineStack.pop()
 
-		if (cline) {
-			console.log(`[subtasks] removing task ${cline.taskId}.${cline.instanceId} from stack`)
+		if (task) {
+			console.log(`[subtasks] removing task ${task.taskId}.${task.instanceId} from stack`)
 
 			try {
 				// Abort the running task and set isAbandoned to true so
 				// all running promises will exit as well.
-				await cline.abortTask(true)
+				await task.abortTask(true)
 			} catch (e) {
 				this.log(
-					`[subtasks] encountered error while aborting task ${cline.taskId}.${cline.instanceId}: ${e.message}`,
+					`[subtasks] encountered error while aborting task ${task.taskId}.${task.instanceId}: ${e.message}`,
 				)
 			}
 
+			task.emit(RooCodeEventName.TaskUnfocused)
+
 			// Make sure no reference kept, once promises end it will be
 			// garbage collected.
-			cline = undefined
+			task = undefined
 		}
 	}
 
@@ -257,8 +362,13 @@ export class ClineProvider
 
 	async dispose() {
 		this.log("Disposing ClineProvider...")
-		await this.removeClineFromStack()
-		this.log("Cleared task")
+
+		// Clear all tasks from the stack.
+		while (this.clineStack.length > 0) {
+			await this.removeClineFromStack()
+		}
+
+		this.log("Cleared all tasks")
 
 		if (this.view && "dispose" in this.view) {
 			this.view.dispose()
@@ -266,6 +376,11 @@ export class ClineProvider
 		}
 
 		this.clearWebviewResources()
+
+		// Clean up cloud service event listener
+		if (CloudService.hasInstance()) {
+			CloudService.instance.off("settings-updated", this.handleCloudSettingsUpdate)
+		}
 
 		while (this.disposables.length) {
 			const x = this.disposables.pop()
@@ -283,6 +398,9 @@ export class ClineProvider
 		this.customModesManager?.dispose()
 		this.log("Disposed all disposables")
 		ClineProvider.activeInstances.delete(this)
+
+		// Clean up any event listeners attached to this provider
+		this.removeAllListeners()
 
 		McpServerManager.unregisterProvider(this)
 	}
@@ -312,6 +430,7 @@ export class ClineProvider
 
 	public static async isActiveTask(): Promise<boolean> {
 		const visibleProvider = await ClineProvider.getInstance()
+
 		if (!visibleProvider) {
 			return false
 		}
@@ -449,16 +568,15 @@ export class ClineProvider
 		// and executes code based on the message that is received
 		this.setWebviewMessageListener(webviewView.webview)
 
-		// Subscribe to code index status updates if the manager exists
-		if (this.codeIndexManager) {
-			this.codeIndexStatusSubscription = this.codeIndexManager.onProgressUpdate((update: IndexProgressUpdate) => {
-				this.postMessageToWebview({
-					type: "indexingStatusUpdate",
-					values: update,
-				})
-			})
-			this.webviewDisposables.push(this.codeIndexStatusSubscription)
-		}
+		// Initialize code index status subscription for the current workspace
+		this.updateCodeIndexStatusSubscription()
+
+		// Listen for active editor changes to update code index status for the current workspace
+		const activeEditorSubscription = vscode.window.onDidChangeActiveTextEditor(() => {
+			// Update subscription when workspace might have changed
+			this.updateCodeIndexStatusSubscription()
+		})
+		this.webviewDisposables.push(activeEditorSubscription)
 
 		// Logs show up in bottom panel > Debug Console
 		//console.log("registering listener")
@@ -494,8 +612,8 @@ export class ClineProvider
 				} else {
 					this.log("Clearing webview resources for sidebar view")
 					this.clearWebviewResources()
-					this.codeIndexStatusSubscription?.dispose()
-					this.codeIndexStatusSubscription = undefined
+					// Reset current workspace manager reference when view is disposed
+					this.currentWorkspaceManager = undefined
 				}
 			},
 			null,
@@ -565,7 +683,7 @@ export class ClineProvider
 			rootTask: this.clineStack.length > 0 ? this.clineStack[0] : undefined,
 			parentTask,
 			taskNumber: this.clineStack.length + 1,
-			onCreated: (instance) => this.emit("taskCreated", instance),
+			onCreated: (instance) => this.emit(RooCodeEventName.TaskCreated, instance),
 			...options,
 		})
 
@@ -645,7 +763,7 @@ export class ClineProvider
 			rootTask: historyItem.rootTask,
 			parentTask: historyItem.parentTask,
 			taskNumber: historyItem.number,
-			onCreated: (instance) => this.emit("taskCreated", instance),
+			onCreated: (instance) => this.emit(RooCodeEventName.TaskCreated, instance),
 		})
 
 		await this.addClineToStack(task)
@@ -856,7 +974,7 @@ export class ClineProvider
 
 		if (cline) {
 			TelemetryService.instance.captureModeSwitch(cline.taskId, newMode)
-			cline.emit("taskModeSwitched", cline.taskId, newMode)
+			cline.emit(RooCodeEventName.TaskModeSwitched, cline.taskId, newMode)
 
 			// Store the current mode in case we need to rollback
 			const previousMode = (cline as any)._taskMode
@@ -1508,6 +1626,7 @@ export class ClineProvider
 			alwaysAllowSubtasks,
 			alwaysAllowUpdateTodoList,
 			allowedMaxRequests,
+			allowedMaxCost,
 			autoCondenseContext,
 			autoCondenseContextPercent,
 			soundEnabled,
@@ -1612,6 +1731,7 @@ export class ClineProvider
 			alwaysAllowSubtasks: alwaysAllowSubtasks ?? true,
 			alwaysAllowUpdateTodoList: alwaysAllowUpdateTodoList ?? true,
 			allowedMaxRequests,
+			allowedMaxCost,
 			autoCondenseContext: autoCondenseContext ?? true,
 			autoCondenseContextPercent: autoCondenseContextPercent ?? 100,
 			uriScheme: vscode.env.uriScheme,
@@ -1816,6 +1936,7 @@ export class ClineProvider
 			followupAutoApproveTimeoutMs: stateValues.followupAutoApproveTimeoutMs ?? 60000,
 			diagnosticsEnabled: stateValues.diagnosticsEnabled ?? true,
 			allowedMaxRequests: stateValues.allowedMaxRequests,
+			allowedMaxCost: stateValues.allowedMaxCost,
 			autoCondenseContext: stateValues.autoCondenseContext ?? true,
 			autoCondenseContextPercent: stateValues.autoCondenseContextPercent ?? 100,
 			taskHistory: stateValues.taskHistory,
@@ -2124,7 +2245,7 @@ export class ClineProvider
 			appName: packageJSON?.name ?? Package.name,
 			appVersion: packageJSON?.version ?? Package.version,
 			vscodeVersion: vscode.version,
-			platform: process.platform,
+			platform: isWsl ? "wsl" /* kilocode_change */ : process.platform,
 			editorName: vscode.env.appName,
 			language,
 			mode,
@@ -2358,6 +2479,60 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
 	}
 
 	// kilocode_change end
+	/**
+	 * Gets the CodeIndexManager for the current active workspace
+	 * @returns CodeIndexManager instance for the current workspace or the default one
+	 */
+	public getCurrentWorkspaceCodeIndexManager(): CodeIndexManager | undefined {
+		return CodeIndexManager.getInstance(this.context)
+	}
+
+	/**
+	 * Updates the code index status subscription to listen to the current workspace manager
+	 */
+	private updateCodeIndexStatusSubscription(): void {
+		// Get the current workspace manager
+		const currentManager = this.getCurrentWorkspaceCodeIndexManager()
+
+		// If the manager hasn't changed, no need to update subscription
+		if (currentManager === this.currentWorkspaceManager) {
+			return
+		}
+
+		// Dispose the old subscription if it exists
+		if (this.codeIndexStatusSubscription) {
+			this.codeIndexStatusSubscription.dispose()
+			this.codeIndexStatusSubscription = undefined
+		}
+
+		// Update the current workspace manager reference
+		this.currentWorkspaceManager = currentManager
+
+		// Subscribe to the new manager's progress updates if it exists
+		if (currentManager) {
+			this.codeIndexStatusSubscription = currentManager.onProgressUpdate((update: IndexProgressUpdate) => {
+				// Only send updates if this manager is still the current one
+				if (currentManager === this.getCurrentWorkspaceCodeIndexManager()) {
+					// Get the full status from the manager to ensure we have all fields correctly formatted
+					const fullStatus = currentManager.getCurrentStatus()
+					this.postMessageToWebview({
+						type: "indexingStatusUpdate",
+						values: fullStatus,
+					})
+				}
+			})
+
+			if (this.view) {
+				this.webviewDisposables.push(this.codeIndexStatusSubscription)
+			}
+
+			// Send initial status for the current workspace
+			this.postMessageToWebview({
+				type: "indexingStatusUpdate",
+				values: currentManager.getCurrentStatus(),
+			})
+		}
+	}
 }
 
 class OrganizationAllowListViolationError extends Error {

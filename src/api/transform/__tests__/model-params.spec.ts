@@ -293,12 +293,12 @@ describe("getModelParams", () => {
 		it("should not honor customMaxThinkingTokens for non-reasoning budget models", () => {
 			const model: ModelInfo = {
 				...baseModel,
-				maxTokens: 4000,
+				maxTokens: 3000, // 3000 is 18.75% of 16000 context window, within 20% threshold
 			}
 
 			expect(getModelParams({ ...anthropicParams, settings: { modelMaxThinkingTokens: 1500 }, model })).toEqual({
 				format: anthropicParams.format,
-				maxTokens: 4000,
+				maxTokens: 3000, // Uses model.maxTokens since it's within 20% threshold
 				temperature: 0, // Using default temperature.
 				reasoningEffort: undefined,
 				reasoningBudget: undefined, // Should remain undefined despite customMaxThinkingTokens being set.
@@ -327,6 +327,57 @@ describe("getModelParams", () => {
 				reasoning: {
 					type: "enabled",
 					budget_tokens: 1024,
+				},
+			})
+		})
+
+		it("should clamp Gemini 2.5 Pro thinking budget to at least 128 tokens", () => {
+			const model: ModelInfo = {
+				...baseModel,
+				requiredReasoningBudget: true,
+			}
+
+			expect(
+				getModelParams({
+					modelId: "gemini-2.5-pro",
+					format: "gemini" as const,
+					settings: { modelMaxTokens: 2000, modelMaxThinkingTokens: 50 },
+					model,
+				}),
+			).toEqual({
+				format: "gemini",
+				maxTokens: 2000,
+				temperature: 1.0,
+				reasoningEffort: undefined,
+				reasoningBudget: 128, // Minimum is 128 for Gemini 2.5 Pro
+				reasoning: {
+					thinkingBudget: 128,
+					includeThoughts: true,
+				},
+			})
+		})
+
+		it("should use 128 as default thinking budget for Gemini 2.5 Pro", () => {
+			const model: ModelInfo = {
+				...baseModel,
+				requiredReasoningBudget: true,
+			}
+
+			expect(
+				getModelParams({
+					modelId: "google/gemini-2.5-pro",
+					format: "openrouter" as const,
+					settings: { modelMaxTokens: 4000 },
+					model,
+				}),
+			).toEqual({
+				format: "openrouter",
+				maxTokens: 4000,
+				temperature: 1.0,
+				reasoningEffort: undefined,
+				reasoningBudget: 128, // Default is 128 for Gemini 2.5 Pro
+				reasoning: {
+					max_tokens: 128,
 				},
 			})
 		})
@@ -514,7 +565,7 @@ describe("getModelParams", () => {
 		it("should use reasoningEffort if supportsReasoningEffort is false but reasoningEffort is set", () => {
 			const model: ModelInfo = {
 				...baseModel,
-				maxTokens: 8000,
+				maxTokens: 3000, // Changed to 3000 (18.75% of 16000), which is within 20% threshold
 				supportsReasoningEffort: false,
 				reasoningEffort: "medium",
 			}
@@ -525,7 +576,7 @@ describe("getModelParams", () => {
 				model,
 			})
 
-			expect(result.maxTokens).toBe(8000)
+			expect(result.maxTokens).toBe(3000) // Now uses model.maxTokens since it's within 20% threshold
 			expect(result.reasoningEffort).toBe("medium")
 		})
 	})
@@ -544,7 +595,8 @@ describe("getModelParams", () => {
 				model,
 			})
 
-			// Should discard model's maxTokens and use default
+			// For hybrid models (supportsReasoningBudget) in Anthropic contexts,
+			// should discard model's maxTokens and use ANTHROPIC_DEFAULT_MAX_TOKENS
 			expect(result.maxTokens).toBe(ANTHROPIC_DEFAULT_MAX_TOKENS)
 			expect(result.reasoningBudget).toBeUndefined()
 		})

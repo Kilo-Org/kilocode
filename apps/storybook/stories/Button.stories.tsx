@@ -8,7 +8,7 @@ const BUTTON_SIZES = ["default", "sm", "lg", "icon"] as const
 const STORY_TABLE_SIZES = ["default", "sm", "lg"] as const
 
 const meta = {
-	title: "Component/Button",
+	title: "Components/Button",
 	component: Button,
 	parameters: {
 		layout: "centered",

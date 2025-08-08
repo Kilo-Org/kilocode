@@ -1,8 +1,7 @@
-export * from "./providers/index.js"
-
 export * from "./api.js"
-export * from "./codebase-index.js"
 export * from "./cloud.js"
+export * from "./codebase-index.js"
+export * from "./events.js"
 export * from "./experiment.js"
 export * from "./followup.js"
 export * from "./global-settings.js"
@@ -15,11 +14,14 @@ export * from "./mode.js"
 export * from "./model.js"
 export * from "./provider-settings.js"
 export * from "./sharing.js"
+export * from "./task.js"
+export * from "./todo.js"
 export * from "./telemetry.js"
 export * from "./terminal.js"
 export * from "./tool.js"
 export * from "./type-fu.js"
 export * from "./vscode.js"
 export * from "./kilocode.js" // kilocode_change
-export * from "./todo.js"
-export * from "./usage-tracker.js"
+export * from "./usage-tracker.js" // kilocode_change
+
+export * from "./providers/index.js"

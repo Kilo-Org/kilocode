@@ -53,6 +53,8 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 			yield* this.handleReasonerMessage(model, id, systemPrompt, messages)
 		} else if (model.id.startsWith("o1")) {
 			yield* this.handleO1FamilyMessage(model, systemPrompt, messages)
+		} else if (this.isNectarineModel(model.id) || this.isGpt5Model(model.id)) {
+			yield* this.handleNectarineMessage(model, systemPrompt, messages)
 		} else {
 			yield* this.handleDefaultModelMessage(model, systemPrompt, messages)
 		}
@@ -123,6 +125,33 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 		yield* this.handleStreamResponse(stream, model)
 	}
 
+	private async *handleNectarineMessage(
+		model: OpenAiNativeModel,
+		systemPrompt: string,
+		messages: Anthropic.Messages.MessageParam[],
+	): ApiStream {
+		const { reasoning } = this.getModel()
+
+		const stream = await this.client.chat.completions.create({
+			model: model.id,
+			temperature: 1,
+			messages: [{ role: "developer", content: systemPrompt }, ...convertToOpenAiMessages(messages)],
+			stream: true,
+			stream_options: { include_usage: true },
+			...(reasoning && reasoning),
+		})
+
+		yield* this.handleStreamResponse(stream, model)
+	}
+
+	private isNectarineModel(modelId: string): boolean {
+		return modelId.includes("nectarine")
+	}
+
+	private isGpt5Model(modelId: string): boolean {
+		return modelId.startsWith("gpt-5")
+	}
+
 	private async *handleStreamResponse(
 		stream: AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>,
 		model: OpenAiNativeModel,
@@ -189,7 +218,7 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 			const params: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
 				model: id,
 				messages: [{ role: "user", content: prompt }],
-				temperature,
+				temperature: this.isGpt5Model(id) ? null : temperature, // kilocode_change: gpt5
 				...(reasoning && reasoning),
 			}
 

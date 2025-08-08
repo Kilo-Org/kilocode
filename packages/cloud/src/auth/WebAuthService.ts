@@ -6,10 +6,18 @@ import { z } from "zod"
 
 import type { CloudUserInfo, CloudOrganizationMembership } from "@roo-code/types"
 
-import { getClerkBaseUrl, getRooCodeApiUrl, PRODUCTION_CLERK_BASE_URL } from "../Config"
-import { RefreshTimer } from "../RefreshTimer"
+import { getClerkBaseUrl, getRooCodeApiUrl, PRODUCTION_CLERK_BASE_URL } from "../config"
 import { getUserAgent } from "../utils"
+import { InvalidClientTokenError } from "../errors"
+import { RefreshTimer } from "../RefreshTimer"
+
 import type { AuthService, AuthServiceEvents, AuthState } from "./AuthService"
+
+const AUTH_STATE_KEY = "clerk-auth-state"
+
+/**
+ * AuthCredentials
+ */
 
 const authCredentialsSchema = z.object({
 	clientToken: z.string().min(1, "Client token cannot be empty"),
@@ -19,7 +27,9 @@ const authCredentialsSchema = z.object({
 
 type AuthCredentials = z.infer<typeof authCredentialsSchema>
 
-const AUTH_STATE_KEY = "clerk-auth-state"
+/**
+ * Clerk Schemas
+ */
 
 const clerkSignInResponseSchema = z.object({
 	response: z.object({
@@ -33,8 +43,9 @@ const clerkCreateSessionTokenResponseSchema = z.object({
 
 const clerkMeResponseSchema = z.object({
 	response: z.object({
-		first_name: z.string().optional().nullable(),
-		last_name: z.string().optional().nullable(),
+		id: z.string().optional(),
+		first_name: z.string().nullish(),
+		last_name: z.string().nullish(),
 		image_url: z.string().optional(),
 		primary_email_address_id: z.string().optional(),
 		email_addresses: z
@@ -69,13 +80,6 @@ const clerkOrganizationMembershipsSchema = z.object({
 	),
 })
 
-class InvalidClientTokenError extends Error {
-	constructor() {
-		super("Invalid/Expired client token")
-		Object.setPrototypeOf(this, InvalidClientTokenError.prototype)
-	}
-}
-
 export class WebAuthService extends EventEmitter<AuthServiceEvents> implements AuthService {
 	private context: vscode.ExtensionContext
 	private timer: RefreshTimer
@@ -94,8 +98,9 @@ export class WebAuthService extends EventEmitter<AuthServiceEvents> implements A
 		this.context = context
 		this.log = log || console.log
 
-		// Calculate auth credentials key based on Clerk base URL
+		// Calculate auth credentials key based on Clerk base URL.
 		const clerkBaseUrl = getClerkBaseUrl()
+
 		if (clerkBaseUrl !== PRODUCTION_CLERK_BASE_URL) {
 			this.authCredentialsKey = `clerk-auth-credentials-${clerkBaseUrl}`
 		} else {
@@ -111,6 +116,12 @@ export class WebAuthService extends EventEmitter<AuthServiceEvents> implements A
 			initialBackoffMs: 1_000,
 			maxBackoffMs: 300_000,
 		})
+	}
+
+	private changeState(newState: AuthState): void {
+		const previousState = this.state
+		this.state = newState
+		this.emit("auth-state-changed", { state: newState, previousState })
 	}
 
 	private async handleCredentialsChange(): Promise<void> {
@@ -138,14 +149,11 @@ export class WebAuthService extends EventEmitter<AuthServiceEvents> implements A
 	private transitionToLoggedOut(): void {
 		this.timer.stop()
 
-		const previousState = this.state
-
 		this.credentials = null
 		this.sessionToken = null
 		this.userInfo = null
-		this.state = "logged-out"
 
-		this.emit("logged-out", { previousState })
+		this.changeState("logged-out")
 
 		this.log("[auth] Transitioned to logged-out state")
 	}
@@ -153,14 +161,11 @@ export class WebAuthService extends EventEmitter<AuthServiceEvents> implements A
 	private transitionToAttemptingSession(credentials: AuthCredentials): void {
 		this.credentials = credentials
 
-		const previousState = this.state
-		this.state = "attempting-session"
-
 		this.sessionToken = null
 		this.userInfo = null
 		this.isFirstRefreshAttempt = true
 
-		this.emit("attempting-session", { previousState })
+		this.changeState("attempting-session")
 
 		this.timer.start()
 
@@ -168,13 +173,10 @@ export class WebAuthService extends EventEmitter<AuthServiceEvents> implements A
 	}
 
 	private transitionToInactiveSession(): void {
-		const previousState = this.state
-		this.state = "inactive-session"
-
 		this.sessionToken = null
 		this.userInfo = null
 
-		this.emit("inactive-session", { previousState })
+		this.changeState("inactive-session")
 
 		this.log("[auth] Transitioned to inactive-session state")
 	}
@@ -302,9 +304,7 @@ export class WebAuthService extends EventEmitter<AuthServiceEvents> implements A
 			this.log("[auth] Successfully authenticated with Roo Code Cloud")
 		} catch (error) {
 			this.log(`[auth] Error handling Roo Code Cloud callback: ${error}`)
-			const previousState = this.state
-			this.state = "logged-out"
-			this.emit("logged-out", { previousState })
+			this.changeState("logged-out")
 			throw new Error(`Failed to handle Roo Code Cloud callback: ${error}`)
 		}
 	}
@@ -388,12 +388,13 @@ export class WebAuthService extends EventEmitter<AuthServiceEvents> implements A
 		try {
 			const previousState = this.state
 			this.sessionToken = await this.clerkCreateSessionToken()
-			this.state = "active-session"
 
 			if (previousState !== "active-session") {
+				this.changeState("active-session")
 				this.log("[auth] Transitioned to active-session state")
-				this.emit("active-session", { previousState })
 				this.fetchUserInfo()
+			} else {
+				this.state = "active-session"
 			}
 		} catch (error) {
 			if (error instanceof InvalidClientTokenError) {
@@ -518,9 +519,13 @@ export class WebAuthService extends EventEmitter<AuthServiceEvents> implements A
 			throw new Error(`HTTP ${response.status}: ${response.statusText}`)
 		}
 
-		const { response: userData } = clerkMeResponseSchema.parse(await response.json())
+		const payload = await response.json()
+		const { response: userData } = clerkMeResponseSchema.parse(payload)
 
-		const userInfo: CloudUserInfo = {}
+		const userInfo: CloudUserInfo = {
+			id: userData.id,
+			picture: userData.image_url,
+		}
 
 		const names = [userData.first_name, userData.last_name].filter((name) => !!name)
 		userInfo.name = names.length > 0 ? names.join(" ") : undefined
@@ -532,8 +537,6 @@ export class WebAuthService extends EventEmitter<AuthServiceEvents> implements A
 				(email: { id: string }) => primaryEmailAddressId === email.id,
 			)?.email_address
 		}
-
-		userInfo.picture = userData.image_url
 
 		// Fetch organization info if user is in organization context
 		try {
@@ -548,6 +551,7 @@ export class WebAuthService extends EventEmitter<AuthServiceEvents> implements A
 
 					if (userMembership) {
 						this.setUserOrganizationInfo(userInfo, userMembership)
+
 						this.log("[auth] User in organization context:", {
 							id: userMembership.organization.id,
 							name: userMembership.organization.name,
@@ -566,6 +570,7 @@ export class WebAuthService extends EventEmitter<AuthServiceEvents> implements A
 
 				if (primaryOrgMembership) {
 					this.setUserOrganizationInfo(userInfo, primaryOrgMembership)
+
 					this.log("[auth] Legacy credentials: Found organization membership:", {
 						id: primaryOrgMembership.organization.id,
 						name: primaryOrgMembership.organization.name,

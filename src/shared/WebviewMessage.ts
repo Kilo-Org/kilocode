@@ -90,6 +90,7 @@ export interface WebviewMessage {
 		| "alwaysAllowMcp"
 		| "alwaysAllowModeSwitch"
 		| "allowedMaxRequests"
+		| "allowedMaxCost"
 		| "alwaysAllowSubtasks"
 		| "alwaysAllowUpdateTodoList"
 		| "autoCondenseContext"

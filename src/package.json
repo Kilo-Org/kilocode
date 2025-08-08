@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.77.1",
+	"version": "4.78.0",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -634,6 +634,7 @@
 		"gray-matter": "^4.0.3",
 		"i18next": "^25.0.0",
 		"ignore": "^7.0.3",
+		"is-wsl": "^3.1.0",
 		"isbinaryfile": "^5.0.2",
 		"lodash.debounce": "^4.0.8",
 		"lru-cache": "^11.1.0",

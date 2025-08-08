@@ -22,7 +22,7 @@ const AutoApproveMenu = ({ style }: AutoApproveMenuProps) => {
 		autoApprovalEnabled,
 		setAutoApprovalEnabled,
 		alwaysApproveResubmit,
-		allowedMaxRequests,
+		allowedMaxRequests, // kilocode_change
 		setAlwaysAllowReadOnly,
 		setAlwaysAllowWrite,
 		setAlwaysAllowExecute,
@@ -33,7 +33,7 @@ const AutoApproveMenu = ({ style }: AutoApproveMenuProps) => {
 		setAlwaysApproveResubmit,
 		setAlwaysAllowFollowupQuestions,
 		setAlwaysAllowUpdateTodoList,
-		setAllowedMaxRequests,
+		setAllowedMaxRequests, // kilocode_change
 	} = useExtensionState()
 
 	const { t } = useAppTranslation()

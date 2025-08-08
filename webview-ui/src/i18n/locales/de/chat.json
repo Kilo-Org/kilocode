@@ -4,10 +4,11 @@
 		"title": "Aufgabe",
 		"seeMore": "Mehr anzeigen",
 		"seeLess": "Weniger anzeigen",
-		"tokens": "Tokens:",
-		"cache": "Cache:",
-		"apiCost": "API-Kosten:",
-		"contextWindow": "Kontextfenster:",
+		"tokens": "Tokens",
+		"cache": "Cache",
+		"apiCost": "API-Kosten",
+		"size": "Größe",
+		"contextWindow": "Kontextfenster",
 		"closeAndStart": "Aufgabe schließen und neue starten",
 		"export": "Aufgabenverlauf exportieren",
 		"delete": "Aufgabe löschen (Shift + Klick zum Überspringen der Bestätigung)",
@@ -146,7 +147,6 @@
 		"streamingFailed": "API-Streaming fehlgeschlagen"
 	},
 	"checkpoint": {
-		"initial": "Initialer Checkpoint",
 		"regular": "Checkpoint",
 		"initializingWarning": "Checkpoint wird noch initialisiert... Falls dies zu lange dauert, kannst du Checkpoints in den <settingsLink>Einstellungen</settingsLink> deaktivieren und deine Aufgabe neu starten.",
 		"menu": {
@@ -321,6 +321,11 @@
 			"title": "Limit für automatisch genehmigte Anfragen erreicht",
 			"description": "Kilo Code hat das automatisch genehmigte Limit von {{count}} API-Anfrage(n) erreicht. Möchtest du den Zähler zurücksetzen und mit der Aufgabe fortfahren?",
 			"button": "Zurücksetzen und fortfahren"
+		},
+		"autoApprovedCostLimitReached": {
+			"description": "Roo hat das automatisch genehmigte Kostenlimit von ${{count}} erreicht. Möchten Sie die Kosten zurücksetzen und mit der Aufgabe fortfahren?",
+			"title": "Kostengrenze für automatische Genehmigung erreicht",
+			"button": "Zurücksetzen und Fortfahren"
 		}
 	},
 	"codebaseSearch": {

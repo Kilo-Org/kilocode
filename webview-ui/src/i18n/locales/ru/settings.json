@@ -128,6 +128,7 @@
 	},
 	"autoApprove": {
 		"description": "Разрешить Kilo Code автоматически выполнять операции без необходимости одобрения. Включайте эти параметры только если полностью доверяете ИИ и понимаете связанные с этим риски безопасности.",
+		"enabled": "Автоодобрение включено",
 		"toggleAriaLabel": "Переключить автоодобрение",
 		"disabledAriaLabel": "Автоодобрение отключено - сначала выберите опции",
 		"readOnly": {
@@ -202,7 +203,14 @@
 			"description": "Автоматически выполнять это количество API-запросов перед запросом разрешения на продолжение задачи.",
 			"unlimited": "Без ограничений"
 		},
-		"selectOptionsFirst": "Выберите хотя бы один вариант ниже, чтобы включить автоодобрение"
+		"selectOptionsFirst": "Выберите хотя бы один вариант ниже, чтобы включить автоодобрение",
+		"apiCostLimit": {
+			"title": "Максимальная стоимость",
+			"unlimited": "Безлимитный"
+		},
+		"maxLimits": {
+			"description": "Автоматически выполнять запросы до указанных лимитов, прежде чем запрашивать разрешение на продолжение."
+		}
 	},
 	"providers": {
 		"providerDocumentation": "Документация {{provider}}",
@@ -231,10 +239,6 @@
 		"openRouterApiKey": "OpenRouter API-ключ",
 		"getOpenRouterApiKey": "Получить OpenRouter API-ключ",
 		"apiKeyStorageNotice": "API-ключи хранятся безопасно в Secret Storage VSCode",
-		"cerebras": {
-			"apiKey": "Cerebras API-ключ",
-			"getApiKey": "Получить Cerebras API-ключ"
-		},
 		"glamaApiKey": "Glama API-ключ",
 		"getGlamaApiKey": "Получить Glama API-ключ",
 		"useCustomBaseUrl": "Использовать пользовательский базовый URL",
@@ -258,21 +262,25 @@
 		"anthropicApiKey": "Anthropic API-ключ",
 		"getAnthropicApiKey": "Получить Anthropic API-ключ",
 		"anthropicUseAuthToken": "Передавать Anthropic API-ключ как Authorization-заголовок вместо X-Api-Key",
+		"cerebrasApiKey": "Cerebras API-ключ",
+		"getCerebrasApiKey": "Получить Cerebras API-ключ",
 		"chutesApiKey": "Chutes API-ключ",
 		"getChutesApiKey": "Получить Chutes API-ключ",
+		"fireworksApiKey": "Fireworks API-ключ",
+		"getFireworksApiKey": "Получить Fireworks API-ключ",
 		"deepSeekApiKey": "DeepSeek API-ключ",
 		"getDeepSeekApiKey": "Получить DeepSeek API-ключ",
 		"doubaoApiKey": "Doubao API-ключ",
 		"getDoubaoApiKey": "Получить Doubao API-ключ",
-		"fireworksApiKey": "Fireworks API-ключ",
-		"getFireworksApiKey": "Получить Fireworks API-ключ",
-		"zaiApiKey": "Z.AI API-ключ",
-		"getZaiApiKey": "Получить Z.AI API-ключ",
 		"bigModelApiKey": "BigModel API-ключ",
 		"getBigModelApiKey": "Получить BigModel API-ключ",
 		"moonshotApiKey": "Moonshot API-ключ",
 		"getMoonshotApiKey": "Получить Moonshot API-ключ",
 		"moonshotBaseUrl": "Точка входа Moonshot",
+		"zaiApiKey": "Z AI API-ключ",
+		"getZaiApiKey": "Получить Z AI API-ключ",
+		"zaiEntrypoint": "Точка входа Z AI",
+		"zaiEntrypointDescription": "Пожалуйста, выберите подходящую точку входа API в зависимости от вашего местоположения. Если вы находитесь в Китае, выберите open.bigmodel.cn. В противном случае выберите api.z.ai.",
 		"geminiApiKey": "Gemini API-ключ",
 		"getGroqApiKey": "Получить Groq API-ключ",
 		"groqApiKey": "Groq API-ключ",
@@ -333,7 +341,6 @@
 				"description": "Позволяет Gemini искать актуальную информацию в Google и основывать ответы на данных в реальном времени. Полезно для запросов, требующих актуальной информации."
 			}
 		},
-
 		"googleCloudSetup": {
 			"title": "Для использования Google Cloud Vertex AI необходимо:",
 			"step1": "1. Создайте аккаунт Google Cloud, включите Vertex AI API и нужные модели Claude.",
@@ -719,6 +726,10 @@
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Фоновое редактирование",
 			"description": "Предотвращает нарушение фокуса редактора при включении. Редактирование файлов происходит в фоновом режиме без открытия представлений различий или кражи фокуса. Вы можете продолжать работать без перерывов, пока Roo вносит изменения. Файлы могут открываться без фокуса для захвата диагностики или оставаться полностью закрытыми."
+		},
+		"ASSISTANT_MESSAGE_PARSER": {
+			"name": "Использовать новый парсер сообщений",
+			"description": "Включите экспериментальный потоковый парсер сообщений, который ускоряет длинные ответы благодаря более эффективной обработке сообщений."
 		}
 	},
 	"promptCaching": {

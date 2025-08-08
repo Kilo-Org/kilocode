@@ -74,6 +74,7 @@
 		"no_internet": "ما فيه اتصال بالإنترنت. تأكد من اتصال الشبكة وجرّب مرة ثانية.",
 		"url_forbidden": "الوصول للموقع ممنوع. ممكن الموقع يمنع الوصول التلقائي أو يحتاج تسجيل دخول.",
 		"url_page_not_found": "الصفحة غير موجودة. تأكد من صحة الرابط.",
+		"url_request_aborted": "تم إلغاء طلب جلب الرابط. قد يحدث هذا إذا كان الموقع يمنع الوصول التلقائي أو يتطلب تسجيل دخول أو بسبب مشكلة في الشبكة. جرّب مرة ثانية أو تأكد من إمكانية الوصول للرابط في المتصفح العادي.",
 		"url_fetch_failed": "فشل جلب محتوى الرابط: {{error}}",
 		"url_fetch_error_with_url": "خطأ في جلب محتوى {{url}}: {{error}}",
 		"command_timeout": "انتهت مهلة تنفيذ الأمر بعد {{seconds}} ثانية",
@@ -96,7 +97,8 @@
 			"errorOutput": "المخرجات الخطأ: {{output}}",
 			"processExitedWithError": "العملية طلعت بكود {{exitCode}}. المخرجات: {{output}}",
 			"stoppedWithReason": "Claude Code توقف والسبب: {{reason}}",
-			"apiKeyModelPlanMismatch": "مفاتيح API وخطط الاشتراك تدعم نماذج مختلفة. تأكد إن النموذج المحدد داخل ضمن خطتك."
+			"apiKeyModelPlanMismatch": "مفاتيح API وخطط الاشتراك تدعم نماذج مختلفة. تأكد إن النموذج المحدد داخل ضمن خطتك.",
+			"notFound": "ملف Claude Code التنفيذي '{{claudePath}}' غير موجود.\n\nرجاءً ثبت Claude Code CLI:\n1. زر {{installationUrl}} لتحميل Claude Code\n2. اتبع تعليمات التثبيت لنظام التشغيل\n3. تأكد إن أمر 'claude' متاح في PATH\n4. أو اضبط مسار مخصص في إعدادات Roo تحت 'مسار Claude Code'\n\nالخطأ الأصلي: {{originalError}}"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "فشل تحميل بيانات OAuth. لازم تسوي تسجيل دخول أول: {{error}}",
@@ -112,6 +114,15 @@
 			"generate_stream": "خطأ في تدفق السياق من Gemini: {{error}}",
 			"generate_complete_prompt": "خطأ في إكمال Gemini: {{error}}",
 			"sources": "المصادر:"
+		},
+		"cerebras": {
+			"authenticationFailed": "فشل تسجيل الدخول في Cerebras API. تأكد من صحة مفتاح API وأنه لم ينته.",
+			"accessForbidden": "الوصول لـ Cerebras API ممنوع. مفتاح API قد لا يملك صلاحية للنموذج أو الميزة المطلوبة.",
+			"rateLimitExceeded": "تجاوزت حد Cerebras API. انتظر قبل إرسال طلب آخر.",
+			"serverError": "خطأ في خادم Cerebras API ({{status}}). جرّب مرة ثانية لاحقاً.",
+			"genericError": "خطأ Cerebras API ({{status}}): {{message}}",
+			"noResponseBody": "خطأ Cerebras API: لا يوجد محتوى في الاستجابة",
+			"completionError": "خطأ في إكمال Cerebras: {{error}}"
 		}
 	},
 	"warnings": {

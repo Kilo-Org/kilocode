@@ -269,7 +269,8 @@ describe("mergeExtensionState", () => {
 				inlineAssist: false, // kilocode_change
 				preventFocusDisruption: false,
 				morphFastApply: false, // kilocode_change
-			},
+				assistantMessageParser: false,
+			} as Record<ExperimentId, boolean>,
 		}
 
 		const result = mergeExtensionState(prevState, newState)
@@ -285,6 +286,7 @@ describe("mergeExtensionState", () => {
 			inlineAssist: false, // kilocode_change
 			preventFocusDisruption: false,
 			morphFastApply: false, // kilocode_change
+			assistantMessageParser: false,
 		})
 	})
 })

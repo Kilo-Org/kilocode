@@ -69,6 +69,7 @@
 		"no_internet": "Không có kết nối internet. Vui lòng kiểm tra kết nối mạng và thử lại.",
 		"url_forbidden": "Truy cập vào trang web này bị cấm. Trang có thể chặn truy cập tự động hoặc yêu cầu xác thực.",
 		"url_page_not_found": "Không tìm thấy trang. Vui lòng kiểm tra URL có đúng không.",
+		"url_request_aborted": "Yêu cầu lấy URL đã bị hủy. Điều này có thể xảy ra nếu trang web chặn truy cập tự động, yêu cầu xác thực hoặc có vấn đề về mạng. Vui lòng thử lại hoặc kiểm tra xem URL có thể truy cập được trong trình duyệt thông thường không.",
 		"url_fetch_failed": "Lỗi lấy nội dung URL: {{error}}",
 		"url_fetch_error_with_url": "Lỗi lấy nội dung cho {{url}}: {{error}}",
 		"command_timeout": "Thực thi lệnh đã hết thời gian chờ sau {{seconds}} giây",
@@ -91,7 +92,8 @@
 			"errorOutput": "Đầu ra lỗi: {{output}}",
 			"processExitedWithError": "Tiến trình Claude Code thoát với mã {{exitCode}}. Đầu ra lỗi: {{output}}",
 			"stoppedWithReason": "Claude Code dừng lại vì lý do: {{reason}}",
-			"apiKeyModelPlanMismatch": "Khóa API và gói đăng ký cho phép các mô hình khác nhau. Đảm bảo rằng mô hình đã chọn được bao gồm trong gói của bạn."
+			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
+			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Roo settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "Không thể tải thông tin xác thực OAuth. Vui lòng xác thực trước: {{error}}",
@@ -107,6 +109,15 @@
 			"generate_stream": "Lỗi luồng ngữ cảnh tạo Gemini: {{error}}",
 			"generate_complete_prompt": "Lỗi hoàn thành Gemini: {{error}}",
 			"sources": "Nguồn:"
+		},
+		"cerebras": {
+			"authenticationFailed": "Xác thực API Cerebras thất bại. Vui lòng kiểm tra khóa API của bạn có hợp lệ và chưa hết hạn.",
+			"accessForbidden": "Truy cập API Cerebras bị từ chối. Khóa API của bạn có thể không có quyền truy cập vào mô hình hoặc tính năng được yêu cầu.",
+			"rateLimitExceeded": "Vượt quá giới hạn tốc độ API Cerebras. Vui lòng chờ trước khi thực hiện yêu cầu khác.",
+			"serverError": "Lỗi máy chủ API Cerebras ({{status}}). Vui lòng thử lại sau.",
+			"genericError": "Lỗi API Cerebras ({{status}}): {{message}}",
+			"noResponseBody": "Lỗi API Cerebras: Không có nội dung phản hồi",
+			"completionError": "Lỗi hoàn thành Cerebras: {{error}}"
 		}
 	},
 	"warnings": {

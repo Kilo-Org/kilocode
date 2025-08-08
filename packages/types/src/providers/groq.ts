@@ -100,21 +100,23 @@ export const groqModels = {
 		description: "Moonshot AI Kimi K2 Instruct 1T model, 128K context.",
 	},
 	"openai/gpt-oss-120b": {
-		maxTokens: 32768,
+		maxTokens: 32766,
 		contextWindow: 131072,
 		supportsImages: false,
 		supportsPromptCache: false,
 		inputPrice: 0.15,
 		outputPrice: 0.75,
-		description: "GPT-OSS 120B is OpenAI's flagship open source model, built on a Mixture-of-Experts (MoE) architecture with 20 billion parameters and 128 experts.",
+		description:
+			"GPT-OSS 120B is OpenAI's flagship open source model, built on a Mixture-of-Experts (MoE) architecture with 20 billion parameters and 128 experts.",
 	},
 	"openai/gpt-oss-20b": {
 		maxTokens: 32768,
 		contextWindow: 131072,
 		supportsImages: false,
 		supportsPromptCache: false,
-		inputPrice: 0.10,
-		outputPrice: 0.50,
-		description: "GPT-OSS 20B is OpenAI's flagship open source model, built on a Mixture-of-Experts (MoE) architecture with 20 billion parameters and 32 experts.",
-	}
+		inputPrice: 0.1,
+		outputPrice: 0.5,
+		description:
+			"GPT-OSS 20B is OpenAI's flagship open source model, built on a Mixture-of-Experts (MoE) architecture with 20 billion parameters and 32 experts.",
+	},
 } as const satisfies Record<string, ModelInfo>
