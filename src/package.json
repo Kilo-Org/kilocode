@@ -4,7 +4,7 @@
 	"description": "%extension.description%",
 	"publisher": "kilocode",
 	"version": "4.77.12",
-	"buildNumber": "003",
+	"buildNumber": "007",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
