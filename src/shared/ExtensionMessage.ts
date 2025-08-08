@@ -138,10 +138,20 @@ export interface ExtensionMessage {
 		| "showEditMessageDialog"
 		| "kilocodeNotificationsResponse" // kilocode_change
 		| "usageDataResponse" // kilocode_change
+		| "apiDataResponse" // kilocode_change: Response with API data from storage
 		| "commands"
 		| "insertTextIntoTextarea"
 	text?: string
 	payload?: ProfileDataResponsePayload | BalanceDataResponsePayload // kilocode_change: Add payload for profile and balance data
+	apiData?: {
+		id?: number
+		messageId: string
+		taskId: string
+		requestData?: string
+		responseData?: string
+		createdAt: string
+		updatedAt: string
+	} | null // kilocode_change: API data from storage
 	action?:
 		| "chatButtonClicked"
 		| "mcpButtonClicked"

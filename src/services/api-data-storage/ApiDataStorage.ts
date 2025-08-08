@@ -17,6 +17,7 @@ export class ApiDataStorage {
 	private db: sqlite3.Database | null = null
 	private dbPath: string
 	private isInitialized = false
+	private initializationPromise: Promise<void> | null = null
 
 	constructor(private context: vscode.ExtensionContext) {
 		this.dbPath = path.join(context.globalStorageUri.fsPath, "api-data.db")
@@ -30,26 +31,48 @@ export class ApiDataStorage {
 			return
 		}
 
+		// 如果已经有初始化过程在进行，等待它完成
+		if (this.initializationPromise) {
+			return this.initializationPromise
+		}
+
+		// 创建新的初始化Promise
+		this.initializationPromise = this.doInitialize()
+		return this.initializationPromise
+	}
+
+	/**
+	 * 执行实际的初始化逻辑
+	 */
+	private async doInitialize(): Promise<void> {
 		try {
+			console.log("Starting ApiDataStorage initialization...")
+
 			// 确保目录存在
 			const dbDir = path.dirname(this.dbPath)
 			if (!fs.existsSync(dbDir)) {
 				fs.mkdirSync(dbDir, { recursive: true })
+				console.log(`Created database directory: ${dbDir}`)
 			}
 
 			// 创建数据库连接
 			this.db = new sqlite3.Database(this.dbPath)
+			console.log(`Database connection created: ${this.dbPath}`)
 
 			// 创建表
 			await this.createTable()
+			console.log("Database table created")
 
 			// 创建索引
 			await this.createIndexes()
+			console.log("Database indexes created")
 
 			this.isInitialized = true
 			console.log("ApiDataStorage initialized successfully")
 		} catch (error) {
 			console.error("Failed to initialize ApiDataStorage:", error)
+			// 重置状态，允许重试
+			this.initializationPromise = null
 			throw error
 		}
 	}
@@ -174,21 +197,29 @@ export class ApiDataStorage {
 	 * 根据消息ID获取数据
 	 */
 	async getByMessageId(messageId: string): Promise<ApiDataRecord | null> {
+		console.log(`Getting API data for messageId: ${messageId}`)
+
 		if (!this.isInitialized) {
+			console.log("ApiDataStorage not initialized, initializing now...")
 			await this.initialize()
 		}
 
 		return new Promise((resolve, reject) => {
 			if (!this.db) {
+				console.error("Database not initialized after initialization attempt")
 				reject(new Error("Database not initialized"))
 				return
 			}
 
 			const sql = "SELECT * FROM api_data WHERE message_id = ? LIMIT 1"
+			console.log(`Executing SQL query: ${sql} with messageId: ${messageId}`)
+
 			this.db.get(sql, [messageId], (err: Error | null, row: any) => {
 				if (err) {
+					console.error(`Database query error for messageId ${messageId}:`, err)
 					reject(err)
 				} else if (row) {
+					console.log(`Found API data for messageId ${messageId}:`, row)
 					resolve({
 						id: row.id,
 						messageId: row.message_id,
@@ -199,6 +230,7 @@ export class ApiDataStorage {
 						updatedAt: row.updated_at,
 					})
 				} else {
+					console.log(`No API data found for messageId: ${messageId}`)
 					resolve(null)
 				}
 			})

@@ -264,8 +264,10 @@ export interface WebviewMessage {
 		| "previewSystemPromptComponent"
 		| "editSystemPromptComponent"
 		| "saveSystemPromptComponent"
+		| "getApiData" // kilocode_change: Get API data from storage
 	text?: string
 	editedMessageContent?: string
+	messageId?: string // kilocode_change: Message ID for API data retrieval
 	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "account"
 	disabled?: boolean
 	context?: string

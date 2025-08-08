@@ -3094,5 +3094,62 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
+		// kilocode_change start - add getApiData
+		case "getApiData": {
+			if (message.messageId) {
+				try {
+					console.log(`Handling getApiData request for messageId: ${message.messageId}`)
+					const currentCline = provider.getCurrentCline()
+
+					if (!currentCline) {
+						console.log("No current Cline instance found")
+						await provider.postMessageToWebview({
+							type: "apiDataResponse",
+							apiData: null,
+							error: "No active task found",
+						})
+						return
+					}
+
+					if (!currentCline.apiDataStorage) {
+						console.log("ApiDataStorage not found on current Cline instance")
+						await provider.postMessageToWebview({
+							type: "apiDataResponse",
+							apiData: null,
+							error: "API data storage not available",
+						})
+						return
+					}
+
+					console.log(`Fetching API data for messageId: ${message.messageId}`)
+					const apiData = await currentCline.apiDataStorage.getByMessageId(message.messageId)
+					console.log(`API data fetch result:`, apiData)
+
+					await provider.postMessageToWebview({
+						type: "apiDataResponse",
+						apiData: apiData,
+					})
+				} catch (error) {
+					console.error(`Error getting API data for messageId ${message.messageId}:`, error)
+					provider.log(
+						`Error getting API data: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
+					)
+					await provider.postMessageToWebview({
+						type: "apiDataResponse",
+						apiData: null,
+						error: error instanceof Error ? error.message : String(error),
+					})
+				}
+			} else {
+				console.log("getApiData called without messageId")
+				await provider.postMessageToWebview({
+					type: "apiDataResponse",
+					apiData: null,
+					error: "No message ID provided",
+				})
+			}
+			break
+		}
+		// kilocode_change end - add getApiData
 	}
 }

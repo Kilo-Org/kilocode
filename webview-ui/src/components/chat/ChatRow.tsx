@@ -54,6 +54,7 @@ import CodebaseSearchResultsDisplay from "./CodebaseSearchResultsDisplay"
 import { cn } from "@/lib/utils"
 import { KiloChatRowUserFeedback } from "../kilocode/chat/KiloChatRowUserFeedback" // kilocode_change
 import { StandardTooltip } from "../ui" // kilocode_change
+import { ApiRequestModal } from "./ApiRequestModal" // kilocode_change
 
 interface ChatRowProps {
 	message: ClineMessage
@@ -137,8 +138,7 @@ export const ChatRowContent = ({
 	const [reasoningCollapsed, setReasoningCollapsed] = useState(true)
 	const [isDiffErrorExpanded, setIsDiffErrorExpanded] = useState(false)
 	const [showDetailedError, setShowDetailedError] = useState(false) // kilocode_change: 添加详细错误信息显示状态
-	const [showRequestInfo, setShowRequestInfo] = useState(false) // kilocode_change: 添加显示请求信息状态
-	const [showResponseInfo, setShowResponseInfo] = useState(false) // kilocode_change: 添加显示返回信息状态
+	const [showApiRequestModal, setShowApiRequestModal] = useState(false) // kilocode_change: 添加API请求模态窗口状态
 	const [showCopySuccess, setShowCopySuccess] = useState(false)
 	const [isEditing, _setIsEditing] = useState(false) // kilocode_change
 	// const [editedContent, setEditedContent] = useState("") // kilocode_change
@@ -1050,30 +1050,16 @@ export const ChatRowContent = ({
 										${Number(cost || 0)?.toFixed(4)}
 									</VSCodeBadge>
 								</div>
-								{/* kilocode_change start: 添加显示请求和返回信息的按钮 */}
+								{/* kilocode_change start: 添加API请求详情按钮 */}
 								<div style={{ display: "flex", alignItems: "center", gap: "4px", marginRight: "8px" }}>
 									<VSCodeButton
 										appearance="icon"
 										onClick={(e) => {
-											console.log("Request info button clicked, current state:", showRequestInfo)
 											e.stopPropagation()
-											setShowRequestInfo(!showRequestInfo)
+											setShowApiRequestModal(true)
 										}}
-										title="显示请求信息">
-										<span className="codicon codicon-arrow-up"></span>
-									</VSCodeButton>
-									<VSCodeButton
-										appearance="icon"
-										onClick={(e) => {
-											console.log(
-												"Response info button clicked, current state:",
-												showResponseInfo,
-											)
-											e.stopPropagation()
-											setShowResponseInfo(!showResponseInfo)
-										}}
-										title="显示返回信息">
-										<span className="codicon codicon-arrow-down"></span>
+										title="查看API请求详情">
+										<span className="codicon codicon-info"></span>
 									</VSCodeButton>
 								</div>
 								{/* kilocode_change end */}
@@ -1154,134 +1140,6 @@ export const ChatRowContent = ({
 											</div>
 										</div>
 									)}
-									{/* 显示请求信息 */}
-									{showRequestInfo &&
-										message.text &&
-										(() => {
-											const requestData = safeJsonParse<any>(message.text)?.request
-											return requestData ? (
-												<div
-													style={{
-														marginTop: "8px",
-														padding: "12px",
-														backgroundColor: "var(--vscode-editor-background)",
-														border: "1px solid var(--vscode-editorGroup-border)",
-														borderRadius: "4px",
-														fontFamily: "var(--vscode-editor-font-family)",
-														fontSize: "var(--vscode-editor-font-size)",
-														whiteSpace: "pre-wrap",
-														wordBreak: "break-word",
-														overflowWrap: "anywhere",
-														maxHeight: "300px",
-														overflow: "auto",
-													}}>
-													<div
-														style={{
-															display: "flex",
-															justifyContent: "space-between",
-															alignItems: "center",
-															marginBottom: "8px",
-														}}>
-														<span
-															style={{
-																fontWeight: "bold",
-																color: "var(--vscode-foreground)",
-															}}>
-															请求信息:
-														</span>
-														<VSCodeButton
-															appearance="icon"
-															onClick={() =>
-																copyWithFeedback(JSON.stringify(requestData, null, 2))
-															}
-															title="复制请求信息">
-															<span className="codicon codicon-copy"></span>
-														</VSCodeButton>
-													</div>
-													<div style={{ color: "var(--vscode-foreground)" }}>
-														{JSON.stringify(requestData, null, 2)}
-													</div>
-												</div>
-											) : null
-										})()}
-									{/* 显示返回信息 */}
-									{showResponseInfo &&
-										(() => {
-											// 尝试从不同来源获取响应信息
-											const responseData =
-												apiRequestFailedMessage ||
-												(message.text && safeJsonParse<any>(message.text)?.response) ||
-												(message.text && safeJsonParse<any>(message.text)?.error)
-											return responseData ? (
-												<div
-													style={{
-														marginTop: "8px",
-														padding: "12px",
-														backgroundColor: "var(--vscode-editor-background)",
-														border: "1px solid var(--vscode-editorGroup-border)",
-														borderRadius: "4px",
-														fontFamily: "var(--vscode-editor-font-family)",
-														fontSize: "var(--vscode-editor-font-size)",
-														whiteSpace: "pre-wrap",
-														wordBreak: "break-word",
-														overflowWrap: "anywhere",
-														maxHeight: "300px",
-														overflow: "auto",
-													}}>
-													<div
-														style={{
-															display: "flex",
-															justifyContent: "space-between",
-															alignItems: "center",
-															marginBottom: "8px",
-														}}>
-														<span
-															style={{
-																fontWeight: "bold",
-																color: "var(--vscode-foreground)",
-															}}>
-															返回信息:
-														</span>
-														<VSCodeButton
-															appearance="icon"
-															onClick={() =>
-																copyWithFeedback(
-																	typeof responseData === "string"
-																		? responseData
-																		: JSON.stringify(responseData, null, 2),
-																)
-															}
-															title="复制返回信息">
-															<span className="codicon codicon-copy"></span>
-														</VSCodeButton>
-													</div>
-													<div
-														style={{
-															color: apiRequestFailedMessage
-																? "var(--vscode-errorForeground)"
-																: "var(--vscode-foreground)",
-														}}>
-														{typeof responseData === "string"
-															? responseData
-															: JSON.stringify(responseData, null, 2)}
-													</div>
-												</div>
-											) : (
-												<div
-													style={{
-														marginTop: "8px",
-														padding: "12px",
-														backgroundColor: "var(--vscode-editor-background)",
-														border: "1px solid var(--vscode-editorGroup-border)",
-														borderRadius: "4px",
-														color: "var(--vscode-descriptionForeground)",
-														fontStyle: "italic",
-													}}>
-													暂无返回信息
-												</div>
-											)
-										})()}
-									{/* kilocode_change end */}
 								</>
 							)}
 
@@ -1295,6 +1153,14 @@ export const ChatRowContent = ({
 									/>
 								</div>
 							)}
+							{/* kilocode_change start: API请求模态窗口 */}
+							<ApiRequestModal
+								isOpen={showApiRequestModal}
+								onClose={() => setShowApiRequestModal(false)}
+								messageText={message.text || ""}
+								messageId={message.ts.toString()}
+							/>
+							{/* kilocode_change end */}
 						</>
 					)
 				case "api_req_finished":

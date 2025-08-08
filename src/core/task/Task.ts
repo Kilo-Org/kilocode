@@ -327,9 +327,10 @@ export class Task extends EventEmitter<TaskEvents> {
 		this.globalStoragePath = provider.context.globalStorageUri.fsPath
 		this.apiDataStorage = new ApiDataStorage(provider.context)
 
-		// Initialize ApiDataStorage asynchronously
+		// Initialize ApiDataStorage asynchronously but don't block constructor
+		// The initialize method will be called when needed and handles concurrent calls
 		this.apiDataStorage.initialize().catch((error) => {
-			console.error("Failed to initialize ApiDataStorage:", error)
+			console.error("Failed to initialize ApiDataStorage during construction:", error)
 		})
 		this.diffEnabled = enableDiff
 		this.fuzzyMatchThreshold = fuzzyMatchThreshold
