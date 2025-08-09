@@ -16,7 +16,9 @@
 	"pricing": {
 		"costUnknown": "kosten onbekend",
 		"costUnknownDescription": "De API-provider heeft geen kostengegevens verstrekt of het verzoek is geannuleerd.",
-		"discoverModelPricing": "Ontdek modelprijzen en mogelijkheden"
+		"discoverModelPricing": "Ontdek modelprijzen en mogelijkheden",
+		"freeModelsDescription": "Gratis modellen kunnen snelheidslimieten hebben. Gebruik de link hieronder om je gebruik van gratis modellen te optimaliseren!",
+		"freeModelsLink": "Ontdek gratis modelopties"
 	},
 	"notifications": {
 		"toolRequest": "Toolverzoek wacht op goedkeuring",

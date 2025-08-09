@@ -16,7 +16,9 @@
 	"pricing": {
 		"costUnknown": "custo desconhecido",
 		"costUnknownDescription": "O Provedor de API não forneceu dados de custo ou a solicitação foi cancelada.",
-		"discoverModelPricing": "Descobrir preços e capacidades do modelo"
+		"discoverModelPricing": "Descobrir preços e capacidades do modelo",
+		"freeModelsDescription": "Modelos gratuitos podem ter limites de taxa. Use o link abaixo para otimizar seu uso de modelos gratuitos!",
+		"freeModelsLink": "Descubra opções de modelos gratuitos"
 	},
 	"notifications": {
 		"toolRequest": "Solicitação de ferramenta aguardando aprovação",

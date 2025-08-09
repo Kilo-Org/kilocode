@@ -16,7 +16,9 @@
 	"pricing": {
 		"costUnknown": "费用未知",
 		"costUnknownDescription": "API 提供商未提供任何费用数据或请求已取消。",
-		"discoverModelPricing": "了解模型定价和功能"
+		"discoverModelPricing": "了解模型定价和功能",
+		"freeModelsDescription": "免费模型可能有请求频率限制。使用下方链接优化你的免费模型使用！",
+		"freeModelsLink": "探索免费模型选项"
 	},
 	"notifications": {
 		"toolRequest": "工具请求等待批准",
@@ -164,7 +166,7 @@
 			"autoTrigger": "自动触发",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "快速内联任务",
-				"description": "只需要一个快速的调整？选中一些代码（或者不选！）然后按下Cmd+I。用简单的英语描述你的目标（\"创建一个带有这些属性的React组件\"，\"为这个函数添加错误处理\"），然后在编辑器中直接获取多个可立即使用的建议。<DocsLink>查看快捷键</DocsLink>"
+				"description": "只需要一个快速的调整？选中一些代码（或者不选！）然后按下Cmd+I。用简单的英语描述你的目标（\"创建一个带有这些属性的 React 组件\"，\"为这个函数添加错误处理\"），然后在编辑器中直接获取多个可立即使用的建议。<DocsLink>查看快捷键</DocsLink>"
 			},
 			"enableAutoTrigger": {
 				"label": "启用自动触发",

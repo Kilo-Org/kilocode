@@ -16,7 +16,9 @@
 	"pricing": {
 		"costUnknown": "neznámé náklady",
 		"costUnknownDescription": "Poskytovatel API neposkytl žádné údaje o nákladech nebo byl požadavek zrušen.",
-		"discoverModelPricing": "Objevte ceny a možnosti modelů"
+		"discoverModelPricing": "Objevte ceny a možnosti modelů",
+		"freeModelsDescription": "Bezplatné modely mohou mít limity na počet požadavků. Použij odkaz níže pro optimalizaci využití bezplatných modelů!",
+		"freeModelsLink": "Objevte možnosti bezplatných modelů"
 	},
 	"notifications": {
 		"toolRequest": "Požadavek na nástroj čeká na schválení",
