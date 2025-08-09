@@ -797,7 +797,7 @@
 		"awsRegion": "You must choose a region to use with Amazon Bedrock.",
 		"googleCloud": "You must provide a valid Google Cloud Project ID and Region.",
 		"modelId": "You must provide a valid model ID.",
-		"modelSelector": "You must provide a valid model selector.",
+		"modelSelector": "GitHub Copilot is required to use VS Code Language Model functionality. Please install and enable GitHub Copilot in VS Code to access language models.",
 		"openAi": "You must provide a valid base URL, API key, and model ID.",
 		"arn": {
 			"invalidFormat": "Invalid ARN format. Please check the format requirements.",
