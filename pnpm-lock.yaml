@@ -14,13 +14,6 @@ overrides:
 importers:
 
   .:
-    dependencies:
-      '@types/sqlite3':
-        specifier: ^3.1.11
-        version: 3.1.11
-      sqlite3:
-        specifier: ^5.1.7
-        version: 5.1.7
     devDependencies:
       '@changesets/changelog-github':
         specifier: ^0.5.1
@@ -4547,9 +4540,6 @@ packages:
 
   '@types/shell-quote@1.7.5':
     resolution: {integrity: sha512-+UE8GAGRPbJVQDdxi16dgadcBfQ+KG2vgZhV1+3A1XmHbmwcdwhCUwIdy+d3pAGrbvgRoVSjeI9vOWyq376Yzw==}
-
-  '@types/sqlite3@3.1.11':
-    resolution: {integrity: sha512-KYF+QgxAnnAh7DWPdNDroxkDI3/MspH1NMx6m/N/6fT1G6+jvsw4/ZePt8R8cr7ta58aboeTfYFBDxTJ5yv15w==}
 
   '@types/stack-utils@2.0.3':
     resolution: {integrity: sha512-9aEbYZ3TbYMznPdcdr3SmIrLXwC/AKZXQeCf9Pgao5CKb8CyHuEX5jzWPTkvregvhRJHcpRO6BFoGW9ycaOkYw==}
@@ -15487,10 +15477,6 @@ snapshots:
   '@types/seedrandom@3.0.8': {}
 
   '@types/shell-quote@1.7.5': {}
-
-  '@types/sqlite3@3.1.11':
-    dependencies:
-      '@types/node': 22.15.29
 
   '@types/stack-utils@2.0.3': {}
 
