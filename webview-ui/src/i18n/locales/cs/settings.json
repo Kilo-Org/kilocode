@@ -455,6 +455,13 @@
 			"medium": "Střední",
 			"low": "Nízké"
 		},
+		"verbosity": {
+			"label": "Podrobnost výstupu",
+			"high": "Vysoká",
+			"medium": "Střední",
+			"low": "Nízká",
+			"description": "Řídí, jak podrobné jsou odpovědi modelu. Nízká podrobnost vytváří stručné odpovědi, zatímco vysoká podrobnost poskytuje důkladná vysvětlení."
+		},
 		"setReasoningLevel": "Povolit úsilí při uvažování",
 		"claudeCode": {
 			"pathLabel": "Cesta ke Claude Code",

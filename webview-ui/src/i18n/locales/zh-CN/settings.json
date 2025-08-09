@@ -441,6 +441,13 @@
 			"medium": "中",
 			"low": "低"
 		},
+		"verbosity": {
+			"label": "输出详细程度",
+			"high": "高",
+			"medium": "中",
+			"low": "低",
+			"description": "控制模型响应的详细程度。低详细度产生简洁的回答，而高详细度提供详尽的解释。"
+		},
 		"setReasoningLevel": "启用推理工作量",
 		"claudeCode": {
 			"pathLabel": "Claude Code 路径",
@@ -730,7 +737,7 @@
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "后台编辑",
-			"description": "启用后防止编辑器焦点干扰。文件编辑在后台进行，不会打开差异视图或抢夺焦点。你可以在 Roo 进行更改时继续不受干扰地工作。文件可以在不获取焦点的情况下打开以捕获诊断信息，或保持完全关闭状态。"
+			"description": "启用后防止编辑器焦点干扰。文件编辑在后台进行，不会打开差异视图或抢夺焦点。你可以在 Kilo Code 进行更改时继续不受干扰地工作。文件可以在不获取焦点的情况下打开以捕获诊断信息，或保持完全关闭状态。"
 		},
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "使用新的消息解析器",

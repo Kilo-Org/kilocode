@@ -98,7 +98,7 @@
 			"processExitedWithError": "العملية طلعت بكود {{exitCode}}. المخرجات: {{output}}",
 			"stoppedWithReason": "Claude Code توقف والسبب: {{reason}}",
 			"apiKeyModelPlanMismatch": "مفاتيح API وخطط الاشتراك تدعم نماذج مختلفة. تأكد إن النموذج المحدد داخل ضمن خطتك.",
-			"notFound": "ملف Claude Code التنفيذي '{{claudePath}}' غير موجود.\n\nرجاءً ثبت Claude Code CLI:\n1. زر {{installationUrl}} لتحميل Claude Code\n2. اتبع تعليمات التثبيت لنظام التشغيل\n3. تأكد إن أمر 'claude' متاح في PATH\n4. أو اضبط مسار مخصص في إعدادات Roo تحت 'مسار Claude Code'\n\nالخطأ الأصلي: {{originalError}}"
+			"notFound": "ملف Claude Code التنفيذي '{{claudePath}}' غير موجود.\n\nرجاءً ثبت Claude Code CLI:\n1. زر {{installationUrl}} لتحميل Claude Code\n2. اتبع تعليمات التثبيت لنظام التشغيل\n3. تأكد إن أمر 'claude' متاح في PATH\n4. أو اضبط مسار مخصص في إعدادات Kilo Code تحت 'مسار Claude Code'\n\nالخطأ الأصلي: {{originalError}}"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "فشل تحميل بيانات OAuth. لازم تسوي تسجيل دخول أول: {{error}}",

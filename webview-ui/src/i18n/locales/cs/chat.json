@@ -347,7 +347,7 @@
 		},
 		"autoApprovedCostLimitReached": {
 			"title": "Dosažen limit automaticky schválených nákladů",
-			"description": "Roo dosáhl limitu automaticky schválených nákladů ${{count}}. Chceš resetovat náklady a pokračovat v úkolu?",
+			"description": "Kilo Code dosáhl limitu automaticky schválených nákladů ${{count}}. Chceš resetovat náklady a pokračovat v úkolu?",
 			"button": "Resetovat a pokračovat"
 		}
 	},

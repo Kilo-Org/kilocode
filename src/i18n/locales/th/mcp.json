@@ -5,7 +5,10 @@
 		"invalid_settings_validation": "รูปแบบการตั้งค่า MCP ไม่ถูกต้อง: {{errorMessages}}",
 		"create_json": "ล้มเหลวในการสร้างหรือเปิด .kilocode/mcp.json: {{error}}",
 		"failed_update_project": "ล้มเหลวในการอัปเดตเซิร์ฟเวอร์ MCP ของโปรเจ็กต์",
-		"invalidJsonArgument": "Kilo Code พยายามใช้ {{toolName}} ด้วยอาร์กิวเมนต์ JSON ที่ไม่ถูกต้อง กำลังลองใหม่..."
+		"invalidJsonArgument": "Kilo Code พยายามใช้ {{toolName}} ด้วยอาร์กิวเมนต์ JSON ที่ไม่ถูกต้อง กำลังลองใหม่...",
+		"refresh_after_disable": "ล้มเหลวในการรีเฟรชการเชื่อมต่อ MCP หลังจากปิดใช้งาน",
+		"refresh_after_enable": "ล้มเหลวในการรีเฟรชการเชื่อมต่อ MCP หลังจากเปิดใช้งาน",
+		"disconnect_servers_partial": "ล้มเหลวในการตัดการเชื่อมต่อเซิร์ฟเวอร์ MCP {{count}} ตัว ตรวจสอบผลลัพธ์สำหรับรายละเอียด"
 	},
 	"info": {
 		"server_restarting": "กำลังรีสตาร์ทเซิร์ฟเวอร์ MCP {{serverName}}...",

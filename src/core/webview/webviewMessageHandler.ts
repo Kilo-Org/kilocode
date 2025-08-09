@@ -421,7 +421,7 @@ export const webviewMessageHandler = async (
 
 			try {
 				const visibility = message.visibility || "organization"
-				const result = await CloudService.instance.shareTask(shareTaskId, visibility, clineMessages)
+				const result = await CloudService.instance.shareTask(shareTaskId, visibility)
 
 				if (result.success && result.shareUrl) {
 					// Show success notification

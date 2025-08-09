@@ -5,7 +5,10 @@
 		"invalid_settings_validation": "Неправильний формат налаштувань MCP: {{errorMessages}}",
 		"create_json": "Не вдалося створити або відкрити .kilocode/mcp.json: {{error}}",
 		"failed_update_project": "Не вдалося оновити сервери MCP проекту",
-		"invalidJsonArgument": "Kilo Code спробував використати {{toolName}} з неправильним аргументом JSON. Повторна спроба..."
+		"invalidJsonArgument": "Kilo Code спробував використати {{toolName}} з неправильним аргументом JSON. Повторна спроба...",
+		"refresh_after_disable": "Не вдалося оновити з'єднання MCP після вимкнення",
+		"refresh_after_enable": "Не вдалося оновити з'єднання MCP після увімкнення",
+		"disconnect_servers_partial": "Не вдалося відключити {{count}} сервер(ів) MCP. Перевір вивід для деталей."
 	},
 	"info": {
 		"server_restarting": "Перезапуск сервера MCP {{serverName}}...",
