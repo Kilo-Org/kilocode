@@ -49,17 +49,19 @@ async function main() {
 			setup(build) {
 				build.onEnd(() => {
 					copyPaths(
-						[
-							["../README.md", "README.md"],
-							["../CHANGELOG.md", "CHANGELOG.md"],
-							["../LICENSE", "LICENSE"],
-							["../.env", ".env", { optional: true }],
-							["node_modules/vscode-material-icons/generated", "assets/vscode-material-icons"],
-							["../webview-ui/audio", "webview-ui/audio"],
-						],
-						srcDir,
-						buildDir,
-					)
+					[
+						//.. 从上级目录，即根目录复制到src目录，dist是src目录
+						["../README.md", "README-abcd.md"],
+						["../CHANGELOG.md", "CHANGELOG.md"],
+						["../LICENSE", "LICENSE"],
+						["../.env", ".env", { optional: true }],
+						["node_modules/vscode-material-icons/generated", "assets/vscode-material-icons"],
+						["../webview-ui/audio", "webview-ui/audio"],
+						["webview-ui/build", "dist/webview-ui/build"], //20250810 陈凤庆 需要复制到dist，并且复制到build
+					],
+					srcDir,
+					buildDir,
+				)
 
 					// Copy walkthrough files to dist directory
 					copyPaths([["walkthrough", "walkthrough"]], srcDir, distDir)
