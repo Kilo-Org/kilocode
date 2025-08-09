@@ -23,6 +23,7 @@ import {
 	MistralHandler,
 	VsCodeLmHandler,
 	UnboundHandler,
+	QwenCodeHandler,
 	RequestyHandler,
 	HumanRelayHandler,
 	FakeAIHandler,
@@ -119,6 +120,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new MistralHandler(options)
 		case "unbound":
 			return new UnboundHandler(options)
+		case "qwen-code":
+			return new QwenCodeHandler(options)
 		case "requesty":
 			return new RequestyHandler(options)
 		case "human-relay":

@@ -22,6 +22,7 @@ import {
 	doubaoModels,
 	internationalZAiModels,
 	fireworksModels,
+	qwenCodeModels,
 } from "@roo-code/types"
 
 export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, ModelInfo>>> = {
@@ -46,6 +47,7 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	sambanova: sambaNovaModels,
 	zai: internationalZAiModels,
 	fireworks: fireworksModels,
+	"qwen-code": qwenCodeModels,
 }
 
 export const PROVIDERS = [
@@ -83,5 +85,6 @@ export const PROVIDERS = [
 	{ value: "litellm", label: "LiteLLM" },
 	{ value: "sambanova", label: "SambaNova" },
 	{ value: "zai", label: "Z AI" },
+	{ value: "qwen-code", label: "Qwen Code" },
 	{ value: "fireworks", label: "Fireworks AI" },
 ] // .sort((a, b) => a.label.localeCompare(b.label)) // kilocode_change: Sort providers with kilocode first

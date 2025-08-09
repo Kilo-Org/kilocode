@@ -36,6 +36,7 @@ import {
 	internationalZAiDefaultModelId,
 	mainlandZAiDefaultModelId,
 	fireworksDefaultModelId,
+	qwenCodeDefaultModelId,
 } from "@roo-code/types"
 
 import { vscode } from "@src/utils/vscode"
@@ -84,6 +85,7 @@ import {
 	OpenAICompatible,
 	OpenRouter,
 	Requesty,
+	QwenCode,
 	SambaNova,
 	Unbound,
 	Vertex,
@@ -357,6 +359,7 @@ const ApiOptions = ({
 				bigmodel: { field: "apiModelId", default: bigModelDefaultModelId },
 				kilocode: { field: "kilocodeModel", default: kilocodeDefaultModelId },
 				// kilocode_change end
+				"qwen-code": { field: "apiModelId", default: qwenCodeDefaultModelId },
 			}
 
 			const config = PROVIDER_MODEL_CONFIG[value]
@@ -394,6 +397,7 @@ const ApiOptions = ({
 			"litellm",
 			"zai",
 			"bigmodel",
+			"qwen-code",
 		]
 
 		// Skip documentation link when the provider is excluded because documentation is not available
@@ -598,6 +602,10 @@ const ApiOptions = ({
 
 			{selectedProvider === "chutes" && (
 				<Chutes apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
+			)}
+
+			{selectedProvider === "qwen-code" && (
+				<QwenCode apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
 
 			{/* kilocode_change start */}
