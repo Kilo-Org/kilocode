@@ -48,13 +48,25 @@ describe("nthline", () => {
 			expect(lines).toEqual(["Line 1", "Line 2", "Line 3", "Line 4"].join("\n") + "\n")
 		})
 
-		it("should floor non-integer line numbers", async () => {
-			const linesWithNonIntegerStart = await readLines(testFile, 3, 1.5)
-			expect(linesWithNonIntegerStart).toEqual(["Line 2", "Line 3", "Line 4"].join("\n") + "\n")
+                it("should floor non-integer line numbers", async () => {
+                        const linesWithNonIntegerStart = await readLines(testFile, 3, 1.5)
+                        expect(linesWithNonIntegerStart).toEqual(["Line 2", "Line 3", "Line 4"].join("\n") + "\n")
 
-			const linesWithNonIntegerEnd = await readLines(testFile, 3.5)
-			expect(linesWithNonIntegerEnd).toEqual(["Line 1", "Line 2", "Line 3", "Line 4"].join("\n") + "\n")
-		})
+                        const linesWithNonIntegerEnd = await readLines(testFile, 3.5)
+                        expect(linesWithNonIntegerEnd).toEqual(["Line 1", "Line 2", "Line 3", "Line 4"].join("\n") + "\n")
+                })
+
+                it("should reject invalid endLine", async () => {
+                        await expect(readLines(testFile, "3" as any)).rejects.toThrow(
+                                "Invalid endLine",
+                        )
+                })
+
+                it("should reject invalid startLine", async () => {
+                        await expect(readLines(testFile, 2, "1" as any)).rejects.toThrow(
+                                "Invalid startLine",
+                        )
+                })
 
 		it("should throw error when from_line > to_line", async () => {
 			await expect(readLines(testFile, 1, 3)).rejects.toThrow(
