@@ -17,6 +17,7 @@ export type ChutesModelId =
 	| "deepseek-ai/DeepSeek-V3-Base"
 	| "deepseek-ai/DeepSeek-R1-Zero"
 	| "deepseek-ai/DeepSeek-V3-0324"
+	| "Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8"
 	| "Qwen/Qwen3-235B-A22B"
 	| "Qwen/Qwen3-235B-A22B-Instruct-2507"
 	| "Qwen/Qwen3-32B"
@@ -165,6 +166,15 @@ export const chutesModels = {
 		inputPrice: 0,
 		outputPrice: 0,
 		description: "DeepSeek V3 (0324) model.",
+	},
+	"Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8": {
+		maxTokens: 32768,
+		contextWindow: 131072,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0,
+		outputPrice: 0,
+		description: "Qwen3 Coder 480B A35B Instruct FP8 - Large-scale coding model with 480B parameters and FP8 quantization.",
 	},
 	"Qwen/Qwen3-235B-A22B-Instruct-2507": {
 		maxTokens: 32768,
