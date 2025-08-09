@@ -128,6 +128,7 @@
 	},
 	"autoApprove": {
 		"description": "允許 Kilo Code 無需核准即執行操作。僅在您完全信任 AI 並了解相關安全風險時啟用這些設定。",
+		"enabled": "自動核准已啟用",
 		"toggleAriaLabel": "切換自動核准",
 		"disabledAriaLabel": "自動核准已停用 - 請先選取選項",
 		"readOnly": {
@@ -202,7 +203,14 @@
 			"description": "在請求批准以繼續執行工作之前，自動發出此數量的 API 請求。",
 			"unlimited": "無限制"
 		},
-		"selectOptionsFirst": "請至少選擇以下一個選項以啟用自動核准"
+		"selectOptionsFirst": "請至少選擇以下一個選項以啟用自動核准",
+		"apiCostLimit": {
+			"unlimited": "无限",
+			"title": "最高费用"
+		},
+		"maxLimits": {
+			"description": "在请求获得继续操作的批准前，自动发送请求直至达到这些限制。"
+		}
 	},
 	"providers": {
 		"providerDocumentation": "{{provider}} 文件",
@@ -231,10 +239,6 @@
 		"openRouterApiKey": "OpenRouter API 金鑰",
 		"getOpenRouterApiKey": "取得 OpenRouter API 金鑰",
 		"apiKeyStorageNotice": "API 金鑰安全儲存於 VSCode 金鑰儲存中",
-		"cerebras": {
-			"apiKey": "Cerebras API 金鑰",
-			"getApiKey": "取得 Cerebras API 金鑰"
-		},
 		"glamaApiKey": "Glama API 金鑰",
 		"getGlamaApiKey": "取得 Glama API 金鑰",
 		"useCustomBaseUrl": "使用自訂基礎 URL",
@@ -258,21 +262,25 @@
 		"anthropicApiKey": "Anthropic API 金鑰",
 		"getAnthropicApiKey": "取得 Anthropic API 金鑰",
 		"anthropicUseAuthToken": "將 Anthropic API 金鑰作為 Authorization 標頭傳遞，而非使用 X-Api-Key",
+		"cerebrasApiKey": "Cerebras API 金鑰",
+		"getCerebrasApiKey": "取得 Cerebras API 金鑰",
 		"chutesApiKey": "Chutes API 金鑰",
 		"getChutesApiKey": "取得 Chutes API 金鑰",
+		"fireworksApiKey": "Fireworks API 金鑰",
+		"getFireworksApiKey": "取得 Fireworks API 金鑰",
 		"deepSeekApiKey": "DeepSeek API 金鑰",
 		"getDeepSeekApiKey": "取得 DeepSeek API 金鑰",
 		"doubaoApiKey": "豆包 API 金鑰",
 		"getDoubaoApiKey": "取得豆包 API 金鑰",
-		"fireworksApiKey": "Fireworks API 金鑰",
-		"getFireworksApiKey": "取得 Fireworks API 金鑰",
-		"zaiApiKey": "Z.AI API 金鑰",
-		"getZaiApiKey": "取得 Z.AI API 金鑰",
 		"bigModelApiKey": "BigModel API 金鑰",
 		"getBigModelApiKey": "取得 BigModel API 金鑰",
 		"moonshotApiKey": "Moonshot API 金鑰",
 		"getMoonshotApiKey": "取得 Moonshot API 金鑰",
 		"moonshotBaseUrl": "Moonshot 服務站點",
+		"zaiApiKey": "Z AI API 金鑰",
+		"getZaiApiKey": "取得 Z AI API 金鑰",
+		"zaiEntrypoint": "Z AI 服務站點",
+		"zaiEntrypointDescription": "請根據您的位置選擇適當的 API 服務站點。如果您在中國，請選擇 open.bigmodel.cn。否則，請選擇 api.z.ai。",
 		"geminiApiKey": "Gemini API 金鑰",
 		"getGroqApiKey": "取得 Groq API 金鑰",
 		"groqApiKey": "Groq API 金鑰",
@@ -323,7 +331,6 @@
 		"cacheUsageNote": "注意：如果您沒有看到快取使用情況，請嘗試選擇其他模型，然後重新選擇您想要的模型。",
 		"vscodeLmModel": "語言模型",
 		"vscodeLmWarning": "注意：此整合功能仍處於實驗階段，各供應商的支援程度可能不同。如果出現模型不支援的錯誤，通常是供應商方面的問題。",
-
 		"geminiParameters": {
 			"urlContext": {
 				"title": "啟用 URL 上下文",
@@ -719,6 +726,10 @@
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "背景編輯",
 			"description": "啟用後可防止編輯器焦點中斷。檔案編輯會在背景進行，不會開啟 diff 檢視或搶奪焦點。您可以在 Kilo Code 進行變更時繼續不受干擾地工作。檔案可能會在不獲得焦點的情況下開啟以捕獲診斷，或保持完全關閉。"
+		},
+		"ASSISTANT_MESSAGE_PARSER": {
+			"name": "使用全新訊息解析器",
+			"description": "啟用實驗性的串流訊息解析器。透過更有效率地處理訊息，能顯著提升長回覆的效能。"
 		}
 	},
 	"promptCaching": {

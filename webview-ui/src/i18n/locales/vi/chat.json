@@ -4,10 +4,11 @@
 		"title": "Nhiệm vụ",
 		"seeMore": "Xem thêm",
 		"seeLess": "Thu gọn",
-		"tokens": "Tokens:",
-		"cache": "Bộ nhớ đệm:",
-		"apiCost": "Chi phí API:",
-		"contextWindow": "Chiều dài bối cảnh:",
+		"tokens": "Tokens",
+		"cache": "Bộ nhớ đệm",
+		"apiCost": "Chi phí API",
+		"size": "Kích thước",
+		"contextWindow": "Chiều dài bối cảnh",
 		"closeAndStart": "Đóng nhiệm vụ và bắt đầu nhiệm vụ mới",
 		"export": "Xuất lịch sử nhiệm vụ",
 		"delete": "Xóa nhiệm vụ (Shift + Click để bỏ qua xác nhận)",
@@ -146,7 +147,6 @@
 		"streamingFailed": "Streaming API thất bại"
 	},
 	"checkpoint": {
-		"initial": "Điểm kiểm tra ban đầu",
 		"regular": "Điểm kiểm tra",
 		"initializingWarning": "Đang khởi tạo điểm kiểm tra... Nếu quá trình này mất quá nhiều thời gian, bạn có thể vô hiệu hóa điểm kiểm tra trong <settingsLink>cài đặt</settingsLink> và khởi động lại tác vụ của bạn.",
 		"menu": {
@@ -321,6 +321,11 @@
 			"title": "Đã Đạt Giới Hạn Yêu Cầu Tự Động Phê Duyệt",
 			"description": "Kilo Code đã đạt đến giới hạn tự động phê duyệt là {{count}} yêu cầu API. Bạn có muốn đặt lại bộ đếm và tiếp tục nhiệm vụ không?",
 			"button": "Đặt lại và Tiếp tục"
+		},
+		"autoApprovedCostLimitReached": {
+			"button": "Đặt lại và Tiếp tục",
+			"title": "Đã Đạt Giới Hạn Chi Phí Tự Động Phê Duyệt",
+			"description": "Roo đã đạt đến giới hạn chi phí tự động phê duyệt là ${{count}}. Bạn có muốn đặt lại chi phí và tiếp tục với nhiệm vụ không?"
 		}
 	},
 	"codebaseSearch": {

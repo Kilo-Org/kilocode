@@ -23,7 +23,7 @@ import { DropdownOptionType, Button, StandardTooltip } from "@/components/ui" //
 
 import Thumbnails from "../common/Thumbnails"
 import ModeSelector from "./ModeSelector"
-import KiloModeSelector from "./KiloModeSelector"
+import KiloModeSelector from "../kilocode/KiloModeSelector"
 import { KiloProfileSelector } from "../kilocode/chat/KiloProfileSelector" // kilocode_change
 import { MAX_IMAGES_PER_MESSAGE } from "./ChatView"
 import ContextMenu from "./ContextMenu"
@@ -1277,8 +1277,14 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						"font-vscode-font-family",
 						"text-vscode-editor-font-size",
 						"leading-vscode-editor-line-height",
-						"py-2",
-						"px-[9px]",
+						isFocused
+							? "border border-vscode-focusBorder outline outline-vscode-focusBorder"
+							: isDraggingOver
+								? "border-2 border-dashed border-vscode-focusBorder"
+								: "border border-transparent",
+						isEditMode ? "pt-1.5 pb-10 px-2" : "py-1.5 px-2",
+						"px-[8px]",
+						"pr-9",
 						"z-10",
 						"forced-color-adjust-none",
 					)}

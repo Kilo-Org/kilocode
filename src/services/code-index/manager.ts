@@ -28,17 +28,27 @@ export class CodeIndexManager {
 	private _searchService: CodeIndexSearchService | undefined
 	private _cacheManager: CacheManager | undefined
 
-	public static getInstance(context: vscode.ExtensionContext): CodeIndexManager | undefined {
-		// Use first workspace folder consistently
-		const workspaceFolders = vscode.workspace.workspaceFolders
-		if (!workspaceFolders || workspaceFolders.length === 0) {
-			return undefined
-		}
+	// Flag to prevent race conditions during error recovery
+	private _isRecoveringFromError = false
 
-		// Always use the first workspace folder for consistency across all indexing operations.
-		// This ensures that the same workspace context is used throughout the indexing pipeline,
-		// preventing path resolution errors in multi-workspace scenarios.
-		const workspacePath = workspaceFolders[0].uri.fsPath
+	public static getInstance(context: vscode.ExtensionContext, workspacePath?: string): CodeIndexManager | undefined {
+		// If workspacePath is not provided, try to get it from the active editor or first workspace folder
+		if (!workspacePath) {
+			const activeEditor = vscode.window.activeTextEditor
+			if (activeEditor) {
+				const workspaceFolder = vscode.workspace.getWorkspaceFolder(activeEditor.document.uri)
+				workspacePath = workspaceFolder?.uri.fsPath
+			}
+
+			if (!workspacePath) {
+				const workspaceFolders = vscode.workspace.workspaceFolders
+				if (!workspaceFolders || workspaceFolders.length === 0) {
+					return undefined
+				}
+				// Use the first workspace folder as fallback
+				workspacePath = workspaceFolders[0].uri.fsPath
+			}
+		}
 
 		if (!CodeIndexManager.instances.has(workspacePath)) {
 			CodeIndexManager.instances.set(workspacePath, new CodeIndexManager(workspacePath, context))
@@ -157,12 +167,26 @@ export class CodeIndexManager {
 
 	/**
 	 * Initiates the indexing process (initial scan and starts watcher).
+	 * Automatically recovers from error state if needed before starting.
+	 *
+	 * @important This method should NEVER be awaited as it starts a long-running background process.
+	 * The indexing will continue asynchronously and progress will be reported through events.
 	 */
-
 	public async startIndexing(): Promise<void> {
 		if (!this.isFeatureEnabled) {
 			return
 		}
+
+		// Check if we're in error state and recover if needed
+		const currentStatus = this.getCurrentStatus()
+		if (currentStatus.systemStatus === "Error") {
+			await this.recoverFromError()
+
+			// After recovery, we need to reinitialize since recoverFromError clears all services
+			// This will be handled by the caller (webviewMessageHandler) checking isInitialized
+			return
+		}
+
 		this.assertInitialized()
 		await this._orchestrator!.startIndexing()
 	}
@@ -176,6 +200,46 @@ export class CodeIndexManager {
 		}
 		if (this._orchestrator) {
 			this._orchestrator.stopWatcher()
+		}
+	}
+
+	/**
+	 * Recovers from error state by clearing the error and resetting internal state.
+	 * This allows the manager to be re-initialized after a recoverable error.
+	 *
+	 * This method clears all service instances (configManager, serviceFactory, orchestrator, searchService)
+	 * to force a complete re-initialization on the next operation. This ensures a clean slate
+	 * after recovering from errors such as network failures or configuration issues.
+	 *
+	 * @remarks
+	 * - Safe to call even when not in error state (idempotent)
+	 * - Does not restart indexing automatically - call initialize() after recovery
+	 * - Service instances will be recreated on next initialize() call
+	 * - Prevents race conditions from multiple concurrent recovery attempts
+	 */
+	public async recoverFromError(): Promise<void> {
+		// Prevent race conditions from multiple rapid recovery attempts
+		if (this._isRecoveringFromError) {
+			return
+		}
+
+		this._isRecoveringFromError = true
+		try {
+			// Clear error state
+			this._stateManager.setSystemState("Standby", "")
+		} catch (error) {
+			// Log error but continue with recovery - clearing service instances is more important
+			console.error("Failed to clear error state during recovery:", error)
+		} finally {
+			// Force re-initialization by clearing service instances
+			// This ensures a clean slate even if state update failed
+			this._configManager = undefined
+			this._serviceFactory = undefined
+			this._orchestrator = undefined
+			this._searchService = undefined
+
+			// Reset the flag after recovery is complete
+			this._isRecoveringFromError = false
 		}
 	}
 
@@ -205,7 +269,11 @@ export class CodeIndexManager {
 	// --- Private Helpers ---
 
 	public getCurrentStatus() {
-		return this._stateManager.getCurrentStatus()
+		const status = this._stateManager.getCurrentStatus()
+		return {
+			...status,
+			workspacePath: this.workspacePath,
+		}
 	}
 
 	public async searchIndex(query: string, directoryPrefix?: string): Promise<VectorStoreSearchResult[]> {

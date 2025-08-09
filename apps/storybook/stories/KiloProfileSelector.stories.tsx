@@ -48,7 +48,7 @@ const KiloProfileSelectorStory = ({ initiallyOpen }: KiloProfileSelectorStoryPro
 }
 
 const meta: Meta<typeof KiloProfileSelectorStory> = {
-	title: "Components/KiloProfileSelector",
+	title: "Chat/KiloProfileSelector",
 	component: KiloProfileSelectorStory,
 	decorators: [withI18n, withTheme, withTooltipProvider, withLimitedWidth(400)],
 }

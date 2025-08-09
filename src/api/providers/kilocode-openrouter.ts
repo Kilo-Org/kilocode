@@ -2,7 +2,12 @@ import { ApiHandlerOptions, ModelRecord } from "../../shared/api"
 import { CompletionUsage, OpenRouterHandler } from "./openrouter"
 import { getModelParams } from "../transform/model-params"
 import { getModels } from "./fetchers/modelCache"
-import { DEEP_SEEK_DEFAULT_TEMPERATURE, kilocodeDefaultModelId } from "@roo-code/types"
+import {
+	DEEP_SEEK_DEFAULT_TEMPERATURE,
+	kilocodeDefaultModelId,
+	openRouterDefaultModelId,
+	openRouterDefaultModelInfo,
+} from "@roo-code/types"
 import { getKiloBaseUriFromToken } from "../../utils/kilocode-token"
 import { ApiHandlerCreateMessageMetadata } from ".."
 import OpenAI from "openai"
@@ -45,33 +50,13 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 	}
 
 	override getModel() {
-		let id
-		let info
+		let id = this.options.kilocodeModel ?? kilocodeDefaultModelId
+		let info = this.models[id]
 		let defaultTemperature = 0
 
-		const selectedModel = this.options.kilocodeModel ?? kilocodeDefaultModelId
-
-		// Map the selected model to the corresponding OpenRouter model ID
-		// legacy mapping
-		const modelMapping = {
-			gemini25: "google/gemini-2.5-pro-preview",
-			gpt41: "openai/gpt-4.1",
-			gemini25flashpreview: "google/gemini-2.5-flash-preview",
-			claude37: "anthropic/claude-3.7-sonnet",
-		}
-
-		// check if the selected model is in the mapping for backwards compatibility
-		id = selectedModel
-		if (Object.keys(modelMapping).includes(selectedModel)) {
-			id = modelMapping[selectedModel as keyof typeof modelMapping]
-		}
-
-		if (Object.keys(this.models).length === 0) {
-			throw new Error("Failed to load Kilo Code provider model list.")
-		} else if (this.models[id]) {
-			info = this.models[id]
-		} else {
-			throw new Error(`Unsupported model: ${selectedModel}`)
+		if (!this.models[id]) {
+			id = openRouterDefaultModelId
+			info = openRouterDefaultModelInfo
 		}
 
 		// If a specific provider is requested, use the endpoint for that provider.

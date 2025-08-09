@@ -69,6 +69,7 @@
 		"no_internet": "Nessuna connessione internet. Verifica la tua connessione di rete e riprova.",
 		"url_forbidden": "L'accesso a questo sito web è vietato. Il sito potrebbe bloccare l'accesso automatizzato o richiedere autenticazione.",
 		"url_page_not_found": "La pagina non è stata trovata. Verifica se l'URL è corretto.",
+		"url_request_aborted": "La richiesta per recuperare l'URL è stata interrotta. Questo può accadere se il sito blocca l'accesso automatizzato, richiede autenticazione o se c'è un problema di rete. Riprova o verifica se l'URL è accessibile in un browser normale.",
 		"url_fetch_failed": "Errore nel recupero del contenuto URL: {{error}}",
 		"url_fetch_error_with_url": "Errore nel recupero del contenuto per {{url}}: {{error}}",
 		"command_timeout": "Esecuzione del comando scaduta dopo {{seconds}} secondi",
@@ -91,7 +92,8 @@
 			"errorOutput": "Output di errore: {{output}}",
 			"processExitedWithError": "Il processo Claude Code è terminato con codice {{exitCode}}. Output di errore: {{output}}",
 			"stoppedWithReason": "Claude Code si è fermato per il motivo: {{reason}}",
-			"apiKeyModelPlanMismatch": "Le chiavi API e i piani di abbonamento consentono modelli diversi. Assicurati che il modello selezionato sia incluso nel tuo piano."
+			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
+			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Roo settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "Impossibile caricare le credenziali OAuth. Autenticati prima: {{error}}",
@@ -107,6 +109,15 @@
 			"generate_stream": "Errore del flusso di contesto di generazione Gemini: {{error}}",
 			"generate_complete_prompt": "Errore di completamento Gemini: {{error}}",
 			"sources": "Fonti:"
+		},
+		"cerebras": {
+			"authenticationFailed": "Autenticazione API Cerebras fallita. Verifica che la tua chiave API sia valida e non scaduta.",
+			"accessForbidden": "Accesso API Cerebras negato. La tua chiave API potrebbe non avere accesso al modello o alla funzione richiesta.",
+			"rateLimitExceeded": "Limite di velocità API Cerebras superato. Attendi prima di fare un'altra richiesta.",
+			"serverError": "Errore del server API Cerebras ({{status}}). Riprova più tardi.",
+			"genericError": "Errore API Cerebras ({{status}}): {{message}}",
+			"noResponseBody": "Errore API Cerebras: Nessun corpo di risposta",
+			"completionError": "Errore di completamento Cerebras: {{error}}"
 		}
 	},
 	"warnings": {

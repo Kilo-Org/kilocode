@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react"
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react"
 import { useDeepCompareEffect, useEvent, useMount } from "react-use"
 import debounce from "debounce"
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso"
@@ -49,7 +49,8 @@ import Announcement from "./Announcement"
 import BrowserSessionRow from "./BrowserSessionRow"
 import ChatRow from "./ChatRow"
 import ChatTextArea from "./ChatTextArea"
-import TaskHeader from "./TaskHeader"
+// import TaskHeader from "./TaskHeader"// kilocode_change
+import KiloTaskHeader from "../kilocode/KiloTaskHeader" // kilocode_change
 import AutoApproveMenu from "./AutoApproveMenu"
 import BottomControls from "../kilocode/BottomControls" // kilocode_change
 import SystemPromptWarning from "./SystemPromptWarning"
@@ -188,8 +189,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const [showAnnouncementModal, setShowAnnouncementModal] = useState(false)
 	const everVisibleMessagesTsRef = useRef<LRUCache<number, boolean>>(
 		new LRUCache({
-			max: 250,
-			ttl: 1000 * 60 * 15, // 15 minutes TTL for long-running tasks
+			max: 100,
+			ttl: 1000 * 60 * 5,
 		}),
 	)
 	const autoApproveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -486,7 +487,12 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		}
 	}, [isHidden])
 
-	useEffect(() => () => everVisibleMessagesTsRef.current.clear(), [])
+	useEffect(() => {
+		const cache = everVisibleMessagesTsRef.current
+		return () => {
+			cache.clear()
+		}
+	}, [])
 
 	useEffect(() => {
 		const prev = prevExpandedRowsRef.current
@@ -530,7 +536,10 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		if (isLastMessagePartial) {
 			return true
 		} else {
-			const lastApiReqStarted = findLast(modifiedMessages, (message) => message.say === "api_req_started")
+			const lastApiReqStarted = findLast(
+				modifiedMessages,
+				(message: ClineMessage) => message.say === "api_req_started",
+			)
 
 			if (
 				lastApiReqStarted &&
@@ -550,7 +559,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	}, [modifiedMessages, clineAsk, enableButtons, primaryButtonText])
 
 	const markFollowUpAsAnswered = useCallback(() => {
-		const lastFollowUpMessage = messagesRef.current.findLast((msg) => msg.ask === "followup")
+		const lastFollowUpMessage = messagesRef.current.findLast((msg: ClineMessage) => msg.ask === "followup")
 		if (lastFollowUpMessage) {
 			setCurrentFollowUpTs(lastFollowUpMessage.ts)
 		}
@@ -592,7 +601,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					if (sendingDisabled && !fromQueue) {
 						// Generate a more unique ID using timestamp + random component
 						const messageId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-						setMessageQueue((prev) => [...prev, { id: messageId, text, images }])
+						setMessageQueue((prev: QueuedMessage[]) => [...prev, { id: messageId, text, images }])
 						setInputValue("")
 						setSelectedImages([])
 						return
@@ -706,7 +715,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				if (retryCount < MAX_RETRY_ATTEMPTS) {
 					retryCountRef.current.set(nextMessage.id, retryCount + 1)
 					// Re-add the message to the end of the queue
-					setMessageQueue((current) => [...current, nextMessage])
+					setMessageQueue((current: QueuedMessage[]) => [...current, nextMessage])
 				} else {
 					console.error(`Message ${nextMessage.id} failed after ${MAX_RETRY_ATTEMPTS} attempts, discarding`)
 					retryCountRef.current.delete(nextMessage.id)
@@ -719,6 +728,11 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		// Cleanup function to handle component unmount
 		return () => {
 			isProcessingQueueRef.current = false
+			// kilocode_change start // Clear any pending queue processing
+			if (messageQueue.length > 0) {
+				setMessageQueue([])
+			}
+			// kilocode_change end
 		}
 	}, [sendingDisabled, messageQueue, handleSendMessage, clineAsk])
 
@@ -860,7 +874,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		[clineAsk, startNewTask, isStreaming],
 	)
 
-	const handleTaskCloseButtonClick = useCallback(() => startNewTask(), [startNewTask])
+	const handleTaskCloseButtonClick = useCallback(() => startNewTask(), [startNewTask]) // kilocode_change
 
 	const { info: model } = useSelectedModel(apiConfiguration)
 
@@ -889,7 +903,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					// Only handle selectedImages if it's not for editing context
 					// When context is "edit", ChatRow will handle the images
 					if (message.context !== "edit") {
-						setSelectedImages((prevImages) =>
+						setSelectedImages((prevImages: string[]) =>
 							appendImages(prevImages, message.images, MAX_IMAGES_PER_MESSAGE),
 						)
 					}
@@ -945,21 +959,13 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	// NOTE: the VSCode window needs to be focused for this to work.
 	useMount(() => textAreaRef.current?.focus())
 
-	useDebounceEffect(
-		() => {
-			if (!isHidden && !sendingDisabled && !enableButtons) {
-				textAreaRef.current?.focus()
-			}
-		},
-		50,
-		[isHidden, sendingDisabled, enableButtons],
-	)
-
 	const visibleMessages = useMemo(() => {
-		const newVisibleMessages = modifiedMessages.filter((message) => {
+		const currentMessageCount = modifiedMessages.length
+		const startIndex = Math.max(0, currentMessageCount - 500)
+		const recentMessages = modifiedMessages.slice(startIndex)
+
+		const newVisibleMessages = recentMessages.filter((message: ClineMessage) => {
 			if (everVisibleMessagesTsRef.current.has(message.ts)) {
-				// If it was ever visible, and it's not one of the types that should always be hidden once processed, keep it.
-				// This helps prevent flickering for messages like 'api_req_retry_delayed' if they are no longer the absolute last.
 				const alwaysHiddenOnceProcessedAsk: ClineAsk[] = [
 					"api_req_failed",
 					"resume_task",
@@ -973,14 +979,12 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				]
 				if (message.ask && alwaysHiddenOnceProcessedAsk.includes(message.ask)) return false
 				if (message.say && alwaysHiddenOnceProcessedSay.includes(message.say)) return false
-				// Also, re-evaluate empty text messages if they were previously visible but now empty (e.g. partial stream ended)
 				if (message.say === "text" && (message.text ?? "") === "" && (message.images?.length ?? 0) === 0) {
 					return false
 				}
 				return true
 			}
 
-			// Original filter logic
 			switch (message.ask) {
 				case "completion_result":
 					if (message.text === "") return false
@@ -999,9 +1003,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					const last1 = modifiedMessages.at(-1)
 					const last2 = modifiedMessages.at(-2)
 					if (last1?.ask === "resume_task" && last2 === message) {
-						// This specific sequence should be visible
+						return true
 					} else if (message !== last1) {
-						// If not the specific sequence above, and not the last message, hide it.
 						return false
 					}
 					break
@@ -1014,11 +1017,40 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			return true
 		})
 
-		// Update the set of ever-visible messages (LRUCache automatically handles cleanup)
-		newVisibleMessages.forEach((msg) => everVisibleMessagesTsRef.current.set(msg.ts, true))
+		const viewportStart = Math.max(0, newVisibleMessages.length - 100)
+		newVisibleMessages
+			.slice(viewportStart)
+			.forEach((msg: ClineMessage) => everVisibleMessagesTsRef.current.set(msg.ts, true))
 
 		return newVisibleMessages
 	}, [modifiedMessages])
+
+	useEffect(() => {
+		const cleanupInterval = setInterval(() => {
+			const cache = everVisibleMessagesTsRef.current
+			const currentMessageIds = new Set(modifiedMessages.map((m: ClineMessage) => m.ts))
+			const viewportMessages = visibleMessages.slice(Math.max(0, visibleMessages.length - 100))
+			const viewportMessageIds = new Set(viewportMessages.map((m: ClineMessage) => m.ts))
+
+			cache.forEach((_value: boolean, key: number) => {
+				if (!currentMessageIds.has(key) && !viewportMessageIds.has(key)) {
+					cache.delete(key)
+				}
+			})
+		}, 60000)
+
+		return () => clearInterval(cleanupInterval)
+	}, [modifiedMessages, visibleMessages])
+
+	useDebounceEffect(
+		() => {
+			if (!isHidden && !sendingDisabled && !enableButtons) {
+				textAreaRef.current?.focus()
+			}
+		},
+		50,
+		[isHidden, sendingDisabled, enableButtons],
+	)
 
 	const isReadOnlyToolAction = useCallback((message: ClineMessage | undefined) => {
 		if (message?.type === "ask") {
@@ -1304,7 +1336,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			}
 		}
 
-		visibleMessages.forEach((message) => {
+		visibleMessages.forEach((message: ClineMessage) => {
 			// kilocode_change start: upstream pr https://github.com/RooCodeInc/Roo-Code/pull/5452
 			// Special handling for browser_action_result - ensure it's always in a browser session
 			if (message.say === "browser_action_result" && !isInBrowserSession) {
@@ -1422,15 +1454,32 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		setHighlightedMessageIndex(index)
 		virtuosoRef.current?.scrollToIndex({ index, align: "end", behavior: "smooth" })
 
-		// Clear the highlight after a delay
-		clearTimeout(highlightClearTimerRef.current)
-		highlightClearTimerRef.current = setTimeout(() => setHighlightedMessageIndex(null), 1000)
+		// Clear existing timer if present
+		if (highlightClearTimerRef.current) {
+			clearTimeout(highlightClearTimerRef.current)
+		}
+		highlightClearTimerRef.current = setTimeout(() => {
+			setHighlightedMessageIndex(null)
+			highlightClearTimerRef.current = undefined
+		}, 1000)
+	}, [])
+
+	// Cleanup highlight timer on unmount
+	useEffect(() => {
+		return () => {
+			if (highlightClearTimerRef.current) {
+				clearTimeout(highlightClearTimerRef.current)
+			}
+		}
 	}, [])
 	// kilocode_change end
 
 	const handleSetExpandedRow = useCallback(
 		(ts: number, expand?: boolean) => {
-			setExpandedRows((prev) => ({ ...prev, [ts]: expand === undefined ? !prev[ts] : expand }))
+			setExpandedRows((prev: Record<number, boolean>) => ({
+				...prev,
+				[ts]: expand === undefined ? !prev[ts] : expand,
+			}))
 		},
 		[setExpandedRows], // setExpandedRows is stable
 	)
@@ -1459,7 +1508,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	)
 
 	useEffect(() => {
-		let timer: NodeJS.Timeout | undefined
+		let timer: ReturnType<typeof setTimeout> | undefined
 		if (!disableAutoScrollRef.current) {
 			timer = setTimeout(() => scrollToBottomSmooth(), 50)
 		}
@@ -1480,8 +1529,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			}
 		}
 	}, [])
-
-	useEvent("wheel", handleWheel, window, { passive: true }) // passive improves scrolling performance
+	//kilocode_change
 
 	// Effect to handle showing the checkpoint warning after a delay
 	useEffect(() => {
@@ -1545,7 +1593,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 			if (event?.shiftKey) {
 				// Always append to existing text, don't overwrite
-				setInputValue((currentValue) => {
+				setInputValue((currentValue: string) => {
 					return currentValue !== "" ? `${currentValue} \n${suggestion.answer}` : suggestion.answer
 				})
 			} else {
@@ -1579,7 +1627,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						isStreaming={isStreaming}
 						isExpanded={(messageTs: number) => expandedRows[messageTs] ?? false}
 						onToggleExpand={(messageTs: number) => {
-							setExpandedRows((prev) => ({
+							setExpandedRows((prev: Record<number, boolean>) => ({
 								...prev,
 								[messageTs]: !prev[messageTs],
 							}))
@@ -1699,10 +1747,20 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					if (followUpData && followUpData.suggest && followUpData.suggest.length > 0) {
 						// Wait for the configured timeout before auto-selecting the first suggestion
 						await new Promise<void>((resolve) => {
+							// kilocode_change start
+							if (!isMountedRef.current) {
+								resolve()
+								return
+							}
 							autoApproveTimeoutRef.current = setTimeout(() => {
+								if (!isMountedRef.current) {
+									resolve()
+									return
+								}
 								autoApproveTimeoutRef.current = null
 								resolve()
 							}, followupAutoApproveTimeoutMs)
+							// kilocode_change end
 						})
 
 						// Check if user responded manually
@@ -1718,12 +1776,22 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						return
 					}
 				} else if (lastMessage.ask === "tool" && isWriteToolAction(lastMessage)) {
+					// kilocode_change start
 					await new Promise<void>((resolve) => {
+						if (!isMountedRef.current) {
+							resolve()
+							return
+						}
 						autoApproveTimeoutRef.current = setTimeout(() => {
+							if (!isMountedRef.current) {
+								resolve()
+								return
+							}
 							autoApproveTimeoutRef.current = null
 							resolve()
 						}, writeDelayMs)
 					})
+					// kilocode_change end
 				}
 
 				vscode.postMessage({ type: "askResponse", askResponse: "yesButtonClicked" })
@@ -1810,10 +1878,12 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	// Add event listener
 	useEffect(() => {
 		window.addEventListener("keydown", handleKeyDown)
+		window.addEventListener("wheel", handleWheel, { passive: true }) // kilocode_change
 		return () => {
 			window.removeEventListener("keydown", handleKeyDown)
+			window.removeEventListener("wheel", handleWheel) // kilocode_change
 		}
-	}, [handleKeyDown])
+	}, [handleKeyDown, handleWheel]) // kilocode_change
 
 	useImperativeHandle(ref, () => ({
 		acceptInput: () => {
@@ -1861,7 +1931,20 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			)}
 			{task ? (
 				<>
-					<TaskHeader
+					{/* kilocode_change start */}
+					{/* <TaskHeader
+						task={task}
+						tokensIn={apiMetrics.totalTokensIn}
+						tokensOut={apiMetrics.totalTokensOut}
+						cacheWrites={apiMetrics.totalCacheWrites}
+						cacheReads={apiMetrics.totalCacheReads}
+						totalCost={apiMetrics.totalCost}
+						contextTokens={apiMetrics.contextTokens}
+						buttonsDisabled={sendingDisabled}
+						handleCondenseContext={handleCondenseContext}
+						todos={latestTodos}
+					/> */}
+					<KiloTaskHeader
 						task={task}
 						tokensIn={apiMetrics.totalTokensIn}
 						tokensOut={apiMetrics.totalTokensOut}
@@ -1872,13 +1955,12 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						buttonsDisabled={sendingDisabled}
 						handleCondenseContext={handleCondenseContext}
 						onClose={handleTaskCloseButtonClick}
-						// kilocode_change start
 						groupedMessages={groupedMessages}
 						onMessageClick={handleMessageClick}
 						isTaskActive={sendingDisabled}
-						// kilocode_change end
 						todos={latestTodos}
 					/>
+					{/* kilocode_change start */}
 
 					{hasSystemPromptOverride && (
 						<div className="px-3">
@@ -1978,20 +2060,20 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					<div className="grow flex" ref={scrollContainerRef}>
 						<Virtuoso
 							ref={virtuosoRef}
-							key={task.ts} // trick to make sure virtuoso re-renders when task changes, and we use initialTopMostItemIndex to start at the bottom
+							key={task.ts}
 							className="scrollable grow overflow-y-scroll mb-1"
 							// increasing top by 3_000 to prevent jumping around when user collapses a row
 							increaseViewportBy={{ top: 400, bottom: 400 }} // kilocode_change: use more modest numbers to see if they reduce gray screen incidence
-							data={groupedMessages} // messages is the raw format returned by extension, modifiedMessages is the manipulated structure that combines certain messages of related type, and visibleMessages is the filtered structure that removes messages that should not be rendered
+							data={groupedMessages}
 							itemContent={itemContent}
-							atBottomStateChange={(isAtBottom) => {
+							atBottomStateChange={(isAtBottom: boolean) => {
 								setIsAtBottom(isAtBottom)
 								if (isAtBottom) {
 									disableAutoScrollRef.current = false
 								}
 								setShowScrollToBottom(disableAutoScrollRef.current && !isAtBottom)
 							}}
-							atBottomThreshold={10} // anything lower causes issues with followOutput
+							atBottomThreshold={10}
 							initialTopMostItemIndex={groupedMessages.length - 1}
 						/>
 					</div>
@@ -2049,7 +2131,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 												appearance="primary"
 												disabled={!enableButtons}
 												className={secondaryButtonText ? "flex-1 mr-[6px]" : "flex-[2] mr-0"}
-												onClick={() => handlePrimaryButtonClick()}>
+												onClick={() => handlePrimaryButtonClick(inputValue, selectedImages)}>
 												{primaryButtonText}
 											</VSCodeButton>
 										</StandardTooltip>
@@ -2071,7 +2153,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 												appearance="secondary"
 												disabled={!enableButtons && !(isStreaming && !didClickCancel)}
 												className={isStreaming ? "flex-[2] ml-0" : "flex-1 ml-[6px]"}
-												onClick={() => handleSecondaryButtonClick()}>
+												onClick={() => handleSecondaryButtonClick(inputValue, selectedImages)}>
 												{isStreaming ? t("chat:cancel.title") : secondaryButtonText}
 											</VSCodeButton>
 										</StandardTooltip>

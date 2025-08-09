@@ -3,7 +3,7 @@ import { LabeledProgress } from "@/components/ui/labeled-progress"
 import { createTableStory } from "../src/utils/createTableStory"
 
 const meta = {
-	title: "Component/LabeledProgress",
+	title: "Components/LabeledProgress",
 	component: LabeledProgress,
 	parameters: {
 		layout: "centered",

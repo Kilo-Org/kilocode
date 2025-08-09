@@ -128,6 +128,7 @@
 	},
 	"autoApprove": {
 		"description": "อนุญาตให้ Kilo Code ดำเนินการโดยอัตโนมัติโดยไม่ต้องขออนุมัติ เปิดใช้งานการตั้งค่าเหล่านี้เฉพาะเมื่อคุณเชื่อถือ AI อย่างเต็มที่และเข้าใจความเสี่ยงด้านความปลอดภัยที่เกี่ยวข้อง",
+		"enabled": "เปิดใช้งานการอนุมัติอัตโนมัติ",
 		"readOnly": {
 			"label": "อ่าน",
 			"description": "เมื่อเปิดใช้งาน Kilo Code จะดูเนื้อหาไดเรกทอรีและอ่านไฟล์โดยอัตโนมัติโดยไม่ต้องให้คุณคลิกปุ่มอนุมัติ",
@@ -197,8 +198,14 @@
 		},
 		"apiRequestLimit": {
 			"title": "คำขอสูงสุด",
-			"description": "ส่งคำขอ API จำนวนนี้โดยอัตโนมัติก่อนที่จะขออนุมัติเพื่อดำเนินการต่อกับงาน",
 			"unlimited": "ไม่จำกัด"
+		},
+		"apiCostLimit": {
+			"title": "ค่าใช้จ่ายสูงสุด",
+			"unlimited": "ไม่จำกัด"
+		},
+		"maxLimits": {
+			"description": "ดำเนินการคำขอโดยอัตโนมัติจนถึงขีดจำกัดเหล่านี้ก่อนขออนุมัติเพื่อดำเนินการต่อ"
 		},
 		"toggleAriaLabel": "สลับการอนุมัติอัตโนมัติ",
 		"disabledAriaLabel": "การอนุมัติอัตโนมัติถูกปิดใช้งาน - เลือกตัวเลือกก่อน",
@@ -254,6 +261,8 @@
 		"anthropicApiKey": "คีย์ API ของ Anthropic",
 		"getAnthropicApiKey": "รับคีย์ API ของ Anthropic",
 		"anthropicUseAuthToken": "ส่งคีย์ API ของ Anthropic เป็นส่วนหัว Authorization แทน X-Api-Key",
+		"cerebrasApiKey": "คีย์ API ของ Cerebras",
+		"getCerebrasApiKey": "รับคีย์ API ของ Cerebras",
 		"chutesApiKey": "คีย์ API ของ Chutes",
 		"getChutesApiKey": "รับคีย์ API ของ Chutes",
 		"deepSeekApiKey": "คีย์ API ของ DeepSeek",
@@ -263,6 +272,8 @@
 		"moonshotApiKey": "คีย์ API ของ Moonshot",
 		"getMoonshotApiKey": "รับคีย์ API ของ Moonshot",
 		"moonshotBaseUrl": "จุดเข้าใช้งาน Moonshot",
+		"zaiEntrypoint": "จุดเข้าใช้งาน Z AI",
+		"zaiEntrypointDescription": "โปรดเลือกจุดเข้าใช้งาน API ที่เหมาะสมตามตำแหน่งของคุณ หากคุณอยู่ในจีน ให้เลือก open.bigmodel.cn มิฉะนั้น ให้เลือก api.z.ai",
 		"geminiApiKey": "คีย์ API ของ Gemini",
 		"geminiParameters": {
 			"urlContext": {
@@ -361,10 +372,6 @@
 				"description": "OpenRouter กำหนดเส้นทางการร้องขอไปยังผู้ให้บริการที่ดีที่สุดสำหรับโมเดลของคุณ โดยค่าเริ่มต้น การร้องขอจะถูกกระจายโหลดไปยังผู้ให้บริการชั้นนำเพื่อเพิ่มเวลาทำงานสูงสุด อย่างไรก็ตาม คุณสามารถเลือกผู้ให้บริการเฉพาะเพื่อใช้สำหรับโมเดลนี้ได้",
 				"learnMore": "เรียนรู้เพิ่มเติมเกี่ยวกับการกำหนดเส้นทางผู้ให้บริการ"
 			}
-		},
-		"cerebras": {
-			"apiKey": "คีย์ API ของ Cerebras",
-			"getApiKey": "รับคีย์ API ของ Cerebras"
 		},
 		"doubaoApiKey": "คีย์ API ของ Doubao",
 		"getDoubaoApiKey": "รับคีย์ API ของ Doubao",
@@ -728,6 +735,10 @@
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "การแก้ไขเบื้องหลัง",
 			"description": "ป้องกันการรบกวนโฟกัสของตัวแก้ไขเมื่อเปิดใช้งาน การแก้ไขไฟล์จะเกิดขึ้นในเบื้องหลังโดยไม่เปิดมุมมอง diff หรือขโมยโฟกัส คุณสามารถทำงานต่อไปได้โดยไม่ถูกขัดจังหวะขณะที่ Kilo Code ทำการเปลี่ยนแปลง ไฟล์อาจเปิดโดยไม่มีโฟกัสเพื่อจับการวินิจฉัยหรือยังคงปิดอยู่ทั้งหมด"
+		},
+		"ASSISTANT_MESSAGE_PARSER": {
+			"name": "ใช้ตัวแยกวิเคราะห์ข้อความใหม่",
+			"description": "เปิดใช้งานตัวแยกวิเคราะห์ข้อความแบบสตรีมมิ่งทดลองที่ให้การปรับปรุงประสิทธิภาพอย่างมีนัยสำคัญสำหรับการตอบสนองของผู้ช่วยที่ยาวโดยการประมวลผลข้อความอย่างมีประสิทธิภาพมากขึ้น"
 		}
 	},
 	"promptCaching": {

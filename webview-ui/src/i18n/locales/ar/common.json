@@ -90,5 +90,21 @@
 		"editWarning": "تعديل هذه الرسالة سيحذف جميع الرسائل اللاحقة في المحادثة. هل تريد المتابعة؟",
 		"proceed": "متابعة",
 		"title": "تأكيد"
+	},
+	"time_ago": {
+		"just_now": "الآن",
+		"seconds_ago": "منذ {{count}} ثانية",
+		"minute_ago": "منذ دقيقة",
+		"minutes_ago": "منذ {{count}} دقيقة",
+		"hour_ago": "منذ ساعة",
+		"hours_ago": "منذ {{count}} ساعة",
+		"day_ago": "منذ يوم",
+		"days_ago": "منذ {{count}} يوم",
+		"week_ago": "منذ أسبوع",
+		"weeks_ago": "منذ {{count}} أسبوع",
+		"month_ago": "منذ شهر",
+		"months_ago": "منذ {{count}} شهر",
+		"year_ago": "منذ سنة",
+		"years_ago": "منذ {{count}} سنة"
 	}
 }

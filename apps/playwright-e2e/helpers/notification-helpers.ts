@@ -4,28 +4,44 @@ import { type Page } from "@playwright/test"
 /**
  * Closes all visible notification toasts in VSCode
  * @param page - The Playwright page instance
- * @param timeout - Maximum time to wait for notifications
  */
-export async function closeAllToastNotifications(page: Page, timeout: number = 0): Promise<void> {
+export async function closeAllToastNotifications(page: Page): Promise<void> {
 	try {
-		await page.waitForSelector(".notification-list-item", { timeout })
+		let closedCount = 0
 
-		// Handle notification-list-item notifications (the ones we found working)
-		const notificationItems = page.locator(".notification-list-item")
-		const notificationCount = await notificationItems.count()
-		console.log(`🔍 Found ${notificationCount} notifications to close...`)
+		// Keep closing notifications until none are found
+		while (true) {
+			const notificationItems = page.locator(".notification-list-item")
+			const notificationCount = await notificationItems.count()
+			if (notificationCount === 0) {
+				return
+			}
 
-		// Close notifications by hovering and clicking their close buttons
-		for (let i = 0; i < notificationCount; i++) {
-			const notification = notificationItems.nth(i)
+			const notification = notificationItems.first()
 			const isVisible = await notification.isVisible().catch(() => false)
 			if (isVisible) {
 				await notification.hover()
 				const closeButton = notification.locator(".codicon-notifications-clear")
-				await closeButton.click()
+				const closeButtonExists = (await closeButton.count()) > 0
+
+				if (closeButtonExists) {
+					await closeButton.click()
+					closedCount++
+					console.log(`✅ Closed notification #${closedCount}`)
+					await page.waitForTimeout(100)
+				} else {
+					// No close button found, break to avoid infinite loop
+					console.log(`⚠️ No close button found for notification, stopping`)
+					break
+				}
+			} else {
+				// Notification not visible, break to avoid infinite loop
+				console.log(`⚠️ Notification not visible, stopping`)
+				break
 			}
 		}
-	} catch {
-		return // No notifications found! That's ok
+	} catch (_error) {
+		console.log(`Ignoring error in closeAllToastNotifications`, _error)
+		return
 	}
 }

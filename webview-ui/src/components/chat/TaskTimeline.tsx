@@ -1,13 +1,15 @@
-import { memo, useRef, useEffect, useCallback, useMemo } from "react"
-import { Virtuoso, type VirtuosoHandle } from "react-virtuoso"
 import type { ClineMessage } from "@roo-code/types"
-import { TaskTimelineMessage } from "./TaskTimelineMessage"
-import { MAX_HEIGHT_PX as TASK_TIMELINE_MAX_HEIGHT_PX } from "../../utils/timeline/calculateTaskTimelineSizes"
-import { consolidateMessagesForTimeline } from "../../utils/timeline/consolidateMessagesForTimeline"
-import { calculateTaskTimelineSizes } from "../../utils/timeline/calculateTaskTimelineSizes"
-import { getTaskTimelineMessageColor } from "../../utils/messageColors"
-import { TooltipProvider } from "../ui/tooltip"
+import { forwardRef, memo, useCallback, useEffect, useMemo, useRef } from "react"
+import { Virtuoso, type VirtuosoHandle } from "react-virtuoso"
 import { useExtensionState } from "../../context/ExtensionStateContext"
+import { getTaskTimelineMessageColor } from "../../utils/messageColors"
+import {
+	calculateTaskTimelineSizes,
+	MAX_HEIGHT_PX as TASK_TIMELINE_MAX_HEIGHT_PX,
+} from "../../utils/timeline/calculateTaskTimelineSizes"
+import { consolidateMessagesForTimeline } from "../../utils/timeline/consolidateMessagesForTimeline"
+import { TooltipProvider } from "../ui/tooltip"
+import { TaskTimelineMessage } from "./TaskTimelineMessage"
 
 // We hide the scrollbars for the TaskTimeline by wrapping it in a container with
 // overflow hidden. This hides the scrollbars for the actual Virtuoso element
@@ -19,6 +21,25 @@ interface TaskTimelineProps {
 	onMessageClick?: (index: number) => void
 	isTaskActive?: boolean
 }
+
+// Translates vertical scrolling into horizontal scrolling
+const HorizontalScroller = forwardRef<HTMLDivElement, any>(({ style, children, ...props }, ref) => (
+	<div
+		{...props}
+		ref={ref}
+		style={{
+			...style,
+			overflowX: "auto",
+			overflowY: "hidden",
+			willChange: "transform",
+		}}
+		onWheel={(e) => {
+			e.preventDefault() // Stop the default vertical scroll
+			;(ref as React.MutableRefObject<HTMLDivElement>).current!.scrollLeft += e.deltaY
+		}}>
+		{children}
+	</div>
+))
 
 export const TaskTimeline = memo<TaskTimelineProps>(({ groupedMessages, onMessageClick, isTaskActive = false }) => {
 	const { setHoveringTaskTimeline } = useExtensionState()
@@ -90,6 +111,7 @@ export const TaskTimeline = memo<TaskTimelineProps>(({ groupedMessages, onMessag
 				<Virtuoso
 					ref={virtuosoRef}
 					data={timelineMessagesData}
+					components={{ Scroller: HorizontalScroller }}
 					itemContent={itemContent}
 					horizontalDirection={true}
 					initialTopMostItemIndex={timelineMessagesData.length - 1}

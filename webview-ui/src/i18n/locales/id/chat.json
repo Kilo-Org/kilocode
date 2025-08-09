@@ -4,11 +4,12 @@
 		"title": "Tugas",
 		"seeMore": "Lihat lebih banyak",
 		"seeLess": "Lihat lebih sedikit",
-		"tokens": "Token:",
-		"cache": "Cache:",
-		"apiCost": "Biaya API:",
+		"tokens": "Token",
+		"cache": "Cache",
+		"apiCost": "Biaya API",
+		"size": "Ukuran",
 		"condenseContext": "Kondensasi konteks secara cerdas",
-		"contextWindow": "Panjang Konteks:",
+		"contextWindow": "Panjang Konteks",
 		"closeAndStart": "Tutup tugas dan mulai yang baru",
 		"export": "Ekspor riwayat tugas",
 		"share": "Bagikan tugas",
@@ -149,7 +150,6 @@
 		"streamingFailed": "Streaming API Gagal"
 	},
 	"checkpoint": {
-		"initial": "Checkpoint Awal",
 		"regular": "Checkpoint",
 		"initializingWarning": "Masih menginisialisasi checkpoint... Jika ini terlalu lama, kamu bisa menonaktifkan checkpoint di <settingsLink>pengaturan</settingsLink> dan restart tugas.",
 		"menu": {
@@ -336,6 +336,11 @@
 			"title": "Batas Permintaan yang Disetujui Otomatis Tercapai",
 			"description": "Kilo Code telah mencapai batas {{count}} permintaan API yang disetujui otomatis. Apakah kamu ingin mengatur ulang hitungan dan melanjutkan tugas?",
 			"button": "Atur Ulang dan Lanjutkan"
+		},
+		"autoApprovedCostLimitReached": {
+			"description": "Roo telah mencapai batas biaya yang disetujui secara otomatis sebesar ${{count}}. Apakah Anda ingin mengatur ulang biaya dan melanjutkan tugas ini?",
+			"button": "Reset dan Lanjutkan",
+			"title": "Batas Biaya Otomatis-Disetujui Tercapai"
 		}
 	},
 	"indexingStatus": {

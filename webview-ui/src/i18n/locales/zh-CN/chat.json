@@ -4,10 +4,11 @@
 		"title": "任务",
 		"seeMore": "展开",
 		"seeLess": "收起",
-		"tokens": "Token 用量:",
-		"cache": "缓存:",
-		"apiCost": "API 费用:",
-		"contextWindow": "上下文长度：",
+		"tokens": "Token 用量",
+		"cache": "缓存",
+		"apiCost": "API 费用",
+		"size": "大小",
+		"contextWindow": "上下文长度",
 		"closeAndStart": "关闭任务并开始新任务",
 		"export": "导出任务历史",
 		"delete": "删除任务（Shift + 点击跳过确认）",
@@ -146,7 +147,6 @@
 		"streamingFailed": "API流式传输失败"
 	},
 	"checkpoint": {
-		"initial": "初始检查点",
 		"regular": "检查点",
 		"initializingWarning": "正在初始化检查点...如果耗时过长，你可以在<settingsLink>设置</settingsLink>中禁用检查点并重新启动任务。",
 		"menu": {
@@ -320,6 +320,11 @@
 		"autoApprovedRequestLimitReached": {
 			"title": "已达自动批准请求限制",
 			"description": "Kilo Code 已达到 {{count}} 次 API 请求的自动批准限制。您想重置计数并继续任务吗？",
+			"button": "重置并继续"
+		},
+		"autoApprovedCostLimitReached": {
+			"title": "已达到自动批准的费用限额",
+			"description": "Roo已经达到了${{count}}的自动批准成本限制。您想重置成本并继续任务吗？",
 			"button": "重置并继续"
 		}
 	},

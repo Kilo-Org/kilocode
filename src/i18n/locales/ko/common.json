@@ -69,6 +69,7 @@
 		"no_internet": "인터넷 연결이 없습니다. 네트워크 연결을 확인하고 다시 시도해 주세요.",
 		"url_forbidden": "이 웹사이트에 대한 접근이 금지되었습니다. 사이트가 자동 접근을 차단하거나 인증이 필요할 수 있습니다.",
 		"url_page_not_found": "페이지를 찾을 수 없습니다. URL이 올바른지 확인해 주세요.",
+		"url_request_aborted": "URL을 가져오는 요청이 중단되었습니다. 사이트가 자동 접근을 차단하거나, 인증이 필요하거나, 네트워크 문제가 있을 때 발생할 수 있습니다. 다시 시도하거나 일반 브라우저에서 URL에 접근할 수 있는지 확인해 주세요.",
 		"url_fetch_failed": "URL 콘텐츠 가져오기 실패: {{error}}",
 		"url_fetch_error_with_url": "{{url}} 콘텐츠 가져오기 오류: {{error}}",
 		"command_timeout": "명령 실행 시간이 {{seconds}}초 후 초과되었습니다",
@@ -91,7 +92,8 @@
 			"errorOutput": "오류 출력: {{output}}",
 			"processExitedWithError": "Claude Code 프로세스가 코드 {{exitCode}}로 종료되었습니다. 오류 출력: {{output}}",
 			"stoppedWithReason": "Claude Code가 다음 이유로 중지되었습니다: {{reason}}",
-			"apiKeyModelPlanMismatch": "API 키와 구독 플랜에서 다른 모델을 허용합니다. 선택한 모델이 플랜에 포함되어 있는지 확인하세요."
+			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
+			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Roo settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "OAuth 자격 증명을 로드하지 못했습니다. 먼저 인증하세요: {{error}}",
@@ -107,6 +109,15 @@
 			"generate_stream": "Gemini 생성 컨텍스트 스트림 오류: {{error}}",
 			"generate_complete_prompt": "Gemini 완료 오류: {{error}}",
 			"sources": "출처:"
+		},
+		"cerebras": {
+			"authenticationFailed": "Cerebras API 인증에 실패했습니다. API 키가 유효하고 만료되지 않았는지 확인하세요.",
+			"accessForbidden": "Cerebras API 액세스가 금지되었습니다. API 키가 요청된 모델이나 기능에 액세스할 수 없을 수 있습니다.",
+			"rateLimitExceeded": "Cerebras API 속도 제한을 초과했습니다. 다른 요청을 하기 전에 기다리세요.",
+			"serverError": "Cerebras API 서버 오류 ({{status}}). 나중에 다시 시도하세요.",
+			"genericError": "Cerebras API 오류 ({{status}}): {{message}}",
+			"noResponseBody": "Cerebras API 오류: 응답 본문 없음",
+			"completionError": "Cerebras 완료 오류: {{error}}"
 		}
 	},
 	"warnings": {

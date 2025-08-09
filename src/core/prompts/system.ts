@@ -123,7 +123,7 @@ async function generatePrompt(
 			: Promise.resolve(""),
 	])
 
-	const codeIndexManager = CodeIndexManager.getInstance(context)
+	const codeIndexManager = CodeIndexManager.getInstance(context, cwd)
 
 	// Use compact mode to reduce token usage
 	if (compactMode) {
@@ -145,6 +145,7 @@ async function generatePrompt(
 				experiments,
 				partialReadsEnabled,
 				settings,
+				enableMcpServerCreation,
 				true, // Enable compact mode for tools
 			)
 

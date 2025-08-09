@@ -2,7 +2,7 @@
 import { TelemetryEventName, type TelemetryEvent, type ClineMessage } from "@roo-code/types" // kilocode_change removed rooCodeTelemetryEventSchema because unused
 import { BaseTelemetryClient } from "@roo-code/telemetry"
 
-// import { getRooCodeApiUrl } from "./Config" // kilocode_change
+// import { getRooCodeApiUrl } from "./config" // kilocode_change
 import type { AuthService } from "./auth"
 import type { SettingsService } from "./SettingsService"
 

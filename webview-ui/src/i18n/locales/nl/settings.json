@@ -128,6 +128,7 @@
 	},
 	"autoApprove": {
 		"description": "Sta Kilo Code toe om automatisch handelingen uit te voeren zonder goedkeuring. Schakel deze instellingen alleen in als je de AI volledig vertrouwt en de bijbehorende beveiligingsrisico's begrijpt.",
+		"enabled": "Auto-goedkeuren ingeschakeld",
 		"toggleAriaLabel": "Automatisch goedkeuren in-/uitschakelen",
 		"disabledAriaLabel": "Automatisch goedkeuren uitgeschakeld - selecteer eerst opties",
 		"readOnly": {
@@ -202,7 +203,14 @@
 			"description": "Voer automatisch dit aantal API-verzoeken uit voordat om goedkeuring wordt gevraagd om door te gaan met de taak.",
 			"unlimited": "Onbeperkt"
 		},
-		"selectOptionsFirst": "Selecteer ten minste één optie hieronder om automatische goedkeuring in te schakelen"
+		"selectOptionsFirst": "Selecteer ten minste één optie hieronder om automatische goedkeuring in te schakelen",
+		"apiCostLimit": {
+			"title": "Max kosten",
+			"unlimited": "Onbeperkt"
+		},
+		"maxLimits": {
+			"description": "Automatisch verzoeken indienen tot aan deze limieten voordat om goedkeuring wordt gevraagd om door te gaan."
+		}
 	},
 	"providers": {
 		"providerDocumentation": "{{provider}} documentatie",
@@ -254,21 +262,25 @@
 		"anthropicApiKey": "Anthropic API-sleutel",
 		"getAnthropicApiKey": "Anthropic API-sleutel ophalen",
 		"anthropicUseAuthToken": "Anthropic API-sleutel als Authorization-header doorgeven in plaats van X-Api-Key",
+		"cerebrasApiKey": "Cerebras API-sleutel",
+		"getCerebrasApiKey": "Cerebras API-sleutel verkrijgen",
 		"chutesApiKey": "Chutes API-sleutel",
 		"getChutesApiKey": "Chutes API-sleutel ophalen",
+		"fireworksApiKey": "Fireworks API-sleutel",
+		"getFireworksApiKey": "Fireworks API-sleutel ophalen",
 		"deepSeekApiKey": "DeepSeek API-sleutel",
 		"getDeepSeekApiKey": "DeepSeek API-sleutel ophalen",
 		"doubaoApiKey": "Doubao API-sleutel",
 		"getDoubaoApiKey": "Doubao API-sleutel ophalen",
-		"fireworksApiKey": "Fireworks API-sleutel",
-		"getFireworksApiKey": "Fireworks API-sleutel ophalen",
-		"zaiApiKey": "Z.AI API-sleutel",
-		"getZaiApiKey": "Z.AI API-sleutel ophalen",
 		"bigModelApiKey": "BigModel API-sleutel",
 		"getBigModelApiKey": "BigModel API-sleutel ophalen",
 		"moonshotApiKey": "Moonshot API-sleutel",
 		"getMoonshotApiKey": "Moonshot API-sleutel ophalen",
 		"moonshotBaseUrl": "Moonshot-ingangspunt",
+		"zaiApiKey": "Z AI API-sleutel",
+		"getZaiApiKey": "Z AI API-sleutel ophalen",
+		"zaiEntrypoint": "Z AI-ingangspunt",
+		"zaiEntrypointDescription": "Selecteer het juiste API-ingangspunt op basis van uw locatie. Als u zich in China bevindt, kies dan open.bigmodel.cn. Anders kiest u api.z.ai.",
 		"geminiApiKey": "Gemini API-sleutel",
 		"getGroqApiKey": "Groq API-sleutel ophalen",
 		"groqApiKey": "Groq API-sleutel",
@@ -329,7 +341,6 @@
 				"description": "Staat Gemini toe om Google te doorzoeken voor actuele informatie en antwoorden op realtime gegevens te baseren. Handig voor vragen die actuele informatie vereisen."
 			}
 		},
-
 		"googleCloudSetup": {
 			"title": "Om Google Cloud Vertex AI te gebruiken, moet je:",
 			"step1": "1. Maak een Google Cloud-account aan, schakel de Vertex AI API in en activeer de gewenste Claude-modellen.",
@@ -370,10 +381,6 @@
 				"description": "OpenRouter stuurt verzoeken naar de best beschikbare providers voor je model. Standaard worden verzoeken gebalanceerd over de beste providers voor maximale uptime. Je kunt echter een specifieke provider kiezen voor dit model.",
 				"learnMore": "Meer informatie over providerroutering"
 			}
-		},
-		"cerebras": {
-			"apiKey": "Cerebras API-sleutel",
-			"getApiKey": "Cerebras API-sleutel verkrijgen"
 		},
 		"customModel": {
 			"capabilities": "Stel de mogelijkheden en prijzen in voor je aangepaste OpenAI-compatibele model. Wees voorzichtig met het opgeven van de modelmogelijkheden, want deze kunnen de prestaties van Kilo Code beïnvloeden.",
@@ -719,6 +726,10 @@
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Achtergrondbewerking",
 			"description": "Voorkomt editor focus verstoring wanneer ingeschakeld. Bestandsbewerkingen gebeuren op de achtergrond zonder diff-weergaven te openen of focus te stelen. Je kunt ononderbroken doorwerken terwijl Roo wijzigingen aanbrengt. Bestanden kunnen zonder focus worden geopend om diagnostiek vast te leggen of volledig gesloten blijven."
+		},
+		"ASSISTANT_MESSAGE_PARSER": {
+			"name": "Nieuwe berichtparser gebruiken",
+			"description": "Schakel de experimentele streaming-berichtparser in die lange antwoorden sneller maakt door berichten efficiënter te verwerken."
 		}
 	},
 	"promptCaching": {

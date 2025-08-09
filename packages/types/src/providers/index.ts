@@ -1,5 +1,6 @@
 export * from "./anthropic.js"
 export * from "./bedrock.js"
+export * from "./cerebras.js"
 export * from "./chutes.js"
 export * from "./claude-code.js"
 export * from "./deepseek.js"
@@ -21,9 +22,7 @@ export * from "./unbound.js"
 export * from "./vertex.js"
 export * from "./vscode-llm.js"
 export * from "./xai.js"
-// kilocode_change start
-export * from "./zai.js"
-export * from "./bigmodel.js"
-// kilocode_change end
+export * from "./bigmodel.js" // kilocode_change
 export * from "./doubao.js"
+export * from "./zai.js"
 export * from "./fireworks.js"

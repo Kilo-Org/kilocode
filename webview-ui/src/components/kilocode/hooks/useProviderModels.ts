@@ -18,8 +18,6 @@ import {
 	xaiDefaultModelId,
 	xaiModels,
 	// kilocode_change start
-	zaiDefaultModelId,
-	zaiModels,
 	bigModelDefaultModelId,
 	bigModelModels,
 	// kilocode_change end
@@ -89,20 +87,12 @@ const getModelsByProvider = ({
 				defaultModel: xaiDefaultModelId,
 			}
 		}
-		// kilocode_change start
-		case "zai": {
-			return {
-				models: zaiModels,
-				defaultModel: zaiDefaultModelId,
-			}
-		}
 		case "bigmodel": {
 			return {
 				models: bigModelModels,
 				defaultModel: bigModelDefaultModelId,
 			}
 		}
-		// kilocode_change end
 		case "groq": {
 			return {
 				models: groqModels,

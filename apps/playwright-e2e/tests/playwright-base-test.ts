@@ -7,7 +7,7 @@ import * as fs from "fs"
 import { fileURLToPath } from "url"
 import { camelCase } from "change-case"
 import { setupConsoleLogging, cleanLogMessage } from "../helpers/console-logging"
-import { closeAllTabs, closeAllToastNotifications, waitForAllExtensionActivation } from "../helpers"
+import { waitForAllExtensionActivation, closeAllTabs } from "../helpers"
 
 // ES module equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url)
@@ -195,7 +195,6 @@ export const test = base.extend<TestFixtures>({
 		await use(async (name?: string) => {
 			await waitForAllExtensionActivation(page)
 			await closeAllTabs(page)
-			await closeAllToastNotifications(page)
 
 			// Extract test suite from the test file name or use a default
 			const testInfo = test.info()

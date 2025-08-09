@@ -4,11 +4,12 @@
 		"title": "Task",
 		"seeMore": "See more",
 		"seeLess": "See less",
-		"tokens": "Tokens:",
-		"cache": "Cache:",
-		"apiCost": "API Cost:",
+		"tokens": "Tokens",
+		"cache": "Cache",
+		"apiCost": "API Cost",
+		"size": "Size",
 		"condenseContext": "Intelligently condense context",
-		"contextWindow": "Context Length:",
+		"contextWindow": "Context Length",
 		"closeAndStart": "Close task and start a new one",
 		"export": "Export task history",
 		"share": "Share task",
@@ -152,7 +153,6 @@
 		"streamingFailed": "API Streaming Failed"
 	},
 	"checkpoint": {
-		"initial": "Initial Checkpoint",
 		"regular": "Checkpoint",
 		"initializingWarning": "Still initializing checkpoint... If this takes too long, you can disable checkpoints in <settingsLink>settings</settingsLink> and restart your task.",
 		"menu": {
@@ -338,6 +338,11 @@
 		"autoApprovedRequestLimitReached": {
 			"title": "Auto-Approved Request Limit Reached",
 			"description": "Kilo Code has reached the auto-approved limit of {{count}} API request(s). Would you like to reset the count and proceed with the task?",
+			"button": "Reset and Continue"
+		},
+		"autoApprovedCostLimitReached": {
+			"title": "Auto-Approved Cost Limit Reached",
+			"description": "Roo has reached the auto-approved cost limit of ${{count}}. Would you like to reset the cost and proceed with the task?",
 			"button": "Reset and Continue"
 		}
 	},

@@ -73,6 +73,7 @@
 		"no_internet": "No hi ha connexió a internet. Comprova la teva connexió de xarxa i torna-ho a provar.",
 		"url_forbidden": "L'accés a aquest lloc web està prohibit. El lloc pot bloquejar l'accés automatitzat o requerir autenticació.",
 		"url_page_not_found": "No s'ha trobat la pàgina. Comprova si la URL és correcta.",
+		"url_request_aborted": "La sol·licitud per obtenir la URL s'ha cancel·lat. Això pot passar si el lloc bloqueja l'accés automatitzat, requereix autenticació o si hi ha un problema de xarxa. Torna-ho a provar o comprova si la URL és accessible en un navegador normal.",
 		"url_fetch_failed": "Error en obtenir el contingut de la URL: {{error}}",
 		"url_fetch_error_with_url": "Error en obtenir contingut per {{url}}: {{error}}",
 		"command_timeout": "L'execució de la comanda ha superat el temps d'espera de {{seconds}} segons",
@@ -94,7 +95,8 @@
 			"errorOutput": "Sortida d'error: {{output}}",
 			"processExitedWithError": "El procés Claude Code ha sortit amb codi {{exitCode}}. Sortida d'error: {{output}}",
 			"stoppedWithReason": "Claude Code s'ha aturat per la raó: {{reason}}",
-			"apiKeyModelPlanMismatch": "Les claus API i els plans de subscripció permeten models diferents. Assegura't que el model seleccionat estigui inclòs al teu pla."
+			"apiKeyModelPlanMismatch": "Les claus API i els plans de subscripció permeten models diferents. Assegura't que el model seleccionat estigui inclòs al teu pla.",
+			"notFound": "No s'ha trobat l'executable Claude Code '{{claudePath}}'.\n\nInstal·la Claude Code CLI:\n1. Visita {{installationUrl}} per descarregar Claude Code\n2. Segueix les instruccions d'instal·lació per al teu sistema operatiu\n3. Assegura't que la comanda 'claude' estigui disponible al teu PATH\n4. Alternativament, configura una ruta personalitzada a la configuració de Roo sota 'Ruta de Claude Code'\n\nError original: {{originalError}}"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "No s'han pogut carregar les credencials OAuth. Si us plau, autentica't primer: {{error}}",
@@ -110,6 +112,15 @@
 			"generate_stream": "Error del flux de context de generació de Gemini: {{error}}",
 			"generate_complete_prompt": "Error de finalització de Gemini: {{error}}",
 			"sources": "Fonts:"
+		},
+		"cerebras": {
+			"authenticationFailed": "Ha fallat l'autenticació de l'API de Cerebras. Comproveu que la vostra clau d'API sigui vàlida i no hagi caducat.",
+			"accessForbidden": "Accés denegat a l'API de Cerebras. La vostra clau d'API pot no tenir accés al model o funcionalitat sol·licitats.",
+			"rateLimitExceeded": "S'ha superat el límit de velocitat de l'API de Cerebras. Espereu abans de fer una altra sol·licitud.",
+			"serverError": "Error del servidor de l'API de Cerebras ({{status}}). Torneu-ho a provar més tard.",
+			"genericError": "Error de l'API de Cerebras ({{status}}): {{message}}",
+			"noResponseBody": "Error de l'API de Cerebras: No hi ha cos de resposta",
+			"completionError": "Error de finalització de Cerebras: {{error}}"
 		},
 		"mode_import_failed": "Ha fallat la importació del mode: {{error}}"
 	},
