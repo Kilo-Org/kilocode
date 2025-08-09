@@ -1,5 +1,6 @@
 import { test, expect, type TestFixtures } from "./playwright-base-test"
-import { verifyExtensionInstalled, findWebview, upsertApiConfiguration } from "../helpers/webview-helpers"
+import { findWebview, upsertApiConfiguration } from "../helpers/webview-helpers"
+import { verifyExtensionInstalled } from "../helpers"
 import { closeAllToastNotifications } from "../helpers"
 
 test.describe("Settings", () => {

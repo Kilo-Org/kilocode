@@ -100,9 +100,15 @@ importers:
       dotenv:
         specifier: ^16.4.5
         version: 16.5.0
+      execa:
+        specifier: ^9.6.0
+        version: 9.6.0
       rimraf:
         specifier: ^6.0.1
         version: 6.0.1
+      signal-exit:
+        specifier: ^4.1.0
+        version: 4.1.0
       typescript:
         specifier: 5.8.3
         version: 5.8.3

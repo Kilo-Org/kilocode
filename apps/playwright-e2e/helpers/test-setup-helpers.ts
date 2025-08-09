@@ -1,6 +1,7 @@
 // kilocode_change - new file
 import { type Page } from "@playwright/test"
-import { verifyExtensionInstalled, waitForWebviewText, configureApiKeyThroughUI } from "./webview-helpers"
+import { waitForWebviewText, configureApiKeyThroughUI } from "./webview-helpers"
+import { verifyExtensionInstalled } from "./vscode-helpers"
 
 export async function setupTestEnvironment(page: Page): Promise<void> {
 	await verifyExtensionInstalled(page)

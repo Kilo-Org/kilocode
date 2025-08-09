@@ -3,10 +3,10 @@ import { test, type TestFixtures } from "./playwright-base-test"
 import {
 	sendMessage,
 	waitForWebviewText,
-	verifyExtensionInstalled,
 	configureApiKeyThroughUI,
 	getChatInput,
 	closeAllToastNotifications,
+	verifyExtensionInstalled,
 } from "../helpers"
 
 test.describe("E2E Chat Test", () => {
