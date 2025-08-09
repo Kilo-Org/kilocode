@@ -3,6 +3,7 @@ import {
 	type ModelInfo,
 	anthropicModels,
 	bedrockModels,
+	cerebrasModels,
 	claudeCodeModels,
 	deepSeekModels,
 	moonshotModels,
@@ -13,31 +14,28 @@ import {
 	vertexModels,
 	xaiModels,
 	// kilocode_change start
-	zaiModels,
 	bigModelModels,
 	// kilocode_change end
 	groqModels,
 	chutesModels,
 	sambaNovaModels,
 	doubaoModels,
+	internationalZAiModels,
 	fireworksModels,
 } from "@roo-code/types"
-
-import { cerebrasModels } from "@roo/api" // kilocode_change
 
 export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, ModelInfo>>> = {
 	anthropic: anthropicModels,
 	"claude-code": claudeCodeModels,
 	bedrock: bedrockModels,
+	cerebras: cerebrasModels,
 	deepseek: deepSeekModels,
 	doubao: doubaoModels,
 	moonshot: moonshotModels,
 	gemini: geminiModels,
 	// kilocode_change start
 	"gemini-cli": geminiCliModels,
-	zai: zaiModels,
 	bigmodel: bigModelModels,
-	cerebras: cerebrasModels,
 	// kilocode_change end
 	mistral: mistralModels,
 	"openai-native": openAiNativeModels,
@@ -46,6 +44,7 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	groq: groqModels,
 	chutes: chutesModels,
 	sambanova: sambaNovaModels,
+	zai: internationalZAiModels,
 	fireworks: fireworksModels,
 }
 
@@ -54,14 +53,13 @@ export const PROVIDERS = [
 	{ value: "openrouter", label: "OpenRouter" },
 	{ value: "anthropic", label: "Anthropic" },
 	{ value: "claude-code", label: "Claude Code" },
+	{ value: "cerebras", label: "Cerebras" },
 	{ value: "gemini", label: "Google Gemini" },
 	{ value: "gemini-cli", label: "Gemini CLI" },
 	{ value: "doubao", label: "Doubao" },
 	{ value: "fireworks", label: "Fireworks AI" },
 	// kilocode_change start
-	{ value: "zai", label: "Z.AI" },
 	{ value: "bigmodel", label: "BigModel" },
-	{ value: "cerebras", label: "Cerebras" },
 	{ value: "virtual-quota-fallback", label: "Virtual Quota Fallback" },
 	// kilocode_change end
 	{ value: "deepseek", label: "DeepSeek" },
@@ -84,4 +82,6 @@ export const PROVIDERS = [
 	{ value: "chutes", label: "Chutes AI" },
 	{ value: "litellm", label: "LiteLLM" },
 	{ value: "sambanova", label: "SambaNova" },
+	{ value: "zai", label: "Z AI" },
+	{ value: "fireworks", label: "Fireworks AI" },
 ] // .sort((a, b) => a.label.localeCompare(b.label)) // kilocode_change: Sort providers with kilocode first

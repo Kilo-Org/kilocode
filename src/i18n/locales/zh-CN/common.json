@@ -74,6 +74,7 @@
 		"no_internet": "无网络连接。请检查网络连接并重试。",
 		"url_forbidden": "访问此网站被禁止。该网站可能阻止自动访问或需要身份验证。",
 		"url_page_not_found": "页面未找到。请检查 URL 是否正确。",
+		"url_request_aborted": "获取 URL 的请求被中止。如果网站阻止自动访问、需要身份验证或存在网络问题，就可能发生这种情况。请重试或检查 URL 是否可以在普通浏览器中访问。",
 		"url_fetch_failed": "获取 URL 内容失败：{{error}}",
 		"url_fetch_error_with_url": "获取 {{url}} 内容时出错：{{error}}",
 		"command_timeout": "命令执行超时，{{seconds}} 秒后",
@@ -96,7 +97,8 @@
 			"errorOutput": "错误输出：{{output}}",
 			"processExitedWithError": "Claude Code 进程退出，退出码：{{exitCode}}。错误输出：{{output}}",
 			"stoppedWithReason": "Claude Code 停止，原因：{{reason}}",
-			"apiKeyModelPlanMismatch": "API 密钥和订阅计划支持不同的模型。请确保所选模型包含在您的计划中。"
+			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
+			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Roo settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "加载 OAuth 凭据失败。请先进行身份验证：{{error}}",
@@ -112,6 +114,15 @@
 			"generate_stream": "Gemini 生成上下文流错误：{{error}}",
 			"generate_complete_prompt": "Gemini 完成错误：{{error}}",
 			"sources": "来源："
+		},
+		"cerebras": {
+			"authenticationFailed": "Cerebras API 身份验证失败。请检查你的 API 密钥是否有效且未过期。",
+			"accessForbidden": "Cerebras API 访问被禁止。你的 API 密钥可能无法访问请求的模型或功能。",
+			"rateLimitExceeded": "Cerebras API 速率限制已超出。请稍等后再发起另一个请求。",
+			"serverError": "Cerebras API 服务器错误 ({{status}})。请稍后重试。",
+			"genericError": "Cerebras API 错误 ({{status}})：{{message}}",
+			"noResponseBody": "Cerebras API 错误：无响应主体",
+			"completionError": "Cerebras 完成错误：{{error}}"
 		}
 	},
 	"warnings": {

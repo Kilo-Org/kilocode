@@ -128,6 +128,7 @@
 	},
 	"autoApprove": {
 		"description": "Cho phép Kilo Code tự động thực hiện các hoạt động mà không cần phê duyệt. Chỉ bật những cài đặt này nếu bạn hoàn toàn tin tưởng AI và hiểu rõ các rủi ro bảo mật liên quan.",
+		"enabled": "Phê duyệt tự động đã bật",
 		"toggleAriaLabel": "Chuyển đổi tự động phê duyệt",
 		"disabledAriaLabel": "Tự động phê duyệt bị vô hiệu hóa - hãy chọn các tùy chọn trước",
 		"readOnly": {
@@ -202,7 +203,14 @@
 			"description": "Tự động thực hiện số lượng API request này trước khi yêu cầu phê duyệt để tiếp tục với nhiệm vụ.",
 			"unlimited": "Không giới hạn"
 		},
-		"selectOptionsFirst": "Chọn ít nhất một tùy chọn bên dưới để bật tự động phê duyệt"
+		"selectOptionsFirst": "Chọn ít nhất một tùy chọn bên dưới để bật tự động phê duyệt",
+		"apiCostLimit": {
+			"title": "Chi phí tối đa",
+			"unlimited": "Không giới hạn"
+		},
+		"maxLimits": {
+			"description": "Tự động thực hiện các yêu cầu lên đến các giới hạn này trước khi xin phê duyệt để tiếp tục."
+		}
 	},
 	"providers": {
 		"providerDocumentation": "Tài liệu {{provider}}",
@@ -231,10 +239,6 @@
 		"openRouterApiKey": "Khóa API OpenRouter",
 		"getOpenRouterApiKey": "Lấy khóa API OpenRouter",
 		"apiKeyStorageNotice": "Khóa API được lưu trữ an toàn trong Bộ lưu trữ bí mật của VSCode",
-		"cerebras": {
-			"apiKey": "Khóa API Cerebras",
-			"getApiKey": "Lấy khóa API Cerebras"
-		},
 		"glamaApiKey": "Khóa API Glama",
 		"getGlamaApiKey": "Lấy khóa API Glama",
 		"useCustomBaseUrl": "Sử dụng URL cơ sở tùy chỉnh",
@@ -258,14 +262,16 @@
 		"anthropicApiKey": "Khóa API Anthropic",
 		"getAnthropicApiKey": "Lấy khóa API Anthropic",
 		"anthropicUseAuthToken": "Truyền khóa API Anthropic dưới dạng tiêu đề Authorization thay vì X-Api-Key",
+		"cerebrasApiKey": "Khóa API Cerebras",
+		"getCerebrasApiKey": "Lấy khóa API Cerebras",
 		"chutesApiKey": "Khóa API Chutes",
 		"getChutesApiKey": "Lấy khóa API Chutes",
+		"fireworksApiKey": "Khóa API Fireworks",
+		"getFireworksApiKey": "Lấy khóa API Fireworks",
 		"deepSeekApiKey": "Khóa API DeepSeek",
 		"getDeepSeekApiKey": "Lấy khóa API DeepSeek",
 		"doubaoApiKey": "Khóa API Doubao",
 		"getDoubaoApiKey": "Lấy khóa API Doubao",
-		"fireworksApiKey": "Khóa API Fireworks",
-		"getFireworksApiKey": "Lấy khóa API Fireworks",
 		"zaiApiKey": "Khóa API Z.AI",
 		"getZaiApiKey": "Lấy khóa API Z.AI",
 		"bigModelApiKey": "Khóa API BigModel",
@@ -273,6 +279,10 @@
 		"moonshotApiKey": "Khóa API Moonshot",
 		"getMoonshotApiKey": "Lấy khóa API Moonshot",
 		"moonshotBaseUrl": "Điểm vào Moonshot",
+		"zaiApiKey": "Khóa API Z AI",
+		"getZaiApiKey": "Lấy khóa API Z AI",
+		"zaiEntrypoint": "Điểm vào Z AI",
+		"zaiEntrypointDescription": "Vui lòng chọn điểm vào API phù hợp dựa trên vị trí của bạn. Nếu bạn ở Trung Quốc, hãy chọn open.bigmodel.cn. Ngược lại, hãy chọn api.z.ai.",
 		"geminiApiKey": "Khóa API Gemini",
 		"getGroqApiKey": "Lấy khóa API Groq",
 		"groqApiKey": "Khóa API Groq",
@@ -333,7 +343,6 @@
 				"description": "Cho phép Gemini tìm kiếm trên Google để lấy thông tin mới nhất và căn cứ phản hồi dựa trên dữ liệu thời gian thực. Hữu ích cho các truy vấn yêu cầu thông tin cập nhật."
 			}
 		},
-
 		"googleCloudSetup": {
 			"title": "Để sử dụng Google Cloud Vertex AI, bạn cần:",
 			"step1": "1. Tạo tài khoản Google Cloud, kích hoạt Vertex AI API và kích hoạt các mô hình Claude mong muốn.",
@@ -719,6 +728,10 @@
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Chỉnh sửa nền",
 			"description": "Khi được bật, ngăn chặn gián đoạn tiêu điểm trình soạn thảo. Việc chỉnh sửa tệp diễn ra ở nền mà không mở chế độ xem diff hoặc chiếm tiêu điểm. Bạn có thể tiếp tục làm việc không bị gián đoạn trong khi Kilo Code thực hiện thay đổi. Các tệp có thể được mở mà không có tiêu điểm để thu thập chẩn đoán hoặc giữ hoàn toàn đóng."
+		},
+		"ASSISTANT_MESSAGE_PARSER": {
+			"name": "Dùng bộ phân tích tin nhắn mới",
+			"description": "Bật bộ phân tích tin nhắn streaming thử nghiệm. Tính năng này tăng tốc phản hồi dài bằng cách xử lý tin nhắn hiệu quả hơn."
 		}
 	},
 	"promptCaching": {

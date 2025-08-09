@@ -69,6 +69,7 @@
 		"no_internet": "インターネット接続がありません。ネットワーク接続を確認してもう一度試してください。",
 		"url_forbidden": "このウェブサイトへのアクセスが禁止されています。サイトが自動アクセスをブロックしているか、認証が必要な可能性があります。",
 		"url_page_not_found": "ページが見つかりませんでした。URLが正しいか確認してください。",
+		"url_request_aborted": "URLの取得リクエストが中断されました。これは、サイトが自動アクセスをブロックしている、認証が必要、またはネットワークの問題がある場合に発生する可能性があります。もう一度試すか、通常のブラウザでURLにアクセスできるか確認してください。",
 		"url_fetch_failed": "URLコンテンツの取得に失敗しました：{{error}}",
 		"url_fetch_error_with_url": "{{url}} のコンテンツ取得エラー：{{error}}",
 		"command_timeout": "コマンドの実行が{{seconds}}秒後にタイムアウトしました",
@@ -91,7 +92,8 @@
 			"errorOutput": "エラー出力：{{output}}",
 			"processExitedWithError": "Claude Code プロセスがコード {{exitCode}} で終了しました。エラー出力：{{output}}",
 			"stoppedWithReason": "Claude Code が理由により停止しました：{{reason}}",
-			"apiKeyModelPlanMismatch": "API キーとサブスクリプションプランでは異なるモデルが利用可能です。選択したモデルがプランに含まれていることを確認してください。"
+			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
+			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Roo settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "OAuth認証情報の読み込みに失敗しました。まず認証してください: {{error}}",
@@ -107,6 +109,15 @@
 			"generate_stream": "Gemini 生成コンテキスト ストリーム エラー: {{error}}",
 			"generate_complete_prompt": "Gemini 完了エラー: {{error}}",
 			"sources": "ソース:"
+		},
+		"cerebras": {
+			"authenticationFailed": "Cerebras API認証が失敗しました。APIキーが有効で期限切れではないことを確認してください。",
+			"accessForbidden": "Cerebras APIアクセスが禁止されています。あなたのAPIキーは要求されたモデルや機能にアクセスできない可能性があります。",
+			"rateLimitExceeded": "Cerebras APIレート制限を超過しました。別のリクエストを行う前にお待ちください。",
+			"serverError": "Cerebras APIサーバーエラー ({{status}})。しばらくしてからもう一度お試しください。",
+			"genericError": "Cerebras APIエラー ({{status}}): {{message}}",
+			"noResponseBody": "Cerebras APIエラー: レスポンスボディなし",
+			"completionError": "Cerebras完了エラー: {{error}}"
 		}
 	},
 	"warnings": {

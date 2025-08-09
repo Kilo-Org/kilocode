@@ -57,7 +57,7 @@ function getCompactToolDescription(toolName: string): string {
 const toolDescriptionMap: Record<string, (args: ToolArgs) => string | undefined> = {
 	execute_command: (args) => getExecuteCommandDescription(args),
 	read_file: (args) => getReadFileDescription(args),
-	fetch_instructions: () => getFetchInstructionsDescription(),
+	fetch_instructions: (args) => getFetchInstructionsDescription(args.settings?.enableMcpServerCreation),
 	write_to_file: (args) => getWriteToFileDescription(args),
 	search_files: (args) => getSearchFilesDescription(args),
 	list_files: (args) => getListFilesDescription(args),
@@ -91,6 +91,7 @@ export function getToolDescriptionsForMode(
 	partialReadsEnabled?: boolean,
 	settings?: Record<string, any>,
 	compactMode?: boolean,
+	enableMcpServerCreation?: boolean,
 ): string {
 	const config = getModeConfig(mode, customModes)
 	const args: ToolArgs = {
@@ -100,7 +101,10 @@ export function getToolDescriptionsForMode(
 		browserViewportSize,
 		mcpHub,
 		partialReadsEnabled,
-		settings,
+		settings: {
+			...settings,
+			enableMcpServerCreation,
+		},
 		experiments,
 	}
 

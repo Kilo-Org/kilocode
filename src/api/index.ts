@@ -8,6 +8,7 @@ import {
 	GlamaHandler,
 	AnthropicHandler,
 	AwsBedrockHandler,
+	CerebrasHandler,
 	OpenRouterHandler,
 	VertexHandler,
 	AnthropicVertexHandler,
@@ -26,17 +27,16 @@ import {
 	HumanRelayHandler,
 	FakeAIHandler,
 	XAIHandler,
-	ZAIHandler, // kilocode_change
 	BigModelHandler, // kilocode_change
 	GroqHandler,
 	HuggingFaceHandler,
 	ChutesHandler,
 	LiteLLMHandler,
-	CerebrasHandler, // kilocode_change
 	VirtualQuotaFallbackHandler, // kilocode_change
 	ClaudeCodeHandler,
 	SambaNovaHandler,
 	DoubaoHandler,
+	ZAiHandler,
 	FireworksHandler,
 } from "./providers"
 // kilocode_change start
@@ -124,12 +124,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 		case "human-relay":
 			return new HumanRelayHandler()
 		// kilocode_change start
-		case "fireworks":
-			return new FireworksHandler(options)
 		case "virtual-quota-fallback":
 			return new VirtualQuotaFallbackHandler(options)
-		case "zai":
-			return new ZAIHandler(options)
 		case "bigmodel":
 			return new BigModelHandler(options)
 		// kilocode_change end
@@ -145,12 +141,14 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new ChutesHandler(options)
 		case "litellm":
 			return new LiteLLMHandler(options)
-		// kilocode_change start
 		case "cerebras":
 			return new CerebrasHandler(options)
-		// kilocode_change end
 		case "sambanova":
 			return new SambaNovaHandler(options)
+		case "zai":
+			return new ZAiHandler(options)
+		case "fireworks":
+			return new FireworksHandler(options)
 		default:
 			apiProvider satisfies "gemini-cli" | undefined
 			return new AnthropicHandler(options)

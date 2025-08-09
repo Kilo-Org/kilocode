@@ -128,6 +128,7 @@
 	},
 	"autoApprove": {
 		"description": "Permitir que Kilo Code realice operaciones automáticamente sin requerir aprobación. Habilite esta configuración solo si confía plenamente en la IA y comprende los riesgos de seguridad asociados.",
+		"enabled": "Auto-aprobación habilitada",
 		"toggleAriaLabel": "Alternar aprobación automática",
 		"disabledAriaLabel": "Aprobación automática desactivada: seleccione primero las opciones",
 		"readOnly": {
@@ -202,7 +203,14 @@
 			"description": "Realizar automáticamente esta cantidad de solicitudes a la API antes de pedir aprobación para continuar con la tarea.",
 			"unlimited": "Ilimitado"
 		},
-		"selectOptionsFirst": "Selecciona al menos una opción a continuación para habilitar la aprobación automática"
+		"selectOptionsFirst": "Selecciona al menos una opción a continuación para habilitar la aprobación automática",
+		"apiCostLimit": {
+			"title": "Costo Máximo",
+			"unlimited": "Ilimitado"
+		},
+		"maxLimits": {
+			"description": "Realizar automáticamente solicitudes hasta estos límites antes de pedir aprobación para continuar."
+		}
 	},
 	"providers": {
 		"providerDocumentation": "Documentación de {{provider}}",
@@ -254,21 +262,25 @@
 		"anthropicApiKey": "Clave API de Anthropic",
 		"getAnthropicApiKey": "Obtener clave API de Anthropic",
 		"anthropicUseAuthToken": "Pasar la clave API de Anthropic como encabezado de autorización en lugar de X-Api-Key",
+		"cerebrasApiKey": "Clave API de Cerebras",
+		"getCerebrasApiKey": "Obtener clave API de Cerebras",
 		"chutesApiKey": "Clave API de Chutes",
 		"getChutesApiKey": "Obtener clave API de Chutes",
+		"fireworksApiKey": "Clave API de Fireworks",
+		"getFireworksApiKey": "Obtener clave API de Fireworks",
 		"deepSeekApiKey": "Clave API de DeepSeek",
 		"getDeepSeekApiKey": "Obtener clave API de DeepSeek",
 		"doubaoApiKey": "Clave API de Doubao",
 		"getDoubaoApiKey": "Obtener clave API de Doubao",
-		"fireworksApiKey": "Clave API de Fireworks",
-		"getFireworksApiKey": "Obtener clave API de Fireworks",
-		"zaiApiKey": "Clave API de Z.AI",
-		"getZaiApiKey": "Obtener clave API de Z.AI",
 		"bigModelApiKey": "Clave API de BigModel",
 		"getBigModelApiKey": "Obtener clave API de BigModel",
 		"moonshotApiKey": "Clave API de Moonshot",
 		"getMoonshotApiKey": "Obtener clave API de Moonshot",
 		"moonshotBaseUrl": "Punto de entrada de Moonshot",
+		"zaiApiKey": "Clave API de Z AI",
+		"getZaiApiKey": "Obtener clave API de Z AI",
+		"zaiEntrypoint": "Punto de entrada de Z AI",
+		"zaiEntrypointDescription": "Por favor, seleccione el punto de entrada de API apropiado según su ubicación. Si está en China, elija open.bigmodel.cn. De lo contrario, elija api.z.ai.",
 		"geminiApiKey": "Clave API de Gemini",
 		"getGroqApiKey": "Obtener clave API de Groq",
 		"groqApiKey": "Clave API de Groq",
@@ -329,7 +341,6 @@
 				"description": "Permite que Gemini busque en Google información actual y fundamente las respuestas en datos en tiempo real. Útil para consultas que requieren información actualizada."
 			}
 		},
-
 		"googleCloudSetup": {
 			"title": "Para usar Google Cloud Vertex AI, necesita:",
 			"step1": "1. Crear una cuenta de Google Cloud, habilitar la API de Vertex AI y habilitar los modelos Claude deseados.",
@@ -370,10 +381,6 @@
 				"description": "OpenRouter dirige las solicitudes a los mejores proveedores disponibles para su modelo. Por defecto, las solicitudes se equilibran entre los principales proveedores para maximizar el tiempo de actividad. Sin embargo, puede elegir un proveedor específico para este modelo.",
 				"learnMore": "Más información sobre el enrutamiento de proveedores"
 			}
-		},
-		"cerebras": {
-			"apiKey": "Clave API de Cerebras",
-			"getApiKey": "Obtener clave API de Cerebras"
 		},
 		"customModel": {
 			"capabilities": "Configure las capacidades y precios para su modelo personalizado compatible con OpenAI. Tenga cuidado al especificar las capacidades del modelo, ya que pueden afectar cómo funciona Kilo Code.",
@@ -718,6 +725,10 @@
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Edición en segundo plano",
 			"description": "Previene la interrupción del foco del editor cuando está habilitado. Las ediciones de archivos ocurren en segundo plano sin abrir vistas de diferencias o robar el foco. Puedes continuar trabajando sin interrupciones mientras Kilo Code realiza cambios. Los archivos pueden abrirse sin foco para capturar diagnósticos o mantenerse completamente cerrados."
+		},
+		"ASSISTANT_MESSAGE_PARSER": {
+			"name": "Usar el nuevo analizador de mensajes",
+			"description": "Activa el analizador de mensajes en streaming experimental que mejora el rendimiento en respuestas largas procesando los mensajes de forma más eficiente."
 		}
 	},
 	"promptCaching": {

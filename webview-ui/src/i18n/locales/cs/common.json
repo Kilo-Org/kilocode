@@ -90,5 +90,21 @@
 		"editWarning": "Úpravou této zprávy se smažou všechny následující zprávy v konverzaci. Chceš pokračovat?",
 		"proceed": "Pokračovat",
 		"title": "Potvrzení"
+	},
+	"time_ago": {
+		"just_now": "právě teď",
+		"seconds_ago": "před {{count}} sekundami",
+		"minute_ago": "před minutou",
+		"minutes_ago": "před {{count}} minutami",
+		"hour_ago": "před hodinou",
+		"hours_ago": "před {{count}} hodinami",
+		"day_ago": "před dnem",
+		"days_ago": "před {{count}} dny",
+		"week_ago": "před týdnem",
+		"weeks_ago": "před {{count}} týdny",
+		"month_ago": "před měsícem",
+		"months_ago": "před {{count}} měsíci",
+		"year_ago": "před rokem",
+		"years_ago": "před {{count}} lety"
 	}
 }

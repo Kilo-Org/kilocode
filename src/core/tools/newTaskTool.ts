@@ -1,5 +1,7 @@
 import delay from "delay"
 
+import { RooCodeEventName } from "@roo-code/types"
+
 import { ToolUse, AskApproval, HandleError, PushToolResult, RemoveClosingTag } from "../../shared/tools"
 import { Task } from "../task/Task"
 import { defaultModeSlug, getModeBySlug } from "../../shared/modes"
@@ -102,14 +104,14 @@ export async function newTaskTool(
 			// await delay(500)
 			// kilocode_change end
 
-			cline.emit("taskSpawned", newCline.taskId)
+			cline.emit(RooCodeEventName.TaskSpawned, newCline.taskId)
 
 			pushToolResult(`Successfully created new task in ${targetMode.name} mode with message: ${unescapedMessage}`)
 
 			// Set the isPaused flag to true so the parent
 			// task can wait for the sub-task to finish.
 			cline.isPaused = true
-			cline.emit("taskPaused")
+			cline.emit(RooCodeEventName.TaskPaused)
 
 			return
 		}

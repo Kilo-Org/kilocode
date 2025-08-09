@@ -74,6 +74,7 @@
 		"no_internet": "Žádné internetové připojení. Zkontroluj prosím své síťové připojení a zkus to znovu.",
 		"url_forbidden": "Přístup k této webové stránce je zakázán. Web může blokovat automatizovaný přístup nebo vyžadovat autentizaci.",
 		"url_page_not_found": "Stránka nebyla nalezena. Zkontroluj prosím, zda je URL správná.",
+		"url_request_aborted": "Požadavek na načtení URL byl přerušen. Může se to stát, pokud stránka blokuje automatický přístup, vyžaduje autentifikaci nebo je problém se sítí. Zkuste to znovu nebo zkontrolujte, zda je URL dostupná v běžném prohlížeči.",
 		"url_fetch_failed": "Načtení obsahu URL selhalo: {{error}}",
 		"url_fetch_error_with_url": "Chyba při načítání obsahu pro {{url}}: {{error}}",
 		"command_timeout": "Spuštění příkazu vypršelo po {{seconds}} sekundách",
@@ -96,7 +97,8 @@
 			"errorOutput": "Chybový výstup: {{output}}",
 			"processExitedWithError": "Proces Claude Code skončil s kódem {{exitCode}}. Chybový výstup: {{output}}",
 			"stoppedWithReason": "Claude Code se zastavil s důvodem: {{reason}}",
-			"apiKeyModelPlanMismatch": "API klíče a plány předplatného umožňují různé modely. Ujisti se, že vybraný model je zahrnut v tvém plánu."
+			"apiKeyModelPlanMismatch": "API klíče a plány předplatného umožňují různé modely. Ujisti se, že vybraný model je zahrnut v tvém plánu.",
+			"notFound": "Spustitelný soubor Claude Code '{{claudePath}}' nebyl nalezen.\n\nNainstalujte prosím Claude Code CLI:\n1. Navštivte {{installationUrl}} pro stažení Claude Code\n2. Postupujte podle pokynů pro instalaci pro váš operační systém\n3. Ujistěte se, že příkaz 'claude' je dostupný v PATH\n4. Alternativně nakonfigurujte vlastní cestu v nastavení Roo pod 'Cesta Claude Code'\n\nPůvodní chyba: {{originalError}}"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "Nepodařilo se načíst OAuth přihlašovací údaje. Nejprve se prosím autentizujte: {{error}}",
@@ -112,6 +114,15 @@
 			"generate_stream": "Chyba generování kontextového proudu Gemini: {{error}}",
 			"generate_complete_prompt": "Chyba dokončení Gemini: {{error}}",
 			"sources": "Zdroje:"
+		},
+		"cerebras": {
+			"authenticationFailed": "Autentifikace Cerebras API selhala. Zkontrolujte prosím, že váš API klíč je platný a nevypršel.",
+			"accessForbidden": "Přístup k Cerebras API je zakázán. Váš API klíč možná nemá přístup k požadovanému modelu nebo funkci.",
+			"rateLimitExceeded": "Překročen limit rychlosti Cerebras API. Počkejte prosím před dalším požadavkem.",
+			"serverError": "Chyba serveru Cerebras API ({{status}}). Zkuste to prosím později.",
+			"genericError": "Chyba Cerebras API ({{status}}): {{message}}",
+			"noResponseBody": "Chyba Cerebras API: Žádné tělo odpovědi",
+			"completionError": "Chyba dokončení Cerebras: {{error}}"
 		}
 	},
 	"warnings": {

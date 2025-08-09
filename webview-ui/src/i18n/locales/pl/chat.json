@@ -4,10 +4,11 @@
 		"title": "Zadanie",
 		"seeMore": "Zobacz więcej",
 		"seeLess": "Zobacz mniej",
-		"tokens": "Tokeny:",
-		"cache": "Pamięć podręczna:",
-		"apiCost": "Koszt API:",
-		"contextWindow": "Okno kontekstu:",
+		"tokens": "Tokeny",
+		"cache": "Pamięć podręczna",
+		"apiCost": "Koszt API",
+		"size": "Rozmiar",
+		"contextWindow": "Okno kontekstu",
 		"closeAndStart": "Zamknij zadanie i rozpocznij nowe",
 		"export": "Eksportuj historię zadań",
 		"delete": "Usuń zadanie (Shift + Kliknięcie, aby pominąć potwierdzenie)",
@@ -146,7 +147,6 @@
 		"streamingFailed": "Strumieniowanie API nie powiodło się"
 	},
 	"checkpoint": {
-		"initial": "Początkowy punkt kontrolny",
 		"regular": "Punkt kontrolny",
 		"initializingWarning": "Trwa inicjalizacja punktu kontrolnego... Jeśli to trwa zbyt długo, możesz wyłączyć punkty kontrolne w <settingsLink>ustawieniach</settingsLink> i uruchomić zadanie ponownie.",
 		"menu": {
@@ -321,6 +321,11 @@
 			"title": "Osiągnięto limit automatycznie zatwierdzonych żądań",
 			"description": "Kilo Code osiągnął automatycznie zatwierdzony limit {{count}} żądania/żądań API. Czy chcesz zresetować licznik i kontynuować zadanie?",
 			"button": "Zresetuj i kontynuuj"
+		},
+		"autoApprovedCostLimitReached": {
+			"button": "Zresetuj i Kontynuuj",
+			"title": "Osiągnięto limit kosztów z automatycznym zatwierdzaniem",
+			"description": "Roo osiągnął automatycznie zatwierdzony limit kosztów wynoszący ${{count}}. Czy chcesz zresetować koszt i kontynuować zadanie?"
 		}
 	},
 	"codebaseSearch": {

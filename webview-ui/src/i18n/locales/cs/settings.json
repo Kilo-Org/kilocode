@@ -132,6 +132,7 @@
 	},
 	"autoApprove": {
 		"description": "Povolit Kilo Code automaticky provádět operace bez nutnosti schválení. Povolte tato nastavení pouze v případě, že plně důvěřujete AI a rozumíte souvisejícím bezpečnostním rizikům.",
+		"enabled": "Automatické schválení povoleno",
 		"readOnly": {
 			"label": "Číst",
 			"description": "Pokud je povoleno, Kilo Code automaticky zobrazí obsah adresáře a přečte soubory, aniž byste museli klikat na tlačítko Schválit.",
@@ -201,8 +202,14 @@
 		},
 		"apiRequestLimit": {
 			"title": "Maximální počet žádostí",
-			"description": "Automaticky provést tento počet žádostí API předtím, než požádá o schválení k pokračování v úkolu.",
 			"unlimited": "Neomezeně"
+		},
+		"apiCostLimit": {
+			"title": "Maximální náklady",
+			"unlimited": "Neomezeně"
+		},
+		"maxLimits": {
+			"description": "Automaticky provádět požadavky až do těchto limitů před žádostí o schválení k pokračování."
 		},
 		"toggleAriaLabel": "Přepnout automatické schválení",
 		"disabledAriaLabel": "Automatické schválení zakázáno - nejprve vyberte možnosti",
@@ -258,6 +265,8 @@
 		"anthropicApiKey": "Klíč API Anthropic",
 		"getAnthropicApiKey": "Získat klíč API Anthropic",
 		"anthropicUseAuthToken": "Předávat klíč API Anthropic jako hlavičku Authorization místo X-Api-Key",
+		"cerebrasApiKey": "Klíč API Cerebras",
+		"getCerebrasApiKey": "Získat klíč API Cerebras",
 		"chutesApiKey": "Klíč API Chutes",
 		"getChutesApiKey": "Získat klíč API Chutes",
 		"deepSeekApiKey": "Klíč API DeepSeek",
@@ -273,6 +282,8 @@
 		"moonshotApiKey": "Klíč API Moonshot",
 		"getMoonshotApiKey": "Získat klíč API Moonshot",
 		"moonshotBaseUrl": "Vstupní bod Moonshot",
+		"zaiEntrypoint": "Vstupní bod Z AI",
+		"zaiEntrypointDescription": "Vyberte prosím vhodný vstupní bod API podle vaší polohy. Pokud jste v Číně, vyberte open.bigmodel.cn. Jinak vyberte api.z.ai.",
 		"geminiApiKey": "Klíč API Gemini",
 		"getGroqApiKey": "Získat klíč API Groq",
 		"groqApiKey": "Klíč API Groq",
@@ -385,10 +396,6 @@
 				"description": "OpenRouter směruje požadavky na nejlepší dostupné poskytovatele pro váš model. Ve výchozím nastavení jsou požadavky vyrovnávány zátěží mezi nejlepší poskytovatele, aby se maximalizovala doba provozu. Můžete si však vybrat konkrétního poskytovatele, kterého chcete pro tento model použít.",
 				"learnMore": "Zjistěte více o směrování poskytovatelů"
 			}
-		},
-		"cerebras": {
-			"apiKey": "Klíč API Cerebras",
-			"getApiKey": "Získat klíč API Cerebras"
 		},
 		"customModel": {
 			"capabilities": "Nakonfigurujte schopnosti a ceny pro váš vlastní model kompatibilní s OpenAI. Při zadávání schopností modelu buďte opatrní, protože mohou ovlivnit výkon Kilo Code.",
@@ -750,6 +757,10 @@
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Úpravy na pozadí",
 			"description": "Zabránit narušení zaměření editoru, když je povoleno. Úpravy souborů probíhají na pozadí bez otevírání diff zobrazení nebo krádeže zaměření. Můžete pokračovat v práci bez přerušení, zatímco Kilo Code provádí změny. Soubory mohou být otevřeny bez zaměření pro zachycení diagnostiky nebo zůstat zcela zavřené."
+		},
+		"ASSISTANT_MESSAGE_PARSER": {
+			"name": "Použít nový parser zpráv",
+			"description": "Povolit experimentální streamovací parser zpráv, který poskytuje významná zlepšení výkonu pro dlouhé odpovědi asistenta efektivnějším zpracováním zpráv."
 		}
 	},
 	"promptCaching": {

@@ -4,10 +4,11 @@
 		"title": "Taak",
 		"seeMore": "Meer weergeven",
 		"seeLess": "Minder weergeven",
-		"tokens": "Tokens:",
-		"cache": "Cache:",
-		"apiCost": "API-kosten:",
-		"contextWindow": "Contextlengte:",
+		"tokens": "Tokens",
+		"cache": "Cache",
+		"apiCost": "API-kosten",
+		"size": "Grootte",
+		"contextWindow": "Contextlengte",
 		"closeAndStart": "Taak sluiten en een nieuwe starten",
 		"export": "Taakgeschiedenis exporteren",
 		"delete": "Taak verwijderen (Shift + Klik om bevestiging over te slaan)",
@@ -141,7 +142,6 @@
 		"streamingFailed": "API-streaming mislukt"
 	},
 	"checkpoint": {
-		"initial": "Initiële checkpoint",
 		"regular": "Checkpoint",
 		"initializingWarning": "Checkpoint wordt nog steeds geïnitialiseerd... Als dit te lang duurt, kun je checkpoints uitschakelen in de <settingsLink>instellingen</settingsLink> en je taak opnieuw starten.",
 		"menu": {
@@ -321,6 +321,11 @@
 			"title": "Limiet voor automatisch goedgekeurde verzoeken bereikt",
 			"description": "Kilo Code heeft de automatisch goedgekeurde limiet van {{count}} API-verzoek(en) bereikt. Wil je de teller resetten en doorgaan met de taak?",
 			"button": "Resetten en doorgaan"
+		},
+		"autoApprovedCostLimitReached": {
+			"title": "Limiet voor automatisch goedgekeurde kosten bereikt",
+			"button": "Resetten en doorgaan",
+			"description": "Roo heeft de automatisch goedgekeurde kostenlimiet van ${{count}} bereikt. Wilt u de kosten resetten en doorgaan met de taak?"
 		}
 	},
 	"codebaseSearch": {

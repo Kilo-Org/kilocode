@@ -4,10 +4,11 @@
 		"title": "Tarefa",
 		"seeMore": "Ver mais",
 		"seeLess": "Ver menos",
-		"tokens": "Tokens:",
-		"cache": "Cache:",
-		"apiCost": "Custo da API:",
-		"contextWindow": "Janela de contexto:",
+		"tokens": "Tokens",
+		"cache": "Cache",
+		"apiCost": "Custo da API",
+		"size": "Tamanho",
+		"contextWindow": "Janela de contexto",
 		"closeAndStart": "Fechar tarefa e iniciar nova",
 		"export": "Exportar histórico de tarefas",
 		"delete": "Excluir tarefa (Shift + Clique para pular confirmação)",
@@ -146,7 +147,6 @@
 		"streamingFailed": "Streaming API falhou"
 	},
 	"checkpoint": {
-		"initial": "Ponto de verificação inicial",
 		"regular": "Ponto de verificação",
 		"initializingWarning": "Ainda inicializando ponto de verificação... Se isso demorar muito, você pode desativar os pontos de verificação nas <settingsLink>configurações</settingsLink> e reiniciar sua tarefa.",
 		"menu": {
@@ -320,6 +320,11 @@
 		"autoApprovedRequestLimitReached": {
 			"title": "Limite de Solicitações Auto-aprovadas Atingido",
 			"description": "Kilo Code atingiu o limite auto-aprovado de {{count}} solicitação(ões) de API. Deseja redefinir a contagem e prosseguir com a tarefa?",
+			"button": "Redefinir e Continuar"
+		},
+		"autoApprovedCostLimitReached": {
+			"title": "Limite de Custo com Aprovação Automática Atingido",
+			"description": "Roo atingiu o limite de custo com aprovação automática de US${{count}}. Você gostaria de redefinir o custo e prosseguir com a tarefa?",
 			"button": "Redefinir e Continuar"
 		}
 	},

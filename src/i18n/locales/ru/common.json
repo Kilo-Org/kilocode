@@ -69,6 +69,7 @@
 		"no_internet": "Нет подключения к интернету. Проверь сетевое подключение и попробуй снова.",
 		"url_forbidden": "Доступ к этому веб-сайту запрещен. Сайт может блокировать автоматический доступ или требовать аутентификацию.",
 		"url_page_not_found": "Страница не найдена. Проверь правильность URL.",
+		"url_request_aborted": "Запрос на получение URL был прерван. Это может произойти, если сайт блокирует автоматический доступ, требует аутентификацию или есть проблемы с сетью. Попробуй снова или проверь, доступен ли URL в обычном браузере.",
 		"url_fetch_failed": "Ошибка получения содержимого URL: {{error}}",
 		"url_fetch_error_with_url": "Ошибка получения содержимого для {{url}}: {{error}}",
 		"command_timeout": "Время выполнения команды истекло через {{seconds}} секунд",
@@ -91,7 +92,8 @@
 			"errorOutput": "Вывод ошибки: {{output}}",
 			"processExitedWithError": "Процесс Claude Code завершился с кодом {{exitCode}}. Вывод ошибки: {{output}}",
 			"stoppedWithReason": "Claude Code остановился по причине: {{reason}}",
-			"apiKeyModelPlanMismatch": "API-ключи и планы подписки позволяют использовать разные модели. Убедитесь, что выбранная модель включена в ваш план."
+			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
+			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Roo settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "Не удалось загрузить учетные данные OAuth. Сначала выполните аутентификацию: {{error}}",
@@ -107,6 +109,15 @@
 			"generate_stream": "Ошибка потока контекста генерации Gemini: {{error}}",
 			"generate_complete_prompt": "Ошибка завершения Gemini: {{error}}",
 			"sources": "Источники:"
+		},
+		"cerebras": {
+			"authenticationFailed": "Ошибка аутентификации Cerebras API. Убедитесь, что ваш API-ключ действителен и не истек.",
+			"accessForbidden": "Доступ к Cerebras API запрещен. Ваш API-ключ может не иметь доступа к запрашиваемой модели или функции.",
+			"rateLimitExceeded": "Превышен лимит скорости Cerebras API. Подождите перед отправкой следующего запроса.",
+			"serverError": "Ошибка сервера Cerebras API ({{status}}). Попробуйте позже.",
+			"genericError": "Ошибка Cerebras API ({{status}}): {{message}}",
+			"noResponseBody": "Ошибка Cerebras API: Нет тела ответа",
+			"completionError": "Ошибка завершения Cerebras: {{error}}"
 		}
 	},
 	"warnings": {

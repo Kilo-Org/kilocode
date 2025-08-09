@@ -39,8 +39,8 @@ export const cerebrasModels = {
 		contextWindow: 8192,
 		supportsImages: false,
 		supportsPromptCache: false,
-		inputPrice: 0.20,
-		outputPrice: 0.60,
+		inputPrice: 0.2,
+		outputPrice: 0.6,
 		description: "Llama 4 Maverick with ~1500 tokens/s",
 	},
 	"llama3.1-8b": {
@@ -48,8 +48,8 @@ export const cerebrasModels = {
 		contextWindow: 8192,
 		supportsImages: false,
 		supportsPromptCache: false,
-		inputPrice: 0.10,
-		outputPrice: 0.10,
+		inputPrice: 0.1,
+		outputPrice: 0.1,
 		description: "Fast and efficient model with ~2200 tokens/s",
 	},
 	"llama-3.3-70b": {
@@ -58,7 +58,7 @@ export const cerebrasModels = {
 		supportsImages: false,
 		supportsPromptCache: false,
 		inputPrice: 0.85,
-		outputPrice: 1.20,
+		outputPrice: 1.2,
 		description: "Powerful model with ~2100 tokens/s",
 	},
 	"qwen-3-32b": {
@@ -66,8 +66,8 @@ export const cerebrasModels = {
 		contextWindow: 65536,
 		supportsImages: false,
 		supportsPromptCache: false,
-		inputPrice: 0.40,
-		outputPrice: 0.80,
+		inputPrice: 0.4,
+		outputPrice: 0.8,
 		description: "SOTA coding performance with ~2600 tokens/s",
 	},
 	"qwen-3-235b-a22b-instruct-2507": {
@@ -75,8 +75,8 @@ export const cerebrasModels = {
 		contextWindow: 64000,
 		supportsImages: false,
 		supportsPromptCache: false,
-		inputPrice: 0.60,
-		outputPrice: 1.20,
+		inputPrice: 0.6,
+		outputPrice: 1.2,
 		description: "Intelligent model with ~1400 tokens/s",
 	},
 	"qwen-3-235b-a22b-thinking-2507": {
@@ -84,8 +84,8 @@ export const cerebrasModels = {
 		contextWindow: 65536,
 		supportsImages: false,
 		supportsPromptCache: false,
-		inputPrice: 0.60,
-		outputPrice: 1.20,
+		inputPrice: 0.6,
+		outputPrice: 1.2,
 		description: "SOTA performance with ~1700 tokens/s",
 	},
 	"qwen-3-coder-480b": {
@@ -93,8 +93,8 @@ export const cerebrasModels = {
 		contextWindow: 65536,
 		supportsImages: false,
 		supportsPromptCache: false,
-		inputPrice: 2.00,
-		outputPrice: 2.00,
+		inputPrice: 2.0,
+		outputPrice: 2.0,
 		description: "SOTA coding model with ~2000 tokens/s",
 	},
 	"deepseek-r1-distill-llama-70b": {
@@ -102,8 +102,8 @@ export const cerebrasModels = {
 		contextWindow: 65536,
 		supportsImages: false,
 		supportsPromptCache: false,
-		inputPrice: 2.20,
-		outputPrice: 2.50,
+		inputPrice: 2.2,
+		outputPrice: 2.5,
 		description: "Deepseek R1 Distill with ~2600 tokens/s",
 	},
 } as const satisfies Record<string, ModelInfo>
@@ -164,6 +164,7 @@ export const shouldUseReasoningEffort = ({
 
 export const DEFAULT_HYBRID_REASONING_MODEL_MAX_TOKENS = 16_384
 export const DEFAULT_HYBRID_REASONING_MODEL_THINKING_TOKENS = 8_192
+export const GEMINI_25_PRO_MIN_THINKING_TOKENS = 128
 
 // Max Tokens
 
@@ -202,9 +203,9 @@ export const getModelMaxOutputTokens = ({
 		return ANTHROPIC_DEFAULT_MAX_TOKENS
 	}
 
-	// If model has explicit maxTokens and it's not the full context window, use it
-	if (model.maxTokens && model.maxTokens !== model.contextWindow) {
-		return model.maxTokens
+	// If model has explicit maxTokens, clamp it to 20% of the context window
+	if (model.maxTokens) {
+		return Math.min(model.maxTokens, Math.ceil(model.contextWindow * 0.2))
 	}
 
 	// For non-Anthropic formats without explicit maxTokens, return undefined

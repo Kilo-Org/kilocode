@@ -34,15 +34,15 @@ export const providerNames = [
 	"chutes",
 	"litellm",
 	// kilocode_change start
-	"fireworks",
 	"kilocode",
-	"cerebras",
 	"virtual-quota-fallback",
-	"zai",
 	"bigmodel",
 	// kilocode_change end
 	"huggingface",
+	"cerebras",
 	"sambanova",
+	"zai",
+	"fireworks",
 ] as const
 
 export const providerNamesSchema = z.enum(providerNames)
@@ -247,10 +247,6 @@ const xaiSchema = apiModelIdProviderModelSchema.extend({
 })
 
 // kilocode_change start
-const zaiSchema = apiModelIdProviderModelSchema.extend({
-	zaiApiKey: z.string().optional(),
-})
-
 const bigModelSchema = apiModelIdProviderModelSchema.extend({
 	bigModelApiKey: z.string().optional(),
 })
@@ -277,6 +273,10 @@ const litellmSchema = baseProviderSettingsSchema.extend({
 	litellmUsePromptCache: z.boolean().optional(),
 })
 
+const cerebrasSchema = apiModelIdProviderModelSchema.extend({
+	cerebrasApiKey: z.string().optional(),
+})
+
 const sambaNovaSchema = apiModelIdProviderModelSchema.extend({
 	sambaNovaApiKey: z.string().optional(),
 })
@@ -287,13 +287,7 @@ const kilocodeSchema = baseProviderSettingsSchema.extend({
 	kilocodeModel: z.string().optional(),
 	openRouterSpecificProvider: z.string().optional(),
 })
-const fireworksSchema = apiModelIdProviderModelSchema.extend({
-	fireworksApiKey: z.string().optional(),
-})
-const cerebrasSchema = baseProviderSettingsSchema.extend({
-	cerebrasApiKey: z.string().optional(),
-	cerebrasModelId: z.string().optional(),
-})
+
 export const virtualQuotaFallbackProfileDataSchema = z.object({
 	profileName: z.string().optional(),
 	profileId: z.string().optional(),
@@ -312,6 +306,14 @@ const virtualQuotaFallbackSchema = baseProviderSettingsSchema.extend({
 	profiles: z.array(virtualQuotaFallbackProfileDataSchema).optional(),
 })
 // kilocode_change end
+const zaiSchema = apiModelIdProviderModelSchema.extend({
+	zaiApiKey: z.string().optional(),
+	zaiApiLine: z.union([z.literal("china"), z.literal("international")]).optional(),
+})
+
+const fireworksSchema = apiModelIdProviderModelSchema.extend({
+	fireworksApiKey: z.string().optional(),
+})
 
 const defaultSchema = z.object({
 	apiProvider: z.undefined(),
@@ -340,19 +342,19 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	fakeAiSchema.merge(z.object({ apiProvider: z.literal("fake-ai") })),
 	xaiSchema.merge(z.object({ apiProvider: z.literal("xai") })),
 	// kilocode_change start
-	zaiSchema.merge(z.object({ apiProvider: z.literal("zai") })),
 	bigModelSchema.merge(z.object({ apiProvider: z.literal("bigmodel") })),
 	geminiCliSchema.merge(z.object({ apiProvider: z.literal("gemini-cli") })),
 	kilocodeSchema.merge(z.object({ apiProvider: z.literal("kilocode") })),
-	fireworksSchema.merge(z.object({ apiProvider: z.literal("fireworks") })),
-	cerebrasSchema.merge(z.object({ apiProvider: z.literal("cerebras") })),
 	virtualQuotaFallbackSchema.merge(z.object({ apiProvider: z.literal("virtual-quota-fallback") })),
 	// kilocode_change end
 	groqSchema.merge(z.object({ apiProvider: z.literal("groq") })),
 	huggingFaceSchema.merge(z.object({ apiProvider: z.literal("huggingface") })),
 	chutesSchema.merge(z.object({ apiProvider: z.literal("chutes") })),
 	litellmSchema.merge(z.object({ apiProvider: z.literal("litellm") })),
+	cerebrasSchema.merge(z.object({ apiProvider: z.literal("cerebras") })),
 	sambaNovaSchema.merge(z.object({ apiProvider: z.literal("sambanova") })),
+	zaiSchema.merge(z.object({ apiProvider: z.literal("zai") })),
+	fireworksSchema.merge(z.object({ apiProvider: z.literal("fireworks") })),
 	defaultSchema,
 ])
 
@@ -372,9 +374,6 @@ export const providerSettingsSchema = z.object({
 	// kilocode_change start
 	...geminiCliSchema.shape,
 	...kilocodeSchema.shape,
-	...fireworksSchema.shape,
-	...cerebrasSchema.shape,
-	...zaiSchema.shape,
 	...bigModelSchema.shape,
 	...virtualQuotaFallbackSchema.shape,
 	// kilocode_change end
@@ -392,11 +391,21 @@ export const providerSettingsSchema = z.object({
 	...huggingFaceSchema.shape,
 	...chutesSchema.shape,
 	...litellmSchema.shape,
+	...cerebrasSchema.shape,
 	...sambaNovaSchema.shape,
+	...zaiSchema.shape,
+	...fireworksSchema.shape,
 	...codebaseIndexProviderSchema.shape,
 })
 
 export type ProviderSettings = z.infer<typeof providerSettingsSchema>
+
+export const providerSettingsWithIdSchema = providerSettingsSchema.extend({ id: z.string().optional() })
+export const discriminatedProviderSettingsWithIdSchema = providerSettingsSchemaDiscriminated.and(
+	z.object({ id: z.string().optional() }),
+)
+export type ProviderSettingsWithId = z.infer<typeof providerSettingsWithIdSchema>
+
 export const PROVIDER_SETTINGS_KEYS = providerSettingsSchema.keyof().options
 
 export const MODEL_ID_KEYS: Partial<keyof ProviderSettings>[] = [
@@ -410,7 +419,6 @@ export const MODEL_ID_KEYS: Partial<keyof ProviderSettings>[] = [
 	"unboundModelId",
 	"requestyModelId",
 	"litellmModelId",
-	"cerebrasModelId", // kilocode_change
 	"huggingFaceModelId",
 ]
 

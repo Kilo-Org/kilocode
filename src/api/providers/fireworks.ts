@@ -1,9 +1,4 @@
-import {
-	type FireworksModelId,
-	fireworksDefaultModelId,
-	fireworksModels,
-	FIREWORKS_API_BASE_URL,
-} from "@roo-code/types"
+import { type FireworksModelId, fireworksDefaultModelId, fireworksModels } from "@roo-code/types"
 
 import type { ApiHandlerOptions } from "../../shared/api"
 
@@ -14,7 +9,7 @@ export class FireworksHandler extends BaseOpenAiCompatibleProvider<FireworksMode
 		super({
 			...options,
 			providerName: "Fireworks",
-			baseURL: FIREWORKS_API_BASE_URL,
+			baseURL: "https://api.fireworks.ai/inference/v1",
 			apiKey: options.fireworksApiKey,
 			defaultProviderModelId: fireworksDefaultModelId,
 			providerModels: fireworksModels,

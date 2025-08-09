@@ -123,14 +123,16 @@ async function generatePrompt(
 			: Promise.resolve(""),
 	])
 
-	const codeIndexManager = CodeIndexManager.getInstance(context)
+	const codeIndexManager = CodeIndexManager.getInstance(context, cwd)
 
 	// Use compact mode to reduce token usage
 	if (compactMode) {
-		// Simplified prompt for compact mode
-		// Ensure roleDefinition is never undefined
+		// Simplified prompt for compact mode - 20250809 陈凤庆 新增紧凑模式
+		// 最后角色定义
 		const finalRoleDefinition =
 			customRoleDefinition || roleDefinition || "You are Kilo Code, an AI coding assistant."
+
+		// 总区块定义
 		const toolSection =
 			customToolUse ||
 			getToolDescriptionsForMode(
@@ -146,6 +148,7 @@ async function generatePrompt(
 				partialReadsEnabled,
 				settings,
 				true, // Enable compact mode for tools
+				enableMcpServerCreation,
 			)
 
 		const rulesSection =
@@ -176,73 +179,48 @@ ${customInstructionsSection}`
 		return basePrompt
 	}
 
-	// Full prompt for normal mode
-	const finalRoleDefinition = customRoleDefinition || roleDefinition
-	const finalMarkdownFormatting = customMarkdownFormatting || markdownFormattingSection()
-	const finalSharedToolUse = customToolUse || getSharedToolUseSection()
-	const finalToolDescriptions =
-		customToolUse ||
-		getToolDescriptionsForMode(
-			mode,
-			cwd,
-			supportsComputerUse,
-			codeIndexManager,
-			effectiveDiffStrategy,
-			browserViewportSize,
-			shouldIncludeMcp ? mcpHub : undefined,
-			customModeConfigs,
-			experiments,
-			partialReadsEnabled,
-			settings,
-			compactMode,
-		)
-	const finalMcpServers = customMcpServers || mcpServersSection
-	const finalCapabilities =
-		customCapabilities ||
-		getCapabilitiesSection(
-			cwd,
-			supportsComputerUse,
-			shouldIncludeMcp ? mcpHub : undefined,
-			effectiveDiffStrategy,
-			codeIndexManager,
-		)
-	const finalModes = customModes || modesSection
-	const finalRules = customRules || getRulesSection(cwd, supportsComputerUse, effectiveDiffStrategy, codeIndexManager)
-	const finalSystemInfo = customSystemInfo || getSystemInfoSection(cwd)
-	const finalObjective = customObjective || getObjectiveSection(codeIndexManager, experiments)
-	const finalCustomInstructions =
-		customCustomInstructions ||
-		(await addCustomInstructions(baseInstructions, globalCustomInstructions || "", cwd, mode, {
-			language: language ?? formatLanguage(vscode.env.language),
-			rooIgnoreInstructions,
-			localRulesToggleState: context.workspaceState.get("localRulesToggles"), // kilocode_change
-			globalRulesToggleState: context.globalState.get("globalRulesToggles"), // kilocode_change
-			settings,
-		}))
+	// Original full prompt for normal mode (compactMode=false) - 保持与历史版本a9b3f92de6fa36da3a2cc88cbbc2b1b30bdff2d3兼容
+	const basePrompt = `${roleDefinition}
 
-	const basePrompt = `${finalRoleDefinition}
+${markdownFormattingSection()}
 
-${finalMarkdownFormatting}
+${getSharedToolUseSection()}
 
-${finalSharedToolUse}
-
-${finalToolDescriptions}
+${getToolDescriptionsForMode(
+	mode,
+	cwd,
+	supportsComputerUse,
+	codeIndexManager,
+	effectiveDiffStrategy,
+	browserViewportSize,
+	shouldIncludeMcp ? mcpHub : undefined,
+	customModeConfigs,
+	experiments,
+	partialReadsEnabled,
+	settings,
+)}
 
 ${getToolUseGuidelinesSection(codeIndexManager)}
 
-${getMorphInstructions(experiments) /* kilocode_change: newlines are returned by function */}${finalMcpServers}
+${getMorphInstructions(experiments) /* kilocode_change: newlines are returned by function */}${mcpServersSection}
 
-${finalCapabilities}
+${getCapabilitiesSection(cwd, supportsComputerUse, shouldIncludeMcp ? mcpHub : undefined, effectiveDiffStrategy, codeIndexManager)}
 
-${finalModes}
+${modesSection}
 
-${finalRules}
+${getRulesSection(cwd, supportsComputerUse, effectiveDiffStrategy, codeIndexManager)}
 
-${finalSystemInfo}
+${getSystemInfoSection(cwd)}
 
-${finalObjective}
+${getObjectiveSection(codeIndexManager, experiments)}
 
-${finalCustomInstructions}`
+${await addCustomInstructions(baseInstructions, globalCustomInstructions || "", cwd, mode, {
+	language: language ?? formatLanguage(vscode.env.language),
+	rooIgnoreInstructions,
+	localRulesToggleState: context.workspaceState.get("localRulesToggles"), // kilocode_change
+	globalRulesToggleState: context.globalState.get("globalRulesToggles"), // kilocode_change
+	settings,
+})}`
 
 	return basePrompt
 }

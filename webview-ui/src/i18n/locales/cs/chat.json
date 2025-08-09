@@ -7,6 +7,7 @@
 		"tokens": "Tokeny:",
 		"cache": "Cache:",
 		"apiCost": "Cena API:",
+		"size": "Velikost",
 		"condenseContext": "Inteligentně zhustit kontext",
 		"contextWindow": "Délka kontextu:",
 		"closeAndStart": "Zavřít úkol a začít nový",
@@ -342,6 +343,11 @@
 		"autoApprovedRequestLimitReached": {
 			"title": "Dosažen limit automaticky schválených požadavků",
 			"description": "Kilo Code dosáhl automaticky schváleného limitu {{count}} API požadavků. Chceš resetovat počítadlo a pokračovat v úkolu?",
+			"button": "Resetovat a pokračovat"
+		},
+		"autoApprovedCostLimitReached": {
+			"title": "Dosažen limit automaticky schválených nákladů",
+			"description": "Roo dosáhl limitu automaticky schválených nákladů ${{count}}. Chceš resetovat náklady a pokračovat v úkolu?",
 			"button": "Resetovat a pokračovat"
 		}
 	},
