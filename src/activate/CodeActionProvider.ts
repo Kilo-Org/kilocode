@@ -11,6 +11,7 @@ export const TITLES: Record<CodeActionName, string> = {
 	FIX: "Fix with Kilo Code",
 	IMPROVE: "Improve with Kilo Code",
 	ADD_TO_CONTEXT: "Add to Kilo Code",
+	ADD_TO_KILO_CODE: "Add to Kilo Code",
 	NEW_TASK: "New Kilo Code Task",
 } as const
 

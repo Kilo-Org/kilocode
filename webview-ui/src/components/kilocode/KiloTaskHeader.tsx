@@ -1,5 +1,5 @@
 // kilocode_change: new file
-import { memo, useRef, useState } from "react"
+import { memo, useRef, useState, useMemo } from "react"
 import { useWindowSize } from "react-use"
 import { useTranslation } from "react-i18next"
 import { CloudUpload, CloudDownload, FoldVertical } from "lucide-react"
@@ -14,6 +14,7 @@ import { cn } from "@src/lib/utils"
 import { Button, StandardTooltip } from "@src/components/ui"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { useSelectedModel } from "@/components/ui/hooks/useSelectedModel"
+import { getTaskTimelineMessageTypeKey } from "@/utils/messageColors"
 
 import Thumbnails from "../common/Thumbnails"
 
@@ -71,12 +72,25 @@ const KiloTaskHeader = ({
 
 	const { width: windowWidth } = useWindowSize()
 
+	// 检测是否有错误消息
+	const hasErrorMessage = useMemo(() => {
+		return groupedMessages.some((message) => {
+			if (Array.isArray(message)) {
+				return message.some((msg) => getTaskTimelineMessageTypeKey(msg) === "say:error")
+			} else {
+				return getTaskTimelineMessageTypeKey(message) === "say:error"
+			}
+		})
+	}, [groupedMessages])
+
 	const condenseButton = (
 		<StandardTooltip content={t("chat:task.condenseContext")}>
 			<button
 				disabled={buttonsDisabled}
 				onClick={() => currentTaskItem && handleCondenseContext(currentTaskItem.id)}
-				className="shrink-0 min-h-[20px] min-w-[20px] p-[2px] cursor-pointer disabled:cursor-not-allowed opacity-85 hover:opacity-100 bg-transparent border-none rounded-md">
+				className="shrink-0 min-h-[20px] min-w-[20px] p-[2px] cursor-pointer disabled:cursor-not-allowed opacity-85 hover:opacity-100 bg-transparent border-none rounded-md"
+				aria-label={t("chat:task.condenseContext")}
+				title={t("chat:task.condenseContext")}>
 				<FoldVertical size={16} />
 			</button>
 		</StandardTooltip>
@@ -107,12 +121,24 @@ const KiloTaskHeader = ({
 								{!isTaskExpanded && ":"}
 							</span>
 							{!isTaskExpanded && (
-								<span style={{ marginLeft: 4 }}>{highlightText(task.text, false, customModes)}</span>
+								<span
+									style={{
+										marginLeft: 4,
+										textDecoration: hasErrorMessage ? "line-through" : "none",
+									}}>
+									{highlightText(task.text, false, customModes)}
+								</span>
 							)}
 						</div>
 					</div>
 					<StandardTooltip content={t("chat:task.closeAndStart")}>
-						<Button variant="ghost" size="icon" onClick={onClose} className="shrink-0 w-5 h-5">
+						<Button
+							variant="ghost"
+							size="icon"
+							onClick={onClose}
+							className="shrink-0 w-5 h-5"
+							aria-label={t("chat:task.closeAndStart")}
+							title={t("chat:task.closeAndStart")}>
 							<span className="codicon codicon-close" />
 						</Button>
 					</StandardTooltip>
@@ -157,6 +183,7 @@ const KiloTaskHeader = ({
 									display: "-webkit-box",
 									WebkitLineClamp: "unset",
 									WebkitBoxOrient: "vertical",
+									textDecoration: hasErrorMessage ? "line-through" : "none",
 								}}>
 								{highlightText(task.text, false, customModes)}
 							</div>
