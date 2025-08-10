@@ -16,7 +16,14 @@ export const codeActionIds = [
 
 export type CodeActionId = (typeof codeActionIds)[number]
 
-export type CodeActionName = "EXPLAIN" | "FIX" | "IMPROVE" | "ADD_TO_CONTEXT" | "ADD_TO_KILO_CODE" | "NEW_TASK"
+export type CodeActionName =
+	| "EXPLAIN"
+	| "FIX"
+	| "IMPROVE"
+	| "ADD_TO_CONTEXT"
+	| "ADD_TO_KILO_CODE"
+	| "ADD_FILE_PATH_TO_KILO_CODE"
+	| "NEW_TASK"
 
 /**
  * TerminalAction

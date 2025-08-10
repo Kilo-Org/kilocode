@@ -76,8 +76,8 @@ const registerFilePathCommand = (context: vscode.ExtensionContext) => {
 				filePath = activeEditor.document.uri.fsPath
 			}
 
-			const params = { filePath, selectedText: "" }
-			await ClineProvider.handleCodeAction("addToContext", "ADD_TO_CONTEXT", params)
+			const params = { filePath }
+			await ClineProvider.handleCodeAction("addToKiloCode", "ADD_FILE_PATH_TO_KILO_CODE", params)
 		}),
 	)
 }
