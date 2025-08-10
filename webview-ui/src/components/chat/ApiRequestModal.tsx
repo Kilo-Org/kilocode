@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect, useRef, useCallback } from "react"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import { safeJsonParse } from "@roo/safeJsonParse"
 import { useCopyToClipboard } from "@src/utils/clipboard"
@@ -35,21 +35,33 @@ export const ApiRequestModal: React.FC<ApiRequestModalProps> = ({
 	const [error, setError] = useState<string | null>(null)
 	const { copyWithFeedback, showCopyFeedback } = useCopyToClipboard()
 
-	// 拖动相关状态
-	const [position, setPosition] = useState({ x: 70, y: 100 })
-	const [isDragging, setIsDragging] = useState(false)
-	const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
-	const modalRef = useRef<HTMLDivElement>(null)
-
 	// 计算初始尺寸：当前视口减去边距
-	const getInitialSize = () => {
+	const getInitialSize = useCallback(() => {
 		const viewportWidth = window.innerWidth
 		const viewportHeight = window.innerHeight
 		return {
 			width: Math.max(300, viewportWidth - 140), // 左右边距70px * 2
-			height: Math.max(300, viewportHeight - 200), // 上下边距100px * 2
+			height: Math.max(300, viewportHeight - 300), // 上下边距150px * 2
 		}
-	}
+	}, [])
+
+	// 计算初始位置：居中显示
+	const getInitialPosition = useCallback(() => {
+		const viewportWidth = window.innerWidth
+		const viewportHeight = window.innerHeight
+		const modalSize = getInitialSize()
+
+		return {
+			x: Math.max(70, (viewportWidth - modalSize.width) / 2),
+			y: Math.max(150, (viewportHeight - modalSize.height) / 2),
+		}
+	}, [getInitialSize])
+
+	// 拖动相关状态
+	const [position, setPosition] = useState(getInitialPosition)
+	const [isDragging, setIsDragging] = useState(false)
+	const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+	const modalRef = useRef<HTMLDivElement>(null)
 
 	// 尺寸调整相关状态
 	const [size, setSize] = useState(getInitialSize)
@@ -99,6 +111,21 @@ export const ApiRequestModal: React.FC<ApiRequestModalProps> = ({
 			window.removeEventListener("message", handleMessage)
 		}
 	}, [])
+
+	// 监听窗口大小变化，重新计算位置和尺寸
+	useEffect(() => {
+		const handleResize = () => {
+			if (isOpen) {
+				const newSize = getInitialSize()
+				const newPosition = getInitialPosition()
+				setSize(newSize)
+				setPosition(newPosition)
+			}
+		}
+
+		window.addEventListener("resize", handleResize)
+		return () => window.removeEventListener("resize", handleResize)
+	}, [isOpen, getInitialPosition, getInitialSize])
 
 	// 拖动事件处理
 	const handleMouseDown = (e: React.MouseEvent) => {
