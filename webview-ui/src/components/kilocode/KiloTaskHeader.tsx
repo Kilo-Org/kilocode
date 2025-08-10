@@ -1,5 +1,5 @@
 // kilocode_change: new file
-import { memo, useRef, useState, useMemo } from "react"
+import { memo, useRef, useState } from "react"
 import { useWindowSize } from "react-use"
 import { useTranslation } from "react-i18next"
 import { CloudUpload, CloudDownload, FoldVertical } from "lucide-react"
@@ -14,7 +14,6 @@ import { cn } from "@src/lib/utils"
 import { Button, StandardTooltip } from "@src/components/ui"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { useSelectedModel } from "@/components/ui/hooks/useSelectedModel"
-import { getTaskTimelineMessageTypeKey } from "@/utils/messageColors"
 
 import Thumbnails from "../common/Thumbnails"
 
@@ -72,17 +71,6 @@ const KiloTaskHeader = ({
 
 	const { width: windowWidth } = useWindowSize()
 
-	// 检测是否有错误消息
-	const hasErrorMessage = useMemo(() => {
-		return groupedMessages.some((message) => {
-			if (Array.isArray(message)) {
-				return message.some((msg) => getTaskTimelineMessageTypeKey(msg) === "say:error")
-			} else {
-				return getTaskTimelineMessageTypeKey(message) === "say:error"
-			}
-		})
-	}, [groupedMessages])
-
 	const condenseButton = (
 		<StandardTooltip content={t("chat:task.condenseContext")}>
 			<button
@@ -124,7 +112,7 @@ const KiloTaskHeader = ({
 								<span
 									style={{
 										marginLeft: 4,
-										textDecoration: hasErrorMessage ? "line-through" : "none",
+										textDecoration: "none",
 									}}>
 									{highlightText(task.text, false, customModes)}
 								</span>
@@ -183,7 +171,7 @@ const KiloTaskHeader = ({
 									display: "-webkit-box",
 									WebkitLineClamp: "unset",
 									WebkitBoxOrient: "vertical",
-									textDecoration: hasErrorMessage ? "line-through" : "none",
+									textDecoration: "none",
 								}}>
 								{highlightText(task.text, false, customModes)}
 							</div>
