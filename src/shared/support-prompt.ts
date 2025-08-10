@@ -40,6 +40,7 @@ type SupportPromptType =
 	| "FIX"
 	| "IMPROVE"
 	| "ADD_TO_CONTEXT"
+	| "ADD_TO_KILO_CODE" // kilocode_change
 	| "TERMINAL_ADD_TO_CONTEXT"
 	| "TERMINAL_FIX"
 	| "TERMINAL_EXPLAIN"
@@ -137,6 +138,12 @@ Please suggest improvements for:
 Provide the improved code along with explanations for each enhancement.`,
 	},
 	ADD_TO_CONTEXT: {
+		template: `\${filePath}:\${startLine}-\${endLine}
+\`\`\`
+\${selectedText}
+\`\`\``,
+	},
+	ADD_TO_KILO_CODE: {
 		template: `\${filePath}:\${startLine}-\${endLine}
 \`\`\`
 \${selectedText}

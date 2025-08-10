@@ -201,6 +201,26 @@
 				"category": "%configuration.title%"
 			},
 			{
+				"command": "kilo-code.addToKiloCode",
+				"title": "%addToKiloCode.title%",
+				"category": "Kilo Code"
+			},
+			{
+				"command": "kilo-code.addFilePathToKiloCode",
+				"title": "%addToKiloCode.title%",
+				"category": "Kilo Code"
+			},
+			{
+				"command": "kilo-code.addSelectedTextToKiloCode",
+				"title": "%addToKiloCode.title%",
+				"category": "Kilo Code"
+			},
+			{
+				"command": "kilo-code.addProblemToKiloCode",
+				"title": "%addToKiloCode.title%",
+				"category": "Kilo Code"
+			},
+			{
 				"command": "kilo-code.newTask",
 				"title": "%command.newTask.title%",
 				"category": "%configuration.title%"
@@ -370,21 +390,50 @@
 					"group": "navigation"
 				}
 			],
+			"editor/title/context": [
+				{
+					"command": "kilo-code.addFilePathToKiloCode",
+					"group": "1_kilocode@1"
+				}
+			],
+			"explorer/context": [
+				{
+					"command": "kilo-code.addFilePathToKiloCode",
+					"group": "1_kilocode@1"
+				}
+			],
+			"debug/console/context": [
+				{
+					"command": "kilo-code.addSelectedTextToKiloCode",
+					"when": "debugConsoleHasSelection",
+					"group": "1_kilocode@1"
+				}
+			],
+			"problems/context": [
+				{
+					"command": "kilo-code.addProblemToKiloCode",
+					"group": "1_kilocode@1"
+				}
+			],
 			"kilo-code.contextMenu": [
 				{
-					"command": "kilo-code.explainCode",
+					"command": "kilo-code.addToContext",
+					"when": "editorHasSelection",
 					"group": "1_actions@1"
 				},
 				{
-					"command": "kilo-code.fixCode",
+					"command": "kilo-code.explainCode",
+					"when": "editorHasSelection",
 					"group": "1_actions@2"
 				},
 				{
-					"command": "kilo-code.improveCode",
+					"command": "kilo-code.fixCode",
+					"when": "editorHasSelection",
 					"group": "1_actions@3"
 				},
 				{
-					"command": "kilo-code.addToContext",
+					"command": "kilo-code.improveCode",
+					"when": "editorHasSelection",
 					"group": "1_actions@4"
 				}
 			],

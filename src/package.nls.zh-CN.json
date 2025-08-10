@@ -6,6 +6,7 @@
 	"command.fixCode.title": "修复代码",
 	"command.improveCode.title": "改进代码",
 	"command.addToContext.title": "添加到上下文",
+	"addToKiloCode.title": "添加到 Kilo Code",
 	"command.openInNewTab.title": "在新标签页中打开",
 	"command.focusInput.title": "聚焦输入框",
 	"command.setCustomStoragePath.title": "设置自定义存储路径",

@@ -462,7 +462,7 @@ export class ClineProvider
 		// TODO: Improve type safety for promptType.
 		const prompt = supportPrompt.create(promptType, params, customSupportPrompts)
 
-		if (command === "addToContext") {
+		if (command === "addToContext" || command === "addToKiloCode") {
 			await visibleProvider.postMessageToWebview({ type: "invoke", invoke: "setChatBoxMessage", text: prompt })
 			return
 		}
