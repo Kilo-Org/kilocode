@@ -179,48 +179,74 @@ ${customInstructionsSection}`
 		return basePrompt
 	}
 
-	// Original full prompt for normal mode (compactMode=false) - 保持与历史版本a9b3f92de6fa36da3a2cc88cbbc2b1b30bdff2d3兼容
-	const basePrompt = `${roleDefinition}
+	// Full prompt for normal mode
+	const finalRoleDefinition = customRoleDefinition || roleDefinition
+	const finalMarkdownFormatting = customMarkdownFormatting || markdownFormattingSection()
+	const finalSharedToolUse = customToolUse || getSharedToolUseSection()
+	const finalToolDescriptions =
+		customToolUse ||
+		getToolDescriptionsForMode(
+			mode,
+			cwd,
+			supportsComputerUse,
+			codeIndexManager,
+			effectiveDiffStrategy,
+			browserViewportSize,
+			shouldIncludeMcp ? mcpHub : undefined,
+			customModeConfigs,
+			experiments,
+			partialReadsEnabled,
+			settings,
+			compactMode,
+			enableMcpServerCreation,
+		)
+	const finalMcpServers = customMcpServers || mcpServersSection
+	const finalCapabilities =
+		customCapabilities ||
+		getCapabilitiesSection(
+			cwd,
+			supportsComputerUse,
+			shouldIncludeMcp ? mcpHub : undefined,
+			effectiveDiffStrategy,
+			codeIndexManager,
+		)
+	const finalModes = customModes || modesSection
+	const finalRules = customRules || getRulesSection(cwd, supportsComputerUse, effectiveDiffStrategy, codeIndexManager)
+	const finalSystemInfo = customSystemInfo || getSystemInfoSection(cwd)
+	const finalObjective = customObjective || getObjectiveSection(codeIndexManager, experiments)
+	const finalCustomInstructions =
+		customCustomInstructions ||
+		(await addCustomInstructions(baseInstructions, globalCustomInstructions || "", cwd, mode, {
+			language: language ?? formatLanguage(vscode.env.language),
+			rooIgnoreInstructions,
+			localRulesToggleState: context.workspaceState.get("localRulesToggles"), // kilocode_change
+			globalRulesToggleState: context.globalState.get("globalRulesToggles"), // kilocode_change
+			settings,
+		}))
 
-${markdownFormattingSection()}
+	const basePrompt = `${finalRoleDefinition}
 
-${getSharedToolUseSection()}
+${finalMarkdownFormatting}
 
-${getToolDescriptionsForMode(
-	mode,
-	cwd,
-	supportsComputerUse,
-	codeIndexManager,
-	effectiveDiffStrategy,
-	browserViewportSize,
-	shouldIncludeMcp ? mcpHub : undefined,
-	customModeConfigs,
-	experiments,
-	partialReadsEnabled,
-	settings,
-)}
+${finalSharedToolUse}
+
+${finalToolDescriptions}
 
 ${getToolUseGuidelinesSection(codeIndexManager)}
 
-${getMorphInstructions(experiments) /* kilocode_change: newlines are returned by function */}${mcpServersSection}
+${getMorphInstructions(experiments) /* kilocode_change: newlines are returned by function */}${finalMcpServers}
 
-${getCapabilitiesSection(cwd, supportsComputerUse, shouldIncludeMcp ? mcpHub : undefined, effectiveDiffStrategy, codeIndexManager)}
+${finalCapabilities}
 
-${modesSection}
+${finalModes}
 
-${getRulesSection(cwd, supportsComputerUse, effectiveDiffStrategy, codeIndexManager)}
+${finalRules}
 
-${getSystemInfoSection(cwd)}
+${finalSystemInfo}
 
-${getObjectiveSection(codeIndexManager, experiments)}
+${finalObjective}
 
-${await addCustomInstructions(baseInstructions, globalCustomInstructions || "", cwd, mode, {
-	language: language ?? formatLanguage(vscode.env.language),
-	rooIgnoreInstructions,
-	localRulesToggleState: context.workspaceState.get("localRulesToggles"), // kilocode_change
-	globalRulesToggleState: context.globalState.get("globalRulesToggles"), // kilocode_change
-	settings,
-})}`
+${finalCustomInstructions}`
 
 	return basePrompt
 }
