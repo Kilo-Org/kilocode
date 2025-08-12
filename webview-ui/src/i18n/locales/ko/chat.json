@@ -124,7 +124,7 @@
 		"title": "모드",
 		"marketplace": "모드 마켓플레이스",
 		"settings": "모드 설정",
-		"description": "Roo의 행동을 맞춤화하는 전문화된 페르소나.",
+		"description": "Kilo Code의 행동을 맞춤화하는 전문화된 페르소나.",
 		"searchPlaceholder": "모드 검색...",
 		"noResults": "결과를 찾을 수 없습니다"
 	},
@@ -323,14 +323,14 @@
 			"button": "재설정 후 계속"
 		},
 		"autoApprovedCostLimitReached": {
-			"description": "Roo가 자동 승인된 비용 한도인 ${{count}}에 도달했습니다. 비용을 초기화하고 작업을 계속하시겠습니까?",
+			"description": "Kilo Code가 자동 승인된 비용 한도인 ${{count}}에 도달했습니다. 비용을 초기화하고 작업을 계속하시겠습니까?",
 			"title": "자동 승인 비용 한도에 도달함",
 			"button": "재설정 후 계속하기"
 		}
 	},
 	"codebaseSearch": {
-		"wantsToSearch": "Roo가 코드베이스에서 <code>{{query}}</code>을(를) 검색하고 싶어합니다:",
-		"wantsToSearchWithPath": "Roo가 <code>{{path}}</code>에서 <code>{{query}}</code>을(를) 검색하고 싶어합니다:",
+		"wantsToSearch": "Kilo Code가 코드베이스에서 <code>{{query}}</code>을(를) 검색하고 싶어합니다:",
+		"wantsToSearchWithPath": "Kilo Code가 <code>{{path}}</code>에서 <code>{{query}}</code>을(를) 검색하고 싶어합니다:",
 		"didSearch_one": "1개의 결과를 찾았습니다",
 		"didSearch_other": "{{count}}개의 결과를 찾았습니다",
 		"resultTooltip": "유사도 점수: {{score}} (클릭하여 파일 열기)"

@@ -338,7 +338,7 @@
 			"button": "Atur Ulang dan Lanjutkan"
 		},
 		"autoApprovedCostLimitReached": {
-			"description": "Roo telah mencapai batas biaya yang disetujui secara otomatis sebesar ${{count}}. Apakah Anda ingin mengatur ulang biaya dan melanjutkan tugas ini?",
+			"description": "Kilo Code telah mencapai batas biaya yang disetujui secara otomatis sebesar ${{count}}. Apakah Anda ingin mengatur ulang biaya dan melanjutkan tugas ini?",
 			"button": "Reset dan Lanjutkan",
 			"title": "Batas Biaya Otomatis-Disetujui Tercapai"
 		}

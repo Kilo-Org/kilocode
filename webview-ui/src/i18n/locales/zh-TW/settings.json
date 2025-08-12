@@ -205,17 +205,17 @@
 		},
 		"selectOptionsFirst": "請至少選擇以下一個選項以啟用自動核准",
 		"apiCostLimit": {
-			"unlimited": "无限",
-			"title": "最高费用"
+			"unlimited": "無限",
+			"title": "最高費用"
 		},
 		"maxLimits": {
-			"description": "在请求获得继续操作的批准前，自动发送请求直至达到这些限制。"
+			"description": "在請求獲得繼續操作的批准前，自動發送請求至達到這些限制。"
 		}
 	},
 	"providers": {
 		"providerDocumentation": "{{provider}} 文件",
-		"configProfile": "配置設定檔",
-		"description": "儲存不同的 API 設定以快速切換供應商和設定。",
+		"configProfile": "設定檔",
+		"description": "儲存不同的 API 設定檔以快速切換供應商和設定。",
 		"apiProvider": "API 供應商",
 		"model": "模型",
 		"nameEmpty": "名稱不能為空",
@@ -439,6 +439,13 @@
 			"high": "高",
 			"medium": "中",
 			"low": "低"
+		},
+		"verbosity": {
+			"label": "輸出詳細程度",
+			"high": "高",
+			"medium": "中",
+			"low": "低",
+			"description": "控制模型回應的詳細程度。低詳細度產生簡潔的回答，而高詳細度提供詳盡的解釋。"
 		},
 		"setReasoningLevel": "啟用推理工作量",
 		"claudeCode": {

@@ -24,7 +24,9 @@
 		"knip": "knip --include files",
 		"update-contributors": "node scripts/update-contributors.js",
 		"evals": "dotenvx run -f packages/evals/.env.development packages/evals/.env.local -- docker compose -f packages/evals/docker-compose.yml --profile server --profile runner up --build --scale runner=0",
-		"playwright": "turbo playwright"
+		"playwright": "turbo playwright",
+		"link-workspace-packages": "node scripts/link-packages.js",
+		"unlink-workspace-packages": "node scripts/link-packages.js --unlink"
 	},
 	"devDependencies": {
 		"@changesets/changelog-github": "^0.5.1",

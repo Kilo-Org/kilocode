@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-import { reasoningEffortsSchema, modelInfoSchema } from "./model.js"
+import { reasoningEffortsSchema, verbosityLevelsSchema, modelInfoSchema } from "./model.js"
 import { codebaseIndexProviderSchema } from "./codebase-index.js"
 
 /**
@@ -87,12 +87,8 @@ const baseProviderSettingsSchema = z.object({
 
 	morphApiKey: z.string().optional(), // kilocode_change: Morph fast apply
 
-	// // kilocode_change start
-	// kilocodeToken: z.string().optional(),
-	// kilocodeModel: z.string().optional(),
-	// fireworksModelId: z.string().optional(),
-	// fireworksApiKey: z.string().optional(),
-	// // kilocode_change end
+	// Model verbosity.
+	verbosity: verbosityLevelsSchema.optional(),
 })
 
 // Several of the providers share common model config properties.

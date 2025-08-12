@@ -565,14 +565,16 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		this.emit(RooCodeEventName.Message, { action: "created", message })
 		await this.saveClineMessages()
 
-		const shouldCaptureMessage = message.partial !== true && CloudService.isEnabled()
+		// kilocode_change start: no cloud service
+		// const shouldCaptureMessage = message.partial !== true && CloudService.isEnabled()
 
-		if (shouldCaptureMessage) {
-			CloudService.instance.captureEvent({
-				event: TelemetryEventName.TASK_MESSAGE,
-				properties: { taskId: this.taskId, message },
-			})
-		}
+		// if (shouldCaptureMessage) {
+		// 	CloudService.instance.captureEvent({
+		// 		event: TelemetryEventName.TASK_MESSAGE,
+		// 		properties: { taskId: this.taskId, message },
+		// 	})
+		// }
+		// kilocode_change end
 	}
 
 	public async overwriteClineMessages(newMessages: ClineMessage[]) {
@@ -588,12 +590,14 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 		const shouldCaptureMessage = message.partial !== true && CloudService.isEnabled()
 
-		if (shouldCaptureMessage) {
-			CloudService.instance.captureEvent({
-				event: TelemetryEventName.TASK_MESSAGE,
-				properties: { taskId: this.taskId, message },
-			})
-		}
+		// kilocode_change start: no cloud service
+		// if (shouldCaptureMessage) {
+		// 	CloudService.instance.captureEvent({
+		// 		event: TelemetryEventName.TASK_MESSAGE,
+		// 		properties: { taskId: this.taskId, message },
+		// 	})
+		// }
+		// kilocode_change end
 	}
 
 	private async saveClineMessages() {

@@ -163,26 +163,26 @@
 		"settings": {
 			"autoTrigger": "自動觸發",
 			"enableQuickInlineTaskKeybinding": {
-				"label": "快速內聯任務",
+				"label": "快速行內任務",
 				"description": "只需要快速修改？選擇一些程式碼（或者不選！）並按下 Cmd+I。用簡單的語言描述你的目標（\"建立一個帶有這些屬性的 React 元件\"，\"為這個函數添加錯誤處理\"），然後在你的編輯器中獲取多個隨時可用的建議。<DocsLink>查看快捷鍵</DocsLink>"
 			},
 			"enableAutoTrigger": {
 				"label": "啟用自動觸發",
-				"description": "啟用後，當你停止輸入時，Kilo Code 將自動觸發內聯助手。這對於快速修復和建議很有用。"
+				"description": "啟用後，當你停止輸入時，Kilo Code 將自動觸發行內輔助。這對於快速修復和建議很有用。"
 			},
 			"autoTriggerDelay": {
 				"label": "自動觸發延遲",
-				"description": "在你停止輸入後，Kilo Code 觸發內聯助手之前的延遲秒數。較低的延遲意味著更快的建議，但可能會更消耗資源。"
+				"description": "在你停止輸入後，Kilo Code 觸發行內輔助之前的延遲秒數。較低的延遲意味著更快的建議，但可能會更消耗資源。"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "智慧內聯任務",
+				"label": "智慧行內任務",
 				"description": "需要快速修復、完成或重構程式碼？Kilo 將使用周圍的上下文提供即時改進，讓您保持工作流暢。<DocsLink>查看快捷鍵</DocsLink>"
 			},
 			"provider": "供應商",
 			"apiConfigId": {
-				"label": "API 設定",
-				"current": "使用目前選擇的 API 設定",
-				"description": "為行內輔助提示選擇一個 API 設定，或者只使用目前選擇的設定"
+				"label": "API 設定檔",
+				"current": "使用目前選擇的 API 設定檔",
+				"description": "為行內輔助提示選擇一個 API 設定檔，或者只使用目前選擇的設定檔"
 			},
 			"triggers": "觸發器",
 			"keybindingDescription": "行內輔助功能透過指令觸發。您可以在<DocsLink>此處設定鍵盤快速鍵</DocsLink>。"
