@@ -1,1 +1,10 @@
-{ "mcpServers": {} }
+{
+	"mcpServers": {
+		"kilocode Docs": {
+			"url": "https://gitmcp.io/Kilo-Org/kilocode",
+			"disabled": false,
+			"autoApprove": [],
+			"alwaysAllow": ["search_kilocode_documentation"]
+		}
+	}
+}
