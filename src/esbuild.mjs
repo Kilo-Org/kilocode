@@ -51,7 +51,7 @@ async function main() {
 					copyPaths(
 					[
 						//.. 从上级目录，即根目录复制到src目录，dist是src目录
-						["../README.md", "README-abcd.md"],
+						["../README.md", "README.md"],
 						["../CHANGELOG.md", "CHANGELOG.md"],
 						["../LICENSE", "LICENSE"],
 						["../.env", ".env", { optional: true }],
