@@ -108,6 +108,7 @@ export interface WebviewMessage {
 		| "enableCheckpoints"
 		| "browserViewportSize"
 		| "screenshotQuality"
+		| "collectNetworkLogs" // kilocode_change
 		| "remoteBrowserHost"
 		| "openMcpSettings"
 		| "openProjectMcpSettings"

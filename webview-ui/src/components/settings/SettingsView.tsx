@@ -173,6 +173,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		requestDelaySeconds,
 		remoteBrowserHost,
 		screenshotQuality,
+		collectNetworkLogs, // kilocode_change
 		soundEnabled,
 		ttsEnabled,
 		ttsSpeed,
@@ -367,6 +368,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			vscode.postMessage({ type: "fuzzyMatchThreshold", value: fuzzyMatchThreshold ?? 1.0 })
 			vscode.postMessage({ type: "writeDelayMs", value: writeDelayMs })
 			vscode.postMessage({ type: "screenshotQuality", value: screenshotQuality ?? 75 })
+			vscode.postMessage({ type: "collectNetworkLogs", text: collectNetworkLogs ?? "no" }) // kilocode_change
 			vscode.postMessage({ type: "terminalOutputLineLimit", value: terminalOutputLineLimit ?? 500 })
 			vscode.postMessage({ type: "terminalOutputCharacterLimit", value: terminalOutputCharacterLimit ?? 50000 })
 			vscode.postMessage({ type: "terminalShellIntegrationTimeout", value: terminalShellIntegrationTimeout })
@@ -748,6 +750,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 							browserToolEnabled={browserToolEnabled}
 							browserViewportSize={browserViewportSize}
 							screenshotQuality={screenshotQuality}
+							collectNetworkLogs={collectNetworkLogs}
 							remoteBrowserHost={remoteBrowserHost}
 							remoteBrowserEnabled={remoteBrowserEnabled}
 							setCachedStateField={setCachedStateField}

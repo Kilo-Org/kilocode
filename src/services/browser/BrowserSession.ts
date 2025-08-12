@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 import * as fs from "fs/promises"
 import * as path from "path"
-import { Browser, Page, ScreenshotOptions, TimeoutError, launch, connect } from "puppeteer-core"
+import { Browser, Page, ScreenshotOptions, TimeoutError, launch, connect, HTTPResponse } from "puppeteer-core"
 // @ts-ignore
 import PCR from "puppeteer-chromium-resolver"
 import pWaitFor from "p-wait-for"
@@ -9,6 +9,8 @@ import delay from "delay"
 import { fileExistsAtPath } from "../../utils/fs"
 import { BrowserActionResult } from "../../shared/ExtensionMessage"
 import { discoverChromeHostUrl, tryChromeHostUrl } from "./browserDiscovery"
+import { BrowserNetworkLogger } from "./BrowserNetworkLogger"
+import { HttpResponse } from "@google/genai"
 
 // Timeout constants
 const BROWSER_NAVIGATION_TIMEOUT = 15_000 // 15 seconds
@@ -19,6 +21,9 @@ interface PCRStats {
 }
 
 export class BrowserSession {
+	static readonly NETWORK_LOG_BODY_LIMIT = 500
+	static readonly NETWORK_LOG_REQUEST_LIMIT = 50
+
 	private context: vscode.ExtensionContext
 	private browser?: Browser
 	private page?: Page
@@ -226,6 +231,7 @@ export class BrowserSession {
 		}
 
 		const logs: string[] = []
+		const responses: HTTPResponse[] = []
 		let lastLogTs = Date.now()
 
 		const consoleListener = (msg: any) => {
@@ -242,9 +248,42 @@ export class BrowserSession {
 			lastLogTs = Date.now()
 		}
 
+		const collectNetworkLogs =
+			((await this.context.globalState.get("collectNetworkLogs")) as string | undefined) || "no"
+
+		const networkLogger = new BrowserNetworkLogger({
+			bodyLimit: BrowserSession.NETWORK_LOG_BODY_LIMIT,
+			maxEntries: BrowserSession.NETWORK_LOG_REQUEST_LIMIT,
+			redactOnSensitive: collectNetworkLogs !== "full",
+		})
+
+		const networkListener = (response: HTTPResponse) => {
+			const req = response.request()
+			const resourceType = req.resourceType()
+			const status = response.status()
+
+			const isErrorStatus = status >= 400 // always log errors
+			const allowedType = ["fetch", "xhr"].includes(resourceType)
+
+			// Heuristic for CORS preflights (can cause body-read issues)
+			const isPreflight =
+				req.method() === "OPTIONS" ||
+				resourceType === "preflight" ||
+				"access-control-request-method" in (req.headers?.() ?? {})
+
+			// Log if error (any type), or if allowed type and not a preflight
+			if (isErrorStatus || (allowedType && !isPreflight)) {
+				responses.push(response)
+				lastLogTs = Date.now()
+			}
+		}
+
 		// Add the listeners
 		this.page.on("console", consoleListener)
 		this.page.on("pageerror", errorListener)
+		if (collectNetworkLogs === "mask" || collectNetworkLogs === "full") {
+			this.page.on("response", networkListener)
+		}
 
 		try {
 			await action(this.page)
@@ -294,13 +333,34 @@ export class BrowserSession {
 		// this.page.removeAllListeners() <- causes the page to crash!
 		this.page.off("console", consoleListener)
 		this.page.off("pageerror", errorListener)
+		this.page.off("response", networkListener)
 
 		return {
 			screenshot,
 			logs: logs.join("\n"),
+			network: await this.generateNetworkLogs(collectNetworkLogs, networkLogger, responses),
 			currentUrl: this.page.url(),
 			currentMousePosition: this.currentMousePosition,
 		}
+	}
+
+	private async generateNetworkLogs(
+		collectNetworkLogs: string,
+		networkLogger: BrowserNetworkLogger,
+		responses: HTTPResponse[],
+	): Promise<string> {
+		const msgs: string[] = []
+		if (collectNetworkLogs === "no") {
+			return "[Network Logs disabled in browser tool settings]"
+		}
+		if (collectNetworkLogs === "mask") {
+			msgs.push("[Sensitive data redacted]")
+		}
+		msgs.push(
+			"[Bodies truncated to 500 chars, all error responses included, capped at 50 entries, ordered earliest-first.\n\n",
+		)
+		msgs.push((await networkLogger.mapHTTPResponsesToStrings(responses)).join("\n"))
+		return msgs.join("\n")
 	}
 
 	/**

@@ -271,6 +271,7 @@ export type ExtensionState = Pick<
 	| "browserViewportSize"
 	| "showAutoApproveMenu" // kilocode_change
 	| "screenshotQuality"
+	| "collectNetworkLogs" // kilocode_change
 	| "remoteBrowserEnabled"
 	| "remoteBrowserHost"
 	// | "enableCheckpoints" // Optional in GlobalSettings, required here.
@@ -461,6 +462,7 @@ export interface ClineSayBrowserAction {
 export type BrowserActionResult = {
 	screenshot?: string
 	logs?: string
+	network?: string
 	currentUrl?: string
 	currentMousePosition?: string
 }

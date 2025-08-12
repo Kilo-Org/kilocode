@@ -1302,6 +1302,12 @@ export const webviewMessageHandler = async (
 			await updateGlobalState("screenshotQuality", message.value)
 			await provider.postStateToWebview()
 			break
+		// kilocode_change start
+		case "collectNetworkLogs":
+			await updateGlobalState("collectNetworkLogs", message.text)
+			await provider.postStateToWebview()
+			break
+		// kilocode_change end
 		case "maxOpenTabsContext":
 			const tabCount = Math.min(Math.max(0, message.value ?? 20), 500)
 			await updateGlobalState("maxOpenTabsContext", tabCount)

@@ -160,8 +160,10 @@ export async function browserActionTool(
 
 					pushToolResult(
 						formatResponse.toolResult(
-							`The browser action has been executed. The console logs and screenshot have been captured for your analysis.\n\nConsole logs:\n${
+							`The browser action has been executed. The console logs, network logs and a screenshot have been captured for your analysis.\n\nConsole logs:\n${
 								browserActionResult?.logs || "(No new logs)"
+							}\n\nNetwork logs:\n${
+								browserActionResult?.network || "(No new network logs)"
 							}\n\n(REMEMBER: if you need to proceed to using non-\`browser_action\` tools or launch a new browser, you MUST first close cline browser. For example, if after analyzing the logs and screenshot you need to edit a file, you must first close the browser before you can use the write_to_file tool.)`,
 							browserActionResult?.screenshot ? [browserActionResult.screenshot] : [],
 						),

@@ -95,6 +95,7 @@ export const globalSettingsSchema = z.object({
 	localRulesToggles: z.record(z.string(), z.boolean()).optional(), // kilocode_change
 	globalRulesToggles: z.record(z.string(), z.boolean()).optional(), // kilocode_change
 	screenshotQuality: z.number().optional(),
+	collectNetworkLogs: z.string().optional(), // kilocode_change
 	remoteBrowserEnabled: z.boolean().optional(),
 	remoteBrowserHost: z.string().optional(),
 	cachedChromeHostUrl: z.string().optional(),
@@ -269,6 +270,7 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 	browserToolEnabled: false,
 	browserViewportSize: "900x600",
 	screenshotQuality: 75,
+	collectNetworkLogs: "no", // kilocode_change
 	remoteBrowserEnabled: false,
 
 	ttsEnabled: false,

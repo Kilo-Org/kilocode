@@ -489,6 +489,15 @@
 			"label": "Screenshot quality",
 			"description": "Adjust the WebP quality of browser screenshots. Higher values provide clearer screenshots but increase token usage."
 		},
+		"collectNetworkLogs": {
+			"label": "Collect network logs",
+			"description": "Choose whether to collect network logs and if sensitive information should be masked. Capped at 50 request/response pairs, bodies truncated to 500 chars, limited to xhr and fetch, all errors prioritized, most recent first.",
+			"options": {
+				"no": "Do not collect network logs",
+				"mask": "Collect and mask sensitive data",
+				"full": "Collect (no masking)"
+			}
+		},
 		"remote": {
 			"label": "Use remote browser connection",
 			"description": "Connect to a Chrome browser running with remote debugging enabled (--remote-debugging-port=9222).",
