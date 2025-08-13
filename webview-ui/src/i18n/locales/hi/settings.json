@@ -272,8 +272,6 @@
 		"getDeepSeekApiKey": "DeepSeek API कुंजी प्राप्त करें",
 		"doubaoApiKey": "डौबाओ API कुंजी",
 		"getDoubaoApiKey": "डौबाओ API कुंजी प्राप्त करें",
-		"bigModelApiKey": "BigModel API कुंजी",
-		"getBigModelApiKey": "BigModel API कुंजी प्राप्त करें",
 		"moonshotApiKey": "Moonshot API कुंजी",
 		"getMoonshotApiKey": "Moonshot API कुंजी प्राप्त करें",
 		"moonshotBaseUrl": "Moonshot प्रवेश बिंदु",

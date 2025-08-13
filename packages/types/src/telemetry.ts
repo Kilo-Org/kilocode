@@ -28,6 +28,7 @@ export enum TelemetryEventName {
 	EXCESSIVE_RECURSION = "Excessive Recursion",
 	NOTIFICATION_CLICKED = "Notification Clicked",
 	WEBVIEW_MEMORY_USAGE = "Webview Memory Usage",
+	SUGGESTION_BUTTON_CLICKED = "Suggestion Button Clicked",
 	// kilocode_change end
 
 	TASK_CREATED = "Task Created",

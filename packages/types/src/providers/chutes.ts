@@ -1,3 +1,5 @@
+// kilocode_change: this file was updated in https://github.com/Kilo-Org/kilocode/pull/1889, revert to Roo version in case of conflicts
+
 import type { ModelInfo } from "../model.js"
 
 // https://llm.chutes.ai/v1 (OpenAI compatible)

@@ -17,10 +17,6 @@ import {
 	vertexModels,
 	xaiDefaultModelId,
 	xaiModels,
-	// kilocode_change start
-	bigModelDefaultModelId,
-	bigModelModels,
-	// kilocode_change end
 	groqModels,
 	groqDefaultModelId,
 	chutesModels,
@@ -85,12 +81,6 @@ const getModelsByProvider = ({
 			return {
 				models: xaiModels,
 				defaultModel: xaiDefaultModelId,
-			}
-		}
-		case "bigmodel": {
-			return {
-				models: bigModelModels,
-				defaultModel: bigModelDefaultModelId,
 			}
 		}
 		case "groq": {

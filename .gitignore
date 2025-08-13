@@ -51,3 +51,6 @@ logs
 
 # Nix / Direnv
 .direnv
+
+# Exclude Conport Directory (MCP server)
+context_portal/

@@ -27,7 +27,6 @@ export { UnboundHandler } from "./unbound"
 export { VertexHandler } from "./vertex"
 // kilocode_change start
 export { VirtualQuotaFallbackHandler } from "./virtual-quota-fallback"
-export { BigModelHandler } from "./bigmodel"
 // kilocode_change end
 export { VsCodeLmHandler } from "./vscode-lm"
 export { XAIHandler } from "./xai"

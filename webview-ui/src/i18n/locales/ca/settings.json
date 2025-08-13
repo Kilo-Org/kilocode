@@ -272,8 +272,6 @@
 		"getDeepSeekApiKey": "Obtenir clau API de DeepSeek",
 		"doubaoApiKey": "Clau API de Doubao",
 		"getDoubaoApiKey": "Obtenir clau API de Doubao",
-		"bigModelApiKey": "Clau API de BigModel",
-		"getBigModelApiKey": "Obtenir clau API de BigModel",
 		"moonshotApiKey": "Clau API de Moonshot",
 		"getMoonshotApiKey": "Obtenir clau API de Moonshot",
 		"moonshotBaseUrl": "Punt d'entrada de Moonshot",

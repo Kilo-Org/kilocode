@@ -377,8 +377,6 @@
 		"getDoubaoApiKey": "รับคีย์ API ของ Doubao",
 		"zaiApiKey": "คีย์ API ของ Z.AI",
 		"getZaiApiKey": "รับคีย์ API ของ Z.AI",
-		"bigModelApiKey": "คีย์ API ของ BigModel",
-		"getBigModelApiKey": "รับคีย์ API ของ BigModel",
 		"sambaNovaApiKey": "คีย์ API ของ SambaNova",
 		"getSambaNovaApiKey": "รับคีย์ API ของ SambaNova",
 		"customModel": {

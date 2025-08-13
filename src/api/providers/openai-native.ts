@@ -432,7 +432,7 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 			} = {
 				model: id,
 				messages: [{ role: "user", content: prompt }],
-				temperature,
+				...(this.isGpt5Model(id) ? {} : { temperature }), // kilocode_change gpt5
 				...(reasoning && reasoning),
 			}
 

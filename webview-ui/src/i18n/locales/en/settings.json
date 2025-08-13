@@ -271,8 +271,6 @@
 		"getDeepSeekApiKey": "Get DeepSeek API Key",
 		"doubaoApiKey": "Doubao API Key",
 		"getDoubaoApiKey": "Get Doubao API Key",
-		"bigModelApiKey": "BigModel API Key",
-		"getBigModelApiKey": "Get BigModel API Key",
 		"moonshotApiKey": "Moonshot API Key",
 		"getMoonshotApiKey": "Get Moonshot API Key",
 		"moonshotBaseUrl": "Moonshot Entrypoint",

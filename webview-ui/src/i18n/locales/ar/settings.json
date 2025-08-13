@@ -277,8 +277,6 @@
 		"getFireworksApiKey": "احصل على مفتاح Fireworks",
 		"zaiApiKey": "مفتاح Z.AI",
 		"getZaiApiKey": "احصل على مفتاح Z.AI",
-		"bigModelApiKey": "مفتاح BigModel",
-		"getBigModelApiKey": "احصل على مفتاح BigModel",
 		"moonshotApiKey": "مفتاح Moonshot",
 		"getMoonshotApiKey": "احصل على مفتاح Moonshot",
 		"moonshotBaseUrl": "نقطة دخول Moonshot",

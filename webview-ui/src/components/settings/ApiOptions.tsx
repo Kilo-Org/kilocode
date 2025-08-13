@@ -23,9 +23,6 @@ import {
 	moonshotDefaultModelId,
 	mistralDefaultModelId,
 	xaiDefaultModelId,
-	// kilocode_change start
-	bigModelDefaultModelId,
-	// kilocode_change end
 	groqDefaultModelId,
 	cerebrasDefaultModelId,
 	chutesDefaultModelId,
@@ -90,7 +87,6 @@ import {
 	VSCodeLM,
 	XAI,
 	// kilocode_change start
-	BigModel,
 	VirtualQuotaFallbackProvider,
 	// kilocode_change end
 	ZAi,
@@ -332,7 +328,6 @@ const ApiOptions = ({
 				"claude-code": { field: "apiModelId", default: claudeCodeDefaultModelId },
 				"openai-native": { field: "apiModelId", default: openAiNativeDefaultModelId },
 				gemini: { field: "apiModelId", default: geminiDefaultModelId },
-				"gemini-cli": { field: "apiModelId", default: geminiCliDefaultModelId },
 				deepseek: { field: "apiModelId", default: deepSeekDefaultModelId },
 				doubao: { field: "apiModelId", default: doubaoDefaultModelId },
 				moonshot: { field: "apiModelId", default: moonshotDefaultModelId },
@@ -355,8 +350,8 @@ const ApiOptions = ({
 				ollama: { field: "ollamaModelId" },
 				lmstudio: { field: "lmStudioModelId" },
 				// kilocode_change start
-				bigmodel: { field: "apiModelId", default: bigModelDefaultModelId },
 				kilocode: { field: "kilocodeModel", default: kilocodeDefaultModelId },
+				"gemini-cli": { field: "apiModelId", default: geminiCliDefaultModelId },
 				// kilocode_change end
 			}
 
@@ -394,7 +389,6 @@ const ApiOptions = ({
 			"virtual-quota-fallback",
 			"litellm",
 			"zai",
-			"bigmodel",
 		]
 
 		// Skip documentation link when the provider is excluded because documentation is not available
@@ -544,10 +538,6 @@ const ApiOptions = ({
 				/>
 			)}
 
-			{selectedProvider === "gemini-cli" && (
-				<GeminiCli apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
-			)}
-
 			{selectedProvider === "openai" && (
 				<OpenAICompatible
 					apiConfiguration={apiConfiguration}
@@ -603,8 +593,8 @@ const ApiOptions = ({
 
 			{/* kilocode_change start */}
 
-			{selectedProvider === "bigmodel" && (
-				<BigModel apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
+			{selectedProvider === "gemini-cli" && (
+				<GeminiCli apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
 
 			{selectedProvider === "virtual-quota-fallback" && (

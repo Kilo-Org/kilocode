@@ -277,8 +277,6 @@
 		"getFireworksApiKey": "Získat klíč API Fireworks",
 		"zaiApiKey": "Klíč API Z.AI",
 		"getZaiApiKey": "Získat klíč API Z.AI",
-		"bigModelApiKey": "Klíč API BigModel",
-		"getBigModelApiKey": "Získat klíč API BigModel",
 		"moonshotApiKey": "Klíč API Moonshot",
 		"getMoonshotApiKey": "Získat klíč API Moonshot",
 		"moonshotBaseUrl": "Vstupní bod Moonshot",

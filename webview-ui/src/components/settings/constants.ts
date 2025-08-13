@@ -13,9 +13,6 @@ import {
 	openAiNativeModels,
 	vertexModels,
 	xaiModels,
-	// kilocode_change start
-	bigModelModels,
-	// kilocode_change end
 	groqModels,
 	chutesModels,
 	sambaNovaModels,
@@ -35,7 +32,6 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	gemini: geminiModels,
 	// kilocode_change start
 	"gemini-cli": geminiCliModels,
-	bigmodel: bigModelModels,
 	// kilocode_change end
 	mistral: mistralModels,
 	"openai-native": openAiNativeModels,
@@ -55,11 +51,9 @@ export const PROVIDERS = [
 	{ value: "claude-code", label: "Claude Code" },
 	{ value: "cerebras", label: "Cerebras" },
 	{ value: "gemini", label: "Google Gemini" },
-	{ value: "gemini-cli", label: "Gemini CLI" },
 	{ value: "doubao", label: "Doubao" },
-	{ value: "fireworks", label: "Fireworks AI" },
 	// kilocode_change start
-	{ value: "bigmodel", label: "BigModel" },
+	{ value: "gemini-cli", label: "Gemini CLI" },
 	{ value: "virtual-quota-fallback", label: "Virtual Quota Fallback" },
 	// kilocode_change end
 	{ value: "deepseek", label: "DeepSeek" },

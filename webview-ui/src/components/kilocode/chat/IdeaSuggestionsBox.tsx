@@ -1,4 +1,6 @@
+import { telemetryClient } from "@/utils/TelemetryClient"
 import { vscode } from "@/utils/vscode"
+import { TelemetryEventName } from "@roo-code/types"
 import { useTranslation, Trans } from "react-i18next"
 
 export const IdeaSuggestionsBox = () => {
@@ -12,6 +14,10 @@ export const IdeaSuggestionsBox = () => {
 		vscode.postMessage({
 			type: "insertTextToChatArea",
 			text: randomIdea,
+		})
+
+		telemetryClient.capture(TelemetryEventName.SUGGESTION_BUTTON_CLICKED, {
+			randomIdea,
 		})
 	}
 

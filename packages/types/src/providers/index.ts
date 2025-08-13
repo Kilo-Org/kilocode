@@ -22,7 +22,6 @@ export * from "./unbound.js"
 export * from "./vertex.js"
 export * from "./vscode-llm.js"
 export * from "./xai.js"
-export * from "./bigmodel.js" // kilocode_change
 export * from "./doubao.js"
 export * from "./zai.js"
 export * from "./fireworks.js"

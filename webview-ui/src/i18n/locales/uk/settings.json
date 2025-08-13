@@ -387,8 +387,6 @@
 		"getDoubaoApiKey": "Отримати ключ API Doubao",
 		"zaiApiKey": "Ключ API Z.AI",
 		"getZaiApiKey": "Отримати ключ API Z.AI",
-		"bigModelApiKey": "Ключ API BigModel",
-		"getBigModelApiKey": "Отримати ключ API BigModel",
 		"sambaNovaApiKey": "Ключ API SambaNova",
 		"getSambaNovaApiKey": "Отримати ключ API SambaNova",
 		"customModel": {

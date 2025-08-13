@@ -4,6 +4,7 @@ import * as fs from "fs/promises"
 import { fileExistsAtPath } from "./fs"
 import { GlobalFileNames } from "../shared/globalFileNames"
 import * as yaml from "yaml"
+import { migrateBigModelProvider } from "./kilocode/migrateBigModel"
 
 const deprecatedCustomModesJSONFilename = "custom_modes.json"
 
@@ -55,6 +56,8 @@ export async function migrateSettings(
 
 			// Special migration for custom_modes.json to custom_modes.yaml with content transformation
 			await migrateCustomModesToYaml(settingsDir, outputChannel)
+
+			await migrateBigModelProvider(context, outputChannel) // kilocode_change
 		} catch (error) {
 			outputChannel.appendLine(`Error in file migrations: ${error}`)
 		}

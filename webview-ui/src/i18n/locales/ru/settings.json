@@ -272,8 +272,6 @@
 		"getDeepSeekApiKey": "Получить DeepSeek API-ключ",
 		"doubaoApiKey": "Doubao API-ключ",
 		"getDoubaoApiKey": "Получить Doubao API-ключ",
-		"bigModelApiKey": "BigModel API-ключ",
-		"getBigModelApiKey": "Получить BigModel API-ключ",
 		"moonshotApiKey": "Moonshot API-ключ",
 		"getMoonshotApiKey": "Получить Moonshot API-ключ",
 		"moonshotBaseUrl": "Точка входа Moonshot",

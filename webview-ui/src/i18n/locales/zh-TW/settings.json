@@ -272,8 +272,6 @@
 		"getDeepSeekApiKey": "取得 DeepSeek API 金鑰",
 		"doubaoApiKey": "豆包 API 金鑰",
 		"getDoubaoApiKey": "取得豆包 API 金鑰",
-		"bigModelApiKey": "BigModel API 金鑰",
-		"getBigModelApiKey": "取得 BigModel API 金鑰",
 		"moonshotApiKey": "Moonshot API 金鑰",
 		"getMoonshotApiKey": "取得 Moonshot API 金鑰",
 		"moonshotBaseUrl": "Moonshot 服務站點",

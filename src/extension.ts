@@ -123,7 +123,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	// kilocode_change start
 	if (!context.globalState.get("firstInstallCompleted")) {
-		context.globalState.update("telemetrySetting", "enabled")
+		await context.globalState.update("telemetrySetting", "enabled")
 	}
 	// kilocode_change end
 
@@ -175,7 +175,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		} catch (error) {
 			outputChannel.appendLine(`Error during first-time setup: ${error.message}`)
 		} finally {
-			context.globalState.update("firstInstallCompleted", true)
+			await context.globalState.update("firstInstallCompleted", true)
 		}
 	}
 	// kilocode_change end

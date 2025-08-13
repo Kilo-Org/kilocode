@@ -240,8 +240,6 @@
 		"getOpenRouterApiKey": "OpenRouter API-Schlüssel erhalten",
 		"doubaoApiKey": "Doubao API-Schlüssel",
 		"getDoubaoApiKey": "Doubao API-Schlüssel erhalten",
-		"bigModelApiKey": "BigModel API-Schlüssel",
-		"getBigModelApiKey": "BigModel API-Schlüssel erhalten",
 		"apiKeyStorageNotice": "API-Schlüssel werden sicher im VSCode Secret Storage gespeichert",
 		"glamaApiKey": "Glama API-Schlüssel",
 		"getGlamaApiKey": "Glama API-Schlüssel erhalten",

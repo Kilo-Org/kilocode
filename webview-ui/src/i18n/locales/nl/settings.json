@@ -272,8 +272,6 @@
 		"getDeepSeekApiKey": "DeepSeek API-sleutel ophalen",
 		"doubaoApiKey": "Doubao API-sleutel",
 		"getDoubaoApiKey": "Doubao API-sleutel ophalen",
-		"bigModelApiKey": "BigModel API-sleutel",
-		"getBigModelApiKey": "BigModel API-sleutel ophalen",
 		"moonshotApiKey": "Moonshot API-sleutel",
 		"getMoonshotApiKey": "Moonshot API-sleutel ophalen",
 		"moonshotBaseUrl": "Moonshot-ingangspunt",
