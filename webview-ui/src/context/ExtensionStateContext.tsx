@@ -166,6 +166,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	routerModels?: RouterModels
 	alwaysAllowUpdateTodoList?: boolean
 	setAlwaysAllowUpdateTodoList: (value: boolean) => void
+	alwaysAllowEditMarkdownOnly?: boolean
+	setAlwaysAllowEditMarkdownOnly: (value: boolean) => void
 	includeDiagnosticMessages?: boolean
 	setIncludeDiagnosticMessages: (value: boolean) => void
 	maxDiagnosticMessages?: number
@@ -282,6 +284,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		},
 		codebaseIndexModels: { ollama: {}, openai: {} },
 		alwaysAllowUpdateTodoList: true,
+		alwaysAllowEditMarkdownOnly: false,
 		includeDiagnosticMessages: true,
 		maxDiagnosticMessages: 50,
 		messageSendingConfig: {
@@ -625,6 +628,10 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		alwaysAllowUpdateTodoList: state.alwaysAllowUpdateTodoList,
 		setAlwaysAllowUpdateTodoList: (value) => {
 			setState((prevState) => ({ ...prevState, alwaysAllowUpdateTodoList: value }))
+		},
+		alwaysAllowEditMarkdownOnly: state.alwaysAllowEditMarkdownOnly,
+		setAlwaysAllowEditMarkdownOnly: (value) => {
+			setState((prevState) => ({ ...prevState, alwaysAllowEditMarkdownOnly: value }))
 		},
 		includeDiagnosticMessages: state.includeDiagnosticMessages,
 		setIncludeDiagnosticMessages: (value) => {

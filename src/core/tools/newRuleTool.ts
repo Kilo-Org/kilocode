@@ -10,6 +10,7 @@ import { addLineNumbers, stripLineNumbers, everyLineHasLineNumbers } from "../..
 import { getReadablePath } from "../../utils/path"
 import { isPathOutsideWorkspace } from "../../utils/pathUtils"
 import { unescapeHtmlEntities } from "../../utils/text-normalization"
+import { validateMarkdownOnlyRestriction } from "../../utils/filePermissions"
 
 export async function newRuleTool(
 	cline: Task,
@@ -33,6 +34,19 @@ export async function newRuleTool(
 	if (!accessAllowed) {
 		await cline.say("rooignore_error", relPath)
 		pushToolResult(formatResponse.toolError(formatResponse.rooIgnoreError(relPath)))
+		return
+	}
+
+	// Check markdown-only restriction
+	try {
+		const provider = cline.providerRef.deref()
+		if (provider) {
+			const state = await provider.getState()
+			validateMarkdownOnlyRestriction(relPath, state)
+		}
+	} catch (error) {
+		await cline.say("error", error instanceof Error ? error.message : String(error))
+		pushToolResult(formatResponse.toolError(error instanceof Error ? error.message : String(error)))
 		return
 	}
 

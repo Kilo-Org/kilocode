@@ -196,6 +196,10 @@
 			"label": "Todo",
 			"description": "Automatically update the to-do list without requiring approval"
 		},
+		"editMarkdownOnly": {
+			"label": "Edit Markdown Only",
+			"description": "Only allow editing markdown (.md) files when enabled"
+		},
 		"apiRequestLimit": {
 			"title": "Max Count",
 			"unlimited": "Unlimited"

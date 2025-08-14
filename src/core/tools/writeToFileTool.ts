@@ -16,6 +16,7 @@ import { detectCodeOmission } from "../../integrations/editor/detect-omission"
 import { unescapeHtmlEntities } from "../../utils/text-normalization"
 import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
+import { validateMarkdownOnlyRestriction } from "../../utils/filePermissions"
 
 export async function writeToFileTool(
 	cline: Task,
@@ -61,6 +62,19 @@ export async function writeToFileTool(
 
 	// Check if file is write-protected
 	const isWriteProtected = cline.rooProtectedController?.isWriteProtected(relPath) || false
+
+	// Check markdown-only restriction
+	try {
+		const provider = cline.providerRef.deref()
+		if (provider) {
+			const state = await provider.getState()
+			validateMarkdownOnlyRestriction(relPath, state)
+		}
+	} catch (error) {
+		await cline.say("error", error instanceof Error ? error.message : String(error))
+		pushToolResult(formatResponse.toolError(error instanceof Error ? error.message : String(error)))
+		return
+	}
 
 	// Check if file exists using cached map or fs.access
 	let fileExists: boolean

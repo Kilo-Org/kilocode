@@ -30,6 +30,7 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	alwaysAllowExecute?: boolean
 	alwaysAllowFollowupQuestions?: boolean
 	alwaysAllowUpdateTodoList?: boolean
+	alwaysAllowEditMarkdownOnly?: boolean
 	followupAutoApproveTimeoutMs?: number
 	allowedCommands?: string[]
 	allowedMaxRequests?: number | undefined
@@ -57,6 +58,7 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 		| "showAutoApproveMenu" // kilocode_change
 		| "deniedCommands"
 		| "alwaysAllowUpdateTodoList"
+		| "alwaysAllowEditMarkdownOnly"
 	>
 }
 
@@ -76,6 +78,7 @@ export const AutoApproveSettings = ({
 	alwaysAllowFollowupQuestions,
 	followupAutoApproveTimeoutMs = 60000,
 	alwaysAllowUpdateTodoList,
+	alwaysAllowEditMarkdownOnly,
 	allowedCommands,
 	allowedMaxRequests,
 	allowedMaxCost,
@@ -185,6 +188,7 @@ export const AutoApproveSettings = ({
 						alwaysAllowExecute={alwaysAllowExecute}
 						alwaysAllowFollowupQuestions={alwaysAllowFollowupQuestions}
 						alwaysAllowUpdateTodoList={alwaysAllowUpdateTodoList}
+						alwaysAllowEditMarkdownOnly={alwaysAllowEditMarkdownOnly}
 						onToggle={(key, value) => setCachedStateField(key, value)}
 					/>
 

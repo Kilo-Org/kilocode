@@ -15,6 +15,7 @@ import { unescapeHtmlEntities } from "../../utils/text-normalization"
 import { parseXml } from "../../utils/xml"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { applyDiffToolLegacy } from "./applyDiffTool"
+import { validateMarkdownOnlyRestrictionForMultipleFiles } from "../../utils/filePermissions"
 
 interface DiffOperation {
 	path: string
@@ -224,6 +225,20 @@ Original error: ${errorMessage}`
 	}
 
 	try {
+		// Check markdown-only restriction for all files
+		try {
+			const provider = cline.providerRef.deref()
+			if (provider) {
+				const state = await provider.getState()
+				const filePaths = operations.map((op) => op.path)
+				validateMarkdownOnlyRestrictionForMultipleFiles(filePaths, state)
+			}
+		} catch (error) {
+			await cline.say("error", error instanceof Error ? error.message : String(error))
+			pushToolResult(formatResponse.toolError(error instanceof Error ? error.message : String(error)))
+			return
+		}
+
 		// First validate all files and prepare for batch approval
 		const operationsToApprove: OperationResult[] = []
 		const allDiffErrors: string[] = [] // Collect all diff errors

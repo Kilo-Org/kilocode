@@ -279,6 +279,7 @@ export type ExtensionState = Pick<
 	| "alwaysAllowSubtasks"
 	| "alwaysAllowExecute"
 	| "alwaysAllowUpdateTodoList"
+	| "alwaysAllowEditMarkdownOnly"
 	| "allowedCommands"
 	| "deniedCommands"
 	| "allowedMaxRequests"

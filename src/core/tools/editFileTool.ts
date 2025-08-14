@@ -13,6 +13,7 @@ import { Experiments, ProviderSettings } from "@roo-code/types"
 import { getKiloBaseUriFromToken } from "../../utils/kilocode-token"
 import { DEFAULT_HEADERS } from "../../api/providers/constants"
 import { TelemetryService } from "@roo-code/telemetry"
+import { validateMarkdownOnlyRestriction } from "../../utils/filePermissions"
 
 async function validateParams(
 	cline: Task,
@@ -105,6 +106,19 @@ export async function editFileTool(
 		if (!accessAllowed) {
 			await cline.say("rooignore_error", relPath)
 			pushToolResult(formatResponse.rooIgnoreError(relPath))
+			return
+		}
+
+		// Check markdown-only restriction
+		try {
+			const provider = cline.providerRef.deref()
+			if (provider) {
+				const state = await provider.getState()
+				validateMarkdownOnlyRestriction(relPath, state)
+			}
+		} catch (error) {
+			await cline.say("error", error instanceof Error ? error.message : String(error))
+			pushToolResult(formatResponse.toolError(error instanceof Error ? error.message : String(error)))
 			return
 		}
 

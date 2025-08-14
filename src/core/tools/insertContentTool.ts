@@ -12,6 +12,7 @@ import { fileExistsAtPath } from "../../utils/fs"
 import { insertGroups } from "../diff/insert-groups"
 import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
+import { validateMarkdownOnlyRestriction } from "../../utils/filePermissions"
 
 export async function insertContentTool(
 	cline: Task,
@@ -70,6 +71,19 @@ export async function insertContentTool(
 
 		// Check if file is write-protected
 		const isWriteProtected = cline.rooProtectedController?.isWriteProtected(relPath) || false
+
+		// Check markdown-only restriction
+		try {
+			const provider = cline.providerRef.deref()
+			if (provider) {
+				const state = await provider.getState()
+				validateMarkdownOnlyRestriction(relPath, state)
+			}
+		} catch (error) {
+			await cline.say("error", error instanceof Error ? error.message : String(error))
+			pushToolResult(formatResponse.toolError(error instanceof Error ? error.message : String(error)))
+			return
+		}
 
 		const absolutePath = path.resolve(cline.cwd, relPath)
 		const lineNumber = parseInt(line, 10)

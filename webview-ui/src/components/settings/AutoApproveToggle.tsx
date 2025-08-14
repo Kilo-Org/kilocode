@@ -16,6 +16,7 @@ type AutoApproveToggles = Pick<
 	| "alwaysAllowExecute"
 	| "alwaysAllowFollowupQuestions"
 	| "alwaysAllowUpdateTodoList"
+	| "alwaysAllowEditMarkdownOnly"
 >
 
 export type AutoApproveSetting = keyof AutoApproveToggles
@@ -98,6 +99,13 @@ export const autoApproveSettingsConfig: Record<AutoApproveSetting, AutoApproveCo
 		descriptionKey: "settings:autoApprove.updateTodoList.description",
 		icon: "checklist",
 		testId: "always-allow-update-todo-list-toggle",
+	},
+	alwaysAllowEditMarkdownOnly: {
+		key: "alwaysAllowEditMarkdownOnly",
+		labelKey: "settings:autoApprove.editMarkdownOnly.label",
+		descriptionKey: "settings:autoApprove.editMarkdownOnly.description",
+		icon: "file-text",
+		testId: "always-allow-edit-markdown-only-toggle",
 	},
 }
 

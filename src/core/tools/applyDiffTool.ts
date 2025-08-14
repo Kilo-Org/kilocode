@@ -13,6 +13,7 @@ import { fileExistsAtPath } from "../../utils/fs"
 import { RecordSource } from "../context-tracking/FileContextTrackerTypes"
 import { unescapeHtmlEntities } from "../../utils/text-normalization"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
+import { validateMarkdownOnlyRestriction } from "../../utils/filePermissions"
 
 export async function applyDiffToolLegacy(
 	cline: Task,
@@ -73,6 +74,19 @@ export async function applyDiffToolLegacy(
 			if (!accessAllowed) {
 				await cline.say("rooignore_error", relPath)
 				pushToolResult(formatResponse.toolError(formatResponse.rooIgnoreError(relPath)))
+				return
+			}
+
+			// Check markdown-only restriction
+			try {
+				const provider = cline.providerRef.deref()
+				if (provider) {
+					const state = await provider.getState()
+					validateMarkdownOnlyRestriction(relPath, state)
+				}
+			} catch (error) {
+				await cline.say("error", error instanceof Error ? error.message : String(error))
+				pushToolResult(formatResponse.toolError(error instanceof Error ? error.message : String(error)))
 				return
 			}
 

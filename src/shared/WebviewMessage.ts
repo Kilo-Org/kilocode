@@ -50,6 +50,7 @@ export interface WebviewMessage {
 		| "alwaysAllowExecute"
 		| "alwaysAllowFollowupQuestions"
 		| "alwaysAllowUpdateTodoList"
+		| "alwaysAllowEditMarkdownOnly"
 		| "followupAutoApproveTimeoutMs"
 		| "webviewDidLaunch"
 		| "newTask"
