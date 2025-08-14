@@ -380,7 +380,7 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 					customModes ?? [],
 					{ apply_diff: cline.diffEnabled },
 					block.params,
-					state?.globalSettings,
+					state,
 				)
 			} catch (error) {
 				cline.consecutiveMistakeCount++
