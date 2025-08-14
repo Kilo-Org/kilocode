@@ -21,3 +21,5 @@
 ```bash
 npm run build && NODE_ENV=development VSCODE_DEBUG_MODE=true code --extensionDevelopmentPath=${PWD}/src
 ```
+
+9. 最后自动生成git提交信息，提交代码，需要注明是ai自动提交（临时保存）

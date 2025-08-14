@@ -33,6 +33,7 @@ const AutoApproveMenu = ({ style }: AutoApproveMenuProps) => {
 		setAlwaysApproveResubmit,
 		setAlwaysAllowFollowupQuestions,
 		setAlwaysAllowUpdateTodoList,
+		setAlwaysAllowEditMarkdownOnly,
 		setAllowedMaxRequests, // kilocode_change
 	} = useExtensionState()
 
@@ -87,6 +88,9 @@ const AutoApproveMenu = ({ style }: AutoApproveMenuProps) => {
 				case "alwaysAllowUpdateTodoList":
 					setAlwaysAllowUpdateTodoList(value)
 					break
+				case "alwaysAllowEditMarkdownOnly":
+					setAlwaysAllowEditMarkdownOnly(value)
+					break
 			}
 
 			// Check if we need to update the master auto-approval state
@@ -122,6 +126,7 @@ const AutoApproveMenu = ({ style }: AutoApproveMenuProps) => {
 			setAlwaysApproveResubmit,
 			setAlwaysAllowFollowupQuestions,
 			setAlwaysAllowUpdateTodoList,
+			setAlwaysAllowEditMarkdownOnly,
 			setAutoApprovalEnabled,
 		],
 	)
