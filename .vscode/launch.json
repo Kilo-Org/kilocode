@@ -43,7 +43,11 @@
 				"VSCODE_DEBUG_MODE": "true"
 			},
 			"resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
-			"presentation": { "hidden": false, "group": "tasks", "order": 1 }
+			"presentation": {
+				"hidden": false,
+				"group": "tasks",
+				"order": 1
+			}
 		}
 	]
 }
