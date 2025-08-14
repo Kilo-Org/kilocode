@@ -17,6 +17,7 @@ import {
 	anthropicDefaultModelId,
 	doubaoDefaultModelId,
 	claudeCodeDefaultModelId,
+	cometApiDefaultModelId,
 	geminiDefaultModelId,
 	geminiCliDefaultModelId,
 	deepSeekDefaultModelId,
@@ -67,6 +68,7 @@ import {
 	Cerebras,
 	Chutes,
 	ClaudeCode,
+	CometAPI,
 	DeepSeek,
 	Doubao,
 	Gemini,
@@ -328,6 +330,7 @@ const ApiOptions = ({
 				anthropic: { field: "apiModelId", default: anthropicDefaultModelId },
 				cerebras: { field: "apiModelId", default: cerebrasDefaultModelId },
 				"claude-code": { field: "apiModelId", default: claudeCodeDefaultModelId },
+				cometapi: { field: "cometApiModelId", default: cometApiDefaultModelId },
 				"openai-native": { field: "apiModelId", default: openAiNativeDefaultModelId },
 				gemini: { field: "apiModelId", default: geminiDefaultModelId },
 				deepseek: { field: "apiModelId", default: deepSeekDefaultModelId },
@@ -512,6 +515,19 @@ const ApiOptions = ({
 				<ClaudeCode apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
 
+			{selectedProvider === "cometapi" && (
+				<CometAPI
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+					routerModels={routerModels}
+					selectedModelId={selectedModelId}
+					_uriScheme={uriScheme}
+					fromWelcomeView={fromWelcomeView}
+					organizationAllowList={organizationAllowList}
+					modelValidationError={modelValidationError}
+				/>
+			)}
+
 			{selectedProvider === "openai-native" && (
 				<OpenAI apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
@@ -639,7 +655,7 @@ const ApiOptions = ({
 				<Fireworks apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
 
-			{selectedProviderModels.length > 0 && (
+			{selectedProviderModels.length > 0 && selectedProvider !== "cometapi" && (
 				<>
 					<div>
 						<label className="block font-medium mb-1">{t("settings:providers.model")}</label>

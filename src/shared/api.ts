@@ -124,6 +124,7 @@ const routerNames = [
 	"kilocode-openrouter",
 	"ollama",
 	"lmstudio",
+	"cometapi",
 ] as const
 
 export type RouterName = (typeof routerNames)[number]
@@ -229,3 +230,4 @@ export type GetModelsOptions =
 	| { provider: "cerebras"; cerebrasApiKey?: string } // kilocode_change
 	| { provider: "ollama"; baseUrl?: string }
 	| { provider: "lmstudio"; baseUrl?: string }
+	| { provider: "cometapi"; apiKey?: string; baseUrl?: string }

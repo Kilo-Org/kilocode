@@ -114,6 +114,11 @@ function validateModelsAndKeysProvided(apiConfiguration: ProviderSettings): stri
 			}
 			break
 		// kilocode_change end
+		case "cometapi":
+			if (!apiConfiguration.cometApiKey) {
+				return i18next.t("settings:validation.apiKey")
+			}
+			break
 		case "huggingface":
 			if (!apiConfiguration.huggingFaceApiKey) {
 				return i18next.t("settings:validation.apiKey")
@@ -198,6 +203,8 @@ function getModelIdForProvider(apiConfiguration: ProviderSettings, provider: str
 			return apiConfiguration.vsCodeLmModelSelector?.id
 		case "huggingface":
 			return apiConfiguration.huggingFaceModelId
+		case "cometapi":
+			return apiConfiguration.cometApiModelId
 		default:
 			return apiConfiguration.apiModelId
 	}
@@ -267,6 +274,9 @@ export function validateModelId(apiConfiguration: ProviderSettings, routerModels
 			break
 		case "litellm":
 			modelId = apiConfiguration.litellmModelId
+			break
+		case "cometapi":
+			modelId = apiConfiguration.cometApiModelId
 			break
 	}
 

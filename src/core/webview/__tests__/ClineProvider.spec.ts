@@ -2678,6 +2678,7 @@ describe("ClineProvider - Router Models", () => {
 		// Mock getState to return API configuration
 		vi.spyOn(provider, "getState").mockResolvedValue({
 			apiConfiguration: {
+				cometApiKey: "cometapi-key",
 				openRouterApiKey: "openrouter-key",
 				requestyApiKey: "requesty-key",
 				glamaApiKey: "glama-key",
@@ -2708,6 +2709,7 @@ describe("ClineProvider - Router Models", () => {
 		await messageHandler({ type: "requestRouterModels" })
 
 		// Verify getModels was called for each provider with correct options
+		expect(getModels).toHaveBeenCalledWith({ provider: "cometapi", apiKey: "cometapi-key" })
 		expect(getModels).toHaveBeenCalledWith({ provider: "openrouter", apiKey: "openrouter-key" }) // kilocode_change: apiKey
 		expect(getModels).toHaveBeenCalledWith({ provider: "requesty", apiKey: "requesty-key" })
 		expect(getModels).toHaveBeenCalledWith({ provider: "glama" })
@@ -2722,6 +2724,7 @@ describe("ClineProvider - Router Models", () => {
 		expect(mockPostMessage).toHaveBeenCalledWith({
 			type: "routerModels",
 			routerModels: {
+				cometapi: mockModels,
 				openrouter: mockModels,
 				requesty: mockModels,
 				glama: mockModels,
@@ -2740,6 +2743,7 @@ describe("ClineProvider - Router Models", () => {
 
 		vi.spyOn(provider, "getState").mockResolvedValue({
 			apiConfiguration: {
+				cometApiKey: "cometapi-key",
 				openRouterApiKey: "openrouter-key",
 				requestyApiKey: "requesty-key",
 				glamaApiKey: "glama-key",
@@ -2755,13 +2759,16 @@ describe("ClineProvider - Router Models", () => {
 		const { getModels } = await import("../../../api/providers/fetchers/modelCache")
 
 		// Mock some providers to succeed and others to fail
+		// Order matches webviewMessageHandler.ts modelFetchPromises array:
+		// openrouter, requesty, glama, unbound, kilocode-openrouter, cometapi, ollama, litellm
 		vi.mocked(getModels)
 			.mockResolvedValueOnce(mockModels) // openrouter success
 			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty fail
 			.mockResolvedValueOnce(mockModels) // glama success
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound fail
 			.mockRejectedValueOnce(new Error("Kilocode-OpenRouter API error")) // kilocode-openrouter fail
-			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
+			.mockResolvedValueOnce(mockModels) // cometapi success
+			.mockRejectedValueOnce(new Error("Ollama API error")) // ollama fail
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm fail
 
 		await messageHandler({ type: "requestRouterModels" })
@@ -2774,10 +2781,11 @@ describe("ClineProvider - Router Models", () => {
 				requesty: {},
 				glama: mockModels,
 				unbound: {},
+				"kilocode-openrouter": {},
+				cometapi: mockModels,
+				litellm: {},
 				ollama: {},
 				lmstudio: {},
-				litellm: {},
-				"kilocode-openrouter": {},
 			},
 		})
 
@@ -2806,15 +2814,15 @@ describe("ClineProvider - Router Models", () => {
 		expect(mockPostMessage).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
-			error: "Unbound API error",
-			values: { provider: "unbound" },
+			error: "LiteLLM connection failed",
+			values: { provider: "litellm" },
 		})
 
 		expect(mockPostMessage).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
-			error: "LiteLLM connection failed",
-			values: { provider: "litellm" },
+			error: "Ollama API error",
+			values: { provider: "ollama" },
 		})
 	})
 
@@ -2888,6 +2896,7 @@ describe("ClineProvider - Router Models", () => {
 		expect(mockPostMessage).toHaveBeenCalledWith({
 			type: "routerModels",
 			routerModels: {
+				cometapi: mockModels,
 				openrouter: mockModels,
 				requesty: mockModels,
 				glama: mockModels,

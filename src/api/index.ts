@@ -37,6 +37,7 @@ import {
 	DoubaoHandler,
 	ZAiHandler,
 	FireworksHandler,
+	CometAPIHandler,
 } from "./providers"
 // kilocode_change start
 import { KilocodeOpenrouterHandler } from "./providers/kilocode-openrouter"
@@ -136,6 +137,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new ChutesHandler(options)
 		case "litellm":
 			return new LiteLLMHandler(options)
+		case "cometapi":
+			return new CometAPIHandler(options)
 		case "cerebras":
 			return new CerebrasHandler(options)
 		case "sambanova":

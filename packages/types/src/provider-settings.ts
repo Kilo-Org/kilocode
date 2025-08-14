@@ -33,6 +33,7 @@ export const providerNames = [
 	"groq",
 	"chutes",
 	"litellm",
+	"cometapi",
 	// kilocode_change start
 	"kilocode",
 	"virtual-quota-fallback",
@@ -271,6 +272,12 @@ const litellmSchema = baseProviderSettingsSchema.extend({
 	litellmUsePromptCache: z.boolean().optional(),
 })
 
+const cometApiSchema = baseProviderSettingsSchema.extend({
+	cometApiKey: z.string().optional(),
+	cometApiBaseUrl: z.string().optional(),
+	cometApiModelId: z.string().optional(),
+})
+
 const cerebrasSchema = apiModelIdProviderModelSchema.extend({
 	cerebrasApiKey: z.string().optional(),
 })
@@ -348,6 +355,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	huggingFaceSchema.merge(z.object({ apiProvider: z.literal("huggingface") })),
 	chutesSchema.merge(z.object({ apiProvider: z.literal("chutes") })),
 	litellmSchema.merge(z.object({ apiProvider: z.literal("litellm") })),
+	cometApiSchema.merge(z.object({ apiProvider: z.literal("cometapi") })),
 	cerebrasSchema.merge(z.object({ apiProvider: z.literal("cerebras") })),
 	sambaNovaSchema.merge(z.object({ apiProvider: z.literal("sambanova") })),
 	zaiSchema.merge(z.object({ apiProvider: z.literal("zai") })),
@@ -387,6 +395,7 @@ export const providerSettingsSchema = z.object({
 	...huggingFaceSchema.shape,
 	...chutesSchema.shape,
 	...litellmSchema.shape,
+	...cometApiSchema.shape,
 	...cerebrasSchema.shape,
 	...sambaNovaSchema.shape,
 	...zaiSchema.shape,
@@ -416,6 +425,7 @@ export const MODEL_ID_KEYS: Partial<keyof ProviderSettings>[] = [
 	"requestyModelId",
 	"litellmModelId",
 	"huggingFaceModelId",
+	"cometApiModelId",
 ]
 
 export const getModelId = (settings: ProviderSettings): string | undefined => {

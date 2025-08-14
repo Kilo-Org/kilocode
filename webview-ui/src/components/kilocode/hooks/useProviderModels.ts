@@ -5,6 +5,7 @@ import {
 	anthropicModels,
 	bedrockDefaultModelId,
 	bedrockModels,
+	cometApiDefaultModelId,
 	deepSeekDefaultModelId,
 	deepSeekModels,
 	geminiDefaultModelId,
@@ -170,6 +171,12 @@ const getModelsByProvider = ({
 				defaultModel: kilocodeDefaultModelId,
 			}
 		}
+		case "cometapi": {
+			return {
+				models: routerModels.cometapi,
+				defaultModel: cometApiDefaultModelId,
+			}
+		}
 		default: {
 			return FALLBACK_MODELS
 		}
@@ -182,6 +189,8 @@ export const useProviderModels = (apiConfiguration?: ProviderSettings) => {
 	const routerModels = useRouterModels({
 		openRouterBaseUrl: apiConfiguration?.openRouterBaseUrl,
 		openRouterApiKey: apiConfiguration?.apiKey,
+		cometApiBaseUrl: apiConfiguration?.cometApiBaseUrl,
+		cometApiKey: apiConfiguration?.cometApiKey,
 	})
 
 	const { models, defaultModel } =

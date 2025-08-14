@@ -775,6 +775,7 @@
 	},
 	"modelPicker": {
 		"automaticFetch": "The extension automatically fetches the latest list of models available on <serviceLink>{{serviceName}}</serviceLink>. If you're unsure which model to choose, Kilo Code works best with <defaultModelLink>{{defaultModelId}}</defaultModelLink>.",
+		"cometApiAutomaticFetch": "CometAPI provides access to 500+ AI models through a unified interface. The extension automatically fetches the latest list of models available. If you're unsure which model to choose, we recommend starting with Claude or GPT models for the best experience.",
 		"label": "Model",
 		"searchPlaceholder": "Search",
 		"noMatchFound": "No match found",
