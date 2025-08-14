@@ -23,6 +23,7 @@ export { OpenAiHandler } from "./openai"
 export { OpenRouterHandler } from "./openrouter"
 export { RequestyHandler } from "./requesty"
 export { SambaNovaHandler } from "./sambanova"
+export { TarsHandler } from "./tars"
 export { UnboundHandler } from "./unbound"
 export { VertexHandler } from "./vertex"
 // kilocode_change start

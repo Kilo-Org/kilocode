@@ -38,6 +38,7 @@ type ModelIdKey = keyof Pick<
 	| "openAiModelId"
 	| "litellmModelId"
 	| "kilocodeModel"
+	| "tarsModelId"
 >
 
 interface ModelPickerProps {
