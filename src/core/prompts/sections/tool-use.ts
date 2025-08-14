@@ -3,7 +3,9 @@ export function getSharedToolUseSection(): string {
 
 TOOL USE
 
-You have access to a set of tools that are executed upon the user's approval. You can use one tool per message, and will receive the result of that tool use in the user's response. You use tools step-by-step to accomplish a given task, with each tool use informed by the result of the previous tool use.
+**IMPORTANT:** You can use ONLY ONE tool per message. If you need to use multiple tools, use only the first tool. For example: when you need to update the todo list AND you need to build the project, you send your message with only the update_todo_list command.
+**END MESSAGE RULE:** Every message containing a tool use MUST end immediately after the closing tool tag. No exceptions. For example: when you need to update the todo list AND you need to provide a summary, you will only use the update_todo_list command and then end the message.
+**REMEMBER:** You use tools step-by-step to accomplish a given task, with each tool use informed by the result of the previous tool use.
 
 # Tool Use Formatting
 
