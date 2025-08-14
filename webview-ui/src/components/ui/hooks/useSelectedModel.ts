@@ -49,6 +49,7 @@ import {
 	mainlandZAiModels,
 	fireworksModels,
 	fireworksDefaultModelId,
+	tarsDefaultModelId,
 } from "@roo-code/types"
 
 import type { ModelRecord, RouterModels } from "@roo/api"
@@ -163,6 +164,11 @@ function getSelectedModel({
 		case "litellm": {
 			const id = apiConfiguration.litellmModelId ?? litellmDefaultModelId
 			const info = routerModels.litellm[id]
+			return { id, info }
+		}
+		case "tars": {
+			const id = apiConfiguration.tarsModelId ?? tarsDefaultModelId
+			const info = routerModels.tars?.[id]
 			return { id, info }
 		}
 		case "xai": {

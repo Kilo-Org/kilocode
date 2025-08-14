@@ -132,6 +132,11 @@ function validateModelsAndKeysProvided(apiConfiguration: ProviderSettings): stri
 				return i18next.t("settings:validation.apiKey")
 			}
 			break
+		case "tars":
+			if (!apiConfiguration.tarsApiKey) {
+				return i18next.t("settings:validation.apiKey")
+			}
+			break
 	}
 
 	return undefined
@@ -193,6 +198,8 @@ function getModelIdForProvider(apiConfiguration: ProviderSettings, provider: str
 			return apiConfiguration.ollamaModelId
 		case "lmstudio":
 			return apiConfiguration.lmStudioModelId
+		case "tars":
+			return apiConfiguration.tarsModelId
 		case "vscode-lm":
 			// vsCodeLmModelSelector is an object, not a string
 			return apiConfiguration.vsCodeLmModelSelector?.id
@@ -267,6 +274,9 @@ export function validateModelId(apiConfiguration: ProviderSettings, routerModels
 			break
 		case "litellm":
 			modelId = apiConfiguration.litellmModelId
+			break
+		case "tars":
+			modelId = apiConfiguration.tarsModelId
 			break
 	}
 

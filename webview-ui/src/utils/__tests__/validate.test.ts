@@ -56,6 +56,7 @@ describe("Model Validation Functions", () => {
 		litellm: {},
 		ollama: {},
 		lmstudio: {},
+		tars: {},
 	}
 
 	const allowAllOrganization: OrganizationAllowList = {
