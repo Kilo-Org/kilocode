@@ -1,5 +1,6 @@
 import type { ClineMessage } from "@roo-code/types"
 import { forwardRef, memo, useCallback, useEffect, useMemo, useRef } from "react"
+import { useDrag } from "@use-gesture/react"
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso"
 import { useExtensionState } from "../../context/ExtensionStateContext"
 import { getTaskTimelineMessageColor } from "../../utils/messageColors"
@@ -22,24 +23,55 @@ interface TaskTimelineProps {
 	isTaskActive?: boolean
 }
 
-// Translates vertical scrolling into horizontal scrolling
-const HorizontalScroller = forwardRef<HTMLDivElement, any>(({ style, children, ...props }, ref) => (
-	<div
-		{...props}
-		ref={ref}
-		style={{
-			...style,
-			overflowX: "auto",
-			overflowY: "hidden",
-			willChange: "transform",
-		}}
-		onWheel={(e) => {
-			e.preventDefault() // Stop the default vertical scroll
-			;(ref as React.MutableRefObject<HTMLDivElement>).current!.scrollLeft += e.deltaY
-		}}>
-		{children}
-	</div>
-))
+// Translates vertical scrolling into horizontal scrolling and supports drag scrolling
+const HorizontalScroller = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+	({ style, children, className, ...props }, ref) => {
+		const bind = useDrag(
+			({ active, delta: [dx] }) => {
+				const element = (ref as React.MutableRefObject<HTMLDivElement>).current
+				if (!element) return
+
+				element.scrollLeft -= dx
+
+				if (active) {
+					element.style.cursor = "grabbing"
+					element.style.userSelect = "none"
+				} else {
+					element.style.cursor = "grab"
+					element.style.userSelect = "auto"
+				}
+			},
+			{
+				// Lock to horizontal axis only
+				axis: "x",
+				// Allow preventDefault to work properly
+				eventOptions: { passive: false },
+				// Prevent small drags from interfering with clicks
+				filterTaps: true,
+				// Use pointer events to capture mouse release outside element
+				pointer: { capture: true },
+				// Prevent conflicts with native browser scrolling on touch devices
+				touchAction: "pan-x",
+			},
+		)
+
+		return (
+			<div
+				{...props}
+				{...bind()}
+				ref={ref}
+				className={`overflow-x-auto overflow-y-hidden touch-none cursor-grab ${className || ""}`}
+				style={style}
+				onWheel={(e) => {
+					e.preventDefault()
+					// Handle both vertical and horizontal wheel events
+					;(ref as React.MutableRefObject<HTMLDivElement>).current!.scrollLeft += e.deltaY
+				}}>
+				{children}
+			</div>
+		)
+	},
+)
 
 export const TaskTimeline = memo<TaskTimelineProps>(({ groupedMessages, onMessageClick, isTaskActive = false }) => {
 	const { setHoveringTaskTimeline } = useExtensionState()
