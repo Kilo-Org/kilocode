@@ -8,10 +8,12 @@ import {
 	type ExperimentId,
 	type ToolGroup,
 	type PromptComponent,
+	type GlobalSettings,
 	DEFAULT_MODES,
 } from "@roo-code/types"
 
 import { addCustomInstructions } from "../core/prompts/sections/custom-instructions"
+import { isMarkdownFile } from "../utils/filePermissions"
 
 import { EXPERIMENT_IDS } from "./experiments"
 import { TOOL_GROUPS, ALWAYS_AVAILABLE_TOOLS } from "./tools"
@@ -183,10 +185,56 @@ export function isToolAllowedForMode(
 	toolRequirements?: Record<string, boolean>,
 	toolParams?: Record<string, any>, // All tool parameters
 	experiments?: Record<string, boolean>,
+	globalSettings?: GlobalSettings,
 ): boolean {
 	// Always allow these tools
 	if (ALWAYS_AVAILABLE_TOOLS.includes(tool as any)) {
 		return true
+	}
+
+	// Special handling for "Edit Markdown Only" setting
+	// If the setting is enabled and this is an edit tool operating on a markdown file,
+	// allow the operation regardless of the current mode's edit permissions
+	if (globalSettings?.alwaysAllowEditMarkdownOnly) {
+		// Check if this is an edit tool
+		const editTools = TOOL_GROUPS.edit.tools
+		if (editTools.includes(tool)) {
+			// Check if we have a file path and it's a markdown file
+			const filePath = toolParams?.path
+			if (filePath && isMarkdownFile(filePath)) {
+				// Check if this is an actual edit operation (not just path-only for streaming)
+				const isEditOperation = EDIT_OPERATION_PARAMS.some((param) => toolParams?.[param])
+				if (isEditOperation) {
+					return true
+				}
+			}
+
+			// Handle XML args parameter (used by MULTI_FILE_APPLY_DIFF experiment)
+			if (toolParams?.args && typeof toolParams.args === "string") {
+				try {
+					const filePathMatches = toolParams.args.match(/<path>([^<]+)<\/path>/g)
+					if (filePathMatches) {
+						// Check if all files in the XML args are markdown files
+						const allMarkdownFiles = filePathMatches.every((match) => {
+							const pathMatch = match.match(/<path>([^<]+)<\/path>/)
+							if (pathMatch && pathMatch[1]) {
+								const extractedPath = pathMatch[1].trim()
+								if (extractedPath && !extractedPath.includes("<") && !extractedPath.includes(">")) {
+									return isMarkdownFile(extractedPath)
+								}
+							}
+							return false
+						})
+						if (allMarkdownFiles) {
+							return true
+						}
+					}
+				} catch (error) {
+					// If XML parsing fails, continue with normal mode validation
+					console.warn(`Failed to parse XML args for markdown validation: ${error}`)
+				}
+			}
+		}
 	}
 	if (experiments && Object.values(EXPERIMENT_IDS).includes(tool as ExperimentId)) {
 		if (!experiments[tool]) {

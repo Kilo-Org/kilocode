@@ -370,7 +370,8 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 			}
 
 			// Validate tool use before execution.
-			const { mode, customModes } = (await cline.providerRef.deref()?.getState()) ?? {}
+			const state = await cline.providerRef.deref()?.getState()
+			const { mode, customModes } = state ?? {}
 
 			try {
 				validateToolUse(
@@ -379,6 +380,7 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 					customModes ?? [],
 					{ apply_diff: cline.diffEnabled },
 					block.params,
+					state,
 				)
 			} catch (error) {
 				cline.consecutiveMistakeCount++

@@ -132,29 +132,73 @@ describe("mode-validator", () => {
 
 	describe("validateToolUse", () => {
 		it("throws error for disallowed tools in architect mode", () => {
-			expect(() => validateToolUse("unknown_tool" as any, "architect", [])).toThrow(
-				'Tool "unknown_tool" is not allowed in architect mode.',
-			)
+			expect(() =>
+				validateToolUse("unknown_tool" as any, "architect", [], undefined, undefined, undefined),
+			).toThrow('Tool "unknown_tool" is not allowed in architect mode.')
 		})
 
 		it("does not throw for allowed tools in architect mode", () => {
-			expect(() => validateToolUse("read_file", "architect", [])).not.toThrow()
+			expect(() => validateToolUse("read_file", "architect", [], undefined, undefined, undefined)).not.toThrow()
 		})
 
 		it("throws error when tool requirement is not met", () => {
 			const requirements = { apply_diff: false }
-			expect(() => validateToolUse("apply_diff", codeMode, [], requirements)).toThrow(
+			expect(() => validateToolUse("apply_diff", codeMode, [], requirements, undefined, undefined)).toThrow(
 				'Tool "apply_diff" is not allowed in code mode.',
 			)
 		})
 
 		it("does not throw when tool requirement is met", () => {
 			const requirements = { apply_diff: true }
-			expect(() => validateToolUse("apply_diff", codeMode, [], requirements)).not.toThrow()
+			expect(() => validateToolUse("apply_diff", codeMode, [], requirements, undefined, undefined)).not.toThrow()
 		})
 
 		it("handles undefined requirements gracefully", () => {
-			expect(() => validateToolUse("apply_diff", codeMode, [], undefined)).not.toThrow()
+			expect(() => validateToolUse("apply_diff", codeMode, [], undefined, undefined, undefined)).not.toThrow()
+		})
+
+		it("allows markdown editing in ask mode when alwaysAllowEditMarkdownOnly is enabled", () => {
+			const globalSettings = { alwaysAllowEditMarkdownOnly: true }
+			const toolParams = { path: "test.md", content: "# Hello World" }
+
+			// Should allow write_to_file for markdown files in ask mode
+			expect(() =>
+				validateToolUse("write_to_file", askMode, [], undefined, toolParams, globalSettings),
+			).not.toThrow()
+
+			// Should allow apply_diff for markdown files in ask mode
+			expect(() =>
+				validateToolUse(
+					"apply_diff",
+					askMode,
+					[],
+					undefined,
+					{ path: "test.md", diff: "- old\n+ new" },
+					globalSettings,
+				),
+			).not.toThrow()
+
+			// Should still block non-markdown files in ask mode
+			expect(() =>
+				validateToolUse(
+					"write_to_file",
+					askMode,
+					[],
+					undefined,
+					{ path: "test.js", content: "console.log('test')" },
+					globalSettings,
+				),
+			).toThrow('Tool "write_to_file" is not allowed in ask mode.')
+		})
+
+		it("blocks markdown editing in ask mode when alwaysAllowEditMarkdownOnly is disabled", () => {
+			const globalSettings = { alwaysAllowEditMarkdownOnly: false }
+			const toolParams = { path: "test.md", content: "# Hello World" }
+
+			// Should block write_to_file for markdown files in ask mode when setting is disabled
+			expect(() => validateToolUse("write_to_file", askMode, [], undefined, toolParams, globalSettings)).toThrow(
+				'Tool "write_to_file" is not allowed in ask mode.',
+			)
 		})
 	})
 })
