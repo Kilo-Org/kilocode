@@ -467,6 +467,13 @@
 			"requirement4": "API anahtarları kullanmaz - kimlik doğrulama OAuth ile yapılır",
 			"requirement5": "Gemini CLI aracının önce yüklenmesi ve kimlik doğrulaması yapılması gerekir",
 			"freeAccess": "OAuth kimlik doğrulaması ile ücretsiz erişim"
+		},
+		"qwenCode": {
+			"oauthPath": "OAuth Kimlik Bilgileri Yolu (isteğe bağlı)",
+			"oauthPathDescription": "OAuth kimlik bilgileri dosyasının yolu. Varsayılan konumu kullanmak için boş bırakın (~/.qwen/oauth_creds.json).",
+			"description": "Bu sağlayıcı Qwen hizmetinden OAuth kimlik doğrulaması kullanır ve API anahtarları gerektirmez.",
+			"instructions": "Yetkilendirme dosyasını almak ve belirtilen yola yerleştirmek için lütfen resmi belgeleri takip edin.",
+			"setupLink": "Qwen Resmi Belgeleri"
 		}
 	},
 	"browser": {

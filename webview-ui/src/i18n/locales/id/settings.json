@@ -467,6 +467,13 @@
 			"requirement4": "Tidak menggunakan kunci API - autentikasi ditangani melalui OAuth",
 			"requirement5": "Memerlukan alat Gemini CLI diinstal dan diautentikasi terlebih dahulu",
 			"freeAccess": "Akses gratis melalui autentikasi OAuth"
+		},
+		"qwenCode": {
+			"oauthPath": "Jalur Kredensial OAuth (opsional)",
+			"oauthPathDescription": "Jalur ke file kredensial OAuth. Biarkan kosong untuk menggunakan lokasi default (~/.qwen/oauth_creds.json).",
+			"description": "Provider ini menggunakan autentikasi OAuth dari layanan Qwen dan tidak memerlukan kunci API.",
+			"instructions": "Silakan ikuti dokumentasi resmi untuk mendapatkan file otorisasi dan tempatkan di jalur yang ditentukan.",
+			"setupLink": "Dokumentasi Resmi Qwen"
 		}
 	},
 	"browser": {

@@ -467,6 +467,13 @@
 			"requirement4": "No utilitza claus d'API - l'autenticació es gestiona via OAuth",
 			"requirement5": "Requereix que l'eina Gemini CLI estigui instal·lada i autenticada primer",
 			"freeAccess": "Accés gratuït via autenticació OAuth"
+		},
+		"qwenCode": {
+			"oauthPath": "Ruta de Credencials OAuth (opcional)",
+			"oauthPathDescription": "Ruta al fitxer de credencials OAuth. Deixa buit per utilitzar la ubicació per defecte (~/.qwen/oauth_creds.json).",
+			"description": "Aquest proveïdor utilitza l'autenticació OAuth del servei Qwen i no requereix claus d'API.",
+			"instructions": "Si us plau, seguiu la documentació oficial per obtenir el fitxer d'autorització i col·locar-lo a la ruta especificada.",
+			"setupLink": "Documentació oficial de Qwen"
 		}
 	},
 	"browser": {

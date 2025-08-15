@@ -18,8 +18,7 @@ export const providerNames = [
 	"ollama",
 	"vscode-lm",
 	"lmstudio",
-	"gemini", // kilocode_change
-	"gemini-cli",
+	"gemini",
 	"openai-native",
 	"mistral",
 	"moonshot",
@@ -36,7 +35,9 @@ export const providerNames = [
 	"cometapi",
 	// kilocode_change start
 	"kilocode",
+	"gemini-cli",
 	"virtual-quota-fallback",
+	"qwen-code",
 	// kilocode_change end
 	"huggingface",
 	"cerebras",
@@ -307,10 +308,16 @@ export const virtualQuotaFallbackProfileDataSchema = z.object({
 		})
 		.optional(),
 })
+
 const virtualQuotaFallbackSchema = baseProviderSettingsSchema.extend({
 	profiles: z.array(virtualQuotaFallbackProfileDataSchema).optional(),
 })
+
+const qwenCodeSchema = apiModelIdProviderModelSchema.extend({
+	qwenCodeOAuthPath: z.string().optional(),
+})
 // kilocode_change end
+
 const zaiSchema = apiModelIdProviderModelSchema.extend({
 	zaiApiKey: z.string().optional(),
 	zaiApiLine: z.union([z.literal("china"), z.literal("international")]).optional(),
@@ -350,6 +357,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	geminiCliSchema.merge(z.object({ apiProvider: z.literal("gemini-cli") })),
 	kilocodeSchema.merge(z.object({ apiProvider: z.literal("kilocode") })),
 	virtualQuotaFallbackSchema.merge(z.object({ apiProvider: z.literal("virtual-quota-fallback") })),
+	qwenCodeSchema.merge(z.object({ apiProvider: z.literal("qwen-code") })),
 	// kilocode_change end
 	groqSchema.merge(z.object({ apiProvider: z.literal("groq") })),
 	huggingFaceSchema.merge(z.object({ apiProvider: z.literal("huggingface") })),
@@ -380,6 +388,7 @@ export const providerSettingsSchema = z.object({
 	...geminiCliSchema.shape,
 	...kilocodeSchema.shape,
 	...virtualQuotaFallbackSchema.shape,
+	...qwenCodeSchema.shape,
 	// kilocode_change end
 	...openAiNativeSchema.shape,
 	...mistralSchema.shape,

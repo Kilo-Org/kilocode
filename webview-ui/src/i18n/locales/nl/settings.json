@@ -467,6 +467,13 @@
 			"requirement4": "Gebruikt geen API-sleutels - authenticatie wordt afgehandeld via OAuth",
 			"requirement5": "Vereist dat de Gemini CLI-tool eerst wordt geïnstalleerd en geauthenticeerd",
 			"freeAccess": "Gratis toegang via OAuth-authenticatie"
+		},
+		"qwenCode": {
+			"oauthPath": "OAuth-referentiepad (optioneel)",
+			"oauthPathDescription": "Pad naar het OAuth-referentiebestand. Laat leeg om de standaardlocatie te gebruiken (~/.qwen/oauth_creds.json).",
+			"description": "Deze provider gebruikt OAuth-authenticatie van de Qwen-service en vereist geen API-sleutels.",
+			"instructions": "Volg de officiële documentatie om het autorisatiebestand te verkrijgen en plaats het in het opgegeven pad.",
+			"setupLink": "Qwen Officiële Documentatie"
 		}
 	},
 	"browser": {

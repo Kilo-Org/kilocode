@@ -467,6 +467,13 @@
 			"requirement4": "APIキーは使用しません - 認証はOAuthで処理されます",
 			"requirement5": "Gemini CLIツールが最初にインストールされ、認証されている必要があります",
 			"freeAccess": "OAuth認証による無料アクセス"
+		},
+		"qwenCode": {
+			"oauthPath": "OAuth認証情報パス（オプション）",
+			"oauthPathDescription": "OAuth認証情報ファイルへのパス。デフォルトの場所（~/.qwen/oauth_creds.json）を使用する場合は空のままにしてください。",
+			"description": "このプロバイダーはQwenサービスからのOAuth認証を使用し、APIキーは必要ありません。",
+			"instructions": "認証ファイルを取得して指定されたパスに配置するには、公式ドキュメントに従ってください。",
+			"setupLink": "Qwen公式ドキュメント"
 		}
 	},
 	"browser": {

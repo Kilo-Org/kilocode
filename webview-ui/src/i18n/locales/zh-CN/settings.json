@@ -468,6 +468,13 @@
 			"requirement4": "不使用 API 密钥 - 身份验证通过 OAuth 处理",
 			"requirement5": "需要先安装并验证 Gemini CLI 工具",
 			"freeAccess": "通过 OAuth 身份验证免费访问"
+		},
+		"qwenCode": {
+			"oauthPath": "OAuth 凭据路径（可选）",
+			"oauthPathDescription": "OAuth 凭据文件的路径。留空以使用默认位置（~/.qwen/oauth_creds.json）。",
+			"description": "此提供商使用 Qwen 服务的 OAuth 身份验证，不需要 API 密钥。",
+			"instructions": "请按照官方文档获取授权文件并将其放置在指定路径中。",
+			"setupLink": "Qwen 官方文档"
 		}
 	},
 	"browser": {

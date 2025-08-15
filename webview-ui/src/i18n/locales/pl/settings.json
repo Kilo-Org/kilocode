@@ -467,6 +467,13 @@
 			"requirement4": "Nie używa kluczy API - uwierzytelnianie jest obsługiwane przez OAuth",
 			"requirement5": "Wymaga, aby narzędzie Gemini CLI było najpierw zainstalowane i uwierzytelnione",
 			"freeAccess": "Darmowy dostęp przez uwierzytelnianie OAuth"
+		},
+		"qwenCode": {
+			"oauthPath": "Ścieżka danych uwierzytelniających OAuth (opcjonalne)",
+			"oauthPathDescription": "Ścieżka do pliku danych uwierzytelniających OAuth. Pozostaw puste, aby użyć domyślnej lokalizacji (~/.qwen/oauth_creds.json).",
+			"description": "Ten dostawca używa uwierzytelniania OAuth z usługi Qwen i nie wymaga kluczy API.",
+			"instructions": "Postępuj zgodnie z oficjalną dokumentacją, aby uzyskać plik autoryzacji i umieścić go w określonej ścieżce.",
+			"setupLink": "Oficjalna dokumentacja Qwen"
 		}
 	},
 	"browser": {

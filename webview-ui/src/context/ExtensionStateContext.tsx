@@ -8,7 +8,8 @@ import {
 	type ExperimentId,
 	type OrganizationAllowList,
 	ORGANIZATION_ALLOW_ALL,
-	GhostServiceSettings, // kilocode_change
+	GhostServiceSettings,
+	openRouterDefaultModelId, // kilocode_change
 } from "@roo-code/types"
 
 import { ExtensionMessage, ExtensionState, MarketplaceInstalledMetadata, Command } from "@roo/ExtensionMessage"
@@ -258,6 +259,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		terminalCompressProgressBar: true, // Default to compress progress bar output
 		historyPreviewCollapsed: false, // Initialize the new state (default to expanded)
 		showTaskTimeline: true, // kilocode_change
+		kilocodeDefaultModel: openRouterDefaultModelId,
 		cloudUserInfo: null,
 		cloudIsAuthenticated: false,
 		sharingEnabled: false,

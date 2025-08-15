@@ -467,6 +467,13 @@
 			"requirement4": "Không sử dụng khóa API - xác thực được xử lý qua OAuth",
 			"requirement5": "Yêu cầu công cụ Gemini CLI được cài đặt và xác thực trước",
 			"freeAccess": "Truy cập miễn phí qua xác thực OAuth"
+		},
+		"qwenCode": {
+			"oauthPath": "Đường dẫn Thông tin xác thực OAuth (tùy chọn)",
+			"oauthPathDescription": "Đường dẫn đến tệp thông tin xác thực OAuth. Để trống để sử dụng vị trí mặc định (~/.qwen/oauth_creds.json).",
+			"description": "Nhà cung cấp này sử dụng xác thực OAuth từ dịch vụ Qwen và không yêu cầu khóa API.",
+			"instructions": "Vui lòng làm theo tài liệu chính thức để lấy tệp ủy quyền và đặt nó trong đường dẫn được chỉ định.",
+			"setupLink": "Tài liệu chính thức Qwen"
 		}
 	},
 	"browser": {

@@ -16,7 +16,6 @@ import {
 	// OllamaHandler, // kilocode_change
 	LmStudioHandler,
 	GeminiHandler,
-	GeminiCliHandler, // kilocode_change
 	OpenAiNativeHandler,
 	DeepSeekHandler,
 	MoonshotHandler,
@@ -31,7 +30,11 @@ import {
 	HuggingFaceHandler,
 	ChutesHandler,
 	LiteLLMHandler,
-	VirtualQuotaFallbackHandler, // kilocode_change
+	// kilocode_change start
+	VirtualQuotaFallbackHandler,
+	GeminiCliHandler,
+	QwenCodeHandler,
+	// kilocode_change end
 	ClaudeCodeHandler,
 	SambaNovaHandler,
 	DoubaoHandler,
@@ -84,6 +87,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new GeminiCliHandler(options)
 		case "virtual-quota-fallback":
 			return new VirtualQuotaFallbackHandler(options)
+		case "qwen-code":
+			return new QwenCodeHandler(options)
 		// kilocode_change end
 		case "anthropic":
 			return new AnthropicHandler(options)

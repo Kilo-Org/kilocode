@@ -466,6 +466,13 @@
 			"requirement4": "Does not use API keys - authentication is handled via OAuth",
 			"requirement5": "Requires the Gemini CLI tool to be installed and authenticated first",
 			"freeAccess": "Free tier access via OAuth authentication"
+		},
+		"qwenCode": {
+			"oauthPath": "OAuth Credentials Path (optional)",
+			"oauthPathDescription": "Path to the OAuth credentials file. Leave empty to use the default location (~/.qwen/oauth_creds.json).",
+			"description": "This provider uses OAuth authentication from the Qwen service and does not require API keys.",
+			"instructions": "Please follow the official documentation to obtain the authorization file and place it in the specified path.",
+			"setupLink": "Qwen Official Documentation"
 		}
 	},
 	"browser": {

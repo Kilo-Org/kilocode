@@ -282,7 +282,6 @@ const renderApiOptions = (props: Partial<ApiOptionsProps> = {}) => {
 					errorMessage={undefined}
 					setErrorMessage={() => {}}
 					uriScheme={undefined}
-					uiKind={"Desktop" /* kilocode_change */}
 					apiConfiguration={{}}
 					setApiConfigurationField={() => {}}
 					{...props}

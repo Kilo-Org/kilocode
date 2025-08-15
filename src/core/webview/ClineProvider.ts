@@ -91,6 +91,7 @@ import { McpServer } from "../../shared/mcp"
 import { OpenRouterHandler } from "../../api/providers"
 import { stringifyError } from "../../shared/kilocode/errorUtils"
 import isWsl from "is-wsl"
+import { getKilocodeDefaultModel } from "../../api/providers/kilocode/getKilocodeDefaultModel"
 // kilocode_change end
 
 /**
@@ -1736,6 +1737,7 @@ export class ClineProvider
 			autoCondenseContextPercent: autoCondenseContextPercent ?? 100,
 			uriScheme: vscode.env.uriScheme,
 			uiKind: vscode.UIKind[vscode.env.uiKind], // kilocode_change
+			kilocodeDefaultModel: await getKilocodeDefaultModel(apiConfiguration.kilocodeToken),
 			currentTaskItem: this.getCurrentCline()?.taskId
 				? (taskHistory || []).find((item: HistoryItem) => item.id === this.getCurrentCline()?.taskId)
 				: undefined,

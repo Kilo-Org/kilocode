@@ -482,6 +482,13 @@
 			"requirement4": "المصادقة تتم عبر OAuth",
 			"requirement5": "الأداة لازم تكون مثبتة ومُسجلة دخول",
 			"freeAccess": "طبقة مجانية عبر OAuth"
+		},
+		"qwenCode": {
+			"oauthPath": "مسار بيانات OAuth (اختياري)",
+			"oauthPathDescription": "مسار ملف بيانات OAuth. اتركه فاضي لاستخدام المسار الافتراضي (~/.qwen/oauth_creds.json).",
+			"description": "يستخدم هذا المزوّد مصادقة OAuth من خدمة Qwen ولا يحتاج مفاتيح API.",
+			"instructions": "يرجى اتباع التوثيق الرسمي للحصول على ملف التخويل ووضعه في المسار المحدد.",
+			"setupLink": "توثيق Qwen الرسمي"
 		}
 	},
 	"browser": {

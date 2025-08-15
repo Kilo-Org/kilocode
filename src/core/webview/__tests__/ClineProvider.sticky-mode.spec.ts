@@ -171,6 +171,7 @@ vi.mock("@roo-code/telemetry", () => ({
 				setProvider: vi.fn(),
 				captureModeSwitch: vi.fn(),
 				updateIdentity: vi.fn().mockResolvedValue(undefined),
+				captureException: vi.fn(), // kilocode_change
 			}
 		},
 	},
