@@ -9,6 +9,9 @@ import {
 	isSecretStateKey,
 	ProviderSettingsEntry,
 	DEFAULT_CONSECUTIVE_MISTAKE_LIMIT,
+	type AutoApprovalConfig,
+	autoApprovalConfigSchema,
+	DEFAULT_AUTO_APPROVAL_CONFIG,
 } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 
@@ -24,6 +27,7 @@ export const providerProfilesSchema = z.object({
 	currentApiConfigName: z.string(),
 	apiConfigs: z.record(z.string(), providerSettingsWithIdSchema),
 	modeApiConfigs: z.record(z.string(), z.string()).optional(),
+	modeAutoApprovalConfigs: z.record(z.string(), autoApprovalConfigSchema).optional(),
 	cloudProfileIds: z.array(z.string()).optional(),
 	migrations: z
 		.object({
@@ -32,6 +36,7 @@ export const providerProfilesSchema = z.object({
 			openAiHeadersMigrated: z.boolean().optional(),
 			consecutiveMistakeLimitMigrated: z.boolean().optional(),
 			todoListEnabledMigrated: z.boolean().optional(),
+			modeAutoApprovalConfigsMigrated: z.boolean().optional(),
 		})
 		.optional(),
 })
@@ -46,16 +51,22 @@ export class ProviderSettingsManager {
 		modes.map((mode) => [mode.slug, this.defaultConfigId]),
 	)
 
+	private readonly defaultModeAutoApprovalConfigs: Record<string, AutoApprovalConfig> = Object.fromEntries(
+		modes.map((mode) => [mode.slug, { ...DEFAULT_AUTO_APPROVAL_CONFIG }]),
+	)
+
 	private readonly defaultProviderProfiles: ProviderProfiles = {
 		currentApiConfigName: "default",
 		apiConfigs: { default: { id: this.defaultConfigId } },
 		modeApiConfigs: this.defaultModeApiConfigs,
+		modeAutoApprovalConfigs: this.defaultModeAutoApprovalConfigs,
 		migrations: {
 			rateLimitSecondsMigrated: true, // Mark as migrated on fresh installs
 			diffSettingsMigrated: true, // Mark as migrated on fresh installs
 			openAiHeadersMigrated: true, // Mark as migrated on fresh installs
 			consecutiveMistakeLimitMigrated: true, // Mark as migrated on fresh installs
 			todoListEnabledMigrated: true, // Mark as migrated on fresh installs
+			modeAutoApprovalConfigsMigrated: true, // Mark as migrated on fresh installs
 		},
 	}
 
@@ -123,6 +134,7 @@ export class ProviderSettingsManager {
 						openAiHeadersMigrated: false,
 						consecutiveMistakeLimitMigrated: false,
 						todoListEnabledMigrated: false,
+						modeAutoApprovalConfigsMigrated: false,
 					} // Initialize with default values
 					isDirty = true
 				}
@@ -154,6 +166,12 @@ export class ProviderSettingsManager {
 				if (!providerProfiles.migrations.todoListEnabledMigrated) {
 					await this.migrateTodoListEnabled(providerProfiles)
 					providerProfiles.migrations.todoListEnabledMigrated = true
+					isDirty = true
+				}
+
+				if (!providerProfiles.migrations.modeAutoApprovalConfigsMigrated) {
+					await this.migrateModeAutoApprovalConfigs(providerProfiles)
+					providerProfiles.migrations.modeAutoApprovalConfigsMigrated = true
 					isDirty = true
 				}
 
@@ -271,6 +289,18 @@ export class ProviderSettingsManager {
 			}
 		} catch (error) {
 			console.error(`[MigrateTodoListEnabled] Failed to migrate todo list enabled setting:`, error)
+		}
+	}
+
+	private async migrateModeAutoApprovalConfigs(providerProfiles: ProviderProfiles) {
+		try {
+			// Migrate existing installs to have per-mode auto approval config map
+			if (!providerProfiles.modeAutoApprovalConfigs) {
+				// Initialize with default auto approval configs for all modes
+				providerProfiles.modeAutoApprovalConfigs = { ...this.defaultModeAutoApprovalConfigs }
+			}
+		} catch (error) {
+			console.error(`[MigrateModeAutoApprovalConfigs] Failed to migrate mode auto approval configs:`, error)
 		}
 	}
 
@@ -445,6 +475,41 @@ export class ProviderSettingsManager {
 			})
 		} catch (error) {
 			throw new Error(`Failed to get mode config: ${error}`)
+		}
+	}
+
+	/**
+	 * Set the auto approval config for a specific mode.
+	 */
+	public async setModeAutoApprovalConfig(mode: Mode, config: AutoApprovalConfig) {
+		try {
+			return await this.lock(async () => {
+				const providerProfiles = await this.load()
+				// Ensure modeAutoApprovalConfigs exists
+				if (!providerProfiles.modeAutoApprovalConfigs) {
+					providerProfiles.modeAutoApprovalConfigs = { ...this.defaultModeAutoApprovalConfigs }
+				}
+				// Assign the config to this mode
+				providerProfiles.modeAutoApprovalConfigs[mode] = { ...config }
+				await this.store(providerProfiles)
+			})
+		} catch (error) {
+			throw new Error(`Failed to set mode auto approval config: ${error}`)
+		}
+	}
+
+	/**
+	 * Get the auto approval config for a specific mode.
+	 */
+	public async getModeAutoApprovalConfig(mode: Mode): Promise<AutoApprovalConfig> {
+		try {
+			return await this.lock(async () => {
+				const { modeAutoApprovalConfigs } = await this.load()
+				// Return mode-specific config or default config
+				return modeAutoApprovalConfigs?.[mode] || { ...DEFAULT_AUTO_APPROVAL_CONFIG }
+			})
+		} catch (error) {
+			throw new Error(`Failed to get mode auto approval config: ${error}`)
 		}
 	}
 

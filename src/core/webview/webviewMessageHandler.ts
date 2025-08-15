@@ -14,6 +14,7 @@ import {
 	type ClineMessage,
 	TelemetryEventName,
 	ghostServiceSettingsSchema, // kilocode_change
+	isAutoApprovalConfigKey,
 } from "@roo-code/types"
 import { CloudService } from "@roo-code/cloud"
 import { TelemetryService } from "@roo-code/telemetry"
@@ -315,37 +316,115 @@ export const webviewMessageHandler = async (
 			break
 		case "alwaysAllowReadOnly":
 			await updateGlobalState("alwaysAllowReadOnly", message.bool ?? undefined)
+			// Save to current mode's auto-approval config
+			if (isAutoApprovalConfigKey("alwaysAllowReadOnly")) {
+				const currentMode = getGlobalState("mode") || "ask"
+				const currentConfig = await provider.providerSettingsManager.getModeAutoApprovalConfig(currentMode)
+				await provider.providerSettingsManager.setModeAutoApprovalConfig(currentMode, {
+					...currentConfig,
+					alwaysAllowReadOnly: message.bool ?? false,
+				})
+			}
 			await provider.postStateToWebview()
 			break
 		case "alwaysAllowReadOnlyOutsideWorkspace":
 			await updateGlobalState("alwaysAllowReadOnlyOutsideWorkspace", message.bool ?? undefined)
+			// Save to current mode's auto-approval config
+			if (isAutoApprovalConfigKey("alwaysAllowReadOnlyOutsideWorkspace")) {
+				const currentMode = getGlobalState("mode") || "ask"
+				const currentConfig = await provider.providerSettingsManager.getModeAutoApprovalConfig(currentMode)
+				await provider.providerSettingsManager.setModeAutoApprovalConfig(currentMode, {
+					...currentConfig,
+					alwaysAllowReadOnlyOutsideWorkspace: message.bool ?? false,
+				})
+			}
 			await provider.postStateToWebview()
 			break
 		case "alwaysAllowWrite":
 			await updateGlobalState("alwaysAllowWrite", message.bool ?? undefined)
+			// Save to current mode's auto-approval config
+			if (isAutoApprovalConfigKey("alwaysAllowWrite")) {
+				const currentMode = getGlobalState("mode") || "ask"
+				const currentConfig = await provider.providerSettingsManager.getModeAutoApprovalConfig(currentMode)
+				await provider.providerSettingsManager.setModeAutoApprovalConfig(currentMode, {
+					...currentConfig,
+					alwaysAllowWrite: message.bool ?? false,
+				})
+			}
 			await provider.postStateToWebview()
 			break
 		case "alwaysAllowWriteOutsideWorkspace":
 			await updateGlobalState("alwaysAllowWriteOutsideWorkspace", message.bool ?? undefined)
+			// Save to current mode's auto-approval config
+			if (isAutoApprovalConfigKey("alwaysAllowWriteOutsideWorkspace")) {
+				const currentMode = getGlobalState("mode") || "ask"
+				const currentConfig = await provider.providerSettingsManager.getModeAutoApprovalConfig(currentMode)
+				await provider.providerSettingsManager.setModeAutoApprovalConfig(currentMode, {
+					...currentConfig,
+					alwaysAllowWriteOutsideWorkspace: message.bool ?? false,
+				})
+			}
 			await provider.postStateToWebview()
 			break
 		case "alwaysAllowWriteProtected":
 			await updateGlobalState("alwaysAllowWriteProtected", message.bool ?? undefined)
+			// Save to current mode's auto-approval config
+			if (isAutoApprovalConfigKey("alwaysAllowWriteProtected")) {
+				const currentMode = getGlobalState("mode") || "ask"
+				const currentConfig = await provider.providerSettingsManager.getModeAutoApprovalConfig(currentMode)
+				await provider.providerSettingsManager.setModeAutoApprovalConfig(currentMode, {
+					...currentConfig,
+					alwaysAllowWriteProtected: message.bool ?? false,
+				})
+			}
 			await provider.postStateToWebview()
 			break
 		case "alwaysAllowExecute":
 			await updateGlobalState("alwaysAllowExecute", message.bool ?? undefined)
+			// Save to current mode's auto-approval config
+			if (isAutoApprovalConfigKey("alwaysAllowExecute")) {
+				const currentMode = getGlobalState("mode") || "ask"
+				const currentConfig = await provider.providerSettingsManager.getModeAutoApprovalConfig(currentMode)
+				await provider.providerSettingsManager.setModeAutoApprovalConfig(currentMode, {
+					...currentConfig,
+					alwaysAllowExecute: message.bool ?? false,
+				})
+			}
 			await provider.postStateToWebview()
 			break
 		case "alwaysAllowBrowser":
 			await updateGlobalState("alwaysAllowBrowser", message.bool ?? undefined)
+			// Save to current mode's auto-approval config
+			if (isAutoApprovalConfigKey("alwaysAllowBrowser")) {
+				const currentMode = getGlobalState("mode") || "ask"
+				const currentConfig = await provider.providerSettingsManager.getModeAutoApprovalConfig(currentMode)
+				await provider.providerSettingsManager.setModeAutoApprovalConfig(currentMode, {
+					...currentConfig,
+					alwaysAllowBrowser: message.bool ?? false,
+				})
+			}
 			await provider.postStateToWebview()
 			break
 		case "alwaysAllowMcp":
 			await updateGlobalState("alwaysAllowMcp", message.bool)
+			// Save to current mode's auto-approval config
+			if (isAutoApprovalConfigKey("alwaysAllowMcp")) {
+				const currentMode = getGlobalState("mode") || "ask"
+				const currentConfig = await provider.providerSettingsManager.getModeAutoApprovalConfig(currentMode)
+				await provider.providerSettingsManager.setModeAutoApprovalConfig(currentMode, {
+					...currentConfig,
+					alwaysAllowMcp: message.bool ?? false,
+				})
+			}
 			await provider.postStateToWebview()
 			break
 		case "alwaysAllowModeSwitch":
+			if (isAutoApprovalConfigKey("alwaysAllowModeSwitch")) {
+				const currentMode = getGlobalState("mode") || "ask"
+				const currentConfig = await provider.providerSettingsManager.getModeAutoApprovalConfig(currentMode)
+				const updatedConfig = { ...currentConfig, alwaysAllowModeSwitch: message.bool }
+				await provider.providerSettingsManager.setModeAutoApprovalConfig(currentMode, updatedConfig)
+			}
 			await updateGlobalState("alwaysAllowModeSwitch", message.bool)
 			await provider.postStateToWebview()
 			break
@@ -358,14 +437,32 @@ export const webviewMessageHandler = async (
 			await provider.postStateToWebview()
 			break
 		case "alwaysAllowSubtasks":
+			if (isAutoApprovalConfigKey("alwaysAllowSubtasks")) {
+				const currentMode = getGlobalState("mode") || "ask"
+				const currentConfig = await provider.providerSettingsManager.getModeAutoApprovalConfig(currentMode)
+				const updatedConfig = { ...currentConfig, alwaysAllowSubtasks: message.bool }
+				await provider.providerSettingsManager.setModeAutoApprovalConfig(currentMode, updatedConfig)
+			}
 			await updateGlobalState("alwaysAllowSubtasks", message.bool)
 			await provider.postStateToWebview()
 			break
 		case "alwaysAllowUpdateTodoList":
+			if (isAutoApprovalConfigKey("alwaysAllowUpdateTodoList")) {
+				const currentMode = getGlobalState("mode") || "ask"
+				const currentConfig = await provider.providerSettingsManager.getModeAutoApprovalConfig(currentMode)
+				const updatedConfig = { ...currentConfig, alwaysAllowUpdateTodoList: message.bool }
+				await provider.providerSettingsManager.setModeAutoApprovalConfig(currentMode, updatedConfig)
+			}
 			await updateGlobalState("alwaysAllowUpdateTodoList", message.bool)
 			await provider.postStateToWebview()
 			break
 		case "alwaysAllowEditMarkdownOnly":
+			if (isAutoApprovalConfigKey("alwaysAllowEditMarkdownOnly")) {
+				const currentMode = getGlobalState("mode") || "ask"
+				const currentConfig = await provider.providerSettingsManager.getModeAutoApprovalConfig(currentMode)
+				const updatedConfig = { ...currentConfig, alwaysAllowEditMarkdownOnly: message.bool }
+				await provider.providerSettingsManager.setModeAutoApprovalConfig(currentMode, updatedConfig)
+			}
 			await updateGlobalState("alwaysAllowEditMarkdownOnly", message.bool)
 			await provider.postStateToWebview()
 			break
@@ -1319,6 +1416,12 @@ export const webviewMessageHandler = async (
 			await provider.postStateToWebview()
 			break
 		case "alwaysAllowFollowupQuestions":
+			if (isAutoApprovalConfigKey("alwaysAllowFollowupQuestions")) {
+				const currentMode = getGlobalState("mode") || "ask"
+				const currentConfig = await provider.providerSettingsManager.getModeAutoApprovalConfig(currentMode)
+				const updatedConfig = { ...currentConfig, alwaysAllowFollowupQuestions: message.bool ?? false }
+				await provider.providerSettingsManager.setModeAutoApprovalConfig(currentMode, updatedConfig)
+			}
 			await updateGlobalState("alwaysAllowFollowupQuestions", message.bool ?? false)
 			await provider.postStateToWebview()
 			break

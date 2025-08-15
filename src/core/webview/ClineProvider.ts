@@ -1031,6 +1031,24 @@ export class ClineProvider
 			}
 		}
 
+		// Load the auto approval config for the new mode
+		try {
+			const modeAutoApprovalConfig = await this.providerSettingsManager.getModeAutoApprovalConfig(newMode)
+
+			// Update global state with the mode-specific auto approval configuration
+			await this.updateGlobalState("autoApprovalEnabled", modeAutoApprovalConfig.autoApprovalEnabled)
+			await this.updateGlobalState("alwaysAllowReadOnly", modeAutoApprovalConfig.alwaysAllowReadOnly)
+			await this.updateGlobalState("alwaysAllowWrite", modeAutoApprovalConfig.alwaysAllowWrite)
+			await this.updateGlobalState("alwaysAllowExecute", modeAutoApprovalConfig.alwaysAllowExecute)
+			await this.updateGlobalState("alwaysAllowBrowser", modeAutoApprovalConfig.alwaysAllowBrowser)
+			await this.updateGlobalState("alwaysAllowMcp", modeAutoApprovalConfig.alwaysAllowMcp)
+			await this.updateGlobalState("allowedCommands", modeAutoApprovalConfig.allowedCommands)
+			await this.updateGlobalState("deniedCommands", modeAutoApprovalConfig.deniedCommands)
+		} catch (error) {
+			console.error(`Failed to load auto approval config for mode ${newMode}:`, error)
+			// Continue execution even if auto approval config loading fails
+		}
+
 		await this.postStateToWebview()
 	}
 

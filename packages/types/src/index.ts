@@ -1,4 +1,5 @@
 export * from "./api.js"
+export * from "./auto-approval-config.js"
 export * from "./cloud.js"
 export * from "./codebase-index.js"
 export * from "./events.js"
