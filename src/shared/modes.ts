@@ -203,7 +203,7 @@ export function isToolAllowedForMode(
 			const filePath = toolParams?.path
 			if (filePath && isMarkdownFile(filePath)) {
 				// Check if this is an actual edit operation (not just path-only for streaming)
-				const isEditOperation = EDIT_OPERATION_PARAMS.some((param) => toolParams?.[param])
+				const isEditOperation = EDIT_OPERATION_PARAMS.some((param) => param in (toolParams || {}))
 				if (isEditOperation) {
 					return true
 				}
@@ -278,7 +278,7 @@ export function isToolAllowedForMode(
 		if (groupName === "edit" && options.fileRegex) {
 			const filePath = toolParams?.path
 			// Check if this is an actual edit operation (not just path-only for streaming)
-			const isEditOperation = EDIT_OPERATION_PARAMS.some((param) => toolParams?.[param])
+			const isEditOperation = EDIT_OPERATION_PARAMS.some((param) => param in (toolParams || {}))
 
 			// Handle single file path validation
 			if (filePath && isEditOperation && !doesFileMatchRegex(filePath, options.fileRegex)) {
