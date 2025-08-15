@@ -506,8 +506,9 @@
 	display: flex;
 	flex-direction: column;
 	gap: 0;
-	border: 1px solid var(--vscode-descriptionForeground);
+	border: 1px solid #d1d5db;
 	border-radius: 6px;
-	padding: 8px;
-	opacity: 0.8;
+	padding: 12px;
+	margin: 8px 0;
+	opacity: 0.9;
 }
