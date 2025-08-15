@@ -37,25 +37,26 @@ export type AutoApprovalConfig = z.infer<typeof autoApprovalConfigSchema>
 
 /**
  * Default auto-approval configuration
+ * Includes default approvals for: read, retry, self-approval, questions, todos, MCP, browser
  */
 export const DEFAULT_AUTO_APPROVAL_CONFIG: AutoApprovalConfig = {
-	autoApprovalEnabled: false,
-	alwaysAllowReadOnly: false,
-	alwaysAllowReadOnlyOutsideWorkspace: false,
+	autoApprovalEnabled: true,
+	alwaysAllowReadOnly: true,
+	alwaysAllowReadOnlyOutsideWorkspace: true,
 	alwaysAllowWrite: false,
 	alwaysAllowWriteOutsideWorkspace: false,
 	alwaysAllowWriteProtected: false,
 	writeDelayMs: 1000,
-	alwaysAllowBrowser: false,
-	alwaysApproveResubmit: false,
+	alwaysAllowBrowser: true,
+	alwaysApproveResubmit: true,
 	requestDelaySeconds: 0,
-	alwaysAllowMcp: false,
+	alwaysAllowMcp: true,
 	alwaysAllowModeSwitch: false,
-	alwaysAllowSubtasks: false,
+	alwaysAllowSubtasks: true,
 	alwaysAllowExecute: false,
-	alwaysAllowFollowupQuestions: false,
+	alwaysAllowFollowupQuestions: true,
 	followupAutoApproveTimeoutMs: 60000,
-	alwaysAllowUpdateTodoList: false,
+	alwaysAllowUpdateTodoList: true,
 	alwaysAllowEditMarkdownOnly: false,
 	allowedCommands: [],
 	deniedCommands: [],
