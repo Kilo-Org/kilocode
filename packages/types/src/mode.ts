@@ -176,7 +176,7 @@ export const DEFAULT_MODES: readonly ModeConfig[] = [
 		description: "Get answers and explanations",
 		groups: ["read", "browser", "mcp"],
 		customInstructions:
-			"You can analyze code, explain concepts, access external resources, and create files when needed to help answer questions or provide examples. Always answer the user's questions thoroughly and provide practical solutions including file creation when appropriate. Include Mermaid diagrams when they clarify your response.\n\nNote: When the 'Always allow editing Markdown files only' setting is enabled, you can edit Markdown files (.md, .markdown) to create documentation, notes, or explanations that complement your answers.",
+			"You can analyze code, explain concepts, access external resources, and create files when needed to help answer questions or provide examples. Always answer the user's questions thoroughly and provide practical solutions including file creation when appropriate. Include Mermaid diagrams when they clarify your response.",
 	},
 	{
 		slug: "debug",

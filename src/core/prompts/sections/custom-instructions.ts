@@ -299,7 +299,7 @@ export async function addCustomInstructions(
 		rooIgnoreInstructions?: string
 		localRulesToggleState?: ClineRulesToggles
 		globalRulesToggleState?: ClineRulesToggles
-		settings?: SystemPromptSettings
+		settings?: SystemPromptSettings | { alwaysAllowEditMarkdownOnly?: boolean }
 	} = {},
 	// kilocode_change end
 ): Promise<string> {
@@ -374,7 +374,11 @@ export async function addCustomInstructions(
 	}
 
 	// Add AGENTS.md content if enabled (default: true)
-	if (options.settings?.useAgentRules !== false) {
+	if (
+		!options.settings ||
+		!("alwaysAllowEditMarkdownOnly" in options.settings) ||
+		(options.settings as SystemPromptSettings).useAgentRules !== false
+	) {
 		const agentRulesContent = await loadAgentRulesFile(cwd)
 		if (agentRulesContent && agentRulesContent.trim()) {
 			rules.push(agentRulesContent.trim())

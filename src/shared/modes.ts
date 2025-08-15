@@ -367,6 +367,7 @@ export async function getFullModeDetails(
 		cwd?: string
 		globalCustomInstructions?: string
 		language?: string
+		settings?: { alwaysAllowEditMarkdownOnly?: boolean }
 	},
 ): Promise<ModeConfig> {
 	// First get the base mode config from custom modes or built-in modes
@@ -375,8 +376,9 @@ export async function getFullModeDetails(
 	// Check for any prompt component overrides
 	const promptComponent = customModePrompts?.[modeSlug]
 
-	// Get the base custom instructions
-	const baseCustomInstructions = promptComponent?.customInstructions || baseMode.customInstructions || ""
+	// Get the base custom instructions with dynamic generation support
+	let baseCustomInstructions =
+		promptComponent?.customInstructions || getCustomInstructions(modeSlug, customModes, options?.settings) || ""
 	const baseWhenToUse = promptComponent?.whenToUse || baseMode.whenToUse || ""
 	const baseDescription = promptComponent?.description || baseMode.description || ""
 
@@ -388,7 +390,7 @@ export async function getFullModeDetails(
 			options.globalCustomInstructions || "",
 			options.cwd,
 			modeSlug,
-			{ language: options.language },
+			{ language: options.language, settings: options.settings },
 		)
 	}
 
@@ -436,11 +438,25 @@ export function getWhenToUse(modeSlug: string, customModes?: ModeConfig[]): stri
 }
 
 // Helper function to safely get custom instructions
-export function getCustomInstructions(modeSlug: string, customModes?: ModeConfig[]): string {
+export function getCustomInstructions(
+	modeSlug: string,
+	customModes?: ModeConfig[],
+	settings?: { alwaysAllowEditMarkdownOnly?: boolean },
+): string {
 	const mode = getModeBySlug(modeSlug, customModes)
 	if (!mode) {
 		console.warn(`No mode found for slug: ${modeSlug}`)
 		return ""
 	}
+
+	// Handle dynamic custom instructions for ask and architect modes
+	if (modeSlug === "ask" && settings?.alwaysAllowEditMarkdownOnly) {
+		return "You can create and edit Markdown files to answer questions or provide examples. You are restricted to only creating and editing Markdown files (.md, .mdx) when the 'Always allow editing Markdown files only' setting is enabled."
+	}
+
+	if (modeSlug === "architect" && settings?.alwaysAllowEditMarkdownOnly) {
+		return "You are an expert software architect. You can create and edit Markdown files to provide architectural guidance, documentation, and design decisions. You are restricted to only creating and editing Markdown files (.md, .mdx) when the 'Always allow editing Markdown files only' setting is enabled."
+	}
+
 	return mode.customInstructions ?? ""
 }

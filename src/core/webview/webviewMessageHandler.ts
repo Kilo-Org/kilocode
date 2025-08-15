@@ -365,6 +365,10 @@ export const webviewMessageHandler = async (
 			await updateGlobalState("alwaysAllowUpdateTodoList", message.bool)
 			await provider.postStateToWebview()
 			break
+		case "alwaysAllowEditMarkdownOnly":
+			await updateGlobalState("alwaysAllowEditMarkdownOnly", message.bool)
+			await provider.postStateToWebview()
+			break
 		case "askResponse":
 			provider.getCurrentCline()?.handleWebviewAskResponse(message.askResponse!, message.text, message.images)
 			break

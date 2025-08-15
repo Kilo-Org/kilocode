@@ -238,12 +238,14 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 		experiments = {} as Record<ExperimentId, boolean>,
 		customInstructions: globalCustomInstructions,
 		language,
+		alwaysAllowEditMarkdownOnly,
 	} = state ?? {}
 
 	const modeDetails = await getFullModeDetails(mode ?? defaultModeSlug, customModes, customModePrompts, {
 		cwd: cline.cwd,
 		globalCustomInstructions,
 		language: language ?? formatLanguage(vscode.env.language),
+		settings: { alwaysAllowEditMarkdownOnly },
 	})
 
 	const currentMode = modeDetails?.slug ?? mode // kilocode_change: don't try to use non-existent modes
