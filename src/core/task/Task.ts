@@ -2024,6 +2024,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					"Unexpected API Response: The language model did not provide any assistant messages. This may indicate an issue with the API or the model's output.",
 				)
 
+				// kilocode_change start
+				TelemetryService.instance.captureEvent(TelemetryEventName.NO_ASSISTANT_MESSAGES)
+				// kilocode_change end
+
 				await this.addToApiConversationHistory({
 					role: "assistant",
 					content: [{ type: "text", text: "Failure: I did not provide a response." }],

@@ -30,6 +30,7 @@ export enum TelemetryEventName {
 	WEBVIEW_MEMORY_USAGE = "Webview Memory Usage",
 	FREE_MODELS_LINK_CLICKED = "Free Models Link Clicked",
 	SUGGESTION_BUTTON_CLICKED = "Suggestion Button Clicked",
+	NO_ASSISTANT_MESSAGES = "No Assistant Messages",
 	// kilocode_change end
 
 	TASK_CREATED = "Task Created",
