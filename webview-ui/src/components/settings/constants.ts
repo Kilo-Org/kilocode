@@ -8,7 +8,10 @@ import {
 	deepSeekModels,
 	moonshotModels,
 	geminiModels,
+	// kilocode_change start
 	geminiCliModels,
+	qwenCodeModels,
+	// kilocode_change end
 	mistralModels,
 	openAiNativeModels,
 	vertexModels,
@@ -36,6 +39,7 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	// kilocode_change start
 	"gemini-cli": geminiCliModels,
 	bigmodel: bigModelModels,
+	"qwen-code": qwenCodeModels,
 	// kilocode_change end
 	mistral: mistralModels,
 	"openai-native": openAiNativeModels,
@@ -61,6 +65,7 @@ export const PROVIDERS = [
 	// kilocode_change start
 	{ value: "bigmodel", label: "BigModel" },
 	{ value: "virtual-quota-fallback", label: "Virtual Quota Fallback" },
+	{ value: "qwen-code", label: "Qwen Code" },
 	// kilocode_change end
 	{ value: "deepseek", label: "DeepSeek" },
 	{ value: "moonshot", label: "Moonshot" },

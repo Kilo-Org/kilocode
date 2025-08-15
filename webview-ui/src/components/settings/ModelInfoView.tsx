@@ -119,7 +119,7 @@ export const ModelInfoView = ({
 	)
 }
 
-const ModelInfoSupportsItem = ({
+export const ModelInfoSupportsItem = ({
 	isSupported,
 	supportsLabel,
 	doesNotSupportLabel,

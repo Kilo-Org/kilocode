@@ -10,6 +10,7 @@ import { ProviderSettings, ModelInfo } from "@roo-code/types"
 import { useSelectedModel } from "../useSelectedModel"
 import { useRouterModels } from "../useRouterModels"
 import { useOpenRouterModelProviders } from "../useOpenRouterModelProviders"
+import { ExtensionStateContextProvider } from "@src/context/ExtensionStateContext" // kilocode_change
 
 vi.mock("../useRouterModels")
 vi.mock("../useOpenRouterModelProviders")
@@ -25,8 +26,14 @@ const createWrapper = () => {
 			},
 		},
 	})
+	// kilocode_change start: wrap with ExtensionStateContextProvider
 	return ({ children }: { children: React.ReactNode }) =>
-		React.createElement(QueryClientProvider, { client: queryClient }, children)
+		React.createElement(
+			ExtensionStateContextProvider,
+			null,
+			React.createElement(QueryClientProvider, { client: queryClient }, children),
+		)
+	// kilocode_change end
 }
 
 describe("useSelectedModel", () => {
