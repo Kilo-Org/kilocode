@@ -5,7 +5,7 @@
 	display: flex;
 	align-items: center;
 	gap: 10px;
-	margin-bottom: 10px;
+	margin-bottom: 6px;
 	word-break: break-word;
 }
 
@@ -384,12 +384,20 @@
 	margin-top: 8px;
 }
 
+.mt-6 {
+	margin-top: 6px;
+}
+
 .mr-4 {
 	margin-right: 4px;
 }
 
 .pt-10 {
 	padding-top: 10px;
+}
+
+.pt-6 {
+	padding-top: 6px;
 }
 
 .pb-15 {
@@ -432,7 +440,6 @@
 
 /* Detailed error styles */
 .detailed-error-container {
-	margin-top: 8px;
 	padding: 12px;
 	background-color: var(--vscode-editor-background);
 	border: 1px solid var(--vscode-editorGroup-border);
@@ -484,4 +491,23 @@
 .user-feedback-diff-container {
 	margin-top: -10px;
 	width: 100%;
+}
+
+/* Checkpoint separator styles */
+.checkpoint-separator {
+	color: var(--vscode-descriptionForeground);
+	font-size: 12px;
+	opacity: 0.6;
+	user-select: none;
+}
+
+/* File list container styles */
+.file-list-container {
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+	border: 1px solid var(--vscode-descriptionForeground);
+	border-radius: 6px;
+	padding: 8px;
+	opacity: 0.8;
 }

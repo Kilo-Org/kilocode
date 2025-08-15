@@ -919,7 +919,7 @@ export const ChatRowContent = ({
 									</p>
 									{/* kilocode_change start: 添加显示详细错误信息的按钮 */}
 									{apiRequestFailedMessage && (
-										<div className="mt-8">
+										<div className="mt-6">
 											<VSCodeButton
 												appearance="secondary"
 												onClick={() => setShowDetailedError(!showDetailedError)}>
@@ -931,7 +931,7 @@ export const ChatRowContent = ({
 									)}
 									{/* 显示详细错误信息 */}
 									{showDetailedError && apiRequestFailedMessage && (
-										<div className="detailed-error-container">
+										<div className="detailed-error-container mt-6">
 											<div className="detailed-error-header">
 												<span className="detailed-error-title">详细错误信息:</span>
 												<VSCodeButton
@@ -948,7 +948,7 @@ export const ChatRowContent = ({
 							)}
 
 							{isExpanded && (
-								<div className="mt-10">
+								<div className="mt-6">
 									<CodeAccordian
 										code={safeJsonParse<any>(message.text)?.request}
 										language="markdown"
