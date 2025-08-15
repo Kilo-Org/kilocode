@@ -24,8 +24,13 @@ if (buildNumberMatch && buildNumberMatch[1]) {
     buildNumber = buildNumberMatch[1];
 }
 
-// 获取功能说明 (从命令行参数或环境变量)
-const featureDescription = process.argv[2] || process.env.FEATURE_DESCRIPTION || 'release';
+// 获取功能说明 (优先从 buildInfo.ts，然后从命令行参数或环境变量)
+const featureDescriptionMatch = buildInfoContent.match(/export const featureDescription = "([^"]+)"/);
+let featureDescriptionFromFile = null;
+if (featureDescriptionMatch && featureDescriptionMatch[1]) {
+    featureDescriptionFromFile = featureDescriptionMatch[1];
+}
+const featureDescription = process.argv[2] || process.env.FEATURE_DESCRIPTION || featureDescriptionFromFile || 'release';
 
 // 构建 vsix 文件名: kilo-code-版本号-编译号-功能说明.vsix
 const vsixFileName = `${packageName}-${packageVersion}-${buildNumber}-${featureDescription}.vsix`;
