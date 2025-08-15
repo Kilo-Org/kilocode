@@ -206,6 +206,25 @@ export class FileContextTracker {
 		return files
 	}
 
+	// Returns the list of files modified by Roo during this task
+	async getModifiedFilesList(): Promise<string[]> {
+		try {
+			const metadata = await this.getTaskMetadata(this.taskId)
+			const modifiedFiles = new Set<string>()
+
+			metadata.files_in_context.forEach((entry) => {
+				if (entry.record_source === "roo_edited" && entry.roo_edit_date) {
+					modifiedFiles.add(entry.path)
+				}
+			})
+
+			return Array.from(modifiedFiles).sort()
+		} catch (error) {
+			console.error("Failed to get modified files list:", error)
+			return []
+		}
+	}
+
 	getAndClearCheckpointPossibleFile(): string[] {
 		const files = Array.from(this.checkpointPossibleFiles)
 		this.checkpointPossibleFiles.clear()

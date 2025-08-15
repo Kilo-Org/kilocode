@@ -89,9 +89,19 @@ export async function attemptCompletionTool(
 
 			cline.consecutiveMistakeCount = 0
 
+			// Get the list of files modified during this task
+			const modifiedFiles = await cline.fileContextTracker.getModifiedFilesList()
+			let finalResult = result
+
+			// Add modified files list to the result if there are any
+			if (modifiedFiles.length > 0) {
+				const fileList = modifiedFiles.map((file, index) => `${index + 1}. ${file}`).join("\n")
+				finalResult += `\n\n本次修改的文件如下：\n${fileList}`
+			}
+
 			// Command execution is permanently disabled in attempt_completion
 			// Users must use execute_command tool separately before attempt_completion
-			await cline.say("completion_result", result, undefined, false)
+			await cline.say("completion_result", finalResult, undefined, false)
 			TelemetryService.instance.captureTaskCompleted(cline.taskId)
 			cline.emit(RooCodeEventName.TaskCompleted, cline.taskId, cline.getTokenUsage(), cline.toolUsage)
 
