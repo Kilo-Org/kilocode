@@ -262,8 +262,6 @@ export const ModelPicker = ({
 					/*kilocode_change start*/
 					apiConfiguration.apiProvider === "kilocode" ? (
 						<Trans i18nKey="kilocode:settings.provider.automaticFetch" />
-					) : apiConfiguration.apiProvider === "cometapi" ? (
-						<Trans i18nKey="settings:modelPicker.cometApiAutomaticFetch" />
 					) : (
 						<Trans
 							i18nKey="settings:modelPicker.automaticFetch"
