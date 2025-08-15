@@ -1038,10 +1038,25 @@ export class ClineProvider
 			// Update global state with the mode-specific auto approval configuration
 			await this.updateGlobalState("autoApprovalEnabled", modeAutoApprovalConfig.autoApprovalEnabled)
 			await this.updateGlobalState("alwaysAllowReadOnly", modeAutoApprovalConfig.alwaysAllowReadOnly)
+			await this.updateGlobalState(
+				"alwaysAllowReadOnlyOutsideWorkspace",
+				modeAutoApprovalConfig.alwaysAllowReadOnlyOutsideWorkspace,
+			)
 			await this.updateGlobalState("alwaysAllowWrite", modeAutoApprovalConfig.alwaysAllowWrite)
 			await this.updateGlobalState("alwaysAllowExecute", modeAutoApprovalConfig.alwaysAllowExecute)
-			await this.updateGlobalState("alwaysAllowBrowser", modeAutoApprovalConfig.alwaysAllowBrowser)
+			await this.updateGlobalState("alwaysApproveResubmit", modeAutoApprovalConfig.alwaysApproveResubmit)
+			await this.updateGlobalState(
+				"alwaysAllowFollowupQuestions",
+				modeAutoApprovalConfig.alwaysAllowFollowupQuestions,
+			)
+			await this.updateGlobalState("alwaysAllowUpdateTodoList", modeAutoApprovalConfig.alwaysAllowUpdateTodoList)
 			await this.updateGlobalState("alwaysAllowMcp", modeAutoApprovalConfig.alwaysAllowMcp)
+			await this.updateGlobalState("alwaysAllowBrowser", modeAutoApprovalConfig.alwaysAllowBrowser)
+			await this.updateGlobalState("alwaysAllowSubtasks", modeAutoApprovalConfig.alwaysAllowSubtasks)
+			await this.updateGlobalState(
+				"alwaysAllowEditMarkdownOnly",
+				modeAutoApprovalConfig.alwaysAllowEditMarkdownOnly,
+			)
 			await this.updateGlobalState("allowedCommands", modeAutoApprovalConfig.allowedCommands)
 			await this.updateGlobalState("deniedCommands", modeAutoApprovalConfig.deniedCommands)
 		} catch (error) {
