@@ -42,16 +42,14 @@ export const CheckpointSaved = ({ checkpoint, ...props }: CheckpointSavedProps) 
 	}
 
 	return (
-		<div className="flex items-center justify-between">
+		<div className="flex items-center w-full">
 			<div className="flex gap-2">
 				<span className="codicon codicon-git-commit text-blue-400" />
 				<span className="font-bold">{t("chat:checkpoint.regular")}</span>
 				{isCurrent && <span className="text-muted text-sm">{t("chat:checkpoint.current")}</span>}
 			</div>
-			<div className="flex items-center gap-3">
-				<div className="checkpoint-separator">----</div>
-				<CheckpointMenu {...props} checkpoint={metadata} />
-			</div>
+			<div className="flex-1 mx-3 border-t border-gray-300 border-dashed"></div>
+			<CheckpointMenu {...props} checkpoint={metadata} />
 		</div>
 	)
 }
