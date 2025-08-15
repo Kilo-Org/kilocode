@@ -1569,6 +1569,15 @@ export const webviewMessageHandler = async (
 			break
 		case "autoApprovalEnabled":
 			await updateGlobalState("autoApprovalEnabled", message.bool ?? false)
+			// Save to current mode's auto-approval config
+			if (isAutoApprovalConfigKey("autoApprovalEnabled")) {
+				const currentMode = getGlobalState("mode") || "ask"
+				const currentConfig = await provider.providerSettingsManager.getModeAutoApprovalConfig(currentMode)
+				await provider.providerSettingsManager.setModeAutoApprovalConfig(currentMode, {
+					...currentConfig,
+					autoApprovalEnabled: message.bool ?? false,
+				})
+			}
 			await provider.postStateToWebview()
 			break
 		case "enhancePrompt":
