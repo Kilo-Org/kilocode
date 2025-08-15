@@ -451,11 +451,11 @@ export function getCustomInstructions(
 
 	// Handle dynamic custom instructions for ask and architect modes
 	if (modeSlug === "ask" && settings?.alwaysAllowEditMarkdownOnly) {
-		return "You can create and edit Markdown files to answer questions or provide examples. You are restricted to only creating and editing Markdown files (.md, .mdx) when the 'Always allow editing Markdown files only' setting is enabled."
+		return "SPECIAL EXCEPTION: When the 'Edit .md files only' option is enabled in auto-approval settings, you can also use write_to_file and replace_in_file tools in ASK MODE, but ONLY for creating and editing .md (Markdown) files. This allows you to create documentation, notes, and plans directly in Markdown format during the planning phase. When creating .md files in ASK MODE, you do NOT need to ask the user to switch to Code MODE - this is considered part of the planning process, not implementation."
 	}
 
 	if (modeSlug === "architect" && settings?.alwaysAllowEditMarkdownOnly) {
-		return "You are an expert software architect. You can create and edit Markdown files to provide architectural guidance, documentation, and design decisions. You are restricted to only creating and editing Markdown files (.md, .mdx) when the 'Always allow editing Markdown files only' setting is enabled."
+		return "SPECIAL EXCEPTION: When the 'Edit .md files only' option is enabled in auto-approval settings, you can also use write_to_file and replace_in_file tools in ARCHITECT MODE, but ONLY for creating and editing .md (Markdown) files. This allows you to create architectural documentation, design decisions, and plans directly in Markdown format during the planning phase. When creating .md files in ARCHITECT MODE, you do NOT need to ask the user to switch to Code MODE - this is considered part of the planning process, not implementation."
 	}
 
 	return mode.customInstructions ?? ""

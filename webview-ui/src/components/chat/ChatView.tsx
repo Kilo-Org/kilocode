@@ -79,6 +79,13 @@ export const MAX_IMAGES_PER_MESSAGE = 20 // Anthropic limits to 20 images
 
 const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0
 
+// Helper function to check if a file is a markdown file
+const isMarkdownFile = (filePath: string): boolean => {
+	if (!filePath) return false
+	const ext = filePath.toLowerCase().split(".").pop()
+	return ext === "md" || ext === "markdown"
+}
+
 const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewProps> = (
 	{ isHidden, showAnnouncement, hideAnnouncement },
 	ref,
@@ -118,6 +125,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		alwaysAllowSubtasks,
 		alwaysAllowFollowupQuestions,
 		alwaysAllowUpdateTodoList,
+		alwaysAllowEditMarkdownOnly,
 		customModes,
 		telemetrySetting,
 		hasSystemPromptOverride,
@@ -1245,6 +1253,16 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				}
 
 				if (isWriteToolAction(message)) {
+					// Check if this is a markdown file and alwaysAllowEditMarkdownOnly is enabled
+					const filePath = tool.path || tool.file_path || tool.filePath
+					if (alwaysAllowEditMarkdownOnly && filePath && isMarkdownFile(filePath)) {
+						return (
+							(!isOutsideWorkspace || alwaysAllowWriteOutsideWorkspace) &&
+							(!isProtected || alwaysAllowWriteProtected)
+						)
+					}
+
+					// Regular write permission check
 					return (
 						alwaysAllowWrite &&
 						(!isOutsideWorkspace || alwaysAllowWriteOutsideWorkspace) &&
@@ -1274,6 +1292,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			alwaysAllowFollowupQuestions,
 			alwaysAllowSubtasks,
 			alwaysAllowUpdateTodoList,
+			alwaysAllowEditMarkdownOnly,
 		],
 	)
 
