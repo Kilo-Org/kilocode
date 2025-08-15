@@ -283,6 +283,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	private lastUsedInstructions?: string
 	private skipPrevResponseIdOnce: boolean = false
 
+	// Context condensing
+	isCondensing = false
+	condensingAbortController?: AbortController
+
 	constructor({
 		context, // kilocode_change
 		provider,
@@ -884,72 +888,98 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	}
 
 	public async condenseContext(): Promise<void> {
-		const systemPrompt = await this.getSystemPrompt()
-
-		// Get condensing configuration
-		// Using type assertion to handle the case where Phase 1 hasn't been implemented yet
-		const state = await this.providerRef.deref()?.getState()
-		const customCondensingPrompt = state ? (state as any).customCondensingPrompt : undefined
-		const condensingApiConfigId = state ? (state as any).condensingApiConfigId : undefined
-		const listApiConfigMeta = state ? (state as any).listApiConfigMeta : undefined
-
-		// Determine API handler to use
-		let condensingApiHandler: ApiHandler | undefined
-		if (condensingApiConfigId && listApiConfigMeta && Array.isArray(listApiConfigMeta)) {
-			// Using type assertion for the id property to avoid implicit any
-			const matchingConfig = listApiConfigMeta.find((config: any) => config.id === condensingApiConfigId)
-			if (matchingConfig) {
-				const profile = await this.providerRef.deref()?.providerSettingsManager.getProfile({
-					id: condensingApiConfigId,
-				})
-				// Ensure profile and apiProvider exist before trying to build handler
-				if (profile && profile.apiProvider) {
-					condensingApiHandler = buildApiHandler(profile)
-				}
-			}
+		// Check if already condensing
+		if (this.isCondensing) {
+			console.log(`[Task#${this.taskId}] Already condensing context, skipping`)
+			return
 		}
 
-		const { contextTokens: prevContextTokens } = this.getTokenUsage()
-		const {
-			messages,
-			summary,
-			cost,
-			newContextTokens = 0,
-			error,
-		} = await summarizeConversation(
-			this.apiConversationHistory,
-			this.api, // Main API handler (fallback)
-			systemPrompt, // Default summarization prompt (fallback)
-			this.taskId,
-			prevContextTokens,
-			false, // manual trigger
-			customCondensingPrompt, // User's custom prompt
-			condensingApiHandler, // Specific handler for condensing
-		)
-		if (error) {
-			this.say(
-				"condense_context_error",
+		// Set condensing flag and create abort controller
+		this.isCondensing = true
+		this.condensingAbortController = new AbortController()
+		// Store the signal reference to avoid accessing a potentially disposed controller
+		const abortSignal = this.condensingAbortController.signal
+
+		try {
+			const systemPrompt = await this.getSystemPrompt()
+
+			// Get condensing configuration
+			// Using type assertion to handle the case where Phase 1 hasn't been implemented yet
+			const state = await this.providerRef.deref()?.getState()
+			const customCondensingPrompt = state ? (state as any).customCondensingPrompt : undefined
+			const condensingApiConfigId = state ? (state as any).condensingApiConfigId : undefined
+			const listApiConfigMeta = state ? (state as any).listApiConfigMeta : undefined
+
+			// Determine API handler to use
+			let condensingApiHandler: ApiHandler | undefined
+			if (condensingApiConfigId && listApiConfigMeta && Array.isArray(listApiConfigMeta)) {
+				// Using type assertion for the id property to avoid implicit any
+				const matchingConfig = listApiConfigMeta.find((config: any) => config.id === condensingApiConfigId)
+				if (matchingConfig) {
+					const profile = await this.providerRef.deref()?.providerSettingsManager.getProfile({
+						id: condensingApiConfigId,
+					})
+					// Ensure profile and apiProvider exist before trying to build handler
+					if (profile && profile.apiProvider) {
+						condensingApiHandler = buildApiHandler(profile)
+					}
+				}
+			}
+
+			const { contextTokens: prevContextTokens } = this.getTokenUsage()
+			const {
+				messages,
+				summary,
+				cost,
+				newContextTokens = 0,
 				error,
+			} = await summarizeConversation(
+				this.apiConversationHistory,
+				this.api, // Main API handler (fallback)
+				systemPrompt, // Default summarization prompt (fallback)
+				this.taskId,
+				prevContextTokens,
+				false, // manual trigger
+				customCondensingPrompt, // User's custom prompt
+				condensingApiHandler, // Specific handler for condensing
+				abortSignal, // Pass abort signal
+			)
+
+			// Check if we were aborted
+			if (abortSignal.aborted) {
+				console.log(`[Task#${this.taskId}] Context condensing was aborted`)
+				return
+			}
+
+			if (error) {
+				this.say(
+					"condense_context_error",
+					error,
+					undefined /* images */,
+					false /* partial */,
+					undefined /* checkpoint */,
+					undefined /* progressStatus */,
+					{ isNonInteractive: true } /* options */,
+				)
+				return
+			}
+			await this.overwriteApiConversationHistory(messages)
+			const contextCondense: ContextCondense = { summary, cost, newContextTokens, prevContextTokens }
+			await this.say(
+				"condense_context",
+				undefined /* text */,
 				undefined /* images */,
 				false /* partial */,
 				undefined /* checkpoint */,
 				undefined /* progressStatus */,
 				{ isNonInteractive: true } /* options */,
+				contextCondense,
 			)
-			return
+		} finally {
+			// Clean up
+			this.isCondensing = false
+			this.condensingAbortController = undefined
 		}
-		await this.overwriteApiConversationHistory(messages)
-		const contextCondense: ContextCondense = { summary, cost, newContextTokens, prevContextTokens }
-		await this.say(
-			"condense_context",
-			undefined /* text */,
-			undefined /* images */,
-			false /* partial */,
-			undefined /* checkpoint */,
-			undefined /* progressStatus */,
-			{ isNonInteractive: true } /* options */,
-			contextCondense,
-		)
 	}
 
 	async say(
@@ -1417,6 +1447,13 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				.unsubscribeFromTask(this.taskId)
 				.catch((error) => console.error("Error unsubscribing from task bridge:", error))
 			this.bridgeService = null
+		}
+
+		// Cancel any ongoing context condensing
+		if (this.condensingAbortController) {
+			console.log(`[Task] aborting context condensing for task ${this.taskId}.${this.instanceId}`)
+			this.condensingAbortController.abort()
+			this.condensingAbortController = undefined
 		}
 
 		// Release any terminals associated with this task.
@@ -2463,43 +2500,59 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				state?.listApiConfigMeta.find((profile) => profile.name === state?.currentApiConfigName)?.id ??
 				"default"
 
-			const truncateResult = await truncateConversationIfNeeded({
-				messages: this.apiConversationHistory,
-				totalTokens: contextTokens,
-				maxTokens,
-				contextWindow,
-				apiHandler: this.api,
-				autoCondenseContext,
-				autoCondenseContextPercent,
-				systemPrompt,
-				taskId: this.taskId,
-				customCondensingPrompt,
-				condensingApiHandler,
-				profileThresholds,
-				currentProfileId,
-			})
-			if (truncateResult.messages !== this.apiConversationHistory) {
-				await this.overwriteApiConversationHistory(truncateResult.messages)
+			// Create abort controller for automatic condensing if not already condensing
+			let autoCondensingAbortController: AbortController | undefined
+			let abortSignal: AbortSignal | undefined
+			if (autoCondenseContext && !this.isCondensing) {
+				this.isCondensing = true
+				this.condensingAbortController = new AbortController()
+				autoCondensingAbortController = this.condensingAbortController
+				// Store the signal reference to avoid accessing a potentially disposed controller
+				abortSignal = this.condensingAbortController.signal
 			}
-			if (truncateResult.error) {
-				await this.say("condense_context_error", truncateResult.error)
-			} else if (truncateResult.summary) {
-				// A condense operation occurred; for the next GPT‑5 API call we should NOT
-				// send previous_response_id so the request reflects the fresh condensed context.
-				this.skipPrevResponseIdOnce = true
 
-				const { summary, cost, prevContextTokens, newContextTokens = 0 } = truncateResult
-				const contextCondense: ContextCondense = { summary, cost, newContextTokens, prevContextTokens }
-				await this.say(
-					"condense_context",
-					undefined /* text */,
-					undefined /* images */,
-					false /* partial */,
-					undefined /* checkpoint */,
-					undefined /* progressStatus */,
-					{ isNonInteractive: true } /* options */,
-					contextCondense,
-				)
+			try {
+				const truncateResult = await truncateConversationIfNeeded({
+					messages: this.apiConversationHistory,
+					totalTokens: contextTokens,
+					maxTokens,
+					contextWindow,
+					apiHandler: this.api,
+					autoCondenseContext,
+					autoCondenseContextPercent,
+					systemPrompt,
+					taskId: this.taskId,
+					customCondensingPrompt,
+					condensingApiHandler,
+					profileThresholds,
+					currentProfileId,
+					abortSignal: abortSignal,
+				})
+				if (truncateResult.messages !== this.apiConversationHistory) {
+					await this.overwriteApiConversationHistory(truncateResult.messages)
+				}
+				if (truncateResult.error) {
+					await this.say("condense_context_error", truncateResult.error)
+				} else if (truncateResult.summary) {
+					const { summary, cost, prevContextTokens, newContextTokens = 0 } = truncateResult
+					const contextCondense: ContextCondense = { summary, cost, newContextTokens, prevContextTokens }
+					await this.say(
+						"condense_context",
+						undefined /* text */,
+						undefined /* images */,
+						false /* partial */,
+						undefined /* checkpoint */,
+						undefined /* progressStatus */,
+						{ isNonInteractive: true } /* options */,
+						contextCondense,
+					)
+				}
+			} finally {
+				// Clean up if we created an abort controller for automatic condensing
+				if (autoCondensingAbortController) {
+					this.isCondensing = false
+					this.condensingAbortController = undefined
+				}
 			}
 		}
 
