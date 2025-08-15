@@ -1,4 +1,5 @@
 // This file is used to store build-related information for development purposes.
 // It is not intended to be read from package.json to allow for real-time updates.
 
-export const buildNumber = "075"
+// 20250815 修改[buildNumber自动递增]
+export const buildNumber = "077"
