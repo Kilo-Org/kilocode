@@ -98,7 +98,7 @@ export async function attemptCompletionTool(
 				const fileList = modifiedFiles
 					.map((file) => {
 						const fileName = file.split("/").pop() || file
-						return `- <span style="background-color: rgba(255, 255, 0, 0.3); padding: 2px 4px; border-radius: 3px;">[${fileName}](${file})</span>`
+						return `- **[${fileName}](${file})**`
 					})
 					.join("\n")
 				finalResult += `\n\n本次修改的文件如下：\n${fileList}`
