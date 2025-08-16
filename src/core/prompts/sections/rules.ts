@@ -45,11 +45,23 @@ function getEditingInstructions(diffStrategy?: DiffStrategy): string {
 	return instructions.join("\n")
 }
 
+function getMorphEditingInstructions(): string {
+	return `- **Morph FastApply is enabled.** You have access to the \`edit_file\` tool which uses a specialized model optimized for intelligent code understanding and modification.
+- **ONLY use the edit_file tool for file modifications.** Traditional editing tools (apply_diff, write_to_file, insert_content, search_and_replace) are disabled in Morph mode.
+- **Focus on clear instructions and precise code edits** using the edit_file format with \`// ... existing code ...\` placeholders to represent unchanged sections.
+- **The edit_file tool requires three parameters:**
+  - \`target_file\`: Full path to the file to modify
+  - \`instructions\`: Single sentence describing what you're doing (use first person)
+  - \`code_edit\`: Only the lines you want to change, using \`// ... existing code ...\` for unchanged sections
+- **Always make all edits to a file in a single edit_file call** rather than multiple calls to the same file.`
+}
+
 export function getRulesSection(
 	cwd: string,
 	supportsComputerUse: boolean,
 	diffStrategy?: DiffStrategy,
 	codeIndexManager?: CodeIndexManager,
+	experiments?: Record<string, boolean>,
 ): string {
 	const isCodebaseSearchAvailable =
 		codeIndexManager &&
@@ -72,7 +84,7 @@ RULES
 - Before using the execute_command tool, you must first think about the SYSTEM INFORMATION context provided to understand the user's environment and tailor your commands to ensure they are compatible with their system. You must also consider if the command you need to run should be executed in a specific directory outside of the current working directory '${cwd.toPosix()}', and if so prepend with \`cd\`'ing into that directory && then executing the command (as one command since you are stuck operating from '${cwd.toPosix()}'). For example, if you needed to run \`npm install\` in a project outside of '${cwd.toPosix()}', you would need to prepend with a \`cd\` i.e. pseudocode for this would be \`cd (path to project) && (command, in this case npm install)\`.
 ${codebaseSearchRule}- When using the search_files tool${isCodebaseSearchAvailable ? " (after codebase_search)" : ""}, craft your regex patterns carefully to balance specificity and flexibility. Based on the user's task you may use it to find code patterns, TODO comments, function definitions, or any text-based information across the project. The results include context, so analyze the surrounding code to better understand the matches. Leverage the search_files tool in combination with other tools for more comprehensive analysis. For example, use it to find specific code patterns, then use read_file to examine the full context of interesting matches before using ${diffStrategy ? "apply_diff or write_to_file" : "write_to_file"} to make informed changes.
 - When creating a new project (such as an app, website, or any software project), organize all new files within a dedicated project directory unless the user specifies otherwise. Use appropriate file paths when writing files, as the write_to_file tool will automatically create any necessary directories. Structure the project logically, adhering to best practices for the specific type of project being created. Unless otherwise specified, new projects should be easily run without additional setup, for example most projects can be built in HTML, CSS, and JavaScript - which you can open in a browser.
-${getEditingInstructions(diffStrategy)}
+${experiments?.morphFastApply ? getMorphEditingInstructions() : getEditingInstructions(diffStrategy)}
 - Some modes have restrictions on which files they can edit. If you attempt to edit a restricted file, the operation will be rejected with a FileRestrictionError that will specify which file patterns are allowed for the current mode.
 - Be sure to consider the type of project (e.g. Python, JavaScript, web application) when determining the appropriate structure and files to include. Also consider what files may be most relevant to accomplishing the task, for example looking at a project's manifest file would help you understand the project's dependencies, which you could incorporate into any code you write.
   * For example, in architect mode trying to edit app.js would be rejected because architect mode can only edit files matching "\\.md$"

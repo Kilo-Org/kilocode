@@ -669,6 +669,125 @@ describe("SYSTEM_PROMPT", () => {
 		expect(prompt).toContain("## update_todo_list")
 	})
 
+	it("should exclude traditional editing tools and include Morph instructions when morphFastApply is enabled", async () => {
+		const experimentsWithMorph = {
+			morphFastApply: true,
+		}
+
+		const prompt = await SYSTEM_PROMPT(
+			mockContext,
+			"/test/path",
+			false, // supportsComputerUse
+			undefined, // mcpHub
+			undefined, // diffStrategy
+			undefined, // browserViewportSize
+			defaultModeSlug, // mode
+			undefined, // customModePrompts
+			undefined, // customModes
+			undefined, // globalCustomInstructions
+			undefined, // diffEnabled
+			experimentsWithMorph,
+			true, // enableMcpServerCreation
+			undefined, // language
+			undefined, // rooIgnoreInstructions
+			undefined, // partialReadsEnabled
+		)
+
+		// Should include edit_file tool
+		expect(prompt).toContain("## edit_file")
+
+		// Should NOT include traditional editing tools
+		expect(prompt).not.toContain("## apply_diff")
+		expect(prompt).not.toContain("## write_to_file")
+		expect(prompt).not.toContain("## insert_content")
+		expect(prompt).not.toContain("## search_and_replace")
+
+		// Should contain Morph-specific instructions
+		expect(prompt).toContain("Morph FastApply is enabled")
+		expect(prompt).toContain(
+			"Traditional editing tools (apply_diff, write_to_file, insert_content, search_and_replace) are disabled",
+		)
+		expect(prompt).toContain("ONLY use the edit_file tool for file modifications")
+	})
+
+	it("should include traditional editing tools and exclude edit_file when morphFastApply is disabled", async () => {
+		const experimentsWithoutMorph = {
+			morphFastApply: false,
+		}
+
+		const prompt = await SYSTEM_PROMPT(
+			mockContext,
+			"/test/path",
+			false, // supportsComputerUse
+			undefined, // mcpHub
+			new MultiSearchReplaceDiffStrategy(), // diffStrategy - include to test apply_diff
+			undefined, // browserViewportSize
+			defaultModeSlug, // mode
+			undefined, // customModePrompts
+			undefined, // customModes
+			undefined, // globalCustomInstructions
+			true, // diffEnabled
+			experimentsWithoutMorph,
+			true, // enableMcpServerCreation
+			undefined, // language
+			undefined, // rooIgnoreInstructions
+			undefined, // partialReadsEnabled
+		)
+
+		// Should NOT include edit_file tool
+		expect(prompt).not.toContain("## edit_file")
+
+		// Should include traditional editing tools
+		expect(prompt).toContain("## apply_diff")
+		expect(prompt).toContain("## write_to_file")
+		expect(prompt).toContain("## insert_content")
+		expect(prompt).toContain("## search_and_replace")
+
+		// Should NOT contain Morph-specific instructions
+		expect(prompt).not.toContain("Morph FastApply is enabled")
+		expect(prompt).not.toContain(
+			"Traditional editing tools (apply_diff, write_to_file, insert_content, search_and_replace) are disabled",
+		)
+
+		// Should contain traditional editing instructions
+		expect(prompt).toContain("For editing files, you have access to these tools:")
+	})
+
+	it("should use Morph editing instructions in rules section when morphFastApply is enabled", async () => {
+		const experimentsWithMorph = {
+			morphFastApply: true,
+		}
+
+		const prompt = await SYSTEM_PROMPT(
+			mockContext,
+			"/test/path",
+			false, // supportsComputerUse
+			undefined, // mcpHub
+			undefined, // diffStrategy
+			undefined, // browserViewportSize
+			defaultModeSlug, // mode
+			undefined, // customModePrompts
+			undefined, // customModes
+			undefined, // globalCustomInstructions
+			undefined, // diffEnabled
+			experimentsWithMorph,
+			true, // enableMcpServerCreation
+			undefined, // language
+			undefined, // rooIgnoreInstructions
+			undefined, // partialReadsEnabled
+		)
+
+		// Should contain Morph-specific editing instructions in rules section
+		expect(prompt).toContain(
+			"For editing files, you have access to the `edit_file` tool which uses Morph FastApply",
+		)
+		expect(prompt).toContain("ONLY use the edit_file tool for file modifications")
+		expect(prompt).toContain(
+			"Traditional editing tools (apply_diff, write_to_file, insert_content, search_and_replace) are disabled in Morph mode",
+		)
+		expect(prompt).toContain("// ... existing code ...")
+	})
+
 	afterAll(() => {
 		vi.restoreAllMocks()
 	})

@@ -298,6 +298,19 @@ export const ChatRowContent = ({
 						/>
 					</div>
 				)
+
+				// Check if this is a Morph request
+				const isMorphRequest = (() => {
+					try {
+						return (
+							message.text &&
+							JSON.parse(message.text || "{}")?.request?.includes?.("Morph FastApply Edit")
+						)
+					} catch {
+						return false
+					}
+				})()
+
 				return [
 					apiReqCancelReason !== null && apiReqCancelReason !== undefined ? (
 						apiReqCancelReason === "user_cancelled" ? (
@@ -306,7 +319,11 @@ export const ChatRowContent = ({
 							getIconSpan("error", errorColor)
 						)
 					) : cost !== null && cost !== undefined ? (
-						getIconSpan("check", successColor)
+						isMorphRequest ? (
+							getIconSpan("rocket", successColor)
+						) : (
+							getIconSpan("check", successColor)
+						)
 					) : apiRequestFailedMessage ? (
 						getIconSpan("error", errorColor)
 					) : (
@@ -323,11 +340,15 @@ export const ChatRowContent = ({
 							</span>
 						)
 					) : cost !== null && cost !== undefined ? (
-						<span style={{ color: normalColor, fontWeight: "bold" }}>{t("chat:apiRequest.title")}</span>
+						<span style={{ color: normalColor, fontWeight: "bold" }}>
+							{isMorphRequest ? "Edited with Morph" : t("chat:apiRequest.title")}
+						</span>
 					) : apiRequestFailedMessage ? (
 						<span style={{ color: errorColor, fontWeight: "bold" }}>{t("chat:apiRequest.failed")}</span>
 					) : (
-						<span style={{ color: normalColor, fontWeight: "bold" }}>{t("chat:apiRequest.streaming")}</span>
+						<span style={{ color: normalColor, fontWeight: "bold" }}>
+							{isMorphRequest ? "Editing with Morph..." : t("chat:apiRequest.streaming")}
+						</span>
 					),
 				]
 			case "followup":

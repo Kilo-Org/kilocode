@@ -118,6 +118,10 @@ export function getToolDescriptionsForMode(
 	// kilocode_change: Morph fast apply
 	if (experiments?.morphFastApply !== true) {
 		tools.delete("edit_file")
+	} else {
+		// When Morph is enabled, disable traditional editing tools
+		const traditionalEditingTools = ["apply_diff", "write_to_file", "insert_content", "search_and_replace"]
+		traditionalEditingTools.forEach((tool) => tools.delete(tool))
 	}
 
 	// Conditionally exclude update_todo_list if disabled in settings
