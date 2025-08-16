@@ -109,6 +109,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setWriteDelayMs: (value: number) => void
 	screenshotQuality?: number
 	setScreenshotQuality: (value: number) => void
+	collectNetworkLogs?: string // kilocode_change
+	setCollectNetworkLogs: (value: string) => void // kilocode_change
 	terminalOutputLineLimit?: number
 	setTerminalOutputLineLimit: (value: number) => void
 	terminalOutputCharacterLimit?: number
@@ -215,6 +217,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		writeDelayMs: 1000,
 		browserViewportSize: "900x600",
 		screenshotQuality: 75,
+		collectNetworkLogs: "no",
 		terminalOutputLineLimit: 500,
 		terminalOutputCharacterLimit: 50000,
 		terminalShellIntegrationTimeout: 4000,
@@ -463,6 +466,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		fuzzyMatchThreshold: state.fuzzyMatchThreshold,
 		writeDelayMs: state.writeDelayMs,
 		screenshotQuality: state.screenshotQuality,
+		collectNetworkLogs: state.collectNetworkLogs,
 		routerModels: extensionRouterModels,
 		cloudIsAuthenticated: state.cloudIsAuthenticated ?? false,
 		organizationSettingsVersion: state.organizationSettingsVersion ?? -1,
@@ -505,6 +509,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setFuzzyMatchThreshold: (value) => setState((prevState) => ({ ...prevState, fuzzyMatchThreshold: value })),
 		setWriteDelayMs: (value) => setState((prevState) => ({ ...prevState, writeDelayMs: value })),
 		setScreenshotQuality: (value) => setState((prevState) => ({ ...prevState, screenshotQuality: value })),
+		setCollectNetworkLogs: (value) => setState((prevState) => ({ ...prevState, collectNetworkLogs: value })),
 		setTerminalOutputLineLimit: (value) =>
 			setState((prevState) => ({ ...prevState, terminalOutputLineLimit: value })),
 		setTerminalOutputCharacterLimit: (value) =>

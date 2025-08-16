@@ -16,12 +16,14 @@ type BrowserSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	browserToolEnabled?: boolean
 	browserViewportSize?: string
 	screenshotQuality?: number
+	collectNetworkLogs?: string
 	remoteBrowserHost?: string
 	remoteBrowserEnabled?: boolean
 	setCachedStateField: SetCachedStateField<
 		| "browserToolEnabled"
 		| "browserViewportSize"
 		| "screenshotQuality"
+		| "collectNetworkLogs"
 		| "remoteBrowserHost"
 		| "remoteBrowserEnabled"
 	>
@@ -31,6 +33,7 @@ export const BrowserSettings = ({
 	browserToolEnabled,
 	browserViewportSize,
 	screenshotQuality,
+	collectNetworkLogs,
 	remoteBrowserHost,
 	remoteBrowserEnabled,
 	setCachedStateField,
@@ -93,6 +96,24 @@ export const BrowserSettings = ({
 			},
 			{ value: "768x1024", label: t("settings:browser.viewport.options.tablet") },
 			{ value: "360x640", label: t("settings:browser.viewport.options.mobile") },
+		],
+		[t],
+	)
+
+	const networkOptions = useMemo(
+		() => [
+			{
+				value: "no",
+				label: t("settings:browser.collectNetworkLogs.options.no"),
+			},
+			{
+				value: "mask",
+				label: t("settings:browser.collectNetworkLogs.options.mask"),
+			},
+			{
+				value: "full",
+				label: t("settings:browser.collectNetworkLogs.options.full"),
+			},
 		],
 		[t],
 	)
@@ -165,6 +186,31 @@ export const BrowserSettings = ({
 							</div>
 							<div className="text-vscode-descriptionForeground text-sm mt-1">
 								{t("settings:browser.screenshotQuality.description")}
+							</div>
+						</div>
+
+						<div>
+							<label className="block font-medium mb-1">
+								{t("settings:browser.collectNetworkLogs.label")}
+							</label>
+							<Select
+								value={collectNetworkLogs ?? "no"}
+								onValueChange={(value) => setCachedStateField("collectNetworkLogs", value)}>
+								<SelectTrigger className="w-full">
+									<SelectValue placeholder={t("settings:common.select")} />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectGroup>
+										{networkOptions.map(({ value, label }) => (
+											<SelectItem key={value} value={value}>
+												{label}
+											</SelectItem>
+										))}
+									</SelectGroup>
+								</SelectContent>
+							</Select>
+							<div className="text-vscode-descriptionForeground text-sm mt-1">
+								{t("settings:browser.collectNetworkLogs.description")}
 							</div>
 						</div>
 

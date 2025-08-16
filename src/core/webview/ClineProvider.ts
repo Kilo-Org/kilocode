@@ -1639,6 +1639,7 @@ export class ClineProvider
 			soundVolume,
 			browserViewportSize,
 			screenshotQuality,
+			collectNetworkLogs, // kilocode_change
 			remoteBrowserHost,
 			remoteBrowserEnabled,
 			cachedChromeHostUrl,
@@ -1756,6 +1757,7 @@ export class ClineProvider
 			soundVolume: soundVolume ?? 0.5,
 			browserViewportSize: browserViewportSize ?? "900x600",
 			screenshotQuality: screenshotQuality ?? 75,
+			collectNetworkLogs: collectNetworkLogs ?? "no", // kilocode_change
 			remoteBrowserHost,
 			remoteBrowserEnabled: remoteBrowserEnabled ?? false,
 			cachedChromeHostUrl: cachedChromeHostUrl,
@@ -1952,6 +1954,7 @@ export class ClineProvider
 			soundVolume: stateValues.soundVolume,
 			browserViewportSize: stateValues.browserViewportSize ?? "900x600",
 			screenshotQuality: stateValues.screenshotQuality ?? 75,
+			collectNetworkLogs: stateValues.collectNetworkLogs ?? "no", // kilocode_change
 			remoteBrowserHost: stateValues.remoteBrowserHost,
 			remoteBrowserEnabled: stateValues.remoteBrowserEnabled ?? true,
 			cachedChromeHostUrl: stateValues.cachedChromeHostUrl as string | undefined,
