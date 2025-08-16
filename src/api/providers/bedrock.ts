@@ -21,6 +21,7 @@ import {
 	BEDROCK_MAX_TOKENS,
 	BEDROCK_DEFAULT_CONTEXT,
 	AWS_INFERENCE_PROFILE_MAPPING,
+	BEDROCK_CLAUDE_SONNET_4_MODEL_ID,
 } from "@roo-code/types"
 
 import { ApiStream } from "../transform/stream"
@@ -46,12 +47,14 @@ interface BedrockInferenceConfig {
 	topP?: number
 }
 
-// Define interface for Bedrock thinking configuration
-interface BedrockThinkingConfig {
-	thinking: {
+// Define interface for Bedrock additional model request fields
+// This includes thinking configuration, 1M context beta, and other model-specific parameters
+interface BedrockAdditionalModelFields {
+	thinking?: {
 		type: "enabled"
 		budget_tokens: number
 	}
+	anthropic_beta?: string[]
 	[key: string]: any // Add index signature to be compatible with DocumentType
 }
 
@@ -62,7 +65,7 @@ interface BedrockPayload {
 	system?: SystemContentBlock[]
 	inferenceConfig: BedrockInferenceConfig
 	anthropic_version?: string
-	additionalModelRequestFields?: BedrockThinkingConfig
+	additionalModelRequestFields?: BedrockAdditionalModelFields
 }
 
 // Define specific types for content block events to avoid 'as any' usage
@@ -230,6 +233,11 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 			// Use API key/token-based authentication if enabled and API key is set
 			clientConfig.token = { token: this.options.awsApiKey }
 			clientConfig.authSchemePreference = ["httpBearerAuth"] // Otherwise there's no end of credential problems.
+			clientConfig.requestHandler = {
+				// This should be the default anyway, but without setting something
+				// this provider fails to work with LiteLLM passthrough.
+				requestTimeout: 0,
+			}
 		} else if (this.options.awsUseProfile && this.options.awsProfile) {
 			// Use profile-based credentials if enabled and profile is set
 			clientConfig.credentials = fromIni({
@@ -338,7 +346,7 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 			conversationId,
 		)
 
-		let additionalModelRequestFields: BedrockThinkingConfig | undefined
+		let additionalModelRequestFields: BedrockAdditionalModelFields | undefined
 		let thinkingEnabled = false
 
 		// Determine if thinking should be enabled
@@ -374,13 +382,26 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 			inferenceConfig.topP = 0.1
 		}
 
+		// Check if 1M context is enabled for Claude Sonnet 4
+		// Use parseBaseModelId to handle cross-region inference prefixes
+		const baseModelId = this.parseBaseModelId(modelConfig.id)
+		const is1MContextEnabled = baseModelId === BEDROCK_CLAUDE_SONNET_4_MODEL_ID && this.options.awsBedrock1MContext
+
+		// Add anthropic_beta for 1M context to additionalModelRequestFields
+		if (is1MContextEnabled) {
+			if (!additionalModelRequestFields) {
+				additionalModelRequestFields = {} as BedrockAdditionalModelFields
+			}
+			additionalModelRequestFields.anthropic_beta = ["context-1m-2025-08-07"]
+		}
+
 		const payload: BedrockPayload = {
 			modelId: modelConfig.id,
 			messages: formatted.messages,
 			system: formatted.system,
 			inferenceConfig,
 			...(additionalModelRequestFields && { additionalModelRequestFields }),
-			// Add anthropic_version when using thinking features
+			// Add anthropic_version at top level when using thinking features
 			...(thinkingEnabled && { anthropic_version: "bedrock-2023-05-31" }),
 		}
 
@@ -956,6 +977,17 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 				if (prefix) {
 					modelConfig.id = `${prefix}${modelConfig.id}`
 				}
+			}
+		}
+
+		// Check if 1M context is enabled for Claude Sonnet 4
+		// Use parseBaseModelId to handle cross-region inference prefixes
+		const baseModelId = this.parseBaseModelId(modelConfig.id)
+		if (baseModelId === BEDROCK_CLAUDE_SONNET_4_MODEL_ID && this.options.awsBedrock1MContext) {
+			// Update context window to 1M tokens when 1M context beta is enabled
+			modelConfig.info = {
+				...modelConfig.info,
+				contextWindow: 1_000_000,
 			}
 		}
 

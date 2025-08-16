@@ -1,10 +1,10 @@
 {
 	"recentTasks": "最近工作",
-	"history": "歷史記錄",
+	"history": "歷史紀錄",
 	"exitSelectionMode": "離開選擇模式",
 	"enterSelectionMode": "進入選擇模式",
 	"done": "完成",
-	"searchPlaceholder": "模糊搜尋歷史記錄...",
+	"searchPlaceholder": "模糊搜尋歷史紀錄...",
 	"newest": "最新",
 	"oldest": "最舊",
 	"mostExpensive": "費用最高",
@@ -15,6 +15,8 @@
 	"exportTask": "匯出工作",
 	"deleteTask": "刪除工作",
 	"deleteTaskMessage": "確定要刪除此工作嗎？此操作無法復原。",
+	"deleteTaskFavoritedWarning": "此工作已收藏。您確定要刪除它嗎？",
+	"deleteTasksFavoritedWarning": "所選工作中有 {{count}} 個已收藏。您確定要刪除它們嗎？",
 	"cancel": "取消",
 	"delete": "刪除",
 	"exitSelection": "結束選擇",
@@ -26,24 +28,24 @@
 	"deleteSelected": "刪除所選項目",
 	"deleteTasks": "刪除工作",
 	"confirmDeleteTasks": "確定要刪除 {{count}} 個工作嗎？",
-	"deleteTasksWarning": "已刪除的工作無法還原。請確認是否要繼續。",
-	"deleteTaskFavoritedWarning": "該工作已收藏，確定刪除？",
-	"deleteTasksFavoritedWarning": "已收藏 {{count}} 個工作，確定刪除？",
+	"deleteTasksWarning": "已刪除的工作無法復原，請確認是否要繼續。",
 	"deleteItems": "刪除 {{count}} 個項目",
 	"showAllWorkspaces": "顯示所有工作區的工作",
 	"showFavoritesOnly": "僅顯示收藏",
 	"workspace": {
-		"prefix": "工作區:",
+		"prefix": "工作區：",
 		"current": "目前",
 		"all": "所有"
 	},
 	"sort": {
-		"prefix": "排序:",
+		"prefix": "排序：",
 		"newest": "最新",
 		"oldest": "最舊",
 		"mostExpensive": "費用最高",
 		"mostTokens": "最多 Token",
 		"mostRelevant": "最相關"
 	},
-	"viewAllHistory": "檢視所有工作"
+	"viewAllHistory": "檢視所有工作",
+	"expandTask": "展開工作",
+	"collapseTask": "收起工作"
 }

@@ -2,6 +2,8 @@
 	"greeting": "Kilo Code가 당신을 위해 무엇을 할 수 있을까요?",
 	"task": {
 		"title": "작업",
+		"expand": "작업 펼치기",
+		"collapse": "작업 접기",
 		"seeMore": "더 보기",
 		"seeLess": "줄여보기",
 		"tokens": "토큰",

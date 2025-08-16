@@ -2,6 +2,8 @@
 	"greeting": "Kilo Code 能为您做什么？",
 	"task": {
 		"title": "任务",
+		"expand": "展开任务",
+		"collapse": "收起任务",
 		"seeMore": "展开",
 		"seeLess": "收起",
 		"tokens": "Token 用量",

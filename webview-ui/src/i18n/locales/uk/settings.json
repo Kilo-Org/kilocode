@@ -263,14 +263,23 @@
 			"error": "Не вдалося оновити список моделей. Спробуйте ще раз."
 		},
 		"getRequestyApiKey": "Отримати ключ API Requesty",
+		"getRequestyBaseUrl": "Базовий URL",
+		"requestyUseCustomBaseUrl": "Використовувати власний базовий URL",
 		"openRouterTransformsText": "Стискати підказки та ланцюжки повідомлень до розміру контексту (<a>Перетворення OpenRouter</a>)",
 		"anthropicApiKey": "Ключ API Anthropic",
 		"getAnthropicApiKey": "Отримати ключ API Anthropic",
 		"anthropicUseAuthToken": "Передавати ключ API Anthropic як заголовок Authorization замість X-Api-Key",
+		"anthropic1MContextBetaLabel": "Увімкнути контекстне вікно 1M (Beta)",
+		"anthropic1MContextBetaDescription": "Розширити контекстне вікно до 1 мільйона токенів для Claude Sonnet 4",
+		"awsBedrock1MContextBetaLabel": "Увімкнути контекстне вікно 1M (Beta)",
+		"awsBedrock1MContextBetaDescription": "Розширити контекстне вікно до 1 мільйона токенів для Claude Sonnet 4",
 		"cerebrasApiKey": "Ключ API Cerebras",
 		"getCerebrasApiKey": "Отримати ключ API Cerebras",
 		"chutesApiKey": "Ключ API Chutes",
 		"getChutesApiKey": "Отримати ключ API Chutes",
+		"ioIntelligenceApiKey": "Ключ API IO Intelligence",
+		"ioIntelligenceApiKeyPlaceholder": "Введіть ваш ключ API IO Intelligence",
+		"getIoIntelligenceApiKey": "Отримати ключ API IO Intelligence",
 		"deepSeekApiKey": "Ключ API DeepSeek",
 		"getDeepSeekApiKey": "Отримати ключ API DeepSeek",
 		"fireworksApiKey": "Ключ API Fireworks",
@@ -443,6 +452,7 @@
 		},
 		"reasoningEffort": {
 			"label": "Зусилля з міркування моделі",
+			"minimal": "Мінімальний (найшвидший)",
 			"high": "Високий",
 			"medium": "Середній",
 			"low": "Низький"
@@ -477,6 +487,17 @@
 			"requirement5": "Потребує, щоб інструмент Gemini CLI був спочатку встановлений і аутентифікований",
 			"freeAccess": "Безкоштовний доступ через OAuth-аутентифікацію"
 		},
+		"io_intelligence": {
+			"name": "IO Intelligence",
+			"description": "Доступний штучний інтелект для повсякденних завдань"
+		},
+		"requesty": {
+			"name": "Requesty",
+			"description": "Швидкий та надійний AI помічник"
+		},
+		"kilo_code_openrouter": {
+			"description": "Доступ до 200+ моделей через OpenRouter з контекстним вікном 1M"
+		},
 		"qwenCode": {
 			"oauthPath": "Шлях до облікових даних OAuth (необов'язково)",
 			"oauthPathDescription": "Шлях до файлу облікових даних OAuth. Залиште порожнім для використання місця за замовчуванням (~/.qwen/oauth_creds.json).",
@@ -484,6 +505,19 @@
 			"instructions": "Будь ласка, дотримуйтесь офіційної документації для отримання файлу авторизації та розміщення його за вказаним шляхом.",
 			"setupLink": "Офіційна документація Qwen"
 		}
+	},
+	"contextWindow": {
+		"description": "Максимальний контекст розмови",
+		"oneMillion": "1M"
+	},
+	"maxTokens": {
+		"description": "Максимальна довжина відповіді"
+	},
+	"topP": {
+		"description": "Контроль різноманітності відповідей"
+	},
+	"kiloRemoteControl": {
+		"description": "Увімкнути віддалене керування завданнями"
 	},
 	"browser": {
 		"enable": {
@@ -779,6 +813,7 @@
 		"noComputerUse": "Не підтримує використання комп'ютера",
 		"supportsPromptCache": "Підтримує кешування підказок",
 		"noPromptCache": "Не підтримує кешування підказок",
+		"contextWindow": "Контекстне вікно:",
 		"maxOutput": "Макс. вихід",
 		"inputPrice": "Ціна входу",
 		"outputPrice": "Ціна виходу",

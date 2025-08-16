@@ -9,6 +9,7 @@ export * from "./gemini-cli.js" // kilocode_change
 export * from "./glama.js"
 export * from "./groq.js"
 export * from "./huggingface.js"
+export * from "./io-intelligence.js"
 export * from "./lite-llm.js"
 export * from "./lm-studio.js"
 export * from "./mistral.js"

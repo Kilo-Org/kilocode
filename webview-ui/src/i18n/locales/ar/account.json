@@ -11,5 +11,11 @@
 	"cloudBenefitHistory": "سجل مهامك أونلاين",
 	"cloudBenefitSharing": "مزايا المشاركة والتعاون",
 	"cloudBenefitMetrics": "إحصائيات الاستخدام حسب المهام والتوكينات والتكلفة",
-	"visitCloudWebsite": "زيارة موقع Kilo Code Cloud"
+	"visitCloudWebsite": "زيارة موقع Kilo Code Cloud",
+	"expandTask": "توسيع المهمة",
+	"collapseTask": "طي المهمة",
+	"deleteFavoritedTaskWarning": "هذا سيحذف المهمة المفضلة نهائيًا. هل أنت متأكد؟",
+	"cloudBenefitWalkaway": "تابع وتحكم في المهام من أي مكان باستخدام التحكم عن بعد في Kilo",
+	"remoteControl": "التحكم عن بعد في Kilo",
+	"remoteControlDescription": "تفعيل متابعة والتفاعل مع المهام في مساحة العمل هذه باستخدام Kilo Code Cloud"
 }

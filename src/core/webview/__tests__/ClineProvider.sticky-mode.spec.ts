@@ -7,7 +7,6 @@ import { ContextProxy } from "../../config/ContextProxy"
 import { Task } from "../../task/Task"
 import type { HistoryItem, ProviderName } from "@roo-code/types"
 
-// Mock setup
 vi.mock("vscode", () => ({
 	ExtensionContext: vi.fn(),
 	OutputChannel: vi.fn(),
@@ -61,7 +60,8 @@ vi.mock("vscode", () => ({
 	},
 	version: "1.85.0",
 }))
-// Create a counter for unique task IDs
+
+// Create a counter for unique task IDs.
 let taskIdCounter = 0
 
 vi.mock("../../task/Task", () => ({
@@ -82,8 +82,11 @@ vi.mock("../../task/Task", () => ({
 		parentTask: options.parentTask,
 	})),
 }))
+
 vi.mock("../../prompts/sections/custom-instructions")
+
 vi.mock("../../../utils/safeWriteJson")
+
 vi.mock("../../../api", () => ({
 	buildApiHandler: vi.fn().mockReturnValue({
 		getModel: vi.fn().mockReturnValue({
@@ -92,12 +95,14 @@ vi.mock("../../../api", () => ({
 		}),
 	}),
 }))
+
 vi.mock("../../../integrations/workspace/WorkspaceTracker", () => ({
 	default: vi.fn().mockImplementation(() => ({
 		initializeFilePaths: vi.fn(),
 		dispose: vi.fn(),
 	})),
 }))
+
 vi.mock("../../diff/strategies/multi-search-replace", () => ({
 	MultiSearchReplaceDiffStrategy: vi.fn().mockImplementation(() => ({
 		getToolDescription: () => "test",
@@ -105,6 +110,7 @@ vi.mock("../../diff/strategies/multi-search-replace", () => ({
 		applyDiff: vi.fn(),
 	})),
 }))
+
 vi.mock("@roo-code/cloud", () => ({
 	CloudService: {
 		hasInstance: vi.fn().mockReturnValue(true),
@@ -115,7 +121,12 @@ vi.mock("@roo-code/cloud", () => ({
 		},
 	},
 	getRooCodeApiUrl: vi.fn().mockReturnValue("https://app.roocode.com"),
+	ORGANIZATION_ALLOW_ALL: {
+		allowAll: true,
+		providers: {},
+	},
 }))
+
 vi.mock("../../../shared/modes", () => ({
 	modes: [
 		{
@@ -139,20 +150,25 @@ vi.mock("../../../shared/modes", () => ({
 	}),
 	defaultModeSlug: "code",
 }))
+
 vi.mock("../../prompts/system", () => ({
 	SYSTEM_PROMPT: vi.fn().mockResolvedValue("mocked system prompt"),
 	codeMode: "code",
 }))
+
 vi.mock("../../../api/providers/fetchers/modelCache", () => ({
 	getModels: vi.fn().mockResolvedValue({}),
 	flushModels: vi.fn(),
 }))
+
 vi.mock("../../../integrations/misc/extract-text", () => ({
 	extractTextFromFile: vi.fn().mockResolvedValue("Mock file content"),
 }))
+
 vi.mock("p-wait-for", () => ({
 	default: vi.fn().mockImplementation(async () => Promise.resolve()),
 }))
+
 vi.mock("fs/promises", () => ({
 	mkdir: vi.fn().mockResolvedValue(undefined),
 	writeFile: vi.fn().mockResolvedValue(undefined),
@@ -160,6 +176,7 @@ vi.mock("fs/promises", () => ({
 	unlink: vi.fn().mockResolvedValue(undefined),
 	rmdir: vi.fn().mockResolvedValue(undefined),
 }))
+
 vi.mock("@roo-code/telemetry", () => ({
 	TelemetryService: {
 		hasInstance: vi.fn().mockReturnValue(true),

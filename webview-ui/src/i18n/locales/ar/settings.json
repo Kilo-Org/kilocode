@@ -261,14 +261,23 @@
 			"error": "فشل التحديث. جرّب مرة ثانية."
 		},
 		"getRequestyApiKey": "احصل على مفتاح Requesty",
+		"getRequestyBaseUrl": "رابط الأساس",
+		"requestyUseCustomBaseUrl": "استخدم رابط أساس مخصص",
 		"openRouterTransformsText": "ضغط الموجهات لتناسب حجم السياق (<a>OpenRouter Transforms</a>)",
 		"anthropicApiKey": "مفتاح Anthropic",
 		"getAnthropicApiKey": "احصل على مفتاح Anthropic",
 		"anthropicUseAuthToken": "إرسال المفتاح في ترويسة Authorization بدل X-Api-Key",
+		"anthropic1MContextBetaLabel": "تفعيل نافذة السياق 1 مليون (Beta)",
+		"anthropic1MContextBetaDescription": "توسيع نافذة السياق إلى مليون رمز لـ Claude Sonnet 4",
+		"awsBedrock1MContextBetaLabel": "تفعيل نافذة السياق 1 مليون (Beta)",
+		"awsBedrock1MContextBetaDescription": "توسيع نافذة السياق إلى مليون رمز لـ Claude Sonnet 4",
 		"cerebrasApiKey": "مفتاح Cerebras API",
 		"getCerebrasApiKey": "احصل على مفتاح Cerebras API",
 		"chutesApiKey": "مفتاح Chutes",
 		"getChutesApiKey": "احصل على مفتاح Chutes",
+		"ioIntelligenceApiKey": "مفتاح IO Intelligence",
+		"ioIntelligenceApiKeyPlaceholder": "أدخل مفتاح IO Intelligence API",
+		"getIoIntelligenceApiKey": "احصل على مفتاح IO Intelligence",
 		"deepSeekApiKey": "مفتاح DeepSeek",
 		"getDeepSeekApiKey": "احصل على مفتاح DeepSeek",
 		"doubaoApiKey": "مفتاح Doubao",
@@ -449,6 +458,7 @@
 		},
 		"reasoningEffort": {
 			"label": "جهد الاستنتاج",
+			"minimal": "الحد الأدنى (الأسرع)",
 			"high": "عالي",
 			"medium": "متوسط",
 			"low": "منخفض"
@@ -483,6 +493,17 @@
 			"requirement5": "الأداة لازم تكون مثبتة ومُسجلة دخول",
 			"freeAccess": "طبقة مجانية عبر OAuth"
 		},
+		"io_intelligence": {
+			"name": "IO Intelligence",
+			"description": "ذكاء ميسور للمهام اليومية"
+		},
+		"requesty": {
+			"name": "Requesty",
+			"description": "مساعد ذكي سريع وموثوق"
+		},
+		"kilo_code_openrouter": {
+			"description": "الوصول لأكثر من 200 نموذج عبر OpenRouter بنافذة سياق 1 مليون"
+		},
 		"qwenCode": {
 			"oauthPath": "مسار بيانات OAuth (اختياري)",
 			"oauthPathDescription": "مسار ملف بيانات OAuth. اتركه فاضي لاستخدام المسار الافتراضي (~/.qwen/oauth_creds.json).",
@@ -490,6 +511,19 @@
 			"instructions": "يرجى اتباع التوثيق الرسمي للحصول على ملف التخويل ووضعه في المسار المحدد.",
 			"setupLink": "توثيق Qwen الرسمي"
 		}
+	},
+	"contextWindow": {
+		"description": "أقصى سياق محادثة",
+		"oneMillion": "1 مليون"
+	},
+	"maxTokens": {
+		"description": "أقصى طول إجابة"
+	},
+	"topP": {
+		"description": "تحكم في تنوع الإجابات"
+	},
+	"kiloRemoteControl": {
+		"description": "تفعيل التحكم عن بُعد للمهام"
 	},
 	"browser": {
 		"enable": {
@@ -780,6 +814,7 @@
 		"noComputerUse": "لا يدعم استخدام الكمبيوتر",
 		"supportsPromptCache": "يدعم تخزين الموجهات",
 		"noPromptCache": "لا يدعم تخزين الموجهات",
+		"contextWindow": "نافذة السياق:",
 		"maxOutput": "أقصى مخرجات",
 		"inputPrice": "سعر الإدخال",
 		"outputPrice": "سعر المخرجات",
