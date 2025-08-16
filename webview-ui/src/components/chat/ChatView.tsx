@@ -126,6 +126,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		alwaysAllowFollowupQuestions,
 		alwaysAllowUpdateTodoList,
 		alwaysAllowEditMarkdownOnly,
+		disableAutoScroll,
 		customModes,
 		telemetrySetting,
 		hasSystemPromptOverride,
@@ -1515,7 +1516,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 	const handleRowHeightChange = useCallback(
 		(isTaller: boolean) => {
-			if (!disableAutoScrollRef.current) {
+			if (!disableAutoScrollRef.current && !disableAutoScroll) {
 				if (isTaller) {
 					scrollToBottomSmooth()
 				} else {
@@ -1523,12 +1524,12 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				}
 			}
 		},
-		[scrollToBottomSmooth, scrollToBottomAuto],
+		[scrollToBottomSmooth, scrollToBottomAuto, disableAutoScroll],
 	)
 
 	useEffect(() => {
 		let timer: ReturnType<typeof setTimeout> | undefined
-		if (!disableAutoScrollRef.current) {
+		if (!disableAutoScrollRef.current && !disableAutoScroll) {
 			timer = setTimeout(() => scrollToBottomSmooth(), 50)
 		}
 		return () => {
@@ -1536,7 +1537,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				clearTimeout(timer)
 			}
 		}
-	}, [groupedMessages.length, scrollToBottomSmooth])
+	}, [groupedMessages.length, scrollToBottomSmooth, disableAutoScroll])
 
 	const handleWheel = useCallback((event: Event) => {
 		const wheelEvent = event as WheelEvent

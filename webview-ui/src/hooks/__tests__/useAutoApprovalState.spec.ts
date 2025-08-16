@@ -16,6 +16,7 @@ describe("useAutoApprovalState", () => {
 				alwaysAllowFollowupQuestions: false,
 				alwaysAllowUpdateTodoList: false,
 				alwaysAllowEditMarkdownOnly: false,
+				disableAutoScroll: false,
 			}
 
 			const { result } = renderHook(() => useAutoApprovalState(toggles, true))
@@ -36,6 +37,7 @@ describe("useAutoApprovalState", () => {
 				alwaysAllowFollowupQuestions: undefined,
 				alwaysAllowUpdateTodoList: undefined,
 				alwaysAllowEditMarkdownOnly: undefined,
+				disableAutoScroll: undefined,
 			}
 
 			const { result } = renderHook(() => useAutoApprovalState(toggles, true))
@@ -56,6 +58,7 @@ describe("useAutoApprovalState", () => {
 				alwaysAllowFollowupQuestions: false,
 				alwaysAllowUpdateTodoList: false,
 				alwaysAllowEditMarkdownOnly: false,
+				disableAutoScroll: false,
 			}
 
 			const { result } = renderHook(() => useAutoApprovalState(toggles, true))
@@ -76,6 +79,7 @@ describe("useAutoApprovalState", () => {
 				alwaysAllowFollowupQuestions: false,
 				alwaysAllowUpdateTodoList: false,
 				alwaysAllowEditMarkdownOnly: false,
+				disableAutoScroll: false,
 			}
 
 			const { result } = renderHook(() => useAutoApprovalState(toggles, true))
@@ -96,6 +100,7 @@ describe("useAutoApprovalState", () => {
 				alwaysAllowFollowupQuestions: true,
 				alwaysAllowUpdateTodoList: true,
 				alwaysAllowEditMarkdownOnly: true,
+				disableAutoScroll: true,
 			}
 
 			const { result } = renderHook(() => useAutoApprovalState(toggles, true))

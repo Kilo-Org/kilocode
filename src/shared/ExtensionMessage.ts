@@ -287,6 +287,7 @@ export type ExtensionState = Pick<
 	| "browserToolEnabled"
 	| "browserViewportSize"
 	| "showAutoApproveMenu" // kilocode_change
+	| "disableAutoScroll" // kilocode_change
 	| "screenshotQuality"
 	| "remoteBrowserEnabled"
 	| "remoteBrowserHost"

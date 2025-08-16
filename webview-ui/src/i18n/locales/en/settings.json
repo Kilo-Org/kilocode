@@ -192,6 +192,10 @@
 			"label": "Show auto-approve menu in chat view",
 			"description": "When enabled, the auto-approve menu will be displayed at the bottom of the chat view, allowing quick access to auto-approve settings"
 		},
+		"disableAutoScroll": {
+			"label": "Disable Auto Scroll",
+			"description": "When enabled, the chat view will not automatically scroll to the bottom when new messages are added or content changes"
+		},
 		"updateTodoList": {
 			"label": "Todo",
 			"description": "Automatically update the to-do list without requiring approval"

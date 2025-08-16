@@ -12,6 +12,7 @@ interface AutoApprovalToggles {
 	alwaysAllowFollowupQuestions?: boolean
 	alwaysAllowUpdateTodoList?: boolean
 	alwaysAllowEditMarkdownOnly?: boolean
+	disableAutoScroll?: boolean
 }
 
 export function useAutoApprovalState(toggles: AutoApprovalToggles, autoApprovalEnabled?: boolean) {

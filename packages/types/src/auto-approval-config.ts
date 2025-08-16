@@ -31,6 +31,7 @@ export const autoApprovalConfigSchema = z.object({
 	allowedMaxRequests: z.number().nullish(),
 	allowedMaxCost: z.number().nullish(),
 	showAutoApproveMenu: z.boolean().optional(),
+	disableAutoScroll: z.boolean().optional(),
 })
 
 export type AutoApprovalConfig = z.infer<typeof autoApprovalConfigSchema>
@@ -66,6 +67,7 @@ export const DEFAULT_AUTO_APPROVAL_CONFIG: AutoApprovalConfig = {
 	allowedMaxRequests: null,
 	allowedMaxCost: null,
 	showAutoApproveMenu: false,
+	disableAutoScroll: false,
 }
 
 /**
@@ -98,6 +100,7 @@ export const AUTO_APPROVAL_CONFIG_KEYS = [
 	"allowedMaxRequests",
 	"allowedMaxCost",
 	"showAutoApproveMenu",
+	"disableAutoScroll",
 ] as const
 
 export type AutoApprovalConfigKey = (typeof AUTO_APPROVAL_CONFIG_KEYS)[number]

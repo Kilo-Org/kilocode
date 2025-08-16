@@ -169,6 +169,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setAlwaysAllowUpdateTodoList: (value: boolean) => void
 	alwaysAllowEditMarkdownOnly?: boolean
 	setAlwaysAllowEditMarkdownOnly: (value: boolean) => void
+	disableAutoScroll?: boolean
+	setDisableAutoScroll: (value: boolean) => void
 	includeDiagnosticMessages?: boolean
 	setIncludeDiagnosticMessages: (value: boolean) => void
 	maxDiagnosticMessages?: number
@@ -287,6 +289,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		codebaseIndexModels: { ollama: {}, openai: {} },
 		alwaysAllowUpdateTodoList: true,
 		alwaysAllowEditMarkdownOnly: false,
+		disableAutoScroll: false,
 		includeDiagnosticMessages: true,
 		maxDiagnosticMessages: 50,
 		messageSendingConfig: {
@@ -634,6 +637,10 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		alwaysAllowEditMarkdownOnly: state.alwaysAllowEditMarkdownOnly,
 		setAlwaysAllowEditMarkdownOnly: (value) => {
 			setState((prevState) => ({ ...prevState, alwaysAllowEditMarkdownOnly: value }))
+		},
+		disableAutoScroll: state.disableAutoScroll,
+		setDisableAutoScroll: (value) => {
+			setState((prevState) => ({ ...prevState, disableAutoScroll: value }))
 		},
 		includeDiagnosticMessages: state.includeDiagnosticMessages,
 		setIncludeDiagnosticMessages: (value) => {

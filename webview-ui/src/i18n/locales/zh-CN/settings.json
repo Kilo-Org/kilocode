@@ -240,6 +240,10 @@
 			"label": "在聊天视图中显示自动批准菜单",
 			"description": "启用后，自动批准菜单将显示在聊天视图底部，方便快速访问自动批准设置"
 		},
+		"disableAutoScroll": {
+			"label": "禁用自动滚动",
+			"description": "启用后，聊天视图在添加新消息或内容变化时不会自动滚动到底部"
+		},
 		"updateTodoList": {
 			"label": "待办",
 			"description": "无需批准即可自动更新待办清单"
