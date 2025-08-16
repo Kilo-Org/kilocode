@@ -9,7 +9,6 @@ on:
         branches: [main]
 
 env:
-    NODE_VERSION: 20.19.2
     PNPM_VERSION: 10.8.1
     TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
     TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
@@ -17,6 +16,9 @@ env:
 jobs:
     compile:
         runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                node-version: [20.x, 22.x]
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -24,17 +26,18 @@ jobs:
               uses: pnpm/action-setup@v4
               with:
                   version: ${{ env.PNPM_VERSION }}
-            - name: Setup Node.js
+            - name: Setup Node.js ${{ matrix.node-version }}
               uses: actions/setup-node@v4
               with:
-                  node-version: ${{ env.NODE_VERSION }}
+                  node-version: ${{ matrix.node-version }}
                   cache: "pnpm"
             - name: Turbo cache setup
               uses: actions/cache@v4
               with:
                   path: .turbo
-                  key: ${{ runner.os }}-turbo-${{ github.sha }}
+                  key: ${{ runner.os }}-node-${{ matrix.node-version }}-turbo-${{ github.sha }}
                   restore-keys: |
+                      ${{ runner.os }}-node-${{ matrix.node-version }}-turbo-
                       ${{ runner.os }}-turbo-
             - name: Install dependencies
               run: pnpm install
@@ -47,6 +50,9 @@ jobs:
 
     check-translations:
         runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                node-version: [20.x, 22.x]
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -54,17 +60,18 @@ jobs:
               uses: pnpm/action-setup@v4
               with:
                   version: ${{ env.PNPM_VERSION }}
-            - name: Setup Node.js
+            - name: Setup Node.js ${{ matrix.node-version }}
               uses: actions/setup-node@v4
               with:
-                  node-version: "18"
+                  node-version: ${{ matrix.node-version }}
                   cache: "pnpm"
             - name: Turbo cache setup
               uses: actions/cache@v4
               with:
                   path: .turbo
-                  key: ${{ runner.os }}-turbo-${{ github.sha }}
+                  key: ${{ runner.os }}-node-${{ matrix.node-version }}-turbo-${{ github.sha }}
                   restore-keys: |
+                      ${{ runner.os }}-node-${{ matrix.node-version }}-turbo-
                       ${{ runner.os }}-turbo-
             - name: Install dependencies
               run: pnpm install
@@ -76,6 +83,7 @@ jobs:
         strategy:
             matrix:
                 os: [ubuntu-latest, windows-latest]
+                node-version: [20.x, 22.x]
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -83,17 +91,18 @@ jobs:
               uses: pnpm/action-setup@v4
               with:
                   version: ${{ env.PNPM_VERSION }}
-            - name: Setup Node.js
+            - name: Setup Node.js ${{ matrix.node-version }}
               uses: actions/setup-node@v4
               with:
-                  node-version: ${{ env.NODE_VERSION }}
+                  node-version: ${{ matrix.node-version }}
                   cache: "pnpm"
             - name: Turbo cache setup
               uses: actions/cache@v4
               with:
                   path: .turbo
-                  key: ${{ runner.os }}-turbo-${{ github.sha }}
+                  key: ${{ runner.os }}-node-${{ matrix.node-version }}-turbo-${{ github.sha }}
                   restore-keys: |
+                      ${{ runner.os }}-node-${{ matrix.node-version }}-turbo-
                       ${{ runner.os }}-turbo-
             - name: Install dependencies
               run: pnpm install
@@ -108,6 +117,7 @@ jobs:
         strategy:
             matrix:
                 os: [ubuntu-latest, windows-latest]
+                node-version: [20.x, 22.x]
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -115,17 +125,18 @@ jobs:
               uses: pnpm/action-setup@v4
               with:
                   version: ${{ env.PNPM_VERSION }}
-            - name: Setup Node.js
+            - name: Setup Node.js ${{ matrix.node-version }}
               uses: actions/setup-node@v4
               with:
-                  node-version: "18"
+                  node-version: ${{ matrix.node-version }}
                   cache: "pnpm"
             - name: Turbo cache setup
               uses: actions/cache@v4
               with:
                   path: .turbo
-                  key: ${{ runner.os }}-turbo-${{ github.sha }}
+                  key: ${{ runner.os }}-node-${{ matrix.node-version }}-turbo-${{ github.sha }}
                   restore-keys: |
+                      ${{ runner.os }}-node-${{ matrix.node-version }}-turbo-
                       ${{ runner.os }}-turbo-
             - name: Install dependencies
               run: pnpm install
