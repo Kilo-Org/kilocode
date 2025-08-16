@@ -77,6 +77,7 @@ type TruncateOptions = {
 	condensingApiHandler?: ApiHandler
 	profileThresholds: Record<string, number>
 	currentProfileId: string
+	abortSignal?: AbortSignal
 }
 
 type TruncateResponse = SummarizeResponse & { prevContextTokens: number }
@@ -102,6 +103,7 @@ export async function truncateConversationIfNeeded({
 	condensingApiHandler,
 	profileThresholds,
 	currentProfileId,
+	abortSignal,
 }: TruncateOptions): Promise<TruncateResponse> {
 	let error: string | undefined
 	let cost = 0
@@ -155,6 +157,7 @@ export async function truncateConversationIfNeeded({
 				true, // automatic trigger
 				customCondensingPrompt,
 				condensingApiHandler,
+				abortSignal,
 			)
 			if (result.error) {
 				error = result.error
