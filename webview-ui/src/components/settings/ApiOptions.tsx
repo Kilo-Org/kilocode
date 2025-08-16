@@ -196,6 +196,8 @@ const ApiOptions = ({
 	const { data: routerModels, refetch: refetchRouterModels } = useRouterModels({
 		openRouterBaseUrl: apiConfiguration?.openRouterBaseUrl,
 		openRouterApiKey: apiConfiguration?.openRouterApiKey,
+		ollamaBaseUrl: apiConfiguration.ollamaBaseUrl,
+		ollamaNumCtx: apiConfiguration.ollamaNumCtx,
 	})
 
 	//const { data: openRouterModelProviders } = useOpenRouterModelProviders(

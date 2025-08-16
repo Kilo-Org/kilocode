@@ -89,7 +89,10 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				break
 			// kilocode_change end
 			case "ollama":
-				models = await getOllamaModels(options.baseUrl)
+				models = await getOllamaModels(
+					options.baseUrl,
+					options.numCtx, // kilocode_change
+				)
 				break
 			case "lmstudio":
 				models = await getLMStudioModels(options.baseUrl)
