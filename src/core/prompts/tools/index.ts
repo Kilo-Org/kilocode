@@ -115,10 +115,15 @@ export function getToolDescriptionsForMode(
 		tools.delete("codebase_search")
 	}
 
-	// kilocode_change: Morph fast apply
+	// kilocode_change start: Morph fast apply
 	if (experiments?.morphFastApply !== true) {
 		tools.delete("edit_file")
+	} else {
+		// When Morph is enabled, disable traditional editing tools
+		const traditionalEditingTools = ["apply_diff", "write_to_file", "insert_content", "search_and_replace"]
+		traditionalEditingTools.forEach((tool) => tools.delete(tool))
 	}
+	// kilocode_change end
 
 	// Conditionally exclude update_todo_list if disabled in settings
 	if (settings?.todoListEnabled === false) {

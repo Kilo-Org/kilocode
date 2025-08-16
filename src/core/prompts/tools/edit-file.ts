@@ -1,12 +1,14 @@
 // kilocode_change: Morph fast apply - file added
 
-import { Experiments } from "@roo-code/types"
-
-export function getMorphInstructions(experiments?: Experiments): string {
-	// don't remove trailing newlines, they are important for the system prompt
-	return experiments?.morphFastApply === true
-		? "Morph FastApply is enabled. When making any file edits, you MUST ALWAYS use the \`edit_file\` tool instead of other editing tools like \`write_to_file\`, \`search_and_replace\`, or \`apply_diff\`. The \`edit_file\` tool uses a less intelligent specialized model to apply code edits to files.**\n\n"
-		: ""
+export function getMorphEditingInstructions(): string {
+	return `- **Morph FastApply is enabled.** You have access to the \`edit_file\` tool which uses a specialized model optimized for intelligent code understanding and modification.
+- **ONLY use the edit_file tool for file modifications.** Traditional editing tools (apply_diff, write_to_file, insert_content, search_and_replace) are disabled in Morph mode.
+- **Focus on clear instructions and precise code edits** using the edit_file format with \`// ... existing code ...\` placeholders to represent unchanged sections.
+- **The edit_file tool requires three parameters:**
+  - \`target_file\`: Full path to the file to modify
+  - \`instructions\`: Single sentence describing what you're doing (use first person)
+  - \`code_edit\`: Only the lines you want to change, using \`// ... existing code ...\` for unchanged sections
+- **Always make all edits to a file in a single edit_file call** rather than multiple calls to the same file.`
 }
 
 export function getEditFileDescription(): string {

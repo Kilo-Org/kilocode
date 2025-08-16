@@ -14,6 +14,33 @@ import { getKiloBaseUriFromToken } from "../../shared/kilocode/token"
 import { DEFAULT_HEADERS } from "../../api/providers/constants"
 import { TelemetryService } from "@roo-code/telemetry"
 
+// Morph model pricing per 1M tokens
+const MORPH_MODEL_PRICING = {
+	"morph-v3-fast": {
+		inputPrice: 0.8, // $0.8 per 1M tokens
+		outputPrice: 1.2, // $1.2 per 1M tokens
+	},
+	"morph-v3-large": {
+		inputPrice: 0.9, // $0.9 per 1M tokens
+		outputPrice: 1.9, // $1.9 per 1M tokens
+	},
+	auto: {
+		inputPrice: 0.9, // Default to morph-v3-large pricing
+		outputPrice: 1.9,
+	},
+} as const
+
+function calculateMorphCost(inputTokens: number, outputTokens: number, model: string): number {
+	const normalizedModel = model.replace("morph/", "") // Remove OpenRouter prefix if present
+	const pricing =
+		MORPH_MODEL_PRICING[normalizedModel as keyof typeof MORPH_MODEL_PRICING] || MORPH_MODEL_PRICING["auto"]
+
+	const inputCost = (pricing.inputPrice / 1_000_000) * inputTokens
+	const outputCost = (pricing.outputPrice / 1_000_000) * outputTokens
+
+	return inputCost + outputCost
+}
+
 async function validateParams(
 	cline: Task,
 	targetFile: string | undefined,
@@ -86,18 +113,6 @@ export async function editFileTool(
 		const absolutePath = path.resolve(cline.cwd, targetFile)
 		const relPath = getReadablePath(cline.cwd, absolutePath)
 
-		// Check if file exists
-		if (!(await fileExistsAtPath(absolutePath))) {
-			cline.consecutiveMistakeCount++
-			cline.recordToolError("edit_file")
-			pushToolResult(
-				formatResponse.toolError(
-					`The file ${relPath} does not exist. Use write_to_file to create new files, or make sure the file path is correct.`,
-				),
-			)
-			return
-		}
-
 		// Check if file access is allowed
 		const accessAllowed = cline.rooIgnoreController?.validateAccess(relPath)
 		if (!accessAllowed) {
@@ -106,20 +121,21 @@ export async function editFileTool(
 			return
 		}
 
+		// Check if file exists
+		if (!(await fileExistsAtPath(absolutePath))) {
+			await fs.writeFile(absolutePath, "")
+		}
+
 		// Read the original file content
 		const originalContent = await fs.readFile(absolutePath, "utf-8")
 
 		// Check if Morph is available
-		const morphApplyResult = await applyMorphEdit(originalContent, editInstructions, editCode, cline)
+		const morphApplyResult = await applyMorphEdit(originalContent, editInstructions, editCode, cline, relPath)
 
 		if (!morphApplyResult.success) {
 			cline.consecutiveMistakeCount++
 			cline.recordToolError("edit_file")
-			pushToolResult(
-				formatResponse.toolError(
-					`Failed to apply edit using Morph: ${morphApplyResult.error}. Consider using apply_diff tool instead.`,
-				),
-			)
+			pushToolResult(formatResponse.toolError(`Failed to apply edit using Morph: ${morphApplyResult.error}`))
 			return
 		}
 
@@ -183,6 +199,7 @@ async function applyMorphEdit(
 	instructions: string,
 	codeEdit: string,
 	cline: Task,
+	filePath?: string,
 ): Promise<MorphApplyResult> {
 	try {
 		// Get the current API configuration
@@ -198,6 +215,34 @@ async function applyMorphEdit(
 		if (!morphConfig.available) {
 			return { success: false, error: morphConfig.error || "Morph is not available" }
 		}
+
+		// Create api_req_started message for tracking
+		const morphApiReqIndex = cline.clineMessages.length
+
+		// Create a verbose request description similar to regular API requests
+		const fileName = filePath ? path.basename(filePath) : "unknown file"
+		const truncatedCodeEdit = codeEdit.length > 500 ? codeEdit.substring(0, 500) + "\n...(truncated)" : codeEdit
+		const morphRequestDescription = [
+			`Morph FastApply Edit (${morphConfig.model})`,
+			``,
+			`File: ${fileName}`,
+			`Instructions: ${instructions}`,
+			``,
+			`Code Edit:`,
+			"```",
+			truncatedCodeEdit,
+			"```",
+			``,
+			`Original Content: ${originalContent.length} characters`,
+		].join("\n")
+
+		await cline.say(
+			"api_req_started",
+			JSON.stringify({
+				request: morphRequestDescription,
+				apiProtocol: "openai",
+			}),
+		)
 
 		// Create OpenAI client for Morph API
 		const client = new OpenAI({
@@ -231,6 +276,21 @@ async function applyMorphEdit(
 		if (!mergedCode) {
 			return { success: false, error: "Morph API returned empty response" }
 		}
+
+		// Extract usage information from response
+		const usage = response.usage
+		const inputTokens = usage?.prompt_tokens || 0
+		const outputTokens = usage?.completion_tokens || 0
+		const cost = calculateMorphCost(inputTokens, outputTokens, morphConfig.model!)
+
+		// Update the api_req_started message with usage and cost data
+		const existingData = JSON.parse(cline.clineMessages[morphApiReqIndex].text || "{}")
+		cline.clineMessages[morphApiReqIndex].text = JSON.stringify({
+			...existingData,
+			tokensIn: inputTokens,
+			tokensOut: outputTokens,
+			cost: cost,
+		})
 
 		return { success: true, result: mergedCode }
 	} catch (error) {
