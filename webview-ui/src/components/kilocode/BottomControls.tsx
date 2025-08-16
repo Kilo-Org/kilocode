@@ -45,7 +45,7 @@ const BottomControls: React.FC<BottomControlsProps> = ({ showApiConfig = false }
 						iconClass={disableAutoScroll ? "codicon-lock" : "codicon-unlock"}
 						title={disableAutoScroll ? "启用自动滚动" : "禁用自动滚动"}
 						onClick={toggleAutoScroll}
-						className={disableAutoScroll ? "bg-vscode-button-background text-vscode-button-foreground" : ""}
+						className={disableAutoScroll ? "text-yellow-400" : ""}
 					/>
 				</div>
 			</div>
