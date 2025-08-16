@@ -42,6 +42,8 @@ export type GhostSuggestionEditOperationType = "+" | "-"
 export interface GhostSuggestionEditOperation {
 	type: GhostSuggestionEditOperationType
 	line: number
+	oldLine: number
+	newLine: number
 	content: string
 }
 

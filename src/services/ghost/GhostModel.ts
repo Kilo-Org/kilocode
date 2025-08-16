@@ -16,6 +16,10 @@ export class GhostModel {
 		}
 	}
 
+	public getApiConfigId() {
+		return this.apiConfigId
+	}
+
 	public async reload(settings: GhostServiceSettings, providerSettingsManager: ProviderSettingsManager) {
 		this.apiConfigId = settings?.apiConfigId || null
 		const defaultApiConfigId = ContextProxy.instance?.getValues?.()?.currentApiConfigName || ""
@@ -41,6 +45,8 @@ export class GhostModel {
 			console.error("API handler is not initialized")
 			throw new Error("API handler is not initialized. Please check your configuration.")
 		}
+
+		console.log("USED MODEL", this.apiHandler.getModel())
 
 		const stream = this.apiHandler.createMessage(systemPrompt, [
 			{ role: "user", content: [{ type: "text", text: userPrompt }] },
