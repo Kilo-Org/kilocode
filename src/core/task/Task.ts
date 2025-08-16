@@ -2126,17 +2126,36 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				throw new Error("Provider reference lost during view transition")
 			}
 
-			// Wait for MCP hub initialization through McpServerManager
-			mcpHub = await McpServerManager.getInstance(provider.context, provider)
+			try {
+				// Sequential initialization: Wait for MCP hub initialization through McpServerManager
+				console.log(`[Task#${this.taskId}] Initializing MCP hub through server manager`)
+				mcpHub = await McpServerManager.getInstance(provider.context, provider)
 
-			if (!mcpHub) {
-				throw new Error("Failed to get MCP hub from server manager")
+				if (!mcpHub) {
+					throw new Error("Failed to get MCP hub from server manager")
+				}
+
+				// Sequential coordination: Wait for MCP servers to be connected before generating system prompt
+				console.log(`[Task#${this.taskId}] Waiting for MCP servers to finish connecting`)
+				await pWaitFor(() => !mcpHub!.isConnecting, { timeout: 15_000 }).catch((timeoutError) => {
+					console.error(`[Task#${this.taskId}] MCP servers failed to connect within timeout:`, timeoutError)
+					throw new Error(
+						"MCP servers initialization timed out. Please check your MCP server configurations.",
+					)
+				})
+
+				console.log(
+					`[Task#${this.taskId}] MCP hub successfully initialized with ${mcpHub.getAllServers().length} servers`,
+				)
+			} catch (error) {
+				console.error(`[Task#${this.taskId}] Failed to initialize MCP hub:`, error)
+				// In case of MCP initialization failure, continue with undefined mcpHub
+				// This allows the task to proceed without MCP functionality
+				mcpHub = undefined
+				provider.log(
+					`Warning: MCP initialization failed for task ${this.taskId}: ${error instanceof Error ? error.message : String(error)}`,
+				)
 			}
-
-			// Wait for MCP servers to be connected before generating system prompt
-			await pWaitFor(() => !mcpHub!.isConnecting, { timeout: 10_000 }).catch(() => {
-				console.error("MCP servers failed to connect in time")
-			})
 		}
 
 		const rooIgnoreInstructions = this.rooIgnoreController?.getInstructions()
