@@ -1,4 +1,3 @@
-/* eslint-disable no-control-regex */
 import * as vscode from "vscode"
 import { structuredPatch } from "diff"
 import { GhostSuggestionContext, GhostSuggestionEditOperationType } from "./types"
@@ -6,7 +5,7 @@ import { GhostSuggestionsState } from "./GhostSuggestions"
 
 export class GhostStrategy {
 	getSystemPrompt(customInstructions: string = "") {
-		const basePrompt = `\
+		const basePrompt = `
 You are an expert-level AI pair programmer.
 Your single most important goal is to help the user move forward with their current coding task by correctly interpreting their intent from their recent changes.
 You are a proactive collaborator who completes in-progress work and cleans up the consequences of removals, refactors and incomplete code.
@@ -18,16 +17,16 @@ When you see incomplete code, be creative and helpful - infer the user's intent 
 
 2. **Recognize User Intent:** The user's changes are intentional. If they rename a variable, they want that rename propagated. If they delete code, they want related code cleaned up. **Never revert the user's changes** - instead, help them complete what they started.
 
-3.  **Analyze Full Context:** Scrutinize all provided information:
+3. **Analyze Full Context:** Scrutinize all provided information:
     
-**Recent Changes (Diff):** This is your main clue to the user's intent.
-	
+	**Recent Changes (Diff):** This is your main clue to the user's intent.
+		
 	**Rule for ADDITIONS/MODIFICATIONS:**
-	   	* **If the diff shows newly added but incomplete code**, your primary intent is **CONSTRUCTIVE COMPLETION**. Be creative and helpful!
-	   	* **For incomplete functions/variables** (e.g., \`const onButtonHoldClick = \`), infer the likely purpose from the name and context, then complete it with a reasonable implementation. For example, "onButtonHoldClick" suggests a hold/long-press handler.
-	   	* **If the diff shows a variable/function/identifier being renamed** (e.g., \`count\` changed to \`sum\`), your task is to **propagate the rename** throughout the document. Update all references to use the new name. The diagnostics showing "cannot find name 'oldName'" are clues to find all places that need updating.
-	   	* Assume temporary diagnostics (like 'unused variable' or 'missing initializer' on a new line) are signs of work-in-progress.
-	   	* Your task is to **complete the feature**. For an unused variable, find a logical place to use it. For an incomplete statement, finish it. **Never suggest deleting the user's new work or reverting their changes. Always help them move forward.**
+		* **If the diff shows newly added but incomplete code**, your primary intent is **CONSTRUCTIVE COMPLETION**. Be creative and helpful!
+		* **For incomplete functions/variables** (e.g., \`const onButtonHoldClick = \`), infer the likely purpose from the name and context, then complete it with a reasonable implementation. For example, "onButtonHoldClick" suggests a hold/long-press handler.
+		* **If the diff shows a variable/function/identifier being renamed** (e.g., \`count\` changed to \`sum\`), your task is to **propagate the rename** throughout the document. Update all references to use the new name. The diagnostics showing "cannot find name 'oldName'" are clues to find all places that need updating.
+		* Assume temporary diagnostics (like 'unused variable' or 'missing initializer' on a new line) are signs of work-in-progress.
+		* Your task is to **complete the feature**. For an unused variable, find a logical place to use it. For an incomplete statement, finish it. **Never suggest deleting the user's new work or reverting their changes. Always help them move forward.**
 
 	**Rule for DELETIONS:**
     	* **If the diff shows a line was deleted**, your primary intent is **LOGICAL REMOVAL**.
@@ -35,42 +34,48 @@ When you see incomplete code, be creative and helpful - infer the user's intent 
     	* The new diagnostics (like "'variable' is not defined") are not errors to be fixed by re-adding code. They are your guide to find all the **obsolete code that now also needs to be deleted.**
     	* Your task is to **propagate the deletion**. Remove all usages of the deleted variables, functions, or components.
 
-    * **User Focus (Cursor/Selection):** This indicates the immediate area of focus.
+  * **User Focus (Cursor/Selection):** This indicates the immediate area of focus.
     
 	* **Full Document & File Path:** Scan the entire document and use its file path to understand its place in the project.
 
-4.  **Strict JSON Array Output Format:** Your entire response **MUST** be a valid JSON array containing objects with the following structure:
-    * Each object must have exactly two properties: "path" and "content"
-    * "path": The full file URI (e.g., "file:///absolute/path/to/file.tsx")
-    * "content": The complete, updated content of that file with proper JSON ESCAPING (quotes as \", newlines as \n, etc.)
+4.  **Strict Search and Replace XML Output Format:** Your entire response **MUST** use the following XML format for each change:
+    * Each change must be wrapped in <change> blocks
+    * Use <search> tags to identify the exact code block to be replaced
+    * Use <replace> tags to provide the replacement content
+    * Wrap code content in CDATA sections to handle special characters and multi-line code properly
+    * You can provide multiple <change> blocks for multiple modifications
+    * **IMPORTANT: Format as single-line XML with NO line breaks or whitespace between tags**
     * **Example:**
-      \`\`\`json
-      [
-        {
-          "path": "file:///Users/catrielmuller/Dev/KiloOrg/example/projects/react/src/App.tsx",
-          "content": "import React from 'react';\\n\\nfunction App() {\\n  return <div>Hello World</div>;\\n}\\n\\nexport default App;"
-        }
-      ]
+      \`\`\`xml
+      <change><search><![CDATA[const oldFunction = () => { console.log("old"); }]]></search><replace><![CDATA[const newFunction = () => { console.log("new"); return true; }]]></replace></change>
       \`\`\`
-    * Do not include any conversational text, explanations, or any text outside of this required JSON format.
-    * Ensure all special characters in the content are properly escaped according to JSON standards.
-    * **Important**: Preserve the exact formatting of the input document, including any empty last lines. If the input document ends with an empty line, your output content must also end with an empty line (represented as \\n at the end).
+    * **Critical Requirements:**
+      - Do not include any conversational text, explanations, or any text outside of this required XML format
+      - The search content must match the existing code exactly, including whitespace and indentation
+      - **IMPORTANT: Always include COMPLETE code blocks in search patterns. Never use partial matches like single lines from multi-line functions, classes, or objects. Include the entire construct from opening to closing braces/brackets.**
+      - **For functions: Include the entire function from declaration to closing brace**
+      - **For objects/classes: Include the entire structure from opening to closing brace**
+      - **For multi-line statements: Include all lines that form the complete logical unit**
+      - Each search block must contain exact text that exists in the current document
+      - Use CDATA sections to properly handle multi-line code blocks and special characters
+      - Multiple changes should use separate <change> blocks, not nested within a single block
+      - **Do not add extra whitespace or line breaks between XML tags; tags should be directly adjacent**
+      - Only the content inside CDATA sections should contain line breaks, spaces, and tabs as needed for code formatting
 `
-
 		return customInstructions ? `${basePrompt}${customInstructions}` : basePrompt
 	}
 
 	private getBaseSuggestionPrompt() {
 		return `\
 # Task
-Analyze my recent code modifications to infer my underlying intent. Based on that intent, identify all related code that is now obsolete or inconsistent and generate the complete, updated file content to complete the task.
+Analyze my recent code modifications to infer my underlying intent. Based on that intent, identify all related code that is now obsolete or inconsistent and provide targeted changes using the XML search-and-replace format.
 
 # Instructions
 1.  **Infer Intent:** First, analyze the \`Recent Changes (Diff)\` to form a hypothesis about my goal. If I've started writing something incomplete, infer what I'm trying to achieve.
 2.  **Be Creative and Helpful:** For incomplete code (like \`const onButtonHoldClick = \`), use context clues to complete it intelligently. Consider the name, surrounding code, and common patterns.
 3.  **Identify All Impacts:** Based on the inferred intent, scan the \`Current Document\` to find every piece of code that is affected. This includes component usages, variables, and related text or comments that are now obsolete.
 4.  **Fix Document Diagnostics:** If the \`Current Document\` has diagnostics, assume they are now obsolete due to the changes. Remove or update them as necessary.
-5.  **Generate JSON Array Response:** Your response must be a valid JSON array containing objects with "path" and "content" properties. The "path" must be the full file URI, and "content" must contain the entire, updated content of the file. **Important**: Preserve the exact formatting of the input document, including any empty last lines.
+5.  **Generate XML Search-and-Replace Response:** Your response must use the XML format with <change>, <search>, and <replace> tags. Each <search> block must contain exact text that exists in the current document, and each <replace> block must contain the updated code. Use CDATA sections to handle multi-line code properly. Provide multiple <change> blocks if multiple modifications are needed.
 
 # Context
 `
@@ -284,337 +289,284 @@ ${sections.filter(Boolean).join("\n\n")}
 `
 	}
 
-	private safeJsonParse(jsonContent: string): any {
-		try {
-			// First, try direct parsing
-			return JSON.parse(jsonContent)
-		} catch (error) {
-			// If direct parsing fails, try to fix common issues with escaped content
-			try {
-				// More robust approach: manually parse and fix the JSON structure
-				let fixedContent = jsonContent
+	/**
+	 * Check if the search pattern might be a partial match of a larger code construct
+	 */
+	private isPotentialPartialMatch(content: string, searchPattern: string): boolean {
+		const trimmedPattern = searchPattern.trim()
 
-				// First, try to find and fix the content field using a more comprehensive approach
-				// This handles cases where the content spans multiple lines and contains unescaped quotes
-				const arrayMatch = fixedContent.match(/^\s*\[\s*([\s\S]*)\s*\]\s*$/)
-				if (arrayMatch) {
-					const arrayContent = arrayMatch[1]
+		// Check for common patterns that suggest partial matches
+		const partialPatterns = [
+			/^(const|let|var|function|class|interface|type)\s+\w+\s*[=:]?\s*$/, // Variable/function declarations without body
+			/^[^{]*\{\s*$/, // Opening brace without closing
+			/^\s*[^}]*$/, // Content without closing brace when it should have one
+			/^[^(]*\([^)]*$/, // Opening parenthesis without closing
+			/^[^[]*\[[^\]]*$/, // Opening bracket without closing
+		]
 
-					// Split by objects (looking for },{ pattern but being careful about content)
-					const objects = []
-					let currentObject = ""
-					let braceCount = 0
-					let inString = false
-					let escapeNext = false
-
-					for (let i = 0; i < arrayContent.length; i++) {
-						const char = arrayContent[i]
-
-						if (escapeNext) {
-							escapeNext = false
-							currentObject += char
-							continue
-						}
-
-						if (char === "\\") {
-							escapeNext = true
-							currentObject += char
-							continue
-						}
-
-						if (char === '"' && !escapeNext) {
-							inString = !inString
-						}
-
-						if (!inString) {
-							if (char === "{") {
-								braceCount++
-							} else if (char === "}") {
-								braceCount--
-								if (braceCount === 0) {
-									currentObject += char
-									objects.push(currentObject.trim())
-									currentObject = ""
-									// Skip comma and whitespace
-									while (i + 1 < arrayContent.length && /[,\s]/.test(arrayContent[i + 1])) {
-										i++
-									}
-									continue
-								}
-							}
-						}
-
-						currentObject += char
-					}
-
-					// Process any remaining object
-					if (currentObject.trim()) {
-						objects.push(currentObject.trim())
-					}
-
-					// Now fix each object
-					const fixedObjects = objects.map((objStr) => {
-						// Extract path and content fields
-						const pathMatch = objStr.match(/"path":\s*"([^"]*)"/)
-						const contentMatch = objStr.match(/"content":\s*"([\s\S]*?)"\s*(?=\s*\})/s)
-
-						if (pathMatch && contentMatch) {
-							const path = pathMatch[1]
-							const content = contentMatch[1]
-
-							// First, unescape any existing escapes to get the raw content
-							const unescapedContent = content
-								.replace(/\\"/g, '"') // Unescape quotes
-								.replace(/\\\\/g, "\\") // Unescape backslashes
-								.replace(/\\n/g, "\n") // Unescape newlines
-								.replace(/\\r/g, "\r") // Unescape carriage returns
-								.replace(/\\t/g, "\t") // Unescape tabs
-
-							// Then properly escape for JSON parsing
-							const escapedContent = unescapedContent
-								.replace(/\\/g, "\\\\") // Escape backslashes first
-								.replace(/"/g, '\\"') // Escape quotes
-								.replace(/\n/g, "\\n") // Escape newlines
-								.replace(/\r/g, "\\r") // Escape carriage returns
-								.replace(/\t/g, "\\t") // Escape tabs
-								.replace(/[\x00-\x1f\x7f-\x9f]/g, (char: string) => {
-									// Escape all control characters
-									return "\\u" + ("0000" + char.charCodeAt(0).toString(16)).slice(-4)
-								})
-
-							return `{"path": "${path}", "content": "${escapedContent}"}`
-						}
-
-						return objStr
-					})
-
-					fixedContent = `[${fixedObjects.join(", ")}]`
-				}
-
-				return JSON.parse(fixedContent)
-			} catch (secondError) {
-				// If both attempts fail, throw the original error
-				throw error
-			}
-		}
+		return partialPatterns.some((pattern) => pattern.test(trimmedPattern))
 	}
 
-	async parseResponse(response: string, context: GhostSuggestionContext): Promise<GhostSuggestionsState> {
-		const suggestions = new GhostSuggestionsState()
+	/**
+	 * Validate if a match represents a complete code construct
+	 */
+	private isCompleteMatch(
+		content: string,
+		matchIndex: number,
+		matchLength: number,
+		originalPattern: string,
+	): boolean {
+		const matchedText = content.substring(matchIndex, matchIndex + matchLength)
+		const trimmedMatch = matchedText.trim()
+		const trimmedPattern = originalPattern.trim()
 
-		// First, try to parse as JSON array format (direct JSON)
-		try {
-			const jsonResponse = JSON.parse(response.trim())
-			if (Array.isArray(jsonResponse)) {
-				return await this.processJsonArrayFormat(jsonResponse, context)
-			}
-		} catch (error) {
-			// Not valid JSON, continue with other formats
+		// Check for balanced braces, parentheses, and brackets
+		const checkBalance = (open: string, close: string) => {
+			const openCount = (trimmedMatch.match(new RegExp(`\\${open}`, "g")) || []).length
+			const closeCount = (trimmedMatch.match(new RegExp(`\\${close}`, "g")) || []).length
+			return openCount === closeCount
 		}
 
-		// Second, try to extract JSON from markdown code blocks
-		const jsonCodeBlockMatch = response.match(/```json\s*\r?\n([\s\S]*?)\r?\n```/m)
-		if (jsonCodeBlockMatch) {
-			try {
-				const jsonContent = jsonCodeBlockMatch[1].trim()
-
-				// Try to parse the JSON content with better error handling
-				const jsonResponse = this.safeJsonParse(jsonContent)
-				if (Array.isArray(jsonResponse)) {
-					return await this.processJsonArrayFormat(jsonResponse, context)
-				}
-			} catch (error) {
-				console.warn("Failed to parse JSON from code block:", error)
-			}
+		if (trimmedPattern.includes("{") || trimmedPattern.includes("}")) {
+			if (!checkBalance("{", "}")) return false
+		}
+		if (trimmedPattern.includes("(") || trimmedPattern.includes(")")) {
+			if (!checkBalance("(", ")")) return false
+		}
+		if (trimmedPattern.includes("[") || trimmedPattern.includes("]")) {
+			if (!checkBalance("[", "]")) return false
 		}
 
-		// Fallback: check for a response with a filePath (legacy format)
-		const fullContentMatch = response.match(/^(.+?)\r?\n```[\w-]*\r?\n([\s\S]+?)```/m)
-		if (fullContentMatch) {
-			const [_, filePath, newContent] = fullContentMatch
-			return await this.processFullContentFormat(filePath, newContent, context)
-		}
-
-		// If the LLM response didn't include a filePath, fallback to assuming
-		// the file to modify is the context.document
-		const contentMatchNoFilePath = response.match(/^```[\w-]*\r?\n([\s\S]+?)```$/m)
-		if (contentMatchNoFilePath) {
-			const [_, newContent] = contentMatchNoFilePath
-			const relativeFilePath = vscode.workspace.asRelativePath(context.document.uri, false)
-			return await this.processFullContentFormat(relativeFilePath, newContent, context)
-		}
-
-		// Check if the response is in the old diff format
-		if (response.includes("--- a/") && response.includes("+++ b/")) {
-			return await this.processDiffFormat(response, context)
-		}
-
-		// No valid format found
-		return suggestions
+		return true
 	}
 
-	private async processJsonArrayFormat(
-		jsonArray: Array<{ path: string; content: string }>,
-		context: GhostSuggestionContext,
-	): Promise<GhostSuggestionsState> {
-		const suggestions = new GhostSuggestionsState()
+	/**
+	 * Find the best match for search content in the document, handling whitespace differences
+	 */
+	private findBestMatch(content: string, searchPattern: string): number {
+		// First try exact match
+		let index = content.indexOf(searchPattern)
+		if (index !== -1) {
+			return index
+		}
 
-		for (const fileObj of jsonArray) {
-			if (!fileObj.path || typeof fileObj.content !== "string") {
-				console.warn("Invalid JSON object format: missing path or content")
-				continue
+		// Handle the case where search pattern has trailing whitespace that might not match exactly
+		// This is common when the search pattern ends with a newline but the content has additional empty lines
+		if (searchPattern.endsWith("\n")) {
+			// Try matching without the trailing newline, then check if we can find it in context
+			const searchWithoutTrailingNewline = searchPattern.slice(0, -1)
+			index = content.indexOf(searchWithoutTrailingNewline)
+			if (index !== -1) {
+				// Check if the character after the match is a newline or end of string
+				const afterMatchIndex = index + searchWithoutTrailingNewline.length
+				if (afterMatchIndex >= content.length || content[afterMatchIndex] === "\n") {
+					return index
+				}
 			}
+		}
 
-			// Parse the file URI
-			let fileUri: vscode.Uri
-			try {
-				fileUri = vscode.Uri.parse(fileObj.path)
-			} catch (error) {
-				console.error(`Error parsing file URI ${fileObj.path}:`, error)
-				continue
+		// Normalize whitespace for both content and search pattern
+		const normalizeWhitespace = (text: string): string => {
+			return text
+				.replace(/\r\n/g, "\n") // Normalize line endings
+				.replace(/\r/g, "\n") // Handle old Mac line endings
+				.replace(/\t/g, "    ") // Convert tabs to spaces
+				.replace(/[ \t]+$/gm, "") // Remove trailing whitespace from each line
+		}
+
+		const normalizedContent = normalizeWhitespace(content)
+		const normalizedSearch = normalizeWhitespace(searchPattern)
+
+		// Try normalized match
+		index = normalizedContent.indexOf(normalizedSearch)
+		if (index !== -1) {
+			// Map back to original content position
+			return this.mapNormalizedToOriginalIndex(content, normalizedContent, index)
+		}
+
+		// Try trimmed search (remove leading/trailing whitespace)
+		const trimmedSearch = searchPattern.trim()
+		if (trimmedSearch !== searchPattern) {
+			index = content.indexOf(trimmedSearch)
+			if (index !== -1) {
+				return index
 			}
+		}
 
-			// Try to find the matching document in the context
-			const openFiles = context.openFiles || []
-			const matchingDocument = openFiles.find(
-				(doc) =>
-					doc.uri.toString() === fileUri.toString() ||
-					vscode.workspace.asRelativePath(doc.uri, false) === vscode.workspace.asRelativePath(fileUri, false),
+		// NEW: Enhanced validation for partial matches
+		// Before doing fuzzy matching, check if this might be a partial match of a larger construct
+		if (this.isPotentialPartialMatch(content, searchPattern)) {
+			console.warn(
+				"Potential partial match detected. Search pattern might be incomplete:",
+				searchPattern.substring(0, 100),
 			)
+			return -1 // Reject partial matches that could cause duplication
+		}
 
-			let documentToUse: vscode.TextDocument | undefined
-			let uriToUse: vscode.Uri = fileUri
+		// Try fuzzy matching with flexible whitespace (only if not a potential partial match)
+		const flexiblePattern = searchPattern
+			.replace(/\s+/g, "\\s+") // Replace any whitespace sequence with flexible regex
+			.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") // Escape regex special characters except our whitespace
 
-			if (matchingDocument) {
-				documentToUse = matchingDocument
-				uriToUse = matchingDocument.uri
-			} else {
-				// If we couldn't find a matching document, try to open the document
-				try {
-					documentToUse = await vscode.workspace.openTextDocument(fileUri)
-				} catch (error) {
-					console.error(`Error opening document ${fileObj.path}:`, error)
-					continue // Skip this file if we can't open it
+		try {
+			const regex = new RegExp(flexiblePattern, "g")
+			const match = regex.exec(content)
+			if (match) {
+				// Additional validation: check if this match is part of a larger construct
+				if (this.isCompleteMatch(content, match.index, match[0].length, searchPattern)) {
+					return match.index
 				}
 			}
+		} catch (e) {
+			// Regex failed, continue with other methods
+		}
 
-			if (!documentToUse) {
-				continue // Skip this file if we can't find or open the document
+		// Last resort: try to find the first few words of the search pattern
+		const words = searchPattern.trim().split(/\s+/).slice(0, 3)
+		if (words.length > 0) {
+			const partialPattern = words.join("\\s+")
+			try {
+				const regex = new RegExp(partialPattern, "g")
+				const match = regex.exec(content)
+				if (match) {
+					return match.index
+				}
+			} catch (e) {
+				// Regex failed
 			}
+		}
 
-			// Get the current content of the file
-			const currentContent = documentToUse.getText()
+		return -1 // No match found
+	}
 
-			// The content from JSON is already properly unescaped by JSON.parse()
-			// No additional processing needed for escaped characters
-			const newContent = fileObj.content
+	/**
+	 * Map an index from normalized content back to the original content
+	 */
+	private mapNormalizedToOriginalIndex(
+		originalContent: string,
+		normalizedContent: string,
+		normalizedIndex: number,
+	): number {
+		let originalIndex = 0
+		let normalizedPos = 0
 
-			// Generate a diff between the current content and the new content
-			const relativePath = vscode.workspace.asRelativePath(uriToUse, false)
-			const patch = structuredPatch(relativePath, relativePath, currentContent, newContent, "", "")
+		while (normalizedPos < normalizedIndex && originalIndex < originalContent.length) {
+			const originalChar = originalContent[originalIndex]
+			const normalizedChar = normalizedContent[normalizedPos]
 
-			// Create a suggestion file
-			const suggestionFile = suggestions.addFile(uriToUse)
-
-			// Process each hunk in the patch
-			for (const hunk of patch.hunks) {
-				let currentOldLineNumber = hunk.oldStart
-				let currentNewLineNumber = hunk.newStart
-
-				// Iterate over each line within the hunk
-				for (const line of hunk.lines) {
-					const operationType = line.charAt(0) as GhostSuggestionEditOperationType
-					const content = line.substring(1)
-
-					switch (operationType) {
-						// Case 1: The line is an addition
-						case "+":
-							suggestionFile.addOperation({
-								type: "+",
-								line: currentNewLineNumber - 1,
-								content: content,
-							})
-							// Only increment the new line counter for additions and context lines
-							currentNewLineNumber++
-							break
-
-						// Case 2: The line is a deletion
-						case "-":
-							suggestionFile.addOperation({
-								type: "-",
-								line: currentOldLineNumber - 1,
-								content: content,
-							})
-							// Only increment the old line counter for deletions and context lines
-							currentOldLineNumber++
-							break
-
-						// Case 3: The line is unchanged (context)
-						default:
-							// For context lines, we increment both counters
-							currentOldLineNumber++
-							currentNewLineNumber++
-							break
+			if (originalChar === normalizedChar) {
+				originalIndex++
+				normalizedPos++
+			} else {
+				// Handle whitespace normalization differences
+				if (/\s/.test(originalChar)) {
+					originalIndex++
+					// Skip ahead in original until we find non-whitespace or match normalized
+					while (originalIndex < originalContent.length && /\s/.test(originalContent[originalIndex])) {
+						originalIndex++
 					}
+					if (normalizedPos < normalizedContent.length && /\s/.test(normalizedChar)) {
+						normalizedPos++
+					}
+				} else {
+					// Characters don't match, this shouldn't happen with proper normalization
+					originalIndex++
+					normalizedPos++
 				}
 			}
 		}
 
-		suggestions.sortGroups()
-		return suggestions
+		return originalIndex
 	}
 
-	private async processFullContentFormat(
-		filePath: string,
-		newContent: string,
+	private async parseSearchAndReplaceFormat(
+		response: string,
 		context: GhostSuggestionContext,
 	): Promise<GhostSuggestionsState> {
 		const suggestions = new GhostSuggestionsState()
 
-		// Clean up the file path (remove any extra quotes or spaces)
-		const cleanedFilePath = filePath.trim()
+		// Extract all <change> blocks from the response
+		// Updated regex to handle both single-line XML format and traditional format with whitespace
+		const changeRegex =
+			/<change>\s*<search>\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*<\/search>\s*<replace>\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*<\/replace>\s*<\/change>/g
+		const changes: Array<{ search: string; replace: string }> = []
 
-		// Create a URI for the file
-		const fileUri = cleanedFilePath.startsWith("file://")
-			? vscode.Uri.parse(cleanedFilePath)
-			: vscode.Uri.parse(`file://${cleanedFilePath}`)
+		let match
+		while ((match = changeRegex.exec(response)) !== null) {
+			const searchContent = match[1]
+			const replaceContent = match[2]
+			changes.push({ search: searchContent, replace: replaceContent })
+		}
+		if (changes.length === 0) {
+			return suggestions
+		}
 
-		// Try to find the matching document in the context
-		const openFiles = context.openFiles || []
-		const matchingDocument = openFiles.find(
-			(doc) =>
-				vscode.workspace.asRelativePath(doc.uri, false) === cleanedFilePath ||
-				doc.uri.toString() === fileUri.toString(),
-		)
+		// Process changes for the current document
+		const document = context.document
+		const currentContent = document.getText()
+		let modifiedContent = currentContent
 
-		let documentToUse: vscode.TextDocument | undefined
-		let uriToUse: vscode.Uri = fileUri
+		// Apply changes in reverse order to maintain line numbers
+		const appliedChanges: Array<{
+			searchContent: string
+			replaceContent: string
+			startIndex: number
+			endIndex: number
+		}> = []
 
-		if (matchingDocument) {
-			documentToUse = matchingDocument
-			uriToUse = matchingDocument.uri
-		} else {
-			// If we couldn't find a matching document, try to open the document
-			try {
-				documentToUse = await vscode.workspace.openTextDocument(fileUri)
-			} catch (error) {
-				console.error(`Error opening document ${cleanedFilePath}:`, error)
-				return suggestions // Return empty suggestions if we can't open the document
+		for (const change of changes) {
+			const searchIndex = this.findBestMatch(modifiedContent, change.search)
+			if (searchIndex !== -1) {
+				// Handle the case where search pattern ends with newline but we need to preserve additional whitespace
+				let endIndex = searchIndex + change.search.length
+				let adjustedReplaceContent = change.replace
+
+				// If the search pattern ends with a newline, check if there are additional empty lines after it
+				if (change.search.endsWith("\n")) {
+					let nextCharIndex = endIndex
+					let extraNewlines = ""
+
+					// Count consecutive newlines after the search pattern
+					while (nextCharIndex < modifiedContent.length && modifiedContent[nextCharIndex] === "\n") {
+						extraNewlines += "\n"
+						nextCharIndex++
+					}
+
+					// If we found extra newlines, preserve them by adding them to the replacement
+					if (extraNewlines.length > 0) {
+						// Only add the extra newlines if the replacement doesn't already end with enough newlines
+						if (!adjustedReplaceContent.endsWith("\n" + extraNewlines)) {
+							adjustedReplaceContent = adjustedReplaceContent.trimEnd() + "\n" + extraNewlines
+						}
+					}
+				}
+
+				appliedChanges.push({
+					searchContent: change.search,
+					replaceContent: adjustedReplaceContent,
+					startIndex: searchIndex,
+					endIndex: endIndex,
+				})
 			}
 		}
 
-		if (!documentToUse) {
-			return suggestions // Return empty suggestions if we can't find or open the document
+		// Sort by start index in descending order to apply changes from end to beginning
+		appliedChanges.sort((a, b) => b.startIndex - a.startIndex)
+
+		// Apply the changes
+		for (const change of appliedChanges) {
+			modifiedContent =
+				modifiedContent.substring(0, change.startIndex) +
+				change.replaceContent +
+				modifiedContent.substring(change.endIndex)
 		}
 
-		// Get the current content of the file
-		const currentContent = documentToUse.getText()
-
-		// Generate a diff between the current content and the new content
-		const patch = structuredPatch(cleanedFilePath, cleanedFilePath, currentContent, newContent, "", "")
+		// Generate diff between original and modified content
+		const relativePath = vscode.workspace.asRelativePath(document.uri, false)
+		const patch = structuredPatch(relativePath, relativePath, currentContent, modifiedContent, "", "")
 
 		// Create a suggestion file
-		const suggestionFile = suggestions.addFile(uriToUse)
+		const suggestionFile = suggestions.addFile(document.uri)
 
 		// Process each hunk in the patch
 		for (const hunk of patch.hunks) {
@@ -663,87 +615,124 @@ ${sections.filter(Boolean).join("\n\n")}
 		return suggestions
 	}
 
-	private async processDiffFormat(response: string, context: GhostSuggestionContext): Promise<GhostSuggestionsState> {
+	async parseResponse(response: string, context: GhostSuggestionContext): Promise<GhostSuggestionsState> {
 		const suggestions = new GhostSuggestionsState()
 
-		// Parse the diff to extract the file path
-		const filePathMatch = response.match(/\+\+\+ b\/(.+?)$/m)
-		if (!filePathMatch) {
-			return suggestions // No file path found
+		// First, try to parse as search-and-replace XML format
+		if (response.includes("<change>") && response.includes("<search>") && response.includes("<replace>")) {
+			return await this.parseSearchAndReplaceFormat(response, context)
 		}
 
-		const filePath = filePathMatch[1]
+		// Try to parse as code block format (filename followed by code block)
+		if (response.includes("```")) {
+			return await this.parseCodeBlockFormat(response, context)
+		}
 
-		// Create a URI for the file
-		const fileUri = filePath.startsWith("file://")
-			? vscode.Uri.parse(filePath)
-			: vscode.Uri.parse(`file://${filePath}`)
+		// No valid format found
+		return suggestions
+	}
 
-		// Try to find the matching document in the context
-		const openFiles = context.openFiles || []
-		const matchingDocument = openFiles.find(
-			(doc) =>
-				vscode.workspace.asRelativePath(doc.uri, false) === filePath ||
-				doc.uri.toString() === fileUri.toString(),
-		)
+	/**
+	 * Parse code block format like:
+	 * filename.js
+	 * ```js
+	 * code content
+	 * ```
+	 */
+	private async parseCodeBlockFormat(
+		response: string,
+		context: GhostSuggestionContext,
+	): Promise<GhostSuggestionsState> {
+		const suggestions = new GhostSuggestionsState()
 
-		let documentToUse: vscode.TextDocument | undefined
-		let uriToUse: vscode.Uri = fileUri
+		// Extract filename and code block
+		const lines = response.split("\n")
+		let filename = ""
+		let codeContent = ""
+		let inCodeBlock = false
+		let language = ""
 
-		if (matchingDocument) {
-			documentToUse = matchingDocument
-			uriToUse = matchingDocument.uri
-		} else {
-			// If we couldn't find a matching document, try to open the document
-			try {
-				documentToUse = await vscode.workspace.openTextDocument(fileUri)
-			} catch (error) {
-				console.error(`Error opening document ${filePath}:`, error)
-				return suggestions // Return empty suggestions if we can't open the document
+		for (let i = 0; i < lines.length; i++) {
+			const line = lines[i].trim()
+
+			// Check for filename (usually first non-empty line)
+			if (!filename && line && !line.startsWith("```") && !inCodeBlock) {
+				filename = line
+				continue
+			}
+
+			// Check for code block start
+			if (line.startsWith("```")) {
+				if (!inCodeBlock) {
+					inCodeBlock = true
+					language = line.substring(3).trim()
+				} else {
+					// End of code block
+					break
+				}
+				continue
+			}
+
+			// Collect code content
+			if (inCodeBlock) {
+				codeContent += (codeContent ? "\n" : "") + lines[i]
 			}
 		}
 
-		if (!documentToUse) {
-			return suggestions // Return empty suggestions if we can't find or open the document
+		if (!codeContent || !context.document) {
+			return suggestions
 		}
 
+		// Replace the entire document content with the new code
+		const document = context.document
+		const currentContent = document.getText()
+
+		// Generate diff between original and new content
+		const relativePath = vscode.workspace.asRelativePath(document.uri, false)
+		const patch = structuredPatch(relativePath, relativePath, currentContent, codeContent, "", "")
+
 		// Create a suggestion file
-		const suggestionFile = suggestions.addFile(uriToUse)
+		const suggestionFile = suggestions.addFile(document.uri)
 
-		// Parse the diff hunks
-		const hunkMatches = response.matchAll(/@@ -(\d+),(\d+) \+(\d+),(\d+) @@([\s\S]+?)(?=@@ |$)/g)
+		// Process each hunk in the patch
+		for (const hunk of patch.hunks) {
+			let currentOldLineNumber = hunk.oldStart
+			let currentNewLineNumber = hunk.newStart
 
-		for (const hunkMatch of hunkMatches) {
-			const [_, oldStart, oldLength, newStart, newLength, hunkContent] = hunkMatch
+			// Iterate over each line within the hunk
+			for (const line of hunk.lines) {
+				const operationType = line.charAt(0) as GhostSuggestionEditOperationType
+				const content = line.substring(1)
 
-			let currentOldLineNumber = parseInt(oldStart)
-			let currentNewLineNumber = parseInt(newStart)
+				switch (operationType) {
+					// Case 1: The line is an addition
+					case "+":
+						suggestionFile.addOperation({
+							type: "+",
+							line: currentNewLineNumber - 1,
+							content: content,
+						})
+						// Only increment the new line counter for additions and context lines
+						currentNewLineNumber++
+						break
 
-			// Split the hunk content into lines
-			const lines = hunkContent.split("\n").filter((line) => line.length > 0)
+					// Case 2: The line is a deletion
+					case "-":
+						suggestionFile.addOperation({
+							type: "-",
+							line: currentOldLineNumber - 1,
+							content: content,
+						})
+						// Only increment the old line counter for deletions and context lines
+						currentOldLineNumber++
+						break
 
-			// Process each line in the hunk
-			for (const line of lines) {
-				if (line.startsWith("+")) {
-					// Addition
-					suggestionFile.addOperation({
-						type: "+",
-						line: currentNewLineNumber - 1,
-						content: line.substring(1),
-					})
-					currentNewLineNumber++
-				} else if (line.startsWith("-")) {
-					// Deletion
-					suggestionFile.addOperation({
-						type: "-",
-						line: currentOldLineNumber - 1,
-						content: line.substring(1),
-					})
-					currentOldLineNumber++
-				} else {
-					// Context line
-					currentOldLineNumber++
-					currentNewLineNumber++
+					// Case 3: The line is unchanged (context)
+					default:
+						// For context lines, we increment both counters
+						currentOldLineNumber++
+						currentNewLineNumber++
+						break
 				}
 			}
 		}
