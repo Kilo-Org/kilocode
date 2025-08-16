@@ -53,7 +53,7 @@ export class RequestyHandler extends BaseProvider implements SingleCompletionHan
 		})
 	}
 
-	public async fetchModel() {
+	public override async /* kilocode_change: override */ fetchModel() {
 		this.models = await getModels({ provider: "requesty" })
 		return this.getModel()
 	}

@@ -5,7 +5,10 @@ import * as vscode from "vscode"
 import pWaitFor from "p-wait-for"
 import delay from "delay"
 
-import type { ExperimentId } from "@roo-code/types"
+import type {
+	ExperimentId,
+	ModelInfo, // kilocode_change
+} from "@roo-code/types"
 import { DEFAULT_TERMINAL_OUTPUT_CHARACTER_LIMIT } from "@roo-code/types"
 
 import { EXPERIMENT_IDS, experiments as Experiments } from "../../shared/experiments"
@@ -22,10 +25,8 @@ import { Task } from "../task/Task"
 import { formatReminderSection } from "./reminder"
 
 // kilocode_change start
-import { OpenRouterHandler } from "../../api/providers/openrouter"
 import { TelemetryService } from "@roo-code/telemetry"
 import { t } from "../../i18n"
-import { KilocodeOllamaHandler } from "../../api/providers/kilocode-ollama"
 // kilocode_change end
 
 export async function getEnvironmentDetails(cline: Task, includeFileDetails: boolean = false) {
@@ -211,22 +212,16 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 	const { contextTokens, totalCost } = getApiMetrics(cline.clineMessages)
 
 	// kilocode_change start
-	// Be sure to fetch the model information before we need it.
-	if (cline.api instanceof OpenRouterHandler || cline.api instanceof KilocodeOllamaHandler) {
-		try {
-			await cline.api.fetchModel()
-		} catch (e) {
-			TelemetryService.instance.captureException(e, { context: "getEnvironmentDetails" })
-			await cline.say(
-				"error",
-				t("kilocode:notLoggedInError", { error: e instanceof Error ? e.message : String(e) }),
-			)
-			return `<environment_details>\n${details.trim()}\n</environment_details>`
-		}
+	let modelId: string
+	let modelInfo: ModelInfo
+	try {
+		;({ id: modelId, info: modelInfo } = await cline.api.fetchModel())
+	} catch (e) {
+		TelemetryService.instance.captureException(e, { context: "getEnvironmentDetails" })
+		await cline.say("error", t("kilocode:notLoggedInError", { error: e instanceof Error ? e.message : String(e) }))
+		return `<environment_details>\n${details.trim()}\n</environment_details>`
 	}
 	// kilocode_change end
-
-	const { id: modelId, info: modelInfo } = cline.api.getModel()
 
 	details += `\n\n# Current Cost\n${totalCost !== null ? `$${totalCost.toFixed(2)}` : "(Not available)"}`
 

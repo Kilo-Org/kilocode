@@ -50,6 +50,20 @@ vi.mock("../../../integrations/terminal/Terminal")
 vi.mock("../../../utils/path")
 vi.mock("../../prompts/responses")
 
+// Mock TelemetryService
+vi.mock("../../../../packages/telemetry/src/TelemetryService", () => ({
+	// kilocode_change
+	TelemetryService: {
+		get instance() {
+			return {
+				isPrivacyMode: false,
+				captureException: vi.fn(),
+				// Add any other methods that might be needed
+			}
+		},
+	},
+}))
+
 describe("getEnvironmentDetails", () => {
 	const mockCwd = "/test/path"
 	const mockTaskId = "test-task-id"
@@ -107,7 +121,7 @@ describe("getEnvironmentDetails", () => {
 			} as unknown as RooIgnoreController,
 			clineMessages: [],
 			api: {
-				getModel: vi.fn().mockReturnValue({ id: "test-model", info: { contextWindow: 100000 } }),
+				fetchModel: vi.fn().mockResolvedValue({ id: "test-model", info: { contextWindow: 100000 } }), // kilocode_change
 				createMessage: vi.fn(),
 				countTokens: vi.fn(),
 			} as unknown as ApiHandler,

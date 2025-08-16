@@ -78,6 +78,12 @@ export class HumanRelayHandler implements ApiHandler, SingleCompletionHandler {
 		}
 	}
 
+	// kilocode_change start
+	fetchModel() {
+		return Promise.resolve(this.getModel())
+	}
+	// kilocode_change end
+
 	/**
 	 * Implementation of a single prompt
 	 * @param prompt Prompt content

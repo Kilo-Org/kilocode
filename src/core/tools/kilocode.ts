@@ -10,15 +10,15 @@ async function getTokenEstimate(task: Task, outputText: string) {
 	return await task.api.countTokens([{ type: "text", text: outputText }])
 }
 
-function getTokenLimit(task: Task) {
-	return SIZE_LIMIT_AS_CONTEXT_WINDOW_FRACTION * task.api.getModel().info.contextWindow
+async function getTokenLimit(task: Task) {
+	return SIZE_LIMIT_AS_CONTEXT_WINDOW_FRACTION * (await task.api.fetchModel()).info.contextWindow
 }
 
 export async function summarizeSuccessfulMcpOutputWhenTooLong(task: Task, outputText: string) {
 	if (await allowVeryLargeReads(task)) {
 		return outputText
 	}
-	const tokenLimit = getTokenLimit(task)
+	const tokenLimit = await getTokenLimit(task)
 	const tokenEstimate = await getTokenEstimate(task, outputText)
 	if (tokenEstimate < tokenLimit) {
 		return outputText
@@ -34,7 +34,7 @@ export async function blockFileReadWhenTooLarge(task: Task, relPath: string, con
 	if (await allowVeryLargeReads(task)) {
 		return undefined
 	}
-	const tokenLimit = getTokenLimit(task)
+	const tokenLimit = await getTokenLimit(task)
 	const tokenEstimate = await getTokenEstimate(task, content)
 	if (tokenEstimate < tokenLimit) {
 		return undefined

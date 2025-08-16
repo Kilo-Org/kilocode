@@ -88,11 +88,11 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 		}
 	}
 
-	getModel(): { id: string; info: ModelInfo } {
+	fetchModel() {
 		if (!this.activeHandler) {
 			throw new Error("No active handler configured - ensure initialize() was called and profiles are available")
 		}
-		return this.activeHandler.getModel()
+		return this.activeHandler.fetchModel()
 	}
 
 	private async loadConfiguredProfiles(): Promise<void> {

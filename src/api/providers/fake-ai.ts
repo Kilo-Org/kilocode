@@ -71,6 +71,12 @@ export class FakeAIHandler implements ApiHandler, SingleCompletionHandler {
 		return this.ai.getModel()
 	}
 
+	// kilocode_change start
+	fetchModel() {
+		return Promise.resolve(this.getModel())
+	}
+	// kilocode_change end
+
 	countTokens(content: Array<Anthropic.Messages.ContentBlockParam>): Promise<number> {
 		return this.ai.countTokens(content)
 	}

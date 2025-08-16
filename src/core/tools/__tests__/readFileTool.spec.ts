@@ -203,7 +203,8 @@ function createMockCline(): any {
 		didRejectTool: false,
 		// CRITICAL: Always ensure image support is enabled
 		api: {
-			getModel: vi.fn().mockReturnValue({
+			fetchModel: vi.fn().mockResolvedValue({
+				// kilocode_change
 				info: {
 					supportsImages: true,
 					contextWindow: 100000, // Add context window for token limit calculations
@@ -219,7 +220,8 @@ function createMockCline(): any {
 // Helper function to set image support without affecting shared state
 function setImageSupport(mockCline: any, supportsImages: boolean | undefined): void {
 	mockCline.api = {
-		getModel: vi.fn().mockReturnValue({
+		fetchModel: vi.fn().mockResolvedValue({
+			// kilocode_change
 			info: {
 				supportsImages,
 				contextWindow: 100000, // Add context window for token limit calculations
@@ -1394,10 +1396,6 @@ describe("read_file tool with image support", () => {
 			partial: false,
 		}
 
-		// Debug: Check if mock is working
-		console.log("Mock API:", localMockCline.api)
-		console.log("Supports images:", localMockCline.api?.getModel?.()?.info?.supportsImages)
-
 		await readFileTool(
 			localMockCline,
 			toolUse,
@@ -1408,9 +1406,6 @@ describe("read_file tool with image support", () => {
 			},
 			(_: ToolParamName, content?: string) => content ?? "",
 		)
-
-		console.log("Result type:", Array.isArray(toolResult) ? "array" : typeof toolResult)
-		console.log("Result:", toolResult)
 
 		return toolResult
 	}

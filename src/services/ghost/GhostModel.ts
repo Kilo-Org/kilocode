@@ -79,12 +79,12 @@ export class GhostModel {
 		}
 	}
 
-	public getModelName(): string | null {
+	public async getModelName(): Promise<string | null> {
 		if (!this.apiHandler) {
 			return null
 		}
 		// Extract model name from API handler
-		return this.apiHandler.getModel().id ?? "unknown"
+		return (await this.apiHandler.fetchModel()).id ?? "unknown"
 	}
 
 	public hasValidCredentials(): boolean {

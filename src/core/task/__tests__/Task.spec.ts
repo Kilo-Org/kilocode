@@ -520,18 +520,21 @@ describe("Cline", () => {
 				})
 
 				// Mock the model info to indicate image support
-				vi.spyOn(clineWithImages.api, "getModel").mockReturnValue({
-					id: "claude-3-sonnet",
-					info: {
-						supportsImages: true,
-						supportsPromptCache: true,
-						supportsComputerUse: true,
-						contextWindow: 200000,
-						maxTokens: 4096,
-						inputPrice: 0.25,
-						outputPrice: 0.75,
-					} as ModelInfo,
-				})
+				// kilocode_change: fetchModel
+				vi.spyOn(clineWithImages.api, "fetchModel").mockReturnValue(
+					Promise.resolve({
+						id: "claude-3-sonnet",
+						info: {
+							supportsImages: true,
+							supportsPromptCache: true,
+							supportsComputerUse: true,
+							contextWindow: 200000,
+							maxTokens: 4096,
+							inputPrice: 0.25,
+							outputPrice: 0.75,
+						} as ModelInfo,
+					}),
+				)
 
 				clineWithImages.apiConversationHistory = conversationHistory
 
@@ -544,18 +547,21 @@ describe("Cline", () => {
 				})
 
 				// Mock the model info to indicate no image support
-				vi.spyOn(clineWithoutImages.api, "getModel").mockReturnValue({
-					id: "gpt-3.5-turbo",
-					info: {
-						supportsImages: false,
-						supportsPromptCache: false,
-						supportsComputerUse: false,
-						contextWindow: 16000,
-						maxTokens: 2048,
-						inputPrice: 0.1,
-						outputPrice: 0.2,
-					} as ModelInfo,
-				})
+				// kilocode_change: fetchModel
+				vi.spyOn(clineWithoutImages.api, "fetchModel").mockReturnValue(
+					Promise.resolve({
+						id: "gpt-3.5-turbo",
+						info: {
+							supportsImages: false,
+							supportsPromptCache: false,
+							supportsComputerUse: false,
+							contextWindow: 16000,
+							maxTokens: 2048,
+							inputPrice: 0.1,
+							outputPrice: 0.2,
+						} as ModelInfo,
+					}),
+				)
 
 				clineWithoutImages.apiConversationHistory = conversationHistory
 

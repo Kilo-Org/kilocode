@@ -10,28 +10,32 @@ describe("maybeRemoveImageBlocks", () => {
 	// Mock ApiHandler factory function
 	const createMockApiHandler = (supportsImages: boolean): ApiHandler => {
 		return {
-			getModel: vitest.fn().mockReturnValue({
-				id: "test-model",
-				info: {
-					supportsImages,
-				} as ModelInfo,
-			}),
+			// kilocode_change start
+			fetchModel: vitest.fn().mockReturnValue(
+				Promise.resolve({
+					id: "test-model",
+					info: {
+						supportsImages,
+					} as ModelInfo,
+				}),
+			),
+			// kilocode_change end
 			createMessage: vitest.fn(),
 			countTokens: vitest.fn(),
 		}
 	}
 
-	it("should handle empty messages array", () => {
+	it("should handle empty messages array", async () => {
 		const apiHandler = createMockApiHandler(true)
 		const messages: ApiMessage[] = []
 
-		const result = maybeRemoveImageBlocks(messages, apiHandler)
+		const result = await maybeRemoveImageBlocks(messages, apiHandler) // kilocode_change
 
 		expect(result).toEqual([])
 		// No need to check if getModel was called since there are no messages to process
 	})
 
-	it("should not modify messages with no image blocks", () => {
+	it("should not modify messages with no image blocks", async () => {
 		const apiHandler = createMockApiHandler(true)
 		const messages: ApiMessage[] = [
 			{
@@ -44,13 +48,13 @@ describe("maybeRemoveImageBlocks", () => {
 			},
 		]
 
-		const result = maybeRemoveImageBlocks(messages, apiHandler)
+		const result = await maybeRemoveImageBlocks(messages, apiHandler) // kilocode_change
 
 		expect(result).toEqual(messages)
 		// getModel is only called when content is an array, which is not the case here
 	})
 
-	it("should not modify messages with array content but no image blocks", () => {
+	it("should not modify messages with array content but no image blocks", async () => {
 		const apiHandler = createMockApiHandler(true)
 		const messages: ApiMessage[] = [
 			{
@@ -68,13 +72,13 @@ describe("maybeRemoveImageBlocks", () => {
 			},
 		]
 
-		const result = maybeRemoveImageBlocks(messages, apiHandler)
+		const result = await maybeRemoveImageBlocks(messages, apiHandler) // kilocode_change
 
 		expect(result).toEqual(messages)
-		expect(apiHandler.getModel).toHaveBeenCalled()
+		expect(apiHandler.fetchModel).toHaveBeenCalled() // kilocode_change
 	})
 
-	it("should not modify image blocks when API handler supports images", () => {
+	it("should not modify image blocks when API handler supports images", async () => {
 		const apiHandler = createMockApiHandler(true)
 		const messages: ApiMessage[] = [
 			{
@@ -96,14 +100,14 @@ describe("maybeRemoveImageBlocks", () => {
 			},
 		]
 
-		const result = maybeRemoveImageBlocks(messages, apiHandler)
+		const result = await maybeRemoveImageBlocks(messages, apiHandler) // kilocode_change
 
 		// Should not modify the messages since the API handler supports images
 		expect(result).toEqual(messages)
-		expect(apiHandler.getModel).toHaveBeenCalled()
+		expect(apiHandler.fetchModel).toHaveBeenCalled() // kilocode_change
 	})
 
-	it("should convert image blocks to text descriptions when API handler doesn't support images", () => {
+	it("should convert image blocks to text descriptions when API handler doesn't support images", async () => {
 		const apiHandler = createMockApiHandler(false)
 		const messages: ApiMessage[] = [
 			{
@@ -125,7 +129,7 @@ describe("maybeRemoveImageBlocks", () => {
 			},
 		]
 
-		const result = maybeRemoveImageBlocks(messages, apiHandler)
+		const result = await maybeRemoveImageBlocks(messages, apiHandler) // kilocode_change
 
 		// Should convert image blocks to text descriptions
 		expect(result).toEqual([
@@ -143,10 +147,10 @@ describe("maybeRemoveImageBlocks", () => {
 				],
 			},
 		])
-		expect(apiHandler.getModel).toHaveBeenCalled()
+		expect(apiHandler.fetchModel).toHaveBeenCalled() // kilocode_change
 	})
 
-	it("should handle mixed content messages with multiple text and image blocks", () => {
+	it("should handle mixed content messages with multiple text and image blocks", async () => {
 		const apiHandler = createMockApiHandler(false)
 		const messages: ApiMessage[] = [
 			{
@@ -180,7 +184,7 @@ describe("maybeRemoveImageBlocks", () => {
 			},
 		]
 
-		const result = maybeRemoveImageBlocks(messages, apiHandler)
+		const result = await maybeRemoveImageBlocks(messages, apiHandler) // kilocode_change
 
 		// Should convert all image blocks to text descriptions
 		expect(result).toEqual([
@@ -206,10 +210,10 @@ describe("maybeRemoveImageBlocks", () => {
 				],
 			},
 		])
-		expect(apiHandler.getModel).toHaveBeenCalled()
+		expect(apiHandler.fetchModel).toHaveBeenCalled() // kilocode_change
 	})
 
-	it("should handle multiple messages with image blocks", () => {
+	it("should handle multiple messages with image blocks", async () => {
 		const apiHandler = createMockApiHandler(false)
 		const messages: ApiMessage[] = [
 			{
@@ -252,7 +256,7 @@ describe("maybeRemoveImageBlocks", () => {
 			},
 		]
 
-		const result = maybeRemoveImageBlocks(messages, apiHandler)
+		const result = await maybeRemoveImageBlocks(messages, apiHandler) // kilocode_change
 
 		// Should convert all image blocks to text descriptions
 		expect(result).toEqual([
@@ -287,10 +291,10 @@ describe("maybeRemoveImageBlocks", () => {
 				],
 			},
 		])
-		expect(apiHandler.getModel).toHaveBeenCalled()
+		expect(apiHandler.fetchModel).toHaveBeenCalled() // kilocode_change
 	})
 
-	it("should preserve additional message properties", () => {
+	it("should preserve additional message properties", async () => {
 		const apiHandler = createMockApiHandler(false)
 		const messages: ApiMessage[] = [
 			{
@@ -314,7 +318,7 @@ describe("maybeRemoveImageBlocks", () => {
 			},
 		]
 
-		const result = maybeRemoveImageBlocks(messages, apiHandler)
+		const result = await maybeRemoveImageBlocks(messages, apiHandler) // kilocode_change
 
 		// Should convert image blocks to text descriptions while preserving additional properties
 		expect(result).toEqual([
@@ -334,6 +338,6 @@ describe("maybeRemoveImageBlocks", () => {
 				isSummary: true,
 			},
 		])
-		expect(apiHandler.getModel).toHaveBeenCalled()
+		expect(apiHandler.fetchModel).toHaveBeenCalled() // kilocode_change
 	})
 })

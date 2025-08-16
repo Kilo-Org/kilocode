@@ -1519,7 +1519,8 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			// anyways, so it remains solely for legacy purposes to keep track
 			// of prices in tasks from history (it's worth removing a few months
 			// from now).
-			const updateApiReqMsg = (cancelReason?: ClineApiReqCancelReason, streamingFailedMessage?: string) => {
+			// kilocode_change: async
+			const updateApiReqMsg = async (cancelReason?: ClineApiReqCancelReason, streamingFailedMessage?: string) => {
 				// kilocode_change start: pending upstream pr https://github.com/RooCodeInc/Roo-Code/pull/6122
 				if (lastApiReqIndex < 0 || !this.clineMessages[lastApiReqIndex]) {
 					return
@@ -1536,7 +1537,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					cost:
 						totalCost ??
 						calculateApiCostAnthropic(
-							this.api.getModel().info,
+							(await this.api.fetchModel()).info, // kilocode_change: await
 							inputTokens,
 							outputTokens,
 							cacheWriteTokens,
@@ -1583,7 +1584,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 				// Update `api_req_started` to have cancelled and cost, so that
 				// we can display the cost of the partial stream.
-				updateApiReqMsg(cancelReason, streamingFailedMessage)
+				await updateApiReqMsg(cancelReason, streamingFailedMessage) // kilocode_change: await
 				await this.saveClineMessages()
 
 				// Signals to provider that it can retrieve the saved messages
@@ -1725,7 +1726,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 					const refreshApiReqMsg = async (messageIndex: number) => {
 						// Update the API request message with the latest usage data
-						updateApiReqMsg()
+						await updateApiReqMsg()
 						await this.saveClineMessages()
 
 						// Update the specific message in the webview
@@ -1765,7 +1766,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 								cost:
 									tokens.total ??
 									calculateApiCostAnthropic(
-										this.api.getModel().info,
+										(await this.api.fetchModel()).info,
 										tokens.input,
 										tokens.output,
 										tokens.cacheWrite,
@@ -1776,7 +1777,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					}
 
 					try {
-						const modelId = this.api.getModel().id
+						const modelId = (await this.api.fetchModel()).id
 						let chunkCount = 0
 						while (!item.done) {
 							// Check for timeout
@@ -1947,7 +1948,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				presentAssistantMessage(this)
 			}
 
-			updateApiReqMsg()
+			await updateApiReqMsg() // kilocode_change: await
 			await this.saveClineMessages()
 			await this.providerRef.deref()?.postStateToWebview()
 
@@ -2169,7 +2170,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				provider.context,
 				this.cwd,
 				// kilocode_change: supports images => supports browser
-				(this.api.getModel().info.supportsImages ?? false) && (browserToolEnabled ?? true),
+				((await this.api.fetchModel()).info.supportsImages ?? false) && (browserToolEnabled ?? true),
 				mcpHub,
 				this.diffStrategy,
 				browserViewportSize,
@@ -2259,10 +2260,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		const { contextTokens } = this.getTokenUsage()
 
 		if (contextTokens) {
-			const modelInfo = this.api.getModel().info
+			const modelInfo = (await this.api.fetchModel()).info // kilocode_change: await
 
 			const maxTokens = getModelMaxOutputTokens({
-				modelId: this.api.getModel().id,
+				modelId: (await this.api.fetchModel()).id, // kilocode_change: await
 				model: modelInfo,
 				settings: this.apiConfiguration,
 			})
@@ -2310,7 +2311,8 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		}
 
 		const messagesSinceLastSummary = getMessagesSinceLastSummary(this.apiConversationHistory)
-		const cleanConversationHistory = maybeRemoveImageBlocks(messagesSinceLastSummary, this.api).map(
+		// kilocode_change: await
+		const cleanConversationHistory = (await maybeRemoveImageBlocks(messagesSinceLastSummary, this.api)).map(
 			({ role, content }) => ({ role, content }),
 		)
 

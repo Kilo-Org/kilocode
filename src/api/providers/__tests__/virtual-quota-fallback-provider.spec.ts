@@ -146,17 +146,17 @@ describe("VirtualQuotaFallbackProvider", () => {
 		const mockSecondaryProfile = { profileId: "p2", profileName: "secondary" }
 		const mockBackupProfile = { profileId: "p3", profileName: "backup" }
 		const mockPrimaryHandler = {
-			getModel: () => ({ id: "primary-model", info: {} }),
+			fetchModel: vitest.fn().mockResolvedValue({ id: "primary-model", info: {} }), // kilocode_change
 			countTokens: vitest.fn(),
 			createMessage: vitest.fn(),
 		}
 		const mockSecondaryHandler = {
-			getModel: () => ({ id: "secondary-model", info: {} }),
+			fetchModel: vitest.fn().mockResolvedValue({ id: "secondary-model", info: {} }), // kilocode_change
 			countTokens: vitest.fn(),
 			createMessage: vitest.fn(),
 		}
 		const mockBackupHandler = {
-			getModel: () => ({ id: "backup-model", info: {} }),
+			fetchModel: vitest.fn().mockResolvedValue({ id: "backup-model", info: {} }), // kilocode_change
 			countTokens: vitest.fn(),
 			createMessage: vitest.fn(),
 		}
@@ -324,11 +324,18 @@ describe("VirtualQuotaFallbackProvider", () => {
 				const usageTracker = (handler as any).usage
 				vitest.spyOn(usageTracker, "isUnderCooldown").mockResolvedValue(false)
 
-				vitest.spyOn(handler, "underLimit").mockReturnValueOnce(false).mockReturnValueOnce(true)
+				// Mock underLimit to return false for first profile and true for second
+				const underLimitSpy = vitest.spyOn(handler, "underLimit") // kilocode_change
+				underLimitSpy.mockImplementation((config: any) => {
+					if (config === mockPrimaryProfile) return false
+					if (config === mockSecondaryProfile) return true
+					return false
+				})
 
 				await handler.adjustActiveHandler()
 
-				expect((handler as any).activeHandler.getModel().id).toEqual("secondary-model")
+				const activeModel = await (handler as any).activeHandler.fetchModel() // kilocode_change
+				expect(activeModel.id).toEqual("secondary-model")
 				expect((handler as any).activeProfileId).toBe("p2")
 			})
 
@@ -359,7 +366,7 @@ describe("VirtualQuotaFallbackProvider", () => {
 			vitest.spyOn(usageTracker, "isUnderCooldown").mockResolvedValue(false)
 			vitest.spyOn(handler, "underLimit").mockReturnValue(true)
 			;(handler as any).activeProfileId = "initial"
-			;(handler as any).activeHandler = { getModel: () => ({ id: "initial-model" }) }
+			;(handler as any).activeHandler = { fetchModel: vitest.fn().mockResolvedValue({ id: "initial-model" }) } // kilocode_change
 			await handler.adjustActiveHandler()
 
 			expect(showInformationMessageSpy).toHaveBeenCalledWith("Switched active provider to: primary-profile")
@@ -456,22 +463,25 @@ describe("VirtualQuotaFallbackProvider", () => {
 			})
 		})
 
-		describe("getModel", () => {
-			it("should delegate to the active handler", () => {
+		describe("fetchModel", () => {
+			it("should delegate to the active handler", async () => {
 				const handler = new VirtualQuotaFallbackHandler({} as any)
-				const getModelMock = vitest.fn().mockReturnValue({ id: "test-model" })
-				;(handler as any).activeHandler = { getModel: getModelMock }
+				const fetchModelMock = vitest.fn().mockResolvedValue({ id: "test-model" })
+				;(handler as any).activeHandler = { fetchModel: fetchModelMock }
 
-				const result = handler.getModel()
+				const result = await handler.fetchModel()
 
-				expect(getModelMock).toHaveBeenCalled()
+				expect(fetchModelMock).toHaveBeenCalled()
 				expect(result).toEqual({ id: "test-model" })
 			})
 
 			it("should throw an error if no active handler", () => {
 				const handler = new VirtualQuotaFallbackHandler({} as any)
 				;(handler as any).activeHandler = undefined
-				expect(() => handler.getModel()).toThrow("No active handler configured")
+				expect(() => handler.fetchModel()).toThrow(
+					// kilocode_change
+					"No active handler configured - ensure initialize() was called and profiles are available",
+				)
 			})
 		})
 	})

@@ -179,7 +179,7 @@ describe("writeToFileTool", () => {
 			}),
 		}
 		mockCline.api = {
-			getModel: vi.fn().mockReturnValue({ id: "claude-3" }),
+			fetchModel: vi.fn().mockResolvedValue({ id: "claude-3" }), // kilocode_change
 		}
 		mockCline.fileContextTracker = {
 			trackFileContext: vi.fn().mockResolvedValue(undefined),
@@ -289,7 +289,7 @@ describe("writeToFileTool", () => {
 		})
 
 		it("unescapes HTML entities for non-Claude models", async () => {
-			mockCline.api.getModel.mockReturnValue({ id: "gpt-4" })
+			mockCline.api.fetchModel.mockResolvedValue({ id: "gpt-4" }) // kilocode_change
 
 			await executeWriteFileTool({ content: "&lt;test&gt;" })
 
@@ -297,7 +297,7 @@ describe("writeToFileTool", () => {
 		})
 
 		it("skips HTML unescaping for Claude models", async () => {
-			mockCline.api.getModel.mockReturnValue({ id: "claude-3" })
+			mockCline.api.fetchModel.mockResolvedValue({ id: "claude-3" }) // kilocode_change
 
 			await executeWriteFileTool({ content: "&lt;test&gt;" })
 
