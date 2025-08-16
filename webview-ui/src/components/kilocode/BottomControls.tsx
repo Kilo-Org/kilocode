@@ -1,6 +1,7 @@
 import React from "react"
 import { vscode } from "../../utils/vscode"
 import { useAppTranslation } from "@/i18n/TranslationContext"
+import { useExtensionState } from "@/context/ExtensionStateContext"
 import KiloRulesToggleModal from "./rules/KiloRulesToggleModal"
 import BottomButton from "./BottomButton"
 import { BottomApiConfig } from "./BottomApiConfig" // kilocode_change
@@ -11,9 +12,20 @@ interface BottomControlsProps {
 
 const BottomControls: React.FC<BottomControlsProps> = ({ showApiConfig = false }) => {
 	const { t } = useAppTranslation()
+	const { disableAutoScroll, setDisableAutoScroll } = useExtensionState()
 
 	const showFeedbackOptions = () => {
 		vscode.postMessage({ type: "showFeedbackOptions" })
+	}
+
+	const toggleAutoScroll = () => {
+		const newValue = !disableAutoScroll
+		setDisableAutoScroll(newValue)
+		vscode.postMessage({
+			type: "updateVSCodeSetting",
+			setting: "kilocode.disableAutoScroll",
+			bool: newValue,
+		})
 	}
 
 	return (
@@ -28,6 +40,12 @@ const BottomControls: React.FC<BottomControlsProps> = ({ showApiConfig = false }
 						iconClass="codicon-feedback"
 						title={t("common:feedback.title")}
 						onClick={showFeedbackOptions}
+					/>
+					<BottomButton
+						iconClass={disableAutoScroll ? "codicon-lock" : "codicon-unlock"}
+						title={disableAutoScroll ? "启用自动滚动" : "禁用自动滚动"}
+						onClick={toggleAutoScroll}
+						className={disableAutoScroll ? "bg-vscode-button-background text-vscode-button-foreground" : ""}
 					/>
 				</div>
 			</div>

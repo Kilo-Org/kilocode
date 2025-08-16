@@ -36,7 +36,6 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	allowedMaxRequests?: number | undefined
 	allowedMaxCost?: number | undefined
 	showAutoApproveMenu?: boolean // kilocode_change
-	disableAutoScroll?: boolean
 	deniedCommands?: string[]
 	setCachedStateField: SetCachedStateField<
 		| "alwaysAllowReadOnly"
@@ -57,7 +56,6 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 		| "allowedMaxRequests"
 		| "allowedMaxCost"
 		| "showAutoApproveMenu" // kilocode_change
-		| "disableAutoScroll"
 		| "deniedCommands"
 		| "alwaysAllowUpdateTodoList"
 		| "alwaysAllowEditMarkdownOnly"
@@ -85,7 +83,6 @@ export const AutoApproveSettings = ({
 	allowedMaxRequests,
 	allowedMaxCost,
 	showAutoApproveMenu, // kilocode_change
-	disableAutoScroll,
 	deniedCommands,
 	setCachedStateField,
 	...props
@@ -144,21 +141,6 @@ export const AutoApproveSettings = ({
 					</div>
 				</div>
 			</Section>
-
-			<Section>
-				<div>
-					<VSCodeCheckbox
-						checked={disableAutoScroll}
-						onChange={(e: any) => setCachedStateField("disableAutoScroll", e.target.checked)}
-						data-testid="disable-auto-scroll-checkbox">
-						<span className="font-medium">{t("settings:autoApprove.disableAutoScroll.label")}</span>
-					</VSCodeCheckbox>
-					<div className="text-vscode-descriptionForeground text-sm mt-1">
-						{t("settings:autoApprove.disableAutoScroll.description")}
-					</div>
-				</div>
-			</Section>
-			{/* kilocode_change end */}
 
 			<Section>
 				<div className="space-y-4">
