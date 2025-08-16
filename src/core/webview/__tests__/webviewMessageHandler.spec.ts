@@ -195,6 +195,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				unbound: mockModels,
 				litellm: mockModels,
 				"kilocode-openrouter": mockModels,
+				cometapi: mockModels, // kilocode_change: add cometapi
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
 			},
@@ -283,6 +284,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				unbound: mockModels,
 				litellm: {},
 				"kilocode-openrouter": mockModels,
+				cometapi: mockModels, // kilocode_change: add cometapi
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
 			},
@@ -306,7 +308,8 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockResolvedValueOnce(mockModels) // glama
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound
 			.mockResolvedValueOnce(mockModels) // kilocode-openrouter
-			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
+			.mockRejectedValueOnce(new Error("Cometapi API error")) // cometapi
+			.mockRejectedValueOnce(new Error("Ollama API error")) // ollama
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
 
 		await webviewMessageHandler(mockClineProvider, {
@@ -323,6 +326,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				unbound: {},
 				litellm: {},
 				"kilocode-openrouter": mockModels,
+				cometapi: {}, // kilocode_change: add cometapi
 				ollama: {},
 				lmstudio: {},
 			},
@@ -346,6 +350,20 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
+			error: "Cometapi API error",
+			values: { provider: "cometapi" },
+		})
+
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "Ollama API error",
+			values: { provider: "ollama" },
+		})
+
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
 			error: "LiteLLM connection failed",
 			values: { provider: "litellm" },
 		})
@@ -359,7 +377,8 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockRejectedValueOnce(new Error("Glama API error")) // glama
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound
 			.mockResolvedValueOnce({}) // kilocode-openrouter - Success
-			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
+			.mockRejectedValueOnce(new Error("Cometapi API error")) // cometapi
+			.mockRejectedValueOnce(new Error("Ollama API error")) // ollama
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
 
 		await webviewMessageHandler(mockClineProvider, {

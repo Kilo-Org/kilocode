@@ -14,6 +14,7 @@ import { getRequestyModels } from "./requesty"
 import { getGlamaModels } from "./glama"
 import { getUnboundModels } from "./unbound"
 import { getLiteLLMModels } from "./litellm"
+import { getCometAPIModels } from "./cometapi"
 import { GetModelsOptions } from "../../../shared/api"
 import { getKiloBaseUriFromToken } from "../../../shared/kilocode/token"
 import { getOllamaModels } from "./ollama"
@@ -93,6 +94,12 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				break
 			case "lmstudio":
 				models = await getLMStudioModels(options.baseUrl)
+				break
+			case "cometapi":
+				models = await getCometAPIModels({
+					cometApiKey: options.apiKey,
+					cometApiBaseUrl: options.baseUrl,
+				})
 				break
 			default: {
 				// Ensures router is exhaustively checked if RouterName is a strict union

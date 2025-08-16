@@ -13,6 +13,7 @@ export const getModelIdKey = ({
 	| "openAiModelId"
 	| "litellmModelId"
 	| "kilocodeModel"
+	| "cometApiModelId"
 	| "ollamaModelId"
 	| "lmStudioModelId"
 	| "vsCodeLmModelSelector"
@@ -36,6 +37,9 @@ export const getModelIdKey = ({
 		}
 		case "openai": {
 			return "openAiModelId"
+		}
+		case "cometapi": {
+			return "cometApiModelId"
 		}
 		case "ollama": {
 			return "ollamaModelId"
