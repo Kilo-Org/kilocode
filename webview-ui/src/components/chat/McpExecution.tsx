@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, memo } from "react"
-import { Server, ChevronDown } from "lucide-react"
+import { Server, ChevronDown, ChevronRight } from "lucide-react"
 import { useEvent } from "react-use"
 import { useTranslation } from "react-i18next"
 
@@ -49,8 +49,8 @@ export const McpExecution = ({
 	const [serverName, setServerName] = useState(initialServerName)
 	const [toolName, setToolName] = useState(initialToolName)
 
-	// Only need expanded state for response section (like command output)
-	const [isResponseExpanded, setIsResponseExpanded] = useState(false)
+	// Main collapse state for the entire MCP execution content
+	const [isMainCollapsed, setIsMainCollapsed] = useState(true)
 
 	// Try to parse JSON and return both the result and formatted text
 	const tryParseJson = useCallback((text: string): { isJson: boolean; formatted: string } => {
@@ -70,9 +70,9 @@ export const McpExecution = ({
 		}
 	}, [])
 
-	// Only parse response data when expanded AND complete to avoid parsing partial JSON
+	// Only parse response data when main content is expanded AND complete to avoid parsing partial JSON
 	const responseData = useMemo(() => {
-		if (!isResponseExpanded) {
+		if (!isMainCollapsed) {
 			return { isJson: false, formatted: responseText }
 		}
 		// Only try to parse JSON if the response is complete
@@ -81,7 +81,7 @@ export const McpExecution = ({
 		}
 		// For partial responses, just return as-is without parsing
 		return { isJson: false, formatted: responseText }
-	}, [responseText, isResponseExpanded, tryParseJson, status])
+	}, [responseText, isMainCollapsed, tryParseJson, status])
 
 	// Only parse arguments data when complete to avoid parsing partial JSON
 	const argumentsData = useMemo(() => {
@@ -118,9 +118,9 @@ export const McpExecution = ({
 	const formattedArgumentsText = argumentsData.formatted
 	const responseIsJson = responseData.isJson
 
-	const onToggleResponseExpand = useCallback(() => {
-		setIsResponseExpanded(!isResponseExpanded)
-	}, [isResponseExpanded])
+	const onToggleMainCollapse = useCallback(() => {
+		setIsMainCollapsed(!isMainCollapsed)
+	}, [isMainCollapsed])
 
 	// Listen for MCP execution status messages
 	const onMessage = useCallback(
@@ -178,7 +178,9 @@ export const McpExecution = ({
 
 	return (
 		<>
-			<div className="flex flex-row items-center justify-between gap-2 mb-1">
+			<div
+				className="flex flex-row items-center justify-between gap-2 mb-1 cursor-pointer select-none"
+				onClick={onToggleMainCollapse}>
 				<div className="flex flex-row items-center gap-1 flex-wrap">
 					<Server size={16} className="text-vscode-descriptionForeground" />
 					<div className="flex items-center gap-1 flex-wrap">
@@ -212,76 +214,78 @@ export const McpExecution = ({
 								)}
 							</div>
 						)}
-						{responseText && responseText.length > 0 && (
-							<Button variant="ghost" size="icon" onClick={onToggleResponseExpand}>
-								<ChevronDown
-									className={cn("size-4 transition-transform duration-300", {
-										"rotate-180": isResponseExpanded,
-									})}
-								/>
-							</Button>
-						)}
 					</div>
+					<Button
+						variant="ghost"
+						size="icon"
+						onClick={(e) => {
+							e.stopPropagation()
+							onToggleMainCollapse()
+						}}>
+						{isMainCollapsed ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}
+					</Button>
 				</div>
 			</div>
 
-			<div className="w-full bg-vscode-editor-background rounded-xs p-2">
-				{/* Tool information section */}
-				{useMcpServer?.type === "use_mcp_tool" && (
-					<div onClick={(e) => e.stopPropagation()}>
-						<McpToolRow
-							tool={{
-								name: useMcpServer.toolName || "",
-								description:
-									server?.tools?.find((tool) => tool.name === useMcpServer.toolName)?.description ||
-									"",
-								alwaysAllow:
-									server?.tools?.find((tool) => tool.name === useMcpServer.toolName)?.alwaysAllow ||
-									false,
-							}}
-							serverName={useMcpServer.serverName}
-							serverSource={server?.source}
-							alwaysAllowMcp={alwaysAllowMcp}
-							isInChatContext={true}
-						/>
-					</div>
-				)}
-				{!useMcpServer && toolName && serverName && (
-					<div onClick={(e) => e.stopPropagation()}>
-						<McpToolRow
-							tool={{
-								name: toolName || "",
-								description: "",
-								alwaysAllow: false,
-							}}
-							serverName={serverName}
-							serverSource={undefined}
-							alwaysAllowMcp={alwaysAllowMcp}
-							isInChatContext={true}
-						/>
-					</div>
-				)}
+			{!isMainCollapsed && (
+				<div className="w-full bg-vscode-editor-background rounded-xs p-2">
+					{/* Tool information section */}
+					{useMcpServer?.type === "use_mcp_tool" && (
+						<div onClick={(e) => e.stopPropagation()}>
+							<McpToolRow
+								tool={{
+									name: useMcpServer.toolName || "",
+									description:
+										server?.tools?.find((tool) => tool.name === useMcpServer.toolName)
+											?.description || "",
+									alwaysAllow:
+										server?.tools?.find((tool) => tool.name === useMcpServer.toolName)
+											?.alwaysAllow || false,
+								}}
+								serverName={useMcpServer.serverName}
+								serverSource={server?.source}
+								alwaysAllowMcp={alwaysAllowMcp}
+								isInChatContext={true}
+							/>
+						</div>
+					)}
+					{!useMcpServer && toolName && serverName && (
+						<div onClick={(e) => e.stopPropagation()}>
+							<McpToolRow
+								tool={{
+									name: toolName || "",
+									description: "",
+									alwaysAllow: false,
+								}}
+								serverName={serverName}
+								serverSource={undefined}
+								alwaysAllowMcp={alwaysAllowMcp}
+								isInChatContext={true}
+							/>
+						</div>
+					)}
 
-				{/* Arguments section - display like command (always visible) */}
-				{(isArguments || useMcpServer?.arguments || argumentsText) && (
-					<div
-						className={cn({
-							"mt-1 pt-1":
-								!isArguments && (useMcpServer?.type === "use_mcp_tool" || (toolName && serverName)),
-						})}>
-						<CodeBlock source={formattedArgumentsText} language="json" />
-					</div>
-				)}
+					{/* Arguments section - display like command (always visible) */}
+					{(isArguments || useMcpServer?.arguments || argumentsText) && (
+						<div
+							className={cn({
+								"mt-1 pt-1":
+									!isArguments && (useMcpServer?.type === "use_mcp_tool" || (toolName && serverName)),
+							})}>
+							<CodeBlock source={formattedArgumentsText} language="json" />
+						</div>
+					)}
 
-				{/* Response section - collapsible like command output */}
-				<ResponseContainer
-					isExpanded={isResponseExpanded}
-					response={formattedResponseText}
-					isJson={responseIsJson}
-					hasArguments={!!(isArguments || useMcpServer?.arguments || argumentsText)}
-					isPartial={status ? status.status !== "completed" : false}
-				/>
-			</div>
+					{/* Response section - use main collapse state for memory management */}
+					<ResponseContainer
+						isExpanded={!isMainCollapsed}
+						response={formattedResponseText}
+						isJson={responseIsJson}
+						hasArguments={!!(isArguments || useMcpServer?.arguments || argumentsText)}
+						isPartial={status ? status.status !== "completed" : false}
+					/>
+				</div>
+			)}
 		</>
 	)
 }
