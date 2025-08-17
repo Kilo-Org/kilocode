@@ -2,7 +2,8 @@
 // It is not intended to be read from package.json to allow for real-time updates.
 
 // 20250815 修改[buildNumber自动递增]
-export const buildNumber = "087"
+export const buildNumber = "088"
 
 // 编译功能说明
-export const featureDescription = "优化自动滚动按钮样式，选中状态显示黄色图标"
+export const featureDescription =
+	"修复TaskTimeline组件类型错误，移除@use-gesture/react依赖，使用原生鼠标事件实现拖拽功能"

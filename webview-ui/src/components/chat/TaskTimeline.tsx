@@ -1,6 +1,6 @@
 import type { ClineMessage } from "@roo-code/types"
 import { forwardRef, memo, useCallback, useEffect, useMemo, useRef } from "react"
-import { useDrag } from "@use-gesture/react"
+// import { useDrag } from "@use-gesture/react" // Temporarily removed due to dependency issues
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso"
 import { useExtensionState } from "../../context/ExtensionStateContext"
 import { getTaskTimelineMessageColor } from "../../utils/messageColors"
@@ -26,42 +26,82 @@ interface TaskTimelineProps {
 // Translates vertical scrolling into horizontal scrolling and supports drag scrolling
 const HorizontalScroller = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
 	({ style, children, className, ...props }, ref) => {
-		const bind = useDrag(
-			({ active, delta: [dx] }) => {
+		const isDragging = useRef(false)
+		const lastX = useRef(0)
+
+		const handleMouseDown = useCallback(
+			(e: React.MouseEvent) => {
+				isDragging.current = true
+				lastX.current = e.clientX
+				const element = (ref as React.MutableRefObject<HTMLDivElement>).current
+				if (element) {
+					element.style.cursor = "grabbing"
+					element.style.userSelect = "none"
+				}
+				e.preventDefault()
+			},
+			[ref],
+		)
+
+		const handleMouseMove = useCallback(
+			(e: React.MouseEvent) => {
+				if (!isDragging.current) return
 				const element = (ref as React.MutableRefObject<HTMLDivElement>).current
 				if (!element) return
 
+				const dx = e.clientX - lastX.current
 				element.scrollLeft -= dx
-
-				if (active) {
-					element.style.cursor = "grabbing"
-					element.style.userSelect = "none"
-				} else {
-					element.style.cursor = "grab"
-					element.style.userSelect = "auto"
-				}
+				lastX.current = e.clientX
+				e.preventDefault()
 			},
-			{
-				// Lock to horizontal axis only
-				axis: "x",
-				// Allow preventDefault to work properly
-				eventOptions: { passive: false },
-				// Prevent small drags from interfering with clicks
-				filterTaps: true,
-				// Use pointer events to capture mouse release outside element
-				pointer: { capture: true },
-				// Prevent conflicts with native browser scrolling on touch devices
-				touchAction: "pan-x",
-			},
+			[ref],
 		)
+
+		const handleMouseUp = useCallback(() => {
+			isDragging.current = false
+			const element = (ref as React.MutableRefObject<HTMLDivElement>).current
+			if (element) {
+				element.style.cursor = "grab"
+				element.style.userSelect = "auto"
+			}
+		}, [ref])
+
+		useEffect(() => {
+			const handleGlobalMouseUp = () => {
+				if (isDragging.current) {
+					handleMouseUp()
+				}
+			}
+
+			const handleGlobalMouseMove = (e: MouseEvent) => {
+				if (!isDragging.current) return
+				const element = (ref as React.MutableRefObject<HTMLDivElement>).current
+				if (!element) return
+
+				const dx = e.clientX - lastX.current
+				element.scrollLeft -= dx
+				lastX.current = e.clientX
+				e.preventDefault()
+			}
+
+			document.addEventListener("mouseup", handleGlobalMouseUp)
+			document.addEventListener("mousemove", handleGlobalMouseMove)
+
+			return () => {
+				document.removeEventListener("mouseup", handleGlobalMouseUp)
+				document.removeEventListener("mousemove", handleGlobalMouseMove)
+			}
+		}, [handleMouseUp, ref])
 
 		return (
 			<div
 				{...props}
-				{...bind()}
 				ref={ref}
 				className={`overflow-x-auto overflow-y-hidden touch-none cursor-grab ${className || ""}`}
 				style={style}
+				onMouseDown={handleMouseDown}
+				onMouseMove={handleMouseMove}
+				onMouseUp={handleMouseUp}
 				onWheel={(e) => {
 					e.preventDefault()
 					// Handle both vertical and horizontal wheel events
