@@ -46,15 +46,29 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 
 	async initialize(): Promise<void> {
 		if (!this.isInitialized) {
-			await this.loadConfiguredProfiles()
-			this.isInitialized = true
+			try {
+				await this.loadConfiguredProfiles()
+				this.isInitialized = true
+			} catch (error) {
+				console.error("Failed to initialize VirtualQuotaFallbackHandler:", error)
+				throw error
+			}
 		}
 	}
 
 	async countTokens(content: Array<Anthropic.Messages.ContentBlockParam>): Promise<number> {
-		await pWaitFor(() => this.isInitialized)
-		await this.adjustActiveHandler()
-		return this.activeHandler?.countTokens(content) ?? 0
+		try {
+			await this.adjustActiveHandler()
+
+			if (!this.activeHandler) {
+				return 0
+			}
+
+			return this.activeHandler.countTokens(content)
+		} catch (error) {
+			console.error("Error in countTokens:", error)
+			throw error
+		}
 	}
 
 	async *createMessage(
@@ -62,35 +76,47 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 		messages: Anthropic.Messages.MessageParam[],
 		metadata?: ApiHandlerCreateMessageMetadata,
 	): ApiStream {
-		await pWaitFor(() => this.isInitialized)
-		await this.adjustActiveHandler()
-
-		if (!this.activeHandler || !this.activeProfileId) {
-			throw new Error("All configured providers are unavailable or over limits.")
-		}
-
-		await this.usage.consume(this.activeProfileId, "requests", 1)
-
-		const stream = this.activeHandler.createMessage(systemPrompt, messages, metadata)
 		try {
-			for await (const chunk of stream) {
-				if (chunk.type === "usage") {
-					const totalTokens = (chunk.inputTokens || 0) + (chunk.outputTokens || 0)
-					if (totalTokens > 0) {
-						await this.usage.consume(this.activeProfileId, "tokens", totalTokens)
+			await this.adjustActiveHandler()
+
+			if (!this.activeHandler || !this.activeProfileId) {
+				throw new Error("All configured providers are unavailable or over limits.")
+			}
+
+			await this.usage.consume(this.activeProfileId, "requests", 1)
+
+			const stream = this.activeHandler.createMessage(systemPrompt, messages, metadata)
+			try {
+				for await (const chunk of stream) {
+					if (chunk.type === "usage") {
+						const totalTokens = (chunk.inputTokens || 0) + (chunk.outputTokens || 0)
+						if (totalTokens > 0) {
+							await this.usage.consume(this.activeProfileId, "tokens", totalTokens)
+						}
 					}
+					yield chunk
 				}
-				yield chunk
+			} catch (error) {
+				await this.usage.setCooldown(this.activeProfileId, 10 * 60 * 1000)
+				throw error
 			}
 		} catch (error) {
-			await this.usage.setCooldown(this.activeProfileId, 10 * 60 * 1000)
+			console.error("Error in createMessage:", error)
 			throw error
 		}
 	}
 
 	getModel(): { id: string; info: ModelInfo } {
 		if (!this.activeHandler) {
-			throw new Error("No active handler configured - ensure initialize() was called and profiles are available")
+			// Return a default model when no active handler is available
+			return {
+				id: "unknown",
+				info: {
+					maxTokens: 100000,
+					contextWindow: 100000,
+					supportsPromptCache: false,
+				},
+			}
 		}
 		return this.activeHandler.getModel()
 	}
@@ -99,33 +125,59 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 		this.handlerConfigs = []
 
 		const profiles = this.settings.profiles || []
-		const handlerPromises = profiles.map(async (profile, index) => {
+		if (profiles.length === 0) {
+			console.warn("No profiles configured for VirtualQuotaFallbackHandler")
+			return
+		}
+
+		console.warn(`Loading ${profiles.length} profiles for VirtualQuotaFallbackHandler`)
+
+		// Process profiles sequentially to avoid overwhelming the system with concurrent operations
+		const handlerConfigs: HandlerConfig[] = []
+
+		for (let i = 0; i < profiles.length; i++) {
+			const profile = profiles[i]
 			if (!profile?.profileId || !profile?.profileName) {
-				return null
+				console.warn(`Skipping invalid profile at index ${i}:`, profile)
+				continue
 			}
 
 			try {
+				console.info(
+					`Loading profile ${i + 1}/${profiles.length}: ${profile.profileName} (${profile.profileId})`,
+				)
+
 				const profileSettings = await this.settingsManager.getProfile({ id: profile.profileId })
 				const apiHandler = buildApiHandler(profileSettings)
 
 				if (apiHandler) {
-					if (apiHandler instanceof OpenRouterHandler) {
-						await apiHandler.fetchModel()
+					// Only fetch model for OpenRouterHandler if it has the method
+					if (apiHandler instanceof OpenRouterHandler && typeof apiHandler.fetchModel === "function") {
+						try {
+							await apiHandler.fetchModel()
+						} catch (error) {
+							console.warn(`Failed to fetch model for profile ${profile.profileName}:`, error)
+							// Continue with the handler even if fetchModel fails
+						}
 					}
-					return {
+
+					handlerConfigs.push({
 						handler: apiHandler,
 						profileId: profile.profileId,
 						config: profile,
-					} as HandlerConfig
+					})
+
+					console.info(`Successfully loaded profile: ${profile.profileName}`)
+				} else {
+					console.warn(`Failed to create API handler for profile: ${profile.profileName}`)
 				}
 			} catch (error) {
-				console.error(`❌ Failed to load profile ${index + 1} (${profile.profileName}): ${error}`)
+				console.error(`❌ Failed to load profile ${i + 1} (${profile.profileName}):`, error)
 			}
-			return null
-		})
+		}
 
-		const results = await Promise.all(handlerPromises)
-		this.handlerConfigs = results.filter((handler): handler is HandlerConfig => handler !== null)
+		this.handlerConfigs = handlerConfigs
+		console.log(`Loaded ${this.handlerConfigs.length} profiles for VirtualQuotaFallbackHandler`)
 
 		await this.adjustActiveHandler()
 	}
@@ -137,6 +189,19 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 			return
 		}
 
+		// Check if we already have a valid active handler
+		if (this.activeHandler && this.activeProfileId) {
+			const currentConfig = this.handlerConfigs.find((c) => c.profileId === this.activeProfileId)
+			if (currentConfig) {
+				const isUnderCooldown = await this.usage.isUnderCooldown(this.activeProfileId)
+				if (!isUnderCooldown && this.underLimit(currentConfig.config)) {
+					// Current handler is still valid, no need to switch
+					return
+				}
+			}
+		}
+
+		// Find a new handler
 		for (const { handler, profileId, config } of this.handlerConfigs) {
 			const isUnderCooldown = await this.usage.isUnderCooldown(profileId)
 			if (isUnderCooldown) {
@@ -156,6 +221,7 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 			return
 		}
 
+		// No valid handler found
 		if (this.activeProfileId) {
 			await this.notifyHandlerSwitch(undefined)
 		}
@@ -177,7 +243,6 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 		} else {
 			message = "No active provider available. All configured providers are unavailable or over limits."
 		}
-		vscode.window.showInformationMessage(message)
 	}
 
 	underLimit(profileData: VirtualQuotaFallbackProfile): boolean {

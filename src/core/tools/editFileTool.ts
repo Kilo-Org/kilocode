@@ -66,11 +66,9 @@ export async function editFileTool(
 				instructions: removeClosingTag("instructions", instructions),
 				codeEdit: removeClosingTag("code_edit", code_edit),
 			}
-			try {
-				await cline.ask("tool", JSON.stringify(partialMessageProps), block.partial)
-			} catch (error) {
-				TelemetryService.instance.captureException(error, { context: "editFileTool" })
-			}
+			await cline.ask("tool", JSON.stringify(partialMessageProps), block.partial).catch(() => {
+				// Roo tools ignore exceptions as well here
+			})
 			return
 		}
 
