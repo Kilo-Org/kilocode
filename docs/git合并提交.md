@@ -5,6 +5,7 @@ cd <项目目录>
 
 ## 添加GitHub原仓库作为远程源，命名为upstream
 
+git remote -v
 git remote add upstream https://github.com/Kilo-Org/kilocode.git
 
 git remote set-url origin https://github.com/Kilo-Org/kilocode.git
@@ -17,6 +18,7 @@ git push upstream 陈凤庆/v4.79.0-feat-新增功能:陈凤庆/v4.79.0-feat-新
 ## 获取upstream的最新代码
 
 git fetch upstream
+git fetch origin
 
 ## 查看远程分支
 
@@ -32,6 +34,12 @@ git merge upstream/main
 git push origin main
 
 git push origin 陈凤庆/v4.79.0-feat-新增功能
+git push origin 待合并/main-20250815
+
+git push upstream main
+
+git push upstream 陈凤庆/v4.79.0-feat-新增功能
+git push upstream 待合并/main-20250815
 
 ## 合并upstream
 
