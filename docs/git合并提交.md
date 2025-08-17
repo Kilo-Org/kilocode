@@ -40,6 +40,7 @@ git push upstream main
 
 git push upstream 陈凤庆/v4.79.0-feat-新增功能
 git push upstream 待合并/main-20250815
+git push upstream 陈凤庆/v5.81.0
 
 ## 合并upstream
 
