@@ -3,7 +3,7 @@
 		"greeting": "欢迎使用 Kilo Code！",
 		"introText1": "Kilo Code 是一个免费的开源 AI 编程代理。",
 		"introText2": "它适用于最新的 AI 模型，如 Claude 4 Sonnet、Gemini 2.5 Pro、GPT-4.1 以及 450 多个其他模型。",
-		"introText3": "创建免费账户，获得价值 20 美元的 token，可用于任何 AI 模型。",
+		"introText3": "创建免费账户，获得价值 25 美元的 Token，可用于任何 AI 模型。",
 		"ctaButton": "开始使用",
 		"manualModeButton": "使用你自己的 API 密钥",
 		"alreadySignedUp": "已经注册了？",

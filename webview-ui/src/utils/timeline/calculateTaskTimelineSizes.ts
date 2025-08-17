@@ -1,11 +1,12 @@
 import type { ClineMessage } from "@roo-code/types"
 
 // Hard-coded constants for dynamic sizing
-export const MAX_HEIGHT_PX = 20
+export const MAX_HEIGHT_PX = 26
 const AVERAGE_REQUEST_TIME_MS = 3000 // on average
 const MIN_WIDTH_PX = 8
 const MAX_WIDTH_PX = 32
 const MIN_HEIGHT_PX = 8
+const TOP_PADDING_PX = 4
 
 export interface MessageSizeData {
 	width: number
@@ -47,7 +48,7 @@ export function calculateTaskTimelineSizes(messages: (ClineMessage | ClineMessag
 		const timingRatio = Math.min(1, effectiveTiming / Math.max(1, maxTiming))
 
 		const width = MIN_WIDTH_PX + timingRatio * (MAX_WIDTH_PX - MIN_WIDTH_PX)
-		const height = MIN_HEIGHT_PX + contentRatio * (MAX_HEIGHT_PX - MIN_HEIGHT_PX)
+		const height = MIN_HEIGHT_PX + contentRatio * (MAX_HEIGHT_PX - MIN_HEIGHT_PX - TOP_PADDING_PX)
 
 		return {
 			width: Math.round(width),

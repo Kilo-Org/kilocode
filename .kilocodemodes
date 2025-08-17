@@ -9,7 +9,7 @@
 				[
 					"edit",
 					{
-						"fileRegex": "(src/i18n/locales/|src/package\\.nls(\\.\\w+)?\\.json)",
+						"fileRegex": "((src/i18n/locales/)|(src/package\\.nls(\\.\\w+)?\\.json))",
 						"description": "Translation files only"
 					}
 				]
