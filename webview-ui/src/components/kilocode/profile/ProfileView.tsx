@@ -159,7 +159,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 										</div>
 									</div>
 
-									<OrganizationSelector />
+									<OrganizationSelector className="mb-6" />
 								</div>
 
 								<div className="w-full flex gap-2 flex-col min-[225px]:flex-row">

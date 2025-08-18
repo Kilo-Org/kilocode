@@ -7,6 +7,7 @@ import * as vscode from "vscode"
 import axios from "axios" // kilocode_change
 import * as yaml from "yaml"
 import { getKiloBaseUriFromToken } from "../../shared/kilocode/token" // kilocode_change
+import { ProfileData } from "../../shared/WebviewMessage" // kilocode_change
 
 import {
 	type Language,
@@ -580,6 +581,7 @@ export const webviewMessageHandler = async (
 					options: {
 						provider: "kilocode-openrouter",
 						kilocodeToken: apiConfiguration.kilocodeToken,
+						kilocodeOrganizationId: apiConfiguration.kilocodeOrganizationId,
 					},
 				},
 				{
@@ -2139,12 +2141,28 @@ export const webviewMessageHandler = async (
 				}
 
 				// Changed to /api/profile
-				const response = await axios.get(`${getKiloBaseUriFromToken(kilocodeToken)}/api/profile`, {
-					headers: {
-						Authorization: `Bearer ${kilocodeToken}`,
-						"Content-Type": "application/json",
+				const response = await axios.get<Omit<ProfileData, "kilocodeToken">>(
+					`${getKiloBaseUriFromToken(kilocodeToken)}/api/profile`,
+					{
+						headers: {
+							Authorization: `Bearer ${kilocodeToken}`,
+							"Content-Type": "application/json",
+						},
 					},
-				})
+				)
+
+				// Go back to Personal when no longer part of the current set organization
+				if (
+					apiConfiguration?.kilocodeOrganizationId &&
+					!(response.data.organizations ?? []).some(
+						({ id }) => id === apiConfiguration?.kilocodeOrganizationId,
+					)
+				) {
+					provider.upsertProviderProfile(provider.providerSettingsManager.activateProfile.name, {
+						...apiConfiguration,
+						kilocodeOrganizationId: undefined,
+					})
+				}
 
 				provider.postMessageToWebview({
 					type: "profileDataResponse", // Assuming this response type is still appropriate for /api/profile

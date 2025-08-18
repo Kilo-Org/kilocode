@@ -30,6 +30,7 @@ describe("OpenRouter API", () => {
 
 			// Define models that are intentionally excluded
 			const excludedModels = new Set([
+				"google/gemini-2.5-pro", // kilocode_change: not included in mock response
 				"google/gemini-2.5-pro-preview", // Excluded due to lag issue (#4487)
 				"google/gemini-2.5-flash", // OpenRouter doesn't report this as supporting prompt caching
 				"google/gemini-2.5-flash-lite-preview-06-17", // OpenRouter doesn't report this as supporting prompt caching

@@ -90,6 +90,7 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 			getModels({
 				provider: "kilocode-openrouter",
 				kilocodeToken: this.options.kilocodeToken,
+				kilocodeOrganizationId: this.options.kilocodeOrganizationId,
 			}),
 			getModelEndpoints({
 				router: "openrouter",

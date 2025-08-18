@@ -51,7 +51,7 @@ export const QwenCode = ({ apiConfiguration, setApiConfigurationField }: QwenCod
 			</div>
 
 			<VSCodeLink
-				href="https://github.com/QwenLM/qwen-code/blob/main/docs/index.md"
+				href="https://github.com/QwenLM/qwen-code/blob/main/README.md"
 				className="text-vscode-textLink-foreground hover:text-vscode-textLink-activeForeground mt-2 inline-block">
 				{t("settings:providers.qwenCode.setupLink")}
 			</VSCodeLink>

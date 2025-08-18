@@ -10,6 +10,7 @@ import { VSCodeButtonLink } from "@src/components/common/VSCodeButtonLink"
 import { inputEventTransform } from "../../../settings/transforms"
 import { ModelPicker } from "../../../settings/ModelPicker"
 import { vscode } from "@src/utils/vscode"
+import { OrganizationSelector } from "../../common/OrganizationSelector"
 
 type KiloCodeProps = {
 	apiConfiguration: ProviderSettings
@@ -89,6 +90,8 @@ export const KiloCode = ({
 					<label className="block font-medium">{t("kilocode:settings.provider.apiKey")}</label>
 				</div>
 			</VSCodeTextField>
+
+			<OrganizationSelector showLabel />
 
 			<ModelPicker
 				apiConfiguration={apiConfiguration}
