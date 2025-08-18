@@ -116,6 +116,7 @@ describe("OpenAiHandler", () => {
 					"X-KiloCode-Version": Package.version,
 					"User-Agent": `Kilo-Code/${Package.version}`,
 				},
+				timeout: expect.any(Number),
 			})
 		})
 	})

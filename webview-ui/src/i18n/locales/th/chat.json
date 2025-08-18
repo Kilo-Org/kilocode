@@ -22,7 +22,9 @@
 		"connectToCloudDescription": "เข้าสู่ระบบ Kilo Code Cloud เพื่อแชร์งาน",
 		"sharingDisabledByOrganization": "การแชร์ถูกปิดใช้งานโดยองค์กร",
 		"shareSuccessOrganization": "คัดลอกลิงก์องค์กรไปยังคลิปบอร์ดแล้ว",
-		"shareSuccessPublic": "คัดลอกลิงก์สาธารณะไปยังคลิปบอร์ดแล้ว"
+		"shareSuccessPublic": "คัดลอกลิงก์สาธารณะไปยังคลิปบอร์ดแล้ว",
+		"expand": "ขยายงาน",
+		"collapse": "ย่องาน"
 	},
 	"history": {
 		"title": "ประวัติ"
@@ -386,5 +388,6 @@
 	"queuedMessages": {
 		"title": "ข้อความในคิว:",
 		"clickToEdit": "คลิกเพื่อแก้ไขข้อความ"
-	}
+	},
+	"generateCommitMessage": "สร้างข้อความ Commit"
 }

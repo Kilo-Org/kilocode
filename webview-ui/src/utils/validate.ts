@@ -1,7 +1,8 @@
 import i18next from "i18next"
 
-import type { ProviderSettings, OrganizationAllowList } from "@roo-code/types"
+import type { ProviderSettings } from "@roo-code/types"
 
+import type { OrganizationAllowList } from "@roo/cloud"
 import { isRouterName, RouterModels } from "@roo/api"
 
 export function validateApiConfiguration(
@@ -140,6 +141,11 @@ function validateModelsAndKeysProvided(apiConfiguration: ProviderSettings): stri
 				return i18next.t("settings:validation.apiKey")
 			}
 			break
+		case "io-intelligence":
+			if (!apiConfiguration.ioIntelligenceApiKey) {
+				return i18next.t("settings:validation.apiKey")
+			}
+			break
 	}
 
 	return undefined
@@ -208,6 +214,8 @@ function getModelIdForProvider(apiConfiguration: ProviderSettings, provider: str
 			return apiConfiguration.huggingFaceModelId
 		case "cometapi":
 			return apiConfiguration.cometApiModelId
+		case "io-intelligence":
+			return apiConfiguration.ioIntelligenceModelId
 		default:
 			return apiConfiguration.apiModelId
 	}
@@ -280,6 +288,8 @@ export function validateModelId(apiConfiguration: ProviderSettings, routerModels
 			break
 		case "cometapi":
 			modelId = apiConfiguration.cometApiModelId
+		case "io-intelligence":
+			modelId = apiConfiguration.ioIntelligenceModelId
 			break
 	}
 

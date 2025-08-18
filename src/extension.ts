@@ -12,7 +12,7 @@ try {
 	console.warn("Failed to load environment variables:", e)
 }
 
-import { CloudService } from "@roo-code/cloud"
+import { CloudService, UnifiedBridgeService } from "@roo-code/cloud"
 import { TelemetryService, PostHogTelemetryClient } from "@roo-code/telemetry"
 
 import "./utils/path" // Necessary to have access to String.prototype.toPosix.
@@ -31,6 +31,7 @@ import { MdmService } from "./services/mdm/MdmService"
 import { migrateSettings } from "./utils/migrateSettings"
 import { checkAndRunAutoLaunchingTask as checkAndRunAutoLaunchingTask } from "./utils/autoLaunchingTask"
 import { autoImportSettings } from "./utils/autoImportSettings"
+import { isRemoteControlEnabled } from "./utils/remoteControl"
 import { API } from "./extension/api"
 
 import {
@@ -75,7 +76,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		console.warn("Failed to register PostHogTelemetryClient:", error)
 	}
 
-	// Create logger for cloud services
+	// Create logger for cloud services.
 	const cloudLogger = createDualLogger(createOutputChannelLogger(outputChannel))
 
 	// kilocode_change start: no Roo cloud service
@@ -108,7 +109,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	const mdmService = await MdmService.createInstance(cloudLogger)
 
 	// Initialize i18n for internationalization support
-	initializeI18n(context.globalState.get("language") ?? "en-US") // kilocode_change
+	initializeI18n(context.globalState.get("language") ?? formatLanguage(vscode.env.language))
 
 	// Initialize terminal shell execution handlers.
 	TerminalRegistry.initialize()
@@ -147,6 +148,45 @@ export async function activate(context: vscode.ExtensionContext) {
 			}
 		}
 	}
+
+	// Initialize Roo Code Cloud service.
+	const cloudService = await CloudService.createInstance(context, cloudLogger)
+
+	try {
+		if (cloudService.telemetryClient) {
+			// TelemetryService.instance.register(cloudService.telemetryClient) kilocode_change
+		}
+	} catch (error) {
+		outputChannel.appendLine(
+			`[CloudService] Failed to register TelemetryClient: ${error instanceof Error ? error.message : String(error)}`,
+		)
+	}
+
+	const postStateListener = () => ClineProvider.getVisibleInstance()?.postStateToWebview()
+
+	cloudService.on("auth-state-changed", postStateListener)
+	cloudService.on("settings-updated", postStateListener)
+
+	cloudService.on("user-info", async ({ userInfo }) => {
+		postStateListener()
+
+		const bridgeConfig = await cloudService.cloudAPI?.bridgeConfig().catch(() => undefined)
+
+		if (!bridgeConfig) {
+			outputChannel.appendLine("[CloudService] Failed to get bridge config")
+			return
+		}
+
+		UnifiedBridgeService.handleRemoteControlState(
+			userInfo,
+			contextProxy.getValue("remoteControlEnabled"),
+			{ ...bridgeConfig, provider: provider as any },
+			(message: string) => outputChannel.appendLine(message),
+		)
+	})
+
+	// Add to subscriptions for proper cleanup on deactivate.
+	context.subscriptions.push(cloudService)
 
 	const provider = new ClineProvider(context, outputChannel, "sidebar", contextProxy, mdmService)
 	TelemetryService.instance.setProvider(provider)
@@ -302,6 +342,13 @@ export async function activate(context: vscode.ExtensionContext) {
 // This method is called when your extension is deactivated.
 export async function deactivate() {
 	outputChannel.appendLine(`${Package.name} extension deactivated`)
+
+	const bridgeService = UnifiedBridgeService.getInstance()
+
+	if (bridgeService) {
+		await bridgeService.disconnect()
+	}
+
 	await McpServerManager.cleanup(extensionContext)
 	TelemetryService.instance.shutdown()
 	TerminalRegistry.cleanup()

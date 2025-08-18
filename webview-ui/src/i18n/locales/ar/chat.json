@@ -22,7 +22,9 @@
 		"connectToCloudDescription": "سجّل دخولك لـ Kilo Code Cloud لمشاركة المهام",
 		"sharingDisabledByOrganization": "المشاركة معطّلة من قِبَل المنظمة",
 		"shareSuccessOrganization": "تم نسخ رابط المنظمة للحافظة",
-		"shareSuccessPublic": "تم نسخ الرابط العام للحافظة"
+		"shareSuccessPublic": "تم نسخ الرابط العام للحافظة",
+		"expand": "توسيع المهمة",
+		"collapse": "طي المهمة"
 	},
 	"history": {
 		"title": "السجل"
@@ -394,5 +396,6 @@
 	"queuedMessages": {
 		"title": "الرسائل في الطابور:",
 		"clickToEdit": "انقر لتعديل الرسالة"
-	}
+	},
+	"generateCommitMessage": "إنشاء رسالة الالتزام"
 }

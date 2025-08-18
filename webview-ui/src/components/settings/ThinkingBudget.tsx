@@ -1,7 +1,12 @@
 import { useEffect } from "react"
 import { Checkbox } from "vscrui"
 
-import { type ProviderSettings, type ModelInfo, type ReasoningEffort, reasoningEfforts } from "@roo-code/types"
+import {
+	type ProviderSettings,
+	type ModelInfo,
+	type ReasoningEffortWithMinimal,
+	reasoningEfforts,
+} from "@roo-code/types"
 
 import {
 	DEFAULT_HYBRID_REASONING_MODEL_MAX_TOKENS,
@@ -19,6 +24,17 @@ interface ThinkingBudgetProps {
 	modelInfo?: ModelInfo
 }
 
+// Helper function to determine if minimal option should be shown
+const shouldShowMinimalOption = (
+	provider: string | undefined,
+	modelId: string | undefined,
+	supportsEffort: boolean | undefined,
+): boolean => {
+	const isGpt5Model = provider === "openai-native" && modelId?.startsWith("gpt-5")
+	const isOpenRouterWithEffort = provider === "openrouter" && supportsEffort === true
+	return !!(isGpt5Model || isOpenRouterWithEffort)
+}
+
 export const ThinkingBudget = ({ apiConfiguration, setApiConfigurationField, modelInfo }: ThinkingBudgetProps) => {
 	const { t } = useAppTranslation()
 	const { id: selectedModelId } = useSelectedModel(apiConfiguration)
@@ -27,9 +43,37 @@ export const ThinkingBudget = ({ apiConfiguration, setApiConfigurationField, mod
 	const isGemini25Pro = selectedModelId && selectedModelId.includes("gemini-2.5-pro")
 	const minThinkingTokens = isGemini25Pro ? GEMINI_25_PRO_MIN_THINKING_TOKENS : 1024
 
+	// Check model capabilities
 	const isReasoningBudgetSupported = !!modelInfo && modelInfo.supportsReasoningBudget
 	const isReasoningBudgetRequired = !!modelInfo && modelInfo.requiredReasoningBudget
 	const isReasoningEffortSupported = !!modelInfo && modelInfo.supportsReasoningEffort
+
+	// Determine if minimal option should be shown
+	const showMinimalOption = shouldShowMinimalOption(
+		apiConfiguration.apiProvider,
+		selectedModelId,
+		isReasoningEffortSupported,
+	)
+
+	// Build available reasoning efforts list
+	const baseEfforts = [...reasoningEfforts] as ReasoningEffortWithMinimal[]
+	const availableReasoningEfforts: ReadonlyArray<ReasoningEffortWithMinimal> = showMinimalOption
+		? (["minimal", ...baseEfforts] as ReasoningEffortWithMinimal[])
+		: baseEfforts
+
+	// Default reasoning effort - use model's default if available
+	// GPT-5 models have "medium" as their default in the model configuration
+	const modelDefaultReasoningEffort = modelInfo?.reasoningEffort as ReasoningEffortWithMinimal | undefined
+	const defaultReasoningEffort: ReasoningEffortWithMinimal = modelDefaultReasoningEffort || "medium"
+	const currentReasoningEffort: ReasoningEffortWithMinimal =
+		(apiConfiguration.reasoningEffort as ReasoningEffortWithMinimal | undefined) || defaultReasoningEffort
+
+	// Set default reasoning effort when model supports it and no value is set
+	useEffect(() => {
+		if (isReasoningEffortSupported && !apiConfiguration.reasoningEffort && defaultReasoningEffort) {
+			setApiConfigurationField("reasoningEffort", defaultReasoningEffort)
+		}
+	}, [isReasoningEffortSupported, apiConfiguration.reasoningEffort, defaultReasoningEffort, setApiConfigurationField])
 
 	const enableReasoningEffort = apiConfiguration.enableReasoningEffort
 	const customMaxOutputTokens = apiConfiguration.modelMaxTokens || DEFAULT_HYBRID_REASONING_MODEL_MAX_TOKENS
@@ -119,13 +163,21 @@ export const ThinkingBudget = ({ apiConfiguration, setApiConfigurationField, mod
 				<label className="block font-medium mb-1">{t("settings:providers.reasoningEffort.label")}</label>
 			</div>
 			<Select
-				value={apiConfiguration.reasoningEffort}
-				onValueChange={(value) => setApiConfigurationField("reasoningEffort", value as ReasoningEffort)}>
+				value={currentReasoningEffort}
+				onValueChange={(value: ReasoningEffortWithMinimal) => {
+					setApiConfigurationField("reasoningEffort", value)
+				}}>
 				<SelectTrigger className="w-full">
-					<SelectValue placeholder={t("settings:common.select")} />
+					<SelectValue
+						placeholder={
+							currentReasoningEffort
+								? t(`settings:providers.reasoningEffort.${currentReasoningEffort}`)
+								: t("settings:common.select")
+						}
+					/>
 				</SelectTrigger>
 				<SelectContent>
-					{reasoningEfforts.map((value) => (
+					{availableReasoningEfforts.map((value) => (
 						<SelectItem key={value} value={value}>
 							{t(`settings:providers.reasoningEffort.${value}`)}
 						</SelectItem>

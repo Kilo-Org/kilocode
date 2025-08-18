@@ -2,6 +2,8 @@
 	"greeting": "Kilo Code sizin için ne yapabilir?",
 	"task": {
 		"title": "Görev",
+		"expand": "Görevi genişlet",
+		"collapse": "Görevi daralt",
 		"seeMore": "Daha fazla gör",
 		"seeLess": "Daha az gör",
 		"tokens": "Tokenlar",

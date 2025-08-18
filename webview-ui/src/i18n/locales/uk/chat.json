@@ -22,7 +22,9 @@
 		"connectToCloudDescription": "Увійдіть до Kilo Code Cloud для обміну завданнями",
 		"sharingDisabledByOrganization": "Обмін вимкнено організацією",
 		"shareSuccessOrganization": "Посилання організації скопійовано до буфера обміну",
-		"shareSuccessPublic": "Публічне посилання скопійовано до буфера обміну"
+		"shareSuccessPublic": "Публічне посилання скопійовано до буфера обміну",
+		"expand": "Розгорнути завдання",
+		"collapse": "Згорнути завдання"
 	},
 	"history": {
 		"title": "Історія"
@@ -388,5 +390,6 @@
 	"queuedMessages": {
 		"title": "Повідомлення в черзі:",
 		"clickToEdit": "Клікни для редагування повідомлення"
-	}
+	},
+	"generateCommitMessage": "Згенерувати повідомлення коміту"
 }

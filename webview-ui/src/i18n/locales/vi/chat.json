@@ -2,6 +2,8 @@
 	"greeting": "Kilo Code có thể giúp gì cho bạn?",
 	"task": {
 		"title": "Nhiệm vụ",
+		"expand": "Mở rộng nhiệm vụ",
+		"collapse": "Thu gọn nhiệm vụ",
 		"seeMore": "Xem thêm",
 		"seeLess": "Thu gọn",
 		"tokens": "Tokens",
