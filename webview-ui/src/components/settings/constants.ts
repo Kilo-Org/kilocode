@@ -49,7 +49,6 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 }
 
 export const PROVIDERS = [
-	{ value: "kilocode", label: "Kilo Code" },
 	{ value: "openrouter", label: "OpenRouter" },
 	{ value: "anthropic", label: "Anthropic" },
 	{ value: "claude-code", label: "Claude Code" },
@@ -84,4 +83,6 @@ export const PROVIDERS = [
 	{ value: "zai", label: "Z AI" },
 	{ value: "fireworks", label: "Fireworks AI" },
 	{ value: "io-intelligence", label: "IO Intelligence" },
-] // .sort((a, b) => a.label.localeCompare(b.label)) // kilocode_change: Sort providers with kilocode first
+].sort((a, b) => a.label.localeCompare(b.label))
+
+PROVIDERS.unshift({ value: "kilocode", label: "Kilo Code" }) // kilocode_change
