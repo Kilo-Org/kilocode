@@ -21,7 +21,12 @@ export const Ollama = ({ apiConfiguration, setApiConfigurationField }: OllamaPro
 	const { t } = useAppTranslation()
 
 	const [ollamaModels, setOllamaModels] = useState<string[]>([])
-	const routerModels = useRouterModels({ ollamaBaseUrl: apiConfiguration.ollamaBaseUrl }) // kilocode_change query key
+	// kilocode_change start: query key
+	const routerModels = useRouterModels({
+		ollamaBaseUrl: apiConfiguration.ollamaBaseUrl,
+		ollamaNumCtx: apiConfiguration.ollamaNumCtx,
+	})
+	// kilocode_change end
 
 	const handleInputChange = useCallback(
 		<K extends keyof ProviderSettings, E>(
@@ -93,6 +98,20 @@ export const Ollama = ({ apiConfiguration, setApiConfigurationField }: OllamaPro
 				className="w-full">
 				<label className="block font-medium mb-1">{t("settings:providers.ollama.modelId")}</label>
 			</VSCodeTextField>
+			{
+				// kilocode_change start
+				<VSCodeTextField
+					value={apiConfiguration?.ollamaNumCtx?.toString() ?? ""}
+					type="text"
+					onInput={(e) => {
+						setApiConfigurationField("ollamaNumCtx", parseInt((e.target as any)?.value) || undefined)
+					}}
+					placeholder="default"
+					className="w-full">
+					<label className="block font-medium mb-1">Context window</label>
+				</VSCodeTextField>
+				// kilocode_change end
+			}
 			{modelNotAvailable && (
 				<div className="flex flex-col gap-2 text-vscode-errorForeground text-sm">
 					<div className="flex flex-row items-center gap-1">

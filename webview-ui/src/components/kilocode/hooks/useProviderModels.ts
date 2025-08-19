@@ -186,6 +186,10 @@ export const useProviderModels = (apiConfiguration?: ProviderSettings) => {
 	const routerModels = useRouterModels({
 		openRouterBaseUrl: apiConfiguration?.openRouterBaseUrl,
 		openRouterApiKey: apiConfiguration?.apiKey,
+		// kilocode_change start
+		ollamaBaseUrl: apiConfiguration?.ollamaBaseUrl,
+		ollamaNumCtx: apiConfiguration?.ollamaNumCtx,
+		// kilocode_change end
 	})
 
 	const { models, defaultModel } =

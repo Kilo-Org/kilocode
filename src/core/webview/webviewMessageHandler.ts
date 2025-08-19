@@ -583,7 +583,14 @@ export const webviewMessageHandler = async (
 						kilocodeOrganizationId: apiConfiguration.kilocodeOrganizationId,
 					},
 				},
-				{ key: "ollama", options: { provider: "ollama", baseUrl: apiConfiguration.ollamaBaseUrl } },
+				{
+					key: "ollama",
+					options: {
+						provider: "ollama",
+						baseUrl: apiConfiguration.ollamaBaseUrl,
+						numCtx: apiConfiguration.ollamaNumCtx,
+					},
+				},
 			]
 			// kilocode_change end
 
@@ -672,6 +679,7 @@ export const webviewMessageHandler = async (
 				const ollamaModels = await getModels({
 					provider: "ollama",
 					baseUrl: ollamaApiConfig.ollamaBaseUrl,
+					numCtx: ollamaApiConfig.ollamaNumCtx, // kilocode_change
 				})
 
 				if (Object.keys(ollamaModels).length > 0) {

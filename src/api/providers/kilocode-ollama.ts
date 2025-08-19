@@ -3,7 +3,7 @@ import { Message, Ollama } from "ollama"
 import { ModelInfo, openAiModelInfoSaneDefaults } from "@roo-code/types"
 import { ApiStream } from "../transform/stream"
 import { BaseProvider } from "./base-provider"
-import { ModelRecord } from "../../shared/api"
+import { ApiHandlerOptions, ModelRecord } from "../../shared/api"
 import { getModels } from "./fetchers/modelCache"
 import { fetchWithTimeout } from "./kilocode/fetchWithTimeout"
 
@@ -122,17 +122,12 @@ function convertToOllamaMessages(anthropicMessages: Anthropic.Messages.MessagePa
 
 const OLLAMA_TIMEOUT_MS = 3_600_000
 
-interface OllamaHandlerOptions {
-	ollamaBaseUrl?: string
-	ollamaModelId?: string
-}
-
 export class KilocodeOllamaHandler extends BaseProvider {
-	private options: OllamaHandlerOptions
+	private options: ApiHandlerOptions
 	private client: Ollama | undefined
 	protected models: ModelRecord = {}
 
-	constructor(options: OllamaHandlerOptions) {
+	constructor(options: ApiHandlerOptions) {
 		super()
 		this.options = options
 	}
@@ -203,7 +198,11 @@ export class KilocodeOllamaHandler extends BaseProvider {
 	}
 
 	async fetchModel() {
-		this.models = await getModels({ provider: "ollama", baseUrl: this.options.ollamaBaseUrl })
+		this.models = await getModels({
+			provider: "ollama",
+			baseUrl: this.options.ollamaBaseUrl,
+			numCtx: this.options.ollamaNumCtx,
+		})
 		return this.getModel()
 	}
 

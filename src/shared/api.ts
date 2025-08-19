@@ -245,6 +245,6 @@ export type GetModelsOptions =
 	| { provider: "litellm"; apiKey: string; baseUrl: string }
 	| { provider: "kilocode-openrouter"; kilocodeToken?: string; kilocodeOrganizationId?: string } // kilocode_change
 	| { provider: "cerebras"; cerebrasApiKey?: string } // kilocode_change
-	| { provider: "ollama"; baseUrl?: string }
+	| { provider: "ollama"; baseUrl?: string; numCtx?: number } // kilocode_change
 	| { provider: "lmstudio"; baseUrl?: string }
 	| { provider: "io-intelligence"; apiKey: string }

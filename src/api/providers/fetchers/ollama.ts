@@ -37,7 +37,10 @@ type OllamaModelsResponse = z.infer<typeof OllamaModelsResponseSchema>
 
 type OllamaModelInfoResponse = z.infer<typeof OllamaModelInfoResponseSchema>
 
-export const parseOllamaModel = (rawModel: OllamaModelInfoResponse): ModelInfo => {
+export const parseOllamaModel = (
+	rawModel: OllamaModelInfoResponse,
+	numCtx?: number, // kilocode_change
+): ModelInfo => {
 	// kilocode_change start
 	const contextLengthFromModelParameters =
 		typeof rawModel.parameters === "string"
@@ -48,7 +51,7 @@ export const parseOllamaModel = (rawModel: OllamaModelInfoResponse): ModelInfo =
 	const contextLengthFromModelInfo =
 		contextKey && typeof rawModel.model_info[contextKey] === "number" ? rawModel.model_info[contextKey] : undefined
 
-	const contextWindow = contextLengthFromModelParameters ?? contextLengthFromModelInfo
+	const contextWindow = numCtx ?? contextLengthFromModelParameters ?? contextLengthFromModelInfo
 	// kilocode_change end
 
 	const modelInfo: ModelInfo = Object.assign({}, ollamaDefaultModelInfo, {
@@ -63,7 +66,10 @@ export const parseOllamaModel = (rawModel: OllamaModelInfoResponse): ModelInfo =
 	return modelInfo
 }
 
-export async function getOllamaModels(baseUrl = "http://localhost:11434"): Promise<Record<string, ModelInfo>> {
+export async function getOllamaModels(
+	baseUrl = "http://localhost:11434",
+	numCtx?: number, // kilocode_change
+): Promise<Record<string, ModelInfo>> {
 	const models: Record<string, ModelInfo> = {}
 
 	// clearing the input can leave an empty string; use the default in that case
@@ -86,7 +92,10 @@ export async function getOllamaModels(baseUrl = "http://localhost:11434"): Promi
 							model: ollamaModel.model,
 						})
 						.then((ollamaModelInfo) => {
-							models[ollamaModel.name] = parseOllamaModel(ollamaModelInfo.data)
+							models[ollamaModel.name] = parseOllamaModel(
+								ollamaModelInfo.data,
+								numCtx, // kilocode_change
+							)
 						}),
 				)
 			}
