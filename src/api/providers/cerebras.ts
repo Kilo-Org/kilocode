@@ -1,4 +1,5 @@
 import { Anthropic } from "@anthropic-ai/sdk"
+import { createHash } from "crypto"
 
 import { type CerebrasModelId, cerebrasDefaultModelId, cerebrasModels } from "@roo-code/types"
 
@@ -7,6 +8,13 @@ import { calculateApiCostOpenAI } from "../../shared/cost"
 import { ApiStream } from "../transform/stream"
 import { convertToOpenAiMessages } from "../transform/openai-format"
 import { XmlMatcher } from "../../utils/xml-matcher"
+import { LRUCache } from "../../utils/lru-cache"
+import { MultiPointStrategy } from "../transform/cache-strategy/multi-point-strategy"
+import type {
+	CacheStrategyConfig,
+	ModelInfo as CacheModelInfo,
+	CachePointPlacement,
+} from "../transform/cache-strategy/types"
 
 import type { ApiHandlerCreateMessageMetadata, SingleCompletionHandler } from "../index"
 import { BaseProvider } from "./base-provider"
@@ -15,6 +23,22 @@ import { t } from "../../i18n"
 
 const CEREBRAS_BASE_URL = "https://api.cerebras.ai/v1"
 const CEREBRAS_DEFAULT_TEMPERATURE = 0
+
+/**
+ * A more accurate token estimation function.
+ * @param text The text to estimate tokens for.
+ * @returns An estimated token count.
+ */
+function estimateTokens(text: string): number {
+	if (!text) return 0
+	// This estimation is based on the one in `base-strategy.ts`
+	const words = text.split(/\s+/).filter((word) => word.length > 0)
+	let tokenCount = words.length * 1.3
+	tokenCount += (text.match(/[.,!?;:()[\]{}""''`]/g) || []).length * 0.3
+	tokenCount += (text.match(/\n/g) || []).length * 0.5
+	tokenCount += 5 // Overhead for structure
+	return Math.ceil(tokenCount)
+}
 
 /**
  * Removes thinking tokens from text to prevent model confusion when processing conversation history.
@@ -83,7 +107,13 @@ export class CerebrasHandler extends BaseProvider implements SingleCompletionHan
 	private providerModels: typeof cerebrasModels
 	private defaultProviderModelId: CerebrasModelId
 	private options: ApiHandlerOptions
-	private lastUsage: { inputTokens: number; outputTokens: number } = { inputTokens: 0, outputTokens: 0 }
+	private lastUsage: {
+		inputTokens: number
+		outputTokens: number
+		cacheReadInputTokens: number
+		cacheWriteInputTokens: number
+	} = { inputTokens: 0, outputTokens: 0, cacheReadInputTokens: 0, cacheWriteInputTokens: 0 }
+	private promptCache = new LRUCache<string, any>(100)
 
 	constructor(options: ApiHandlerOptions) {
 		super()
@@ -121,9 +151,71 @@ export class CerebrasHandler extends BaseProvider implements SingleCompletionHan
 	): ApiStream {
 		const {
 			id: model,
+			info,
 			info: { maxTokens: max_tokens },
 		} = this.getModel()
 		const temperature = this.options.modelTemperature ?? CEREBRAS_DEFAULT_TEMPERATURE
+
+		let cacheReadInputTokens = 0
+		let cacheWriteInputTokens = 0
+
+		// Client-side prompt cache simulation
+		if (this.options.cerebrasUsePromptCache && info.supportsPromptCache) {
+			const conversationId = createHash("sha256")
+				.update(JSON.stringify(messages.slice(0, 2))) // Base ID on first two messages
+				.digest("hex")
+
+			const previousPlacements: CachePointPlacement[] = this.promptCache.get(conversationId) || []
+
+			const cacheModelInfo: CacheModelInfo = {
+				maxTokens: info.maxTokens || 0,
+				contextWindow: info.contextWindow || 0,
+				supportsPromptCache: info.supportsPromptCache || false,
+				maxCachePoints: (info as any).maxCachePoints || 0,
+				minTokensPerCachePoint: (info as any).minTokensPerCachePoint || 0,
+				cachableFields: (info as any).cachableFields || [],
+			}
+
+			const config: CacheStrategyConfig = {
+				modelInfo: cacheModelInfo,
+				systemPrompt,
+				messages,
+				usePromptCache: true,
+				previousCachePointPlacements: previousPlacements,
+			}
+
+			const strategy = new MultiPointStrategy(config)
+			const cacheResult = strategy.determineOptimalCachePoints()
+			const newPlacements = cacheResult.messageCachePointPlacements || []
+			this.promptCache.set(conversationId, newPlacements)
+
+			// Calculate cache read/write tokens by comparing new and old placements
+			const prevPlacementMap = new Map(previousPlacements.map((p) => [p.index, p]))
+			for (const placement of newPlacements) {
+				if (prevPlacementMap.has(placement.index)) {
+					cacheReadInputTokens += placement.tokensCovered
+				} else {
+					cacheWriteInputTokens += placement.tokensCovered
+				}
+			}
+
+			// The MultiPointStrategy doesn't explicitly return system cache status,
+			// so we handle it separately for our virtual cache.
+			const systemTokenCount = estimateTokens(systemPrompt)
+			if (
+				cacheModelInfo.cachableFields.includes("system") &&
+				systemPrompt &&
+				systemTokenCount >= cacheModelInfo.minTokensPerCachePoint
+			) {
+				const systemCacheKey = `system_${conversationId}`
+				if (this.promptCache.get(systemCacheKey)) {
+					cacheReadInputTokens += systemTokenCount
+				} else {
+					cacheWriteInputTokens += systemTokenCount
+					this.promptCache.set(systemCacheKey, true)
+				}
+			}
+		}
 
 		// Convert Anthropic messages to OpenAI format, then flatten for Cerebras
 		// This will automatically strip thinking tokens from assistant messages
@@ -262,12 +354,14 @@ export class CerebrasHandler extends BaseProvider implements SingleCompletionHan
 			}
 
 			// Store usage for cost calculation
-			this.lastUsage = { inputTokens, outputTokens }
+			this.lastUsage = { inputTokens, outputTokens, cacheReadInputTokens, cacheWriteInputTokens }
 
 			yield {
 				type: "usage",
 				inputTokens,
 				outputTokens,
+				cacheReadInputTokens,
+				cacheWriteInputTokens,
 			}
 		} catch (error) {
 			if (error instanceof Error) {
@@ -330,7 +424,9 @@ export class CerebrasHandler extends BaseProvider implements SingleCompletionHan
 	getApiCost(metadata: ApiHandlerCreateMessageMetadata): number {
 		const { info } = this.getModel()
 		// Use actual token usage from the last request
-		const { inputTokens, outputTokens } = this.lastUsage
-		return calculateApiCostOpenAI(info, inputTokens, outputTokens)
+		const { inputTokens, outputTokens, cacheReadInputTokens } = this.lastUsage
+		// For virtual client-side caching, we don't bill for cached-read tokens.
+		const billableInputTokens = Math.max(0, inputTokens - cacheReadInputTokens)
+		return calculateApiCostOpenAI(info, billableInputTokens, outputTokens)
 	}
 }

@@ -286,6 +286,7 @@ const litellmSchema = baseProviderSettingsSchema.extend({
 
 const cerebrasSchema = apiModelIdProviderModelSchema.extend({
 	cerebrasApiKey: z.string().optional(),
+	cerebrasUsePromptCache: z.boolean().optional(),
 })
 
 const sambaNovaSchema = apiModelIdProviderModelSchema.extend({

@@ -165,14 +165,119 @@ describe("CerebrasHandler", () => {
 		})
 	})
 
-	describe("token usage and cost calculation", () => {
-		it("should track token usage properly", () => {
-			// Test that lastUsage is updated correctly
-			// Test getApiCost returns calculated cost based on actual usage
+	describe("Client-Side Caching", () => {
+		const mockCacheOptions = {
+			cerebrasApiKey: "test-api-key",
+			apiModelId: "llama-3.3-70b" as CerebrasModelId,
+			cerebrasUsePromptCache: true,
+		}
+
+		// Helper to create a mock stream response from an array of chunks
+		const createMockStream = (chunks: string[]) => {
+			const encoder = new TextEncoder()
+			const stream = new ReadableStream({
+				async start(controller) {
+					for (const chunk of chunks) {
+						controller.enqueue(encoder.encode(chunk))
+						await new Promise((r) => setTimeout(r, 0)) // Yield to event loop
+					}
+					controller.close()
+				},
+			})
+			return {
+				ok: true,
+				body: stream,
+			}
+		}
+
+		it("should perform a cache write on the first request", async () => {
+			handler = new CerebrasHandler(mockCacheOptions)
+			const mockStreamChunks = [
+				`data: ${JSON.stringify({ usage: { prompt_tokens: 100, completion_tokens: 50 } })}\n\n`,
+				"data: [DONE]\n\n",
+			]
+			vi.mocked(fetch).mockResolvedValue(createMockStream(mockStreamChunks) as any)
+
+			const systemPrompt = "You are a helpful assistant.".repeat(10) // Ensure it's long enough
+			const messages = [{ role: "user" as const, content: "Hello, world!".repeat(10) }]
+
+			const stream = handler.createMessage(systemPrompt, messages)
+			let usageEvent: any
+			for await (const event of stream) {
+				if (event.type === "usage") {
+					usageEvent = event
+				}
+			}
+
+			expect(usageEvent).toBeDefined()
+			expect(usageEvent.inputTokens).toBe(100)
+			expect(usageEvent.cacheWriteInputTokens).toBeGreaterThan(0)
+			expect(usageEvent.cacheReadInputTokens).toBe(0)
 		})
 
-		it("should provide usage estimates when API doesn't return usage", () => {
-			// Test fallback token estimation logic
+		it("should perform a cache read on a subsequent request", async () => {
+			handler = new CerebrasHandler(mockCacheOptions)
+			const mockStreamChunks1 = [
+				`data: ${JSON.stringify({ usage: { prompt_tokens: 150, completion_tokens: 50 } })}\n\n`,
+				"data: [DONE]\n\n",
+			]
+			const mockStreamChunks2 = [
+				`data: ${JSON.stringify({ usage: { prompt_tokens: 180, completion_tokens: 60 } })}\n\n`,
+				"data: [DONE]\n\n",
+			]
+
+			const systemPrompt = "You are a helpful assistant.".repeat(10)
+			const messages1 = [{ role: "user" as const, content: "Hello, world!".repeat(10) }]
+			const messages2 = [
+				...messages1,
+				{ role: "assistant" as const, content: "How can I help?".repeat(10) },
+				{ role: "user" as const, content: "Tell me a joke.".repeat(10) },
+			]
+
+			// First call (write)
+			vi.mocked(fetch).mockResolvedValueOnce(createMockStream(mockStreamChunks1) as any)
+			const stream1 = handler.createMessage(systemPrompt, messages1)
+			for await (const event of stream1) {
+				/* drain */
+			}
+
+			// Second call (read)
+			vi.mocked(fetch).mockResolvedValueOnce(createMockStream(mockStreamChunks2) as any)
+			const stream2 = handler.createMessage(systemPrompt, messages1) // Use same messages to ensure cache hit
+			let usageEvent2: any
+			for await (const event of stream2) {
+				if (event.type === "usage") {
+					usageEvent2 = event
+				}
+			}
+
+			expect(usageEvent2).toBeDefined()
+			expect(usageEvent2.inputTokens).toBe(180)
+			expect(usageEvent2.cacheReadInputTokens).toBeGreaterThan(0)
+		})
+
+		it("should not use cache if cerebrasUsePromptCache is false", async () => {
+			handler = new CerebrasHandler({ ...mockCacheOptions, cerebrasUsePromptCache: false })
+			const mockStreamChunks = [
+				`data: ${JSON.stringify({ usage: { prompt_tokens: 100, completion_tokens: 50 } })}\n\n`,
+				"data: [DONE]\n\n",
+			]
+			vi.mocked(fetch).mockResolvedValue(createMockStream(mockStreamChunks) as any)
+
+			const systemPrompt = "You are a helpful assistant.".repeat(10)
+			const messages = [{ role: "user" as const, content: "Hello, world!".repeat(10) }]
+
+			const stream = handler.createMessage(systemPrompt, messages)
+			let usageEvent: any
+			for await (const event of stream) {
+				if (event.type === "usage") {
+					usageEvent = event
+				}
+			}
+
+			expect(usageEvent).toBeDefined()
+			expect(usageEvent.cacheWriteInputTokens).toBe(0)
+			expect(usageEvent.cacheReadInputTokens).toBe(0)
 		})
 	})
 })
