@@ -55,8 +55,7 @@ import {
 	SelectValue,
 	SelectContent,
 	SelectItem,
-	// SearchableSelect, // kilocode_change
-	SelectSeparator,
+	SearchableSelect,
 	Collapsible,
 	CollapsibleTrigger,
 	CollapsibleContent,
@@ -420,6 +419,17 @@ const ApiOptions = ({
 		}
 	}, [selectedProvider])
 
+	// Convert providers to SearchableSelect options
+	// kilocode_change start: no organizationAllowList yet
+	const providerOptions = useMemo(
+		() =>
+			PROVIDERS.map(({ value, label }) => {
+				return { value, label }
+			}),
+		[],
+	)
+	// kilocode_change end
+
 	return (
 		<div className="flex flex-col gap-3">
 			<div className="flex flex-col gap-1 relative">
@@ -433,21 +443,16 @@ const ApiOptions = ({
 						</div>
 					)}
 				</div>
-				<Select value={selectedProvider} onValueChange={(value) => onProviderChange(value as ProviderName)}>
-					<SelectTrigger className="w-full">
-						<SelectValue placeholder={t("settings:common.select")} />
-					</SelectTrigger>
-					<SelectContent>
-						{/*  kilocode_change start: separator */}
-						{PROVIDERS.map(({ value, label }, i) => (
-							<Fragment key={value}>
-								<SelectItem value={value}>{label}</SelectItem>
-								{i === 0 ? <SelectSeparator /> : null}
-							</Fragment>
-						))}
-						{/*  kilocode_change end */}
-					</SelectContent>
-				</Select>
+				<SearchableSelect
+					value={selectedProvider}
+					onValueChange={(value) => onProviderChange(value as ProviderName)}
+					options={providerOptions}
+					placeholder={t("settings:common.select")}
+					searchPlaceholder={t("settings:providers.searchProviderPlaceholder")}
+					emptyMessage={t("settings:providers.noProviderMatchFound")}
+					className="w-full"
+					data-testid="provider-select"
+				/>
 			</div>
 
 			{errorMessage && <ApiErrorMessage errorMessage={errorMessage} />}
