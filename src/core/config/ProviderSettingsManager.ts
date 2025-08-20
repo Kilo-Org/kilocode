@@ -542,14 +542,28 @@ export class ProviderSettingsManager {
 
 			const apiConfigs = Object.entries(providerProfiles.apiConfigs).reduce(
 				(acc, [key, apiConfig]) => {
-					// Use passthrough to preserve all fields, including new ones like requestsPerMinute
-					const result = providerSettingsWithIdSchema.passthrough().safeParse(apiConfig)
-					if (!result.success) {
-						console.error(`[ProviderSettingsManager] Failed to parse config "${key}":`, result.error.issues)
-						// Fallback: try to preserve the raw config
-						return { ...acc, [key]: { ...apiConfig, id: apiConfig.id || this.generateId() } }
+					// First try discriminated schema for proper validation
+					const discriminatedResult = discriminatedProviderSettingsWithIdSchema.safeParse(apiConfig)
+					if (discriminatedResult.success) {
+						return { ...acc, [key]: discriminatedResult.data }
 					}
-					return { ...acc, [key]: result.data }
+					
+					// If discriminated fails, try passthrough to preserve new fields like requestsPerMinute
+					const passthroughResult = providerSettingsWithIdSchema.passthrough().safeParse(apiConfig)
+					if (passthroughResult.success) {
+						// Check if it's a valid provider type
+						const provider = passthroughResult.data.apiProvider
+						const validProviders = ["anthropic", "openai", "google", "openrouter", "bedrock", "azureopenai", "vertexai", "openai-compatible", "ollama", "lmstudio", "gemini", "openai-native", "aws-bedrock", "gcp-vertex", "github-models", "xai", "deepseek", "vscode-lm"]
+						if (provider && !validProviders.includes(provider)) {
+							console.error(`[ProviderSettingsManager] Invalid provider "${provider}" in config "${key}", skipping`)
+							return acc
+						}
+						return { ...acc, [key]: passthroughResult.data }
+					}
+					
+					console.error(`[ProviderSettingsManager] Failed to parse config "${key}":`, passthroughResult.error.issues)
+					// Skip invalid configs completely
+					return acc
 				},
 				{} as Record<string, ProviderSettingsWithId>,
 			)
