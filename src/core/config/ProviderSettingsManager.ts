@@ -476,7 +476,7 @@ export class ProviderSettingsManager {
 					// This ensures requestsPerMinute and other new fields are exported
 					const baseSchema = baseProviderSettingsSchema
 						.extend({
-							id: z.string().uuid(),
+							id: z.string(),
 						})
 						.passthrough()
 
