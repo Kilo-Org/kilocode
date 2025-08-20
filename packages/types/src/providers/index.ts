@@ -3,6 +3,7 @@ export * from "./bedrock.js"
 export * from "./cerebras.js"
 export * from "./chutes.js"
 export * from "./claude-code.js"
+export * from "./cometapi.js"
 export * from "./deepseek.js"
 export * from "./gemini.js"
 export * from "./gemini-cli.js" // kilocode_change

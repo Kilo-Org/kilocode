@@ -89,6 +89,8 @@ export class ProfileValidator {
 				return profile.ollamaModelId
 			case "requesty":
 				return profile.requestyModelId
+			case "cometapi":
+				return profile.cometApiModelId
 			case "io-intelligence":
 				return profile.ioIntelligenceModelId
 			case "human-relay":

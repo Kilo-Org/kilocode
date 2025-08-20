@@ -8,6 +8,8 @@ import {
 	bedrockModels,
 	cerebrasDefaultModelId,
 	cerebrasModels,
+	cometApiDefaultModelId,
+	cometApiModels,
 	deepSeekDefaultModelId,
 	deepSeekModels,
 	moonshotDefaultModelId,
@@ -367,6 +369,11 @@ function getSelectedModel({
 			const info = sambaNovaModels[id as keyof typeof sambaNovaModels]
 			return { id, info }
 		}
+		case "cometapi": {
+			const id = apiConfiguration.cometApiModelId ?? cometApiDefaultModelId
+			// Try to get model info from dynamic router models first, fallback to static models
+			const info =
+				routerModels.cometapi[id] ?? (cometApiModels as any)[id] ?? cometApiModels[cometApiDefaultModelId]
 		case "fireworks": {
 			const id = apiConfiguration.apiModelId ?? fireworksDefaultModelId
 			const info = fireworksModels[id as keyof typeof fireworksModels]

@@ -5,6 +5,7 @@ import {
 	bedrockModels,
 	cerebrasModels,
 	claudeCodeModels,
+	cometApiModels,
 	deepSeekModels,
 	moonshotModels,
 	geminiModels,
@@ -29,6 +30,7 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	"claude-code": claudeCodeModels,
 	bedrock: bedrockModels,
 	cerebras: cerebrasModels,
+	cometapi: cometApiModels,
 	deepseek: deepSeekModels,
 	doubao: doubaoModels,
 	moonshot: moonshotModels,
@@ -53,6 +55,7 @@ export const PROVIDERS = [
 	{ value: "anthropic", label: "Anthropic" },
 	{ value: "claude-code", label: "Claude Code" },
 	{ value: "cerebras", label: "Cerebras" },
+	{ value: "cometapi", label: "CometAPI" },
 	{ value: "gemini", label: "Google Gemini" },
 	{ value: "doubao", label: "Doubao" },
 	// kilocode_change start
