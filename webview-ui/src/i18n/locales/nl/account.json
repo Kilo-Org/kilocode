@@ -10,5 +10,8 @@
 	"cloudBenefitHistory": "Online taakgeschiedenis",
 	"cloudBenefitSharing": "Deel- en samenwerkingsfuncties",
 	"cloudBenefitMetrics": "Taak-, token- en kostengebaseerde gebruiksstatistieken",
+	"cloudBenefitWalkaway": "Volg en beheer taken van overal met Kilo remote Control",
+	"remoteControl": "Kilo remote Control",
+	"remoteControlDescription": "Schakel het volgen en interacteren met taken in deze workspace in met Kilo Code Cloud",
 	"visitCloudWebsite": "Bezoek Kilo Code Cloud"
 }

@@ -125,6 +125,7 @@ const OLLAMA_TIMEOUT_MS = 3_600_000
 interface OllamaHandlerOptions {
 	ollamaBaseUrl?: string
 	ollamaModelId?: string
+	ollamaApiKey?: string
 }
 
 export class KilocodeOllamaHandler extends BaseProvider {
@@ -140,9 +141,14 @@ export class KilocodeOllamaHandler extends BaseProvider {
 	private ensureClient(): Ollama {
 		if (!this.client) {
 			try {
+				const headers = this.options.ollamaApiKey
+					? { Authorization: this.options.ollamaApiKey } //Yes, this is weird, its not a Bearer token
+					: undefined
+
 				this.client = new Ollama({
 					host: this.options.ollamaBaseUrl || "http://localhost:11434",
-					fetch: fetchWithTimeout(OLLAMA_TIMEOUT_MS),
+					fetch: fetchWithTimeout(OLLAMA_TIMEOUT_MS, headers),
+					headers: headers,
 				})
 			} catch (error) {
 				throw new Error(`Error creating Ollama client: ${error.message}`)

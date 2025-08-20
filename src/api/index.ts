@@ -16,7 +16,6 @@ import {
 	// OllamaHandler, // kilocode_change
 	LmStudioHandler,
 	GeminiHandler,
-	GeminiCliHandler, // kilocode_change
 	OpenAiNativeHandler,
 	DeepSeekHandler,
 	MoonshotHandler,
@@ -32,9 +31,14 @@ import {
 	HuggingFaceHandler,
 	ChutesHandler,
 	LiteLLMHandler,
-	VirtualQuotaFallbackHandler, // kilocode_change
+	// kilocode_change start
+	VirtualQuotaFallbackHandler,
+	GeminiCliHandler,
+	QwenCodeHandler,
+	// kilocode_change end
 	ClaudeCodeHandler,
 	SambaNovaHandler,
+	IOIntelligenceHandler,
 	DoubaoHandler,
 	ZAiHandler,
 	FireworksHandler,
@@ -51,6 +55,13 @@ export interface SingleCompletionHandler {
 export interface ApiHandlerCreateMessageMetadata {
 	mode?: string
 	taskId: string
+	previousResponseId?: string
+	/**
+	 * When true, the provider must NOT fall back to internal continuity state
+	 * (e.g., lastResponseId) if previousResponseId is absent.
+	 * Used to enforce "skip once" after a condense operation.
+	 */
+	suppressPreviousResponseId?: boolean
 }
 
 export interface ApiHandler {
@@ -84,6 +95,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new GeminiCliHandler(options)
 		case "virtual-quota-fallback":
 			return new VirtualQuotaFallbackHandler(options)
+		case "qwen-code":
+			return new QwenCodeHandler(options)
 		// kilocode_change end
 		case "anthropic":
 			return new AnthropicHandler(options)
@@ -147,6 +160,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new ZAiHandler(options)
 		case "fireworks":
 			return new FireworksHandler(options)
+		case "io-intelligence":
+			return new IOIntelligenceHandler(options)
 		default:
 			apiProvider satisfies "gemini-cli" | undefined
 			return new AnthropicHandler(options)

@@ -258,16 +258,25 @@
 			"error": "No s'ha pogut actualitzar la llista de models. Si us plau, torneu-ho a provar."
 		},
 		"getRequestyApiKey": "Obtenir clau API de Requesty",
+		"getRequestyBaseUrl": "URL base",
+		"requestyUseCustomBaseUrl": "Utilitza l'URL base personalitzada",
 		"openRouterTransformsText": "Comprimir prompts i cadenes de missatges a la mida del context (<a>Transformacions d'OpenRouter</a>)",
 		"anthropicApiKey": "Clau API d'Anthropic",
 		"getAnthropicApiKey": "Obtenir clau API d'Anthropic",
 		"anthropicUseAuthToken": "Passar la clau API d'Anthropic com a capçalera d'autorització en lloc de X-Api-Key",
+		"anthropic1MContextBetaLabel": "Activa la finestra de context d'1M (Beta)",
+		"anthropic1MContextBetaDescription": "Amplia la finestra de context a 1 milió de tokens per a Claude Sonnet 4",
+		"awsBedrock1MContextBetaLabel": "Activa la finestra de context d'1M (Beta)",
+		"awsBedrock1MContextBetaDescription": "Amplia la finestra de context a 1 milió de tokens per a Claude Sonnet 4",
 		"cerebrasApiKey": "Clau API de Cerebras",
 		"getCerebrasApiKey": "Obtenir clau API de Cerebras",
 		"chutesApiKey": "Clau API de Chutes",
 		"getChutesApiKey": "Obtenir clau API de Chutes",
 		"fireworksApiKey": "Clau API de Fireworks",
 		"getFireworksApiKey": "Obtenir clau API de Fireworks",
+		"ioIntelligenceApiKey": "Clau API d'IO Intelligence",
+		"ioIntelligenceApiKeyPlaceholder": "Introdueix la teva clau d'API de IO Intelligence",
+		"getIoIntelligenceApiKey": "Obtenir clau API d'IO Intelligence",
 		"deepSeekApiKey": "Clau API de DeepSeek",
 		"getDeepSeekApiKey": "Obtenir clau API de DeepSeek",
 		"doubaoApiKey": "Clau API de Doubao",
@@ -364,6 +373,9 @@
 		"ollama": {
 			"baseUrl": "URL base (opcional)",
 			"modelId": "ID del model",
+			"apiKey": "Clau API",
+			"apiKeyPlaceholder": "Introduïu la vostra clau API",
+			"apiKeyInfo": "La clau API s'enviarà com a capçalera d'autorització",
 			"description": "Ollama permet executar models localment al vostre ordinador. Per a instruccions sobre com començar, consulteu la Guia d'inici ràpid.",
 			"warning": "Nota: Kilo Code utilitza prompts complexos i funciona millor amb models Claude. Els models menys capaços poden no funcionar com s'espera."
 		},
@@ -436,6 +448,7 @@
 		},
 		"reasoningEffort": {
 			"label": "Esforç de raonament del model",
+			"minimal": "Mínim (el més ràpid)",
 			"high": "Alt",
 			"medium": "Mitjà",
 			"low": "Baix"
@@ -469,6 +482,13 @@
 			"requirement4": "No utilitza claus d'API - l'autenticació es gestiona via OAuth",
 			"requirement5": "Requereix que l'eina Gemini CLI estigui instal·lada i autenticada primer",
 			"freeAccess": "Accés gratuït via autenticació OAuth"
+		},
+		"qwenCode": {
+			"oauthPath": "Ruta de Credencials OAuth (opcional)",
+			"oauthPathDescription": "Ruta al fitxer de credencials OAuth. Deixa buit per utilitzar la ubicació per defecte (~/.qwen/oauth_creds.json).",
+			"description": "Aquest proveïdor utilitza l'autenticació OAuth del servei Qwen i no requereix claus d'API.",
+			"instructions": "Si us plau, seguiu la documentació oficial per obtenir el fitxer d'autorització i col·locar-lo a la ruta especificada.",
+			"setupLink": "Documentació oficial de Qwen"
 		}
 	},
 	"browser": {
@@ -754,6 +774,7 @@
 		"noComputerUse": "No suporta ús de l'ordinador",
 		"supportsPromptCache": "Suporta emmagatzematge en caché de prompts",
 		"noPromptCache": "No suporta emmagatzematge en caché de prompts",
+		"contextWindow": "Finestra de context:",
 		"maxOutput": "Sortida màxima",
 		"inputPrice": "Preu d'entrada",
 		"outputPrice": "Preu de sortida",

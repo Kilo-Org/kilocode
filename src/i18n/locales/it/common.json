@@ -118,6 +118,9 @@
 			"genericError": "Errore API Cerebras ({{status}}): {{message}}",
 			"noResponseBody": "Errore API Cerebras: Nessun corpo di risposta",
 			"completionError": "Errore di completamento Cerebras: {{error}}"
+		},
+		"qwenCode": {
+			"oauthLoadFailed": "Impossibile caricare le credenziali OAuth. Autenticati prima: {{error}}"
 		}
 	},
 	"warnings": {

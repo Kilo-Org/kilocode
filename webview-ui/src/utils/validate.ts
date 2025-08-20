@@ -1,7 +1,8 @@
 import i18next from "i18next"
 
-import type { ProviderSettings, OrganizationAllowList } from "@roo-code/types"
+import type { ProviderSettings } from "@roo-code/types"
 
+import type { OrganizationAllowList } from "@roo/cloud"
 import { isRouterName, RouterModels } from "@roo/api"
 
 export function validateApiConfiguration(
@@ -76,6 +77,9 @@ function validateModelsAndKeysProvided(apiConfiguration: ProviderSettings): stri
 		case "gemini-cli":
 			// OAuth-based provider, no API key validation needed
 			break
+		case "qwen-code":
+			// OAuth-based provider, no API key validation needed
+			break
 		// kilocode_change end
 		case "openai-native":
 			if (!apiConfiguration.openAiNativeApiKey) {
@@ -134,6 +138,11 @@ function validateModelsAndKeysProvided(apiConfiguration: ProviderSettings): stri
 			break
 		case "tars":
 			if (!apiConfiguration.tarsApiKey) {
+				return i18next.t("settings:validation.apiKey")
+			}
+			break
+		case "io-intelligence":
+			if (!apiConfiguration.ioIntelligenceApiKey) {
 				return i18next.t("settings:validation.apiKey")
 			}
 			break
@@ -205,6 +214,8 @@ function getModelIdForProvider(apiConfiguration: ProviderSettings, provider: str
 			return apiConfiguration.vsCodeLmModelSelector?.id
 		case "huggingface":
 			return apiConfiguration.huggingFaceModelId
+		case "io-intelligence":
+			return apiConfiguration.ioIntelligenceModelId
 		default:
 			return apiConfiguration.apiModelId
 	}
@@ -277,6 +288,9 @@ export function validateModelId(apiConfiguration: ProviderSettings, routerModels
 			break
 		case "tars":
 			modelId = apiConfiguration.tarsModelId
+			break
+		case "io-intelligence":
+			modelId = apiConfiguration.ioIntelligenceModelId
 			break
 	}
 

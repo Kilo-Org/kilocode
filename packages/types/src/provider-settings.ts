@@ -3,6 +3,14 @@ import { z } from "zod"
 import { reasoningEffortsSchema, verbosityLevelsSchema, modelInfoSchema } from "./model.js"
 import { codebaseIndexProviderSchema } from "./codebase-index.js"
 
+// Bedrock Claude Sonnet 4 model ID that supports 1M context
+export const BEDROCK_CLAUDE_SONNET_4_MODEL_ID = "anthropic.claude-sonnet-4-20250514-v1:0"
+
+// Extended schema that includes "minimal" for GPT-5 models
+export const extendedReasoningEffortsSchema = z.union([reasoningEffortsSchema, z.literal("minimal")])
+
+export type ReasoningEffortWithMinimal = z.infer<typeof extendedReasoningEffortsSchema>
+
 /**
  * ProviderName
  */
@@ -18,8 +26,7 @@ export const providerNames = [
 	"ollama",
 	"vscode-lm",
 	"lmstudio",
-	"gemini", // kilocode_change
-	"gemini-cli",
+	"gemini",
 	"openai-native",
 	"mistral",
 	"moonshot",
@@ -35,7 +42,9 @@ export const providerNames = [
 	"litellm",
 	// kilocode_change start
 	"kilocode",
+	"gemini-cli",
 	"virtual-quota-fallback",
+	"qwen-code",
 	// kilocode_change end
 	"huggingface",
 	"cerebras",
@@ -43,6 +52,7 @@ export const providerNames = [
 	"zai",
 	"fireworks",
 	"tars",
+	"io-intelligence",
 ] as const
 
 export const providerNamesSchema = z.enum(providerNames)
@@ -81,7 +91,7 @@ const baseProviderSettingsSchema = z.object({
 
 	// Model reasoning.
 	enableReasoningEffort: z.boolean().optional(),
-	reasoningEffort: reasoningEffortsSchema.optional(),
+	reasoningEffort: extendedReasoningEffortsSchema.optional(),
 	modelMaxTokens: z.number().optional(),
 	modelMaxThinkingTokens: z.number().optional(),
 
@@ -100,6 +110,7 @@ const anthropicSchema = apiModelIdProviderModelSchema.extend({
 	apiKey: z.string().optional(),
 	anthropicBaseUrl: z.string().optional(),
 	anthropicUseAuthToken: z.boolean().optional(),
+	anthropicBeta1MContext: z.boolean().optional(), // Enable 'context-1m-2025-08-07' beta for 1M context window
 })
 
 const claudeCodeSchema = apiModelIdProviderModelSchema.extend({
@@ -144,6 +155,7 @@ const bedrockSchema = apiModelIdProviderModelSchema.extend({
 	awsModelContextWindow: z.number().optional(),
 	awsBedrockEndpointEnabled: z.boolean().optional(),
 	awsBedrockEndpoint: z.string().optional(),
+	awsBedrock1MContext: z.boolean().optional(), // Enable 'context-1m-2025-08-07' beta for 1M context window
 })
 
 const vertexSchema = apiModelIdProviderModelSchema.extend({
@@ -170,6 +182,7 @@ const openAiSchema = baseProviderSettingsSchema.extend({
 const ollamaSchema = baseProviderSettingsSchema.extend({
 	ollamaModelId: z.string().optional(),
 	ollamaBaseUrl: z.string().optional(),
+	ollamaApiKey: z.string().optional(), // kilocode_change
 })
 
 const vsCodeLmSchema = baseProviderSettingsSchema.extend({
@@ -237,6 +250,7 @@ const unboundSchema = baseProviderSettingsSchema.extend({
 })
 
 const requestySchema = baseProviderSettingsSchema.extend({
+	requestyBaseUrl: z.string().optional(),
 	requestyApiKey: z.string().optional(),
 	requestyModelId: z.string().optional(),
 })
@@ -288,7 +302,11 @@ const tarsSchema = baseProviderSettingsSchema.extend({
 // kilocode_change start
 const kilocodeSchema = baseProviderSettingsSchema.extend({
 	kilocodeToken: z.string().optional(),
+	kilocodeOrganizationId: z.string().optional(),
 	kilocodeModel: z.string().optional(),
+	openRouterSpecificProvider: z.string().optional(),
+	openRouterProviderDataCollection: openRouterProviderDataCollectionSchema.optional(),
+	openRouterProviderSort: openRouterProviderSortSchema.optional(),
 })
 
 export const virtualQuotaFallbackProfileDataSchema = z.object({
@@ -305,10 +323,16 @@ export const virtualQuotaFallbackProfileDataSchema = z.object({
 		})
 		.optional(),
 })
+
 const virtualQuotaFallbackSchema = baseProviderSettingsSchema.extend({
 	profiles: z.array(virtualQuotaFallbackProfileDataSchema).optional(),
 })
+
+const qwenCodeSchema = apiModelIdProviderModelSchema.extend({
+	qwenCodeOAuthPath: z.string().optional(),
+})
 // kilocode_change end
+
 const zaiSchema = apiModelIdProviderModelSchema.extend({
 	zaiApiKey: z.string().optional(),
 	zaiApiLine: z.union([z.literal("china"), z.literal("international")]).optional(),
@@ -316,6 +340,11 @@ const zaiSchema = apiModelIdProviderModelSchema.extend({
 
 const fireworksSchema = apiModelIdProviderModelSchema.extend({
 	fireworksApiKey: z.string().optional(),
+})
+
+const ioIntelligenceSchema = apiModelIdProviderModelSchema.extend({
+	ioIntelligenceModelId: z.string().optional(),
+	ioIntelligenceApiKey: z.string().optional(),
 })
 
 const defaultSchema = z.object({
@@ -348,6 +377,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	geminiCliSchema.merge(z.object({ apiProvider: z.literal("gemini-cli") })),
 	kilocodeSchema.merge(z.object({ apiProvider: z.literal("kilocode") })),
 	virtualQuotaFallbackSchema.merge(z.object({ apiProvider: z.literal("virtual-quota-fallback") })),
+	qwenCodeSchema.merge(z.object({ apiProvider: z.literal("qwen-code") })),
 	// kilocode_change end
 	groqSchema.merge(z.object({ apiProvider: z.literal("groq") })),
 	huggingFaceSchema.merge(z.object({ apiProvider: z.literal("huggingface") })),
@@ -358,6 +388,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	zaiSchema.merge(z.object({ apiProvider: z.literal("zai") })),
 	fireworksSchema.merge(z.object({ apiProvider: z.literal("fireworks") })),
 	tarsSchema.merge(z.object({ apiProvider: z.literal("tars") })),
+	ioIntelligenceSchema.merge(z.object({ apiProvider: z.literal("io-intelligence") })),
 	defaultSchema,
 ])
 
@@ -378,6 +409,7 @@ export const providerSettingsSchema = z.object({
 	...geminiCliSchema.shape,
 	...kilocodeSchema.shape,
 	...virtualQuotaFallbackSchema.shape,
+	...qwenCodeSchema.shape,
 	// kilocode_change end
 	...openAiNativeSchema.shape,
 	...mistralSchema.shape,
@@ -398,6 +430,7 @@ export const providerSettingsSchema = z.object({
 	...zaiSchema.shape,
 	...fireworksSchema.shape,
 	...tarsSchema.shape,
+	...ioIntelligenceSchema.shape,
 	...codebaseIndexProviderSchema.shape,
 })
 
@@ -424,6 +457,7 @@ export const MODEL_ID_KEYS: Partial<keyof ProviderSettings>[] = [
 	"litellmModelId",
 	"huggingFaceModelId",
 	"tarsModelId",
+	"ioIntelligenceModelId",
 ]
 
 export const getModelId = (settings: ProviderSettings): string | undefined => {

@@ -16,6 +16,7 @@
 		"build": "pnpm vsix",
 		"bundle": "turbo bundle --log-order grouped --output-logs new-only",
 		"bundle:nightly": "turbo bundle:nightly --log-order grouped --output-logs new-only",
+		"vsix:production": "turbo vsix --log-order grouped --output-logs new-only --force",
 		"vsix": "turbo vsix --log-order grouped --output-logs new-only",
 		"vsix:nightly": "turbo vsix:nightly --log-order grouped --output-logs new-only",
 		"clean": "turbo clean --log-order grouped --output-logs new-only && rimraf dist out bin .vite-port .turbo",

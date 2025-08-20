@@ -3,7 +3,7 @@ import { verifyExtensionInstalled, findWebview, upsertApiConfiguration } from ".
 import { closeAllToastNotifications } from "../helpers"
 
 test.describe("Settings", () => {
-	test("settings tab screenshot", async ({ workbox: page, takeScreenshot }: TestFixtures) => {
+	test("screenshots", async ({ workbox: page, takeScreenshot }: TestFixtures) => {
 		await verifyExtensionInstalled(page)
 		await upsertApiConfiguration(page)
 

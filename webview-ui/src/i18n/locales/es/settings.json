@@ -258,16 +258,25 @@
 			"error": "Error al actualizar la lista de modelos. Por favor, inténtalo de nuevo."
 		},
 		"getRequestyApiKey": "Obtener clave API de Requesty",
+		"getRequestyBaseUrl": "URL base",
+		"requestyUseCustomBaseUrl": "Utilice una URL base personalizada",
 		"openRouterTransformsText": "Comprimir prompts y cadenas de mensajes al tamaño del contexto (<a>Transformaciones de OpenRouter</a>)",
 		"anthropicApiKey": "Clave API de Anthropic",
 		"getAnthropicApiKey": "Obtener clave API de Anthropic",
 		"anthropicUseAuthToken": "Pasar la clave API de Anthropic como encabezado de autorización en lugar de X-Api-Key",
+		"anthropic1MContextBetaLabel": "Habilitar ventana de contexto de 1M (Beta)",
+		"anthropic1MContextBetaDescription": "Amplía la ventana de contexto a 1 millón de tokens para Claude Sonnet 4",
+		"awsBedrock1MContextBetaLabel": "Habilitar ventana de contexto de 1M (Beta)",
+		"awsBedrock1MContextBetaDescription": "Amplía la ventana de contexto a 1 millón de tokens para Claude Sonnet 4",
 		"cerebrasApiKey": "Clave API de Cerebras",
 		"getCerebrasApiKey": "Obtener clave API de Cerebras",
 		"chutesApiKey": "Clave API de Chutes",
 		"getChutesApiKey": "Obtener clave API de Chutes",
 		"fireworksApiKey": "Clave API de Fireworks",
 		"getFireworksApiKey": "Obtener clave API de Fireworks",
+		"ioIntelligenceApiKey": "Clave API de IO Intelligence",
+		"ioIntelligenceApiKeyPlaceholder": "Introduce tu clave de API de IO Intelligence",
+		"getIoIntelligenceApiKey": "Obtener clave API de IO Intelligence",
 		"deepSeekApiKey": "Clave API de DeepSeek",
 		"getDeepSeekApiKey": "Obtener clave API de DeepSeek",
 		"doubaoApiKey": "Clave API de Doubao",
@@ -364,6 +373,9 @@
 		"ollama": {
 			"baseUrl": "URL base (opcional)",
 			"modelId": "ID del modelo",
+			"apiKey": "Clave API",
+			"apiKeyPlaceholder": "Introduce tu clave de API",
+			"apiKeyInfo": "La clave API se enviará como encabezado de autorización",
 			"description": "Ollama le permite ejecutar modelos localmente en su computadora. Para obtener instrucciones sobre cómo comenzar, consulte la guía de inicio rápido.",
 			"warning": "Nota: Kilo Code utiliza prompts complejos y funciona mejor con modelos Claude. Los modelos menos capaces pueden no funcionar como se espera."
 		},
@@ -436,6 +448,7 @@
 		},
 		"reasoningEffort": {
 			"label": "Esfuerzo de razonamiento del modelo",
+			"minimal": "Mínimo (el más rápido)",
 			"high": "Alto",
 			"medium": "Medio",
 			"low": "Bajo"
@@ -469,6 +482,13 @@
 			"requirement4": "No usa claves API - la autenticación se maneja vía OAuth",
 			"requirement5": "Requiere que la herramienta Gemini CLI esté instalada y autenticada primero",
 			"freeAccess": "Acceso gratuito vía autenticación OAuth"
+		},
+		"qwenCode": {
+			"oauthPath": "Ruta de Credenciales OAuth (opcional)",
+			"oauthPathDescription": "Ruta al archivo de credenciales OAuth. Deja vacío para usar la ubicación predeterminada (~/.qwen/oauth_creds.json).",
+			"description": "Este proveedor usa autenticación OAuth del servicio Qwen y no requiere claves API.",
+			"instructions": "Por favor, sigue la documentación oficial para obtener el archivo de autorización y colócalo en la ruta especificada.",
+			"setupLink": "Documentación Oficial de Qwen"
 		}
 	},
 	"browser": {
@@ -754,6 +774,7 @@
 		"noComputerUse": "No soporta uso del ordenador",
 		"supportsPromptCache": "Soporta caché de prompts",
 		"noPromptCache": "No soporta caché de prompts",
+		"contextWindow": "Ventana de contexto",
 		"maxOutput": "Salida máxima",
 		"inputPrice": "Precio de entrada",
 		"outputPrice": "Precio de salida",

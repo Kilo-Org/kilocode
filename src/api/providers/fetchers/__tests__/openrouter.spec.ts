@@ -30,6 +30,7 @@ describe("OpenRouter API", () => {
 
 			// Define models that are intentionally excluded
 			const excludedModels = new Set([
+				"google/gemini-2.5-pro", // kilocode_change: not included in mock response
 				"google/gemini-2.5-pro-preview", // Excluded due to lag issue (#4487)
 				"google/gemini-2.5-flash", // OpenRouter doesn't report this as supporting prompt caching
 				"google/gemini-2.5-flash-lite-preview-06-17", // OpenRouter doesn't report this as supporting prompt caching
@@ -230,7 +231,8 @@ describe("OpenRouter API", () => {
 			const endpoints = await getOpenRouterModelEndpoints("google/gemini-2.5-pro-preview")
 
 			expect(endpoints).toEqual({
-				Google: {
+				"google-vertex": {
+					// kilocode_change: Updated to match actual endpoint tag
 					maxTokens: 65535,
 					contextWindow: 1048576,
 					supportsImages: true,
@@ -244,7 +246,8 @@ describe("OpenRouter API", () => {
 					supportsReasoningEffort: undefined,
 					supportedParameters: undefined,
 				},
-				"Google AI Studio": {
+				"google-ai-studio": {
+					// kilocode_change: Updated to match actual endpoint tag
 					maxTokens: 65536,
 					contextWindow: 1048576,
 					supportsImages: true,

@@ -28,11 +28,11 @@ import {
 	glamaDefaultModelId,
 	unboundDefaultModelId,
 	litellmDefaultModelId,
-	kilocodeDefaultModelId,
 } from "@roo-code/types"
 import { cerebrasModels, cerebrasDefaultModelId } from "@roo/api"
 import type { ModelRecord, RouterModels } from "@roo/api"
 import { useRouterModels } from "../../ui/hooks/useRouterModels"
+import { useExtensionState } from "@/context/ExtensionStateContext" // kilocode_change
 
 const FALLBACK_MODELS = {
 	models: anthropicModels,
@@ -42,9 +42,11 @@ const FALLBACK_MODELS = {
 const getModelsByProvider = ({
 	provider,
 	routerModels,
+	kilocodeDefaultModel,
 }: {
 	provider: ProviderName
 	routerModels: RouterModels
+	kilocodeDefaultModel: string
 }): { models: ModelRecord; defaultModel: string } => {
 	switch (provider) {
 		case "openrouter": {
@@ -167,7 +169,7 @@ const getModelsByProvider = ({
 		case "kilocode": {
 			return {
 				models: routerModels["kilocode-openrouter"],
-				defaultModel: kilocodeDefaultModelId,
+				defaultModel: kilocodeDefaultModel,
 			}
 		}
 		default: {
@@ -179,6 +181,8 @@ const getModelsByProvider = ({
 export const useProviderModels = (apiConfiguration?: ProviderSettings) => {
 	const provider = apiConfiguration?.apiProvider || "anthropic"
 
+	const { kilocodeDefaultModel } = useExtensionState() // kilocode_change
+
 	const routerModels = useRouterModels({
 		openRouterBaseUrl: apiConfiguration?.openRouterBaseUrl,
 		openRouterApiKey: apiConfiguration?.apiKey,
@@ -189,6 +193,7 @@ export const useProviderModels = (apiConfiguration?: ProviderSettings) => {
 			? getModelsByProvider({
 					provider,
 					routerModels: routerModels.data,
+					kilocodeDefaultModel,
 				})
 			: FALLBACK_MODELS
 

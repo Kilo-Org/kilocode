@@ -2,16 +2,12 @@ import { ApiHandlerOptions, ModelRecord } from "../../shared/api"
 import { CompletionUsage, OpenRouterHandler } from "./openrouter"
 import { getModelParams } from "../transform/model-params"
 import { getModels } from "./fetchers/modelCache"
-import {
-	DEEP_SEEK_DEFAULT_TEMPERATURE,
-	kilocodeDefaultModelId,
-	openRouterDefaultModelId,
-	openRouterDefaultModelInfo,
-} from "@roo-code/types"
+import { DEEP_SEEK_DEFAULT_TEMPERATURE, openRouterDefaultModelId, openRouterDefaultModelInfo } from "@roo-code/types"
 import { getKiloBaseUriFromToken } from "../../shared/kilocode/token"
 import { ApiHandlerCreateMessageMetadata } from ".."
 import OpenAI from "openai"
 import { getModelEndpoints } from "./fetchers/modelEndpointCache"
+import { getKilocodeDefaultModel } from "./kilocode/getKilocodeDefaultModel"
 
 /**
  * A custom OpenRouter handler that overrides the getModel function
@@ -19,9 +15,10 @@ import { getModelEndpoints } from "./fetchers/modelEndpointCache"
  */
 export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 	protected override models: ModelRecord = {}
+	defaultModel: string = openRouterDefaultModelId
 
 	constructor(options: ApiHandlerOptions) {
-		const baseUri = getKiloBaseUri(options)
+		const baseUri = getKiloBaseUriFromToken(options.kilocodeToken ?? "")
 		options = {
 			...options,
 			openRouterBaseUrl: `${baseUri}/api/openrouter/`,
@@ -32,13 +29,20 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 	}
 
 	override customRequestOptions(metadata?: ApiHandlerCreateMessageMetadata): OpenAI.RequestOptions | undefined {
-		return metadata
-			? {
-					headers: {
-						"X-KiloCode-TaskId": metadata.taskId,
-					},
-				}
-			: undefined
+		const headers: Record<string, string> = {}
+
+		if (metadata?.taskId) {
+			headers["X-KiloCode-TaskId"] = metadata.taskId
+		}
+
+		// Cast to access kilocode-specific properties
+		const kilocodeOptions = this.options as ApiHandlerOptions
+
+		if (kilocodeOptions.kilocodeOrganizationId) {
+			headers["X-KiloCode-OrganizationId"] = kilocodeOptions.kilocodeOrganizationId
+		}
+
+		return Object.keys(headers).length > 0 ? { headers } : undefined
 	}
 
 	override getTotalCost(lastUsage: CompletionUsage): number {
@@ -50,7 +54,7 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 	}
 
 	override getModel() {
-		let id = this.options.kilocodeModel ?? kilocodeDefaultModelId
+		let id = this.options.kilocodeModel ?? this.defaultModel
 		let info = this.models[id]
 		let defaultTemperature = 0
 
@@ -82,24 +86,23 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 			throw new Error("KiloCode token + baseUrl is required to fetch models")
 		}
 
-		const [models, endpoints] = await Promise.all([
+		const [models, endpoints, defaultModel] = await Promise.all([
 			getModels({
 				provider: "kilocode-openrouter",
 				kilocodeToken: this.options.kilocodeToken,
+				kilocodeOrganizationId: this.options.kilocodeOrganizationId,
 			}),
 			getModelEndpoints({
 				router: "openrouter",
 				modelId: this.options.kilocodeModel,
 				endpoint: this.options.openRouterSpecificProvider,
 			}),
+			getKilocodeDefaultModel(this.options.kilocodeToken),
 		])
 
 		this.models = models
 		this.endpoints = endpoints
+		this.defaultModel = defaultModel
 		return this.getModel()
 	}
-}
-
-function getKiloBaseUri(options: ApiHandlerOptions) {
-	return getKiloBaseUriFromToken(options.kilocodeToken ?? "")
 }

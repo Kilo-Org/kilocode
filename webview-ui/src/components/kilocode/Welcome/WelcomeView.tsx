@@ -41,7 +41,6 @@ const WelcomeView = () => {
 							fromWelcomeView
 							apiConfiguration={apiConfiguration || {}}
 							uriScheme={uriScheme}
-							uiKind={uiKind}
 							setApiConfigurationField={(field, value) => setApiConfiguration({ [field]: value })}
 							errorMessage={errorMessage}
 							setErrorMessage={setErrorMessage}

@@ -118,6 +118,9 @@
 			"genericError": "Lỗi API Cerebras ({{status}}): {{message}}",
 			"noResponseBody": "Lỗi API Cerebras: Không có nội dung phản hồi",
 			"completionError": "Lỗi hoàn thành Cerebras: {{error}}"
+		},
+		"qwenCode": {
+			"oauthLoadFailed": "Không thể tải thông tin xác thực OAuth. Vui lòng xác thực trước: {{error}}"
 		}
 	},
 	"warnings": {

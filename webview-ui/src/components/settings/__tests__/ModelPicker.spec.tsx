@@ -5,12 +5,17 @@ import { act } from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { vi } from "vitest"
 
-import { ModelInfo } from "@roo-code/types"
+import {
+	ModelInfo,
+	openRouterDefaultModelId, // kilocode_change
+} from "@roo-code/types"
 
 import { ModelPicker } from "../ModelPicker"
 
 vi.mock("@src/context/ExtensionStateContext", () => ({
-	useExtensionState: vi.fn(),
+	useExtensionState: vi.fn(() => ({
+		kilocodeDefaultModel: openRouterDefaultModelId, // kilocode_change
+	})),
 }))
 
 Element.prototype.scrollIntoView = vi.fn()

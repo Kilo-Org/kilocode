@@ -1,7 +1,5 @@
 import { z } from "zod"
 
-export const kilocodeDefaultModelId = "qwen/qwen3-coder"
-
 export const ghostServiceSettingsSchema = z
 	.object({
 		enableAutoTrigger: z.boolean().optional(),

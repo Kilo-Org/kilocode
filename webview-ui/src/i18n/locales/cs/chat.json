@@ -22,7 +22,9 @@
 		"connectToCloudDescription": "Přihlaste se do Kilo Code Cloud pro sdílení úkolů",
 		"sharingDisabledByOrganization": "Sdílení zakázáno organizací",
 		"shareSuccessOrganization": "Odkaz organizace zkopírován do schránky",
-		"shareSuccessPublic": "Veřejný odkaz zkopírován do schránky"
+		"shareSuccessPublic": "Veřejný odkaz zkopírován do schránky",
+		"expand": "Rozbalit úkol",
+		"collapse": "Sbalit úkol"
 	},
 	"history": {
 		"title": "Historie"
@@ -393,5 +395,6 @@
 	},
 	"editMessage": {
 		"placeholder": "Upravit tvou zprávu..."
-	}
+	},
+	"generateCommitMessage": "Vygenerovat commit zprávu"
 }

@@ -12,6 +12,7 @@ import {
 
 import type { ApiHandlerOptions } from "../../../shared/api"
 import { parseApiPrice } from "../../../shared/cost"
+import { DEFAULT_HEADERS } from "../constants" // kilocode_change
 
 /**
  * OpenRouterBaseModel
@@ -59,6 +60,7 @@ export type OpenRouterModel = z.infer<typeof openRouterModelSchema>
 
 export const openRouterModelEndpointSchema = modelRouterBaseModelSchema.extend({
 	provider_name: z.string(),
+	tag: z.string().optional(), // kilocode_change
 })
 
 export type OpenRouterModelEndpoint = z.infer<typeof openRouterModelEndpointSchema>
@@ -102,7 +104,7 @@ export async function getOpenRouterModels(
 
 	try {
 		const response = await axios.get<OpenRouterModelsResponse>(`${baseURL}/models`, {
-			headers: options?.headers, // kilocode_change: added headers
+			headers: { ...DEFAULT_HEADERS, ...(options?.headers ?? {}) }, // kilocode_change: added headers
 		})
 		const result = openRouterModelsResponseSchema.safeParse(response.data)
 		const data = result.success ? result.data.data : response.data.data
@@ -155,7 +157,7 @@ export async function getOpenRouterModelEndpoints(
 		const { id, architecture, endpoints } = data
 
 		for (const endpoint of endpoints) {
-			models[endpoint.provider_name] = parseOpenRouterModel({
+			models[endpoint.tag /*kilocode_change*/ ?? endpoint.provider_name] = parseOpenRouterModel({
 				id,
 				model: endpoint,
 				modality: architecture?.modality,

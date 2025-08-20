@@ -123,6 +123,9 @@
 			"genericError": "Помилка Cerebras API ({{status}}): {{message}}",
 			"noResponseBody": "Помилка Cerebras API: Немає тіла відповіді",
 			"completionError": "Помилка завершення Cerebras: {{error}}"
+		},
+		"qwenCode": {
+			"oauthLoadFailed": "Не вдалося завантажити OAuth дані для входу. Будь ласка, спочатку автентифікуйся: {{error}}"
 		}
 	},
 	"warnings": {

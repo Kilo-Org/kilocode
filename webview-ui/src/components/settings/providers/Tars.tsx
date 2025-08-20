@@ -1,7 +1,8 @@
 import { useCallback, useState } from "react"
 import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 
-import { type ProviderSettings, type OrganizationAllowList, tarsDefaultModelId } from "@roo-code/types"
+import { type ProviderSettings, tarsDefaultModelId } from "@roo-code/types"
+import { type OrganizationAllowList } from "@roo/cloud"
 
 import type { RouterModels } from "@roo/api"
 

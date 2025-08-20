@@ -2,8 +2,9 @@ import { useState, useEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
 import { SquareArrowOutUpRightIcon } from "lucide-react"
 
-import type { HistoryItem, ShareVisibility } from "@roo-code/types"
-import { TelemetryEventName } from "@roo-code/types"
+import { type HistoryItem, TelemetryEventName } from "@roo-code/types"
+
+import type { ShareVisibility } from "@roo/cloud"
 
 import { vscode } from "@/utils/vscode"
 import { telemetryClient } from "@/utils/TelemetryClient"

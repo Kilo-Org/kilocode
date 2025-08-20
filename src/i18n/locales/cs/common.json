@@ -110,6 +110,9 @@
 			"apiError": "Chyba Gemini CLI API: {{error}}",
 			"completionError": "Chyba dokončení Gemini CLI: {{error}}"
 		},
+		"qwenCode": {
+			"oauthLoadFailed": "Nepodařilo se načíst OAuth přihlašovací údaje. Nejprve se prosím autentizujte: {{error}}"
+		},
 		"gemini": {
 			"generate_stream": "Chyba generování kontextového proudu Gemini: {{error}}",
 			"generate_complete_prompt": "Chyba dokončení Gemini: {{error}}",

@@ -2,6 +2,8 @@
 	"greeting": "O que o Kilo Code pode fazer por você?",
 	"task": {
 		"title": "Tarefa",
+		"expand": "Expandir tarefa",
+		"collapse": "Recolher tarefa",
 		"seeMore": "Ver mais",
 		"seeLess": "Ver menos",
 		"tokens": "Tokens",

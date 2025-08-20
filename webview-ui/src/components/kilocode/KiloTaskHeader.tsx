@@ -88,7 +88,7 @@ const KiloTaskHeader = ({
 		<div className="py-2 px-3">
 			<div
 				className={cn(
-					"p-2.5 flex flex-col gap-1.5 relative z-1 border",
+					"p-2.5 flex flex-col relative z-1 border",
 					hasTodos ? "rounded-t-xs border-b-0" : "rounded-xs",
 					isTaskExpanded
 						? "border-vscode-panel-border text-vscode-foreground"

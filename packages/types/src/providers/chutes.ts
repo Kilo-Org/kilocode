@@ -21,6 +21,7 @@ export type ChutesModelId =
 	| "Qwen/Qwen3-30B-A3B"
 	| "Qwen/Qwen3-14B"
 	| "Qwen/Qwen3-8B"
+	| "Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8"
 	| "microsoft/MAI-DS-R1-FP8"
 	| "tngtech/DeepSeek-R1T-Chimera"
 	| "zai-org/GLM-4.5-Air"
@@ -29,9 +30,9 @@ export type ChutesModelId =
 	| "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B"
 	| "moonshotai/Kimi-K2-Instruct"
 	| "moonshotai/Kimi-Dev-72B"
-	| "Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8"
 	| "chutesai/Devstral-Small-2505"
 	| "openai/gpt-oss-120b"
+	| "moonshotai/Kimi-K2-Instruct-75k"
 
 export const chutesDefaultModelId: ChutesModelId = "deepseek-ai/DeepSeek-R1-0528"
 
@@ -227,6 +228,15 @@ export const chutesModels = {
 		description:
 			"GLM-4.5-FP8 model with 98,304 token context window, optimized for agent-based applications with MoE architecture.",
 	},
+	"Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8": {
+		maxTokens: 32768,
+		contextWindow: 262144,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0,
+		outputPrice: 0,
+		description: "Qwen3 Coder 480B A35B Instruct FP8 model, optimized for coding tasks.",
+	},
 	"Qwen/Qwen3-235B-A22B-Thinking-2507": {
 		maxTokens: 32768,
 		contextWindow: 262144,
@@ -263,15 +273,6 @@ export const chutesModels = {
 		outputPrice: 0.266688,
 		description: "Moonshot AI Kimi Dev 72B model with 131K context window.",
 	},
-	"Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8": {
-		maxTokens: 32768,
-		contextWindow: 262144,
-		supportsImages: false,
-		supportsPromptCache: false,
-		inputPrice: 0.1999188,
-		outputPrice: 0.800064,
-		description: "Qwen3 Coder 480B A35B Instruct FP8 model with 262K context window.",
-	},
 	"chutesai/Devstral-Small-2505": {
 		maxTokens: 32768,
 		contextWindow: 131072,
@@ -289,5 +290,14 @@ export const chutesModels = {
 		inputPrice: 0.07256312,
 		outputPrice: 0.2903936,
 		description: "OpenAI GPT-OSS 120B model with 131K context window.",
+	},
+	"moonshotai/Kimi-K2-Instruct-75k": {
+		maxTokens: 32768,
+		contextWindow: 75000,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0.1481,
+		outputPrice: 0.5926,
+		description: "Moonshot AI Kimi K2 Instruct model with 75k context window.",
 	},
 } as const satisfies Record<string, ModelInfo>

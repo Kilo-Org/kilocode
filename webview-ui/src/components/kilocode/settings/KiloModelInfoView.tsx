@@ -1,4 +1,4 @@
-import type { ModelInfo, ProviderSettings } from "@roo-code/types"
+import { type ModelInfo, type ProviderSettings } from "@roo-code/types"
 import { formatPrice } from "@src/utils/formatPrice"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { ModelDescriptionMarkdown } from "../../settings/ModelDescriptionMarkdown"
@@ -74,7 +74,7 @@ export const KiloModelInfoView = ({
 	setIsPricingExpanded: (isPricingExpanded: boolean) => void
 }) => {
 	const { t } = useAppTranslation()
-	const providers = Object.values(useModelProviders(apiConfiguration).data ?? {})
+	const providers = Object.values(useModelProviders(modelId, apiConfiguration).data ?? {})
 	const { data: modelStats } = useQuery<{ model: string; cost: Intl.StringNumericLiteral | number }[]>({
 		queryKey: ["modelstats"],
 		queryFn: async () => {

@@ -110,6 +110,9 @@
 			"generate_complete_prompt": "Ошибка завершения Gemini: {{error}}",
 			"sources": "Источники:"
 		},
+		"qwenCode": {
+			"oauthLoadFailed": "Не удалось загрузить учетные данные OAuth. Сначала выполните аутентификацию: {{error}}"
+		},
 		"cerebras": {
 			"authenticationFailed": "Ошибка аутентификации Cerebras API. Убедитесь, что ваш API-ключ действителен и не истек.",
 			"accessForbidden": "Доступ к Cerebras API запрещен. Ваш API-ключ может не иметь доступа к запрашиваемой модели или функции.",

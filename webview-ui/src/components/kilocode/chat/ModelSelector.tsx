@@ -42,6 +42,10 @@ export const ModelSelector = ({ currentApiConfigName, apiConfiguration, fallback
 		if (!currentApiConfigName) {
 			return
 		}
+		if (apiConfiguration[modelIdKey] === value) {
+			// don't reset openRouterSpecificProvider
+			return
+		}
 		vscode.postMessage({
 			type: "upsertApiConfiguration",
 			text: currentApiConfigName,

@@ -261,14 +261,23 @@
 			"error": "Nepodařilo se obnovit seznam modelů. Zkuste to prosím znovu."
 		},
 		"getRequestyApiKey": "Získat klíč API Requesty",
+		"getRequestyBaseUrl": "Základní URL",
+		"requestyUseCustomBaseUrl": "Použít vlastní základní URL",
 		"openRouterTransformsText": "Komprimovat výzvy a řetězce zpráv na velikost kontextu (<a>Transformace OpenRouter</a>)",
 		"anthropicApiKey": "Klíč API Anthropic",
 		"getAnthropicApiKey": "Získat klíč API Anthropic",
 		"anthropicUseAuthToken": "Předávat klíč API Anthropic jako hlavičku Authorization místo X-Api-Key",
+		"anthropic1MContextBetaLabel": "Povolit 1M okno kontextu (Beta)",
+		"anthropic1MContextBetaDescription": "Rozšířit okno kontextu na 1 milion tokenů pro Claude Sonnet 4",
+		"awsBedrock1MContextBetaLabel": "Povolit 1M okno kontextu (Beta)",
+		"awsBedrock1MContextBetaDescription": "Rozšířit okno kontextu na 1 milion tokenů pro Claude Sonnet 4",
 		"cerebrasApiKey": "Klíč API Cerebras",
 		"getCerebrasApiKey": "Získat klíč API Cerebras",
 		"chutesApiKey": "Klíč API Chutes",
 		"getChutesApiKey": "Získat klíč API Chutes",
+		"ioIntelligenceApiKey": "Klíč API IO Intelligence",
+		"ioIntelligenceApiKeyPlaceholder": "Zadejte váš klíč API IO Intelligence",
+		"getIoIntelligenceApiKey": "Získat klíč API IO Intelligence",
 		"deepSeekApiKey": "Klíč API DeepSeek",
 		"getDeepSeekApiKey": "Získat klíč API DeepSeek",
 		"doubaoApiKey": "Klíč API Doubao",
@@ -379,6 +388,9 @@
 		"ollama": {
 			"baseUrl": "Základní URL (volitelné)",
 			"modelId": "ID modelu",
+			"apiKey": "Klíč API",
+			"apiKeyPlaceholder": "Zadejte svůj klíč API",
+			"apiKeyInfo": "Klíč API bude odeslán jako Authorization hlavička",
 			"description": "Ollama vám umožňuje spouštět modely lokálně na vašem počítači. Pokyny k zahájení práce naleznete v jejich průvodci rychlým startem.",
 			"warning": "Poznámka: Kilo Code používá složité výzvy a nejlépe funguje s modely Claude. Méně schopné modely nemusí fungovat podle očekávání."
 		},
@@ -451,6 +463,7 @@
 		},
 		"reasoningEffort": {
 			"label": "Úsilí modelu při uvažování",
+			"minimal": "Minimální (nejrychlejší)",
 			"high": "Vysoké",
 			"medium": "Střední",
 			"low": "Nízké"
@@ -484,7 +497,38 @@
 			"requirement4": "Nepoužívá klíče API - ověřování je řešeno přes OAuth",
 			"requirement5": "Vyžaduje, aby byl nástroj Gemini CLI nejdříve nainstalován a ověřen",
 			"freeAccess": "Přístup k bezplatné úrovni prostřednictvím OAuth autentizace"
+		},
+		"io_intelligence": {
+			"name": "IO Intelligence",
+			"description": "Cenově dostupná inteligence pro každodenní úkoly"
+		},
+		"requesty": {
+			"name": "Requesty",
+			"description": "Rychlý a spolehlivý AI asistent"
+		},
+		"kilo_code_openrouter": {
+			"description": "Přístup k 200+ modelům přes OpenRouter s 1M kontextovým oknem"
+		},
+		"qwenCode": {
+			"oauthPath": "Cesta k OAuth přihlašovacím údajům (volitelné)",
+			"oauthPathDescription": "Cesta k souboru přihlašovacích údajů OAuth. Ponechte prázdné pro použití výchozího umístění (~/.qwen/oauth_creds.json).",
+			"description": "Tento poskytovatel používá OAuth autentizaci ze služby Qwen a nevyžaduje klíče API.",
+			"instructions": "Postupujte prosím podle oficiální dokumentace pro získání autorizačního souboru a umístěte jej do zadané cesty.",
+			"setupLink": "Oficiální dokumentace Qwen"
 		}
+	},
+	"contextWindow": {
+		"description": "Maximální kontext konverzace",
+		"oneMillion": "1M"
+	},
+	"maxTokens": {
+		"description": "Maximální délka odpovědi"
+	},
+	"topP": {
+		"description": "Kontrola rozmanitosti odpovědí"
+	},
+	"kiloRemoteControl": {
+		"description": "Povolit vzdálené ovládání úkolů"
 	},
 	"browser": {
 		"enable": {
@@ -786,6 +830,7 @@
 		"noComputerUse": "Nepodporuje používání počítače",
 		"supportsPromptCache": "Podporuje ukládání výzev do mezipaměti",
 		"noPromptCache": "Nepodporuje ukládání výzev do mezipaměti",
+		"contextWindow": "Kontextové okno:",
 		"maxOutput": "Maximální výstup",
 		"inputPrice": "Cena vstupu",
 		"outputPrice": "Cena výstupu",

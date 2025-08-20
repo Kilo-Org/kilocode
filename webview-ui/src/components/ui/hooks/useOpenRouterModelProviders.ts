@@ -22,7 +22,10 @@ const openRouterEndpointsSchema = z.object({
 		endpoints: z.array(
 			z.object({
 				name: z.string(),
-				tag: z.string().optional(), // kilocode_change
+				// kilocode_change start
+				provider_name: z.string(),
+				tag: z.string().optional(),
+				// kilocode_change end
 				context_length: z.number(),
 				max_completion_tokens: z.number().nullish(),
 				pricing: z
@@ -65,7 +68,7 @@ async function getOpenRouterProvidersForModel(modelId: string, baseUrl?: string,
 		const { id, description, architecture, endpoints } = result.data.data
 
 		for (const endpoint of endpoints) {
-			const providerName = endpoint.tag /*kilocode_change*/ || endpoint.name.split("|")[0].trim()
+			const providerName = endpoint.tag ?? endpoint.provider_name // kilocode_change
 			const inputPrice = parseApiPrice(endpoint.pricing?.prompt)
 			const outputPrice = parseApiPrice(endpoint.pricing?.completion)
 

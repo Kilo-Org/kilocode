@@ -8,7 +8,10 @@ import {
 	deepSeekModels,
 	moonshotModels,
 	geminiModels,
+	// kilocode_change start
 	geminiCliModels,
+	qwenCodeModels,
+	// kilocode_change end
 	mistralModels,
 	openAiNativeModels,
 	vertexModels,
@@ -32,6 +35,7 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	gemini: geminiModels,
 	// kilocode_change start
 	"gemini-cli": geminiCliModels,
+	"qwen-code": qwenCodeModels,
 	// kilocode_change end
 	mistral: mistralModels,
 	"openai-native": openAiNativeModels,
@@ -45,7 +49,6 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 }
 
 export const PROVIDERS = [
-	{ value: "kilocode", label: "Kilo Code" },
 	{ value: "openrouter", label: "OpenRouter" },
 	{ value: "anthropic", label: "Anthropic" },
 	{ value: "claude-code", label: "Claude Code" },
@@ -55,6 +58,7 @@ export const PROVIDERS = [
 	// kilocode_change start
 	{ value: "gemini-cli", label: "Gemini CLI" },
 	{ value: "virtual-quota-fallback", label: "Virtual Quota Fallback" },
+	{ value: "qwen-code", label: "Qwen Code" },
 	// kilocode_change end
 	{ value: "deepseek", label: "DeepSeek" },
 	{ value: "moonshot", label: "Moonshot" },
@@ -79,4 +83,7 @@ export const PROVIDERS = [
 	{ value: "zai", label: "Z AI" },
 	{ value: "fireworks", label: "Fireworks AI" },
 	{ value: "tars", label: "TARS (Tetrate Agent Router Service)" },
-] // .sort((a, b) => a.label.localeCompare(b.label)) // kilocode_change: Sort providers with kilocode first
+	{ value: "io-intelligence", label: "IO Intelligence" },
+].sort((a, b) => a.label.localeCompare(b.label))
+
+PROVIDERS.unshift({ value: "kilocode", label: "Kilo Code" }) // kilocode_change

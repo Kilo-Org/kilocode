@@ -6,6 +6,8 @@ import pWaitFor from "p-wait-for"
 import * as vscode from "vscode"
 import axios from "axios" // kilocode_change
 import * as yaml from "yaml"
+import { getKiloBaseUriFromToken } from "../../shared/kilocode/token" // kilocode_change
+import { ProfileData } from "../../shared/WebviewMessage" // kilocode_change
 
 import {
 	type Language,
@@ -576,11 +578,24 @@ export const webviewMessageHandler = async (
 				{ key: "unbound", options: { provider: "unbound", apiKey: apiConfiguration.unboundApiKey } },
 				{
 					key: "kilocode-openrouter",
-					options: { provider: "kilocode-openrouter", kilocodeToken: apiConfiguration.kilocodeToken },
+					options: {
+						provider: "kilocode-openrouter",
+						kilocodeToken: apiConfiguration.kilocodeToken,
+						kilocodeOrganizationId: apiConfiguration.kilocodeOrganizationId,
+					},
 				},
 				{ key: "ollama", options: { provider: "ollama", baseUrl: apiConfiguration.ollamaBaseUrl } },
 			]
 			// kilocode_change end
+
+			// Add IO Intelligence if API key is provided
+			const ioIntelligenceApiKey = apiConfiguration.ioIntelligenceApiKey
+			if (ioIntelligenceApiKey) {
+				modelFetchPromises.push({
+					key: "io-intelligence",
+					options: { provider: "io-intelligence", apiKey: ioIntelligenceApiKey },
+				})
+			}
 
 			// Don't fetch Ollama and LM Studio models by default anymore
 			// They have their own specific handlers: requestOllamaModels and requestLmStudioModels
@@ -941,19 +956,12 @@ export const webviewMessageHandler = async (
 		}
 		case "mcpEnabled":
 			const mcpEnabled = message.bool ?? true
-			const currentMcpEnabled = getGlobalState("mcpEnabled") ?? true
-
-			// Always update the state to ensure consistency
 			await updateGlobalState("mcpEnabled", mcpEnabled)
 
-			// Only refresh MCP connections if the value actually changed
-			// This prevents expensive MCP server refresh operations when saving unrelated settings
-			if (currentMcpEnabled !== mcpEnabled) {
-				// Delegate MCP enable/disable logic to McpHub
-				const mcpHubInstance = provider.getMcpHub()
-				if (mcpHubInstance) {
-					await mcpHubInstance.handleMcpEnabledChange(mcpEnabled)
-				}
+			// Delegate MCP enable/disable logic to McpHub
+			const mcpHubInstance = provider.getMcpHub()
+			if (mcpHubInstance) {
+				await mcpHubInstance.handleMcpEnabledChange(mcpEnabled)
 			}
 
 			await provider.postStateToWebview()
@@ -986,6 +994,11 @@ export const webviewMessageHandler = async (
 			}
 			break
 		// kilocode_change end
+		case "remoteControlEnabled":
+			await updateGlobalState("remoteControlEnabled", message.bool ?? false)
+			await provider.handleRemoteControlToggle(message.bool ?? false)
+			await provider.postStateToWebview()
+			break
 		case "refreshAllMcpServers": {
 			const mcpHub = provider.getMcpHub()
 			if (mcpHub) {
@@ -1634,9 +1647,23 @@ export const webviewMessageHandler = async (
 			}
 			break
 		case "upsertApiConfiguration":
+			// kilocode_change start: check for kilocodeToken change to remove organizationId
 			if (message.text && message.apiConfiguration) {
-				await provider.upsertProviderProfile(message.text, message.apiConfiguration)
+				let configToSave = message.apiConfiguration
+				try {
+					const { ...currentConfig } = await provider.providerSettingsManager.getProfile({
+						name: message.text,
+					})
+					if (currentConfig.kilocodeToken !== message.apiConfiguration.kilocodeToken) {
+						configToSave = { ...message.apiConfiguration, kilocodeOrganizationId: undefined }
+					}
+				} catch (error) {
+					// Config might not exist yet, that's fine
+				}
+
+				await provider.upsertProviderProfile(message.text, configToSave)
 			}
+			// kilocode_change end
 			break
 		case "renameApiConfiguration":
 			if (message.values && message.apiConfiguration) {
@@ -2113,12 +2140,28 @@ export const webviewMessageHandler = async (
 				}
 
 				// Changed to /api/profile
-				const response = await axios.get("https://kilocode.ai/api/profile", {
-					headers: {
-						Authorization: `Bearer ${kilocodeToken}`,
-						"Content-Type": "application/json",
+				const response = await axios.get<Omit<ProfileData, "kilocodeToken">>(
+					`${getKiloBaseUriFromToken(kilocodeToken)}/api/profile`,
+					{
+						headers: {
+							Authorization: `Bearer ${kilocodeToken}`,
+							"Content-Type": "application/json",
+						},
 					},
-				})
+				)
+
+				// Go back to Personal when no longer part of the current set organization
+				if (
+					apiConfiguration?.kilocodeOrganizationId &&
+					!(response.data.organizations ?? []).some(
+						({ id }) => id === apiConfiguration?.kilocodeOrganizationId,
+					)
+				) {
+					provider.upsertProviderProfile(provider.providerSettingsManager.activateProfile.name, {
+						...apiConfiguration,
+						kilocodeOrganizationId: undefined,
+					})
+				}
 
 				provider.postMessageToWebview({
 					type: "profileDataResponse", // Assuming this response type is still appropriate for /api/profile
@@ -2139,7 +2182,7 @@ export const webviewMessageHandler = async (
 		case "fetchBalanceDataRequest": // New handler
 			try {
 				const { apiConfiguration } = await provider.getState()
-				const kilocodeToken = apiConfiguration?.kilocodeToken
+				const { kilocodeToken, kilocodeOrganizationId } = apiConfiguration ?? {}
 
 				if (!kilocodeToken) {
 					provider.log("KiloCode token not found in extension state for balance data.")
@@ -2150,12 +2193,18 @@ export const webviewMessageHandler = async (
 					break
 				}
 
-				const response = await axios.get("https://kilocode.ai/api/profile/balance", {
+				const headers: Record<string, string> = {
+					Authorization: `Bearer ${kilocodeToken}`,
+					"Content-Type": "application/json",
+				}
+
+				if (kilocodeOrganizationId) {
+					headers["X-KiloCode-OrganizationId"] = kilocodeOrganizationId
+				}
+
+				const response = await axios.get(`${getKiloBaseUriFromToken(kilocodeToken)}/api/profile/balance`, {
 					// Original path for balance
-					headers: {
-						Authorization: `Bearer ${kilocodeToken}`,
-						"Content-Type": "application/json",
-					},
+					headers,
 				})
 				provider.postMessageToWebview({
 					type: "balanceDataResponse", // New response type

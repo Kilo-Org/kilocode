@@ -10,5 +10,8 @@
 	"cloudBenefitHistory": "Histórico de tarefas online",
 	"cloudBenefitSharing": "Recursos de compartilhamento e colaboração",
 	"cloudBenefitMetrics": "Métricas de uso baseadas em tarefas, tokens e custos",
+	"cloudBenefitWalkaway": "Acompanhe e controle tarefas de qualquer lugar com Kilo remote Control",
+	"remoteControl": "Kilo remote Control",
+	"remoteControlDescription": "Permite acompanhar e interagir com tarefas neste workspace com Kilo Code Cloud",
 	"visitCloudWebsite": "Visitar Kilo Code Cloud"
 }
