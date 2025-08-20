@@ -86,6 +86,7 @@ const baseProviderSettingsSchema = z.object({
 	fuzzyMatchThreshold: z.number().optional(),
 	modelTemperature: z.number().nullish(),
 	rateLimitSeconds: z.number().optional(),
+	requestsPerMinute: z.number().min(1).optional(), // kilocode_change: 분당 요청 제한
 	consecutiveMistakeLimit: z.number().min(0).optional(),
 
 	// Model reasoning.

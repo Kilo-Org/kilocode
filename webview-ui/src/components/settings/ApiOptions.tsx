@@ -108,6 +108,7 @@ import { DiffSettingsControl } from "./DiffSettingsControl"
 import { TodoListSettingsControl } from "./TodoListSettingsControl"
 import { TemperatureControl } from "./TemperatureControl"
 import { RateLimitSecondsControl } from "./RateLimitSecondsControl"
+import { RequestsPerMinuteControl } from "./RequestsPerMinuteControl"
 import { ConsecutiveMistakeLimitControl } from "./ConsecutiveMistakeLimitControl"
 import { BedrockCustomArn } from "./providers/BedrockCustomArn"
 import { KiloCode } from "../kilocode/settings/providers/KiloCode" // kilocode_change
@@ -146,6 +147,11 @@ const ApiOptions = ({
 		const headers = apiConfiguration?.openAiHeaders || {}
 		return Object.entries(headers)
 	})
+
+	// kilocode_change: Rate limit mode selection
+	const [rateLimitMode, setRateLimitMode] = useState<"seconds" | "requests">(
+		apiConfiguration?.requestsPerMinute ? "requests" : "seconds",
+	)
 
 	useEffect(() => {
 		const propHeaders = apiConfiguration?.openAiHeaders || {}
@@ -768,10 +774,53 @@ const ApiOptions = ({
 							onChange={handleInputChange("modelTemperature", noTransform)}
 							maxValue={2}
 						/>
-						<RateLimitSecondsControl
-							value={apiConfiguration.rateLimitSeconds || 0}
-							onChange={(value) => setApiConfigurationField("rateLimitSeconds", value)}
-						/>
+						{/* kilocode_change: Rate limit mode selection */}
+						<div className="space-y-2">
+							<div className="flex items-center gap-2">
+								<label className="block font-medium">{t("settings:providers.rateLimit.label")}</label>
+								<Select
+									value={rateLimitMode}
+									onValueChange={(value: "seconds" | "requests") => {
+										setRateLimitMode(value)
+										if (value === "seconds") {
+											setApiConfigurationField("requestsPerMinute", undefined)
+											setApiConfigurationField(
+												"rateLimitSeconds",
+												apiConfiguration.rateLimitSeconds || 0,
+											)
+										} else {
+											setApiConfigurationField("rateLimitSeconds", undefined)
+											setApiConfigurationField(
+												"requestsPerMinute",
+												apiConfiguration.requestsPerMinute || 10,
+											)
+										}
+									}}>
+									<SelectTrigger className="w-32">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="seconds">
+											{t("settings:providers.rateLimit.seconds")}
+										</SelectItem>
+										<SelectItem value="requests">
+											{t("settings:providers.rateLimit.requests")}
+										</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+							{rateLimitMode === "seconds" ? (
+								<RateLimitSecondsControl
+									value={apiConfiguration.rateLimitSeconds || 0}
+									onChange={(value) => setApiConfigurationField("rateLimitSeconds", value)}
+								/>
+							) : (
+								<RequestsPerMinuteControl
+									value={apiConfiguration.requestsPerMinute || 10}
+									onChange={(value) => setApiConfigurationField("requestsPerMinute", value)}
+								/>
+							)}
+						</div>
 						<ConsecutiveMistakeLimitControl
 							value={
 								apiConfiguration.consecutiveMistakeLimit !== undefined

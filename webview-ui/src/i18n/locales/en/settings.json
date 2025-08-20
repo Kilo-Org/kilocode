@@ -437,6 +437,15 @@
 			"label": "Rate limit",
 			"description": "Minimum time between API requests."
 		},
+		"requestsPerMinute": {
+			"label": "Requests per minute",
+			"description": "Maximum number of API requests allowed per minute."
+		},
+		"rateLimit": {
+			"label": "Rate limit type",
+			"seconds": "Time-based",
+			"requests": "Request count"
+		},
 		"consecutiveMistakeLimit": {
 			"label": "Error & Repetition Limit",
 			"description": "Number of consecutive errors or repeated actions before showing 'Kilo Code is having trouble' dialog",

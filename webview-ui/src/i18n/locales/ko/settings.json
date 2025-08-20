@@ -438,6 +438,15 @@
 			"label": "속도 제한",
 			"description": "API 요청 간 최소 시간."
 		},
+		"requestsPerMinute": {
+			"label": "분당 요청 수",
+			"description": "분당 허용되는 최대 API 요청 수."
+		},
+		"rateLimit": {
+			"label": "속도 제한 유형",
+			"seconds": "시간 기반",
+			"requests": "요청 수 기반"
+		},
 		"consecutiveMistakeLimit": {
 			"label": "오류 및 반복 제한",
 			"description": "'Kilo Code에 문제가 발생했습니다' 대화 상자를 표시하기 전의 연속 오류 또는 반복 작업 수",
