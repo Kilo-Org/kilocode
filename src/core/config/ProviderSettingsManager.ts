@@ -306,9 +306,21 @@ export class ProviderSettingsManager {
 				const existingId = providerProfiles.apiConfigs[name]?.id
 				const id = config.id || existingId || this.generateId()
 
-				// Filter out settings from other providers.
-				const filteredConfig = discriminatedProviderSettingsWithIdSchema.parse(config)
-				providerProfiles.apiConfigs[name] = { ...filteredConfig, id }
+				// Try the discriminated schema first (stricter validation)
+				const filteredConfig = discriminatedProviderSettingsWithIdSchema.safeParse(config)
+				if (filteredConfig.success) {
+					providerProfiles.apiConfigs[name] = { ...filteredConfig.data, id }
+				} else {
+					// Fallback: use the less strict schema with passthrough to preserve new fields
+					const fallbackConfig = providerSettingsWithIdSchema.passthrough().safeParse(config)
+					if (fallbackConfig.success) {
+						providerProfiles.apiConfigs[name] = { ...fallbackConfig.data, id }
+					} else {
+						// Last resort: save raw config (should not happen normally)
+						console.error(`[ProviderSettingsManager] Failed to validate config "${name}":`, filteredConfig.error.issues)
+						providerProfiles.apiConfigs[name] = { ...config, id }
+					}
+				}
 				await this.store(providerProfiles)
 				return id
 			})
@@ -501,8 +513,14 @@ export class ProviderSettingsManager {
 
 			const apiConfigs = Object.entries(providerProfiles.apiConfigs).reduce(
 				(acc, [key, apiConfig]) => {
-					const result = providerSettingsWithIdSchema.safeParse(apiConfig)
-					return result.success ? { ...acc, [key]: result.data } : acc
+					// Use passthrough to preserve all fields, including new ones like requestsPerMinute
+					const result = providerSettingsWithIdSchema.passthrough().safeParse(apiConfig)
+					if (!result.success) {
+						console.error(`[ProviderSettingsManager] Failed to parse config "${key}":`, result.error.issues)
+						// Fallback: try to preserve the raw config
+						return { ...acc, [key]: { ...apiConfig, id: apiConfig.id || this.generateId() } }
+					}
+					return { ...acc, [key]: result.data }
 				},
 				{} as Record<string, ProviderSettingsWithId>,
 			)
