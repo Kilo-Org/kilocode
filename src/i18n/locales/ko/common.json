@@ -105,6 +105,9 @@
 			"apiError": "Gemini CLI API 오류: {{error}}",
 			"completionError": "Gemini CLI 완성 오류: {{error}}"
 		},
+		"qwenCode": {
+			"oauthLoadFailed": "OAuth 자격 증명을 로드하지 못했습니다. 먼저 인증하세요: {{error}}"
+		},
 		"gemini": {
 			"generate_stream": "Gemini 생성 컨텍스트 스트림 오류: {{error}}",
 			"generate_complete_prompt": "Gemini 완료 오류: {{error}}",

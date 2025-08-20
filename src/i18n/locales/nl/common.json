@@ -105,6 +105,9 @@
 			"apiError": "Gemini CLI API-fout: {{error}}",
 			"completionError": "Gemini CLI voltooiingsfout: {{error}}"
 		},
+		"qwenCode": {
+			"oauthLoadFailed": "Kan OAuth-referenties niet laden. Authenticeer eerst: {{error}}"
+		},
 		"gemini": {
 			"generate_stream": "Fout bij het genereren van contextstream door Gemini: {{error}}",
 			"generate_complete_prompt": "Fout bij het voltooien door Gemini: {{error}}",

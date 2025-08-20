@@ -371,6 +371,9 @@
 		"ollama": {
 			"baseUrl": "Basis-URL (optioneel)",
 			"modelId": "Model-ID",
+			"apiKey": "API-sleutel",
+			"apiKeyPlaceholder": "Voer je API-sleutel in",
+			"apiKeyInfo": "API-sleutel wordt verzonden als Authorization-header",
 			"description": "Ollama laat je modellen lokaal op je computer draaien. Zie hun quickstart-gids voor instructies.",
 			"warning": "Let op: Kilo Code gebruikt complexe prompts en werkt het beste met Claude-modellen. Minder krachtige modellen werken mogelijk niet zoals verwacht."
 		},

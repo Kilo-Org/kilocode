@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.81.0",
+	"version": "4.82.2",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -368,7 +368,7 @@
 			"editor/context": [
 				{
 					"submenu": "kilo-code.contextMenu",
-					"group": "navigation"
+					"group": "1"
 				}
 			],
 			"kilo-code.contextMenu": [
@@ -392,7 +392,7 @@
 			"terminal/context": [
 				{
 					"submenu": "kilo-code.terminalMenu",
-					"group": "navigation"
+					"group": "2"
 				}
 			],
 			"kilo-code.terminalMenu": [

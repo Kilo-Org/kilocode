@@ -105,6 +105,9 @@
 			"apiError": "Erreur API Gemini CLI : {{error}}",
 			"completionError": "Erreur de complétion Gemini CLI : {{error}}"
 		},
+		"qwenCode": {
+			"oauthLoadFailed": "Échec du chargement des identifiants OAuth. Veuillez vous authentifier d'abord : {{error}}"
+		},
 		"gemini": {
 			"generate_stream": "Erreur du flux de contexte de génération Gemini : {{error}}",
 			"generate_complete_prompt": "Erreur d'achèvement de Gemini : {{error}}",

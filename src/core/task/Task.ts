@@ -2274,6 +2274,8 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					todoListEnabled: apiConfiguration?.todoListEnabled ?? true,
 					useAgentRules: vscode.workspace.getConfiguration("kilo-code").get<boolean>("useAgentRules") ?? true,
 				},
+				undefined, // todoList
+				this.api.getModel().id,
 			)
 		})()
 	}

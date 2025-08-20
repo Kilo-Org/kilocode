@@ -12,6 +12,7 @@ import {
 
 import type { ApiHandlerOptions } from "../../../shared/api"
 import { parseApiPrice } from "../../../shared/cost"
+import { DEFAULT_HEADERS } from "../constants" // kilocode_change
 
 /**
  * OpenRouterBaseModel
@@ -103,7 +104,7 @@ export async function getOpenRouterModels(
 
 	try {
 		const response = await axios.get<OpenRouterModelsResponse>(`${baseURL}/models`, {
-			headers: options?.headers, // kilocode_change: added headers
+			headers: { ...DEFAULT_HEADERS, ...(options?.headers ?? {}) }, // kilocode_change: added headers
 		})
 		const result = openRouterModelsResponseSchema.safeParse(response.data)
 		const data = result.success ? result.data.data : response.data.data

@@ -104,6 +104,9 @@
 			"apiError": "Gemini CLI API 錯誤：{{error}}",
 			"completionError": "Gemini CLI 完成錯誤：{{error}}"
 		},
+		"qwenCode": {
+			"oauthLoadFailed": "無法載入 OAuth 憑證。請先進行驗證：{{error}}"
+		},
 		"gemini": {
 			"generate_stream": "Gemini 產生內容串流錯誤：{{error}}",
 			"generate_complete_prompt": "Gemini 完成錯誤：{{error}}",

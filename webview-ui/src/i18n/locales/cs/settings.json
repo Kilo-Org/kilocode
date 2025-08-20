@@ -386,6 +386,9 @@
 		"ollama": {
 			"baseUrl": "Základní URL (volitelné)",
 			"modelId": "ID modelu",
+			"apiKey": "Klíč API",
+			"apiKeyPlaceholder": "Zadejte svůj klíč API",
+			"apiKeyInfo": "Klíč API bude odeslán jako Authorization hlavička",
 			"description": "Ollama vám umožňuje spouštět modely lokálně na vašem počítači. Pokyny k zahájení práce naleznete v jejich průvodci rychlým startem.",
 			"warning": "Poznámka: Kilo Code používá složité výzvy a nejlépe funguje s modely Claude. Méně schopné modely nemusí fungovat podle očekávání."
 		},

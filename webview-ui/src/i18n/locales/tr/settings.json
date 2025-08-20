@@ -371,6 +371,9 @@
 		"ollama": {
 			"baseUrl": "Temel URL (İsteğe bağlı)",
 			"modelId": "Model Kimliği",
+			"apiKey": "API Anahtarı",
+			"apiKeyPlaceholder": "API anahtarınızı girin",
+			"apiKeyInfo": "API anahtarı Authorization başlığı olarak gönderilecek",
 			"description": "Ollama, modelleri bilgisayarınızda yerel olarak çalıştırmanıza olanak tanır. Başlamak için hızlı başlangıç kılavuzlarına bakın.",
 			"warning": "Not: Kilo Code karmaşık istemler kullanır ve Claude modelleriyle en iyi şekilde çalışır. Daha az yetenekli modeller beklendiği gibi çalışmayabilir."
 		},

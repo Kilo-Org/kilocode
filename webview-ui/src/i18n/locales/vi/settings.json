@@ -371,6 +371,9 @@
 		"ollama": {
 			"baseUrl": "URL cơ sở (tùy chọn)",
 			"modelId": "ID mô hình",
+			"apiKey": "Khóa API",
+			"apiKeyPlaceholder": "Nhập khóa API của bạn",
+			"apiKeyInfo": "Khóa API sẽ được gửi dưới dạng tiêu đề Authorization",
 			"description": "Ollama cho phép bạn chạy các mô hình cục bộ trên máy tính của bạn. Để biết hướng dẫn về cách bắt đầu, xem hướng dẫn nhanh của họ.",
 			"warning": "Lưu ý: Kilo Code sử dụng các lời nhắc phức tạp và hoạt động tốt nhất với các mô hình Claude. Các mô hình kém mạnh hơn có thể không hoạt động như mong đợi."
 		},

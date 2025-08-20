@@ -371,6 +371,9 @@
 		"ollama": {
 			"baseUrl": "基礎 URL（選用）",
 			"modelId": "模型 ID",
+			"apiKey": "API 金鑰",
+			"apiKeyPlaceholder": "輸入您的 API 金鑰",
+			"apiKeyInfo": "API 金鑰將作為 Authorization 標頭傳送",
 			"description": "Ollama 允許您在本機電腦執行模型。請參閱快速入門指南。",
 			"warning": "注意：Kilo Code 使用複雜提示，與 Claude 模型搭配最佳。功能較弱的模型可能無法正常運作。"
 		},

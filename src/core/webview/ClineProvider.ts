@@ -2335,6 +2335,22 @@ export class ClineProvider
 			}
 		}
 
+		function getOpenRouter() {
+			if (
+				apiConfiguration &&
+				(apiConfiguration.apiProvider === "openrouter" || apiConfiguration.apiProvider === "kilocode")
+			) {
+				return {
+					openRouter: {
+						sort: apiConfiguration.openRouterProviderSort,
+						dataCollection: apiConfiguration.openRouterProviderDataCollection,
+						specificProvider: apiConfiguration.openRouterSpecificProvider,
+					},
+				}
+			}
+			return {}
+		}
+
 		function getMemory() {
 			try {
 				return { memory: { ...process.memoryUsage() } }
@@ -2388,6 +2404,7 @@ export class ClineProvider
 			...(await getModelId()),
 			...getMemory(),
 			...getFastApply(),
+			...getOpenRouter(),
 			// kilocode_change end
 			diffStrategy: task?.diffStrategy?.getName(),
 			isSubtask: task ? !!task.parentTask : undefined,

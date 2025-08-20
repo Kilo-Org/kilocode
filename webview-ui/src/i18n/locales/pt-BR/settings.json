@@ -371,6 +371,9 @@
 		"ollama": {
 			"baseUrl": "URL Base (opcional)",
 			"modelId": "ID do Modelo",
+			"apiKey": "Chave de API",
+			"apiKeyPlaceholder": "Insira sua chave de API",
+			"apiKeyInfo": "A chave de API será enviada como cabeçalho de autorização",
 			"description": "O Ollama permite que você execute modelos localmente em seu computador. Para instruções sobre como começar, veja o guia de início rápido deles.",
 			"warning": "Nota: O Kilo Code usa prompts complexos e funciona melhor com modelos Claude. Modelos menos capazes podem não funcionar como esperado."
 		},

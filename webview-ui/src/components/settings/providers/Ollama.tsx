@@ -21,6 +21,7 @@ export const Ollama = ({ apiConfiguration, setApiConfigurationField }: OllamaPro
 	const { t } = useAppTranslation()
 
 	const [ollamaModels, setOllamaModels] = useState<string[]>([])
+	const [showApiKey, setShowApiKey] = useState(false) // kilocode_change added
 	const routerModels = useRouterModels({ ollamaBaseUrl: apiConfiguration.ollamaBaseUrl }) // kilocode_change query key
 
 	const handleInputChange = useCallback(
@@ -86,6 +87,40 @@ export const Ollama = ({ apiConfiguration, setApiConfigurationField }: OllamaPro
 				className="w-full">
 				<label className="block font-medium mb-1">{t("settings:providers.ollama.baseUrl")}</label>
 			</VSCodeTextField>
+			{
+				// kilocode_change start
+				<>
+					<div className="relative">
+						<VSCodeTextField
+							value={apiConfiguration?.ollamaApiKey || ""}
+							type={showApiKey ? "text" : "password"}
+							onInput={handleInputChange("ollamaApiKey")}
+							placeholder={t("settings:providers.ollama.apiKeyPlaceholder")}
+							className="w-full pr-10">
+							<label className="block font-medium mb-1">
+								{t("settings:providers.ollama.apiKeyInfo")}{" "}
+								<span className="text-vscode-descriptionForeground font-normal">
+									({t("settings:optional")})
+								</span>
+							</label>
+						</VSCodeTextField>
+						<button
+							type="button"
+							onClick={() => setShowApiKey(!showApiKey)}
+							className="absolute right-3 top-8 text-vscode-foreground hover:text-vscode-descriptionForeground focus:outline-none">
+							{showApiKey ? (
+								<span className="codicon codicon-eye" />
+							) : (
+								<span className="codicon codicon-eye-closed" />
+							)}
+						</button>
+					</div>
+					<div className="text-sm text-vscode-descriptionForeground mb-2">
+						{t("settings:providers.ollama.apiKeyInfo")}
+					</div>
+				</>
+				// kilocode_change end
+			}
 			<VSCodeTextField
 				value={apiConfiguration?.ollamaModelId || ""}
 				onInput={handleInputChange("ollamaModelId")}

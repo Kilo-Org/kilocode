@@ -110,6 +110,9 @@
 			"apiError": "خطأ من Gemini CLI: {{error}}",
 			"completionError": "خطأ أثناء الإكمال في Gemini CLI: {{error}}"
 		},
+		"qwenCode": {
+			"oauthLoadFailed": "فشل تحميل بيانات OAuth. لازم تسوي مصادقة أول: {{error}}"
+		},
 		"gemini": {
 			"generate_stream": "خطأ في تدفق السياق من Gemini: {{error}}",
 			"generate_complete_prompt": "خطأ في إكمال Gemini: {{error}}",

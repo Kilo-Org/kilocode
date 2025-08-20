@@ -105,6 +105,9 @@
 			"apiError": "Gemini CLI API error: {{error}}",
 			"completionError": "Gemini CLI completion error: {{error}}"
 		},
+		"qwenCode": {
+			"oauthLoadFailed": "Failed to load OAuth credentials. Please authenticate first: {{error}}"
+		},
 		"gemini": {
 			"generate_stream": "Gemini generate context stream error: {{error}}",
 			"generate_complete_prompt": "Gemini completion error: {{error}}",

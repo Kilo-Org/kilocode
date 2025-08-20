@@ -123,6 +123,9 @@
 			"genericError": "ข้อผิดพลาด Cerebras API ({{status}}): {{message}}",
 			"noResponseBody": "ข้อผิดพลาด Cerebras API: ไม่มีเนื้อหาการตอบกลับ",
 			"completionError": "ข้อผิดพลาดการเติมเต็ม Cerebras: {{error}}"
+		},
+		"qwenCode": {
+			"oauthLoadFailed": "ล้มเหลวในการโหลดข้อมูลประจำตัว OAuth กรุณายืนยันตัวตนก่อน: {{error}}"
 		}
 	},
 	"warnings": {
