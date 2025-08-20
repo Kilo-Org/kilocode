@@ -317,7 +317,10 @@ export class ProviderSettingsManager {
 						providerProfiles.apiConfigs[name] = { ...fallbackConfig.data, id }
 					} else {
 						// Last resort: save raw config (should not happen normally)
-						console.error(`[ProviderSettingsManager] Failed to validate config "${name}":`, filteredConfig.error.issues)
+						console.error(
+							`[ProviderSettingsManager] Failed to validate config "${name}":`,
+							filteredConfig.error.issues,
+						)
 						providerProfiles.apiConfigs[name] = { ...config, id }
 					}
 				}
@@ -463,11 +466,31 @@ export class ProviderSettingsManager {
 	public async export() {
 		try {
 			return await this.lock(async () => {
-				const profiles = providerProfilesSchema.parse(await this.load())
+				// Use passthrough to preserve fields like requestsPerMinute
+				const rawProfiles = await this.load()
+				const profiles = providerProfilesSchema.passthrough().parse(rawProfiles)
 				const configs = profiles.apiConfigs
 				for (const name in configs) {
-					// Avoid leaking properties from other providers.
-					configs[name] = discriminatedProviderSettingsWithIdSchema.parse(configs[name])
+					// Use passthrough to preserve new fields while still validating known fields
+					// This ensures requestsPerMinute and other new fields are exported
+					const baseSchema = baseProviderSettingsSchema
+						.extend({
+							id: z.string().uuid(),
+						})
+						.passthrough()
+
+					// First validate with base schema to preserve all fields
+					const baseValidated = baseSchema.parse(configs[name])
+
+					// Then validate the discriminated part to ensure provider-specific fields are correct
+					// but without parsing (which would remove unknown fields)
+					const result = discriminatedProviderSettingsWithIdSchema.safeParse(baseValidated)
+					if (result.success) {
+						configs[name] = baseValidated // Keep the passthrough version
+					} else {
+						// If validation fails, keep the original
+						configs[name] = baseValidated
+					}
 				}
 				return profiles
 			})
@@ -507,13 +530,8 @@ export class ProviderSettingsManager {
 
 			// Parse with a more lenient schema that preserves all fields
 			const rawData = JSON.parse(content)
-			
+
 			// Debug: Check if requestsPerMinute exists in raw data
-			for (const [name, config] of Object.entries(rawData.apiConfigs || {})) {
-				if ((config as any).requestsPerMinute !== undefined) {
-					console.log(`[ProviderSettingsManager] Found requestsPerMinute in "${name}":`, (config as any).requestsPerMinute)
-				}
-			}
 
 			const providerProfiles = providerProfilesSchema
 				.extend({
@@ -530,10 +548,6 @@ export class ProviderSettingsManager {
 						// Fallback: try to preserve the raw config
 						return { ...acc, [key]: { ...apiConfig, id: apiConfig.id || this.generateId() } }
 					}
-					// Debug: Check if requestsPerMinute is preserved after parsing
-					if (result.data.requestsPerMinute !== undefined) {
-						console.log(`[ProviderSettingsManager] Preserved requestsPerMinute in "${key}":`, result.data.requestsPerMinute)
-					}
 					return { ...acc, [key]: result.data }
 				},
 				{} as Record<string, ProviderSettingsWithId>,
@@ -545,14 +559,6 @@ export class ProviderSettingsManager {
 					Object.entries(apiConfigs).filter(([_, apiConfig]) => apiConfig !== null),
 				),
 			}
-			
-			// Debug: Final check
-			for (const [name, config] of Object.entries(finalProfiles.apiConfigs)) {
-				if ((config as any).requestsPerMinute !== undefined) {
-					console.log(`[ProviderSettingsManager] Final requestsPerMinute in "${name}":`, (config as any).requestsPerMinute)
-				}
-			}
-			
 			return finalProfiles
 		} catch (error) {
 			if (error instanceof ZodError) {

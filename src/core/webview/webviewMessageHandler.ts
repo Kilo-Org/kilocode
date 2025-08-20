@@ -45,6 +45,7 @@ import { showSystemNotification } from "../../integrations/notifications" // kil
 import { singleCompletionHandler } from "../../utils/single-completion-handler" // kilocode_change
 import { searchCommits } from "../../utils/git"
 import { exportSettings, importSettingsWithFeedback } from "../config/importExport"
+import { autoExportSettings } from "../../utils/autoExportSettings"
 import { getOpenAiModels } from "../../api/providers/openai"
 import { getVsCodeLmModels } from "../../api/providers/vscode-lm"
 import { openMention } from "../mentions"
@@ -1630,6 +1631,12 @@ export const webviewMessageHandler = async (
 					await provider.providerSettingsManager.saveConfig(message.text, message.apiConfiguration)
 					const listApiConfig = await provider.providerSettingsManager.listConfig()
 					await updateGlobalState("listApiConfigMeta", listApiConfig)
+					// Auto-export settings if configured
+					await autoExportSettings(
+						provider.providerSettingsManager,
+						provider.contextProxy,
+						provider.outputChannel,
+					)
 				} catch (error) {
 					provider.log(
 						`Error save api configuration: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
@@ -1654,6 +1661,12 @@ export const webviewMessageHandler = async (
 				}
 
 				await provider.upsertProviderProfile(message.text, configToSave)
+				// Auto-export settings if configured
+				await autoExportSettings(
+					provider.providerSettingsManager,
+					provider.contextProxy,
+					provider.outputChannel,
+				)
 			}
 			// kilocode_change end
 			break
@@ -1678,6 +1691,12 @@ export const webviewMessageHandler = async (
 					// Re-activate to update the global settings related to the
 					// currently activated provider profile.
 					await provider.activateProviderProfile({ name: newName })
+					// Auto-export settings if configured
+					await autoExportSettings(
+						provider.providerSettingsManager,
+						provider.contextProxy,
+						provider.outputChannel,
+					)
 				} catch (error) {
 					provider.log(
 						`Error rename api configuration: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
