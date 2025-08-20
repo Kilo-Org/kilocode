@@ -211,8 +211,8 @@ describe("CerebrasHandler", () => {
 
 			expect(usageEvent).toBeDefined()
 			expect(usageEvent.inputTokens).toBe(100)
-			expect(usageEvent.cacheWriteInputTokens).toBeGreaterThan(0)
-			expect(usageEvent.cacheReadInputTokens).toBe(0)
+			expect(usageEvent.cacheWriteTokens).toBeGreaterThan(0)
+			expect(usageEvent.cacheReadTokens).toBeUndefined() // Should be undefined, not 0
 		})
 
 		it("should perform a cache read on a subsequent request", async () => {
@@ -253,7 +253,7 @@ describe("CerebrasHandler", () => {
 
 			expect(usageEvent2).toBeDefined()
 			expect(usageEvent2.inputTokens).toBe(180)
-			expect(usageEvent2.cacheReadInputTokens).toBeGreaterThan(0)
+			expect(usageEvent2.cacheReadTokens).toBeGreaterThan(0)
 		})
 
 		it("should not use cache if cerebrasUsePromptCache is false", async () => {
@@ -276,8 +276,8 @@ describe("CerebrasHandler", () => {
 			}
 
 			expect(usageEvent).toBeDefined()
-			expect(usageEvent.cacheWriteInputTokens).toBe(0)
-			expect(usageEvent.cacheReadInputTokens).toBe(0)
+			expect(usageEvent.cacheWriteTokens).toBeUndefined()
+			expect(usageEvent.cacheReadTokens).toBeUndefined()
 		})
 	})
 })

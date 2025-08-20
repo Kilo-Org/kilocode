@@ -356,13 +356,21 @@ export class CerebrasHandler extends BaseProvider implements SingleCompletionHan
 			// Store usage for cost calculation
 			this.lastUsage = { inputTokens, outputTokens, cacheReadInputTokens, cacheWriteInputTokens }
 
-			yield {
+			const usageChunk: any = {
 				type: "usage",
 				inputTokens,
 				outputTokens,
-				cacheReadInputTokens,
-				cacheWriteInputTokens,
 			}
+
+			// Only include cache tokens if they are non-zero
+			if (cacheReadInputTokens > 0) {
+				usageChunk.cacheReadTokens = cacheReadInputTokens
+			}
+			if (cacheWriteInputTokens > 0) {
+				usageChunk.cacheWriteTokens = cacheWriteInputTokens
+			}
+
+			yield usageChunk
 		} catch (error) {
 			if (error instanceof Error) {
 				throw new Error(t("common:errors.cerebras.completionError", { error: error.message }))
