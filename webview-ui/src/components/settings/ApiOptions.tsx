@@ -149,9 +149,22 @@ const ApiOptions = ({
 	})
 
 	// kilocode_change: Rate limit mode selection
-	const [rateLimitMode, setRateLimitMode] = useState<"seconds" | "requests">(
-		apiConfiguration?.requestsPerMinute ? "requests" : "seconds",
-	)
+	const [rateLimitMode, setRateLimitMode] = useState<"seconds" | "requests">(() => {
+		// Determine initial mode based on which value is set
+		if (apiConfiguration?.requestsPerMinute !== undefined && apiConfiguration.requestsPerMinute > 0) {
+			return "requests"
+		}
+		return "seconds"
+	})
+
+	// Update rate limit mode when apiConfiguration changes
+	useEffect(() => {
+		if (apiConfiguration?.requestsPerMinute !== undefined && apiConfiguration.requestsPerMinute > 0) {
+			setRateLimitMode("requests")
+		} else if (apiConfiguration?.rateLimitSeconds !== undefined) {
+			setRateLimitMode("seconds")
+		}
+	}, [apiConfiguration?.requestsPerMinute, apiConfiguration?.rateLimitSeconds])
 
 	useEffect(() => {
 		const propHeaders = apiConfiguration?.openAiHeaders || {}
@@ -783,16 +796,20 @@ const ApiOptions = ({
 									onValueChange={(value: "seconds" | "requests") => {
 										setRateLimitMode(value)
 										if (value === "seconds") {
+											// Clear requests per minute and ensure seconds has a value
 											setApiConfigurationField("requestsPerMinute", undefined)
+											const currentSeconds = apiConfiguration.rateLimitSeconds
 											setApiConfigurationField(
 												"rateLimitSeconds",
-												apiConfiguration.rateLimitSeconds || 0,
+												currentSeconds !== undefined && currentSeconds >= 0 ? currentSeconds : 0,
 											)
 										} else {
+											// Clear seconds and ensure requests per minute has a value
 											setApiConfigurationField("rateLimitSeconds", undefined)
+											const currentRequests = apiConfiguration.requestsPerMinute
 											setApiConfigurationField(
 												"requestsPerMinute",
-												apiConfiguration.requestsPerMinute || 10,
+												currentRequests !== undefined && currentRequests > 0 ? currentRequests : 10,
 											)
 										}
 									}}>
@@ -811,13 +828,25 @@ const ApiOptions = ({
 							</div>
 							{rateLimitMode === "seconds" ? (
 								<RateLimitSecondsControl
-									value={apiConfiguration.rateLimitSeconds || 0}
-									onChange={(value) => setApiConfigurationField("rateLimitSeconds", value)}
+									value={apiConfiguration.rateLimitSeconds ?? 0}
+									onChange={(value) => {
+										setApiConfigurationField("rateLimitSeconds", value)
+										// Ensure requestsPerMinute is cleared when using seconds mode
+										if (apiConfiguration.requestsPerMinute !== undefined) {
+											setApiConfigurationField("requestsPerMinute", undefined)
+										}
+									}}
 								/>
 							) : (
 								<RequestsPerMinuteControl
-									value={apiConfiguration.requestsPerMinute || 10}
-									onChange={(value) => setApiConfigurationField("requestsPerMinute", value)}
+									value={apiConfiguration.requestsPerMinute ?? 10}
+									onChange={(value) => {
+										setApiConfigurationField("requestsPerMinute", value)
+										// Ensure rateLimitSeconds is cleared when using requests mode
+										if (apiConfiguration.rateLimitSeconds !== undefined) {
+											setApiConfigurationField("rateLimitSeconds", undefined)
+										}
+									}}
 								/>
 							)}
 						</div>
