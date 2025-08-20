@@ -79,7 +79,7 @@ export type ProviderSettingsEntry = z.infer<typeof providerSettingsEntrySchema>
  */
 export const DEFAULT_CONSECUTIVE_MISTAKE_LIMIT = 3
 
-const baseProviderSettingsSchema = z.object({
+export const baseProviderSettingsSchema = z.object({
 	includeMaxTokens: z.boolean().optional(),
 	diffEnabled: z.boolean().optional(),
 	todoListEnabled: z.boolean().optional(),

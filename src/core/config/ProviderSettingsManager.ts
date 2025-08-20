@@ -6,6 +6,7 @@ import {
 	type ProviderSettingsWithId,
 	providerSettingsWithIdSchema,
 	discriminatedProviderSettingsWithIdSchema,
+	baseProviderSettingsSchema,
 	isSecretStateKey,
 	ProviderSettingsEntry,
 	DEFAULT_CONSECUTIVE_MISTAKE_LIMIT,
