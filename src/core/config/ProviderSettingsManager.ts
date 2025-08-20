@@ -505,11 +505,21 @@ export class ProviderSettingsManager {
 				return this.defaultProviderProfiles
 			}
 
+			// Parse with a more lenient schema that preserves all fields
+			const rawData = JSON.parse(content)
+			
+			// Debug: Check if requestsPerMinute exists in raw data
+			for (const [name, config] of Object.entries(rawData.apiConfigs || {})) {
+				if ((config as any).requestsPerMinute !== undefined) {
+					console.log(`[ProviderSettingsManager] Found requestsPerMinute in "${name}":`, (config as any).requestsPerMinute)
+				}
+			}
+
 			const providerProfiles = providerProfilesSchema
 				.extend({
 					apiConfigs: z.record(z.string(), z.any()),
 				})
-				.parse(JSON.parse(content))
+				.parse(rawData)
 
 			const apiConfigs = Object.entries(providerProfiles.apiConfigs).reduce(
 				(acc, [key, apiConfig]) => {
@@ -520,17 +530,30 @@ export class ProviderSettingsManager {
 						// Fallback: try to preserve the raw config
 						return { ...acc, [key]: { ...apiConfig, id: apiConfig.id || this.generateId() } }
 					}
+					// Debug: Check if requestsPerMinute is preserved after parsing
+					if (result.data.requestsPerMinute !== undefined) {
+						console.log(`[ProviderSettingsManager] Preserved requestsPerMinute in "${key}":`, result.data.requestsPerMinute)
+					}
 					return { ...acc, [key]: result.data }
 				},
 				{} as Record<string, ProviderSettingsWithId>,
 			)
 
-			return {
+			const finalProfiles = {
 				...providerProfiles,
 				apiConfigs: Object.fromEntries(
 					Object.entries(apiConfigs).filter(([_, apiConfig]) => apiConfig !== null),
 				),
 			}
+			
+			// Debug: Final check
+			for (const [name, config] of Object.entries(finalProfiles.apiConfigs)) {
+				if ((config as any).requestsPerMinute !== undefined) {
+					console.log(`[ProviderSettingsManager] Final requestsPerMinute in "${name}":`, (config as any).requestsPerMinute)
+				}
+			}
+			
+			return finalProfiles
 		} catch (error) {
 			if (error instanceof ZodError) {
 				TelemetryService.instance.captureSchemaValidationError({
