@@ -1,0 +1,47 @@
+// SPDX-FileCopyrightText: 2025 Weibo, Inc.
+//
+// SPDX-License-Identifier: Apache-2.0
+
+package com.sina.weibo.agent.service
+
+import com.intellij.openapi.components.PersistentStateComponent
+import com.intellij.openapi.components.Service
+import com.intellij.openapi.components.State
+import com.intellij.openapi.components.Storage
+import com.intellij.util.xmlb.XmlSerializerUtil
+import com.google.gson.Gson
+
+@Service
+@State(
+    name = "com.sina.weibo.agent.service.ExtensionStorageService",
+    storages = [Storage("roo-cline-extension-storage.xml")]
+)
+class ExtensionStorageService() : PersistentStateComponent<ExtensionStorageService> {
+    private val gson = Gson()
+    var storageMap: MutableMap<String, String> = mutableMapOf()
+
+    override fun getState(): ExtensionStorageService = this
+
+    override fun loadState(state: ExtensionStorageService) {
+        XmlSerializerUtil.copyBean(state, this)
+    }
+
+    fun setValue(key: String, value: Any) {
+        storageMap[key] = when (value) {
+            is String -> value
+            else -> gson.toJson(value)
+        }
+    }
+
+    fun getValue(key: String): String? {
+        return storageMap[key]
+    }
+
+    fun removeValue(key: String) {
+        storageMap.remove(key)
+    }
+
+    fun clear() {
+        storageMap.clear()
+    }
+} 

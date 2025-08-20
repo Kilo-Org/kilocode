@@ -19,6 +19,9 @@
         nodejs_20
         corepack_20
         libnotify
+        jetbrains.idea-community
+        jetbrains.jdk-no-jcef
+        gradle
       ];
     };
   in {
