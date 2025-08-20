@@ -438,6 +438,15 @@
 			"label": "速率限制",
 			"description": "API 請求間的最短時間"
 		},
+		"requestsPerMinute": {
+			"label": "Requests per minute",
+			"description": "Maximum number of API requests allowed per minute."
+		},
+		"rateLimit": {
+			"label": "Rate limit type",
+			"seconds": "Time-based",
+			"requests": "Request count"
+		},
 		"consecutiveMistakeLimit": {
 			"label": "錯誤和重複限制",
 			"description": "在顯示「Kilo Code 遇到問題」對話方塊前允許的連續錯誤或重複操作次數",

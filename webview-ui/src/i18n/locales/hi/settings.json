@@ -438,6 +438,15 @@
 			"label": "दर सीमा",
 			"description": "API अनुरोधों के बीच न्यूनतम समय।"
 		},
+		"requestsPerMinute": {
+			"label": "Requests per minute",
+			"description": "Maximum number of API requests allowed per minute."
+		},
+		"rateLimit": {
+			"label": "Rate limit type",
+			"seconds": "Time-based",
+			"requests": "Request count"
+		},
 		"consecutiveMistakeLimit": {
 			"label": "त्रुटि और पुनरावृत्ति सीमा",
 			"description": "'रू को समस्या हो रही है' संवाद दिखाने से पहले लगातार त्रुटियों या दोहराए गए कार्यों की संख्या",

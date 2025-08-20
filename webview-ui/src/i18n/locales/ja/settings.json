@@ -438,6 +438,15 @@
 			"label": "レート制限",
 			"description": "APIリクエスト間の最小時間。"
 		},
+		"requestsPerMinute": {
+			"label": "Requests per minute",
+			"description": "Maximum number of API requests allowed per minute."
+		},
+		"rateLimit": {
+			"label": "Rate limit type",
+			"seconds": "Time-based",
+			"requests": "Request count"
+		},
 		"consecutiveMistakeLimit": {
 			"label": "エラーと繰り返しの制限",
 			"description": "「Kilo Codeが問題を抱えています」ダイアログを表示するまでの連続エラーまたは繰り返しアクションの数",

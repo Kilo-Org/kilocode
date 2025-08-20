@@ -453,6 +453,15 @@
 			"label": "Omezení rychlosti",
 			"description": "Minimální čas mezi požadavky API."
 		},
+		"requestsPerMinute": {
+			"label": "Requests per minute",
+			"description": "Maximum number of API requests allowed per minute."
+		},
+		"rateLimit": {
+			"label": "Rate limit type",
+			"seconds": "Time-based",
+			"requests": "Request count"
+		},
 		"consecutiveMistakeLimit": {
 			"label": "Limit chyb a opakování",
 			"description": "Počet po sobě jdoucích chyb nebo opakovaných akcí před zobrazením dialogu 'Kilo Code má problémy'",

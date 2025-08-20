@@ -447,6 +447,15 @@
 			"label": "Обмеження швидкості",
 			"description": "Мінімальний час між запитами API."
 		},
+		"requestsPerMinute": {
+			"label": "Requests per minute",
+			"description": "Maximum number of API requests allowed per minute."
+		},
+		"rateLimit": {
+			"label": "Rate limit type",
+			"seconds": "Time-based",
+			"requests": "Request count"
+		},
 		"consecutiveMistakeLimit": {
 			"label": "Обмеження помилок і повторень",
 			"description": "Кількість послідовних помилок або повторних дій перед показом діалогу 'Kilo Code має проблеми'",

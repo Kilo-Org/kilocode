@@ -453,6 +453,15 @@
 			"label": "معدل الطلب",
 			"description": "أقل وقت بين طلبات API."
 		},
+		"requestsPerMinute": {
+			"label": "Requests per minute",
+			"description": "Maximum number of API requests allowed per minute."
+		},
+		"rateLimit": {
+			"label": "Rate limit type",
+			"seconds": "Time-based",
+			"requests": "Request count"
+		},
 		"consecutiveMistakeLimit": {
 			"label": "حد الأخطاء والتكرار",
 			"description": "عدد الأخطاء المتتالية أو الإجراءات المتكررة قبل إظهار حوار 'Kilo Code يواجه مشكلة'",

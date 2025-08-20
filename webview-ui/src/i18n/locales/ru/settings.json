@@ -438,6 +438,15 @@
 			"label": "Лимит скорости",
 			"description": "Минимальное время между запросами к API."
 		},
+		"requestsPerMinute": {
+			"label": "Requests per minute",
+			"description": "Maximum number of API requests allowed per minute."
+		},
+		"rateLimit": {
+			"label": "Rate limit type",
+			"seconds": "Time-based",
+			"requests": "Request count"
+		},
 		"consecutiveMistakeLimit": {
 			"label": "Лимит ошибок и повторений",
 			"description": "Количество последовательных ошибок или повторных действий перед показом диалогового окна 'У Kilo Code возникли проблемы'",

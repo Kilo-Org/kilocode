@@ -437,6 +437,15 @@
 			"label": "ขีดจำกัดอัตรา",
 			"description": "เวลาน้อยที่สุดระหว่างการร้องขอ API"
 		},
+		"requestsPerMinute": {
+			"label": "Requests per minute",
+			"description": "Maximum number of API requests allowed per minute."
+		},
+		"rateLimit": {
+			"label": "Rate limit type",
+			"seconds": "Time-based",
+			"requests": "Request count"
+		},
 		"consecutiveMistakeLimit": {
 			"label": "ขีดจำกัดข้อผิดพลาดและการทำซ้ำ",
 			"description": "จำนวนข้อผิดพลาดหรือการกระทำซ้ำติดต่อกันก่อนที่จะแสดงกล่องโต้ตอบ 'Kilo Code กำลังมีปัญหา'",
