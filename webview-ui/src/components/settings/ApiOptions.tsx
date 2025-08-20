@@ -114,6 +114,7 @@ import { BedrockCustomArn } from "./providers/BedrockCustomArn"
 import { KiloCode } from "../kilocode/settings/providers/KiloCode" // kilocode_change
 import { buildDocLink } from "@src/utils/docLinks"
 import { KiloProviderRouting } from "./providers/KiloProviderRouting"
+import { useRateLimitMode } from "@src/hooks/useRateLimitMode" // kilocode_change: Custom hook for rate limit mode
 
 export interface ApiOptionsProps {
 	uriScheme: string | undefined
@@ -148,23 +149,11 @@ const ApiOptions = ({
 		return Object.entries(headers)
 	})
 
-	// kilocode_change: Rate limit mode selection
-	const [rateLimitMode, setRateLimitMode] = useState<"seconds" | "requests">(() => {
-		// Determine initial mode based on which value is set
-		if (apiConfiguration?.requestsPerMinute !== undefined && apiConfiguration.requestsPerMinute > 0) {
-			return "requests"
-		}
-		return "seconds"
-	})
-
-	// Update rate limit mode when apiConfiguration changes
-	useEffect(() => {
-		if (apiConfiguration?.requestsPerMinute !== undefined && apiConfiguration.requestsPerMinute > 0) {
-			setRateLimitMode("requests")
-		} else if (apiConfiguration?.rateLimitSeconds !== undefined) {
-			setRateLimitMode("seconds")
-		}
-	}, [apiConfiguration?.requestsPerMinute, apiConfiguration?.rateLimitSeconds])
+	// kilocode_change: Use custom hook for simplified rate limit mode management
+	const { rateLimitMode, handleModeChange, handleSecondsChange, handleRequestsChange } = useRateLimitMode(
+		apiConfiguration,
+		setApiConfigurationField,
+	)
 
 	useEffect(() => {
 		const propHeaders = apiConfiguration?.openAiHeaders || {}
@@ -791,28 +780,7 @@ const ApiOptions = ({
 						<div className="space-y-2">
 							<div className="flex items-center gap-2">
 								<label className="block font-medium">{t("settings:providers.rateLimit.label")}</label>
-								<Select
-									value={rateLimitMode}
-									onValueChange={(value: "seconds" | "requests") => {
-										setRateLimitMode(value)
-										if (value === "seconds") {
-											// Clear requests per minute and ensure seconds has a value
-											setApiConfigurationField("requestsPerMinute", undefined)
-											const currentSeconds = apiConfiguration.rateLimitSeconds
-											setApiConfigurationField(
-												"rateLimitSeconds",
-												currentSeconds !== undefined && currentSeconds >= 0 ? currentSeconds : 0,
-											)
-										} else {
-											// Clear seconds and ensure requests per minute has a value
-											setApiConfigurationField("rateLimitSeconds", undefined)
-											const currentRequests = apiConfiguration.requestsPerMinute
-											setApiConfigurationField(
-												"requestsPerMinute",
-												currentRequests !== undefined && currentRequests > 0 ? currentRequests : 10,
-											)
-										}
-									}}>
+								<Select value={rateLimitMode} onValueChange={handleModeChange}>
 									<SelectTrigger className="w-32">
 										<SelectValue />
 									</SelectTrigger>
@@ -829,24 +797,12 @@ const ApiOptions = ({
 							{rateLimitMode === "seconds" ? (
 								<RateLimitSecondsControl
 									value={apiConfiguration.rateLimitSeconds ?? 0}
-									onChange={(value) => {
-										setApiConfigurationField("rateLimitSeconds", value)
-										// Ensure requestsPerMinute is cleared when using seconds mode
-										if (apiConfiguration.requestsPerMinute !== undefined) {
-											setApiConfigurationField("requestsPerMinute", undefined)
-										}
-									}}
+									onChange={handleSecondsChange}
 								/>
 							) : (
 								<RequestsPerMinuteControl
 									value={apiConfiguration.requestsPerMinute ?? 10}
-									onChange={(value) => {
-										setApiConfigurationField("requestsPerMinute", value)
-										// Ensure rateLimitSeconds is cleared when using requests mode
-										if (apiConfiguration.rateLimitSeconds !== undefined) {
-											setApiConfigurationField("rateLimitSeconds", undefined)
-										}
-									}}
+									onChange={handleRequestsChange}
 								/>
 							)}
 						</div>
