@@ -284,6 +284,8 @@
 		"groqApiKey": "Groq API 金鑰",
 		"getSambaNovaApiKey": "取得 SambaNova API 金鑰",
 		"sambaNovaApiKey": "SambaNova API 金鑰",
+		"getTarsApiKey": "取得 TARS API 金鑰",
+		"tarsApiKey": "TARS API 金鑰",
 		"getHuggingFaceApiKey": "取得 Hugging Face API 金鑰",
 		"huggingFaceApiKey": "Hugging Face API 金鑰",
 		"huggingFaceModelId": "模型 ID",

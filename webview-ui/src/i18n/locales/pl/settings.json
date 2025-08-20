@@ -284,6 +284,8 @@
 		"groqApiKey": "Klucz API Groq",
 		"getSambaNovaApiKey": "Uzyskaj klucz API SambaNova",
 		"sambaNovaApiKey": "Klucz API SambaNova",
+		"getTarsApiKey": "Uzyskaj klucz API TARS",
+		"tarsApiKey": "Klucz API TARS",
 		"getGeminiApiKey": "Uzyskaj klucz API Gemini",
 		"getHuggingFaceApiKey": "Uzyskaj klucz API Hugging Face",
 		"huggingFaceApiKey": "Klucz API Hugging Face",

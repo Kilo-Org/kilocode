@@ -284,6 +284,8 @@
 		"groqApiKey": "Chiave API Groq",
 		"getSambaNovaApiKey": "Ottieni chiave API SambaNova",
 		"sambaNovaApiKey": "Chiave API SambaNova",
+		"getTarsApiKey": "Ottieni chiave API TARS",
+		"tarsApiKey": "Chiave API TARS",
 		"getHuggingFaceApiKey": "Ottieni chiave API Hugging Face",
 		"huggingFaceApiKey": "Chiave API Hugging Face",
 		"huggingFaceModelId": "ID modello",

@@ -287,6 +287,8 @@
 		"groqApiKey": "Klíč API Groq",
 		"getSambaNovaApiKey": "Získat klíč API SambaNova",
 		"sambaNovaApiKey": "Klíč API SambaNova",
+		"getTarsApiKey": "Získat TARS API klíč",
+		"tarsApiKey": "TARS API klíč",
 		"getGeminiApiKey": "Získat klíč API Gemini",
 		"openAiApiKey": "Klíč API OpenAI",
 		"getHuggingFaceApiKey": "Získat klíč API Hugging Face",

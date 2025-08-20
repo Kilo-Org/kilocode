@@ -59,9 +59,10 @@ describe("TarsHandler", () => {
 			baseURL: "https://api.router.tetrate.ai/v1",
 			apiKey: mockOptions.tarsApiKey,
 			defaultHeaders: {
-				"HTTP-Referer": "https://github.com/RooVetGit/Roo-Cline",
-				"X-Title": "Roo Code",
-				"User-Agent": `RooCode/${Package.version}`,
+				"HTTP-Referer": "https://kilocode.ai",
+				"X-Title": "Kilo Code",
+				"User-Agent": `Kilo-Code/${Package.version}`,
+				"X-KiloCode-Version": Package.version,
 			},
 		})
 	})

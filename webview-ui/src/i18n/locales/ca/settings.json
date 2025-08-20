@@ -284,6 +284,8 @@
 		"groqApiKey": "Clau API de Groq",
 		"getSambaNovaApiKey": "Obtenir clau API de SambaNova",
 		"sambaNovaApiKey": "Clau API de SambaNova",
+		"getTarsApiKey": "Obtenir clau API de TARS",
+		"tarsApiKey": "Clau API de TARS",
 		"getHuggingFaceApiKey": "Obtenir clau API de Hugging Face",
 		"huggingFaceApiKey": "Clau API de Hugging Face",
 		"huggingFaceModelId": "ID del model",

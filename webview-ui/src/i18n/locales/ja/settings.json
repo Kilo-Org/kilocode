@@ -284,6 +284,8 @@
 		"groqApiKey": "Groq APIキー",
 		"getSambaNovaApiKey": "SambaNova APIキーを取得",
 		"sambaNovaApiKey": "SambaNova APIキー",
+		"getTarsApiKey": "TARS APIキーを取得",
+		"tarsApiKey": "TARS APIキー",
 		"getHuggingFaceApiKey": "Hugging Face APIキーを取得",
 		"huggingFaceApiKey": "Hugging Face APIキー",
 		"huggingFaceModelId": "モデルID",

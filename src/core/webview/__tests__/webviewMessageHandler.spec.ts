@@ -197,6 +197,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				"kilocode-openrouter": mockModels,
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
+				tars: mockModels,
 			},
 		})
 	})
@@ -285,6 +286,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				"kilocode-openrouter": mockModels,
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
+				tars: mockModels,
 			},
 		})
 	})
@@ -325,6 +327,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				"kilocode-openrouter": mockModels,
 				ollama: {},
 				lmstudio: {},
+				tars: mockModels,
 			},
 		})
 

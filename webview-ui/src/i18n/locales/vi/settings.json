@@ -284,6 +284,8 @@
 		"groqApiKey": "Khóa API Groq",
 		"getSambaNovaApiKey": "Lấy khóa API SambaNova",
 		"sambaNovaApiKey": "Khóa API SambaNova",
+		"getTarsApiKey": "Lấy khóa API TARS",
+		"tarsApiKey": "Khóa API TARS",
 		"getHuggingFaceApiKey": "Lấy Khóa API Hugging Face",
 		"huggingFaceApiKey": "Khóa API Hugging Face",
 		"huggingFaceModelId": "ID Mô hình",
