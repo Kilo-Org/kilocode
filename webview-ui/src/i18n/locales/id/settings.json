@@ -438,6 +438,15 @@
 			"label": "Rate limit",
 			"description": "Waktu minimum antara permintaan API."
 		},
+		"requestsPerMinute": {
+			"label": "Requests per minute",
+			"description": "Maximum number of API requests allowed per minute."
+		},
+		"rateLimit": {
+			"label": "Rate limit type",
+			"seconds": "Time-based",
+			"requests": "Request count"
+		},
 		"consecutiveMistakeLimit": {
 			"label": "Batas Kesalahan & Pengulangan",
 			"description": "Jumlah kesalahan berturut-turut atau tindakan berulang sebelum menampilkan dialog 'Kilo Code mengalami masalah'",
