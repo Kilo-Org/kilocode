@@ -11,6 +11,7 @@ function calculateApiCostInternal(
 	const cacheReadsCost = ((modelInfo.cacheReadsPrice || 0) / 1_000_000) * cacheReadInputTokens
 	const baseInputCost = ((modelInfo.inputPrice || 0) / 1_000_000) * inputTokens
 	const outputCost = ((modelInfo.outputPrice || 0) / 1_000_000) * outputTokens
+	//TOdo: If OpenAi service_tier=flex, price is 0.5x if service_tier=priority,price is 2x.
 	const totalCost = cacheWritesCost + cacheReadsCost + baseInputCost + outputCost
 	return totalCost
 }
@@ -53,5 +54,5 @@ export function calculateApiCostOpenAI(
 		cacheReadInputTokensNum,
 	)
 }
-
+if 
 export const parseApiPrice = (price: any) => (price ? parseFloat(price) * 1_000_000 : undefined)

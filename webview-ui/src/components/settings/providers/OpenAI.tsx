@@ -1,8 +1,9 @@
 import { useCallback, useState } from "react"
 import { Checkbox } from "vscrui"
-import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
+import { VSCodeTextField, VSCodeDropdown, VSCodeOption } from "@vscode/webview-ui-toolkit/react"
 
 import type { ProviderSettings } from "@roo-code/types"
+import { openAiNativeModels, openAiNativeDefaultModelId, type OpenAiNativeModelId } from "@roo-code/types"
 
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { VSCodeButtonLink } from "@src/components/common/VSCodeButtonLink"
@@ -12,6 +13,10 @@ import { inputEventTransform } from "../transforms"
 type OpenAIProps = {
 	apiConfiguration: ProviderSettings
 	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
+}
+
+function isOpenAiNativeModelId(id: string): id is OpenAiNativeModelId {
+	return id in openAiNativeModels
 }
 
 export const OpenAI = ({ apiConfiguration, setApiConfigurationField }: OpenAIProps) => {
@@ -32,8 +37,59 @@ export const OpenAI = ({ apiConfiguration, setApiConfigurationField }: OpenAIPro
 		[setApiConfigurationField],
 	)
 
+	// Validate current modelId or fall back
+	const maybeId = String(apiConfiguration.openAiNativeModelId ?? "")
+	const modelId: OpenAiNativeModelId = isOpenAiNativeModelId(maybeId) ? maybeId : openAiNativeDefaultModelId
+
+	const modelInfo = openAiNativeModels[modelId]
+	const supportsServiceTier = !!modelInfo.supportsServiceTier
+
+	const modelOptions = Object.keys(openAiNativeModels) as OpenAiNativeModelId[]
+
+	// For OpenAI: only show Standard/Flex/Priority
+	const serviceTierOptions = [
+		{ value: "", label: t("settings:providers.serviceTierDefault") }, // maps to Default/Auto
+		{ value: "standard", label: t("settings:providers.serviceTierStandard") },
+		{ value: "flex", label: t("settings:providers.serviceTierFlex") },
+		{ value: "priority", label: t("settings:providers.serviceTierPriority") },
+	]
+
 	return (
 		<>
+			{/* Model picker */}
+			<VSCodeDropdown
+				value={modelId}
+				onChange={(e) =>
+					setApiConfigurationField(
+						"openAiNativeModelId",
+						(e.target as HTMLSelectElement).value as OpenAiNativeModelId,
+					)
+				}
+				className="w-full">
+				{modelOptions.map((id) => (
+					<VSCodeOption key={id} value={id}>
+						{id}
+					</VSCodeOption>
+				))}
+			</VSCodeDropdown>
+
+			{/* Show service tier dropdown if model supports it */}
+			{supportsServiceTier && (
+				<VSCodeDropdown
+					value={apiConfiguration.openAiNativeServiceTier ?? ""}
+					onInput={handleInputChange("openAiNativeServiceTier") as any}
+					className="w-full mt-2">
+					<span slot="label" className="block font-medium mb-1">
+						{t("settings:providers.serviceTier")}
+					</span>
+					{serviceTierOptions.map((opt) => (
+						<VSCodeOption key={opt.value} value={opt.value}>
+							{opt.label}
+						</VSCodeOption>
+					))}
+				</VSCodeDropdown>
+			)}
+
 			<Checkbox
 				checked={openAiNativeBaseUrlSelected}
 				onChange={(checked: boolean) => {

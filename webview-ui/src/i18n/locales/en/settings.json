@@ -651,7 +651,7 @@
 		},
 		"compressProgressBar": {
 			"label": "Compress progress bar output",
-			"description": "When enabled, processes terminal output with carriage returns (\\r) to simulate how a real terminal would display content. This removes intermediate progress bar states, retaining only the final state, which conserves context space for more relevant information. <0>Learn more</0>"
+			"description": "When enabled, processes terminal output with carriage returns (\r) to simulate how a real terminal would display content. This removes intermediate progress bar states, retaining only the final state, which conserves context space for more relevant information. <0>Learn more</0>"
 		},
 		"powershellCounter": {
 			"label": "Enable PowerShell counter workaround",
@@ -792,6 +792,18 @@
 			"freeRequests": "* Free up to {{count}} requests per minute. After that, billing depends on prompt size.",
 			"pricingDetails": "For more info, see pricing details.",
 			"billingEstimate": "* Billing is an estimate - exact cost depends on prompt size."
+		}
+	},
+	"openaiServiceTier": {
+		"label": "Service Tier",
+		"description": "Specifies the processing type used for serving the request.",
+		"instructions": "Flex processing provides 50% lower costs in exchange for slower response times/unavailability.",
+		"instructionsContinued": "Priority processing (at double cost) gives significantly lower, more consistent latency.",
+		"instructionsAddl": "Default/Standard will be processed at the standard price and performance.",
+		"options": {
+			"default": "Default",
+			"flex": "Flex",
+			"priority": "Priority"
 		}
 	},
 	"modelPicker": {
