@@ -78,6 +78,17 @@ export class API extends EventEmitter<RooCodeEvents> implements RooCodeAPI {
 						await vscode.commands.executeCommand("workbench.action.files.saveFiles")
 						await vscode.commands.executeCommand("workbench.action.closeWindow")
 						break
+					case TaskCommandName.ResumeTask:
+						this.log(`[API] ResumeTask -> ${data}`)
+						try {
+							await this.resumeTask(data)
+						} catch (error) {
+							const errorMessage = error instanceof Error ? error.message : String(error)
+							this.log(`[API] ResumeTask failed for taskId ${data}: ${errorMessage}`)
+							// Don't rethrow - we want to prevent IPC server crashes
+							// The error is logged for debugging purposes
+						}
+						break
 				}
 			})
 		}
@@ -148,7 +159,7 @@ export class API extends EventEmitter<RooCodeEvents> implements RooCodeAPI {
 		await provider.postMessageToWebview({ type: "action", action: "chatButtonClicked" })
 		await provider.postMessageToWebview({ type: "invoke", invoke: "newChat", text, images })
 
-		const cline = await provider.initClineWithTask(text, images, undefined, {
+		const cline = await provider.createTask(text, images, undefined, {
 			consecutiveMistakeLimit: Number.MAX_SAFE_INTEGER,
 		})
 
@@ -161,7 +172,7 @@ export class API extends EventEmitter<RooCodeEvents> implements RooCodeAPI {
 
 	public async resumeTask(taskId: string): Promise<void> {
 		const { historyItem } = await this.sidebarProvider.getTaskWithId(taskId)
-		await this.sidebarProvider.initClineWithHistoryItem(historyItem)
+		await this.sidebarProvider.createTaskWithHistoryItem(historyItem)
 		await this.sidebarProvider.postMessageToWebview({ type: "action", action: "chatButtonClicked" })
 	}
 

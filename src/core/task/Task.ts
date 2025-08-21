@@ -11,6 +11,7 @@ import { serializeError } from "serialize-error"
 
 import {
 	type TaskLike,
+	type TaskMetadata,
 	type TaskEvents,
 	type ProviderSettings,
 	type TokenUsage,
@@ -20,19 +21,21 @@ import {
 	type ClineMessage,
 	type ClineSay,
 	type ClineAsk,
-	type BlockingAsk,
 	type ToolProgressStatus,
 	type HistoryItem,
 	RooCodeEventName,
 	TelemetryEventName,
+	TaskStatus,
 	TodoItem,
+	DEFAULT_CONSECUTIVE_MISTAKE_LIMIT,
 	getApiProtocol,
 	getModelId,
-	DEFAULT_CONSECUTIVE_MISTAKE_LIMIT,
-	isBlockingAsk,
+	isIdleAsk,
+	isInteractiveAsk,
+	isResumableAsk,
 } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
-import { CloudService, UnifiedBridgeService } from "@roo-code/cloud"
+import { CloudService, ExtensionBridgeService } from "@roo-code/cloud"
 
 // api
 import { ApiHandler, ApiHandlerCreateMessageMetadata, buildApiHandler } from "../../api"
@@ -107,6 +110,7 @@ import { reportExcessiveRecursion, yieldPromise } from "../kilocode" // kilocode
 import { AutoApprovalHandler } from "./AutoApprovalHandler"
 
 const MAX_EXPONENTIAL_BACKOFF_SECONDS = 600 // 10 minutes
+const DEFAULT_USAGE_COLLECTION_TIMEOUT_MS = 5000 // 5 seconds
 
 export type TaskOptions = {
 	context: vscode.ExtensionContext // kilocode_change
@@ -133,10 +137,12 @@ type UserContent = Array<Anthropic.ContentBlockParam> // kilocode_change
 export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	private context: vscode.ExtensionContext // kilocode_change
 
-	todoList?: TodoItem[]
 	readonly taskId: string
 	private taskIsFavorited?: boolean // kilocode_change
 	readonly instanceId: string
+	readonly metadata: TaskMetadata
+
+	todoList?: TodoItem[]
 
 	readonly rootTask: Task | undefined
 	readonly parentTask: Task | undefined
@@ -190,7 +196,12 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	providerRef: WeakRef<ClineProvider>
 	private readonly globalStoragePath: string
 	abort: boolean = false
-	blockingAsk?: BlockingAsk
+
+	// TaskStatus
+	idleAsk?: ClineMessage
+	resumableAsk?: ClineMessage
+	interactiveAsk?: ClineMessage
+
 	didFinishAbortingStream = false
 	abandoned = false
 	isInitialized = false
@@ -257,7 +268,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 	// Task Bridge
 	enableTaskBridge: boolean
-	bridgeService: UnifiedBridgeService | null = null
+	bridgeService: ExtensionBridgeService | null = null
 
 	// Streaming
 	isWaitingForFirstChunk = false
@@ -304,6 +315,12 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 		this.taskId = historyItem ? historyItem.id : crypto.randomUUID()
 		this.taskIsFavorited = historyItem?.isFavorited // kilocode_change
+
+		this.metadata = {
+			task: historyItem ? historyItem.task : task,
+			images: historyItem ? [] : images,
+		}
+
 		// Normal use-case is usually retry similar history task with new workspace.
 		this.workspacePath = parentTask
 			? parentTask.workspacePath
@@ -515,6 +532,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		if (this._taskMode === undefined) {
 			throw new Error("Task mode accessed before initialization. Use getTaskMode() or wait for taskModeReady.")
 		}
+
 		return this._taskMode
 	}
 
@@ -637,6 +655,16 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		}
 	}
 
+	private findMessageByTimestamp(ts: number): ClineMessage | undefined {
+		for (let i = this.clineMessages.length - 1; i >= 0; i--) {
+			if (this.clineMessages[i].ts === ts) {
+				return this.clineMessages[i]
+			}
+		}
+
+		return undefined
+	}
+
 	// Note that `partial` has three valid states true (partial message),
 	// false (completion of partial message), undefined (individual complete
 	// message).
@@ -735,16 +763,55 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			await this.addToClineMessages({ ts: askTs, type: "ask", ask: type, text, isProtected })
 		}
 
-		// Detect if the task will enter an idle state.
-		const isReady = this.askResponse !== undefined || this.lastMessageTs !== askTs
+		// The state is mutable if the message is complete and the task will
+		// block (via the `pWaitFor`).
+		const isBlocking = !(this.askResponse !== undefined || this.lastMessageTs !== askTs)
+		const isStatusMutable = !partial && isBlocking
+		let statusMutationTimeouts: NodeJS.Timeout[] = []
 
-		if (!partial && !isReady && isBlockingAsk(type)) {
-			this.blockingAsk = type
-			this.emit(RooCodeEventName.TaskIdle, this.taskId)
+		if (isStatusMutable) {
+			if (isInteractiveAsk(type)) {
+				statusMutationTimeouts.push(
+					setTimeout(() => {
+						const message = this.findMessageByTimestamp(askTs)
+
+						if (message) {
+							this.interactiveAsk = message
+							this.emit(RooCodeEventName.TaskInteractive, this.taskId)
+						}
+					}, 1_000),
+				)
+			} else if (isResumableAsk(type)) {
+				statusMutationTimeouts.push(
+					setTimeout(() => {
+						const message = this.findMessageByTimestamp(askTs)
+
+						if (message) {
+							this.resumableAsk = message
+							this.emit(RooCodeEventName.TaskResumable, this.taskId)
+						}
+					}, 1_000),
+				)
+			} else if (isIdleAsk(type)) {
+				statusMutationTimeouts.push(
+					setTimeout(() => {
+						const message = this.findMessageByTimestamp(askTs)
+
+						if (message) {
+							this.idleAsk = message
+							this.emit(RooCodeEventName.TaskIdle, this.taskId)
+						}
+					}, 1_000),
+				)
+			}
 		}
 
-		console.log(`[Task#${this.taskId}] pWaitFor askResponse(${type}) -> blocking`)
+		console.log(
+			`[Task#${this.taskId}] pWaitFor askResponse(${type}) -> blocking (isStatusMutable = ${isStatusMutable}, statusMutationTimeouts = ${statusMutationTimeouts.length})`,
+		)
+
 		await pWaitFor(() => this.askResponse !== undefined || this.lastMessageTs !== askTs, { interval: 100 })
+
 		console.log(`[Task#${this.taskId}] pWaitFor askResponse(${type}) -> unblocked (${this.askResponse})`)
 
 		if (this.lastMessageTs !== askTs) {
@@ -759,9 +826,14 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		this.askResponseText = undefined
 		this.askResponseImages = undefined
 
+		// Cancel the timeouts if they are still running.
+		statusMutationTimeouts.forEach((timeout) => clearTimeout(timeout))
+
 		// Switch back to an active state.
-		if (this.blockingAsk) {
-			this.blockingAsk = undefined
+		if (this.idleAsk || this.resumableAsk || this.interactiveAsk) {
+			this.idleAsk = undefined
+			this.resumableAsk = undefined
+			this.interactiveAsk = undefined
 			this.emit(RooCodeEventName.TaskActive, this.taskId)
 		}
 
@@ -779,27 +851,30 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		this.askResponseImages = images
 	}
 
+	public approveAsk({ text, images }: { text?: string; images?: string[] } = {}) {
+		this.handleWebviewAskResponse("yesButtonClicked", text, images)
+	}
+
+	public denyAsk({ text, images }: { text?: string; images?: string[] } = {}) {
+		this.handleWebviewAskResponse("noButtonClicked", text, images)
+	}
+
 	public submitUserMessage(text: string, images?: string[]): void {
 		try {
-			const trimmed = (text ?? "").trim()
-			const imgs = images ?? []
+			text = (text ?? "").trim()
+			images = images ?? []
 
-			if (!trimmed && imgs.length === 0) {
+			if (text.length === 0 && images.length === 0) {
 				return
 			}
 
 			const provider = this.providerRef.deref()
-			if (!provider) {
-				console.error("[Task#submitUserMessage] Provider reference lost")
-				return
-			}
 
-			void provider.postMessageToWebview({
-				type: "invoke",
-				invoke: "sendMessage",
-				text: trimmed,
-				images: imgs,
-			})
+			if (provider) {
+				provider.postMessageToWebview({ type: "invoke", invoke: "sendMessage", text, images })
+			} else {
+				console.error("[Task#submitUserMessage] Provider reference lost")
+			}
 		} catch (error) {
 			console.error("[Task#submitUserMessage] Failed to submit user message:", error)
 		}
@@ -1013,7 +1088,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	private async startTask(task?: string, images?: string[]): Promise<void> {
 		if (this.enableTaskBridge) {
 			try {
-				this.bridgeService = this.bridgeService || UnifiedBridgeService.getInstance()
+				this.bridgeService = this.bridgeService || ExtensionBridgeService.getInstance()
 
 				if (this.bridgeService) {
 					await this.bridgeService.subscribeToTask(this as any)
@@ -1052,12 +1127,11 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	}
 
 	public async resumePausedTask(lastMessage: string) {
-		// Release this Cline instance from paused state.
 		this.isPaused = false
 		this.emit(RooCodeEventName.TaskUnpaused)
 
 		// Fake an answer from the subtask that it has completed running and
-		// this is the result of what it has done  add the message to the chat
+		// this is the result of what it has done add the message to the chat
 		// history and to the webview ui.
 		try {
 			await this.say("subtask_result", lastMessage)
@@ -1078,7 +1152,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	private async resumeTaskFromHistory() {
 		if (this.enableTaskBridge) {
 			try {
-				this.bridgeService = this.bridgeService || UnifiedBridgeService.getInstance()
+				this.bridgeService = this.bridgeService || ExtensionBridgeService.getInstance()
 
 				if (this.bridgeService) {
 					await this.bridgeService.subscribeToTask(this as any)
@@ -1329,6 +1403,13 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	public dispose(): void {
 		console.log(`[Task] disposing task ${this.taskId}.${this.instanceId}`)
 
+		// Remove all event listeners to prevent memory leaks
+		try {
+			this.removeAllListeners()
+		} catch (error) {
+			console.error("Error removing event listeners:", error)
+		}
+
 		// Stop waiting for child task completion.
 		if (this.pauseInterval) {
 			clearInterval(this.pauseInterval)
@@ -1471,662 +1552,681 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	public async recursivelyMakeClineRequests(
 		userContent: Anthropic.Messages.ContentBlockParam[],
 		includeFileDetails: boolean = false,
-		recursionDepth: number = 0, // kilocode_change
 	): Promise<boolean> {
-		reportExcessiveRecursion("recursivelyMakeClineRequests", recursionDepth) // kilocode_change
-		if (this.abort) {
-			throw new Error(`[KiloCode#recursivelyMakeClineRequests] task ${this.taskId}.${this.instanceId} aborted`)
+		interface StackItem {
+			userContent: Anthropic.Messages.ContentBlockParam[]
+			includeFileDetails: boolean
 		}
 
-		if (this.consecutiveMistakeLimit > 0 && this.consecutiveMistakeCount >= this.consecutiveMistakeLimit) {
-			const { response, text, images } = await this.ask(
-				"mistake_limit_reached",
-				t("common:errors.mistake_limit_guidance"),
-			)
+		const stack: StackItem[] = [{ userContent, includeFileDetails }]
 
-			if (response === "messageResponse") {
-				userContent.push(
-					...[
-						{ type: "text" as const, text: formatResponse.tooManyMistakes(text) },
-						...formatResponse.imageBlocks(images),
-					],
-				)
+		while (stack.length > 0) {
+			const currentItem = stack.pop()!
+			const currentUserContent = currentItem.userContent
+			const currentIncludeFileDetails = currentItem.includeFileDetails
 
-				await this.say("user_feedback", text, images)
-
-				// Track consecutive mistake errors in telemetry.
-				TelemetryService.instance.captureConsecutiveMistakeError(this.taskId)
-			}
-
-			this.consecutiveMistakeCount = 0
-		}
-
-		// In this Cline request loop, we need to check if this task instance
-		// has been asked to wait for a subtask to finish before continuing.
-		const provider = this.providerRef.deref()
-
-		if (this.isPaused && provider) {
-			provider.log(`[subtasks] paused ${this.taskId}.${this.instanceId}`)
-			await this.waitForResume()
-			provider.log(`[subtasks] resumed ${this.taskId}.${this.instanceId}`)
-			const currentMode = (await provider.getState())?.mode ?? defaultModeSlug
-
-			if (currentMode !== this.pausedModeSlug) {
-				// The mode has changed, we need to switch back to the paused mode.
-				await provider.handleModeSwitch(this.pausedModeSlug)
-
-				// Delay to allow mode change to take effect before next tool is executed.
-				await delay(500)
-
-				provider.log(
-					`[subtasks] task ${this.taskId}.${this.instanceId} has switched back to '${this.pausedModeSlug}' from '${currentMode}'`,
-				)
-			}
-		}
-
-		// Getting verbose details is an expensive operation, it uses ripgrep to
-		// top-down build file structure of project which for large projects can
-		// take a few seconds. For the best UX we show a placeholder api_req_started
-		// message with a loading spinner as this happens.
-
-		// Determine API protocol based on provider and model
-		const modelId = getModelId(this.apiConfiguration)
-		const apiProtocol = getApiProtocol(this.apiConfiguration.apiProvider, modelId)
-
-		await this.say(
-			"api_req_started",
-			JSON.stringify({
-				request:
-					userContent.map((block) => formatContentBlockToMarkdown(block)).join("\n\n") + "\n\nLoading...",
-				apiProtocol,
-			}),
-		)
-
-		const {
-			showRooIgnoredFiles = true,
-			includeDiagnosticMessages = true,
-			maxDiagnosticMessages = 50,
-			maxReadFileLine = -1,
-		} = (await this.providerRef.deref()?.getState()) ?? {}
-
-		const [parsedUserContent, needsRulesFileCheck] = await processKiloUserContentMentions({
-			context: this.context, // kilocode_change
-			userContent,
-			cwd: this.cwd,
-			urlContentFetcher: this.urlContentFetcher,
-			fileContextTracker: this.fileContextTracker,
-			rooIgnoreController: this.rooIgnoreController,
-			showRooIgnoredFiles,
-			includeDiagnosticMessages,
-			maxDiagnosticMessages,
-			maxReadFileLine,
-		})
-
-		if (needsRulesFileCheck) {
-			await this.say(
-				"error",
-				"Issue with processing the /newrule command. Double check that, if '.kilocode/rules' already exists, it's a directory and not a file. Otherwise there was an issue referencing this file/directory",
-			)
-		}
-		// kilocode_change end
-
-		const environmentDetails = await getEnvironmentDetails(this, includeFileDetails)
-
-		// Add environment details as its own text block, separate from tool
-		// results.
-		const finalUserContent = [...parsedUserContent, { type: "text" as const, text: environmentDetails }]
-
-		await this.addToApiConversationHistory({ role: "user", content: finalUserContent })
-		TelemetryService.instance.captureConversationMessage(this.taskId, "user")
-
-		// Since we sent off a placeholder api_req_started message to update the
-		// webview while waiting to actually start the API request (to load
-		// potential details for example), we need to update the text of that
-		// message.
-		const lastApiReqIndex = findLastIndex(this.clineMessages, (m) => m.say === "api_req_started")
-
-		this.clineMessages[lastApiReqIndex].text = JSON.stringify({
-			request: finalUserContent.map((block) => formatContentBlockToMarkdown(block)).join("\n\n"),
-			apiProtocol,
-		} satisfies ClineApiReqInfo)
-
-		await this.saveClineMessages()
-		await provider?.postStateToWebview()
-
-		try {
-			let cacheWriteTokens = 0
-			let cacheReadTokens = 0
-			let inputTokens = 0
-			let outputTokens = 0
-			let totalCost: number | undefined
-			let usageMissing = false // kilocode_change
-
-			// We can't use `api_req_finished` anymore since it's a unique case
-			// where it could come after a streaming message (i.e. in the middle
-			// of being updated or executed).
-			// Fortunately `api_req_finished` was always parsed out for the GUI
-			// anyways, so it remains solely for legacy purposes to keep track
-			// of prices in tasks from history (it's worth removing a few months
-			// from now).
-			const updateApiReqMsg = (cancelReason?: ClineApiReqCancelReason, streamingFailedMessage?: string) => {
-				// kilocode_change start: pending upstream pr https://github.com/RooCodeInc/Roo-Code/pull/6122
-				if (lastApiReqIndex < 0 || !this.clineMessages[lastApiReqIndex]) {
-					return
-				}
-				// kilocode_change end
-
-				const existingData = JSON.parse(this.clineMessages[lastApiReqIndex].text || "{}")
-				this.clineMessages[lastApiReqIndex].text = JSON.stringify({
-					...existingData,
-					tokensIn: inputTokens,
-					tokensOut: outputTokens,
-					cacheWrites: cacheWriteTokens,
-					cacheReads: cacheReadTokens,
-					cost:
-						totalCost ??
-						calculateApiCostAnthropic(
-							this.api.getModel().info,
-							inputTokens,
-							outputTokens,
-							cacheWriteTokens,
-							cacheReadTokens,
-						),
-					usageMissing, // kilocode_change
-					cancelReason,
-					streamingFailedMessage,
-				} satisfies ClineApiReqInfo)
-			}
-
-			const abortStream = async (cancelReason: ClineApiReqCancelReason, streamingFailedMessage?: string) => {
-				if (this.diffViewProvider.isEditing) {
-					await this.diffViewProvider.revertChanges() // closes diff view
-				}
-
-				// if last message is a partial we need to update and save it
-				const lastMessage = this.clineMessages.at(-1)
-
-				if (lastMessage && lastMessage.partial) {
-					// lastMessage.ts = Date.now() DO NOT update ts since it is used as a key for virtuoso list
-					lastMessage.partial = false
-					// instead of streaming partialMessage events, we do a save and post like normal to persist to disk
-					console.log("updating partial message", lastMessage)
-					// await this.saveClineMessages()
-				}
-
-				// Let assistant know their response was interrupted for when task is resumed
-				await this.addToApiConversationHistory({
-					role: "assistant",
-					content: [
-						{
-							type: "text",
-							text:
-								assistantMessage +
-								`\n\n[${
-									cancelReason === "streaming_failed"
-										? "Response interrupted by API Error"
-										: "Response interrupted by user"
-								}]`,
-						},
-					],
-				})
-
-				// Update `api_req_started` to have cancelled and cost, so that
-				// we can display the cost of the partial stream.
-				updateApiReqMsg(cancelReason, streamingFailedMessage)
-				await this.saveClineMessages()
-
-				// Signals to provider that it can retrieve the saved messages
-				// from disk, as abortTask can not be awaited on in nature.
-				this.didFinishAbortingStream = true
-			}
-
-			// Reset streaming state.
-			this.currentStreamingContentIndex = 0
-			this.currentStreamingDidCheckpoint = false
-			this.assistantMessageContent = []
-			this.didCompleteReadingStream = false
-			this.userMessageContent = []
-			this.userMessageContentReady = false
-			this.didRejectTool = false
-			this.didAlreadyUseTool = false
-			this.presentAssistantMessageLocked = false
-			this.presentAssistantMessageHasPendingUpdates = false
-			if (this.assistantMessageParser) {
-				this.assistantMessageParser.reset()
-			}
-
-			await this.diffViewProvider.reset()
-
-			// Yields only if the first chunk is successful, otherwise will
-			// allow the user to retry the request (most likely due to rate
-			// limit error, which gets thrown on the first chunk).
-			const stream = this.attemptApiRequest()
-			let assistantMessage = ""
-			let reasoningMessage = ""
-			this.isStreaming = true
-
-			try {
-				// kilocode change: use manual iterator instead of for ... of
-				const iterator = stream[Symbol.asyncIterator]()
-				let item = await iterator.next()
-				while (!item.done) {
-					const chunk = item.value
-					item = await iterator.next()
-
-					if (!chunk) {
-						// Sometimes chunk is undefined, no idea that can cause
-						// it, but this workaround seems to fix it.
-						continue
-					}
-
-					switch (chunk.type) {
-						case "reasoning":
-							reasoningMessage += chunk.text
-							await this.say("reasoning", reasoningMessage, undefined, true)
-							break
-						case "usage":
-							inputTokens += chunk.inputTokens
-							outputTokens += chunk.outputTokens
-							cacheWriteTokens += chunk.cacheWriteTokens ?? 0
-							cacheReadTokens += chunk.cacheReadTokens ?? 0
-							totalCost = chunk.totalCost
-							break
-						case "text": {
-							assistantMessage += chunk.text
-
-							// Parse raw assistant message chunk into content blocks.
-							const prevLength = this.assistantMessageContent.length
-							if (this.isAssistantMessageParserEnabled && this.assistantMessageParser) {
-								this.assistantMessageContent = this.assistantMessageParser.processChunk(chunk.text)
-							} else {
-								// Use the old parsing method when experiment is disabled
-								this.assistantMessageContent = parseAssistantMessage(assistantMessage)
-							}
-
-							if (this.assistantMessageContent.length > prevLength) {
-								// New content we need to present, reset to
-								// false in case previous content set this to true.
-								this.userMessageContentReady = false
-							}
-
-							// Present content to user.
-							presentAssistantMessage(this)
-							break
-						}
-					}
-
-					if (this.abort) {
-						console.log(`aborting stream, this.abandoned = ${this.abandoned}`)
-
-						if (!this.abandoned) {
-							// Only need to gracefully abort if this instance
-							// isn't abandoned (sometimes OpenRouter stream
-							// hangs, in which case this would affect future
-							// instances of Cline).
-							await abortStream("user_cancelled")
-						}
-
-						break // Aborts the stream.
-					}
-
-					if (this.didRejectTool) {
-						// `userContent` has a tool rejection, so interrupt the
-						// assistant's response to present the user's feedback.
-						assistantMessage += "\n\n[Response interrupted by user feedback]"
-						// Instead of setting this preemptively, we allow the
-						// present iterator to finish and set
-						// userMessageContentReady when its ready.
-						// this.userMessageContentReady = true
-						break
-					}
-
-					// PREV: We need to let the request finish for openrouter to
-					// get generation details.
-					// UPDATE: It's better UX to interrupt the request at the
-					// cost of the API cost not being retrieved.
-					if (this.didAlreadyUseTool) {
-						assistantMessage +=
-							"\n\n[Response interrupted by a tool use result. Only one tool may be used at a time and should be placed at the end of the message.]"
-						break
-					}
-				}
-
-				// kilocode_change start: pending upstream pr https://github.com/RooCodeInc/Roo-Code/pull/6122
-				// Create a copy of current token values to avoid race conditions
-				const currentTokens = {
-					input: inputTokens,
-					output: outputTokens,
-					cacheWrite: cacheWriteTokens,
-					cacheRead: cacheReadTokens,
-					total: totalCost,
-				}
-
-				const drainStreamInBackgroundToFindAllUsage = async (apiReqIndex: number) => {
-					const timeoutMs = 30_000
-					const startTime = performance.now()
-
-					// Local variables to accumulate usage data without affecting the main flow
-					let bgInputTokens = currentTokens.input
-					let bgOutputTokens = currentTokens.output
-					let bgCacheWriteTokens = currentTokens.cacheWrite
-					let bgCacheReadTokens = currentTokens.cacheRead
-					let bgTotalCost = currentTokens.total
-
-					const refreshApiReqMsg = async (messageIndex: number) => {
-						// Update the API request message with the latest usage data
-						updateApiReqMsg()
-						await this.saveClineMessages()
-
-						// Update the specific message in the webview
-						const apiReqMessage = this.clineMessages[messageIndex]
-						if (apiReqMessage) {
-							await this.updateClineMessage(apiReqMessage)
-						}
-					}
-
-					// Helper function to capture telemetry and update messages
-					const captureUsageData = async (
-						tokens: {
-							input: number
-							output: number
-							cacheWrite: number
-							cacheRead: number
-							total?: number
-						},
-						messageIndex: number = apiReqIndex,
-					) => {
-						if (tokens.input > 0 || tokens.output > 0 || tokens.cacheWrite > 0 || tokens.cacheRead > 0) {
-							// Update the shared variables atomically
-							inputTokens = tokens.input
-							outputTokens = tokens.output
-							cacheWriteTokens = tokens.cacheWrite
-							cacheReadTokens = tokens.cacheRead
-							totalCost = tokens.total
-
-							await refreshApiReqMsg(messageIndex)
-
-							// Capture telemetry
-							TelemetryService.instance.captureLlmCompletion(this.taskId, {
-								inputTokens: tokens.input,
-								outputTokens: tokens.output,
-								cacheWriteTokens: tokens.cacheWrite,
-								cacheReadTokens: tokens.cacheRead,
-								cost:
-									tokens.total ??
-									calculateApiCostAnthropic(
-										this.api.getModel().info,
-										tokens.input,
-										tokens.output,
-										tokens.cacheWrite,
-										tokens.cacheRead,
-									),
-							})
-						}
-					}
-
-					try {
-						const modelId = this.api.getModel().id
-						let chunkCount = 0
-						while (!item.done) {
-							// Check for timeout
-							const time = performance.now() - startTime
-							if (this.abort || time > timeoutMs) {
-								console.warn(
-									`[Background Usage Collection] Cancelled after ${time}ms for model: ${modelId}, processed ${chunkCount} chunks`,
-								)
-								await iterator.return(undefined)
-								break
-							}
-
-							const chunk = item.value
-							item = await iterator.next()
-							chunkCount++
-
-							if (chunk && chunk.type === "usage") {
-								bgInputTokens += chunk.inputTokens
-								bgOutputTokens += chunk.outputTokens
-								bgCacheWriteTokens += chunk.cacheWriteTokens ?? 0
-								bgCacheReadTokens += chunk.cacheReadTokens ?? 0
-								bgTotalCost = chunk.totalCost
-							}
-						}
-
-						if (
-							bgInputTokens > 0 ||
-							bgOutputTokens > 0 ||
-							bgCacheWriteTokens > 0 ||
-							bgCacheReadTokens > 0
-						) {
-							// We have some usage data even if we didn't find a usage chunk
-							await captureUsageData(
-								{
-									input: bgInputTokens,
-									output: bgOutputTokens,
-									cacheWrite: bgCacheWriteTokens,
-									cacheRead: bgCacheReadTokens,
-									total: bgTotalCost,
-								},
-								lastApiReqIndex,
-							)
-						} else {
-							console.warn(
-								`[Background Usage Collection] Suspicious: request ${apiReqIndex} is complete, but no usage info was found. Model: ${modelId}`,
-							)
-							usageMissing = true
-							await refreshApiReqMsg(apiReqIndex)
-						}
-					} catch (error) {
-						console.error("Error draining stream for usage data:", error)
-						// Still try to capture whatever usage data we have collected so far
-						if (
-							bgInputTokens > 0 ||
-							bgOutputTokens > 0 ||
-							bgCacheWriteTokens > 0 ||
-							bgCacheReadTokens > 0
-						) {
-							await captureUsageData(
-								{
-									input: bgInputTokens,
-									output: bgOutputTokens,
-									cacheWrite: bgCacheWriteTokens,
-									cacheRead: bgCacheReadTokens,
-									total: bgTotalCost,
-								},
-								lastApiReqIndex,
-							)
-						} else {
-							usageMissing = true
-							await refreshApiReqMsg(apiReqIndex)
-						}
-					}
-				}
-
-				// Start the background task and handle any errors
-				drainStreamInBackgroundToFindAllUsage(lastApiReqIndex).catch((error) => {
-					console.error("Background usage collection failed:", error)
-				})
-				// kilocode_change end
-			} catch (error) {
-				// Abandoned happens when extension is no longer waiting for the
-				// Cline instance to finish aborting (error is thrown here when
-				// any function in the for loop throws due to this.abort).
-				if (!this.abandoned) {
-					// If the stream failed, there's various states the task
-					// could be in (i.e. could have streamed some tools the user
-					// may have executed), so we just resort to replicating a
-					// cancel task.
-
-					// Check if this was a user-initiated cancellation BEFORE calling abortTask
-					// If this.abort is already true, it means the user clicked cancel, so we should
-					// treat this as "user_cancelled" rather than "streaming_failed"
-					const cancelReason = this.abort ? "user_cancelled" : "streaming_failed"
-
-					const streamingFailedMessage = this.abort
-						? undefined
-						: (error.message ?? JSON.stringify(serializeError(error), null, 2))
-
-					// Now call abortTask after determining the cancel reason.
-					await this.abortTask()
-					await abortStream(cancelReason, streamingFailedMessage)
-
-					const history = await provider?.getTaskWithId(this.taskId)
-
-					if (history) {
-						await provider?.initClineWithHistoryItem(history.historyItem)
-					}
-				}
-			} finally {
-				this.isStreaming = false
-			}
-
-			// kilocode_change: pending upstream pr https://github.com/RooCodeInc/Roo-Code/pull/6122
-			//if (inputTokens > 0 || outputTokens > 0 || cacheWriteTokens > 0 || cacheReadTokens > 0) {
-			//	TelemetryService.instance.captureLlmCompletion(this.taskId, {
-			//		inputTokens,
-			//		outputTokens,
-			//		cacheWriteTokens,
-			//		cacheReadTokens,
-			//		cost:
-			//			totalCost ??
-			//			calculateApiCostAnthropic(
-			//				this.api.getModel().info,
-			//				inputTokens,
-			//				outputTokens,
-			//				cacheWriteTokens,
-			//				cacheReadTokens,
-			//			),
-			//	})
-			//}
-
-			// Need to call here in case the stream was aborted.
-			if (this.abort || this.abandoned) {
+			if (this.abort) {
 				throw new Error(
 					`[KiloCode#recursivelyMakeClineRequests] task ${this.taskId}.${this.instanceId} aborted`,
 				)
 			}
 
-			this.didCompleteReadingStream = true
+			if (this.consecutiveMistakeLimit > 0 && this.consecutiveMistakeCount >= this.consecutiveMistakeLimit) {
+				const { response, text, images } = await this.ask(
+					"mistake_limit_reached",
+					t("common:errors.mistake_limit_guidance"),
+				)
 
-			// Set any blocks to be complete to allow `presentAssistantMessage`
-			// to finish and set `userMessageContentReady` to true.
-			// (Could be a text block that had no subsequent tool uses, or a
-			// text block at the very end, or an invalid tool use, etc. Whatever
-			// the case, `presentAssistantMessage` relies on these blocks either
-			// to be completed or the user to reject a block in order to proceed
-			// and eventually set userMessageContentReady to true.)
-			const partialBlocks = this.assistantMessageContent.filter((block) => block.partial)
-			partialBlocks.forEach((block) => (block.partial = false))
+				if (response === "messageResponse") {
+					currentUserContent.push(
+						...[
+							{ type: "text" as const, text: formatResponse.tooManyMistakes(text) },
+							...formatResponse.imageBlocks(images),
+						],
+					)
 
-			// Can't just do this b/c a tool could be in the middle of executing.
-			// this.assistantMessageContent.forEach((e) => (e.partial = false))
+					await this.say("user_feedback", text, images)
 
-			// Now that the stream is complete, finalize any remaining partial content blocks
-			if (this.isAssistantMessageParserEnabled && this.assistantMessageParser) {
-				this.assistantMessageParser.finalizeContentBlocks()
-				this.assistantMessageContent = this.assistantMessageParser.getContentBlocks()
-			}
-			// When using old parser, no finalization needed - parsing already happened during streaming
-
-			if (partialBlocks.length > 0) {
-				// If there is content to update then it will complete and
-				// update `this.userMessageContentReady` to true, which we
-				// `pWaitFor` before making the next request. All this is really
-				// doing is presenting the last partial message that we just set
-				// to complete.
-				presentAssistantMessage(this)
-			}
-
-			await this.persistGpt5Metadata(reasoningMessage)
-
-			updateApiReqMsg()
-			await this.saveClineMessages()
-			await this.providerRef.deref()?.postStateToWebview()
-
-			// Reset parser after each complete conversation round
-			if (this.assistantMessageParser) {
-				this.assistantMessageParser.reset()
-			}
-
-			// Now add to apiConversationHistory.
-			// Need to save assistant responses to file before proceeding to
-			// tool use since user can exit at any moment and we wouldn't be
-			// able to save the assistant's response.
-			let didEndLoop = false
-
-			if (assistantMessage.length > 0) {
-				await this.addToApiConversationHistory({
-					role: "assistant",
-					content: [{ type: "text", text: assistantMessage }],
-				})
-
-				TelemetryService.instance.captureConversationMessage(this.taskId, "assistant")
-
-				// NOTE: This comment is here for future reference - this was a
-				// workaround for `userMessageContent` not getting set to true.
-				// It was due to it not recursively calling for partial blocks
-				// when `didRejectTool`, so it would get stuck waiting for a
-				// partial block to complete before it could continue.
-				// In case the content blocks finished it may be the api stream
-				// finished after the last parsed content block was executed, so
-				// we are able to detect out of bounds and set
-				// `userMessageContentReady` to true (note you should not call
-				// `presentAssistantMessage` since if the last block i
-				//  completed it will be presented again).
-				// const completeBlocks = this.assistantMessageContent.filter((block) => !block.partial) // If there are any partial blocks after the stream ended we can consider them invalid.
-				// if (this.currentStreamingContentIndex >= completeBlocks.length) {
-				// 	this.userMessageContentReady = true
-				// }
-
-				await pWaitFor(() => this.userMessageContentReady)
-
-				// If the model did not tool use, then we need to tell it to
-				// either use a tool or attempt_completion.
-				const didToolUse = this.assistantMessageContent.some((block) => block.type === "tool_use")
-
-				if (!didToolUse) {
-					this.userMessageContent.push({ type: "text", text: formatResponse.noToolsUsed() })
-					this.consecutiveMistakeCount++
+					// Track consecutive mistake errors in telemetry.
+					TelemetryService.instance.captureConsecutiveMistakeError(this.taskId)
 				}
 
-				// kilocode_change start: prevent excessive recursion
-				// e.g. https://github.com/RooCodeInc/Roo-Code/issues/5601#issuecomment-3120612488
-				await yieldPromise()
-				const recDidEndLoop = await this.recursivelyMakeClineRequests(
-					this.userMessageContent,
-					undefined,
-					recursionDepth + 1,
-				)
-				// kilocode_change end
-				didEndLoop = recDidEndLoop
-			} else {
-				// If there's no assistant_responses, that means we got no text
-				// or tool_use content blocks from API which we should assume is
-				// an error.
-				await this.say(
-					"error",
-					"Unexpected API Response: The language model did not provide any assistant messages. This may indicate an issue with the API or the model's output.",
-				)
-
-				// kilocode_change start
-				TelemetryService.instance.captureEvent(TelemetryEventName.NO_ASSISTANT_MESSAGES)
-				// kilocode_change end
-
-				await this.addToApiConversationHistory({
-					role: "assistant",
-					content: [{ type: "text", text: "Failure: I did not provide a response." }],
-				})
+				this.consecutiveMistakeCount = 0
 			}
 
-			return didEndLoop // Will always be false for now.
-		} catch (error) {
-			// This should never happen since the only thing that can throw an
-			// error is the attemptApiRequest, which is wrapped in a try catch
-			// that sends an ask where if noButtonClicked, will clear current
-			// task and destroy this instance. However to avoid unhandled
-			// promise rejection, we will end this loop which will end execution
-			// of this instance (see `startTask`).
-			return true // Needs to be true so parent loop knows to end task.
+			// In this Cline request loop, we need to check if this task instance
+			// has been asked to wait for a subtask to finish before continuing.
+			const provider = this.providerRef.deref()
+
+			if (this.isPaused && provider) {
+				provider.log(`[subtasks] paused ${this.taskId}.${this.instanceId}`)
+				await this.waitForResume()
+				provider.log(`[subtasks] resumed ${this.taskId}.${this.instanceId}`)
+				const currentMode = (await provider.getState())?.mode ?? defaultModeSlug
+
+				if (currentMode !== this.pausedModeSlug) {
+					// The mode has changed, we need to switch back to the paused mode.
+					await provider.handleModeSwitch(this.pausedModeSlug)
+
+					// Delay to allow mode change to take effect before next tool is executed.
+					await delay(500)
+
+					provider.log(
+						`[subtasks] task ${this.taskId}.${this.instanceId} has switched back to '${this.pausedModeSlug}' from '${currentMode}'`,
+					)
+				}
+			}
+
+			// Getting verbose details is an expensive operation, it uses ripgrep to
+			// top-down build file structure of project which for large projects can
+			// take a few seconds. For the best UX we show a placeholder api_req_started
+			// message with a loading spinner as this happens.
+
+			// Determine API protocol based on provider and model
+			const modelId = getModelId(this.apiConfiguration)
+			const apiProtocol = getApiProtocol(this.apiConfiguration.apiProvider, modelId)
+
+			await this.say(
+				"api_req_started",
+				JSON.stringify({
+					request:
+						currentUserContent.map((block) => formatContentBlockToMarkdown(block)).join("\n\n") +
+						"\n\nLoading...",
+					apiProtocol,
+				}),
+			)
+
+			const {
+				showRooIgnoredFiles = true,
+				includeDiagnosticMessages = true,
+				maxDiagnosticMessages = 50,
+				maxReadFileLine = -1,
+			} = (await this.providerRef.deref()?.getState()) ?? {}
+
+			// kilocode_change start
+			const [parsedUserContent, needsRulesFileCheck] = await processKiloUserContentMentions({
+				context: this.getContext(),
+				userContent: currentUserContent,
+				cwd: this.cwd,
+				urlContentFetcher: this.urlContentFetcher,
+				fileContextTracker: this.fileContextTracker,
+				rooIgnoreController: this.rooIgnoreController,
+				showRooIgnoredFiles,
+				includeDiagnosticMessages,
+				maxDiagnosticMessages,
+				maxReadFileLine,
+			})
+
+			if (needsRulesFileCheck) {
+				await this.say(
+					"error",
+					"Issue with processing the /newrule command. Double check that, if '.kilocode/rules' already exists, it's a directory and not a file. Otherwise there was an issue referencing this file/directory",
+				)
+			}
+			// kilocode_change end
+
+			const environmentDetails = await getEnvironmentDetails(this, currentIncludeFileDetails)
+
+			// Add environment details as its own text block, separate from tool
+			// results.
+			const finalUserContent = [...parsedUserContent, { type: "text" as const, text: environmentDetails }]
+
+			await this.addToApiConversationHistory({ role: "user", content: finalUserContent })
+			TelemetryService.instance.captureConversationMessage(this.taskId, "user")
+
+			// Since we sent off a placeholder api_req_started message to update the
+			// webview while waiting to actually start the API request (to load
+			// potential details for example), we need to update the text of that
+			// message.
+			const lastApiReqIndex = findLastIndex(this.clineMessages, (m) => m.say === "api_req_started")
+
+			this.clineMessages[lastApiReqIndex].text = JSON.stringify({
+				request: finalUserContent.map((block) => formatContentBlockToMarkdown(block)).join("\n\n"),
+				apiProtocol,
+			} satisfies ClineApiReqInfo)
+
+			await this.saveClineMessages()
+			await provider?.postStateToWebview()
+
+			try {
+				let cacheWriteTokens = 0
+				let cacheReadTokens = 0
+				let inputTokens = 0
+				let outputTokens = 0
+				let totalCost: number | undefined
+				let usageMissing = false // kilocode_change
+
+				// We can't use `api_req_finished` anymore since it's a unique case
+				// where it could come after a streaming message (i.e. in the middle
+				// of being updated or executed).
+				// Fortunately `api_req_finished` was always parsed out for the GUI
+				// anyways, so it remains solely for legacy purposes to keep track
+				// of prices in tasks from history (it's worth removing a few months
+				// from now).
+				const updateApiReqMsg = (cancelReason?: ClineApiReqCancelReason, streamingFailedMessage?: string) => {
+					if (lastApiReqIndex < 0 || !this.clineMessages[lastApiReqIndex]) {
+						return
+					}
+
+					const existingData = JSON.parse(this.clineMessages[lastApiReqIndex].text || "{}")
+					this.clineMessages[lastApiReqIndex].text = JSON.stringify({
+						...existingData,
+						tokensIn: inputTokens,
+						tokensOut: outputTokens,
+						cacheWrites: cacheWriteTokens,
+						cacheReads: cacheReadTokens,
+						cost:
+							totalCost ??
+							calculateApiCostAnthropic(
+								this.api.getModel().info,
+								inputTokens,
+								outputTokens,
+								cacheWriteTokens,
+								cacheReadTokens,
+							),
+						usageMissing, // kilocode_change
+						cancelReason,
+						streamingFailedMessage,
+					} satisfies ClineApiReqInfo)
+				}
+
+				const abortStream = async (cancelReason: ClineApiReqCancelReason, streamingFailedMessage?: string) => {
+					if (this.diffViewProvider.isEditing) {
+						await this.diffViewProvider.revertChanges() // closes diff view
+					}
+
+					// if last message is a partial we need to update and save it
+					const lastMessage = this.clineMessages.at(-1)
+
+					if (lastMessage && lastMessage.partial) {
+						// lastMessage.ts = Date.now() DO NOT update ts since it is used as a key for virtuoso list
+						lastMessage.partial = false
+						// instead of streaming partialMessage events, we do a save and post like normal to persist to disk
+						console.log("updating partial message", lastMessage)
+						// await this.saveClineMessages()
+					}
+
+					// Let assistant know their response was interrupted for when task is resumed
+					await this.addToApiConversationHistory({
+						role: "assistant",
+						content: [
+							{
+								type: "text",
+								text:
+									assistantMessage +
+									`\n\n[${
+										cancelReason === "streaming_failed"
+											? "Response interrupted by API Error"
+											: "Response interrupted by user"
+									}]`,
+							},
+						],
+					})
+
+					// Update `api_req_started` to have cancelled and cost, so that
+					// we can display the cost of the partial stream.
+					updateApiReqMsg(cancelReason, streamingFailedMessage)
+					await this.saveClineMessages()
+
+					// Signals to provider that it can retrieve the saved messages
+					// from disk, as abortTask can not be awaited on in nature.
+					this.didFinishAbortingStream = true
+				}
+
+				// Reset streaming state.
+				this.currentStreamingContentIndex = 0
+				this.currentStreamingDidCheckpoint = false
+				this.assistantMessageContent = []
+				this.didCompleteReadingStream = false
+				this.userMessageContent = []
+				this.userMessageContentReady = false
+				this.didRejectTool = false
+				this.didAlreadyUseTool = false
+				this.presentAssistantMessageLocked = false
+				this.presentAssistantMessageHasPendingUpdates = false
+				if (this.assistantMessageParser) {
+					this.assistantMessageParser.reset()
+				}
+
+				await this.diffViewProvider.reset()
+
+				// Yields only if the first chunk is successful, otherwise will
+				// allow the user to retry the request (most likely due to rate
+				// limit error, which gets thrown on the first chunk).
+				const stream = this.attemptApiRequest()
+				let assistantMessage = ""
+				let reasoningMessage = ""
+				this.isStreaming = true
+
+				try {
+					const iterator = stream[Symbol.asyncIterator]()
+					let item = await iterator.next()
+					while (!item.done) {
+						const chunk = item.value
+						item = await iterator.next()
+						if (!chunk) {
+							// Sometimes chunk is undefined, no idea that can cause
+							// it, but this workaround seems to fix it.
+							continue
+						}
+
+						switch (chunk.type) {
+							case "reasoning":
+								reasoningMessage += chunk.text
+								await this.say("reasoning", reasoningMessage, undefined, true)
+								break
+							case "usage":
+								inputTokens += chunk.inputTokens
+								outputTokens += chunk.outputTokens
+								cacheWriteTokens += chunk.cacheWriteTokens ?? 0
+								cacheReadTokens += chunk.cacheReadTokens ?? 0
+								totalCost = chunk.totalCost
+								break
+							case "text": {
+								assistantMessage += chunk.text
+
+								// Parse raw assistant message chunk into content blocks.
+								const prevLength = this.assistantMessageContent.length
+								if (this.isAssistantMessageParserEnabled && this.assistantMessageParser) {
+									this.assistantMessageContent = this.assistantMessageParser.processChunk(chunk.text)
+								} else {
+									// Use the old parsing method when experiment is disabled
+									this.assistantMessageContent = parseAssistantMessage(assistantMessage)
+								}
+
+								if (this.assistantMessageContent.length > prevLength) {
+									// New content we need to present, reset to
+									// false in case previous content set this to true.
+									this.userMessageContentReady = false
+								}
+
+								// Present content to user.
+								presentAssistantMessage(this)
+								break
+							}
+						}
+
+						if (this.abort) {
+							console.log(`aborting stream, this.abandoned = ${this.abandoned}`)
+
+							if (!this.abandoned) {
+								// Only need to gracefully abort if this instance
+								// isn't abandoned (sometimes OpenRouter stream
+								// hangs, in which case this would affect future
+								// instances of Cline).
+								await abortStream("user_cancelled")
+							}
+
+							break // Aborts the stream.
+						}
+
+						if (this.didRejectTool) {
+							// `userContent` has a tool rejection, so interrupt the
+							// assistant's response to present the user's feedback.
+							assistantMessage += "\n\n[Response interrupted by user feedback]"
+							// Instead of setting this preemptively, we allow the
+							// present iterator to finish and set
+							// userMessageContentReady when its ready.
+							// this.userMessageContentReady = true
+							break
+						}
+
+						if (this.didAlreadyUseTool) {
+							assistantMessage +=
+								"\n\n[Response interrupted by a tool use result. Only one tool may be used at a time and should be placed at the end of the message.]"
+							break
+						}
+					}
+
+					// Create a copy of current token values to avoid race conditions
+					const currentTokens = {
+						input: inputTokens,
+						output: outputTokens,
+						cacheWrite: cacheWriteTokens,
+						cacheRead: cacheReadTokens,
+						total: totalCost,
+					}
+
+					const drainStreamInBackgroundToFindAllUsage = async (apiReqIndex: number) => {
+						const timeoutMs = DEFAULT_USAGE_COLLECTION_TIMEOUT_MS
+						const startTime = Date.now()
+						const modelId = getModelId(this.apiConfiguration)
+
+						// Local variables to accumulate usage data without affecting the main flow
+						let bgInputTokens = currentTokens.input
+						let bgOutputTokens = currentTokens.output
+						let bgCacheWriteTokens = currentTokens.cacheWrite
+						let bgCacheReadTokens = currentTokens.cacheRead
+						let bgTotalCost = currentTokens.total
+
+						// kilocode_change start
+						const refreshApiReqMsg = async (messageIndex: number) => {
+							// Update the API request message with the latest usage data
+							updateApiReqMsg()
+							await this.saveClineMessages()
+
+							// Update the specific message in the webview
+							const apiReqMessage = this.clineMessages[messageIndex]
+							if (apiReqMessage) {
+								await this.updateClineMessage(apiReqMessage)
+							}
+						}
+						// kilocode_change end
+
+						// Helper function to capture telemetry and update messages
+						const captureUsageData = async (
+							tokens: {
+								input: number
+								output: number
+								cacheWrite: number
+								cacheRead: number
+								total?: number
+							},
+							messageIndex: number = apiReqIndex,
+						) => {
+							if (
+								tokens.input > 0 ||
+								tokens.output > 0 ||
+								tokens.cacheWrite > 0 ||
+								tokens.cacheRead > 0
+							) {
+								// Update the shared variables atomically
+								inputTokens = tokens.input
+								outputTokens = tokens.output
+								cacheWriteTokens = tokens.cacheWrite
+								cacheReadTokens = tokens.cacheRead
+								totalCost = tokens.total
+
+								// Update the API request message with the latest usage data
+								updateApiReqMsg()
+								await this.saveClineMessages()
+
+								// Update the specific message in the webview
+								const apiReqMessage = this.clineMessages[messageIndex]
+								if (apiReqMessage) {
+									await this.updateClineMessage(apiReqMessage)
+								}
+
+								// Capture telemetry
+								TelemetryService.instance.captureLlmCompletion(this.taskId, {
+									inputTokens: tokens.input,
+									outputTokens: tokens.output,
+									cacheWriteTokens: tokens.cacheWrite,
+									cacheReadTokens: tokens.cacheRead,
+									cost:
+										tokens.total ??
+										calculateApiCostAnthropic(
+											this.api.getModel().info,
+											tokens.input,
+											tokens.output,
+											tokens.cacheWrite,
+											tokens.cacheRead,
+										),
+								})
+							}
+						}
+
+						try {
+							// Continue processing the original stream from where the main loop left off
+							let usageFound = false
+							let chunkCount = 0
+
+							// Use the same iterator that the main loop was using
+							while (!item.done) {
+								// Check for timeout
+								if (Date.now() - startTime > timeoutMs) {
+									console.warn(
+										`[Background Usage Collection] Timed out after ${timeoutMs}ms for model: ${modelId}, processed ${chunkCount} chunks`,
+									)
+									// Clean up the iterator before breaking
+									if (iterator.return) {
+										await iterator.return(undefined)
+									}
+									break
+								}
+
+								const chunk = item.value
+								item = await iterator.next()
+								chunkCount++
+
+								if (chunk && chunk.type === "usage") {
+									usageFound = true
+									bgInputTokens += chunk.inputTokens
+									bgOutputTokens += chunk.outputTokens
+									bgCacheWriteTokens += chunk.cacheWriteTokens ?? 0
+									bgCacheReadTokens += chunk.cacheReadTokens ?? 0
+									bgTotalCost = chunk.totalCost
+								}
+							}
+
+							if (
+								usageFound ||
+								bgInputTokens > 0 ||
+								bgOutputTokens > 0 ||
+								bgCacheWriteTokens > 0 ||
+								bgCacheReadTokens > 0
+							) {
+								// We have usage data either from a usage chunk or accumulated tokens
+								await captureUsageData(
+									{
+										input: bgInputTokens,
+										output: bgOutputTokens,
+										cacheWrite: bgCacheWriteTokens,
+										cacheRead: bgCacheReadTokens,
+										total: bgTotalCost,
+									},
+									lastApiReqIndex,
+								)
+							} else {
+								console.warn(
+									`[Background Usage Collection] Suspicious: request ${apiReqIndex} is complete, but no usage info was found. Model: ${modelId}`,
+								)
+								// kilocode_change start
+								usageMissing = true
+								await refreshApiReqMsg(apiReqIndex)
+								// kilocode_change end
+							}
+						} catch (error) {
+							console.error("Error draining stream for usage data:", error)
+							// Still try to capture whatever usage data we have collected so far
+							if (
+								bgInputTokens > 0 ||
+								bgOutputTokens > 0 ||
+								bgCacheWriteTokens > 0 ||
+								bgCacheReadTokens > 0
+							) {
+								await captureUsageData(
+									{
+										input: bgInputTokens,
+										output: bgOutputTokens,
+										cacheWrite: bgCacheWriteTokens,
+										cacheRead: bgCacheReadTokens,
+										total: bgTotalCost,
+									},
+									lastApiReqIndex,
+								)
+								// kilocode_change start
+							} else {
+								usageMissing = true
+								await refreshApiReqMsg(apiReqIndex)
+								// kilocode_change end
+							}
+						}
+					}
+
+					// Start the background task and handle any errors
+					drainStreamInBackgroundToFindAllUsage(lastApiReqIndex).catch((error) => {
+						console.error("Background usage collection failed:", error)
+					})
+				} catch (error) {
+					// Abandoned happens when extension is no longer waiting for the
+					// Cline instance to finish aborting (error is thrown here when
+					// any function in the for loop throws due to this.abort).
+					if (!this.abandoned) {
+						// If the stream failed, there's various states the task
+						// could be in (i.e. could have streamed some tools the user
+						// may have executed), so we just resort to replicating a
+						// cancel task.
+
+						// Check if this was a user-initiated cancellation BEFORE calling abortTask
+						// If this.abort is already true, it means the user clicked cancel, so we should
+						// treat this as "user_cancelled" rather than "streaming_failed"
+						const cancelReason = this.abort ? "user_cancelled" : "streaming_failed"
+
+						const streamingFailedMessage = this.abort
+							? undefined
+							: (error.message ?? JSON.stringify(serializeError(error), null, 2))
+
+						// Now call abortTask after determining the cancel reason.
+						await this.abortTask()
+						await abortStream(cancelReason, streamingFailedMessage)
+
+						const history = await provider?.getTaskWithId(this.taskId)
+
+						if (history) {
+							await provider?.createTaskWithHistoryItem(history.historyItem)
+						}
+					}
+				} finally {
+					this.isStreaming = false
+				}
+
+				// Need to call here in case the stream was aborted.
+				if (this.abort || this.abandoned) {
+					throw new Error(
+						`[KiloCode#recursivelyMakeClineRequests] task ${this.taskId}.${this.instanceId} aborted`,
+					)
+				}
+
+				this.didCompleteReadingStream = true
+
+				// Set any blocks to be complete to allow `presentAssistantMessage`
+				// to finish and set `userMessageContentReady` to true.
+				// (Could be a text block that had no subsequent tool uses, or a
+				// text block at the very end, or an invalid tool use, etc. Whatever
+				// the case, `presentAssistantMessage` relies on these blocks either
+				// to be completed or the user to reject a block in order to proceed
+				// and eventually set userMessageContentReady to true.)
+				const partialBlocks = this.assistantMessageContent.filter((block) => block.partial)
+				partialBlocks.forEach((block) => (block.partial = false))
+
+				// Can't just do this b/c a tool could be in the middle of executing.
+				// this.assistantMessageContent.forEach((e) => (e.partial = false))
+
+				// Now that the stream is complete, finalize any remaining partial content blocks
+				if (this.isAssistantMessageParserEnabled && this.assistantMessageParser) {
+					this.assistantMessageParser.finalizeContentBlocks()
+					this.assistantMessageContent = this.assistantMessageParser.getContentBlocks()
+				}
+				// When using old parser, no finalization needed - parsing already happened during streaming
+
+				if (partialBlocks.length > 0) {
+					// If there is content to update then it will complete and
+					// update `this.userMessageContentReady` to true, which we
+					// `pWaitFor` before making the next request. All this is really
+					// doing is presenting the last partial message that we just set
+					// to complete.
+					presentAssistantMessage(this)
+				}
+
+				// Note: updateApiReqMsg() is now called from within drainStreamInBackgroundToFindAllUsage
+				// to ensure usage data is captured even when the stream is interrupted. The background task
+				// uses local variables to accumulate usage data before atomically updating the shared state.
+				await this.persistGpt5Metadata(reasoningMessage)
+				await this.saveClineMessages()
+				await this.providerRef.deref()?.postStateToWebview()
+
+				// Reset parser after each complete conversation round
+				if (this.assistantMessageParser) {
+					this.assistantMessageParser.reset()
+				}
+
+				// Now add to apiConversationHistory.
+				// Need to save assistant responses to file before proceeding to
+				// tool use since user can exit at any moment and we wouldn't be
+				// able to save the assistant's response.
+				let didEndLoop = false
+
+				if (assistantMessage.length > 0) {
+					await this.addToApiConversationHistory({
+						role: "assistant",
+						content: [{ type: "text", text: assistantMessage }],
+					})
+
+					TelemetryService.instance.captureConversationMessage(this.taskId, "assistant")
+
+					// NOTE: This comment is here for future reference - this was a
+					// workaround for `userMessageContent` not getting set to true.
+					// It was due to it not recursively calling for partial blocks
+					// when `didRejectTool`, so it would get stuck waiting for a
+					// partial block to complete before it could continue.
+					// In case the content blocks finished it may be the api stream
+					// finished after the last parsed content block was executed, so
+					// we are able to detect out of bounds and set
+					// `userMessageContentReady` to true (note you should not call
+					// `presentAssistantMessage` since if the last block i
+					//  completed it will be presented again).
+					// const completeBlocks = this.assistantMessageContent.filter((block) => !block.partial) // If there are any partial blocks after the stream ended we can consider them invalid.
+					// if (this.currentStreamingContentIndex >= completeBlocks.length) {
+					// 	this.userMessageContentReady = true
+					// }
+
+					await pWaitFor(() => this.userMessageContentReady)
+
+					// If the model did not tool use, then we need to tell it to
+					// either use a tool or attempt_completion.
+					const didToolUse = this.assistantMessageContent.some((block) => block.type === "tool_use")
+
+					if (!didToolUse) {
+						this.userMessageContent.push({ type: "text", text: formatResponse.noToolsUsed() })
+						this.consecutiveMistakeCount++
+					}
+
+					if (this.userMessageContent.length > 0) {
+						stack.push({
+							userContent: [...this.userMessageContent], // Create a copy to avoid mutation issues
+							includeFileDetails: false, // Subsequent iterations don't need file details
+						})
+
+						// Add periodic yielding to prevent blocking
+						await new Promise((resolve) => setImmediate(resolve))
+					}
+					// Continue to next iteration instead of setting didEndLoop from recursive call
+					continue
+				} else {
+					// If there's no assistant_responses, that means we got no text
+					// or tool_use content blocks from API which we should assume is
+					// an error.
+					await this.say(
+						"error",
+						"Unexpected API Response: The language model did not provide any assistant messages. This may indicate an issue with the API or the model's output.",
+					)
+
+					// kilocode_change start
+					TelemetryService.instance.captureEvent(TelemetryEventName.NO_ASSISTANT_MESSAGES)
+					// kilocode_change end
+
+					await this.addToApiConversationHistory({
+						role: "assistant",
+						content: [{ type: "text", text: "Failure: I did not provide a response." }],
+					})
+				}
+
+				// If we reach here without continuing, return false (will always be false for now)
+				return false
+			} catch (error) {
+				// This should never happen since the only thing that can throw an
+				// error is the attemptApiRequest, which is wrapped in a try catch
+				// that sends an ask where if noButtonClicked, will clear current
+				// task and destroy this instance. However to avoid unhandled
+				// promise rejection, we will end this loop which will end execution
+				// of this instance (see `startTask`).
+				return true // Needs to be true so parent loop knows to end task.
+			}
 		}
+
+		// If we exit the while loop normally (stack is empty), return false
+		return false
 	}
 
 	// kilocode_change start
@@ -2279,6 +2379,8 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					todoListEnabled: apiConfiguration?.todoListEnabled ?? true,
 					useAgentRules: vscode.workspace.getConfiguration("kilo-code").get<boolean>("useAgentRules") ?? true,
 				},
+				undefined, // todoList
+				this.api.getModel().id,
 			)
 		})()
 	}
@@ -2697,5 +2799,25 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 	public get cwd() {
 		return this.workspacePath
+	}
+
+	public get taskStatus(): TaskStatus {
+		if (this.interactiveAsk) {
+			return TaskStatus.Interactive
+		}
+
+		if (this.resumableAsk) {
+			return TaskStatus.Resumable
+		}
+
+		if (this.idleAsk) {
+			return TaskStatus.Idle
+		}
+
+		return TaskStatus.Running
+	}
+
+	public get taskAsk(): ClineMessage | undefined {
+		return this.idleAsk || this.resumableAsk || this.interactiveAsk
 	}
 }

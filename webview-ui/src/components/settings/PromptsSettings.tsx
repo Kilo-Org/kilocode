@@ -47,7 +47,7 @@ const PromptsSettings = ({
 	} = useExtensionState()
 
 	// Use props if provided, otherwise fall back to context
-	const includeTaskHistoryInEnhance = propsIncludeTaskHistoryInEnhance ?? contextIncludeTaskHistoryInEnhance
+	const includeTaskHistoryInEnhance = propsIncludeTaskHistoryInEnhance ?? contextIncludeTaskHistoryInEnhance ?? true
 	const setIncludeTaskHistoryInEnhance = propsSetIncludeTaskHistoryInEnhance ?? contextSetIncludeTaskHistoryInEnhance
 
 	const [testPrompt, setTestPrompt] = useState("")
@@ -236,7 +236,7 @@ const PromptsSettings = ({
 								<>
 									<div>
 										<VSCodeCheckbox
-											checked={includeTaskHistoryInEnhance || false}
+											checked={includeTaskHistoryInEnhance}
 											onChange={(e: any) => {
 												const value = e.target.checked
 												setIncludeTaskHistoryInEnhance(value)

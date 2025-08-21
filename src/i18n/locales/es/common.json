@@ -121,6 +121,9 @@
 		},
 		"qwenCode": {
 			"oauthLoadFailed": "Error al cargar credenciales OAuth. Por favor autentícate primero: {{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "El proveedor Roo requiere autenticación en la nube. Por favor, inicia sesión en Roo Code Cloud."
 		}
 	},
 	"warnings": {
