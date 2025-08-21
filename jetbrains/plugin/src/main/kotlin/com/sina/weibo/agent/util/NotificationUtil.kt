@@ -15,7 +15,7 @@ import com.intellij.openapi.project.ProjectManager
  */
 object NotificationUtil {
     
-    private const val NOTIFICATION_GROUP_ID = "RunVSAgent"
+    private const val NOTIFICATION_GROUP_ID = "kilocode"
     
     /**
      * Show error notification

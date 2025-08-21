@@ -47,8 +47,8 @@ class ExtensionManager : Disposable {
         val packageJson = gson.fromJson(packageJsonContent, PackageJson::class.java)
         
         // Create extension identifier
-        val name = "RunVSAgent."+packageJson.name
-        val publisher = "WeCode-AI"
+        val name = packageJson.name
+        val publisher = "Kilo Code"
         val extensionIdentifier = ExtensionIdentifier("$publisher.$name")
         
         // Create extension description
@@ -56,10 +56,10 @@ class ExtensionManager : Disposable {
             id = "${publisher}.${name}",
             identifier = extensionIdentifier,
             name = "${publisher}.${name}",
-            displayName = "RunVSAgent:"+packageJson.displayName,
-            description = "RunVSAgent:"+packageJson.description,
+            displayName = packageJson.displayName,
+            description = packageJson.description,
             version = packageJson.version ?: "1.0.0",
-            publisher = "WeCode-AI",
+            publisher = "Kilo Code",
             main = packageJson.main ?: "./dist/extension.js",
             activationEvents = packageJson.activationEvents ?: listOf("onStartupFinished"),
             extensionLocation = URI.file(extensionPath),

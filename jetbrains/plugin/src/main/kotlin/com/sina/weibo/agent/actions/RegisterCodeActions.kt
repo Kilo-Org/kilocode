@@ -170,7 +170,7 @@ fun registerCodeAction(
                 userInput = Messages.showInputDialog(
                     project,
                     inputPrompt,
-                    "RunVSAgent",
+                    "Kilo Code",
                     null,
                     inputPlaceholder,
                     null

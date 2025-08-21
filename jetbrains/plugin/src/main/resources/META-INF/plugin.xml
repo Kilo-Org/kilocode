@@ -7,11 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
     <!-- Unique identifier of the plugin. It should be FQN. It cannot be changed between the plugin versions. -->
-    <id>RunVSAgent</id>
+    <id>kilocode</id>
 
     <!-- Public plugin name should be written in Title Case.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-name -->
-    <name>RunVSAgent</name>
+    <name>Kilo Code</name>
 
     <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
     <vendor url="https://weibo.com">WeCode-AI</vendor>
@@ -20,78 +20,16 @@ SPDX-License-Identifier: Apache-2.0
          Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
     <description><![CDATA[
-        <h1>RunVSAgent - Run VSCode-based Coding Agents in JetBrains IDEs</h1>
-        <p>RunVSAgent is an innovative cross-platform development tool that enables developers to run VSCode-based coding agents and extensions within JetBrains IDEs (IntelliJ IDEA, WebStorm, PyCharm, etc.) or other IDE platforms.</p>
-        
-        <h2>Core Features</h2>
-        <ul>
-            <li><strong>VSCode Agent Compatibility</strong>: Seamlessly run VSCode-based coding agents in JetBrains IDEs</li>
-            <li><strong>Cross-IDE Development</strong>: Unified agent experience across different IDE platforms</li>
-            <li><strong>AI-Powered Assistance</strong>: Leverage advanced AI coding assistants for intelligent code generation</li>
-        </ul>
-        
-        <h2>Supported IDEs</h2>
-        <p>RunVSAgent currently supports the following JetBrains IDE series:</p>
-        <ul>
-            <li><strong>IntelliJ IDEA</strong> (Ultimate & Community)</li>
-            <li><strong>WebStorm</strong> - JavaScript and TypeScript development</li>
-            <li><strong>PyCharm</strong> (Professional & Community) - Python development</li>
-            <li><strong>PhpStorm</strong> - PHP development</li>
-            <li><strong>RubyMine</strong> - Ruby development</li>
-            <li><strong>CLion</strong> - C/C++ development</li>
-            <li><strong>GoLand</strong> - Go development</li>
-            <li><strong>DataGrip</strong> - Database development</li>
-            <li><strong>Rider</strong> - .NET development</li>
-            <li><strong>Android Studio</strong> - Android development</li>
-        </ul>
-        
-        <h2>Supported Agents</h2>
-        <ul>
-            <li><strong>Roo Code</strong>: Advanced AI-powered coding assistant with intelligent code generation and refactoring capabilities</li>
-        </ul>
-        
-        <h2>Requirements</h2>
-        <ul>
-            <li>Requires <a href="https://nodejs.org/">Node.js</a> v18+ installed</li>
-            <li>Requires JetBrains IDE version 2023.1 or later for optimal compatibility</li>
-        </ul>
-        
-        <h2>Benefits</h2>
-        <ul>
-            <li><strong>Increased Productivity</strong>: Access powerful AI coding assistants without leaving your preferred IDE</li>
-            <li><strong>Unified Workflow</strong>: Maintain a consistent development experience across different platforms</li>
-            <li><strong>Extensible Architecture</strong>: Support for new agents and extensions as they become available</li>
-        </ul>
-        
+        <h1>Kilo Code AI Agent</h1>
+        <p>Open Source AI coding assistant for planning, building, and fixing code.</p>
    ]]></description>
    
    <!-- Change notes for the plugin -->
    <change-notes><![CDATA[
-        <h3>Version 0.1.7</h3>
+        <h3>Version 0.X.X</h3>
         <ul>
-            <li>Updated Roo Code version to 3.25.15 with latest AI coding assistant features</li>
-            <li>Added support for no proxy configuration in restricted network environments</li>
-            <li>Added support for @terminal for improved user experience</li>
+            <li>Notes HERE</li>
         </ul>
-        
-        <h3>Version 0.1.6</h3>
-        <ul>
-            <li>Added proxy support for extension host to enable usage in restricted network environments</li>
-            <li>Fixed ConcurrentModificationException in EditorAndDocManager for improved stability</li>
-            <li>Updated Roo Code version to 3.25.10 with latest AI coding assistant features</li>
-            <li>Fixed an intermittent issue where an extra "}" character would appear at the end of the file.</li>
-        </ul>
-        
-        <h3>Version 0.1.5</h3>
-        <ul>
-            <li>Added system information display while webview is loading</li>
-            <li>Fixed issue where LocalResHandler attempted to load non-local resources</li>
-            <li>Enhanced logging for webview initialization process</li>
-            <li>Updated documentation and added known issues list</li>
-            <li>Improved README with star history and updated contributor information</li>
-        </ul>
-        
-
    ]]></change-notes>
 
     <!-- Product and plugin compatibility requirements.
@@ -106,11 +44,11 @@ SPDX-License-Identifier: Apache-2.0
         <postStartupActivity implementation="com.sina.weibo.agent.plugin.WecoderPlugin"/>
         <editorFactoryListener implementation="com.sina.weibo.agent.editor.EditorListener"/>
         <toolWindow factoryClass="com.sina.weibo.agent.ui.RooToolWindowFactory"
-                    id="RunVSAgent"
+                    id="kilocode"
                     secondary="true"
                     icon="/icons/wecoder-window.svg"
                     anchor="right" />
-        <notificationGroup id="RunVSAgent"
+        <notificationGroup id="kilocode"
                            displayType="BALLOON"/>
     </extensions>
 
@@ -119,7 +57,7 @@ SPDX-License-Identifier: Apache-2.0
     </extensions>
 
     <actions>
-        <action id="RunVSAgent.plusButtonClicked"
+        <action id="kilocode.plusButtonClicked"
                 icon="AllIcons.General.Add"
                 class="com.sina.weibo.agent.actions.PlusButtonClickAction"
                 text="New Task"
@@ -127,7 +65,7 @@ SPDX-License-Identifier: Apache-2.0
             <override-text place="GoToAction" text="New Task" />
         </action>
 
-        <action id="RunVSAgent.promptsButtonClicked"
+        <action id="kilocode.promptsButtonClicked"
                 icon="AllIcons.General.Information"
                 class="com.sina.weibo.agent.actions.PromptsButtonClickAction"
                 text="Prompt"
@@ -135,7 +73,7 @@ SPDX-License-Identifier: Apache-2.0
             <override-text place="GoToAction" text="Prompts" />
         </action>
 
-        <action id="RunVSAgent.mcpButtonClicked"
+        <action id="kilocode.mcpButtonClicked"
                 icon="AllIcons.Webreferences.Server"
                 class="com.sina.weibo.agent.actions.MCPButtonClickAction"
                 text="MCP Server"
@@ -143,7 +81,7 @@ SPDX-License-Identifier: Apache-2.0
             <override-text place="GoToAction" text="MCP Server" />
         </action>
 
-        <action id="RunVSAgent.historyButtonClicked"
+        <action id="kilocode.historyButtonClicked"
                 icon="AllIcons.Vcs.History"
                 class="com.sina.weibo.agent.actions.HistoryButtonClickAction"
                 text="History"
@@ -151,7 +89,7 @@ SPDX-License-Identifier: Apache-2.0
             <override-text place="GoToAction" text="History" />
         </action>
 
-        <action id="RunVSAgent.marketplaceButtonClicked"
+        <action id="kilocode.marketplaceButtonClicked"
                 icon="AllIcons.Actions.Install"
                 class="com.sina.weibo.agent.actions.MarketplaceButtonClickAction"
                 text="MCP Marketplace"
@@ -159,7 +97,7 @@ SPDX-License-Identifier: Apache-2.0
             <override-text place="GoToAction" text="Marketplace" />
         </action>
 
-        <action id="RunVSAgent.settingsButtonClicked"
+        <action id="kilocode.settingsButtonClicked"
                 icon="AllIcons.General.Settings"
                 class="com.sina.weibo.agent.actions.SettingsButtonClickAction"
                 text="Settings"
@@ -168,17 +106,17 @@ SPDX-License-Identifier: Apache-2.0
         </action>
 
         <group id="WecoderToolbarGroup">
-            <reference ref="RunVSAgent.plusButtonClicked" />
-            <reference ref="RunVSAgent.promptsButtonClicked" />
-            <reference ref="RunVSAgent.mcpButtonClicked" />
-            <reference ref="RunVSAgent.historyButtonClicked" />
-            <reference ref="RunVSAgent.marketplaceButtonClicked" />
-            <reference ref="RunVSAgent.settingsButtonClicked" />
+            <reference ref="kilocode.plusButtonClicked" />
+            <reference ref="kilocode.promptsButtonClicked" />
+            <reference ref="kilocode.mcpButtonClicked" />
+            <reference ref="kilocode.historyButtonClicked" />
+            <reference ref="kilocode.marketplaceButtonClicked" />
+            <reference ref="kilocode.settingsButtonClicked" />
         </group>
 
-        <group id="RunVSAgent.RightClickMenu" text="RunVSAgent" description="RunVSAgent main menu"  icon="/icons/weibo_logo_13px.svg" popup="true">
-            <group id="RunVSAgent.RightClick.Chat" class="com.sina.weibo.agent.actions.RightClickChatActionGroup"
-                   text="Chat" description="RunVSAgent chat tool"/>
+        <group id="kilocode.RightClickMenu" text="Kilo Code" description="kilocode main menu"  icon="/icons/weibo_logo_13px.svg" popup="true">
+            <group id="kilocode.RightClick.Chat" class="com.sina.weibo.agent.actions.RightClickChatActionGroup"
+                   text="Chat" description="kilocode chat tool"/>
             <add-to-group group-id="EditorPopupMenu" anchor="first"/>
         </group>
     </actions>

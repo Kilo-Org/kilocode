@@ -72,7 +72,7 @@ class MainThreadMessageService : MainThreadMessageServiceShape {
             val selectedIdx = Messages.showDialog(
                 project,
                 dialogMessage,
-                options["source"]?.let { (it as? Map<*, *>)?.get("label")?.toString() } ?: "RunVSAgent",
+                options["source"]?.let { (it as? Map<*, *>)?.get("label")?.toString() } ?: "kilocode",
                 buttonTitles.toTypedArray(),
                 if (cancelIdxFinal >= 0) cancelIdxFinal else 0,
                 // Choose different icons based on severity
@@ -101,7 +101,7 @@ class MainThreadMessageService : MainThreadMessageServiceShape {
             3 -> NotificationType.ERROR
             else -> NotificationType.INFORMATION
         }
-        val notification = NotificationGroupManager.getInstance().getNotificationGroup("RunVSAgent").createNotification(
+        val notification = NotificationGroupManager.getInstance().getNotificationGroup("kilocode").createNotification(
             message,
             notificationType
         )

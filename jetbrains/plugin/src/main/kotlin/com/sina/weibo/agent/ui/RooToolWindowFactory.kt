@@ -100,7 +100,7 @@ class RooToolWindowFactory : ToolWindowFactory {
             
             return buildString {
                 append("<html><body style='width: 300px;'>")
-                append("<p>RunVSAgent is initializing...")
+                append("<p>Kilo Code is initializing...")
                 append("<h3>System Information</h3>")
                 append("<table>")
                 append("<tr><td><b>CPU Architecture:</b></td><td>$osArch</td></tr>")
@@ -194,7 +194,8 @@ class RooToolWindowFactory : ToolWindowFactory {
         private val knownIssuesButton = JButton("Known Issues").apply {
             preferredSize = Dimension(150, 30)
             addActionListener {
-                BrowserUtil.browse("https://github.com/wecode-ai/RunVSAgent/blob/main/docs/KNOWN_ISSUES.md")
+                // TODO: Update to point to actual known issues documentation
+                BrowserUtil.browse("https://kilocode.ai/docs")
             }
         }
         

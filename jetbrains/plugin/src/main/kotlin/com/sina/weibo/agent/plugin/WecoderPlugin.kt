@@ -67,7 +67,7 @@ class WecoderPlugin : StartupActivity.DumbAware {
         val osArch = System.getProperty("os.arch")
         
         LOG.info(
-            "Initializing RunVSAgent plugin for project: ${project.name}, " +
+            "Initializing Kilo Code plugin for project: ${project.name}, " +
             "OS: $osName $osVersion ($osArch), " +
             "IDE: ${appInfo.fullApplicationName} (build ${appInfo.build}), " +
             "Plugin version: $pluginVersion, " +
@@ -85,14 +85,14 @@ class WecoderPlugin : StartupActivity.DumbAware {
             
             // Register project-level resource disposal
             Disposer.register(project, Disposable {
-                LOG.info("Disposing RunVSAgent plugin for project: ${project.name}")
+                LOG.info("Disposing Kilo Code plugin for project: ${project.name}")
                 pluginService.dispose()
                 SystemObjectProvider.dispose()
             })
-            
-            LOG.info("RunVSAgent plugin initialized successfully for project: ${project.name}")
+
+            LOG.info("Kilo Code plugin initialized successfully for project: ${project.name}")
         } catch (e: Exception) {
-            LOG.error("Failed to initialize RunVSAgent plugin", e)
+            LOG.error("Failed to initialize Kilo Code plugin", e)
         }
     }
 }
