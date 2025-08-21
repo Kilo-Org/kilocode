@@ -27,22 +27,28 @@ suspend fun doInvokeMethod(
 
             // Handle type mismatch caused by serialization (e.g., int serialized as double)
             val convertedArg = when {
-                arg is Double && paramType.type.isSubtypeOf(typeOf<Int>()) ->
+                arg is Double && (paramType.type.isSubtypeOf(typeOf<Int>()) ||
+                                 paramType.type.isSubtypeOf(typeOf<Int?>())) ->
                     arg.toInt()
 
-                arg is Double && paramType.type.isSubtypeOf(typeOf<Long>()) ->
+                arg is Double && (paramType.type.isSubtypeOf(typeOf<Long>()) ||
+                                 paramType.type.isSubtypeOf(typeOf<Long?>())) ->
                     arg.toLong()
 
-                arg is Double && paramType.type.isSubtypeOf(typeOf<Float>()) ->
+                arg is Double && (paramType.type.isSubtypeOf(typeOf<Float>()) ||
+                                 paramType.type.isSubtypeOf(typeOf<Float?>())) ->
                     arg.toFloat()
 
-                arg is Double && paramType.type.isSubtypeOf(typeOf<Short>()) ->
+                arg is Double && (paramType.type.isSubtypeOf(typeOf<Short>()) ||
+                                 paramType.type.isSubtypeOf(typeOf<Short?>())) ->
                     arg.toInt().toShort()
 
-                arg is Double && paramType.type.isSubtypeOf(typeOf<Byte>()) ->
+                arg is Double && (paramType.type.isSubtypeOf(typeOf<Byte>()) ||
+                                 paramType.type.isSubtypeOf(typeOf<Byte?>())) ->
                     arg.toInt().toByte()
 
-                arg is Double && paramType.type.isSubtypeOf(typeOf<Boolean>()) ->
+                arg is Double && (paramType.type.isSubtypeOf(typeOf<Boolean>()) ||
+                                 paramType.type.isSubtypeOf(typeOf<Boolean?>())) ->
                     arg != 0.0
 
                 else -> arg

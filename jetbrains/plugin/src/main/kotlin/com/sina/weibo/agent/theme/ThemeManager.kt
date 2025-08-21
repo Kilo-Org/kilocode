@@ -73,7 +73,7 @@ class ThemeManager : Disposable {
         logger.info("Initializing theme manager, resource root: $resourceRoot")
         
         // Set theme resource directory
-        themeResourceDir = Paths.get(resourceRoot, "src", "integrations", "theme", "default-themes")
+        themeResourceDir = Paths.get(resourceRoot, "integrations", "theme", "default-themes")
         
         // Check if resource directory exists
         if (themeResourceDir?.notExists() == true) {
@@ -454,6 +454,7 @@ class ThemeManager : Disposable {
                     notifyThemeChangeListeners()
                 }
             } else {
+                logger.warn("Theme configuration file does not exist: $themeResourceDir")
                 logger.warn("Theme configuration file does not exist: $themeFileName")
             }
         } catch (e: IOException) {

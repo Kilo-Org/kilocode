@@ -41,6 +41,10 @@ import java.util.*
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 import kotlin.io.path.pathString
+import java.awt.BorderLayout
+import javax.swing.JButton
+import javax.swing.JFrame
+import javax.swing.JPanel
 
 /**
  * WebView creation callback interface
@@ -251,6 +255,8 @@ class WebViewManager(var project: Project) : Disposable, ThemeChangeListener {
         val state = data.options["state"] as? Map<String, Any?> ?: emptyMap()
         
         val webview = WebViewInstance(data.viewType, viewId, title, state,project,data.extension)
+        // DEBUG HERE!
+        // webview.showDebugWindow()
 
         val proxy = protocol.getProxy(ServiceProxyRegistry.ExtHostContext.ExtHostWebviewViews)
         proxy.resolveWebviewView(viewId, data.viewType, title, state, null)
@@ -277,6 +283,7 @@ class WebViewManager(var project: Project) : Disposable, ThemeChangeListener {
          * @param data HTML update data
          */
     fun updateWebViewHtml(data: WebviewHtmlUpdateData) {
+        data.htmlContent = data.htmlContent.replace("/jetbrains/debug-resources/kilocode/", "./")
         val encodedState = getLatestWebView()?.state.toString().replace("\"", "\\\"")
         val mRst = """<script\s+nonce="([A-Za-z0-9]{32})">""".toRegex().find(data.htmlContent)
         val str = mRst?.value ?: ""
@@ -735,6 +742,7 @@ class WebViewInstance(
                 // Handle message
                 val protocol = project.getService(PluginContext::class.java).getRPCProtocol()
                 if (protocol != null) {
+                    logger.info("Received message from WebView: $message")
                     // Send message to plugin host
                     val serializeParam = SerializableObjectWithBuffers(emptyList<ByteArray>())
                     protocol.getProxy(ServiceProxyRegistry.ExtHostContext.ExtHostWebviews).onMessage(viewId, message, serializeParam)
@@ -775,6 +783,8 @@ class WebViewInstance(
 
             // Get JCEF client
             val client = browser.jbCefClient
+
+
 
             // Register console message handler
             client.addDisplayHandler(object: CefDisplayHandlerAdapter() {
@@ -832,6 +842,7 @@ class WebViewInstance(
                     logger.info("WebView load error: $failedUrl, error code: $errorCode, error message: $errorText")
                 }
             }, browser.cefBrowser)
+
             client.addRequestHandler(object : CefRequestHandlerAdapter() {
                 override fun onBeforeBrowse(
                     browser: CefBrowser?,
@@ -863,6 +874,7 @@ class WebViewInstance(
                         val path = Paths.get(fsPath)
                         return LocalResHandler(path.pathString,request)
                     }else{
+                        logger.error("Resource request handler not found for url: ${request?.url}")
                         return null
                     }
 
@@ -914,6 +926,25 @@ class WebViewInstance(
     fun openDevTools() {
         if (!isDisposed) {
             browser.openDevtools()
+        }
+    }
+
+    fun showDebugWindow() {
+        if (!isDisposed) {
+            ApplicationManager.getApplication().invokeLater {
+                val frame = JFrame("WebView Debug - $viewType")
+                frame.defaultCloseOperation = JFrame.DISPOSE_ON_CLOSE
+                frame.add(browser.component)
+                frame.setSize(800, 600)
+                frame.isVisible = true
+                
+                // Optional: Add dev tools button
+                val toolbar = JPanel()
+                val devToolsButton = JButton("Open DevTools")
+                devToolsButton.addActionListener { openDevTools() }
+                toolbar.add(devToolsButton)
+                frame.add(toolbar, BorderLayout.NORTH)
+            }
         }
     }
     

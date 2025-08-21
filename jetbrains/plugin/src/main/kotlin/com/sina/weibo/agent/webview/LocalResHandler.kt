@@ -19,8 +19,10 @@ import java.io.File
 
 
 class LocalResHandler(val resourcePath:String , val request: CefRequest?) : CefResourceRequestHandlerAdapter() {
+    private val logger = Logger.getInstance(LocalResHandler::class.java)
 
     override fun getResourceHandler(browser: CefBrowser?, frame: CefFrame?, request: CefRequest?): CefResourceHandler {
+        logger.info("getResourceHandler,resourcePath:${resourcePath},request:${request?.url}")
         return LocalCefResHandle(resourcePath,request)
     }
 
@@ -35,6 +37,7 @@ class LocalCefResHandle(val resourceBasePath: String, val request: CefRequest?) 
 
     init {
         val requestPath = request?.url?.decodeURLPart()?.replace("http://localhost:","")?.substringAfter("/")?.substringBefore("?")
+        logger.info("init LocalCefResHandle,requestPath:${requestPath},resourceBasePath:${resourceBasePath}")
         requestPath?.let {
             val filePath = if (requestPath.isEmpty()) {
                 "$resourceBasePath/index.html"
