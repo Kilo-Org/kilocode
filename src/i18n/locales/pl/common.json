@@ -64,6 +64,7 @@
 		"condensed_recently": "Kontekst został niedawno skondensowany; pomijanie tej próby",
 		"condense_handler_invalid": "Nieprawidłowy handler API do kondensowania kontekstu",
 		"condense_context_grew": "Rozmiar kontekstu wzrósł z {{prevContextTokens}} do {{newContextTokens}} podczas kondensacji; pomijanie tej próby",
+		"condense_aborted": "Context condensing was aborted",
 		"url_timeout": "Strona internetowa ładowała się zbyt długo (timeout). Może to być spowodowane wolnym połączeniem, ciężką stroną lub tymczasową niedostępnością. Możesz spróbować ponownie później lub sprawdzić, czy URL jest poprawny.",
 		"url_not_found": "Nie można znaleźć adresu strony internetowej. Sprawdź, czy URL jest poprawny i spróbuj ponownie.",
 		"no_internet": "Brak połączenia z internetem. Sprawdź połączenie sieciowe i spróbuj ponownie.",

@@ -64,6 +64,7 @@
 		"condensed_recently": "上下文最近已壓縮；跳過此次嘗試",
 		"condense_handler_invalid": "壓縮上下文的 API 處理程式無效",
 		"condense_context_grew": "壓縮過程中上下文大小從 {{prevContextTokens}} 增加到 {{newContextTokens}}；跳過此次嘗試",
+		"condense_aborted": "Context condensing was aborted",
 		"url_timeout": "網站載入超時。這可能是由於網路連線緩慢、網站負載過重或暫時無法使用。你可以稍後重試或檢查 URL 是否正確。",
 		"url_not_found": "找不到網站位址。請檢查 URL 是否正確並重試。",
 		"no_internet": "無網路連線。請檢查網路連線並重試。",

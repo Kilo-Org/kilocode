@@ -64,6 +64,7 @@
 		"condensed_recently": "Bağlam yakın zamanda sıkıştırıldı; bu deneme atlanıyor",
 		"condense_handler_invalid": "Bağlamı sıkıştırmak için API işleyicisi geçersiz",
 		"condense_context_grew": "Sıkıştırma sırasında bağlam boyutu {{prevContextTokens}} token'dan {{newContextTokens}} token'a arttı; bu deneme atlanıyor",
+		"condense_aborted": "Context condensing was aborted",
 		"url_timeout": "Web sitesi yüklenmesi çok uzun sürdü (zaman aşımı). Bu yavaş bağlantı, ağır web sitesi veya geçici olarak kullanılamama nedeniyle olabilir. Daha sonra tekrar deneyebilir veya URL'nin doğru olup olmadığını kontrol edebilirsin.",
 		"url_not_found": "Web sitesi adresi bulunamadı. URL'nin doğru olup olmadığını kontrol et ve tekrar dene.",
 		"no_internet": "İnternet bağlantısı yok. Ağ bağlantını kontrol et ve tekrar dene.",
