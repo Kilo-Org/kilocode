@@ -8,7 +8,7 @@ import { dirname } from "path"
 import { fileURLToPath } from "url"
 import { configurePortable } from "./bootstrap-node.js"
 import { bootstrapESM } from "./bootstrap-esm.js"
-import { resolveNLSConfiguration } from "./vs/base/node/nls.js"
+import { resolveNLSConfiguration } from "./deps/vscode/vs/base/node/nls.js"
 import { product } from "./bootstrap-meta.js"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -33,4 +33,4 @@ process.env["VSCODE_CLI"] = "1"
 await bootstrapESM()
 
 // Load Server
-await import("./vs/code/node/cli.js")
+await import("./deps/vscode/vs/code/node/cli.js")

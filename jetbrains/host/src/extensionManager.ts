@@ -7,10 +7,10 @@ import {
 	ExtensionIdentifier,
 	IExtensionDescription,
 	TargetPlatform,
-} from "../vscode/vs/platform/extensions/common/extensions.js"
-import { URI } from "../vscode/vs/base/common/uri.js"
-import { ExtHostContext } from "../vscode/vs/workbench/api/common/extHost.protocol.js"
-import { IRPCProtocol } from "../vscode/vs/workbench/services/extensions/common/proxyIdentifier.js"
+} from "../deps/vscode/vs/platform/extensions/common/extensions.js"
+import { URI } from "../deps/vscode/vs/base/common/uri.js"
+import { ExtHostContext } from "../deps/vscode/vs/workbench/api/common/extHost.protocol.js"
+import { IRPCProtocol } from "../deps/vscode/vs/workbench/services/extensions/common/proxyIdentifier.js"
 import * as fs from "fs"
 import * as path from "path"
 

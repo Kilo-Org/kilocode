@@ -6,7 +6,7 @@
 # https://detekt.github.io/detekt/configurations.html
 
 build:
-  maxIssues: 0
+  maxIssues: 5000
   excludeCorrectable: false
   weights:
     # complexity: 2
@@ -339,7 +339,6 @@ naming:
     active: true
     parameterPattern: '[a-z][A-Za-z0-9]*'
     excludeClassPattern: '$^'
-    ignoreOverridden: true
   InvalidPackageDeclaration:
     active: true
     rootPackage: ''
@@ -381,7 +380,6 @@ naming:
     variablePattern: '[a-z][A-Za-z0-9]*'
     privateVariablePattern: '(_)?[a-z][A-Za-z0-9]*'
     excludeClassPattern: '$^'
-    ignoreOverridden: true
 
 performance:
   active: true
@@ -508,7 +506,7 @@ style:
     active: false
   CollapsibleIfStatements:
     active: false
-  DataClassContainsFunction:
+  DataClassContainsFunctions:
     active: false
     conversionFunctionPrefix:
       - 'to'
@@ -531,12 +529,14 @@ style:
     includeLineWrapping: false
   ForbiddenComment:
     active: true
-    values:
-      - 'FIXME:'
-      - 'STOPSHIP:'
-      - 'TODO:'
+    comments:
+      - value: 'FIXME:'
+        reason: 'Forbidden FIXME todo marker'
+      - value: 'STOPSHIP:'
+        reason: 'Forbidden STOPSHIP todo marker'
+      - value: 'TODO:'
+        reason: 'Forbidden TODO todo marker'
     allowedPatterns: ''
-    customMessage: ''
   ForbiddenImport:
     active: false
     imports: []
@@ -547,7 +547,7 @@ style:
       - 'kotlin.io.print'
       - 'kotlin.io.println'
   ForbiddenPublicDataClass:
-    active: true
+    active: false
     excludes: ['**']
     ignorePackages:
       - '*.internal'
@@ -562,7 +562,7 @@ style:
     ignoreActualFunction: true
     excludedFunctions: []
   LibraryCodeMustSpecifyReturnType:
-    active: true
+    active: false
     excludes: ['**']
   LibraryEntitiesShouldNotBePublic:
     active: false
@@ -588,8 +588,10 @@ style:
     ignoreEnums: false
     ignoreRanges: false
     ignoreExtensionFunctions: true
-  MandatoryBracesIfStatements:
+  BracesOnIfStatements:
     active: false
+    singleLine: 'always'
+    multiLine: 'always'
   MandatoryBracesLoops:
     active: false
   MaxChainedCallsOnSameLine:

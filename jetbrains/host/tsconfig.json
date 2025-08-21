@@ -28,22 +28,22 @@
 		"src/**/*.ts", // Include all TS files under src
 		"src/**/*.js",
 		"electron.d.ts",
-		"vscode/typings",
-		"vscode/vs/workbench/api/node",
-		"vscode/vs/workbench/contrib/debug/common/debugProtocol.d.ts",
-		"vscode/vscode-dts/vscode.d.ts",
-		"vscode/vscode-dts/vscode.proposed.*.d.ts",
-		"vscode/vs/base/common/marked",
-		"vscode/vs/base/common/semver"
+		"deps/vscode/typings",
+		"deps/vscode/vs/workbench/api/node",
+		"deps/vscode/vs/workbench/contrib/debug/common/debugProtocol.d.ts",
+		"deps/vscode/vscode-dts/vscode.d.ts",
+		"deps/vscode/vscode-dts/vscode.proposed.*.d.ts",
+		"deps/vscode/vs/base/common/marked",
+		"deps/vscode/vs/base/common/semver"
 	],
 	"exclude": [
 		"node_modules",
 		".vscode-test",
 		"webview-ui",
-		"vscode/**/test/**/*.ts",
-		"vscode/**/test/**/*.js",
-		"vscode/**/fixtures/**/*.js",
-		"vscode/**/fixtures/**/*.ts",
+		"deps/vscode/**/test/**/*.ts",
+		"deps/vscode/**/test/**/*.js",
+		"deps/vscode/**/fixtures/**/*.js",
+		"deps/vscode/**/fixtures/**/*.ts",
 		"node_modules/@types/vscode",
 		"node_modules/@types/electron",
 		"dist/**/*"

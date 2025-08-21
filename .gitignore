@@ -54,3 +54,7 @@ logs
 
 # Exclude Conport Directory (MCP server)
 context_portal/
+
+# Submodules
+deps/vscode/*
+!deps/vscode/.git

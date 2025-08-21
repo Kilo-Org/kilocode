@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { createRequire } from "node:module"
-import type { IProductConfiguration } from "./vs/base/common/product.js"
+import type { IProductConfiguration } from "./deps/vscode/vs/base/common/product.js"
 
 const require = createRequire(import.meta.url)
 

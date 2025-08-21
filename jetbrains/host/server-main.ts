@@ -14,11 +14,11 @@ import { fileURLToPath } from "url"
 import minimist from "minimist"
 import { devInjectNodeModuleLookupPath, removeGlobalNodeJsModuleLookupPaths } from "./bootstrap-node.js"
 import { bootstrapESM } from "./bootstrap-esm.js"
-import { resolveNLSConfiguration } from "./vs/base/node/nls.js"
+import { resolveNLSConfiguration } from "./deps/vscode/vs/base/node/nls.js"
 import { product } from "./bootstrap-meta.js"
-import * as perf from "./vs/base/common/performance.js"
-import { INLSConfiguration } from "./vs/nls.js"
-import { IServerAPI } from "./vs/server/node/remoteExtensionHostAgentServer.js"
+import * as perf from "./deps/vscode/vs/base/common/performance.js"
+import { INLSConfiguration } from "./deps/vscode/vs/nls.js"
+import { IServerAPI } from "./deps/vscode/vs/server/node/remoteExtensionHostAgentServer.js"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -294,7 +294,7 @@ async function loadCode(nlsConfiguration: INLSConfiguration) {
 	await bootstrapESM()
 
 	// Load Server
-	return import("./vs/server/node/server.main.js")
+	return import("./deps/vscode/vs/server/node/server.main.js")
 }
 
 function hasStdinWithoutTty(): boolean {

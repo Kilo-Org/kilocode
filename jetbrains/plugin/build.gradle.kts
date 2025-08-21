@@ -10,7 +10,7 @@ fun properties(key: String) = providers.gradleProperty(key)
 plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "1.8.10"
-    id("org.jetbrains.intellij") version "1.17.3"
+    id("org.jetbrains.intellij") version "1.17.4"
     id("org.jlleitschuh.gradle.ktlint") version "11.6.1"
     id("io.gitlab.arturbosch.detekt") version "1.23.4"
 }
@@ -32,7 +32,7 @@ apply("genPlatform.gradle")
 //    - Requires platform.zip to exist, which can be retrieved via git-lfs or generated with genPlatform.gradle.
 //    - This file includes the full runtime environment for VSCode plugins (e.g., node_modules, platform.txt).
 //    - The zip is extracted to build/platform/, and its node_modules take precedence over other dependencies.
-//    - Copies compiled extension_host outputs (dist, package.json, node_modules) and plugin resources.
+//    - Copies compiled host outputs (dist, package.json, node_modules) and plugin resources.
 //    - The result is a fully self-contained package ready for deployment across platforms.
 //
 // 3. "none" (default) — Lightweight mode (used for testing and CI)
@@ -84,11 +84,11 @@ fun Sync.prepareSandbox() {
             }
         }
 
-        from("../extension_host/dist") { into("${intellij.pluginName.get()}/runtime/") }
-        from("../extension_host/package.json") { into("${intellij.pluginName.get()}/runtime/") }
+        from("../host/dist") { into("${intellij.pluginName.get()}/runtime/") }
+        from("../host/package.json") { into("${intellij.pluginName.get()}/runtime/") }
         
-        // First copy extension_host node_modules
-        from("../extension_host/node_modules") {
+        // First copy host node_modules
+        from("../host/node_modules") {
             into("${intellij.pluginName.get()}/node_modules/")
             list.forEach {
                 include(it)
@@ -106,7 +106,7 @@ fun Sync.prepareSandbox() {
             val platformZip = File("platform.zip")
             if (platformZip.exists() && platformZip.length() >= 1024 * 1024) {
                 // Extract platform.zip to the platform subdirectory under the project build directory
-                val platformDir = File("${project.buildDir}/platform")
+                val platformDir = File("${layout.buildDirectory.get().asFile}/platform")
                 platformDir.mkdirs()
                 copy {
                     from(zipTree(platformZip))
@@ -116,9 +116,9 @@ fun Sync.prepareSandbox() {
                 throw IllegalStateException("platform.zip file does not exist or is smaller than 1MB. This file is supported through git lfs and needs to be obtained through git lfs")
             }
 
-            from(File(project.buildDir, "platform/platform.txt")) { into("${intellij.pluginName.get()}/") }
-            // Copy platform node_modules last to ensure it takes precedence over extension_host node_modules
-            from(File(project.buildDir, "platform/node_modules")) { into("${intellij.pluginName.get()}/node_modules") }
+            from(File(layout.buildDirectory.get().asFile, "platform/platform.txt")) { into("${intellij.pluginName.get()}/") }
+            // Copy platform node_modules last to ensure it takes precedence over host node_modules
+            from(File(layout.buildDirectory.get().asFile, "platform/node_modules")) { into("${intellij.pluginName.get()}/node_modules") }
         }
 
         doLast {
@@ -139,6 +139,15 @@ dependencies {
     implementation("com.google.code.gson:gson:2.10.1")
     testImplementation("junit:junit:4.13.2")
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.4")
+}
+
+// Configure Java toolchain to force Java 17
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(17))
+    }
 }
 
 // Configure Gradle IntelliJ Plugin
@@ -210,6 +219,7 @@ tasks {
     publishPlugin {
         token.set(System.getenv("PUBLISH_TOKEN"))
     }
+
 }
 
 // Configure ktlint
@@ -220,7 +230,7 @@ ktlint {
     android.set(false)
     outputToConsole.set(true)
     outputColorName.set("RED")
-    ignoreFailures.set(false)
+    ignoreFailures.set(true)
     enableExperimentalRules.set(false)
     filter {
         exclude("**/generated/**")

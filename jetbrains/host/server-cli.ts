@@ -8,7 +8,7 @@ import { dirname, join } from "path"
 import { fileURLToPath } from "url"
 import { devInjectNodeModuleLookupPath } from "./bootstrap-node.js"
 import { bootstrapESM } from "./bootstrap-esm.js"
-import { resolveNLSConfiguration } from "./vs/base/node/nls.js"
+import { resolveNLSConfiguration } from "./deps/vscode/vs/base/node/nls.js"
 import { product } from "./bootstrap-meta.js"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -37,4 +37,4 @@ if (process.env["VSCODE_DEV"]) {
 await bootstrapESM()
 
 // Load Server
-await import("./vs/server/node/server.cli.js")
+await import("./deps/vscode/vs/server/node/server.cli.js")

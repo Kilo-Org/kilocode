@@ -10,12 +10,12 @@ import {
 	WebviewExtensionDescription as ExtHostWebviewExtensionDescription,
 	MainThreadWebviewsShape,
 	IWebviewContentOptions,
-} from "../vscode/vs/workbench/api/common/extHost.protocol.js"
-import { IRPCProtocol } from "../vscode/vs/workbench/services/extensions/common/proxyIdentifier.js"
-import { WebviewContentOptions } from "../vscode/vs/workbench/contrib/webview/browser/webview.js"
-import { URI } from "../vscode/vs/base/common/uri.js"
-import { CancellationToken } from "../vscode/vs/base/common/cancellation.js"
-import { VSBuffer } from "../vscode/vs/base/common/buffer.js"
+} from "../deps/vscode/vs/workbench/api/common/extHost.protocol.js"
+import { IRPCProtocol } from "../deps/vscode/vs/workbench/services/extensions/common/proxyIdentifier.js"
+import { WebviewContentOptions } from "../deps/vscode/vs/workbench/contrib/webview/browser/webview.js"
+import { URI } from "../deps/vscode/vs/base/common/uri.js"
+import { CancellationToken } from "../deps/vscode/vs/base/common/cancellation.js"
+import { VSBuffer } from "../deps/vscode/vs/base/common/buffer.js"
 
 /**
  * A simplified webview implementation that only includes methods used by WebViewManager

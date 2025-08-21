@@ -9,8 +9,8 @@ import { fileURLToPath } from "url"
 import { createRequire, register } from "node:module"
 import { product, pkg } from "./bootstrap-meta.js"
 import "./bootstrap-node.js"
-import * as performance from "./vs/base/common/performance.js"
-import { INLSConfiguration } from "./vs/nls.js"
+import * as performance from "./deps/vscode/vs/base/common/performance.js"
+import { INLSConfiguration } from "./deps/vscode/vs/nls.js"
 
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))

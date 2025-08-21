@@ -44,4 +44,7 @@ bin/
 ### Mac OS ###
 .DS_Store
 src/main/resources/com/sina/weibo/agent/plugin/config/plugin.properties
+
+### Deps ###
 prodDep.txt
+plugins

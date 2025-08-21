@@ -135,7 +135,7 @@ async function handleDisconnect() {
 
 console.log("Starting extension host process...")
 
-import start from "./vs/workbench/api/node/extensionHostProcess.js"
+import start from "./deps/vscode/vs/workbench/api/node/extensionHostProcess.js"
 
 // This line will trigger extension host related logic startup, actual logic is in extensionHostProcess,
 // Do not handle specific plugin business logic in subsequent content of this file

@@ -4,9 +4,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import net from "net"
-import start from "../vscode/vs/workbench/api/node/extensionHostProcess.js"
-import { FileRPCProtocolLogger } from "../vscode/vs/workbench/services/extensions/common/fileRPCProtocolLogger.js"
-import { RequestInitiator } from "../vscode/vs/workbench/services/extensions/common/rpcProtocol.js"
+import start from "../deps/vscode/vs/workbench/api/node/extensionHostProcess.js"
+import { FileRPCProtocolLogger } from "../deps/vscode/vs/workbench/services/extensions/common/fileRPCProtocolLogger.js"
+import { RequestInitiator } from "../deps/vscode/vs/workbench/services/extensions/common/rpcProtocol.js"
 
 // Create global logger instance and export for use by other modules
 export const fileLoggerGlobal = new FileRPCProtocolLogger("extension")

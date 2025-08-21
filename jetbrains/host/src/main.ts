@@ -7,9 +7,9 @@ import { fork } from "child_process"
 import * as path from "path"
 import { fileURLToPath } from "url"
 import * as net from "net"
-import { VSBuffer } from "../vscode/vs/base/common/buffer.js"
-import { NodeSocket } from "../vscode/vs/base/parts/ipc/node/ipc.net.js"
-import { PersistentProtocol } from "../vscode/vs/base/parts/ipc/common/ipc.net.js"
+import { VSBuffer } from "../deps/vscode/vs/base/common/buffer.js"
+import { NodeSocket } from "../deps/vscode/vs/base/parts/ipc/node/ipc.net.js"
+import { PersistentProtocol } from "../deps/vscode/vs/base/parts/ipc/common/ipc.net.js"
 import { DEBUG_PORT } from "./config.js"
 import {
 	MessageType,
@@ -17,10 +17,10 @@ import {
 	isMessageOfType,
 	UIKind,
 	IExtensionHostInitData,
-} from "../vscode/vs/workbench/services/extensions/common/extensionHostProtocol.js"
-import { SocketCloseEvent, SocketCloseEventType } from "../vscode/vs/base/parts/ipc/common/ipc.net.js"
-import { IDisposable } from "../vscode/vs/base/common/lifecycle.js"
-import { URI } from "../vscode/vs/base/common/uri.js"
+} from "../deps/vscode/vs/workbench/services/extensions/common/extensionHostProtocol.js"
+import { SocketCloseEvent, SocketCloseEventType } from "../deps/vscode/vs/base/parts/ipc/common/ipc.net.js"
+import { IDisposable } from "../deps/vscode/vs/base/common/lifecycle.js"
+import { URI } from "../deps/vscode/vs/base/common/uri.js"
 import { RPCManager } from "./rpcManager.js"
 import { ExtensionManager } from "./extensionManager.js"
 

@@ -3,6 +3,9 @@
 	"license": "Apache-2.0",
 	"type": "module",
 	"scripts": {
+		"deps:patch": "cd ../../deps/vscode && git reset --hard HEAD && git clean -fd && git apply ../patches/vscode/jetbrains.patch",
+		"deps:clean": "rimraf ./deps/vscode/*",
+		"deps:copy": "cp -R ../../deps/vscode/src/* ./deps/vscode",
 		"clean": "rimraf ./dist",
 		"build": "tsc",
 		"build:clean": "npm run clean && npm run build",
@@ -10,7 +13,8 @@
 		"dev": "tsc && node ./dist/src/main.js",
 		"watch:tsc": "tsc --watch",
 		"watch": "tsc --watch",
-		"build:extension": "tsc --noEmit && tsup"
+		"build:extension": "tsc --noEmit && tsup",
+		"prop:deps": "npm ls --prod --depth=10 --parseable > ../plugin/prodDep.txt"
 	},
 	"dependencies": {
 		"@c4312/eventsource-umd": "^3.0.5",
