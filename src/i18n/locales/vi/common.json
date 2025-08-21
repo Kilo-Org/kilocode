@@ -64,6 +64,7 @@
 		"condensed_recently": "Ngữ cảnh đã được nén gần đây; bỏ qua lần thử này",
 		"condense_handler_invalid": "Trình xử lý API để nén ngữ cảnh không hợp lệ",
 		"condense_context_grew": "Kích thước ngữ cảnh tăng từ {{prevContextTokens}} lên {{newContextTokens}} trong quá trình nén; bỏ qua lần thử này",
+		"condense_aborted": "Context condensing was aborted",
 		"url_timeout": "Trang web mất quá nhiều thời gian để tải (timeout). Điều này có thể do kết nối chậm, trang web nặng hoặc tạm thời không khả dụng. Bạn có thể thử lại sau hoặc kiểm tra xem URL có đúng không.",
 		"url_not_found": "Không thể tìm thấy địa chỉ trang web. Vui lòng kiểm tra URL có đúng không và thử lại.",
 		"no_internet": "Không có kết nối internet. Vui lòng kiểm tra kết nối mạng và thử lại.",

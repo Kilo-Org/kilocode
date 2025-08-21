@@ -64,6 +64,7 @@
 		"condensed_recently": "コンテキストは最近圧縮されました；この試行をスキップします",
 		"condense_handler_invalid": "コンテキストを圧縮するためのAPIハンドラーが無効です",
 		"condense_context_grew": "圧縮中にコンテキストサイズが{{prevContextTokens}}から{{newContextTokens}}に増加しました；この試行をスキップします",
+		"condense_aborted": "Context condensing was aborted",
 		"url_timeout": "ウェブサイトの読み込みがタイムアウトしました。接続が遅い、ウェブサイトが重い、または一時的に利用できない可能性があります。後でもう一度試すか、URLが正しいか確認してください。",
 		"url_not_found": "ウェブサイトのアドレスが見つかりませんでした。URLが正しいか確認してもう一度試してください。",
 		"no_internet": "インターネット接続がありません。ネットワーク接続を確認してもう一度試してください。",

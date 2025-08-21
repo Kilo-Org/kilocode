@@ -68,6 +68,7 @@
 		"condensed_recently": "O contexto foi condensado recentemente; pulando esta tentativa",
 		"condense_handler_invalid": "O manipulador de API para condensar o contexto é inválido",
 		"condense_context_grew": "O tamanho do contexto aumentou de {{prevContextTokens}} para {{newContextTokens}} durante a condensação; pulando esta tentativa",
+		"condense_aborted": "Context condensing was aborted",
 		"url_timeout": "O site demorou muito para carregar (timeout). Isso pode ser devido a uma conexão lenta, site pesado ou temporariamente indisponível. Você pode tentar novamente mais tarde ou verificar se a URL está correta.",
 		"url_not_found": "O endereço do site não pôde ser encontrado. Verifique se a URL está correta e tente novamente.",
 		"no_internet": "Sem conexão com a internet. Verifique sua conexão de rede e tente novamente.",
