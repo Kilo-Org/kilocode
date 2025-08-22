@@ -7,14 +7,14 @@ SPDX-License-Identifier: Apache-2.0
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
     <!-- Unique identifier of the plugin. It should be FQN. It cannot be changed between the plugin versions. -->
-    <id>kilocode</id>
+    <id>kilocode.kilo-code</id>
 
     <!-- Public plugin name should be written in Title Case.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-name -->
     <name>Kilo Code</name>
 
     <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
-    <vendor url="https://weibo.com">WeCode-AI</vendor>
+    <vendor url="https://kilocode.ai">Kilo Code</vendor>
 
     <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
          Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
@@ -40,42 +40,36 @@ SPDX-License-Identifier: Apache-2.0
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
-        <projectService serviceImplementation="com.sina.weibo.agent.plugin.WecoderPluginService"/>
-        <postStartupActivity implementation="com.sina.weibo.agent.plugin.WecoderPlugin"/>
-        <editorFactoryListener implementation="com.sina.weibo.agent.editor.EditorListener"/>
-        <toolWindow factoryClass="com.sina.weibo.agent.ui.RooToolWindowFactory"
+        <projectService serviceImplementation="ai.kilocode.jetbrains.plugin.WecoderPluginService"/>
+        <postStartupActivity implementation="ai.kilocode.jetbrains.plugin.WecoderPlugin"/>
+        <editorFactoryListener implementation="ai.kilocode.jetbrains.editor.EditorListener"/>
+        <toolWindow factoryClass="ai.kilocode.jetbrains.ui.RooToolWindowFactory"
                     id="kilocode"
                     secondary="true"
-                    icon="/icons/wecoder-window.svg"
+                    icon="/icons/kilo-dark.svg"
                     anchor="right" />
-        <notificationGroup id="kilocode"
-                           displayType="BALLOON"/>
+        <notificationGroup 
+                    id="kilocode" 
+                    displayType="BALLOON"
+        />
     </extensions>
 
     <extensions defaultExtensionNs="org.jetbrains.plugins.terminal">
-        <localTerminalCustomizer implementation="com.sina.weibo.agent.terminal.WeCoderTerminalCustomizer"/>
+        <localTerminalCustomizer implementation="ai.kilocode.jetbrains.terminal.WeCoderTerminalCustomizer"/>
     </extensions>
 
     <actions>
         <action id="kilocode.plusButtonClicked"
                 icon="AllIcons.General.Add"
-                class="com.sina.weibo.agent.actions.PlusButtonClickAction"
+                class="ai.kilocode.jetbrains.actions.PlusButtonClickAction"
                 text="New Task"
                 description="New task">
             <override-text place="GoToAction" text="New Task" />
         </action>
 
-        <action id="kilocode.promptsButtonClicked"
-                icon="AllIcons.General.Information"
-                class="com.sina.weibo.agent.actions.PromptsButtonClickAction"
-                text="Prompt"
-                description="Prompts">
-            <override-text place="GoToAction" text="Prompts" />
-        </action>
-
         <action id="kilocode.mcpButtonClicked"
                 icon="AllIcons.Webreferences.Server"
-                class="com.sina.weibo.agent.actions.MCPButtonClickAction"
+                class="ai.kilocode.jetbrains.actions.MCPButtonClickAction"
                 text="MCP Server"
                 description="MCP server">
             <override-text place="GoToAction" text="MCP Server" />
@@ -83,23 +77,23 @@ SPDX-License-Identifier: Apache-2.0
 
         <action id="kilocode.historyButtonClicked"
                 icon="AllIcons.Vcs.History"
-                class="com.sina.weibo.agent.actions.HistoryButtonClickAction"
+                class="ai.kilocode.jetbrains.actions.HistoryButtonClickAction"
                 text="History"
                 description="History">
             <override-text place="GoToAction" text="History" />
         </action>
 
-        <action id="kilocode.marketplaceButtonClicked"
-                icon="AllIcons.Actions.Install"
-                class="com.sina.weibo.agent.actions.MarketplaceButtonClickAction"
-                text="MCP Marketplace"
-                description="Marketplace">
-            <override-text place="GoToAction" text="Marketplace" />
+        <action id="kilocode.profileButtonClicked"
+                icon="AllIcons.Expui.General.User"
+                class="ai.kilocode.jetbrains.actions.ProfileButtonClickAction"
+                text="Profile"
+                description="Profile">
+            <override-text place="GoToAction" text="Profile" />
         </action>
 
         <action id="kilocode.settingsButtonClicked"
                 icon="AllIcons.General.Settings"
-                class="com.sina.weibo.agent.actions.SettingsButtonClickAction"
+                class="ai.kilocode.jetbrains.actions.SettingsButtonClickAction"
                 text="Settings"
                 description="Setting">
             <override-text place="GoToAction" text="Setting" />
@@ -114,8 +108,8 @@ SPDX-License-Identifier: Apache-2.0
             <reference ref="kilocode.settingsButtonClicked" />
         </group>
 
-        <group id="kilocode.RightClickMenu" text="Kilo Code" description="kilocode main menu"  icon="/icons/weibo_logo_13px.svg" popup="true">
-            <group id="kilocode.RightClick.Chat" class="com.sina.weibo.agent.actions.RightClickChatActionGroup"
+        <group id="kilocode.RightClickMenu" text="Kilo Code" description="kilocode main menu"  icon="/icons/kilo-dark-small.svg" popup="true">
+            <group id="kilocode.RightClick.Chat" class="ai.kilocode.jetbrains.actions.RightClickChatActionGroup"
                    text="Chat" description="kilocode chat tool"/>
             <add-to-group group-id="EditorPopupMenu" anchor="first"/>
         </group>

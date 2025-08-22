@@ -171,7 +171,7 @@ tasks {
     register("generateConfigProperties") {
         description = "Generate properties file containing plugin configuration"
         doLast {
-            val configDir = File("$projectDir/src/main/resources/com/sina/weibo/agent/plugin/config")
+            val configDir = File("$projectDir/src/main/resources/ai/kilocode/jetbrains/plugin/config")
             configDir.mkdirs()
 
             val configFile = File(configDir, "plugin.properties")
