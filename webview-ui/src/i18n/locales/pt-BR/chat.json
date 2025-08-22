@@ -206,7 +206,7 @@
 	"commandExecution": {
 		"running": "Executando",
 		"pid": "PID: {{pid}}",
-		"exited": "Encerrado ({{exitCode}})",
+		"exited": "Saiu ({{exitCode}})",
 		"manageCommands": "Gerenciar Permissões de Comando",
 		"commandManagementDescription": "Gerencie as permissões de comando: Clique em ✓ para permitir a execução automática, ✗ para negar a execução. Os padrões podem ser ativados/desativados ou removidos das listas. <settingsLink>Ver todas as configurações</settingsLink>",
 		"addToAllowed": "Adicionar à lista de permitidos",
@@ -217,7 +217,11 @@
 		"expandOutput": "Expandir saída",
 		"collapseOutput": "Recolher saída",
 		"expandManagement": "Expandir seção de gerenciamento de comandos",
-		"collapseManagement": "Recolher seção de gerenciamento de comandos"
+		"collapseManagement": "Recolher seção de gerenciamento de comandos",
+		"editCommand": "Editar comando",
+		"enterCommand": "Digite o comando...",
+		"save": "Salvar",
+		"cancel": "Cancelar"
 	},
 	"response": "Resposta",
 	"arguments": "Argumentos",

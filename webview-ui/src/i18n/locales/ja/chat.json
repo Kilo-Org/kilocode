@@ -217,7 +217,11 @@
 		"expandOutput": "出力を展開",
 		"collapseOutput": "出力を折りたたむ",
 		"expandManagement": "コマンド管理セクションを展開",
-		"collapseManagement": "コマンド管理セクションを折りたたむ"
+		"collapseManagement": "コマンド管理セクションを折りたたむ",
+		"editCommand": "コマンドを編集",
+		"enterCommand": "コマンドを入力...",
+		"save": "保存",
+		"cancel": "キャンセル"
 	},
 	"response": "応答",
 	"arguments": "引数",

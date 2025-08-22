@@ -206,7 +206,7 @@
 	"commandExecution": {
 		"running": "Executant",
 		"pid": "PID: {{pid}}",
-		"exited": "Finalitzat ({{exitCode}})",
+		"exited": "Sortida ({{exitCode}})",
 		"manageCommands": "Gestiona els permisos de les ordres",
 		"commandManagementDescription": "Gestiona els permisos de les ordres: Fes clic a ✓ per permetre l'execució automàtica, ✗ per denegar l'execució. Els patrons es poden activar/desactivar o eliminar de les llistes. <settingsLink>Mostra tots els paràmetres</settingsLink>",
 		"addToAllowed": "Afegeix a la llista de permesos",
@@ -217,7 +217,11 @@
 		"expandOutput": "Amplia la sortida",
 		"collapseOutput": "Redueix la sortida",
 		"expandManagement": "Amplia la secció de gestió d'ordres",
-		"collapseManagement": "Redueix la secció de gestió d'ordres"
+		"collapseManagement": "Redueix la secció de gestió d'ordres",
+		"editCommand": "Editar comanda",
+		"enterCommand": "Introdueix la comanda...",
+		"save": "Desa",
+		"cancel": "Cancel·la"
 	},
 	"response": "Resposta",
 	"arguments": "Arguments",

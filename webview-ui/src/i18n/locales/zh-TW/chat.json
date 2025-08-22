@@ -223,9 +223,9 @@
 	},
 	"commandOutput": "命令輸出",
 	"commandExecution": {
-		"running": "正在執行",
+		"running": "執行中",
 		"pid": "PID: {{pid}}",
-		"exited": "已結束 ({{exitCode}})",
+		"exited": "已退出 ({{exitCode}})",
 		"manageCommands": "管理命令權限",
 		"commandManagementDescription": "管理命令權限：點選 ✓ 允許自動執行，點選 ✗ 拒絕執行。規則可以開啟/關閉或從清單中移除。<settingsLink>檢視所有設定</settingsLink>",
 		"addToAllowed": "新增至允許清單",
@@ -236,7 +236,11 @@
 		"expandOutput": "展開輸出",
 		"collapseOutput": "摺疊輸出",
 		"expandManagement": "展開命令管理部分",
-		"collapseManagement": "摺疊命令管理部分"
+		"collapseManagement": "摺疊命令管理部分",
+		"editCommand": "編輯命令",
+		"enterCommand": "輸入命令...",
+		"save": "儲存",
+		"cancel": "取消"
 	},
 	"response": "回應",
 	"arguments": "參數",

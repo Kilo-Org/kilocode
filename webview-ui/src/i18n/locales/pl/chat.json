@@ -204,7 +204,7 @@
 	},
 	"commandOutput": "Wyjście polecenia",
 	"commandExecution": {
-		"running": "Wykonywanie",
+		"running": "W trakcie",
 		"pid": "PID: {{pid}}",
 		"exited": "Zakończono ({{exitCode}})",
 		"manageCommands": "Zarządzaj uprawnieniami poleceń",
@@ -217,7 +217,11 @@
 		"expandOutput": "Rozwiń wyjście",
 		"collapseOutput": "Zwiń wyjście",
 		"expandManagement": "Rozwiń sekcję zarządzania poleceniami",
-		"collapseManagement": "Zwiń sekcję zarządzania poleceniami"
+		"collapseManagement": "Zwiń sekcję zarządzania poleceniami",
+		"editCommand": "Edytuj polecenie",
+		"enterCommand": "Wprowadź polecenie...",
+		"save": "Zapisz",
+		"cancel": "Anuluj"
 	},
 	"response": "Odpowiedź",
 	"arguments": "Argumenty",
