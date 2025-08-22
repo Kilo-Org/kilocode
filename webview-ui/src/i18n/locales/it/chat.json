@@ -217,7 +217,11 @@
 		"expandOutput": "Espandi output",
 		"collapseOutput": "Comprimi output",
 		"expandManagement": "Espandi la sezione di gestione dei comandi",
-		"collapseManagement": "Comprimi la sezione di gestione dei comandi"
+		"collapseManagement": "Comprimi la sezione di gestione dei comandi",
+		"editCommand": "Modifica comando",
+		"enterCommand": "Inserisci comando...",
+		"save": "Salva",
+		"cancel": "Annulla"
 	},
 	"response": "Risposta",
 	"arguments": "Argomenti",

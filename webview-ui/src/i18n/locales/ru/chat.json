@@ -212,7 +212,11 @@
 		"expandOutput": "Развернуть вывод",
 		"collapseOutput": "Свернуть вывод",
 		"expandManagement": "Развернуть раздел управления командами",
-		"collapseManagement": "Свернуть раздел управления командами"
+		"collapseManagement": "Свернуть раздел управления командами",
+		"editCommand": "Редактировать команду",
+		"enterCommand": "Введите команду...",
+		"save": "Сохранить",
+		"cancel": "Отмена"
 	},
 	"response": "Ответ",
 	"arguments": "Аргументы",

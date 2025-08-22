@@ -237,7 +237,11 @@
 		"expandOutput": "ขยายผลลัพธ์",
 		"collapseOutput": "ยุบผลลัพธ์",
 		"expandManagement": "ขยายส่วนจัดการคำสั่ง",
-		"collapseManagement": "ยุบส่วนจัดการคำสั่ง"
+		"collapseManagement": "ยุบส่วนจัดการคำสั่ง",
+		"editCommand": "แก้ไขคำสั่ง",
+		"enterCommand": "ป้อนคำสั่ง...",
+		"save": "บันทึก",
+		"cancel": "ยกเลิก"
 	},
 	"response": "การตอบสนอง",
 	"arguments": "อาร์กิวเมนต์",

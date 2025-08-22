@@ -236,7 +236,11 @@
 		"expandOutput": "展開輸出",
 		"collapseOutput": "摺疊輸出",
 		"expandManagement": "展開命令管理部分",
-		"collapseManagement": "摺疊命令管理部分"
+		"collapseManagement": "摺疊命令管理部分",
+		"editCommand": "編輯命令",
+		"enterCommand": "輸入命令...",
+		"save": "儲存",
+		"cancel": "取消"
 	},
 	"response": "回應",
 	"arguments": "參數",

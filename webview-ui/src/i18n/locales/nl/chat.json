@@ -212,7 +212,11 @@
 		"expandOutput": "Uitvoer uitvouwen",
 		"collapseOutput": "Uitvoer samenvouwen",
 		"expandManagement": "Beheersectie voor commando's uitvouwen",
-		"collapseManagement": "Beheersectie voor commando's samenvouwen"
+		"collapseManagement": "Beheersectie voor commando's samenvouwen",
+		"editCommand": "Opdracht bewerken",
+		"enterCommand": "Voer opdracht in...",
+		"save": "Opslaan",
+		"cancel": "Annuleren"
 	},
 	"response": "Antwoord",
 	"arguments": "Argumenten",

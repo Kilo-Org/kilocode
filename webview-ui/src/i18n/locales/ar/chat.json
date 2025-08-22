@@ -241,7 +241,11 @@
 		"expandOutput": "توسيع المخرجات",
 		"collapseOutput": "طي المخرجات",
 		"expandManagement": "توسيع قسم إدارة الأوامر",
-		"collapseManagement": "طي قسم إدارة الأوامر"
+		"collapseManagement": "طي قسم إدارة الأوامر",
+		"editCommand": "تحرير الأمر",
+		"enterCommand": "أدخل الأمر...",
+		"save": "حفظ",
+		"cancel": "إلغاء"
 	},
 	"response": "الاستجابة",
 	"arguments": "المعطيات",

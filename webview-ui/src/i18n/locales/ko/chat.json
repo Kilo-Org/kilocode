@@ -217,7 +217,11 @@
 		"expandOutput": "출력 확장",
 		"collapseOutput": "출력 축소",
 		"expandManagement": "명령 관리 섹션 확장",
-		"collapseManagement": "명령 관리 섹션 축소"
+		"collapseManagement": "명령 관리 섹션 축소",
+		"editCommand": "명령어 수정",
+		"enterCommand": "명령어 입력...",
+		"save": "저장",
+		"cancel": "취소"
 	},
 	"response": "응답",
 	"arguments": "인수",

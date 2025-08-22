@@ -217,7 +217,11 @@
 		"expandOutput": "Amplia la sortida",
 		"collapseOutput": "Redueix la sortida",
 		"expandManagement": "Amplia la secció de gestió d'ordres",
-		"collapseManagement": "Redueix la secció de gestió d'ordres"
+		"collapseManagement": "Redueix la secció de gestió d'ordres",
+		"editCommand": "Editar comanda",
+		"enterCommand": "Introdueix la comanda...",
+		"save": "Desa",
+		"cancel": "Cancel·la"
 	},
 	"response": "Resposta",
 	"arguments": "Arguments",

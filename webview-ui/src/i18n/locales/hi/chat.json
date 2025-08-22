@@ -217,7 +217,11 @@
 		"expandOutput": "आउटपुट का विस्तार करें",
 		"collapseOutput": "आउटपुट संक्षिप्त करें",
 		"expandManagement": "कमांड प्रबंधन अनुभाग का विस्तार करें",
-		"collapseManagement": "कमांड प्रबंधन अनुभाग संक्षिप्त करें"
+		"collapseManagement": "कमांड प्रबंधन अनुभाग संक्षिप्त करें",
+		"editCommand": "कमांड संपादित करें",
+		"enterCommand": "कमांड दर्ज करें...",
+		"save": "सहेजें",
+		"cancel": "रद्द करें"
 	},
 	"response": "प्रतिक्रिया",
 	"arguments": "आर्ग्युमेंट्स",

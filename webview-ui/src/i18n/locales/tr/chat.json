@@ -217,7 +217,11 @@
 		"expandOutput": "Çıktıyı genişlet",
 		"collapseOutput": "Çıktıyı daralt",
 		"expandManagement": "Komut yönetimi bölümünü genişlet",
-		"collapseManagement": "Komut yönetimi bölümünü daralt"
+		"collapseManagement": "Komut yönetimi bölümünü daralt",
+		"editCommand": "Komutu düzenle",
+		"enterCommand": "Komut girin...",
+		"save": "Kaydet",
+		"cancel": "İptal"
 	},
 	"response": "Yanıt",
 	"arguments": "Argümanlar",

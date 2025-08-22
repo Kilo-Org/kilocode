@@ -217,7 +217,11 @@
 		"expandOutput": "Ausgabe erweitern",
 		"collapseOutput": "Ausgabe einklappen",
 		"expandManagement": "Befehlsverwaltungsbereich erweitern",
-		"collapseManagement": "Befehlsverwaltungsbereich einklappen"
+		"collapseManagement": "Befehlsverwaltungsbereich einklappen",
+		"editCommand": "Befehl bearbeiten",
+		"enterCommand": "Befehl eingeben...",
+		"save": "Speichern",
+		"cancel": "Abbrechen"
 	},
 	"response": "Antwort",
 	"arguments": "Argumente",

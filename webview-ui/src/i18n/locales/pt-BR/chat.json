@@ -217,7 +217,11 @@
 		"expandOutput": "Expandir saída",
 		"collapseOutput": "Recolher saída",
 		"expandManagement": "Expandir seção de gerenciamento de comandos",
-		"collapseManagement": "Recolher seção de gerenciamento de comandos"
+		"collapseManagement": "Recolher seção de gerenciamento de comandos",
+		"editCommand": "Editar comando",
+		"enterCommand": "Digite o comando...",
+		"save": "Salvar",
+		"cancel": "Cancelar"
 	},
 	"response": "Resposta",
 	"arguments": "Argumentos",
