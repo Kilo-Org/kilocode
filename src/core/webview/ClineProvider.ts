@@ -991,6 +991,7 @@ export class ClineProvider
 						window.IMAGES_BASE_URI = "${imagesUri}"
 						window.AUDIO_BASE_URI = "${audioUri}"
 						window.MATERIAL_ICONS_BASE_URI = "${materialIconsUri}"
+						window.KILOCODE_BASE_URL = ${process.env.KILOCODE_BASE_URL ? `"${process.env.KILOCODE_BASE_URL}"` : "undefined"}
 					</script>
 					<title>Kilo Code</title>
 				</head>
@@ -1065,6 +1066,7 @@ export class ClineProvider
 				window.IMAGES_BASE_URI = "${imagesUri}"
 				window.AUDIO_BASE_URI = "${audioUri}"
 				window.MATERIAL_ICONS_BASE_URI = "${materialIconsUri}"
+				window.KILOCODE_BASE_URL = ${process.env.KILOCODE_BASE_URL ? `"${process.env.KILOCODE_BASE_URL}"` : "undefined"}
 			</script>
             <title>Kilo Code</title>
           </head>
