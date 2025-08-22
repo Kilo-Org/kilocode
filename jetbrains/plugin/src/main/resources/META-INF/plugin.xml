@@ -44,7 +44,7 @@ SPDX-License-Identifier: Apache-2.0
         <postStartupActivity implementation="ai.kilocode.jetbrains.plugin.WecoderPlugin"/>
         <editorFactoryListener implementation="ai.kilocode.jetbrains.editor.EditorListener"/>
         <toolWindow factoryClass="ai.kilocode.jetbrains.ui.RooToolWindowFactory"
-                    id="kilocode"
+                    id="Kilo Code"
                     secondary="true"
                     icon="/icons/kilo-dark.svg"
                     anchor="right" />
@@ -84,7 +84,7 @@ SPDX-License-Identifier: Apache-2.0
         </action>
 
         <action id="kilocode.profileButtonClicked"
-                icon="AllIcons.Expui.General.User"
+                icon="AllIcons.General.User"
                 class="ai.kilocode.jetbrains.actions.ProfileButtonClickAction"
                 text="Profile"
                 description="Profile">
@@ -101,10 +101,9 @@ SPDX-License-Identifier: Apache-2.0
 
         <group id="WecoderToolbarGroup">
             <reference ref="kilocode.plusButtonClicked" />
-            <reference ref="kilocode.promptsButtonClicked" />
             <reference ref="kilocode.mcpButtonClicked" />
             <reference ref="kilocode.historyButtonClicked" />
-            <reference ref="kilocode.marketplaceButtonClicked" />
+            <reference ref="kilocode.profileButtonClicked" />
             <reference ref="kilocode.settingsButtonClicked" />
         </group>
 
