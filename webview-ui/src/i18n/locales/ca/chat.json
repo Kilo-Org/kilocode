@@ -206,7 +206,7 @@
 	"commandExecution": {
 		"running": "Executant",
 		"pid": "PID: {{pid}}",
-		"exited": "Finalitzat ({{exitCode}})",
+		"exited": "Sortida ({{exitCode}})",
 		"manageCommands": "Gestiona els permisos de les ordres",
 		"commandManagementDescription": "Gestiona els permisos de les ordres: Fes clic a ✓ per permetre l'execució automàtica, ✗ per denegar l'execució. Els patrons es poden activar/desactivar o eliminar de les llistes. <settingsLink>Mostra tots els paràmetres</settingsLink>",
 		"addToAllowed": "Afegeix a la llista de permesos",

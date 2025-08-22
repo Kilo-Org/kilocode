@@ -206,7 +206,7 @@
 	"commandExecution": {
 		"running": "In esecuzione",
 		"pid": "PID: {{pid}}",
-		"exited": "Terminato ({{exitCode}})",
+		"exited": "Uscito ({{exitCode}})",
 		"manageCommands": "Gestisci autorizzazioni comandi",
 		"commandManagementDescription": "Gestisci le autorizzazioni dei comandi: fai clic su ✓ per consentire l'esecuzione automatica, ✗ per negare l'esecuzione. I pattern possono essere attivati/disattivati o rimossi dagli elenchi. <settingsLink>Visualizza tutte le impostazioni</settingsLink>",
 		"addToAllowed": "Aggiungi all'elenco consentiti",

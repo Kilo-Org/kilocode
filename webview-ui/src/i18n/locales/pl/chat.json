@@ -204,7 +204,7 @@
 	},
 	"commandOutput": "Wyjście polecenia",
 	"commandExecution": {
-		"running": "Wykonywanie",
+		"running": "W trakcie",
 		"pid": "PID: {{pid}}",
 		"exited": "Zakończono ({{exitCode}})",
 		"manageCommands": "Zarządzaj uprawnieniami poleceń",

@@ -206,7 +206,7 @@
 	"commandExecution": {
 		"running": "Ejecutando",
 		"pid": "PID: {{pid}}",
-		"exited": "Finalizado ({{exitCode}})",
+		"exited": "Salida ({{exitCode}})",
 		"manageCommands": "Gestionar permisos de comandos",
 		"commandManagementDescription": "Gestionar permisos de comandos: Haz clic en ✓ para permitir la ejecución automática, ✗ para denegar la ejecución. Los patrones se pueden activar/desactivar o eliminar de las listas. <settingsLink>Ver todos los ajustes</settingsLink>",
 		"addToAllowed": "Añadir a la lista de permitidos",

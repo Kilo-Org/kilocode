@@ -230,7 +230,7 @@
 	"commandExecution": {
 		"running": "قيد التشغيل",
 		"pid": "معرف العملية: {{pid}}",
-		"exited": "تم الإنهاء ({{exitCode}})",
+		"exited": "تم الخروج ({{exitCode}})",
 		"manageCommands": "أدارة صلاحيات الأوامر",
 		"commandManagementDescription": "أدارة صلاحيات الأوامر: انقر ✓ للسماح بالتنفيذ التلقائي، ✗ لرفض التنفيذ. يمكن تشغيل/إيقاف الأنماط أو حذفها من القوائم. <settingsLink>عرض جميع الإعدادات</settingsLink>",
 		"addToAllowed": "أضف إلى قائمة المسموح",

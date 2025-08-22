@@ -220,7 +220,7 @@
 	},
 	"commandOutput": "Output Perintah",
 	"commandExecution": {
-		"running": "Menjalankan",
+		"running": "Berjalan",
 		"pid": "PID: {{pid}}",
 		"exited": "Keluar ({{exitCode}})",
 		"manageCommands": "Kelola Izin Perintah",

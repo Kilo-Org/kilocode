@@ -204,7 +204,7 @@
 	},
 	"commandOutput": "Sortie de commande",
 	"commandExecution": {
-		"running": "En cours d'exécution",
+		"running": "En cours",
 		"pid": "PID : {{pid}}",
 		"exited": "Terminé ({{exitCode}})",
 		"manageCommands": "Gérer les autorisations de commande",

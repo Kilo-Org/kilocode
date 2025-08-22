@@ -204,7 +204,7 @@
 	},
 	"commandOutput": "Befehlsausgabe",
 	"commandExecution": {
-		"running": "Wird ausgeführt",
+		"running": "Läuft",
 		"pid": "PID: {{pid}}",
 		"exited": "Beendet ({{exitCode}})",
 		"manageCommands": "Befehlsberechtigungen verwalten",
