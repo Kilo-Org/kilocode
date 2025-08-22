@@ -1804,6 +1804,7 @@ export class ClineProvider
 			language,
 			showAutoApproveMenu, // kilocode_change
 			showTaskTimeline, // kilocode_change
+			hideCostBelowThreshold, // kilocode_change
 			maxReadFileLine,
 			maxImageFileSize,
 			maxTotalImageSize,
@@ -1925,6 +1926,7 @@ export class ClineProvider
 			showRooIgnoredFiles: showRooIgnoredFiles ?? true,
 			showAutoApproveMenu: showAutoApproveMenu ?? false, // kilocode_change
 			showTaskTimeline: showTaskTimeline ?? true, // kilocode_change
+			hideCostBelowThreshold, // kilocode_change
 			language, // kilocode_change
 			renderContext: this.renderContext,
 			maxReadFileLine: maxReadFileLine ?? -1,
@@ -2125,6 +2127,7 @@ export class ClineProvider
 			showRooIgnoredFiles: stateValues.showRooIgnoredFiles ?? true,
 			showAutoApproveMenu: stateValues.showAutoApproveMenu ?? false, // kilocode_change
 			showTaskTimeline: stateValues.showTaskTimeline ?? true, // kilocode_change
+			hideCostBelowThreshold: stateValues.hideCostBelowThreshold, // kilocode_change
 			maxReadFileLine: stateValues.maxReadFileLine ?? -1,
 			maxImageFileSize: stateValues.maxImageFileSize ?? 5,
 			maxTotalImageSize: stateValues.maxTotalImageSize ?? 20,
