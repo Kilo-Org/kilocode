@@ -6,7 +6,7 @@ import { useTranslation, Trans } from "react-i18next"
 import deepEqual from "fast-deep-equal"
 import { VSCodeBadge, VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 
-import type { ClineMessage } from "@roo-code/types"
+import type { ClineMessage, ClineAsk } from "@roo-code/types"
 // import { Mode } from "@roo/modes" // kilocode_change
 
 import { ClineApiReqInfo, ClineAskUseMcpServer, ClineSayTool } from "@roo/ExtensionMessage"
@@ -70,6 +70,7 @@ interface ChatRowProps {
 	onFollowUpUnmount?: () => void
 	isFollowUpAnswered?: boolean
 	editable?: boolean
+	clineAsk?: ClineAsk // kilocode_change: Add clineAsk prop for command editing
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
@@ -130,6 +131,7 @@ export const ChatRowContent = ({
 	onChatReset, // kilocode_change
 	isFollowUpAnswered,
 	editable,
+	clineAsk, // kilocode_change: Add clineAsk prop
 }: ChatRowContentProps) => {
 	const { t } = useTranslation()
 	const { mcpServers, alwaysAllowMcp, currentCheckpoint } = useExtensionState()
@@ -1255,6 +1257,7 @@ export const ChatRowContent = ({
 							text={message.text}
 							icon={icon}
 							title={title}
+							isApprovalPending={clineAsk === "command" && message.ts === lastModifiedMessage?.ts}
 						/>
 					)
 				case "use_mcp_server":

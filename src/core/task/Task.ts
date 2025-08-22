@@ -842,7 +842,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 	handleWebviewAskResponse(askResponse: ClineAskResponse, text?: string, images?: string[]) {
 		this.askResponse = askResponse
-		this.askResponseText = text
+		if (text !== undefined) {
+			this.askResponseText = text
+		}
 		this.askResponseImages = images
 	}
 

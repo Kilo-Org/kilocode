@@ -1,6 +1,8 @@
 import { useCallback, useState, memo, useMemo } from "react"
 import { useEvent } from "react-use"
-import { ChevronDown, Skull } from "lucide-react"
+import { ChevronDown, Skull, Edit, Check, X } from "lucide-react"
+import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
+import { useTranslation } from "react-i18next"
 
 import { CommandExecutionStatus, commandExecutionStatusSchema } from "@roo-code/types"
 
@@ -28,9 +30,16 @@ interface CommandExecutionProps {
 	text?: string
 	icon?: JSX.Element | null
 	title?: JSX.Element | null
+	isApprovalPending?: boolean
 }
 
-export const CommandExecution = ({ executionId, text, icon, title }: CommandExecutionProps) => {
+export const CommandExecution = ({
+	executionId,
+	text,
+	icon,
+	title,
+	isApprovalPending = false,
+}: CommandExecutionProps) => {
 	const {
 		terminalShellIntegrationDisabled = true, // kilocode_change: default
 		allowedCommands = [],
@@ -39,7 +48,12 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 		setDeniedCommands,
 	} = useExtensionState()
 
+	const { t } = useTranslation()
+
 	const { command, output: parsedOutput } = useMemo(() => parseCommandAndOutput(text), [text])
+
+	const [isEditing, setIsEditing] = useState(false)
+	const [editedCommand, setEditedCommand] = useState("")
 
 	// If we aren't opening the VSCode terminal for this command then we default
 	// to expanding the command execution output.
@@ -77,6 +91,27 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 			pattern,
 		}))
 	}, [command])
+
+	const handleEditClick = useCallback(() => {
+		setEditedCommand(command)
+		setIsEditing(true)
+	}, [command])
+
+	const handleSaveEdit = useCallback(() => {
+		if (editedCommand.trim()) {
+			vscode.postMessage({
+				type: "updateCommandText",
+				messageTs: parseInt(executionId),
+				text: editedCommand,
+			})
+		}
+		setIsEditing(false)
+	}, [editedCommand, executionId])
+
+	const handleCancelEdit = useCallback(() => {
+		setIsEditing(false)
+		setEditedCommand("")
+	}, [])
 
 	// Handle pattern changes
 	const handleAllowPatternChange = (pattern: string) => {
@@ -149,7 +184,7 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 						{status?.status === "started" && (
 							<div className="flex flex-row items-center gap-2 font-mono text-xs">
 								<div className="rounded-full size-1.5 bg-lime-400" />
-								<div>Running</div>
+								<div>{t("chat:commandExecution.running")}</div>
 								{status.pid && <div className="whitespace-nowrap">(PID: {status.pid})</div>}
 								<Button
 									variant="ghost"
@@ -169,7 +204,9 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 										status.exitCode === 0 ? "bg-lime-400" : "bg-red-400",
 									)}
 								/>
-								<div className="whitespace-nowrap">Exited ({status.exitCode})</div>
+								<div className="whitespace-nowrap">
+									{t("chat:commandExecution.exited", { exitCode: status.exitCode })}
+								</div>
 							</div>
 						)}
 						{output.length > 0 && (
@@ -187,7 +224,56 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 
 			<div className="w-full bg-vscode-editor-background border border-vscode-border rounded-xs">
 				<div className="p-2">
-					<CodeBlock source={command} language="shell" />
+					{isEditing ? (
+						// 编辑模式
+						<div className="flex flex-col gap-2">
+							<VSCodeTextField
+								value={editedCommand}
+								onInput={(e: any) => setEditedCommand(e.target.value)}
+								className="w-full font-mono text-sm"
+								placeholder={t("chat:commandExecution.enterCommand")}
+								style={{
+									backgroundColor: "var(--vscode-input-background)",
+									border: "1px solid var(--vscode-focusBorder)",
+									boxShadow: "0 0 0 1px var(--vscode-focusBorder)",
+								}}
+							/>
+							<div className="flex flex-row gap-2">
+								<Button
+									variant="default"
+									size="sm"
+									onClick={handleSaveEdit}
+									className="flex items-center gap-1">
+									<Check className="w-3 h-3" />
+									{t("chat:commandExecution.save")}
+								</Button>
+								<Button
+									variant="secondary"
+									size="sm"
+									onClick={handleCancelEdit}
+									className="flex items-center gap-1">
+									<X className="w-3 h-3" />
+									{t("chat:commandExecution.cancel")}
+								</Button>
+							</div>
+						</div>
+					) : (
+						<div className="flex items-start justify-between gap-2">
+							<div className="flex-1">
+								<CodeBlock source={command} language="shell" />
+							</div>
+							{isApprovalPending && (
+								<Button
+									variant="ghost"
+									size="icon"
+									onClick={handleEditClick}
+									className="shrink-0 mt-1"
+									title={t("chat:commandExecution.editCommand")}>
+									<Edit className="w-4 h-4" />
+								</Button>
+							)}
+						</div>
+					)}
 					<OutputContainer isExpanded={isExpanded} output={output} />
 				</div>
 				{command && command.trim() && (

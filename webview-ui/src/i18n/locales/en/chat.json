@@ -236,7 +236,11 @@
 		"expandOutput": "Expand output",
 		"collapseOutput": "Collapse output",
 		"expandManagement": "Expand command management section",
-		"collapseManagement": "Collapse command management section"
+		"collapseManagement": "Collapse command management section",
+		"editCommand": "Edit command",
+		"enterCommand": "Enter command...",
+		"save": "Save",
+		"cancel": "Cancel"
 	},
 	"response": "Response",
 	"arguments": "Arguments",

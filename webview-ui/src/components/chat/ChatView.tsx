@@ -1654,6 +1654,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					highlighted={highlightedMessageIndex === index} // kilocode_change: add highlight prop
 					onFollowUpUnmount={handleFollowUpUnmount}
 					isFollowUpAnswered={messageOrGroup.ts === currentFollowUpTs}
+					clineAsk={clineAsk} // kilocode_change: pass clineAsk for command editing
 					editable={
 						messageOrGroup.type === "ask" &&
 						messageOrGroup.ask === "tool" &&
@@ -1687,6 +1688,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			highlightedMessageIndex, // kilocode_change: add highlightedMessageIndex
 			handleFollowUpUnmount,
 			currentFollowUpTs,
+			clineAsk, // kilocode_change: add clineAsk dependency
 			alwaysAllowUpdateTodoList,
 			enableButtons,
 			primaryButtonText,

@@ -3070,5 +3070,36 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
+
+		case "updateCommandText": {
+			if (message.messageTs && message.text) {
+				const currentTask = provider.getCurrentTask()
+				if (currentTask) {
+					const messageIndex = currentTask.clineMessages.findIndex((msg) => msg.ts === message.messageTs)
+
+					if (messageIndex !== -1) {
+						const targetMessage = currentTask.clineMessages[messageIndex]
+						if (targetMessage.type === "ask" && targetMessage.ask === "command") {
+							targetMessage.text = message.text
+							;(currentTask as any).askResponseText = message.text
+
+							try {
+								;(currentTask as any).saveClineMessages()
+								;(currentTask as any).updateClineMessage(targetMessage)
+
+								provider.log(
+									`Command text updated directly for message timestamp: ${message.messageTs}, new text: ${message.text}`,
+								)
+							} catch (error) {
+								provider.log(
+									`Error updating command text: ${error instanceof Error ? error.message : String(error)}`,
+								)
+							}
+						}
+					}
+				}
+			}
+			break
+		}
 	}
 }
