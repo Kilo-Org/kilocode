@@ -842,9 +842,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 	handleWebviewAskResponse(askResponse: ClineAskResponse, text?: string, images?: string[]) {
 		this.askResponse = askResponse
-		if (text !== undefined) {
-			this.askResponseText = text
-		}
+		this.askResponseText = text
 		this.askResponseImages = images
 	}
 
@@ -854,6 +852,20 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 	public denyAsk({ text, images }: { text?: string; images?: string[] } = {}) {
 		this.handleWebviewAskResponse("noButtonClicked", text, images)
+	}
+
+	private _modifiedCommandForApproval?: string
+
+	public setModifiedCommandForApproval(command: string, targetMessage: ClineMessage): void {
+		this._modifiedCommandForApproval = command
+		this.saveClineMessages()
+		this.updateClineMessage(targetMessage)
+	}
+
+	public consumeModifiedCommandForApproval(): string | undefined {
+		const command = this._modifiedCommandForApproval
+		this._modifiedCommandForApproval = undefined // Consume-once
+		return command
 	}
 
 	public submitUserMessage(text: string, images?: string[]): void {

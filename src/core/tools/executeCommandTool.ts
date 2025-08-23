@@ -55,14 +55,15 @@ export async function executeCommandTool(
 
 			command = unescapeHtmlEntities(command) // Unescape HTML entities.
 
-			const { response, text } = await task.ask("command", command, false)
+			const approvalResult = await askApproval("command", command, undefined, undefined, true)
+			if (typeof approvalResult === "boolean") {
+				if (!approvalResult) return
+			} else {
+				if (!approvalResult.approved) return
 
-			if (response !== "yesButtonClicked") {
-				return
-			}
-
-			if (text && text.trim()) {
-				command = text.trim()
+				if (approvalResult.text && approvalResult.text.trim()) {
+					command = approvalResult.text.trim()
+				}
 			}
 
 			const executionId = task.lastMessageTs?.toString() ?? Date.now().toString()

@@ -3081,12 +3081,8 @@ export const webviewMessageHandler = async (
 						const targetMessage = currentTask.clineMessages[messageIndex]
 						if (targetMessage.type === "ask" && targetMessage.ask === "command") {
 							targetMessage.text = message.text
-							;(currentTask as any).askResponseText = message.text
-
 							try {
-								;(currentTask as any).saveClineMessages()
-								;(currentTask as any).updateClineMessage(targetMessage)
-
+								currentTask.setModifiedCommandForApproval(message.text, targetMessage)
 								provider.log(
 									`Command text updated directly for message timestamp: ${message.messageTs}, new text: ${message.text}`,
 								)

@@ -225,7 +225,6 @@ export const CommandExecution = ({
 			<div className="w-full bg-vscode-editor-background border border-vscode-border rounded-xs">
 				<div className="p-2">
 					{isEditing ? (
-						// 编辑模式
 						<div className="flex flex-col gap-2">
 							<VSCodeTextField
 								value={editedCommand}
