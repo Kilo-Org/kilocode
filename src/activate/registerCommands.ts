@@ -10,6 +10,7 @@ import { exportSettings } from "../core/config/importExport" // kilocode_change
 import { ContextProxy } from "../core/config/ContextProxy"
 import { focusPanel } from "../utils/focusPanel"
 
+import { Orchestrator } from "../autor-orquestrador/orchestrator"
 import { registerHumanRelayCallback, unregisterHumanRelayCallback, handleHumanRelayResponse } from "./humanRelay"
 import { handleNewTask } from "./handleTask"
 import { CodeIndexManager } from "../services/code-index/manager"
@@ -73,7 +74,7 @@ export const registerCommands = (options: RegisterCommandOptions) => {
 	}
 }
 
-const getCommandsMap = ({ context, outputChannel }: RegisterCommandOptions): Record<CommandId, any> => ({
+const getCommandsMap = ({ context, outputChannel, provider }: RegisterCommandOptions): Record<CommandId, any> => ({
 	activationCompleted: () => {},
 	accountButtonClicked: () => {
 		const visibleProvider = getVisibleProviderOrLog(outputChannel)
@@ -257,6 +258,10 @@ const getCommandsMap = ({ context, outputChannel }: RegisterCommandOptions): Rec
 		})
 	},
 	// kilocode_change end
+	autorOrquestrador: async () => {
+		const orchestrator = new Orchestrator(context, outputChannel, provider)
+		await orchestrator.start()
+	},
 })
 
 export const openClineInNewTab = async ({ context, outputChannel }: Omit<RegisterCommandOptions, "provider">) => {
