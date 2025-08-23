@@ -18,7 +18,7 @@ vi.mock("../../prompts/responses", () => ({
 type MockClineInstance = { taskId: string }
 
 // Mock dependencies after modules are mocked
-const mockAskApproval = vi.fn<AskApproval>()
+const mockAskApproval = vi.fn()
 const mockHandleError = vi.fn<HandleError>()
 const mockPushToolResult = vi.fn()
 const mockRemoveClosingTag = vi.fn((_name: string, value: string | undefined) => value ?? "")
@@ -54,7 +54,13 @@ describe("newTaskTool", () => {
 	beforeEach(() => {
 		// Reset mocks before each test
 		vi.clearAllMocks()
-		mockAskApproval.mockResolvedValue(true) // Default to approved
+		mockAskApproval.mockImplementation((type, partialMessage, progressStatus, isProtected, isModifiable) => {
+			if (isModifiable === true) {
+				return Promise.resolve({ approved: true })
+			} else {
+				return Promise.resolve(true)
+			}
+		}) // Default to approved
 		vi.mocked(getModeBySlug).mockReturnValue({
 			slug: "code",
 			name: "Code Mode",
@@ -79,14 +85,14 @@ describe("newTaskTool", () => {
 		await newTaskTool(
 			mockCline as any, // Use 'as any' for simplicity in mocking complex type
 			block,
-			mockAskApproval, // Now correctly typed
+			mockAskApproval as AskApproval, // Now correctly typed
 			mockHandleError,
 			mockPushToolResult,
 			mockRemoveClosingTag,
 		)
 
 		// Verify askApproval was called
-		expect(mockAskApproval).toHaveBeenCalled()
+		expect(mockAskApproval as AskApproval).toHaveBeenCalled()
 
 		// Verify the message passed to createTask reflects the code's behavior in unit tests
 		expect(mockCreateTask).toHaveBeenCalledWith(
@@ -116,7 +122,7 @@ describe("newTaskTool", () => {
 		await newTaskTool(
 			mockCline as any,
 			block,
-			mockAskApproval, // Now correctly typed
+			mockAskApproval as AskApproval, // Now correctly typed
 			mockHandleError,
 			mockPushToolResult,
 			mockRemoveClosingTag,
@@ -143,7 +149,7 @@ describe("newTaskTool", () => {
 		await newTaskTool(
 			mockCline as any,
 			block,
-			mockAskApproval, // Now correctly typed
+			mockAskApproval as AskApproval, // Now correctly typed
 			mockHandleError,
 			mockPushToolResult,
 			mockRemoveClosingTag,
@@ -170,7 +176,7 @@ describe("newTaskTool", () => {
 		await newTaskTool(
 			mockCline as any,
 			block,
-			mockAskApproval, // Now correctly typed
+			mockAskApproval as AskApproval, // Now correctly typed
 			mockHandleError,
 			mockPushToolResult,
 			mockRemoveClosingTag,
