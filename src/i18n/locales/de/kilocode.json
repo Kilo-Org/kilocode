@@ -9,10 +9,10 @@
 	},
 	"lowCreditWarning": {
 		"title": "Warnung: Niedriges Guthaben!",
-		"message": "Prüfen Sie, ob Sie kostenloses Guthaben aufladen oder mehr kaufen können!"
+		"message": "Überprüfe, ob du kostenloses Guthaben einlösen oder mehr kaufen kannst!"
 	},
 	"task": {
-		"noAssistantMessages": "Die Antwort des Modells endete unerwartet (keine Assistant-Nachrichten). Dies könnte ein Hinweis auf Rate-Limiting sein.",
+		"noAssistantMessages": "Die Antwort des Modells endete unerwartet (keine Assistant-Nachrichten). Dies könnte ein Hinweis auf Raten-Limitierung sein.",
 		"notLoggedInError": "Anfrage kann nicht abgeschlossen werden. Stelle sicher, dass du mit dem ausgewählten Anbieter verbunden und angemeldet bist.\n\n{{error}}"
 	},
 	"rules": {
@@ -96,7 +96,7 @@
 		"chatParticipant": {
 			"name": "Agent",
 			"fullName": "Kilo Code Agent",
-			"description": "Ich kann Ihnen mit schnellen Aufgaben und vorgeschlagenen Änderungen helfen."
+			"description": "Ich kann dir mit schnellen Aufgaben und vorgeschlagenen Änderungen helfen."
 		},
 		"codeAction": {
 			"title": "Kilo Code: Vorgeschlagene Änderungen"
@@ -113,16 +113,16 @@
 	"terminalCommandGenerator": {
 		"inputPrompt": "Kilo: Beschreibe den Befehl, den du generieren möchtest",
 		"generatingProgress": "Kilo: Terminal-Befehl wird generiert...",
-		"noActiveTerminal": "Kilo: Kein aktives Terminal gefunden. Bitte öffnen Sie zuerst ein Terminal.",
+		"noActiveTerminal": "Kilo: Kein aktives Terminal gefunden. Bitte öffne zuerst ein Terminal.",
 		"inputPlaceholder": "z.B. den Prozess beenden, der auf Port 3001 läuft, große Dateien finden, usw.",
 		"generationFailed": "Kilo: Fehler beim Generieren des Befehls: {{error}}",
 		"commandGenerated": "Kilo: Generierter Befehl: {{command}}",
 		"warningDialog": {
 			"okButton": "Ich verstehe",
 			"title": "Sicherheitswarnung für das Terminal",
-			"message": "Überprüfen Sie alle generierten Befehle doppelt, bevor Sie sie ausführen. Terminal-Aktionen können nicht immer rückgängig gemacht werden - das Ausführen ungeprüfter Befehle kann zu irreversiblem Datenverlust oder Systemschäden führen. Überprüfen und verstehen Sie den Befehl vollständig, bevor Sie fortfahren!",
+			"message": "Überprüfe alle generierten Befehle doppelt, bevor du sie ausführst. Terminal-Aktionen können nicht immer rückgängig gemacht werden - das Ausführen ungeprüfter Befehle kann zu irreversiblem Datenverlust oder Systemschäden führen. Überprüfe und verstehe den Befehl vollständig, bevor du fortfährst!",
 			"cancelButton": "Abbrechen"
 		},
-		"tipMessage": "Kilo: Drücken Sie {{shortcut}}, um Terminal-Befehle zu generieren"
+		"tipMessage": "Kilo: Drücke {{shortcut}}, um Terminal-Befehle zu generieren"
 	}
 }
