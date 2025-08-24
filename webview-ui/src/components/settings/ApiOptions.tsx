@@ -1,7 +1,7 @@
 import React, { Fragment, memo, useCallback, useEffect, useMemo, useState } from "react" // kilocode_change Fragment
 import { convertHeadersToObject } from "./utils/headers"
 import { useDebounce } from "react-use"
-import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
+import { VSCodeLink, VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 // import { ExternalLinkIcon } from "@radix-ui/react-icons" // kilocode_change
 
 import {
@@ -34,6 +34,7 @@ import {
 	fireworksDefaultModelId,
 	ioIntelligenceDefaultModelId,
 	qwenCodeDefaultModelId,
+	rooDefaultModelId,
 } from "@roo-code/types"
 
 import { vscode } from "@src/utils/vscode"
@@ -117,7 +118,11 @@ import { KiloProviderRouting } from "./providers/KiloProviderRouting"
 export interface ApiOptionsProps {
 	uriScheme: string | undefined
 	apiConfiguration: ProviderSettings
-	setApiConfigurationField: <K extends keyof ProviderSettings>(field: K, value: ProviderSettings[K]) => void
+	setApiConfigurationField: <K extends keyof ProviderSettings>(
+		field: K,
+		value: ProviderSettings[K],
+		isUserAction?: boolean,
+	) => void
 	fromWelcomeView?: boolean
 	errorMessage: string | undefined
 	setErrorMessage: React.Dispatch<React.SetStateAction<string | undefined>>
@@ -140,6 +145,7 @@ const ApiOptions = ({
 		organizationAllowList,
 		uiKind, // kilocode_change
 		kilocodeDefaultModel,
+		cloudIsAuthenticated,
 	} = useExtensionState()
 
 	const [customHeaders, setCustomHeaders] = useState<[string, string][]>(() => {
@@ -310,7 +316,7 @@ const ApiOptions = ({
 				const shouldSetDefault = !modelId
 
 				if (shouldSetDefault) {
-					setApiConfigurationField(field, defaultValue)
+					setApiConfigurationField(field, defaultValue, false)
 				}
 			}
 
@@ -353,6 +359,7 @@ const ApiOptions = ({
 				},
 				fireworks: { field: "apiModelId", default: fireworksDefaultModelId },
 				"io-intelligence": { field: "ioIntelligenceModelId", default: ioIntelligenceDefaultModelId },
+				roo: { field: "apiModelId", default: rooDefaultModelId },
 				openai: { field: "openAiModelId" },
 				ollama: { field: "ollamaModelId" },
 				lmstudio: { field: "lmStudioModelId" },
@@ -664,6 +671,25 @@ const ApiOptions = ({
 
 			{selectedProvider === "fireworks" && (
 				<Fireworks apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
+			)}
+
+			{selectedProvider === "roo" && (
+				<div className="flex flex-col gap-3">
+					{cloudIsAuthenticated ? (
+						<div className="text-sm text-vscode-descriptionForeground">
+							{t("settings:providers.roo.authenticatedMessage")}
+						</div>
+					) : (
+						<div className="flex flex-col gap-2">
+							<VSCodeButton
+								appearance="primary"
+								onClick={() => vscode.postMessage({ type: "rooCloudSignIn" })}
+								className="w-fit">
+								{t("settings:providers.roo.connectButton")}
+							</VSCodeButton>
+						</div>
+					)}
+				</div>
 			)}
 
 			{selectedProviderModels.length > 0 && (

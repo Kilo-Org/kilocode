@@ -174,7 +174,7 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 			stream: true,
 			stream_options: { include_usage: true },
 			...(reasoning && reasoning),
-			...(service_tier && service_tier) // In beta for GPT-5, o3, o4-mini only
+			...(service_tier && { service_tier }), // In beta for GPT-5, o3, o4-mini only
 		})
 
 		yield* this.handleStreamResponse(stream, model)
@@ -185,27 +185,15 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 		systemPrompt: string,
 		messages: Anthropic.Messages.MessageParam[],
 	): ApiStream {
-<<<<<<< HEAD
-		const { reasoning, verbosity } = this.getModel()
-
-		// Prepare the request parameters
-		const params: any = {
-=======
-<<<<<<< Updated upstream
-		const stream = await this.client.chat.completions.create({
-=======
 		const { reasoning, verbosity, service_tier } = this.getModel()
 
 		// Prepare the request parameters
 		const params: any = {
->>>>>>> Stashed changes
->>>>>>> 76d925af8 (WIP: mid-merge snapshot from recover-stash)
 			model: model.id,
 			temperature: this.options.modelTemperature ?? OPENAI_NATIVE_DEFAULT_TEMPERATURE,
 			messages: [{ role: "system", content: systemPrompt }, ...convertToOpenAiMessages(messages)],
 			stream: true,
 			stream_options: { include_usage: true },
-<<<<<<< HEAD
 			...(reasoning && reasoning),
 		}
 
@@ -279,90 +267,6 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 			this.responseIdResolver = resolve
 		})
 
-=======
-<<<<<<< Updated upstream
-		})
-
-		yield* this.handleStreamResponse(stream, model)
-=======
-			...(reasoning && reasoning),
-			...(service_tier && service_tier) // In beta for GPT-5, o3, o4-mini only
-		}
-
-		// Add verbosity only if the model supports it
-		if (verbosity && model.info.supportsVerbosity) {
-			params.verbosity = verbosity
-		}
-		const stream = await this.client.chat.completions.create(params)
-
-		if (typeof (stream as any)[Symbol.asyncIterator] !== "function") {
-			throw new Error(
-				"OpenAI SDK did not return an AsyncIterable for streaming response. Please check SDK version and usage.",
-			)
-		}
-
-		yield* this.handleStreamResponse(
-			stream as unknown as AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>,
-			model,
-		)
-	}
-
-	private async *handleResponsesApiMessage(
-		model: OpenAiNativeModel,
-		systemPrompt: string,
-		messages: Anthropic.Messages.MessageParam[],
-		metadata?: ApiHandlerCreateMessageMetadata,
-	): ApiStream {
-		const { service_tier } = this.getModel()
-
-
-		// Prefer the official SDK Responses API with streaming; fall back to fetch-based SSE if needed.
-		const { verbosity } = this.getModel()
-
-		// Both GPT-5 and Codex Mini use the same v1/responses endpoint format
-
-
-		// Resolve reasoning effort (supports "minimal" for GPT‑5)
-		const reasoningEffort = this.getGpt5ReasoningEffort(model)
-
-		// Wait for any pending response ID from a previous request to be available
-		// This handles the race condition with fast nano model responses
-		let effectivePreviousResponseId = metadata?.previousResponseId
-
-		// Only allow fallback to pending/last response id when not explicitly suppressed
-		if (!metadata?.suppressPreviousResponseId) {
-			// If we have a pending response ID promise, wait for it to resolve
-			if (!effectivePreviousResponseId && this.responseIdPromise) {
-				try {
-					const resolvedId = await Promise.race([
-						this.responseIdPromise,
-						// Timeout after 100ms to avoid blocking too long
-						new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 100)),
-					])
-					if (resolvedId) {
-						effectivePreviousResponseId = resolvedId
-					}
-				} catch {
-					// Non-fatal if promise fails
-				}
-			}
-
-			// Fall back to the last known response ID if still not available
-			if (!effectivePreviousResponseId) {
-				effectivePreviousResponseId = this.lastResponseId
-			}
-		}
-
-		// Format input and capture continuity id
-		const { formattedInput, previousResponseId } = this.prepareGpt5Input(systemPrompt, messages, metadata)
-		const requestPreviousResponseId = effectivePreviousResponseId ?? previousResponseId
-
-		// Create a new promise for this request's response ID
-		this.responseIdPromise = new Promise<string | undefined>((resolve) => {
-			this.responseIdResolver = resolve
-		})
-
->>>>>>> 76d925af8 (WIP: mid-merge snapshot from recover-stash)
 		// Build a request body (also used for fallback)
 		// Ensure we explicitly pass max_output_tokens for GPT‑5 based on Roo's reserved model response calculation
 		// so requests do not default to very large limits (e.g., 120k).
@@ -375,10 +279,6 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 			temperature?: number
 			max_output_tokens?: number
 			previous_response_id?: string
-<<<<<<< HEAD
-=======
-			service_tier: string
->>>>>>> 76d925af8 (WIP: mid-merge snapshot from recover-stash)
 		}
 
 		const requestBody: Gpt5RequestBody = {
@@ -391,21 +291,12 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 					...(this.options.enableGpt5ReasoningSummary ? { summary: "auto" as const } : {}),
 				},
 			}),
-<<<<<<< HEAD
 			text: { verbosity: (verbosity || "medium") as VerbosityLevel },
-=======
-			)| "medium") as VerbosityLevel },
->>>>>>> 76d925af8 (WIP: mid-merge snapshot from recover-stash)
 			temperature: this.options.modelTemperature ?? GPT5_DEFAULT_TEMPERATURE,
 			// Explicitly include the calculated max output tokens for GPT‑5.
 			// Use the per-request reserved output computed by Roo (params.maxTokens from getModelParams).
 			...(model.maxTokens ? { max_output_tokens: model.maxTokens } : {}),
 			...(requestPreviousResponseId && { previous_response_id: requestPreviousResponseId }),
-<<<<<<< HEAD
-=======
-			...(service_tier && service_tier) // In beta for GPT-5, o3, o4-mini only
-
->>>>>>> 76d925af8 (WIP: mid-merge snapshot from recover-stash)
 		}
 
 		try {
@@ -1252,10 +1143,6 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 	private isResponsesApiModel(modelId: string): boolean {
 		// Both GPT-5 and Codex Mini use the v1/responses endpoint
 		return modelId.startsWith("gpt-5") || modelId === "codex-mini-latest"
-<<<<<<< HEAD
-=======
->>>>>>> Stashed changes
->>>>>>> 76d925af8 (WIP: mid-merge snapshot from recover-stash)
 	}
 
 	private async *handleStreamResponse(
@@ -1337,7 +1224,13 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 
 		// The o3 models are named like "o3-mini-[reasoning-effort]", which are
 		// not valid model ids, so we need to strip the suffix.
-		return { id: id.startsWith("o3-mini") ? "o3-mini" : id, info, ...params, verbosity: params.verbosity }
+		return {
+			id: id.startsWith("o3-mini") ? "o3-mini" : id,
+			info,
+			...params,
+			verbosity: params.verbosity,
+			service_tier: this.options.openAiNativeServiceTier,
+		}
 	}
 
 	/**

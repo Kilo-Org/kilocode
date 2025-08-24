@@ -121,9 +121,9 @@ export const webviewMessageHandler = async (
 	 * Handles confirmed message deletion from webview dialog
 	 */
 	const handleDeleteMessageConfirm = async (messageTs: number): Promise<void> => {
-		// Only proceed if we have a current cline
-		if (provider.getCurrentCline()) {
-			const currentCline = provider.getCurrentCline()!
+		// Only proceed if we have a current task.
+		if (provider.getCurrentTask()) {
+			const currentCline = provider.getCurrentTask()!
 			const { messageIndex, apiConversationHistoryIndex } = findMessageIndices(messageTs, currentCline)
 
 			if (messageIndex !== -1) {
@@ -134,7 +134,7 @@ export const webviewMessageHandler = async (
 					await removeMessagesThisAndSubsequent(currentCline, messageIndex, apiConversationHistoryIndex)
 
 					// Initialize with history item after deletion
-					await provider.initClineWithHistoryItem(historyItem)
+					await provider.createTaskWithHistoryItem(historyItem)
 				} catch (error) {
 					console.error("Error in delete message:", error)
 					vscode.window.showErrorMessage(
@@ -166,9 +166,9 @@ export const webviewMessageHandler = async (
 		editedContent: string,
 		images?: string[],
 	): Promise<void> => {
-		// Only proceed if we have a current cline
-		if (provider.getCurrentCline()) {
-			const currentCline = provider.getCurrentCline()!
+		// Only proceed if we have a current task.
+		if (provider.getCurrentTask()) {
+			const currentCline = provider.getCurrentTask()!
 
 			// Use findMessageIndices to find messages based on timestamp
 			const { messageIndex, apiConversationHistoryIndex } = findMessageIndices(messageTs, currentCline)
@@ -304,11 +304,11 @@ export const webviewMessageHandler = async (
 			// Initializing new instance of Cline will make sure that any
 			// agentically running promises in old instance don't affect our new
 			// task. This essentially creates a fresh slate for the new task.
-			await provider.initClineWithTask(message.text, message.images)
+			await provider.createTask(message.text, message.images)
 			break
 		// kilocode_change start
 		case "condense":
-			provider.getCurrentCline()?.handleWebviewAskResponse("yesButtonClicked")
+			provider.getCurrentTask()?.handleWebviewAskResponse("yesButtonClicked")
 			break
 		// kilocode_change end
 		case "customInstructions":
@@ -367,7 +367,7 @@ export const webviewMessageHandler = async (
 			await provider.postStateToWebview()
 			break
 		case "askResponse":
-			provider.getCurrentCline()?.handleWebviewAskResponse(message.askResponse!, message.text, message.images)
+			provider.getCurrentTask()?.handleWebviewAskResponse(message.askResponse!, message.text, message.images)
 			break
 		case "autoCondenseContext":
 			await updateGlobalState("autoCondenseContext", message.bool)
@@ -379,19 +379,23 @@ export const webviewMessageHandler = async (
 			break
 		case "terminalOperation":
 			if (message.terminalOperation) {
-				provider.getCurrentCline()?.handleTerminalOperation(message.terminalOperation)
+				provider.getCurrentTask()?.handleTerminalOperation(message.terminalOperation)
 			}
 			break
 		case "clearTask":
-			// clear task resets the current session and allows for a new task to be started, if this session is a subtask - it allows the parent task to be resumed
-			// Check if the current task actually has a parent task
-			const currentTask = provider.getCurrentCline()
+			// Clear task resets the current session and allows for a new task
+			// to be started, if this session is a subtask - it allows the
+			// parent task to be resumed.
+			// Check if the current task actually has a parent task.
+			const currentTask = provider.getCurrentTask()
+
 			if (currentTask && currentTask.parentTask) {
 				await provider.finishSubTask(t("common:tasks.canceled"))
 			} else {
 				// Regular task - just clear it
 				await provider.clearTask()
 			}
+
 			await provider.postStateToWebview()
 			break
 		case "didShowAnnouncement":
@@ -408,14 +412,15 @@ export const webviewMessageHandler = async (
 			})
 			break
 		case "exportCurrentTask":
-			const currentTaskId = provider.getCurrentCline()?.taskId
+			const currentTaskId = provider.getCurrentTask()?.taskId
 			if (currentTaskId) {
 				provider.exportTaskWithId(currentTaskId)
 			}
 			break
 		case "shareCurrentTask":
-			const shareTaskId = provider.getCurrentCline()?.taskId
-			const clineMessages = provider.getCurrentCline()?.clineMessages
+			const shareTaskId = provider.getCurrentTask()?.taskId
+			const clineMessages = provider.getCurrentTask()?.clineMessages
+
 			if (!shareTaskId) {
 				vscode.window.showErrorMessage(t("common:errors.share_no_active_task"))
 				break
@@ -764,7 +769,7 @@ export const webviewMessageHandler = async (
 			const result = checkoutDiffPayloadSchema.safeParse(message.payload)
 
 			if (result.success) {
-				await provider.getCurrentCline()?.checkpointDiff(result.data)
+				await provider.getCurrentTask()?.checkpointDiff(result.data)
 			}
 
 			break
@@ -775,13 +780,13 @@ export const webviewMessageHandler = async (
 				await provider.cancelTask()
 
 				try {
-					await pWaitFor(() => provider.getCurrentCline()?.isInitialized === true, { timeout: 3_000 })
+					await pWaitFor(() => provider.getCurrentTask()?.isInitialized === true, { timeout: 3_000 })
 				} catch (error) {
 					vscode.window.showErrorMessage(t("common:errors.checkpoint_timeout"))
 				}
 
 				try {
-					await provider.getCurrentCline()?.checkpointRestore(result.data)
+					await provider.getCurrentTask()?.checkpointRestore(result.data)
 				} catch (error) {
 					vscode.window.showErrorMessage(t("common:errors.checkpoint_failed"))
 				}
@@ -1290,14 +1295,14 @@ export const webviewMessageHandler = async (
 			}
 			break
 		case "deleteMessage": {
-			if (provider.getCurrentCline() && typeof message.value === "number" && message.value) {
+			if (provider.getCurrentTask() && typeof message.value === "number" && message.value) {
 				await handleMessageModificationsOperation(message.value, "delete")
 			}
 			break
 		}
 		case "submitEditedMessage": {
 			if (
-				provider.getCurrentCline() &&
+				provider.getCurrentTask() &&
 				typeof message.value === "number" &&
 				message.value &&
 				message.editedMessageContent
@@ -1439,7 +1444,7 @@ export const webviewMessageHandler = async (
 			break
 		// kilocode_change end
 		case "includeTaskHistoryInEnhance":
-			await updateGlobalState("includeTaskHistoryInEnhance", message.bool ?? false)
+			await updateGlobalState("includeTaskHistoryInEnhance", message.bool ?? true)
 			await provider.postStateToWebview()
 			break
 		case "condensingApiConfigId":
@@ -1467,6 +1472,7 @@ export const webviewMessageHandler = async (
 			if (message.text) {
 				try {
 					const state = await provider.getState()
+
 					const {
 						apiConfiguration,
 						customSupportPrompts,
@@ -1475,7 +1481,8 @@ export const webviewMessageHandler = async (
 						includeTaskHistoryInEnhance,
 					} = state
 
-					const currentCline = provider.getCurrentCline()
+					const currentCline = provider.getCurrentTask()
+
 					const result = await MessageEnhancer.enhanceMessage({
 						text: message.text,
 						apiConfiguration,
@@ -2332,7 +2339,7 @@ export const webviewMessageHandler = async (
 		}
 
 		case "reportBug":
-			provider.getCurrentCline()?.handleWebviewAskResponse("yesButtonClicked")
+			provider.getCurrentTask()?.handleWebviewAskResponse("yesButtonClicked")
 			break
 		// end kilocode_change
 		case "telemetrySetting": {

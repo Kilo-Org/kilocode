@@ -34,7 +34,7 @@ const resendMessageSequence = async (
 	images?: string[],
 ): Promise<boolean> => {
 	// 1. Get the current cline instance before deletion
-	const currentCline = provider.getCurrentCline()
+	const currentCline = provider.getCurrentTask()
 	if (!currentCline || currentCline.taskId !== taskId) {
 		provider.log(`[Edit Message] Error: Could not get current cline instance before deletion for task ${taskId}.`)
 		vscode.window.showErrorMessage(t("kilocode:userFeedback.message_update_failed"))
@@ -53,7 +53,7 @@ const resendMessageSequence = async (
 		return false
 	}
 
-	const newCline = await provider.initClineWithHistoryItem(historyItem)
+	const newCline = await provider.createTaskWithHistoryItem(historyItem)
 	if (!newCline) {
 		provider.log(
 			`[Edit Message] Error: Failed to re-initialize Cline with updated history item for task ${taskId}.`,
@@ -112,7 +112,7 @@ export const editMessageHandler = async (provider: ClineProvider, message: Webvi
 	const revert = message.values.revert || false
 	const images = message.values.images
 
-	const currentCline = provider.getCurrentCline()
+	const currentCline = provider.getCurrentTask()
 	if (!currentCline) {
 		provider.log("[Edit Message] Error: No active Cline instance found.")
 		return

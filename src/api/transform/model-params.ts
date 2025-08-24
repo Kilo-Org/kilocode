@@ -135,6 +135,13 @@ export function getModelParams({
 
 	const params: BaseModelParams = { maxTokens, temperature, reasoningEffort, reasoningBudget, verbosity }
 
+	// Some OpenAI models like o1(all) and o3-mini don't support temperature
+	// Note that OpenRouter's `supported_parameters` field includes
+	// `temperature`, which is probably a bug.
+	if (model.supportsTemperature === false) {
+		params.temperature = undefined
+	}
+
 	if (format === "anthropic") {
 		return {
 			format,
@@ -142,10 +149,8 @@ export function getModelParams({
 			reasoning: getAnthropicReasoning({ model, reasoningBudget, reasoningEffort, settings }),
 		}
 	} else if (format === "openai") {
-		// Special case for o1 and o3-mini, which don't support temperature.
-		// TODO: Add a `supportsTemperature` field to the model info.
-		if (modelId.startsWith("o1") || modelId.startsWith("o3-mini")) {
-			params.temperature = undefined
+		if (settings.openAiNativeServiceTier) {
+			;(params as any).service_tier = settings.openAiNativeServiceTier
 		}
 
 		return {
@@ -160,15 +165,6 @@ export function getModelParams({
 			reasoning: getGeminiReasoning({ model, reasoningBudget, reasoningEffort, settings }),
 		}
 	} else {
-		// Special case for o1-pro, which doesn't support temperature.
-		// Note that OpenRouter's `supported_parameters` field includes
-		// `temperature`, which is probably a bug.
-		// TODO: Add a `supportsTemperature` field to the model info and populate
-		// it appropriately in the OpenRouter fetcher.
-		if (modelId === "openai/o1-pro") {
-			params.temperature = undefined
-		}
-
 		return {
 			format,
 			...params,

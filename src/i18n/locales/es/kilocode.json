@@ -11,7 +11,10 @@
 		"title": "¡Advertencia de Crédito Bajo!",
 		"message": "¡Comprueba si puedes recargar con créditos gratuitos o comprar más!"
 	},
-	"notLoggedInError": "No se puede completar la solicitud, asegúrate de que estás conectado y has iniciado sesión con el proveedor seleccionado.\n\n{{error}}",
+	"task": {
+		"noAssistantMessages": "La respuesta del modelo terminó inesperadamente (sin mensajes del asistente). Esto puede ser una señal de limitación de tasa.",
+		"notLoggedInError": "No se puede completar la solicitud, asegúrate de que estás conectado y has iniciado sesión con el proveedor seleccionado.\n\n{{error}}"
+	},
 	"rules": {
 		"actions": {
 			"delete": "Eliminar",

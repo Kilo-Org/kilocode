@@ -3,6 +3,7 @@ import { getKiloBaseUriFromToken } from "../../../shared/kilocode/token"
 import { TelemetryService } from "@roo-code/telemetry"
 import { z } from "zod"
 import { fetchWithTimeout } from "./fetchWithTimeout"
+import { DEFAULT_HEADERS } from "../constants"
 
 type KilocodeToken = string
 
@@ -14,19 +15,15 @@ const defaultsSchema = z.object({
 
 const fetcher = fetchWithTimeout(5000)
 
-async function fetchKilocodeDefaultModel(kilocodeToken?: KilocodeToken): Promise<string> {
+async function fetchKilocodeDefaultModel(kilocodeToken: KilocodeToken): Promise<string> {
 	try {
-		const url = `${getKiloBaseUriFromToken(kilocodeToken ?? "")}/api/defaults`
-		const response = await fetcher(
-			url,
-			kilocodeToken
-				? {
-						headers: {
-							Authorization: `Bearer ${kilocodeToken}`,
-						},
-					}
-				: undefined,
-		)
+		const url = `${getKiloBaseUriFromToken(kilocodeToken)}/api/defaults`
+		const response = await fetcher(url, {
+			headers: {
+				...DEFAULT_HEADERS,
+				Authorization: `Bearer ${kilocodeToken}`,
+			},
+		})
 		if (!response.ok) {
 			throw new Error(`Fetching default model from ${url} failed: ${response.status}`)
 		}
@@ -44,10 +41,13 @@ async function fetchKilocodeDefaultModel(kilocodeToken?: KilocodeToken): Promise
 }
 
 export async function getKilocodeDefaultModel(kilocodeToken?: KilocodeToken): Promise<string> {
+	if (!kilocodeToken) {
+		return openRouterDefaultModelId
+	}
 	let defaultModelPromise = cache.get(kilocodeToken ?? "")
 	if (!defaultModelPromise) {
 		defaultModelPromise = fetchKilocodeDefaultModel(kilocodeToken)
-		cache.set(kilocodeToken ?? "", defaultModelPromise)
+		cache.set(kilocodeToken, defaultModelPromise)
 	}
 	return await defaultModelPromise
 }

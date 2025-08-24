@@ -219,7 +219,7 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 			TelemetryService.instance.captureException(e, { context: "getEnvironmentDetails" })
 			await cline.say(
 				"error",
-				t("kilocode:notLoggedInError", { error: e instanceof Error ? e.message : String(e) }),
+				t("kilocode:task.notLoggedInError", { error: e instanceof Error ? e.message : String(e) }),
 			)
 			return `<environment_details>\n${details.trim()}\n</environment_details>`
 		}

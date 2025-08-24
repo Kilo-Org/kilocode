@@ -513,6 +513,10 @@
 			"description": "يستخدم هذا المزوّد مصادقة OAuth من خدمة Qwen ولا يحتاج مفاتيح API.",
 			"instructions": "يرجى اتباع التوثيق الرسمي للحصول على ملف التخويل ووضعه في المسار المحدد.",
 			"setupLink": "توثيق Qwen الرسمي"
+		},
+		"roo": {
+			"authenticatedMessage": "تم التوثيق بأمان عبر حساب Roo Code Cloud.",
+			"connectButton": "اتصل بـ Roo Code Cloud"
 		}
 	},
 	"contextWindow": {

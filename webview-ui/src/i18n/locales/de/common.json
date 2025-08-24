@@ -21,10 +21,10 @@
 	},
 	"feedback": {
 		"title": "Feedback",
-		"description": "Wir würden gerne Ihr Feedback hören oder Ihnen bei Problemen helfen, die Sie erleben.",
+		"description": "Wir würden gerne dein Feedback hören, um dir bei allen Problemen zu helfen.",
 		"githubIssues": "Ein Problem auf GitHub melden",
 		"githubDiscussions": "An GitHub-Diskussionen teilnehmen",
-		"discord": "Treten Sie unserer Discord-Community bei",
+		"discord": "Trete unserer Discord-Community bei",
 		"customerSupport": "Kundensupport"
 	},
 	"ui": {

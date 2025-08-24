@@ -1,6 +1,9 @@
+import { z } from "zod"
+
 import { RooCodeEventName } from "./events.js"
-import { type ClineMessage, type BlockingAsk, type TokenUsage } from "./message.js"
+import { type ClineMessage, type TokenUsage } from "./message.js"
 import { type ToolUsage, type ToolName } from "./tool.js"
+import type { StaticAppProperties, GitProperties, TelemetryProperties } from "./telemetry.js"
 
 /**
  * TaskProviderLike
@@ -12,18 +15,23 @@ export interface TaskProviderState {
 
 export interface TaskProviderLike {
 	readonly cwd: string
+	readonly appProperties: StaticAppProperties
+	readonly gitProperties: GitProperties | undefined
 
-	getCurrentCline(): TaskLike | undefined
+	getCurrentTask(): TaskLike | undefined
 	getCurrentTaskStack(): string[]
+	getRecentTasks(): string[]
 
-	initClineWithTask(text?: string, images?: string[], parentTask?: TaskLike): Promise<TaskLike>
+	createTask(text?: string, images?: string[], parentTask?: TaskLike): Promise<TaskLike>
 	cancelTask(): Promise<void>
 	clearTask(): Promise<void>
-	postStateToWebview(): Promise<void>
+	resumeTask(taskId: string): void
 
 	getState(): Promise<TaskProviderState>
-
+	postStateToWebview(): Promise<void>
 	postMessageToWebview(message: unknown): Promise<void>
+
+	getTelemetryProperties(): Promise<TelemetryProperties>
 
 	on<K extends keyof TaskProviderEvents>(
 		event: K,
@@ -34,14 +42,6 @@ export interface TaskProviderLike {
 		event: K,
 		listener: (...args: TaskProviderEvents[K]) => void | Promise<void>,
 	): this
-
-	context: {
-		extension?: {
-			packageJSON?: {
-				version?: string
-			}
-		}
-	}
 }
 
 export type TaskProviderEvents = {
@@ -54,6 +54,8 @@ export type TaskProviderEvents = {
 	[RooCodeEventName.TaskFocused]: [taskId: string]
 	[RooCodeEventName.TaskUnfocused]: [taskId: string]
 	[RooCodeEventName.TaskActive]: [taskId: string]
+	[RooCodeEventName.TaskInteractive]: [taskId: string]
+	[RooCodeEventName.TaskResumable]: [taskId: string]
 	[RooCodeEventName.TaskIdle]: [taskId: string]
 }
 
@@ -61,16 +63,36 @@ export type TaskProviderEvents = {
  * TaskLike
  */
 
+export enum TaskStatus {
+	Running = "running",
+	Interactive = "interactive",
+	Resumable = "resumable",
+	Idle = "idle",
+	None = "none",
+}
+
+export const taskMetadataSchema = z.object({
+	task: z.string().optional(),
+	images: z.array(z.string()).optional(),
+})
+
+export type TaskMetadata = z.infer<typeof taskMetadataSchema>
+
 export interface TaskLike {
 	readonly taskId: string
+	readonly taskStatus: TaskStatus
+	readonly taskAsk: ClineMessage | undefined
+	readonly metadata: TaskMetadata
+
 	readonly rootTask?: TaskLike
-	readonly blockingAsk?: BlockingAsk
 
 	on<K extends keyof TaskEvents>(event: K, listener: (...args: TaskEvents[K]) => void | Promise<void>): this
 	off<K extends keyof TaskEvents>(event: K, listener: (...args: TaskEvents[K]) => void | Promise<void>): this
 
-	setMessageResponse(text: string, images?: string[]): void
+	approveAsk(options?: { text?: string; images?: string[] }): void
+	denyAsk(options?: { text?: string; images?: string[] }): void
 	submitUserMessage(text: string, images?: string[]): void
+	abortTask(): void
 }
 
 export type TaskEvents = {
@@ -81,6 +103,8 @@ export type TaskEvents = {
 	[RooCodeEventName.TaskFocused]: []
 	[RooCodeEventName.TaskUnfocused]: []
 	[RooCodeEventName.TaskActive]: [taskId: string]
+	[RooCodeEventName.TaskInteractive]: [taskId: string]
+	[RooCodeEventName.TaskResumable]: [taskId: string]
 	[RooCodeEventName.TaskIdle]: [taskId: string]
 
 	// Subtask Lifecycle

@@ -45,7 +45,7 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
 		rateLimitResetTime: 0,
 		consecutiveRateLimitErrors: 0,
 		lastRateLimitError: 0,
-		// Mutex to ensure thread-safe access to rate limit state
+		// Mutex to re thread-safe access to rate limit state
 		mutex: new Mutex(),
 	}
 
