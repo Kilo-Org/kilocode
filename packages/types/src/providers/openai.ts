@@ -6,6 +6,11 @@ export type OpenAiNativeModelId = keyof typeof openAiNativeModels
 export const openAiNativeDefaultModelId: OpenAiNativeModelId = "gpt-5-2025-08-07"
 
 export const openAiNativeModels = {
+<<<<<<< HEAD
+=======
+<<<<<<< Updated upstream
+=======
+>>>>>>> 76d925af8 (WIP: mid-merge snapshot from recover-stash)
 	"gpt-5-2025-08-07": {
 		maxTokens: 128000,
 		contextWindow: 400000,
@@ -19,6 +24,10 @@ export const openAiNativeModels = {
 		description: "GPT-5: The best model for coding and agentic tasks across domains",
 		// supportsVerbosity is a new capability; ensure ModelInfo includes it
 		supportsVerbosity: true,
+<<<<<<< HEAD
+=======
+		supportsServiceTier: true,
+>>>>>>> 76d925af8 (WIP: mid-merge snapshot from recover-stash)
 	},
 	"gpt-5-mini-2025-08-07": {
 		maxTokens: 128000,
@@ -32,6 +41,10 @@ export const openAiNativeModels = {
 		cacheReadsPrice: 0.03,
 		description: "GPT-5 Mini: A faster, more cost-efficient version of GPT-5 for well-defined tasks",
 		supportsVerbosity: true,
+<<<<<<< HEAD
+=======
+		supportsServiceTier: true,
+>>>>>>> 76d925af8 (WIP: mid-merge snapshot from recover-stash)
 	},
 	"gpt-5-nano-2025-08-07": {
 		maxTokens: 128000,
@@ -45,7 +58,13 @@ export const openAiNativeModels = {
 		cacheReadsPrice: 0.01,
 		description: "GPT-5 Nano: Fastest, most cost-efficient version of GPT-5",
 		supportsVerbosity: true,
+<<<<<<< HEAD
 	},
+=======
+		supportsServiceTier: true,
+	},
+>>>>>>> Stashed changes
+>>>>>>> 76d925af8 (WIP: mid-merge snapshot from recover-stash)
 	"gpt-4.1": {
 		maxTokens: 32_768,
 		contextWindow: 1_047_576,
@@ -54,6 +73,7 @@ export const openAiNativeModels = {
 		inputPrice: 2,
 		outputPrice: 8,
 		cacheReadsPrice: 0.5,
+		supportsServiceTier: false,
 	},
 	"gpt-4.1-mini": {
 		maxTokens: 32_768,
@@ -63,6 +83,7 @@ export const openAiNativeModels = {
 		inputPrice: 0.4,
 		outputPrice: 1.6,
 		cacheReadsPrice: 0.1,
+		supportsServiceTier: false,
 	},
 	"gpt-4.1-nano": {
 		maxTokens: 32_768,
@@ -72,6 +93,7 @@ export const openAiNativeModels = {
 		inputPrice: 0.1,
 		outputPrice: 0.4,
 		cacheReadsPrice: 0.025,
+		supportsServiceTier: false,
 	},
 	o3: {
 		maxTokens: 100_000,
@@ -83,6 +105,7 @@ export const openAiNativeModels = {
 		cacheReadsPrice: 0.5,
 		supportsReasoningEffort: true,
 		reasoningEffort: "medium",
+		supportsServiceTier: true,
 	},
 	"o3-high": {
 		maxTokens: 100_000,
@@ -93,6 +116,7 @@ export const openAiNativeModels = {
 		outputPrice: 8.0,
 		cacheReadsPrice: 0.5,
 		reasoningEffort: "high",
+		supportsServiceTier: true,
 	},
 	"o3-low": {
 		maxTokens: 100_000,
@@ -103,6 +127,7 @@ export const openAiNativeModels = {
 		outputPrice: 8.0,
 		cacheReadsPrice: 0.5,
 		reasoningEffort: "low",
+		supportsServiceTier: true,
 	},
 	"o4-mini": {
 		maxTokens: 100_000,
@@ -114,6 +139,7 @@ export const openAiNativeModels = {
 		cacheReadsPrice: 0.275,
 		supportsReasoningEffort: true,
 		reasoningEffort: "medium",
+		supportsServiceTier: true,
 	},
 	"o4-mini-high": {
 		maxTokens: 100_000,
@@ -124,6 +150,7 @@ export const openAiNativeModels = {
 		outputPrice: 4.4,
 		cacheReadsPrice: 0.275,
 		reasoningEffort: "high",
+		supportsServiceTier: true,
 	},
 	"o4-mini-low": {
 		maxTokens: 100_000,
@@ -134,6 +161,7 @@ export const openAiNativeModels = {
 		outputPrice: 4.4,
 		cacheReadsPrice: 0.275,
 		reasoningEffort: "low",
+		supportsServiceTier: true,
 	},
 	"o3-mini": {
 		maxTokens: 100_000,
@@ -145,6 +173,7 @@ export const openAiNativeModels = {
 		cacheReadsPrice: 0.55,
 		supportsReasoningEffort: true,
 		reasoningEffort: "medium",
+		supportsServiceTier: false,
 	},
 	"o3-mini-high": {
 		maxTokens: 100_000,
@@ -155,6 +184,7 @@ export const openAiNativeModels = {
 		outputPrice: 4.4,
 		cacheReadsPrice: 0.55,
 		reasoningEffort: "high",
+		supportsServiceTier: false,
 	},
 	"o3-mini-low": {
 		maxTokens: 100_000,
@@ -165,7 +195,9 @@ export const openAiNativeModels = {
 		outputPrice: 4.4,
 		cacheReadsPrice: 0.55,
 		reasoningEffort: "low",
+		supportsServiceTier: false,
 	},
+
 	o1: {
 		maxTokens: 100_000,
 		contextWindow: 200_000,
@@ -174,6 +206,7 @@ export const openAiNativeModels = {
 		inputPrice: 15,
 		outputPrice: 60,
 		cacheReadsPrice: 7.5,
+		supportsServiceTier: false,
 	},
 	"o1-preview": {
 		maxTokens: 32_768,
@@ -183,6 +216,7 @@ export const openAiNativeModels = {
 		inputPrice: 15,
 		outputPrice: 60,
 		cacheReadsPrice: 7.5,
+		supportsServiceTier: false,
 	},
 	"o1-mini": {
 		maxTokens: 65_536,
@@ -200,7 +234,8 @@ export const openAiNativeModels = {
 		supportsPromptCache: true,
 		inputPrice: 2.5,
 		outputPrice: 10,
-		cacheReadsPrice: 1.25,
+		cacheReadsPrice: 0.025,
+		supportsServiceTier: true,
 	},
 	"gpt-4o-mini": {
 		maxTokens: 16_384,
@@ -231,8 +266,8 @@ export const openAiModelInfoSaneDefaults: ModelInfo = {
 	supportsPromptCache: false,
 	inputPrice: 0,
 	outputPrice: 0,
+	supportsServiceTier: false,
 }
-
 // https://learn.microsoft.com/en-us/azure/ai-services/openai/api-version-deprecation
 // https://learn.microsoft.com/en-us/azure/ai-services/openai/reference#api-specs
 export const azureOpenAiDefaultApiVersion = "2024-08-01-preview"

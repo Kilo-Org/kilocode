@@ -226,6 +226,10 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 						: [systemMessage, ...convertToOpenAiMessages(messages)],
 			}
 
+			if (this.options.openAiNativeServiceTier) {
+				requestOptions.service_tier = this.options.openAiNativeServiceTier
+			}
+
 			// Add max_tokens if needed
 			this.addMaxTokensIfNeeded(requestOptions, modelInfo)
 
@@ -269,6 +273,10 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
 				model: model.id,
 				messages: [{ role: "user", content: prompt }],
+			}
+
+			if (this.options.openAiNativeServiceTier) {
+				requestOptions.service_tier = this.options.openAiNativeServiceTier
 			}
 
 			// Add max_tokens if needed
@@ -315,6 +323,10 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				temperature: undefined,
 			}
 
+			if (this.options.openAiNativeServiceTier) {
+				requestOptions.service_tier = this.options.openAiNativeServiceTier
+			}
+
 			// O3 family models do not support the deprecated max_tokens parameter
 			// but they do support max_completion_tokens (the modern OpenAI parameter)
 			// This allows O3 models to limit response length when includeMaxTokens is enabled
@@ -338,6 +350,10 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				],
 				reasoning_effort: modelInfo.reasoningEffort as "low" | "medium" | "high" | undefined,
 				temperature: undefined,
+			}
+
+			if (this.options.openAiNativeServiceTier) {
+				requestOptions.service_tier = this.options.openAiNativeServiceTier
 			}
 
 			// O3 family models do not support the deprecated max_tokens parameter
@@ -448,5 +464,17 @@ export async function getOpenAiModels(baseUrl?: string, apiKey?: string, openAiH
 		return [...new Set<string>(modelsArray)]
 	} catch (error) {
 		return []
+	}
+}
+
+// from TODO request
+export class OpenAINativeHandler extends OpenAiHandler {
+	constructor(options: ApiHandlerOptions) {
+		super({
+			...options,
+			openAiBaseUrl: options.openAiNativeBaseUrl ?? "https://api.openai.com/v1",
+			openAiApiKey: options.openAiNativeApiKey,
+			openAiModelId: options.apiModelId,
+		})
 	}
 }
