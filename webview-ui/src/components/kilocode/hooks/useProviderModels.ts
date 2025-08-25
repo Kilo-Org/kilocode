@@ -32,7 +32,7 @@ import {
 import { cerebrasModels, cerebrasDefaultModelId } from "@roo/api"
 import type { ModelRecord, RouterModels } from "@roo/api"
 import { useRouterModels } from "../../ui/hooks/useRouterModels"
-import { useExtensionState } from "@/context/ExtensionStateContext" // kilocode_change
+import { useExtensionState } from "@/context/ExtensionStateContext"
 
 const FALLBACK_MODELS = {
 	models: anthropicModels,
@@ -181,11 +181,12 @@ const getModelsByProvider = ({
 export const useProviderModels = (apiConfiguration?: ProviderSettings) => {
 	const provider = apiConfiguration?.apiProvider || "anthropic"
 
-	const { kilocodeDefaultModel } = useExtensionState() // kilocode_change
+	const { kilocodeDefaultModel } = useExtensionState()
 
 	const routerModels = useRouterModels({
 		openRouterBaseUrl: apiConfiguration?.openRouterBaseUrl,
 		openRouterApiKey: apiConfiguration?.apiKey,
+		kilocodeOrganizationId: apiConfiguration?.kilocodeOrganizationId ?? "personal",
 	})
 
 	const { models, defaultModel } =

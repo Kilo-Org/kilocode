@@ -1656,6 +1656,18 @@ export const webviewMessageHandler = async (
 					if (currentConfig.kilocodeToken !== message.apiConfiguration.kilocodeToken) {
 						configToSave = { ...message.apiConfiguration, kilocodeOrganizationId: undefined }
 					}
+					if (currentConfig.kilocodeOrganizationId !== message.apiConfiguration.kilocodeOrganizationId) {
+						await flushModels("kilocode-openrouter")
+						const models = await getModels({
+							provider: "kilocode-openrouter",
+							kilocodeOrganizationId: message.apiConfiguration.kilocodeOrganizationId,
+							kilocodeToken: message.apiConfiguration.kilocodeToken,
+						})
+						provider.postMessageToWebview({
+							type: "routerModels",
+							routerModels: { "kilocode-openrouter": models } as Record<RouterName, ModelRecord>,
+						})
+					}
 				} catch (error) {
 					// Config might not exist yet, that's fine
 				}

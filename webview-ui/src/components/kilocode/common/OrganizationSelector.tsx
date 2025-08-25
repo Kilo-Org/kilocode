@@ -12,11 +12,27 @@ export const OrganizationSelector = ({ className, showLabel = false }: { classNa
 	const selectedOrg = organizations.find((o) => o.id === apiConfiguration?.kilocodeOrganizationId)
 	const containerRef = useRef<HTMLDivElement>(null)
 
+	const handleMessage = (event: MessageEvent<WebviewMessage>) => {
+		const message = event.data
+		if (message.type === "profileDataResponse") {
+			const payload = message.payload as ProfileDataResponsePayload
+			if (payload.success) {
+				setOrganizations(payload.data?.organizations ?? [])
+			} else {
+				console.error("Error fetching profile organizations data:", payload.error)
+				setOrganizations([])
+			}
+		} else if (message.type === "updateProfileData") {
+			vscode.postMessage({
+				type: "fetchProfileDataRequest",
+			})
+		}
+	}
+
 	useEffect(() => {
 		const onKeyDown = (e: KeyboardEvent) => {
 			if (e.key === "Escape") setIsOpen(false)
 		}
-		window.addEventListener("keydown", onKeyDown)
 
 		const onMouseDown = (e: MouseEvent) => {
 			if (!containerRef.current) return
@@ -25,11 +41,14 @@ export const OrganizationSelector = ({ className, showLabel = false }: { classNa
 			}
 		}
 
+		window.addEventListener("keydown", onKeyDown)
 		window.addEventListener("mousedown", onMouseDown)
+		window.addEventListener("message", handleMessage)
 
 		return () => {
 			window.removeEventListener("keydown", onKeyDown)
 			window.removeEventListener("mousedown", onMouseDown)
+			window.removeEventListener("message", handleMessage)
 		}
 	}, [])
 
@@ -39,29 +58,6 @@ export const OrganizationSelector = ({ className, showLabel = false }: { classNa
 		vscode.postMessage({
 			type: "fetchProfileDataRequest",
 		})
-	}, [apiConfiguration?.kilocodeToken])
-
-	useEffect(() => {
-		const handleMessage = (event: MessageEvent<WebviewMessage>) => {
-			const message = event.data
-			if (message.type === "profileDataResponse") {
-				const payload = message.payload as ProfileDataResponsePayload
-				if (payload.success) {
-					setOrganizations(payload.data?.organizations ?? [])
-				} else {
-					console.error("Error fetching profile organizations data:", payload.error)
-					setOrganizations([])
-				}
-			} else if (message.type === "updateProfileData") {
-				vscode.postMessage({
-					type: "fetchProfileDataRequest",
-				})
-			}
-		}
-
-		window.addEventListener("message", handleMessage)
-
-		return () => window.removeEventListener("message", handleMessage)
 	}, [apiConfiguration?.kilocodeToken])
 
 	const setSelectedOrganization = (organization: UserOrganizationWithApiKey | null) => {
