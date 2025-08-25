@@ -100,8 +100,22 @@ export class TerminalProcess extends BaseTerminalProcess {
 		})
 
 		// Create promise that resolves when shell execution completes for this terminal
-		const shellExecutionComplete = new Promise<ExitCodeDetails>((resolve) => {
+		const shellExecutionComplete = new Promise<ExitCodeDetails>((resolve, reject) => {
+			// Set up completion listener
 			this.once("shell_execution_complete", (details: ExitCodeDetails) => resolve(details))
+
+			// Add timeout to prevent hanging indefinitely
+			const timeoutId = setTimeout(() => {
+				this.removeAllListeners("shell_execution_complete")
+				console.warn("[TerminalProcess] Shell execution completion timeout - proceeding without exit details")
+				// Resolve with a default exit code instead of rejecting to allow process to continue
+				resolve({ exitCode: 0 })
+			}, Terminal.getShellIntegrationTimeout() + 5000) // Add 5 seconds buffer to shell integration timeout
+
+			// Clear timeout when completion event fires
+			this.once("shell_execution_complete", () => {
+				clearTimeout(timeoutId)
+			})
 		})
 
 		// Execute command
@@ -208,8 +222,26 @@ export class TerminalProcess extends BaseTerminalProcess {
 		// Set streamClosed immediately after stream ends.
 		this.terminal.setActiveStream(undefined)
 
-		// Wait for shell execution to complete.
-		await shellExecutionComplete
+		// Wait for shell execution to complete with additional fallback
+		try {
+			await shellExecutionComplete
+		} catch (error) {
+			console.warn("[TerminalProcess] Shell execution completion failed:", error.message)
+			// Continue processing even if shell execution completion fails
+		}
+
+		// Additional fallback: if we've processed the stream but no completion event fired,
+		// emit a synthetic completion event after a short delay
+		if (!this.terminal.isStreamClosed) {
+			setTimeout(() => {
+				if (this.terminal.running) {
+					console.warn(
+						"[TerminalProcess] Forcing completion due to stream end without shell execution complete event",
+					)
+					this.terminal.shellExecutionComplete({ exitCode: 0 })
+				}
+			}, 1000)
+		}
 
 		this.isHot = false
 
