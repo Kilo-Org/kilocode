@@ -32,6 +32,7 @@ import {
 	internationalZAiDefaultModelId,
 	mainlandZAiDefaultModelId,
 	fireworksDefaultModelId,
+	tarsDefaultModelId,
 	ioIntelligenceDefaultModelId,
 	qwenCodeDefaultModelId,
 	rooDefaultModelId,
@@ -85,6 +86,7 @@ import {
 	OpenRouter,
 	Requesty,
 	SambaNova,
+	Tars,
 	Unbound,
 	Vertex,
 	VSCodeLM,
@@ -358,6 +360,7 @@ const ApiOptions = ({
 							: internationalZAiDefaultModelId,
 				},
 				fireworks: { field: "apiModelId", default: fireworksDefaultModelId },
+				tars: { field: "tarsModelId", default: tarsDefaultModelId },
 				"io-intelligence": { field: "ioIntelligenceModelId", default: ioIntelligenceDefaultModelId },
 				roo: { field: "apiModelId", default: rooDefaultModelId },
 				openai: { field: "openAiModelId" },
@@ -647,6 +650,21 @@ const ApiOptions = ({
 
 			{selectedProvider === "zai" && (
 				<ZAi apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
+			)}
+
+			{selectedProvider === "fireworks" && (
+				<Fireworks apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
+			)}
+
+			{selectedProvider === "tars" && (
+				<Tars
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+					routerModels={routerModels}
+					refetchRouterModels={refetchRouterModels}
+					organizationAllowList={organizationAllowList}
+					modelValidationError={modelValidationError}
+				/>
 			)}
 
 			{selectedProvider === "io-intelligence" && (

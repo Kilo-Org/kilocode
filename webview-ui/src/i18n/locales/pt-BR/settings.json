@@ -293,6 +293,8 @@
 		"groqApiKey": "Chave de API Groq",
 		"getSambaNovaApiKey": "Obter chave de API SambaNova",
 		"sambaNovaApiKey": "Chave de API SambaNova",
+		"getTarsApiKey": "Obter chave de API do TARS",
+		"tarsApiKey": "Chave de API do TARS",
 		"getGeminiApiKey": "Obter chave de API Gemini",
 		"getHuggingFaceApiKey": "Obter chave de API Hugging Face",
 		"huggingFaceApiKey": "Chave de API Hugging Face",

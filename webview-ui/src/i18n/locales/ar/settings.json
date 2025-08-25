@@ -296,6 +296,8 @@
 		"groqApiKey": "مفتاح Groq",
 		"getSambaNovaApiKey": "احصل على مفتاح SambaNova",
 		"sambaNovaApiKey": "مفتاح SambaNova",
+		"getTarsApiKey": "الحصول على مفتاح TARS API",
+		"tarsApiKey": "مفتاح TARS API",
 		"getGeminiApiKey": "احصل على مفتاح Gemini",
 		"openAiApiKey": "مفتاح OpenAI",
 		"getHuggingFaceApiKey": "احصل على مفتاح Hugging Face API",

@@ -293,6 +293,8 @@
 		"groqApiKey": "Groq API 키",
 		"getSambaNovaApiKey": "SambaNova API 키 받기",
 		"sambaNovaApiKey": "SambaNova API 키",
+		"getTarsApiKey": "TARS API 키 받기",
+		"tarsApiKey": "TARS API 키",
 		"getGeminiApiKey": "Gemini API 키 받기",
 		"getHuggingFaceApiKey": "Hugging Face API 키 받기",
 		"huggingFaceApiKey": "Hugging Face API 키",

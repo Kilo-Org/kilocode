@@ -51,6 +51,7 @@ export const providerNames = [
 	"sambanova",
 	"zai",
 	"fireworks",
+	"tars",
 	"io-intelligence",
 	"roo",
 ] as const
@@ -294,6 +295,11 @@ const sambaNovaSchema = apiModelIdProviderModelSchema.extend({
 	sambaNovaApiKey: z.string().optional(),
 })
 
+const tarsSchema = baseProviderSettingsSchema.extend({
+	tarsApiKey: z.string().optional(),
+	tarsModelId: z.string().optional(),
+})
+
 // kilocode_change start
 const kilocodeSchema = baseProviderSettingsSchema.extend({
 	kilocodeToken: z.string().optional(),
@@ -386,6 +392,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	sambaNovaSchema.merge(z.object({ apiProvider: z.literal("sambanova") })),
 	zaiSchema.merge(z.object({ apiProvider: z.literal("zai") })),
 	fireworksSchema.merge(z.object({ apiProvider: z.literal("fireworks") })),
+	tarsSchema.merge(z.object({ apiProvider: z.literal("tars") })),
 	ioIntelligenceSchema.merge(z.object({ apiProvider: z.literal("io-intelligence") })),
 	rooSchema.merge(z.object({ apiProvider: z.literal("roo") })),
 	defaultSchema,
@@ -428,6 +435,7 @@ export const providerSettingsSchema = z.object({
 	...sambaNovaSchema.shape,
 	...zaiSchema.shape,
 	...fireworksSchema.shape,
+	...tarsSchema.shape,
 	...ioIntelligenceSchema.shape,
 	...rooSchema.shape,
 	...codebaseIndexProviderSchema.shape,
@@ -455,6 +463,7 @@ export const MODEL_ID_KEYS: Partial<keyof ProviderSettings>[] = [
 	"requestyModelId",
 	"litellmModelId",
 	"huggingFaceModelId",
+	"tarsModelId",
 	"ioIntelligenceModelId",
 ]
 

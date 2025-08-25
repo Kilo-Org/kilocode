@@ -293,6 +293,8 @@
 		"groqApiKey": "Groq API-sleutel",
 		"getSambaNovaApiKey": "SambaNova API-sleutel ophalen",
 		"sambaNovaApiKey": "SambaNova API-sleutel",
+		"getTarsApiKey": "TARS API-sleutel verkrijgen",
+		"tarsApiKey": "TARS API-sleutel",
 		"getGeminiApiKey": "Gemini API-sleutel ophalen",
 		"getHuggingFaceApiKey": "Hugging Face API-sleutel ophalen",
 		"huggingFaceApiKey": "Hugging Face API-sleutel",

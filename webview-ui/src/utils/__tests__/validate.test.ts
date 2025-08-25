@@ -58,6 +58,7 @@ describe("Model Validation Functions", () => {
 		litellm: {},
 		ollama: {},
 		lmstudio: {},
+		tars: {},
 		"io-intelligence": {},
 	}
 
