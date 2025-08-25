@@ -1136,6 +1136,19 @@ export const ChatRowContent = ({
 							<div style={{ color: "var(--vscode-charts-green)", paddingTop: 10 }}>
 								<Markdown markdown={message.text} />
 							</div>
+							<div>
+								<VSCodeButton
+									onClick={() => {
+										vscode.postMessage({
+											type: "showNewChanges",
+											payload: {
+												ts: message.ts,
+											} as any,
+										})
+									}}>
+									Show New Changes
+								</VSCodeButton>
+							</div>
 						</>
 					)
 				case "shell_integration_warning":

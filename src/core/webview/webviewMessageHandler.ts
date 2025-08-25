@@ -65,6 +65,7 @@ const ALLOWED_VSCODE_SETTINGS = new Set(["terminal.integrated.inheritEnv"])
 import { MarketplaceManager, MarketplaceItemType } from "../../services/marketplace"
 import { setPendingTodoList } from "../tools/updateTodoListTool"
 import { UsageTracker } from "../../utils/usage-tracker"
+import { showNewChanges } from "../checkpoints"
 
 export const webviewMessageHandler = async (
 	provider: ClineProvider,
@@ -767,12 +768,18 @@ export const webviewMessageHandler = async (
 			break
 		case "checkpointDiff":
 			const result = checkoutDiffPayloadSchema.safeParse(message.payload)
-
 			if (result.success) {
 				await provider.getCurrentTask()?.checkpointDiff(result.data)
 			}
-
 			break
+		// kilocode_change start
+		case "showNewChanges":
+			const task = provider.getCurrentCline()
+			if (task && message.payload) {
+				await showNewChanges(task, message.payload as any)
+			}
+			break
+		// kilocode_change end
 		case "checkpointRestore": {
 			const result = checkoutRestorePayloadSchema.safeParse(message.payload)
 

@@ -164,6 +164,7 @@ export interface WebviewMessage {
 		| "openCustomModesSettings"
 		| "checkpointDiff"
 		| "checkpointRestore"
+		| "showNewChanges" // kilocode_change
 		| "deleteMcpServer"
 		| "maxOpenTabsContext"
 		| "maxWorkspaceFiles"

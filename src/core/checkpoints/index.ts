@@ -17,7 +17,7 @@ import { DIFF_VIEW_URI_SCHEME } from "../../integrations/editor/DiffViewProvider
 import { CheckpointServiceOptions, RepoPerTaskCheckpointService } from "../../services/checkpoints"
 
 // kilocode_change start
-import { TelemetryEventName } from "@roo-code/types"
+import { ClineMessage, TelemetryEventName } from "@roo-code/types"
 import { stringifyError } from "../../shared/kilocode/errorUtils"
 
 function reportError(callsite: string, error: unknown) {
@@ -317,3 +317,68 @@ export async function checkpointDiff(cline: Task, { ts, previousCommitHash, comm
 		reportError("checkpointDiff", err) // kilocode_change
 	}
 }
+
+// kilocode_change start
+
+function findLast<T>(array: Array<T>, predicate: (value: T, index: number, obj: T[]) => boolean): number {
+	let index = array.length - 1
+	for (; index >= 0; index--) {
+		if (predicate(array[index], index, array)) {
+			break
+		}
+	}
+	return index
+}
+
+export async function showNewChanges(cline: Task, { ts }: { ts: number; commitHash: string }) {
+	try {
+		const service = await getCheckpointService(cline)
+		if (!service) {
+			return
+		}
+
+		const currentMessageIndex = cline.clineMessages.findIndex((msg) => msg.ts === ts)
+		const currentCheckpointIndex = findLast(
+			cline.clineMessages.slice(0, currentMessageIndex),
+			(msg) => !!msg.checkpoint,
+		)
+		const currentCheckpoint = cline.clineMessages[currentCheckpointIndex]
+
+		const previousCompletionIndex = findLast(
+			cline.clineMessages.slice(0, currentCheckpointIndex),
+			(msg) => msg.say === "completion_result",
+		)
+		const previousCheckpointIndex =
+			previousCompletionIndex >= 0
+				? findLast(cline.clineMessages.slice(0, previousCompletionIndex), (msg) => !!msg.checkpoint)
+				: cline.clineMessages.findIndex((msg) => !!msg.checkpoint)
+		const previousCheckpoint = cline.clineMessages[previousCheckpointIndex]
+
+		const changes = await service.getDiff({
+			from: previousCheckpoint.checkpoint?.to as string,
+			to: currentCheckpoint.checkpoint?.to as string,
+		})
+		if (!changes?.length) {
+			vscode.window.showInformationMessage("No changes found.")
+			return
+		}
+
+		await vscode.commands.executeCommand(
+			"vscode.changes",
+			"Showing new changes",
+			changes.map((change) => [
+				vscode.Uri.file(change.paths.absolute),
+				vscode.Uri.parse(`${DIFF_VIEW_URI_SCHEME}:${change.paths.relative}`).with({
+					query: Buffer.from(change.content.before ?? "").toString("base64"),
+				}),
+				vscode.Uri.parse(`${DIFF_VIEW_URI_SCHEME}:${change.paths.relative}`).with({
+					query: Buffer.from(change.content.after ?? "").toString("base64"),
+				}),
+			]),
+		)
+	} catch (err) {
+		console.error("showNewChanges", err)
+		TelemetryService.instance.captureException(err, { context: "showNewChanges" })
+	}
+}
+// kilocode_change end
