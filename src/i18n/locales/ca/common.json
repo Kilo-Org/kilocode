@@ -68,6 +68,7 @@
 		"condensed_recently": "El context s'ha condensat recentment; s'omet aquest intent",
 		"condense_handler_invalid": "El gestor de l'API per condensar el context no és vàlid",
 		"condense_context_grew": "La mida del context ha augmentat de {{prevContextTokens}} a {{newContextTokens}} durant la condensació; s'omet aquest intent",
+		"condense_aborted": "Context condensing was aborted",
 		"url_timeout": "El lloc web ha trigat massa a carregar (timeout). Això pot ser degut a una connexió lenta, un lloc web pesat o temporalment no disponible. Pots tornar-ho a provar més tard o comprovar si la URL és correcta.",
 		"url_not_found": "No s'ha pogut trobar l'adreça del lloc web. Comprova si la URL és correcta i torna-ho a provar.",
 		"no_internet": "No hi ha connexió a internet. Comprova la teva connexió de xarxa i torna-ho a provar.",
