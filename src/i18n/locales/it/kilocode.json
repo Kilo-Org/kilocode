@@ -11,7 +11,10 @@
 		"title": "Avviso Credito Basso!",
 		"message": "Controlla se puoi ricaricare con crediti gratuiti o acquistarne altri!"
 	},
-	"notLoggedInError": "Impossibile completare la richiesta, assicurati di essere connesso e di aver effettuato l'accesso con il provider selezionato.\n\n{{error}}",
+	"task": {
+		"noAssistantMessages": "La risposta del modello è terminata inaspettatamente (nessun messaggio dell'assistente). Questo potrebbe essere un segno di limitazione del tasso di richieste.",
+		"notLoggedInError": "Impossibile completare la richiesta, assicurati di essere connesso e di aver effettuato l'accesso con il provider selezionato.\n\n{{error}}"
+	},
 	"rules": {
 		"actions": {
 			"delete": "Elimina",

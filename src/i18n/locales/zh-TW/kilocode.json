@@ -11,7 +11,10 @@
 		"title": "警告：信用額度低！",
 		"message": "檢查您是否可以透過免費信用額度儲值或購買更多額度！"
 	},
-	"notLoggedInError": "無法完成請求，請確保您已連線並使用所選供應商登入。\n\n{{error}}",
+	"task": {
+		"noAssistantMessages": "模型回應意外結束（沒有助理訊息）。這可能是頻率限制的跡象。",
+		"notLoggedInError": "無法完成請求，請確保您已連線並使用所選供應商登入。\n\n{{error}}"
+	},
 	"rules": {
 		"actions": {
 			"delete": "刪除",

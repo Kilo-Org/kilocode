@@ -1,5 +1,13 @@
 # kilo-code
 
+## [v4.83.1]
+
+- [#2073](https://github.com/Kilo-Org/kilocode/pull/2073) [`a4b8770`](https://github.com/Kilo-Org/kilocode/commit/a4b8770ba82cbb366bb986a36026b6860129f799) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Ensured free model usage is reported as free
+
+- [#2066](https://github.com/Kilo-Org/kilocode/pull/2066) [`62624d2`](https://github.com/Kilo-Org/kilocode/commit/62624d21f4f3408a552b5f0308d35be154d403b3) Thanks [@mcowger](https://github.com/mcowger)! - Fixed "'messages' field is required" error in LMStudio
+
+- [#2064](https://github.com/Kilo-Org/kilocode/pull/2064) [`8655a71`](https://github.com/Kilo-Org/kilocode/commit/8655a712d7fc84fce1a7aa8c928fa2b32a68cf24) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Improved the "language model did not provide any assistant messages" error message to indicate that it likely involves rate limiting
+
 ## [v4.83.0]
 
 - [#2063](https://github.com/Kilo-Org/kilocode/pull/2063) [`e844c5f`](https://github.com/Kilo-Org/kilocode/commit/e844c5f3a43c0808a037156e44f621b36a529abd) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Add marketplace for modes

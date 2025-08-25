@@ -53,8 +53,7 @@
 		"modelInfo": {
 			"contextWindow": "Finestra de context",
 			"providerBreakdown": "Desglossament de preus i capacitats del proveïdor",
-			"averageKiloCodeCost": "Cost mitjà de Kilo Code",
-			"averageKiloCodeCostDescription": "Aquest és el cost real mitjà gastat per Kilo Code utilitzant aquest model durant la darrera setmana. Pot ser inferior al preu llistat a causa de la utilització de la memòria cau de prompts.",
+			"averageKiloCodeCost": "Aquest és el cost real mitjà gastat per Kilo Code utilitzant aquest model durant la darrera setmana. Pot ser inferior al preu llistat a causa de la utilització de la memòria cau de prompts.",
 			"table": {
 				"provider": "Proveïdor",
 				"context": "L'endpoint pot processar aquest nombre de tokens (entrada + sortida).",

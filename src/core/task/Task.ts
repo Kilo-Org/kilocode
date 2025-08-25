@@ -2199,7 +2199,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					// an error.
 					await this.say(
 						"error",
-						"Unexpected API Response: The language model did not provide any assistant messages. This may indicate an issue with the API or the model's output.",
+						t("kilocode:task.noAssistantMessages"), // kilocode_change
 					)
 
 					// kilocode_change start

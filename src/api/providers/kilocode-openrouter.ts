@@ -46,6 +46,10 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 	}
 
 	override getTotalCost(lastUsage: CompletionUsage): number {
+		const model = this.getModel().info
+		if (!model.inputPrice && !model.outputPrice) {
+			return 0
+		}
 		// https://github.com/Kilo-Org/kilocode-backend/blob/eb3d382df1e933a089eea95b9c4387db0c676e35/src/lib/processUsage.ts#L281
 		if (lastUsage.is_byok) {
 			return lastUsage.cost_details?.upstream_inference_cost || 0
@@ -58,9 +62,17 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 		let info = this.models[id]
 		let defaultTemperature = 0
 
-		if (!this.models[id]) {
-			id = openRouterDefaultModelId
-			info = openRouterDefaultModelInfo
+		if (!info) {
+			const defaultInfo = this.models[this.defaultModel]
+			if (defaultInfo) {
+				console.warn(`${id} no longer exists, falling back to ${this.defaultModel}`)
+				id = this.defaultModel
+				info = defaultInfo
+			} else {
+				console.warn(`${id} no longer exists, falling back to ${openRouterDefaultModelId}`)
+				id = openRouterDefaultModelId
+				info = openRouterDefaultModelInfo
+			}
 		}
 
 		// If a specific provider is requested, use the endpoint for that provider.

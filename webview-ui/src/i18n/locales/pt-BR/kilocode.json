@@ -52,9 +52,8 @@
 		},
 		"modelInfo": {
 			"contextWindow": "Janela de contexto",
-			"providerBreakdown": "Detalhamento de Preços e Recursos do Provedor",
-			"averageKiloCodeCost": "Custo médio do Kilo Code",
-			"averageKiloCodeCostDescription": "Este é o valor médio realmente gasto pelo Kilo Code usando este modelo na última semana. Pode ser menor que o preço listado devido à utilização do cache de prompts.",
+			"providerBreakdown": "Detalhamento de Preços e Capacidades do Provedor",
+			"averageKiloCodeCost": "Este é o valor médio realmente gasto pelo Kilo Code usando este modelo na última semana. Pode ser menor que o preço listado devido à utilização do cache de prompts.",
 			"table": {
 				"provider": "Provedor",
 				"context": "O endpoint pode processar este número de tokens (entrada + saída).",

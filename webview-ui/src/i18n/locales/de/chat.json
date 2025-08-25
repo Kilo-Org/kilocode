@@ -331,7 +331,7 @@
 			"button": "Zurücksetzen und fortfahren"
 		},
 		"autoApprovedCostLimitReached": {
-			"description": "Kilo Code hat das automatisch genehmigte Kostenlimit von ${{count}} erreicht. Möchten Sie die Kosten zurücksetzen und mit der Aufgabe fortfahren?",
+			"description": "Kilo Code hat das automatisch genehmigte Kostenlimit von ${{count}} erreicht. Möchtest du die Kosten zurücksetzen und mit der Aufgabe fortfahren?",
 			"title": "Kostengrenze für automatische Genehmigung erreicht",
 			"button": "Zurücksetzen und Fortfahren"
 		}
@@ -359,7 +359,7 @@
 		"status": "Index-Status"
 	},
 	"versionIndicator": {
-		"ariaLabel": "Version {{version}} - Klicken Sie, um die Versionshinweise anzuzeigen"
+		"ariaLabel": "Version {{version}} - Klicke, um die Versionshinweise anzuzeigen"
 	},
 	"rooCloudCTA": {
 		"title": "Roo Code Cloud entwickelt sich weiter!",

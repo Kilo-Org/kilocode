@@ -52,7 +52,7 @@
 		"ollamaProvider": "Ollama",
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "API-Schlüssel:",
-		"geminiApiKeyPlaceholder": "Geben Sie Ihren Gemini-API-Schlüssel ein",
+		"geminiApiKeyPlaceholder": "Gib deinen Gemini-API-Schlüssel ein",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API-Schlüssel:",
 		"mistralApiKeyPlaceholder": "Gib deinen Mistral-API-Schlüssel ein",
@@ -65,7 +65,7 @@
 		"openAiCompatibleModelDimensionLabel": "Embedding-Dimension:",
 		"modelDimensionLabel": "Modell-Dimension",
 		"openAiCompatibleModelDimensionPlaceholder": "z.B. 1536",
-		"openAiCompatibleModelDimensionDescription": "Die Embedding-Dimension (Ausgabegröße) für Ihr Modell. Überprüfen Sie die Dokumentation Ihres Anbieters für diesen Wert. Übliche Werte: 384, 768, 1536, 3072.",
+		"openAiCompatibleModelDimensionDescription": "Die Embedding-Dimension (Ausgabegröße) für Ihr Modell. Überprüfe die Dokumentation deines Anbieters für diesen Wert. Übliche Werte: 384, 768, 1536, 3072.",
 		"modelLabel": "Modell",
 		"modelPlaceholder": "Modellname eingeben",
 		"selectModel": "Modell auswählen",
@@ -81,8 +81,8 @@
 		"clearIndexDataButton": "Index löschen",
 		"unsavedSettingsMessage": "Bitte speichere deine Einstellungen, bevor du den Indexierungsprozess startest.",
 		"clearDataDialog": {
-			"title": "Sind Sie sicher?",
-			"description": "Diese Aktion kann nicht rückgängig gemacht werden. Dies wird Ihre Codebase-Indexdaten dauerhaft löschen.",
+			"title": "Bist du sicher?",
+			"description": "Diese Aktion kann nicht rückgängig gemacht werden. Dies wird deine Codebase-Indexdaten dauerhaft löschen.",
 			"cancelButton": "Abbrechen",
 			"confirmButton": "Daten löschen"
 		},
@@ -182,9 +182,9 @@
 			"label": "Ausführen",
 			"description": "Erlaubte Terminal-Befehle automatisch ohne Genehmigung ausführen",
 			"allowedCommands": "Erlaubte Auto-Ausführungsbefehle",
-			"allowedCommandsDescription": "Befehlspräfixe, die automatisch ausgeführt werden können, wenn 'Ausführungsoperationen immer genehmigen' aktiviert ist. Fügen Sie * hinzu, um alle Befehle zu erlauben (mit Vorsicht verwenden).",
+			"allowedCommandsDescription": "Befehlspräfixe, die automatisch ausgeführt werden können, wenn 'Ausführungsoperationen immer genehmigen' aktiviert ist. Füge * hinzu, um alle Befehle zu erlauben (mit Vorsicht verwenden).",
 			"deniedCommands": "Verweigerte Befehle",
-			"deniedCommandsDescription": "Befehlspräfixe, die automatisch verweigert werden, ohne nach Genehmigung zu fragen. Bei Konflikten mit erlaubten Befehlen hat die längste Präfix-Übereinstimmung Vorrang. Fügen Sie * hinzu, um alle Befehle zu verweigern.",
+			"deniedCommandsDescription": "Befehlspräfixe, die automatisch verweigert werden, ohne nach Genehmigung zu fragen. Bei Konflikten mit erlaubten Befehlen hat die längste Präfix-Übereinstimmung Vorrang. Füge * hinzu, um alle Befehle zu verweigern.",
 			"commandPlaceholder": "Befehlspräfix eingeben (z.B. 'git ')",
 			"deniedCommandPlaceholder": "Befehlspräfix zum Verweigern eingeben (z.B. 'rm -rf')",
 			"addButton": "Hinzufügen",
@@ -215,13 +215,13 @@
 	"providers": {
 		"providerDocumentation": "{{provider}}-Dokumentation",
 		"configProfile": "Konfigurationsprofil",
-		"description": "Speichern Sie verschiedene API-Konfigurationen, um schnell zwischen Anbietern und Einstellungen zu wechseln.",
+		"description": "Speicher verschiedene API-Konfigurationen, um schnell zwischen Anbietern und Einstellungen zu wechseln.",
 		"apiProvider": "API-Anbieter",
 		"model": "Modell",
 		"nameEmpty": "Name darf nicht leer sein",
 		"nameExists": "Ein Profil mit diesem Namen existiert bereits",
 		"deleteProfile": "Profil löschen",
-		"invalidArnFormat": "Ungültiges ARN-Format. Überprüfen Sie die obigen Beispiele.",
+		"invalidArnFormat": "Ungültiges ARN-Format. Überprüfe die obigen Beispiele.",
 		"enterNewName": "Neuen Namen eingeben",
 		"addProfile": "Profil hinzufügen",
 		"renameProfile": "Profil umbenennen",
@@ -234,8 +234,8 @@
 		"noProviderMatchFound": "Keine Anbieter gefunden",
 		"noMatchFound": "Keine passenden Profile gefunden",
 		"vscodeLmDescription": "Die VS Code Language Model API ermöglicht das Ausführen von Modellen, die von anderen VS Code-Erweiterungen bereitgestellt werden (einschließlich, aber nicht beschränkt auf GitHub Copilot). Der einfachste Weg, um zu starten, besteht darin, die Erweiterungen Copilot und Copilot Chat aus dem VS Code Marketplace zu installieren.",
-		"awsCustomArnUse": "Geben Sie eine gültige Amazon Bedrock ARN für das Modell ein, das Sie verwenden möchten. Formatbeispiele:",
-		"awsCustomArnDesc": "Stellen Sie sicher, dass die Region in der ARN mit Ihrer oben ausgewählten AWS-Region übereinstimmt.",
+		"awsCustomArnUse": "Gib eine gültige Amazon Bedrock ARN für das Modell ein, das du verwenden möchtest. Formatbeispiele:",
+		"awsCustomArnDesc": "Stelle sicher, dass die Region in der ARN mit Ihrer oben ausgewählten AWS-Region übereinstimmt.",
 		"openRouterApiKey": "OpenRouter API-Schlüssel",
 		"getOpenRouterApiKey": "OpenRouter API-Schlüssel erhalten",
 		"doubaoApiKey": "Doubao API-Schlüssel",
@@ -287,7 +287,7 @@
 		"zaiApiKey": "Z AI API-Schlüssel",
 		"getZaiApiKey": "Z AI API-Schlüssel erhalten",
 		"zaiEntrypoint": "Z AI Einstiegspunkt",
-		"zaiEntrypointDescription": "Bitte wählen Sie den entsprechenden API-Einstiegspunkt basierend auf Ihrem Standort. Wenn Sie sich in China befinden, wählen Sie open.bigmodel.cn. Andernfalls wählen Sie api.z.ai.",
+		"zaiEntrypointDescription": "Bitte wähle den entsprechenden API-Einstiegspunkt basierend auf deinem Standort aus. Wenn du dich in China befindest, wähle open.bigmodel.cn. Andernfalls wähle api.z.ai.",
 		"geminiApiKey": "Gemini API-Schlüssel",
 		"getGroqApiKey": "Groq API-Schlüssel erhalten",
 		"groqApiKey": "Groq API-Schlüssel",
@@ -314,7 +314,7 @@
 		"mistralApiKey": "Mistral API-Schlüssel",
 		"getMistralApiKey": "Mistral / Codestral API-Schlüssel erhalten",
 		"codestralBaseUrl": "Codestral Basis-URL (Optional)",
-		"codestralBaseUrlDesc": "Legen Sie eine alternative URL für das Codestral-Modell fest.",
+		"codestralBaseUrlDesc": "Lege eine alternative URL für das Codestral-Modell fest.",
 		"xaiApiKey": "xAI API-Schlüssel",
 		"getXaiApiKey": "xAI API-Schlüssel erhalten",
 		"litellmApiKey": "LiteLLM API-Schlüssel",
@@ -335,9 +335,9 @@
 		},
 		"enablePromptCaching": "Prompt-Caching aktivieren",
 		"enablePromptCachingTitle": "Prompt-Caching aktivieren, um die Leistung zu verbessern und Kosten für unterstützte Modelle zu reduzieren.",
-		"cacheUsageNote": "Hinweis: Wenn Sie keine Cache-Nutzung sehen, versuchen Sie ein anderes Modell auszuwählen und dann Ihr gewünschtes Modell erneut auszuwählen.",
+		"cacheUsageNote": "Hinweis: Wenn du keine Cache-Nutzung siehst, versuche ein anderes Modell auszuwählen und dann dein gewünschtes Modell erneut auszuwählen.",
 		"vscodeLmModel": "Sprachmodell",
-		"vscodeLmWarning": "Hinweis: Dies ist eine sehr experimentelle Integration und die Anbieterunterstützung variiert. Wenn Sie einen Fehler über ein nicht unterstütztes Modell erhalten, liegt das Problem auf Anbieterseite.",
+		"vscodeLmWarning": "Hinweis: Dies ist eine sehr experimentelle Integration und die Anbieterunterstützung variiert. Wenn du einen Fehler über ein nicht unterstütztes Modell erhälst, liegt das Problem auf Anbieterseite.",
 		"geminiParameters": {
 			"urlContext": {
 				"title": "URL-Kontext aktivieren",
@@ -349,7 +349,7 @@
 			}
 		},
 		"googleCloudSetup": {
-			"title": "Um Google Cloud Vertex AI zu verwenden, müssen Sie:",
+			"title": "Um Google Cloud Vertex AI zu verwenden, musst du:",
 			"step1": "1. Ein Google Cloud-Konto erstellen, die Vertex AI API aktivieren & die gewünschten Claude-Modelle aktivieren.",
 			"step2": "2. Die Google Cloud CLI installieren & Standardanmeldeinformationen für die Anwendung konfigurieren.",
 			"step3": "3. Oder ein Servicekonto mit Anmeldeinformationen erstellen."
@@ -379,8 +379,8 @@
 		},
 		"unboundApiKey": "Unbound API-Schlüssel",
 		"getUnboundApiKey": "Unbound API-Schlüssel erhalten",
-		"unboundRefreshModelsSuccess": "Modellliste aktualisiert! Sie können jetzt aus den neuesten Modellen auswählen.",
-		"unboundInvalidApiKey": "Ungültiger API-Schlüssel. Bitte überprüfen Sie Ihren API-Schlüssel und versuchen Sie es erneut.",
+		"unboundRefreshModelsSuccess": "Modellliste aktualisiert! Du kannst jetzt aus den neuesten Modellen auswählen.",
+		"unboundInvalidApiKey": "Ungültiger API-Schlüssel. Bitte überprüfe deinen API-Schlüssel und versuche es erneut.",
 		"humanRelay": {
 			"description": "Es ist kein API-Schlüssel erforderlich, aber der Benutzer muss beim Kopieren und Einfügen der Informationen in den Web-Chat-KI helfen.",
 			"instructions": "Während der Verwendung wird ein Dialogfeld angezeigt und die aktuelle Nachricht wird automatisch in die Zwischenablage kopiert. Du musst diese in Web-Versionen von KI (wie ChatGPT oder Claude) einfügen, dann die Antwort der KI zurück in das Dialogfeld kopieren und auf die Bestätigungsschaltfläche klicken."
@@ -400,7 +400,7 @@
 			"capabilities": "Konfiguriere die Fähigkeiten und Preise für dein benutzerdefiniertes OpenAI-kompatibles Modell. Sei vorsichtig bei der Angabe der Modellfähigkeiten, da diese beeinflussen können, wie Kilo Code funktioniert.",
 			"maxTokens": {
 				"label": "Maximale Ausgabe-Tokens",
-				"description": "Maximale Anzahl von Tokens, die das Modell in einer Antwort generieren kann. (Geben Sie -1 an, damit der Server die maximalen Tokens festlegt.)"
+				"description": "Maximale Anzahl von Tokens, die das Modell in einer Antwort generieren kann. (Gib -1 an, damit der Server die maximalen Tokens festlegt.)"
 			},
 			"contextWindow": {
 				"label": "Kontextfenstergröße",
@@ -509,7 +509,7 @@
 		},
 		"viewport": {
 			"label": "Viewport-Größe",
-			"description": "Wählen Sie die Viewport-Größe für Browser-Interaktionen. Dies beeinflusst, wie Websites angezeigt und mit ihnen interagiert wird.",
+			"description": "Wähle die Viewport-Größe für Browser-Interaktionen. Dies beeinflusst, wie Websites angezeigt und mit ihnen interagiert wird.",
 			"options": {
 				"largeDesktop": "Großer Desktop (1280x800)",
 				"smallDesktop": "Kleiner Desktop (900x600)",
@@ -519,7 +519,7 @@
 		},
 		"screenshotQuality": {
 			"label": "Screenshot-Qualität",
-			"description": "Passen Sie die WebP-Qualität von Browser-Screenshots an. Höhere Werte bieten klarere Screenshots, erhöhen aber den Token-Verbrauch."
+			"description": "Passe die WebP-Qualität von Browser-Screenshots an. Höhere Werte bieten klarere Screenshots, erhöhen aber den Token-Verbrauch."
 		},
 		"remote": {
 			"label": "Remote-Browser-Verbindung verwenden",
@@ -527,7 +527,7 @@
 			"urlPlaceholder": "Benutzerdefinierte URL (z.B. http://localhost:9222)",
 			"testButton": "Verbindung testen",
 			"testingButton": "Teste...",
-			"instructions": "Geben Sie die DevTools-Protokoll-Host-Adresse ein oder lassen Sie das Feld leer, um Chrome lokale Instanzen automatisch zu erkennen. Die Schaltfläche 'Verbindung testen' versucht die benutzerdefinierte URL, wenn angegeben, oder erkennt automatisch, wenn das Feld leer ist."
+			"instructions": "Gib die DevTools-Protokoll-Host-Adresse ein oder lasse das Feld leer, um Chrome lokale Instanzen automatisch zu erkennen. Die Schaltfläche 'Verbindung testen' versucht die benutzerdefinierte URL, wenn angegeben, oder erkennt automatisch, wenn das Feld leer ist."
 		}
 	},
 	"checkpoints": {
@@ -549,26 +549,26 @@
 		}
 	},
 	"contextManagement": {
-		"description": "Steuern Sie, welche Informationen im KI-Kontextfenster enthalten sind, was den Token-Verbrauch und die Antwortqualität beeinflusst",
+		"description": "Steuer, welche Informationen im KI-Kontextfenster enthalten sind, was den Token-Verbrauch und die Antwortqualität beeinflusst",
 		"autoCondenseContextPercent": {
 			"label": "Schwellenwert für intelligente Kontextkomprimierung",
 			"description": "Wenn das Kontextfenster diesen Schwellenwert erreicht, wird Kilo Code es automatisch komprimieren."
 		},
 		"condensingApiConfiguration": {
 			"label": "API-Konfiguration für Kontextkomprimierung",
-			"description": "Wählen Sie, welche API-Konfiguration für Kontextkomprimierungsoperationen verwendet werden soll. Lassen Sie unausgewählt, um die aktuelle aktive Konfiguration zu verwenden.",
+			"description": "Wähle, welche API-Konfiguration für Kontextkomprimierungsoperationen verwendet werden soll. Lasse es unausgewählt, um die aktuelle aktive Konfiguration zu verwenden.",
 			"useCurrentConfig": "Aktuelle Konfiguration verwenden"
 		},
 		"customCondensingPrompt": {
 			"label": "Benutzerdefinierter Kontextkomprimierungs-Prompt",
-			"description": "Passen Sie den System-Prompt an, der für die Kontextkomprimierung verwendet wird. Lassen Sie leer, um den Standard-Prompt zu verwenden.",
-			"placeholder": "Geben Sie hier Ihren benutzerdefinierten Komprimierungs-Prompt ein...\n\nSie können die gleiche Struktur wie der Standard-Prompt verwenden:\n- Vorherige Konversation\n- Aktuelle Arbeit\n- Wichtige technische Konzepte\n- Relevante Dateien und Code\n- Problemlösung\n- Ausstehende Aufgaben und nächste Schritte",
+			"description": "Passe den System-Prompt an, der für die Kontextkomprimierung verwendet wird. Lasse es leer, um den Standard-Prompt zu verwenden.",
+			"placeholder": "Gebe hier Ihren benutzerdefinierten Komprimierungs-Prompt ein...\n\nDu kannst die gleiche Struktur wie der Standard-Prompt verwenden:\n- Vorherige Konversation\n- Aktuelle Arbeit\n- Wichtige technische Konzepte\n- Relevante Dateien und Code\n- Problemlösung\n- Ausstehende Aufgaben und nächste Schritte",
 			"reset": "Auf Standard zurücksetzen",
 			"hint": "Leer = Standard-Prompt verwenden"
 		},
 		"autoCondenseContext": {
 			"name": "Intelligente Kontextkomprimierung automatisch auslösen",
-			"description": "Wenn aktiviert, wird Kilo Code automatisch den Kontext komprimieren, wenn der Schwellenwert erreicht wird. Wenn deaktiviert, können Sie die Kontextkomprimierung weiterhin manuell auslösen."
+			"description": "Wenn aktiviert, wird Kilo Code automatisch den Kontext komprimieren, wenn der Schwellenwert erreicht wird. Wenn deaktiviert, kannst du die Kontextkomprimierung weiterhin manuell auslösen."
 		},
 		"openTabs": {
 			"label": "Geöffnete Tabs Kontextlimit",
@@ -595,7 +595,7 @@
 		"diagnostics": {
 			"includeMessages": {
 				"label": "Diagnosen automatisch in den Kontext aufnehmen",
-				"description": "Wenn aktiviert, werden Diagnosenachrichten (Fehler) aus bearbeiteten Dateien automatisch in den Kontext aufgenommen. Sie können jederzeit alle Workspace-Diagnosen manuell mit @problems einbeziehen."
+				"description": "Wenn aktiviert, werden Diagnosenachrichten (Fehler) aus bearbeiteten Dateien automatisch in den Kontext aufgenommen. Du kannst jederzeit alle Workspace-Diagnosen manuell mit @problems einbeziehen."
 			},
 			"maxMessages": {
 				"label": "Maximale Anzahl von Diagnosenachrichten",
@@ -708,7 +708,7 @@
 			},
 			"matchPrecision": {
 				"label": "Übereinstimmungspräzision",
-				"description": "Dieser Schieberegler steuert, wie genau Codeabschnitte bei der Anwendung von Diffs übereinstimmen müssen. Niedrigere Werte ermöglichen eine flexiblere Übereinstimmung, erhöhen aber das Risiko falscher Ersetzungen. Verwenden Sie Werte unter 100 % mit äußerster Vorsicht."
+				"description": "Dieser Schieberegler steuert, wie genau Codeabschnitte bei der Anwendung von Diffs übereinstimmen müssen. Niedrigere Werte ermöglichen eine flexiblere Übereinstimmung, erhöhen aber das Risiko falscher Ersetzungen. Verwende Werte unter 100 % mit äußerster Vorsicht."
 			}
 		},
 		"todoList": {
@@ -743,7 +743,7 @@
 		},
 		"MARKETPLACE": {
 			"name": "Marktplatz aktivieren",
-			"description": "Wenn aktiviert, können Sie MCPs und benutzerdefinierte Modi aus dem Marketplace installieren."
+			"description": "Wenn aktiviert, kannst du MCPs und benutzerdefinierte Modi aus dem Marketplace installieren."
 		},
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Gleichzeitige Dateibearbeitungen aktivieren",
@@ -758,7 +758,7 @@
 		},
 		"INLINE_ASSIST": {
 			"name": "Inline-Unterstützung",
-			"description": "Aktivieren Sie Inline-Assist-Funktionen für schnelle Code-Vorschläge und -Verbesserungen direkt in Ihrem Editor. Beinhaltet Quick Inline Task (Cmd+I) für gezielte Änderungen und Auto Inline Task für kontextbezogene Verbesserungen."
+			"description": "Aktiviere Inline-Assist-Funktionen für schnelle Code-Vorschläge und -Verbesserungen direkt in deinem Editor. Beinhaltet Quick Inline Task (Cmd+I) für gezielte Änderungen und Auto Inline Task für kontextbezogene Verbesserungen."
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Hintergrundbearbeitung",
@@ -798,7 +798,7 @@
 		"azureApiVersion": "Azure API-Version festlegen",
 		"gemini": {
 			"freeRequests": "* Kostenlos bis zu {{count}} Anfragen pro Minute. Danach hängt die Abrechnung von der Prompt-Größe ab.",
-			"pricingDetails": "Weitere Informationen finden Sie unter Preisdetails.",
+			"pricingDetails": "Weitere Informationen findest du unter Preisdetails.",
 			"billingEstimate": "* Die Abrechnung ist eine Schätzung - die genauen Kosten hängen von der Prompt-Größe ab."
 		}
 	},
@@ -811,7 +811,7 @@
 	},
 	"footer": {
 		"feedback": "Wenn du Fragen oder Feedback hast, kannst du gerne ein Issue auf <githubLink>github.com/Kilo-Org/kilocode</githubLink> öffnen oder <redditLink>reddit.com/r/kilocode</redditLink> oder <discordLink>kilocode.ai/discord</discordLink> beitreten",
-		"support": "Für finanzielle Fragen wenden Sie sich bitte an den Kundensupport unter <supportLink>https://kilocode.ai/support</supportLink>",
+		"support": "Für finanzielle Fragen wende dich bitte an den Kundensupport unter <supportLink>https://kilocode.ai/support</supportLink>",
 		"telemetry": {
 			"label": "Fehler- und Nutzungsberichte zulassen",
 			"description": "Hilf dabei, Kilo Code zu verbessern, indem du Nutzungsdaten und Fehlerberichte sendest. Es werden niemals Code, Prompts oder persönliche Informationen gesendet. Weitere Details findest du in unserer Datenschutzrichtlinie."
@@ -878,11 +878,11 @@
 	"display": {
 		"taskTimeline": {
 			"label": "Aufgabenzeitplan anzeigen",
-			"description": "Zeigt eine visuelle Zeitleiste der Aufgabennachrichten an, farblich nach Typ gekennzeichnet, sodass Sie den Fortschritt der Aufgabe schnell überblicken und zu bestimmten Punkten in der Aufgabenhistorie zurückspringen können."
+			"description": "Zeigt eine visuelle Zeitleiste der Aufgabennachrichten an, farblich nach Typ gekennzeichnet, sodass du den Fortschritt der Aufgabe schnell überblicken und zu bestimmten Punkten in der Aufgabenhistorie zurückspringen kannst."
 		}
 	},
 	"includeMaxOutputTokens": "Maximale Ausgabe-Tokens einbeziehen",
-	"includeMaxOutputTokensDescription": "Senden Sie den Parameter für maximale Ausgabe-Tokens in API-Anfragen. Einige Anbieter unterstützen dies möglicherweise nicht.",
+	"includeMaxOutputTokensDescription": "Sende den Parameter für maximale Ausgabe-Tokens in API-Anfragen. Einige Anbieter unterstützen dies möglicherweise nicht.",
 	"limitMaxTokensDescription": "Begrenze die maximale Anzahl von Tokens in der Antwort",
 	"maxOutputTokensLabel": "Maximale Ausgabe-Tokens",
 	"maxTokensGenerateDescription": "Maximale Tokens, die in der Antwort generiert werden"

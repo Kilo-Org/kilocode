@@ -2,19 +2,19 @@ import * as undici from "undici"
 
 export function fetchWithTimeout(timeoutMs: number, headers?: Record<string, string>): typeof fetch {
 	const agent = new undici.Agent({ headersTimeout: timeoutMs, bodyTimeout: timeoutMs })
-	return async (input, init) => {
-		const mergedHeaders = {
-			...headers, // Persistent headers from function parameter
-			...(init?.headers || {}), // Request-specific headers (can override persistent ones)
+	return (input, init) => {
+		const requestInit: undici.RequestInit = {
+			...(init as undici.RequestInit),
+			dispatcher: agent,
 		}
-		const response = (await undici.fetch(
-			input as undici.RequestInfo,
-			{
-				...init,
-				headers: mergedHeaders,
-				dispatcher: agent,
-			} as undici.RequestInit,
-		)) as unknown as Response
-		return response
+
+		if (headers) {
+			requestInit.headers = {
+				...(init?.headers || {}),
+				...headers,
+			}
+		}
+
+		return undici.fetch(input as undici.RequestInfo, requestInit) as unknown as Promise<Response>
 	}
 }

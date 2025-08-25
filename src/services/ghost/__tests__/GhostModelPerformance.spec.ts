@@ -55,7 +55,7 @@ describe("GhostModelPerformance", () => {
 			if (!KEYS.KILOCODE) {
 				return
 			}
-			allowNetConnect("kilocode.ai")
+			allowNetConnect("api.kilocode.ai")
 			const apiHandler = buildApiHandler({
 				apiProvider: "kilocode",
 				kilocodeModel: "google/gemini-2.5-flash",
@@ -67,7 +67,7 @@ describe("GhostModelPerformance", () => {
 			if (!KEYS.KILOCODE) {
 				return
 			}
-			allowNetConnect("kilocode.ai")
+			allowNetConnect("api.kilocode.ai")
 			const apiHandler = buildApiHandler({
 				apiProvider: "kilocode",
 				kilocodeModel: "mistralai/codestral-2501",

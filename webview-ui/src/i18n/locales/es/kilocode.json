@@ -53,8 +53,7 @@
 		"modelInfo": {
 			"contextWindow": "Ventana de contexto",
 			"providerBreakdown": "Desglose de precios y capacidades del proveedor",
-			"averageKiloCodeCost": "Costo promedio de Kilo Code",
-			"averageKiloCodeCostDescription": "Este es el gasto real promedio de Kilo Code usando este modelo durante la última semana. Puede ser menor que el precio listado debido al uso del caché de prompts.",
+			"averageKiloCodeCost": "Este es el gasto real promedio de Kilo Code usando este modelo durante la última semana. Puede ser menor que el precio listado debido al uso del caché de prompts.",
 			"table": {
 				"provider": "Proveedor",
 				"context": "El endpoint puede procesar este número de tokens (entrada + salida).",
