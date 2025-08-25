@@ -5,7 +5,7 @@ import type { ToolName, ClineAsk, ToolProgressStatus } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 
 import { defaultModeSlug, getModeBySlug } from "../../shared/modes"
-import type { ToolParamName, ToolResponse } from "../../shared/tools"
+import type { ToolParamName, ToolResponse, AskApproval } from "../../shared/tools"
 
 import { fetchInstructionsTool } from "../tools/fetchInstructionsTool"
 import { listFilesTool } from "../tools/listFilesTool"
@@ -286,12 +286,13 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 				cline.didAlreadyUseTool = true
 			}
 
-			const askApproval = async (
+			const askApproval: AskApproval = async (
 				type: ClineAsk,
 				partialMessage?: string,
 				progressStatus?: ToolProgressStatus,
 				isProtected?: boolean,
-			) => {
+				isModifiable?: boolean,
+			): Promise<any> => {
 				const { response, text, images } = await cline.ask(
 					type,
 					partialMessage,
@@ -318,7 +319,13 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 					pushToolResult(formatResponse.toolResult(formatResponse.toolApprovedWithFeedback(text), images))
 				}
 
-				return true
+				if (isModifiable) {
+					const modifiedCommand = cline.consumeModifiedCommandForApproval()
+					return { approved: true, text: modifiedCommand ?? text }
+				} else {
+					cline.consumeModifiedCommandForApproval()
+					return true
+				}
 			}
 
 			const askFinishSubTaskApproval = async () => {
@@ -327,7 +334,9 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 				// control to the parent task to continue running the rest of
 				// the sub-tasks.
 				const toolMessage = JSON.stringify({ tool: "finishTask" })
-				return await askApproval("tool", toolMessage)
+				const result = await askApproval("tool", toolMessage)
+				// We expect a boolean here, as we didn't pass isModifiable: true
+				return typeof result === "boolean" ? result : result.approved
 			}
 
 			const handleError = async (action: string, error: Error) => {

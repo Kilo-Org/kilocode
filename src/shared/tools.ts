@@ -4,12 +4,24 @@ import type { ClineAsk, ToolProgressStatus, ToolGroup, ToolName } from "@roo-cod
 
 export type ToolResponse = string | Array<Anthropic.TextBlockParam | Anthropic.ImageBlockParam>
 
-export type AskApproval = (
-	type: ClineAsk,
-	partialMessage?: string,
-	progressStatus?: ToolProgressStatus,
-	forceApproval?: boolean,
-) => Promise<boolean>
+export type AskApprovalResult = { approved: boolean; text?: string }
+
+export type AskApproval = {
+	(
+		type: ClineAsk,
+		partialMessage?: string,
+		progressStatus?: ToolProgressStatus,
+		isProtected?: boolean,
+		isModifiable?: true, // When isModifiable is true
+	): Promise<AskApprovalResult> // Returns object
+	(
+		type: ClineAsk,
+		partialMessage?: string,
+		progressStatus?: ToolProgressStatus,
+		isProtected?: boolean,
+		isModifiable?: false | undefined, // When isModifiable is false or undefined
+	): Promise<boolean> // Returns boolean
+}
 
 export type HandleError = (action: string, error: Error) => Promise<void>
 

@@ -204,7 +204,7 @@
 	},
 	"commandOutput": "Sortie de commande",
 	"commandExecution": {
-		"running": "En cours d'exécution",
+		"running": "En cours",
 		"pid": "PID : {{pid}}",
 		"exited": "Terminé ({{exitCode}})",
 		"manageCommands": "Gérer les autorisations de commande",
@@ -217,7 +217,11 @@
 		"expandOutput": "Développer la sortie",
 		"collapseOutput": "Réduire la sortie",
 		"expandManagement": "Développer la section de gestion des commandes",
-		"collapseManagement": "Réduire la section de gestion des commandes"
+		"collapseManagement": "Réduire la section de gestion des commandes",
+		"editCommand": "Modifier la commande",
+		"enterCommand": "Entrer la commande...",
+		"save": "Enregistrer",
+		"cancel": "Annuler"
 	},
 	"response": "Réponse",
 	"arguments": "Arguments",
