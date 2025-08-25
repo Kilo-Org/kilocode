@@ -1,15 +1,24 @@
-sequential-mixed-operations/input.js
-```js
-function calculateTotal(items) {
+<change><search><![CDATA[function calculateTotal(items) {
+	let total = 0
+	for (const item of items) {
+		total += item.price
+	}
+	return total
+}]]></search><replace><![CDATA[function calculateTotal(items) {
 	let total = 0
 	// Add tax calculation
 	for (const item of items) {
 		total += item.price * 1.1 // Apply 10% tax
 	}
 	return total
-}
-
-function processOrder(order) {
+}]]></replace></change><change><search><![CDATA[function processOrder(order) {
+	const total = calculateTotal(order.items)
+	return {
+		id: order.id,
+		total: total,
+		status: "processed",
+	}
+}]]></search><replace><![CDATA[function processOrder(order) {
 	// Validate order first
 	if (!order || !order.items) {
 		throw new Error("Invalid order")
@@ -20,6 +29,4 @@ function processOrder(order) {
 		total: total,
 		status: "completed",
 	}
-}
-
-```
+}]]></replace></change>

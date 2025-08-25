@@ -209,6 +209,10 @@
 				"label": "Akıllı Satır İçi Görev",
 				"description": "Hızlı bir düzeltme, tamamlama veya yeniden düzenlemeye mi ihtiyacın var? Kilo, anında iyileştirmeler sunmak için çevredeki bağlamı kullanır ve seni akışta tutar. <DocsLink>Kısayolu gör</DocsLink>"
 			},
+			"enableCustomProvider": {
+				"label": "Özel sağlayıcı kullan",
+				"description": "Inline Assist, varsayılan olarak Codestral modelini kullanmak için KiloCode / OpenRouter / Mistral kimlik bilgilerinizi kullanır"
+			},
 			"provider": "Sağlayıcı",
 			"apiConfigId": {
 				"label": "API Yapılandırması",

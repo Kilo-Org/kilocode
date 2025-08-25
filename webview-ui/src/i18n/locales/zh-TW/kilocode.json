@@ -205,6 +205,10 @@
 				"label": "智慧行內任務",
 				"description": "需要快速修復、完成或重構程式碼？Kilo 將使用周圍的上下文提供即時改進，讓您保持工作流暢。<DocsLink>查看快捷鍵</DocsLink>"
 			},
+			"enableCustomProvider": {
+				"label": "使用自訂提供者",
+				"description": "Inline Assist 使用你的 KiloCode / OpenRouter / Mistral 憑證預設使用 Codestral 模型"
+			},
 			"provider": "供應商",
 			"apiConfigId": {
 				"label": "API 設定檔",

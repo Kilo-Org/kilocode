@@ -209,6 +209,10 @@
 				"label": "Tugas Inline Pintar",
 				"description": "Butuh perbaikan cepat, penyelesaian, atau refaktor? Kilo akan menggunakan konteks sekitar untuk menawarkan perbaikan segera, menjaga kamu tetap dalam alur. <DocsLink>Lihat pintasan</DocsLink>"
 			},
+			"enableCustomProvider": {
+				"label": "Gunakan penyedia kustom",
+				"description": "Inline Assist menggunakan kredensial KiloCode / OpenRouter / Mistral Anda untuk menggunakan model Codestral secara default"
+			},
 			"provider": "Penyedia",
 			"apiConfigId": {
 				"label": "Konfigurasi API",

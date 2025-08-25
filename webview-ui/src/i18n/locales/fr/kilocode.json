@@ -209,6 +209,10 @@
 				"label": "Tâche Intelligente en Ligne",
 				"description": "Besoin d'une correction rapide, d'une complétion ou d'un refactoring ? Kilo utilisera le contexte environnant pour offrir des améliorations immédiates, te gardant dans le flux. <DocsLink>Voir le raccourci</DocsLink>"
 			},
+			"enableCustomProvider": {
+				"label": "Utiliser un fournisseur personnalisé",
+				"description": "Inline Assist utilise tes identifiants KiloCode / OpenRouter / Mistral pour utiliser le modèle Codestral par défaut"
+			},
 			"provider": "Fournisseur",
 			"apiConfigId": {
 				"label": "Configuration API",

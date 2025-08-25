@@ -1,22 +1,20 @@
-partial-mixed-operations/input.js
-```js
-function calculateDiscount(price, discountRate) {
-	return price * discountRate
-}
-
-function applyDiscount(item) {
+<change><search><![CDATA[function applyDiscount(item) {
+	const discount = calculateDiscount(item.price, 0.1)
+	return {
+		...item,
+		discountedPrice: item.price - discount,
+	}
+}]]></search><replace><![CDATA[function applyDiscount(item) {
 	const discount = calculateDiscount(item.price, 0.1)
 	return {
 		...item,
 		originalPrice: item.price,
 		discountedPrice: item.price - discount,
 	}
-}
-
-function processItems(items) {
+}]]></replace></change><change><search><![CDATA[function processItems(items) {
+	return items.map(applyDiscount)
+}]]></search><replace><![CDATA[function processItems(items) {
 	// Filter out invalid items
 	const validItems = items.filter((item) => item && item.price > 0)
 	return validItems.map(applyDiscount)
-}
-
-```
+}]]></replace></change>

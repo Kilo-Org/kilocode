@@ -119,7 +119,8 @@ describe("GhostRecentOperations", () => {
 		const prompt = strategy.getSuggestionPrompt(enrichedContext)
 
 		// Verify that the prompt includes the recent operations section
-		expect(prompt).toContain("**Recent User Actions:**")
+		// The new strategy system uses "## Recent Typing" format
+		expect(prompt).toContain("## Recent Typing")
 	})
 
 	it("should not include recent operations in the prompt when not available", async () => {

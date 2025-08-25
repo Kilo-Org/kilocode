@@ -209,6 +209,10 @@
 				"label": "스마트 인라인 작업",
 				"description": "빠른 수정, 완성 또는 리팩토링이 필요하신가요? Kilo가 주변 컨텍스트를 사용하여 즉각적인 개선사항을 제공하여 작업 흐름을 유지합니다. <DocsLink>단축키 보기</DocsLink>"
 			},
+			"enableCustomProvider": {
+				"label": "사용자 정의 제공자 사용",
+				"description": "Inline Assist는 기본적으로 Codestral 모델을 사용하기 위해 KiloCode / OpenRouter / Mistral 자격 증명을 사용합니다"
+			},
 			"provider": "제공자",
 			"apiConfigId": {
 				"label": "API 구성",

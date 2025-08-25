@@ -205,6 +205,10 @@
 				"label": "智能内联任务",
 				"description": "需要快速修复、完成或重构代码？Kilo 将使用周围的上下文提供即时改进，让您保持工作流畅。<DocsLink>查看快捷键</DocsLink>"
 			},
+			"enableCustomProvider": {
+				"label": "使用自定义提供商",
+				"description": "Inline Assist 使用你的 KiloCode / OpenRouter / Mistral 凭据默认使用 Codestral 模型"
+			},
 			"provider": "提供商",
 			"apiConfigId": {
 				"label": "API 配置",

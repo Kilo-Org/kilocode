@@ -1,7 +1,7 @@
-line-deletions/input.js
-```js
-function greet(name) {
+<change><search><![CDATA[function greet(name) {
+	// TODO: Remove this debug log
+	console.log("Debug: greeting", name)
 	return `Hello, ${name}!`
-}
-
-```
+}]]></search><replace><![CDATA[function greet(name) {
+	return `Hello, ${name}!`
+}]]></replace></change>

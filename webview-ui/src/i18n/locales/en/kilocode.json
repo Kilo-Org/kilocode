@@ -207,6 +207,10 @@
 				"label": "Smart Inline Task",
 				"description": "Need a quick fix, completion, or refactor? Kilo will use the surrounding context to offer immediate improvements, keeping you in the flow. <DocsLink>See shortcut</DocsLink>"
 			},
+			"enableCustomProvider": {
+				"label": "Use custom provider",
+				"description": "Inline Assist uses your KiloCode / OpenRouter / Mistral credential to use the Codestral model by default"
+			},
 			"provider": "Provider",
 			"apiConfigId": {
 				"label": "API Configuration",

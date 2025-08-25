@@ -209,6 +209,10 @@
 				"label": "Chytrý inline úkol",
 				"description": "Potřebuješ rychlou opravu, dokončení nebo refaktoring? Kilo použije okolní kontext k nabídnutí okamžitých vylepšení, což tě udrží v pracovním tempu. <DocsLink>Zobrazit zkratku</DocsLink>"
 			},
+			"enableCustomProvider": {
+				"label": "Použít vlastního poskytovatele",
+				"description": "Inline Assist používá vaše přihlašovací údaje KiloCode / OpenRouter / Mistral pro výchozí použití modelu Codestral"
+			},
 			"provider": "Poskytovatel",
 			"apiConfigId": {
 				"label": "Konfigurace API",

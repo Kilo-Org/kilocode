@@ -209,6 +209,10 @@
 				"label": "Inteligentne zadanie w tekście",
 				"description": "Potrzebujesz szybkiej poprawki, uzupełnienia lub refaktoryzacji? Kilo użyje otaczającego kontekstu, aby zaoferować natychmiastowe ulepszenia, utrzymując cię w przepływie. <DocsLink>Zobacz skrót</DocsLink>"
 			},
+			"enableCustomProvider": {
+				"label": "Użyj niestandardowego dostawcy",
+				"description": "Inline Assist używa twoich danych uwierzytelniających KiloCode / OpenRouter / Mistral do domyślnego używania modelu Codestral"
+			},
 			"provider": "Dostawca",
 			"apiConfigId": {
 				"label": "Konfiguracja API",

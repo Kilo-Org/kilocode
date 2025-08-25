@@ -209,6 +209,10 @@
 				"label": "Slimme Inline Taak",
 				"description": "Heb je een snelle fix, aanvulling of refactoring nodig? Kilo gebruikt de omringende context om directe verbeteringen aan te bieden, zodat je in de flow blijft. <DocsLink>Bekijk sneltoets</DocsLink>"
 			},
+			"enableCustomProvider": {
+				"label": "Aangepaste provider gebruiken",
+				"description": "Inline Assist gebruikt je KiloCode / OpenRouter / Mistral inloggegevens om standaard het Codestral model te gebruiken"
+			},
 			"provider": "Aanbieder",
 			"apiConfigId": {
 				"label": "API-configuratie",
