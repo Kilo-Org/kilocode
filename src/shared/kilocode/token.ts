@@ -9,5 +9,5 @@ export function getKiloBaseUriFromToken(kilocodeToken: string) {
 	} catch (_error) {
 		console.warn("Failed to get base URL from Kilo Code token")
 	}
-	return "https://kilocode.ai"
+	return "https://api.kilocode.ai"
 }

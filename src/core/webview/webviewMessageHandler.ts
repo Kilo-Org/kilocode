@@ -2233,7 +2233,7 @@ export const webviewMessageHandler = async (
 				const source = uiKind === "Web" ? "web" : uriScheme
 
 				const response = await axios.post(
-					`https://kilocode.ai/payments/topup?origin=extension&source=${source}&amount=${credits}`,
+					`https://api.kilocode.ai/payments/topup?origin=extension&source=${source}&amount=${credits}`,
 					{},
 					{
 						headers: {
