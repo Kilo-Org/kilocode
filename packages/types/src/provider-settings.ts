@@ -80,13 +80,14 @@ export type ProviderSettingsEntry = z.infer<typeof providerSettingsEntrySchema>
  */
 export const DEFAULT_CONSECUTIVE_MISTAKE_LIMIT = 3
 
-const baseProviderSettingsSchema = z.object({
+export const baseProviderSettingsSchema = z.object({
 	includeMaxTokens: z.boolean().optional(),
 	diffEnabled: z.boolean().optional(),
 	todoListEnabled: z.boolean().optional(),
 	fuzzyMatchThreshold: z.number().optional(),
 	modelTemperature: z.number().nullish(),
 	rateLimitSeconds: z.number().optional(),
+	requestsPerMinute: z.number().min(1).optional(), // kilocode_change: 분당 요청 제한
 	consecutiveMistakeLimit: z.number().min(0).optional(),
 
 	// Model reasoning.

@@ -213,6 +213,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	readonly apiConfiguration: ProviderSettings
 	api: ApiHandler
 	private static lastGlobalApiRequestTime?: number
+	// kilocode_change: Track recent request timestamps per task instance to avoid race conditions
+	private static recentApiRequestTimestampsMap: Map<string, number[]> = new Map()
+	private static readonly MAX_TIMESTAMPS_PER_TASK = 1000 // Prevent memory leak
+	private static readonly MINUTE_IN_MS = 60000 // 1 minute in milliseconds
 	private autoApprovalHandler: AutoApprovalHandler
 
 	/**
@@ -221,6 +225,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	 */
 	static resetGlobalApiRequestTime(): void {
 		Task.lastGlobalApiRequestTime = undefined
+		Task.recentApiRequestTimestampsMap.clear() // kilocode_change: Clear all per-minute tracking
 	}
 
 	toolRepetitionDetector: ToolRepetitionDetector
@@ -2420,14 +2425,45 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 		let rateLimitDelay = 0
 
-		// Use the shared timestamp so that subtasks respect the same rate-limit
-		// window as their parent tasks.
-		if (Task.lastGlobalApiRequestTime) {
-			const now = Date.now()
+		// kilocode_change start: Add requests per minute limiting with thread-safe implementation
+		const now = Date.now()
+
+		// Check if we should use requests per minute limiting
+		if (apiConfiguration?.requestsPerMinute) {
+			// Get or create timestamps array for this task instance
+			let timestamps = Task.recentApiRequestTimestampsMap.get(this.taskId) || []
+			
+			// Clean up old timestamps (older than 1 minute) and limit array size to prevent memory leak
+			timestamps = timestamps.filter((timestamp) => now - timestamp < Task.MINUTE_IN_MS)
+			
+			// Limit the size of timestamps array to prevent unbounded growth
+			if (timestamps.length > Task.MAX_TIMESTAMPS_PER_TASK) {
+				timestamps = timestamps.slice(-Task.MAX_TIMESTAMPS_PER_TASK)
+			}
+			
+			Task.recentApiRequestTimestampsMap.set(this.taskId, timestamps)
+
+			const requestsInLastMinute = timestamps.length
+
+			if (requestsInLastMinute >= apiConfiguration.requestsPerMinute) {
+				// Find the oldest request timestamp that we need to wait for to expire
+				const oldestRelevantTimestamp =
+					timestamps[timestamps.length - apiConfiguration.requestsPerMinute + 1]
+
+				if (oldestRelevantTimestamp) {
+					const timeToWait = Task.MINUTE_IN_MS - (now - oldestRelevantTimestamp)
+					if (timeToWait > 0) {
+						rateLimitDelay = Math.ceil(timeToWait / 1000)
+					}
+				}
+			}
+		} else if (Task.lastGlobalApiRequestTime) {
+			// Fall back to the original rate limit seconds logic
 			const timeSinceLastRequest = now - Task.lastGlobalApiRequestTime
 			const rateLimit = apiConfiguration?.rateLimitSeconds || 0
 			rateLimitDelay = Math.ceil(Math.max(0, rateLimit * 1000 - timeSinceLastRequest) / 1000)
 		}
+		// kilocode_change end
 
 		// Only show rate limiting message if we're not retrying. If retrying, we'll include the delay there.
 		if (rateLimitDelay > 0 && retryAttempt === 0) {
@@ -2442,6 +2478,13 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		// Update last request time before making the request so that subsequent
 		// requests — even from new subtasks — will honour the provider's rate-limit.
 		Task.lastGlobalApiRequestTime = Date.now()
+		
+		// kilocode_change: Track this request for per-minute limiting
+		if (apiConfiguration?.requestsPerMinute) {
+			const timestamps = Task.recentApiRequestTimestampsMap.get(this.taskId) || []
+			timestamps.push(Date.now())
+			Task.recentApiRequestTimestampsMap.set(this.taskId, timestamps)
+		}
 
 		const systemPrompt = await this.getSystemPrompt()
 		this.lastUsedInstructions = systemPrompt
