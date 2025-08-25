@@ -11,7 +11,10 @@
 		"title": "Ostrzeżenie o niskim saldzie!",
 		"message": "Sprawdź, czy możesz doładować darmowymi środkami lub kupić więcej!"
 	},
-	"notLoggedInError": "Nie można ukończyć żądania, upewnij się, że jesteś połączony i zalogowany u wybranego dostawcy.\n\n{{error}}",
+	"task": {
+		"noAssistantMessages": "Odpowiedź modelu zakończyła się nieoczekiwanie (brak komunikatów asystenta). To może być oznaka ograniczenia częstotliwości żądań.",
+		"notLoggedInError": "Nie można ukończyć żądania, upewnij się, że jesteś połączony i zalogowany u wybranego dostawcy.\n\n{{error}}"
+	},
 	"rules": {
 		"actions": {
 			"delete": "Usuń",

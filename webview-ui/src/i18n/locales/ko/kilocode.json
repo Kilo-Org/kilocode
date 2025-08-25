@@ -53,8 +53,7 @@
 		"modelInfo": {
 			"contextWindow": "컨텍스트 창",
 			"providerBreakdown": "공급자 가격 및 기능 세부사항",
-			"averageKiloCodeCost": "평균 Kilo Code 비용",
-			"averageKiloCodeCostDescription": "이는 지난 주 동안 이 모델을 사용한 Kilo Code의 실제 평균 비용입니다. 프롬프트 캐시 활용으로 인해 표시된 가격보다 낮을 수 있습니다.",
+			"averageKiloCodeCost": "이는 지난 주 동안 이 모델을 사용한 Kilo Code의 실제 평균 비용입니다. 프롬프트 캐시 활용으로 인해 표시된 가격보다 낮을 수 있습니다.",
 			"table": {
 				"provider": "공급자",
 				"context": "엔드포인트가 처리할 수 있는 토큰 수입니다 (입력 + 출력).",

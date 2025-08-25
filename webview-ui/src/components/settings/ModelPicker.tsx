@@ -50,7 +50,11 @@ interface ModelPickerProps {
 	serviceName: string
 	serviceUrl: string
 	apiConfiguration: ProviderSettings
-	setApiConfigurationField: <K extends keyof ProviderSettings>(field: K, value: ProviderSettings[K]) => void
+	setApiConfigurationField: <K extends keyof ProviderSettings>(
+		field: K,
+		value: ProviderSettings[K],
+		isUserAction?: boolean,
+	) => void
 	organizationAllowList: OrganizationAllowList
 	errorMessage?: string
 }
@@ -126,9 +130,8 @@ export const ModelPicker = ({
 
 	useEffect(() => {
 		if (!selectedModelId && !isInitialized.current) {
-			const initialValue =
-				selectedModelId && modelIds.includes(selectedModelId) ? selectedModelId : defaultModelId
-			setApiConfigurationField(modelIdKey, initialValue)
+			const initialValue = modelIds.includes(selectedModelId) ? selectedModelId : defaultModelId
+			setApiConfigurationField(modelIdKey, initialValue, false) // false = automatic initialization
 		}
 
 		isInitialized.current = true

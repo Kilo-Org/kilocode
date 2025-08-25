@@ -53,8 +53,7 @@
 		"modelInfo": {
 			"contextWindow": "Kontextfenster",
 			"providerBreakdown": "Anbieter-Preis- und Funktionsübersicht",
-			"averageKiloCodeCost": "Durchschnittliche Kilo Code Kosten",
-			"averageKiloCodeCostDescription": "Das sind die durchschnittlichen tatsächlichen Ausgaben für Kilo Code mit diesem Modell in der letzten Woche. Sie können niedriger sein als der angegebene Preis aufgrund der Nutzung des Prompt-Caches.",
+			"averageKiloCodeCost": "Das sind die durchschnittlichen tatsächlichen Ausgaben für Kilo Code mit diesem Modell in der letzten Woche. Sie können niedriger sein als der angegebene Preis aufgrund der Nutzung des Prompt-Caches.",
 			"table": {
 				"provider": "Anbieter",
 				"context": "Der Endpunkt kann diese Anzahl von Token verarbeiten (Eingabe + Ausgabe).",
@@ -83,7 +82,7 @@
 				"apiConfigId": {
 					"label": "API-Konfiguration",
 					"current": "Aktuelle Konfiguration verwenden",
-					"description": "Wählen Sie aus, welche API-Konfiguration für die Generierung von Terminal-Befehlen verwendet werden soll. Belassen Sie es bei \"Aktuelle Konfiguration verwenden\", um Ihre Standardeinstellungen zu nutzen."
+					"description": "Wähle aus, welche API-Konfiguration für die Generierung von Terminal-Befehlen verwendet werden soll. Belasse es bei \"Aktuelle Konfiguration verwenden\", um Ihre Standardeinstellungen zu nutzen."
 				}
 			}
 		}
@@ -196,7 +195,7 @@
 			},
 			"enableAutoInlineTaskKeybinding": {
 				"label": "Auto Inline Aufgabe",
-				"description": "Brauchen Sie eine schnelle Korrektur, Vervollständigung oder Umstrukturierung? Kilo nutzt den umliegenden Kontext, um sofortige Verbesserungen anzubieten und Sie im Flow zu halten. <DocsLink>Tastenkombination anzeigen</DocsLink>"
+				"description": "Brauchest du eine schnelle Korrektur, Vervollständigung oder Umstrukturierung? Kilo nutzt den umliegenden Kontext, um sofortige Verbesserungen anzubieten und dich im Flow zu halten. <DocsLink>Tastenkombination anzeigen</DocsLink>"
 			},
 			"enableAutoTrigger": {
 				"label": "Automatischen Auslöser aktivieren",
@@ -217,12 +216,12 @@
 				"description": "Wähle eine API-Konfiguration für Inline-Assist-Prompts aus oder verwende einfach die aktuell ausgewählte"
 			},
 			"triggers": "Auslöser",
-			"keybindingDescription": "Inline-Assistenzfunktionen werden durch Befehle ausgelöst. Sie können die <DocsLink>Tastaturkürzel hier konfigurieren</DocsLink>."
+			"keybindingDescription": "Inline-Assistenzfunktionen werden durch Befehle ausgelöst. Du kannst die <DocsLink>Tastaturkürzel hier konfigurieren</DocsLink>."
 		}
 	},
 	"virtualProvider": {
 		"title": "Virtuelle Kontingent-Fallback-Anbieter-Einstellungen",
-		"description": "Konfigurieren Sie eine Liste von Profilen, jedes mit eigenen Kontingentbeschränkungen. Wenn die Kontingentbeschränkungen eines Anbieters erreicht sind, wird das nächste Profil in der Liste verwendet, bis keines mehr übrig ist.",
+		"description": "Konfiguriere eine Liste von Profilen, jedes mit eigenen Kontingentbeschränkungen. Wenn die Kontingentbeschränkungen eines Anbieters erreicht sind, wird das nächste Profil in der Liste verwendet, bis keines mehr übrig ist.",
 		"profileLabel": "Profil {{number}}",
 		"primaryProfileLabel": "Profil {{number}} (Primär)",
 		"moveProfileUp": "Profil nach oben verschieben",
@@ -230,7 +229,7 @@
 		"removeProfile": "Profil entfernen",
 		"selectProfilePlaceholder": "Profil auswählen...",
 		"addProfile": "Profil hinzufügen",
-		"noProfilesAvailable": "Keine Profileprofile verfügbar. Bitte konfigurieren Sie zuerst mindestens ein nicht-virtuelles Anbieterprofil.",
+		"noProfilesAvailable": "Keine Profileprofile verfügbar. Bitte konfiguriere zuerst mindestens ein nicht-virtuelles Anbieterprofil.",
 		"dangerZoneTitle": "Gefahrenbereich",
 		"dangerZoneDescription": "Diese Aktionen sind destruktiv und können nicht rückgängig gemacht werden.",
 		"clearUsageData": "Nutzungsdaten löschen",

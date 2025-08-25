@@ -126,6 +126,9 @@
 			"genericError": "Chyba Cerebras API ({{status}}): {{message}}",
 			"noResponseBody": "Chyba Cerebras API: Žádné tělo odpovědi",
 			"completionError": "Chyba dokončení Cerebras: {{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "Poskytovatel Roo vyžaduje cloudovou autentizaci. Prosím přihlas se do Roo Code Cloud."
 		}
 	},
 	"warnings": {

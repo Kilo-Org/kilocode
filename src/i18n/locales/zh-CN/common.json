@@ -126,6 +126,9 @@
 		},
 		"qwenCode": {
 			"oauthLoadFailed": "加载 OAuth 凭据失败。请先进行身份验证：{{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "Roo 提供商需要云认证。请登录 Roo Code Cloud。"
 		}
 	},
 	"warnings": {

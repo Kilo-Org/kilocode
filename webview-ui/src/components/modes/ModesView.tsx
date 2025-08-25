@@ -578,7 +578,6 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 									</div>
 								)}
 							</div>
-							{/* kilocode_change
 							<StandardTooltip content={t("chat:modeSelector.marketplace")}>
 								<Button
 									variant="ghost"
@@ -596,7 +595,6 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 									<span className="codicon codicon-extensions"></span>
 								</Button>
 							</StandardTooltip>
-							*/}
 						</div>
 					</div>
 

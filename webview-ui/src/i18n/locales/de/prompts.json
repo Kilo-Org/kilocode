@@ -99,45 +99,45 @@
 		},
 		"condense": {
 			"apiConfiguration": "API-Konfiguration für die Kontextverdichtung",
-			"apiConfigDescription": "Wählen Sie aus, welche API-Konfiguration für Kontextverdichtungsvorgänge verwendet werden soll. Lassen Sie die Auswahl leer, um die aktuell aktive Konfiguration zu verwenden.",
+			"apiConfigDescription": "Wähle aus, welche API-Konfiguration für Kontextverdichtungsvorgänge verwendet werden soll. Lasse die Auswahl leer, um die aktuell aktive Konfiguration zu verwenden.",
 			"useCurrentConfig": "Derzeit ausgewählte API-Konfiguration verwenden"
 		},
 		"types": {
 			"ENHANCE": {
 				"label": "Prompt verbessern",
-				"description": "Verwenden Sie die Prompt-Verbesserung, um maßgeschneiderte Vorschläge oder Verbesserungen für Ihre Eingaben zu erhalten. Dies stellt sicher, dass Kilo Code Ihre Absicht versteht und die bestmöglichen Antworten liefert. Verfügbar über das ✨-Symbol im Chat."
+				"description": "Verwende die Prompt-Verbesserung, um maßgeschneiderte Vorschläge oder Verbesserungen für deine Eingaben zu erhalten. Dies stellt sicher, dass Kilo Code deine Absicht versteht und die bestmöglichen Antworten liefert. Verfügbar über das ✨-Symbol im Chat."
 			},
 			"CONDENSE": {
 				"label": "Kontextverdichtung",
-				"description": "Konfigurieren Sie, wie der Konversationskontext verdichtet wird, um Token-Limits zu verwalten. Dieser Prompt wird sowohl für manuelle als auch für automatische Kontextverdichtungsvorgänge verwendet."
+				"description": "Konfiguriere, wie der Konversationskontext verdichtet wird, um Token-Limits zu verwalten. Dieser Prompt wird sowohl für manuelle als auch für automatische Kontextverdichtungsvorgänge verwendet."
 			},
 			"EXPLAIN": {
 				"label": "Code erklären",
-				"description": "Erhalten Sie detaillierte Erklärungen zu Code-Schnipseln, Funktionen oder ganzen Dateien. Nützlich zum Verständnis komplexen Codes oder zum Erlernen neuer Muster. Verfügbar in Code-Aktionen (Glühbirnen-Symbol im Editor) und im Kontextmenü des Editors (Rechtsklick auf ausgewählten Code)."
+				"description": "Erhalte detaillierte Erklärungen zu Code-Schnipseln, Funktionen oder ganzen Dateien. Nützlich zum Verständnis komplexen Codes oder zum Erlernen neuer Muster. Verfügbar in Code-Aktionen (Glühbirnen-Symbol im Editor) und im Kontextmenü des Editors (Rechtsklick auf ausgewählten Code)."
 			},
 			"FIX": {
 				"label": "Probleme beheben",
-				"description": "Erhalten Sie Hilfe beim Identifizieren und Lösen von Bugs, Fehlern oder Problemen mit der Code-Qualität. Bietet Schritt-für-Schritt-Anleitungen zur Problemlösung. Verfügbar in Code-Aktionen (Glühbirnen-Symbol im Editor) und im Kontextmenü des Editors (Rechtsklick auf ausgewählten Code)."
+				"description": "Erhalte Hilfe beim Identifizieren und Lösen von Bugs, Fehlern oder Problemen mit der Code-Qualität. Bietet Schritt-für-Schritt-Anleitungen zur Problemlösung. Verfügbar in Code-Aktionen (Glühbirnen-Symbol im Editor) und im Kontextmenü des Editors (Rechtsklick auf ausgewählten Code)."
 			},
 			"IMPROVE": {
 				"label": "Code verbessern",
-				"description": "Erhalten Sie Vorschläge zur Code-Optimierung, bessere Praktiken und architektonische Verbesserungen bei gleichzeitiger Beibehaltung der Funktionalität. Verfügbar in Code-Aktionen (Glühbirnen-Symbol im Editor) und im Kontextmenü des Editors (Rechtsklick auf ausgewählten Code)."
+				"description": "Erhalte Vorschläge zur Code-Optimierung, bessere Praktiken und architektonische Verbesserungen bei gleichzeitiger Beibehaltung der Funktionalität. Verfügbar in Code-Aktionen (Glühbirnen-Symbol im Editor) und im Kontextmenü des Editors (Rechtsklick auf ausgewählten Code)."
 			},
 			"ADD_TO_CONTEXT": {
 				"label": "Zum Kontext hinzufügen",
-				"description": "Fügen Sie Kontext zu Ihrer aktuellen Aufgabe oder Konversation hinzu. Nützlich für die Bereitstellung zusätzlicher Informationen oder Klarstellungen. Verfügbar in Code-Aktionen (Glühbirnen-Symbol im Editor) und im Kontextmenü des Editors (Rechtsklick auf ausgewählten Code)."
+				"description": "Füge Kontext zu deiner aktuellen Aufgabe oder Konversation hinzu. Nützlich für die Bereitstellung zusätzlicher Informationen oder Klarstellungen. Verfügbar in Code-Aktionen (Glühbirnen-Symbol im Editor) und im Kontextmenü des Editors (Rechtsklick auf ausgewählten Code)."
 			},
 			"TERMINAL_ADD_TO_CONTEXT": {
 				"label": "Terminal-Inhalt zum Kontext hinzufügen",
-				"description": "Fügen Sie Terminal-Ausgaben zu Ihrer aktuellen Aufgabe oder Konversation hinzu. Nützlich für die Bereitstellung von Befehlsausgaben oder Protokollen. Verfügbar im Kontextmenü des Terminals (Rechtsklick auf ausgewählten Terminal-Inhalt)."
+				"description": "Füge Terminal-Ausgaben zu Ihrer aktuellen Aufgabe oder Konversation hinzu. Nützlich für die Bereitstellung von Befehlsausgaben oder Protokollen. Verfügbar im Kontextmenü des Terminals (Rechtsklick auf ausgewählten Terminal-Inhalt)."
 			},
 			"TERMINAL_FIX": {
 				"label": "Terminal-Befehl korrigieren",
-				"description": "Erhalten Sie Hilfe bei der Korrektur fehlgeschlagener Terminal-Befehle oder solcher, die Verbesserungen benötigen. Verfügbar im Kontextmenü des Terminals (Rechtsklick auf ausgewählten Terminal-Inhalt)."
+				"description": "Erhalte Hilfe bei der Korrektur fehlgeschlagener Terminal-Befehle oder solcher, die Verbesserungen benötigen. Verfügbar im Kontextmenü des Terminals (Rechtsklick auf ausgewählten Terminal-Inhalt)."
 			},
 			"TERMINAL_EXPLAIN": {
 				"label": "Terminal-Befehl erklären",
-				"description": "Erhalten Sie detaillierte Erklärungen zu Terminal-Befehlen und deren Ausgaben. Verfügbar im Kontextmenü des Terminals (Rechtsklick auf ausgewählten Terminal-Inhalt)."
+				"description": "Erhalte detaillierte Erklärungen zu Terminal-Befehlen und deren Ausgaben. Verfügbar im Kontextmenü des Terminals (Rechtsklick auf ausgewählten Terminal-Inhalt)."
 			},
 			"TERMINAL_GENERATE": {
 				"label": "Terminal-Befehl generieren",
@@ -155,7 +155,7 @@
 	},
 	"advancedSystemPrompt": {
 		"title": "Erweitert: System-Prompt überschreiben",
-		"description": "<2>⚠️ Warnung:</2> Diese erweiterte Funktion umgeht Sicherheitsvorkehrungen. <1>LESEN SIE DIES VOR DER VERWENDUNG!</1>Überschreiben Sie den Standard-System-Prompt, indem Sie eine Datei unter <span>.kilocode/system-prompt-{{slug}}</span> erstellen."
+		"description": "<2>⚠️ Warnung:</2> Diese erweiterte Funktion umgeht Sicherheitsvorkehrungen. <1>LIES DIES VOR DER VERWENDUNG!</1>Überschreibe den Standard-System-Prompt, indem du eine Datei unter <span>.kilocode/system-prompt-{{slug}}</span> erstellst."
 	},
 	"createModeDialog": {
 		"title": "Neuen Modus erstellen",
@@ -198,7 +198,7 @@
 		},
 		"customInstructions": {
 			"label": "Benutzerdefinierte Anweisungen (optional)",
-			"description": "Fügen Sie verhaltensspezifische Richtlinien für diesen Modus hinzu."
+			"description": "Füge verhaltensspezifische Richtlinien für diesen Modus hinzu."
 		},
 		"buttons": {
 			"cancel": "Abbrechen",
@@ -209,9 +209,9 @@
 	"allFiles": "alle Dateien",
 	"deleteMode": {
 		"title": "Modus löschen",
-		"message": "Möchten Sie den Modus \"{{modeName}}\" wirklich löschen?",
+		"message": "Möchtest du den Modus \"{{modeName}}\" wirklich löschen?",
 		"rulesFolder": "Dieser Modus hat einen Regelordner unter {{folderPath}}, der ebenfalls gelöscht wird.",
-		"descriptionNoRules": "Möchten Sie diesen benutzerdefinierten Modus wirklich löschen?",
+		"descriptionNoRules": "Möchtest du diesen benutzerdefinierten Modus wirklich löschen?",
 		"confirm": "Löschen",
 		"cancel": "Abbrechen"
 	}

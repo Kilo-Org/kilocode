@@ -280,8 +280,14 @@
 		"disabledAriaLabel": "自動核准已停用 - 請先選取選項"
 	},
 	"announcement": {
-		"title": "🎉 Kilo Code {{version}} 已發布",
-		"description": "Kilo Code {{version}} 帶來強大的新功能和重大改進，提升您的開發任務流程。",
+		"title": "🎉 Roo Code {{version}} 已發布",
+		"stealthModel": {
+			"feature": "<bold>限時免費隱形模型</bold> - 一個在代理程式編程方面表現出色的超快推理模型，擁有 262k 上下文視窗，透過 Roo Code Cloud 提供。",
+			"note": "(注意：提示和完成會被模型創建者記錄並用於改進模型)",
+			"connectButton": "連接到 Roo Code Cloud",
+			"selectModel": "在<br/><settingsLink>設定</settingsLink>中從 Roo Code Cloud 提供商選擇 <code>roo/sonic</code> 開始使用"
+		},
+		"description": "Roo Code {{version}} 帶來強大的新功能和重大改進，提升您的開發工作流程。",
 		"whatsNew": "新功能",
 		"feature1": "<bold>訊息佇列</bold>：在 Kilo Code 工作時將多個訊息排入佇列，讓您可以不間斷地繼續規劃工作流程。",
 		"feature2": "<bold>自訂斜線命令</bold>：建立個人化斜線命令，快速存取常用提示詞和工作流程，具備完整的 UI 管理功能。",
@@ -359,9 +365,9 @@
 		"ariaLabel": "版本 {{version}} - 點選查看發布說明"
 	},
 	"rooCloudCTA": {
-		"title": "Kilo Code Cloud 即將推出！",
-		"description": "在雲端執行 Kilo remote 遠端代理、隨時隨地存取您的工作、與他人協作等等。",
-		"joinWaitlist": "加入等候名單以獲得早期存取權限。"
+		"title": "Roo Code Cloud 正在進化！",
+		"description": "在雲端執行 Roomote 遠端代理、隨時隨地存取您的工作、與他人協作等等。",
+		"joinWaitlist": "註冊以獲得最新更新。"
 	},
 	"command": {
 		"triggerDescription": "觸發 {{name}} 命令"

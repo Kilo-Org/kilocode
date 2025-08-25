@@ -1,11 +1,17 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import { Message, Ollama } from "ollama"
-import { ModelInfo, openAiModelInfoSaneDefaults } from "@roo-code/types"
+import { ModelInfo, openAiModelInfoSaneDefaults, DEEP_SEEK_DEFAULT_TEMPERATURE } from "@roo-code/types"
 import { ApiStream } from "../transform/stream"
 import { BaseProvider } from "./base-provider"
-import { ModelRecord } from "../../shared/api"
-import { getModels } from "./fetchers/modelCache"
+import type { ApiHandlerOptions } from "../../shared/api"
+import { getOllamaModels } from "./fetchers/ollama"
+import { XmlMatcher } from "../../utils/xml-matcher"
+import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
+
+// kilocode_change start
 import { fetchWithTimeout } from "./kilocode/fetchWithTimeout"
+const OLLAMA_TIMEOUT_MS = 3_600_000
+// kilocode_change end
 
 function convertToOllamaMessages(anthropicMessages: Anthropic.Messages.MessageParam[]): Message[] {
 	const ollamaMessages: Message[] = []
@@ -46,11 +52,11 @@ function convertToOllamaMessages(anthropicMessages: Anthropic.Messages.MessagePa
 							toolMessage.content
 								?.map((part) => {
 									if (part.type === "image") {
-										toolResultImages.push(
-											part.source.type === "url"
-												? part.source.url
-												: `data:${part.source.media_type};base64,${part.source.data}`,
-										)
+										// Handle base64 images only (Anthropic SDK uses base64)
+										// Ollama expects raw base64 strings, not data URLs
+										if ("source" in part && part.source.type === "base64") {
+											toolResultImages.push(part.source.data)
+										}
 										return "(see following user message for image)"
 									}
 									return part.text
@@ -66,18 +72,24 @@ function convertToOllamaMessages(anthropicMessages: Anthropic.Messages.MessagePa
 
 				// Process non-tool messages
 				if (nonToolMessages.length > 0) {
+					// Separate text and images for Ollama
+					const textContent = nonToolMessages
+						.filter((part) => part.type === "text")
+						.map((part) => part.text)
+						.join("\n")
+
+					const imageData: string[] = []
+					nonToolMessages.forEach((part) => {
+						if (part.type === "image" && "source" in part && part.source.type === "base64") {
+							// Ollama expects raw base64 strings, not data URLs
+							imageData.push(part.source.data)
+						}
+					})
+
 					ollamaMessages.push({
 						role: "user",
-						content: nonToolMessages
-							.map((part) => {
-								if (part.type === "image") {
-									return part.source.type === "url"
-										? part.source.url
-										: `data:${part.source.media_type};base64,${part.source.data}`
-								}
-								return part.text
-							})
-							.join("\n"),
+						content: textContent,
+						images: imageData.length > 0 ? imageData : undefined,
 					})
 				}
 			} else if (anthropicMessage.role === "assistant") {
@@ -120,20 +132,12 @@ function convertToOllamaMessages(anthropicMessages: Anthropic.Messages.MessagePa
 	return ollamaMessages
 }
 
-const OLLAMA_TIMEOUT_MS = 3_600_000
-
-interface OllamaHandlerOptions {
-	ollamaBaseUrl?: string
-	ollamaModelId?: string
-	ollamaApiKey?: string
-}
-
-export class KilocodeOllamaHandler extends BaseProvider {
-	private options: OllamaHandlerOptions
+export class NativeOllamaHandler extends BaseProvider implements SingleCompletionHandler {
+	protected options: ApiHandlerOptions
 	private client: Ollama | undefined
-	protected models: ModelRecord = {}
+	protected models: Record<string, ModelInfo> = {}
 
-	constructor(options: OllamaHandlerOptions) {
+	constructor(options: ApiHandlerOptions) {
 		super()
 		this.options = options
 	}
@@ -141,67 +145,115 @@ export class KilocodeOllamaHandler extends BaseProvider {
 	private ensureClient(): Ollama {
 		if (!this.client) {
 			try {
+				// kilocode_change start
 				const headers = this.options.ollamaApiKey
 					? { Authorization: this.options.ollamaApiKey } //Yes, this is weird, its not a Bearer token
 					: undefined
+				// kilocode_change end
 
 				this.client = new Ollama({
 					host: this.options.ollamaBaseUrl || "http://localhost:11434",
+					// kilocode_change start
 					fetch: fetchWithTimeout(OLLAMA_TIMEOUT_MS, headers),
 					headers: headers,
+					// kilocode_change end
 				})
-			} catch (error) {
+			} catch (error: any) {
 				throw new Error(`Error creating Ollama client: ${error.message}`)
 			}
 		}
 		return this.client
 	}
 
-	async *createMessage(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): ApiStream {
+	override async *createMessage(
+		systemPrompt: string,
+		messages: Anthropic.Messages.MessageParam[],
+		metadata?: ApiHandlerCreateMessageMetadata,
+	): ApiStream {
 		const client = this.ensureClient()
+		const { id: modelId, info: modelInfo } = await this.fetchModel()
+		const useR1Format = modelId.toLowerCase().includes("deepseek-r1")
+
 		const ollamaMessages: Message[] = [
 			{ role: "system", content: systemPrompt },
 			...convertToOllamaMessages(messages),
 		]
 
+		const matcher = new XmlMatcher(
+			"think",
+			(chunk) =>
+				({
+					type: chunk.matched ? "reasoning" : "text",
+					text: chunk.data,
+				}) as const,
+		)
+
 		try {
 			// Create the actual API request promise
-			const model = this.getModel()
 			const stream = await client.chat({
-				model: model.id,
+				model: modelId,
 				messages: ollamaMessages,
 				stream: true,
 				options: {
-					num_ctx: model.info.contextWindow,
+					num_ctx: modelInfo.contextWindow,
+					temperature: this.options.modelTemperature ?? (useR1Format ? DEEP_SEEK_DEFAULT_TEMPERATURE : 0),
 				},
 			})
+
+			let totalInputTokens = 0
+			let totalOutputTokens = 0
 
 			try {
 				for await (const chunk of stream) {
 					if (typeof chunk.message.content === "string") {
-						yield {
-							type: "text",
-							text: chunk.message.content,
+						// Process content through matcher for reasoning detection
+						for (const matcherChunk of matcher.update(chunk.message.content)) {
+							yield matcherChunk
 						}
 					}
 
 					// Handle token usage if available
 					if (chunk.eval_count !== undefined || chunk.prompt_eval_count !== undefined) {
-						yield {
-							type: "usage",
-							inputTokens: chunk.prompt_eval_count || 0,
-							outputTokens: chunk.eval_count || 0,
+						if (chunk.prompt_eval_count) {
+							totalInputTokens = chunk.prompt_eval_count
+						}
+						if (chunk.eval_count) {
+							totalOutputTokens = chunk.eval_count
 						}
 					}
 				}
-			} catch (streamError) {
+
+				// Yield any remaining content from the matcher
+				for (const chunk of matcher.final()) {
+					yield chunk
+				}
+
+				// Yield usage information if available
+				if (totalInputTokens > 0 || totalOutputTokens > 0) {
+					yield {
+						type: "usage",
+						inputTokens: totalInputTokens,
+						outputTokens: totalOutputTokens,
+					}
+				}
+			} catch (streamError: any) {
 				console.error("Error processing Ollama stream:", streamError)
 				throw new Error(`Ollama stream processing error: ${streamError.message || "Unknown error"}`)
 			}
-		} catch (error) {
+		} catch (error: any) {
 			// Enhance error reporting
 			const statusCode = error.status || error.statusCode
 			const errorMessage = error.message || "Unknown error"
+
+			if (error.code === "ECONNREFUSED") {
+				throw new Error(
+					`Ollama service is not running at ${this.options.ollamaBaseUrl || "http://localhost:11434"}. Please start Ollama first.`,
+				)
+			} else if (statusCode === 404) {
+				throw new Error(
+					`Model ${this.getModel().id} not found in Ollama. Please pull the model first with: ollama pull ${this.getModel().id}`,
+				)
+			}
 
 			console.error(`Ollama API error (${statusCode || "unknown"}): ${errorMessage}`)
 			throw error
@@ -209,15 +261,39 @@ export class KilocodeOllamaHandler extends BaseProvider {
 	}
 
 	async fetchModel() {
-		this.models = await getModels({ provider: "ollama", baseUrl: this.options.ollamaBaseUrl })
+		this.models = await getOllamaModels(this.options.ollamaBaseUrl)
 		return this.getModel()
 	}
 
-	getModel(): { id: string; info: ModelInfo } {
+	override getModel(): { id: string; info: ModelInfo } {
 		const modelId = this.options.ollamaModelId || ""
 		return {
 			id: modelId,
 			info: this.models[modelId] || openAiModelInfoSaneDefaults,
+		}
+	}
+
+	async completePrompt(prompt: string): Promise<string> {
+		try {
+			const client = this.ensureClient()
+			const { id: modelId } = await this.fetchModel()
+			const useR1Format = modelId.toLowerCase().includes("deepseek-r1")
+
+			const response = await client.chat({
+				model: modelId,
+				messages: [{ role: "user", content: prompt }],
+				stream: false,
+				options: {
+					temperature: this.options.modelTemperature ?? (useR1Format ? DEEP_SEEK_DEFAULT_TEMPERATURE : 0),
+				},
+			})
+
+			return response.message?.content || ""
+		} catch (error) {
+			if (error instanceof Error) {
+				throw new Error(`Ollama completion error: ${error.message}`)
+			}
+			throw error
 		}
 	}
 }

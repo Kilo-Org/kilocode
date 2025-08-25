@@ -271,8 +271,14 @@
 		"countdownDisplay": "{{count}}s"
 	},
 	"announcement": {
-		"title": "🎉 Kilo Code {{version}} Đã phát hành",
-		"description": "Kilo Code {{version}} mang đến các tính năng mạnh mẽ mới và cải tiến đáng kể để nâng cao quy trình phát triển của bạn.",
+		"title": "🎉 Roo Code {{version}} Đã phát hành",
+		"stealthModel": {
+			"feature": "<bold>Mô hình stealth MIỄN PHÍ có thời hạn</bold> - Một mô hình lý luận cực nhanh xuất sắc trong lập trình agentic với cửa sổ ngữ cảnh 262k, có sẵn qua Roo Code Cloud.",
+			"note": "(Lưu ý: các prompt và completion được ghi lại bởi người tạo mô hình và được sử dụng để cải thiện mô hình)",
+			"connectButton": "Kết nối với Roo Code Cloud",
+			"selectModel": "Chọn <code>roo/sonic</code> từ nhà cung cấp Roo Code Cloud trong<br/><settingsLink>Cài đặt</settingsLink> để bắt đầu"
+		},
+		"description": "Roo Code {{version}} mang đến các tính năng mạnh mẽ mới và cải tiến đáng kể để nâng cao quy trình phát triển của bạn.",
 		"whatsNew": "Có gì mới",
 		"feature1": "<bold>Hàng đợi Tin nhắn</bold>: Xếp hàng nhiều tin nhắn trong khi Roo đang làm việc, cho phép bạn tiếp tục lập kế hoạch quy trình làm việc mà không bị gián đoạn.",
 		"feature2": "<bold>Lệnh Slash Tùy chỉnh</bold>: Tạo các lệnh slash được cá nhân hóa để truy cập nhanh vào các prompt và quy trình làm việc thường dùng, với quản lý UI đầy đủ.",
@@ -356,9 +362,9 @@
 		"ariaLabel": "Phiên bản {{version}} - Nhấp để xem ghi chú phát hành"
 	},
 	"rooCloudCTA": {
-		"title": "Roo Code Cloud sắp ra mắt!",
+		"title": "Roo Code Cloud đang phát triển!",
 		"description": "Chạy các agent từ xa trên cloud, truy cập các tác vụ của bạn từ mọi nơi, cộng tác với người khác và nhiều hơn nữa.",
-		"joinWaitlist": "Tham gia danh sách chờ để được truy cập sớm."
+		"joinWaitlist": "Đăng ký để nhận các cập nhật mới nhất."
 	},
 	"editMessage": {
 		"placeholder": "Chỉnh sửa tin nhắn của bạn..."

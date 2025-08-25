@@ -89,7 +89,8 @@ export async function newTaskTool(
 			// kilocode_change end
 
 			// Now create the task with the correct mode already set
-			const newCline = await provider.initClineWithTask(unescapedMessage, undefined, cline)
+			const newCline = await provider.createTask(unescapedMessage, undefined, cline)
+
 			if (!newCline) {
 				await provider.handleModeSwitch(cline.pausedModeSlug) // kilocode_change: if task creation failed, switch back to the parent's mode
 				pushToolResult(t("tools:newTask.errors.policy_restriction"))

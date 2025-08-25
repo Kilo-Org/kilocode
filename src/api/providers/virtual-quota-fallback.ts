@@ -41,7 +41,6 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 		this.settings = options
 		this.settingsManager = new ProviderSettingsManager(ContextProxy.instance.rawContext)
 		this.usage = UsageTracker.getInstance()
-		this.initialize()
 	}
 
 	async initialize(): Promise<void> {
@@ -77,6 +76,7 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 		metadata?: ApiHandlerCreateMessageMetadata,
 	): ApiStream {
 		try {
+			await this.initialize()
 			await this.adjustActiveHandler()
 
 			if (!this.activeHandler || !this.activeProfileId) {
@@ -108,7 +108,6 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 
 	getModel(): { id: string; info: ModelInfo } {
 		if (!this.activeHandler) {
-			// Return a default model when no active handler is available
 			return {
 				id: "unknown",
 				info: {
@@ -132,7 +131,6 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 
 		console.warn(`Loading ${profiles.length} profiles for VirtualQuotaFallbackHandler`)
 
-		// Process profiles sequentially to avoid overwhelming the system with concurrent operations
 		const handlerConfigs: HandlerConfig[] = []
 
 		for (let i = 0; i < profiles.length; i++) {
@@ -243,6 +241,7 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 		} else {
 			message = "No active provider available. All configured providers are unavailable or over limits."
 		}
+		vscode.window.showInformationMessage(message)
 	}
 
 	underLimit(profileData: VirtualQuotaFallbackProfile): boolean {

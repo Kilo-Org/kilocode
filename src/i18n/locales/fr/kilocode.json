@@ -11,7 +11,10 @@
 		"title": "Alerte de Crédit Faible !",
 		"message": "Vérifiez si vous pouvez ajouter des crédits gratuits ou en acheter davantage !"
 	},
-	"notLoggedInError": "Impossible de terminer la demande, assurez-vous d'être connecté et identifié avec le fournisseur sélectionné.\n\n{{error}}",
+	"task": {
+		"noAssistantMessages": "La réponse du modèle s'est terminée de manière inattendue (aucun message d'assistant). Cela peut être un signe de limitation du taux de requêtes.",
+		"notLoggedInError": "Impossible de terminer la demande, assurez-vous d'être connecté et identifié avec le fournisseur sélectionné.\n\n{{error}}"
+	},
 	"rules": {
 		"actions": {
 			"delete": "Supprimer",

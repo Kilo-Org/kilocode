@@ -11,7 +11,10 @@
 		"title": "Cảnh báo Tín dụng Thấp!",
 		"message": "Hãy kiểm tra xem bạn có thể nạp thêm tín dụng miễn phí hoặc mua thêm không!"
 	},
-	"notLoggedInError": "Không thể hoàn thành yêu cầu, hãy đảm bảo bạn đã kết nối và đăng nhập bằng nhà cung cấp đã chọn.\n\n{{error}}",
+	"task": {
+		"noAssistantMessages": "Phản hồi của mô hình kết thúc bất ngờ (không có tin nhắn trợ lý). Điều này có thể là dấu hiệu của giới hạn tốc độ.",
+		"notLoggedInError": "Không thể hoàn thành yêu cầu, hãy đảm bảo bạn đã kết nối và đăng nhập bằng nhà cung cấp đã chọn.\n\n{{error}}"
+	},
 	"rules": {
 		"actions": {
 			"delete": "Xóa",

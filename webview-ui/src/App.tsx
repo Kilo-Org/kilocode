@@ -1,10 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from "react"
+import React, { useCallback, useEffect, useRef, useState, useMemo } from "react"
 import { useEvent } from "react-use"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 
 import { ExtensionMessage } from "@roo/ExtensionMessage"
 import TranslationProvider from "./i18n/TranslationContext"
-// import { MarketplaceViewStateManager } from "./components/marketplace/MarketplaceViewStateManager" // kilocode_change: rendered in settings
+import { MarketplaceViewStateManager } from "./components/marketplace/MarketplaceViewStateManager"
 
 import { vscode } from "./utils/vscode"
 import { telemetryClient } from "./utils/TelemetryClient"
@@ -17,7 +17,7 @@ import SettingsView, { SettingsViewRef } from "./components/settings/SettingsVie
 import WelcomeView from "./components/kilocode/Welcome/WelcomeView" // kilocode_change
 import ProfileView from "./components/kilocode/profile/ProfileView" // kilocode_change
 import McpView from "./components/mcp/McpView"
-// import { MarketplaceView } from "./components/marketplace/MarketplaceView" // kilocode_change: rendered in settings
+import { MarketplaceView } from "./components/marketplace/MarketplaceView"
 import ModesView from "./components/modes/ModesView"
 import { HumanRelayDialog } from "./components/human-relay/HumanRelayDialog"
 import BottomControls from "./components/kilocode/BottomControls" // kilocode_change
@@ -82,7 +82,7 @@ const App = () => {
 	} = useExtensionState()
 
 	// Create a persistent state manager
-	// const marketplaceStateManager = useMemo(() => new MarketplaceViewStateManager(), []) // kilocode_change: rendered in settings
+	const marketplaceStateManager = useMemo(() => new MarketplaceViewStateManager(), [])
 
 	const [showAnnouncement, setShowAnnouncement] = useState(false)
 	const [tab, setTab] = useState<Tab>("chat")
@@ -266,10 +266,14 @@ const App = () => {
 			)}
 			{/* kilocode_change: add profileview */}
 			{tab === "profile" && <ProfileView onDone={() => switchTab("chat")} />}
-			{/* kilocode_change: rendered in settings */}
-			{/* {tab === "marketplace" && (
-				<MarketplaceView stateManager={marketplaceStateManager} onDone={() => switchTab("chat")} />
-			)} */}
+			{tab === "marketplace" && (
+				<MarketplaceView
+					stateManager={marketplaceStateManager}
+					onDone={() => switchTab("chat")}
+					// kilocode_change: targetTab="mode"
+					targetTab="mode"
+				/>
+			)}
 			{/* kilocode_change: we have our own profile view */}
 			{/* {tab === "account" && (
 				<AccountView userInfo={cloudUserInfo} isAuthenticated={false} onDone={() => switchTab("chat")} />

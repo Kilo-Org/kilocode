@@ -53,8 +53,7 @@
 		"modelInfo": {
 			"contextWindow": "コンテキストウィンドウ",
 			"providerBreakdown": "プロバイダー価格・機能詳細",
-			"averageKiloCodeCost": "平均Kilo Codeコスト",
-			"averageKiloCodeCostDescription": "これは、過去1週間のこのモデルを使用したKilo Codeの実際の平均支出です。プロンプトキャッシュの活用により、表示価格より安くなる場合があります。",
+			"averageKiloCodeCost": "これは、過去1週間のこのモデルを使用したKilo Codeの実際の平均支出です。プロンプトキャッシュの活用により、表示価格より安くなる場合があります。",
 			"table": {
 				"provider": "プロバイダー",
 				"context": "エンドポイントが処理できるトークン数（入力+出力）。",

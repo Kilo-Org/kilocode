@@ -271,8 +271,14 @@
 		"countdownDisplay": "{{count}}s"
 	},
 	"announcement": {
-		"title": "🎉 Kilo Code {{version}} Lançado",
-		"description": "Kilo Code {{version}} traz novos recursos poderosos e melhorias significativas para aprimorar seu fluxo de trabalho de desenvolvimento.",
+		"title": "🎉 Roo Code {{version}} Lançado",
+		"stealthModel": {
+			"feature": "<bold>Modelo stealth GRATUITO por tempo limitado</bold> - Um modelo de raciocínio ultrarrápido que se destaca em codificação agêntica com uma janela de contexto de 262k, disponível através do Roo Code Cloud.",
+			"note": "(Nota: prompts e completações são registrados pelo criador do modelo e usados para melhorá-lo)",
+			"connectButton": "Conectar ao Roo Code Cloud",
+			"selectModel": "Selecione <code>roo/sonic</code> do provedor Roo Code Cloud em<br/><settingsLink>Configurações</settingsLink> para começar"
+		},
+		"description": "Roo Code {{version}} traz novos recursos poderosos e melhorias significativas para aprimorar seu fluxo de trabalho de desenvolvimento.",
 		"whatsNew": "O que há de novo",
 		"feature1": "<bold>Fila de Mensagens</bold>: Coloque várias mensagens na fila enquanto o Roo está trabalhando, permitindo que você continue planejando seu fluxo de trabalho sem interrupção.",
 		"feature2": "<bold>Comandos de Barra Personalizados</bold>: Crie comandos de barra personalizados para acesso rápido a prompts e fluxos de trabalho usados frequentemente, com gerenciamento completo da interface do usuário.",
@@ -356,9 +362,9 @@
 		"ariaLabel": "Versão {{version}} - Clique para ver as notas de lançamento"
 	},
 	"rooCloudCTA": {
-		"title": "Roo Code Cloud chegará em breve!",
+		"title": "Roo Code Cloud está evoluindo!",
 		"description": "Execute agentes remotos na nuvem, acesse suas tarefas de qualquer lugar, colabore com outros e muito mais.",
-		"joinWaitlist": "Junte-se à lista de espera para obter acesso antecipado."
+		"joinWaitlist": "Cadastre-se para receber as últimas atualizações."
 	},
 	"editMessage": {
 		"placeholder": "Edite sua mensagem..."

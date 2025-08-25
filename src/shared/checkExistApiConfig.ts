@@ -12,6 +12,7 @@ export function checkExistKey(config: ProviderSettings | undefined) {
 			"human-relay",
 			"fake-ai",
 			"claude-code",
+			"roo",
 			"gemini-cli", // kilocode_change
 			"qwen-code", // kilocode_change
 		].includes(config.apiProvider)

@@ -11,7 +11,10 @@
 		"title": "Avís de Crèdit Baix!",
 		"message": "Comprova si pots recarregar amb crèdits gratuïts o comprar-ne més!"
 	},
-	"notLoggedInError": "No es pot completar la sol·licitud, assegura't que estàs connectat i has iniciat sessió amb el proveïdor seleccionat.\n\n{{error}}",
+	"task": {
+		"noAssistantMessages": "La resposta del model ha acabat de forma inesperada (cap missatge de l'assistent). Això pot ser un signe de limitació de freqüència.",
+		"notLoggedInError": "No es pot completar la sol·licitud, assegura't que estàs connectat i has iniciat sessió amb el proveïdor seleccionat.\n\n{{error}}"
+	},
 	"rules": {
 		"actions": {
 			"delete": "Eliminar",

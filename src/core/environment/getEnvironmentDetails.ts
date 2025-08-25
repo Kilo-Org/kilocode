@@ -25,7 +25,7 @@ import { formatReminderSection } from "./reminder"
 import { OpenRouterHandler } from "../../api/providers/openrouter"
 import { TelemetryService } from "@roo-code/telemetry"
 import { t } from "../../i18n"
-import { KilocodeOllamaHandler } from "../../api/providers/kilocode-ollama"
+import { NativeOllamaHandler } from "../../api/providers/native-ollama"
 // kilocode_change end
 
 export async function getEnvironmentDetails(cline: Task, includeFileDetails: boolean = false) {
@@ -212,14 +212,14 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 
 	// kilocode_change start
 	// Be sure to fetch the model information before we need it.
-	if (cline.api instanceof OpenRouterHandler || cline.api instanceof KilocodeOllamaHandler) {
+	if (cline.api instanceof OpenRouterHandler || cline.api instanceof NativeOllamaHandler) {
 		try {
 			await cline.api.fetchModel()
 		} catch (e) {
 			TelemetryService.instance.captureException(e, { context: "getEnvironmentDetails" })
 			await cline.say(
 				"error",
-				t("kilocode:notLoggedInError", { error: e instanceof Error ? e.message : String(e) }),
+				t("kilocode:task.notLoggedInError", { error: e instanceof Error ? e.message : String(e) }),
 			)
 			return `<environment_details>\n${details.trim()}\n</environment_details>`
 		}

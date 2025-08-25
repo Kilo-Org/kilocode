@@ -126,6 +126,9 @@
 		},
 		"qwenCode": {
 			"oauthLoadFailed": "Не вдалося завантажити OAuth дані для входу. Будь ласка, спочатку автентифікуйся: {{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "Провайдер Roo вимагає автентифікації в хмарі. Будь ласка, увійди в Roo Code Cloud."
 		}
 	},
 	"warnings": {

@@ -4,7 +4,7 @@ import { z } from "zod"
 // import { getRooCodeApiUrl } from "@roo-code/cloud" kilocode_change: use our own api
 import type { MarketplaceItem, MarketplaceItemType } from "@roo-code/types"
 import { modeMarketplaceItemSchema, mcpMarketplaceItemSchema } from "@roo-code/types"
-import { getKiloCodeApiUrl } from "../../shared/kilocode/api"
+import { getKiloBaseUriFromToken } from "../../shared/kilocode/token"
 
 // Response schemas for YAML API responses
 const modeMarketplaceResponse = z.object({
@@ -21,7 +21,7 @@ export class RemoteConfigLoader {
 	private cacheDuration = 5 * 60 * 1000 // 5 minutes
 
 	constructor() {
-		this.apiBaseUrl = getKiloCodeApiUrl()
+		this.apiBaseUrl = getKiloBaseUriFromToken()
 	}
 
 	async loadAllItems(hideMarketplaceMcps = false): Promise<MarketplaceItem[]> {

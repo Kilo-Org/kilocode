@@ -1,5 +1,4 @@
 import { type ModelInfo, type ProviderSettings } from "@roo-code/types"
-import { formatPrice } from "@src/utils/formatPrice"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { ModelDescriptionMarkdown } from "../../settings/ModelDescriptionMarkdown"
 import { ModelInfoSupportsItem } from "@/components/settings/ModelInfoView"
@@ -9,6 +8,21 @@ import { useQuery } from "@tanstack/react-query"
 import { getKiloBaseUriFromToken } from "@roo/kilocode/token"
 import { telemetryClient } from "@/utils/TelemetryClient"
 import { useModelProviders } from "@/components/ui/hooks/useSelectedModel"
+
+type ModelStats = {
+	model: string
+	cost?: Intl.StringNumericLiteral
+	costPerRequest?: Intl.StringNumericLiteral
+}
+
+export const formatPrice = (price: number | Intl.StringNumericLiteral, digits: number = 2) => {
+	return new Intl.NumberFormat("en-US", {
+		style: "currency",
+		currency: "USD",
+		minimumFractionDigits: digits,
+		maximumFractionDigits: digits,
+	}).format(price)
+}
 
 const PricingTable = ({ providers }: { providers: (ModelInfo & { label: string })[] }) => {
 	const { t } = useAppTranslation()
@@ -75,7 +89,7 @@ export const KiloModelInfoView = ({
 }) => {
 	const { t } = useAppTranslation()
 	const providers = Object.values(useModelProviders(modelId, apiConfiguration).data ?? {})
-	const { data: modelStats } = useQuery<{ model: string; cost: Intl.StringNumericLiteral | number }[]>({
+	const { data: modelStats } = useQuery<ModelStats[]>({
 		queryKey: ["modelstats"],
 		queryFn: async () => {
 			try {
@@ -90,7 +104,7 @@ export const KiloModelInfoView = ({
 			}
 		},
 	})
-	const averageCost = modelStats?.find((ms) => ms.model === modelId)?.cost
+	const stats = modelStats?.find((ms) => ms.model === modelId)
 
 	return (
 		<>
@@ -124,15 +138,17 @@ export const KiloModelInfoView = ({
 					<span className="font-medium">{t("settings:modelInfo.maxOutput")}:</span>{" "}
 					{model.maxTokens?.toLocaleString() ?? 0}
 				</div>
-				{typeof averageCost !== "undefined" && (
-					<StandardTooltip content={t("kilocode:settings.modelInfo.averageKiloCodeCostDescription")}>
-						<div>
-							<span className="font-medium">{t("kilocode:settings.modelInfo.averageKiloCodeCost")}:</span>{" "}
-							{formatPrice(averageCost)} / M tokens
-						</div>
-					</StandardTooltip>
-				)}
 			</div>
+			{stats && stats.cost && stats.costPerRequest && model.inputPrice && model.outputPrice && (
+				<StandardTooltip content={t("kilocode:settings.modelInfo.averageKiloCodeCost")}>
+					<div className="text-sm text-vscode-descriptionForeground font-medium flex flex-wrap gap-2">
+						<div className="rounded-full border px-2.5 py-1">{formatPrice(stats.cost)} / M tokens</div>
+						<div className="rounded-full border px-2.5 py-1">
+							{formatPrice(stats.costPerRequest, 4)} / request
+						</div>
+					</div>
+				</StandardTooltip>
+			)}
 			<Collapsible open={isPricingExpanded} onOpenChange={setIsPricingExpanded}>
 				<CollapsibleTrigger className="flex items-center gap-1 w-full cursor-pointer hover:opacity-80 mb-2">
 					<span className={`codicon codicon-chevron-${isPricingExpanded ? "down" : "right"}`}></span>

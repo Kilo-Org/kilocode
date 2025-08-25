@@ -126,6 +126,9 @@
 			"genericError": "خطأ Cerebras API ({{status}}): {{message}}",
 			"noResponseBody": "خطأ Cerebras API: لا يوجد محتوى في الاستجابة",
 			"completionError": "خطأ في إكمال Cerebras: {{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "يتطلب موفر Roo المصادقة السحابية. يرجى تسجيل الدخول إلى Roo Code Cloud."
 		}
 	},
 	"warnings": {

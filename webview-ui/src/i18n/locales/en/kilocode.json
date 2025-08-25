@@ -53,8 +53,7 @@
 		"modelInfo": {
 			"contextWindow": "Context window",
 			"providerBreakdown": "Provider Price and Capability Breakdown",
-			"averageKiloCodeCost": "Average Kilo Code cost",
-			"averageKiloCodeCostDescription": "This is the average actual spent for Kilo Code using this model over the last week. It may be lower than the listed price due to prompt cache utilization.",
+			"averageKiloCodeCost": "This is the average actual spent for Kilo Code using this model over the last week. It may be lower than the listed price due to prompt cache utilization.",
 			"table": {
 				"provider": "Provider",
 				"context": "The endpoint can process this number of tokens (input + output).",

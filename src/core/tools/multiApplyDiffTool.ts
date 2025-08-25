@@ -12,7 +12,7 @@ import { formatResponse } from "../prompts/responses"
 import { fileExistsAtPath } from "../../utils/fs"
 import { RecordSource } from "../context-tracking/FileContextTrackerTypes"
 import { unescapeHtmlEntities } from "../../utils/text-normalization"
-import { parseXml } from "../../utils/xml"
+import { parseXmlForDiff } from "../../utils/xml"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { applyDiffToolLegacy } from "./applyDiffTool"
 
@@ -108,7 +108,10 @@ export async function applyDiffTool(
 	if (argsXmlTag) {
 		// Parse file entries from XML (new way)
 		try {
-			const parsed = parseXml(argsXmlTag, ["file.diff.content"]) as ParsedXmlResult
+			// IMPORTANT: We use parseXmlForDiff here instead of parseXml to prevent HTML entity decoding
+			// This ensures exact character matching when comparing parsed content against original file content
+			// Without this, special characters like & would be decoded to &amp; causing diff mismatches
+			const parsed = parseXmlForDiff(argsXmlTag, ["file.diff.content"]) as ParsedXmlResult
 			const files = Array.isArray(parsed.file) ? parsed.file : [parsed.file].filter(Boolean)
 
 			for (const file of files) {
@@ -132,13 +135,17 @@ export async function applyDiffTool(
 					let diffContent: string
 					let startLine: number | undefined
 
-					diffContent = diff.content
+					// Ensure content is a string before storing it
+					diffContent = typeof diff.content === "string" ? diff.content : ""
 					startLine = diff.start_line ? parseInt(diff.start_line) : undefined
 
-					operationsMap[filePath].diff.push({
-						content: diffContent,
-						startLine,
-					})
+					// Only add to operations if we have valid content
+					if (diffContent) {
+						operationsMap[filePath].diff.push({
+							content: diffContent,
+							startLine,
+						})
+					}
 				}
 			}
 		} catch (error) {

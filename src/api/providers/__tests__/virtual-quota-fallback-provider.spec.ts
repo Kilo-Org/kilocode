@@ -1,4 +1,4 @@
-// npx vitest run src/api/providers/__tests__/virtual-quota-fallback-provider.spec.spec.ts
+// npx vitest run src/api/providers/__tests__/virtual-quota-fallback-provider.spec.ts
 
 // Mock vscode first to avoid import errors
 vitest.mock("vscode", () => ({
@@ -298,14 +298,12 @@ describe("VirtualQuotaFallbackProvider", () => {
 
 		describe("adjustActiveHandler", () => {
 			beforeEach(() => {
-				// kilocode_change start
 				;(mockSettingsManager.getProfile as any).mockImplementation(async ({ id }: { id: string }) => {
 					if (id === "p1") return { id: "p1", name: "primary-profile" }
 					if (id === "p2") return { id: "p2", name: "secondary-profile" }
 					if (id === "p3") return { id: "p3", name: "backup-profile" }
 					return undefined
 				})
-				// kilocode_change end
 			})
 			it("should set first handler as active if it is under limit", async () => {
 				const handler = new VirtualQuotaFallbackHandler({
@@ -505,7 +503,15 @@ describe("VirtualQuotaFallbackProvider", () => {
 			it("should delegate to the active handler", () => {
 				const handler = new VirtualQuotaFallbackHandler({} as any)
 				const getModelMock = vitest.fn().mockReturnValue({ id: "test-model" })
+
+				// Set up handler configs to ensure the active handler isn't overridden by our default logic
+				;(handler as any).handlerConfigs = [
+					{ handler: { getModel: getModelMock }, profileId: "p1", config: { profileId: "p1" } },
+				]
+
+				// Set the active handler
 				;(handler as any).activeHandler = { getModel: getModelMock }
+				;(handler as any).activeProfileId = "p1"
 
 				const result = handler.getModel()
 
@@ -565,17 +571,22 @@ describe("VirtualQuotaFallbackProvider", () => {
 					profiles: manyProfiles,
 				} as any)
 
-				// The constructor already calls initialize through initializationPromise
-				// We don't need to call it again, but we need to wait for it to complete
-				await (handler as any).initializationPromise
+				// Explicitly call initialize since constructor no longer does this automatically
+				await handler.initialize()
 
 				// Verify that all profiles were processed
-				// In the current implementation, buildApiHandler is called for each profile
-				expect(buildApiHandler).toHaveBeenCalledTimes(1)
+				// buildApiHandler should be called for each profile
+				expect(buildApiHandler).toHaveBeenCalledTimes(manyProfiles.length)
 
 				// Verify that handler configs were created for all profiles
 				const handlerConfigs = (handler as any).handlerConfigs
-				expect(handlerConfigs).toHaveLength(0)
+				expect(handlerConfigs).toHaveLength(manyProfiles.length)
+
+				// Verify each handler config has the correct profileId
+				handlerConfigs.forEach((config: any, index: number) => {
+					expect(config.profileId).toBe(manyProfiles[index].profileId)
+					expect(config.handler.getModel().id).toBe(`${manyProfiles[index].profileId}-model`)
+				})
 			})
 			it("should maintain active handler if it's still valid", async () => {
 				const handler = new VirtualQuotaFallbackHandler({

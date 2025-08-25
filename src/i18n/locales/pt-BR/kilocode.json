@@ -11,7 +11,10 @@
 		"title": "Aviso de Crédito Baixo!",
 		"message": "Verifique se você pode recarregar com créditos gratuitos ou comprar mais!"
 	},
-	"notLoggedInError": "Não é possível concluir a solicitação, certifique-se de que está conectado e logado com o provedor selecionado.\n\n{{error}}",
+	"task": {
+		"noAssistantMessages": "A resposta do modelo terminou inesperadamente (nenhuma mensagem do assistente). Isso pode ser um sinal de limitação de taxa.",
+		"notLoggedInError": "Não é possível concluir a solicitação, certifique-se de que está conectado e logado com o provedor selecionado.\n\n{{error}}"
+	},
 	"rules": {
 		"actions": {
 			"delete": "Excluir",
