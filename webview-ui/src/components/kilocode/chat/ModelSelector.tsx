@@ -65,14 +65,9 @@ export const ModelSelector = ({ currentApiConfigName, apiConfiguration, fallback
 		return <span className="text-xs text-vscode-descriptionForeground opacity-70 truncate">{fallbackText}</span>
 	}
 
-	const selectedModelNoLongerExistsButDefaultDoes =
-		modelsIds.indexOf(selectedModelId) < 0 && modelsIds.indexOf(providerDefaultModel) >= 0
-
-	const currentValue = selectedModelNoLongerExistsButDefaultDoes ? providerDefaultModel : selectedModelId
-
 	return (
 		<SelectDropdown
-			value={currentValue}
+			value={selectedModelId}
 			disabled={disabled}
 			title={t("chat:selectApiConfig")}
 			options={options}
