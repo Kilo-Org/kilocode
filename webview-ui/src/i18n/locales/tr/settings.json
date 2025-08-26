@@ -274,6 +274,8 @@
 		"getChutesApiKey": "Chutes API Anahtarı Al",
 		"fireworksApiKey": "Fireworks API Anahtarı",
 		"getFireworksApiKey": "Fireworks API Anahtarı Al",
+		"featherlessApiKey": "Featherless API Anahtarı",
+		"getFeatherlessApiKey": "Featherless API Anahtarı Al",
 		"ioIntelligenceApiKey": "IO Intelligence API Anahtarı",
 		"ioIntelligenceApiKeyPlaceholder": "IO Intelligence API anahtarınızı girin",
 		"getIoIntelligenceApiKey": "IO Intelligence API Anahtarı Al",
@@ -758,6 +760,10 @@
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "Yeni mesaj ayrıştırıcıyı kullan",
 			"description": "Uzun yanıtları daha verimli işleyerek hızlandıran deneysel akış mesaj ayrıştırıcısını etkinleştir."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "Yeni görevler için 'todos' listesi gerektir",
+			"description": "Etkinleştirildiğinde, new_task aracı bir todos parametresi sağlanmasını gerektirir. Bu, tüm yeni görevlerin net bir hedef listesiyle başlamasını sağlar. Devre dışı bırakıldığında (varsayılan), todos parametresi geriye dönük uyumluluk için isteğe bağlı kalır."
 		}
 	},
 	"promptCaching": {

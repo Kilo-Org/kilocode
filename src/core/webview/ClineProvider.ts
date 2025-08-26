@@ -773,7 +773,12 @@ export class ClineProvider
 		options: Partial<
 			Pick<
 				TaskOptions,
-				"enableDiff" | "enableCheckpoints" | "fuzzyMatchThreshold" | "consecutiveMistakeLimit" | "experiments"
+				| "enableDiff"
+				| "enableCheckpoints"
+				| "fuzzyMatchThreshold"
+				| "consecutiveMistakeLimit"
+				| "experiments"
+				| "initialTodos"
 			>
 		> = {},
 	) {
@@ -808,6 +813,7 @@ export class ClineProvider
 			taskNumber: this.clineStack.length + 1,
 			onCreated: this.taskCreationCallback,
 			enableTaskBridge: isRemoteControlEnabled(cloudUserInfo, remoteControlEnabled),
+			initialTodos: options.initialTodos,
 			...options,
 		})
 
@@ -1612,7 +1618,8 @@ export class ClineProvider
 		this.postMessageToWebview({ type: "state", state })
 
 		// Check MDM compliance and send user to account tab if not compliant
-		if (!this.checkMdmCompliance()) {
+		// Only redirect if there's an actual MDM policy requiring authentication
+		if (this.mdmService?.requiresCloudAuth() && !this.checkMdmCompliance()) {
 			await this.postMessageToWebview({ type: "action", action: "accountButtonClicked" })
 		}
 	}
@@ -1872,6 +1879,7 @@ export class ClineProvider
 				? (taskHistory || []).find((item: HistoryItem) => item.id === this.getCurrentTask()?.taskId)
 				: undefined,
 			clineMessages: this.getCurrentTask()?.clineMessages || [],
+			currentTaskTodos: this.getCurrentTask()?.todoList || [],
 			taskHistory: (taskHistory || [])
 				.filter((item: HistoryItem) => item.ts && item.task)
 				.sort((a: HistoryItem, b: HistoryItem) => b.ts - a.ts),
@@ -1959,7 +1967,9 @@ export class ClineProvider
 				codebaseIndexSearchMaxResults: codebaseIndexConfig?.codebaseIndexSearchMaxResults,
 				codebaseIndexSearchMinScore: codebaseIndexConfig?.codebaseIndexSearchMinScore,
 			},
-			mdmCompliant: this.checkMdmCompliance(),
+			// Only set mdmCompliant if there's an actual MDM policy
+			// undefined means no MDM policy, true means compliant, false means non-compliant
+			mdmCompliant: this.mdmService?.requiresCloudAuth() ? this.checkMdmCompliance() : undefined,
 			profileThresholds: profileThresholds ?? {},
 			cloudApiUrl: getRooCodeApiUrl(),
 			hasOpenedModeSelector: this.getGlobalState("hasOpenedModeSelector") ?? false,
@@ -2281,7 +2291,7 @@ export class ClineProvider
 
 	/**
 	 * Check if the current state is compliant with MDM policy
-	 * @returns true if compliant, false if blocked
+	 * @returns true if compliant or no MDM policy exists, false if MDM policy exists and user is non-compliant
 	 */
 	public checkMdmCompliance(): boolean {
 		if (!this.mdmService) {

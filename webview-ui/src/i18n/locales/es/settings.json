@@ -274,6 +274,8 @@
 		"getChutesApiKey": "Obtener clave API de Chutes",
 		"fireworksApiKey": "Clave API de Fireworks",
 		"getFireworksApiKey": "Obtener clave API de Fireworks",
+		"featherlessApiKey": "Clave API de Featherless",
+		"getFeatherlessApiKey": "Obtener clave API de Featherless",
 		"ioIntelligenceApiKey": "Clave API de IO Intelligence",
 		"ioIntelligenceApiKeyPlaceholder": "Introduce tu clave de API de IO Intelligence",
 		"getIoIntelligenceApiKey": "Obtener clave API de IO Intelligence",
@@ -757,6 +759,10 @@
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "Usar el nuevo analizador de mensajes",
 			"description": "Activa el analizador de mensajes en streaming experimental que mejora el rendimiento en respuestas largas procesando los mensajes de forma más eficiente."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "Requerir lista de 'todos' para nuevas tareas",
+			"description": "Cuando está habilitado, la herramienta new_task requerirá que se proporcione un parámetro todos. Esto asegura que todas las nuevas tareas comiencen con una lista clara de objetivos. Cuando está deshabilitado (predeterminado), el parámetro todos permanece opcional por compatibilidad con versiones anteriores."
 		}
 	},
 	"promptCaching": {

@@ -274,6 +274,8 @@
 		"getChutesApiKey": "Lấy khóa API Chutes",
 		"fireworksApiKey": "Khóa API Fireworks",
 		"getFireworksApiKey": "Lấy khóa API Fireworks",
+		"featherlessApiKey": "Khóa API Featherless",
+		"getFeatherlessApiKey": "Lấy khóa API Featherless",
 		"ioIntelligenceApiKey": "Khóa API IO Intelligence",
 		"ioIntelligenceApiKeyPlaceholder": "Nhập khóa API IO Intelligence của bạn",
 		"getIoIntelligenceApiKey": "Lấy khóa API IO Intelligence",
@@ -758,6 +760,10 @@
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "Dùng bộ phân tích tin nhắn mới",
 			"description": "Bật bộ phân tích tin nhắn streaming thử nghiệm. Tính năng này tăng tốc phản hồi dài bằng cách xử lý tin nhắn hiệu quả hơn."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "Yêu cầu danh sách 'todos' cho các nhiệm vụ mới",
+			"description": "Khi được bật, công cụ new_task sẽ yêu cầu cung cấp tham số todos. Điều này đảm bảo tất cả các nhiệm vụ mới bắt đầu với một danh sách mục tiêu rõ ràng. Khi bị tắt (mặc định), tham số todos vẫn là tùy chọn để tương thích ngược."
 		}
 	},
 	"promptCaching": {

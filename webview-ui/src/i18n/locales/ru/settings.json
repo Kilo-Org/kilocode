@@ -274,6 +274,8 @@
 		"getChutesApiKey": "Получить Chutes API-ключ",
 		"fireworksApiKey": "Fireworks API-ключ",
 		"getFireworksApiKey": "Получить Fireworks API-ключ",
+		"featherlessApiKey": "Featherless API-ключ",
+		"getFeatherlessApiKey": "Получить Featherless API-ключ",
 		"ioIntelligenceApiKey": "IO Intelligence API-ключ",
 		"ioIntelligenceApiKeyPlaceholder": "Введите свой ключ API IO Intelligence",
 		"getIoIntelligenceApiKey": "Получить IO Intelligence API-ключ",
@@ -758,6 +760,10 @@
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "Использовать новый парсер сообщений",
 			"description": "Включите экспериментальный потоковый парсер сообщений, который ускоряет длинные ответы благодаря более эффективной обработке сообщений."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "Требовать список 'todos' для новых задач",
+			"description": "Если включено, инструмент new_task будет требовать предоставления параметра todos. Это гарантирует, что все новые задачи начинаются с четкого списка целей. Когда отключено (по умолчанию), параметр todos остается необязательным для обратной совместимости."
 		}
 	},
 	"promptCaching": {

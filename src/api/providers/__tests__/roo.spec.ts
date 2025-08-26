@@ -131,21 +131,25 @@ describe("RooHandler", () => {
 			expect(handler.getModel().id).toBe(mockOptions.apiModelId)
 		})
 
-		it("should throw error if CloudService is not available", () => {
+		it("should not throw error if CloudService is not available", () => {
 			mockHasInstanceFn.mockReturnValue(false)
 			expect(() => {
 				new RooHandler(mockOptions)
-			}).toThrow("Authentication required for Roo Code Cloud")
-			expect(t).toHaveBeenCalledWith("common:errors.roo.authenticationRequired")
+			}).not.toThrow()
+			// Constructor should succeed even without CloudService
+			const handler = new RooHandler(mockOptions)
+			expect(handler).toBeInstanceOf(RooHandler)
 		})
 
-		it("should throw error if session token is not available", () => {
+		it("should not throw error if session token is not available", () => {
 			mockHasInstanceFn.mockReturnValue(true)
 			mockGetSessionTokenFn.mockReturnValue(null)
 			expect(() => {
 				new RooHandler(mockOptions)
-			}).toThrow("Authentication required for Roo Code Cloud")
-			expect(t).toHaveBeenCalledWith("common:errors.roo.authenticationRequired")
+			}).not.toThrow()
+			// Constructor should succeed even without session token
+			const handler = new RooHandler(mockOptions)
+			expect(handler).toBeInstanceOf(RooHandler)
 		})
 
 		it("should initialize with default model if no model specified", () => {
@@ -257,6 +261,7 @@ describe("RooHandler", () => {
 						expect.objectContaining({ role: "user", content: "Second message" }),
 					]),
 				}),
+				undefined,
 			)
 		})
 	})
@@ -350,7 +355,7 @@ describe("RooHandler", () => {
 	})
 
 	describe("temperature and model configuration", () => {
-		it("should use default temperature of 0.7", async () => {
+		it("should omit temperature when not explicitly set", async () => {
 			handler = new RooHandler(mockOptions)
 			const stream = handler.createMessage(systemPrompt, messages)
 			for await (const _chunk of stream) {
@@ -358,9 +363,10 @@ describe("RooHandler", () => {
 			}
 
 			expect(mockCreate).toHaveBeenCalledWith(
-				expect.objectContaining({
-					temperature: 0.7,
+				expect.not.objectContaining({
+					temperature: expect.anything(),
 				}),
+				undefined,
 			)
 		})
 
@@ -378,6 +384,7 @@ describe("RooHandler", () => {
 				expect.objectContaining({
 					temperature: 0.9,
 				}),
+				undefined,
 			)
 		})
 
@@ -400,7 +407,7 @@ describe("RooHandler", () => {
 			expect(mockGetSessionTokenFn).toHaveBeenCalled()
 		})
 
-		it("should handle undefined auth service", () => {
+		it("should handle undefined auth service gracefully", () => {
 			mockHasInstanceFn.mockReturnValue(true)
 			// Mock CloudService with undefined authService
 			const originalGetter = Object.getOwnPropertyDescriptor(CloudService, "instance")?.get
@@ -413,7 +420,10 @@ describe("RooHandler", () => {
 
 				expect(() => {
 					new RooHandler(mockOptions)
-				}).toThrow("Authentication required for Roo Code Cloud")
+				}).not.toThrow()
+				// Constructor should succeed even with undefined auth service
+				const handler = new RooHandler(mockOptions)
+				expect(handler).toBeInstanceOf(RooHandler)
 			} finally {
 				// Always restore original getter, even if test fails
 				if (originalGetter) {
@@ -425,12 +435,15 @@ describe("RooHandler", () => {
 			}
 		})
 
-		it("should handle empty session token", () => {
+		it("should handle empty session token gracefully", () => {
 			mockGetSessionTokenFn.mockReturnValue("")
 
 			expect(() => {
 				new RooHandler(mockOptions)
-			}).toThrow("Authentication required for Roo Code Cloud")
+			}).not.toThrow()
+			// Constructor should succeed even with empty session token
+			const handler = new RooHandler(mockOptions)
+			expect(handler).toBeInstanceOf(RooHandler)
 		})
 	})
 })

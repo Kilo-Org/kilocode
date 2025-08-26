@@ -273,6 +273,8 @@
 		"getChutesApiKey": "Get Chutes API Key",
 		"fireworksApiKey": "Fireworks API Key",
 		"getFireworksApiKey": "Get Fireworks API Key",
+		"featherlessApiKey": "Featherless API Key",
+		"getFeatherlessApiKey": "Get Featherless API Key",
 		"ioIntelligenceApiKey": "IO Intelligence API Key",
 		"ioIntelligenceApiKeyPlaceholder": "Enter your IO Intelligence API key",
 		"getIoIntelligenceApiKey": "Get IO Intelligence API Key",
@@ -762,6 +764,10 @@
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "Use new message parser",
 			"description": "Enable the experimental streaming message parser that provides significant performance improvements for long assistant responses by processing messages more efficiently."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "Require 'todos' list for new tasks",
+			"description": "When enabled, the new_task tool will require a todos parameter to be provided. This ensures all new tasks start with a clear list of objectives. When disabled (default), the todos parameter remains optional for backward compatibility."
 		}
 	},
 	"promptCaching": {

@@ -212,6 +212,9 @@
 			"cloud_auth_required": "Votre organisation nécessite une authentification Kilo Code Cloud. Veuillez vous connecter pour continuer.",
 			"organization_mismatch": "Vous devez être authentifié avec le compte Kilo Code Cloud de votre organisation.",
 			"verification_failed": "Impossible de vérifier l'authentification de l'organisation."
+		},
+		"info": {
+			"organization_requires_auth": "Votre organisation nécessite une authentification."
 		}
 	},
 	"prompts": {

@@ -50,7 +50,7 @@
 		"title": "Istruzioni personalizzate specifiche per la modalità (opzionale)",
 		"resetToDefault": "Ripristina predefiniti",
 		"description": "Aggiungi linee guida comportamentali specifiche per la modalità {{modeName}}.",
-		"loadFromFile": "Le istruzioni personalizzate specifiche per la modalità {{mode}} possono essere caricate anche dalla cartella <span>.kilocode/rules/</span> nel tuo spazio di lavoro (.kilocoderules-{{slug}} è obsoleto e smetterà di funzionare presto)."
+		"loadFromFile": "Le istruzioni personalizzate specifiche per la modalità {{mode}} possono anche essere caricate dalla cartella <span>.kilocode/rules-{{slug}}/</span> nel tuo spazio di lavoro o dal globale <0>.kilocode/rules-{{slug}}/</0> (.kilocoderules-{{slug}} e .clinerules-{{slug}} sono deprecati e smetteranno di funzionare presto)."
 	},
 	"exportMode": {
 		"title": "Esporta modalità",
@@ -76,7 +76,7 @@
 	"globalCustomInstructions": {
 		"title": "Istruzioni personalizzate per tutte le modalità",
 		"description": "Queste istruzioni si applicano a tutte le modalità. Forniscono un insieme base di comportamenti che possono essere migliorati dalle istruzioni specifiche per modalità qui sotto. <0>Scopri di più</0>",
-		"loadFromFile": "Le istruzioni possono essere caricate anche dalla cartella <span>.kilocode/rules/</span> nel tuo spazio di lavoro (.kilocoderules sono obsoleti e smetteranno di funzionare presto)."
+		"loadFromFile": "Le istruzioni possono anche essere caricate dalla cartella <span>.kilocode/rules/</span> nel tuo spazio di lavoro o dal globale <0>.kilocode/rules/</0> (.kilocoderules e .clinerules sono deprecati e smetteranno di funzionare presto)."
 	},
 	"systemPrompt": {
 		"preview": "Anteprima prompt di sistema",

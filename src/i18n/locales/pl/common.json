@@ -212,6 +212,9 @@
 			"cloud_auth_required": "Twoja organizacja wymaga uwierzytelnienia Kilo Code Cloud. Zaloguj się, aby kontynuować.",
 			"organization_mismatch": "Musisz być uwierzytelniony kontem Kilo Code Cloud swojej organizacji.",
 			"verification_failed": "Nie można zweryfikować uwierzytelnienia organizacji."
+		},
+		"info": {
+			"organization_requires_auth": "Twoja organizacja wymaga uwierzytelnienia."
 		}
 	},
 	"prompts": {

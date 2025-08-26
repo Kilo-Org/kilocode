@@ -50,7 +50,7 @@
 		"title": "Instruksi Kustom Khusus Mode (opsional)",
 		"resetToDefault": "Reset ke default",
 		"description": "Tambahkan panduan perilaku khusus untuk mode {{modeName}}.",
-		"loadFromFile": "Instruksi kustom khusus untuk mode {{mode}} juga dapat dimuat dari folder <span>.kilocode/rules-{{slug}}/</span> di workspace Anda (.kilocodemodes-{{slug}} dan .clinerules-{{slug}} sudah deprecated dan akan segera berhenti bekerja)."
+		"loadFromFile": "Instruksi khusus untuk mode {{mode}} juga dapat dimuat dari folder <span>.kilocode/rules-{{slug}}/</span> di ruang kerja Anda atau dari global <0>.kilocode/rules-{{slug}}/</0> (.kilocoderules-{{slug}} dan .clinerules-{{slug}} sudah usang dan akan segera berhenti berfungsi)."
 	},
 	"exportMode": {
 		"title": "Ekspor Mode",
@@ -76,7 +76,7 @@
 	"globalCustomInstructions": {
 		"title": "Instruksi Kustom untuk Semua Mode",
 		"description": "Instruksi ini berlaku untuk semua mode. Mereka menyediakan set dasar perilaku yang dapat ditingkatkan oleh instruksi khusus mode di bawah. <0>Pelajari lebih lanjut</0>",
-		"loadFromFile": "Instruksi juga dapat dimuat dari folder <span>.kilocode/rules/</span> di workspace Anda (.kilocoderules dan .clinerules sudah deprecated dan akan segera berhenti bekerja)."
+		"loadFromFile": "Instruksi juga dapat dimuat dari folder <span>.kilocode/rules/</span> di ruang kerja Anda atau dari global <0>.kilocode/rules/</0> (.kilocoderules dan .clinerules sudah usang dan akan segera berhenti berfungsi)."
 	},
 	"systemPrompt": {
 		"preview": "Pratinjau System Prompt",
