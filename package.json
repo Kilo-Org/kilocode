@@ -66,5 +66,8 @@
 			"form-data": ">=4.0.4",
 			"bluebird": ">=3.7.2"
 		}
+	},
+	"dependencies": {
+		"openai": "5.15.0"
 	}
 }

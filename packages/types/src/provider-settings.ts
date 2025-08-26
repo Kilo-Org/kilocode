@@ -1,4 +1,5 @@
 import { z } from "zod"
+import type { ChatCompletion } from "openai/resources/chat/completions"
 
 import { reasoningEffortsSchema, verbosityLevelsSchema, modelInfoSchema } from "./model.js"
 import { codebaseIndexProviderSchema } from "./codebase-index.js"
@@ -10,6 +11,9 @@ export const BEDROCK_CLAUDE_SONNET_4_MODEL_ID = "anthropic.claude-sonnet-4-20250
 export const extendedReasoningEffortsSchema = z.union([reasoningEffortsSchema, z.literal("minimal")])
 
 export type ReasoningEffortWithMinimal = z.infer<typeof extendedReasoningEffortsSchema>
+// New flex/priority servicetiers for OpenAi models for 1/2 price on flex or 2x for priority
+// Defined in OpenAI SDK 5.15.0
+export type ServiceTier = ChatCompletion["service_tier"]
 
 /**
  * ProviderName
@@ -215,14 +219,14 @@ const geminiCliSchema = apiModelIdProviderModelSchema.extend({
 	geminiCliOAuthPath: z.string().optional(),
 	geminiCliProjectId: z.string().optional(),
 })
-// kilocode_change end
 
 const openAiNativeSchema = apiModelIdProviderModelSchema.extend({
 	openAiNativeApiKey: z.string().optional(),
 	openAiNativeBaseUrl: z.string().optional(),
 	openAiNativeModelId: z.string().optional(),
-	openAiNativeServiceTier: z.enum(["default", "auto", "standard", "flex", "priority", "scale"]).optional(),
+	openAiNativeServiceTier: z.custom<ServiceTier>().optional(),
 })
+// kilocode_change end
 
 const mistralSchema = apiModelIdProviderModelSchema.extend({
 	mistralApiKey: z.string().optional(),
