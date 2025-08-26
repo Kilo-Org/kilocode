@@ -282,6 +282,8 @@
 		"getDeepSeekApiKey": "Získat klíč API DeepSeek",
 		"doubaoApiKey": "Klíč API Doubao",
 		"getDoubaoApiKey": "Získat klíč API Doubao",
+		"featherlessApiKey": "Klíč API Featherless",
+		"getFeatherlessApiKey": "Získat klíč API Featherless",
 		"fireworksApiKey": "Klíč API Fireworks",
 		"getFireworksApiKey": "Získat klíč API Fireworks",
 		"zaiApiKey": "Klíč API Z.AI",
@@ -813,6 +815,10 @@
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "Použít nový parser zpráv",
 			"description": "Povolit experimentální streamovací parser zpráv, který poskytuje významná zlepšení výkonu pro dlouhé odpovědi asistenta efektivnějším zpracováním zpráv."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "Vyžadovat seznam 'úkolů' pro nové úkoly",
+			"description": "Pokud je povoleno, nástroj new_task bude vyžadovat poskytnutí parametru úkolů. Tím se zajistí, že všechny nové úkoly začnou s jasným seznamem cílů. Pokud je zakázáno (výchozí), parametr úkolů zůstane volitelný pro zpětnou kompatibilitu."
 		}
 	},
 	"promptCaching": {

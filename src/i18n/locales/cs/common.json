@@ -207,6 +207,9 @@
 			"cloud_auth_required": "Tvá organizace vyžaduje autentizaci Kilo Code Cloud. Prosím přihlas se pro pokračování.",
 			"organization_mismatch": "Musíš být autentizován s účtem Kilo Code Cloud tvé organizace.",
 			"verification_failed": "Nelze ověřit autentizaci organizace."
+		},
+		"info": {
+			"organization_requires_auth": "Tvá organizace vyžaduje autentizaci."
 		}
 	},
 	"prompts": {

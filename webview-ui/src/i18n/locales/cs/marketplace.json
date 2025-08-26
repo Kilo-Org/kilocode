@@ -33,6 +33,12 @@
 			"selected": "Zobrazeny položky s jakýmkoli z vybraných štítků",
 			"clickToFilter": "Klikni na štítky pro filtrování položek"
 		},
+		"installed": {
+			"label": "Filtrovat podle stavu",
+			"all": "Všechny položky",
+			"installed": "Nainstalováno",
+			"notInstalled": "Nenainstalováno"
+		},
 		"none": "Žádné"
 	},
 	"sections": {

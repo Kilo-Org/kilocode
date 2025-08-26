@@ -38,6 +38,12 @@
 			"noResults": "Žádné štítky nenalezeny.",
 			"selected": "Zobrazeny položky s jakýmkoli z vybraných štítků"
 		},
+		"installed": {
+			"label": "Filtrovat podle stavu",
+			"all": "Všechny položky",
+			"installed": "Nainstalováno",
+			"notInstalled": "Nenainstalováno"
+		},
 		"title": "Tržiště"
 	},
 	"done": "Hotovo",

@@ -276,6 +276,8 @@
 		"getIoIntelligenceApiKey": "รับคีย์ API ของ IO Intelligence",
 		"deepSeekApiKey": "คีย์ API ของ DeepSeek",
 		"getDeepSeekApiKey": "รับคีย์ API ของ DeepSeek",
+		"featherlessApiKey": "คีย์ API ของ Featherless",
+		"getFeatherlessApiKey": "รับคีย์ API ของ Featherless",
 		"fireworksApiKey": "คีย์ API ของ Fireworks",
 		"getFireworksApiKey": "รับคีย์ API ของ Fireworks",
 		"moonshotApiKey": "คีย์ API ของ Moonshot",
@@ -791,6 +793,10 @@
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "ใช้ตัวแยกวิเคราะห์ข้อความใหม่",
 			"description": "เปิดใช้งานตัวแยกวิเคราะห์ข้อความแบบสตรีมมิ่งทดลองที่ให้การปรับปรุงประสิทธิภาพอย่างมีนัยสำคัญสำหรับการตอบสนองของผู้ช่วยที่ยาวโดยการประมวลผลข้อความอย่างมีประสิทธิภาพมากขึ้น"
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "กำหนดให้มีรายการ 'สิ่งที่ต้องทำ' สำหรับงานใหม่",
+			"description": "เมื่อเปิดใช้งาน เครื่องมือ new_task จะต้องมีการให้พารามิเตอร์รายการสิ่งที่ต้องทำ ซึ่งจะช่วยให้แน่ใจว่างานใหม่ทั้งหมดเริ่มต้นด้วยรายการเป้าหมายที่ชัดเจน เมื่อปิดใช้งาน (ค่าเริ่มต้น) พารามิเตอร์รายการสิ่งที่ต้องทำจะยังคงเป็นทางเลือกเพื่อความเข้ากันได้แบบย้อนหลัง"
 		}
 	},
 	"promptCaching": {

@@ -282,6 +282,8 @@
 		"getIoIntelligenceApiKey": "Отримати ключ API IO Intelligence",
 		"deepSeekApiKey": "Ключ API DeepSeek",
 		"getDeepSeekApiKey": "Отримати ключ API DeepSeek",
+		"featherlessApiKey": "Ключ API Featherless",
+		"getFeatherlessApiKey": "Отримати ключ API Featherless",
 		"fireworksApiKey": "Ключ API Fireworks",
 		"getFireworksApiKey": "Отримати ключ API Fireworks",
 		"moonshotApiKey": "Ключ API Moonshot",
@@ -801,6 +803,10 @@
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "Використовувати новий парсер повідомлень",
 			"description": "Увімкнути експериментальний потоковий парсер повідомлень, який забезпечує значні покращення продуктивності для довгих відповідей асистента шляхом більш ефективної обробки повідомлень."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "Вимагати список 'завдань' для нових завдань",
+			"description": "Коли увімкнено, інструмент new_task вимагатиме надання параметра завдань. Це забезпечить, що всі нові завдання почнуть з чітким списком цілей. Коли вимкнено (за замовчуванням), параметр завдань залишається необов'язковим для зворотної сумісності."
 		}
 	},
 	"promptCaching": {

@@ -207,6 +207,9 @@
 			"cloud_auth_required": "منظمتك تتطلب تسجيل دخول Kilo Code Cloud. سجل دخولك عشان تكمل.",
 			"organization_mismatch": "لازم تسجل دخول بحساب المنظمة في Kilo Code Cloud.",
 			"verification_failed": "فشل التحقق من تسجيل الدخول للمنظمة."
+		},
+		"info": {
+			"organization_requires_auth": "منظمتك تتطلب المصادقة."
 		}
 	},
 	"prompts": {

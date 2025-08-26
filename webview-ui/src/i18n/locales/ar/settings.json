@@ -282,6 +282,8 @@
 		"getDeepSeekApiKey": "احصل على مفتاح DeepSeek",
 		"doubaoApiKey": "مفتاح Doubao",
 		"getDoubaoApiKey": "احصل على مفتاح Doubao",
+		"featherlessApiKey": "مفتاح Featherless API",
+		"getFeatherlessApiKey": "احصل على مفتاح Featherless API",
 		"fireworksApiKey": "مفتاح Fireworks",
 		"getFireworksApiKey": "احصل على مفتاح Fireworks",
 		"zaiApiKey": "مفتاح Z.AI",
@@ -802,6 +804,10 @@
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "استخدام محلل الرسائل الجديد",
 			"description": "تفعيل محلل الرسائل التجريبي المتدفق الذي يوفر تحسينات كبيرة في الأداء للاستجابات الطويلة من المساعد من خلال معالجة الرسائل بكفاءة أكبر."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "يتطلب قائمة 'مهام' للمهام الجديدة",
+			"description": "عند التفعيل، أداة المهام الجديدة ستتطلب توفير معامل المهام. هذا يضمن أن كل المهام الجديدة تبدأ بقائمة واضحة من الأهداف. عند التعطيل (افتراضي)، يبقى معامل المهام اختياري للتوافق مع النسخة السابقة."
 		}
 	},
 	"promptCaching": {
