@@ -554,6 +554,7 @@ export const webviewMessageHandler = async (
 				"kilocode-openrouter": {}, // kilocode_change
 				ollama: {},
 				lmstudio: {},
+				tars: {},
 			}
 
 			const safeGetModels = async (options: GetModelsOptions): Promise<ModelRecord> => {
@@ -612,6 +613,13 @@ export const webviewMessageHandler = async (
 					options: { provider: "litellm", apiKey: litellmApiKey, baseUrl: litellmBaseUrl },
 				})
 			}
+
+			// Add TARS model fetching
+			const tarsApiKey = apiConfiguration.tarsApiKey || message?.values?.tarsApiKey
+			modelFetchPromises.push({
+				key: "tars",
+				options: { provider: "tars", apiKey: tarsApiKey },
+			})
 
 			const results = await Promise.allSettled(
 				modelFetchPromises.map(async ({ key, options }) => {

@@ -293,6 +293,8 @@
 		"groqApiKey": "Groq API Anahtarı",
 		"getSambaNovaApiKey": "SambaNova API Anahtarı Al",
 		"sambaNovaApiKey": "SambaNova API Anahtarı",
+		"getTarsApiKey": "TARS API Anahtarı Al",
+		"tarsApiKey": "TARS API Anahtarı",
 		"getHuggingFaceApiKey": "Hugging Face API Anahtarı Al",
 		"huggingFaceApiKey": "Hugging Face API Anahtarı",
 		"huggingFaceModelId": "Model ID",

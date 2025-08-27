@@ -390,6 +390,8 @@
 		"zaiApiKey": "คีย์ API ของ Z.AI",
 		"getZaiApiKey": "รับคีย์ API ของ Z.AI",
 		"sambaNovaApiKey": "คีย์ API ของ SambaNova",
+		"getTarsApiKey": "รับคีย์ API ของ TARS",
+		"tarsApiKey": "คีย์ API ของ TARS",
 		"getSambaNovaApiKey": "รับคีย์ API ของ SambaNova",
 		"customModel": {
 			"capabilities": "กำหนดค่าความสามารถและราคาสำหรับโมเดลที่เข้ากันได้กับ OpenAI ที่กำหนดเองของคุณ ระมัดระวังในการระบุความสามารถของโมเดล เนื่องจากอาจส่งผลต่อประสิทธิภาพของ Kilo Code",

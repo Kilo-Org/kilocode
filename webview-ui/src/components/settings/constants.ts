@@ -84,6 +84,7 @@ export const PROVIDERS = [
 	{ value: "sambanova", label: "SambaNova" },
 	{ value: "zai", label: "Z AI" },
 	{ value: "fireworks", label: "Fireworks AI" },
+	{ value: "tars", label: "TARS (Tetrate Agent Router Service)" },
 	{ value: "io-intelligence", label: "IO Intelligence" },
 	// { value: "roo", label: "Roo Code Cloud" }, // kilocode_change
 ].sort((a, b) => a.label.localeCompare(b.label))

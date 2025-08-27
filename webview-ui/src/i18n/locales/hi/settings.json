@@ -293,6 +293,8 @@
 		"groqApiKey": "Groq API कुंजी",
 		"getSambaNovaApiKey": "SambaNova API कुंजी प्राप्त करें",
 		"sambaNovaApiKey": "SambaNova API कुंजी",
+		"getTarsApiKey": "TARS API कुंजी प्राप्त करें",
+		"tarsApiKey": "TARS API कुंजी",
 		"getHuggingFaceApiKey": "Hugging Face API कुंजी प्राप्त करें",
 		"huggingFaceApiKey": "Hugging Face API कुंजी",
 		"huggingFaceModelId": "मॉडल ID",

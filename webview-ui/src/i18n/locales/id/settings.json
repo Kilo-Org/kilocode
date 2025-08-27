@@ -293,6 +293,8 @@
 		"groqApiKey": "Groq API Key",
 		"getSambaNovaApiKey": "Dapatkan SambaNova API Key",
 		"sambaNovaApiKey": "SambaNova API Key",
+		"getTarsApiKey": "Dapatkan Kunci API TARS",
+		"tarsApiKey": "Kunci API TARS",
 		"getHuggingFaceApiKey": "Dapatkan Kunci API Hugging Face",
 		"huggingFaceApiKey": "Kunci API Hugging Face",
 		"huggingFaceModelId": "ID Model",

@@ -404,6 +404,8 @@
 		"zaiApiKey": "Ключ API Z.AI",
 		"getZaiApiKey": "Отримати ключ API Z.AI",
 		"sambaNovaApiKey": "Ключ API SambaNova",
+		"getTarsApiKey": "Отримати API-ключ TARS",
+		"tarsApiKey": "API-ключ TARS",
 		"getSambaNovaApiKey": "Отримати ключ API SambaNova",
 		"customModel": {
 			"capabilities": "Налаштуйте можливості та ціни для вашої власної моделі, сумісної з OpenAI. Будьте обережні при вказуванні можливостей моделі, оскільки вони можуть вплинути на продуктивність Kilo Code.",

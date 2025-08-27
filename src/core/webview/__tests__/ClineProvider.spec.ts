@@ -2728,6 +2728,7 @@ describe("ClineProvider - Router Models", () => {
 				"kilocode-openrouter": mockModels,
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
+				tars: mockModels,
 			},
 		})
 	})
@@ -2761,6 +2762,7 @@ describe("ClineProvider - Router Models", () => {
 			.mockRejectedValueOnce(new Error("Kilocode-OpenRouter API error")) // kilocode-openrouter fail
 			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm fail
+			.mockResolvedValueOnce(mockModels) // tars success
 
 		await messageHandler({ type: "requestRouterModels" })
 
@@ -2776,6 +2778,7 @@ describe("ClineProvider - Router Models", () => {
 				lmstudio: {},
 				litellm: {},
 				"kilocode-openrouter": {},
+				tars: mockModels,
 			},
 		})
 
@@ -2894,6 +2897,7 @@ describe("ClineProvider - Router Models", () => {
 				"kilocode-openrouter": mockModels,
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
+				tars: mockModels,
 			},
 		})
 	})

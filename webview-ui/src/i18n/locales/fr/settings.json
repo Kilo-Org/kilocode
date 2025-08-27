@@ -293,6 +293,8 @@
 		"groqApiKey": "Clé API Groq",
 		"getSambaNovaApiKey": "Obtenir la clé API SambaNova",
 		"sambaNovaApiKey": "Clé API SambaNova",
+		"getTarsApiKey": "Obtenir la clé API TARS",
+		"tarsApiKey": "Clé API TARS",
 		"getHuggingFaceApiKey": "Obtenir la clé API Hugging Face",
 		"huggingFaceApiKey": "Clé API Hugging Face",
 		"huggingFaceModelId": "ID du modèle",

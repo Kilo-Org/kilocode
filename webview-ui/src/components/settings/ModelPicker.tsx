@@ -39,6 +39,7 @@ type ModelIdKey = keyof Pick<
 	| "openAiModelId"
 	| "litellmModelId"
 	| "kilocodeModel"
+	| "tarsModelId"
 	| "ioIntelligenceModelId"
 >
 
