@@ -220,7 +220,7 @@
 	},
 	"commandOutput": "Output Perintah",
 	"commandExecution": {
-		"running": "Menjalankan",
+		"running": "Berjalan",
 		"pid": "PID: {{pid}}",
 		"exited": "Keluar ({{exitCode}})",
 		"manageCommands": "Kelola Izin Perintah",
@@ -233,7 +233,11 @@
 		"expandOutput": "Perluas output",
 		"collapseOutput": "Ciutkan output",
 		"expandManagement": "Perluas bagian manajemen perintah",
-		"collapseManagement": "Ciutkan bagian manajemen perintah"
+		"collapseManagement": "Ciutkan bagian manajemen perintah",
+		"editCommand": "Edit perintah",
+		"enterCommand": "Masukkan perintah...",
+		"save": "Simpan",
+		"cancel": "Batal"
 	},
 	"response": "Respons",
 	"arguments": "Argumen",

@@ -217,7 +217,11 @@
 		"expandOutput": "Mở rộng kết quả",
 		"collapseOutput": "Thu gọn kết quả",
 		"expandManagement": "Mở rộng phần quản lý lệnh",
-		"collapseManagement": "Thu gọn phần quản lý lệnh"
+		"collapseManagement": "Thu gọn phần quản lý lệnh",
+		"editCommand": "Chỉnh sửa lệnh",
+		"enterCommand": "Nhập lệnh...",
+		"save": "Lưu",
+		"cancel": "Hủy"
 	},
 	"response": "Phản hồi",
 	"arguments": "Tham số",

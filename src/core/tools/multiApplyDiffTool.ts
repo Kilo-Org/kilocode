@@ -568,7 +568,13 @@ ${errorDetails ? `\nTechnical details:\n${errorDetails}\n` : ""}
 
 					// Ask for approval (same for both flows)
 					const isWriteProtected = cline.rooProtectedController?.isWriteProtected(relPath) || false
-					didApprove = await askApproval("tool", operationMessage, toolProgressStatus, isWriteProtected)
+					didApprove = await askApproval(
+						"tool",
+						operationMessage,
+						toolProgressStatus,
+						isWriteProtected,
+						false,
+					)
 
 					if (!didApprove) {
 						// Revert changes if diff view was shown

@@ -217,7 +217,11 @@
 		"expandOutput": "展开输出",
 		"collapseOutput": "折叠输出",
 		"expandManagement": "展开命令管理部分",
-		"collapseManagement": "折叠命令管理部分"
+		"collapseManagement": "折叠命令管理部分",
+		"editCommand": "编辑命令",
+		"enterCommand": "输入命令...",
+		"save": "保存",
+		"cancel": "取消"
 	},
 	"response": "响应",
 	"arguments": "参数",

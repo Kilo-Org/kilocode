@@ -199,9 +199,9 @@
 	},
 	"commandOutput": "Commando-uitvoer",
 	"commandExecution": {
-		"running": "Lopend",
+		"running": "Actief",
 		"pid": "PID: {{pid}}",
-		"exited": "Afgesloten ({{exitCode}})",
+		"exited": "Afgebroken ({{exitCode}})",
 		"manageCommands": "Beheer Commando Toestemmingen",
 		"commandManagementDescription": "Beheer commando toestemmingen: Klik op ✓ om automatische uitvoering toe te staan, ✗ om uitvoering te weigeren. Patronen kunnen worden in- of uitgeschakeld of uit lijsten worden verwijderd. <settingsLink>Bekijk alle instellingen</settingsLink>",
 		"addToAllowed": "Toevoegen aan toegestane lijst",
@@ -212,7 +212,11 @@
 		"expandOutput": "Uitvoer uitvouwen",
 		"collapseOutput": "Uitvoer samenvouwen",
 		"expandManagement": "Beheersectie voor commando's uitvouwen",
-		"collapseManagement": "Beheersectie voor commando's samenvouwen"
+		"collapseManagement": "Beheersectie voor commando's samenvouwen",
+		"editCommand": "Opdracht bewerken",
+		"enterCommand": "Voer opdracht in...",
+		"save": "Opslaan",
+		"cancel": "Annuleren"
 	},
 	"response": "Antwoord",
 	"arguments": "Argumenten",

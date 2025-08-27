@@ -136,6 +136,7 @@ export interface ExtensionMessage {
 		| "commands"
 		| "insertTextIntoTextarea"
 	text?: string
+	commandText?: string
 	payload?: ProfileDataResponsePayload | BalanceDataResponsePayload // kilocode_change: Add payload for profile and balance data
 	action?:
 		| "chatButtonClicked"

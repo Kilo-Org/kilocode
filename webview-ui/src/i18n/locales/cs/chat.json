@@ -233,7 +233,11 @@
 		"expandOutput": "Rozbalit výstup",
 		"collapseOutput": "Sbalit výstup",
 		"expandManagement": "Rozbalit sekci správy příkazů",
-		"collapseManagement": "Sbalit sekci správy příkazů"
+		"collapseManagement": "Sbalit sekci správy příkazů",
+		"editCommand": "Upravit příkaz",
+		"enterCommand": "Zadejte příkaz...",
+		"save": "Uložit",
+		"cancel": "Zrušit"
 	},
 	"response": "Odpověď",
 	"arguments": "Argumenty",
@@ -398,9 +402,6 @@
 	"queuedMessages": {
 		"title": "Zprávy ve frontě:",
 		"clickToEdit": "Klikni pro úpravu zprávy"
-	},
-	"editMessage": {
-		"placeholder": "Upravit tvou zprávu..."
 	},
 	"generateCommitMessage": "Vygenerovat commit zprávu"
 }
