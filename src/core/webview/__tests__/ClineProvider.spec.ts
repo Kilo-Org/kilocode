@@ -350,6 +350,7 @@ describe("ClineProvider", () => {
 	let mockWebviewView: vscode.WebviewView
 	let mockPostMessage: any
 	let updateGlobalStateSpy: any
+	let mockContextProxy: any
 
 	beforeEach(() => {
 		vi.clearAllMocks()
@@ -394,6 +395,84 @@ describe("ClineProvider", () => {
 			},
 		} as unknown as vscode.ExtensionContext
 
+		// Provide a mock ContextProxy that forwards to mockContext.globalState by default.
+		// Use a shared underlying spy so callers using either `setValue` or legacy `updateGlobalState` are recorded.
+		const baseUpdate = vi.fn(async (k: string, v: any) => {
+			;(mockContext.globalState.update as any)(k, v)
+		})
+		const baseGet = vi.fn((k: string) => (mockContext.globalState.get as any)(k))
+
+		mockContextProxy = {
+			// New API shims used by callers in this repo
+			setValue: vi.fn(async (k: string, v: any) => baseUpdate(k, v)),
+			getValue: vi.fn((k: string) => baseGet(k)),
+			// Bulk helpers used in import/export and tests
+			setValues: vi.fn(async (values: Record<string, any>) => {
+				const entries = Object.entries(values)
+				for (const [k, v] of entries) {
+					await baseUpdate(k, v)
+				}
+			}),
+			getValues: vi.fn(() => {
+				// Return a shallow merge of global state and secrets for convenience in tests.
+				return { ...(globalState as Record<string, any>), ...(secrets as Record<string, any>) }
+			}),
+			// Provider / settings helpers used by ClineProvider
+			getProviderSettings: vi.fn(() => {
+				// Minimal provider settings object used by ClineProvider.getState.
+				// Tests can override mockContextProxy.getProviderSettings.mockImplementation if they need different values.
+				return {}
+			}),
+			setProviderSettings: vi.fn(async (_settings: any) => Promise.resolve()),
+			getGlobalSettings: vi.fn(() => {
+				// Minimal global settings; callers may override in specific tests.
+				return {}
+			}),
+			// Legacy names still referenced in some tests / callers - point them to the same base spy.
+			updateGlobalState: baseUpdate,
+			updateRawKey: baseUpdate,
+			getGlobalState: baseGet,
+			// minimal props used by consumers
+			extensionUri: mockContext.extensionUri,
+		}
+		// Ensure any code calling ContextProxy.getInstance() or ContextProxy.instance uses our mock.
+		vi.spyOn(ContextProxy as any, "getInstance").mockResolvedValue(mockContextProxy)
+		Object.defineProperty(ContextProxy, "instance", { get: vi.fn(() => mockContextProxy), configurable: true })
+
+		// Helper to ensure any context proxy (real or mocked) has the minimal API used by ClineProvider.
+		const ensureContextProxy = (p: any) => {
+			if (!p) return
+			// Ensure extensionUri exists
+			if (p.extensionUri === undefined) p.extensionUri = mockContext.extensionUri
+			// getValues: shallow merge of globalState and secrets
+			if (typeof p.getValues !== "function")
+				p.getValues = vi.fn(() => ({
+					...(globalState as Record<string, any>),
+					...(secrets as Record<string, any>),
+				}))
+			// Provider settings helpers
+			if (typeof p.getProviderSettings !== "function") p.getProviderSettings = vi.fn(() => ({}))
+			if (typeof p.setProviderSettings !== "function")
+				p.setProviderSettings = vi.fn(async () => Promise.resolve())
+			// Value setters/getters
+			if (typeof p.setValue !== "function")
+				p.setValue = vi.fn(async (k: string, v: any) => (mockContext.globalState.update as any)(k, v))
+			if (typeof p.getValue !== "function")
+				p.getValue = vi.fn((k: string) => (mockContext.globalState.get as any)(k))
+			if (typeof p.setValues !== "function")
+				p.setValues = vi.fn(async (values: Record<string, any>) => {
+					for (const [k, v] of Object.entries(values)) {
+						await (mockContext.globalState.update as any)(k, v)
+					}
+				})
+			// Legacy shims
+			if (typeof p.updateGlobalState !== "function") p.updateGlobalState = p.setValue
+			if (typeof p.updateRawKey !== "function") p.updateRawKey = p.setValue
+			if (typeof p.getGlobalState !== "function") p.getGlobalState = p.getValue
+			// Secrets
+			if (typeof p.storeSecret !== "function")
+				p.storeSecret = vi.fn(async (k: string, v: any) => (mockContext.secrets.store as any)(k, v))
+		}
 		// Mock CustomModesManager
 		const mockCustomModesManager = {
 			updateCustomMode: vi.fn().mockResolvedValue(undefined),
@@ -401,6 +480,8 @@ describe("ClineProvider", () => {
 			dispose: vi.fn(),
 		}
 
+		// Ensure the proxy used by the provider has the minimal test API
+		ensureContextProxy(mockContextProxy)
 		// Mock output channel
 		mockOutputChannel = {
 			appendLine: vi.fn(),
@@ -428,7 +509,7 @@ describe("ClineProvider", () => {
 			onDidChangeVisibility: vi.fn().mockImplementation(() => ({ dispose: vi.fn() })),
 		} as unknown as vscode.WebviewView
 
-		provider = new ClineProvider(mockContext, mockOutputChannel, "sidebar", new ContextProxy(mockContext))
+		provider = new ClineProvider(mockContext, mockOutputChannel, "sidebar", mockContextProxy)
 
 		defaultTaskOptions = {
 			context: mockContext,
@@ -1164,7 +1245,9 @@ describe("ClineProvider", () => {
 		} as unknown as vscode.ExtensionContext
 
 		// Create new provider with updated mock context
-		provider = new ClineProvider(mockContext, mockOutputChannel, "sidebar", new ContextProxy(mockContext))
+		provider = new ClineProvider(mockContext, mockOutputChannel, "sidebar", mockContextProxy)
+		// Ensure the mockContextProxy reflects the new context for this test
+		mockContextProxy.getValues = vi.fn(() => ({ mode: "code", currentApiConfigName: "test-config" }))
 		await provider.resolveWebviewView(mockWebviewView)
 		const messageHandler = (mockWebviewView.webview.onDidReceiveMessage as any).mock.calls[0][0]
 
@@ -1983,8 +2066,8 @@ describe("ClineProvider", () => {
 				}),
 			)
 
-			// Verify state was updated
-			expect(mockContext.globalState.update).toHaveBeenCalledWith("customModes", [
+			// Verify state was updated via ContextProxy
+			expect(mockContextProxy.updateGlobalState).toHaveBeenCalledWith("customModes", [
 				{ groups: ["read"], name: "Test Mode", roleDefinition: "Updated role definition", slug: "test-mode" },
 			])
 
@@ -2237,6 +2320,7 @@ describe("Project MCP Settings", () => {
 	let mockOutputChannel: vscode.OutputChannel
 	let mockWebviewView: vscode.WebviewView
 	let mockPostMessage: any
+	let mockContextProxy: any
 
 	beforeEach(() => {
 		vi.clearAllMocks()
@@ -2289,7 +2373,7 @@ describe("Project MCP Settings", () => {
 			onDidChangeVisibility: vi.fn(),
 		} as unknown as vscode.WebviewView
 
-		provider = new ClineProvider(mockContext, mockOutputChannel, "sidebar", new ContextProxy(mockContext))
+		provider = new ClineProvider(mockContext, mockOutputChannel, "sidebar", mockContextProxy)
 	})
 
 	test.skip("handles openProjectMcpSettings message", async () => {
@@ -2608,6 +2692,7 @@ describe("ClineProvider - Router Models", () => {
 	let mockOutputChannel: vscode.OutputChannel
 	let mockWebviewView: vscode.WebviewView
 	let mockPostMessage: any
+	let mockContextProxy: any
 
 	beforeEach(() => {
 		vi.clearAllMocks()
@@ -2666,7 +2751,7 @@ describe("ClineProvider - Router Models", () => {
 			TelemetryService.createInstance([])
 		}
 
-		provider = new ClineProvider(mockContext, mockOutputChannel, "sidebar", new ContextProxy(mockContext))
+		provider = new ClineProvider(mockContext, mockOutputChannel, "sidebar", mockContextProxy)
 	})
 
 	test("handles requestRouterModels with successful responses", async () => {
@@ -2933,6 +3018,7 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 	let mockWebviewView: vscode.WebviewView
 	let mockPostMessage: any
 	let defaultTaskOptions: TaskOptions
+	let mockContextProxy: any
 
 	beforeEach(() => {
 		vi.clearAllMocks()
@@ -2996,7 +3082,7 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 			onDidChangeVisibility: vi.fn().mockImplementation(() => ({ dispose: vi.fn() })),
 		} as unknown as vscode.WebviewView
 
-		provider = new ClineProvider(mockContext, mockOutputChannel, "sidebar", new ContextProxy(mockContext))
+		provider = new ClineProvider(mockContext, mockOutputChannel, "sidebar", mockContextProxy)
 
 		defaultTaskOptions = {
 			context: mockContext,

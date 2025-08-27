@@ -119,12 +119,14 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	// Initialize global state if not already set.
 	if (!context.globalState.get("allowedCommands")) {
-		context.globalState.update("allowedCommands", defaultCommands)
+		const proxyEarly = await ContextProxy.getInstance(context)
+		await proxyEarly.setValue("allowedCommands", defaultCommands)
 	}
 
 	// kilocode_change start
 	if (!context.globalState.get("firstInstallCompleted")) {
-		await context.globalState.update("telemetrySetting", "enabled")
+		const proxyTelemetry = await ContextProxy.getInstance(context)
+		await proxyTelemetry.setValue("telemetrySetting", "enabled")
 	}
 	// kilocode_change end
 
@@ -215,7 +217,10 @@ export async function activate(context: vscode.ExtensionContext) {
 		} catch (error) {
 			outputChannel.appendLine(`Error during first-time setup: ${error.message}`)
 		} finally {
-			await context.globalState.update("firstInstallCompleted", true)
+			{
+				const proxy = await ContextProxy.getInstance(context)
+				await proxy.updateRawKey("firstInstallCompleted", true)
+			}
 		}
 	}
 	// kilocode_change end

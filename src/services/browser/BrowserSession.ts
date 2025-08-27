@@ -9,6 +9,7 @@ import delay from "delay"
 import { fileExistsAtPath } from "../../utils/fs"
 import { BrowserActionResult } from "../../shared/ExtensionMessage"
 import { discoverChromeHostUrl, tryChromeHostUrl } from "./browserDiscovery"
+import { ContextProxy } from "../../core/config/ContextProxy"
 
 // Timeout constants
 const BROWSER_NAVIGATION_TIMEOUT = 15_000 // 15 seconds
@@ -89,7 +90,11 @@ export class BrowserSession {
 
 			// Cache the successful endpoint
 			console.log(`Connected to remote browser at ${chromeHostUrl}`)
-			this.context.globalState.update("cachedChromeHostUrl", chromeHostUrl)
+			{
+				// Use ContextProxy for RooCodeSettings keys to avoid direct memento writes
+				const proxy = await ContextProxy.getInstance(this.context)
+				await proxy.setValue("cachedChromeHostUrl", chromeHostUrl)
+			}
 			this.lastConnectionAttempt = Date.now()
 			this.isUsingRemoteBrowser = true
 
@@ -118,7 +123,10 @@ export class BrowserSession {
 
 			console.log(`Failed to connect using cached Chrome Host Url: ${cachedChromeHostUrl}`)
 			// Clear the cached endpoint since it's no longer valid
-			this.context.globalState.update("cachedChromeHostUrl", undefined)
+			{
+				const proxy = await ContextProxy.getInstance(this.context)
+				await proxy.setValue("cachedChromeHostUrl", undefined)
+			}
 
 			// User wants to give up after one reconnection attempt
 			if (remoteBrowserHost) {

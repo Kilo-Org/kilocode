@@ -16,6 +16,7 @@ import { GlobalFileNames } from "../../../shared/globalFileNames"
 
 import { CustomModesManager } from "../CustomModesManager"
 import { getProjectRooDirectoryForCwd } from "../../../services/roo-config" // kilocode_change
+import { ContextProxy } from "../ContextProxy"
 
 vi.mock("vscode", () => ({
 	workspace: {
@@ -65,6 +66,32 @@ describe("CustomModesManager", () => {
 				fsPath: mockStoragePath,
 			},
 		} as unknown as vscode.ExtensionContext
+
+		// Create a lightweight mock ContextProxy that forwards to mockContext by default.
+		const mockContextProxy: any = {
+			updateGlobalState: vi.fn(async (key: string, value: any) => {
+				// Forward to the underlying mockContext.globalState.update so tests that override that mock still work.
+				return (mockContext.globalState.update as Mock)(key, value)
+			}),
+			updateRawKey: vi.fn(async (key: string, value: any) => {
+				return (mockContext.globalState.update as Mock)(key, value)
+			}),
+			getGlobalState: vi.fn((key: string) => {
+				return (mockContext.globalState.get as Mock)(key)
+			}),
+			getSecret: vi.fn(),
+			storeSecret: vi.fn(),
+			get extensionUri() {
+				return (mockContext as any).extensionUri
+			},
+		}
+
+		// Spy ContextProxy.getInstance and the ContextProxy.instance getter so code under test receives our mock proxy.
+		vi.spyOn(ContextProxy as any, "getInstance").mockResolvedValue(mockContextProxy)
+		Object.defineProperty(ContextProxy, "instance", {
+			get: vi.fn(() => mockContextProxy),
+			configurable: true,
+		})
 
 		// mockWorkspacePath is now defined at the top level
 		mockWorkspaceFolders = [{ uri: { fsPath: mockWorkspacePath } }]

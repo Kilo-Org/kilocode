@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import * as path from "path"
 import * as fs from "fs/promises"
 import * as os from "os"
+import { ContextProxy } from "./ContextProxy"
 
 import * as yaml from "yaml"
 import stripBom from "strip-bom"
@@ -299,7 +300,10 @@ export class CustomModesManager {
 
 				// Merge modes from both sources (.kilocodemodes takes precedence)
 				const mergedModes = await this.mergeCustomModes(roomodesModes, result.data.customModes)
-				await this.context.globalState.update("customModes", mergedModes)
+				{
+					const proxy = await ContextProxy.getInstance(this.context)
+					await proxy.updateGlobalState("customModes", mergedModes)
+				}
 				this.clearCache()
 				await this.onUpdate()
 			} catch (error) {
@@ -325,7 +329,10 @@ export class CustomModesManager {
 					const roomodesModes = await this.loadModesFromFile(roomodesPath)
 					// .roomodes takes precedence
 					const mergedModes = await this.mergeCustomModes(roomodesModes, settingsModes)
-					await this.context.globalState.update("customModes", mergedModes)
+					{
+						const proxy = await ContextProxy.getInstance(this.context)
+						await proxy.updateGlobalState("customModes", mergedModes)
+					}
 					this.clearCache()
 					await this.onUpdate()
 				} catch (error) {
@@ -340,7 +347,10 @@ export class CustomModesManager {
 					// When .roomodes is deleted, refresh with only settings modes
 					try {
 						const settingsModes = await this.loadModesFromFile(settingsPath)
-						await this.context.globalState.update("customModes", settingsModes)
+						{
+							const proxy = await ContextProxy.getInstance(this.context)
+							await proxy.updateGlobalState("customModes", settingsModes)
+						}
 						this.clearCache()
 						await this.onUpdate()
 					} catch (error) {
@@ -392,7 +402,10 @@ export class CustomModesManager {
 				.map((mode) => ({ ...mode, source: "global" as const })),
 		]
 
-		await this.context.globalState.update("customModes", mergedModes)
+		{
+			const proxy = await ContextProxy.getInstance(this.context)
+			await proxy.updateGlobalState("customModes", mergedModes)
+		}
 
 		this.cachedModes = mergedModes
 		this.cachedAt = now
@@ -499,7 +512,10 @@ export class CustomModesManager {
 		const roomodesModes = roomodesPath ? await this.loadModesFromFile(roomodesPath) : []
 		const mergedModes = await this.mergeCustomModes(roomodesModes, settingsModes)
 
-		await this.context.globalState.update("customModes", mergedModes)
+		{
+			const proxy = await ContextProxy.getInstance(this.context)
+			await proxy.updateGlobalState("customModes", mergedModes)
+		}
 
 		this.clearCache()
 
@@ -603,7 +619,10 @@ export class CustomModesManager {
 		try {
 			const filePath = await this.getCustomModesFilePath()
 			await fs.writeFile(filePath, yaml.stringify({ customModes: [] }, { lineWidth: 0 }))
-			await this.context.globalState.update("customModes", [])
+			{
+				const proxy = await ContextProxy.getInstance(this.context)
+				await proxy.updateGlobalState("customModes", [])
+			}
 			this.clearCache()
 			await this.onUpdate()
 		} catch (error) {

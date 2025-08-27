@@ -53,7 +53,10 @@ async function showWarningIfNeeded(context: vscode.ExtensionContext): Promise<bo
 			return false
 		}
 
-		await context.globalState.update("terminalCommandWarningAcknowledged", true)
+		{
+			const proxy = await ContextProxy.getInstance(context)
+			await proxy.updateRawKey("terminalCommandWarningAcknowledged", true)
+		}
 	}
 	return true
 }

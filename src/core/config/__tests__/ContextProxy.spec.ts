@@ -4,7 +4,12 @@ import * as vscode from "vscode"
 
 import { GLOBAL_STATE_KEYS, SECRET_STATE_KEYS } from "@roo-code/types"
 
-import { ContextProxy } from "../ContextProxy"
+// Mock fs/promises early so we can control mkdir/appendFile behavior in tests.
+// Vitest cannot spy on ESM namespace exports at runtime, so we provide a mock implementation.
+vi.mock("fs/promises", () => ({
+	mkdir: vi.fn(),
+	appendFile: vi.fn(),
+}))
 
 vi.mock("vscode", () => ({
 	Uri: {
@@ -16,6 +21,8 @@ vi.mock("vscode", () => ({
 		Test: 3,
 	},
 }))
+
+import { ContextProxy } from "../ContextProxy"
 
 describe("ContextProxy", () => {
 	let proxy: ContextProxy
@@ -381,13 +388,17 @@ describe("ContextProxy", () => {
 			// Reset all state
 			await proxy.resetAllState()
 
-			// Should have called update with undefined for each key
+			// Should have called update with undefined for each non-large key
+			// taskHistory is stored on-disk (large state) and therefore is deleted instead of memento-updated.
 			for (const key of GLOBAL_STATE_KEYS) {
+				if (key === "taskHistory") {
+					continue
+				}
 				expect(mockGlobalState.update).toHaveBeenCalledWith(key, undefined)
 			}
 
-			// Total calls should include initial setup + reset operations
-			const expectedUpdateCalls = 2 + GLOBAL_STATE_KEYS.length
+			// Total calls should include initial setup + reset operations for non-large keys
+			const expectedUpdateCalls = 2 + (GLOBAL_STATE_KEYS.length - 1) // subtract taskHistory
 			expect(mockGlobalState.update).toHaveBeenCalledTimes(expectedUpdateCalls)
 		})
 

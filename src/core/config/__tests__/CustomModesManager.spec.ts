@@ -7,6 +7,7 @@ import * as fs from "fs/promises"
 
 import * as yaml from "yaml"
 import * as vscode from "vscode"
+import { ContextProxy } from "../ContextProxy"
 
 import type { ModeConfig } from "@roo-code/types"
 
@@ -45,6 +46,7 @@ describe("CustomModesManager", () => {
 	let mockContext: vscode.ExtensionContext
 	let mockOnUpdate: Mock
 	let mockWorkspaceFolders: { uri: { fsPath: string } }[]
+	let mockContextProxy: any
 
 	// Use path.sep to ensure correct path separators for the current platform
 	const mockStoragePath = `${path.sep}mock${path.sep}settings`
@@ -65,6 +67,20 @@ describe("CustomModesManager", () => {
 				fsPath: mockStoragePath,
 			},
 		} as unknown as vscode.ExtensionContext
+
+		// Provide a mock ContextProxy used by the manager (so tests assert against it)
+		mockContextProxy = {
+			updateGlobalState: vi.fn().mockResolvedValue(undefined),
+			getGlobalState: vi.fn().mockResolvedValue(undefined),
+			getValues: vi.fn().mockReturnValue({}),
+		}
+
+		// Ensure ContextProxy.getInstance and ContextProxy.instance return our mock
+		vi.spyOn(ContextProxy as any, "getInstance").mockResolvedValue(mockContextProxy)
+		Object.defineProperty(ContextProxy, "instance", {
+			get: vi.fn(() => mockContextProxy),
+			configurable: true,
+		})
 
 		// mockWorkspacePath is now defined at the top level
 		mockWorkspaceFolders = [{ uri: { fsPath: mockWorkspacePath } }]
@@ -503,7 +519,7 @@ describe("CustomModesManager", () => {
 			)
 
 			// Should update global state with merged modes where .kilocodemodes takes precedence
-			expect(mockContext.globalState.update).toHaveBeenCalledWith(
+			expect(mockContextProxy.updateGlobalState).toHaveBeenCalledWith(
 				"customModes",
 				expect.arrayContaining([
 					expect.objectContaining({
@@ -616,7 +632,7 @@ describe("CustomModesManager", () => {
 			expect(settingsContent.customModes.map((m: ModeConfig) => m.name)).toContain("Mode 2")
 
 			// Verify global state was updated
-			expect(mockContext.globalState.update).toHaveBeenCalledWith(
+			expect(mockContextProxy.updateGlobalState).toHaveBeenCalledWith(
 				"customModes",
 				expect.arrayContaining([
 					expect.objectContaining({
@@ -705,7 +721,7 @@ describe("CustomModesManager", () => {
 
 				// Verify file was processed
 				expect(fs.readFile).toHaveBeenCalledWith(configPath, "utf-8")
-				expect(mockContext.globalState.update).toHaveBeenCalled()
+				expect(mockContextProxy.updateGlobalState).toHaveBeenCalled()
 				expect(mockOnUpdate).toHaveBeenCalled()
 
 				// Clean up
@@ -741,8 +757,8 @@ describe("CustomModesManager", () => {
 				return Promise.resolve()
 			})
 
-			// Mock the global state update to actually update the settingsContent
-			;(mockContext.globalState.update as Mock).mockImplementation((key: string, value: any) => {
+			// Mock the ContextProxy updateGlobalState to actually update the settingsContent
+			;(mockContextProxy.updateGlobalState as Mock).mockImplementation((key: string, value: any) => {
 				if (key === "customModes") {
 					settingsContent.customModes = value
 				}
@@ -755,7 +771,7 @@ describe("CustomModesManager", () => {
 			expect(settingsContent.customModes).toHaveLength(0)
 
 			// Verify global state was updated
-			expect(mockContext.globalState.update).toHaveBeenCalledWith("customModes", [])
+			expect(mockContextProxy.updateGlobalState).toHaveBeenCalledWith("customModes", [])
 
 			// Should trigger onUpdate
 			expect(mockOnUpdate).toHaveBeenCalled()

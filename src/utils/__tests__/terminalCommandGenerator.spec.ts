@@ -70,20 +70,26 @@ describe("generateTerminalCommand", () => {
 		},
 	} as unknown as vscode.Terminal
 
+	let mockContextProxy: any
+
 	beforeEach(() => {
 		vi.clearAllMocks()
 
-		const mockContextProxy = {
+		mockContextProxy = {
 			getProviderSettings: vi.fn().mockReturnValue({
 				apiProvider: "anthropic",
 				apiKey: "test-key",
 			}),
 			getValue: vi.fn().mockReturnValue(null),
+			updateRawKey: vi.fn().mockResolvedValue(undefined),
 		}
+		// Mock ContextProxy.instance getter to return our mock proxy (tests expect ContextProxy.instance usage)
 		Object.defineProperty(ContextProxy, "instance", {
 			get: vi.fn(() => mockContextProxy),
 			configurable: true,
 		})
+		// Also mock ContextProxy.getInstance to support callers that use getInstance(context)
+		vi.spyOn(ContextProxy as any, "getInstance").mockResolvedValue(mockContextProxy)
 
 		vscode.window.showInputBox = vi.fn().mockResolvedValue("list files")
 		Object.defineProperty(vscode.window, "activeTerminal", {
@@ -203,7 +209,7 @@ describe("generateTerminalCommand", () => {
 				"OK, I Understand",
 				"Cancel",
 			)
-			expect(mockContext.globalState.update).toHaveBeenCalledWith("terminalCommandWarningAcknowledged", true)
+			expect(mockContextProxy.updateRawKey).toHaveBeenCalledWith("terminalCommandWarningAcknowledged", true)
 			expect(mockTerminal.sendText).toHaveBeenCalledWith("ls -la", false)
 		})
 
@@ -218,7 +224,7 @@ describe("generateTerminalCommand", () => {
 
 			expect(vscode.window.showInformationMessage).toHaveBeenCalledTimes(1) // Only the success message
 			expect(vscode.window.showInformationMessage).toHaveBeenCalledWith("Generated command: ls -la")
-			expect(mockContext.globalState.update).not.toHaveBeenCalledWith("terminalCommandWarningAcknowledged", true)
+			expect(mockContextProxy.updateRawKey).not.toHaveBeenCalledWith("terminalCommandWarningAcknowledged", true)
 			expect(mockTerminal.sendText).toHaveBeenCalledWith("ls -la", false)
 		})
 
@@ -280,7 +286,7 @@ describe("generateTerminalCommand", () => {
 				"OK, I Understand",
 				"Cancel",
 			)
-			expect(mockContext.globalState.update).toHaveBeenCalledWith("terminalCommandWarningAcknowledged", true)
+			expect(mockContextProxy.updateRawKey).toHaveBeenCalledWith("terminalCommandWarningAcknowledged", true)
 		})
 	})
 })

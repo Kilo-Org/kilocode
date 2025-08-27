@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
 import { McpHub } from "./McpHub"
 import { ClineProvider } from "../../core/webview/ClineProvider"
+import { ContextProxy } from "../../core/config/ContextProxy"
 
 /**
  * Singleton manager for MCP server instances.
@@ -38,7 +39,10 @@ export class McpServerManager {
 				if (!this.instance) {
 					this.instance = new McpHub(provider)
 					// Store a unique identifier in global state to track the primary instance
-					await context.globalState.update(this.GLOBAL_STATE_KEY, Date.now().toString())
+					{
+						const proxy = await ContextProxy.getInstance(context)
+						await proxy.updateRawKey(this.GLOBAL_STATE_KEY, Date.now().toString())
+					}
 				}
 				return this.instance
 			} finally {
@@ -76,7 +80,10 @@ export class McpServerManager {
 		if (this.instance) {
 			await this.instance.dispose()
 			this.instance = null
-			await context.globalState.update(this.GLOBAL_STATE_KEY, undefined)
+			{
+				const proxy = await ContextProxy.getInstance(context)
+				await proxy.updateRawKey(this.GLOBAL_STATE_KEY, undefined)
+			}
 		}
 		this.providers.clear()
 	}

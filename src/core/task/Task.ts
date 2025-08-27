@@ -2460,8 +2460,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			const contextWindow = modelInfo.contextWindow
 
 			const currentProfileId =
-				state?.listApiConfigMeta.find((profile) => profile.name === state?.currentApiConfigName)?.id ??
-				"default"
+				((state?.listApiConfigMeta ?? []) as Array<{ id?: string; name?: string }>).find(
+					(profile) => profile.name === state?.currentApiConfigName,
+				)?.id ?? "default"
 
 			const truncateResult = await truncateConversationIfNeeded({
 				messages: this.apiConversationHistory,
