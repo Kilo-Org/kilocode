@@ -118,6 +118,7 @@ export interface WebviewMessage {
 		| "toggleMcpServer"
 		| "updateMcpTimeout"
 		| "fuzzyMatchThreshold"
+		| "morphApiKey" // kilocode_change: Morph fast apply - global setting
 		| "writeDelayMs"
 		| "diagnosticsEnabled"
 		| "enhancePrompt"

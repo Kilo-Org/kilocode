@@ -96,6 +96,8 @@ import { OpenRouterHandler } from "../../api/providers"
 import { stringifyError } from "../../shared/kilocode/errorUtils"
 import isWsl from "is-wsl"
 import { getKilocodeDefaultModel } from "../../api/providers/kilocode/getKilocodeDefaultModel"
+
+export type ClineProviderState = Awaited<ReturnType<ClineProvider["getState"]>>
 // kilocode_change end
 
 /**
@@ -1824,6 +1826,7 @@ export class ClineProvider
 			profileThresholds,
 			systemNotificationsEnabled, // kilocode_change
 			dismissedNotificationIds, // kilocode_change
+			morphApiKey, // kilocode_change
 			alwaysAllowFollowupQuestions,
 			followupAutoApproveTimeoutMs,
 			includeDiagnosticMessages,
@@ -1962,6 +1965,7 @@ export class ClineProvider
 			hasOpenedModeSelector: this.getGlobalState("hasOpenedModeSelector") ?? false,
 			systemNotificationsEnabled: systemNotificationsEnabled ?? false, // kilocode_change
 			dismissedNotificationIds: dismissedNotificationIds ?? [], // kilocode_change
+			morphApiKey, // kilocode_change
 			alwaysAllowFollowupQuestions: alwaysAllowFollowupQuestions ?? false,
 			followupAutoApproveTimeoutMs: followupAutoApproveTimeoutMs ?? 60000,
 			includeDiagnosticMessages: includeDiagnosticMessages ?? true,
@@ -2132,6 +2136,7 @@ export class ClineProvider
 			allowVeryLargeReads: stateValues.allowVeryLargeReads ?? false, // kilocode_change
 			systemNotificationsEnabled: stateValues.systemNotificationsEnabled ?? true, // kilocode_change
 			dismissedNotificationIds: stateValues.dismissedNotificationIds ?? [], // kilocode_change
+			morphApiKey: stateValues.morphApiKey, // kilocode_change
 			historyPreviewCollapsed: stateValues.historyPreviewCollapsed ?? false,
 			cloudUserInfo,
 			cloudIsAuthenticated,
@@ -2477,12 +2482,12 @@ export class ClineProvider
 			}
 		}
 
-		function getFastApply() {
+		const getFastApply = () => {
 			try {
 				return {
 					fastApply: {
 						morphFastApply: Boolean(experiments.morphFastApply),
-						morphApiKey: Boolean(apiConfiguration.morphApiKey),
+						morphApiKey: Boolean(this.contextProxy.getValue("morphApiKey")),
 					},
 				}
 			} catch (error) {

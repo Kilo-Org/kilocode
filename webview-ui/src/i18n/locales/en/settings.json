@@ -747,10 +747,9 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Enable Morph Fast Apply",
-			"description": "When enabled, Kilo Code can edit files using Morph Fast Apply.",
+			"description": "When enabled, Kilo Code can edit files using Morph Fast Apply. Requires the Kilo Code API Provider, OpenRouter or a Morph API key.",
 			"apiKey": "Morph API key (optional)",
-			"placeholder": "Enter your Morph API key (optional)",
-			"warning": "If you do not configure a Morph API key, you can still use Fast Apply with Kilo Code or OpenRouter. Your account will be billed for model usage, this is currently not shown in the extension UI."
+			"placeholder": "Enter your Morph API key (optional)"
 		},
 		"INLINE_ASSIST": {
 			"name": "Inline Assist",

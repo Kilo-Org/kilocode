@@ -3,8 +3,6 @@ import { type Page, type FrameLocator, expect } from "@playwright/test"
 import type { WebviewMessage } from "../../../src/shared/WebviewMessage"
 import { ProviderSettings } from "@roo-code/types"
 
-const modifier = process.platform === "darwin" ? "Meta" : "Control"
-
 const defaultPlaywrightApiConfig = {
 	apiProvider: "openrouter" as const,
 	openRouterApiKey: process.env.OPENROUTER_API_KEY,
@@ -48,16 +46,6 @@ export async function postWebviewMessage(page: Page, message: WebviewMessage): P
 	}
 }
 
-export async function verifyExtensionInstalled(page: Page) {
-	try {
-		const activityBarIcon = page.locator('[aria-label*="Kilo"], [title*="Kilo"]').first()
-		expect(await activityBarIcon).toBeDefined()
-		console.log("✅ Extension installed!")
-	} catch (_error) {
-		throw new Error("Failed to find the installed extension! Check if the build failed and try again.")
-	}
-}
-
 export async function upsertApiConfiguration(page: Page, apiConfiguration?: Partial<ProviderSettings>): Promise<void> {
 	await postWebviewMessage(page, {
 		type: "upsertApiConfiguration",
@@ -97,30 +85,4 @@ export async function configureApiKeyThroughUI(page: Page): Promise<void> {
 	await submitButton.waitFor()
 	await submitButton.click()
 	console.log("✅ Provider configured!")
-}
-
-export async function closeAllTabs(page: Page): Promise<void> {
-	const tabs = page.locator(".tab a.label-name")
-	const count = await tabs.count()
-	if (count > 0) {
-		// Close all editor tabs using the default keyboard command [Cmd+K Cmd+W]
-		await page.keyboard.press(`${modifier}+K`)
-		await page.keyboard.press(`${modifier}+W`)
-
-		const dismissedTabs = page.locator(".tab a.label-name")
-		await expect(dismissedTabs).not.toBeVisible()
-	}
-}
-
-export async function waitForAllExtensionActivation(page: Page): Promise<void> {
-	try {
-		const activatingStatus = page.locator("text=Activating Extensions")
-		const activatingStatusCount = await activatingStatus.count()
-		if (activatingStatusCount > 0) {
-			console.log("⌛️ Waiting for `Activating Extensions` to go away...")
-			await activatingStatus.waitFor({ state: "hidden", timeout: 10000 })
-		}
-	} catch {
-		// noop
-	}
 }

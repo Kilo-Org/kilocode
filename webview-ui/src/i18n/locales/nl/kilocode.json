@@ -53,8 +53,7 @@
 		"modelInfo": {
 			"contextWindow": "Context venster",
 			"providerBreakdown": "Provider Prijs en Capaciteit Overzicht",
-			"averageKiloCodeCost": "Gemiddelde Kilo Code kosten",
-			"averageKiloCodeCostDescription": "Dit zijn de gemiddelde daadwerkelijke kosten voor Kilo Code bij gebruik van dit model over de afgelopen week. Deze kunnen lager zijn dan de vermelde prijs door gebruik van prompt cache.",
+			"averageKiloCodeCost": "Dit zijn de gemiddelde daadwerkelijke kosten voor Kilo Code bij gebruik van dit model over de afgelopen week. Deze kunnen lager zijn dan de vermelde prijs door gebruik van prompt cache.",
 			"table": {
 				"provider": "Provider",
 				"context": "Het eindpunt kan dit aantal tokens verwerken (input + output).",

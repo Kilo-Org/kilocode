@@ -11,6 +11,8 @@ import { MultiFileSearchReplaceDiffStrategy } from "../diff/strategies/multi-fil
 import { ClineProvider } from "./ClineProvider"
 
 export const generateSystemPrompt = async (provider: ClineProvider, message: WebviewMessage) => {
+	const state = await provider.getState() // kilocode_change
+
 	const {
 		apiConfiguration,
 		customModePrompts,
@@ -25,7 +27,7 @@ export const generateSystemPrompt = async (provider: ClineProvider, message: Web
 		language,
 		maxReadFileLine,
 		maxConcurrentFileReads,
-	} = await provider.getState()
+	} = state // kilocode_change
 
 	// Check experiment to determine which diff strategy to use
 	const isMultiFileApplyDiffEnabled = experimentsModule.isEnabled(
@@ -87,6 +89,11 @@ export const generateSystemPrompt = async (provider: ClineProvider, message: Web
 			todoListEnabled: apiConfiguration?.todoListEnabled ?? true,
 			useAgentRules: vscode.workspace.getConfiguration("kilo-code").get<boolean>("useAgentRules") ?? true,
 		},
+		// kilocode_change start
+		undefined,
+		undefined,
+		state,
+		// kilocode_change end
 	)
 
 	return systemPrompt

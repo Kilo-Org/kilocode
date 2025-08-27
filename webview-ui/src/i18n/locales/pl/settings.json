@@ -743,10 +743,9 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Włącz Morph Fast Apply",
-			"description": "Gdy włączone, Kilo Code może edytować pliki używając Morph Fast Apply.",
+			"description": "Gdy włączone, Kilo Code może edytować pliki używając Morph Fast Apply. Wymaga Dostawcy API Kilo Code, OpenRouter lub klucza API Morph.",
 			"apiKey": "Klucz API Morph (opcjonalny)",
-			"placeholder": "Wprowadź swój klucz API Morph (opcjonalny)",
-			"warning": "Jeśli nie skonfigurujesz klucza API Morph, nadal możesz używać Fast Apply z Kilo Code lub OpenRouter. Twoje konto zostanie obciążone za użycie modelu, co obecnie nie jest pokazywane w interfejsie rozszerzenia."
+			"placeholder": "Wprowadź swój klucz API Morph (opcjonalny)"
 		},
 		"INLINE_ASSIST": {
 			"name": "Pomoc w linii",

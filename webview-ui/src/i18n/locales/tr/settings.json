@@ -743,10 +743,9 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Morph Fast Apply'ı etkinleştir",
-			"description": "Etkinleştirildiğinde, Kilo Code dosyaları Morph Fast Apply kullanarak düzenleyebilir.",
+			"description": "Etkinleştirildiğinde, Kilo Code dosyaları Morph Fast Apply kullanarak düzenleyebilir. Kilo Code API Sağlayıcısı, OpenRouter veya bir Morph API anahtarı gerektirir.",
 			"apiKey": "Morph API anahtarı (isteğe bağlı)",
-			"placeholder": "Morph API anahtarınızı girin (isteğe bağlı)",
-			"warning": "Bir Morph API anahtarı yapılandırmazsanız, Fast Apply'ı yine de Kilo Code veya OpenRouter ile kullanabilirsiniz. Hesabınızdan model kullanımı için ücret alınacaktır, bu şu anda uzantı arayüzünde gösterilmemektedir."
+			"placeholder": "Morph API anahtarınızı girin (isteğe bağlı)"
 		},
 		"INLINE_ASSIST": {
 			"name": "Satır İçi Asistan",

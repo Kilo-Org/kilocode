@@ -1,6 +1,5 @@
 import { test, expect, type TestFixtures } from "./playwright-base-test"
-import { verifyExtensionInstalled, findWebview, upsertApiConfiguration } from "../helpers/webview-helpers"
-import { closeAllToastNotifications } from "../helpers"
+import { findWebview, upsertApiConfiguration, closeAllToastNotifications, verifyExtensionInstalled } from "../helpers"
 
 test.describe("Settings", () => {
 	test("screenshots", async ({ workbox: page, takeScreenshot }: TestFixtures) => {

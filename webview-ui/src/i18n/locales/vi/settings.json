@@ -743,10 +743,9 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Bật Morph Fast Apply",
-			"description": "Khi được bật, Kilo Code có thể chỉnh sửa tệp bằng Morph Fast Apply.",
+			"description": "Khi được bật, Kilo Code có thể chỉnh sửa tệp bằng Morph Fast Apply. Yêu cầu Nhà cung cấp API Kilo Code, OpenRouter hoặc khóa API Morph.",
 			"apiKey": "Khóa API Morph (tùy chọn)",
-			"placeholder": "Nhập khóa API Morph của bạn (tùy chọn)",
-			"warning": "Nếu bạn không cấu hình khóa API Morph, bạn vẫn có thể sử dụng Fast Apply với Kilo Code hoặc OpenRouter. Tài khoản của bạn sẽ bị tính phí cho việc sử dụng mô hình, điều này hiện không được hiển thị trong giao diện tiện ích mở rộng."
+			"placeholder": "Nhập khóa API Morph của bạn (tùy chọn)"
 		},
 		"INLINE_ASSIST": {
 			"name": "Trợ lý Nội dòng",

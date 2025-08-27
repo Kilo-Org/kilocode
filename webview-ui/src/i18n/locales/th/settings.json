@@ -776,10 +776,9 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "เปิดใช้งาน Morph Fast Apply",
-			"description": "เมื่อเปิดใช้งาน Kilo Code สามารถแก้ไขไฟล์โดยใช้ Morph Fast Apply",
+			"description": "เมื่อเปิดใช้งาน Kilo Code สามารถแก้ไขไฟล์โดยใช้ Morph Fast Apply ต้องใช้ Kilo Code API Provider, OpenRouter หรือคีย์ API ของ Morph",
 			"apiKey": "คีย์ API ของ Morph (ไม่บังคับ)",
-			"placeholder": "ป้อนคีย์ API ของ Morph (ไม่บังคับ)",
-			"warning": "หากคุณไม่กำหนดค่าคีย์ API ของ Morph คุณยังคงสามารถใช้ Fast Apply กับ Kilo Code หรือ OpenRouter ได้ บัญชีของคุณจะถูกเรียกเก็บเงินสำหรับการใช้งานโมเดล ซึ่งขณะนี้ยังไม่แสดงใน UI ของส่วนขยาย"
+			"placeholder": "ป้อนคีย์ API ของ Morph (ไม่บังคับ)"
 		},
 		"INLINE_ASSIST": {
 			"name": "การช่วยเหลือแบบอินไลน์",

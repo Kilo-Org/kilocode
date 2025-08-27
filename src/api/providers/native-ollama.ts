@@ -8,6 +8,11 @@ import { getOllamaModels } from "./fetchers/ollama"
 import { XmlMatcher } from "../../utils/xml-matcher"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 
+// kilocode_change start
+import { fetchWithTimeout } from "./kilocode/fetchWithTimeout"
+const OLLAMA_TIMEOUT_MS = 3_600_000
+// kilocode_change end
+
 function convertToOllamaMessages(anthropicMessages: Anthropic.Messages.MessageParam[]): Message[] {
 	const ollamaMessages: Message[] = []
 
@@ -140,9 +145,18 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 	private ensureClient(): Ollama {
 		if (!this.client) {
 			try {
+				// kilocode_change start
+				const headers = this.options.ollamaApiKey
+					? { Authorization: this.options.ollamaApiKey } //Yes, this is weird, its not a Bearer token
+					: undefined
+				// kilocode_change end
+
 				this.client = new Ollama({
 					host: this.options.ollamaBaseUrl || "http://localhost:11434",
-					// Note: The ollama npm package handles timeouts internally
+					// kilocode_change start
+					fetch: fetchWithTimeout(OLLAMA_TIMEOUT_MS, headers),
+					headers: headers,
+					// kilocode_change end
 				})
 			} catch (error: any) {
 				throw new Error(`Error creating Ollama client: ${error.message}`)

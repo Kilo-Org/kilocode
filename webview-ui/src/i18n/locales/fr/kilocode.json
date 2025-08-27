@@ -53,8 +53,7 @@
 		"modelInfo": {
 			"contextWindow": "Fenêtre de contexte",
 			"providerBreakdown": "Répartition des prix et capacités par fournisseur",
-			"averageKiloCodeCost": "Coût moyen Kilo Code",
-			"averageKiloCodeCostDescription": "Il s'agit de la dépense réelle moyenne pour Kilo Code utilisant ce modèle au cours de la semaine dernière. Elle peut être inférieure au prix affiché en raison de l'utilisation du cache de prompts.",
+			"averageKiloCodeCost": "Il s'agit de la dépense réelle moyenne pour Kilo Code utilisant ce modèle au cours de la semaine dernière. Elle peut être inférieure au prix affiché en raison de l'utilisation du cache de prompts.",
 			"table": {
 				"provider": "Fournisseur",
 				"context": "Le point de terminaison peut traiter ce nombre de tokens (entrée + sortie).",

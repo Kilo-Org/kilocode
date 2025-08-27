@@ -1106,6 +1106,12 @@ export const webviewMessageHandler = async (
 			await updateGlobalState("fuzzyMatchThreshold", message.value)
 			await provider.postStateToWebview()
 			break
+		// kilocode_change start
+		case "morphApiKey":
+			await updateGlobalState("morphApiKey", message.text)
+			await provider.postStateToWebview()
+			break
+		// kilocode_change end
 		case "updateVSCodeSetting": {
 			const { setting, value } = message
 
@@ -1655,6 +1661,18 @@ export const webviewMessageHandler = async (
 					})
 					if (currentConfig.kilocodeToken !== message.apiConfiguration.kilocodeToken) {
 						configToSave = { ...message.apiConfiguration, kilocodeOrganizationId: undefined }
+					}
+					if (currentConfig.kilocodeOrganizationId !== message.apiConfiguration.kilocodeOrganizationId) {
+						await flushModels("kilocode-openrouter")
+						const models = await getModels({
+							provider: "kilocode-openrouter",
+							kilocodeOrganizationId: message.apiConfiguration.kilocodeOrganizationId,
+							kilocodeToken: message.apiConfiguration.kilocodeToken,
+						})
+						provider.postMessageToWebview({
+							type: "routerModels",
+							routerModels: { "kilocode-openrouter": models } as Record<RouterName, ModelRecord>,
+						})
 					}
 				} catch (error) {
 					// Config might not exist yet, that's fine
@@ -2232,8 +2250,9 @@ export const webviewMessageHandler = async (
 				const uiKind = message.values?.uiKind || "Desktop"
 				const source = uiKind === "Web" ? "web" : uriScheme
 
+				const baseUrl = getKiloBaseUriFromToken(kilocodeToken)
 				const response = await axios.post(
-					`https://kilocode.ai/payments/topup?origin=extension&source=${source}&amount=${credits}`,
+					`${baseUrl}/payments/topup?origin=extension&source=${source}&amount=${credits}`,
 					{},
 					{
 						headers: {

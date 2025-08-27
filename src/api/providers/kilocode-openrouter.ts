@@ -62,9 +62,17 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 		let info = this.models[id]
 		let defaultTemperature = 0
 
-		if (!this.models[id]) {
-			id = openRouterDefaultModelId
-			info = openRouterDefaultModelInfo
+		if (!info) {
+			const defaultInfo = this.models[this.defaultModel]
+			if (defaultInfo) {
+				console.warn(`${id} no longer exists, falling back to ${this.defaultModel}`)
+				id = this.defaultModel
+				info = defaultInfo
+			} else {
+				console.warn(`${id} no longer exists, falling back to ${openRouterDefaultModelId}`)
+				id = openRouterDefaultModelId
+				info = openRouterDefaultModelInfo
+			}
 		}
 
 		// If a specific provider is requested, use the endpoint for that provider.

@@ -743,10 +743,9 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Morph Fast Apply सक्षम करें",
-			"description": "जब सक्षम होता है, तो Kilo Code फ़ाइलों को Morph Fast Apply का उपयोग करके संपादित कर सकता है।",
+			"description": "जब सक्षम होता है, तो Kilo Code फ़ाइलों को Morph Fast Apply का उपयोग करके संपादित कर सकता है। Kilo Code API प्रदाता, OpenRouter या Morph API कुंजी की आवश्यकता है।",
 			"apiKey": "Morph API कुंजी (वैकल्पिक)",
-			"placeholder": "अपनी Morph API कुंजी दर्ज करें (वैकल्पिक)",
-			"warning": "यदि आप Morph API कुंजी कॉन्फ़िगर नहीं करते हैं, तो आप अभी भी Kilo Code या OpenRouter के साथ Fast Apply का उपयोग कर सकते हैं, लेकिन मॉडल उपयोग के लिए आपके खाते से शुल्क लिया जाएगा!"
+			"placeholder": "अपनी Morph API कुंजी दर्ज करें (वैकल्पिक)"
 		},
 		"INLINE_ASSIST": {
 			"name": "इनलाइन सहायता",
