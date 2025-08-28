@@ -139,7 +139,7 @@ export const KiloModelInfoView = ({
 					{model.maxTokens?.toLocaleString() ?? 0}
 				</div>
 			</div>
-			{stats && stats.cost && stats.costPerRequest && model.inputPrice && model.outputPrice && (
+			{stats && stats.cost && stats.costPerRequest && model.inputPrice && model.outputPrice ? (
 				<StandardTooltip content={t("kilocode:settings.modelInfo.averageKiloCodeCost")}>
 					<div className="text-sm text-vscode-descriptionForeground font-medium flex flex-wrap gap-2">
 						<div className="rounded-full border px-2.5 py-1">{formatPrice(stats.cost)} / M tokens</div>
@@ -148,6 +148,8 @@ export const KiloModelInfoView = ({
 						</div>
 					</div>
 				</StandardTooltip>
+			) : (
+				<></>
 			)}
 			<Collapsible open={isPricingExpanded} onOpenChange={setIsPricingExpanded}>
 				<CollapsibleTrigger className="flex items-center gap-1 w-full cursor-pointer hover:opacity-80 mb-2">

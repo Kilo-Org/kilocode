@@ -274,6 +274,8 @@
 		"getChutesApiKey": "Chutes APIキーを取得",
 		"fireworksApiKey": "Fireworks APIキー",
 		"getFireworksApiKey": "Fireworks APIキーを取得",
+		"featherlessApiKey": "Featherless APIキー",
+		"getFeatherlessApiKey": "Featherless APIキーを取得",
 		"ioIntelligenceApiKey": "IO Intelligence APIキー",
 		"ioIntelligenceApiKeyPlaceholder": "IO Intelligence APIキーを入力してください",
 		"getIoIntelligenceApiKey": "IO Intelligence APIキーを取得",
@@ -752,10 +754,9 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Morph Fast Applyを有効にする",
-			"description": "有効にすると、Kilo CodeはMorph Fast Applyを使用してファイルを編集できます。",
+			"description": "有効にすると、Kilo CodeはMorph Fast Applyを使用してファイルを編集できます。Kilo Code APIプロバイダー、OpenRouter、またはMorph APIキーが必要です。",
 			"apiKey": "Morph APIキー（オプション）",
-			"placeholder": "Morph APIキーを入力してください（オプション）",
-			"warning": "Morph APIキーを設定しない場合でも、Kilo CodeまたはOpenRouterでFast Applyを使用できます。アカウントにモデル使用料金が請求されますが、現在この料金は拡張機能のUIには表示されません。"
+			"placeholder": "Morph APIキーを入力してください（オプション）"
 		},
 		"INLINE_ASSIST": {
 			"name": "インラインアシスト",
@@ -768,6 +769,10 @@
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "新しいメッセージパーサーを使う",
 			"description": "実験的なストリーミングメッセージパーサーを有効にします。長い回答をより効率的に処理し、遅延を減らします。"
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "新しいタスクには'todos'リストを必須にする",
+			"description": "有効にすると、new_taskツールはtodosパラメータの提供が必須になります。これにより、すべての新しいタスクが明確な目的のリストで開始されることが保証されます。無効（デフォルト）の場合、下位互換性のためにtodosパラメータはオプションのままです。"
 		}
 	},
 	"promptCaching": {

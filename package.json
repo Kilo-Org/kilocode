@@ -28,7 +28,9 @@
 		"playwright": "turbo playwright",
 		"npm:publish:types": "pnpm --filter @roo-code/types npm:publish",
 		"link-workspace-packages": "tsx scripts/link-packages.ts",
-		"unlink-workspace-packages": "tsx scripts/link-packages.ts --unlink"
+		"unlink-workspace-packages": "tsx scripts/link-packages.ts --unlink",
+		"docs:start": "pnpm --filter kilocode-docs start",
+		"docs:build": "pnpm --filter kilocode-docs build"
 	},
 	"devDependencies": {
 		"@changesets/changelog-github": "^0.5.1",

@@ -34,7 +34,7 @@ import {
 	addCustomInstructions,
 	markdownFormattingSection,
 } from "./sections"
-import { getMorphInstructions } from "./tools/edit-file" // kilocode_change: Morph fast apply
+import { type ClineProviderState } from "../webview/ClineProvider" // kilocode_change
 
 // Helper function to get prompt component, filtering out empty objects
 export function getPromptComponent(
@@ -69,6 +69,7 @@ async function generatePrompt(
 	settings?: SystemPromptSettings,
 	todoList?: TodoItem[],
 	modelId?: string,
+	clineProviderState?: ClineProviderState, // kilocode_change
 ): Promise<string> {
 	if (!context) {
 		throw new Error("Extension context is required for generating system prompt")
@@ -115,17 +116,18 @@ ${getToolDescriptionsForMode(
 	settings,
 	enableMcpServerCreation,
 	modelId,
+	clineProviderState, // kilocode_change
 )}
 
 ${getToolUseGuidelinesSection(codeIndexManager)}
 
-${getMorphInstructions(experiments) /* kilocode_change: newlines are returned by function */}${mcpServersSection}
+${mcpServersSection}
 
-${getCapabilitiesSection(cwd, supportsComputerUse, shouldIncludeMcp ? mcpHub : undefined, effectiveDiffStrategy, codeIndexManager)}
+${getCapabilitiesSection(cwd, supportsComputerUse, shouldIncludeMcp ? mcpHub : undefined, effectiveDiffStrategy, codeIndexManager, clineProviderState /* kilocode_change */)}
 
 ${modesSection}
 
-${getRulesSection(cwd, supportsComputerUse, effectiveDiffStrategy, codeIndexManager)}
+${getRulesSection(cwd, supportsComputerUse, effectiveDiffStrategy, codeIndexManager, clineProviderState /* kilocode_change */)}
 
 ${getSystemInfoSection(cwd)}
 
@@ -162,6 +164,7 @@ export const SYSTEM_PROMPT = async (
 	settings?: SystemPromptSettings,
 	todoList?: TodoItem[],
 	modelId?: string,
+	clineProviderState?: ClineProviderState, // kilocode_change
 ): Promise<string> => {
 	if (!context) {
 		throw new Error("Extension context is required for generating system prompt")
@@ -211,7 +214,7 @@ export const SYSTEM_PROMPT = async (
 
 ${fileCustomSystemPrompt}
 
-${getMorphInstructions(experiments) /* kilocode_change: Morph fast apply */}${customInstructions}`
+${customInstructions}`
 	}
 
 	// If diff is disabled, don't pass the diffStrategy
@@ -237,5 +240,6 @@ ${getMorphInstructions(experiments) /* kilocode_change: Morph fast apply */}${cu
 		settings,
 		todoList,
 		modelId,
+		clineProviderState, // kilocode_change
 	)
 }

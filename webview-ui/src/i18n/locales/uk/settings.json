@@ -282,6 +282,8 @@
 		"getIoIntelligenceApiKey": "Отримати ключ API IO Intelligence",
 		"deepSeekApiKey": "Ключ API DeepSeek",
 		"getDeepSeekApiKey": "Отримати ключ API DeepSeek",
+		"featherlessApiKey": "Ключ API Featherless",
+		"getFeatherlessApiKey": "Отримати ключ API Featherless",
 		"fireworksApiKey": "Ключ API Fireworks",
 		"getFireworksApiKey": "Отримати ключ API Fireworks",
 		"moonshotApiKey": "Ключ API Moonshot",
@@ -795,10 +797,9 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Увімкнути Morph Fast Apply",
-			"description": "Якщо ввімкнено, Kilo Code може редагувати файли за допомогою Morph Fast Apply.",
+			"description": "Якщо ввімкнено, Kilo Code може редагувати файли за допомогою Morph Fast Apply. Потребує провайдера API Kilo Code, OpenRouter або ключа API Morph.",
 			"apiKey": "Ключ API Morph (необов'язково)",
-			"placeholder": "Введіть ваш ключ API Morph (необов'язково)",
-			"warning": "Якщо ви не налаштуєте ключ API Morph, ви все одно можете використовувати Fast Apply з Kilo Code або OpenRouter. З вашого рахунку буде стягуватися плата за використання моделі, це наразі не відображається в інтерфейсі розширення."
+			"placeholder": "Введіть ваш ключ API Morph (необов'язково)"
 		},
 		"INLINE_ASSIST": {
 			"name": "Вбудований помічник",
@@ -811,6 +812,10 @@
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "Використовувати новий парсер повідомлень",
 			"description": "Увімкнути експериментальний потоковий парсер повідомлень, який забезпечує значні покращення продуктивності для довгих відповідей асистента шляхом більш ефективної обробки повідомлень."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "Вимагати список 'завдань' для нових завдань",
+			"description": "Коли увімкнено, інструмент new_task вимагатиме надання параметра завдань. Це забезпечить, що всі нові завдання почнуть з чітким списком цілей. Коли вимкнено (за замовчуванням), параметр завдань залишається необов'язковим для зворотної сумісності."
 		}
 	},
 	"promptCaching": {

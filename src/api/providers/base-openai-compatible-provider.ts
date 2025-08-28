@@ -66,24 +66,27 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 		systemPrompt: string,
 		messages: Anthropic.Messages.MessageParam[],
 		metadata?: ApiHandlerCreateMessageMetadata,
+		requestOptions?: OpenAI.RequestOptions,
 	) {
 		const {
 			id: model,
 			info: { maxTokens: max_tokens },
 		} = this.getModel()
 
-		const temperature = this.options.modelTemperature ?? this.defaultTemperature
-
 		const params: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming = {
 			model,
 			max_tokens,
-			temperature,
 			messages: [{ role: "system", content: systemPrompt }, ...convertToOpenAiMessages(messages)],
 			stream: true,
 			stream_options: { include_usage: true },
 		}
 
-		return this.client.chat.completions.create(params)
+		// Only include temperature if explicitly set
+		if (this.options.modelTemperature !== undefined) {
+			params.temperature = this.options.modelTemperature
+		}
+
+		return this.client.chat.completions.create(params, requestOptions)
 	}
 
 	override async *createMessage(

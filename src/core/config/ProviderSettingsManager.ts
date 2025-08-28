@@ -14,6 +14,7 @@ import {
 import { TelemetryService } from "@roo-code/telemetry"
 
 import { Mode, modes } from "../../shared/modes"
+import { migrateMorphApiKey } from "./kilocode/migrateMorphApiKey"
 
 export interface SyncCloudProfilesResult {
 	hasChanges: boolean
@@ -33,6 +34,7 @@ export const providerProfilesSchema = z.object({
 			openAiHeadersMigrated: z.boolean().optional(),
 			consecutiveMistakeLimitMigrated: z.boolean().optional(),
 			todoListEnabledMigrated: z.boolean().optional(),
+			morphApiKeyMigrated: z.boolean().optional(), // kilocode_change: Morph API key migration
 		})
 		.optional(),
 })
@@ -124,6 +126,7 @@ export class ProviderSettingsManager {
 						openAiHeadersMigrated: false,
 						consecutiveMistakeLimitMigrated: false,
 						todoListEnabledMigrated: false,
+						morphApiKeyMigrated: false, // kilocode_change: Morph API key migration
 					} // Initialize with default values
 					isDirty = true
 				}
@@ -157,6 +160,14 @@ export class ProviderSettingsManager {
 					providerProfiles.migrations.todoListEnabledMigrated = true
 					isDirty = true
 				}
+
+				// kilocode_change start
+				if (!providerProfiles.migrations.morphApiKeyMigrated) {
+					const result = await migrateMorphApiKey(this.context, providerProfiles)
+					providerProfiles.migrations.morphApiKeyMigrated = true
+					isDirty ||= result
+				}
+				// kilocode_change end
 
 				if (isDirty) {
 					await this.store(providerProfiles)

@@ -35,10 +35,6 @@ interface QwenOAuthCredentials {
 	resource_url?: string
 }
 
-function getQwenCachedCredentialPath(): string {
-	return path.join(os.homedir(), QWEN_DIR, QWEN_CREDENTIAL_FILENAME)
-}
-
 function objectToUrlEncoded(data: Record<string, string>): string {
 	return Object.keys(data)
 		.map((key) => `${encodeURIComponent(key)}=${encodeURIComponent(data[key])}`)
@@ -62,13 +58,20 @@ export class QwenCodeHandler extends BaseProvider implements SingleCompletionHan
 		})
 	}
 
+	private getQwenCachedCredentialPath(): string {
+		if (this.options.qwenCodeOAuthPath) {
+			return this.options.qwenCodeOAuthPath
+		}
+		return path.join(os.homedir(), QWEN_DIR, QWEN_CREDENTIAL_FILENAME)
+	}
+
 	private async loadCachedQwenCredentials(): Promise<QwenOAuthCredentials> {
+		const keyFile = this.getQwenCachedCredentialPath()
 		try {
-			const keyFile = getQwenCachedCredentialPath()
 			const credsStr = await fs.readFile(keyFile, "utf-8")
 			return JSON.parse(credsStr)
 		} catch (error) {
-			console.error(`Error reading or parsing credentials file at ${getQwenCachedCredentialPath()}`)
+			console.error(`Error reading or parsing credentials file at ${keyFile}`)
 			throw new Error(t("common:errors.qwenCode.oauthLoadFailed", { error }))
 		}
 	}
@@ -112,7 +115,7 @@ export class QwenCodeHandler extends BaseProvider implements SingleCompletionHan
 			expiry_date: Date.now() + tokenData.expires_in * 1000,
 		}
 
-		const filePath = getQwenCachedCredentialPath()
+		const filePath = this.getQwenCachedCredentialPath()
 		await fs.writeFile(filePath, JSON.stringify(newCredentials, null, 2))
 
 		return newCredentials

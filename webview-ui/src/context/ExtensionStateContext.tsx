@@ -8,6 +8,7 @@ import {
 	type ExperimentId,
 	GhostServiceSettings, // kilocode_change
 	openRouterDefaultModelId, // kilocode_change
+	type TodoItem,
 } from "@roo-code/types"
 
 import { type OrganizationAllowList, ORGANIZATION_ALLOW_ALL } from "@roo/cloud"
@@ -43,6 +44,7 @@ export interface ExtensionStateContextType extends ExtensionState {
 	mcpMarketplaceCatalog: McpMarketplaceCatalog // kilocode_change
 	hasSystemPromptOverride?: boolean
 	currentCheckpoint?: string
+	currentTaskTodos?: TodoItem[] // Initial todos for the current task
 	filePaths: string[]
 	openedTabs: Array<{ label: string; isActive: boolean; path?: string }>
 	// kilocode_change start

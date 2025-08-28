@@ -276,6 +276,8 @@
 		"getChutesApiKey": "Chutes API-Schlüssel erhalten",
 		"fireworksApiKey": "Fireworks API-Schlüssel",
 		"getFireworksApiKey": "Fireworks API-Schlüssel erhalten",
+		"featherlessApiKey": "Featherless API-Schlüssel",
+		"getFeatherlessApiKey": "Featherless API-Schlüssel erhalten",
 		"ioIntelligenceApiKey": "IO Intelligence API-Schlüssel",
 		"ioIntelligenceApiKeyPlaceholder": "Gib deinen IO Intelligence API-Schlüssel ein",
 		"getIoIntelligenceApiKey": "IO Intelligence API-Schlüssel erhalten",
@@ -751,10 +753,9 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Morph Fast Apply aktivieren",
-			"description": "Wenn aktiviert, kann Kilo Code Dateien mit Morph Fast Apply bearbeiten.",
+			"description": "Wenn aktiviert, kann Kilo Code Dateien mit Morph Fast Apply bearbeiten. Erfordert den Kilo Code API-Anbieter, OpenRouter oder einen Morph API-Schlüssel.",
 			"apiKey": "Morph API-Schlüssel (optional)",
-			"placeholder": "Gib deinen Morph API-Schlüssel ein (optional)",
-			"warning": "Wenn du keinen Morph API-Schlüssel konfigurierst, kannst du Fast Apply trotzdem mit Kilo Code oder OpenRouter verwenden. Dein Konto wird für die Modellnutzung belastet, dies wird derzeit nicht in der Erweiterungs-UI angezeigt."
+			"placeholder": "Gib deinen Morph API-Schlüssel ein (optional)"
 		},
 		"INLINE_ASSIST": {
 			"name": "Inline-Unterstützung",
@@ -767,6 +768,10 @@
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "Neuen Nachrichtenparser verwenden",
 			"description": "Aktiviere den experimentellen Streaming-Nachrichtenparser, der lange Antworten durch effizientere Verarbeitung spürbar schneller macht."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "'todos'-Liste für neue Aufgaben anfordern",
+			"description": "Wenn aktiviert, erfordert das new_task-Tool die Angabe eines todos-Parameters. Dies stellt sicher, dass alle neuen Aufgaben mit einer klaren Zielliste beginnen. Wenn deaktiviert (Standard), bleibt der todos-Parameter aus Gründen der Abwärtskompatibilität optional."
 		}
 	},
 	"promptCaching": {

@@ -96,6 +96,8 @@ import { OpenRouterHandler } from "../../api/providers"
 import { stringifyError } from "../../shared/kilocode/errorUtils"
 import isWsl from "is-wsl"
 import { getKilocodeDefaultModel } from "../../api/providers/kilocode/getKilocodeDefaultModel"
+
+export type ClineProviderState = Awaited<ReturnType<ClineProvider["getState"]>>
 // kilocode_change end
 
 /**
@@ -771,7 +773,12 @@ export class ClineProvider
 		options: Partial<
 			Pick<
 				TaskOptions,
-				"enableDiff" | "enableCheckpoints" | "fuzzyMatchThreshold" | "consecutiveMistakeLimit" | "experiments"
+				| "enableDiff"
+				| "enableCheckpoints"
+				| "fuzzyMatchThreshold"
+				| "consecutiveMistakeLimit"
+				| "experiments"
+				| "initialTodos"
 			>
 		> = {},
 	) {
@@ -806,6 +813,7 @@ export class ClineProvider
 			taskNumber: this.clineStack.length + 1,
 			onCreated: this.taskCreationCallback,
 			enableTaskBridge: isRemoteControlEnabled(cloudUserInfo, remoteControlEnabled),
+			initialTodos: options.initialTodos,
 			...options,
 		})
 
@@ -1610,7 +1618,8 @@ export class ClineProvider
 		this.postMessageToWebview({ type: "state", state })
 
 		// Check MDM compliance and send user to account tab if not compliant
-		if (!this.checkMdmCompliance()) {
+		// Only redirect if there's an actual MDM policy requiring authentication
+		if (this.mdmService?.requiresCloudAuth() && !this.checkMdmCompliance()) {
 			await this.postMessageToWebview({ type: "action", action: "accountButtonClicked" })
 		}
 	}
@@ -1824,6 +1833,7 @@ export class ClineProvider
 			profileThresholds,
 			systemNotificationsEnabled, // kilocode_change
 			dismissedNotificationIds, // kilocode_change
+			morphApiKey, // kilocode_change
 			alwaysAllowFollowupQuestions,
 			followupAutoApproveTimeoutMs,
 			includeDiagnosticMessages,
@@ -1869,6 +1879,7 @@ export class ClineProvider
 				? (taskHistory || []).find((item: HistoryItem) => item.id === this.getCurrentTask()?.taskId)
 				: undefined,
 			clineMessages: this.getCurrentTask()?.clineMessages || [],
+			currentTaskTodos: this.getCurrentTask()?.todoList || [],
 			taskHistory: (taskHistory || [])
 				.filter((item: HistoryItem) => item.ts && item.task)
 				.sort((a: HistoryItem, b: HistoryItem) => b.ts - a.ts),
@@ -1956,12 +1967,15 @@ export class ClineProvider
 				codebaseIndexSearchMaxResults: codebaseIndexConfig?.codebaseIndexSearchMaxResults,
 				codebaseIndexSearchMinScore: codebaseIndexConfig?.codebaseIndexSearchMinScore,
 			},
-			mdmCompliant: this.checkMdmCompliance(),
+			// Only set mdmCompliant if there's an actual MDM policy
+			// undefined means no MDM policy, true means compliant, false means non-compliant
+			mdmCompliant: this.mdmService?.requiresCloudAuth() ? this.checkMdmCompliance() : undefined,
 			profileThresholds: profileThresholds ?? {},
 			cloudApiUrl: getRooCodeApiUrl(),
 			hasOpenedModeSelector: this.getGlobalState("hasOpenedModeSelector") ?? false,
 			systemNotificationsEnabled: systemNotificationsEnabled ?? false, // kilocode_change
 			dismissedNotificationIds: dismissedNotificationIds ?? [], // kilocode_change
+			morphApiKey, // kilocode_change
 			alwaysAllowFollowupQuestions: alwaysAllowFollowupQuestions ?? false,
 			followupAutoApproveTimeoutMs: followupAutoApproveTimeoutMs ?? 60000,
 			includeDiagnosticMessages: includeDiagnosticMessages ?? true,
@@ -2132,6 +2146,7 @@ export class ClineProvider
 			allowVeryLargeReads: stateValues.allowVeryLargeReads ?? false, // kilocode_change
 			systemNotificationsEnabled: stateValues.systemNotificationsEnabled ?? true, // kilocode_change
 			dismissedNotificationIds: stateValues.dismissedNotificationIds ?? [], // kilocode_change
+			morphApiKey: stateValues.morphApiKey, // kilocode_change
 			historyPreviewCollapsed: stateValues.historyPreviewCollapsed ?? false,
 			cloudUserInfo,
 			cloudIsAuthenticated,
@@ -2276,7 +2291,7 @@ export class ClineProvider
 
 	/**
 	 * Check if the current state is compliant with MDM policy
-	 * @returns true if compliant, false if blocked
+	 * @returns true if compliant or no MDM policy exists, false if MDM policy exists and user is non-compliant
 	 */
 	public checkMdmCompliance(): boolean {
 		if (!this.mdmService) {
@@ -2477,12 +2492,12 @@ export class ClineProvider
 			}
 		}
 
-		function getFastApply() {
+		const getFastApply = () => {
 			try {
 				return {
 					fastApply: {
 						morphFastApply: Boolean(experiments.morphFastApply),
-						morphApiKey: Boolean(apiConfiguration.morphApiKey),
+						morphApiKey: Boolean(this.contextProxy.getValue("morphApiKey")),
 					},
 				}
 			} catch (error) {

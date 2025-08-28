@@ -274,6 +274,8 @@
 		"getChutesApiKey": "Chutes API कुंजी प्राप्त करें",
 		"fireworksApiKey": "Fireworks API कुंजी",
 		"getFireworksApiKey": "Fireworks API कुंजी प्राप्त करें",
+		"featherlessApiKey": "Featherless API कुंजी",
+		"getFeatherlessApiKey": "Featherless API कुंजी प्राप्त करें",
 		"ioIntelligenceApiKey": "IO Intelligence API कुंजी",
 		"ioIntelligenceApiKeyPlaceholder": "अपना आईओ इंटेलिजेंस एपीआई कुंजी दर्ज करें",
 		"getIoIntelligenceApiKey": "IO Intelligence API कुंजी प्राप्त करें",
@@ -752,10 +754,9 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Morph Fast Apply सक्षम करें",
-			"description": "जब सक्षम होता है, तो Kilo Code फ़ाइलों को Morph Fast Apply का उपयोग करके संपादित कर सकता है।",
+			"description": "जब सक्षम होता है, तो Kilo Code फ़ाइलों को Morph Fast Apply का उपयोग करके संपादित कर सकता है। Kilo Code API प्रदाता, OpenRouter या Morph API कुंजी की आवश्यकता है।",
 			"apiKey": "Morph API कुंजी (वैकल्पिक)",
-			"placeholder": "अपनी Morph API कुंजी दर्ज करें (वैकल्पिक)",
-			"warning": "यदि आप Morph API कुंजी कॉन्फ़िगर नहीं करते हैं, तो आप अभी भी Kilo Code या OpenRouter के साथ Fast Apply का उपयोग कर सकते हैं, लेकिन मॉडल उपयोग के लिए आपके खाते से शुल्क लिया जाएगा!"
+			"placeholder": "अपनी Morph API कुंजी दर्ज करें (वैकल्पिक)"
 		},
 		"INLINE_ASSIST": {
 			"name": "इनलाइन सहायता",
@@ -768,6 +769,10 @@
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "नए मैसेज पार्सर का उपयोग करें",
 			"description": "प्रायोगिक स्ट्रीमिंग मैसेज पार्सर सक्षम करें, जो लंबे उत्तरों के लिए संदेशों को अधिक कुशलता से प्रोसेस करके प्रदर्शन को बेहतर बनाता है।"
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "नए कार्यों के लिए 'todos' सूची की आवश्यकता है",
+			"description": "जब सक्षम किया जाता है, तो new_task टूल को todos पैरामीटर प्रदान करने की आवश्यकता होगी। यह सुनिश्चित करता है कि सभी नए कार्य स्पष्ट उद्देश्यों की सूची के साथ शुरू हों। जब अक्षम किया जाता है (डिफ़ॉल्ट), तो todos पैरामीटर पिछड़े संगतता के लिए वैकल्पिक रहता है।"
 		}
 	},
 	"promptCaching": {

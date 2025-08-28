@@ -1,0 +1,20 @@
+.reportContainer {
+  margin-top: 3rem;
+  margin-bottom: 1rem;
+}
+
+.separator {
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  border: 0;
+  border-top: 1px solid var(--ifm-color-emphasis-300);
+}
+
+.reportLink {
+  font-size: 0.875rem;
+  color: var(--ifm-color-emphasis-700);
+}
+
+.reportLink a {
+  font-weight: 500;
+}

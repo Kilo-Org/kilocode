@@ -482,6 +482,7 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 					break
 				// kilocode_change start: Morph fast apply
 				case "edit_file":
+					await checkpointSaveAndMark(cline)
 					await editFileTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 				// kilocode_change end

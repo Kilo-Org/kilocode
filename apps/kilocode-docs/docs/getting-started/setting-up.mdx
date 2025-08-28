@@ -1,0 +1,48 @@
+---
+sidebar_label: Getting Set up
+---
+
+import { DISCORD_URL } from "@site/src/constants.ts";
+import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
+
+export const FreeTierAmount = () => {
+  const { siteConfig } = useDocusaurusContext();
+  return siteConfig.customFields.freeTierAmount;
+};
+
+# Setting up Kilo Code
+
+When you sign up for Kilo Code, you'll receive **free credits** to help you get started. To claim your credits:
+
+1. **Sign up:** Complete the registration process to receive $5 in credits immediately after verification (we might require a hold to verify identity)
+2. **First top-up:** Add funds to your account (min $5) and get $20 bonus credits
+3. **Start Coding:** Enjoy your $25 in total free credits
+
+:::note About the temporary hold
+The $0.50 hold is for identity verification only:
+
+- **Not a charge** - This is a temporary authorization that will not be charged
+- **Instant release** - Kilo Code releases the hold immediately after verification
+- **Bank processing** - While we release instantly, it may take a few business days for funds to return (varies by bank)
+  :::
+
+## Registration process
+
+Kilo Code provides a simple registration process that gives you access to the latest frontier coding models with your Kilo Code login.
+
+1. Click on "Try Kilo Code for Free" in the extension
+1. Sign in with your Google account to kilocode.ai
+1. kilocode.ai will prompt you to open Visual Studio Code
+   - When using an IDE in a web browser, you will be asked to copy the API key manually instead
+1. Once you allow it to Open VS Code, you must also allow VS Code to open the authorization URL
+
+<img
+  src="/docs/img/setting-up/signupflow.gif"
+  alt="Sign up and registration flow with Kilo Code"
+/>
+
+That's it - you're all set! Now you can start with [your first task](/getting-started/your-first-task)
+
+:::tip Need Help?
+If you have any questions about pricing or tokens, please reach out to our [support team](mailto:hi@kilocode.ai) or ask in our <a href={DISCORD_URL} target='_blank'>Discord community</a>.
+:::

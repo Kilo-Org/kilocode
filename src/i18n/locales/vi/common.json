@@ -212,6 +212,9 @@
 			"cloud_auth_required": "Tổ chức của bạn yêu cầu xác thực Kilo Code Cloud. Vui lòng đăng nhập để tiếp tục.",
 			"organization_mismatch": "Bạn phải được xác thực bằng tài khoản Kilo Code Cloud của tổ chức.",
 			"verification_failed": "Không thể xác minh xác thực tổ chức."
+		},
+		"info": {
+			"organization_requires_auth": "Tổ chức của bạn yêu cầu xác thực."
 		}
 	},
 	"prompts": {

@@ -274,6 +274,8 @@
 		"getChutesApiKey": "取得 Chutes API 金鑰",
 		"fireworksApiKey": "Fireworks API 金鑰",
 		"getFireworksApiKey": "取得 Fireworks API 金鑰",
+		"featherlessApiKey": "Featherless API 金鑰",
+		"getFeatherlessApiKey": "取得 Featherless API 金鑰",
 		"ioIntelligenceApiKey": "IO Intelligence API 金鑰",
 		"ioIntelligenceApiKeyPlaceholder": "輸入您的 IO Intelligence API 金鑰",
 		"getIoIntelligenceApiKey": "取得 IO Intelligence API 金鑰",
@@ -752,10 +754,9 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "啟用 Morph Fast Apply",
-			"description": "啟用後，Kilo Code 可使用 Morph Fast Apply 模型編輯檔案。",
+			"description": "啟用後，Kilo Code 可使用 Morph Fast Apply 編輯檔案。需要 Kilo Code API 供應商、OpenRouter 或 Morph API 金鑰。",
 			"apiKey": "Morph API 金鑰（選用）",
-			"placeholder": "輸入您的 Morph API 金鑰（選用）",
-			"warning": "如果您未設定 Morph API 金鑰，仍可透過 Kilo Code 或 OpenRouter 使用 Morph Fast Apply。您的帳戶將被收取模型使用費用，目前延伸模組 UI 中不會顯示此費用。"
+			"placeholder": "輸入您的 Morph API 金鑰（選用）"
 		},
 		"INLINE_ASSIST": {
 			"name": "行內輔助",
@@ -768,6 +769,10 @@
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "使用全新訊息解析器",
 			"description": "啟用實驗性的串流訊息解析器。透過更有效率地處理訊息，能顯著提升長回覆的效能。"
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "要求新工作提供 'todos' 列表",
+			"description": "啟用後，new_task 工具將需要提供 todos 參數。這可以確保所有新工作都以明確的目標列表開始。停用時（預設），todos 參數保持可選，以實現向後相容。"
 		}
 	},
 	"promptCaching": {

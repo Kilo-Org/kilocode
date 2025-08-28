@@ -274,6 +274,8 @@
 		"getChutesApiKey": "Получить Chutes API-ключ",
 		"fireworksApiKey": "Fireworks API-ключ",
 		"getFireworksApiKey": "Получить Fireworks API-ключ",
+		"featherlessApiKey": "Featherless API-ключ",
+		"getFeatherlessApiKey": "Получить Featherless API-ключ",
 		"ioIntelligenceApiKey": "IO Intelligence API-ключ",
 		"ioIntelligenceApiKeyPlaceholder": "Введите свой ключ API IO Intelligence",
 		"getIoIntelligenceApiKey": "Получить IO Intelligence API-ключ",
@@ -752,10 +754,9 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Включить Morph Fast Apply",
-			"description": "Когда включено, Kilo Code может редактировать файлы с помощью Morph Fast Apply.",
+			"description": "Когда включено, Kilo Code может редактировать файлы с помощью Morph Fast Apply. Требует провайдера Kilo Code API, OpenRouter или API-ключ Morph.",
 			"apiKey": "API-ключ Morph (необязательно)",
-			"placeholder": "Введите ваш API-ключ Morph (необязательно)",
-			"warning": "Если вы не настроите API-ключ Morph, вы все равно можете использовать Fast Apply с Kilo Code или OpenRouter. С вашего аккаунта будет взиматься плата за использование модели, в настоящее время это не отображается в интерфейсе расширения."
+			"placeholder": "Введите ваш API-ключ Morph (необязательно)"
 		},
 		"INLINE_ASSIST": {
 			"name": "Встроенная поддержка",
@@ -768,6 +769,10 @@
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "Использовать новый парсер сообщений",
 			"description": "Включите экспериментальный потоковый парсер сообщений, который ускоряет длинные ответы благодаря более эффективной обработке сообщений."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "Требовать список 'todos' для новых задач",
+			"description": "Если включено, инструмент new_task будет требовать предоставления параметра todos. Это гарантирует, что все новые задачи начинаются с четкого списка целей. Когда отключено (по умолчанию), параметр todos остается необязательным для обратной совместимости."
 		}
 	},
 	"promptCaching": {

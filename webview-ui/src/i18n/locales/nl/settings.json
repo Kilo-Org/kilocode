@@ -274,6 +274,8 @@
 		"getChutesApiKey": "Chutes API-sleutel ophalen",
 		"fireworksApiKey": "Fireworks API-sleutel",
 		"getFireworksApiKey": "Fireworks API-sleutel ophalen",
+		"featherlessApiKey": "Featherless API-sleutel",
+		"getFeatherlessApiKey": "Featherless API-sleutel ophalen",
 		"ioIntelligenceApiKey": "IO Intelligence API-sleutel",
 		"ioIntelligenceApiKeyPlaceholder": "Voer je IO Intelligence API-sleutel in",
 		"getIoIntelligenceApiKey": "IO Intelligence API-sleutel ophalen",
@@ -752,10 +754,9 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Morph Fast Apply inschakelen",
-			"description": "Wanneer ingeschakeld, kan Kilo Code bestanden bewerken met Morph Fast Apply.",
+			"description": "Wanneer ingeschakeld, kan Kilo Code bestanden bewerken met Morph Fast Apply. Vereist de Kilo Code API Provider, OpenRouter of een Morph API-sleutel.",
 			"apiKey": "Morph API-sleutel (optioneel)",
-			"placeholder": "Voer je Morph API-sleutel in (optioneel)",
-			"warning": "Als je geen Morph API-sleutel configureert, kun je Fast Apply nog steeds gebruiken met Kilo Code of OpenRouter. Je account wordt gefactureerd voor modelgebruik, dit wordt momenteel niet weergegeven in de extensie-UI."
+			"placeholder": "Voer je Morph API-sleutel in (optioneel)"
 		},
 		"INLINE_ASSIST": {
 			"name": "Inline Ondersteuning",
@@ -768,6 +769,10 @@
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "Nieuwe berichtparser gebruiken",
 			"description": "Schakel de experimentele streaming-berichtparser in die lange antwoorden sneller maakt door berichten efficiënter te verwerken."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "'todos'-lijst vereisen voor nieuwe taken",
+			"description": "Wanneer ingeschakeld, vereist de new_task-tool dat een todos-parameter wordt opgegeven. Dit zorgt ervoor dat alle nieuwe taken beginnen met een duidelijke lijst met doelstellingen. Wanneer uitgeschakeld (standaard), blijft de todos-parameter optioneel voor achterwaartse compatibiliteit."
 		}
 	},
 	"promptCaching": {

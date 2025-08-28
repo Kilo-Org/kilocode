@@ -274,6 +274,8 @@
 		"getChutesApiKey": "Dapatkan Chutes API Key",
 		"fireworksApiKey": "Fireworks API Key",
 		"getFireworksApiKey": "Dapatkan Fireworks API Key",
+		"featherlessApiKey": "Featherless API Key",
+		"getFeatherlessApiKey": "Dapatkan Featherless API Key",
 		"ioIntelligenceApiKey": "IO Intelligence API Key",
 		"ioIntelligenceApiKeyPlaceholder": "Masukkan kunci API IO Intelligence Anda",
 		"getIoIntelligenceApiKey": "Dapatkan IO Intelligence API Key",
@@ -773,10 +775,9 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Aktifkan Morph Fast Apply",
-			"description": "Ketika diaktifkan, Kilo Code dapat mengedit file menggunakan Morph Fast Apply.",
+			"description": "Ketika diaktifkan, Kilo Code dapat mengedit file menggunakan Morph Fast Apply. Memerlukan Kilo Code API Provider, OpenRouter atau kunci API Morph.",
 			"apiKey": "Kunci API Morph (opsional)",
-			"placeholder": "Masukkan kunci API Morph Anda (opsional)",
-			"warning": "Jika Anda tidak mengonfigurasi kunci API Morph, Anda masih dapat menggunakan Fast Apply dengan Kilo Code atau OpenRouter. Akun Anda akan ditagih untuk penggunaan model, ini saat ini tidak ditampilkan di UI ekstensi."
+			"placeholder": "Masukkan kunci API Morph Anda (opsional)"
 		},
 		"INLINE_ASSIST": {
 			"name": "Bantuan Inline",
@@ -789,6 +790,10 @@
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "Gunakan parser pesan baru",
 			"description": "Aktifkan parser pesan streaming eksperimental yang meningkatkan kinerja untuk respons panjang dengan memproses pesan lebih efisien."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "Membutuhkan daftar 'todos' untuk tugas baru",
+			"description": "Ketika diaktifkan, alat new_task akan membutuhkan parameter todos untuk disediakan. Ini memastikan semua tugas baru dimulai dengan daftar tujuan yang jelas. Ketika dinonaktifkan (default), parameter todos tetap opsional untuk kompatibilitas mundur."
 		}
 	},
 	"promptCaching": {

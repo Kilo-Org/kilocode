@@ -41,6 +41,7 @@ type RouterModelsQueryKey = {
 	openRouterApiKey?: string
 	lmStudioBaseUrl?: string
 	ollamaBaseUrl?: string
+	kilocodeOrganizationId?: string
 	// Requesty, Unbound, etc should perhaps also be here, but they already have their own hacks for reloading
 }
 

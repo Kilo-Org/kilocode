@@ -118,6 +118,7 @@ export interface WebviewMessage {
 		| "toggleMcpServer"
 		| "updateMcpTimeout"
 		| "fuzzyMatchThreshold"
+		| "morphApiKey" // kilocode_change: Morph fast apply - global setting
 		| "writeDelayMs"
 		| "diagnosticsEnabled"
 		| "enhancePrompt"
@@ -260,6 +261,7 @@ export interface WebviewMessage {
 		| "deleteCommand"
 		| "createCommand"
 		| "insertTextIntoTextarea"
+		| "showMdmAuthRequiredNotification"
 	text?: string
 	editedMessageContent?: string
 	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "account"

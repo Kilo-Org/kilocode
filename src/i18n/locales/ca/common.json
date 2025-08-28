@@ -212,6 +212,9 @@
 			"cloud_auth_required": "La teva organització requereix autenticació de Kilo Code Cloud. Si us plau, inicia sessió per continuar.",
 			"organization_mismatch": "Has d'estar autenticat amb el compte de Kilo Code Cloud de la teva organització.",
 			"verification_failed": "No s'ha pogut verificar l'autenticació de l'organització."
+		},
+		"info": {
+			"organization_requires_auth": "La teva organització requereix autenticació."
 		}
 	},
 	"prompts": {

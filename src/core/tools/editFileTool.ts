@@ -9,10 +9,38 @@ import { formatResponse } from "../prompts/responses"
 import { ToolUse, AskApproval, HandleError, PushToolResult, RemoveClosingTag } from "../../shared/tools"
 import { fileExistsAtPath } from "../../utils/fs"
 import { getReadablePath } from "../../utils/path"
-import { Experiments, ProviderSettings } from "@roo-code/types"
 import { getKiloBaseUriFromToken } from "../../shared/kilocode/token"
 import { DEFAULT_HEADERS } from "../../api/providers/constants"
 import { TelemetryService } from "@roo-code/telemetry"
+import { type ClineProviderState } from "../webview/ClineProvider"
+import { ClineSayTool } from "../../shared/ExtensionMessage"
+
+// Morph model pricing per 1M tokens
+const MORPH_MODEL_PRICING = {
+	"morph-v3-fast": {
+		inputPrice: 0.8, // $0.8 per 1M tokens
+		outputPrice: 1.2, // $1.2 per 1M tokens
+	},
+	"morph-v3-large": {
+		inputPrice: 0.9, // $0.9 per 1M tokens
+		outputPrice: 1.9, // $1.9 per 1M tokens
+	},
+	auto: {
+		inputPrice: 0.9, // Default to morph-v3-large pricing
+		outputPrice: 1.9,
+	},
+} as const
+
+function calculateMorphCost(inputTokens: number, outputTokens: number, model: string): number {
+	const normalizedModel = model.replace("morph/", "") // Remove OpenRouter prefix if present
+	const pricing =
+		MORPH_MODEL_PRICING[normalizedModel as keyof typeof MORPH_MODEL_PRICING] || MORPH_MODEL_PRICING["auto"]
+
+	const inputCost = (pricing.inputPrice / 1_000_000) * inputTokens
+	const outputCost = (pricing.outputPrice / 1_000_000) * outputTokens
+
+	return inputCost + outputCost
+}
 
 async function validateParams(
 	cline: Task,
@@ -57,15 +85,21 @@ export async function editFileTool(
 	const instructions: string | undefined = block.params.instructions
 	const code_edit: string | undefined = block.params.code_edit
 
+	let fileExists = true
 	try {
+		if (block.partial && (!target_file || instructions === undefined)) {
+			// wait so we can determine if it's a new file or editing an existing file
+			return
+		}
+		fileExists = await fileExistsAtPath(path.resolve(cline.cwd, target_file ?? ""))
+
 		// Handle partial tool use
 		if (block.partial) {
 			const partialMessageProps = {
-				tool: "editFile" as const,
+				tool: fileExists ? "editedExistingFile" : "newFileCreated",
 				path: getReadablePath(cline.cwd, removeClosingTag("target_file", target_file)),
-				instructions: removeClosingTag("instructions", instructions),
-				codeEdit: removeClosingTag("code_edit", code_edit),
-			}
+				content: removeClosingTag("code_edit", code_edit),
+			} satisfies ClineSayTool
 			await cline.ask("tool", JSON.stringify(partialMessageProps), block.partial).catch(() => {
 				// Roo tools ignore exceptions as well here
 			})
@@ -86,18 +120,6 @@ export async function editFileTool(
 		const absolutePath = path.resolve(cline.cwd, targetFile)
 		const relPath = getReadablePath(cline.cwd, absolutePath)
 
-		// Check if file exists
-		if (!(await fileExistsAtPath(absolutePath))) {
-			cline.consecutiveMistakeCount++
-			cline.recordToolError("edit_file")
-			pushToolResult(
-				formatResponse.toolError(
-					`The file ${relPath} does not exist. Use write_to_file to create new files, or make sure the file path is correct.`,
-				),
-			)
-			return
-		}
-
 		// Check if file access is allowed
 		const accessAllowed = cline.rooIgnoreController?.validateAccess(relPath)
 		if (!accessAllowed) {
@@ -107,26 +129,24 @@ export async function editFileTool(
 		}
 
 		// Read the original file content
-		const originalContent = await fs.readFile(absolutePath, "utf-8")
+		const originalContent = fileExists ? await fs.readFile(absolutePath, "utf-8") : ""
 
 		// Check if Morph is available
-		const morphApplyResult = await applyMorphEdit(originalContent, editInstructions, editCode, cline)
+		const morphApplyResult = fileExists
+			? await applyMorphEdit(originalContent, editInstructions, editCode, cline, relPath)
+			: undefined
 
-		if (!morphApplyResult.success) {
+		if (morphApplyResult && !morphApplyResult.success) {
 			cline.consecutiveMistakeCount++
 			cline.recordToolError("edit_file")
-			pushToolResult(
-				formatResponse.toolError(
-					`Failed to apply edit using Morph: ${morphApplyResult.error}. Consider using apply_diff tool instead.`,
-				),
-			)
+			pushToolResult(formatResponse.toolError(`Failed to apply edit using Morph: ${morphApplyResult.error}`))
 			return
 		}
 
-		const newContent = morphApplyResult.result!
+		const newContent = morphApplyResult?.result ?? code_edit ?? ""
 
 		// Show the diff and ask for approval
-		cline.diffViewProvider.editType = "modify"
+		cline.diffViewProvider.editType = fileExists ? "modify" : "create"
 		await cline.diffViewProvider.open(relPath)
 
 		// Stream the content to show the diff
@@ -137,18 +157,25 @@ export async function editFileTool(
 		const approved = await askApproval(
 			"tool",
 			JSON.stringify({
-				tool: "editedExistingFile",
+				tool: fileExists ? "editedExistingFile" : "newFileCreated",
 				path: relPath,
 				isProtected: cline.rooProtectedController?.isWriteProtected(relPath) || false,
-				instructions: editInstructions,
-			}),
+				content: editCode,
+				fastApplyResult: morphApplyResult
+					? {
+							description: morphApplyResult.description,
+							tokensIn: morphApplyResult.tokensIn,
+							tokensOut: morphApplyResult.tokensOut,
+							cost: morphApplyResult.cost,
+						}
+					: undefined,
+			} satisfies ClineSayTool),
 			undefined,
 			cline.rooProtectedController?.isWriteProtected(relPath) || false,
 		)
 
 		if (!approved) {
 			await cline.diffViewProvider.revertChanges()
-			pushToolResult(formatResponse.toolResult("Edit cancelled by user."))
 			return
 		}
 
@@ -176,6 +203,10 @@ interface MorphApplyResult {
 	success: boolean
 	result?: string
 	error?: string
+	description?: string
+	tokensIn?: number
+	tokensOut?: number
+	cost?: number
 }
 
 async function applyMorphEdit(
@@ -183,6 +214,7 @@ async function applyMorphEdit(
 	instructions: string,
 	codeEdit: string,
 	cline: Task,
+	filePath: string,
 ): Promise<MorphApplyResult> {
 	try {
 		// Get the current API configuration
@@ -194,10 +226,27 @@ async function applyMorphEdit(
 		const state = await provider.getState()
 
 		// Check if user has Morph enabled via OpenRouter or direct API
-		const morphConfig = await getMorphConfiguration(state.experiments, state.apiConfiguration)
+		const morphConfig = await getMorphConfiguration(state)
 		if (!morphConfig.available) {
 			return { success: false, error: morphConfig.error || "Morph is not available" }
 		}
+
+		// Create a verbose request description similar to regular API requests
+		const fileName = filePath ? path.basename(filePath) : "unknown file"
+		const truncatedCodeEdit = codeEdit.length > 500 ? codeEdit.substring(0, 500) + "\n...(truncated)" : codeEdit
+		const description = [
+			`Morph FastApply Edit (${morphConfig.model})`,
+			``,
+			`File: ${fileName}`,
+			`Instructions: ${instructions}`,
+			``,
+			`Code Edit:`,
+			"```",
+			truncatedCodeEdit,
+			"```",
+			``,
+			`Original Content: ${originalContent.length} characters`,
+		].join("\n")
 
 		// Create OpenAI client for Morph API
 		const client = new OpenAI({
@@ -232,7 +281,20 @@ async function applyMorphEdit(
 			return { success: false, error: "Morph API returned empty response" }
 		}
 
-		return { success: true, result: mergedCode }
+		// Extract usage information from response
+		const usage = response.usage
+		const tokensIn = usage?.prompt_tokens || 0
+		const tokensOut = usage?.completion_tokens || 0
+		const cost = calculateMorphCost(tokensIn, tokensOut, morphConfig.model!)
+
+		return {
+			success: true,
+			result: mergedCode,
+			description,
+			tokensIn,
+			tokensOut,
+			cost,
+		}
 	} catch (error) {
 		TelemetryService.instance.captureException(error, { context: "applyMorphEdit" })
 		return {
@@ -250,30 +312,29 @@ interface MorphConfiguration {
 	error?: string
 }
 
-async function getMorphConfiguration(
-	experiments: Experiments,
-	apiConfig: ProviderSettings,
-): Promise<MorphConfiguration> {
+function getMorphConfiguration(state: ClineProviderState): MorphConfiguration {
 	// Check if Morph is enabled in API configuration
-	if (experiments.morphFastApply !== true) {
+	if (state.experiments.morphFastApply !== true) {
 		return {
 			available: false,
 			error: "Morph is disabled. Enable it in API Options > Enable Editing with Morph FastApply",
 		}
 	}
 
-	// If user has direct Morph API key, use it
-	if (apiConfig.morphApiKey) {
+	// Priority 1: Use direct Morph API key if available
+	// Allow human-relay for debugging
+	if (state.morphApiKey || state.apiConfiguration?.apiProvider === "human-relay") {
 		return {
 			available: true,
-			apiKey: apiConfig.morphApiKey,
+			apiKey: state.morphApiKey,
 			baseUrl: "https://api.morphllm.com/v1",
 			model: "auto",
 		}
 	}
 
-	if (apiConfig.apiProvider === "kilocode") {
-		const token = apiConfig.kilocodeToken
+	// Priority 2: Use KiloCode provider
+	if (state.apiConfiguration?.apiProvider === "kilocode") {
+		const token = state.apiConfiguration.kilocodeToken
 		if (!token) {
 			return { available: false, error: "No KiloCode token available to use Morph" }
 		}
@@ -285,22 +346,26 @@ async function getMorphConfiguration(
 		}
 	}
 
-	// If user is using OpenRouter as their provider, use Morph through OpenRouter
-	if (apiConfig.apiProvider === "openrouter") {
-		const token = apiConfig.openRouterApiKey
+	// Priority 3: Use OpenRouter provider
+	if (state.apiConfiguration?.apiProvider === "openrouter") {
+		const token = state.apiConfiguration.openRouterApiKey
 		if (!token) {
-			return { available: false, error: "No Openrouter api token available to use Morph" }
+			return { available: false, error: "No OpenRouter API token available to use Morph" }
 		}
 		return {
 			available: true,
 			apiKey: token,
-			baseUrl: apiConfig.openRouterBaseUrl || "https://openrouter.ai/api/v1",
+			baseUrl: state.apiConfiguration.openRouterBaseUrl || "https://openrouter.ai/api/v1",
 			model: "morph/morph-v3-large", // Morph model via OpenRouter
 		}
 	}
 
 	return {
 		available: false,
-		error: "Morph is enabled but not configured. Either set a Morph API key in API Options or use OpenRouter with Morph access.",
+		error: "Morph configuration error. Please check your settings.",
 	}
+}
+
+export function isMorphAvailable(state?: ClineProviderState): boolean {
+	return (state && getMorphConfiguration(state).available) || false
 }
