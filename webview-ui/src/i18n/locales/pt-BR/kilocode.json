@@ -191,7 +191,7 @@
 			"autoTrigger": "Gatilho Automático",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Tarefa Rápida em Linha",
-				"description": "Precisa apenas de uma mudança rápida? Selecione algum código (ou não!) e pressione Cmd+I. Descreva seu objetivo em linguagem simples (\"criar um componente React com essas props\", \"adicionar tratamento de erro a esta função\") e receba múltiplas sugestões prontas para uso diretamente no seu editor. <DocsLink>Ver atalho</DocsLink>"
+				"description": "Precisa apenas de uma mudança rápida? Selecione algum código (ou não!) e pressione {{keybinding}}. Descreva seu objetivo em linguagem simples (\"criar um componente React com essas props\", \"adicionar tratamento de erro a esta função\") e receba múltiplas sugestões prontas para uso diretamente no seu editor. <DocsLink>Ver atalho</DocsLink>"
 			},
 			"enableAutoInlineTaskKeybinding": {
 				"label": "Tarefa Automática em Linha",
@@ -207,7 +207,7 @@
 			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Tarefa Inteligente em Linha",
-				"description": "Precisa de uma correção rápida, completar ou refatorar? O Kilo usará o contexto ao redor para oferecer melhorias imediatas, mantendo você no fluxo. <DocsLink>Ver atalho</DocsLink>"
+				"description": "Precisa de uma correção rápida, finalização ou refatoração? Pressione {{keybinding}} e o Kilo usará o contexto ao redor para oferecer melhorias imediatas, mantendo seu fluxo de trabalho. <DocsLink>Ver atalho</DocsLink>"
 			},
 			"enableCustomProvider": {
 				"label": "Usar provedor personalizado",

@@ -191,7 +191,7 @@
 			"autoTrigger": "自動トリガー",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "クイックインラインタスク",
-				"description": "ちょっとした変更だけが必要ですか？コードを選択して（または選択せずに！）Cmd+Iを押してください。目標を普通の言葉で説明してください（「これらのpropsを持つReactコンポーネントを作成」、「この関数にエラー処理を追加」など）。すぐに使える複数の提案がエディタ上に表示されます。<DocsLink>ショートカットを見る</DocsLink>"
+				"description": "ちょっとした変更だけが必要ですか？コードを選択して（または選択せずに！）{{keybinding}}を押してください。目標を普通の言葉で説明してください（「これらのpropsを持つReactコンポーネントを作成」、「この関数にエラー処理を追加」など）。すぐに使える複数の提案がエディタ上に表示されます。<DocsLink>ショートカットを見る</DocsLink>"
 			},
 			"enableAutoInlineTaskKeybinding": {
 				"label": "自動インライン タスク",
@@ -207,7 +207,7 @@
 			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "スマートインラインタスク",
-				"description": "素早い修正、補完、またはリファクタリングが必要？Kiloは周囲のコンテキストを使用して即座の改善を提供し、フローを維持します。<DocsLink>ショートカットを見る</DocsLink>"
+				"description": "修正、補完、またはリファクタリングが必要ですか？{{keybinding}}を押すと、Kiloは周囲のコンテキストを使用して即座に改善を提案し、あなたの作業の流れを維持します。<DocsLink>ショートカットを見る</DocsLink>"
 			},
 			"enableCustomProvider": {
 				"label": "カスタムプロバイダーを使用",

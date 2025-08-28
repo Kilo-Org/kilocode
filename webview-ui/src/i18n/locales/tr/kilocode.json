@@ -191,7 +191,7 @@
 			"autoTrigger": "Otomatik Tetikleyici",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Hızlı Satır İçi Görev",
-				"description": "Sadece hızlı bir değişikliğe mi ihtiyacınız var? Biraz kod seçin (ya da seçmeyin!) ve Cmd+I tuşuna basın. Amacınızı sade bir şekilde açıklayın (\"bu prop'larla bir React bileşeni oluştur\", \"bu fonksiyona hata yönetimi ekle\") ve düzenleyicinizde kullanıma hazır birden fazla öneri alın. <DocsLink>Kısayolu gör</DocsLink>"
+				"description": "Sadece hızlı bir değişikliğe mi ihtiyacınız var? Biraz kod seçin (ya da seçmeyin!) ve {{keybinding}} tuşuna basın. Amacınızı sade bir şekilde açıklayın (\"bu prop'larla bir React bileşeni oluştur\", \"bu fonksiyona hata yönetimi ekle\") ve düzenleyicinizde kullanıma hazır birden fazla öneri alın. <DocsLink>Kısayolu gör</DocsLink>"
 			},
 			"enableAutoInlineTaskKeybinding": {
 				"label": "Otomatik Satır İçi Görev",
@@ -207,7 +207,7 @@
 			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Akıllı Satır İçi Görev",
-				"description": "Hızlı bir düzeltme, tamamlama veya yeniden düzenlemeye mi ihtiyacın var? Kilo, anında iyileştirmeler sunmak için çevredeki bağlamı kullanır ve seni akışta tutar. <DocsLink>Kısayolu gör</DocsLink>"
+				"description": "Hızlı bir düzeltme, tamamlama veya yeniden düzenleme mi gerekiyor? {{keybinding}} tuşlarına basın ve Kilo, akışınızı bozmadan anında iyileştirmeler sunmak için çevredeki bağlamı kullanacaktır. <DocsLink>Kısayolu gör</DocsLink>"
 			},
 			"enableCustomProvider": {
 				"label": "Özel sağlayıcı kullan",

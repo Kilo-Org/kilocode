@@ -191,7 +191,7 @@
 			"autoTrigger": "Déclenchement automatique",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Tâche Rapide en Ligne",
-				"description": "Besoin d'une modification rapide ? Sélectionnez du code (ou pas !) et appuyez sur Cmd+I. Décrivez votre objectif en langage courant (\"créer un composant React avec ces props\", \"ajouter une gestion d'erreurs à cette fonction\"), et obtenez plusieurs suggestions prêtes à l'emploi directement dans votre éditeur. <DocsLink>Voir le raccourci</DocsLink>"
+				"description": "Besoin d'une modification rapide ? Sélectionnez du code (ou pas !) et appuyez sur {{keybinding}}. Décrivez votre objectif en langage courant (\"créer un composant React avec ces props\", \"ajouter une gestion d'erreurs à cette fonction\"), et obtenez plusieurs suggestions prêtes à l'emploi directement dans votre éditeur. <DocsLink>Voir le raccourci</DocsLink>"
 			},
 			"enableAutoInlineTaskKeybinding": {
 				"label": "Tâche automatique en ligne",
@@ -207,7 +207,7 @@
 			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Tâche Intelligente en Ligne",
-				"description": "Besoin d'une correction rapide, d'une complétion ou d'un refactoring ? Kilo utilisera le contexte environnant pour offrir des améliorations immédiates, te gardant dans le flux. <DocsLink>Voir le raccourci</DocsLink>"
+				"description": "Besoin d'une correction rapide, d'une complétion ou d'une refactorisation ? Appuyez sur {{keybinding}} et Kilo utilisera le contexte environnant pour proposer des améliorations immédiates, vous permettant de rester concentré. <DocsLink>Voir le raccourci</DocsLink>"
 			},
 			"enableCustomProvider": {
 				"label": "Utiliser un fournisseur personnalisé",

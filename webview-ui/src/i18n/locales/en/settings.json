@@ -755,7 +755,7 @@
 		},
 		"INLINE_ASSIST": {
 			"name": "Inline Assist",
-			"description": "Enable Inline Assist features for quick code suggestions and improvements directly in your editor. Includes Quick Inline Task (Cmd+I) for targeted changes and Auto Inline Task for contextual improvements."
+			"description": "Enable Inline Assist features for quick code suggestions and improvements directly in your editor. Includes Quick Inline Task ({{keybinding}}) for targeted changes and Auto Inline Task for contextual improvements."
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Background editing",

@@ -191,7 +191,7 @@
 			"autoTrigger": "Automatische Trigger",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Snelle Inline Taak",
-				"description": "Heb je maar een snelle aanpassing nodig? Selecteer wat code (of niet!) en druk op Cmd+I. Beschrijf je doel in gewoon Nederlands (\"maak een React-component met deze props\", \"voeg foutafhandeling toe aan deze functie\"), en krijg meerdere, direct bruikbare suggesties rechtstreeks in je editor. <DocsLink>Zie sneltoets</DocsLink>"
+				"description": "Heb je maar een snelle aanpassing nodig? Selecteer wat code (of niet!) en druk op {{keybinding}}. Beschrijf je doel in gewoon Nederlands (\"maak een React-component met deze props\", \"voeg foutafhandeling toe aan deze functie\"), en krijg meerdere, direct bruikbare suggesties rechtstreeks in je editor. <DocsLink>Zie sneltoets</DocsLink>"
 			},
 			"enableAutoInlineTaskKeybinding": {
 				"label": "Automatische Inline Taak",
@@ -207,7 +207,7 @@
 			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Slimme Inline Taak",
-				"description": "Heb je een snelle fix, aanvulling of refactoring nodig? Kilo gebruikt de omringende context om directe verbeteringen aan te bieden, zodat je in de flow blijft. <DocsLink>Bekijk sneltoets</DocsLink>"
+				"description": "Heb je een snelle correctie, aanvulling of herstructurering nodig? Druk op {{keybinding}} en Kilo gebruikt de omringende context om direct verbeteringen aan te bieden, zodat je in je werkflow blijft. <DocsLink>Bekijk sneltoets</DocsLink>"
 			},
 			"enableCustomProvider": {
 				"label": "Aangepaste provider gebruiken",

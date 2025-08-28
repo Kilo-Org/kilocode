@@ -751,7 +751,7 @@
 		},
 		"INLINE_ASSIST": {
 			"name": "Inline Ondersteuning",
-			"description": "Schakel Inline Assist-functies in voor snelle codevoorstellen en verbeteringen direct in uw editor. Bevat Quick Inline Task (Cmd+I) voor gerichte wijzigingen en Auto Inline Task voor contextuele verbeteringen."
+			"description": "Schakel Inline Assist-functies in voor snelle codevoorstellen en verbeteringen direct in uw editor. Bevat Quick Inline Task ({{keybinding}}) voor gerichte wijzigingen en Auto Inline Task voor contextuele verbeteringen."
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Achtergrondbewerking",

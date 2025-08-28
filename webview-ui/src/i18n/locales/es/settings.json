@@ -750,7 +750,7 @@
 		},
 		"INLINE_ASSIST": {
 			"name": "Asistencia Integrada",
-			"description": "Habilita las funciones de Asistencia en línea para obtener sugerencias y mejoras de código rápidas directamente en tu editor. Incluye Tarea rápida en línea (Cmd+I) para cambios específicos y Tarea automática en línea para mejoras contextuales."
+			"description": "Habilita las funciones de Asistencia en línea para obtener sugerencias y mejoras de código rápidas directamente en tu editor. Incluye Tarea rápida en línea ({{keybinding}}) para cambios específicos y Tarea automática en línea para mejoras contextuales."
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Edición en segundo plano",

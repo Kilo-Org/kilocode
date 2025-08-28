@@ -750,7 +750,7 @@
 		},
 		"INLINE_ASSIST": {
 			"name": "Inline-Unterstützung",
-			"description": "Aktiviere Inline-Assist-Funktionen für schnelle Code-Vorschläge und -Verbesserungen direkt in deinem Editor. Beinhaltet Quick Inline Task (Cmd+I) für gezielte Änderungen und Auto Inline Task für kontextbezogene Verbesserungen."
+			"description": "Aktiviere Inline-Assist-Funktionen für schnelle Code-Vorschläge und -Verbesserungen direkt in deinem Editor. Beinhaltet Quick Inline Task ({{keybinding}}) für gezielte Änderungen und Auto Inline Task für kontextbezogene Verbesserungen."
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Hintergrundbearbeitung",

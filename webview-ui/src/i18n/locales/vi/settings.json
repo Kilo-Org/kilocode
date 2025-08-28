@@ -751,7 +751,7 @@
 		},
 		"INLINE_ASSIST": {
 			"name": "Trợ lý Nội dòng",
-			"description": "Bật tính năng Trợ giúp nội tuyến (Inline Assist) để nhận gợi ý và cải tiến mã nhanh chóng ngay trong trình soạn thảo của bạn. Bao gồm Tác vụ nội tuyến nhanh (Cmd+I) cho những thay đổi có mục tiêu và Tác vụ nội tuyến tự động cho những cải tiến theo ngữ cảnh."
+			"description": "Bật tính năng Trợ giúp nội tuyến (Inline Assist) để nhận gợi ý và cải tiến mã nhanh chóng ngay trong trình soạn thảo của bạn. Bao gồm Tác vụ nội tuyến nhanh ({{keybinding}}) cho những thay đổi có mục tiêu và Tác vụ nội tuyến tự động cho những cải tiến theo ngữ cảnh."
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Chỉnh sửa nền",

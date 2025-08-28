@@ -191,7 +191,7 @@
 			"autoTrigger": "Attivazione automatica",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Attività Rapida In Linea",
-				"description": "Hai solo bisogno di una modifica rapida? Seleziona del codice (o anche no!) e premi Cmd+I. Descrivi il tuo obiettivo in linguaggio semplice (\"crea un componente React con queste props\", \"aggiungi la gestione degli errori a questa funzione\") e ottieni molteplici suggerimenti pronti all'uso direttamente nel tuo editor. <DocsLink>Vedi scorciatoia</DocsLink>"
+				"description": "Hai solo bisogno di una modifica rapida? Seleziona del codice (o anche no!) e premi {{keybinding}}. Descrivi il tuo obiettivo in linguaggio semplice (\"crea un componente React con queste props\", \"aggiungi la gestione degli errori a questa funzione\") e ottieni molteplici suggerimenti pronti all'uso direttamente nel tuo editor. <DocsLink>Vedi scorciatoia</DocsLink>"
 			},
 			"enableAutoInlineTaskKeybinding": {
 				"label": "Attività Automatica in Linea",
@@ -207,7 +207,7 @@
 			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Attività Inline Intelligente",
-				"description": "Hai bisogno di una correzione rapida, completamento o refactoring? Kilo userà il contesto circostante per offrire miglioramenti immediati, mantenendoti nel flusso. <DocsLink>Vedi scorciatoia</DocsLink>"
+				"description": "Hai bisogno di una correzione rapida, un completamento o una ristrutturazione del codice? Premi {{keybinding}} e Kilo utilizzerà il contesto circostante per offrire miglioramenti immediati, mantenendoti concentrato sul tuo lavoro. <DocsLink>Vedi scorciatoia</DocsLink>"
 			},
 			"enableCustomProvider": {
 				"label": "Usa provider personalizzato",
