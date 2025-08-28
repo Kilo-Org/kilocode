@@ -82,6 +82,11 @@ function runCommand(command, options = {}) {
 function checkJava() {
 	printStatus("Checking Java installation...")
 
+	if (process.env.DEVENV === "nix") {
+		printSuccess("Nix environment detected, assuming Java is managed by Nix")
+		return true
+	}
+
 	if (!commandExists("java")) {
 		printError("Java is not installed or not in PATH")
 		console.log("  Install Java 17 (recommended):")

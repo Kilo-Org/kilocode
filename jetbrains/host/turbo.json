@@ -3,18 +3,21 @@
 	"extends": ["//"],
 	"tasks": {
 		"deps:check": {
-			"cache": false
+			"cache": false,
+			"env": ["DEVENV"]
 		},
 		"deps:clean": {
 			"cache": false
 		},
 		"deps:patch": {
 			"cache": false,
-			"dependsOn": ["deps:check", "deps:clean"]
+			"dependsOn": ["deps:check", "deps:clean"],
+			"env": ["DEVENV"]
 		},
 		"deps:copy": {
 			"cache": false,
-			"dependsOn": ["deps:check", "deps:patch"]
+			"dependsOn": ["deps:check", "deps:patch"],
+			"env": ["DEVENV"]
 		},
 		"prop:deps": {
 			"cache": false

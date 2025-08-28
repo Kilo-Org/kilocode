@@ -72,7 +72,8 @@
 
       # Set library path for dynamic linking
       shellHook = ''
-        export JAVA_HOME="${pkgs.jdk17}"
+        export DEVENV="nix"
+        export JAVA_HOME="${pkgs.jetbrains.jdk}"
         export PATH="$JAVA_HOME/bin:$PATH"
         export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath [
           pkgs.xorg.libX11
