@@ -33,7 +33,7 @@
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}/src",
 				"--disable-extensions",
-				"${workspaceFolder}/launch"
+				"${input:extensionLaunchDir}"
 			],
 			"sourceMaps": true,
 			"outFiles": ["${workspaceFolder}/dist/**/*.js"],
@@ -44,6 +44,14 @@
 			},
 			"resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
 			"presentation": { "hidden": false, "group": "tasks", "order": 1 }
+		}
+	],
+	"inputs": [
+		{
+			"id": "extensionLaunchDir",
+			"description": "Directory the dev extension will open in",
+			"default": "${workspaceFolder}/launch",
+			"type": "promptString"
 		}
 	]
 }
