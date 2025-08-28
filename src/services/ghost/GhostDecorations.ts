@@ -149,7 +149,7 @@ export class GhostDecorations {
 		let content = group
 			.sort((a, b) => a.line - b.line)
 			.map((x) => x.content)
-			.join(`\\A`)
+			.join(`\\A `)
 
 		const renderOptions: vscode.DecorationRenderOptions = { ...ADDITION_DECORATION_OPTIONS }
 		renderOptions.after = {

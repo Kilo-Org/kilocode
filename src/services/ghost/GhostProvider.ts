@@ -425,7 +425,6 @@ export class GhostProvider {
 		if (!editor) {
 			return
 		}
-		console.log("displaySuggestions")
 		this.decorations.displaySuggestions(this.suggestions)
 	}
 
