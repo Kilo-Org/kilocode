@@ -38,7 +38,7 @@ export class GhostModel {
 						return 1 // Place undefined providers at the end
 					}
 					if (!b.apiProvider) {
-						return -1 // Place undefined providers at the end
+						return -1 // Place undefined providers at the beginning
 					}
 					return (
 						SUPPORTED_DEFAULT_PROVIDERS.indexOf(a.apiProvider) -
