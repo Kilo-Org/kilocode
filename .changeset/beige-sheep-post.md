@@ -2,4 +2,4 @@
 "kilo-code": minor
 ---
 
-Inline Assist - Model Compatibility and Performance improvements.
+Improve Inline Assist model compatibility and performance
