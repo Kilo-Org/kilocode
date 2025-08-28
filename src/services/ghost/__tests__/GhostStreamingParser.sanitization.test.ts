@@ -150,5 +150,55 @@ describe("GhostStreamingParser - XML Sanitization", () => {
 			expect(result.suggestions.hasSuggestions()).toBe(true)
 			expect(parser.getCompletedChanges()).toHaveLength(1)
 		})
+
+		it("should handle malformed CDATA sections - the actual bug from user logs", () => {
+			// This reproduces the EXACT malformed CDATA issue from user logs
+			const malformedCDataXML = `<change><search><![CDATA[function getRedirectUrl(txn: CreditTransaction | undefined) {
+  <<<AUTOCOMPLETE_HERE>>>
+
+  const params = new URLSearchParams();</![CDATA[</search><replace><![CDATA[function getRedirectUrl(txn: CreditTransaction | undefined) {
+  if (!txn) {
+    return '/organizations';
+  }
+
+  const params = new URLSearchParams();</![CDATA[</replace></change>`
+
+			// Update mock document to match the search content exactly
+			const mockDocument = {
+				getText: vi.fn().mockReturnValue(`function getRedirectUrl(txn: CreditTransaction | undefined) {
+  <<<AUTOCOMPLETE_HERE>>>
+
+  const params = new URLSearchParams();`),
+				uri: { fsPath: "/test/file.tsx", toString: () => "file:///test/file.tsx" } as vscode.Uri,
+				offsetAt: vi.fn().mockReturnValue(60),
+			} as unknown as vscode.TextDocument
+
+			const testContext = {
+				document: mockDocument,
+				range: { start: { line: 1, character: 2 }, end: { line: 1, character: 2 } } as vscode.Range,
+			}
+
+			parser.initialize(testContext)
+
+			// Process the malformed XML - this should initially fail
+			let result = parser.processChunk(malformedCDataXML)
+
+			// Should fail to parse initially due to malformed CDATA
+			expect(result.hasNewSuggestions).toBe(false)
+			expect(result.isComplete).toBe(false)
+			expect(parser.getCompletedChanges()).toHaveLength(0)
+
+			// Simulate stream completion - this should trigger sanitization and fix the CDATA issue
+			result = parser.finishStream()
+
+			// After sanitization, it should work
+			expect(result.hasNewSuggestions).toBe(true)
+			expect(result.suggestions.hasSuggestions()).toBe(true)
+			expect(parser.getCompletedChanges()).toHaveLength(1)
+
+			const change = parser.getCompletedChanges()[0]
+			expect(change.search).toContain("function getRedirectUrl")
+			expect(change.replace).toContain("if (!txn)")
+		})
 	})
 })

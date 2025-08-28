@@ -475,6 +475,10 @@ export class GhostStreamingParser {
 	private sanitizeXMLConservative(buffer: string): string {
 		let sanitized = buffer
 
+		// Fix malformed CDATA sections first - this is the main bug from user logs
+		// Replace </![CDATA[ with ]]> to fix malformed CDATA closures
+		sanitized = sanitized.replace(/<\/!\[CDATA\[/g, "]]>")
+
 		// Only fix the specific case: missing </change> tag when we have complete search/replace pairs
 		const changeOpenCount = (sanitized.match(/<change>/g) || []).length
 		const changeCloseCount = (sanitized.match(/<\/change>/g) || []).length
