@@ -291,11 +291,11 @@ export class GhostProvider {
 		this.strategy.initializeStreamingParser(context)
 
 		let hasShownFirstSuggestion = false
-		let totalCost = 0
-		let totalInputTokens = 0
-		let totalOutputTokens = 0
-		let totalCacheWriteTokens = 0
-		let totalCacheReadTokens = 0
+		let cost = 0
+		let inputTokens = 0
+		let outputTokens = 0
+		let cacheWriteTokens = 0
+		let cacheReadTokens = 0
 		let response = ""
 
 		// Create streaming callback
@@ -342,22 +342,22 @@ export class GhostProvider {
 			console.log("response", response)
 
 			// Update cost tracking
-			totalCost = usageInfo.cost
-			totalInputTokens = usageInfo.inputTokens
-			totalOutputTokens = usageInfo.outputTokens
-			totalCacheWriteTokens = usageInfo.cacheWriteTokens
-			totalCacheReadTokens = usageInfo.cacheReadTokens
+			cost = usageInfo.cost
+			inputTokens = usageInfo.inputTokens
+			outputTokens = usageInfo.outputTokens
+			cacheWriteTokens = usageInfo.cacheWriteTokens
+			cacheReadTokens = usageInfo.cacheReadTokens
 
-			this.updateCostTracking(totalCost)
+			this.updateCostTracking(cost)
 
 			// Send telemetry
 			TelemetryService.instance.captureEvent(TelemetryEventName.LLM_COMPLETION, {
 				taskId: this.taskId,
-				inputTokens: totalInputTokens,
-				outputTokens: totalOutputTokens,
-				cacheWriteTokens: totalCacheWriteTokens,
-				cacheReadTokens: totalCacheReadTokens,
-				cost: totalCost,
+				inputTokens: inputTokens,
+				outputTokens: outputTokens,
+				cacheWriteTokens: cacheWriteTokens,
+				cacheReadTokens: cacheReadTokens,
+				cost: cost,
 				service: "INLINE_ASSIST",
 			})
 
