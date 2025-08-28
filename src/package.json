@@ -13,6 +13,9 @@
 		"vscode": "^1.84.0",
 		"node": "20.19.2"
 	},
+	"extensionKind": [
+		"workspace"
+	],
 	"author": {
 		"name": "Kilo Code"
 	},
