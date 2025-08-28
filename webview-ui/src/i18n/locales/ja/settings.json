@@ -279,6 +279,8 @@
 		"ioIntelligenceApiKey": "IO Intelligence APIキー",
 		"ioIntelligenceApiKeyPlaceholder": "IO Intelligence APIキーを入力してください",
 		"getIoIntelligenceApiKey": "IO Intelligence APIキーを取得",
+		"submodelApiKey": "Submodel Access Key",
+		"getSubmodelApiKey": "Submodel Access Keyを取得",
 		"deepSeekApiKey": "DeepSeek APIキー",
 		"getDeepSeekApiKey": "DeepSeek APIキーを取得",
 		"doubaoApiKey": "Doubao APIキー",

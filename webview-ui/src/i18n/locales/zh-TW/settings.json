@@ -279,6 +279,8 @@
 		"ioIntelligenceApiKey": "IO Intelligence API 金鑰",
 		"ioIntelligenceApiKeyPlaceholder": "輸入您的 IO Intelligence API 金鑰",
 		"getIoIntelligenceApiKey": "取得 IO Intelligence API 金鑰",
+		"submodelApiKey": "Submodel Access Key",
+		"getSubmodelApiKey": "取得 Submodel Access Key",
 		"deepSeekApiKey": "DeepSeek API 金鑰",
 		"getDeepSeekApiKey": "取得 DeepSeek API 金鑰",
 		"doubaoApiKey": "豆包 API 金鑰",

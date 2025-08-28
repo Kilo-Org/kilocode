@@ -279,6 +279,8 @@
 		"ioIntelligenceApiKey": "IO Intelligence API Key",
 		"ioIntelligenceApiKeyPlaceholder": "Masukkan kunci API IO Intelligence Anda",
 		"getIoIntelligenceApiKey": "Dapatkan IO Intelligence API Key",
+		"submodelApiKey": "Submodel Access Key",
+		"getSubmodelApiKey": "Dapatkan Submodel Access Key",
 		"deepSeekApiKey": "DeepSeek API Key",
 		"getDeepSeekApiKey": "Dapatkan DeepSeek API Key",
 		"doubaoApiKey": "Kunci API Doubao",

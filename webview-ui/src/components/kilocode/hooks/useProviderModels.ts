@@ -44,6 +44,7 @@ import {
 	sambaNovaDefaultModelId,
 	featherlessModels,
 	featherlessDefaultModelId,
+	submodelDefaultModelId,
 } from "@roo-code/types"
 import { cerebrasModels, cerebrasDefaultModelId } from "@roo/api"
 import type { ModelRecord, RouterModels } from "@roo/api"
@@ -244,6 +245,12 @@ export const getModelsByProvider = ({
 			return {
 				models: featherlessModels,
 				defaultModel: featherlessDefaultModelId,
+			}
+		}
+		case "submodel": {
+			return {
+				models: routerModels.submodel,
+				defaultModel: submodelDefaultModelId,
 			}
 		}
 		default:

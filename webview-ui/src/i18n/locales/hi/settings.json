@@ -279,6 +279,8 @@
 		"ioIntelligenceApiKey": "IO Intelligence API कुंजी",
 		"ioIntelligenceApiKeyPlaceholder": "अपना आईओ इंटेलिजेंस एपीआई कुंजी दर्ज करें",
 		"getIoIntelligenceApiKey": "IO Intelligence API कुंजी प्राप्त करें",
+		"submodelApiKey": "Submodel Access Key",
+		"getSubmodelApiKey": "Submodel Access Key प्राप्त करें",
 		"deepSeekApiKey": "DeepSeek API कुंजी",
 		"getDeepSeekApiKey": "DeepSeek API कुंजी प्राप्त करें",
 		"doubaoApiKey": "डौबाओ API कुंजी",

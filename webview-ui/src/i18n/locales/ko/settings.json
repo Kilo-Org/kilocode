@@ -279,6 +279,8 @@
 		"ioIntelligenceApiKey": "IO Intelligence API 키",
 		"ioIntelligenceApiKeyPlaceholder": "IO Intelligence API 키를 입력하세요",
 		"getIoIntelligenceApiKey": "IO Intelligence API 키 받기",
+		"submodelApiKey": "Submodel Access Key",
+		"getSubmodelApiKey": "Submodel Access Key 받기",
 		"deepSeekApiKey": "DeepSeek API 키",
 		"getDeepSeekApiKey": "DeepSeek API 키 받기",
 		"doubaoApiKey": "Doubao API 키",

@@ -69,6 +69,7 @@ export const providerNames = [
 	"featherless",
 	"io-intelligence",
 	"roo",
+	"submodel",
 ] as const
 
 export const providerNamesSchema = z.enum(providerNames)
@@ -362,6 +363,11 @@ const ioIntelligenceSchema = apiModelIdProviderModelSchema.extend({
 	ioIntelligenceApiKey: z.string().optional(),
 })
 
+const submodelSchema = apiModelIdProviderModelSchema.extend({
+	submodelModelId: z.string().optional(),
+	submodelApiKey: z.string().optional(),
+})
+
 const rooSchema = apiModelIdProviderModelSchema.extend({
 	// No additional fields needed - uses cloud authentication
 })
@@ -408,6 +414,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	fireworksSchema.merge(z.object({ apiProvider: z.literal("fireworks") })),
 	featherlessSchema.merge(z.object({ apiProvider: z.literal("featherless") })),
 	ioIntelligenceSchema.merge(z.object({ apiProvider: z.literal("io-intelligence") })),
+	submodelSchema.merge(z.object({ apiProvider: z.literal("submodel") })),
 	rooSchema.merge(z.object({ apiProvider: z.literal("roo") })),
 	defaultSchema,
 ])
@@ -451,6 +458,7 @@ export const providerSettingsSchema = z.object({
 	...fireworksSchema.shape,
 	...featherlessSchema.shape,
 	...ioIntelligenceSchema.shape,
+	...submodelSchema.shape,
 	...rooSchema.shape,
 	...codebaseIndexProviderSchema.shape,
 })
@@ -478,6 +486,7 @@ export const MODEL_ID_KEYS: Partial<keyof ProviderSettings>[] = [
 	"litellmModelId",
 	"huggingFaceModelId",
 	"ioIntelligenceModelId",
+	"submodelModelId",
 ]
 
 export const getModelId = (settings: ProviderSettings): string | undefined => {

@@ -36,6 +36,7 @@ import {
 	ioIntelligenceDefaultModelId,
 	qwenCodeDefaultModelId,
 	rooDefaultModelId,
+	submodelDefaultModelId,
 } from "@roo-code/types"
 
 import { vscode } from "@src/utils/vscode"
@@ -98,6 +99,7 @@ import {
 	ZAi,
 	Fireworks,
 	Featherless,
+	Submodel,
 } from "./providers"
 
 import { MODELS_BY_PROVIDER, PROVIDERS } from "./constants"
@@ -372,6 +374,7 @@ const ApiOptions = ({
 				"gemini-cli": { field: "apiModelId", default: geminiCliDefaultModelId },
 				"qwen-code": { field: "apiModelId", default: qwenCodeDefaultModelId },
 				// kilocode_change end
+				submodel: { field: "submodelModelId", default: submodelDefaultModelId },
 			}
 
 			const config = PROVIDER_MODEL_CONFIG[value]
@@ -409,6 +412,7 @@ const ApiOptions = ({
 			"litellm",
 			"zai",
 			"qwen-code",
+			"submodel",
 		]
 
 		// Skip documentation link when the provider is excluded because documentation is not available
@@ -680,6 +684,16 @@ const ApiOptions = ({
 
 			{selectedProvider === "fireworks" && (
 				<Fireworks apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
+			)}
+
+			{selectedProvider === "submodel" && (
+				<Submodel
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+					routerModels={routerModels}
+					organizationAllowList={organizationAllowList}
+					modelValidationError={modelValidationError}
+				/>
 			)}
 
 			{selectedProvider === "roo" && (

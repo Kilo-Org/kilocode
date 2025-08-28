@@ -40,6 +40,7 @@ type ModelIdKey = keyof Pick<
 	| "litellmModelId"
 	| "kilocodeModel"
 	| "ioIntelligenceModelId"
+	| "submodelModelId"
 >
 
 interface ModelPickerProps {

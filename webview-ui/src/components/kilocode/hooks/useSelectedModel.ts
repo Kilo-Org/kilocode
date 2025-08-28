@@ -16,6 +16,7 @@ export const getModelIdKey = ({
 	| "ollamaModelId"
 	| "lmStudioModelId"
 	| "vsCodeLmModelSelector"
+	| "submodelModelId"
 	| "apiModelId"
 > => {
 	switch (provider) {
@@ -48,6 +49,9 @@ export const getModelIdKey = ({
 		}
 		case "kilocode": {
 			return "kilocodeModel"
+		}
+		case "submodel": {
+			return "submodelModelId"
 		}
 		default: {
 			return "apiModelId"

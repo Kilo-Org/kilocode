@@ -146,6 +146,11 @@ function validateModelsAndKeysProvided(apiConfiguration: ProviderSettings): stri
 				return i18next.t("settings:validation.apiKey")
 			}
 			break
+		case "submodel":
+			if (!apiConfiguration.submodelApiKey) {
+				return i18next.t("settings:validation.apiKey")
+			}
+			break
 	}
 
 	return undefined
@@ -214,6 +219,8 @@ function getModelIdForProvider(apiConfiguration: ProviderSettings, provider: str
 			return apiConfiguration.huggingFaceModelId
 		case "io-intelligence":
 			return apiConfiguration.ioIntelligenceModelId
+		case "submodel":
+			return apiConfiguration.submodelModelId
 		default:
 			return apiConfiguration.apiModelId
 	}
@@ -286,6 +293,9 @@ export function validateModelId(apiConfiguration: ProviderSettings, routerModels
 			break
 		case "io-intelligence":
 			modelId = apiConfiguration.ioIntelligenceModelId
+			break
+		case "submodel":
+			modelId = apiConfiguration.submodelModelId
 			break
 	}
 
