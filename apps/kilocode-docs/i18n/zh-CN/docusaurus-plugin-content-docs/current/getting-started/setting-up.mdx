@@ -1,0 +1,48 @@
+---
+sidebar_label: 初始设置
+---
+
+import { DISCORD_URL } from '@site/src/constants.ts'
+import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
+
+export const FreeTierAmount = () => {
+  const {siteConfig} = useDocusaurusContext();
+  return siteConfig.customFields.freeTierAmount;
+};
+
+# 设置Kilo Code
+
+注册Kilo Code时，你将获得**价值<FreeTierAmount />的免费token**作为启动资源。领取免费token的步骤：
+
+1.  完成注册过程 - 你将立即获得初始数量的免费积分
+2.  要解锁额外积分（总计高达 <FreeTierAmount />）：
+    *   添加支付方式以进行身份验证
+    *   授权 Kilo Code 在你的卡上进行*临时* 10 美元冻结
+3.  只要此支付方式以前未通过其他 Kilo Code 帐户领取过免费积分，你就可以立即享受您的免费 token 并开始编码！
+
+:::note 关于临时冻结
+为了保持我们服务的可靠性并防止滥用，我们在验证期间会在您的信用卡上进行*临时* 10 美元冻结。以下是您需要了解的信息：
+
+-   **这不是收费** - 这是一项临时授权，不会向您的帐户收费
+-   **银行处理时间** - Kilo Code 在 7 天后解除冻结。解除后，资金可能需要**数周**（平均 5-10 个工作日）才能返回您的帐户。具体时间表取决于您的银行。
+-   **如何显示** - 某些银行可能会将其显示为常规交易，但它仍然是临时冻结
+-   **可追踪** - 冻结解除后（7 天），如果需要，我们可以提供 STAN 号码以帮助您通过银行追踪交易。
+:::
+
+## 注册流程
+
+Kilo Code提供简单的注册流程，通过你的账号即可使用前沿的编程模型：
+
+1. 在扩展中点击"免费试用Kilo Code"
+2. 使用Google账号登录kilocode.ai
+3. kilocode.ai将提示打开Visual Studio Code
+   * 在网页版IDE中使用时，需要手动复制API密钥
+4. 允许打开VS Code后，还需允许VS Code打开授权URL
+
+<img src="/docs/img/setting-up/signupflow.gif" alt="Kilo Code注册流程演示" />
+
+完成！现在可以开始你的[第一个任务](/getting-started/your-first-task)
+
+:::tip 需要帮助？
+如有任何定价或token相关问题，请联系[支持团队](mailto:hi@kilocode.ai)或加入我们的<a href={DISCORD_URL} target='_blank'>Discord社区</a>。
+:::

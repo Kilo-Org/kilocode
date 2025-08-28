@@ -3,7 +3,7 @@
 		"greeting": "Bem-vindo ao Kilo Code!",
 		"introText1": "Kilo Code é um agente de codificação AI gratuito e de código aberto.",
 		"introText2": "Funciona com os mais recentes modelos de IA como Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1, e mais de 450 outros.",
-		"introText3": "Crie uma conta gratuita e receba $20 em tokens para usar com qualquer modelo de IA.",
+		"introText3": "Crie uma conta gratuita e receba até $25 em tokens para usar em qualquer modelo de IA.",
 		"ctaButton": "Começar",
 		"manualModeButton": "Use sua própria chave de API",
 		"alreadySignedUp": "Já se cadastrou?",
@@ -16,7 +16,8 @@
 	"pricing": {
 		"costUnknown": "custo desconhecido",
 		"costUnknownDescription": "O Provedor de API não forneceu dados de custo ou a solicitação foi cancelada.",
-		"discoverModelPricing": "Descobrir preços e capacidades do modelo"
+		"freeModelsDescription": "Modelos gratuitos podem ter limites de taxa. Use o link abaixo para otimizar seu uso de modelos gratuitos!",
+		"freeModelsLink": "Descubra opções de modelos gratuitos e econômicos"
 	},
 	"notifications": {
 		"toolRequest": "Solicitação de ferramenta aguardando aprovação",
@@ -35,7 +36,31 @@
 			"automaticFetch": "Os modelos mais recentes estão automaticamente disponíveis no Kilo Code. Se você não tem certeza de qual modelo escolher, o Kilo Code funciona melhor com os modelos recomendados listados no topo em <strong>negrito</strong>.",
 			"providerRouting": {
 				"title": "Kilo Code - Roteamento de Provedor OpenRouter",
-				"description": "O Kilo Code roteia as solicitações para os melhores provedores disponíveis para o seu modelo. Por padrão, as solicitações são balanceadas em carga entre os principais provedores para maximizar o tempo de atividade. No entanto, você pode escolher um provedor específico para usar para este modelo."
+				"description": "O Kilo Code roteia as solicitações para os melhores provedores disponíveis para o seu modelo. Por padrão, as solicitações são balanceadas em carga entre os principais provedores para maximizar o tempo de atividade. No entanto, você pode escolher um provedor específico para usar para este modelo.",
+				"sorting": {
+					"default": "Ordenação padrão do provedor",
+					"price": "Preferir provedores com menor preço",
+					"throughput": "Preferir provedores com maior throughput",
+					"latency": "Preferir provedores com menor latência"
+				},
+				"dataCollection": {
+					"default": "Nenhuma política de dados definida",
+					"allow": "Permitir coleta de dados do provedor",
+					"deny": "Negar coleta de dados do provedor"
+				}
+			}
+		},
+		"modelInfo": {
+			"contextWindow": "Janela de contexto",
+			"providerBreakdown": "Detalhamento de Preços e Capacidades do Provedor",
+			"averageKiloCodeCost": "Este é o valor médio realmente gasto pelo Kilo Code usando este modelo na última semana. Pode ser menor que o preço listado devido à utilização do cache de prompts.",
+			"table": {
+				"provider": "Provedor",
+				"context": "O endpoint pode processar este número de tokens (entrada + saída).",
+				"inputPrice": "Custo por milhão de tokens para o prompt.",
+				"outputPrice": "Custo por milhão de tokens para a conclusão.",
+				"cacheReadPrice": "Custo por milhão de tokens para leitura do cache.",
+				"cacheWritePrice": "Custo por milhão de tokens para escrita no cache."
 			}
 		},
 		"contextManagement": {
@@ -77,6 +102,8 @@
 		"logOut": "Sair",
 		"currentBalance": "SALDO ATUAL",
 		"loading": "Carregando...",
+		"organization": "Organização",
+		"personal": "Pessoal",
 		"shop": {
 			"title": "Comprar Créditos",
 			"popular": "Popular",

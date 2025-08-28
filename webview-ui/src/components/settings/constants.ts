@@ -8,20 +8,22 @@ import {
 	deepSeekModels,
 	moonshotModels,
 	geminiModels,
+	// kilocode_change start
 	geminiCliModels,
+	qwenCodeModels,
+	// kilocode_change end
 	mistralModels,
 	openAiNativeModels,
 	vertexModels,
 	xaiModels,
-	// kilocode_change start
-	bigModelModels,
-	// kilocode_change end
 	groqModels,
 	chutesModels,
 	sambaNovaModels,
 	doubaoModels,
 	internationalZAiModels,
 	fireworksModels,
+	rooModels,
+	featherlessModels,
 } from "@roo-code/types"
 
 export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, ModelInfo>>> = {
@@ -35,7 +37,7 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	gemini: geminiModels,
 	// kilocode_change start
 	"gemini-cli": geminiCliModels,
-	bigmodel: bigModelModels,
+	"qwen-code": qwenCodeModels,
 	// kilocode_change end
 	mistral: mistralModels,
 	"openai-native": openAiNativeModels,
@@ -46,21 +48,21 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	sambanova: sambaNovaModels,
 	zai: internationalZAiModels,
 	fireworks: fireworksModels,
+	roo: rooModels,
+	featherless: featherlessModels,
 }
 
 export const PROVIDERS = [
-	{ value: "kilocode", label: "Kilo Code" },
 	{ value: "openrouter", label: "OpenRouter" },
 	{ value: "anthropic", label: "Anthropic" },
 	{ value: "claude-code", label: "Claude Code" },
 	{ value: "cerebras", label: "Cerebras" },
 	{ value: "gemini", label: "Google Gemini" },
-	{ value: "gemini-cli", label: "Gemini CLI" },
 	{ value: "doubao", label: "Doubao" },
-	{ value: "fireworks", label: "Fireworks AI" },
 	// kilocode_change start
-	{ value: "bigmodel", label: "BigModel" },
+	{ value: "gemini-cli", label: "Gemini CLI" },
 	{ value: "virtual-quota-fallback", label: "Virtual Quota Fallback" },
+	{ value: "qwen-code", label: "Qwen Code" },
 	// kilocode_change end
 	{ value: "deepseek", label: "DeepSeek" },
 	{ value: "moonshot", label: "Moonshot" },
@@ -84,4 +86,9 @@ export const PROVIDERS = [
 	{ value: "sambanova", label: "SambaNova" },
 	{ value: "zai", label: "Z AI" },
 	{ value: "fireworks", label: "Fireworks AI" },
-] // .sort((a, b) => a.label.localeCompare(b.label)) // kilocode_change: Sort providers with kilocode first
+	{ value: "featherless", label: "Featherless AI" },
+	{ value: "io-intelligence", label: "IO Intelligence" },
+	// { value: "roo", label: "Roo Code Cloud" }, // kilocode_change
+].sort((a, b) => a.label.localeCompare(b.label))
+
+PROVIDERS.unshift({ value: "kilocode", label: "Kilo Code" }) // kilocode_change

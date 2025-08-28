@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, memo } from "react"
-import { Server, ChevronDown } from "lucide-react"
+import { Server, ChevronDown, ChevronRight } from "lucide-react"
 import { useEvent } from "react-use"
 import { useTranslation } from "react-i18next"
 
@@ -28,6 +28,7 @@ interface McpExecutionProps {
 	}
 	useMcpServer?: ClineAskUseMcpServer
 	alwaysAllowMcp?: boolean
+	initiallyExpanded?: boolean // kilocode_change: For Storybook stories only
 }
 
 export const McpExecution = ({
@@ -39,6 +40,7 @@ export const McpExecution = ({
 	server,
 	useMcpServer,
 	alwaysAllowMcp = false,
+	initiallyExpanded = false, // kilocode_change
 }: McpExecutionProps) => {
 	const { t } = useTranslation("mcp")
 
@@ -49,8 +51,8 @@ export const McpExecution = ({
 	const [serverName, setServerName] = useState(initialServerName)
 	const [toolName, setToolName] = useState(initialToolName)
 
-	// Only need expanded state for response section (like command output)
-	const [isResponseExpanded, setIsResponseExpanded] = useState(false)
+	// kilocode_change: Main collapse state for the entire MCP execution content
+	const [isResponseExpanded, setIsResponseExpanded] = useState(initiallyExpanded)
 
 	// Try to parse JSON and return both the result and formatted text
 	const tryParseJson = useCallback((text: string): { isJson: boolean; formatted: string } => {
@@ -70,7 +72,7 @@ export const McpExecution = ({
 		}
 	}, [])
 
-	// Only parse response data when expanded AND complete to avoid parsing partial JSON
+	// kilocode_change: Only parse response data when main content is expanded AND complete to avoid parsing partial JSON
 	const responseData = useMemo(() => {
 		if (!isResponseExpanded) {
 			return { isJson: false, formatted: responseText }
@@ -178,7 +180,9 @@ export const McpExecution = ({
 
 	return (
 		<>
-			<div className="flex flex-row items-center justify-between gap-2 mb-1">
+			<div
+				className="flex flex-row items-center justify-between gap-2 mb-1 cursor-pointer select-none"
+				onClick={onToggleResponseExpand /* kilocode_change */}>
 				<div className="flex flex-row items-center gap-1 flex-wrap">
 					<Server size={16} className="text-vscode-descriptionForeground" />
 					<div className="flex items-center gap-1 flex-wrap">
@@ -212,20 +216,22 @@ export const McpExecution = ({
 								)}
 							</div>
 						)}
-						{responseText && responseText.length > 0 && (
-							<Button variant="ghost" size="icon" onClick={onToggleResponseExpand}>
-								<ChevronDown
-									className={cn("size-4 transition-transform duration-300", {
-										"rotate-180": isResponseExpanded,
-									})}
-								/>
-							</Button>
-						)}
 					</div>
+					{/* kilocode_change start - moved Chevron button */}
+					<Button
+						variant="ghost"
+						size="icon"
+						onClick={(e) => {
+							e.stopPropagation()
+							onToggleResponseExpand()
+						}}>
+						{!isResponseExpanded ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}
+					</Button>
+					{/* kilocode_change end - moved Chevron button */}
 				</div>
 			</div>
 
-			<div className="w-full bg-vscode-editor-background rounded-xs p-2">
+			<div className={cn("w-full bg-vscode-editor-background rounded-xs p-2", !isResponseExpanded && "hidden")}>
 				{/* Tool information section */}
 				{useMcpServer?.type === "use_mcp_tool" && (
 					<div onClick={(e) => e.stopPropagation()}>
@@ -273,7 +279,7 @@ export const McpExecution = ({
 					</div>
 				)}
 
-				{/* Response section - collapsible like command output */}
+				{/* Response section - use main collapse state for memory management */}
 				<ResponseContainer
 					isExpanded={isResponseExpanded}
 					response={formattedResponseText}

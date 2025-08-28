@@ -257,22 +257,31 @@
 			"error": "Failed to refresh models list. Please try again."
 		},
 		"getRequestyApiKey": "Get Requesty API Key",
+		"getRequestyBaseUrl": "Base URL",
+		"requestyUseCustomBaseUrl": "Use custom base URL",
 		"openRouterTransformsText": "Compress prompts and message chains to the context size (<a>OpenRouter Transforms</a>)",
 		"anthropicApiKey": "Anthropic API Key",
 		"getAnthropicApiKey": "Get Anthropic API Key",
 		"anthropicUseAuthToken": "Pass Anthropic API Key as Authorization header instead of X-Api-Key",
+		"anthropic1MContextBetaLabel": "Enable 1M context window (Beta)",
+		"anthropic1MContextBetaDescription": "Extends context window to 1 million tokens for Claude Sonnet 4",
+		"awsBedrock1MContextBetaLabel": "Enable 1M context window (Beta)",
+		"awsBedrock1MContextBetaDescription": "Extends context window to 1 million tokens for Claude Sonnet 4",
 		"cerebrasApiKey": "Cerebras API Key",
 		"getCerebrasApiKey": "Get Cerebras API Key",
 		"chutesApiKey": "Chutes API Key",
 		"getChutesApiKey": "Get Chutes API Key",
 		"fireworksApiKey": "Fireworks API Key",
 		"getFireworksApiKey": "Get Fireworks API Key",
+		"featherlessApiKey": "Featherless API Key",
+		"getFeatherlessApiKey": "Get Featherless API Key",
+		"ioIntelligenceApiKey": "IO Intelligence API Key",
+		"ioIntelligenceApiKeyPlaceholder": "Enter your IO Intelligence API key",
+		"getIoIntelligenceApiKey": "Get IO Intelligence API Key",
 		"deepSeekApiKey": "DeepSeek API Key",
 		"getDeepSeekApiKey": "Get DeepSeek API Key",
 		"doubaoApiKey": "Doubao API Key",
 		"getDoubaoApiKey": "Get Doubao API Key",
-		"bigModelApiKey": "BigModel API Key",
-		"getBigModelApiKey": "Get BigModel API Key",
 		"moonshotApiKey": "Moonshot API Key",
 		"getMoonshotApiKey": "Get Moonshot API Key",
 		"moonshotBaseUrl": "Moonshot Entrypoint",
@@ -363,6 +372,9 @@
 		"ollama": {
 			"baseUrl": "Base URL (optional)",
 			"modelId": "Model ID",
+			"apiKey": "API Key",
+			"apiKeyPlaceholder": "Enter your API key",
+			"apiKeyInfo": "API key will be sent as Authorization header",
 			"description": "Ollama allows you to run models locally on your computer. For instructions on how to get started, see their quickstart guide.",
 			"warning": "Note: Kilo Code uses complex prompts and works best with Claude models. Less capable models may not work as expected."
 		},
@@ -373,6 +385,10 @@
 		"humanRelay": {
 			"description": "No API key is required, but the user needs to help copy and paste the information to the web chat AI.",
 			"instructions": "During use, a dialog box will pop up and the current message will be copied to the clipboard automatically. You need to paste these to web versions of AI (such as ChatGPT or Claude), then copy the AI's reply back to the dialog box and click the confirm button."
+		},
+		"roo": {
+			"authenticatedMessage": "Securely authenticated through your Roo Code Cloud account.",
+			"connectButton": "Connect to Roo Code Cloud"
 		},
 		"openRouter": {
 			"providerRouting": {
@@ -435,9 +451,10 @@
 		},
 		"reasoningEffort": {
 			"label": "Model Reasoning Effort",
-			"high": "High",
+			"minimal": "Minimal (Fastest)",
+			"low": "Low",
 			"medium": "Medium",
-			"low": "Low"
+			"high": "High"
 		},
 		"verbosity": {
 			"label": "Output Verbosity",
@@ -468,6 +485,13 @@
 			"requirement4": "Does not use API keys - authentication is handled via OAuth",
 			"requirement5": "Requires the Gemini CLI tool to be installed and authenticated first",
 			"freeAccess": "Free tier access via OAuth authentication"
+		},
+		"qwenCode": {
+			"oauthPath": "OAuth Credentials Path (optional)",
+			"oauthPathDescription": "Path to the OAuth credentials file. Leave empty to use the default location (~/.qwen/oauth_creds.json).",
+			"description": "This provider uses OAuth authentication from the Qwen service and does not require API keys.",
+			"instructions": "Please follow the official documentation to obtain the authorization file and place it in the specified path.",
+			"setupLink": "Qwen Official Documentation"
 		}
 	},
 	"browser": {
@@ -725,10 +749,9 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Enable Morph Fast Apply",
-			"description": "When enabled, Kilo Code can edit files using Morph Fast Apply.",
+			"description": "When enabled, Kilo Code can edit files using Morph Fast Apply. Requires the Kilo Code API Provider, OpenRouter or a Morph API key.",
 			"apiKey": "Morph API key (optional)",
-			"placeholder": "Enter your Morph API key (optional)",
-			"warning": "If you do not configure a Morph API key, you can still use Fast Apply with Kilo Code or OpenRouter. Your account will be billed for model usage, this is currently not shown in the extension UI."
+			"placeholder": "Enter your Morph API key (optional)"
 		},
 		"INLINE_ASSIST": {
 			"name": "Inline Assist",
@@ -741,6 +764,10 @@
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "Use new message parser",
 			"description": "Enable the experimental streaming message parser that provides significant performance improvements for long assistant responses by processing messages more efficiently."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "Require 'todos' list for new tasks",
+			"description": "When enabled, the new_task tool will require a todos parameter to be provided. This ensures all new tasks start with a clear list of objectives. When disabled (default), the todos parameter remains optional for backward compatibility."
 		}
 	},
 	"promptCaching": {
@@ -759,6 +786,7 @@
 		"noComputerUse": "Does not support computer use",
 		"supportsPromptCache": "Supports prompt caching",
 		"noPromptCache": "Does not support prompt caching",
+		"contextWindow": "Context Window:",
 		"maxOutput": "Max output",
 		"inputPrice": "Input price",
 		"outputPrice": "Output price",

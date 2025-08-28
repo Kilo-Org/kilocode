@@ -3,7 +3,7 @@
 		"greeting": "欢迎使用 Kilo Code！",
 		"introText1": "Kilo Code 是一个免费的开源 AI 编程代理。",
 		"introText2": "它适用于最新的 AI 模型，如 Claude 4 Sonnet、Gemini 2.5 Pro、GPT-4.1 以及 450 多个其他模型。",
-		"introText3": "创建免费账户，获得价值 20 美元的 token，可用于任何 AI 模型。",
+		"introText3": "创建免费账户，获得价值 25 美元的 Token，可用于任何 AI 模型。",
 		"ctaButton": "开始使用",
 		"manualModeButton": "使用你自己的 API 密钥",
 		"alreadySignedUp": "已经注册了？",
@@ -16,7 +16,8 @@
 	"pricing": {
 		"costUnknown": "费用未知",
 		"costUnknownDescription": "API 提供商未提供任何费用数据或请求已取消。",
-		"discoverModelPricing": "了解模型定价和功能"
+		"freeModelsDescription": "免费模型可能有请求频率限制。使用下方链接优化你的免费模型使用！",
+		"freeModelsLink": "探索免费模型选项"
 	},
 	"notifications": {
 		"toolRequest": "工具请求等待批准",
@@ -48,7 +49,31 @@
 			"automaticFetch": "最新模型在 Kilo Code 中自动可用。如果您不确定选择哪个模型，Kilo Code 与顶部<strong>粗体</strong>显示的推荐模型配合最佳。",
 			"providerRouting": {
 				"title": "Kilo Code - OpenRouter 提供商路由",
-				"description": "Kilo Code 将请求路由到您模型的最佳可用提供商。默认情况下，请求会在顶级提供商之间进行负载均衡，以最大限度地延长正常运行时间。但是，您可以选择要用于此模型的特定提供商。"
+				"description": "Kilo Code 将请求路由到您模型的最佳可用提供商。默认情况下，请求会在顶级提供商之间进行负载均衡，以最大限度地延长正常运行时间。但是，您可以选择要用于此模型的特定提供商。",
+				"sorting": {
+					"default": "默认提供商排序",
+					"price": "优先选择低价格提供商",
+					"throughput": "优先选择高吞吐量提供商",
+					"latency": "优先选择低延迟提供商"
+				},
+				"dataCollection": {
+					"default": "未设置数据策略",
+					"allow": "允许提供商数据收集",
+					"deny": "拒绝提供商数据收集"
+				}
+			}
+		},
+		"modelInfo": {
+			"contextWindow": "上下文窗口",
+			"providerBreakdown": "提供商价格和功能详情",
+			"averageKiloCodeCost": "这是过去一周 Kilo Code 使用此模型的实际平均费用。由于提示词缓存的使用，费用可能低于标准价格。",
+			"table": {
+				"provider": "提供商",
+				"context": "端点可以处理的 Token 数（输入 + 输出）。",
+				"inputPrice": "每百万提示 Token 的费用。",
+				"outputPrice": "每百万完成 Token 的费用。",
+				"cacheReadPrice": "每百万从缓存读取 Token 的费用。",
+				"cacheWritePrice": "每百万写入缓存 Token 的费用。"
 			}
 		},
 		"terminal": {
@@ -77,6 +102,8 @@
 		"logOut": "退出登录",
 		"currentBalance": "当前余额",
 		"loading": "加载中...",
+		"organization": "组织",
+		"personal": "个人",
 		"shop": {
 			"title": "购买 Credits",
 			"popular": "热门",
@@ -164,7 +191,7 @@
 			"autoTrigger": "自动触发",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "快速内联任务",
-				"description": "只需要一个快速的调整？选中一些代码（或者不选！）然后按下Cmd+I。用简单的英语描述你的目标（\"创建一个带有这些属性的React组件\"，\"为这个函数添加错误处理\"），然后在编辑器中直接获取多个可立即使用的建议。<DocsLink>查看快捷键</DocsLink>"
+				"description": "只需要一个快速的调整？选中一些代码（或者不选！）然后按下Cmd+I。用简单的英语描述你的目标（\"创建一个带有这些属性的 React 组件\"，\"为这个函数添加错误处理\"），然后在编辑器中直接获取多个可立即使用的建议。<DocsLink>查看快捷键</DocsLink>"
 			},
 			"enableAutoTrigger": {
 				"label": "启用自动触发",

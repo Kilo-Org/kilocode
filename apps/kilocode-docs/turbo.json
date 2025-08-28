@@ -1,0 +1,10 @@
+{
+	"$schema": "https://turbo.build/schema.json",
+	"extends": ["//"],
+	"tasks": {
+		"build": {
+			"outputs": ["build/**"],
+			"env": ["POSTHOG_API_KEY", "FREE_TIER_AMOUNT"]
+		}
+	}
+}

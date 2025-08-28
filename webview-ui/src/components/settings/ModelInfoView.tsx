@@ -25,14 +25,19 @@ export const ModelInfoView = ({
 }: ModelInfoViewProps) => {
 	const { t } = useAppTranslation()
 
-	// kilocode_change start
-	const kiloCodeTrustsThePricing =
-		(apiProvider !== "kilocode" && apiProvider !== "openrouter") ||
-		selectedModelId.startsWith("anthropic/") ||
-		selectedModelId.startsWith("google/")
-	// kilocode_change end
-
 	const infoItems = [
+		typeof modelInfo?.contextWindow === "number" && modelInfo.contextWindow > 0 && (
+			<>
+				<span className="font-medium">{t("settings:modelInfo.contextWindow")}</span>{" "}
+				{modelInfo.contextWindow?.toLocaleString()} tokens
+			</>
+		),
+		typeof modelInfo?.maxTokens === "number" && modelInfo.maxTokens > 0 && (
+			<>
+				<span className="font-medium">{t("settings:modelInfo.maxOutput")}:</span>{" "}
+				{modelInfo.maxTokens?.toLocaleString()} tokens
+			</>
+		),
 		<ModelInfoSupportsItem
 			isSupported={modelInfo?.supportsImages ?? false}
 			supportsLabel={t("settings:modelInfo.supportsImages")}
@@ -49,42 +54,29 @@ export const ModelInfoView = ({
 			supportsLabel={t("settings:modelInfo.supportsPromptCache")}
 			doesNotSupportLabel={t("settings:modelInfo.noPromptCache")}
 		/>,
-		typeof modelInfo?.maxTokens === "number" && modelInfo.maxTokens > 0 && (
-			<>
-				<span className="font-medium">{t("settings:modelInfo.maxOutput")}:</span>{" "}
-				{modelInfo.maxTokens?.toLocaleString()} tokens
-			</>
-		),
-		kiloCodeTrustsThePricing && modelInfo?.inputPrice !== undefined && modelInfo.inputPrice > 0 && (
+		modelInfo?.inputPrice !== undefined && modelInfo.inputPrice > 0 && (
 			<>
 				<span className="font-medium">{t("settings:modelInfo.inputPrice")}:</span>{" "}
 				{formatPrice(modelInfo.inputPrice)} / 1M tokens
 			</>
 		),
-		kiloCodeTrustsThePricing && modelInfo?.outputPrice !== undefined && modelInfo.outputPrice > 0 && (
+		modelInfo?.outputPrice !== undefined && modelInfo.outputPrice > 0 && (
 			<>
 				<span className="font-medium">{t("settings:modelInfo.outputPrice")}:</span>{" "}
 				{formatPrice(modelInfo.outputPrice)} / 1M tokens
 			</>
 		),
-		kiloCodeTrustsThePricing && modelInfo?.supportsPromptCache && modelInfo.cacheReadsPrice && (
+		modelInfo?.supportsPromptCache && modelInfo.cacheReadsPrice && (
 			<>
 				<span className="font-medium">{t("settings:modelInfo.cacheReadsPrice")}:</span>{" "}
 				{formatPrice(modelInfo.cacheReadsPrice || 0)} / 1M tokens
 			</>
 		),
-		kiloCodeTrustsThePricing && modelInfo?.supportsPromptCache && modelInfo.cacheWritesPrice && (
+		modelInfo?.supportsPromptCache && modelInfo.cacheWritesPrice && (
 			<>
 				<span className="font-medium">{t("settings:modelInfo.cacheWritesPrice")}:</span>{" "}
 				{formatPrice(modelInfo.cacheWritesPrice || 0)} / 1M tokens
 			</>
-		),
-		!kiloCodeTrustsThePricing && selectedModelId && (
-			<span className="font-medium">
-				<a href={`https://openrouter.ai/${selectedModelId}`} className="text-vscode-link">
-					{t("kilocode:pricing.discoverModelPricing")}
-				</a>
-			</span>
 		),
 		apiProvider === "gemini" && (
 			<span className="italic">
@@ -119,7 +111,7 @@ export const ModelInfoView = ({
 	)
 }
 
-const ModelInfoSupportsItem = ({
+export /*kilocode_change*/ const ModelInfoSupportsItem = ({
 	isSupported,
 	supportsLabel,
 	doesNotSupportLabel,
@@ -128,11 +120,7 @@ const ModelInfoSupportsItem = ({
 	supportsLabel: string
 	doesNotSupportLabel: string
 }) => (
-	<div
-		className={cn(
-			"flex items-center gap-1 font-medium",
-			isSupported ? "text-vscode-charts-green" : "text-vscode-errorForeground",
-		)}>
+	<div className="flex items-center gap-1 font-medium">
 		<span className={cn("codicon", isSupported ? "codicon-check" : "codicon-x")} />
 		{isSupported ? supportsLabel : doesNotSupportLabel}
 	</div>

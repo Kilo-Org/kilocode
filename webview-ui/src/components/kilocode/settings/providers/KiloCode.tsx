@@ -2,13 +2,15 @@ import { useCallback } from "react"
 import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 import { getKiloCodeBackendSignInUrl } from "../../helpers"
 import { Button } from "@src/components/ui"
-import { type ProviderSettings, type OrganizationAllowList, kilocodeDefaultModelId } from "@roo-code/types"
+import { type ProviderSettings } from "@roo-code/types"
+import { type OrganizationAllowList } from "@roo/cloud"
 import type { RouterModels } from "@roo/api"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { VSCodeButtonLink } from "@src/components/common/VSCodeButtonLink"
 import { inputEventTransform } from "../../../settings/transforms"
 import { ModelPicker } from "../../../settings/ModelPicker"
 import { vscode } from "@src/utils/vscode"
+import { OrganizationSelector } from "../../common/OrganizationSelector"
 
 type KiloCodeProps = {
 	apiConfiguration: ProviderSettings
@@ -19,6 +21,7 @@ type KiloCodeProps = {
 	organizationAllowList: OrganizationAllowList
 	uriScheme: string | undefined
 	uiKind: string | undefined
+	kilocodeDefaultModel: string
 }
 
 export const KiloCode = ({
@@ -30,6 +33,7 @@ export const KiloCode = ({
 	organizationAllowList,
 	uriScheme,
 	uiKind,
+	kilocodeDefaultModel,
 }: KiloCodeProps) => {
 	const { t } = useAppTranslation()
 
@@ -46,9 +50,6 @@ export const KiloCode = ({
 
 	return (
 		<>
-			<div style={{ marginTop: "0px" }} className="text-sm text-vscode-descriptionForeground -mt-2">
-				You get $20 for free!
-			</div>
 			<div>
 				<label className="block font-medium -mb-2">{t("kilocode:settings.provider.account")}</label>
 			</div>
@@ -66,6 +67,7 @@ export const KiloCode = ({
 									apiConfiguration: {
 										...apiConfiguration,
 										kilocodeToken: "",
+										kilocodeOrganizationId: undefined,
 									},
 								})
 							}}>
@@ -89,10 +91,12 @@ export const KiloCode = ({
 				</div>
 			</VSCodeTextField>
 
+			<OrganizationSelector showLabel />
+
 			<ModelPicker
 				apiConfiguration={apiConfiguration}
 				setApiConfigurationField={setApiConfigurationField}
-				defaultModelId={kilocodeDefaultModelId}
+				defaultModelId={kilocodeDefaultModel}
 				models={routerModels?.["kilocode-openrouter"] ?? {}}
 				modelIdKey="kilocodeModel"
 				serviceName="Kilo Code"

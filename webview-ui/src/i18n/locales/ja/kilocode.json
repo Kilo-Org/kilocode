@@ -3,7 +3,7 @@
 		"greeting": "Kilo Codeへようこそ！",
 		"introText1": "Kilo Codeは無料のオープンソースAIコーディングエージェントです。",
 		"introText2": "Claude 4 Sonnet、Gemini 2.5 Pro、GPT-4.1、その他450以上の最新のAIモデルと連携します。",
-		"introText3": "無料アカウントを作成して、任意のAIモデルで使用できる$20のトークンを取得しましょう。",
+		"introText3": "無料アカウントを作成して、任意のAIモデルで使用できる$25のトークンを取得しましょう。",
 		"ctaButton": "始める",
 		"manualModeButton": "自分のAPIキーを使う",
 		"alreadySignedUp": "すでに登録済みですか？",
@@ -16,7 +16,8 @@
 	"pricing": {
 		"costUnknown": "コスト不明",
 		"costUnknownDescription": "APIプロバイダーがコストデータを提供しなかったか、リクエストがキャンセルされました。",
-		"discoverModelPricing": "モデルの価格と機能を確認"
+		"freeModelsDescription": "無料モデルにはレート制限がある場合があります。下のリンクを使って無料モデルの使用を最適化しよう！",
+		"freeModelsLink": "無料・格安モデルのオプションを見る"
 	},
 	"notifications": {
 		"toolRequest": "ツールのリクエストが承認待ちです",
@@ -34,9 +35,33 @@
 			"logout": "Kilo Codeからログアウト",
 			"providerRouting": {
 				"title": "Kilo Code - OpenRouterプロバイダーのルーティング",
-				"description": "Kilo Codeは、モデルに最適な利用可能なプロバイダーにリクエストをルーティングします。デフォルトでは、稼働時間を最大化するために、リクエストはトッププロバイダー間で負荷分散されます。ただし、このモデルに使用する特定のプロバイダーを選択できます。"
+				"description": "Kilo Codeは、モデルに最適な利用可能なプロバイダーにリクエストをルーティングします。デフォルトでは、稼働時間を最大化するために、リクエストはトッププロバイダー間で負荷分散されます。ただし、このモデルに使用する特定のプロバイダーを選択できます。",
+				"sorting": {
+					"default": "デフォルトプロバイダーソート",
+					"price": "より安い価格のプロバイダーを優先",
+					"throughput": "より高いスループットのプロバイダーを優先",
+					"latency": "より低いレイテンシのプロバイダーを優先"
+				},
+				"dataCollection": {
+					"default": "データポリシーが設定されていません",
+					"allow": "プロバイダーのデータ収集を許可",
+					"deny": "プロバイダーのデータ収集を拒否"
+				}
 			},
 			"automaticFetch": "最新のモデルはKilo Codeで自動的に利用可能になります。どのモデルを選択すべきかわからない場合は、上部に<strong>太字</strong>で表示されている推奨モデルでKilo Codeが最適に動作します。"
+		},
+		"modelInfo": {
+			"contextWindow": "コンテキストウィンドウ",
+			"providerBreakdown": "プロバイダー価格・機能詳細",
+			"averageKiloCodeCost": "これは、過去1週間のこのモデルを使用したKilo Codeの実際の平均支出です。プロンプトキャッシュの活用により、表示価格より安くなる場合があります。",
+			"table": {
+				"provider": "プロバイダー",
+				"context": "エンドポイントが処理できるトークン数（入力+出力）。",
+				"inputPrice": "プロンプトの100万トークンあたりのコスト。",
+				"outputPrice": "補完の100万トークンあたりのコスト。",
+				"cacheReadPrice": "キャッシュから読み取る100万トークンあたりのコスト。",
+				"cacheWritePrice": "キャッシュに書き込む100万トークンあたりのコスト。"
+			}
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {
@@ -58,7 +83,7 @@
 					"description": "ターミナルコマンドの生成に使用するAPI設定を選択してください。デフォルト設定を使用する場合は「現在の設定を使用」のままにしてください。",
 					"current": "現在の設定を使用"
 				},
-				"provider": "ターミナルコマンドジェネレータープロバイダー"
+				"provider": "ターミナルコマンドジェネラtorープロバイダー"
 			}
 		}
 	},
@@ -77,6 +102,8 @@
 		"logOut": "ログアウト",
 		"currentBalance": "現在の残高",
 		"loading": "読み込み中...",
+		"organization": "組織",
+		"personal": "個人",
 		"shop": {
 			"title": "クレジット購入",
 			"popular": "人気",

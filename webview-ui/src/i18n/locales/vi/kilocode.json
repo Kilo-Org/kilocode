@@ -3,7 +3,7 @@
 		"greeting": "Chào mừng bạn đến với Kilo Code!",
 		"introText1": "Kilo Code là một agent lập trình AI miễn phí và mã nguồn mở.",
 		"introText2": "Hoạt động với các mô hình AI mới nhất như Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1, và hơn 450 mô hình khác.",
-		"introText3": "Tạo tài khoản miễn phí và nhận token trị giá $20 để sử dụng với bất kỳ mô hình AI nào.",
+		"introText3": "Tạo tài khoản miễn phí và nhận lên đến $25 token để sử dụng với bất kỳ mô hình AI nào.",
 		"ctaButton": "Bắt đầu",
 		"manualModeButton": "Sử dụng khóa API của riêng bạn",
 		"alreadySignedUp": "Đã đăng ký?",
@@ -16,7 +16,8 @@
 	"pricing": {
 		"costUnknown": "chi phí không xác định",
 		"costUnknownDescription": "Nhà cung cấp API không cung cấp dữ liệu chi phí hoặc yêu cầu đã bị hủy.",
-		"discoverModelPricing": "Khám phá giá cả và khả năng của mô hình"
+		"freeModelsDescription": "Các mô hình miễn phí có thể có giới hạn tốc độ. Sử dụng liên kết dưới đây để tối ưu hóa việc sử dụng mô hình miễn phí của bạn!",
+		"freeModelsLink": "Khám phá các tùy chọn mô hình miễn phí"
 	},
 	"notifications": {
 		"toolRequest": "Yêu cầu công cụ đang chờ phê duyệt",
@@ -40,9 +41,33 @@
 			"logout": "Đăng xuất khỏi Kilo Code",
 			"providerRouting": {
 				"title": "Kilo Code - Định tuyến nhà cung cấp OpenRouter",
-				"description": "Kilo Code định tuyến các yêu cầu đến các nhà cung cấp tốt nhất có sẵn cho mô hình của bạn. Theo mặc định, các yêu cầu được cân bằng tải trên các nhà cung cấp hàng đầu để tối đa hóa thời gian hoạt động. Tuy nhiên, bạn có thể chọn một nhà cung cấp cụ thể để sử dụng cho mô hình này."
+				"description": "Kilo Code định tuyến các yêu cầu đến các nhà cung cấp tốt nhất có sẵn cho mô hình của bạn. Theo mặc định, các yêu cầu được cân bằng tải trên các nhà cung cấp hàng đầu để tối đa hóa thời gian hoạt động. Tuy nhiên, bạn có thể chọn một nhà cung cấp cụ thể để sử dụng cho mô hình này.",
+				"sorting": {
+					"default": "Sắp xếp nhà cung cấp mặc định",
+					"price": "Ưu tiên nhà cung cấp có giá thấp hơn",
+					"throughput": "Ưu tiên nhà cung cấp có thông lượng cao hơn",
+					"latency": "Ưu tiên nhà cung cấp có độ trễ thấp hơn"
+				},
+				"dataCollection": {
+					"default": "Không thiết lập chính sách dữ liệu",
+					"allow": "Cho phép thu thập dữ liệu của nhà cung cấp",
+					"deny": "Từ chối thu thập dữ liệu của nhà cung cấp"
+				}
 			},
 			"automaticFetch": "Các mô hình mới nhất được tự động cung cấp trong Kilo Code. Nếu bạn không chắc chắn nên chọn mô hình nào, Kilo Code hoạt động tốt nhất với các mô hình được khuyến nghị được liệt kê ở đầu bằng <strong>chữ đậm</strong>."
+		},
+		"modelInfo": {
+			"contextWindow": "Cửa sổ ngữ cảnh",
+			"providerBreakdown": "Phân tích Giá và Khả năng của Nhà cung cấp",
+			"averageKiloCodeCost": "Đây là chi phí thực tế trung bình mà Kilo Code đã chi tiêu khi sử dụng mô hình này trong tuần qua. Chi phí này có thể thấp hơn giá niêm yết do việc sử dụng bộ nhớ đệm prompt.",
+			"table": {
+				"provider": "Nhà cung cấp",
+				"context": "Điểm cuối có thể xử lý số lượng token này (đầu vào + đầu ra).",
+				"inputPrice": "Chi phí cho một triệu token đối với prompt.",
+				"outputPrice": "Chi phí cho một triệu token đối với completion.",
+				"cacheReadPrice": "Chi phí cho một triệu token để đọc từ bộ nhớ đệm.",
+				"cacheWritePrice": "Chi phí cho một triệu token để ghi vào bộ nhớ đệm."
+			}
 		},
 		"systemNotifications": {
 			"label": "Bật thông báo hệ thống",
@@ -77,6 +102,8 @@
 		"logOut": "Đăng xuất",
 		"currentBalance": "SỐ DƯ HIỆN TẠI",
 		"loading": "Đang tải...",
+		"organization": "Tổ chức",
+		"personal": "Cá nhân",
 		"shop": {
 			"title": "Mua Tín dụng",
 			"popular": "Phổ biến",

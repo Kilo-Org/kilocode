@@ -118,6 +118,12 @@
 			"genericError": "Cerebras APIエラー ({{status}}): {{message}}",
 			"noResponseBody": "Cerebras APIエラー: レスポンスボディなし",
 			"completionError": "Cerebras完了エラー: {{error}}"
+		},
+		"qwenCode": {
+			"oauthLoadFailed": "OAuth認証情報の読み込みに失敗しました。まず認証してください: {{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "Rooプロバイダーはクラウド認証が必要です。Roo Code Cloudにサインインしてください。"
 		}
 	},
 	"warnings": {
@@ -206,6 +212,9 @@
 			"cloud_auth_required": "あなたの組織では Kilo Code Cloud 認証が必要です。続行するにはサインインしてください。",
 			"organization_mismatch": "組織の Kilo Code Cloud アカウントで認証する必要があります。",
 			"verification_failed": "組織認証の確認ができませんでした。"
+		},
+		"info": {
+			"organization_requires_auth": "あなたの組織では認証が必要です。"
 		}
 	},
 	"prompts": {

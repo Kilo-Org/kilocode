@@ -7,10 +7,10 @@ import type {
 	TelemetrySetting,
 	Experiments,
 	ClineMessage,
-	OrganizationAllowList,
-	CloudUserInfo,
-	ShareVisibility,
+	MarketplaceItem,
+	TodoItem,
 } from "@roo-code/types"
+import type { CloudUserInfo, OrganizationAllowList, ShareVisibility } from "@roo-code/cloud"
 
 import { GitCommit } from "../utils/git"
 
@@ -20,7 +20,6 @@ import { Mode } from "./modes"
 import { ModelRecord, RouterModels } from "./api"
 import { ProfileDataResponsePayload, BalanceDataResponsePayload } from "./WebviewMessage" // kilocode_change
 import { ClineRulesToggles } from "./cline-rules" // kilocode_change
-import type { MarketplaceItem } from "@roo-code/types"
 
 // Command interface for frontend/backend communication
 export interface Command {
@@ -298,6 +297,7 @@ export type ExtensionState = Pick<
 	| "diagnosticsEnabled"
 	| "diffEnabled"
 	| "fuzzyMatchThreshold"
+	| "morphApiKey" // kilocode_change: Morph fast apply - global setting
 	// | "experiments" // Optional in GlobalSettings, required here.
 	| "language"
 	// | "telemetrySetting" // Optional in GlobalSettings, required here.
@@ -325,13 +325,16 @@ export type ExtensionState = Pick<
 	| "systemNotificationsEnabled" // kilocode_change
 	| "includeDiagnosticMessages"
 	| "maxDiagnosticMessages"
+	| "remoteControlEnabled"
 > & {
 	version: string
 	clineMessages: ClineMessage[]
 	currentTaskItem?: HistoryItem
+	currentTaskTodos?: TodoItem[] // Initial todos for the current task
 	apiConfiguration?: ProviderSettings
 	uriScheme?: string
 	uiKind?: string // kilocode_change
+	kilocodeDefaultModel: string
 	shouldShowAnnouncement: boolean
 
 	taskHistory: HistoryItem[]
@@ -435,6 +438,14 @@ export interface ClineSayTool {
 		}>
 	}>
 	question?: string
+	// kilocode_change start
+	fastApplyResult?: {
+		description?: string
+		tokensIn?: number
+		tokensOut?: number
+		cost?: number
+	}
+	// kilocode_change end
 }
 
 // Must keep in sync with system prompt.

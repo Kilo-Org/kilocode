@@ -122,6 +122,12 @@
 			"noResponseBody": "Error de l'API de Cerebras: No hi ha cos de resposta",
 			"completionError": "Error de finalització de Cerebras: {{error}}"
 		},
+		"qwenCode": {
+			"oauthLoadFailed": "No s'han pogut carregar les credencials OAuth. Si us plau, autentica't primer: {{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "El proveïdor Roo requereix autenticació al núvol. Si us plau, inicieu sessió a Roo Code Cloud."
+		},
 		"mode_import_failed": "Ha fallat la importació del mode: {{error}}"
 	},
 	"warnings": {
@@ -206,6 +212,9 @@
 			"cloud_auth_required": "La teva organització requereix autenticació de Kilo Code Cloud. Si us plau, inicia sessió per continuar.",
 			"organization_mismatch": "Has d'estar autenticat amb el compte de Kilo Code Cloud de la teva organització.",
 			"verification_failed": "No s'ha pogut verificar l'autenticació de l'organització."
+		},
+		"info": {
+			"organization_requires_auth": "La teva organització requereix autenticació."
 		}
 	},
 	"prompts": {

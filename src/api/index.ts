@@ -16,7 +16,6 @@ import {
 	// OllamaHandler, // kilocode_change
 	LmStudioHandler,
 	GeminiHandler,
-	GeminiCliHandler, // kilocode_change
 	OpenAiNativeHandler,
 	DeepSeekHandler,
 	MoonshotHandler,
@@ -27,22 +26,28 @@ import {
 	HumanRelayHandler,
 	FakeAIHandler,
 	XAIHandler,
-	BigModelHandler, // kilocode_change
 	GroqHandler,
 	HuggingFaceHandler,
 	ChutesHandler,
 	LiteLLMHandler,
-	VirtualQuotaFallbackHandler, // kilocode_change
+	// kilocode_change start
+	VirtualQuotaFallbackHandler,
+	GeminiCliHandler,
+	QwenCodeHandler,
+	// kilocode_change end
 	ClaudeCodeHandler,
 	SambaNovaHandler,
+	IOIntelligenceHandler,
 	DoubaoHandler,
 	ZAiHandler,
 	FireworksHandler,
+	RooHandler,
+	FeatherlessHandler,
 } from "./providers"
 // kilocode_change start
 import { KilocodeOpenrouterHandler } from "./providers/kilocode-openrouter"
-import { KilocodeOllamaHandler } from "./providers/kilocode-ollama"
 // kilocode_change end
+import { NativeOllamaHandler } from "./providers/native-ollama"
 
 export interface SingleCompletionHandler {
 	completePrompt(prompt: string): Promise<string>
@@ -51,6 +56,13 @@ export interface SingleCompletionHandler {
 export interface ApiHandlerCreateMessageMetadata {
 	mode?: string
 	taskId: string
+	previousResponseId?: string
+	/**
+	 * When true, the provider must NOT fall back to internal continuity state
+	 * (e.g., lastResponseId) if previousResponseId is absent.
+	 * Used to enforce "skip once" after a condense operation.
+	 */
+	suppressPreviousResponseId?: boolean
 }
 
 export interface ApiHandler {
@@ -77,8 +89,16 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 	const { apiProvider, ...options } = configuration
 
 	switch (apiProvider) {
+		// kilocode_change start
 		case "kilocode":
 			return new KilocodeOpenrouterHandler(options)
+		case "gemini-cli":
+			return new GeminiCliHandler(options)
+		case "virtual-quota-fallback":
+			return new VirtualQuotaFallbackHandler(options)
+		case "qwen-code":
+			return new QwenCodeHandler(options)
+		// kilocode_change end
 		case "anthropic":
 			return new AnthropicHandler(options)
 		case "claude-code":
@@ -96,15 +116,11 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 		case "openai":
 			return new OpenAiHandler(options)
 		case "ollama":
-			return new KilocodeOllamaHandler(options)
+			return new NativeOllamaHandler(options)
 		case "lmstudio":
 			return new LmStudioHandler(options)
 		case "gemini":
 			return new GeminiHandler(options)
-		// kilocode_change start
-		case "gemini-cli":
-			return new GeminiCliHandler(options)
-		// kilocode_change end
 		case "openai-native":
 			return new OpenAiNativeHandler(options)
 		case "deepseek":
@@ -123,12 +139,6 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new RequestyHandler(options)
 		case "human-relay":
 			return new HumanRelayHandler()
-		// kilocode_change start
-		case "virtual-quota-fallback":
-			return new VirtualQuotaFallbackHandler(options)
-		case "bigmodel":
-			return new BigModelHandler(options)
-		// kilocode_change end
 		case "fake-ai":
 			return new FakeAIHandler(options)
 		case "xai":
@@ -149,6 +159,14 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new ZAiHandler(options)
 		case "fireworks":
 			return new FireworksHandler(options)
+		case "io-intelligence":
+			return new IOIntelligenceHandler(options)
+		case "roo":
+			// Never throw exceptions from provider constructors
+			// The provider-proxy server will handle authentication and return appropriate error codes
+			return new RooHandler(options)
+		case "featherless":
+			return new FeatherlessHandler(options)
 		default:
 			apiProvider satisfies "gemini-cli" | undefined
 			return new AnthropicHandler(options)

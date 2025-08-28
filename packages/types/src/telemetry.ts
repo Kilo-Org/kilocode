@@ -28,7 +28,9 @@ export enum TelemetryEventName {
 	EXCESSIVE_RECURSION = "Excessive Recursion",
 	NOTIFICATION_CLICKED = "Notification Clicked",
 	WEBVIEW_MEMORY_USAGE = "Webview Memory Usage",
+	FREE_MODELS_LINK_CLICKED = "Free Models Link Clicked",
 	SUGGESTION_BUTTON_CLICKED = "Suggestion Button Clicked",
+	NO_ASSISTANT_MESSAGES = "No Assistant Messages",
 	// kilocode_change end
 
 	TASK_CREATED = "Task Created",
@@ -85,16 +87,36 @@ export enum TelemetryEventName {
  * TelemetryProperties
  */
 
-export const appPropertiesSchema = z.object({
+export const staticAppPropertiesSchema = z.object({
 	appName: z.string(),
 	appVersion: z.string(),
 	vscodeVersion: z.string(),
 	platform: z.string(),
 	editorName: z.string(),
+})
+
+export type StaticAppProperties = z.infer<typeof staticAppPropertiesSchema>
+
+export const dynamicAppPropertiesSchema = z.object({
 	language: z.string(),
 	mode: z.string(),
+})
+
+export type DynamicAppProperties = z.infer<typeof dynamicAppPropertiesSchema>
+
+export const cloudAppPropertiesSchema = z.object({
 	cloudIsAuthenticated: z.boolean().optional(),
 })
+
+export type CloudAppProperties = z.infer<typeof cloudAppPropertiesSchema>
+
+export const appPropertiesSchema = z.object({
+	...staticAppPropertiesSchema.shape,
+	...dynamicAppPropertiesSchema.shape,
+	...cloudAppPropertiesSchema.shape,
+})
+
+export type AppProperties = z.infer<typeof appPropertiesSchema>
 
 export const taskPropertiesSchema = z.object({
 	taskId: z.string().optional(),
@@ -112,11 +134,15 @@ export const taskPropertiesSchema = z.object({
 		.optional(),
 })
 
+export type TaskProperties = z.infer<typeof taskPropertiesSchema>
+
 export const gitPropertiesSchema = z.object({
 	repositoryUrl: z.string().optional(),
 	repositoryName: z.string().optional(),
 	defaultBranch: z.string().optional(),
 })
+
+export type GitProperties = z.infer<typeof gitPropertiesSchema>
 
 export const telemetryPropertiesSchema = z.object({
 	...appPropertiesSchema.shape,
@@ -125,7 +151,6 @@ export const telemetryPropertiesSchema = z.object({
 })
 
 export type TelemetryProperties = z.infer<typeof telemetryPropertiesSchema>
-export type GitProperties = z.infer<typeof gitPropertiesSchema>
 
 /**
  * TelemetryEvent

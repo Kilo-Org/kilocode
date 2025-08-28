@@ -11,7 +11,10 @@
 		"title": "余额不足警告！",
 		"message": "请检查是否可以充值免费额度或购买更多额度！"
 	},
-	"notLoggedInError": "无法完成请求，请确保您已连接并使用所选提供商登录。\n\n{{error}}",
+	"task": {
+		"noAssistantMessages": "模型响应意外结束（没有助理消息）。这可能是 API 请求频率限制的迹象。",
+		"notLoggedInError": "无法完成请求，请确保您已连接并使用所选提供商登录。\n\n{{error}}"
+	},
 	"rules": {
 		"actions": {
 			"delete": "删除",

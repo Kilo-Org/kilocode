@@ -221,6 +221,26 @@ export const bedrockModels = {
 		inputPrice: 1.35,
 		outputPrice: 5.4,
 	},
+	"openai.gpt-oss-20b-1:0": {
+		maxTokens: 8192,
+		contextWindow: 128_000,
+		supportsImages: false,
+		supportsComputerUse: false,
+		supportsPromptCache: false,
+		inputPrice: 0.5,
+		outputPrice: 1.5,
+		description: "GPT-OSS 20B - Optimized for low latency and local/specialized use cases",
+	},
+	"openai.gpt-oss-120b-1:0": {
+		maxTokens: 8192,
+		contextWindow: 128_000,
+		supportsImages: false,
+		supportsComputerUse: false,
+		supportsPromptCache: false,
+		inputPrice: 2.0,
+		outputPrice: 6.0,
+		description: "GPT-OSS 120B - Production-ready, general-purpose, high-reasoning model",
+	},
 	"meta.llama3-3-70b-instruct-v1:0": {
 		maxTokens: 8192,
 		contextWindow: 128_000,
@@ -421,3 +441,5 @@ export const BEDROCK_REGIONS = [
 	{ value: "us-gov-east-1", label: "us-gov-east-1" },
 	{ value: "us-gov-west-1", label: "us-gov-west-1" },
 ].sort((a, b) => a.value.localeCompare(b.value))
+
+export const BEDROCK_CLAUDE_SONNET_4_MODEL_ID = "anthropic.claude-sonnet-4-20250514-v1:0"

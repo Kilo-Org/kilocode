@@ -9,9 +9,12 @@
 	},
 	"lowCreditWarning": {
 		"title": "Düşük Kredi Uyarısı!",
-		"message": "Ücretsiz kredilerle yükleme yapıp yapamayacağınızı veya daha fazla satın alıp alamayacağınızı kontrol edin!"
+		"message": "Ücretsiz kredilerle yükleme yapamayacağınızı veya daha fazla satın alıp alamayacağınızı kontrol edin!"
 	},
-	"notLoggedInError": "İstek tamamlanamıyor, seçili sağlayıcıyla bağlantı kurduğunuzdan ve oturum açtığınızdan emin olun.\n\n{{error}}",
+	"task": {
+		"noAssistantMessages": "Modelin yanıtı beklenmedik şekilde sona erdi (asistan mesajı yok). Bu hız sınırlamasının bir işareti olabilir.",
+		"notLoggedInError": "İstek tamamlanamıyor, seçili sağlayıcıyla bağlantı kurduğunuzdan ve oturum açtığınızdan emin olun.\n\n{{error}}"
+	},
 	"rules": {
 		"actions": {
 			"delete": "Sil",

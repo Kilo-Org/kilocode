@@ -3,7 +3,7 @@
 		"greeting": "Willkommen bei Kilo Code!",
 		"introText1": "Kilo Code ist ein kostenloser Open-Source-KI-Coding-Agent.",
 		"introText2": "Er funktioniert mit den neuesten KI-Modellen wie Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1 und über 450 weiteren.",
-		"introText3": "Erstelle ein kostenloses Konto und erhalte $20 an Tokens zur Nutzung mit jedem KI-Modell.",
+		"introText3": "Erstelle ein kostenloses Konto und erhalte bis zu $25 an Tokens zur Nutzung mit jedem KI-Modell.",
 		"ctaButton": "Loslegen",
 		"manualModeButton": "Eigenen API-Schlüssel verwenden",
 		"alreadySignedUp": "Bereits registriert?",
@@ -16,7 +16,8 @@
 	"pricing": {
 		"costUnknown": "Kosten unbekannt",
 		"costUnknownDescription": "Der API-Anbieter hat keine Kostendaten bereitgestellt oder die Anfrage wurde abgebrochen.",
-		"discoverModelPricing": "Modellpreise und -funktionen entdecken"
+		"freeModelsDescription": "Kostenlose Modelle können Ratenbeschränkungen haben. Nutze den Link unten, um deine kostenlose Modellnutzung zu optimieren!",
+		"freeModelsLink": "Kostenlose und Budget-Modelloptionen entdecken"
 	},
 	"notifications": {
 		"toolRequest": "Werkzeuganfrage wartet auf Genehmigung",
@@ -35,7 +36,31 @@
 			"automaticFetch": "Die neuesten Modelle sind automatisch in Kilo Code verfügbar. Wenn du dir nicht sicher bist, welches Modell du wählen sollst, funktioniert Kilo Code am besten mit den empfohlenen Modellen, die oben in <strong>fetter Schrift</strong> aufgeführt sind.",
 			"providerRouting": {
 				"title": "Kilo Code - OpenRouter-Anbieter-Routing",
-				"description": "Kilo Code leitet Anfragen an die besten verfügbaren Anbieter für dein Modell weiter. Standardmäßig werden Anfragen über die Top-Anbieter verteilt, um die Betriebszeit zu maximieren. Du kannst jedoch einen bestimmten Anbieter für dieses Modell auswählen."
+				"description": "Kilo Code leitet Anfragen an die besten verfügbaren Anbieter für dein Modell weiter. Standardmäßig werden Anfragen über die Top-Anbieter verteilt, um die Betriebszeit zu maximieren. Du kannst jedoch einen bestimmten Anbieter für dieses Modell auswählen.",
+				"sorting": {
+					"default": "Standard-Anbieter-Sortierung",
+					"price": "Anbieter mit niedrigeren Preisen bevorzugen",
+					"throughput": "Anbieter mit höherem Durchsatz bevorzugen",
+					"latency": "Anbieter mit niedrigerer Latenz bevorzugen"
+				},
+				"dataCollection": {
+					"default": "Keine Datenrichtlinie festgelegt",
+					"allow": "Anbieter-Datensammlung erlauben",
+					"deny": "Anbieter-Datensammlung verweigern"
+				}
+			}
+		},
+		"modelInfo": {
+			"contextWindow": "Kontextfenster",
+			"providerBreakdown": "Anbieter-Preis- und Funktionsübersicht",
+			"averageKiloCodeCost": "Das sind die durchschnittlichen tatsächlichen Ausgaben für Kilo Code mit diesem Modell in der letzten Woche. Sie können niedriger sein als der angegebene Preis aufgrund der Nutzung des Prompt-Caches.",
+			"table": {
+				"provider": "Anbieter",
+				"context": "Der Endpunkt kann diese Anzahl von Token verarbeiten (Eingabe + Ausgabe).",
+				"inputPrice": "Kosten pro Million Token für den Prompt.",
+				"outputPrice": "Kosten pro Million Token für die Vervollständigung.",
+				"cacheReadPrice": "Kosten pro Million Token für das Lesen aus dem Cache.",
+				"cacheWritePrice": "Kosten pro Million Token für das Schreiben in den Cache."
 			}
 		},
 		"contextManagement": {
@@ -57,7 +82,7 @@
 				"apiConfigId": {
 					"label": "API-Konfiguration",
 					"current": "Aktuelle Konfiguration verwenden",
-					"description": "Wählen Sie aus, welche API-Konfiguration für die Generierung von Terminal-Befehlen verwendet werden soll. Belassen Sie es bei \"Aktuelle Konfiguration verwenden\", um Ihre Standardeinstellungen zu nutzen."
+					"description": "Wähle aus, welche API-Konfiguration für die Generierung von Terminal-Befehlen verwendet werden soll. Belasse es bei \"Aktuelle Konfiguration verwenden\", um Ihre Standardeinstellungen zu nutzen."
 				}
 			}
 		}
@@ -77,6 +102,8 @@
 		"logOut": "Abmelden",
 		"currentBalance": "AKTUELLES GUTHABEN",
 		"loading": "Lädt...",
+		"organization": "Organisation",
+		"personal": "Persönlich",
 		"shop": {
 			"title": "Credits kaufen",
 			"popular": "Beliebt",
@@ -168,7 +195,7 @@
 			},
 			"enableAutoInlineTaskKeybinding": {
 				"label": "Auto Inline Aufgabe",
-				"description": "Brauchen Sie eine schnelle Korrektur, Vervollständigung oder Umstrukturierung? Kilo nutzt den umliegenden Kontext, um sofortige Verbesserungen anzubieten und Sie im Flow zu halten. <DocsLink>Tastenkombination anzeigen</DocsLink>"
+				"description": "Brauchest du eine schnelle Korrektur, Vervollständigung oder Umstrukturierung? Kilo nutzt den umliegenden Kontext, um sofortige Verbesserungen anzubieten und dich im Flow zu halten. <DocsLink>Tastenkombination anzeigen</DocsLink>"
 			},
 			"enableAutoTrigger": {
 				"label": "Automatischen Auslöser aktivieren",
@@ -193,12 +220,12 @@
 				"description": "Wähle eine API-Konfiguration für Inline-Assist-Prompts aus oder verwende einfach die aktuell ausgewählte"
 			},
 			"triggers": "Auslöser",
-			"keybindingDescription": "Inline-Assistenzfunktionen werden durch Befehle ausgelöst. Sie können die <DocsLink>Tastaturkürzel hier konfigurieren</DocsLink>."
+			"keybindingDescription": "Inline-Assistenzfunktionen werden durch Befehle ausgelöst. Du kannst die <DocsLink>Tastaturkürzel hier konfigurieren</DocsLink>."
 		}
 	},
 	"virtualProvider": {
 		"title": "Virtuelle Kontingent-Fallback-Anbieter-Einstellungen",
-		"description": "Konfigurieren Sie eine Liste von Profilen, jedes mit eigenen Kontingentbeschränkungen. Wenn die Kontingentbeschränkungen eines Anbieters erreicht sind, wird das nächste Profil in der Liste verwendet, bis keines mehr übrig ist.",
+		"description": "Konfiguriere eine Liste von Profilen, jedes mit eigenen Kontingentbeschränkungen. Wenn die Kontingentbeschränkungen eines Anbieters erreicht sind, wird das nächste Profil in der Liste verwendet, bis keines mehr übrig ist.",
 		"profileLabel": "Profil {{number}}",
 		"primaryProfileLabel": "Profil {{number}} (Primär)",
 		"moveProfileUp": "Profil nach oben verschieben",
@@ -206,7 +233,7 @@
 		"removeProfile": "Profil entfernen",
 		"selectProfilePlaceholder": "Profil auswählen...",
 		"addProfile": "Profil hinzufügen",
-		"noProfilesAvailable": "Keine Profileprofile verfügbar. Bitte konfigurieren Sie zuerst mindestens ein nicht-virtuelles Anbieterprofil.",
+		"noProfilesAvailable": "Keine Profileprofile verfügbar. Bitte konfiguriere zuerst mindestens ein nicht-virtuelles Anbieterprofil.",
 		"dangerZoneTitle": "Gefahrenbereich",
 		"dangerZoneDescription": "Diese Aktionen sind destruktiv und können nicht rückgängig gemacht werden.",
 		"clearUsageData": "Nutzungsdaten löschen",

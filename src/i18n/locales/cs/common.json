@@ -110,6 +110,9 @@
 			"apiError": "Chyba Gemini CLI API: {{error}}",
 			"completionError": "Chyba dokončení Gemini CLI: {{error}}"
 		},
+		"qwenCode": {
+			"oauthLoadFailed": "Nepodařilo se načíst OAuth přihlašovací údaje. Nejprve se prosím autentizujte: {{error}}"
+		},
 		"gemini": {
 			"generate_stream": "Chyba generování kontextového proudu Gemini: {{error}}",
 			"generate_complete_prompt": "Chyba dokončení Gemini: {{error}}",
@@ -123,6 +126,9 @@
 			"genericError": "Chyba Cerebras API ({{status}}): {{message}}",
 			"noResponseBody": "Chyba Cerebras API: Žádné tělo odpovědi",
 			"completionError": "Chyba dokončení Cerebras: {{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "Poskytovatel Roo vyžaduje cloudovou autentizaci. Prosím přihlas se do Roo Code Cloud."
 		}
 	},
 	"warnings": {
@@ -201,6 +207,9 @@
 			"cloud_auth_required": "Tvá organizace vyžaduje autentizaci Kilo Code Cloud. Prosím přihlas se pro pokračování.",
 			"organization_mismatch": "Musíš být autentizován s účtem Kilo Code Cloud tvé organizace.",
 			"verification_failed": "Nelze ověřit autentizaci organizace."
+		},
+		"info": {
+			"organization_requires_auth": "Tvá organizace vyžaduje autentizaci."
 		}
 	},
 	"prompts": {

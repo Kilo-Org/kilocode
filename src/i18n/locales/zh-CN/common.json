@@ -123,6 +123,12 @@
 			"genericError": "Cerebras API 错误 ({{status}})：{{message}}",
 			"noResponseBody": "Cerebras API 错误：无响应主体",
 			"completionError": "Cerebras 完成错误：{{error}}"
+		},
+		"qwenCode": {
+			"oauthLoadFailed": "加载 OAuth 凭据失败。请先进行身份验证：{{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "Roo 提供商需要云认证。请登录 Roo Code Cloud。"
 		}
 	},
 	"warnings": {
@@ -211,6 +217,9 @@
 			"cloud_auth_required": "您的组织需要 Kilo Code Cloud 身份验证。请登录以继续。",
 			"organization_mismatch": "您必须使用组织的 Kilo Code Cloud 账户进行身份验证。",
 			"verification_failed": "无法验证组织身份验证。"
+		},
+		"info": {
+			"organization_requires_auth": "您的组织需要身份验证。"
 		}
 	},
 	"prompts": {

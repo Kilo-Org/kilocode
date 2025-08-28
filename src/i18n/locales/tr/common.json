@@ -105,6 +105,9 @@
 			"apiError": "Gemini CLI API hatası: {{error}}",
 			"completionError": "Gemini CLI tamamlama hatası: {{error}}"
 		},
+		"qwenCode": {
+			"oauthLoadFailed": "OAuth kimlik bilgileri yüklenemedi. Lütfen önce kimlik doğrulaması yapın: {{error}}"
+		},
 		"gemini": {
 			"generate_stream": "Gemini oluşturma bağlam akışı hatası: {{error}}",
 			"generate_complete_prompt": "Gemini tamamlama hatası: {{error}}",
@@ -118,6 +121,9 @@
 			"genericError": "Cerebras API Hatası ({{status}}): {{message}}",
 			"noResponseBody": "Cerebras API Hatası: Yanıt gövdesi yok",
 			"completionError": "Cerebras tamamlama hatası: {{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "Roo sağlayıcısı bulut kimlik doğrulaması gerektirir. Lütfen Roo Code Cloud'a giriş yapın."
 		}
 	},
 	"warnings": {
@@ -206,6 +212,9 @@
 			"cloud_auth_required": "Kuruluşunuz Kilo Code Cloud kimlik doğrulaması gerektiriyor. Devam etmek için giriş yapın.",
 			"organization_mismatch": "Kuruluşunuzun Kilo Code Cloud hesabıyla kimlik doğrulaması yapmalısınız.",
 			"verification_failed": "Kuruluş kimlik doğrulaması doğrulanamıyor."
+		},
+		"info": {
+			"organization_requires_auth": "Kuruluşunuz kimlik doğrulaması gerektiriyor."
 		}
 	},
 	"prompts": {

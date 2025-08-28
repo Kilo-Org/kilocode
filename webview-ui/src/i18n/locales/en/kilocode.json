@@ -3,7 +3,7 @@
 		"greeting": "Welcome to Kilo Code!",
 		"introText1": "Kilo Code is a free, open source AI coding agent.",
 		"introText2": "It works with the latest AI models like Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1, and 450+ more.",
-		"introText3": "Create a free account and get $20 worth of tokens to use across any AI model.",
+		"introText3": "Create a free account and get up to $25 worth of tokens to use across any AI model.",
 		"ctaButton": "Get Started",
 		"manualModeButton": "Use your own API key",
 		"alreadySignedUp": "Already signed up?",
@@ -16,7 +16,8 @@
 	"pricing": {
 		"costUnknown": "cost unknown",
 		"costUnknownDescription": "The API Provider did not provide any cost data or the request was canceled.",
-		"discoverModelPricing": "Discover model pricing and capabilities"
+		"freeModelsDescription": "Free models may have rate limits. Use the link below to optimize your free model usage!",
+		"freeModelsLink": "Discover free and budget model options"
 	},
 	"notifications": {
 		"toolRequest": "Tool request waiting for approval",
@@ -34,9 +35,33 @@
 			"logout": "Log out from Kilo Code",
 			"providerRouting": {
 				"title": "Kilo Code - OpenRouter Provider Routing",
-				"description": "Kilo Code routes requests to the best available providers for your model. By default, requests are load balanced across the top providers to maximize uptime. However, you can choose a specific provider to use for this model."
+				"description": "Kilo Code routes requests to the best available providers for your model. By default, requests are load balanced across the top providers to maximize uptime. However, you can choose a specific provider to use for this model.",
+				"sorting": {
+					"default": "Default provider sorting",
+					"price": "Prefer providers with lower price",
+					"throughput": "Prefer providers with higher throughput",
+					"latency": "Prefer providers with lower latency"
+				},
+				"dataCollection": {
+					"default": "No data policy set",
+					"allow": "Allow provider data collection",
+					"deny": "Deny provider data collection"
+				}
 			},
 			"automaticFetch": "The latest models are automatically available in Kilo Code. If you're unsure which model to choose, Kilo Code works best with the recommended models listed at the top in <strong>bold face</strong>."
+		},
+		"modelInfo": {
+			"contextWindow": "Context window",
+			"providerBreakdown": "Provider Price and Capability Breakdown",
+			"averageKiloCodeCost": "This is the average actual spent for Kilo Code using this model over the last week. It may be lower than the listed price due to prompt cache utilization.",
+			"table": {
+				"provider": "Provider",
+				"context": "The endpoint can process this number of tokens (input + output).",
+				"inputPrice": "Cost per million tokens for the prompt.",
+				"outputPrice": "Cost per million tokens for the completion.",
+				"cacheReadPrice": "Cost per million tokens for reading from the cache.",
+				"cacheWritePrice": "Cost per million tokens for writing to the cache."
+			}
 		},
 		"contextManagement": {
 			"allowVeryLargeReads": {
@@ -77,6 +102,8 @@
 		"logOut": "Log out",
 		"currentBalance": "CURRENT BALANCE",
 		"loading": "Loading...",
+		"organization": "Organization",
+		"personal": "Personal",
 		"shop": {
 			"title": "Buy Credits",
 			"popular": "Popular",

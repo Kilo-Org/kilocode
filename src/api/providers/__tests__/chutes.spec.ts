@@ -165,6 +165,28 @@ describe("ChutesHandler", () => {
 		expect(model.info).toEqual(expect.objectContaining(chutesModels[testModelId]))
 	})
 
+	it("should return DeepSeek V3.1 model with correct configuration", () => {
+		const testModelId: ChutesModelId = "deepseek-ai/DeepSeek-V3.1"
+		const handlerWithModel = new ChutesHandler({
+			apiModelId: testModelId,
+			chutesApiKey: "test-chutes-api-key",
+		})
+		const model = handlerWithModel.getModel()
+		expect(model.id).toBe(testModelId)
+		expect(model.info).toEqual(
+			expect.objectContaining({
+				maxTokens: 32768,
+				contextWindow: 163840,
+				supportsImages: false,
+				supportsPromptCache: false,
+				inputPrice: 0,
+				outputPrice: 0,
+				description: "DeepSeek V3.1 model.",
+				temperature: 0.5, // Non-R1 DeepSeek models use default temperature
+			}),
+		)
+	})
+
 	it("should return Qwen3-235B-A22B-Instruct-2507 model with correct configuration", () => {
 		const testModelId: ChutesModelId = "Qwen/Qwen3-235B-A22B-Instruct-2507"
 		const handlerWithModel = new ChutesHandler({
@@ -228,6 +250,50 @@ describe("ChutesHandler", () => {
 				outputPrice: 0.800064,
 				description:
 					"GLM-4.5-FP8 model with 98,304 token context window, optimized for agent-based applications with MoE architecture.",
+				temperature: 0.5, // Default temperature for non-DeepSeek models
+			}),
+		)
+	})
+
+	it("should return Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8 model with correct configuration", () => {
+		const testModelId: ChutesModelId = "Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8"
+		const handlerWithModel = new ChutesHandler({
+			apiModelId: testModelId,
+			chutesApiKey: "test-chutes-api-key",
+		})
+		const model = handlerWithModel.getModel()
+		expect(model.id).toBe(testModelId)
+		expect(model.info).toEqual(
+			expect.objectContaining({
+				maxTokens: 32768,
+				contextWindow: 262144,
+				supportsImages: false,
+				supportsPromptCache: false,
+				inputPrice: 0,
+				outputPrice: 0,
+				description: "Qwen3 Coder 480B A35B Instruct FP8 model, optimized for coding tasks.",
+				temperature: 0.5, // Default temperature for non-DeepSeek models
+			}),
+		)
+	})
+
+	it("should return moonshotai/Kimi-K2-Instruct-75k model with correct configuration", () => {
+		const testModelId: ChutesModelId = "moonshotai/Kimi-K2-Instruct-75k"
+		const handlerWithModel = new ChutesHandler({
+			apiModelId: testModelId,
+			chutesApiKey: "test-chutes-api-key",
+		})
+		const model = handlerWithModel.getModel()
+		expect(model.id).toBe(testModelId)
+		expect(model.info).toEqual(
+			expect.objectContaining({
+				maxTokens: 32768,
+				contextWindow: 75000,
+				supportsImages: false,
+				supportsPromptCache: false,
+				inputPrice: 0.1481,
+				outputPrice: 0.5926,
+				description: "Moonshot AI Kimi K2 Instruct model with 75k context window.",
 				temperature: 0.5, // Default temperature for non-DeepSeek models
 			}),
 		)
@@ -352,11 +418,11 @@ describe("ChutesHandler", () => {
 			expect.objectContaining({
 				model: modelId,
 				max_tokens: modelInfo.maxTokens,
-				temperature: 0.5,
 				messages: expect.arrayContaining([{ role: "system", content: systemPrompt }]),
 				stream: true,
 				stream_options: { include_usage: true },
 			}),
+			undefined,
 		)
 	})
 

@@ -257,16 +257,27 @@
 			"error": "ไม่สามารถรีเฟรชรายการโมเดลได้ โปรดลองอีกครั้ง"
 		},
 		"getRequestyApiKey": "รับคีย์ API ของ Requesty",
+		"getRequestyBaseUrl": "Base URL",
+		"requestyUseCustomBaseUrl": "ใช้ Base URL ที่กำหนดเอง",
 		"openRouterTransformsText": "บีบอัดพรอมต์และสายข้อความให้มีขนาดบริบท (<a>OpenRouter Transforms</a>)",
 		"anthropicApiKey": "คีย์ API ของ Anthropic",
 		"getAnthropicApiKey": "รับคีย์ API ของ Anthropic",
 		"anthropicUseAuthToken": "ส่งคีย์ API ของ Anthropic เป็นส่วนหัว Authorization แทน X-Api-Key",
+		"anthropic1MContextBetaLabel": "เปิดใช้งาน context window 1M (Beta)",
+		"anthropic1MContextBetaDescription": "ขยาย context window เป็น 1 ล้าน tokens สำหรับ Claude Sonnet 4",
+		"awsBedrock1MContextBetaLabel": "เปิดใช้งาน context window 1M (Beta)",
+		"awsBedrock1MContextBetaDescription": "ขยาย context window เป็น 1 ล้าน tokens สำหรับ Claude Sonnet 4",
 		"cerebrasApiKey": "คีย์ API ของ Cerebras",
 		"getCerebrasApiKey": "รับคีย์ API ของ Cerebras",
 		"chutesApiKey": "คีย์ API ของ Chutes",
 		"getChutesApiKey": "รับคีย์ API ของ Chutes",
+		"ioIntelligenceApiKey": "คีย์ API ของ IO Intelligence",
+		"ioIntelligenceApiKeyPlaceholder": "ป้อนคีย์ API ของ IO Intelligence",
+		"getIoIntelligenceApiKey": "รับคีย์ API ของ IO Intelligence",
 		"deepSeekApiKey": "คีย์ API ของ DeepSeek",
 		"getDeepSeekApiKey": "รับคีย์ API ของ DeepSeek",
+		"featherlessApiKey": "คีย์ API ของ Featherless",
+		"getFeatherlessApiKey": "รับคีย์ API ของ Featherless",
 		"fireworksApiKey": "คีย์ API ของ Fireworks",
 		"getFireworksApiKey": "รับคีย์ API ของ Fireworks",
 		"moonshotApiKey": "คีย์ API ของ Moonshot",
@@ -355,6 +366,9 @@
 		"ollama": {
 			"baseUrl": "URL พื้นฐาน (ไม่บังคับ)",
 			"modelId": "รหัสโมเดล",
+			"apiKey": "คีย์ API",
+			"apiKeyPlaceholder": "ป้อนคีย์ API ของคุณ",
+			"apiKeyInfo": "คีย์ API จะถูกส่งเป็นส่วนหัว Authorization",
 			"description": "Ollama ช่วยให้คุณสามารถรันโมเดลในเครื่องคอมพิวเตอร์ของคุณได้ สำหรับคำแนะนำเกี่ยวกับวิธีเริ่มต้น โปรดดูคำแนะนำเริ่มต้นอย่างรวดเร็วของพวกเขา",
 			"warning": "หมายเหตุ: Kilo Code ใช้พรอมต์ที่ซับซ้อนและทำงานได้ดีที่สุดกับโมเดล Claude โมเดลที่มีความสามารถน้อยกว่าอาจทำงานไม่เป็นไปตามที่คาดไว้"
 		},
@@ -377,8 +391,6 @@
 		"getDoubaoApiKey": "รับคีย์ API ของ Doubao",
 		"zaiApiKey": "คีย์ API ของ Z.AI",
 		"getZaiApiKey": "รับคีย์ API ของ Z.AI",
-		"bigModelApiKey": "คีย์ API ของ BigModel",
-		"getBigModelApiKey": "รับคีย์ API ของ BigModel",
 		"sambaNovaApiKey": "คีย์ API ของ SambaNova",
 		"getSambaNovaApiKey": "รับคีย์ API ของ SambaNova",
 		"customModel": {
@@ -435,6 +447,7 @@
 		},
 		"reasoningEffort": {
 			"label": "ความพยายามในการให้เหตุผลของโมเดล",
+			"minimal": "น้อยที่สุด (เร็วที่สุด)",
 			"high": "สูง",
 			"medium": "ปานกลาง",
 			"low": "ต่ำ"
@@ -468,7 +481,42 @@
 			"requirement4": "ไม่ใช้กุญแจ API - การยืนยันตัวตนจัดการผ่าน OAuth",
 			"requirement5": "ต้องการให้เครื่องมือ Gemini CLI ถูกติดตั้งและยืนยันตัวตนก่อน",
 			"freeAccess": "การเข้าถึงระดับฟรีผ่านการยืนยันตัวตน OAuth"
+		},
+		"io_intelligence": {
+			"name": "IO Intelligence",
+			"description": "ความฉลาดราคาประหยัดสำหรับงานประจำวัน"
+		},
+		"requesty": {
+			"name": "Requesty",
+			"description": "ผู้ช่วย AI ที่รวดเร็วและเชื่อถือได้"
+		},
+		"kilo_code_openrouter": {
+			"description": "เข้าถึงมากกว่า 200 โมเดลผ่าน OpenRouter ด้วยหน้าต่างบริบท 1M"
+		},
+		"qwenCode": {
+			"oauthPath": "เส้นทางข้อมูลประจำตัว OAuth (ไม่บังคับ)",
+			"oauthPathDescription": "เส้นทางไปยังไฟล์ข้อมูลประจำตัว OAuth ปล่อยว่างไว้เพื่อใช้ตำแหน่งเริ่มต้น (~/.qwen/oauth_creds.json)",
+			"description": "ผู้ให้บริการนี้ใช้การยืนยันตัวตน OAuth จากบริการ Qwen และไม่ต้องการคีย์ API",
+			"instructions": "โปรดปฏิบัติตามเอกสารประกอบอย่างเป็นทางการเพื่อรับไฟล์การอนุญาตและวางไว้ในเส้นทางที่ระบุ",
+			"setupLink": "เอกสารประกอบอย่างเป็นทางการของ Qwen"
+		},
+		"roo": {
+			"authenticatedMessage": "ยืนยันตัวตนอย่างปลอดภัยผ่านบัญชี Roo Code Cloud ของคุณ",
+			"connectButton": "เชื่อมต่อกับ Roo Code Cloud"
 		}
+	},
+	"contextWindow": {
+		"description": "บริบทการสนทนาสูงสุด",
+		"oneMillion": "1M"
+	},
+	"maxTokens": {
+		"description": "ความยาวการตอบสนองสูงสุด"
+	},
+	"topP": {
+		"description": "การควบคุมความหลากหลายของการตอบสนอง"
+	},
+	"kiloRemoteControl": {
+		"description": "เปิดใช้งานการควบคุมระยะไกลสำหรับงาน"
 	},
 	"browser": {
 		"enable": {
@@ -730,10 +778,9 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "เปิดใช้งาน Morph Fast Apply",
-			"description": "เมื่อเปิดใช้งาน Kilo Code สามารถแก้ไขไฟล์โดยใช้ Morph Fast Apply",
+			"description": "เมื่อเปิดใช้งาน Kilo Code สามารถแก้ไขไฟล์โดยใช้ Morph Fast Apply ต้องใช้ Kilo Code API Provider, OpenRouter หรือคีย์ API ของ Morph",
 			"apiKey": "คีย์ API ของ Morph (ไม่บังคับ)",
-			"placeholder": "ป้อนคีย์ API ของ Morph (ไม่บังคับ)",
-			"warning": "หากคุณไม่กำหนดค่าคีย์ API ของ Morph คุณยังคงสามารถใช้ Fast Apply กับ Kilo Code หรือ OpenRouter ได้ บัญชีของคุณจะถูกเรียกเก็บเงินสำหรับการใช้งานโมเดล ซึ่งขณะนี้ยังไม่แสดงใน UI ของส่วนขยาย"
+			"placeholder": "ป้อนคีย์ API ของ Morph (ไม่บังคับ)"
 		},
 		"INLINE_ASSIST": {
 			"name": "การช่วยเหลือแบบอินไลน์",
@@ -746,6 +793,10 @@
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "ใช้ตัวแยกวิเคราะห์ข้อความใหม่",
 			"description": "เปิดใช้งานตัวแยกวิเคราะห์ข้อความแบบสตรีมมิ่งทดลองที่ให้การปรับปรุงประสิทธิภาพอย่างมีนัยสำคัญสำหรับการตอบสนองของผู้ช่วยที่ยาวโดยการประมวลผลข้อความอย่างมีประสิทธิภาพมากขึ้น"
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "กำหนดให้มีรายการ 'สิ่งที่ต้องทำ' สำหรับงานใหม่",
+			"description": "เมื่อเปิดใช้งาน เครื่องมือ new_task จะต้องมีการให้พารามิเตอร์รายการสิ่งที่ต้องทำ ซึ่งจะช่วยให้แน่ใจว่างานใหม่ทั้งหมดเริ่มต้นด้วยรายการเป้าหมายที่ชัดเจน เมื่อปิดใช้งาน (ค่าเริ่มต้น) พารามิเตอร์รายการสิ่งที่ต้องทำจะยังคงเป็นทางเลือกเพื่อความเข้ากันได้แบบย้อนหลัง"
 		}
 	},
 	"promptCaching": {
@@ -764,6 +815,7 @@
 		"noComputerUse": "ไม่รองรับการใช้งานคอมพิวเตอร์",
 		"supportsPromptCache": "รองรับการแคชพรอมต์",
 		"noPromptCache": "ไม่รองรับการแคชพรอมต์",
+		"contextWindow": "หน้าต่างบริบท:",
 		"maxOutput": "เอาต์พุตสูงสุด",
 		"inputPrice": "ราคาอินพุต",
 		"outputPrice": "ราคาเอาต์พุต",

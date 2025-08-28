@@ -7,7 +7,8 @@
 		"src/activate/**",
 		"src/workers/countTokens.ts",
 		"src/extension.ts",
-		"scripts/**"
+		"scripts/**",
+		"apps/web-roo-code/next-sitemap.config.cjs"
 	],
 	"workspaces": {
 		"src": {
@@ -16,7 +17,7 @@
 		},
 		"webview-ui": {
 			"entry": ["src/index.tsx"],
-			"project": ["src/**/*.{ts,tsx}"]
+			"project": ["src/**/*.{ts,tsx}", "../src/shared/*.ts"]
 		},
 		"packages/{build,cloud,evals,ipc,telemetry,types}": {
 			"project": ["src/**/*.ts"]

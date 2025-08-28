@@ -43,6 +43,7 @@ import { useAutoApprovalToggles } from "@src/hooks/useAutoApprovalToggles"
 
 import TelemetryBanner from "../common/TelemetryBanner" // kilocode_change: deactivated for now
 // import VersionIndicator from "../common/VersionIndicator" // kilocode_change: unused
+import { OrganizationSelector } from "../kilocode/common/OrganizationSelector"
 import { useTaskSearch } from "../history/useTaskSearch"
 import HistoryPreview from "../history/HistoryPreview"
 import Announcement from "./Announcement"
@@ -94,6 +95,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const {
 		clineMessages: messages,
 		currentTaskItem,
+		currentTaskTodos,
 		taskHistory,
 		apiConfiguration,
 		organizationAllowList,
@@ -152,8 +154,20 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const task = useMemo(() => messages.at(0), [messages])
 
 	const latestTodos = useMemo(() => {
+		// First check if we have initial todos from the state (for new subtasks)
+		if (currentTaskTodos && currentTaskTodos.length > 0) {
+			// Check if there are any todo updates in messages
+			const messageBasedTodos = getLatestTodo(messages)
+			// If there are message-based todos, they take precedence (user has updated them)
+			if (messageBasedTodos && messageBasedTodos.length > 0) {
+				return messageBasedTodos
+			}
+			// Otherwise use the initial todos from state
+			return currentTaskTodos
+		}
+		// Fall back to extracting from messages
 		return getLatestTodo(messages)
-	}, [messages])
+	}, [messages, currentTaskTodos])
 
 	const modifiedMessages = useMemo(() => combineApiRequests(combineCommandSequences(messages.slice(1))), [messages])
 
@@ -463,9 +477,12 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	}, [messages.length])
 
 	useEffect(() => {
+		// Reset UI states
 		setExpandedRows({})
 		everVisibleMessagesTsRef.current.clear() // Clear for new task
 		setCurrentFollowUpTs(null) // Clear follow-up answered state for new task
+		setIsCondensing(false) // Reset condensing state when switching tasks
+		// Note: sendingDisabled is not reset here as it's managed by message effects
 
 		// Clear any pending auto-approval timeout from previous task
 		if (autoApproveTimeoutRef.current) {
@@ -960,11 +977,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	useMount(() => textAreaRef.current?.focus())
 
 	const visibleMessages = useMemo(() => {
-		const currentMessageCount = modifiedMessages.length
-		const startIndex = Math.max(0, currentMessageCount - 500)
-		const recentMessages = modifiedMessages.slice(startIndex)
-
-		const newVisibleMessages = recentMessages.filter((message: ClineMessage) => {
+		// Remove the 500-message limit to prevent array index shifting
+		// Virtuoso is designed to efficiently handle large lists through virtualization
+		const newVisibleMessages = modifiedMessages.filter((message: ClineMessage) => {
 			if (everVisibleMessagesTsRef.current.has(message.ts)) {
 				const alwaysHiddenOnceProcessedAsk: ClineAsk[] = [
 					"api_req_failed",
@@ -1989,6 +2004,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							</div>
 						</div>
 					)}
+					<div>
+						<OrganizationSelector className="absolute top-2 right-3" />
+					</div>
 					{/* kilocode_change start: changed the classes to support notifications */}
 					<div className="w-full h-full flex flex-col gap-4 px-3.5 transition-all duration-300">
 						{/* kilocode_change end */}
@@ -2000,9 +2018,14 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						/>
 
 						<RooHero /> */}
+
 						{telemetrySetting === "unset" && <TelemetryBanner />}
 						{/* kilocode_change start: KilocodeNotifications + Layout fixes */}
-						{telemetrySetting !== "unset" && <KilocodeNotifications />}
+						{telemetrySetting !== "unset" && (
+							<div className={tasks.length === 0 ? "mt-10" : undefined}>
+								<KilocodeNotifications />
+							</div>
+						)}
 						<div className="flex flex-grow flex-col justify-center gap-4">
 							{/* kilocode_change end */}
 							<p className="text-vscode-editor-foreground leading-tight font-vscode-font-family text-center text-balance max-w-[380px] mx-auto my-0">

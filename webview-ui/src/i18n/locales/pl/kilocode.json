@@ -3,7 +3,7 @@
 		"greeting": "Witaj w Kilo Code!",
 		"introText1": "Kilo Code to darmowy, otwartoźródłowy agent kodowania AI.",
 		"introText2": "Współpracuje z najnowszymi modelami AI, takimi jak Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1 i ponad 450 innymi.",
-		"introText3": "Stwórz darmowe konto i otrzymaj tokeny o wartości $20 do wykorzystania z dowolnym modelem AI.",
+		"introText3": "Stwórz darmowe konto i otrzymaj do $25 wartości tokenów do wykorzystania z dowolnym modelem AI.",
 		"ctaButton": "Rozpocznij",
 		"manualModeButton": "Użyj własnego klucza API",
 		"alreadySignedUp": "Już zarejestrowany?",
@@ -16,7 +16,8 @@
 	"pricing": {
 		"costUnknown": "koszt nieznany",
 		"costUnknownDescription": "Dostawca API nie podał żadnych danych o kosztach lub żądanie zostało anulowane.",
-		"discoverModelPricing": "Odkryj ceny i możliwości modeli"
+		"freeModelsDescription": "Darmowe modele mogą mieć limity użycia. Użyj poniższego linku, aby zoptymalizować wykorzystanie darmowych modeli!",
+		"freeModelsLink": "Odkryj opcje darmowych modeli i modeli budżetowych"
 	},
 	"notifications": {
 		"toolRequest": "Żądanie narzędzia oczekuje na zatwierdzenie",
@@ -32,10 +33,34 @@
 			"apiKey": "Klucz API Kilo Code",
 			"login": "Zaloguj się do Kilo Code",
 			"logout": "Wyloguj się z Kilo Code",
-			"automaticFetch": "Najnowsze modele są automatycznie dostępne w Kilo Code. Jeśli nie jesteś pewien, który model wybrać, Kilo Code działa najlepiej z zalecanymi modelami wymienionymi na górze <strong>pogrubioną czcionką</strong>.",
 			"providerRouting": {
 				"title": "Kilo Code - Routing dostawców OpenRouter",
-				"description": "Kilo Code kieruje żądania do najlepszych dostępnych dostawców dla Twojego modelu. Domyślnie żądania są równoważone obciążeniem między najlepszymi dostawcami, aby zmaksymalizować czas działania. Możesz jednak wybrać konkretnego dostawcę do użycia dla tego modelu."
+				"description": "Kilo Code kieruje żądania do najlepszych dostępnych dostawców dla Twojego modelu. Domyślnie żądania są równoważone obciążeniem między najlepszymi dostawcami, aby zmaksymalizować czas działania. Możesz jednak wybrać konkretnego dostawcę do użycia dla tego modelu.",
+				"sorting": {
+					"default": "Domyślne sortowanie dostawców",
+					"price": "Preferuj dostawców z niższą ceną",
+					"throughput": "Preferuj dostawców z wyższą przepustowością",
+					"latency": "Preferuj dostawców z niższym opóźnieniem"
+				},
+				"dataCollection": {
+					"default": "Brak ustawionej polityki danych",
+					"allow": "Zezwól na gromadzenie danych przez dostawcę",
+					"deny": "Zabroń gromadzenia danych przez dostawcę"
+				}
+			},
+			"automaticFetch": "Najnowsze modele są automatycznie dostępne w Kilo Code. Jeśli nie jesteś pewien, który model wybrać, Kilo Code działa najlepiej z zalecanymi modelami wymienionymi na górze <strong>pogrubioną czcionką</strong>."
+		},
+		"modelInfo": {
+			"contextWindow": "Okno kontekstu",
+			"providerBreakdown": "Zestawienie Cen i Możliwości Dostawcy",
+			"averageKiloCodeCost": "To jest średni rzeczywisty koszt za korzystanie z Kilo Code z tym modelem w ciągu ostatniego tygodnia. Może być niższy niż podana cena ze względu na wykorzystanie pamięci podręcznej promptów.",
+			"table": {
+				"provider": "Dostawca",
+				"context": "Punkt końcowy może przetworzyć tę liczbę tokenów (wejście + wyjście).",
+				"inputPrice": "Koszt za milion tokenów dla promptu.",
+				"outputPrice": "Koszt za milion tokenów dla uzupełnienia.",
+				"cacheReadPrice": "Koszt za milion tokenów dla odczytu z pamięci podręcznej.",
+				"cacheWritePrice": "Koszt za milion tokenów dla zapisu do pamięci podręcznej."
 			}
 		},
 		"contextManagement": {
@@ -77,6 +102,8 @@
 		"logOut": "Wyloguj się",
 		"currentBalance": "AKTUALNY STAN KONTA",
 		"loading": "Ładowanie...",
+		"organization": "Organizacja",
+		"personal": "Osobiste",
 		"shop": {
 			"title": "Kup Kredyty",
 			"popular": "Popularne",
@@ -164,7 +191,7 @@
 			"autoTrigger": "Automatyczne wyzwalanie",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Szybkie zadanie w tekście",
-				"description": "Potrzebujesz tylko szybkiej zmiany? Zaznacz jakiś kod (albo nie!) i naciśnij Cmd+I. Opisz swój cel zwykłym językiem (\"stwórz komponent React z tymi propsami\", \"dodaj obsługę błędów do tej funkcji\"), i otrzymaj wiele gotowych do użycia sugestii bezpośrednio w swoim edytorze. <DocsLink>Zobacz skrót</DocsLink>"
+				"description": "Potrzebujesz tylko szybkiej zmiany? Zaznacz jakiś kod (albo nie!) i naciśnij Cmd+I. Opisz swój cel zwykłą językiem (\"stwórz komponent React z tymi propsami\", \"dodaj obsługę błędów do tej funkcji\"), i otrzymaj wiele gotowych do użycia sugestii bezpośrednio w swoim edytorze. <DocsLink>Zobacz skrót</DocsLink>"
 			},
 			"enableAutoInlineTaskKeybinding": {
 				"label": "Zadanie automatyczne w linii",

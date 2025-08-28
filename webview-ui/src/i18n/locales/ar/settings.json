@@ -261,24 +261,33 @@
 			"error": "فشل التحديث. جرّب مرة ثانية."
 		},
 		"getRequestyApiKey": "احصل على مفتاح Requesty",
+		"getRequestyBaseUrl": "رابط الأساس",
+		"requestyUseCustomBaseUrl": "استخدم رابط أساس مخصص",
 		"openRouterTransformsText": "ضغط الموجهات لتناسب حجم السياق (<a>OpenRouter Transforms</a>)",
 		"anthropicApiKey": "مفتاح Anthropic",
 		"getAnthropicApiKey": "احصل على مفتاح Anthropic",
 		"anthropicUseAuthToken": "إرسال المفتاح في ترويسة Authorization بدل X-Api-Key",
+		"anthropic1MContextBetaLabel": "تفعيل نافذة السياق 1 مليون (Beta)",
+		"anthropic1MContextBetaDescription": "توسيع نافذة السياق إلى مليون رمز لـ Claude Sonnet 4",
+		"awsBedrock1MContextBetaLabel": "تفعيل نافذة السياق 1 مليون (Beta)",
+		"awsBedrock1MContextBetaDescription": "توسيع نافذة السياق إلى مليون رمز لـ Claude Sonnet 4",
 		"cerebrasApiKey": "مفتاح Cerebras API",
 		"getCerebrasApiKey": "احصل على مفتاح Cerebras API",
 		"chutesApiKey": "مفتاح Chutes",
 		"getChutesApiKey": "احصل على مفتاح Chutes",
+		"ioIntelligenceApiKey": "مفتاح IO Intelligence",
+		"ioIntelligenceApiKeyPlaceholder": "أدخل مفتاح IO Intelligence API",
+		"getIoIntelligenceApiKey": "احصل على مفتاح IO Intelligence",
 		"deepSeekApiKey": "مفتاح DeepSeek",
 		"getDeepSeekApiKey": "احصل على مفتاح DeepSeek",
 		"doubaoApiKey": "مفتاح Doubao",
 		"getDoubaoApiKey": "احصل على مفتاح Doubao",
+		"featherlessApiKey": "مفتاح Featherless API",
+		"getFeatherlessApiKey": "احصل على مفتاح Featherless API",
 		"fireworksApiKey": "مفتاح Fireworks",
 		"getFireworksApiKey": "احصل على مفتاح Fireworks",
 		"zaiApiKey": "مفتاح Z.AI",
 		"getZaiApiKey": "احصل على مفتاح Z.AI",
-		"bigModelApiKey": "مفتاح BigModel",
-		"getBigModelApiKey": "احصل على مفتاح BigModel",
 		"moonshotApiKey": "مفتاح Moonshot",
 		"getMoonshotApiKey": "احصل على مفتاح Moonshot",
 		"moonshotBaseUrl": "نقطة دخول Moonshot",
@@ -379,6 +388,9 @@
 		"ollama": {
 			"baseUrl": "الرابط الأساسي (اختياري)",
 			"modelId": "معرّف النموذج",
+			"apiKey": "مفتاح API",
+			"apiKeyPlaceholder": "أدخل مفتاح API",
+			"apiKeyInfo": "سيتم إرسال مفتاح API في ترويسة Authorization",
 			"description": "Ollama يشغّل نماذج محليًا. راجع دليلهم.",
 			"warning": "ملاحظة: Kilo Code يعمل أفضل مع Claude. النماذج الضعيفة قد لا تؤدي المطلوب."
 		},
@@ -451,6 +463,7 @@
 		},
 		"reasoningEffort": {
 			"label": "جهد الاستنتاج",
+			"minimal": "الحد الأدنى (الأسرع)",
 			"high": "عالي",
 			"medium": "متوسط",
 			"low": "منخفض"
@@ -484,7 +497,42 @@
 			"requirement4": "المصادقة تتم عبر OAuth",
 			"requirement5": "الأداة لازم تكون مثبتة ومُسجلة دخول",
 			"freeAccess": "طبقة مجانية عبر OAuth"
+		},
+		"io_intelligence": {
+			"name": "IO Intelligence",
+			"description": "ذكاء ميسور للمهام اليومية"
+		},
+		"requesty": {
+			"name": "Requesty",
+			"description": "مساعد ذكي سريع وموثوق"
+		},
+		"kilo_code_openrouter": {
+			"description": "الوصول لأكثر من 200 نموذج عبر OpenRouter بنافذة سياق 1 مليون"
+		},
+		"qwenCode": {
+			"oauthPath": "مسار بيانات OAuth (اختياري)",
+			"oauthPathDescription": "مسار ملف بيانات OAuth. اتركه فاضي لاستخدام المسار الافتراضي (~/.qwen/oauth_creds.json).",
+			"description": "يستخدم هذا المزوّد مصادقة OAuth من خدمة Qwen ولا يحتاج مفاتيح API.",
+			"instructions": "يرجى اتباع التوثيق الرسمي للحصول على ملف التخويل ووضعه في المسار المحدد.",
+			"setupLink": "توثيق Qwen الرسمي"
+		},
+		"roo": {
+			"authenticatedMessage": "تم التوثيق بأمان عبر حساب Roo Code Cloud.",
+			"connectButton": "اتصل بـ Roo Code Cloud"
 		}
+	},
+	"contextWindow": {
+		"description": "أقصى سياق محادثة",
+		"oneMillion": "1 مليون"
+	},
+	"maxTokens": {
+		"description": "أقصى طول إجابة"
+	},
+	"topP": {
+		"description": "تحكم في تنوع الإجابات"
+	},
+	"kiloRemoteControl": {
+		"description": "تفعيل التحكم عن بُعد للمهام"
 	},
 	"browser": {
 		"enable": {
@@ -741,10 +789,9 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "تفعيل Morph Fast Apply",
-			"description": "عند التفعيل، يمكن لـ Kilo Code تحرير الملفات باستخدام Morph Fast Apply.",
+			"description": "عند التفعيل، يمكن لـ Kilo Code تحرير الملفات باستخدام Morph Fast Apply. يتطلب مزوّد Kilo Code API أو OpenRouter أو مفتاح Morph API.",
 			"apiKey": "مفتاح Morph API (اختياري)",
-			"placeholder": "أدخل مفتاح Morph API (اختياري)",
-			"warning": "إذا لم تقم بتكوين مفتاح Morph API، يمكنك لا تزال استخدام Fast Apply مع Kilo Code أو OpenRouter. سيتم تحصيل رسوم من حسابك لاستخدام النموذج، هذا غير مُعرض حاليًا في واجهة الإضافة."
+			"placeholder": "أدخل مفتاح Morph API (اختياري)"
 		},
 		"INLINE_ASSIST": {
 			"name": "المساعد المضمّن",
@@ -757,6 +804,10 @@
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "استخدام محلل الرسائل الجديد",
 			"description": "تفعيل محلل الرسائل التجريبي المتدفق الذي يوفر تحسينات كبيرة في الأداء للاستجابات الطويلة من المساعد من خلال معالجة الرسائل بكفاءة أكبر."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "يتطلب قائمة 'مهام' للمهام الجديدة",
+			"description": "عند التفعيل، أداة المهام الجديدة ستتطلب توفير معامل المهام. هذا يضمن أن كل المهام الجديدة تبدأ بقائمة واضحة من الأهداف. عند التعطيل (افتراضي)، يبقى معامل المهام اختياري للتوافق مع النسخة السابقة."
 		}
 	},
 	"promptCaching": {
@@ -775,6 +826,7 @@
 		"noComputerUse": "لا يدعم استخدام الكمبيوتر",
 		"supportsPromptCache": "يدعم تخزين الموجهات",
 		"noPromptCache": "لا يدعم تخزين الموجهات",
+		"contextWindow": "نافذة السياق:",
 		"maxOutput": "أقصى مخرجات",
 		"inputPrice": "سعر الإدخال",
 		"outputPrice": "سعر المخرجات",

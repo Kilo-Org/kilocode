@@ -105,6 +105,9 @@
 			"apiError": "Gemini CLI API error: {{error}}",
 			"completionError": "Gemini CLI completion error: {{error}}"
 		},
+		"qwenCode": {
+			"oauthLoadFailed": "Failed to load OAuth credentials. Please authenticate first: {{error}}"
+		},
 		"gemini": {
 			"generate_stream": "Gemini generate context stream error: {{error}}",
 			"generate_complete_prompt": "Gemini completion error: {{error}}",
@@ -118,6 +121,9 @@
 			"genericError": "Cerebras API Error ({{status}}): {{message}}",
 			"noResponseBody": "Cerebras API Error: No response body",
 			"completionError": "Cerebras completion error: {{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "Roo provider requires cloud authentication. Please sign in to Roo Code Cloud."
 		}
 	},
 	"warnings": {
@@ -195,6 +201,9 @@
 			"cloud_auth_required": "Your organization requires Kilo Code Cloud authentication. Please sign in to continue.",
 			"organization_mismatch": "You must be authenticated with your organization's Kilo Code Cloud account.",
 			"verification_failed": "Unable to verify organization authentication."
+		},
+		"info": {
+			"organization_requires_auth": "Your organization requires authentication."
 		}
 	},
 	"prompts": {

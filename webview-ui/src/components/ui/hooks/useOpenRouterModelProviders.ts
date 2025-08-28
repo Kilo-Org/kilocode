@@ -22,12 +22,20 @@ const openRouterEndpointsSchema = z.object({
 		endpoints: z.array(
 			z.object({
 				name: z.string(),
+				// kilocode_change start
+				provider_name: z.string(),
+				tag: z.string().optional(),
+				// kilocode_change end
 				context_length: z.number(),
 				max_completion_tokens: z.number().nullish(),
 				pricing: z
 					.object({
 						prompt: z.union([z.string(), z.number()]).optional(),
 						completion: z.union([z.string(), z.number()]).optional(),
+						// kilocode_change start
+						input_cache_read: z.union([z.string(), z.number()]).optional(),
+						input_cache_write: z.union([z.string(), z.number()]).optional(),
+						// kilocode_change end
 					})
 					.optional(),
 			}),
@@ -60,15 +68,24 @@ async function getOpenRouterProvidersForModel(modelId: string, baseUrl?: string,
 		const { id, description, architecture, endpoints } = result.data.data
 
 		for (const endpoint of endpoints) {
-			const providerName = endpoint.name.split("|")[0].trim()
+			const providerName = endpoint.tag ?? endpoint.provider_name // kilocode_change
 			const inputPrice = parseApiPrice(endpoint.pricing?.prompt)
 			const outputPrice = parseApiPrice(endpoint.pricing?.completion)
+
+			// kilocode_change start
+			const cacheReadsPrice = parseApiPrice(endpoint.pricing?.input_cache_read)
+			const cacheWritesPrice = parseApiPrice(endpoint.pricing?.input_cache_write)
+			// kilocode_change end
 
 			const modelInfo: OpenRouterModelProvider = {
 				maxTokens: endpoint.max_completion_tokens || endpoint.context_length,
 				contextWindow: endpoint.context_length,
 				supportsImages: architecture?.modality?.includes("image"),
-				supportsPromptCache: false,
+				// kilocode_change start
+				supportsPromptCache: typeof cacheReadsPrice !== "undefined",
+				cacheReadsPrice,
+				cacheWritesPrice,
+				// kilocode_change end
 				inputPrice,
 				outputPrice,
 				description,
@@ -93,11 +110,13 @@ async function getOpenRouterProvidersForModel(modelId: string, baseUrl?: string,
 					modelInfo.cacheReadsPrice = 0.3
 					modelInfo.maxTokens = 8192
 					break
-				default:
-					modelInfo.supportsPromptCache = true
-					modelInfo.cacheWritesPrice = 0.3
-					modelInfo.cacheReadsPrice = 0.03
-					break
+				// kilocode_change start
+				//default:
+				//	modelInfo.supportsPromptCache = true
+				//	modelInfo.cacheWritesPrice = 0.3
+				//	modelInfo.cacheReadsPrice = 0.03
+				//	break
+				// kilocode_change end
 			}
 
 			models[providerName] = modelInfo
@@ -118,15 +137,16 @@ type UseOpenRouterModelProvidersOptions = Omit<
 	"queryKey" | "queryFn"
 >
 
-// kilocode_change start: baseUrl, apiKey
+// kilocode_change start: baseUrl, apiKey, organizationId
 export const useOpenRouterModelProviders = (
 	modelId?: string,
 	baseUrl?: string,
 	apiKey?: string,
+	organizationId?: string,
 	options?: UseOpenRouterModelProvidersOptions,
 ) =>
 	useQuery<Record<string, OpenRouterModelProvider>>({
-		queryKey: ["openrouter-model-providers", modelId, baseUrl, apiKey],
+		queryKey: ["openrouter-model-providers", modelId, baseUrl, apiKey, organizationId],
 		queryFn: () => (modelId ? getOpenRouterProvidersForModel(modelId, baseUrl, apiKey) : {}),
 		...options,
 	})

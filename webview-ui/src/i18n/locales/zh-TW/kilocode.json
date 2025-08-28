@@ -3,7 +3,7 @@
 		"greeting": "歡迎使用 Kilo Code！",
 		"introText1": "Kilo Code 是一個免費的開源 AI 程式設計代理。",
 		"introText2": "它適用於最新的 AI 模型，如 Claude 4 Sonnet、Gemini 2.5 Pro、GPT-4.1 以及 450 多個其他模型。",
-		"introText3": "建立免費帳戶，獲得價值 20 美元的 token，可用於任何 AI 模型。",
+		"introText3": "建立免費帳戶，獲得最多價值 25 美元的 token，可用於任何 AI 模型。",
 		"ctaButton": "開始使用",
 		"manualModeButton": "使用你自己的 API 金鑰",
 		"alreadySignedUp": "已經註冊了？",
@@ -16,7 +16,8 @@
 	"pricing": {
 		"costUnknown": "費用未知",
 		"costUnknownDescription": "API 提供商未提供任何費用資料或請求已取消。",
-		"discoverModelPricing": "了解模型定價和功能"
+		"freeModelsDescription": "免費模型可能有速率限制。使用下方連結來優化你的免費模型使用！",
+		"freeModelsLink": "探索免費模型選項"
 	},
 	"notifications": {
 		"toolRequest": "工具請求等待核准",
@@ -47,9 +48,33 @@
 			"logout": "登出 Kilo Code",
 			"providerRouting": {
 				"title": "Kilo Code - OpenRouter 供應商路由",
-				"description": "Kilo Code 將請求路由到您模型的最佳可用供應商。預設情況下，請求會在頂級供應商之間進行負載平衡，以最大化正常執行時間。但是，您可以選擇要用於此模型的特定供應商。"
+				"description": "Kilo Code 將請求路由到您模型的最佳可用供應商。預設情況下，請求會在頂級供應商之間進行負載平衡，以最大化正常執行時間。但是，您可以選擇要用於此模型的特定供應商。",
+				"sorting": {
+					"default": "預設供應商排序",
+					"price": "偏好較低價格的供應商",
+					"throughput": "偏好較高輸送量的供應商",
+					"latency": "偏好較低延遲的供應商"
+				},
+				"dataCollection": {
+					"default": "未設定資料政策",
+					"allow": "允許供應商資料收集",
+					"deny": "拒絕供應商資料收集"
+				}
 			},
 			"automaticFetch": "最新模型會自動在 Kilo Code 中提供。如果您不確定要選擇哪個模型，Kilo Code 與列在頂部<strong>粗體</strong>顯示的推薦模型搭配使用效果最佳。"
+		},
+		"modelInfo": {
+			"contextWindow": "上下文視窗",
+			"providerBreakdown": "供應商價格與功能明細",
+			"averageKiloCodeCost": "這是過去一週 Kilo Code 使用此模型的平均實際花費。由於提示詞快取的使用，可能低於列出的價格。",
+			"table": {
+				"provider": "供應商",
+				"context": "端點可以處理這個數量的 Token（輸入 + 輸出）。",
+				"inputPrice": "提示每百萬 Token 的費用。",
+				"outputPrice": "完成每百萬 Token 的費用。",
+				"cacheReadPrice": "從快取讀取每百萬 Token 的費用。",
+				"cacheWritePrice": "寫入快取每百萬 Token 的費用。"
+			}
 		},
 		"terminal": {
 			"commandGenerator": {
@@ -77,6 +102,8 @@
 		"logOut": "登出",
 		"currentBalance": "目前餘額",
 		"loading": "載入中...",
+		"organization": "組織",
+		"personal": "個人",
 		"shop": {
 			"title": "購買點數",
 			"popular": "熱門",

@@ -261,24 +261,33 @@
 			"error": "Nepodařilo se obnovit seznam modelů. Zkuste to prosím znovu."
 		},
 		"getRequestyApiKey": "Získat klíč API Requesty",
+		"getRequestyBaseUrl": "Základní URL",
+		"requestyUseCustomBaseUrl": "Použít vlastní základní URL",
 		"openRouterTransformsText": "Komprimovat výzvy a řetězce zpráv na velikost kontextu (<a>Transformace OpenRouter</a>)",
 		"anthropicApiKey": "Klíč API Anthropic",
 		"getAnthropicApiKey": "Získat klíč API Anthropic",
 		"anthropicUseAuthToken": "Předávat klíč API Anthropic jako hlavičku Authorization místo X-Api-Key",
+		"anthropic1MContextBetaLabel": "Povolit 1M okno kontextu (Beta)",
+		"anthropic1MContextBetaDescription": "Rozšířit okno kontextu na 1 milion tokenů pro Claude Sonnet 4",
+		"awsBedrock1MContextBetaLabel": "Povolit 1M okno kontextu (Beta)",
+		"awsBedrock1MContextBetaDescription": "Rozšířit okno kontextu na 1 milion tokenů pro Claude Sonnet 4",
 		"cerebrasApiKey": "Klíč API Cerebras",
 		"getCerebrasApiKey": "Získat klíč API Cerebras",
 		"chutesApiKey": "Klíč API Chutes",
 		"getChutesApiKey": "Získat klíč API Chutes",
+		"ioIntelligenceApiKey": "Klíč API IO Intelligence",
+		"ioIntelligenceApiKeyPlaceholder": "Zadejte váš klíč API IO Intelligence",
+		"getIoIntelligenceApiKey": "Získat klíč API IO Intelligence",
 		"deepSeekApiKey": "Klíč API DeepSeek",
 		"getDeepSeekApiKey": "Získat klíč API DeepSeek",
 		"doubaoApiKey": "Klíč API Doubao",
 		"getDoubaoApiKey": "Získat klíč API Doubao",
+		"featherlessApiKey": "Klíč API Featherless",
+		"getFeatherlessApiKey": "Získat klíč API Featherless",
 		"fireworksApiKey": "Klíč API Fireworks",
 		"getFireworksApiKey": "Získat klíč API Fireworks",
 		"zaiApiKey": "Klíč API Z.AI",
 		"getZaiApiKey": "Získat klíč API Z.AI",
-		"bigModelApiKey": "Klíč API BigModel",
-		"getBigModelApiKey": "Získat klíč API BigModel",
 		"moonshotApiKey": "Klíč API Moonshot",
 		"getMoonshotApiKey": "Získat klíč API Moonshot",
 		"moonshotBaseUrl": "Vstupní bod Moonshot",
@@ -379,6 +388,9 @@
 		"ollama": {
 			"baseUrl": "Základní URL (volitelné)",
 			"modelId": "ID modelu",
+			"apiKey": "Klíč API",
+			"apiKeyPlaceholder": "Zadejte svůj klíč API",
+			"apiKeyInfo": "Klíč API bude odeslán jako Authorization hlavička",
 			"description": "Ollama vám umožňuje spouštět modely lokálně na vašem počítači. Pokyny k zahájení práce naleznete v jejich průvodci rychlým startem.",
 			"warning": "Poznámka: Kilo Code používá složité výzvy a nejlépe funguje s modely Claude. Méně schopné modely nemusí fungovat podle očekávání."
 		},
@@ -389,6 +401,10 @@
 		"humanRelay": {
 			"description": "Není vyžadován žádný klíč API, ale uživatel musí pomoci zkopírovat a vložit informace do webového chatu AI.",
 			"instructions": "Během používání se zobrazí dialogové okno a aktuální zpráva se automaticky zkopíruje do schránky. Musíte je vložit do webových verzí AI (například ChatGPT nebo Claude), poté zkopírovat odpověď AI zpět do dialogového okna a kliknout na tlačítko potvrdit."
+		},
+		"roo": {
+			"authenticatedMessage": "Bezpečně autentizováno prostřednictvím vašeho účtu Roo Code Cloud.",
+			"connectButton": "Připojit se k Roo Code Cloud"
 		},
 		"openRouter": {
 			"providerRouting": {
@@ -451,6 +467,7 @@
 		},
 		"reasoningEffort": {
 			"label": "Úsilí modelu při uvažování",
+			"minimal": "Minimální (nejrychlejší)",
 			"high": "Vysoké",
 			"medium": "Střední",
 			"low": "Nízké"
@@ -484,7 +501,38 @@
 			"requirement4": "Nepoužívá klíče API - ověřování je řešeno přes OAuth",
 			"requirement5": "Vyžaduje, aby byl nástroj Gemini CLI nejdříve nainstalován a ověřen",
 			"freeAccess": "Přístup k bezplatné úrovni prostřednictvím OAuth autentizace"
+		},
+		"io_intelligence": {
+			"name": "IO Intelligence",
+			"description": "Cenově dostupná inteligence pro každodenní úkoly"
+		},
+		"requesty": {
+			"name": "Requesty",
+			"description": "Rychlý a spolehlivý AI asistent"
+		},
+		"kilo_code_openrouter": {
+			"description": "Přístup k 200+ modelům přes OpenRouter s 1M kontextovým oknem"
+		},
+		"qwenCode": {
+			"oauthPath": "Cesta k OAuth přihlašovacím údajům (volitelné)",
+			"oauthPathDescription": "Cesta k souboru přihlašovacích údajů OAuth. Ponechte prázdné pro použití výchozího umístění (~/.qwen/oauth_creds.json).",
+			"description": "Tento poskytovatel používá OAuth autentizaci ze služby Qwen a nevyžaduje klíče API.",
+			"instructions": "Postupujte prosím podle oficiální dokumentace pro získání autorizačního souboru a umístěte jej do zadané cesty.",
+			"setupLink": "Oficiální dokumentace Qwen"
 		}
+	},
+	"contextWindow": {
+		"description": "Maximální kontext konverzace",
+		"oneMillion": "1M"
+	},
+	"maxTokens": {
+		"description": "Maximální délka odpovědi"
+	},
+	"topP": {
+		"description": "Kontrola rozmanitosti odpovědí"
+	},
+	"kiloRemoteControl": {
+		"description": "Povolit vzdálené ovládání úkolů"
 	},
 	"browser": {
 		"enable": {
@@ -752,10 +800,9 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Povolit Morph Fast Apply",
-			"description": "Pokud je povoleno, Kilo Code může upravovat soubory pomocí Morph Fast Apply.",
+			"description": "Pokud je povoleno, Kilo Code může upravovat soubory pomocí Morph Fast Apply. Vyžaduje poskytovatele Kilo Code API, OpenRouter nebo klíč API Morph.",
 			"apiKey": "Klíč API Morph (volitelné)",
-			"placeholder": "Zadejte svůj klíč API Morph (volitelné)",
-			"warning": "Pokud nenakonfigurujete klíč API Morph, můžete stále používat Fast Apply s Kilo Code nebo OpenRouter. Váš účet bude účtován za použití modelu, což se aktuálně nezobrazuje v uživatelském rozhraní rozšíření."
+			"placeholder": "Zadejte svůj klíč API Morph (volitelné)"
 		},
 		"INLINE_ASSIST": {
 			"name": "Inline pomoc",
@@ -768,6 +815,10 @@
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "Použít nový parser zpráv",
 			"description": "Povolit experimentální streamovací parser zpráv, který poskytuje významná zlepšení výkonu pro dlouhé odpovědi asistenta efektivnějším zpracováním zpráv."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "Vyžadovat seznam 'úkolů' pro nové úkoly",
+			"description": "Pokud je povoleno, nástroj new_task bude vyžadovat poskytnutí parametru úkolů. Tím se zajistí, že všechny nové úkoly začnou s jasným seznamem cílů. Pokud je zakázáno (výchozí), parametr úkolů zůstane volitelný pro zpětnou kompatibilitu."
 		}
 	},
 	"promptCaching": {
@@ -786,6 +837,7 @@
 		"noComputerUse": "Nepodporuje používání počítače",
 		"supportsPromptCache": "Podporuje ukládání výzev do mezipaměti",
 		"noPromptCache": "Nepodporuje ukládání výzev do mezipaměti",
+		"contextWindow": "Kontextové okno:",
 		"maxOutput": "Maximální výstup",
 		"inputPrice": "Cena vstupu",
 		"outputPrice": "Cena výstupu",

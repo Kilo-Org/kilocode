@@ -258,22 +258,31 @@
 			"error": "Nie udało się odświeżyć listy modeli. Spróbuj ponownie."
 		},
 		"getRequestyApiKey": "Uzyskaj klucz API Requesty",
+		"getRequestyBaseUrl": "Bazowy URL",
+		"requestyUseCustomBaseUrl": "Użyj niestandardowego bazowego URL",
 		"openRouterTransformsText": "Kompresuj podpowiedzi i łańcuchy wiadomości do rozmiaru kontekstu (<a>Transformacje OpenRouter</a>)",
 		"anthropicApiKey": "Klucz API Anthropic",
 		"getAnthropicApiKey": "Uzyskaj klucz API Anthropic",
 		"anthropicUseAuthToken": "Przekaż klucz API Anthropic jako nagłówek Authorization zamiast X-Api-Key",
+		"anthropic1MContextBetaLabel": "Włącz okno kontekstowe 1M (Beta)",
+		"anthropic1MContextBetaDescription": "Rozszerza okno kontekstowe do 1 miliona tokenów dla Claude Sonnet 4",
+		"awsBedrock1MContextBetaLabel": "Włącz okno kontekstowe 1M (Beta)",
+		"awsBedrock1MContextBetaDescription": "Rozszerza okno kontekstowe do 1 miliona tokenów dla Claude Sonnet 4",
 		"cerebrasApiKey": "Klucz API Cerebras",
 		"getCerebrasApiKey": "Pobierz klucz API Cerebras",
 		"chutesApiKey": "Klucz API Chutes",
 		"getChutesApiKey": "Uzyskaj klucz API Chutes",
 		"fireworksApiKey": "Klucz API Fireworks",
 		"getFireworksApiKey": "Uzyskaj klucz API Fireworks",
+		"featherlessApiKey": "Klucz API Featherless",
+		"getFeatherlessApiKey": "Uzyskaj klucz API Featherless",
+		"ioIntelligenceApiKey": "Klucz API IO Intelligence",
+		"ioIntelligenceApiKeyPlaceholder": "Wprowadź swój klucz API IO Intelligence",
+		"getIoIntelligenceApiKey": "Uzyskaj klucz API IO Intelligence",
 		"deepSeekApiKey": "Klucz API DeepSeek",
 		"getDeepSeekApiKey": "Uzyskaj klucz API DeepSeek",
 		"doubaoApiKey": "Klucz API Doubao",
 		"getDoubaoApiKey": "Uzyskaj klucz API Doubao",
-		"bigModelApiKey": "Klucz API BigModel",
-		"getBigModelApiKey": "Uzyskaj klucz API BigModel",
 		"moonshotApiKey": "Klucz API Moonshot",
 		"getMoonshotApiKey": "Uzyskaj klucz API Moonshot",
 		"moonshotBaseUrl": "Punkt wejścia Moonshot",
@@ -364,6 +373,9 @@
 		"ollama": {
 			"baseUrl": "URL bazowy (opcjonalnie)",
 			"modelId": "ID modelu",
+			"apiKey": "Klucz API",
+			"apiKeyPlaceholder": "Wprowadź swój klucz API",
+			"apiKeyInfo": "Klucz API będzie wysłany jako nagłówek Authorization",
 			"description": "Ollama pozwala na lokalne uruchamianie modeli na twoim komputerze. Aby rozpocząć, zapoznaj się z przewodnikiem szybkiego startu.",
 			"warning": "Uwaga: Kilo Code używa złożonych podpowiedzi i działa najlepiej z modelami Claude. Modele o niższych możliwościach mogą nie działać zgodnie z oczekiwaniami."
 		},
@@ -374,6 +386,10 @@
 		"humanRelay": {
 			"description": "Nie jest wymagany klucz API, ale użytkownik będzie musiał pomóc w kopiowaniu i wklejaniu informacji do czatu internetowego AI.",
 			"instructions": "Podczas użytkowania pojawi się okno dialogowe, a bieżąca wiadomość zostanie automatycznie skopiowana do schowka. Będziesz musiał wkleić ją do internetowych wersji AI (takich jak ChatGPT lub Claude), a następnie skopiować odpowiedź AI z powrotem do okna dialogowego i kliknąć przycisk potwierdzenia."
+		},
+		"roo": {
+			"authenticatedMessage": "Bezpiecznie uwierzytelniony przez twoje konto Roo Code Cloud.",
+			"connectButton": "Połącz z Roo Code Cloud"
 		},
 		"openRouter": {
 			"providerRouting": {
@@ -436,6 +452,7 @@
 		},
 		"reasoningEffort": {
 			"label": "Wysiłek rozumowania modelu",
+			"minimal": "Minimalny (najszybszy)",
 			"high": "Wysoki",
 			"medium": "Średni",
 			"low": "Niski"
@@ -469,6 +486,13 @@
 			"requirement4": "Nie używa kluczy API - uwierzytelnianie jest obsługiwane przez OAuth",
 			"requirement5": "Wymaga, aby narzędzie Gemini CLI było najpierw zainstalowane i uwierzytelnione",
 			"freeAccess": "Darmowy dostęp przez uwierzytelnianie OAuth"
+		},
+		"qwenCode": {
+			"oauthPath": "Ścieżka danych uwierzytelniających OAuth (opcjonalne)",
+			"oauthPathDescription": "Ścieżka do pliku danych uwierzytelniających OAuth. Pozostaw puste, aby użyć domyślnej lokalizacji (~/.qwen/oauth_creds.json).",
+			"description": "Ten dostawca używa uwierzytelniania OAuth z usługi Qwen i nie wymaga kluczy API.",
+			"instructions": "Postępuj zgodnie z oficjalną dokumentacją, aby uzyskać plik autoryzacji i umieścić go w określonej ścieżce.",
+			"setupLink": "Oficjalna dokumentacja Qwen"
 		}
 	},
 	"browser": {
@@ -721,10 +745,9 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Włącz Morph Fast Apply",
-			"description": "Gdy włączone, Kilo Code może edytować pliki używając Morph Fast Apply.",
+			"description": "Gdy włączone, Kilo Code może edytować pliki używając Morph Fast Apply. Wymaga Dostawcy API Kilo Code, OpenRouter lub klucza API Morph.",
 			"apiKey": "Klucz API Morph (opcjonalny)",
-			"placeholder": "Wprowadź swój klucz API Morph (opcjonalny)",
-			"warning": "Jeśli nie skonfigurujesz klucza API Morph, nadal możesz używać Fast Apply z Kilo Code lub OpenRouter. Twoje konto zostanie obciążone za użycie modelu, co obecnie nie jest pokazywane w interfejsie rozszerzenia."
+			"placeholder": "Wprowadź swój klucz API Morph (opcjonalny)"
 		},
 		"INLINE_ASSIST": {
 			"name": "Pomoc w linii",
@@ -737,6 +760,10 @@
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "Użyj nowego parsera wiadomości",
 			"description": "Włącz eksperymentalny parser wiadomości w strumieniu, który przyspiesza długie odpowiedzi dzięki bardziej wydajnemu przetwarzaniu wiadomości."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "Wymagaj listy 'todos' dla nowych zadań",
+			"description": "Gdy włączone, narzędzie new_task będzie wymagało podania parametru todos. Zapewnia to, że wszystkie nowe zadania rozpoczynają się od jasnej listy celów. Gdy wyłączone (domyślnie), parametr todos pozostaje opcjonalny dla zachowania kompatybilności wstecznej."
 		}
 	},
 	"promptCaching": {
@@ -755,6 +782,7 @@
 		"noComputerUse": "Nie obsługuje użycia komputera",
 		"supportsPromptCache": "Obsługuje buforowanie podpowiedzi",
 		"noPromptCache": "Nie obsługuje buforowania podpowiedzi",
+		"contextWindow": "Okno kontekstowe:",
 		"maxOutput": "Maksymalne wyjście",
 		"inputPrice": "Cena wejścia",
 		"outputPrice": "Cena wyjścia",

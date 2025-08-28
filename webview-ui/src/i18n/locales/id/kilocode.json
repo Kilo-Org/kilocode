@@ -3,7 +3,7 @@
 		"greeting": "Selamat datang di Kilo Code!",
 		"introText1": "Kilo Code adalah agen coding AI gratis dan open source.",
 		"introText2": "Bekerja dengan model AI terbaru seperti Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1, dan lebih dari 450 model lainnya.",
-		"introText3": "Buat akun gratis dan dapatkan $20 token untuk digunakan dengan model AI apapun.",
+		"introText3": "Buat akun gratis dan dapatkan hingga $25 senilai token untuk digunakan dengan model AI apapun.",
 		"ctaButton": "Mulai",
 		"manualModeButton": "Gunakan API key sendiri",
 		"alreadySignedUp": "Sudah mendaftar?",
@@ -16,7 +16,8 @@
 	"pricing": {
 		"costUnknown": "biaya tidak diketahui",
 		"costUnknownDescription": "Penyedia API tidak memberikan data biaya atau permintaan dibatalkan.",
-		"discoverModelPricing": "Temukan harga dan kemampuan model"
+		"freeModelsDescription": "Model gratis mungkin memiliki batas penggunaan. Gunakan tautan di bawah ini untuk mengoptimalkan penggunaan model gratis kamu!",
+		"freeModelsLink": "Temukan opsi model gratis dan hemat biaya"
 	},
 	"notifications": {
 		"toolRequest": "Permintaan tool menunggu persetujuan",
@@ -35,7 +36,31 @@
 			"automaticFetch": "Model terbaru tersedia secara otomatis di Kilo Code. Jika Anda tidak yakin model mana yang harus dipilih, Kilo Code bekerja paling baik dengan model yang direkomendasikan yang tercantum di bagian atas dengan <strong>huruf tebal</strong>.",
 			"providerRouting": {
 				"title": "Kilo Code - Perutean Penyedia OpenRouter",
-				"description": "Kilo Code merutekan permintaan ke penyedia terbaik yang tersedia untuk model Anda. Secara default, permintaan diseimbangkan bebannya di seluruh penyedia teratas untuk memaksimalkan waktu aktif. Namun, Anda dapat memilih penyedia tertentu untuk digunakan untuk model ini."
+				"description": "Kilo Code merutekan permintaan ke penyedia terbaik yang tersedia untuk model Anda. Secara default, permintaan diseimbangkan bebannya di seluruh penyedia teratas untuk memaksimalkan waktu aktif. Namun, Anda dapat memilih penyedia tertentu untuk digunakan untuk model ini.",
+				"sorting": {
+					"default": "Pengurutan penyedia default",
+					"price": "Utamakan penyedia dengan harga lebih rendah",
+					"throughput": "Utamakan penyedia dengan throughput lebih tinggi",
+					"latency": "Utamakan penyedia dengan latensi lebih rendah"
+				},
+				"dataCollection": {
+					"default": "Tidak ada kebijakan data yang ditetapkan",
+					"allow": "Izinkan pengumpulan data penyedia",
+					"deny": "Tolak pengumpulan data penyedia"
+				}
+			}
+		},
+		"modelInfo": {
+			"contextWindow": "Jendela konteks",
+			"providerBreakdown": "Rincian Harga dan Kemampuan Penyedia",
+			"averageKiloCodeCost": "Ini adalah rata-rata biaya aktual yang dihabiskan Kilo Code menggunakan model ini selama seminggu terakhir. Biaya ini mungkin lebih rendah dari harga yang tercantum karena pemanfaatan cache prompt.",
+			"table": {
+				"provider": "Penyedia",
+				"context": "Endpoint dapat memproses jumlah token ini (input + output).",
+				"inputPrice": "Biaya per juta token untuk prompt.",
+				"outputPrice": "Biaya per juta token untuk completion.",
+				"cacheReadPrice": "Biaya per juta token untuk membaca dari cache.",
+				"cacheWritePrice": "Biaya per juta token untuk menulis ke cache."
 			}
 		},
 		"contextManagement": {
@@ -77,6 +102,8 @@
 		"logOut": "Keluar",
 		"currentBalance": "SALDO SAAT INI",
 		"loading": "Memuat...",
+		"organization": "Organisasi",
+		"personal": "Pribadi",
 		"shop": {
 			"title": "Beli Kredit",
 			"popular": "Populer",

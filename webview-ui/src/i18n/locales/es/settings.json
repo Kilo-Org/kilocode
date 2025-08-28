@@ -258,22 +258,31 @@
 			"error": "Error al actualizar la lista de modelos. Por favor, inténtalo de nuevo."
 		},
 		"getRequestyApiKey": "Obtener clave API de Requesty",
+		"getRequestyBaseUrl": "URL base",
+		"requestyUseCustomBaseUrl": "Utilice una URL base personalizada",
 		"openRouterTransformsText": "Comprimir prompts y cadenas de mensajes al tamaño del contexto (<a>Transformaciones de OpenRouter</a>)",
 		"anthropicApiKey": "Clave API de Anthropic",
 		"getAnthropicApiKey": "Obtener clave API de Anthropic",
 		"anthropicUseAuthToken": "Pasar la clave API de Anthropic como encabezado de autorización en lugar de X-Api-Key",
+		"anthropic1MContextBetaLabel": "Habilitar ventana de contexto de 1M (Beta)",
+		"anthropic1MContextBetaDescription": "Amplía la ventana de contexto a 1 millón de tokens para Claude Sonnet 4",
+		"awsBedrock1MContextBetaLabel": "Habilitar ventana de contexto de 1M (Beta)",
+		"awsBedrock1MContextBetaDescription": "Amplía la ventana de contexto a 1 millón de tokens para Claude Sonnet 4",
 		"cerebrasApiKey": "Clave API de Cerebras",
 		"getCerebrasApiKey": "Obtener clave API de Cerebras",
 		"chutesApiKey": "Clave API de Chutes",
 		"getChutesApiKey": "Obtener clave API de Chutes",
 		"fireworksApiKey": "Clave API de Fireworks",
 		"getFireworksApiKey": "Obtener clave API de Fireworks",
+		"featherlessApiKey": "Clave API de Featherless",
+		"getFeatherlessApiKey": "Obtener clave API de Featherless",
+		"ioIntelligenceApiKey": "Clave API de IO Intelligence",
+		"ioIntelligenceApiKeyPlaceholder": "Introduce tu clave de API de IO Intelligence",
+		"getIoIntelligenceApiKey": "Obtener clave API de IO Intelligence",
 		"deepSeekApiKey": "Clave API de DeepSeek",
 		"getDeepSeekApiKey": "Obtener clave API de DeepSeek",
 		"doubaoApiKey": "Clave API de Doubao",
 		"getDoubaoApiKey": "Obtener clave API de Doubao",
-		"bigModelApiKey": "Clave API de BigModel",
-		"getBigModelApiKey": "Obtener clave API de BigModel",
 		"moonshotApiKey": "Clave API de Moonshot",
 		"getMoonshotApiKey": "Obtener clave API de Moonshot",
 		"moonshotBaseUrl": "Punto de entrada de Moonshot",
@@ -364,6 +373,9 @@
 		"ollama": {
 			"baseUrl": "URL base (opcional)",
 			"modelId": "ID del modelo",
+			"apiKey": "Clave API",
+			"apiKeyPlaceholder": "Introduce tu clave de API",
+			"apiKeyInfo": "La clave API se enviará como encabezado de autorización",
 			"description": "Ollama le permite ejecutar modelos localmente en su computadora. Para obtener instrucciones sobre cómo comenzar, consulte la guía de inicio rápido.",
 			"warning": "Nota: Kilo Code utiliza prompts complejos y funciona mejor con modelos Claude. Los modelos menos capaces pueden no funcionar como se espera."
 		},
@@ -374,6 +386,10 @@
 		"humanRelay": {
 			"description": "No se requiere clave API, pero el usuario necesita ayudar a copiar y pegar la información en el chat web de IA.",
 			"instructions": "Durante el uso, aparecerá un cuadro de diálogo y el mensaje actual se copiará automáticamente al portapapeles. Debe pegarlo en las versiones web de IA (como ChatGPT o Claude), luego copiar la respuesta de la IA de vuelta al cuadro de diálogo y hacer clic en el botón de confirmar."
+		},
+		"roo": {
+			"authenticatedMessage": "Autenticado de forma segura a través de tu cuenta de Roo Code Cloud.",
+			"connectButton": "Conectar a Roo Code Cloud"
 		},
 		"openRouter": {
 			"providerRouting": {
@@ -436,6 +452,7 @@
 		},
 		"reasoningEffort": {
 			"label": "Esfuerzo de razonamiento del modelo",
+			"minimal": "Mínimo (el más rápido)",
 			"high": "Alto",
 			"medium": "Medio",
 			"low": "Bajo"
@@ -469,6 +486,13 @@
 			"requirement4": "No usa claves API - la autenticación se maneja vía OAuth",
 			"requirement5": "Requiere que la herramienta Gemini CLI esté instalada y autenticada primero",
 			"freeAccess": "Acceso gratuito vía autenticación OAuth"
+		},
+		"qwenCode": {
+			"oauthPath": "Ruta de Credenciales OAuth (opcional)",
+			"oauthPathDescription": "Ruta al archivo de credenciales OAuth. Deja vacío para usar la ubicación predeterminada (~/.qwen/oauth_creds.json).",
+			"description": "Este proveedor usa autenticación OAuth del servicio Qwen y no requiere claves API.",
+			"instructions": "Por favor, sigue la documentación oficial para obtener el archivo de autorización y colócalo en la ruta especificada.",
+			"setupLink": "Documentación Oficial de Qwen"
 		}
 	},
 	"browser": {
@@ -720,10 +744,9 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Habilitar Morph Fast Apply",
-			"description": "Cuando está habilitado, Kilo Code puede editar archivos usando Morph Fast Apply.",
+			"description": "Cuando está habilitado, Kilo Code puede editar archivos usando Morph Fast Apply. Requiere el Proveedor de API de Kilo Code, OpenRouter o una clave API de Morph.",
 			"apiKey": "Clave API de Morph (opcional)",
-			"placeholder": "Introduce tu clave API de Morph (opcional)",
-			"warning": "Si no configuras una clave API de Morph, aún puedes usar Fast Apply con Kilo Code u OpenRouter. Tu cuenta será facturada por el uso del modelo, esto actualmente no se muestra en la interfaz de la extensión."
+			"placeholder": "Introduce tu clave API de Morph (opcional)"
 		},
 		"INLINE_ASSIST": {
 			"name": "Asistencia Integrada",
@@ -736,6 +759,10 @@
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "Usar el nuevo analizador de mensajes",
 			"description": "Activa el analizador de mensajes en streaming experimental que mejora el rendimiento en respuestas largas procesando los mensajes de forma más eficiente."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "Requerir lista de 'todos' para nuevas tareas",
+			"description": "Cuando está habilitado, la herramienta new_task requerirá que se proporcione un parámetro todos. Esto asegura que todas las nuevas tareas comiencen con una lista clara de objetivos. Cuando está deshabilitado (predeterminado), el parámetro todos permanece opcional por compatibilidad con versiones anteriores."
 		}
 	},
 	"promptCaching": {
@@ -754,6 +781,7 @@
 		"noComputerUse": "No soporta uso del ordenador",
 		"supportsPromptCache": "Soporta caché de prompts",
 		"noPromptCache": "No soporta caché de prompts",
+		"contextWindow": "Ventana de contexto",
 		"maxOutput": "Salida máxima",
 		"inputPrice": "Precio de entrada",
 		"outputPrice": "Precio de salida",

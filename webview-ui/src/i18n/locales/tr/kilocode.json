@@ -3,7 +3,7 @@
 		"greeting": "Kilo Code'a hoş geldiniz!",
 		"introText1": "Kilo Code ücretsiz, açık kaynaklı bir AI kodlama ajanıdır.",
 		"introText2": "Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1 ve 450+ diğer en yeni AI modelleri ile çalışır.",
-		"introText3": "Ücretsiz hesap oluşturun ve herhangi bir AI modeli ile kullanabilceğiniz $20 değerinde token alın.",
+		"introText3": "Ücretsiz hesap oluşturun ve herhangi bir AI modeli ile kullanabilceğiniz $25 değerinde token alın.",
 		"ctaButton": "Başla",
 		"manualModeButton": "Kendi API anahtarınızı kullanın",
 		"alreadySignedUp": "Zaten kaydoldunuz mu?",
@@ -16,7 +16,8 @@
 	"pricing": {
 		"costUnknown": "maliyet bilinmiyor",
 		"costUnknownDescription": "API Sağlayıcısı herhangi bir maliyet verisi sağlamadı veya istek iptal edildi.",
-		"discoverModelPricing": "Model fiyatlandırması ve yeteneklerini keşfedin"
+		"freeModelsDescription": "Ücretsiz modellerin hız limitleri olabilir. Ücretsiz model kullanımını optimize etmek için aşağıdaki bağlantıyı kullan!",
+		"freeModelsLink": "Ücretsiz ve bütçe dostu model seçeneklerini keşfet"
 	},
 	"notifications": {
 		"toolRequest": "Araç isteği onay bekliyor",
@@ -41,7 +42,31 @@
 			"automaticFetch": "En son modeller Kilo Code'da otomatik olarak kullanılabilir. Hangi modeli seçeceğinizden emin değilseniz, Kilo Code en üstte <strong>kalın yazı</strong> ile listelenen önerilen modellerle en iyi şekilde çalışır.",
 			"providerRouting": {
 				"title": "Kilo Code - OpenRouter Sağlayıcı Yönlendirme",
-				"description": "Kilo Code, modeliniz için en iyi kullanılabilir sağlayıcılara istekleri yönlendirir. Varsayılan olarak, çalışma süresini en üst düzeye çıkarmak için istekler en iyi sağlayıcılar arasında yük dengelenir. Ancak, bu model için kullanılacak belirli bir sağlayıcı seçebilirsiniz."
+				"description": "Kilo Code, modeliniz için en iyi kullanılabilir sağlayıcılara istekleri yönlendirir. Varsayılan olarak, çalışma süresini en üst düzeye çıkarmak için istekler en iyi sağlayıcılar arasında yük dengelenir. Ancak, bu model için kullanılacak belirli bir sağlayıcı seçebilirsiniz.",
+				"sorting": {
+					"default": "Varsayılan sağlayıcı sıralaması",
+					"price": "Düşük fiyatlı sağlayıcıları tercih et",
+					"throughput": "Yüksek aktarım hızlı sağlayıcıları tercih et",
+					"latency": "Düşük gecikme süreli sağlayıcıları tercih et"
+				},
+				"dataCollection": {
+					"default": "Veri politikası ayarlanmamış",
+					"allow": "Sağlayıcı veri toplamaya izin ver",
+					"deny": "Sağlayıcı veri toplamayı reddet"
+				}
+			}
+		},
+		"modelInfo": {
+			"contextWindow": "Bağlam penceresi",
+			"providerBreakdown": "Sağlayıcı Fiyat ve Yetenek Dökümü",
+			"averageKiloCodeCost": "Bu, Kilo Code'un bu modeli kullanarak geçtiğimiz hafta boyunca yaptığı ortalama gerçek harcamadır. Prompt önbellek kullanımı nedeniyle listelenen fiyattan daha düşük olabilir.",
+			"table": {
+				"provider": "Sağlayıcı",
+				"context": "Uç nokta bu sayıda token işleyebilir (giriş + çıkış).",
+				"inputPrice": "İstem için milyon token başına maliyet.",
+				"outputPrice": "Tamamlama için milyon token başına maliyet.",
+				"cacheReadPrice": "Önbellekten okuma için milyon token başına maliyet.",
+				"cacheWritePrice": "Önbelleğe yazma için milyon token başına maliyet."
 			}
 		},
 		"systemNotifications": {
@@ -77,6 +102,8 @@
 		"logOut": "Çıkış Yap",
 		"currentBalance": "MEVCUT BAKİYE",
 		"loading": "Yükleniyor...",
+		"organization": "Organizasyon",
+		"personal": "Kişisel",
 		"shop": {
 			"title": "Kredi Satın Al",
 			"popular": "Popüler",

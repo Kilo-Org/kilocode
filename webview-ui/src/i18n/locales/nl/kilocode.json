@@ -3,7 +3,7 @@
 		"greeting": "Welkom bij Kilo Code!",
 		"introText1": "Kilo Code is een gratis, open source AI coding agent.",
 		"introText2": "Het werkt met de nieuwste AI modellen zoals Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1, en meer dan 450 andere.",
-		"introText3": "Maak een gratis account aan en krijg $20 aan tokens om te gebruiken met elk AI model.",
+		"introText3": "Maak een gratis account aan en krijg tot $25 aan tokens om te gebruiken met elk AI model.",
 		"ctaButton": "Aan de slag",
 		"manualModeButton": "Gebruik je eigen API-sleutel",
 		"alreadySignedUp": "Al aangemeld?",
@@ -16,7 +16,8 @@
 	"pricing": {
 		"costUnknown": "kosten onbekend",
 		"costUnknownDescription": "De API-provider heeft geen kostengegevens verstrekt of het verzoek is geannuleerd.",
-		"discoverModelPricing": "Ontdek modelprijzen en mogelijkheden"
+		"freeModelsDescription": "Gratis modellen kunnen snelheidslimieten hebben. Gebruik de link hieronder om je gebruik van gratis modellen te optimaliseren!",
+		"freeModelsLink": "Ontdek gratis en budget modelopties"
 	},
 	"notifications": {
 		"toolRequest": "Toolverzoek wacht op goedkeuring",
@@ -35,7 +36,31 @@
 			"automaticFetch": "De nieuwste modellen zijn automatisch beschikbaar in Kilo Code. Als je niet zeker weet welk model je moet kiezen, werkt Kilo Code het beste met de aanbevolen modellen die bovenaan in <strong>vetgedrukte tekst</strong> staan.",
 			"providerRouting": {
 				"title": "Kilo Code - OpenRouter Provider Routing",
-				"description": "Kilo Code routeert verzoeken naar de beste beschikbare providers voor uw model. Standaard worden verzoeken verdeeld over de beste providers om de uptime te maximaliseren. U kunt echter een specifieke provider kiezen om voor dit model te gebruiken."
+				"description": "Kilo Code routeert verzoeken naar de beste beschikbare providers voor uw model. Standaard worden verzoeken verdeeld over de beste providers om de uptime te maximaliseren. U kunt echter een specifieke provider kiezen om voor dit model te gebruiken.",
+				"sorting": {
+					"default": "Standaard provider sortering",
+					"price": "Voorkeur voor providers met lagere prijs",
+					"throughput": "Voorkeur voor providers met hogere doorvoer",
+					"latency": "Voorkeur voor providers met lagere latentie"
+				},
+				"dataCollection": {
+					"default": "Geen databeleid ingesteld",
+					"allow": "Sta dataverzameling door provider toe",
+					"deny": "Weiger dataverzameling door provider"
+				}
+			}
+		},
+		"modelInfo": {
+			"contextWindow": "Context venster",
+			"providerBreakdown": "Provider Prijs en Capaciteit Overzicht",
+			"averageKiloCodeCost": "Dit zijn de gemiddelde daadwerkelijke kosten voor Kilo Code bij gebruik van dit model over de afgelopen week. Deze kunnen lager zijn dan de vermelde prijs door gebruik van prompt cache.",
+			"table": {
+				"provider": "Provider",
+				"context": "Het eindpunt kan dit aantal tokens verwerken (input + output).",
+				"inputPrice": "Kosten per miljoen tokens voor de prompt.",
+				"outputPrice": "Kosten per miljoen tokens voor de voltooiing.",
+				"cacheReadPrice": "Kosten per miljoen tokens voor het lezen uit de cache.",
+				"cacheWritePrice": "Kosten per miljoen tokens voor het schrijven naar de cache."
 			}
 		},
 		"contextManagement": {
@@ -77,6 +102,8 @@
 		"logOut": "Uitloggen",
 		"currentBalance": "HUIDIG SALDO",
 		"loading": "Laden...",
+		"organization": "Organisatie",
+		"personal": "Persoonlijk",
 		"shop": {
 			"title": "Credits Kopen",
 			"popular": "Populair",
