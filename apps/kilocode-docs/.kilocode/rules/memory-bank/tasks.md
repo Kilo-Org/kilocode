@@ -6,24 +6,27 @@ This file documents common repetitive tasks and workflows for maintaining the Ki
 
 **Last performed:** Initial documentation setup
 **Files to modify:**
+
 - `/docs/providers/[provider-name].md` - Create new provider documentation
 - `/sidebars.ts` - Add provider to navigation structure
 - `/src/constants.ts` - Add provider URLs if needed
 
 **Steps:**
+
 1. Create new provider documentation file in `/docs/providers/`
 2. Follow the standard provider documentation template:
-   - Introduction and website link
-   - Getting an API Key section
-   - Supported Models section
-   - Configuration in Kilo Code section
-   - Tips and Notes section
+    - Introduction and website link
+    - Getting an API Key section
+    - Supported Models section
+    - Configuration in Kilo Code section
+    - Tips and Notes section
 3. Add provider to the Model Providers section in `sidebars.ts`
 4. Update constants file if new URLs are needed
 5. Test documentation locally with `npm start`
 6. Verify all links work correctly
 
 **Template structure:**
+
 ```markdown
 ---
 sidebar_label: Provider Name
@@ -36,15 +39,19 @@ Brief description of the provider and their strengths.
 **Website:** [Provider URL]
 
 ## Getting an API Key
+
 [Step-by-step instructions]
 
 ## Supported Models
+
 [List of supported models]
 
 ## Configuration in Kilo Code
+
 [Setup instructions]
 
 ## Tips and Notes
+
 [Additional helpful information]
 ```
 
@@ -52,11 +59,13 @@ Brief description of the provider and their strengths.
 
 **Last performed:** Tool reference documentation setup
 **Files to modify:**
+
 - `/docs/features/tools/[tool-name].md` - Create new tool documentation
 - `/sidebars.ts` - Add tool to Tools Reference section
 - `/docs/features/tools/tool-use-overview.md` - Update tool overview if needed
 
 **Steps:**
+
 1. Create new tool documentation file in `/docs/features/tools/`
 2. Follow the standard tool documentation template
 3. Add tool to the Tools Reference section in `sidebars.ts`
@@ -65,6 +74,7 @@ Brief description of the provider and their strengths.
 6. Verify code examples and parameter descriptions are accurate
 
 **Important notes:**
+
 - Include practical examples of tool usage
 - Document all parameters with their types and requirements
 - Explain when and why to use the tool
@@ -74,11 +84,13 @@ Brief description of the provider and their strengths.
 
 **Last performed:** Feature documentation organization
 **Files to modify:**
+
 - Relevant feature documentation files in `/docs/features/`
 - `/sidebars.ts` - Update navigation if structure changes
 - `/docs/index.mdx` - Update feature highlights if major features added
 
 **Steps:**
+
 1. Identify which feature documentation needs updates
 2. Review current documentation for accuracy
 3. Update content to reflect latest extension capabilities
@@ -88,6 +100,7 @@ Brief description of the provider and their strengths.
 7. Verify examples still work with current extension version
 
 **Important considerations:**
+
 - Keep screenshots current with latest extension UI
 - Ensure feature descriptions match actual extension behavior
 - Update version-specific information
@@ -97,10 +110,12 @@ Brief description of the provider and their strengths.
 
 **Last performed:** Auto-generate commit messages blog post
 **Files to modify:**
+
 - `/blog-posts/[post-name].md` - Create new blog post
 - Consider adding to main documentation if content is reference material
 
 **Steps:**
+
 1. Create new blog post file in `/blog-posts/`
 2. Follow the established blog post style and tone
 3. Include practical examples and real-world usage
@@ -109,6 +124,7 @@ Brief description of the provider and their strengths.
 6. Review for clarity and technical accuracy
 
 **Content guidelines:**
+
 - Focus on practical benefits and real-world usage
 - Include specific examples and code snippets
 - Maintain conversational but informative tone
@@ -118,10 +134,12 @@ Brief description of the provider and their strengths.
 
 **Last performed:** Provider documentation updates
 **Files to modify:**
+
 - Relevant provider documentation in `/docs/providers/`
 - `/docs/getting-started/connecting-api-provider.md` - If setup process changes
 
 **Steps:**
+
 1. Identify which providers have API changes
 2. Update supported models lists
 3. Update configuration instructions if needed
@@ -130,6 +148,7 @@ Brief description of the provider and their strengths.
 6. Update screenshots if provider UIs have changed
 
 **Important notes:**
+
 - Verify model names and capabilities with provider documentation
 - Check for new authentication methods or requirements
 - Update rate limit information if changed
@@ -139,11 +158,13 @@ Brief description of the provider and their strengths.
 
 **Last performed:** Features section reorganization
 **Files to modify:**
+
 - `/sidebars.ts` - Primary navigation structure changes
 - `/docusaurus.config.ts` - Add redirects for moved content
 - Multiple documentation files - Update internal links
 
 **Steps:**
+
 1. Plan new documentation structure
 2. Update `sidebars.ts` with new organization
 3. Add redirects in `docusaurus.config.ts` for moved content
@@ -153,6 +174,7 @@ Brief description of the provider and their strengths.
 7. Update any hardcoded paths in components
 
 **Important considerations:**
+
 - Always add redirects for moved content to prevent broken links
 - Update internal link references throughout the site
 - Test navigation flow from user perspective
@@ -162,11 +184,13 @@ Brief description of the provider and their strengths.
 
 **Last performed:** YouTube embed and image components
 **Files to modify:**
+
 - `/src/components/[ComponentName]/` - Create new component directory
 - `/src/theme/MDXComponents.ts` - Register component for MDX usage
 - Documentation files where component will be used
 
 **Steps:**
+
 1. Create component directory in `/src/components/`
 2. Implement React component with TypeScript
 3. Add component styles in separate CSS module if needed
@@ -176,6 +200,7 @@ Brief description of the provider and their strengths.
 7. Use component in relevant documentation files
 
 **Component guidelines:**
+
 - Follow existing component patterns and styling
 - Use TypeScript for type safety
 - Include proper error handling
@@ -186,12 +211,14 @@ Brief description of the provider and their strengths.
 
 **Last performed:** Ongoing maintenance need
 **Files to modify:**
+
 - `/static/img/[feature-directories]/` - Update screenshot files
 - Documentation files with embedded images - Update image references
 - `/docs/getting-started/` - Installation and setup screenshots
 - `/docs/basic-usage/` - Interface and workflow screenshots
 
 **Steps:**
+
 1. Identify which features have UI changes from extension releases
 2. Take new screenshots in consistent browser/OS environment
 3. Optimize images for web (compress, appropriate dimensions)
@@ -201,6 +228,7 @@ Brief description of the provider and their strengths.
 7. Verify images are accessible and have proper alt text
 
 **Important considerations:**
+
 - Maintain consistent screenshot style (browser, zoom level, theme)
 - Use descriptive filenames that match the feature being documented
 - Compress images to keep site performance optimal
@@ -211,6 +239,7 @@ Brief description of the provider and their strengths.
 
 **Last performed:** Codebase indexing graduation
 **Files to modify:**
+
 - Feature documentation files - Remove experimental warnings
 - `/sidebars.ts` - Move from experimental to appropriate section
 - `/docs/features/experimental/` - Remove from experimental list
@@ -218,6 +247,7 @@ Brief description of the provider and their strengths.
 - `/docusaurus.config.ts` - Add redirects if URLs change
 
 **Steps:**
+
 1. Identify features graduating from experimental status
 2. Remove experimental warnings and disclaimers from documentation
 3. Update navigation structure in `sidebars.ts`
@@ -228,6 +258,7 @@ Brief description of the provider and their strengths.
 8. Update feature overview pages to reflect stable status
 
 **Important considerations:**
+
 - Always add redirects for moved content to prevent broken links
 - Search for all references to the feature across documentation
 - Update any "experimental features" overview pages
@@ -238,6 +269,7 @@ Brief description of the provider and their strengths.
 
 **Last performed:** Version-specific updates from todos.md
 **Files to modify:**
+
 - Multiple feature documentation files based on release notes
 - Provider documentation for new models or API changes
 - Tool documentation for behavior changes
@@ -245,6 +277,7 @@ Brief description of the provider and their strengths.
 - FAQ or troubleshooting sections for resolved issues
 
 **Steps:**
+
 1. Review extension release notes for documentation impacts
 2. Categorize changes: UI updates, new features, bug fixes, model additions
 3. Update relevant feature documentation with new capabilities
@@ -255,6 +288,7 @@ Brief description of the provider and their strengths.
 8. Test all updated examples and instructions
 
 **Important considerations:**
+
 - Prioritize user-facing changes that affect documentation accuracy
 - Update version-specific information where relevant
 - Ensure examples still work with current extension version
@@ -265,11 +299,13 @@ Brief description of the provider and their strengths.
 
 **Last performed:** MCP and features section reorganization
 **Files to modify:**
+
 - `/docusaurus.config.ts` - Add redirect configurations
 - `/sidebars.ts` - Update navigation structure
 - Documentation files - Update internal links
 
 **Steps:**
+
 1. Plan new documentation structure or identify moved content
 2. Document all URL changes that will occur
 3. Add redirect entries in `docusaurus.config.ts`
@@ -280,6 +316,7 @@ Brief description of the provider and their strengths.
 8. Update any hardcoded paths in components
 
 **Important considerations:**
+
 - Always add redirects before moving content to prevent 404 errors
 - Use permanent redirects (301) for moved content
 - Test redirects work for both old and new URLs
@@ -291,12 +328,14 @@ Brief description of the provider and their strengths.
 
 **Last performed:** Codebase search tool documentation cleanup needed
 **Files to modify:**
+
 - Duplicate documentation files
 - Navigation structure
 - Internal links and cross-references
 - Redirect configuration if URLs change
 
 **Steps:**
+
 1. Identify duplicate or conflicting documentation files
 2. Compare content to determine which version is authoritative
 3. Merge useful content from both versions if needed
@@ -307,6 +346,7 @@ Brief description of the provider and their strengths.
 8. Verify no broken links remain
 
 **Important considerations:**
+
 - Determine which version has more accurate/current information
 - Preserve any unique content from the version being removed
 - Check git history to understand why duplicates exist
@@ -317,11 +357,13 @@ Brief description of the provider and their strengths.
 
 **Last performed:** Tool fixes mentioned in v4.58.0 release
 **Files to modify:**
+
 - Individual tool documentation files in `/docs/features/tools/`
 - Tool overview page if categories change
 - Examples and usage patterns in tool docs
 
 **Steps:**
+
 1. Review extension release notes for tool behavior changes
 2. Identify which tools have updated functionality
 3. Update parameter descriptions and requirements
@@ -332,6 +374,7 @@ Brief description of the provider and their strengths.
 8. Update tool overview page if needed
 
 **Important considerations:**
+
 - Verify all parameter descriptions are accurate
 - Test code examples with current extension version
 - Update any error scenarios or troubleshooting information
@@ -342,11 +385,13 @@ Brief description of the provider and their strengths.
 
 **Last performed:** Ongoing maintenance need
 **Files to modify:**
+
 - All documentation files with internal or external links
 - Navigation configuration files
 - Component files with hardcoded links
 
 **Steps:**
+
 1. Run Docusaurus build to identify broken internal links
 2. Use link checking tools for external links
 3. Manually verify provider URLs and external service links
@@ -357,6 +402,7 @@ Brief description of the provider and their strengths.
 8. Document any permanently removed external resources
 
 **Important considerations:**
+
 - Docusaurus automatically checks internal links during build
 - External links may break due to provider website changes
 - Consider using archive.org links for historical references
@@ -368,11 +414,13 @@ Brief description of the provider and their strengths.
 
 **Last performed:** Ongoing as providers add models
 **Files to modify:**
+
 - Individual provider documentation files in `/docs/providers/`
 - Provider comparison information if it exists
 - Getting started guides mentioning specific models
 
 **Steps:**
+
 1. Review provider websites and APIs for new model additions
 2. Update supported models lists in provider documentation
 3. Add model capabilities and limitations information
@@ -383,6 +431,7 @@ Brief description of the provider and their strengths.
 8. Update examples to use current model names
 
 **Important considerations:**
+
 - Verify model names exactly match provider APIs
 - Include context window sizes and capabilities where relevant
 - Note any special configuration requirements for new models

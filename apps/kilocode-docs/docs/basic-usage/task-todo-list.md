@@ -9,11 +9,13 @@
 ## How to trigger todo lists
 
 **Automatic triggers**:
+
 - Complex tasks with multiple steps
 - Working in Architect mode
 - Multi-phase workflows with dependencies
 
 **Manual triggers**:
+
 - Ask Kilo to "use the [update_todo_list tool](/features/tools/update-todo-list)"
 - Say "create a todo list"
 
@@ -38,6 +40,7 @@ Quick progress overview with your next important item
 
 **2. Interactive Tool Block**
 Full todo interface in chat where you can:
+
 - See all items and their status
 - Edit descriptions when Kilo asks for approval
 - Stage changes using the "Edit" button

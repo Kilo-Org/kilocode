@@ -31,29 +31,32 @@ Kilo Code 提供了几个设置来微调 shell 集成。在 Kilo Code 侧边栏�
 ### 基本设置
 
 #### 终端输出限制
+
 <img src="/docs/img/shell-integration/terminal-output-limit.png" alt="终端输出限制滑块设置为 500" width="500" />
 控制从终端输出捕获的最大行数。超出时，它会保留开头 20% 和结尾 80%，中间有截断消息。这可以防止过度使用 token，同时保持上下文。默认值：500 行。
 控制从终端输出捕获的最大行数。超出时，会从中间删除行以节省 token。默认值：500 行。
 
 #### 终端 Shell 集成超时
+
 <img src="/docs/img/shell-integration/shell-integration-timeout.png" alt="终端 shell 集成超时滑块设置为 15 秒" width="500" />
 
 在执行命令之前等待 shell 集成初始化的最长时间。如果您遇到“Shell 集成不可用”错误，请增加此值。默认值：15 秒。
 
 #### 终端命令延迟
+
 <img src="/docs/img/shell-integration/terminal-command-delay.png" alt="终端命令延迟滑块设置为 0 毫秒" width="500" />
 
 在运行命令后添加一个短暂的暂停，以帮助 Kilo Code 正确捕获所有输出。由于 VSCode 在不同操作系统和 shell 配置中实现终端集成的方式，此设置可能会显著影响 shell 集成的可靠性：
 
 - **默认**：0 毫秒
 - **常见值**：
-  * 0 毫秒：对于某些使用较新 VSCode 版本的用户效果最佳
-  * 50 毫秒：历史默认值，对许多用户仍然有效
-  * 150 毫秒：推荐用于 PowerShell 用户
+    - 0 毫秒：对于某些使用较新 VSCode 版本的用户效果最佳
+    - 50 毫秒：历史默认值，对许多用户仍然有效
+    - 150 毫秒：推荐用于 PowerShell 用户
 - **注意**：不同的值可能更适合您的：
-  * VSCode 版本
-  * Shell 自定义（oh-my-zsh、powerlevel10k 等）
-  * 操作系统和环境
+    - VSCode 版本
+    - Shell 自定义（oh-my-zsh、powerlevel10k 等）
+    - 操作系统和环境
 
 ### 高级设置
 
@@ -69,26 +72,31 @@ Kilo Code 提供了几个设置来微调 shell 集成。在 Kilo Code 侧边栏�
 :::
 
 #### PowerShell 计数器解决方法
+
 <img src="/docs/img/shell-integration/power-shell-workaround.png" alt="PowerShell 计数器解决方法复选框" width="600" />
 
 帮助 PowerShell 连续多次运行相同的命令。如果您发现 Kilo Code 无法在 PowerShell 中连续运行相同的命令，请启用此功能。
 
 #### 清除 ZSH EOL 标记
+
 <img src="/docs/img/shell-integration/clear-zsh-eol-mark.png" alt="清除 ZSH EOL 标记复选框" width="600" />
 
 防止 ZSH 在输出行末尾添加特殊字符，这些字符在 Kilo Code 读取终端结果时可能会造成混淆。
 
 #### Oh My Zsh 集成
+
 <img src="/docs/img/shell-integration/oh-my-zsh.png" alt="启用 Oh My Zsh 集成复选框" width="600" />
 
 使 Kilo Code 更好地与流行的 [Oh My Zsh](https://ohmyz.sh/) shell 自定义框架配合使用。如果您使用 Oh My Zsh 并遇到终端问题，请打开此功能。
 
 #### Powerlevel10k 集成
+
 <img src="/docs/img/shell-integration/power10k.png" alt="启用 Powerlevel10k 集成复选框" width="600" />
 
 如果您使用 ZSH 的 Powerlevel10k 主题，则可提高兼容性。如果您的花哨终端提示导致 Kilo Code 出现问题，请打开此功能。
 
 #### ZDOTDIR 处理
+
 <img src="/docs/img/shell-integration/zdotdir.png" alt="启用 ZDOTDIR 处理复选框" width="600" />
 
 帮助 Kilo Code 与自定义 ZSH 配置配合使用，而不会干扰您的个人 shell 设置和自定义。
@@ -104,6 +112,7 @@ PowerShell 默认限制脚本执行。要配置：
 3.  设置适当的策略：`Set-ExecutionPolicy RemoteSigned -Scope CurrentUser`
 
 常见策略：
+
 - `Restricted`：不允许任何脚本（默认）
 - `RemoteSigned`：本地脚本可以运行；下载的脚本需要签名
 - `Unrestricted`：所有脚本都带警告运行
@@ -114,21 +123,25 @@ PowerShell 默认限制脚本执行。要配置：
 如果自动集成失败，请将适当的行添加到您的 shell 配置中：
 
 **Bash** (`~/.bashrc`)：
+
 ```bash
 [[ "$TERM_PROGRAM" == "vscode" ]] && . "$(code --locate-shell-integration-path bash)"
 ```
 
 **Zsh** (`~/.zshrc`)：
+
 ```bash
 [[ "$TERM_PROGRAM" == "vscode" ]] && . "$(code --locate-shell-integration-path zsh)"
 ```
 
 **PowerShell** (`$Profile`)：
+
 ```powershell
 if ($env:TERM_PROGRAM -eq "vscode") { . "$(code --locate-shell-integration-path pwsh)" }
 ```
 
 **Fish** (`~/.config/fish/config.fish`)：
+
 ```fish
 string match -q "$TERM_PROGRAM" "vscode"; and . (code --locate-shell-integration-path fish)
 ```
@@ -138,6 +151,7 @@ string match -q "$TERM_PROGRAM" "vscode"; and . (code --locate-shell-integration
 如果您使用终端自定义工具：
 
 **Powerlevel10k**：
+
 ```bash
 # 在 ~/.zshrc 中 source powerlevel10k 之前添加
 typeset -g POWERLEVEL9K_TERM_SHELL_INTEGRATION=true
@@ -150,6 +164,7 @@ typeset -g POWERLEVEL9K_TERM_SHELL_INTEGRATION=true
 使用以下命令确认 shell 集成处于活动状态：
 
 **Bash**：
+
 ```bash
 set | grep -i '[16]33;'
 echo "$PROMPT_COMMAND" | grep vsc
@@ -157,24 +172,28 @@ trap -p DEBUG | grep vsc
 ```
 
 **Zsh**：
+
 ```zsh
 functions | grep -i vsc
 typeset -p precmd_functions preexec_functions
 ```
 
 **PowerShell**：
+
 ```powershell
 Get-Command -Name "*VSC*" -CommandType Function
 Get-Content Function:\Prompt | Select-String "VSCode"
 ```
 
 **Fish**：
+
 ```fish
 functions | grep -i vsc
 functions fish_prompt | grep -i vsc
 ```
 
 活动 shell 集成的视觉指示器：
+
 1.  终端标题栏中的 shell 集成指示器
 2.  命令检测高亮显示
 3.  终端标题中的工作目录更新
@@ -187,6 +206,7 @@ functions fish_prompt | grep -i vsc
 ### 方法 1：VSCode Windows 与 WSL 终端
 
 在此设置中：
+
 - VSCode 在 Windows 中原生运行
 - 您在 VSCode 中使用 WSL 终端集成功能
 - Shell 命令通过 WSL 桥接执行
@@ -196,6 +216,7 @@ functions fish_prompt | grep -i vsc
 ### 方法 2：VSCode 在 WSL 中运行
 
 在此设置中：
+
 - 您直接从 WSL 中使用 `code .` 启动 VSCode
 - VSCode 服务器在 Linux 环境中原生运行
 - 直接访问 Linux 文件系统和工具
@@ -204,6 +225,7 @@ functions fish_prompt | grep -i vsc
 - WSL 开发的推荐方法
 
 为了与 WSL 实现最佳 shell 集成，我们建议：
+
 1.  打开您的 WSL 发行版
 2.  导航到您的项目目录
 3.  使用 `code .` 启动 VSCode
@@ -216,10 +238,12 @@ functions fish_prompt | grep -i vsc
 对于在 Cygwin 环境中运行 Fish 终端的 Windows 用户，以下是 VS Code shell 集成的配置方法：
 
 1.  **（可选）定位 Shell 集成脚本：**
-    在 *VS Code 内* 打开您的 Fish 终端并运行以下命令：
+    在 _VS Code 内_ 打开您的 Fish 终端并运行以下命令：
+
     ```bash
     code --locate-shell-integration-path fish
     ```
+
     这会输出 `shellIntegration.fish` 脚本的路径。请记下此路径。
 
 2.  **更新您的 Fish 配置：**
@@ -239,7 +263,8 @@ functions fish_prompt | grep -i vsc
         # source "/cygdrive/c/Users/YourUser/.vscode/extensions/..../shellIntegration.fish"
     end
     ```
-    *请记得将示例路径替换为第 1 步中获得的实际路径，并确保其格式适用于 Cygwin。*
+
+    _请记得将示例路径替换为第 1 步中获得的实际路径，并确保其格式适用于 Cygwin。_
 
 3.  **配置 VS Code 终端配置文件：**
     打开您的 VS Code `settings.json` 文件（Ctrl+Shift+P -\> "首选项: 打开用户设置 (JSON)"）。在 `terminal.integrated.profiles.windows` 下更新或添加 Fish 配置文件，如下所示：
@@ -277,7 +302,8 @@ functions fish_prompt | grep -i vsc
       // ... 其他设置 ...
     }
     ```
-    *注意：在 Cygwin 环境中，使用 `bash.exe --login -i -c "exec fish"` 通常更可靠，可以确保在 `fish` 启动前正确设置环境。但是，如果该方法无效，请尝试 `fish-direct` 配置文件。*
+
+    _注意：在 Cygwin 环境中，使用 `bash.exe --login -i -c "exec fish"` 通常更可靠，可以确保在 `fish` 启动前正确设置环境。但是，如果该方法无效，请尝试 `fish-direct` 配置文件。_
 
 4.  **重启 VS Code：**
     完全关闭并重新打开 Visual Studio Code 以应用更改。
@@ -287,23 +313,26 @@ functions fish_prompt | grep -i vsc
 
 此设置在使用 Cygwin、Fish 和 Starship 提示符的 Windows 系统上运行稳定，并应能帮助有类似配置的用户。
 
-
 ### VSCode 1.98 版本后 Shell 集成失败
 
 **问题**：VSCode 更新到 1.98 以上版本后，shell 集成可能会失败，并显示错误 “VSCE output start escape sequence (]633;C or ]133;C) not received”。
 
 **解决方案**：
+
 1. **设置终端命令延迟**：
+
     - 在 Kilo Code 设置中将“终端命令延迟”设置为 50 毫秒。
     - 更改此设置后，重启所有终端。
     - 这与旧版的默认行为匹配，可能解决问题，但有用户报告称设置为 0 毫秒效果更好。这是针对上游 VSCode 问题的解决方法。
 
 2. **回退 VSCode 版本**：
+
     - 从 [VSCode 更新页面](https://code.visualstudio.com/updates/v1_98) 下载 VSCode v1.98。
     - 替换您当前的 VSCode 安装。
     - 无需备份 Kilo 设置。
 
 3. **WSL 特定解决方法**：
+
     - 如果使用 WSL，请确保您是从 WSL 内部通过 `code .` 命令启动 VSCode。
 
 4. **ZSH 用户**：
@@ -340,7 +369,9 @@ functions fish_prompt | grep -i vsc
 ## 故障排除资源
 
 ### 检查调试日志
+
 当出现 shell 集成问题时，请检查调试日志：
+
 1.  打开“帮助” → “切换开发人员工具” → “控制台”。
 2.  将日志级别设置为“显示所有级别”以查看所有日志消息。
 3.  查找包含 `[Terminal Process]` 的消息。
@@ -350,19 +381,21 @@ functions fish_prompt | grep -i vsc
     - 缺少 shell 集成标记可能需要调整设置，以解决与 shell 初始化和 VSCode 加载特殊 shell 集成钩子相关的上游 bug 或本地工作站配置问题。
 
 ### 使用 VSCode Terminal Integration Test 扩展
+
 [VSCode Terminal Integration Test 扩展](https://github.com/KJ7LNW/vsce-test-terminal-integration) 通过测试不同的设置组合来帮助诊断 shell 集成问题：
 
-
 1.  **当命令卡住时**：
+
     - 如果您看到“命令已在运行”的警告，请单击“重置统计信息”以重置终端状态。
     - 这些警告表明 shell 集成未正常工作。
     - 尝试不同的设置组合，直到找到一个可行的。
     - 如果问题确实卡住了，通过关闭窗口并按 F5 来重启扩展。
 
 2.  **测试设置**：
+
     - 系统地尝试以下设置的不同组合：
-        * 终端命令延迟
-        * Shell 集成设置
+        - 终端命令延迟
+        - Shell 集成设置
     - 记录哪些组合成功或失败。
     - 这有助于识别 shell 集成问题的模式。
 

@@ -30,6 +30,18 @@
 		},
 		"playwright": {
 			"cache": false
+		},
+		"jetbrains:bundle": {
+			"cache": false,
+			"dependsOn": ["@kilo-code/jetbrains-plugin#bundle"]
+		},
+		"jetbrains:run-bundle": {
+			"cache": false,
+			"dependsOn": ["@kilo-code/jetbrains-plugin#run:bundle"]
+		},
+		"jetbrains:run": {
+			"cache": false,
+			"dependsOn": ["@kilo-code/jetbrains-plugin#run"]
 		}
 	}
 }

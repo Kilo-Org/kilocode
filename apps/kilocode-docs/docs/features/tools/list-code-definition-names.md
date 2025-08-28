@@ -55,9 +55,9 @@ When the `list_code_definition_names` tool is invoked, it follows this process:
 4. **File Filtering**: Limits processing to a maximum of 50 files
 5. **Language Detection**: Identifies file types based on extensions (.js, .jsx, .ts, .tsx, .py, .rs, .go, .cpp, .hpp, .c, .h, .cs, .rb, .java, .php, .swift, .kt, .kts)
 6. **Code Parsing**: Uses Tree-sitter to parse code and extract definitions through these steps:
-   - Parsing file content into an Abstract Syntax Tree (AST)
-   - Creating a query using a language-specific query string
-   - Sorting the captures by their position in the file
+    - Parsing file content into an Abstract Syntax Tree (AST)
+    - Creating a query using a language-specific query string
+    - Sorting the captures by their position in the file
 7. **Result Formatting**: Outputs definitions with line numbers and actual source code
 
 ## Output Format
@@ -77,6 +77,7 @@ src/models/User.js:
 ```
 
 Each line displays:
+
 - The start and end line numbers of the definition
 - The pipe symbol (|) as a separator
 - The actual source code of the definition
@@ -95,6 +96,7 @@ This output format helps you quickly see both where definitions are located in t
 ## Usage Examples
 
 Listing code definitions in the current directory:
+
 ```
 <list_code_definition_names>
 <path>.</path>
@@ -102,6 +104,7 @@ Listing code definitions in the current directory:
 ```
 
 Examining a specific module's structure:
+
 ```
 <list_code_definition_names>
 <path>src/components</path>
@@ -109,6 +112,7 @@ Examining a specific module's structure:
 ```
 
 Exploring a utility library:
+
 ```
 <list_code_definition_names>
 <path>lib/utils</path>

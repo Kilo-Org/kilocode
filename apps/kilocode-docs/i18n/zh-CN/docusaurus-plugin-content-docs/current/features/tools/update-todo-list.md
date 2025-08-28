@@ -46,7 +46,7 @@
 该工具使用三种不同的状态指示器：
 
 - `[ ]` **待处理**：任务尚未开始
-- `[-]` **进行中**：任务当前正在进行中  
+- `[-]` **进行中**：任务当前正在进行中
 - `[x]` **已完成**：任务已完全完成，没有未解决的问题
 
 ## 工作原理
@@ -54,16 +54,19 @@
 当调用 `update_todo_list` 工具时，它遵循以下过程：
 
 1.  **状态验证**：
+
     - 解析 markdown 清单格式
     - 验证状态指示器格式是否正确
     - 确保任务描述清晰且可操作
 
 2.  **列表替换**：
+
     - 完全替换现有 TODO 列表
     - Preserves task order as specified in the update
     - Maintains task descriptions and status states
 
 3.  **提醒集成**：
+
     - 将更新的列表与提醒系统集成
     - Displays current tasks in subsequent message headers
     - Provides persistent visibility of task progress
@@ -93,12 +96,14 @@
 ### 何时使用
 
 Use this tool when:
+
 - The task involves multiple steps or requires ongoing tracking
 - New actionable items are discovered during task execution
 - Multiple todos need status updates simultaneously
 - Complex tasks benefit from clear progress visualization
 
 Avoid using when:
+
 - There is only a single, trivial task
 - The task can be completed in one or two simple steps
 - The request is purely conversational or informational
@@ -114,6 +119,7 @@ Avoid using when:
 ## 用法示例
 
 Initial task breakdown:
+
 ```
 <update_todo_list>
 <todos>
@@ -128,6 +134,7 @@ Initial task breakdown:
 ```
 
 Updating progress and adding discovered tasks:
+
 ```
 <update_todo_list>
 <todos>
@@ -144,6 +151,7 @@ Updating progress and adding discovered tasks:
 ```
 
 Completing multiple tasks and transitioning focus:
+
 ```
 <update_todo_list>
 <todos>

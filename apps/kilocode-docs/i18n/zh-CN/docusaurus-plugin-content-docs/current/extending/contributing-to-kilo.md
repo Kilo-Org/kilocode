@@ -44,17 +44,18 @@ git checkout -b your-branch-name
 ### 测试你的更改
 
 - 运行测试套件：
-  ```bash
-  npm test
-  ```
+    ```bash
+    npm test
+    ```
 - 在开发扩展中手动测试你的更改
 
 ### 创建拉取请求
 
 1. 将你的更改推送到你的 fork：
-   ```bash
-   git push origin your-branch-name
-   ```
+
+    ```bash
+    git push origin your-branch-name
+    ```
 
 2. 前往 [Kilo Code 仓库](https://github.com/Kilo-Org/kilocode)
 
@@ -63,10 +64,10 @@ git checkout -b your-branch-name
 4. 选择你的 fork 和分支
 
 5. 填写 PR 模板，包括：
-   - 更改的清晰描述
-   - 任何相关问题
-   - 测试步骤
-   - 截图（如适用）
+    - 更改的清晰描述
+    - 任何相关问题
+    - 测试步骤
+    - 截图（如适用）
 
 ## 创建自定义模式
 
@@ -83,17 +84,19 @@ git checkout -b your-branch-name
 文档改进是非常有价值的贡献：
 
 1. 遵循文档风格指南：
-   - 使用清晰、简洁的语言
-   - 在适当时包含示例
-   - 使用以 `/docs/` 开头的绝对路径作为内部链接
-   - 不要在链接中包含 `.md` 扩展名
+
+    - 使用清晰、简洁的语言
+    - 在适当时包含示例
+    - 使用以 `/docs/` 开头的绝对路径作为内部链接
+    - 不要在链接中包含 `.md` 扩展名
 
 2. 通过本地运行文档站点测试你的文档更改：
-   ```bash
-   cd docs
-   npm install
-   npm start
-   ```
+
+    ```bash
+    cd docs
+    npm install
+    npm start
+    ```
 
 3. 提交包含文档更改的 PR
 
