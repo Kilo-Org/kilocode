@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import { GhostSuggestionContext } from "../types"
 import { UseCaseType } from "../types/PromptStrategy"
 import { BasePromptStrategy } from "./BasePromptStrategy"
+import { CURSOR_MARKER } from "../ghostConstants"
 
 /**
  * Fallback strategy for automatic completions
@@ -70,7 +71,7 @@ Avoid:
 - Anything that changes program behavior significantly
 
 ## CRITICAL: Cursor Marker Usage
-- The cursor position is marked with ${this.CURSOR_MARKER}
+- The cursor position is marked with ${CURSOR_MARKER}
 - Your <search> block MUST include the cursor marker to avoid conflicts
 - When creating <search> content, include text around the cursor marker
 - This ensures you target the exact location, not similar text elsewhere
@@ -120,8 +121,8 @@ Important:
 
 		// Add specific instructions
 		prompt += "## Instructions\n"
-		prompt += `Provide a minimal, obvious completion at the cursor position (${this.CURSOR_MARKER}).\n`
-		prompt += `IMPORTANT: Your <search> block must include the cursor marker ${this.CURSOR_MARKER} to target the exact location.\n`
+		prompt += `Provide a minimal, obvious completion at the cursor position (${CURSOR_MARKER}).\n`
+		prompt += `IMPORTANT: Your <search> block must include the cursor marker ${CURSOR_MARKER} to target the exact location.\n`
 		prompt += `Include surrounding text with the cursor marker to avoid conflicts with similar code elsewhere.\n`
 		prompt += "Complete only what the user appears to be typing.\n"
 		prompt += "Single line preferred, no new features.\n"

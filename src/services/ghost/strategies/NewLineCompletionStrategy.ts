@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import { GhostSuggestionContext } from "../types"
 import { UseCaseType } from "../types/PromptStrategy"
 import { BasePromptStrategy } from "./BasePromptStrategy"
+import { CURSOR_MARKER } from "../ghostConstants"
 
 /**
  * Strategy for proactive code completion on new/empty lines
@@ -122,7 +123,7 @@ Important:
 
 		// Add specific instructions
 		prompt += "## Instructions\n"
-		prompt += `Suggest the most logical code for the cursor position (${this.CURSOR_MARKER}).\n`
+		prompt += `Suggest the most logical code for the cursor position (${CURSOR_MARKER}).\n`
 		prompt += "Consider the pattern being established and complete it naturally.\n"
 		prompt += "Keep suggestions concise and immediately useful.\n"
 

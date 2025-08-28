@@ -2,9 +2,7 @@ import * as vscode from "vscode"
 import { structuredPatch } from "diff"
 import { GhostSuggestionContext, GhostSuggestionEditOperationType } from "./types"
 import { GhostSuggestionsState } from "./GhostSuggestions"
-
-// Special marker for cursor position
-const CURSOR_MARKER = "<<<AUTOCOMPLETE_HERE>>>"
+import { CURSOR_MARKER } from "./ghostConstants"
 
 export interface StreamingParseResult {
 	suggestions: GhostSuggestionsState

@@ -1,6 +1,7 @@
 import { GhostSuggestionContext } from "../types"
 import { BasePromptStrategy } from "./BasePromptStrategy"
 import { UseCaseType } from "../types/PromptStrategy"
+import { CURSOR_MARKER } from "../ghostConstants"
 
 /**
  * Strategy for refactoring selected code
@@ -89,7 +90,7 @@ Remember: The goal is to improve the code quality while keeping the exact same b
 		}
 
 		prompt += `## Instructions\n`
-		prompt += `Refactor the selected code at the cursor position (${this.CURSOR_MARKER}) to improve its quality, readability, and maintainability.\n`
+		prompt += `Refactor the selected code at the cursor position (${CURSOR_MARKER}) to improve its quality, readability, and maintainability.\n`
 		prompt += `Focus on: ${refactoringSuggestions.slice(0, 3).join(", ")}\n`
 		prompt += `Maintain the same functionality while improving the code structure.\n`
 

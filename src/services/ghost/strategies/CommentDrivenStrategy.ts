@@ -1,6 +1,7 @@
 import { GhostSuggestionContext } from "../types"
 import { BasePromptStrategy } from "./BasePromptStrategy"
 import { UseCaseType } from "../types/PromptStrategy"
+import { CURSOR_MARKER } from "../ghostConstants"
 
 /**
  * Strategy for generating code based on comments
@@ -105,7 +106,7 @@ export class CommentDrivenStrategy extends BasePromptStrategy {
 
 		prompt += `## Instructions\n`
 		prompt += `Generate code that implements the functionality described in the comment.\n`
-		prompt += `The code should be placed at the cursor position (${this.CURSOR_MARKER}).\n`
+		prompt += `The code should be placed at the cursor position (${CURSOR_MARKER}).\n`
 		prompt += `Focus on implementing exactly what the comment describes.\n`
 
 		return prompt

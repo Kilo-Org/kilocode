@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import { GhostSuggestionContext } from "../types"
 import { UseCaseType } from "../types/PromptStrategy"
 import { BasePromptStrategy } from "./BasePromptStrategy"
+import { CURSOR_MARKER } from "../ghostConstants"
 
 /**
  * Strategy for handling explicit user requests
@@ -119,7 +120,7 @@ Common Request Patterns:
 		prompt += `Generate changes that directly implement: "${context.userInput}"\n`
 
 		if (context.range && context.document) {
-			prompt += `Start with changes at the cursor position (${this.CURSOR_MARKER}).\n`
+			prompt += `Start with changes at the cursor position (${CURSOR_MARKER}).\n`
 
 			// Add context-specific hints
 			if (context.range.isEmpty) {

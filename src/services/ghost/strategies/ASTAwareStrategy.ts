@@ -1,6 +1,7 @@
 import { GhostSuggestionContext } from "../types"
 import { BasePromptStrategy } from "./BasePromptStrategy"
 import { UseCaseType } from "../types/PromptStrategy"
+import { CURSOR_MARKER } from "../ghostConstants"
 
 /**
  * Strategy for AST-aware completions
@@ -119,7 +120,7 @@ export class ASTAwareStrategy extends BasePromptStrategy {
 		}
 
 		prompt += `## Instructions\n`
-		prompt += `Based on the AST context, complete the code at the cursor position (${this.CURSOR_MARKER}).\n`
+		prompt += `Based on the AST context, complete the code at the cursor position (${CURSOR_MARKER}).\n`
 		prompt += `The completion should fit the expected AST structure for a ${nodeInfo.type} node.\n`
 
 		return prompt

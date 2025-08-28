@@ -1,6 +1,7 @@
 import { GhostSuggestionContext } from "../types"
 import { BasePromptStrategy } from "./BasePromptStrategy"
 import { UseCaseType } from "../types/PromptStrategy"
+import { CURSOR_MARKER } from "../ghostConstants"
 
 /**
  * Strategy for inline code completions (mid-line completions)
@@ -59,7 +60,7 @@ export class InlineCompletionStrategy extends BasePromptStrategy {
 - Look for patterns in similar code nearby
 
 ## CRITICAL: Cursor Marker Usage
-- The cursor position is marked with ${this.CURSOR_MARKER}
+- The cursor position is marked with ${CURSOR_MARKER}
 - Your <search> block MUST include the cursor marker to avoid conflicts
 - When creating <search> content, include text around the cursor marker
 - This ensures you target the exact location, not similar text elsewhere
@@ -106,8 +107,8 @@ export class InlineCompletionStrategy extends BasePromptStrategy {
 		}
 
 		prompt += `## Instructions\n`
-		prompt += `Complete the partial code at the cursor position (${this.CURSOR_MARKER}).\n`
-		prompt += `IMPORTANT: Your <search> block must include the cursor marker ${this.CURSOR_MARKER} to target the exact location.\n`
+		prompt += `Complete the partial code at the cursor position (${CURSOR_MARKER}).\n`
+		prompt += `IMPORTANT: Your <search> block must include the cursor marker ${CURSOR_MARKER} to target the exact location.\n`
 		prompt += `Include surrounding text with the cursor marker to avoid conflicts with similar code elsewhere.\n`
 		prompt += `Focus on completing the ${completionType}.\n`
 

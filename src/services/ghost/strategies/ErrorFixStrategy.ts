@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import { GhostSuggestionContext } from "../types"
 import { UseCaseType } from "../types/PromptStrategy"
 import { BasePromptStrategy } from "./BasePromptStrategy"
+import { CURSOR_MARKER } from "../ghostConstants"
 
 /**
  * Strategy for fixing compilation errors and warnings
@@ -146,7 +147,7 @@ Important:
 		prompt += "Priority: Errors > Warnings\n"
 
 		if (context.range) {
-			prompt += `Focus on fixes near the cursor position (${this.CURSOR_MARKER}).\n`
+			prompt += `Focus on fixes near the cursor position (${CURSOR_MARKER}).\n`
 		}
 
 		// Count errors vs warnings

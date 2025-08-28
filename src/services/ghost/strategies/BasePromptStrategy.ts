@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
 import { GhostSuggestionContext } from "../types"
 import { PromptStrategy, UseCaseType } from "../types/PromptStrategy"
+import { CURSOR_MARKER } from "../ghostConstants"
 
 /**
  * Abstract base class for all prompt strategies
@@ -16,11 +17,6 @@ export abstract class BasePromptStrategy implements PromptStrategy {
 	 * The use case type this strategy handles
 	 */
 	abstract type: UseCaseType
-
-	/**
-	 * Cursor marker used to indicate where completions should occur
-	 */
-	protected readonly CURSOR_MARKER = "<<<AUTOCOMPLETE_HERE>>>"
 
 	/**
 	 * Determines if this strategy can handle the given context
@@ -115,7 +111,7 @@ EXAMPLE:
 		const beforeCursor = fullText.substring(0, cursorOffset)
 		const afterCursor = fullText.substring(cursorOffset)
 
-		return `${beforeCursor}${this.CURSOR_MARKER}${afterCursor}`
+		return `${beforeCursor}${CURSOR_MARKER}${afterCursor}`
 	}
 
 	/**
