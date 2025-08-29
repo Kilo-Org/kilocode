@@ -21,6 +21,15 @@ import { ModelRecord, RouterModels } from "./api"
 import { ProfileDataResponsePayload, BalanceDataResponsePayload } from "./WebviewMessage" // kilocode_change
 import { ClineRulesToggles } from "./cline-rules" // kilocode_change
 
+// kilocode_change start
+export interface KiloCodeWrapperProperties {
+	kiloCodeWrapped: boolean
+	kiloCodeWrapper: string | null
+	kiloCodeWrapperTitle: string | null
+	kiloCodeWrapperCode: string | null
+	kiloCodeWrapperVersion: string | null
+}
+
 // Command interface for frontend/backend communication
 export interface Command {
 	name: string
@@ -334,6 +343,9 @@ export type ExtensionState = Pick<
 	apiConfiguration?: ProviderSettings
 	uriScheme?: string
 	uiKind?: string // kilocode_change
+
+	kiloCodeWrapperProperties?: KiloCodeWrapperProperties // kilocode_change: Wrapper information
+
 	kilocodeDefaultModel: string
 	shouldShowAnnouncement: boolean
 

@@ -242,7 +242,7 @@ class ExtensionHostManager : Disposable {
                 "extensionTestsLocationURI" to null,
                 "useHostProxy" to false,
                 "skipWorkspaceStorageLock" to false,
-                "isExtensionTelemetryLoggingOnly" to false
+                "isExtensionTelemetryLoggingOnly" to false,
             ),
             "workspace" to mapOf(
                 "id" to "intellij-workspace",
@@ -289,29 +289,12 @@ class ExtensionHostManager : Disposable {
      */
     private fun getCurrentIDEName(): String {
         val applicationInfo = ApplicationInfo.getInstance()
-         // Get product code, which is the main identifier for distinguishing IDEs
         val productCode = applicationInfo.build.productCode
-        val fullName = applicationInfo.fullApplicationName
+        val version = applicationInfo.shortVersion ?: "1.0.0"
         
-        val ideName = when (productCode) {
-            "IC" -> "IntelliJ IDEA"
-            "IU" -> "IntelliJ IDEA"  
-            "AS" -> "Android Studio"
-            "AI" -> "Android Studio"
-            "WS" -> "WebStorm"
-            "PS" -> "PhpStorm"
-            "PY" -> "PyCharm Professional"
-            "PC" -> "PyCharm Community"
-            "GO" -> "GoLand"
-            "CL" -> "CLion"
-            "RD" -> "Rider"
-            "RM" -> "RubyMine"
-            "DB" -> "DataGrip"
-            "DS" -> "DataSpell"
-            else -> if (fullName?.contains("Android Studio") == true) "Android Studio" else "JetBrains"
-        }
-        LOG.info("Get IDE name, productCode: $productCode ideName: $ideName fullName: $fullName")
-        return ideName
+        // Return in the format: wrapper|jetbrains|productCode
+        val result = "wrapper|jetbrains|$productCode|$version"
+        return result
     }
     
     /**

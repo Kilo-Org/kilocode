@@ -44,7 +44,11 @@ import { Package } from "../../shared/package"
 import { findLast } from "../../shared/array"
 import { supportPrompt } from "../../shared/support-prompt"
 import { GlobalFileNames } from "../../shared/globalFileNames"
-import { ExtensionMessage, MarketplaceInstalledMetadata } from "../../shared/ExtensionMessage"
+import {
+	ExtensionMessage,
+	KiloCodeWrapperProperties,
+	MarketplaceInstalledMetadata,
+} from "../../shared/ExtensionMessage"
 import { Mode, defaultModeSlug, getModeBySlug } from "../../shared/modes"
 import { experimentDefault } from "../../shared/experiments"
 import { formatLanguage } from "../../shared/language"
@@ -1853,6 +1857,10 @@ export class ClineProvider
 		const currentMode = mode ?? defaultModeSlug
 		const hasSystemPromptOverride = await this.hasFileBasedSystemPromptOverride(currentMode)
 
+		// kilocode_change start wrapper information
+		const kiloCodeWrapperProperties = this.getKiloCodeWrapperProperties()
+		// kilocode_change end
+
 		return {
 			version: this.context.extension?.packageJSON?.version ?? "",
 			apiConfiguration,
@@ -1874,6 +1882,7 @@ export class ClineProvider
 			autoCondenseContextPercent: autoCondenseContextPercent ?? 100,
 			uriScheme: vscode.env.uriScheme,
 			uiKind: vscode.UIKind[vscode.env.uiKind], // kilocode_change
+			kiloCodeWrapperProperties, // kilocode_change wrapper information
 			kilocodeDefaultModel: await getKilocodeDefaultModel(apiConfiguration.kilocodeToken),
 			currentTaskItem: this.getCurrentTask()?.taskId
 				? (taskHistory || []).find((item: HistoryItem) => item.id === this.getCurrentTask()?.taskId)
@@ -2365,18 +2374,95 @@ export class ClineProvider
 	private getAppProperties(): StaticAppProperties {
 		if (!this._appProperties) {
 			const packageJSON = this.context.extension?.packageJSON
+			const { kiloCodeWrapperTitle } = this.getKiloCodeWrapperProperties() // kilocode_change
 
 			this._appProperties = {
 				appName: packageJSON?.name ?? Package.name,
 				appVersion: packageJSON?.version ?? Package.version,
 				vscodeVersion: vscode.version,
 				platform: process.platform,
-				editorName: vscode.env.appName,
+				editorName: kiloCodeWrapperTitle || vscode.env.appName, // kilocode_change
 			}
 		}
 
 		return this._appProperties
 	}
+
+	// kilocode_change start
+	private getKiloCodeWrapperProperties(): KiloCodeWrapperProperties {
+		const appName = vscode.env.appName
+		const kiloCodeWrapped = appName.includes("wrapper")
+		let kiloCodeWrapper = null
+		let kiloCodeWrapperTitle = null
+		let kiloCodeWrapperCode = null
+		let kiloCodeWrapperVersion = null
+
+		if (kiloCodeWrapped) {
+			const wrapperMatch = appName.split("|")
+			kiloCodeWrapper = wrapperMatch[1].trim() || null
+			kiloCodeWrapperCode = wrapperMatch[2].trim() || null
+			kiloCodeWrapperVersion = wrapperMatch[3].trim() || null
+		}
+
+		switch (kiloCodeWrapperCode) {
+			case "IC":
+				kiloCodeWrapperTitle = "IntelliJ IDEA"
+				break
+			case "IU":
+				kiloCodeWrapperTitle = "IntelliJ IDEA"
+				break
+			case "AS":
+				kiloCodeWrapperTitle = "Android Studio"
+				break
+			case "AI":
+				kiloCodeWrapperTitle = "Android Studio"
+				break
+			case "WS":
+				kiloCodeWrapperTitle = "WebStorm"
+				break
+			case "PS":
+				kiloCodeWrapperTitle = "PhpStorm"
+				break
+			case "PY":
+				kiloCodeWrapperTitle = "PyCharm Professional"
+				break
+			case "PC":
+				kiloCodeWrapperTitle = "PyCharm Community"
+				break
+			case "GO":
+				kiloCodeWrapperTitle = "GoLand"
+				break
+			case "CL":
+				kiloCodeWrapperTitle = "CLion"
+				break
+			case "RD":
+				kiloCodeWrapperTitle = "Rider"
+				break
+			case "RM":
+				kiloCodeWrapperTitle = "RubyMine"
+				break
+			case "DB":
+				kiloCodeWrapperTitle = "DataGrip"
+				break
+			case "DS":
+				kiloCodeWrapperTitle = "DataSpell"
+				break
+			case null:
+				break
+			default:
+				kiloCodeWrapperTitle = "JetBrains IDE"
+				break
+		}
+
+		return {
+			kiloCodeWrapped,
+			kiloCodeWrapper,
+			kiloCodeWrapperTitle,
+			kiloCodeWrapperCode,
+			kiloCodeWrapperVersion,
+		}
+	}
+	// kilocode_change end
 
 	public get appProperties(): StaticAppProperties {
 		return this._appProperties ?? this.getAppProperties()
