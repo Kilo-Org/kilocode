@@ -25,6 +25,7 @@ describe("getModelsByProvider", () => {
 			lmstudio: { "test-model": testModel },
 			"io-intelligence": { "test-model": testModel },
 			submodel: { "test-model": testModel },
+			deepinfra: { "test-model": testModel },
 		}
 
 		const exceptions = [

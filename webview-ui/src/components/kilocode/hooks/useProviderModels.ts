@@ -45,6 +45,7 @@ import {
 	featherlessModels,
 	featherlessDefaultModelId,
 	submodelDefaultModelId,
+	deepInfraDefaultModelId,
 } from "@roo-code/types"
 import { cerebrasModels, cerebrasDefaultModelId } from "@roo/api"
 import type { ModelRecord, RouterModels } from "@roo/api"
@@ -251,6 +252,12 @@ export const getModelsByProvider = ({
 			return {
 				models: routerModels.submodel,
 				defaultModel: submodelDefaultModelId,
+			}
+		}
+		case "deepinfra": {
+			return {
+				models: routerModels.deepinfra,
+				defaultModel: deepInfraDefaultModelId,
 			}
 		}
 		default:

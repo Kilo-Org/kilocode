@@ -1,12 +1,13 @@
-mixed-addition-deletion/input.js
-```js
-function processData(data) {
+<change><search><![CDATA[function processData(data) {
+	// Old validation
+	if (!data) return null
+
+	return data.toUpperCase()
+}]]></search><replace><![CDATA[function processData(data) {
 	// New validation with better error handling
 	if (!data || typeof data !== "string") {
 		throw new Error("Invalid data provided")
 	}
 
 	return data.toUpperCase()
-}
-
-```
+}]]></replace></change>

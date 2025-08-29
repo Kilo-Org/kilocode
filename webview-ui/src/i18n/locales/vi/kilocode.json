@@ -205,6 +205,10 @@
 				"label": "Tác vụ thông minh nội tuyến",
 				"description": "Cần sửa nhanh, hoàn thiện hay cấu trúc lại code? Kilo sẽ sử dụng ngữ cảnh xung quanh để đưa ra các cải tiến ngay lập tức, giúp bạn duy trì nhịp độ làm việc. <DocsLink>Xem phím tắt</DocsLink>"
 			},
+			"enableCustomProvider": {
+				"label": "Sử dụng nhà cung cấp tùy chỉnh",
+				"description": "Inline Assist sử dụng thông tin xác thực KiloCode / OpenRouter / Mistral của bạn để sử dụng mô hình Codestral theo mặc định"
+			},
 			"provider": "Nhà cung cấp",
 			"apiConfigId": {
 				"label": "Cấu hình API",

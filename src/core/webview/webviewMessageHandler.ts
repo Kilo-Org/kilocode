@@ -572,6 +572,7 @@ export const webviewMessageHandler = async (
 				ollama: {},
 				lmstudio: {},
 				submodel: {},
+				deepinfra: {}, // kilocode_change
 			}
 
 			const safeGetModels = async (options: GetModelsOptions): Promise<ModelRecord> => {
@@ -615,6 +616,7 @@ export const webviewMessageHandler = async (
 					},
 				},
 				{ key: "ollama", options: { provider: "ollama", baseUrl: apiConfiguration.ollamaBaseUrl } },
+				{ key: "deepinfra", options: { provider: "deepinfra", apiKey: apiConfiguration.deepInfraApiKey } },
 			]
 			// kilocode_change end
 

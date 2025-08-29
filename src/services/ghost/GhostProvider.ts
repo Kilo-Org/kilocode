@@ -1,5 +1,6 @@
 import crypto from "crypto"
 import * as vscode from "vscode"
+import { t } from "../../i18n"
 import { GhostDocumentStore } from "./GhostDocumentStore"
 import { GhostStrategy } from "./GhostStrategy"
 import { GhostModel } from "./GhostModel"
@@ -7,8 +8,6 @@ import { GhostWorkspaceEdit } from "./GhostWorkspaceEdit"
 import { GhostDecorations } from "./GhostDecorations"
 import { GhostSuggestionContext } from "./types"
 import { GhostStatusBar } from "./GhostStatusBar"
-import { t } from "../../i18n"
-import { addCustomInstructions } from "../../core/prompts/sections/custom-instructions"
 import { getWorkspacePath } from "../../utils/path"
 import { GhostSuggestionsState } from "./GhostSuggestions"
 import { GhostCodeActionProvider } from "./GhostCodeActionProvider"
@@ -21,6 +20,7 @@ import { TelemetryService } from "@roo-code/telemetry"
 import { ClineProvider } from "../../core/webview/ClineProvider"
 import { experiments, EXPERIMENT_IDS } from "../../shared/experiments"
 import { GhostCursorAnimation } from "./GhostCursorAnimation"
+import { GhostCursor } from "./GhostCursor"
 
 export class GhostProvider {
 	private static instance: GhostProvider | null = null
@@ -35,7 +35,8 @@ export class GhostProvider {
 	private providerSettingsManager: ProviderSettingsManager
 	private settings: GhostServiceSettings | null = null
 	private ghostContext: GhostContext
-	private cursor: GhostCursorAnimation
+	private cursor: GhostCursor
+	private cursorAnimation: GhostCursorAnimation
 
 	private enabled: boolean = false
 	private taskId: string | null = null
@@ -62,12 +63,13 @@ export class GhostProvider {
 		// Register Internal Components
 		this.decorations = new GhostDecorations()
 		this.documentStore = new GhostDocumentStore()
-		this.strategy = new GhostStrategy()
+		this.strategy = new GhostStrategy({ debug: true })
 		this.workspaceEdit = new GhostWorkspaceEdit()
 		this.providerSettingsManager = new ProviderSettingsManager(context)
 		this.model = new GhostModel()
 		this.ghostContext = new GhostContext(this.documentStore)
-		this.cursor = new GhostCursorAnimation(context)
+		this.cursor = new GhostCursor()
+		this.cursorAnimation = new GhostCursorAnimation(context)
 
 		// Register the providers
 		this.codeActionProvider = new GhostCodeActionProvider()
@@ -200,7 +202,7 @@ export class GhostProvider {
 		if (!this.enabled) {
 			return
 		}
-		this.cursor.update()
+		this.cursorAnimation.update()
 		const timeSinceLastTextChange = Date.now() - this.lastTextChangeTime
 		const isSelectionChangeFromTyping = timeSinceLastTextChange < 50
 		if (!isSelectionChangeFromTyping) {
@@ -271,11 +273,7 @@ export class GhostProvider {
 		this.isRequestCancelled = false
 
 		const context = await this.ghostContext.generate(initialContext)
-		// Load custom instructions
-		const workspacePath = getWorkspacePath()
-		const customInstructions = await addCustomInstructions("", "", workspacePath, "ghost")
-
-		const systemPrompt = this.strategy.getSystemPrompt(customInstructions)
+		const systemPrompt = this.strategy.getSystemPrompt(context)
 		const userPrompt = this.strategy.getSuggestionPrompt(context)
 		if (this.isRequestCancelled) {
 			return
@@ -286,64 +284,137 @@ export class GhostProvider {
 			await this.reload()
 		}
 
-		const { response, cost, inputTokens, outputTokens, cacheWriteTokens, cacheReadTokens } =
-			await this.model.generateResponse(systemPrompt, userPrompt)
+		console.log("system", systemPrompt)
+		console.log("userprompt", userPrompt)
 
-		this.updateCostTracking(cost)
+		// Initialize the streaming parser
+		this.strategy.initializeStreamingParser(context)
 
-		TelemetryService.instance.captureEvent(TelemetryEventName.LLM_COMPLETION, {
-			taskId: this.taskId,
-			inputTokens,
-			outputTokens,
-			cacheWriteTokens,
-			cacheReadTokens,
-			cost,
-			service: "INLINE_ASSIST",
-		})
+		let hasShownFirstSuggestion = false
+		let cost = 0
+		let inputTokens = 0
+		let outputTokens = 0
+		let cacheWriteTokens = 0
+		let cacheReadTokens = 0
+		let response = ""
 
-		if (this.isRequestCancelled) {
-			return
+		// Create streaming callback
+		const onChunk = (chunk: any) => {
+			if (this.isRequestCancelled) {
+				return
+			}
+
+			if (chunk.type === "text") {
+				response += chunk.text
+
+				// Process the text chunk through our streaming parser
+				const parseResult = this.strategy.processStreamingChunk(chunk.text)
+
+				if (parseResult.hasNewSuggestions) {
+					// Update our suggestions with the new parsed results
+					this.suggestions = parseResult.suggestions
+
+					// If this is the first suggestion, show it immediately
+					if (!hasShownFirstSuggestion && this.suggestions.hasSuggestions()) {
+						hasShownFirstSuggestion = true
+						this.stopProcessing() // Stop the loading animation
+						this.selectClosestSuggestion()
+						void this.render() // Render asynchronously to not block streaming
+					} else if (hasShownFirstSuggestion) {
+						// Update existing suggestions
+						this.selectClosestSuggestion()
+						void this.render() // Update UI asynchronously
+					}
+				}
+
+				// If the response appears complete, finalize
+				if (parseResult.isComplete && hasShownFirstSuggestion) {
+					this.selectClosestSuggestion()
+					void this.render()
+				}
+			}
 		}
 
-		// First parse the response into edit operations
-		this.suggestions = await this.strategy.parseResponse(response, context)
-		if (this.isRequestCancelled) {
-			this.suggestions.clear()
+		try {
+			// Start streaming generation
+			const usageInfo = await this.model.generateResponse(systemPrompt, userPrompt, onChunk)
+
+			console.log("response", response)
+
+			// Update cost tracking
+			cost = usageInfo.cost
+			inputTokens = usageInfo.inputTokens
+			outputTokens = usageInfo.outputTokens
+			cacheWriteTokens = usageInfo.cacheWriteTokens
+			cacheReadTokens = usageInfo.cacheReadTokens
+
+			this.updateCostTracking(cost)
+
+			// Send telemetry
+			TelemetryService.instance.captureEvent(TelemetryEventName.LLM_COMPLETION, {
+				taskId: this.taskId,
+				inputTokens: inputTokens,
+				outputTokens: outputTokens,
+				cacheWriteTokens: cacheWriteTokens,
+				cacheReadTokens: cacheReadTokens,
+				cost: cost,
+				service: "INLINE_ASSIST",
+			})
+
+			if (this.isRequestCancelled) {
+				this.suggestions.clear()
+				await this.render()
+				return
+			}
+
+			// Finish the streaming parser to apply sanitization if needed
+			const finalParseResult = this.strategy.finishStreamingParser()
+			if (finalParseResult.hasNewSuggestions && !hasShownFirstSuggestion) {
+				// Handle case where sanitization produced suggestions
+				this.suggestions = finalParseResult.suggestions
+				hasShownFirstSuggestion = true
+				this.stopProcessing()
+				this.selectClosestSuggestion()
+				await this.render()
+			} else if (finalParseResult.hasNewSuggestions && hasShownFirstSuggestion) {
+				// Update existing suggestions with sanitized results
+				this.suggestions = finalParseResult.suggestions
+				this.selectClosestSuggestion()
+				await this.render()
+			}
+
+			// If we never showed any suggestions, there might have been an issue
+			if (!hasShownFirstSuggestion) {
+				console.warn("No suggestions were generated during streaming")
+				this.stopProcessing()
+			}
+
+			// Final render to ensure everything is up to date
+			this.selectClosestSuggestion()
 			await this.render()
-			return
+		} catch (error) {
+			console.error("Error in streaming generation:", error)
+			this.stopProcessing()
+			throw error
 		}
-		// Generate placeholder for show the suggestions
-		this.stopProcessing()
-		await this.workspaceEdit.applySuggestionsPlaceholders(this.suggestions)
-		await this.render()
 	}
 
 	private async render() {
 		await this.updateGlobalContext()
 		await this.displaySuggestions()
-		await this.displayCodeLens()
-		await this.moveCursorToSuggestion()
+		// await this.displayCodeLens()
 	}
 
-	private async moveCursorToSuggestion() {
-		const topLine = this.getSelectedSuggestionLine()
-		if (topLine === null) {
-			return
-		}
+	private selectClosestSuggestion() {
 		const editor = vscode.window.activeTextEditor
 		if (!editor) {
 			return
 		}
-		// Get the text of the line to find its length
-		const lineText = editor.document.lineAt(topLine).text
-		const lineLength = lineText.length
-
-		// Move cursor to the end of the line
-		editor.selection = new vscode.Selection(topLine, lineLength, topLine, lineLength)
-		editor.revealRange(
-			new vscode.Range(topLine, lineLength, topLine, lineLength),
-			vscode.TextEditorRevealType.InCenter,
-		)
+		const file = this.suggestions.getFile(editor.document.uri)
+		if (!file) {
+			return
+		}
+		file.selectClosestGroup(editor.selection)
 	}
 
 	public async displaySuggestions() {
@@ -418,7 +489,6 @@ export class GhostProvider {
 			taskId: this.taskId,
 		})
 		this.decorations.clearAll()
-		await this.workspaceEdit.revertSuggestionsPlaceholder(this.suggestions)
 		this.suggestions.clear()
 
 		this.clearAutoTriggerTimer()
@@ -450,12 +520,11 @@ export class GhostProvider {
 			taskId: this.taskId,
 		})
 		this.decorations.clearAll()
-		await this.workspaceEdit.revertSuggestionsPlaceholder(this.suggestions)
 		await this.workspaceEdit.applySelectedSuggestions(this.suggestions)
+		this.cursor.moveToAppliedGroup(this.suggestions)
 		suggestionsFile.deleteSelectedGroup()
+		suggestionsFile.selectClosestGroup(editor.selection)
 		this.suggestions.validateFiles()
-		await this.workspaceEdit.applySuggestionsPlaceholders(this.suggestions)
-
 		this.clearAutoTriggerTimer()
 		await this.render()
 	}
@@ -471,7 +540,6 @@ export class GhostProvider {
 			taskId: this.taskId,
 		})
 		this.decorations.clearAll()
-		await this.workspaceEdit.revertSuggestionsPlaceholder(this.suggestions)
 		await this.workspaceEdit.applySuggestions(this.suggestions)
 		this.suggestions.clear()
 
@@ -584,19 +652,19 @@ export class GhostProvider {
 	}
 
 	private startRequesting() {
-		this.cursor.active()
+		this.cursorAnimation.active()
 		this.isProcessing = true
 		this.updateGlobalContext()
 	}
 
 	private startProcessing() {
-		this.cursor.wait()
+		this.cursorAnimation.wait()
 		this.isProcessing = true
 		this.updateGlobalContext()
 	}
 
 	private stopProcessing() {
-		this.cursor.hide()
+		this.cursorAnimation.hide()
 		this.isProcessing = false
 		this.updateGlobalContext()
 	}
@@ -607,6 +675,8 @@ export class GhostProvider {
 		if (this.autoTriggerTimer) {
 			this.clearAutoTriggerTimer()
 		}
+		// Reset streaming parser when cancelling
+		this.strategy.resetStreamingParser()
 	}
 
 	/**

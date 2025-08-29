@@ -209,6 +209,10 @@
 				"label": "المهمة الذكية المباشرة",
 				"description": "هل تحتاج إلى إصلاح سريع أو إكمال أو إعادة هيكلة؟ سيستخدم Kilo السياق المحيط لتقديم تحسينات فورية، مما يبقيك في حالة التدفق. <DocsLink>عرض الاختصار</DocsLink>"
 			},
+			"enableCustomProvider": {
+				"label": "استخدام مقدم خدمة مخصص",
+				"description": "يستخدم Inline Assist بيانات اعتماد KiloCode / OpenRouter / Mistral الخاصة بك لاستخدام نموذج Codestral افتراضياً"
+			},
 			"provider": "المزود",
 			"apiConfigId": {
 				"label": "إعدادات API",

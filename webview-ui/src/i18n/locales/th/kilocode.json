@@ -209,6 +209,10 @@
 				"label": "ภารกิจอินไลน์อัจฉริยะ",
 				"description": "ต้องการแก้ไขอย่างรวดเร็ว เติมเต็ม หรือรีแฟคเตอร์? Kilo จะใช้บริบทโดยรอบเพื่อเสนอการปรับปรุงทันที ทำให้คุณอยู่ในโฟลว์ <DocsLink>ดูทางลัด</DocsLink>"
 			},
+			"enableCustomProvider": {
+				"label": "ใช้ผู้ให้บริการแบบกำหนดเอง",
+				"description": "Inline Assist ใช้ข้อมูลประจำตัว KiloCode / OpenRouter / Mistral ของคุณเพื่อใช้โมเดล Codestral เป็นค่าเริ่มต้น"
+			},
 			"provider": "ผู้ให้บริการ",
 			"apiConfigId": {
 				"label": "การกำหนดค่า API",

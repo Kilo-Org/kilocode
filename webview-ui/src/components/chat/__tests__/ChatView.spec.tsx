@@ -1080,40 +1080,61 @@ describe("ChatView - Focus Grabbing Tests", () => {
 	it("does not grab focus when follow-up question presented", async () => {
 		const { getByTestId } = renderChatView()
 
+		// Clear the initial focus call from useMount effect
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve))
+		})
+		mockFocus.mockClear()
+
 		// First hydrate state with initial task
-		mockPostMessage({
-			clineMessages: [
-				{
-					type: "say",
-					say: "task",
-					ts: Date.now() - 2000,
-					text: "Initial task",
-				},
-			],
+		await act(async () => {
+			mockPostMessage({
+				clineMessages: [
+					{
+						type: "say",
+						say: "task",
+						ts: Date.now() - 2000,
+						text: "Initial task",
+					},
+				],
+			})
 		})
 
-		// Clear any initial calls
+		// Wait for initial state to settle
+		await waitFor(() => {
+			expect(getByTestId("chat-textarea")).toBeInTheDocument()
+		})
+
+		// Clear any focus calls from initial state processing
 		mockFocus.mockClear()
 
 		// Add follow-up question
-		mockPostMessage({
-			clineMessages: [
-				{
-					type: "say",
-					say: "task",
-					ts: Date.now() - 2000,
-					text: "Initial task",
-				},
-				{
-					type: "ask",
-					ask: "followup",
-					ts: Date.now(),
-					text: "Should I continue?",
-				},
-			],
+		await act(async () => {
+			mockPostMessage({
+				clineMessages: [
+					{
+						type: "say",
+						say: "task",
+						ts: Date.now() - 2000,
+						text: "Initial task",
+					},
+					{
+						type: "ask",
+						ask: "followup",
+						ts: Date.now(),
+						text: "Should I continue?",
+					},
+				],
+			})
 		})
 
-		// Wait a bit to ensure any focus operations would have occurred
+		// Wait for the follow-up question to be processed and any debounced effects to complete
+		// The useDebounceEffect has a 50ms delay, so we wait longer to ensure it completes
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve))
+		})
+
+		// Ensure the textarea is still in the document
 		await waitFor(() => {
 			expect(getByTestId("chat-textarea")).toBeInTheDocument()
 		})

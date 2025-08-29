@@ -209,6 +209,10 @@
 				"label": "स्मार्ट इनलाइन कार्य",
 				"description": "त्वरित सुधार, पूर्णता या रिफैक्टर की आवश्यकता है? Kilo आसपास के संदर्भ का उपयोग करके तत्काल सुधार प्रदान करेगा, आपको प्रवाह में बनाए रखेगा। <DocsLink>शॉर्टकट देखें</DocsLink>"
 			},
+			"enableCustomProvider": {
+				"label": "कस्टम प्रदाता का उपयोग करें",
+				"description": "Inline Assist डिफ़ॉल्ट रूप से Codestral मॉडल का उपयोग करने के लिए आपके KiloCode / OpenRouter / Mistral क्रेडेंशियल का उपयोग करता है"
+			},
 			"provider": "प्रदाता",
 			"apiConfigId": {
 				"label": "API कॉन्फ़िगरेशन",

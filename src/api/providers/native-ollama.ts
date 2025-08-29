@@ -11,6 +11,13 @@ import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from ".
 // kilocode_change start
 import { fetchWithTimeout } from "./kilocode/fetchWithTimeout"
 const OLLAMA_TIMEOUT_MS = 3_600_000
+
+const TOKEN_ESTIMATION_FACTOR = 4 //Industry standard technique for estimating token counts without actually implementing a parser/tokenizer
+
+function estimateOllamaTokenCount(messages: Message[]): number {
+	const totalChars = messages.reduce((acc, msg) => acc + (msg.content?.length || 0), 0)
+	return Math.ceil(totalChars / TOKEN_ESTIMATION_FACTOR)
+}
 // kilocode_change end
 
 function convertToOllamaMessages(anthropicMessages: Anthropic.Messages.MessageParam[]): Message[] {
@@ -136,18 +143,30 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 	protected options: ApiHandlerOptions
 	private client: Ollama | undefined
 	protected models: Record<string, ModelInfo> = {}
+	private isInitialized = false // kilocode_change
 
 	constructor(options: ApiHandlerOptions) {
 		super()
 		this.options = options
+		this.initialize() // kilocode_change
 	}
+
+	// kilocode_change start
+	private async initialize(): Promise<void> {
+		if (this.isInitialized) {
+			return
+		}
+		await this.fetchModel()
+		this.isInitialized = true
+	}
+	// kilocode_change end
 
 	private ensureClient(): Ollama {
 		if (!this.client) {
 			try {
 				// kilocode_change start
 				const headers = this.options.ollamaApiKey
-					? { Authorization: this.options.ollamaApiKey } //Yes, this is weird, its not a Bearer token
+					? { Authorization: this.options.ollamaApiKey } // Yes, this is weird, its not a Bearer token
 					: undefined
 				// kilocode_change end
 
@@ -170,14 +189,29 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 		messages: Anthropic.Messages.MessageParam[],
 		metadata?: ApiHandlerCreateMessageMetadata,
 	): ApiStream {
+		// kilocode_change start
+		if (!this.isInitialized) {
+			await this.initialize()
+		}
+		// kilocode_change end
+
 		const client = this.ensureClient()
-		const { id: modelId, info: modelInfo } = await this.fetchModel()
+		const { id: modelId, info: modelInfo } = this.getModel() // kilocode_change: fetchModel => getModel
 		const useR1Format = modelId.toLowerCase().includes("deepseek-r1")
 
 		const ollamaMessages: Message[] = [
 			{ role: "system", content: systemPrompt },
 			...convertToOllamaMessages(messages),
 		]
+
+		// kilocode_change start
+		const estimatedTokenCount = estimateOllamaTokenCount(ollamaMessages)
+		if (modelInfo.maxTokens && estimatedTokenCount > modelInfo.maxTokens) {
+			throw new Error(
+				`Input message is too long for the selected model. Estimated tokens: ${estimatedTokenCount}, Max tokens: ${modelInfo.maxTokens}. To increase the context window size, see: http://localhost:3000/docs/providers/ollama#preventing-prompt-truncation`,
+			)
+		}
+		// kilocode_change end
 
 		const matcher = new XmlMatcher(
 			"think",
@@ -195,7 +229,6 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 				messages: ollamaMessages,
 				stream: true,
 				options: {
-					num_ctx: modelInfo.contextWindow,
 					temperature: this.options.modelTemperature ?? (useR1Format ? DEEP_SEEK_DEFAULT_TEMPERATURE : 0),
 				},
 			})
@@ -262,21 +295,40 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 
 	async fetchModel() {
 		this.models = await getOllamaModels(this.options.ollamaBaseUrl)
-		return this.getModel()
+		return this.models // kilocode_change
 	}
 
 	override getModel(): { id: string; info: ModelInfo } {
 		const modelId = this.options.ollamaModelId || ""
+
+		// kilocode_change start
+		const modelInfo = this.models[modelId]
+		if (!modelInfo) {
+			const availableModels = Object.keys(this.models)
+			const errorMessage =
+				availableModels.length > 0
+					? `Model ${modelId} not found. Available models: ${availableModels.join(", ")}`
+					: `Model ${modelId} not found. No models available.`
+			throw new Error(errorMessage)
+		}
+		// kilocode_change end
+
 		return {
 			id: modelId,
-			info: this.models[modelId] || openAiModelInfoSaneDefaults,
+			info: modelInfo, // kilocode_change
 		}
 	}
 
 	async completePrompt(prompt: string): Promise<string> {
 		try {
+			// kilocode_change start
+			if (!this.isInitialized) {
+				await this.initialize()
+			}
+			// kilocode_change end
+
 			const client = this.ensureClient()
-			const { id: modelId } = await this.fetchModel()
+			const { id: modelId } = this.getModel() // kilocode_change: fetchModel => getModel
 			const useR1Format = modelId.toLowerCase().includes("deepseek-r1")
 
 			const response = await client.chat({

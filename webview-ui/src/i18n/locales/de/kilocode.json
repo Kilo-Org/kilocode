@@ -209,6 +209,10 @@
 				"label": "Intelligente Inline-Aufgabe",
 				"description": "Brauchst du eine schnelle Korrektur, Vervollständigung oder Refaktorierung? Kilo nutzt den umgebenden Kontext, um sofortige Verbesserungen anzubieten und dich im Flow zu halten. <DocsLink>Tastenkürzel anzeigen</DocsLink>"
 			},
+			"enableCustomProvider": {
+				"label": "Benutzerdefinierten Anbieter verwenden",
+				"description": "Inline-Unterstützung verwendet deine KiloCode / OpenRouter / Mistral Zugangsdaten, um standardmäßig das Codestral-Modell zu verwenden"
+			},
 			"provider": "Anbieter",
 			"apiConfigId": {
 				"label": "API-Konfiguration",

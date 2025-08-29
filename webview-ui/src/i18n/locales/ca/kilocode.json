@@ -209,6 +209,10 @@
 				"label": "Tasca intel·ligent en línia",
 				"description": "Necessites una correcció ràpida, completar o refactoritzar? Kilo utilitzarà el context del voltant per oferir millores immediates, mantenint-te en el flux. <DocsLink>Veure drecera</DocsLink>"
 			},
+			"enableCustomProvider": {
+				"label": "Utilitzar proveïdor personalitzat",
+				"description": "Inline Assist utilitza les teves credencials de KiloCode / OpenRouter / Mistral per utilitzar el model Codestral per defecte"
+			},
 			"provider": "Proveïdor",
 			"apiConfigId": {
 				"label": "Configuració de l'API",

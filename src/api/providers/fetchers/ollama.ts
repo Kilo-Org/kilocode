@@ -44,11 +44,13 @@ export const parseOllamaModel = (rawModel: OllamaModelInfoResponse): ModelInfo =
 			? parseInt(rawModel.parameters.match(/^num_ctx\s+(\d+)/m)?.[1] ?? "", 10) || undefined
 			: undefined
 
-	const contextKey = Object.keys(rawModel.model_info).find((k) => k.includes("context_length"))
-	const contextLengthFromModelInfo =
-		contextKey && typeof rawModel.model_info[contextKey] === "number" ? rawModel.model_info[contextKey] : undefined
+	const contextLengthFromEnvironment = parseInt(process.env.OLLAMA_CONTEXT_LENGTH || "4096", 10)
 
-	const contextWindow = contextLengthFromModelParameters ?? contextLengthFromModelInfo
+	let contextWindow = contextLengthFromModelParameters ?? contextLengthFromEnvironment
+
+	if (contextWindow == 40960 && !contextLengthFromModelParameters) {
+		contextWindow = 4096 // For some unknown reason, Ollama returns an undefind context as "40960" rather than 4096, which is what it actually enforces.
+	}
 	// kilocode_change end
 
 	const modelInfo: ModelInfo = Object.assign({}, ollamaDefaultModelInfo, {

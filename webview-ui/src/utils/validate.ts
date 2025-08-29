@@ -74,6 +74,11 @@ function validateModelsAndKeysProvided(apiConfiguration: ProviderSettings): stri
 			}
 			break
 		// kilocode_change start
+		case "deepinfra":
+			if (!apiConfiguration.deepInfraApiKey) {
+				return i18next.t("settings:validation.apiKey")
+			}
+			break
 		case "gemini-cli":
 			// OAuth-based provider, no API key validation needed
 			break
@@ -219,8 +224,12 @@ function getModelIdForProvider(apiConfiguration: ProviderSettings, provider: str
 			return apiConfiguration.huggingFaceModelId
 		case "io-intelligence":
 			return apiConfiguration.ioIntelligenceModelId
+		// kilocode_change start
 		case "submodel":
 			return apiConfiguration.submodelModelId
+		case "deepinfra":
+			return apiConfiguration.deepInfraModelId
+		// kilocode_change end
 		default:
 			return apiConfiguration.apiModelId
 	}
@@ -291,6 +300,11 @@ export function validateModelId(apiConfiguration: ProviderSettings, routerModels
 		case "litellm":
 			modelId = apiConfiguration.litellmModelId
 			break
+		// kilocode_change start
+		case "deepinfra":
+			modelId = apiConfiguration.deepInfraModelId
+			break
+		// kilocode_change end
 		case "io-intelligence":
 			modelId = apiConfiguration.ioIntelligenceModelId
 			break

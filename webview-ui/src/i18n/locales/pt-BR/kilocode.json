@@ -209,6 +209,10 @@
 				"label": "Tarefa Inteligente em Linha",
 				"description": "Precisa de uma correção rápida, completar ou refatorar? O Kilo usará o contexto ao redor para oferecer melhorias imediatas, mantendo você no fluxo. <DocsLink>Ver atalho</DocsLink>"
 			},
+			"enableCustomProvider": {
+				"label": "Usar provedor personalizado",
+				"description": "O Inline Assist usa suas credenciais do KiloCode / OpenRouter / Mistral para usar o modelo Codestral por padrão"
+			},
 			"provider": "Provedor",
 			"apiConfigId": {
 				"label": "Configuração de API",
