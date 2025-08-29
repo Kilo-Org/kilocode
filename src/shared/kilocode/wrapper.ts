@@ -8,67 +8,67 @@ export interface KiloCodeWrapperProperties {
 
 export const JETBRAIN_PRODUCTS = {
 	AC: {
-		tooltag: "appcode",
+		urlScheme: "appcode",
 		name: "AppCode",
 	},
 	IC: {
-		tooltag: "idea",
+		urlScheme: "idea",
 		name: "IntelliJ IDEA",
 	},
 	IU: {
-		tooltag: "idea",
+		urlScheme: "idea",
 		name: "IntelliJ IDEA",
 	},
 	AS: {
-		tooltag: "android",
+		urlScheme: "android",
 		name: "Android Studio",
 	},
 	AI: {
-		tooltag: "android",
+		urlScheme: "android",
 		name: "Android Studio",
 	},
 	WS: {
-		tooltag: "web-storm",
+		urlScheme: "webstorm",
 		name: "WebStorm",
 	},
 	PS: {
-		tooltag: "php-storm",
+		urlScheme: "phpstorm",
 		name: "PhpStorm",
 	},
 	PY: {
-		tooltag: "pycharm",
+		urlScheme: "pycharm",
 		name: "PyCharm Professional",
 	},
 	PC: {
-		tooltag: "pycharm",
+		urlScheme: "pycharm",
 		name: "PyCharm Community",
 	},
 	GO: {
-		tooltag: "goland",
+		urlScheme: "goland",
 		name: "GoLand",
 	},
 	CL: {
-		tooltag: "clion",
+		urlScheme: "clion",
 		name: "CLion",
 	},
 	RD: {
-		tooltag: "rider",
+		urlScheme: "rider",
 		name: "Rider",
 	},
 	RM: {
-		tooltag: "rubymine",
+		urlScheme: "rubymine",
 		name: "RubyMine",
 	},
 	DB: {
-		tooltag: "datagrip",
+		urlScheme: "datagrip",
 		name: "DataGrip",
 	},
 	DS: {
-		tooltag: "dataspell",
+		urlScheme: "dataspell",
 		name: "DataSpell",
 	},
 	JB: {
-		tooltag: "jetbrains",
+		urlScheme: "jetbrains",
 		name: "JetBrains",
 	},
 }
