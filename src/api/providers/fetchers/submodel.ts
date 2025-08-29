@@ -3,6 +3,7 @@ import axios from "axios"
 import type { ModelInfo } from "@roo-code/types"
 
 import { parseApiPrice } from "../../../shared/cost"
+import { DEFAULT_HEADERS } from "../constants" // kilocode_change
 
 /*
    Get Submodel Models from API
@@ -11,7 +12,9 @@ export async function getSubmodelModels(apiKey?: string | null): Promise<Record<
 	const models: Record<string, ModelInfo> = {}
 
 	try {
-		const headers: Record<string, string> = {}
+		const headers: Record<string, string> = {
+			...DEFAULT_HEADERS,
+		}
 
 		if (apiKey) {
 			headers["Authorization"] = `Bearer ${apiKey}`

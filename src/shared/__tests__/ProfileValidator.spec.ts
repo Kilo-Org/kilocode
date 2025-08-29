@@ -196,7 +196,6 @@ describe("ProfileValidator", () => {
 			"sambanova",
 			"fireworks",
 			"featherless",
-			"submodel",
 		]
 
 		apiModelProviders.forEach((provider) => {
@@ -318,6 +317,21 @@ describe("ProfileValidator", () => {
 			const profile: ProviderSettings = {
 				apiProvider: "glama",
 				glamaModelId: "glama-model",
+			}
+
+			expect(ProfileValidator.isProfileAllowed(profile, allowList)).toBe(true)
+		})
+
+		it("should extract submodelModelId for submodel provider", () => {
+			const allowList: OrganizationAllowList = {
+				allowAll: false,
+				providers: {
+					submodel: { allowAll: false, models: ["submodel-model"] },
+				},
+			}
+			const profile: ProviderSettings = {
+				apiProvider: "submodel",
+				submodelModelId: "submodel-model",
 			}
 
 			expect(ProfileValidator.isProfileAllowed(profile, allowList)).toBe(true)

@@ -28,11 +28,6 @@ export class SubmodelHandler extends RouterProvider implements SingleCompletionH
 		messages: Anthropic.Messages.MessageParam[],
 		metadata?: ApiHandlerCreateMessageMetadata,
 	) {
-		//const {
-		//	id: model,
-		//	info: { maxTokens: max_tokens },
-		//} = this.getModel()
-
 		const {
 			id: model,
 			info: { maxTokens: max_tokens },
