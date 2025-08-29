@@ -41,6 +41,7 @@ SPDX-License-Identifier: Apache-2.0
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
         <projectService serviceImplementation="ai.kilocode.jetbrains.plugin.WecoderPluginService"/>
+        <jbProtocolCommand implementation="ai.kilocode.jetbrains.commands.KiloCodeAuthProtocolCommand" />
         <postStartupActivity implementation="ai.kilocode.jetbrains.plugin.WecoderPlugin"/>
         <editorFactoryListener implementation="ai.kilocode.jetbrains.editor.EditorListener"/>
         <toolWindow factoryClass="ai.kilocode.jetbrains.ui.RooToolWindowFactory"
@@ -48,8 +49,8 @@ SPDX-License-Identifier: Apache-2.0
                     secondary="true"
                     icon="/icons/kilo-dark.svg"
                     anchor="right" />
-        <notificationGroup 
-                    id="kilocode" 
+        <notificationGroup
+                    id="kilocode"
                     displayType="BALLOON"
         />
     </extensions>
