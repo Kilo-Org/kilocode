@@ -247,5 +247,9 @@
 		"perHour": "Per hora",
 		"requestsLabel": "Sol·licituds",
 		"tokensLabel": "Tokens"
+	},
+	"imageWarnings": {
+		"modelNoImageSupport": "Les imatges no són compatibles amb el model actual.",
+		"maxImagesReached": "Màxim de 20 imatges per missatge. Elimineu algunes imatges per afegir-ne més."
 	}
 }

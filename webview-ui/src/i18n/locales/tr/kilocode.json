@@ -247,5 +247,9 @@
 		"perHour": "Saat Başına",
 		"perMinute": "Dakika Başına",
 		"requestsLabel": "İstekler"
+	},
+	"imageWarnings": {
+		"maxImagesReached": "Mesaj başına maksimum 20 görsel. Daha fazla eklemek için bazı görselleri kaldırın.",
+		"modelNoImageSupport": "Görüntüler mevcut model tarafından desteklenmiyor."
 	}
 }

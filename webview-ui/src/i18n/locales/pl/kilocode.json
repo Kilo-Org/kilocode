@@ -247,5 +247,9 @@
 		"perDay": "Dziennie",
 		"perHour": "Za godzinę",
 		"requestsLabel": "Prośby"
+	},
+	"imageWarnings": {
+		"modelNoImageSupport": "Obrazy nie są obsługiwane przez aktualny model.",
+		"maxImagesReached": "Maksymalnie 20 obrazów na wiadomość. Usuń niektóre obrazy, aby dodać więcej."
 	}
 }

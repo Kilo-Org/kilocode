@@ -243,5 +243,9 @@
 		"perMinute": "Mỗi Phút",
 		"perHour": "Một Giờ",
 		"requestsLabel": "Yêu cầu"
+	},
+	"imageWarnings": {
+		"modelNoImageSupport": "Hình ảnh không được hỗ trợ bởi mô hình hiện tại.",
+		"maxImagesReached": "Tối đa 20 hình ảnh cho mỗi tin nhắn. Hãy xóa một số hình ảnh để thêm được nhiều hơn."
 	}
 }

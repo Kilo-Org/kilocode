@@ -247,5 +247,9 @@
 		"requestsLabel": "Solicitações",
 		"perMinute": "Por Minuto",
 		"perHour": "Por Hora"
+	},
+	"imageWarnings": {
+		"modelNoImageSupport": "Imagens não são suportadas pelo modelo atual.",
+		"maxImagesReached": "Máximo de 20 imagens por mensagem. Remova algumas imagens para adicionar mais."
 	}
 }

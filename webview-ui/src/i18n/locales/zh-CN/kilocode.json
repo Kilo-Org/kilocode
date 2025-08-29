@@ -243,5 +243,9 @@
 		"perDay": "每天",
 		"requestsLabel": "请求",
 		"perMinute": "每分钟"
+	},
+	"imageWarnings": {
+		"maxImagesReached": "每条消息最多 20 张图片。删除一些图片以添加更多。",
+		"modelNoImageSupport": "当前模型不支持图像。"
 	}
 }

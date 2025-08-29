@@ -247,5 +247,9 @@
 		"perHour": "Za hodinu",
 		"requestsLabel": "Požadavky",
 		"perDay": "Za den"
+	},
+	"imageWarnings": {
+		"modelNoImageSupport": "Obrázky nejsou podporovány aktuálním modelem.",
+		"maxImagesReached": "Maximálně 20 obrázků na zprávu. Odstraňte některé obrázky, abyste mohli přidat další."
 	}
 }

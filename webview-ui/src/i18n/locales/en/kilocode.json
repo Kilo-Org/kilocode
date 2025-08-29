@@ -26,6 +26,10 @@
 		"browserAction": "Browser action waiting for approval",
 		"command": "Command waiting for approval"
 	},
+	"imageWarnings": {
+		"modelNoImageSupport": "Images are not supported by the current model.",
+		"maxImagesReached": "Maximum of 20 images per message. Remove some images to add more."
+	},
 	"settings": {
 		"sections": {
 			"mcp": "MCP Servers"

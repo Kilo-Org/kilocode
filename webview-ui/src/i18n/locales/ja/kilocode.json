@@ -247,5 +247,9 @@
 		"requestsLabel": "リクエスト",
 		"perDay": "1日あたり",
 		"perHour": "1時間あたり"
+	},
+	"imageWarnings": {
+		"modelNoImageSupport": "画像は現在のモデルではサポートされていません。",
+		"maxImagesReached": "メッセージあたり最大20枚の画像。さらに追加するには一部の画像を削除してください。"
 	}
 }

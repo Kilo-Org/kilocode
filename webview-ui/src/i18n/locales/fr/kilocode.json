@@ -247,5 +247,9 @@
 		"perMinute": "Par minute",
 		"requestsLabel": "Demandes",
 		"perDay": "Par jour"
+	},
+	"imageWarnings": {
+		"modelNoImageSupport": "Les images ne sont pas prises en charge par le modèle actuel.",
+		"maxImagesReached": "Maximum de 20 images par message. Supprimez quelques images pour en ajouter d'autres."
 	}
 }
