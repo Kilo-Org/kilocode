@@ -278,6 +278,8 @@
 		"ioIntelligenceApiKey": "Klíč API IO Intelligence",
 		"ioIntelligenceApiKeyPlaceholder": "Zadejte váš klíč API IO Intelligence",
 		"getIoIntelligenceApiKey": "Získat klíč API IO Intelligence",
+		"submodelApiKey": "Klíč Access Key Submodel",
+		"getSubmodelApiKey": "Získat klíč Access Key Submodel",
 		"deepSeekApiKey": "Klíč API DeepSeek",
 		"getDeepSeekApiKey": "Získat klíč API DeepSeek",
 		"doubaoApiKey": "Klíč API Doubao",

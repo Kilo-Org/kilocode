@@ -278,6 +278,8 @@
 		"ioIntelligenceApiKey": "مفتاح IO Intelligence",
 		"ioIntelligenceApiKeyPlaceholder": "أدخل مفتاح IO Intelligence API",
 		"getIoIntelligenceApiKey": "احصل على مفتاح IO Intelligence",
+		"submodelApiKey": "مفتاح Submodel Access Key",
+		"getSubmodelApiKey": "احصل على Submodel Access Key",
 		"deepSeekApiKey": "مفتاح DeepSeek",
 		"getDeepSeekApiKey": "احصل على مفتاح DeepSeek",
 		"doubaoApiKey": "مفتاح Doubao",

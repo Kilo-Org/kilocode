@@ -279,6 +279,8 @@
 		"ioIntelligenceApiKey": "Khóa API IO Intelligence",
 		"ioIntelligenceApiKeyPlaceholder": "Nhập khóa API IO Intelligence của bạn",
 		"getIoIntelligenceApiKey": "Lấy khóa API IO Intelligence",
+		"submodelApiKey": "Submodel Access Key",
+		"getSubmodelApiKey": "Lấy Submodel Access Key",
 		"deepSeekApiKey": "Khóa API DeepSeek",
 		"getDeepSeekApiKey": "Lấy khóa API DeepSeek",
 		"doubaoApiKey": "Khóa API Doubao",

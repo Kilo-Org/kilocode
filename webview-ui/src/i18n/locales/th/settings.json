@@ -274,6 +274,8 @@
 		"ioIntelligenceApiKey": "คีย์ API ของ IO Intelligence",
 		"ioIntelligenceApiKeyPlaceholder": "ป้อนคีย์ API ของ IO Intelligence",
 		"getIoIntelligenceApiKey": "รับคีย์ API ของ IO Intelligence",
+		"submodelApiKey": "Submodel Access Key",
+		"getSubmodelApiKey": "รับ Submodel Access Key",
 		"deepSeekApiKey": "คีย์ API ของ DeepSeek",
 		"getDeepSeekApiKey": "รับคีย์ API ของ DeepSeek",
 		"featherlessApiKey": "คีย์ API ของ Featherless",

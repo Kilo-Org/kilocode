@@ -132,6 +132,7 @@ const routerNames = [
 	"ollama",
 	"lmstudio",
 	"io-intelligence",
+	"submodel",
 	"deepinfra", // kilocode_change
 ] as const
 
@@ -260,3 +261,4 @@ export type GetModelsOptions =
 	| { provider: "lmstudio"; baseUrl?: string }
 	| { provider: "deepinfra"; apiKey?: string; baseUrl?: string }
 	| { provider: "io-intelligence"; apiKey: string }
+	| { provider: "submodel"; apiKey: string }

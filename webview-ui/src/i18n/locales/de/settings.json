@@ -281,6 +281,8 @@
 		"ioIntelligenceApiKey": "IO Intelligence API-Schlüssel",
 		"ioIntelligenceApiKeyPlaceholder": "Gib deinen IO Intelligence API-Schlüssel ein",
 		"getIoIntelligenceApiKey": "IO Intelligence API-Schlüssel erhalten",
+		"submodelApiKey": "Submodel Access Key",
+		"getSubmodelApiKey": "Submodel Access Key erhalten",
 		"deepSeekApiKey": "DeepSeek API-Schlüssel",
 		"getDeepSeekApiKey": "DeepSeek API-Schlüssel erhalten",
 		"moonshotApiKey": "Moonshot API-Schlüssel",

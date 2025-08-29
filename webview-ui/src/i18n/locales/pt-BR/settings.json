@@ -279,6 +279,8 @@
 		"ioIntelligenceApiKey": "Chave de API IO Intelligence",
 		"ioIntelligenceApiKeyPlaceholder": "Insira sua chave de API da IO Intelligence",
 		"getIoIntelligenceApiKey": "Obter chave de API IO Intelligence",
+		"submodelApiKey": "Submodel Access Key",
+		"getSubmodelApiKey": "Obter Submodel Access Key",
 		"deepSeekApiKey": "Chave de API DeepSeek",
 		"getDeepSeekApiKey": "Obter chave de API DeepSeek",
 		"doubaoApiKey": "Chave de API Doubao",

@@ -151,6 +151,11 @@ function validateModelsAndKeysProvided(apiConfiguration: ProviderSettings): stri
 				return i18next.t("settings:validation.apiKey")
 			}
 			break
+		case "submodel":
+			if (!apiConfiguration.submodelApiKey) {
+				return i18next.t("settings:validation.apiKey")
+			}
+			break
 	}
 
 	return undefined
@@ -220,6 +225,8 @@ function getModelIdForProvider(apiConfiguration: ProviderSettings, provider: str
 		case "io-intelligence":
 			return apiConfiguration.ioIntelligenceModelId
 		// kilocode_change start
+		case "submodel":
+			return apiConfiguration.submodelModelId
 		case "deepinfra":
 			return apiConfiguration.deepInfraModelId
 		// kilocode_change end
@@ -300,6 +307,9 @@ export function validateModelId(apiConfiguration: ProviderSettings, routerModels
 		// kilocode_change end
 		case "io-intelligence":
 			modelId = apiConfiguration.ioIntelligenceModelId
+			break
+		case "submodel":
+			modelId = apiConfiguration.submodelModelId
 			break
 	}
 

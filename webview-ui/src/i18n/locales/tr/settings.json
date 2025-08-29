@@ -279,6 +279,8 @@
 		"ioIntelligenceApiKey": "IO Intelligence API Anahtarı",
 		"ioIntelligenceApiKeyPlaceholder": "IO Intelligence API anahtarınızı girin",
 		"getIoIntelligenceApiKey": "IO Intelligence API Anahtarı Al",
+		"submodelApiKey": "Submodel Access Key",
+		"getSubmodelApiKey": "Submodel Access Key Al",
 		"deepSeekApiKey": "DeepSeek API Anahtarı",
 		"getDeepSeekApiKey": "DeepSeek API Anahtarı Al",
 		"doubaoApiKey": "Doubao API Anahtarı",

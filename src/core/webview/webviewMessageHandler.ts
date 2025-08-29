@@ -571,6 +571,7 @@ export const webviewMessageHandler = async (
 				"kilocode-openrouter": {}, // kilocode_change
 				ollama: {},
 				lmstudio: {},
+				submodel: {},
 				deepinfra: {}, // kilocode_change
 			}
 
@@ -605,6 +606,7 @@ export const webviewMessageHandler = async (
 				},
 				{ key: "glama", options: { provider: "glama" } },
 				{ key: "unbound", options: { provider: "unbound", apiKey: apiConfiguration.unboundApiKey } },
+				{ key: "submodel", options: { provider: "submodel", apiKey: apiConfiguration.submodelApiKey || "" } },
 				{
 					key: "kilocode-openrouter",
 					options: {

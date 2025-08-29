@@ -280,6 +280,8 @@
 		"ioIntelligenceApiKey": "Ключ API IO Intelligence",
 		"ioIntelligenceApiKeyPlaceholder": "Введіть ваш ключ API IO Intelligence",
 		"getIoIntelligenceApiKey": "Отримати ключ API IO Intelligence",
+		"submodelApiKey": "Submodel Access Key",
+		"getSubmodelApiKey": "Отримати Submodel Access Key",
 		"deepSeekApiKey": "Ключ API DeepSeek",
 		"getDeepSeekApiKey": "Отримати ключ API DeepSeek",
 		"featherlessApiKey": "Ключ API Featherless",
