@@ -44,11 +44,7 @@ import { Package } from "../../shared/package"
 import { findLast } from "../../shared/array"
 import { supportPrompt } from "../../shared/support-prompt"
 import { GlobalFileNames } from "../../shared/globalFileNames"
-import {
-	ExtensionMessage,
-	KiloCodeWrapperProperties,
-	MarketplaceInstalledMetadata,
-} from "../../shared/ExtensionMessage"
+import { ExtensionMessage, MarketplaceInstalledMetadata } from "../../shared/ExtensionMessage"
 import { Mode, defaultModeSlug, getModeBySlug } from "../../shared/modes"
 import { experimentDefault } from "../../shared/experiments"
 import { formatLanguage } from "../../shared/language"
@@ -100,6 +96,7 @@ import { OpenRouterHandler } from "../../api/providers"
 import { stringifyError } from "../../shared/kilocode/errorUtils"
 import isWsl from "is-wsl"
 import { getKilocodeDefaultModel } from "../../api/providers/kilocode/getKilocodeDefaultModel"
+import { JETBRAIN_PRODUCTS, KiloCodeWrapperProperties } from "../../shared/kilocode/wrapper"
 
 export type ClineProviderState = Awaited<ReturnType<ClineProvider["getState"]>>
 // kilocode_change end
@@ -2404,55 +2401,8 @@ export class ClineProvider
 			kiloCodeWrapperVersion = wrapperMatch[3].trim() || null
 		}
 
-		switch (kiloCodeWrapperCode) {
-			case "IC":
-				kiloCodeWrapperTitle = "IntelliJ IDEA"
-				break
-			case "IU":
-				kiloCodeWrapperTitle = "IntelliJ IDEA"
-				break
-			case "AS":
-				kiloCodeWrapperTitle = "Android Studio"
-				break
-			case "AI":
-				kiloCodeWrapperTitle = "Android Studio"
-				break
-			case "WS":
-				kiloCodeWrapperTitle = "WebStorm"
-				break
-			case "PS":
-				kiloCodeWrapperTitle = "PhpStorm"
-				break
-			case "PY":
-				kiloCodeWrapperTitle = "PyCharm Professional"
-				break
-			case "PC":
-				kiloCodeWrapperTitle = "PyCharm Community"
-				break
-			case "GO":
-				kiloCodeWrapperTitle = "GoLand"
-				break
-			case "CL":
-				kiloCodeWrapperTitle = "CLion"
-				break
-			case "RD":
-				kiloCodeWrapperTitle = "Rider"
-				break
-			case "RM":
-				kiloCodeWrapperTitle = "RubyMine"
-				break
-			case "DB":
-				kiloCodeWrapperTitle = "DataGrip"
-				break
-			case "DS":
-				kiloCodeWrapperTitle = "DataSpell"
-				break
-			case null:
-				break
-			default:
-				kiloCodeWrapperTitle = "JetBrains IDE"
-				break
-		}
+		kiloCodeWrapperTitle =
+			JETBRAIN_PRODUCTS[kiloCodeWrapperCode as keyof typeof JETBRAIN_PRODUCTS]?.name || "JetBrains IDE"
 
 		return {
 			kiloCodeWrapped,

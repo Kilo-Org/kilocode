@@ -11,6 +11,7 @@ import { inputEventTransform } from "../../../settings/transforms"
 import { ModelPicker } from "../../../settings/ModelPicker"
 import { vscode } from "@src/utils/vscode"
 import { OrganizationSelector } from "../../common/OrganizationSelector"
+import { KiloCodeWrapperProperties } from "../../../../../../src/shared/kilocode/wrapper"
 
 type KiloCodeProps = {
 	apiConfiguration: ProviderSettings
@@ -20,6 +21,7 @@ type KiloCodeProps = {
 	routerModels?: RouterModels
 	organizationAllowList: OrganizationAllowList
 	uriScheme: string | undefined
+	kiloCodeWrapperProperties: KiloCodeWrapperProperties | undefined
 	uiKind: string | undefined
 	kilocodeDefaultModel: string
 }
@@ -33,6 +35,7 @@ export const KiloCode = ({
 	organizationAllowList,
 	uriScheme,
 	uiKind,
+	kiloCodeWrapperProperties,
 	kilocodeDefaultModel,
 }: KiloCodeProps) => {
 	const { t } = useAppTranslation()
@@ -75,7 +78,9 @@ export const KiloCode = ({
 						</Button>
 					</div>
 				) : (
-					<VSCodeButtonLink variant="secondary" href={getKiloCodeBackendSignInUrl(uriScheme, uiKind)}>
+					<VSCodeButtonLink
+						variant="secondary"
+						href={getKiloCodeBackendSignInUrl(uriScheme, uiKind, kiloCodeWrapperProperties)}>
 						{t("kilocode:settings.provider.login")}
 					</VSCodeButtonLink>
 				))}

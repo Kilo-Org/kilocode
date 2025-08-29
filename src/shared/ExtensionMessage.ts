@@ -20,15 +20,7 @@ import { Mode } from "./modes"
 import { ModelRecord, RouterModels } from "./api"
 import { ProfileDataResponsePayload, BalanceDataResponsePayload } from "./WebviewMessage" // kilocode_change
 import { ClineRulesToggles } from "./cline-rules" // kilocode_change
-
-// kilocode_change start
-export interface KiloCodeWrapperProperties {
-	kiloCodeWrapped: boolean
-	kiloCodeWrapper: string | null
-	kiloCodeWrapperTitle: string | null
-	kiloCodeWrapperCode: string | null
-	kiloCodeWrapperVersion: string | null
-}
+import { KiloCodeWrapperProperties } from "./kilocode/wrapper" // kilocode_change
 
 // Command interface for frontend/backend communication
 export interface Command {

@@ -11,7 +11,14 @@ import KiloCodeAuth from "../common/KiloCodeAuth"
 import { getKiloCodeBackendSignInUrl } from "../helpers"
 
 const WelcomeView = () => {
-	const { apiConfiguration, currentApiConfigName, setApiConfiguration, uriScheme, uiKind } = useExtensionState()
+	const {
+		apiConfiguration,
+		currentApiConfigName,
+		setApiConfiguration,
+		uriScheme,
+		uiKind,
+		kiloCodeWrapperProperties,
+	} = useExtensionState()
 	const [errorMessage, setErrorMessage] = useState<string | undefined>()
 	const [manualConfig, setManualConfig] = useState(false)
 	const { t } = useAppTranslation()
@@ -47,7 +54,8 @@ const WelcomeView = () => {
 							hideKiloCodeButton
 						/>
 						{isSettingUpKiloCode ? (
-							<ButtonLink href={getKiloCodeBackendSignInUrl(uriScheme, uiKind)}>
+							<ButtonLink
+								href={getKiloCodeBackendSignInUrl(uriScheme, uiKind, kiloCodeWrapperProperties)}>
 								{t("kilocode:settings.provider.login")}
 							</ButtonLink>
 						) : (

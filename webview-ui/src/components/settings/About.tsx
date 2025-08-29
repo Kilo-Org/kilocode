@@ -14,7 +14,6 @@ import { Button } from "@/components/ui"
 
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
-import { useExtensionState } from "../../context/ExtensionStateContext" // kilocode_change
 
 type AboutProps = HTMLAttributes<HTMLDivElement> & {
 	telemetrySetting: TelemetrySetting
@@ -23,7 +22,6 @@ type AboutProps = HTMLAttributes<HTMLDivElement> & {
 
 export const About = ({ telemetrySetting, setTelemetrySetting, className, ...props }: AboutProps) => {
 	const { t } = useAppTranslation()
-	const { kiloCodeWrapperProperties } = useExtensionState() // kilocode_change
 
 	return (
 		<div className={cn("flex flex-col gap-2", className)} {...props}>
@@ -38,19 +36,6 @@ export const About = ({ telemetrySetting, setTelemetrySetting, className, ...pro
 					<div>{t("settings:sections.about")}</div>
 				</div>
 			</SectionHeader>
-
-			{/* kilocode_change start */}
-			{kiloCodeWrapperProperties?.kiloCodeWrapped && (
-				<Section>
-					<div>
-						<p>Wrapper: {kiloCodeWrapperProperties.kiloCodeWrapper}</p>
-						<p>Code: {kiloCodeWrapperProperties.kiloCodeWrapperCode}</p>
-						<p>Title: {kiloCodeWrapperProperties.kiloCodeWrapperTitle}</p>
-						<p>Version: {kiloCodeWrapperProperties.kiloCodeWrapperVersion}</p>
-					</div>
-				</Section>
-			)}
-			{/* kilocode_change end */}
 
 			<Section>
 				<div>
