@@ -154,6 +154,14 @@ export class McpHub {
 	private refCount: number = 0 // Reference counter for active clients
 	private configChangeDebounceTimers: Map<string, NodeJS.Timeout> = new Map()
 
+	// File watcher restart debouncing to prevent infinite loops
+	private restartDebounceTimers: Map<string, NodeJS.Timeout> = new Map()
+	private restartAttempts: Map<string, { count: number; lastAttempt: number }> = new Map()
+
+	// Connection state management to prevent concurrent operations
+	private connectionStates: Map<string, "idle" | "connecting" | "disconnecting" | "restarting"> = new Map()
+	private connectionLocks: Map<string, Promise<void>> = new Map()
+
 	constructor(provider: ClineProvider) {
 		this.providerRef = new WeakRef(provider)
 		this.watchMcpSettingsFile()
@@ -162,6 +170,122 @@ export class McpHub {
 		this.initializeGlobalMcpServers()
 		this.initializeProjectMcpServers()
 	}
+
+	/**
+	 * Debounced restart method with exponential backoff to prevent infinite loops
+	 */
+	private async debouncedRestart(serverName: string, source: "global" | "project"): Promise<void> {
+		const key = `${serverName}-${source}`
+
+		// Clear existing timer
+		const existingTimer = this.restartDebounceTimers.get(key)
+		if (existingTimer) {
+			clearTimeout(existingTimer)
+		}
+
+		// Implement exponential backoff
+		const attempts = this.restartAttempts.get(key) || { count: 0, lastAttempt: 0 }
+		const now = Date.now()
+		const timeSinceLastAttempt = now - attempts.lastAttempt
+
+		// Reset count if enough time has passed (1 minute)
+		if (timeSinceLastAttempt > 60000) {
+			attempts.count = 0
+		}
+
+		attempts.count++
+		attempts.lastAttempt = now
+		this.restartAttempts.set(key, attempts)
+
+		// Exponential backoff: 1s, 2s, 4s, 8s, 16s, max 30s
+		const backoffDelay = Math.min(1000 * Math.pow(2, attempts.count - 1), 30000)
+
+		console.log(
+			`[McpHub] Scheduling restart for ${serverName} (attempt ${attempts.count}) with ${backoffDelay}ms delay`,
+		)
+
+		// Set new timer with backoff
+		const timer = setTimeout(async () => {
+			this.restartDebounceTimers.delete(key)
+			try {
+				await this.restartConnection(serverName, source)
+			} catch (error) {
+				console.error(`[McpHub] Failed to restart ${serverName}:`, error)
+			}
+		}, backoffDelay)
+
+		this.restartDebounceTimers.set(key, timer)
+	}
+
+	/**
+	 * Connection locking mechanism to prevent concurrent operations on the same server
+	 */
+	private async withConnectionLock<T>(
+		serverName: string,
+		source: "global" | "project",
+		operation: () => Promise<T>,
+	): Promise<T> {
+		const key = `${serverName}-${source}`
+
+		// Wait for any existing operation to complete
+		const existingLock = this.connectionLocks.get(key)
+		if (existingLock) {
+			console.log(`[McpHub] Waiting for existing operation to complete for ${serverName}`)
+			await existingLock
+		}
+
+		// Create new lock for this operation
+		let result: T
+		const lockPromise = (async () => {
+			try {
+				this.connectionStates.set(key, "connecting")
+				console.log(`[McpHub] Starting locked operation for ${serverName}`)
+				result = await operation()
+			} finally {
+				this.connectionStates.set(key, "idle")
+				this.connectionLocks.delete(key)
+				console.log(`[McpHub] Completed locked operation for ${serverName}`)
+			}
+		})()
+
+		this.connectionLocks.set(key, lockPromise)
+		await lockPromise
+		return result!
+	}
+
+	/**
+	 * Ensure process termination for stdio transports
+	 */
+	private async ensureProcessTerminated(transport: any): Promise<void> {
+		// Access the underlying process if available (different transport implementations may vary)
+		const process = transport._process || transport.process || transport._child || transport.child
+		if (process && typeof process.kill === "function" && !process.killed) {
+			console.log(`[McpHub] Terminating MCP server process (PID: ${process.pid})`)
+
+			// First try graceful termination
+			process.kill("SIGTERM")
+
+			// Wait up to 3 seconds for graceful termination
+			await new Promise<void>((resolve) => {
+				const timeout = setTimeout(() => {
+					if (process && !process.killed && typeof process.kill === "function") {
+						console.warn(`[McpHub] Force killing MCP server process (PID: ${process.pid})`)
+						process.kill("SIGKILL") // Force kill
+					}
+					resolve()
+				}, 3000)
+
+				if (process) {
+					process.on("exit", () => {
+						console.log(`[McpHub] MCP server process terminated (PID: ${process.pid})`)
+						clearTimeout(timeout)
+						resolve()
+					})
+				}
+			})
+		}
+	}
+
 	/**
 	 * Registers a client (e.g., ClineProvider) using this hub.
 	 * Increments the reference count.
@@ -630,240 +754,244 @@ export class McpHub {
 		config: z.infer<typeof ServerConfigSchema>,
 		source: "global" | "project" = "global",
 	): Promise<void> {
-		// Remove existing connection if it exists with the same source
-		await this.deleteConnection(name, source)
+		return this.withConnectionLock(name, source, async () => {
+			// Remove existing connection if it exists with the same source
+			await this.deleteConnection(name, source)
 
-		// Check if MCP is globally enabled
-		const mcpEnabled = await this.isMcpEnabled()
-		if (!mcpEnabled) {
-			// Still create a connection object to track the server, but don't actually connect
-			const connection = this.createPlaceholderConnection(name, config, source, DisableReason.MCP_DISABLED)
-			this.connections.push(connection)
-			return
-		}
+			// Check if MCP is globally enabled
+			const mcpEnabled = await this.isMcpEnabled()
+			if (!mcpEnabled) {
+				// Still create a connection object to track the server, but don't actually connect
+				const connection = this.createPlaceholderConnection(name, config, source, DisableReason.MCP_DISABLED)
+				this.connections.push(connection)
+				return
+			}
 
-		// Skip connecting to disabled servers
-		if (config.disabled) {
-			// Still create a connection object to track the server, but don't actually connect
-			const connection = this.createPlaceholderConnection(name, config, source, DisableReason.SERVER_DISABLED)
-			this.connections.push(connection)
-			return
-		}
+			// Skip connecting to disabled servers
+			if (config.disabled) {
+				// Still create a connection object to track the server, but don't actually connect
+				const connection = this.createPlaceholderConnection(name, config, source, DisableReason.SERVER_DISABLED)
+				this.connections.push(connection)
+				return
+			}
 
-		// Set up file watchers for enabled servers
-		this.setupFileWatcher(name, config, source)
+			// Set up file watchers for enabled servers
+			this.setupFileWatcher(name, config, source)
 
-		try {
-			const client = new Client(
-				{
-					name: "Kilo Code",
-					version: this.providerRef.deref()?.context.extension?.packageJSON?.version ?? "1.0.0",
-				},
-				{
-					capabilities: {},
-				},
-			)
-
-			let transport: StdioClientTransport | SSEClientTransport | StreamableHTTPClientTransport
-
-			// Inject variables to the config (environment, magic variables,...)
-			const configInjected = (await injectVariables(config, {
-				env: process.env,
-				workspaceFolder: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "",
-			})) as typeof config
-
-			if (configInjected.type === "stdio") {
-				// On Windows, wrap commands with cmd.exe to handle non-exe executables like npx.ps1
-				// This is necessary for node version managers (fnm, nvm-windows, volta) that implement
-				// commands as PowerShell scripts rather than executables.
-				// Note: This adds a small overhead as commands go through an additional shell layer.
-				const isWindows = process.platform === "win32"
-
-				// Check if command is already cmd.exe to avoid double-wrapping
-				const isAlreadyWrapped =
-					configInjected.command.toLowerCase() === "cmd.exe" || configInjected.command.toLowerCase() === "cmd"
-
-				const command = isWindows && !isAlreadyWrapped ? "cmd.exe" : configInjected.command
-				const args =
-					isWindows && !isAlreadyWrapped
-						? ["/c", configInjected.command, ...(configInjected.args || [])]
-						: configInjected.args
-
-				transport = new StdioClientTransport({
-					command,
-					args,
-					cwd: configInjected.cwd,
-					env: {
-						...getDefaultEnvironment(),
-						...(configInjected.env || {}),
+			try {
+				const client = new Client(
+					{
+						name: "Kilo Code",
+						version: this.providerRef.deref()?.context.extension?.packageJSON?.version ?? "1.0.0",
 					},
-					stderr: "pipe",
-				})
+					{
+						capabilities: {},
+					},
+				)
 
-				// Set up stdio specific error handling
-				transport.onerror = async (error) => {
-					console.error(`Transport error for "${name}":`, error)
-					const connection = this.findConnection(name, source)
-					if (connection) {
-						connection.server.status = "disconnected"
-						this.appendErrorMessage(connection, error instanceof Error ? error.message : `${error}`)
+				let transport: StdioClientTransport | SSEClientTransport | StreamableHTTPClientTransport
+
+				// Inject variables to the config (environment, magic variables,...)
+				const configInjected = (await injectVariables(config, {
+					env: process.env,
+					workspaceFolder: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "",
+				})) as typeof config
+
+				if (configInjected.type === "stdio") {
+					// On Windows, wrap commands with cmd.exe to handle non-exe executables like npx.ps1
+					// This is necessary for node version managers (fnm, nvm-windows, volta) that implement
+					// commands as PowerShell scripts rather than executables.
+					// Note: This adds a small overhead as commands go through an additional shell layer.
+					const isWindows = process.platform === "win32"
+
+					// Check if command is already cmd.exe to avoid double-wrapping
+					const isAlreadyWrapped =
+						configInjected.command.toLowerCase() === "cmd.exe" ||
+						configInjected.command.toLowerCase() === "cmd"
+
+					const command = isWindows && !isAlreadyWrapped ? "cmd.exe" : configInjected.command
+					const args =
+						isWindows && !isAlreadyWrapped
+							? ["/c", configInjected.command, ...(configInjected.args || [])]
+							: configInjected.args
+
+					transport = new StdioClientTransport({
+						command,
+						args,
+						cwd: configInjected.cwd,
+						env: {
+							...getDefaultEnvironment(),
+							...(configInjected.env || {}),
+						},
+						stderr: "pipe",
+					})
+
+					// Set up stdio specific error handling
+					transport.onerror = async (error) => {
+						console.error(`Transport error for "${name}":`, error)
+						const connection = this.findConnection(name, source)
+						if (connection) {
+							connection.server.status = "disconnected"
+							this.appendErrorMessage(connection, error instanceof Error ? error.message : `${error}`)
+						}
+						await this.notifyWebviewOfServerChanges()
 					}
-					await this.notifyWebviewOfServerChanges()
-				}
 
-				transport.onclose = async () => {
-					const connection = this.findConnection(name, source)
-					if (connection) {
-						connection.server.status = "disconnected"
+					transport.onclose = async () => {
+						const connection = this.findConnection(name, source)
+						if (connection) {
+							connection.server.status = "disconnected"
+						}
+						await this.notifyWebviewOfServerChanges()
 					}
-					await this.notifyWebviewOfServerChanges()
-				}
 
-				// transport.stderr is only available after the process has been started. However we can't start it separately from the .connect() call because it also starts the transport. And we can't place this after the connect call since we need to capture the stderr stream before the connection is established, in order to capture errors during the connection process.
-				// As a workaround, we start the transport ourselves, and then monkey-patch the start method to no-op so that .connect() doesn't try to start it again.
-				await transport.start()
-				const stderrStream = transport.stderr
-				if (stderrStream) {
-					stderrStream.on("data", async (data: Buffer) => {
-						const output = data.toString()
-						// Check if output contains INFO level log
-						const isInfoLog = /INFO/i.test(output)
+					// transport.stderr is only available after the process has been started. However we can't start it separately from the .connect() call because it also starts the transport. And we can't place this after the connect call since we need to capture the stderr stream before the connection is established, in order to capture errors during the connection process.
+					// As a workaround, we start the transport ourselves, and then monkey-patch the start method to no-op so that .connect() doesn't try to start it again.
+					await transport.start()
+					const stderrStream = transport.stderr
+					if (stderrStream) {
+						stderrStream.on("data", async (data: Buffer) => {
+							const output = data.toString()
+							// Check if output contains INFO level log
+							const isInfoLog = /INFO/i.test(output)
 
-						if (isInfoLog) {
-							// Log normal informational messages
-							console.log(`Server "${name}" info:`, output)
-						} else {
-							// Treat as error log
-							console.error(`Server "${name}" stderr:`, output)
-							const connection = this.findConnection(name, source)
-							if (connection) {
-								this.appendErrorMessage(connection, output)
-								if (connection.server.status === "disconnected") {
-									await this.notifyWebviewOfServerChanges()
+							if (isInfoLog) {
+								// Log normal informational messages
+								console.log(`Server "${name}" info:`, output)
+							} else {
+								// Treat as error log
+								console.error(`Server "${name}" stderr:`, output)
+								const connection = this.findConnection(name, source)
+								if (connection) {
+									this.appendErrorMessage(connection, output)
+									if (connection.server.status === "disconnected") {
+										await this.notifyWebviewOfServerChanges()
+									}
 								}
 							}
-						}
-					})
-				} else {
-					console.error(`No stderr stream for ${name}`)
-				}
-			} else if (configInjected.type === "streamable-http") {
-				// Streamable HTTP connection
-				transport = new StreamableHTTPClientTransport(new URL(configInjected.url), {
-					requestInit: {
-						headers: configInjected.headers,
-					},
-				})
-
-				// Set up Streamable HTTP specific error handling
-				transport.onerror = async (error) => {
-					console.error(`Transport error for "${name}" (streamable-http):`, error)
-					const connection = this.findConnection(name, source)
-					if (connection) {
-						connection.server.status = "disconnected"
-						this.appendErrorMessage(connection, error instanceof Error ? error.message : `${error}`)
-					}
-					await this.notifyWebviewOfServerChanges()
-				}
-
-				transport.onclose = async () => {
-					const connection = this.findConnection(name, source)
-					if (connection) {
-						connection.server.status = "disconnected"
-					}
-					await this.notifyWebviewOfServerChanges()
-				}
-			} else if (configInjected.type === "sse") {
-				// SSE connection
-				const sseOptions = {
-					requestInit: {
-						headers: configInjected.headers,
-					},
-				}
-				// Configure ReconnectingEventSource options
-				const reconnectingEventSourceOptions = {
-					max_retry_time: 5000, // Maximum retry time in milliseconds
-					withCredentials: configInjected.headers?.["Authorization"] ? true : false, // Enable credentials if Authorization header exists
-					fetch: (url: string | URL, init: RequestInit) => {
-						const headers = new Headers({ ...(init?.headers || {}), ...(configInjected.headers || {}) })
-						return fetch(url, {
-							...init,
-							headers,
 						})
+					} else {
+						console.error(`No stderr stream for ${name}`)
+					}
+				} else if (configInjected.type === "streamable-http") {
+					// Streamable HTTP connection
+					transport = new StreamableHTTPClientTransport(new URL(configInjected.url), {
+						requestInit: {
+							headers: configInjected.headers,
+						},
+					})
+
+					// Set up Streamable HTTP specific error handling
+					transport.onerror = async (error) => {
+						console.error(`Transport error for "${name}" (streamable-http):`, error)
+						const connection = this.findConnection(name, source)
+						if (connection) {
+							connection.server.status = "disconnected"
+							this.appendErrorMessage(connection, error instanceof Error ? error.message : `${error}`)
+						}
+						await this.notifyWebviewOfServerChanges()
+					}
+
+					transport.onclose = async () => {
+						const connection = this.findConnection(name, source)
+						if (connection) {
+							connection.server.status = "disconnected"
+						}
+						await this.notifyWebviewOfServerChanges()
+					}
+				} else if (configInjected.type === "sse") {
+					// SSE connection
+					const sseOptions = {
+						requestInit: {
+							headers: configInjected.headers,
+						},
+					}
+					// Configure ReconnectingEventSource options
+					const reconnectingEventSourceOptions = {
+						max_retry_time: 5000, // Maximum retry time in milliseconds
+						withCredentials: configInjected.headers?.["Authorization"] ? true : false, // Enable credentials if Authorization header exists
+						fetch: (url: string | URL, init: RequestInit) => {
+							const headers = new Headers({ ...(init?.headers || {}), ...(configInjected.headers || {}) })
+							return fetch(url, {
+								...init,
+								headers,
+							})
+						},
+					}
+					global.EventSource = ReconnectingEventSource
+					transport = new SSEClientTransport(new URL(configInjected.url), {
+						...sseOptions,
+						eventSourceInit: reconnectingEventSourceOptions,
+					})
+
+					// Set up SSE specific error handling
+					transport.onerror = async (error) => {
+						console.error(`Transport error for "${name}":`, error)
+						const connection = this.findConnection(name, source)
+						if (connection) {
+							connection.server.status = "disconnected"
+							this.appendErrorMessage(connection, error instanceof Error ? error.message : `${error}`)
+						}
+						await this.notifyWebviewOfServerChanges()
+					}
+
+					transport.onclose = async () => {
+						const connection = this.findConnection(name, source)
+						if (connection) {
+							connection.server.status = "disconnected"
+						}
+						await this.notifyWebviewOfServerChanges()
+					}
+				} else {
+					// Should not happen if validateServerConfig is correct
+					throw new Error(`Unsupported MCP server type: ${(configInjected as any).type}`)
+				}
+
+				// Only override transport.start for stdio transports that have already been started
+				if (configInjected.type === "stdio") {
+					transport.start = async () => {}
+				}
+
+				// Create a connected connection
+				const connection: ConnectedMcpConnection = {
+					type: "connected",
+					server: {
+						name,
+						config: JSON.stringify(configInjected),
+						status: "connecting",
+						disabled: configInjected.disabled,
+						source,
+						projectPath:
+							source === "project" ? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath : undefined,
+						errorHistory: [],
 					},
+					client,
+					transport,
 				}
-				global.EventSource = ReconnectingEventSource
-				transport = new SSEClientTransport(new URL(configInjected.url), {
-					...sseOptions,
-					eventSourceInit: reconnectingEventSourceOptions,
-				})
+				this.connections.push(connection)
 
-				// Set up SSE specific error handling
-				transport.onerror = async (error) => {
-					console.error(`Transport error for "${name}":`, error)
-					const connection = this.findConnection(name, source)
-					if (connection) {
-						connection.server.status = "disconnected"
-						this.appendErrorMessage(connection, error instanceof Error ? error.message : `${error}`)
-					}
-					await this.notifyWebviewOfServerChanges()
+				// Connect (this will automatically start the transport)
+				await client.connect(transport)
+				connection.server.status = "connected"
+				connection.server.error = ""
+				connection.server.instructions = client.getInstructions()
+
+				this.kiloNotificationService.connect(name, connection.client)
+
+				// Initial fetch of tools and resources
+				connection.server.tools = await this.fetchToolsList(name, source)
+				connection.server.resources = await this.fetchResourcesList(name, source)
+				connection.server.resourceTemplates = await this.fetchResourceTemplatesList(name, source)
+			} catch (error) {
+				// Update status with error
+				const connection = this.findConnection(name, source)
+				if (connection) {
+					connection.server.status = "disconnected"
+					this.appendErrorMessage(connection, error instanceof Error ? error.message : `${error}`)
 				}
-
-				transport.onclose = async () => {
-					const connection = this.findConnection(name, source)
-					if (connection) {
-						connection.server.status = "disconnected"
-					}
-					await this.notifyWebviewOfServerChanges()
-				}
-			} else {
-				// Should not happen if validateServerConfig is correct
-				throw new Error(`Unsupported MCP server type: ${(configInjected as any).type}`)
+				throw error
 			}
-
-			// Only override transport.start for stdio transports that have already been started
-			if (configInjected.type === "stdio") {
-				transport.start = async () => {}
-			}
-
-			// Create a connected connection
-			const connection: ConnectedMcpConnection = {
-				type: "connected",
-				server: {
-					name,
-					config: JSON.stringify(configInjected),
-					status: "connecting",
-					disabled: configInjected.disabled,
-					source,
-					projectPath: source === "project" ? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath : undefined,
-					errorHistory: [],
-				},
-				client,
-				transport,
-			}
-			this.connections.push(connection)
-
-			// Connect (this will automatically start the transport)
-			await client.connect(transport)
-			connection.server.status = "connected"
-			connection.server.error = ""
-			connection.server.instructions = client.getInstructions()
-
-			this.kiloNotificationService.connect(name, connection.client)
-
-			// Initial fetch of tools and resources
-			connection.server.tools = await this.fetchToolsList(name, source)
-			connection.server.resources = await this.fetchResourcesList(name, source)
-			connection.server.resourceTemplates = await this.fetchResourceTemplatesList(name, source)
-		} catch (error) {
-			// Update status with error
-			const connection = this.findConnection(name, source)
-			if (connection) {
-				connection.server.status = "disconnected"
-				this.appendErrorMessage(connection, error instanceof Error ? error.message : `${error}`)
-			}
-			throw error
-		}
+		})
 	}
 
 	private appendErrorMessage(connection: McpConnection, error: string, level: "error" | "warn" | "info" = "error") {
@@ -1021,6 +1149,8 @@ export class McpHub {
 		for (const connection of connections) {
 			try {
 				if (connection.type === "connected") {
+					// Ensure proper process termination for stdio transports
+					await this.ensureProcessTerminated(connection.transport)
 					await connection.transport.close()
 					await connection.client.close()
 				}
@@ -1130,8 +1260,8 @@ export class McpHub {
 
 				watchPathsWatcher.on("change", async (changedPath) => {
 					try {
-						// Pass the source from the config to restartConnection
-						await this.restartConnection(name, source)
+						// Use debounced restart to prevent infinite loops
+						await this.debouncedRestart(name, source)
 					} catch (error) {
 						console.error(`Failed to restart server ${name} after change in ${changedPath}:`, error)
 					}
@@ -1152,8 +1282,8 @@ export class McpHub {
 
 				indexJsWatcher.on("change", async () => {
 					try {
-						// Pass the source from the config to restartConnection
-						await this.restartConnection(name, source)
+						// Use debounced restart to prevent infinite loops
+						await this.debouncedRestart(name, source)
 					} catch (error) {
 						console.error(`Failed to restart server ${name} after change in ${filePath}:`, error)
 					}
