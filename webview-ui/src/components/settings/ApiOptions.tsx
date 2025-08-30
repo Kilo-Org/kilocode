@@ -118,6 +118,7 @@ import { BedrockCustomArn } from "./providers/BedrockCustomArn"
 import { KiloCode } from "../kilocode/settings/providers/KiloCode" // kilocode_change
 import { buildDocLink } from "@src/utils/docLinks"
 import { KiloProviderRouting } from "./providers/KiloProviderRouting"
+import { OpenRouterMarkupInfoView } from "../kilocode/FreeModelsLink"
 
 export interface ApiOptionsProps {
 	uriScheme: string | undefined
@@ -469,6 +470,14 @@ const ApiOptions = ({
 					data-testid="provider-select"
 				/>
 			</div>
+
+			{
+				// kilocode_change start
+				selectedProvider === "openrouter" && (
+					<OpenRouterMarkupInfoView setApiConfigurationField={setApiConfigurationField} />
+				)
+				// kilocode_change end
+			}
 
 			{errorMessage && <ApiErrorMessage errorMessage={errorMessage} />}
 
