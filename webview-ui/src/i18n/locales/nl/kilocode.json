@@ -91,7 +91,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code wil je gesprek samenvatten",
 			"condenseConversation": "Gesprek samenvatten"
-		}
+		},
+		"showNewChanges": "Toon Nieuwe Wijzigingen"
 	},
 	"newTaskPreview": {
 		"task": "Taak"

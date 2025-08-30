@@ -110,6 +110,11 @@
 			"disableInlineAssist": "Inline Assist अक्षम करें"
 		}
 	},
+	"showNewChanges": {
+		"title": "नए परिवर्तन दिखाए जा रहे हैं",
+		"noChanges": "नए परिवर्तन नहीं दिखाए जा सकते, कोई परिवर्तन नहीं मिले।",
+		"error": "नए परिवर्तन नहीं दिखाए जा सकते, एक त्रुटि हुई।"
+	},
 	"terminalCommandGenerator": {
 		"inputPrompt": "Kilo: उस कमांड का वर्णन करें जिसे आप जनरेट करना चाहते हैं",
 		"noActiveTerminal": "Kilo: कोई सक्रिय टर्मिनल नहीं मिला। कृपया पहले एक टर्मिनल खोलें।",

@@ -124,5 +124,10 @@
 			"cancelButton": "Batal"
 		},
 		"tipMessage": "Kilo: Tekan {{shortcut}} untuk menghasilkan perintah terminal"
+	},
+	"showNewChanges": {
+		"title": "Menampilkan perubahan baru",
+		"noChanges": "Tidak dapat menampilkan perubahan baru, tidak ada perubahan yang ditemukan.",
+		"error": "Tidak dapat menampilkan perubahan baru, terjadi kesalahan."
 	}
 }

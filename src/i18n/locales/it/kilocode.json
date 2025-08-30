@@ -124,5 +124,10 @@
 			"cancelButton": "Annulla"
 		},
 		"tipMessage": "Kilo: Premi {{shortcut}} per generare comandi del terminale"
+	},
+	"showNewChanges": {
+		"title": "Visualizzazione nuove modifiche",
+		"noChanges": "Impossibile mostrare le nuove modifiche, nessuna modifica trovata.",
+		"error": "Impossibile mostrare le nuove modifiche, si è verificato un errore."
 	}
 }

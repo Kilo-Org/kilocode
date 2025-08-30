@@ -174,6 +174,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	// Has to be after api_req_finished are all reduced into api_req_started messages.
 	const apiMetrics = useMemo(() => getApiMetrics(modifiedMessages), [modifiedMessages])
 
+	const hasCheckpoints =
+		modifiedMessages.findIndex((msg) => msg.type === "say" && msg.say === "checkpoint_saved") >= 0 // kilocode_change
+
 	const [inputValue, setInputValue] = useState("")
 	const textAreaRef = useRef<HTMLTextAreaElement>(null)
 	const [sendingDisabled, setSendingDisabled] = useState(false)
@@ -1685,10 +1688,15 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							return tool.tool === "updateTodoList" && enableButtons && !!primaryButtonText
 						})()
 					}
+					hasCheckpoints={hasCheckpoints} // kilocode_change
 				/>
 			)
 		},
 		[
+			// kilocode_change start
+			highlightedMessageIndex,
+			hasCheckpoints,
+			// kilocode_change end
 			expandedRows,
 			toggleRowExpansion,
 			modifiedMessages,
@@ -1697,7 +1705,6 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			isStreaming,
 			handleSuggestionClickInRow,
 			handleBatchFileResponse,
-			highlightedMessageIndex, // kilocode_change: add highlightedMessageIndex
 			handleFollowUpUnmount,
 			currentFollowUpTs,
 			alwaysAllowUpdateTodoList,

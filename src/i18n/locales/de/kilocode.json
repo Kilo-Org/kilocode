@@ -124,5 +124,10 @@
 			"cancelButton": "Abbrechen"
 		},
 		"tipMessage": "Kilo: Drücke {{shortcut}}, um Terminal-Befehle zu generieren"
+	},
+	"showNewChanges": {
+		"title": "Zeige neue Änderungen",
+		"noChanges": "Kann neue Änderungen nicht anzeigen, keine Änderungen gefunden.",
+		"error": "Kann neue Änderungen nicht anzeigen, ein Fehler ist aufgetreten."
 	}
 }

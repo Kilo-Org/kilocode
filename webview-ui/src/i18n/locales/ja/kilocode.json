@@ -91,7 +91,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Codeは会話を要約したいと思っています",
 			"condenseConversation": "会話を要約する"
-		}
+		},
+		"showNewChanges": "新しい変更を表示"
 	},
 	"newTaskPreview": {
 		"task": "タスク"

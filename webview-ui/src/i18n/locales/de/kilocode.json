@@ -91,7 +91,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code möchte deine Unterhaltung zusammenfassen",
 			"condenseConversation": "Unterhaltung zusammenfassen"
-		}
+		},
+		"showNewChanges": "Neue Änderungen anzeigen"
 	},
 	"newTaskPreview": {
 		"task": "Aufgabe"

@@ -124,5 +124,10 @@
 			"cancelButton": "Cancel·lar"
 		},
 		"tipMessage": "Kilo: Premeu {{shortcut}} per a generar ordres del terminal"
+	},
+	"showNewChanges": {
+		"title": "Mostrant canvis nous",
+		"noChanges": "No es poden mostrar canvis nous, no s'han trobat canvis.",
+		"error": "No es poden mostrar canvis nous, s'ha produït un error."
 	}
 }

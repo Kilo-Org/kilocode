@@ -110,6 +110,11 @@
 			"disableInlineAssist": "Wyłącz Asystenta Inline"
 		}
 	},
+	"showNewChanges": {
+		"title": "Wyświetlanie nowych zmian",
+		"noChanges": "Nie można wyświetlić nowych zmian, nie znaleziono żadnych zmian.",
+		"error": "Nie można wyświetlić nowych zmian, wystąpił błąd."
+	},
 	"terminalCommandGenerator": {
 		"inputPrompt": "Kilo: Opisz polecenie, które chcesz wygenerować",
 		"inputPlaceholder": "np. zakończ proces działający na porcie 3001, znajdź duże pliki, itp.",

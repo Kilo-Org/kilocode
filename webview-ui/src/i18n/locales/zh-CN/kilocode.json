@@ -91,7 +91,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code 想要压缩你的对话",
 			"condenseConversation": "压缩对话"
-		}
+		},
+		"showNewChanges": "显示新变更"
 	},
 	"newTaskPreview": {
 		"task": "任务"

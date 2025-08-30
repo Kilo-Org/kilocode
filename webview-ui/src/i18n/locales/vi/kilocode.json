@@ -91,7 +91,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code muốn tóm tắt cuộc trò chuyện của bạn",
 			"condenseConversation": "Tóm tắt cuộc trò chuyện"
-		}
+		},
+		"showNewChanges": "Hiển thị thay đổi mới"
 	},
 	"newTaskPreview": {
 		"task": "Nhiệm vụ"

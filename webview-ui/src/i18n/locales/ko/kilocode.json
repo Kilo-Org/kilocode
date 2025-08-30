@@ -91,7 +91,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code가 대화를 요약하고자 합니다",
 			"condenseConversation": "대화 요약하기"
-		}
+		},
+		"showNewChanges": "새 변경사항 보기"
 	},
 	"newTaskPreview": {
 		"task": "작업"

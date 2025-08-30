@@ -91,7 +91,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code хочет сократить твой разговор",
 			"condenseConversation": "Сократить разговор"
-		}
+		},
+		"showNewChanges": "Показать новые изменения"
 	},
 	"newTaskPreview": {
 		"task": "Задача"

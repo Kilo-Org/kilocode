@@ -107,7 +107,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code vol condensar la teva conversa",
 			"condenseConversation": "Condensar Conversa"
-		}
+		},
+		"showNewChanges": "Mostrar Nous Canvis"
 	},
 	"newTaskPreview": {
 		"task": "Tasca"

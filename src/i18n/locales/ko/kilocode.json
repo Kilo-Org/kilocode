@@ -124,5 +124,10 @@
 			"cancelButton": "취소"
 		},
 		"tipMessage": "Kilo: {{shortcut}}을(를) 눌러 터미널 명령어 생성"
+	},
+	"showNewChanges": {
+		"title": "새로운 변경사항 표시 중",
+		"noChanges": "새로운 변경사항을 표시할 수 없습니다. 변경사항이 없습니다.",
+		"error": "새로운 변경사항을 표시할 수 없습니다. 오류가 발생했습니다."
 	}
 }
