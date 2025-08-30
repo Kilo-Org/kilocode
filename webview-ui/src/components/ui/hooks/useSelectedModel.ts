@@ -78,8 +78,12 @@ export const useModelProviders = (kilocodeDefaultModel: string, apiConfiguration
 			: provider === "openrouter"
 				? (apiConfiguration?.openRouterModelId ?? openRouterDefaultModelId)
 				: undefined,
-		provider === "openrouter" ? apiConfiguration?.openRouterBaseUrl : undefined,
-		apiConfiguration?.apiKey,
+		provider === "openrouter" || provider === "kilocode" ? apiConfiguration?.openRouterBaseUrl : undefined,
+		provider === "openrouter"
+			? apiConfiguration?.apiKey
+			: provider === "kilocode"
+				? apiConfiguration?.kilocodeToken
+				: undefined,
 		apiConfiguration?.kilocodeOrganizationId ?? "personal",
 	)
 }
