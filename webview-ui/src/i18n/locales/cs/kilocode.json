@@ -191,7 +191,7 @@
 			"autoTrigger": "Automatické spuštění",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Rychlý inline úkol",
-				"description": "Potřebujete jen rychlou změnu? Vyberte nějaký kód (nebo ne!) a stiskněte Cmd+I. Popište svůj cíl běžnou češtinou (\"vytvořit React komponentu s těmito props\", \"přidat ošetření chyb do této funkce\") a získejte několik připravených návrhů přímo ve svém editoru. <DocsLink>Zobrazit zkratku</DocsLink>"
+				"description": "Potřebujete jen rychlou změnu? Vyberte nějaký kód (nebo ne!) a stiskněte {{keybinding}}. Popište svůj cíl běžnou češtinou (\"vytvořit React komponentu s těmito props\", \"přidat ošetření chyb do této funkce\") a získejte několik připravených návrhů přímo ve svém editoru. <DocsLink>Zobrazit zkratku</DocsLink>"
 			},
 			"enableAutoInlineTaskKeybinding": {
 				"label": "Automatický inline úkol",
@@ -207,7 +207,7 @@
 			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Chytrý inline úkol",
-				"description": "Potřebuješ rychlou opravu, dokončení nebo refaktoring? Kilo použije okolní kontext k nabídnutí okamžitých vylepšení, což tě udrží v pracovním tempu. <DocsLink>Zobrazit zkratku</DocsLink>"
+				"description": "Potřebujete rychlou opravu, dokončení nebo refaktorování? Stiskněte {{keybinding}} a Kilo využije okolní kontext k nabídnutí okamžitých vylepšení, abyste zůstali v pracovním tempu. <DocsLink>Zobrazit klávesovou zkratku</DocsLink>"
 			},
 			"enableCustomProvider": {
 				"label": "Použít vlastního poskytovatele",

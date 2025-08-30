@@ -191,7 +191,7 @@
 			"autoTrigger": "自动触发",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "快速内联任务",
-				"description": "只需要一个快速的调整？选中一些代码（或者不选！）然后按下Cmd+I。用简单的英语描述你的目标（\"创建一个带有这些属性的 React 组件\"，\"为这个函数添加错误处理\"），然后在编辑器中直接获取多个可立即使用的建议。<DocsLink>查看快捷键</DocsLink>"
+				"description": "只需要一个快速的调整？选中一些代码（或者不选！）然后按下{{keybinding}}。用简单的英语描述你的目标（\"创建一个带有这些属性的 React 组件\"，\"为这个函数添加错误处理\"），然后在编辑器中直接获取多个可立即使用的建议。<DocsLink>查看快捷键</DocsLink>"
 			},
 			"enableAutoTrigger": {
 				"label": "启用自动触发",
@@ -203,7 +203,7 @@
 			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "智能内联任务",
-				"description": "需要快速修复、完成或重构代码？Kilo 将使用周围的上下文提供即时改进，让您保持工作流畅。<DocsLink>查看快捷键</DocsLink>"
+				"description": "需要快速修复、补全或重构？按下 {{keybinding}}，Kilo 将使用周围的上下文立即提供改进建议，让您保持工作流畅。<DocsLink>查看快捷键</DocsLink>"
 			},
 			"enableCustomProvider": {
 				"label": "使用自定义提供商",

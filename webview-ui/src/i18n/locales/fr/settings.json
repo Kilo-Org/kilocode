@@ -750,7 +750,7 @@
 		},
 		"INLINE_ASSIST": {
 			"name": "Assistance en ligne",
-			"description": "Activez les fonctionnalités d'assistance en ligne pour des suggestions et améliorations de code rapides directement dans votre éditeur. Inclut la Tâche rapide en ligne (Cmd+I) pour des modifications ciblées et la Tâche automatique en ligne pour des améliorations contextuelles."
+			"description": "Activez les fonctionnalités d'assistance en ligne pour des suggestions et améliorations de code rapides directement dans votre éditeur. Inclut la Tâche rapide en ligne ({{keybinding}}) pour des modifications ciblées et la Tâche automatique en ligne pour des améliorations contextuelles."
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Édition en arrière-plan",

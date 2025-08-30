@@ -191,7 +191,7 @@
 			"autoTrigger": "自動觸發",
 			"enableQuickInlineTaskKeybinding": {
 				"label": "快速行內任務",
-				"description": "只需要快速修改？選擇一些程式碼（或者不選！）並按下 Cmd+I。用簡單的語言描述你的目標（\"建立一個帶有這些屬性的 React 元件\"，\"為這個函數添加錯誤處理\"），然後在你的編輯器中獲取多個隨時可用的建議。<DocsLink>查看快捷鍵</DocsLink>"
+				"description": "只需要快速修改？選擇一些程式碼（或者不選！）並按下 {{keybinding}}。用簡單的語言描述你的目標（\"建立一個帶有這些屬性的 React 元件\"，\"為這個函數添加錯誤處理\"），然後在你的編輯器中獲取多個隨時可用的建議。<DocsLink>查看快捷鍵</DocsLink>"
 			},
 			"enableAutoTrigger": {
 				"label": "啟用自動觸發",
@@ -203,7 +203,7 @@
 			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "智慧行內任務",
-				"description": "需要快速修復、完成或重構程式碼？Kilo 將使用周圍的上下文提供即時改進，讓您保持工作流暢。<DocsLink>查看快捷鍵</DocsLink>"
+				"description": "需要快速修复、补全或重构代码？按下{{keybinding}}，Kilo将使用周围上下文提供即时改进，让您保持工作流畅。<DocsLink>查看快捷键</DocsLink>"
 			},
 			"enableCustomProvider": {
 				"label": "使用自訂提供者",

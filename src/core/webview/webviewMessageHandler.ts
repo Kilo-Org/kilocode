@@ -7,6 +7,7 @@ import * as vscode from "vscode"
 import axios from "axios" // kilocode_change
 import * as yaml from "yaml"
 import { getKiloBaseUriFromToken } from "../../shared/kilocode/token" // kilocode_change
+import { getKeybindingLabels } from "../../utils/keybindings" // kilocode_change
 import { ProfileData } from "../../shared/WebviewMessage" // kilocode_change
 
 import {
@@ -996,6 +997,10 @@ export const webviewMessageHandler = async (
 		// kilocode_change begin
 		case "openGlobalKeybindings":
 			vscode.commands.executeCommand("workbench.action.openGlobalKeybindings", message.text ?? "kilo-code.")
+			break
+		case "getKeybindings":
+			const keybindings = await getKeybindingLabels(message.commandIds ?? [])
+			provider.postMessageToWebview({ type: "keybindingsResponse", keybindings })
 			break
 		case "showSystemNotification":
 			const isSystemNotificationsEnabled = getGlobalState("systemNotificationsEnabled") ?? true

@@ -772,7 +772,7 @@
 		},
 		"INLINE_ASSIST": {
 			"name": "Bantuan Inline",
-			"description": "Aktifkan fitur Inline Assist untuk saran dan perbaikan kode cepat langsung di editor Anda. Termasuk Quick Inline Task (Cmd+I) untuk perubahan terarah dan Auto Inline Task untuk perbaikan kontekstual."
+			"description": "Aktifkan fitur Inline Assist untuk saran dan perbaikan kode cepat langsung di editor Anda. Termasuk Quick Inline Task ({{keybinding}}) untuk perubahan terarah dan Auto Inline Task untuk perbaikan kontekstual."
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Pengeditan Latar Belakang",

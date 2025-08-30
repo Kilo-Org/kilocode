@@ -751,7 +751,7 @@
 		},
 		"INLINE_ASSIST": {
 			"name": "Satır İçi Asistan",
-			"description": "Düzenleyicinizde doğrudan hızlı kod önerileri ve iyileştirmeleri için Satır İçi Yardımcı özelliklerini etkinleştirin. Hedeflenen değişiklikler için Hızlı Satır İçi Görev (Cmd+I) ve bağlamsal iyileştirmeler için Otomatik Satır İçi Görev içerir."
+			"description": "Düzenleyicinizde doğrudan hızlı kod önerileri ve iyileştirmeleri için Satır İçi Yardımcı özelliklerini etkinleştirin. Hedeflenen değişiklikler için Hızlı Satır İçi Görev ({{keybinding}}) ve bağlamsal iyileştirmeler için Otomatik Satır İçi Görev içerir."
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Arka plan düzenleme",

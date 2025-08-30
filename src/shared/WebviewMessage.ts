@@ -231,6 +231,7 @@ export interface WebviewMessage {
 		| "fixMermaidSyntax" // kilocode_change
 		| "mermaidFixResponse" // kilocode_change
 		| "openGlobalKeybindings" // kilocode_change
+		| "getKeybindings" // kilocode_change
 		| "openExternal"
 		| "filterMarketplaceItems"
 		| "mcpButtonClicked"
@@ -316,6 +317,7 @@ export interface WebviewMessage {
 	historyPreviewCollapsed?: boolean
 	filters?: { type?: string; search?: string; tags?: string[] }
 	url?: string // For openExternal
+	commandIds?: string[] // kilocode_change: For getKeybindings
 	mpItem?: MarketplaceItem
 	mpInstallOptions?: InstallMarketplaceItemOptions
 	config?: Record<string, any> // Add config to the payload

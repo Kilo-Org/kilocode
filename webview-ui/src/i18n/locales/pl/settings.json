@@ -751,7 +751,7 @@
 		},
 		"INLINE_ASSIST": {
 			"name": "Pomoc w linii",
-			"description": "Włącz funkcje Asystenta Inline, aby uzyskać szybkie sugestie i usprawnienia kodu bezpośrednio w edytorze. Zawiera Szybkie Zadanie Inline (Cmd+I) do ukierunkowanych zmian oraz Automatyczne Zadanie Inline do kontekstowych usprawnień."
+			"description": "Włącz funkcje Asystenta Inline, aby uzyskać szybkie sugestie i usprawnienia kodu bezpośrednio w edytorze. Zawiera Szybkie Zadanie Inline ({{keybinding}}) do ukierunkowanych zmian oraz Automatyczne Zadanie Inline do kontekstowych usprawnień."
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Edycja w tle",

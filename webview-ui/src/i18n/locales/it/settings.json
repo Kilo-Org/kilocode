@@ -751,7 +751,7 @@
 		},
 		"INLINE_ASSIST": {
 			"name": "Assistenza Inline",
-			"description": "Abilita le funzionalità di Assistenza in Linea per suggerimenti e miglioramenti rapidi del codice direttamente nel tuo editor. Include Attività Rapida in Linea (Cmd+I) per modifiche mirate e Attività Automatica in Linea per miglioramenti contestuali."
+			"description": "Abilita le funzionalità di Assistenza in Linea per suggerimenti e miglioramenti rapidi del codice direttamente nel tuo editor. Include Attività Rapida in Linea ({{keybinding}}) per modifiche mirate e Attività Automatica in Linea per miglioramenti contestuali."
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Modifica in background",

@@ -751,7 +751,7 @@
 		},
 		"INLINE_ASSIST": {
 			"name": "Assistência em Linha",
-			"description": "Ative os recursos de assistência em linha para obter sugestões e melhorias de código rápidas diretamente no seu editor. Inclui Tarefa Rápida em Linha (Cmd+I) para alterações direcionadas e Tarefa Automática em Linha para melhorias contextuais."
+			"description": "Ative os recursos de assistência em linha para obter sugestões e melhorias de código rápidas diretamente no seu editor. Inclui Tarefa Rápida em Linha ({{keybinding}}) para alterações direcionadas e Tarefa Automática em Linha para melhorias contextuais."
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Edição em segundo plano",
