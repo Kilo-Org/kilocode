@@ -9,6 +9,9 @@ import { getModels } from "./fetchers/modelCache"
 
 import { DEFAULT_HEADERS } from "./constants"
 
+// Define unsupported temperature model prefixes
+const TEMPERATURE_UNSUPPORTED_PREFIXES = ["openai/o3", "openai/gpt5", "gpt-5"]
+
 type RouterProviderOptions = {
 	name: RouterName
 	baseURL: string
@@ -69,6 +72,7 @@ export abstract class RouterProvider extends BaseProvider {
 	}
 
 	protected supportsTemperature(modelId: string): boolean {
-		return !modelId.startsWith("openai/o3-mini")
+		// Check if the modelId starts with any of the unsupported prefixes
+		return !TEMPERATURE_UNSUPPORTED_PREFIXES.some((prefix) => modelId.startsWith(prefix))
 	}
 }
