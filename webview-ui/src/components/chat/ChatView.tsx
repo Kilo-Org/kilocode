@@ -199,7 +199,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const lastTtsRef = useRef<string>("")
 	const [wasStreaming, setWasStreaming] = useState<boolean>(false)
 	const [showCheckpointWarning, setShowCheckpointWarning] = useState<boolean>(false)
-	const [isCondensing, setIsCondensing] = useState<boolean>(false)
+	const [condensingTaskIds, setCondensingTaskIds] = useState<Set<string>>(new Set())
 	const [showAnnouncementModal, setShowAnnouncementModal] = useState(false)
 	const everVisibleMessagesTsRef = useRef<LRUCache<number, boolean>>(
 		new LRUCache({
@@ -481,7 +481,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		setExpandedRows({})
 		everVisibleMessagesTsRef.current.clear() // Clear for new task
 		setCurrentFollowUpTs(null) // Clear follow-up answered state for new task
-		setIsCondensing(false) // Reset condensing state when switching tasks
+		// Reset condensing state when switching tasks - handled in useEffect for task.ts changes
 		// Note: sendingDisabled is not reset here as it's managed by message effects
 
 		// Clear any pending auto-approval timeout from previous task
@@ -496,6 +496,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		setMessageQueue([])
 		// Clear retry counts
 		retryCountRef.current.clear()
+
+		// Clear condensing state when switching tasks
+		setCondensingTaskIds(new Set())
 	}, [task?.ts])
 
 	useEffect(() => {
@@ -945,11 +948,16 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					}
 					break
 				case "condenseTaskContextResponse":
-					if (message.text && message.text === currentTaskItem?.id) {
-						if (isCondensing && sendingDisabled) {
+					// Ensure we're checking against the same ID format used in handleCondenseContext
+					if (message.text && currentTaskItem?.id && message.text === currentTaskItem.id) {
+						if (condensingTaskIds.has(message.text) && sendingDisabled) {
 							setSendingDisabled(false)
 						}
-						setIsCondensing(false)
+						setCondensingTaskIds((prev) => {
+							const newSet = new Set(prev)
+							newSet.delete(message.text!)
+							return newSet
+						})
 					}
 					break
 			}
@@ -958,7 +966,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			// not using its value but its reference.
 		},
 		[
-			isCondensing,
+			condensingTaskIds,
 			isHidden,
 			sendingDisabled,
 			enableButtons,
@@ -1423,7 +1431,11 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			result.push([...currentGroup])
 		}
 
-		if (isCondensing) {
+		// Check if current task is condensing
+		// Use currentTaskItem?.id consistently as that's what's used in handleCondenseContext
+		const isCurrentTaskCondensing = currentTaskItem?.id ? condensingTaskIds.has(currentTaskItem.id) : false
+
+		if (isCurrentTaskCondensing) {
 			// Show indicator after clicking condense button
 			result.push({
 				type: "say",
@@ -1434,7 +1446,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		}
 
 		return result
-	}, [isCondensing, visibleMessages])
+	}, [condensingTaskIds, visibleMessages, currentTaskItem])
 
 	// scrolling
 
@@ -1918,10 +1930,10 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	}))
 
 	const handleCondenseContext = (taskId: string) => {
-		if (isCondensing || sendingDisabled) {
+		if (condensingTaskIds.has(taskId) || sendingDisabled) {
 			return
 		}
-		setIsCondensing(true)
+		setCondensingTaskIds((prev) => new Set(prev).add(taskId))
 		setSendingDisabled(true)
 		vscode.postMessage({ type: "condenseTaskContextRequest", text: taskId })
 	}

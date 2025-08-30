@@ -64,6 +64,7 @@
 		"condensed_recently": "Konteks baru saja dikompres; melewati percobaan ini",
 		"condense_handler_invalid": "Handler API untuk mengompres konteks tidak valid",
 		"condense_context_grew": "Ukuran konteks bertambah dari {{prevContextTokens}} menjadi {{newContextTokens}} saat mengompres; melewati percobaan ini",
+		"condense_aborted": "Context condensing was aborted",
 		"url_timeout": "Situs web membutuhkan waktu terlalu lama untuk dimuat (timeout). Ini bisa disebabkan oleh koneksi lambat, situs web berat, atau sementara tidak tersedia. Kamu bisa mencoba lagi nanti atau memeriksa apakah URL sudah benar.",
 		"url_not_found": "Alamat situs web tidak dapat ditemukan. Silakan periksa apakah URL sudah benar dan coba lagi.",
 		"no_internet": "Tidak ada koneksi internet. Silakan periksa koneksi jaringan kamu dan coba lagi.",

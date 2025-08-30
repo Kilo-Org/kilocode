@@ -69,6 +69,7 @@
 		"condensed_recently": "Kontext byl nedávno zhuštěn; přeskakuji tento pokus",
 		"condense_handler_invalid": "API handler pro zhušťování kontextu je neplatný",
 		"condense_context_grew": "Velikost kontextu se zvětšila z {{prevContextTokens}} na {{newContextTokens}} během zhušťování; přeskakuji tento pokus",
+		"condense_aborted": "Context condensing was aborted",
 		"url_timeout": "Načítání webové stránky trvalo příliš dlouho (vypršel časový limit). Může to být způsobeno pomalým připojením, náročnou webovou stránkou nebo dočasnou nedostupností webu. Můžeš to zkusit později nebo zkontrolovat, zda je URL správná.",
 		"url_not_found": "Webová adresa nebyla nalezena. Zkontroluj prosím, zda je URL správná, a zkus to znovu.",
 		"no_internet": "Žádné internetové připojení. Zkontroluj prosím své síťové připojení a zkus to znovu.",

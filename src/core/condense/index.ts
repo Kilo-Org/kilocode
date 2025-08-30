@@ -91,6 +91,7 @@ export async function summarizeConversation(
 	isAutomaticTrigger?: boolean,
 	customCondensingPrompt?: string,
 	condensingApiHandler?: ApiHandler,
+	abortSignal?: AbortSignal,
 ): Promise<SummarizeResponse> {
 	TelemetryService.instance.captureContextCondensed(
 		taskId,
@@ -166,14 +167,32 @@ export async function summarizeConversation(
 	let cost = 0
 	let outputTokens = 0
 
-	for await (const chunk of stream) {
-		if (chunk.type === "text") {
-			summary += chunk.text
-		} else if (chunk.type === "usage") {
-			// Record final usage chunk only
-			cost = chunk.totalCost ?? 0
-			outputTokens = chunk.outputTokens ?? 0
+	try {
+		for await (const chunk of stream) {
+			// Check if we should abort
+			if (abortSignal?.aborted) {
+				console.log(`[summarizeConversation] Aborting context condensing for task ${taskId}`)
+				const error = t("common:errors.condense_aborted")
+				return { ...response, error }
+			}
+
+			if (chunk.type === "text") {
+				summary += chunk.text
+			} else if (chunk.type === "usage") {
+				// Record final usage chunk only
+				cost = chunk.totalCost ?? 0
+				outputTokens = chunk.outputTokens ?? 0
+			}
 		}
+	} catch (error) {
+		// If the stream was aborted, return early
+		if (abortSignal?.aborted) {
+			console.log(`[summarizeConversation] Stream aborted for task ${taskId}`)
+			const abortError = t("common:errors.condense_aborted")
+			return { ...response, error: abortError }
+		}
+		// Re-throw other errors
+		throw error
 	}
 
 	summary = summary.trim()

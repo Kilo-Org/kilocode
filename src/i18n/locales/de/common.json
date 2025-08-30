@@ -64,6 +64,7 @@
 		"condensed_recently": "Kontext wurde kürzlich verdichtet; dieser Versuch wird übersprungen",
 		"condense_handler_invalid": "API-Handler zum Verdichten des Kontexts ist ungültig",
 		"condense_context_grew": "Kontextgröße ist von {{prevContextTokens}} auf {{newContextTokens}} während der Verdichtung gewachsen; dieser Versuch wird übersprungen",
+		"condense_aborted": "Context condensing was aborted",
 		"url_timeout": "Die Website hat zu lange zum Laden gebraucht (Timeout). Das könnte an einer langsamen Verbindung, einer schweren Website oder vorübergehender Nichtverfügbarkeit liegen. Du kannst es später nochmal versuchen oder prüfen, ob die URL korrekt ist.",
 		"url_not_found": "Die Website-Adresse konnte nicht gefunden werden. Bitte prüfe, ob die URL korrekt ist und versuche es erneut.",
 		"no_internet": "Keine Internetverbindung. Bitte prüfe deine Netzwerkverbindung und versuche es erneut.",

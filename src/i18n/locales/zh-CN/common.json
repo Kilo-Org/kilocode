@@ -69,6 +69,7 @@
 		"condensed_recently": "上下文最近已压缩；跳过此次尝试",
 		"condense_handler_invalid": "压缩上下文的API处理程序无效",
 		"condense_context_grew": "压缩过程中上下文大小从 {{prevContextTokens}} 增加到 {{newContextTokens}} Token；跳过此次尝试",
+		"condense_aborted": "上下文压缩已中止",
 		"url_timeout": "网站加载超时。这可能是由于网络连接缓慢、网站负载过重或暂时不可用。你可以稍后重试或检查 URL 是否正确。",
 		"url_not_found": "找不到网站地址。请检查 URL 是否正确并重试。",
 		"no_internet": "无网络连接。请检查网络连接并重试。",
