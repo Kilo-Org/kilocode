@@ -113,11 +113,13 @@ import { DiffSettingsControl } from "./DiffSettingsControl"
 import { TodoListSettingsControl } from "./TodoListSettingsControl"
 import { TemperatureControl } from "./TemperatureControl"
 import { RateLimitSecondsControl } from "./RateLimitSecondsControl"
+import { RequestsPerMinuteControl } from "./RequestsPerMinuteControl"
 import { ConsecutiveMistakeLimitControl } from "./ConsecutiveMistakeLimitControl"
 import { BedrockCustomArn } from "./providers/BedrockCustomArn"
 import { KiloCode } from "../kilocode/settings/providers/KiloCode" // kilocode_change
 import { buildDocLink } from "@src/utils/docLinks"
 import { KiloProviderRouting } from "./providers/KiloProviderRouting"
+import { useRateLimitMode } from "@src/hooks/useRateLimitMode" // kilocode_change: Custom hook for rate limit mode
 
 export interface ApiOptionsProps {
 	uriScheme: string | undefined
@@ -156,6 +158,12 @@ const ApiOptions = ({
 		const headers = apiConfiguration?.openAiHeaders || {}
 		return Object.entries(headers)
 	})
+
+	// kilocode_change: Use custom hook for simplified rate limit mode management
+	const { rateLimitMode, handleModeChange, handleSecondsChange, handleRequestsChange } = useRateLimitMode(
+		apiConfiguration,
+		setApiConfigurationField,
+	)
 
 	useEffect(() => {
 		const propHeaders = apiConfiguration?.openAiHeaders || {}
@@ -826,10 +834,36 @@ const ApiOptions = ({
 							onChange={handleInputChange("modelTemperature", noTransform)}
 							maxValue={2}
 						/>
-						<RateLimitSecondsControl
-							value={apiConfiguration.rateLimitSeconds || 0}
-							onChange={(value) => setApiConfigurationField("rateLimitSeconds", value)}
-						/>
+						{/* kilocode_change: Rate limit mode selection */}
+						<div className="space-y-2">
+							<div className="flex items-center gap-2">
+								<label className="block font-medium">{t("settings:providers.rateLimit.label")}</label>
+								<Select value={rateLimitMode} onValueChange={handleModeChange}>
+									<SelectTrigger className="w-32">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="seconds">
+											{t("settings:providers.rateLimit.seconds")}
+										</SelectItem>
+										<SelectItem value="requests">
+											{t("settings:providers.rateLimit.requests")}
+										</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+							{rateLimitMode === "seconds" ? (
+								<RateLimitSecondsControl
+									value={apiConfiguration.rateLimitSeconds ?? 0}
+									onChange={handleSecondsChange}
+								/>
+							) : (
+								<RequestsPerMinuteControl
+									value={apiConfiguration.requestsPerMinute ?? 10}
+									onChange={handleRequestsChange}
+								/>
+							)}
+						</div>
 						<ConsecutiveMistakeLimitControl
 							value={
 								apiConfiguration.consecutiveMistakeLimit !== undefined

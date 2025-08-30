@@ -40,17 +40,20 @@ export async function importSettingsFromPath(
 	filePath: string,
 	{ providerSettingsManager, contextProxy, customModesManager }: ImportOptions,
 ) {
+	// Use passthrough to preserve new fields like requestsPerMinute
 	const schema = z.object({
-		providerProfiles: providerProfilesSchema,
+		providerProfiles: providerProfilesSchema.extend({
+			// Allow apiConfigs to have any additional fields
+			apiConfigs: z.record(z.string(), z.any()),
+		}),
 		globalSettings: globalSettingsSchema.optional(),
-	})
+	}).passthrough()
 
 	try {
 		const previousProviderProfiles = await providerSettingsManager.export()
 
-		const { providerProfiles: newProviderProfiles, globalSettings = {} } = schema.parse(
-			JSON.parse(await fs.readFile(filePath, "utf-8")),
-		)
+		const rawData = JSON.parse(await fs.readFile(filePath, "utf-8"))
+		const { providerProfiles: newProviderProfiles, globalSettings = {} } = schema.parse(rawData)
 
 		const providerProfiles = {
 			currentApiConfigName: newProviderProfiles.currentApiConfigName,
