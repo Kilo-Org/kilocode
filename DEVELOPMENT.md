@@ -4,16 +4,36 @@ Welcome to the Kilo Code development guide! This document will help you set up y
 
 ## Prerequisites
 
-Before you begin, make sure you have the following installed:
+Before you begin, choose one of the following development environment options:
+
+### Option 1: Native Development (Recommended for MacOS/Linux/Windows Subsystem for Linux)
 
 1. **Git** - For version control
 2. **Node.js** (version [v20.19.2](https://github.com/Kilo-Org/kilocode/blob/main/.nvmrc) recommended)
 3. **pnpm** - Package manager (https://pnpm.io/)
 4. **Visual Studio Code** - Our recommended IDE for development
 
+### Option 2: Devcontainer (Recommended for Windows)
+
+1. **Git** - For version control
+2. **Docker Desktop** - For running the development container
+3. **Visual Studio Code** - Our recommended IDE for development
+4. **Dev Containers extension** - VSCode extension for container development
+
+> **Note for Windows Contributors**: If you're having issues with WSL or want a standardized development environment, we recommend using the devcontainer option. It provides the exact same environment as our Nix flake configuration but works seamlessly on Windows without WSL.
+
+### Option 3: Nix Flake (Recommended for NixOS/Nix users)
+
+1. **Git** - For version control
+2. **Nix** - The Nix package manager with flakes enabled
+3. **direnv** - For automatic environment loading
+4. **Visual Studio Code** - Our recommended IDE for development
+
 ## Getting Started
 
 ### Installation
+
+#### Native Development Setup
 
 1. **Fork and Clone the Repository**:
 
@@ -44,6 +64,64 @@ While not strictly necessary for running the extension, these extensions are rec
 - [Prettier - Code formatter](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) - Integrates Prettier into VS Code.
 
 The full list of recommended extensions is [here](https://github.com/Kilo-Org/kilocode/blob/main/.vscode/extensions.json)
+
+#### Devcontainer Setup (Recommended for Windows)
+
+1. **Prerequisites**:
+
+    - Install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+    - Install [Visual Studio Code](https://code.visualstudio.com/)
+    - Install the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+
+2. **Fork and Clone the Repository** (same as above)
+
+3. **Open in Devcontainer**:
+
+    - Open the project in VSCode
+    - When prompted, click "Reopen in Container" or use Command Palette: `Dev Containers: Reopen in Container`
+    - Wait for the container to build and setup to complete (this may take a few minutes on first run)
+
+4. **Start Development**:
+    - All dependencies are automatically installed
+    - All recommended VSCode extensions are pre-installed
+    - Press F5 to start debugging the extension
+
+#### Nix Flake Setup (Recommended for NixOS/Nix users)
+
+1. **Prerequisites**:
+
+    - Install [Nix](https://nixos.org/download.html) with flakes enabled
+    - Install [direnv](https://direnv.net/) for automatic environment loading
+    - Install [Visual Studio Code](https://code.visualstudio.com/)
+    - (Optional) Install the [mkhl.direnv](https://marketplace.visualstudio.com/items?itemName=mkhl.direnv) VSCode extension for better direnv integration
+
+2. **Fork and Clone the Repository** (same as above)
+
+3. **Setup Development Environment**:
+
+    ```bash
+    cd kilocode
+    direnv allow
+    ```
+
+    The project includes a [`.envrc`](.envrc) file that automatically loads the Nix flake environment when you enter the directory. This provides:
+
+    - Node.js 20 (matching the version in `.nvmrc`)
+    - pnpm (via corepack)
+    - All other necessary development dependencies
+
+4. **Install Project Dependencies**:
+
+    ```bash
+    pnpm install
+    ```
+
+5. **Install VSCode Extensions** (same as native development setup above)
+
+6. **Start Development**:
+    - Press F5 to start debugging the extension
+    - The environment is automatically activated when you enter the project directory
+    - No need to manually run `nix develop` - direnv handles this automatically
 
 ### Project Structure
 
