@@ -51,8 +51,8 @@
 	"postCreateCommand": "bash .devcontainer/setup.sh",
 	"postStartCommand": "echo '🚀 Kilo Code devcontainer is ready!'",
 
-	"remoteUser": "node",
-	"containerUser": "node",
+	"remoteUser": "root",
+	"containerUser": "root",
 
 	"mounts": ["source=${localWorkspaceFolder}/.git,target=/workspace/.git,type=bind,consistency=cached"]
 }

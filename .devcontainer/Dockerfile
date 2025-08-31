@@ -20,23 +20,16 @@ RUN apt-get update && apt-get install -y \
 # Enable corepack for pnpm (matching package.json version)
 RUN corepack enable && corepack prepare pnpm@10.8.1 --activate
 
-# The node user already exists in the base image with UID/GID 1000
-# Just ensure the home directory exists and has correct permissions
-RUN mkdir -p /home/node && chown node:node /home/node
-
 # Set working directory
 WORKDIR /workspace
 
-# Switch to non-root user
-USER node
-
 # Set environment variables
 ENV NODE_ENV=development
-ENV PNPM_HOME="/home/node/.local/share/pnpm"
+ENV PNPM_HOME="/root/.local/share/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
 # Create pnpm directories
-RUN mkdir -p /home/node/.local/share/pnpm
+RUN mkdir -p /root/.local/share/pnpm
 
 # Default command
 CMD ["bash"]
