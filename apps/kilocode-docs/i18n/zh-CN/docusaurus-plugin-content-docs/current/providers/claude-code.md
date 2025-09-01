@@ -18,8 +18,8 @@ Claude Code 是 Anthropic 的官方 CLI，它提供从终端直接访问 Claude 
 
 Kilo Code 通过 Claude Code 支持以下 Claude 模型：
 
-- `claude-sonnet-4`（推荐）
-- `claude-4-opus`
+*   `claude-sonnet-4`（推荐）
+*   `claude-4-opus`
 
 可用的特定模型取决于您的 Claude 订阅和计划。有关每个模型功能的更多详细信息，请参阅 [Anthropic 的模型文档](https://docs.anthropic.com/en/docs/about-claude/models)。
 
@@ -32,16 +32,16 @@ Kilo Code 通过 Claude Code 支持以下 Claude 模型：
 
 ## 提示和注意事项
 
-- **无需 API 密钥：** Claude Code 使用您现有的 CLI 身份验证，因此您无需管理单独的 API 密钥。
-- **成本透明：** 使用成本由 Claude CLI 直接报告，让您清楚地了解您的支出。
-- **高级推理：** 完全支持 Claude 的思考模式和推理功能（如果可用）。
-- **上下文窗口：** Claude 模型具有大型上下文窗口，允许您在提示中包含大量代码和上下文。
-- **增强提示功能：** 完全兼容 Kilo Code 的增强提示功能，允许您在将提示发送到 Claude 之前自动改进和优化提示。
-- **自定义路径：** 如果您将 Claude Code 安装在非标准位置，您可以在设置中指定完整路径。示例：
-    - Windows：`C:\tools\claude\claude.exe`
-    - macOS/Linux：`/usr/local/bin/claude` 或 `~/bin/claude`
+*   **无需 API 密钥：** Claude Code 使用您现有的 CLI 身份验证，因此您无需管理单独的 API 密钥。
+*   **成本透明：** 使用成本由 Claude CLI 直接报告，让您清楚地了解您的支出。
+*   **高级推理：** 完全支持 Claude 的思考模式和推理功能（如果可用）。
+*   **上下文窗口：** Claude 模型具有大型上下文窗口，允许您在提示中包含大量代码和上下文。
+*   **增强提示功能：** 完全兼容 Kilo Code 的增强提示功能，允许您在将提示发送到 Claude 之前自动改进和优化提示。
+*   **自定义路径：** 如果您将 Claude Code 安装在非标准位置，您可以在设置中指定完整路径。示例：
+    *   Windows：`C:\tools\claude\claude.exe`
+    *   macOS/Linux：`/usr/local/bin/claude` 或 `~/bin/claude`
 
 ## 故障排除
 
-- **“Claude Code 进程退出并出现错误”：** 验证 Claude Code 是否已安装（`claude --version`）并已通过身份验证（`claude auth login`）。确保您的订阅包含所选模型。
-- **自定义路径不起作用：** 使用 Claude 可执行文件的完整绝对路径，并验证文件是否存在且可执行。在 Windows 上，包含 `.exe` 扩展名。
+*   **“Claude Code 进程退出并出现错误”：** 验证 Claude Code 是否已安装（`claude --version`）并已通过身份验证（`claude auth login`）。确保您的订阅包含所选模型。
+*   **自定义路径不起作用：** 使用 Claude 可执行文件的完整绝对路径，并验证文件是否存在且可执行。在 Windows 上，包含 `.exe` 扩展名。

@@ -50,45 +50,42 @@ MCP servers can be configured globally or at the project level:
 
 - **Global Configuration**: Managed through the Kilo Code extension settings in VS Code. These apply across all projects unless overridden.
 - **Project-level Configuration**: Defined in a `.kilocode/mcp.json` file within your project's root directory.
-- This allows project-specific server setups.
-- Project-level servers take precedence over global servers if they share the same name.
-- Since `.kilocode/mcp.json` can be committed to version control, it simplifies sharing configurations with your team.
+ - This allows project-specific server setups.
+ - Project-level servers take precedence over global servers if they share the same name.
+ - Since `.kilocode/mcp.json` can be committed to version control, it simplifies sharing configurations with your team.
 
 ## How It Works
 
 When the `use_mcp_tool` tool is invoked, it follows this process:
 
 1. **Initialization and Validation**:
-
-    - The system verifies that the MCP hub is available
-    - Confirms the specified server exists and is connected
-    - Validates the requested tool exists on the server
-    - Arguments are validated against the tool's schema definition
-    - Timeout settings are extracted from server configuration (default: 60 seconds)
+   - The system verifies that the MCP hub is available
+   - Confirms the specified server exists and is connected
+   - Validates the requested tool exists on the server
+   - Arguments are validated against the tool's schema definition
+   - Timeout settings are extracted from server configuration (default: 60 seconds)
 
 2. **Execution and Communication**:
-
-    - The system selects the appropriate transport mechanism:
-        - `StdioClientTransport`: For communicating with local processes via standard I/O
-        - `SSEClientTransport`: For communicating with HTTP servers via Server-Sent Events
-    - A request is sent with validated server name, tool name, and arguments
-    - Communication uses the `@modelcontextprotocol/sdk` library for standardized interactions
-    - Request execution is tracked with timeout handling to prevent hanging operations
+   - The system selects the appropriate transport mechanism:
+     - `StdioClientTransport`: For communicating with local processes via standard I/O
+     - `SSEClientTransport`: For communicating with HTTP servers via Server-Sent Events
+   - A request is sent with validated server name, tool name, and arguments
+   - Communication uses the `@modelcontextprotocol/sdk` library for standardized interactions
+   - Request execution is tracked with timeout handling to prevent hanging operations
 
 3. **Response Processing**:
-
-    - Responses can include multiple content types:
-        - Text content: Plain text responses
-        - Image content: Binary image data with MIME type information
-        - Resource references: URIs to access server resources (works with `access_mcp_resource`)
-    - The system checks the `isError` flag to determine if error handling is needed
-    - Results are formatted for display in the Kilo Code interface
+   - Responses can include multiple content types:
+     - Text content: Plain text responses
+     - Image content: Binary image data with MIME type information
+     - Resource references: URIs to access server resources (works with `access_mcp_resource`)
+   - The system checks the `isError` flag to determine if error handling is needed
+   - Results are formatted for display in the Kilo Code interface
 
 4. **Resource and Error Handling**:
-    - The system uses WeakRef patterns to prevent memory leaks
-    - A consecutive mistake counter tracks and manages errors
-    - File watchers monitor for server code changes and trigger automatic restarts
-    - The security model requires approval for tool execution unless in the "always allow" list
+   - The system uses WeakRef patterns to prevent memory leaks
+   - A consecutive mistake counter tracks and manages errors
+   - File watchers monitor for server code changes and trigger automatic restarts
+   - The security model requires approval for tool execution unless in the "always allow" list
 
 ## Security and Permissions
 
@@ -111,7 +108,6 @@ The MCP architecture provides several security features:
 ## Usage Examples
 
 Requesting weather forecast data with text response:
-
 ```
 <use_mcp_tool>
 <server_name>weather-server</server_name>
@@ -127,7 +123,6 @@ Requesting weather forecast data with text response:
 ```
 
 Analyzing source code with a specialized tool that returns JSON:
-
 ```
 <use_mcp_tool>
 <server_name>code-analysis</server_name>
@@ -144,7 +139,6 @@ Analyzing source code with a specialized tool that returns JSON:
 ```
 
 Generating an image with specific parameters:
-
 ```
 <use_mcp_tool>
 <server_name>image-generation</server_name>
@@ -164,7 +158,6 @@ Generating an image with specific parameters:
 ```
 
 Accessing a resource through a tool that returns a resource reference:
-
 ```
 <use_mcp_tool>
 <server_name>database-connector</server_name>
@@ -184,7 +177,6 @@ Accessing a resource through a tool that returns a resource reference:
 ```
 
 Tool with no required arguments:
-
 ```
 <use_mcp_tool>
 <server_name>system-monitor</server_name>

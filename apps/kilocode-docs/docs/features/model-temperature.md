@@ -11,11 +11,11 @@ Temperature is a setting (usually between 0.0 and 2.0) that controls how random 
 :::info Temperature and Code: Common Misconceptions
 Temperature controls output randomness, not code quality or accuracy directly. Key points:
 
-- **Low Temperature (near 0.0):** Produces predictable, consistent code. Good for simple tasks, but can be repetitive and lack creativity. It doesn't guarantee _better_ code.
-- **High Temperature:** Increases randomness, potentially leading to creative solutions but also more errors or nonsensical code. It doesn't guarantee _higher-quality_ code.
-- **Accuracy:** Code accuracy depends on the model's training and prompt clarity, not temperature.
-- **Temperature 0.0:** Useful for consistency, but limits exploration needed for complex problems.
-  :::
+*   **Low Temperature (near 0.0):** Produces predictable, consistent code. Good for simple tasks, but can be repetitive and lack creativity. It doesn't guarantee *better* code.
+*   **High Temperature:** Increases randomness, potentially leading to creative solutions but also more errors or nonsensical code. It doesn't guarantee *higher-quality* code.
+*   **Accuracy:** Code accuracy depends on the model's training and prompt clarity, not temperature.
+*   **Temperature 0.0:** Useful for consistency, but limits exploration needed for complex problems.
+:::
 
 ## Default Values in Kilo Code
 
@@ -31,10 +31,10 @@ Some specialized models don't support temperature adjustments at all, in which c
 
 Here are some examples of temperature settings that might work well for different tasks:
 
-- **Code Mode (0.0-0.3):** For writing precise, correct code with consistent, deterministic results
-- **Architect Mode (0.4-0.7):** For brainstorming architecture or design solutions with balanced creativity and structure
-- **Ask Mode (0.7-1.0):** For explanations or open-ended questions requiring diverse and insightful responses
-- **Debug Mode (0.0-0.3):** For troubleshooting bugs with consistent precision
+*   **Code Mode (0.0-0.3):** For writing precise, correct code with consistent, deterministic results
+*   **Architect Mode (0.4-0.7):** For brainstorming architecture or design solutions with balanced creativity and structure
+*   **Ask Mode (0.7-1.0):** For explanations or open-ended questions requiring diverse and insightful responses
+*   **Debug Mode (0.0-0.3):** For troubleshooting bugs with consistent precision
 
 These are starting points – it's important to [experiment with different settings](#experimentation) to find what works best for your specific needs and preferences.
 
@@ -66,11 +66,11 @@ This approach optimizes model behavior for specific tasks without manual adjustm
 
 Kilo Code implements temperature handling with these considerations:
 
-- User-defined settings take priority over defaults
-- Provider-specific behaviors are respected
-- Model-specific limitations are enforced:
-    - Thinking-enabled models require a fixed temperature of 1.0
-    - Some models don't support temperature adjustments
+*   User-defined settings take priority over defaults
+*   Provider-specific behaviors are respected
+*   Model-specific limitations are enforced:
+    *   Thinking-enabled models require a fixed temperature of 1.0
+    *   Some models don't support temperature adjustments
 
 ## Experimentation
 

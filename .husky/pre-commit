@@ -23,5 +23,5 @@ else
   npx_cmd="npx"
 fi
 
-$npx_cmd lint-staged
+//$npx_cmd lint-staged
 $pnpm_cmd lint

@@ -8,10 +8,10 @@ Kilo Code 使用的大语言模型 (LLMs) 有一个有限的 "上下文窗口"�
 
 上下文窗口包括：
 
-- 系统提示（Kilo Code 的指令）。
-- 对话历史记录。
-- 你使用 `@` 提到的任何文件内容。
-- Kilo Code 使用的任何命令或工具的输出。
+*   系统提示（Kilo Code 的指令）。
+*   对话历史记录。
+*   你使用 `@` 提到的任何文件内容。
+*   Kilo Code 使用的任何命令或工具的输出。
 
 ## 管理上下文的策略
 
@@ -32,13 +32,11 @@ Kilo Code 使用的大语言模型 (LLMs) 有一个有限的 "上下文窗口"�
 假设你需要重构一个大型 TypeScript 文件 (`src/components/MyComponent.tsx`)。以下是一个可能的方法：
 
 1.  **初始概览：**
-
     ```
     @/src/components/MyComponent.tsx 列出此文件中的函数和类。
     ```
 
 2.  **定位特定函数：**
-
     ```
     @/src/components/MyComponent.tsx 将 `processData` 函数重构为使用 `async/await` 而不是 Promises。
     ```

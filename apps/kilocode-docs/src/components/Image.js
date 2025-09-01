@@ -1,4 +1,4 @@
-import React from "react"
+import React from 'react';
 
 /**
  * Renders an image with an optional caption.
@@ -10,19 +10,19 @@ import React from "react"
  * @returns {JSX.Element} The Image component.
  */
 const Image = ({ src, alt, width, caption }) => {
-	return (
-		<div style={{ textAlign: "center" }}>
-			<img src={src} alt={alt} width={width} />
-			{caption && (
-				<>
-					<br />
-					<small>
-						<i>{caption}</i>
-					</small>
-				</>
-			)}
-		</div>
-	)
-}
+  return (
+    <div style={{ textAlign: 'center' }}>
+      <img src={src} alt={alt} width={width} />
+      {caption && (
+        <>
+          <br />
+          <small>
+            <i>{caption}</i>
+          </small>
+        </>
+      )}
+    </div>
+  );
+};
 
-export default Image
+export default Image;

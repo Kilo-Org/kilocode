@@ -16,11 +16,11 @@ To use Groq with Kilo Code, you'll need an API key from the [GroqCloud Console](
 
 Kilo Code will attempt to fetch the list of available models from the Groq API. Common models available via Groq include:
 
-- `llama3-8b-8192`
-- `llama3-70b-8192`
-- `mixtral-8x7b-32768`
-- `gemma-7b-it`
-- `moonshotai/kimi-k2-instruct` (Kimi K2 model)
+*   `llama3-8b-8192`
+*   `llama3-70b-8192`
+*   `mixtral-8x7b-32768`
+*   `gemma-7b-it`
+*   `moonshotai/kimi-k2-instruct` (Kimi K2 model)
 
 **Note:** Model availability and specifications may change. Refer to the [Groq Documentation](https://console.groq.com/docs/models) for the most up-to-date list of supported models and their capabilities.
 
@@ -33,22 +33,22 @@ Kilo Code will attempt to fetch the list of available models from the Groq API. 
 
 ## Tips and Notes
 
-- **High-Speed Inference:** Groq's LPUs provide exceptionally fast response times, making it ideal for interactive development workflows.
-- **Token Limits:** Some models have specific `max_tokens` limits that are automatically handled by Kilo Code (e.g., the `moonshotai/kimi-k2-instruct` model).
-- **Cost Efficiency:** Groq often provides competitive pricing for high-speed inference compared to other providers.
-- **Model Selection:** Choose models based on your specific needs - larger models like `llama3-70b-8192` for complex reasoning tasks, or smaller models like `llama3-8b-8192` for faster, simpler operations.
+*   **High-Speed Inference:** Groq's LPUs provide exceptionally fast response times, making it ideal for interactive development workflows.
+*   **Token Limits:** Some models have specific `max_tokens` limits that are automatically handled by Kilo Code (e.g., the `moonshotai/kimi-k2-instruct` model).
+*   **Cost Efficiency:** Groq often provides competitive pricing for high-speed inference compared to other providers.
+*   **Model Selection:** Choose models based on your specific needs - larger models like `llama3-70b-8192` for complex reasoning tasks, or smaller models like `llama3-8b-8192` for faster, simpler operations.
 
 ## Supported Models
 
 Kilo Code supports the following models through Groq:
 
-| Model ID                      | Provider    | Context Window | Notes                                 |
-| ----------------------------- | ----------- | -------------- | ------------------------------------- |
-| `moonshotai/kimi-k2-instruct` | Moonshot AI | 128K tokens    | Optimized max_tokens limit configured |
-| `llama-3.3-70b-versatile`     | Meta        | 128K tokens    | High-performance Llama model          |
-| `llama-3.1-70b-versatile`     | Meta        | 128K tokens    | Versatile reasoning capabilities      |
-| `llama-3.1-8b-instant`        | Meta        | 128K tokens    | Fast inference for quick tasks        |
-| `mixtral-8x7b-32768`          | Mistral AI  | 32K tokens     | Mixture of experts architecture       |
+| Model ID | Provider | Context Window | Notes |
+|----------|----------|----------------|-------|
+| `moonshotai/kimi-k2-instruct` | Moonshot AI | 128K tokens | Optimized max_tokens limit configured |
+| `llama-3.3-70b-versatile` | Meta | 128K tokens | High-performance Llama model |
+| `llama-3.1-70b-versatile` | Meta | 128K tokens | Versatile reasoning capabilities |
+| `llama-3.1-8b-instant` | Meta | 128K tokens | Fast inference for quick tasks |
+| `mixtral-8x7b-32768` | Mistral AI | 32K tokens | Mixture of experts architecture |
 
 **Note:** Model availability may change. Refer to the [Groq documentation](https://console.groq.com/docs/models) for the latest model list and specifications.
 
@@ -75,10 +75,10 @@ The `moonshotai/kimi-k2-instruct` model includes optimized configuration:
 - **Cost-Effective:** Competitive pricing for high-performance inference
 - **Rate Limits:** Be aware of API rate limits based on your Groq plan
 - **Model Selection:** Choose models based on your specific use case:
-    - **Kimi K2**: Best for complex reasoning and multilingual tasks
-    - **Llama 3.3 70B**: Excellent general-purpose performance
-    - **Llama 3.1 8B Instant**: Fastest responses for simple tasks
-    - **Mixtral**: Good balance of performance and efficiency
+  - **Kimi K2**: Best for complex reasoning and multilingual tasks
+  - **Llama 3.3 70B**: Excellent general-purpose performance
+  - **Llama 3.1 8B Instant**: Fastest responses for simple tasks
+  - **Mixtral**: Good balance of performance and efficiency
 
 ## Troubleshooting
 

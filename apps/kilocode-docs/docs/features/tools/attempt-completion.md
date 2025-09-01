@@ -49,39 +49,34 @@ This tool marks the end of a task by presenting a final summary of what was acco
 When the `attempt_completion` tool is invoked, it follows this process:
 
 1. **Safety Consideration** (guideline, not enforced):
-
-    - The AI is instructed to confirm previous tool uses were successful
-    - This is a best practice rather than a programmatically enforced mechanism
+   - The AI is instructed to confirm previous tool uses were successful
+   - This is a best practice rather than a programmatically enforced mechanism
 
 2. **Result Presentation**:
-
-    - Displays the completion message to the user in a special "completion_result" UI format
-    - Removes XML closing tags from the result text using the `removeClosingTag` function
-    - Presents the result differently than regular messages for visual distinction
+   - Displays the completion message to the user in a special "completion_result" UI format
+   - Removes XML closing tags from the result text using the `removeClosingTag` function
+   - Presents the result differently than regular messages for visual distinction
 
 3. **Command Execution** (if provided):
-
-    - Requests user approval before executing the command
-    - Only executes if the user approves
-    - Executes the command using the system's command execution functionality
-    - Shows the result of the command to the user
+   - Requests user approval before executing the command
+   - Only executes if the user approves
+   - Executes the command using the system's command execution functionality
+   - Shows the result of the command to the user
 
 4. **Feedback Collection**:
-
-    - Waits for user feedback on the completion result
-    - Processes this feedback and returns it to the AI
-    - Enables continued refinement based on user input
+   - Waits for user feedback on the completion result
+   - Processes this feedback and returns it to the AI
+   - Enables continued refinement based on user input
 
 5. **Task Completion and Continuation**:
-
-    - Signals the task as completed in the system
-    - Captures telemetry data for the completed task
-    - For subtasks, offers to finish the subtask and resume the parent task
-    - Supports continued conversation through the feedback mechanism
+   - Signals the task as completed in the system
+   - Captures telemetry data for the completed task
+   - For subtasks, offers to finish the subtask and resume the parent task
+   - Supports continued conversation through the feedback mechanism
 
 6. **Implementation Integration**:
-    - Tool results are parsed through the system's parsing mechanism in `parse-assistant-message.ts`
-    - The tool is part of the "ALWAYS_AVAILABLE_TOOLS" constant, making it available in all modes
+   - Tool results are parsed through the system's parsing mechanism in `parse-assistant-message.ts`
+   - The tool is part of the "ALWAYS_AVAILABLE_TOOLS" constant, making it available in all modes
 
 ## Result Formatting Guidelines
 
@@ -104,9 +99,9 @@ When including a command, follow these guidelines:
 - Choose commands that visually demonstrate the result
 - Prefer commands that show the user what was created or modified
 - Examples include:
-    - `open index.html` to display a created website
-    - `npm start` to launch a development server
-    - `python app.py` to run a created application
+  * `open index.html` to display a created website
+  * `npm start` to launch a development server
+  * `python app.py` to run a created application
 - Avoid commands that merely print text (like `echo` or `cat`)
 - Remember that commands require user approval before execution
 - Ensure the command is valid for the user's operating system
@@ -123,7 +118,6 @@ The `attempt_completion` tool has a unique feedback mechanism:
 - Results serve as clear checkpoints in the conversation flow
 
 When used within subtasks:
-
 - The system offers to finish the subtask and resume the parent task
 - If approved, the subtask is completed with a summary
 - The parent task resumes with context from the completed subtask
@@ -139,8 +133,8 @@ When used within subtasks:
 
 ## Usage Examples
 
-Completing a task with just a result summary:
 
+Completing a task with just a result summary:
 ```
 <attempt_completion>
 <result>
@@ -153,7 +147,6 @@ I've updated the CSS for the navigation bar to match the design mockup. The chan
 ```
 
 Completing a task with a result and demonstration command:
-
 ```
 <attempt_completion>
 <result>
@@ -168,7 +161,6 @@ I've created a simple React application with the following features:
 ```
 
 Completing a Python script task with execution:
-
 ```
 <attempt_completion>
 <result>

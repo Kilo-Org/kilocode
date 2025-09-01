@@ -45,38 +45,36 @@
 1. **参数验证**：验证必需的`path`参数和可选参数
 2. **路径解析**：将相对路径解析为绝对路径
 3. **读取策略选择**：
-    - 工具使用严格的优先级层次（下文详细说明）
-    - 在范围读取、自动截断或完整文件读取之间选择
+   - 工具使用严格的优先级层次（下文详细说明）
+   - 在范围读取、自动截断或完整文件读取之间选择
 4. **内容处理**：
-    - 为内容添加行号（例如"1 | const x = 13"）
-    - 对于截断文件，添加截断通知和方法定义
-    - 对于特殊格式（PDF、DOCX、IPYNB），提取可读文本
+   - 为内容添加行号（例如"1 | const x = 13"）
+   - 对于截断文件，添加截断通知和方法定义
+   - 对于特殊格式（PDF、DOCX、IPYNB），提取可读文本
 
 ## 读取策略优先级
 
 工具使用明确的决策层次来确定如何读取文件：
 
 1. **第一优先级：显式行范围**
-
-    - 如果提供了`start_line`或`end_line`，工具始终执行范围读取
-    - 实现高效流式传输仅请求的行，适合处理大文件
-    - 此选项优先于所有其他选项
+   - 如果提供了`start_line`或`end_line`，工具始终执行范围读取
+   - 实现高效流式传输仅请求的行，适合处理大文件
+   - 此选项优先于所有其他选项
 
 2. **第二优先级：大文件自动截断**
-
-    - 仅在满足以下所有条件时应用：
-        - 未指定`start_line`或`end_line`
-        - `auto_truncate`参数设为`true`
-        - 文件不是二进制文件
-        - 文件超过配置的行阈值（通常500-1000行）
-    - 当自动截断激活时，工具：
-        - 仅读取文件开头部分（由maxReadFileLine设置决定）
-        - 添加截断通知显示已显示行数与总行数
-        - 提供带行范围的方法定义摘要
+   - 仅在满足以下所有条件时应用：
+     - 未指定`start_line`或`end_line`
+     - `auto_truncate`参数设为`true`
+     - 文件不是二进制文件
+     - 文件超过配置的行阈值（通常500-1000行）
+   - 当自动截断激活时，工具：
+     - 仅读取文件开头部分（由maxReadFileLine设置决定）
+     - 添加截断通知显示已显示行数与总行数
+     - 提供带行范围的方法定义摘要
 
 3. **默认行为：读取整个文件**
-    - 如果不符合上述条件，则读取整个文件内容
-    - 对于PDF、DOCX和IPYNB等特殊格式，使用专用提取器
+   - 如果不符合上述条件，则读取整个文件内容
+   - 对于PDF、DOCX和IPYNB等特殊格式，使用专用提取器
 
 ## 使用示例
 
@@ -93,7 +91,6 @@
 读取文件的完整内容：
 
 **输入：**
-
 ```xml
 <read_file>
 <path>src/app.js</path>
@@ -101,21 +98,18 @@
 ```
 
 **模拟输出（小文件如`example_small.txt`）：**
-
 ```
 1 | This is the first line.
 2 | This is the second line.
 3 | This is the third line.
 ```
-
-_(输出会根据实际文件内容而变化)_
+*(输出会根据实际文件内容而变化)*
 
 ### 读取特定行
 
 仅读取特定行范围（例如46-68行）：
 
 **输入：**
-
 ```xml
 <read_file>
 <path>src/app.js</path>
@@ -125,20 +119,17 @@ _(输出会根据实际文件内容而变化)_
 ```
 
 **模拟输出（`example_five_lines.txt`的2-3行）：**
-
 ```
 2 | Content of line two.
 3 | Content of line three.
 ```
-
-_(输出仅显示请求的行及其原始行号)_
+*(输出仅显示请求的行及其原始行号)*
 
 ### 读取大文件（自动截断）
 
 当读取大文件且未指定行范围，且`auto_truncate`启用时（或根据设置默认为true）：
 
 **输入：**
-
 ```xml
 <read_file>
 <path>src/large-module.js</path>
@@ -147,7 +138,6 @@ _(输出仅显示请求的行及其原始行号)_
 ```
 
 **模拟输出（`large_file.log`有1500行，限制1000行）：**
-
 ```
 1 | Log entry 1...
 2 | Log entry 2...
@@ -155,15 +145,13 @@ _(输出仅显示请求的行及其原始行号)_
 1000 | Log entry 1000...
 [... truncated 500 lines ...]
 ```
-
-_(输出限制为配置的最大行数，并带有截断通知)_
+*(输出限制为配置的最大行数，并带有截断通知)*
 
 ### 尝试读取不存在的文件
 
 如果指定文件不存在：
 
 **输入：**
-
 ```xml
 <read_file>
 <path>non_existent_file.txt</path>
@@ -171,7 +159,6 @@ _(输出限制为配置的最大行数，并带有截断通知)_
 ```
 
 **模拟输出（错误）：**
-
 ```
 Error: File not found at path 'non_existent_file.txt'.
 ```
@@ -181,7 +168,6 @@ Error: File not found at path 'non_existent_file.txt'.
 如果文件被`.kilocodeignore`规则排除：
 
 **输入：**
-
 ```xml
 <read_file>
 <path>.env</path>
@@ -189,7 +175,6 @@ Error: File not found at path 'non_existent_file.txt'.
 ```
 
 **模拟输出（错误）：**
-
 ```
 Error: Access denied to file '.env' due to .kilocodeignore rules.
 ```

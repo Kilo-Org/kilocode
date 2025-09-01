@@ -72,16 +72,16 @@ docker run -p 6333:6333 qdrant/qdrant
 **使用 Docker Compose：**
 
 ```yaml
-version: "3.8"
+version: '3.8'
 services:
-    qdrant:
-        image: qdrant/qdrant
-        ports:
-            - "6333:6333"
-        volumes:
-            - qdrant_storage:/qdrant/storage
+  qdrant:
+    image: qdrant/qdrant
+    ports:
+      - '6333:6333'
+    volumes:
+      - qdrant_storage:/qdrant/storage
 volumes:
-    qdrant_storage:
+  qdrant_storage:
 ```
 
 ### 生产部署

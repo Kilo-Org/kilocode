@@ -50,8 +50,8 @@ The specific models available depend on your Claude subscription and plan. See [
 - **Context Windows:** Claude models have large context windows, allowing you to include significant amounts of code and context in your prompts.
 - **Enhance Prompt Feature:** Full compatibility with Kilo Code's Enhance Prompt feature, allowing you to automatically improve and refine your prompts before sending them to Claude.
 - **Custom Paths:** If you installed Claude Code in a non-standard location, you can specify the full path in the settings. Examples:
-    - Windows: `C:\tools\claude\claude.exe`
-    - macOS/Linux: `/usr/local/bin/claude` or `~/bin/claude`
+  - Windows: `C:\tools\claude\claude.exe`
+  - macOS/Linux: `/usr/local/bin/claude` or `~/bin/claude`
 
 ## Troubleshooting
 

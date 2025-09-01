@@ -47,46 +47,41 @@ This tool writes content to a specified file, either creating a new file if it d
 When the `write_to_file` tool is invoked, it follows this process:
 
 1. **Parameter Validation**: Validates the required parameters and permissions
-
-    - Checks that `path`, `content`, and `line_count` are provided
-    - Validates the file is allowed (not restricted by `.kilocodeignore`)
-    - Ensures the path is within the workspace boundaries
-    - Tracks consecutive mistake counts for missing parameters
-    - Shows specific error messages for each validation failure
+   - Checks that `path`, `content`, and `line_count` are provided
+   - Validates the file is allowed (not restricted by `.kilocodeignore`)
+   - Ensures the path is within the workspace boundaries
+   - Tracks consecutive mistake counts for missing parameters
+   - Shows specific error messages for each validation failure
 
 2. **Content Preprocessing**:
-
-    - Removes code block markers that might be added by AI models
-    - Handles escaped HTML entities (specifically for non-Claude models)
-    - Strips line numbers if accidentally included in content
-    - Performs model-specific processing for different AI providers
+   - Removes code block markers that might be added by AI models
+   - Handles escaped HTML entities (specifically for non-Claude models)
+   - Strips line numbers if accidentally included in content
+   - Performs model-specific processing for different AI providers
 
 3. **Diff View Generation**:
-
-    - Opens a diff view in the editor showing the proposed changes
-    - Adds a 300ms delay to ensure UI responsiveness
-    - Scrolls automatically to the first difference
-    - Highlights changes for easy review
+   - Opens a diff view in the editor showing the proposed changes
+   - Adds a 300ms delay to ensure UI responsiveness
+   - Scrolls automatically to the first difference
+   - Highlights changes for easy review
 
 4. **User Approval Process**:
-
-    - Waits for explicit user approval to proceed
-    - Allows users to edit the content in the diff view
-    - Captures any user edits for the final content
-    - Provides option to reject changes entirely
-    - Detects and incorporates user modifications into the final result
+   - Waits for explicit user approval to proceed
+   - Allows users to edit the content in the diff view
+   - Captures any user edits for the final content
+   - Provides option to reject changes entirely
+   - Detects and incorporates user modifications into the final result
 
 5. **Safety Validation**:
-
-    - Detects potential content truncation by comparing with provided line count
-    - Shows warnings if content appears incomplete
-    - Validates file path and access permissions
-    - Specifically checks if files are outside the workspace with `isOutsideWorkspace` flag
+   - Detects potential content truncation by comparing with provided line count
+   - Shows warnings if content appears incomplete
+   - Validates file path and access permissions
+   - Specifically checks if files are outside the workspace with `isOutsideWorkspace` flag
 
 6. **File Writing**:
-    - Writes the approved content (with any user edits) to the file
-    - Provides confirmation of successful write
-    - Resets the consecutive mistakes counter on success
+   - Writes the approved content (with any user edits) to the file
+   - Provides confirmation of successful write
+   - Resets the consecutive mistakes counter on success
 
 ## Examples When Used
 
@@ -98,7 +93,6 @@ When the `write_to_file` tool is invoked, it follows this process:
 ## Usage Examples
 
 Creating a new JSON configuration file:
-
 ```
 <write_to_file>
 <path>config/settings.json</path>
@@ -123,7 +117,6 @@ Creating a new JSON configuration file:
 ```
 
 Creating a simple HTML file:
-
 ```
 <write_to_file>
 <path>src/index.html</path>
@@ -147,7 +140,6 @@ Creating a simple HTML file:
 ```
 
 Creating a JavaScript module:
-
 ```
 <write_to_file>
 <path>src/utils/helpers.js</path>

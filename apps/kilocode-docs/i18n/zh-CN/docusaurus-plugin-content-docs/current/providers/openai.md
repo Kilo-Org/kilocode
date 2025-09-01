@@ -19,15 +19,15 @@ Kilo Code 支持通过官方 OpenAI API 直接访问模型。
 
 Kilo Code 支持多种 OpenAI 模型，包括：
 
-- `o3-mini` (中等推理能力)
-- `o3-mini-high` (高推理能力)
-- `o3-mini-low` (低推理能力)
-- `o1`
-- `o1-preview`
-- `o1-mini`
-- `gpt-4.5-preview`
-- `gpt-4o`
-- `gpt-4o-mini`
+* `o3-mini` (中等推理能力)
+* `o3-mini-high` (高推理能力) 
+* `o3-mini-low` (低推理能力)
+* `o1`
+* `o1-preview`
+* `o1-mini`
+* `gpt-4.5-preview`
+* `gpt-4o`
+* `gpt-4o-mini`
 
 请参考 [OpenAI 模型文档](https://platform.openai.com/docs/models) 获取最新的模型列表和能力说明。
 
@@ -40,5 +40,5 @@ Kilo Code 支持多种 OpenAI 模型，包括：
 
 ## 提示和注意事项
 
-- **定价:** 请参考 [OpenAI 定价](https://openai.com/pricing) 页面了解模型成本详情
-- **Azure OpenAI 服务:** 如需使用 Azure OpenAI 服务，请参阅我们的 [OpenAI 兼容](/providers/openai-compatible) 提供商章节
+* **定价:** 请参考 [OpenAI 定价](https://openai.com/pricing) 页面了解模型成本详情
+* **Azure OpenAI 服务:** 如需使用 Azure OpenAI 服务，请参阅我们的 [OpenAI 兼容](/providers/openai-compatible) 提供商章节

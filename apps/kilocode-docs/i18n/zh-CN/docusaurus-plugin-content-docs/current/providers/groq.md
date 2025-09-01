@@ -16,11 +16,11 @@ Groq 通过其高性能基础设施为各种 AI 模型提供超快速推理。Ki
 
 Kilo Code 将尝试从 Groq API 获取可用模型列表。通过 Groq 通常可用的模型包括：
 
-- `llama3-8b-8192`
-- `llama3-70b-8192`
-- `mixtral-8x7b-32768`
-- `gemma-7b-it`
-- `moonshotai/kimi-k2-instruct` (Kimi K2 模型)
+*   `llama3-8b-8192`
+*   `llama3-70b-8192`
+*   `mixtral-8x7b-32768`
+*   `gemma-7b-it`
+*   `moonshotai/kimi-k2-instruct` (Kimi K2 模型)
 
 **注意：** 模型可用性和规格可能会发生变化。请参阅 [Groq 文档](https://console.groq.com/docs/models)以获取最新支持的模型列表及其功能。
 
@@ -33,22 +33,22 @@ Kilo Code 将尝试从 Groq API 获取可用模型列表。通过 Groq 通常可
 
 ## 提示和注意事项
 
-- **高速推理：** Groq 的 LPU 提供异常快速的响应时间，使其成为交互式开发工作流的理想选择。
-- **Token 限制：** 某些模型具有特定的 `max_tokens` 限制，Kilo Code 会自动处理（例如，`moonshotai/kimi-k2-instruct` 模型）。
-- **成本效益：** 高性能推理具有竞争力的定价。
-- **模型选择：** 根据您的特定需求选择模型 - 对于复杂推理任务，选择 `llama3-70b-8192` 等大型模型，或者对于更快、更简单的操作，选择 `llama3-8b-8192` 等小型模型。
+*   **高速推理：** Groq 的 LPU 提供异常快速的响应时间，使其成为交互式开发工作流的理想选择。
+*   **Token 限制：** 某些模型具有特定的 `max_tokens` 限制，Kilo Code 会自动处理（例如，`moonshotai/kimi-k2-instruct` 模型）。
+*   **成本效益：** 高性能推理具有竞争力的定价。
+*   **模型选择：** 根据您的特定需求选择模型 - 对于复杂推理任务，选择 `llama3-70b-8192` 等大型模型，或者对于更快、更简单的操作，选择 `llama3-8b-8192` 等小型模型。
 
 ## 支持的模型
 
 Kilo Code 通过 Groq 支持以下模型：
 
-| Model ID                      | Provider    | Context Window | Notes                        |
-| ----------------------------- | ----------- | -------------- | ---------------------------- |
-| `moonshotai/kimi-k2-instruct` | Moonshot AI | 128K tokens    | 已配置优化 `max_tokens` 限制 |
-| `llama-3.3-70b-versatile`     | Meta        | 128K tokens    | 高性能 Llama 模型            |
-| `llama-3.1-70b-versatile`     | Meta        | 128K tokens    | 通用推理能力                 |
-| `llama-3.1-8b-instant`        | Meta        | 128K tokens    | 快速推理，适用于快速任务     |
-| `mixtral-8x7b-32768`          | Mistral AI  | 32K tokens     | 专家混合架构                 |
+| Model ID | Provider | Context Window | Notes |
+|----------|----------|----------------|-------|
+| `moonshotai/kimi-k2-instruct` | Moonshot AI | 128K tokens | 已配置优化 `max_tokens` 限制 |
+| `llama-3.3-70b-versatile` | Meta | 128K tokens | 高性能 Llama 模型 |
+| `llama-3.1-70b-versatile` | Meta | 128K tokens | 通用推理能力 |
+| `llama-3.1-8b-instant` | Meta | 128K tokens | 快速推理，适用于快速任务 |
+| `mixtral-8x7b-32768` | Mistral AI | 32K tokens | 专家混合架构 |
 
 **注意：** 模型可用性可能会发生变化。请参阅 [Groq 文档](https://console.groq.com/docs/models)以获取最新的模型列表和规格。
 
@@ -75,10 +75,10 @@ Kilo Code 通过 Groq 支持以下模型：
 - **成本效益：** 高性能推理具有竞争力的定价
 - **速率限制：** 请注意根据您的 Groq 计划的 API 速率限制
 - **模型选择：** 根据您的特定用例选择模型：
-    - **Kimi K2**：最适合复杂推理和多语言任务
-    - **Llama 3.3 70B**：出色的通用性能
-    - **Llama 3.1 8B Instant**：最快的响应，适用于简单任务
-    - **Mixtral**：性能和效率的良好平衡
+  - **Kimi K2**：最适合复杂推理和多语言任务
+  - **Llama 3.3 70B**：出色的通用性能
+  - **Llama 3.1 8B Instant**：最快的响应，适用于简单任务
+  - **Mixtral**：性能和效率的良好平衡
 
 ## 故障排除
 

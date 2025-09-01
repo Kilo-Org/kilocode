@@ -19,8 +19,8 @@ Kilo Code支持通过DeepSeek API访问模型，包括`deepseek-chat`和`deepsee
 
 Kilo Code支持以下DeepSeek模型：
 
-- `deepseek-chat` (推荐用于编码任务)
-- `deepseek-reasoner` (推荐用于推理任务)
+* `deepseek-chat` (推荐用于编码任务)
+* `deepseek-reasoner` (推荐用于推理任务)
 
 ## 在Kilo Code中配置
 
@@ -30,5 +30,4 @@ Kilo Code支持以下DeepSeek模型：
 4. **选择模型:** 从"Model"下拉菜单中选择所需模型
 
 ## 提示和注意事项
-
-- **价格:** 参考[DeepSeek定价](https://api-docs.deepseek.com/quick_start/pricing/)页面了解模型费用详情
+* **价格:** 参考[DeepSeek定价](https://api-docs.deepseek.com/quick_start/pricing/)页面了解模型费用详情

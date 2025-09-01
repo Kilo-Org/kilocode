@@ -19,12 +19,12 @@ Anthropic 是一家专注于 AI 安全和研究的公司，致力于构建可靠
 
 Kilo Code 支持以下 Anthropic Claude 模型：
 
-- `claude-3-7-sonnet-20250219` (推荐)
-- `claude-3-7-sonnet-20250219:thinking` (扩展思考版)
-- `claude-3-5-sonnet-20241022`
-- `claude-3-5-haiku-20241022`
-- `claude-3-opus-20240229`
-- `claude-3-haiku-20240307`
+*   `claude-3-7-sonnet-20250219` (推荐)
+*   `claude-3-7-sonnet-20250219:thinking` (扩展思考版)
+*   `claude-3-5-sonnet-20241022`
+*   `claude-3-5-haiku-20241022`
+*   `claude-3-opus-20240229`
+*   `claude-3-haiku-20240307`
 
 查看 [Anthropic 模型文档](https://docs.anthropic.com/en/docs/about-claude/models) 获取各模型能力的详细信息
 
@@ -38,7 +38,7 @@ Kilo Code 支持以下 Anthropic Claude 模型：
 
 ## 提示与注意事项
 
-- **提示缓存:** Claude 3 模型支持 [提示缓存](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching)，可显著降低重复提示的成本和延迟
-- **上下文窗口:** Claude 模型具有大容量上下文窗口 (200,000 tokens)，可在提示中包含大量代码和上下文
-- **定价:** 参考 [Anthropic 定价](https://www.anthropic.com/pricing) 页面获取最新价格信息
-- **速率限制:** Anthropic 根据 [使用层级](https://docs.anthropic.com/en/api/rate-limits#requirements-to-advance-tier) 设有严格速率限制。如频繁遇到限制，请联系 Anthropic 销售或通过 [OpenRouter](/providers/openrouter) 等其它提供商访问 Claude
+*   **提示缓存:** Claude 3 模型支持 [提示缓存](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching)，可显著降低重复提示的成本和延迟
+*   **上下文窗口:** Claude 模型具有大容量上下文窗口 (200,000 tokens)，可在提示中包含大量代码和上下文
+*   **定价:** 参考 [Anthropic 定价](https://www.anthropic.com/pricing) 页面获取最新价格信息
+*   **速率限制:** Anthropic 根据 [使用层级](https://docs.anthropic.com/en/api/rate-limits#requirements-to-advance-tier) 设有严格速率限制。如频繁遇到限制，请联系 Anthropic 销售或通过 [OpenRouter](/providers/openrouter) 等其它提供商访问 Claude

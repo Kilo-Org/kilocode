@@ -31,8 +31,8 @@ Kilo Code offers a streamlined registration that connects you directly to fronti
 1. **Start Registration:** Click "Try Kilo Code for Free" in the extension
 2. **Sign In:** Use your Google account to sign in at kilocode.ai
 3. **Authorize VS Code:**
-    - kilocode.ai will prompt you to open Visual Studio Code
-    - For web-based IDEs, you'll copy the API key manually instead
+   - kilocode.ai will prompt you to open Visual Studio Code
+   - For web-based IDEs, you'll copy the API key manually instead
 4. **Complete Setup:** Allow VS Code to open the authorization URL when prompted
 
 <!-- <img src="/img/setting-up/signupflow.gif" alt="Sign up and registration flow with Kilo Code" width="600" /> -->

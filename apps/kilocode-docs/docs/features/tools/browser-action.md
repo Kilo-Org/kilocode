@@ -7,12 +7,12 @@ The `browser_action` tool enables web automation and interaction via a Puppeteer
 The tool accepts these parameters:
 
 - `action` (required): The action to perform:
-    - `launch`: Start a new browser session at a URL
-    - `click`: Click at specific x,y coordinates
-    - `type`: Type text via the keyboard
-    - `scroll_down`: Scroll down one page height
-    - `scroll_up`: Scroll up one page height
-    - `close`: End the browser session
+  * `launch`: Start a new browser session at a URL
+  * `click`: Click at specific x,y coordinates
+  * `type`: Type text via the keyboard
+  * `scroll_down`: Scroll down one page height
+  * `scroll_up`: Scroll up one page height
+  * `close`: End the browser session
 - `url` (optional): The URL to navigate to when using the `launch` action
 - `coordinate` (optional): The x,y coordinates for the `click` action (e.g., "450,300")
 - `text` (optional): The text to type when using the `type` action
@@ -44,7 +44,6 @@ This tool creates an automated browser session that Kilo Code can control to nav
 The tool operates in two distinct modes:
 
 ### Local Browser Mode (Default)
-
 - Downloads and manages a local Chromium instance through Puppeteer
 - Creates a fresh browser environment with each launch
 - No access to existing user profiles, cookies, or extensions
@@ -52,7 +51,6 @@ The tool operates in two distinct modes:
 - Completely closes the browser when the session ends
 
 ### Remote Browser Mode
-
 - Connects to an existing Chrome/Chromium instance running with remote debugging enabled
 - Can access existing browser state, cookies, and potentially extensions
 - Faster startup as it reuses an existing browser process
@@ -77,28 +75,25 @@ The tool operates in two distinct modes:
 When the `browser_action` tool is invoked, it follows this process:
 
 1. **Action Validation and Browser Management**:
-
-    - Validates the required parameters for the requested action
-    - For `launch`: Initializes a browser session (either local Puppeteer instance or remote Chrome)
-    - For interaction actions: Uses the existing browser session
-    - For `close`: Terminates or disconnects from the browser appropriately
+   - Validates the required parameters for the requested action
+   - For `launch`: Initializes a browser session (either local Puppeteer instance or remote Chrome)
+   - For interaction actions: Uses the existing browser session
+   - For `close`: Terminates or disconnects from the browser appropriately
 
 2. **Page Interaction and Stability**:
-
-    - Ensures pages are fully loaded using DOM stability detection via `waitTillHTMLStable` algorithm
-    - Executes requested actions (navigation, clicking, typing, scrolling) with proper timing
-    - Monitors network activity after clicks and waits for navigation when necessary
+   - Ensures pages are fully loaded using DOM stability detection via `waitTillHTMLStable` algorithm
+   - Executes requested actions (navigation, clicking, typing, scrolling) with proper timing
+   - Monitors network activity after clicks and waits for navigation when necessary
 
 3. **Visual Feedback**:
-
-    - Captures optimized screenshots using WebP format (with PNG fallback)
-    - Records browser console logs for debugging purposes
-    - Tracks mouse position and maintains paginated history of actions
+   - Captures optimized screenshots using WebP format (with PNG fallback)
+   - Records browser console logs for debugging purposes
+   - Tracks mouse position and maintains paginated history of actions
 
 4. **Session Management**:
-    - Maintains browser state across multiple actions
-    - Handles errors and automatically cleans up resources
-    - Enforces proper workflow sequence (launch → interactions → close)
+   - Maintains browser state across multiple actions
+   - Handles errors and automatically cleans up resources
+   - Enforces proper workflow sequence (launch → interactions → close)
 
 ## Workflow Sequence
 
@@ -119,7 +114,6 @@ Browser interactions must follow this specific sequence:
 ## Usage Examples
 
 Launching a browser and navigating to a website:
-
 ```
 <browser_action>
 <action>launch</action>
@@ -128,7 +122,6 @@ Launching a browser and navigating to a website:
 ```
 
 Clicking at specific coordinates (e.g., a button):
-
 ```
 <browser_action>
 <action>click</action>
@@ -137,7 +130,6 @@ Clicking at specific coordinates (e.g., a button):
 ```
 
 Typing text into a focused input field:
-
 ```
 <browser_action>
 <action>type</action>
@@ -146,7 +138,6 @@ Typing text into a focused input field:
 ```
 
 Scrolling down to see more content:
-
 ```
 <browser_action>
 <action>scroll_down</action>
@@ -154,7 +145,6 @@ Scrolling down to see more content:
 ```
 
 Closing the browser session:
-
 ```
 <browser_action>
 <action>close</action>

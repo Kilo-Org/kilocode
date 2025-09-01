@@ -25,22 +25,21 @@ Suggested Responses appear as clickable buttons directly below Kilo Code's quest
 You have two options for using suggested responses:
 
 1.  **Direct Selection**:
-
-    - **Action**: Simply click the button containing the answer you want to provide.
-    - **Result**: The selected answer is immediately sent back to Kilo Code as your response. This is the quickest way to reply if one of the suggestions perfectly matches your intent.
+    *   **Action**: Simply click the button containing the answer you want to provide.
+    *   **Result**: The selected answer is immediately sent back to Kilo Code as your response. This is the quickest way to reply if one of the suggestions perfectly matches your intent.
 
 2.  **Edit Before Sending**:
-    - **Action**:
-        - Hold down `Shift` and click the suggestion button.
-        - _Alternatively_, hover over the suggestion button and click the pencil icon (<Codicon name="edit" />) that appears.
-    - **Result**: The text of the suggestion is copied into the chat input box. You can then modify the text as needed before pressing Enter to send your customized response. This is useful when a suggestion is close but needs minor adjustments.
+    *   **Action**:
+        *   Hold down `Shift` and click the suggestion button.
+        *   *Alternatively*, hover over the suggestion button and click the pencil icon (<Codicon name="edit" />) that appears.
+    *   **Result**: The text of the suggestion is copied into the chat input box. You can then modify the text as needed before pressing Enter to send your customized response. This is useful when a suggestion is close but needs minor adjustments.
 
 <img src="/docs/img/suggested-responses/suggested-responses-1.png" alt="Chat input box showing text copied from a suggested response, ready for editing" width="600" />
 
 ## Benefits
 
-- **Speed**: Quickly respond without typing full answers.
-- **Clarity**: Suggestions often clarify the type of information Kilo Code needs.
-- **Flexibility**: Edit suggestions to provide precise, customized answers when needed.
+*   **Speed**: Quickly respond without typing full answers.
+*   **Clarity**: Suggestions often clarify the type of information Kilo Code needs.
+*   **Flexibility**: Edit suggestions to provide precise, customized answers when needed.
 
 This feature streamlines the interaction when Kilo Code requires clarification, allowing you to guide the task effectively with minimal effort.

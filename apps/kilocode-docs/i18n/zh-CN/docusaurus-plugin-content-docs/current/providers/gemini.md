@@ -21,23 +21,23 @@ Kilo Code支持以下Gemini模型：
 
 ### 聊天模型
 
-- `gemini-2.5-pro-exp-03-25`
-- `gemini-2.0-flash-001`
-- `gemini-2.0-flash-lite-preview-02-05`
-- `gemini-2.0-pro-exp-02-05`
-- `gemini-2.0-flash-thinking-exp-01-21`
-- `gemini-2.0-flash-thinking-exp-1219`
-- `gemini-2.0-flash-exp`
-- `gemini-1.5-flash-002`
-- `gemini-1.5-flash-exp-0827`
-- `gemini-1.5-flash-8b-exp-0827`
-- `gemini-1.5-pro-002`
-- `gemini-1.5-pro-exp-0827`
-- `gemini-exp-1206`
+* `gemini-2.5-pro-exp-03-25`
+* `gemini-2.0-flash-001`
+* `gemini-2.0-flash-lite-preview-02-05`
+* `gemini-2.0-pro-exp-02-05`
+* `gemini-2.0-flash-thinking-exp-01-21`
+* `gemini-2.0-flash-thinking-exp-1219`
+* `gemini-2.0-flash-exp`
+* `gemini-1.5-flash-002`
+* `gemini-1.5-flash-exp-0827`
+* `gemini-1.5-flash-8b-exp-0827`
+* `gemini-1.5-pro-002`
+* `gemini-1.5-pro-exp-0827`
+* `gemini-exp-1206`
 
 ### 嵌入模型
 
-- `gemini-embedding-001` - 针对代码库索引和语义搜索进行了优化
+*   `gemini-embedding-001` - 针对代码库索引和语义搜索进行了优化
 
 有关每个模型的更多详细信息，请参阅 [Gemini 文档](https://ai.google.dev/models/gemini)。
 
@@ -50,5 +50,5 @@ Kilo Code支持以下Gemini模型：
 
 ## 提示与注意事项
 
-- **定价:** Gemini API使用根据输入和输出的token计费。参考[Gemini定价页面](https://ai.google.dev/pricing)获取详细信息。
-- **代码库索引：** `gemini-embedding-001` 模型专门支持[代码库索引](/features/codebase-indexing)，为语义代码搜索提供高质量嵌入。
+* **定价:** Gemini API使用根据输入和输出的token计费。参考[Gemini定价页面](https://ai.google.dev/pricing)获取详细信息。
+*   **代码库索引：** `gemini-embedding-001` 模型专门支持[代码库索引](/features/codebase-indexing)，为语义代码搜索提供高质量嵌入。

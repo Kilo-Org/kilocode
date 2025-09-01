@@ -1,3 +1,4 @@
+
 # read_file
 
 The `read_file` tool examines the contents of files in a project. It allows Kilo Code to understand code, configuration files, and documentation to provide better assistance.
@@ -45,38 +46,36 @@ When the `read_file` tool is invoked, it follows this process:
 1. **Parameter Validation**: Validates the required `path` parameter and optional parameters
 2. **Path Resolution**: Resolves the relative path to an absolute path
 3. **Reading Strategy Selection**:
-    - The tool uses a strict priority hierarchy (explained in detail below)
-    - It chooses between range reading, auto-truncation, or full file reading
+   - The tool uses a strict priority hierarchy (explained in detail below)
+   - It chooses between range reading, auto-truncation, or full file reading
 4. **Content Processing**:
-    - Adds line numbers to the content (e.g., "1 | const x = 13") where `1 |` is the line number.
-    - For truncated files, adds truncation notice and method definitions
-    - For special formats (PDF, DOCX, IPYNB), extracts readable text
+   - Adds line numbers to the content (e.g., "1 | const x = 13") where `1 |` is the line number.
+   - For truncated files, adds truncation notice and method definitions
+   - For special formats (PDF, DOCX, IPYNB), extracts readable text
 
 ## Reading Strategy Priority
 
 The tool uses a clear decision hierarchy to determine how to read a file:
 
 1. **First Priority: Explicit Line Range**
-
-    - If either `start_line` or `end_line` is provided, the tool always performs a range read
-    - The implementation efficiently streams only the requested lines, making it suitable for processing large files
-    - This takes precedence over all other options
+   - If either `start_line` or `end_line` is provided, the tool always performs a range read
+   - The implementation efficiently streams only the requested lines, making it suitable for processing large files
+   - This takes precedence over all other options
 
 2. **Second Priority: Auto-Truncation for Large Files**
-
-    - This only applies when ALL of these conditions are met:
-        - Neither `start_line` nor `end_line` is specified
-        - The `auto_truncate` parameter is set to `true`
-        - The file is not a binary file
-        - The file exceeds the configured line threshold (typically 500-1000 lines)
-    - When auto-truncation activates, the tool:
-        - Reads only the first portion of the file (determined by the maxReadFileLine setting)
-        - Adds a truncation notice showing the number of lines displayed vs. total
-        - Provides a summary of method definitions with their line ranges
+   - This only applies when ALL of these conditions are met:
+     - Neither `start_line` nor `end_line` is specified
+     - The `auto_truncate` parameter is set to `true`
+     - The file is not a binary file
+     - The file exceeds the configured line threshold (typically 500-1000 lines)
+   - When auto-truncation activates, the tool:
+     - Reads only the first portion of the file (determined by the maxReadFileLine setting)
+     - Adds a truncation notice showing the number of lines displayed vs. total
+     - Provides a summary of method definitions with their line ranges
 
 3. **Default Behavior: Read Entire File**
-    - If neither of the above conditions are met, it reads the entire file content
-    - For special formats like PDF, DOCX, and IPYNB, it uses specialized extractors
+   - If neither of the above conditions are met, it reads the entire file content
+   - For special formats like PDF, DOCX, and IPYNB, it uses specialized extractors
 
 ## Examples When Used
 
@@ -93,7 +92,6 @@ Here are several scenarios demonstrating how the `read_file` tool is used and th
 To read the complete content of a file:
 
 **Input:**
-
 ```xml
 <read_file>
 <path>src/app.js</path>
@@ -101,21 +99,18 @@ To read the complete content of a file:
 ```
 
 **Simulated Output (for a small file like `example_small.txt`):**
-
 ```
 1 | This is the first line.
 2 | This is the second line.
 3 | This is the third line.
 ```
-
-_(Output will vary based on the actual file content)_
+*(Output will vary based on the actual file content)*
 
 ### Reading Specific Lines
 
 To read only a specific range of lines (e.g., 46-68):
 
 **Input:**
-
 ```xml
 <read_file>
 <path>src/app.js</path>
@@ -125,20 +120,17 @@ To read only a specific range of lines (e.g., 46-68):
 ```
 
 **Simulated Output (for lines 2-3 of `example_five_lines.txt`):**
-
 ```
 2 | Content of line two.
 3 | Content of line three.
 ```
-
-_(Output shows only the requested lines with their original line numbers)_
+*(Output shows only the requested lines with their original line numbers)*
 
 ### Reading a Large File (Auto-Truncation)
 
 When reading a large file without specifying lines and `auto_truncate` is enabled (or defaults to true based on settings):
 
 **Input:**
-
 ```xml
 <read_file>
 <path>src/large-module.js</path>
@@ -147,7 +139,6 @@ When reading a large file without specifying lines and `auto_truncate` is enable
 ```
 
 **Simulated Output (for `large_file.log` with 1500 lines, limit 1000):**
-
 ```
 1 | Log entry 1...
 2 | Log entry 2...
@@ -155,15 +146,13 @@ When reading a large file without specifying lines and `auto_truncate` is enable
 1000 | Log entry 1000...
 [... truncated 500 lines ...]
 ```
-
-_(Output is limited to the configured maximum lines, with a truncation notice)_
+*(Output is limited to the configured maximum lines, with a truncation notice)*
 
 ### Attempting to Read a Non-Existent File
 
 If the specified file does not exist:
 
 **Input:**
-
 ```xml
 <read_file>
 <path>non_existent_file.txt</path>
@@ -171,7 +160,6 @@ If the specified file does not exist:
 ```
 
 **Simulated Output (Error):**
-
 ```
 Error: File not found at path 'non_existent_file.txt'.
 ```
@@ -181,7 +169,6 @@ Error: File not found at path 'non_existent_file.txt'.
 If the file is excluded by rules in a `.kilocodeignore` file:
 
 **Input:**
-
 ```xml
 <read_file>
 <path>.env</path>
@@ -189,7 +176,6 @@ If the file is excluded by rules in a `.kilocodeignore` file:
 ```
 
 **Simulated Output (Error):**
-
 ```
 Error: Access denied to file '.env' due to .kilocodeignore rules.
 ```

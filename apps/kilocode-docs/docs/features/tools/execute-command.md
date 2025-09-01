@@ -54,62 +54,56 @@ This tool executes terminal commands directly on the user's system, enabling a w
 When the `execute_command` tool is invoked, it follows this process:
 
 1. **Command Validation and Security Checks**:
-
-    - Parses the command using shell-quote to identify components
-    - Validates against security restrictions (subshell usage, restricted files)
-    - Checks against KiloCodeIgnore rules for file access permissions
-    - Ensures the command meets system security requirements
+   - Parses the command using shell-quote to identify components
+   - Validates against security restrictions (subshell usage, restricted files)
+   - Checks against KiloCodeIgnore rules for file access permissions
+   - Ensures the command meets system security requirements
 
 2. **Terminal Management**:
-
-    - Gets or creates a terminal through TerminalRegistry
-    - Sets up the working directory context
-    - Prepares event listeners for output capture
-    - Shows the terminal for user visibility
+   - Gets or creates a terminal through TerminalRegistry
+   - Sets up the working directory context
+   - Prepares event listeners for output capture
+   - Shows the terminal for user visibility
 
 3. **Command Execution and Monitoring**:
-
-    - Executes via VS Code's shellIntegration API
-    - Captures output with escape sequence processing
-    - Throttles output handling (100ms intervals)
-    - Monitors for command completion or errors
-    - Detects "hot" processes like compilers for special handling
+   - Executes via VS Code's shellIntegration API
+   - Captures output with escape sequence processing
+   - Throttles output handling (100ms intervals)
+   - Monitors for command completion or errors
+   - Detects "hot" processes like compilers for special handling
 
 4. **Result Processing**:
-    - Strips ANSI/VS Code escape sequences for clean output
-    - Interprets exit codes with detailed signal information
-    - Updates working directory tracking if changed by command
-    - Provides command status with appropriate context
+   - Strips ANSI/VS Code escape sequences for clean output
+   - Interprets exit codes with detailed signal information
+   - Updates working directory tracking if changed by command
+   - Provides command status with appropriate context
 
 ## Terminal Implementation Details
 
 The tool uses a sophisticated terminal management system:
 
 1. **First Priority: Terminal Reuse**
-
-    - The TerminalRegistry tries to reuse existing terminals when possible
-    - This reduces proliferation of terminal instances and improves performance
-    - Terminal state (working directory, history) is preserved across commands
+   - The TerminalRegistry tries to reuse existing terminals when possible
+   - This reduces proliferation of terminal instances and improves performance
+   - Terminal state (working directory, history) is preserved across commands
 
 2. **Second Priority: Security Validation**
-
-    - Commands are parsed using shell-quote for component analysis
-    - Dangerous patterns like `$(...)` and backticks are blocked
-    - Commands are checked against KiloCodeIgnore rules for file access control
-    - A prefix-based allowlist system validates command patterns
+   - Commands are parsed using shell-quote for component analysis
+   - Dangerous patterns like `$(...)` and backticks are blocked
+   - Commands are checked against KiloCodeIgnore rules for file access control
+   - A prefix-based allowlist system validates command patterns
 
 3. **Performance Optimizations**
-
-    - Output is processed in 100ms throttled intervals to prevent UI overload
-    - Zero-copy buffer management uses index-based tracking for efficiency
-    - Special handling for compilation and "hot" processes
-    - Platform-specific optimizations for Windows PowerShell
+   - Output is processed in 100ms throttled intervals to prevent UI overload
+   - Zero-copy buffer management uses index-based tracking for efficiency
+   - Special handling for compilation and "hot" processes
+   - Platform-specific optimizations for Windows PowerShell
 
 4. **Error and Signal Handling**
-    - Exit codes are mapped to detailed signal information (SIGTERM, SIGKILL, etc.)
-    - Core dump detection for critical failures
-    - Working directory changes are tracked and handled automatically
-    - Clean recovery from terminal disconnection scenarios
+   - Exit codes are mapped to detailed signal information (SIGTERM, SIGKILL, etc.)
+   - Core dump detection for critical failures
+   - Working directory changes are tracked and handled automatically
+   - Clean recovery from terminal disconnection scenarios
 
 ## Examples When Used
 
@@ -123,7 +117,6 @@ The tool uses a sophisticated terminal management system:
 ## Usage Examples
 
 Running a simple command in the current directory:
-
 ```
 <execute_command>
 <command>npm run dev</command>
@@ -131,7 +124,6 @@ Running a simple command in the current directory:
 ```
 
 Installing dependencies for a project:
-
 ```
 <execute_command>
 <command>npm install express mongodb mongoose dotenv</command>
@@ -139,7 +131,6 @@ Installing dependencies for a project:
 ```
 
 Running multiple commands in sequence:
-
 ```
 <execute_command>
 <command>mkdir -p src/components && touch src/components/App.js</command>
@@ -147,7 +138,6 @@ Running multiple commands in sequence:
 ```
 
 Executing a command in a specific directory:
-
 ```
 <execute_command>
 <command>git status</command>
@@ -156,7 +146,6 @@ Executing a command in a specific directory:
 ```
 
 Building and then starting a project:
-
 ```
 <execute_command>
 <command>npm run build && npm start</command>

@@ -8,9 +8,9 @@ Code Actions are a powerful feature of VS Code that provide quick fixes, refacto
 
 Code Actions appear as a lightbulb icon (💡) in the editor gutter (the area to the left of the line numbers). They can also be accessed via the right-click context menu, or via keyboard shortcut. They are triggered when:
 
-- You select a range of code.
-- Your cursor is on a line with a problem (error, warning, or hint).
-- You invoke them via command.
+*   You select a range of code.
+*   Your cursor is on a line with a problem (error, warning, or hint).
+*   You invoke them via command.
 
 Clicking the lightbulb, right-clicking and selecting "Kilo Code", or using the keyboard shortcut (`Ctrl+.` or `Cmd+.` on macOS, by default), displays a menu of available actions.
 
@@ -20,10 +20,10 @@ Clicking the lightbulb, right-clicking and selecting "Kilo Code", or using the k
 
 Kilo Code provides the following Code Actions:
 
-- **Add to Context:** Quickly adds the selected code to your chat with Kilo, including line numbers so Kilo knows exactly where the code is from. It's listed first in the menu for easy access. (More details below).
-- **Explain Code:** Asks Kilo Code to explain the selected code.
-- **Fix Code:** Asks Kilo Code to fix problems in the selected code (available when diagnostics are present).
-- **Improve Code:** Asks Kilo Code to suggest improvements to the selected code.
+*   **Add to Context:** Quickly adds the selected code to your chat with Kilo, including line numbers so Kilo knows exactly where the code is from. It's listed first in the menu for easy access. (More details below).
+*   **Explain Code:** Asks Kilo Code to explain the selected code.
+*   **Fix Code:** Asks Kilo Code to fix problems in the selected code (available when diagnostics are present).
+*   **Improve Code:** Asks Kilo Code to suggest improvements to the selected code.
 
 ### Add to Context Deep Dive
 
@@ -40,7 +40,7 @@ Can you explain this function?
 @myFile.js:15:25
 ```
 
-_(Where `@myFile.js:15:25` represents the code added via "Add to Context")_
+*(Where `@myFile.js:15:25` represents the code added via "Add to Context")*
 
 Each of these actions can be performed "in a new task" or "in the current task."
 
@@ -75,16 +75,16 @@ There are three main ways to use Kilo Code's Code Actions:
 
 Each code action gives you two options:
 
-- **in New Task:** Select this to begin a conversation with Kilo centered around this code action.
-- **in Current Task:** If a conversation has already begun, this option will add the code action as an additional message.
+*   **in New Task:** Select this to begin a conversation with Kilo centered around this code action.
+*   **in Current Task:** If a conversation has already begun, this option will add the code action as an additional message.
 
 ## Customizing Code Action Prompts
 
-You can customize the prompts used for each Code Action by modifying the "Support Prompts" in the **Prompts** tab. This allows you to fine-tune the instructions given to the AI model and tailor the responses to your specific needs.
+You can customize the prompts used for each Code Action by modifying the "Support Prompts" in the **Prompts** tab.  This allows you to fine-tune the instructions given to the AI model and tailor the responses to your specific needs.
 
 1.  **Open the Prompts Tab:** Click the <Codicon name="notebook" /> icon in the Kilo Code top menu bar.
-2.  **Find "Support Prompts":** You will see the support prompts, including "Enhance Prompt", "Explain Code", "Fix Code", and "Improve Code".
-3.  **Edit the Prompts:** Modify the text in the text area for the prompt you want to customize. You can use placeholders like `${filePath}` and `${selectedText}` to include information about the current file and selection.
-4.  **Click "Done":** Save your changes.
+2. **Find "Support Prompts":** You will see the support prompts, including "Enhance Prompt", "Explain Code", "Fix Code", and "Improve Code".
+3. **Edit the Prompts:**  Modify the text in the text area for the prompt you want to customize. You can use placeholders like `${filePath}` and `${selectedText}` to include information about the current file and selection.
+4. **Click "Done":** Save your changes.
 
 By using Kilo Code's Code Actions, you can quickly get AI-powered assistance directly within your coding workflow. This can save you time and help you write better code.

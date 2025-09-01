@@ -11,11 +11,11 @@ Kilo Code supports accessing models through the [Requesty](https://www.requesty.
 ## Getting an API Key
 
 1.  **Sign Up/Sign In:** Go to the [Requesty website](https://www.requesty.ai/) and create an account or sign in.
-2.  **Get API Key:** You can get an API key from the [API Management](https://app.requesty.ai/manage-api) section of your Requesty dashboard.
+2.  **Get API Key:**  You can get an API key from the [API Management](https://app.requesty.ai/manage-api) section of your Requesty dashboard.
 
 ## Supported Models
 
-Requesty provides access to a wide range of models. Kilo Code will automatically fetch the latest list of available models. You can see the full list of available models on the [Model List](https://app.requesty.ai/router/list) page.
+Requesty provides access to a wide range of models.  Kilo Code will automatically fetch the latest list of available models. You can see the full list of available models on the [Model List](https://app.requesty.ai/router/list) page.
 
 ## Configuration in Kilo Code
 
@@ -31,7 +31,6 @@ Requesty provides access to a wide range of models. Kilo Code will automatically
 - **Cost tracking**: Track cost per model, coding language, changed file, and more via the [Cost dashboard](https://app.requesty.ai/cost-management) or the [Requesty VS.code extension](https://marketplace.visualstudio.com/items?itemName=Requesty.requesty).
 - **Stats and logs**: See your [coding stats dashboard](https://app.requesty.ai/usage-stats) or go through your [LLM interaction logs](https://app.requesty.ai/logs).
 - **Fallback policies**: Keep your LLM working for you with fallback policies when providers are down.
-
 * **Prompt Caching:** Some providers support prompt caching. [Search models with caching](https://app.requesty.ai/router/list).
 
 ## Relevant resources

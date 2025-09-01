@@ -27,6 +27,6 @@ Always refer to the official Chutes AI documentation or your dashboard for the m
 
 ## Tips and Notes
 
-- **Free Access:** Chutes AI provides free API access, making it an excellent option for experimentation and development without immediate costs.
-- **Model Variety:** The platform offers access to both open-source and proprietary models, giving you flexibility in choosing the right model for your needs.
-- **Rate Limits:** As with any free service, be aware of potential rate limits or usage restrictions that may apply to your API key.
+*   **Free Access:** Chutes AI provides free API access, making it an excellent option for experimentation and development without immediate costs.
+*   **Model Variety:** The platform offers access to both open-source and proprietary models, giving you flexibility in choosing the right model for your needs.
+*   **Rate Limits:** As with any free service, be aware of potential rate limits or usage restrictions that may apply to your API key.

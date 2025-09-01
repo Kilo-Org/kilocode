@@ -13,13 +13,13 @@ Kilo Code 通过工具与你的代码和环境进行交互。这些专业助手�
 
 ## 工具分类
 
-| 类别   | 用途                   | 工具名称                                                                 |
-| :----- | :--------------------- | :----------------------------------------------------------------------- |
-| 读取   | 访问文件内容和代码结构 | `read_file`, `search_files`, `list_files`, `list_code_definition_names`  |
-| 编辑   | 创建或修改文件和代码   | `write_to_file`, `apply_diff`                                            |
-| 执行   | 运行命令和系统操作     | `execute_command`                                                        |
-| 浏览器 | 与网页内容交互         | `browser_action`                                                         |
-| 工作流 | 管理任务流程和上下文   | `ask_followup_question`, `attempt_completion`, `switch_mode`, `new_task` |
+| 类别 | 用途 | 工具名称 |
+| :--- | :--- | :------- |
+| 读取 | 访问文件内容和代码结构 | `read_file`, `search_files`, `list_files`, `list_code_definition_names` |
+| 编辑 | 创建或修改文件和代码 | `write_to_file`, `apply_diff` |
+| 执行 | 运行命令和系统操作 | `execute_command` |
+| 浏览器 | 与网页内容交互 | `browser_action` |
+| 工作流 | 管理任务流程和上下文 | `ask_followup_question`, `attempt_completion`, `switch_mode`, `new_task` |
 
 ## 示例：工具使用
 
@@ -27,12 +27,11 @@ Kilo Code 通过工具与你的代码和环境进行交互。这些专业助手�
 
 <img src="/docs/img/how-tools-work/how-tools-work.png" alt="工具审批界面显示保存和拒绝按钮以及自动批准复选框" width="600" />
 
-_工具审批界面显示保存/拒绝按钮和自动批准选项。_
+*工具审批界面显示保存/拒绝按钮和自动批准选项。*
 
 **用户：** 创建一个名为 `greeting.js` 的文件，用于输出问候消息
 
 **Kilo Code：** (建议使用 `write_to_file` 工具，如上图所示)
-
 ```xml
 <write_to_file>
 <path>greeting.js</path>
@@ -55,28 +54,28 @@ greet('World');
 
 每次使用工具都需要你的明确批准。当 Kilo 建议使用工具时，你会看到：
 
-- "保存"按钮 - 批准并执行工具
-- "拒绝"按钮 - 拒绝建议的工具
-- 可选的"自动批准"设置 - 用于信任的操作
+* "保存"按钮 - 批准并执行工具
+* "拒绝"按钮 - 拒绝建议的工具
+* 可选的"自动批准"设置 - 用于信任的操作
 
 此安全机制确保你能完全控制哪些文件被修改、执行哪些命令以及如何更改代码库。执行前请务必仔细审查工具建议。
 
 ## 核心工具参考
 
-| 工具名称                     | 描述                         | 类别   |
-| :--------------------------- | :--------------------------- | :----- |
-| `read_file`                  | 读取带行号的文件内容         | 读取   |
-| `search_files`               | 跨文件搜索文本或正则表达式   | 读取   |
-| `list_files`                 | 列出指定位置的文件和目录     | 读取   |
-| `list_code_definition_names` | 列出类/函数等代码定义        | 读取   |
-| `write_to_file`              | 创建新文件或覆盖现有文件     | 编辑   |
-| `apply_diff`                 | 对文件特定部分进行精确修改   | 编辑   |
-| `execute_command`            | 在 VS Code 终端中运行命令    | 执行   |
-| `browser_action`             | 在无头浏览器中执行操作       | 浏览器 |
-| `ask_followup_question`      | 向你提出澄清问题             | 工作流 |
-| `attempt_completion`         | 标记任务已完成               | 工作流 |
-| `switch_mode`                | 切换到不同操作模式           | 工作流 |
-| `new_task`                   | 创建具有特定启动模式的子任务 | 工作流 |
+| 工具名称 | 描述 | 类别 |
+| :------- | :--- | :--- |
+| `read_file` | 读取带行号的文件内容 | 读取 |
+| `search_files` | 跨文件搜索文本或正则表达式 | 读取 |
+| `list_files` | 列出指定位置的文件和目录 | 读取 |
+| `list_code_definition_names` | 列出类/函数等代码定义 | 读取 |
+| `write_to_file` | 创建新文件或覆盖现有文件 | 编辑 |
+| `apply_diff` | 对文件特定部分进行精确修改 | 编辑 |
+| `execute_command` | 在 VS Code 终端中运行命令 | 执行 |
+| `browser_action` | 在无头浏览器中执行操作 | 浏览器 |
+| `ask_followup_question` | 向你提出澄清问题 | 工作流 |
+| `attempt_completion` | 标记任务已完成 | 工作流 |
+| `switch_mode` | 切换到不同操作模式 | 工作流 |
+| `new_task` | 创建具有特定启动模式的子任务 | 工作流 |
 
 ## 了解更多工具信息
 

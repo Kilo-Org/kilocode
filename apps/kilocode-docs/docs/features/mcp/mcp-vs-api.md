@@ -9,14 +9,14 @@ Comparing REST APIs to the Model Context Protocol (MCP) is a category error. The
 
 ## Architectural Differences
 
-| Feature              | MCP                                                  | REST APIs                                         |
-| -------------------- | ---------------------------------------------------- | ------------------------------------------------- |
-| State Management     | **Stateful** - maintains context across interactions | **Stateless** - each request is independent       |
-| Connection Type      | Persistent, bidirectional connections                | One-way request/response                          |
-| Communication Style  | JSON-RPC based with ongoing sessions                 | HTTP-based with discrete requests                 |
-| Context Handling     | Context is intrinsic to the protocol                 | Context must be manually managed                  |
-| Tool Discovery       | Runtime discovery of available tools                 | Design-time integration requiring prior knowledge |
-| Integration Approach | Runtime integration with dynamic capabilities        | Design-time integration requiring code changes    |
+| Feature | MCP | REST APIs |
+|---------|-----|-----------|
+| State Management | **Stateful** - maintains context across interactions | **Stateless** - each request is independent |
+| Connection Type | Persistent, bidirectional connections | One-way request/response |
+| Communication Style | JSON-RPC based with ongoing sessions | HTTP-based with discrete requests |
+| Context Handling | Context is intrinsic to the protocol | Context must be manually managed |
+| Tool Discovery | Runtime discovery of available tools | Design-time integration requiring prior knowledge |
+| Integration Approach | Runtime integration with dynamic capabilities | Design-time integration requiring code changes |
 
 ## Different Layers, Different Purposes
 
@@ -43,23 +43,23 @@ MCP enables an AI to discover and use tools at runtime:
 ```json
 // AI discovers available tools
 {
-	"tools": [
-		{
-			"name": "readFile",
-			"description": "Reads content from a file",
-			"parameters": {
-				"path": { "type": "string", "description": "File path" }
-			}
-		},
-		{
-			"name": "createTicket",
-			"description": "Creates a ticket in issue tracker",
-			"parameters": {
-				"title": { "type": "string" },
-				"description": { "type": "string" }
-			}
-		}
-	]
+  "tools": [
+    {
+      "name": "readFile",
+      "description": "Reads content from a file",
+      "parameters": {
+        "path": { "type": "string", "description": "File path" }
+      }
+    },
+    {
+      "name": "createTicket",
+      "description": "Creates a ticket in issue tracker",
+      "parameters": {
+        "title": { "type": "string" },
+        "description": { "type": "string" }
+      }
+    }
+  ]
 }
 ```
 
@@ -70,13 +70,11 @@ This "plug-and-play" capability allows new tools to be added without redeploying
 Consider a task requiring multiple services: "Check recent commits, create a JIRA ticket for the bug fix, and post to Slack."
 
 **REST-based approach**:
-
 - Requires separate integrations for Git, JIRA, and Slack APIs
 - Needs custom code to manage context between calls
 - Breaks if any service changes its API
 
 **MCP-based approach**:
-
 - One unified protocol for all tools
 - Maintains context across the entire workflow
 - New tools can be swapped in without code changes

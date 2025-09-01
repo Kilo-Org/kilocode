@@ -12,19 +12,17 @@ Kilo Code 支持使用 LM Studio 在本地运行模型。LM Studio 提供了一�
 
 1.  **下载并安装 LM Studio：** 从 [LM Studio 网站](https://lmstudio.ai/)下载 LM Studio。
 2.  **下载模型：** 使用 LM Studio 界面搜索并下载模型。一些推荐的模型包括：
-
-    - CodeLlama 模型（例如，`codellama:7b-code`、`codellama:13b-code`、`codellama:34b-code`）
-    - Mistral 模型（例如，`mistralai/Mistral-7B-Instruct-v0.1`）
-    - DeepSeek Coder 模型（例如，`deepseek-coder:6.7b-base`）
-    - 任何其他受 Kilo Code 支持的模型，或者您可以设置上下文窗口的模型。
+    *   CodeLlama 模型（例如，`codellama:7b-code`、`codellama:13b-code`、`codellama:34b-code`）
+    *   Mistral 模型（例如，`mistralai/Mistral-7B-Instruct-v0.1`）
+    *   DeepSeek Coder 模型（例如，`deepseek-coder:6.7b-base`）
+    * 任何其他受 Kilo Code 支持的模型，或者您可以设置上下文窗口的模型。
 
     查找 GGUF 格式的模型。LM Studio 提供搜索界面以查找和下载模型。
-
 3.  **启动本地服务器：**
-    - 打开 LM Studio。
-    - 单击“**本地服务器**”选项卡（图标看起来像 `<->`）。
-    - 选择您下载的模型。
-    - 单击“**启动服务器**”。
+    *   打开 LM Studio。
+    *   单击“**本地服务器**”选项卡（图标看起来像 `<->`）。
+    *   选择您下载的模型。
+    *   单击“**启动服务器**”。
 
 ## Kilo Code 中的配置
 
@@ -35,8 +33,8 @@ Kilo Code 支持使用 LM Studio 在本地运行模型。LM Studio 提供了一�
 
 ## 提示和注意事项
 
-- **资源要求：** 在本地运行大型语言模型可能资源密集。确保您的计算机满足您选择的模型的最低要求。
-- **模型选择：** LM Studio 提供各种模型。尝试找到最适合您需求的模型。
-- **本地服务器：** LM Studio 本地服务器必须运行，Kilo Code 才能连接到它。
-- **LM Studio 文档：** 有关更多信息，请参阅 [LM Studio 文档](https://lmstudio.ai/docs)。
-- **故障排除：** 如果您看到“请检查 LM Studio 开发人员日志以调试出了什么问题”错误，您可能需要调整 LM Studio 中的上下文长度设置。
+*   **资源要求：** 在本地运行大型语言模型可能资源密集。确保您的计算机满足您选择的模型的最低要求。
+*   **模型选择：** LM Studio 提供各种模型。尝试找到最适合您需求的模型。
+*   **本地服务器：** LM Studio 本地服务器必须运行，Kilo Code 才能连接到它。
+*   **LM Studio 文档：** 有关更多信息，请参阅 [LM Studio 文档](https://lmstudio.ai/docs)。
+*   **故障排除：** 如果您看到“请检查 LM Studio 开发人员日志以调试出了什么问题”错误，您可能需要调整 LM Studio 中的上下文长度设置。

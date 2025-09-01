@@ -50,19 +50,19 @@ When the `list_files` tool is invoked, it follows this process:
 2. **Path Resolution**: Resolves the relative path to an absolute path
 3. **Security Checks**: Prevents listing files in sensitive locations like root or home directories
 4. **Directory Scanning**:
-    - For non-recursive mode: Lists only the top-level contents
-    - For recursive mode: Traverses the directory structure level by level with a 10-second timeout
-    - If timeout occurs, returns partial results collected up to that point
+   - For non-recursive mode: Lists only the top-level contents
+   - For recursive mode: Traverses the directory structure level by level with a 10-second timeout
+   - If timeout occurs, returns partial results collected up to that point
 5. **Result Filtering**:
-    - In recursive mode, skips common large directories like `node_modules`, `.git`, etc.
-    - Respects `.gitignore` rules when in recursive mode
-    - Handles `.kilocodeignore` patterns, either hiding files or marking them with a lock symbol
+   - In recursive mode, skips common large directories like `node_modules`, `.git`, etc.
+   - Respects `.gitignore` rules when in recursive mode
+   - Handles `.kilocodeignore` patterns, either hiding files or marking them with a lock symbol
 6. **Formatting**:
-    - Marks directories with a trailing slash (`/`)
-    - Sorts results to show directories before their contents for logical hierarchy
-    - Marks ignored files with a lock symbol (🔒) when `showKiloCodeIgnored` is enabled
-    - Caps results at 200 files by default with a note about using subdirectories
-    - Organizes results for readability
+   - Marks directories with a trailing slash (`/`)
+   - Sorts results to show directories before their contents for logical hierarchy
+   - Marks ignored files with a lock symbol (🔒) when `showKiloCodeIgnored` is enabled
+   - Caps results at 200 files by default with a note about using subdirectories
+   - Organizes results for readability
 
 ## File Listing Format
 
@@ -75,7 +75,6 @@ The file listing results include:
 - When the file limit is reached, a message appears suggesting to use `list_files` on specific subdirectories
 
 Example output format:
-
 ```
 src/
 src/components/
@@ -89,7 +88,6 @@ File listing truncated (showing 200 of 543 files). Use list_files on specific su
 ```
 
 When `.kilocodeignore` files are used and `showKiloCodeIgnored` is enabled:
-
 ```
 src/
 src/components/
@@ -111,7 +109,6 @@ src/index.ts
 ## Usage Examples
 
 Listing top-level files in the current directory:
-
 ```
 <list_files>
 <path>.</path>
@@ -119,7 +116,6 @@ Listing top-level files in the current directory:
 ```
 
 Recursively listing all files in a source directory:
-
 ```
 <list_files>
 <path>src</path>
@@ -128,7 +124,6 @@ Recursively listing all files in a source directory:
 ```
 
 Examining a specific project subdirectory:
-
 ```
 <list_files>
 <path>src/components</path>

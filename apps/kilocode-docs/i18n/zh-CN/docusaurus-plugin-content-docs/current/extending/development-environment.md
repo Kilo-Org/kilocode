@@ -90,7 +90,7 @@ npm run build
 在开发模式下（NODE_ENV="development"），更改核心代码将触发 `workbench.action.reloadWindow` 命令，因此不再需要手动启动/停止调试器和任务。
 
 > **重要提示**：在生产构建中，更改核心扩展代码时，你需要：
->
+> 
 > 1. 停止调试过程
 > 2. 终止任何在后台运行的 npm 任务（见下图）
 > 3. 重新开始调试

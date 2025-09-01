@@ -19,19 +19,16 @@ The Kilo Code documentation site is a mature, production-ready Docusaurus projec
 The documentation is organized into several major sections:
 
 ### Core User Journey
-
 - **Getting Started**: Installation, setup, and first task completion
 - **Using Kilo Code**: Chat interface, modes, context mentions, and basic features
 - **Core Concepts**: Auto-approving actions, suggested responses, tool usage, and checkpoints
 
 ### Advanced Features
-
 - **Advanced Usage**: Prompt engineering, customization options, memory bank, and large project handling
 - **Customization**: Settings management, custom modes, API configuration profiles
 - **Extending Kilo Code**: Model providers (18+ supported), local models, MCP integration, shell integration
 
 ### Reference Materials
-
 - **Tools Reference**: Comprehensive documentation of all 15+ available tools
 - **Provider Documentation**: Detailed setup guides for Anthropic, OpenAI, and 16+ other AI providers
 - **Community Resources**: Contributing guidelines, development environment setup
@@ -39,14 +36,12 @@ The documentation is organized into several major sections:
 ## Key Features Documented
 
 ### Core Capabilities
-
 - Multi-mode AI assistance (Code, Architect, Ask, Debug, Custom)
 - Comprehensive tool ecosystem for file operations, browser automation, and system commands
 - Memory Bank system for persistent project context
 - MCP (Model Context Protocol) integration for external tool connectivity
 
 ### User Experience Features
-
 - Auto-generated commit messages with customizable templates
 - Context mentions for precise file and code referencing
 - Checkpoints for conversation state management
@@ -54,7 +49,6 @@ The documentation is organized into several major sections:
 - Browser automation for web testing and interaction
 
 ### Extensibility
-
 - 18+ AI model providers supported
 - Custom mode creation with file restrictions and tool limitations
 - Local model support for privacy-conscious development
@@ -63,7 +57,6 @@ The documentation is organized into several major sections:
 ## Technical Implementation
 
 The site uses modern web technologies:
-
 - **Framework**: Docusaurus 3.8.1 for static site generation
 - **Styling**: Custom CSS with VS Code-inspired design elements
 - **Search**: Local search implementation with @easyops-cn/docusaurus-search-local

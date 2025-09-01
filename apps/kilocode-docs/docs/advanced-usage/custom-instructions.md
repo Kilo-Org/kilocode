@@ -34,6 +34,7 @@ Mode-specific instructions can be set using the Modes Tab
         If the mode itself is global (not workspace-specific), any custom instructions you set for it will also apply globally for that mode across all workspaces.
         :::
 
+
 ## Related Features
 
 - [Custom Modes](/docs/features/custom-modes)

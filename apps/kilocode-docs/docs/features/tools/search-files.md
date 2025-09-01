@@ -1,3 +1,4 @@
+
 # search_files
 
 The `search_files` tool performs regex searches across multiple files in your project. It helps Kilo Code locate specific code patterns, text, or other content throughout your codebase with contextual results.
@@ -8,7 +9,7 @@ The tool accepts these parameters:
 
 - `path` (required): The path of the directory to search in, relative to the current working directory
 - `regex` (required): The regular expression pattern to search for (uses Rust regex syntax)
-- `file_pattern` (optional): Glob pattern to filter files (e.g., '\*.ts' for TypeScript files)
+- `file_pattern` (optional): Glob pattern to filter files (e.g., '*.ts' for TypeScript files)
 
 ## What It Does
 
@@ -48,16 +49,16 @@ When the `search_files` tool is invoked, it follows this process:
 1. **Parameter Validation**: Validates the required `path` and `regex` parameters
 2. **Path Resolution**: Resolves the relative path to an absolute path
 3. **Search Execution**:
-    - Uses Ripgrep (rg) for high-performance text searching
-    - Applies file pattern filtering if specified
-    - Collects matches with surrounding context
+   - Uses Ripgrep (rg) for high-performance text searching
+   - Applies file pattern filtering if specified
+   - Collects matches with surrounding context
 4. **Result Formatting**:
-    - Formats results with file paths, line numbers, and context
-    - Displays 1 line of context before and after each match
-    - Structures output for easy readability
-    - Limits results to a maximum of 300 matches with notification
-    - Truncates lines longer than 500 characters
-    - Merges nearby matches into contiguous blocks
+   - Formats results with file paths, line numbers, and context
+   - Displays 1 line of context before and after each match
+   - Structures output for easy readability
+   - Limits results to a maximum of 300 matches with notification
+   - Truncates lines longer than 500 characters
+   - Merges nearby matches into contiguous blocks
 
 ## Search Results Format
 
@@ -65,11 +66,10 @@ The search results include:
 
 - Relative file paths for each matching file (prefixed with #)
 - Context lines before and after each match (1 line by default)
-- Line numbers padded to 3 spaces followed by `|` and the line content
+- Line numbers padded to 3 spaces followed by ` | ` and the line content
 - A separator line (----) after each match group
 
 Example output format:
-
 ```
 # rel/path/to/app.ts
  11 |   // Some processing logic here
@@ -102,7 +102,6 @@ When matches occur close to each other, they're merged into a single block rathe
 ## Usage Examples
 
 Searching for TODO comments in all JavaScript files:
-
 ```
 <search_files>
 <path>src</path>
@@ -112,7 +111,6 @@ Searching for TODO comments in all JavaScript files:
 ```
 
 Finding all usages of a specific function:
-
 ```
 <search_files>
 <path>.</path>
@@ -122,7 +120,6 @@ Finding all usages of a specific function:
 ```
 
 Searching for a specific import pattern across the entire project:
-
 ```
 <search_files>
 <path>.</path>

@@ -46,7 +46,7 @@ This tool manages a comprehensive TODO list that tracks task progress through di
 The tool uses three distinct status indicators:
 
 - `[ ]` **Pending**: Task not yet started
-- `[-]` **In Progress**: Task currently being worked on
+- `[-]` **In Progress**: Task currently being worked on  
 - `[x]` **Completed**: Task fully finished with no unresolved issues
 
 ## How It Works
@@ -54,27 +54,24 @@ The tool uses three distinct status indicators:
 When the `update_todo_list` tool is invoked, it follows this process:
 
 1. **Status Validation**:
-
-    - Parses the markdown checklist format
-    - Validates status indicators are properly formatted
-    - Ensures task descriptions are clear and actionable
+   - Parses the markdown checklist format
+   - Validates status indicators are properly formatted
+   - Ensures task descriptions are clear and actionable
 
 2. **List Replacement**:
-
-    - Completely replaces the existing TODO list
-    - Preserves task order as specified in the update
-    - Maintains task descriptions and status states
+   - Completely replaces the existing TODO list
+   - Preserves task order as specified in the update
+   - Maintains task descriptions and status states
 
 3. **Reminder Integration**:
-
-    - Integrates updated list with the reminder system
-    - Displays current tasks in subsequent message headers
-    - Provides persistent visibility of task progress
+   - Integrates updated list with the reminder system
+   - Displays current tasks in subsequent message headers
+   - Provides persistent visibility of task progress
 
 4. **Progress Tracking**:
-    - Tracks completion status across multiple updates
-    - Maintains task history for reference
-    - Supports workflow continuation across sessions
+   - Tracks completion status across multiple updates
+   - Maintains task history for reference
+   - Supports workflow continuation across sessions
 
 ## Best Practices
 
@@ -96,14 +93,12 @@ When the `update_todo_list` tool is invoked, it follows this process:
 ### When to Use
 
 Use this tool when:
-
 - The task involves multiple steps or requires ongoing tracking
 - New actionable items are discovered during task execution
 - Multiple todos need status updates simultaneously
 - Complex tasks benefit from clear progress visualization
 
 Avoid using when:
-
 - There is only a single, trivial task
 - The task can be completed in one or two simple steps
 - The request is purely conversational or informational
@@ -119,7 +114,6 @@ Avoid using when:
 ## Usage Examples
 
 Initial task breakdown:
-
 ```
 <update_todo_list>
 <todos>
@@ -134,7 +128,6 @@ Initial task breakdown:
 ```
 
 Updating progress and adding discovered tasks:
-
 ```
 <update_todo_list>
 <todos>
@@ -151,7 +144,6 @@ Updating progress and adding discovered tasks:
 ```
 
 Completing multiple tasks and transitioning focus:
-
 ```
 <update_todo_list>
 <todos>
@@ -165,4 +157,3 @@ Completing multiple tasks and transitioning focus:
 [ ] Implement rate limiting for login attempts
 </todos>
 </update_todo_list>
-```

@@ -35,11 +35,11 @@ find all instances of the variable oldValue in @/src/App.js and replace them wit
 ```
 
 **What makes requests work:**
-
 - **Be specific** - "Fix the bug in `calculateTotal` that returns incorrect results" beats "Fix the code"
 - **Use @ mentions** - Reference files and code directly with `@filename`
 - **One task at a time** - Break complex work into manageable steps
 - **Include examples** - Show the style or format you want
+
 
 ## The Chat Interface
 
@@ -50,7 +50,6 @@ find all instances of the variable oldValue in @/src/App.js and replace them wit
 />
 
 **Essential controls:**
-
 - **Chat history** - See your conversation and task history
 - **Input field** - Type your requests here (press Enter to send)
 - **Action buttons** - Approve or reject Kilo's proposed changes
@@ -60,26 +59,24 @@ find all instances of the variable oldValue in @/src/App.js and replace them wit
 ## Quick Interactions
 
 **Click to act:**
-
 - File paths → Opens the file
 - URLs → Opens in browser
 - Messages → Expand/collapse details
 - Code blocks → Copy button appears
 
 **Status signals:**
-
 - Spinning → Kilo is working
 - Red → Error occurred
 - Green → Success
 
 ## Common Mistakes to Avoid
 
-| Instead of this...          | Try this                                                         |
-| --------------------------- | ---------------------------------------------------------------- |
-| "Fix the code"              | "Fix the bug in `calculateTotal` that returns incorrect results" |
-| Assuming Kilo knows context | Use `@` to reference specific files                              |
-| Multiple unrelated tasks    | Submit one focused request at a time                             |
-| Technical jargon overload   | Clear, straightforward language works best                       |
+| Instead of this... | Try this |
+|-------------------|----------|
+| "Fix the code" | "Fix the bug in `calculateTotal` that returns incorrect results" |
+| Assuming Kilo knows context | Use `@` to reference specific files |
+| Multiple unrelated tasks | Submit one focused request at a time |
+| Technical jargon overload | Clear, straightforward language works best |
 
 **Why it matters:** Kilo Code works best when you communicate like you're talking to a smart teammate who needs clear direction.
 

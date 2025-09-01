@@ -16,14 +16,14 @@ The Human Relay provider allows you to use Kilo Code with web-based AI models li
 
 This provider is useful if:
 
-- You want to use models that don't offer direct API access.
-- You prefer not to manage API keys.
-- You need to leverage the specific capabilities or context available only in the web UI of certain AI models.
+*   You want to use models that don't offer direct API access.
+*   You prefer not to manage API keys.
+*   You need to leverage the specific capabilities or context available only in the web UI of certain AI models.
 
 ## Limitations
 
-- **Manual Effort**: Requires constant copy-pasting between VS Code and your browser.
-- **Slower Interaction**: The back-and-forth process is significantly slower than direct API integration.
-- **Potential for Errors**: Manual copying and pasting can introduce errors or omissions.
+*   **Manual Effort**: Requires constant copy-pasting between VS Code and your browser.
+*   **Slower Interaction**: The back-and-forth process is significantly slower than direct API integration.
+*   **Potential for Errors**: Manual copying and pasting can introduce errors or omissions.
 
 Choose this provider when the benefits of using a specific web AI outweigh the inconvenience of the manual relay process.

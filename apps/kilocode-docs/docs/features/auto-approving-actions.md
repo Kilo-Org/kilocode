@@ -16,28 +16,28 @@ Auto-approve settings speed up your workflow by eliminating repetitive confirmat
 
 <img src="/docs/img/auto-approving-actions/auto-approving-actions.png" alt="Auto-approve toolbar collapsed state" width="600" />
 
-_Prompt box and Auto-Approve Toolbar showing enabled permissions_
+*Prompt box and Auto-Approve Toolbar showing enabled permissions*
 
 Click the toolbar to expand it and configure individual permissions:
 
 <img src="/docs/img/auto-approving-actions/auto-approving-actions-1.png" alt="Auto-approve toolbar expanded state" width="600" />
 
-_Prompt text box and Expanded toolbar with all options_
+*Prompt text box and Expanded toolbar with all options*
 
 ### Available Permissions
 
-| Permission                     | What it does                                     | Risk level  |
-| ------------------------------ | ------------------------------------------------ | ----------- |
-| **Read files and directories** | Lets Kilo Code access files without asking       | Medium      |
-| **Edit files**                 | Lets Kilo Code modify files without asking       | **High**    |
-| **Execute approved commands**  | Runs whitelisted terminal commands automatically | **High**    |
-| **Use the browser**            | Allows headless browser interaction              | Medium      |
-| **Use MCP servers**            | Lets Kilo Code use configured MCP services       | Medium-High |
-| **Switch modes**               | Changes between Kilo Code modes automatically    | Low         |
-| **Create & complete subtasks** | Manages subtasks without confirmation            | Low         |
-| **Retry failed requests**      | Automatically retries failed API requests        | Low         |
-| **Answer follow-up questions** | Selects default answer for follow-up questions   | Low         |
-| **Update todo list**           | Automatically updates task progress              | Low         |
+| Permission | What it does | Risk level |
+|------------|--------------|------------|
+| **Read files and directories** | Lets Kilo Code access files without asking | Medium |
+| **Edit files** | Lets Kilo Code modify files without asking | **High** |
+| **Execute approved commands** | Runs whitelisted terminal commands automatically | **High** |
+| **Use the browser** | Allows headless browser interaction | Medium |
+| **Use MCP servers** | Lets Kilo Code use configured MCP services | Medium-High |
+| **Switch modes** | Changes between Kilo Code modes automatically | Low |
+| **Create & complete subtasks** | Manages subtasks without confirmation | Low |
+| **Retry failed requests** | Automatically retries failed API requests | Low |
+| **Answer follow-up questions** | Selects default answer for follow-up questions| Low |
+| **Update todo list** | Automatically updates task progress | Low |
 
 ## Master Toggle for Quick Control
 
@@ -45,10 +45,9 @@ The leftmost checkbox works as a master toggle:
 
 <img src="/docs/img/auto-approving-actions/auto-approving-actions-14.png" alt="Master toggle in Auto-approve toolbar" width="600" />
 
-_Master toggle (checkbox) controls all auto-approve permissions at once_
+*Master toggle (checkbox) controls all auto-approve permissions at once*
 
 Use the master toggle when:
-
 - Working in sensitive code (turn off)
 - Doing rapid development (turn on)
 - Switching between exploration and editing tasks
@@ -66,7 +65,7 @@ To access these settings:
 
 <img src="/docs/img/auto-approving-actions/auto-approving-actions-4.png" alt="Settings panel auto-approve options" width="550" />
 
-_Complete settings panel view_
+*Complete settings panel view*
 
 ### Read Operations
 
@@ -96,7 +95,6 @@ While this setting only allows reading files (not modifying them), it could pote
 **Risk level:** High
 
 This setting allows Kilo Code to modify your files without confirmation. The delay timer is crucial:
-
 - Higher values (2000ms+): Recommended for complex projects where diagnostics take longer
 - Default (1000ms): Suitable for most projects
 - Lower values: Use only when speed is critical and you're in a controlled environment
@@ -106,7 +104,7 @@ This setting allows Kilo Code to modify your files without confirmation. The del
 
 <img src="/docs/img/auto-approving-actions/auto-approving-actions-5.png" alt="VSCode Problems pane showing diagnostic information" width="600" />
 
-_VSCode Problems pane that Kilo Code checks during the write delay_
+*VSCode Problems pane that Kilo Code checks during the write delay*
 
 When you enable auto-approval for writing files, the delay timer works with VSCode's Problems pane:
 
@@ -120,7 +118,7 @@ This works like a human developer pausing to check for errors after changing cod
 - Project complexity
 - Language server speed
 - How important error detection is for your workflow
-  :::
+:::
 
 ### Browser Actions
 
@@ -136,7 +134,6 @@ This works like a human developer pausing to check for errors after changing cod
 **Risk level:** Medium
 
 Allows Kilo Code to control a headless browser without confirmation. This can include:
-
 - Opening websites
 - Navigating pages
 - Interacting with web elements
@@ -158,10 +155,9 @@ Consider the security implications of allowing automated browser access.
 **Risk level:** Low
 
 This setting automatically retries API calls when they fail. The delay controls how long Kilo Code waits before trying again:
-
 - Longer delays are gentler on API rate limits
 - Shorter delays give faster recovery from transient errors
-  :::
+:::
 
 ### MCP Tools
 
@@ -214,23 +210,22 @@ Enables Kilo Code to create and complete subtasks automatically. This relates to
 
 **Description:** "Automatically execute allowed terminal commands without requiring approval"
 
-**Command management:** "Command prefixes that can be auto-executed when 'Always approve execute operations' is enabled. Add \* to allow all commands (use with caution)."
+**Command management:** "Command prefixes that can be auto-executed when 'Always approve execute operations' is enabled. Add * to allow all commands (use with caution)."
 
 **Risk level:** High
 
 This setting allows terminal command execution with controls. While risky, the whitelist feature limits what commands can run. Important security features:
 
 - Whitelist specific command prefixes (recommended)
-- Never use \* wildcard in production or with sensitive data
+- Never use * wildcard in production or with sensitive data
 - Consider security implications of each allowed command
 - Always verify commands that interact with external systems
 
 **Interface elements:**
-
 - Text field to enter command prefixes (e.g., 'git')
 - "Add" button to add new prefixes
 - Clickable command buttons with X to remove them
-  :::
+:::
 
 ### Follow-Up Questions
 
@@ -245,7 +240,6 @@ This setting allows terminal command execution with controls. While risky, the w
 **Timeout slider:** Use the slider to set the wait time from 1 to 300 seconds (Default: 60s).
 
 **Override options:** You can cancel the auto-selection at any time by:
-
 - Clicking a different suggestion
 - Editing any suggestion
 - Typing your own response
@@ -254,11 +248,10 @@ This setting allows terminal command execution with controls. While risky, the w
 **Risk level:** Low
 
 **Use cases:**
-
 - Overnight runs where you want Roo to continue working
 - Repetitive tasks where the default suggestions are usually correct
 - Testing workflows where interaction isn't critical
-  :::
+:::
 
 ### Update Todo List
 
@@ -271,21 +264,18 @@ This setting allows terminal command execution with controls. While risky, the w
 **Risk level:** Low
 
 This setting allows Roo to automatically update task progress and todo lists during work sessions. This includes:
-
 - Marking tasks as completed
 - Adding new discovered tasks
 - Updating task status (pending, in progress, completed)
 - Reorganizing task priorities
 
 **Benefits:**
-
 - Maintains real-time task progress visibility
 - Reduces interruptions during multi-step workflows
 - Keeps project status accurately reflected
 - Helps track complex task dependencies
 
 **Use cases:**
-
 - Long-running development sessions
 - Multi-step refactoring projects
 - Complex debugging workflows

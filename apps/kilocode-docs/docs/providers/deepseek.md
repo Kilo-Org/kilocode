@@ -12,15 +12,15 @@ Kilo Code supports accessing models through the DeepSeek API, including `deepsee
 
 1.  **Sign Up/Sign In:** Go to the [DeepSeek Platform](https://platform.deepseek.com/). Create an account or sign in.
 2.  **Navigate to API Keys:** Find your API keys in the [API keys](https://platform.deepseek.com/api_keys) section of the platform.
-3.  **Create a Key:** Click "Create new API key". Give your key a descriptive name (e.g., "Kilo Code").
-4.  **Copy the Key:** **Important:** Copy the API key _immediately_. You will not be able to see it again. Store it securely.
+3.  **Create a Key:** Click "Create new API key".  Give your key a descriptive name (e.g., "Kilo Code").
+4.  **Copy the Key:**  **Important:** Copy the API key *immediately*.  You will not be able to see it again.  Store it securely.
 
 ## Supported Models
 
 Kilo Code supports the following DeepSeek models:
 
-- `deepseek-chat` (Recommended for coding tasks)
-- `deepseek-reasoner` (Recommended for reasoning tasks)
+*   `deepseek-chat` (Recommended for coding tasks)
+*	  `deepseek-reasoner` (Recommended for reasoning tasks)
 
 ## Configuration in Kilo Code
 
@@ -30,5 +30,4 @@ Kilo Code supports the following DeepSeek models:
 4.  **Select Model:** Choose your desired model from the "Model" dropdown.
 
 ## Tips and Notes
-
-- **Pricing:** Refer to the [DeepSeek Pricing](https://api-docs.deepseek.com/quick_start/pricing/) page for details on model costs.
+*   **Pricing:** Refer to the [DeepSeek Pricing](https://api-docs.deepseek.com/quick_start/pricing/) page for details on model costs.

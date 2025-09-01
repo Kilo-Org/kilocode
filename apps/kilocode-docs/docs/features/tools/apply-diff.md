@@ -52,12 +52,12 @@ When the `apply_diff` tool is invoked, it follows this process:
 4.  **Match Finding**: Uses the selected strategy's algorithms (exact, fuzzy, overlapping windows) to locate the target content, considering confidence thresholds and context (`BUFFER_LINES`).
 5.  **Change Preparation**: Generates the proposed changes, preserving indentation.
 6.  **User Interaction**:
-    - Displays the changes in a diff view.
-    - Allows the user to review and potentially edit the proposed changes.
-    - Waits for user approval or rejection.
+    *   Displays the changes in a diff view.
+    *   Allows the user to review and potentially edit the proposed changes.
+    *   Waits for user approval or rejection.
 7.  **Change Application**: If approved, applies the changes (potentially including user edits) to the file.
 8.  **Error Handling**: If errors occur (e.g., match failure, partial application), increments the `consecutiveMistakeCountForApplyDiff` for the file and reports the failure type.
-9.  **Feedback**: Returns the result, including any user feedback or error details.
+9. **Feedback**: Returns the result, including any user feedback or error details.
 
 ## Diff Strategy
 
@@ -67,8 +67,8 @@ Kilo Code uses this strategy for applying diffs:
 
 An enhanced search/replace format supporting multiple changes in one request. **Line numbers are mandatory for each search block.**
 
-- **Best for**: Multiple, distinct changes where line numbers are known or can be estimated.
-- **Requires**: Exact match for the `SEARCH` block content, including whitespace and indentation. The `:start_line:` marker is **required** within each SEARCH block. Markers within content must be escaped (`\`).
+*   **Best for**: Multiple, distinct changes where line numbers are known or can be estimated.
+*   **Requires**: Exact match for the `SEARCH` block content, including whitespace and indentation. The `:start_line:` marker is **required** within each SEARCH block. Markers within content must be escaped (`\`).
 
 Example format for the `<diff>` block:
 
