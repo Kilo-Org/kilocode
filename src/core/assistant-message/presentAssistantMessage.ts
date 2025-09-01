@@ -21,6 +21,7 @@ import { listCodeDefinitionNamesTool } from "../tools/listCodeDefinitionNamesToo
 import { searchFilesTool } from "../tools/searchFilesTool"
 import { browserActionTool } from "../tools/browserActionTool"
 import { executeCommandTool } from "../tools/executeCommandTool"
+import { useVSCLMT } from "../tools/vsclmt"
 import { useMcpToolTool } from "../tools/useMcpToolTool"
 import { accessMcpResourceTool } from "../tools/accessMcpResourceTool"
 import { askFollowupQuestionTool } from "../tools/askFollowupQuestionTool"
@@ -212,6 +213,8 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 						return `[${block.name} for '${block.params.path}']`
 					case "browser_action":
 						return `[${block.name} for '${block.params.action}']`
+					case "use_vsclmt":
+						return `[${block.name} for '${block.params.tool_name}']`
 					case "use_mcp_tool":
 						return `[${block.name} for '${block.params.server_name}']`
 					case "access_mcp_resource":
@@ -529,6 +532,9 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 					break
 				case "execute_command":
 					await executeCommandTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
+					break
+				case "use_vsclmt":
+					await useVSCLMT(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 				case "use_mcp_tool":
 					await useMcpToolTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)

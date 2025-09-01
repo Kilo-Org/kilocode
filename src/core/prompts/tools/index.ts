@@ -19,6 +19,7 @@ import { getListCodeDefinitionNamesDescription } from "./list-code-definition-na
 import { getBrowserActionDescription } from "./browser-action"
 import { getAskFollowupQuestionDescription } from "./ask-followup-question"
 import { getAttemptCompletionDescription } from "./attempt-completion"
+import { getVSCLMTDescription } from "./vsclmt"
 import { getUseMcpToolDescription } from "./use-mcp-tool"
 import { getAccessMcpResourceDescription } from "./access-mcp-resource"
 import { getSwitchModeDescription } from "./switch-mode"
@@ -35,6 +36,7 @@ import { type ClineProviderState } from "../../webview/ClineProvider"
 
 // Map of tool names to their description functions
 const toolDescriptionMap: Record<string, (args: ToolArgs) => string | undefined> = {
+	use_vsclmt: (args) => getVSCLMTDescription(args),
 	execute_command: (args) => getExecuteCommandDescription(args),
 	read_file: (args) => {
 		// Check if the current model should use the simplified read_file tool
@@ -176,6 +178,7 @@ export {
 	getBrowserActionDescription,
 	getAskFollowupQuestionDescription,
 	getAttemptCompletionDescription,
+	getVSCLMTDescription,
 	getUseMcpToolDescription,
 	getAccessMcpResourceDescription,
 	getSwitchModeDescription,

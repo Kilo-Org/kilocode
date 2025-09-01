@@ -122,6 +122,13 @@
 					"type": "webview",
 					"id": "kilo-code.SidebarProvider",
 					"name": "%views.sidebar.name%"
+				},
+				{
+					"type": "tree",
+					"id": "kilo-tool-selection",
+					"name": "Tool Selection",
+					"icon": "$(tools)",
+					"visibility": "visible"
 				}
 			]
 		},
@@ -254,6 +261,21 @@
 					"light": "assets/icons/kilo-light.svg",
 					"dark": "assets/icons/kilo-dark.svg"
 				},
+				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.setManualApproval",
+				"title": "Switch to Manual Approval",
+				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.setAutoApproval",
+				"title": "Switch to Auto Approval",
+				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.addMoreTools",
+				"title": "+ Add More",
 				"category": "%configuration.title%"
 			},
 			{
@@ -411,6 +433,21 @@
 			],
 			"view/title": [
 				{
+					"command": "kilo-code.setManualApproval",
+					"group": "navigation@1",
+					"when": "view == kilo-tool-selection && config.chat.tools.autoApprove == true"
+				},
+				{
+					"command": "kilo-code.setAutoApproval",
+					"group": "navigation@1",
+					"when": "view == kilo-tool-selection && config.chat.tools.autoApprove != true"
+				},
+				{
+					"command": "kilo-code.addMoreTools",
+					"group": "navigation@2",
+					"when": "view == kilo-tool-selection"
+				},
+				{
 					"command": "kilo-code.plusButtonClicked",
 					"group": "navigation@1",
 					"when": "view == kilo-code.SidebarProvider"
@@ -510,6 +547,11 @@
 		"configuration": {
 			"title": "%configuration.title%",
 			"properties": {
+				"chat.tools.autoApprove": {
+					"type": "boolean",
+					"default": false,
+					"description": "Automatically approve tool invocations in chat without manual confirmation"
+				},
 				"kilo-code.allowedCommands": {
 					"type": "array",
 					"items": {
