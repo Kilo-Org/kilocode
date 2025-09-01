@@ -31,6 +31,7 @@ export const GhostServiceSettingsView = ({
 		apiConfigId,
 		enableQuickInlineTaskKeybinding,
 		enableSmartInlineTaskKeybinding,
+		enableCustomProvider,
 	} = ghostServiceSettings || {}
 	const { listApiConfigMeta } = useExtensionState()
 
@@ -59,6 +60,14 @@ export const GhostServiceSettingsView = ({
 		setCachedStateField("ghostServiceSettings", {
 			...ghostServiceSettings,
 			enableSmartInlineTaskKeybinding: newValue,
+		})
+	}
+
+	const onEnableCustomProviderChange = (newValue: boolean) => {
+		setCachedStateField("ghostServiceSettings", {
+			...ghostServiceSettings,
+			enableCustomProvider: newValue,
+			apiConfigId: newValue ? ghostServiceSettings?.apiConfigId : "",
 		})
 	}
 
@@ -206,40 +215,56 @@ export const GhostServiceSettingsView = ({
 							<div>{t("kilocode:ghost.settings.provider")}</div>
 						</div>
 					</div>
-					<div className="flex flex-col gap-3">
-						<div>
-							<label className="block font-medium mb-1">
-								{t("kilocode:ghost.settings.apiConfigId.label")}
-							</label>
-							<div className="flex items-center gap-2">
-								<div>
-									<Select value={apiConfigId || "-"} onValueChange={onApiConfigIdChange}>
-										<SelectTrigger data-testid="autocomplete-api-config-select" className="w-full">
-											<SelectValue
-												placeholder={t("kilocode:ghost.settings.apiConfigId.current")}
-											/>
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="-">
-												{t("kilocode:ghost.settings.apiConfigId.current")}
-											</SelectItem>
-											{(listApiConfigMeta || []).map((config) => (
-												<SelectItem
-													key={config.id}
-													value={config.id}
-													data-testid={`autocomplete-${config.id}-option`}>
-													{config.name} ({config.apiProvider})
+					<div className="flex flex-col gap-1">
+						<ControlledCheckbox
+							checked={enableCustomProvider || false}
+							onChange={onEnableCustomProviderChange}>
+							<span className="font-medium">
+								{t("kilocode:ghost.settings.enableCustomProvider.label")}
+							</span>
+						</ControlledCheckbox>
+						<div className="text-vscode-descriptionForeground text-sm mt-1">
+							<Trans i18nKey="kilocode:ghost.settings.enableCustomProvider.description" />
+						</div>
+					</div>
+					{enableCustomProvider && (
+						<div className="flex flex-col gap-3">
+							<div>
+								<label className="block font-medium mb-1">
+									{t("kilocode:ghost.settings.apiConfigId.label")}
+								</label>
+								<div className="flex items-center gap-2">
+									<div>
+										<Select value={apiConfigId || "-"} onValueChange={onApiConfigIdChange}>
+											<SelectTrigger
+												data-testid="autocomplete-api-config-select"
+												className="w-full">
+												<SelectValue
+													placeholder={t("kilocode:ghost.settings.apiConfigId.current")}
+												/>
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="-">
+													{t("kilocode:ghost.settings.apiConfigId.current")}
 												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-									<div className="text-sm text-vscode-descriptionForeground mt-1">
-										{t("kilocode:ghost.settings.apiConfigId.description")}
+												{(listApiConfigMeta || []).map((config) => (
+													<SelectItem
+														key={config.id}
+														value={config.id}
+														data-testid={`autocomplete-${config.id}-option`}>
+														{config.name} ({config.apiProvider})
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+										<div className="text-sm text-vscode-descriptionForeground mt-1">
+											{t("kilocode:ghost.settings.apiConfigId.description")}
+										</div>
 									</div>
 								</div>
 							</div>
 						</div>
-					</div>
+					)}
 				</div>
 			</Section>
 		</div>

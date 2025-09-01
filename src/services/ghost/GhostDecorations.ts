@@ -1,159 +1,55 @@
 import * as vscode from "vscode"
 import { GhostSuggestionsState } from "./GhostSuggestions"
+import { GhostSuggestionEditOperation } from "./types"
 
 const ADDITION_DECORATION_OPTIONS: vscode.DecorationRenderOptions = {
 	after: {
-		margin: "0 0 0 0.1em",
-		color: new vscode.ThemeColor("editor.background"),
-		backgroundColor: new vscode.ThemeColor("editorGutter.addedBackground"),
+		color: new vscode.ThemeColor("editor.foreground"),
+		backgroundColor: new vscode.ThemeColor("editor.background"),
+		border: "1px solid",
+		borderColor: new vscode.ThemeColor("editorGutter.addedBackground"),
 	},
-	opacity: "0.8",
 	isWholeLine: false,
+	borderColor: new vscode.ThemeColor("editorGutter.addedBackground"),
 	overviewRulerColor: new vscode.ThemeColor("editorGutter.addedBackground"),
 	overviewRulerLane: vscode.OverviewRulerLane.Right,
 }
 
-const ADDITION_ACTIVE_DECORATION_OPTIONS: vscode.DecorationRenderOptions = {
-	...ADDITION_DECORATION_OPTIONS,
-	after: {
-		...ADDITION_DECORATION_OPTIONS.after,
-		borderColor: new vscode.ThemeColor("editorGutter.addedSecondaryBackground"),
-		border: "1px solid",
-		fontWeight: "bold",
-	},
-}
-
 const DELETION_DECORATION_OPTIONS: vscode.DecorationRenderOptions = {
 	isWholeLine: false,
-	color: new vscode.ThemeColor("editor.background"),
-	backgroundColor: new vscode.ThemeColor("editorGutter.deletedBackground"),
-	opacity: "0.8",
+	border: "1px solid",
+	borderColor: new vscode.ThemeColor("editorGutter.deletedBackground"),
 	overviewRulerColor: new vscode.ThemeColor("editorGutter.deletedBackground"),
 	overviewRulerLane: vscode.OverviewRulerLane.Right,
 }
 
-const DELETION_ACTIVE_DECORATION_OPTIONS: vscode.DecorationRenderOptions = {
-	...DELETION_DECORATION_OPTIONS,
-	borderColor: new vscode.ThemeColor("editorGutter.deletedSecondaryBackground"),
-	borderStyle: "solid",
-	borderWidth: "1px",
-	fontWeight: "bold",
+const EDIT_DECORATION_OPTIONS: vscode.DecorationRenderOptions = {
+	after: {
+		// CSS INJECT
+		textDecoration:
+			"none; display: block; position: absolute; top: 100%; left: 20px; width: max-content; z-index: 10000; box-shadow: 0 1px 3px rgba(255, 255, 255, 0.12), 0 1px 2px rgba(255, 255, 255, 0.24); padding: 0.2em;",
+		color: new vscode.ThemeColor("editor.foreground"),
+		backgroundColor: new vscode.ThemeColor("editor.background"),
+		border: "1px solid",
+		borderColor: new vscode.ThemeColor("editorGutter.addedBackground"),
+	},
+	textDecoration: "none; position: relative;",
+	isWholeLine: false,
+	border: "1px solid",
+	borderColor: new vscode.ThemeColor("editorGutter.deletedBackground"),
+	overviewRulerColor: new vscode.ThemeColor("editorGutter.deletedBackground"),
+	overviewRulerLane: vscode.OverviewRulerLane.Right,
 }
 
 export class GhostDecorations {
 	private additionDecorationType: vscode.TextEditorDecorationType
 	private deletionDecorationType: vscode.TextEditorDecorationType
-	private deletionActiveDecorationType: vscode.TextEditorDecorationType
+	private editionDecorationType: vscode.TextEditorDecorationType
 
 	constructor() {
 		this.additionDecorationType = vscode.window.createTextEditorDecorationType(ADDITION_DECORATION_OPTIONS)
 		this.deletionDecorationType = vscode.window.createTextEditorDecorationType(DELETION_DECORATION_OPTIONS)
-		this.deletionActiveDecorationType = vscode.window.createTextEditorDecorationType(
-			DELETION_ACTIVE_DECORATION_OPTIONS,
-		)
-	}
-
-	/**
-	 * Displays the ghost suggestions in the active text editor based on the provided operations.
-	 * @param operations An array of edit operations to visualize.
-	 */
-	public displaySuggestions(suggestions: GhostSuggestionsState): void {
-		const editor = vscode.window.activeTextEditor
-		if (!editor) {
-			console.log("No active editor found, returning")
-			return
-		}
-
-		const additionDecorations: vscode.DecorationOptions[] = []
-		const deletionDecorations: vscode.DecorationOptions[] = []
-		const deletionActiveDecorations: vscode.DecorationOptions[] = []
-
-		const documentUri = editor.document.uri
-		const suggestionsFile = suggestions.getFile(documentUri)
-		if (!suggestionsFile) {
-			console.log(`No suggestions found for document: ${documentUri.toString()}`)
-			return
-		}
-		const fileOperations = suggestions.getFile(documentUri)?.getAllOperations() || []
-		if (fileOperations.length === 0) {
-			console.log("No operations to display, returning")
-			return
-		}
-		let linesAdded = 0
-		let linesRemoved = 0
-
-		const groups = suggestionsFile.getGroupsOperations()
-		if (groups.length === 0) {
-			console.log("No groups to display, returning")
-			return
-		}
-
-		for (let groupIndex = 0; groupIndex < groups.length; groupIndex++) {
-			const operations = groups[groupIndex]
-			const selected = groupIndex === suggestionsFile.getSelectedGroup()
-			for (const op of operations) {
-				if (op.type === "+") {
-					const anchorLine = op.line + linesRemoved
-					if (anchorLine < 0 || anchorLine >= editor.document.lineCount) {
-						continue
-					}
-
-					const nextLineInfo = editor.document.lineAt(anchorLine)
-					const position = nextLineInfo.range.start
-					const range = new vscode.Range(position, position)
-
-					// Whitespace in `contentText` collapses. To preserve indentation,
-					// replace leading spaces with non-breaking space characters.
-					const leadingWhitespace = op.content.match(/^\s*/)?.[0] ?? ""
-					const preservedWhitespace = leadingWhitespace.replace(/ /g, "\u00A0")
-					const trimmedContent = op.content.trimStart()
-
-					// Make the ghost text more visible with a clear prefix and formatting
-					// Split the content by newlines to handle multi-line additions properly
-					const contentText = preservedWhitespace + trimmedContent
-
-					const renderOptions: vscode.DecorationRenderOptions = selected
-						? { ...ADDITION_ACTIVE_DECORATION_OPTIONS }
-						: { ...ADDITION_DECORATION_OPTIONS }
-
-					renderOptions.after = {
-						...renderOptions.after,
-						contentText: `${contentText}`,
-					}
-
-					additionDecorations.push({
-						range,
-						renderOptions,
-					})
-					linesAdded++
-				}
-
-				if (op.type === "-") {
-					const anchorLine = op.line + linesAdded
-					if (anchorLine < 0 || anchorLine >= editor.document.lineCount) {
-						continue
-					}
-					const range = editor.document.lineAt(anchorLine).range
-
-					if (selected) {
-						deletionActiveDecorations.push({
-							range,
-						})
-					} else {
-						deletionDecorations.push({
-							range,
-						})
-					}
-
-					linesRemoved++
-				}
-			}
-		}
-
-		// Apply the decorations directly
-		editor.setDecorations(this.additionDecorationType, additionDecorations)
-		editor.setDecorations(this.deletionDecorationType, deletionDecorations)
-		editor.setDecorations(this.deletionActiveDecorationType, deletionActiveDecorations)
+		this.editionDecorationType = vscode.window.createTextEditorDecorationType(EDIT_DECORATION_OPTIONS)
 	}
 
 	/**
@@ -167,6 +63,163 @@ export class GhostDecorations {
 
 		editor.setDecorations(this.additionDecorationType, [])
 		editor.setDecorations(this.deletionDecorationType, [])
-		editor.setDecorations(this.deletionActiveDecorationType, [])
+		editor.setDecorations(this.editionDecorationType, [])
+	}
+
+	// TODO: Split the differences between the contents and show each range individually
+	private displayEditOpertionGroup = (editor: vscode.TextEditor, group: GhostSuggestionEditOperation[]) => {
+		const line = Math.min(...group.map((x) => x.oldLine))
+
+		const nextLineInfo = editor.document.lineAt(line)
+		const range = nextLineInfo.range
+
+		const newContent = group.find((x) => x.type === "+")?.content || ""
+
+		const leadingWhitespace = newContent.match(/^\s*/)?.[0] ?? ""
+		const preservedWhitespace = leadingWhitespace.replace(/ /g, "\u00A0")
+		const trimmedContent = newContent.trimStart()
+
+		const contentText = preservedWhitespace + trimmedContent
+
+		const renderOptions: vscode.DecorationRenderOptions = { ...EDIT_DECORATION_OPTIONS }
+		renderOptions.after = {
+			...renderOptions.after,
+			contentText: `${contentText}`,
+		}
+
+		// Apply the decorations directly
+		editor.setDecorations(this.additionDecorationType, [])
+		editor.setDecorations(this.deletionDecorationType, [])
+		editor.setDecorations(this.editionDecorationType, [
+			{
+				range,
+				renderOptions,
+			},
+		])
+	}
+
+	private displayDeleteOperationGroup = (editor: vscode.TextEditor, group: GhostSuggestionEditOperation[]) => {
+		const lines = group.map((x) => x.oldLine)
+		const from = Math.min(...lines)
+		const to = Math.max(...lines)
+
+		const start = editor.document.lineAt(from).range.start
+		const end = editor.document.lineAt(to).range.end
+		const range = new vscode.Range(start, end)
+
+		editor.setDecorations(this.additionDecorationType, [])
+		editor.setDecorations(this.editionDecorationType, [])
+		editor.setDecorations(this.deletionDecorationType, [
+			{
+				range,
+			},
+		])
+	}
+
+	private getCssInjectionForEdit = (content: string) => {
+		let filteredContent = content
+		if (filteredContent === "") {
+			filteredContent = "[↵]"
+		}
+		filteredContent = filteredContent.replaceAll(`"`, `\\"`)
+		filteredContent = filteredContent.replaceAll(`'`, `\\'`)
+		filteredContent = filteredContent.replaceAll(`;`, `\\;`)
+
+		console.log(content)
+
+		return `none; display: block; position: absolute; top: 0px; left: 0px; width: max-content; z-index: 10000; white-space: pre-wrap; content: "${filteredContent}"; box-shadow: 0 1px 3px rgba(255, 255, 255, 0.12), 0 1px 2px rgba(255, 255, 255, 0.24); padding: 0.2em;`
+	}
+
+	private displayAdditionsOperationGroup = (editor: vscode.TextEditor, group: GhostSuggestionEditOperation[]) => {
+		const line = Math.min(...group.map((x) => x.oldLine))
+
+		// Handle end-of-document additions gracefully
+		let range: vscode.Range
+		if (line >= editor.document.lineCount) {
+			// If the line is beyond the document, use the last line of the document
+			const lastLineIndex = Math.max(0, editor.document.lineCount - 1)
+			const lastLineInfo = editor.document.lineAt(lastLineIndex)
+			range = new vscode.Range(lastLineInfo.range.end, lastLineInfo.range.end)
+		} else {
+			// Normal case: line exists in the document
+			const nextLineInfo = editor.document.lineAt(line)
+			range = nextLineInfo.range
+		}
+
+		let content = group
+			.sort((a, b) => a.line - b.line)
+			.map((x) => x.content)
+			.join(`\\A `)
+
+		const renderOptions: vscode.DecorationRenderOptions = { ...ADDITION_DECORATION_OPTIONS }
+		renderOptions.after = {
+			...renderOptions.after,
+			textDecoration: this.getCssInjectionForEdit(content),
+		}
+
+		// Apply the decorations directly
+		editor.setDecorations(this.deletionDecorationType, [])
+		editor.setDecorations(this.editionDecorationType, [])
+		editor.setDecorations(this.additionDecorationType, [
+			{
+				range,
+				renderOptions,
+			},
+		])
+	}
+
+	/**
+	 * Displays the ghost suggestions in the active text editor based on the provided operations.
+	 * @param operations An array of edit operations to visualize.
+	 */
+	public displaySuggestions(suggestions: GhostSuggestionsState): void {
+		const editor = vscode.window.activeTextEditor
+		if (!editor) {
+			console.log("No active editor found, returning")
+			return
+		}
+
+		const documentUri = editor.document.uri
+		const suggestionsFile = suggestions.getFile(documentUri)
+		if (!suggestionsFile) {
+			console.log(`No suggestions found for document: ${documentUri.toString()}`)
+			this.clearAll()
+			return
+		}
+		const fileOperations = suggestions.getFile(documentUri)?.getAllOperations() || []
+		if (fileOperations.length === 0) {
+			console.log("No operations to display, returning")
+			this.clearAll()
+			return
+		}
+
+		const groups = suggestionsFile.getGroupsOperations()
+		if (groups.length === 0) {
+			console.log("No groups to display, returning")
+			this.clearAll()
+			return
+		}
+
+		const selectedGroupIndex = suggestionsFile.getSelectedGroup()
+		if (selectedGroupIndex === null) {
+			console.log("No group selected, returning")
+			this.clearAll()
+			return
+		}
+		const selectedGroup = groups[selectedGroupIndex]
+		const groupType = suggestionsFile.getGroupType(selectedGroup)
+
+		console.log("selectedGroup", selectedGroup)
+		console.log("groupType", groupType)
+
+		if (groupType === "/") {
+			this.displayEditOpertionGroup(editor, selectedGroup)
+		} else if (groupType === "-") {
+			this.displayDeleteOperationGroup(editor, selectedGroup)
+		} else if (groupType === "+") {
+			this.displayAdditionsOperationGroup(editor, selectedGroup)
+		} else {
+			this.clearAll()
+		}
 	}
 }

@@ -17,7 +17,9 @@
 		"costUnknown": "вартість невідома",
 		"costUnknownDescription": "API провайдер не надав дані про вартість або запит було скасовано.",
 		"freeModelsDescription": "Безкоштовні моделі можуть мати обмеження швидкості. Використовуй посилання нижче, щоб оптимізувати використання безкоштовних моделей!",
-		"freeModelsLink": "Дізнатися про безкоштовні та бюджетні моделі"
+		"freeModelsLink": "Дізнатися про безкоштовні та бюджетні моделі",
+		"openRouterMarkup": "Провайдер Kilo Code включає всі моделі OpenRouter, без наценки та з 0% комісії!",
+		"switchToKiloCode": "Перейти на Kilo Code"
 	},
 	"notifications": {
 		"toolRequest": "Запит інструменту очікує на схвалення",
@@ -91,7 +93,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code хоче стиснути твою розмову",
 			"condenseConversation": "Стиснути розмову"
-		}
+		},
+		"seeNewChanges": "Показати нові зміни"
 	},
 	"newTaskPreview": {
 		"task": "Завдання"
@@ -204,6 +207,10 @@
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Розумне вбудоване завдання",
 				"description": "Потрібно швидко виправити, доповнити чи відрефакторити код? Kilo використовуватиме навколишній контекст для миттєвих покращень, дозволяючи вам не втрачати концентрацію. <DocsLink>Див. комбінацію клавіш</DocsLink>"
+			},
+			"enableCustomProvider": {
+				"label": "Використовувати власного постачальника",
+				"description": "Inline Assist використовує твої облікові дані KiloCode / OpenRouter / Mistral для використання моделі Codestral за замовчуванням"
 			},
 			"provider": "Постачальник",
 			"apiConfigId": {

@@ -17,7 +17,9 @@
 		"costUnknown": "biaya tidak diketahui",
 		"costUnknownDescription": "Penyedia API tidak memberikan data biaya atau permintaan dibatalkan.",
 		"freeModelsDescription": "Model gratis mungkin memiliki batas penggunaan. Gunakan tautan di bawah ini untuk mengoptimalkan penggunaan model gratis kamu!",
-		"freeModelsLink": "Temukan opsi model gratis dan hemat biaya"
+		"freeModelsLink": "Temukan opsi model gratis dan hemat biaya",
+		"openRouterMarkup": "Penyedia Kilo Code mencakup semua model OpenRouter, tanpa markup dan dengan komisi 0%!",
+		"switchToKiloCode": "Beralih ke Kilo Code"
 	},
 	"notifications": {
 		"toolRequest": "Permintaan tool menunggu persetujuan",
@@ -91,7 +93,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code ingin mengondensasi percakapan kamu",
 			"condenseConversation": "Kondensasi Percakapan"
-		}
+		},
+		"seeNewChanges": "Tampilkan Perubahan Baru"
 	},
 	"newTaskPreview": {
 		"task": "Tugas"
@@ -208,6 +211,10 @@
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Tugas Inline Pintar",
 				"description": "Butuh perbaikan cepat, penyelesaian, atau refaktor? Kilo akan menggunakan konteks sekitar untuk menawarkan perbaikan segera, menjaga kamu tetap dalam alur. <DocsLink>Lihat pintasan</DocsLink>"
+			},
+			"enableCustomProvider": {
+				"label": "Gunakan penyedia kustom",
+				"description": "Inline Assist menggunakan kredensial KiloCode / OpenRouter / Mistral Anda untuk menggunakan model Codestral secara default"
 			},
 			"provider": "Penyedia",
 			"apiConfigId": {

@@ -105,6 +105,14 @@ The following models look like reasonable choices, but were found to **not** wor
 | deepseek-r1:7b | fails to use tools properly    |
 | deepseek-r1:8b | gets stuck in a reasoning loop |
 
+## Preventing prompt truncation
+
+By default Ollama truncates prompts to a very short length.
+If you run into this problem, please see this FAQ item to resolve it:
+[How can I specify the context window size?](https://github.com/ollama/ollama/blob/4383a3ab7a075eff78b31f7dc84c747e2fcd22b8/docs/faq.md#how-can-i-specify-the-context-window-size)
+
+If you decide to use the `OLLAMA_CONTEXT_LENGTH` environment variable, it needs to be visible to both the IDE and the Ollama server.
+
 ## Setting up Ollama
 
 1.  **Download and Install Ollama:** Download the Ollama installer for your operating system from the [Ollama website](https://ollama.com/). Follow the installation instructions and make sure Ollama is running:

@@ -17,7 +17,9 @@
 		"costUnknown": "cost unknown",
 		"costUnknownDescription": "The API Provider did not provide any cost data or the request was canceled.",
 		"freeModelsDescription": "Free models may have rate limits. Use the link below to optimize your free model usage!",
-		"freeModelsLink": "Discover free and budget model options"
+		"freeModelsLink": "Discover free and budget model options",
+		"openRouterMarkup": "The Kilo Code provider includes all of the OpenRouter models, with zero markup and 0% commission!",
+		"switchToKiloCode": "Switch to Kilo Code"
 	},
 	"notifications": {
 		"toolRequest": "Tool request waiting for approval",
@@ -91,7 +93,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code wants to condense your conversation",
 			"condenseConversation": "Condense Conversation"
-		}
+		},
+		"seeNewChanges": "See New Changes"
 	},
 	"newTaskPreview": {
 		"task": "Task"
@@ -206,6 +209,10 @@
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Smart Inline Task",
 				"description": "Need a quick fix, completion, or refactor? Kilo will use the surrounding context to offer immediate improvements, keeping you in the flow. <DocsLink>See shortcut</DocsLink>"
+			},
+			"enableCustomProvider": {
+				"label": "Use custom provider",
+				"description": "Inline Assist uses your KiloCode / OpenRouter / Mistral credential to use the Codestral model by default"
 			},
 			"provider": "Provider",
 			"apiConfigId": {

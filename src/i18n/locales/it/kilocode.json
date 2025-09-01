@@ -15,6 +15,11 @@
 		"noAssistantMessages": "La risposta del modello è terminata inaspettatamente (nessun messaggio dell'assistente). Questo potrebbe essere un segno di limitazione del tasso di richieste.",
 		"notLoggedInError": "Impossibile completare la richiesta, assicurati di essere connesso e di aver effettuato l'accesso con il provider selezionato.\n\n{{error}}"
 	},
+	"checkpoints": {
+		"nestedGitRepos": "I checkpoint non sono disponibili perché sono stati rilevati repository Git annidati nel workspace. Rimuovi o sposta i repository Git annidati per utilizzare la funzione checkpoint oppure disabilita i checkpoint nelle impostazioni per sopprimere questo avviso.",
+		"protectedPaths": "I checkpoint non sono disponibili in {{workspaceDir}}. Apri una sottocartella come workspace per utilizzare la funzione checkpoint oppure disabilita i checkpoint nelle impostazioni per sopprimere questo avviso.",
+		"dismissWarning": "Ignora"
+	},
 	"rules": {
 		"actions": {
 			"delete": "Elimina",
@@ -124,5 +129,11 @@
 			"cancelButton": "Annulla"
 		},
 		"tipMessage": "Kilo: Premi {{shortcut}} per generare comandi del terminale"
+	},
+	"seeNewChanges": {
+		"title": "Visualizzazione nuove modifiche",
+		"checkpointsUnavailable": "Impossibile mostrare le nuove modifiche, i checkpoint non sono disponibili.",
+		"noChanges": "Impossibile mostrare le nuove modifiche, nessuna modifica trovata.",
+		"error": "Impossibile mostrare le nuove modifiche, si è verificato un errore."
 	}
 }

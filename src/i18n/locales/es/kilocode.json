@@ -15,6 +15,11 @@
 		"noAssistantMessages": "La respuesta del modelo terminó inesperadamente (sin mensajes del asistente). Esto puede ser una señal de limitación de tasa.",
 		"notLoggedInError": "No se puede completar la solicitud, asegúrate de que estás conectado y has iniciado sesión con el proveedor seleccionado.\n\n{{error}}"
 	},
+	"checkpoints": {
+		"nestedGitRepos": "Los puntos de control no están disponibles porque se detectaron repositorios Git anidados en el espacio de trabajo. Por favor, elimine o reubique los repositorios Git anidados para usar la función de puntos de control o desactive los puntos de control en la configuración para suprimir esta advertencia.",
+		"protectedPaths": "Los puntos de control no están disponibles en {{workspaceDir}}. Por favor, abra una subcarpeta como espacio de trabajo para usar la función de puntos de control o desactive los puntos de control en la configuración para suprimir esta advertencia.",
+		"dismissWarning": "Descartar"
+	},
 	"rules": {
 		"actions": {
 			"delete": "Eliminar",
@@ -124,5 +129,11 @@
 			"cancelButton": "Cancelar"
 		},
 		"tipMessage": "Kilo: Presiona {{shortcut}} para generar comandos de terminal"
+	},
+	"seeNewChanges": {
+		"title": "Mostrando nuevos cambios",
+		"checkpointsUnavailable": "No se pueden mostrar nuevos cambios, los puntos de control no están disponibles.",
+		"noChanges": "No se pueden mostrar nuevos cambios, no se encontraron cambios.",
+		"error": "No se pueden mostrar nuevos cambios, ocurrió un error."
 	}
 }

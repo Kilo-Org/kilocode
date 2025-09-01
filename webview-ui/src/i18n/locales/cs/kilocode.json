@@ -17,7 +17,9 @@
 		"costUnknown": "neznámé náklady",
 		"costUnknownDescription": "Poskytovatel API neposkytl žádné údaje o nákladech nebo byl požadavek zrušen.",
 		"freeModelsDescription": "Bezplatné modely mohou mít limity na počet požadavků. Použij odkaz níže pro optimalizaci využití bezplatných modelů!",
-		"freeModelsLink": "Objevte možnosti bezplatných a rozpočtových modelů"
+		"freeModelsLink": "Objevte možnosti bezplatných a rozpočtových modelů",
+		"openRouterMarkup": "Poskytovatel Kilo Code zahrnuje všechny modely OpenRouter, bez přirážky a s 0% provizí!",
+		"switchToKiloCode": "Přepnout na Kilo Code"
 	},
 	"notifications": {
 		"toolRequest": "Požadavek na nástroj čeká na schválení",
@@ -91,7 +93,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code chce zkrátit tvou konverzaci",
 			"condenseConversation": "Zkrátit konverzaci"
-		}
+		},
+		"seeNewChanges": "Zobrazit nové změny"
 	},
 	"newTaskPreview": {
 		"task": "Úkol"
@@ -208,6 +211,10 @@
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Chytrý inline úkol",
 				"description": "Potřebuješ rychlou opravu, dokončení nebo refaktoring? Kilo použije okolní kontext k nabídnutí okamžitých vylepšení, což tě udrží v pracovním tempu. <DocsLink>Zobrazit zkratku</DocsLink>"
+			},
+			"enableCustomProvider": {
+				"label": "Použít vlastního poskytovatele",
+				"description": "Inline Assist používá vaše přihlašovací údaje KiloCode / OpenRouter / Mistral pro výchozí použití modelu Codestral"
 			},
 			"provider": "Poskytovatel",
 			"apiConfigId": {

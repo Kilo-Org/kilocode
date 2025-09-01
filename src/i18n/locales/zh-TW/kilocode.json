@@ -15,6 +15,11 @@
 		"noAssistantMessages": "模型回應意外結束（沒有助理訊息）。這可能是頻率限制的跡象。",
 		"notLoggedInError": "無法完成請求，請確保您已連線並使用所選供應商登入。\n\n{{error}}"
 	},
+	"checkpoints": {
+		"nestedGitRepos": "無法使用存檔點功能，因為工作區中偵測到巢狀 Git 儲存庫。請移除或重新配置巢狀 Git 儲存庫以使用存檔點功能，或在設定中停用存檔點以隱藏此警告。",
+		"protectedPaths": "無法在 {{workspaceDir}} 中使用存檔點功能。請開啟子資料夾作為工作區以使用存檔點功能，或在設定中停用存檔點以隱藏此警告。",
+		"dismissWarning": "關閉"
+	},
 	"rules": {
 		"actions": {
 			"delete": "刪除",
@@ -124,5 +129,11 @@
 			"message": "執行前請仔細檢查所有產生的指令。終端機操作並非都可撤銷－執行未經驗證的指令可能導致不可逆的資料遺失或系統損壞。在繼續操作前，請完整審核並瞭解指令內容！",
 			"cancelButton": "取消"
 		}
+	},
+	"seeNewChanges": {
+		"title": "正在顯示新變更",
+		"checkpointsUnavailable": "無法顯示新變更，檢查點不可用。",
+		"noChanges": "無法顯示新變更，找不到任何變更。",
+		"error": "無法顯示新變更，發生錯誤。"
 	}
 }

@@ -13,7 +13,6 @@ import {
 	VertexHandler,
 	AnthropicVertexHandler,
 	OpenAiHandler,
-	// OllamaHandler, // kilocode_change
 	LmStudioHandler,
 	GeminiHandler,
 	OpenAiNativeHandler,
@@ -34,6 +33,7 @@ import {
 	VirtualQuotaFallbackHandler,
 	GeminiCliHandler,
 	QwenCodeHandler,
+	DeepInfraHandler,
 	// kilocode_change end
 	ClaudeCodeHandler,
 	SambaNovaHandler,
@@ -98,6 +98,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new VirtualQuotaFallbackHandler(options)
 		case "qwen-code":
 			return new QwenCodeHandler(options)
+		case "deepinfra":
+			return new DeepInfraHandler(options)
 		// kilocode_change end
 		case "anthropic":
 			return new AnthropicHandler(options)

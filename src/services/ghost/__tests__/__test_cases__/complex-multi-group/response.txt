@@ -1,6 +1,16 @@
-complex-multi-group/input.js
-```js
-class Calculator {
+<change><search><![CDATA[class Calculator {
+	add(a, b) {
+		return a + b
+	}
+
+	subtract(a, b) {
+		return a - b
+	}
+
+	multiply(a, b) {
+		return a * b
+	}
+}]]></search><replace><![CDATA[class Calculator {
 	constructor() {
 		this.precision = 2
 	}
@@ -23,6 +33,4 @@ class Calculator {
 		if (b === 0) throw new Error("Division by zero")
 		return a / b
 	}
-}
-
-```
+}]]></replace></change>

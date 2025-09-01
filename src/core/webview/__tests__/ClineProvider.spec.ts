@@ -147,6 +147,7 @@ vi.mock("vscode", () => ({
 		showWarningMessage: vi.fn(),
 		showErrorMessage: vi.fn(),
 		onDidChangeActiveTextEditor: vi.fn(() => ({ dispose: vi.fn() })),
+		createTextEditorDecorationType: vi.fn(() => ({ dispose: vi.fn() })), // kilocode_change
 	},
 	workspace: {
 		getConfiguration: vi.fn().mockReturnValue({
@@ -2728,6 +2729,7 @@ describe("ClineProvider - Router Models", () => {
 				"kilocode-openrouter": mockModels,
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
+				deepinfra: mockModels, // kilocode_change
 			},
 		})
 	})
@@ -2760,6 +2762,7 @@ describe("ClineProvider - Router Models", () => {
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound fail
 			.mockRejectedValueOnce(new Error("Kilocode-OpenRouter API error")) // kilocode-openrouter fail
 			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
+			.mockRejectedValueOnce(new Error("DeepInfra API error")) // kilocode_change
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm fail
 
 		await messageHandler({ type: "requestRouterModels" })
@@ -2776,6 +2779,7 @@ describe("ClineProvider - Router Models", () => {
 				lmstudio: {},
 				litellm: {},
 				"kilocode-openrouter": {},
+				deepinfra: {}, // kilocode_change
 			},
 		})
 
@@ -2892,6 +2896,7 @@ describe("ClineProvider - Router Models", () => {
 				unbound: mockModels,
 				litellm: {},
 				"kilocode-openrouter": mockModels,
+				deepinfra: mockModels, // kilocode_change
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
 			},

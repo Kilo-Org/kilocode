@@ -59,6 +59,7 @@ describe("Model Validation Functions", () => {
 		ollama: {},
 		lmstudio: {},
 		"io-intelligence": {},
+		deepinfra: {}, // kilocode_change
 	}
 
 	const allowAllOrganization: OrganizationAllowList = {

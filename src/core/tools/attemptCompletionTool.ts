@@ -17,6 +17,20 @@ import {
 } from "../../shared/tools"
 import { formatResponse } from "../prompts/responses"
 import { Package } from "../../shared/package"
+import { getCommitRangeForNewCompletion } from "../checkpoints/kilocode/seeNewChanges"
+
+// kilocode_change start
+async function getClineMessageOptions(task: Task) {
+	const commitRange = await getCommitRangeForNewCompletion(task)
+	return (
+		commitRange && {
+			metadata: {
+				kiloCode: { commitRange },
+			},
+		}
+	)
+}
+// kilocode_change end
 
 export async function attemptCompletionTool(
 	cline: Task,
@@ -67,7 +81,15 @@ export async function attemptCompletionTool(
 				} else {
 					// last message is completion_result
 					// we have command string, which means we have the result as well, so finish it (doesnt have to exist yet)
-					await cline.say("completion_result", removeClosingTag("result", result), undefined, false)
+					await cline.say(
+						"completion_result",
+						removeClosingTag("result", result),
+						undefined,
+						false,
+						undefined,
+						undefined,
+						await getClineMessageOptions(cline), // kilocode_change
+					)
 
 					TelemetryService.instance.captureTaskCompleted(cline.taskId)
 					cline.emit(RooCodeEventName.TaskCompleted, cline.taskId, cline.getTokenUsage(), cline.toolUsage)
@@ -91,7 +113,15 @@ export async function attemptCompletionTool(
 
 			// Command execution is permanently disabled in attempt_completion
 			// Users must use execute_command tool separately before attempt_completion
-			await cline.say("completion_result", result, undefined, false)
+			await cline.say(
+				"completion_result",
+				result,
+				undefined,
+				false,
+				undefined,
+				undefined,
+				await getClineMessageOptions(cline), //kilocode_change
+			)
 			TelemetryService.instance.captureTaskCompleted(cline.taskId)
 			cline.emit(RooCodeEventName.TaskCompleted, cline.taskId, cline.getTokenUsage(), cline.toolUsage)
 

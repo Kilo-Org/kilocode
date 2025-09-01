@@ -57,6 +57,7 @@ export const providerNames = [
 	"litellm",
 	// kilocode_change start
 	"kilocode",
+	"deepinfra",
 	"gemini-cli",
 	"virtual-quota-fallback",
 	"qwen-code",
@@ -320,6 +321,12 @@ const kilocodeSchema = baseProviderSettingsSchema.extend({
 	openRouterProviderSort: openRouterProviderSortSchema.optional(),
 })
 
+const deepInfraSchema = apiModelIdProviderModelSchema.extend({
+	deepInfraBaseUrl: z.string().optional(),
+	deepInfraApiKey: z.string().optional(),
+	deepInfraModelId: z.string().optional(),
+})
+
 export const virtualQuotaFallbackProfileDataSchema = z.object({
 	profileName: z.string().optional(),
 	profileId: z.string().optional(),
@@ -393,6 +400,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	fakeAiSchema.merge(z.object({ apiProvider: z.literal("fake-ai") })),
 	xaiSchema.merge(z.object({ apiProvider: z.literal("xai") })),
 	// kilocode_change start
+	deepInfraSchema.merge(z.object({ apiProvider: z.literal("deepinfra") })),
 	geminiCliSchema.merge(z.object({ apiProvider: z.literal("gemini-cli") })),
 	kilocodeSchema.merge(z.object({ apiProvider: z.literal("kilocode") })),
 	virtualQuotaFallbackSchema.merge(z.object({ apiProvider: z.literal("virtual-quota-fallback") })),
@@ -430,6 +438,7 @@ export const providerSettingsSchema = z.object({
 	...kilocodeSchema.shape,
 	...virtualQuotaFallbackSchema.shape,
 	...qwenCodeSchema.shape,
+	...deepInfraSchema.shape,
 	// kilocode_change end
 	...openAiNativeSchema.shape,
 	...mistralSchema.shape,
@@ -478,6 +487,7 @@ export const MODEL_ID_KEYS: Partial<keyof ProviderSettings>[] = [
 	"litellmModelId",
 	"huggingFaceModelId",
 	"ioIntelligenceModelId",
+	"deepInfraModelId", // kilocode_change
 ]
 
 export const getModelId = (settings: ProviderSettings): string | undefined => {
@@ -598,6 +608,7 @@ export const MODELS_BY_PROVIDER: Record<
 	kilocode: { id: "kilocode", label: "Kilocode", models: [] },
 	"virtual-quota-fallback": { id: "virtual-quota-fallback", label: "Virtual Quota Fallback", models: [] },
 	"qwen-code": { id: "qwen-code", label: "Qwen Code", models: [] },
+	deepinfra: { id: "deepinfra", label: "DeepInfra", models: [] },
 	// kilocode_change end
 }
 
@@ -611,6 +622,7 @@ export const dynamicProviders = [
 	// kilocode_change start
 	"kilocode",
 	"virtual-quota-fallback",
+	"deepinfra",
 	// kilocode_change end
 ] as const satisfies readonly ProviderName[]
 

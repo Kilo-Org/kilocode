@@ -17,7 +17,9 @@
 		"costUnknown": "비용 알 수 없음",
 		"costUnknownDescription": "API 제공자가 비용 데이터를 제공하지 않았거나 요청이 취소되었습니다.",
 		"freeModelsDescription": "무료 모델에는 사용 제한이 있을 수 있습니다. 아래 링크를 사용하여 무료 모델 사용을 최적화하세요!",
-		"freeModelsLink": "무료 및 저비용 모델 옵션 알아보기"
+		"freeModelsLink": "무료 및 저비용 모델 옵션 알아보기",
+		"openRouterMarkup": "Kilo Code 제공자는 모든 OpenRouter 모델을 포함하며, 마크업 없이 0% 수수료로 제공합니다!",
+		"switchToKiloCode": "Kilo Code로 전환"
 	},
 	"notifications": {
 		"toolRequest": "도구 요청 승인 대기 중",
@@ -91,7 +93,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code가 대화를 요약하고자 합니다",
 			"condenseConversation": "대화 요약하기"
-		}
+		},
+		"seeNewChanges": "새 변경사항 보기"
 	},
 	"newTaskPreview": {
 		"task": "작업"
@@ -208,6 +211,10 @@
 			"enableSmartInlineTaskKeybinding": {
 				"label": "스마트 인라인 작업",
 				"description": "빠른 수정, 완성 또는 리팩토링이 필요하신가요? Kilo가 주변 컨텍스트를 사용하여 즉각적인 개선사항을 제공하여 작업 흐름을 유지합니다. <DocsLink>단축키 보기</DocsLink>"
+			},
+			"enableCustomProvider": {
+				"label": "사용자 정의 제공자 사용",
+				"description": "Inline Assist는 기본적으로 Codestral 모델을 사용하기 위해 KiloCode / OpenRouter / Mistral 자격 증명을 사용합니다"
 			},
 			"provider": "제공자",
 			"apiConfigId": {

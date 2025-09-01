@@ -1,6 +1,7 @@
 // kilocode_change - new file
 import { telemetryClient } from "../utils/TelemetryClient"
 import { TelemetryEventName } from "@roo-code/types"
+import { createSampledFunction } from "../utils/sampling"
 
 interface PerformanceMemory {
 	usedJSHeapSize?: number
@@ -9,7 +10,11 @@ interface PerformanceMemory {
 
 export class MemoryService {
 	private intervalId: number | null = null
-	private readonly intervalMs: number = 60 * 1000 // 1 min
+	private readonly intervalMs: number = 10 * 60 * 1000 // 10 min(s)
+	private readonly sampledTelemetryCapture = createSampledFunction(
+		telemetryClient.capture.bind(telemetryClient),
+		0.01, // 1% sampling rate
+	)
 
 	public start(): void {
 		if (this.intervalId) {
@@ -35,7 +40,7 @@ export class MemoryService {
 			heapUsedMb: this.bytesToMegabytes(memory?.usedJSHeapSize || 0),
 			heapTotalMb: this.bytesToMegabytes(memory?.totalJSHeapSize || 0),
 		}
-		telemetryClient.capture(TelemetryEventName.WEBVIEW_MEMORY_USAGE, memoryInfo)
+		this.sampledTelemetryCapture(TelemetryEventName.WEBVIEW_MEMORY_USAGE, memoryInfo)
 	}
 
 	private bytesToMegabytes(bytes: number): number {

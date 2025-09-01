@@ -110,6 +110,11 @@
 			"disableInlineAssist": "Satır İçi Yardım'ı Devre Dışı Bırak"
 		}
 	},
+	"checkpoints": {
+		"nestedGitRepos": "İç içe Git depoları bulunan çalışma alanları için kontrol noktaları kullanılamaz.",
+		"protectedPaths": "Korumalı çalışma alanı yolları için kontrol noktaları kullanılamaz.",
+		"dismissWarning": "Kapat"
+	},
 	"terminalCommandGenerator": {
 		"noActiveTerminal": "Kilo: Aktif terminal bulunamadı. Lütfen önce bir terminal açın.",
 		"inputPrompt": "Kilo: Oluşturmak istediğiniz komutu açıklayın",
@@ -124,5 +129,11 @@
 			"cancelButton": "İptal"
 		},
 		"tipMessage": "Kilo: Terminal komutları oluşturmak için {{shortcut}} tuşuna basın"
+	},
+	"seeNewChanges": {
+		"title": "Yeni değişiklikler gösteriliyor",
+		"checkpointsUnavailable": "Yeni değişiklikler gösterilemiyor, kontrol noktaları kullanılamıyor.",
+		"noChanges": "Yeni değişiklikler gösterilemiyor, hiçbir değişiklik bulunamadı.",
+		"error": "Yeni değişiklikler gösterilemiyor, bir hata oluştu."
 	}
 }

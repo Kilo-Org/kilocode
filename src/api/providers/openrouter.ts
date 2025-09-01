@@ -114,6 +114,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 					order: [this.options.openRouterSpecificProvider],
 					only: [this.options.openRouterSpecificProvider],
 					allow_fallbacks: false,
+					data_collection: this.options.openRouterProviderDataCollection,
 				},
 			}
 		}

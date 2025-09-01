@@ -15,6 +15,11 @@
 		"noAssistantMessages": "모델의 응답이 예상치 못하게 종료되었습니다 (어시스턴트 메시지 없음). 이는 요청 제한의 징후일 수 있습니다.",
 		"notLoggedInError": "요청을 완료할 수 없습니다. 선택한 공급자와 연결되어 로그인했는지 확인하세요.\n\n{{error}}"
 	},
+	"checkpoints": {
+		"nestedGitRepos": "작업 영역에서 중첩된 Git 저장소가 감지되어 체크포인트를 사용할 수 없습니다. 체크포인트 기능을 사용하려면 중첩된 Git 저장소를 제거하거나 이동하거나, 설정에서 체크포인트를 비활성화하여 이 경고를 숨기세요.",
+		"protectedPaths": "{{workspaceDir}}에서는 체크포인트를 사용할 수 없습니다. 체크포인트 기능을 사용하려면 하위 폴더를 작업 영역으로 열거나, 설정에서 체크포인트를 비활성화하여 이 경고를 숨기세요.",
+		"dismissWarning": "닫기"
+	},
 	"rules": {
 		"actions": {
 			"delete": "삭제",
@@ -124,5 +129,11 @@
 			"cancelButton": "취소"
 		},
 		"tipMessage": "Kilo: {{shortcut}}을(를) 눌러 터미널 명령어 생성"
+	},
+	"seeNewChanges": {
+		"title": "새로운 변경사항 표시 중",
+		"checkpointsUnavailable": "새로운 변경사항을 표시할 수 없습니다. 체크포인트를 사용할 수 없습니다.",
+		"noChanges": "새로운 변경사항을 표시할 수 없습니다. 변경사항이 없습니다.",
+		"error": "새로운 변경사항을 표시할 수 없습니다. 오류가 발생했습니다."
 	}
 }

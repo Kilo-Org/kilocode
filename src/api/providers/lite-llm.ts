@@ -109,7 +109,7 @@ export class LiteLLMHandler extends RouterProvider implements SingleCompletionHa
 
 		const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming = {
 			model: modelId,
-			max_tokens: maxTokens,
+			max_completion_tokens: maxTokens, // kilocode_change
 			messages: [systemMessage, ...enhancedMessages],
 			stream: true,
 			stream_options: {
@@ -189,7 +189,7 @@ export class LiteLLMHandler extends RouterProvider implements SingleCompletionHa
 				requestOptions.temperature = this.options.modelTemperature ?? 0
 			}
 
-			requestOptions.max_tokens = info.maxTokens
+			requestOptions.max_completion_tokens = info.maxTokens // kilocode_change
 
 			const response = await this.client.chat.completions.create(requestOptions)
 			return response.choices[0]?.message.content || ""

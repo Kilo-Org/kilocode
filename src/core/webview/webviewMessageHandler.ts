@@ -7,7 +7,7 @@ import * as vscode from "vscode"
 import axios from "axios" // kilocode_change
 import * as yaml from "yaml"
 import { getKiloBaseUriFromToken } from "../../shared/kilocode/token" // kilocode_change
-import { ProfileData } from "../../shared/WebviewMessage" // kilocode_change
+import { ProfileData, SeeNewChangesPayload } from "../../shared/WebviewMessage" // kilocode_change
 
 import {
 	type Language,
@@ -65,6 +65,7 @@ const ALLOWED_VSCODE_SETTINGS = new Set(["terminal.integrated.inheritEnv"])
 import { MarketplaceManager, MarketplaceItemType } from "../../services/marketplace"
 import { setPendingTodoList } from "../tools/updateTodoListTool"
 import { UsageTracker } from "../../utils/usage-tracker"
+import { seeNewChanges } from "../checkpoints/kilocode/seeNewChanges" // kilocode_change
 
 export const webviewMessageHandler = async (
 	provider: ClineProvider,
@@ -571,6 +572,7 @@ export const webviewMessageHandler = async (
 				"kilocode-openrouter": {}, // kilocode_change
 				ollama: {},
 				lmstudio: {},
+				deepinfra: {}, // kilocode_change
 			}
 
 			const safeGetModels = async (options: GetModelsOptions): Promise<ModelRecord> => {
@@ -613,6 +615,7 @@ export const webviewMessageHandler = async (
 					},
 				},
 				{ key: "ollama", options: { provider: "ollama", baseUrl: apiConfiguration.ollamaBaseUrl } },
+				{ key: "deepinfra", options: { provider: "deepinfra", apiKey: apiConfiguration.deepInfraApiKey } },
 			]
 			// kilocode_change end
 
@@ -797,6 +800,14 @@ export const webviewMessageHandler = async (
 			}
 
 			break
+		// kilocode_change start
+		case "seeNewChanges":
+			const task = provider.getCurrentTask()
+			if (task && message.payload && message.payload) {
+				await seeNewChanges(task, (message.payload as SeeNewChangesPayload).commitRange)
+			}
+			break
+		// kilocode_change end
 		case "checkpointRestore": {
 			const result = checkoutRestorePayloadSchema.safeParse(message.payload)
 

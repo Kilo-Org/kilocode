@@ -26,6 +26,7 @@ export { SambaNovaHandler } from "./sambanova"
 export { UnboundHandler } from "./unbound"
 export { VertexHandler } from "./vertex"
 // kilocode_change start
+export { DeepInfraHandler } from "./deepinfra"
 export { GeminiCliHandler } from "./gemini-cli"
 export { QwenCodeHandler } from "./qwen-code"
 export { VirtualQuotaFallbackHandler } from "./virtual-quota-fallback"

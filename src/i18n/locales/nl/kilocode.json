@@ -15,6 +15,11 @@
 		"noAssistantMessages": "Het model reageerde onverwacht (geen assistent berichten). Dit kan een teken zijn van snelheidsbeperking.",
 		"notLoggedInError": "Kan verzoek niet voltooien, zorg ervoor dat je verbonden bent en bent aangemeld bij de geselecteerde provider.\n\n{{error}}"
 	},
+	"checkpoints": {
+		"nestedGitRepos": "Controlepunten zijn niet beschikbaar omdat geneste Git-repositories zijn gedetecteerd in de werkruimte. Verwijder of verplaats geneste Git-repositories om de controlepuntfunctie te gebruiken of schakel controlepunten uit in de instellingen om deze waarschuwing te onderdrukken.",
+		"protectedPaths": "Controlepunten zijn niet beschikbaar in {{workspaceDir}}. Open een submap als werkruimte om de controlepuntfunctie te gebruiken of schakel controlepunten uit in de instellingen om deze waarschuwing te onderdrukken.",
+		"dismissWarning": "Sluiten"
+	},
 	"rules": {
 		"actions": {
 			"delete": "Verwijderen",
@@ -124,5 +129,11 @@
 			"cancelButton": "Annuleren"
 		},
 		"tipMessage": "Kilo: Druk op {{shortcut}} om terminalopdrachten te genereren"
+	},
+	"seeNewChanges": {
+		"title": "Nieuwe wijzigingen weergeven",
+		"checkpointsUnavailable": "Kan nieuwe wijzigingen niet weergeven, controlepunten zijn niet beschikbaar.",
+		"noChanges": "Kan nieuwe wijzigingen niet weergeven, er zijn geen wijzigingen gevonden.",
+		"error": "Kan nieuwe wijzigingen niet weergeven, er is een fout opgetreden."
 	}
 }

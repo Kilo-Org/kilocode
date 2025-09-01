@@ -8,7 +8,11 @@ export * from "./doubao.js"
 export * from "./featherless.js"
 export * from "./fireworks.js"
 export * from "./gemini.js"
-export * from "./gemini-cli.js" // kilocode_change
+// kilocode_change start
+export * from "./gemini-cli.js"
+export * from "./qwen-code.js"
+export * from "./deepinfra.js"
+// kilocode_change end
 export * from "./glama.js"
 export * from "./groq.js"
 export * from "./huggingface.js"
@@ -21,7 +25,6 @@ export * from "./ollama.js"
 export * from "./openai.js"
 export * from "./openrouter.js"
 export * from "./requesty.js"
-export * from "./qwen-code.js" // kilocode_change
 export * from "./roo.js"
 export * from "./sambanova.js"
 export * from "./unbound.js"

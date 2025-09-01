@@ -8,6 +8,10 @@ sidebar_label: Free & Budget Models
 
 ## Completely Free Options
 
+### Grok Code Fast 1
+
+This frontier AI model is 100% free in Kilo Code for a limited time. [See the blog post for more details](https://blog.kilocode.ai/p/grok-code-fast-get-this-frontier-ai-model-free).
+
 ### OpenRouter Free Tier Models
 
 OpenRouter offers several models with generous free tiers. **Note:** You'll need to create a free OpenRouter account to access these models.

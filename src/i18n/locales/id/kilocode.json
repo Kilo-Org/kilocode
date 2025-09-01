@@ -15,6 +15,11 @@
 		"noAssistantMessages": "Respons model berakhir secara tidak terduga (tidak ada pesan asisten). Ini mungkin merupakan tanda pembatasan laju.",
 		"notLoggedInError": "Tidak dapat menyelesaikan permintaan, pastikan Anda terhubung dan masuk dengan penyedia yang dipilih.\n\n{{error}}"
 	},
+	"checkpoints": {
+		"nestedGitRepos": "Checkpoint tidak tersedia karena terdeteksi repositori Git bersarang di ruang kerja. Silakan hapus atau pindahkan repositori Git bersarang untuk menggunakan fitur checkpoint atau nonaktifkan checkpoint di pengaturan untuk menyembunyikan peringatan ini.",
+		"protectedPaths": "Checkpoint tidak tersedia di {{workspaceDir}}. Silakan buka subfolder sebagai ruang kerja untuk menggunakan fitur checkpoint atau nonaktifkan checkpoint di pengaturan untuk menyembunyikan peringatan ini.",
+		"dismissWarning": "Tutup"
+	},
 	"rules": {
 		"actions": {
 			"delete": "Hapus",
@@ -124,5 +129,11 @@
 			"cancelButton": "Batal"
 		},
 		"tipMessage": "Kilo: Tekan {{shortcut}} untuk menghasilkan perintah terminal"
+	},
+	"seeNewChanges": {
+		"title": "Menampilkan perubahan baru",
+		"checkpointsUnavailable": "Tidak dapat menampilkan perubahan baru, checkpoint tidak tersedia.",
+		"noChanges": "Tidak dapat menampilkan perubahan baru, tidak ada perubahan yang ditemukan.",
+		"error": "Tidak dapat menampilkan perubahan baru, terjadi kesalahan."
 	}
 }

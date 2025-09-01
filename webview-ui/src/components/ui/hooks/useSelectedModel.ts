@@ -19,6 +19,7 @@ import {
 	geminiCliModels,
 	qwenCodeModels,
 	qwenCodeDefaultModelId,
+	deepInfraDefaultModelId,
 	// kilocode_change end
 	mistralDefaultModelId,
 	mistralModels,
@@ -181,6 +182,11 @@ function getSelectedModel({
 		case "litellm": {
 			const id = apiConfiguration.litellmModelId ?? litellmDefaultModelId
 			const info = routerModels.litellm[id]
+			return { id, info }
+		}
+		case "deepinfra": {
+			const id = apiConfiguration.deepInfraModelId ?? deepInfraDefaultModelId
+			const info = routerModels.deepinfra[id]
 			return { id, info }
 		}
 		case "xai": {

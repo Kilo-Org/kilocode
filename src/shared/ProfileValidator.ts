@@ -92,6 +92,10 @@ export class ProfileValidator {
 				return profile.requestyModelId
 			case "io-intelligence":
 				return profile.ioIntelligenceModelId
+			// kilocode_change start
+			case "deepinfra":
+				return profile.deepInfraModelId
+			// kilocode_change end
 			case "human-relay":
 			case "fake-ai":
 			default:

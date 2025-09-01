@@ -17,7 +17,9 @@
 		"costUnknown": "लागत अज्ञात",
 		"costUnknownDescription": "API प्रदाता ने कोई लागत डेटा प्रदान नहीं किया या अनुरोध रद्द कर दिया गया।",
 		"freeModelsDescription": "मुफ्त मॉडल में दर सीमाएं हो सकती हैं। अपने मुफ्त मॉडल उपयोग को अनुकूलित करने के लिए नीचे दिए गए लिंक का उपयोग करें!",
-		"freeModelsLink": "मुफ्त और बजट मॉडल विकल्पों की खोज करें"
+		"freeModelsLink": "मुफ्त और बजट मॉडल विकल्पों की खोज करें",
+		"openRouterMarkup": "Kilo Code प्रदाता में सभी OpenRouter मॉडल शामिल हैं, बिना किसी मार्कअप और 0% कमीशन के साथ!",
+		"switchToKiloCode": "Kilo Code पर स्विच करें"
 	},
 	"notifications": {
 		"toolRequest": "उपकरण अनुरोध अनुमोदन की प्रतीक्षा कर रहा है",
@@ -91,7 +93,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code तुम्हारी बातचीत को संक्षिप्त करना चाहता है",
 			"condenseConversation": "बातचीत संक्षिप्त करें"
-		}
+		},
+		"seeNewChanges": "नए परिवर्तन देखें"
 	},
 	"newTaskPreview": {
 		"task": "कार्य"
@@ -208,6 +211,10 @@
 			"enableSmartInlineTaskKeybinding": {
 				"label": "स्मार्ट इनलाइन कार्य",
 				"description": "त्वरित सुधार, पूर्णता या रिफैक्टर की आवश्यकता है? Kilo आसपास के संदर्भ का उपयोग करके तत्काल सुधार प्रदान करेगा, आपको प्रवाह में बनाए रखेगा। <DocsLink>शॉर्टकट देखें</DocsLink>"
+			},
+			"enableCustomProvider": {
+				"label": "कस्टम प्रदाता का उपयोग करें",
+				"description": "Inline Assist डिफ़ॉल्ट रूप से Codestral मॉडल का उपयोग करने के लिए आपके KiloCode / OpenRouter / Mistral क्रेडेंशियल का उपयोग करता है"
 			},
 			"provider": "प्रदाता",
 			"apiConfigId": {

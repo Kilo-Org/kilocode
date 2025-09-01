@@ -17,7 +17,9 @@
 		"costUnknown": "费用未知",
 		"costUnknownDescription": "API 提供商未提供任何费用数据或请求已取消。",
 		"freeModelsDescription": "免费模型可能有请求频率限制。使用下方链接优化你的免费模型使用！",
-		"freeModelsLink": "探索免费模型选项"
+		"freeModelsLink": "探索免费模型选项",
+		"openRouterMarkup": "Kilo Code 提供商包含所有 OpenRouter 模型，无加价且 0% 佣金！",
+		"switchToKiloCode": "切换到 Kilo Code"
 	},
 	"notifications": {
 		"toolRequest": "工具请求等待批准",
@@ -91,7 +93,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code 想要压缩你的对话",
 			"condenseConversation": "压缩对话"
-		}
+		},
+		"seeNewChanges": "查看新更改"
 	},
 	"newTaskPreview": {
 		"task": "任务"
@@ -204,6 +207,10 @@
 			"enableSmartInlineTaskKeybinding": {
 				"label": "智能内联任务",
 				"description": "需要快速修复、完成或重构代码？Kilo 将使用周围的上下文提供即时改进，让您保持工作流畅。<DocsLink>查看快捷键</DocsLink>"
+			},
+			"enableCustomProvider": {
+				"label": "使用自定义提供商",
+				"description": "Inline Assist 使用你的 KiloCode / OpenRouter / Mistral 凭据默认使用 Codestral 模型"
 			},
 			"provider": "提供商",
 			"apiConfigId": {
