@@ -17,7 +17,9 @@
 		"costUnknown": "biaya tidak diketahui",
 		"costUnknownDescription": "Penyedia API tidak memberikan data biaya atau permintaan dibatalkan.",
 		"freeModelsDescription": "Model gratis mungkin memiliki batas penggunaan. Gunakan tautan di bawah ini untuk mengoptimalkan penggunaan model gratis kamu!",
-		"freeModelsLink": "Temukan opsi model gratis dan hemat biaya"
+		"freeModelsLink": "Temukan opsi model gratis dan hemat biaya",
+		"openRouterMarkup": "Penyedia Kilo Code mencakup semua model OpenRouter, tanpa markup dan dengan komisi 0%!",
+		"switchToKiloCode": "Beralih ke Kilo Code"
 	},
 	"notifications": {
 		"toolRequest": "Permintaan tool menunggu persetujuan",
@@ -91,7 +93,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code ingin mengondensasi percakapan kamu",
 			"condenseConversation": "Kondensasi Percakapan"
-		}
+		},
+		"seeNewChanges": "Tampilkan Perubahan Baru"
 	},
 	"newTaskPreview": {
 		"task": "Tugas"

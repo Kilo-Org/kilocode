@@ -124,5 +124,11 @@
 			"cancelButton": "Cancel·lar"
 		},
 		"tipMessage": "Kilo: Premeu {{shortcut}} per a generar ordres del terminal"
+	},
+	"seeNewChanges": {
+		"title": "Mostrant canvis nous",
+		"checkpointsUnavailable": "No es poden mostrar canvis nous, els punts de control no estan disponibles.",
+		"noChanges": "No es poden mostrar canvis nous, no s'han trobat canvis.",
+		"error": "No es poden mostrar canvis nous, s'ha produït un error."
 	}
 }

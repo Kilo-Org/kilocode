@@ -124,5 +124,11 @@
 			"cancelButton": "Batal"
 		},
 		"tipMessage": "Kilo: Tekan {{shortcut}} untuk menghasilkan perintah terminal"
+	},
+	"seeNewChanges": {
+		"title": "Menampilkan perubahan baru",
+		"checkpointsUnavailable": "Tidak dapat menampilkan perubahan baru, checkpoint tidak tersedia.",
+		"noChanges": "Tidak dapat menampilkan perubahan baru, tidak ada perubahan yang ditemukan.",
+		"error": "Tidak dapat menampilkan perubahan baru, terjadi kesalahan."
 	}
 }

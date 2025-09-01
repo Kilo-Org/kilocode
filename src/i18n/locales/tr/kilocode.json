@@ -124,5 +124,11 @@
 			"cancelButton": "İptal"
 		},
 		"tipMessage": "Kilo: Terminal komutları oluşturmak için {{shortcut}} tuşuna basın"
+	},
+	"seeNewChanges": {
+		"title": "Yeni değişiklikler gösteriliyor",
+		"checkpointsUnavailable": "Yeni değişiklikler gösterilemiyor, kontrol noktaları kullanılamıyor.",
+		"noChanges": "Yeni değişiklikler gösterilemiyor, hiçbir değişiklik bulunamadı.",
+		"error": "Yeni değişiklikler gösterilemiyor, bir hata oluştu."
 	}
 }

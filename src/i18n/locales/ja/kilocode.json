@@ -124,5 +124,11 @@
 			"cancelButton": "キャンセル"
 		},
 		"tipMessage": "Kilo: {{shortcut}}を押してターミナルコマンドを生成"
+	},
+	"seeNewChanges": {
+		"title": "新しい変更を表示中",
+		"checkpointsUnavailable": "新しい変更を表示できません。チェックポイントが利用できません。",
+		"noChanges": "新しい変更を表示できません。変更が見つかりませんでした。",
+		"error": "新しい変更を表示できません。エラーが発生しました。"
 	}
 }

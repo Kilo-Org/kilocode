@@ -17,7 +17,9 @@
 		"costUnknown": "стоимость неизвестна",
 		"costUnknownDescription": "API-провайдер не предоставил данные о стоимости или запрос был отменен.",
 		"freeModelsDescription": "Бесплатные модели могут иметь ограничения по скорости. Используйте ссылку ниже, чтобы оптимизировать использование бесплатных моделей!",
-		"freeModelsLink": "Узнать о бесплатных и бюджетных моделях"
+		"freeModelsLink": "Узнать о бесплатных и бюджетных моделях",
+		"openRouterMarkup": "Провайдер Kilo Code включает все модели OpenRouter, без наценки и с 0% комиссии!",
+		"switchToKiloCode": "Переключиться на Kilo Code"
 	},
 	"notifications": {
 		"toolRequest": "Запрос инструмента ожидает утверждения",
@@ -91,7 +93,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code хочет сократить твой разговор",
 			"condenseConversation": "Сократить разговор"
-		}
+		},
+		"seeNewChanges": "Показать новые изменения"
 	},
 	"newTaskPreview": {
 		"task": "Задача"

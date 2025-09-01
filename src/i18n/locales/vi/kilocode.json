@@ -124,5 +124,11 @@
 			"cancelButton": "Hủy"
 		},
 		"tipMessage": "Kilo: Nhấn {{shortcut}} để tạo lệnh terminal"
+	},
+	"seeNewChanges": {
+		"title": "Đang hiển thị các thay đổi mới",
+		"checkpointsUnavailable": "Không thể hiển thị các thay đổi mới, điểm kiểm tra không khả dụng.",
+		"noChanges": "Không thể hiển thị các thay đổi mới, không tìm thấy thay đổi nào.",
+		"error": "Không thể hiển thị các thay đổi mới, đã xảy ra lỗi."
 	}
 }

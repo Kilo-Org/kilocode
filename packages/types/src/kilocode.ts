@@ -12,3 +12,16 @@ export const ghostServiceSettingsSchema = z
 	.optional()
 
 export type GhostServiceSettings = z.infer<typeof ghostServiceSettingsSchema>
+
+export const commitRangeSchema = z.object({
+	from: z.string(),
+	to: z.string(),
+})
+
+export type CommitRange = z.infer<typeof commitRangeSchema>
+
+export const kiloCodeMetaDataSchema = z.object({
+	commitRange: commitRangeSchema.optional(),
+})
+
+export type KiloCodeMetaData = z.infer<typeof kiloCodeMetaDataSchema>

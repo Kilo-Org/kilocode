@@ -17,7 +17,9 @@
 		"costUnknown": "コスト不明",
 		"costUnknownDescription": "APIプロバイダーがコストデータを提供しなかったか、リクエストがキャンセルされました。",
 		"freeModelsDescription": "無料モデルにはレート制限がある場合があります。下のリンクを使って無料モデルの使用を最適化しよう！",
-		"freeModelsLink": "無料・格安モデルのオプションを見る"
+		"freeModelsLink": "無料・格安モデルのオプションを見る",
+		"openRouterMarkup": "Kilo Code プロバイダーには、すべての OpenRouter モデルが含まれており、マークアップなし、手数料 0% です！",
+		"switchToKiloCode": "Kilo Code に切り替える"
 	},
 	"notifications": {
 		"toolRequest": "ツールのリクエストが承認待ちです",
@@ -91,7 +93,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Codeは会話を要約したいと思っています",
 			"condenseConversation": "会話を要約する"
-		}
+		},
+		"seeNewChanges": "新しい変更を表示"
 	},
 	"newTaskPreview": {
 		"task": "タスク"

@@ -124,5 +124,11 @@
 			"cancelButton": "Cancelar"
 		},
 		"tipMessage": "Kilo: Pressione {{shortcut}} para gerar comandos de terminal"
+	},
+	"seeNewChanges": {
+		"title": "Exibindo novas alterações",
+		"checkpointsUnavailable": "Não é possível exibir novas alterações, pontos de verificação não estão disponíveis.",
+		"noChanges": "Não é possível exibir novas alterações, nenhuma alteração foi encontrada.",
+		"error": "Não é possível exibir novas alterações, ocorreu um erro."
 	}
 }

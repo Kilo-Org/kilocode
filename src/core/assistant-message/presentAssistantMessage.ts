@@ -560,6 +560,7 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 					await newTaskTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 				case "attempt_completion":
+					await checkpointSaveAndMark(cline) // kilocode_change for "See new changes"
 					await attemptCompletionTool(
 						cline,
 						block,

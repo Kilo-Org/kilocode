@@ -107,6 +107,12 @@
 			"disableInlineAssist": "Disable Inline Assist"
 		}
 	},
+	"seeNewChanges": {
+		"title": "Showing new changes",
+		"checkpointsUnavailable": "Cannot show new changes, checkpoints are unavailable.",
+		"noChanges": "Cannot show new changes, no changes were found.",
+		"error": "Cannot show new changes, an error occured."
+	},
 	"terminalCommandGenerator": {
 		"tipMessage": "Kilo: Press {{shortcut}} to generate terminal commands",
 		"inputPrompt": "Kilo: Describe the command you want to generate",

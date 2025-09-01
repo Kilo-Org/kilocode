@@ -124,5 +124,11 @@
 			"cancelButton": "Annuleren"
 		},
 		"tipMessage": "Kilo: Druk op {{shortcut}} om terminalopdrachten te genereren"
+	},
+	"seeNewChanges": {
+		"title": "Nieuwe wijzigingen weergeven",
+		"checkpointsUnavailable": "Kan nieuwe wijzigingen niet weergeven, controlepunten zijn niet beschikbaar.",
+		"noChanges": "Kan nieuwe wijzigingen niet weergeven, er zijn geen wijzigingen gevonden.",
+		"error": "Kan nieuwe wijzigingen niet weergeven, er is een fout opgetreden."
 	}
 }

@@ -54,8 +54,10 @@ export const KiloProviderRouting = ({ apiConfiguration, setApiConfigurationField
 	}
 
 	const specficProvider = apiConfiguration.openRouterSpecificProvider
-	const specificProviderIsSet = !!specficProvider && specficProvider !== OPENROUTER_DEFAULT_PROVIDER_NAME
-	const specificProviderIsInvalid = specificProviderIsSet && !providers.find((p) => p.label === specficProvider)
+	const specificProviderIsInvalid =
+		!!specficProvider &&
+		specficProvider !== OPENROUTER_DEFAULT_PROVIDER_NAME &&
+		!providers.find((p) => p.label === specficProvider)
 
 	return (
 		<div className="flex flex-col gap-1">
@@ -95,19 +97,14 @@ export const KiloProviderRouting = ({ apiConfiguration, setApiConfigurationField
 				</SelectContent>
 			</Select>
 			<Select
-				value={
-					specificProviderIsSet ? "default" : (apiConfiguration.openRouterProviderDataCollection ?? "default")
-				}
+				value={apiConfiguration.openRouterProviderDataCollection ?? "default"}
 				onValueChange={(value) => {
-					if (specificProviderIsSet) {
-						return
-					}
 					setApiConfigurationField(
 						"openRouterProviderDataCollection",
 						openRouterProviderDataCollectionSchema.safeParse(value).data,
 					)
 				}}>
-				<SelectTrigger disabled={specificProviderIsSet} className="w-full">
+				<SelectTrigger className="w-full">
 					<SelectValue />
 				</SelectTrigger>
 				<SelectContent>

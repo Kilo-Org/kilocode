@@ -163,8 +163,9 @@ export default defineConfig(({ mode }) => {
 			},
 		},
 		server: {
+			host: "0.0.0.0", // kilocode_change
 			hmr: {
-				host: "localhost",
+				// host: "localhost", kilocode_change
 				protocol: "ws",
 			},
 			cors: {

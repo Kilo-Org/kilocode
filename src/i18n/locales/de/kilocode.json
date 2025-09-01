@@ -124,5 +124,11 @@
 			"cancelButton": "Abbrechen"
 		},
 		"tipMessage": "Kilo: Drücke {{shortcut}}, um Terminal-Befehle zu generieren"
+	},
+	"seeNewChanges": {
+		"title": "Zeige neue Änderungen",
+		"checkpointsUnavailable": "Kann neue Änderungen nicht anzeigen, Checkpoints sind nicht verfügbar.",
+		"noChanges": "Kann neue Änderungen nicht anzeigen, keine Änderungen gefunden.",
+		"error": "Kann neue Änderungen nicht anzeigen, ein Fehler ist aufgetreten."
 	}
 }

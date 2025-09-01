@@ -124,5 +124,11 @@
 			"cancelButton": "Annulla"
 		},
 		"tipMessage": "Kilo: Premi {{shortcut}} per generare comandi del terminale"
+	},
+	"seeNewChanges": {
+		"title": "Visualizzazione nuove modifiche",
+		"checkpointsUnavailable": "Impossibile mostrare le nuove modifiche, i checkpoint non sono disponibili.",
+		"noChanges": "Impossibile mostrare le nuove modifiche, nessuna modifica trovata.",
+		"error": "Impossibile mostrare le nuove modifiche, si è verificato un errore."
 	}
 }

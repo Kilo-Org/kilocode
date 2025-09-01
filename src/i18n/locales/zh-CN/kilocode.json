@@ -110,6 +110,12 @@
 			"disableInlineAssist": "禁用 内联辅助"
 		}
 	},
+	"seeNewChanges": {
+		"title": "显示新更改",
+		"checkpointsUnavailable": "无法显示新更改，存档点不可用。",
+		"noChanges": "无法显示新更改，未发现任何更改。",
+		"error": "无法显示新更改，发生错误。"
+	},
 	"terminalCommandGenerator": {
 		"inputPrompt": "Kilo：描述您想要生成的命令",
 		"inputPlaceholder": "例如，终止在3001端口上运行的进程，查找大文件等",

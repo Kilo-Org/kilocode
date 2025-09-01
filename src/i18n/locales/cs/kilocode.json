@@ -110,6 +110,12 @@
 			"disableInlineAssist": "Deaktivovat Inline asistenta"
 		}
 	},
+	"seeNewChanges": {
+		"title": "Zobrazování nových změn",
+		"checkpointsUnavailable": "Nelze zobrazit nové změny, kontrolní body nejsou dostupné.",
+		"noChanges": "Nelze zobrazit nové změny, nebyly nalezeny žádné změny.",
+		"error": "Nelze zobrazit nové změny, došlo k chybě."
+	},
 	"terminalCommandGenerator": {
 		"inputPrompt": "Kilo: Popište příkaz, který chcete vygenerovat",
 		"noActiveTerminal": "Kilo: Nebyl nalezen žádný aktivní terminál. Nejprve prosím otevřete terminál.",
