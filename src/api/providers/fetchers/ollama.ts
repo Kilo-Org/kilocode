@@ -37,30 +37,79 @@ type OllamaModelsResponse = z.infer<typeof OllamaModelsResponseSchema>
 
 type OllamaModelInfoResponse = z.infer<typeof OllamaModelInfoResponseSchema>
 
+function parseOllamaParametersToJSON(inputString: string): Record<string, any> {
+	const lines = inputString.split("\n")
+	const result: Record<string, any> = {}
+
+	lines.forEach((line) => {
+		const parts = line.trim().split(/\s+/) // Split by one or more spaces
+		let key = parts[0]
+		let value = parts.slice(1).join(" ") // Re-join the rest as the value
+
+		// Remove quotes from value if present
+		if (value.startsWith('"') && value.endsWith('"')) {
+			value = value.substring(1, value.length - 1)
+		}
+
+		// Type conversion
+		let parsedValue: any
+		if (!isNaN(Number(value))) {
+			parsedValue = Number(value) // Try to parse as number
+		} else if (value.toLowerCase() === "true") {
+			parsedValue = true
+		} else if (value.toLowerCase() === "false") {
+			parsedValue = false
+		} else {
+			parsedValue = value // Keep as string
+		}
+
+		// Handle duplicate 'stop' keys by collecting them into an array
+		if (key === "stop") {
+			if (!result[key]) {
+				result[key] = []
+			}
+			;(result[key] as string[]).push(parsedValue)
+		} else {
+			result[key] = parsedValue
+		}
+	})
+
+	return result
+}
+
 export const parseOllamaModel = (rawModel: OllamaModelInfoResponse): ModelInfo => {
 	// kilocode_change start
-	const contextLengthFromModelParameters =
-		typeof rawModel.parameters === "string"
-			? parseInt(rawModel.parameters.match(/^num_ctx\s+(\d+)/m)?.[1] ?? "", 10) || undefined
-			: undefined
 
-	const contextLengthFromEnvironment = parseInt(process.env.OLLAMA_CONTEXT_LENGTH || "4096", 10)
+	const parameters = rawModel.parameters ? parseOllamaParametersToJSON(rawModel.parameters) : undefined
+	const contextLengthFromModelParameters = parameters ? parseInt(parameters.num_ctx, 10) : undefined
+	let definedContextWindow = contextLengthFromModelParameters
 
-	let contextWindow = contextLengthFromModelParameters ?? contextLengthFromEnvironment
+	// Find the first key that ends with the ".context_length" suffix.
+	const modelInfoKeys = Object.keys(rawModel.model_info)
+	const contextLengthKey = modelInfoKeys.find((key) => key.endsWith(".context_length"))
+	// If a matching key was found, extract its value.
+	if (contextLengthKey) {
+		definedContextWindow = rawModel.model_info[contextLengthKey]
+	} // This enables us to grab qwen3.context_length or qwen2.context_length or gemma3.context_length, etc.
 
-	if (contextWindow == 40960 && !contextLengthFromModelParameters) {
-		contextWindow = 4096 // For some unknown reason, Ollama returns an undefind context as "40960" rather than 4096, which is what it actually enforces.
+	if (process.env.OLLAMA_CONTEXT_LENGTH && parseInt(process.env.OLLAMA_CONTEXT_LENGTH, 10)) {
+		definedContextWindow = parseInt(process.env.OLLAMA_CONTEXT_LENGTH, 10)
+		// env var overrides all.
 	}
-	// kilocode_change end
 
 	const modelInfo: ModelInfo = Object.assign({}, ollamaDefaultModelInfo, {
-		description: `Family: ${rawModel.details.family}, Context: ${contextWindow}, Size: ${rawModel.details.parameter_size}`,
-		contextWindow: contextWindow || ollamaDefaultModelInfo.contextWindow,
+		description: `Family: ${rawModel.details.family}, Context: ${definedContextWindow || ollamaDefaultModelInfo.contextWindow}, Size: ${rawModel.details.parameter_size}`,
+		contextWindow: definedContextWindow || ollamaDefaultModelInfo.contextWindow,
 		supportsPromptCache: true,
 		supportsImages: rawModel.capabilities?.includes("vision"),
 		supportsComputerUse: false,
-		maxTokens: contextWindow || ollamaDefaultModelInfo.contextWindow,
+		maxTokens: definedContextWindow || ollamaDefaultModelInfo.contextWindow,
 	})
+	// grab the specified context window from what ollama tells us about the paramaters.
+	// If thats not defined, grab it from environment overrides.
+	// If thats not defined, use whatever the model defaults are.
+	// If thats not defined, use ollamaDefaultModelInfo.contextWindow
+	// kilocode_change end
 
 	return modelInfo
 }
