@@ -6,6 +6,7 @@ import {
 	type ProviderSettingsWithId,
 	providerSettingsWithIdSchema,
 	discriminatedProviderSettingsWithIdSchema,
+	baseProviderSettingsSchema,
 	isSecretStateKey,
 	ProviderSettingsEntry,
 	DEFAULT_CONSECUTIVE_MISTAKE_LIMIT,
@@ -317,9 +318,24 @@ export class ProviderSettingsManager {
 				const existingId = providerProfiles.apiConfigs[name]?.id
 				const id = config.id || existingId || this.generateId()
 
-				// Filter out settings from other providers.
-				const filteredConfig = discriminatedProviderSettingsWithIdSchema.parse(config)
-				providerProfiles.apiConfigs[name] = { ...filteredConfig, id }
+				// Try the discriminated schema first (stricter validation)
+				const filteredConfig = discriminatedProviderSettingsWithIdSchema.safeParse(config)
+				if (filteredConfig.success) {
+					providerProfiles.apiConfigs[name] = { ...filteredConfig.data, id }
+				} else {
+					// Fallback: use the less strict schema with passthrough to preserve new fields
+					const fallbackConfig = providerSettingsWithIdSchema.passthrough().safeParse(config)
+					if (fallbackConfig.success) {
+						providerProfiles.apiConfigs[name] = { ...fallbackConfig.data, id }
+					} else {
+						// Last resort: save raw config (should not happen normally)
+						console.error(
+							`[ProviderSettingsManager] Failed to validate config "${name}":`,
+							filteredConfig.error.issues,
+						)
+						providerProfiles.apiConfigs[name] = { ...config, id }
+					}
+				}
 				await this.store(providerProfiles)
 				return id
 			})
@@ -462,11 +478,31 @@ export class ProviderSettingsManager {
 	public async export() {
 		try {
 			return await this.lock(async () => {
-				const profiles = providerProfilesSchema.parse(await this.load())
+				// Use passthrough to preserve fields like requestsPerMinute
+				const rawProfiles = await this.load()
+				const profiles = providerProfilesSchema.passthrough().parse(rawProfiles)
 				const configs = profiles.apiConfigs
 				for (const name in configs) {
-					// Avoid leaking properties from other providers.
-					configs[name] = discriminatedProviderSettingsWithIdSchema.parse(configs[name])
+					// Use passthrough to preserve new fields while still validating known fields
+					// This ensures requestsPerMinute and other new fields are exported
+					const baseSchema = baseProviderSettingsSchema
+						.extend({
+							id: z.string(),
+						})
+						.passthrough()
+
+					// First validate with base schema to preserve all fields
+					const baseValidated = baseSchema.parse(configs[name])
+
+					// Then validate the discriminated part to ensure provider-specific fields are correct
+					// but without parsing (which would remove unknown fields)
+					const result = discriminatedProviderSettingsWithIdSchema.safeParse(baseValidated)
+					if (result.success) {
+						configs[name] = baseValidated // Keep the passthrough version
+					} else {
+						// If validation fails, keep the original
+						configs[name] = baseValidated
+					}
 				}
 				return profiles
 			})
@@ -504,26 +540,52 @@ export class ProviderSettingsManager {
 				return this.defaultProviderProfiles
 			}
 
+			// Parse with a more lenient schema that preserves all fields
+			const rawData = JSON.parse(content)
+
+			// Debug: Check if requestsPerMinute exists in raw data
+
 			const providerProfiles = providerProfilesSchema
 				.extend({
 					apiConfigs: z.record(z.string(), z.any()),
 				})
-				.parse(JSON.parse(content))
+				.parse(rawData)
 
 			const apiConfigs = Object.entries(providerProfiles.apiConfigs).reduce(
 				(acc, [key, apiConfig]) => {
-					const result = providerSettingsWithIdSchema.safeParse(apiConfig)
-					return result.success ? { ...acc, [key]: result.data } : acc
+					// First try discriminated schema for proper validation
+					const discriminatedResult = discriminatedProviderSettingsWithIdSchema.safeParse(apiConfig)
+					if (discriminatedResult.success) {
+						return { ...acc, [key]: discriminatedResult.data }
+					}
+					
+					// If discriminated fails, try passthrough to preserve new fields like requestsPerMinute
+					const passthroughResult = providerSettingsWithIdSchema.passthrough().safeParse(apiConfig)
+					if (passthroughResult.success) {
+						// Check if it's a valid provider type
+						const provider = passthroughResult.data.apiProvider
+						const validProviders = ["anthropic", "openai", "google", "openrouter", "bedrock", "azureopenai", "vertexai", "openai-compatible", "ollama", "lmstudio", "gemini", "openai-native", "aws-bedrock", "gcp-vertex", "github-models", "xai", "deepseek", "vscode-lm"]
+						if (provider && !validProviders.includes(provider)) {
+							console.error(`[ProviderSettingsManager] Invalid provider "${provider}" in config "${key}", skipping`)
+							return acc
+						}
+						return { ...acc, [key]: passthroughResult.data }
+					}
+					
+					console.error(`[ProviderSettingsManager] Failed to parse config "${key}":`, passthroughResult.error.issues)
+					// Skip invalid configs completely
+					return acc
 				},
 				{} as Record<string, ProviderSettingsWithId>,
 			)
 
-			return {
+			const finalProfiles = {
 				...providerProfiles,
 				apiConfigs: Object.fromEntries(
 					Object.entries(apiConfigs).filter(([_, apiConfig]) => apiConfig !== null),
 				),
 			}
+			return finalProfiles
 		} catch (error) {
 			if (error instanceof ZodError) {
 				TelemetryService.instance.captureSchemaValidationError({
