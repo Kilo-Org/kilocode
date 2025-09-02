@@ -271,7 +271,6 @@ describe("mergeExtensionState", () => {
 			experiments: {
 				powerSteering: true,
 				multiFileApplyDiff: true,
-				inlineAssist: false, // kilocode_change
 				preventFocusDisruption: false,
 				morphFastApply: false, // kilocode_change
 				newTaskRequireTodos: false,
@@ -288,7 +287,6 @@ describe("mergeExtensionState", () => {
 		expect(result.experiments).toEqual({
 			powerSteering: true,
 			multiFileApplyDiff: true,
-			inlineAssist: false, // kilocode_change
 			preventFocusDisruption: false,
 			morphFastApply: false, // kilocode_change
 			newTaskRequireTodos: false,

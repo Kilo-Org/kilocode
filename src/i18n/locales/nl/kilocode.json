@@ -62,13 +62,13 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo In-line Assistent",
-			"disabled": "$(circle-slash) Kilo In-line Assistent",
-			"warning": "$(warning) Kilo In-line Assistent",
+			"enabled": "$(sparkle) Kilo Code Autocomplete",
+			"disabled": "$(circle-slash) Kilo Code Autocomplete",
+			"warning": "$(warning) Kilo Code Autocomplete",
 			"tooltip": {
-				"basic": "Kilo Code In-line Assistent",
-				"disabled": "Kilo Code In-line Assistent (uitgeschakeld)",
-				"tokenError": "Een geldig token moet zijn ingesteld om In-line Assistent te gebruiken",
+				"basic": "Kilo Code Autocomplete",
+				"disabled": "Kilo Code Autocomplete (uitgeschakeld)",
+				"tokenError": "Een geldig token moet worden ingesteld om Autocomplete te gebruiken",
 				"lastCompletion": "Laatste suggestie:",
 				"sessionTotal": "Totale sessiekosten:",
 				"model": "Model:"
@@ -78,21 +78,21 @@
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Kilo In-line Assistent {{status}}",
+		"toggleMessage": "Kilo Code Autocomplete {{status}}",
 		"progress": {
 			"title": "Kilo Code",
-			"analyzing": "Uw code analyseren...",
-			"generating": "Suggesties voor bewerkingen genereren...",
-			"processing": "Suggesties voor bewerkingen verwerken...",
-			"showing": "Suggesties voor bewerkingen weergeven..."
+			"analyzing": "Je code analyseren...",
+			"generating": "Voorgestelde bewerkingen genereren...",
+			"processing": "Voorgestelde bewerkingen verwerken...",
+			"showing": "Voorgestelde bewerkingen tonen..."
 		},
 		"input": {
 			"title": "Kilo Code: Snelle Taak",
-			"placeholder": "bijv. 'refactor deze functie om deze efficiënter te maken'"
+			"placeholder": "bijv., 'refactor deze functie om efficiënter te zijn'"
 		},
 		"commands": {
-			"generateSuggestions": "Kilo Code: Genereer Voorgestelde Bewerkingen",
-			"displaySuggestions": "Voorgestelde Bewerkingen Weergeven",
+			"generateSuggestions": "Kilo Code: Voorgestelde Bewerkingen Genereren",
+			"displaySuggestions": "Voorgestelde Bewerkingen Tonen",
 			"cancelSuggestions": "Voorgestelde Bewerkingen Annuleren",
 			"applyCurrentSuggestion": "Huidige Voorgestelde Bewerking Toepassen",
 			"applyAllSuggestions": "Alle Voorgestelde Bewerkingen Toepassen",
@@ -105,15 +105,12 @@
 		"chatParticipant": {
 			"fullName": "Kilo Code Agent",
 			"name": "Agent",
-			"description": "Ik kan u helpen met snelle taken en voorgestelde bewerkingen."
-		},
-		"messages": {
-			"provideCodeSuggestions": "Code suggesties worden verstrekt..."
+			"description": "Ik kan je helpen met snelle taken en voorgestelde bewerkingen."
 		},
 		"incompatibilityExtensionPopup": {
-			"message": "De Kilo Code In-line Assistent wordt geblokkeerd door een conflict met GitHub Copilot. Om dit op te lossen, moet u de in-line suggesties van Copilot uitschakelen.",
-			"disableCopilot": "Copilot uitschakelen",
-			"disableInlineAssist": "In-line Assistent uitschakelen"
+			"message": "De Kilo Code Autocomplete wordt geblokkeerd door een conflict met GitHub Copilot. Om dit op te lossen, moet je Copilot's inline suggesties uitschakelen.",
+			"disableCopilot": "Copilot Uitschakelen",
+			"disableInlineAssist": "Autocomplete Uitschakelen"
 		}
 	},
 	"terminalCommandGenerator": {

@@ -4,7 +4,6 @@ export const EXPERIMENT_IDS = {
 	MORPH_FAST_APPLY: "morphFastApply", // kilocode_change
 	MULTI_FILE_APPLY_DIFF: "multiFileApplyDiff",
 	POWER_STEERING: "powerSteering",
-	INLINE_ASSIST: "inlineAssist", // kilocode_change
 	PREVENT_FOCUS_DISRUPTION: "preventFocusDisruption",
 } as const satisfies Record<string, ExperimentId>
 
@@ -20,7 +19,6 @@ export const experimentConfigsMap: Record<ExperimentKey, ExperimentConfig> = {
 	MORPH_FAST_APPLY: { enabled: false }, // kilocode_change
 	MULTI_FILE_APPLY_DIFF: { enabled: false },
 	POWER_STEERING: { enabled: false },
-	INLINE_ASSIST: { enabled: false }, // kilocode_change
 	PREVENT_FOCUS_DISRUPTION: { enabled: false },
 }
 

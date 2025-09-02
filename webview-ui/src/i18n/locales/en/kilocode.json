@@ -26,6 +26,10 @@
 		"browserAction": "Browser action waiting for approval",
 		"command": "Command waiting for approval"
 	},
+	"imageWarnings": {
+		"modelNoImageSupport": "Images are not supported by the current model.",
+		"maxImagesReached": "Maximum of 20 images per message. Remove some images to add more."
+	},
 	"settings": {
 		"sections": {
 			"mcp": "MCP Servers"
@@ -189,36 +193,36 @@
 		}
 	},
 	"ghost": {
-		"title": "Inline Assist",
+		"title": "Autocomplete",
 		"settings": {
 			"autoTrigger": "Auto Trigger",
 			"triggers": "Triggers",
-			"keybindingDescription": "Inline Assist features are triggered by commands. You can configure the <DocsLink>Keyboard Shortcuts here</DocsLink>.",
+			"keybindingDescription": "Autocomplete features can be triggered by commands. You can configure the <DocsLink>Keyboard Shortcuts here</DocsLink>.",
 			"enableAutoTrigger": {
-				"label": "Enable Auto Trigger",
-				"description": "When enabled, Kilo Code will automatically trigger Inline Assist when you stop typing. This can be useful for quick fixes and suggestions."
+				"label": "Enable Autocomplete",
+				"description": "When enabled, Kilo Code will automatically trigger Autocomplete when you stop typing. This can be useful for quick fixes and suggestions."
 			},
 			"autoTriggerDelay": {
 				"label": "Auto Trigger Delay",
-				"description": "The delay in seconds before Kilo Code triggers Inline Assist after you stop typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
+				"description": "The delay in seconds before Kilo Code triggers Autocomplete after you stop typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
 			},
 			"enableQuickInlineTaskKeybinding": {
-				"label": "Quick Inline Task",
+				"label": "Quick Task",
 				"description": "Only need a quick change? Select some code (or don't!) and hit Cmd+I. Describe your goal in plain English (\"create a React component with these props\", \"add error handling to this function\"), and get multiple, ready-to-use suggestions right in your editor. <DocsLink>See shortcut</DocsLink>"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Smart Inline Task",
+				"label": "Manual Autocomplete",
 				"description": "Need a quick fix, completion, or refactor? Kilo will use the surrounding context to offer immediate improvements, keeping you in the flow. <DocsLink>See shortcut</DocsLink>"
 			},
 			"enableCustomProvider": {
 				"label": "Use custom provider",
-				"description": "Inline Assist uses your KiloCode / OpenRouter / Mistral credential to use the Codestral model by default"
+				"description": "Autocomplete uses your KiloCode / OpenRouter / Mistral credential to use the Codestral model by default"
 			},
 			"provider": "Provider",
 			"apiConfigId": {
 				"label": "API Configuration",
 				"current": "Use currently selected API configuration",
-				"description": "Select an API configuration to use for Inline Assist prompts, or just use whatever is currently selected"
+				"description": "Select an API configuration to use for Autocomplete prompts, or just use whatever is currently selected"
 			}
 		}
 	},

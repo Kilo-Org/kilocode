@@ -18,7 +18,6 @@ import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManag
 import { GhostContext } from "./GhostContext"
 import { TelemetryService } from "@roo-code/telemetry"
 import { ClineProvider } from "../../core/webview/ClineProvider"
-import { experiments, EXPERIMENT_IDS } from "../../shared/experiments"
 import { GhostCursorAnimation } from "./GhostCursorAnimation"
 import { GhostCursor } from "./GhostCursor"
 
@@ -38,7 +37,7 @@ export class GhostProvider {
 	private cursor: GhostCursor
 	private cursorAnimation: GhostCursorAnimation
 
-	private enabled: boolean = false
+	private enabled: boolean = true
 	private taskId: string | null = null
 	private isProcessing: boolean = false
 	private isRequestCancelled: boolean = false
@@ -82,7 +81,7 @@ export class GhostProvider {
 		vscode.window.onDidChangeTextEditorSelection(this.onDidChangeTextEditorSelection, this, context.subscriptions)
 		vscode.window.onDidChangeActiveTextEditor(this.onDidChangeActiveTextEditor, this, context.subscriptions)
 
-		void this.reload()
+		void this.load()
 	}
 
 	// Singleton Management
@@ -102,11 +101,6 @@ export class GhostProvider {
 	}
 
 	// Settings Management
-	private loadExperimentStatus() {
-		const state = ContextProxy.instance?.getValues?.()
-		return experiments.isEnabled(state.experiments ?? {}, EXPERIMENT_IDS.INLINE_ASSIST)
-	}
-
 	private loadSettings() {
 		const state = ContextProxy.instance?.getValues?.()
 		return state.ghostServiceSettings
@@ -120,17 +114,11 @@ export class GhostProvider {
 		await this.cline.postStateToWebview
 	}
 
-	private async load() {
+	public async load() {
 		this.settings = this.loadSettings()
 		await this.model.reload(this.settings, this.providerSettingsManager)
 		await this.updateGlobalContext()
 		this.updateStatusBar()
-	}
-
-	private async unload() {
-		this.clearAutoTriggerTimer()
-		this.disposeStatusBar()
-		await this.cancelSuggestions()
 	}
 
 	public async disable() {
@@ -141,7 +129,7 @@ export class GhostProvider {
 			enableQuickInlineTaskKeybinding: false,
 		}
 		await this.saveSettings()
-		await this.reload()
+		await this.load()
 	}
 
 	public async enable() {
@@ -152,21 +140,7 @@ export class GhostProvider {
 			enableQuickInlineTaskKeybinding: true,
 		}
 		await this.saveSettings()
-		await this.reload()
-	}
-
-	public async reload() {
-		const enabled = this.loadExperimentStatus()
-		if (this.enabled && !enabled) {
-			this.enabled = enabled
-			await this.unload()
-			return
-		}
-		this.enabled = enabled
-		if (this.enabled) {
-			await this.load()
-		}
-		return
+		await this.load()
 	}
 
 	// VsCode Event Handlers
@@ -281,7 +255,7 @@ export class GhostProvider {
 
 		if (!this.model.loaded) {
 			this.stopProcessing()
-			await this.reload()
+			await this.load()
 		}
 
 		console.log("system", systemPrompt)

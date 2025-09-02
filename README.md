@@ -49,7 +49,7 @@ Kilo Code started as a fork of Roo Code, which itself is a fork of Cline. We fre
 
 - No need to fiddle with API keys, Kilo Code ships with the latest AI models plugged in, including Gemini 2.5 Pro, Claude 4 Sonnet & Opus, and GPT-5
 - MCP Server Marketplace: Easily find, and use MCP servers to extend the agent capabilities.
-- Inline Assist (experimental)
+- Autocomplete (experimental)
 
 Kilo Code is a direct fork from Roo Code, and also includes the following features from Cline (and our own features):
 
