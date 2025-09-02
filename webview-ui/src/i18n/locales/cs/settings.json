@@ -804,10 +804,6 @@
 			"apiKey": "Klíč API Morph (volitelné)",
 			"placeholder": "Zadejte svůj klíč API Morph (volitelné)"
 		},
-		"INLINE_ASSIST": {
-			"name": "Inline pomoc",
-			"description": "Povolte funkce Inline Assist pro rychlé návrhy a vylepšení kódu přímo ve vašem editoru. Zahrnuje Rychlý inline úkol (Cmd+I) pro cílené změny a Automatický inline úkol pro kontextová vylepšení."
-		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Úpravy na pozadí",
 			"description": "Zabránit narušení zaměření editoru, když je povoleno. Úpravy souborů probíhají na pozadí bez otevírání diff zobrazení nebo krádeže zaměření. Můžete pokračovat v práci bez přerušení, zatímco Kilo Code provádí změny. Soubory mohou být otevřeny bez zaměření pro zachycení diagnostiky nebo zůstat zcela zavřené."
@@ -819,6 +815,10 @@
 		"NEW_TASK_REQUIRE_TODOS": {
 			"name": "Vyžadovat seznam 'úkolů' pro nové úkoly",
 			"description": "Pokud je povoleno, nástroj new_task bude vyžadovat poskytnutí parametru úkolů. Tím se zajistí, že všechny nové úkoly začnou s jasným seznamem cílů. Pokud je zakázáno (výchozí), parametr úkolů zůstane volitelný pro zpětnou kompatibilitu."
+		},
+		"INLINE_ASSIST": {
+			"name": "Autocomplete",
+			"description": "Povolit funkce Autocomplete pro rychlé návrhy kódu a vylepšení přímo ve tvém editoru. Zahrnuje Rychlý úkol (Cmd+I) pro cílené změny a Autocomplete pro kontextová vylepšení."
 		}
 	},
 	"promptCaching": {

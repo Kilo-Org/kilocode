@@ -1951,7 +1951,13 @@ export class ClineProvider
 			cloudIsAuthenticated: cloudIsAuthenticated ?? false,
 			sharingEnabled: sharingEnabled ?? false,
 			organizationAllowList,
-			ghostServiceSettings: ghostServiceSettings ?? {}, // kilocode_change
+			// kilocode_change start
+			ghostServiceSettings: ghostServiceSettings ?? {
+				enableAutoTrigger: true,
+				enableQuickInlineTaskKeybinding: true,
+				enableSmartInlineTaskKeybinding: true,
+			},
+			// kilocode_change end
 			organizationSettingsVersion,
 			condensingApiConfigId,
 			customCondensingPrompt,
@@ -2127,7 +2133,13 @@ export class ClineProvider
 			enhancementApiConfigId: stateValues.enhancementApiConfigId,
 			commitMessageApiConfigId: stateValues.commitMessageApiConfigId, // kilocode_change
 			terminalCommandApiConfigId: stateValues.terminalCommandApiConfigId, // kilocode_change
-			ghostServiceSettings: stateValues.ghostServiceSettings ?? {}, // kilocode_change
+			// kilocode_change start
+			ghostServiceSettings: stateValues.ghostServiceSettings ?? {
+				enableAutoTrigger: true,
+				enableQuickInlineTaskKeybinding: true,
+				enableSmartInlineTaskKeybinding: true,
+			},
+			// kilocode_change end
 			experiments: stateValues.experiments ?? experimentDefault,
 			autoApprovalEnabled: stateValues.autoApprovalEnabled ?? true,
 			customModes,

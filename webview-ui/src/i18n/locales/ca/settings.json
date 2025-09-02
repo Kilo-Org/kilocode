@@ -748,10 +748,6 @@
 			"apiKey": "Clau d'API de Morph (opcional)",
 			"placeholder": "Introduïu la vostra clau d'API de Morph (opcional)"
 		},
-		"INLINE_ASSIST": {
-			"name": "Assistència en línia",
-			"description": "Activa les funcions d'assistència en línia per obtenir suggeriments i millores de codi ràpides directament al teu editor. Inclou la Tasca ràpida en línia (Cmd+I) per a canvis específics i la Tasca automàtica en línia per a millores contextuals."
-		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Edició en segon pla",
 			"description": "Quan s'activa, evita la interrupció del focus de l'editor. Les edicions de fitxers es produeixen en segon pla sense obrir la vista diff o robar el focus. Pots continuar treballant sense interrupcions mentre Kilo Code fa canvis. Els fitxers poden obrir-se sense focus per capturar diagnòstics o romandre completament tancats."
@@ -763,6 +759,10 @@
 		"NEW_TASK_REQUIRE_TODOS": {
 			"name": "Requerir la llista 'todos' per a noves tasques",
 			"description": "Quan estigui activat, l'eina new_task requerirà que es proporcioni un paràmetre 'todos'. Això garanteix que totes les noves tasques comencin amb una llista clara d'objectius. Quan estigui desactivat (per defecte), el paràmetre 'todos' continua sent opcional per a la compatibilitat amb versions anteriors."
+		},
+		"INLINE_ASSIST": {
+			"name": "Autocomplete",
+			"description": "Habilita les funcionalitats d'Autocomplete per a suggeriments de codi ràpids i millores directament al teu editor. Inclou Tasca Ràpida (Cmd+I) per a canvis específics i Autocomplete per a millores contextuals."
 		}
 	},
 	"promptCaching": {

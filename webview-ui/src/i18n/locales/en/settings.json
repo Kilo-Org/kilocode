@@ -754,8 +754,8 @@
 			"placeholder": "Enter your Morph API key (optional)"
 		},
 		"INLINE_ASSIST": {
-			"name": "Inline Assist",
-			"description": "Enable Inline Assist features for quick code suggestions and improvements directly in your editor. Includes Quick Inline Task (Cmd+I) for targeted changes and Auto Inline Task for contextual improvements."
+			"name": "Autocomplete",
+			"description": "Enable Autocomplete features for quick code suggestions and improvements directly in your editor. Includes Quick Task (Cmd+I) for targeted changes and Autocomplete for contextual improvements."
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Background editing",

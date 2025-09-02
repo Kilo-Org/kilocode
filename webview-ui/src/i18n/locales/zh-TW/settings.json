@@ -749,10 +749,6 @@
 			"apiKey": "Morph API 金鑰（選用）",
 			"placeholder": "輸入您的 Morph API 金鑰（選用）"
 		},
-		"INLINE_ASSIST": {
-			"name": "行內輔助",
-			"description": "啟用行內輔助功能，可直接在編輯器中快速取得程式碼建議和改進。其中包括用於定向修改的快速行內任務 (Cmd+I) 和用於情境改進的自動行內任務。"
-		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "背景編輯",
 			"description": "啟用後可防止編輯器焦點中斷。檔案編輯會在背景進行，不會開啟 diff 檢視或搶奪焦點。您可以在 Kilo Code 進行變更時繼續不受幹擾地工作。檔案可能會在不獲得焦點的情況下開啟以捕獲診斷，或保持完全關閉。"
@@ -764,6 +760,10 @@
 		"NEW_TASK_REQUIRE_TODOS": {
 			"name": "要求新工作提供 'todos' 列表",
 			"description": "啟用後，new_task 工具將需要提供 todos 參數。這可以確保所有新工作都以明確的目標列表開始。停用時（預設），todos 參數保持可選，以實現向後相容。"
+		},
+		"INLINE_ASSIST": {
+			"name": "Autocomplete",
+			"description": "啟用 Autocomplete 功能，在編輯器中直接提供快速程式碼建議和改進。包括針對性變更的快速工作（Cmd+I）和內容改進的 Autocomplete。"
 		}
 	},
 	"promptCaching": {
