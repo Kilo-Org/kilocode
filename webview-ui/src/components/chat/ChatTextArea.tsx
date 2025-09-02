@@ -863,14 +863,14 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				}
 			},
 			[
-				inputValue,
+				shouldDisableImages,
+				setSelectedImages,
 				cursorPosition,
 				setInputValue,
-				selectedImages.length,
-				shouldDisableImages,
-				showImageWarning,
+				inputValue,
 				t,
-				setSelectedImages,
+				selectedImages.length, // kilocode_change - added selectedImages.length
+				showImageWarning, // kilocode_change - added showImageWarning
 			],
 		)
 
@@ -1039,15 +1039,17 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				}
 			},
 			[
-				inputValue,
 				cursorPosition,
-				setInputValue,
 				cwd,
+				inputValue,
+				setInputValue,
+				setCursorPosition,
+				setIntendedCursorPosition,
 				shouldDisableImages,
-				selectedImages.length,
-				showImageWarning,
-				t,
 				setSelectedImages,
+				t,
+				selectedImages.length, // kilocode_change - added selectedImages.length
+				showImageWarning, // kilocode_change - added showImageWarning
 			],
 		)
 
@@ -1566,7 +1568,6 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 								setIsDraggingOver(false)
 							}
 						}}>
-						{/* kilocode_change start: pull slash commands from Cline */}
 						{/* kilocode_change start: ImageWarningBanner integration */}
 						<ImageWarningBanner
 							messageKey={imageWarning ?? ""}
@@ -1574,6 +1575,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							isVisible={!!imageWarning}
 						/>
 						{/* kilocode_change end: ImageWarningBanner integration */}
+						{/* kilocode_change start: pull slash commands from Cline */}
 						{showSlashCommandsMenu && (
 							<div ref={slashCommandsMenuContainerRef}>
 								<SlashCommandMenu
@@ -1586,7 +1588,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 								/>
 							</div>
 						)}
-						{/* kilocode_change end */}
+						{/* kilocode_change end: pull slash commands from Cline */}
 						{showContextMenu && (
 							<div
 								ref={contextMenuContainerRef}
