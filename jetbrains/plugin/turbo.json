@@ -52,6 +52,7 @@
 			"dependsOn": ["copy:resource-nodemodules"]
 		},
 		"sync:version": {
+			"cache": false,
 			"outputs": ["./gradle.properties"],
 			"inputs": ["../src/package.json"]
 		},
