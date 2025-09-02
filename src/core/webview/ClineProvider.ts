@@ -1860,7 +1860,7 @@ export class ClineProvider
 			alwaysAllowReadOnly: alwaysAllowReadOnly ?? true,
 			alwaysAllowReadOnlyOutsideWorkspace: alwaysAllowReadOnlyOutsideWorkspace ?? true,
 			alwaysAllowWrite: alwaysAllowWrite ?? true,
-			alwaysAllowWriteOutsideWorkspace: alwaysAllowWriteOutsideWorkspace ?? false, // kilocode_change
+			alwaysAllowWriteOutsideWorkspace: alwaysAllowWriteOutsideWorkspace ?? false,
 			alwaysAllowWriteProtected: alwaysAllowWriteProtected ?? false,
 			alwaysAllowExecute: alwaysAllowExecute ?? true,
 			alwaysAllowBrowser: alwaysAllowBrowser ?? true,
@@ -2068,7 +2068,7 @@ export class ClineProvider
 			alwaysAllowReadOnly: stateValues.alwaysAllowReadOnly ?? true,
 			alwaysAllowReadOnlyOutsideWorkspace: stateValues.alwaysAllowReadOnlyOutsideWorkspace ?? true,
 			alwaysAllowWrite: stateValues.alwaysAllowWrite ?? true,
-			alwaysAllowWriteOutsideWorkspace: stateValues.alwaysAllowWriteOutsideWorkspace ?? false, // kilocode_change
+			alwaysAllowWriteOutsideWorkspace: stateValues.alwaysAllowWriteOutsideWorkspace ?? false,
 			alwaysAllowWriteProtected: stateValues.alwaysAllowWriteProtected ?? false,
 			alwaysAllowExecute: stateValues.alwaysAllowExecute ?? true,
 			alwaysAllowBrowser: stateValues.alwaysAllowBrowser ?? true,
