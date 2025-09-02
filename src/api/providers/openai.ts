@@ -16,6 +16,7 @@ import { XmlMatcher } from "../../utils/xml-matcher"
 
 import { convertToOpenAiMessages } from "../transform/openai-format"
 import { convertToR1Format } from "../transform/r1-format"
+import { convertToDeepSeekV31Messages } from "../transform/deepseek-v3.1-format"
 import { convertToSimpleMessages } from "../transform/simple-format"
 import { ApiStream, ApiStreamUsageChunk } from "../transform/stream"
 import { getModelParams } from "../transform/model-params"
@@ -90,6 +91,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 		const enabledLegacyFormat = this.options.openAiLegacyFormat ?? false
 		const isAzureAiInference = this._isAzureAiInference(modelUrl)
 		const deepseekReasoner = modelId.includes("deepseek-reasoner") || enabledR1Format
+		const deepseekV31 = modelId.includes("deepseek-v3.1") || modelId.includes("DeepSeek-V3.1")
 		const ark = modelUrl.includes(".volces.com")
 
 		if (modelId.includes("o1") || modelId.includes("o3") || modelId.includes("o4")) {
@@ -107,6 +109,8 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 
 			if (deepseekReasoner) {
 				convertedMessages = convertToR1Format([{ role: "user", content: systemPrompt }, ...messages])
+			} else if (deepseekV31) {
+				convertedMessages = convertToDeepSeekV31Messages(systemPrompt, messages, true)
 			} else if (ark || enabledLegacyFormat) {
 				convertedMessages = [systemMessage, ...convertToSimpleMessages(messages)]
 			} else {
@@ -166,8 +170,8 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			// Only include temperature if explicitly set
 			if (this.options.modelTemperature !== undefined) {
 				requestOptions.temperature = this.options.modelTemperature
-			} else if (deepseekReasoner) {
-				// DeepSeek Reasoner has a specific default temperature
+			} else if (deepseekReasoner || deepseekV31) {
+				// DeepSeek Reasoner and V3.1 have a specific default temperature
 				requestOptions.temperature = DEEP_SEEK_DEFAULT_TEMPERATURE
 			}
 
@@ -228,9 +232,11 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				model: modelId,
 				messages: deepseekReasoner
 					? convertToR1Format([{ role: "user", content: systemPrompt }, ...messages])
-					: enabledLegacyFormat
-						? [systemMessage, ...convertToSimpleMessages(messages)]
-						: [systemMessage, ...convertToOpenAiMessages(messages)],
+					: deepseekV31
+						? convertToDeepSeekV31Messages(systemPrompt, messages, true)
+						: enabledLegacyFormat
+							? [systemMessage, ...convertToSimpleMessages(messages)]
+							: [systemMessage, ...convertToOpenAiMessages(messages)],
 			}
 
 			// Add max_tokens if needed
