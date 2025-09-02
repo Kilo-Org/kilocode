@@ -101,14 +101,14 @@ export function convertToDeepSeekV31Format(
 /**
  * Extract text content from Anthropic message content
  */
-function extractTextContent(content: string | Anthropic.Messages.ContentBlock[]): string {
+function extractTextContent(content: string | Anthropic.Messages.ContentBlockParam[]): string {
 	if (typeof content === "string") {
 		return content
 	}
 
 	if (Array.isArray(content)) {
 		return content
-			.filter((block): block is Anthropic.Messages.TextBlock => block.type === "text")
+			.filter((block): block is Anthropic.Messages.TextBlockParam => block.type === "text")
 			.map((block) => block.text)
 			.join("\n")
 	}
