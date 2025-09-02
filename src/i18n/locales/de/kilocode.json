@@ -13,7 +13,8 @@
 	},
 	"task": {
 		"noAssistantMessages": "Die Antwort des Modells endete unerwartet (keine Assistant-Nachrichten). Dies könnte ein Hinweis auf Raten-Limitierung sein.",
-		"notLoggedInError": "Anfrage kann nicht abgeschlossen werden. Stelle sicher, dass du mit dem ausgewählten Anbieter verbunden und angemeldet bist.\n\n{{error}}"
+		"notLoggedInError": "Anfrage kann nicht abgeschlossen werden. Stelle sicher, dass du mit dem ausgewählten Anbieter verbunden und angemeldet bist.\n\n{{error}}",
+		"maxCompletionTokens": "Die maximale Anzahl an Completion-Tokens wurde erreicht."
 	},
 	"checkpoints": {
 		"nestedGitRepos": "Checkpoints sind nicht verfügbar, da verschachtelte Git-Repositories im Arbeitsbereich erkannt wurden. Bitte entferne oder verschiebe verschachtelte Git-Repositories, um die Checkpoint-Funktion zu nutzen, oder deaktiviere Checkpoints in den Einstellungen, um diese Warnung zu unterdrücken.",

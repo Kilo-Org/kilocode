@@ -13,7 +13,8 @@
 	},
 	"task": {
 		"noAssistantMessages": "The model's response ended unexpectedly (no assistant messages). This may be a sign of rate limiting.",
-		"notLoggedInError": "Cannot complete request, make sure you are connected and logged in with the selected provider.\n\n{{error}}"
+		"notLoggedInError": "Cannot complete request, make sure you are connected and logged in with the selected provider.\n\n{{error}}",
+		"maxCompletionTokens": "The maximum number of completion tokens was reached."
 	},
 	"checkpoints": {
 		"nestedGitRepos": "Checkpoints are unavailable, because nested Git repositories were detected in the workspace. Please remove or relocate nested Git repositories to use the checkpoints feature or disable checkpoints in the settings to supress this warning.",

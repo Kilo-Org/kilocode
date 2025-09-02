@@ -2,7 +2,7 @@ import { DISCORD_URL } from '@site/src/constants.ts'
 
 # Adding More Tokens
 
-Once you've used your initial free tokens, you can easily add more:
+Once you've used any initial free tokens, you can easily add more:
 
 - Add a credit card to your account (all payments are securely processed through Stripe)
 - We don't currently offer a subscription, so you only pay for the tokens you use, and only when you choose to top up your tokens!
