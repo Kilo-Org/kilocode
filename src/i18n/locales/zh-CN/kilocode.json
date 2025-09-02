@@ -15,6 +15,11 @@
 		"noAssistantMessages": "模型响应意外结束（没有助理消息）。这可能是 API 请求频率限制的迹象。",
 		"notLoggedInError": "无法完成请求，请确保您已连接并使用所选提供商登录。\n\n{{error}}"
 	},
+	"checkpoints": {
+		"nestedGitRepos": "存档点功能不可用，因为工作区中检测到嵌套的 Git 仓库。请移除或重新定位嵌套的 Git 仓库以使用存档点功能，或在设置中禁用存档点以消除此警告。",
+		"protectedPaths": "存档点功能在 {{workspaceDir}} 中不可用。请将子文件夹作为工作区打开以使用存档点功能，或在设置中禁用存档点以消除此警告。",
+		"dismissWarning": "忽略"
+	},
 	"rules": {
 		"actions": {
 			"delete": "删除",
@@ -109,6 +114,12 @@
 			"disableCopilot": "禁用 Copilot",
 			"disableInlineAssist": "禁用 内联辅助"
 		}
+	},
+	"seeNewChanges": {
+		"title": "显示新更改",
+		"checkpointsUnavailable": "无法显示新更改，存档点不可用。",
+		"noChanges": "无法显示新更改，未发现任何更改。",
+		"error": "无法显示新更改，发生错误。"
 	},
 	"terminalCommandGenerator": {
 		"inputPrompt": "Kilo：描述您想要生成的命令",

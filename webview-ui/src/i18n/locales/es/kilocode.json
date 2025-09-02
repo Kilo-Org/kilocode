@@ -17,7 +17,9 @@
 		"costUnknown": "costo desconocido",
 		"costUnknownDescription": "El proveedor de API no proporcionó datos de costo o la solicitud fue cancelada.",
 		"freeModelsDescription": "Los modelos gratuitos pueden tener límites de velocidad. ¡Usa el enlace a continuación para optimizar tu uso de modelos gratuitos!",
-		"freeModelsLink": "Descubre opciones de modelos gratuitos y económicos"
+		"freeModelsLink": "Descubre opciones de modelos gratuitos y económicos",
+		"openRouterMarkup": "¡El proveedor de Kilo Code incluye todos los modelos de OpenRouter, sin recargo y con 0% de comisión!",
+		"switchToKiloCode": "Cambiar a Kilo Code"
 	},
 	"notifications": {
 		"toolRequest": "Solicitud de herramienta pendiente de aprobación",
@@ -91,7 +93,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code quiere condensar tu conversación",
 			"condenseConversation": "Condensar Conversación"
-		}
+		},
+		"seeNewChanges": "Mostrar Nuevos Cambios"
 	},
 	"newTaskPreview": {
 		"task": "Tarea"

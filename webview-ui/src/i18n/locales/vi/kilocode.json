@@ -17,7 +17,9 @@
 		"costUnknown": "chi phí không xác định",
 		"costUnknownDescription": "Nhà cung cấp API không cung cấp dữ liệu chi phí hoặc yêu cầu đã bị hủy.",
 		"freeModelsDescription": "Các mô hình miễn phí có thể có giới hạn tốc độ. Sử dụng liên kết dưới đây để tối ưu hóa việc sử dụng mô hình miễn phí của bạn!",
-		"freeModelsLink": "Khám phá các tùy chọn mô hình miễn phí"
+		"freeModelsLink": "Khám phá các tùy chọn mô hình miễn phí",
+		"openRouterMarkup": "Nhà cung cấp Kilo Code bao gồm tất cả các mô hình OpenRouter, không có phí đánh giá và hoa hồng 0%!",
+		"switchToKiloCode": "Chuyển sang Kilo Code"
 	},
 	"notifications": {
 		"toolRequest": "Yêu cầu công cụ đang chờ phê duyệt",
@@ -91,7 +93,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code muốn tóm tắt cuộc trò chuyện của bạn",
 			"condenseConversation": "Tóm tắt cuộc trò chuyện"
-		}
+		},
+		"seeNewChanges": "Hiển thị thay đổi mới"
 	},
 	"newTaskPreview": {
 		"task": "Nhiệm vụ"

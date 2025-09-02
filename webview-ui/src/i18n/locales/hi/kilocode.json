@@ -17,7 +17,9 @@
 		"costUnknown": "लागत अज्ञात",
 		"costUnknownDescription": "API प्रदाता ने कोई लागत डेटा प्रदान नहीं किया या अनुरोध रद्द कर दिया गया।",
 		"freeModelsDescription": "मुफ्त मॉडल में दर सीमाएं हो सकती हैं। अपने मुफ्त मॉडल उपयोग को अनुकूलित करने के लिए नीचे दिए गए लिंक का उपयोग करें!",
-		"freeModelsLink": "मुफ्त और बजट मॉडल विकल्पों की खोज करें"
+		"freeModelsLink": "मुफ्त और बजट मॉडल विकल्पों की खोज करें",
+		"openRouterMarkup": "Kilo Code प्रदाता में सभी OpenRouter मॉडल शामिल हैं, बिना किसी मार्कअप और 0% कमीशन के साथ!",
+		"switchToKiloCode": "Kilo Code पर स्विच करें"
 	},
 	"notifications": {
 		"toolRequest": "उपकरण अनुरोध अनुमोदन की प्रतीक्षा कर रहा है",
@@ -91,7 +93,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code तुम्हारी बातचीत को संक्षिप्त करना चाहता है",
 			"condenseConversation": "बातचीत संक्षिप्त करें"
-		}
+		},
+		"seeNewChanges": "नए परिवर्तन देखें"
 	},
 	"newTaskPreview": {
 		"task": "कार्य"

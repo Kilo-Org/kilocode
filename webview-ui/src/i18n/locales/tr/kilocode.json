@@ -17,7 +17,9 @@
 		"costUnknown": "maliyet bilinmiyor",
 		"costUnknownDescription": "API Sağlayıcısı herhangi bir maliyet verisi sağlamadı veya istek iptal edildi.",
 		"freeModelsDescription": "Ücretsiz modellerin hız limitleri olabilir. Ücretsiz model kullanımını optimize etmek için aşağıdaki bağlantıyı kullan!",
-		"freeModelsLink": "Ücretsiz ve bütçe dostu model seçeneklerini keşfet"
+		"freeModelsLink": "Ücretsiz ve bütçe dostu model seçeneklerini keşfet",
+		"openRouterMarkup": "Kilo Code sağlayıcısı tüm OpenRouter modellerini içerir, sıfır ek ücret ve %0 komisyon ile!",
+		"switchToKiloCode": "Kilo Code'a geç"
 	},
 	"notifications": {
 		"toolRequest": "Araç isteği onay bekliyor",
@@ -91,7 +93,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code konuşmanı özetlemek istiyor",
 			"condenseConversation": "Konuşmayı Özetle"
-		}
+		},
+		"seeNewChanges": "Yeni Değişiklikleri Göster"
 	},
 	"newTaskPreview": {
 		"task": "Görev"

@@ -15,6 +15,11 @@
 		"noAssistantMessages": "The model's response ended unexpectedly (no assistant messages). This may be a sign of rate limiting.",
 		"notLoggedInError": "Cannot complete request, make sure you are connected and logged in with the selected provider.\n\n{{error}}"
 	},
+	"checkpoints": {
+		"nestedGitRepos": "Checkpoints are unavailable, because nested Git repositories were detected in the workspace. Please remove or relocate nested Git repositories to use the checkpoints feature or disable checkpoints in the settings to supress this warning.",
+		"protectedPaths": "Checkpoints are unavailable in {{workspaceDir}}. Please open a subfolder as workspace to use the checkpoints feature or disable checkpoints in the settings to supress this warning.",
+		"dismissWarning": "Dismiss"
+	},
 	"rules": {
 		"actions": {
 			"delete": "Delete",
@@ -106,6 +111,12 @@
 			"disableCopilot": "Disable Copilot",
 			"disableInlineAssist": "Disable Inline Assist"
 		}
+	},
+	"seeNewChanges": {
+		"title": "Showing new changes",
+		"checkpointsUnavailable": "Cannot show new changes, checkpoints are unavailable.",
+		"noChanges": "Cannot show new changes, no changes were found.",
+		"error": "Cannot show new changes, an error occured."
 	},
 	"terminalCommandGenerator": {
 		"tipMessage": "Kilo: Press {{shortcut}} to generate terminal commands",

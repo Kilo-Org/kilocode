@@ -15,6 +15,11 @@
 		"noAssistantMessages": "Phản hồi của mô hình kết thúc bất ngờ (không có tin nhắn trợ lý). Điều này có thể là dấu hiệu của giới hạn tốc độ.",
 		"notLoggedInError": "Không thể hoàn thành yêu cầu, hãy đảm bảo bạn đã kết nối và đăng nhập bằng nhà cung cấp đã chọn.\n\n{{error}}"
 	},
+	"checkpoints": {
+		"nestedGitRepos": "Điểm kiểm tra không khả dụng vì phát hiện các kho lưu trữ Git lồng nhau trong không gian làm việc. Vui lòng xóa hoặc di chuyển các kho lưu trữ Git lồng nhau để sử dụng tính năng điểm kiểm tra hoặc tắt điểm kiểm tra trong cài đặt để loại bỏ cảnh báo này.",
+		"protectedPaths": "Điểm kiểm tra không khả dụng trong {{workspaceDir}}. Vui lòng mở một thư mục con làm không gian làm việc để sử dụng tính năng điểm kiểm tra hoặc tắt điểm kiểm tra trong cài đặt để loại bỏ cảnh báo này.",
+		"dismissWarning": "Bỏ qua"
+	},
 	"rules": {
 		"actions": {
 			"delete": "Xóa",
@@ -124,5 +129,11 @@
 			"cancelButton": "Hủy"
 		},
 		"tipMessage": "Kilo: Nhấn {{shortcut}} để tạo lệnh terminal"
+	},
+	"seeNewChanges": {
+		"title": "Đang hiển thị các thay đổi mới",
+		"checkpointsUnavailable": "Không thể hiển thị các thay đổi mới, điểm kiểm tra không khả dụng.",
+		"noChanges": "Không thể hiển thị các thay đổi mới, không tìm thấy thay đổi nào.",
+		"error": "Không thể hiển thị các thay đổi mới, đã xảy ra lỗi."
 	}
 }

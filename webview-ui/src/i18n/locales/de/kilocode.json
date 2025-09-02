@@ -17,7 +17,9 @@
 		"costUnknown": "Kosten unbekannt",
 		"costUnknownDescription": "Der API-Anbieter hat keine Kostendaten bereitgestellt oder die Anfrage wurde abgebrochen.",
 		"freeModelsDescription": "Kostenlose Modelle können Ratenbeschränkungen haben. Nutze den Link unten, um deine kostenlose Modellnutzung zu optimieren!",
-		"freeModelsLink": "Kostenlose und Budget-Modelloptionen entdecken"
+		"freeModelsLink": "Kostenlose und Budget-Modelloptionen entdecken",
+		"openRouterMarkup": "Der Kilo Code Anbieter umfasst alle OpenRouter-Modelle, ohne Aufschlag und mit 0% Provision!",
+		"switchToKiloCode": "Zu Kilo Code wechseln"
 	},
 	"notifications": {
 		"toolRequest": "Werkzeuganfrage wartet auf Genehmigung",
@@ -91,7 +93,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code möchte deine Unterhaltung zusammenfassen",
 			"condenseConversation": "Unterhaltung zusammenfassen"
-		}
+		},
+		"seeNewChanges": "Neue Änderungen anzeigen"
 	},
 	"newTaskPreview": {
 		"task": "Aufgabe"

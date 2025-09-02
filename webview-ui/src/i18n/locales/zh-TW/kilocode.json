@@ -17,7 +17,9 @@
 		"costUnknown": "費用未知",
 		"costUnknownDescription": "API 提供商未提供任何費用資料或請求已取消。",
 		"freeModelsDescription": "免費模型可能有速率限制。使用下方連結來優化你的免費模型使用！",
-		"freeModelsLink": "探索免費模型選項"
+		"freeModelsLink": "探索免費模型選項",
+		"openRouterMarkup": "Kilo Code 供應商包含所有 OpenRouter 模型，無加價且 0% 佣金！",
+		"switchToKiloCode": "切換至 Kilo Code"
 	},
 	"notifications": {
 		"toolRequest": "工具請求等待核准",
@@ -91,7 +93,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code 想要壓縮你的對話",
 			"condenseConversation": "壓縮對話"
-		}
+		},
+		"seeNewChanges": "顯示新變更"
 	},
 	"newTaskPreview": {
 		"task": "任務"

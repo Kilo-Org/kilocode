@@ -17,7 +17,9 @@
 		"costUnknown": "kosten onbekend",
 		"costUnknownDescription": "De API-provider heeft geen kostengegevens verstrekt of het verzoek is geannuleerd.",
 		"freeModelsDescription": "Gratis modellen kunnen snelheidslimieten hebben. Gebruik de link hieronder om je gebruik van gratis modellen te optimaliseren!",
-		"freeModelsLink": "Ontdek gratis en budget modelopties"
+		"freeModelsLink": "Ontdek gratis en budget modelopties",
+		"openRouterMarkup": "De Kilo Code provider bevat alle OpenRouter modellen, zonder opslag en met 0% commissie!",
+		"switchToKiloCode": "Overstappen naar Kilo Code"
 	},
 	"notifications": {
 		"toolRequest": "Toolverzoek wacht op goedkeuring",
@@ -91,7 +93,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code wil je gesprek samenvatten",
 			"condenseConversation": "Gesprek samenvatten"
-		}
+		},
+		"seeNewChanges": "Toon Nieuwe Wijzigingen"
 	},
 	"newTaskPreview": {
 		"task": "Taak"

@@ -17,7 +17,9 @@
 		"costUnknown": "التكلفة غير معروفة",
 		"costUnknownDescription": "لم يقدم مزود واجهة برمجة التطبيقات أي بيانات تكلفة أو تم إلغاء الطلب.",
 		"freeModelsDescription": "النماذج المجانية قد يكون لها حدود على الاستخدام. استخدم الرابط أدناه لتحسين استخدامك للنماذج المجانية!",
-		"freeModelsLink": "اكتشف خيارات النماذج المجانية والاقتصادية"
+		"freeModelsLink": "اكتشف خيارات النماذج المجانية والاقتصادية",
+		"openRouterMarkup": "يتضمن مزود Kilo Code جميع نماذج OpenRouter، بدون رسوم إضافية وبعمولة 0%!",
+		"switchToKiloCode": "التبديل إلى Kilo Code"
 	},
 	"notifications": {
 		"toolRequest": "طلب أداة بانتظار الموافقة",
@@ -91,7 +93,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code يقترح تلخيص المحادثة",
 			"condenseConversation": "تلخيص المحادثة"
-		}
+		},
+		"seeNewChanges": "عرض التغييرات الجديدة"
 	},
 	"newTaskPreview": {
 		"task": "مهمة"
