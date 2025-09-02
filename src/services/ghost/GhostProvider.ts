@@ -425,7 +425,8 @@ export class GhostProvider {
 		if (!editor) {
 			return
 		}
-		this.decorations.displaySuggestions(this.suggestions)
+		console.log("displaySuggestions")
+		await this.decorations.displaySuggestions(this.suggestions)
 	}
 
 	private getSelectedSuggestionLine() {

@@ -1,18 +1,19 @@
 import * as vscode from "vscode"
 import { GhostSuggestionsState } from "./GhostSuggestions"
 import { GhostSuggestionEditOperation } from "./types"
+import { generateCodeSVG, SVGRenderOptions } from "./utils/SvgRenderer"
+import {
+	initializeHighlighter,
+	getLanguageForDocument,
+	type DiffLine,
+	type CharacterRange,
+} from "./utils/CodeHighlighter"
+import { calculateTipDimensions } from "./utils/HtmlToSvgRenderer"
+import { calculateCharacterDiff, type BackgroundRange } from "./utils/CharacterDiff"
 
-const ADDITION_DECORATION_OPTIONS: vscode.DecorationRenderOptions = {
-	after: {
-		color: new vscode.ThemeColor("editor.foreground"),
-		backgroundColor: new vscode.ThemeColor("editor.background"),
-		border: "1px solid",
-		borderColor: new vscode.ThemeColor("editorGutter.addedBackground"),
-	},
-	isWholeLine: false,
-	borderColor: new vscode.ThemeColor("editorGutter.addedBackground"),
-	overviewRulerColor: new vscode.ThemeColor("editorGutter.addedBackground"),
-	overviewRulerLane: vscode.OverviewRulerLane.Right,
+interface SvgDecorationContent {
+	text: string // The new content to display
+	backgroundRanges: BackgroundRange[] // Character ranges to highlight
 }
 
 const DELETION_DECORATION_OPTIONS: vscode.DecorationRenderOptions = {
@@ -23,33 +24,24 @@ const DELETION_DECORATION_OPTIONS: vscode.DecorationRenderOptions = {
 	overviewRulerLane: vscode.OverviewRulerLane.Right,
 }
 
-const EDIT_DECORATION_OPTIONS: vscode.DecorationRenderOptions = {
-	after: {
-		// CSS INJECT
-		textDecoration:
-			"none; display: block; position: absolute; top: 100%; left: 20px; width: max-content; z-index: 10000; box-shadow: 0 1px 3px rgba(255, 255, 255, 0.12), 0 1px 2px rgba(255, 255, 255, 0.24); padding: 0.2em;",
-		color: new vscode.ThemeColor("editor.foreground"),
-		backgroundColor: new vscode.ThemeColor("editor.background"),
-		border: "1px solid",
-		borderColor: new vscode.ThemeColor("editorGutter.addedBackground"),
-	},
-	textDecoration: "none; position: relative;",
-	isWholeLine: false,
-	border: "1px solid",
-	borderColor: new vscode.ThemeColor("editorGutter.deletedBackground"),
-	overviewRulerColor: new vscode.ThemeColor("editorGutter.deletedBackground"),
-	overviewRulerLane: vscode.OverviewRulerLane.Right,
-}
-
+/**
+ * Hybrid ghost decorations: SVG highlighting for edits/additions, simple styling for deletions
+ */
 export class GhostDecorations {
-	private additionDecorationType: vscode.TextEditorDecorationType
 	private deletionDecorationType: vscode.TextEditorDecorationType
-	private editionDecorationType: vscode.TextEditorDecorationType
+	private svgDecorationTypes: vscode.TextEditorDecorationType[] = []
 
 	constructor() {
-		this.additionDecorationType = vscode.window.createTextEditorDecorationType(ADDITION_DECORATION_OPTIONS)
 		this.deletionDecorationType = vscode.window.createTextEditorDecorationType(DELETION_DECORATION_OPTIONS)
-		this.editionDecorationType = vscode.window.createTextEditorDecorationType(EDIT_DECORATION_OPTIONS)
+		this.initializeAsync()
+	}
+
+	private async initializeAsync(): Promise<void> {
+		try {
+			await initializeHighlighter()
+		} catch (error) {
+			console.error("Failed to initialize ghost decorations:", error)
+		}
 	}
 
 	/**
@@ -61,118 +53,21 @@ export class GhostDecorations {
 			return
 		}
 
-		editor.setDecorations(this.additionDecorationType, [])
+		// Clear deletion decorations
 		editor.setDecorations(this.deletionDecorationType, [])
-		editor.setDecorations(this.editionDecorationType, [])
-	}
 
-	// TODO: Split the differences between the contents and show each range individually
-	private displayEditOpertionGroup = (editor: vscode.TextEditor, group: GhostSuggestionEditOperation[]) => {
-		const line = Math.min(...group.map((x) => x.oldLine))
-
-		const nextLineInfo = editor.document.lineAt(line)
-		const range = nextLineInfo.range
-
-		const newContent = group.find((x) => x.type === "+")?.content || ""
-
-		const leadingWhitespace = newContent.match(/^\s*/)?.[0] ?? ""
-		const preservedWhitespace = leadingWhitespace.replace(/ /g, "\u00A0")
-		const trimmedContent = newContent.trimStart()
-
-		const contentText = preservedWhitespace + trimmedContent
-
-		const renderOptions: vscode.DecorationRenderOptions = { ...EDIT_DECORATION_OPTIONS }
-		renderOptions.after = {
-			...renderOptions.after,
-			contentText: `${contentText}`,
+		// Clear SVG decorations
+		for (const decorationType of this.svgDecorationTypes) {
+			editor.setDecorations(decorationType, [])
+			decorationType.dispose()
 		}
-
-		// Apply the decorations directly
-		editor.setDecorations(this.additionDecorationType, [])
-		editor.setDecorations(this.deletionDecorationType, [])
-		editor.setDecorations(this.editionDecorationType, [
-			{
-				range,
-				renderOptions,
-			},
-		])
-	}
-
-	private displayDeleteOperationGroup = (editor: vscode.TextEditor, group: GhostSuggestionEditOperation[]) => {
-		const lines = group.map((x) => x.oldLine)
-		const from = Math.min(...lines)
-		const to = Math.max(...lines)
-
-		const start = editor.document.lineAt(from).range.start
-		const end = editor.document.lineAt(to).range.end
-		const range = new vscode.Range(start, end)
-
-		editor.setDecorations(this.additionDecorationType, [])
-		editor.setDecorations(this.editionDecorationType, [])
-		editor.setDecorations(this.deletionDecorationType, [
-			{
-				range,
-			},
-		])
-	}
-
-	private getCssInjectionForEdit = (content: string) => {
-		let filteredContent = content
-		if (filteredContent === "") {
-			filteredContent = "[↵]"
-		}
-		filteredContent = filteredContent.replaceAll(`"`, `\\"`)
-		filteredContent = filteredContent.replaceAll(`'`, `\\'`)
-		filteredContent = filteredContent.replaceAll(`;`, `\\;`)
-
-		console.log(content)
-
-		return `none; display: block; position: absolute; top: 0px; left: 0px; width: max-content; z-index: 10000; white-space: pre-wrap; content: "${filteredContent}"; box-shadow: 0 1px 3px rgba(255, 255, 255, 0.12), 0 1px 2px rgba(255, 255, 255, 0.24); padding: 0.2em;`
-	}
-
-	private displayAdditionsOperationGroup = (editor: vscode.TextEditor, group: GhostSuggestionEditOperation[]) => {
-		const line = Math.min(...group.map((x) => x.oldLine))
-
-		// Handle end-of-document additions gracefully
-		let range: vscode.Range
-		if (line >= editor.document.lineCount) {
-			// If the line is beyond the document, use the last line of the document
-			const lastLineIndex = Math.max(0, editor.document.lineCount - 1)
-			const lastLineInfo = editor.document.lineAt(lastLineIndex)
-			range = new vscode.Range(lastLineInfo.range.end, lastLineInfo.range.end)
-		} else {
-			// Normal case: line exists in the document
-			const nextLineInfo = editor.document.lineAt(line)
-			range = nextLineInfo.range
-		}
-
-		let content = group
-			.sort((a, b) => a.line - b.line)
-			.map((x) => x.content)
-			.join(`\\A `)
-
-		const renderOptions: vscode.DecorationRenderOptions = { ...ADDITION_DECORATION_OPTIONS }
-		renderOptions.after = {
-			...renderOptions.after,
-			textDecoration: this.getCssInjectionForEdit(content),
-		}
-
-		// Apply the decorations directly
-		editor.setDecorations(this.deletionDecorationType, [])
-		editor.setDecorations(this.editionDecorationType, [])
-		editor.setDecorations(this.additionDecorationType, [
-			{
-				range,
-				renderOptions,
-			},
-		])
+		this.svgDecorationTypes = []
 	}
 
 	/**
-	 * Displays the ghost suggestions in the active text editor based on the provided operations.
-	 * @param operations An array of edit operations to visualize.
+	 * Display suggestions using hybrid approach: SVG for edits/additions, simple styling for deletions
 	 */
-	public displaySuggestions(suggestions: GhostSuggestionsState): void {
+	public async displaySuggestions(suggestions: GhostSuggestionsState): Promise<void> {
 		const editor = vscode.window.activeTextEditor
 		if (!editor) {
 			console.log("No active editor found, returning")
@@ -209,17 +104,169 @@ export class GhostDecorations {
 		const selectedGroup = groups[selectedGroupIndex]
 		const groupType = suggestionsFile.getGroupType(selectedGroup)
 
-		console.log("selectedGroup", selectedGroup)
-		console.log("groupType", groupType)
+		// Clear previous decorations
+		this.clearAll()
 
+		// Route to appropriate display method
 		if (groupType === "/") {
-			this.displayEditOpertionGroup(editor, selectedGroup)
+			await this.displayEditOperationGroup(editor, selectedGroup)
 		} else if (groupType === "-") {
 			this.displayDeleteOperationGroup(editor, selectedGroup)
 		} else if (groupType === "+") {
-			this.displayAdditionsOperationGroup(editor, selectedGroup)
+			await this.displayAdditionsOperationGroup(editor, selectedGroup)
+		}
+	}
+
+	/**
+	 * Display edit operations using SVG decorations
+	 */
+	private async displayEditOperationGroup(
+		editor: vscode.TextEditor,
+		group: GhostSuggestionEditOperation[],
+	): Promise<void> {
+		const line = Math.min(...group.map((x) => x.oldLine))
+		const range = this.calculateRangeForOperations(editor, line)
+
+		const newContent = group.find((x) => x.type === "+")?.content || ""
+		if (!newContent.trim()) {
+			return
+		}
+
+		const originalContent = line < editor.document.lineCount ? editor.document.lineAt(line).text : ""
+		const backgroundRanges = calculateCharacterDiff(originalContent, newContent)
+		const svgContent: SvgDecorationContent = {
+			text: newContent,
+			backgroundRanges: backgroundRanges,
+		}
+
+		await this.createSvgDecoration(editor, range, svgContent)
+	}
+
+	/**
+	 * Display deletion operations using simple border styling (original implementation)
+	 */
+	private displayDeleteOperationGroup(editor: vscode.TextEditor, group: GhostSuggestionEditOperation[]): void {
+		const lines = group.map((x) => x.oldLine)
+		const from = Math.min(...lines)
+		const to = Math.max(...lines)
+
+		const start = editor.document.lineAt(from).range.start
+		const end = editor.document.lineAt(to).range.end
+		const range = new vscode.Range(start, end)
+
+		editor.setDecorations(this.deletionDecorationType, [{ range }])
+	}
+
+	/**
+	 * Display addition operations using SVG decorations
+	 */
+	private async displayAdditionsOperationGroup(
+		editor: vscode.TextEditor,
+		group: GhostSuggestionEditOperation[],
+	): Promise<void> {
+		const line = Math.min(...group.map((x) => x.oldLine))
+		const range = this.calculateRangeForOperations(editor, line)
+
+		const content = group
+			.sort((a, b) => a.line - b.line)
+			.map((x) => x.content)
+			.join("\n")
+		if (!content.trim()) {
+			return
+		}
+
+		// For additions, all content is new/modified (highlight entire content)
+		const backgroundRanges: BackgroundRange[] = [{ start: 0, end: content.length, type: "modified" }]
+		const svgContent: SvgDecorationContent = {
+			text: content,
+			backgroundRanges: backgroundRanges,
+		}
+
+		await this.createSvgDecoration(editor, range, svgContent)
+	}
+
+	/**
+	 * Calculate range for operations, handling end-of-document gracefully
+	 */
+	private calculateRangeForOperations(editor: vscode.TextEditor, line: number): vscode.Range {
+		if (line >= editor.document.lineCount) {
+			// If the line is beyond the document, use the last line of the document
+			const lastLineIndex = Math.max(0, editor.document.lineCount - 1)
+			const lastLineInfo = editor.document.lineAt(lastLineIndex)
+			return new vscode.Range(lastLineInfo.range.end, lastLineInfo.range.end)
 		} else {
-			this.clearAll()
+			const nextLineInfo = editor.document.lineAt(line)
+			return nextLineInfo.range
+		}
+	}
+
+	/**
+	 * Create SVG decoration with character-level highlighting
+	 */
+	private async createSvgDecoration(
+		editor: vscode.TextEditor,
+		range: vscode.Range,
+		content: SvgDecorationContent,
+	): Promise<void> {
+		const language = getLanguageForDocument(editor.document)
+		const { fontSize, fontFamily, lineHeight } = this.getEditorConfiguration()
+
+		const dimensions = calculateTipDimensions(content.text, fontSize, lineHeight)
+		const svgOptions: SVGRenderOptions = { fontSize, fontFamily, dimensions, lineHeight }
+
+		// Convert BackgroundRange to CharacterRange format
+		const characterRanges: CharacterRange[] = content.backgroundRanges.map((range) => ({
+			start: range.start,
+			end: range.end,
+			type: range.type,
+		}))
+
+		const diffLines: DiffLine[] = [
+			{
+				type: "new",
+				line: content.text,
+				characterRanges: characterRanges,
+			},
+		]
+
+		const svgDataUri = await generateCodeSVG(content.text, language, svgOptions, range.start.line, diffLines)
+
+		// Create decoration with SVG
+		const offsetFromTop = 0
+		const marginLeft = Math.ceil(fontSize * 0.6 + 6)
+		const decorationType = vscode.window.createTextEditorDecorationType({
+			after: {
+				contentIconPath: vscode.Uri.parse(svgDataUri),
+				border: `transparent; position: absolute; z-index: 2147483647;
+				filter: drop-shadow(4px 4px 0px rgba(0, 0, 0, 0.2));
+				margin-top: ${-1 * offsetFromTop}px;
+				margin-left: ${marginLeft}px;`,
+				width: `${dimensions.width}px`,
+				height: `${dimensions.height}px`,
+			},
+			rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
+		})
+
+		this.svgDecorationTypes.push(decorationType)
+		editor.setDecorations(decorationType, [{ range }])
+	}
+	/**
+	 * Get all editor configuration values in one call
+	 */
+	private getEditorConfiguration(): { fontSize: number; fontFamily: string; lineHeight: number } {
+		const config = vscode.workspace.getConfiguration("editor")
+		const fontSize = config.get<number>("fontSize") || 14
+		const rawLineHeight = config.get<number>("lineHeight") || 1.5
+
+		// VS Code lineHeight can be either:
+		// - A multiplier (like 1.2) if < 8
+		// - An absolute pixel value (like 18) if >= 8
+		const lineHeight = rawLineHeight < 8 ? rawLineHeight : rawLineHeight / fontSize
+
+		return {
+			fontSize,
+			fontFamily: config.get<string>("fontFamily") || "Consolas, 'Courier New', monospace",
+			lineHeight,
 		}
 	}
 }

@@ -62,6 +62,21 @@ async function main() {
 
 					// Copy walkthrough files to dist directory
 					copyPaths([["walkthrough", "walkthrough"]], srcDir, distDir)
+
+					// Copy JSDOM xhr-sync-worker.js to fix runtime resolution
+					const jsdomWorkerSource = path.join(srcDir, "../node_modules/.pnpm/jsdom@24.1.3/node_modules/jsdom/lib/jsdom/living/xhr/xhr-sync-worker.js")
+					const jsdomWorkerDest = path.join(distDir, "xhr-sync-worker.js")
+
+					try {
+						if (fs.existsSync(jsdomWorkerSource)) {
+							fs.copyFileSync(jsdomWorkerSource, jsdomWorkerDest)
+							console.log(`[${name}] Copied JSDOM xhr-sync-worker.js to dist`)
+						} else {
+							console.warn(`[${name}] JSDOM xhr-sync-worker.js not found at expected path: ${jsdomWorkerSource}`)
+						}
+					} catch (error) {
+						console.error(`[${name}] Failed to copy JSDOM xhr-sync-worker.js:`, error.message)
+					}
 				})
 			},
 		},
