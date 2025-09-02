@@ -29,6 +29,7 @@ import type {
 	ApiHandlerCreateMessageMetadata, // kilocode_change
 	SingleCompletionHandler,
 } from "../index"
+import { verifyFinishReason } from "./kilocode/verifyFinishReason"
 
 // kilocode_change start
 type OpenRouterProviderParams = {
@@ -210,6 +211,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 					throw new Error(`OpenRouter API Error ${error?.code}: ${error?.message}`)
 				}
 
+				verifyFinishReason(chunk.choices[0]) // kilocode_change
 				const delta = chunk.choices[0]?.delta
 
 				if (

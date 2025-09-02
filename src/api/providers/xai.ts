@@ -12,6 +12,7 @@ import { getModelParams } from "../transform/model-params"
 import { DEFAULT_HEADERS } from "./constants"
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
+import { verifyFinishReason } from "./kilocode/verifyFinishReason"
 
 const XAI_DEFAULT_TEMPERATURE = 0
 
@@ -59,6 +60,7 @@ export class XAIHandler extends BaseProvider implements SingleCompletionHandler 
 		})
 
 		for await (const chunk of stream) {
+			verifyFinishReason(chunk.choices[0]) // kilocode_change
 			const delta = chunk.choices[0]?.delta
 
 			if (delta?.content) {
@@ -78,12 +80,15 @@ export class XAIHandler extends BaseProvider implements SingleCompletionHandler 
 			if (chunk.usage) {
 				// Extract detailed token information if available
 				// First check for prompt_tokens_details structure (real API response)
-				const promptDetails = "prompt_tokens_details" in chunk.usage ? chunk.usage.prompt_tokens_details : null;
-				const cachedTokens = promptDetails && "cached_tokens" in promptDetails ? promptDetails.cached_tokens : 0;
+				const promptDetails = "prompt_tokens_details" in chunk.usage ? chunk.usage.prompt_tokens_details : null
+				const cachedTokens = promptDetails && "cached_tokens" in promptDetails ? promptDetails.cached_tokens : 0
 
 				// Fall back to direct fields in usage (used in test mocks)
-				const readTokens = cachedTokens || ("cache_read_input_tokens" in chunk.usage ? (chunk.usage as any).cache_read_input_tokens : 0);
-				const writeTokens = "cache_creation_input_tokens" in chunk.usage ? (chunk.usage as any).cache_creation_input_tokens : 0;
+				const readTokens =
+					cachedTokens ||
+					("cache_read_input_tokens" in chunk.usage ? (chunk.usage as any).cache_read_input_tokens : 0)
+				const writeTokens =
+					"cache_creation_input_tokens" in chunk.usage ? (chunk.usage as any).cache_creation_input_tokens : 0
 
 				yield {
 					type: "usage",

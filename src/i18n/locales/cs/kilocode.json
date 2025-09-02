@@ -13,7 +13,8 @@
 	},
 	"task": {
 		"noAssistantMessages": "Odpověď modelu neočekávaně skončila (žádné zprávy asistenta). Může to být známka omezení počtu požadavků.",
-		"notLoggedInError": "Požadavek nelze dokončit, ujisti se, že jsi připojen a přihlášen u vybraného poskytovatele.\n\n{{error}}"
+		"notLoggedInError": "Požadavek nelze dokončit, ujisti se, že jsi připojen a přihlášen u vybraného poskytovatele.\n\n{{error}}",
+		"maxCompletionTokens": "Bylo dosaženo maximálního počtu completion tokenů."
 	},
 	"checkpoints": {
 		"nestedGitRepos": "Checkpointy nejsou k dispozici, protože byly ve workspace detekované vnořené Git repozitáře. Prosím odstraňte nebo přemístěte vnořené Git repozitáře pro použití funkce checkpointů nebo deaktivujte checkpointy v nastavení pro potlačení tohoto varování.",

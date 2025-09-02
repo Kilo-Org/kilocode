@@ -10,11 +10,11 @@ Kilo Code provides its own built-in API provider that gives you access to the la
 
 ## Getting Started with Free Credits
 
-When you sign up for Kilo Code, you'll receive free credits to help you get started:
+When you sign up for Kilo Code, you may receive free credits to help you get started:
 
-1. **Sign up:** Complete the registration process to receive $5 in credits immediately after verification (we might require a hold to verify identity)
+1. **Sign up:** Complete the registration (we might require a hold to verify identity)
 2. **First top-up:**: Add funds to your account (min $5) and get $20 bonus credits
-3. **Start Coding:** Enjoy your $25 in total free credits
+3. **Start Coding:** Enjoy your free credits
 
 :::note About the temporary hold
 The $0.50 hold is for identity verification only:
@@ -31,8 +31,8 @@ Kilo Code offers a streamlined registration that connects you directly to fronti
 1. **Start Registration:** Click "Try Kilo Code for Free" in the extension
 2. **Sign In:** Use your Google account to sign in at kilocode.ai
 3. **Authorize VS Code:**
-   - kilocode.ai will prompt you to open Visual Studio Code
-   - For web-based IDEs, you'll copy the API key manually instead
+    - kilocode.ai will prompt you to open Visual Studio Code
+    - For web-based IDEs, you'll copy the API key manually instead
 4. **Complete Setup:** Allow VS Code to open the authorization URL when prompted
 
 <!-- <img src="/img/setting-up/signupflow.gif" alt="Sign up and registration flow with Kilo Code" width="600" /> -->
