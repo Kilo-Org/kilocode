@@ -1953,7 +1953,6 @@ export class ClineProvider
 			organizationAllowList,
 			// kilocode_change start
 			ghostServiceSettings: ghostServiceSettings ?? {
-				enableAutoTrigger: true,
 				enableQuickInlineTaskKeybinding: true,
 				enableSmartInlineTaskKeybinding: true,
 			},
@@ -2135,7 +2134,6 @@ export class ClineProvider
 			terminalCommandApiConfigId: stateValues.terminalCommandApiConfigId, // kilocode_change
 			// kilocode_change start
 			ghostServiceSettings: stateValues.ghostServiceSettings ?? {
-				enableAutoTrigger: true,
 				enableQuickInlineTaskKeybinding: true,
 				enableSmartInlineTaskKeybinding: true,
 			},
