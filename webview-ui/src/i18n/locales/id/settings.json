@@ -770,10 +770,6 @@
 			"apiKey": "Kunci API Morph (opsional)",
 			"placeholder": "Masukkan kunci API Morph Anda (opsional)"
 		},
-		"INLINE_ASSIST": {
-			"name": "Bantuan Inline",
-			"description": "Aktifkan fitur Inline Assist untuk saran dan perbaikan kode cepat langsung di editor Anda. Termasuk Quick Inline Task (Cmd+I) untuk perubahan terarah dan Auto Inline Task untuk perbaikan kontekstual."
-		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Pengeditan Latar Belakang",
 			"description": "Ketika diaktifkan, mencegah gangguan fokus editor. Pengeditan file terjadi di latar belakang tanpa membuka tampilan diff atau mencuri fokus. Anda dapat terus bekerja tanpa gangguan saat Kilo Code melakukan perubahan. File mungkin dibuka tanpa fokus untuk menangkap diagnostik atau tetap tertutup sepenuhnya."
@@ -785,6 +781,10 @@
 		"NEW_TASK_REQUIRE_TODOS": {
 			"name": "Membutuhkan daftar 'todos' untuk tugas baru",
 			"description": "Ketika diaktifkan, alat new_task akan membutuhkan parameter todos untuk disediakan. Ini memastikan semua tugas baru dimulai dengan daftar tujuan yang jelas. Ketika dinonaktifkan (default), parameter todos tetap opsional untuk kompatibilitas mundur."
+		},
+		"INLINE_ASSIST": {
+			"name": "Autocomplete",
+			"description": "Aktifkan fitur Autocomplete untuk saran kode cepat dan perbaikan langsung di editor Anda. Termasuk Tugas Cepat (Cmd+I) untuk perubahan yang ditargetkan dan Autocomplete untuk perbaikan kontekstual."
 		}
 	},
 	"promptCaching": {

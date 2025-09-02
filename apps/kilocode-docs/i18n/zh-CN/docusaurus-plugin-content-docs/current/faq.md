@@ -3,11 +3,6 @@
 
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 
-export const FreeTierAmount = () => {
-  const {siteConfig} = useDocusaurusContext();
-  return siteConfig.customFields.freeTierAmount;
-};
-
 # 常见问题解答
 
 本页面解答关于Kilo Code的一些常见问题。
@@ -22,10 +17,10 @@ Kilo Code是一个开源的Visual Studio Code扩展，它通过生成代码、�
 
 Kilo Code使用大型语言模型（LLMs）来理解你的请求并将其转化为行动。它可以：
 
-* 读取和写入项目中的文件
-* 在VS Code终端中执行命令
-* 进行网页浏览（如果启用）
-* 通过模型上下文协议（MCP）使用外部工具
+- 读取和写入项目中的文件
+- 在VS Code终端中执行命令
+- 进行网页浏览（如果启用）
+- 通过模型上下文协议（MCP）使用外部工具
 
 你通过聊天界面与Kilo Code交互，在其中提供指令并审查/批准其提出的操作。
 
@@ -33,18 +28,18 @@ Kilo Code使用大型语言模型（LLMs）来理解你的请求并将其转化�
 
 Kilo Code可以帮助完成各种编码任务，包括：
 
-* 根据自然语言描述生成代码
-* 重构现有代码
-* 修复bug
-* 编写文档
-* 解释代码
-* 回答有关代码库的问题
-* 自动化重复性任务
-* 创建新文件和项目
+- 根据自然语言描述生成代码
+- 重构现有代码
+- 修复bug
+- 编写文档
+- 解释代码
+- 回答有关代码库的问题
+- 自动化重复性任务
+- 创建新文件和项目
 
 ### Kilo Code是免费的吗？
 
-Kilo Code扩展本身是免费开源的。此外，Kilo Code提供免费层级，包含<FreeTierAmount />的Claude 3.7 Sonnet tokens。如果你的反馈有用，我们还会赠送更多免费tokens。
+Kilo Code扩展本身是免费开源的。
 
 之后，你可以添加信用卡购买更多tokens（通过Stripe安全处理）。我们的定价与Anthropic的API费率完全一致。我们不会从每个token或每次充值中抽取任何费用。未来我们将添加更多LLM提供商。
 
@@ -54,9 +49,9 @@ Kilo Code扩展本身是免费开源的。此外，Kilo Code提供免费层级�
 
 Kilo Code是一个强大的工具，使用时需要负责任。以下是一些需要注意的事项：
 
-* **Kilo Code可能会出错。** 在批准Kilo Code的更改之前，请仔细审查。
-* **Kilo Code可以执行命令。** 在允许Kilo Code运行命令时要非常谨慎，尤其是在使用自动批准时。
-* **Kilo Code可以访问互联网。** 如果你使用的提供商支持网页浏览，请注意Kilo Code可能会访问敏感信息。
+- **Kilo Code可能会出错。** 在批准Kilo Code的更改之前，请仔细审查。
+- **Kilo Code可以执行命令。** 在允许Kilo Code运行命令时要非常谨慎，尤其是在使用自动批准时。
+- **Kilo Code可以访问互联网。** 如果你使用的提供商支持网页浏览，请注意Kilo Code可能会访问敏感信息。
 
 ## 设置与安装
 
@@ -67,21 +62,22 @@ Kilo Code是一个强大的工具，使用时需要负责任。以下是一些�
 ### 支持哪些API提供商？
 
 Kilo Code支持多种API提供商，包括：
-* [Anthropic (Claude)](/providers/kilocode)
-* [Anthropic (Claude)](/providers/anthropic)
-* [OpenAI](/providers/openai)
-* [OpenRouter](/providers/openrouter)
-* [Google Gemini](/providers/gemini)
-* [Glama](/providers/glama)
-* [AWS Bedrock](/providers/bedrock)
-* [GCP Vertex AI](/providers/vertex)
-* [Ollama](/providers/ollama)
-* [LM Studio](/providers/lmstudio)
-* [DeepSeek](/providers/deepseek)
-* [Mistral](/providers/mistral)
-* [Unbound](/providers/unbound)
-* [Requesty](/providers/requesty)
-* [VS Code Language Model API](/providers/vscode-lm)
+
+- [Anthropic (Claude)](/providers/kilocode)
+- [Anthropic (Claude)](/providers/anthropic)
+- [OpenAI](/providers/openai)
+- [OpenRouter](/providers/openrouter)
+- [Google Gemini](/providers/gemini)
+- [Glama](/providers/glama)
+- [AWS Bedrock](/providers/bedrock)
+- [GCP Vertex AI](/providers/vertex)
+- [Ollama](/providers/ollama)
+- [LM Studio](/providers/lmstudio)
+- [DeepSeek](/providers/deepseek)
+- [Mistral](/providers/mistral)
+- [Unbound](/providers/unbound)
+- [Requesty](/providers/requesty)
+- [VS Code Language Model API](/providers/vscode-lm)
 
 ### 如何获取API密钥？
 
@@ -101,11 +97,11 @@ Kilo Code支持多种API提供商，包括：
 
 [模式](/basic-usage/using-modes)是Kilo Code可以采用的不同的角色，每个角色都有特定的关注点和能力。内置模式包括：
 
-* **Code模式：** 用于通用编码任务
-* **Architect模式：** 用于规划和技术领导
-* **Ask模式：** 用于回答问题并提供信息
-* **Debug模式：** 用于系统化问题诊断
-你还可以创建[自定义模式](/features/custom-modes)。
+- **Code模式：** 用于通用编码任务
+- **Architect模式：** 用于规划和技术领导
+- **Ask模式：** 用于回答问题并提供信息
+- **Debug模式：** 用于系统化问题诊断
+  你还可以创建[自定义模式](/features/custom-modes)。
 
 ### 如何在模式之间切换？
 
@@ -135,10 +131,10 @@ Kilo Code支持多种API提供商，包括：
 
 是的，你可以通过多种方式自定义Kilo Code：
 
-* **自定义指令：** 提供适用于所有模式的通用指令，或特定模式的指令
-* **自定义模式：** 创建具有定制提示和工具权限的自定义模式
-* **`.clinerules`文件：** 在项目中创建`.clinerules`文件以提供额外的指导
-* **设置：** 调整各种设置，如自动批准、差异编辑等
+- **自定义指令：** 提供适用于所有模式的通用指令，或特定模式的指令
+- **自定义模式：** 创建具有定制提示和工具权限的自定义模式
+- **`.clinerules`文件：** 在项目中创建`.clinerules`文件以提供额外的指导
+- **设置：** 调整各种设置，如自动批准、差异编辑等
 
 ### Kilo Code有自动批准设置吗？
 
@@ -162,11 +158,11 @@ Kilo Code支持多种API提供商，包括：
 
 ### Kilo Code没有响应。我该怎么办？
 
-* 确保你的API密钥正确且未过期
-* 检查你的互联网连接
-* 检查你选择的API提供商的状态
-* 尝试重启VS Code
-* 如果问题仍然存在，请在[GitHub](https://github.com/Kilo-Org/kilocode/issues)或[Discord](https://kilocode.ai/discord)上报告问题
+- 确保你的API密钥正确且未过期
+- 检查你的互联网连接
+- 检查你选择的API提供商的状态
+- 尝试重启VS Code
+- 如果问题仍然存在，请在[GitHub](https://github.com/Kilo-Org/kilocode/issues)或[Discord](https://kilocode.ai/discord)上报告问题
 
 ### 我看到错误消息。这是什么意思？
 

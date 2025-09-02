@@ -189,41 +189,37 @@
 		}
 	},
 	"ghost": {
-		"title": "インライン支援",
+		"title": "Autocomplete",
 		"settings": {
 			"autoTrigger": "自動トリガー",
-			"enableQuickInlineTaskKeybinding": {
-				"label": "クイックインラインタスク",
-				"description": "ちょっとした変更だけが必要ですか？コードを選択して（または選択せずに！）Cmd+Iを押してください。目標を普通の言葉で説明してください（「これらのpropsを持つReactコンポーネントを作成」、「この関数にエラー処理を追加」など）。すぐに使える複数の提案がエディタ上に表示されます。<DocsLink>ショートカットを見る</DocsLink>"
-			},
-			"enableAutoInlineTaskKeybinding": {
-				"label": "自動インライン タスク",
-				"description": "素早く修正、補完、リファクタリングが必要ですか？Kiloは周囲のコンテキストを使用して即座に改善を提案し、あなたの作業の流れを維持します。<DocsLink>ショートカットを見る</DocsLink>"
-			},
+			"triggers": "トリガー",
+			"keybindingDescription": "Autocomplete機能はコマンドでトリガーできます。<DocsLink>キーボードショートカットはこちら</DocsLink>で設定できます。",
 			"enableAutoTrigger": {
-				"label": "自動トリガーを有効にする",
-				"description": "有効にすると、入力を停止したときにKilo Codeが自動的にインラインアシストをトリガーします。これは素早い修正や提案に便利です。"
+				"label": "Autocompleteを有効にする",
+				"description": "有効にすると、タイピングを停止したときにKilo CodeがAutocompleteを自動的にトリガーします。これは素早い修正や提案に役立ちます。"
 			},
 			"autoTriggerDelay": {
 				"label": "自動トリガー遅延",
-				"description": "入力を停止してからKilo Codeがインラインアシストをトリガーするまでの秒単位の遅延。短い遅延はより速い提案を意味しますが、リソースをより多く消費する可能性があります。"
+				"description": "タイピングを停止してからKilo CodeがAutocompleteをトリガーするまでの秒数。遅延が短いほど提案が早くなりますが、リソースを多く消費する可能性があります。"
+			},
+			"enableQuickInlineTaskKeybinding": {
+				"label": "クイックタスク",
+				"description": "ちょっとした変更だけが必要？コードを選択して（しなくても大丈夫！）Cmd+Iを押してください。目標を日本語で説明し（「これらのpropsでReactコンポーネントを作成」、「この関数にエラーハンドリングを追加」）、エディター内で複数のすぐに使える提案を取得できます。<DocsLink>ショートカットを見る</DocsLink>"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "スマートインラインタスク",
+				"label": "手動Autocomplete",
 				"description": "素早い修正、補完、またはリファクタリングが必要？Kiloは周囲のコンテキストを使用して即座の改善を提供し、フローを維持します。<DocsLink>ショートカットを見る</DocsLink>"
 			},
 			"enableCustomProvider": {
 				"label": "カスタムプロバイダーを使用",
-				"description": "Inline AssistはあなたのKiloCode / OpenRouter / Mistralの認証情報を使用して、デフォルトでCodestralモデルを使用します"
+				"description": "AutocompleteはデフォルトでKiloCode / OpenRouter / Mistralの認証情報を使用してCodestralモデルを使用します"
 			},
 			"provider": "プロバイダー",
 			"apiConfigId": {
 				"label": "API設定",
 				"current": "現在選択されているAPI設定を使用",
-				"description": "インラインアシストプロンプトに使用するAPI構成を選択するか、現在選択されているものを使用してください"
-			},
-			"triggers": "トリガー",
-			"keybindingDescription": "インラインアシスト機能はコマンドによって起動されます。<DocsLink>キーボードショートカットはこちら</DocsLink>で設定できます。"
+				"description": "Autocompleteプロンプトに使用するAPI設定を選択するか、現在選択されているものを使用してください"
+			}
 		}
 	},
 	"virtualProvider": {
@@ -247,5 +243,9 @@
 		"requestsLabel": "リクエスト",
 		"perDay": "1日あたり",
 		"perHour": "1時間あたり"
+	},
+	"imageWarnings": {
+		"modelNoImageSupport": "画像は現在のモデルではサポートされていません。",
+		"maxImagesReached": "メッセージあたり最大20枚の画像。さらに追加するには一部の画像を削除してください。"
 	}
 }

@@ -753,10 +753,6 @@
 			"apiKey": "Morph API key (optional)",
 			"placeholder": "Enter your Morph API key (optional)"
 		},
-		"INLINE_ASSIST": {
-			"name": "Inline Assist",
-			"description": "Enable Inline Assist features for quick code suggestions and improvements directly in your editor. Includes Quick Inline Task (Cmd+I) for targeted changes and Auto Inline Task for contextual improvements."
-		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Background editing",
 			"description": "Prevent editor focus disruption when enabled. File edits happen in the background without opening diff views or stealing focus. You can continue working uninterrupted while Kilo Code makes changes. Files can be opened without focus to capture diagnostics or kept closed entirely."

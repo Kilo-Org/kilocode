@@ -189,41 +189,37 @@
 		}
 	},
 	"ghost": {
-		"title": "Assistenza in linea",
+		"title": "Autocomplete",
 		"settings": {
-			"autoTrigger": "Attivazione automatica",
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Attività Rapida In Linea",
-				"description": "Hai solo bisogno di una modifica rapida? Seleziona del codice (o anche no!) e premi Cmd+I. Descrivi il tuo obiettivo in linguaggio semplice (\"crea un componente React con queste props\", \"aggiungi la gestione degli errori a questa funzione\") e ottieni molteplici suggerimenti pronti all'uso direttamente nel tuo editor. <DocsLink>Vedi scorciatoia</DocsLink>"
-			},
-			"enableAutoInlineTaskKeybinding": {
-				"label": "Attività Automatica in Linea",
-				"description": "Hai bisogno di una correzione rapida, di completare o refactoring del codice? Kilo userà il contesto circostante per offrire miglioramenti immediati, mantenendoti concentrato. <DocsLink>Vedi scorciatoia</DocsLink>"
-			},
+			"autoTrigger": "Attivazione Automatica",
+			"triggers": "Trigger",
+			"keybindingDescription": "Le funzionalità Autocomplete possono essere attivate tramite comandi. Puoi configurare le <DocsLink>Scorciatoie da Tastiera qui</DocsLink>.",
 			"enableAutoTrigger": {
-				"label": "Abilita attivazione automatica",
-				"description": "Quando abilitato, Kilo Code attiverà automaticamente l'Assistenza Inline quando smetti di digitare. Questo può essere utile per correzioni e suggerimenti rapidi."
+				"label": "Abilita Autocomplete",
+				"description": "Quando abilitato, Kilo Code attiverà automaticamente Autocomplete quando smetti di digitare. Questo può essere utile per correzioni rapide e suggerimenti."
 			},
 			"autoTriggerDelay": {
-				"label": "Ritardo attivazione automatica",
-				"description": "Il ritardo in secondi prima che Kilo Code attivi l'Assistenza Inline dopo che hai smesso di digitare. Un ritardo più breve significa suggerimenti più rapidi, ma potrebbe essere più intensivo in termini di risorse."
+				"label": "Ritardo Attivazione Automatica",
+				"description": "Il ritardo in secondi prima che Kilo Code attivi Autocomplete dopo che hai smesso di digitare. Un ritardo più breve significa suggerimenti più veloci, ma può essere più intensivo in termini di risorse."
+			},
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Attività Rapida",
+				"description": "Hai bisogno solo di una modifica rapida? Seleziona del codice (o no!) e premi Cmd+I. Descrivi il tuo obiettivo in italiano semplice (\"crea un componente React con queste props\", \"aggiungi gestione errori a questa funzione\"), e ottieni più suggerimenti pronti all'uso direttamente nel tuo editor. <DocsLink>Vedi scorciatoia</DocsLink>"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Attività Inline Intelligente",
+				"label": "Autocomplete Manuale",
 				"description": "Hai bisogno di una correzione rapida, completamento o refactoring? Kilo userà il contesto circostante per offrire miglioramenti immediati, mantenendoti nel flusso. <DocsLink>Vedi scorciatoia</DocsLink>"
 			},
 			"enableCustomProvider": {
 				"label": "Usa provider personalizzato",
-				"description": "Inline Assist usa le tue credenziali KiloCode / OpenRouter / Mistral per utilizzare il modello Codestral di default"
+				"description": "Autocomplete usa le tue credenziali KiloCode / OpenRouter / Mistral per utilizzare il modello Codestral di default"
 			},
-			"provider": "Fornitore",
+			"provider": "Provider",
 			"apiConfigId": {
 				"label": "Configurazione API",
-				"current": "Usa la configurazione API attualmente selezionata",
-				"description": "Seleziona una configurazione API da utilizzare per i prompt di Inline Assist, o semplicemente usa quella attualmente selezionata"
-			},
-			"triggers": "Trigger",
-			"keybindingDescription": "Le funzionalità di Inline Assist sono attivate da comandi. Puoi configurare le <DocsLink>scorciatoie da tastiera qui</DocsLink>."
+				"current": "Usa configurazione API attualmente selezionata",
+				"description": "Seleziona una configurazione API da usare per i prompt Autocomplete, o usa semplicemente quella attualmente selezionata"
+			}
 		}
 	},
 	"virtualProvider": {
@@ -247,5 +243,9 @@
 		"perHour": "All'ora",
 		"perDay": "Al Giorno",
 		"requestsLabel": "Richieste"
+	},
+	"imageWarnings": {
+		"modelNoImageSupport": "Le immagini non sono supportate dal modello attuale.",
+		"maxImagesReached": "Massimo 20 immagini per messaggio. Rimuovi alcune immagini per aggiungerne altre."
 	}
 }

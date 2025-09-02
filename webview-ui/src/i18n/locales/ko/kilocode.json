@@ -189,41 +189,37 @@
 		}
 	},
 	"ghost": {
-		"title": "인라인 지원",
+		"title": "Autocomplete",
 		"settings": {
 			"autoTrigger": "자동 트리거",
-			"enableQuickInlineTaskKeybinding": {
-				"label": "빠른 인라인 작업",
-				"description": "빠른 변경만 필요하신가요? 코드를 선택하거나(또는 그냥 넘어가도 됩니다!) Cmd+I를 누르세요. 평범한 말로 목표를 설명하세요(\"이러한 props가 있는 React 컴포넌트 만들기\", \"이 함수에 오류 처리 추가하기\"), 그러면 에디터에서 바로 사용할 수 있는 다양한 제안을 받을 수 있습니다. <DocsLink>단축키 보기</DocsLink>"
-			},
-			"enableAutoInlineTaskKeybinding": {
-				"label": "자동 인라인 작업",
-				"description": "빠른 수정, 완성 또는 리팩토링이 필요하신가요? Kilo는 주변 컨텍스트를 활용하여 즉각적인 개선 사항을 제안하며, 작업 흐름을 유지시켜 드립니다. <DocsLink>단축키 보기</DocsLink>"
-			},
+			"triggers": "트리거",
+			"keybindingDescription": "Autocomplete 기능은 명령으로 트리거할 수 있습니다. <DocsLink>키보드 단축키를 여기서</DocsLink> 구성할 수 있습니다.",
 			"enableAutoTrigger": {
-				"label": "자동 트리거 활성화",
-				"description": "활성화되면 입력을 멈출 때 Kilo Code가 자동으로 인라인 어시스트를 트리거합니다. 빠른 수정 및 제안에 유용할 수 있습니다."
+				"label": "Autocomplete 활성화",
+				"description": "활성화되면 타이핑을 멈췄을 때 Kilo Code가 자동으로 Autocomplete를 트리거합니다. 빠른 수정과 제안에 유용할 수 있습니다."
 			},
 			"autoTriggerDelay": {
 				"label": "자동 트리거 지연",
-				"description": "입력을 멈춘 후 Kilo Code가 인라인 어시스트를 트리거하기 전까지의 초 단위 지연. 짧은 지연은 더 빠른 제안을 의미하지만 더 많은 리소스를 사용할 수 있습니다."
+				"description": "타이핑을 멈춘 후 Kilo Code가 Autocomplete를 트리거하기까지의 초 단위 지연. 지연이 짧을수록 제안이 빨라지지만 리소스를 더 많이 사용할 수 있습니다."
+			},
+			"enableQuickInlineTaskKeybinding": {
+				"label": "빠른 작업",
+				"description": "빠른 변경만 필요하신가요? 코드를 선택하고(또는 하지 않고!) Cmd+I를 누르세요. 목표를 한국어로 설명하면(\"이 props로 React 컴포넌트 만들기\", \"이 함수에 에러 처리 추가\"), 에디터에서 바로 사용할 수 있는 여러 제안을 받을 수 있습니다. <DocsLink>단축키 보기</DocsLink>"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "스마트 인라인 작업",
-				"description": "빠른 수정, 완성 또는 리팩토링이 필요하신가요? Kilo가 주변 컨텍스트를 사용하여 즉각적인 개선사항을 제공하여 작업 흐름을 유지합니다. <DocsLink>단축키 보기</DocsLink>"
+				"label": "수동 Autocomplete",
+				"description": "빠른 수정, 완성 또는 리팩토링이 필요하신가요? Kilo가 주변 컨텍스트를 사용하여 즉각적인 개선사항을 제공하여 플로우를 유지합니다. <DocsLink>단축키 보기</DocsLink>"
 			},
 			"enableCustomProvider": {
-				"label": "사용자 정의 제공자 사용",
-				"description": "Inline Assist는 기본적으로 Codestral 모델을 사용하기 위해 KiloCode / OpenRouter / Mistral 자격 증명을 사용합니다"
+				"label": "사용자 정의 공급자 사용",
+				"description": "Autocomplete는 기본적으로 KiloCode / OpenRouter / Mistral 자격 증명을 사용하여 Codestral 모델을 사용합니다"
 			},
-			"provider": "제공자",
+			"provider": "공급자",
 			"apiConfigId": {
 				"label": "API 구성",
 				"current": "현재 선택된 API 구성 사용",
-				"description": "인라인 지원 프롬프트에 사용할 API 구성을 선택하거나 현재 선택된 것을 사용하세요."
-			},
-			"triggers": "트리거",
-			"keybindingDescription": "인라인 어시스트 기능은 명령어로 트리거됩니다. <DocsLink>여기에서 키보드 단축키를 구성</DocsLink>할 수 있습니다."
+				"description": "Autocomplete 프롬프트에 사용할 API 구성을 선택하거나 현재 선택된 것을 사용하세요"
+			}
 		}
 	},
 	"virtualProvider": {
@@ -247,5 +243,9 @@
 		"perDay": "일일당",
 		"requestsLabel": "요청",
 		"perMinute": "분당"
+	},
+	"imageWarnings": {
+		"modelNoImageSupport": "현재 모델은 이미지를 지원하지 않습니다.",
+		"maxImagesReached": "메시지당 최대 20개의 이미지. 더 추가하려면 일부 이미지를 제거하세요."
 	}
 }

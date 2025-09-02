@@ -189,41 +189,37 @@
 		}
 	},
 	"ghost": {
-		"title": "Assistance en ligne",
+		"title": "Autocomplete",
 		"settings": {
-			"autoTrigger": "Déclenchement automatique",
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Tâche Rapide en Ligne",
-				"description": "Besoin d'une modification rapide ? Sélectionnez du code (ou pas !) et appuyez sur Cmd+I. Décrivez votre objectif en langage courant (\"créer un composant React avec ces props\", \"ajouter une gestion d'erreurs à cette fonction\"), et obtenez plusieurs suggestions prêtes à l'emploi directement dans votre éditeur. <DocsLink>Voir le raccourci</DocsLink>"
-			},
-			"enableAutoInlineTaskKeybinding": {
-				"label": "Tâche automatique en ligne",
-				"description": "Besoin d'une correction rapide, d'une complétion ou d'une refactorisation ? Kilo utilisera le contexte environnant pour proposer des améliorations immédiates, vous permettant de rester dans votre flux de travail. <DocsLink>Voir le raccourci</DocsLink>"
-			},
+			"autoTrigger": "Déclenchement Automatique",
+			"triggers": "Déclencheurs",
+			"keybindingDescription": "Les fonctionnalités Autocomplete peuvent être déclenchées par des commandes. Tu peux configurer les <DocsLink>Raccourcis Clavier ici</DocsLink>.",
 			"enableAutoTrigger": {
-				"label": "Activer le déclenchement automatique",
-				"description": "Lorsqu'activé, Kilo Code déclenchera automatiquement l'Assistance en ligne quand tu arrêtes de taper. Cela peut être utile pour des corrections et suggestions rapides."
+				"label": "Activer Autocomplete",
+				"description": "Quand activé, Kilo Code déclenchera automatiquement Autocomplete quand tu arrêtes de taper. Cela peut être utile pour des corrections rapides et des suggestions."
 			},
 			"autoTriggerDelay": {
-				"label": "Délai du déclenchement automatique",
-				"description": "Le délai en secondes avant que Kilo Code déclenche l'Assistance en ligne après que tu aies arrêté de taper. Un délai plus court signifie des suggestions plus rapides, mais peut être plus gourmand en ressources."
+				"label": "Délai de Déclenchement Automatique",
+				"description": "Le délai en secondes avant que Kilo Code déclenche Autocomplete après que tu aies arrêté de taper. Un délai plus court signifie des suggestions plus rapides, mais peut être plus intensif en ressources."
+			},
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Tâche Rapide",
+				"description": "Tu n'as besoin que d'un changement rapide ? Sélectionne du code (ou pas !) et appuie sur Cmd+I. Décris ton objectif en français simple (\"créer un composant React avec ces props\", \"ajouter la gestion d'erreurs à cette fonction\"), et obtiens plusieurs suggestions prêtes à l'emploi directement dans ton éditeur. <DocsLink>Voir le raccourci</DocsLink>"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Tâche Intelligente en Ligne",
-				"description": "Besoin d'une correction rapide, d'une complétion ou d'un refactoring ? Kilo utilisera le contexte environnant pour offrir des améliorations immédiates, te gardant dans le flux. <DocsLink>Voir le raccourci</DocsLink>"
+				"label": "Autocomplete Manuel",
+				"description": "Besoin d'une correction rapide, d'un complément ou d'une refactorisation ? Kilo utilisera le contexte environnant pour offrir des améliorations immédiates, te gardant dans le flux. <DocsLink>Voir le raccourci</DocsLink>"
 			},
 			"enableCustomProvider": {
 				"label": "Utiliser un fournisseur personnalisé",
-				"description": "Inline Assist utilise tes identifiants KiloCode / OpenRouter / Mistral pour utiliser le modèle Codestral par défaut"
+				"description": "Autocomplete utilise tes identifiants KiloCode / OpenRouter / Mistral pour utiliser le modèle Codestral par défaut"
 			},
 			"provider": "Fournisseur",
 			"apiConfigId": {
 				"label": "Configuration API",
 				"current": "Utiliser la configuration API actuellement sélectionnée",
-				"description": "Sélectionnez une configuration d'API à utiliser pour les invites d'assistance en ligne, ou utilisez simplement celle qui est actuellement sélectionnée"
-			},
-			"triggers": "Déclencheurs",
-			"keybindingDescription": "Les fonctionnalités d'Inline Assist sont déclenchées par des commandes. Vous pouvez configurer les <DocsLink>raccourcis clavier ici</DocsLink>."
+				"description": "Sélectionne une configuration API à utiliser pour les prompts Autocomplete, ou utilise simplement celle qui est actuellement sélectionnée"
+			}
 		}
 	},
 	"virtualProvider": {
@@ -247,5 +243,9 @@
 		"perMinute": "Par minute",
 		"requestsLabel": "Demandes",
 		"perDay": "Par jour"
+	},
+	"imageWarnings": {
+		"modelNoImageSupport": "Les images ne sont pas prises en charge par le modèle actuel.",
+		"maxImagesReached": "Maximum de 20 images par message. Supprimez quelques images pour en ajouter d'autres."
 	}
 }

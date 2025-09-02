@@ -749,10 +749,6 @@
 			"apiKey": "Morph API-sleutel (optioneel)",
 			"placeholder": "Voer je Morph API-sleutel in (optioneel)"
 		},
-		"INLINE_ASSIST": {
-			"name": "Inline Ondersteuning",
-			"description": "Schakel Inline Assist-functies in voor snelle codevoorstellen en verbeteringen direct in uw editor. Bevat Quick Inline Task (Cmd+I) voor gerichte wijzigingen en Auto Inline Task voor contextuele verbeteringen."
-		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Achtergrondbewerking",
 			"description": "Voorkomt editor focus verstoring wanneer ingeschakeld. Bestandsbewerkingen gebeuren op de achtergrond zonder diff-weergaven te openen of focus te stelen. Je kunt ononderbroken doorwerken terwijl Kilo Code wijzigingen aanbrengt. Bestanden kunnen zonder focus worden geopend om diagnostiek vast te leggen of volledig gesloten blijven."
@@ -764,6 +760,10 @@
 		"NEW_TASK_REQUIRE_TODOS": {
 			"name": "'todos'-lijst vereisen voor nieuwe taken",
 			"description": "Wanneer ingeschakeld, vereist de new_task-tool dat een todos-parameter wordt opgegeven. Dit zorgt ervoor dat alle nieuwe taken beginnen met een duidelijke lijst met doelstellingen. Wanneer uitgeschakeld (standaard), blijft de todos-parameter optioneel voor achterwaartse compatibiliteit."
+		},
+		"INLINE_ASSIST": {
+			"name": "Autocomplete",
+			"description": "Schakel Autocomplete-functies in voor snelle codesuggesties en verbeteringen direct in je editor. Bevat Snelle Taak (Cmd+I) voor gerichte wijzigingen en Autocomplete voor contextuele verbeteringen."
 		}
 	},
 	"promptCaching": {

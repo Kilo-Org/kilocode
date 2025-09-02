@@ -189,37 +189,37 @@
 		}
 	},
 	"ghost": {
-		"title": "行內輔助",
+		"title": "Autocomplete",
 		"settings": {
 			"autoTrigger": "自動觸發",
-			"enableQuickInlineTaskKeybinding": {
-				"label": "快速行內任務",
-				"description": "只需要快速修改？選擇一些程式碼（或者不選！）並按下 Cmd+I。用簡單的語言描述你的目標（\"建立一個帶有這些屬性的 React 元件\"，\"為這個函數添加錯誤處理\"），然後在你的編輯器中獲取多個隨時可用的建議。<DocsLink>查看快捷鍵</DocsLink>"
-			},
+			"triggers": "觸發器",
+			"keybindingDescription": "Autocomplete 功能可以透過指令觸發。你可以在<DocsLink>這裡設定鍵盤快速鍵</DocsLink>。",
 			"enableAutoTrigger": {
-				"label": "啟用自動觸發",
-				"description": "啟用後，當你停止輸入時，Kilo Code 將自動觸發行內輔助。這對於快速修復和建議很有用。"
+				"label": "啟用 Autocomplete",
+				"description": "啟用後，當你停止輸入時 Kilo Code 將自動觸發 Autocomplete。這對快速修正和建議很有用。"
 			},
 			"autoTriggerDelay": {
 				"label": "自動觸發延遲",
-				"description": "在你停止輸入後，Kilo Code 觸發行內輔助之前的延遲秒數。較低的延遲意味著更快的建議，但可能會更消耗資源。"
+				"description": "你停止輸入後 Kilo Code 觸發 Autocomplete 前的秒數延遲。延遲越短建議越快，但可能更耗費資源。"
+			},
+			"enableQuickInlineTaskKeybinding": {
+				"label": "快速工作",
+				"description": "只需要快速變更？選取一些程式碼（或不選！）然後按 Cmd+I。用簡單的中文描述你的目標（「用這些 props 建立 React 元件」，「為這個函數新增錯誤處理」），在編輯器中直接取得多個即用建議。<DocsLink>檢視快速鍵</DocsLink>"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "智慧行內任務",
-				"description": "需要快速修復、完成或重構程式碼？Kilo 將使用周圍的上下文提供即時改進，讓您保持工作流暢。<DocsLink>查看快捷鍵</DocsLink>"
+				"label": "手動 Autocomplete",
+				"description": "需要快速修正、補全或重構？Kilo 將使用周圍內容提供即時改進，保持你的工作流程。<DocsLink>檢視快速鍵</DocsLink>"
 			},
 			"enableCustomProvider": {
 				"label": "使用自訂提供者",
-				"description": "Inline Assist 使用你的 KiloCode / OpenRouter / Mistral 憑證預設使用 Codestral 模型"
+				"description": "Autocomplete 預設使用你的 KiloCode / OpenRouter / Mistral 憑證來使用 Codestral 模型"
 			},
-			"provider": "供應商",
+			"provider": "提供者",
 			"apiConfigId": {
-				"label": "API 設定檔",
-				"current": "使用目前選擇的 API 設定檔",
-				"description": "為行內輔助提示選擇一個 API 設定檔，或者只使用目前選擇的設定檔"
-			},
-			"triggers": "觸發器",
-			"keybindingDescription": "行內輔助功能透過指令觸發。您可以在<DocsLink>此處設定鍵盤快速鍵</DocsLink>。"
+				"label": "API 設定",
+				"current": "使用目前選取的 API 設定",
+				"description": "選取用於 Autocomplete 提示的 API 設定，或直接使用目前選取的設定"
+			}
 		}
 	},
 	"virtualProvider": {
@@ -243,5 +243,9 @@
 		"perDay": "每天",
 		"perHour": "每小時",
 		"requestsLabel": "請求"
+	},
+	"imageWarnings": {
+		"modelNoImageSupport": "当前模型不支持图片。",
+		"maxImagesReached": "每条信息最多可发送20张图片。要添加更多图片，请先删除一些现有图片。"
 	}
 }

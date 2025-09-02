@@ -62,13 +62,13 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Assistente Inline Kilo",
-			"disabled": "$(circle-slash) Assistente Inline Kilo",
-			"warning": "$(warning) Assistente Inline Kilo",
+			"enabled": "$(sparkle) Kilo Code Autocomplete",
+			"disabled": "$(circle-slash) Kilo Code Autocomplete",
+			"warning": "$(warning) Kilo Code Autocomplete",
 			"tooltip": {
-				"basic": "Assistente Inline Kilo Code",
-				"disabled": "Assistente Inline Kilo Code (desativado)",
-				"tokenError": "Um token válido deve ser definido para usar o Assistente Inline",
+				"basic": "Kilo Code Autocomplete",
+				"disabled": "Kilo Code Autocomplete (desabilitado)",
+				"tokenError": "Um token válido deve ser definido para usar o Autocomplete",
 				"lastCompletion": "Última sugestão:",
 				"sessionTotal": "Custo total da sessão:",
 				"model": "Modelo:"
@@ -78,7 +78,7 @@
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Assistente Inline Kilo {{status}}",
+		"toggleMessage": "Kilo Code Autocomplete {{status}}",
 		"progress": {
 			"title": "Kilo Code",
 			"analyzing": "Analisando seu código...",
@@ -88,7 +88,7 @@
 		},
 		"input": {
 			"title": "Kilo Code: Tarefa Rápida",
-			"placeholder": "ex. 'refatorar esta função para torná-la mais eficiente'"
+			"placeholder": "ex., 'refatore esta função para ser mais eficiente'"
 		},
 		"commands": {
 			"generateSuggestions": "Kilo Code: Gerar Edições Sugeridas",
@@ -103,17 +103,14 @@
 			"title": "Kilo Code: Edições Sugeridas"
 		},
 		"chatParticipant": {
-			"fullName": "Agente Kilo Code",
-			"name": "Agente",
-			"description": "Posso ajudá-lo com tarefas rápidas e edições sugeridas."
-		},
-		"messages": {
-			"provideCodeSuggestions": "Fornecendo sugestões de código..."
+			"fullName": "Kilo Code Agent",
+			"name": "Agent",
+			"description": "Posso te ajudar com tarefas rápidas e edições sugeridas."
 		},
 		"incompatibilityExtensionPopup": {
-			"message": "O Assistente Inline do Kilo Code está sendo bloqueado por um conflito com o GitHub Copilot. Para corrigir isso, você deve desabilitar as sugestões inline do Copilot.",
+			"message": "O Kilo Code Autocomplete está sendo bloqueado por um conflito com o GitHub Copilot. Para corrigir isso, você deve desabilitar as sugestões inline do Copilot.",
 			"disableCopilot": "Desabilitar Copilot",
-			"disableInlineAssist": "Desabilitar Assistente Inline"
+			"disableInlineAssist": "Desabilitar Autocomplete"
 		}
 	},
 	"terminalCommandGenerator": {
