@@ -103,8 +103,8 @@ export class GhostProvider {
 
 	// Settings Management
 	private loadExperimentStatus() {
-		const state = ContextProxy.instance?.getValues?.()
-		return experiments.isEnabled(state.experiments ?? {}, EXPERIMENT_IDS.INLINE_ASSIST)
+		// Inline assist is now enabled by default (experiment removed)
+		return true
 	}
 
 	private loadSettings() {
