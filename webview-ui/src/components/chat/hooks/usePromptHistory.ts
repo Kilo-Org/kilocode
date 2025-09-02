@@ -1,9 +1,9 @@
 import { ClineMessage, HistoryItem } from "@roo-code/types"
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { useTaskSearch } from "../../history/useTaskSearch"
 
 interface UsePromptHistoryProps {
 	clineMessages: ClineMessage[] | undefined
-	taskHistory: HistoryItem[] | undefined
 	cwd: string | undefined
 	inputValue: string
 	setInputValue: (value: string) => void
@@ -26,11 +26,11 @@ export interface UsePromptHistoryReturn {
 
 export const usePromptHistory = ({
 	clineMessages,
-	taskHistory,
 	cwd,
 	inputValue,
 	setInputValue,
 }: UsePromptHistoryProps): UsePromptHistoryReturn => {
+	const { tasks: taskHistory } = useTaskSearch()
 	// Maximum number of prompts to keep in history for memory management
 	const MAX_PROMPT_HISTORY_SIZE = 100
 
@@ -64,8 +64,8 @@ export const usePromptHistory = ({
 
 		// Extract user prompts from task history for the current workspace only
 		return taskHistory
-			.filter((item) => item.task?.trim() && (!item.workspace || item.workspace === cwd))
-			.map((item) => item.task)
+			.filter((item: HistoryItem) => item.task?.trim() && (!item.workspace || item.workspace === cwd))
+			.map((item: HistoryItem) => item.task)
 			.slice(0, MAX_PROMPT_HISTORY_SIZE)
 	}, [clineMessages, taskHistory, cwd])
 

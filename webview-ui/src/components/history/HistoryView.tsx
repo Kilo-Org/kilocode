@@ -38,10 +38,19 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 		setLastNonRelevantSort,
 		showAllWorkspaces,
 		setShowAllWorkspaces,
-		showFavoritesOnly, // kilocode_change
-		setShowFavoritesOnly, // kilocode_change
+		favoritesOnly, // kilocode_change
+		setFavoritesOnly, // kilocode_change
 	} = useTaskSearch()
 	const { t } = useAppTranslation()
+
+	console.log("[HistoryView] Rendering with tasks:", {
+		tasksCount: tasks.length,
+		tasks: tasks.slice(0, 3), // Log first 3 tasks for debugging
+		searchQuery,
+		sortOption,
+		showAllWorkspaces,
+		favoritesOnly,
+	})
 
 	const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null)
 	const [isSelectionMode, setIsSelectionMode] = useState(false)
@@ -203,8 +212,8 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 					<div className="flex items-center gap-2">
 						<Checkbox
 							id="show-favorites-only"
-							checked={showFavoritesOnly}
-							onCheckedChange={(checked) => setShowFavoritesOnly(checked === true)}
+							checked={favoritesOnly}
+							onCheckedChange={(checked) => setFavoritesOnly(checked === true)}
 							variant="description"
 						/>
 						<label htmlFor="show-favorites-only" className="text-vscode-foreground cursor-pointer">

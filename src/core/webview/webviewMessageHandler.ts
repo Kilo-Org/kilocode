@@ -34,6 +34,7 @@ import { experimentDefault } from "../../shared/experiments"
 import { Terminal } from "../../integrations/terminal/Terminal"
 import { openFile } from "../../integrations/misc/open-file"
 import { CodeIndexManager } from "../../services/code-index/manager"
+import { TaskHistoryService } from "../../services/task-history/TaskHistoryService"
 import { openImage, saveImage } from "../../integrations/misc/image-handler"
 import { selectImages } from "../../integrations/misc/process-images"
 import { getTheme } from "../../integrations/theme/getTheme"
@@ -551,7 +552,6 @@ export const webviewMessageHandler = async (
 				providerSettingsManager: provider.providerSettingsManager,
 				contextProxy: provider.contextProxy,
 			})
-
 			break
 		case "resetState":
 			await provider.resetState()
@@ -1669,6 +1669,146 @@ export const webviewMessageHandler = async (
 			const todos = payload?.todos
 			if (Array.isArray(todos)) {
 				await setPendingTodoList(todos)
+			}
+			break
+		}
+		case "getTaskHistory": {
+			try {
+				const { requestId, query, filters } = message
+				const mode = filters?.mode || "search"
+
+				const taskHistory = provider.getTaskHistory()
+				console.log("🚀 ~ webviewMessageHandler ~ taskHistory:", taskHistory)
+				// kilocode_change start: Debug logging for getTaskHistory backend
+				console.log("[getTaskHistory Backend] Request received", {
+					requestId,
+					query,
+					filters,
+					mode,
+					taskHistoryLength: taskHistory?.length || 0,
+					taskHistory: taskHistory?.slice(0, 3), // Log first 3 tasks for debugging
+				})
+				// kilocode_change start: Debug logging for getTaskHistory backend (VSCode output channel)
+				provider.log(
+					`[getTaskHistory Backend] Request received - Mode: ${mode}, Query: "${query || "none"}", TaskHistory Length: ${taskHistory?.length || 0}`,
+				)
+				provider.log(
+					`[getTaskHistory Backend] First 3 tasks: ${JSON.stringify(taskHistory?.slice(0, 3) || [], null, 2)}`,
+				)
+				provider.log(`[getTaskHistory Backend] Filters: ${JSON.stringify(filters || {}, null, 2)}`)
+				provider.log(
+					`[getTaskHistory Backend] Full taskHistory array: ${JSON.stringify(taskHistory || [], null, 2)}`,
+				)
+				// kilocode_change end: Debug logging for getTaskHistory backend (VSCode output channel)
+				// kilocode_change end: Debug logging for getTaskHistory backend
+				const taskHistoryService = new TaskHistoryService(taskHistory)
+
+				let taskHistoryData: any = {}
+
+				// Calculate favorite count once for all cases
+				const totalFavoriteCount = taskHistory.filter((task: any) => task.isFavorited).length
+
+				switch (mode) {
+					case "search":
+						const searchResult = taskHistoryService.searchTasks(query || "", filters || {})
+						taskHistoryData = {
+							type: mode,
+							tasks: searchResult.tasks,
+							totalCount: searchResult.totalCount,
+							favoriteCount: totalFavoriteCount,
+							hasMore: searchResult.hasMore,
+						}
+						break
+					case "favorites":
+						const favoriteTasks = taskHistoryService.getFavoriteTasks({ workspace: filters?.workspace })
+						taskHistoryData = {
+							type: mode,
+							tasks: favoriteTasks,
+							totalCount: taskHistory.length,
+							favoriteCount: totalFavoriteCount,
+							hasMore: false,
+						}
+						break
+					case "page":
+						const pageResult = taskHistoryService.getTaskPage(filters?.page || 1, filters?.limit, filters)
+						taskHistoryData = {
+							type: mode,
+							tasks: pageResult.tasks,
+							totalCount: taskHistory.length,
+							favoriteCount: totalFavoriteCount,
+							hasMore: pageResult.hasMore,
+							pageNumber: pageResult.pageNumber,
+							totalPages: pageResult.totalPages,
+						}
+						break
+					case "promptHistory":
+						const promptHistory = taskHistoryService.getPromptHistory(filters?.workspace || "", 20)
+						taskHistoryData = {
+							type: mode,
+							promptHistory: promptHistory,
+							totalCount: taskHistory.length,
+							favoriteCount: totalFavoriteCount,
+						}
+						break
+					case "metadata":
+						taskHistoryData = {
+							type: mode,
+							totalCount: taskHistory.length,
+							favoriteCount: totalFavoriteCount,
+						}
+						break
+					default:
+						const defaultResult = taskHistoryService.searchTasks(query || "", filters || {})
+						taskHistoryData = {
+							type: "search",
+							tasks: defaultResult.tasks,
+							totalCount: defaultResult.totalCount,
+							favoriteCount: totalFavoriteCount,
+							hasMore: defaultResult.hasMore,
+						}
+						break
+				}
+
+				taskHistoryData.requestContext = {
+					query,
+					filters,
+					mode,
+					page: filters?.page,
+					limit: filters?.limit,
+					workspace: filters?.workspace,
+				}
+
+				// kilocode_change start: Debug logging for response being sent
+				provider.log(`[getTaskHistory Backend] Sending response to webview:`)
+				provider.log(`[getTaskHistory Backend] Response type: taskHistoryResult`)
+				provider.log(`[getTaskHistory Backend] Response requestId: ${requestId || ""}`)
+				provider.log(
+					`[getTaskHistory Backend] Response taskHistoryData: ${JSON.stringify(taskHistoryData, null, 2)}`,
+				)
+				// kilocode_change end: Debug logging for response being sent
+
+				await provider.postMessageToWebview({
+					type: "taskHistoryResult",
+					requestId: requestId || "",
+					taskHistoryData,
+				})
+			} catch (error) {
+				console.error("Error handling getTaskHistory message:", error)
+				const errorMessage = error instanceof Error ? error.message : String(error)
+
+				await provider.postMessageToWebview({
+					type: "taskHistoryResult",
+					requestId: message.requestId || "",
+					taskHistoryData: {
+						type: message.filters?.mode || "search",
+						tasks: [],
+						totalCount: 0,
+						favoriteCount: 0,
+						hasMore: false,
+						promptHistory: [],
+						error: errorMessage,
+					},
+				})
 			}
 			break
 		}

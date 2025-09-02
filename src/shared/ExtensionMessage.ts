@@ -20,6 +20,7 @@ import { Mode } from "./modes"
 import { ModelRecord, RouterModels } from "./api"
 import { ProfileDataResponsePayload, BalanceDataResponsePayload } from "./WebviewMessage" // kilocode_change
 import { ClineRulesToggles } from "./cline-rules" // kilocode_change
+import { TaskHistoryResponseData } from "./TaskHistoryTypes"
 
 // Command interface for frontend/backend communication
 export interface Command {
@@ -127,6 +128,7 @@ export interface ExtensionMessage {
 		| "marketplaceRemoveResult"
 		| "marketplaceData"
 		| "mermaidFixResponse" // kilocode_change
+		| "taskHistoryResult" // kilocode_change
 		| "shareTaskSuccess"
 		| "codeIndexSettingsSaved"
 		| "codeIndexSecretStatus"
@@ -237,6 +239,13 @@ export interface ExtensionMessage {
 	}>
 	// kilocode_change end
 	commands?: Command[]
+	taskHistoryData?: TaskHistoryResponseData
+}
+
+export interface TaskHistoryResultMessage extends ExtensionMessage {
+	type: "taskHistoryResult"
+	requestId: string
+	taskHistoryData: TaskHistoryResponseData
 }
 
 export type ExtensionState = Pick<
@@ -336,8 +345,6 @@ export type ExtensionState = Pick<
 	uiKind?: string // kilocode_change
 	kilocodeDefaultModel: string
 	shouldShowAnnouncement: boolean
-
-	taskHistory: HistoryItem[]
 
 	writeDelayMs: number
 	requestDelaySeconds: number

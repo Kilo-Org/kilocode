@@ -2208,6 +2208,12 @@ export class ClineProvider
 
 		return history
 	}
+	/**
+	 * Public method to get task history for the unified handler
+	 */
+	public getTaskHistory(): any[] {
+		return (this.getGlobalState("taskHistory") as any[] | undefined) || []
+	}
 
 	// ContextProxy
 
