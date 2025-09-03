@@ -349,7 +349,11 @@ export async function activate(context: vscode.ExtensionContext) {
 		}),
 	)
 
-	registerGhostProvider(context, provider) // kilocode_change
+	// kilocode_change start
+	if (!vscode.env.appName.includes("wrapper")) {
+		registerGhostProvider(context, provider)
+	}
+	// kilocode_change end
 	registerCommitMessageProvider(context, outputChannel) // kilocode_change
 	registerCodeActions(context)
 	registerTerminalActions(context)

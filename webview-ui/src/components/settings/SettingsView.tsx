@@ -113,7 +113,13 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 	const { t } = useAppTranslation()
 
 	const extensionState = useExtensionState()
-	const { currentApiConfigName, listApiConfigMeta, uriScheme, settingsImportedAt } = extensionState
+	const {
+		currentApiConfigName,
+		listApiConfigMeta,
+		uriScheme,
+		kiloCodeWrapperProperties, // kilocode_change
+		settingsImportedAt,
+	} = extensionState
 
 	const [isDiscardDialogShow, setDiscardDialogShow] = useState(false)
 	const [isChangeDetected, setChangeDetected] = useState(false)
@@ -526,7 +532,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			{ id: "browser", icon: SquareMousePointer },
 			{ id: "checkpoints", icon: GitBranch },
 			{ id: "display", icon: Monitor }, // kilocode_change
-			{ id: "ghost", icon: Bot }, // kilocode_change
+			...(kiloCodeWrapperProperties?.kiloCodeWrapped ? [] : [{ id: "ghost" as const, icon: Bot }]), // kilocode_change
 			{ id: "notifications", icon: Bell },
 			{ id: "contextManagement", icon: Database },
 			{ id: "terminal", icon: SquareTerminal },
@@ -536,7 +542,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			{ id: "mcp", icon: Server },
 			{ id: "about", icon: Info },
 		],
-		[],
+		[kiloCodeWrapperProperties?.kiloCodeWrapped], // kilocode_change
 	)
 	// Update target section logic to set active tab
 	useEffect(() => {
