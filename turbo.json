@@ -39,8 +39,10 @@
 			"cache": false,
 			"dependsOn": ["@kilo-code/jetbrains-plugin#run:bundle"]
 		},
+		"jetbrains:build": {
+			"dependsOn": ["@kilo-code/jetbrains-plugin#build"]
+		},
 		"jetbrains:run": {
-			"cache": false,
 			"dependsOn": ["@kilo-code/jetbrains-plugin#run"]
 		}
 	}

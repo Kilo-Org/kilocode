@@ -31,6 +31,7 @@
 		"unlink-workspace-packages": "tsx scripts/link-packages.ts --unlink",
 		"jetbrains:bundle": "turbo jetbrains:bundle",
 		"jetbrains:run-bundle": "turbo jetbrains:run-bundle",
+		"jetbrains:build": "turbo jetbrains:build",
 		"jetbrains:run": "turbo jetbrains:run",
 		"docs:start": "pnpm --filter kilocode-docs start",
 		"docs:build": "pnpm --filter kilocode-docs build"

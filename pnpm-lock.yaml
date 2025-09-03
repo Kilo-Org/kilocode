@@ -712,7 +712,7 @@ importers:
         specifier: ^1.50.0
         version: 1.55.0
       '@roo-code/config-eslint':
-        specifier: workspace:^
+        specifier: file:../../packages/config-eslint
         version: link:../../packages/config-eslint
       '@types/cookie':
         specifier: ^0.3.3

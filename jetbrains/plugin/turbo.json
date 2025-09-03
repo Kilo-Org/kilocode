@@ -41,6 +41,7 @@
 			"dependsOn": ["clean:resource-logs"]
 		},
 		"copy:resource-nodemodules": {
+			"cache": false,
 			"inputs": ["../host/package.json", "../host/package-lock.json"],
 			"outputs": ["../resources/node_modules/**", "../resources/package.json", "../resources/package-lock.json"],
 			"dependsOn": ["clean:resource-nodemodules", "copy:resource-host"],
@@ -63,7 +64,6 @@
 			"dependsOn": ["sync:version"]
 		},
 		"build": {
-			"cache": false,
 			"outputs": ["build/**"],
 			"inputs": ["src/**", "plugin/**"],
 			"dependsOn": [
@@ -73,7 +73,8 @@
 				"copy:resource-kilocode",
 				"copy:resource-host",
 				"copy:resource-logs",
-				"copy:resource-nodemodules"
+				"copy:resource-nodemodules",
+				"propDep"
 			]
 		},
 		"bundle": {
