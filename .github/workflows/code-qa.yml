@@ -192,7 +192,7 @@ jobs:
                   name: ${{ env.BUNDLE_NAME }}
                   path: jetbrains/plugin/build/distributions/${{ env.BUNDLE_NAME }}
             - name: JetBrains Marketplace Publisher
-              uses: CodingWithCalvin/GHA-JBMarketplacePublisher@v1
+              uses: CodingWithCalvin/GHA-JBMarketplacePublisher@v1.0.0
               with:
                 marketplace-pat: ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}
                 archive-path: jetbrains/plugin/build/distributions/${{ env.BUNDLE_NAME }}
