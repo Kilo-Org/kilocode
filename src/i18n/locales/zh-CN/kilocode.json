@@ -13,7 +13,8 @@
 	},
 	"task": {
 		"noAssistantMessages": "模型响应意外结束（没有助理消息）。这可能是 API 请求频率限制的迹象。",
-		"notLoggedInError": "无法完成请求，请确保您已连接并使用所选提供商登录。\n\n{{error}}"
+		"notLoggedInError": "无法完成请求，请确保您已连接并使用所选提供商登录。\n\n{{error}}",
+		"maxCompletionTokens": "已达到最大完成 Token 数量。"
 	},
 	"checkpoints": {
 		"nestedGitRepos": "存档点功能不可用，因为工作区中检测到嵌套的 Git 仓库。请移除或重新定位嵌套的 Git 仓库以使用存档点功能，或在设置中禁用存档点以消除此警告。",
@@ -59,67 +60,64 @@
 		"providerRegistered": "Kilo：提交消息提供程序已注册",
 		"activationFailed": "Kilo：消息生成器激活失败：{{error}}"
 	},
-	"ghost": {
-		"statusBar": {
-			"enabled": "$(sparkle) Kilo 内联辅助",
-			"disabled": "$(circle-slash) Kilo 内联辅助",
-			"warning": "$(warning) Kilo 内联辅助",
-			"tooltip": {
-				"basic": "Kilo Code 内联辅助",
-				"disabled": "Kilo Code 内联辅助",
-				"lastCompletion": "最后建议：",
-				"tokenError": "必须设置有效令牌才能使用行内助手",
-				"sessionTotal": "会话总费用：",
-				"model": "模型："
-			},
-			"cost": {
-				"zero": "¥0.00",
-				"lessThanCent": "<¥0.07"
-			}
-		},
-		"toggleMessage": "Kilo 内联辅助 {{status}}",
-		"progress": {
-			"analyzing": "正在分析您的代码...",
-			"generating": "正在生成建议修改...",
-			"processing": "正在处理建议的编辑...",
-			"showing": "显示建议的编辑...",
-			"title": "Kilo Code"
-		},
-		"input": {
-			"title": "Kilo：快速任务",
-			"placeholder": "例如，\"重构这个函数使其更高效\""
-		},
-		"commands": {
-			"displaySuggestions": "显示建议的编辑",
-			"applyCurrentSuggestion": "应用当前建议的编辑",
-			"generateSuggestions": "Kilo：生成建议的编辑",
-			"cancelSuggestions": "取消建议的编辑",
-			"applyAllSuggestions": "应用所有建议的编辑",
-			"promptCodeSuggestion": "快速任务提示",
-			"category": "Kilo Code"
-		},
-		"codeAction": {
-			"title": "Kilo Code：建议编辑"
-		},
-		"chatParticipant": {
-			"fullName": "Kilo Code 代理",
-			"description": "我可以帮助你完成快速任务和提供建议的编辑。",
-			"name": "代理"
-		},
-		"messages": {
-			"provideCodeSuggestions": "正在提供代码建议..."
-		},
-		"incompatibilityExtensionPopup": {
-			"message": "Kilo Code 内联辅助 被 GitHub Copilot 的冲突阻止了。要解决此问题，你需要禁用 Copilot 的内联辅助。",
-			"disableCopilot": "禁用 Copilot",
-			"disableInlineAssist": "禁用 内联辅助"
-		}
-	},
 	"seeNewChanges": {
 		"title": "显示新更改",
 		"checkpointsUnavailable": "无法显示新更改，存档点不可用。",
 		"noChanges": "无法显示新更改，未发现任何更改。",
 		"error": "无法显示新更改，发生错误。"
+	},
+	"ghost": {
+		"statusBar": {
+			"enabled": "$(sparkle) Kilo Code Autocomplete",
+			"disabled": "$(circle-slash) Kilo Code Autocomplete",
+			"warning": "$(warning) Kilo Code Autocomplete",
+			"tooltip": {
+				"basic": "Kilo Code Autocomplete",
+				"disabled": "Kilo Code Autocomplete（已禁用）",
+				"tokenError": "必须设置有效 Token 才能使用 Autocomplete",
+				"lastCompletion": "最后建议:",
+				"sessionTotal": "会话总费用:",
+				"model": "模型:"
+			},
+			"cost": {
+				"zero": "$0.00",
+				"lessThanCent": "<$0.01"
+			}
+		},
+		"toggleMessage": "Kilo Code Autocomplete {{status}}",
+		"progress": {
+			"title": "Kilo Code",
+			"analyzing": "正在分析你的代码...",
+			"generating": "正在生成建议编辑...",
+			"processing": "正在处理建议编辑...",
+			"showing": "正在显示建议编辑..."
+		},
+		"input": {
+			"title": "Kilo Code: 快速任务",
+			"placeholder": "例如：'重构这个函数使其更高效'"
+		},
+		"commands": {
+			"generateSuggestions": "Kilo Code: 生成建议编辑",
+			"displaySuggestions": "显示建议编辑",
+			"cancelSuggestions": "取消建议编辑",
+			"applyCurrentSuggestion": "应用当前建议编辑",
+			"applyAllSuggestions": "应用所有建议编辑",
+			"promptCodeSuggestion": "快速任务",
+			"category": "Kilo Code"
+		},
+		"codeAction": {
+			"title": "Kilo Code: 建议编辑"
+		},
+		"chatParticipant": {
+			"fullName": "Kilo Code Agent",
+			"name": "Agent",
+			"description": "我可以帮助你完成快速任务和建议编辑。"
+		},
+		"incompatibilityExtensionPopup": {
+			"message": "Kilo Code Autocomplete 被与 GitHub Copilot 的冲突阻止。要解决此问题，你必须禁用 Copilot 的内联建议。",
+			"disableCopilot": "禁用 Copilot",
+			"disableInlineAssist": "禁用 Autocomplete"
+		}
 	},
 	"terminalCommandGenerator": {
 		"inputPrompt": "Kilo：描述您想要生成的命令",

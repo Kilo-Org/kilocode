@@ -748,10 +748,6 @@
 			"apiKey": "Clave API de Morph (opcional)",
 			"placeholder": "Introduce tu clave API de Morph (opcional)"
 		},
-		"INLINE_ASSIST": {
-			"name": "Asistencia Integrada",
-			"description": "Habilita las funciones de Asistencia en línea para obtener sugerencias y mejoras de código rápidas directamente en tu editor. Incluye Tarea rápida en línea (Cmd+I) para cambios específicos y Tarea automática en línea para mejoras contextuales."
-		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Edición en segundo plano",
 			"description": "Previene la interrupción del foco del editor cuando está habilitado. Las ediciones de archivos ocurren en segundo plano sin abrir vistas de diferencias o robar el foco. Puedes continuar trabajando sin interrupciones mientras Kilo Code realiza cambios. Los archivos pueden abrirse sin foco para capturar diagnósticos o mantenerse completamente cerrados."
@@ -763,6 +759,10 @@
 		"NEW_TASK_REQUIRE_TODOS": {
 			"name": "Requerir lista de 'todos' para nuevas tareas",
 			"description": "Cuando está habilitado, la herramienta new_task requerirá que se proporcione un parámetro todos. Esto asegura que todas las nuevas tareas comiencen con una lista clara de objetivos. Cuando está deshabilitado (predeterminado), el parámetro todos permanece opcional por compatibilidad con versiones anteriores."
+		},
+		"INLINE_ASSIST": {
+			"name": "Autocomplete",
+			"description": "Habilita las funciones de Autocomplete para sugerencias de código rápidas y mejoras directamente en tu editor. Incluye Tarea Rápida (Cmd+I) para cambios específicos y Autocomplete para mejoras contextuales."
 		}
 	},
 	"promptCaching": {

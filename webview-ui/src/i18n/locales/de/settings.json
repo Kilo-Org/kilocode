@@ -748,10 +748,6 @@
 			"apiKey": "Morph API-Schlüssel (optional)",
 			"placeholder": "Gib deinen Morph API-Schlüssel ein (optional)"
 		},
-		"INLINE_ASSIST": {
-			"name": "Inline-Unterstützung",
-			"description": "Aktiviere Inline-Assist-Funktionen für schnelle Code-Vorschläge und -Verbesserungen direkt in deinem Editor. Beinhaltet Quick Inline Task (Cmd+I) für gezielte Änderungen und Auto Inline Task für kontextbezogene Verbesserungen."
-		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Hintergrundbearbeitung",
 			"description": "Verhindert Editor-Fokus-Störungen wenn aktiviert. Dateibearbeitungen erfolgen im Hintergrund ohne Öffnung von Diff-Ansichten oder Fokus-Diebstahl. Du kannst ungestört weiterarbeiten, während Kilo Code Änderungen vornimmt. Dateien können ohne Fokus geöffnet werden, um Diagnosen zu erfassen oder vollständig geschlossen bleiben."
@@ -763,6 +759,10 @@
 		"NEW_TASK_REQUIRE_TODOS": {
 			"name": "'todos'-Liste für neue Aufgaben anfordern",
 			"description": "Wenn aktiviert, erfordert das new_task-Tool die Angabe eines todos-Parameters. Dies stellt sicher, dass alle neuen Aufgaben mit einer klaren Zielliste beginnen. Wenn deaktiviert (Standard), bleibt der todos-Parameter aus Gründen der Abwärtskompatibilität optional."
+		},
+		"INLINE_ASSIST": {
+			"name": "Autocomplete",
+			"description": "Aktiviere Autocomplete-Funktionen für schnelle Code-Vorschläge und Verbesserungen direkt in deinem Editor. Beinhaltet Schnellaufgabe (Cmd+I) für gezielte Änderungen und Autocomplete für kontextuelle Verbesserungen."
 		}
 	},
 	"promptCaching": {

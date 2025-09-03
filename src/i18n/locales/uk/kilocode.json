@@ -13,7 +13,8 @@
 	},
 	"task": {
 		"noAssistantMessages": "Відповідь моделі завершилася несподівано (без повідомлень асистента). Це може бути ознакою обмеження швидкості запитів.",
-		"notLoggedInError": "Не вдалося виконати запит, переконайтеся, що ви підключені та увійшли до системи з вибраним постачальником.\n\n{{error}}"
+		"notLoggedInError": "Не вдалося виконати запит, переконайтеся, що ви підключені та увійшли до системи з вибраним постачальником.\n\n{{error}}",
+		"maxCompletionTokens": "Досягнуто максимальної кількості токенів завершення."
 	},
 	"checkpoints": {
 		"nestedGitRepos": "Контрольні точки недоступні, оскільки в робочій області виявлено вкладені Git-репозиторії. Будь ласка, видаліть або перемістіть вкладені Git-репозиторії, щоб використовувати функцію контрольних точок, або вимкніть контрольні точки в налаштуваннях, щоб приховати це попередження.",
@@ -61,13 +62,13 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Вбудована допомога Kilo",
-			"disabled": "$(circle-slash) Вбудована допомога Kilo",
-			"warning": "$(warning) Вбудована допомога Kilo",
+			"enabled": "$(sparkle) Kilo Code Autocomplete",
+			"disabled": "$(circle-slash) Kilo Code Autocomplete",
+			"warning": "$(warning) Kilo Code Autocomplete",
 			"tooltip": {
-				"basic": "Вбудована допомога Kilo Code",
-				"disabled": "Вбудована допомога Kilo Code (вимкнено)",
-				"tokenError": "Для використання вбудованої допомоги необхідно встановити дійсний токен",
+				"basic": "Kilo Code Autocomplete",
+				"disabled": "Kilo Code Autocomplete (вимкнено)",
+				"tokenError": "Для використання Autocomplete потрібно встановити дійсний токен",
 				"lastCompletion": "Остання пропозиція:",
 				"sessionTotal": "Загальна вартість сесії:",
 				"model": "Модель:"
@@ -77,42 +78,39 @@
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Вбудована допомога Kilo {{status}}",
+		"toggleMessage": "Kilo Code Autocomplete {{status}}",
 		"progress": {
 			"title": "Kilo Code",
-			"analyzing": "Аналіз вашого коду...",
-			"generating": "Генерація запропонованих правок...",
-			"processing": "Обробка запропонованих правок...",
-			"showing": "Відображення запропонованих правок..."
+			"analyzing": "Аналізую твій код...",
+			"generating": "Генерую запропоновані правки...",
+			"processing": "Обробляю запропоновані правки...",
+			"showing": "Показую запропоновані правки..."
 		},
 		"input": {
-			"title": "Kilo Code: Швидке завдання",
-			"placeholder": "наприклад, 'рефакторити цю функцію, щоб зробити її ефективнішою'"
+			"title": "Kilo Code: Швидке Завдання",
+			"placeholder": "напр., 'рефактори цю функцію для більшої ефективності'"
 		},
 		"commands": {
-			"generateSuggestions": "Kilo Code: Згенерувати запропоновані правки",
-			"displaySuggestions": "Показати запропоновані правки",
-			"cancelSuggestions": "Скасувати запропоновані правки",
-			"applyCurrentSuggestion": "Застосувати поточну запропоновану правку",
-			"applyAllSuggestions": "Застосувати всі запропоновані правки",
-			"promptCodeSuggestion": "Швидке завдання",
+			"generateSuggestions": "Kilo Code: Генерувати Запропоновані Правки",
+			"displaySuggestions": "Показати Запропоновані Правки",
+			"cancelSuggestions": "Скасувати Запропоновані Правки",
+			"applyCurrentSuggestion": "Застосувати Поточну Запропоновану Правку",
+			"applyAllSuggestions": "Застосувати Всі Запропоновані Правки",
+			"promptCodeSuggestion": "Швидке Завдання",
 			"category": "Kilo Code"
 		},
 		"codeAction": {
-			"title": "Kilo Code: Запропоновані правки"
+			"title": "Kilo Code: Запропоновані Правки"
 		},
 		"chatParticipant": {
-			"fullName": "Агент Kilo Code",
-			"name": "Агент",
-			"description": "Я можу допомогти вам зі швидкими завданнями та запропонованими правками."
-		},
-		"messages": {
-			"provideCodeSuggestions": "Надання пропозицій коду..."
+			"fullName": "Kilo Code Agent",
+			"name": "Agent",
+			"description": "Я можу допомогти тобі зі швидкими завданнями та запропонованими правками."
 		},
 		"incompatibilityExtensionPopup": {
-			"message": "Вбудована допомога Kilo Code блокується конфліктом із GitHub Copilot. Щоб вирішити цю проблему, вам потрібно вимкнути вбудовані пропозиції Copilot.",
+			"message": "Kilo Code Autocomplete блокується конфліктом з GitHub Copilot. Щоб виправити це, ти повинен вимкнути вбудовані пропозиції Copilot.",
 			"disableCopilot": "Вимкнути Copilot",
-			"disableInlineAssist": "Вимкнути вбудовану допомогу"
+			"disableInlineAssist": "Вимкнути Autocomplete"
 		}
 	},
 	"terminalCommandGenerator": {

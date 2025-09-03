@@ -13,7 +13,8 @@
 	},
 	"task": {
 		"noAssistantMessages": "The model's response ended unexpectedly (no assistant messages). This may be a sign of rate limiting.",
-		"notLoggedInError": "Cannot complete request, make sure you are connected and logged in with the selected provider.\n\n{{error}}"
+		"notLoggedInError": "Cannot complete request, make sure you are connected and logged in with the selected provider.\n\n{{error}}",
+		"maxCompletionTokens": "The maximum number of completion tokens was reached."
 	},
 	"checkpoints": {
 		"nestedGitRepos": "Checkpoints are unavailable, because nested Git repositories were detected in the workspace. Please remove or relocate nested Git repositories to use the checkpoints feature or disable checkpoints in the settings to supress this warning.",
@@ -61,13 +62,13 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Inline Assist",
-			"disabled": "$(circle-slash) Kilo Inline Assist",
-			"warning": "$(warning) Kilo Inline Assist",
+			"enabled": "$(sparkle) Kilo Code Autocomplete",
+			"disabled": "$(circle-slash) Kilo Code Autocomplete",
+			"warning": "$(warning) Kilo Code Autocomplete",
 			"tooltip": {
-				"basic": "Kilo Code Inline Assist",
-				"disabled": "Kilo Code Inline Assist (disabled)",
-				"tokenError": "A valid token must be set to use Inline Assist",
+				"basic": "Kilo Code Autocomplete",
+				"disabled": "Kilo Code Autocomplete (disabled)",
+				"tokenError": "A valid token must be set to use Autocomplete",
 				"lastCompletion": "Last suggestion:",
 				"sessionTotal": "Session total cost:",
 				"model": "Model:"
@@ -77,7 +78,7 @@
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Kilo Inline Assist {{status}}",
+		"toggleMessage": "Kilo Code Autocomplete {{status}}",
 		"progress": {
 			"title": "Kilo Code",
 			"analyzing": "Analyzing your code...",
@@ -107,9 +108,9 @@
 			"description": "I can help you with quick tasks and suggested edits."
 		},
 		"incompatibilityExtensionPopup": {
-			"message": "The Kilo Code Inline Assist is being blocked by a conflict with GitHub Copilot. To fix this, you must disable Copilot's inline suggestions.",
+			"message": "The Kilo Code Autocomplete is being blocked by a conflict with GitHub Copilot. To fix this, you must disable Copilot's inline suggestions.",
 			"disableCopilot": "Disable Copilot",
-			"disableInlineAssist": "Disable Inline Assist"
+			"disableInlineAssist": "Disable Autocomplete"
 		}
 	},
 	"seeNewChanges": {

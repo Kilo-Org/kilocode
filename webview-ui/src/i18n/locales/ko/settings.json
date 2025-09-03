@@ -749,10 +749,6 @@
 			"apiKey": "Morph API 키 (선택사항)",
 			"placeholder": "Morph API 키를 입력하세요 (선택사항)"
 		},
-		"INLINE_ASSIST": {
-			"name": "인라인 어시스트",
-			"description": "에디터에서 직접 빠른 코드 제안 및 개선을 위해 인라인 어시스트 기능을 활성화하세요. 대상 변경을 위한 빠른 인라인 태스크(Cmd+I)와 상황에 맞는 개선을 위한 자동 인라인 태스크가 포함되어 있습니다."
-		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "백그라운드 편집",
 			"description": "활성화하면 편집기 포커스 방해를 방지합니다. 파일 편집이 diff 뷰를 열거나 포커스를 빼앗지 않고 백그라운드에서 수행됩니다. Kilo Code가 변경사항을 적용하는 동안 방해받지 않고 계속 작업할 수 있습니다. 파일은 진단을 캡처하기 위해 포커스 없이 열거나 완전히 닫힌 상태로 유지할 수 있습니다."
@@ -764,6 +760,10 @@
 		"NEW_TASK_REQUIRE_TODOS": {
 			"name": "새 작업에 'todos' 목록 필요",
 			"description": "활성화하면 new_task 도구에 todos 매개변수를 제공해야 합니다. 이렇게 하면 모든 새 작업이 명확한 목표 목록으로 시작됩니다. 비활성화하면(기본값) 이전 버전과의 호환성을 위해 todos 매개변수는 선택 사항으로 유지됩니다."
+		},
+		"INLINE_ASSIST": {
+			"name": "Autocomplete",
+			"description": "에디터에서 직접 빠른 코드 제안과 개선을 위한 Autocomplete 기능을 활성화합니다. 타겟 변경을 위한 빠른 작업(Cmd+I)과 컨텍스트 개선을 위한 Autocomplete가 포함됩니다."
 		}
 	},
 	"promptCaching": {

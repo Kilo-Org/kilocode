@@ -508,7 +508,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			{ id: "browser", icon: SquareMousePointer },
 			{ id: "checkpoints", icon: GitBranch },
 			{ id: "display", icon: Monitor }, // kilocode_change
-			...(extensionState.experiments?.inlineAssist ? [{ id: "ghost" as const, icon: Bot }] : []), // kilocode_change
+			{ id: "ghost", icon: Bot }, // kilocode_change
 			{ id: "notifications", icon: Bell },
 			{ id: "contextManagement", icon: Database },
 			{ id: "terminal", icon: SquareTerminal },
@@ -518,9 +518,8 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			{ id: "mcp", icon: Server },
 			{ id: "about", icon: Info },
 		],
-		[extensionState.experiments?.inlineAssist], // kilocode_change
+		[],
 	)
-
 	// Update target section logic to set active tab
 	useEffect(() => {
 		if (targetSection && sectionNames.includes(targetSection as SectionName)) {

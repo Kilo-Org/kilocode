@@ -189,37 +189,37 @@
 		}
 	},
 	"ghost": {
-		"title": "内联辅助",
+		"title": "Autocomplete",
 		"settings": {
 			"autoTrigger": "自动触发",
-			"enableQuickInlineTaskKeybinding": {
-				"label": "快速内联任务",
-				"description": "只需要一个快速的调整？选中一些代码（或者不选！）然后按下Cmd+I。用简单的英语描述你的目标（\"创建一个带有这些属性的 React 组件\"，\"为这个函数添加错误处理\"），然后在编辑器中直接获取多个可立即使用的建议。<DocsLink>查看快捷键</DocsLink>"
-			},
+			"triggers": "触发器",
+			"keybindingDescription": "Autocomplete 功能可以通过命令触发。你可以在<DocsLink>这里配置键盘快捷键</DocsLink>。",
 			"enableAutoTrigger": {
-				"label": "启用自动触发",
-				"description": "启用后，当你停止输入时，Kilo Code 将自动触发内联助手。这对于快速修复和建议很有用。"
+				"label": "启用 Autocomplete",
+				"description": "启用后，当你停止输入时 Kilo Code 将自动触发 Autocomplete。这对快速修复和建议很有用。"
 			},
 			"autoTriggerDelay": {
 				"label": "自动触发延迟",
-				"description": "在你停止输入后，Kilo Code 触发内联助手之前的延迟秒数。较低的延迟意味着更快的建议，但可能会更消耗资源。"
+				"description": "你停止输入后 Kilo Code 触发 Autocomplete 前的秒数延迟。延迟越短建议越快，但可能更消耗资源。"
+			},
+			"enableQuickInlineTaskKeybinding": {
+				"label": "快速任务",
+				"description": "只需要快速更改？选择一些代码（或不选！）然后按 Cmd+I。用简单的中文描述你的目标（\"用这些 props 创建 React 组件\"，\"给这个函数添加错误处理\"），在编辑器中直接获得多个即用建议。<DocsLink>查看快捷键</DocsLink>"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "智能内联任务",
-				"description": "需要快速修复、完成或重构代码？Kilo 将使用周围的上下文提供即时改进，让您保持工作流畅。<DocsLink>查看快捷键</DocsLink>"
+				"label": "手动 Autocomplete",
+				"description": "需要快速修复、补全或重构？Kilo 将使用周围上下文提供即时改进，保持你的工作流。<DocsLink>查看快捷键</DocsLink>"
 			},
 			"enableCustomProvider": {
 				"label": "使用自定义提供商",
-				"description": "Inline Assist 使用你的 KiloCode / OpenRouter / Mistral 凭据默认使用 Codestral 模型"
+				"description": "Autocomplete 默认使用你的 KiloCode / OpenRouter / Mistral 凭据来使用 Codestral 模型"
 			},
 			"provider": "提供商",
 			"apiConfigId": {
 				"label": "API 配置",
 				"current": "使用当前选择的 API 配置",
-				"description": "为内联辅助提示选择一个 API 配置，或者只使用当前选择的配置"
-			},
-			"triggers": "触发器",
-			"keybindingDescription": "内联助手功能由命令触发。您可以在<DocsLink>这里配置键盘快捷键</DocsLink>。"
+				"description": "选择用于 Autocomplete 提示的 API 配置，或直接使用当前选择的配置"
+			}
 		}
 	},
 	"virtualProvider": {
@@ -243,5 +243,9 @@
 		"perDay": "每天",
 		"requestsLabel": "请求",
 		"perMinute": "每分钟"
+	},
+	"imageWarnings": {
+		"maxImagesReached": "每条消息最多 20 张图片。删除一些图片以添加更多。",
+		"modelNoImageSupport": "当前模型不支持图像。"
 	}
 }

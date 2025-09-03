@@ -749,10 +749,6 @@
 			"apiKey": "Khóa API Morph (tùy chọn)",
 			"placeholder": "Nhập khóa API Morph của bạn (tùy chọn)"
 		},
-		"INLINE_ASSIST": {
-			"name": "Trợ lý Nội dòng",
-			"description": "Bật tính năng Trợ giúp nội tuyến (Inline Assist) để nhận gợi ý và cải tiến mã nhanh chóng ngay trong trình soạn thảo của bạn. Bao gồm Tác vụ nội tuyến nhanh (Cmd+I) cho những thay đổi có mục tiêu và Tác vụ nội tuyến tự động cho những cải tiến theo ngữ cảnh."
-		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Chỉnh sửa nền",
 			"description": "Khi được bật, ngăn chặn gián đoạn tiêu điểm trình soạn thảo. Việc chỉnh sửa tệp diễn ra ở nền mà không mở chế độ xem diff hoặc chiếm tiêu điểm. Bạn có thể tiếp tục làm việc không bị gián đoạn trong khi Kilo Code thực hiện thay đổi. Các tệp có thể được mở mà không có tiêu điểm để thu thập chẩn đoán hoặc giữ hoàn toàn đóng."
@@ -764,6 +760,10 @@
 		"NEW_TASK_REQUIRE_TODOS": {
 			"name": "Yêu cầu danh sách 'todos' cho các nhiệm vụ mới",
 			"description": "Khi được bật, công cụ new_task sẽ yêu cầu cung cấp tham số todos. Điều này đảm bảo tất cả các nhiệm vụ mới bắt đầu với một danh sách mục tiêu rõ ràng. Khi bị tắt (mặc định), tham số todos vẫn là tùy chọn để tương thích ngược."
+		},
+		"INLINE_ASSIST": {
+			"name": "Autocomplete",
+			"description": "Bật các tính năng Autocomplete cho gợi ý mã nhanh và cải tiến trực tiếp trong editor của bạn. Bao gồm Tác Vụ Nhanh (Cmd+I) cho các thay đổi có mục tiêu và Autocomplete cho các cải tiến theo ngữ cảnh."
 		}
 	},
 	"promptCaching": {

@@ -13,7 +13,8 @@
 	},
 	"task": {
 		"noAssistantMessages": "A resposta do modelo terminou inesperadamente (nenhuma mensagem do assistente). Isso pode ser um sinal de limitação de taxa.",
-		"notLoggedInError": "Não é possível concluir a solicitação, certifique-se de que está conectado e logado com o provedor selecionado.\n\n{{error}}"
+		"notLoggedInError": "Não é possível concluir a solicitação, certifique-se de que está conectado e logado com o provedor selecionado.\n\n{{error}}",
+		"maxCompletionTokens": "O número máximo de tokens de conclusão foi atingido."
 	},
 	"checkpoints": {
 		"nestedGitRepos": "Os pontos de verificação não estão disponíveis porque foram detectados repositórios Git aninhados no workspace. Remova ou realoque os repositórios Git aninhados para usar o recurso de pontos de verificação ou desabilite os pontos de verificação nas configurações para suprimir este aviso.",
@@ -61,13 +62,13 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Assistente Inline Kilo",
-			"disabled": "$(circle-slash) Assistente Inline Kilo",
-			"warning": "$(warning) Assistente Inline Kilo",
+			"enabled": "$(sparkle) Kilo Code Autocomplete",
+			"disabled": "$(circle-slash) Kilo Code Autocomplete",
+			"warning": "$(warning) Kilo Code Autocomplete",
 			"tooltip": {
-				"basic": "Assistente Inline Kilo Code",
-				"disabled": "Assistente Inline Kilo Code (desativado)",
-				"tokenError": "Um token válido deve ser definido para usar o Assistente Inline",
+				"basic": "Kilo Code Autocomplete",
+				"disabled": "Kilo Code Autocomplete (desabilitado)",
+				"tokenError": "Um token válido deve ser definido para usar o Autocomplete",
 				"lastCompletion": "Última sugestão:",
 				"sessionTotal": "Custo total da sessão:",
 				"model": "Modelo:"
@@ -77,7 +78,7 @@
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Assistente Inline Kilo {{status}}",
+		"toggleMessage": "Kilo Code Autocomplete {{status}}",
 		"progress": {
 			"title": "Kilo Code",
 			"analyzing": "Analisando seu código...",
@@ -87,7 +88,7 @@
 		},
 		"input": {
 			"title": "Kilo Code: Tarefa Rápida",
-			"placeholder": "ex. 'refatorar esta função para torná-la mais eficiente'"
+			"placeholder": "ex., 'refatore esta função para ser mais eficiente'"
 		},
 		"commands": {
 			"generateSuggestions": "Kilo Code: Gerar Edições Sugeridas",
@@ -102,17 +103,14 @@
 			"title": "Kilo Code: Edições Sugeridas"
 		},
 		"chatParticipant": {
-			"fullName": "Agente Kilo Code",
-			"name": "Agente",
-			"description": "Posso ajudá-lo com tarefas rápidas e edições sugeridas."
-		},
-		"messages": {
-			"provideCodeSuggestions": "Fornecendo sugestões de código..."
+			"fullName": "Kilo Code Agent",
+			"name": "Agent",
+			"description": "Posso te ajudar com tarefas rápidas e edições sugeridas."
 		},
 		"incompatibilityExtensionPopup": {
-			"message": "O Assistente Inline do Kilo Code está sendo bloqueado por um conflito com o GitHub Copilot. Para corrigir isso, você deve desabilitar as sugestões inline do Copilot.",
+			"message": "O Kilo Code Autocomplete está sendo bloqueado por um conflito com o GitHub Copilot. Para corrigir isso, você deve desabilitar as sugestões inline do Copilot.",
 			"disableCopilot": "Desabilitar Copilot",
-			"disableInlineAssist": "Desabilitar Assistente Inline"
+			"disableInlineAssist": "Desabilitar Autocomplete"
 		}
 	},
 	"terminalCommandGenerator": {

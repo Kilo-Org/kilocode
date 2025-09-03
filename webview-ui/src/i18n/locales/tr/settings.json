@@ -749,10 +749,6 @@
 			"apiKey": "Morph API anahtarı (isteğe bağlı)",
 			"placeholder": "Morph API anahtarınızı girin (isteğe bağlı)"
 		},
-		"INLINE_ASSIST": {
-			"name": "Satır İçi Asistan",
-			"description": "Düzenleyicinizde doğrudan hızlı kod önerileri ve iyileştirmeleri için Satır İçi Yardımcı özelliklerini etkinleştirin. Hedeflenen değişiklikler için Hızlı Satır İçi Görev (Cmd+I) ve bağlamsal iyileştirmeler için Otomatik Satır İçi Görev içerir."
-		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Arka plan düzenleme",
 			"description": "Etkinleştirildiğinde editör odak kesintisini önler. Dosya düzenlemeleri diff görünümlerini açmadan veya odağı çalmadan arka planda gerçekleşir. Kilo Code değişiklikler yaparken kesintisiz çalışmaya devam edebilirsiniz. Dosyalar tanılamayı yakalamak için odaksız açılabilir veya tamamen kapalı kalabilir."
@@ -764,6 +760,10 @@
 		"NEW_TASK_REQUIRE_TODOS": {
 			"name": "Yeni görevler için 'todos' listesi gerektir",
 			"description": "Etkinleştirildiğinde, new_task aracı bir todos parametresi sağlanmasını gerektirir. Bu, tüm yeni görevlerin net bir hedef listesiyle başlamasını sağlar. Devre dışı bırakıldığında (varsayılan), todos parametresi geriye dönük uyumluluk için isteğe bağlı kalır."
+		},
+		"INLINE_ASSIST": {
+			"name": "Autocomplete",
+			"description": "Editörünüzde doğrudan hızlı kod önerileri ve iyileştirmeler için Autocomplete özelliklerini etkinleştirin. Hedeflenen değişiklikler için Hızlı Görev (Cmd+I) ve bağlamsal iyileştirmeler için Autocomplete içerir."
 		}
 	},
 	"promptCaching": {

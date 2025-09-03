@@ -13,7 +13,8 @@
 	},
 	"task": {
 		"noAssistantMessages": "模型回應意外結束（沒有助理訊息）。這可能是頻率限制的跡象。",
-		"notLoggedInError": "無法完成請求，請確保您已連線並使用所選供應商登入。\n\n{{error}}"
+		"notLoggedInError": "無法完成請求，請確保您已連線並使用所選供應商登入。\n\n{{error}}",
+		"maxCompletionTokens": "已達到完成 Token 數量上限。"
 	},
 	"checkpoints": {
 		"nestedGitRepos": "無法使用存檔點功能，因為工作區中偵測到巢狀 Git 儲存庫。請移除或重新配置巢狀 Git 儲存庫以使用存檔點功能，或在設定中停用存檔點以隱藏此警告。",
@@ -61,58 +62,55 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo 行內輔助",
-			"disabled": "$(circle-slash) Kilo 行內輔助",
-			"warning": "$(warning) Kilo 行內輔助",
+			"enabled": "$(sparkle) Kilo Code Autocomplete",
+			"disabled": "$(circle-slash) Kilo Code Autocomplete",
+			"warning": "$(warning) Kilo Code Autocomplete",
 			"tooltip": {
-				"basic": "Kilo Code 行內輔助",
-				"disabled": "Kilo Code 行內輔助 (已停用)",
-				"tokenError": "必須設定有效的令牌才能使用行內輔助",
-				"lastCompletion": "最後建議：",
-				"sessionTotal": "工作階段總費用：",
-				"model": "模型："
+				"basic": "Kilo Code Autocomplete",
+				"disabled": "Kilo Code Autocomplete（已停用）",
+				"tokenError": "必須設定有效 Token 才能使用 Autocomplete",
+				"lastCompletion": "最後建議:",
+				"sessionTotal": "工作階段總費用:",
+				"model": "模型:"
 			},
 			"cost": {
 				"zero": "$0.00",
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Kilo 行內輔助 {{status}}",
+		"toggleMessage": "Kilo Code Autocomplete {{status}}",
 		"progress": {
 			"title": "Kilo Code",
-			"analyzing": "正在分析您的程式碼...",
-			"generating": "正在產生建議的編輯...",
-			"processing": "正在處理建議的編輯...",
-			"showing": "正在顯示建議的編輯..."
+			"analyzing": "正在分析你的程式碼...",
+			"generating": "正在產生建議編輯...",
+			"processing": "正在處理建議編輯...",
+			"showing": "正在顯示建議編輯..."
 		},
 		"input": {
-			"title": "Kilo Code：快速任務",
-			"placeholder": "例如：'重構此函數以提高效率'"
+			"title": "Kilo Code: 快速工作",
+			"placeholder": "例如：「重構這個函數使其更有效率」"
 		},
 		"commands": {
-			"generateSuggestions": "Kilo Code：產生建議的編輯",
-			"displaySuggestions": "顯示建議的編輯",
-			"cancelSuggestions": "取消建議的編輯",
-			"applyCurrentSuggestion": "套用目前的建議編輯",
-			"applyAllSuggestions": "套用所有建議的編輯",
-			"promptCodeSuggestion": "快速任務",
+			"generateSuggestions": "Kilo Code: 產生建議編輯",
+			"displaySuggestions": "顯示建議編輯",
+			"cancelSuggestions": "取消建議編輯",
+			"applyCurrentSuggestion": "套用目前建議編輯",
+			"applyAllSuggestions": "套用所有建議編輯",
+			"promptCodeSuggestion": "快速工作",
 			"category": "Kilo Code"
 		},
 		"codeAction": {
-			"title": "Kilo Code：建議的編輯"
+			"title": "Kilo Code: 建議編輯"
 		},
 		"chatParticipant": {
 			"fullName": "Kilo Code Agent",
 			"name": "Agent",
-			"description": "我可以幫助您處理快速任務和建議的編輯。"
-		},
-		"messages": {
-			"provideCodeSuggestions": "正在提供程式碼建議..."
+			"description": "我可以協助你處理快速工作和建議編輯。"
 		},
 		"incompatibilityExtensionPopup": {
-			"message": "Kilo Code 行內輔助被 GitHub Copilot 的衝突所阻擋。為了解決此問題，您必須停用 Copilot 的內嵌建議。",
+			"message": "Kilo Code Autocomplete 被與 GitHub Copilot 的衝突阻擋。要修正此問題，你必須停用 Copilot 的內嵌建議。",
 			"disableCopilot": "停用 Copilot",
-			"disableInlineAssist": "停用行內輔助"
+			"disableInlineAssist": "停用 Autocomplete"
 		}
 	},
 	"terminalCommandGenerator": {

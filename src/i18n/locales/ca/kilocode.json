@@ -13,7 +13,8 @@
 	},
 	"task": {
 		"noAssistantMessages": "La resposta del model ha acabat de forma inesperada (cap missatge de l'assistent). Això pot ser un signe de limitació de freqüència.",
-		"notLoggedInError": "No es pot completar la sol·licitud, assegura't que estàs connectat i has iniciat sessió amb el proveïdor seleccionat.\n\n{{error}}"
+		"notLoggedInError": "No es pot completar la sol·licitud, assegura't que estàs connectat i has iniciat sessió amb el proveïdor seleccionat.\n\n{{error}}",
+		"maxCompletionTokens": "S'ha arribat al nombre màxim de tokens de compleció."
 	},
 	"checkpoints": {
 		"nestedGitRepos": "Els punts de control no estan disponibles perquè s'han detectat repositoris Git imbricats a l'espai de treball. Si us plau, elimineu o reubiqueu els repositoris Git imbricats per utilitzar la funcionalitat de punts de control o desactiveu els punts de control a la configuració per suprimir aquest avís.",
@@ -60,59 +61,56 @@
 		"activationFailed": "Kilo: No s'ha pogut activar el generador de missatges: {{error}}"
 	},
 	"ghost": {
-		"progress": {
-			"analyzing": "Analitzant el teu codi...",
-			"generating": "Generant suggeriments d'edició...",
-			"processing": "Processant les edicions suggerides...",
-			"showing": "Mostrant edicions suggerides...",
-			"title": "Kilo Code"
-		},
-		"input": {
-			"title": "Kilo Code: Tasca Ràpida",
-			"placeholder": "p. ex., 'refactora aquesta funció perquè sigui més eficient'"
-		},
-		"commands": {
-			"generateSuggestions": "Kilo Code: Genera suggeriments d'edició",
-			"displaySuggestions": "Mostrar Suggeriments d'Edició",
-			"cancelSuggestions": "Cancel·la les edicions suggerides",
-			"applyAllSuggestions": "Aplica totes les edicions suggerides",
-			"applyCurrentSuggestion": "Aplica l'edició suggerida actual",
-			"promptCodeSuggestion": "Petició de Tasca Ràpida",
-			"category": "Kilo Code"
-		},
-		"codeAction": {
-			"title": "Kilo Code: Edicions suggerides"
-		},
-		"chatParticipant": {
-			"name": "Agent",
-			"fullName": "Kilo Code Agent",
-			"description": "Et puc ajudar amb tasques ràpides i edicions suggerides."
-		},
-		"messages": {
-			"provideCodeSuggestions": "S'estan proporcionant suggeriments de codi..."
-		},
 		"statusBar": {
-			"enabled": "$(sparkle) Assistència en línia de Kilo",
-			"disabled": "$(circle-slash) Kilo Inline Assist",
-			"warning": "$(warning) Assistència de Kilo en línia",
+			"enabled": "$(sparkle) Kilo Code Autocomplete",
+			"disabled": "$(circle-slash) Kilo Code Autocomplete",
+			"warning": "$(warning) Kilo Code Autocomplete",
 			"tooltip": {
-				"disabled": "Assistència en línia de Kilo Code (desactivat)",
-				"basic": "Assistència en línia Kilo Code",
-				"tokenError": "S'ha d'establir un token vàlid per utilitzar l'Assistència Integrada",
-				"lastCompletion": "Última suggerència:",
+				"basic": "Kilo Code Autocomplete",
+				"disabled": "Kilo Code Autocomplete (desactivat)",
+				"tokenError": "S'ha d'establir un token vàlid per utilitzar Autocomplete",
+				"lastCompletion": "Últim suggeriment:",
 				"sessionTotal": "Cost total de la sessió:",
 				"model": "Model:"
 			},
 			"cost": {
-				"zero": "0,00 €",
-				"lessThanCent": "<0,01 €"
+				"zero": "$0.00",
+				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Assistència en línia Kilo {{status}}",
+		"toggleMessage": "Kilo Code Autocomplete {{status}}",
+		"progress": {
+			"title": "Kilo Code",
+			"analyzing": "Analitzant el teu codi...",
+			"generating": "Generant edicions suggerides...",
+			"processing": "Processant edicions suggerides...",
+			"showing": "Mostrant edicions suggerides..."
+		},
+		"input": {
+			"title": "Kilo Code: Tasca Ràpida",
+			"placeholder": "p. ex., 'refactoritza aquesta funció per ser més eficient'"
+		},
+		"commands": {
+			"generateSuggestions": "Kilo Code: Generar Edicions Suggerides",
+			"displaySuggestions": "Mostrar Edicions Suggerides",
+			"cancelSuggestions": "Cancel·lar Edicions Suggerides",
+			"applyCurrentSuggestion": "Aplicar Edició Suggerida Actual",
+			"applyAllSuggestions": "Aplicar Totes les Edicions Suggerides",
+			"promptCodeSuggestion": "Tasca Ràpida",
+			"category": "Kilo Code"
+		},
+		"codeAction": {
+			"title": "Kilo Code: Edicions Suggerides"
+		},
+		"chatParticipant": {
+			"fullName": "Kilo Code Agent",
+			"name": "Agent",
+			"description": "Puc ajudar-te amb tasques ràpides i edicions suggerides."
+		},
 		"incompatibilityExtensionPopup": {
-			"message": "L'Assistència en línia de Kilo Code està bloquejada per un conflicte amb GitHub Copilot. Per solucionar-ho, has de desactivar els suggeriments en línia de Copilot.",
+			"message": "El Kilo Code Autocomplete està sent bloquejat per un conflicte amb GitHub Copilot. Per solucionar això, has de desactivar els suggeriments en línia de Copilot.",
 			"disableCopilot": "Desactivar Copilot",
-			"disableInlineAssist": "Desactivar Assistència en línia"
+			"disableInlineAssist": "Desactivar Autocomplete"
 		}
 	},
 	"terminalCommandGenerator": {

@@ -1,5 +1,27 @@
 # kilo-code
 
+## [v4.88.0]
+
+- [#2235](https://github.com/Kilo-Org/kilocode/pull/2235) [`fbf4e42`](https://github.com/Kilo-Org/kilocode/commit/fbf4e42125cef538387301be784ede7d2609fe16) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Rename Inline Assist to Kilo Code Autocomplete
+
+- [#2202](https://github.com/Kilo-Org/kilocode/pull/2202) [`92ef190`](https://github.com/Kilo-Org/kilocode/commit/92ef190d8d9e5ec0df3cbdd8488c98f4190f57b2) Thanks [@hassoncs](https://github.com/hassoncs)! - Show a warning when trying to paste an image when the current model does not support images
+
+### Patch Changes
+
+- [#2244](https://github.com/Kilo-Org/kilocode/pull/2244) [`6a83c5a`](https://github.com/Kilo-Org/kilocode/commit/6a83c5acdd8153a2d8c89aff9644883061c7efe6) Thanks [@hassoncs](https://github.com/hassoncs)! - Prevent writing to files outside the workspace by default
+
+    This should mitigate supply chain compromise attacks via prompt injection. Thank you, Evan Harris from MCP Security Research for finding this!
+
+- [#2245](https://github.com/Kilo-Org/kilocode/pull/2245) [`fff884f`](https://github.com/Kilo-Org/kilocode/commit/fff884fd6f2f1be4906e3d4494adeed3017e8d57) Thanks [@hassoncs](https://github.com/hassoncs)! - Fix Kilo Code Marketplace header missing background color
+
+- [#2237](https://github.com/Kilo-Org/kilocode/pull/2237) [`06c6e8b`](https://github.com/Kilo-Org/kilocode/commit/06c6e8b013b54fc7706a9862af9ddabc86fb8781) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Kilo Code now shows an error message when a model reaches its maximum ouput
+
+- [#2238](https://github.com/Kilo-Org/kilocode/pull/2238) [`b5de938`](https://github.com/Kilo-Org/kilocode/commit/b5de93836338c0398dfa6dede89dbb92f525ceef) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Fixed 500 error with Chutes when no custom temperature is specified.
+
+- [#2248](https://github.com/Kilo-Org/kilocode/pull/2248) [`b8c6f27`](https://github.com/Kilo-Org/kilocode/commit/b8c6f2780757f16e1599b989bb88d235c26233c4) Thanks [@hassoncs](https://github.com/hassoncs)! - Remove the Inline Assist experiment, enabling it by default
+
+    The individual commands and keyboard shortcuts can still be enabled/disabled individually in the settings.
+
 ## [v4.87.0]
 
 - [#2010](https://github.com/Kilo-Org/kilocode/pull/2010) [`a7b89d3`](https://github.com/Kilo-Org/kilocode/commit/a7b89d3cf173e6f5d1915aece598489d63652b5f) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - There is now a "See New Changes" button below a Task Completed message. Use this button to see all file changes made since the previous Task Completed message. This feature requires checkpoints to be enabled.
