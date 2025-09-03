@@ -13,7 +13,8 @@
 	},
 	"task": {
 		"noAssistantMessages": "モデルの応答が予期せず終了しました（アシスタントメッセージなし）。これは制限に達している兆候である可能性があります。",
-		"notLoggedInError": "リクエストを完了できません。選択したプロバイダーに接続してログインしていることを確認してください。\n\n{{error}}"
+		"notLoggedInError": "リクエストを完了できません。選択したプロバイダーに接続してログインしていることを確認してください。\n\n{{error}}",
+		"maxCompletionTokens": "完了トークンの最大数に達しました。"
 	},
 	"checkpoints": {
 		"nestedGitRepos": "ワークスペース内にネストされたGitリポジトリが検出されたため、チェックポイント機能は利用できません。チェックポイント機能を使用するには、ネストされたGitリポジトリを削除または移動するか、設定でチェックポイントを無効にしてこの警告を非表示にしてください。",
@@ -61,13 +62,13 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo インラインアシスト",
-			"disabled": "$(circle-slash) Kilo インラインアシスト",
-			"warning": "$(warning) Kilo インラインアシスト",
+			"enabled": "$(sparkle) Kilo Code Autocomplete",
+			"disabled": "$(circle-slash) Kilo Code Autocomplete",
+			"warning": "$(warning) Kilo Code Autocomplete",
 			"tooltip": {
-				"basic": "Kilo Code インラインアシスト",
-				"disabled": "Kilo Code インラインアシスト (無効)",
-				"tokenError": "インラインアシストを使用するには有効なトークンを設定する必要があります",
+				"basic": "Kilo Code Autocomplete",
+				"disabled": "Kilo Code Autocomplete（無効）",
+				"tokenError": "Autocompleteを使用するには有効なトークンを設定する必要があります",
 				"lastCompletion": "最後の提案:",
 				"sessionTotal": "セッション合計コスト:",
 				"model": "モデル:"
@@ -77,42 +78,39 @@
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Kilo インラインアシスト {{status}}",
+		"toggleMessage": "Kilo Code Autocomplete {{status}}",
 		"progress": {
 			"title": "Kilo Code",
 			"analyzing": "コードを分析中...",
-			"generating": "提案された編集を生成中...",
-			"processing": "提案された編集を処理中...",
-			"showing": "提案された編集を表示中..."
+			"generating": "編集提案を生成中...",
+			"processing": "編集提案を処理中...",
+			"showing": "編集提案を表示中..."
 		},
 		"input": {
 			"title": "Kilo Code: クイックタスク",
-			"placeholder": "例: 'この関数をより効率的にリファクタリングする'"
+			"placeholder": "例：「この関数をより効率的にリファクタリングして」"
 		},
 		"commands": {
-			"generateSuggestions": "Kilo Code: 提案された編集を生成",
-			"displaySuggestions": "提案された編集を表示",
-			"cancelSuggestions": "提案された編集をキャンセル",
-			"applyCurrentSuggestion": "現在の提案された編集を適用",
-			"applyAllSuggestions": "すべての提案された編集を適用",
+			"generateSuggestions": "Kilo Code: 編集提案を生成",
+			"displaySuggestions": "編集提案を表示",
+			"cancelSuggestions": "編集提案をキャンセル",
+			"applyCurrentSuggestion": "現在の編集提案を適用",
+			"applyAllSuggestions": "すべての編集提案を適用",
 			"promptCodeSuggestion": "クイックタスク",
 			"category": "Kilo Code"
 		},
 		"codeAction": {
-			"title": "Kilo Code: 提案された編集"
+			"title": "Kilo Code: 編集提案"
 		},
 		"chatParticipant": {
-			"fullName": "Kilo Code エージェント",
-			"name": "エージェント",
-			"description": "クイックタスクや提案された編集をお手伝いできます。"
-		},
-		"messages": {
-			"provideCodeSuggestions": "コードの提案を提供中..."
+			"fullName": "Kilo Code Agent",
+			"name": "Agent",
+			"description": "クイックタスクと編集提案でお手伝いできます。"
 		},
 		"incompatibilityExtensionPopup": {
-			"message": "Kilo Code Inline Assist は GitHub Copilot との競合によりブロックされています。これを解決するには、Copilot のインライン提案を無効にする必要があります。",
-			"disableCopilot": "Copilot を無効にする",
-			"disableInlineAssist": "インライン アシストを無効にする"
+			"message": "Kilo Code AutocompleteがGitHub Copilotとの競合によってブロックされています。これを修正するには、Copilotのインライン提案を無効にする必要があります。",
+			"disableCopilot": "Copilotを無効にする",
+			"disableInlineAssist": "Autocompleteを無効にする"
 		}
 	},
 	"terminalCommandGenerator": {

@@ -189,41 +189,37 @@
 		}
 	},
 	"ghost": {
-		"title": "Asistencia en línea",
+		"title": "Autocomplete",
 		"settings": {
-			"autoTrigger": "Activación automática",
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Tarea Rápida en Línea",
-				"description": "¿Solo necesitas un cambio rápido? Selecciona algo de código (¡o no!) y presiona Cmd+I. Describe tu objetivo en lenguaje sencillo (\"crear un componente de React con estas propiedades\", \"agregar manejo de errores a esta función\"), y obtén múltiples sugerencias listas para usar directamente en tu editor. <DocsLink>Ver atajo</DocsLink>"
-			},
-			"enableAutoInlineTaskKeybinding": {
-				"label": "Tarea en Línea Automática",
-				"description": "¿Necesitas una solución rápida, completar algo o refactorizar? Kilo utilizará el contexto circundante para ofrecer mejoras inmediatas, manteniéndote en el flujo de trabajo. <DocsLink>Ver atajo</DocsLink>"
-			},
+			"autoTrigger": "Activación Automática",
+			"triggers": "Activadores",
+			"keybindingDescription": "Las funciones de Autocomplete pueden activarse mediante comandos. Puedes configurar los <DocsLink>Atajos de Teclado aquí</DocsLink>.",
 			"enableAutoTrigger": {
-				"label": "Activar la activación automática",
-				"description": "Cuando está activado, Kilo Code activará automáticamente la Asistencia en línea cuando dejes de escribir. Esto puede ser útil para correcciones y sugerencias rápidas."
+				"label": "Habilitar Autocomplete",
+				"description": "Cuando está habilitado, Kilo Code activará automáticamente Autocomplete cuando dejes de escribir. Esto puede ser útil para correcciones rápidas y sugerencias."
 			},
 			"autoTriggerDelay": {
-				"label": "Retraso de activación automática",
-				"description": "El retraso en segundos antes de que Kilo Code active la Asistencia en línea después de que dejes de escribir. Un retraso más corto significa sugerencias más rápidas, pero puede consumir más recursos."
+				"label": "Retraso de Activación Automática",
+				"description": "El retraso en segundos antes de que Kilo Code active Autocomplete después de que dejes de escribir. Un retraso más corto significa sugerencias más rápidas, pero puede ser más intensivo en recursos."
+			},
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Tarea Rápida",
+				"description": "¿Solo necesitas un cambio rápido? Selecciona algo de código (¡o no!) y presiona Cmd+I. Describe tu objetivo en español simple (\"crear un componente React con estas props\", \"agregar manejo de errores a esta función\"), y obtén múltiples sugerencias listas para usar directamente en tu editor. <DocsLink>Ver atajo</DocsLink>"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Tarea Inteligente en Línea",
-				"description": "¿Necesitas una corrección rápida, completar o refactorizar? Kilo usará el contexto circundante para ofrecer mejoras inmediatas, manteniéndote en el flujo. <DocsLink>Ver atajo</DocsLink>"
+				"label": "Autocomplete Manual",
+				"description": "¿Necesitas una corrección rápida, completado o refactorización? Kilo usará el contexto circundante para ofrecer mejoras inmediatas, manteniéndote en el flujo. <DocsLink>Ver atajo</DocsLink>"
 			},
 			"enableCustomProvider": {
 				"label": "Usar proveedor personalizado",
-				"description": "Inline Assist usa tus credenciales de KiloCode / OpenRouter / Mistral para usar el modelo Codestral por defecto"
+				"description": "Autocomplete usa tu credencial de KiloCode / OpenRouter / Mistral para usar el modelo Codestral por defecto"
 			},
 			"provider": "Proveedor",
 			"apiConfigId": {
 				"label": "Configuración de API",
-				"current": "Usar la configuración de API seleccionada actualmente",
-				"description": "Selecciona una configuración de API para usar en los prompts de Asistencia en Línea, o simplemente usa la que esté seleccionada actualmente"
-			},
-			"keybindingDescription": "Las funciones de Asistencia Integrada se activan mediante comandos. Puedes configurar los <DocsLink>atajos de teclado aquí</DocsLink>.",
-			"triggers": "Disparadores"
+				"current": "Usar configuración de API actualmente seleccionada",
+				"description": "Selecciona una configuración de API para usar en los prompts de Autocomplete, o simplemente usa la que esté actualmente seleccionada"
+			}
 		}
 	},
 	"virtualProvider": {
@@ -247,5 +243,9 @@
 		"perDay": "Por día",
 		"perHour": "Por hora",
 		"requestsLabel": "Solicitudes"
+	},
+	"imageWarnings": {
+		"modelNoImageSupport": "Las imágenes no son compatibles con el modelo actual.",
+		"maxImagesReached": "Máximo de 20 imágenes por mensaje. Elimina algunas imágenes para añadir más."
 	}
 }

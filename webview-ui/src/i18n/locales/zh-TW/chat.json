@@ -189,6 +189,10 @@
 		"wantsToEditOutsideWorkspace": "Kilo Code 想要編輯此工作區外的檔案：",
 		"wantsToEditProtected": "Kilo Code 想要編輯受保護的設定檔案：",
 		"wantsToApplyBatchChanges": "Kilo Code 想要對多個檔案套用變更：",
+		"wantsToGenerateImage": "Kilo Code 想要產生圖片：",
+		"wantsToGenerateImageOutsideWorkspace": "Kilo Code 想要在工作區外產生圖片：",
+		"wantsToGenerateImageProtected": "Kilo Code 想要在受保護位置產生圖片：",
+		"didGenerateImage": "Kilo Code 已產生圖片：",
 		"wantsToCreate": "Kilo Code 想要建立新檔案：",
 		"wantsToSearchReplace": "Kilo Code 想要在此檔案中搜尋和取代：",
 		"didSearchReplace": "Kilo Code 已在此檔案執行搜尋和取代：",
@@ -282,10 +286,10 @@
 	"announcement": {
 		"title": "🎉 Roo Code {{version}} 已發布",
 		"stealthModel": {
-			"feature": "<bold>限時免費隱形模型</bold> - 一個在代理程式編程方面表現出色的超快推理模型，擁有 262k 上下文視窗，透過 Roo Code Cloud 提供。",
-			"note": "(注意：提示和完成會被模型創建者記錄並用於改進模型)",
+			"feature": "Sonic 隱形模型現在是 <bold>Grok Code Fast</bold>！這個高效能推理模型現已作為 <code>grok-code-fast-1</code> 在 <bold>xAI (Grok)</bold> 提供商下提供。",
+			"note": "作為對 Sonic 所有寶貴回饋的感謝，xAI 將透過 <bold>Roo Code Cloud</bold> 提供商延長 <code>grok-code-fast-1</code> 的免費存取一週。",
 			"connectButton": "連接到 Roo Code Cloud",
-			"selectModel": "在<br/><settingsLink>設定</settingsLink>中從 Roo Code Cloud 提供商選擇 <code>roo/sonic</code> 開始使用"
+			"selectModel": "造訪<settingsLink>設定</settingsLink>更新你的提供商設定。"
 		},
 		"description": "Roo Code {{version}} 帶來強大的新功能和重大改進，提升您的開發工作流程。",
 		"whatsNew": "新功能",
@@ -375,7 +379,8 @@
 	"slashCommands": {
 		"tooltip": "管理斜線命令",
 		"title": "斜線命令",
-		"description": "建立自訂斜線命令，以便快速存取常用的提示詞和工作流程。<DocsLink>說明文件</DocsLink>",
+		"description": "使用內建斜線命令或建立自訂命令，以便快速存取常用的提示詞和工作流程。<DocsLink>說明文件</DocsLink>",
+		"builtInCommands": "內建命令",
 		"globalCommands": "全域命令",
 		"workspaceCommands": "工作區命令",
 		"globalCommand": "全域命令",

@@ -13,7 +13,8 @@
 	},
 	"task": {
 		"noAssistantMessages": "Ответ модели неожиданно завершился (нет сообщений ассистента). Это может быть признаком ограничения скорости запросов.",
-		"notLoggedInError": "Невозможно выполнить запрос, убедитесь, что вы подключены и вошли в систему с выбранным поставщиком.\n\n{{error}}"
+		"notLoggedInError": "Невозможно выполнить запрос, убедитесь, что вы подключены и вошли в систему с выбранным поставщиком.\n\n{{error}}",
+		"maxCompletionTokens": "Достигнуто максимальное количество токенов завершения."
 	},
 	"rules": {
 		"actions": {
@@ -56,13 +57,13 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Встроенная помощь Kilo",
-			"disabled": "$(circle-slash) Встроенная помощь Kilo",
-			"warning": "$(warning) Встроенная помощь Kilo",
+			"enabled": "$(sparkle) Kilo Code Autocomplete",
+			"disabled": "$(circle-slash) Kilo Code Autocomplete",
+			"warning": "$(warning) Kilo Code Autocomplete",
 			"tooltip": {
-				"basic": "Встроенная помощь Kilo Code",
-				"disabled": "Встроенная помощь Kilo Code (отключена)",
-				"tokenError": "Для использования встроенной помощи необходимо установить действительный токен",
+				"basic": "Kilo Code Autocomplete",
+				"disabled": "Kilo Code Autocomplete (отключено)",
+				"tokenError": "Для использования Autocomplete необходимо установить действительный токен",
 				"lastCompletion": "Последнее предложение:",
 				"sessionTotal": "Общая стоимость сессии:",
 				"model": "Модель:"
@@ -72,42 +73,39 @@
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Встроенная помощь Kilo {{status}}",
+		"toggleMessage": "Kilo Code Autocomplete {{status}}",
 		"progress": {
 			"title": "Kilo Code",
-			"analyzing": "Анализ вашего кода...",
-			"generating": "Генерация предлагаемых правок...",
-			"processing": "Обработка предлагаемых правок...",
-			"showing": "Отображение предлагаемых правок..."
+			"analyzing": "Анализирую твой код...",
+			"generating": "Генерирую предлагаемые правки...",
+			"processing": "Обрабатываю предлагаемые правки...",
+			"showing": "Показываю предлагаемые правки..."
 		},
 		"input": {
-			"title": "Kilo Code: Быстрая задача",
-			"placeholder": "например, 'рефакторить эту функцию, чтобы сделать ее более эффективной'"
+			"title": "Kilo Code: Быстрая Задача",
+			"placeholder": "напр., 'рефактори эту функцию для большей эффективности'"
 		},
 		"commands": {
-			"generateSuggestions": "Kilo Code: Сгенерировать предлагаемые правки",
-			"displaySuggestions": "Показать предлагаемые правки",
-			"cancelSuggestions": "Отменить предлагаемые правки",
-			"applyCurrentSuggestion": "Применить текущую предложенную правку",
-			"applyAllSuggestions": "Применить все предложенные правки",
-			"promptCodeSuggestion": "Быстрая задача",
+			"generateSuggestions": "Kilo Code: Генерировать Предлагаемые Правки",
+			"displaySuggestions": "Показать Предлагаемые Правки",
+			"cancelSuggestions": "Отменить Предлагаемые Правки",
+			"applyCurrentSuggestion": "Применить Текущую Предлагаемую Правку",
+			"applyAllSuggestions": "Применить Все Предлагаемые Правки",
+			"promptCodeSuggestion": "Быстрая Задача",
 			"category": "Kilo Code"
 		},
 		"codeAction": {
-			"title": "Kilo Code: Предлагаемые правки"
+			"title": "Kilo Code: Предлагаемые Правки"
 		},
 		"chatParticipant": {
-			"fullName": "Агент Kilo Code",
-			"name": "Агент",
-			"description": "Я могу помочь вам с быстрыми задачами и предлагаемыми правками."
-		},
-		"messages": {
-			"provideCodeSuggestions": "Предоставление предложений кода..."
+			"fullName": "Kilo Code Agent",
+			"name": "Agent",
+			"description": "Я могу помочь тебе с быстрыми задачами и предлагаемыми правками."
 		},
 		"incompatibilityExtensionPopup": {
-			"message": "Встроенная помощь Kilo Code блокируется конфликтом с GitHub Copilot. Чтобы исправить это, вам необходимо отключить встроенные предложения Copilot.",
+			"message": "Kilo Code Autocomplete блокируется конфликтом с GitHub Copilot. Чтобы исправить это, ты должен отключить встроенные предложения Copilot.",
 			"disableCopilot": "Отключить Copilot",
-			"disableInlineAssist": "Отключить встроенную помощь"
+			"disableInlineAssist": "Отключить Autocomplete"
 		}
 	},
 	"terminalCommandGenerator": {
@@ -129,7 +127,7 @@
 		"nestedGitRepos": "Контрольные точки недоступны для рабочих областей с вложенными Git-репозиториями.",
 		"protectedPaths": "Контрольные точки недоступны для защищенных путей рабочей области.",
 		"dismissWarning": "Закрыть"
-  },
+	},
 	"seeNewChanges": {
 		"title": "Отображение новых изменений",
 		"checkpointsUnavailable": "Невозможно показать новые изменения, контрольные точки недоступны.",

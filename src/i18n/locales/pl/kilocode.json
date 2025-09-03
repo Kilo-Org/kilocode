@@ -13,7 +13,8 @@
 	},
 	"task": {
 		"noAssistantMessages": "Odpowiedź modelu zakończyła się nieoczekiwanie (brak komunikatów asystenta). To może być oznaka ograniczenia częstotliwości żądań.",
-		"notLoggedInError": "Nie można ukończyć żądania, upewnij się, że jesteś połączony i zalogowany u wybranego dostawcy.\n\n{{error}}"
+		"notLoggedInError": "Nie można ukończyć żądania, upewnij się, że jesteś połączony i zalogowany u wybranego dostawcy.\n\n{{error}}",
+		"maxCompletionTokens": "Osiągnięto maksymalną liczbę tokenów uzupełnienia."
 	},
 	"checkpoints": {
 		"nestedGitRepos": "Punkty kontrolne są niedostępne, ponieważ wykryto zagnieżdżone repozytoria Git w obszarze roboczym. Usuń lub przenieś zagnieżdżone repozytoria Git, aby korzystać z funkcji punktów kontrolnych, lub wyłącz punkty kontrolne w ustawieniach, aby pominąć to ostrzeżenie.",
@@ -59,15 +60,21 @@
 		"activationFailed": "Kilo: Nie udało się aktywować generatora wiadomości: {{error}}",
 		"providerRegistered": "Kilo: Zarejestrowano dostawcę wiadomości commit"
 	},
+	"seeNewChanges": {
+		"title": "Wyświetlanie nowych zmian",
+		"checkpointsUnavailable": "Nie można wyświetlić nowych zmian, punkty kontrolne są niedostępne.",
+		"noChanges": "Nie można wyświetlić nowych zmian, nie znaleziono żadnych zmian.",
+		"error": "Nie można wyświetlić nowych zmian, wystąpił błąd."
+	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Asystent Inline Kilo",
-			"disabled": "$(circle-slash) Asystent Inline Kilo",
-			"warning": "$(warning) Asystent Inline Kilo",
+			"enabled": "$(sparkle) Kilo Code Autocomplete",
+			"disabled": "$(circle-slash) Kilo Code Autocomplete",
+			"warning": "$(warning) Kilo Code Autocomplete",
 			"tooltip": {
-				"basic": "Asystent Inline Kilo Code",
-				"disabled": "Asystent Inline Kilo Code (wyłączony)",
-				"tokenError": "Musisz ustawić prawidłowy token, aby korzystać z Asystenta Inline",
+				"basic": "Kilo Code Autocomplete",
+				"disabled": "Kilo Code Autocomplete (wyłączone)",
+				"tokenError": "Aby używać Autocomplete, musi być ustawiony ważny token",
 				"lastCompletion": "Ostatnia sugestia:",
 				"sessionTotal": "Całkowity koszt sesji:",
 				"model": "Model:"
@@ -77,17 +84,17 @@
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Asystent Inline Kilo {{status}}",
+		"toggleMessage": "Kilo Code Autocomplete {{status}}",
 		"progress": {
 			"title": "Kilo Code",
-			"analyzing": "Analizowanie Twojego kodu...",
-			"generating": "Generowanie sugerowanych edycji...",
-			"processing": "Przetwarzanie sugerowanych edycji...",
-			"showing": "Wyświetlanie sugerowanych edycji..."
+			"analyzing": "Analizuję twój kod...",
+			"generating": "Generuję sugerowane edycje...",
+			"processing": "Przetwarzam sugerowane edycje...",
+			"showing": "Wyświetlam sugerowane edycje..."
 		},
 		"input": {
 			"title": "Kilo Code: Szybkie Zadanie",
-			"placeholder": "np. 'refaktoryzuj tę funkcję, aby była bardziej wydajna'"
+			"placeholder": "np. 'zrefaktoruj tę funkcję, aby była bardziej wydajna'"
 		},
 		"commands": {
 			"generateSuggestions": "Kilo Code: Generuj Sugerowane Edycje",
@@ -102,24 +109,15 @@
 			"title": "Kilo Code: Sugerowane Edycje"
 		},
 		"chatParticipant": {
-			"fullName": "Agent Kilo Code",
+			"fullName": "Kilo Code Agent",
 			"name": "Agent",
-			"description": "Mogę pomóc w szybkich zadaniach i sugerowanych edycjach."
-		},
-		"messages": {
-			"provideCodeSuggestions": "Dostarczanie sugestii kodu..."
+			"description": "Mogę pomóc ci w szybkich zadaniach i sugerowanych edycjach."
 		},
 		"incompatibilityExtensionPopup": {
-			"message": "Asystent Kilo Code Inline jest blokowany przez konflikt z GitHub Copilot. Aby to naprawić, musisz wyłączyć sugestie inline Copilota.",
-			"disableCopilot": "Wyłącz Copilota",
-			"disableInlineAssist": "Wyłącz Asystenta Inline"
+			"message": "Kilo Code Autocomplete jest blokowane przez konflikt z GitHub Copilot. Aby to naprawić, musisz wyłączyć sugestie inline Copilot.",
+			"disableCopilot": "Wyłącz Copilot",
+			"disableInlineAssist": "Wyłącz Autocomplete"
 		}
-	},
-	"seeNewChanges": {
-		"title": "Wyświetlanie nowych zmian",
-		"checkpointsUnavailable": "Nie można wyświetlić nowych zmian, punkty kontrolne są niedostępne.",
-		"noChanges": "Nie można wyświetlić nowych zmian, nie znaleziono żadnych zmian.",
-		"error": "Nie można wyświetlić nowych zmian, wystąpił błąd."
 	},
 	"terminalCommandGenerator": {
 		"inputPrompt": "Kilo: Opisz polecenie, które chcesz wygenerować",

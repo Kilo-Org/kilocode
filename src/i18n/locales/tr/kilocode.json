@@ -13,7 +13,8 @@
 	},
 	"task": {
 		"noAssistantMessages": "Modelin yanıtı beklenmedik şekilde sona erdi (asistan mesajı yok). Bu hız sınırlamasının bir işareti olabilir.",
-		"notLoggedInError": "İstek tamamlanamıyor, seçili sağlayıcıyla bağlantı kurduğunuzdan ve oturum açtığınızdan emin olun.\n\n{{error}}"
+		"notLoggedInError": "İstek tamamlanamıyor, seçili sağlayıcıyla bağlantı kurduğunuzdan ve oturum açtığınızdan emin olun.\n\n{{error}}",
+		"maxCompletionTokens": "Maksimum tamamlama token sayısına ulaşıldı."
 	},
 	"rules": {
 		"actions": {
@@ -54,15 +55,20 @@
 		"activationFailed": "Kilo: Mesaj oluşturucu etkinleştirilemedi: {{error}}",
 		"providerRegistered": "Kilo: Commit mesajı sağlayıcısı kaydedildi"
 	},
+	"checkpoints": {
+		"nestedGitRepos": "İç içe Git depoları bulunan çalışma alanları için kontrol noktaları kullanılamaz.",
+		"protectedPaths": "Korumalı çalışma alanı yolları için kontrol noktaları kullanılamaz.",
+		"dismissWarning": "Kapat"
+	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Satır İçi Yardım",
-			"disabled": "$(circle-slash) Kilo Satır İçi Yardım",
-			"warning": "$(warning) Kilo Satır İçi Yardım",
+			"enabled": "$(sparkle) Kilo Code Autocomplete",
+			"disabled": "$(circle-slash) Kilo Code Autocomplete",
+			"warning": "$(warning) Kilo Code Autocomplete",
 			"tooltip": {
-				"basic": "Kilo Code Satır İçi Yardım",
-				"disabled": "Kilo Code Satır İçi Yardım (devre dışı)",
-				"tokenError": "Satır İçi Yardım'ı kullanmak için geçerli bir belirteç ayarlanmalıdır",
+				"basic": "Kilo Code Autocomplete",
+				"disabled": "Kilo Code Autocomplete (devre dışı)",
+				"tokenError": "Autocomplete kullanmak için geçerli bir token ayarlanmalı",
 				"lastCompletion": "Son öneri:",
 				"sessionTotal": "Oturum toplam maliyeti:",
 				"model": "Model:"
@@ -72,23 +78,23 @@
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Kilo Satır İçi Yardım {{status}}",
+		"toggleMessage": "Kilo Code Autocomplete {{status}}",
 		"progress": {
 			"title": "Kilo Code",
-			"analyzing": "Kodunuz analiz ediliyor...",
+			"analyzing": "Kodun analiz ediliyor...",
 			"generating": "Önerilen düzenlemeler oluşturuluyor...",
 			"processing": "Önerilen düzenlemeler işleniyor...",
 			"showing": "Önerilen düzenlemeler gösteriliyor..."
 		},
 		"input": {
 			"title": "Kilo Code: Hızlı Görev",
-			"placeholder": "örn. 'bu fonksiyonu daha verimli hale getirmek için yeniden düzenle'"
+			"placeholder": "örn., 'bu fonksiyonu daha verimli olacak şekilde yeniden düzenle'"
 		},
 		"commands": {
 			"generateSuggestions": "Kilo Code: Önerilen Düzenlemeler Oluştur",
 			"displaySuggestions": "Önerilen Düzenlemeleri Göster",
 			"cancelSuggestions": "Önerilen Düzenlemeleri İptal Et",
-			"applyCurrentSuggestion": "Geçerli Önerilen Düzenlemeyi Uygula",
+			"applyCurrentSuggestion": "Mevcut Önerilen Düzenlemeyi Uygula",
 			"applyAllSuggestions": "Tüm Önerilen Düzenlemeleri Uygula",
 			"promptCodeSuggestion": "Hızlı Görev",
 			"category": "Kilo Code"
@@ -97,23 +103,15 @@
 			"title": "Kilo Code: Önerilen Düzenlemeler"
 		},
 		"chatParticipant": {
-			"fullName": "Kilo Code Ajanı",
-			"name": "Ajan",
-			"description": "Hızlı görevler ve önerilen düzenlemeler konusunda size yardımcı olabilirim."
-		},
-		"messages": {
-			"provideCodeSuggestions": "Kod önerileri sağlanıyor..."
+			"fullName": "Kilo Code Agent",
+			"name": "Agent",
+			"description": "Hızlı görevler ve önerilen düzenlemeler konusunda sana yardımcı olabilirim."
 		},
 		"incompatibilityExtensionPopup": {
-			"message": "Kilo Code Satır İçi Yardım, GitHub Copilot ile çakışma nedeniyle engelleniyor. Bunu düzeltmek için Copilot'un satır içi önerilerini devre dışı bırakmalısınız.",
+			"message": "Kilo Code Autocomplete, GitHub Copilot ile bir çakışma nedeniyle engelleniyor. Bunu düzeltmek için Copilot'un satır içi önerilerini devre dışı bırakmalısın.",
 			"disableCopilot": "Copilot'u Devre Dışı Bırak",
-			"disableInlineAssist": "Satır İçi Yardım'ı Devre Dışı Bırak"
+			"disableInlineAssist": "Autocomplete'i Devre Dışı Bırak"
 		}
-	},
-	"checkpoints": {
-		"nestedGitRepos": "İç içe Git depoları bulunan çalışma alanları için kontrol noktaları kullanılamaz.",
-		"protectedPaths": "Korumalı çalışma alanı yolları için kontrol noktaları kullanılamaz.",
-		"dismissWarning": "Kapat"
 	},
 	"terminalCommandGenerator": {
 		"noActiveTerminal": "Kilo: Aktif terminal bulunamadı. Lütfen önce bir terminal açın.",

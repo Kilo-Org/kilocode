@@ -177,7 +177,11 @@
 		"wantsToInsertAtEnd": "Kilo Code wil inhoud toevoegen aan het einde van dit bestand:",
 		"wantsToReadAndXMore": "Kilo Code wil dit bestand en nog {{count}} andere lezen:",
 		"wantsToReadMultiple": "Kilo Code wil meerdere bestanden lezen:",
-		"wantsToApplyBatchChanges": "Kilo Code wil wijzigingen toepassen op meerdere bestanden:"
+		"wantsToApplyBatchChanges": "Kilo Code wil wijzigingen toepassen op meerdere bestanden:",
+		"wantsToGenerateImage": "Kilo Code wil een afbeelding genereren:",
+		"wantsToGenerateImageOutsideWorkspace": "Kilo Code wil een afbeelding genereren buiten de werkruimte:",
+		"wantsToGenerateImageProtected": "Kilo Code wil een afbeelding genereren op een beschermde locatie:",
+		"didGenerateImage": "Kilo Code heeft een afbeelding gegenereerd:"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code wil de bovenliggende bestanden in deze map bekijken:",
@@ -258,10 +262,10 @@
 	"announcement": {
 		"title": "🎉 Roo Code {{version}} uitgebracht",
 		"stealthModel": {
-			"feature": "<bold>Beperkt tijd GRATIS stealth model</bold> - Een bliksemsnelle redeneermodel die uitblinkt in agentische programmering met een 262k contextvenster, beschikbaar via Roo Code Cloud.",
-			"note": "(Opmerking: prompts en aanvullingen worden gelogd door de modelmaker en gebruikt om het model te verbeteren)",
+			"feature": "Het Sonic stealth model is nu <bold>Grok Code Fast</bold>! Dit hoogperformante redeneermodel is beschikbaar als <code>grok-code-fast-1</code> onder de <bold>xAI (Grok)</bold> provider.",
+			"note": "Als dank voor alle nuttige feedback over Sonic, breidt xAI de gratis toegang tot <code>grok-code-fast-1</code> uit voor nog een week via de <bold>Roo Code Cloud</bold>-provider.",
 			"connectButton": "Verbinden met Roo Code Cloud",
-			"selectModel": "Selecteer <code>roo/sonic</code> van de Roo Code Cloud provider in<br/><settingsLink>Instellingen</settingsLink> om te beginnen"
+			"selectModel": "Ga naar <settingsLink>Instellingen</settingsLink> om je provider configuratie bij te werken."
 		},
 		"description": "Roo Code {{version}} brengt krachtige nieuwe functies en significante verbeteringen om je ontwikkelingsworkflow te verbeteren.",
 		"whatsNew": "Wat is er nieuw",
@@ -375,7 +379,8 @@
 	"slashCommands": {
 		"tooltip": "Slash-opdrachten beheren",
 		"title": "Slash-opdrachten",
-		"description": "Maak aangepaste slash-opdrachten voor snelle toegang tot veelgebruikte prompts en workflows. <DocsLink>Documentatie</DocsLink>",
+		"description": "Gebruik ingebouwde slash-opdrachten of maak aangepaste voor snelle toegang tot veelgebruikte prompts en workflows. <DocsLink>Documentatie</DocsLink>",
+		"builtInCommands": "Ingebouwde Opdrachten",
 		"globalCommands": "Globale Opdrachten",
 		"workspaceCommands": "Werkruimte Opdrachten",
 		"globalCommand": "Globale opdracht",

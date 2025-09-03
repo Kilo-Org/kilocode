@@ -40,6 +40,7 @@ export const toolNames = [
 	"condense",
 	// kilocode_change end
 	"update_todo_list",
+	"generate_image",
 ] as const
 
 export const toolNamesSchema = z.enum(toolNames)

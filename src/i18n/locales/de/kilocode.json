@@ -13,7 +13,8 @@
 	},
 	"task": {
 		"noAssistantMessages": "Die Antwort des Modells endete unerwartet (keine Assistant-Nachrichten). Dies könnte ein Hinweis auf Raten-Limitierung sein.",
-		"notLoggedInError": "Anfrage kann nicht abgeschlossen werden. Stelle sicher, dass du mit dem ausgewählten Anbieter verbunden und angemeldet bist.\n\n{{error}}"
+		"notLoggedInError": "Anfrage kann nicht abgeschlossen werden. Stelle sicher, dass du mit dem ausgewählten Anbieter verbunden und angemeldet bist.\n\n{{error}}",
+		"maxCompletionTokens": "Die maximale Anzahl an Completion-Tokens wurde erreicht."
 	},
 	"checkpoints": {
 		"nestedGitRepos": "Checkpoints sind nicht verfügbar, da verschachtelte Git-Repositories im Arbeitsbereich erkannt wurden. Bitte entferne oder verschiebe verschachtelte Git-Repositories, um die Checkpoint-Funktion zu nutzen, oder deaktiviere Checkpoints in den Einstellungen, um diese Warnung zu unterdrücken.",
@@ -61,58 +62,55 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Inline Assist",
-			"disabled": "$(circle-slash) Kilo Inline Assist",
-			"warning": "$(warning) Kilo Inline Assist",
+			"enabled": "$(sparkle) Kilo Code Autocomplete",
+			"disabled": "$(circle-slash) Kilo Code Autocomplete",
+			"warning": "$(warning) Kilo Code Autocomplete",
 			"tooltip": {
-				"basic": "Kilo Code Inline-Unterstützung",
-				"disabled": "Kilo Code Inline-Hilfe (deaktiviert)",
-				"tokenError": "Ein gültiges Token muss festgelegt werden, um Inline-Unterstützung zu nutzen",
+				"basic": "Kilo Code Autocomplete",
+				"disabled": "Kilo Code Autocomplete (deaktiviert)",
+				"tokenError": "Ein gültiger Token muss gesetzt werden, um Autocomplete zu verwenden",
 				"lastCompletion": "Letzter Vorschlag:",
-				"sessionTotal": "Gesamtkosten der Sitzung:",
+				"sessionTotal": "Sitzungsgesamtkosten:",
 				"model": "Modell:"
 			},
 			"cost": {
-				"zero": "0,00 €",
-				"lessThanCent": "<0,01 €"
+				"zero": "$0.00",
+				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Kilo Inline Assist {{status}}",
+		"toggleMessage": "Kilo Code Autocomplete {{status}}",
 		"progress": {
 			"title": "Kilo Code",
 			"analyzing": "Analysiere deinen Code...",
-			"generating": "Generiere vorgeschlagene Änderungen...",
-			"processing": "Verarbeitung von Änderungsvorschlägen...",
-			"showing": "Zeige Bearbeitungsvorschläge an..."
+			"generating": "Generiere Bearbeitungsvorschläge...",
+			"processing": "Verarbeite Bearbeitungsvorschläge...",
+			"showing": "Zeige Bearbeitungsvorschläge..."
 		},
 		"input": {
 			"title": "Kilo Code: Schnellaufgabe",
-			"placeholder": "z.B. 'diese Funktion umgestalten, um effizienter zu sein'"
+			"placeholder": "z.B. 'refaktoriere diese Funktion für mehr Effizienz'"
 		},
 		"commands": {
-			"generateSuggestions": "Kilo Code: Vorgeschlagene Änderungen generieren",
-			"displaySuggestions": "Vorgeschlagene Änderungen anzeigen",
-			"cancelSuggestions": "Vorgeschlagene Änderungen abbrechen",
-			"applyAllSuggestions": "Alle vorgeschlagenen Änderungen übernehmen",
-			"promptCodeSuggestion": "Schnellaufgabe erstellen",
-			"applyCurrentSuggestion": "Aktuelle Vorgeschlagene Änderung Übernehmen",
+			"generateSuggestions": "Kilo Code: Bearbeitungsvorschläge generieren",
+			"displaySuggestions": "Bearbeitungsvorschläge anzeigen",
+			"cancelSuggestions": "Bearbeitungsvorschläge abbrechen",
+			"applyCurrentSuggestion": "Aktuellen Bearbeitungsvorschlag anwenden",
+			"applyAllSuggestions": "Alle Bearbeitungsvorschläge anwenden",
+			"promptCodeSuggestion": "Schnellaufgabe",
 			"category": "Kilo Code"
 		},
-		"chatParticipant": {
-			"name": "Agent",
-			"fullName": "Kilo Code Agent",
-			"description": "Ich kann dir mit schnellen Aufgaben und vorgeschlagenen Änderungen helfen."
-		},
 		"codeAction": {
-			"title": "Kilo Code: Vorgeschlagene Änderungen"
+			"title": "Kilo Code: Bearbeitungsvorschläge"
 		},
-		"messages": {
-			"provideCodeSuggestions": "Code-Vorschläge werden bereitgestellt..."
+		"chatParticipant": {
+			"fullName": "Kilo Code Agent",
+			"name": "Agent",
+			"description": "Ich kann dir bei Schnellaufgaben und Bearbeitungsvorschlägen helfen."
 		},
 		"incompatibilityExtensionPopup": {
-			"message": "Die Kilo Code Inline Assist wird durch einen Konflikt mit GitHub Copilot blockiert. Um dies zu beheben, musst du die Inline-Vorschläge von Copilot deaktivieren.",
+			"message": "Das Kilo Code Autocomplete wird durch einen Konflikt mit GitHub Copilot blockiert. Um dies zu beheben, musst du Copilots Inline-Vorschläge deaktivieren.",
 			"disableCopilot": "Copilot deaktivieren",
-			"disableInlineAssist": "Inline Assist deaktivieren"
+			"disableInlineAssist": "Autocomplete deaktivieren"
 		}
 	},
 	"terminalCommandGenerator": {

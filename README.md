@@ -16,7 +16,7 @@
 - 🌐 Automate the browser
 - 🤖 Latest AI models
 - 🎁 API keys optional
-- 💡 **Get $25 in free credits: $5 when you sign up, $20 when you top-up for the first time** Credits can be used with 400+ models like Gemini 2.5 Pro, Claude 4 Sonnet & Opus, and GPT-5
+- 💡 **Get $20 in bonus credits when you top-up for the first time** Credits can be used with 400+ models like Gemini 2.5 Pro, Claude 4 Sonnet & Opus, and GPT-5
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/Kilo-Org/kilocode/refs/heads/main/kilo.gif" width="100%" />
@@ -35,22 +35,26 @@
 
 ## How to get started with Kilo Code
 
-1.  Install the Kilo Code extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code).
-2.  Sign up to get $5 in free credits which can be used with 400+ models like Gemini 2.5 Pro, Claude 4 Sonnet & Opus, and GPT-5
-3.  Start using the extension. Here's a video to help you get started (just click on the image below and you'll be redirected to YouTube):
+## How to get started with Kilo Code
+
+1. Install the Kilo Code extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code).
+2. Create your account to access 400+ cutting-edge AI models including Gemini 2.5 Pro, Claude 4 Sonnet & Opus, and GPT-5 – with transparent pricing that matches provider rates exactly.
+3. Start coding with AI that adapts to your workflow. Watch our quick-start guide to see Kilo Code in action:
 
 [![Watch the video](https://img.youtube.com/vi/pqGfYXgrhig/maxresdefault.jpg)](https://youtu.be/pqGfYXgrhig)
 
 ## Difference between Kilo Code, Roo Code and Cline
+
 Kilo Code started as a fork of Roo Code, which itself is a fork of Cline. We frequently merge features from these open-source projects and contribute improvements back. Built on these foundations, Kilo Code is independently developed with our own vision for AI coding agents.
 
 - No need to fiddle with API keys, Kilo Code ships with the latest AI models plugged in, including Gemini 2.5 Pro, Claude 4 Sonnet & Opus, and GPT-5
 - MCP Server Marketplace: Easily find, and use MCP servers to extend the agent capabilities.
-- Inline Assist (experimental)
+- Autocomplete (experimental)
 
 Kilo Code is a direct fork from Roo Code, and also includes the following features from Cline (and our own features):
+
 - System notifications: Get notified when the agent is done with a task.
-- Easy model connection: with bigger free tier.
+- Easy model connection: batteries included.
 - Editing previous messages
 - Assisted commit messages: we write git commit messages for you based on what changed
 

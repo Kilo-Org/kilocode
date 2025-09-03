@@ -13,7 +13,8 @@
 	},
 	"task": {
 		"noAssistantMessages": "मॉडल का प्रतिक्रिया अप्रत्याशित रूप से समाप्त हो गई (कोई सहायक संदेश नहीं)। यह दर सीमा का संकेत हो सकता है।",
-		"notLoggedInError": "अनुरोध पूरा नहीं किया जा सकता है, सुनिश्चित करें कि आप चयनित प्रदाता के साथ जुड़े और लॉग इन हैं।\n\n{{error}}"
+		"notLoggedInError": "अनुरोध पूरा नहीं किया जा सकता है, सुनिश्चित करें कि आप चयनित प्रदाता के साथ जुड़े और लॉग इन हैं।\n\n{{error}}",
+		"maxCompletionTokens": "अधिकतम पूर्णता टोकन की संख्या पहुंच गई।"
 	},
 	"checkpoints": {
 		"nestedGitRepos": "चेकपॉइंट उपलब्ध नहीं हैं, क्योंकि वर्कस्पेस में नेस्टेड Git रिपॉजिटरी का पता चला है। चेकपॉइंट सुविधा का उपयोग करने के लिए कृपया नेस्टेड Git रिपॉजिटरी को हटाएं या स्थानांतरित करें या इस चेतावनी को दबाने के लिए सेटिंग्स में चेकपॉइंट को अक्षम करें।",
@@ -59,17 +60,23 @@
 		"activationFailed": "Kilo: संदेश जनरेटर सक्रिय करने में विफल: {{error}}",
 		"providerRegistered": "Kilo: कमिट संदेश प्रदाता पंजीकृत"
 	},
+	"seeNewChanges": {
+		"title": "नए परिवर्तन दिखाए जा रहे हैं",
+		"checkpointsUnavailable": "नए परिवर्तन नहीं दिखाए जा सकते, चेकपॉइंट उपलब्ध नहीं हैं।",
+		"noChanges": "नए परिवर्तन नहीं दिखाए जा सकते, कोई परिवर्तन नहीं मिले।",
+		"error": "नए परिवर्तन नहीं दिखाए जा सकते, एक त्रुटि हुई।"
+	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo इनलाइन सहायता",
-			"disabled": "$(circle-slash) Kilo इनलाइन सहायता",
-			"warning": "$(warning) Kilo इनलाइन सहायता",
+			"enabled": "$(sparkle) Kilo Code Autocomplete",
+			"disabled": "$(circle-slash) Kilo Code Autocomplete",
+			"warning": "$(warning) Kilo Code Autocomplete",
 			"tooltip": {
-				"basic": "Kilo Code इनलाइन सहायता",
-				"disabled": "Kilo Code इनलाइन सहायता (अक्षम)",
-				"tokenError": "इनलाइन सहायता का उपयोग करने के लिए एक वैध टोकन सेट होना चाहिए",
+				"basic": "Kilo Code Autocomplete",
+				"disabled": "Kilo Code Autocomplete (अक्षम)",
+				"tokenError": "Autocomplete का उपयोग करने के लिए एक वैध टोकन सेट करना होगा",
 				"lastCompletion": "अंतिम सुझाव:",
-				"sessionTotal": "सत्र कुल लागत:",
+				"sessionTotal": "सत्र की कुल लागत:",
 				"model": "मॉडल:"
 			},
 			"cost": {
@@ -77,21 +84,21 @@
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Kilo इनलाइन सहायता {{status}}",
+		"toggleMessage": "Kilo Code Autocomplete {{status}}",
 		"progress": {
 			"title": "Kilo Code",
-			"analyzing": "आपका कोड विश्लेषण कर रहा है...",
-			"generating": "सुझाए गए संपादन उत्पन्न कर रहा है...",
-			"processing": "सुझाए गए संपादन संसाधित कर रहा है...",
-			"showing": "सुझाए गए संपादन प्रदर्शित कर रहा है..."
+			"analyzing": "आपके कोड का विश्लेषण कर रहे हैं...",
+			"generating": "सुझाए गए संपादन बना रहे हैं...",
+			"processing": "सुझाए गए संपादन प्रोसेस कर रहे हैं...",
+			"showing": "सुझाए गए संपादन दिखा रहे हैं..."
 		},
 		"input": {
 			"title": "Kilo Code: त्वरित कार्य",
-			"placeholder": "जैसे, 'इस फ़ंक्शन को अधिक कुशल बनाने के लिए रीफैक्टर करें'"
+			"placeholder": "जैसे, 'इस फ़ंक्शन को अधिक कुशल बनाने के लिए रिफैक्टर करें'"
 		},
 		"commands": {
-			"generateSuggestions": "Kilo Code: सुझाए गए संपादन उत्पन्न करें",
-			"displaySuggestions": "सुझाए गए संपादन प्रदर्शित करें",
+			"generateSuggestions": "Kilo Code: सुझाए गए संपादन जेनरेट करें",
+			"displaySuggestions": "सुझाए गए संपादन दिखाएं",
 			"cancelSuggestions": "सुझाए गए संपादन रद्द करें",
 			"applyCurrentSuggestion": "वर्तमान सुझाए गए संपादन लागू करें",
 			"applyAllSuggestions": "सभी सुझाए गए संपादन लागू करें",
@@ -102,24 +109,15 @@
 			"title": "Kilo Code: सुझाए गए संपादन"
 		},
 		"chatParticipant": {
-			"fullName": "Kilo Code एजेंट",
-			"name": "एजेंट",
-			"description": "मैं त्वरित कार्यों और सुझाए गए संपादनों में आपकी सहायता कर सकता हूँ।"
-		},
-		"messages": {
-			"provideCodeSuggestions": "कोड सुझाव प्रदान किए जा रहे हैं..."
+			"fullName": "Kilo Code Agent",
+			"name": "Agent",
+			"description": "मैं त्वरित कार्यों और सुझाए गए संपादनों में आपकी सहायता कर सकता हूं।"
 		},
 		"incompatibilityExtensionPopup": {
-			"message": "Kilo Code Inline Assist GitHub Copilot के साथ टकराव के कारण अवरुद्ध हो रहा है। इसे ठीक करने के लिए, आपको Copilot के इनलाइन सुझावों को अक्षम करना होगा।",
+			"message": "Kilo Code Autocomplete को GitHub Copilot के साथ संघर्ष के कारण ब्लॉक किया जा रहा है। इसे ठीक करने के लिए, आपको Copilot के इनलाइन सुझावों को अक्षम करना होगा।",
 			"disableCopilot": "Copilot अक्षम करें",
-			"disableInlineAssist": "Inline Assist अक्षम करें"
+			"disableInlineAssist": "Autocomplete अक्षम करें"
 		}
-	},
-	"seeNewChanges": {
-		"title": "नए परिवर्तन दिखाए जा रहे हैं",
-		"checkpointsUnavailable": "नए परिवर्तन नहीं दिखाए जा सकते, चेकपॉइंट उपलब्ध नहीं हैं।",
-		"noChanges": "नए परिवर्तन नहीं दिखाए जा सकते, कोई परिवर्तन नहीं मिले।",
-		"error": "नए परिवर्तन नहीं दिखाए जा सकते, एक त्रुटि हुई।"
 	},
 	"terminalCommandGenerator": {
 		"inputPrompt": "Kilo: उस कमांड का वर्णन करें जिसे आप जनरेट करना चाहते हैं",

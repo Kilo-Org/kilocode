@@ -47,6 +47,7 @@
 		"openAiCompatibleConfigMissing": "Відсутня конфігурація OpenAI Compatible для створення embedder",
 		"geminiConfigMissing": "Відсутня конфігурація Gemini для створення embedder",
 		"mistralConfigMissing": "Відсутня конфігурація Mistral для створення embedder",
+		"vercelAiGatewayConfigMissing": "Відсутня конфігурація Vercel AI Gateway для створення embedder",
 		"invalidEmbedderType": "Налаштовано недійсний тип embedder: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "Не вдалося визначити розмірність вектора для моделі '{{modelId}}' з провайдером '{{provider}}'. Будь ласка, переконайся, що 'Розмірність Embedding' правильно встановлена в налаштуваннях провайдера OpenAI-Compatible.",
 		"vectorDimensionNotDetermined": "Не вдалося визначити розмірність вектора для моделі '{{modelId}}' з провайдером '{{provider}}'. Перевір профілі моделі або конфігурацію.",

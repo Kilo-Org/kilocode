@@ -72,6 +72,8 @@ export const toolParamNames = [
 	"query",
 	"args",
 	"todos",
+	"prompt",
+	"image",
 ] as const
 
 export type ToolParamName = (typeof toolParamNames)[number]
@@ -183,6 +185,11 @@ export interface EditFileToolUse extends ToolUse {
 }
 // kilocode_change end
 
+export interface GenerateImageToolUse extends ToolUse {
+	name: "generate_image"
+	params: Partial<Pick<Record<ToolParamName, string>, "prompt" | "path" | "image">>
+}
+
 // Define tool group configuration
 export type ToolGroupConfig = {
 	tools: readonly string[]
@@ -213,6 +220,7 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	condense: "condense the current context window", // kilocode_change
 	codebase_search: "codebase search",
 	update_todo_list: "update todo list",
+	generate_image: "generate images",
 } as const
 
 // Define available tool groups.
@@ -234,7 +242,8 @@ export const TOOL_GROUPS: Record<ToolGroup, ToolGroupConfig> = {
 			"write_to_file",
 			"insert_content",
 			"search_and_replace",
-			"new_rule",
+			"new_rule", // kilocode_change
+			"generate_image",
 		],
 	},
 	browser: {

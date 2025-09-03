@@ -9,8 +9,10 @@ import type {
 	ClineMessage,
 	MarketplaceItem,
 	TodoItem,
+	CloudUserInfo,
+	OrganizationAllowList,
+	ShareVisibility,
 } from "@roo-code/types"
-import type { CloudUserInfo, OrganizationAllowList, ShareVisibility } from "@roo-code/cloud"
 
 import { GitCommit } from "../utils/git"
 
@@ -25,7 +27,7 @@ import { KiloCodeWrapperProperties } from "./kilocode/wrapper" // kilocode_chang
 // Command interface for frontend/backend communication
 export interface Command {
 	name: string
-	source: "global" | "project"
+	source: "global" | "project" | "built-in"
 	filePath?: string
 	description?: string
 	argumentHint?: string
@@ -147,7 +149,7 @@ export interface ExtensionMessage {
 		| "promptsButtonClicked"
 		| "profileButtonClicked" // kilocode_change
 		| "marketplaceButtonClicked"
-		| "accountButtonClicked"
+		| "cloudButtonClicked"
 		| "didBecomeVisible"
 		| "focusInput"
 		| "switchTab"
@@ -327,6 +329,7 @@ export type ExtensionState = Pick<
 	| "includeDiagnosticMessages"
 	| "maxDiagnosticMessages"
 	| "remoteControlEnabled"
+	| "openRouterImageGenerationSelectedModel"
 > & {
 	version: string
 	clineMessages: ClineMessage[]
@@ -387,6 +390,7 @@ export type ExtensionState = Pick<
 	marketplaceInstalledMetadata?: { project: Record<string, any>; global: Record<string, any> }
 	profileThresholds: Record<string, number>
 	hasOpenedModeSelector: boolean
+	openRouterImageApiKey?: string
 }
 
 export interface ClineSayTool {
@@ -406,6 +410,8 @@ export interface ClineSayTool {
 		| "finishTask"
 		| "searchAndReplace"
 		| "insertContent"
+		| "generateImage"
+		| "imageGenerated"
 	path?: string
 	diff?: string
 	content?: string
@@ -450,6 +456,7 @@ export interface ClineSayTool {
 		cost?: number
 	}
 	// kilocode_change end
+	imageData?: string // Base64 encoded image data for generated images
 }
 
 // Must keep in sync with system prompt.

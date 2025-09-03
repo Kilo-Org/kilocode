@@ -189,41 +189,37 @@
 		}
 	},
 	"ghost": {
-		"title": "Inline Assistentie",
+		"title": "Autocomplete",
 		"settings": {
-			"autoTrigger": "Automatische Trigger",
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Snelle Inline Taak",
-				"description": "Heb je maar een snelle aanpassing nodig? Selecteer wat code (of niet!) en druk op Cmd+I. Beschrijf je doel in gewoon Nederlands (\"maak een React-component met deze props\", \"voeg foutafhandeling toe aan deze functie\"), en krijg meerdere, direct bruikbare suggesties rechtstreeks in je editor. <DocsLink>Zie sneltoets</DocsLink>"
-			},
-			"enableAutoInlineTaskKeybinding": {
-				"label": "Automatische Inline Taak",
-				"description": "Behoefte aan een snelle oplossing, aanvulling of herstructurering? Kilo gebruikt de omringende context om directe verbeteringen aan te bieden, zodat je in je flow blijft. <DocsLink>Bekijk sneltoets</DocsLink>"
-			},
+			"autoTrigger": "Automatische Activering",
+			"triggers": "Triggers",
+			"keybindingDescription": "Autocomplete-functies kunnen worden geactiveerd door commando's. Je kunt de <DocsLink>Toetsenbordsnelkoppelingen hier</DocsLink> configureren.",
 			"enableAutoTrigger": {
-				"label": "Automatische Trigger Inschakelen",
-				"description": "Wanneer ingeschakeld, zal Kilo Code automatisch Inline Assist activeren wanneer je stopt met typen. Dit kan handig zijn voor snelle fixes en suggesties."
+				"label": "Autocomplete Inschakelen",
+				"description": "Wanneer ingeschakeld, zal Kilo Code automatisch Autocomplete activeren wanneer je stopt met typen. Dit kan nuttig zijn voor snelle fixes en suggesties."
 			},
 			"autoTriggerDelay": {
-				"label": "Automatische Trigger Vertraging",
-				"description": "De vertraging in seconden voordat Kilo Code Inline Assist activeert nadat je stopt met typen. Een kortere vertraging betekent snellere suggesties, maar kan meer resources gebruiken."
+				"label": "Automatische Activeringsvertraging",
+				"description": "De vertraging in seconden voordat Kilo Code Autocomplete activeert nadat je bent gestopt met typen. Een kortere vertraging betekent snellere suggesties, maar kan meer resource-intensief zijn."
+			},
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Snelle Taak",
+				"description": "Heb je alleen een snelle wijziging nodig? Selecteer wat code (of niet!) en druk op Cmd+I. Beschrijf je doel in eenvoudig Nederlands (\"maak een React-component met deze props\", \"voeg foutafhandeling toe aan deze functie\"), en krijg meerdere, klaar-voor-gebruik suggesties direct in je editor. <DocsLink>Snelkoppeling bekijken</DocsLink>"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Slimme Inline Taak",
-				"description": "Heb je een snelle fix, aanvulling of refactoring nodig? Kilo gebruikt de omringende context om directe verbeteringen aan te bieden, zodat je in de flow blijft. <DocsLink>Bekijk sneltoets</DocsLink>"
+				"label": "Handmatige Autocomplete",
+				"description": "Heb je een snelle fix, voltooiing of refactor nodig? Kilo zal de omringende context gebruiken om onmiddellijke verbeteringen aan te bieden, waardoor je in de flow blijft. <DocsLink>Snelkoppeling bekijken</DocsLink>"
 			},
 			"enableCustomProvider": {
 				"label": "Aangepaste provider gebruiken",
-				"description": "Inline Assist gebruikt je KiloCode / OpenRouter / Mistral inloggegevens om standaard het Codestral model te gebruiken"
+				"description": "Autocomplete gebruikt standaard je KiloCode / OpenRouter / Mistral-referenties om het Codestral-model te gebruiken"
 			},
-			"provider": "Aanbieder",
+			"provider": "Provider",
 			"apiConfigId": {
-				"label": "API-configuratie",
-				"current": "Gebruik de momenteel geselecteerde API-configuratie",
-				"description": "Selecteer een API-configuratie om te gebruiken voor Inline Assist-prompts, of gebruik gewoon wat momenteel is geselecteerd"
-			},
-			"triggers": "Triggers",
-			"keybindingDescription": "Functies binnen Inline Assist worden geactiveerd door commando's. Je kunt de <DocsLink>sneltoetsen hier configureren</DocsLink>."
+				"label": "API-Configuratie",
+				"current": "Gebruik momenteel geselecteerde API-configuratie",
+				"description": "Selecteer een API-configuratie om te gebruiken voor Autocomplete-prompts, of gebruik gewoon wat er momenteel is geselecteerd"
+			}
 		}
 	},
 	"virtualProvider": {
@@ -247,5 +243,9 @@
 		"perHour": "Per Uur",
 		"perDay": "Per dag",
 		"requestsLabel": "Verzoeken"
+	},
+	"imageWarnings": {
+		"modelNoImageSupport": "Afbeeldingen worden niet ondersteund door het huidige model.",
+		"maxImagesReached": "Maximaal 20 afbeeldingen per bericht. Verwijder enkele afbeeldingen om meer toe te voegen."
 	}
 }

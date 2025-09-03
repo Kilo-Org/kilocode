@@ -9,7 +9,7 @@ export const registerGhostProvider = (context: vscode.ExtensionContext, cline: C
 	// Register GhostProvider Commands
 	context.subscriptions.push(
 		vscode.commands.registerCommand("kilo-code.ghost.reload", async () => {
-			await ghost.reload()
+			await ghost.load()
 		}),
 	)
 	context.subscriptions.push(

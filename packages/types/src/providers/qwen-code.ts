@@ -1,46 +1,30 @@
-// kilocode_change -- file added
-
 import type { ModelInfo } from "../model.js"
-import type { ProviderName } from "../provider-settings.js"
 
-export const qwenCodeModels = {
-	"qwen3-coder-plus": {
-		id: "qwen3-coder-plus",
-		name: "Qwen3 Coder Plus",
-		provider: "qwen-code" as ProviderName,
-		contextWindow: 1000000,
-		maxTokens: 65536,
-		supportsPromptCache: false,
-	},
-	"qwen3-coder-flash": {
-		id: "qwen3-coder-flash",
-		name: "Qwen3 Coder Flash",
-		provider: "qwen-code" as ProviderName,
-		contextWindow: 1000000,
-		maxTokens: 65536,
-		supportsPromptCache: false,
-	},
-} as const
-
-export type QwenCodeModelId = keyof typeof qwenCodeModels
+export type QwenCodeModelId = "qwen3-coder-plus" | "qwen3-coder-flash"
 
 export const qwenCodeDefaultModelId: QwenCodeModelId = "qwen3-coder-plus"
 
-export const isQwenCodeModel = (modelId: string): modelId is QwenCodeModelId => {
-	return modelId in qwenCodeModels
-}
-
-export const getQwenCodeModelInfo = (modelId: string): ModelInfo => {
-	if (isQwenCodeModel(modelId)) {
-		return qwenCodeModels[modelId]
-	}
-	// Fallback to a default or throw an error
-	return qwenCodeModels[qwenCodeDefaultModelId]
-}
-
-export type QwenCodeProvider = {
-	id: "qwen-code"
-	apiKey?: string
-	baseUrl?: string
-	model: QwenCodeModelId
-}
+export const qwenCodeModels = {
+	"qwen3-coder-plus": {
+		maxTokens: 65_536,
+		contextWindow: 1_000_000,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0,
+		outputPrice: 0,
+		cacheWritesPrice: 0,
+		cacheReadsPrice: 0,
+		description: "Qwen3 Coder Plus - High-performance coding model with 1M context window for large codebases",
+	},
+	"qwen3-coder-flash": {
+		maxTokens: 65_536,
+		contextWindow: 1_000_000,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0,
+		outputPrice: 0,
+		cacheWritesPrice: 0,
+		cacheReadsPrice: 0,
+		description: "Qwen3 Coder Flash - Fast coding model with 1M context window optimized for speed",
+	},
+} as const satisfies Record<QwenCodeModelId, ModelInfo>

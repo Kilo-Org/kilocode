@@ -56,6 +56,9 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "مفتاح API:",
 		"mistralApiKeyPlaceholder": "أدخل مفتاح Mistral API",
+		"vercelAiGatewayProvider": "Vercel AI Gateway",
+		"vercelAiGatewayApiKeyLabel": "مفتاح API",
+		"vercelAiGatewayApiKeyPlaceholder": "أدخل مفتاح Vercel AI Gateway API",
 		"openaiCompatibleProvider": "متوافق مع OpenAI",
 		"openAiKeyLabel": "مفتاح OpenAI API",
 		"openAiKeyPlaceholder": "أدخل مفتاح OpenAI API",
@@ -121,6 +124,7 @@
 			"modelDimensionRequired": "بُعد النموذج مطلوب",
 			"geminiApiKeyRequired": "مفتاح Gemini API مطلوب",
 			"mistralApiKeyRequired": "مفتاح Mistral API مطلوب",
+			"vercelAiGatewayApiKeyRequired": "مفتاح Vercel AI Gateway API مطلوب",
 			"ollamaBaseUrlRequired": "رابط Ollama الأساسي مطلوب",
 			"baseUrlRequired": "الرابط الأساسي مطلوب",
 			"modelDimensionMinValue": "بُعد النموذج يجب أن يكون أكبر من 0"
@@ -241,6 +245,8 @@
 		"awsCustomArnDesc": "تأكد إن المنطقة في ARN تطابق المنطقة المختارة.",
 		"openRouterApiKey": "مفتاح OpenRouter",
 		"getOpenRouterApiKey": "احصل على المفتاح",
+		"vercelAiGatewayApiKey": "مفتاح Vercel AI Gateway",
+		"getVercelAiGatewayApiKey": "احصل على مفتاح Vercel AI Gateway",
 		"apiKeyStorageNotice": "المفاتيح تُحفظ بأمان في مخزن أسرار VSCode",
 		"glamaApiKey": "مفتاح Glama",
 		"getGlamaApiKey": "احصل على مفتاح Glama",
@@ -793,10 +799,6 @@
 			"apiKey": "مفتاح Morph API (اختياري)",
 			"placeholder": "أدخل مفتاح Morph API (اختياري)"
 		},
-		"INLINE_ASSIST": {
-			"name": "المساعد المضمّن",
-			"description": "تفعيل ميزات المساعدة المضمنة للحصول على اقتراحات وتحسينات سريعة للكود مباشرة في محرر النصوص الخاص بك. يتضمن ذلك مهمة مضمنة سريعة (Cmd+I) للتغييرات المستهدفة ومهمة مضمنة تلقائية للتحسينات السياقية."
-		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "التحرير في الخلفية",
 			"description": "منع تعطيل تركيز المحرر عند التفعيل. تحدث تعديلات الملفات في الخلفية دون فتح عروض diff أو سرقة التركيز. يمكنك الاستمرار في العمل دون انقطاع بينما يقوم Kilo Code بإجراء التغييرات. يمكن فتح الملفات دون تركيز لالتقاط التشخيصات أو إبقاؤها مغلقة تماماً."
@@ -808,6 +810,21 @@
 		"NEW_TASK_REQUIRE_TODOS": {
 			"name": "يتطلب قائمة 'مهام' للمهام الجديدة",
 			"description": "عند التفعيل، أداة المهام الجديدة ستتطلب توفير معامل المهام. هذا يضمن أن كل المهام الجديدة تبدأ بقائمة واضحة من الأهداف. عند التعطيل (افتراضي)، يبقى معامل المهام اختياري للتوافق مع النسخة السابقة."
+		},
+		"IMAGE_GENERATION": {
+			"name": "تمكين إنشاء صور بالذكاء الاصطناعي",
+			"description": "عند التفعيل، يمكن لـ Kilo Code إنشاء صور من النصوص باستخدام نماذج إنشاء الصور من OpenRouter. يتطلب مفتاح OpenRouter API.",
+			"openRouterApiKeyLabel": "مفتاح OpenRouter API",
+			"openRouterApiKeyPlaceholder": "أدخل مفتاح OpenRouter API",
+			"getApiKeyText": "احصل على مفتاحك من",
+			"modelSelectionLabel": "نموذج إنشاء الصور",
+			"modelSelectionDescription": "اختر النموذج المراد استخدامه لإنشاء الصور",
+			"warningMissingKey": "⚠️ مفتاح OpenRouter API مطلوب لإنشاء الصور. يرجى تكوينه أعلاه.",
+			"successConfigured": "✓ تم تكوين إنشاء الصور وهو جاهز للاستخدام"
+		},
+		"INLINE_ASSIST": {
+			"name": "Autocomplete",
+			"description": "تمكين ميزات الإكمال التلقائي للحصول على اقتراحات كود سريعة وتحسينات مباشرة في محررك. يتضمن المهمة السريعة (Cmd+I) للتغييرات المستهدفة والإكمال التلقائي للتحسينات السياقية."
 		}
 	},
 	"promptCaching": {
@@ -881,7 +898,8 @@
 		"modelAvailability": "النموذج {{modelId}} غير متاح.",
 		"providerNotAllowed": "المزوّد '{{provider}}' غير مسموح به.",
 		"modelNotAllowed": "النموذج '{{model}}' غير مسموح به للمزوّد '{{provider}}'.",
-		"profileInvalid": "الملف يحتوي مزوّد أو نموذج غير مسموح."
+		"profileInvalid": "الملف يحتوي مزوّد أو نموذج غير مسموح.",
+		"qwenCodeOauthPath": "يجب توفير مسار صالح لبيانات OAuth."
 	},
 	"placeholders": {
 		"apiKey": "اكتب مفتاح API...",

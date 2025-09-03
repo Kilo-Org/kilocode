@@ -189,41 +189,37 @@
 		}
 	},
 	"ghost": {
-		"title": "Assistència en línia",
+		"title": "Autocomplete",
 		"settings": {
-			"autoTrigger": "Activació automàtica",
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Tasca ràpida en línia",
-				"description": "Només necessites un canvi ràpid? Selecciona codi (o no!) i prem Cmd+I. Descriu el teu objectiu en llenguatge natural (\"crea un component de React amb aquestes props\", \"afegeix gestió d'errors a aquesta funció\"), i obtén múltiples suggeriments llestos per utilitzar directament al teu editor. <DocsLink>Veure drecera</DocsLink>"
-			},
-			"enableAutoInlineTaskKeybinding": {
-				"label": "Tasca automàtica en línia",
-				"description": "Necessites una solució ràpida, completar alguna cosa o refactoritzar? Kilo utilitzarà el context del voltant per oferir millores immediates, mantenint el teu flux de treball. <DocsLink>Veure drecera</DocsLink>"
-			},
+			"autoTrigger": "Activació Automàtica",
+			"triggers": "Activadors",
+			"keybindingDescription": "Les funcionalitats d'Autocomplete es poden activar mitjançant ordres. Pots configurar les <DocsLink>Dreceres de Teclat aquí</DocsLink>.",
 			"enableAutoTrigger": {
-				"label": "Activar l'activació automàtica",
-				"description": "Quan està activat, Kilo Code activarà automàticament l'Assistència en línia quan deixis d'escriure. Això pot ser útil per a correccions i suggeriments ràpids."
+				"label": "Habilitar Autocomplete",
+				"description": "Quan està habilitat, Kilo Code activarà automàticament Autocomplete quan deixis d'escriure. Això pot ser útil per a correccions ràpides i suggeriments."
 			},
 			"autoTriggerDelay": {
-				"label": "Retard de l'activació automàtica",
-				"description": "El retard en segons abans que Kilo Code activi l'Assistència en línia després que deixis d'escriure. Un retard més curt significa suggeriments més ràpids, però pot consumir més recursos."
+				"label": "Retard d'Activació Automàtica",
+				"description": "El retard en segons abans que Kilo Code activi Autocomplete després que deixis d'escriure. Un retard més curt significa suggeriments més ràpids, però pot ser més intensiu en recursos."
+			},
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Tasca Ràpida",
+				"description": "Només necessites un canvi ràpid? Selecciona codi (o no!) i prem Cmd+I. Descriu el teu objectiu en català simple (\"crear un component React amb aquestes props\", \"afegir gestió d'errors a aquesta funció\"), i obtén múltiples suggeriments llestos per usar directament al teu editor. <DocsLink>Veure drecera</DocsLink>"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Tasca intel·ligent en línia",
-				"description": "Necessites una correcció ràpida, completar o refactoritzar? Kilo utilitzarà el context del voltant per oferir millores immediates, mantenint-te en el flux. <DocsLink>Veure drecera</DocsLink>"
+				"label": "Autocomplete Manual",
+				"description": "Necessites una correcció ràpida, completació o refactorització? Kilo utilitzarà el context circumdant per oferir millores immediates, mantenint-te en el flux. <DocsLink>Veure drecera</DocsLink>"
 			},
 			"enableCustomProvider": {
-				"label": "Utilitzar proveïdor personalitzat",
-				"description": "Inline Assist utilitza les teves credencials de KiloCode / OpenRouter / Mistral per utilitzar el model Codestral per defecte"
+				"label": "Usar proveïdor personalitzat",
+				"description": "Autocomplete utilitza les teves credencials KiloCode / OpenRouter / Mistral per usar el model Codestral per defecte"
 			},
 			"provider": "Proveïdor",
 			"apiConfigId": {
-				"label": "Configuració de l'API",
-				"current": "Utilitza la configuració de l'API seleccionada actualment",
-				"description": "Selecciona una configuració de l'API per utilitzar en els prompts d'assistència en línia, o simplement utilitza la que estigui seleccionada actualment"
-			},
-			"triggers": "Activadors",
-			"keybindingDescription": "Les funcions d'Assistència en línia es desencadenen mitjançant ordres. Podeu configurar les <DocsLink>dreceres de teclat aquí</DocsLink>."
+				"label": "Configuració d'API",
+				"current": "Usar configuració d'API actualment seleccionada",
+				"description": "Selecciona una configuració d'API per usar als prompts d'Autocomplete, o simplement usa la que està actualment seleccionada"
+			}
 		}
 	},
 	"virtualProvider": {
@@ -247,5 +243,9 @@
 		"perHour": "Per hora",
 		"requestsLabel": "Sol·licituds",
 		"tokensLabel": "Tokens"
+	},
+	"imageWarnings": {
+		"modelNoImageSupport": "Les imatges no són compatibles amb el model actual.",
+		"maxImagesReached": "Màxim de 20 imatges per missatge. Elimineu algunes imatges per afegir-ne més."
 	}
 }

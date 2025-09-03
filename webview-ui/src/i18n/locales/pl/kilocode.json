@@ -189,41 +189,37 @@
 		}
 	},
 	"ghost": {
-		"title": "Pomoc w tekście",
+		"title": "Autocomplete",
 		"settings": {
-			"autoTrigger": "Automatyczne wyzwalanie",
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Szybkie zadanie w tekście",
-				"description": "Potrzebujesz tylko szybkiej zmiany? Zaznacz jakiś kod (albo nie!) i naciśnij Cmd+I. Opisz swój cel zwykłą językiem (\"stwórz komponent React z tymi propsami\", \"dodaj obsługę błędów do tej funkcji\"), i otrzymaj wiele gotowych do użycia sugestii bezpośrednio w swoim edytorze. <DocsLink>Zobacz skrót</DocsLink>"
-			},
-			"enableAutoInlineTaskKeybinding": {
-				"label": "Zadanie automatyczne w linii",
-				"description": "Potrzebujesz szybkiej poprawki, uzupełnienia lub refaktoryzacji? Kilo użyje otaczającego kontekstu, aby zaproponować natychmiastowe usprawnienia, pozwalając Ci pozostać w stanie flow. <DocsLink>Zobacz skrót</DocsLink>"
-			},
+			"autoTrigger": "Automatyczne Wyzwalanie",
+			"triggers": "Wyzwalacze",
+			"keybindingDescription": "Funkcje Autocomplete mogą być wyzwalane przez polecenia. Możesz skonfigurować <DocsLink>Skróty Klawiszowe tutaj</DocsLink>.",
 			"enableAutoTrigger": {
-				"label": "Włącz automatyczne wyzwalanie",
-				"description": "Gdy włączone, Kilo Code automatycznie uruchomi Inline Assist, gdy przestaniesz pisać. Może to być przydatne do szybkich poprawek i sugestii."
+				"label": "Włącz Autocomplete",
+				"description": "Gdy włączone, Kilo Code automatycznie wyzwoli Autocomplete, gdy przestaniesz pisać. Może to być przydatne do szybkich poprawek i sugestii."
 			},
 			"autoTriggerDelay": {
-				"label": "Opóźnienie automatycznego wyzwalania",
-				"description": "Opóźnienie w sekundach przed uruchomieniem Inline Assist przez Kilo Code po zakończeniu pisania. Krótsze opóźnienie oznacza szybsze sugestie, ale może być bardziej wymagające dla zasobów."
+				"label": "Opóźnienie Automatycznego Wyzwalania",
+				"description": "Opóźnienie w sekundach przed tym, jak Kilo Code wyzwoli Autocomplete po tym, jak przestaniesz pisać. Krótsze opóźnienie oznacza szybsze sugestie, ale może być bardziej zasobożerne."
+			},
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Szybkie Zadanie",
+				"description": "Potrzebujesz tylko szybkiej zmiany? Zaznacz trochę kodu (lub nie!) i naciśnij Cmd+I. Opisz swój cel w prostym języku polskim (\"stwórz komponent React z tymi propsami\", \"dodaj obsługę błędów do tej funkcji\"), i otrzymaj wiele gotowych do użycia sugestii bezpośrednio w swoim edytorze. <DocsLink>Zobacz skrót</DocsLink>"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Inteligentne zadanie w tekście",
+				"label": "Ręczne Autocomplete",
 				"description": "Potrzebujesz szybkiej poprawki, uzupełnienia lub refaktoryzacji? Kilo użyje otaczającego kontekstu, aby zaoferować natychmiastowe ulepszenia, utrzymując cię w przepływie. <DocsLink>Zobacz skrót</DocsLink>"
 			},
 			"enableCustomProvider": {
 				"label": "Użyj niestandardowego dostawcy",
-				"description": "Inline Assist używa twoich danych uwierzytelniających KiloCode / OpenRouter / Mistral do domyślnego używania modelu Codestral"
+				"description": "Autocomplete używa domyślnie twoich danych uwierzytelniających KiloCode / OpenRouter / Mistral do korzystania z modelu Codestral"
 			},
 			"provider": "Dostawca",
 			"apiConfigId": {
 				"label": "Konfiguracja API",
 				"current": "Użyj aktualnie wybranej konfiguracji API",
-				"description": "Wybierz konfigurację API do użycia w podpowiedziach Inline Assist lub po prostu użyj tej, która jest aktualnie wybrana"
-			},
-			"triggers": "Wyzwalacze",
-			"keybindingDescription": "Funkcje Inline Assist są uruchamiane za pomocą poleceń. Możesz skonfigurować <DocsLink>skróty klawiaturowe tutaj</DocsLink>."
+				"description": "Wybierz konfigurację API do użycia dla promptów Autocomplete, lub po prostu użyj tej, która jest aktualnie wybrana"
+			}
 		}
 	},
 	"virtualProvider": {
@@ -247,5 +243,9 @@
 		"perDay": "Dziennie",
 		"perHour": "Za godzinę",
 		"requestsLabel": "Prośby"
+	},
+	"imageWarnings": {
+		"modelNoImageSupport": "Obrazy nie są obsługiwane przez aktualny model.",
+		"maxImagesReached": "Maksymalnie 20 obrazów na wiadomość. Usuń niektóre obrazy, aby dodać więcej."
 	}
 }

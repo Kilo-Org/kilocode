@@ -179,6 +179,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "requesty", apiKey: "requesty-key" })
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "glama" })
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "unbound", apiKey: "unbound-key" })
+		expect(mockGetModels).toHaveBeenCalledWith({ provider: "vercel-ai-gateway" })
 		expect(mockGetModels).toHaveBeenCalledWith({
 			provider: "litellm",
 			apiKey: "litellm-key",
@@ -198,6 +199,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				ollama: mockModels, // kilocode_change
 				deepinfra: mockModels, // kilocode_change
 				lmstudio: {},
+				"vercel-ai-gateway": mockModels,
 			},
 		})
 	})
@@ -287,6 +289,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				ollama: mockModels, // kilocode_change
 				deepinfra: mockModels, // kilocode_change
 				lmstudio: {},
+				"vercel-ai-gateway": mockModels,
 			},
 		})
 	})
@@ -310,6 +313,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockResolvedValueOnce(mockModels) // kilocode-openrouter
 			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
 			.mockResolvedValueOnce(mockModels) // kilocode_change deepinfra
+			.mockResolvedValueOnce(mockModels) // vercel-ai-gateway
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
 
 		await webviewMessageHandler(mockClineProvider, {
@@ -329,6 +333,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				ollama: {},
 				deepinfra: mockModels,
 				lmstudio: {},
+				"vercel-ai-gateway": mockModels,
 			},
 		})
 
@@ -365,6 +370,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockResolvedValueOnce({}) // kilocode-openrouter - Success
 			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
 			.mockRejectedValueOnce({}) // kilocode_change deepinfra
+			.mockRejectedValueOnce(new Error("Vercel AI Gateway error")) // vercel-ai-gateway
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
 
 		await webviewMessageHandler(mockClineProvider, {

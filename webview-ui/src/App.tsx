@@ -25,12 +25,13 @@ import { MemoryService } from "./services/MemoryService" // kilocode_change
 import { DeleteMessageDialog, EditMessageDialog } from "./components/chat/MessageModificationConfirmationDialog"
 import ErrorBoundary from "./components/ErrorBoundary"
 // import { AccountView } from "./components/account/AccountView" // kilocode_change: we have our own profile view
+// import { CloudView } from "./components/cloud/CloudView" // kilocode_change: not rendering this
 import { useAddNonInteractiveClickListener } from "./components/ui/hooks/useNonInteractiveClick"
 import { TooltipProvider } from "./components/ui/tooltip"
 import { STANDARD_TOOLTIP_DELAY } from "./components/ui/standard-tooltip"
 import { useKiloIdentity } from "./utils/kilocode/useKiloIdentity"
 
-type Tab = "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "account" | "profile" // kilocode_change: add "profile"
+type Tab = "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "account" | "cloud" | "profile" // kilocode_change: add "profile"
 
 interface HumanRelayDialogState {
 	isOpen: boolean
@@ -63,7 +64,7 @@ const tabsByMessageAction: Partial<Record<NonNullable<ExtensionMessage["action"]
 	historyButtonClicked: "history",
 	profileButtonClicked: "profile",
 	marketplaceButtonClicked: "marketplace",
-	accountButtonClicked: "account",
+	// cloudButtonClicked: "cloud", // kilocode_change: no cloud
 }
 
 const App = () => {
@@ -112,7 +113,7 @@ const App = () => {
 		(newTab: Tab) => {
 			// Only check MDM compliance if mdmCompliant is explicitly false (meaning there's an MDM policy and user is non-compliant)
 			// If mdmCompliant is undefined or true, allow tab switching
-			if (mdmCompliant === false && newTab !== "account") {
+			if (mdmCompliant === false && newTab !== "cloud") {
 				// Notify the user that authentication is required by their organization
 				vscode.postMessage({ type: "showMdmAuthRequiredNotification" })
 				return
@@ -277,6 +278,15 @@ const App = () => {
 					targetTab="mode"
 				/>
 			)}
+			{/* kilocode_change: no cloud view */}
+			{/* {tab === "cloud" && (
+				<CloudView
+					userInfo={cloudUserInfo}
+					isAuthenticated={cloudIsAuthenticated}
+					cloudApiUrl={cloudApiUrl}
+					onDone={() => switchTab("chat")}
+				/>
+			)} */}
 			{/* kilocode_change: we have our own profile view */}
 			{/* {tab === "account" && (
 				<AccountView userInfo={cloudUserInfo} isAuthenticated={false} onDone={() => switchTab("chat")} />

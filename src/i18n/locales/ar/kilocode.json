@@ -13,7 +13,8 @@
 	},
 	"task": {
 		"noAssistantMessages": "انتهت استجابة النموذج بشكل غير متوقع (لا توجد رسائل مساعد). قد يكون هذا علامة على تقييد المعدل.",
-		"notLoggedInError": "لا يمكن إكمال الطلب، تأكد من أنك متصل ومسجل الدخول باستخدام المزود المحدد.\n\n{{error}}"
+		"notLoggedInError": "لا يمكن إكمال الطلب، تأكد من أنك متصل ومسجل الدخول باستخدام المزود المحدد.\n\n{{error}}",
+		"maxCompletionTokens": "تم الوصول إلى الحد الأقصى لعدد رموز الإكمال."
 	},
 	"checkpoints": {
 		"nestedGitRepos": "نقاط الحفظ غير متاحة، لأنه تم اكتشاف مستودعات Git متداخلة في مساحة العمل. يرجى إزالة أو نقل مستودعات Git المتداخلة لاستخدام ميزة نقاط الحفظ أو تعطيل نقاط الحفظ في الإعدادات لإخفاء هذا التحذير.",
@@ -64,59 +65,56 @@
 		"providerRegistered": "Kilo: تم تسجيل موفر رسائل الاعتماد"
 	},
 	"ghost": {
+		"statusBar": {
+			"enabled": "$(sparkle) Kilo Code Autocomplete",
+			"disabled": "$(circle-slash) Kilo Code Autocomplete",
+			"warning": "$(warning) Kilo Code Autocomplete",
+			"tooltip": {
+				"basic": "Kilo Code Autocomplete",
+				"disabled": "Kilo Code Autocomplete (معطل)",
+				"tokenError": "يجب تعيين رمز صالح لاستخدام الإكمال التلقائي",
+				"lastCompletion": "آخر اقتراح:",
+				"sessionTotal": "إجمالي تكلفة الجلسة:",
+				"model": "النموذج:"
+			},
+			"cost": {
+				"zero": "$0.00",
+				"lessThanCent": "<$0.01"
+			}
+		},
+		"toggleMessage": "Kilo Code Autocomplete {{status}}",
 		"progress": {
-			"analyzing": "جارِ تحليل الكود الخاص بك...",
-			"showing": "عرض التعديلات المقترحة...",
-			"generating": "جاري توليد التعديلات المقترحة...",
-			"processing": "جارِ معالجة التعديلات المقترحة...",
-			"title": "Kilo Code"
+			"title": "Kilo Code",
+			"analyzing": "تحليل الكود الخاص بك...",
+			"generating": "إنشاء التعديلات المقترحة...",
+			"processing": "معالجة التعديلات المقترحة...",
+			"showing": "عرض التعديلات المقترحة..."
 		},
 		"input": {
 			"title": "Kilo Code: مهمة سريعة",
-			"placeholder": "مثلاً، 'أعد هيكلة هذه الدالة لتكون أكثر كفاءة'"
+			"placeholder": "مثال، 'أعد هيكلة هذه الدالة لتكون أكثر كفاءة'"
 		},
 		"commands": {
+			"generateSuggestions": "Kilo Code: إنشاء التعديلات المقترحة",
 			"displaySuggestions": "عرض التعديلات المقترحة",
-			"generateSuggestions": "Kilo Code: توليد تعديلات مقترحة",
-			"applyCurrentSuggestion": "تطبيق التعديل المُقترح الحالي",
 			"cancelSuggestions": "إلغاء التعديلات المقترحة",
+			"applyCurrentSuggestion": "تطبيق التعديل المقترح الحالي",
+			"applyAllSuggestions": "تطبيق جميع التعديلات المقترحة",
 			"promptCodeSuggestion": "مهمة سريعة",
-			"applyAllSuggestions": "تطبيق كافة التعديلات المقترحة",
 			"category": "Kilo Code"
 		},
 		"codeAction": {
 			"title": "Kilo Code: التعديلات المقترحة"
 		},
 		"chatParticipant": {
-			"fullName": "Kilo Code وكيل",
-			"description": "يمكنني مساعدتك بالمهام السريعة والتعديلات المقترحة.",
-			"name": "وكيل"
+			"fullName": "Kilo Code Agent",
+			"name": "Agent",
+			"description": "يمكنني مساعدتك في المهام السريعة والتعديلات المقترحة."
 		},
-		"messages": {
-			"provideCodeSuggestions": "جارٍ تقديم اقتراحات الرمز..."
-		},
-		"statusBar": {
-			"warning": "$(warning) مساعد Kilo المباشر",
-			"disabled": "$(circle-slash) مساعدة Kilo المضمنة",
-			"tooltip": {
-				"disabled": "مساعد Kilo كود المضمّن (معطّل)",
-				"basic": "مساعد رمز Kilo المدمج",
-				"lastCompletion": "الاقتراح الأخير:",
-				"model": "النموذج:",
-				"tokenError": "يجب تعيين رمز صالح لاستخدام المساعد المضمن",
-				"sessionTotal": "التكلفة الإجمالية للجلسة:"
-			},
-			"enabled": "$(sparkle) مساعد Kilo المضمّن",
-			"cost": {
-				"lessThanCent": "<$0.01",
-				"zero": "$٠٫٠٠"
-			}
-		},
-		"toggleMessage": "المساعد المضمن Kilo {{status}}",
 		"incompatibilityExtensionPopup": {
-			"message": "يتم حظر مساعد Kilo كود المضمّن بسبب تعارض مع GitHub Copilot. لإصلاح هذا، يجب عليك تعطيل اقتراحات Copilot المضمنة.",
+			"message": "يتم حظر Kilo Code Autocomplete بسبب تعارض مع GitHub Copilot. لإصلاح هذا، يجب عليك تعطيل اقتراحات Copilot المضمنة.",
 			"disableCopilot": "تعطيل Copilot",
-			"disableInlineAssist": "تعطيل المساعد المضمّن"
+			"disableInlineAssist": "تعطيل الإكمال التلقائي"
 		}
 	},
 	"terminalCommandGenerator": {

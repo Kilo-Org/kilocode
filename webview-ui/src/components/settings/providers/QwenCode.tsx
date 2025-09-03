@@ -1,60 +1,66 @@
-// kilocode_change -- file added
+import React from "react"
+import { VSCodeTextField, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
+import { type ProviderSettings } from "@roo-code/types"
 
-import { useCallback } from "react"
-import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
-
-import type { ProviderSettings } from "@roo-code/types"
-
-import { useAppTranslation } from "@src/i18n/TranslationContext"
-import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
-
-import { inputEventTransform } from "../transforms"
-
-type QwenCodeProps = {
+interface QwenCodeProps {
 	apiConfiguration: ProviderSettings
 	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
 }
 
-export const QwenCode = ({ apiConfiguration, setApiConfigurationField }: QwenCodeProps) => {
-	const { t } = useAppTranslation()
+export const QwenCode: React.FC<QwenCodeProps> = ({ apiConfiguration, setApiConfigurationField }) => {
+	const defaultPath = "~/.qwen/oauth_creds.json"
 
-	const handleInputChange = useCallback(
-		<K extends keyof ProviderSettings, E>(
-			field: K,
-			transform: (event: E) => ProviderSettings[K] = inputEventTransform,
-		) =>
-			(event: E | Event) => {
-				setApiConfigurationField(field, transform(event as E))
-			},
-		[setApiConfigurationField],
-	)
+	const handleInputChange = (e: Event | React.FormEvent<HTMLElement>) => {
+		const element = e.target as HTMLInputElement
+		setApiConfigurationField("qwenCodeOauthPath", element.value)
+	}
+
+	const handleBlur = (e: Event | React.FormEvent<HTMLElement>) => {
+		const element = e.target as HTMLInputElement
+		// If the field is empty on blur, set it to the default value
+		if (!element.value || element.value.trim() === "") {
+			setApiConfigurationField("qwenCodeOauthPath", defaultPath)
+		}
+	}
 
 	return (
-		<>
-			<VSCodeTextField
-				value={apiConfiguration?.qwenCodeOAuthPath || ""}
-				onInput={handleInputChange("qwenCodeOAuthPath")}
-				placeholder="~/.qwen/oauth_creds.json"
-				className="w-full">
-				<label className="block font-medium mb-1">{t("settings:providers.qwenCode.oauthPath")}</label>
-			</VSCodeTextField>
-			<div className="text-sm text-vscode-descriptionForeground -mt-2">
-				{t("settings:providers.qwenCode.oauthPathDescription")}
-			</div>
+		<div className="flex flex-col gap-4">
+			<div>
+				<VSCodeTextField
+					value={apiConfiguration?.qwenCodeOauthPath || ""}
+					className="w-full mt-1"
+					type="text"
+					onInput={handleInputChange}
+					onBlur={handleBlur}
+					placeholder={defaultPath}>
+					OAuth Credentials Path
+				</VSCodeTextField>
 
-			<div className="text-sm text-vscode-descriptionForeground mt-3">
-				{t("settings:providers.qwenCode.description")}
-			</div>
+				<p className="text-xs mt-1 text-vscode-descriptionForeground">
+					Path to your Qwen OAuth credentials file. Defaults to ~/.qwen/oauth_creds.json if left empty.
+				</p>
 
-			<div className="text-sm text-vscode-descriptionForeground mt-2">
-				{t("settings:providers.qwenCode.instructions")}
-			</div>
+				<div className="text-xs text-vscode-descriptionForeground mt-3">
+					Qwen Code is an OAuth-based API that requires authentication through the official Qwen client.
+					You&apos;ll need to set up OAuth credentials first.
+				</div>
 
-			<VSCodeLink
-				href="https://github.com/QwenLM/qwen-code/blob/main/README.md"
-				className="text-vscode-textLink-foreground hover:text-vscode-textLink-activeForeground mt-2 inline-block">
-				{t("settings:providers.qwenCode.setupLink")}
-			</VSCodeLink>
-		</>
+				<div className="text-xs text-vscode-descriptionForeground mt-2">
+					To get started:
+					<br />
+					1. Install the official Qwen client
+					<br />
+					2. Authenticate using your account
+					<br />
+					3. OAuth credentials will be stored automatically
+				</div>
+
+				<VSCodeLink
+					href="https://github.com/QwenLM/qwen-code/blob/main/README.md"
+					className="text-vscode-textLink-foreground mt-2 inline-block text-xs">
+					Setup Instructions
+				</VSCodeLink>
+			</div>
+		</div>
 	)
 }

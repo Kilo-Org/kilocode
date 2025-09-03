@@ -189,6 +189,10 @@
 		"wantsToEditOutsideWorkspace": "Kilo Code wants to edit this file outside of the workspace:",
 		"wantsToEditProtected": "Kilo Code wants to edit a protected configuration file:",
 		"wantsToApplyBatchChanges": "Kilo Code wants to apply changes to multiple files:",
+		"wantsToGenerateImage": "Kilo Code wants to generate an image:",
+		"wantsToGenerateImageOutsideWorkspace": "Kilo Code wants to generate an image outside of the workspace:",
+		"wantsToGenerateImageProtected": "Kilo Code wants to generate an image in a protected location:",
+		"didGenerateImage": "Kilo Code generated an image:",
 		"wantsToCreate": "Kilo Code wants to create a new file:",
 		"wantsToSearchReplace": "Kilo Code wants to search and replace in this file:",
 		"didSearchReplace": "Kilo Code performed search and replace on this file:",
@@ -282,10 +286,10 @@
 	"announcement": {
 		"title": "🎉 Roo Code {{version}} Released",
 		"stealthModel": {
-			"feature": "<bold>Limited-time FREE stealth model</bold> - A blazing fast reasoning model that excels at agentic coding with a 262k context window, available through Roo Code Cloud.",
-			"note": "(Note: prompts and completions are logged by the model creator to improve the model)",
+			"feature": "The Sonic stealth model is now <bold>Grok Code Fast</bold>! This high-performance reasoning model is available as <code>grok-code-fast-1</code> under the <bold>xAI (Grok)</bold> provider.",
+			"note": "As a thank you for all the helpful feedback on Sonic, xAI is extending free access to <code>grok-code-fast-1</code> for another week through the <bold>Roo Code Cloud</bold> provider.",
 			"connectButton": "Connect to Roo Code Cloud",
-			"selectModel": "Select <code>roo/sonic</code> from the Roo Code Cloud provider in<br/><settingsLink>Settings</settingsLink> to get started"
+			"selectModel": "Visit <settingsLink>Settings</settingsLink> to update your provider configuration."
 		}
 	},
 	"reasoning": {
@@ -368,7 +372,8 @@
 	"slashCommands": {
 		"tooltip": "Manage slash commands",
 		"title": "Slash Commands",
-		"description": "Create custom slash commands for quick access to frequently used prompts and workflows. <DocsLink>Docs</DocsLink>",
+		"description": "Use built-in slash commands or create custom ones for quick access to frequently used prompts and workflows. <DocsLink>Docs</DocsLink>",
+		"builtInCommands": "Built-in Commands",
 		"globalCommands": "Global Commands",
 		"workspaceCommands": "Workspace Commands",
 		"globalCommand": "Global command",

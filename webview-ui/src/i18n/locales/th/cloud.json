@@ -1,0 +1,16 @@
+{
+	"title": "คลาวด์",
+	"profilePicture": "รูปโปรไฟล์",
+	"logOut": "ออกจากระบบ",
+	"testApiAuthentication": "ทดสอบการยืนยันตัวตน API",
+	"signIn": "เชื่อมต่อกับ Kilo Code Cloud",
+	"connect": "เชื่อมต่อเดี๋ยวนี้",
+	"cloudBenefitsTitle": "เชื่อมต่อกับ Kilo Code Cloud",
+	"cloudBenefitWalkaway": "ติดตามและควบคุมงานจากทุกที่ด้วย Kilo remote Control",
+	"cloudBenefitSharing": "แชร์งานกับผู้อื่น",
+	"cloudBenefitHistory": "เข้าถึงประวัติงานของคุณ",
+	"cloudBenefitMetrics": "ดูภาพรวมการใช้โทเค็นของคุณ",
+	"visitCloudWebsite": "เยี่ยมชม Kilo Code Cloud",
+	"remoteControl": "Kilo remote Control",
+	"remoteControlDescription": "เปิดใช้งานการติดตามและโต้ตอบกับงานในพื้นที่ทำงานนี้ด้วย Kilo Code Cloud"
+}

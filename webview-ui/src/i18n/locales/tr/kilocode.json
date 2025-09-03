@@ -189,41 +189,37 @@
 		}
 	},
 	"ghost": {
-		"title": "Satır İçi Yardım",
+		"title": "Autocomplete",
 		"settings": {
-			"autoTrigger": "Otomatik Tetikleyici",
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Hızlı Satır İçi Görev",
-				"description": "Sadece hızlı bir değişikliğe mi ihtiyacınız var? Biraz kod seçin (ya da seçmeyin!) ve Cmd+I tuşuna basın. Amacınızı sade bir şekilde açıklayın (\"bu prop'larla bir React bileşeni oluştur\", \"bu fonksiyona hata yönetimi ekle\") ve düzenleyicinizde kullanıma hazır birden fazla öneri alın. <DocsLink>Kısayolu gör</DocsLink>"
-			},
-			"enableAutoInlineTaskKeybinding": {
-				"label": "Otomatik Satır İçi Görev",
-				"description": "Hızlı bir düzeltme, tamamlama veya yeniden düzenleme mi gerekiyor? Kilo, çevreleyen bağlamı kullanarak anında iyileştirmeler sunacak, böylece odağınızı kaybetmeyeceksiniz. <DocsLink>Kısayolu gör</DocsLink>"
-			},
+			"autoTrigger": "Otomatik Tetikleme",
+			"triggers": "Tetikleyiciler",
+			"keybindingDescription": "Autocomplete özellikleri komutlarla tetiklenebilir. <DocsLink>Klavye Kısayollarını burada</DocsLink> yapılandırabilirsin.",
 			"enableAutoTrigger": {
-				"label": "Otomatik Tetikleyiciyi Etkinleştir",
-				"description": "Etkinleştirildiğinde, yazmayı bıraktığında Kilo Code otomatik olarak Satır İçi Yardımı tetikler. Bu, hızlı düzeltmeler ve öneriler için yararlı olabilir."
+				"label": "Autocomplete'i Etkinleştir",
+				"description": "Etkinleştirildiğinde, Kilo Code yazmayı bıraktığında otomatik olarak Autocomplete'i tetikleyecek. Bu hızlı düzeltmeler ve öneriler için yararlı olabilir."
 			},
 			"autoTriggerDelay": {
-				"label": "Otomatik Tetikleyici Gecikmesi",
-				"description": "Yazmayı bıraktıktan sonra Kilo Code'un Satır İçi Yardımı tetiklemeden önceki saniye cinsinden gecikme. Daha kısa gecikme daha hızlı öneriler anlamına gelir, ancak daha fazla kaynak kullanabilir."
+				"label": "Otomatik Tetikleme Gecikmesi",
+				"description": "Yazmayı bıraktıktan sonra Kilo Code'un Autocomplete'i tetiklemeden önceki saniye cinsinden gecikme. Daha kısa gecikme daha hızlı öneriler anlamına gelir, ancak daha fazla kaynak yoğun olabilir."
+			},
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Hızlı Görev",
+				"description": "Sadece hızlı bir değişiklik mi gerekiyor? Biraz kod seç (ya da seçme!) ve Cmd+I'ya bas. Hedefini basit Türkçe ile açıkla (\"bu props'larla bir React bileşeni oluştur\", \"bu fonksiyona hata işleme ekle\"), ve editöründe doğrudan kullanıma hazır birden fazla öneri al. <DocsLink>Kısayolu gör</DocsLink>"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Akıllı Satır İçi Görev",
-				"description": "Hızlı bir düzeltme, tamamlama veya yeniden düzenlemeye mi ihtiyacın var? Kilo, anında iyileştirmeler sunmak için çevredeki bağlamı kullanır ve seni akışta tutar. <DocsLink>Kısayolu gör</DocsLink>"
+				"label": "Manuel Autocomplete",
+				"description": "Hızlı bir düzeltme, tamamlama veya yeniden düzenleme mi gerekiyor? Kilo çevredeki bağlamı kullanarak anında iyileştirmeler sunacak, seni akışta tutacak. <DocsLink>Kısayolu gör</DocsLink>"
 			},
 			"enableCustomProvider": {
 				"label": "Özel sağlayıcı kullan",
-				"description": "Inline Assist, varsayılan olarak Codestral modelini kullanmak için KiloCode / OpenRouter / Mistral kimlik bilgilerinizi kullanır"
+				"description": "Autocomplete varsayılan olarak Codestral modelini kullanmak için KiloCode / OpenRouter / Mistral kimlik bilgilerini kullanır"
 			},
 			"provider": "Sağlayıcı",
 			"apiConfigId": {
 				"label": "API Yapılandırması",
 				"current": "Şu anda seçili API yapılandırmasını kullan",
-				"description": "Satır İçi Yardım istemleri için kullanılacak bir API yapılandırması seçin veya o anda seçili olanı kullanın"
-			},
-			"triggers": "Tetikleyiciler",
-			"keybindingDescription": "Satır içi Yardım özellikleri komutlarla tetiklenir. <DocsLink>Klavye kısayollarını buradan</DocsLink> yapılandırabilirsiniz."
+				"description": "Autocomplete istekleri için kullanılacak API yapılandırmasını seç, ya da şu anda seçili olanı kullan"
+			}
 		}
 	},
 	"virtualProvider": {
@@ -247,5 +243,9 @@
 		"perHour": "Saat Başına",
 		"perMinute": "Dakika Başına",
 		"requestsLabel": "İstekler"
+	},
+	"imageWarnings": {
+		"maxImagesReached": "Mesaj başına maksimum 20 görsel. Daha fazla eklemek için bazı görselleri kaldırın.",
+		"modelNoImageSupport": "Görüntüler mevcut model tarafından desteklenmiyor."
 	}
 }

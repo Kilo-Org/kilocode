@@ -13,7 +13,8 @@
 	},
 	"task": {
 		"noAssistantMessages": "Phản hồi của mô hình kết thúc bất ngờ (không có tin nhắn trợ lý). Điều này có thể là dấu hiệu của giới hạn tốc độ.",
-		"notLoggedInError": "Không thể hoàn thành yêu cầu, hãy đảm bảo bạn đã kết nối và đăng nhập bằng nhà cung cấp đã chọn.\n\n{{error}}"
+		"notLoggedInError": "Không thể hoàn thành yêu cầu, hãy đảm bảo bạn đã kết nối và đăng nhập bằng nhà cung cấp đã chọn.\n\n{{error}}",
+		"maxCompletionTokens": "Đã đạt đến số lượng token hoàn thành tối đa."
 	},
 	"checkpoints": {
 		"nestedGitRepos": "Điểm kiểm tra không khả dụng vì phát hiện các kho lưu trữ Git lồng nhau trong không gian làm việc. Vui lòng xóa hoặc di chuyển các kho lưu trữ Git lồng nhau để sử dụng tính năng điểm kiểm tra hoặc tắt điểm kiểm tra trong cài đặt để loại bỏ cảnh báo này.",
@@ -61,14 +62,14 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Inline Assist",
-			"disabled": "$(circle-slash) Kilo Inline Assist",
-			"warning": "$(warning) Kilo Inline Assist",
+			"enabled": "$(sparkle) Kilo Code Autocomplete",
+			"disabled": "$(circle-slash) Kilo Code Autocomplete",
+			"warning": "$(warning) Kilo Code Autocomplete",
 			"tooltip": {
-				"basic": "Kilo Code Inline Assist",
-				"disabled": "Kilo Code Inline Assist (đã tắt)",
-				"tokenError": "Phải đặt một token hợp lệ để sử dụng Inline Assist",
-				"lastCompletion": "Đề xuất cuối cùng:",
+				"basic": "Kilo Code Autocomplete",
+				"disabled": "Kilo Code Autocomplete (đã tắt)",
+				"tokenError": "Phải đặt token hợp lệ để sử dụng Autocomplete",
+				"lastCompletion": "Gợi ý cuối cùng:",
 				"sessionTotal": "Tổng chi phí phiên:",
 				"model": "Mô hình:"
 			},
@@ -77,7 +78,7 @@
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Kilo Inline Assist {{status}}",
+		"toggleMessage": "Kilo Code Autocomplete {{status}}",
 		"progress": {
 			"title": "Kilo Code",
 			"analyzing": "Đang phân tích mã của bạn...",
@@ -86,33 +87,30 @@
 			"showing": "Đang hiển thị các chỉnh sửa được đề xuất..."
 		},
 		"input": {
-			"title": "Kilo Code: Nhiệm vụ Nhanh",
-			"placeholder": "ví dụ: 'tái cấu trúc hàm này để hiệu quả hơn'"
+			"title": "Kilo Code: Tác Vụ Nhanh",
+			"placeholder": "ví dụ, 'tái cấu trúc hàm này để hiệu quả hơn'"
 		},
 		"commands": {
-			"generateSuggestions": "Kilo Code: Tạo các chỉnh sửa được đề xuất",
-			"displaySuggestions": "Hiển thị các chỉnh sửa được đề xuất",
-			"cancelSuggestions": "Hủy các chỉnh sửa được đề xuất",
-			"applyCurrentSuggestion": "Áp dụng chỉnh sửa được đề xuất hiện tại",
-			"applyAllSuggestions": "Áp dụng tất cả các chỉnh sửa được đề xuất",
-			"promptCodeSuggestion": "Nhiệm vụ Nhanh",
+			"generateSuggestions": "Kilo Code: Tạo Các Chỉnh Sửa Được Đề Xuất",
+			"displaySuggestions": "Hiển Thị Các Chỉnh Sửa Được Đề Xuất",
+			"cancelSuggestions": "Hủy Các Chỉnh Sửa Được Đề Xuất",
+			"applyCurrentSuggestion": "Áp Dụng Chỉnh Sửa Được Đề Xuất Hiện Tại",
+			"applyAllSuggestions": "Áp Dụng Tất Cả Các Chỉnh Sửa Được Đề Xuất",
+			"promptCodeSuggestion": "Tác Vụ Nhanh",
 			"category": "Kilo Code"
 		},
 		"codeAction": {
-			"title": "Kilo Code: Chỉnh sửa được đề xuất"
+			"title": "Kilo Code: Các Chỉnh Sửa Được Đề Xuất"
 		},
 		"chatParticipant": {
 			"fullName": "Kilo Code Agent",
 			"name": "Agent",
-			"description": "Tôi có thể giúp bạn với các nhiệm vụ nhanh chóng và các chỉnh sửa được đề xuất."
-		},
-		"messages": {
-			"provideCodeSuggestions": "Đang cung cấp các đề xuất mã..."
+			"description": "Tôi có thể giúp bạn với các tác vụ nhanh và chỉnh sửa được đề xuất."
 		},
 		"incompatibilityExtensionPopup": {
-			"message": "Kilo Code Inline Assist bị chặn bởi xung đột với GitHub Copilot. Để khắc phục điều này, bạn phải tắt các đề xuất nội dòng của Copilot.",
+			"message": "Kilo Code Autocomplete đang bị chặn do xung đột với GitHub Copilot. Để khắc phục điều này, bạn phải tắt các gợi ý inline của Copilot.",
 			"disableCopilot": "Tắt Copilot",
-			"disableInlineAssist": "Tắt Trợ lý Nội dòng"
+			"disableInlineAssist": "Tắt Autocomplete"
 		}
 	},
 	"terminalCommandGenerator": {
