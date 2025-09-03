@@ -15,7 +15,8 @@
 		"watch:tsc": "tsc --watch",
 		"watch": "tsc --watch",
 		"bundle:package": "cp ./package.json ./dist/package.json",
-		"bundle:build": "tsc --noEmit && tsup"
+		"bundle:build": "tsc --noEmit && tsup",
+		"lint": "eslint . --ext=ts --max-warnings=0"
 	},
 	"dependencies": {
 		"@c4312/eventsource-umd": "^3.0.5",
@@ -69,6 +70,7 @@
 		"yazl": "^2.4.3"
 	},
 	"devDependencies": {
+		"@roo-code/config-eslint": "workspace:^",
 		"@playwright/test": "^1.50.0",
 		"@types/cookie": "^0.3.3",
 		"@types/debug": "^4.1.5",

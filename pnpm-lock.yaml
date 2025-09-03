@@ -711,6 +711,9 @@ importers:
       '@playwright/test':
         specifier: ^1.50.0
         version: 1.55.0
+      '@roo-code/config-eslint':
+        specifier: workspace:^
+        version: link:../../packages/config-eslint
       '@types/cookie':
         specifier: ^0.3.3
         version: 0.3.3
