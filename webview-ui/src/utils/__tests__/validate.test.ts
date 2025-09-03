@@ -1,6 +1,5 @@
-import type { ProviderSettings } from "@roo-code/types"
+import type { ProviderSettings, OrganizationAllowList } from "@roo-code/types"
 
-import type { OrganizationAllowList } from "@roo/cloud"
 import { RouterModels } from "@roo/api"
 
 import { getModelValidationError, validateApiConfigurationExcludingModelErrors } from "../validate"
@@ -61,6 +60,7 @@ describe("Model Validation Functions", () => {
 		"io-intelligence": {},
 		submodel: {},
 		deepinfra: {}, // kilocode_change
+		"vercel-ai-gateway": {},
 	}
 
 	const allowAllOrganization: OrganizationAllowList = {

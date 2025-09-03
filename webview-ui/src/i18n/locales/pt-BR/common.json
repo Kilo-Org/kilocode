@@ -67,6 +67,12 @@
 			"copyError": "Erro ao copiar imagem"
 		}
 	},
+	"image": {
+		"tabs": {
+			"view": "Imagem"
+		},
+		"noData": "Nenhum dado de imagem"
+	},
 	"file": {
 		"errors": {
 			"invalidDataUri": "Formato de URI de dados inválido",

@@ -3,7 +3,7 @@ import { Mode } from "@roo/modes"
 import { Button, StandardTooltip } from "@/components/ui"
 import { Image, SendHorizontal } from "lucide-react"
 import { cn } from "@/lib/utils"
-import ModeSelector from "./ModeSelector"
+import { ModeSelector } from "./ModeSelector"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 
 interface EditModeControlsProps {

@@ -67,6 +67,12 @@
 			"copyError": "Chyba při kopírování obrázku"
 		}
 	},
+	"image": {
+		"tabs": {
+			"view": "Obrázek"
+		},
+		"noData": "Žádná data obrázku"
+	},
 	"file": {
 		"errors": {
 			"invalidDataUri": "Neplatný formát data URI",

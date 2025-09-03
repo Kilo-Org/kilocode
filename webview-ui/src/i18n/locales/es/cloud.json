@@ -1,0 +1,17 @@
+{
+	"title": "Cloud",
+	"profilePicture": "Foto de perfil",
+	"logOut": "Cerrar sesión",
+	"testApiAuthentication": "Probar autenticación de API",
+	"signIn": "Conectar a Kilo Code Cloud",
+	"connect": "Conectar",
+	"cloudBenefitsTitle": "Conectar a Kilo Code Cloud",
+	"cloudBenefitsSubtitle": "Sincroniza tus prompts y telemetría para habilitar:",
+	"cloudBenefitHistory": "Historial de tareas en línea",
+	"cloudBenefitSharing": "Funciones de compartir y colaboración",
+	"cloudBenefitMetrics": "Métricas de uso basadas en tareas, tokens y costos",
+	"cloudBenefitWalkaway": "Sigue y controla tareas desde cualquier lugar con Kilo remote Control",
+	"remoteControl": "Kilo remote Control",
+	"remoteControlDescription": "Permite seguir e interactuar con tareas en este espacio de trabajo con Kilo Code Cloud",
+	"visitCloudWebsite": "Visitar Kilo Code Cloud"
+}

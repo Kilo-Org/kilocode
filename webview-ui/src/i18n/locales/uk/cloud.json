@@ -1,0 +1,16 @@
+{
+	"title": "Хмара",
+	"profilePicture": "Фото профілю",
+	"logOut": "Вийти",
+	"testApiAuthentication": "Тестувати автентифікацію API",
+	"signIn": "Підключитися до Kilo Code Cloud",
+	"connect": "Підключитися зараз",
+	"cloudBenefitsTitle": "Підключитися до Kilo Code Cloud",
+	"cloudBenefitWalkaway": "Відстежуй і керуй завданнями звідусіль за допомогою Kilo remote Control",
+	"cloudBenefitSharing": "Діліться завданнями з іншими",
+	"cloudBenefitHistory": "Доступ до історії завдань",
+	"cloudBenefitMetrics": "Отримайте цілісний огляд споживання токенів",
+	"visitCloudWebsite": "Відвідати Kilo Code Cloud",
+	"remoteControl": "Kilo remote Control",
+	"remoteControlDescription": "Увімкнути відстеження та взаємодію з завданнями в цьому робочому просторі за допомогою Kilo Code Cloud"
+}

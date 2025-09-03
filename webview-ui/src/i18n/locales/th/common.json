@@ -67,6 +67,12 @@
 			"copyError": "เกิดข้อผิดพลาดในการคัดลอกรูปภาพ"
 		}
 	},
+	"image": {
+		"tabs": {
+			"view": "รูปภาพ"
+		},
+		"noData": "ไม่มีข้อมูลรูปภาพ"
+	},
 	"file": {
 		"errors": {
 			"invalidDataUri": "รูปแบบ data URI ไม่ถูกต้อง",

@@ -1,0 +1,17 @@
+{
+	"title": "Cloud",
+	"profilePicture": "Imatge de perfil",
+	"logOut": "Tancar sessió",
+	"testApiAuthentication": "Provar autenticació d'API",
+	"signIn": "Connecta't a Kilo Code Cloud",
+	"connect": "Connecta",
+	"cloudBenefitsTitle": "Connecta't a Kilo Code Cloud",
+	"cloudBenefitsSubtitle": "Sincronitza els teus prompts i telemetria per habilitar:",
+	"cloudBenefitHistory": "Historial de tasques en línia",
+	"cloudBenefitSharing": "Funcions de compartició i col·laboració",
+	"cloudBenefitMetrics": "Mètriques d'ús basades en tasques, tokens i costos",
+	"cloudBenefitWalkaway": "Segueix i controla tasques des de qualsevol lloc amb Roomote Control",
+	"remoteControl": "Remote Control",
+	"remoteControlDescription": "Permet seguir i interactuar amb tasques en aquest espai de treball amb Kilo Code Cloud",
+	"visitCloudWebsite": "Visita Kilo Code Cloud"
+}

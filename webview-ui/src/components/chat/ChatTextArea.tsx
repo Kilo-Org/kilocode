@@ -22,7 +22,7 @@ import { convertToMentionPath } from "@/utils/path-mentions"
 import { DropdownOptionType, Button, StandardTooltip } from "@/components/ui" // kilocode_change
 
 import Thumbnails from "../common/Thumbnails"
-import ModeSelector from "./ModeSelector"
+import { ModeSelector } from "./ModeSelector"
 import KiloModeSelector from "../kilocode/KiloModeSelector"
 import { KiloProfileSelector } from "../kilocode/chat/KiloProfileSelector" // kilocode_change
 import { MAX_IMAGES_PER_MESSAGE } from "./ChatView"
@@ -73,7 +73,7 @@ interface ChatTextAreaProps {
 	onCancel?: () => void
 }
 
-const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
+export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 	(
 		{
 			inputValue,
@@ -1657,5 +1657,3 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		)
 	},
 )
-
-export default ChatTextArea

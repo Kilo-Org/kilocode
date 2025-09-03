@@ -67,6 +67,12 @@
 			"copyError": "इमेज कॉपी करने में त्रुटि"
 		}
 	},
+	"image": {
+		"tabs": {
+			"view": "चित्र"
+		},
+		"noData": "कोई छवि डेटा नहीं"
+	},
 	"file": {
 		"errors": {
 			"invalidDataUri": "अमान्य डेटा URI फॉर्मेट",

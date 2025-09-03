@@ -10,6 +10,7 @@ import { RouterName, ModelRecord, cerebrasModels } from "../../../shared/api"
 import { fileExistsAtPath } from "../../../utils/fs"
 
 import { getOpenRouterModels } from "./openrouter"
+import { getVercelAiGatewayModels } from "./vercel-ai-gateway"
 import { getRequestyModels } from "./requesty"
 import { getGlamaModels } from "./glama"
 import { getUnboundModels } from "./unbound"
@@ -109,6 +110,9 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				break
 			case "submodel":
 				models = await getSubmodelModels(options.apiKey)
+				break
+			case "vercel-ai-gateway":
+				models = await getVercelAiGatewayModels()
 				break
 			default: {
 				// Ensures router is exhaustively checked if RouterName is a strict union

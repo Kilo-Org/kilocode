@@ -134,6 +134,7 @@ const routerNames = [
 	"io-intelligence",
 	"submodel",
 	"deepinfra", // kilocode_change
+	"vercel-ai-gateway",
 ] as const
 
 export type RouterName = (typeof routerNames)[number]
@@ -262,3 +263,4 @@ export type GetModelsOptions =
 	| { provider: "deepinfra"; apiKey?: string; baseUrl?: string }
 	| { provider: "io-intelligence"; apiKey: string }
 	| { provider: "submodel"; apiKey: string }
+	| { provider: "vercel-ai-gateway" }

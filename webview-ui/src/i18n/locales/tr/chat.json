@@ -182,7 +182,11 @@
 		"wantsToInsertAtEnd": "Kilo Code bu dosyanın sonuna içerik eklemek istiyor:",
 		"wantsToReadAndXMore": "Kilo Code bu dosyayı ve {{count}} tane daha okumak istiyor:",
 		"wantsToReadMultiple": "Kilo Code birden fazla dosya okumak istiyor:",
-		"wantsToApplyBatchChanges": "Kilo Code birden fazla dosyaya değişiklik uygulamak istiyor:"
+		"wantsToApplyBatchChanges": "Kilo Code birden fazla dosyaya değişiklik uygulamak istiyor:",
+		"wantsToGenerateImage": "Kilo Code bir görsel oluşturmak istiyor:",
+		"wantsToGenerateImageOutsideWorkspace": "Kilo Code çalışma alanının dışında bir görsel oluşturmak istiyor:",
+		"wantsToGenerateImageProtected": "Kilo Code korumalı bir konumda görsel oluşturmak istiyor:",
+		"didGenerateImage": "Kilo Code bir görsel oluşturdu:"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code bu dizindeki üst düzey dosyaları görüntülemek istiyor:",
@@ -273,10 +277,10 @@
 	"announcement": {
 		"title": "🎉 Roo Code {{version}} Yayınlandı",
 		"stealthModel": {
-			"feature": "<bold>Sınırlı süre ÜCRETSİZ gizli model</bold> - 262k bağlam penceresi ile ajantik kodlamada mükemmel olan çok hızlı akıl yürütme modeli, Roo Code Cloud üzerinden kullanılabilir.",
-			"note": "(Not: istemler ve tamamlamalar model yaratıcısı tarafından kaydedilir ve modeli geliştirmek için kullanılır)",
+			"feature": "Sonic gizli model artık <bold>Grok Code Fast</bold>! Bu yüksek performanslı akıl yürütme modeli <bold>xAI (Grok)</bold> sağlayıcısı altında <code>grok-code-fast-1</code> olarak mevcut.",
+			"note": "Sonic hakkındaki tüm yararlı geri bildirimler için teşekkür olarak, xAI <code>grok-code-fast-1</code>'e ücretsiz erişimi <bold>Roo Code Cloud</bold> sağlayıcısı üzerinden bir hafta daha uzatıyor.",
 			"connectButton": "Roo Code Cloud'a bağlan",
-			"selectModel": "<br/><settingsLink>Ayarlar</settingsLink>'da Roo Code Cloud sağlayıcısından <code>roo/sonic</code>'i seç ve başla"
+			"selectModel": "Sağlayıcı yapılandırmanızı güncellemek için <settingsLink>Ayarlar</settingsLink>'ı ziyaret edin."
 		},
 		"description": "Roo Code {{version}}, geliştirme iş akışınızı geliştirmek için güçlü yeni özellikler ve önemli iyileştirmeler getiriyor.",
 		"whatsNew": "Yenilikler",
@@ -375,7 +379,8 @@
 	"slashCommands": {
 		"tooltip": "Eğik çizgi komutlarını yönet",
 		"title": "Eğik Çizgi Komutları",
-		"description": "Sık kullanılan komut istemleri ve iş akışlarına hızlı erişim için özel eğik çizgi komutları oluşturun. <DocsLink>Belgeler</DocsLink>",
+		"description": "Yerleşik eğik çizgi komutlarını kullanın veya sık kullanılan komut istemleri ve iş akışlarına hızlı erişim için özel komutlar oluşturun. <DocsLink>Belgeler</DocsLink>",
+		"builtInCommands": "Yerleşik Komutlar",
 		"globalCommands": "Genel Komutlar",
 		"workspaceCommands": "Çalışma Alanı Komutları",
 		"globalCommand": "Genel komut",

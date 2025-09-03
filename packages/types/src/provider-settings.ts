@@ -18,6 +18,7 @@ import {
 	mistralModels,
 	moonshotModels,
 	openAiNativeModels,
+	qwenCodeModels,
 	rooModels,
 	sambaNovaModels,
 	vertexModels,
@@ -47,6 +48,7 @@ export const providerNames = [
 	"moonshot",
 	"deepseek",
 	"doubao",
+	"qwen-code",
 	"unbound",
 	"requesty",
 	"human-relay",
@@ -60,7 +62,6 @@ export const providerNames = [
 	"deepinfra",
 	"gemini-cli",
 	"virtual-quota-fallback",
-	"qwen-code",
 	// kilocode_change end
 	"huggingface",
 	"cerebras",
@@ -71,6 +72,7 @@ export const providerNames = [
 	"io-intelligence",
 	"roo",
 	"submodel",
+	"vercel-ai-gateway",
 ] as const
 
 export const providerNamesSchema = z.enum(providerNames)
@@ -85,6 +87,7 @@ export const providerSettingsEntrySchema = z.object({
 	id: z.string(),
 	name: z.string(),
 	apiProvider: providerNamesSchema.optional(),
+	modelId: z.string().optional(),
 })
 
 export type ProviderSettingsEntry = z.infer<typeof providerSettingsEntrySchema>
@@ -200,7 +203,7 @@ const openAiSchema = baseProviderSettingsSchema.extend({
 const ollamaSchema = baseProviderSettingsSchema.extend({
 	ollamaModelId: z.string().optional(),
 	ollamaBaseUrl: z.string().optional(),
-	ollamaApiKey: z.string().optional(), // kilocode_change
+	ollamaApiKey: z.string().optional(),
 })
 
 const vsCodeLmSchema = baseProviderSettingsSchema.extend({
@@ -346,10 +349,6 @@ export const virtualQuotaFallbackProfileDataSchema = z.object({
 const virtualQuotaFallbackSchema = baseProviderSettingsSchema.extend({
 	profiles: z.array(virtualQuotaFallbackProfileDataSchema).optional(),
 })
-
-const qwenCodeSchema = apiModelIdProviderModelSchema.extend({
-	qwenCodeOAuthPath: z.string().optional(),
-})
 // kilocode_change end
 
 const zaiSchema = apiModelIdProviderModelSchema.extend({
@@ -375,8 +374,17 @@ const submodelSchema = apiModelIdProviderModelSchema.extend({
 	submodelApiKey: z.string().optional(),
 })
 
+const qwenCodeSchema = apiModelIdProviderModelSchema.extend({
+	qwenCodeOauthPath: z.string().optional(),
+})
+
 const rooSchema = apiModelIdProviderModelSchema.extend({
 	// No additional fields needed - uses cloud authentication
+})
+
+const vercelAiGatewaySchema = baseProviderSettingsSchema.extend({
+	vercelAiGatewayApiKey: z.string().optional(),
+	vercelAiGatewayModelId: z.string().optional(),
 })
 
 const defaultSchema = z.object({
@@ -410,7 +418,6 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	geminiCliSchema.merge(z.object({ apiProvider: z.literal("gemini-cli") })),
 	kilocodeSchema.merge(z.object({ apiProvider: z.literal("kilocode") })),
 	virtualQuotaFallbackSchema.merge(z.object({ apiProvider: z.literal("virtual-quota-fallback") })),
-	qwenCodeSchema.merge(z.object({ apiProvider: z.literal("qwen-code") })),
 	// kilocode_change end
 	groqSchema.merge(z.object({ apiProvider: z.literal("groq") })),
 	huggingFaceSchema.merge(z.object({ apiProvider: z.literal("huggingface") })),
@@ -423,7 +430,9 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	featherlessSchema.merge(z.object({ apiProvider: z.literal("featherless") })),
 	ioIntelligenceSchema.merge(z.object({ apiProvider: z.literal("io-intelligence") })),
 	submodelSchema.merge(z.object({ apiProvider: z.literal("submodel") })),
+	qwenCodeSchema.merge(z.object({ apiProvider: z.literal("qwen-code") })),
 	rooSchema.merge(z.object({ apiProvider: z.literal("roo") })),
+	vercelAiGatewaySchema.merge(z.object({ apiProvider: z.literal("vercel-ai-gateway") })),
 	defaultSchema,
 ])
 
@@ -444,7 +453,6 @@ export const providerSettingsSchema = z.object({
 	...geminiCliSchema.shape,
 	...kilocodeSchema.shape,
 	...virtualQuotaFallbackSchema.shape,
-	...qwenCodeSchema.shape,
 	...deepInfraSchema.shape,
 	// kilocode_change end
 	...openAiNativeSchema.shape,
@@ -468,16 +476,20 @@ export const providerSettingsSchema = z.object({
 	...featherlessSchema.shape,
 	...ioIntelligenceSchema.shape,
 	...submodelSchema.shape,
+	...qwenCodeSchema.shape,
 	...rooSchema.shape,
+	...vercelAiGatewaySchema.shape,
 	...codebaseIndexProviderSchema.shape,
 })
 
 export type ProviderSettings = z.infer<typeof providerSettingsSchema>
 
 export const providerSettingsWithIdSchema = providerSettingsSchema.extend({ id: z.string().optional() })
+
 export const discriminatedProviderSettingsWithIdSchema = providerSettingsSchemaDiscriminated.and(
 	z.object({ id: z.string().optional() }),
 )
+
 export type ProviderSettingsWithId = z.infer<typeof providerSettingsWithIdSchema>
 
 export const PROVIDER_SETTINGS_KEYS = providerSettingsSchema.keyof().options
@@ -497,6 +509,7 @@ export const MODEL_ID_KEYS: Partial<keyof ProviderSettings>[] = [
 	"ioIntelligenceModelId",
 	"submodelModelId",
 	"deepInfraModelId", // kilocode_change
+	"vercelAiGatewayModelId",
 ]
 
 export const getModelId = (settings: ProviderSettings): string | undefined => {
@@ -513,6 +526,11 @@ export const getApiProtocol = (provider: ProviderName | undefined, modelId?: str
 	}
 
 	if (provider && provider === "vertex" && modelId && modelId.toLowerCase().includes("claude")) {
+		return "anthropic"
+	}
+
+	// Vercel AI Gateway uses anthropic protocol for anthropic models.
+	if (provider && provider === "vercel-ai-gateway" && modelId && modelId.toLowerCase().startsWith("anthropic/")) {
 		return "anthropic"
 	}
 
@@ -586,6 +604,7 @@ export const MODELS_BY_PROVIDER: Record<
 		label: "OpenAI",
 		models: Object.keys(openAiNativeModels),
 	},
+	"qwen-code": { id: "qwen-code", label: "Qwen Code", models: Object.keys(qwenCodeModels) },
 	roo: { id: "roo", label: "Roo", models: Object.keys(rooModels) },
 	sambanova: {
 		id: "sambanova",
@@ -617,9 +636,9 @@ export const MODELS_BY_PROVIDER: Record<
 	// kilocode_change start
 	kilocode: { id: "kilocode", label: "Kilocode", models: [] },
 	"virtual-quota-fallback": { id: "virtual-quota-fallback", label: "Virtual Quota Fallback", models: [] },
-	"qwen-code": { id: "qwen-code", label: "Qwen Code", models: [] },
 	deepinfra: { id: "deepinfra", label: "DeepInfra", models: [] },
 	// kilocode_change end
+	"vercel-ai-gateway": { id: "vercel-ai-gateway", label: "Vercel AI Gateway", models: [] },
 }
 
 export const dynamicProviders = [
@@ -635,6 +654,7 @@ export const dynamicProviders = [
 	"virtual-quota-fallback",
 	"deepinfra",
 	// kilocode_change end
+	"vercel-ai-gateway",
 ] as const satisfies readonly ProviderName[]
 
 export type DynamicProvider = (typeof dynamicProviders)[number]

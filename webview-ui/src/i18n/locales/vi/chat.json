@@ -182,7 +182,11 @@
 		"wantsToInsertAtEnd": "Kilo Code muốn thêm nội dung vào cuối tệp này:",
 		"wantsToReadAndXMore": "Kilo Code muốn đọc tệp này và {{count}} tệp khác:",
 		"wantsToReadMultiple": "Kilo Code muốn đọc nhiều tệp:",
-		"wantsToApplyBatchChanges": "Kilo Code muốn áp dụng thay đổi cho nhiều tệp:"
+		"wantsToApplyBatchChanges": "Kilo Code muốn áp dụng thay đổi cho nhiều tệp:",
+		"wantsToGenerateImage": "Kilo Code muốn tạo một hình ảnh:",
+		"wantsToGenerateImageOutsideWorkspace": "Kilo Code muốn tạo hình ảnh bên ngoài không gian làm việc:",
+		"wantsToGenerateImageProtected": "Kilo Code muốn tạo hình ảnh ở vị trí được bảo vệ:",
+		"didGenerateImage": "Kilo Code đã tạo một hình ảnh:"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code muốn xem các tệp cấp cao nhất trong thư mục này:",
@@ -273,10 +277,10 @@
 	"announcement": {
 		"title": "🎉 Roo Code {{version}} Đã phát hành",
 		"stealthModel": {
-			"feature": "<bold>Mô hình stealth MIỄN PHÍ có thời hạn</bold> - Một mô hình lý luận cực nhanh xuất sắc trong lập trình agentic với cửa sổ ngữ cảnh 262k, có sẵn qua Roo Code Cloud.",
-			"note": "(Lưu ý: các prompt và completion được ghi lại bởi người tạo mô hình và được sử dụng để cải thiện mô hình)",
+			"feature": "Mô hình stealth Sonic giờ là <bold>Grok Code Fast</bold>! Mô hình lý luận hiệu năng cao này có sẵn dưới dạng <code>grok-code-fast-1</code> trong nhà cung cấp <bold>xAI (Grok)</bold>.",
+			"note": "Để cảm ơn tất cả các phản hồi hữu ích về Sonic, xAI đang mở rộng quyền truy cập miễn phí vào <code>grok-code-fast-1</code> thêm một tuần nữa thông qua nhà cung cấp <bold>Roo Code Cloud</bold>.",
 			"connectButton": "Kết nối với Roo Code Cloud",
-			"selectModel": "Chọn <code>roo/sonic</code> từ nhà cung cấp Roo Code Cloud trong<br/><settingsLink>Cài đặt</settingsLink> để bắt đầu"
+			"selectModel": "Truy cập <settingsLink>Cài đặt</settingsLink> để cập nhật cấu hình nhà cung cấp của bạn."
 		},
 		"description": "Roo Code {{version}} mang đến các tính năng mạnh mẽ mới và cải tiến đáng kể để nâng cao quy trình phát triển của bạn.",
 		"whatsNew": "Có gì mới",
@@ -375,7 +379,8 @@
 	"slashCommands": {
 		"tooltip": "Quản lý lệnh gạch chéo",
 		"title": "Lệnh Gạch Chéo",
-		"description": "Tạo lệnh gạch chéo tùy chỉnh để truy cập nhanh vào các lời nhắc và quy trình làm việc thường dùng. <DocsLink>Tài liệu</DocsLink>",
+		"description": "Sử dụng lệnh gạch chéo tích hợp sẵn hoặc tạo tùy chỉnh để truy cập nhanh vào các lời nhắc và quy trình làm việc thường dùng. <DocsLink>Tài liệu</DocsLink>",
+		"builtInCommands": "Lệnh Tích Hợp",
 		"globalCommands": "Lệnh Toàn Cục",
 		"workspaceCommands": "Lệnh Không Gian Làm Việc",
 		"globalCommand": "Lệnh toàn cục",

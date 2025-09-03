@@ -1,0 +1,16 @@
+{
+	"title": "السحابة",
+	"profilePicture": "صورة الملف الشخصي",
+	"logOut": "تسجيل الخروج",
+	"testApiAuthentication": "اختبار مصادقة API",
+	"signIn": "الاتصال بـ Kilo Code Cloud",
+	"connect": "الاتصال الآن",
+	"cloudBenefitsTitle": "الاتصال بـ Kilo Code Cloud",
+	"cloudBenefitWalkaway": "تابع وتحكم في المهام من أي مكان باستخدام Kilo remote Control",
+	"cloudBenefitSharing": "شارك المهام مع الآخرين",
+	"cloudBenefitHistory": "الوصول إلى تاريخ المهام",
+	"cloudBenefitMetrics": "احصل على نظرة شاملة على استهلاك Token الخاص بك",
+	"visitCloudWebsite": "زيارة Kilo Code Cloud",
+	"remoteControl": "Kilo remote Control",
+	"remoteControlDescription": "تمكين متابعة والتفاعل مع المهام في مساحة العمل هذه باستخدام Kilo Code Cloud"
+}

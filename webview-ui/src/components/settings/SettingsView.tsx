@@ -31,11 +31,10 @@ import {
 // kilocode_change
 import { ensureBodyPointerEventsRestored } from "@/utils/fixPointerEvents"
 
-import type { ProviderSettings, ExperimentId } from "@roo-code/types"
-
-import { TelemetrySetting } from "@roo/TelemetrySetting"
+import type { ProviderSettings, ExperimentId, TelemetrySetting } from "@roo-code/types"
 
 import { vscode } from "@src/utils/vscode"
+import { cn } from "@src/lib/utils"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { ExtensionStateContextType, useExtensionState } from "@src/context/ExtensionStateContext"
 import {
@@ -72,7 +71,6 @@ import { LanguageSettings } from "./LanguageSettings"
 import { About } from "./About"
 import { Section } from "./Section"
 import PromptsSettings from "./PromptsSettings"
-import { cn } from "@/lib/utils"
 import McpView from "../kilocodeMcp/McpView" // kilocode_change
 import deepEqual from "fast-deep-equal" // kilocode_change
 import { GhostServiceSettingsView } from "../kilocode/settings/GhostServiceSettings" // kilocode_change
@@ -212,6 +210,8 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		includeDiagnosticMessages,
 		maxDiagnosticMessages,
 		includeTaskHistoryInEnhance,
+		openRouterImageApiKey,
+		openRouterImageGenerationSelectedModel,
 	} = cachedState
 
 	const apiConfiguration = useMemo(() => cachedState.apiConfiguration ?? {}, [cachedState.apiConfiguration])
@@ -321,6 +321,20 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		})
 	}, [])
 
+	const setOpenRouterImageApiKey = useCallback((apiKey: string) => {
+		setCachedState((prevState) => {
+			setChangeDetected(true)
+			return { ...prevState, openRouterImageApiKey: apiKey }
+		})
+	}, [])
+
+	const setImageGenerationSelectedModel = useCallback((model: string) => {
+		setCachedState((prevState) => {
+			setChangeDetected(true)
+			return { ...prevState, openRouterImageGenerationSelectedModel: model }
+		})
+	}, [])
+
 	const setCustomSupportPromptsField = useCallback((prompts: Record<string, string | undefined>) => {
 		setCachedState((prevState) => {
 			if (JSON.stringify(prevState.customSupportPrompts) === JSON.stringify(prompts)) {
@@ -411,7 +425,11 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			vscode.postMessage({ type: "systemNotificationsEnabled", bool: systemNotificationsEnabled }) // kilocode_change
 			vscode.postMessage({ type: "ghostServiceSettings", values: ghostServiceSettings }) // kilocode_change
 			vscode.postMessage({ type: "morphApiKey", text: morphApiKey }) // kilocode_change
-
+			vscode.postMessage({ type: "openRouterImageApiKey", text: openRouterImageApiKey })
+			vscode.postMessage({
+				type: "openRouterImageGenerationSelectedModel",
+				text: openRouterImageGenerationSelectedModel,
+			})
 			// Update cachedState to match the current state to prevent isChangeDetected from being set back to true
 			setCachedState((prevState) => ({ ...prevState, ...extensionState }))
 			setChangeDetected(false)
@@ -851,6 +869,14 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 							setCachedStateField={setCachedStateField}
 							morphApiKey={morphApiKey}
 							// kilocode_change end
+							apiConfiguration={apiConfiguration}
+							setApiConfigurationField={setApiConfigurationField}
+							openRouterImageApiKey={openRouterImageApiKey as string | undefined}
+							openRouterImageGenerationSelectedModel={
+								openRouterImageGenerationSelectedModel as string | undefined
+							}
+							setOpenRouterImageApiKey={setOpenRouterImageApiKey}
+							setImageGenerationSelectedModel={setImageGenerationSelectedModel}
 						/>
 					)}
 

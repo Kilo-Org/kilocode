@@ -1,8 +1,7 @@
 import i18next from "i18next"
 
-import type { ProviderSettings } from "@roo-code/types"
+import type { ProviderSettings, OrganizationAllowList } from "@roo-code/types"
 
-import type { OrganizationAllowList } from "@roo/cloud"
 import { isRouterName, RouterModels } from "@roo/api"
 
 export function validateApiConfiguration(
@@ -82,9 +81,6 @@ function validateModelsAndKeysProvided(apiConfiguration: ProviderSettings): stri
 		case "gemini-cli":
 			// OAuth-based provider, no API key validation needed
 			break
-		case "qwen-code":
-			// OAuth-based provider, no API key validation needed
-			break
 		// kilocode_change end
 		case "openai-native":
 			if (!apiConfiguration.openAiNativeApiKey) {
@@ -153,6 +149,16 @@ function validateModelsAndKeysProvided(apiConfiguration: ProviderSettings): stri
 			break
 		case "submodel":
 			if (!apiConfiguration.submodelApiKey) {
+				return i18next.t("settings:validation.apiKey")
+			}
+			break
+		case "qwen-code":
+			if (!apiConfiguration.qwenCodeOauthPath) {
+				return i18next.t("settings:validation.qwenCodeOauthPath")
+			}
+			break
+		case "vercel-ai-gateway":
+			if (!apiConfiguration.vercelAiGatewayApiKey) {
 				return i18next.t("settings:validation.apiKey")
 			}
 			break
@@ -230,6 +236,8 @@ function getModelIdForProvider(apiConfiguration: ProviderSettings, provider: str
 		case "deepinfra":
 			return apiConfiguration.deepInfraModelId
 		// kilocode_change end
+		case "vercel-ai-gateway":
+			return apiConfiguration.vercelAiGatewayModelId
 		default:
 			return apiConfiguration.apiModelId
 	}
@@ -310,6 +318,9 @@ export function validateModelId(apiConfiguration: ProviderSettings, routerModels
 			break
 		case "submodel":
 			modelId = apiConfiguration.submodelModelId
+			break
+		case "vercel-ai-gateway":
+			modelId = apiConfiguration.vercelAiGatewayModelId
 			break
 	}
 
