@@ -183,8 +183,11 @@ jobs:
             - name: Build
               run: pnpm run jetbrains:bundle
               shell: bash
+            - name: Get bundle name
+              id: get_bundle_name
+              run: echo "BUNDLE_NAME=$(node scripts/get_bundle_name.js)" >> $GITHUB_ENV
             - name: Upload artifact
               uses: actions/upload-artifact@v4
               with:
                   name: jetbrains-plugin
-                  path: jetbrains/plugin/build/distributions/*.zip
+                  path: jetbrains/plugin/build/distributions/${{ env.BUNDLE_NAME }}

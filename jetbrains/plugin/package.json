@@ -13,6 +13,7 @@
 		"run": "./gradlew runIde -PdebugMode=idea",
 		"run:bundle": "./gradlew runIde -PdebugMode=release",
 		"bundle": "./gradlew buildPlugin -PdebugMode=release",
+		"bundle:name": "node scripts/get_bundle_name.js",
 		"clean:kilocode": "npx del-cli ./plugins/kilocode --force && npx mkdirp ./plugins/kilocode",
 		"copy:kilocode": "npx cpy '../../bin-unpacked/extension/**' './plugins/kilocode/extension' --parents",
 		"clean:resource-kilocode": "npx del-cli ../resources/kilocode --force",
@@ -24,6 +25,7 @@
 		"clean:resource-nodemodules": "npx del-cli ../resources/node_modules --force && npx del-cli ../resources/package.json --force",
 		"copy:resource-nodemodules": "cp ../host/package.json ../resources/package.json && npm install --prefix ../resources",
 		"propDep": "npx del-cli ./propDep.txt --force && npm ls --omit=dev --all --parseable --prefix ../resources > ./prodDep.txt",
-		"sync:version": "node scripts/sync_version.js"
+		"sync:version": "node scripts/sync_version.js",
+		"sync:changelog": "node scripts/update_change_notes.js"
 	}
 }

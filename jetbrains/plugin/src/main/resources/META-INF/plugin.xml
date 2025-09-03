@@ -26,11 +26,13 @@ SPDX-License-Identifier: Apache-2.0
    
    <!-- Change notes for the plugin -->
    <change-notes><![CDATA[
-        <h3>Version 0.X.X</h3>
+        <h3>Version 4.86.0</h3>
         <ul>
-            <li>Notes HERE</li>
+            <li>Improve Inline Assist model compatibility and performance</li>
+            <li>Added DeepInfra provider with dynamic model fetching and prompt caching</li>
+            <li>Remove the forced override of the context limit for Ollama API</li>
         </ul>
-   ]]></change-notes>
+    ]]></change-notes>
 
     <!-- Product and plugin compatibility requirements.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
