@@ -259,22 +259,31 @@
 			"error": "刷新模型列表失败。请重试。"
 		},
 		"getRequestyApiKey": "获取 Requesty API 密钥",
+		"getRequestyBaseUrl": "基础 URL",
+		"requestyUseCustomBaseUrl": "使用自定义基础 URL",
 		"openRouterTransformsText": "自动压缩提示词和消息链到上下文长度限制内 (<a>OpenRouter转换</a>)",
 		"anthropicApiKey": "Anthropic API 密钥",
 		"getAnthropicApiKey": "获取 Anthropic API 密钥",
 		"anthropicUseAuthToken": "将 Anthropic API 密钥作为 Authorization 标头传递，而不是 X-Api-Key",
+		"anthropic1MContextBetaLabel": "启用 1M 上下文窗口 (Beta)",
+		"anthropic1MContextBetaDescription": "为 Claude Sonnet 4 将上下文窗口扩展至 100 万个 token",
+		"awsBedrock1MContextBetaLabel": "启用 1M 上下文窗口 (Beta)",
+		"awsBedrock1MContextBetaDescription": "为 Claude Sonnet 4 将上下文窗口扩展至 100 万个 token",
 		"cerebrasApiKey": "Cerebras API 密钥",
 		"getCerebrasApiKey": "获取 Cerebras API 密钥",
 		"chutesApiKey": "Chutes API 密钥",
 		"getChutesApiKey": "获取 Chutes API 密钥",
 		"fireworksApiKey": "Fireworks API 密钥",
 		"getFireworksApiKey": "获取 Fireworks API 密钥",
+		"featherlessApiKey": "Featherless API 密钥",
+		"getFeatherlessApiKey": "获取 Featherless API 密钥",
+		"ioIntelligenceApiKey": "IO Intelligence API 密钥",
+		"ioIntelligenceApiKeyPlaceholder": "输入您的 IO Intelligence API 密钥",
+		"getIoIntelligenceApiKey": "获取 IO Intelligence API 密钥",
 		"deepSeekApiKey": "DeepSeek API 密钥",
 		"getDeepSeekApiKey": "获取 DeepSeek API 密钥",
 		"doubaoApiKey": "豆包 API 密钥",
 		"getDoubaoApiKey": "获取豆包 API 密钥",
-		"bigModelApiKey": "BigModel API 密钥",
-		"getBigModelApiKey": "获取 BigModel API 密钥",
 		"moonshotApiKey": "Moonshot API 密钥",
 		"getMoonshotApiKey": "获取 Moonshot API 密钥",
 		"moonshotBaseUrl": "Moonshot 服务站点",
@@ -365,6 +374,9 @@
 		"ollama": {
 			"baseUrl": "基础 URL（可选）",
 			"modelId": "模型 ID",
+			"apiKey": "API 密钥",
+			"apiKeyPlaceholder": "输入您的 API 密钥",
+			"apiKeyInfo": "API 密钥将作为 Authorization 标头发送",
 			"description": "Ollama 允许您在本地计算机上运行模型。有关如何开始使用的说明，请参阅其快速入门指南。",
 			"warning": "注意：Kilo Code 使用复杂的提示，与 Claude 模型配合最佳。功能较弱的模型可能无法按预期工作。"
 		},
@@ -375,6 +387,10 @@
 		"humanRelay": {
 			"description": "不需要 API 密钥，但用户需要帮助将信息复制并粘贴到网页聊天 AI。",
 			"instructions": "使用期间，将弹出对话框并自动将当前消息复制到剪贴板。您需要将这些内容粘贴到 AI 的网页版本（如 ChatGPT 或 Claude），然后将 AI 的回复复制回对话框并点击确认按钮。"
+		},
+		"roo": {
+			"authenticatedMessage": "已通过 Roo Code Cloud 账户安全认证。",
+			"connectButton": "连接到 Roo Code Cloud"
 		},
 		"openRouter": {
 			"providerRouting": {
@@ -437,9 +453,17 @@
 		},
 		"reasoningEffort": {
 			"label": "模型推理强度",
+			"minimal": "最小 (最快)",
 			"high": "高",
 			"medium": "中",
 			"low": "低"
+		},
+		"verbosity": {
+			"label": "输出详细程度",
+			"high": "高",
+			"medium": "中",
+			"low": "低",
+			"description": "控制模型响应的详细程度。低详细度产生简洁的回答，而高详细度提供详尽的解释。"
 		},
 		"setReasoningLevel": "启用推理工作量",
 		"claudeCode": {
@@ -463,6 +487,13 @@
 			"requirement4": "不使用 API 密钥 - 身份验证通过 OAuth 处理",
 			"requirement5": "需要先安装并验证 Gemini CLI 工具",
 			"freeAccess": "通过 OAuth 身份验证免费访问"
+		},
+		"qwenCode": {
+			"oauthPath": "OAuth 凭据路径（可选）",
+			"oauthPathDescription": "OAuth 凭据文件的路径。留空以使用默认位置（~/.qwen/oauth_creds.json）。",
+			"description": "此提供商使用 Qwen 服务的 OAuth 身份验证，不需要 API 密钥。",
+			"instructions": "请按照官方文档获取授权文件并将其放置在指定路径中。",
+			"setupLink": "Qwen 官方文档"
 		}
 	},
 	"browser": {
@@ -719,22 +750,25 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "启用 Morph Fast Apply",
-			"description": "启用后 Kilo Code 可使用 Morph Fast Apply 编辑文件。",
+			"description": "启用后 Kilo Code 可使用 Morph Fast Apply 编辑文件。需要 Kilo Code API 提供商、OpenRouter 或 Morph API 密钥。",
 			"apiKey": "Morph API 密钥（可选）",
-			"placeholder": "输入您的 Morph API 密钥（可选）",
-			"warning": "如果您未配置 Morph API 密钥，仍可通过 Kilo Code 或 OpenRouter 使用 Fast Apply。您的账户将承担模型使用费用，目前扩展界面中不会显示此费用。"
-		},
-		"INLINE_ASSIST": {
-			"name": "内嵌助手",
-			"description": "启用内联辅助功能，在您的编辑器中直接获取快速代码建议和改进。包括用于定向更改的快速内联任务（Cmd+I）和用于上下文相关改进的自动内联任务。"
+			"placeholder": "输入您的 Morph API 密钥（可选）"
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "后台编辑",
-			"description": "启用后防止编辑器焦点干扰。文件编辑在后台进行，不会打开差异视图或抢夺焦点。你可以在 Roo 进行更改时继续不受干扰地工作。文件可以在不获取焦点的情况下打开以捕获诊断信息，或保持完全关闭状态。"
+			"description": "启用后防止编辑器焦点干扰。文件编辑在后台进行，不会打开差异视图或抢夺焦点。你可以在 Kilo Code 进行更改时继续不受干扰地工作。文件可以在不获取焦点的情况下打开以捕获诊断信息，或保持完全关闭状态。"
 		},
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "使用新的消息解析器",
 			"description": "启用实验性的流式消息解析器。通过更高效地处理消息，可显著提升长回复的性能。"
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "要求新任务提供 'todos' 列表",
+			"description": "启用后，new_task 工具将需要提供 todos 参数。这可以确保所有新任务都以明确的目标列表开始。禁用时（默认），todos 参数保持可选，以实现向后兼容。"
+		},
+		"INLINE_ASSIST": {
+			"name": "Autocomplete",
+			"description": "启用 Autocomplete 功能，在编辑器中直接提供快速代码建议和改进。包括针对性更改的快速任务（Cmd+I）和上下文改进的 Autocomplete。"
 		}
 	},
 	"promptCaching": {
@@ -753,6 +787,7 @@
 		"noComputerUse": "不支持计算机功能调用",
 		"supportsPromptCache": "支持提示缓存",
 		"noPromptCache": "不支持提示缓存",
+		"contextWindow": "上下文窗口:",
 		"maxOutput": "最大输出",
 		"inputPrice": "输入价格",
 		"outputPrice": "输出价格",

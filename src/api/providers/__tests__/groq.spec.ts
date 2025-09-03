@@ -108,13 +108,63 @@ describe("GroqHandler", () => {
 		const firstChunk = await stream.next()
 
 		expect(firstChunk.done).toBe(false)
-		expect(firstChunk.value).toEqual({ type: "usage", inputTokens: 10, outputTokens: 20 })
+		expect(firstChunk.value).toMatchObject({
+			type: "usage",
+			inputTokens: 10,
+			outputTokens: 20,
+			cacheWriteTokens: 0,
+			cacheReadTokens: 0,
+		})
+		// Check that totalCost is a number (we don't need to test the exact value as that's tested in cost.spec.ts)
+		expect(typeof firstChunk.value.totalCost).toBe("number")
+	})
+
+	it("createMessage should handle cached tokens in usage data", async () => {
+		mockCreate.mockImplementationOnce(() => {
+			return {
+				[Symbol.asyncIterator]: () => ({
+					next: vitest
+						.fn()
+						.mockResolvedValueOnce({
+							done: false,
+							value: {
+								choices: [{ delta: {} }],
+								usage: {
+									prompt_tokens: 100,
+									completion_tokens: 50,
+									prompt_tokens_details: {
+										cached_tokens: 30,
+									},
+								},
+							},
+						})
+						.mockResolvedValueOnce({ done: true }),
+				}),
+			}
+		})
+
+		const stream = handler.createMessage("system prompt", [])
+		const firstChunk = await stream.next()
+
+		expect(firstChunk.done).toBe(false)
+		expect(firstChunk.value).toMatchObject({
+			type: "usage",
+			inputTokens: 70, // 100 total - 30 cached
+			outputTokens: 50,
+			cacheWriteTokens: 0,
+			cacheReadTokens: 30,
+		})
+		expect(typeof firstChunk.value.totalCost).toBe("number")
 	})
 
 	it("createMessage should pass correct parameters to Groq client", async () => {
 		const modelId: GroqModelId = "llama-3.1-8b-instant"
 		const modelInfo = groqModels[modelId]
-		const handlerWithModel = new GroqHandler({ apiModelId: modelId, groqApiKey: "test-groq-api-key" })
+		const handlerWithModel = new GroqHandler({
+			apiModelId: modelId,
+			groqApiKey: "test-groq-api-key",
+			modelTemperature: 0.5, // Explicitly set temperature for this test
+		})
 
 		mockCreate.mockImplementationOnce(() => {
 			return {
@@ -141,6 +191,80 @@ describe("GroqHandler", () => {
 				stream: true,
 				stream_options: { include_usage: true },
 			}),
+			undefined,
+		)
+	})
+
+	it("should omit temperature when modelTemperature is undefined", async () => {
+		const modelId: GroqModelId = "llama-3.1-8b-instant"
+		const handlerWithoutTemp = new GroqHandler({
+			apiModelId: modelId,
+			groqApiKey: "test-groq-api-key",
+			// modelTemperature is not set
+		})
+
+		mockCreate.mockImplementationOnce(() => {
+			return {
+				[Symbol.asyncIterator]: () => ({
+					async next() {
+						return { done: true }
+					},
+				}),
+			}
+		})
+
+		const systemPrompt = "Test system prompt"
+		const messages: Anthropic.Messages.MessageParam[] = [{ role: "user", content: "Test message" }]
+
+		const messageGenerator = handlerWithoutTemp.createMessage(systemPrompt, messages)
+		await messageGenerator.next()
+
+		expect(mockCreate).toHaveBeenCalledWith(
+			expect.objectContaining({
+				model: modelId,
+				messages: expect.arrayContaining([{ role: "system", content: systemPrompt }]),
+				stream: true,
+			}),
+			undefined,
+		)
+
+		// Verify temperature is NOT included
+		const callArgs = mockCreate.mock.calls[0][0]
+		expect(callArgs).not.toHaveProperty("temperature")
+	})
+
+	it("should include temperature when modelTemperature is explicitly set", async () => {
+		const modelId: GroqModelId = "llama-3.1-8b-instant"
+		const handlerWithTemp = new GroqHandler({
+			apiModelId: modelId,
+			groqApiKey: "test-groq-api-key",
+			modelTemperature: 0.7,
+		})
+
+		mockCreate.mockImplementationOnce(() => {
+			return {
+				[Symbol.asyncIterator]: () => ({
+					async next() {
+						return { done: true }
+					},
+				}),
+			}
+		})
+
+		const systemPrompt = "Test system prompt"
+		const messages: Anthropic.Messages.MessageParam[] = [{ role: "user", content: "Test message" }]
+
+		const messageGenerator = handlerWithTemp.createMessage(systemPrompt, messages)
+		await messageGenerator.next()
+
+		expect(mockCreate).toHaveBeenCalledWith(
+			expect.objectContaining({
+				model: modelId,
+				temperature: 0.7,
+				messages: expect.arrayContaining([{ role: "system", content: systemPrompt }]),
+				stream: true,
+			}),
+			undefined,
 		)
 	})
 })

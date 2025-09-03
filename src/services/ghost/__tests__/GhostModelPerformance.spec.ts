@@ -16,14 +16,18 @@ describe("GhostModelPerformance", () => {
 	const generatePrompt = (userInput: string) => {
 		const strategy = new GhostStrategy()
 		const mockWorkspace = new MockWorkspace()
-		const systemPrompt = strategy.getSystemPrompt()
 
 		const testUri = vscode.Uri.parse("file:///example.ts")
 		const document = mockWorkspace.addDocument(testUri, "")
-		const suggestionPrompt = strategy.getSuggestionPrompt({
+
+		const context = {
 			userInput,
 			document: document,
-		})
+		}
+
+		const systemPrompt = strategy.getSystemPrompt(context)
+		const suggestionPrompt = strategy.getSuggestionPrompt(context)
+
 		return { systemPrompt, suggestionPrompt }
 	}
 
@@ -31,11 +35,20 @@ describe("GhostModelPerformance", () => {
 		const model = new GhostModel(apiHandler)
 
 		const startTime = performance.now()
-		const response = await model.generateResponse(prompt.systemPrompt, prompt.suggestionPrompt)
+		let fullResponse = ""
+
+		const onChunk = (chunk: any) => {
+			if (chunk.type === "text") {
+				fullResponse += chunk.text
+			}
+		}
+
+		const usageInfo = await model.generateResponse(prompt.systemPrompt, prompt.suggestionPrompt, onChunk)
 		const endTime = performance.now()
 		const duration = endTime - startTime
-		expect(response).toBeDefined()
-		expect(response).toContain("```diff")
+
+		expect(usageInfo).toBeDefined()
+		expect(fullResponse).toContain("```diff")
 		console.log(`Response time: ${duration}ms`)
 	}
 
@@ -55,7 +68,7 @@ describe("GhostModelPerformance", () => {
 			if (!KEYS.KILOCODE) {
 				return
 			}
-			allowNetConnect("kilocode.ai")
+			allowNetConnect("api.kilocode.ai")
 			const apiHandler = buildApiHandler({
 				apiProvider: "kilocode",
 				kilocodeModel: "google/gemini-2.5-flash",
@@ -67,7 +80,7 @@ describe("GhostModelPerformance", () => {
 			if (!KEYS.KILOCODE) {
 				return
 			}
-			allowNetConnect("kilocode.ai")
+			allowNetConnect("api.kilocode.ai")
 			const apiHandler = buildApiHandler({
 				apiProvider: "kilocode",
 				kilocodeModel: "mistralai/codestral-2501",

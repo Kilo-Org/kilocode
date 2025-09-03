@@ -1,14 +1,15 @@
 import { z } from "zod"
 
-import type {
-	ProviderSettings,
-	PromptComponent,
-	ModeConfig,
-	InstallMarketplaceItemOptions,
-	MarketplaceItem,
-	ShareVisibility,
+import {
+	type ProviderSettings,
+	type PromptComponent,
+	type ModeConfig,
+	type InstallMarketplaceItemOptions,
+	type MarketplaceItem,
+	marketplaceItemSchema,
+	CommitRange, // kilocode_change
 } from "@roo-code/types"
-import { marketplaceItemSchema } from "@roo-code/types"
+import type { ShareVisibility } from "@roo-code/cloud"
 
 import { Mode } from "./modes"
 
@@ -118,6 +119,7 @@ export interface WebviewMessage {
 		| "toggleMcpServer"
 		| "updateMcpTimeout"
 		| "fuzzyMatchThreshold"
+		| "morphApiKey" // kilocode_change: Morph fast apply - global setting
 		| "writeDelayMs"
 		| "diagnosticsEnabled"
 		| "enhancePrompt"
@@ -140,6 +142,7 @@ export interface WebviewMessage {
 		| "terminalCompressProgressBar"
 		| "mcpEnabled"
 		| "enableMcpServerCreation"
+		| "remoteControlEnabled"
 		| "searchCommits"
 		| "alwaysApproveResubmit"
 		| "requestDelaySeconds"
@@ -163,6 +166,7 @@ export interface WebviewMessage {
 		| "openCustomModesSettings"
 		| "checkpointDiff"
 		| "checkpointRestore"
+		| "seeNewChanges" // kilocode_change
 		| "deleteMcpServer"
 		| "maxOpenTabsContext"
 		| "maxWorkspaceFiles"
@@ -259,6 +263,7 @@ export interface WebviewMessage {
 		| "deleteCommand"
 		| "createCommand"
 		| "insertTextIntoTextarea"
+		| "showMdmAuthRequiredNotification"
 	text?: string
 	editedMessageContent?: string
 	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "account"
@@ -341,6 +346,16 @@ export interface WebviewMessage {
 }
 
 // kilocode_change begin
+export type OrganizationRole = "owner" | "admin" | "member"
+
+export type UserOrganizationWithApiKey = {
+	id: string
+	name: string
+	balance: number
+	role: OrganizationRole
+	apiKey: string
+}
+
 export type ProfileData = {
 	kilocodeToken: string
 	user: {
@@ -349,6 +364,7 @@ export type ProfileData = {
 		email: string
 		image: string
 	}
+	organizations?: UserOrganizationWithApiKey[]
 }
 
 export interface ProfileDataResponsePayload {
@@ -362,6 +378,10 @@ export interface BalanceDataResponsePayload {
 	success: boolean
 	data?: any // Replace 'any' with a more specific type if known for balance
 	error?: string
+}
+
+export interface SeeNewChangesPayload {
+	commitRange: CommitRange
 }
 // kilocode_change end
 
@@ -402,11 +422,14 @@ export type InstallMarketplaceItemWithParametersPayload = z.infer<
 >
 
 export type WebViewMessagePayload =
+	// kilocode_change start
+	| ProfileDataResponsePayload
+	| BalanceDataResponsePayload
+	| SeeNewChangesPayload
+	// kilocode_change end
 	| CheckpointDiffPayload
 	| CheckpointRestorePayload
 	| IndexingStatusPayload
 	| IndexClearedPayload
-	| ProfileDataResponsePayload // kilocode_change
-	| BalanceDataResponsePayload // kilocode_change
 	| InstallMarketplaceItemWithParametersPayload
 	| UpdateTodoListPayload

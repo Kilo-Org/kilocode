@@ -2,6 +2,8 @@
 	"greeting": "Kilo Code가 당신을 위해 무엇을 할 수 있을까요?",
 	"task": {
 		"title": "작업",
+		"expand": "작업 펼치기",
+		"collapse": "작업 접기",
 		"seeMore": "더 보기",
 		"seeLess": "줄여보기",
 		"tokens": "토큰",
@@ -124,7 +126,7 @@
 		"title": "모드",
 		"marketplace": "모드 마켓플레이스",
 		"settings": "모드 설정",
-		"description": "Roo의 행동을 맞춤화하는 전문화된 페르소나.",
+		"description": "Kilo Code의 행동을 맞춤화하는 전문화된 페르소나.",
 		"searchPlaceholder": "모드 검색...",
 		"noResults": "결과를 찾을 수 없습니다"
 	},
@@ -269,8 +271,14 @@
 		"countdownDisplay": "{{count}}초"
 	},
 	"announcement": {
-		"title": "🎉 Kilo Code {{version}} 출시",
-		"description": "Kilo Code {{version}}은 개발 워크플로우를 향상시키는 강력한 새 기능과 중요한 개선사항을 제공합니다.",
+		"title": "🎉 Roo Code {{version}} 출시",
+		"stealthModel": {
+			"feature": "<bold>기간 한정 무료 스텔스 모델</bold> - 262k 컨텍스트 윈도우를 가진 에이전틱 코딩에 뛰어난 초고속 추론 모델, Roo Code Cloud를 통해 이용 가능.",
+			"note": "(참고: 프롬프트와 완성은 모델 제작자에 의해 기록되고 모델 개선에 사용됩니다)",
+			"connectButton": "Roo Code Cloud에 연결",
+			"selectModel": "<br/><settingsLink>설정</settingsLink>에서 Roo Code Cloud 제공업체의 <code>roo/sonic</code>을 선택하여 시작"
+		},
+		"description": "Roo Code {{version}}은 개발 워크플로우를 향상시키는 강력한 새 기능과 중요한 개선사항을 제공합니다.",
 		"whatsNew": "새로운 기능",
 		"feature1": "<bold>메시지 대기열</bold>: Roo가 작업하는 동안 여러 메시지를 대기열에 넣어 워크플로우 계획을 중단 없이 계속할 수 있습니다.",
 		"feature2": "<bold>사용자 정의 슬래시 명령</bold>: 자주 사용하는 프롬프트와 워크플로우에 빠르게 액세스할 수 있는 개인화된 슬래시 명령을 생성하고, 완전한 UI 관리를 제공합니다.",
@@ -323,14 +331,14 @@
 			"button": "재설정 후 계속"
 		},
 		"autoApprovedCostLimitReached": {
-			"description": "Roo가 자동 승인된 비용 한도인 ${{count}}에 도달했습니다. 비용을 초기화하고 작업을 계속하시겠습니까?",
+			"description": "Kilo Code가 자동 승인된 비용 한도인 ${{count}}에 도달했습니다. 비용을 초기화하고 작업을 계속하시겠습니까?",
 			"title": "자동 승인 비용 한도에 도달함",
 			"button": "재설정 후 계속하기"
 		}
 	},
 	"codebaseSearch": {
-		"wantsToSearch": "Roo가 코드베이스에서 <code>{{query}}</code>을(를) 검색하고 싶어합니다:",
-		"wantsToSearchWithPath": "Roo가 <code>{{path}}</code>에서 <code>{{query}}</code>을(를) 검색하고 싶어합니다:",
+		"wantsToSearch": "Kilo Code가 코드베이스에서 <code>{{query}}</code>을(를) 검색하고 싶어합니다:",
+		"wantsToSearchWithPath": "Kilo Code가 <code>{{path}}</code>에서 <code>{{query}}</code>을(를) 검색하고 싶어합니다:",
 		"didSearch_one": "1개의 결과를 찾았습니다",
 		"didSearch_other": "{{count}}개의 결과를 찾았습니다",
 		"resultTooltip": "유사도 점수: {{score}} (클릭하여 파일 열기)"
@@ -354,9 +362,9 @@
 		"ariaLabel": "버전 {{version}} - 릴리스 노트를 보려면 클릭하세요"
 	},
 	"rooCloudCTA": {
-		"title": "Roo Code Cloud가 곧 출시됩니다!",
+		"title": "Roo Code Cloud가 진화하고 있습니다!",
 		"description": "클라우드에서 원격 에이전트를 실행하고, 어디서나 작업에 액세스하고, 다른 사람들과 협업하는 등 다양한 기능을 이용하세요.",
-		"joinWaitlist": "얼리 액세스를 받으려면 대기 목록에 가입하세요."
+		"joinWaitlist": "최신 업데이트를 받으려면 가입하세요."
 	},
 	"editMessage": {
 		"placeholder": "메시지 편집..."

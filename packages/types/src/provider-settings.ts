@@ -1,7 +1,30 @@
 import { z } from "zod"
 
-import { reasoningEffortsSchema, modelInfoSchema } from "./model.js"
+import { modelInfoSchema, reasoningEffortWithMinimalSchema, verbosityLevelsSchema } from "./model.js"
 import { codebaseIndexProviderSchema } from "./codebase-index.js"
+import {
+	anthropicModels,
+	bedrockModels,
+	cerebrasModels,
+	chutesModels,
+	claudeCodeModels,
+	deepSeekModels,
+	doubaoModels,
+	featherlessModels,
+	fireworksModels,
+	geminiModels,
+	groqModels,
+	ioIntelligenceModels,
+	mistralModels,
+	moonshotModels,
+	openAiNativeModels,
+	rooModels,
+	sambaNovaModels,
+	vertexModels,
+	vscodeLlmModels,
+	xaiModels,
+	internationalZAiModels,
+} from "./providers/index.js"
 
 /**
  * ProviderName
@@ -18,8 +41,7 @@ export const providerNames = [
 	"ollama",
 	"vscode-lm",
 	"lmstudio",
-	"gemini", // kilocode_change
-	"gemini-cli",
+	"gemini",
 	"openai-native",
 	"mistral",
 	"moonshot",
@@ -35,14 +57,19 @@ export const providerNames = [
 	"litellm",
 	// kilocode_change start
 	"kilocode",
+	"deepinfra",
+	"gemini-cli",
 	"virtual-quota-fallback",
-	"bigmodel",
+	"qwen-code",
 	// kilocode_change end
 	"huggingface",
 	"cerebras",
 	"sambanova",
 	"zai",
 	"fireworks",
+	"featherless",
+	"io-intelligence",
+	"roo",
 ] as const
 
 export const providerNamesSchema = z.enum(providerNames)
@@ -81,18 +108,12 @@ const baseProviderSettingsSchema = z.object({
 
 	// Model reasoning.
 	enableReasoningEffort: z.boolean().optional(),
-	reasoningEffort: reasoningEffortsSchema.optional(),
+	reasoningEffort: reasoningEffortWithMinimalSchema.optional(),
 	modelMaxTokens: z.number().optional(),
 	modelMaxThinkingTokens: z.number().optional(),
 
-	morphApiKey: z.string().optional(), // kilocode_change: Morph fast apply
-
-	// // kilocode_change start
-	// kilocodeToken: z.string().optional(),
-	// kilocodeModel: z.string().optional(),
-	// fireworksModelId: z.string().optional(),
-	// fireworksApiKey: z.string().optional(),
-	// // kilocode_change end
+	// Model verbosity.
+	verbosity: verbosityLevelsSchema.optional(),
 })
 
 // Several of the providers share common model config properties.
@@ -104,6 +125,7 @@ const anthropicSchema = apiModelIdProviderModelSchema.extend({
 	apiKey: z.string().optional(),
 	anthropicBaseUrl: z.string().optional(),
 	anthropicUseAuthToken: z.boolean().optional(),
+	anthropicBeta1MContext: z.boolean().optional(), // Enable 'context-1m-2025-08-07' beta for 1M context window
 })
 
 const claudeCodeSchema = apiModelIdProviderModelSchema.extend({
@@ -116,12 +138,21 @@ const glamaSchema = baseProviderSettingsSchema.extend({
 	glamaApiKey: z.string().optional(),
 })
 
+// kilocode_change start
+export const openRouterProviderDataCollectionSchema = z.enum(["allow", "deny"])
+export const openRouterProviderSortSchema = z.enum(["price", "throughput", "latency"])
+// kilocode_change end
+
 const openRouterSchema = baseProviderSettingsSchema.extend({
 	openRouterApiKey: z.string().optional(),
 	openRouterModelId: z.string().optional(),
 	openRouterBaseUrl: z.string().optional(),
 	openRouterSpecificProvider: z.string().optional(),
 	openRouterUseMiddleOutTransform: z.boolean().optional(),
+	// kilocode_change start
+	openRouterProviderDataCollection: openRouterProviderDataCollectionSchema.optional(),
+	openRouterProviderSort: openRouterProviderSortSchema.optional(),
+	// kilocode_change end
 })
 
 const bedrockSchema = apiModelIdProviderModelSchema.extend({
@@ -139,6 +170,7 @@ const bedrockSchema = apiModelIdProviderModelSchema.extend({
 	awsModelContextWindow: z.number().optional(),
 	awsBedrockEndpointEnabled: z.boolean().optional(),
 	awsBedrockEndpoint: z.string().optional(),
+	awsBedrock1MContext: z.boolean().optional(), // Enable 'context-1m-2025-08-07' beta for 1M context window
 })
 
 const vertexSchema = apiModelIdProviderModelSchema.extend({
@@ -146,6 +178,8 @@ const vertexSchema = apiModelIdProviderModelSchema.extend({
 	vertexJsonCredentials: z.string().optional(),
 	vertexProjectId: z.string().optional(),
 	vertexRegion: z.string().optional(),
+	enableUrlContext: z.boolean().optional(),
+	enableGrounding: z.boolean().optional(),
 })
 
 const openAiSchema = baseProviderSettingsSchema.extend({
@@ -165,6 +199,7 @@ const openAiSchema = baseProviderSettingsSchema.extend({
 const ollamaSchema = baseProviderSettingsSchema.extend({
 	ollamaModelId: z.string().optional(),
 	ollamaBaseUrl: z.string().optional(),
+	ollamaApiKey: z.string().optional(), // kilocode_change
 })
 
 const vsCodeLmSchema = baseProviderSettingsSchema.extend({
@@ -232,6 +267,7 @@ const unboundSchema = baseProviderSettingsSchema.extend({
 })
 
 const requestySchema = baseProviderSettingsSchema.extend({
+	requestyBaseUrl: z.string().optional(),
 	requestyApiKey: z.string().optional(),
 	requestyModelId: z.string().optional(),
 })
@@ -245,12 +281,6 @@ const fakeAiSchema = baseProviderSettingsSchema.extend({
 const xaiSchema = apiModelIdProviderModelSchema.extend({
 	xaiApiKey: z.string().optional(),
 })
-
-// kilocode_change start
-const bigModelSchema = apiModelIdProviderModelSchema.extend({
-	bigModelApiKey: z.string().optional(),
-})
-// kilocode_change end
 
 const groqSchema = apiModelIdProviderModelSchema.extend({
 	groqApiKey: z.string().optional(),
@@ -284,8 +314,17 @@ const sambaNovaSchema = apiModelIdProviderModelSchema.extend({
 // kilocode_change start
 const kilocodeSchema = baseProviderSettingsSchema.extend({
 	kilocodeToken: z.string().optional(),
+	kilocodeOrganizationId: z.string().optional(),
 	kilocodeModel: z.string().optional(),
 	openRouterSpecificProvider: z.string().optional(),
+	openRouterProviderDataCollection: openRouterProviderDataCollectionSchema.optional(),
+	openRouterProviderSort: openRouterProviderSortSchema.optional(),
+})
+
+const deepInfraSchema = apiModelIdProviderModelSchema.extend({
+	deepInfraBaseUrl: z.string().optional(),
+	deepInfraApiKey: z.string().optional(),
+	deepInfraModelId: z.string().optional(),
 })
 
 export const virtualQuotaFallbackProfileDataSchema = z.object({
@@ -302,10 +341,16 @@ export const virtualQuotaFallbackProfileDataSchema = z.object({
 		})
 		.optional(),
 })
+
 const virtualQuotaFallbackSchema = baseProviderSettingsSchema.extend({
 	profiles: z.array(virtualQuotaFallbackProfileDataSchema).optional(),
 })
+
+const qwenCodeSchema = apiModelIdProviderModelSchema.extend({
+	qwenCodeOAuthPath: z.string().optional(),
+})
 // kilocode_change end
+
 const zaiSchema = apiModelIdProviderModelSchema.extend({
 	zaiApiKey: z.string().optional(),
 	zaiApiLine: z.union([z.literal("china"), z.literal("international")]).optional(),
@@ -313,6 +358,19 @@ const zaiSchema = apiModelIdProviderModelSchema.extend({
 
 const fireworksSchema = apiModelIdProviderModelSchema.extend({
 	fireworksApiKey: z.string().optional(),
+})
+
+const featherlessSchema = apiModelIdProviderModelSchema.extend({
+	featherlessApiKey: z.string().optional(),
+})
+
+const ioIntelligenceSchema = apiModelIdProviderModelSchema.extend({
+	ioIntelligenceModelId: z.string().optional(),
+	ioIntelligenceApiKey: z.string().optional(),
+})
+
+const rooSchema = apiModelIdProviderModelSchema.extend({
+	// No additional fields needed - uses cloud authentication
 })
 
 const defaultSchema = z.object({
@@ -342,10 +400,11 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	fakeAiSchema.merge(z.object({ apiProvider: z.literal("fake-ai") })),
 	xaiSchema.merge(z.object({ apiProvider: z.literal("xai") })),
 	// kilocode_change start
-	bigModelSchema.merge(z.object({ apiProvider: z.literal("bigmodel") })),
+	deepInfraSchema.merge(z.object({ apiProvider: z.literal("deepinfra") })),
 	geminiCliSchema.merge(z.object({ apiProvider: z.literal("gemini-cli") })),
 	kilocodeSchema.merge(z.object({ apiProvider: z.literal("kilocode") })),
 	virtualQuotaFallbackSchema.merge(z.object({ apiProvider: z.literal("virtual-quota-fallback") })),
+	qwenCodeSchema.merge(z.object({ apiProvider: z.literal("qwen-code") })),
 	// kilocode_change end
 	groqSchema.merge(z.object({ apiProvider: z.literal("groq") })),
 	huggingFaceSchema.merge(z.object({ apiProvider: z.literal("huggingface") })),
@@ -355,6 +414,9 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	sambaNovaSchema.merge(z.object({ apiProvider: z.literal("sambanova") })),
 	zaiSchema.merge(z.object({ apiProvider: z.literal("zai") })),
 	fireworksSchema.merge(z.object({ apiProvider: z.literal("fireworks") })),
+	featherlessSchema.merge(z.object({ apiProvider: z.literal("featherless") })),
+	ioIntelligenceSchema.merge(z.object({ apiProvider: z.literal("io-intelligence") })),
+	rooSchema.merge(z.object({ apiProvider: z.literal("roo") })),
 	defaultSchema,
 ])
 
@@ -374,8 +436,9 @@ export const providerSettingsSchema = z.object({
 	// kilocode_change start
 	...geminiCliSchema.shape,
 	...kilocodeSchema.shape,
-	...bigModelSchema.shape,
 	...virtualQuotaFallbackSchema.shape,
+	...qwenCodeSchema.shape,
+	...deepInfraSchema.shape,
 	// kilocode_change end
 	...openAiNativeSchema.shape,
 	...mistralSchema.shape,
@@ -395,6 +458,9 @@ export const providerSettingsSchema = z.object({
 	...sambaNovaSchema.shape,
 	...zaiSchema.shape,
 	...fireworksSchema.shape,
+	...featherlessSchema.shape,
+	...ioIntelligenceSchema.shape,
+	...rooSchema.shape,
 	...codebaseIndexProviderSchema.shape,
 })
 
@@ -420,6 +486,8 @@ export const MODEL_ID_KEYS: Partial<keyof ProviderSettings>[] = [
 	"requestyModelId",
 	"litellmModelId",
 	"huggingFaceModelId",
+	"ioIntelligenceModelId",
+	"deepInfraModelId", // kilocode_change
 ]
 
 export const getModelId = (settings: ProviderSettings): string | undefined => {
@@ -427,21 +495,138 @@ export const getModelId = (settings: ProviderSettings): string | undefined => {
 	return modelIdKey ? (settings[modelIdKey] as string) : undefined
 }
 
-// Providers that use Anthropic-style API protocol
+// Providers that use Anthropic-style API protocol.
 export const ANTHROPIC_STYLE_PROVIDERS: ProviderName[] = ["anthropic", "claude-code", "bedrock"]
 
-// Helper function to determine API protocol for a provider and model
 export const getApiProtocol = (provider: ProviderName | undefined, modelId?: string): "anthropic" | "openai" => {
-	// First check if the provider is an Anthropic-style provider
 	if (provider && ANTHROPIC_STYLE_PROVIDERS.includes(provider)) {
 		return "anthropic"
 	}
 
-	// For vertex provider, check if the model ID contains "claude" (case-insensitive)
 	if (provider && provider === "vertex" && modelId && modelId.toLowerCase().includes("claude")) {
 		return "anthropic"
 	}
 
-	// Default to OpenAI protocol
 	return "openai"
 }
+
+export const MODELS_BY_PROVIDER: Record<
+	Exclude<ProviderName, "fake-ai" | "human-relay" | "gemini-cli" | "lmstudio" | "openai" | "ollama">,
+	{ id: ProviderName; label: string; models: string[] }
+> = {
+	anthropic: {
+		id: "anthropic",
+		label: "Anthropic",
+		models: Object.keys(anthropicModels),
+	},
+	bedrock: {
+		id: "bedrock",
+		label: "Amazon Bedrock",
+		models: Object.keys(bedrockModels),
+	},
+	cerebras: {
+		id: "cerebras",
+		label: "Cerebras",
+		models: Object.keys(cerebrasModels),
+	},
+	chutes: {
+		id: "chutes",
+		label: "Chutes AI",
+		models: Object.keys(chutesModels),
+	},
+	"claude-code": { id: "claude-code", label: "Claude Code", models: Object.keys(claudeCodeModels) },
+	deepseek: {
+		id: "deepseek",
+		label: "DeepSeek",
+		models: Object.keys(deepSeekModels),
+	},
+	doubao: { id: "doubao", label: "Doubao", models: Object.keys(doubaoModels) },
+	featherless: {
+		id: "featherless",
+		label: "Featherless",
+		models: Object.keys(featherlessModels),
+	},
+	fireworks: {
+		id: "fireworks",
+		label: "Fireworks",
+		models: Object.keys(fireworksModels),
+	},
+	gemini: {
+		id: "gemini",
+		label: "Google Gemini",
+		models: Object.keys(geminiModels),
+	},
+	groq: { id: "groq", label: "Groq", models: Object.keys(groqModels) },
+	"io-intelligence": {
+		id: "io-intelligence",
+		label: "IO Intelligence",
+		models: Object.keys(ioIntelligenceModels),
+	},
+	mistral: {
+		id: "mistral",
+		label: "Mistral",
+		models: Object.keys(mistralModels),
+	},
+	moonshot: {
+		id: "moonshot",
+		label: "Moonshot",
+		models: Object.keys(moonshotModels),
+	},
+	"openai-native": {
+		id: "openai-native",
+		label: "OpenAI",
+		models: Object.keys(openAiNativeModels),
+	},
+	roo: { id: "roo", label: "Roo", models: Object.keys(rooModels) },
+	sambanova: {
+		id: "sambanova",
+		label: "SambaNova",
+		models: Object.keys(sambaNovaModels),
+	},
+	vertex: {
+		id: "vertex",
+		label: "GCP Vertex AI",
+		models: Object.keys(vertexModels),
+	},
+	"vscode-lm": {
+		id: "vscode-lm",
+		label: "VS Code LM API",
+		models: Object.keys(vscodeLlmModels),
+	},
+	xai: { id: "xai", label: "xAI (Grok)", models: Object.keys(xaiModels) },
+	zai: { id: "zai", label: "Zai", models: Object.keys(internationalZAiModels) },
+
+	// Dynamic providers; models pulled from the respective APIs.
+	glama: { id: "glama", label: "Glama", models: [] },
+	huggingface: { id: "huggingface", label: "Hugging Face", models: [] },
+	litellm: { id: "litellm", label: "LiteLLM", models: [] },
+	openrouter: { id: "openrouter", label: "OpenRouter", models: [] },
+	requesty: { id: "requesty", label: "Requesty", models: [] },
+	unbound: { id: "unbound", label: "Unbound", models: [] },
+
+	// kilocode_change start
+	kilocode: { id: "kilocode", label: "Kilocode", models: [] },
+	"virtual-quota-fallback": { id: "virtual-quota-fallback", label: "Virtual Quota Fallback", models: [] },
+	"qwen-code": { id: "qwen-code", label: "Qwen Code", models: [] },
+	deepinfra: { id: "deepinfra", label: "DeepInfra", models: [] },
+	// kilocode_change end
+}
+
+export const dynamicProviders = [
+	"glama",
+	"huggingface",
+	"litellm",
+	"openrouter",
+	"requesty",
+	"unbound",
+	// kilocode_change start
+	"kilocode",
+	"virtual-quota-fallback",
+	"deepinfra",
+	// kilocode_change end
+] as const satisfies readonly ProviderName[]
+
+export type DynamicProvider = (typeof dynamicProviders)[number]
+
+export const isDynamicProvider = (key: string): key is DynamicProvider =>
+	dynamicProviders.includes(key as DynamicProvider)

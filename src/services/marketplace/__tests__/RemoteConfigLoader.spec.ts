@@ -14,8 +14,8 @@ vi.mock("@roo-code/cloud", () => ({
 }))
 
 // kilocode_change start
-vi.mock("../../../shared/kilocode/api", () => ({
-	getKiloCodeApiUrl: () => "https://test.api.com",
+vi.mock("../../../shared/kilocode/token", () => ({
+	getKiloBaseUriFromToken: () => "https://test.api.com",
 }))
 // kilocode_change end
 

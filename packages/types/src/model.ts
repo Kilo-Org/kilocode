@@ -11,6 +11,24 @@ export const reasoningEffortsSchema = z.enum(reasoningEfforts)
 export type ReasoningEffort = z.infer<typeof reasoningEffortsSchema>
 
 /**
+ * ReasoningEffortWithMinimal
+ */
+
+export const reasoningEffortWithMinimalSchema = z.union([reasoningEffortsSchema, z.literal("minimal")])
+
+export type ReasoningEffortWithMinimal = z.infer<typeof reasoningEffortWithMinimalSchema>
+
+/**
+ * Verbosity
+ */
+
+export const verbosityLevels = ["low", "medium", "high"] as const
+
+export const verbosityLevelsSchema = z.enum(verbosityLevels)
+
+export type VerbosityLevel = z.infer<typeof verbosityLevelsSchema>
+
+/**
  * ModelParameter
  */
 
@@ -34,6 +52,8 @@ export const modelInfoSchema = z.object({
 	supportsImages: z.boolean().optional(),
 	supportsComputerUse: z.boolean().optional(),
 	supportsPromptCache: z.boolean(),
+	// Capability flag to indicate whether the model supports an output verbosity parameter
+	supportsVerbosity: z.boolean().optional(),
 	supportsReasoningBudget: z.boolean().optional(),
 	requiredReasoningBudget: z.boolean().optional(),
 	supportsReasoningEffort: z.boolean().optional(),

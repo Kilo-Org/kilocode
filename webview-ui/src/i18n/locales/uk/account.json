@@ -10,5 +10,11 @@
 	"cloudBenefitHistory": "Онлайн історія завдань",
 	"cloudBenefitSharing": "Функції обміну та співпраці",
 	"cloudBenefitMetrics": "Метрики використання на основі завдань, токенів та витрат",
-	"visitCloudWebsite": "Відвідати Kilo Code Cloud"
+	"visitCloudWebsite": "Відвідати Kilo Code Cloud",
+	"expandTask": "Розгорнути завдання",
+	"collapseTask": "Згорнути завдання",
+	"deleteFavoritedTaskWarning": "Це назавжди видалить улюблене завдання. Ви впевнені?",
+	"cloudBenefitWalkaway": "Відстежуйте та керуйте завданнями звідки завгодно за допомогою Kilo remote Control",
+	"remoteControl": "Kilo remote Control",
+	"remoteControlDescription": "Увімкнути відстеження та взаємодію з завданнями в цьому workspace за допомогою Kilo Code Cloud"
 }

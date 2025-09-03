@@ -92,7 +92,7 @@
 			"processExitedWithError": "Claude Code 程序退出，退出碼：{{exitCode}}。錯誤輸出：{{output}}",
 			"stoppedWithReason": "Claude Code 停止，原因：{{reason}}",
 			"apiKeyModelPlanMismatch": "API 金鑰和訂閱方案允許不同的模型。請確保所選模型包含在您的方案中。",
-			"notFound": "找不到 Claude Code 可執行檔案 '{{claudePath}}'。\n\n請安裝 Claude Code CLI：\n1. 造訪 {{installationUrl}} 下載 Claude Code\n2. 依照作業系統的安裝說明進行操作\n3. 確保 'claude' 指令在 PATH 中可用\n4. 或者在 Roo 設定中的 'Claude Code 路徑' 下設定自訂路徑\n\n原始錯誤：{{originalError}}"
+			"notFound": "找不到 Claude Code 可執行檔案 '{{claudePath}}'。\n\n請安裝 Claude Code CLI：\n1. 造訪 {{installationUrl}} 下載 Claude Code\n2. 依照作業系統的安裝說明進行操作\n3. 確保 'claude' 指令在 PATH 中可用\n4. 或者在 Kilo Code 設定中的 'Claude Code 路徑' 下設定自訂路徑\n\n原始錯誤：{{originalError}}"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "無法載入 OAuth 憑證。請先進行驗證：{{error}}",
@@ -103,6 +103,9 @@
 			"badRequest": "錯誤的請求：{{details}}",
 			"apiError": "Gemini CLI API 錯誤：{{error}}",
 			"completionError": "Gemini CLI 完成錯誤：{{error}}"
+		},
+		"qwenCode": {
+			"oauthLoadFailed": "無法載入 OAuth 憑證。請先進行驗證：{{error}}"
 		},
 		"gemini": {
 			"generate_stream": "Gemini 產生內容串流錯誤：{{error}}",
@@ -117,6 +120,9 @@
 			"genericError": "Cerebras API 錯誤 ({{status}})：{{message}}",
 			"noResponseBody": "Cerebras API 錯誤：無回應主體",
 			"completionError": "Cerebras 完成錯誤：{{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "Roo 提供者需要雲端認證。請登入 Roo Code Cloud。"
 		},
 		"mode_import_failed": "匯入模式失敗：{{error}}"
 	},
@@ -206,6 +212,9 @@
 			"cloud_auth_required": "您的組織需要 Kilo Code Cloud 身份驗證。請登入以繼續。",
 			"organization_mismatch": "您必須使用組織的 Kilo Code Cloud 帳戶進行身份驗證。",
 			"verification_failed": "無法驗證組織身份驗證。"
+		},
+		"info": {
+			"organization_requires_auth": "您的組織需要身份驗證。"
 		}
 	},
 	"prompts": {

@@ -3,7 +3,7 @@
 		"greeting": "¡Bienvenido a Kilo Code!",
 		"introText1": "Kilo Code es un agente de codificación de IA gratuito y de código abierto.",
 		"introText2": "Funciona con los modelos de IA más recientes como Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1, y más de 450 modelos adicionales.",
-		"introText3": "Crea una cuenta gratuita y obtén $20 en tokens para usar con cualquier modelo de IA.",
+		"introText3": "Crea una cuenta gratuita y obtén hasta $25 en tokens para usar con cualquier modelo de IA.",
 		"ctaButton": "Empezar",
 		"manualModeButton": "Usa tu propia clave API",
 		"alreadySignedUp": "¿Ya te registraste?",
@@ -16,7 +16,10 @@
 	"pricing": {
 		"costUnknown": "costo desconocido",
 		"costUnknownDescription": "El proveedor de API no proporcionó datos de costo o la solicitud fue cancelada.",
-		"discoverModelPricing": "Descubrir precios y capacidades del modelo"
+		"freeModelsDescription": "Los modelos gratuitos pueden tener límites de velocidad. ¡Usa el enlace a continuación para optimizar tu uso de modelos gratuitos!",
+		"freeModelsLink": "Descubre opciones de modelos gratuitos y económicos",
+		"openRouterMarkup": "¡El proveedor de Kilo Code incluye todos los modelos de OpenRouter, sin recargo y con 0% de comisión!",
+		"switchToKiloCode": "Cambiar a Kilo Code"
 	},
 	"notifications": {
 		"toolRequest": "Solicitud de herramienta pendiente de aprobación",
@@ -35,7 +38,31 @@
 			"automaticFetch": "Los modelos más recientes están disponibles automáticamente en Kilo Code. Si no estás seguro de qué modelo elegir, Kilo Code funciona mejor con los modelos recomendados que aparecen en la parte superior en <strong>negrita</strong>.",
 			"providerRouting": {
 				"title": "Kilo Code - Enrutamiento de proveedores de OpenRouter",
-				"description": "Kilo Code enruta las solicitudes a los mejores proveedores disponibles para su modelo. De forma predeterminada, las solicitudes se equilibran en carga entre los principales proveedores para maximizar el tiempo de actividad. Sin embargo, puede elegir un proveedor específico para usar para este modelo."
+				"description": "Kilo Code enruta las solicitudes a los mejores proveedores disponibles para su modelo. De forma predeterminada, las solicitudes se equilibran en carga entre los principales proveedores para maximizar el tiempo de actividad. Sin embargo, puede elegir un proveedor específico para usar para este modelo.",
+				"sorting": {
+					"default": "Ordenación de proveedor predeterminada",
+					"price": "Preferir proveedores con precio más bajo",
+					"throughput": "Preferir proveedores con mayor rendimiento",
+					"latency": "Preferir proveedores con menor latencia"
+				},
+				"dataCollection": {
+					"default": "No se estableció política de datos",
+					"allow": "Permitir recolección de datos del proveedor",
+					"deny": "Denegar recolección de datos del proveedor"
+				}
+			}
+		},
+		"modelInfo": {
+			"contextWindow": "Ventana de contexto",
+			"providerBreakdown": "Desglose de precios y capacidades del proveedor",
+			"averageKiloCodeCost": "Este es el gasto real promedio de Kilo Code usando este modelo durante la última semana. Puede ser menor que el precio listado debido al uso del caché de prompts.",
+			"table": {
+				"provider": "Proveedor",
+				"context": "El endpoint puede procesar este número de tokens (entrada + salida).",
+				"inputPrice": "Costo por millón de tokens para el prompt.",
+				"outputPrice": "Costo por millón de tokens para la completación.",
+				"cacheReadPrice": "Costo por millón de tokens para leer desde el caché.",
+				"cacheWritePrice": "Costo por millón de tokens para escribir al caché."
 			}
 		},
 		"contextManagement": {
@@ -66,7 +93,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code quiere condensar tu conversación",
 			"condenseConversation": "Condensar Conversación"
-		}
+		},
+		"seeNewChanges": "Mostrar Nuevos Cambios"
 	},
 	"newTaskPreview": {
 		"task": "Tarea"
@@ -77,6 +105,8 @@
 		"logOut": "Cerrar sesión",
 		"currentBalance": "SALDO ACTUAL",
 		"loading": "Cargando...",
+		"organization": "Organización",
+		"personal": "Personal",
 		"shop": {
 			"title": "Comprar Créditos",
 			"popular": "Popular",
@@ -159,37 +189,37 @@
 		}
 	},
 	"ghost": {
-		"title": "Asistencia en línea",
+		"title": "Autocomplete",
 		"settings": {
-			"autoTrigger": "Activación automática",
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Tarea Rápida en Línea",
-				"description": "¿Solo necesitas un cambio rápido? Selecciona algo de código (¡o no!) y presiona Cmd+I. Describe tu objetivo en lenguaje sencillo (\"crear un componente de React con estas propiedades\", \"agregar manejo de errores a esta función\"), y obtén múltiples sugerencias listas para usar directamente en tu editor. <DocsLink>Ver atajo</DocsLink>"
-			},
-			"enableAutoInlineTaskKeybinding": {
-				"label": "Tarea en Línea Automática",
-				"description": "¿Necesitas una solución rápida, completar algo o refactorizar? Kilo utilizará el contexto circundante para ofrecer mejoras inmediatas, manteniéndote en el flujo de trabajo. <DocsLink>Ver atajo</DocsLink>"
-			},
+			"autoTrigger": "Activación Automática",
+			"triggers": "Activadores",
+			"keybindingDescription": "Las funciones de Autocomplete pueden activarse mediante comandos. Puedes configurar los <DocsLink>Atajos de Teclado aquí</DocsLink>.",
 			"enableAutoTrigger": {
-				"label": "Activar la activación automática",
-				"description": "Cuando está activado, Kilo Code activará automáticamente la Asistencia en línea cuando dejes de escribir. Esto puede ser útil para correcciones y sugerencias rápidas."
+				"label": "Habilitar Autocomplete",
+				"description": "Cuando está habilitado, Kilo Code activará automáticamente Autocomplete cuando dejes de escribir. Esto puede ser útil para correcciones rápidas y sugerencias."
 			},
 			"autoTriggerDelay": {
-				"label": "Retraso de activación automática",
-				"description": "El retraso en segundos antes de que Kilo Code active la Asistencia en línea después de que dejes de escribir. Un retraso más corto significa sugerencias más rápidas, pero puede consumir más recursos."
+				"label": "Retraso de Activación Automática",
+				"description": "El retraso en segundos antes de que Kilo Code active Autocomplete después de que dejes de escribir. Un retraso más corto significa sugerencias más rápidas, pero puede ser más intensivo en recursos."
+			},
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Tarea Rápida",
+				"description": "¿Solo necesitas un cambio rápido? Selecciona algo de código (¡o no!) y presiona Cmd+I. Describe tu objetivo en español simple (\"crear un componente React con estas props\", \"agregar manejo de errores a esta función\"), y obtén múltiples sugerencias listas para usar directamente en tu editor. <DocsLink>Ver atajo</DocsLink>"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Tarea Inteligente en Línea",
-				"description": "¿Necesitas una corrección rápida, completar o refactorizar? Kilo usará el contexto circundante para ofrecer mejoras inmediatas, manteniéndote en el flujo. <DocsLink>Ver atajo</DocsLink>"
+				"label": "Autocomplete Manual",
+				"description": "¿Necesitas una corrección rápida, completado o refactorización? Kilo usará el contexto circundante para ofrecer mejoras inmediatas, manteniéndote en el flujo. <DocsLink>Ver atajo</DocsLink>"
+			},
+			"enableCustomProvider": {
+				"label": "Usar proveedor personalizado",
+				"description": "Autocomplete usa tu credencial de KiloCode / OpenRouter / Mistral para usar el modelo Codestral por defecto"
 			},
 			"provider": "Proveedor",
 			"apiConfigId": {
 				"label": "Configuración de API",
-				"current": "Usar la configuración de API seleccionada actualmente",
-				"description": "Selecciona una configuración de API para usar en los prompts de Asistencia en Línea, o simplemente usa la que esté seleccionada actualmente"
-			},
-			"keybindingDescription": "Las funciones de Asistencia Integrada se activan mediante comandos. Puedes configurar los <DocsLink>atajos de teclado aquí</DocsLink>.",
-			"triggers": "Disparadores"
+				"current": "Usar configuración de API actualmente seleccionada",
+				"description": "Selecciona una configuración de API para usar en los prompts de Autocomplete, o simplemente usa la que esté actualmente seleccionada"
+			}
 		}
 	},
 	"virtualProvider": {
@@ -213,5 +243,9 @@
 		"perDay": "Por día",
 		"perHour": "Por hora",
 		"requestsLabel": "Solicitudes"
+	},
+	"imageWarnings": {
+		"modelNoImageSupport": "Las imágenes no son compatibles con el modelo actual.",
+		"maxImagesReached": "Máximo de 20 imágenes por mensaje. Elimina algunas imágenes para añadir más."
 	}
 }

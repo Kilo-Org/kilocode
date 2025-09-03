@@ -258,22 +258,31 @@
 			"error": "Не удалось обновить список моделей. Пожалуйста, попробуйте снова."
 		},
 		"getRequestyApiKey": "Получить Requesty API-ключ",
+		"getRequestyBaseUrl": "Базовый URL",
+		"requestyUseCustomBaseUrl": "Использовать пользовательский базовый URL",
 		"openRouterTransformsText": "Сжимать подсказки и цепочки сообщений до размера контекста (<a>OpenRouter Transforms</a>)",
 		"anthropicApiKey": "Anthropic API-ключ",
 		"getAnthropicApiKey": "Получить Anthropic API-ключ",
 		"anthropicUseAuthToken": "Передавать Anthropic API-ключ как Authorization-заголовок вместо X-Api-Key",
+		"anthropic1MContextBetaLabel": "Включить контекстное окно 1M (бета)",
+		"anthropic1MContextBetaDescription": "Расширяет контекстное окно до 1 миллиона токенов для Claude Sonnet 4",
+		"awsBedrock1MContextBetaLabel": "Включить контекстное окно 1M (бета)",
+		"awsBedrock1MContextBetaDescription": "Расширяет контекстное окно до 1 миллиона токенов для Claude Sonnet 4",
 		"cerebrasApiKey": "Cerebras API-ключ",
 		"getCerebrasApiKey": "Получить Cerebras API-ключ",
 		"chutesApiKey": "Chutes API-ключ",
 		"getChutesApiKey": "Получить Chutes API-ключ",
 		"fireworksApiKey": "Fireworks API-ключ",
 		"getFireworksApiKey": "Получить Fireworks API-ключ",
+		"featherlessApiKey": "Featherless API-ключ",
+		"getFeatherlessApiKey": "Получить Featherless API-ключ",
+		"ioIntelligenceApiKey": "IO Intelligence API-ключ",
+		"ioIntelligenceApiKeyPlaceholder": "Введите свой ключ API IO Intelligence",
+		"getIoIntelligenceApiKey": "Получить IO Intelligence API-ключ",
 		"deepSeekApiKey": "DeepSeek API-ключ",
 		"getDeepSeekApiKey": "Получить DeepSeek API-ключ",
 		"doubaoApiKey": "Doubao API-ключ",
 		"getDoubaoApiKey": "Получить Doubao API-ключ",
-		"bigModelApiKey": "BigModel API-ключ",
-		"getBigModelApiKey": "Получить BigModel API-ключ",
 		"moonshotApiKey": "Moonshot API-ключ",
 		"getMoonshotApiKey": "Получить Moonshot API-ключ",
 		"moonshotBaseUrl": "Точка входа Moonshot",
@@ -364,6 +373,9 @@
 		"ollama": {
 			"baseUrl": "Базовый URL (опционально)",
 			"modelId": "ID модели",
+			"apiKey": "API-ключ",
+			"apiKeyPlaceholder": "Введите ваш API-ключ",
+			"apiKeyInfo": "API-ключ будет передан как заголовок Authorization",
 			"description": "Ollama позволяет запускать модели локально на вашем компьютере. Для начала ознакомьтесь с кратким руководством.",
 			"warning": "Примечание: Kilo Code использует сложные подсказки и лучше всего работает с моделями Claude. Менее мощные модели могут работать некорректно."
 		},
@@ -374,6 +386,10 @@
 		"humanRelay": {
 			"description": "API-ключ не требуется, но пользователю нужно вручную копировать и вставлять информацию в веб-чат ИИ.",
 			"instructions": "Во время использования появится диалоговое окно, и текущее сообщение будет скопировано в буфер обмена автоматически. Вам нужно вставить его в веб-версию ИИ (например, ChatGPT или Claude), затем скопировать ответ ИИ обратно в диалоговое окно и нажать кнопку подтверждения."
+		},
+		"roo": {
+			"authenticatedMessage": "Безопасно аутентифицирован через твой аккаунт Roo Code Cloud.",
+			"connectButton": "Подключиться к Roo Code Cloud"
 		},
 		"openRouter": {
 			"providerRouting": {
@@ -436,9 +452,17 @@
 		},
 		"reasoningEffort": {
 			"label": "Усилия по рассуждению модели",
+			"minimal": "Минимальный (самый быстрый)",
 			"high": "Высокие",
 			"medium": "Средние",
 			"low": "Низкие"
+		},
+		"verbosity": {
+			"label": "Подробность вывода",
+			"high": "Высокая",
+			"medium": "Средняя",
+			"low": "Низкая",
+			"description": "Контролирует, насколько подробны ответы модели. Низкая подробность дает краткие ответы, а высокая — подробные объяснения."
 		},
 		"setReasoningLevel": "Включить усилие рассуждения",
 		"claudeCode": {
@@ -462,6 +486,13 @@
 			"requirement4": "Не использует API-ключи - аутентификация обрабатывается через OAuth",
 			"requirement5": "Требует, чтобы инструмент Gemini CLI был сначала установлен и аутентифицирован",
 			"freeAccess": "Бесплатный доступ через OAuth-аутентификацию"
+		},
+		"qwenCode": {
+			"oauthPath": "Путь к учетным данным OAuth (необязательно)",
+			"oauthPathDescription": "Путь к файлу учетных данных OAuth. Оставьте пустым для использования местоположения по умолчанию (~/.qwen/oauth_creds.json).",
+			"description": "Этот провайдер использует OAuth-аутентификацию из сервиса Qwen и не требует API-ключей.",
+			"instructions": "Пожалуйста, следуйте официальной документации для получения файла авторизации и размещения его по указанному пути.",
+			"setupLink": "Официальная документация Qwen"
 		}
 	},
 	"browser": {
@@ -714,14 +745,9 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Включить Morph Fast Apply",
-			"description": "Когда включено, Kilo Code может редактировать файлы с помощью Morph Fast Apply.",
+			"description": "Когда включено, Kilo Code может редактировать файлы с помощью Morph Fast Apply. Требует провайдера Kilo Code API, OpenRouter или API-ключ Morph.",
 			"apiKey": "API-ключ Morph (необязательно)",
-			"placeholder": "Введите ваш API-ключ Morph (необязательно)",
-			"warning": "Если вы не настроите API-ключ Morph, вы все равно можете использовать Fast Apply с Kilo Code или OpenRouter. С вашего аккаунта будет взиматься плата за использование модели, в настоящее время это не отображается в интерфейсе расширения."
-		},
-		"INLINE_ASSIST": {
-			"name": "Встроенная поддержка",
-			"description": "Включите функции Inline Assist для быстрых предложений по коду и улучшений прямо в вашем редакторе. Включает в себя Quick Inline Task (Cmd+I) для целенаправленных изменений и Auto Inline Task для контекстуальных улучшений."
+			"placeholder": "Введите ваш API-ключ Morph (необязательно)"
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Фоновое редактирование",
@@ -730,6 +756,14 @@
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "Использовать новый парсер сообщений",
 			"description": "Включите экспериментальный потоковый парсер сообщений, который ускоряет длинные ответы благодаря более эффективной обработке сообщений."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "Требовать список 'todos' для новых задач",
+			"description": "Если включено, инструмент new_task будет требовать предоставления параметра todos. Это гарантирует, что все новые задачи начинаются с четкого списка целей. Когда отключено (по умолчанию), параметр todos остается необязательным для обратной совместимости."
+		},
+		"INLINE_ASSIST": {
+			"name": "Autocomplete",
+			"description": "Включи функции Autocomplete для быстрых предложений кода и улучшений прямо в твоем редакторе. Включает Быструю Задачу (Cmd+I) для целевых изменений и Autocomplete для контекстуальных улучшений."
 		}
 	},
 	"promptCaching": {
@@ -748,6 +782,7 @@
 		"noComputerUse": "Не поддерживает использование компьютера",
 		"supportsPromptCache": "Поддерживает кэширование подсказок",
 		"noPromptCache": "Не поддерживает кэширование подсказок",
+		"contextWindow": "Контекстное окно:",
 		"maxOutput": "Максимум вывода",
 		"inputPrice": "Цена за вход",
 		"outputPrice": "Цена за вывод",

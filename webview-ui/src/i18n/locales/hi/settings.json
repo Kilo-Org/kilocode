@@ -258,22 +258,31 @@
 			"error": "मॉडल सूची अपडेट करने में विफल। कृपया पुनः प्रयास करें।"
 		},
 		"getRequestyApiKey": "Requesty API कुंजी प्राप्त करें",
+		"getRequestyBaseUrl": "बेस URL",
+		"requestyUseCustomBaseUrl": "कस्टम बेस URL का उपयोग करें",
 		"openRouterTransformsText": "संदर्भ आकार के लिए प्रॉम्प्ट और संदेश श्रृंखलाओं को संपीड़ित करें (<a>OpenRouter ट्रांसफॉर्म</a>)",
 		"anthropicApiKey": "Anthropic API कुंजी",
 		"getAnthropicApiKey": "Anthropic API कुंजी प्राप्त करें",
 		"anthropicUseAuthToken": "X-Api-Key के बजाय Anthropic API कुंजी को Authorization हेडर के रूप में पास करें",
+		"anthropic1MContextBetaLabel": "1M संदर्भ विंडो सक्षम करें (बीटा)",
+		"anthropic1MContextBetaDescription": "Claude Sonnet 4 के लिए संदर्भ विंडो को 1 मिलियन टोकन तक बढ़ाता है",
+		"awsBedrock1MContextBetaLabel": "1M संदर्भ विंडो सक्षम करें (बीटा)",
+		"awsBedrock1MContextBetaDescription": "Claude Sonnet 4 के लिए संदर्भ विंडो को 1 मिलियन टोकन तक बढ़ाता है",
 		"cerebrasApiKey": "Cerebras API कुंजी",
 		"getCerebrasApiKey": "Cerebras API कुंजी प्राप्त करें",
 		"chutesApiKey": "Chutes API कुंजी",
 		"getChutesApiKey": "Chutes API कुंजी प्राप्त करें",
 		"fireworksApiKey": "Fireworks API कुंजी",
 		"getFireworksApiKey": "Fireworks API कुंजी प्राप्त करें",
+		"featherlessApiKey": "Featherless API कुंजी",
+		"getFeatherlessApiKey": "Featherless API कुंजी प्राप्त करें",
+		"ioIntelligenceApiKey": "IO Intelligence API कुंजी",
+		"ioIntelligenceApiKeyPlaceholder": "अपना आईओ इंटेलिजेंस एपीआई कुंजी दर्ज करें",
+		"getIoIntelligenceApiKey": "IO Intelligence API कुंजी प्राप्त करें",
 		"deepSeekApiKey": "DeepSeek API कुंजी",
 		"getDeepSeekApiKey": "DeepSeek API कुंजी प्राप्त करें",
 		"doubaoApiKey": "डौबाओ API कुंजी",
 		"getDoubaoApiKey": "डौबाओ API कुंजी प्राप्त करें",
-		"bigModelApiKey": "BigModel API कुंजी",
-		"getBigModelApiKey": "BigModel API कुंजी प्राप्त करें",
 		"moonshotApiKey": "Moonshot API कुंजी",
 		"getMoonshotApiKey": "Moonshot API कुंजी प्राप्त करें",
 		"moonshotBaseUrl": "Moonshot प्रवेश बिंदु",
@@ -364,6 +373,9 @@
 		"ollama": {
 			"baseUrl": "बेस URL (वैकल्पिक)",
 			"modelId": "मॉडल ID",
+			"apiKey": "API कुंजी",
+			"apiKeyPlaceholder": "अपनी API कुंजी दर्ज करें",
+			"apiKeyInfo": "API कुंजी को Authorization हेडर के रूप में भेजा जाएगा",
 			"description": "Ollama आपको अपने कंप्यूटर पर स्थानीय रूप से मॉडल चलाने की अनुमति देता है। आरंभ करने के निर्देशों के लिए, उनकी क्विकस्टार्ट गाइड देखें।",
 			"warning": "नोट: Kilo Code जटिल प्रॉम्प्ट्स का उपयोग करता है और Claude मॉडल के साथ सबसे अच्छा काम करता है। कम क्षमता वाले मॉडल अपेक्षित रूप से काम नहीं कर सकते हैं।"
 		},
@@ -374,6 +386,10 @@
 		"humanRelay": {
 			"description": "कोई API कुंजी आवश्यक नहीं है, लेकिन उपयोगकर्ता को वेब चैट AI में जानकारी कॉपी और पेस्ट करने में मदद करनी होगी।",
 			"instructions": "उपयोग के दौरान, एक डायलॉग बॉक्स पॉप अप होगा और वर्तमान संदेश स्वचालित रूप से क्लिपबोर्ड पर कॉपी हो जाएगा। आपको इन्हें AI के वेब संस्करणों (जैसे ChatGPT या Claude) में पेस्ट करना होगा, फिर AI की प्रतिक्रिया को डायलॉग बॉक्स में वापस कॉपी करें और पुष्टि बटन पर क्लिक करें।"
+		},
+		"roo": {
+			"authenticatedMessage": "आपके Roo Code Cloud खाते के माध्यम से सुरक्षित रूप से प्रमाणित।",
+			"connectButton": "Roo Code Cloud से कनेक्ट करें"
 		},
 		"openRouter": {
 			"providerRouting": {
@@ -436,9 +452,17 @@
 		},
 		"reasoningEffort": {
 			"label": "मॉडल तर्क प्रयास",
+			"minimal": "न्यूनतम (सबसे तेज़)",
 			"high": "उच्च",
 			"medium": "मध्यम",
 			"low": "निम्न"
+		},
+		"verbosity": {
+			"label": "आउटपुट वर्बोसिटी",
+			"high": "उच्च",
+			"medium": "मध्यम",
+			"low": "कम",
+			"description": "मॉडल की प्रतिक्रियाएं कितनी विस्तृत हैं, इसे नियंत्रित करता है। कम वर्बोसिटी संक्षिप्त उत्तर देती है, जबकि उच्च वर्बोसिटी विस्तृत स्पष्टीकरण प्रदान करती है।"
 		},
 		"setReasoningLevel": "तर्क प्रयास सक्षम करें",
 		"claudeCode": {
@@ -462,6 +486,13 @@
 			"requirement4": "API कुंजियों का उपयोग नहीं करता - प्रमाणीकरण OAuth के माध्यम से संभाला जाता है",
 			"requirement5": "Gemini CLI टूल को पहले इंस्टॉल और प्रमाणित करने की आवश्यकता है",
 			"freeAccess": "OAuth प्रमाणीकरण के माध्यम से मुफ्त पहुंच"
+		},
+		"qwenCode": {
+			"oauthPath": "OAuth क्रेडेंशियल पथ (वैकल्पिक)",
+			"oauthPathDescription": "OAuth क्रेडेंशियल फ़ाइल का पथ। डिफ़ॉल्ट स्थान (~/.qwen/oauth_creds.json) का उपयोग करने के लिए खाली छोड़ें।",
+			"description": "यह प्रदाता Qwen सेवा से OAuth प्रमाणीकरण का उपयोग करता है और API कुंजियों की आवश्यकता नहीं है।",
+			"instructions": "कृपया प्राधिकरण फ़ाइल प्राप्त करने और इसे निर्दिष्ट पथ में रखने के लिए आधिकारिक दस्तावेज़ीकरण का पालन करें।",
+			"setupLink": "Qwen आधिकारिक दस्तावेज़ीकरण"
 		}
 	},
 	"browser": {
@@ -714,14 +745,9 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Morph Fast Apply सक्षम करें",
-			"description": "जब सक्षम होता है, तो Kilo Code फ़ाइलों को Morph Fast Apply का उपयोग करके संपादित कर सकता है।",
+			"description": "जब सक्षम होता है, तो Kilo Code फ़ाइलों को Morph Fast Apply का उपयोग करके संपादित कर सकता है। Kilo Code API प्रदाता, OpenRouter या Morph API कुंजी की आवश्यकता है।",
 			"apiKey": "Morph API कुंजी (वैकल्पिक)",
-			"placeholder": "अपनी Morph API कुंजी दर्ज करें (वैकल्पिक)",
-			"warning": "यदि आप Morph API कुंजी कॉन्फ़िगर नहीं करते हैं, तो आप अभी भी Kilo Code या OpenRouter के साथ Fast Apply का उपयोग कर सकते हैं, लेकिन मॉडल उपयोग के लिए आपके खाते से शुल्क लिया जाएगा!"
-		},
-		"INLINE_ASSIST": {
-			"name": "इनलाइन सहायता",
-			"description": "अपने एडिटर में सीधे त्वरित कोड सुझावों और सुधारों के लिए इनलाइन असिस्ट फीचर्स सक्षम करें। इसमें लक्षित परिवर्तनों के लिए क्विक इनलाइन टास्क (Cmd+I) और संदर्भित सुधारों के लिए ऑटो इनलाइन टास्क शामिल हैं।"
+			"placeholder": "अपनी Morph API कुंजी दर्ज करें (वैकल्पिक)"
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "बैकग्राउंड संपादन",
@@ -730,6 +756,14 @@
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "नए मैसेज पार्सर का उपयोग करें",
 			"description": "प्रायोगिक स्ट्रीमिंग मैसेज पार्सर सक्षम करें, जो लंबे उत्तरों के लिए संदेशों को अधिक कुशलता से प्रोसेस करके प्रदर्शन को बेहतर बनाता है।"
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "नए कार्यों के लिए 'todos' सूची की आवश्यकता है",
+			"description": "जब सक्षम किया जाता है, तो new_task टूल को todos पैरामीटर प्रदान करने की आवश्यकता होगी। यह सुनिश्चित करता है कि सभी नए कार्य स्पष्ट उद्देश्यों की सूची के साथ शुरू हों। जब अक्षम किया जाता है (डिफ़ॉल्ट), तो todos पैरामीटर पिछड़े संगतता के लिए वैकल्पिक रहता है।"
+		},
+		"INLINE_ASSIST": {
+			"name": "Autocomplete",
+			"description": "आपके एडिटर में सीधे त्वरित कोड सुझाव और सुधार के लिए Autocomplete सुविधाओं को सक्षम करें। लक्षित परिवर्तनों के लिए त्वरित कार्य (Cmd+I) और संदर्भित सुधारों के लिए Autocomplete शामिल है।"
 		}
 	},
 	"promptCaching": {
@@ -748,6 +782,7 @@
 		"noComputerUse": "कंप्यूटर उपयोग का समर्थन नहीं करता है",
 		"supportsPromptCache": "प्रॉम्प्ट कैशिंग का समर्थन करता है",
 		"noPromptCache": "प्रॉम्प्ट कैशिंग का समर्थन नहीं करता है",
+		"contextWindow": "संदर्भ विंडो:",
 		"maxOutput": "अधिकतम आउटपुट",
 		"inputPrice": "इनपुट मूल्य",
 		"outputPrice": "आउटपुट मूल्य",

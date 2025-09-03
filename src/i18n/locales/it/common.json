@@ -93,7 +93,7 @@
 			"processExitedWithError": "Il processo Claude Code è terminato con codice {{exitCode}}. Output di errore: {{output}}",
 			"stoppedWithReason": "Claude Code si è fermato per il motivo: {{reason}}",
 			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
-			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Roo settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
+			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Kilo Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "Impossibile caricare le credenziali OAuth. Autenticati prima: {{error}}",
@@ -118,6 +118,12 @@
 			"genericError": "Errore API Cerebras ({{status}}): {{message}}",
 			"noResponseBody": "Errore API Cerebras: Nessun corpo di risposta",
 			"completionError": "Errore di completamento Cerebras: {{error}}"
+		},
+		"qwenCode": {
+			"oauthLoadFailed": "Impossibile caricare le credenziali OAuth. Autenticati prima: {{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "Il provider Roo richiede l'autenticazione cloud. Accedi a Roo Code Cloud."
 		}
 	},
 	"warnings": {
@@ -206,6 +212,9 @@
 			"cloud_auth_required": "La tua organizzazione richiede l'autenticazione Kilo Code Cloud. Accedi per continuare.",
 			"organization_mismatch": "Devi essere autenticato con l'account Kilo Code Cloud della tua organizzazione.",
 			"verification_failed": "Impossibile verificare l'autenticazione dell'organizzazione."
+		},
+		"info": {
+			"organization_requires_auth": "La tua organizzazione richiede l'autenticazione."
 		}
 	},
 	"prompts": {

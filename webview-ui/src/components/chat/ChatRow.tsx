@@ -54,6 +54,7 @@ import CodebaseSearchResultsDisplay from "./CodebaseSearchResultsDisplay"
 import { cn } from "@/lib/utils"
 import { KiloChatRowUserFeedback } from "../kilocode/chat/KiloChatRowUserFeedback" // kilocode_change
 import { StandardTooltip } from "../ui" // kilocode_change
+import { FastApplyChatDisplay } from "./kilocode/FastApplyChatDisplay" // kilocode_change
 
 interface ChatRowProps {
 	message: ClineMessage
@@ -424,6 +425,11 @@ export const ChatRowContent = ({
 							isExpanded={isExpanded}
 							onToggleExpand={handleToggleExpand}
 						/>
+						{
+							// kilocode_change start
+							tool.fastApplyResult && <FastApplyChatDisplay fastApplyResult={tool.fastApplyResult} />
+							// kilocode_change end
+						}
 					</>
 				)
 			case "insertContent":
@@ -556,6 +562,11 @@ export const ChatRowContent = ({
 							onToggleExpand={handleToggleExpand}
 							onJumpToFile={() => vscode.postMessage({ type: "openFile", text: "./" + tool.path })}
 						/>
+						{
+							// kilocode_change start
+							tool.fastApplyResult && <FastApplyChatDisplay fastApplyResult={tool.fastApplyResult} />
+							// kilocode_change end
+						}
 					</>
 				)
 			case "readFile":
@@ -1127,6 +1138,7 @@ export const ChatRowContent = ({
 						</>
 					)
 				case "completion_result":
+					const commitRange = message.metadata?.kiloCode?.commitRange
 					return (
 						<>
 							<div style={headerStyle}>
@@ -1136,6 +1148,29 @@ export const ChatRowContent = ({
 							<div style={{ color: "var(--vscode-charts-green)", paddingTop: 10 }}>
 								<Markdown markdown={message.text} />
 							</div>
+							{
+								// kilocode_change start
+								!message.partial && commitRange ? (
+									<div>
+										<VSCodeButton
+											className="w-full mt-2"
+											appearance="secondary"
+											onClick={() => {
+												vscode.postMessage({
+													type: "seeNewChanges",
+													payload: {
+														commitRange,
+													},
+												})
+											}}>
+											{t("kilocode:chat.seeNewChanges")}
+										</VSCodeButton>
+									</div>
+								) : (
+									<></>
+								)
+								// kilocode_change end
+							}
 						</>
 					)
 				case "shell_integration_warning":

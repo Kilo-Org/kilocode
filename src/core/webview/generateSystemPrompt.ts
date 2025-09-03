@@ -11,6 +11,8 @@ import { MultiFileSearchReplaceDiffStrategy } from "../diff/strategies/multi-fil
 import { ClineProvider } from "./ClineProvider"
 
 export const generateSystemPrompt = async (provider: ClineProvider, message: WebviewMessage) => {
+	const state = await provider.getState() // kilocode_change
+
 	const {
 		apiConfiguration,
 		customModePrompts,
@@ -25,7 +27,7 @@ export const generateSystemPrompt = async (provider: ClineProvider, message: Web
 		language,
 		maxReadFileLine,
 		maxConcurrentFileReads,
-	} = await provider.getState()
+	} = state // kilocode_change
 
 	// Check experiment to determine which diff strategy to use
 	const isMultiFileApplyDiffEnabled = experimentsModule.isEnabled(
@@ -42,7 +44,7 @@ export const generateSystemPrompt = async (provider: ClineProvider, message: Web
 	const mode = message.mode ?? defaultModeSlug
 	const customModes = await provider.customModesManager.getCustomModes()
 
-	const rooIgnoreInstructions = provider.getCurrentCline()?.rooIgnoreController?.getInstructions()
+	const rooIgnoreInstructions = provider.getCurrentTask()?.rooIgnoreController?.getInstructions()
 
 	// Determine if browser tools can be used based on model support, mode, and user settings
 	let modelSupportsComputerUse = false
@@ -85,8 +87,16 @@ export const generateSystemPrompt = async (provider: ClineProvider, message: Web
 		{
 			maxConcurrentFileReads: maxConcurrentFileReads ?? 5,
 			todoListEnabled: apiConfiguration?.todoListEnabled ?? true,
-			useAgentRules: vscode.workspace.getConfiguration("roo-cline").get<boolean>("useAgentRules") ?? true,
+			useAgentRules: vscode.workspace.getConfiguration("kilo-code").get<boolean>("useAgentRules") ?? true,
+			newTaskRequireTodos: vscode.workspace
+				.getConfiguration("kilo-code")
+				.get<boolean>("newTaskRequireTodos", false),
 		},
+		// kilocode_change start
+		undefined,
+		undefined,
+		state,
+		// kilocode_change end
 	)
 
 	return systemPrompt

@@ -3,7 +3,7 @@
 		"greeting": "Kilo Code'a hoş geldiniz!",
 		"introText1": "Kilo Code ücretsiz, açık kaynaklı bir AI kodlama ajanıdır.",
 		"introText2": "Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1 ve 450+ diğer en yeni AI modelleri ile çalışır.",
-		"introText3": "Ücretsiz hesap oluşturun ve herhangi bir AI modeli ile kullanabilceğiniz $20 değerinde token alın.",
+		"introText3": "Ücretsiz hesap oluşturun ve herhangi bir AI modeli ile kullanabilceğiniz $25 değerinde token alın.",
 		"ctaButton": "Başla",
 		"manualModeButton": "Kendi API anahtarınızı kullanın",
 		"alreadySignedUp": "Zaten kaydoldunuz mu?",
@@ -16,7 +16,10 @@
 	"pricing": {
 		"costUnknown": "maliyet bilinmiyor",
 		"costUnknownDescription": "API Sağlayıcısı herhangi bir maliyet verisi sağlamadı veya istek iptal edildi.",
-		"discoverModelPricing": "Model fiyatlandırması ve yeteneklerini keşfedin"
+		"freeModelsDescription": "Ücretsiz modellerin hız limitleri olabilir. Ücretsiz model kullanımını optimize etmek için aşağıdaki bağlantıyı kullan!",
+		"freeModelsLink": "Ücretsiz ve bütçe dostu model seçeneklerini keşfet",
+		"openRouterMarkup": "Kilo Code sağlayıcısı tüm OpenRouter modellerini içerir, sıfır ek ücret ve %0 komisyon ile!",
+		"switchToKiloCode": "Kilo Code'a geç"
 	},
 	"notifications": {
 		"toolRequest": "Araç isteği onay bekliyor",
@@ -41,7 +44,31 @@
 			"automaticFetch": "En son modeller Kilo Code'da otomatik olarak kullanılabilir. Hangi modeli seçeceğinizden emin değilseniz, Kilo Code en üstte <strong>kalın yazı</strong> ile listelenen önerilen modellerle en iyi şekilde çalışır.",
 			"providerRouting": {
 				"title": "Kilo Code - OpenRouter Sağlayıcı Yönlendirme",
-				"description": "Kilo Code, modeliniz için en iyi kullanılabilir sağlayıcılara istekleri yönlendirir. Varsayılan olarak, çalışma süresini en üst düzeye çıkarmak için istekler en iyi sağlayıcılar arasında yük dengelenir. Ancak, bu model için kullanılacak belirli bir sağlayıcı seçebilirsiniz."
+				"description": "Kilo Code, modeliniz için en iyi kullanılabilir sağlayıcılara istekleri yönlendirir. Varsayılan olarak, çalışma süresini en üst düzeye çıkarmak için istekler en iyi sağlayıcılar arasında yük dengelenir. Ancak, bu model için kullanılacak belirli bir sağlayıcı seçebilirsiniz.",
+				"sorting": {
+					"default": "Varsayılan sağlayıcı sıralaması",
+					"price": "Düşük fiyatlı sağlayıcıları tercih et",
+					"throughput": "Yüksek aktarım hızlı sağlayıcıları tercih et",
+					"latency": "Düşük gecikme süreli sağlayıcıları tercih et"
+				},
+				"dataCollection": {
+					"default": "Veri politikası ayarlanmamış",
+					"allow": "Sağlayıcı veri toplamaya izin ver",
+					"deny": "Sağlayıcı veri toplamayı reddet"
+				}
+			}
+		},
+		"modelInfo": {
+			"contextWindow": "Bağlam penceresi",
+			"providerBreakdown": "Sağlayıcı Fiyat ve Yetenek Dökümü",
+			"averageKiloCodeCost": "Bu, Kilo Code'un bu modeli kullanarak geçtiğimiz hafta boyunca yaptığı ortalama gerçek harcamadır. Prompt önbellek kullanımı nedeniyle listelenen fiyattan daha düşük olabilir.",
+			"table": {
+				"provider": "Sağlayıcı",
+				"context": "Uç nokta bu sayıda token işleyebilir (giriş + çıkış).",
+				"inputPrice": "İstem için milyon token başına maliyet.",
+				"outputPrice": "Tamamlama için milyon token başına maliyet.",
+				"cacheReadPrice": "Önbellekten okuma için milyon token başına maliyet.",
+				"cacheWritePrice": "Önbelleğe yazma için milyon token başına maliyet."
 			}
 		},
 		"systemNotifications": {
@@ -66,7 +93,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code konuşmanı özetlemek istiyor",
 			"condenseConversation": "Konuşmayı Özetle"
-		}
+		},
+		"seeNewChanges": "Yeni Değişiklikleri Göster"
 	},
 	"newTaskPreview": {
 		"task": "Görev"
@@ -77,6 +105,8 @@
 		"logOut": "Çıkış Yap",
 		"currentBalance": "MEVCUT BAKİYE",
 		"loading": "Yükleniyor...",
+		"organization": "Organizasyon",
+		"personal": "Kişisel",
 		"shop": {
 			"title": "Kredi Satın Al",
 			"popular": "Popüler",
@@ -159,37 +189,37 @@
 		}
 	},
 	"ghost": {
-		"title": "Satır İçi Yardım",
+		"title": "Autocomplete",
 		"settings": {
-			"autoTrigger": "Otomatik Tetikleyici",
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Hızlı Satır İçi Görev",
-				"description": "Sadece hızlı bir değişikliğe mi ihtiyacınız var? Biraz kod seçin (ya da seçmeyin!) ve Cmd+I tuşuna basın. Amacınızı sade bir şekilde açıklayın (\"bu prop'larla bir React bileşeni oluştur\", \"bu fonksiyona hata yönetimi ekle\") ve düzenleyicinizde kullanıma hazır birden fazla öneri alın. <DocsLink>Kısayolu gör</DocsLink>"
-			},
-			"enableAutoInlineTaskKeybinding": {
-				"label": "Otomatik Satır İçi Görev",
-				"description": "Hızlı bir düzeltme, tamamlama veya yeniden düzenleme mi gerekiyor? Kilo, çevreleyen bağlamı kullanarak anında iyileştirmeler sunacak, böylece odağınızı kaybetmeyeceksiniz. <DocsLink>Kısayolu gör</DocsLink>"
-			},
+			"autoTrigger": "Otomatik Tetikleme",
+			"triggers": "Tetikleyiciler",
+			"keybindingDescription": "Autocomplete özellikleri komutlarla tetiklenebilir. <DocsLink>Klavye Kısayollarını burada</DocsLink> yapılandırabilirsin.",
 			"enableAutoTrigger": {
-				"label": "Otomatik Tetikleyiciyi Etkinleştir",
-				"description": "Etkinleştirildiğinde, yazmayı bıraktığında Kilo Code otomatik olarak Satır İçi Yardımı tetikler. Bu, hızlı düzeltmeler ve öneriler için yararlı olabilir."
+				"label": "Autocomplete'i Etkinleştir",
+				"description": "Etkinleştirildiğinde, Kilo Code yazmayı bıraktığında otomatik olarak Autocomplete'i tetikleyecek. Bu hızlı düzeltmeler ve öneriler için yararlı olabilir."
 			},
 			"autoTriggerDelay": {
-				"label": "Otomatik Tetikleyici Gecikmesi",
-				"description": "Yazmayı bıraktıktan sonra Kilo Code'un Satır İçi Yardımı tetiklemeden önceki saniye cinsinden gecikme. Daha kısa gecikme daha hızlı öneriler anlamına gelir, ancak daha fazla kaynak kullanabilir."
+				"label": "Otomatik Tetikleme Gecikmesi",
+				"description": "Yazmayı bıraktıktan sonra Kilo Code'un Autocomplete'i tetiklemeden önceki saniye cinsinden gecikme. Daha kısa gecikme daha hızlı öneriler anlamına gelir, ancak daha fazla kaynak yoğun olabilir."
+			},
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Hızlı Görev",
+				"description": "Sadece hızlı bir değişiklik mi gerekiyor? Biraz kod seç (ya da seçme!) ve Cmd+I'ya bas. Hedefini basit Türkçe ile açıkla (\"bu props'larla bir React bileşeni oluştur\", \"bu fonksiyona hata işleme ekle\"), ve editöründe doğrudan kullanıma hazır birden fazla öneri al. <DocsLink>Kısayolu gör</DocsLink>"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Akıllı Satır İçi Görev",
-				"description": "Hızlı bir düzeltme, tamamlama veya yeniden düzenlemeye mi ihtiyacın var? Kilo, anında iyileştirmeler sunmak için çevredeki bağlamı kullanır ve seni akışta tutar. <DocsLink>Kısayolu gör</DocsLink>"
+				"label": "Manuel Autocomplete",
+				"description": "Hızlı bir düzeltme, tamamlama veya yeniden düzenleme mi gerekiyor? Kilo çevredeki bağlamı kullanarak anında iyileştirmeler sunacak, seni akışta tutacak. <DocsLink>Kısayolu gör</DocsLink>"
+			},
+			"enableCustomProvider": {
+				"label": "Özel sağlayıcı kullan",
+				"description": "Autocomplete varsayılan olarak Codestral modelini kullanmak için KiloCode / OpenRouter / Mistral kimlik bilgilerini kullanır"
 			},
 			"provider": "Sağlayıcı",
 			"apiConfigId": {
 				"label": "API Yapılandırması",
 				"current": "Şu anda seçili API yapılandırmasını kullan",
-				"description": "Satır İçi Yardım istemleri için kullanılacak bir API yapılandırması seçin veya o anda seçili olanı kullanın"
-			},
-			"triggers": "Tetikleyiciler",
-			"keybindingDescription": "Satır içi Yardım özellikleri komutlarla tetiklenir. <DocsLink>Klavye kısayollarını buradan</DocsLink> yapılandırabilirsiniz."
+				"description": "Autocomplete istekleri için kullanılacak API yapılandırmasını seç, ya da şu anda seçili olanı kullan"
+			}
 		}
 	},
 	"virtualProvider": {
@@ -213,5 +243,9 @@
 		"perHour": "Saat Başına",
 		"perMinute": "Dakika Başına",
 		"requestsLabel": "İstekler"
+	},
+	"imageWarnings": {
+		"maxImagesReached": "Mesaj başına maksimum 20 görsel. Daha fazla eklemek için bazı görselleri kaldırın.",
+		"modelNoImageSupport": "Görüntüler mevcut model tarafından desteklenmiyor."
 	}
 }

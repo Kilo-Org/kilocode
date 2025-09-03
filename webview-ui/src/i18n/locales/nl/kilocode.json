@@ -3,7 +3,7 @@
 		"greeting": "Welkom bij Kilo Code!",
 		"introText1": "Kilo Code is een gratis, open source AI coding agent.",
 		"introText2": "Het werkt met de nieuwste AI modellen zoals Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1, en meer dan 450 andere.",
-		"introText3": "Maak een gratis account aan en krijg $20 aan tokens om te gebruiken met elk AI model.",
+		"introText3": "Maak een gratis account aan en krijg tot $25 aan tokens om te gebruiken met elk AI model.",
 		"ctaButton": "Aan de slag",
 		"manualModeButton": "Gebruik je eigen API-sleutel",
 		"alreadySignedUp": "Al aangemeld?",
@@ -16,7 +16,10 @@
 	"pricing": {
 		"costUnknown": "kosten onbekend",
 		"costUnknownDescription": "De API-provider heeft geen kostengegevens verstrekt of het verzoek is geannuleerd.",
-		"discoverModelPricing": "Ontdek modelprijzen en mogelijkheden"
+		"freeModelsDescription": "Gratis modellen kunnen snelheidslimieten hebben. Gebruik de link hieronder om je gebruik van gratis modellen te optimaliseren!",
+		"freeModelsLink": "Ontdek gratis en budget modelopties",
+		"openRouterMarkup": "De Kilo Code provider bevat alle OpenRouter modellen, zonder opslag en met 0% commissie!",
+		"switchToKiloCode": "Overstappen naar Kilo Code"
 	},
 	"notifications": {
 		"toolRequest": "Toolverzoek wacht op goedkeuring",
@@ -35,7 +38,31 @@
 			"automaticFetch": "De nieuwste modellen zijn automatisch beschikbaar in Kilo Code. Als je niet zeker weet welk model je moet kiezen, werkt Kilo Code het beste met de aanbevolen modellen die bovenaan in <strong>vetgedrukte tekst</strong> staan.",
 			"providerRouting": {
 				"title": "Kilo Code - OpenRouter Provider Routing",
-				"description": "Kilo Code routeert verzoeken naar de beste beschikbare providers voor uw model. Standaard worden verzoeken verdeeld over de beste providers om de uptime te maximaliseren. U kunt echter een specifieke provider kiezen om voor dit model te gebruiken."
+				"description": "Kilo Code routeert verzoeken naar de beste beschikbare providers voor uw model. Standaard worden verzoeken verdeeld over de beste providers om de uptime te maximaliseren. U kunt echter een specifieke provider kiezen om voor dit model te gebruiken.",
+				"sorting": {
+					"default": "Standaard provider sortering",
+					"price": "Voorkeur voor providers met lagere prijs",
+					"throughput": "Voorkeur voor providers met hogere doorvoer",
+					"latency": "Voorkeur voor providers met lagere latentie"
+				},
+				"dataCollection": {
+					"default": "Geen databeleid ingesteld",
+					"allow": "Sta dataverzameling door provider toe",
+					"deny": "Weiger dataverzameling door provider"
+				}
+			}
+		},
+		"modelInfo": {
+			"contextWindow": "Context venster",
+			"providerBreakdown": "Provider Prijs en Capaciteit Overzicht",
+			"averageKiloCodeCost": "Dit zijn de gemiddelde daadwerkelijke kosten voor Kilo Code bij gebruik van dit model over de afgelopen week. Deze kunnen lager zijn dan de vermelde prijs door gebruik van prompt cache.",
+			"table": {
+				"provider": "Provider",
+				"context": "Het eindpunt kan dit aantal tokens verwerken (input + output).",
+				"inputPrice": "Kosten per miljoen tokens voor de prompt.",
+				"outputPrice": "Kosten per miljoen tokens voor de voltooiing.",
+				"cacheReadPrice": "Kosten per miljoen tokens voor het lezen uit de cache.",
+				"cacheWritePrice": "Kosten per miljoen tokens voor het schrijven naar de cache."
 			}
 		},
 		"contextManagement": {
@@ -66,7 +93,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code wil je gesprek samenvatten",
 			"condenseConversation": "Gesprek samenvatten"
-		}
+		},
+		"seeNewChanges": "Toon Nieuwe Wijzigingen"
 	},
 	"newTaskPreview": {
 		"task": "Taak"
@@ -77,6 +105,8 @@
 		"logOut": "Uitloggen",
 		"currentBalance": "HUIDIG SALDO",
 		"loading": "Laden...",
+		"organization": "Organisatie",
+		"personal": "Persoonlijk",
 		"shop": {
 			"title": "Credits Kopen",
 			"popular": "Populair",
@@ -159,37 +189,37 @@
 		}
 	},
 	"ghost": {
-		"title": "Inline Assistentie",
+		"title": "Autocomplete",
 		"settings": {
-			"autoTrigger": "Automatische Trigger",
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Snelle Inline Taak",
-				"description": "Heb je maar een snelle aanpassing nodig? Selecteer wat code (of niet!) en druk op Cmd+I. Beschrijf je doel in gewoon Nederlands (\"maak een React-component met deze props\", \"voeg foutafhandeling toe aan deze functie\"), en krijg meerdere, direct bruikbare suggesties rechtstreeks in je editor. <DocsLink>Zie sneltoets</DocsLink>"
-			},
-			"enableAutoInlineTaskKeybinding": {
-				"label": "Automatische Inline Taak",
-				"description": "Behoefte aan een snelle oplossing, aanvulling of herstructurering? Kilo gebruikt de omringende context om directe verbeteringen aan te bieden, zodat je in je flow blijft. <DocsLink>Bekijk sneltoets</DocsLink>"
-			},
+			"autoTrigger": "Automatische Activering",
+			"triggers": "Triggers",
+			"keybindingDescription": "Autocomplete-functies kunnen worden geactiveerd door commando's. Je kunt de <DocsLink>Toetsenbordsnelkoppelingen hier</DocsLink> configureren.",
 			"enableAutoTrigger": {
-				"label": "Automatische Trigger Inschakelen",
-				"description": "Wanneer ingeschakeld, zal Kilo Code automatisch Inline Assist activeren wanneer je stopt met typen. Dit kan handig zijn voor snelle fixes en suggesties."
+				"label": "Autocomplete Inschakelen",
+				"description": "Wanneer ingeschakeld, zal Kilo Code automatisch Autocomplete activeren wanneer je stopt met typen. Dit kan nuttig zijn voor snelle fixes en suggesties."
 			},
 			"autoTriggerDelay": {
-				"label": "Automatische Trigger Vertraging",
-				"description": "De vertraging in seconden voordat Kilo Code Inline Assist activeert nadat je stopt met typen. Een kortere vertraging betekent snellere suggesties, maar kan meer resources gebruiken."
+				"label": "Automatische Activeringsvertraging",
+				"description": "De vertraging in seconden voordat Kilo Code Autocomplete activeert nadat je bent gestopt met typen. Een kortere vertraging betekent snellere suggesties, maar kan meer resource-intensief zijn."
+			},
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Snelle Taak",
+				"description": "Heb je alleen een snelle wijziging nodig? Selecteer wat code (of niet!) en druk op Cmd+I. Beschrijf je doel in eenvoudig Nederlands (\"maak een React-component met deze props\", \"voeg foutafhandeling toe aan deze functie\"), en krijg meerdere, klaar-voor-gebruik suggesties direct in je editor. <DocsLink>Snelkoppeling bekijken</DocsLink>"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Slimme Inline Taak",
-				"description": "Heb je een snelle fix, aanvulling of refactoring nodig? Kilo gebruikt de omringende context om directe verbeteringen aan te bieden, zodat je in de flow blijft. <DocsLink>Bekijk sneltoets</DocsLink>"
+				"label": "Handmatige Autocomplete",
+				"description": "Heb je een snelle fix, voltooiing of refactor nodig? Kilo zal de omringende context gebruiken om onmiddellijke verbeteringen aan te bieden, waardoor je in de flow blijft. <DocsLink>Snelkoppeling bekijken</DocsLink>"
 			},
-			"provider": "Aanbieder",
+			"enableCustomProvider": {
+				"label": "Aangepaste provider gebruiken",
+				"description": "Autocomplete gebruikt standaard je KiloCode / OpenRouter / Mistral-referenties om het Codestral-model te gebruiken"
+			},
+			"provider": "Provider",
 			"apiConfigId": {
-				"label": "API-configuratie",
-				"current": "Gebruik de momenteel geselecteerde API-configuratie",
-				"description": "Selecteer een API-configuratie om te gebruiken voor Inline Assist-prompts, of gebruik gewoon wat momenteel is geselecteerd"
-			},
-			"triggers": "Triggers",
-			"keybindingDescription": "Functies binnen Inline Assist worden geactiveerd door commando's. Je kunt de <DocsLink>sneltoetsen hier configureren</DocsLink>."
+				"label": "API-Configuratie",
+				"current": "Gebruik momenteel geselecteerde API-configuratie",
+				"description": "Selecteer een API-configuratie om te gebruiken voor Autocomplete-prompts, of gebruik gewoon wat er momenteel is geselecteerd"
+			}
 		}
 	},
 	"virtualProvider": {
@@ -213,5 +243,9 @@
 		"perHour": "Per Uur",
 		"perDay": "Per dag",
 		"requestsLabel": "Verzoeken"
+	},
+	"imageWarnings": {
+		"modelNoImageSupport": "Afbeeldingen worden niet ondersteund door het huidige model.",
+		"maxImagesReached": "Maximaal 20 afbeeldingen per bericht. Verwijder enkele afbeeldingen om meer toe te voegen."
 	}
 }

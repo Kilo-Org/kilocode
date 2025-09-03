@@ -81,7 +81,6 @@ src/node_modules
 !webview-ui/
 !packages/evals/.docker/entrypoints/runner.sh
 !packages/build/
-!packages/cloud/
 !packages/config-eslint/
 !packages/config-typescript/
 !packages/evals/

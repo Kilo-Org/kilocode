@@ -5,6 +5,7 @@ import {
 	type GenerateContentParameters,
 	type GenerateContentConfig,
 	type GroundingMetadata,
+	FinishReason, // kilocode_change
 } from "@google/genai"
 import type { JWTInput } from "google-auth-library"
 
@@ -20,6 +21,7 @@ import { getModelParams } from "../transform/model-params"
 
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { BaseProvider } from "./base-provider"
+import { throwMaxCompletionTokensReachedError } from "./kilocode/verifyFinishReason"
 
 type GeminiHandlerOptions = ApiHandlerOptions & {
 	isVertex?: boolean
@@ -99,6 +101,12 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 				// Process candidates and their parts to separate thoughts from content
 				if (chunk.candidates && chunk.candidates.length > 0) {
 					const candidate = chunk.candidates[0]
+
+					// kilocode_change start
+					if (candidate.finishReason === FinishReason.MAX_TOKENS) {
+						throwMaxCompletionTokensReachedError()
+					}
+					// kilocode_change end
 
 					if (candidate.groundingMetadata) {
 						pendingGroundingMetadata = candidate.groundingMetadata

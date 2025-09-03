@@ -258,22 +258,31 @@
 			"error": "Gagal merefresh daftar model. Silakan coba lagi."
 		},
 		"getRequestyApiKey": "Dapatkan Requesty API Key",
+		"getRequestyBaseUrl": "Base URL",
+		"requestyUseCustomBaseUrl": "Gunakan URL dasar khusus",
 		"openRouterTransformsText": "Kompres prompt dan rantai pesan ke ukuran konteks (<a>OpenRouter Transforms</a>)",
 		"anthropicApiKey": "Anthropic API Key",
 		"getAnthropicApiKey": "Dapatkan Anthropic API Key",
 		"anthropicUseAuthToken": "Kirim Anthropic API Key sebagai Authorization header alih-alih X-Api-Key",
+		"anthropic1MContextBetaLabel": "Aktifkan jendela konteks 1M (Beta)",
+		"anthropic1MContextBetaDescription": "Memperluas jendela konteks menjadi 1 juta token untuk Claude Sonnet 4",
+		"awsBedrock1MContextBetaLabel": "Aktifkan jendela konteks 1M (Beta)",
+		"awsBedrock1MContextBetaDescription": "Memperluas jendela konteks menjadi 1 juta token untuk Claude Sonnet 4",
 		"cerebrasApiKey": "Cerebras API Key",
 		"getCerebrasApiKey": "Dapatkan Cerebras API Key",
 		"chutesApiKey": "Chutes API Key",
 		"getChutesApiKey": "Dapatkan Chutes API Key",
 		"fireworksApiKey": "Fireworks API Key",
 		"getFireworksApiKey": "Dapatkan Fireworks API Key",
+		"featherlessApiKey": "Featherless API Key",
+		"getFeatherlessApiKey": "Dapatkan Featherless API Key",
+		"ioIntelligenceApiKey": "IO Intelligence API Key",
+		"ioIntelligenceApiKeyPlaceholder": "Masukkan kunci API IO Intelligence Anda",
+		"getIoIntelligenceApiKey": "Dapatkan IO Intelligence API Key",
 		"deepSeekApiKey": "DeepSeek API Key",
 		"getDeepSeekApiKey": "Dapatkan DeepSeek API Key",
 		"doubaoApiKey": "Kunci API Doubao",
 		"getDoubaoApiKey": "Dapatkan Kunci API Doubao",
-		"bigModelApiKey": "Kunci API BigModel",
-		"getBigModelApiKey": "Dapatkan Kunci API BigModel",
 		"moonshotApiKey": "Kunci API Moonshot",
 		"getMoonshotApiKey": "Dapatkan Kunci API Moonshot",
 		"moonshotBaseUrl": "Titik Masuk Moonshot",
@@ -364,6 +373,9 @@
 		"ollama": {
 			"baseUrl": "Base URL (opsional)",
 			"modelId": "Model ID",
+			"apiKey": "API Key",
+			"apiKeyPlaceholder": "Masukkan API key Anda",
+			"apiKeyInfo": "API key akan dikirim sebagai Authorization header",
 			"description": "Ollama memungkinkan kamu menjalankan model secara lokal di komputer. Untuk instruksi cara memulai, lihat panduan quickstart mereka.",
 			"warning": "Catatan: Kilo Code menggunakan prompt kompleks dan bekerja terbaik dengan model Claude. Model yang kurang mampu mungkin tidak bekerja seperti yang diharapkan."
 		},
@@ -374,6 +386,10 @@
 		"humanRelay": {
 			"description": "Tidak diperlukan API key, tetapi pengguna perlu membantu menyalin dan menempel informasi ke web chat AI.",
 			"instructions": "Selama penggunaan, kotak dialog akan muncul dan pesan saat ini akan disalin ke clipboard secara otomatis. Kamu perlu menempel ini ke versi web AI (seperti ChatGPT atau Claude), lalu salin balasan AI kembali ke kotak dialog dan klik tombol konfirmasi."
+		},
+		"roo": {
+			"authenticatedMessage": "Terautentikasi dengan aman melalui akun Roo Code Cloud Anda.",
+			"connectButton": "Hubungkan ke Roo Code Cloud"
 		},
 		"openRouter": {
 			"providerRouting": {
@@ -436,9 +452,17 @@
 		},
 		"reasoningEffort": {
 			"label": "Upaya Reasoning Model",
+			"minimal": "Minimal (Tercepat)",
 			"high": "Tinggi",
 			"medium": "Sedang",
 			"low": "Rendah"
+		},
+		"verbosity": {
+			"label": "Verbositas Output",
+			"high": "Tinggi",
+			"medium": "Sedang",
+			"low": "Rendah",
+			"description": "Mengontrol seberapa detail respons model. Verbositas rendah menghasilkan jawaban singkat, sedangkan verbositas tinggi memberikan penjelasan menyeluruh."
 		},
 		"setReasoningLevel": "Aktifkan Upaya Reasoning",
 		"claudeCode": {
@@ -462,6 +486,13 @@
 			"requirement4": "Tidak menggunakan kunci API - autentikasi ditangani melalui OAuth",
 			"requirement5": "Memerlukan alat Gemini CLI diinstal dan diautentikasi terlebih dahulu",
 			"freeAccess": "Akses gratis melalui autentikasi OAuth"
+		},
+		"qwenCode": {
+			"oauthPath": "Jalur Kredensial OAuth (opsional)",
+			"oauthPathDescription": "Jalur ke file kredensial OAuth. Biarkan kosong untuk menggunakan lokasi default (~/.qwen/oauth_creds.json).",
+			"description": "Provider ini menggunakan autentikasi OAuth dari layanan Qwen dan tidak memerlukan kunci API.",
+			"instructions": "Silakan ikuti dokumentasi resmi untuk mendapatkan file otorisasi dan tempatkan di jalur yang ditentukan.",
+			"setupLink": "Dokumentasi Resmi Qwen"
 		}
 	},
 	"browser": {
@@ -735,14 +766,9 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Aktifkan Morph Fast Apply",
-			"description": "Ketika diaktifkan, Kilo Code dapat mengedit file menggunakan Morph Fast Apply.",
+			"description": "Ketika diaktifkan, Kilo Code dapat mengedit file menggunakan Morph Fast Apply. Memerlukan Kilo Code API Provider, OpenRouter atau kunci API Morph.",
 			"apiKey": "Kunci API Morph (opsional)",
-			"placeholder": "Masukkan kunci API Morph Anda (opsional)",
-			"warning": "Jika Anda tidak mengonfigurasi kunci API Morph, Anda masih dapat menggunakan Fast Apply dengan Kilo Code atau OpenRouter. Akun Anda akan ditagih untuk penggunaan model, ini saat ini tidak ditampilkan di UI ekstensi."
-		},
-		"INLINE_ASSIST": {
-			"name": "Bantuan Inline",
-			"description": "Aktifkan fitur Inline Assist untuk saran dan perbaikan kode cepat langsung di editor Anda. Termasuk Quick Inline Task (Cmd+I) untuk perubahan terarah dan Auto Inline Task untuk perbaikan kontekstual."
+			"placeholder": "Masukkan kunci API Morph Anda (opsional)"
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Pengeditan Latar Belakang",
@@ -751,6 +777,14 @@
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "Gunakan parser pesan baru",
 			"description": "Aktifkan parser pesan streaming eksperimental yang meningkatkan kinerja untuk respons panjang dengan memproses pesan lebih efisien."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "Membutuhkan daftar 'todos' untuk tugas baru",
+			"description": "Ketika diaktifkan, alat new_task akan membutuhkan parameter todos untuk disediakan. Ini memastikan semua tugas baru dimulai dengan daftar tujuan yang jelas. Ketika dinonaktifkan (default), parameter todos tetap opsional untuk kompatibilitas mundur."
+		},
+		"INLINE_ASSIST": {
+			"name": "Autocomplete",
+			"description": "Aktifkan fitur Autocomplete untuk saran kode cepat dan perbaikan langsung di editor Anda. Termasuk Tugas Cepat (Cmd+I) untuk perubahan yang ditargetkan dan Autocomplete untuk perbaikan kontekstual."
 		}
 	},
 	"promptCaching": {
@@ -769,6 +803,7 @@
 		"noComputerUse": "Tidak mendukung computer use",
 		"supportsPromptCache": "Mendukung prompt caching",
 		"noPromptCache": "Tidak mendukung prompt caching",
+		"contextWindow": "Jendela Konteks:",
 		"maxOutput": "Output maksimum",
 		"inputPrice": "Harga input",
 		"outputPrice": "Harga output",

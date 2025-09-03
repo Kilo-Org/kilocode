@@ -1,6 +1,10 @@
 import { render, screen, act } from "@/utils/test-utils"
 
-import { ProviderSettings, ExperimentId } from "@roo-code/types"
+import {
+	ProviderSettings,
+	ExperimentId,
+	openRouterDefaultModelId, // kilocode_change
+} from "@roo-code/types"
 
 import { ExtensionState } from "@roo/ExtensionMessage"
 
@@ -252,6 +256,7 @@ describe("mergeExtensionState", () => {
 			hasOpenedModeSelector: false, // Add the new required property
 			maxImageFileSize: 5,
 			maxTotalImageSize: 20,
+			kilocodeDefaultModel: openRouterDefaultModelId,
 		}
 
 		const prevState: ExtensionState = {
@@ -266,10 +271,9 @@ describe("mergeExtensionState", () => {
 			experiments: {
 				powerSteering: true,
 				multiFileApplyDiff: true,
-				inlineAssist: false, // kilocode_change
 				preventFocusDisruption: false,
 				morphFastApply: false, // kilocode_change
-				assistantMessageParser: false,
+				newTaskRequireTodos: false,
 			} as Record<ExperimentId, boolean>,
 		}
 
@@ -283,10 +287,9 @@ describe("mergeExtensionState", () => {
 		expect(result.experiments).toEqual({
 			powerSteering: true,
 			multiFileApplyDiff: true,
-			inlineAssist: false, // kilocode_change
 			preventFocusDisruption: false,
 			morphFastApply: false, // kilocode_change
-			assistantMessageParser: false,
+			newTaskRequireTodos: false,
 		})
 	})
 })

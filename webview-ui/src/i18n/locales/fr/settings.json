@@ -258,22 +258,31 @@
 			"error": "Échec de l'actualisation de la liste des modèles. Veuillez réessayer."
 		},
 		"getRequestyApiKey": "Obtenir la clé API Requesty",
+		"getRequestyBaseUrl": "URL de base",
+		"requestyUseCustomBaseUrl": "Utiliser une URL de base personnalisée",
 		"openRouterTransformsText": "Compresser les prompts et chaînes de messages à la taille du contexte (<a>Transformations OpenRouter</a>)",
 		"anthropicApiKey": "Clé API Anthropic",
 		"getAnthropicApiKey": "Obtenir la clé API Anthropic",
 		"anthropicUseAuthToken": "Passer la clé API Anthropic comme en-tête d'autorisation au lieu de X-Api-Key",
+		"anthropic1MContextBetaLabel": "Activer la fenêtre de contexte de 1M (Bêta)",
+		"anthropic1MContextBetaDescription": "Étend la fenêtre de contexte à 1 million de tokens pour Claude Sonnet 4",
+		"awsBedrock1MContextBetaLabel": "Activer la fenêtre de contexte de 1M (Bêta)",
+		"awsBedrock1MContextBetaDescription": "Étend la fenêtre de contexte à 1 million de tokens pour Claude Sonnet 4",
 		"cerebrasApiKey": "Clé API Cerebras",
 		"getCerebrasApiKey": "Obtenir la clé API Cerebras",
 		"chutesApiKey": "Clé API Chutes",
 		"getChutesApiKey": "Obtenir la clé API Chutes",
 		"fireworksApiKey": "Clé API Fireworks",
 		"getFireworksApiKey": "Obtenir la clé API Fireworks",
+		"featherlessApiKey": "Clé API Featherless",
+		"getFeatherlessApiKey": "Obtenir la clé API Featherless",
+		"ioIntelligenceApiKey": "Clé API IO Intelligence",
+		"ioIntelligenceApiKeyPlaceholder": "Saisissez votre clé d'API IO Intelligence",
+		"getIoIntelligenceApiKey": "Obtenir la clé API IO Intelligence",
 		"deepSeekApiKey": "Clé API DeepSeek",
 		"getDeepSeekApiKey": "Obtenir la clé API DeepSeek",
 		"doubaoApiKey": "Clé API Doubao",
 		"getDoubaoApiKey": "Obtenir la clé API Doubao",
-		"bigModelApiKey": "Clé API BigModel",
-		"getBigModelApiKey": "Obtenir la clé API BigModel",
 		"moonshotApiKey": "Clé API Moonshot",
 		"getMoonshotApiKey": "Obtenir la clé API Moonshot",
 		"moonshotBaseUrl": "Point d'entrée Moonshot",
@@ -364,6 +373,9 @@
 		"ollama": {
 			"baseUrl": "URL de base (optionnel)",
 			"modelId": "ID du modèle",
+			"apiKey": "Clé API",
+			"apiKeyPlaceholder": "Entrez votre clé API",
+			"apiKeyInfo": "La clé API sera envoyée comme en-tête d'autorisation",
 			"description": "Ollama vous permet d'exécuter des modèles localement sur votre ordinateur. Pour obtenir des instructions sur la mise en route, consultez le guide de démarrage rapide.",
 			"warning": "Remarque : Kilo Code utilise des prompts complexes et fonctionne mieux avec les modèles Claude. Les modèles moins performants peuvent ne pas fonctionner comme prévu."
 		},
@@ -374,6 +386,10 @@
 		"humanRelay": {
 			"description": "Aucune clé API n'est requise, mais l'utilisateur doit aider à copier et coller les informations dans le chat web de l'IA.",
 			"instructions": "Pendant l'utilisation, une boîte de dialogue apparaîtra et le message actuel sera automatiquement copié dans le presse-papiers. Vous devez le coller dans les versions web de l'IA (comme ChatGPT ou Claude), puis copier la réponse de l'IA dans la boîte de dialogue et cliquer sur le bouton de confirmation."
+		},
+		"roo": {
+			"authenticatedMessage": "Authentifié de manière sécurisée via ton compte Roo Code Cloud.",
+			"connectButton": "Se connecter à Roo Code Cloud"
 		},
 		"openRouter": {
 			"providerRouting": {
@@ -436,9 +452,17 @@
 		},
 		"reasoningEffort": {
 			"label": "Effort de raisonnement du modèle",
+			"minimal": "Minimal (le plus rapide)",
 			"high": "Élevé",
 			"medium": "Moyen",
 			"low": "Faible"
+		},
+		"verbosity": {
+			"label": "Verbosité de la sortie",
+			"high": "Élevée",
+			"medium": "Moyenne",
+			"low": "Faible",
+			"description": "Contrôle le niveau de détail des réponses du modèle. Une faible verbosité produit des réponses concises, tandis qu'une verbosité élevée fournit des explications approfondies."
 		},
 		"setReasoningLevel": "Activer l'effort de raisonnement",
 		"claudeCode": {
@@ -462,6 +486,13 @@
 			"requirement4": "N'utilise pas de clés API - l'authentification est gérée via OAuth",
 			"requirement5": "Nécessite que l'outil Gemini CLI soit installé et authentifié d'abord",
 			"freeAccess": "Accès gratuit via l'authentification OAuth"
+		},
+		"qwenCode": {
+			"oauthPath": "Chemin des identifiants OAuth (optionnel)",
+			"oauthPathDescription": "Chemin vers le fichier d'identifiants OAuth. Laissez vide pour utiliser l'emplacement par défaut (~/.qwen/oauth_creds.json).",
+			"description": "Ce fournisseur utilise l'authentification OAuth du service Qwen et ne nécessite pas de clés API.",
+			"instructions": "Veuillez suivre la documentation officielle pour obtenir le fichier d'autorisation et le placer dans le chemin spécifié.",
+			"setupLink": "Documentation officielle Qwen"
 		}
 	},
 	"browser": {
@@ -713,14 +744,9 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Activer Morph Fast Apply",
-			"description": "Lorsque cette option est activée, Kilo Code peut éditer des fichiers en utilisant Morph Fast Apply.",
+			"description": "Lorsque cette option est activée, Kilo Code peut éditer des fichiers en utilisant Morph Fast Apply. Nécessite le fournisseur d'API Kilo Code, OpenRouter ou une clé API Morph.",
 			"apiKey": "Clé API Morph (optionnel)",
-			"placeholder": "Entrez votre clé API Morph (optionnel)",
-			"warning": "Si vous ne configurez pas de clé API Morph, vous pouvez toujours utiliser Fast Apply avec Kilo Code ou OpenRouter. Votre compte sera facturé pour l'utilisation du modèle, ceci n'est actuellement pas affiché dans l'interface de l'extension."
-		},
-		"INLINE_ASSIST": {
-			"name": "Assistance en ligne",
-			"description": "Activez les fonctionnalités d'assistance en ligne pour des suggestions et améliorations de code rapides directement dans votre éditeur. Inclut la Tâche rapide en ligne (Cmd+I) pour des modifications ciblées et la Tâche automatique en ligne pour des améliorations contextuelles."
+			"placeholder": "Entrez votre clé API Morph (optionnel)"
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Édition en arrière-plan",
@@ -729,6 +755,14 @@
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "Utiliser le nouveau parseur de messages",
 			"description": "Active le parseur de messages en streaming expérimental qui accélère nettement les longues réponses en traitant les messages plus efficacement."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "Exiger la liste 'todos' pour les nouvelles tâches",
+			"description": "Lorsqu'il est activé, l'outil new_task exigera qu'un paramètre todos soit fourni. Cela garantit que toutes les nouvelles tâches commencent avec une liste claire d'objectifs. Lorsqu'il est désactivé (par défaut), le paramètre todos reste facultatif pour la compatibilité descendante."
+		},
+		"INLINE_ASSIST": {
+			"name": "Autocomplete",
+			"description": "Active les fonctionnalités Autocomplete pour des suggestions de code rapides et des améliorations directement dans ton éditeur. Inclut Tâche Rapide (Cmd+I) pour des changements ciblés et Autocomplete pour des améliorations contextuelles."
 		}
 	},
 	"promptCaching": {
@@ -747,6 +781,7 @@
 		"noComputerUse": "Ne prend pas en charge l'utilisation de l'ordinateur",
 		"supportsPromptCache": "Prend en charge la mise en cache des prompts",
 		"noPromptCache": "Ne prend pas en charge la mise en cache des prompts",
+		"contextWindow": "Fenêtre de contexte :",
 		"maxOutput": "Sortie maximale",
 		"inputPrice": "Prix d'entrée",
 		"outputPrice": "Prix de sortie",

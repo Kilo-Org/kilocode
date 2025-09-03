@@ -1,35 +1,39 @@
 import { HTMLAttributes } from "react"
 import { FlaskConical } from "lucide-react"
 
-import type {
-	Experiments,
-	ProviderSettings, // kilocode_change
-} from "@roo-code/types"
+import type { Experiments } from "@roo-code/types"
 
 import { EXPERIMENT_IDS, experimentConfigsMap } from "@roo/experiments"
 
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { cn } from "@src/lib/utils"
 
-import { SetExperimentEnabled } from "./types"
+import {
+	SetCachedStateField, // kilocode_change
+	SetExperimentEnabled,
+} from "./types"
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
 import { ExperimentalFeature } from "./ExperimentalFeature"
-import { MorphSettings } from "./MorphSettings" // kilocode_change
+import { MorphSettings } from "./MorphSettings" // kilocode_change: Use global version
 
 type ExperimentalSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	experiments: Experiments
 	setExperimentEnabled: SetExperimentEnabled
-	apiConfiguration: ProviderSettings // kilocode_change
-	setApiConfigurationField: <K extends keyof ProviderSettings>(field: K, value: ProviderSettings[K]) => void // kilocode_change
+	// kilocode_change start
+	morphApiKey?: string
+	setCachedStateField: SetCachedStateField<"morphApiKey">
+	// kilocode_change end
 }
 
 export const ExperimentalSettings = ({
 	experiments,
 	setExperimentEnabled,
 	className,
-	apiConfiguration, // kilocode_change
-	setApiConfigurationField, // kilocode_change
+	// kilocode_change start
+	morphApiKey,
+	setCachedStateField,
+	// kilocode_change end
 	...props
 }: ExperimentalSettingsProps) => {
 	const { t } = useAppTranslation()
@@ -79,8 +83,8 @@ export const ExperimentalSettings = ({
 									/>
 									{enabled && (
 										<MorphSettings
-											apiConfiguration={apiConfiguration}
-											setApiConfigurationField={setApiConfigurationField}
+											setCachedStateField={setCachedStateField}
+											morphApiKey={morphApiKey}
 										/>
 									)}
 								</>

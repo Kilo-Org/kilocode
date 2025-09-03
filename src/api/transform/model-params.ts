@@ -1,4 +1,10 @@
-import { type ModelInfo, type ProviderSettings, ANTHROPIC_DEFAULT_MAX_TOKENS } from "@roo-code/types"
+import {
+	type ModelInfo,
+	type ProviderSettings,
+	type VerbosityLevel,
+	type ReasoningEffortWithMinimal,
+	ANTHROPIC_DEFAULT_MAX_TOKENS,
+} from "@roo-code/types"
 
 import {
 	DEFAULT_HYBRID_REASONING_MODEL_MAX_TOKENS,
@@ -33,8 +39,9 @@ type GetModelParamsOptions<T extends Format> = {
 type BaseModelParams = {
 	maxTokens: number | undefined
 	temperature: number | undefined
-	reasoningEffort: "low" | "medium" | "high" | undefined
+	reasoningEffort: ReasoningEffortWithMinimal | undefined
 	reasoningBudget: number | undefined
+	verbosity: VerbosityLevel | undefined
 }
 
 type AnthropicModelParams = {
@@ -76,6 +83,7 @@ export function getModelParams({
 		modelMaxThinkingTokens: customMaxThinkingTokens,
 		modelTemperature: customTemperature,
 		reasoningEffort: customReasoningEffort,
+		verbosity: customVerbosity,
 	} = settings
 
 	// Use the centralized logic for computing maxTokens
@@ -89,6 +97,7 @@ export function getModelParams({
 	let temperature = customTemperature ?? defaultTemperature
 	let reasoningBudget: ModelParams["reasoningBudget"] = undefined
 	let reasoningEffort: ModelParams["reasoningEffort"] = undefined
+	let verbosity: VerbosityLevel | undefined = customVerbosity
 
 	if (shouldUseReasoningBudget({ model, settings })) {
 		// Check if this is a Gemini 2.5 Pro model
@@ -120,10 +129,11 @@ export function getModelParams({
 		temperature = 1.0
 	} else if (shouldUseReasoningEffort({ model, settings })) {
 		// "Traditional" reasoning models use the `reasoningEffort` parameter.
-		reasoningEffort = customReasoningEffort ?? model.reasoningEffort
+		const effort = customReasoningEffort ?? model.reasoningEffort
+		reasoningEffort = effort as ReasoningEffortWithMinimal
 	}
 
-	const params: BaseModelParams = { maxTokens, temperature, reasoningEffort, reasoningBudget }
+	const params: BaseModelParams = { maxTokens, temperature, reasoningEffort, reasoningBudget, verbosity }
 
 	if (format === "anthropic") {
 		return {

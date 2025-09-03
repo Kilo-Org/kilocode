@@ -263,16 +263,27 @@
 			"error": "Не вдалося оновити список моделей. Спробуйте ще раз."
 		},
 		"getRequestyApiKey": "Отримати ключ API Requesty",
+		"getRequestyBaseUrl": "Базовий URL",
+		"requestyUseCustomBaseUrl": "Використовувати власний базовий URL",
 		"openRouterTransformsText": "Стискати підказки та ланцюжки повідомлень до розміру контексту (<a>Перетворення OpenRouter</a>)",
 		"anthropicApiKey": "Ключ API Anthropic",
 		"getAnthropicApiKey": "Отримати ключ API Anthropic",
 		"anthropicUseAuthToken": "Передавати ключ API Anthropic як заголовок Authorization замість X-Api-Key",
+		"anthropic1MContextBetaLabel": "Увімкнути контекстне вікно 1M (Beta)",
+		"anthropic1MContextBetaDescription": "Розширити контекстне вікно до 1 мільйона токенів для Claude Sonnet 4",
+		"awsBedrock1MContextBetaLabel": "Увімкнути контекстне вікно 1M (Beta)",
+		"awsBedrock1MContextBetaDescription": "Розширити контекстне вікно до 1 мільйона токенів для Claude Sonnet 4",
 		"cerebrasApiKey": "Ключ API Cerebras",
 		"getCerebrasApiKey": "Отримати ключ API Cerebras",
 		"chutesApiKey": "Ключ API Chutes",
 		"getChutesApiKey": "Отримати ключ API Chutes",
+		"ioIntelligenceApiKey": "Ключ API IO Intelligence",
+		"ioIntelligenceApiKeyPlaceholder": "Введіть ваш ключ API IO Intelligence",
+		"getIoIntelligenceApiKey": "Отримати ключ API IO Intelligence",
 		"deepSeekApiKey": "Ключ API DeepSeek",
 		"getDeepSeekApiKey": "Отримати ключ API DeepSeek",
+		"featherlessApiKey": "Ключ API Featherless",
+		"getFeatherlessApiKey": "Отримати ключ API Featherless",
 		"fireworksApiKey": "Ключ API Fireworks",
 		"getFireworksApiKey": "Отримати ключ API Fireworks",
 		"moonshotApiKey": "Ключ API Moonshot",
@@ -365,7 +376,10 @@
 		"ollama": {
 			"baseUrl": "Базовий URL (необов'язково)",
 			"modelId": "Ідентифікатор моделі",
-			"description": "Ollama дозволяє запускати моделі локально на вашому комп’ютері. Інструкції щодо початку роботи див. у їхньому посібнику зі швидкого старту.",
+			"apiKey": "Ключ API",
+			"apiKeyPlaceholder": "Введіть ваш ключ API",
+			"apiKeyInfo": "Ключ API буде надісланий як заголовок Authorization",
+			"description": "Ollama дозволяє запускати моделі локально на вашому комп'ютері. Інструкції щодо початку роботи див. у їхньому посібнику зі швидкого старту.",
 			"warning": "Примітка: Kilo Code використовує складні підказки і найкраще працює з моделями Claude. Менш здатні моделі можуть працювати не так, як очікувалося."
 		},
 		"unboundApiKey": "Ключ API Unbound",
@@ -374,7 +388,11 @@
 		"unboundInvalidApiKey": "Недійсний ключ API. Перевірте свій ключ API і спробуйте ще раз.",
 		"humanRelay": {
 			"description": "Ключ API не потрібен, але користувачеві потрібно допомогти скопіювати та вставити інформацію до веб-чату ШІ.",
-			"instructions": "Під час використання з’явиться діалогове вікно, і поточне повідомлення буде автоматично скопійовано до буфера обміну. Вам потрібно вставити це до веб-версій ШІ (наприклад, ChatGPT або Claude), потім скопіювати відповідь ШІ назад у діалогове вікно та натиснути кнопку підтвердження."
+			"instructions": "Під час використання з'явиться діалогове вікно, і поточне повідомлення буде автоматично скопійовано до буфера обміну. Вам потрібно вставити це до веб-версій ШІ (наприклад, ChatGPT або Claude), потім скопіювати відповідь ШІ назад у діалогове вікно та натиснути кнопку підтвердження."
+		},
+		"roo": {
+			"authenticatedMessage": "Безпечна автентифікація через ваш обліковий запис Roo Code Cloud.",
+			"connectButton": "Підключитися до Roo Code Cloud"
 		},
 		"openRouter": {
 			"providerRouting": {
@@ -387,8 +405,6 @@
 		"getDoubaoApiKey": "Отримати ключ API Doubao",
 		"zaiApiKey": "Ключ API Z.AI",
 		"getZaiApiKey": "Отримати ключ API Z.AI",
-		"bigModelApiKey": "Ключ API BigModel",
-		"getBigModelApiKey": "Отримати ключ API BigModel",
 		"sambaNovaApiKey": "Ключ API SambaNova",
 		"getSambaNovaApiKey": "Отримати ключ API SambaNova",
 		"customModel": {
@@ -445,9 +461,17 @@
 		},
 		"reasoningEffort": {
 			"label": "Зусилля з міркування моделі",
+			"minimal": "Мінімальний (найшвидший)",
 			"high": "Високий",
 			"medium": "Середній",
 			"low": "Низький"
+		},
+		"verbosity": {
+			"label": "Рівень деталізації виводу",
+			"high": "Високий",
+			"medium": "Середній",
+			"low": "Низький",
+			"description": "Контролює рівень деталізації відповідей моделі. Низький рівень створює стислі відповіді, тоді як високий рівень надає докладні пояснення."
 		},
 		"setReasoningLevel": "Увімкнути зусилля з міркування",
 		"claudeCode": {
@@ -471,7 +495,38 @@
 			"requirement4": "Не використовує API-ключі - аутентифікація здійснюється через OAuth",
 			"requirement5": "Потребує, щоб інструмент Gemini CLI був спочатку встановлений і аутентифікований",
 			"freeAccess": "Безкоштовний доступ через OAuth-аутентифікацію"
+		},
+		"io_intelligence": {
+			"name": "IO Intelligence",
+			"description": "Доступний штучний інтелект для повсякденних завдань"
+		},
+		"requesty": {
+			"name": "Requesty",
+			"description": "Швидкий та надійний AI помічник"
+		},
+		"kilo_code_openrouter": {
+			"description": "Доступ до 200+ моделей через OpenRouter з контекстним вікном 1M"
+		},
+		"qwenCode": {
+			"oauthPath": "Шлях до облікових даних OAuth (необов'язково)",
+			"oauthPathDescription": "Шлях до файлу облікових даних OAuth. Залиште порожнім для використання місця за замовчуванням (~/.qwen/oauth_creds.json).",
+			"description": "Цей провайдер використовує OAuth-аутентифікацію від сервісу Qwen і не потребує API-ключів.",
+			"instructions": "Будь ласка, дотримуйтесь офіційної документації для отримання файлу авторизації та розміщення його за вказаним шляхом.",
+			"setupLink": "Офіційна документація Qwen"
 		}
+	},
+	"contextWindow": {
+		"description": "Максимальний контекст розмови",
+		"oneMillion": "1M"
+	},
+	"maxTokens": {
+		"description": "Максимальна довжина відповіді"
+	},
+	"topP": {
+		"description": "Контроль різноманітності відповідей"
+	},
+	"kiloRemoteControl": {
+		"description": "Увімкнути віддалене керування завданнями"
 	},
 	"browser": {
 		"enable": {
@@ -733,14 +788,9 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Увімкнути Morph Fast Apply",
-			"description": "Якщо ввімкнено, Kilo Code може редагувати файли за допомогою Morph Fast Apply.",
+			"description": "Якщо ввімкнено, Kilo Code може редагувати файли за допомогою Morph Fast Apply. Потребує провайдера API Kilo Code, OpenRouter або ключа API Morph.",
 			"apiKey": "Ключ API Morph (необов'язково)",
-			"placeholder": "Введіть ваш ключ API Morph (необов'язково)",
-			"warning": "Якщо ви не налаштуєте ключ API Morph, ви все одно можете використовувати Fast Apply з Kilo Code або OpenRouter. З вашого рахунку буде стягуватися плата за використання моделі, це наразі не відображається в інтерфейсі розширення."
-		},
-		"INLINE_ASSIST": {
-			"name": "Вбудований помічник",
-			"description": "Увімкніть функції Inline Assist для швидких пропозицій та покращень коду безпосередньо у вашому редакторі. Включає Quick Inline Task (Cmd+I) для цільових змін та Auto Inline Task для контекстуальних покращень."
+			"placeholder": "Введіть ваш ключ API Morph (необов'язково)"
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Редагування у фоновому режимі",
@@ -749,6 +799,14 @@
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "Використовувати новий парсер повідомлень",
 			"description": "Увімкнути експериментальний потоковий парсер повідомлень, який забезпечує значні покращення продуктивності для довгих відповідей асистента шляхом більш ефективної обробки повідомлень."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "Вимагати список 'завдань' для нових завдань",
+			"description": "Коли увімкнено, інструмент new_task вимагатиме надання параметра завдань. Це забезпечить, що всі нові завдання почнуть з чітким списком цілей. Коли вимкнено (за замовчуванням), параметр завдань залишається необов'язковим для зворотної сумісності."
+		},
+		"INLINE_ASSIST": {
+			"name": "Autocomplete",
+			"description": "Увімкни функції Autocomplete для швидких пропозицій коду та покращень безпосередньо у твоєму редакторі. Включає Швидке Завдання (Cmd+I) для цільових змін та Autocomplete для контекстуальних покращень."
 		}
 	},
 	"promptCaching": {
@@ -767,6 +825,7 @@
 		"noComputerUse": "Не підтримує використання комп'ютера",
 		"supportsPromptCache": "Підтримує кешування підказок",
 		"noPromptCache": "Не підтримує кешування підказок",
+		"contextWindow": "Контекстне вікно:",
 		"maxOutput": "Макс. вихід",
 		"inputPrice": "Ціна входу",
 		"outputPrice": "Ціна виходу",

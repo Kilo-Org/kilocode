@@ -3,8 +3,6 @@ import { type Page, type FrameLocator, expect } from "@playwright/test"
 import type { WebviewMessage } from "../../../src/shared/WebviewMessage"
 import { ProviderSettings } from "@roo-code/types"
 
-const modifier = process.platform === "darwin" ? "Meta" : "Control"
-
 const defaultPlaywrightApiConfig = {
 	apiProvider: "openrouter" as const,
 	openRouterApiKey: process.env.OPENROUTER_API_KEY,
@@ -26,22 +24,25 @@ export async function waitForWebviewText(page: Page, text: string, timeout: numb
 
 export async function postWebviewMessage(page: Page, message: WebviewMessage): Promise<void> {
 	const webviewFrame = await findWebview(page)
-	await webviewFrame.locator("body").evaluate((element, msg) => {
-		if (!window.vscode) {
-			throw new Error("Global vscode API not found")
+
+	// Retry mechanism for VSCode API availability
+	const maxRetries = 3
+	for (let attempt = 1; attempt <= maxRetries; attempt++) {
+		try {
+			await webviewFrame.locator("body").evaluate((element, msg) => {
+				if (!window.vscode) {
+					throw new Error("Global vscode API not found")
+				}
+
+				window.vscode.postMessage(msg)
+			}, message)
+			return // Success - exit the retry loop
+		} catch (error) {
+			if (attempt === maxRetries) {
+				throw error // Re-throw on final attempt
+			}
+			await page.waitForTimeout(1000)
 		}
-
-		window.vscode.postMessage(msg)
-	}, message)
-}
-
-export async function verifyExtensionInstalled(page: Page) {
-	try {
-		const activityBarIcon = page.locator('[aria-label*="Kilo"], [title*="Kilo"]').first()
-		expect(await activityBarIcon).toBeDefined()
-		console.log("✅ Extension installed!")
-	} catch (_error) {
-		throw new Error("Failed to find the installed extension! Check if the build failed and try again.")
 	}
 }
 
@@ -84,30 +85,4 @@ export async function configureApiKeyThroughUI(page: Page): Promise<void> {
 	await submitButton.waitFor()
 	await submitButton.click()
 	console.log("✅ Provider configured!")
-}
-
-export async function closeAllTabs(page: Page): Promise<void> {
-	const tabs = page.locator(".tab a.label-name")
-	const count = await tabs.count()
-	if (count > 0) {
-		// Close all editor tabs using the default keyboard command [Cmd+K Cmd+W]
-		await page.keyboard.press(`${modifier}+K`)
-		await page.keyboard.press(`${modifier}+W`)
-
-		const dismissedTabs = page.locator(".tab a.label-name")
-		await expect(dismissedTabs).not.toBeVisible()
-	}
-}
-
-export async function waitForAllExtensionActivation(page: Page): Promise<void> {
-	try {
-		const activatingStatus = page.locator("text=Activating Extensions")
-		const activatingStatusCount = await activatingStatus.count()
-		if (activatingStatusCount > 0) {
-			console.log("⌛️ Waiting for `Activating Extensions` to go away...")
-			await activatingStatus.waitFor({ state: "hidden", timeout: 10000 })
-		}
-	} catch {
-		// noop
-	}
 }

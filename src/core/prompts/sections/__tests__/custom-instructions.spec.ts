@@ -658,7 +658,14 @@ describe("addCustomInstructions", () => {
 			"global instructions",
 			"/fake/path",
 			"test-mode",
-			{ settings: { maxConcurrentFileReads: 5, todoListEnabled: true, useAgentRules: true } },
+			{
+				settings: {
+					maxConcurrentFileReads: 5,
+					todoListEnabled: true,
+					useAgentRules: true,
+					newTaskRequireTodos: false,
+				},
+			},
 		)
 
 		expect(result).toContain("# Agent Rules Standard (AGENTS.md):")
@@ -683,7 +690,14 @@ describe("addCustomInstructions", () => {
 			"global instructions",
 			"/fake/path",
 			"test-mode",
-			{ settings: { maxConcurrentFileReads: 5, todoListEnabled: true, useAgentRules: false } },
+			{
+				settings: {
+					maxConcurrentFileReads: 5,
+					todoListEnabled: true,
+					useAgentRules: false,
+					newTaskRequireTodos: false,
+				},
+			},
 		)
 
 		expect(result).not.toContain("# Agent Rules Standard (AGENTS.md):")
@@ -737,7 +751,14 @@ describe("addCustomInstructions", () => {
 			"global instructions",
 			"/fake/path",
 			"test-mode",
-			{ settings: { maxConcurrentFileReads: 5, todoListEnabled: true, useAgentRules: true } },
+			{
+				settings: {
+					maxConcurrentFileReads: 5,
+					todoListEnabled: true,
+					useAgentRules: true,
+					newTaskRequireTodos: false,
+				},
+			},
 		)
 
 		expect(result).toContain("Global Instructions:\nglobal instructions")
@@ -776,7 +797,14 @@ describe("addCustomInstructions", () => {
 			"global instructions",
 			"/fake/path",
 			"test-mode",
-			{ settings: { maxConcurrentFileReads: 5, todoListEnabled: true, useAgentRules: true } },
+			{
+				settings: {
+					maxConcurrentFileReads: 5,
+					todoListEnabled: true,
+					useAgentRules: true,
+					newTaskRequireTodos: false,
+				},
+			},
 		)
 
 		// Should contain both AGENTS.md and .roorules content
@@ -837,7 +865,14 @@ describe("addCustomInstructions", () => {
 			"global instructions",
 			"/fake/path",
 			"test-mode",
-			{ settings: { maxConcurrentFileReads: 5, todoListEnabled: true, useAgentRules: true } },
+			{
+				settings: {
+					maxConcurrentFileReads: 5,
+					todoListEnabled: true,
+					useAgentRules: true,
+					newTaskRequireTodos: false,
+				},
+			},
 		)
 
 		expect(result).toContain("# Agent Rules Standard (AGENTS.md):")
@@ -882,7 +917,14 @@ describe("addCustomInstructions", () => {
 			"global instructions",
 			"/fake/path",
 			"test-mode",
-			{ settings: { maxConcurrentFileReads: 5, todoListEnabled: true, useAgentRules: true } },
+			{
+				settings: {
+					maxConcurrentFileReads: 5,
+					todoListEnabled: true,
+					useAgentRules: true,
+					newTaskRequireTodos: false,
+				},
+			},
 		)
 
 		expect(result).toContain("# Agent Rules Standard (AGENTS.md):")
@@ -895,6 +937,100 @@ describe("addCustomInstructions", () => {
 		expect(readlinkMock).not.toHaveBeenCalledWith(expect.stringContaining("AGENTS.md"))
 
 		// Verify the file was read directly
+		expect(readFileMock).toHaveBeenCalledWith(expect.stringContaining("AGENTS.md"), "utf-8")
+	})
+
+	it("should load AGENT.md (singular) when AGENTS.md is not found", async () => {
+		// Simulate no .roo/rules-test-mode directory
+		statMock.mockRejectedValueOnce({ code: "ENOENT" })
+
+		// Mock lstat to indicate AGENTS.md doesn't exist but AGENT.md does
+		lstatMock.mockImplementation((filePath: PathLike) => {
+			const pathStr = filePath.toString()
+			if (pathStr.endsWith("AGENTS.md")) {
+				return Promise.reject({ code: "ENOENT" })
+			}
+			if (pathStr.endsWith("AGENT.md")) {
+				return Promise.resolve({
+					isSymbolicLink: vi.fn().mockReturnValue(false),
+				})
+			}
+			return Promise.reject({ code: "ENOENT" })
+		})
+
+		readFileMock.mockImplementation((filePath: PathLike) => {
+			const pathStr = filePath.toString()
+			if (pathStr.endsWith("AGENT.md")) {
+				return Promise.resolve("Agent rules from AGENT.md file (singular)")
+			}
+			return Promise.reject({ code: "ENOENT" })
+		})
+
+		const result = await addCustomInstructions(
+			"mode instructions",
+			"global instructions",
+			"/fake/path",
+			"test-mode",
+			{
+				settings: {
+					maxConcurrentFileReads: 5,
+					todoListEnabled: true,
+					useAgentRules: true,
+					newTaskRequireTodos: false,
+				},
+			},
+		)
+
+		expect(result).toContain("# Agent Rules Standard (AGENT.md):")
+		expect(result).toContain("Agent rules from AGENT.md file (singular)")
+		expect(readFileMock).toHaveBeenCalledWith(expect.stringContaining("AGENT.md"), "utf-8")
+	})
+
+	it("should prefer AGENTS.md over AGENT.md when both exist", async () => {
+		// Simulate no .roo/rules-test-mode directory
+		statMock.mockRejectedValueOnce({ code: "ENOENT" })
+
+		// Mock lstat to indicate both files exist
+		lstatMock.mockImplementation((filePath: PathLike) => {
+			const pathStr = filePath.toString()
+			if (pathStr.endsWith("AGENTS.md") || pathStr.endsWith("AGENT.md")) {
+				return Promise.resolve({
+					isSymbolicLink: vi.fn().mockReturnValue(false),
+				})
+			}
+			return Promise.reject({ code: "ENOENT" })
+		})
+
+		readFileMock.mockImplementation((filePath: PathLike) => {
+			const pathStr = filePath.toString()
+			if (pathStr.endsWith("AGENTS.md")) {
+				return Promise.resolve("Agent rules from AGENTS.md file (plural)")
+			}
+			if (pathStr.endsWith("AGENT.md")) {
+				return Promise.resolve("Agent rules from AGENT.md file (singular)")
+			}
+			return Promise.reject({ code: "ENOENT" })
+		})
+
+		const result = await addCustomInstructions(
+			"mode instructions",
+			"global instructions",
+			"/fake/path",
+			"test-mode",
+			{
+				settings: {
+					maxConcurrentFileReads: 5,
+					todoListEnabled: true,
+					useAgentRules: true,
+					newTaskRequireTodos: false,
+				},
+			},
+		)
+
+		// Should contain AGENTS.md content (preferred) and not AGENT.md
+		expect(result).toContain("# Agent Rules Standard (AGENTS.md):")
+		expect(result).toContain("Agent rules from AGENTS.md file (plural)")
+		expect(result).not.toContain("Agent rules from AGENT.md file (singular)")
 		expect(readFileMock).toHaveBeenCalledWith(expect.stringContaining("AGENTS.md"), "utf-8")
 	})
 

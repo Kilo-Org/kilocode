@@ -17,14 +17,7 @@ import { Tab, TabContent } from "../common/Tab"
 import RooHero from "./RooHero"
 
 const WelcomeView = () => {
-	const {
-		apiConfiguration,
-		currentApiConfigName,
-		setApiConfiguration,
-		uriScheme,
-		uiKind /* kilocode_change */,
-		machineId,
-	} = useExtensionState()
+	const { apiConfiguration, currentApiConfigName, setApiConfiguration, uriScheme, machineId } = useExtensionState()
 	const { t } = useAppTranslation()
 	const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined)
 
@@ -132,7 +125,6 @@ const WelcomeView = () => {
 						fromWelcomeView
 						apiConfiguration={apiConfiguration || {}}
 						uriScheme={uriScheme}
-						uiKind={uiKind /* kilocode_change */}
 						setApiConfigurationField={setApiConfigurationFieldForApiOptions}
 						errorMessage={errorMessage}
 						setErrorMessage={setErrorMessage}

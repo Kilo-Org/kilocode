@@ -6,8 +6,15 @@ import {
 } from "@roo-code/types"
 
 // ApiHandlerOptions
-
-export type ApiHandlerOptions = Omit<ProviderSettings, "apiProvider">
+// Extend ProviderSettings (minus apiProvider) with handler-specific toggles.
+export type ApiHandlerOptions = Omit<ProviderSettings, "apiProvider"> & {
+	/**
+	 * When true and using GPT‑5 Responses API, include reasoning.summary: "auto"
+	 * so the API returns reasoning summaries (we already parse and surface them).
+	 * Defaults to true; set to false to disable summaries.
+	 */
+	enableGpt5ReasoningSummary?: boolean
+}
 
 // kilocode_change start
 // Cerebras
@@ -124,6 +131,8 @@ const routerNames = [
 	"kilocode-openrouter",
 	"ollama",
 	"lmstudio",
+	"io-intelligence",
+	"deepinfra", // kilocode_change
 ] as const
 
 export type RouterName = (typeof routerNames)[number]
@@ -160,7 +169,17 @@ export const shouldUseReasoningEffort = ({
 }: {
 	model: ModelInfo
 	settings?: ProviderSettings
-}): boolean => (!!model.supportsReasoningEffort && !!settings?.reasoningEffort) || !!model.reasoningEffort
+}): boolean => {
+	// If enableReasoningEffort is explicitly set to false, reasoning should be disabled
+	if (settings?.enableReasoningEffort === false) {
+		return false
+	}
+
+	// Otherwise, use reasoning if:
+	// 1. Model supports reasoning effort AND settings provide reasoning effort, OR
+	// 2. Model itself has a reasoningEffort property
+	return (!!model.supportsReasoningEffort && !!settings?.reasoningEffort) || !!model.reasoningEffort
+}
 
 export const DEFAULT_HYBRID_REASONING_MODEL_MAX_TOKENS = 16_384
 export const DEFAULT_HYBRID_REASONING_MODEL_THINKING_TOKENS = 8_192
@@ -204,7 +223,17 @@ export const getModelMaxOutputTokens = ({
 	}
 
 	// If model has explicit maxTokens, clamp it to 20% of the context window
+	// Exception: GPT-5 models should use their exact configured max output tokens
 	if (model.maxTokens) {
+		// Check if this is a GPT-5 model (case-insensitive)
+		const isGpt5Model = modelId.toLowerCase().includes("gpt-5")
+
+		// GPT-5 models bypass the 20% cap and use their full configured max tokens
+		if (isGpt5Model) {
+			return model.maxTokens
+		}
+
+		// All other models are clamped to 20% of context window
 		return Math.min(model.maxTokens, Math.ceil(model.contextWindow * 0.2))
 	}
 
@@ -222,10 +251,12 @@ export const getModelMaxOutputTokens = ({
 export type GetModelsOptions =
 	| { provider: "openrouter"; apiKey?: string; baseUrl?: string } // kilocode_change: add apiKey, baseUrl
 	| { provider: "glama" }
-	| { provider: "requesty"; apiKey?: string }
+	| { provider: "requesty"; apiKey?: string; baseUrl?: string }
 	| { provider: "unbound"; apiKey?: string }
 	| { provider: "litellm"; apiKey: string; baseUrl: string }
-	| { provider: "kilocode-openrouter"; kilocodeToken?: string } // kilocode_change
+	| { provider: "kilocode-openrouter"; kilocodeToken?: string; kilocodeOrganizationId?: string } // kilocode_change
 	| { provider: "cerebras"; cerebrasApiKey?: string } // kilocode_change
 	| { provider: "ollama"; baseUrl?: string }
 	| { provider: "lmstudio"; baseUrl?: string }
+	| { provider: "deepinfra"; apiKey?: string; baseUrl?: string }
+	| { provider: "io-intelligence"; apiKey: string }

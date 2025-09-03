@@ -10,6 +10,7 @@ import { convertToOpenAiMessages } from "../transform/openai-format"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { DEFAULT_HEADERS } from "./constants"
 import { BaseProvider } from "./base-provider"
+import { verifyFinishReason } from "./kilocode/verifyFinishReason"
 
 type BaseOpenAiCompatibleProviderOptions<ModelName extends string> = ApiHandlerOptions & {
 	providerName: string
@@ -62,30 +63,45 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 		})
 	}
 
-	override async *createMessage(
+	protected createStream(
 		systemPrompt: string,
 		messages: Anthropic.Messages.MessageParam[],
 		metadata?: ApiHandlerCreateMessageMetadata,
-	): ApiStream {
+		requestOptions?: OpenAI.RequestOptions,
+	) {
 		const {
 			id: model,
 			info: { maxTokens: max_tokens },
 		} = this.getModel()
 
-		const temperature = this.options.modelTemperature ?? this.defaultTemperature
-
 		const params: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming = {
 			model,
 			max_tokens,
-			temperature,
 			messages: [{ role: "system", content: systemPrompt }, ...convertToOpenAiMessages(messages)],
 			stream: true,
 			stream_options: { include_usage: true },
 		}
 
-		const stream = await this.client.chat.completions.create(params)
+		// Only include temperature if explicitly set
+		if (
+			this.options.modelTemperature !== undefined &&
+			this.options.modelTemperature !== null // kilocode_change: some providers like Chutes don't like this
+		) {
+			params.temperature = this.options.modelTemperature
+		}
+
+		return this.client.chat.completions.create(params, requestOptions)
+	}
+
+	override async *createMessage(
+		systemPrompt: string,
+		messages: Anthropic.Messages.MessageParam[],
+		metadata?: ApiHandlerCreateMessageMetadata,
+	): ApiStream {
+		const stream = await this.createStream(systemPrompt, messages, metadata)
 
 		for await (const chunk of stream) {
+			verifyFinishReason(chunk.choices[0]) // kilocode_change
 			const delta = chunk.choices[0]?.delta
 
 			if (delta?.content) {

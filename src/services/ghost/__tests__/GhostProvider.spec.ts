@@ -127,8 +127,14 @@ describe("GhostProvider", () => {
 	}
 
 	async function parseAndApplySuggestions(response: string, context: GhostSuggestionContext) {
-		const suggestions = await strategy.parseResponse(response, context)
-		await workspaceEdit.applySuggestions(suggestions)
+		// Initialize streaming parser
+		strategy.initializeStreamingParser(context)
+
+		// Process the response as a single chunk (simulating complete response)
+		const result = strategy.processStreamingChunk(response)
+
+		// Apply the suggestions
+		await workspaceEdit.applySuggestions(result.suggestions)
 	}
 
 	// Test cases directory for file-based tests
@@ -225,8 +231,9 @@ describe("GhostProvider", () => {
 			const { context } = await setupTestDocument("empty.js", initialContent)
 
 			// Test empty response
-			const suggestions = await strategy.parseResponse("", context)
-			expect(suggestions.hasSuggestions()).toBe(false)
+			strategy.initializeStreamingParser(context)
+			const result = strategy.processStreamingChunk("")
+			expect(result.suggestions.hasSuggestions()).toBe(false)
 		})
 
 		it("should handle invalid diff format", async () => {
@@ -235,8 +242,9 @@ describe("GhostProvider", () => {
 
 			// Test invalid diff format
 			const invalidDiff = "This is not a valid diff format"
-			const suggestions = await strategy.parseResponse(invalidDiff, context)
-			expect(suggestions.hasSuggestions()).toBe(false)
+			strategy.initializeStreamingParser(context)
+			const result = strategy.processStreamingChunk(invalidDiff)
+			expect(result.suggestions.hasSuggestions()).toBe(false)
 		})
 
 		it("should handle file not found in context", async () => {
@@ -245,19 +253,18 @@ describe("GhostProvider", () => {
 
 			// Create context without the file in openFiles
 			const context: GhostSuggestionContext = {
-				document: mockDocument, // Add dummy document as active document
-				openFiles: [], // Empty - file not in context
+				document: mockDocument,
+				openFiles: [],
 			}
 
-			const diffResponse = `missing.js
-\`\`\`js
-// Added comment
-console.log('test');
-\`\`\``
+			// Use the new XML format instead of the old diff format
+			const xmlResponse = `<change><search><![CDATA[console.log('test');]]></search><replace><![CDATA[// Added comment
+console.log('test');]]></replace></change>`
 
-			const suggestions = await strategy.parseResponse(diffResponse, context)
-			// Should still work even if file not in openFiles - it can still parse the diff
-			expect(suggestions.hasSuggestions()).toBe(true)
+			strategy.initializeStreamingParser(context)
+			const result = strategy.processStreamingChunk(xmlResponse)
+			// Should work with the XML format
+			expect(result.suggestions.hasSuggestions()).toBe(true)
 		})
 	})
 })

@@ -123,6 +123,12 @@
 			"genericError": "Помилка Cerebras API ({{status}}): {{message}}",
 			"noResponseBody": "Помилка Cerebras API: Немає тіла відповіді",
 			"completionError": "Помилка завершення Cerebras: {{error}}"
+		},
+		"qwenCode": {
+			"oauthLoadFailed": "Не вдалося завантажити OAuth дані для входу. Будь ласка, спочатку автентифікуйся: {{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "Провайдер Roo вимагає автентифікації в хмарі. Будь ласка, увійди в Roo Code Cloud."
 		}
 	},
 	"warnings": {
@@ -201,6 +207,9 @@
 			"cloud_auth_required": "Твоя організація вимагає автентифікації Kilo Code Cloud. Будь ласка, увійди, щоб продовжити.",
 			"organization_mismatch": "Ти повинен бути автентифікований з обліковим записом Kilo Code Cloud твоєї організації.",
 			"verification_failed": "Не вдалося перевірити автентифікацію організації."
+		},
+		"info": {
+			"organization_requires_auth": "Твоя організація вимагає автентифікації."
 		}
 	},
 	"prompts": {

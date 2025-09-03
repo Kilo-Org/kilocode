@@ -2,6 +2,8 @@
 	"greeting": "Kilo Code は何をお手伝いできますか？",
 	"task": {
 		"title": "タスク",
+		"expand": "タスクを展開",
+		"collapse": "タスクを折りたたむ",
 		"seeMore": "もっと見る",
 		"seeLess": "表示を減らす",
 		"tokens": "トークン",
@@ -269,8 +271,14 @@
 		"countdownDisplay": "{{count}}秒"
 	},
 	"announcement": {
-		"title": "🎉 Kilo Code {{version}} リリース",
-		"description": "Kilo Code {{version}}は、開発ワークフローを向上させる強力な新機能と重要な改善をもたらします。",
+		"title": "🎉 Roo Code {{version}} リリース",
+		"stealthModel": {
+			"feature": "<bold>期間限定無料ステルスモデル</bold> - 262kコンテキストウィンドウを持つ、エージェンティックコーディングに優れた超高速推論モデル、Roo Code Cloud経由で利用可能。",
+			"note": "(注意：プロンプトと補完はモデル作成者によってログに記録され、モデルの改善に使用されます)",
+			"connectButton": "Roo Code Cloudに接続",
+			"selectModel": "<br/><settingsLink>設定</settingsLink>でRoo Code Cloudプロバイダーから<code>roo/sonic</code>を選択して開始"
+		},
+		"description": "Roo Code {{version}}は、開発ワークフローを向上させる強力な新機能と重要な改善をもたらします。",
 		"whatsNew": "新機能",
 		"feature1": "<bold>メッセージキュー</bold>: Rooが作業中に複数のメッセージをキューに入れ、ワークフローの計画を中断することなく続行できます。",
 		"feature2": "<bold>カスタムスラッシュコマンド</bold>: よく使用するプロンプトやワークフローへの迅速なアクセスのために、パーソナライズされたスラッシュコマンドを作成し、完全なUI管理を提供します。",
@@ -324,13 +332,13 @@
 		},
 		"autoApprovedCostLimitReached": {
 			"title": "自動承認コスト制限に達しました",
-			"description": "Rooは自動承認されたコスト制限の${{count}}に達しました。コストをリセットしてタスクを続行しますか？",
+			"description": "Kilo Codeは自動承認されたコスト制限の${{count}}に達しました。コストをリセットしてタスクを続行しますか？",
 			"button": "リセットして続ける"
 		}
 	},
 	"codebaseSearch": {
-		"wantsToSearch": "Rooはコードベースで <code>{{query}}</code> を検索したい:",
-		"wantsToSearchWithPath": "Rooは <code>{{path}}</code> 内のコードベースで <code>{{query}}</code> を検索したい:",
+		"wantsToSearch": "Kilo Codeはコードベースで <code>{{query}}</code> を検索したい:",
+		"wantsToSearchWithPath": "Kilo Codeは <code>{{path}}</code> 内のコードベースで <code>{{query}}</code> を検索したい:",
 		"didSearch_one": "1件の結果が見つかりました",
 		"didSearch_other": "{{count}}件の結果が見つかりました",
 		"resultTooltip": "類似度スコア: {{score}} (クリックしてファイルを開く)"
@@ -354,9 +362,9 @@
 		"ariaLabel": "バージョン {{version}} - クリックしてリリースノートを表示"
 	},
 	"rooCloudCTA": {
-		"title": "Roo Code Cloud が間もなく登場！",
+		"title": "Roo Code Cloud が進化中！",
 		"description": "クラウドでリモートエージェントを実行し、どこからでもタスクにアクセスし、他の人と協力し、その他多くの機能を利用できます。",
-		"joinWaitlist": "早期アクセスを取得するためにウェイトリストに参加してください。"
+		"joinWaitlist": "最新のアップデートを受け取るためにサインアップしてください。"
 	},
 	"editMessage": {
 		"placeholder": "メッセージを編集..."

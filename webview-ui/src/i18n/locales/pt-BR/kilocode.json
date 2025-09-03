@@ -3,7 +3,7 @@
 		"greeting": "Bem-vindo ao Kilo Code!",
 		"introText1": "Kilo Code é um agente de codificação AI gratuito e de código aberto.",
 		"introText2": "Funciona com os mais recentes modelos de IA como Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1, e mais de 450 outros.",
-		"introText3": "Crie uma conta gratuita e receba $20 em tokens para usar com qualquer modelo de IA.",
+		"introText3": "Crie uma conta gratuita e receba até $25 em tokens para usar em qualquer modelo de IA.",
 		"ctaButton": "Começar",
 		"manualModeButton": "Use sua própria chave de API",
 		"alreadySignedUp": "Já se cadastrou?",
@@ -16,7 +16,10 @@
 	"pricing": {
 		"costUnknown": "custo desconhecido",
 		"costUnknownDescription": "O Provedor de API não forneceu dados de custo ou a solicitação foi cancelada.",
-		"discoverModelPricing": "Descobrir preços e capacidades do modelo"
+		"freeModelsDescription": "Modelos gratuitos podem ter limites de taxa. Use o link abaixo para otimizar seu uso de modelos gratuitos!",
+		"freeModelsLink": "Descubra opções de modelos gratuitos e econômicos",
+		"openRouterMarkup": "O provedor Kilo Code inclui todos os modelos do OpenRouter, sem markup e com 0% de comissão!",
+		"switchToKiloCode": "Mudar para Kilo Code"
 	},
 	"notifications": {
 		"toolRequest": "Solicitação de ferramenta aguardando aprovação",
@@ -35,7 +38,31 @@
 			"automaticFetch": "Os modelos mais recentes estão automaticamente disponíveis no Kilo Code. Se você não tem certeza de qual modelo escolher, o Kilo Code funciona melhor com os modelos recomendados listados no topo em <strong>negrito</strong>.",
 			"providerRouting": {
 				"title": "Kilo Code - Roteamento de Provedor OpenRouter",
-				"description": "O Kilo Code roteia as solicitações para os melhores provedores disponíveis para o seu modelo. Por padrão, as solicitações são balanceadas em carga entre os principais provedores para maximizar o tempo de atividade. No entanto, você pode escolher um provedor específico para usar para este modelo."
+				"description": "O Kilo Code roteia as solicitações para os melhores provedores disponíveis para o seu modelo. Por padrão, as solicitações são balanceadas em carga entre os principais provedores para maximizar o tempo de atividade. No entanto, você pode escolher um provedor específico para usar para este modelo.",
+				"sorting": {
+					"default": "Ordenação padrão do provedor",
+					"price": "Preferir provedores com menor preço",
+					"throughput": "Preferir provedores com maior throughput",
+					"latency": "Preferir provedores com menor latência"
+				},
+				"dataCollection": {
+					"default": "Nenhuma política de dados definida",
+					"allow": "Permitir coleta de dados do provedor",
+					"deny": "Negar coleta de dados do provedor"
+				}
+			}
+		},
+		"modelInfo": {
+			"contextWindow": "Janela de contexto",
+			"providerBreakdown": "Detalhamento de Preços e Capacidades do Provedor",
+			"averageKiloCodeCost": "Este é o valor médio realmente gasto pelo Kilo Code usando este modelo na última semana. Pode ser menor que o preço listado devido à utilização do cache de prompts.",
+			"table": {
+				"provider": "Provedor",
+				"context": "O endpoint pode processar este número de tokens (entrada + saída).",
+				"inputPrice": "Custo por milhão de tokens para o prompt.",
+				"outputPrice": "Custo por milhão de tokens para a conclusão.",
+				"cacheReadPrice": "Custo por milhão de tokens para leitura do cache.",
+				"cacheWritePrice": "Custo por milhão de tokens para escrita no cache."
 			}
 		},
 		"contextManagement": {
@@ -66,7 +93,8 @@
 		"condense": {
 			"wantsToCondense": "Kilo Code quer condensar sua conversa",
 			"condenseConversation": "Condensar Conversa"
-		}
+		},
+		"seeNewChanges": "Ver Novas Alterações"
 	},
 	"newTaskPreview": {
 		"task": "Tarefa"
@@ -77,6 +105,8 @@
 		"logOut": "Sair",
 		"currentBalance": "SALDO ATUAL",
 		"loading": "Carregando...",
+		"organization": "Organização",
+		"personal": "Pessoal",
 		"shop": {
 			"title": "Comprar Créditos",
 			"popular": "Popular",
@@ -159,37 +189,37 @@
 		}
 	},
 	"ghost": {
-		"title": "Assistência em linha",
+		"title": "Autocomplete",
 		"settings": {
-			"autoTrigger": "Gatilho Automático",
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Tarefa Rápida em Linha",
-				"description": "Precisa apenas de uma mudança rápida? Selecione algum código (ou não!) e pressione Cmd+I. Descreva seu objetivo em linguagem simples (\"criar um componente React com essas props\", \"adicionar tratamento de erro a esta função\") e receba múltiplas sugestões prontas para uso diretamente no seu editor. <DocsLink>Ver atalho</DocsLink>"
-			},
-			"enableAutoInlineTaskKeybinding": {
-				"label": "Tarefa Automática em Linha",
-				"description": "Precisa de uma correção rápida, preenchimento ou refatoração? Kilo usará o contexto ao redor para oferecer melhorias imediatas, mantendo seu fluxo de trabalho. <DocsLink>Ver atalho</DocsLink>"
-			},
+			"autoTrigger": "Ativação Automática",
+			"triggers": "Gatilhos",
+			"keybindingDescription": "As funcionalidades do Autocomplete podem ser ativadas por comandos. Você pode configurar os <DocsLink>Atalhos de Teclado aqui</DocsLink>.",
 			"enableAutoTrigger": {
-				"label": "Ativar Gatilho Automático",
-				"description": "Quando ativado, o Kilo Code acionará automaticamente a Assistência em Linha quando você parar de digitar. Isso pode ser útil para correções e sugestões rápidas."
+				"label": "Habilitar Autocomplete",
+				"description": "Quando habilitado, o Kilo Code ativará automaticamente o Autocomplete quando você parar de digitar. Isso pode ser útil para correções rápidas e sugestões."
 			},
 			"autoTriggerDelay": {
-				"label": "Atraso do Gatilho Automático",
-				"description": "O atraso em segundos antes do Kilo Code acionar a Assistência em Linha após você parar de digitar. Um atraso menor significa sugestões mais rápidas, mas pode ser mais intensivo em recursos."
+				"label": "Atraso da Ativação Automática",
+				"description": "O atraso em segundos antes do Kilo Code ativar o Autocomplete depois que você parar de digitar. Um atraso menor significa sugestões mais rápidas, mas pode ser mais intensivo em recursos."
+			},
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Tarefa Rápida",
+				"description": "Precisa apenas de uma mudança rápida? Selecione algum código (ou não!) e pressione Cmd+I. Descreva seu objetivo em português simples (\"criar um componente React com essas props\", \"adicionar tratamento de erro a esta função\"), e obtenha múltiplas sugestões prontas para uso diretamente no seu editor. <DocsLink>Ver atalho</DocsLink>"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Tarefa Inteligente em Linha",
-				"description": "Precisa de uma correção rápida, completar ou refatorar? O Kilo usará o contexto ao redor para oferecer melhorias imediatas, mantendo você no fluxo. <DocsLink>Ver atalho</DocsLink>"
+				"label": "Autocomplete Manual",
+				"description": "Precisa de uma correção rápida, completação ou refatoração? O Kilo usará o contexto ao redor para oferecer melhorias imediatas, mantendo você no fluxo. <DocsLink>Ver atalho</DocsLink>"
+			},
+			"enableCustomProvider": {
+				"label": "Usar provedor personalizado",
+				"description": "O Autocomplete usa suas credenciais KiloCode / OpenRouter / Mistral para usar o modelo Codestral por padrão"
 			},
 			"provider": "Provedor",
 			"apiConfigId": {
-				"label": "Configuração de API",
-				"current": "Usar configuração de API atualmente selecionada",
-				"description": "Selecione uma configuração de API para usar nos prompts do Inline Assist ou apenas use o que estiver selecionado no momento"
-			},
-			"triggers": "Gatilhos",
-			"keybindingDescription": "Os recursos de Assistência em Linha são acionados por comandos. Você pode configurar os <DocsLink>atalhos de teclado aqui</DocsLink>."
+				"label": "Configuração da API",
+				"current": "Usar configuração da API atualmente selecionada",
+				"description": "Selecione uma configuração da API para usar nos prompts do Autocomplete, ou apenas use a que está atualmente selecionada"
+			}
 		}
 	},
 	"virtualProvider": {
@@ -213,5 +243,9 @@
 		"requestsLabel": "Solicitações",
 		"perMinute": "Por Minuto",
 		"perHour": "Por Hora"
+	},
+	"imageWarnings": {
+		"modelNoImageSupport": "Imagens não são suportadas pelo modelo atual.",
+		"maxImagesReached": "Máximo de 20 imagens por mensagem. Remova algumas imagens para adicionar mais."
 	}
 }
