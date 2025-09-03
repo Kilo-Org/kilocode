@@ -862,9 +862,12 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	}
 
 	handleWebviewAskResponse(askResponse: ClineAskResponse, text?: string, images?: string[]) {
-		this.askResponse = askResponse
 		this.askResponseText = text
 		this.askResponseImages = images
+
+		// the askResponse assignment needs to happen last to avoid the async
+		// callbacks triggering before we assign the data above
+		this.askResponse = askResponse // this triggers async callbacks
 	}
 
 	public approveAsk({ text, images }: { text?: string; images?: string[] } = {}) {
