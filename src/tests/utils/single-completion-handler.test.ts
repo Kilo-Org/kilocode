@@ -5,7 +5,7 @@ import { ProviderSettings } from "@roo-code/types"
 vi.mock("../../api")
 
 describe("singleCompletionHandler", () => {
-	it("should call completePrompt for gemini-cli provider", async () => {
+	it("should call completePrompt for providers that support it", async () => {
 		const mockCompletePrompt = vi.fn().mockResolvedValue("enhanced prompt")
 		const mockBuildApiHandler = buildApiHandler as vi.Mock
 		mockBuildApiHandler.mockReturnValue({
@@ -13,7 +13,7 @@ describe("singleCompletionHandler", () => {
 		})
 
 		const apiConfiguration: ProviderSettings = {
-			apiProvider: "gemini-cli",
+			apiProvider: "some-provider-with-complete",
 			// other settings...
 		} as any
 

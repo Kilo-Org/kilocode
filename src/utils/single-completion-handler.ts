@@ -17,7 +17,7 @@ export async function singleCompletionHandler(apiConfiguration: ProviderSettings
 
 	// kilocode_change start
 	// Force gemini-cli to use completePrompt
-	if (apiConfiguration.apiProvider === "gemini-cli") {
+	if ("completePrompt" in handler && typeof (handler as SingleCompletionHandler).completePrompt === "function") {
 		return (handler as SingleCompletionHandler).completePrompt(promptText)
 	}
 	// kilocode_change end
@@ -30,7 +30,7 @@ export async function singleCompletionHandler(apiConfiguration: ProviderSettings
 		// kilocode_change end
 	}
 
-	return (handler as SingleCompletionHandler).completePrompt(promptText)
+	return await streamResponseFromHandler(handler, promptText)
 }
 
 // kilocode_change start - Stream responses using createMessage
