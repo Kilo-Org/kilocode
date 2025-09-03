@@ -1675,6 +1675,7 @@ export class ClineProvider
 			includeTaskHistoryInEnhance,
 			remoteControlEnabled,
 			openRouterImageApiKey,
+			kiloCodeImageApiKey,
 			openRouterImageGenerationSelectedModel,
 		} = await this.getState()
 
@@ -1824,6 +1825,7 @@ export class ClineProvider
 			includeTaskHistoryInEnhance: includeTaskHistoryInEnhance ?? true,
 			remoteControlEnabled,
 			openRouterImageApiKey,
+			kiloCodeImageApiKey,
 			openRouterImageGenerationSelectedModel,
 		}
 	}
@@ -2040,6 +2042,7 @@ export class ClineProvider
 			})(),
 			// Add image generation settings
 			openRouterImageApiKey: stateValues.openRouterImageApiKey,
+			kiloCodeImageApiKey: stateValues.kiloCodeImageApiKey,
 			openRouterImageGenerationSelectedModel: stateValues.openRouterImageGenerationSelectedModel,
 		}
 	}

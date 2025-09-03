@@ -771,13 +771,16 @@
 		},
 		"IMAGE_GENERATION": {
 			"name": "AI-afbeeldingsgeneratie inschakelen",
-			"description": "Wanneer ingeschakeld, kan Kilo Code afbeeldingen genereren van tekstprompts met behulp van OpenRouter's afbeeldingsgeneratiemodellen. Vereist een geconfigureerde OpenRouter API-sleutel.",
+			"description": "Wanneer ingeschakeld, kan Kilo Code afbeeldingen genereren van tekstprompts. Vereist een geconfigureerde Kilo Code of OpenRouter API-sleutel (OpenRouter heeft voorrang).",
 			"openRouterApiKeyLabel": "OpenRouter API-sleutel",
 			"openRouterApiKeyPlaceholder": "Voer je OpenRouter API-sleutel in",
+			"kiloCodeApiKeyLabel": "Kilo Code API-sleutel",
+			"kiloCodeApiKeyPlaceholder": "Voer je Kilo Code API-sleutel in",
+			"kiloCodeApiKeyPaste": "Plak huidige Kilo Code API-sleutel",
 			"getApiKeyText": "Haal je API-sleutel op van",
 			"modelSelectionLabel": "Afbeeldingsgeneratiemodel",
 			"modelSelectionDescription": "Selecteer het model voor afbeeldingsgeneratie",
-			"warningMissingKey": "⚠️ OpenRouter API-sleutel is vereist voor afbeeldingsgeneratie. Configureer deze hierboven.",
+			"warningMissingKey": "⚠️ Kilo Code of OpenRouter API-sleutel is vereist voor afbeeldingsgeneratie. Configureer deze hierboven.",
 			"successConfigured": "✓ Afbeeldingsgeneratie is geconfigureerd en klaar voor gebruik"
 		},
 		"INLINE_ASSIST": {

@@ -11,6 +11,7 @@ vi.mock("@/i18n/TranslationContext", () => ({
 
 describe("ImageGenerationSettings", () => {
 	const mockSetOpenRouterImageApiKey = vi.fn()
+	const mockSetKiloCodeImageApiKey = vi.fn()
 	const mockSetImageGenerationSelectedModel = vi.fn()
 	const mockOnChange = vi.fn()
 
@@ -18,8 +19,10 @@ describe("ImageGenerationSettings", () => {
 		enabled: false,
 		onChange: mockOnChange,
 		openRouterImageApiKey: undefined,
+		kiloCodeImageApiKey: undefined,
 		openRouterImageGenerationSelectedModel: undefined,
 		setOpenRouterImageApiKey: mockSetOpenRouterImageApiKey,
+		setKiloCodeImageApiKey: mockSetKiloCodeImageApiKey,
 		setImageGenerationSelectedModel: mockSetImageGenerationSelectedModel,
 	}
 

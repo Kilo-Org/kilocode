@@ -371,38 +371,40 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		}
 
 		try {
-			const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-				method: "POST",
-				headers: {
-					Authorization: `Bearer ${apiKey}`,
-					"Content-Type": "application/json",
-					"HTTP-Referer": "https://github.com/RooVetGit/Roo-Code",
-					"X-Title": "Roo Code",
-				},
-				body: JSON.stringify({
-					model,
-					messages: [
-						{
-							role: "user",
-							content: inputImage
-								? [
-										{
-											type: "text",
-											text: prompt,
-										},
-										{
-											type: "image_url",
-											image_url: {
-												url: inputImage,
+			const response = await fetch(
+				`${this.options.openRouterBaseUrl || "https://openrouter.ai/api/v1/"}chat/completions`, // kilocode_change: support baseUrl
+				{
+					method: "POST",
+					headers: {
+						...DEFAULT_HEADERS, // kilocode_change: add DEFAULT_HEADERS
+						Authorization: `Bearer ${apiKey}`,
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						model,
+						messages: [
+							{
+								role: "user",
+								content: inputImage
+									? [
+											{
+												type: "text",
+												text: prompt,
 											},
-										},
-									]
-								: prompt,
-						},
-					],
-					modalities: ["image", "text"],
-				}),
-			})
+											{
+												type: "image_url",
+												image_url: {
+													url: inputImage,
+												},
+											},
+										]
+									: prompt,
+							},
+						],
+						modalities: ["image", "text"],
+					}),
+				},
+			)
 
 			if (!response.ok) {
 				const errorText = await response.text()

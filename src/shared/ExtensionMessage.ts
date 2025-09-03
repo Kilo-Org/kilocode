@@ -387,6 +387,7 @@ export type ExtensionState = Pick<
 	profileThresholds: Record<string, number>
 	hasOpenedModeSelector: boolean
 	openRouterImageApiKey?: string
+	kiloCodeImageApiKey?: string
 }
 
 export interface ClineSayTool {

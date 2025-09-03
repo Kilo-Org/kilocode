@@ -804,13 +804,16 @@
 		},
 		"IMAGE_GENERATION": {
 			"name": "เปิดใช้งานการสร้างภาพด้วย AI",
-			"description": "เมื่อเปิดใช้งาน Kilo Code สามารถสร้างภาพจากข้อความโดยใช้โมเดลสร้างภาพของ OpenRouter ต้องการ OpenRouter API key",
+			"description": "เมื่อเปิดใช้งาน Kilo Code สามารถสร้างภาพจากข้อความ prompt ต้องการ API key ของ Kilo Code หรือ OpenRouter (OpenRouter มีความสำคัญ)",
 			"openRouterApiKeyLabel": "OpenRouter API Key",
 			"openRouterApiKeyPlaceholder": "ป้อน OpenRouter API key ของคุณ",
+			"kiloCodeApiKeyLabel": "Kilo Code API Key",
+			"kiloCodeApiKeyPlaceholder": "ป้อน Kilo Code API key ของคุณ",
+			"kiloCodeApiKeyPaste": "วาง API key ปัจจุบันของ Kilo Code",
 			"getApiKeyText": "รับ API key จาก",
 			"modelSelectionLabel": "โมเดลสร้างภาพ",
 			"modelSelectionDescription": "เลือกโมเดลที่จะใช้สำหรับการสร้างภาพ",
-			"warningMissingKey": "⚠️ ต้องใช้ OpenRouter API key สำหรับการสร้างภาพ กรุณาตั้งค่าข้างต้น",
+			"warningMissingKey": "⚠️ ต้องใช้ Kilo Code หรือ OpenRouter API key สำหรับการสร้างภาพ กรุณาตั้งค่าข้างต้น",
 			"successConfigured": "✓ การสร้างภาพได้รับการตั้งค่าและพร้อมใช้งาน"
 		},
 		"INLINE_ASSIST": {

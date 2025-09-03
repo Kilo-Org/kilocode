@@ -24,6 +24,9 @@ type ExperimentalSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	// kilocode_change start
 	morphApiKey?: string
 	setCachedStateField: SetCachedStateField<"morphApiKey">
+	kiloCodeImageApiKey?: string
+	setKiloCodeImageApiKey?: (apiKey: string) => void
+	currentProfileKilocodeToken?: string
 	// kilocode_change end
 	apiConfiguration?: any
 	setApiConfigurationField?: any
@@ -46,6 +49,9 @@ export const ExperimentalSettings = ({
 	// kilocode_change start
 	morphApiKey,
 	setCachedStateField,
+	setKiloCodeImageApiKey,
+	kiloCodeImageApiKey,
+	currentProfileKilocodeToken,
 	// kilocode_change end
 	...props
 }: ExperimentalSettingsProps) => {
@@ -107,6 +113,7 @@ export const ExperimentalSettings = ({
 						if (
 							config[0] === "IMAGE_GENERATION" &&
 							setOpenRouterImageApiKey &&
+							setKiloCodeImageApiKey &&
 							setImageGenerationSelectedModel
 						) {
 							return (
@@ -117,9 +124,12 @@ export const ExperimentalSettings = ({
 										setExperimentEnabled(EXPERIMENT_IDS.IMAGE_GENERATION, enabled)
 									}
 									openRouterImageApiKey={openRouterImageApiKey}
+									kiloCodeImageApiKey={kiloCodeImageApiKey}
 									openRouterImageGenerationSelectedModel={openRouterImageGenerationSelectedModel}
 									setOpenRouterImageApiKey={setOpenRouterImageApiKey}
+									setKiloCodeImageApiKey={setKiloCodeImageApiKey}
 									setImageGenerationSelectedModel={setImageGenerationSelectedModel}
+									currentProfileKilocodeToken={currentProfileKilocodeToken}
 								/>
 							)
 						}

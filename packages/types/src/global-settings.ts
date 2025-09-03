@@ -46,6 +46,7 @@ export const globalSettingsSchema = z.object({
 	// Image generation settings (experimental) - flattened for simplicity
 	openRouterImageApiKey: z.string().optional(),
 	openRouterImageGenerationSelectedModel: z.string().optional(),
+	kiloCodeImageApiKey: z.string().optional(),
 
 	condensingApiConfigId: z.string().optional(),
 	customCondensingPrompt: z.string().optional(),
@@ -231,6 +232,7 @@ export const SECRET_STATE_KEYS = [
 // Global secrets that are part of GlobalSettings (not ProviderSettings)
 export const GLOBAL_SECRET_KEYS = [
 	"openRouterImageApiKey", // For image generation
+	"kiloCodeImageApiKey",
 ] as const
 
 // Type for the actual secret storage keys

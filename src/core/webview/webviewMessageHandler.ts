@@ -1416,6 +1416,10 @@ export const webviewMessageHandler = async (
 			await provider.postStateToWebview()
 			break
 		// kilocode_change start
+		case "kiloCodeImageApiKey":
+			await provider.contextProxy.setValue("kiloCodeImageApiKey", message.text)
+			await provider.postStateToWebview()
+			break
 		case "showAutoApproveMenu":
 			await updateGlobalState("showAutoApproveMenu", message.bool ?? true)
 			await provider.postStateToWebview()

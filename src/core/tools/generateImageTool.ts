@@ -9,6 +9,7 @@ import { getReadablePath } from "../../utils/path"
 import { isPathOutsideWorkspace } from "../../utils/pathUtils"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { OpenRouterHandler } from "../../api/providers/openrouter"
+import { KilocodeOpenrouterHandler } from "../../api/providers/kilocode-openrouter"
 
 // Hardcoded list of image generation models for now
 const IMAGE_GENERATION_MODELS = ["google/gemini-2.5-flash-image-preview", "google/gemini-2.5-flash-image-preview:free"]
@@ -130,8 +131,9 @@ export async function generateImageTool(
 
 	// Get OpenRouter API key from global settings (experimental image generation)
 	const openRouterApiKey = state?.openRouterImageApiKey
+	const kiloCodeApiKey = state?.kiloCodeImageApiKey
 
-	if (!openRouterApiKey) {
+	if (!openRouterApiKey && !kiloCodeApiKey) {
 		await cline.say(
 			"error",
 			"OpenRouter API key is required for image generation. Please configure it in the Image Generation experimental settings.",
@@ -177,13 +179,23 @@ export async function generateImageTool(
 			}
 
 			// Create a temporary OpenRouter handler with minimal options
-			const openRouterHandler = new OpenRouterHandler({} as any)
+			// kilocode_change start
+			const openRouterHandler = openRouterApiKey
+				? new OpenRouterHandler({})
+				: new KilocodeOpenrouterHandler({ kilocodeToken: kiloCodeApiKey })
+			// kilocode_change end
 
 			// Call the generateImage method with the explicit API key and optional input image
 			const result = await openRouterHandler.generateImage(
 				prompt,
 				selectedModel,
-				openRouterApiKey,
+				// kilocode_change start
+				openRouterApiKey ||
+					kiloCodeApiKey ||
+					(() => {
+						throw new Error("Unreachable because of earlier check.")
+					})(),
+				// kilocode_change end
 				inputImageData,
 			)
 

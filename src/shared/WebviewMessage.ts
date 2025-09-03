@@ -266,6 +266,7 @@ export interface WebviewMessage {
 		| "showMdmAuthRequiredNotification"
 		| "imageGenerationSettings"
 		| "openRouterImageApiKey"
+		| "kiloCodeImageApiKey"
 		| "openRouterImageGenerationSelectedModel"
 	text?: string
 	editedMessageContent?: string

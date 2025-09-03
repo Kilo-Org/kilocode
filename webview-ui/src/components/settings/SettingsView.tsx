@@ -211,6 +211,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		maxDiagnosticMessages,
 		includeTaskHistoryInEnhance,
 		openRouterImageApiKey,
+		kiloCodeImageApiKey,
 		openRouterImageGenerationSelectedModel,
 	} = cachedState
 
@@ -328,6 +329,13 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		})
 	}, [])
 
+	const setKiloCodeImageApiKey = useCallback((apiKey: string) => {
+		setCachedState((prevState) => {
+			setChangeDetected(true)
+			return { ...prevState, kiloCodeImageApiKey: apiKey }
+		})
+	}, [])
+
 	const setImageGenerationSelectedModel = useCallback((model: string) => {
 		setCachedState((prevState) => {
 			setChangeDetected(true)
@@ -426,6 +434,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			vscode.postMessage({ type: "ghostServiceSettings", values: ghostServiceSettings }) // kilocode_change
 			vscode.postMessage({ type: "morphApiKey", text: morphApiKey }) // kilocode_change
 			vscode.postMessage({ type: "openRouterImageApiKey", text: openRouterImageApiKey })
+			vscode.postMessage({ type: "kiloCodeImageApiKey", text: kiloCodeImageApiKey })
 			vscode.postMessage({
 				type: "openRouterImageGenerationSelectedModel",
 				text: openRouterImageGenerationSelectedModel,
@@ -872,11 +881,14 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 							apiConfiguration={apiConfiguration}
 							setApiConfigurationField={setApiConfigurationField}
 							openRouterImageApiKey={openRouterImageApiKey as string | undefined}
+							kiloCodeImageApiKey={kiloCodeImageApiKey}
 							openRouterImageGenerationSelectedModel={
 								openRouterImageGenerationSelectedModel as string | undefined
 							}
 							setOpenRouterImageApiKey={setOpenRouterImageApiKey}
+							setKiloCodeImageApiKey={setKiloCodeImageApiKey}
 							setImageGenerationSelectedModel={setImageGenerationSelectedModel}
+							currentProfileKilocodeToken={apiConfiguration.kilocodeToken}
 						/>
 					)}
 

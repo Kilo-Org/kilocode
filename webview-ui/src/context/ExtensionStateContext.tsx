@@ -287,6 +287,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		includeDiagnosticMessages: true,
 		maxDiagnosticMessages: 50,
 		openRouterImageApiKey: "",
+		kiloCodeImageApiKey: "",
 		openRouterImageGenerationSelectedModel: "",
 	})
 

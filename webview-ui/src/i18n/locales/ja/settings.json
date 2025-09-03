@@ -771,13 +771,16 @@
 		},
 		"IMAGE_GENERATION": {
 			"name": "AI画像生成を有効にする",
-			"description": "有効にすると、RooはOpenRouterの画像生成モデルを使用してテキストプロンプトから画像を生成できます。OpenRouter APIキーの設定が必要です。",
+			"description": "有効にすると、Kilo Codeはテキストプロンプトから画像を生成できます。Kilo Code または OpenRouter API キーの設定が必要です（OpenRouter が優先されます）。",
 			"openRouterApiKeyLabel": "OpenRouter APIキー",
 			"openRouterApiKeyPlaceholder": "OpenRouter APIキーを入力してください",
+			"kiloCodeApiKeyLabel": "Kilo Code APIキー",
+			"kiloCodeApiKeyPlaceholder": "Kilo Code APIキーを入力してください",
+			"kiloCodeApiKeyPaste": "現在の Kilo Code API キーを貼り付け",
 			"getApiKeyText": "APIキーを取得する場所",
 			"modelSelectionLabel": "画像生成モデル",
 			"modelSelectionDescription": "画像生成に使用するモデルを選択",
-			"warningMissingKey": "⚠️ 画像生成にはOpenRouter APIキーが必要です。上記で設定してください。",
+			"warningMissingKey": "⚠️ 画像生成にはKilo CodeまたはOpenRouter APIキーが必要です。上記で設定してください。",
 			"successConfigured": "✓ 画像生成が設定され、使用準備完了です"
 		},
 		"INLINE_ASSIST": {
