@@ -185,7 +185,7 @@ jobs:
               shell: bash
             - name: Get bundle name
               id: get_bundle_name
-              run: echo "BUNDLE_NAME=$(node scripts/get_bundle_name.js)" >> $GITHUB_ENV
+              run: echo "BUNDLE_NAME=$(node jetbrains/plugin/scripts/get_bundle_name.js)" >> $GITHUB_ENV
             - name: Upload artifact
               uses: actions/upload-artifact@v4
               with:
