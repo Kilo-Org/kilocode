@@ -9,9 +9,19 @@ vi.mock("child_process", () => ({
 	spawnSync: vi.fn(),
 }))
 
+const mockWorkspaceFolders = [{ uri: { fsPath: "/test/workspace" } }]
+const mockGitRepositories = [
+	{
+		rootUri: { fsPath: "/test/workspace" },
+		inputBox: { value: "" },
+	},
+]
+
 vi.mock("vscode", () => ({
 	workspace: {
-		workspaceFolders: [{ uri: { fsPath: "/test/workspace" } }],
+		get workspaceFolders() {
+			return mockWorkspaceFolders
+		},
 		createFileSystemWatcher: vi.fn(() => ({
 			onDidCreate: vi.fn(() => ({ dispose: vi.fn() })),
 			onDidChange: vi.fn(() => ({ dispose: vi.fn() })),
@@ -24,12 +34,7 @@ vi.mock("vscode", () => ({
 			isActive: true,
 			exports: {
 				getAPI: vi.fn(() => ({
-					repositories: [
-						{
-							rootUri: { fsPath: "/test/workspace" },
-							inputBox: { value: "" },
-						},
-					],
+					repositories: mockGitRepositories,
 				})),
 			},
 		})),
@@ -39,6 +44,9 @@ vi.mock("vscode", () => ({
 	},
 	window: { showInformationMessage: vi.fn() },
 	RelativePattern: vi.fn().mockImplementation((base, pattern) => ({ base, pattern })),
+	Uri: {
+		file: vi.fn((path: string) => ({ fsPath: path })),
+	},
 }))
 
 const mockSpawnSync = spawnSync as Mock
@@ -256,6 +264,231 @@ describe("GitExtensionService", () => {
 
 			expect(result).toContain("Full Diff of Unstaged Changes")
 			expect(result).not.toContain("Full Diff of Staged Changes")
+		})
+	})
+
+	describe("Repository Determination Methods", () => {
+		describe("getVSCodeGitRepository", () => {
+			it("should return first repository when no resourceUri provided", () => {
+				const getVSCodeGitRepository = (service as any).getVSCodeGitRepository
+				const result = getVSCodeGitRepository.call(service)
+
+				expect(result).toEqual({
+					rootUri: { fsPath: "/test/workspace" },
+					inputBox: { value: "" },
+				})
+			})
+
+			it("should find matching repository by resourceUri", () => {
+				// Add another repository to test matching logic
+				mockGitRepositories.push({
+					rootUri: { fsPath: "/test/other-workspace" },
+					inputBox: { value: "" },
+				})
+
+				const resourceUri = { fsPath: "/test/other-workspace/subfolder" }
+				const getVSCodeGitRepository = (service as any).getVSCodeGitRepository
+				const result = getVSCodeGitRepository.call(service, resourceUri)
+
+				expect(result).toEqual({
+					rootUri: { fsPath: "/test/other-workspace" },
+					inputBox: { value: "" },
+				})
+
+				// Clean up
+				mockGitRepositories.pop()
+			})
+
+			it("should return null when Git extension is not active", async () => {
+				const vscode = vi.mocked(await import("vscode"))
+				vscode.extensions.getExtension = vi.fn(() => ({
+					isActive: false,
+					exports: null,
+				})) as any
+
+				const getVSCodeGitRepository = (service as any).getVSCodeGitRepository
+				const result = getVSCodeGitRepository.call(service)
+
+				expect(result).toBeNull()
+			})
+
+			it("should return null when no repositories available", async () => {
+				const vscode = vi.mocked(await import("vscode"))
+				vscode.extensions.getExtension = vi.fn(() => ({
+					isActive: true,
+					exports: {
+						getAPI: vi.fn(() => ({
+							repositories: [],
+						})),
+					},
+				})) as any
+
+				const getVSCodeGitRepository = (service as any).getVSCodeGitRepository
+				const result = getVSCodeGitRepository.call(service)
+
+				expect(result).toBeNull()
+			})
+		})
+
+		describe("isExternalWorkspace", () => {
+			it("should return false when resourceUri is within workspace folder", () => {
+				const resourceUri = { fsPath: "/test/workspace/subfolder/file.ts" }
+				const isExternalWorkspace = (service as any).isExternalWorkspace
+				const result = isExternalWorkspace.call(service, resourceUri)
+
+				expect(result).toBe(false)
+			})
+
+			it("should return true when resourceUri is outside workspace folders", () => {
+				const resourceUri = { fsPath: "/external/project/file.ts" }
+				const isExternalWorkspace = (service as any).isExternalWorkspace
+				const result = isExternalWorkspace.call(service, resourceUri)
+
+				expect(result).toBe(true)
+			})
+
+			it("should return true when no workspace folders exist", () => {
+				// Temporarily clear workspace folders
+				const originalFolders = mockWorkspaceFolders.slice()
+				mockWorkspaceFolders.length = 0
+
+				const resourceUri = { fsPath: "/any/path" }
+				const isExternalWorkspace = (service as any).isExternalWorkspace
+				const result = isExternalWorkspace.call(service, resourceUri)
+
+				expect(result).toBe(true)
+
+				// Restore workspace folders
+				mockWorkspaceFolders.push(...originalFolders)
+			})
+		})
+
+		describe("createExternalRepository", () => {
+			beforeEach(() => {
+				// Mock successful Git repository validation
+				mockSpawnSync.mockReturnValue({ status: 0, stdout: ".git", stderr: "", error: null })
+			})
+
+			it("should create external repository for valid Git path", () => {
+				const resourceUri = { fsPath: "/external/project" }
+				const createExternalRepository = (service as any).createExternalRepository
+				const result = createExternalRepository.call(service, resourceUri)
+
+				expect(mockSpawnSync).toHaveBeenCalledWith(
+					"git",
+					["rev-parse", "--git-dir"],
+					expect.objectContaining({
+						cwd: "/external/project",
+						encoding: "utf8",
+						stdio: ["ignore", "pipe", "pipe"],
+					}),
+				)
+
+				expect(result).toEqual({
+					inputBox: { value: "" },
+					rootUri: { fsPath: "/external/project" },
+				})
+			})
+
+			it("should return null for invalid Git repository", () => {
+				// Mock failed Git repository validation
+				mockSpawnSync.mockReturnValue({ status: 1, stdout: "", stderr: "not a git repo", error: null })
+
+				const resourceUri = { fsPath: "/invalid/path" }
+				const createExternalRepository = (service as any).createExternalRepository
+				const result = createExternalRepository.call(service, resourceUri)
+
+				expect(result).toBeNull()
+			})
+
+			it("should handle Git command errors gracefully", () => {
+				// Mock Git command error
+				mockSpawnSync.mockReturnValue({ status: 1, stdout: "", stderr: "", error: new Error("Git not found") })
+
+				const resourceUri = { fsPath: "/error/path" }
+				const createExternalRepository = (service as any).createExternalRepository
+				const result = createExternalRepository.call(service, resourceUri)
+
+				expect(result).toBeNull()
+			})
+		})
+
+		describe("determineTargetRepository", () => {
+			beforeEach(async () => {
+				// Reset Git extension mock to default state
+				const vscode = vi.mocked(await import("vscode"))
+				vscode.extensions.getExtension = vi.fn(() => ({
+					isActive: true,
+					exports: {
+						getAPI: vi.fn(() => ({
+							repositories: mockGitRepositories,
+						})),
+					},
+				})) as any
+			})
+
+			it("should return VSCode repository when no resourceUri provided", () => {
+				const determineTargetRepository = (service as any).determineTargetRepository
+				const result = determineTargetRepository.call(service)
+
+				expect(result).toEqual({
+					rootUri: { fsPath: "/test/workspace" },
+					inputBox: { value: "" },
+				})
+			})
+
+			it("should create external repository for external workspace", () => {
+				// Mock successful Git validation for external path
+				mockSpawnSync.mockReturnValue({ status: 0, stdout: ".git", stderr: "", error: null })
+
+				const resourceUri = { fsPath: "/external/project" }
+				const determineTargetRepository = (service as any).determineTargetRepository
+				const result = determineTargetRepository.call(service, resourceUri)
+
+				expect(result).toEqual({
+					inputBox: { value: "" },
+					rootUri: { fsPath: "/external/project" },
+				})
+			})
+
+			it("should find matching VSCode repository for internal workspace", () => {
+				const resourceUri = { fsPath: "/test/workspace/subfolder" }
+				const determineTargetRepository = (service as any).determineTargetRepository
+				const result = determineTargetRepository.call(service, resourceUri)
+
+				expect(result).toEqual({
+					rootUri: { fsPath: "/test/workspace" },
+					inputBox: { value: "" },
+				})
+			})
+
+			it("should return null when all methods fail", async () => {
+				// Mock Git extension unavailable
+				const vscode = vi.mocked(await import("vscode"))
+				vscode.extensions.getExtension = vi.fn(() => null) as any
+
+				// Mock invalid Git repository
+				mockSpawnSync.mockReturnValue({ status: 1, stdout: "", stderr: "not a git repo", error: null })
+
+				const resourceUri = { fsPath: "/invalid/path" }
+				const determineTargetRepository = (service as any).determineTargetRepository
+				const result = determineTargetRepository.call(service, resourceUri)
+
+				expect(result).toBeNull()
+			})
+
+			it("should handle errors gracefully and return null", async () => {
+				// Force an error in the method
+				const vscode = vi.mocked(await import("vscode"))
+				vscode.extensions.getExtension = vi.fn(() => {
+					throw new Error("Extension error")
+				}) as any
+
+				const determineTargetRepository = (service as any).determineTargetRepository
+				const result = determineTargetRepository.call(service)
+
+				expect(result).toBeNull()
+			})
 		})
 	})
 })

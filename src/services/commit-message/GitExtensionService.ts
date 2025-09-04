@@ -160,6 +160,12 @@ export class GitExtensionService {
 
 	/**
 	 * Validates if a path contains a Git repository
+	 *
+	 * @param workspacePath - The absolute path to validate as a Git repository
+	 * @returns true if the path contains a valid Git repository, false otherwise
+	 *
+	 * Note: This method logs detailed error information for debugging when validation fails,
+	 * including the workspace path and specific error details to help troubleshoot issues.
 	 */
 	private isValidGitRepository(workspacePath: string): boolean {
 		try {
@@ -169,8 +175,72 @@ export class GitExtensionService {
 				stdio: ["ignore", "pipe", "pipe"],
 			})
 
-			return result.status === 0
+			if (result.status === 0) {
+				return true
+			}
+
+			// Log detailed information about Git command failure
+			if (result.error) {
+				// Handle system-level errors (command not found, permission issues, etc.)
+				const systemError = result.error as NodeJS.ErrnoException
+				if (systemError.code === "ENOENT") {
+					console.error(
+						`[GitExtensionService] Git command not found when validating repository at: ${workspacePath}`,
+					)
+					console.error(`[GitExtensionService] Please ensure Git is installed and available in PATH`)
+				} else if (systemError.code === "EACCES") {
+					console.error(
+						`[GitExtensionService] Permission denied when accessing Git repository at: ${workspacePath}`,
+					)
+					console.error(`[GitExtensionService] Error details:`, systemError.message)
+				} else {
+					console.error(
+						`[GitExtensionService] System error when validating Git repository at: ${workspacePath}`,
+					)
+					console.error(
+						`[GitExtensionService] Error code: ${systemError.code}, message: ${systemError.message}`,
+					)
+				}
+			} else {
+				// Handle Git-specific errors (not a repository, corrupted repo, etc.)
+				const stderr = result.stderr?.trim()
+				if (stderr) {
+					if (stderr.includes("not a git repository")) {
+						console.error(`[GitExtensionService] Path is not a Git repository: ${workspacePath}`)
+					} else if (stderr.includes("fatal: bad revision")) {
+						console.error(`[GitExtensionService] Corrupted Git repository detected at: ${workspacePath}`)
+						console.error(`[GitExtensionService] Git error: ${stderr}`)
+					} else {
+						console.error(`[GitExtensionService] Git validation failed for: ${workspacePath}`)
+						console.error(`[GitExtensionService] Git stderr: ${stderr}`)
+					}
+				} else {
+					console.error(
+						`[GitExtensionService] Git validation failed with status ${result.status} for: ${workspacePath}`,
+					)
+					if (result.stdout?.trim()) {
+						console.error(`[GitExtensionService] Git stdout: ${result.stdout.trim()}`)
+					}
+				}
+			}
+
+			return false
 		} catch (error) {
+			// Handle unexpected errors during execution
+			const errorMessage = error instanceof Error ? error.message : String(error)
+			const errorName = error instanceof Error ? error.name : "Unknown Error"
+
+			console.error(
+				`[GitExtensionService] Unexpected error during Git repository validation for: ${workspacePath}`,
+			)
+			console.error(`[GitExtensionService] Error type: ${errorName}`)
+			console.error(`[GitExtensionService] Error message: ${errorMessage}`)
+
+			// Log stack trace for debugging if available
+			if (error instanceof Error && error.stack) {
+				console.error(`[GitExtensionService] Stack trace:`, error.stack)
+			}
+
 			return false
 		}
 	}

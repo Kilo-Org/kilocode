@@ -17,8 +17,12 @@ import com.intellij.openapi.vcs.changes.ChangeListManager
 import com.intellij.openapi.vfs.VirtualFileManager
 import ai.kilocode.jetbrains.core.PluginContext
 import ai.kilocode.jetbrains.core.ServiceProxyRegistry
+import ai.kilocode.jetbrains.git.WorkspaceResolver
 import ai.kilocode.jetbrains.ipc.proxy.LazyPromise
 import java.io.File
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 /**
  * Action that generates AI-powered commit messages for Git repositories.
@@ -87,7 +91,7 @@ class GitCommitMessageAction : AnAction("Generate Commit Message") {
         val staged = !hasUnstagedChanges // Default to staged if no unstaged changes
 
         // Get workspace path
-        val workspacePath = getWorkspacePath(project)
+        val workspacePath = WorkspaceResolver.getWorkspacePath(project)
         if (workspacePath == null) {
             Messages.showErrorMessage(
                 project,
@@ -156,15 +160,36 @@ class GitCommitMessageAction : AnAction("Generate Commit Message") {
 
         indicator.text = "Generating commit message with AI..."
 
-        // Execute the command via RPC
+        // Execute the command via RPC with timeout handling
         val promise: LazyPromise = proxy.executeContributedCommand(commandId, listOf(params))
+        val timeoutFuture = CompletableFuture<Any?>()
         
-        // Handle the response
+        // Set up timeout (30 seconds for AI generation)
+        val timeoutTask = ApplicationManager.getApplication().executeOnPooledThread {
+            try {
+                Thread.sleep(30000) // 30 seconds
+                if (!timeoutFuture.isDone) {
+                    timeoutFuture.completeExceptionally(
+                        TimeoutException("Commit message generation timed out after 30 seconds")
+                    )
+                }
+            } catch (e: InterruptedException) {
+                // Thread was interrupted, likely because operation completed
+            }
+        }
+        
+        // Handle the response with timeout
         promise.then({ result ->
+            if (!timeoutFuture.isDone) {
+                timeoutFuture.complete(result)
+            }
             ApplicationManager.getApplication().invokeLater {
                 handleCommitMessageResult(project, result)
             }
         }, { error ->
+            if (!timeoutFuture.isDone) {
+                timeoutFuture.completeExceptionally(error as? Throwable ?: RuntimeException(error.toString()))
+            }
             ApplicationManager.getApplication().invokeLater {
                 logger.error("RPC call failed", error as? Throwable)
                 Messages.showErrorMessage(
@@ -174,6 +199,23 @@ class GitCommitMessageAction : AnAction("Generate Commit Message") {
                 )
             }
         })
+        
+        // Handle timeout scenarios
+        timeoutFuture.handle { result, throwable ->
+            if (throwable is TimeoutException) {
+                logger.warn("Commit message generation timed out", throwable)
+                ApplicationManager.getApplication().invokeLater {
+                    Messages.showErrorMessage(
+                        project,
+                        "The commit message generation request timed out. Please check if the VSCode extension is running and try again.",
+                        "Generate Commit Message Timeout"
+                    )
+                }
+                // Interrupt the timeout task since we're handling the timeout
+                timeoutTask.cancel(true)
+            }
+            null
+        }
     }
 
     /**
@@ -183,43 +225,53 @@ class GitCommitMessageAction : AnAction("Generate Commit Message") {
      * @param result The result from the VSCode extension command
      */
     private fun handleCommitMessageResult(project: Project, result: Any?) {
+        // Guard clause: Handle exceptions early
         try {
-            when (result) {
-                is Map<*, *> -> {
-                    val message = result["message"] as? String
-                    val error = result["error"] as? String
-
-                    if (error != null) {
-                        Messages.showErrorMessage(
-                            project,
-                            "Failed to generate commit message: $error",
-                            "Generate Commit Message Error"
-                        )
-                    } else if (message != null) {
-                        // For now, just show the generated message in a dialog
-                        // In Phase 3, this will be integrated with the commit dialog
-                        Messages.showInfoMessage(
-                            project,
-                            "Generated commit message:\n\n$message",
-                            "Generated Commit Message"
-                        )
-                        logger.info("Successfully generated commit message: $message")
-                    } else {
-                        Messages.showErrorMessage(
-                            project,
-                            "Received invalid response from commit message generation",
-                            "Generate Commit Message Error"
-                        )
-                    }
-                }
-                else -> {
-                    Messages.showErrorMessage(
-                        project,
-                        "Received unexpected response format from commit message generation",
-                        "Generate Commit Message Error"
-                    )
-                }
+            // Guard clause: Check for invalid result format early
+            if (result !is Map<*, *>) {
+                logger.warn("Received unexpected response format: ${result?.javaClass?.simpleName}")
+                Messages.showErrorMessage(
+                    project,
+                    "Received unexpected response format from commit message generation",
+                    "Generate Commit Message Error"
+                )
+                return
             }
+
+            // Extract response data
+            val message = result["message"] as? String
+            val error = result["error"] as? String
+
+            // Guard clause: Handle error response early
+            if (error != null) {
+                logger.warn("Commit message generation failed with error: $error")
+                Messages.showErrorMessage(
+                    project,
+                    "Failed to generate commit message: $error",
+                    "Generate Commit Message Error"
+                )
+                return
+            }
+
+            // Guard clause: Handle missing message early
+            if (message == null) {
+                logger.warn("Received response without message or error field")
+                Messages.showErrorMessage(
+                    project,
+                    "Received invalid response from commit message generation",
+                    "Generate Commit Message Error"
+                )
+                return
+            }
+
+            // Happy path: Success case
+            logger.info("Successfully generated commit message: $message")
+            Messages.showInfoMessage(
+                project,
+                "Generated commit message:\n\n$message",
+                "Generated Commit Message"
+            )
+
         } catch (e: Exception) {
             logger.error("Error handling commit message result", e)
             Messages.showErrorMessage(
@@ -230,39 +282,4 @@ class GitCommitMessageAction : AnAction("Generate Commit Message") {
         }
     }
 
-    /**
-     * Determines the workspace path for the given project.
-     * Looks for the Git repository root or falls back to project base path.
-     *
-     * @param project The current project
-     * @return The absolute workspace path or null if not found
-     */
-    private fun getWorkspacePath(project: Project): String? {
-        // Try to get the project base path
-        val basePath = project.basePath
-        if (basePath != null) {
-            val baseDir = File(basePath)
-            
-            // Check if this is a Git repository
-            val gitDir = File(baseDir, ".git")
-            if (gitDir.exists()) {
-                return baseDir.absolutePath
-            }
-            
-            // Look for Git repository in parent directories
-            var currentDir = baseDir.parentFile
-            while (currentDir != null) {
-                val parentGitDir = File(currentDir, ".git")
-                if (parentGitDir.exists()) {
-                    return currentDir.absolutePath
-                }
-                currentDir = currentDir.parentFile
-            }
-            
-            // Fall back to project base path even if no .git found
-            return baseDir.absolutePath
-        }
-        
-        return null
-    }
 }

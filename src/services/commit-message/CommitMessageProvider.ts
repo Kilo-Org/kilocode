@@ -43,12 +43,19 @@ export class CommitMessageProvider {
 			this.outputChannel.appendLine(t("kilocode:commitMessage.gitInitError", { error }))
 		}
 
-		// Register the command
-		const disposable = vscode.commands.registerCommand(
-			"kilo-code.generateCommitMessage",
-			(commitContext?: GitRepository) => this.generateCommitMessage(commitContext),
-		)
-		this.context.subscriptions.push(disposable)
+		// Register the commands
+		const disposables = [
+			vscode.commands.registerCommand("kilo-code.generateCommitMessage", (commitContext?: GitRepository) =>
+				this.generateCommitMessage(commitContext),
+			),
+			vscode.commands.registerCommand(
+				"kilo-code.generateCommitMessageForExternal",
+				async (params: { workspacePath: string; staged?: boolean }) =>
+					this.generateCommitMessageForExternal(params),
+			),
+		]
+
+		this.context.subscriptions.push(...disposables)
 		this.context.subscriptions.push(this.gitService)
 	}
 
