@@ -1,5 +1,39 @@
 # kilo-code
 
+## [v4.89.0]
+
+- [#2242](https://github.com/Kilo-Org/kilocode/pull/2242) [`f474c89`](https://github.com/Kilo-Org/kilocode/commit/f474c89e3881955d2f41b8912b728e91eddb87f8) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Include changes from Roo Code v3.26.4
+
+    - Optimize memory usage for image handling in webview (thanks @daniel-lxs!)
+    - Fix: Special tokens should not break task processing (#7539 by @pwilkin, PR by @pwilkin)
+    - Add Ollama API key support for Turbo mode (#7147 by @LivioGama, PR by @app/roomote)
+    - Add optional input image parameter to image generation tool (thanks @roomote!)
+    - Refactor: Flatten image generation settings structure (thanks @daniel-lxs!)
+    - Show console logging in vitests when the --no-silent flag is set (thanks @hassoncs!)
+    - feat: Add experimental image generation tool with OpenRouter integration (thanks @daniel-lxs!)
+    - Fix: Resolve GPT-5 Responses API issues with condensing and image support (#7334 by @nlbuescher, PR by @daniel-lxs)
+    - Fix: Hide .kilocodeignore'd files from environment details by default (#7368 by @AlexBlack772, PR by @app/roomote)
+    - Fix: Exclude browser scroll actions from repetition detection (#7470 by @cgrierson-smartsheet, PR by @app/roomote)
+    - Add Vercel AI Gateway provider integration (thanks @joshualipman123!)
+    - Add support for Vercel embeddings (thanks @mrubens!)
+    - Enable on-disk storage for Qdrant vectors and HNSW index (thanks @daniel-lxs!)
+    - Update tooltip component to match native VSCode tooltip shadow styling (thanks @roomote!)
+    - Fix: remove duplicate cache display in task header (thanks @mrubens!)
+    - Random chat text area cleanup (thanks @cte!)
+    - feat: Add Deepseek v3.1 to Fireworks AI provider (#7374 by @dmarkey, PR by @app/roomote)
+    - Fix: Make auto approve toggle trigger stay (#3909 by @kyle-apex, PR by @elianiva)
+    - Fix: Preserve user input when selecting follow-up choices (#7316 by @teihome, PR by @daniel-lxs)
+    - Fix: Handle Mistral thinking content as reasoning chunks (#6842 by @Biotrioo, PR by @app/roomote)
+    - Fix: Resolve newTaskRequireTodos setting not working correctly (thanks @hannesrudolph!)
+    - Fix: Requesty model listing (#7377 by @dtrugman, PR by @dtrugman)
+    - feat: Hide static providers with no models from provider list (thanks @daniel-lxs!)
+    - Add todos parameter to new_task tool usage in issue-fixer mode (thanks @hannesrudolph!)
+    - Handle substitution patterns in command validation (thanks @mrubens!)
+    - Mark code-workspace files as protected (thanks @mrubens!)
+    - Update list of default allowed commands (thanks @mrubens!)
+    - Follow symlinks in rooignore checks (thanks @mrubens!)
+    - Show cache read and write prices for OpenRouter inference providers (thanks @chrarnoldus!)
+
 ## [v4.88.0]
 
 - [#2235](https://github.com/Kilo-Org/kilocode/pull/2235) [`fbf4e42`](https://github.com/Kilo-Org/kilocode/commit/fbf4e42125cef538387301be784ede7d2609fe16) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Rename Inline Assist to Kilo Code Autocomplete
