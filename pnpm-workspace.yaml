@@ -3,6 +3,8 @@ packages:
   - webview-ui
   - apps/*
   - packages/*
+  - jetbrains/host
+  - jetbrains/plugin
 
 onlyBuiltDependencies:
   - '@tailwindcss/oxide'

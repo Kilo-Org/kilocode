@@ -116,7 +116,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 	}
 
 	// kilocode_change start
-	customRequestOptions(_metadata?: ApiHandlerCreateMessageMetadata): OpenAI.RequestOptions | undefined {
+	customRequestOptions(_metadata?: ApiHandlerCreateMessageMetadata): { headers: Record<string, string> } | undefined {
 		return undefined
 	}
 
@@ -362,6 +362,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		model: string,
 		apiKey: string,
 		inputImage?: string,
+		taskId?: string, // kilocode_change
 	): Promise<ImageGenerationResult> {
 		if (!apiKey) {
 			return {
@@ -370,13 +371,18 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			}
 		}
 
+		const extraHeaders = (taskId ? this.customRequestOptions({ taskId })?.headers : undefined) ?? {} // kilocode_change
+
 		try {
 			const response = await fetch(
 				`${this.options.openRouterBaseUrl || "https://openrouter.ai/api/v1/"}chat/completions`, // kilocode_change: support baseUrl
 				{
 					method: "POST",
 					headers: {
-						...DEFAULT_HEADERS, // kilocode_change: add DEFAULT_HEADERS
+						// kilocode_change start
+						...DEFAULT_HEADERS,
+						...extraHeaders,
+						// kilocode_change end
 						Authorization: `Bearer ${apiKey}`,
 						"Content-Type": "application/json",
 					},

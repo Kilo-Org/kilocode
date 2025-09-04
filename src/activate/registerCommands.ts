@@ -256,6 +256,26 @@ const getCommandsMap = ({ context, outputChannel }: RegisterCommandOptions): Rec
 			contextProxy: visibleProvider.contextProxy,
 		})
 	},
+	// Handle external URI - used by JetBrains plugin to forward auth tokens
+	handleExternalUri: async (uriString: string) => {
+		const visibleProvider = getVisibleProviderOrLog(outputChannel)
+		if (!visibleProvider) {
+			return
+		}
+
+		try {
+			// Parse the URI string and create a VSCode URI object
+			const uri = vscode.Uri.parse(uriString)
+
+			// Import and use the existing handleUri function
+			const { handleUri } = await import("./handleUri")
+			await handleUri(uri)
+
+			outputChannel.appendLine(`Successfully handled external URI: ${uriString}`)
+		} catch (error) {
+			outputChannel.appendLine(`Error handling external URI: ${uriString}, error: ${error}`)
+		}
+	},
 	// kilocode_change end
 })
 
