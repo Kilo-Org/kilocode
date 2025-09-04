@@ -15,8 +15,17 @@ import { logger } from "../../utils/logging"
 import { GlobalFileNames } from "../../shared/globalFileNames"
 import { ensureSettingsDirectoryExists } from "../../utils/globalContext"
 import { t } from "../../i18n"
+import { ModesDirectoryLoader } from "./ModesDirectoryLoader"
 
 const ROOMODES_FILENAME = ".kilocodemodes"
+const MODES_DIRNAME = ".kilocode/modes"
+
+type SaveTarget = "file" | "directory"
+
+interface UpdateOptions {
+	toDirectory?: boolean
+	global?: boolean
+}
 
 // Type definitions for import/export functionality
 interface RuleFile {
@@ -257,6 +266,119 @@ export class CustomModesManager {
 		return filePath
 	}
 
+	// Returns path to project .kilocode/modes directory if workspace exists
+	private async getProjectModesDirectory(): Promise<string | undefined> {
+		const workspaceFolders = vscode.workspace.workspaceFolders
+		if (!workspaceFolders || workspaceFolders.length === 0) return undefined
+		const workspaceRoot = getWorkspacePath()
+		return path.join(workspaceRoot, MODES_DIRNAME)
+	}
+
+	// Returns path to global .kilocode/modes directory inside the extension global storage
+	private async getGlobalModesDirectory(): Promise<string> {
+		const settingsDir = await ensureSettingsDirectoryExists(this.context)
+		// Reuse settings/global storage base for global modes directory
+		return path.join(settingsDir, MODES_DIRNAME)
+	}
+
+	/**
+	 * Ensure a directory exists (mkdir -p)
+	 */
+	private async ensureDir(dirPath: string): Promise<void> {
+		await fs.mkdir(dirPath, { recursive: true })
+	}
+
+	/**
+	 * Compute the directory path (.kilocode/modes) for the given source
+	 */
+	private async getModesDirectoryForSource(source: "project" | "global"): Promise<string> {
+		if (source === "project") {
+			const projectDir = await this.getProjectModesDirectory()
+			if (!projectDir) {
+				throw new Error(t("common:customModes.errors.noWorkspaceForProject"))
+			}
+			return projectDir
+		}
+		return await this.getGlobalModesDirectory()
+	}
+
+	/**
+	 * Save a single mode to the directory structure as {slug}.yaml
+	 * Ensures the directory exists, validates the config, and writes YAML.
+	 */
+	public async saveModeToDirectory(mode: ModeConfig): Promise<void> {
+		// Validate
+		const validation = modeConfigSchema.safeParse(mode)
+		if (!validation.success) {
+			const errors = validation.error.errors.map((e) => e.message).join(", ")
+			throw new Error(`Invalid mode configuration: ${errors}`)
+		}
+
+		// Determine directory based on source
+		const source = mode.source === "project" ? ("project" as const) : ("global" as const)
+		const modesDir = await this.getModesDirectoryForSource(source)
+		await this.ensureDir(modesDir)
+
+		const filePath = path.join(modesDir, `${mode.slug}.yaml`)
+		const toWrite = { ...mode, source } // ensure explicit source in file
+		const yamlContent = yaml.stringify(toWrite, { lineWidth: 0 })
+		await fs.writeFile(filePath, yamlContent, "utf-8")
+	}
+
+	/**
+	 * Delete a single mode file from the directory by slug.
+	 * If file does not exist, this is a no-op.
+	 */
+	public async deleteModeFileFromDirectory(slug: string, source: "project" | "global"): Promise<void> {
+		try {
+			const modesDir = await this.getModesDirectoryForSource(source)
+			const filePath = path.join(modesDir, `${slug}.yaml`)
+			const exists = await fileExistsAtPath(filePath)
+			if (exists) {
+				await fs.rm(filePath, { force: true })
+			}
+		} catch (err) {
+			logger.error(`[CustomModesManager] Failed to delete mode file ${slug} from ${source} directory`, {
+				error: err instanceof Error ? err.message : String(err),
+			})
+		}
+	}
+
+	// Loads modes from both project and global modes directories via ModesDirectoryLoader
+	private async loadModesFromDirectories(): Promise<{ projectDirModes: ModeConfig[]; globalDirModes: ModeConfig[] }> {
+		const loader = new ModesDirectoryLoader()
+
+		// Project directory
+		let projectDirModes: ModeConfig[] = []
+		const projectDir = await this.getProjectModesDirectory()
+		if (projectDir && (await fileExistsAtPath(projectDir))) {
+			try {
+				projectDirModes = (await loader.loadModesFromDirectory(projectDir)).map((m) => ({
+					...m,
+					source: "project" as const,
+				}))
+			} catch (err) {
+				console.error(`[CustomModesManager] Failed loading project modes directory ${projectDir}:`, err)
+			}
+		}
+
+		// Global directory
+		let globalDirModes: ModeConfig[] = []
+		const globalDir = await this.getGlobalModesDirectory()
+		if (await fileExistsAtPath(globalDir)) {
+			try {
+				globalDirModes = (await loader.loadModesFromDirectory(globalDir)).map((m) => ({
+					...m,
+					source: "global" as const,
+				}))
+			} catch (err) {
+				console.error(`[CustomModesManager] Failed loading global modes directory ${globalDir}:`, err)
+			}
+		}
+
+		return { projectDirModes, globalDirModes }
+	}
+
 	private async watchCustomModesFiles(): Promise<void> {
 		// Skip if test environment is detected
 		if (process.env.NODE_ENV === "test") {
@@ -350,57 +472,158 @@ export class CustomModesManager {
 			)
 			this.disposables.push(roomodesWatcher)
 		}
+
+		// Also watch .kilocode/modes directories (project and global) for .yaml/.yml add/modify/delete
+		const setupDirWatcher = async (dirPath: string | undefined, isGlobal: boolean) => {
+			if (!dirPath) return
+
+			// Create a pattern that matches YAML files in the directory and subdirectories
+			// Note: vscode.GlobPattern supports ** for recursive matching.
+			const yamlPattern = new vscode.RelativePattern(dirPath, "**/*.{yaml,yml}")
+
+			const watcher = vscode.workspace.createFileSystemWatcher(yamlPattern)
+
+			const onDirModesChanged = async () => {
+				try {
+					// Reload all sources and rebuild merged state so precedence is preserved:
+					// Project dir > .kilocodemodes > Global dir > Global settings
+					const globalSettingsModes = await this.loadModesFromFile(settingsPath)
+
+					const roomodesPath = await this.getWorkspaceRoomodes()
+					const projectFileModes = roomodesPath ? await this.loadModesFromFile(roomodesPath) : []
+
+					const { projectDirModes, globalDirModes } = await this.loadModesFromDirectories()
+
+					// Precedence application
+					const bySlug = new Map<string, ModeConfig>()
+					const take = (m: ModeConfig, source: "project" | "global") => {
+						bySlug.set(m.slug, { ...m, source })
+					}
+
+					for (const m of globalSettingsModes) {
+						if (!bySlug.has(m.slug)) take(m, "global")
+					}
+					for (const m of globalDirModes) {
+						take(m, "global")
+					}
+					for (const m of projectFileModes) {
+						take(m, "project")
+					}
+					for (const m of projectDirModes) {
+						take(m, "project")
+					}
+
+					const mergedModes = Array.from(bySlug.values()).sort((a, b) => a.slug.localeCompare(b.slug))
+					await this.context.globalState.update("customModes", mergedModes)
+					this.clearCache()
+					await this.onUpdate()
+				} catch (err) {
+					console.error(
+						`[CustomModesManager] Error handling ${isGlobal ? "global" : "project"} modes directory change:`,
+						err,
+					)
+				}
+			}
+
+			this.disposables.push(watcher.onDidCreate(onDirModesChanged))
+			this.disposables.push(watcher.onDidChange(onDirModesChanged))
+			this.disposables.push(watcher.onDidDelete(onDirModesChanged))
+			this.disposables.push(watcher)
+		}
+
+		// Project .kilocode/modes (optional)
+		try {
+			const projectDir = await this.getProjectModesDirectory()
+			// Watcher pattern handles non-existing directories gracefully; if dir is missing,
+			// it simply won't emit until created.
+			await setupDirWatcher(projectDir, false)
+		} catch (err) {
+			console.error("[CustomModesManager] Failed to setup project modes directory watcher:", err)
+		}
+
+		// Global .kilocode/modes (optional)
+		try {
+			const globalDir = await this.getGlobalModesDirectory()
+			await setupDirWatcher(globalDir, true)
+		} catch (err) {
+			console.error("[CustomModesManager] Failed to setup global modes directory watcher:", err)
+		}
 	}
 
 	public async getCustomModes(): Promise<ModeConfig[]> {
+		console.log(`[CustomModesManager] DEBUG: getCustomModes() called`)
+
 		// Check if we have a valid cached result.
 		const now = Date.now()
 
 		if (this.cachedModes && now - this.cachedAt < CustomModesManager.cacheTTL) {
+			console.log(`[CustomModesManager] DEBUG: Returning cached modes (${this.cachedModes.length} modes)`)
 			return this.cachedModes
 		}
 
-		// Get modes from settings file.
+		console.log(`[CustomModesManager] DEBUG: Cache miss or expired, loading fresh modes`)
+
+		// Collect from all sources:
+		// 1) Project dir (.kilocode/modes)
+		// 2) .kilocodemodes (project file)
+		// 3) Global dir (.kilocode/modes in global storage)
+		// 4) Global settings (GlobalFileNames.customModes)
 		const settingsPath = await this.getCustomModesFilePath()
-		const settingsModes = await this.loadModesFromFile(settingsPath)
+		console.log(`[CustomModesManager] DEBUG: Loading global settings from: ${settingsPath}`)
+		const globalSettingsModes = await this.loadModesFromFile(settingsPath)
+		console.log(`[CustomModesManager] DEBUG: Loaded ${globalSettingsModes.length} modes from global settings`)
 
-		// Get modes from .kilocodemodes if it exists
 		const roomodesPath = await this.getWorkspaceRoomodes()
-		const roomodesModes = roomodesPath ? await this.loadModesFromFile(roomodesPath) : []
+		console.log(`[CustomModesManager] DEBUG: .kilocodemodes path: ${roomodesPath}`)
+		const projectFileModes = roomodesPath ? await this.loadModesFromFile(roomodesPath) : []
+		console.log(`[CustomModesManager] DEBUG: Loaded ${projectFileModes.length} modes from .kilocodemodes`)
 
-		// Create maps to store modes by source.
-		const projectModes = new Map<string, ModeConfig>()
-		const globalModes = new Map<string, ModeConfig>()
+		console.log(`[CustomModesManager] DEBUG: About to call loadModesFromDirectories()`)
+		const { projectDirModes, globalDirModes } = await this.loadModesFromDirectories()
+		console.log(
+			`[CustomModesManager] DEBUG: Directory loading complete - project: ${projectDirModes.length}, global: ${globalDirModes.length}`,
+		)
 
-		// Add project modes (they take precedence).
-		for (const mode of roomodesModes) {
-			projectModes.set(mode.slug, { ...mode, source: "project" as const })
-		}
+		// Build ordered result by precedence while preserving source order per layer:
+		// Project dir > .kilocodemodes > Global dir > Global settings
+		const seen = new Set<string>()
+		const ordered: ModeConfig[] = []
 
-		// Add global modes.
-		for (const mode of settingsModes) {
-			if (!projectModes.has(mode.slug)) {
-				globalModes.set(mode.slug, { ...mode, source: "global" as const })
+		const pushLayer = (layer: ModeConfig[], source: "project" | "global") => {
+			console.log(
+				`[CustomModesManager] DEBUG: Pushing layer with ${layer.length} modes (source: ${source}):`,
+				layer.map((m) => m.slug),
+			)
+			for (const m of layer) {
+				if (seen.has(m.slug)) {
+					console.log(`[CustomModesManager] DEBUG: Skipping duplicate slug: ${m.slug}`)
+					continue
+				}
+				seen.add(m.slug)
+				ordered.push({ ...m, source })
 			}
 		}
 
-		// Combine modes in the correct order: project modes first, then global modes.
-		const mergedModes = [
-			...roomodesModes.map((mode) => ({ ...mode, source: "project" as const })),
-			...settingsModes
-				.filter((mode) => !projectModes.has(mode.slug))
-				.map((mode) => ({ ...mode, source: "global" as const })),
-		]
+		// Highest precedence first so they appear earlier in the final array
+		pushLayer(projectDirModes, "project")
+		pushLayer(projectFileModes, "project")
+		pushLayer(globalDirModes, "global")
+		pushLayer(globalSettingsModes, "global")
 
-		await this.context.globalState.update("customModes", mergedModes)
+		console.log(
+			`[CustomModesManager] DEBUG: Final ordered modes (${ordered.length}):`,
+			ordered.map((m) => `${m.slug} (${m.source})`),
+		)
 
-		this.cachedModes = mergedModes
+		await this.context.globalState.update("customModes", ordered)
+
+		this.cachedModes = ordered
 		this.cachedAt = now
 
-		return mergedModes
+		return ordered
 	}
 
-	public async updateCustomMode(slug: string, config: ModeConfig): Promise<void> {
+	public async updateCustomMode(slug: string, config: ModeConfig, options?: UpdateOptions): Promise<void> {
 		try {
 			// Validate the mode configuration before saving
 			const validationResult = modeConfigSchema.safeParse(config)
@@ -415,6 +638,25 @@ export class CustomModesManager {
 			}
 
 			const isProjectMode = config.source === "project"
+			const toDirectory = options?.toDirectory === true
+
+			if (toDirectory) {
+				// New behavior: save to .kilocode/modes/{slug}.yaml
+				await this.queueWrite(async () => {
+					const modeWithSource = {
+						...config,
+						source: isProjectMode ? ("project" as const) : ("global" as const),
+					}
+					await this.saveModeToDirectory(modeWithSource)
+					this.clearCache()
+					// refresh merged so directory source is included with precedence
+					await this.getCustomModes()
+					await this.onUpdate()
+				})
+				return
+			}
+
+			// Legacy behavior: write to monolithic files
 			let targetPath: string
 
 			if (isProjectMode) {
@@ -514,9 +756,14 @@ export class CustomModesManager {
 			const settingsModes = await this.loadModesFromFile(settingsPath)
 			const roomodesModes = roomodesPath ? await this.loadModesFromFile(roomodesPath) : []
 
-			// Find the mode in either file
-			const projectMode = roomodesModes.find((m) => m.slug === slug)
-			const globalMode = settingsModes.find((m) => m.slug === slug)
+			// Also check directory-based modes
+			const { projectDirModes, globalDirModes } = await this.loadModesFromDirectories()
+			const projectDirMode = projectDirModes.find((m) => m.slug === slug)
+			const globalDirMode = globalDirModes.find((m) => m.slug === slug)
+
+			// Find the mode in any source
+			const projectMode = roomodesModes.find((m) => m.slug === slug) || projectDirMode
+			const globalMode = settingsModes.find((m) => m.slug === slug) || globalDirMode
 
 			if (!projectMode && !globalMode) {
 				throw new Error(t("common:customModes.errors.modeNotFound"))
@@ -526,14 +773,21 @@ export class CustomModesManager {
 			const modeToDelete = projectMode || globalMode
 
 			await this.queueWrite(async () => {
-				// Delete from project first if it exists there
-				if (projectMode && roomodesPath) {
+				// Delete from project monolithic file
+				if (roomodesPath) {
 					await this.updateModesInFile(roomodesPath, (modes) => modes.filter((m) => m.slug !== slug))
 				}
 
-				// Delete from global settings if it exists there
-				if (globalMode) {
-					await this.updateModesInFile(settingsPath, (modes) => modes.filter((m) => m.slug !== slug))
+				// Delete from global monolithic file
+				await this.updateModesInFile(settingsPath, (modes) => modes.filter((m) => m.slug !== slug))
+
+				// Delete from project directory file
+				if (projectDirMode) {
+					await this.deleteModeFileFromDirectory(slug, "project")
+				}
+				// Delete from global directory file
+				if (globalDirMode) {
+					await this.deleteModeFileFromDirectory(slug, "global")
 				}
 
 				// Delete associated rules folder
@@ -928,6 +1182,7 @@ export class CustomModesManager {
 	public async importModeWithRules(
 		yamlContent: string,
 		source: "global" | "project" = "project",
+		options?: { toDirectory?: boolean },
 	): Promise<ImportResult> {
 		try {
 			// Parse the YAML content with proper type validation
@@ -956,6 +1211,8 @@ export class CustomModesManager {
 				}
 			}
 
+			const toDirectory = options?.toDirectory === true
+
 			// Process each mode in the import
 			for (const importMode of importData.customModes) {
 				const { rulesFiles, ...modeConfig } = importMode
@@ -979,11 +1236,16 @@ export class CustomModesManager {
 					logger.info(`Overwriting existing mode: ${importMode.slug}`)
 				}
 
-				// Import the mode configuration with the specified source
-				await this.updateCustomMode(importMode.slug, {
-					...modeConfig,
-					source: source, // Use the provided source parameter
-				})
+				const prepared = { ...modeConfig, source } as ModeConfig
+
+				// Persist using directory or monolithic file
+				if (toDirectory) {
+					await this.queueWrite(async () => {
+						await this.saveModeToDirectory(prepared)
+					})
+				} else {
+					await this.updateCustomMode(importMode.slug, prepared)
+				}
 
 				// Import rules files (this also handles cleanup of existing rules folders)
 				await this.importRulesFiles(importMode, rulesFiles || [], source)
