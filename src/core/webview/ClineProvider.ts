@@ -99,7 +99,7 @@ import { OpenRouterHandler } from "../../api/providers"
 import { stringifyError } from "../../shared/kilocode/errorUtils"
 import isWsl from "is-wsl"
 import { getKilocodeDefaultModel } from "../../api/providers/kilocode/getKilocodeDefaultModel"
-import { JETBRAIN_PRODUCTS, KiloCodeWrapperProperties } from "../../shared/kilocode/wrapper"
+import { getKiloCodeWrapperProperties } from "../../core/kilocode/wrapper"
 
 export type ClineProviderState = Awaited<ReturnType<ClineProvider["getState"]>>
 // kilocode_change end
@@ -1691,7 +1691,7 @@ export class ClineProvider
 		const hasSystemPromptOverride = await this.hasFileBasedSystemPromptOverride(currentMode)
 
 		// kilocode_change start wrapper information
-		const kiloCodeWrapperProperties = this.getKiloCodeWrapperProperties()
+		const kiloCodeWrapperProperties = getKiloCodeWrapperProperties()
 		// kilocode_change end
 
 		return {
@@ -2513,7 +2513,7 @@ export class ClineProvider
 	private getAppProperties(): StaticAppProperties {
 		if (!this._appProperties) {
 			const packageJSON = this.context.extension?.packageJSON
-			const { kiloCodeWrapperTitle } = this.getKiloCodeWrapperProperties() // kilocode_change
+			const { kiloCodeWrapperTitle } = getKiloCodeWrapperProperties() // kilocode_change
 
 			this._appProperties = {
 				appName: packageJSON?.name ?? Package.name,
@@ -2526,35 +2526,6 @@ export class ClineProvider
 
 		return this._appProperties
 	}
-
-	// kilocode_change start
-	private getKiloCodeWrapperProperties(): KiloCodeWrapperProperties {
-		const appName = vscode.env.appName
-		const kiloCodeWrapped = appName.includes("wrapper")
-		let kiloCodeWrapper = null
-		let kiloCodeWrapperTitle = null
-		let kiloCodeWrapperCode = null
-		let kiloCodeWrapperVersion = null
-
-		if (kiloCodeWrapped) {
-			const wrapperMatch = appName.split("|")
-			kiloCodeWrapper = wrapperMatch[1].trim() || null
-			kiloCodeWrapperCode = wrapperMatch[2].trim() || null
-			kiloCodeWrapperVersion = wrapperMatch[3].trim() || null
-		}
-
-		kiloCodeWrapperTitle =
-			JETBRAIN_PRODUCTS[kiloCodeWrapperCode as keyof typeof JETBRAIN_PRODUCTS]?.name || "JetBrains IDE"
-
-		return {
-			kiloCodeWrapped,
-			kiloCodeWrapper,
-			kiloCodeWrapperTitle,
-			kiloCodeWrapperCode,
-			kiloCodeWrapperVersion,
-		}
-	}
-	// kilocode_change end
 
 	public get appProperties(): StaticAppProperties {
 		return this._appProperties ?? this.getAppProperties()

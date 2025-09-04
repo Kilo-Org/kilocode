@@ -44,6 +44,7 @@ import {
 import { initializeI18n } from "./i18n"
 import { registerGhostProvider } from "./services/ghost" // kilocode_change
 import { TerminalWelcomeService } from "./services/terminal-welcome/TerminalWelcomeService" // kilocode_change
+import { getKiloCodeWrapperProperties } from "./core/kilocode/wrapper" // kilocode_change
 
 /**
  * Built using https://github.com/microsoft/vscode-webview-ui-toolkit
@@ -350,7 +351,8 @@ export async function activate(context: vscode.ExtensionContext) {
 	)
 
 	// kilocode_change start
-	if (!vscode.env.appName.includes("wrapper")) {
+	const kilocodeWrapperProperties = getKiloCodeWrapperProperties()
+	if (!kilocodeWrapperProperties.kiloCodeWrapped) {
 		registerGhostProvider(context, provider)
 	}
 	// kilocode_change end
