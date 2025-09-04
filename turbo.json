@@ -24,13 +24,6 @@
 		"storybook:build": {
 			"outputs": ["storybook-static/**"]
 		},
-		"chromatic": {
-			"dependsOn": ["storybook:build"],
-			"cache": false
-		},
-		"playwright": {
-			"cache": false
-		},
 		"jetbrains:bundle": {
 			"cache": false,
 			"dependsOn": ["@kilo-code/jetbrains-plugin#bundle"]
@@ -44,6 +37,13 @@
 		},
 		"jetbrains:run": {
 			"dependsOn": ["@kilo-code/jetbrains-plugin#run"]
+		},
+		"chromatic": {
+			"dependsOn": ["storybook:build"],
+			"cache": false
+		},
+		"playwright": {
+			"cache": false
 		}
 	}
 }
