@@ -53,6 +53,9 @@
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "Clave API:",
 		"geminiApiKeyPlaceholder": "Introduce tu clave de API de Gemini",
+		"vercelAiGatewayProvider": "Vercel AI Gateway",
+		"vercelAiGatewayApiKeyLabel": "Clave API",
+		"vercelAiGatewayApiKeyPlaceholder": "Introduce tu clave API de Vercel AI Gateway",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "Clave API:",
 		"mistralApiKeyPlaceholder": "Introduce tu clave de API de Mistral",
@@ -114,6 +117,7 @@
 			"modelDimensionRequired": "Se requiere la dimensión del modelo",
 			"geminiApiKeyRequired": "Se requiere la clave API de Gemini",
 			"mistralApiKeyRequired": "Se requiere la clave de API de Mistral",
+			"vercelAiGatewayApiKeyRequired": "Se requiere la clave API de Vercel AI Gateway",
 			"ollamaBaseUrlRequired": "Se requiere la URL base de Ollama",
 			"baseUrlRequired": "Se requiere la URL base",
 			"modelDimensionMinValue": "La dimensión del modelo debe ser mayor que 0"
@@ -238,6 +242,8 @@
 		"awsCustomArnDesc": "Asegúrese de que la región en el ARN coincida con la región de AWS seleccionada anteriormente.",
 		"openRouterApiKey": "Clave API de OpenRouter",
 		"getOpenRouterApiKey": "Obtener clave API de OpenRouter",
+		"vercelAiGatewayApiKey": "Clave API de Vercel AI Gateway",
+		"getVercelAiGatewayApiKey": "Obtener clave API de Vercel AI Gateway",
 		"apiKeyStorageNotice": "Las claves API se almacenan de forma segura en el Almacenamiento Secreto de VSCode",
 		"glamaApiKey": "Clave API de Glama",
 		"getGlamaApiKey": "Obtener clave API de Glama",
@@ -760,6 +766,20 @@
 			"name": "Requerir lista de 'todos' para nuevas tareas",
 			"description": "Cuando está habilitado, la herramienta new_task requerirá que se proporcione un parámetro todos. Esto asegura que todas las nuevas tareas comiencen con una lista clara de objetivos. Cuando está deshabilitado (predeterminado), el parámetro todos permanece opcional por compatibilidad con versiones anteriores."
 		},
+		"IMAGE_GENERATION": {
+			"name": "Habilitar generación de imágenes con IA",
+			"description": "Cuando esté habilitado, Kilo Code puede generar imágenes a partir de prompts de texto. Requiere que se configure una clave de API de Kilo Code u OpenRouter (OpenRouter toma precedencia).",
+			"openRouterApiKeyLabel": "Clave API de OpenRouter",
+			"openRouterApiKeyPlaceholder": "Introduce tu clave API de OpenRouter",
+			"kiloCodeApiKeyLabel": "Clave API de Kilo Code",
+			"kiloCodeApiKeyPlaceholder": "Introduce tu clave API de Kilo Code",
+			"kiloCodeApiKeyPaste": "Pegar clave API actual de Kilo Code",
+			"getApiKeyText": "Obtén tu clave API de",
+			"modelSelectionLabel": "Modelo de generación de imágenes",
+			"modelSelectionDescription": "Selecciona el modelo para la generación de imágenes",
+			"warningMissingKey": "⚠️ La clave API de Kilo Code u OpenRouter es requerida para la generación de imágenes. Por favor, configúrala arriba.",
+			"successConfigured": "✓ La generación de imágenes está configurada y lista para usar"
+		},
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
 			"description": "Habilita las funciones de Autocomplete para sugerencias de código rápidas y mejoras directamente en tu editor. Incluye Tarea Rápida (Cmd+I) para cambios específicos y Autocomplete para mejoras contextuales."
@@ -836,7 +856,8 @@
 		"modelAvailability": "El ID de modelo ({{modelId}}) que proporcionó no está disponible. Por favor, elija un modelo diferente.",
 		"providerNotAllowed": "El proveedor '{{provider}}' no está permitido por su organización",
 		"modelNotAllowed": "El modelo '{{model}}' no está permitido para el proveedor '{{provider}}' por su organización",
-		"profileInvalid": "Este perfil contiene un proveedor o modelo que no está permitido por su organización"
+		"profileInvalid": "Este perfil contiene un proveedor o modelo que no está permitido por su organización",
+		"qwenCodeOauthPath": "Debes proporcionar una ruta válida de credenciales OAuth"
 	},
 	"placeholders": {
 		"apiKey": "Ingrese clave API...",

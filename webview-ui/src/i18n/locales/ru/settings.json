@@ -48,6 +48,9 @@
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "Ключ API:",
 		"geminiApiKeyPlaceholder": "Введите свой API-ключ Gemini",
+		"vercelAiGatewayProvider": "Vercel AI Gateway",
+		"vercelAiGatewayApiKeyLabel": "Ключ API",
+		"vercelAiGatewayApiKeyPlaceholder": "Введите свой API-ключ Vercel AI Gateway",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "Ключ API:",
 		"mistralApiKeyPlaceholder": "Введите свой API-ключ Mistral",
@@ -114,6 +117,7 @@
 			"modelDimensionRequired": "Требуется размерность модели",
 			"geminiApiKeyRequired": "Требуется ключ API Gemini",
 			"mistralApiKeyRequired": "Требуется API-ключ Mistral",
+			"vercelAiGatewayApiKeyRequired": "Требуется API-ключ Vercel AI Gateway",
 			"ollamaBaseUrlRequired": "Требуется базовый URL Ollama",
 			"baseUrlRequired": "Требуется базовый URL",
 			"modelDimensionMinValue": "Размерность модели должна быть больше 0"
@@ -238,6 +242,8 @@
 		"awsCustomArnDesc": "Убедитесь, что регион в ARN совпадает с выбранным выше регионом AWS.",
 		"openRouterApiKey": "OpenRouter API-ключ",
 		"getOpenRouterApiKey": "Получить OpenRouter API-ключ",
+		"vercelAiGatewayApiKey": "Ключ API Vercel AI Gateway",
+		"getVercelAiGatewayApiKey": "Получить ключ API Vercel AI Gateway",
 		"apiKeyStorageNotice": "API-ключи хранятся безопасно в Secret Storage VSCode",
 		"glamaApiKey": "Glama API-ключ",
 		"getGlamaApiKey": "Получить Glama API-ключ",
@@ -751,7 +757,7 @@
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Фоновое редактирование",
-			"description": "Предотвращает нарушение фокуса редактора при включении. Редактирование файлов происходит в фоновом режиме без открытия представлений различий или кражи фокуса. Вы можете продолжать работать без перерывов, пока Roo вносит изменения. Файлы могут открываться без фокуса для захвата диагностики или оставаться полностью закрытыми."
+			"description": "Предотвращает нарушение фокуса редактора при включении. Редактирование файлов происходит в фоновом режиме без открытия представлений различий или кражи фокуса. Вы можете продолжать работать без перерывов, пока Kilo Code вносит изменения. Файлы могут открываться без фокуса для захвата диагностики или оставаться полностью закрытыми."
 		},
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "Использовать новый парсер сообщений",
@@ -760,6 +766,20 @@
 		"NEW_TASK_REQUIRE_TODOS": {
 			"name": "Требовать список 'todos' для новых задач",
 			"description": "Если включено, инструмент new_task будет требовать предоставления параметра todos. Это гарантирует, что все новые задачи начинаются с четкого списка целей. Когда отключено (по умолчанию), параметр todos остается необязательным для обратной совместимости."
+		},
+		"IMAGE_GENERATION": {
+			"name": "Включить генерацию изображений ИИ",
+			"description": "Когда включено, Kilo Code может генерировать изображения из текстовых запросов. Требует настроенный API-ключ Kilo Code или OpenRouter (OpenRouter имеет приоритет).",
+			"openRouterApiKeyLabel": "API-ключ OpenRouter",
+			"openRouterApiKeyPlaceholder": "Введите ваш API-ключ OpenRouter",
+			"kiloCodeApiKeyLabel": "API-ключ Kilo Code",
+			"kiloCodeApiKeyPlaceholder": "Введите ваш API-ключ Kilo Code",
+			"kiloCodeApiKeyPaste": "Вставить текущий API-ключ Kilo Code",
+			"getApiKeyText": "Получите ваш API-ключ от",
+			"modelSelectionLabel": "Модель генерации изображений",
+			"modelSelectionDescription": "Выберите модель для генерации изображений",
+			"warningMissingKey": "⚠️ API-ключ Kilo Code или OpenRouter необходим для генерации изображений. Настройте его выше.",
+			"successConfigured": "✓ Генерация изображений настроена и готова к использованию"
 		},
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
@@ -837,7 +857,8 @@
 		"modelAvailability": "ID модели ({{modelId}}), который вы указали, недоступен. Пожалуйста, выберите другую модель.",
 		"providerNotAllowed": "Провайдер '{{provider}}' не разрешен вашей организацией",
 		"modelNotAllowed": "Модель '{{model}}' не разрешена для провайдера '{{provider}}' вашей организацией",
-		"profileInvalid": "Этот профиль содержит провайдера или модель, которые не разрешены вашей организацией"
+		"profileInvalid": "Этот профиль содержит провайдера или модель, которые не разрешены вашей организацией",
+		"qwenCodeOauthPath": "Вы должны указать допустимый путь к учетным данным OAuth"
 	},
 	"placeholders": {
 		"apiKey": "Введите API-ключ...",

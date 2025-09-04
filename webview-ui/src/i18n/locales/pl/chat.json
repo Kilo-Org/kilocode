@@ -182,7 +182,11 @@
 		"wantsToInsertAtEnd": "Kilo Code chce dodać zawartość na końcu tego pliku:",
 		"wantsToReadAndXMore": "Kilo Code chce przeczytać ten plik i {{count}} więcej:",
 		"wantsToReadMultiple": "Kilo Code chce odczytać wiele plików:",
-		"wantsToApplyBatchChanges": "Kilo Code chce zastosować zmiany do wielu plików:"
+		"wantsToApplyBatchChanges": "Kilo Code chce zastosować zmiany do wielu plików:",
+		"wantsToGenerateImage": "Kilo Code chce wygenerować obraz:",
+		"wantsToGenerateImageOutsideWorkspace": "Kilo Code chce wygenerować obraz poza obszarem roboczym:",
+		"wantsToGenerateImageProtected": "Kilo Code chce wygenerować obraz w chronionym miejscu:",
+		"didGenerateImage": "Kilo Code wygenerował obraz:"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code chce zobaczyć pliki najwyższego poziomu w tym katalogu:",
@@ -273,10 +277,10 @@
 	"announcement": {
 		"title": "🎉 Roo Code {{version}} wydany",
 		"stealthModel": {
-			"feature": "<bold>Darmowy model stealth na ograniczony czas</bold> - Błyskawiczny model rozumowania, który doskonale radzi sobie z kodowaniem agentowym z oknem kontekstu 262k, dostępny przez Roo Code Cloud.",
-			"note": "(Uwaga: prompty i uzupełnienia są rejestrowane przez twórcę modelu i używane do jego ulepszania)",
+			"feature": "Model stealth Sonic to teraz <bold>Grok Code Fast</bold>! Ten wysokowydajny model rozumowania jest dostępny jako <code>grok-code-fast-1</code> u dostawcy <bold>xAI (Grok)</bold>.",
+			"note": "W podzięce za wszystkie pomocne opinie o Sonic, xAI rozszerza bezpłatny dostęp do <code>grok-code-fast-1</code> na kolejny tydzień za pośrednictwem dostawcy <bold>Roo Code Cloud</bold>.",
 			"connectButton": "Połącz z Roo Code Cloud",
-			"selectModel": "Wybierz <code>roo/sonic</code> od dostawcy Roo Code Cloud w<br/><settingsLink>Ustawieniach</settingsLink> aby rozpocząć"
+			"selectModel": "Odwiedź <settingsLink>Ustawienia</settingsLink>, aby zaktualizować konfigurację dostawcy."
 		},
 		"description": "Roo Code {{version}} wprowadza potężne nowe funkcje i znaczące ulepszenia, aby ulepszyć Twój przepływ pracy programistycznej.",
 		"whatsNew": "Co nowego",
@@ -375,7 +379,8 @@
 	"slashCommands": {
 		"tooltip": "Zarządzaj poleceniami slash",
 		"title": "Polecenia Slash",
-		"description": "Twórz niestandardowe polecenia slash dla szybkiego dostępu do często używanych promptów i przepływów pracy. <DocsLink>Dokumentacja</DocsLink>",
+		"description": "Używaj wbudowanych poleceń slash lub twórz niestandardowe dla szybkiego dostępu do często używanych promptów i przepływów pracy. <DocsLink>Dokumentacja</DocsLink>",
+		"builtInCommands": "Polecenia Wbudowane",
 		"globalCommands": "Polecenia Globalne",
 		"workspaceCommands": "Polecenia Obszaru Roboczego",
 		"globalCommand": "Polecenie globalne",

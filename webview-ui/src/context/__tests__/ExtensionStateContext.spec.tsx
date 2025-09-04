@@ -274,6 +274,7 @@ describe("mergeExtensionState", () => {
 				preventFocusDisruption: false,
 				morphFastApply: false, // kilocode_change
 				newTaskRequireTodos: false,
+				imageGeneration: false,
 			} as Record<ExperimentId, boolean>,
 		}
 
@@ -290,6 +291,7 @@ describe("mergeExtensionState", () => {
 			preventFocusDisruption: false,
 			morphFastApply: false, // kilocode_change
 			newTaskRequireTodos: false,
+			imageGeneration: false,
 		})
 	})
 })

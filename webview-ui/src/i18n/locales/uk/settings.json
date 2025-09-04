@@ -56,6 +56,9 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "Ключ API:",
 		"mistralApiKeyPlaceholder": "Введіть ваш ключ API Mistral",
+		"vercelAiGatewayProvider": "Vercel AI Gateway",
+		"vercelAiGatewayApiKeyLabel": "Ключ API",
+		"vercelAiGatewayApiKeyPlaceholder": "Введіть ваш ключ API Vercel AI Gateway",
 		"openaiCompatibleProvider": "Сумісний з OpenAI",
 		"openAiKeyLabel": "Ключ API OpenAI",
 		"openAiKeyPlaceholder": "Введіть ваш ключ API OpenAI",
@@ -129,7 +132,8 @@
 			"mistralApiKeyRequired": "Ключ API Mistral є обов'язковим",
 			"ollamaBaseUrlRequired": "Базовий URL Ollama є обов'язковим",
 			"baseUrlRequired": "Базовий URL є обов'язковим",
-			"modelDimensionMinValue": "Розмірність моделі повинна бути більше 0"
+			"modelDimensionMinValue": "Розмірність моделі повинна бути більше 0",
+			"vercelAiGatewayApiKeyRequired": "Ключ API Vercel AI Gateway є обов'язковим"
 		}
 	},
 	"autoApprove": {
@@ -243,6 +247,8 @@
 		"awsCustomArnDesc": "Переконайтеся, що регіон у ARN відповідає вибраному вами регіону AWS вище.",
 		"openRouterApiKey": "Ключ API OpenRouter",
 		"getOpenRouterApiKey": "Отримати ключ API OpenRouter",
+		"vercelAiGatewayApiKey": "Vercel AI Gateway API Key",
+		"getVercelAiGatewayApiKey": "Отримати Vercel AI Gateway API Key",
 		"apiKeyStorageNotice": "Ключі API надійно зберігаються в Secret Storage VSCode",
 		"glamaApiKey": "Ключ API Glama",
 		"getGlamaApiKey": "Отримати ключ API Glama",
@@ -804,6 +810,20 @@
 			"name": "Вимагати список 'завдань' для нових завдань",
 			"description": "Коли увімкнено, інструмент new_task вимагатиме надання параметра завдань. Це забезпечить, що всі нові завдання почнуть з чітким списком цілей. Коли вимкнено (за замовчуванням), параметр завдань залишається необов'язковим для зворотної сумісності."
 		},
+		"IMAGE_GENERATION": {
+			"name": "Увімкнути генерацію зображень ШІ",
+			"description": "Коли увімкнено, Kilo Code може генерувати зображення з текстових запитів. Потребує Kilo Code або OpenRouter API ключ (OpenRouter має пріоритет).",
+			"openRouterApiKeyLabel": "OpenRouter API Key",
+			"openRouterApiKeyPlaceholder": "Введіть свій OpenRouter API ключ",
+			"kiloCodeApiKeyLabel": "Kilo Code API ключ",
+			"kiloCodeApiKeyPlaceholder": "Введіть свій Kilo Code API ключ",
+			"kiloCodeApiKeyPaste": "Вставити поточний API ключ Kilo Code",
+			"getApiKeyText": "Отримайте API ключ з",
+			"modelSelectionLabel": "Модель генерації зображень",
+			"modelSelectionDescription": "Виберіть модель для використання при генерації зображень",
+			"warningMissingKey": "⚠️ Kilo Code або OpenRouter API ключ потрібен для генерації зображень. Будь ласка, налаштуйте його вище.",
+			"successConfigured": "✓ Генерація зображень налаштована і готова до використання"
+		},
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
 			"description": "Увімкни функції Autocomplete для швидких пропозицій коду та покращень безпосередньо у твоєму редакторі. Включає Швидке Завдання (Cmd+I) для цільових змін та Autocomplete для контекстуальних покращень."
@@ -880,7 +900,8 @@
 		"modelAvailability": "Ідентифікатор моделі ({{modelId}}), який ти надав, недоступний. Будь ласка, вибери іншу модель.",
 		"providerNotAllowed": "Провайдер '{{provider}}' не дозволений твоєю організацією",
 		"modelNotAllowed": "Модель '{{model}}' не дозволена для провайдера '{{provider}}' твоєю організацією",
-		"profileInvalid": "Цей профіль містить провайдера або модель, які не дозволені твоєю організацією"
+		"profileInvalid": "Цей профіль містить провайдера або модель, які не дозволені твоєю організацією",
+		"qwenCodeOauthPath": "Ви повинні надати дійсний шлях до облікових даних OAuth."
 	},
 	"placeholders": {
 		"apiKey": "Введи ключ API...",

@@ -16,6 +16,7 @@ import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
 import { ExperimentalFeature } from "./ExperimentalFeature"
 import { MorphSettings } from "./MorphSettings" // kilocode_change: Use global version
+import { ImageGenerationSettings } from "./ImageGenerationSettings"
 
 type ExperimentalSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	experiments: Experiments
@@ -23,16 +24,34 @@ type ExperimentalSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	// kilocode_change start
 	morphApiKey?: string
 	setCachedStateField: SetCachedStateField<"morphApiKey">
+	kiloCodeImageApiKey?: string
+	setKiloCodeImageApiKey?: (apiKey: string) => void
+	currentProfileKilocodeToken?: string
 	// kilocode_change end
+	apiConfiguration?: any
+	setApiConfigurationField?: any
+	openRouterImageApiKey?: string
+	openRouterImageGenerationSelectedModel?: string
+	setOpenRouterImageApiKey?: (apiKey: string) => void
+	setImageGenerationSelectedModel?: (model: string) => void
 }
 
 export const ExperimentalSettings = ({
 	experiments,
 	setExperimentEnabled,
+	apiConfiguration,
+	setApiConfigurationField,
+	openRouterImageApiKey,
+	openRouterImageGenerationSelectedModel,
+	setOpenRouterImageApiKey,
+	setImageGenerationSelectedModel,
 	className,
 	// kilocode_change start
 	morphApiKey,
 	setCachedStateField,
+	setKiloCodeImageApiKey,
+	kiloCodeImageApiKey,
+	currentProfileKilocodeToken,
 	// kilocode_change end
 	...props
 }: ExperimentalSettingsProps) => {
@@ -91,6 +110,29 @@ export const ExperimentalSettings = ({
 							)
 						}
 						// kilocode_change end
+						if (
+							config[0] === "IMAGE_GENERATION" &&
+							setOpenRouterImageApiKey &&
+							setKiloCodeImageApiKey &&
+							setImageGenerationSelectedModel
+						) {
+							return (
+								<ImageGenerationSettings
+									key={config[0]}
+									enabled={experiments[EXPERIMENT_IDS.IMAGE_GENERATION] ?? false}
+									onChange={(enabled) =>
+										setExperimentEnabled(EXPERIMENT_IDS.IMAGE_GENERATION, enabled)
+									}
+									openRouterImageApiKey={openRouterImageApiKey}
+									kiloCodeImageApiKey={kiloCodeImageApiKey}
+									openRouterImageGenerationSelectedModel={openRouterImageGenerationSelectedModel}
+									setOpenRouterImageApiKey={setOpenRouterImageApiKey}
+									setKiloCodeImageApiKey={setKiloCodeImageApiKey}
+									setImageGenerationSelectedModel={setImageGenerationSelectedModel}
+									currentProfileKilocodeToken={currentProfileKilocodeToken}
+								/>
+							)
+						}
 						return (
 							<ExperimentalFeature
 								key={config[0]}

@@ -24,7 +24,7 @@ describe("OpenRouter API", () => {
 			const models = await getOpenRouterModels()
 
 			const openRouterSupportedCaching = Object.entries(models)
-				.filter(([id, _]) => id.startsWith("anthropic/claude") || id.startsWith("google/gemini")) // kilocode_change: only these support manual caching
+				.filter(([id, _]) => id.startsWith("anthropic/claude") || id.startsWith("google/gemini")) // only these support cache_control breakpoints (https://openrouter.ai/docs/features/prompt-caching)
 				.filter(([_, model]) => model.supportsPromptCache)
 				.map(([id, _]) => id)
 
@@ -232,7 +232,6 @@ describe("OpenRouter API", () => {
 
 			expect(endpoints).toEqual({
 				"google-vertex": {
-					// kilocode_change: Updated to match actual endpoint tag
 					maxTokens: 65535,
 					contextWindow: 1048576,
 					supportsImages: true,
@@ -247,7 +246,6 @@ describe("OpenRouter API", () => {
 					supportedParameters: undefined,
 				},
 				"google-ai-studio": {
-					// kilocode_change: Updated to match actual endpoint tag
 					maxTokens: 65536,
 					contextWindow: 1048576,
 					supportsImages: true,
@@ -283,7 +281,8 @@ describe("OpenRouter API", () => {
 			const result = parseOpenRouterModel({
 				id: "openrouter/horizon-alpha",
 				model: mockModel,
-				modality: "text",
+				inputModality: ["text"],
+				outputModality: ["text"],
 				maxTokens: 128000,
 			})
 
@@ -306,7 +305,8 @@ describe("OpenRouter API", () => {
 			const result = parseOpenRouterModel({
 				id: "openrouter/horizon-beta",
 				model: mockModel,
-				modality: "text",
+				inputModality: ["text"],
+				outputModality: ["text"],
 				maxTokens: 128000,
 			})
 
@@ -329,12 +329,59 @@ describe("OpenRouter API", () => {
 			const result = parseOpenRouterModel({
 				id: "openrouter/other-model",
 				model: mockModel,
-				modality: "text",
+				inputModality: ["text"],
+				outputModality: ["text"],
 				maxTokens: 64000,
 			})
 
 			expect(result.maxTokens).toBe(64000)
 			expect(result.contextWindow).toBe(128000)
+		})
+
+		it("filters out image generation models", () => {
+			const mockImageModel = {
+				name: "Image Model",
+				description: "Test image generation model",
+				context_length: 128000,
+				max_completion_tokens: 64000,
+				pricing: {
+					prompt: "0.000003",
+					completion: "0.000015",
+				},
+			}
+
+			const mockTextModel = {
+				name: "Text Model",
+				description: "Test text generation model",
+				context_length: 128000,
+				max_completion_tokens: 64000,
+				pricing: {
+					prompt: "0.000003",
+					completion: "0.000015",
+				},
+			}
+
+			// Model with image output should be filtered out - we only test parseOpenRouterModel
+			// since the filtering happens in getOpenRouterModels/getOpenRouterModelEndpoints
+			const textResult = parseOpenRouterModel({
+				id: "test/text-model",
+				model: mockTextModel,
+				inputModality: ["text"],
+				outputModality: ["text"],
+				maxTokens: 64000,
+			})
+
+			const imageResult = parseOpenRouterModel({
+				id: "test/image-model",
+				model: mockImageModel,
+				inputModality: ["text"],
+				outputModality: ["image"],
+				maxTokens: 64000,
+			})
+
+			// Both should parse successfully (filtering happens at a higher level)
+			expect(textResult.maxTokens).toBe(64000)
+			expect(imageResult.maxTokens).toBe(64000)
 		})
 	})
 })

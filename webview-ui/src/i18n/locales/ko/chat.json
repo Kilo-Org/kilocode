@@ -182,7 +182,11 @@
 		"wantsToInsertAtEnd": "Kilo Code가 이 파일의 끝에 내용을 추가하고 싶어합니다:",
 		"wantsToReadAndXMore": "Kilo Code가 이 파일과 {{count}}개의 파일을 더 읽으려고 합니다:",
 		"wantsToReadMultiple": "Kilo Code가 여러 파일을 읽으려고 합니다:",
-		"wantsToApplyBatchChanges": "Kilo Code가 여러 파일에 변경 사항을 적용하고 싶어합니다:"
+		"wantsToApplyBatchChanges": "Kilo Code가 여러 파일에 변경 사항을 적용하고 싶어합니다:",
+		"wantsToGenerateImage": "Kilo Code가 이미지를 생성하고 싶어합니다:",
+		"wantsToGenerateImageOutsideWorkspace": "Kilo Code가 워크스페이스 외부에서 이미지를 생성하고 싶어합니다:",
+		"wantsToGenerateImageProtected": "Kilo Code가 보호된 위치에서 이미지를 생성하고 싶어합니다:",
+		"didGenerateImage": "Kilo Code가 이미지를 생성했습니다:"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code가 이 디렉토리의 최상위 파일을 보고 싶어합니다:",
@@ -273,10 +277,10 @@
 	"announcement": {
 		"title": "🎉 Roo Code {{version}} 출시",
 		"stealthModel": {
-			"feature": "<bold>기간 한정 무료 스텔스 모델</bold> - 262k 컨텍스트 윈도우를 가진 에이전틱 코딩에 뛰어난 초고속 추론 모델, Roo Code Cloud를 통해 이용 가능.",
-			"note": "(참고: 프롬프트와 완성은 모델 제작자에 의해 기록되고 모델 개선에 사용됩니다)",
+			"feature": "Sonic 스텔스 모델이 이제 <bold>Grok Code Fast</bold>입니다! 이 고성능 추론 모델은 <bold>xAI (Grok)</bold> 제공업체 하에서 <code>grok-code-fast-1</code>로 이용 가능합니다.",
+			"note": "Sonic에 대한 모든 유용한 피드백에 대한 감사의 표시로, xAI는 <bold>Roo Code Cloud</bold> 제공업체를 통해 <code>grok-code-fast-1</code>에 대한 무료 액세스를 한 주 더 연장합니다.",
 			"connectButton": "Roo Code Cloud에 연결",
-			"selectModel": "<br/><settingsLink>설정</settingsLink>에서 Roo Code Cloud 제공업체의 <code>roo/sonic</code>을 선택하여 시작"
+			"selectModel": "제공업체 설정을 업데이트하려면 <settingsLink>설정</settingsLink>을 방문하세요."
 		},
 		"description": "Roo Code {{version}}은 개발 워크플로우를 향상시키는 강력한 새 기능과 중요한 개선사항을 제공합니다.",
 		"whatsNew": "새로운 기능",
@@ -375,7 +379,8 @@
 	"slashCommands": {
 		"tooltip": "슬래시 명령 관리",
 		"title": "슬래시 명령",
-		"description": "자주 사용하는 프롬프트와 워크플로우에 빠르게 액세스할 수 있는 사용자 정의 슬래시 명령을 만듭니다. <DocsLink>문서</DocsLink>",
+		"description": "내장 슬래시 명령을 사용하거나 자주 사용하는 프롬프트와 워크플로우에 빠르게 액세스할 수 있는 사용자 정의 슬래시 명령을 만듭니다. <DocsLink>문서</DocsLink>",
+		"builtInCommands": "내장 명령",
 		"globalCommands": "전역 명령",
 		"workspaceCommands": "작업 공간 명령",
 		"globalCommand": "전역 명령",

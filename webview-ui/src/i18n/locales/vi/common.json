@@ -67,6 +67,12 @@
 			"copyError": "Lỗi sao chép hình ảnh"
 		}
 	},
+	"image": {
+		"tabs": {
+			"view": "Hình ảnh"
+		},
+		"noData": "Không có dữ liệu hình ảnh"
+	},
 	"file": {
 		"errors": {
 			"invalidDataUri": "Định dạng URI dữ liệu không hợp lệ",

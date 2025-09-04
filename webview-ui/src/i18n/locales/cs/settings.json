@@ -56,6 +56,9 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "Klíč API:",
 		"mistralApiKeyPlaceholder": "Zadejte svůj klíč API Mistral",
+		"vercelAiGatewayProvider": "Vercel AI Gateway",
+		"vercelAiGatewayApiKeyLabel": "Klíč API",
+		"vercelAiGatewayApiKeyPlaceholder": "Zadejte svůj klíč API Vercel AI Gateway",
 		"openaiCompatibleProvider": "Kompatibilní s OpenAI",
 		"openAiKeyLabel": "Klíč API OpenAI",
 		"openAiKeyPlaceholder": "Zadejte svůj klíč API OpenAI",
@@ -121,6 +124,7 @@
 			"modelDimensionRequired": "Dimenze modelu je povinná",
 			"geminiApiKeyRequired": "Klíč API Gemini je povinný",
 			"mistralApiKeyRequired": "Klíč API Mistral je povinný",
+			"vercelAiGatewayApiKeyRequired": "Je vyžadován klíč API Vercel AI Gateway",
 			"ollamaBaseUrlRequired": "Základní URL Ollama je povinné",
 			"baseUrlRequired": "Základní URL je povinné",
 			"modelDimensionMinValue": "Dimenze modelu musí být větší než 0"
@@ -241,6 +245,8 @@
 		"awsCustomArnDesc": "Ujistěte se, že region v ARN odpovídá výše vybranému regionu AWS.",
 		"openRouterApiKey": "Klíč API OpenRouter",
 		"getOpenRouterApiKey": "Získat klíč API OpenRouter",
+		"vercelAiGatewayApiKey": "Klíč API Vercel AI Gateway",
+		"getVercelAiGatewayApiKey": "Získat klíč API Vercel AI Gateway",
 		"apiKeyStorageNotice": "Klíče API jsou bezpečně uloženy v tajném úložišti VSCode",
 		"glamaApiKey": "Klíč API Glama",
 		"getGlamaApiKey": "Získat klíč API Glama",
@@ -816,6 +822,20 @@
 			"name": "Vyžadovat seznam 'úkolů' pro nové úkoly",
 			"description": "Pokud je povoleno, nástroj new_task bude vyžadovat poskytnutí parametru úkolů. Tím se zajistí, že všechny nové úkoly začnou s jasným seznamem cílů. Pokud je zakázáno (výchozí), parametr úkolů zůstane volitelný pro zpětnou kompatibilitu."
 		},
+		"IMAGE_GENERATION": {
+			"name": "Povolit AI generování obrázků",
+			"description": "Když je povoleno, Kilo Code může generovat obrázky z textových podnětů. Vyžaduje Kilo Code nebo OpenRouter API klíč (OpenRouter má přednost).",
+			"openRouterApiKeyLabel": "OpenRouter API Key",
+			"openRouterApiKeyPlaceholder": "Zadejte svůj OpenRouter API klíč",
+			"kiloCodeApiKeyLabel": "Kilo Code API klíč",
+			"kiloCodeApiKeyPlaceholder": "Zadejte svůj Kilo Code API klíč",
+			"kiloCodeApiKeyPaste": "Vložte aktuální Kilo Code API klíč",
+			"getApiKeyText": "Získejte API klíč z",
+			"modelSelectionLabel": "Model pro generování obrázků",
+			"modelSelectionDescription": "Vyberte model pro použití při generování obrázků",
+			"warningMissingKey": "⚠️ Kilo Code nebo OpenRouter API klíč je vyžadován pro generování obrázků. Nakonfigurujte ho výše.",
+			"successConfigured": "✓ Generování obrázků je nakonfigurováno a připraveno k použití"
+		},
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
 			"description": "Povolit funkce Autocomplete pro rychlé návrhy kódu a vylepšení přímo ve tvém editoru. Zahrnuje Rychlý úkol (Cmd+I) pro cílené změny a Autocomplete pro kontextová vylepšení."
@@ -892,7 +912,8 @@
 		"modelAvailability": "ID modelu ({{modelId}}), které jste zadali, není k dispozici. Vyberte prosím jiný model.",
 		"providerNotAllowed": "Poskytovatel '{{provider}}' není povolen vaší organizací",
 		"modelNotAllowed": "Model '{{model}}' není povolen pro poskytovatele '{{provider}}' vaší organizací",
-		"profileInvalid": "Tento profil obsahuje poskytovatele nebo model, který není povolen vaší organizací"
+		"profileInvalid": "Tento profil obsahuje poskytovatele nebo model, který není povolen vaší organizací",
+		"qwenCodeOauthPath": "Musíte poskytnout platnou cestu k OAuth pověřením."
 	},
 	"placeholders": {
 		"apiKey": "Zadejte klíč API...",

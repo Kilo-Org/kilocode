@@ -1,0 +1,17 @@
+{
+	"title": "Cloud",
+	"profilePicture": "個人圖片",
+	"logOut": "登出",
+	"testApiAuthentication": "測試 API 認證",
+	"signIn": "登入 Kilo Code Cloud",
+	"connect": "連線",
+	"cloudBenefitsTitle": "連線至 Kilo Code Cloud",
+	"cloudBenefitsSubtitle": "同步您的提示詞和遙測資料以啟用：",
+	"cloudBenefitHistory": "線上工作歷史紀錄",
+	"cloudBenefitSharing": "分享和協作功能",
+	"cloudBenefitMetrics": "基於工作任務、Token 和成本的用量指標",
+	"cloudBenefitWalkaway": "使用 Kilo remote Control 隨時隨地追蹤和控制工作",
+	"remoteControl": "Kilo remote Control",
+	"remoteControlDescription": "允許透過 Kilo Code Cloud 追蹤和操作此工作區中的工作",
+	"visitCloudWebsite": "造訪 Kilo Code Cloud"
+}

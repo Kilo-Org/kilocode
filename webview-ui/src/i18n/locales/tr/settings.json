@@ -51,6 +51,9 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API Anahtarı:",
 		"mistralApiKeyPlaceholder": "Mistral API anahtarınızı girin",
+		"vercelAiGatewayProvider": "Vercel AI Gateway",
+		"vercelAiGatewayApiKeyLabel": "API Anahtarı",
+		"vercelAiGatewayApiKeyPlaceholder": "Vercel AI Gateway API anahtarınızı girin",
 		"openaiCompatibleProvider": "OpenAI Uyumlu",
 		"openAiKeyLabel": "OpenAI API Anahtarı",
 		"openAiKeyPlaceholder": "OpenAI API anahtarınızı girin",
@@ -114,6 +117,7 @@
 			"modelDimensionRequired": "Model boyutu gereklidir",
 			"geminiApiKeyRequired": "Gemini API anahtarı gereklidir",
 			"mistralApiKeyRequired": "Mistral API anahtarı gereklidir",
+			"vercelAiGatewayApiKeyRequired": "Vercel AI Gateway API anahtarı gereklidir",
 			"ollamaBaseUrlRequired": "Ollama temel URL'si gereklidir",
 			"baseUrlRequired": "Temel URL'si gereklidir",
 			"modelDimensionMinValue": "Model boyutu 0'dan büyük olmalıdır"
@@ -238,6 +242,8 @@
 		"awsCustomArnDesc": "ARN içindeki bölgenin yukarıda seçilen AWS Bölgesiyle eşleştiğinden emin olun.",
 		"openRouterApiKey": "OpenRouter API Anahtarı",
 		"getOpenRouterApiKey": "OpenRouter API Anahtarı Al",
+		"vercelAiGatewayApiKey": "Vercel AI Gateway API Anahtarı",
+		"getVercelAiGatewayApiKey": "Vercel AI Gateway API Anahtarı Al",
 		"apiKeyStorageNotice": "API anahtarları VSCode'un Gizli Depolamasında güvenli bir şekilde saklanır",
 		"glamaApiKey": "Glama API Anahtarı",
 		"getGlamaApiKey": "Glama API Anahtarı Al",
@@ -761,6 +767,20 @@
 			"name": "Yeni görevler için 'todos' listesi gerektir",
 			"description": "Etkinleştirildiğinde, new_task aracı bir todos parametresi sağlanmasını gerektirir. Bu, tüm yeni görevlerin net bir hedef listesiyle başlamasını sağlar. Devre dışı bırakıldığında (varsayılan), todos parametresi geriye dönük uyumluluk için isteğe bağlı kalır."
 		},
+		"IMAGE_GENERATION": {
+			"name": "AI görüntü üretimini etkinleştir",
+			"description": "Etkinleştirildiğinde, Kilo Code metin istemlerinden görüntüler üretebilir. Yapılandırılmış bir Kilo Code veya OpenRouter API anahtarı gerektirir (OpenRouter önceliklidir).",
+			"openRouterApiKeyLabel": "OpenRouter API Anahtarı",
+			"openRouterApiKeyPlaceholder": "OpenRouter API anahtarınızı girin",
+			"kiloCodeApiKeyLabel": "Kilo Code API Anahtarı",
+			"kiloCodeApiKeyPlaceholder": "Kilo Code API anahtarınızı girin",
+			"kiloCodeApiKeyPaste": "Mevcut Kilo Code API anahtarını yapıştır",
+			"getApiKeyText": "API anahtarınızı alın",
+			"modelSelectionLabel": "Görüntü Üretim Modeli",
+			"modelSelectionDescription": "Görüntü üretimi için kullanılacak modeli seçin",
+			"warningMissingKey": "⚠️ Görüntü üretimi için Kilo Code veya OpenRouter API anahtarı gereklidir. Lütfen yukarıda yapılandırın.",
+			"successConfigured": "✓ Görüntü üretimi yapılandırılmış ve kullanıma hazır"
+		},
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
 			"description": "Editörünüzde doğrudan hızlı kod önerileri ve iyileştirmeler için Autocomplete özelliklerini etkinleştirin. Hedeflenen değişiklikler için Hızlı Görev (Cmd+I) ve bağlamsal iyileştirmeler için Autocomplete içerir."
@@ -837,7 +857,8 @@
 		"modelAvailability": "Sağladığınız model kimliği ({{modelId}}) kullanılamıyor. Lütfen başka bir model seçin.",
 		"providerNotAllowed": "Sağlayıcı '{{provider}}' kuruluşunuz tarafından izin verilmiyor",
 		"modelNotAllowed": "Model '{{model}}' sağlayıcı '{{provider}}' için kuruluşunuz tarafından izin verilmiyor",
-		"profileInvalid": "Bu profil, kuruluşunuz tarafından izin verilmeyen bir sağlayıcı veya model içeriyor"
+		"profileInvalid": "Bu profil, kuruluşunuz tarafından izin verilmeyen bir sağlayıcı veya model içeriyor",
+		"qwenCodeOauthPath": "Geçerli bir OAuth kimlik bilgileri yolu sağlamalısın"
 	},
 	"placeholders": {
 		"apiKey": "API anahtarını girin...",

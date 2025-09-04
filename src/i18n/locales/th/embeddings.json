@@ -47,6 +47,7 @@
 		"openAiCompatibleConfigMissing": "การกำหนดค่า OpenAI Compatible หายไปสำหรับการสร้าง embedder",
 		"geminiConfigMissing": "การกำหนดค่า Gemini หายไปสำหรับการสร้าง embedder",
 		"mistralConfigMissing": "การกำหนดค่า Mistral หายไปสำหรับการสร้าง embedder",
+		"vercelAiGatewayConfigMissing": "การกำหนดค่า Vercel AI Gateway หายไปสำหรับการสร้าง embedder",
 		"invalidEmbedderType": "ประเภท embedder ที่กำหนดค่าไม่ถูกต้อง: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "ไม่สามารถกำหนดมิติเวกเตอร์สำหรับโมเดล '{{modelId}}' กับผู้ให้บริการ '{{provider}}' กรุณาตรวจสอบให้แน่ใจว่า 'Embedding Dimension' ถูกตั้งค่าอย่างถูกต้องในการตั้งค่าผู้ให้บริการ OpenAI-Compatible",
 		"vectorDimensionNotDetermined": "ไม่สามารถกำหนดมิติเวกเตอร์สำหรับโมเดล '{{modelId}}' กับผู้ให้บริการ '{{provider}}' ตรวจสอบโปรไฟล์โมเดลหรือการกำหนดค่า",

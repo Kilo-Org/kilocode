@@ -54,6 +54,9 @@
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "API 密钥：",
 		"geminiApiKeyPlaceholder": "输入您的Gemini API密钥",
+		"vercelAiGatewayProvider": "Vercel AI Gateway",
+		"vercelAiGatewayApiKeyLabel": "API 密钥",
+		"vercelAiGatewayApiKeyPlaceholder": "输入您的 Vercel AI Gateway API 密钥",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API 密钥:",
 		"mistralApiKeyPlaceholder": "输入您的 Mistral API 密钥",
@@ -115,6 +118,7 @@
 			"modelDimensionRequired": "需要模型维度",
 			"geminiApiKeyRequired": "需要 Gemini API 密钥",
 			"mistralApiKeyRequired": "需要 Mistral API 密钥",
+			"vercelAiGatewayApiKeyRequired": "需要 Vercel AI Gateway API 密钥",
 			"ollamaBaseUrlRequired": "需要 Ollama 基础 URL",
 			"baseUrlRequired": "需要基础 URL",
 			"modelDimensionMinValue": "模型维度必须大于 0"
@@ -239,6 +243,8 @@
 		"awsCustomArnDesc": "请确保ARN中的区域与上方选择的AWS区域一致。",
 		"openRouterApiKey": "OpenRouter API 密钥",
 		"getOpenRouterApiKey": "获取 OpenRouter API 密钥",
+		"vercelAiGatewayApiKey": "Vercel AI Gateway API 密钥",
+		"getVercelAiGatewayApiKey": "获取 Vercel AI Gateway API 密钥",
 		"apiKeyStorageNotice": "API 密钥安全存储在 VSCode 的密钥存储中",
 		"glamaApiKey": "Glama API 密钥",
 		"getGlamaApiKey": "获取 Glama API 密钥",
@@ -766,6 +772,20 @@
 			"name": "要求新任务提供 'todos' 列表",
 			"description": "启用后，new_task 工具将需要提供 todos 参数。这可以确保所有新任务都以明确的目标列表开始。禁用时（默认），todos 参数保持可选，以实现向后兼容。"
 		},
+		"IMAGE_GENERATION": {
+			"name": "启用 AI 图像生成",
+			"description": "启用后，Kilo Code 可以从文本提示生成图像。需要配置 Kilo Code 或 OpenRouter API 密钥（OpenRouter 优先）。",
+			"openRouterApiKeyLabel": "OpenRouter API 密钥",
+			"openRouterApiKeyPlaceholder": "输入您的 OpenRouter API 密钥",
+			"kiloCodeApiKeyLabel": "Kilo Code API 密钥",
+			"kiloCodeApiKeyPlaceholder": "输入您的 Kilo Code API 密钥",
+			"kiloCodeApiKeyPaste": "粘贴当前 Kilo Code API 密钥",
+			"getApiKeyText": "获取您的 API 密钥",
+			"modelSelectionLabel": "图像生成模型",
+			"modelSelectionDescription": "选择用于图像生成的模型",
+			"warningMissingKey": "⚠️ 图像生成需要 Kilo Code 或 OpenRouter API 密钥。请在上方配置。",
+			"successConfigured": "✓ 图像生成已配置完成，可以使用"
+		},
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
 			"description": "启用 Autocomplete 功能，在编辑器中直接提供快速代码建议和改进。包括针对性更改的快速任务（Cmd+I）和上下文改进的 Autocomplete。"
@@ -842,7 +862,8 @@
 		"modelAvailability": "模型ID {{modelId}} 不可用，请重新选择",
 		"providerNotAllowed": "提供商 '{{provider}}' 不允许用于您的组织",
 		"modelNotAllowed": "模型 '{{model}}' 不允许用于提供商 '{{provider}}'，您的组织不允许",
-		"profileInvalid": "此配置文件包含您的组织不允许的提供商或模型"
+		"profileInvalid": "此配置文件包含您的组织不允许的提供商或模型",
+		"qwenCodeOauthPath": "您必须提供有效的 OAuth 凭证路径"
 	},
 	"placeholders": {
 		"apiKey": "请输入 API 密钥...",

@@ -45,8 +45,9 @@ import {
 	featherlessModels,
 	featherlessDefaultModelId,
 	deepInfraDefaultModelId,
+	cerebrasModels,
+	cerebrasDefaultModelId,
 } from "@roo-code/types"
-import { cerebrasModels, cerebrasDefaultModelId } from "@roo/api"
 import type { ModelRecord, RouterModels } from "@roo/api"
 import { useRouterModels } from "../../ui/hooks/useRouterModels"
 import { useExtensionState } from "@/context/ExtensionStateContext"

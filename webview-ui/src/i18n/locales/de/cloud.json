@@ -1,0 +1,17 @@
+{
+	"title": "Cloud",
+	"profilePicture": "Profilbild",
+	"logOut": "Abmelden",
+	"testApiAuthentication": "API-Authentifizierung testen",
+	"signIn": "Mit Kilo Code Cloud verbinden",
+	"connect": "Verbinden",
+	"cloudBenefitsTitle": "Mit Kilo Code Cloud verbinden",
+	"cloudBenefitsSubtitle": "Synchronisiere deine Prompts und Telemetrie, um folgendes zu aktivieren:",
+	"cloudBenefitHistory": "Online-Aufgabenverlauf",
+	"cloudBenefitSharing": "Freigabe- und Kollaborationsfunktionen",
+	"cloudBenefitMetrics": "Aufgaben-, Token- und kostenbasierte Nutzungsmetriken",
+	"cloudBenefitWalkaway": "Verfolge und steuere Aufgaben von überall mit Roomote Control",
+	"remoteControl": "Kilo remote Control",
+	"remoteControlDescription": "Ermöglicht das Verfolgen und Interagieren mit Aufgaben in diesem Arbeitsbereich mit Kilo Code Cloud",
+	"visitCloudWebsite": "Kilo Code Cloud besuchen"
+}

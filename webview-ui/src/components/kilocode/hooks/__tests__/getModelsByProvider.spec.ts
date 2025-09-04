@@ -25,6 +25,7 @@ describe("getModelsByProvider", () => {
 			lmstudio: { "test-model": testModel },
 			"io-intelligence": { "test-model": testModel },
 			deepinfra: { "test-model": testModel },
+			"vercel-ai-gateway": { "test-model": testModel },
 		}
 
 		const exceptions = [
@@ -35,6 +36,7 @@ describe("getModelsByProvider", () => {
 			"roo", // don't care
 			"virtual-quota-fallback", // no models
 			"zai", // has weird mainland/international distiction
+			"vercel-ai-gateway", // different structure
 		]
 
 		const providersWithoutModels = providerNames

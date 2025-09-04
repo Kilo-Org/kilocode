@@ -51,6 +51,9 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "Khóa API:",
 		"mistralApiKeyPlaceholder": "Nhập khóa API Mistral của bạn",
+		"vercelAiGatewayProvider": "Vercel AI Gateway",
+		"vercelAiGatewayApiKeyLabel": "Khóa API",
+		"vercelAiGatewayApiKeyPlaceholder": "Nhập khóa API Vercel AI Gateway của bạn",
 		"openaiCompatibleProvider": "Tương thích OpenAI",
 		"openAiKeyLabel": "Khóa API OpenAI",
 		"openAiKeyPlaceholder": "Nhập khóa API OpenAI của bạn",
@@ -114,6 +117,7 @@
 			"modelDimensionRequired": "Yêu cầu kích thước mô hình",
 			"geminiApiKeyRequired": "Yêu cầu khóa API Gemini",
 			"mistralApiKeyRequired": "Cần có khóa API của Mistral",
+			"vercelAiGatewayApiKeyRequired": "Cần có khóa API Vercel AI Gateway",
 			"ollamaBaseUrlRequired": "Yêu cầu URL cơ sở Ollama",
 			"baseUrlRequired": "Yêu cầu URL cơ sở",
 			"modelDimensionMinValue": "Kích thước mô hình phải lớn hơn 0"
@@ -238,6 +242,8 @@
 		"awsCustomArnDesc": "Đảm bảo rằng vùng trong ARN khớp với vùng AWS đã chọn ở trên.",
 		"openRouterApiKey": "Khóa API OpenRouter",
 		"getOpenRouterApiKey": "Lấy khóa API OpenRouter",
+		"vercelAiGatewayApiKey": "Khóa API Vercel AI Gateway",
+		"getVercelAiGatewayApiKey": "Lấy khóa API Vercel AI Gateway",
 		"apiKeyStorageNotice": "Khóa API được lưu trữ an toàn trong Bộ lưu trữ bí mật của VSCode",
 		"glamaApiKey": "Khóa API Glama",
 		"getGlamaApiKey": "Lấy khóa API Glama",
@@ -761,6 +767,20 @@
 			"name": "Yêu cầu danh sách 'todos' cho các nhiệm vụ mới",
 			"description": "Khi được bật, công cụ new_task sẽ yêu cầu cung cấp tham số todos. Điều này đảm bảo tất cả các nhiệm vụ mới bắt đầu với một danh sách mục tiêu rõ ràng. Khi bị tắt (mặc định), tham số todos vẫn là tùy chọn để tương thích ngược."
 		},
+		"IMAGE_GENERATION": {
+			"name": "Bật tạo hình ảnh AI",
+			"description": "Khi được bật, Kilo Code có thể tạo hình ảnh từ lời nhắc văn bản. Yêu cầu khóa API Kilo Code hoặc OpenRouter được cấu hình (OpenRouter được ưu tiên).",
+			"openRouterApiKeyLabel": "Khóa API OpenRouter",
+			"openRouterApiKeyPlaceholder": "Nhập khóa API OpenRouter của bạn",
+			"kiloCodeApiKeyLabel": "Khóa API Kilo Code",
+			"kiloCodeApiKeyPlaceholder": "Nhập khóa API Kilo Code của bạn",
+			"kiloCodeApiKeyPaste": "Dán khóa API Kilo Code hiện tại",
+			"getApiKeyText": "Lấy khóa API của bạn từ",
+			"modelSelectionLabel": "Mô hình tạo hình ảnh",
+			"modelSelectionDescription": "Chọn mô hình để sử dụng cho việc tạo hình ảnh",
+			"warningMissingKey": "⚠️ Khóa API Kilo Code hoặc OpenRouter là bắt buộc để tạo hình ảnh. Vui lòng cấu hình ở trên.",
+			"successConfigured": "✓ Tạo hình ảnh đã được cấu hình và sẵn sàng sử dụng"
+		},
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
 			"description": "Bật các tính năng Autocomplete cho gợi ý mã nhanh và cải tiến trực tiếp trong editor của bạn. Bao gồm Tác Vụ Nhanh (Cmd+I) cho các thay đổi có mục tiêu và Autocomplete cho các cải tiến theo ngữ cảnh."
@@ -837,7 +857,8 @@
 		"modelAvailability": "ID mô hình ({{modelId}}) bạn đã cung cấp không khả dụng. Vui lòng chọn một mô hình khác.",
 		"providerNotAllowed": "Nhà cung cấp '{{provider}}' không được phép bởi tổ chức của bạn",
 		"modelNotAllowed": "Mô hình '{{model}}' không được phép cho nhà cung cấp '{{provider}}' bởi tổ chức của bạn",
-		"profileInvalid": "Hồ sơ này chứa một nhà cung cấp hoặc mô hình không được phép bởi tổ chức của bạn"
+		"profileInvalid": "Hồ sơ này chứa một nhà cung cấp hoặc mô hình không được phép bởi tổ chức của bạn",
+		"qwenCodeOauthPath": "Bạn phải cung cấp đường dẫn thông tin xác thực OAuth hợp lệ"
 	},
 	"placeholders": {
 		"apiKey": "Nhập khóa API...",

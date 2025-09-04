@@ -67,6 +67,12 @@
 			"copyError": "خطأ أثناء نسخ الصورة"
 		}
 	},
+	"image": {
+		"tabs": {
+			"view": "صورة"
+		},
+		"noData": "لا توجد بيانات صورة"
+	},
 	"file": {
 		"errors": {
 			"invalidDataUri": "تنسيق URI للبيانات غير صالح",

@@ -47,6 +47,7 @@
 		"openAiCompatibleConfigMissing": "Chybí konfigurace OpenAI Compatible pro vytvoření embedderu",
 		"geminiConfigMissing": "Chybí konfigurace Gemini pro vytvoření embedderu",
 		"mistralConfigMissing": "Chybí konfigurace Mistral pro vytvoření embedderu",
+		"vercelAiGatewayConfigMissing": "Chybí konfigurace Vercel AI Gateway pro vytvoření embedderu",
 		"invalidEmbedderType": "Nakonfigurován neplatný typ embedderu: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "Nelze určit rozměr vektoru pro model '{{modelId}}' s poskytovatelem '{{provider}}'. Ujisti se prosím, že 'Rozměr Embeddingu' je správně nastaven v nastavení OpenAI-Compatible poskytovatele.",
 		"vectorDimensionNotDetermined": "Nelze určit rozměr vektoru pro model '{{modelId}}' s poskytovatelem '{{provider}}'. Zkontroluj profily modelů nebo konfiguraci.",

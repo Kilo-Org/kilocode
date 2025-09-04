@@ -3,7 +3,7 @@ import type { ModelInfo } from "../model.js"
 // https://docs.x.ai/docs/api-reference
 export type XAIModelId = keyof typeof xaiModels
 
-export const xaiDefaultModelId: XAIModelId = "grok-4"
+export const xaiDefaultModelId: XAIModelId = "grok-code-fast-1"
 
 export const xaiModels = {
 	"grok-code-fast-1": {

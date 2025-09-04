@@ -48,6 +48,9 @@
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "API कुंजी:",
 		"geminiApiKeyPlaceholder": "अपना जेमिनी एपीआई कुंजी दर्ज करें",
+		"vercelAiGatewayProvider": "Vercel AI Gateway",
+		"vercelAiGatewayApiKeyLabel": "API कुंजी",
+		"vercelAiGatewayApiKeyPlaceholder": "अपनी Vercel AI Gateway API कुंजी दर्ज करें",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API कुंजी:",
 		"mistralApiKeyPlaceholder": "अपनी मिस्ट्रल एपीआई कुंजी दर्ज करें",
@@ -114,6 +117,7 @@
 			"modelDimensionRequired": "मॉडल आयाम आवश्यक है",
 			"geminiApiKeyRequired": "Gemini API कुंजी आवश्यक है",
 			"mistralApiKeyRequired": "मिस्ट्रल एपीआई कुंजी आवश्यक है",
+			"vercelAiGatewayApiKeyRequired": "Vercel AI Gateway API कुंजी आवश्यक है",
 			"ollamaBaseUrlRequired": "Ollama आधार URL आवश्यक है",
 			"baseUrlRequired": "आधार URL आवश्यक है",
 			"modelDimensionMinValue": "मॉडल आयाम 0 से बड़ा होना चाहिए"
@@ -238,6 +242,8 @@
 		"awsCustomArnDesc": "सुनिश्चित करें कि ARN में क्षेत्र ऊपर चयनित AWS क्षेत्र से मेल खाता है।",
 		"openRouterApiKey": "OpenRouter API कुंजी",
 		"getOpenRouterApiKey": "OpenRouter API कुंजी प्राप्त करें",
+		"vercelAiGatewayApiKey": "Vercel AI Gateway API कुंजी",
+		"getVercelAiGatewayApiKey": "Vercel AI Gateway API कुंजी प्राप्त करें",
 		"apiKeyStorageNotice": "API कुंजियाँ VSCode के सुरक्षित स्टोरेज में सुरक्षित रूप से संग्रहीत हैं",
 		"glamaApiKey": "Glama API कुंजी",
 		"getGlamaApiKey": "Glama API कुंजी प्राप्त करें",
@@ -761,6 +767,20 @@
 			"name": "नए कार्यों के लिए 'todos' सूची की आवश्यकता है",
 			"description": "जब सक्षम किया जाता है, तो new_task टूल को todos पैरामीटर प्रदान करने की आवश्यकता होगी। यह सुनिश्चित करता है कि सभी नए कार्य स्पष्ट उद्देश्यों की सूची के साथ शुरू हों। जब अक्षम किया जाता है (डिफ़ॉल्ट), तो todos पैरामीटर पिछड़े संगतता के लिए वैकल्पिक रहता है।"
 		},
+		"IMAGE_GENERATION": {
+			"name": "AI छवि निर्माण सक्षम करें",
+			"description": "जब सक्षम किया जाता है, तो Kilo Code टेक्स्ट प्रॉम्प्ट से छवियां उत्पन्न कर सकता है। Kilo Code या OpenRouter API कुंजी कॉन्फ़िगरेशन की आवश्यकता होती है (OpenRouter को प्राथमिकता)।",
+			"openRouterApiKeyLabel": "OpenRouter API कुंजी",
+			"openRouterApiKeyPlaceholder": "अपनी OpenRouter API कुंजी दर्ज करें",
+			"kiloCodeApiKeyLabel": "Kilo Code API कुंजी",
+			"kiloCodeApiKeyPlaceholder": "अपनी Kilo Code API कुंजी दर्ज करें",
+			"kiloCodeApiKeyPaste": "वर्तमान Kilo Code API कुंजी पेस्ट करें",
+			"getApiKeyText": "अपनी API कुंजी प्राप्त करें",
+			"modelSelectionLabel": "छवि निर्माण मॉडल",
+			"modelSelectionDescription": "छवि निर्माण के लिए उपयोग करने वाला मॉडल चुनें",
+			"warningMissingKey": "⚠️ छवि निर्माण के लिए Kilo Code या OpenRouter API कुंजी आवश्यक है। कृपया इसे ऊपर कॉन्फ़िगर करें।",
+			"successConfigured": "✓ छवि निर्माण कॉन्फ़िगर है और उपयोग के लिए तैयार है"
+		},
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
 			"description": "आपके एडिटर में सीधे त्वरित कोड सुझाव और सुधार के लिए Autocomplete सुविधाओं को सक्षम करें। लक्षित परिवर्तनों के लिए त्वरित कार्य (Cmd+I) और संदर्भित सुधारों के लिए Autocomplete शामिल है।"
@@ -837,7 +857,8 @@
 		"modelAvailability": "आपके द्वारा प्रदान की गई मॉडल ID ({{modelId}}) उपलब्ध नहीं है। कृपया कोई अन्य मॉडल चुनें।",
 		"providerNotAllowed": "प्रदाता '{{provider}}' आपके संगठन द्वारा अनुमत नहीं है",
 		"modelNotAllowed": "मॉडल '{{model}}' प्रदाता '{{provider}}' के लिए आपके संगठन द्वारा अनुमत नहीं है",
-		"profileInvalid": "इस प्रोफ़ाइल में एक प्रदाता या मॉडल शामिल है जो आपके संगठन द्वारा अनुमत नहीं है"
+		"profileInvalid": "इस प्रोफ़ाइल में एक प्रदाता या मॉडल शामिल है जो आपके संगठन द्वारा अनुमत नहीं है",
+		"qwenCodeOauthPath": "आपको एक वैध OAuth क्रेडेंशियल पथ प्रदान करना होगा"
 	},
 	"placeholders": {
 		"apiKey": "API कुंजी दर्ज करें...",

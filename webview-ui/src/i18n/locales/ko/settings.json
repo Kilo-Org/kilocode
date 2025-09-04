@@ -51,6 +51,9 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API 키:",
 		"mistralApiKeyPlaceholder": "Mistral API 키를 입력하세요",
+		"vercelAiGatewayProvider": "Vercel AI Gateway",
+		"vercelAiGatewayApiKeyLabel": "API 키",
+		"vercelAiGatewayApiKeyPlaceholder": "Vercel AI Gateway API 키를 입력하세요",
 		"openaiCompatibleProvider": "OpenAI 호환",
 		"openAiKeyLabel": "OpenAI API 키",
 		"openAiKeyPlaceholder": "OpenAI API 키를 입력하세요",
@@ -114,6 +117,7 @@
 			"modelDimensionRequired": "모델 차원이 필요합니다",
 			"geminiApiKeyRequired": "Gemini API 키가 필요합니다",
 			"mistralApiKeyRequired": "Mistral API 키가 필요합니다",
+			"vercelAiGatewayApiKeyRequired": "Vercel AI Gateway API 키가 필요합니다",
 			"ollamaBaseUrlRequired": "Ollama 기본 URL이 필요합니다",
 			"baseUrlRequired": "기본 URL이 필요합니다",
 			"modelDimensionMinValue": "모델 차원은 0보다 커야 합니다"
@@ -238,6 +242,8 @@
 		"awsCustomArnDesc": "ARN의 리전이 위에서 선택한 AWS 리전과 일치하는지 확인하세요.",
 		"openRouterApiKey": "OpenRouter API 키",
 		"getOpenRouterApiKey": "OpenRouter API 키 받기",
+		"vercelAiGatewayApiKey": "Vercel AI Gateway API 키",
+		"getVercelAiGatewayApiKey": "Vercel AI Gateway API 키 받기",
 		"apiKeyStorageNotice": "API 키는 VSCode의 보안 저장소에 안전하게 저장됩니다",
 		"glamaApiKey": "Glama API 키",
 		"getGlamaApiKey": "Glama API 키 받기",
@@ -761,6 +767,20 @@
 			"name": "새 작업에 'todos' 목록 필요",
 			"description": "활성화하면 new_task 도구에 todos 매개변수를 제공해야 합니다. 이렇게 하면 모든 새 작업이 명확한 목표 목록으로 시작됩니다. 비활성화하면(기본값) 이전 버전과의 호환성을 위해 todos 매개변수는 선택 사항으로 유지됩니다."
 		},
+		"IMAGE_GENERATION": {
+			"name": "AI 이미지 생성 활성화",
+			"description": "활성화하면 Kilo Code는 텍스트 프롬프트에서 이미지를 생성할 수 있습니다. Kilo Code 또는 OpenRouter API 키 구성이 필요합니다 (OpenRouter가 우선됩니다).",
+			"openRouterApiKeyLabel": "OpenRouter API 키",
+			"openRouterApiKeyPlaceholder": "OpenRouter API 키를 입력하세요",
+			"kiloCodeApiKeyLabel": "Kilo Code API 키",
+			"kiloCodeApiKeyPlaceholder": "Kilo Code API 키를 입력하세요",
+			"kiloCodeApiKeyPaste": "현재 Kilo Code API 키 붙여넣기",
+			"getApiKeyText": "API 키를 받을 곳",
+			"modelSelectionLabel": "이미지 생성 모델",
+			"modelSelectionDescription": "이미지 생성에 사용할 모델을 선택하세요",
+			"warningMissingKey": "⚠️ 이미지 생성에는 Kilo Code 또는 OpenRouter API 키가 필요합니다. 위에서 설정해주세요.",
+			"successConfigured": "✓ 이미지 생성이 구성되었으며 사용할 준비가 되었습니다"
+		},
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
 			"description": "에디터에서 직접 빠른 코드 제안과 개선을 위한 Autocomplete 기능을 활성화합니다. 타겟 변경을 위한 빠른 작업(Cmd+I)과 컨텍스트 개선을 위한 Autocomplete가 포함됩니다."
@@ -837,7 +857,8 @@
 		"modelAvailability": "제공한 모델 ID({{modelId}})를 사용할 수 없습니다. 다른 모델을 선택하세요.",
 		"providerNotAllowed": "제공자 '{{provider}}'는 조직에서 허용되지 않습니다",
 		"modelNotAllowed": "모델 '{{model}}'은 제공자 '{{provider}}'에 대해 조직에서 허용되지 않습니다",
-		"profileInvalid": "이 프로필에는 조직에서 허용되지 않는 제공자 또는 모델이 포함되어 있습니다"
+		"profileInvalid": "이 프로필에는 조직에서 허용되지 않는 제공자 또는 모델이 포함되어 있습니다",
+		"qwenCodeOauthPath": "유효한 OAuth 자격 증명 경로를 제공해야 합니다"
 	},
 	"placeholders": {
 		"apiKey": "API 키 입력...",

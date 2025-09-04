@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from "vitest"
 import fs from "fs/promises"
 import * as path from "path"
+
 import { getCommand, getCommands } from "../commands"
 
 // Mock fs and path modules
@@ -8,6 +8,11 @@ vi.mock("fs/promises")
 vi.mock("../roo-config", () => ({
 	getGlobalRooDirectory: vi.fn(() => "/mock/global/.kilocode"),
 	getProjectRooDirectoryForCwd: vi.fn(() => "/mock/project/.kilocode"),
+}))
+vi.mock("../built-in-commands", () => ({
+	getBuiltInCommands: vi.fn(() => Promise.resolve([])),
+	getBuiltInCommand: vi.fn(() => Promise.resolve(undefined)),
+	getBuiltInCommandNames: vi.fn(() => Promise.resolve([])),
 }))
 
 const mockFs = vi.mocked(fs)

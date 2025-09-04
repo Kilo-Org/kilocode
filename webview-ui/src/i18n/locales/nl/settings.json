@@ -48,6 +48,9 @@
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "API-sleutel:",
 		"geminiApiKeyPlaceholder": "Voer uw Gemini API-sleutel in",
+		"vercelAiGatewayProvider": "Vercel AI Gateway",
+		"vercelAiGatewayApiKeyLabel": "API-sleutel",
+		"vercelAiGatewayApiKeyPlaceholder": "Voer uw Vercel AI Gateway API-sleutel in",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API-sleutel:",
 		"mistralApiKeyPlaceholder": "Voer uw Mistral API-sleutel in",
@@ -114,6 +117,7 @@
 			"modelDimensionRequired": "Modelafmeting is vereist",
 			"geminiApiKeyRequired": "Gemini API-sleutel is vereist",
 			"mistralApiKeyRequired": "Mistral API-sleutel is vereist",
+			"vercelAiGatewayApiKeyRequired": "Vercel AI Gateway API-sleutel is vereist",
 			"ollamaBaseUrlRequired": "Ollama basis-URL is vereist",
 			"baseUrlRequired": "Basis-URL is vereist",
 			"modelDimensionMinValue": "Modelafmeting moet groter zijn dan 0"
@@ -238,6 +242,8 @@
 		"awsCustomArnDesc": "Zorg ervoor dat de regio in de ARN overeenkomt met je geselecteerde AWS-regio hierboven.",
 		"openRouterApiKey": "OpenRouter API-sleutel",
 		"getOpenRouterApiKey": "OpenRouter API-sleutel ophalen",
+		"vercelAiGatewayApiKey": "Vercel AI Gateway API-sleutel",
+		"getVercelAiGatewayApiKey": "Vercel AI Gateway API-sleutel ophalen",
 		"apiKeyStorageNotice": "API-sleutels worden veilig opgeslagen in de geheime opslag van VSCode",
 		"glamaApiKey": "Glama API-sleutel",
 		"getGlamaApiKey": "Glama API-sleutel ophalen",
@@ -761,6 +767,20 @@
 			"name": "'todos'-lijst vereisen voor nieuwe taken",
 			"description": "Wanneer ingeschakeld, vereist de new_task-tool dat een todos-parameter wordt opgegeven. Dit zorgt ervoor dat alle nieuwe taken beginnen met een duidelijke lijst met doelstellingen. Wanneer uitgeschakeld (standaard), blijft de todos-parameter optioneel voor achterwaartse compatibiliteit."
 		},
+		"IMAGE_GENERATION": {
+			"name": "AI-afbeeldingsgeneratie inschakelen",
+			"description": "Wanneer ingeschakeld, kan Kilo Code afbeeldingen genereren van tekstprompts. Vereist een geconfigureerde Kilo Code of OpenRouter API-sleutel (OpenRouter heeft voorrang).",
+			"openRouterApiKeyLabel": "OpenRouter API-sleutel",
+			"openRouterApiKeyPlaceholder": "Voer je OpenRouter API-sleutel in",
+			"kiloCodeApiKeyLabel": "Kilo Code API-sleutel",
+			"kiloCodeApiKeyPlaceholder": "Voer je Kilo Code API-sleutel in",
+			"kiloCodeApiKeyPaste": "Plak huidige Kilo Code API-sleutel",
+			"getApiKeyText": "Haal je API-sleutel op van",
+			"modelSelectionLabel": "Afbeeldingsgeneratiemodel",
+			"modelSelectionDescription": "Selecteer het model voor afbeeldingsgeneratie",
+			"warningMissingKey": "⚠️ Kilo Code of OpenRouter API-sleutel is vereist voor afbeeldingsgeneratie. Configureer deze hierboven.",
+			"successConfigured": "✓ Afbeeldingsgeneratie is geconfigureerd en klaar voor gebruik"
+		},
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
 			"description": "Schakel Autocomplete-functies in voor snelle codesuggesties en verbeteringen direct in je editor. Bevat Snelle Taak (Cmd+I) voor gerichte wijzigingen en Autocomplete voor contextuele verbeteringen."
@@ -837,7 +857,8 @@
 		"modelAvailability": "Het opgegeven model-ID ({{modelId}}) is niet beschikbaar. Kies een ander model.",
 		"providerNotAllowed": "Provider '{{provider}}' is niet toegestaan door je organisatie",
 		"modelNotAllowed": "Model '{{model}}' is niet toegestaan voor provider '{{provider}}' door je organisatie",
-		"profileInvalid": "Dit profiel bevat een provider of model dat niet is toegestaan door je organisatie"
+		"profileInvalid": "Dit profiel bevat een provider of model dat niet is toegestaan door je organisatie",
+		"qwenCodeOauthPath": "Je moet een geldig OAuth-referentiepad opgeven"
 	},
 	"placeholders": {
 		"apiKey": "Voer API-sleutel in...",
