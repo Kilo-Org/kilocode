@@ -15,6 +15,13 @@ export async function singleCompletionHandler(apiConfiguration: ProviderSettings
 
 	const handler = buildApiHandler(apiConfiguration)
 
+	// kilocode_change start
+	// Force gemini-cli to use completePrompt
+	if (apiConfiguration.apiProvider === "gemini-cli") {
+		return (handler as SingleCompletionHandler).completePrompt(promptText)
+	}
+	// kilocode_change end
+
 	// Check if handler supports single completions
 	if (!("completePrompt" in handler)) {
 		// kilocode_change start - stream responses for handlers without completePrompt
