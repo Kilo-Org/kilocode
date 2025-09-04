@@ -42,6 +42,7 @@ SPDX-License-Identifier: Apache-2.0
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
     <depends>com.intellij.modules.platform</depends>
     <depends>org.jetbrains.plugins.terminal</depends>
+    <depends>Git4Idea</depends>
     
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
@@ -59,6 +60,7 @@ SPDX-License-Identifier: Apache-2.0
                     id="kilocode"
                     displayType="BALLOON"
         />
+        <checkinHandlerFactory implementation="ai.kilocode.jetbrains.git.CommitMessageHandlerFactory"/>
     </extensions>
 
     <extensions defaultExtensionNs="org.jetbrains.plugins.terminal">
@@ -104,6 +106,16 @@ SPDX-License-Identifier: Apache-2.0
                 text="Settings"
                 description="Setting">
             <override-text place="GoToAction" text="Setting" />
+        </action>
+
+        <action id="kilocode.generateCommitMessage"
+                icon="AllIcons.Vcs.CommitNode"
+                class="ai.kilocode.jetbrains.actions.GitCommitMessageAction"
+                text="Generate Commit Message"
+                description="Generate AI-powered commit message for current changes">
+            <override-text place="GoToAction" text="Generate Commit Message" />
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt G"/>
+            <add-to-group group-id="Vcs.MessageActionGroup" anchor="first"/>
         </action>
 
         <group id="WecoderToolbarGroup">

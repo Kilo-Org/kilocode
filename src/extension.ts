@@ -355,10 +355,24 @@ export async function activate(context: vscode.ExtensionContext) {
 	if (!kilocodeWrapperProperties.kiloCodeWrapped) {
 		registerGhostProvider(context, provider)
 	}
+
 	// kilocode_change end
 	registerCommitMessageProvider(context, outputChannel) // kilocode_change
+	registerGhostProvider(context, provider) // kilocode_change
+
 	registerCodeActions(context)
 	registerTerminalActions(context)
+
+	// kilocode_change start: Register external commit message command for JetBrains integration
+	const commitMessageProvider = registerCommitMessageProvider(context, outputChannel) // kilocode_change
+	const externalCommitMessageDisposable = vscode.commands.registerCommand(
+		"kilo-code.generateCommitMessageForExternal",
+		async (params: { workspacePath: string; staged?: boolean }) => {
+			return await commitMessageProvider.generateCommitMessageForExternal(params)
+		},
+	)
+	context.subscriptions.push(externalCommitMessageDisposable)
+	// kilocode_change end
 
 	// Allows other extensions to activate once Kilo Code is ready.
 	vscode.commands.executeCommand(`${Package.name}.activationCompleted`)

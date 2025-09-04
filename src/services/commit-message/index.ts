@@ -10,7 +10,7 @@ import { t } from "../../i18n"
 export function registerCommitMessageProvider(
 	context: vscode.ExtensionContext,
 	outputChannel: vscode.OutputChannel,
-): void {
+): CommitMessageProvider {
 	const commitProvider = new CommitMessageProvider(context, outputChannel)
 
 	commitProvider.activate().catch((error) => {
@@ -19,4 +19,6 @@ export function registerCommitMessageProvider(
 	})
 
 	outputChannel.appendLine(t("kilocode:commitMessage.providerRegistered"))
+
+	return commitProvider
 }

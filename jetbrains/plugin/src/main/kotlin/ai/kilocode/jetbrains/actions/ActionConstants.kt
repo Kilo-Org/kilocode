@@ -22,6 +22,8 @@ object ActionNames {
     const val ADD_TO_CONTEXT = "Add to Context"
     /** Action to create a new task */
     const val NEW_TASK = "New Task"
+    /** Action to generate commit message */
+    const val GENERATE_COMMIT_MESSAGE = "Generate Commit Message"
 }
 
 /**
@@ -39,6 +41,8 @@ object CommandIds {
     const val ADD_TO_CONTEXT = "kilo-code.addToContext"
     /** Command ID for creating a new task */
     const val NEW_TASK = "kilo-code.newTask"
+    /** Command ID for generating commit message */
+    const val GENERATE_COMMIT_MESSAGE = "kilo-code.generateCommitMessageForExternal"
 }
 
 /** Type alias for prompt type identifiers */

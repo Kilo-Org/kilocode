@@ -264,6 +264,48 @@ FINAL REMINDER: Your message MUST be COMPLETELY DIFFERENT from the previous mess
 	}
 
 	/**
+	 * Generates an AI-powered commit message for external callers (e.g., JetBrains plugin).
+	 * Returns the result as an object instead of setting VSCode UI state.
+	 */
+	public async generateCommitMessageForExternal(params: {
+		workspacePath: string
+		staged?: boolean
+	}): Promise<{ message: string; error?: string }> {
+		try {
+			// Configure the Git service for the external workspace
+			this.gitService.configureRepositoryContext(vscode.Uri.file(params.workspacePath))
+
+			const staged = params.staged ?? true
+			const changes = await this.gitService.gatherChanges({ staged })
+
+			if (changes.length === 0) {
+				return {
+					message: "",
+					error: staged ? "No staged changes found in the repository" : "No changes found in the repository",
+				}
+			}
+
+			const gitContextString = await this.gitService.getCommitContext(changes, { staged })
+			const generatedMessage = await this.callAIForCommitMessage(gitContextString)
+
+			// Store context for potential future calls
+			this.previousGitContext = gitContextString
+			this.previousCommitMessage = generatedMessage
+
+			TelemetryService.instance.captureEvent(TelemetryEventName.COMMIT_MSG_GENERATED)
+
+			return { message: generatedMessage }
+		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
+			console.error("Error generating commit message for external caller:", error)
+			return {
+				message: "",
+				error: errorMessage,
+			}
+		}
+	}
+
+	/**
 	 * Extracts the commit message from the AI response.
 	 */
 	private extractCommitMessage(response: string): string {

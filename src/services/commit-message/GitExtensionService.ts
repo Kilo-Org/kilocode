@@ -32,6 +32,7 @@ export class GitExtensionService {
 
 	/**
 	 * Configures the repository context for multi-workspace scenarios
+	 * Supports both VSCode Git extension integration and external workspace paths
 	 */
 	public configureRepositoryContext(resourceUri?: vscode.Uri): void {
 		const newTargetRepository = this.determineTargetRepository(resourceUri)
@@ -50,22 +51,127 @@ export class GitExtensionService {
 
 	private determineTargetRepository(resourceUri?: vscode.Uri): GitRepository | null {
 		try {
+			// If no resourceUri provided, try to use VSCode Git extension
+			if (!resourceUri) {
+				return this.getVSCodeGitRepository()
+			}
+
+			// Check if this is an external workspace call (not in current VSCode workspace)
+			if (this.isExternalWorkspace(resourceUri)) {
+				return this.createExternalRepository(resourceUri)
+			}
+
+			// Try to find matching repository in VSCode Git extension
+			const vscodeRepo = this.getVSCodeGitRepository(resourceUri)
+			if (vscodeRepo) {
+				return vscodeRepo
+			}
+
+			// Fallback: create external repository for any valid path
+			return this.createExternalRepository(resourceUri)
+		} catch (error) {
+			console.error("Error determining target repository:", error)
+			return null
+		}
+	}
+
+	/**
+	 * Gets repository from VSCode Git extension
+	 */
+	private getVSCodeGitRepository(resourceUri?: vscode.Uri): GitRepository | null {
+		try {
 			const gitExtension = vscode.extensions.getExtension("vscode.git")
 			if (!gitExtension || !gitExtension.isActive) {
 				return null
 			}
 
 			const gitApi = gitExtension?.exports.getAPI(1)
-			for (const repo of gitApi?.repositories ?? []) {
-				if (repo.rootUri && resourceUri?.fsPath.startsWith(repo.rootUri.fsPath)) {
-					return repo
+			if (!gitApi?.repositories?.length) {
+				return null
+			}
+
+			// If resourceUri provided, find matching repository
+			if (resourceUri) {
+				for (const repo of gitApi.repositories) {
+					if (repo.rootUri && resourceUri.fsPath.startsWith(repo.rootUri.fsPath)) {
+						return repo
+					}
 				}
 			}
 
-			return gitApi.repositories[0] // Fallback to first repository
+			// Fallback to first repository
+			return gitApi.repositories[0]
 		} catch (error) {
-			console.error("Error determining target repository:", error)
+			console.error("Error accessing VSCode Git extension:", error)
 			return null
+		}
+	}
+
+	/**
+	 * Determines if the given URI represents an external workspace
+	 */
+	private isExternalWorkspace(resourceUri: vscode.Uri): boolean {
+		try {
+			// Check if the path is outside current VSCode workspace folders
+			const workspaceFolders = vscode.workspace.workspaceFolders
+			if (!workspaceFolders?.length) {
+				return true // No workspace folders means it's external
+			}
+
+			// Check if resourceUri is within any workspace folder
+			for (const folder of workspaceFolders) {
+				if (resourceUri.fsPath.startsWith(folder.uri.fsPath)) {
+					return false // Found within workspace
+				}
+			}
+
+			return true // Not found in any workspace folder
+		} catch (error) {
+			console.error("Error checking if workspace is external:", error)
+			return true // Assume external on error
+		}
+	}
+
+	/**
+	 * Creates a mock repository object for external workspace paths
+	 */
+	private createExternalRepository(resourceUri: vscode.Uri): GitRepository | null {
+		try {
+			// Verify this is a valid Git repository
+			if (!this.isValidGitRepository(resourceUri.fsPath)) {
+				console.error(`Path is not a valid Git repository: ${resourceUri.fsPath}`)
+				return null
+			}
+
+			// Create mock repository object that satisfies GitRepository interface
+			const mockRepository: GitRepository = {
+				inputBox: {
+					value: "", // Mock input box for external repositories
+				},
+				rootUri: resourceUri,
+			}
+
+			return mockRepository
+		} catch (error) {
+			console.error("Error creating external repository:", error)
+			return null
+		}
+	}
+
+	/**
+	 * Validates if a path contains a Git repository
+	 */
+	private isValidGitRepository(workspacePath: string): boolean {
+		try {
+			const result = spawnSync("git", ["rev-parse", "--git-dir"], {
+				cwd: workspacePath,
+				encoding: "utf8",
+				stdio: ["ignore", "pipe", "pipe"],
+			})
+
+			return result.status === 0
+		} catch (error) {
+			return false
 		}
 	}
 
@@ -105,15 +211,46 @@ export class GitExtensionService {
 
 	/**
 	 * Sets the commit message in the Git input box
+	 * For external repositories, falls back to clipboard
 	 */
 	public setCommitMessage(message: string): void {
 		if (this.targetRepository) {
-			this.targetRepository.inputBox.value = message
+			// For VSCode repositories, set the input box value
+			// For external repositories, the inputBox is a mock object
+			if (this.isExternalRepository(this.targetRepository)) {
+				// External repositories don't have real input boxes, use clipboard
+				this.copyToClipboardFallback(message)
+			} else {
+				// VSCode repository with real input box
+				this.targetRepository.inputBox.value = message
+			}
 			return
 		}
 
-		// Fallback to clipboard if VS Code Git Extension API is not available
+		// Fallback to clipboard if no repository is available
 		this.copyToClipboardFallback(message)
+	}
+
+	/**
+	 * Checks if a repository is an external (mock) repository
+	 */
+	private isExternalRepository(repository: GitRepository): boolean {
+		// External repositories are identified by having a rootUri but no real VSCode Git extension backing
+		// We can check if this repository exists in the VSCode Git extension
+		try {
+			const gitExtension = vscode.extensions.getExtension("vscode.git")
+			if (!gitExtension || !gitExtension.isActive) {
+				return true // If no Git extension, it's external
+			}
+
+			const gitApi = gitExtension?.exports.getAPI(1)
+			const vscodeRepos = gitApi?.repositories ?? []
+
+			// Check if this repository exists in VSCode Git extension
+			return !vscodeRepos.some((repo: any) => repo.rootUri?.fsPath === repository.rootUri?.fsPath)
+		} catch (error) {
+			return true // Assume external on error
+		}
 	}
 
 	/**

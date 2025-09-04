@@ -8,6 +8,8 @@
 
 # 🚀 Kilo Code
 
+<!-- Code review test comment - testing diff functionality -->
+
 > Open-source VS Code AI agent. We frequently merge features from open-source projects, such as [Roo Code](https://github.com/RooVetGit/Roo-Code) and [Cline](https://github.com/cline/cline), while building our own vision.
 
 - ✨ Generate code from natural language
