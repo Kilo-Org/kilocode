@@ -8,7 +8,7 @@
 		"lint": "eslint src --ext=ts --max-warnings=0",
 		"check-types": "tsc --noEmit",
 		"_test": "dotenvx run -f .env.test -- vitest run",
-		"clean": "rimraf dist .turbo",
+		"clean": "rimraf dist .turbo *.tsbuildinfo",
 		"cli": "dotenvx run -f .env.development .env.local -- tsx src/cli/index.ts",
 		"drizzle-kit": "dotenvx run -f .env.development -- tsx node_modules/drizzle-kit/bin.cjs",
 		"drizzle-kit:test": "dotenvx run -f .env.test -- tsx node_modules/drizzle-kit/bin.cjs",

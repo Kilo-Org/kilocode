@@ -1,9 +1,10 @@
 {
 	"extends": "@roo-code/config-typescript/base.json",
 	"compilerOptions": {
-		"types": ["vitest/globals"],
-		"outDir": "dist"
+		"types": ["node", "vitest/globals"],
+		"outDir": "dist",
+		"incremental": false
 	},
 	"include": ["src"],
-	"exclude": ["node_modules"]
+	"exclude": ["node_modules", "**/node_modules", "**/.turbo", "**/.next", "**/build", "**/coverage", "**/*.d.ts", "**/test-results/**", "**/playwright-report/**", "**/.vscode-test/**", "**/storybook-static/**"]
 }

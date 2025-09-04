@@ -124,6 +124,8 @@
 				{
 					"type": "webview",
 					"id": "kilo-code.SidebarProvider",
+					"icon": "assets/icons/kilo.png",
+					"darkIcon": "assets/icons/kilo-dark.png",
 					"name": "%views.sidebar.name%"
 				}
 			]
@@ -602,6 +604,7 @@
 	"scripts": {
 		"lint": "eslint . --ext=ts --max-warnings=0",
 		"check-types": "tsc --noEmit",
+		"build": "tsc --build",
 		"pretest": "turbo run bundle --cwd ..",
 		"test": "vitest run",
 		"format": "prettier --write .",
@@ -610,8 +613,8 @@
 		"vsix": "mkdirp ../bin && vsce package --no-dependencies --out ../bin",
 		"publish:marketplace": "vsce publish --no-dependencies && ovsx publish --no-dependencies",
 		"watch:bundle": "pnpm bundle --watch",
-		"watch:tsc": "cd .. && tsc --noEmit --watch --project src/tsconfig.json",
-		"clean": "rimraf README.md CHANGELOG.md LICENSE dist logs mock .turbo"
+		"watch:tsc": "tsc --noEmit --watch",
+		"clean": "rimraf README.md CHANGELOG.md LICENSE dist logs mock .turbo *.tsbuildinfo"
 	},
 	"dependencies": {
 		"@anthropic-ai/bedrock-sdk": "^0.22.0",

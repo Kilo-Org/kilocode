@@ -6,10 +6,29 @@
 	},
 	"search.exclude": {
 		"out": true, // set this to false to include "out" folder in search results
-		"dist": true // set this to false to include "dist" folder in search results
+		"dist": true, // set this to false to include "dist" folder in search results
+		"**/*.tsbuildinfo": true, // exclude TypeScript build info files
+		"**/.turbo": true, // exclude Turbo cache
+		"**/node_modules": true // exclude node_modules
 	},
-	// Turn off tsc task auto detection since we have the necessary tasks as npm scripts
-	"typescript.tsc.autoDetect": "off",
+	"files.watcherExclude": {
+		"**/dist/**": true,
+		"**/out/**": true,
+		"**/*.tsbuildinfo": true,
+		"**/.turbo/**": true,
+		"**/node_modules/**": true,
+		"**/.git/**": true,
+		"**/coverage/**": true,
+		"**/build/**": true,
+		"**/.next/**": true,
+		"**/storybook-static/**": true,
+		"**/playwright-report/**": true,
+		"**/test-results/**": true
+	},
+	// Enable VS Code's built-in TypeScript error detection
+	"typescript.tsc.autoDetect": "on",
+	"typescript.preferences.includePackageJsonAutoImports": "on",
+	"typescript.suggest.autoImports": true,
 	"i18n-ally.localesPaths": ["webview-ui/src/i18n", "webview-ui/src/__mocks__/i18n", "webview-ui/src/i18n/locales"],
 	"vitest.disableWorkspaceWarning": true,
 	"markdown.editor.filePaste.copyIntoWorkspace": "mediaFiles",

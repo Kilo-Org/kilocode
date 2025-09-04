@@ -8,7 +8,7 @@ import {
 	createMessageTypeVarietyMessages,
 } from "../src/mockData/clineMessages"
 
-const meta = {
+const meta: Meta<typeof TaskTimeline> = {
 	title: "Chat/TaskTimeline",
 	component: TaskTimeline,
 	parameters: {

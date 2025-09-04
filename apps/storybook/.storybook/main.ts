@@ -62,6 +62,72 @@ const config: StorybookConfig = {
 			"process.env": {}, // Inject a dummy `process.env`
 		}
 
+		// Optimize build performance
+		config.build = config.build || {}
+		config.build.rollupOptions = config.build.rollupOptions || {}
+		config.build.rollupOptions.external = [
+			// Externalize Node.js built-ins
+			"fs",
+			"path",
+			"os",
+			"crypto",
+			"stream",
+			"util",
+			"events",
+			"child_process",
+			"node:fs",
+			"node:path",
+			"node:os",
+			"node:crypto",
+			"node:stream",
+			"node:util",
+			"node:events",
+			"node:child_process",
+			"node:buffer",
+			"node:process",
+			"node:url",
+			"node:timers/promises",
+			"node:string_decoder",
+			"node:tty",
+			"node:assert",
+			"node:zlib",
+			"node:v8",
+			"node:stream/promises",
+			"fs/promises",
+		]
+
+		// Optimize dependency pre-bundling
+		config.optimizeDeps = config.optimizeDeps || {}
+		config.optimizeDeps.exclude = [
+			...(config.optimizeDeps.exclude || []),
+			// Exclude Node.js specific packages
+			"execa",
+			"cross-spawn",
+			"graceful-fs",
+			"fdir",
+			"dotenv",
+			"undici",
+			"posthog-node",
+			"signal-exit",
+			"isbinaryfile",
+			"human-signals",
+			"npm-run-path",
+			"which",
+			"isexe",
+		]
+
+		config.optimizeDeps.include = [
+			...(config.optimizeDeps.include || []),
+			// Pre-bundle common React/UI dependencies
+			"react",
+			"react-dom",
+			"react/jsx-runtime",
+			"@radix-ui/react-tooltip",
+			"@radix-ui/react-progress",
+			"@tanstack/react-query",
+			"lucide-react",
+		]
+
 		// Add Tailwind CSS plugin to process the webview-ui's CSS
 		const { default: tailwindcss } = await import("@tailwindcss/vite")
 		config.plugins = config.plugins || []

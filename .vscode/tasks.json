@@ -5,16 +5,13 @@
 	"tasks": [
 		{
 			"label": "watch",
-			"dependsOn": ["watch:pnpm", "watch:webview", "watch:bundle", "watch:tsc"],
+			"dependsOn": ["watch:pnpm", "watch:webview", "watch:bundle"],
 			"presentation": {
 				"reveal": "never"
 			},
 			"group": {
 				"kind": "build",
 				"isDefault": true
-			},
-			"runOptions": {
-				"runOn": "folderOpen"
 			}
 		},
 		{
@@ -78,19 +75,6 @@
 			"isBackground": true,
 			"presentation": {
 				"group": "watch",
-				"reveal": "always"
-			}
-		},
-		{
-			"label": "watch:tsc",
-			"dependsOn": ["watch:pnpm"],
-			"type": "shell",
-			"command": "npx turbo watch:tsc",
-			"group": "none",
-			"problemMatcher": "$tsc-watch",
-			"isBackground": true,
-			"presentation": {
-				"group": "none",
 				"reveal": "always"
 			}
 		},

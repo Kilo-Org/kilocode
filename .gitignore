@@ -12,6 +12,7 @@ mock/
 # Builds
 bin/
 *.vsix
+*.tsbuildinfo
 
 # Local prompts and rules
 /local-prompts
@@ -54,5 +55,6 @@ logs
 
 # Exclude Conport Directory (MCP server)
 context_portal/
+
 # Qdrant
 qdrant_storage/

@@ -2,6 +2,7 @@
 	"extends": "@roo-code/config-typescript/base.json",
 	"compilerOptions": {
 		"types": ["vitest/globals"],
+		"composite": true,
 		"outDir": "dist"
 	},
 	"include": ["src", "scripts", "*.config.ts"],

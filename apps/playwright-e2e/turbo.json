@@ -1,0 +1,9 @@
+{
+	"extends": ["//"],
+	"tasks": {
+		"check-types": {
+			"dependsOn": ["^build", "kilo-code#build"],
+			"inputs": ["src/**/*.ts", "helpers/**/*.ts", "tests/**/*.ts", "types/**/*.ts", "tsconfig.json"]
+		}
+	}
+}

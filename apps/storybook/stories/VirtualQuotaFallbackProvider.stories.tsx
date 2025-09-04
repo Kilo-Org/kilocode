@@ -4,7 +4,7 @@ import { fn } from "storybook/test"
 import { VirtualLimitInputsPresentation } from "../../../webview-ui/src/components/settings/providers/VirtualQuotaFallbackProviderPresentation"
 import { withExtensionState } from "../src/decorators/withExtensionState"
 
-const meta = {
+const meta: Meta<typeof VirtualLimitInputsPresentation> = {
 	title: "Settings/Providers/VirtualQuotaFallbackProvider",
 	component: VirtualLimitInputsPresentation,
 	decorators: [withExtensionState],

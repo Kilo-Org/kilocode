@@ -4,7 +4,7 @@ import { fn } from "storybook/test"
 import { McpExecution } from "../../../webview-ui/src/components/chat/McpExecution"
 import { withTooltipProvider } from "../src/decorators/withTooltipProvider"
 
-const meta = {
+const meta: Meta<typeof McpExecution> = {
 	title: "Chat/Row/McpExecution",
 	component: McpExecution,
 	parameters: { layout: "padded" },
