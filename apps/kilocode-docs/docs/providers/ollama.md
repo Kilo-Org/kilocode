@@ -13,132 +13,86 @@ Kilo Code supports running models locally using Ollama. This provides privacy, o
 
 ## Managing Expectations
 
-Local LLMs are much smaller than premium cloud-hosted LLMs such as Claude and Gemini and the results will be much less impressive.
+The LLMs that can be run locally are generally much smaller than cloud-hosted LLMs such as Claude and GPT and the results will be much less impressive.
 They are much more likely to get stuck in loops, fail to use tools properly or produce syntax errors in code.
 More trial and error will be required to find the right prompt.
-Local LLMs are usually also not very fast.
+Running LLMs locally is often also not very fast.
 Using simple prompts, keeping conversations short and disabling MCP tools can result in a speed-up.
 
 ## Hardware Requirements
 
-You will need a large amount of RAM (32GB or more) and a powerful CPU (e.g. Ryzen 9000 series) to run the models listed below.
-GPUs can run LLMs much faster, but a large amount of VRAM is required (24GB, if not more), which is not very common on consumer GPUs.
-Smaller models will run on more modest GPUs, but do not provide good results.
-MacBooks with a sufficient amount of unified memory can use GPU-acceleration, but do not outperform high-end desktop CPUs in our testing.
+You will need a GPU with a large amount of VRAM (24GB or more) or a MacBook with a large amount of unified RAM (32GB or more) to run the models discussed below at decent speed.
 
 ## Selecting a Model
 
 Ollama supports many different models.
 You can find a list of available models on the [Ollama website](https://ollama.com/library).
-Selecting a model that suits your use case, runs on your hardware configuration and achieves the desired speed requires some trial and error.
-The following rules and heuristics can be used to find a model:
 
-- Must have at least a 32k context window (this is a requirement for Kilo Code).
-- Listed as supporting tools.
-- Number of parameters in the 7b to 24b range.
-- Prefer popular models.
-- Prefer newer models.
+For the Kilo Code agent the current recommendation is `qwen3-coder:30b`. `qwen3-coder:30b` sometimes fails to call tools correctly (it is much more likely to have this problem than the full `qwen3-coder:480b` model). As a mixture-of-experts model, this could be because it activated the wrong experts. Whenever this happens, try changing your prompt or use the Enhance Prompt button.
 
-### Recommendations for Kilo Code
-
-We tested a few models with the following prompt:
-
-```
-Create a simple web page with a button that greets the user when clicked.
-```
-
-A model is considered to pass if it produces a working result within a few tries. The models we found to work correctly are:
-
-| Model name       | Completion time |
-| ---------------- | --------------- |
-| qwen2.5-coder:7b | 1x (baseline)   |
-| devstral:24b     | 2x              |
-| gemma3:12b       | 4x              |
-| qwen3-8b         | 12x             |
-
-Our recommendation is to use **devstral:24b** if your hardware can handle it, because it makes fewer mistakes than qwen2.5-coder:7b.
-qwen2.5-coder:7b is worth considering because of its speed, if you can put up with its mistakes.
-The table also shows speed can be hard to predict, since the special-purpose devstral:24b outperforms the smaller general-purpose models gemma3:12b and qwen3-8b here.
-The gemma3:12b result is remarkable, because it can use tools correctly (at least sometimes), while not being listed as suitable for tool use on the Ollama website.
-
-The result produced by devstral:24b is included below:
-
-```html
-<!DOCTYPE html>
-<html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Greet User Button</title>
-		<style>
-			body {
-				font-family: Arial, sans-serif;
-				display: flex;
-				justify-content: center;
-				align-items: center;
-				height: 100vh;
-				margin: 0;
-			}
-			button {
-				padding: 10px 20px;
-				font-size: 16px;
-				cursor: pointer;
-			}
-		</style>
-	</head>
-	<body>
-		<button onclick="greetUser()">Greet Me!</button>
-
-		<script>
-			function greetUser() {
-				alert("Hello! Welcome to our website.")
-			}
-		</script>
-	</body>
-</html>
-```
-
-The following models look like reasonable choices, but were found to **not** work properly with Kilo Code in its default configuration:
-
-| Model name     | Fail reason                    |
-| -------------- | ------------------------------ |
-| deepseek-r1:7b | fails to use tools properly    |
-| deepseek-r1:8b | gets stuck in a reasoning loop |
-
-## Preventing prompt truncation
-
-By default Ollama truncates prompts to a very short length.
-If you run into this problem, please see this FAQ item to resolve it:
-[How can I specify the context window size?](https://github.com/ollama/ollama/blob/4383a3ab7a075eff78b31f7dc84c747e2fcd22b8/docs/faq.md#how-can-i-specify-the-context-window-size)
-
-If you decide to use the `OLLAMA_CONTEXT_LENGTH` environment variable, it needs to be visible to both the IDE and the Ollama server.
+An alternative to `qwen3-coder:30b` is `devstral:24b`. For other features of Kilo Code such as Enhance Prompt or Commit Message Generation smaller models may suffice.
 
 ## Setting up Ollama
 
-1.  **Download and Install Ollama:** Download the Ollama installer for your operating system from the [Ollama website](https://ollama.com/). Follow the installation instructions and make sure Ollama is running:
+To set up Ollama for use with Kilo Code, follow the instructions below.
 
-    ```bash
-    ollama serve
-    ```
+### Download and Install Ollama
 
-2.  **Download a Model:** Once you've downloaded a model, you can use Kilo Code offline with that model. To download a model, open your terminal and run:
+Download the Ollama installer from the [Ollama website](https://ollama.com/) (or use the package manager for your operating system). Follow the installation instructions, then make sure Ollama is running:
 
-    ```bash
-    ollama pull <model_name>
-    ```
+```bash
+ollama serve
+```
 
-    For example:
+### Download a Model
 
-    ```bash
-    ollama pull devstral:24b
-    ```
+To download a model, open a second terminal (`ollama serve` needs to be running) and run:
 
-3.  **Configure Kilo Code:**
-    - Open the Kilo Code sidebar (<img src="/docs/img/kilo-v1.svg" width="12" /> icon).
-    - Click the settings gear icon (<Codicon name="gear" />).
-    - Select "ollama" as the API Provider.
-    - Enter the Model name.
-    - (Optional) You can configure the base URL if you're running Ollama on a different machine. The default is `http://localhost:11434`.
+```bash
+ollama pull <model_name>
+```
+
+For example:
+
+```bash
+ollama pull qwen3-coder:30b
+```
+
+### Configure the Context Size
+
+By default Ollama truncates prompts to a very short length, [as documented here](https://github.com/ollama/ollama/blob/4383a3ab7a075eff78b31f7dc84c747e2fcd22b8/docs/faq.md#how-can-i-specify-the-context-window-size).
+
+You need to have at least 32k to get decent results, but increasing the context size increases memory usage and may decrease performance, depending on your hardware.
+To configure a model, you need to set its parameters and save a copy of it.
+
+Load the model (we will use `qwen3-coder:30b` as an example):
+
+```bash
+ollama run qwen3-coder:30b
+```
+
+Change context size parameter:
+
+```bash
+/set parameter num_ctx 32768
+```
+
+Save the model with a new name:
+
+```bash
+/save qwen3-coder-30b-c32k
+```
+
+You can also set the `OLLAMA_CONTEXT_LENGTH` environment variable,
+but this is not recommended as it changes the context for all models and the environment variable needs to be visible to both the Ollama server and the IDE.
+
+### Configure Kilo Code
+
+- Open the Kilo Code sidebar (<img src="/docs/img/kilo-v1.svg" width="12" /> icon).
+- Click the Settings gear icon (<Codicon name="gear" />).
+- Select "Ollama" as the API Provider.
+- Select the model configured in the previous step.
+- (Optional) You can configure the base URL if you're running Ollama on a different machine. The default is `http://localhost:11434`.
 
 ## Further Reading
 
