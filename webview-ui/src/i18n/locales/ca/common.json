@@ -67,6 +67,12 @@
 			"copyError": "Error copiant la imatge"
 		}
 	},
+	"image": {
+		"tabs": {
+			"view": "Imatge"
+		},
+		"noData": "Sense dades d'imatge"
+	},
 	"file": {
 		"errors": {
 			"invalidDataUri": "Format d'URI de dades no vàlid",

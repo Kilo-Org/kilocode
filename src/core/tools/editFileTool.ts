@@ -14,6 +14,7 @@ import { DEFAULT_HEADERS } from "../../api/providers/constants"
 import { TelemetryService } from "@roo-code/telemetry"
 import { type ClineProviderState } from "../webview/ClineProvider"
 import { ClineSayTool } from "../../shared/ExtensionMessage"
+import { X_KILOCODE_ORGANIZATIONID, X_KILOCODE_TASKID } from "../../shared/kilocode/headers"
 
 // Morph model pricing per 1M tokens
 const MORPH_MODEL_PRICING = {
@@ -253,8 +254,11 @@ async function applyMorphEdit(
 			apiKey: morphConfig.apiKey,
 			baseURL: morphConfig.baseUrl,
 			defaultHeaders: {
-				"X-KiloCode-TaskId": cline.taskId,
 				...DEFAULT_HEADERS,
+				...(morphConfig.kiloCodeOrganizationId
+					? { [X_KILOCODE_ORGANIZATIONID]: morphConfig.kiloCodeOrganizationId }
+					: {}),
+				[X_KILOCODE_TASKID]: cline.taskId,
 			},
 		})
 
@@ -310,6 +314,7 @@ interface MorphConfiguration {
 	baseUrl?: string
 	model?: string
 	error?: string
+	kiloCodeOrganizationId?: string
 }
 
 function getMorphConfiguration(state: ClineProviderState): MorphConfiguration {
@@ -343,6 +348,7 @@ function getMorphConfiguration(state: ClineProviderState): MorphConfiguration {
 			apiKey: token,
 			baseUrl: `${getKiloBaseUriFromToken(token)}/api/openrouter/`,
 			model: "morph/morph-v3-large", // Morph model via OpenRouter
+			kiloCodeOrganizationId: state.apiConfiguration.kilocodeOrganizationId,
 		}
 	}
 

@@ -8,6 +8,7 @@ import { ApiHandlerCreateMessageMetadata } from ".."
 import OpenAI from "openai"
 import { getModelEndpoints } from "./fetchers/modelEndpointCache"
 import { getKilocodeDefaultModel } from "./kilocode/getKilocodeDefaultModel"
+import { X_KILOCODE_ORGANIZATIONID, X_KILOCODE_TASKID } from "../../shared/kilocode/headers"
 
 /**
  * A custom OpenRouter handler that overrides the getModel function
@@ -28,18 +29,17 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 		super(options)
 	}
 
-	override customRequestOptions(metadata?: ApiHandlerCreateMessageMetadata): OpenAI.RequestOptions | undefined {
+	override customRequestOptions(metadata?: ApiHandlerCreateMessageMetadata) {
 		const headers: Record<string, string> = {}
 
 		if (metadata?.taskId) {
-			headers["X-KiloCode-TaskId"] = metadata.taskId
+			headers[X_KILOCODE_TASKID] = metadata.taskId
 		}
 
-		// Cast to access kilocode-specific properties
-		const kilocodeOptions = this.options as ApiHandlerOptions
+		const kilocodeOptions = this.options
 
 		if (kilocodeOptions.kilocodeOrganizationId) {
-			headers["X-KiloCode-OrganizationId"] = kilocodeOptions.kilocodeOrganizationId
+			headers[X_KILOCODE_ORGANIZATIONID] = kilocodeOptions.kilocodeOrganizationId
 		}
 
 		return Object.keys(headers).length > 0 ? { headers } : undefined

@@ -1,0 +1,17 @@
+{
+	"title": "Cloud",
+	"profilePicture": "प्रोफाइल चित्र",
+	"logOut": "लॉग आउट",
+	"testApiAuthentication": "API प्रमाणीकरण का परीक्षण करें",
+	"signIn": "Kilo Code Cloud से कनेक्ट करें",
+	"connect": "कनेक्ट करें",
+	"cloudBenefitsTitle": "Kilo Code Cloud से कनेक्ट करें",
+	"cloudBenefitsSubtitle": "निम्नलिखित को सक्षम करने के लिए अपने prompts और telemetry को sync करें:",
+	"cloudBenefitHistory": "ऑनलाइन कार्य इतिहास",
+	"cloudBenefitSharing": "साझाकरण और सहयोग सुविधाएं",
+	"cloudBenefitMetrics": "कार्य, token और लागत आधारित उपयोग मेट्रिक्स",
+	"cloudBenefitWalkaway": "Kilo remote Control के साथ कहीं से भी कार्यों को फॉलो और नियंत्रित करें",
+	"remoteControl": "Kilo remote Control",
+	"remoteControlDescription": "Kilo Code Cloud के साथ इस वर्कस्पेस में कार्यों को फॉलो और इंटरैक्ट करने की सुविधा दें",
+	"visitCloudWebsite": "Kilo Code Cloud पर जाएं"
+}

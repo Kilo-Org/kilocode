@@ -21,7 +21,7 @@
 			"label": "watch:pnpm",
 			"type": "shell",
 			"command": "npx",
-			"args": ["nodemon", "--watch", "pnpm-lock.yaml", "--exec", "pnpm install"],
+			"args": ["nodemon", "--watch", "\"**/package.json\"", "--exec", "pnpm install"],
 			"group": "none",
 			"isBackground": true,
 			"presentation": {

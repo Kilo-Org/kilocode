@@ -11,6 +11,16 @@ vi.mock("vscode", () => ({
 	},
 }))
 
+// Mock Package module
+vi.mock("../../../shared/package", () => ({
+	Package: {
+		name: "kilo-code",
+		publisher: "Kilo-Org",
+		version: "1.0.0",
+		outputChannel: "Kilo-Code",
+	},
+}))
+
 // Mock other modules first - these are hoisted to the top
 vi.mock("../../../shared/modes", () => ({
 	getModeBySlug: vi.fn(),
@@ -74,6 +84,7 @@ const mockCline = {
 	consecutiveMistakeCount: 0,
 	isPaused: false,
 	pausedModeSlug: "ask",
+	taskId: "mock-parent-task-id",
 	providerRef: {
 		deref: vi.fn(() => ({
 			getState: vi.fn(() => ({ customModes: [], mode: "ask" })),
@@ -147,7 +158,7 @@ describe("newTaskTool", () => {
 		)
 
 		// Verify side effects
-		expect(mockCline.emit).toHaveBeenCalledWith("taskSpawned", expect.any(String)) // Assuming initCline returns a mock task ID
+		expect(mockCline.emit).toHaveBeenCalledWith("taskSpawned", "mock-subtask-id")
 		expect(mockCline.isPaused).toBe(true)
 		expect(mockCline.emit).toHaveBeenCalledWith("taskPaused")
 		expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("Successfully created new task"))
@@ -589,7 +600,7 @@ describe("newTaskTool", () => {
 			expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("Successfully created new task"))
 		})
 
-		it("should check VSCode setting with correct configuration key", async () => {
+		it("should check VSCode setting with Package.name configuration key", async () => {
 			const mockGet = vi.fn().mockReturnValue(false)
 			const mockGetConfiguration = vi.fn().mockReturnValue({
 				get: mockGet,
@@ -617,6 +628,42 @@ describe("newTaskTool", () => {
 
 			// Verify that VSCode configuration was accessed correctly
 			expect(mockGetConfiguration).toHaveBeenCalledWith("kilo-code")
+			expect(mockGet).toHaveBeenCalledWith("newTaskRequireTodos", false)
+		})
+
+		it("should use current Package.name value (roo-code-nightly) when accessing VSCode configuration", async () => {
+			// Arrange: capture calls to VSCode configuration and ensure we can assert the namespace
+			const mockGet = vi.fn().mockReturnValue(false)
+			const mockGetConfiguration = vi.fn().mockReturnValue({
+				get: mockGet,
+			} as any)
+			vi.mocked(vscode.workspace.getConfiguration).mockImplementation(mockGetConfiguration)
+
+			// Mutate the mocked Package.name dynamically to simulate a different build variant
+			const pkg = await import("../../../shared/package")
+			;(pkg.Package as any).name = "roo-code-nightly"
+
+			const block: ToolUse = {
+				type: "tool_use",
+				name: "new_task",
+				params: {
+					mode: "code",
+					message: "Test message",
+				},
+				partial: false,
+			}
+
+			await newTaskTool(
+				mockCline as any,
+				block,
+				mockAskApproval,
+				mockHandleError,
+				mockPushToolResult,
+				mockRemoveClosingTag,
+			)
+
+			// Assert: configuration was read using the dynamic nightly namespace
+			expect(mockGetConfiguration).toHaveBeenCalledWith("roo-code-nightly")
 			expect(mockGet).toHaveBeenCalledWith("newTaskRequireTodos", false)
 		})
 	})

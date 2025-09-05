@@ -3,8 +3,7 @@ import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 import { Trans } from "react-i18next"
 import { ChevronsUpDown, Check, X } from "lucide-react"
 
-import type { OrganizationAllowList } from "@roo/cloud"
-import { type ProviderSettings, type ModelInfo } from "@roo-code/types"
+import type { ProviderSettings, ModelInfo, OrganizationAllowList } from "@roo-code/types"
 
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { useSelectedModel } from "@/components/ui/hooks/useSelectedModel"
@@ -43,6 +42,7 @@ type ModelIdKey = keyof Pick<
 	| "deepInfraModelId"
 	// kilocode_change end
 	| "ioIntelligenceModelId"
+	| "vercelAiGatewayModelId"
 >
 
 interface ModelPickerProps {

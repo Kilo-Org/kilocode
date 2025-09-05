@@ -1,5 +1,71 @@
 # kilo-code
 
+## [v4.90.0]
+
+- [#2275](https://github.com/Kilo-Org/kilocode/pull/2275) [`4ae9acc`](https://github.com/Kilo-Org/kilocode/commit/4ae9acc00a90331944333356e8b936a0dcc06e77) Thanks [@jeske](https://github.com/jeske)! - fixes an intermittent async race that discards user-chat-input during structured approve/reject
+
+- [#2129](https://github.com/Kilo-Org/kilocode/pull/2129) [`984b5c4`](https://github.com/Kilo-Org/kilocode/commit/984b5c4151945fc483ca1fd08e07c12f61a372da) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Jetbrains Extension Beta
+
+### Patch Changes
+
+- [#2274](https://github.com/Kilo-Org/kilocode/pull/2274) [`24d0c9f`](https://github.com/Kilo-Org/kilocode/commit/24d0c9f679e33c899f74c06440a80e4ea50b07ed) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - The API Provider (Kilo Code or OpenRouter) for image generation is now an explicit choice
+
+## [v4.89.0]
+
+- [#2242](https://github.com/Kilo-Org/kilocode/pull/2242) [`f474c89`](https://github.com/Kilo-Org/kilocode/commit/f474c89e3881955d2f41b8912b728e91eddb87f8) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Include changes from Roo Code v3.26.4
+
+    - Optimize memory usage for image handling in webview (thanks @daniel-lxs!)
+    - Fix: Special tokens should not break task processing (#7539 by @pwilkin, PR by @pwilkin)
+    - Add Ollama API key support for Turbo mode (#7147 by @LivioGama, PR by @app/roomote)
+    - Add optional input image parameter to image generation tool (thanks @roomote!)
+    - Refactor: Flatten image generation settings structure (thanks @daniel-lxs!)
+    - Show console logging in vitests when the --no-silent flag is set (thanks @hassoncs!)
+    - feat: Add experimental image generation tool with OpenRouter integration (thanks @daniel-lxs!)
+    - Fix: Resolve GPT-5 Responses API issues with condensing and image support (#7334 by @nlbuescher, PR by @daniel-lxs)
+    - Fix: Hide .kilocodeignore'd files from environment details by default (#7368 by @AlexBlack772, PR by @app/roomote)
+    - Fix: Exclude browser scroll actions from repetition detection (#7470 by @cgrierson-smartsheet, PR by @app/roomote)
+    - Add Vercel AI Gateway provider integration (thanks @joshualipman123!)
+    - Add support for Vercel embeddings (thanks @mrubens!)
+    - Enable on-disk storage for Qdrant vectors and HNSW index (thanks @daniel-lxs!)
+    - Update tooltip component to match native VSCode tooltip shadow styling (thanks @roomote!)
+    - Fix: remove duplicate cache display in task header (thanks @mrubens!)
+    - Random chat text area cleanup (thanks @cte!)
+    - feat: Add Deepseek v3.1 to Fireworks AI provider (#7374 by @dmarkey, PR by @app/roomote)
+    - Fix: Make auto approve toggle trigger stay (#3909 by @kyle-apex, PR by @elianiva)
+    - Fix: Preserve user input when selecting follow-up choices (#7316 by @teihome, PR by @daniel-lxs)
+    - Fix: Handle Mistral thinking content as reasoning chunks (#6842 by @Biotrioo, PR by @app/roomote)
+    - Fix: Resolve newTaskRequireTodos setting not working correctly (thanks @hannesrudolph!)
+    - Fix: Requesty model listing (#7377 by @dtrugman, PR by @dtrugman)
+    - feat: Hide static providers with no models from provider list (thanks @daniel-lxs!)
+    - Add todos parameter to new_task tool usage in issue-fixer mode (thanks @hannesrudolph!)
+    - Handle substitution patterns in command validation (thanks @mrubens!)
+    - Mark code-workspace files as protected (thanks @mrubens!)
+    - Update list of default allowed commands (thanks @mrubens!)
+    - Follow symlinks in rooignore checks (thanks @mrubens!)
+    - Show cache read and write prices for OpenRouter inference providers (thanks @chrarnoldus!)
+
+## [v4.88.0]
+
+- [#2235](https://github.com/Kilo-Org/kilocode/pull/2235) [`fbf4e42`](https://github.com/Kilo-Org/kilocode/commit/fbf4e42125cef538387301be784ede7d2609fe16) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Rename Inline Assist to Kilo Code Autocomplete
+
+- [#2202](https://github.com/Kilo-Org/kilocode/pull/2202) [`92ef190`](https://github.com/Kilo-Org/kilocode/commit/92ef190d8d9e5ec0df3cbdd8488c98f4190f57b2) Thanks [@hassoncs](https://github.com/hassoncs)! - Show a warning when trying to paste an image when the current model does not support images
+
+### Patch Changes
+
+- [#2244](https://github.com/Kilo-Org/kilocode/pull/2244) [`6a83c5a`](https://github.com/Kilo-Org/kilocode/commit/6a83c5acdd8153a2d8c89aff9644883061c7efe6) Thanks [@hassoncs](https://github.com/hassoncs)! - Prevent writing to files outside the workspace by default
+
+    This should mitigate supply chain compromise attacks via prompt injection. Thank you, Evan Harris from MCP Security Research for finding this!
+
+- [#2245](https://github.com/Kilo-Org/kilocode/pull/2245) [`fff884f`](https://github.com/Kilo-Org/kilocode/commit/fff884fd6f2f1be4906e3d4494adeed3017e8d57) Thanks [@hassoncs](https://github.com/hassoncs)! - Fix Kilo Code Marketplace header missing background color
+
+- [#2237](https://github.com/Kilo-Org/kilocode/pull/2237) [`06c6e8b`](https://github.com/Kilo-Org/kilocode/commit/06c6e8b013b54fc7706a9862af9ddabc86fb8781) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Kilo Code now shows an error message when a model reaches its maximum ouput
+
+- [#2238](https://github.com/Kilo-Org/kilocode/pull/2238) [`b5de938`](https://github.com/Kilo-Org/kilocode/commit/b5de93836338c0398dfa6dede89dbb92f525ceef) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Fixed 500 error with Chutes when no custom temperature is specified.
+
+- [#2248](https://github.com/Kilo-Org/kilocode/pull/2248) [`b8c6f27`](https://github.com/Kilo-Org/kilocode/commit/b8c6f2780757f16e1599b989bb88d235c26233c4) Thanks [@hassoncs](https://github.com/hassoncs)! - Remove the Inline Assist experiment, enabling it by default
+
+    The individual commands and keyboard shortcuts can still be enabled/disabled individually in the settings.
+
 ## [v4.87.0]
 
 - [#2010](https://github.com/Kilo-Org/kilocode/pull/2010) [`a7b89d3`](https://github.com/Kilo-Org/kilocode/commit/a7b89d3cf173e6f5d1915aece598489d63652b5f) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - There is now a "See New Changes" button below a Task Completed message. Use this button to see all file changes made since the previous Task Completed message. This feature requires checkpoints to be enabled.

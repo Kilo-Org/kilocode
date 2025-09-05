@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="201"
+   height="201"
+   viewBox="0 0 201 201"
+   fill="none"
+   version="1.1"
+   id="svg1"
+   sodipodi:docname="Logo_Outline_-_Black2.svg"
+   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="2.0696517"
+     inkscape:cx="12.5625"
+     inkscape:cy="118.3774"
+     inkscape:window-width="1920"
+     inkscape:window-height="1011"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg1" />
+  <g
+     inkscape:groupmode="layer"
+     id="layer1"
+     inkscape:label="bg">
+    <rect
+       style="fill:#ffffff"
+       id="rect1"
+       width="200.20981"
+       height="199.86815"
+       x="0"
+       y="0" />
+  </g>
+  <path
+     d="M 0.276367,0.210815 V 200.97972 H 201.04472 V 0.210815 Z M 186.17379,186.10778 H 15.148143 V 15.082543 H 186.17379 Z m -63.20501,-44.61483 h 18.58917 v 14.87094 h -23.36948 l -10.09164,-10.09063 v -23.37048 h 14.87195 z m 33.46112,0 h -14.87195 v -18.59017 h -18.58917 v -14.87195 h 23.36948 l 10.09164,10.09164 z M 93.22479,122.90278 H 78.353048 V 108.03083 H 93.22479 Z M 44.891627,108.03083 H 59.76337 v 33.46212 h 33.461521 v 14.87094 H 54.983167 L 44.891627,146.27326 Z M 156.4299,78.287549 V 93.159392 H 108.09683 V 78.287549 h 16.61964 V 59.69787 H 108.09683 V 44.826127 h 21.39994 l 10.09164,10.09144 V 78.287448 Z M 59.76337,61.556787 H 78.353048 L 93.22479,76.42853 V 93.15919 H 78.353048 V 76.42853 H 59.76337 V 93.15919 H 44.891627 V 44.826027 H 59.76337 Z m 33.46142,0 H 78.353048 V 44.826127 H 93.22479 Z"
+     fill="#000000"
+     id="path1"
+     style="stroke-width:1.00385" />
+</svg>

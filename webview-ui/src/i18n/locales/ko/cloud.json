@@ -1,0 +1,17 @@
+{
+	"title": "Cloud",
+	"profilePicture": "프로필 사진",
+	"logOut": "로그아웃",
+	"testApiAuthentication": "API 인증 테스트",
+	"signIn": "Kilo Code Cloud에 연결",
+	"connect": "연결",
+	"cloudBenefitsTitle": "Kilo Code Cloud에 연결",
+	"cloudBenefitsSubtitle": "프롬프트와 텔레메트리를 동기화하여 다음을 활성화:",
+	"cloudBenefitHistory": "온라인 작업 기록",
+	"cloudBenefitSharing": "공유 및 협업 기능",
+	"cloudBenefitMetrics": "작업, 토큰, 비용 기반 사용 메트릭",
+	"cloudBenefitWalkaway": "Kilo remote Control로 어디서나 작업을 팔로우하고 제어하세요",
+	"remoteControl": "Kilo remote Control",
+	"remoteControlDescription": "Kilo Code Cloud로 이 워크스페이스의 작업을 팔로우하고 상호작용할 수 있게 합니다",
+	"visitCloudWebsite": "Kilo Code Cloud 방문"
+}

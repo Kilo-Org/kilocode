@@ -1,9 +1,8 @@
 // npx vitest services/browser/__tests__/UrlContentFetcher.spec.ts
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { UrlContentFetcher } from "../UrlContentFetcher"
-import { fileExistsAtPath } from "../../../utils/fs"
 import * as path from "path"
+
+import { UrlContentFetcher } from "../UrlContentFetcher"
 
 // Mock dependencies
 vi.mock("vscode", () => ({

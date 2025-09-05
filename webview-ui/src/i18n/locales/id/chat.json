@@ -186,6 +186,10 @@
 		"wantsToEditOutsideWorkspace": "Kilo Code ingin mengedit file ini di luar workspace:",
 		"wantsToEditProtected": "Kilo Code ingin mengedit file konfigurasi yang dilindungi:",
 		"wantsToApplyBatchChanges": "Kilo Code ingin menerapkan perubahan ke beberapa file:",
+		"wantsToGenerateImage": "Kilo Code ingin menghasilkan gambar:",
+		"wantsToGenerateImageOutsideWorkspace": "Kilo Code ingin menghasilkan gambar di luar workspace:",
+		"wantsToGenerateImageProtected": "Kilo Code ingin menghasilkan gambar di lokasi yang dilindungi:",
+		"didGenerateImage": "Kilo Code telah menghasilkan gambar:",
 		"wantsToCreate": "Kilo Code ingin membuat file baru:",
 		"wantsToSearchReplace": "Kilo Code ingin mencari dan mengganti di file ini:",
 		"didSearchReplace": "Kilo Code melakukan pencarian dan penggantian pada file ini:",
@@ -279,10 +283,10 @@
 	"announcement": {
 		"title": "🎉 Roo Code {{version}} Dirilis",
 		"stealthModel": {
-			"feature": "<bold>Model stealth GRATIS waktu terbatas</bold> - Model penalaran super cepat yang unggul dalam coding agentik dengan jendela konteks 262k, tersedia melalui Roo Code Cloud.",
-			"note": "(Catatan: prompt dan completion dicatat oleh pembuat model dan digunakan untuk meningkatkan model)",
+			"feature": "Model stealth Sonic kini adalah <bold>Grok Code Fast</bold>! Model penalaran berperforma tinggi ini tersedia sebagai <code>grok-code-fast-1</code> di bawah penyedia <bold>xAI (Grok)</bold>.",
+			"note": "Sebagai ucapan terima kasih atas semua masukan berguna tentang Sonic, xAI memperpanjang akses gratis ke <code>grok-code-fast-1</code> selama satu minggu lagi melalui penyedia <bold>Roo Code Cloud</bold>.",
 			"connectButton": "Hubungkan ke Roo Code Cloud",
-			"selectModel": "Pilih <code>roo/sonic</code> dari penyedia Roo Code Cloud di<br/><settingsLink>Pengaturan</settingsLink> untuk memulai"
+			"selectModel": "Kunjungi <settingsLink>Pengaturan</settingsLink> untuk memperbarui konfigurasi penyedia."
 		},
 		"description": "Roo Code {{version}} menghadirkan fitur-fitur baru yang kuat dan peningkatan signifikan untuk meningkatkan alur kerja pengembangan Anda.",
 		"whatsNew": "Yang Baru",
@@ -375,7 +379,8 @@
 	"slashCommands": {
 		"tooltip": "Kelola perintah slash",
 		"title": "Perintah Slash",
-		"description": "Buat perintah slash kustom untuk akses cepat ke prompt dan alur kerja yang sering digunakan. <DocsLink>Dokumentasi</DocsLink>",
+		"description": "Gunakan perintah slash bawaan atau buat kustom untuk akses cepat ke prompt dan alur kerja yang sering digunakan. <DocsLink>Dokumentasi</DocsLink>",
+		"builtInCommands": "Perintah Bawaan",
 		"globalCommands": "Perintah Global",
 		"workspaceCommands": "Perintah Workspace",
 		"globalCommand": "Perintah global",

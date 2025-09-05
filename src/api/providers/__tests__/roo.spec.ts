@@ -100,7 +100,6 @@ vitest.mock("../../../i18n", () => ({
 // Import after mocks are set up
 import { RooHandler } from "../roo"
 import { CloudService } from "@roo-code/cloud"
-import { t } from "../../../i18n"
 
 describe("RooHandler", () => {
 	let handler: RooHandler
@@ -115,7 +114,7 @@ describe("RooHandler", () => {
 
 	beforeEach(() => {
 		mockOptions = {
-			apiModelId: "roo/sonic",
+			apiModelId: "xai/grok-code-fast-1",
 		}
 		// Set up CloudService mocks for successful authentication
 		mockHasInstanceFn.mockReturnValue(true)
@@ -313,8 +312,8 @@ describe("RooHandler", () => {
 			const modelInfo = handler.getModel()
 			expect(modelInfo.id).toBe(mockOptions.apiModelId)
 			expect(modelInfo.info).toBeDefined()
-			// roo/sonic is a valid model in rooModels
-			expect(modelInfo.info).toBe(rooModels["roo/sonic"])
+			// xai/grok-code-fast-1 is a valid model in rooModels
+			expect(modelInfo.info).toBe(rooModels["xai/grok-code-fast-1"])
 		})
 
 		it("should return default model when no model specified", () => {
