@@ -183,7 +183,7 @@ class ExtensionUnixDomainSocketServer : ISocketServer {
     // Create temporary socket file, ensure uniqueness
     private fun createSocketFile(): Path {
         val tmpDir = java.nio.file.Paths.get("/tmp")
-        val sockPath = Files.createTempFile(tmpDir, "roo-cline-idea-extension-ipc-", ".sock")
+        val sockPath = Files.createTempFile(tmpDir, "kilocode-idea-extension-ipc-", ".sock")
         Files.deleteIfExists(sockPath) // Ensure it does not exist
         return sockPath
     }

@@ -47,7 +47,7 @@ interface MainThreadSecretStateShape : Disposable {
 
 /**
  * Implementation of the secret state management service.
- * Stores secrets in ~/.roo-cline/secrets.json file.
+ * Stores secrets in ~/.kilocode/secrets.json file.
  */
 class MainThreadSecretState : MainThreadSecretStateShape {
     private val logger = Logger.getInstance(MainThreadSecretState::class.java)
@@ -55,7 +55,7 @@ class MainThreadSecretState : MainThreadSecretStateShape {
     private val mutex = Mutex()
     
     // Configuration file path
-    private val secretsDir = File(System.getProperty("user.home"), ".roo-cline")
+    private val secretsDir = File(System.getProperty("user.home"), ".kilocode")
     private val secretsFile = File(secretsDir, "secrets.json")
     
     init {
