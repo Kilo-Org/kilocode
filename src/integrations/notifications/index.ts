@@ -1,5 +1,5 @@
 import { execa } from "execa"
-import { platform } from "os"
+import * as os from "os"
 import * as vscode from "vscode"
 
 interface NotificationOptions {
@@ -103,7 +103,7 @@ export async function showSystemNotification(options: NotificationOptions): Prom
 			subtitle: options.subtitle?.replace(/"/g, '\\"') || "",
 		}
 
-		switch (platform()) {
+		switch (os.platform()) {
 			case "darwin":
 				await showMacOSNotification(escapedOptions)
 				break

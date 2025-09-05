@@ -1,19 +1,37 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { execa } from "execa"
-import { platform } from "os"
 import * as path from "path"
-import { showSystemNotification } from "../index"
 
 // Mock execa
 vi.mock("execa")
 
-// Mock os platform
+// Mock os module
 vi.mock("os", () => ({
 	platform: vi.fn(),
 }))
 
+// Mock vscode module
+vi.mock("vscode", () => ({
+	extensions: {
+		getExtension: vi.fn(() => ({
+			extensionUri: {
+				fsPath: "/mock/extension/path",
+			},
+		})),
+	},
+	Uri: {
+		joinPath: vi.fn((extensionUri, ...pathSegments) => ({
+			fsPath: path.join(__dirname, "..", "..", "..", ...pathSegments),
+		})),
+	},
+}))
+
+// Import after mocking
+import { showSystemNotification } from "../index"
+import * as os from "os"
+
 const mockedExeca = vi.mocked(execa)
-const mockedPlatform = vi.mocked(platform)
+const mockedPlatform = vi.mocked(os.platform)
 
 describe("showSystemNotification", () => {
 	beforeEach(() => {
