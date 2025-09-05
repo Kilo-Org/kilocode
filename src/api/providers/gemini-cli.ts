@@ -405,8 +405,10 @@ export class GeminiCliHandler extends BaseProvider implements SingleCompletionHa
 				data: JSON.stringify(requestBody),
 			})
 
-			// Extract text from response
-			const responseData = response.data as any
+			// Extract text from response, handling both direct and nested response structures
+			const rawData = response.data as any
+			const responseData = rawData.response || rawData
+
 			if (responseData.candidates && responseData.candidates.length > 0) {
 				const candidate = responseData.candidates[0]
 				if (candidate.content && candidate.content.parts) {

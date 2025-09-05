@@ -238,6 +238,13 @@ vi.mock("../providers/LiteLLM", () => ({
 	),
 }))
 
+vi.mock("@src/components/ui/hooks/useRouterModels", () => ({
+	useRouterModels: vi.fn(() => ({
+		data: {},
+		refetch: vi.fn(),
+	})),
+}))
+
 vi.mock("@src/components/ui/hooks/useSelectedModel", () => ({
 	useSelectedModel: vi.fn((apiConfiguration: ProviderSettings) => {
 		if (apiConfiguration.apiModelId?.includes("thinking")) {

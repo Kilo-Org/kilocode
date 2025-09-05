@@ -23,6 +23,7 @@ import {
 	DialogDescription,
 	DialogFooter,
 	ToggleSwitch,
+	Input,
 	// StandardTooltip, // kilocode_change: not used
 } from "@src/components/ui"
 import { buildDocLink } from "@src/utils/docLinks"
@@ -49,6 +50,7 @@ const McpView = ({ onDone, hideHeader = false }: McpViewProps) => {
 	} = useExtensionState()
 
 	const { t } = useAppTranslation()
+	const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
 
 	return (
 		// kilocode_change: add relative className
@@ -160,26 +162,15 @@ const McpView = ({ onDone, hideHeader = false }: McpViewProps) => {
 								<span className="codicon codicon-refresh" style={{ marginRight: "6px" }}></span>
 								{t("mcp:refreshMCP")}
 							</Button>
-							{/* kilocode_change
-							<StandardTooltip content={t("mcp:marketplace")}>
-								<Button
-									variant="secondary"
-									style={{ width: "100%" }}
-									onClick={() => {
-										window.postMessage(
-											{
-												type: "action",
-												action: "marketplaceButtonClicked",
-												values: { marketplaceTab: "mcp" },
-											},
-											"*",
-										)
-									}}>
-									<span className="codicon codicon-extensions" style={{ marginRight: "6px" }}></span>
-									{t("mcp:marketplace")}
-								</Button>
-							</StandardTooltip>
-							*/}
+							<Button
+								variant="secondary"
+								style={{ width: "100%" }}
+								onClick={() => {
+									setIsAddDialogOpen(true)
+								}}>
+								<span className="codicon codicon-add" style={{ marginRight: "6px" }}></span>
+								{t("mcp:addUrlBasedMcp")}
+							</Button>
 						</div>
 						{/* kilocode_change start */}
 						<div className="mt-5">

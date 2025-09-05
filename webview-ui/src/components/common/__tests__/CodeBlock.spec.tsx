@@ -84,10 +84,11 @@ vi.mock("../../../utils/highlighter", () => {
 })
 
 // Mock clipboard utility
+const mockCopyWithFeedback = vi.fn()
 vi.mock("../../../utils/clipboard", () => ({
 	useCopyToClipboard: () => ({
 		showCopyFeedback: false,
-		copyWithFeedback: vi.fn(),
+		copyWithFeedback: mockCopyWithFeedback,
 	}),
 }))
 
@@ -199,23 +200,18 @@ describe("CodeBlock", () => {
 
 	it("handles copy functionality", async () => {
 		const code = "const x = 1;"
-		const { container } = render(<CodeBlock source={code} language="typescript" />)
 
-		// Simulate code block visibility
-		const codeBlock = container.querySelector("[data-partially-visible]")
-		if (codeBlock) {
-			codeBlock.setAttribute("data-partially-visible", "true")
-		}
+		render(<CodeBlock source={code} language="typescript" />)
 
-		// Find the copy button by looking for the button containing the Copy icon
-		const buttons = screen.getAllByRole("button")
-		const copyButton = buttons.find((btn) => btn.querySelector("svg.lucide-copy"))
+		// Wait for the highlighter to finish and render the code
+		await screen.findByText(/\[dark-theme\]/, undefined, { timeout: 4000 })
 
-		expect(copyButton).toBeTruthy()
-		if (copyButton) {
-			await act(async () => {
-				fireEvent.click(copyButton)
-			})
-		}
+		const copyButton = screen.getByTestId("codeblock-copy-button")
+		expect(copyButton).toBeInTheDocument()
+
+		fireEvent.click(copyButton)
+
+		// Verify the copyWithFeedback mock was called
+		expect(mockCopyWithFeedback).toHaveBeenCalledWith(code, expect.anything())
 	})
 })
