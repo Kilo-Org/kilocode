@@ -81,56 +81,52 @@ const missingFieldsErrorMessage =
 
 // Helper function to create a refined schema with better error messages
 const createServerTypeSchema = () => {
-	return z.union([
-		// Stdio config (has command field)
-		BaseConfigSchema.extend({
-			type: z.enum(["stdio"]).optional(),
-			command: z.string().min(1, "Command cannot be empty"),
-			args: z.array(z.string()).optional(),
-			cwd: z.string().default(() => vscode.workspace.workspaceFolders?.at(0)?.uri.fsPath ?? process.cwd()),
-			env: z.record(z.string()).optional(),
-			// Ensure no SSE fields are present
-			url: z.undefined().optional(),
-			headers: z.undefined().optional(),
-		})
-			.transform((data) => ({
-				...data,
-				type: "stdio" as const,
-			}))
-			.refine((data) => data.type === undefined || data.type === "stdio", { message: typeErrorMessage }),
-		// SSE config (has url field)
-		BaseConfigSchema.extend({
-			type: z.enum(["sse"]).optional(),
-			url: z.string().url("URL must be a valid URL format"),
-			headers: z.record(z.string()).optional(),
-			// Ensure no stdio fields are present
-			command: z.undefined().optional(),
-			args: z.undefined().optional(),
-			env: z.undefined().optional(),
-		})
-			.transform((data) => ({
-				...data,
-				type: "sse" as const,
-			}))
-			.refine((data) => data.type === undefined || data.type === "sse", { message: typeErrorMessage }),
-		// StreamableHTTP config (has url field)
-		BaseConfigSchema.extend({
-			type: z.enum(["streamable-http"]).optional(),
-			url: z.string().url("URL must be a valid URL format"),
-			headers: z.record(z.string()).optional(),
-			// Ensure no stdio fields are present
-			command: z.undefined().optional(),
-			args: z.undefined().optional(),
-			env: z.undefined().optional(),
-		})
-			.transform((data) => ({
-				...data,
-				type: "streamable-http" as const,
-			}))
-			.refine((data) => data.type === undefined || data.type === "streamable-http", {
-				message: typeErrorMessage,
+	return z
+		.union([
+			// Stdio config (has command field)
+			BaseConfigSchema.extend({
+				type: z.literal("stdio").optional(),
+				command: z.string().min(1, "Command cannot be empty"),
+				args: z.array(z.string()).optional(),
+				cwd: z.string().default(() => vscode.workspace.workspaceFolders?.at(0)?.uri.fsPath ?? process.cwd()),
+				env: z.record(z.string()).optional(),
+				url: z.undefined().optional(),
+				headers: z.undefined().optional(),
+			}).transform((data) => ({ ...data, type: "stdio" as const })),
+
+			// SSE config (has url field)
+			BaseConfigSchema.extend({
+				type: z.literal("sse"),
+				url: z.string().url("URL must be a valid URL format"),
+				headers: z.record(z.string()).optional(),
+				command: z.undefined().optional(),
+				args: z.undefined().optional(),
+				env: z.undefined().optional(),
 			}),
-	])
+
+			// Legacy HTTP config (will be mapped to streamable-http)
+			BaseConfigSchema.extend({
+				type: z.literal("http"),
+				url: z.string().url("URL must be a valid URL format"),
+				headers: z.record(z.string()).optional(),
+				command: z.undefined().optional(),
+				args: z.undefined().optional(),
+				env: z.undefined().optional(),
+			}).transform((data) => ({ ...data, type: "streamable-http" as const })),
+
+			// Streamable HTTP config (has url field)
+			BaseConfigSchema.extend({
+				type: z.literal("streamable-http"),
+				url: z.string().url("URL must be a valid URL format"),
+				headers: z.record(z.string()).optional(),
+				command: z.undefined().optional(),
+				args: z.undefined().optional(),
+				env: z.undefined().optional(),
+			}),
+		])
+		.refine((data) => !("command" in data && "url" in data), {
+			message: mixedFieldsErrorMessage,
+		})
 }
 
 // Server configuration schema with automatic type inference and validation
@@ -194,29 +190,25 @@ export class McpHub {
 	 * @throws Error if the configuration is invalid
 	 */
 	private validateServerConfig(config: any, serverName?: string): z.infer<typeof ServerConfigSchema> {
-		// Detect configuration issues before validation
+		console.log(`[McpHub] Raw config input for "${serverName}":`, JSON.stringify(config, null, 2))
+
+		// Automatically infer type if not provided or map invalid types
+		if (!config.type) {
+			if (config.command) {
+				config.type = "stdio"
+			} else if (config.url) {
+				config.type = "sse" // Default to SSE for URL-based servers
+			}
+		} else if (config.type === "http") {
+			// Map legacy "http" type to "streamable-http" for backward compatibility
+			console.log(`[McpHub] Mapping legacy "http" type to "streamable-http" for server "${serverName}"`)
+			config.type = "streamable-http"
+		}
+
+		console.log(`[McpHub] Config after type inference for "${serverName}":`, JSON.stringify(config, null, 2))
+
 		const hasStdioFields = config.command !== undefined
-		const hasUrlFields = config.url !== undefined // Covers sse and streamable-http
-
-		// Check for mixed fields (stdio vs url-based)
-		if (hasStdioFields && hasUrlFields) {
-			throw new Error(mixedFieldsErrorMessage)
-		}
-
-		// Infer type for stdio if not provided
-		if (!config.type && hasStdioFields) {
-			config.type = "stdio"
-		}
-
-		// For url-based configs, type must be provided by the user
-		if (hasUrlFields && !config.type) {
-			throw new Error("Configuration with 'url' must explicitly specify 'type' as 'sse' or 'streamable-http'.")
-		}
-
-		// Validate type if provided
-		if (config.type && !["stdio", "sse", "streamable-http"].includes(config.type)) {
-			throw new Error(typeErrorMessage)
-		}
+		const hasUrlFields = config.url !== undefined
 
 		// Check for type/field mismatch
 		if (config.type === "stdio" && !hasStdioFields) {
@@ -236,8 +228,14 @@ export class McpHub {
 
 		// Validate the config against the schema
 		try {
-			return ServerConfigSchema.parse(config)
+			const validated = ServerConfigSchema.parse(config)
+			console.log(
+				`[McpHub] Schema validation successful for "${serverName}":`,
+				JSON.stringify(validated, null, 2),
+			)
+			return validated
 		} catch (validationError) {
+			console.error(`[McpHub] Schema validation failed for "${serverName}":`, validationError)
 			if (validationError instanceof z.ZodError) {
 				// Extract and format validation errors
 				const errorMessages = validationError.errors
