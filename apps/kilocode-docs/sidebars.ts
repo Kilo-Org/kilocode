@@ -34,6 +34,7 @@ const sidebars: SidebarsConfig = {
 						"basic-usage/git-commit-generation",
 						"features/browser-use",
 						"features/code-actions",
+						"features/system-notifications",
 						"features/more-features",
 					],
 				},
