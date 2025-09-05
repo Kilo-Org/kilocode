@@ -113,13 +113,8 @@ class MultiDiffCommands(val project: Project) {
             }
             
             if (diffRequests.isNotEmpty()) {
-                // Check if we're in a test environment
-                if (isTestEnvironment()) {
-                    logger.info("Test environment detected, skipping UI operations")
-                } else {
-                    ApplicationManager.getApplication().invokeAndWait {
-                        showMultiDiffView(title, diffRequests)
-                    }
+                ApplicationManager.getApplication().invokeAndWait {
+                    showMultiDiffView(title, diffRequests)
                 }
             } else {
                 logger.warn("No valid diff requests created")
@@ -227,20 +222,4 @@ class MultiDiffCommands(val project: Project) {
         }
     }
     
-    /**
-     * Checks if we're running in a test environment
-     */
-    private fun isTestEnvironment(): Boolean {
-        return try {
-            // Check if we're running under test
-            ApplicationManager.getApplication()?.isUnitTestMode == true ||
-            System.getProperty("idea.test.mode") == "true" ||
-            Thread.currentThread().stackTrace.any {
-                it.className.contains("test", ignoreCase = true) ||
-                it.className.contains("Test", ignoreCase = false)
-            }
-        } catch (e: Exception) {
-            false
-        }
-    }
 }
