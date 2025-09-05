@@ -291,6 +291,18 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		}, [])
 		// kilocode_change end: Image warning handlers
 
+		// kilocode_change start: Clear images if unsupported
+		// Track previous shouldDisableImages state to detect when model image support changes
+		const prevShouldDisableImages = useRef<boolean>(shouldDisableImages)
+		useEffect(() => {
+			if (!prevShouldDisableImages.current && shouldDisableImages && selectedImages.length > 0) {
+				setSelectedImages([])
+				showImageWarning("kilocode:imageWarnings.imagesRemovedNoSupport")
+			}
+			prevShouldDisableImages.current = shouldDisableImages
+		}, [shouldDisableImages, selectedImages.length, setSelectedImages, showImageWarning])
+		// kilocode_change end: Clear images if unsupported
+
 		const allModes = useMemo(() => getAllModes(customModes), [customModes])
 
 		const queryItems = useMemo(() => {

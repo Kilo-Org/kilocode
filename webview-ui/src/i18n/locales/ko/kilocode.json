@@ -246,6 +246,7 @@
 	},
 	"imageWarnings": {
 		"modelNoImageSupport": "현재 모델은 이미지를 지원하지 않습니다.",
-		"maxImagesReached": "메시지당 최대 20개의 이미지. 더 추가하려면 일부 이미지를 제거하세요."
+		"maxImagesReached": "메시지당 최대 20개의 이미지. 더 추가하려면 일부 이미지를 제거하세요.",
+		"imagesRemovedNoSupport": "모델에서 지원되지 않는 이미지가 제거되었습니다."
 	}
 }

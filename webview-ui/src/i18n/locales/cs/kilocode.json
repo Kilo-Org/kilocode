@@ -246,6 +246,7 @@
 	},
 	"imageWarnings": {
 		"modelNoImageSupport": "Obrázky nejsou podporovány aktuálním modelem.",
-		"maxImagesReached": "Maximálně 20 obrázků na zprávu. Odstraňte některé obrázky, abyste mohli přidat další."
+		"maxImagesReached": "Maximálně 20 obrázků na zprávu. Odstraňte některé obrázky, abyste mohli přidat další.",
+		"imagesRemovedNoSupport": "Obrázky odstraněny, nejsou podporovány modelem."
 	}
 }

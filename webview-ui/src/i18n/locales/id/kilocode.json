@@ -246,6 +246,7 @@
 	},
 	"imageWarnings": {
 		"maxImagesReached": "Maksimum 20 gambar per pesan. Hapus beberapa gambar untuk menambahkan lebih banyak.",
-		"modelNoImageSupport": "Gambar tidak didukung oleh model saat ini."
+		"modelNoImageSupport": "Gambar tidak didukung oleh model saat ini.",
+		"imagesRemovedNoSupport": "Gambar dihapus, tidak didukung oleh model."
 	}
 }

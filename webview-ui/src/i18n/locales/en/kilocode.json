@@ -28,7 +28,8 @@
 	},
 	"imageWarnings": {
 		"modelNoImageSupport": "Images are not supported by the current model.",
-		"maxImagesReached": "Maximum of 20 images per message. Remove some images to add more."
+		"maxImagesReached": "Maximum of 20 images per message. Remove some images to add more.",
+		"imagesRemovedNoSupport": "Images removed, unsupported by model."
 	},
 	"settings": {
 		"sections": {

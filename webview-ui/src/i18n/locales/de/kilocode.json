@@ -246,6 +246,7 @@
 	},
 	"imageWarnings": {
 		"modelNoImageSupport": "Bilder werden vom aktuellen Modell nicht unterstützt.",
-		"maxImagesReached": "Maximal 20 Bilder pro Nachricht. Entfernen Sie einige Bilder, um weitere hinzuzufügen."
+		"maxImagesReached": "Maximal 20 Bilder pro Nachricht. Entfernen Sie einige Bilder, um weitere hinzuzufügen.",
+		"imagesRemovedNoSupport": "Bilder entfernt, vom Modell nicht unterstützt."
 	}
 }
