@@ -2081,6 +2081,82 @@ describe("ClineProvider", () => {
 			expect(mockPostMessage).toHaveBeenCalledWith(expect.objectContaining({ type: "state" }))
 		})
 
+		// kilocode_change start - kilocodeOrganizationId tests
+		test("preserves kilocodeOrganizationId when no previous token exists", async () => {
+			await provider.resolveWebviewView(mockWebviewView)
+			const messageHandler = (mockWebviewView.webview.onDidReceiveMessage as any).mock.calls[0][0]
+
+			const mockUpsertProviderProfile = vi.fn()
+			;(provider as any).upsertProviderProfile = mockUpsertProviderProfile
+			;(provider as any).providerSettingsManager = {
+				getProfile: vi.fn().mockResolvedValue({
+					// Simulate saved config with NO kilocodeToken (common case)
+					name: "test-config",
+					apiProvider: "anthropic",
+					apiKey: "test-key",
+					id: "test-id",
+				}),
+			} as any
+
+			await messageHandler({
+				type: "upsertApiConfiguration",
+				text: "test-config",
+				apiConfiguration: {
+					apiProvider: "anthropic" as const,
+					apiKey: "test-key",
+					kilocodeToken: "test-kilo-token",
+					kilocodeOrganizationId: "org-123",
+				},
+			})
+
+			expect(mockUpsertProviderProfile).toHaveBeenCalledWith(
+				"test-config",
+				expect.objectContaining({
+					kilocodeToken: "test-kilo-token",
+					kilocodeOrganizationId: "org-123", // Should be preserved
+				}),
+			)
+		})
+
+		test("clears kilocodeOrganizationId when token actually changes", async () => {
+			await provider.resolveWebviewView(mockWebviewView)
+			const messageHandler = (mockWebviewView.webview.onDidReceiveMessage as any).mock.calls[0][0]
+
+			const mockUpsertProviderProfile = vi.fn()
+			;(provider as any).upsertProviderProfile = mockUpsertProviderProfile
+			;(provider as any).providerSettingsManager = {
+				getProfile: vi.fn().mockResolvedValue({
+					// Simulate saved config with DIFFERENT kilocodeToken
+					name: "test-config",
+					apiProvider: "anthropic",
+					apiKey: "test-key",
+					kilocodeToken: "old-kilo-token",
+					id: "test-id",
+				}),
+			} as any
+
+			await messageHandler({
+				type: "upsertApiConfiguration",
+				text: "test-config",
+				apiConfiguration: {
+					apiProvider: "anthropic" as const,
+					apiKey: "test-key",
+					kilocodeToken: "new-kilo-token", // Different token
+					kilocodeOrganizationId: "org-123",
+				},
+			})
+
+			// Verify the organization ID was cleared for security
+			expect(mockUpsertProviderProfile).toHaveBeenCalledWith(
+				"test-config",
+				expect.objectContaining({
+					kilocodeToken: "new-kilo-token",
+					kilocodeOrganizationId: undefined, // Should be cleared
+				}),
+			)
+		})
+		// kilocode_change end
+
 		test("handles buildApiHandler error in updateApiConfiguration", async () => {
 			await provider.resolveWebviewView(mockWebviewView)
 			const messageHandler = (mockWebviewView.webview.onDidReceiveMessage as any).mock.calls[0][0]
