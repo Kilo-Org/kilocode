@@ -23,7 +23,6 @@ import {
 	DialogDescription,
 	DialogFooter,
 	ToggleSwitch,
-	Input,
 	// StandardTooltip, // kilocode_change: not used
 } from "@src/components/ui"
 import { buildDocLink } from "@src/utils/docLinks"
@@ -50,7 +49,6 @@ const McpView = ({ onDone, hideHeader = false }: McpViewProps) => {
 	} = useExtensionState()
 
 	const { t } = useAppTranslation()
-	const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
 
 	return (
 		// kilocode_change: add relative className
@@ -166,7 +164,7 @@ const McpView = ({ onDone, hideHeader = false }: McpViewProps) => {
 								variant="secondary"
 								style={{ width: "100%" }}
 								onClick={() => {
-									setIsAddDialogOpen(true)
+									// TODO: Implement this
 								}}>
 								<span className="codicon codicon-add" style={{ marginRight: "6px" }}></span>
 								{t("mcp:addUrlBasedMcp")}

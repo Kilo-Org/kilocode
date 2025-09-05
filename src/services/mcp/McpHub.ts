@@ -1484,6 +1484,36 @@ export class McpHub {
 		await fs.writeFile(configPath, JSON.stringify(updatedConfig, null, 2))
 	}
 
+	public async addServer(serverConfigText: string, source: "global" | "project"): Promise<void> {
+		try {
+			// Parse the server configuration from JSON text
+			let serverConfig: any
+			try {
+				serverConfig = JSON.parse(serverConfigText)
+			} catch (parseError) {
+				throw new Error(
+					`Invalid JSON configuration: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
+				)
+			}
+
+			// Validate that we have a server name
+			if (!serverConfig.name) {
+				throw new Error("Server configuration must include a 'name' field")
+			}
+
+			const serverName = serverConfig.name
+
+			// Remove the name from the config since it's used as a key
+			const { name, ...serverConfigWithoutName } = serverConfig
+
+			// Use updateServerConnections to add the new server
+			await this.updateServerConnections({ [serverName]: serverConfigWithoutName }, source)
+		} catch (error) {
+			this.showErrorMessage(`Failed to add MCP server`, error)
+			throw error
+		}
+	}
+
 	public async updateServerTimeout(
 		serverName: string,
 		timeout: number,
