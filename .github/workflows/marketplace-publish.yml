@@ -165,5 +165,5 @@ jobs:
                 -F "file=@jetbrains/plugin/build/distributions/${{ env.BUNDLE_NAME }}" \
                 -F "pluginId=28350" \
                 -F "channel=stable" \
-                -F "isHidden=true" \
+                -F "isHidden=false" \
                 https://plugins.jetbrains.com/plugin/uploadPlugin
