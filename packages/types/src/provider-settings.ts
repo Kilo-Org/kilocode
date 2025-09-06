@@ -297,6 +297,32 @@ const huggingFaceSchema = baseProviderSettingsSchema.extend({
 
 const chutesSchema = apiModelIdProviderModelSchema.extend({
 	chutesApiKey: z.string().optional(),
+	chutesSeed: z.number().optional(),
+	chutesTopP: z.number().optional(),
+	chutesFrequencyPenalty: z.number().optional(),
+	chutesPresencePenalty: z.number().optional(),
+	chutesStop: z.union([z.string(), z.array(z.string())]).optional(),
+	chutesMinP: z.number().optional(),
+	chutesBestOf: z.number().optional(),
+	chutesLogprobs: z.boolean().optional(),
+	chutesIgnoreEos: z.boolean().optional(),
+	chutesLogitBias: z.record(z.string(), z.number()).optional(),
+	chutesMinTokens: z.number().optional(),
+	chutesTopLogprobs: z.number().optional(),
+	chutesLengthPenalty: z.number().optional(),
+	chutesStopTokenIds: z.array(z.number()).optional(),
+	chutesPromptLogprobs: z.number().optional(),
+	chutesResponseFormat: z
+		.object({
+			type: z.enum(["text", "json_object", "json_schema"]),
+			json_schema: z.record(z.string(), z.any()).optional(),
+		})
+		.optional(),
+	chutesUseBeamSearch: z.boolean().optional(),
+	chutesRepetitionPenalty: z.number().optional(),
+	chutesSkipSpecialTokens: z.boolean().optional(),
+	chutesIncludeStopStrInOutput: z.boolean().optional(),
+	chutesSpacesBetweenSpecialTokens: z.boolean().optional(),
 })
 
 const litellmSchema = baseProviderSettingsSchema.extend({

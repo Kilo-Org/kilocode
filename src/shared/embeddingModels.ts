@@ -45,6 +45,7 @@ export const EMBEDDING_MODEL_PROFILES: EmbeddingModelProfiles = {
 			scoreThreshold: 0.15,
 			queryPrefix: "Represent this query for searching relevant code: ",
 		},
+		"chutes-baai-bge-large-en-v1-5": { dimension: 1024, scoreThreshold: 0.4 },
 	},
 	gemini: {
 		"text-embedding-004": { dimension: 768 },
