@@ -205,6 +205,18 @@ export class CodeIndexManager {
 	}
 
 	/**
+	 * Cancel any active indexing activity immediately.
+	 */
+	public cancelIndexing(): void {
+		if (!this.isFeatureEnabled) {
+			return
+		}
+		if (this._orchestrator) {
+			this._orchestrator.cancelIndexing()
+		}
+	}
+
+	/**
 	 * Recovers from error state by clearing the error and resetting internal state.
 	 * This allows the manager to be re-initialized after a recoverable error.
 	 *

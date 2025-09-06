@@ -128,7 +128,9 @@
 		"searchMinScoreResetTooltip": "기본값(0.4)으로 재설정",
 		"searchMaxResultsLabel": "최대 검색 결과",
 		"searchMaxResultsDescription": "코드베이스 인덱스를 쿼리할 때 반환할 최대 검색 결과 수입니다. 값이 높을수록 더 많은 컨텍스트를 제공하지만 관련성이 낮은 결과가 포함될 수 있습니다.",
-		"resetToDefault": "기본값으로 재설정"
+		"resetToDefault": "기본값으로 재설정",
+		"cancelling": "취소 중...",
+		"cancelIndexingButton": "인덱싱 취소"
 	},
 	"autoApprove": {
 		"description": "Kilo Code가 승인 없이 자동으로 작업을 수행하도록 허용합니다. AI를 완전히 신뢰하고 관련 보안 위험을 이해하는 경우에만 이 설정을 활성화하세요.",

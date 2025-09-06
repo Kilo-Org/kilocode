@@ -134,7 +134,9 @@
 			"baseUrlRequired": "Базовий URL є обов'язковим",
 			"modelDimensionMinValue": "Розмірність моделі повинна бути більше 0",
 			"vercelAiGatewayApiKeyRequired": "Ключ API Vercel AI Gateway є обов'язковим"
-		}
+		},
+		"cancelling": "Скасування...",
+		"cancelIndexingButton": "Скасувати індексацію"
 	},
 	"autoApprove": {
 		"description": "Дозволити Kilo Code автоматично виконувати операції без необхідності затвердження. Вмикайте ці налаштування, лише якщо ви повністю довіряєте ШІ та розумієте пов'язані з цим ризики безпеки.",

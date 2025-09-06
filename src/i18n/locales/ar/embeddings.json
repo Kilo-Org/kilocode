@@ -61,6 +61,7 @@
 		"fileWatcherStopped": "تم إيقاف مراقب الملفات.",
 		"failedDuringInitialScan": "فشل أثناء المسح الأولي: {{errorMessage}}",
 		"unknownError": "خطأ غير معروف",
-		"indexingRequiresWorkspace": "الفهرسة تتطلب مجلد مشروع مفتوح"
+		"indexingRequiresWorkspace": "الفهرسة تتطلب مجلد مشروع مفتوح",
+		"indexingCancelled": "تم إلغاء الفهرسة"
 	}
 }

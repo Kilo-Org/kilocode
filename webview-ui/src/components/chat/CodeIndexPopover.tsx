@@ -482,6 +482,15 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 	// Use the shared ESC key handler hook - respects unsaved changes logic
 	useEscapeKey(open, handlePopoverClose)
 
+	const handleCancelIndexing = useCallback(() => {
+		// Optimistically update UI while backend cancels
+		setIndexingStatus((prev) => ({
+			...prev,
+			message: t("settings:codeIndex.cancelling"),
+		}))
+		vscode.postMessage({ type: "cancelIndexing" })
+	}, [t])
+
 	const handleSaveSettings = () => {
 		// Validate settings before saving
 		if (!validateSettings()) {
@@ -1294,6 +1303,14 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 						{/* Action Buttons */}
 						<div className="flex items-center justify-between gap-2 pt-6">
 							<div className="flex gap-2">
+								{currentSettings.codebaseIndexEnabled && indexingStatus.systemStatus === "Indexing" && (
+									<VSCodeButton
+										appearance="secondary"
+										onClick={handleCancelIndexing}
+										disabled={saveStatus === "saving"}>
+										{t("settings:codeIndex.cancelIndexingButton")}
+									</VSCodeButton>
+								)}
 								{currentSettings.codebaseIndexEnabled &&
 									(indexingStatus.systemStatus === "Error" ||
 										indexingStatus.systemStatus === "Standby") && (
