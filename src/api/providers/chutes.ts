@@ -6,6 +6,7 @@ import type { ApiHandlerOptions } from "../../shared/api"
 import { XmlMatcher } from "../../utils/xml-matcher"
 import { convertToR1Format } from "../transform/r1-format"
 import { convertToOpenAiMessages } from "../transform/openai-format"
+import { convertToDeepSeekV31Messages } from "../transform/deepseek-v3.1-format"
 import { ApiStream } from "../transform/stream"
 
 import { BaseOpenAiCompatibleProvider } from "./base-openai-compatible-provider"
@@ -84,6 +85,44 @@ export class ChutesHandler extends BaseOpenAiCompatibleProvider<ChutesModelId> {
 			for (const processedChunk of matcher.final()) {
 				yield processedChunk
 			}
+		} else if (model.id.includes("DeepSeek-V3.1")) {
+			// Handle DeepSeek V3.1 with thinking mode support
+			const stream = await this.client.chat.completions.create({
+				...this.getCompletionParams(systemPrompt, messages),
+				messages: convertToDeepSeekV31Messages(systemPrompt, messages, true), // Enable thinking mode
+			})
+
+			const matcher = new XmlMatcher(
+				"think",
+				(chunk) =>
+					({
+						type: chunk.matched ? "reasoning" : "text",
+						text: chunk.data,
+					}) as const,
+			)
+
+			for await (const chunk of stream) {
+				const delta = chunk.choices[0]?.delta
+
+				if (delta?.content) {
+					for (const processedChunk of matcher.update(delta.content)) {
+						yield processedChunk
+					}
+				}
+
+				if (chunk.usage) {
+					yield {
+						type: "usage",
+						inputTokens: chunk.usage.prompt_tokens || 0,
+						outputTokens: chunk.usage.completion_tokens || 0,
+					}
+				}
+			}
+
+			// Process any remaining content
+			for (const processedChunk of matcher.final()) {
+				yield processedChunk
+			}
 		} else {
 			yield* super.createMessage(systemPrompt, messages)
 		}
@@ -92,11 +131,12 @@ export class ChutesHandler extends BaseOpenAiCompatibleProvider<ChutesModelId> {
 	override getModel() {
 		const model = super.getModel()
 		const isDeepSeekR1 = model.id.includes("DeepSeek-R1")
+		const isDeepSeekV31 = model.id.includes("DeepSeek-V3.1")
 		return {
 			...model,
 			info: {
 				...model.info,
-				temperature: isDeepSeekR1 ? DEEP_SEEK_DEFAULT_TEMPERATURE : this.defaultTemperature,
+				temperature: isDeepSeekR1 || isDeepSeekV31 ? DEEP_SEEK_DEFAULT_TEMPERATURE : this.defaultTemperature,
 			},
 		}
 	}
