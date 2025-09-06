@@ -22,7 +22,7 @@ class WeCoderTerminalCustomizer : LocalTerminalCustomizer() {
   // Get the base directory for shell integration files - use user home directory for cross-platform compatibility
   private val shellIntegrationBaseDir: String by lazy {
     val userHome = System.getProperty("user.home")
-    Paths.get(userHome, ".roo-cline-shell-integrations").toString()
+    Paths.get(userHome, ".kilocode-shell-integrations").toString()
   }
   
   init {
@@ -56,7 +56,7 @@ class WeCoderTerminalCustomizer : LocalTerminalCustomizer() {
  
         // Copy integration files for each shell
         shellConfigs.forEach { (shellType, files) ->
-          val sourceDir = "roo-cline-shell-integrations/$shellType"
+          val sourceDir = "kilocode-shell-integrations/$shellType"
           val targetDir = Paths.get(shellIntegrationBaseDir, shellType).toString()
  
           // Create target directory

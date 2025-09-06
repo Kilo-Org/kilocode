@@ -246,6 +246,7 @@
 	},
 	"imageWarnings": {
 		"maxImagesReached": "Mesaj başına maksimum 20 görsel. Daha fazla eklemek için bazı görselleri kaldırın.",
-		"modelNoImageSupport": "Görüntüler mevcut model tarafından desteklenmiyor."
+		"modelNoImageSupport": "Görüntüler mevcut model tarafından desteklenmiyor.",
+		"imagesRemovedNoSupport": "Resimler kaldırıldı, model tarafından desteklenmiyor."
 	}
 }

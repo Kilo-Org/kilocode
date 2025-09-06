@@ -246,6 +246,7 @@
 	},
 	"imageWarnings": {
 		"modelNoImageSupport": "当前模型不支持图片。",
-		"maxImagesReached": "每条信息最多可发送20张图片。要添加更多图片，请先删除一些现有图片。"
+		"maxImagesReached": "每条信息最多可发送20张图片。要添加更多图片，请先删除一些现有图片。",
+		"imagesRemovedNoSupport": "已移除图像，模型不支持。"
 	}
 }
