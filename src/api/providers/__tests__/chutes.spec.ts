@@ -1,5 +1,3 @@
-// kilocode_change: this file was updated in https://github.com/Kilo-Org/kilocode/pull/1889, revert to Roo version in case of conflicts
-
 // npx vitest run api/providers/__tests__/chutes.spec.ts
 
 import { Anthropic } from "@anthropic-ai/sdk"
@@ -201,8 +199,8 @@ describe("ChutesHandler", () => {
 				contextWindow: 262144,
 				supportsImages: false,
 				supportsPromptCache: false,
-				inputPrice: 0.077968332,
-				outputPrice: 0.31202496,
+				inputPrice: 0,
+				outputPrice: 0,
 				description: "Qwen3 235B A22B Instruct 2507 model with 262K context window.",
 				temperature: 0.5, // Default temperature for non-DeepSeek models
 			}),
@@ -220,13 +218,13 @@ describe("ChutesHandler", () => {
 		expect(model.info).toEqual(
 			expect.objectContaining({
 				maxTokens: 32768,
-				contextWindow: 131072,
+				contextWindow: 151329,
 				supportsImages: false,
 				supportsPromptCache: false,
 				inputPrice: 0,
 				outputPrice: 0,
 				description:
-					"GLM-4.5-Air model with 131,072 token context window and 106B total parameters with 12B activated.",
+					"GLM-4.5-Air model with 151,329 token context window and 106B total parameters with 12B activated.",
 				temperature: 0.5, // Default temperature for non-DeepSeek models
 			}),
 		)
@@ -243,13 +241,13 @@ describe("ChutesHandler", () => {
 		expect(model.info).toEqual(
 			expect.objectContaining({
 				maxTokens: 32768,
-				contextWindow: 98304,
+				contextWindow: 131072,
 				supportsImages: false,
 				supportsPromptCache: false,
-				inputPrice: 0.1999188,
-				outputPrice: 0.800064,
+				inputPrice: 0,
+				outputPrice: 0,
 				description:
-					"GLM-4.5-FP8 model with 98,304 token context window, optimized for agent-based applications with MoE architecture.",
+					"GLM-4.5-FP8 model with 128k token context window, optimized for agent-based applications with MoE architecture.",
 				temperature: 0.5, // Default temperature for non-DeepSeek models
 			}),
 		)
@@ -394,7 +392,7 @@ describe("ChutesHandler", () => {
 	})
 
 	it("createMessage should pass correct parameters to Chutes client for non-DeepSeek models", async () => {
-		const modelId: ChutesModelId = "unsloth/Mistral-Nemo-Instruct-2407"
+		const modelId: ChutesModelId = "unsloth/Llama-3.3-70B-Instruct"
 		const modelInfo = chutesModels[modelId]
 		const handlerWithModel = new ChutesHandler({ apiModelId: modelId, chutesApiKey: "test-chutes-api-key" })
 
@@ -437,7 +435,7 @@ describe("ChutesHandler", () => {
 	})
 
 	it("should use default temperature for non-DeepSeek models", () => {
-		const testModelId: ChutesModelId = "unsloth/Mistral-Nemo-Instruct-2407"
+		const testModelId: ChutesModelId = "unsloth/Llama-3.3-70B-Instruct"
 		const handlerWithModel = new ChutesHandler({
 			apiModelId: testModelId,
 			chutesApiKey: "test-chutes-api-key",

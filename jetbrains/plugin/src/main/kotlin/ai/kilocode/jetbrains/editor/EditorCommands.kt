@@ -17,7 +17,7 @@ import java.io.File
 
 /**
  * Registers commands related to editor API operations
- * Currently registers the workbench diff command for file comparison
+ * Registers both single-file diff and multi-file diff commands
  *
  * @param project The current IntelliJ project
  * @param registry The command registry to register commands with
@@ -43,6 +43,9 @@ fun registerOpenEditorAPICommands(project: Project,registry: CommandRegistry) {
 
         }
     )
+    
+    // Register the multi-diff command
+    registerMultiDiffCommands(project, registry)
 }
 
 /**
