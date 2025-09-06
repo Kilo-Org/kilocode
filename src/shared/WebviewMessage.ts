@@ -112,6 +112,7 @@ export interface WebviewMessage {
 		| "remoteBrowserHost"
 		| "openMcpSettings"
 		| "openProjectMcpSettings"
+		| "addMcpServer"
 		| "restartMcpServer"
 		| "refreshAllMcpServers"
 		| "toggleToolAlwaysAllow"

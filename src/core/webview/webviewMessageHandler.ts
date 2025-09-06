@@ -923,6 +923,18 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
+		case "addMcpServer": {
+			if (message.text && message.source) {
+				try {
+					await provider.getMcpHub()?.addServer(message.text, message.source as "global" | "project")
+					await provider.postStateToWebview()
+				} catch (error) {
+					const errorMessage = error instanceof Error ? error.message : String(error)
+					provider.log(`Failed to add MCP server: ${errorMessage}`)
+				}
+			}
+			break
+		}
 		case "restartMcpServer": {
 			try {
 				await provider.getMcpHub()?.restartConnection(message.text!, message.source as "global" | "project")
