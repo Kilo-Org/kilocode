@@ -388,6 +388,7 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
 					stack: error instanceof Error ? error.stack : undefined,
 					location: "OpenAICompatibleEmbedder:validateConfiguration",
 				})
+				console.error("OpenAI Compatible embedder error in validateConfiguration:", error)
 				throw error
 			}
 		}, "openai-compatible")

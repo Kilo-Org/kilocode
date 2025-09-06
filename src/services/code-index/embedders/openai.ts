@@ -206,6 +206,7 @@ export class OpenAiEmbedder extends OpenAiNativeHandler implements IEmbedder {
 					stack: error instanceof Error ? error.stack : undefined,
 					location: "OpenAiEmbedder:validateConfiguration",
 				})
+				console.error("OpenAI embedder error in validateConfiguration:", error)
 				throw error
 			}
 		}, "openai")
