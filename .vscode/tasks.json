@@ -21,7 +21,19 @@
 			"label": "watch:pnpm",
 			"type": "shell",
 			"command": "npx",
-			"args": ["nodemon", "--watch", "\"**/package.json\"", "--exec", "pnpm install"],
+			"args": [
+				"nodemon",
+				"--watch",
+				"package.json",
+				"--watch",
+				"src/package.json",
+				"--watch",
+				"webview-ui/package.json",
+				"--watch",
+				"pnpm-workspace.yaml",
+				"--exec",
+				"pnpm install"
+			],
 			"group": "none",
 			"isBackground": true,
 			"presentation": {

@@ -1,5 +1,6 @@
 import { execa } from "execa"
-import { platform } from "os"
+import * as os from "os"
+import * as vscode from "vscode"
 
 interface NotificationOptions {
 	title?: string
@@ -10,6 +11,30 @@ interface NotificationOptions {
 async function showMacOSNotification(options: NotificationOptions): Promise<void> {
 	const { title, subtitle = "", message } = options
 
+	// Try terminal-notifier first if available
+	try {
+		const args = ["-message", message]
+		if (title) {
+			args.push("-title", title)
+		}
+		if (subtitle) {
+			args.push("-subtitle", subtitle)
+		}
+		args.push("-sound", "Tink")
+
+		// Add Kilo Code logo
+		const extensionUri = vscode.extensions.getExtension(`kilocode.kilo-code`)!.extensionUri
+		const iconPath = vscode.Uri.joinPath(extensionUri, "assets", "icons", "kilo.png").fsPath
+		args.push("-appIcon", iconPath)
+
+		await execa("terminal-notifier", args)
+		return
+	} catch (error) {
+		// If terminal-notifier fails, fall back to osascript
+		// This could be because terminal-notifier is not installed or other error
+	}
+
+	// Fallback to osascript
 	const script = `display notification "${message}" with title "${title}" subtitle "${subtitle}" sound name "Tink"`
 
 	try {
@@ -78,7 +103,7 @@ export async function showSystemNotification(options: NotificationOptions): Prom
 			subtitle: options.subtitle?.replace(/"/g, '\\"') || "",
 		}
 
-		switch (platform()) {
+		switch (os.platform()) {
 			case "darwin":
 				await showMacOSNotification(escapedOptions)
 				break
