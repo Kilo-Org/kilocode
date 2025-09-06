@@ -73,6 +73,7 @@ import { setTtsEnabled, setTtsSpeed } from "../../utils/tts"
 import { getWorkspaceGitInfo } from "../../utils/git"
 import { getWorkspacePath } from "../../utils/path"
 import { OrganizationAllowListViolationError } from "../../utils/errors"
+import { getStorageDirectoryPath, getTaskDirectoryPath } from "../../utils/storage"
 
 import { setPanel } from "../../activate/registerCommands"
 
@@ -1201,9 +1202,7 @@ export class ClineProvider
 	}
 
 	async ensureSettingsDirectoryExists(): Promise<string> {
-		const { getSettingsDirectoryPath } = await import("../../utils/storage")
-		const globalStoragePath = this.contextProxy.globalStorageUri.fsPath
-		return getSettingsDirectoryPath(globalStoragePath)
+		return getStorageDirectoryPath(this.context.globalStorageUri.fsPath, "settings")
 	}
 
 	// OpenRouter
@@ -1318,9 +1317,7 @@ export class ClineProvider
 		const historyItem = history.find((item) => item.id === id)
 
 		if (historyItem) {
-			const { getTaskDirectoryPath } = await import("../../utils/storage")
-			const globalStoragePath = this.contextProxy.globalStorageUri.fsPath
-			const taskDirPath = await getTaskDirectoryPath(globalStoragePath, id)
+			const taskDirPath = await getTaskDirectoryPath(this.context.globalStorageUri.fsPath, id)
 			const apiConversationHistoryFilePath = path.join(taskDirPath, GlobalFileNames.apiConversationHistory)
 			const uiMessagesFilePath = path.join(taskDirPath, GlobalFileNames.uiMessages)
 			const fileExists = await fileExistsAtPath(apiConversationHistoryFilePath)

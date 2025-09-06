@@ -57,6 +57,12 @@ export async function getTaskDirectoryPath(globalStoragePath: string, taskId: st
 	return taskDir
 }
 
+export async function getStorageDirectoryPath(globalStoragePath: string, subfolder: string): Promise<string> {
+	const storagePath = path.join(globalStoragePath, subfolder)
+	await fs.mkdir(storagePath, { recursive: true })
+	return storagePath
+}
+
 /**
  * Gets the settings directory path
  */

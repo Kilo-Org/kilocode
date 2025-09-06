@@ -299,7 +299,7 @@ export class CustomModesManager {
 
 				// Merge modes from both sources (.kilocodemodes takes precedence)
 				const mergedModes = await this.mergeCustomModes(roomodesModes, result.data.customModes)
-				await this.context.globalState.update("customModes", mergedModes)
+				await this.writeModesToStorage(mergedModes)
 				this.clearCache()
 				await this.onUpdate()
 			} catch (error) {
@@ -325,7 +325,7 @@ export class CustomModesManager {
 					const roomodesModes = await this.loadModesFromFile(roomodesPath)
 					// .roomodes takes precedence
 					const mergedModes = await this.mergeCustomModes(roomodesModes, settingsModes)
-					await this.context.globalState.update("customModes", mergedModes)
+					await this.writeModesToStorage(mergedModes)
 					this.clearCache()
 					await this.onUpdate()
 				} catch (error) {
@@ -340,7 +340,7 @@ export class CustomModesManager {
 					// When .roomodes is deleted, refresh with only settings modes
 					try {
 						const settingsModes = await this.loadModesFromFile(settingsPath)
-						await this.context.globalState.update("customModes", settingsModes)
+						await this.writeModesToStorage(settingsModes)
 						this.clearCache()
 						await this.onUpdate()
 					} catch (error) {
@@ -353,51 +353,34 @@ export class CustomModesManager {
 	}
 
 	public async getCustomModes(): Promise<ModeConfig[]> {
-		// Check if we have a valid cached result.
 		const now = Date.now()
-
 		if (this.cachedModes && now - this.cachedAt < CustomModesManager.cacheTTL) {
 			return this.cachedModes
 		}
 
-		// Get modes from settings file.
-		const settingsPath = await this.getCustomModesFilePath()
-		const settingsModes = await this.loadModesFromFile(settingsPath)
+		const storagePath = this.getCustomModesStoragePath()
+		try {
+			const content = await fs.readFile(storagePath, "utf-8")
+			const modes = JSON.parse(content)
+			this.cachedModes = modes
+			this.cachedAt = now
+			return modes
+		} catch (error) {
+			// File might not exist or is invalid, so we'll load from original sources and create it.
+			const settingsPath = await this.getCustomModesFilePath()
+			const settingsModes = await this.loadModesFromFile(settingsPath)
 
-		// Get modes from .kilocodemodes if it exists
-		const roomodesPath = await this.getWorkspaceRoomodes()
-		const roomodesModes = roomodesPath ? await this.loadModesFromFile(roomodesPath) : []
+			const roomodesPath = await this.getWorkspaceRoomodes()
+			const roomodesModes = roomodesPath ? await this.loadModesFromFile(roomodesPath) : []
 
-		// Create maps to store modes by source.
-		const projectModes = new Map<string, ModeConfig>()
-		const globalModes = new Map<string, ModeConfig>()
+			const mergedModes = await this.mergeCustomModes(roomodesModes, settingsModes)
 
-		// Add project modes (they take precedence).
-		for (const mode of roomodesModes) {
-			projectModes.set(mode.slug, { ...mode, source: "project" as const })
+			await this.writeModesToStorage(mergedModes)
+
+			this.cachedModes = mergedModes
+			this.cachedAt = now
+			return mergedModes
 		}
-
-		// Add global modes.
-		for (const mode of settingsModes) {
-			if (!projectModes.has(mode.slug)) {
-				globalModes.set(mode.slug, { ...mode, source: "global" as const })
-			}
-		}
-
-		// Combine modes in the correct order: project modes first, then global modes.
-		const mergedModes = [
-			...roomodesModes.map((mode) => ({ ...mode, source: "project" as const })),
-			...settingsModes
-				.filter((mode) => !projectModes.has(mode.slug))
-				.map((mode) => ({ ...mode, source: "global" as const })),
-		]
-
-		await this.context.globalState.update("customModes", mergedModes)
-
-		this.cachedModes = mergedModes
-		this.cachedAt = now
-
-		return mergedModes
 	}
 
 	public async updateCustomMode(slug: string, config: ModeConfig): Promise<void> {
@@ -499,7 +482,7 @@ export class CustomModesManager {
 		const roomodesModes = roomodesPath ? await this.loadModesFromFile(roomodesPath) : []
 		const mergedModes = await this.mergeCustomModes(roomodesModes, settingsModes)
 
-		await this.context.globalState.update("customModes", mergedModes)
+		await this.writeModesToStorage(mergedModes)
 
 		this.clearCache()
 
@@ -603,7 +586,7 @@ export class CustomModesManager {
 		try {
 			const filePath = await this.getCustomModesFilePath()
 			await fs.writeFile(filePath, yaml.stringify({ customModes: [] }, { lineWidth: 0 }))
-			await this.context.globalState.update("customModes", [])
+			await this.writeModesToStorage([])
 			this.clearCache()
 			await this.onUpdate()
 		} catch (error) {
@@ -998,6 +981,16 @@ export class CustomModesManager {
 			logger.error("Failed to import mode with rules", { error: errorMessage })
 			return { success: false, error: errorMessage }
 		}
+	}
+
+	private getCustomModesStoragePath(): string {
+		return path.join(this.context.globalStorageUri.fsPath, "customModes.json")
+	}
+
+	private async writeModesToStorage(modes: ModeConfig[]): Promise<void> {
+		const storagePath = this.getCustomModesStoragePath()
+		await fs.mkdir(path.dirname(storagePath), { recursive: true })
+		await fs.writeFile(storagePath, JSON.stringify(modes, null, 2))
 	}
 
 	private clearCache(): void {

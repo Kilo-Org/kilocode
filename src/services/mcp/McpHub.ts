@@ -868,6 +868,40 @@ export class McpHub {
 		}
 	}
 
+	/**
+	 * Connects to the server with a retry mechanism
+	 * @param client The client instance
+	 * @param transport The transport instance
+	 * @param name The server name
+	 * @param source The source of the server (global or project)
+	 */
+	private async connectWithRetry(
+		client: Client,
+		transport: StdioClientTransport | SSEClientTransport | StreamableHTTPClientTransport,
+		name: string,
+		source: "global" | "project",
+		retries = 3,
+		delayDuration = 1000,
+	): Promise<void> {
+		for (let i = 0; i < retries; i++) {
+			try {
+				await client.connect(transport)
+				return // Success
+			} catch (error) {
+				console.error(`Attempt ${i + 1} failed for ${name}:`, error)
+				if (i === retries - 1) {
+					const connection = this.findConnection(name, source)
+					if (connection) {
+						connection.server.status = "disconnected"
+						this.appendErrorMessage(connection, error instanceof Error ? error.message : `${error}`)
+					}
+					throw error
+				}
+				await delay(delayDuration * (i + 1))
+			}
+		}
+	}
+
 	private appendErrorMessage(connection: McpConnection, error: string, level: "error" | "warn" | "info" = "error") {
 		const MAX_ERROR_LENGTH = 1000
 		const truncatedError =
