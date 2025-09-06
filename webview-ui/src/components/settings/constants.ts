@@ -89,6 +89,7 @@ export const PROVIDERS = [
 	{ value: "featherless", label: "Featherless AI" },
 	{ value: "io-intelligence", label: "IO Intelligence" },
 	// kilocode_change start
+	{ value: "submodel", label: "SubModel" },
 	{ value: "deepinfra", label: "Deep Infra" },
 	// { value: "roo", label: "Roo Code Cloud" },
 	// kilocode_change end

@@ -92,6 +92,8 @@ export class ProfileValidator {
 			case "io-intelligence":
 				return profile.ioIntelligenceModelId
 			// kilocode_change start
+			case "submodel":
+				return profile.submodelModelId
 			case "deepinfra":
 				return profile.deepInfraModelId
 			// kilocode_change end

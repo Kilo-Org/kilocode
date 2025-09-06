@@ -42,6 +42,7 @@ type ModelIdKey = keyof Pick<
 	| "deepInfraModelId"
 	// kilocode_change end
 	| "ioIntelligenceModelId"
+	| "submodelModelId"
 	| "vercelAiGatewayModelId"
 >
 

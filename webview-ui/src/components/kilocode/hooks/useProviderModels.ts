@@ -44,6 +44,7 @@ import {
 	sambaNovaDefaultModelId,
 	featherlessModels,
 	featherlessDefaultModelId,
+	submodelDefaultModelId,
 	deepInfraDefaultModelId,
 	cerebrasModels,
 	cerebrasDefaultModelId,
@@ -246,6 +247,12 @@ export const getModelsByProvider = ({
 			return {
 				models: featherlessModels,
 				defaultModel: featherlessDefaultModelId,
+			}
+		}
+		case "submodel": {
+			return {
+				models: routerModels.submodel,
+				defaultModel: submodelDefaultModelId,
 			}
 		}
 		case "deepinfra": {
