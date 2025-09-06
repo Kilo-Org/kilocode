@@ -812,7 +812,8 @@
 		},
 		"IMAGE_GENERATION": {
 			"name": "Увімкнути генерацію зображень ШІ",
-			"description": "Коли увімкнено, Kilo Code може генерувати зображення з текстових запитів. Потребує Kilo Code або OpenRouter API ключ (OpenRouter має пріоритет).",
+			"description": "Коли увімкнено, Kilo Code може генерувати зображення з текстових запитів. Потребує Kilo Code або OpenRouter API ключ.",
+			"apiProvider": "Провайдер API",
 			"openRouterApiKeyLabel": "OpenRouter API Key",
 			"openRouterApiKeyPlaceholder": "Введіть свій OpenRouter API ключ",
 			"kiloCodeApiKeyLabel": "Kilo Code API ключ",
@@ -821,7 +822,7 @@
 			"getApiKeyText": "Отримайте API ключ з",
 			"modelSelectionLabel": "Модель генерації зображень",
 			"modelSelectionDescription": "Виберіть модель для використання при генерації зображень",
-			"warningMissingKey": "⚠️ Kilo Code або OpenRouter API ключ потрібен для генерації зображень. Будь ласка, налаштуйте його вище.",
+			"warningMissingKey": "⚠️ API ключ потрібен для генерації зображень, будь ласка, налаштуйте його вище.",
 			"successConfigured": "✓ Генерація зображень налаштована і готова до використання"
 		},
 		"INLINE_ASSIST": {

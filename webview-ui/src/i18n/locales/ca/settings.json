@@ -768,7 +768,8 @@
 		},
 		"IMAGE_GENERATION": {
 			"name": "Habilitar generació d'imatges amb IA",
-			"description": "Quan estigui habilitat, Kilo Code pot generar imatges a partir de prompts de text. Requereix que es configuri una clau d'API de Kilo Code o OpenRouter (OpenRouter té precedència).",
+			"description": "Quan estigui habilitat, Kilo Code pot generar imatges a partir de prompts de text. Requereix que es configuri una clau d'API de Kilo Code o OpenRouter.",
+			"apiProvider": "Proveïdor d'API",
 			"openRouterApiKeyLabel": "Clau API d'OpenRouter",
 			"openRouterApiKeyPlaceholder": "Introdueix la teva clau API d'OpenRouter",
 			"kiloCodeApiKeyLabel": "Clau API de Kilo Code",
@@ -777,7 +778,7 @@
 			"getApiKeyText": "Obté la teva clau API de",
 			"modelSelectionLabel": "Model de generació d'imatges",
 			"modelSelectionDescription": "Selecciona el model per a la generació d'imatges",
-			"warningMissingKey": "⚠️ La clau API de Kilo Code o OpenRouter és necessària per a la generació d'imatges. Si us plau, configura-la a dalt.",
+			"warningMissingKey": "⚠️ Es requereix una clau API per a la generació d'imatges, si us plau configura-la a dalt.",
 			"successConfigured": "✓ La generació d'imatges està configurada i llesta per utilitzar"
 		},
 		"INLINE_ASSIST": {

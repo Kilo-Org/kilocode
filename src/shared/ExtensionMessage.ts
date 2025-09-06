@@ -22,6 +22,7 @@ import { Mode } from "./modes"
 import { ModelRecord, RouterModels } from "./api"
 import { ProfileDataResponsePayload, BalanceDataResponsePayload } from "./WebviewMessage" // kilocode_change
 import { ClineRulesToggles } from "./cline-rules" // kilocode_change
+import { KiloCodeWrapperProperties } from "./kilocode/wrapper" // kilocode_change
 
 // Command interface for frontend/backend communication
 export interface Command {
@@ -337,6 +338,9 @@ export type ExtensionState = Pick<
 	apiConfiguration?: ProviderSettings
 	uriScheme?: string
 	uiKind?: string // kilocode_change
+
+	kiloCodeWrapperProperties?: KiloCodeWrapperProperties // kilocode_change: Wrapper information
+
 	kilocodeDefaultModel: string
 	shouldShowAnnouncement: boolean
 

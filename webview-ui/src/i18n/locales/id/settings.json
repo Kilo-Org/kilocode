@@ -790,7 +790,8 @@
 		},
 		"IMAGE_GENERATION": {
 			"name": "Aktifkan pembuatan gambar AI",
-			"description": "Ketika diaktifkan, Kilo Code dapat menghasilkan gambar dari prompt teks. Memerlukan kunci API Kilo Code atau OpenRouter yang dikonfigurasi (OpenRouter diprioritaskan).",
+			"description": "Ketika diaktifkan, Kilo Code dapat menghasilkan gambar dari prompt teks. Memerlukan kunci API Kilo Code atau OpenRouter yang dikonfigurasi.",
+			"apiProvider": "Penyedia API",
 			"openRouterApiKeyLabel": "Kunci API OpenRouter",
 			"openRouterApiKeyPlaceholder": "Masukkan kunci API OpenRouter Anda",
 			"kiloCodeApiKeyLabel": "Kunci API Kilo Code",
@@ -799,7 +800,7 @@
 			"getApiKeyText": "Dapatkan kunci API Anda dari",
 			"modelSelectionLabel": "Model Pembuatan Gambar",
 			"modelSelectionDescription": "Pilih model untuk pembuatan gambar",
-			"warningMissingKey": "⚠️ Kunci API Kilo Code atau OpenRouter diperlukan untuk pembuatan gambar. Silakan konfigurasi di atas.",
+			"warningMissingKey": "⚠️ Kunci API diperlukan untuk pembuatan gambar, silakan konfigurasi di atas.",
 			"successConfigured": "✓ Pembuatan gambar dikonfigurasi dan siap digunakan"
 		},
 		"INLINE_ASSIST": {

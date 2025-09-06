@@ -769,7 +769,8 @@
 		},
 		"IMAGE_GENERATION": {
 			"name": "Bật tạo hình ảnh AI",
-			"description": "Khi được bật, Kilo Code có thể tạo hình ảnh từ lời nhắc văn bản. Yêu cầu khóa API Kilo Code hoặc OpenRouter được cấu hình (OpenRouter được ưu tiên).",
+			"description": "Khi được bật, Kilo Code có thể tạo hình ảnh từ lời nhắc văn bản. Yêu cầu khóa API Kilo Code hoặc OpenRouter được cấu hình.",
+			"apiProvider": "Nhà cung cấp API",
 			"openRouterApiKeyLabel": "Khóa API OpenRouter",
 			"openRouterApiKeyPlaceholder": "Nhập khóa API OpenRouter của bạn",
 			"kiloCodeApiKeyLabel": "Khóa API Kilo Code",
@@ -778,7 +779,7 @@
 			"getApiKeyText": "Lấy khóa API của bạn từ",
 			"modelSelectionLabel": "Mô hình tạo hình ảnh",
 			"modelSelectionDescription": "Chọn mô hình để sử dụng cho việc tạo hình ảnh",
-			"warningMissingKey": "⚠️ Khóa API Kilo Code hoặc OpenRouter là bắt buộc để tạo hình ảnh. Vui lòng cấu hình ở trên.",
+			"warningMissingKey": "⚠️ Khóa API là bắt buộc để tạo hình ảnh, vui lòng cấu hình ở trên.",
 			"successConfigured": "✓ Tạo hình ảnh đã được cấu hình và sẵn sàng sử dụng"
 		},
 		"INLINE_ASSIST": {

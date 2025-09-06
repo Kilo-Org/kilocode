@@ -768,7 +768,8 @@
 		},
 		"IMAGE_GENERATION": {
 			"name": "Activer la génération d'images IA",
-			"description": "Lorsqu'activé, Kilo Code peut générer des images à partir de prompts textuels. Nécessite qu'une clé API Kilo Code ou OpenRouter soit configurée (OpenRouter prend la priorité).",
+			"description": "Lorsqu'activé, Kilo Code peut générer des images à partir de prompts textuels. Nécessite qu'une clé API Kilo Code ou OpenRouter soit configurée.",
+			"apiProvider": "Fournisseur d'API",
 			"openRouterApiKeyLabel": "Clé API OpenRouter",
 			"openRouterApiKeyPlaceholder": "Entrez votre clé API OpenRouter",
 			"kiloCodeApiKeyLabel": "Clé API Kilo Code",
@@ -777,7 +778,7 @@
 			"getApiKeyText": "Obtenez votre clé API depuis",
 			"modelSelectionLabel": "Modèle de génération d'images",
 			"modelSelectionDescription": "Sélectionnez le modèle pour la génération d'images",
-			"warningMissingKey": "⚠️ Une clé API Kilo Code ou OpenRouter est requise pour la génération d'images. Veuillez la configurer ci-dessus.",
+			"warningMissingKey": "⚠️ Une clé API est requise pour la génération d'images, veuillez la configurer ci-dessus.",
 			"successConfigured": "✓ La génération d'images est configurée et prête à utiliser"
 		},
 		"INLINE_ASSIST": {

@@ -151,6 +151,7 @@ const ApiOptions = ({
 	const {
 		organizationAllowList,
 		uiKind, // kilocode_change
+		kiloCodeWrapperProperties, // kilocode_change
 		kilocodeDefaultModel,
 		cloudIsAuthenticated,
 	} = useExtensionState()
@@ -495,6 +496,7 @@ const ApiOptions = ({
 					organizationAllowList={organizationAllowList}
 					uriScheme={uriScheme}
 					uiKind={uiKind}
+					kiloCodeWrapperProperties={kiloCodeWrapperProperties}
 					kilocodeDefaultModel={kilocodeDefaultModel}
 				/>
 			)}

@@ -824,7 +824,8 @@
 		},
 		"IMAGE_GENERATION": {
 			"name": "Povolit AI generování obrázků",
-			"description": "Když je povoleno, Kilo Code může generovat obrázky z textových podnětů. Vyžaduje Kilo Code nebo OpenRouter API klíč (OpenRouter má přednost).",
+			"description": "Když je povoleno, Kilo Code může generovat obrázky z textových podnětů. Vyžaduje Kilo Code nebo OpenRouter API klíč.",
+			"apiProvider": "Poskytovatel API",
 			"openRouterApiKeyLabel": "OpenRouter API Key",
 			"openRouterApiKeyPlaceholder": "Zadejte svůj OpenRouter API klíč",
 			"kiloCodeApiKeyLabel": "Kilo Code API klíč",
@@ -833,7 +834,7 @@
 			"getApiKeyText": "Získejte API klíč z",
 			"modelSelectionLabel": "Model pro generování obrázků",
 			"modelSelectionDescription": "Vyberte model pro použití při generování obrázků",
-			"warningMissingKey": "⚠️ Kilo Code nebo OpenRouter API klíč je vyžadován pro generování obrázků. Nakonfigurujte ho výše.",
+			"warningMissingKey": "⚠️ API klíč je vyžadován pro generování obrázků, nakonfigurujte ho výše.",
 			"successConfigured": "✓ Generování obrázků je nakonfigurováno a připraveno k použití"
 		},
 		"INLINE_ASSIST": {

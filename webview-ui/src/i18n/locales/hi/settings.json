@@ -769,7 +769,8 @@
 		},
 		"IMAGE_GENERATION": {
 			"name": "AI छवि निर्माण सक्षम करें",
-			"description": "जब सक्षम किया जाता है, तो Kilo Code टेक्स्ट प्रॉम्प्ट से छवियां उत्पन्न कर सकता है। Kilo Code या OpenRouter API कुंजी कॉन्फ़िगरेशन की आवश्यकता होती है (OpenRouter को प्राथमिकता)।",
+			"description": "जब सक्षम किया जाता है, तो Kilo Code टेक्स्ट प्रॉम्प्ट से छवियां उत्पन्न कर सकता है। Kilo Code या OpenRouter API कुंजी कॉन्फ़िगरेशन की आवश्यकता होती है।",
+			"apiProvider": "API प्रदाता",
 			"openRouterApiKeyLabel": "OpenRouter API कुंजी",
 			"openRouterApiKeyPlaceholder": "अपनी OpenRouter API कुंजी दर्ज करें",
 			"kiloCodeApiKeyLabel": "Kilo Code API कुंजी",
@@ -778,7 +779,7 @@
 			"getApiKeyText": "अपनी API कुंजी प्राप्त करें",
 			"modelSelectionLabel": "छवि निर्माण मॉडल",
 			"modelSelectionDescription": "छवि निर्माण के लिए उपयोग करने वाला मॉडल चुनें",
-			"warningMissingKey": "⚠️ छवि निर्माण के लिए Kilo Code या OpenRouter API कुंजी आवश्यक है। कृपया इसे ऊपर कॉन्फ़िगर करें।",
+			"warningMissingKey": "⚠️ छवि निर्माण के लिए API कुंजी आवश्यक है, कृपया इसे ऊपर कॉन्फ़िगर करें।",
 			"successConfigured": "✓ छवि निर्माण कॉन्फ़िगर है और उपयोग के लिए तैयार है"
 		},
 		"INLINE_ASSIST": {

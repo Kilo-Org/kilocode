@@ -11,6 +11,7 @@ mock/
 
 # Builds
 bin/
+bin-unpacked/
 *.vsix
 
 # Local prompts and rules
@@ -54,5 +55,10 @@ logs
 
 # Exclude Conport Directory (MCP server)
 context_portal/
+
+# Submodules
+deps/vscode/*
+!deps/vscode/.git
+
 # Qdrant
 qdrant_storage/

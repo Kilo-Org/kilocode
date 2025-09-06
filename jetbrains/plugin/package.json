@@ -1,0 +1,31 @@
+{
+	"name": "@kilo-code/jetbrains-plugin",
+	"license": "Apache-2.0",
+	"type": "module",
+	"devDependencies": {
+		"del-cli": "^5.1.0",
+		"cpy-cli": "^5.0.0",
+		"mkdirp": "^3.0.1"
+	},
+	"scripts": {
+		"clean": "./gradlew clean",
+		"build": "./gradlew buildPlugin -PdebugMode=idea",
+		"run": "./gradlew runIde -PdebugMode=idea",
+		"run:bundle": "./gradlew runIde -PdebugMode=release",
+		"bundle": "./gradlew buildPlugin -PdebugMode=release",
+		"bundle:name": "node scripts/get_bundle_name.js",
+		"clean:kilocode": "npx del-cli ./plugins/kilocode --force && npx mkdirp ./plugins/kilocode",
+		"copy:kilocode": "npx cpy '../../bin-unpacked/extension/**' './plugins/kilocode/extension' --parents",
+		"clean:resource-kilocode": "npx del-cli ../resources/kilocode --force",
+		"copy:resource-kilocode": "npx cpy '../../bin-unpacked/extension/**' '../resources/kilocode' --parents",
+		"clean:resource-host": "npx del-cli ../resources/runtime --force",
+		"copy:resource-host": "npx cpy '../host/dist/**' '../resources/runtime' --parents",
+		"clean:resource-logs": "npx del-cli ../resources/logs --force",
+		"copy:resource-logs": "npx mkdirp ../resources/logs",
+		"clean:resource-nodemodules": "npx del-cli ../resources/node_modules --force && npx del-cli ../resources/package.json --force",
+		"copy:resource-nodemodules": "cp ../host/package.json ../resources/package.json && npm install --prefix ../resources",
+		"propDep": "npx del-cli ./propDep.txt --force && npm ls --omit=dev --all --parseable --prefix ../resources > ./prodDep.txt",
+		"sync:version": "node scripts/sync_version.js",
+		"sync:changelog": "node scripts/update_change_notes.js"
+	}
+}

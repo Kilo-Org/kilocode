@@ -769,7 +769,8 @@
 		},
 		"IMAGE_GENERATION": {
 			"name": "Включить генерацию изображений ИИ",
-			"description": "Когда включено, Kilo Code может генерировать изображения из текстовых запросов. Требует настроенный API-ключ Kilo Code или OpenRouter (OpenRouter имеет приоритет).",
+			"description": "Когда включено, Kilo Code может генерировать изображения из текстовых запросов. Требует настроенный API-ключ Kilo Code или OpenRouter.",
+			"apiProvider": "Провайдер API",
 			"openRouterApiKeyLabel": "API-ключ OpenRouter",
 			"openRouterApiKeyPlaceholder": "Введите ваш API-ключ OpenRouter",
 			"kiloCodeApiKeyLabel": "API-ключ Kilo Code",
@@ -778,7 +779,7 @@
 			"getApiKeyText": "Получите ваш API-ключ от",
 			"modelSelectionLabel": "Модель генерации изображений",
 			"modelSelectionDescription": "Выберите модель для генерации изображений",
-			"warningMissingKey": "⚠️ API-ключ Kilo Code или OpenRouter необходим для генерации изображений. Настройте его выше.",
+			"warningMissingKey": "⚠️ API-ключ необходим для генерации изображений, настройте его выше.",
 			"successConfigured": "✓ Генерация изображений настроена и готова к использованию"
 		},
 		"INLINE_ASSIST": {

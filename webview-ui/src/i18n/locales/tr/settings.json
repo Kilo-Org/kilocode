@@ -769,7 +769,8 @@
 		},
 		"IMAGE_GENERATION": {
 			"name": "AI görüntü üretimini etkinleştir",
-			"description": "Etkinleştirildiğinde, Kilo Code metin istemlerinden görüntüler üretebilir. Yapılandırılmış bir Kilo Code veya OpenRouter API anahtarı gerektirir (OpenRouter önceliklidir).",
+			"description": "Etkinleştirildiğinde, Kilo Code metin istemlerinden görüntüler üretebilir. Yapılandırılmış bir Kilo Code veya OpenRouter API anahtarı gerektirir.",
+			"apiProvider": "API Sağlayıcı",
 			"openRouterApiKeyLabel": "OpenRouter API Anahtarı",
 			"openRouterApiKeyPlaceholder": "OpenRouter API anahtarınızı girin",
 			"kiloCodeApiKeyLabel": "Kilo Code API Anahtarı",
@@ -778,7 +779,7 @@
 			"getApiKeyText": "API anahtarınızı alın",
 			"modelSelectionLabel": "Görüntü Üretim Modeli",
 			"modelSelectionDescription": "Görüntü üretimi için kullanılacak modeli seçin",
-			"warningMissingKey": "⚠️ Görüntü üretimi için Kilo Code veya OpenRouter API anahtarı gereklidir. Lütfen yukarıda yapılandırın.",
+			"warningMissingKey": "⚠️ Görüntü üretimi için bir API anahtarı gereklidir, lütfen yukarıda yapılandırın.",
 			"successConfigured": "✓ Görüntü üretimi yapılandırılmış ve kullanıma hazır"
 		},
 		"INLINE_ASSIST": {

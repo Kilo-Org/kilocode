@@ -1711,7 +1711,12 @@ export const webviewMessageHandler = async (
 					const { ...currentConfig } = await provider.providerSettingsManager.getProfile({
 						name: message.text,
 					})
-					if (currentConfig.kilocodeToken !== message.apiConfiguration.kilocodeToken) {
+					// Only clear organization ID if we actually had a kilocode token before and it's different now
+					const hadPreviousToken = currentConfig.kilocodeToken !== undefined
+					const hasNewToken = message.apiConfiguration.kilocodeToken !== undefined
+					const tokensAreDifferent = currentConfig.kilocodeToken !== message.apiConfiguration.kilocodeToken
+
+					if (hadPreviousToken && hasNewToken && tokensAreDifferent) {
 						configToSave = { ...message.apiConfiguration, kilocodeOrganizationId: undefined }
 					}
 					if (currentConfig.kilocodeOrganizationId !== message.apiConfiguration.kilocodeOrganizationId) {
@@ -2220,12 +2225,10 @@ export const webviewMessageHandler = async (
 				)
 
 				// Go back to Personal when no longer part of the current set organization
-				if (
-					apiConfiguration?.kilocodeOrganizationId &&
-					!(response.data.organizations ?? []).some(
-						({ id }) => id === apiConfiguration?.kilocodeOrganizationId,
-					)
-				) {
+				const organizationExists = (response.data.organizations ?? []).some(
+					({ id }) => id === apiConfiguration?.kilocodeOrganizationId,
+				)
+				if (apiConfiguration?.kilocodeOrganizationId && !organizationExists) {
 					provider.upsertProviderProfile(provider.providerSettingsManager.activateProfile.name, {
 						...apiConfiguration,
 						kilocodeOrganizationId: undefined,

@@ -773,7 +773,8 @@
 		},
 		"IMAGE_GENERATION": {
 			"name": "Enable AI image generation",
-			"description": "When enabled, Kilo Code can generate images from text prompts. Requires a Kilo Code or OpenRouter API key to be configured (OpenRouter takes precedence).",
+			"description": "When enabled, Kilo Code can generate images from text prompts. Requires a Kilo Code or OpenRouter API key to be configured.",
+			"apiProvider": "API Provider",
 			"openRouterApiKeyLabel": "OpenRouter API Key",
 			"openRouterApiKeyPlaceholder": "Enter your OpenRouter API key",
 			"kiloCodeApiKeyLabel": "Kilo Code API Key",
@@ -782,7 +783,7 @@
 			"getApiKeyText": "Get your API key from",
 			"modelSelectionLabel": "Image Generation Model",
 			"modelSelectionDescription": "Select the model to use for image generation",
-			"warningMissingKey": "⚠️ Kilo Code or OpenRouter API key is required for image generation. Please configure it above.",
+			"warningMissingKey": "⚠️ An API key is required for image generation, please configure it above.",
 			"successConfigured": "✓ Image generation is configured and ready to use"
 		}
 	},

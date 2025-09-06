@@ -182,7 +182,14 @@ export async function generateImageTool(
 			// kilocode_change start
 			const openRouterHandler = openRouterApiKey
 				? new OpenRouterHandler({})
-				: new KilocodeOpenrouterHandler({ kilocodeToken: kiloCodeApiKey })
+				: new KilocodeOpenrouterHandler({
+						kilocodeToken: kiloCodeApiKey,
+						kilocodeOrganizationId:
+							cline.apiConfiguration.apiProvider === "kilocode" &&
+							cline.apiConfiguration.kilocodeToken === kiloCodeApiKey
+								? cline.apiConfiguration.kilocodeOrganizationId
+								: undefined,
+					})
 			// kilocode_change end
 
 			// Call the generateImage method with the explicit API key and optional input image

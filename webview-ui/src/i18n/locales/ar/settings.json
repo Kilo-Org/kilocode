@@ -813,7 +813,8 @@
 		},
 		"IMAGE_GENERATION": {
 			"name": "تمكين إنشاء صور بالذكاء الاصطناعي",
-			"description": "عند التفعيل، يمكن لـ Kilo Code إنشاء صور من النصوص. يتطلب مفتاح Kilo Code أو OpenRouter API (OpenRouter له الأولوية).",
+			"description": "عند التفعيل، يمكن لـ Kilo Code إنشاء صور من النصوص. يتطلب مفتاح Kilo Code أو OpenRouter API.",
+			"apiProvider": "مزود API",
 			"openRouterApiKeyLabel": "مفتاح OpenRouter API",
 			"openRouterApiKeyPlaceholder": "أدخل مفتاح OpenRouter API",
 			"kiloCodeApiKeyLabel": "مفتاح Kilo Code API",
@@ -822,7 +823,7 @@
 			"getApiKeyText": "احصل على مفتاحك من",
 			"modelSelectionLabel": "نموذج إنشاء الصور",
 			"modelSelectionDescription": "اختر النموذج المراد استخدامه لإنشاء الصور",
-			"warningMissingKey": "⚠️ مفتاح Kilo Code أو OpenRouter API مطلوب لإنشاء الصور. يرجى تكوينه أعلاه.",
+			"warningMissingKey": "⚠️ مفتاح API مطلوب لإنشاء الصور، يرجى تكوينه أعلاه.",
 			"successConfigured": "✓ تم تكوين إنشاء الصور وهو جاهز للاستخدام"
 		},
 		"INLINE_ASSIST": {

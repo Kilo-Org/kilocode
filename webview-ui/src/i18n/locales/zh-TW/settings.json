@@ -769,7 +769,8 @@
 		},
 		"IMAGE_GENERATION": {
 			"name": "啟用 AI 圖像生成",
-			"description": "啟用後，Kilo Code 可以從文字提示生成圖像。需要設定 Kilo Code 或 OpenRouter API 金鑰（OpenRouter 優先）。",
+			"description": "啟用後，Kilo Code 可以從文字提示生成圖像。需要設定 Kilo Code 或 OpenRouter API 金鑰。",
+			"apiProvider": "API 供應商",
 			"openRouterApiKeyLabel": "OpenRouter API 金鑰",
 			"openRouterApiKeyPlaceholder": "輸入您的 OpenRouter API 金鑰",
 			"kiloCodeApiKeyLabel": "Kilo Code API 金鑰",
@@ -778,7 +779,7 @@
 			"getApiKeyText": "取得您的 API 金鑰從",
 			"modelSelectionLabel": "圖像生成模型",
 			"modelSelectionDescription": "選擇用於圖像生成的模型",
-			"warningMissingKey": "⚠️ 圖像生成需要 Kilo Code 或 OpenRouter API 金鑰。請在上方設定。",
+			"warningMissingKey": "⚠️ 圖像生成需要 API 金鑰，請在上方設定。",
 			"successConfigured": "✓ 圖像生成已設定完成並準備使用"
 		},
 		"INLINE_ASSIST": {

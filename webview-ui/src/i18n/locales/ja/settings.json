@@ -769,7 +769,8 @@
 		},
 		"IMAGE_GENERATION": {
 			"name": "AI画像生成を有効にする",
-			"description": "有効にすると、Kilo Codeはテキストプロンプトから画像を生成できます。Kilo Code または OpenRouter API キーの設定が必要です（OpenRouter が優先されます）。",
+			"description": "有効にすると、Kilo Codeはテキストプロンプトから画像を生成できます。Kilo Code または OpenRouter API キーの設定が必要です。",
+			"apiProvider": "APIプロバイダー",
 			"openRouterApiKeyLabel": "OpenRouter APIキー",
 			"openRouterApiKeyPlaceholder": "OpenRouter APIキーを入力してください",
 			"kiloCodeApiKeyLabel": "Kilo Code APIキー",
@@ -778,7 +779,7 @@
 			"getApiKeyText": "APIキーを取得する場所",
 			"modelSelectionLabel": "画像生成モデル",
 			"modelSelectionDescription": "画像生成に使用するモデルを選択",
-			"warningMissingKey": "⚠️ 画像生成にはKilo CodeまたはOpenRouter APIキーが必要です。上記で設定してください。",
+			"warningMissingKey": "⚠️ 画像生成にはAPIキーが必要です。上記で設定してください。",
 			"successConfigured": "✓ 画像生成が設定され、使用準備完了です"
 		},
 		"INLINE_ASSIST": {
