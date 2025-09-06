@@ -1,5 +1,29 @@
 # kilo-code
 
+## [v4.91.0]
+
+### Major Changes
+
+- **[FEAT] Streamable MCP Support**: This major release introduces comprehensive support for streamable MCP and Server-Sent Events (SSE), enabling real-time, bidirectional communication for MCP servers.
+    - **Streamable HTTP Support**: New "streamable-http" server type enabling streaming capabilities for HTTP-based MCP servers
+    - **Server-Sent Events (SSE) Integration**: Full support for SSE protocol in MCP communication
+    - **Real-time Communication**: Bidirectional streaming support for enhanced MCP interactions
+    - **Legacy Compatibility**: Automatic mapping of legacy configurations for seamless migration
+    - **Enhanced Schema Validation**: Improved server configuration validation with better error messages
+    - **Unified Configuration**: Streamlined schema with proper field validation using Zod
+    - **Type Safety**: Comprehensive TypeScript types for all streamable MCP features
+    - **Performance Optimization**: Optimized streaming performance for high-throughput MCP operations
+
+### Patch Changes
+
+- **[FIX] Chat History Loading**: Fixed intermittent async race condition that discarded user-chat-input during structured approve/reject operations
+
+- **[FIX] Kilo Code Extension Stability**: Resolved potential memory leaks and improved error handling for better extension stability
+
+- **[FIX] Add .env to build inputs**: Included .env files in build inputs to ensure proper configuration loading
+
+- **[FIX] Resolve Merge Conflicts and Extension Errors**: Comprehensive fixes for merge conflict resolution and various extension errors
+
 ## [v4.90.0]
 
 - [#2275](https://github.com/Kilo-Org/kilocode/pull/2275) [`4ae9acc`](https://github.com/Kilo-Org/kilocode/commit/4ae9acc00a90331944333356e8b936a0dcc06e77) Thanks [@jeske](https://github.com/jeske)! - fixes an intermittent async race that discards user-chat-input during structured approve/reject
