@@ -1,0 +1,25 @@
+{
+	"errors": {
+		"invalid_settings_format": "Ogiltigt JSON-format för MCP-inställningar. Säkerställ att dina inställningar följer korrekt JSON-format.",
+		"invalid_settings_syntax": "Ogiltigt JSON-format för MCP-inställningar. Kontrollera din inställningsfil för syntaxfel.",
+		"invalid_settings_validation": "Ogiltigt format för MCP-inställningar: {{errorMessages}}",
+		"create_json": "Misslyckades med att skapa eller öppna .kilocode/mcp.json: {{error}}",
+		"failed_update_project": "Misslyckades med att uppdatera projektets MCP-servrar",
+		"invalidJsonArgument": "Kilo Code försökte använda {{toolName}} med ett ogiltigt JSON-argument. Försöker igen...",
+		"refresh_after_disable": "Misslyckades med att uppdatera MCP-anslutningar efter inaktivering",
+		"refresh_after_enable": "Misslyckades med att uppdatera MCP-anslutningar efter aktivering",
+		"disconnect_servers_partial": "Misslyckades med att koppla från {{count}} MCP-server/servrar. Kontrollera utskriften för detaljer."
+	},
+	"info": {
+		"server_restarting": "Startar om MCP-servern {{serverName}}...",
+		"server_connected": "MCP-servern {{serverName}} ansluten",
+		"server_deleted": "MCP-server borttagen: {{serverName}}",
+		"server_not_found": "Servern \"{{serverName}}\" hittades inte i konfigurationen",
+		"global_servers_active": "Aktiva globala MCP-servrar: {{mcpServers}}",
+		"project_servers_active": "Aktiva projekt-MCP-servrar: {{mcpServers}}",
+		"already_refreshing": "MCP-servrar uppdateras redan.",
+		"refreshing_all": "Uppdaterar alla MCP-servrar...",
+		"all_refreshed": "Alla MCP-servrar har uppdaterats.",
+		"project_config_deleted": "Projektets MCP-konfigurationsfil har tagits bort. Alla projekt-MCP-servrar har kopplats från."
+	}
+}

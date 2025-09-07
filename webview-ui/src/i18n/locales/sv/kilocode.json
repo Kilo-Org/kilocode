@@ -1,0 +1,252 @@
+{
+	"welcome": {
+		"greeting": "Välkommen till Kilo Code!",
+		"introText1": "Kilo Code är en kostnadsfri AI‑kodagent med öppen källkod.",
+		"introText2": "Den fungerar med de senaste AI‑modellerna som Claude 4 Sonnet, Gemini 2.5 Pro, GPT‑4.1 och 450+ till.",
+		"introText3": "Skapa ett gratis konto och få upp till 25 USD i tokens att använda med valfri AI‑modell.",
+		"ctaButton": "Kom igång",
+		"manualModeButton": "Använd din egen API‑nyckel",
+		"alreadySignedUp": "Redan registrerad?",
+		"loginText": "Logga in här"
+	},
+	"lowCreditWarning": {
+		"addCredit": "Fyll på saldo",
+		"lowBalance": "Ditt Kilo Code‑saldo är lågt"
+	},
+	"pricing": {
+		"costUnknown": "okänd kostnad",
+		"costUnknownDescription": "API‑leverantören angav ingen kostnadsdata eller begäran avbröts.",
+		"freeModelsDescription": "Gratismodeller kan ha hastighetsbegränsningar. Använd länken nedan för att optimera din användning av gratismodeller!",
+		"freeModelsLink": "Upptäck gratis‑ och budgetmodeller",
+		"openRouterMarkup": "Kilo Code‑leverantören inkluderar alla OpenRouter‑modeller, utan påslag och 0 % provision!",
+		"switchToKiloCode": "Byt till Kilo Code"
+	},
+	"notifications": {
+		"toolRequest": "Verktygsbegäran väntar på godkännande",
+		"browserAction": "Webbläsaråtgärd väntar på godkännande",
+		"command": "Kommando väntar på godkännande"
+	},
+	"imageWarnings": {
+		"modelNoImageSupport": "Bilder stöds inte av den aktuella modellen.",
+		"maxImagesReached": "Maximalt 20 bilder per meddelande. Ta bort några bilder för att lägga till fler.",
+		"imagesRemovedNoSupport": "Bilder togs bort, stöds inte av modellen."
+	},
+	"settings": {
+		"sections": {
+			"mcp": "MCP‑servrar"
+		},
+		"provider": {
+			"account": "Kilo Code‑konto",
+			"apiKey": "Kilo Code API‑nyckel",
+			"login": "Logga in på Kilo Code",
+			"logout": "Logga ut från Kilo Code",
+			"providerRouting": {
+				"title": "Kilo Code – OpenRouter leverantörsroutning",
+				"description": "Kilo Code skickar förfrågningar till de bästa tillgängliga leverantörerna för din modell. Som standard lastbalanseras förfrågningar mellan toppleverantörerna för maximal upptid. Du kan dock välja en specifik leverantör för denna modell.",
+				"sorting": {
+					"default": "Standardleverantörssortering",
+					"price": "Föredra leverantörer med lägre pris",
+					"throughput": "Föredra leverantörer med högre genomströmning",
+					"latency": "Föredra leverantörer med lägre latens"
+				},
+				"dataCollection": {
+					"default": "Ingen datapolicy angiven",
+					"allow": "Tillåt leverantörens datainsamling",
+					"deny": "Neka leverantörens datainsamling"
+				}
+			},
+			"automaticFetch": "De senaste modellerna är automatiskt tillgängliga i Kilo Code. Om du är osäker på vilken modell du ska välja fungerar Kilo Code bäst med de rekommenderade modellerna som listas högst upp i <strong>fet stil</strong>."
+		},
+		"modelInfo": {
+			"contextWindow": "Kontextfönster",
+			"providerBreakdown": "Pris‑ och kapacitetsöversikt per leverantör",
+			"averageKiloCodeCost": "Detta är det genomsnitt som Kilo Code faktiskt spenderade med denna modell under den senaste veckan. Det kan vara lägre än listpriset tack vare utnyttjande av promptcache.",
+			"table": {
+				"provider": "Leverantör",
+				"context": "Slutpunkten kan bearbeta detta antal token (input + output).",
+				"inputPrice": "Kostnad per miljon token för prompten.",
+				"outputPrice": "Kostnad per miljon token för svaret.",
+				"cacheReadPrice": "Kostnad per miljon token för läsning från cache.",
+				"cacheWritePrice": "Kostnad per miljon token för skrivning till cache."
+			}
+		},
+		"contextManagement": {
+			"allowVeryLargeReads": {
+				"label": "Tillåt mycket stora filläsningar",
+				"description": "När detta är aktiverat kommer Kilo Code att utföra mycket stora fil‑ eller MCP‑utdata‑läsningar även om det finns hög risk att kontextfönstret överskrids (innehållsstorlek >80 % av kontextfönstret)."
+			}
+		},
+		"systemNotifications": {
+			"label": "Aktivera systemaviseringar",
+			"description": "När detta är aktiverat skickar Kilo Code systemaviseringar för viktiga händelser som uppgiftsslut eller fel.",
+			"testButton": "Testa avisering",
+			"testTitle": "Kilo Code",
+			"testMessage": "Detta är en testavisering från Kilo Code."
+		},
+		"terminal": {
+			"commandGenerator": {
+				"provider": "Leverantör för generering av terminalkommandon",
+				"apiConfigId": {
+					"label": "API‑konfiguration",
+					"description": "Välj vilken API‑konfiguration som ska användas för att generera terminalkommandon. Lämna som 'Använd aktuell konfiguration' för att använda standardinställningarna.",
+					"current": "Använd aktuell konfiguration"
+				}
+			}
+		}
+	},
+	"chat": {
+		"condense": {
+			"wantsToCondense": "Kilo Code vill kondensera din konversation",
+			"condenseConversation": "Kondensera konversation"
+		},
+		"seeNewChanges": "Visa nya ändringar"
+	},
+	"newTaskPreview": {
+		"task": "Uppgift"
+	},
+	"profile": {
+		"title": "Profil",
+		"dashboard": "Instrumentpanel",
+		"logOut": "Logga ut",
+		"currentBalance": "AKTUELLT SALDO",
+		"loading": "Laddar...",
+		"organization": "Organisation",
+		"personal": "Personligt",
+		"shop": {
+			"title": "Köp krediter",
+			"popular": "Populärt",
+			"credits": "krediter",
+			"action": "Köp nu",
+			"viewAll": "Visa alla prisalternativ"
+		}
+	},
+	"docs": "Dokumentation",
+	"rules": {
+		"tooltip": "Hantera Kilo Code‑regler och arbetsflöden",
+		"ariaLabel": "Kilo Code‑regler",
+		"tabs": {
+			"rules": "Regler",
+			"workflows": "Arbetsflöden"
+		},
+		"description": {
+			"rules": "Regler låter dig ge Kilo Code instruktioner som ska följas i alla lägen och för alla promptar. De är ett beständigt sätt att inkludera kontext och preferenser för alla konversationer i din arbetsyta eller globalt.",
+			"workflows": "Arbetsflöden är förberedda mallar för en konversation. Arbetsflöden kan låta dig definiera promptar du ofta använder och kan inkludera en serie steg som guidar Kilo Code genom repetitiva uppgifter, såsom att deploya en tjänst eller skapa en PR. För att anropa ett arbetsflöde, skriv",
+			"workflowsInChat": "i chatten."
+		},
+		"sections": {
+			"globalRules": "Globala regler",
+			"workspaceRules": "Arbetsytans regler",
+			"globalWorkflows": "Globala arbetsflöden",
+			"workspaceWorkflows": "Arbetsytans arbetsflöden"
+		},
+		"validation": {
+			"invalidFileExtension": "Endast .md, .txt eller ingen filändelse är tillåten"
+		},
+		"placeholders": {
+			"workflowName": "arbetsflödes‑namn (.md, .txt eller ingen filändelse)",
+			"ruleName": "regel‑namn (.md, .txt eller ingen filändelse)"
+		},
+		"newFile": {
+			"newWorkflowFile": "Ny arbetsflödesfil...",
+			"newRuleFile": "Ny regelfil..."
+		}
+	},
+	"taskTimeline": {
+		"tooltip": {
+			"clickToScroll": "Visa {{messageType}} (#{{messageNumber}})",
+			"messageTypes": {
+				"browser_action_launch": "webbläsarstart",
+				"browser_action_result": "resultat av webbläsaråtgärd",
+				"browser_action": "webbläsaråtgärd",
+				"checkpoint_saved": "kontrollpunkt sparad",
+				"command": "kommandokörning",
+				"command_output": "kommandoutdata",
+				"completion_result": "kompletteringsresultat",
+				"condense_context": "kondensera kontext",
+				"error": "felmeddelande",
+				"followup": "uppföljningsfråga",
+				"mcp_server_response": "MCP‑serversvar",
+				"reasoning": "AI‑resonemang",
+				"text": "AI‑svar",
+				"tool": "verktygsanvändning",
+				"user": "användarfeedback",
+				"unknown": "okänd meddelandetyp",
+				"use_mcp_server": "MCP‑serveranvändning"
+			}
+		}
+	},
+	"userFeedback": {
+		"editCancel": "Avbryt",
+		"send": "Skicka",
+		"restoreAndSend": "Återställ och skicka"
+	},
+	"ideaSuggestionsBox": {
+		"newHere": "Ny här?",
+		"suggestionText": "<suggestionButton>Klicka här</suggestionButton> för ett kul förslag, tryck sedan på <sendIcon /> och se mig göra magi!",
+		"ideas": {
+			"idea1": "Skapa en roterande, glödande 3D‑sfär som reagerar på musrörelser. Få appen att fungera i webbläsaren.",
+			"idea2": "Skapa en portföljsajt för en Python‑utvecklare",
+			"idea3": "Skapa en mockup av en finansapp i webbläsaren. Testa sedan att den fungerar",
+			"idea4": "Skapa en katalogsajt med de bästa modellerna för AI‑videogenerering just nu",
+			"idea5": "Skapa en CSS‑gradientgenerator som exporterar anpassade stilmallar och visar en liveförhandsvisning",
+			"idea6": "Generera kort som avslöjar dynamiskt innehåll på ett snyggt sätt vid hovring",
+			"idea7": "Skapa ett rogivande interaktivt stjärnfält som rör sig med musgester"
+		}
+	},
+	"ghost": {
+		"title": "Autokomplettering",
+		"settings": {
+			"autoTrigger": "Auto‑utlösning",
+			"triggers": "Utlösare",
+			"keybindingDescription": "Autokompletteringsfunktioner kan triggas via kommandon. Du kan konfigurera <DocsLink>Tangentbordsgenvägar här</DocsLink>.",
+			"enableAutoTrigger": {
+				"label": "Aktivera autokomplettering",
+				"description": "När detta är aktiverat triggar Kilo Code autokomplettering automatiskt när du slutar skriva. Detta kan vara användbart för snabba fixar och förslag."
+			},
+			"autoTriggerDelay": {
+				"label": "Fördröjning för auto‑utlösning",
+				"description": "Fördröjningen i sekunder innan Kilo Code triggar autokomplettering efter att du slutat skriva. En kortare fördröjning ger snabbare förslag men kan använda mer resurser."
+			},
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Snabbuppgift",
+				"description": "Behöver du bara en snabb ändring? Markera lite kod (eller låt bli!) och tryck Cmd+I. Beskriv ditt mål på enkel svenska (\"skapa en React‑komponent med dessa props\", \"lägg till felhantering i denna funktion\") och få flera, färdiga förslag direkt i editorn. <DocsLink>Se genväg</DocsLink>"
+			},
+			"enableSmartInlineTaskKeybinding": {
+				"label": "Manuell autokomplettering",
+				"description": "Behöver du en snabb fix, komplettering eller refaktorering? Kilo använder den omgivande kontexten för att ge omedelbara förbättringar så att du behåller flödet. <DocsLink>Se genväg</DocsLink>"
+			},
+			"enableCustomProvider": {
+				"label": "Använd anpassad leverantör",
+				"description": "Autokomplettering använder din KiloCode / OpenRouter / Mistral‑inloggning för att använda Codestral som standard"
+			},
+			"provider": "Leverantör",
+			"apiConfigId": {
+				"label": "API‑konfiguration",
+				"current": "Använd nuvarande API‑konfiguration",
+				"description": "Välj en API‑konfiguration att använda för autokompletteringspromptar, eller använd helt enkelt den som är vald just nu"
+			}
+		}
+	},
+	"virtualProvider": {
+		"title": "Inställningar för virtuell kvot‑fallback‑leverantör",
+		"description": "Konfigurera en lista av profiler med egna kvotgränser. När en leverantörs kvotgränser är uppnådda används nästa profil i listan tills inga återstår.",
+		"profileLabel": "Profil {{number}}",
+		"primaryProfileLabel": "Profil {{number}} (Primär)",
+		"moveProfileUp": "Flytta profilen upp",
+		"moveProfileDown": "Flytta profilen ned",
+		"removeProfile": "Ta bort profil",
+		"selectProfilePlaceholder": "Välj profil...",
+		"addProfile": "Lägg till profil",
+		"noProfilesAvailable": "Inga profiler tillgängliga. Konfigurera minst en icke‑virtuell leverantörsprofil först.",
+		"tokensLabel": "Token",
+		"perMinute": "Per minut",
+		"perHour": "Per timme",
+		"perDay": "Per dag",
+		"requestsLabel": "Förfrågningar",
+		"dangerZoneTitle": "Riskzon",
+		"dangerZoneDescription": "Dessa åtgärder är destruktiva och kan inte ångras.",
+		"clearUsageData": "Rensa användningsdata",
+		"confirmClearTitle": "Är du säker?",
+		"confirmClearDescription": "Detta raderar permanent all sparad användningsdata för virtuella leverantörer. Åtgärden kan inte ångras."
+	}
+}

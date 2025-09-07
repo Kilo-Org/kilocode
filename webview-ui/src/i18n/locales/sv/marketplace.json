@@ -1,0 +1,156 @@
+{
+	"title": "Kilo Code marknadsplats",
+	"tabs": {
+		"installed": "Installerade",
+		"settings": "Inställningar",
+		"browse": "Bläddra"
+	},
+	"done": "Klart",
+	"refresh": "Uppdatera",
+	"filters": {
+		"search": {
+			"placeholder": "Sök bland marknadsplatsobjekt...",
+			"placeholderMcp": "Sök MCP:er...",
+			"placeholderMode": "Sök lägen..."
+		},
+		"installed": {
+			"label": "Filtrera efter status",
+			"all": "Alla objekt",
+			"installed": "Installerade",
+			"notInstalled": "Inte installerade"
+		},
+		"type": {
+			"label": "Filtrera efter typ:",
+			"all": "Alla typer",
+			"mode": "Läge",
+			"mcpServer": "MCP-server"
+		},
+		"sort": {
+			"label": "Sortera efter:",
+			"name": "Namn",
+			"author": "Författare",
+			"lastUpdated": "Senast uppdaterad"
+		},
+		"tags": {
+			"label": "Filtrera efter taggar:",
+			"clear": "Rensa taggar",
+			"placeholder": "Skriv för att söka och välja taggar...",
+			"noResults": "Inga matchande taggar hittades",
+			"selected": "Visar objekt med någon av de valda taggarna",
+			"clickToFilter": "Klicka på taggar för att filtrera objekt"
+		},
+		"none": "Inga"
+	},
+	"sections": {
+		"organizationMcps": "{{organization}} MCP:er",
+		"marketplace": "Marknadsplats"
+	},
+	"type-group": {
+		"modes": "Lägen",
+		"mcps": "MCP-servrar"
+	},
+	"items": {
+		"empty": {
+			"noItems": "Inga marknadsplatsobjekt hittades",
+			"withFilters": "Prova att justera dina filter",
+			"noSources": "Prova att lägga till en källa på fliken Källor",
+			"adjustFilters": "Prova att justera dina filter eller söktermer",
+			"clearAllFilters": "Rensa alla filter"
+		},
+		"count": "{{count}} objekt hittades",
+		"components": "{{count}} komponenter",
+		"matched": "{{count}} matchningar",
+		"refresh": {
+			"button": "Uppdatera",
+			"refreshing": "Uppdaterar...",
+			"mayTakeMoment": "Detta kan ta en stund."
+		},
+		"card": {
+			"by": "av {{author}}",
+			"from": "från {{source}}",
+			"install": "Installera",
+			"installProject": "Installera",
+			"installGlobal": "Installera (globalt)",
+			"remove": "Ta bort",
+			"removeProject": "Ta bort",
+			"removeGlobal": "Ta bort (globalt)",
+			"viewSource": "Visa",
+			"viewOnSource": "Visa på {{source}}",
+			"noWorkspaceTooltip": "Öppna en arbetsyta för att installera marknadsplatsobjekt",
+			"installed": "Installerad",
+			"removeProjectTooltip": "Ta bort från aktuellt projekt",
+			"removeGlobalTooltip": "Ta bort från global konfiguration",
+			"actionsMenuLabel": "Fler åtgärder"
+		},
+		"removeFailed": "Misslyckades med att ta bort objekt: {{error}}",
+		"unknownError": "Okänt fel inträffade"
+	},
+	"install": {
+		"title": "Installera {{name}}",
+		"titleMode": "Installera {{name}}-läge",
+		"titleMcp": "Installera {{name}} MCP",
+		"scope": "Installationsomfång",
+		"project": "Projekt (aktuell arbetsyta)",
+		"global": "Globalt (alla arbetsytor)",
+		"method": "Installationsmetod",
+		"prerequisites": "Förutsättningar",
+		"configuration": "Konfiguration",
+		"configurationDescription": "Konfigurera de parametrar som krävs för denna MCP-server",
+		"button": "Installera",
+		"successTitle": "{{name}} installerad",
+		"successDescription": "Installationen slutfördes",
+		"installed": "Installerades!",
+		"whatNextMcp": "Du kan nu konfigurera och använda denna MCP-server. Klicka på MCP-ikonen i sidofältet för att byta flik.",
+		"whatNextMode": "Du kan nu använda detta läge. Klicka på Lägen-ikonen i sidofältet för att byta flik.",
+		"done": "Klart",
+		"goToMcp": "Gå till MCP-fliken",
+		"goToModes": "Gå till lägesinställningar",
+		"moreInfoMcp": "Visa dokumentation för {{name}} MCP",
+		"validationRequired": "Ange ett värde för {{paramName}}"
+	},
+	"sources": {
+		"title": "Konfigurera marknadsplatskällor",
+		"description": "Lägg till Git-repon som innehåller marknadsplatsobjekt. Dessa hämtas när du bläddrar i marknadsplatsen.",
+		"add": {
+			"title": "Lägg till ny källa",
+			"urlPlaceholder": "Git-repo-URL (t.ex. https://github.com/username/repo)",
+			"urlFormats": "Stödda format: HTTPS (https://github.com/username/repo), SSH (git@github.com:username/repo.git) eller Git-protokoll (git://github.com/username/repo.git)",
+			"namePlaceholder": "Visningsnamn (max 20 tecken)",
+			"button": "Lägg till källa"
+		},
+		"current": {
+			"title": "Aktuella källor",
+			"empty": "Inga källor konfigurerade. Lägg till en källa för att komma igång.",
+			"refresh": "Uppdatera denna källa",
+			"remove": "Ta bort källa"
+		},
+		"errors": {
+			"emptyUrl": "URL får inte vara tom",
+			"invalidUrl": "Ogiltigt URL-format",
+			"nonVisibleChars": "URL innehåller icke-synliga tecken förutom blanksteg",
+			"invalidGitUrl": "URL måste vara en giltig Git-repo-URL (t.ex. https://github.com/username/repo)",
+			"duplicateUrl": "Denna URL finns redan i listan (skiftläges- och blankstegsoberoende matchning)",
+			"nameTooLong": "Namnet får vara högst 20 tecken",
+			"nonVisibleCharsName": "Namnet innehåller icke-synliga tecken förutom blanksteg",
+			"duplicateName": "Detta namn används redan (skiftläges- och blankstegsoberoende matchning)",
+			"emojiName": "Emoji-tecken kan orsaka visningsproblem",
+			"maxSources": "Högst {{max}} källor tillåtna"
+		}
+	},
+	"removeConfirm": {
+		"mode": {
+			"title": "Ta bort läge",
+			"message": "Är du säker på att du vill ta bort läget \"{{modeName}}\"?",
+			"rulesWarning": "Detta tar också bort alla associerade regelfiler för detta läge."
+		},
+		"mcp": {
+			"title": "Ta bort MCP-server",
+			"message": "Är du säker på att du vill ta bort MCP-servern \"{{mcpName}}\"?"
+		},
+		"cancel": "Avbryt",
+		"confirm": "Ta bort"
+	},
+	"footer": {
+		"issueText": "Hittade du problem med ett marknadsplatsobjekt eller har förslag på nya? <0>Öppna ett GitHub-ärende</0> för att meddela oss!"
+	}
+}

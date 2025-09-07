@@ -1,0 +1,395 @@
+{
+	"greeting": "Vad kan Kilo Code göra för dig?",
+	"task": {
+		"title": "Uppgift",
+		"expand": "Expandera uppgift",
+		"collapse": "Fäll ihop uppgift",
+		"seeMore": "Visa mer",
+		"seeLess": "Visa mindre",
+		"tokens": "Token",
+		"cache": "Cache",
+		"apiCost": "API-kostnad",
+		"size": "Storlek",
+		"condenseContext": "Kondensera kontext intelligent",
+		"contextWindow": "Kontextlängd",
+		"closeAndStart": "Stäng uppgift och starta en ny",
+		"export": "Exportera uppgiftshistorik",
+		"share": "Dela uppgift",
+		"delete": "Ta bort uppgift (Skift + klick för att hoppa över bekräftelse)",
+		"shareWithOrganization": "Dela med organisation",
+		"shareWithOrganizationDescription": "Endast medlemmar i din organisation har åtkomst",
+		"sharePublicly": "Dela offentligt",
+		"sharePubliclyDescription": "Alla med länken har åtkomst",
+		"connectToCloud": "Anslut till molnet",
+		"connectToCloudDescription": "Logga in på Kilo Code Cloud för att dela uppgifter",
+		"sharingDisabledByOrganization": "Delning inaktiverad av organisationen",
+		"shareSuccessOrganization": "Organisationslänk kopierad till urklipp",
+		"shareSuccessPublic": "Offentlig länk kopierad till urklipp"
+	},
+	"history": {
+		"title": "Historik"
+	},
+	"unpin": "Lossa",
+	"pin": "Fäst",
+	"retry": {
+		"title": "Försök igen",
+		"tooltip": "Försök åtgärden igen"
+	},
+	"startNewTask": {
+		"title": "Starta ny uppgift",
+		"tooltip": "Påbörja en ny uppgift"
+	},
+	"reportBug": {
+		"title": "Rapportera fel"
+	},
+	"proceedAnyways": {
+		"title": "Fortsätt ändå",
+		"tooltip": "Fortsätt medan kommandot körs"
+	},
+	"save": {
+		"title": "Spara",
+		"tooltip": "Spara meddelandeändringar"
+	},
+	"tokenProgress": {
+		"availableSpace": "Tillgängligt utrymme: {{amount}} token",
+		"tokensUsed": "Använda token: {{used}} av {{total}}",
+		"reservedForResponse": "Reserverat för modellsvar: {{amount}} token"
+	},
+	"reject": {
+		"title": "Avvisa",
+		"tooltip": "Avvisa denna åtgärd"
+	},
+	"completeSubtaskAndReturn": "Slutför deluppgift och återgå",
+	"approve": {
+		"title": "Godkänn",
+		"tooltip": "Godkänn denna åtgärd"
+	},
+	"read-batch": {
+		"approve": {
+			"title": "Godkänn alla"
+		},
+		"deny": {
+			"title": "Neka alla"
+		}
+	},
+	"runCommand": {
+		"title": "Kör kommando",
+		"tooltip": "Kör detta kommando"
+	},
+	"proceedWhileRunning": {
+		"title": "Fortsätt medan det körs",
+		"tooltip": "Fortsätt trots varningar"
+	},
+	"killCommand": {
+		"title": "Avsluta kommando",
+		"tooltip": "Avsluta aktuellt kommando"
+	},
+	"resumeTask": {
+		"title": "Återuppta uppgift",
+		"tooltip": "Fortsätt den aktuella uppgiften"
+	},
+	"terminate": {
+		"title": "Avsluta",
+		"tooltip": "Avsluta den aktuella uppgiften"
+	},
+	"cancel": {
+		"title": "Avbryt",
+		"tooltip": "Avbryt den aktuella åtgärden"
+	},
+	"editMessage": {
+		"placeholder": "Redigera ditt meddelande..."
+	},
+	"scrollToBottom": "Rulla till botten av chatten",
+	"about": "Generera, refaktorera och felsök kod med AI-hjälp. Kolla vår <DocsLink>dokumentation</DocsLink> för att lära dig mer.",
+	"onboarding": "Din uppgiftslista i denna arbetsyta är tom.",
+	"rooTips": {
+		"boomerangTasks": {
+			"title": "Uppgiftsorkestrering",
+			"description": "Dela uppgifter i mindre, hanterbara delar"
+		},
+		"stickyModels": {
+			"title": "Klistriga modeller",
+			"description": "Varje läge minns din senast använda modell"
+		},
+		"tools": {
+			"title": "Verktyg",
+			"description": "Låt AI lösa problem genom att surfa på webben, köra kommandon och mer"
+		},
+		"customizableModes": {
+			"title": "Anpassningsbara lägen",
+			"description": "Specialiserade personligheter med egna beteenden och tilldelade modeller"
+		}
+	},
+	"selectMode": "Välj läge för interaktion",
+	"selectApiConfig": "Välj API-konfiguration",
+	"selectModelConfig": "Välj modell",
+	"enhancePrompt": "Förbättra prompt med ytterligare kontext",
+	"modeSelector": {
+		"title": "Lägen",
+		"marketplace": "Lägesmarknad",
+		"settings": "Lägesinställningar",
+		"description": "Specialiserade personligheter som skräddarsyr Kilo Codes beteende.",
+		"searchPlaceholder": "Sök lägen...",
+		"noResults": "Inga resultat hittades"
+	},
+	"enhancePromptDescription": "Knappen 'Förbättra prompt' hjälper till att förbättra din prompt genom att ge extra kontext, förtydliganden eller omformuleringar. Skriv en prompt här och klicka på knappen igen för att se hur det fungerar.",
+	"addImages": "Lägg till bilder i meddelande",
+	"sendMessage": "Skicka meddelande",
+	"stopTts": "Stoppa text-till-tal",
+	"typeMessage": "Skriv ett meddelande...",
+	"typeTask": "Skriv din uppgift här...",
+	"addContext": "@ för att lägga till kontext, / för kommandon",
+	"dragFiles": "håll shift för att dra in filer",
+	"dragFilesImages": "håll shift för att dra in filer/bilder",
+	"errorReadingFile": "Fel vid läsning av fil:",
+	"noValidImages": "Inga giltiga bilder bearbetades",
+	"separator": "Avgränsare",
+	"edit": "Redigera...",
+	"forNextMode": "för nästa läge",
+	"forPreviousMode": "för föregående läge",
+	"apiRequest": {
+		"title": "API-begäran",
+		"failed": "API-begäran misslyckades",
+		"streaming": "API-begäran...",
+		"cancelled": "API-begäran avbruten",
+		"streamingFailed": "API-strömning misslyckades"
+	},
+	"checkpoint": {
+		"regular": "Kontrollpunkt",
+		"initializingWarning": "Initierar fortfarande kontrollpunkt... Om detta tar för lång tid kan du inaktivera kontrollpunkter i <settingsLink>inställningar</settingsLink> och starta om din uppgift.",
+		"menu": {
+			"viewDiff": "Visa diff",
+			"restore": "Återställ kontrollpunkt",
+			"restoreFiles": "Återställ filer",
+			"restoreFilesDescription": "Återställer projektets filer till en ögonblicksbild tagen vid denna punkt.",
+			"restoreFilesAndTask": "Återställ filer och uppgift",
+			"confirm": "Bekräfta",
+			"cancel": "Avbryt",
+			"cannotUndo": "Denna åtgärd kan inte ångras.",
+			"restoreFilesAndTaskDescription": "Återställer projektets filer till en ögonblicksbild tagen vid denna punkt och tar bort alla meddelanden efter denna punkt."
+		},
+		"current": "Aktuell"
+	},
+	"contextCondense": {
+		"title": "Kontext kondenserad",
+		"condensing": "Kondenserar kontext...",
+		"errorHeader": "Misslyckades med att kondensera kontext",
+		"tokens": "token"
+	},
+	"instructions": {
+		"wantsToFetch": "Kilo Code vill hämta detaljerade instruktioner för att hjälpa till med den aktuella uppgiften"
+	},
+	"fileOperations": {
+		"wantsToRead": "Kilo Code vill läsa denna fil:",
+		"wantsToReadMultiple": "Kilo Code vill läsa flera filer:",
+		"wantsToReadAndXMore": "Kilo Code vill läsa denna fil och {{count}} till:",
+		"wantsToReadOutsideWorkspace": "Kilo Code vill läsa denna fil utanför arbetsytan:",
+		"didRead": "Kilo Code läste denna fil:",
+		"wantsToEdit": "Kilo Code vill redigera denna fil:",
+		"wantsToEditOutsideWorkspace": "Kilo Code vill redigera denna fil utanför arbetsytan:",
+		"wantsToEditProtected": "Kilo Code vill redigera en skyddad konfigurationsfil:",
+		"wantsToApplyBatchChanges": "Kilo Code vill tillämpa ändringar på flera filer:",
+		"wantsToGenerateImage": "Kilo Code vill generera en bild:",
+		"wantsToGenerateImageOutsideWorkspace": "Kilo Code vill generera en bild utanför arbetsytan:",
+		"wantsToGenerateImageProtected": "Kilo Code vill generera en bild på en skyddad plats:",
+		"didGenerateImage": "Kilo Code genererade en bild:",
+		"wantsToCreate": "Kilo Code vill skapa en ny fil:",
+		"wantsToSearchReplace": "Kilo Code vill söka och ersätta i denna fil:",
+		"didSearchReplace": "Kilo Code utförde sök och ersätt på denna fil:",
+		"wantsToInsert": "Kilo Code vill infoga innehåll i denna fil:",
+		"wantsToInsertWithLineNumber": "Kilo Code vill infoga innehåll i denna fil vid rad {{lineNumber}}:",
+		"wantsToInsertAtEnd": "Kilo Code vill lägga till innehåll i slutet av denna fil:"
+	},
+	"directoryOperations": {
+		"wantsToViewTopLevel": "Kilo Code vill visa toppnivåfilerna i denna katalog:",
+		"didViewTopLevel": "Kilo Code visade toppnivåfilerna i denna katalog:",
+		"wantsToViewTopLevelOutsideWorkspace": "Kilo Code vill visa toppnivåfilerna i denna katalog (utanför arbetsytan):",
+		"didViewTopLevelOutsideWorkspace": "Kilo Code visade toppnivåfilerna i denna katalog (utanför arbetsytan):",
+		"wantsToViewRecursive": "Kilo Code vill rekursivt visa alla filer i denna katalog:",
+		"didViewRecursive": "Kilo Code visade rekursivt alla filer i denna katalog:",
+		"wantsToViewRecursiveOutsideWorkspace": "Kilo Code vill rekursivt visa alla filer i denna katalog (utanför arbetsytan):",
+		"didViewRecursiveOutsideWorkspace": "Kilo Code visade rekursivt alla filer i denna katalog (utanför arbetsytan):",
+		"wantsToViewDefinitions": "Kilo Code vill visa källkodens definitionsnamn som används i denna katalog:",
+		"didViewDefinitions": "Kilo Code visade källkodens definitionsnamn som används i denna katalog:",
+		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code vill visa källkodens definitionsnamn som används i denna katalog (utanför arbetsytan):",
+		"didViewDefinitionsOutsideWorkspace": "Kilo Code visade källkodens definitionsnamn som används i denna katalog (utanför arbetsytan):",
+		"wantsToSearch": "Kilo Code vill söka i denna katalog efter <code>{{regex}}</code>:",
+		"didSearch": "Kilo Code sökte i denna katalog efter <code>{{regex}}</code>:",
+		"wantsToSearchOutsideWorkspace": "Kilo Code vill söka i denna katalog (utanför arbetsytan) efter <code>{{regex}}</code>:",
+		"didSearchOutsideWorkspace": "Kilo Code sökte i denna katalog (utanför arbetsytan) efter <code>{{regex}}</code>:"
+	},
+	"codebaseSearch": {
+		"wantsToSearch": "Kilo Code vill söka i kodbasen efter <code>{{query}}</code>:",
+		"wantsToSearchWithPath": "Kilo Code vill söka i kodbasen efter <code>{{query}}</code> i <code>{{path}}</code>:",
+		"didSearch_one": "Hittade 1 resultat",
+		"didSearch_other": "Hittade {{count}} resultat",
+		"resultTooltip": "Likhetspoäng: {{score}} (klicka för att öppna fil)"
+	},
+	"commandOutput": "Kommandoutdata",
+	"commandExecution": {
+		"running": "Körs",
+		"pid": "PID: {{pid}}",
+		"exited": "Avslutades ({{exitCode}})",
+		"manageCommands": "Hantera kommandobehörigheter",
+		"commandManagementDescription": "Hantera kommandobehörigheter: Klicka ✓ för att tillåta autokörning, ✗ för att neka körning. Mönster kan växlas på/av eller tas bort från listor. <settingsLink>Visa alla inställningar</settingsLink>",
+		"addToAllowed": "Lägg till i tillåtna",
+		"removeFromAllowed": "Ta bort från tillåtna",
+		"addToDenied": "Lägg till i nekade",
+		"removeFromDenied": "Ta bort från nekade",
+		"abortCommand": "Avbryt kommandokörning",
+		"expandOutput": "Expandera utdata",
+		"collapseOutput": "Fäll ihop utdata",
+		"expandManagement": "Expandera hanteringsavsnittet för kommandon",
+		"collapseManagement": "Fäll ihop hanteringsavsnittet för kommandon"
+	},
+	"response": "Svar",
+	"arguments": "Argument",
+	"mcp": {
+		"wantsToUseTool": "Kilo Code vill använda ett verktyg på MCP-servern {{serverName}}:",
+		"wantsToAccessResource": "Kilo Code vill komma åt en resurs på MCP-servern {{serverName}}:"
+	},
+	"modes": {
+		"wantsToSwitch": "Kilo Code vill byta till läget {{mode}}",
+		"wantsToSwitchWithReason": "Kilo Code vill byta till läget {{mode}} eftersom: {{reason}}",
+		"didSwitch": "Kilo Code bytte till läget {{mode}}",
+		"didSwitchWithReason": "Kilo Code bytte till läget {{mode}} eftersom: {{reason}}"
+	},
+	"subtasks": {
+		"wantsToCreate": "Kilo Code vill skapa en ny deluppgift i läget {{mode}}:",
+		"wantsToFinish": "Kilo Code vill slutföra denna deluppgift",
+		"newTaskContent": "Instruktioner för deluppgift",
+		"completionContent": "Deluppgift slutförd",
+		"resultContent": "Resultat för deluppgift",
+		"defaultResult": "Fortsätt till nästa uppgift.",
+		"completionInstructions": "Deluppgift slutförd! Du kan granska resultaten och föreslå korrigeringar eller nästa steg. Om allt ser bra ut, bekräfta för att returnera resultatet till huvuduppgiften."
+	},
+	"questions": {
+		"hasQuestion": "Kilo Code har en fråga:"
+	},
+	"taskCompleted": "Uppgift slutförd",
+	"error": "Fel",
+	"diffError": {
+		"title": "Redigering misslyckades"
+	},
+	"troubleMessage": "Kilo Code har problem...",
+	"powershell": {
+		"issues": "Det verkar som att du har problem med Windows PowerShell, se detta"
+	},
+	"autoApprove": {
+		"title": "Auto-godkännande:",
+		"none": "Inget",
+		"description": "Auto-godkännande låter Kilo Code utföra åtgärder utan att be om tillåtelse. Aktivera endast för åtgärder du litar fullt på. Mer detaljerad konfiguration finns i <settingsLink>Inställningar</settingsLink>.",
+		"selectOptionsFirst": "Välj minst ett alternativ nedan för att aktivera auto-godkännande",
+		"toggleAriaLabel": "Växla auto-godkännande",
+		"disabledAriaLabel": "Auto-godkännande inaktiverat – välj alternativ först"
+	},
+	"announcement": {
+		"title": "🎉 Roo Code {{version}} släppt",
+		"stealthModel": {
+			"feature": "Sonic stealth-modellen heter nu <bold>Grok Code Fast</bold>! Denna högpresterande resonemangsmodell finns som <code>grok-code-fast-1</code> under leverantören <bold>xAI (Grok)</bold>.",
+			"note": "Som tack för all hjälpsam feedback på Sonic förlänger xAI gratis åtkomst till <code>grok-code-fast-1</code> ytterligare en vecka via leverantören <bold>Roo Code Cloud</bold>.",
+			"connectButton": "Anslut till Roo Code Cloud",
+			"selectModel": "Besök <settingsLink>Inställningar</settingsLink> för att uppdatera din leverantörskonfiguration."
+		}
+	},
+	"reasoning": {
+		"thinking": "Tänker",
+		"seconds": "{{count}} s"
+	},
+	"followUpSuggest": {
+		"copyToInput": "Kopiera till inmatning (samma som shift + klick)",
+		"autoSelectCountdown": "Väljer automatiskt om {{count}} s",
+		"countdownDisplay": "{{count}} s"
+	},
+	"browser": {
+		"rooWantsToUse": "Kilo Code vill använda webbläsaren:",
+		"consoleLogs": "Konsolloggar",
+		"noNewLogs": "(Inga nya loggar)",
+		"screenshot": "Skärmdump från webbläsare",
+		"cursor": "markör",
+		"navigation": {
+			"step": "Steg {{current}} av {{total}}",
+			"previous": "Föregående",
+			"next": "Nästa"
+		},
+		"sessionStarted": "Webbläsarsession startad",
+		"actions": {
+			"title": "Bläddringsåtgärd: ",
+			"launch": "Starta webbläsare på {{url}}",
+			"click": "Klicka ({{coordinate}})",
+			"type": "Skriv \"{{text}}\"",
+			"scrollDown": "Rulla ned",
+			"scrollUp": "Rulla upp",
+			"close": "Stäng webbläsare"
+		}
+	},
+	"codeblock": {
+		"tooltips": {
+			"expand": "Expandera kodblock",
+			"collapse": "Fäll ihop kodblock",
+			"enable_wrap": "Aktivera radbrytning",
+			"disable_wrap": "Inaktivera radbrytning",
+			"copy_code": "Kopiera kod"
+		}
+	},
+	"systemPromptWarning": "VARNING: Anpassad systemprompt-override är aktiv. Detta kan kraftigt försämra funktionaliteten och orsaka oförutsägbart beteende.",
+	"profileViolationWarning": "Den aktuella profilen är inte kompatibel med din organisations inställningar",
+	"shellIntegration": {
+		"title": "Varning för kommandokörning",
+		"description": "Ditt kommando körs utan VSCode-terminalens skalintegration. För att undertrycka denna varning kan du inaktivera skalintegration i avsnittet <strong>Terminal</strong> i <settingsLink>Kilo Code-inställningar</settingsLink> eller felsöka VSCode-terminalens integration via länken nedan.",
+		"troubleshooting": "Klicka här för dokumentation om skalintegration."
+	},
+	"ask": {
+		"autoApprovedRequestLimitReached": {
+			"title": "Gräns för auto-godkända begäranden uppnådd",
+			"description": "Kilo Code har nått gränsen på {{count}} auto-godkända API-begäranden. Vill du nollställa räknaren och fortsätta med uppgiften?",
+			"button": "Nollställ och fortsätt"
+		},
+		"autoApprovedCostLimitReached": {
+			"title": "Gräns för auto-godkänd kostnad uppnådd",
+			"description": "Kilo har nått gränsen för auto-godkänd kostnad på ${{count}}. Vill du nollställa kostnaden och fortsätta med uppgiften?",
+			"button": "Nollställ och fortsätt"
+		}
+	},
+	"indexingStatus": {
+		"ready": "Index redo",
+		"indexing": "Indexerar {{percentage}}%",
+		"indexed": "Indexerad",
+		"error": "Indexfel",
+		"status": "Indexstatus"
+	},
+	"versionIndicator": {
+		"ariaLabel": "Version {{version}} – Klicka för att visa versionsanteckningar"
+	},
+	"rooCloudCTA": {
+		"title": "Roo Code Cloud utvecklas!",
+		"description": "Kör Roomote-agenter i molnet, kom åt dina uppgifter var som helst, samarbeta med andra och mer.",
+		"joinWaitlist": "Registrera dig för att få de senaste uppdateringarna."
+	},
+	"command": {
+		"triggerDescription": "Utlös kommandot {{name}}"
+	},
+	"slashCommands": {
+		"tooltip": "Hantera slash-kommandon",
+		"title": "Slash-kommandon",
+		"description": "Använd inbyggda slash-kommandon eller skapa egna för snabb åtkomst till ofta använda promptar och arbetsflöden. <DocsLink>Docs</DocsLink>",
+		"builtInCommands": "Inbyggda kommandon",
+		"globalCommands": "Globala kommandon",
+		"workspaceCommands": "Arbetsytans kommandon",
+		"globalCommand": "Globalt kommando",
+		"editCommand": "Redigera kommando",
+		"deleteCommand": "Ta bort kommando",
+		"newGlobalCommandPlaceholder": "Nytt globalt kommando...",
+		"newWorkspaceCommandPlaceholder": "Nytt arbetsytakommando...",
+		"deleteDialog": {
+			"title": "Ta bort kommando",
+			"description": "Är du säker på att du vill ta bort kommandot \"{{name}}\"? Denna åtgärd kan inte ångras.",
+			"cancel": "Avbryt",
+			"confirm": "Ta bort"
+		}
+	},
+	"queuedMessages": {
+		"title": "Köade meddelanden:",
+		"clickToEdit": "Klicka för att redigera meddelande"
+	}
+}
