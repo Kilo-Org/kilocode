@@ -9,7 +9,6 @@ import { getKiloBaseUriFromToken } from "@roo/kilocode/token"
 import { telemetryClient } from "@/utils/TelemetryClient"
 import { useModelProviders } from "@/components/ui/hooks/useSelectedModel"
 import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
-import { inputEventTransform } from "../../settings/transforms"
 
 type ModelStats = {
 	model: string
