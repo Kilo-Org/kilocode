@@ -16,6 +16,7 @@ export const getModelIdKey = ({
 	| "ollamaModelId"
 	| "lmStudioModelId"
 	| "vsCodeLmModelSelector"
+	| "cometApiModelId"
 	| "apiModelId"
 > => {
 	switch (provider) {
@@ -39,6 +40,9 @@ export const getModelIdKey = ({
 		}
 		case "ollama": {
 			return "ollamaModelId"
+		}
+		case "cometapi": {
+			return "cometApiModelId"
 		}
 		case "lmstudio": {
 			return "lmStudioModelId"

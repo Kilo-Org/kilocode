@@ -30,6 +30,7 @@ export { VertexHandler } from "./vertex"
 export { DeepInfraHandler } from "./deepinfra"
 export { GeminiCliHandler } from "./gemini-cli"
 export { VirtualQuotaFallbackHandler } from "./virtual-quota-fallback"
+export { CometAPIHandler } from "./cometapi"
 // kilocode_change end
 export { VsCodeLmHandler } from "./vscode-lm"
 export { XAIHandler } from "./xai"

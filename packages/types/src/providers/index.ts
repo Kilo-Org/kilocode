@@ -11,6 +11,7 @@ export * from "./gemini.js"
 // kilocode_change start
 export * from "./gemini-cli.js"
 export * from "./deepinfra.js"
+export * from "./cometapi.js"
 // kilocode_change end
 export * from "./glama.js"
 export * from "./groq.js"

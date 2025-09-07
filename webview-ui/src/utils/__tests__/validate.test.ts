@@ -60,6 +60,7 @@ describe("Model Validation Functions", () => {
 		"io-intelligence": {},
 		deepinfra: {}, // kilocode_change
 		"vercel-ai-gateway": {},
+		cometapi: {}, // kilocode_change
 	}
 
 	const allowAllOrganization: OrganizationAllowList = {

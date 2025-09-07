@@ -23,6 +23,7 @@ import { getIOIntelligenceModels } from "./io-intelligence"
 
 // kilocode_change start
 import { getDeepInfraModels } from "./deepinfra"
+import { getCometAPIModels } from "./cometapi"
 import { cerebrasModels } from "@roo-code/types"
 // kilocode_change end
 
@@ -101,6 +102,9 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				break
 			case "cerebras":
 				models = cerebrasModels
+				break
+			case "cometapi":
+				models = await getCometAPIModels(options.apiKey, options.baseUrl)
 				break
 			// kilocode_change end
 			case "ollama":

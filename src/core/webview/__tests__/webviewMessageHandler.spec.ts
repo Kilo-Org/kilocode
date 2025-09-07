@@ -198,6 +198,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				"kilocode-openrouter": mockModels,
 				ollama: mockModels, // kilocode_change
 				deepinfra: mockModels, // kilocode_change
+				cometapi: mockModels, // kilocode_change
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
 			},
@@ -288,6 +289,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				"kilocode-openrouter": mockModels,
 				ollama: mockModels, // kilocode_change
 				deepinfra: mockModels, // kilocode_change
+				cometapi: mockModels, // kilocode_change
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
 			},
@@ -313,6 +315,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockResolvedValueOnce(mockModels) // kilocode-openrouter
 			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
 			.mockResolvedValueOnce(mockModels) // kilocode_change deepinfra
+			.mockResolvedValueOnce(mockModels) // cometapi
 			.mockResolvedValueOnce(mockModels) // vercel-ai-gateway
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
 
@@ -334,6 +337,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				deepinfra: mockModels,
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
+				cometapi: mockModels,
 			},
 		})
 
@@ -371,6 +375,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
 			.mockRejectedValueOnce({}) // kilocode_change deepinfra
 			.mockRejectedValueOnce(new Error("Vercel AI Gateway error")) // vercel-ai-gateway
+			.mockRejectedValueOnce(new Error("CometAPI Gateway error")) // cometapi
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
 
 		await webviewMessageHandler(mockClineProvider, {

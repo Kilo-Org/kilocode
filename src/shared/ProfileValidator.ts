@@ -94,6 +94,8 @@ export class ProfileValidator {
 			// kilocode_change start
 			case "deepinfra":
 				return profile.deepInfraModelId
+			case "cometapi":
+				return profile.cometApiModelId
 			// kilocode_change end
 			case "human-relay":
 			case "fake-ai":

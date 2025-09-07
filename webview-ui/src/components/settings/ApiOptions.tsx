@@ -37,7 +37,10 @@ import {
 	ioIntelligenceDefaultModelId,
 	rooDefaultModelId,
 	vercelAiGatewayDefaultModelId,
-	deepInfraDefaultModelId, // kilocode_change
+	// kilocode_change start
+	deepInfraDefaultModelId,
+	cometApiDefaultModelId,
+	// kilocode_change end
 } from "@roo-code/types"
 
 import { vscode } from "@src/utils/vscode"
@@ -97,6 +100,7 @@ import {
 	GeminiCli,
 	VirtualQuotaFallbackProvider,
 	DeepInfra,
+	CometAPI,
 	// kilocode_change end
 	ZAi,
 	Fireworks,
@@ -213,6 +217,7 @@ const ApiOptions = ({
 		openRouterApiKey: apiConfiguration?.openRouterApiKey,
 		kilocodeOrganizationId: apiConfiguration?.kilocodeOrganizationId ?? "personal",
 		deepInfraApiKey: apiConfiguration?.deepInfraApiKey,
+		cometApiKey: apiConfiguration?.cometApiKey,
 	})
 
 	//const { data: openRouterModelProviders } = useOpenRouterModelProviders(
@@ -380,6 +385,7 @@ const ApiOptions = ({
 				kilocode: { field: "kilocodeModel", default: kilocodeDefaultModel },
 				"gemini-cli": { field: "apiModelId", default: geminiCliDefaultModelId },
 				deepinfra: { field: "deepInfraModelId", default: deepInfraDefaultModelId },
+				cometapi: { field: "cometApiModelId", default: cometApiDefaultModelId },
 				// kilocode_change end
 			}
 
@@ -693,6 +699,20 @@ const ApiOptions = ({
 				// kilocode_change start
 				selectedProvider === "deepinfra" && (
 					<DeepInfra
+						apiConfiguration={apiConfiguration}
+						setApiConfigurationField={setApiConfigurationField}
+						routerModels={routerModels}
+						refetchRouterModels={() => refetchRouterModels()}
+						organizationAllowList={organizationAllowList}
+						modelValidationError={modelValidationError}
+					/>
+				)
+				// kilocode_change end
+			}
+			{
+				// kilocode_change start
+				selectedProvider === "cometapi" && (
+					<CometAPI
 						apiConfiguration={apiConfiguration}
 						setApiConfigurationField={setApiConfigurationField}
 						routerModels={routerModels}
