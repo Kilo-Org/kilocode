@@ -95,6 +95,11 @@ export const getModelMaxOutputTokens = ({
 	settings?: ProviderSettings
 	format?: "anthropic" | "openai" | "gemini" | "openrouter"
 }): number | undefined => {
+	// Check for KiloCode specific context window override
+	if (settings?.apiProvider === "kilocode" && settings.kilocodeModelContextWindow) {
+		model = { ...model, contextWindow: settings.kilocodeModelContextWindow }
+	}
+
 	// Check for Claude Code specific max output tokens setting
 	if (settings?.apiProvider === "claude-code") {
 		return settings.claudeCodeMaxOutputTokens || CLAUDE_CODE_DEFAULT_MAX_OUTPUT_TOKENS

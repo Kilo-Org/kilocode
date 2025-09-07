@@ -310,6 +310,52 @@ describe("getModelMaxOutputTokens", () => {
 
 		expect(getModelMaxOutputTokens({ modelId: "test", model, settings })).toBe(16_384)
 	})
+
+	test("should override model context window when using kilocode provider with kilocodeModelContextWindow setting", () => {
+		const model: ModelInfo = {
+			contextWindow: 200_000,
+			supportsPromptCache: true,
+			maxTokens: 8192,
+		}
+
+		const settings: ProviderSettings = {
+			apiProvider: "kilocode",
+			kilocodeModelContextWindow: 100_000, // Override to smaller context window
+		}
+
+		const result = getModelMaxOutputTokens({
+			modelId: "claude-3-5-sonnet-20241022",
+			model,
+			settings,
+		})
+
+		// With overridden context window of 100_000, maxTokens should be clamped to 20% = 16_384
+		// But since the model's original maxTokens (8192) is within 20% of the overridden context window,
+		// it should use the model's maxTokens value
+		expect(result).toBe(8192)
+	})
+
+	test("should clamp maxTokens to 20% of overridden context window when necessary", () => {
+		const model: ModelInfo = {
+			contextWindow: 200_000,
+			supportsPromptCache: true,
+			maxTokens: 50_000, // This exceeds 20% of the overridden context window
+		}
+
+		const settings: ProviderSettings = {
+			apiProvider: "kilocode",
+			kilocodeModelContextWindow: 100_000, // Override to smaller context window
+		}
+
+		const result = getModelMaxOutputTokens({
+			modelId: "claude-3-5-sonnet-20241022",
+			model,
+			settings,
+		})
+
+		// With overridden context window of 100_000, maxTokens should be clamped to 20% = 20_000
+		expect(result).toBe(20_000)
+	})
 })
 
 describe("shouldUseReasoningBudget", () => {

@@ -10,6 +10,7 @@ import { maybeRemoveImageBlocks } from "../../api/transform/image-cleaning"
 export const N_MESSAGES_TO_KEEP = 3
 export const MIN_CONDENSE_THRESHOLD = 5 // Minimum percentage of context window to trigger condensing
 export const MAX_CONDENSE_THRESHOLD = 100 // Maximum percentage of context window to trigger condensing
+export const MAX_RETRY_ATTEMPTS = 3 // Maximum number of retry attempts when context grows
 
 const SUMMARY_PROMPT = `\
 Your task is to create a detailed summary of the conversation so far, paying close attention to the user's explicit requests and your previous actions.
@@ -49,6 +50,18 @@ Example summary structure:
   - [...]
 
 Output only the summary of the conversation so far, without any additional commentary or explanation.
+`
+
+const CONCISE_SUMMARY_PROMPT = `\
+Your task is to create a concise summary of the conversation so far. Focus on the essential technical details and key points needed to continue the task, but be brief and to the point.
+
+Summarize:
+- What was being worked on
+- Key technical concepts and decisions
+- Important file changes
+- Current status and next immediate steps
+
+Keep it brief. Output only the summary, without any additional commentary or explanation.
 `
 
 export type SummarizeResponse = {
@@ -134,9 +147,8 @@ export async function summarizeConversation(
 		({ role, content }) => ({ role, content }),
 	)
 
-	// Note: this doesn't need to be a stream, consider using something like apiHandler.completePrompt
 	// Use custom prompt if provided and non-empty, otherwise use the default SUMMARY_PROMPT
-	const promptToUse = customCondensingPrompt?.trim() ? customCondensingPrompt.trim() : SUMMARY_PROMPT
+	const initialPrompt = customCondensingPrompt?.trim() ? customCondensingPrompt.trim() : SUMMARY_PROMPT
 
 	// Use condensing API handler if provided, otherwise use main API handler
 	let handlerToUse = condensingApiHandler || apiHandler
@@ -160,57 +172,85 @@ export async function summarizeConversation(
 		}
 	}
 
-	const stream = handlerToUse.createMessage(promptToUse, requestMessages)
-
+	// Implement retry mechanism for when context grows instead of shrinking
+	let attempt = 0
+	let promptToUse = initialPrompt
 	let summary = ""
 	let cost = 0
 	let outputTokens = 0
+	let newContextTokens = 0
 
-	for await (const chunk of stream) {
-		if (chunk.type === "text") {
-			summary += chunk.text
-		} else if (chunk.type === "usage") {
-			// Record final usage chunk only
-			cost = chunk.totalCost ?? 0
-			outputTokens = chunk.outputTokens ?? 0
+	while (attempt < MAX_RETRY_ATTEMPTS) {
+		const stream = handlerToUse.createMessage(promptToUse, requestMessages)
+
+		summary = ""
+		cost = 0
+		outputTokens = 0
+
+		for await (const chunk of stream) {
+			if (chunk.type === "text") {
+				summary += chunk.text
+			} else if (chunk.type === "usage") {
+				// Record final usage chunk only
+				cost = chunk.totalCost ?? 0
+				outputTokens = chunk.outputTokens ?? 0
+			}
 		}
+
+		summary = summary.trim()
+
+		if (summary.length === 0) {
+			const error = t("common:errors.condense_failed")
+			return { ...response, cost, error }
+		}
+
+		const summaryMessage: ApiMessage = {
+			role: "assistant",
+			content: summary,
+			ts: keepMessages[0].ts,
+			isSummary: true,
+		}
+
+		const newMessages = [...messages.slice(0, -N_MESSAGES_TO_KEEP), summaryMessage, ...keepMessages]
+
+		// Count the tokens in the context for the next API request
+		// We only estimate the tokens in summaryMesage if outputTokens is 0, otherwise we use outputTokens
+		const systemPromptMessage: ApiMessage = { role: "user", content: systemPrompt }
+
+		const contextMessages = outputTokens
+			? [systemPromptMessage, ...keepMessages]
+			: [systemPromptMessage, summaryMessage, ...keepMessages]
+
+		const contextBlocks = contextMessages.flatMap((message) =>
+			typeof message.content === "string" ? [{ text: message.content, type: "text" as const }] : message.content,
+		)
+
+		newContextTokens = outputTokens + (await apiHandler.countTokens(contextBlocks))
+
+		// If context decreased, return success
+		if (newContextTokens < prevContextTokens) {
+			return { messages: newMessages, summary, cost, newContextTokens }
+		}
+
+		// If we're on our first attempt and context didn't decrease, try again with concise prompt
+		// If we're on a retry attempt and context still grew, try again (if attempts remain)
+		if (attempt === 0) {
+			console.warn(
+				`Context size did not decrease on first attempt (${prevContextTokens} -> ${newContextTokens}), retrying with concise prompt`,
+			)
+			promptToUse = CONCISE_SUMMARY_PROMPT
+		} else {
+			console.warn(
+				`Context size still did not decrease on retry attempt ${attempt + 1} (${prevContextTokens} -> ${newContextTokens}), trying again`,
+			)
+		}
+
+		attempt++
 	}
 
-	summary = summary.trim()
-
-	if (summary.length === 0) {
-		const error = t("common:errors.condense_failed")
-		return { ...response, cost, error }
-	}
-
-	const summaryMessage: ApiMessage = {
-		role: "assistant",
-		content: summary,
-		ts: keepMessages[0].ts,
-		isSummary: true,
-	}
-
-	const newMessages = [...messages.slice(0, -N_MESSAGES_TO_KEEP), summaryMessage, ...keepMessages]
-
-	// Count the tokens in the context for the next API request
-	// We only estimate the tokens in summaryMesage if outputTokens is 0, otherwise we use outputTokens
-	const systemPromptMessage: ApiMessage = { role: "user", content: systemPrompt }
-
-	const contextMessages = outputTokens
-		? [systemPromptMessage, ...keepMessages]
-		: [systemPromptMessage, summaryMessage, ...keepMessages]
-
-	const contextBlocks = contextMessages.flatMap((message) =>
-		typeof message.content === "string" ? [{ text: message.content, type: "text" as const }] : message.content,
-	)
-
-	const newContextTokens = outputTokens + (await apiHandler.countTokens(contextBlocks))
-	if (newContextTokens >= prevContextTokens) {
-		// kilocode_change add numbers
-		const error = t("common:errors.condense_context_grew", { prevContextTokens, newContextTokens })
-		return { ...response, cost, error }
-	}
-	return { messages: newMessages, summary, cost, newContextTokens }
+	// If we've exhausted all retry attempts and context still grew, return error
+	const error = t("common:errors.condense_context_grew", { prevContextTokens, newContextTokens })
+	return { ...response, cost, error }
 }
 
 /* Returns the list of all messages since the last summary message, including the summary. Returns all messages if there is no summary. */

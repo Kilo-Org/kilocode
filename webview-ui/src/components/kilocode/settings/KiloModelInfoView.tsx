@@ -8,6 +8,8 @@ import { useQuery } from "@tanstack/react-query"
 import { getKiloBaseUriFromToken } from "@roo/kilocode/token"
 import { telemetryClient } from "@/utils/TelemetryClient"
 import { useModelProviders } from "@/components/ui/hooks/useSelectedModel"
+import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
+import { inputEventTransform } from "../../settings/transforms"
 
 type ModelStats = {
 	model: string
@@ -78,6 +80,7 @@ export const KiloModelInfoView = ({
 	setIsDescriptionExpanded,
 	isPricingExpanded,
 	setIsPricingExpanded,
+	setApiConfigurationField,
 }: {
 	apiConfiguration: ProviderSettings
 	modelId: string
@@ -86,6 +89,7 @@ export const KiloModelInfoView = ({
 	setIsDescriptionExpanded: (isExpanded: boolean) => void
 	isPricingExpanded: boolean
 	setIsPricingExpanded: (isPricingExpanded: boolean) => void
+	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
 }) => {
 	const { t } = useAppTranslation()
 	const providers = Object.values(useModelProviders(modelId, apiConfiguration).data ?? {})
@@ -133,6 +137,24 @@ export const KiloModelInfoView = ({
 				<div>
 					<span className="font-medium">{t("kilocode:settings.modelInfo.contextWindow")}:</span>{" "}
 					{model.contextWindow.toLocaleString()}
+				</div>
+				<div>
+					<VSCodeTextField
+						value={apiConfiguration?.kilocodeModelContextWindow?.toString() || ""}
+						type="text"
+						onInput={(e: any) => {
+							const value = parseInt(e.target.value)
+							setApiConfigurationField("kilocodeModelContextWindow", isNaN(value) ? undefined : value)
+						}}
+						placeholder={t("settings:placeholders.numbers.contextWindow")}
+						className="w-full mt-1">
+						<label className="block font-medium mb-1">
+							{t("settings:providers.customModel.contextWindow.label")}
+						</label>
+					</VSCodeTextField>
+					<div className="text-sm text-vscode-descriptionForeground">
+						{t("settings:providers.customModel.contextWindow.description")}
+					</div>
 				</div>
 				<div>
 					<span className="font-medium">{t("settings:modelInfo.maxOutput")}:</span>{" "}
