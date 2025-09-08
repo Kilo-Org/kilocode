@@ -2531,7 +2531,7 @@ export class ClineProvider
 				appVersion: packageJSON?.version ?? Package.version,
 				vscodeVersion: vscode.version,
 				platform: isWsl ? "wsl" /* kilocode_change */ : process.platform,
-				editorName: kiloCodeWrapped && kiloCodeWrapperTitle ? kiloCodeWrapperTitle : vscode.env.appName, // kilocode_change
+				editorName: kiloCodeWrapperTitle ? kiloCodeWrapperTitle : vscode.env.appName, // kilocode_change
 				wrapped: kiloCodeWrapped, // kilocode_change
 				wrapper: kiloCodeWrapper, // kilocode_change
 				wrapperCode: kiloCodeWrapperCode, // kilocode_change
