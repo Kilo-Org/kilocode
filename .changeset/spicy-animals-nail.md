@@ -1,5 +1,4 @@
 ---
-"kilocode-docs": minor
 "kilo-code": minor
 ---
 
