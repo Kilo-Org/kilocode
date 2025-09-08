@@ -1,0 +1,19 @@
+{
+	"errors": {
+		"nodejsMissing": {
+			"title": "Ambiente Node.js ausente",
+			"message": "Ambiente Node.js não detectado, instale o Node.js e tente novamente. Versão recomendada: {{minVersion}} ou superior."
+		},
+		"nodejsVersionLow": {
+			"title": "Versão do Node.js muito baixa",
+			"message": "A versão atual do Node.js ({{nodePath}}) é {{nodeVersion}}, atualize para {{minVersion}} ou superior para melhor compatibilidade."
+		}
+	},
+	"dialog": {
+		"cancel": "Cancelar"
+	},
+	"ui": {
+		"initializing": "Kilo Code está inicializando...",
+		"systemInformation": "Informações do Sistema"
+	}
+}

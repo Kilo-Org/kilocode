@@ -1,0 +1,19 @@
+{
+	"errors": {
+		"nodejsMissing": {
+			"title": "Node.js-Umgebung fehlt",
+			"message": "Node.js-Umgebung wurde nicht erkannt, bitte installiere Node.js und versuche es erneut. Empfohlene Version: {{minVersion}} oder höher."
+		},
+		"nodejsVersionLow": {
+			"title": "Node.js-Version zu niedrig",
+			"message": "Die aktuelle Node.js-Version ({{nodePath}}) ist {{nodeVersion}}, bitte aktualisiere auf {{minVersion}} oder höher für bessere Kompatibilität."
+		}
+	},
+	"dialog": {
+		"cancel": "Abbrechen"
+	},
+	"ui": {
+		"initializing": "Kilo Code wird initialisiert...",
+		"systemInformation": "Systeminformationen"
+	}
+}

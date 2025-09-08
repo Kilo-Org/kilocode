@@ -16,6 +16,10 @@ SPDX-License-Identifier: Apache-2.0
     <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
     <vendor url="https://kilocode.ai">Kilo Code</vendor>
 
+    <!-- Resource bundles for internationalization -->
+    <resource-bundle>messages.JetbrainsBundle</resource-bundle>
+    <resource-bundle>messages.KilocodeBundle</resource-bundle>
+
     <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
          Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
