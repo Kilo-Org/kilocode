@@ -1005,7 +1005,7 @@ export const webviewMessageHandler = async (
 			break
 		case "showSystemNotification":
 			const isSystemNotificationsEnabled = getGlobalState("systemNotificationsEnabled") ?? true
-			if (!isSystemNotificationsEnabled) {
+			if (!isSystemNotificationsEnabled && !message.alwaysAllow) {
 				break
 			}
 			if (message.notificationOptions) {
