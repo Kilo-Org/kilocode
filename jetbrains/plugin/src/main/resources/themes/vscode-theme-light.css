@@ -1,5 +1,12 @@
 --chat-editing-last-edit-shift: 100%;
 --dropdown-padding-bottom: 4px;
+--text-link-decoration: none;
+--vscode-font-family: system-ui, "Ubuntu", "Droid Sans", sans-serif;
+--vscode-font-weight: normal;
+--vscode-font-size: 13px;
+--vscode-editor-font-family: "0xProto Nerd Font", "FiraCode Nerd Font", "monospace";
+--vscode-editor-font-weight: normal;
+--vscode-editor-font-size: 13px;
 --dropdown-padding-top: 3px;
 --guide-color: rgba(123, 56, 20, 0.3);
 --guide-color-active: #7b3814;
@@ -14,7 +21,6 @@
 --monaco-monospace-font: "Ubuntu Mono", "Liberation Mono", "DejaVu Sans Mono", "Courier New", monospace;
 --notebook-find-horizontal-padding: 4px;
 --notebook-find-width: 419px;
---text-link-decoration: underline;
 --vscode-actionBar-toggledBackground: #dddddd;
 --vscode-activityBar-activeBorder: #ffffff;
 --vscode-activityBar-background: #2c2c2c;
@@ -168,9 +174,6 @@
 --vscode-editor-focusedStackFrameHighlightBackground: rgba(206, 231, 206, 0.45);
 --vscode-editor-foldBackground: rgba(173, 214, 255, 0.3);
 --vscode-editor-foldPlaceholderForeground: #808080;
---vscode-editor-font-family: Menlo, Monaco, "Courier New", monospace;
---vscode-editor-font-size: 16px;
---vscode-editor-font-weight: normal;
 --vscode-editor-foreground: #000000;
 --vscode-editor-hoverHighlightBackground: rgba(173, 214, 255, 0.15);
 --vscode-editor-inactiveSelectionBackground: #e5ebf1;
@@ -350,9 +353,6 @@
 --vscode-extensionIcon-starForeground: #df6100;
 --vscode-extensionIcon-verifiedForeground: #006ab1;
 --vscode-focusBorder: #0090f1;
---vscode-font-family: -apple-system, BlinkMacSystemFont, sans-serif;
---vscode-font-size: 13px;
---vscode-font-weight: normal;
 --vscode-foreground: #616161;
 --vscode-gauge-background: #007acc;
 --vscode-gauge-errorBackground: #be1100;
@@ -435,7 +435,7 @@
 --vscode-keybindingLabel-foreground: #555555;
 --vscode-keybindingTable-headerBackground: rgba(97, 97, 97, 0.04);
 --vscode-keybindingTable-rowsBackground: rgba(97, 97, 97, 0.04);
---vscode-list-activeSelectionBackground: #0060c0;
+--vscode-list-activeSelectionBackground: #e8e8e8;
 --vscode-list-activeSelectionForeground: #ffffff;
 --vscode-list-activeSelectionIconForeground: #ffffff;
 --vscode-list-deemphasizedForeground: #8e8e90;
