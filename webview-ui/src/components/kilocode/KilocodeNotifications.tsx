@@ -3,7 +3,9 @@ import { useExtensionState } from "@/context/ExtensionStateContext"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import { vscode } from "@/utils/vscode"
 import { telemetryClient } from "@/utils/TelemetryClient"
-import { TelemetryEventName } from "@roo-code/types"
+import { OPENROUTER_DEFAULT_PROVIDER_NAME, TelemetryEventName } from "@roo-code/types"
+import { useProviderModels } from "./hooks/useProviderModels"
+import { getModelIdKey } from "./hooks/useSelectedModel"
 
 interface NotificationAction {
 	actionText: string
@@ -15,10 +17,14 @@ interface Notification {
 	title: string
 	message: string
 	action?: NotificationAction
+	suggestModelId?: string
 }
 
+const USE_MODEL_BUTTON_LABEL = "Use model"
+
 export const KilocodeNotifications: React.FC = () => {
-	const { dismissedNotificationIds } = useExtensionState()
+	const { dismissedNotificationIds, currentApiConfigName, apiConfiguration } = useExtensionState()
+	const { provider, providerModels, isLoading, isError } = useProviderModels(apiConfiguration)
 	const [notifications, setNotifications] = useState<Notification[]>([])
 	const filteredNotifications = notifications.filter(
 		(notification) => !(dismissedNotificationIds || []).includes(notification.id),
@@ -57,6 +63,24 @@ export const KilocodeNotifications: React.FC = () => {
 		})
 	}
 
+	const modelIdKey = getModelIdKey({ provider })
+
+	const switchModel = (suggestModelId: string) => {
+		vscode.postMessage({
+			type: "upsertApiConfiguration",
+			text: currentApiConfigName,
+			apiConfiguration: {
+				...apiConfiguration,
+				[modelIdKey]: suggestModelId,
+				openRouterSpecificProvider: OPENROUTER_DEFAULT_PROVIDER_NAME,
+			},
+		})
+		telemetryClient.capture(TelemetryEventName.NOTIFICATION_CLICKED, {
+			actionText: USE_MODEL_BUTTON_LABEL,
+			suggestModelId,
+		})
+	}
+
 	const goToNext = () => {
 		setCurrentIndex((prev) => (prev + 1) % filteredNotifications.length)
 	}
@@ -77,6 +101,17 @@ export const KilocodeNotifications: React.FC = () => {
 		return null
 	}
 
+	const action = currentNotification.action
+	const suggestModelId = currentNotification.suggestModelId
+	const isReadyToSwitchModels =
+		!isLoading &&
+		!isError &&
+		suggestModelId &&
+		suggestModelId in providerModels &&
+		currentApiConfigName &&
+		apiConfiguration &&
+		suggestModelId !== apiConfiguration[modelIdKey]
+
 	return (
 		<div className="kilocode-notifications flex flex-col mb-4">
 			<div className="bg-vscode-editor-background border border-vscode-panel-border rounded-lg p-3 gap-3">
@@ -92,14 +127,21 @@ export const KilocodeNotifications: React.FC = () => {
 
 				<p className="text-sm text-vscode-descriptionForeground">{currentNotification.message}</p>
 
-				{currentNotification.action && (
-					<div className="flex items-center justify-end">
-						<VSCodeButton
-							appearance="primary"
-							onClick={() => handleAction(currentNotification.action!)}
-							className="text-sm">
-							{currentNotification.action.actionText}
-						</VSCodeButton>
+				{(action || isReadyToSwitchModels) && (
+					<div className="flex items-center justify-end gap-2">
+						{suggestModelId && isReadyToSwitchModels && (
+							<VSCodeButton
+								appearance="primary"
+								onClick={() => switchModel(suggestModelId)}
+								className="text-sm">
+								{USE_MODEL_BUTTON_LABEL}
+							</VSCodeButton>
+						)}
+						{action && (
+							<VSCodeButton appearance="primary" onClick={() => handleAction(action)} className="text-sm">
+								{action.actionText}
+							</VSCodeButton>
+						)}
 					</div>
 				)}
 			</div>

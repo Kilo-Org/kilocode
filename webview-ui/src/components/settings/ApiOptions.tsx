@@ -661,10 +661,6 @@ const ApiOptions = ({
 					setApiConfigurationField={setApiConfigurationField}
 				/>
 			)}
-
-			{selectedProvider === "qwen-code" && (
-				<QwenCode apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
-			)}
 			{/* kilocode_change end */}
 
 			{selectedProvider === "litellm" && (

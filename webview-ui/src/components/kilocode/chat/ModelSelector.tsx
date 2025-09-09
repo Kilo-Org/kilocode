@@ -26,15 +26,14 @@ export const ModelSelector = ({ currentApiConfigName, apiConfiguration, fallback
 	const modelIdKey = getModelIdKey({ provider })
 
 	const modelsIds = usePreferredModels(providerModels)
-	const options = useMemo(
-		() =>
-			modelsIds.map((modelId) => ({
-				value: modelId,
-				label: prettyModelName(modelId),
-				type: DropdownOptionType.ITEM,
-			})),
-		[modelsIds],
-	)
+	const options = useMemo(() => {
+		const missingModelIds = modelsIds.indexOf(selectedModelId) >= 0 ? [] : [selectedModelId]
+		return missingModelIds.concat(modelsIds).map((modelId) => ({
+			value: modelId,
+			label: prettyModelName(modelId),
+			type: DropdownOptionType.ITEM,
+		}))
+	}, [modelsIds, selectedModelId])
 
 	const disabled = isLoading || isError
 
@@ -65,14 +64,9 @@ export const ModelSelector = ({ currentApiConfigName, apiConfiguration, fallback
 		return <span className="text-xs text-vscode-descriptionForeground opacity-70 truncate">{fallbackText}</span>
 	}
 
-	const selectedModelNoLongerExistsButDefaultDoes =
-		modelsIds.indexOf(selectedModelId) < 0 && modelsIds.indexOf(providerDefaultModel) >= 0
-
-	const currentValue = selectedModelNoLongerExistsButDefaultDoes ? providerDefaultModel : selectedModelId
-
 	return (
 		<SelectDropdown
-			value={currentValue}
+			value={selectedModelId}
 			disabled={disabled}
 			title={t("chat:selectApiConfig")}
 			options={options}

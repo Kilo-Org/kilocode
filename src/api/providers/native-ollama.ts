@@ -208,7 +208,7 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 		const estimatedTokenCount = estimateOllamaTokenCount(ollamaMessages)
 		if (modelInfo.maxTokens && estimatedTokenCount > modelInfo.maxTokens) {
 			throw new Error(
-				`Input message is too long for the selected model. Estimated tokens: ${estimatedTokenCount}, Max tokens: ${modelInfo.maxTokens}. To increase the context window size, see: https://kilocode.ai/docs/providers/ollama#preventing-prompt-truncation`,
+				`Input message is too long for the selected model. Estimated tokens: ${estimatedTokenCount}, Max tokens: ${modelInfo.maxTokens}. To increase the context window size, see: https://kilocode.ai/docs/providers/ollama#configure-the-context-size`,
 			)
 		}
 		// kilocode_change end

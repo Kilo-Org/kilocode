@@ -164,7 +164,10 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			}
 
 			// Only include temperature if explicitly set
-			if (this.options.modelTemperature !== undefined) {
+			if (
+				this.options.modelTemperature !== undefined &&
+				this.options.modelTemperature !== null // kilocode_change: some providers like Chutes don't like this
+			) {
 				requestOptions.temperature = this.options.modelTemperature
 			} else if (deepseekReasoner) {
 				// DeepSeek Reasoner has a specific default temperature
