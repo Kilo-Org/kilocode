@@ -284,7 +284,7 @@ class WebViewManager(var project: Project) : Disposable, ThemeChangeListener {
          */
     fun updateWebViewHtml(data: WebviewHtmlUpdateData) {
         data.htmlContent = data.htmlContent.replace("/jetbrains/resources/kilocode/", "./")
-        data.htmlContent = data.htmlContent.replace("<html lang=\"en\">", "<html lang=\"en\" style=\"background: var(--vscode-editor-background);\">")
+        data.htmlContent = data.htmlContent.replace("<html lang=\"en\">", "<html lang=\"en\" style=\"background: var(--vscode-sideBar-background);\">")
         val encodedState = getLatestWebView()?.state.toString().replace("\"", "\\\"")
         val mRst = """<script\s+nonce="([A-Za-z0-9]{32})">""".toRegex().find(data.htmlContent)
         val str = mRst?.value ?: ""
@@ -587,14 +587,14 @@ class WebViewInstance(
                                         // Add default_themes.css content
                                         defaultStylesElement.textContent = `
                                             html {
-                                                background: var(--vscode-editor-background);
-                                                scrollbar-color: var(--vscode-scrollbarSlider-background) var(--vscode-editor-background);
+                                                background: var(--vscode-sideBar-background);
+                                                scrollbar-color: var(--vscode-scrollbarSlider-background) var(--vscode-sideBar-background);
                                             }
                                             
                                             body {
                                                 overscroll-behavior-x: none;
                                                 background-color: transparent;
-                                                color: var(--vscode-editor-foreground);
+                                                color: var(--vscode-sideBar-foreground);
                                                 font-family: var(--vscode-font-family);
                                                 font-weight: var(--vscode-font-weight);
                                                 font-size: var(--vscode-font-size);
