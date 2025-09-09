@@ -1,10 +1,10 @@
 --chat-editing-last-edit-shift: 100%;
 --dropdown-padding-bottom: 4px;
 --text-link-decoration: none;
---vscode-font-family: system-ui, "Ubuntu", "Droid Sans", sans-serif;
+--vscode-font-family: -apple-system, BlinkMacSystemFont, sans-serif;
 --vscode-font-weight: normal;
 --vscode-font-size: 13px;
---vscode-editor-font-family: "0xProto Nerd Font", "FiraCode Nerd Font", "monospace";
+--vscode-editor-font-family: Menlo, Monaco, "Courier New", monospace;
 --vscode-editor-font-weight: normal;
 --vscode-editor-font-size: 13px;
 --dropdown-padding-top: 3px;
