@@ -20,6 +20,7 @@ describe("getModelsByProvider", () => {
 			glama: { "test-model": testModel },
 			unbound: { "test-model": testModel },
 			litellm: { "test-model": testModel },
+			cometapi: { "test-model": testModel },
 			"kilocode-openrouter": { "test-model": testModel },
 			ollama: { "test-model": testModel },
 			lmstudio: { "test-model": testModel },

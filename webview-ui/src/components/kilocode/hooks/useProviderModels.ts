@@ -45,6 +45,7 @@ import {
 	featherlessModels,
 	featherlessDefaultModelId,
 	deepInfraDefaultModelId,
+	cometApiDefaultModelId,
 	cerebrasModels,
 	cerebrasDefaultModelId,
 } from "@roo-code/types"
@@ -252,6 +253,12 @@ export const getModelsByProvider = ({
 			return {
 				models: routerModels.deepinfra,
 				defaultModel: deepInfraDefaultModelId,
+			}
+		}
+		case "cometapi": {
+			return {
+				models: routerModels.cometapi,
+				defaultModel: cometApiDefaultModelId,
 			}
 		}
 		default:

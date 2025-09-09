@@ -62,6 +62,7 @@ export const providerNames = [
 	"deepinfra",
 	"gemini-cli",
 	"virtual-quota-fallback",
+	"cometapi",
 	// kilocode_change end
 	"huggingface",
 	"cerebras",
@@ -348,6 +349,12 @@ export const virtualQuotaFallbackProfileDataSchema = z.object({
 const virtualQuotaFallbackSchema = baseProviderSettingsSchema.extend({
 	profiles: z.array(virtualQuotaFallbackProfileDataSchema).optional(),
 })
+
+const cometApiSchema = apiModelIdProviderModelSchema.extend({
+	cometApiKey: z.string().optional(),
+	cometApiBaseUrl: z.string().optional(),
+	cometApiModelId: z.string().optional(),
+})
 // kilocode_change end
 
 const zaiSchema = apiModelIdProviderModelSchema.extend({
@@ -412,6 +419,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	geminiCliSchema.merge(z.object({ apiProvider: z.literal("gemini-cli") })),
 	kilocodeSchema.merge(z.object({ apiProvider: z.literal("kilocode") })),
 	virtualQuotaFallbackSchema.merge(z.object({ apiProvider: z.literal("virtual-quota-fallback") })),
+	cometApiSchema.merge(z.object({ apiProvider: z.literal("cometapi") })),
 	// kilocode_change end
 	groqSchema.merge(z.object({ apiProvider: z.literal("groq") })),
 	huggingFaceSchema.merge(z.object({ apiProvider: z.literal("huggingface") })),
@@ -447,6 +455,7 @@ export const providerSettingsSchema = z.object({
 	...kilocodeSchema.shape,
 	...virtualQuotaFallbackSchema.shape,
 	...deepInfraSchema.shape,
+	...cometApiSchema.shape,
 	// kilocode_change end
 	...openAiNativeSchema.shape,
 	...mistralSchema.shape,
@@ -500,6 +509,7 @@ export const MODEL_ID_KEYS: Partial<keyof ProviderSettings>[] = [
 	"huggingFaceModelId",
 	"ioIntelligenceModelId",
 	"deepInfraModelId", // kilocode_change
+	"cometApiModelId",
 	"vercelAiGatewayModelId",
 ]
 
@@ -617,6 +627,7 @@ export const MODELS_BY_PROVIDER: Record<
 
 	// Dynamic providers; models pulled from the respective APIs.
 	glama: { id: "glama", label: "Glama", models: [] },
+	cometapi: { id: "cometapi", label: "Comet API", models: [] },
 	huggingface: { id: "huggingface", label: "Hugging Face", models: [] },
 	litellm: { id: "litellm", label: "LiteLLM", models: [] },
 	openrouter: { id: "openrouter", label: "OpenRouter", models: [] },
@@ -633,6 +644,7 @@ export const MODELS_BY_PROVIDER: Record<
 
 export const dynamicProviders = [
 	"glama",
+	"cometapi",
 	"huggingface",
 	"litellm",
 	"openrouter",

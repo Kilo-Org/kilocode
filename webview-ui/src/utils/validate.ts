@@ -78,6 +78,11 @@ function validateModelsAndKeysProvided(apiConfiguration: ProviderSettings): stri
 				return i18next.t("settings:validation.apiKey")
 			}
 			break
+		case "cometapi":
+			if (!apiConfiguration.cometApiKey) {
+				return i18next.t("settings:validation.apiKey")
+			}
+			break
 		case "gemini-cli":
 			// OAuth-based provider, no API key validation needed
 			break
@@ -228,6 +233,8 @@ function getModelIdForProvider(apiConfiguration: ProviderSettings, provider: str
 		// kilocode_change start
 		case "deepinfra":
 			return apiConfiguration.deepInfraModelId
+		case "cometapi":
+			return apiConfiguration.cometApiModelId
 		// kilocode_change end
 		case "vercel-ai-gateway":
 			return apiConfiguration.vercelAiGatewayModelId
@@ -304,6 +311,9 @@ export function validateModelId(apiConfiguration: ProviderSettings, routerModels
 		// kilocode_change start
 		case "deepinfra":
 			modelId = apiConfiguration.deepInfraModelId
+			break
+		case "cometapi":
+			modelId = apiConfiguration.cometApiModelId
 			break
 		// kilocode_change end
 		case "io-intelligence":

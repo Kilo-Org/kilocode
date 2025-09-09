@@ -214,6 +214,7 @@ export const SECRET_STATE_KEYS = [
 	// kilocode_change start
 	"kilocodeToken",
 	"deepInfraApiKey",
+	"cometApiKey",
 	// kilocode_change end
 	"codebaseIndexOpenAiCompatibleApiKey",
 	"codebaseIndexGeminiApiKey",

@@ -569,6 +569,7 @@ export const webviewMessageHandler = async (
 				ollama: {},
 				lmstudio: {},
 				deepinfra: {}, // kilocode_change
+				cometapi: {}, // kilocode_change
 			}
 
 			const safeGetModels = async (options: GetModelsOptions): Promise<ModelRecord> => {
@@ -613,6 +614,7 @@ export const webviewMessageHandler = async (
 				{ key: "ollama", options: { provider: "ollama", baseUrl: apiConfiguration.ollamaBaseUrl } },
 				{ key: "deepinfra", options: { provider: "deepinfra", apiKey: apiConfiguration.deepInfraApiKey } },
 				{ key: "vercel-ai-gateway", options: { provider: "vercel-ai-gateway" } },
+				{ key: "cometapi", options: { provider: "cometapi", apiKey: apiConfiguration.cometApiKey } },
 			]
 			// kilocode_change end
 

@@ -29,6 +29,7 @@ const routerNames = [
 	"lmstudio",
 	"io-intelligence",
 	"deepinfra", // kilocode_change
+	"cometapi", // kilocode_change
 	"vercel-ai-gateway",
 ] as const
 
@@ -153,6 +154,7 @@ export type GetModelsOptions =
 	| { provider: "litellm"; apiKey: string; baseUrl: string }
 	| { provider: "kilocode-openrouter"; kilocodeToken?: string; kilocodeOrganizationId?: string } // kilocode_change
 	| { provider: "cerebras"; cerebrasApiKey?: string } // kilocode_change
+	| { provider: "cometapi"; apiKey?: string; baseUrl?: string } // kilocode_change
 	| { provider: "ollama"; baseUrl?: string }
 	| { provider: "lmstudio"; baseUrl?: string }
 	| { provider: "deepinfra"; apiKey?: string; baseUrl?: string }

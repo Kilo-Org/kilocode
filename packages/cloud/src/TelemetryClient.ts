@@ -101,7 +101,6 @@ export class CloudTelemetryClient extends BaseTelemetryClient {
 		)
 	}
 
-	// kilocode_change
 	private async fetch(path: string, options: RequestInit) {
 		if (!this.authService.isAuthenticated()) {
 			return
@@ -114,12 +113,12 @@ export class CloudTelemetryClient extends BaseTelemetryClient {
 			return
 		}
 
-		/* kilocode_change
 		const response = await fetch(`${getRooCodeApiUrl()}/api/${path}`, {
 			...options,
 			headers: {
 				Authorization: `Bearer ${token}`,
 				"Content-Type": "application/json",
+				...(options.headers || {}),
 			},
 		})
 
@@ -128,12 +127,9 @@ export class CloudTelemetryClient extends BaseTelemetryClient {
 				`[TelemetryClient#fetch] ${options.method} ${path} -> ${response.status} ${response.statusText}`,
 			)
 		}
-			*/
 	}
 
 	public override async capture(event: TelemetryEvent) {
-		/* kilocode_change
-
 		if (!this.isTelemetryEnabled() || !this.isEventCapturable(event.event)) {
 			if (this.debug) {
 				console.info(`[TelemetryClient#capture] Skipping event: ${event.event}`)
@@ -157,7 +153,6 @@ export class CloudTelemetryClient extends BaseTelemetryClient {
 			console.error(
 				`[TelemetryClient#capture] Invalid telemetry event: ${result.error.message} - ${JSON.stringify(payload)}`,
 			)
-
 			return
 		}
 
@@ -169,11 +164,9 @@ export class CloudTelemetryClient extends BaseTelemetryClient {
 		} catch (error) {
 			console.error(`[TelemetryClient#capture] Error sending telemetry event: ${error}`)
 		}
-		*/
 	}
 
 	public async backfillMessages(messages: ClineMessage[], taskId: string): Promise<void> {
-		/* kilocode_change
 		if (!this.authService.isAuthenticated()) {
 			if (this.debug) {
 				console.info(`[TelemetryClient#backfillMessages] Skipping: Not authenticated`)
@@ -211,12 +204,11 @@ export class CloudTelemetryClient extends BaseTelemetryClient {
 				)
 			}
 
-			// Custom fetch for multipart - don't set Content-Type header (let browser set it)
+			// For multipart uploads allow the runtime to set boundary; do not set Content-Type explicitly
 			const response = await fetch(`${getRooCodeApiUrl()}/api/events/backfill`, {
 				method: "POST",
 				headers: {
 					Authorization: `Bearer ${token}`,
-					// Note: No Content-Type header - browser will set multipart/form-data with boundary
 				},
 				body: formData,
 			})
@@ -231,7 +223,6 @@ export class CloudTelemetryClient extends BaseTelemetryClient {
 		} catch (error) {
 			console.error(`[TelemetryClient#backfillMessages] Error uploading messages: ${error}`)
 		}
-		*/
 	}
 
 	public override updateTelemetryState(_didUserOptIn: boolean) {}

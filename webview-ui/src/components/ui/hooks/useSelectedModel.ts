@@ -18,6 +18,8 @@ import {
 	geminiCliDefaultModelId,
 	geminiCliModels,
 	deepInfraDefaultModelId,
+	cometApiDefaultModelId,
+	cometApiModels,
 	// kilocode_change end
 	mistralDefaultModelId,
 	mistralModels,
@@ -188,6 +190,12 @@ function getSelectedModel({
 		case "deepinfra": {
 			const id = apiConfiguration.deepInfraModelId ?? deepInfraDefaultModelId
 			const info = routerModels.deepinfra[id]
+			return { id, info }
+		}
+		case "cometapi": {
+			const id = apiConfiguration.cometApiModelId ?? cometApiDefaultModelId
+			const info =
+				routerModels.cometapi[id] ?? (cometApiModels as any)[id] ?? cometApiModels[cometApiDefaultModelId]
 			return { id, info }
 		}
 		case "xai": {

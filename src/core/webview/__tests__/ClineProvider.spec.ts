@@ -2736,6 +2736,7 @@ describe("ClineProvider - Router Models", () => {
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
 				deepinfra: mockModels, // kilocode_change
+				cometapi: mockModels, // kilocode_change
 				"vercel-ai-gateway": mockModels,
 			},
 		})
@@ -2771,6 +2772,7 @@ describe("ClineProvider - Router Models", () => {
 			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
 			.mockRejectedValueOnce(new Error("DeepInfra API error")) // kilocode_change
 			.mockResolvedValueOnce(mockModels) // vercel-ai-gateway success
+			.mockRejectedValueOnce(new Error("CometAPI error")) // cometapi fail
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm fail
 
 		await messageHandler({ type: "requestRouterModels" })
@@ -2789,10 +2791,11 @@ describe("ClineProvider - Router Models", () => {
 				"kilocode-openrouter": {},
 				deepinfra: {}, // kilocode_change
 				"vercel-ai-gateway": mockModels,
+				cometapi: {}, // kilocode_change
 			},
 		})
 
-		// Verify error messages were sent for failed providers
+		// Verify error messages were sent for failed providers (order-agnostic)
 		expect(mockPostMessage).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
@@ -2817,8 +2820,22 @@ describe("ClineProvider - Router Models", () => {
 		expect(mockPostMessage).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
-			error: "Unbound API error",
-			values: { provider: "unbound" },
+			error: "Ollama API error",
+			values: { provider: "ollama" },
+		})
+
+		expect(mockPostMessage).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "DeepInfra API error",
+			values: { provider: "deepinfra" },
+		})
+
+		expect(mockPostMessage).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "CometAPI error",
+			values: { provider: "cometapi" },
 		})
 
 		expect(mockPostMessage).toHaveBeenCalledWith({
@@ -2907,6 +2924,7 @@ describe("ClineProvider - Router Models", () => {
 				"kilocode-openrouter": mockModels,
 				deepinfra: mockModels, // kilocode_change
 				ollama: mockModels, // kilocode_change
+				cometapi: mockModels, // kilocode_change
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
 			},
