@@ -48,3 +48,8 @@ src/main/resources/ai/kilocode/jetbrains/plugin/config/plugin.properties
 ### Deps ###
 prodDep.txt
 plugins
+
+### Generated build artifacts ###
+gradle.properties
+src/main/resources/META-INF/plugin.xml
+platform.zip

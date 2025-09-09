@@ -23,23 +23,18 @@ function syncVersion() {
 
 		console.log(`Found version: ${version}`)
 
-		// Read gradle.properties
-		const gradlePropertiesPath = join(__dirname, "../gradle.properties")
-		const gradlePropertiesContent = readFileSync(gradlePropertiesPath, "utf8")
+		// Read gradle.properties.template
+		const gradlePropertiesTemplatePath = join(__dirname, "../gradle.properties.template")
+		const gradlePropertiesTemplateContent = readFileSync(gradlePropertiesTemplatePath, "utf8")
 
-		// Update pluginVersion in gradle.properties
-		const updatedContent = gradlePropertiesContent.replace(/^pluginVersion=.*$/m, `pluginVersion=${version}`)
-
-		// Check if the replacement was successful
-		if (updatedContent === gradlePropertiesContent) {
-			console.warn("Warning: pluginVersion property not found or already up to date")
-			return
-		}
+		// Replace {{VERSION}} placeholder with actual version
+		const updatedContent = gradlePropertiesTemplateContent.replace(/\{\{VERSION\}\}/g, version)
 
 		// Write updated gradle.properties
+		const gradlePropertiesPath = join(__dirname, "../gradle.properties")
 		writeFileSync(gradlePropertiesPath, updatedContent, "utf8")
 
-		console.log(`✅ Successfully updated pluginVersion to ${version} in gradle.properties`)
+		console.log(`✅ Successfully updated pluginVersion to ${version} in gradle.properties from template`)
 	} catch (error) {
 		console.error("❌ Error syncing version:", error.message)
 		process.exit(1)
