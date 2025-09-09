@@ -43,10 +43,10 @@ const mockSpawnSync = spawnSync as Mock
 
 describe("Progress Reporting", () => {
 	let service: GitExtensionService
+	const mockWorkspaceRoot = "/test/workspace"
 
 	beforeEach(() => {
-		service = new GitExtensionService()
-		service.configureRepositoryContext()
+		service = new GitExtensionService(mockWorkspaceRoot)
 		mockSpawnSync.mockClear()
 	})
 

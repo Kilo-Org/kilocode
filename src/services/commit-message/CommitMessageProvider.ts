@@ -3,7 +3,8 @@ import * as vscode from "vscode"
 import { ContextProxy } from "../../core/config/ContextProxy"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 import { singleCompletionHandler } from "../../utils/single-completion-handler"
-import { GitExtensionService, GitChange, GitProgressOptions, GitRepository } from "./GitExtensionService"
+import { GitExtensionService } from "./GitExtensionService"
+import { VscGenerationRequest, ExternalGitCommitGenRequest } from "./types"
 import { supportPrompt } from "../../shared/support-prompt"
 import { t } from "../../i18n"
 import { addCustomInstructions } from "../../core/prompts/sections/custom-instructions"
@@ -12,22 +13,31 @@ import { TelemetryEventName, type ProviderSettings } from "@roo-code/types"
 import delay from "delay"
 import { TelemetryService } from "@roo-code/telemetry"
 
+interface CommitGenerationCallbacks {
+	onProgress: (progress: { message?: string; increment?: number }) => void
+	onNoChanges: () => void
+	onGeneratingFromUnstaged: () => void
+	onSuccess: (message: string) => void
+	onError: (error: string) => void
+}
+
 /**
  * Provides AI-powered commit message generation for source control management.
  * Integrates with Git repositories to analyze staged changes and generate
  * conventional commit messages using AI.
  */
 export class CommitMessageProvider {
-	private gitService: GitExtensionService
+	private gitService: GitExtensionService | null = null
 	private providerSettingsManager: ProviderSettingsManager
 	private previousGitContext: string | null = null
 	private previousCommitMessage: string | null = null
+	private targetRepository: VscGenerationRequest | null = null
+	private currentWorkspaceRoot: string | null = null
 
 	constructor(
 		private context: vscode.ExtensionContext,
 		private outputChannel: vscode.OutputChannel,
 	) {
-		this.gitService = new GitExtensionService()
 		this.providerSettingsManager = new ProviderSettingsManager(this.context)
 	}
 
@@ -44,18 +54,27 @@ export class CommitMessageProvider {
 		}
 
 		// Register the command
-		const disposable = vscode.commands.registerCommand(
-			"kilo-code.generateCommitMessage",
-			(commitContext?: GitRepository) => this.generateCommitMessage(commitContext),
-		)
-		this.context.subscriptions.push(disposable)
-		this.context.subscriptions.push(this.gitService)
+		const disposables = [
+			vscode.commands.registerCommand("kilo-code.generateCommitMessage", (vsRequest?: VscGenerationRequest) =>
+				this.generateCommitMessageVsCode(vsRequest),
+			),
+			vscode.commands.registerCommand(
+				"kilo-code.generateCommitMessageForExternal",
+				(externalRequest?: ExternalGitCommitGenRequest) => this.generateCommitMessageExternal(externalRequest),
+			),
+		]
+		this.context.subscriptions.push(...disposables)
 	}
 
-	/**
-	 * Generates an AI-powered commit message based on staged changes, or unstaged changes if no staged changes exist.
-	 */
-	public async generateCommitMessage(commitContext?: GitRepository): Promise<void> {
+	public async generateCommitMessageVsCode(vsRequest?: VscGenerationRequest): Promise<void> {
+		const targetRepository = this.determineTargetRepository(vsRequest?.rootUri)
+		if (!targetRepository?.rootUri) {
+			throw new Error("Could not determine Git repository")
+		}
+		this.targetRepository = targetRepository
+		const workspaceRoot = targetRepository.rootUri.fsPath
+
+		// Wrap in VSCode progress UI
 		await vscode.window.withProgress(
 			{
 				location: vscode.ProgressLocation.SourceControl,
@@ -63,61 +82,125 @@ export class CommitMessageProvider {
 				cancellable: false,
 			},
 			async (progress) => {
-				try {
-					this.gitService.configureRepositoryContext(commitContext?.rootUri)
-
-					let staged = true
-					let changes = await this.gitService.gatherChanges({ staged })
-
-					if (changes.length === 0) {
-						staged = false
-						changes = await this.gitService.gatherChanges({ staged })
-						if (changes.length > 0) {
-							vscode.window.showInformationMessage(t("kilocode:commitMessage.generatingFromUnstaged"))
-						} else {
-							vscode.window.showInformationMessage(t("kilocode:commitMessage.noChanges"))
-							return
-						}
-					}
-
-					// Report initial progress after gathering changes (10% of total)
-					progress.report({ increment: 10, message: t("kilocode:commitMessage.generating") })
-
-					// Track progress for diff collection (70% of total progress)
-					let lastReportedProgress = 0
-					const onDiffProgress = (percentage: number) => {
-						const currentProgress = (percentage / 100) * 70
-						const increment = currentProgress - lastReportedProgress
-						if (increment > 0) {
-							progress.report({ increment, message: t("kilocode:commitMessage.generating") })
-							lastReportedProgress = currentProgress
-						}
-					}
-
-					const gitContextString = await this.gitService.getCommitContext(changes, {
-						staged,
-						onProgress: onDiffProgress,
-					})
-
-					const generatedMessage = await this.callAIForCommitMessageWithProgress(gitContextString, progress)
-
-					// Store the current context and message for future reference
-					this.previousGitContext = gitContextString
-					this.previousCommitMessage = generatedMessage
-					this.gitService.setCommitMessage(generatedMessage)
-					TelemetryService.instance.captureEvent(TelemetryEventName.COMMIT_MSG_GENERATED)
-				} catch (error) {
-					const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
-					vscode.window.showErrorMessage(t("kilocode:commitMessage.generationFailed", { errorMessage }))
-					console.error("Error generating commit message:", error)
+				const callbacks: CommitGenerationCallbacks = {
+					onProgress: progress.report,
+					onNoChanges: () => {
+						vscode.window.showInformationMessage(t("kilocode:commitMessage.noChanges"))
+					},
+					onGeneratingFromUnstaged: () => {
+						vscode.window.showInformationMessage(t("kilocode:commitMessage.generatingFromUnstaged"))
+					},
+					onSuccess: (message: string) => {
+						this.setCommitMessage(message)
+					},
+					onError: (error: string) => {
+						vscode.window.showErrorMessage(
+							t("kilocode:commitMessage.generationFailed", { errorMessage: error }),
+						)
+					},
 				}
+				await this.generateCommitMessage(workspaceRoot, callbacks)
 			},
 		)
 	}
 
+	public async generateCommitMessageExternal(
+		externalRequest?: ExternalGitCommitGenRequest,
+	): Promise<{ message: string; error?: string }> {
+		if (!externalRequest?.workspacePath) {
+			return { error: "Workspace path is required for external requests", message: "" }
+		}
+
+		try {
+			let generatedMessage = ""
+
+			// External callbacks - silent, no UI
+			const callbacks: CommitGenerationCallbacks = {
+				onProgress: () => {
+					// Silent - no progress UI for external calls
+				},
+				onNoChanges: () => {
+					throw new Error("No changes found to generate commit message")
+				},
+				onGeneratingFromUnstaged: () => {
+					// Silent - no notification for external calls
+				},
+				onSuccess: (message: string) => {
+					generatedMessage = message
+				},
+				onError: (error: string) => {
+					throw new Error(error)
+				},
+			}
+
+			await this.generateCommitMessage(externalRequest.workspacePath, callbacks)
+			return { message: generatedMessage }
+		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
+			return { error: errorMessage, message: "" }
+		}
+	}
+
+	/**
+	 * Pure commit message generation logic with no IDE-specific dependencies.
+	 * Uses callbacks to handle UI operations, making it suitable for both VSCode and external usage.
+	 */
+	private async generateCommitMessage(workspaceRoot: string, callbacks: CommitGenerationCallbacks): Promise<string> {
+		try {
+			const { changes, staged } = await this.gatherGitChanges(workspaceRoot)
+			if (changes.length === 0) {
+				callbacks.onNoChanges()
+				return ""
+			}
+
+			// Handle unstaged changes case
+			if (!staged && changes.length > 0) {
+				callbacks.onGeneratingFromUnstaged()
+			}
+
+			// Report initial progress after gathering changes (10% of total)
+			callbacks.onProgress({ message: t("kilocode:commitMessage.generating"), increment: 10 })
+
+			// Track progress for diff collection (70% of total progress)
+			let lastReportedProgress = 0
+			const onDiffProgress = (percentage: number) => {
+				const currentProgress = (percentage / 100) * 70
+				const increment = currentProgress - lastReportedProgress
+				if (increment > 0) {
+					callbacks.onProgress({ message: t("kilocode:commitMessage.generating"), increment })
+					lastReportedProgress = currentProgress
+				}
+			}
+
+			const gitContextString = await this.gitService!.getCommitContext(changes, {
+				staged,
+				onProgress: onDiffProgress,
+			})
+
+			const generatedMessage = await this.callAIForCommitMessageWithProgress(
+				gitContextString,
+				callbacks.onProgress,
+			)
+
+			// Store the current context and message for future reference
+			this.previousGitContext = gitContextString
+			this.previousCommitMessage = generatedMessage
+
+			callbacks.onSuccess(generatedMessage)
+			TelemetryService.instance.captureEvent(TelemetryEventName.COMMIT_MSG_GENERATED)
+
+			return generatedMessage
+		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
+			callbacks.onError(errorMessage)
+			console.error("Error generating commit message:", error)
+			throw error
+		}
+	}
+
 	private async callAIForCommitMessageWithProgress(
 		gitContextString: string,
-		progress: vscode.Progress<{ increment?: number; message?: string }>,
+		onProgress: (progress: { message?: string; increment?: number }) => void,
 	): Promise<string> {
 		let totalProgressUsed = 0
 		const maxProgress = 20 // We have 20% reserved for AI processing
@@ -135,7 +218,7 @@ export class CommitMessageProvider {
 				minIncrement,
 			)
 			const increment = Math.min(incrementLimited, maxProgress - totalProgressUsed)
-			progress.report({ increment: increment, message: t("kilocode:commitMessage.generating") })
+			onProgress({ increment: increment, message: t("kilocode:commitMessage.generating") })
 			totalProgressUsed += increment
 		}, 100)
 
@@ -144,12 +227,61 @@ export class CommitMessageProvider {
 
 			// Now, animate the bar to 100% to make it look nicer :)
 			for (let i = 0; i < maxProgress - totalProgressUsed; i++) {
-				progress.report({ increment: 1 })
+				onProgress({ increment: 1 })
 				await delay(25)
 			}
 			return message
 		} finally {
 			clearInterval(progressInterval) // Always clear when done
+		}
+	}
+
+	private determineTargetRepository(resourceUri?: vscode.Uri): VscGenerationRequest | null {
+		try {
+			const gitExtension = vscode.extensions.getExtension("vscode.git")
+			if (!gitExtension || !gitExtension.isActive) {
+				return null
+			}
+
+			const gitApi = gitExtension?.exports.getAPI(1)
+			for (const repo of gitApi?.repositories ?? []) {
+				if (repo.rootUri && resourceUri?.fsPath.startsWith(repo.rootUri.fsPath)) {
+					return repo
+				}
+			}
+
+			return gitApi.repositories[0] // Fallback to first repository
+		} catch (error) {
+			console.error("Error determining target repository:", error)
+			return null
+		}
+	}
+
+	/**
+	 * Sets the commit message in the Git input box
+	 */
+	public setCommitMessage(message: string): void {
+		if (this.targetRepository) {
+			this.targetRepository.inputBox.value = message
+			return
+		}
+
+		// Fallback to clipboard if VS Code Git Extension API is not available
+		this.copyToClipboardFallback(message)
+	}
+
+	/**
+	 * Fallback method to copy commit message to clipboard when Git extension API is unavailable
+	 */
+	private copyToClipboardFallback(message: string): void {
+		try {
+			vscode.env.clipboard.writeText(message)
+			vscode.window.showInformationMessage(
+				"Commit message copied to clipboard. Paste it into the commit message field.",
+			)
+		} catch (clipboardError) {
+			console.error("Error copying to clipboard:", clipboardError)
+			throw new Error("Failed to set commit message")
 		}
 	}
 
@@ -279,7 +411,29 @@ FINAL REMINDER: Your message MUST be COMPLETELY DIFFERENT from the previous mess
 		return withoutQuotes.trim()
 	}
 
+	private async gatherGitChanges(workspacePath: string) {
+		if (this.currentWorkspaceRoot !== workspacePath) {
+			this.gitService?.dispose()
+			this.gitService = new GitExtensionService(workspacePath)
+			this.currentWorkspaceRoot = workspacePath
+		}
+		if (!this.gitService) {
+			throw new Error("Failed to initialize Git service")
+		}
+
+		let staged = true
+		let changes = await this.gitService.gatherChanges({ staged })
+
+		if (changes.length === 0) {
+			staged = false
+			changes = await this.gitService.gatherChanges({ staged })
+		}
+
+		return { changes, staged }
+	}
+
 	public dispose() {
-		this.gitService.dispose()
+		this.gitService?.dispose()
+		this.gitService = null
 	}
 }
