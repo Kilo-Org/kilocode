@@ -594,7 +594,7 @@ class WebViewInstance(
                                             body {
                                                 overscroll-behavior-x: none;
                                                 background-color: transparent;
-                                                color: var(--vscode-sideBar-foreground);
+                                                color: var(--vscode-editor-foreground);
                                                 font-family: var(--vscode-font-family);
                                                 font-weight: var(--vscode-font-weight);
                                                 font-size: var(--vscode-font-size);
