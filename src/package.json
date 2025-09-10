@@ -585,6 +585,11 @@
 					"type": "boolean",
 					"default": false,
 					"description": "%settings.newTaskRequireTodos.description%"
+				},
+				"kilo-code.enableSettingsSync": {
+					"type": "boolean",
+					"default": true,
+					"description": "%settings.enableSettingsSync.description%"
 				}
 			}
 		},

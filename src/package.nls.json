@@ -44,6 +44,7 @@
 	"settings.useAgentRules.description": "Enable loading of AGENTS.md files for agent-specific rules (see https://agent-rules.org/)",
 	"settings.apiRequestTimeout.description": "Maximum time in seconds to wait for API responses (0 = no timeout, 1-3600s, default: 600s). Higher values are recommended for local providers like LM Studio and Ollama that may need more processing time.",
 	"settings.newTaskRequireTodos.description": "Require todos parameter when creating new tasks with the new_task tool",
+	"settings.enableSettingsSync.description": "Enable synchronization of Kilo Code settings across devices via VS Code Settings Sync. When enabled, your API configurations, custom modes, and preferences will automatically sync when you sign in to VS Code Settings Sync.",
 	"ghost.input.title": "Press 'Enter' to confirm or 'Escape' to cancel",
 	"ghost.input.placeholder": "Describe what you want to do...",
 	"ghost.commands.generateSuggestions": "Generate Suggested Edits",
