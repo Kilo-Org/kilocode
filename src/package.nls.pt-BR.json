@@ -41,6 +41,7 @@
 	"settings.autoImportSettingsPath.description": "Caminho para um arquivo de configuração do Kilo Code para importar automaticamente na inicialização da extensão. Suporta caminhos absolutos e caminhos relativos ao diretório inicial (por exemplo, '~/Documents/kilo-code-settings.json'). Deixe em branco para desativar a importação automática.",
 	"settings.useAgentRules.description": "Habilita o carregamento de arquivos AGENTS.md para regras específicas do agente (consulte https://agent-rules.org/)",
 	"settings.apiRequestTimeout.description": "Tempo máximo em segundos de espera pelas respostas da API (0 = sem tempo limite, 1-3600s, padrão: 600s). Valores mais altos são recomendados para provedores locais como LM Studio e Ollama que podem precisar de mais tempo de processamento.",
+	"settings.codeIndex.embeddingBatchSize.description": "O tamanho do lote para operações de embedding durante a indexação de código. Ajuste isso com base nos limites do seu provedor de API. O padrão é 60.",
 	"ghost.input.title": "Pressione 'Enter' para confirmar ou 'Escape' para cancelar",
 	"ghost.input.placeholder": "Descreva o que você quer fazer...",
 	"ghost.commands.generateSuggestions": "Kilo Code: Gerar Sugestões de Edição",

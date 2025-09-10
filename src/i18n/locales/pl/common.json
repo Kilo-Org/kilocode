@@ -124,6 +124,9 @@
 		},
 		"roo": {
 			"authenticationRequired": "Dostawca Roo wymaga uwierzytelnienia w chmurze. Zaloguj się do Roo Code Cloud."
+		},
+		"api": {
+			"invalidKeyInvalidChars": "Klucz API zawiera nieprawidłowe znaki."
 		}
 	},
 	"warnings": {

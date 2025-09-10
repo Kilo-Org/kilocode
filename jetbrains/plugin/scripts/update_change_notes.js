@@ -42,21 +42,15 @@ function updateChangeNotes() {
 		// Convert markdown to HTML format suitable for plugin.xml
 		const changeNotesHtml = convertMarkdownToHtml(changelogSection, version)
 
-		// Read plugin.xml
-		const pluginXmlPath = join(__dirname, "../src/main/resources/META-INF/plugin.xml")
-		const pluginXmlContent = readFileSync(pluginXmlPath, "utf8")
+		// Read plugin.xml.template
+		const pluginXmlTemplatePath = join(__dirname, "../src/main/resources/META-INF/plugin.xml.template")
+		const pluginXmlTemplateContent = readFileSync(pluginXmlTemplatePath, "utf8")
 
-		// Replace change-notes section
-		const changeNotesPattern = /(<change-notes><!\[CDATA\[)([\s\S]*?)(\]\]><\/change-notes>)/
-		const updatedPluginXml = pluginXmlContent.replace(changeNotesPattern, `$1\n${changeNotesHtml}\n    $3`)
-
-		// Check if the replacement was successful
-		if (updatedPluginXml === pluginXmlContent) {
-			console.warn("Warning: change-notes section not found or already up to date")
-			return
-		}
+		// Replace {{CHANGE_NOTES}} placeholder with generated HTML
+		const updatedPluginXml = pluginXmlTemplateContent.replace(/\{\{CHANGE_NOTES\}\}/g, changeNotesHtml)
 
 		// Write updated plugin.xml
+		const pluginXmlPath = join(__dirname, "../src/main/resources/META-INF/plugin.xml")
 		writeFileSync(pluginXmlPath, updatedPluginXml, "utf8")
 
 		console.log(`✅ Successfully updated change-notes for version ${version} in plugin.xml`)

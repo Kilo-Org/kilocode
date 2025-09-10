@@ -248,5 +248,11 @@
 		"maxImagesReached": "Maksimum 20 gambar per pesan. Hapus beberapa gambar untuk menambahkan lebih banyak.",
 		"modelNoImageSupport": "Gambar tidak didukung oleh model saat ini.",
 		"imagesRemovedNoSupport": "Gambar dihapus, tidak didukung oleh model."
+	},
+	"invalidModel": {
+		"alphaPeriodEnded": "🎉 Periode alpha untuk {{model}} telah berakhir! Ganti ke model lain untuk melanjutkan.",
+		"modelUnavailable": "⚠️ Model {{model}} tidak tersedia. Ganti ke model lain untuk melanjutkan.",
+		"continueWith": "Lanjutkan dengan {{model}}",
+		"continue": "Lanjutkan"
 	}
 }

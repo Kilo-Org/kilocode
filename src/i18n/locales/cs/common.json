@@ -129,6 +129,9 @@
 		},
 		"roo": {
 			"authenticationRequired": "Poskytovatel Roo vyžaduje cloudovou autentizaci. Prosím přihlas se do Roo Code Cloud."
+		},
+		"api": {
+			"invalidKeyInvalidChars": "API klíč obsahuje neplatné znaky."
 		}
 	},
 	"warnings": {

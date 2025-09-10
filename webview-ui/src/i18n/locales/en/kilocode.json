@@ -13,6 +13,12 @@
 		"addCredit": "Add Credit",
 		"lowBalance": "Your Kilo Code balance is low"
 	},
+	"invalidModel": {
+		"alphaPeriodEnded": "🎉 The alpha period for {{model}} has ended! Change to a different model to continue.",
+		"modelUnavailable": "⚠️ The model {{model}} is unavailable. Change to a different model to continue.",
+		"continueWith": "Continue with {{model}}",
+		"continue": "Continue"
+	},
 	"pricing": {
 		"costUnknown": "cost unknown",
 		"costUnknownDescription": "The API Provider did not provide any cost data or the request was canceled.",

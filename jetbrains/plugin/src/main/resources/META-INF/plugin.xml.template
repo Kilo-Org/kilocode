@@ -16,6 +16,10 @@ SPDX-License-Identifier: Apache-2.0
     <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
     <vendor url="https://kilocode.ai">Kilo Code</vendor>
 
+    <!-- Resource bundles for internationalization -->
+    <resource-bundle>messages.JetbrainsBundle</resource-bundle>
+    <resource-bundle>messages.KilocodeBundle</resource-bundle>
+
     <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
          Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
@@ -26,16 +30,7 @@ SPDX-License-Identifier: Apache-2.0
    
    <!-- Change notes for the plugin -->
    <change-notes><![CDATA[
-        <h3>Version 4.88.0</h3>
-        <ul>
-            <li>Rename Inline Assist to Kilo Code Autocomplete</li>
-            <li>Show a warning when trying to paste an image when the current model does not support images</li>
-            <li>Prevent writing to files outside the workspace by default</li>
-            <li>Fix Kilo Code Marketplace header missing background color</li>
-            <li>Kilo Code now shows an error message when a model reaches its maximum ouput</li>
-            <li>Fixed 500 error with Chutes when no custom temperature is specified.</li>
-            <li>Remove the Inline Assist experiment, enabling it by default</li>
-        </ul>
+{{CHANGE_NOTES}}
     ]]></change-notes>
 
     <!-- Product and plugin compatibility requirements.

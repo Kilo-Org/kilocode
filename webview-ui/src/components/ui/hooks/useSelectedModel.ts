@@ -17,7 +17,6 @@ import {
 	// kilocode_change start
 	geminiCliDefaultModelId,
 	geminiCliModels,
-	deepInfraDefaultModelId,
 	// kilocode_change end
 	mistralDefaultModelId,
 	mistralModels,
@@ -62,6 +61,7 @@ import {
 	qwenCodeModels,
 	vercelAiGatewayDefaultModelId,
 	BEDROCK_CLAUDE_SONNET_4_MODEL_ID,
+	deepInfraDefaultModelId,
 } from "@roo-code/types"
 
 import type { ModelRecord, RouterModels } from "@roo/api"

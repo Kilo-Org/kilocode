@@ -4,6 +4,7 @@
 
 package ai.kilocode.jetbrains.actors
 
+import ai.kilocode.jetbrains.i18n.I18n
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.Disposable
@@ -53,7 +54,7 @@ class MainThreadMessageService : MainThreadMessageServiceShape {
         // If no cancel button, automatically add a "Cancel" button at the end
         val commandsWithCancel = if (cancelIdx < 0) {
             val cancelHandle = commands.size
-            commands + mapOf("title" to "Cancel", "handle" to cancelHandle, "isCloseAffordance" to true)
+            commands + mapOf("title" to I18n.t("jetbrains:dialog.cancel"), "handle" to cancelHandle, "isCloseAffordance" to true)
         } else {
             commands
         }

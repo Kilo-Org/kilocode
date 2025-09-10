@@ -12,5 +12,6 @@
 	"cloudBenefitMetrics": "Get a holistic view of your token consumption",
 	"visitCloudWebsite": "Visit Kilo Code Cloud",
 	"remoteControl": "Kilo remote Control",
-	"remoteControlDescription": "Enable following and interacting with tasks in this workspace with Kilo Code Cloud"
+	"remoteControlDescription": "Enable following and interacting with tasks in this workspace with Kilo Code Cloud",
+	"cloudUrlPillLabel": "Kilo Code Cloud URL"
 }

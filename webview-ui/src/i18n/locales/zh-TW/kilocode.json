@@ -13,6 +13,12 @@
 		"addCredit": "添加額度",
 		"lowBalance": "你的 Kilo Code 餘額不足"
 	},
+	"invalidModel": {
+		"alphaPeriodEnded": "🎉 {{model}} 的測試期已結束！請切換到其他模型繼續使用。",
+		"modelUnavailable": "⚠️ 模型 {{model}} 無法使用。請切換到其他模型繼續使用。",
+		"continueWith": "繼續使用 {{model}}",
+		"continue": "繼續"
+	},
 	"pricing": {
 		"costUnknown": "費用未知",
 		"costUnknownDescription": "API 提供商未提供任何費用資料或請求已取消。",

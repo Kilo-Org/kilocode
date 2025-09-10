@@ -27,7 +27,6 @@ export { SambaNovaHandler } from "./sambanova"
 export { UnboundHandler } from "./unbound"
 export { VertexHandler } from "./vertex"
 // kilocode_change start
-export { DeepInfraHandler } from "./deepinfra"
 export { GeminiCliHandler } from "./gemini-cli"
 export { VirtualQuotaFallbackHandler } from "./virtual-quota-fallback"
 // kilocode_change end
@@ -39,3 +38,4 @@ export { RooHandler } from "./roo"
 export { FeatherlessHandler } from "./featherless"
 export { SubmodelHandler } from "./submodel"
 export { VercelAiGatewayHandler } from "./vercel-ai-gateway"
+export { DeepInfraHandler } from "./deepinfra"

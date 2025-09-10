@@ -1,4 +1,4 @@
-import { HTMLAttributes } from "react"
+import React, { HTMLAttributes } from "react"
 import { FlaskConical } from "lucide-react"
 
 import type { Experiments } from "@roo-code/types"
@@ -88,7 +88,7 @@ export const ExperimentalSettings = ({
 							const enabled =
 								experiments[EXPERIMENT_IDS[config[0] as keyof typeof EXPERIMENT_IDS]] ?? false
 							return (
-								<>
+								<React.Fragment key={config[0]}>
 									<ExperimentalFeature
 										key={config[0]}
 										experimentKey={config[0]}
@@ -106,7 +106,7 @@ export const ExperimentalSettings = ({
 											morphApiKey={morphApiKey}
 										/>
 									)}
-								</>
+								</React.Fragment>
 							)
 						}
 						// kilocode_change end

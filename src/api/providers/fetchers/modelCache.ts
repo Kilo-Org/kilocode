@@ -23,10 +23,10 @@ import { getIOIntelligenceModels } from "./io-intelligence"
 import { getSubmodelModels } from "./submodel"
 
 // kilocode_change start
-import { getDeepInfraModels } from "./deepinfra"
 import { cerebrasModels } from "@roo-code/types"
 // kilocode_change end
 
+import { getDeepInfraModels } from "./deepinfra"
 const memoryCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 5 * 60 })
 
 export /*kilocode_change*/ async function writeModels(router: RouterName, data: ModelRecord) {
@@ -97,18 +97,18 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 					headers: options.kilocodeToken ? { Authorization: `Bearer ${options.kilocodeToken}` } : undefined,
 				})
 				break
-			case "deepinfra":
-				models = await getDeepInfraModels(options.apiKey, options.baseUrl)
-				break
+			// kilocode_change end
 			case "cerebras":
 				models = cerebrasModels
 				break
-			// kilocode_change end
 			case "ollama":
 				models = await getOllamaModels(options.baseUrl)
 				break
 			case "lmstudio":
 				models = await getLMStudioModels(options.baseUrl)
+				break
+			case "deepinfra":
+				models = await getDeepInfraModels(options.apiKey, options.baseUrl)
 				break
 			case "io-intelligence":
 				models = await getIOIntelligenceModels(options.apiKey)

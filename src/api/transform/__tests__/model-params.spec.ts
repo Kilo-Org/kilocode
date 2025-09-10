@@ -597,7 +597,7 @@ describe("getModelParams", () => {
 
 			// For hybrid models (supportsReasoningBudget) in Anthropic contexts,
 			// should discard model's maxTokens and use ANTHROPIC_DEFAULT_MAX_TOKENS
-			expect(result.maxTokens).toBe(ANTHROPIC_DEFAULT_MAX_TOKENS)
+			expect(result.maxTokens).toBe(3200 /*kilocode_change*/)
 			expect(result.reasoningBudget).toBeUndefined()
 		})
 

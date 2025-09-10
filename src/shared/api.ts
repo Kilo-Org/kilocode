@@ -28,8 +28,8 @@ const routerNames = [
 	"ollama",
 	"lmstudio",
 	"io-intelligence",
+	"deepinfra",
 	"submodel",
-	"deepinfra", // kilocode_change
 	"vercel-ai-gateway",
 ] as const
 
@@ -111,9 +111,10 @@ export const getModelMaxOutputTokens = ({
 		(format === "openrouter" && modelId.startsWith("anthropic/"))
 
 	// For "Hybrid" reasoning models, discard the model's actual maxTokens for Anthropic contexts
+	/* kilocode_change: don't limit Anthropic model output, no idea why this was done before
 	if (model.supportsReasoningBudget && isAnthropicContext) {
 		return ANTHROPIC_DEFAULT_MAX_TOKENS
-	}
+	}*/
 
 	// For Anthropic contexts, always ensure a maxTokens value is set
 	if (isAnthropicContext && (!model.maxTokens || model.maxTokens === 0)) {

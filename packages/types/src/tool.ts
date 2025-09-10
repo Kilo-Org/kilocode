@@ -40,6 +40,7 @@ export const toolNames = [
 	"condense",
 	// kilocode_change end
 	"update_todo_list",
+	"run_slash_command",
 	"generate_image",
 ] as const
 

@@ -28,92 +28,123 @@ You can edit both global and project-level MCP configuration files directly from
 1. Click the <Codicon name="gear" /> icon in the top navigation of the Kilo Code pane to open `Settings`.
 2. Click the `MCP Servers` tab on the left side
 3. Choose the `Installed` servers
-3. Click the appropriate button:
-    *   **`Edit Global MCP`**: Opens the global `mcp_settings.json` file.
-    *   **`Edit Project MCP`**: Opens the project-specific `.kilocode/mcp.json` file. If this file doesn't exist, Kilo Code will create it for you.
+4. Click the appropriate button:
+    - **`Edit Global MCP`**: Opens the global `mcp_settings.json` file.
+    - **`Edit Project MCP`**: Opens the project-specific `.kilocode/mcp.json` file. If this file doesn't exist, Kilo Code will create it for you.
 
   <img src="/docs/img/using-mcp-in-kilo-code/mcp-installed-config.png" alt="Edit Global MCP and Edit Project MCP buttons" width="600" />
 
 Both files use a JSON format with a `mcpServers` object containing named server configurations:
 
-  ```json
-  {
-    "mcpServers": {
-      "server1": {
-        "command": "python",
-        "args": ["/path/to/server.py"],
-        "env": {
-          "API_KEY": "your_api_key"
-        },
-        "alwaysAllow": ["tool1", "tool2"],
-        "disabled": false
-      }
-    }
-  }
-    ```
-    *Example of MCP Server config in Kilo Code (STDIO Transport)*
-  
-  ### Understanding Transport Types
-  
-  MCP supports two transport types for server communication:
-  
-  #### STDIO Transport
-  
-  Used for local servers running on your machine:
-  
-  * Communicates via standard input/output streams
-  * Lower latency (no network overhead)
-  * Better security (no network exposure)
-  * Simpler setup (no HTTP server needed)
-  * Runs as a child process on your machine
-  
-  For more in-depth information about how STDIO transport works, see [STDIO Transport](/features/mcp/server-transports#stdio-transport).
-  
-  STDIO configuration example:
-  ```json
-  {
-    "mcpServers": {
-      "local-server": {
-        "command": "node",
-        "args": ["/path/to/server.js"],
-        "env": {
-          "API_KEY": "your_api_key"
-        },
-        "alwaysAllow": ["tool1", "tool2"],
-        "disabled": false
-      }
-    }
-  }
-  ```
-  
-  #### SSE Transport
-  
-  Used for remote servers accessed over HTTP/HTTPS:
-  
-  * Communicates via Server-Sent Events protocol
-  * Can be hosted on a different machine
-  * Supports multiple client connections
-  * Requires network access
-  * Allows centralized deployment and management
-  
-  For more in-depth information about how SSE transport works, see [SSE Transport](/features/mcp/server-transports#sse-transport).
-  
-  SSE configuration example:
-  
-  ```json
-  {
-    "mcpServers": {
-      "remote-server": {
-        "url": "https://your-server-url.com/mcp",
-        "headers": {
-          "Authorization": "Bearer your-token"
-        },
-        "alwaysAllow": ["tool3"],
-        "disabled": false
-      }
-    }
-  }
-  ```
+```json
+{
+	"mcpServers": {
+		"server1": {
+			"command": "python",
+			"args": ["/path/to/server.py"],
+			"env": {
+				"API_KEY": "your_api_key"
+			},
+			"alwaysAllow": ["tool1", "tool2"],
+			"disabled": false
+		}
+	}
+}
+```
+
+_Example of MCP Server config in Kilo Code (STDIO Transport)_
+
+### Understanding Transport Types
+
+MCP supports three transport types for server communication:
+
+#### STDIO Transport
+
+Used for local servers running on your machine:
+
+- Communicates via standard input/output streams
+- Lower latency (no network overhead)
+- Better security (no network exposure)
+- Simpler setup (no HTTP server needed)
+- Runs as a child process on your machine
+
+For more in-depth information about how STDIO transport works, see [STDIO Transport](/features/mcp/server-transports#stdio-transport).
+
+STDIO configuration example:
+
+```json
+{
+	"mcpServers": {
+		"local-server": {
+			"command": "node",
+			"args": ["/path/to/server.js"],
+			"env": {
+				"API_KEY": "your_api_key"
+			},
+			"alwaysAllow": ["tool1", "tool2"],
+			"disabled": false
+		}
+	}
+}
+```
+
+#### Streamable HTTP Transport
+
+Used for remote servers accessed over HTTP/HTTPS:
+
+- Can be hosted on a different machine
+- Supports multiple client connections
+- Requires network access
+- Allows centralized deployment and management
+
+Streamable HTTP transport configuration example:
+
+```json
+{
+	"mcpServers": {
+		"remote-server": {
+			"type": "streamable-http",
+			"url": "https://your-server-url.com/mcp",
+			"headers": {
+				"Authorization": "Bearer your-token"
+			},
+			"alwaysAllow": ["tool3"],
+			"disabled": false
+		}
+	}
+}
+```
+
+#### SSE Transport
+
+    ⚠️ DEPRECATED: The SSE Transport has been deprecated as of MCP specification version 2025-03-26. Please use the HTTP Stream Transport instead, which implements the new Streamable HTTP transport specification.
+
+Used for remote servers accessed over HTTP/HTTPS:
+
+- Communicates via Server-Sent Events protocol
+- Can be hosted on a different machine
+- Supports multiple client connections
+- Requires network access
+- Allows centralized deployment and management
+
+For more in-depth information about how SSE transport works, see [SSE Transport](/features/mcp/server-transports#sse-transport).
+
+SSE configuration example:
+
+```json
+{
+	"mcpServers": {
+		"remote-server": {
+			"url": "https://your-server-url.com/mcp",
+			"headers": {
+				"Authorization": "Bearer your-token"
+			},
+			"alwaysAllow": ["tool3"],
+			"disabled": false
+		}
+	}
+}
+```
 
 ### Deleting a Server
 
@@ -154,9 +185,9 @@ When enabled, Kilo Code will automatically approve this specific tool without pr
 
 Kilo Code does not come with any pre-installed MCP servers. You'll need to find and install them separately.
 
-* **Community Repositories:** Check for community-maintained lists of MCP servers on GitHub
-* **Ask Kilo Code:** You can ask Kilo Code to help you find or even create MCP servers
-* **Build Your Own:** Create custom MCP servers using the SDK to extend Kilo Code with your own tools
+- **Community Repositories:** Check for community-maintained lists of MCP servers on GitHub
+- **Ask Kilo Code:** You can ask Kilo Code to help you find or even create MCP servers
+- **Build Your Own:** Create custom MCP servers using the SDK to extend Kilo Code with your own tools
 
 For full SDK documentation, visit the [MCP GitHub repository](https://github.com/modelcontextprotocol/).
 
@@ -174,10 +205,10 @@ Example: "Analyze the performance of my API" might use an MCP tool that tests AP
 
 Common issues and solutions:
 
-* **Server Not Responding:** Check if the server process is running and verify network connectivity
-* **Permission Errors:** Ensure proper API keys and credentials are configured in your `mcp_settings.json` (for global settings) or `.kilocode/mcp.json` (for project settings).
-* **Tool Not Available:** Confirm the server is properly implementing the tool and it's not disabled in settings
-* **Slow Performance:** Try adjusting the network timeout value for the specific MCP server
+- **Server Not Responding:** Check if the server process is running and verify network connectivity
+- **Permission Errors:** Ensure proper API keys and credentials are configured in your `mcp_settings.json` (for global settings) or `.kilocode/mcp.json` (for project settings).
+- **Tool Not Available:** Confirm the server is properly implementing the tool and it's not disabled in settings
+- **Slow Performance:** Try adjusting the network timeout value for the specific MCP server
 
 ## Platform-Specific MCP Configuration Examples
 
@@ -187,21 +218,17 @@ When setting up MCP servers on Windows, you'll need to use the Windows Command P
 
 ```json
 {
-  "mcpServers": {
-    "puppeteer": {
-      "command": "cmd",
-      "args": [
-        "/c",
-        "npx",
-        "-y",
-        "@modelcontextprotocol/server-puppeteer"
-      ]
-    }
-  }
+	"mcpServers": {
+		"puppeteer": {
+			"command": "cmd",
+			"args": ["/c", "npx", "-y", "@modelcontextprotocol/server-puppeteer"]
+		}
+	}
 }
 ```
 
 This Windows-specific configuration:
+
 - Uses the `cmd` command to access the Windows Command Prompt
 - Uses `/c` to tell cmd to execute the command and then terminate
 - Uses `npx` to run the package without installing it permanently
@@ -210,19 +237,18 @@ This Windows-specific configuration:
 
 :::note
 For macOS or Linux, you would use a different configuration:
+
 ```json
 {
-  "mcpServers": {
-    "puppeteer": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-puppeteer"
-      ]
-    }
-  }
+	"mcpServers": {
+		"puppeteer": {
+			"command": "npx",
+			"args": ["-y", "@modelcontextprotocol/server-puppeteer"]
+		}
+	}
 }
 ```
+
 :::
 
 The same approach can be used for other MCP servers on Windows, adjusting the package name as needed for different server types.

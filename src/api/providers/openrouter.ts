@@ -41,6 +41,7 @@ type OpenRouterProviderParams = {
 	sort?: "price" | "throughput" | "latency"
 }
 // kilocode_change end
+import { handleOpenAIError } from "./utils/openai-error-handler"
 
 // Image generation types
 interface ImageGenerationResponse {
@@ -104,6 +105,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 	private client: OpenAI
 	protected models: ModelRecord = {}
 	protected endpoints: ModelRecord = {}
+	private readonly providerName = "OpenRouter"
 
 	constructor(options: ApiHandlerOptions) {
 		super()
@@ -221,11 +223,16 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			...(transforms && { transforms }),
 			...(reasoning && { reasoning }),
 		}
+
 		let stream
-		stream = await this.client.chat.completions.create(
-			completionParams,
-			this.customRequestOptions(metadata), // kilocode_change
-		)
+		try {
+			stream = await this.client.chat.completions.create(
+				completionParams,
+				this.customRequestOptions(metadata), // kilocode_change
+			)
+		} catch (error) {
+			throw handleOpenAIError(error, this.providerName)
+		}
 
 		let lastUsage: CompletionUsage | undefined = undefined
 
@@ -338,7 +345,12 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			...(reasoning && { reasoning }),
 		}
 
-		const response = await this.client.chat.completions.create(completionParams)
+		let response
+		try {
+			response = await this.client.chat.completions.create(completionParams)
+		} catch (error) {
+			throw handleOpenAIError(error, this.providerName)
+		}
 
 		if ("error" in response) {
 			const error = response.error as { message?: string; code?: number }

@@ -1,5 +1,3 @@
-// kilocode_change: provider added
-
 import type { ModelInfo } from "../model.js"
 
 // Default fallback values for DeepInfra when model metadata is not yet loaded.

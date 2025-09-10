@@ -5,6 +5,7 @@ import type { Socket } from "socket.io-client"
 import {
 	type TaskProviderLike,
 	type TaskProviderEvents,
+	type StaticAppProperties,
 	RooCodeEventName,
 	ExtensionBridgeEventName,
 	ExtensionSocketEvents,
@@ -18,6 +19,22 @@ describe("ExtensionChannel", () => {
 	let extensionChannel: ExtensionChannel
 	const instanceId = "test-instance-123"
 	const userId = "test-user-456"
+
+	const appProperties: StaticAppProperties = {
+		appName: "roo-code",
+		appVersion: "1.0.0",
+		vscodeVersion: "1.0.0",
+		platform: "darwin",
+		editorName: "Roo Code",
+		// kilocode_change start
+		wrapped: false,
+		wrapper: null,
+		wrapperTitle: null,
+		wrapperCode: null,
+		wrapperVersion: null,
+		// kilocode_change end
+		hostname: "test-host",
+	}
 
 	// Track registered event listeners
 	const eventListeners = new Map<keyof TaskProviderEvents, Set<(...args: unknown[]) => unknown>>()
@@ -80,7 +97,12 @@ describe("ExtensionChannel", () => {
 		} as unknown as TaskProviderLike
 
 		// Create extension channel instance
-		extensionChannel = new ExtensionChannel(instanceId, userId, mockProvider)
+		extensionChannel = new ExtensionChannel({
+			instanceId,
+			appProperties,
+			userId,
+			provider: mockProvider,
+		})
 	})
 
 	afterEach(() => {
@@ -101,6 +123,11 @@ describe("ExtensionChannel", () => {
 				RooCodeEventName.TaskInteractive,
 				RooCodeEventName.TaskResumable,
 				RooCodeEventName.TaskIdle,
+				RooCodeEventName.TaskPaused,
+				RooCodeEventName.TaskUnpaused,
+				RooCodeEventName.TaskSpawned,
+				RooCodeEventName.TaskUserMessage,
+				RooCodeEventName.TaskTokenUsageUpdated,
 			]
 
 			// Check that on() was called for each event
@@ -151,7 +178,12 @@ describe("ExtensionChannel", () => {
 
 		it("should not have duplicate listeners after multiple channel creations", () => {
 			// Create a second channel with the same provider
-			const secondChannel = new ExtensionChannel("instance-2", userId, mockProvider)
+			const secondChannel = new ExtensionChannel({
+				instanceId: "instance-2",
+				appProperties,
+				userId,
+				provider: mockProvider,
+			})
 
 			// Each event should have exactly 2 listeners (one from each channel)
 			eventListeners.forEach((listeners) => {
@@ -230,8 +262,7 @@ describe("ExtensionChannel", () => {
 			}
 
 			// Listeners should still be the same count (not accumulated)
-			const expectedEventCount = 10 // Number of events we listen to
-			expect(eventListeners.size).toBe(expectedEventCount)
+			expect(eventListeners.size).toBe(15)
 
 			// Each event should have exactly 1 listener
 			eventListeners.forEach((listeners) => {

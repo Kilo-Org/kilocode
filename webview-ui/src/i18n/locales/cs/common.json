@@ -94,6 +94,12 @@
 		"deleteWarning": "Smazáním této zprávy se smažou všechny následující zprávy v konverzaci. Chceš pokračovat?",
 		"editMessage": "Upravit zprávu",
 		"editWarning": "Úpravou této zprávy se smažou všechny následující zprávy v konverzaci. Chceš pokračovat?",
+		"editQuestionWithCheckpoint": "Úprava této zprávy smaže všechny pozdější zprávy v konverzaci. Chceš také vrátit všechny změny zpět k tomuto kontrolnímu bodu?",
+		"deleteQuestionWithCheckpoint": "Smazání této zprávy smaže všechny pozdější zprávy v konverzaci. Chceš také vrátit všechny změny zpět k tomuto kontrolnímu bodu?",
+		"editOnly": "Ne, pouze upravit zprávu",
+		"deleteOnly": "Ne, pouze smazat zprávu",
+		"restoreToCheckpoint": "Ano, obnovit kontrolní bod",
+		"dontShowAgain": "Už nezobrazovat",
 		"proceed": "Pokračovat",
 		"title": "Potvrzení"
 	},

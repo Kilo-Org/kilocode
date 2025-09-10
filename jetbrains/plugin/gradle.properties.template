@@ -1,6 +1,6 @@
 # Plugin basic information
 pluginGroup=ai.kilocode.jetbrains
-pluginVersion=4.88.0
+pluginVersion={{VERSION}}
 
 # Platform basic information
 platformVersion=2024.1.4

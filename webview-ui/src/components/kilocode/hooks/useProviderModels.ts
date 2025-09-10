@@ -291,7 +291,7 @@ export const useProviderModels = (apiConfiguration?: ProviderSettings) => {
 
 	return {
 		provider,
-		providerModels: models,
+		providerModels: models as ModelRecord,
 		providerDefaultModel: defaultModel,
 		isLoading: routerModels.isLoading,
 		isError: routerModels.isError,

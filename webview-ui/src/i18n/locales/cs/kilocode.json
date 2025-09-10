@@ -13,6 +13,12 @@
 		"addCredit": "Přidat kredit",
 		"lowBalance": "Tvůj Kilo Code zůstatek je nízký"
 	},
+	"invalidModel": {
+		"alphaPeriodEnded": "🎉 Alfa období pro {{model}} skončilo! Změň na jiný model pro pokračování.",
+		"modelUnavailable": "⚠️ Model {{model}} není dostupný. Změň na jiný model pro pokračování.",
+		"continueWith": "Pokračovat s {{model}}",
+		"continue": "Pokračovat"
+	},
 	"pricing": {
 		"costUnknown": "neznámé náklady",
 		"costUnknownDescription": "Poskytovatel API neposkytl žádné údaje o nákladech nebo byl požadavek zrušen.",

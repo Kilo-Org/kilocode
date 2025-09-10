@@ -248,5 +248,11 @@
 		"modelNoImageSupport": "Les imatges no són compatibles amb el model actual.",
 		"maxImagesReached": "Màxim de 20 imatges per missatge. Elimineu algunes imatges per afegir-ne més.",
 		"imagesRemovedNoSupport": "Imatges eliminades, no compatibles amb el model."
+	},
+	"invalidModel": {
+		"alphaPeriodEnded": "🎉 El període alfa per a {{model}} ha finalitzat! Canvia a un model diferent per continuar.",
+		"modelUnavailable": "⚠️ El model {{model}} no està disponible. Canvia a un model diferent per continuar.",
+		"continueWith": "Continua amb {{model}}",
+		"continue": "Continua"
 	}
 }

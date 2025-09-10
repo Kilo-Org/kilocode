@@ -129,6 +129,9 @@
 		},
 		"roo": {
 			"authenticationRequired": "يتطلب موفر Roo المصادقة السحابية. يرجى تسجيل الدخول إلى Roo Code Cloud."
+		},
+		"api": {
+			"invalidKeyInvalidChars": "مفتاح API يحتوي على رموز غير صالحة."
 		}
 	},
 	"warnings": {

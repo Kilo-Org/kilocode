@@ -13,5 +13,6 @@
 	"cloudBenefitWalkaway": "使用 Kilo remote Control 随时随地跟踪和控制任务",
 	"remoteControl": "Kilo remote Control",
 	"remoteControlDescription": "允许通过 Kilo Code Cloud 跟踪和操作此工作区中的任务",
-	"visitCloudWebsite": "访问 Kilo Code Cloud"
+	"visitCloudWebsite": "访问 Kilo Code Cloud",
+	"cloudUrlPillLabel": "Kilo Code Cloud URL"
 }

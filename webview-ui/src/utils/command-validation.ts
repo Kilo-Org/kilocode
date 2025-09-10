@@ -71,6 +71,8 @@ type ShellToken = string | { op: string } | { command: string }
  * - ${var=value} with escape sequences - Can embed commands via \140 (backtick), \x60, or \u0060
  * - ${!var} - Indirect variable references
  * - <<<$(...) or <<<`...` - Here-strings with command substitution
+ * - =(...) - Zsh process substitution that executes commands
+ * - *(e:...:) or similar - Zsh glob qualifiers with code execution
  *
  * @param source - The command string to analyze
  * @returns true if dangerous substitution patterns are detected, false otherwise
@@ -100,9 +102,23 @@ export function containsDangerousSubstitution(source: string): boolean {
 	// <<<$(...) or <<<`...` can execute commands
 	const hereStringWithSubstitution = /<<<\s*(\$\(|`)/.test(source)
 
+	// Check for zsh process substitution =(...) which executes commands
+	// =(...) creates a temporary file containing the output of the command, but executes it
+	const zshProcessSubstitution = /=\([^)]+\)/.test(source)
+
+	// Check for zsh glob qualifiers with code execution (e:...:)
+	// Patterns like *(e:whoami:) or ?(e:rm -rf /:) execute commands during glob expansion
+	// This regex matches patterns like *(e:...:), ?(e:...:), +(e:...:), @(e:...:), !(e:...:)
+	const zshGlobQualifier = /[*?+@!]\(e:[^:]+:\)/.test(source)
+
 	// Return true if any dangerous pattern is detected
 	return (
-		dangerousParameterExpansion || parameterAssignmentWithEscapes || indirectExpansion || hereStringWithSubstitution
+		dangerousParameterExpansion ||
+		parameterAssignmentWithEscapes ||
+		indirectExpansion ||
+		hereStringWithSubstitution ||
+		zshProcessSubstitution ||
+		zshGlobQualifier
 	)
 }
 

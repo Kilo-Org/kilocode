@@ -244,6 +244,12 @@
 		"perHour": "Por hora",
 		"requestsLabel": "Solicitudes"
 	},
+	"invalidModel": {
+		"alphaPeriodEnded": "🎉 ¡El período alfa para {{model}} ha terminado! Cambia a un modelo diferente para continuar.",
+		"modelUnavailable": "⚠️ El modelo {{model}} no está disponible. Cambia a un modelo diferente para continuar.",
+		"continueWith": "Continuar con {{model}}",
+		"continue": "Continuar"
+	},
 	"imageWarnings": {
 		"modelNoImageSupport": "Las imágenes no son compatibles con el modelo actual.",
 		"maxImagesReached": "Máximo de 20 imágenes por mensaje. Elimina algunas imágenes para añadir más.",

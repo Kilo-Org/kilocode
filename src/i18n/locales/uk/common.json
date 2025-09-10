@@ -129,6 +129,9 @@
 		},
 		"roo": {
 			"authenticationRequired": "Провайдер Roo вимагає автентифікації в хмарі. Будь ласка, увійди в Roo Code Cloud."
+		},
+		"api": {
+			"invalidKeyInvalidChars": "API ключ містить недопустимі символи."
 		}
 	},
 	"warnings": {

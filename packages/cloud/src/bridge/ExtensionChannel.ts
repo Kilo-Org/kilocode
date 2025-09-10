@@ -14,7 +14,12 @@ import {
 	HEARTBEAT_INTERVAL_MS,
 } from "@roo-code/types"
 
-import { BaseChannel } from "./BaseChannel.js"
+import { type BaseChannelOptions, BaseChannel } from "./BaseChannel.js"
+
+interface ExtensionChannelOptions extends BaseChannelOptions {
+	userId: string
+	provider: TaskProviderLike
+}
 
 /**
  * Manages the extension-level communication channel.
@@ -31,33 +36,36 @@ export class ExtensionChannel extends BaseChannel<
 	private heartbeatInterval: NodeJS.Timeout | null = null
 	private eventListeners: Map<RooCodeEventName, (...args: unknown[]) => void> = new Map()
 
-	constructor(instanceId: string, userId: string, provider: TaskProviderLike) {
-		super(instanceId)
-		this.userId = userId
-		this.provider = provider
+	constructor(options: ExtensionChannelOptions) {
+		super({
+			instanceId: options.instanceId,
+			appProperties: options.appProperties,
+			gitProperties: options.gitProperties,
+		})
+
+		this.userId = options.userId
+		this.provider = options.provider
 
 		this.extensionInstance = {
 			instanceId: this.instanceId,
 			userId: this.userId,
 			workspacePath: this.provider.cwd,
-			appProperties: this.provider.appProperties,
-			gitProperties: this.provider.gitProperties,
+			appProperties: this.appProperties,
+			gitProperties: this.gitProperties,
 			lastHeartbeat: Date.now(),
-			task: {
-				taskId: "",
-				taskStatus: TaskStatus.None,
-			},
+			task: { taskId: "", taskStatus: TaskStatus.None },
 			taskHistory: [],
 		}
 
 		this.setupListeners()
 	}
 
-	public async handleCommand(command: ExtensionBridgeCommand): Promise<void> {
+	protected async handleCommandImplementation(command: ExtensionBridgeCommand): Promise<void> {
 		if (command.instanceId !== this.instanceId) {
 			console.log(`[ExtensionChannel] command -> instance id mismatch | ${this.instanceId}`, {
 				messageInstanceId: command.instanceId,
 			})
+
 			return
 		}
 
@@ -175,6 +183,11 @@ export class ExtensionChannel extends BaseChannel<
 			{ from: RooCodeEventName.TaskInteractive, to: ExtensionBridgeEventName.TaskInteractive },
 			{ from: RooCodeEventName.TaskResumable, to: ExtensionBridgeEventName.TaskResumable },
 			{ from: RooCodeEventName.TaskIdle, to: ExtensionBridgeEventName.TaskIdle },
+			{ from: RooCodeEventName.TaskPaused, to: ExtensionBridgeEventName.TaskPaused },
+			{ from: RooCodeEventName.TaskUnpaused, to: ExtensionBridgeEventName.TaskUnpaused },
+			{ from: RooCodeEventName.TaskSpawned, to: ExtensionBridgeEventName.TaskSpawned },
+			{ from: RooCodeEventName.TaskUserMessage, to: ExtensionBridgeEventName.TaskUserMessage },
+			{ from: RooCodeEventName.TaskTokenUsageUpdated, to: ExtensionBridgeEventName.TaskTokenUsageUpdated },
 		] as const
 
 		eventMapping.forEach(({ from, to }) => {
@@ -213,13 +226,16 @@ export class ExtensionChannel extends BaseChannel<
 
 		this.extensionInstance = {
 			...this.extensionInstance,
-			appProperties: this.extensionInstance.appProperties ?? this.provider.appProperties,
-			gitProperties: this.extensionInstance.gitProperties ?? this.provider.gitProperties,
 			lastHeartbeat: Date.now(),
 			task: task
 				? {
 						taskId: task.taskId,
+						parentTaskId: task.parentTaskId,
+						childTaskId: task.childTaskId,
 						taskStatus: task.taskStatus,
+						taskAsk: task?.taskAsk,
+						queuedMessages: task.queuedMessages,
+						tokenUsage: task.tokenUsage,
 						...task.metadata,
 					}
 				: { taskId: "", taskStatus: TaskStatus.None },

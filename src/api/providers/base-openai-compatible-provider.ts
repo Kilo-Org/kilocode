@@ -11,6 +11,7 @@ import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from ".
 import { DEFAULT_HEADERS } from "./constants"
 import { BaseProvider } from "./base-provider"
 import { verifyFinishReason } from "./kilocode/verifyFinishReason"
+import { handleOpenAIError } from "./utils/openai-error-handler"
 
 type BaseOpenAiCompatibleProviderOptions<ModelName extends string> = ApiHandlerOptions & {
 	providerName: string
@@ -90,7 +91,11 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 			params.temperature = this.options.modelTemperature
 		}
 
-		return this.client.chat.completions.create(params, requestOptions)
+		try {
+			return this.client.chat.completions.create(params, requestOptions)
+		} catch (error) {
+			throw handleOpenAIError(error, this.providerName)
+		}
 	}
 
 	override async *createMessage(
@@ -132,11 +137,7 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 
 			return response.choices[0]?.message.content || ""
 		} catch (error) {
-			if (error instanceof Error) {
-				throw new Error(`${this.providerName} completion error: ${error.message}`)
-			}
-
-			throw error
+			throw handleOpenAIError(error, this.providerName)
 		}
 	}
 

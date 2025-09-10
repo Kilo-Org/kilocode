@@ -30,10 +30,10 @@ export const ModelSelector = ({ currentApiConfigName, apiConfiguration, fallback
 		const missingModelIds = modelsIds.indexOf(selectedModelId) >= 0 ? [] : [selectedModelId]
 		return missingModelIds.concat(modelsIds).map((modelId) => ({
 			value: modelId,
-			label: prettyModelName(modelId),
+			label: providerModels[modelId]?.displayName ?? prettyModelName(modelId),
 			type: DropdownOptionType.ITEM,
 		}))
-	}, [modelsIds, selectedModelId])
+	}, [modelsIds, providerModels, selectedModelId])
 
 	const disabled = isLoading || isError
 

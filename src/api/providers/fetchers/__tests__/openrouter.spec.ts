@@ -171,6 +171,7 @@ describe("OpenRouter API", () => {
 				cacheWritesPrice: 3.75,
 				cacheReadsPrice: 0.3,
 				description: expect.any(String),
+				displayName: expect.any(String), // kilocode_change
 				supportsComputerUse: true,
 				supportsReasoningBudget: false,
 				supportsReasoningEffort: false,
@@ -187,6 +188,7 @@ describe("OpenRouter API", () => {
 				cacheWritesPrice: 3.75,
 				cacheReadsPrice: 0.3,
 				description: expect.any(String),
+				displayName: expect.any(String), // kilocode_change
 				supportsComputerUse: true,
 				supportsReasoningBudget: true,
 				requiredReasoningBudget: true,

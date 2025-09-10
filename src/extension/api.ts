@@ -1,8 +1,9 @@
 import { EventEmitter } from "events"
-import * as vscode from "vscode"
 import fs from "fs/promises"
 import * as path from "path"
 import * as os from "os"
+
+import * as vscode from "vscode"
 
 import {
 	type RooCodeAPI,
@@ -211,13 +212,10 @@ export class API extends EventEmitter<RooCodeEvents> implements RooCodeAPI {
 			})
 
 			task.on(RooCodeEventName.TaskCompleted, async (_, tokenUsage, toolUsage) => {
-				let isSubtask = false
+				this.emit(RooCodeEventName.TaskCompleted, task.taskId, tokenUsage, toolUsage, {
+					isSubtask: !!task.parentTaskId,
+				})
 
-				if (typeof task.rootTask !== "undefined") {
-					isSubtask = true
-				}
-
-				this.emit(RooCodeEventName.TaskCompleted, task.taskId, tokenUsage, toolUsage, { isSubtask: isSubtask })
 				this.taskMap.delete(task.taskId)
 
 				await this.fileLog(

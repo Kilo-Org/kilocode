@@ -407,5 +407,9 @@
 	"editMessage": {
 		"placeholder": "Upravit tvou zprávu..."
 	},
-	"generateCommitMessage": "Vygenerovat commit zprávu"
+	"generateCommitMessage": "Vygenerovat commit zprávu",
+	"slashCommand": {
+		"wantsToRun": "Kilo Code chce spustit slash příkaz:",
+		"didRun": "Kilo Code spustil slash příkaz:"
+	}
 }

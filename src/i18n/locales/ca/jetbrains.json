@@ -1,0 +1,19 @@
+{
+	"errors": {
+		"nodejsMissing": {
+			"title": "Entorn Node.js absent",
+			"message": "No s'ha detectat l'entorn Node.js, si us plau instal·la Node.js i torna-ho a intentar. Versió recomanada: {{minVersion}} o superior."
+		},
+		"nodejsVersionLow": {
+			"title": "Versió de Node.js massa baixa",
+			"message": "La versió actual de Node.js ({{nodePath}}) és {{nodeVersion}}, si us plau actualitza a {{minVersion}} o superior per a una millor compatibilitat."
+		}
+	},
+	"dialog": {
+		"cancel": "Cancel·la"
+	},
+	"ui": {
+		"initializing": "Kilo Code s'està inicialitzant...",
+		"systemInformation": "Informació del sistema"
+	}
+}

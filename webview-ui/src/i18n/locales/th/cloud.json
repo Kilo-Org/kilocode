@@ -12,5 +12,6 @@
 	"cloudBenefitMetrics": "ดูภาพรวมการใช้โทเค็นของคุณ",
 	"visitCloudWebsite": "เยี่ยมชม Kilo Code Cloud",
 	"remoteControl": "Kilo remote Control",
-	"remoteControlDescription": "เปิดใช้งานการติดตามและโต้ตอบกับงานในพื้นที่ทำงานนี้ด้วย Kilo Code Cloud"
+	"remoteControlDescription": "เปิดใช้งานการติดตามและโต้ตอบกับงานในพื้นที่ทำงานนี้ด้วย Kilo Code Cloud",
+	"cloudUrlPillLabel": "URL Kilo Code Cloud"
 }

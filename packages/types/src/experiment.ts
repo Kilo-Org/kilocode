@@ -12,6 +12,7 @@ export const experimentIds = [
 	"multiFileApplyDiff",
 	"preventFocusDisruption",
 	"imageGeneration",
+	"runSlashCommand",
 ] as const
 
 export const experimentIdsSchema = z.enum([...experimentIds, ...kilocodeExperimentIds])
@@ -28,6 +29,7 @@ export const experimentsSchema = z.object({
 	multiFileApplyDiff: z.boolean().optional(),
 	preventFocusDisruption: z.boolean().optional(),
 	imageGeneration: z.boolean().optional(),
+	runSlashCommand: z.boolean().optional(),
 })
 
 export type Experiments = z.infer<typeof experimentsSchema>

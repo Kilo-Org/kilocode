@@ -1,6 +1,4 @@
-// kilocode_change - provider added
-
-import { Anthropic } from "@anthropic-ai/sdk" // for message param types
+import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
 
 import { deepInfraDefaultModelId, deepInfraDefaultModelInfo } from "@roo-code/types"
@@ -16,9 +14,6 @@ import { RouterProvider } from "./router-provider"
 import { getModelParams } from "../transform/model-params"
 import { getModels } from "./fetchers/modelCache"
 
-/**
- * DeepInfra provider handler (OpenAI compatible)
- */
 export class DeepInfraHandler extends RouterProvider implements SingleCompletionHandler {
 	constructor(options: ApiHandlerOptions) {
 		super({
@@ -62,13 +57,15 @@ export class DeepInfraHandler extends RouterProvider implements SingleCompletion
 		messages: Anthropic.Messages.MessageParam[],
 		_metadata?: ApiHandlerCreateMessageMetadata,
 	): ApiStream {
+		// Ensure we have up-to-date model metadata
+		await this.fetchModel()
 		const { id: modelId, info, reasoningEffort: reasoning_effort } = await this.fetchModel()
 		let prompt_cache_key = undefined
 		if (info.supportsPromptCache && _metadata?.taskId) {
 			prompt_cache_key = _metadata.taskId
 		}
 
-		const requestOptions = {
+		const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming = {
 			model: modelId,
 			messages: [{ role: "system", content: systemPrompt }, ...convertToOpenAiMessages(messages)],
 			stream: true,
@@ -81,9 +78,7 @@ export class DeepInfraHandler extends RouterProvider implements SingleCompletion
 			requestOptions.temperature = this.options.modelTemperature ?? 0
 		}
 
-		// If includeMaxTokens is enabled, set a cap using model info
 		if (this.options.includeMaxTokens === true && info.maxTokens) {
-			// Prefer modern OpenAI param when available in SDK
 			;(requestOptions as any).max_completion_tokens = this.options.modelMaxTokens || info.maxTokens
 		}
 
@@ -112,7 +107,8 @@ export class DeepInfraHandler extends RouterProvider implements SingleCompletion
 	}
 
 	async completePrompt(prompt: string): Promise<string> {
-		const { id: modelId, info } = await this.fetchModel()
+		await this.fetchModel()
+		const { id: modelId, info } = this.getModel()
 
 		const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
 			model: modelId,

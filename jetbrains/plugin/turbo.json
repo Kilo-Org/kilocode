@@ -44,7 +44,7 @@
 			"cache": false,
 			"inputs": ["../host/package.json", "../host/package-lock.json"],
 			"outputs": ["../resources/node_modules/**", "../resources/package.json", "../resources/package-lock.json"],
-			"dependsOn": ["clean:resource-nodemodules", "copy:resource-host"],
+			"dependsOn": ["copy:resource-host"],
 			"env": ["PKG_CONFIG_PATH"]
 		},
 		"propDep": {
@@ -55,12 +55,16 @@
 		"sync:version": {
 			"cache": false,
 			"outputs": ["./gradle.properties"],
-			"inputs": ["../src/package.json"]
+			"inputs": ["../src/package.json", "./gradle.properties.template"]
 		},
 		"sync:changelog": {
 			"cache": false,
 			"outputs": ["./src/main/resources/META-INF/plugin.xml"],
-			"inputs": ["./gradle.properties", "../../CHANGELOG.md"],
+			"inputs": [
+				"./gradle.properties",
+				"../../CHANGELOG.md",
+				"./src/main/resources/META-INF/plugin.xml.template"
+			],
 			"dependsOn": ["sync:version"]
 		},
 		"build": {
