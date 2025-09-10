@@ -1,0 +1,19 @@
+{
+	"errors": {
+		"nodejsMissing": {
+			"title": "Node.js ortamı eksik",
+			"message": "Node.js ortamı algılanmadı, lütfen Node.js'yi yükleyin ve tekrar deneyin. Önerilen sürüm: {{minVersion}} veya üzeri."
+		},
+		"nodejsVersionLow": {
+			"title": "Node.js sürümü çok düşük",
+			"message": "Mevcut Node.js ({{nodePath}}) sürümü {{nodeVersion}}, daha iyi uyumluluk için lütfen {{minVersion}} veya üzerine yükseltin."
+		}
+	},
+	"dialog": {
+		"cancel": "İptal"
+	},
+	"ui": {
+		"initializing": "Kilo Code başlatılıyor...",
+		"systemInformation": "Sistem Bilgileri"
+	}
+}

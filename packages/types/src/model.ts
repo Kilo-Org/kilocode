@@ -69,7 +69,10 @@ export const modelInfoSchema = z.object({
 	minTokensPerCachePoint: z.number().optional(),
 	maxCachePoints: z.number().optional(),
 	cachableFields: z.array(z.string()).optional(),
-	preferredIndex: z.number().nullish(), // kilocode_change
+	// kilocode_change start
+	displayName: z.string().nullish(),
+	preferredIndex: z.number().nullish(),
+	// kilocode_change end
 	tiers: z
 		.array(
 			z.object({

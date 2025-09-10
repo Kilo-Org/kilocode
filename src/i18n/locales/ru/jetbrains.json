@@ -1,0 +1,19 @@
+{
+	"errors": {
+		"nodejsMissing": {
+			"title": "Отсутствует среда Node.js",
+			"message": "Среда Node.js не обнаружена, установите Node.js и попробуйте снова. Рекомендуемая версия: {{minVersion}} или выше."
+		},
+		"nodejsVersionLow": {
+			"title": "Версия Node.js слишком низкая",
+			"message": "Текущая версия Node.js ({{nodePath}}) {{nodeVersion}}, обновите до {{minVersion}} или выше для лучшей совместимости."
+		}
+	},
+	"dialog": {
+		"cancel": "Отмена"
+	},
+	"ui": {
+		"initializing": "Kilo Code инициализируется...",
+		"systemInformation": "Информация о системе"
+	}
+}

@@ -13,6 +13,12 @@
 		"addCredit": "クレジットを追加",
 		"lowBalance": "Kilo Codeの残高が少なくなっています"
 	},
+	"invalidModel": {
+		"alphaPeriodEnded": "🎉 {{model}}のアルファ期間が終了しました！続行するには別のモデルに変更してください。",
+		"modelUnavailable": "⚠️ モデル{{model}}は利用できません。続行するには別のモデルに変更してください。",
+		"continueWith": "{{model}}で続行",
+		"continue": "続行"
+	},
 	"pricing": {
 		"costUnknown": "コスト不明",
 		"costUnknownDescription": "APIプロバイダーがコストデータを提供しなかったか、リクエストがキャンセルされました。",

@@ -248,5 +248,11 @@
 		"modelNoImageSupport": "Obrazy nie są obsługiwane przez aktualny model.",
 		"maxImagesReached": "Maksymalnie 20 obrazów na wiadomość. Usuń niektóre obrazy, aby dodać więcej.",
 		"imagesRemovedNoSupport": "Obrazy usunięte, nieobsługiwane przez model."
+	},
+	"invalidModel": {
+		"alphaPeriodEnded": "🎉 Okres alfa dla {{model}} się zakończył! Zmień na inny model, aby kontynuować.",
+		"modelUnavailable": "⚠️ Model {{model}} jest niedostępny. Zmień na inny model, aby kontynuować.",
+		"continueWith": "Kontynuuj z {{model}}",
+		"continue": "Kontynuuj"
 	}
 }

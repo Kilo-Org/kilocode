@@ -52,7 +52,7 @@ export const FreeModelsLink = ({
 	modelId,
 }: {
 	className: string
-	origin: "chat" | "settings"
+	origin: "chat" | "settings" | "invalid_model"
 	modelId?: string
 }) => {
 	const { t } = useAppTranslation()

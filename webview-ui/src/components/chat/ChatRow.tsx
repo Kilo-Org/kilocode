@@ -51,6 +51,7 @@ import { KiloChatRowUserFeedback } from "../kilocode/chat/KiloChatRowUserFeedbac
 import { StandardTooltip } from "../ui" // kilocode_change
 import { FastApplyChatDisplay } from "./kilocode/FastApplyChatDisplay" // kilocode_change
 import { McpExecution } from "./McpExecution"
+import { InvalidModelWarning } from "../kilocode/chat/InvalidModelWarning"
 
 interface ChatRowProps {
 	message: ClineMessage
@@ -1408,6 +1409,9 @@ export const ChatRowContent = ({
 
 				case "payment_required_prompt": {
 					return <LowCreditWarning message={message} />
+				}
+				case "invalid_model": {
+					return <InvalidModelWarning message={message} isLast={isLast} />
 				}
 				case "report_bug":
 					return (

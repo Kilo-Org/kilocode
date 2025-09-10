@@ -109,9 +109,9 @@ import { parseKiloSlashCommands } from "../slash-commands/kilo" // kilocode_chan
 import { GlobalFileNames } from "../../shared/globalFileNames" // kilocode_change
 import { ensureLocalKilorulesDirExists } from "../context/instructions/kilo-rules" // kilocode_change
 import { restoreTodoListForTask } from "../tools/updateTodoListTool"
-import { reportExcessiveRecursion, yieldPromise } from "../kilocode" // kilocode_change
 import { AutoApprovalHandler } from "./AutoApprovalHandler"
 import { Gpt5Metadata, ClineMessageWithMetadata } from "./types"
+import { isAlphaPeriodEndedError, isInvalidModelError, isPaymentRequiredError } from "../../shared/kilocode/errorUtils"
 
 const MAX_EXPONENTIAL_BACKOFF_SECONDS = 600 // 10 minutes
 const DEFAULT_USAGE_COLLECTION_TIMEOUT_MS = 5000 // 5 seconds
@@ -2691,20 +2691,30 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		} catch (error) {
 			this.isWaitingForFirstChunk = false
 			// kilocode_change start
-			// Check for payment required error from KiloCode provider
-			if ((error as any).status === 402 && apiConfiguration?.apiProvider === "kilocode") {
-				const balance = (error as any).balance ?? "0.00"
-				const buyCreditsUrl = (error as any).buyCreditsUrl ?? "https://kilocode.ai/profile"
-
-				const { response } = await this.ask(
-					"payment_required_prompt",
-					JSON.stringify({
-						title: t("kilocode:lowCreditWarning.title"),
-						message: t("kilocode:lowCreditWarning.message"),
-						balance: balance,
-						buyCreditsUrl: buyCreditsUrl,
-					}),
-				)
+			if (
+				apiConfiguration?.apiProvider === "kilocode" &&
+				(isPaymentRequiredError(error) || isInvalidModelError(error) || isAlphaPeriodEndedError(error))
+			) {
+				const { response } = await (isPaymentRequiredError(error)
+					? this.ask(
+							"payment_required_prompt",
+							JSON.stringify({
+								title: t("kilocode:lowCreditWarning.title"),
+								message: t("kilocode:lowCreditWarning.message"),
+								balance: (error as any).balance ?? "0.00",
+								buyCreditsUrl: (error as any).buyCreditsUrl ?? "https://kilocode.ai/profile",
+							}),
+						)
+					: this.ask(
+							"invalid_model",
+							JSON.stringify({
+								modelId: apiConfiguration.kilocodeModel,
+								error: {
+									status: error.status,
+									message: error.message,
+								},
+							}),
+						))
 
 				if (response === "retry_clicked") {
 					yield* this.attemptApiRequest(retryAttempt + 1)

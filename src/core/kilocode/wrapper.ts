@@ -14,10 +14,9 @@ export const getKiloCodeWrapperProperties = (): KiloCodeWrapperProperties => {
 		kiloCodeWrapper = wrapperMatch[1].trim() || null
 		kiloCodeWrapperCode = wrapperMatch[2].trim() || null
 		kiloCodeWrapperVersion = wrapperMatch[3].trim() || null
+		kiloCodeWrapperTitle =
+			JETBRAIN_PRODUCTS[kiloCodeWrapperCode as keyof typeof JETBRAIN_PRODUCTS]?.name || "JetBrains IDE"
 	}
-
-	kiloCodeWrapperTitle =
-		JETBRAIN_PRODUCTS[kiloCodeWrapperCode as keyof typeof JETBRAIN_PRODUCTS]?.name || "JetBrains IDE"
 
 	return {
 		kiloCodeWrapped,

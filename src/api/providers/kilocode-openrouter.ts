@@ -59,21 +59,7 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 
 	override getModel() {
 		let id = this.options.kilocodeModel ?? this.defaultModel
-		let info = this.models[id]
-		let defaultTemperature = 0
-
-		if (!info) {
-			const defaultInfo = this.models[this.defaultModel]
-			if (defaultInfo) {
-				console.warn(`${id} no longer exists, falling back to ${this.defaultModel}`)
-				id = this.defaultModel
-				info = defaultInfo
-			} else {
-				console.warn(`${id} no longer exists, falling back to ${openRouterDefaultModelId}`)
-				id = openRouterDefaultModelId
-				info = openRouterDefaultModelInfo
-			}
-		}
+		let info = this.models[id] ?? openRouterDefaultModelInfo
 
 		// If a specific provider is requested, use the endpoint for that provider.
 		if (this.options.openRouterSpecificProvider && this.endpoints[this.options.openRouterSpecificProvider]) {
@@ -87,7 +73,7 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 			modelId: id,
 			model: info,
 			settings: this.options,
-			defaultTemperature: isDeepSeekR1 ? DEEP_SEEK_DEFAULT_TEMPERATURE : defaultTemperature,
+			defaultTemperature: isDeepSeekR1 ? DEEP_SEEK_DEFAULT_TEMPERATURE : 0,
 		})
 
 		return { id, info, topP: isDeepSeekR1 ? 0.95 : undefined, ...params }

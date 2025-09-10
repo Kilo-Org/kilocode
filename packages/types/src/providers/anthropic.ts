@@ -29,7 +29,7 @@ export const anthropicModels = {
 		],
 	},
 	"claude-opus-4-1-20250805": {
-		maxTokens: 8192,
+		maxTokens: 32_000, // kilocode_change: https://openrouter.ai/anthropic/claude-opus-4.1/providers
 		contextWindow: 200_000,
 		supportsImages: true,
 		supportsComputerUse: true,

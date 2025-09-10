@@ -339,10 +339,10 @@ function getSelectedModel({
 				}
 			}
 
-			// Fallback to anthropic model if no match found
+			const invalidOrDefaultModel = apiConfiguration.kilocodeModel ?? kilocodeDefaultModel
 			return {
-				id: kilocodeDefaultModel,
-				info: routerModels["kilocode-openrouter"][kilocodeDefaultModel],
+				id: invalidOrDefaultModel,
+				info: routerModels["kilocode-openrouter"][invalidOrDefaultModel],
 			}
 		}
 		case "gemini-cli": {

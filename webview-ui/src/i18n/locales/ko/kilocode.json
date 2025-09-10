@@ -13,6 +13,12 @@
 		"addCredit": "크레딧 추가",
 		"lowBalance": "Kilo Code 잔액이 부족합니다"
 	},
+	"invalidModel": {
+		"alphaPeriodEnded": "🎉 {{model}}의 알파 기간이 종료되었습니다! 계속하려면 다른 모델로 변경하세요.",
+		"modelUnavailable": "⚠️ {{model}} 모델을 사용할 수 없습니다. 계속하려면 다른 모델로 변경하세요.",
+		"continueWith": "{{model}}로 계속하기",
+		"continue": "계속하기"
+	},
 	"pricing": {
 		"costUnknown": "비용 알 수 없음",
 		"costUnknownDescription": "API 제공자가 비용 데이터를 제공하지 않았거나 요청이 취소되었습니다.",

@@ -7,6 +7,12 @@
 // Convenient for reading variables from gradle.properties
 fun properties(key: String) = providers.gradleProperty(key)
 
+buildscript {
+    dependencies {
+        classpath("com.google.code.gson:gson:2.10.1")
+    }
+}
+
 plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "1.8.10"
@@ -220,6 +226,123 @@ tasks {
         token.set(System.getenv("PUBLISH_TOKEN"))
     }
 
+    // Convert the extension's JSON translation files to JetBrains ResourceBundle .properties format
+    register("convertTranslations") {
+        description = "Convert JSON translation files to the native ResourceBundle .properties format"
+        
+        val sourceDir = file("../../src/i18n/locales")
+        val targetDir = file("src/main/resources/messages")
+        
+        inputs.dir(sourceDir)
+        outputs.dir(targetDir)
+        
+        doLast {
+            if (!sourceDir.exists()) {
+                throw IllegalStateException("Source translation directory not found: ${sourceDir.absolutePath}")
+            }
+            
+            targetDir.mkdirs()
+            
+            // Find all JSON bundles (jetbrains.json, kilocode.json, etc.)
+            val jsonBundles = mutableSetOf<String>()
+            sourceDir.listFiles()?.forEach { localeDir ->
+                if (localeDir.isDirectory) {
+                    localeDir.listFiles { file -> file.extension == "json" }?.forEach { jsonFile ->
+                        jsonBundles.add(jsonFile.nameWithoutExtension)
+                    }
+                }
+            }
+            println("Found translation bundles: ${jsonBundles.joinToString(", ")}")
+            
+            jsonBundles.forEach { bundleName ->
+                convertBundleToProperties(sourceDir, targetDir, bundleName)
+            }
+            println("Converted ${jsonBundles.size} translation bundles to ResourceBundle .properties format")
+        }
+    }
+
+    named("processResources") {
+        dependsOn("convertTranslations")
+    }
+
+}
+
+// Helper function to convert JSON bundle to .properties files
+fun convertBundleToProperties(sourceDir: File, targetDir: File, bundleName: String) {
+    val gson = com.google.gson.Gson()
+    
+    sourceDir.listFiles()?.forEach { localeDir ->
+        if (localeDir.isDirectory) {
+            val jsonFile = File(localeDir, "$bundleName.json")
+            if (jsonFile.exists()) {
+                try {
+                    val locale = localeDir.name
+                    val capitalizedBundleName = bundleName.replaceFirstChar { it.uppercase() }
+                    
+                    // Determine properties file name
+                    val propertiesFileName = if (locale == "en") {
+                        "${capitalizedBundleName}Bundle.properties"
+                    } else {
+                        "${capitalizedBundleName}Bundle_${locale.replace("-", "_")}.properties"
+                    }
+                    
+                    val propertiesFile = File(targetDir, propertiesFileName)
+                    
+                    // Parse JSON
+                    val jsonContent = jsonFile.readText()
+                    val jsonObject = gson.fromJson(jsonContent, com.google.gson.JsonObject::class.java)
+                    
+                    // Convert to flat properties
+                    val properties = mutableMapOf<String, String>()
+                    flattenJsonObject(jsonObject, "", properties)
+                    
+                    // Write properties file
+                    propertiesFile.writeText("# Auto-generated from $bundleName.json - do not edit directly\n")
+                    properties.toSortedMap().forEach { (key, value) ->
+                        // Keep named parameters as {{paramName}} for Kotlin named substitution
+                        val escapedValue = value
+                            .replace("\\", "\\\\")
+                            .replace("\n", "\\n")
+                            .replace("\r", "\\r")
+                            .replace("\t", "\\t")
+                            .replace("=", "\\=")
+                            .replace(":", "\\:")
+                            .replace("#", "\\#")
+                            .replace("!", "\\!")
+                        
+                        propertiesFile.appendText("$key=$escapedValue\n")
+                    }
+                    
+                    println("  → $locale: ${properties.size} keys → $propertiesFileName")
+                    
+                } catch (e: Exception) {
+                    throw RuntimeException("Failed to convert $jsonFile", e)
+                }
+            }
+        }
+    }
+}
+
+// Helper function to flatten nested JSON objects into dot-notation keys
+fun flattenJsonObject(jsonObject: com.google.gson.JsonObject, prefix: String, properties: MutableMap<String, String>) {
+    for (entry in jsonObject.entrySet()) {
+        val key = entry.key
+        val element = entry.value
+        val fullKey = if (prefix.isEmpty()) key else "$prefix.$key"
+        
+        when {
+            element.isJsonObject -> {
+                flattenJsonObject(element.asJsonObject, fullKey, properties)
+            }
+            element.isJsonPrimitive -> {
+                properties[fullKey] = element.asString
+            }
+            else -> {
+                // Skip arrays and other complex types for now
+                println("  Warning: Skipping complex type for key: $fullKey")
+            }
+        }
+    }
 }
 
 // Configure ktlint

@@ -19,6 +19,7 @@ import ai.kilocode.jetbrains.util.PluginConstants
 import ai.kilocode.jetbrains.util.NotificationUtil
 import ai.kilocode.jetbrains.util.NodeVersionUtil
 import ai.kilocode.jetbrains.util.NodeVersion
+import ai.kilocode.jetbrains.i18n.I18n
 
 /**
  * Extension process manager
@@ -81,8 +82,9 @@ class ExtensionProcessManager : Disposable {
                 
                 // Show notification to prompt user to install Node.js
                 NotificationUtil.showError(
-                    "Node.js environment missing",
-                    "Node.js environment not detected, please install Node.js and try again. Recommended version: $MIN_REQUIRED_NODE_VERSION or higher."
+                    I18n.t("jetbrains:errors.nodejsMissing.title"),
+                    I18n.t("jetbrains:errors.nodejsMissing.message",
+                        mapOf("minVersion" to MIN_REQUIRED_NODE_VERSION))
                 )
                 
                 return false
@@ -94,8 +96,12 @@ class ExtensionProcessManager : Disposable {
                 LOG.error("Node.js version is not supported: $nodeVersion, required: $MIN_REQUIRED_NODE_VERSION")
 
                 NotificationUtil.showError(
-                    "Node.js version too low",
-                    "Current Node.js($nodePath) version is $nodeVersion, please upgrade to $MIN_REQUIRED_NODE_VERSION or higher for better compatibility."
+                    I18n.t("jetbrains:errors.nodejsVersionLow.title"),
+                    I18n.t("jetbrains:errors.nodejsVersionLow.message", mapOf(
+                        "nodePath" to nodePath,
+                        "nodeVersion" to (nodeVersion?.toString() ?: "unknown"),
+                        "minVersion" to MIN_REQUIRED_NODE_VERSION
+                    ))
                 )
                 
                 return false

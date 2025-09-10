@@ -1,0 +1,19 @@
+{
+	"errors": {
+		"nodejsMissing": {
+			"title": "Node.js 환경이 없습니다",
+			"message": "Node.js 환경이 감지되지 않았습니다. Node.js를 설치한 후 다시 시도해주세요. 권장 버전: {{minVersion}} 이상."
+		},
+		"nodejsVersionLow": {
+			"title": "Node.js 버전이 너무 낮습니다",
+			"message": "현재 Node.js({{nodePath}}) 버전은 {{nodeVersion}}입니다. 더 나은 호환성을 위해 {{minVersion}} 이상으로 업그레이드해주세요."
+		}
+	},
+	"dialog": {
+		"cancel": "취소"
+	},
+	"ui": {
+		"initializing": "Kilo Code를 초기화하는 중...",
+		"systemInformation": "시스템 정보"
+	}
+}

@@ -2516,14 +2516,27 @@ export class ClineProvider
 	private getAppProperties(): StaticAppProperties {
 		if (!this._appProperties) {
 			const packageJSON = this.context.extension?.packageJSON
-			const { kiloCodeWrapperTitle } = getKiloCodeWrapperProperties() // kilocode_change
+			// kilocode_change start
+			const {
+				kiloCodeWrapped,
+				kiloCodeWrapper,
+				kiloCodeWrapperCode,
+				kiloCodeWrapperVersion,
+				kiloCodeWrapperTitle,
+			} = getKiloCodeWrapperProperties()
+			// kilocode_change end
 
 			this._appProperties = {
 				appName: packageJSON?.name ?? Package.name,
 				appVersion: packageJSON?.version ?? Package.version,
 				vscodeVersion: vscode.version,
-				platform: process.platform,
-				editorName: kiloCodeWrapperTitle || vscode.env.appName, // kilocode_change
+				platform: isWsl ? "wsl" /* kilocode_change */ : process.platform,
+				editorName: kiloCodeWrapperTitle ? kiloCodeWrapperTitle : vscode.env.appName, // kilocode_change
+				wrapped: kiloCodeWrapped, // kilocode_change
+				wrapper: kiloCodeWrapper, // kilocode_change
+				wrapperCode: kiloCodeWrapperCode, // kilocode_change
+				wrapperVersion: kiloCodeWrapperVersion, // kilocode_change
+				wrapperTitle: kiloCodeWrapperTitle, // kilocode_change
 			}
 		}
 

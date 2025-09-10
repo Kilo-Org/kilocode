@@ -13,6 +13,12 @@
 		"addCredit": "Guthaben hinzufügen",
 		"lowBalance": "Ihr Kilo Code Guthaben ist niedrig"
 	},
+	"invalidModel": {
+		"alphaPeriodEnded": "🎉 Die Alpha-Phase für {{model}} ist beendet! Wechsle zu einem anderen Modell, um fortzufahren.",
+		"modelUnavailable": "⚠️ Das Modell {{model}} ist nicht verfügbar. Wechsle zu einem anderen Modell, um fortzufahren.",
+		"continueWith": "Mit {{model}} fortfahren",
+		"continue": "Fortfahren"
+	},
 	"pricing": {
 		"costUnknown": "Kosten unbekannt",
 		"costUnknownDescription": "Der API-Anbieter hat keine Kostendaten bereitgestellt oder die Anfrage wurde abgebrochen.",

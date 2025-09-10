@@ -50,12 +50,12 @@ Both files use a JSON format with a `mcpServers` object containing named server 
       }
     }
   }
-    ```
-    *Example of MCP Server config in Kilo Code (STDIO Transport)*
+```
+*Example of MCP Server config in Kilo Code (STDIO Transport)*
   
   ### Understanding Transport Types
   
-  MCP supports two transport types for server communication:
+  MCP supports three transport types for server communication:
   
   #### STDIO Transport
   
@@ -85,9 +85,38 @@ Both files use a JSON format with a `mcpServers` object containing named server 
     }
   }
   ```
+
+  #### Streamable HTTP Transport
   
+  Used for remote servers accessed over HTTP/HTTPS:
+  
+  * Can be hosted on a different machine
+  * Supports multiple client connections
+  * Requires network access
+  * Allows centralized deployment and management
+  
+  Streamable HTTP transport configuration example:
+  
+  ```json
+  {
+    "mcpServers": {
+      "remote-server": {
+        "type": "streamable-http",
+        "url": "https://your-server-url.com/mcp",
+        "headers": {
+          "Authorization": "Bearer your-token"
+        },
+        "alwaysAllow": ["tool3"],
+        "disabled": false
+      }
+    }
+  }
+  ```
+
   #### SSE Transport
   
+    ⚠️ DEPRECATED: The SSE Transport has been deprecated as of MCP specification version 2025-03-26. Please use the HTTP Stream Transport instead, which implements the new Streamable HTTP transport specification.
+
   Used for remote servers accessed over HTTP/HTTPS:
   
   * Communicates via Server-Sent Events protocol

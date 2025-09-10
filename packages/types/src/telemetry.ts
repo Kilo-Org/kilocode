@@ -94,6 +94,11 @@ export const staticAppPropertiesSchema = z.object({
 	vscodeVersion: z.string(),
 	platform: z.string(),
 	editorName: z.string(),
+	wrapped: z.boolean(), // kilocode_change
+	wrapper: z.string().nullable(), // kilocode_change
+	wrapperTitle: z.string().nullable(), // kilocode_change
+	wrapperCode: z.string().nullable(), // kilocode_change
+	wrapperVersion: z.string().nullable(), // kilocode_change
 })
 
 export type StaticAppProperties = z.infer<typeof staticAppPropertiesSchema>

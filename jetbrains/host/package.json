@@ -12,8 +12,6 @@
 		"build:clean": "npm run clean && npm run build",
 		"start": "node ./dist/src/main.js",
 		"dev": "tsc && node ./dist/src/main.js",
-		"watch:tsc": "tsc --watch",
-		"watch": "tsc --watch",
 		"bundle:package": "cp ./package.json ./dist/package.json",
 		"bundle:build": "tsc --noEmit && tsup",
 		"lint": "eslint . --ext=ts --max-warnings=0"

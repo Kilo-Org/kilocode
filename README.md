@@ -35,8 +35,6 @@
 
 ## How to get started with Kilo Code
 
-## How to get started with Kilo Code
-
 1. Install the Kilo Code extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code).
 2. Create your account to access 400+ cutting-edge AI models including Gemini 2.5 Pro, Claude 4 Sonnet & Opus, and GPT-5 – with transparent pricing that matches provider rates exactly.
 3. Start coding with AI that adapts to your workflow. Watch our quick-start guide to see Kilo Code in action:
