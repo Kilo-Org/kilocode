@@ -32,6 +32,7 @@ import { sanitizeErrorMessage } from "../shared/validation-helpers"
 import { Package } from "../../../shared/package"
 
 export class DirectoryScanner implements IDirectoryScanner {
+	private _cancelled = false
 	private readonly batchSegmentThreshold: number
 
 	constructor(
@@ -59,6 +60,18 @@ export class DirectoryScanner implements IDirectoryScanner {
 	}
 
 	/**
+	 * Request cooperative cancellation of any in-flight scanning work.
+	 * The scanDirectory and batch operations periodically check this flag
+	 * and will exit as soon as practical.
+	 */
+	public cancel(): void {
+		this._cancelled = true
+	}
+	public get isCancelled(): boolean {
+		return this._cancelled
+	}
+
+	/**
 	 * Recursively scans a directory for code blocks in supported files.
 	 * @param directoryPath The directory to scan
 	 * @param rooIgnoreController Optional RooIgnoreController instance for filtering
@@ -72,6 +85,9 @@ export class DirectoryScanner implements IDirectoryScanner {
 		onBlocksIndexed?: (indexedCount: number) => void,
 		onFileParsed?: (fileBlockCount: number) => void,
 	): Promise<{ stats: { processed: number; skipped: number }; totalBlockCount: number }> {
+		// reset cooperative cancel flag on new full scan
+		this._cancelled = false
+
 		const directoryPath = directory
 		// Capture workspace context at scan start
 		const scanWorkspace = getWorkspacePathForContext(directoryPath)
@@ -126,9 +142,16 @@ export class DirectoryScanner implements IDirectoryScanner {
 		// Process all files in parallel with concurrency control
 		const parsePromises = supportedPaths.map((filePath) =>
 			parseLimiter(async () => {
+				// Early exit if cancellation requested
+				if (this._cancelled) {
+					return
+				}
 				try {
 					// Check file size
 					const stats = await stat(filePath)
+					if (this._cancelled) {
+						return
+					}
 					if (stats.size > MAX_FILE_SIZE_BYTES) {
 						skippedCount++ // Skip large files
 						return
@@ -138,6 +161,9 @@ export class DirectoryScanner implements IDirectoryScanner {
 					const content = await vscode.workspace.fs
 						.readFile(vscode.Uri.file(filePath))
 						.then((buffer) => Buffer.from(buffer).toString("utf-8"))
+					if (this._cancelled) {
+						return
+					}
 
 					// Calculate current hash
 					const currentFileHash = createHash("sha256").update(content).digest("hex")
@@ -154,6 +180,9 @@ export class DirectoryScanner implements IDirectoryScanner {
 
 					// File is new or changed - parse it using the injected parser function
 					const blocks = await this.codeParser.parseFile(filePath, { content, fileHash: currentFileHash })
+					if (this._cancelled) {
+						return
+					}
 					const fileBlockCount = blocks.length
 					onFileParsed?.(fileBlockCount)
 					processedCount++
@@ -163,10 +192,15 @@ export class DirectoryScanner implements IDirectoryScanner {
 						// Add to batch accumulators
 						let addedBlocksFromFile = false
 						for (const block of blocks) {
+							if (this._cancelled) break
 							const trimmedContent = block.content.trim()
 							if (trimmedContent) {
 								const release = await mutex.acquire()
 								try {
+									if (this._cancelled) {
+										// Abort adding more items if cancelled
+										break
+									}
 									currentBatchBlocks.push(block)
 									currentBatchTexts.push(trimmedContent)
 									addedBlocksFromFile = true
@@ -175,8 +209,12 @@ export class DirectoryScanner implements IDirectoryScanner {
 									if (currentBatchBlocks.length >= this.batchSegmentThreshold) {
 										// Wait if we've reached the maximum pending batches
 										while (pendingBatchCount >= MAX_PENDING_BATCHES) {
+											if (this._cancelled) break
 											// Wait for at least one batch to complete
 											await Promise.race(activeBatchPromises)
+										}
+										if (this._cancelled) {
+											break
 										}
 
 										// Copy current batch data and clear accumulators
@@ -258,7 +296,7 @@ export class DirectoryScanner implements IDirectoryScanner {
 		await Promise.all(parsePromises)
 
 		// Process any remaining items in batch
-		if (currentBatchBlocks.length > 0) {
+		if (!this._cancelled && currentBatchBlocks.length > 0) {
 			const release = await mutex.acquire()
 			try {
 				// Copy current batch data and clear accumulators
@@ -288,8 +326,21 @@ export class DirectoryScanner implements IDirectoryScanner {
 			}
 		}
 
-		// Wait for all batch processing to complete
-		await Promise.all(activeBatchPromises)
+		// Wait for all batch processing to complete (skip if cancelled to return early)
+		if (!this._cancelled) {
+			await Promise.all(activeBatchPromises)
+		}
+
+		// Short-circuit if cancelled before handling deletions
+		if (this._cancelled) {
+			return {
+				stats: {
+					processed: processedCount,
+					skipped: skippedCount,
+				},
+				totalBlockCount,
+			}
+		}
 
 		// Handle deleted files
 		const oldHashes = this.cacheManager.getAllHashes()
@@ -354,7 +405,8 @@ export class DirectoryScanner implements IDirectoryScanner {
 		onError?: (error: Error) => void,
 		onBlocksIndexed?: (indexedCount: number) => void,
 	): Promise<void> {
-		if (batchBlocks.length === 0) return
+		// Respect cooperative cancellation
+		if (this._cancelled || batchBlocks.length === 0) return
 
 		let attempts = 0
 		let success = false
@@ -362,6 +414,7 @@ export class DirectoryScanner implements IDirectoryScanner {
 
 		while (attempts < MAX_BATCH_RETRIES && !success) {
 			attempts++
+			if (this._cancelled) return
 			try {
 				// --- Deletion Step ---
 				const uniqueFilePaths = [
@@ -405,6 +458,7 @@ export class DirectoryScanner implements IDirectoryScanner {
 				// --- End Deletion Step ---
 
 				// Create embeddings for batch
+				if (this._cancelled) return
 				const { embeddings } = await this.embedder.createEmbeddings(batchTexts)
 
 				// Prepare points for Qdrant
@@ -428,6 +482,7 @@ export class DirectoryScanner implements IDirectoryScanner {
 				})
 
 				// Upsert points to Qdrant
+				if (this._cancelled) return
 				await this.qdrantClient.upsertPoints(points)
 				onBlocksIndexed?.(batchBlocks.length)
 

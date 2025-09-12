@@ -128,7 +128,9 @@
 			"ollamaBaseUrlRequired": "Ollama base URL is required",
 			"baseUrlRequired": "Base URL is required",
 			"modelDimensionMinValue": "Model dimension must be greater than 0"
-		}
+		},
+		"cancelling": "Cancelling...",
+		"cancelIndexingButton": "Cancel Indexing"
 	},
 	"autoApprove": {
 		"description": "Allow Kilo Code to automatically perform operations without requiring approval. Enable these settings only if you fully trust the AI and understand the associated security risks.",

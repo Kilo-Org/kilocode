@@ -61,6 +61,7 @@
 		"fileWatcherStopped": "Наблюдатель файлов остановлен.",
 		"failedDuringInitialScan": "Ошибка во время первоначального сканирования: {{errorMessage}}",
 		"unknownError": "Неизвестная ошибка",
-		"indexingRequiresWorkspace": "Для индексации требуется открытая папка рабочего пространства"
+		"indexingRequiresWorkspace": "Для индексации требуется открытая папка рабочего пространства",
+		"indexingCancelled": "Индексация отменена"
 	}
 }

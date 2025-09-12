@@ -61,6 +61,7 @@
 		"fileWatcherStopped": "Pozorovatel souborů byl zastaven.",
 		"failedDuringInitialScan": "Selhalo během úvodního skenování: {{errorMessage}}",
 		"unknownError": "Neznámá chyba",
-		"indexingRequiresWorkspace": "Indexování vyžaduje otevřenou složku workspace"
+		"indexingRequiresWorkspace": "Indexování vyžaduje otevřenou složku workspace",
+		"indexingCancelled": "Indexování bylo zrušeno"
 	}
 }
