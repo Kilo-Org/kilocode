@@ -8,10 +8,6 @@ sidebar_label: Free & Budget Models
 
 ## Completely Free Options
 
-### Grok Code Fast 1
-
-This frontier AI model is 100% free in Kilo Code for a limited time. [See the blog post for more details](https://blog.kilocode.ai/p/grok-code-fast-get-this-frontier-ai-model-free).
-
 ### OpenRouter Free Tier Models
 
 OpenRouter offers several models with generous free tiers. **Note:** You'll need to create a free OpenRouter account to access these models.
@@ -24,8 +20,8 @@ OpenRouter offers several models with generous free tiers. **Note:** You'll need
 
 **Available free models:**
 
-- **Qwen3 Coder (free)** - Optimized for agentic coding tasks such as function calling, tool use, and long-context reasoning over repositories.
-- **Z.AI: GLM 4.5 Air (free)** - Lightweight variant of the GLM-4.5 family, purpose-built for agent-centric applications.
+- **Qwen3 Coder (free)** - Optimized for agentic coding tasks such as function calling, tool use, and long-context reasoning over repositories. 
+- **Z.AI: GLM 4.5 Air (free)** - Lightweight variant of the GLM-4.5 family, purpose-built for agent-centric applications. 
 - **DeepSeek: R1 0528 (free)** - Performance on par with OpenAI o1, but open-sourced and with fully open reasoning tokens.
 - **MoonshotAI: Kimi K2 (free)** - Optimized for agentic capabilities, including advanced tool use, reasoning, and code synthesis.
 
@@ -243,8 +239,8 @@ When you need more capability than free models provide, these options deliver ex
 1. **Create OpenRouter account** for free models
 2. **Configure multiple providers** in Kilo Code
 3. **Set up API Configuration Profiles** for easy switching
-4. **Escalate to budget models** when needed
-5. **Reserve premium models** for complex work
+5. **Escalate to budget models** when needed
+6. **Reserve premium models** for complex work
 
 ### Recommended Provider Mix
 
