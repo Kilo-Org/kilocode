@@ -1,8 +1,6 @@
 # kilo-code
 
-## 4.94.0
-
-### Minor Changes
+## [v4.94.0]
 
 - [#2361](https://github.com/Kilo-Org/kilocode/pull/2361) [`9b553d3`](https://github.com/Kilo-Org/kilocode/commit/9b553d32940736fec49dde8de75faba1e0890471) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Jetbrains - Improve Light Theme
 
