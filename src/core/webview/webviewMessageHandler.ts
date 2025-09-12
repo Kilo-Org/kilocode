@@ -6,7 +6,12 @@ import pWaitFor from "p-wait-for"
 import * as vscode from "vscode"
 import axios from "axios" // kilocode_change
 import { getKiloBaseUriFromToken } from "../../shared/kilocode/token" // kilocode_change
-import { ProfileData, SeeNewChangesPayload } from "../../shared/WebviewMessage" // kilocode_change
+import {
+	ProfileData,
+	SeeNewChangesPayload,
+	TaskHistoryRequestPayload,
+	TaskHistoryResponsePayload,
+} from "../../shared/WebviewMessage" // kilocode_change
 
 import {
 	type Language,
@@ -69,6 +74,7 @@ import { MarketplaceManager, MarketplaceItemType } from "../../services/marketpl
 import { setPendingTodoList } from "../tools/updateTodoListTool"
 import { UsageTracker } from "../../utils/usage-tracker"
 import { seeNewChanges } from "../checkpoints/kilocode/seeNewChanges" // kilocode_change
+import { getTaskHistory } from "../kilocode/webview/getTaskHistory"
 
 export const webviewMessageHandler = async (
 	provider: ClineProvider,
@@ -984,6 +990,13 @@ export const webviewMessageHandler = async (
 				await seeNewChanges(task, (message.payload as SeeNewChangesPayload).commitRange)
 			}
 			break
+		case "taskHistoryRequest": {
+			await provider.postMessageToWebview({
+				type: "taskHistoryResponse",
+				payload: getTaskHistory(provider, message.payload as TaskHistoryRequestPayload),
+			})
+			break
+		}
 		// kilocode_change end
 		case "checkpointRestore": {
 			const result = checkoutRestorePayloadSchema.safeParse(message.payload)

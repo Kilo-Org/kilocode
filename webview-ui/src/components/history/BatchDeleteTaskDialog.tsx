@@ -13,7 +13,6 @@ import {
 } from "@/components/ui"
 import { vscode } from "@/utils/vscode"
 import { AlertDialogProps } from "@radix-ui/react-alert-dialog"
-import { useTaskSearch } from "./useTaskSearch" // kilocode_change
 
 interface BatchDeleteTaskDialogProps extends AlertDialogProps {
 	taskIds: string[]
@@ -21,10 +20,9 @@ interface BatchDeleteTaskDialogProps extends AlertDialogProps {
 
 export const BatchDeleteTaskDialog = ({ taskIds, ...props }: BatchDeleteTaskDialogProps) => {
 	const { t } = useAppTranslation()
-	const { tasks } = useTaskSearch() // kilocode_change
 	const { onOpenChange } = props
 
-	const favoritedTasks = tasks.filter((task) => taskIds.includes(task.id) && task.isFavorited) // kilocode_change
+	const favoritedTasks = [] // todo: tasks.filter((task) => taskIds.includes(task.id) && task.isFavorited) // kilocode_change
 	const hasFavoritedTasks = favoritedTasks.length > 0 // kilocode_change
 
 	const onDelete = useCallback(() => {

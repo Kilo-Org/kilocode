@@ -3,11 +3,20 @@ import { memo } from "react"
 import { vscode } from "@src/utils/vscode"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 
-import { useTaskSearch } from "./useTaskSearch"
+// import { useTaskSearch } from "./useTaskSearch" // kilocode_change
 import TaskItem from "./TaskItem"
+import { useTaskHistory } from "@/kilocode/hooks/useTaskHistory"
 
 const HistoryPreview = () => {
-	const { tasks } = useTaskSearch()
+	// kilocode_change start
+	const { data } = useTaskHistory({
+		workspace: "current",
+		sort: "newest",
+		favoritesOnly: false,
+		pageIndex: 0,
+	})
+	const tasks = data?.historyItems ?? []
+	// kilocode_change end
 	const { t } = useAppTranslation()
 
 	const handleViewAllHistory = () => {

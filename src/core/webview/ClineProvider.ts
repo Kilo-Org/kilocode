@@ -1787,7 +1787,7 @@ export class ClineProvider
 			ttsSpeed,
 			diffEnabled,
 			enableCheckpoints,
-			taskHistory,
+			taskHistoryFullLength, // kilocode_change
 			soundVolume,
 			browserViewportSize,
 			screenshotQuality,
@@ -1905,14 +1905,14 @@ export class ClineProvider
 				apiConfiguration.kilocodeOrganizationId,
 			),
 			currentTaskItem: this.getCurrentTask()?.taskId
-				? (taskHistory || []).find((item: HistoryItem) => item.id === this.getCurrentTask()?.taskId)
+				? (this.getGlobalState("taskHistory") /*kilocode_change*/ || []).find(
+						(item: HistoryItem) => item.id === this.getCurrentTask()?.taskId,
+					)
 				: undefined,
 			clineMessages: this.getCurrentTask()?.clineMessages || [],
 			currentTaskTodos: this.getCurrentTask()?.todoList || [],
 			messageQueue: this.getCurrentTask()?.messageQueueService?.messages,
-			taskHistory: (taskHistory || [])
-				.filter((item: HistoryItem) => item.ts && item.task)
-				.sort((a: HistoryItem, b: HistoryItem) => b.ts - a.ts),
+			taskHistoryFullLength,
 			soundEnabled: soundEnabled ?? false,
 			ttsEnabled: ttsEnabled ?? false,
 			ttsSpeed: ttsSpeed ?? 1.0,
@@ -2136,7 +2136,7 @@ export class ClineProvider
 			allowedMaxCost: stateValues.allowedMaxCost,
 			autoCondenseContext: stateValues.autoCondenseContext ?? true,
 			autoCondenseContextPercent: stateValues.autoCondenseContextPercent ?? 100,
-			taskHistory: stateValues.taskHistory ?? [],
+			taskHistoryFullLength: stateValues.taskHistory?.length ?? 0, // kilocode_change
 			allowedCommands: stateValues.allowedCommands,
 			deniedCommands: stateValues.deniedCommands,
 			soundEnabled: stateValues.soundEnabled ?? false,
@@ -3102,6 +3102,9 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
 		await this.postStateToWebview()
 	}
 
+	public getTaskHistory(): HistoryItem[] {
+		return this.getGlobalState("taskHistory") || []
+	}
 	// kilocode_change end
 
 	public get cwd() {

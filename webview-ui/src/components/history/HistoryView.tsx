@@ -30,7 +30,7 @@ type SortOption = "newest" | "oldest" | "mostExpensive" | "mostTokens" | "mostRe
 
 const HistoryView = ({ onDone }: HistoryViewProps) => {
 	const {
-		tasks,
+		data, // kilocode_change
 		searchQuery,
 		setSearchQuery,
 		sortOption,
@@ -38,9 +38,13 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 		setLastNonRelevantSort,
 		showAllWorkspaces,
 		setShowAllWorkspaces,
-		showFavoritesOnly, // kilocode_change
-		setShowFavoritesOnly, // kilocode_change
+		// kilocode_change start
+		showFavoritesOnly,
+		setShowFavoritesOnly,
+		setRequestedPageIndex,
+		// kilocode_change end
 	} = useTaskSearch()
+	const tasks = data?.historyItems ?? [] // kilocode_change
 	const { t } = useAppTranslation()
 
 	const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null)
@@ -263,6 +267,33 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 						/>
 					)}
 				/>
+				{
+					// kilocode_change start
+					<div>
+						{(data?.pageIndex ?? 0) + 1} / {data?.pageCount ?? 1}
+						<Button
+							className="button"
+							onClick={() => {
+								const pageIndex = data?.pageIndex ?? 0
+								if (pageIndex > 0) {
+									setRequestedPageIndex(pageIndex - 1)
+								}
+							}}>
+							Prev
+						</Button>
+						<Button
+							className="button"
+							onClick={() => {
+								const pageIndex = data?.pageIndex ?? 0
+								if (pageIndex < (data?.pageCount ?? 0) - 1) {
+									setRequestedPageIndex(pageIndex + 1)
+								}
+							}}>
+							Next
+						</Button>
+					</div>
+					// kilocode_change end
+				}
 			</TabContent>
 
 			{/* Fixed action bar at bottom - only shown in selection mode with selected items */}
