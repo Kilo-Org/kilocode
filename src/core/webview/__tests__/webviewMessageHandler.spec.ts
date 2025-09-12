@@ -146,6 +146,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				requestyApiKey: "requesty-key",
 				glamaApiKey: "glama-key",
 				unboundApiKey: "unbound-key",
+				submodelApiKey: "submodel-key",
 				litellmApiKey: "litellm-key",
 				litellmBaseUrl: "http://localhost:4000",
 			},
@@ -180,6 +181,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "requesty", apiKey: "requesty-key" })
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "glama" })
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "unbound", apiKey: "unbound-key" })
+		expect(mockGetModels).toHaveBeenCalledWith({ provider: "submodel", apiKey: "submodel-key" })
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "vercel-ai-gateway" })
 		expect(mockGetModels).toHaveBeenCalledWith({
 			provider: "litellm",
@@ -196,6 +198,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				requesty: mockModels,
 				glama: mockModels,
 				unbound: mockModels,
+				submodel: mockModels,
 				litellm: mockModels,
 				"kilocode-openrouter": mockModels,
 				ollama: mockModels, // kilocode_change
@@ -212,6 +215,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				requestyApiKey: "requesty-key",
 				glamaApiKey: "glama-key",
 				unboundApiKey: "unbound-key",
+				submodelApiKey: "submodel-key",
 				// Missing litellm config
 			},
 		})
@@ -250,6 +254,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				requestyApiKey: "requesty-key",
 				glamaApiKey: "glama-key",
 				unboundApiKey: "unbound-key",
+				submodelApiKey: "submodel-key",
 				// Missing litellm config
 			},
 		})
@@ -286,6 +291,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				requesty: mockModels,
 				glama: mockModels,
 				unbound: mockModels,
+				submodel: mockModels,
 				litellm: {},
 				"kilocode-openrouter": mockModels,
 				ollama: mockModels, // kilocode_change
@@ -311,6 +317,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty
 			.mockResolvedValueOnce(mockModels) // glama
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound
+			.mockRejectedValueOnce(new Error("Submodel API error")) // submodel
 			.mockResolvedValueOnce(mockModels) // kilocode-openrouter
 			.mockRejectedValueOnce(new Error("Ollama API error")) // ollama
 			.mockResolvedValueOnce(mockModels) // vercel-ai-gateway
@@ -330,6 +337,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				requesty: {},
 				glama: mockModels,
 				unbound: {},
+				submodel: {},
 				litellm: {},
 				"kilocode-openrouter": mockModels,
 				ollama: {},
@@ -356,6 +364,13 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
+			error: "Submodel API error",
+			values: { provider: "submodel" },
+		})
+
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
 			error: "LiteLLM connection failed",
 			values: { provider: "litellm" },
 		})
@@ -368,6 +383,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty
 			.mockRejectedValueOnce(new Error("Glama API error")) // glama
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound
+			.mockRejectedValueOnce(new Error("Submodel API error")) // submodel
 			.mockResolvedValueOnce({}) // kilocode-openrouter - Success
 			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
 			.mockRejectedValueOnce(new Error("Vercel AI Gateway error")) // vercel-ai-gateway
@@ -414,6 +430,13 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			values: { provider: "deepinfra" },
 		})
 
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "Submodel API error",
+			values: { provider: "submodel" },
+		})
+    
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,

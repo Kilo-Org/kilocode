@@ -42,6 +42,7 @@ import {
 	FireworksHandler,
 	RooHandler,
 	FeatherlessHandler,
+	SubmodelHandler,
 	VercelAiGatewayHandler,
 	DeepInfraHandler,
 } from "./providers"
@@ -172,6 +173,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new FireworksHandler(options)
 		case "io-intelligence":
 			return new IOIntelligenceHandler(options)
+		case "submodel":
+			return new SubmodelHandler(options)
 		case "roo":
 			// Never throw exceptions from provider constructors
 			// The provider-proxy server will handle authentication and return appropriate error codes

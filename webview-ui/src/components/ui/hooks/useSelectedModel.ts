@@ -54,6 +54,7 @@ import {
 	featherlessDefaultModelId,
 	ioIntelligenceDefaultModelId,
 	ioIntelligenceModels,
+	submodelDefaultModelId,
 	rooDefaultModelId,
 	rooModels,
 	qwenCodeDefaultModelId,
@@ -390,6 +391,11 @@ function getSelectedModel({
 			const id = apiConfiguration.ioIntelligenceModelId ?? ioIntelligenceDefaultModelId
 			const info =
 				routerModels["io-intelligence"]?.[id] ?? ioIntelligenceModels[id as keyof typeof ioIntelligenceModels]
+			return { id, info }
+		}
+		case "submodel": {
+			const id = apiConfiguration.submodelModelId ?? submodelDefaultModelId
+			const info = routerModels.submodel[id]
 			return { id, info }
 		}
 		case "roo": {

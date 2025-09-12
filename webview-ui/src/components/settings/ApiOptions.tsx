@@ -36,6 +36,7 @@ import {
 	featherlessDefaultModelId,
 	ioIntelligenceDefaultModelId,
 	rooDefaultModelId,
+	submodelDefaultModelId,
 	vercelAiGatewayDefaultModelId,
 	deepInfraDefaultModelId,
 } from "@roo-code/types"
@@ -100,6 +101,7 @@ import {
 	ZAi,
 	Fireworks,
 	Featherless,
+	Submodel,
 	VercelAiGateway,
 	DeepInfra,
 } from "./providers"
@@ -385,6 +387,7 @@ const ApiOptions = ({
 				kilocode: { field: "kilocodeModel", default: kilocodeDefaultModel },
 				"gemini-cli": { field: "apiModelId", default: geminiCliDefaultModelId },
 				// kilocode_change end
+				submodel: { field: "submodelModelId", default: submodelDefaultModelId },
 			}
 
 			const config = PROVIDER_MODEL_CONFIG[value]
@@ -718,6 +721,16 @@ const ApiOptions = ({
 
 			{selectedProvider === "fireworks" && (
 				<Fireworks apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
+			)}
+
+			{selectedProvider === "submodel" && (
+				<Submodel
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+					routerModels={routerModels}
+					organizationAllowList={organizationAllowList}
+					modelValidationError={modelValidationError}
+				/>
 			)}
 
 			{selectedProvider === "roo" && (
