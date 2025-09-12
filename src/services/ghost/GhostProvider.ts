@@ -399,7 +399,7 @@ export class GhostProvider {
 		if (!editor) {
 			return
 		}
-		this.decorations.displaySuggestions(this.suggestions)
+		await this.decorations.displaySuggestions(this.suggestions)
 	}
 
 	private getSelectedSuggestionLine() {
