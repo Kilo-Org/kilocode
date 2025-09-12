@@ -785,6 +785,10 @@
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
 			"description": "에디터에서 직접 빠른 코드 제안과 개선을 위한 Autocomplete 기능을 활성화합니다. 타겟 변경을 위한 빠른 작업(Cmd+I)과 컨텍스트 개선을 위한 Autocomplete가 포함됩니다."
+		},
+		"RUN_SLASH_COMMAND": {
+			"name": "모델 시작 슬래시 명령 활성화",
+			"description": "활성화되면 Kilo Code가 워크플로를 실행하기 위해 슬래시 명령을 실행할 수 있습니다."
 		}
 	},
 	"promptCaching": {
@@ -904,5 +908,19 @@
 	"includeMaxOutputTokensDescription": "API 요청에서 최대 출력 토큰 매개변수를 전송합니다. 일부 제공업체는 이를 지원하지 않을 수 있습니다.",
 	"limitMaxTokensDescription": "응답에서 최대 토큰 수 제한",
 	"maxOutputTokensLabel": "최대 출력 토큰",
-	"maxTokensGenerateDescription": "응답에서 생성할 최대 토큰 수"
+	"maxTokensGenerateDescription": "응답에서 생성할 최대 토큰 수",
+	"serviceTier": {
+		"label": "서비스 등급",
+		"tooltip": "API 요청을 더 빠르게 처리하려면 우선 처리 서비스 등급을 사용해 보세요. 더 낮은 가격에 더 높은 지연 시간을 원하시면 플렉스 처리 등급을 사용해 보세요.",
+		"standard": "표준",
+		"flex": "플렉스",
+		"priority": "우선",
+		"pricingTableTitle": "서비스 등급별 가격 (100만 토큰당 가격)",
+		"columns": {
+			"tier": "등급",
+			"input": "입력",
+			"output": "출력",
+			"cacheReads": "캐시 읽기"
+		}
+	}
 }

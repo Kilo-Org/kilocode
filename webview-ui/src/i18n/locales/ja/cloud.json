@@ -13,5 +13,6 @@
 	"cloudBenefitWalkaway": "Kilo remote Controlでどこからでもタスクをフォローし制御",
 	"remoteControl": "Kilo remote Control",
 	"remoteControlDescription": "Kilo Code Cloudでこのワークスペースのタスクをフォローし操作することを有効にする",
-	"visitCloudWebsite": "Kilo Code Cloudを訪問"
+	"visitCloudWebsite": "Kilo Code Cloudを訪問",
+	"cloudUrlPillLabel": "Kilo Code Cloud URL"
 }

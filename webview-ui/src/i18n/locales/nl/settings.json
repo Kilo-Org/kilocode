@@ -785,6 +785,10 @@
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
 			"description": "Schakel Autocomplete-functies in voor snelle codesuggesties en verbeteringen direct in je editor. Bevat Snelle Taak (Cmd+I) voor gerichte wijzigingen en Autocomplete voor contextuele verbeteringen."
+		},
+		"RUN_SLASH_COMMAND": {
+			"name": "Model-geïnitieerde slash-commando's inschakelen",
+			"description": "Wanneer ingeschakeld, kan Kilo Code je slash-commando's uitvoeren om workflows uit te voeren."
 		}
 	},
 	"promptCaching": {
@@ -904,5 +908,19 @@
 	"includeMaxOutputTokensDescription": "Stuur maximale output tokens parameter in API-verzoeken. Sommige providers ondersteunen dit mogelijk niet.",
 	"limitMaxTokensDescription": "Beperk het maximale aantal tokens in het antwoord",
 	"maxOutputTokensLabel": "Maximale output tokens",
-	"maxTokensGenerateDescription": "Maximale tokens om te genereren in het antwoord"
+	"maxTokensGenerateDescription": "Maximale tokens om te genereren in het antwoord",
+	"serviceTier": {
+		"label": "Serviceniveau",
+		"tooltip": "Voor snellere verwerking van API-verzoeken, probeer het prioriteitsverwerkingsniveau. Voor lagere prijzen met hogere latentie, probeer het flexverwerkingsniveau.",
+		"standard": "Standaard",
+		"flex": "Flex",
+		"priority": "Prioriteit",
+		"pricingTableTitle": "Prijzen per serviceniveau (prijs per 1M tokens)",
+		"columns": {
+			"tier": "Niveau",
+			"input": "Invoer",
+			"output": "Uitvoer",
+			"cacheReads": "Cache leest"
+		}
+	}
 }

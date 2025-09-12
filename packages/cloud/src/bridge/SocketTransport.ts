@@ -7,8 +7,7 @@ export interface SocketTransportOptions {
 	socketOptions: Partial<ManagerOptions & SocketOptions>
 	onConnect?: () => void | Promise<void>
 	onDisconnect?: (reason: string) => void
-	onReconnect?: (attemptNumber: number) => void | Promise<void>
-	onError?: (error: Error) => void
+	onReconnect?: () => void | Promise<void>
 	logger?: {
 		log: (message: string, ...args: unknown[]) => void
 		error: (message: string, ...args: unknown[]) => void
@@ -23,12 +22,11 @@ export interface SocketTransportOptions {
 export class SocketTransport {
 	private socket: Socket | null = null
 	private connectionState: ConnectionState = ConnectionState.DISCONNECTED
-	private retryAttempt: number = 0
 	private retryTimeout: NodeJS.Timeout | null = null
-	private hasConnectedOnce: boolean = false
+	private isPreviouslyConnected: boolean = false
 
 	private readonly retryConfig: RetryConfig = {
-		maxInitialAttempts: 10,
+		maxInitialAttempts: Infinity,
 		initialDelay: 1_000,
 		maxDelay: 15_000,
 		backoffMultiplier: 2,
@@ -45,93 +43,68 @@ export class SocketTransport {
 		}
 	}
 
+	// This is the initial connnect attempt. We need to implement our own
+	// infinite retry mechanism since Socket.io's automatic reconnection only
+	// kicks in after a successful initial connection.
 	public async connect(): Promise<void> {
 		if (this.connectionState === ConnectionState.CONNECTED) {
-			console.log(`[SocketTransport] Already connected`)
+			console.log(`[SocketTransport#connect] Already connected`)
 			return
 		}
 
 		if (this.connectionState === ConnectionState.CONNECTING || this.connectionState === ConnectionState.RETRYING) {
-			console.log(`[SocketTransport] Connection attempt already in progress`)
+			console.log(`[SocketTransport#connect] Already in progress`)
 			return
 		}
 
-		// Start connection attempt without blocking.
-		this.startConnectionAttempt()
-	}
-
-	private async startConnectionAttempt() {
-		this.retryAttempt = 0
-
-		try {
-			await this.connectWithRetry()
-		} catch (error) {
-			console.error(
-				`[SocketTransport] Initial connection attempts failed: ${error instanceof Error ? error.message : String(error)}`,
-			)
-
-			// If we've never connected successfully, we've exhausted our retry attempts
-			// The user will need to manually retry or fix the issue
-			this.connectionState = ConnectionState.FAILED
-		}
-	}
-
-	private async connectWithRetry(): Promise<void> {
+		let attempt = 0
 		let delay = this.retryConfig.initialDelay
 
-		while (this.retryAttempt < this.retryConfig.maxInitialAttempts) {
+		while (attempt < this.retryConfig.maxInitialAttempts) {
+			console.log(`[SocketTransport#connect] attempt = ${attempt + 1}, delay = ${delay}ms`)
+			this.connectionState = attempt === 0 ? ConnectionState.CONNECTING : ConnectionState.RETRYING
+
 			try {
-				this.connectionState = this.retryAttempt === 0 ? ConnectionState.CONNECTING : ConnectionState.RETRYING
-
-				console.log(
-					`[SocketTransport] Connection attempt ${this.retryAttempt + 1} / ${this.retryConfig.maxInitialAttempts}`,
-				)
-
-				await this.connectSocket()
-
-				console.log(`[SocketTransport] Connected to ${this.options.url}`)
-
-				this.connectionState = ConnectionState.CONNECTED
-				this.retryAttempt = 0
-
-				this.clearRetryTimeouts()
-
-				if (this.options.onConnect) {
-					await this.options.onConnect()
-				}
-
-				return
-			} catch (error) {
-				this.retryAttempt++
-
-				console.error(`[SocketTransport] Connection attempt ${this.retryAttempt} failed:`, error)
+				await this._connect()
+				break
+			} catch (_error) {
+				attempt++
 
 				if (this.socket) {
 					this.socket.disconnect()
 					this.socket = null
 				}
 
-				if (this.retryAttempt >= this.retryConfig.maxInitialAttempts) {
-					this.connectionState = ConnectionState.FAILED
+				const promise = new Promise((resolve) => {
+					this.retryTimeout = setTimeout(resolve, delay)
+				})
 
-					throw new Error(`Failed to connect after ${this.retryConfig.maxInitialAttempts} attempts`)
-				}
-
-				console.log(`[SocketTransport] Waiting ${delay}ms before retry...`)
-
-				await this.delay(delay)
+				await promise
 
 				delay = Math.min(delay * this.retryConfig.backoffMultiplier, this.retryConfig.maxDelay)
 			}
 		}
+
+		if (this.retryTimeout) {
+			clearTimeout(this.retryTimeout)
+			this.retryTimeout = null
+		}
+
+		if (this.socket?.connected) {
+			console.log(`[SocketTransport#connect] connected - ${this.options.url}`)
+		} else {
+			// Since we have infinite retries this should never happen.
+			this.connectionState = ConnectionState.FAILED
+			console.error(`[SocketTransport#connect] Giving up`)
+		}
 	}
 
-	private async connectSocket(): Promise<void> {
+	private async _connect(): Promise<void> {
 		return new Promise((resolve, reject) => {
 			this.socket = io(this.options.url, this.options.socketOptions)
 
-			const connectionTimeout = setTimeout(() => {
-				console.error(`[SocketTransport] Connection timeout`)
+			let connectionTimeout: NodeJS.Timeout | null = setTimeout(() => {
+				console.error(`[SocketTransport#_connect] failed to connect after ${this.CONNECTION_TIMEOUT}ms`)
 
 				if (this.connectionState !== ConnectionState.CONNECTED) {
 					this.socket?.disconnect()
@@ -139,31 +112,48 @@ export class SocketTransport {
 				}
 			}, this.CONNECTION_TIMEOUT)
 
+			// https://socket.io/docs/v4/client-api/#event-connect
 			this.socket.on("connect", async () => {
-				clearTimeout(connectionTimeout)
+				console.log(
+					`[SocketTransport#_connect] on(connect): isPreviouslyConnected = ${this.isPreviouslyConnected}`,
+				)
 
-				const isReconnection = this.hasConnectedOnce
+				if (connectionTimeout) {
+					clearTimeout(connectionTimeout)
+					connectionTimeout = null
+				}
 
-				// If this is a reconnection (not the first connect), treat it as a
-				// reconnect. This handles server restarts where 'reconnect' event might not fire.
-				if (isReconnection) {
-					console.log(`[SocketTransport] Treating connect as reconnection (server may have restarted)`)
+				this.connectionState = ConnectionState.CONNECTED
 
-					this.connectionState = ConnectionState.CONNECTED
-
+				if (this.isPreviouslyConnected) {
 					if (this.options.onReconnect) {
-						// Call onReconnect to re-register instance.
-						await this.options.onReconnect(0)
+						await this.options.onReconnect()
+					}
+				} else {
+					if (this.options.onConnect) {
+						await this.options.onConnect()
 					}
 				}
 
-				this.hasConnectedOnce = true
+				this.isPreviouslyConnected = true
 				resolve()
 			})
 
-			this.socket.on("disconnect", (reason: string) => {
-				console.log(`[SocketTransport] Disconnected (reason: ${reason})`)
+			// https://socket.io/docs/v4/client-api/#event-connect_error
+			this.socket.on("connect_error", (error) => {
+				if (connectionTimeout && this.connectionState !== ConnectionState.CONNECTED) {
+					console.error(`[SocketTransport] on(connect_error): ${error.message}`)
+					clearTimeout(connectionTimeout)
+					connectionTimeout = null
+					reject(error)
+				}
+			})
 
+			// https://socket.io/docs/v4/client-api/#event-disconnect
+			this.socket.on("disconnect", (reason, details) => {
+				console.log(
+					`[SocketTransport#_connect] on(disconnect) (reason: ${reason}, details: ${JSON.stringify(details)})`,
+				)
 				this.connectionState = ConnectionState.DISCONNECTED
 
 				if (this.options.onDisconnect) {
@@ -173,91 +163,95 @@ export class SocketTransport {
 				// Don't attempt to reconnect if we're manually disconnecting.
 				const isManualDisconnect = reason === "io client disconnect"
 
-				if (!isManualDisconnect && this.hasConnectedOnce) {
-					// After successful initial connection, rely entirely on Socket.IO's
-					// reconnection.
-					console.log(`[SocketTransport] Socket.IO will handle reconnection (reason: ${reason})`)
+				if (!isManualDisconnect && this.isPreviouslyConnected) {
+					// After successful initial connection, rely entirely on
+					// Socket.IO's reconnection logic.
+					console.log("[SocketTransport#_connect] will attempt to reconnect")
+				} else {
+					console.log("[SocketTransport#_connect] will *NOT* attempt to reconnect")
 				}
 			})
 
-			// Listen for reconnection attempts.
-			this.socket.on("reconnect_attempt", (attemptNumber: number) => {
-				console.log(`[SocketTransport] Socket.IO reconnect attempt:`, {
-					attemptNumber,
-				})
-			})
-
-			this.socket.on("reconnect", (attemptNumber: number) => {
-				console.log(`[SocketTransport] Socket reconnected (attempt: ${attemptNumber})`)
-
-				this.connectionState = ConnectionState.CONNECTED
-
-				if (this.options.onReconnect) {
-					this.options.onReconnect(attemptNumber)
-				}
-			})
-
-			this.socket.on("reconnect_error", (error: Error) => {
-				console.error(`[SocketTransport] Socket.IO reconnect error:`, error)
-			})
-
-			this.socket.on("reconnect_failed", () => {
-				console.error(`[SocketTransport] Socket.IO reconnection failed after all attempts`)
-
-				this.connectionState = ConnectionState.FAILED
-
-				// Socket.IO has exhausted its reconnection attempts
-				// The connection is now permanently failed until manual intervention
-			})
-
-			this.socket.on("error", (error) => {
-				console.error(`[SocketTransport] Socket error:`, error)
-
-				if (this.connectionState !== ConnectionState.CONNECTED) {
+			// https://socket.io/docs/v4/client-api/#event-error
+			// Fired upon a connection error.
+			this.socket.io.on("error", (error) => {
+				// Connection error.
+				if (connectionTimeout && this.connectionState !== ConnectionState.CONNECTED) {
+					console.error(`[SocketTransport#_connect] on(error): ${error.message}`)
 					clearTimeout(connectionTimeout)
+					connectionTimeout = null
 					reject(error)
 				}
 
-				if (this.options.onError) {
-					this.options.onError(error)
+				// Post-connection error.
+				if (this.connectionState === ConnectionState.CONNECTED) {
+					console.error(`[SocketTransport#_connect] on(error): ${error.message}`)
 				}
 			})
 
+			// https://socket.io/docs/v4/client-api/#event-reconnect
+			// Fired upon a successful reconnection.
+			this.socket.io.on("reconnect", (attempt) => {
+				console.log(`[SocketTransport#_connect] on(reconnect) - ${attempt}`)
+				this.connectionState = ConnectionState.CONNECTED
+
+				if (this.options.onReconnect) {
+					this.options.onReconnect()
+				}
+			})
+
+			// https://socket.io/docs/v4/client-api/#event-reconnect_attempt
+			// Fired upon an attempt to reconnect.
+			this.socket.io.on("reconnect_attempt", (attempt) => {
+				console.log(`[SocketTransport#_connect] on(reconnect_attempt) - ${attempt}`)
+			})
+
+			// https://socket.io/docs/v4/client-api/#event-reconnect_error
+			// Fired upon a reconnection attempt error.
+			this.socket.io.on("reconnect_error", (error) => {
+				console.error(`[SocketTransport#_connect] on(reconnect_error): ${error.message}`)
+			})
+
+			// https://socket.io/docs/v4/client-api/#event-reconnect_failed
+			// Fired when couldn't reconnect within `reconnectionAttempts`.
+			// Since we use infinite retries, this should never fire.
+			this.socket.io.on("reconnect_failed", () => {
+				console.error(`[SocketTransport#_connect] on(reconnect_failed) - giving up`)
+				this.connectionState = ConnectionState.FAILED
+			})
+
+			// This is a custom event fired by the server.
 			this.socket.on("auth_error", (error) => {
-				console.error(`[SocketTransport] Authentication error:`, error)
-				clearTimeout(connectionTimeout)
-				reject(new Error(error.message || "Authentication failed"))
+				console.error(
+					`[SocketTransport#_connect] on(auth_error): ${error instanceof Error ? error.message : String(error)}`,
+				)
+
+				if (connectionTimeout && this.connectionState !== ConnectionState.CONNECTED) {
+					clearTimeout(connectionTimeout)
+					connectionTimeout = null
+					reject(new Error(error.message || "Authentication failed"))
+				}
 			})
 		})
 	}
 
-	private delay(ms: number): Promise<void> {
-		return new Promise((resolve) => {
-			this.retryTimeout = setTimeout(resolve, ms)
-		})
-	}
+	public async disconnect(): Promise<void> {
+		console.log(`[SocketTransport#disconnect] Disconnecting...`)
 
-	private clearRetryTimeouts() {
 		if (this.retryTimeout) {
 			clearTimeout(this.retryTimeout)
 			this.retryTimeout = null
 		}
-	}
-
-	public async disconnect(): Promise<void> {
-		console.log(`[SocketTransport] Disconnecting...`)
-
-		this.clearRetryTimeouts()
 
 		if (this.socket) {
 			this.socket.removeAllListeners()
+			this.socket.io.removeAllListeners()
 			this.socket.disconnect()
 			this.socket = null
 		}
 
 		this.connectionState = ConnectionState.DISCONNECTED
-
-		console.log(`[SocketTransport] Disconnected`)
+		console.log(`[SocketTransport#disconnect] Disconnected`)
 	}
 
 	public getSocket(): Socket | null {
@@ -273,15 +267,14 @@ export class SocketTransport {
 	}
 
 	public async reconnect(): Promise<void> {
+		console.log(`[SocketTransport#reconnect] Manually reconnecting...`)
+
 		if (this.connectionState === ConnectionState.CONNECTED) {
-			console.log(`[SocketTransport] Already connected`)
+			console.log(`[SocketTransport#reconnect] Already connected`)
 			return
 		}
 
-		console.log(`[SocketTransport] Manual reconnection requested`)
-
-		this.hasConnectedOnce = false
-
+		this.isPreviouslyConnected = false
 		await this.disconnect()
 		await this.connect()
 	}

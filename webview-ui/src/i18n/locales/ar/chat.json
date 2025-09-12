@@ -404,6 +404,10 @@
 			"confirm": "حذف"
 		}
 	},
+	"slashCommand": {
+		"wantsToRun": "Kilo Code يريد تشغيل أمر شرطة مائلة:",
+		"didRun": "Kilo Code شغّل أمر شرطة مائلة:"
+	},
 	"queuedMessages": {
 		"title": "الرسائل في الطابور:",
 		"clickToEdit": "انقر لتعديل الرسالة"

@@ -785,6 +785,10 @@
 			"modelSelectionDescription": "Select the model to use for image generation",
 			"warningMissingKey": "⚠️ An API key is required for image generation, please configure it above.",
 			"successConfigured": "✓ Image generation is configured and ready to use"
+		},
+		"RUN_SLASH_COMMAND": {
+			"name": "Enable model-initiated slash commands",
+			"description": "When enabled, Roo can run your slash commands to execute workflows."
 		}
 	},
 	"promptCaching": {
@@ -898,5 +902,19 @@
 	"includeMaxOutputTokensDescription": "Send max output tokens parameter in API requests. Some providers may not support this.",
 	"limitMaxTokensDescription": "Limit the maximum number of tokens in the response",
 	"maxOutputTokensLabel": "Max output tokens",
-	"maxTokensGenerateDescription": "Maximum tokens to generate in response"
+	"maxTokensGenerateDescription": "Maximum tokens to generate in response",
+	"serviceTier": {
+		"label": "Service tier",
+		"tooltip": "For faster processing of API requests, try the priority processing service tier. For lower prices with higher latency, try the flex processing tier.",
+		"standard": "Standard",
+		"flex": "Flex",
+		"priority": "Priority",
+		"pricingTableTitle": "Pricing by service tier (price per 1M tokens)",
+		"columns": {
+			"tier": "Tier",
+			"input": "Input",
+			"output": "Output",
+			"cacheReads": "Cache reads"
+		}
+	}
 }

@@ -15,6 +15,7 @@
 	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 De alfaperiode voor {{model}} is beëindigd! Verander naar een ander model om door te gaan.",
+		"notAllowedForTeam": "⚠️ Je organisatie staat het gebruik van het {{model}} model niet toe. Verander naar een ander model om door te gaan.",
 		"modelUnavailable": "⚠️ Het model {{model}} is niet beschikbaar. Verander naar een ander model om door te gaan.",
 		"continueWith": "Doorgaan met {{model}}",
 		"continue": "Doorgaan"
@@ -43,7 +44,8 @@
 			"logout": "Uitloggen bij Kilo Code",
 			"automaticFetch": "De nieuwste modellen zijn automatisch beschikbaar in Kilo Code. Als je niet zeker weet welk model je moet kiezen, werkt Kilo Code het beste met de aanbevolen modellen die bovenaan in <strong>vetgedrukte tekst</strong> staan.",
 			"providerRouting": {
-				"title": "Kilo Code - OpenRouter Provider Routing",
+				"title": "Provider Routing",
+				"managedByOrganization": "De Provider Routing instellingen worden beheerd door je organisatie.",
 				"description": "Kilo Code routeert verzoeken naar de beste beschikbare providers voor uw model. Standaard worden verzoeken verdeeld over de beste providers om de uptime te maximaliseren. U kunt echter een specifieke provider kiezen om voor dit model te gebruiken.",
 				"sorting": {
 					"default": "Standaard provider sortering",

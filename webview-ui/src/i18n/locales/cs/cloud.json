@@ -12,5 +12,6 @@
 	"cloudBenefitMetrics": "Získej ucelený přehled o spotřebě tokenů",
 	"visitCloudWebsite": "Navštivit Kilo Code Cloud",
 	"remoteControl": "Kilo remote Control",
-	"remoteControlDescription": "Povolit sledování a interakci s úkoly v tomto pracovním prostoru pomocí Kilo Code Cloud"
+	"remoteControlDescription": "Povolit sledování a interakci s úkoly v tomto pracovním prostoru pomocí Kilo Code Cloud",
+	"cloudUrlPillLabel": "URL Kilo Code Cloud"
 }

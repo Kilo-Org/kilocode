@@ -12,20 +12,25 @@ import { getModelParams } from "../transform/model-params"
 import { DEFAULT_HEADERS } from "./constants"
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
-import { verifyFinishReason } from "./kilocode/verifyFinishReason"
+import { verifyFinishReason } from "./kilocode/verifyFinishReason" // kilocode_change
+import { handleOpenAIError } from "./utils/openai-error-handler"
 
 const XAI_DEFAULT_TEMPERATURE = 0
 
 export class XAIHandler extends BaseProvider implements SingleCompletionHandler {
 	protected options: ApiHandlerOptions
 	private client: OpenAI
+	private readonly providerName = "xAI"
 
 	constructor(options: ApiHandlerOptions) {
 		super()
 		this.options = options
+
+		const apiKey = this.options.xaiApiKey ?? "not-provided"
+
 		this.client = new OpenAI({
 			baseURL: "https://api.x.ai/v1",
-			apiKey: this.options.xaiApiKey ?? "not-provided",
+			apiKey: apiKey,
 			defaultHeaders: DEFAULT_HEADERS,
 		})
 	}
@@ -49,15 +54,20 @@ export class XAIHandler extends BaseProvider implements SingleCompletionHandler 
 		const { id: modelId, info: modelInfo, reasoning } = this.getModel()
 
 		// Use the OpenAI-compatible API.
-		const stream = await this.client.chat.completions.create({
-			model: modelId,
-			max_tokens: modelInfo.maxTokens,
-			temperature: this.options.modelTemperature ?? XAI_DEFAULT_TEMPERATURE,
-			messages: [{ role: "system", content: systemPrompt }, ...convertToOpenAiMessages(messages)],
-			stream: true,
-			stream_options: { include_usage: true },
-			...(reasoning && reasoning),
-		})
+		let stream
+		try {
+			stream = await this.client.chat.completions.create({
+				model: modelId,
+				max_tokens: modelInfo.maxTokens,
+				temperature: this.options.modelTemperature ?? XAI_DEFAULT_TEMPERATURE,
+				messages: [{ role: "system", content: systemPrompt }, ...convertToOpenAiMessages(messages)],
+				stream: true,
+				stream_options: { include_usage: true },
+				...(reasoning && reasoning),
+			})
+		} catch (error) {
+			throw handleOpenAIError(error, this.providerName)
+		}
 
 		for await (const chunk of stream) {
 			verifyFinishReason(chunk.choices[0]) // kilocode_change
@@ -113,11 +123,7 @@ export class XAIHandler extends BaseProvider implements SingleCompletionHandler 
 
 			return response.choices[0]?.message.content || ""
 		} catch (error) {
-			if (error instanceof Error) {
-				throw new Error(`xAI completion error: ${error.message}`)
-			}
-
-			throw error
+			throw handleOpenAIError(error, this.providerName)
 		}
 	}
 }

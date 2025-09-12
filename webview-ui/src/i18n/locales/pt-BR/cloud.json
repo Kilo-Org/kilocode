@@ -13,5 +13,6 @@
 	"cloudBenefitWalkaway": "Acompanhe e controle tarefas de qualquer lugar com Kilo remote Control",
 	"remoteControl": "Kilo remote Control",
 	"remoteControlDescription": "Permite acompanhar e interagir com tarefas neste workspace com Kilo Code Cloud",
-	"visitCloudWebsite": "Visitar Kilo Code Cloud"
+	"visitCloudWebsite": "Visitar Kilo Code Cloud",
+	"cloudUrlPillLabel": "URL do Kilo Code Cloud "
 }

@@ -13,5 +13,6 @@
 	"cloudBenefitWalkaway": "Theo dõi và điều khiển tác vụ từ bất kỳ đâu với Kilo remote Control",
 	"remoteControl": "Kilo remote Control",
 	"remoteControlDescription": "Cho phép theo dõi và tương tác với các tác vụ trong workspace này với Kilo Code Cloud",
-	"visitCloudWebsite": "Truy cập Kilo Code Cloud"
+	"visitCloudWebsite": "Truy cập Kilo Code Cloud",
+	"cloudUrlPillLabel": "URL Kilo Code Cloud"
 }

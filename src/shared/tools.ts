@@ -172,6 +172,11 @@ export interface ReportBugToolUse extends ToolUse {
 	params: Partial<Pick<Record<ToolParamName, string>, "title" | "description">>
 }
 
+export interface RunSlashCommandToolUse extends ToolUse {
+	name: "run_slash_command"
+	params: Partial<Pick<Record<ToolParamName, string>, "command" | "args">>
+}
+
 export interface SearchAndReplaceToolUse extends ToolUse {
 	name: "search_and_replace"
 	params: Required<Pick<Record<ToolParamName, string>, "path" | "search" | "replace">> &
@@ -220,6 +225,7 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	condense: "condense the current context window", // kilocode_change
 	codebase_search: "codebase search",
 	update_todo_list: "update todo list",
+	run_slash_command: "run slash command",
 	generate_image: "generate images",
 } as const
 
@@ -270,6 +276,7 @@ export const ALWAYS_AVAILABLE_TOOLS: ToolName[] = [
 	"report_bug",
 	"condense", // kilocode_Change
 	"update_todo_list",
+	"run_slash_command",
 ] as const
 
 export type DiffResult =

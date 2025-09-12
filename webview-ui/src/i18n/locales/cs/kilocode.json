@@ -15,6 +15,7 @@
 	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 Alfa období pro {{model}} skončilo! Změň na jiný model pro pokračování.",
+		"notAllowedForTeam": "⚠️ Tvoje organizace nepovoluje použití modelu {{model}}. Změň na jiný model pro pokračování.",
 		"modelUnavailable": "⚠️ Model {{model}} není dostupný. Změň na jiný model pro pokračování.",
 		"continueWith": "Pokračovat s {{model}}",
 		"continue": "Pokračovat"
@@ -43,7 +44,8 @@
 			"logout": "Odhlásit se z Kilo Code",
 			"automaticFetch": "Nejnovější modely jsou v Kilo Code automaticky dostupné. Pokud si nejste jisti, který model zvolit, Kilo Code funguje nejlépe s doporučenými modely uvedenými nahoře <strong>tučně</strong>.",
 			"providerRouting": {
-				"title": "Kilo Code - Směrování poskytovatelů OpenRouter",
+				"title": "Směrování poskytovatelů",
+				"managedByOrganization": "Nastavení směrování poskytovatelů je spravováno vaší organizací.",
 				"description": "Kilo Code směruje požadavky na nejlepší dostupné poskytovatele pro váš model. Ve výchozím nastavení jsou požadavky rozloženy mezi nejlepší poskytovatele, aby se maximalizovala doba provozu. Můžete si však vybrat konkrétního poskytovatele, kterého chcete pro tento model použít.",
 				"sorting": {
 					"default": "Výchozí řazení poskytovatelů",

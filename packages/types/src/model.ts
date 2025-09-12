@@ -29,6 +29,13 @@ export const verbosityLevelsSchema = z.enum(verbosityLevels)
 export type VerbosityLevel = z.infer<typeof verbosityLevelsSchema>
 
 /**
+ * Service tiers (OpenAI Responses API)
+ */
+export const serviceTiers = ["default", "flex", "priority"] as const
+export const serviceTierSchema = z.enum(serviceTiers)
+export type ServiceTier = z.infer<typeof serviceTierSchema>
+
+/**
  * ModelParameter
  */
 
@@ -73,9 +80,15 @@ export const modelInfoSchema = z.object({
 	displayName: z.string().nullish(),
 	preferredIndex: z.number().nullish(),
 	// kilocode_change end
+	/**
+	 * Service tiers with pricing information.
+	 * Each tier can have a name (for OpenAI service tiers) and pricing overrides.
+	 * The top-level input/output/cache* fields represent the default/standard tier.
+	 */
 	tiers: z
 		.array(
 			z.object({
+				name: serviceTierSchema.optional(), // Service tier name (flex, priority, etc.)
 				contextWindow: z.number(),
 				inputPrice: z.number().optional(),
 				outputPrice: z.number().optional(),

@@ -837,6 +837,10 @@
 			"warningMissingKey": "⚠️ API klíč je vyžadován pro generování obrázků, nakonfigurujte ho výše.",
 			"successConfigured": "✓ Generování obrázků je nakonfigurováno a připraveno k použití"
 		},
+		"RUN_SLASH_COMMAND": {
+			"name": "Povolit slash příkazy iniciované modelem",
+			"description": "Když je povoleno, Roo může spouštět vaše slash příkazy k provedení pracovních toků."
+		},
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
 			"description": "Povolit funkce Autocomplete pro rychlé návrhy kódu a vylepšení přímo ve tvém editoru. Zahrnuje Rychlý úkol (Cmd+I) pro cílené změny a Autocomplete pro kontextová vylepšení."
@@ -953,5 +957,19 @@
 	"maxOutputTokensLabel": "Maximální počet výstupních tokenů",
 	"maxTokensGenerateDescription": "Maximální počet tokenů k vygenerování v odpovědi",
 	"includeMaxOutputTokens": "Zahrnout maximální počet výstupních tokenů",
-	"includeMaxOutputTokensDescription": "Odeslat parametr maximálního počtu výstupních tokenů v požadavcích API. Někteří poskytovatelé to nemusí podporovat."
+	"includeMaxOutputTokensDescription": "Odeslat parametr maximálního počtu výstupních tokenů v požadavcích API. Někteří poskytovatelé to nemusí podporovat.",
+	"serviceTier": {
+		"label": "Úroveň služby",
+		"tooltip": "Pro rychlejší zpracování API požadavků zkuste úroveň prioritního zpracování. Pro nižší ceny s vyšší latencí zkuste flexibilní úroveň zpracování.",
+		"standard": "Standardní",
+		"flex": "Flexibilní",
+		"priority": "Prioritní",
+		"pricingTableTitle": "Ceny podle úrovně služby (cena za 1M tokenů)",
+		"columns": {
+			"tier": "Úroveň",
+			"input": "Vstup",
+			"output": "Výstup",
+			"cacheReads": "Čtení cache"
+		}
+	}
 }

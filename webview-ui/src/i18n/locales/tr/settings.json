@@ -785,6 +785,10 @@
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
 			"description": "Editörünüzde doğrudan hızlı kod önerileri ve iyileştirmeler için Autocomplete özelliklerini etkinleştirin. Hedeflenen değişiklikler için Hızlı Görev (Cmd+I) ve bağlamsal iyileştirmeler için Autocomplete içerir."
+		},
+		"RUN_SLASH_COMMAND": {
+			"name": "Model tarafından başlatılan slash komutlarını etkinleştir",
+			"description": "Etkinleştirildiğinde, Kilo Code iş akışlarını yürütmek için slash komutlarınızı çalıştırabilir."
 		}
 	},
 	"promptCaching": {
@@ -904,5 +908,19 @@
 	"includeMaxOutputTokensDescription": "API isteklerinde maksimum çıktı token parametresini gönder. Bazı sağlayıcılar bunu desteklemeyebilir.",
 	"limitMaxTokensDescription": "Yanıttaki maksimum token sayısını sınırla",
 	"maxOutputTokensLabel": "Maksimum çıktı tokenları",
-	"maxTokensGenerateDescription": "Yanıtta oluşturulacak maksimum token sayısı"
+	"maxTokensGenerateDescription": "Yanıtta oluşturulacak maksimum token sayısı",
+	"serviceTier": {
+		"label": "Hizmet seviyesi",
+		"tooltip": "Daha hızlı API isteği işleme için öncelikli işleme hizmeti seviyesini deneyin. Daha düşük gecikme süresiyle daha düşük fiyatlar için esnek işleme seviyesini deneyin.",
+		"standard": "Standart",
+		"flex": "Esnek",
+		"priority": "Öncelik",
+		"pricingTableTitle": "Hizmet seviyesine göre fiyatlandırma (1 milyon token başına fiyat)",
+		"columns": {
+			"tier": "Seviye",
+			"input": "Giriş",
+			"output": "Çıkış",
+			"cacheReads": "Önbellek okumaları"
+		}
+	}
 }

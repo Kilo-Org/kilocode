@@ -15,6 +15,7 @@
 	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 The alpha period for {{model}} has ended! Change to a different model to continue.",
+		"notAllowedForTeam": "⚠️ Your organization does not allow use of the {{model}} model. Change to a different model to continue.",
 		"modelUnavailable": "⚠️ The model {{model}} is unavailable. Change to a different model to continue.",
 		"continueWith": "Continue with {{model}}",
 		"continue": "Continue"
@@ -47,8 +48,8 @@
 			"login": "Log in at Kilo Code",
 			"logout": "Log out from Kilo Code",
 			"providerRouting": {
-				"title": "Kilo Code - OpenRouter Provider Routing",
-				"description": "Kilo Code routes requests to the best available providers for your model. By default, requests are load balanced across the top providers to maximize uptime. However, you can choose a specific provider to use for this model.",
+				"title": "Provider Routing",
+				"managedByOrganization": "The Provider Routing settings are managed by your organization.",
 				"sorting": {
 					"default": "Default provider sorting",
 					"price": "Prefer providers with lower price",

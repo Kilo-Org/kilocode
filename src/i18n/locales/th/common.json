@@ -129,6 +129,9 @@
 		},
 		"roo": {
 			"authenticationRequired": "ผู้ให้บริการ Roo ต้องการการยืนยันตัวตนบนคลาวด์ กรุณาเข้าสู่ระบบ Roo Code Cloud"
+		},
+		"api": {
+			"invalidKeyInvalidChars": "API key มีตัวอักษรที่ไม่ถูกต้อง"
 		}
 	},
 	"warnings": {

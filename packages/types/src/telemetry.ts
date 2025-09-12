@@ -99,6 +99,7 @@ export const staticAppPropertiesSchema = z.object({
 	wrapperTitle: z.string().nullable(), // kilocode_change
 	wrapperCode: z.string().nullable(), // kilocode_change
 	wrapperVersion: z.string().nullable(), // kilocode_change
+	hostname: z.string().optional(),
 })
 
 export type StaticAppProperties = z.infer<typeof staticAppPropertiesSchema>

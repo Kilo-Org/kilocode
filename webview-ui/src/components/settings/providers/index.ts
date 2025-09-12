@@ -27,10 +27,10 @@ export { XAI } from "./XAI"
 // kilocode_change start
 export { GeminiCli } from "./GeminiCli"
 export { VirtualQuotaFallbackProvider } from "./VirtualQuotaFallbackProvider"
-export { DeepInfra } from "./DeepInfra"
 // kilocode_change end
 export { ZAi } from "./ZAi"
 export { LiteLLM } from "./LiteLLM"
 export { Fireworks } from "./Fireworks"
 export { Featherless } from "./Featherless"
 export { VercelAiGateway } from "./VercelAiGateway"
+export { DeepInfra } from "./DeepInfra"

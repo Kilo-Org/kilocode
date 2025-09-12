@@ -806,6 +806,10 @@
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
 			"description": "Aktifkan fitur Autocomplete untuk saran kode cepat dan perbaikan langsung di editor Anda. Termasuk Tugas Cepat (Cmd+I) untuk perubahan yang ditargetkan dan Autocomplete untuk perbaikan kontekstual."
+		},
+		"RUN_SLASH_COMMAND": {
+			"name": "Aktifkan perintah slash yang dimulai model",
+			"description": "Ketika diaktifkan, Kilo Code dapat menjalankan perintah slash Anda untuk mengeksekusi alur kerja."
 		}
 	},
 	"promptCaching": {
@@ -925,5 +929,19 @@
 	"includeMaxOutputTokensDescription": "Kirim parameter token output maksimum dalam permintaan API. Beberapa provider mungkin tidak mendukung ini.",
 	"limitMaxTokensDescription": "Batasi jumlah maksimum token dalam respons",
 	"maxOutputTokensLabel": "Token output maksimum",
-	"maxTokensGenerateDescription": "Token maksimum untuk dihasilkan dalam respons"
+	"maxTokensGenerateDescription": "Token maksimum untuk dihasilkan dalam respons",
+	"serviceTier": {
+		"label": "Tingkat layanan",
+		"tooltip": "Untuk pemrosesan permintaan API yang lebih cepat, coba tingkat layanan pemrosesan prioritas. Untuk harga lebih rendah dengan latensi lebih tinggi, coba tingkat pemrosesan fleksibel.",
+		"standard": "Standar",
+		"flex": "Fleksibel",
+		"priority": "Prioritas",
+		"pricingTableTitle": "Harga berdasarkan tingkat layanan (harga per 1 juta token)",
+		"columns": {
+			"tier": "Tingkat",
+			"input": "Input",
+			"output": "Output",
+			"cacheReads": "Pembacaan cache"
+		}
+	}
 }

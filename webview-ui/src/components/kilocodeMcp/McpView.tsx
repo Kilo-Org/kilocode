@@ -1,6 +1,5 @@
-import { useEffect, useState, useMemo } from "react"
+import { useState, useMemo } from "react"
 import styled from "styled-components"
-import { vscode } from "../../utils/vscode"
 import { useAppTranslation } from "../../i18n/TranslationContext"
 
 import { Server } from "lucide-react"
@@ -19,11 +18,6 @@ const McpView = () => {
 	const handleTabChange = (tab: string) => {
 		setActiveTab(tab)
 	}
-
-	useEffect(() => {
-		vscode.postMessage({ type: "silentlyRefreshMcpMarketplace" })
-		vscode.postMessage({ type: "fetchLatestMcpServersFromHub" })
-	}, [])
 
 	return (
 		<div
@@ -68,7 +62,7 @@ const McpView = () => {
 						{activeTab === "marketplace" && (
 							<MarketplaceView hideHeader targetTab="mcp" stateManager={marketplaceStateManager} />
 						)}
-						{activeTab === "installed" && <RooMcpView hideHeader onDone={() => {}} />}
+						{activeTab === "installed" && <RooMcpView hideHeader onDone={() => { }} />}
 					</div>
 				</div>
 			</Section>

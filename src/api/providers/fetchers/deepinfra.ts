@@ -6,11 +6,10 @@ import { type ModelInfo } from "@roo-code/types"
 import { DEFAULT_HEADERS } from "../constants"
 
 // DeepInfra models endpoint follows OpenAI /models shape with an added metadata object.
-// Use only the supported fields and infer capabilities from tags.
 
 const DeepInfraModelSchema = z.object({
 	id: z.string(),
-	object: z.literal("model"),
+	object: z.literal("model").optional(),
 	owned_by: z.string().optional(),
 	created: z.number().optional(),
 	root: z.string().optional(),
@@ -59,7 +58,6 @@ export async function getDeepInfraModels(
 			contextWindow,
 			supportsImages: tags.includes("vision"),
 			supportsPromptCache: tags.includes("prompt_cache"),
-			supportsReasoningEffort: tags.includes("reasoning_effort"),
 			inputPrice: meta.pricing?.input_tokens,
 			outputPrice: meta.pricing?.output_tokens,
 			cacheReadsPrice: meta.pricing?.cache_read_tokens,

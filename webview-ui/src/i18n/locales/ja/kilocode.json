@@ -15,6 +15,7 @@
 	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 {{model}}のアルファ期間が終了しました！続行するには別のモデルに変更してください。",
+		"notAllowedForTeam": "⚠️ あなたの組織は{{model}}モデルの使用を許可していません。続行するには別のモデルに変更してください。",
 		"modelUnavailable": "⚠️ モデル{{model}}は利用できません。続行するには別のモデルに変更してください。",
 		"continueWith": "{{model}}で続行",
 		"continue": "続行"
@@ -42,7 +43,8 @@
 			"login": "Kilo Codeにログイン",
 			"logout": "Kilo Codeからログアウト",
 			"providerRouting": {
-				"title": "Kilo Code - OpenRouterプロバイダーのルーティング",
+				"title": "プロバイダールーティング",
+				"managedByOrganization": "プロバイダールーティング設定はあなたの組織によって管理されています。",
 				"description": "Kilo Codeは、モデルに最適な利用可能なプロバイダーにリクエストをルーティングします。デフォルトでは、稼働時間を最大化するために、リクエストはトッププロバイダー間で負荷分散されます。ただし、このモデルに使用する特定のプロバイダーを選択できます。",
 				"sorting": {
 					"default": "デフォルトプロバイダーソート",

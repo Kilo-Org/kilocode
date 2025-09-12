@@ -8,7 +8,10 @@
 		"invalidJsonArgument": "Kilo Code حاول يستخدم {{toolName}} بوسيط JSON غير صحيح. جاري إعادة المحاولة...",
 		"refresh_after_disable": "فشل في تحديث اتصالات MCP بعد التعطيل",
 		"refresh_after_enable": "فشل في تحديث اتصالات MCP بعد التفعيل",
-		"disconnect_servers_partial": "فشل في قطع الاتصال عن {{count}} خادم MCP. تحقق من المخرجات للحصول على التفاصيل."
+		"disconnect_servers_partial": "فشل في قطع الاتصال عن {{count}} خادم MCP. تحقق من المخرجات للحصول على التفاصيل.",
+		"toolNotFound": "الأداة '{{toolName}}' غير موجودة في الخادم '{{serverName}}'. الأدوات المتاحة: {{availableTools}}",
+		"serverNotFound": "خادم MCP '{{serverName}}' غير مكوّن. الخوادم المتاحة: {{availableServers}}",
+		"toolDisabled": "الأداة '{{toolName}}' في الخادم '{{serverName}}' معطلة. الأدوات المفعلة المتاحة: {{availableTools}}"
 	},
 	"info": {
 		"server_restarting": "جاري إعادة تشغيل خادم MCP: {{serverName}}...",

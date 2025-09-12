@@ -57,8 +57,8 @@ describe("Model Validation Functions", () => {
 		litellm: {},
 		ollama: {},
 		lmstudio: {},
+		deepinfra: {},
 		"io-intelligence": {},
-		deepinfra: {}, // kilocode_change
 		"vercel-ai-gateway": {},
 	}
 

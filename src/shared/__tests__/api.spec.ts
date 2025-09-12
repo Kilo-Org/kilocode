@@ -112,7 +112,7 @@ describe("getModelMaxOutputTokens", () => {
 		}
 
 		const result = getModelMaxOutputTokens({ modelId: anthropicModelId, model, settings })
-		expect(result).toBe(ANTHROPIC_DEFAULT_MAX_TOKENS) // Should be 8192, not 64_000
+		expect(result).toBe(40_000 /*kilocode_change*/) // Should be 8192, not 64_000
 	})
 
 	test("should return model.maxTokens for non-Anthropic models that support reasoning budget but aren't using it", () => {

@@ -8,7 +8,10 @@
 		"invalidJsonArgument": "Kilo Code se pokusil použít {{toolName}} s neplatným argumentem JSON. Zkouším znovu...",
 		"refresh_after_disable": "Nepodařilo se obnovit připojení MCP po deaktivaci",
 		"refresh_after_enable": "Nepodařilo se obnovit připojení MCP po aktivaci",
-		"disconnect_servers_partial": "Nepodařilo se odpojit {{count}} server(ů) MCP. Zkontroluj výstup pro podrobnosti."
+		"disconnect_servers_partial": "Nepodařilo se odpojit {{count}} server(ů) MCP. Zkontroluj výstup pro podrobnosti.",
+		"toolNotFound": "Nástroj '{{toolName}}' neexistuje na serveru '{{serverName}}'. Dostupné nástroje: {{availableTools}}",
+		"serverNotFound": "Server MCP '{{serverName}}' není nakonfigurován. Dostupné servery: {{availableServers}}",
+		"toolDisabled": "Nástroj '{{toolName}}' na serveru '{{serverName}}' je zakázán. Dostupné povolené nástroje: {{availableTools}}"
 	},
 	"info": {
 		"server_restarting": "Restartování serveru MCP {{serverName}}...",

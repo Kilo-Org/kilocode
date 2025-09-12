@@ -7,7 +7,9 @@ import { DEFAULT_HEADERS } from "../constants"
 
 type KilocodeToken = string
 
-const cache = new Map<KilocodeToken, Promise<string>>()
+type OrganizationId = string
+
+const cache = new Map<string, Promise<string>>()
 
 const defaultsSchema = z.object({
 	defaultModel: z.string().nullish(),
@@ -15,9 +17,13 @@ const defaultsSchema = z.object({
 
 const fetcher = fetchWithTimeout(5000)
 
-async function fetchKilocodeDefaultModel(kilocodeToken: KilocodeToken): Promise<string> {
+async function fetchKilocodeDefaultModel(
+	kilocodeToken: KilocodeToken,
+	organizationId?: OrganizationId,
+): Promise<string> {
 	try {
-		const url = `${getKiloBaseUriFromToken(kilocodeToken)}/api/defaults`
+		const path = organizationId ? `/organizations/${organizationId}/defaults` : `/defaults`
+		const url = `${getKiloBaseUriFromToken(kilocodeToken)}/api${path}`
 		const response = await fetcher(url, {
 			headers: {
 				...DEFAULT_HEADERS,
@@ -40,14 +46,18 @@ async function fetchKilocodeDefaultModel(kilocodeToken: KilocodeToken): Promise<
 	}
 }
 
-export async function getKilocodeDefaultModel(kilocodeToken?: KilocodeToken): Promise<string> {
+export async function getKilocodeDefaultModel(
+	kilocodeToken?: KilocodeToken,
+	organizationId?: OrganizationId,
+): Promise<string> {
 	if (!kilocodeToken) {
 		return openRouterDefaultModelId
 	}
-	let defaultModelPromise = cache.get(kilocodeToken ?? "")
+	const key = JSON.stringify({ kilocodeToken, organizationId })
+	let defaultModelPromise = cache.get(key)
 	if (!defaultModelPromise) {
-		defaultModelPromise = fetchKilocodeDefaultModel(kilocodeToken)
-		cache.set(kilocodeToken, defaultModelPromise)
+		defaultModelPromise = fetchKilocodeDefaultModel(kilocodeToken, organizationId)
+		cache.set(key, defaultModelPromise)
 	}
 	return await defaultModelPromise
 }

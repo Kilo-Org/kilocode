@@ -2,7 +2,7 @@ import { z } from "zod"
 
 import { RooCodeEventName } from "./events.js"
 import type { RooCodeSettings } from "./global-settings.js"
-import type { ClineMessage, TokenUsage } from "./message.js"
+import type { ClineMessage, QueuedMessage, TokenUsage } from "./message.js"
 import type { ToolUsage, ToolName } from "./tool.js"
 import type { StaticAppProperties, GitProperties, TelemetryProperties } from "./telemetry.js"
 import type { TodoItem } from "./todo.js"
@@ -59,8 +59,6 @@ export interface TaskProviderLike {
 
 export type TaskProviderEvents = {
 	[RooCodeEventName.TaskCreated]: [task: TaskLike]
-
-	// Proxied from the Task EventEmitter.
 	[RooCodeEventName.TaskStarted]: [taskId: string]
 	[RooCodeEventName.TaskCompleted]: [taskId: string, tokenUsage: TokenUsage, toolUsage: ToolUsage]
 	[RooCodeEventName.TaskAborted]: [taskId: string]
@@ -70,7 +68,15 @@ export type TaskProviderEvents = {
 	[RooCodeEventName.TaskInteractive]: [taskId: string]
 	[RooCodeEventName.TaskResumable]: [taskId: string]
 	[RooCodeEventName.TaskIdle]: [taskId: string]
+
+	[RooCodeEventName.TaskPaused]: [taskId: string]
+	[RooCodeEventName.TaskUnpaused]: [taskId: string]
 	[RooCodeEventName.TaskSpawned]: [taskId: string]
+
+	[RooCodeEventName.TaskUserMessage]: [taskId: string]
+
+	[RooCodeEventName.TaskTokenUsageUpdated]: [taskId: string, tokenUsage: TokenUsage]
+
 	[RooCodeEventName.ModeChanged]: [mode: string]
 	[RooCodeEventName.ProviderProfileChanged]: [config: { name: string; provider?: string }]
 }
@@ -105,11 +111,14 @@ export type TaskMetadata = z.infer<typeof taskMetadataSchema>
 
 export interface TaskLike {
 	readonly taskId: string
+	readonly rootTaskId?: string
+	readonly parentTaskId?: string
+	readonly childTaskId?: string
+	readonly metadata: TaskMetadata
 	readonly taskStatus: TaskStatus
 	readonly taskAsk: ClineMessage | undefined
-	readonly metadata: TaskMetadata
-
-	readonly rootTask?: TaskLike
+	readonly queuedMessages: QueuedMessage[]
+	readonly tokenUsage: TokenUsage | undefined
 
 	on<K extends keyof TaskEvents>(event: K, listener: (...args: TaskEvents[K]) => void | Promise<void>): this
 	off<K extends keyof TaskEvents>(event: K, listener: (...args: TaskEvents[K]) => void | Promise<void>): this
@@ -133,14 +142,15 @@ export type TaskEvents = {
 	[RooCodeEventName.TaskIdle]: [taskId: string]
 
 	// Subtask Lifecycle
-	[RooCodeEventName.TaskPaused]: []
-	[RooCodeEventName.TaskUnpaused]: []
+	[RooCodeEventName.TaskPaused]: [taskId: string]
+	[RooCodeEventName.TaskUnpaused]: [taskId: string]
 	[RooCodeEventName.TaskSpawned]: [taskId: string]
 
 	// Task Execution
 	[RooCodeEventName.Message]: [{ action: "created" | "updated"; message: ClineMessage }]
 	[RooCodeEventName.TaskModeSwitched]: [taskId: string, mode: string]
 	[RooCodeEventName.TaskAskResponded]: []
+	[RooCodeEventName.TaskUserMessage]: [taskId: string]
 
 	// Task Analytics
 	[RooCodeEventName.TaskToolFailed]: [taskId: string, tool: ToolName, error: string]

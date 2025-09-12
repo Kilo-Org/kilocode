@@ -13,5 +13,6 @@
 	"cloudBenefitWalkaway": "Segueix i controla tasques des de qualsevol lloc amb Roomote Control",
 	"remoteControl": "Remote Control",
 	"remoteControlDescription": "Permet seguir i interactuar amb tasques en aquest espai de treball amb Kilo Code Cloud",
-	"visitCloudWebsite": "Visita Kilo Code Cloud"
+	"visitCloudWebsite": "Visita Kilo Code Cloud",
+	"cloudUrlPillLabel": "URL de Kilo Code Cloud"
 }

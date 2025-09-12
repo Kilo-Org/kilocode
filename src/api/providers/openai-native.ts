@@ -11,13 +11,13 @@ import {
 	type ReasoningEffort,
 	type VerbosityLevel,
 	type ReasoningEffortWithMinimal,
+	type ServiceTier,
 } from "@roo-code/types"
 
 import type { ApiHandlerOptions } from "../../shared/api"
 
 import { calculateApiCostOpenAI } from "../../shared/cost"
 
-import { convertToOpenAiMessages } from "../transform/openai-format"
 import { ApiStream, ApiStreamUsageChunk } from "../transform/stream"
 import { getModelParams } from "../transform/model-params"
 
@@ -37,6 +37,8 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 	private lastResponseId: string | undefined
 	private responseIdPromise: Promise<string | undefined> | undefined
 	private responseIdResolver: ((value: string | undefined) => void) | undefined
+	// Resolved service tier from Responses API (actual tier used by OpenAI)
+	private lastServiceTier: ServiceTier | undefined
 
 	// Event types handled by the shared event processor to avoid duplication
 	private readonly coreHandledEventTypes = new Set<string>([
@@ -66,27 +68,62 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 	private normalizeUsage(usage: any, model: OpenAiNativeModel): ApiStreamUsageChunk | undefined {
 		if (!usage) return undefined
 
-		const totalInputTokens = usage.input_tokens ?? usage.prompt_tokens ?? 0
-		const totalOutputTokens = usage.output_tokens ?? usage.completion_tokens ?? 0
-		const cacheWriteTokens = usage.cache_creation_input_tokens ?? usage.cache_write_tokens ?? 0
-		const cacheReadTokens = usage.cache_read_input_tokens ?? usage.cache_read_tokens ?? usage.cached_tokens ?? 0
+		// Prefer detailed shapes when available (Responses API)
+		const inputDetails = usage.input_tokens_details ?? usage.prompt_tokens_details
 
+		// Extract cache information from details with better readability
+		const hasCachedTokens = typeof inputDetails?.cached_tokens === "number"
+		const hasCacheMissTokens = typeof inputDetails?.cache_miss_tokens === "number"
+		const cachedFromDetails = hasCachedTokens ? inputDetails.cached_tokens : 0
+		const missFromDetails = hasCacheMissTokens ? inputDetails.cache_miss_tokens : 0
+
+		// If total input tokens are missing but we have details, derive from them
+		let totalInputTokens = usage.input_tokens ?? usage.prompt_tokens ?? 0
+		if (totalInputTokens === 0 && inputDetails && (cachedFromDetails > 0 || missFromDetails > 0)) {
+			totalInputTokens = cachedFromDetails + missFromDetails
+		}
+
+		const totalOutputTokens = usage.output_tokens ?? usage.completion_tokens ?? 0
+
+		// Note: missFromDetails is NOT used as fallback for cache writes
+		// Cache miss tokens represent tokens that weren't found in cache (part of input)
+		// Cache write tokens represent tokens being written to cache for future use
+		const cacheWriteTokens = usage.cache_creation_input_tokens ?? usage.cache_write_tokens ?? 0
+
+		const cacheReadTokens =
+			usage.cache_read_input_tokens ?? usage.cache_read_tokens ?? usage.cached_tokens ?? cachedFromDetails ?? 0
+
+		// Resolve effective tier: prefer actual tier from response; otherwise requested tier
+		const effectiveTier =
+			this.lastServiceTier || (this.options.openAiNativeServiceTier as ServiceTier | undefined) || undefined
+		const effectiveInfo = this.applyServiceTierPricing(model.info, effectiveTier)
+
+		// Pass total input tokens directly to calculateApiCostOpenAI
+		// The function handles subtracting both cache reads and writes internally (see shared/cost.ts:46)
 		const totalCost = calculateApiCostOpenAI(
-			model.info,
+			effectiveInfo,
 			totalInputTokens,
 			totalOutputTokens,
-			cacheWriteTokens || 0,
-			cacheReadTokens || 0,
+			cacheWriteTokens,
+			cacheReadTokens,
 		)
 
-		return {
+		const reasoningTokens =
+			typeof usage.output_tokens_details?.reasoning_tokens === "number"
+				? usage.output_tokens_details.reasoning_tokens
+				: undefined
+
+		const out: ApiStreamUsageChunk = {
 			type: "usage",
+			// Keep inputTokens as TOTAL input to preserve correct context length
 			inputTokens: totalInputTokens,
 			outputTokens: totalOutputTokens,
 			cacheWriteTokens,
 			cacheReadTokens,
+			...(typeof reasoningTokens === "number" ? { reasoningTokens } : {}),
 			totalCost,
 		}
+		return out
 	}
 
 	private resolveResponseId(responseId: string | undefined): void {
@@ -117,6 +154,9 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 		messages: Anthropic.Messages.MessageParam[],
 		metadata?: ApiHandlerCreateMessageMetadata,
 	): ApiStream {
+		// Reset resolved tier for this request; will be set from response if present
+		this.lastServiceTier = undefined
+
 		// Use Responses API for ALL models
 		const { verbosity, reasoning } = this.getModel()
 
@@ -177,8 +217,8 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 			metadata,
 		)
 
-		// Make the request
-		yield* this.executeRequest(requestBody, model, metadata)
+		// Make the request (pass systemPrompt and messages for potential retry)
+		yield* this.executeRequest(requestBody, model, metadata, systemPrompt, messages)
 	}
 
 	private buildRequestBody(
@@ -204,7 +244,12 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 			previous_response_id?: string
 			store?: boolean
 			instructions?: string
+			service_tier?: ServiceTier
 		}
+
+		// Validate requested tier against model support; if not supported, omit.
+		const requestedTier = (this.options.openAiNativeServiceTier as ServiceTier | undefined) || undefined
+		const allowedTierNames = new Set(model.info.tiers?.map((t) => t.name).filter(Boolean) || [])
 
 		const body: Gpt5RequestBody = {
 			model: model.id,
@@ -233,6 +278,11 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 			// Use the per-request reserved output computed by Roo (params.maxTokens from getModelParams).
 			...(model.maxTokens ? { max_output_tokens: model.maxTokens } : {}),
 			...(requestPreviousResponseId && { previous_response_id: requestPreviousResponseId }),
+			// Include tier when selected and supported by the model, or when explicitly "default"
+			...(requestedTier &&
+				(requestedTier === "default" || allowedTierNames.has(requestedTier)) && {
+					service_tier: requestedTier,
+				}),
 		}
 
 		// Include text.verbosity only when the model explicitly supports it
@@ -247,6 +297,8 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 		requestBody: any,
 		model: OpenAiNativeModel,
 		metadata?: ApiHandlerCreateMessageMetadata,
+		systemPrompt?: string,
+		messages?: Anthropic.Messages.MessageParam[],
 	): ApiStream {
 		try {
 			// Use the official SDK
@@ -273,12 +325,18 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 			if (is400Error && requestBody.previous_response_id && isPreviousResponseError) {
 				// Log the error and retry without the previous_response_id
 
-				// Remove the problematic previous_response_id and retry
-				const retryRequestBody = { ...requestBody }
-				delete retryRequestBody.previous_response_id
-
 				// Clear the stored lastResponseId to prevent using it again
 				this.lastResponseId = undefined
+
+				// Re-prepare the full conversation without previous_response_id
+				let retryRequestBody = { ...requestBody }
+				delete retryRequestBody.previous_response_id
+
+				// If we have the original messages, re-prepare the full conversation
+				if (systemPrompt && messages) {
+					const { formattedInput } = this.prepareStructuredInput(systemPrompt, messages, undefined)
+					retryRequestBody.input = formattedInput
+				}
 
 				try {
 					// Retry with the SDK
@@ -288,7 +346,13 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 
 					if (typeof (retryStream as any)[Symbol.asyncIterator] !== "function") {
 						// If SDK fails, fall back to SSE
-						yield* this.makeGpt5ResponsesAPIRequest(retryRequestBody, model, metadata)
+						yield* this.makeGpt5ResponsesAPIRequest(
+							retryRequestBody,
+							model,
+							metadata,
+							systemPrompt,
+							messages,
+						)
 						return
 					}
 
@@ -300,13 +364,13 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 					return
 				} catch (retryErr) {
 					// If retry also fails, fall back to SSE
-					yield* this.makeGpt5ResponsesAPIRequest(retryRequestBody, model, metadata)
+					yield* this.makeGpt5ResponsesAPIRequest(retryRequestBody, model, metadata, systemPrompt, messages)
 					return
 				}
 			}
 
 			// For other errors, fallback to manual SSE via fetch
-			yield* this.makeGpt5ResponsesAPIRequest(requestBody, model, metadata)
+			yield* this.makeGpt5ResponsesAPIRequest(requestBody, model, metadata, systemPrompt, messages)
 		}
 	}
 
@@ -413,6 +477,8 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 		requestBody: any,
 		model: OpenAiNativeModel,
 		metadata?: ApiHandlerCreateMessageMetadata,
+		systemPrompt?: string,
+		messages?: Anthropic.Messages.MessageParam[],
 	): ApiStream {
 		const apiKey = this.options.openAiNativeApiKey ?? "not-provided"
 		const baseUrl = this.options.openAiNativeBaseUrl || "https://api.openai.com"
@@ -457,16 +523,22 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 				if (response.status === 400 && requestBody.previous_response_id && isPreviousResponseError) {
 					// Log the error and retry without the previous_response_id
 
-					// Remove the problematic previous_response_id and retry
-					const retryRequestBody = { ...requestBody }
-					delete retryRequestBody.previous_response_id
-
 					// Clear the stored lastResponseId to prevent using it again
 					this.lastResponseId = undefined
 					// Resolve the promise once to unblock any waiting requests
 					this.resolveResponseId(undefined)
 
-					// Retry the request without the previous_response_id
+					// Re-prepare the full conversation without previous_response_id
+					let retryRequestBody = { ...requestBody }
+					delete retryRequestBody.previous_response_id
+
+					// If we have the original messages, re-prepare the full conversation
+					if (systemPrompt && messages) {
+						const { formattedInput } = this.prepareStructuredInput(systemPrompt, messages, undefined)
+						retryRequestBody.input = formattedInput
+					}
+
+					// Retry the request with full conversation context
 					const retryResponse = await fetch(url, {
 						method: "POST",
 						headers: {
@@ -624,6 +696,10 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 							// Store response ID for conversation continuity
 							if (parsed.response?.id) {
 								this.resolveResponseId(parsed.response.id)
+							}
+							// Capture resolved service tier if present
+							if (parsed.response?.service_tier) {
+								this.lastServiceTier = parsed.response.service_tier as ServiceTier
 							}
 
 							// Delegate standard event types to the shared processor to avoid duplication
@@ -916,6 +992,10 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 								if (parsed.response?.id) {
 									this.resolveResponseId(parsed.response.id)
 								}
+								// Capture resolved service tier if present
+								if (parsed.response?.service_tier) {
+									this.lastServiceTier = parsed.response.service_tier as ServiceTier
+								}
 
 								// Check if the done event contains the complete output (as a fallback)
 								if (
@@ -1040,6 +1120,10 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 		if (event?.response?.id) {
 			this.resolveResponseId(event.response.id)
 		}
+		// Capture resolved service tier when available
+		if (event?.response?.service_tier) {
+			this.lastServiceTier = event.response.service_tier as ServiceTier
+		}
 
 		// Handle known streaming text deltas
 		if (event?.type === "response.text.delta" || event?.type === "response.output_text.delta") {
@@ -1130,6 +1214,26 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 		return info.reasoningEffort as ReasoningEffortWithMinimal | undefined
 	}
 
+	/**
+	 * Returns a shallow-cloned ModelInfo with pricing overridden for the given tier, if available.
+	 * If no tier or no overrides exist, the original ModelInfo is returned.
+	 */
+	private applyServiceTierPricing(info: ModelInfo, tier?: ServiceTier): ModelInfo {
+		if (!tier || tier === "default") return info
+
+		// Find the tier with matching name in the tiers array
+		const tierInfo = info.tiers?.find((t) => t.name === tier)
+		if (!tierInfo) return info
+
+		return {
+			...info,
+			inputPrice: tierInfo.inputPrice ?? info.inputPrice,
+			outputPrice: tierInfo.outputPrice ?? info.outputPrice,
+			cacheReadsPrice: tierInfo.cacheReadsPrice ?? info.cacheReadsPrice,
+			cacheWritesPrice: tierInfo.cacheWritesPrice ?? info.cacheWritesPrice,
+		}
+	}
+
 	// Removed isResponsesApiModel method as ALL models now use the Responses API
 
 	override getModel() {
@@ -1201,6 +1305,13 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 				],
 				stream: false, // Non-streaming for completePrompt
 				store: false, // Don't store prompt completions
+			}
+
+			// Include service tier if selected and supported
+			const requestedTier = (this.options.openAiNativeServiceTier as ServiceTier | undefined) || undefined
+			const allowedTierNames = new Set(model.info.tiers?.map((t) => t.name).filter(Boolean) || [])
+			if (requestedTier && (requestedTier === "default" || allowedTierNames.has(requestedTier))) {
+				requestBody.service_tier = requestedTier
 			}
 
 			// Add reasoning if supported

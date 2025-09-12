@@ -400,5 +400,9 @@
 		"title": "ข้อความในคิว:",
 		"clickToEdit": "คลิกเพื่อแก้ไขข้อความ"
 	},
-	"generateCommitMessage": "สร้างข้อความ Commit"
+	"generateCommitMessage": "สร้างข้อความ Commit",
+	"slashCommand": {
+		"wantsToRun": "Kilo Code ต้องการรันคำสั่ง slash:",
+		"didRun": "Kilo Code รันคำสั่ง slash แล้ว:"
+	}
 }

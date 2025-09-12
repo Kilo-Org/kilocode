@@ -15,7 +15,8 @@
 	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 O período alfa para {{model}} terminou! Mude para um modelo diferente para continuar.",
-		"modelUnavailable": "⚠️ O modelo {{model}} está indisponível. Mude para um modelo diferente para continuar.",
+		"notAllowedForTeam": "⚠️ Sua organização não permite o uso do modelo {{model}}. Mude para um modelo diferente para continuar.",
+		"modelUnavailable": "⚠️ O modelo {{model}} não está disponível. Mude para um modelo diferente para continuar.",
 		"continueWith": "Continuar com {{model}}",
 		"continue": "Continuar"
 	},
@@ -43,7 +44,8 @@
 			"logout": "Sair do Kilo Code",
 			"automaticFetch": "Os modelos mais recentes estão automaticamente disponíveis no Kilo Code. Se você não tem certeza de qual modelo escolher, o Kilo Code funciona melhor com os modelos recomendados listados no topo em <strong>negrito</strong>.",
 			"providerRouting": {
-				"title": "Kilo Code - Roteamento de Provedor OpenRouter",
+				"title": "Roteamento de Provedor",
+				"managedByOrganization": "As configurações de Roteamento de Provedor são gerenciadas pela sua organização.",
 				"description": "O Kilo Code roteia as solicitações para os melhores provedores disponíveis para o seu modelo. Por padrão, as solicitações são balanceadas em carga entre os principais provedores para maximizar o tempo de atividade. No entanto, você pode escolher um provedor específico para usar para este modelo.",
 				"sorting": {
 					"default": "Ordenação padrão do provedor",

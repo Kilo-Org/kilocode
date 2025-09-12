@@ -785,6 +785,10 @@
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
 			"description": "Abilita le funzionalità Autocomplete per suggerimenti di codice rapidi e miglioramenti direttamente nel tuo editor. Include Attività Rapida (Cmd+I) per modifiche mirate e Autocomplete per miglioramenti contestuali."
+		},
+		"RUN_SLASH_COMMAND": {
+			"name": "Abilita comandi slash avviati dal modello",
+			"description": "Quando abilitato, Kilo Code può eseguire i tuoi comandi slash per eseguire flussi di lavoro."
 		}
 	},
 	"promptCaching": {
@@ -904,5 +908,19 @@
 	"includeMaxOutputTokensDescription": "Invia il parametro dei token di output massimi nelle richieste API. Alcuni provider potrebbero non supportarlo.",
 	"limitMaxTokensDescription": "Limita il numero massimo di token nella risposta",
 	"maxOutputTokensLabel": "Token di output massimi",
-	"maxTokensGenerateDescription": "Token massimi da generare nella risposta"
+	"maxTokensGenerateDescription": "Token massimi da generare nella risposta",
+	"serviceTier": {
+		"label": "Livello di servizio",
+		"tooltip": "Per un'elaborazione più rapida delle richieste API, prova il livello di servizio di elaborazione prioritaria. Per prezzi più bassi con una latenza maggiore, prova il livello di elaborazione flessibile.",
+		"standard": "Standard",
+		"flex": "Flessibile",
+		"priority": "Priorità",
+		"pricingTableTitle": "Prezzi per livello di servizio (prezzo per 1 milione di token)",
+		"columns": {
+			"tier": "Livello",
+			"input": "Input",
+			"output": "Output",
+			"cacheReads": "Letture cache"
+		}
+	}
 }

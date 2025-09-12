@@ -781,9 +781,9 @@
 			"warningMissingKey": "⚠️ Ein API-Schlüssel ist für die Bildgenerierung erforderlich, bitte konfiguriere ihn oben.",
 			"successConfigured": "✓ Bildgenerierung ist konfiguriert und einsatzbereit"
 		},
-		"INLINE_ASSIST": {
-			"name": "Autocomplete",
-			"description": "Aktiviere Autocomplete-Funktionen für schnelle Code-Vorschläge und Verbesserungen direkt in deinem Editor. Beinhaltet Schnellaufgabe (Cmd+I) für gezielte Änderungen und Autocomplete für kontextuelle Verbesserungen."
+		"RUN_SLASH_COMMAND": {
+			"name": "Modellinitierte Slash-Befehle aktivieren",
+			"description": "Wenn aktiviert, kann Kilo Code deine Slash-Befehle ausführen, um Workflows zu starten."
 		}
 	},
 	"promptCaching": {
@@ -903,5 +903,19 @@
 	"includeMaxOutputTokensDescription": "Sende den Parameter für maximale Ausgabe-Tokens in API-Anfragen. Einige Anbieter unterstützen dies möglicherweise nicht.",
 	"limitMaxTokensDescription": "Begrenze die maximale Anzahl von Tokens in der Antwort",
 	"maxOutputTokensLabel": "Maximale Ausgabe-Tokens",
-	"maxTokensGenerateDescription": "Maximale Tokens, die in der Antwort generiert werden"
+	"maxTokensGenerateDescription": "Maximale Tokens, die in der Antwort generiert werden",
+	"serviceTier": {
+		"label": "Service-Stufe",
+		"tooltip": "Für eine schnellere Verarbeitung von API-Anfragen, probiere die Prioritäts-Verarbeitungsstufe. Für niedrigere Preise bei höherer Latenz, probiere die Flex-Verarbeitungsstufe.",
+		"standard": "Standard",
+		"flex": "Flex",
+		"priority": "Priorität",
+		"pricingTableTitle": "Preise nach Service-Stufe (Preis pro 1 Mio. Token)",
+		"columns": {
+			"tier": "Stufe",
+			"input": "Eingabe",
+			"output": "Ausgabe",
+			"cacheReads": "Cache-Lesevorgänge"
+		}
+	}
 }
