@@ -1,0 +1,18 @@
+{
+	"readFile": {
+		"linesRange": " (rader {{start}}-{{end}})",
+		"definitionsOnly": " (endast definitioner)",
+		"maxLines": " (max {{max}} rader)",
+		"imageTooLarge": "Bildfilen är för stor ({{size}} MB). Den maximalt tillåtna storleken är {{max}} MB.",
+		"imageWithSize": "Bildfil ({{size}} KB)"
+	},
+	"toolRepetitionLimitReached": "Kilo Code verkar ha fastnat i en loop och försöker samma åtgärd ({{toolName}}) upprepade gånger. Detta kan indikera ett problem med den aktuella strategin. Överväg att omformulera uppgiften, ge mer specifika instruktioner eller styra mot ett annat angreppssätt.",
+	"codebaseSearch": {
+		"approval": "Söker efter '{{query}}' i kodbasen..."
+	},
+	"newTask": {
+		"errors": {
+			"policy_restriction": "Misslyckades med att skapa ny uppgift på grund av policybegränsningar."
+		}
+	}
+}
