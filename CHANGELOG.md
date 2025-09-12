@@ -1,5 +1,17 @@
 # kilo-code
 
+## 4.94.0
+
+### Minor Changes
+
+- [#2361](https://github.com/Kilo-Org/kilocode/pull/2361) [`9b553d3`](https://github.com/Kilo-Org/kilocode/commit/9b553d32940736fec49dde8de75faba1e0890471) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Jetbrains - Improve Light Theme
+
+### Patch Changes
+
+- [#2412](https://github.com/Kilo-Org/kilocode/pull/2412) [`e7fc4b4`](https://github.com/Kilo-Org/kilocode/commit/e7fc4b473b105ce8a6d92df17f1893f724c158a1) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Change default mode on first start from architect to code and tweak mode selector menu to show all default modes
+
+- [#2408](https://github.com/Kilo-Org/kilocode/pull/2408) [`53b387c`](https://github.com/Kilo-Org/kilocode/commit/53b387ce388dbd0c51547934c308d305128f9e5a) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Add support for Qwen3-Next-80B-A3B-Instruct and Qwen3-Next-80B-A3B-Thinking to Chutes provider
+
 ## [v4.93.2]
 
 - [#2401](https://github.com/Kilo-Org/kilocode/pull/2401) [`4c0c434`](https://github.com/Kilo-Org/kilocode/commit/4c0c434fce4bd8ce9c31a396c98e21b62cb300c1) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Commit Message Generation and Enhance Prompt now support billing through Kilo for Teams
