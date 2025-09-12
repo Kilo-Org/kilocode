@@ -21,7 +21,7 @@ export class ZAiHandler extends BaseOpenAiCompatibleProvider<InternationalZAiMod
 		super({
 			...options,
 			providerName: "Z AI",
-			baseURL: isChina ? "https://open.bigmodel.cn/api/paas/v4" : "https://api.z.ai/api/paas/v4",
+			baseURL: isChina ? "https://open.bigmodel.cn/api/paas/v4" : "https://api.z.ai/api/coding/paas/v4", // kilocode_change, upstream pr pending
 			apiKey: options.zaiApiKey ?? "not-provided",
 			defaultProviderModelId: defaultModelId,
 			providerModels: models,
