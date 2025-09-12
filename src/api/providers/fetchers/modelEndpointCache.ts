@@ -34,10 +34,18 @@ export const getModelEndpoints = async ({
 	router,
 	modelId,
 	endpoint,
+	// kilocode_change start
+	baseUrl,
+	apiKey,
+	// kilocode_change end
 }: {
 	router: RouterName
 	modelId?: string
 	endpoint?: string
+	// kilocode_change start
+	baseUrl?: string
+	apiKey?: string
+	// kilocode_change end
 }): Promise<ModelRecord> => {
 	// OpenRouter is the only provider that supports model endpoints, but you
 	// can see how we'd extend this to other providers in the future.
@@ -53,7 +61,15 @@ export const getModelEndpoints = async ({
 		return modelProviders
 	}
 
-	modelProviders = await getOpenRouterModelEndpoints(modelId)
+	modelProviders = await getOpenRouterModelEndpoints(
+		modelId,
+		// kilocode_change start
+		{
+			openRouterBaseUrl: baseUrl,
+			openRouterApiKey: apiKey,
+		},
+		// kilocode_change end
+	)
 
 	if (Object.keys(modelProviders).length > 0) {
 		// console.log(`[getModelProviders] API fetch for ${key} -> ${Object.keys(modelProviders).length}`)
