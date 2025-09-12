@@ -15,6 +15,7 @@
 	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 {{model}} 的測試期已結束！請切換到其他模型繼續使用。",
+		"notAllowedForTeam": "⚠️ 您的組織不允許使用 {{model}} 模型。請切換到其他模型繼續使用。",
 		"modelUnavailable": "⚠️ 模型 {{model}} 無法使用。請切換到其他模型繼續使用。",
 		"continueWith": "繼續使用 {{model}}",
 		"continue": "繼續"
@@ -55,7 +56,8 @@
 			"login": "登入 Kilo Code",
 			"logout": "登出 Kilo Code",
 			"providerRouting": {
-				"title": "Kilo Code - OpenRouter 供應商路由",
+				"title": "供應商路由",
+				"managedByOrganization": "供應商路由設定由您的組織管理。",
 				"description": "Kilo Code 將請求路由到您模型的最佳可用供應商。預設情況下，請求會在頂級供應商之間進行負載平衡，以最大化正常執行時間。但是，您可以選擇要用於此模型的特定供應商。",
 				"sorting": {
 					"default": "預設供應商排序",

@@ -15,9 +15,10 @@
 	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 Die Alpha-Phase für {{model}} ist beendet! Wechsle zu einem anderen Modell, um fortzufahren.",
+		"notAllowedForTeam": "⚠️ Deine Organisation erlaubt die Nutzung des {{model}} Modells nicht. Wechsle zu einem anderen Modell, um fortzufahren.",
 		"modelUnavailable": "⚠️ Das Modell {{model}} ist nicht verfügbar. Wechsle zu einem anderen Modell, um fortzufahren.",
-		"continueWith": "Mit {{model}} fortfahren",
-		"continue": "Fortfahren"
+		"continueWith": "Weiter mit {{model}}",
+		"continue": "Weiter"
 	},
 	"pricing": {
 		"costUnknown": "Kosten unbekannt",
@@ -43,7 +44,8 @@
 			"logout": "Von Kilo Code abmelden",
 			"automaticFetch": "Die neuesten Modelle sind automatisch in Kilo Code verfügbar. Wenn du dir nicht sicher bist, welches Modell du wählen sollst, funktioniert Kilo Code am besten mit den empfohlenen Modellen, die oben in <strong>fetter Schrift</strong> aufgeführt sind.",
 			"providerRouting": {
-				"title": "Kilo Code - OpenRouter-Anbieter-Routing",
+				"title": "Anbieter-Routing",
+				"managedByOrganization": "Die Anbieter-Routing-Einstellungen werden von deiner Organisation verwaltet.",
 				"description": "Kilo Code leitet Anfragen an die besten verfügbaren Anbieter für dein Modell weiter. Standardmäßig werden Anfragen über die Top-Anbieter verteilt, um die Betriebszeit zu maximieren. Du kannst jedoch einen bestimmten Anbieter für dieses Modell auswählen.",
 				"sorting": {
 					"default": "Standard-Anbieter-Sortierung",

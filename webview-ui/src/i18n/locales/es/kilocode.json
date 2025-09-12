@@ -37,7 +37,8 @@
 			"logout": "Cerrar sesión de Kilo Code",
 			"automaticFetch": "Los modelos más recientes están disponibles automáticamente en Kilo Code. Si no estás seguro de qué modelo elegir, Kilo Code funciona mejor con los modelos recomendados que aparecen en la parte superior en <strong>negrita</strong>.",
 			"providerRouting": {
-				"title": "Kilo Code - Enrutamiento de proveedores de OpenRouter",
+				"title": "Enrutamiento de proveedores",
+				"managedByOrganization": "La configuración de enrutamiento de proveedores está gestionada por tu organización.",
 				"description": "Kilo Code enruta las solicitudes a los mejores proveedores disponibles para su modelo. De forma predeterminada, las solicitudes se equilibran en carga entre los principales proveedores para maximizar el tiempo de actividad. Sin embargo, puede elegir un proveedor específico para usar para este modelo.",
 				"sorting": {
 					"default": "Ordenación de proveedor predeterminada",
@@ -246,6 +247,7 @@
 	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 ¡El período alfa para {{model}} ha terminado! Cambia a un modelo diferente para continuar.",
+		"notAllowedForTeam": "⚠️ Tu organización no permite el uso del modelo {{model}}. Cambia a un modelo diferente para continuar.",
 		"modelUnavailable": "⚠️ El modelo {{model}} no está disponible. Cambia a un modelo diferente para continuar.",
 		"continueWith": "Continuar con {{model}}",
 		"continue": "Continuar"

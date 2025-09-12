@@ -37,7 +37,8 @@
 			"logout": "Keluar dari Kilo Code",
 			"automaticFetch": "Model terbaru tersedia secara otomatis di Kilo Code. Jika Anda tidak yakin model mana yang harus dipilih, Kilo Code bekerja paling baik dengan model yang direkomendasikan yang tercantum di bagian atas dengan <strong>huruf tebal</strong>.",
 			"providerRouting": {
-				"title": "Kilo Code - Perutean Penyedia OpenRouter",
+				"title": "Perutean Penyedia",
+				"managedByOrganization": "Pengaturan Perutean Penyedia dikelola oleh organisasi Anda.",
 				"description": "Kilo Code merutekan permintaan ke penyedia terbaik yang tersedia untuk model Anda. Secara default, permintaan diseimbangkan bebannya di seluruh penyedia teratas untuk memaksimalkan waktu aktif. Namun, Anda dapat memilih penyedia tertentu untuk digunakan untuk model ini.",
 				"sorting": {
 					"default": "Pengurutan penyedia default",
@@ -251,6 +252,7 @@
 	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 Periode alpha untuk {{model}} telah berakhir! Ganti ke model lain untuk melanjutkan.",
+		"notAllowedForTeam": "⚠️ Organisasi Anda tidak mengizinkan penggunaan model {{model}}. Ganti ke model lain untuk melanjutkan.",
 		"modelUnavailable": "⚠️ Model {{model}} tidak tersedia. Ganti ke model lain untuk melanjutkan.",
 		"continueWith": "Lanjutkan dengan {{model}}",
 		"continue": "Lanjutkan"

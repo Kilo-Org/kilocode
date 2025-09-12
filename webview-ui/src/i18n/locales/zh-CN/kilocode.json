@@ -15,6 +15,7 @@
 	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 {{model}} 的测试期已结束！请切换到其他模型继续使用。",
+		"notAllowedForTeam": "⚠️ 您的组织不允许使用 {{model}} 模型。请切换到其他模型继续使用。",
 		"modelUnavailable": "⚠️ 模型 {{model}} 不可用。请切换到其他模型继续使用。",
 		"continueWith": "继续使用 {{model}}",
 		"continue": "继续"
@@ -56,7 +57,8 @@
 			"logout": "退出 Kilo Code",
 			"automaticFetch": "最新模型在 Kilo Code 中自动可用。如果您不确定选择哪个模型，Kilo Code 与顶部<strong>粗体</strong>显示的推荐模型配合最佳。",
 			"providerRouting": {
-				"title": "Kilo Code - OpenRouter 提供商路由",
+				"title": "提供商路由",
+				"managedByOrganization": "提供商路由设置由您的组织管理。",
 				"description": "Kilo Code 将请求路由到您模型的最佳可用提供商。默认情况下，请求会在顶级提供商之间进行负载均衡，以最大限度地延长正常运行时间。但是，您可以选择要用于此模型的特定提供商。",
 				"sorting": {
 					"default": "默认提供商排序",

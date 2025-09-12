@@ -15,6 +15,7 @@
 	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 La période alpha pour {{model}} est terminée ! Changez vers un modèle différent pour continuer.",
+		"notAllowedForTeam": "⚠️ Votre organisation n'autorise pas l'utilisation du modèle {{model}}. Changez vers un modèle différent pour continuer.",
 		"modelUnavailable": "⚠️ Le modèle {{model}} n'est pas disponible. Changez vers un modèle différent pour continuer.",
 		"continueWith": "Continuer avec {{model}}",
 		"continue": "Continuer"
@@ -43,7 +44,8 @@
 			"logout": "Se déconnecter de Kilo Code",
 			"automaticFetch": "Les derniers modèles sont automatiquement disponibles dans Kilo Code. Si vous ne savez pas quel modèle choisir, Kilo Code fonctionne mieux avec les modèles recommandés listés en haut en <strong>gras</strong>.",
 			"providerRouting": {
-				"title": "Kilo Code - Routage des fournisseurs OpenRouter",
+				"title": "Routage des fournisseurs",
+				"managedByOrganization": "Les paramètres de routage des fournisseurs sont gérés par votre organisation.",
 				"description": "Kilo Code achemine les demandes vers les meilleurs fournisseurs disponibles pour votre modèle. Par défaut, les demandes sont réparties entre les principaux fournisseurs afin de maximiser le temps de disponibilité. Cependant, vous pouvez choisir un fournisseur spécifique à utiliser pour ce modèle.",
 				"sorting": {
 					"default": "Tri des fournisseurs par défaut",

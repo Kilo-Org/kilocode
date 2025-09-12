@@ -37,6 +37,22 @@ interface Props {
 	kilocodeDefaultModel: string
 }
 
+export const KiloProviderRoutingManagedByOrganization = () => {
+	const { t } = useAppTranslation()
+	return (
+		<div className="flex flex-col gap-1">
+			<div className="flex justify-between items-center">
+				<label className="block font-medium mb-1">
+					{t("kilocode:settings.provider.providerRouting.title")}
+				</label>
+			</div>
+			<div className="text-sm text-vscode-descriptionForeground">
+				{t("kilocode:settings.provider.providerRouting.managedByOrganization")}
+			</div>
+		</div>
+	)
+}
+
 export const KiloProviderRouting = ({ apiConfiguration, setApiConfigurationField, kilocodeDefaultModel }: Props) => {
 	const { t } = useAppTranslation()
 	const providers = Object.values(useModelProviders(kilocodeDefaultModel, apiConfiguration).data ?? {})
@@ -62,7 +78,9 @@ export const KiloProviderRouting = ({ apiConfiguration, setApiConfigurationField
 	return (
 		<div className="flex flex-col gap-1">
 			<div className="flex justify-between items-center">
-				<label className="block font-medium mb-1">Provider Routing</label>
+				<label className="block font-medium mb-1">
+					{t("kilocode:settings.provider.providerRouting.title")}
+				</label>
 			</div>
 			<Select value={JSON.stringify(getProviderPreference(apiConfiguration))} onValueChange={onValueChange}>
 				<SelectTrigger className={cn("w-full", specificProviderIsInvalid && "border-destructive border-3")}>

@@ -15,9 +15,10 @@
 	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 {{model}}의 알파 기간이 종료되었습니다! 계속하려면 다른 모델로 변경하세요.",
+		"notAllowedForTeam": "⚠️ 귀하의 조직에서는 {{model}} 모델 사용을 허용하지 않습니다. 계속하려면 다른 모델로 변경하세요.",
 		"modelUnavailable": "⚠️ {{model}} 모델을 사용할 수 없습니다. 계속하려면 다른 모델로 변경하세요.",
-		"continueWith": "{{model}}로 계속하기",
-		"continue": "계속하기"
+		"continueWith": "{{model}}로 계속",
+		"continue": "계속"
 	},
 	"pricing": {
 		"costUnknown": "비용 알 수 없음",
@@ -43,7 +44,8 @@
 			"logout": "Kilo Code에서 로그아웃",
 			"automaticFetch": "최신 모델은 Kilo Code에서 자동으로 사용할 수 있습니다. 어떤 모델을 선택할지 확실하지 않다면, Kilo Code는 상단에 <strong>굵은 글씨</strong>로 나열된 권장 모델과 가장 잘 작동합니다.",
 			"providerRouting": {
-				"title": "Kilo Code - OpenRouter 공급자 라우팅",
+				"title": "공급자 라우팅",
+				"managedByOrganization": "공급자 라우팅 설정은 귀하의 조직에서 관리됩니다.",
 				"description": "Kilo Code는 모델에 가장 적합한 공급자에게 요청을 라우팅합니다. 기본적으로 요청은 가동 시간을 최대화하기 위해 상위 공급자에게 로드 밸런싱됩니다. 그러나 이 모델에 사용할 특정 공급자를 선택할 수 있습니다.",
 				"sorting": {
 					"default": "기본 공급자 정렬",

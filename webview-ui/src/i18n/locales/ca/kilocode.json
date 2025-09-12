@@ -37,7 +37,8 @@
 			"logout": "Tancar sessió de Kilo Code",
 			"automaticFetch": "Els models més recents estan disponibles automàticament a Kilo Code. Si no estàs segur de quin model triar, Kilo Code funciona millor amb els models recomanats que apareixen a la part superior en <strong>negreta</strong>.",
 			"providerRouting": {
-				"title": "Kilo Code - Encaminament de proveïdors OpenRouter",
+				"title": "Encaminament de proveïdors",
+				"managedByOrganization": "La configuració d'encaminament de proveïdors està gestionada per la teva organització.",
 				"description": "Kilo Code encamina les sol·licituds als millors proveïdors disponibles per al vostre model. Per defecte, les sol·licituds es distribueixen entre els principals proveïdors per maximitzar el temps de funcionament. No obstant això, podeu triar un proveïdor específic per a aquest model.",
 				"sorting": {
 					"default": "Ordenació de proveïdors per defecte",
@@ -251,6 +252,7 @@
 	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 El període alfa per a {{model}} ha finalitzat! Canvia a un model diferent per continuar.",
+		"notAllowedForTeam": "⚠️ La teva organització no permet l'ús del model {{model}}. Canvia a un model diferent per continuar.",
 		"modelUnavailable": "⚠️ El model {{model}} no està disponible. Canvia a un model diferent per continuar.",
 		"continueWith": "Continua amb {{model}}",
 		"continue": "Continua"

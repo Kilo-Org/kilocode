@@ -120,7 +120,11 @@ import { Gpt5Metadata, ClineMessageWithMetadata } from "./types"
 import { MessageQueueService } from "../message-queue/MessageQueueService"
 
 import { AutoApprovalHandler } from "./AutoApprovalHandler"
-import { isAlphaPeriodEndedError, isInvalidModelError, isPaymentRequiredError } from "../../shared/kilocode/errorUtils"
+import {
+	isAlphaPeriodEndedError,
+	isAnyRecognizedKiloCodeError,
+	isPaymentRequiredError,
+} from "../../shared/kilocode/errorUtils"
 
 const MAX_EXPONENTIAL_BACKOFF_SECONDS = 600 // 10 minutes
 const DEFAULT_USAGE_COLLECTION_TIMEOUT_MS = 5000 // 5 seconds
@@ -2833,10 +2837,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		} catch (error) {
 			this.isWaitingForFirstChunk = false
 			// kilocode_change start
-			if (
-				apiConfiguration?.apiProvider === "kilocode" &&
-				(isPaymentRequiredError(error) || isInvalidModelError(error) || isAlphaPeriodEndedError(error))
-			) {
+			if (apiConfiguration?.apiProvider === "kilocode" && isAnyRecognizedKiloCodeError(error)) {
 				const { response } = await (isPaymentRequiredError(error)
 					? this.ask(
 							"payment_required_prompt",
