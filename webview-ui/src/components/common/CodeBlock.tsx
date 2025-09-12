@@ -25,7 +25,7 @@ export const SCROLL_SNAP_TOLERANCE = 20
 /*
 overflowX: auto + inner div with padding results in an issue where the top/left/bottom padding renders but the right padding inside does not count as overflow as the width of the element is not exceeded. Once the inner div is outside the boundaries of the parent it counts as overflow.
 https://stackoverflow.com/questions/60778406/why-is-padding-right-clipped-with-overflowscroll/77292459#77292459
-this fixes the issue of right padding clipped off 
+this fixes the issue of right padding clipped off
 “ideal” size in a given axis when given infinite available space--allows the syntax highlighter to grow to largest possible width including its padding
 minWidth: "max-content",
 */
@@ -45,7 +45,7 @@ const CodeBlockButton = styled.button`
 	background: transparent;
 	border: none;
 	color: var(--vscode-foreground);
-	cursor: var(--copy-button-cursor, default);
+	cursor: pointer;
 	padding: 4px;
 	margin: 0 0px;
 	display: flex;
@@ -53,7 +53,7 @@ const CodeBlockButton = styled.button`
 	justify-content: center;
 	opacity: 0.4;
 	border-radius: 3px;
-	pointer-events: var(--copy-button-events, none);
+	pointer-events: all;
 	margin-left: 4px;
 	height: 24px;
 	width: 24px;
@@ -70,24 +70,19 @@ const CodeBlockButton = styled.button`
 `
 
 const CodeBlockButtonWrapper = styled.div`
-	position: fixed;
-	top: var(--copy-button-top);
-	right: var(--copy-button-right, 8px);
 	height: auto;
 	z-index: 100;
 	background: ${CODE_BLOCK_BG_COLOR}${WRAPPER_ALPHA};
 	overflow: visible;
-	pointer-events: none;
-	opacity: var(--copy-button-opacity, 0);
 	padding: 4px 6px;
 	border-radius: 3px;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
+	transition: opacity 0.2s;
 
 	&:hover {
 		background: var(--vscode-editor-background);
-		opacity: 1 !important;
 	}
 
 	${CodeBlockButton} {
@@ -101,18 +96,6 @@ const CodeBlockContainer = styled.div`
 	position: relative;
 	overflow: hidden;
 	background-color: ${CODE_BLOCK_BG_COLOR};
-
-	${CodeBlockButtonWrapper} {
-		opacity: 0;
-		pointer-events: none;
-		transition: opacity 0.2s; /* Keep opacity transition for buttons */
-	}
-
-	&[data-partially-visible="true"]:hover ${CodeBlockButtonWrapper} {
-		opacity: 1;
-		pointer-events: all;
-		cursor: pointer;
-	}
 `
 
 export const StyledPre = styled.div<{
@@ -230,6 +213,7 @@ const CodeBlock = memo(
 		const userChangedLanguageRef = useRef(false)
 		const [highlightedCode, setHighlightedCode] = useState<React.ReactNode>(null)
 		const [showCollapseButton, setShowCollapseButton] = useState(true)
+		const [isHovered, setIsHovered] = useState(false)
 		const codeBlockRef = useRef<HTMLDivElement>(null)
 		const preRef = useRef<HTMLDivElement>(null)
 		const copyButtonWrapperRef = useRef<HTMLDivElement>(null)
@@ -417,97 +401,11 @@ const CodeBlock = memo(
 			}
 		}, [source])
 
-		const updateCodeBlockButtonPosition = useCallback((forceHide = false) => {
-			const codeBlock = codeBlockRef.current
-			const copyWrapper = copyButtonWrapperRef.current
-
-			if (!codeBlock) {
-				return
-			}
-
-			const rectCodeBlock = codeBlock.getBoundingClientRect()
-			const scrollContainer = document.querySelector('[data-virtuoso-scroller="true"]')
-
-			if (!scrollContainer) {
-				return
-			}
-
-			// Get wrapper height dynamically
-			let wrapperHeight
-
-			if (copyWrapper) {
-				const copyRect = copyWrapper.getBoundingClientRect()
-
-				// If height is 0 due to styling, estimate from children
-				if (copyRect.height > 0) {
-					wrapperHeight = copyRect.height
-				} else if (copyWrapper.children.length > 0) {
-					// Try to get height from the button inside
-					const buttonRect = copyWrapper.children[0].getBoundingClientRect()
-					const buttonStyle = window.getComputedStyle(copyWrapper.children[0] as Element)
-					const buttonPadding =
-						parseInt(buttonStyle.getPropertyValue("padding-top") || "0", 10) +
-						parseInt(buttonStyle.getPropertyValue("padding-bottom") || "0", 10)
-					wrapperHeight = buttonRect.height + buttonPadding
-				}
-			}
-
-			// If we still don't have a height, calculate from font size
-			if (!wrapperHeight) {
-				const fontSize = parseInt(window.getComputedStyle(document.body).getPropertyValue("font-size"), 10)
-				wrapperHeight = fontSize * 2.5 // Approximate button height based on font size
-			}
-
-			const scrollRect = scrollContainer.getBoundingClientRect()
-			const copyButtonEdge = 48
-			const isPartiallyVisible =
-				rectCodeBlock.top < scrollRect.bottom - copyButtonEdge &&
-				rectCodeBlock.bottom >= scrollRect.top + copyButtonEdge
-
-			// Calculate margin from existing padding in the component
-			const computedStyle = window.getComputedStyle(codeBlock)
-			const paddingValue = parseInt(computedStyle.getPropertyValue("padding") || "0", 10)
-			const margin =
-				paddingValue > 0 ? paddingValue : parseInt(computedStyle.getPropertyValue("padding-top") || "0", 10)
-
-			// Update visibility state and button interactivity
-			const isVisible = !forceHide && isPartiallyVisible
-			codeBlock.setAttribute("data-partially-visible", isPartiallyVisible ? "true" : "false")
-			codeBlock.style.setProperty("--copy-button-cursor", isVisible ? "pointer" : "default")
-			codeBlock.style.setProperty("--copy-button-events", isVisible ? "all" : "none")
-			codeBlock.style.setProperty("--copy-button-opacity", isVisible ? "1" : "0")
-
-			if (isPartiallyVisible) {
-				// Keep button within code block bounds using dynamic measurements
-				const topPosition = Math.max(
-					scrollRect.top + margin,
-					Math.min(rectCodeBlock.bottom - wrapperHeight - margin, rectCodeBlock.top + margin),
-				)
-				const rightPosition = Math.max(margin, scrollRect.right - rectCodeBlock.right + margin)
-
-				codeBlock.style.setProperty("--copy-button-top", `${topPosition}px`)
-				codeBlock.style.setProperty("--copy-button-right", `${rightPosition}px`)
-			}
+		// Simplified button position update - no complex calculations needed
+		const updateCodeBlockButtonPosition = useCallback(() => {
+			// This function is kept for compatibility but simplified
+			// The hover menu now uses pure CSS positioning
 		}, [])
-
-		useEffect(() => {
-			const handleScroll = () => updateCodeBlockButtonPosition()
-			const handleResize = () => updateCodeBlockButtonPosition()
-
-			const scrollContainer = document.querySelector('[data-virtuoso-scroller="true"]')
-			if (scrollContainer) {
-				scrollContainer.addEventListener("scroll", handleScroll)
-				window.addEventListener("resize", handleResize)
-				updateCodeBlockButtonPosition()
-			}
-
-			return () => {
-				if (scrollContainer) {
-					scrollContainer.removeEventListener("scroll", handleScroll)
-					window.removeEventListener("resize", handleResize)
-				}
-			}
-		}, [updateCodeBlockButtonPosition])
 
 		// Update button position and scroll when highlightedCode changes
 		useEffect(() => {
@@ -652,11 +550,13 @@ const CodeBlock = memo(
 			const handleMouseDown = (e: MouseEvent) => {
 				// Only trigger if clicking the pre element directly
 				if (e.currentTarget === preRef.current) {
+					console.log("[DEBUG] Mouse down on pre element, setting isSelecting=true")
 					setIsSelecting(true)
 				}
 			}
 
 			const handleMouseUp = () => {
+				console.log("[DEBUG] Mouse up, setting isSelecting=false")
 				setIsSelecting(false)
 			}
 
@@ -673,12 +573,6 @@ const CodeBlock = memo(
 		const handleCopy = useCallback(
 			(e: React.MouseEvent) => {
 				e.stopPropagation()
-
-				// Check if code block is partially visible before allowing copy
-				const codeBlock = codeBlockRef.current
-				if (!codeBlock || codeBlock.getAttribute("data-partially-visible") !== "true") {
-					return
-				}
 				const textToCopy = rawSource !== undefined ? rawSource : source || ""
 				if (textToCopy) {
 					copyWithFeedback(textToCopy, e)
@@ -687,12 +581,21 @@ const CodeBlock = memo(
 			[source, rawSource, copyWithFeedback],
 		)
 
+		// Handle hover events for menu visibility
+		const handleMouseEnter = useCallback(() => {
+			setIsHovered(true)
+		}, [])
+
+		const handleMouseLeave = useCallback(() => {
+			setIsHovered(false)
+		}, [])
+
 		if (source?.length === 0) {
 			return null
 		}
 
 		return (
-			<CodeBlockContainer ref={codeBlockRef}>
+			<CodeBlockContainer ref={codeBlockRef} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
 				<MemoizedStyledPre
 					preRef={preRef}
 					preStyle={preStyle}
@@ -702,11 +605,17 @@ const CodeBlock = memo(
 					highlightedCode={highlightedCode}
 					updateCodeBlockButtonPosition={updateCodeBlockButtonPosition}
 				/>
-				{!isSelecting && (
+				{/* Hover menu with simplified positioning */}
+				{!isSelecting && isHovered && (
 					<CodeBlockButtonWrapper
 						ref={copyButtonWrapperRef}
-						onMouseOver={() => updateCodeBlockButtonPosition()}
-						style={{ gap: 0 }}>
+						style={{
+							position: "absolute",
+							top: "8px",
+							right: "8px",
+							gap: 0,
+							zIndex: 10,
+						}}>
 						<LanguageSelect
 							value={currentLanguage}
 							style={{
