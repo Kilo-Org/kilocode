@@ -8,8 +8,21 @@ const ColorThemeKind = {
 } as const
 
 const window = {
-	activeColorTheme: {
-		kind: ColorThemeKind.Dark, // Default to dark theme
+	get activeColorTheme() {
+		try {
+			// In browser/Storybook environment, detect theme from DOM
+			const themeContainer = document.querySelector("[data-theme]")
+			const currentTheme = themeContainer?.getAttribute("data-theme")
+
+			if (currentTheme === "light") {
+				return { kind: ColorThemeKind.Light }
+			}
+		} catch {
+			// Fallback on any DOM errors
+		}
+
+		// Default to dark theme
+		return { kind: ColorThemeKind.Dark }
 	},
 }
 
@@ -17,6 +30,17 @@ const workspace = {
 	getConfiguration: () => ({
 		get: (key: string) => {
 			if (key === "workbench.colorTheme") {
+				try {
+					const themeContainer = document.querySelector("[data-theme]")
+					const currentTheme = themeContainer?.getAttribute("data-theme")
+
+					if (currentTheme === "light") {
+						return "Light+ (default light)"
+					}
+				} catch {
+					// Fallback on any DOM errors
+				}
+
 				return "Dark+ (default dark)"
 			}
 			return undefined

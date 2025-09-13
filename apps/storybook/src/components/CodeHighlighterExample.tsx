@@ -75,7 +75,7 @@ export const SvgCodeHighlighterExample: React.FC<CharacterHighlightingProps> = (
 	}, [initialNewText])
 
 	return (
-		<div className="p-4 text-gray-300">
+		<div className="p-4 text-vscode-foreground">
 			<h3 className="text-xl font-semibold mb-4">SVG Code Highlighter Demo</h3>
 
 			<div className="flex gap-5 mb-5">
@@ -84,7 +84,7 @@ export const SvgCodeHighlighterExample: React.FC<CharacterHighlightingProps> = (
 					<textarea
 						value={originalText}
 						onChange={(e) => setOriginalText(e.target.value)}
-						className="w-full h-30 bg-gray-700 text-gray-300 border border-gray-600 rounded p-2 font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
+						className="w-full h-30 bg-vscode-input-background text-vscode-input-foreground border border-vscode-input-border rounded p-2 font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-vscode-focusBorder"
 					/>
 				</div>
 				<div className="flex-1">
@@ -92,15 +92,17 @@ export const SvgCodeHighlighterExample: React.FC<CharacterHighlightingProps> = (
 					<textarea
 						value={newText}
 						onChange={(e) => setNewText(e.target.value)}
-						className="w-full h-30 bg-gray-700 text-gray-300 border border-gray-600 rounded p-2 font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
+						className="w-full h-30 bg-vscode-input-background text-vscode-input-foreground border border-vscode-input-border rounded p-2 font-mono text-sm resize-y focus:ring-2 focus:ring-vscode-focusBorder"
 					/>
 				</div>
 			</div>
 
 			<div className="flex flex-col">
 				<strong className="text-sm py-1">SVG Preview</strong>
-				<div className="border border-gray-600 p-2.5  rounded">
-					{loading && <div className="text-gray-500 italic text-sm mt-1">Generating...</div>}
+				<div className="border border-vscode-input-border p-2.5 rounded">
+					{loading && (
+						<div className="text-vscode-descriptionForeground italic text-sm mt-1">Generating...</div>
+					)}
 					<div className="mt-2.5 min-h-[50px]" dangerouslySetInnerHTML={{ __html: svg }} />
 				</div>
 			</div>
