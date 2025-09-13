@@ -7,7 +7,6 @@ import {
 	OPENROUTER_DEFAULT_PROVIDER_NAME,
 	OPEN_ROUTER_PROMPT_CACHING_MODELS,
 	DEEP_SEEK_DEFAULT_TEMPERATURE,
-	ModelInfo, // kilocode_change
 } from "@roo-code/types"
 
 import type { ApiHandlerOptions, ModelRecord } from "../../shared/api"
@@ -135,18 +134,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		return (lastUsage.cost_details?.upstream_inference_cost || 0) + (lastUsage.cost || 0)
 	}
 
-	getIgnoredProviders(model: ModelInfo): string[] | undefined {
-		const endpoints = Object.entries(this.endpoints)
-		const ignoredProviders = endpoints
-			.filter((endpoint) => endpoint[1].contextWindow < model.contextWindow)
-			.map((endpoint) => endpoint[0])
-		if (ignoredProviders.length > 0 && ignoredProviders.length < endpoints.length) {
-			return ignoredProviders
-		}
-		return undefined
-	}
-
-	getProviderParams(model: ModelInfo): { provider?: OpenRouterProviderParams } {
+	getProviderParams(): { provider?: OpenRouterProviderParams } {
 		if (this.options.openRouterSpecificProvider && this.endpoints[this.options.openRouterSpecificProvider]) {
 			return {
 				provider: {
@@ -157,15 +145,9 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 				},
 			}
 		}
-		const ignoredProviders = this.getIgnoredProviders(model)
-		if (
-			(ignoredProviders?.length ?? 0) > 0 ||
-			this.options.openRouterProviderDataCollection ||
-			this.options.openRouterProviderSort
-		) {
+		if (this.options.openRouterProviderDataCollection || this.options.openRouterProviderSort) {
 			return {
 				provider: {
-					ignore: ignoredProviders,
 					data_collection: this.options.openRouterProviderDataCollection,
 					sort: this.options.openRouterProviderSort,
 				},
@@ -228,7 +210,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			messages: openAiMessages,
 			stream: true,
 			stream_options: { include_usage: true },
-			...this.getProviderParams(model.info), // kilocode_change: original expression was moved into function
+			...this.getProviderParams(), // kilocode_change: original expression was moved into function
 			...(transforms && { transforms }),
 			...(reasoning && { reasoning }),
 		}
@@ -336,13 +318,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 	}
 
 	async completePrompt(prompt: string) {
-		let {
-			id: modelId,
-			maxTokens,
-			temperature,
-			reasoning,
-			info: modelInfo, // kilocode_change
-		} = await this.fetchModel()
+		let { id: modelId, maxTokens, temperature, reasoning } = await this.fetchModel()
 
 		const completionParams: OpenRouterChatCompletionParams = {
 			model: modelId,
@@ -350,7 +326,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			temperature,
 			messages: [{ role: "user", content: prompt }],
 			stream: false,
-			...this.getProviderParams(modelInfo), // kilocode_change: original expression was moved into function
+			...this.getProviderParams(), // kilocode_change: original expression was moved into function
 			...(reasoning && { reasoning }),
 		}
 
