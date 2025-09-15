@@ -127,6 +127,10 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		return undefined
 	}
 
+	getCustomRequestHeaders(taskId?: string) {
+		return (taskId ? this.customRequestOptions({ taskId })?.headers : undefined) ?? {}
+	}
+
 	getTotalCost(lastUsage: CompletionUsage): number {
 		return (lastUsage.cost_details?.upstream_inference_cost || 0) + (lastUsage.cost || 0)
 	}
@@ -352,7 +356,10 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 
 		let response
 		try {
-			response = await this.client.chat.completions.create(completionParams)
+			response = await this.client.chat.completions.create(
+				completionParams,
+				this.customRequestOptions(), // kilocode_change
+			)
 		} catch (error) {
 			throw handleOpenAIError(error, this.providerName)
 		}
@@ -388,8 +395,6 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			}
 		}
 
-		const extraHeaders = (taskId ? this.customRequestOptions({ taskId })?.headers : undefined) ?? {} // kilocode_change
-
 		try {
 			const response = await fetch(
 				`${this.options.openRouterBaseUrl || "https://openrouter.ai/api/v1/"}chat/completions`, // kilocode_change: support baseUrl
@@ -398,7 +403,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 					headers: {
 						// kilocode_change start
 						...DEFAULT_HEADERS,
-						...extraHeaders,
+						...this.getCustomRequestHeaders(taskId),
 						// kilocode_change end
 						Authorization: `Bearer ${apiKey}`,
 						"Content-Type": "application/json",

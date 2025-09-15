@@ -204,6 +204,7 @@ export async function generateImageTool(
 					})(),
 				// kilocode_change end
 				inputImageData,
+				cline.taskId, // kilocode_change
 			)
 
 			if (!result.success) {

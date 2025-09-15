@@ -275,6 +275,50 @@ describe("ChutesHandler", () => {
 		)
 	})
 
+	it("should return Qwen/Qwen3-Next-80B-A3B-Instruct model with correct configuration", () => {
+		const testModelId: ChutesModelId = "Qwen/Qwen3-Next-80B-A3B-Instruct"
+		const handlerWithModel = new ChutesHandler({
+			apiModelId: testModelId,
+			chutesApiKey: "test-chutes-api-key",
+		})
+		const model = handlerWithModel.getModel()
+		expect(model.id).toBe(testModelId)
+		expect(model.info).toEqual(
+			expect.objectContaining({
+				maxTokens: 32768,
+				contextWindow: 262144,
+				supportsImages: false,
+				supportsPromptCache: false,
+				inputPrice: 0,
+				outputPrice: 0,
+				description: "Qwen3 Next 80B A3B Instruct model with 262K context window.",
+				temperature: 0.5, // Default temperature for non-DeepSeek models
+			}),
+		)
+	})
+
+	it("should return Qwen/Qwen3-Next-80B-A3B-Thinking model with correct configuration", () => {
+		const testModelId: ChutesModelId = "Qwen/Qwen3-Next-80B-A3B-Thinking"
+		const handlerWithModel = new ChutesHandler({
+			apiModelId: testModelId,
+			chutesApiKey: "test-chutes-api-key",
+		})
+		const model = handlerWithModel.getModel()
+		expect(model.id).toBe(testModelId)
+		expect(model.info).toEqual(
+			expect.objectContaining({
+				maxTokens: 32768,
+				contextWindow: 262144,
+				supportsImages: false,
+				supportsPromptCache: false,
+				inputPrice: 0,
+				outputPrice: 0,
+				description: "Qwen3 Next 80B A3B Thinking model with 262K context window.",
+				temperature: 0.5, // Default temperature for non-DeepSeek models
+			}),
+		)
+	})
+
 	it("should return moonshotai/Kimi-K2-Instruct-75k model with correct configuration", () => {
 		const testModelId: ChutesModelId = "moonshotai/Kimi-K2-Instruct-75k"
 		const handlerWithModel = new ChutesHandler({

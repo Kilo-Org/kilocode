@@ -393,6 +393,71 @@ class ThemeManager : Disposable {
     }
     
     /**
+     * Parse CSS custom properties from theme variables file and add to theme colors
+     * @param cssContent CSS content containing custom properties
+     * @param themeColors Existing theme colors JSON object to update
+     */
+    private fun parseCssVariablesIntoTheme(cssContent: String, themeColors: JsonObject) {
+        try {
+            // Parse CSS custom properties (--property-name: value;)
+            val cssVariablePattern = Regex("""--([a-zA-Z-]+):\s*([^;]+);""")
+            val matches = cssVariablePattern.findAll(cssContent)
+            
+            for (match in matches) {
+                val propertyName = match.groupValues[1]
+                val propertyValue = match.groupValues[2].trim()
+                
+                // Skip color delegations that start with --color- as they are Tailwind-specific
+                if (propertyName.startsWith("color-")) {
+                    continue
+                }
+                
+                // Skip layout/sizing variables that aren't colors
+                val nonColorProperties = setOf(
+                    "border-width", "corner-radius", "corner-radius-round", "design-unit",
+                    "disabled-opacity", "font-family", "font-weight", "input-height",
+                    "input-min-width", "type-ramp-base-font-size", "type-ramp-base-line-height",
+                    "type-ramp-minus1-font-size", "type-ramp-minus1-line-height",
+                    "type-ramp-minus2-font-size", "type-ramp-minus2-line-height",
+                    "type-ramp-plus1-font-size", "type-ramp-plus1-line-height",
+                    "scrollbarWidth", "scrollbarHeight", "button-icon-corner-radius",
+                    "button-icon-outline-offset", "button-icon-padding", "button-padding-horizontal",
+                    "button-padding-vertical", "checkbox-corner-radius", "dropdown-list-max-height",
+                    "tag-corner-radius", "text-xs", "text-sm", "text-base", "text-lg",
+                    "radius", "radius-lg", "radius-md", "radius-sm"
+                )
+                
+                if (nonColorProperties.contains(propertyName)) {
+                    continue
+                }
+                
+                // Convert CSS variable references to values that can be resolved
+                val resolvedValue = if (propertyValue.contains("var(")) {
+                    // For var() references, keep them as-is for now
+                    propertyValue
+                } else {
+                    // For direct values, use them as-is
+                    propertyValue
+                }
+                
+                // Add to theme colors with proper formatting
+                // Convert kebab-case to the format expected by the theme system
+                val themePropertyName = if (propertyName.contains("-")) {
+                    propertyName // Keep kebab-case for CSS compatibility
+                } else {
+                    propertyName
+                }
+                
+                themeColors.addProperty(themePropertyName, resolvedValue)
+            }
+            
+            logger.info("Parsed ${matches.count()} CSS custom properties into theme colors")
+        } catch (e: Exception) {
+            logger.error("Error parsing CSS variables into theme", e)
+        }
+    }
+    
+    /**
      * Load theme configuration
      */
     private fun loadThemeConfig() {
@@ -405,8 +470,10 @@ class ThemeManager : Disposable {
             // Select corresponding theme file
             val themeFileName = if (isDarkTheme) "dark_modern.json" else "light_modern.json"
             val vscodeThemeName = if (isDarkTheme) "vscode-theme-dark.css" else "vscode-theme-light.css"
+            val themeVariablesName = "theme-variables.css"
             val themeFile = themeResourceDir?.resolve(themeFileName)?.toFile()
             val vscodeThemeFile = themeResourceDir?.resolve(vscodeThemeName)?.toFile()
+            val themeVariablesFile = themeResourceDir?.resolve(themeVariablesName)?.toFile()
             
             if (themeFile?.exists() == true && vscodeThemeFile?.exists() == true) {
                 // Read theme file content
@@ -438,16 +505,63 @@ class ThemeManager : Disposable {
                 // Read VSCode theme style file
                 themeStyleContent = loadVscodeThemeStyle(vscodeThemeFile)
                 
-                // Add style content to converted theme object
-                if (themeStyleContent != null) {
-                    converted.addProperty("cssContent", themeStyleContent)
+                // Read theme variables CSS file and combine with theme-specific CSS
+                val themeVariablesContent = if (themeVariablesFile?.exists() == true) {
+                    loadVscodeThemeStyle(themeVariablesFile)
+                } else {
+                    null
+                }
+                
+                // Parse CSS variables from theme-variables.css and add them to the theme colors
+                if (themeVariablesContent != null) {
+                    // Ensure colors object exists
+                    if (!converted.has("colors")) {
+                        converted.add("colors", JsonObject())
+                    }
+                    val themeColors = converted.getAsJsonObject("colors")
+                    parseCssVariablesIntoTheme(themeVariablesContent, themeColors)
+                }
+                
+                // Combine theme variables and theme-specific CSS content
+                val combinedCssContent = buildString {
+                    // Add theme variables first wrapped in :root selector
+                    if (themeVariablesContent != null) {
+                        append("/* Theme Variables */\n")
+                        append(":root {\n")
+                        // Process each line and add proper indentation
+                        themeVariablesContent.split("\n").forEach { line ->
+                            val trimmedLine = line.trim()
+                            if (trimmedLine.startsWith("--") && trimmedLine.contains(":")) {
+                                // Add CSS custom property with proper indentation
+                                append("  $trimmedLine")
+                                if (!trimmedLine.endsWith(";")) {
+                                    append(";")
+                                }
+                                append("\n")
+                            } else if (trimmedLine.startsWith("/*") || trimmedLine.contains("*/") || trimmedLine.isEmpty()) {
+                                // Include comments and empty lines
+                                append("  $line\n")
+                            }
+                        }
+                        append("}\n\n")
+                    }
+                    // Add theme-specific CSS
+                    if (themeStyleContent != null) {
+                        append("/* Theme-Specific Styles */\n")
+                        append(themeStyleContent)
+                    }
+                }
+                
+                // Add combined style content to converted theme object
+                if (combinedCssContent.isNotEmpty()) {
+                    converted.addProperty("cssContent", combinedCssContent)
                 }
                 
                 // Update cache
                 val oldConfig = currentThemeConfig
                 currentThemeConfig = converted
                 
-                logger.info("Loaded and converted theme configuration: $themeFileName")
+                logger.info("Loaded and converted theme configuration: $themeFileName with variables: $themeVariablesName")
                 
                 // Notify listeners when configuration changes
                 if (oldConfig?.toString() != converted.toString()) {
@@ -455,7 +569,10 @@ class ThemeManager : Disposable {
                 }
             } else {
                 logger.warn("Theme configuration file does not exist: $themeResourceDir")
-                logger.warn("Theme configuration file does not exist: $themeFileName")
+                logger.warn("Required files missing - Theme: $themeFileName, VSCode Theme: $vscodeThemeName")
+                if (themeVariablesFile?.exists() != true) {
+                    logger.warn("Theme variables file not found: $themeVariablesName (this is optional)")
+                }
             }
         } catch (e: IOException) {
             logger.error("Error reading theme configuration", e)
