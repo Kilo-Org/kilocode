@@ -2,7 +2,7 @@ import * as vscode from "vscode"
 import { GhostSuggestionsState } from "./GhostSuggestions"
 import { GhostSuggestionEditOperation } from "./types"
 import { calculateDiff, type BackgroundRange } from "./utils/CharacterDiff"
-import { SVGDecorationBuilder, type SVGDecorationContent } from "./SVGDecorationBuilder"
+import { createSVGDecorationType, type SVGDecorationContent } from "./utils/createSVGDecorationType"
 
 export const DELETION_DECORATION_OPTIONS: vscode.DecorationRenderOptions = {
 	isWholeLine: false,
@@ -14,15 +14,13 @@ export const DELETION_DECORATION_OPTIONS: vscode.DecorationRenderOptions = {
 
 /**
  * Hybrid ghost decorations: SVG highlighting for edits/additions, simple styling for deletions
- * Acts as an orchestrator using SVGDecorationBuilder
+ * Acts as an orchestrator using createSVGDecorationType utility
  */
 export class GhostDecorations {
 	private deletionDecorationType: vscode.TextEditorDecorationType
 	private codeEditDecorationTypes: vscode.TextEditorDecorationType[] = []
-	private svgBuilder: SVGDecorationBuilder
 
 	constructor() {
-		this.svgBuilder = new SVGDecorationBuilder()
 		this.deletionDecorationType = vscode.window.createTextEditorDecorationType(DELETION_DECORATION_OPTIONS)
 	}
 
@@ -159,14 +157,14 @@ export class GhostDecorations {
 	}
 
 	/**
-	 * Create SVG decoration using the SVGDecorationBuilder
+	 * Create SVG decoration using the createSVGDecorationType utility
 	 */
 	private async createSvgDecoration(
 		editor: vscode.TextEditor,
 		range: vscode.Range,
 		content: SVGDecorationContent,
 	): Promise<void> {
-		const decorationType = await this.svgBuilder.createDecorationType(content, editor.document)
+		const decorationType = await createSVGDecorationType(content, editor.document)
 		this.codeEditDecorationTypes.push(decorationType)
 		editor.setDecorations(decorationType, [{ range }])
 	}

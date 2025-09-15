@@ -5,12 +5,40 @@ import { GhostSuggestionsState } from "../GhostSuggestions"
 import { GhostSuggestionEditOperation } from "../types"
 import { initializeHighlighter } from "../utils/CodeHighlighter"
 
-// Mock the new modules
-vi.mock("../SVGDecorationBuilder", () => ({
-	SVGDecorationBuilder: vi.fn().mockImplementation(() => ({
-		createDecorationType: vi.fn().mockResolvedValue({
-			dispose: vi.fn(),
-		}),
+// Mock the SVG decoration utilities
+vi.mock("../utils/createSVGDecorationType", () => ({
+	createSVGDecorationType: vi.fn().mockResolvedValue({
+		dispose: vi.fn(),
+	}),
+}))
+
+// Mock EditorConfiguration
+vi.mock("../EditorConfiguration", () => ({
+	getEditorConfiguration: vi.fn().mockReturnValue({
+		fontSize: 14,
+		fontFamily: "Consolas, 'Courier New', monospace",
+		lineHeight: 1.2,
+	}),
+}))
+
+// Mock text measurement utilities
+vi.mock("../utils/textMeasurement", () => ({
+	calculateContainerWidth: vi.fn().mockReturnValue(200),
+	calculateCharacterWidth: vi.fn().mockReturnValue(8),
+}))
+
+// Mock ThemeMapper
+vi.mock("../utils/ThemeMapper", () => ({
+	getThemeColors: vi.fn().mockReturnValue({
+		background: "#1e1e1e",
+		foreground: "#cccccc",
+	}),
+}))
+
+// Mock SvgRenderer
+vi.mock("../utils/SvgRenderer", () => ({
+	SvgRenderer: vi.fn().mockImplementation(() => ({
+		render: vi.fn().mockReturnValue("<svg>test</svg>"),
 	})),
 }))
 
@@ -18,6 +46,9 @@ vi.mock("../SVGDecorationBuilder", () => ({
 vi.mock("../utils/CodeHighlighter", () => ({
 	initializeHighlighter: vi.fn().mockResolvedValue(undefined),
 	getLanguageForDocument: vi.fn().mockReturnValue("typescript"),
+	generateHighlightedHtmlWithRanges: vi.fn().mockResolvedValue({
+		html: "<span>highlighted code</span>",
+	}),
 }))
 
 // Mock vscode module
