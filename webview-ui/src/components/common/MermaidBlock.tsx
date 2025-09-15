@@ -6,7 +6,7 @@ import { vscode } from "@src/utils/vscode"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { useCopyToClipboard } from "@src/utils/clipboard"
 import { MermaidSyntaxFixer } from "@src/services/mermaidSyntaxFixer" // kilocode_change
-import CodeBlock from "./CodeBlock"
+import CodeBlock from "../kilocode/common/CodeBlock" // kilocode_change
 import { MermaidButton } from "@/components/common/MermaidButton"
 import { MermaidFixButton } from "@/components/common/MermaidFixButton" // kilocode_change
 
