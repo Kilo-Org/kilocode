@@ -17,5 +17,3 @@ webview-ui/src/i18n/locales/** linguist-generated=true
 # Then explicitly mark English directories as NOT generated (override the above)
 src/i18n/locales/en/** linguist-generated=false
 webview-ui/src/i18n/locales/en/** linguist-generated=false
-# This approach uses gitattributes' last-match-wins rule to exclude English while including all other locales
-jetbrains/plugin/platform.zip filter=lfs diff=lfs merge=lfs -text
