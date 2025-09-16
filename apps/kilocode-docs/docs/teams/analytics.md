@@ -57,7 +57,7 @@ Shows usage aggregated by date with columns:
 - **DATE** - The specific date
 - **COST** - Total spending for that date
 - **REQUESTS** - Number of API requests made
-- **TOKENS** - Total tokens processed
+- **TOKENS** - Total tokens processed (hover to show input vs. output tokens)
 - **USERS** - Number of active users that date
 
 When viewing team data, you can click on any date row to expand and see individual user breakdowns for that day, showing each team member's usage, cost, requests, and tokens.
@@ -70,7 +70,7 @@ Shows detailed usage broken down by AI model and date with columns:
 - **MODEL** - The AI model used (e.g., anthropic/claude-sonnet-4, openai/gpt-4)
 - **COST** - Cost for that model on that date
 - **REQUESTS** - Number of requests to that model
-- **TOKENS** - Tokens processed by that model
+- **TOKENS** - Tokens processed by that model (hover to show input vs. output tokens)
 - **USERS** - Number of users who used that model
 
 Click on any row to expand and see which specific team members used that model on that date, along with their individual usage statistics.
@@ -106,6 +106,6 @@ All costs are displayed in USD with detailed precision, helping you:
 
 - [Manage team billing settings](/teams/billing)
 - [Configure team roles and permissions](/teams/roles-permissions)
-- [Set up team integrations](/teams/integration)
+- [Learn about team roles and permissions](/teams/roles-permissions)
 
 The usage analytics provide the insights needed to optimize your team's AI usage while maintaining visibility into costs and activity patterns.

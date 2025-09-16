@@ -368,7 +368,7 @@ _Actual savings vary based on usage patterns and team efficiency gains._
 
 ## Next Steps
 
-- [Review frequently asked questions](/teams/faq)
+- [Get started with your team](/teams/getting-started)
 - [Explore team management features](/teams/team-management)
 - [Understand billing and pricing](/teams/billing)
 

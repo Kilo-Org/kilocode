@@ -159,6 +159,6 @@ Promote or demote team members as needed:
 
 - [Understand billing and credits](/teams/billing)
 - [Explore usage analytics](/teams/analytics)
-- [Configure security settings](/teams/security)
+- [Learn about team roles and permissions](/teams/roles-permissions)
 
 Effective team management ensures your organization maximizes the benefits of AI-assisted development while maintaining cost control and security.

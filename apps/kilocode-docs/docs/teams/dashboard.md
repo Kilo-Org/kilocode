@@ -37,7 +37,6 @@ View all team members with:
 - Name and email address
 - Current role (Owner, Admin, Member)
 - Last activity timestamp
-- Usage status indicators
 
 ### Quick Actions
 
@@ -52,7 +51,6 @@ Toggle organization-wide policies:
 
 - **Code training opt-out** - Prevent AI providers from using your code for training
 - **Usage analytics** - Control internal usage tracking
-- **Anonymized reporting** - Enable/disable anonymous usage statistics
 
 ## Usage Tab
 
@@ -82,39 +80,22 @@ Interactive graphs displaying:
 - **Daily usage trends** - Spot peak usage periods
 - **Weekly patterns** - Understand team workflows
 - **Monthly comparisons** - Track growth and optimization
-- **Cost projections** - Forecast upcoming expenses
 
 ### User-Level Insights
 
 - Individual usage statistics (Owners and Admins only)
 - Top users by request volume
 - Usage distribution across team members
-- Efficiency metrics per user
 
 ## Billing Tab
 
 Complete financial management for your Kilo for Teams subscription.
 
-### Current Balance
-
 - **Available credits** remaining
-- **Credit expiration** dates (if applicable)
-- **Low balance warnings** and thresholds
-- **Auto-recharge** settings (if enabled)
-
-### Invoice History
-
 - **Downloadable invoices** for expense reporting
 - **Payment status** for each billing cycle
-- **Detailed line items** showing usage and subscription costs
-- **Tax information** and compliance details
-
-### Payment Methods
-
 - **Primary payment method** on file
-- **Backup payment options** for failed charges
 - **Payment history** with transaction details
-- **Update payment** information securely
 
 ### Purchase History
 

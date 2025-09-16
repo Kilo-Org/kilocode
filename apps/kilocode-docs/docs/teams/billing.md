@@ -12,7 +12,6 @@ Kilo for Teams uses a transparent, two-part billing system: a monthly subscripti
 
 - **$29 per user per month** for platform access
 - **Billed monthly** on your signup anniversary
-- **Pro-rated** for mid-cycle seat changes
 - **Includes** dashboard access, team management, and all platform features
 
 ### AI Credits System
@@ -54,8 +53,7 @@ Kilo for Teams uses a transparent, two-part billing system: a monthly subscripti
 1. **Navigate to Subscriptions tab**
 2. **Click "Remove Seats"**
 3. **Select seats to remove** (must remove team members first)
-4. **Review credit calculation** for remaining cycle
-5. **Confirm reduction**
+4. **Confirm reduction**
 
 ### Pro-Rating Calculations
 
@@ -82,31 +80,6 @@ Each invoice includes:
 2. **Find desired invoice** in history
 3. **Click "Download PDF"**
 4. **Save for expense reporting**
-
-## Payment Methods
-
-### Adding Payment Methods
-
-1. **Go to Billing tab**
-2. **Click "Add Payment Method"**
-3. **Enter card information** securely
-4. **Set as primary** (optional)
-5. **Save changes**
-
-## Credit Management
-
-### Monitoring Credit Balance
-
-- **Real-time balance** shown in dashboard
-- **Usage projections** based on team patterns
-- **Low balance warnings** at 20% remaining
-- **Automatic alerts** when credits run low
-
-### Credit Expiration
-
-- **Purchased credits never expire** - use them at your own pace
-- **No monthly minimums** or usage requirements
-- **Unused credits** carry forward indefinitely
 
 ## Billing Troubleshooting
 
@@ -140,7 +113,7 @@ If payment fails repeatedly:
 ## Next Steps
 
 - [Explore usage analytics](/teams/analytics)
-- [Configure security settings](/teams/security)
+- [Learn about team roles and permissions](/teams/roles-permissions)
 - [Learn about team management](/teams/team-management)
 
 Transparent billing ensures you always know exactly what you're paying for, with no hidden fees or surprise charges.
