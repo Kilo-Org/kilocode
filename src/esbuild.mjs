@@ -2,6 +2,7 @@ import * as esbuild from "esbuild"
 import * as fs from "fs"
 import * as path from "path"
 import { fileURLToPath } from "url"
+import { createRequire } from "module"
 import process from "node:process"
 import * as console from "node:console"
 
@@ -62,6 +63,23 @@ async function main() {
 
 					// Copy walkthrough files to dist directory
 					copyPaths([["walkthrough", "walkthrough"]], srcDir, distDir)
+
+					// Copy JSDOM xhr-sync-worker.js to fix runtime resolution
+					const jsdomWorkerDest = path.join(distDir, "xhr-sync-worker.js")
+
+					try {
+						const require = createRequire(import.meta.url)
+						const jsdomModulePath = require.resolve("jsdom/package.json")
+						const jsdomDir = path.dirname(jsdomModulePath)
+						const jsdomWorkerSource = path.join(jsdomDir, "lib/jsdom/living/xhr/xhr-sync-worker.js")
+
+						if (fs.existsSync(jsdomWorkerSource)) {
+							fs.copyFileSync(jsdomWorkerSource, jsdomWorkerDest)
+							console.log(`[${name}] Copied JSDOM xhr-sync-worker.js to dist from: ${jsdomWorkerSource}`)
+						}
+					} catch (error) {
+						console.error(`[${name}] Failed to copy JSDOM xhr-sync-worker.js:`, error.message)
+					}
 				})
 			},
 		},
