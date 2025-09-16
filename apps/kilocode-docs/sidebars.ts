@@ -94,6 +94,19 @@ const sidebars: SidebarsConfig = {
 		},
 		{
 			type: "category",
+			label: "Kilo for Teams",
+			items: [
+				"teams/getting-started",
+				"teams/roles-permissions",
+				"teams/dashboard",
+				"teams/team-management",
+				"teams/billing",
+				"teams/analytics",
+				"teams/migration",
+			],
+		},
+		{
+			type: "category",
 			label: "Advanced Usage",
 			items: [
 				"advanced-usage/prompt-engineering",
