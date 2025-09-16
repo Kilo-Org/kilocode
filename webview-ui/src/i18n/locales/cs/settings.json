@@ -32,7 +32,8 @@
 		"prompts": "Výzvy",
 		"experimental": "Experimentální",
 		"language": "Jazyk",
-		"about": "O Kilo Code"
+		"about": "O Kilo Code",
+		"autoPurge": "Automatické čištění"
 	},
 	"prompts": {
 		"description": "Nakonfigurujte podpůrné výzvy, které se používají pro rychlé akce, jako je vylepšení výzev, vysvětlení kódu a oprava problémů. Tyto výzvy pomáhají Kilo Code poskytovat lepší pomoc při běžných vývojových úkolech."
@@ -572,6 +573,38 @@
 		"enable": {
 			"label": "Povolit automatické kontrolní body",
 			"description": "Pokud je povoleno, Kilo Code automaticky vytvoří kontrolní body během provádění úkolu, což usnadní kontrolu změn nebo návrat do předchozích stavů. <0>Dozvědět se více</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "Povolit automatické čištění úkolů",
+			"description": "Automaticky mazat staré úkoly pro uvolnění místa na disku a zlepšení výkonu. Úkoly jsou klasifikovány podle typu a stáří pro určení, kdy mají být odstraněny."
+		},
+		"defaultRetention": {
+			"label": "Výchozí doba uchovávání (dny)",
+			"description": "Počet dní pro uchovávání úkolů před tím, než jsou způsobilé k čištění"
+		},
+		"neverPurgeFavorited": {
+			"label": "Nikdy nemazat oblíbené úkoly",
+			"description": "Když je povoleno, oblíbené úkoly nebudou nikdy automaticky smazány bez ohledu na stáří"
+		},
+		"favoritedRetention": {
+			"label": "Uchovávání oblíbených úkolů (dny)",
+			"description": "Počet dní pro uchovávání oblíbených úkolů (platí pouze když je 'Nikdy nemazat oblíbené úkoly' zakázáno)"
+		},
+		"completedRetention": {
+			"label": "Uchovávání dokončených úkolů (dny)",
+			"description": "Počet dní pro uchovávání úkolů, které byly úspěšně dokončeny"
+		},
+		"incompleteRetention": {
+			"label": "Uchovávání nedokončených úkolů (dny)",
+			"description": "Počet dní pro uchovávání úkolů, které nebyly dokončeny (obvykle kratší než dokončené úkoly)"
+		},
+		"lastRun": {
+			"label": "Poslední čištění"
+		},
+		"manualPurge": {
+			"button": "Spustit čištění nyní"
 		}
 	},
 	"display": {

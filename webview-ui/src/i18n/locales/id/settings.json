@@ -25,6 +25,7 @@
 		"autoApprove": "Auto-Approve",
 		"browser": "Browser",
 		"checkpoints": "Checkpoint",
+		"display": "Tampilkan",
 		"notifications": "Notifikasi",
 		"contextManagement": "Konteks",
 		"terminal": "Terminal",
@@ -32,7 +33,7 @@
 		"experimental": "Eksperimental",
 		"language": "Bahasa",
 		"about": "Tentang Kilo Code",
-		"display": "Tampilkan"
+		"autoPurge": "Pembersihan Otomatis"
 	},
 	"prompts": {
 		"description": "Konfigurasi support prompt yang digunakan untuk aksi cepat seperti meningkatkan prompt, menjelaskan kode, dan memperbaiki masalah. Prompt ini membantu Kilo Code memberikan bantuan yang lebih baik untuk tugas pengembangan umum."
@@ -533,6 +534,38 @@
 		"enable": {
 			"label": "Aktifkan checkpoint otomatis",
 			"description": "Ketika diaktifkan, Kilo Code akan secara otomatis membuat checkpoint selama eksekusi tugas, memudahkan untuk meninjau perubahan atau kembali ke state sebelumnya. <0>Pelajari lebih lanjut</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "Aktifkan pembersihan tugas otomatis",
+			"description": "Secara otomatis menghapus tugas lama untuk membebaskan ruang disk dan meningkatkan kinerja. Tugas diklasifikasikan berdasarkan jenis dan usia untuk menentukan kapan harus dihapus."
+		},
+		"defaultRetention": {
+			"label": "Periode retensi default (hari)",
+			"description": "Jumlah hari untuk menyimpan tugas sebelum memenuhi syarat untuk dibersihkan"
+		},
+		"neverPurgeFavorited": {
+			"label": "Jangan pernah hapus tugas favorit",
+			"description": "Ketika diaktifkan, tugas favorit tidak akan pernah dihapus secara otomatis terlepas dari usia"
+		},
+		"favoritedRetention": {
+			"label": "Retensi tugas favorit (hari)",
+			"description": "Jumlah hari untuk menyimpan tugas favorit (hanya berlaku ketika 'Jangan pernah hapus tugas favorit' dinonaktifkan)"
+		},
+		"completedRetention": {
+			"label": "Retensi tugas selesai (hari)",
+			"description": "Jumlah hari untuk menyimpan tugas yang telah berhasil diselesaikan"
+		},
+		"incompleteRetention": {
+			"label": "Retensi tugas tidak lengkap (hari)",
+			"description": "Jumlah hari untuk menyimpan tugas yang tidak diselesaikan (biasanya lebih pendek dari tugas yang selesai)"
+		},
+		"lastRun": {
+			"label": "Pembersihan terakhir"
+		},
+		"manualPurge": {
+			"button": "Jalankan Pembersihan Sekarang"
 		}
 	},
 	"notifications": {

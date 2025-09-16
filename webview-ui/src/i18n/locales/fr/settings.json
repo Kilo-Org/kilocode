@@ -25,6 +25,7 @@
 		"autoApprove": "Auto-approbation",
 		"browser": "Accès ordinateur",
 		"checkpoints": "Points de contrôle",
+		"display": "Afficher",
 		"notifications": "Notifications",
 		"contextManagement": "Contexte",
 		"terminal": "Terminal",
@@ -32,7 +33,7 @@
 		"experimental": "Expérimental",
 		"language": "Langue",
 		"about": "À propos de Kilo Code",
-		"display": "Afficher"
+		"autoPurge": "Auto-nettoyage"
 	},
 	"prompts": {
 		"description": "Configurez les invites de support utilisées pour les actions rapides comme l'amélioration des invites, l'explication du code et la résolution des problèmes. Ces invites aident Kilo Code à fournir une meilleure assistance pour les tâches de développement courantes."
@@ -533,6 +534,38 @@
 		"enable": {
 			"label": "Activer les points de contrôle automatiques",
 			"description": "Lorsque cette option est activée, Kilo Code créera automatiquement des points de contrôle pendant l'exécution des tâches, facilitant la révision des modifications ou le retour à des états antérieurs. <0>En savoir plus</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "Activer le nettoyage automatique des tâches",
+			"description": "Supprimer automatiquement les anciennes tâches pour libérer de l'espace disque et améliorer les performances. Les tâches sont classées par type et âge pour déterminer quand elles doivent être supprimées."
+		},
+		"defaultRetention": {
+			"label": "Période de rétention par défaut (jours)",
+			"description": "Nombre de jours pour conserver les tâches avant qu'elles soient éligibles au nettoyage"
+		},
+		"neverPurgeFavorited": {
+			"label": "Ne jamais supprimer les tâches favorites",
+			"description": "Lorsque activé, les tâches favorites ne seront jamais supprimées automatiquement quel que soit leur âge"
+		},
+		"favoritedRetention": {
+			"label": "Rétention des tâches favorites (jours)",
+			"description": "Nombre de jours pour conserver les tâches favorites (s'applique uniquement lorsque 'Ne jamais supprimer les tâches favorites' est désactivé)"
+		},
+		"completedRetention": {
+			"label": "Rétention des tâches terminées (jours)",
+			"description": "Nombre de jours pour conserver les tâches qui ont été terminées avec succès"
+		},
+		"incompleteRetention": {
+			"label": "Rétention des tâches incomplètes (jours)",
+			"description": "Nombre de jours pour conserver les tâches qui n'ont pas été terminées (généralement plus court que les tâches terminées)"
+		},
+		"lastRun": {
+			"label": "Dernier nettoyage"
+		},
+		"manualPurge": {
+			"button": "Exécuter le nettoyage maintenant"
 		}
 	},
 	"notifications": {

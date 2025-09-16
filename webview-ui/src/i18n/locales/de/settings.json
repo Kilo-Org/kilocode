@@ -25,6 +25,7 @@
 		"autoApprove": "Auto-Genehmigung",
 		"browser": "Computerzugriff",
 		"checkpoints": "Kontrollpunkte",
+		"display": "Anzeigen",
 		"notifications": "Benachrichtigungen",
 		"contextManagement": "Kontext",
 		"terminal": "Terminal",
@@ -32,7 +33,7 @@
 		"experimental": "Experimentell",
 		"language": "Sprache",
 		"about": "Über Kilo Code",
-		"display": "Anzeigen"
+		"autoPurge": "Auto-Bereinigung"
 	},
 	"prompts": {
 		"description": "Konfiguriere Support-Prompts, die für schnelle Aktionen wie das Verbessern von Prompts, das Erklären von Code und das Beheben von Problemen verwendet werden. Diese Prompts helfen Kilo Code dabei, bessere Unterstützung für häufige Entwicklungsaufgaben zu bieten."
@@ -533,6 +534,38 @@
 		"enable": {
 			"label": "Automatische Kontrollpunkte aktivieren",
 			"description": "Wenn aktiviert, erstellt Kilo Code automatisch Kontrollpunkte während der Aufgabenausführung, was die Überprüfung von Änderungen oder die Rückkehr zu früheren Zuständen erleichtert. <0>Mehr erfahren</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "Automatische Aufgabenbereinigung aktivieren",
+			"description": "Alte Aufgaben automatisch löschen, um Speicherplatz freizugeben und die Leistung zu verbessern. Aufgaben werden nach Typ und Alter klassifiziert, um zu bestimmen, wann sie entfernt werden sollen."
+		},
+		"defaultRetention": {
+			"label": "Standard-Aufbewahrungszeit (Tage)",
+			"description": "Anzahl der Tage, die Aufgaben aufbewahrt werden, bevor sie für die Bereinigung berechtigt sind"
+		},
+		"neverPurgeFavorited": {
+			"label": "Favorisierte Aufgaben niemals löschen",
+			"description": "Wenn aktiviert, werden favorisierte Aufgaben niemals automatisch gelöscht, unabhängig vom Alter"
+		},
+		"favoritedRetention": {
+			"label": "Aufbewahrung favorisierter Aufgaben (Tage)",
+			"description": "Anzahl der Tage, die favorisierte Aufgaben aufbewahrt werden (gilt nur, wenn 'Favorisierte Aufgaben niemals löschen' deaktiviert ist)"
+		},
+		"completedRetention": {
+			"label": "Aufbewahrung abgeschlossener Aufgaben (Tage)",
+			"description": "Anzahl der Tage, die erfolgreich abgeschlossene Aufgaben aufbewahrt werden"
+		},
+		"incompleteRetention": {
+			"label": "Aufbewahrung unvollständiger Aufgaben (Tage)",
+			"description": "Anzahl der Tage, die nicht abgeschlossene Aufgaben aufbewahrt werden (normalerweise kürzer als abgeschlossene Aufgaben)"
+		},
+		"lastRun": {
+			"label": "Letzte Bereinigung"
+		},
+		"manualPurge": {
+			"button": "Bereinigung jetzt ausführen"
 		}
 	},
 	"notifications": {

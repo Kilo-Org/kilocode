@@ -25,6 +25,7 @@
 		"autoApprove": "Auto-aprovació",
 		"browser": "Accés a l'ordinador",
 		"checkpoints": "Punts de control",
+		"display": "Mostrar",
 		"notifications": "Notificacions",
 		"contextManagement": "Context",
 		"terminal": "Terminal",
@@ -32,7 +33,7 @@
 		"experimental": "Experimental",
 		"language": "Idioma",
 		"about": "Sobre Kilo Code",
-		"display": "Mostrar"
+		"autoPurge": "Auto-neteja"
 	},
 	"prompts": {
 		"description": "Configura les indicacions de suport utilitzades per a accions ràpides com millorar indicacions, explicar codi i solucionar problemes. Aquestes indicacions ajuden Kilo Code a proporcionar millor assistència per a tasques comunes de desenvolupament."
@@ -533,6 +534,38 @@
 		"enable": {
 			"label": "Habilitar punts de control automàtics",
 			"description": "Quan està habilitat, Kilo Code crearà automàticament punts de control durant l'execució de tasques, facilitant la revisió de canvis o la reversió a estats anteriors. <0>Més informació</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "Activar neteja automàtica de tasques",
+			"description": "Eliminar automàticament tasques antigues per alliberar espai de disc i millorar el rendiment. Les tasques es classifiquen per tipus i edat per determinar quan s'han d'eliminar."
+		},
+		"defaultRetention": {
+			"label": "Període de retenció per defecte (dies)",
+			"description": "Nombre de dies per mantenir les tasques abans que siguin elegibles per a la neteja"
+		},
+		"neverPurgeFavorited": {
+			"label": "Mai eliminar tasques favorites",
+			"description": "Quan està activat, les tasques favorites mai s'eliminaran automàticament independentment de l'edat"
+		},
+		"favoritedRetention": {
+			"label": "Retenció de tasques favorites (dies)",
+			"description": "Nombre de dies per mantenir tasques favorites (només s'aplica quan 'Mai eliminar tasques favorites' està desactivat)"
+		},
+		"completedRetention": {
+			"label": "Retenció de tasques completades (dies)",
+			"description": "Nombre de dies per mantenir tasques que s'han completat amb èxit"
+		},
+		"incompleteRetention": {
+			"label": "Retenció de tasques incompletes (dies)",
+			"description": "Nombre de dies per mantenir tasques que no es van completar (normalment més curt que les tasques completades)"
+		},
+		"lastRun": {
+			"label": "Última neteja"
+		},
+		"manualPurge": {
+			"button": "Executar neteja ara"
 		}
 	},
 	"notifications": {

@@ -25,6 +25,7 @@
 		"autoApprove": "Auto-aprobación",
 		"browser": "Acceso al ordenador",
 		"checkpoints": "Puntos de control",
+		"display": "Mostrar",
 		"notifications": "Notificaciones",
 		"contextManagement": "Contexto",
 		"terminal": "Terminal",
@@ -32,7 +33,7 @@
 		"experimental": "Experimental",
 		"language": "Idioma",
 		"about": "Acerca de Kilo Code",
-		"display": "Mostrar"
+		"autoPurge": "Auto-limpieza"
 	},
 	"prompts": {
 		"description": "Configura indicaciones de soporte que se utilizan para acciones rápidas como mejorar indicaciones, explicar código y solucionar problemas. Estas indicaciones ayudan a Kilo Code a brindar mejor asistencia para tareas comunes de desarrollo."
@@ -533,6 +534,38 @@
 		"enable": {
 			"label": "Habilitar puntos de control automáticos",
 			"description": "Cuando está habilitado, Kilo Code creará automáticamente puntos de control durante la ejecución de tareas, facilitando la revisión de cambios o la reversión a estados anteriores. <0>Más información</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "Habilitar limpieza automática de tareas",
+			"description": "Eliminar automáticamente tareas antiguas para liberar espacio en disco y mejorar el rendimiento. Las tareas se clasifican por tipo y antigüedad para determinar cuándo deben eliminarse."
+		},
+		"defaultRetention": {
+			"label": "Período de retención predeterminado (días)",
+			"description": "Número de días para mantener las tareas antes de que sean elegibles para limpieza"
+		},
+		"neverPurgeFavorited": {
+			"label": "Nunca eliminar tareas favoritas",
+			"description": "Cuando está habilitado, las tareas favoritas nunca se eliminarán automáticamente independientemente de la antigüedad"
+		},
+		"favoritedRetention": {
+			"label": "Retención de tareas favoritas (días)",
+			"description": "Número de días para mantener tareas favoritas (solo aplica cuando 'Nunca eliminar tareas favoritas' está deshabilitado)"
+		},
+		"completedRetention": {
+			"label": "Retención de tareas completadas (días)",
+			"description": "Número de días para mantener tareas que han sido completadas exitosamente"
+		},
+		"incompleteRetention": {
+			"label": "Retención de tareas incompletas (días)",
+			"description": "Número de días para mantener tareas que no fueron completadas (típicamente más corto que las tareas completadas)"
+		},
+		"lastRun": {
+			"label": "Última limpieza"
+		},
+		"manualPurge": {
+			"button": "Ejecutar Limpieza Ahora"
 		}
 	},
 	"notifications": {

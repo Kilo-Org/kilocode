@@ -32,6 +32,10 @@ export enum TelemetryEventName {
 	SWITCH_TO_KILO_CODE_CLICKED = "Switch To Kilo Code Clicked",
 	SUGGESTION_BUTTON_CLICKED = "Suggestion Button Clicked",
 	NO_ASSISTANT_MESSAGES = "No Assistant Messages",
+	AUTO_PURGE_STARTED = "Auto Purge Started",
+	AUTO_PURGE_COMPLETED = "Auto Purge Completed",
+	AUTO_PURGE_FAILED = "Auto Purge Failed",
+	MANUAL_PURGE_TRIGGERED = "Manual Purge Triggered",
 	// kilocode_change end
 
 	TASK_CREATED = "Task Created",
@@ -183,6 +187,10 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 			TelemetryEventName.INLINE_ASSIST_ACCEPT_SUGGESTION, // kilocode_change
 			TelemetryEventName.INLINE_ASSIST_REJECT_SUGGESTION, // kilocode_change
 			TelemetryEventName.WEBVIEW_MEMORY_USAGE, // kilocode_change
+			TelemetryEventName.AUTO_PURGE_STARTED, // kilocode_change
+			TelemetryEventName.AUTO_PURGE_COMPLETED, // kilocode_change
+			TelemetryEventName.AUTO_PURGE_FAILED, // kilocode_change
+			TelemetryEventName.MANUAL_PURGE_TRIGGERED, // kilocode_change
 			// kilocode_change end
 
 			TelemetryEventName.TASK_CREATED,

@@ -25,6 +25,7 @@
 		"autoApprove": "自動承認",
 		"browser": "コンピューターアクセス",
 		"checkpoints": "チェックポイント",
+		"display": "表示",
 		"notifications": "通知",
 		"contextManagement": "コンテキスト",
 		"terminal": "ターミナル",
@@ -32,7 +33,7 @@
 		"experimental": "実験的",
 		"language": "言語",
 		"about": "Kilo Codeについて",
-		"display": "表示"
+		"autoPurge": "自動クリーンアップ"
 	},
 	"prompts": {
 		"description": "プロンプトの強化、コードの説明、問題の修正などの迅速なアクションに使用されるサポートプロンプトを設定します。これらのプロンプトは、Kilo Codeが一般的な開発タスクでより良いサポートを提供するのに役立ちます。"
@@ -533,6 +534,38 @@
 		"enable": {
 			"label": "自動チェックポイントを有効化",
 			"description": "有効にすると、Kilo Codeはタスク実行中に自動的にチェックポイントを作成し、変更の確認や以前の状態への復帰を容易にします。 <0>詳細情報</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "自動タスククリーンアップを有効化",
+			"description": "古いタスクを自動的に削除してディスク容量を解放し、パフォーマンスを向上させます。タスクはタイプと経過時間によって分類され、削除時期が決定されます。"
+		},
+		"defaultRetention": {
+			"label": "デフォルト保持期間（日）",
+			"description": "タスクがクリーンアップの対象となるまでの保持日数"
+		},
+		"neverPurgeFavorited": {
+			"label": "お気に入りタスクを削除しない",
+			"description": "有効にすると、お気に入りタスクは経過時間に関係なく自動削除されません"
+		},
+		"favoritedRetention": {
+			"label": "お気に入りタスク保持期間（日）",
+			"description": "お気に入りタスクの保持日数（「お気に入りタスクを削除しない」が無効の場合のみ適用）"
+		},
+		"completedRetention": {
+			"label": "完了タスク保持期間（日）",
+			"description": "正常に完了したタスクの保持日数"
+		},
+		"incompleteRetention": {
+			"label": "未完了タスク保持期間（日）",
+			"description": "完了しなかったタスクの保持日数（通常は完了タスクより短い）"
+		},
+		"lastRun": {
+			"label": "最後のクリーンアップ"
+		},
+		"manualPurge": {
+			"button": "今すぐクリーンアップを実行"
 		}
 	},
 	"notifications": {

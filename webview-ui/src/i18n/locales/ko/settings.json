@@ -25,6 +25,7 @@
 		"autoApprove": "자동 승인",
 		"browser": "컴퓨터 접근",
 		"checkpoints": "체크포인트",
+		"display": "디스플레이",
 		"notifications": "알림",
 		"contextManagement": "컨텍스트",
 		"terminal": "터미널",
@@ -32,7 +33,7 @@
 		"experimental": "실험적",
 		"language": "언어",
 		"about": "Kilo Code 정보",
-		"display": "디스플레이"
+		"autoPurge": "자동 정리"
 	},
 	"prompts": {
 		"description": "프롬프트 향상, 코드 설명, 문제 해결과 같은 빠른 작업에 사용되는 지원 프롬프트를 구성합니다. 이러한 프롬프트는 Kilo Code가 일반적인 개발 작업에 대해 더 나은 지원을 제공하는 데 도움이 됩니다."
@@ -533,6 +534,38 @@
 		"enable": {
 			"label": "자동 체크포인트 활성화",
 			"description": "활성화되면 Kilo Code는 작업 실행 중에 자동으로 체크포인트를 생성하여 변경 사항을 검토하거나 이전 상태로 되돌리기 쉽게 합니다. <0>더 알아보기</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "자동 작업 정리 활성화",
+			"description": "디스크 공간을 확보하고 성능을 향상시키기 위해 오래된 작업을 자동으로 삭제합니다. 작업은 유형과 경과 시간에 따라 분류되어 제거 시기가 결정됩니다."
+		},
+		"defaultRetention": {
+			"label": "기본 보존 기간 (일)",
+			"description": "작업이 정리 대상이 되기 전까지 보존할 일수"
+		},
+		"neverPurgeFavorited": {
+			"label": "즐겨찾기 작업 삭제 안 함",
+			"description": "활성화하면 즐겨찾기 작업은 경과 시간에 관계없이 자동으로 삭제되지 않습니다"
+		},
+		"favoritedRetention": {
+			"label": "즐겨찾기 작업 보존 (일)",
+			"description": "즐겨찾기 작업을 보존할 일수 ('즐겨찾기 작업 삭제 안 함'이 비활성화된 경우에만 적용)"
+		},
+		"completedRetention": {
+			"label": "완료된 작업 보존 (일)",
+			"description": "성공적으로 완료된 작업을 보존할 일수"
+		},
+		"incompleteRetention": {
+			"label": "미완료 작업 보존 (일)",
+			"description": "완료되지 않은 작업을 보존할 일수 (일반적으로 완료된 작업보다 짧음)"
+		},
+		"lastRun": {
+			"label": "마지막 정리"
+		},
+		"manualPurge": {
+			"button": "지금 정리 실행"
 		}
 	},
 	"notifications": {

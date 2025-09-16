@@ -25,6 +25,7 @@
 		"autoApprove": "Oto-Onay",
 		"browser": "Bilgisayar Erişimi",
 		"checkpoints": "Kontrol Noktaları",
+		"display": "Göster",
 		"notifications": "Bildirimler",
 		"contextManagement": "Bağlam",
 		"terminal": "Terminal",
@@ -32,7 +33,7 @@
 		"experimental": "Deneysel",
 		"language": "Dil",
 		"about": "Kilo Code Hakkında",
-		"display": "Göster"
+		"autoPurge": "Otomatik Temizlik"
 	},
 	"prompts": {
 		"description": "Prompt geliştirme, kod açıklama ve sorun çözme gibi hızlı eylemler için kullanılan destek promptlarını yapılandırın. Bu promptlar, Kilo Code'nun yaygın geliştirme görevleri için daha iyi destek sağlamasına yardımcı olur."
@@ -533,6 +534,38 @@
 		"enable": {
 			"label": "Otomatik kontrol noktalarını etkinleştir",
 			"description": "Etkinleştirildiğinde, Kilo Code görev yürütme sırasında otomatik olarak kontrol noktaları oluşturarak değişiklikleri gözden geçirmeyi veya önceki durumlara dönmeyi kolaylaştırır. <0>Daha fazla bilgi</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "Otomatik görev temizliğini etkinleştir",
+			"description": "Disk alanını boşaltmak ve performansı artırmak için eski görevleri otomatik olarak sil. Görevler ne zaman kaldırılacağını belirlemek için türe ve yaşa göre sınıflandırılır."
+		},
+		"defaultRetention": {
+			"label": "Varsayılan saklama süresi (gün)",
+			"description": "Görevlerin temizlik için uygun hale gelmeden önce saklanacağı gün sayısı"
+		},
+		"neverPurgeFavorited": {
+			"label": "Favori görevleri asla silme",
+			"description": "Etkinleştirildiğinde, favori görevler yaşından bağımsız olarak asla otomatik olarak silinmeyecektir"
+		},
+		"favoritedRetention": {
+			"label": "Favori görev saklama (gün)",
+			"description": "Favori görevlerin saklanacağı gün sayısı ('Favori görevleri asla silme' devre dışı bırakıldığında geçerlidir)"
+		},
+		"completedRetention": {
+			"label": "Tamamlanan görev saklama (gün)",
+			"description": "Başarıyla tamamlanan görevlerin saklanacağı gün sayısı"
+		},
+		"incompleteRetention": {
+			"label": "Tamamlanmamış görev saklama (gün)",
+			"description": "Tamamlanmamış görevlerin saklanacağı gün sayısı (genellikle tamamlanan görevlerden daha kısa)"
+		},
+		"lastRun": {
+			"label": "Son temizlik"
+		},
+		"manualPurge": {
+			"button": "Şimdi Temizlik Çalıştır"
 		}
 	},
 	"notifications": {

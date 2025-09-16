@@ -25,6 +25,7 @@
 		"autoApprove": "自動核准",
 		"browser": "電腦存取",
 		"checkpoints": "檢查點",
+		"display": "顯示",
 		"notifications": "通知",
 		"contextManagement": "上下文",
 		"terminal": "終端機",
@@ -32,7 +33,7 @@
 		"experimental": "實驗性",
 		"language": "語言",
 		"about": "關於 Kilo Code",
-		"display": "顯示"
+		"autoPurge": "自動清理"
 	},
 	"prompts": {
 		"description": "設定用於快速操作的支援提示詞，如增強提示詞、解釋程式碼和修復問題。這些提示詞幫助 Kilo Code 為常見開發工作提供更好的支援。"
@@ -533,6 +534,38 @@
 		"enable": {
 			"label": "啟用自動檢查點",
 			"description": "啟用後，Kilo Code 將在工作執行期間自動建立檢查點，使審核變更或回到早期狀態變得容易。 <0>了解更多</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "啟用自動任務清理",
+			"description": "自動刪除舊任務以釋放磁碟空間並提升效能。任務會依類型和時間分類，以決定何時應該移除。"
+		},
+		"defaultRetention": {
+			"label": "預設保留期間（天）",
+			"description": "任務在符合清理條件前的保留天數"
+		},
+		"neverPurgeFavorited": {
+			"label": "永不刪除我的最愛任務",
+			"description": "啟用後，我的最愛任務無論多久都不會被自動刪除"
+		},
+		"favoritedRetention": {
+			"label": "我的最愛任務保留期（天）",
+			"description": "我的最愛任務的保留天數（僅在「永不刪除我的最愛任務」停用時適用）"
+		},
+		"completedRetention": {
+			"label": "已完成任務保留期（天）",
+			"description": "成功完成的任務保留天數"
+		},
+		"incompleteRetention": {
+			"label": "未完成任務保留期（天）",
+			"description": "未完成任務的保留天數（通常比已完成任務更短）"
+		},
+		"lastRun": {
+			"label": "上次清理"
+		},
+		"manualPurge": {
+			"button": "立即執行清理"
 		}
 	},
 	"notifications": {

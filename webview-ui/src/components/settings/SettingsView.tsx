@@ -218,6 +218,14 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		alwaysAllowUpdateTodoList,
 		followupAutoApproveTimeoutMs,
 		ghostServiceSettings, // kilocode_change
+		// kilocode_change start - Auto-purge settings
+		autoPurgeEnabled,
+		autoPurgeDefaultRetentionDays,
+		autoPurgeFavoritedTaskRetentionDays,
+		autoPurgeCompletedTaskRetentionDays,
+		autoPurgeIncompleteTaskRetentionDays,
+		autoPurgeLastRunTimestamp,
+		// kilocode_change end - Auto-purge settings
 		includeDiagnosticMessages,
 		maxDiagnosticMessages,
 		includeTaskHistoryInEnhance,
@@ -450,6 +458,22 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 				type: "openRouterImageGenerationSelectedModel",
 				text: openRouterImageGenerationSelectedModel,
 			})
+			// kilocode_change start - Auto-purge settings
+			vscode.postMessage({ type: "autoPurgeEnabled", bool: autoPurgeEnabled })
+			vscode.postMessage({ type: "autoPurgeDefaultRetentionDays", value: autoPurgeDefaultRetentionDays })
+			vscode.postMessage({
+				type: "autoPurgeFavoritedTaskRetentionDays",
+				value: autoPurgeFavoritedTaskRetentionDays ?? undefined,
+			})
+			vscode.postMessage({
+				type: "autoPurgeCompletedTaskRetentionDays",
+				value: autoPurgeCompletedTaskRetentionDays,
+			})
+			vscode.postMessage({
+				type: "autoPurgeIncompleteTaskRetentionDays",
+				value: autoPurgeIncompleteTaskRetentionDays,
+			})
+			// kilocode_change end
 			// Update cachedState to match the current state to prevent isChangeDetected from being set back to true
 			setCachedState((prevState) => ({ ...prevState, ...extensionState }))
 			setChangeDetected(false)
@@ -804,6 +828,17 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 						<CheckpointSettings
 							enableCheckpoints={enableCheckpoints}
 							setCachedStateField={setCachedStateField}
+							// kilocode_change start
+							autoPurgeEnabled={autoPurgeEnabled}
+							autoPurgeDefaultRetentionDays={autoPurgeDefaultRetentionDays}
+							autoPurgeFavoritedTaskRetentionDays={autoPurgeFavoritedTaskRetentionDays}
+							autoPurgeCompletedTaskRetentionDays={autoPurgeCompletedTaskRetentionDays}
+							autoPurgeIncompleteTaskRetentionDays={autoPurgeIncompleteTaskRetentionDays}
+							autoPurgeLastRunTimestamp={autoPurgeLastRunTimestamp}
+							onManualPurge={() => {
+								vscode.postMessage({ type: "manualPurge" })
+							}}
+							// kilocode_change end
 						/>
 					)}
 

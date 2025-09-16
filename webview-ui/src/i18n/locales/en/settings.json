@@ -32,7 +32,8 @@
 		"prompts": "Prompts",
 		"experimental": "Experimental",
 		"language": "Language",
-		"about": "About Kilo Code"
+		"about": "About Kilo Code",
+		"autoPurge": "Auto-Cleanup"
 	},
 	"prompts": {
 		"description": "Configure support prompts that are used for quick actions like enhancing prompts, explaining code, and fixing issues. These prompts help Kilo Code provide better assistance for common development tasks."
@@ -532,6 +533,38 @@
 		"enable": {
 			"label": "Enable automatic checkpoints",
 			"description": "When enabled, Kilo Code will automatically create checkpoints during task execution, making it easy to review changes or revert to earlier states. <0>Learn more</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "Enable automatic task cleanup",
+			"description": "Automatically delete old tasks to free up disk space and improve performance. Tasks are classified by type and age to determine when they should be removed."
+		},
+		"defaultRetention": {
+			"label": "Default retention period (days)",
+			"description": "Number of days to keep tasks before they are eligible for cleanup"
+		},
+		"neverPurgeFavorited": {
+			"label": "Never delete favorited tasks",
+			"description": "When enabled, favorited tasks will never be automatically deleted regardless of age"
+		},
+		"favoritedRetention": {
+			"label": "Favorited task retention (days)",
+			"description": "Number of days to keep favorited tasks (only applies when 'Never delete favorited tasks' is disabled)"
+		},
+		"completedRetention": {
+			"label": "Completed task retention (days)",
+			"description": "Number of days to keep tasks that have been completed successfully"
+		},
+		"incompleteRetention": {
+			"label": "Incomplete task retention (days)",
+			"description": "Number of days to keep tasks that were not completed (typically shorter than completed tasks)"
+		},
+		"lastRun": {
+			"label": "Last cleanup"
+		},
+		"manualPurge": {
+			"button": "Run Cleanup Now"
 		}
 	},
 	"display": {

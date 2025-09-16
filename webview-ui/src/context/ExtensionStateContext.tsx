@@ -37,6 +37,20 @@ export interface ExtensionStateContextType extends ExtensionState {
 	systemNotificationsEnabled?: boolean // kilocode_change
 	setSystemNotificationsEnabled: (value: boolean) => void // kilocode_change
 	dismissedNotificationIds: string[] // kilocode_change
+	// kilocode_change start - Auto-purge settings
+	autoPurgeEnabled?: boolean
+	setAutoPurgeEnabled: (value: boolean) => void
+	autoPurgeDefaultRetentionDays?: number
+	setAutoPurgeDefaultRetentionDays: (value: number) => void
+	autoPurgeFavoritedTaskRetentionDays?: number | null
+	setAutoPurgeFavoritedTaskRetentionDays: (value: number | null) => void
+	autoPurgeCompletedTaskRetentionDays?: number
+	setAutoPurgeCompletedTaskRetentionDays: (value: number) => void
+	autoPurgeIncompleteTaskRetentionDays?: number
+	setAutoPurgeIncompleteTaskRetentionDays: (value: number) => void
+	autoPurgeLastRunTimestamp?: number
+	setAutoPurgeLastRunTimestamp: (value: number) => void
+	// kilocode_change end
 	didHydrateState: boolean
 	showWelcome: boolean
 	theme: any
@@ -289,6 +303,14 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		maxDiagnosticMessages: 50,
 		openRouterImageApiKey: "",
 		kiloCodeImageApiKey: "",
+		// kilocode_change start - Auto Purge
+		autoPurgeEnabled: false,
+		autoPurgeDefaultRetentionDays: 30,
+		autoPurgeFavoritedTaskRetentionDays: null,
+		autoPurgeCompletedTaskRetentionDays: 30,
+		autoPurgeIncompleteTaskRetentionDays: 7,
+		autoPurgeLastRunTimestamp: undefined,
+		// kilocode_change end
 		openRouterImageGenerationSelectedModel: "",
 	})
 
@@ -610,6 +632,19 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setMaxDiagnosticMessages: (value) => {
 			setState((prevState) => ({ ...prevState, maxDiagnosticMessages: value }))
 		},
+		// kilocode_change start - Auto-purge setters
+		setAutoPurgeEnabled: (value) => setState((prevState) => ({ ...prevState, autoPurgeEnabled: value })),
+		setAutoPurgeDefaultRetentionDays: (value) =>
+			setState((prevState) => ({ ...prevState, autoPurgeDefaultRetentionDays: value })),
+		setAutoPurgeFavoritedTaskRetentionDays: (value) =>
+			setState((prevState) => ({ ...prevState, autoPurgeFavoritedTaskRetentionDays: value })),
+		setAutoPurgeCompletedTaskRetentionDays: (value) =>
+			setState((prevState) => ({ ...prevState, autoPurgeCompletedTaskRetentionDays: value })),
+		setAutoPurgeIncompleteTaskRetentionDays: (value) =>
+			setState((prevState) => ({ ...prevState, autoPurgeIncompleteTaskRetentionDays: value })),
+		setAutoPurgeLastRunTimestamp: (value) =>
+			setState((prevState) => ({ ...prevState, autoPurgeLastRunTimestamp: value })),
+		// kilocode_change end
 		includeTaskHistoryInEnhance,
 		setIncludeTaskHistoryInEnhance,
 	}

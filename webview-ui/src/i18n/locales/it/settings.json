@@ -25,6 +25,7 @@
 		"autoApprove": "Auto-approvazione",
 		"browser": "Accesso computer",
 		"checkpoints": "Punti di controllo",
+		"display": "Mostra",
 		"notifications": "Notifiche",
 		"contextManagement": "Contesto",
 		"terminal": "Terminal",
@@ -32,7 +33,7 @@
 		"experimental": "Sperimentale",
 		"language": "Lingua",
 		"about": "Informazioni su Kilo Code",
-		"display": "Mostra"
+		"autoPurge": "Auto-pulizia"
 	},
 	"prompts": {
 		"description": "Configura i prompt di supporto utilizzati per azioni rapide come il miglioramento dei prompt, la spiegazione del codice e la risoluzione dei problemi. Questi prompt aiutano Kilo Code a fornire una migliore assistenza per le attività di sviluppo comuni."
@@ -533,6 +534,38 @@
 		"enable": {
 			"label": "Abilita punti di controllo automatici",
 			"description": "Quando abilitato, Kilo Code creerà automaticamente punti di controllo durante l'esecuzione dei compiti, facilitando la revisione delle modifiche o il ritorno a stati precedenti. <0>Scopri di più</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "Abilita pulizia automatica delle attività",
+			"description": "Elimina automaticamente le vecchie attività per liberare spazio su disco e migliorare le prestazioni. Le attività sono classificate per tipo ed età per determinare quando devono essere rimosse."
+		},
+		"defaultRetention": {
+			"label": "Periodo di conservazione predefinito (giorni)",
+			"description": "Numero di giorni per mantenere le attività prima che siano idonee per la pulizia"
+		},
+		"neverPurgeFavorited": {
+			"label": "Non eliminare mai le attività preferite",
+			"description": "Quando abilitato, le attività preferite non verranno mai eliminate automaticamente indipendentemente dall'età"
+		},
+		"favoritedRetention": {
+			"label": "Conservazione attività preferite (giorni)",
+			"description": "Numero di giorni per mantenere le attività preferite (si applica solo quando 'Non eliminare mai le attività preferite' è disabilitato)"
+		},
+		"completedRetention": {
+			"label": "Conservazione attività completate (giorni)",
+			"description": "Numero di giorni per mantenere le attività che sono state completate con successo"
+		},
+		"incompleteRetention": {
+			"label": "Conservazione attività incomplete (giorni)",
+			"description": "Numero di giorni per mantenere le attività che non sono state completate (tipicamente più breve delle attività completate)"
+		},
+		"lastRun": {
+			"label": "Ultima pulizia"
+		},
+		"manualPurge": {
+			"button": "Esegui pulizia ora"
 		}
 	},
 	"notifications": {

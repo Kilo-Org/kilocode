@@ -25,6 +25,7 @@
 		"autoApprove": "Phê duyệt",
 		"browser": "Trình duyệt",
 		"checkpoints": "Điểm kiểm tra",
+		"display": "Hiển thị",
 		"notifications": "Thông báo",
 		"contextManagement": "Ngữ cảnh",
 		"terminal": "Terminal",
@@ -32,7 +33,7 @@
 		"experimental": "Thử nghiệm",
 		"language": "Ngôn ngữ",
 		"about": "Giới thiệu",
-		"display": "Hiển thị"
+		"autoPurge": "Tự động dọn dẹp"
 	},
 	"prompts": {
 		"description": "Cấu hình các lời nhắc hỗ trợ được sử dụng cho các hành động nhanh như cải thiện lời nhắc, giải thích mã và khắc phục sự cố. Những lời nhắc này giúp Kilo Code cung cấp hỗ trợ tốt hơn cho các tác vụ phát triển phổ biến."
@@ -533,6 +534,38 @@
 		"enable": {
 			"label": "Bật điểm kiểm tra tự động",
 			"description": "Khi được bật, Kilo Code sẽ tự động tạo các điểm kiểm tra trong quá trình thực hiện nhiệm vụ, giúp dễ dàng xem lại các thay đổi hoặc quay lại trạng thái trước đó. <0>Tìm hiểu thêm</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "Bật tự động dọn dẹp nhiệm vụ",
+			"description": "Tự động xóa các nhiệm vụ cũ để giải phóng dung lượng đĩa và cải thiện hiệu suất. Các nhiệm vụ được phân loại theo loại và tuổi để xác định thời điểm nên xóa."
+		},
+		"defaultRetention": {
+			"label": "Thời gian lưu giữ mặc định (ngày)",
+			"description": "Số ngày lưu giữ nhiệm vụ trước khi chúng đủ điều kiện để dọn dẹp"
+		},
+		"neverPurgeFavorited": {
+			"label": "Không bao giờ xóa nhiệm vụ yêu thích",
+			"description": "Khi được bật, các nhiệm vụ yêu thích sẽ không bao giờ bị xóa tự động bất kể tuổi"
+		},
+		"favoritedRetention": {
+			"label": "Lưu giữ nhiệm vụ yêu thích (ngày)",
+			"description": "Số ngày lưu giữ nhiệm vụ yêu thích (chỉ áp dụng khi 'Không bao giờ xóa nhiệm vụ yêu thích' bị tắt)"
+		},
+		"completedRetention": {
+			"label": "Lưu giữ nhiệm vụ đã hoàn thành (ngày)",
+			"description": "Số ngày lưu giữ các nhiệm vụ đã được hoàn thành thành công"
+		},
+		"incompleteRetention": {
+			"label": "Lưu giữ nhiệm vụ chưa hoàn thành (ngày)",
+			"description": "Số ngày lưu giữ các nhiệm vụ chưa được hoàn thành (thường ngắn hơn các nhiệm vụ đã hoàn thành)"
+		},
+		"lastRun": {
+			"label": "Lần dọn dẹp cuối"
+		},
+		"manualPurge": {
+			"button": "Chạy dọn dẹp ngay"
 		}
 	},
 	"notifications": {

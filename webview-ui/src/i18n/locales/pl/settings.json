@@ -25,6 +25,7 @@
 		"autoApprove": "Auto-zatwierdzanie",
 		"browser": "Dostęp komputera",
 		"checkpoints": "Punkty kontrolne",
+		"display": "Wyświetl",
 		"notifications": "Powiadomienia",
 		"contextManagement": "Kontekst",
 		"terminal": "Terminal",
@@ -32,7 +33,7 @@
 		"experimental": "Eksperymentalne",
 		"language": "Język",
 		"about": "O Kilo Code",
-		"display": "Wyświetl"
+		"autoPurge": "Auto-czyszczenie"
 	},
 	"prompts": {
 		"description": "Skonfiguruj podpowiedzi wsparcia używane do szybkich działań, takich jak ulepszanie podpowiedzi, wyjaśnianie kodu i rozwiązywanie problemów. Te podpowiedzi pomagają Kilo Code zapewnić lepsze wsparcie dla typowych zadań programistycznych."
@@ -533,6 +534,38 @@
 		"enable": {
 			"label": "Włącz automatyczne punkty kontrolne",
 			"description": "Gdy włączone, Kilo Code automatycznie utworzy punkty kontrolne podczas wykonywania zadań, ułatwiając przeglądanie zmian lub powrót do wcześniejszych stanów. <0>Dowiedz się więcej</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "Włącz automatyczne czyszczenie zadań",
+			"description": "Automatycznie usuwaj stare zadania, aby zwolnić miejsce na dysku i poprawić wydajność. Zadania są klasyfikowane według typu i wieku, aby określić, kiedy powinny zostać usunięte."
+		},
+		"defaultRetention": {
+			"label": "Domyślny okres przechowywania (dni)",
+			"description": "Liczba dni przechowywania zadań przed ich kwalifikacją do czyszczenia"
+		},
+		"neverPurgeFavorited": {
+			"label": "Nigdy nie usuwaj ulubionych zadań",
+			"description": "Gdy włączone, ulubione zadania nigdy nie będą automatycznie usuwane niezależnie od wieku"
+		},
+		"favoritedRetention": {
+			"label": "Przechowywanie ulubionych zadań (dni)",
+			"description": "Liczba dni przechowywania ulubionych zadań (dotyczy tylko gdy 'Nigdy nie usuwaj ulubionych zadań' jest wyłączone)"
+		},
+		"completedRetention": {
+			"label": "Przechowywanie ukończonych zadań (dni)",
+			"description": "Liczba dni przechowywania zadań, które zostały pomyślnie ukończone"
+		},
+		"incompleteRetention": {
+			"label": "Przechowywanie nieukończonych zadań (dni)",
+			"description": "Liczba dni przechowywania zadań, które nie zostały ukończone (zazwyczaj krócej niż ukończone zadania)"
+		},
+		"lastRun": {
+			"label": "Ostatnie czyszczenie"
+		},
+		"manualPurge": {
+			"button": "Uruchom czyszczenie teraz"
 		}
 	},
 	"notifications": {
