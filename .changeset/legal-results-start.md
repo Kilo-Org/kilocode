@@ -2,4 +2,6 @@
 "kilo-code": minor
 ---
 
-Auto-start a task in a given profile/mode using new by creating a .kilocode/launchConfig.json file the workspace before starting VS Code
+You can now auto-start a task in a given profile/mode by creating a `.kilocode/launchConfig.json` before starting VS Code.
+
+See the docs for more information!
