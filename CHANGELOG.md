@@ -1,5 +1,21 @@
 # kilo-code
 
+## [v4.94.0]
+
+- [#2361](https://github.com/Kilo-Org/kilocode/pull/2361) [`9b553d3`](https://github.com/Kilo-Org/kilocode/commit/9b553d32940736fec49dde8de75faba1e0890471) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Jetbrains - Improve Light Theme
+
+- [#2407](https://github.com/Kilo-Org/kilocode/pull/2407) [`aacf662`](https://github.com/Kilo-Org/kilocode/commit/aacf662030e25c64fbc8800bcf514832949f74ec) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Re-add codeblock menu bar for easy copying and syntax highlighting toggling
+
+### Patch Changes
+
+- [#2423](https://github.com/Kilo-Org/kilocode/pull/2423) [`ed12b48`](https://github.com/Kilo-Org/kilocode/commit/ed12b4897bc65df822fa994c13bf325c12055842) Thanks [@mcowger](https://github.com/mcowger)! - Improved the behavior of the Virtual Quota Fallback provider when there are no limits configured.
+
+- [#2412](https://github.com/Kilo-Org/kilocode/pull/2412) [`e7fc4b4`](https://github.com/Kilo-Org/kilocode/commit/e7fc4b473b105ce8a6d92df17f1893f724c158a1) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Change default mode on first start from architect to code and tweak mode selector menu to show all default modes
+
+- [#2402](https://github.com/Kilo-Org/kilocode/pull/2402) [`cb44445`](https://github.com/Kilo-Org/kilocode/commit/cb44445574a43179968656ade28bfce666973f9d) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - The Z.ai provider now supports their coding plan (subscription)
+
+- [#2408](https://github.com/Kilo-Org/kilocode/pull/2408) [`53b387c`](https://github.com/Kilo-Org/kilocode/commit/53b387ce388dbd0c51547934c308d305128f9e5a) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Add support for Qwen3-Next-80B-A3B-Instruct and Qwen3-Next-80B-A3B-Thinking to Chutes provider
+
 ## [v4.93.2]
 
 - [#2401](https://github.com/Kilo-Org/kilocode/pull/2401) [`4c0c434`](https://github.com/Kilo-Org/kilocode/commit/4c0c434fce4bd8ce9c31a396c98e21b62cb300c1) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Commit Message Generation and Enhance Prompt now support billing through Kilo for Teams

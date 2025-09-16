@@ -351,11 +351,15 @@ export const virtualQuotaFallbackProfileDataSchema = z.object({
 const virtualQuotaFallbackSchema = baseProviderSettingsSchema.extend({
 	profiles: z.array(virtualQuotaFallbackProfileDataSchema).optional(),
 })
+
+export const zaiApiLineSchema = z.enum(["international_coding", "international", "china_coding", "china"])
+
+export type ZaiApiLine = z.infer<typeof zaiApiLineSchema>
 // kilocode_change end
 
 const zaiSchema = apiModelIdProviderModelSchema.extend({
 	zaiApiKey: z.string().optional(),
-	zaiApiLine: z.union([z.literal("china"), z.literal("international")]).optional(),
+	zaiApiLine: zaiApiLineSchema.optional(), // kilocode_change
 })
 
 const fireworksSchema = apiModelIdProviderModelSchema.extend({

@@ -13,7 +13,7 @@ import { vscode } from "@src/utils/vscode"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { cn } from "@src/lib/utils"
 import { Button } from "@src/components/ui"
-import CodeBlock from "../common/CodeBlock"
+import CodeBlock from "../kilocode/common/CodeBlock" // kilocode_change
 import { CommandPatternSelector } from "./CommandPatternSelector"
 import { parseCommand } from "../../utils/command-validation"
 import { extractPatternsFromCommand } from "../../utils/command-parser"

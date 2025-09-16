@@ -315,10 +315,9 @@ function fibonacci(n: number): number {
 		})
 
 		it("should handle many small chunks efficiently", () => {
-			const baseChunk = "<change><search><![CDATA[test"
 			const chunks = Array(1000).fill("x")
-
 			const startTime = performance.now()
+
 			for (const chunk of chunks) {
 				parser.processChunk(chunk)
 			}

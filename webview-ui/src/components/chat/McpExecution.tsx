@@ -8,7 +8,7 @@ import { ExtensionMessage, ClineAskUseMcpServer } from "../../../../src/shared/E
 import { safeJsonParse } from "../../../../src/shared/safeJsonParse"
 import { cn } from "@src/lib/utils"
 import { Button } from "@src/components/ui"
-import CodeBlock from "../common/CodeBlock"
+import CodeBlock from "../kilocode/common/CodeBlock" // kilocode_change
 import McpToolRow from "../mcp/McpToolRow"
 import { Markdown } from "./Markdown"
 

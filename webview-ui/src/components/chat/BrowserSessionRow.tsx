@@ -11,7 +11,7 @@ import { BrowserAction, BrowserActionResult, ClineSayBrowserAction } from "@roo/
 import { vscode } from "@src/utils/vscode"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 
-import CodeBlock, { CODE_BLOCK_BG_COLOR } from "../common/CodeBlock"
+import CodeBlock, { CODE_BLOCK_BG_COLOR } from "../kilocode/common/CodeBlock" // kilocode_change
 import { ChatRowContent } from "./ChatRow"
 import { ProgressIndicator } from "./ProgressIndicator"
 

@@ -57,7 +57,7 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 
 	async countTokens(content: Array<Anthropic.Messages.ContentBlockParam>): Promise<number> {
 		try {
-			await this.adjustActiveHandler()
+			await this.adjustActiveHandler("Count Tokens")
 
 			if (!this.activeHandler) {
 				return 0
@@ -77,7 +77,7 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 	): ApiStream {
 		try {
 			await this.initialize()
-			await this.adjustActiveHandler()
+			await this.adjustActiveHandler("Message Call")
 
 			if (!this.activeHandler || !this.activeProfileId) {
 				throw new Error("All configured providers are unavailable or over limits.")
@@ -97,6 +97,20 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 					yield chunk
 				}
 			} catch (error) {
+				// Check if this is a retryable
+				if (this.isRateLimitError(error) || this.isOverloadError(error)) {
+					// Set cooldown for the current provider
+					await this.usage.setCooldown(this.activeProfileId, 10 * 60 * 1000)
+
+					// Switch to a different provider
+					await this.adjustActiveHandler("Retryable Error")
+
+					// Retry the request with the new provider
+					yield* this.createMessage(systemPrompt, messages, metadata)
+					return
+				}
+
+				// For non-rate limit errors, set cooldown and rethrow
 				await this.usage.setCooldown(this.activeProfileId, 10 * 60 * 1000)
 				throw error
 			}
@@ -129,7 +143,7 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 			return
 		}
 
-		console.warn(`Loading ${profiles.length} profiles for VirtualQuotaFallbackHandler`)
+		console.debug(`Loading ${profiles.length} profiles for VirtualQuotaFallbackHandler`)
 
 		const handlerConfigs: HandlerConfig[] = []
 
@@ -141,7 +155,7 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 			}
 
 			try {
-				console.info(
+				console.debug(
 					`Loading profile ${i + 1}/${profiles.length}: ${profile.profileName} (${profile.profileId})`,
 				)
 
@@ -165,7 +179,7 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 						config: profile,
 					})
 
-					console.info(`Successfully loaded profile: ${profile.profileName}`)
+					console.debug(`Successfully loaded profile: ${profile.profileName}`)
 				} else {
 					console.warn(`Failed to create API handler for profile: ${profile.profileName}`)
 				}
@@ -175,12 +189,13 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 		}
 
 		this.handlerConfigs = handlerConfigs
-		console.log(`Loaded ${this.handlerConfigs.length} profiles for VirtualQuotaFallbackHandler`)
+		console.debug(`Loaded ${this.handlerConfigs.length} profiles for VirtualQuotaFallbackHandler`)
 
-		await this.adjustActiveHandler()
+		await this.adjustActiveHandler("Initial Config")
 	}
 
-	async adjustActiveHandler(): Promise<void> {
+	async adjustActiveHandler(reason?: string): Promise<void> {
+		console.debug(`VirtualQuotaFallbackHandler:adjustActiveHandler(): ${reason}`)
 		if (this.handlerConfigs.length === 0) {
 			this.activeHandler = undefined
 			this.activeProfileId = undefined
@@ -193,6 +208,7 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 			if (currentConfig) {
 				const isUnderCooldown = await this.usage.isUnderCooldown(this.activeProfileId)
 				if (!isUnderCooldown && this.underLimit(currentConfig.config)) {
+					console.debug(`VirtualQuotaFallbackHandler:adjustActiveHandler() No Change: ${reason}`)
 					// Current handler is still valid, no need to switch
 					return
 				}
@@ -203,16 +219,18 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 		for (const { handler, profileId, config } of this.handlerConfigs) {
 			const isUnderCooldown = await this.usage.isUnderCooldown(profileId)
 			if (isUnderCooldown) {
+				console.info(`VirtualQuotaFallbackHandler:adjustActiveHandler() UnderCooldown: Profile: ${profileId}`)
 				continue
 			}
 
 			const isUnderLimit = this.underLimit(config)
 			if (!isUnderLimit) {
+				console.debug(`VirtualQuotaFallbackHandler:adjustActiveHandler() isUnderLimit: ${config}`)
 				continue
 			}
 
 			if (this.activeHandler !== handler || this.activeProfileId !== profileId) {
-				await this.notifyHandlerSwitch(profileId)
+				await this.notifyHandlerSwitch(profileId, reason)
 			}
 			this.activeHandler = handler
 			this.activeProfileId = profileId
@@ -221,13 +239,13 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 
 		// No valid handler found
 		if (this.activeProfileId) {
-			await this.notifyHandlerSwitch(undefined)
+			await this.notifyHandlerSwitch(undefined, "No Valid Provider")
 		}
 		this.activeHandler = undefined
 		this.activeProfileId = undefined
 	}
 
-	private async notifyHandlerSwitch(newProfileId: string | undefined): Promise<void> {
+	private async notifyHandlerSwitch(newProfileId: string | undefined, reason?: string): Promise<void> {
 		let message: string
 		if (newProfileId) {
 			try {
@@ -241,7 +259,29 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 		} else {
 			message = "No active provider available. All configured providers are unavailable or over limits."
 		}
+		message = `${message}${reason ? " Reason: " + reason : ""}`
 		vscode.window.showInformationMessage(message)
+	}
+
+	private isRateLimitError(error: any): boolean {
+		// Check if error is a rate limit error (429)
+		return (
+			error?.status === 429 ||
+			error?.response?.status === 429 ||
+			error?.code === 429 ||
+			(error?.message && error.message.toLowerCase().includes("rate limit")) ||
+			(error?.response?.data?.error?.type && error.response.data.error.type.includes("rate_limit"))
+		)
+	}
+	private isOverloadError(error: any): boolean {
+		// Check if error is a 503
+		return (
+			error?.status === 503 ||
+			error?.response?.status === 503 ||
+			error?.code === 503 ||
+			(error?.message && error.message.toLowerCase().includes("503")) ||
+			(error?.response?.data?.error?.type && error.response.data.error.type.includes("503"))
+		)
 	}
 
 	underLimit(profileData: VirtualQuotaFallbackProfile): boolean {

@@ -5,7 +5,7 @@ import { getLanguageFromPath } from "@src/utils/getLanguageFromPath"
 import { removeLeadingNonAlphanumeric } from "@src/utils/removeLeadingNonAlphanumeric"
 
 import { ToolUseBlock, ToolUseBlockHeader } from "./ToolUseBlock"
-import CodeBlock from "./CodeBlock"
+import CodeBlock from "../kilocode/common/CodeBlock" // kilocode_change
 
 interface CodeAccordianProps {
 	path?: string
