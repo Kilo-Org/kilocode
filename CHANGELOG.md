@@ -1,5 +1,19 @@
 # kilo-code
 
+## [v4.95.0]
+
+- [#2437](https://github.com/Kilo-Org/kilocode/pull/2437) [`5591bcb`](https://github.com/Kilo-Org/kilocode/commit/5591bcbb68d2e8e5af49baf45b8614982ab71e2f) Thanks [@hassoncs](https://github.com/hassoncs)! - You can now auto-start a task in a given profile/mode by creating a `.kilocode/launchConfig.json` before starting VS Code.
+
+    See the docs for more information!
+
+- [#2394](https://github.com/Kilo-Org/kilocode/pull/2394) [`94ce7ca`](https://github.com/Kilo-Org/kilocode/commit/94ce7ca174c4569d8e31fe11d075f04631fc42f4) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - The Task History tab is now paginated. This should help with reducing memory consumption.
+
+- [#2417](https://github.com/Kilo-Org/kilocode/pull/2417) [`0d4a18f`](https://github.com/Kilo-Org/kilocode/commit/0d4a18fd0ff5a1948405405644ff30b9cbfa3e43) Thanks [@hassoncs](https://github.com/hassoncs)! - Inline assist / autocomplete suggestions now support colorized code highlighting
+
+### Patch Changes
+
+- [#2421](https://github.com/Kilo-Org/kilocode/pull/2421) [`825f7df`](https://github.com/Kilo-Org/kilocode/commit/825f7df5da5a6bbdbfe26739cd5adfc2836fb7a1) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Improved proxy support in cases where previously the Kilo Code and OpenRouter model lists would remain empty
+
 ## [v4.94.0]
 
 - [#2361](https://github.com/Kilo-Org/kilocode/pull/2361) [`9b553d3`](https://github.com/Kilo-Org/kilocode/commit/9b553d32940736fec49dde8de75faba1e0890471) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Jetbrains - Improve Light Theme

@@ -1344,6 +1344,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						"pr-9",
 						"z-10",
 						"forced-color-adjust-none",
+						"pb-16", // kilocode_change
 					)}
 					style={{
 						color: "transparent",
