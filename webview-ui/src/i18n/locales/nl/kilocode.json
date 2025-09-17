@@ -13,6 +13,11 @@
 		"addCredit": "Krediet toevoegen",
 		"lowBalance": "Uw Kilo Code-saldo is laag"
 	},
+	"pagination": {
+		"previous": "Vorige",
+		"next": "Volgende",
+		"page": "Pagina {{page}} / {{count}}"
+	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 De alfaperiode voor {{model}} is beëindigd! Verander naar een ander model om door te gaan.",
 		"notAllowedForTeam": "⚠️ Je organisatie staat het gebruik van het {{model}} model niet toe. Verander naar een ander model om door te gaan.",

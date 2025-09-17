@@ -49,6 +49,17 @@ Once you've completed the registration process, Kilo Code is automatically confi
 2. **No API Key Management:** Your authentication is handled seamlessly through the registration process
 3. **Model Selection:** Access to frontier models is provided automatically through your Kilo Code account
 
+## Connected Accounts
+
+With the Kilo Code provider, if you sign up with Google you can also connect other sign in accounts - like GitHub - by:
+
+1. Go to your profile
+2. Select [**Connected Accounts**](https://app.kilocode.ai/connected-accounts)
+3. Under "Link a New account" select the type of account to link
+4. Complete the OAuth authorization, and you'll see your connected accounts!
+
+<img src="/docs/img/kilo-provider/connected-accounts.png" alt="Connect account screen" width="600" />
+
 ## Tips and Notes
 
 - **Free Credits:** New users receive free credits to explore Kilo Code's capabilities

@@ -1,7 +1,15 @@
+// kilocode_change - new file Support JSON-based launch configurations
 import * as vscode from "vscode"
 
+interface LaunchConfig {
+	prompt: string
+	profile?: string
+	mode?: string
+}
+
 /**
- * Checks for a file in .kilocode/launchPrompt.md and runs it immediately if it exists.
+ * Checks for launch configuration and runs the task immediately if found.
+ * Reads .kilocode/launchConfig.json from the workspace root.
  */
 export async function checkAndRunAutoLaunchingTask(context: vscode.ExtensionContext): Promise<void> {
 	if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
@@ -9,21 +17,22 @@ export async function checkAndRunAutoLaunchingTask(context: vscode.ExtensionCont
 	}
 
 	const workspaceFolderUri = vscode.workspace.workspaceFolders[0].uri
-	const promptFilePath = vscode.Uri.joinPath(workspaceFolderUri, ".kilocode", "launchPrompt.md")
+	const configPath = vscode.Uri.joinPath(workspaceFolderUri, ".kilocode", "launchConfig.json")
 
 	try {
-		const fileContent = await vscode.workspace.fs.readFile(promptFilePath)
-		const prompt = Buffer.from(fileContent).toString("utf8")
-		console.log(`🚀 Auto-launching task from '${promptFilePath}' with content:\n${prompt}`)
+		const configContent = await vscode.workspace.fs.readFile(configPath)
+		const configText = Buffer.from(configContent).toString("utf8")
+		const config = JSON.parse(configText) as LaunchConfig
+		console.log(`🚀 Auto-launching task from '${configPath}' with config:\n${JSON.stringify(config)}`)
 
 		await new Promise((resolve) => setTimeout(resolve, 500))
 		await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
 
-		vscode.commands.executeCommand("kilo-code.newTask", { prompt })
+		vscode.commands.executeCommand("kilo-code.newTask", config) // Pass the full config to newTask
 	} catch (error) {
 		if (error instanceof vscode.FileSystemError && error.code === "FileNotFound") {
-			return // File not found, which is expected if no launchPrompt.md exists
+			return // No config file found
 		}
-		console.error(`Error running .kilocode/launchPrompt.md: ${error}`)
+		console.error(`Error reading launch config:`, error)
 	}
 }

@@ -205,7 +205,8 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		apiConfiguration: {},
 		version: "",
 		clineMessages: [],
-		taskHistory: [],
+		taskHistoryFullLength: 0, // kilocode_change
+		taskHistoryVersion: 0, // kilocode_change
 		shouldShowAnnouncement: false,
 		allowedCommands: [],
 		deniedCommands: [],
