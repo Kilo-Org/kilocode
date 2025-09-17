@@ -13,6 +13,11 @@
 		"addCredit": "Přidat kredit",
 		"lowBalance": "Tvůj Kilo Code zůstatek je nízký"
 	},
+	"pagination": {
+		"previous": "Předchozí",
+		"next": "Další",
+		"page": "Stránka {{page}} / {{count}}"
+	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 Alfa období pro {{model}} skončilo! Změň na jiný model pro pokračování.",
 		"notAllowedForTeam": "⚠️ Tvoje organizace nepovoluje použití modelu {{model}}. Změň na jiný model pro pokračování.",

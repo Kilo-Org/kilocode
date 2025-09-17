@@ -40,7 +40,7 @@ vi.mock("../../../utils/fs", () => ({
 }))
 
 import { SYSTEM_PROMPT } from "../system"
-import { defaultModeSlug, modes } from "../../../shared/modes"
+import { defaultModeSlug, modes, getModeBySlug } from "../../../shared/modes"
 import * as vscode from "vscode"
 import * as fs from "fs/promises"
 import { toPosix } from "./utils"
@@ -148,7 +148,8 @@ describe("File-Based Custom System Prompt", () => {
 		)
 
 		// Should contain role definition and file-based system prompt
-		expect(prompt).toContain(modes[0].roleDefinition)
+		const expectedMode = getModeBySlug(defaultModeSlug) || modes[0]
+		expect(prompt).toContain(expectedMode.roleDefinition)
 		expect(prompt).toContain(fileCustomSystemPrompt)
 
 		// Should not contain any of the default sections

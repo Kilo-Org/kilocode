@@ -21,7 +21,7 @@ import { getLanguageFromPath } from "@src/utils/getLanguageFromPath"
 import { ToolUseBlock, ToolUseBlockHeader } from "../common/ToolUseBlock"
 import UpdateTodoListToolBlock from "./UpdateTodoListToolBlock"
 import CodeAccordian from "../common/CodeAccordian"
-import CodeBlock from "../common/CodeBlock"
+import CodeBlock from "../kilocode/common/CodeBlock" // kilocode_change
 import MarkdownBlock from "../common/MarkdownBlock"
 import { ReasoningBlock } from "./ReasoningBlock"
 // import Thumbnails from "../common/Thumbnails" // kilocode_change

@@ -13,6 +13,11 @@
 		"addCredit": "Afegir crèdit",
 		"lowBalance": "El teu saldo de Kilo Code és baix"
 	},
+	"pagination": {
+		"previous": "Anterior",
+		"next": "Següent",
+		"page": "Pàgina {{page}} / {{count}}"
+	},
 	"pricing": {
 		"costUnknown": "cost desconegut",
 		"costUnknownDescription": "El proveïdor de l'API no va proporcionar cap dada de cost o la sol·licitud va ser cancel·lada.",

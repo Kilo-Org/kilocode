@@ -45,7 +45,7 @@ import { useAutoApprovalToggles } from "@src/hooks/useAutoApprovalToggles"
 import TelemetryBanner from "../common/TelemetryBanner" // kilocode_change: deactivated for now
 // import VersionIndicator from "../common/VersionIndicator" // kilocode_change: unused
 import { OrganizationSelector } from "../kilocode/common/OrganizationSelector"
-import { useTaskSearch } from "../history/useTaskSearch"
+// import { useTaskSearch } from "../history/useTaskSearch" // kilocode_change: unused
 import HistoryPreview from "../history/HistoryPreview"
 import Announcement from "./Announcement"
 import BrowserSessionRow from "./BrowserSessionRow"
@@ -98,7 +98,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		clineMessages: messages,
 		currentTaskItem,
 		currentTaskTodos,
-		taskHistory,
+		taskHistoryFullLength, // kilocode_change
+		taskHistoryVersion, // kilocode_change
 		apiConfiguration,
 		organizationAllowList,
 		mcpServers,
@@ -138,7 +139,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		messagesRef.current = messages
 	}, [messages])
 
-	const { tasks } = useTaskSearch()
+	// const { tasks } = useTaskSearch() // kilocode_change
 
 	// Initialize expanded state based on the persisted setting (default to expanded if undefined)
 	const [isExpanded, setIsExpanded] = useState(
@@ -1951,10 +1952,10 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			) : (
 				<div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-4 relative">
 					{/* Moved Task Bar Header Here */}
-					{tasks.length !== 0 && (
+					{taskHistoryFullLength !== 0 && (
 						<div className="flex text-vscode-descriptionForeground w-full mx-auto px-5 pt-3">
 							<div className="flex items-center gap-1 cursor-pointer" onClick={toggleExpanded}>
-								{tasks.length < 10 && (
+								{taskHistoryFullLength < 10 && (
 									<span className={`font-medium text-xs `}>{t("history:recentTasks")}</span>
 								)}
 								<span
@@ -1981,7 +1982,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						{telemetrySetting === "unset" && <TelemetryBanner />}
 						{/* kilocode_change start: KilocodeNotifications + Layout fixes */}
 						{telemetrySetting !== "unset" && (
-							<div className={tasks.length === 0 ? "mt-10" : undefined}>
+							<div className={taskHistoryFullLength === 0 ? "mt-10" : undefined}>
 								<KilocodeNotifications />
 							</div>
 						)}
@@ -2002,12 +2003,14 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 									}}
 								/>
 							</p>
-							{taskHistory.length === 0 && <IdeaSuggestionsBox />} {/* kilocode_change */}
+							{taskHistoryFullLength === 0 && <IdeaSuggestionsBox />} {/* kilocode_change */}
 							{/*<div className="mb-2.5">
 								{cloudIsAuthenticated || taskHistory.length < 4 ? <RooTips /> : <RooCloudCTA />}
 							</div> kilocode_change: do not show */}
 							{/* Show the task history preview if expanded and tasks exist */}
-							{taskHistory.length > 0 && isExpanded && <HistoryPreview />}
+							{taskHistoryFullLength > 0 && isExpanded && (
+								<HistoryPreview taskHistoryVersion={taskHistoryVersion} />
+							)}
 							{/* kilocode_change start: KilocodeNotifications + Layout fixes */}
 						</div>
 						{/* kilocode_change end */}

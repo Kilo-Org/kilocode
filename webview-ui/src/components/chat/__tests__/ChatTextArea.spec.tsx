@@ -4,6 +4,8 @@ import { render, fireEvent, screen } from "@src/utils/test-utils"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { vscode } from "@src/utils/vscode"
 import * as pathMentions from "@src/utils/path-mentions"
+import { useQuery } from "@tanstack/react-query" // kilocode_change
+import { HistoryItem } from "@roo-code/types" // kilocode_change
 
 import { ChatTextArea } from "../ChatTextArea"
 
@@ -32,6 +34,14 @@ const mockConvertToMentionPath = pathMentions.convertToMentionPath as ReturnType
 
 // Mock ExtensionStateContext
 vi.mock("@src/context/ExtensionStateContext")
+
+// kilocode_change start
+vi.mock("@tanstack/react-query")
+
+function kiloCodeSetUpUseQueryMock(historyItems: Partial<HistoryItem>[]) {
+	;(useQuery as ReturnType<typeof vi.fn>).mockReturnValue({ data: { historyItems } })
+}
+// kilocode_change end
 
 vi.mock("@src/components/ui/hooks/useSelectedModel", () => ({
 	useSelectedModel: vi.fn(() => ({
@@ -79,6 +89,8 @@ describe("ChatTextArea", () => {
 			taskHistory: [],
 			cwd: "/test/workspace",
 		})
+
+		kiloCodeSetUpUseQueryMock([])
 	})
 
 	describe("enhance prompt button", () => {
@@ -759,6 +771,8 @@ describe("ChatTextArea", () => {
 					cwd: "/test/workspace",
 				})
 
+				kiloCodeSetUpUseQueryMock(mockTaskHistory)
+
 				const setInputValue = vi.fn()
 				const { container } = render(
 					<ChatTextArea {...defaultProps} setInputValue={setInputValue} inputValue="" />,
@@ -795,6 +809,11 @@ describe("ChatTextArea", () => {
 					clineMessages: [],
 					cwd: "/test/workspace",
 				})
+
+				kiloCodeSetUpUseQueryMock([
+					{ task: "Task 1", workspace: "/test/workspace" },
+					{ task: "Task 2", workspace: "/test/workspace" },
+				])
 
 				rerender(<ChatTextArea {...defaultProps} setInputValue={setInputValue} inputValue="" />)
 

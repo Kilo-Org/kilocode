@@ -13,6 +13,11 @@
 		"addCredit": "Thêm tín dụng",
 		"lowBalance": "Số dư Kilo Code của bạn thấp"
 	},
+	"pagination": {
+		"previous": "Trước",
+		"next": "Tiếp",
+		"page": "Trang {{page}} / {{count}}"
+	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 Giai đoạn alpha cho {{model}} đã kết thúc! Chuyển sang mô hình khác để tiếp tục.",
 		"notAllowedForTeam": "⚠️ Tổ chức của bạn không cho phép sử dụng mô hình {{model}}. Chuyển sang mô hình khác để tiếp tục.",

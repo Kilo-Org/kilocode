@@ -1,4 +1,4 @@
-import axios, { type RawAxiosRequestHeaders /*kilocode_change*/ } from "axios"
+import axios from "axios"
 import { z } from "zod"
 
 import {
@@ -99,20 +99,27 @@ type OpenRouterModelEndpointsResponse = z.infer<typeof openRouterModelEndpointsR
  */
 
 export async function getOpenRouterModels(
-	options?: ApiHandlerOptions & { headers?: RawAxiosRequestHeaders }, // kilocode_change: added headers
+	options?: ApiHandlerOptions & { headers?: Record<string, string> }, // kilocode_change: added headers
 ): Promise<Record<string, ModelInfo>> {
 	const models: Record<string, ModelInfo> = {}
 	const baseURL = options?.openRouterBaseUrl || "https://openrouter.ai/api/v1"
 
 	try {
-		const response = await axios.get<OpenRouterModelsResponse>(`${baseURL}/models`, {
-			headers: { ...DEFAULT_HEADERS, ...(options?.headers ?? {}) }, // kilocode_change: added headers
+		// kilocode_change: use fetch, added headers
+		const response = await fetch(`${baseURL}/models`, {
+			headers: { ...DEFAULT_HEADERS, ...(options?.headers ?? {}) },
 		})
-		const result = openRouterModelsResponseSchema.safeParse(response.data)
-		const data = result.success ? result.data.data : response.data.data
+		const json = await response.json()
+		const result = openRouterModelsResponseSchema.safeParse(json)
+		const data = result.success ? result.data.data : json.data
+		// kilocode_change end
 
 		if (!result.success) {
-			throw new Error("OpenRouter models response is invalid: " + result.error.format()) // kilocode_change
+			// kilocode_change start
+			throw new Error(
+				"OpenRouter models response is invalid: " + JSON.stringify(result.error.format(), undefined, 2),
+			)
+			// kilocode_change end
 		}
 
 		for (const model of data) {

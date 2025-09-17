@@ -13,6 +13,11 @@
 		"addCredit": "크레딧 추가",
 		"lowBalance": "Kilo Code 잔액이 부족합니다"
 	},
+	"pagination": {
+		"previous": "이전",
+		"next": "다음",
+		"page": "{{page}} / {{count}} 페이지"
+	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 {{model}}의 알파 기간이 종료되었습니다! 계속하려면 다른 모델로 변경하세요.",
 		"notAllowedForTeam": "⚠️ 귀하의 조직에서는 {{model}} 모델 사용을 허용하지 않습니다. 계속하려면 다른 모델로 변경하세요.",

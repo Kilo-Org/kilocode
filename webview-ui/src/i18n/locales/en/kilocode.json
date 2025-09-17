@@ -13,6 +13,11 @@
 		"addCredit": "Add Credit",
 		"lowBalance": "Your Kilo Code balance is low"
 	},
+	"pagination": {
+		"previous": "Previous",
+		"next": "Next",
+		"page": "Page {{page}} / {{count}}"
+	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 The alpha period for {{model}} has ended! Change to a different model to continue.",
 		"notAllowedForTeam": "⚠️ Your organization does not allow use of the {{model}} model. Change to a different model to continue.",
