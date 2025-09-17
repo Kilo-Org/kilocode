@@ -58,7 +58,43 @@
 		"generationFailed": "Kilo: Failed to generate commit message: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: Generating message using unstaged changes",
 		"activationFailed": "Kilo: Failed to activate message generator: {{error}}",
-		"providerRegistered": "Kilo: Commit message provider registered"
+		"providerRegistered": "Kilo: Commit message provider registered",
+		"errors": {
+			"connectionFailed": "Failed to connect to Kilo Code extension",
+			"timeout": "Request timed out after 30 seconds",
+			"invalidResponse": "Invalid response format received from extension",
+			"missingMessage": "No commit message received from extension",
+			"noChanges": "No changes found to commit",
+			"noWorkspacePath": "Could not determine workspace path for Git repository",
+			"workspaceNotFound": "Could not determine workspace path for Git repository",
+			"processingError": "Error processing commit message generation: {{error}}"
+		},
+		"error": {
+			"title": "Error",
+			"workspacePathNotFound": "Could not determine workspace path for Git repository",
+			"generationFailed": "Failed to generate commit message: {{error}}",
+			"processingFailed": "Error processing commit message generation: {{error}}",
+			"unknown": "Unknown error"
+		},
+		"dialogs": {
+			"info": "AI Commit Message",
+			"error": "Error",
+			"success": "Success",
+			"title": "AI Commit Message"
+		},
+		"progress": {
+			"title": "Generating AI Commit Message",
+			"analyzing": "Analyzing code changes...",
+			"connecting": "Connecting to AI service...",
+			"generating": "Generating commit message..."
+		},
+		"ui": {
+			"generateButton": "Generate AI Message",
+			"generateButtonTooltip": "Generate commit message using AI analysis of code changes",
+			"generatingButton": "Generating...",
+			"autoGenerateCheckbox": "Auto-generate if empty",
+			"autoGenerateCheckboxTooltip": "Automatically generate commit message if field is empty when committing"
+		}
 	},
 	"ghost": {
 		"statusBar": {
