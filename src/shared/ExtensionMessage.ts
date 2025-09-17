@@ -147,6 +147,7 @@ export interface ExtensionMessage {
 		| "showEditMessageDialog"
 		| "kilocodeNotificationsResponse" // kilocode_change
 		| "usageDataResponse" // kilocode_change
+		| "keybindingsResponse" // kilocode_change
 		| "commands"
 		| "insertTextIntoTextarea"
 	text?: string
@@ -222,6 +223,7 @@ export interface ExtensionMessage {
 		message: string
 	} // kilocode_change
 	url?: string // kilocode_change
+	keybindings?: Record<string, string> // kilocode_change
 	setting?: string
 	value?: any
 	hasContent?: boolean // For checkRulesDirectoryResult

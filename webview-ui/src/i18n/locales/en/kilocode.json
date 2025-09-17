@@ -221,11 +221,11 @@
 			},
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Quick Task",
-				"description": "Only need a quick change? Select some code (or don't!) and hit Cmd+I. Describe your goal in plain English (\"create a React component with these props\", \"add error handling to this function\"), and get multiple, ready-to-use suggestions right in your editor. <DocsLink>See shortcut</DocsLink>"
+				"description": "Only need a quick change? Select some code (or don't!) and hit <DocsLink>{{keybinding}}</DocsLink>. Describe your goal in plain English (\"create a React component with these props\", \"add error handling to this function\"), and get multiple, ready-to-use suggestions right in your editor."
 			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Manual Autocomplete",
-				"description": "Need a quick fix, completion, or refactor? Kilo will use the surrounding context to offer immediate improvements, keeping you in the flow. <DocsLink>See shortcut</DocsLink>"
+				"description": "Need a quick fix, completion, or refactor? Hit <DocsLink>{{keybinding}}</DocsLink> to make Kilo offer immediate improvements using the surrounding context, keeping you in the flow."
 			},
 			"enableCustomProvider": {
 				"label": "Use custom provider",
