@@ -10,7 +10,6 @@ export type KeybindingEntry = {
 	mac?: string
 }
 
-// Module-level constants for performance (created once, not per call)
 const MAC_MODIFIERS: Record<string, string> = {
 	cmd: "Cmd",
 	meta: "Cmd",
@@ -96,20 +95,17 @@ export async function getKeybindingForCommand(commandId: string): Promise<string
 export function getDefaultKeybindingForCommand(commandId: string): string {
 	const keybindings = packageJson.contributes?.keybindings as KeybindingEntry[] | undefined
 	const binding = keybindings?.find((kb) => kb.command === commandId)
-	console.log("🚀 ~ getDefaultKeybindingForCommand ~ binding:", binding)
 	if (!binding) {
 		throw new Error(`Command '${commandId}' not found in package.json keybindings`)
 	}
 
 	// Use platform-specific key if available, otherwise fall back to generic key
 	const rawKey = process.platform === "darwin" ? binding.mac || binding.key : binding.key
-	console.log("🚀 ~ getDefaultKeybindingForCommand ~ rawKey:", rawKey)
 	if (!rawKey) {
 		throw new Error(`No keybinding defined for command '${commandId}' on platform '${process.platform}'`)
 	}
 
 	const pretty = prettyPrintKey(rawKey, process.platform)
-	console.log("🚀 ~ getDefaultKeybindingForCommand ~ pretty:", pretty)
 	return pretty
 }
 

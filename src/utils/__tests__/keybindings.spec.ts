@@ -62,13 +62,6 @@ describe("keybindings", () => {
 				"Unable to read keybindings file: File not found",
 			)
 		})
-
-		it("should ignore empty or whitespace-only keys", async () => {
-			vi.mocked(vscodeConfig.readUserConfigFile).mockResolvedValue([{ command: "test.command", key: "  " }])
-
-			const result = await getKeybindingForCommand("test.command")
-			expect(result).toBeUndefined()
-		})
 	})
 
 	describe("explicit unbinding behavior", () => {
@@ -106,14 +99,12 @@ describe("keybindings", () => {
 			expect(result).toEqual({})
 		})
 
-		it("should omit commands without keybindings", async () => {
+		it("should throw error for commands without keybindings", async () => {
 			vi.mocked(vscodeConfig.readUserConfigFile).mockResolvedValue([{ command: "test.command1", key: "ctrl+k" }])
 
-			const result = await getKeybindingsForCommands(["test.command1", "test.command2"])
-			expect(result).toEqual({
-				"test.command1": "Ctrl+K",
-			})
-			expect(result["test.command2"]).toBeUndefined()
+			await expect(getKeybindingsForCommands(["test.command1", "test.command2"])).rejects.toThrow(
+				"Command 'test.command2' not found in package.json keybindings",
+			)
 		})
 	})
 

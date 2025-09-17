@@ -1,9 +1,11 @@
 // kilocode_change - new file
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { vscode } from "@src/utils/vscode"
+import { useAppTranslation } from "@/i18n/TranslationContext"
 
 export function useKeybindings(commandIds: string[]): Record<string, string> {
 	const [keybindings, setKeybindings] = useState<Record<string, string>>({})
+	const { t } = useAppTranslation()
 
 	useEffect(() => {
 		vscode.postMessage({ type: "getKeybindings", commandIds })
@@ -19,5 +21,15 @@ export function useKeybindings(commandIds: string[]): Record<string, string> {
 		return () => window.removeEventListener("message", handleMessage)
 	}, [commandIds])
 
-	return keybindings
+	// Apply fallback for missing keybindings
+	const keybindingsWithFallback = useMemo(() => {
+		const result: Record<string, string> = {}
+		const fallbackText = t("kilocode:ghost.settings.keybindingNotFound")
+		for (const commandId of commandIds) {
+			result[commandId] = keybindings[commandId] || fallbackText
+		}
+		return result
+	}, [keybindings, commandIds, t])
+
+	return keybindingsWithFallback
 }

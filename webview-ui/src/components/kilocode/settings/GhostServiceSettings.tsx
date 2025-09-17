@@ -22,6 +22,7 @@ import {
 } from "@src/components/ui"
 import { vscode } from "@/utils/vscode"
 import { ControlledCheckbox } from "../common/ControlledCheckbox"
+import { useKeybindings } from "@/hooks/useKeybindings"
 
 type GhostServiceSettingsViewProps = HTMLAttributes<HTMLDivElement> & {
 	ghostServiceSettings: GhostServiceSettings
@@ -45,6 +46,7 @@ export const GhostServiceSettingsView = ({
 		enableCustomProvider,
 	} = ghostServiceSettings || {}
 	const { listApiConfigMeta } = useExtensionState()
+	const keybindings = useKeybindings(["kilo-code.ghost.promptCodeSuggestion", "kilo-code.ghost.generateSuggestions"])
 
 	const onEnableAutoTriggerChange = (newValue: boolean) => {
 		setCachedStateField("ghostServiceSettings", {
@@ -150,7 +152,9 @@ export const GhostServiceSettingsView = ({
 							checked={enableQuickInlineTaskKeybinding || false}
 							onChange={onEnableQuickInlineTaskKeybindingChange}>
 							<span className="font-medium">
-								{t("kilocode:ghost.settings.enableQuickInlineTaskKeybinding.label")}
+								{t("kilocode:ghost.settings.enableQuickInlineTaskKeybinding.label", {
+									keybinding: keybindings["kilo-code.ghost.promptCodeSuggestion"],
+								})}
 							</span>
 						</ControlledCheckbox>
 						<div className="text-vscode-descriptionForeground text-sm mt-1">
@@ -163,7 +167,7 @@ export const GhostServiceSettingsView = ({
 											onClick={() =>
 												openGlobalKeybindings("kilo-code.ghost.promptCodeSuggestion")
 											}
-											className="text-vscode-textLink hover:text-vscode-textLinkActive cursor-pointer"></a>
+											className="text-[var(--vscode-list-highlightForeground)] hover:underline cursor-pointer"></a>
 									),
 								}}
 							/>
@@ -174,18 +178,21 @@ export const GhostServiceSettingsView = ({
 							checked={enableSmartInlineTaskKeybinding || false}
 							onChange={onEnableSmartInlineTaskKeybindingChange}>
 							<span className="font-medium">
-								{t("kilocode:ghost.settings.enableSmartInlineTaskKeybinding.label")}
+								{t("kilocode:ghost.settings.enableSmartInlineTaskKeybinding.label", {
+									keybinding: keybindings["kilo-code.ghost.generateSuggestions"],
+								})}
 							</span>
 						</ControlledCheckbox>
 						<div className="text-vscode-descriptionForeground text-sm mt-1">
 							<Trans
 								i18nKey="kilocode:ghost.settings.enableSmartInlineTaskKeybinding.description"
+								values={{ keybinding: keybindings["kilo-code.ghost.generateSuggestions"] }}
 								components={{
 									DocsLink: (
 										<a
 											href="#"
 											onClick={() => openGlobalKeybindings("kilo-code.ghost.generateSuggestions")}
-											className="text-vscode-textLink hover:text-vscode-textLinkActive cursor-pointer"></a>
+											className="text-[var(--vscode-list-highlightForeground)] hover:underline cursor-pointer"></a>
 									),
 								}}
 							/>

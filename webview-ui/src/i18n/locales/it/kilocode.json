@@ -215,11 +215,11 @@
 				"description": "Il ritardo in secondi prima che Kilo Code attivi Autocomplete dopo che hai smesso di digitare. Un ritardo più breve significa suggerimenti più veloci, ma può essere più intensivo in termini di risorse."
 			},
 			"enableQuickInlineTaskKeybinding": {
-				"label": "Attività Rapida (scorciatoia tastiera)",
+				"label": "Attività Rapida ({{keybinding}})",
 				"description": "Hai bisogno solo di una modifica rapida? Seleziona del codice (o no!) e premi Cmd+I. Descrivi il tuo obiettivo in italiano semplice (\"crea un componente React con queste props\", \"aggiungi gestione errori a questa funzione\"), e ottieni più suggerimenti pronti all'uso direttamente nel tuo editor. <DocsLink>Modifica scorciatoia</DocsLink>"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Autocomplete Manuale (scorciatoia tastiera)",
+				"label": "Completamento Automatico Manuale ({{keybinding}})",
 				"description": "Hai bisogno di una correzione rapida, completamento o refactoring? Kilo userà il contesto circostante per offrire miglioramenti immediati, mantenendoti nel flusso. <DocsLink>Modifica scorciatoia</DocsLink>"
 			},
 			"enableCustomProvider": {
@@ -231,7 +231,8 @@
 				"label": "Configurazione API",
 				"current": "Usa configurazione API attualmente selezionata",
 				"description": "Seleziona una configurazione API da usare per i prompt Autocomplete, o usa semplicemente quella attualmente selezionata"
-			}
+			},
+			"keybindingNotFound": "non trovato"
 		}
 	},
 	"virtualProvider": {

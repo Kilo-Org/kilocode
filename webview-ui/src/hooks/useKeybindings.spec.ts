@@ -14,10 +14,9 @@ describe("useKeybindings", () => {
 		vi.clearAllMocks()
 	})
 
-	it("should initialize with empty keybindings object", () => {
+	it("should gracefully handle missing keybindings", () => {
 		const { result } = renderHook(() => useKeybindings(["test.command"]))
-
-		expect(result.current).toEqual({})
+		expect(result.current).toEqual({ "test.command": "kilocode:ghost.settings.keybindingNotFound" })
 	})
 
 	it("should send getKeybindings message on mount", () => {
