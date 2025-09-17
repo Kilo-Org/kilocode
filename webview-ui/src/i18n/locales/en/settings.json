@@ -788,7 +788,7 @@
 		},
 		"RUN_SLASH_COMMAND": {
 			"name": "Enable model-initiated slash commands",
-			"description": "When enabled, Roo can run your slash commands to execute workflows."
+			"description": "When enabled, Kilo Code can run your slash commands to execute workflows."
 		}
 	},
 	"promptCaching": {
