@@ -239,6 +239,7 @@ export interface WebviewMessage {
 		| "fixMermaidSyntax" // kilocode_change
 		| "mermaidFixResponse" // kilocode_change
 		| "openGlobalKeybindings" // kilocode_change
+		| "getKeybindings" // kilocode_change
 		| "openExternal"
 		| "filterMarketplaceItems"
 		| "mcpButtonClicked"
@@ -308,6 +309,7 @@ export interface WebviewMessage {
 	filename?: string // kilocode_change
 	ruleType?: string // kilocode_change
 	notificationId?: string // kilocode_change
+	commandIds?: string[] // kilocode_change: For getKeybindings
 	// kilocode_change end
 	serverName?: string
 	toolName?: string

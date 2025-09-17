@@ -199,7 +199,6 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"autoTrigger": "自動觸發",
 			"triggers": "觸發器",
 			"keybindingDescription": "Autocomplete 功能可以透過指令觸發。你可以在<DocsLink>這裡設定鍵盤快速鍵</DocsLink>。",
 			"enableAutoTrigger": {
@@ -211,11 +210,11 @@
 				"description": "你停止輸入後 Kilo Code 觸發 Autocomplete 前的秒數延遲。延遲越短建議越快，但可能更耗費資源。"
 			},
 			"enableQuickInlineTaskKeybinding": {
-				"label": "快速工作",
+				"label": "快速任务 ({{keybinding}})",
 				"description": "只需要快速變更？選取一些程式碼（或不選！）然後按 Cmd+I。用簡單的中文描述你的目標（「用這些 props 建立 React 元件」，「為這個函數新增錯誤處理」），在編輯器中直接取得多個即用建議。<DocsLink>檢視快速鍵</DocsLink>"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "手動 Autocomplete",
+				"label": "手动自动补全 ({{keybinding}})",
 				"description": "需要快速修正、補全或重構？Kilo 將使用周圍內容提供即時改進，保持你的工作流程。<DocsLink>檢視快速鍵</DocsLink>"
 			},
 			"enableCustomProvider": {
@@ -227,7 +226,8 @@
 				"label": "API 設定",
 				"current": "使用目前選取的 API 設定",
 				"description": "選取用於 Autocomplete 提示的 API 設定，或直接使用目前選取的設定"
-			}
+			},
+			"keybindingNotFound": "未找到"
 		}
 	},
 	"virtualProvider": {

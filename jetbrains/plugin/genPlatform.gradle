@@ -7,7 +7,18 @@ import java.security.MessageDigest
 
 
 tasks.register('genPlatform', Zip) {
-    download(project)
+    doFirst {
+        // Delete existing platform.zip right before regeneration
+        def zipFile = new File(project.projectDir, "platform.zip")
+        if (zipFile.exists()) {
+            zipFile.delete()
+            println "Deleted existing platform.zip before regeneration"
+        }
+        
+        // Download platform files only when task actually executes
+        download(project)
+    }
+    
     from(new File(project.buildDir, "genPlatform/gen"))
     into("")
     destinationDirectory = project.projectDir
@@ -93,11 +104,6 @@ def download(Project project){
     def targetDir = new File(projectBuild, "gen/node_modules")
     def txtFile = new File(projectBuild, "gen/platform.txt")
     mergeDirectories(list, targetDir,txtFile)
-
-    def zipFile = new File(project.projectDir,"platform.zip")
-    if(zipFile.exists()) {
-        zipFile.delete()
-    }
 }
 
 
