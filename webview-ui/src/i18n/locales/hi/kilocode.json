@@ -13,6 +13,11 @@
 		"addCredit": "क्रेडिट जोड़ें",
 		"lowBalance": "आपका Kilo Code बैलेंस कम है"
 	},
+	"pagination": {
+		"previous": "पिछला",
+		"next": "अगला",
+		"page": "पृष्ठ {{page}} / {{count}}"
+	},
 	"pricing": {
 		"costUnknown": "लागत अज्ञात",
 		"costUnknownDescription": "API प्रदाता ने कोई लागत डेटा प्रदान नहीं किया या अनुरोध रद्द कर दिया गया।",

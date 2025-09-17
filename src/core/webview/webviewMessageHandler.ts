@@ -4,9 +4,16 @@ import * as os from "os"
 import * as fs from "fs/promises"
 import pWaitFor from "p-wait-for"
 import * as vscode from "vscode"
-import axios from "axios" // kilocode_change
-import { getKiloBaseUriFromToken } from "../../shared/kilocode/token" // kilocode_change
-import { ProfileData, SeeNewChangesPayload } from "../../shared/WebviewMessage" // kilocode_change
+// kilocode_change start
+import axios from "axios"
+import { getKiloBaseUriFromToken } from "../../shared/kilocode/token"
+import {
+	ProfileData,
+	SeeNewChangesPayload,
+	TaskHistoryRequestPayload,
+	TasksByIdRequestPayload,
+} from "../../shared/WebviewMessage"
+// kilocode_change end
 
 import {
 	type Language,
@@ -69,6 +76,7 @@ import { MarketplaceManager, MarketplaceItemType } from "../../services/marketpl
 import { setPendingTodoList } from "../tools/updateTodoListTool"
 import { UsageTracker } from "../../utils/usage-tracker"
 import { seeNewChanges } from "../checkpoints/kilocode/seeNewChanges" // kilocode_change
+import { getTaskHistory } from "../../shared/kilocode/getTaskHistory" // kilocode_change
 
 export const webviewMessageHandler = async (
 	provider: ClineProvider,
@@ -984,6 +992,28 @@ export const webviewMessageHandler = async (
 				await seeNewChanges(task, (message.payload as SeeNewChangesPayload).commitRange)
 			}
 			break
+		case "tasksByIdRequest": {
+			const request = message.payload as TasksByIdRequestPayload
+			await provider.postMessageToWebview({
+				type: "tasksByIdResponse",
+				payload: {
+					requestId: request.requestId,
+					tasks: provider.getTaskHistory().filter((task) => request.taskIds.includes(task.id)),
+				},
+			})
+			break
+		}
+		case "taskHistoryRequest": {
+			await provider.postMessageToWebview({
+				type: "taskHistoryResponse",
+				payload: getTaskHistory(
+					provider.getTaskHistory(),
+					provider.cwd,
+					message.payload as TaskHistoryRequestPayload,
+				),
+			})
+			break
+		}
 		// kilocode_change end
 		case "checkpointRestore": {
 			const result = checkoutRestorePayloadSchema.safeParse(message.payload)

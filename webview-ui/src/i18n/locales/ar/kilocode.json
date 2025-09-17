@@ -13,6 +13,11 @@
 		"addCredit": "شحن الرصيد",
 		"lowBalance": "رصيدك في Kilo Code منخفض"
 	},
+	"pagination": {
+		"previous": "السابق",
+		"next": "التالي",
+		"page": "صفحة {{page}} / {{count}}"
+	},
 	"pricing": {
 		"costUnknown": "التكلفة غير معروفة",
 		"costUnknownDescription": "لم يقدم مزود واجهة برمجة التطبيقات أي بيانات تكلفة أو تم إلغاء الطلب.",

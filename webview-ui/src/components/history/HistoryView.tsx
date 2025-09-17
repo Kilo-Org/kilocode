@@ -30,7 +30,7 @@ type SortOption = "newest" | "oldest" | "mostExpensive" | "mostTokens" | "mostRe
 
 const HistoryView = ({ onDone }: HistoryViewProps) => {
 	const {
-		tasks,
+		data, // kilocode_change
 		searchQuery,
 		setSearchQuery,
 		sortOption,
@@ -38,9 +38,18 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 		setLastNonRelevantSort,
 		showAllWorkspaces,
 		setShowAllWorkspaces,
-		showFavoritesOnly, // kilocode_change
-		setShowFavoritesOnly, // kilocode_change
+		// kilocode_change start
+		taskHistoryFullLength,
+		showFavoritesOnly,
+		setShowFavoritesOnly,
+		setRequestedPageIndex,
+		// kilocode_change end
 	} = useTaskSearch()
+	// kilocode_change start
+	const tasks = data?.historyItems ?? []
+	const pageIndex = data?.pageIndex ?? 0
+	const pageCount = data?.pageCount ?? 1
+	// kilocode_change end
 	const { t } = useAppTranslation()
 
 	const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null)
@@ -229,7 +238,7 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 								<span className="ml-auto text-vscode-descriptionForeground text-xs">
 									{t("history:selectedItems", {
 										selected: selectedTaskIds.length,
-										total: tasks.length,
+										total: taskHistoryFullLength, // kilocode_change
 									})}
 								</span>
 							</div>
@@ -265,22 +274,58 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 				/>
 			</TabContent>
 
-			{/* Fixed action bar at bottom - only shown in selection mode with selected items */}
-			{isSelectionMode && selectedTaskIds.length > 0 && (
-				<div className="fixed bottom-0 left-0 right-2 bg-vscode-editor-background border-t border-vscode-panel-border p-2 flex justify-between items-center">
-					<div className="text-vscode-foreground">
-						{t("history:selectedItems", { selected: selectedTaskIds.length, total: tasks.length })}
+			{/* kilocode_change: more nesting so we can add more rows, removed fixed class */}
+			<div className="bg-vscode-editor-background">
+				{/* Fixed action bar at bottom - only shown in selection mode with selected items */}
+				{isSelectionMode && selectedTaskIds.length > 0 && (
+					<div className="border-t border-vscode-panel-border p-2 flex justify-between items-center">
+						<div className="text-vscode-foreground">
+							{t("history:selectedItems", {
+								selected: selectedTaskIds.length,
+								total: taskHistoryFullLength, // kilocode_change
+							})}
+						</div>
+						<div className="flex gap-2">
+							<Button variant="secondary" onClick={() => setSelectedTaskIds([])}>
+								{t("history:clearSelection")}
+							</Button>
+							<Button variant="default" onClick={handleBatchDelete}>
+								{t("history:deleteSelected")}
+							</Button>
+						</div>
 					</div>
-					<div className="flex gap-2">
-						<Button variant="secondary" onClick={() => setSelectedTaskIds([])}>
-							{t("history:clearSelection")}
-						</Button>
-						<Button variant="default" onClick={handleBatchDelete}>
-							{t("history:deleteSelected")}
-						</Button>
+				)}
+				{
+					// kilocode_change start
+					<div className="border-t border-b border-vscode-panel-border p-2 flex justify-between items-center">
+						{t("kilocode:pagination.page", {
+							page: pageIndex + 1,
+							count: pageCount,
+						})}
+						<div className="flex gap-2">
+							<Button
+								disabled={pageIndex <= 0}
+								onClick={() => {
+									if (pageIndex > 0) {
+										setRequestedPageIndex(pageIndex - 1)
+									}
+								}}>
+								{t("kilocode:pagination.previous")}
+							</Button>
+							<Button
+								disabled={pageIndex >= pageCount - 1}
+								onClick={() => {
+									if (pageIndex < pageCount - 1) {
+										setRequestedPageIndex(pageIndex + 1)
+									}
+								}}>
+								{t("kilocode:pagination.next")}
+							</Button>
+						</div>
 					</div>
-				</div>
-			)}
+					// kilocode_change end
+				}
+			</div>
 
 			{/* Delete dialog */}
 			{deleteTaskId && (
@@ -301,12 +346,13 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 					}}
 				/>
 			)}
-			{/* kilocode_change */}
-			{selectedTaskIds.length === 0 && (
+			{
+				// kilocode_change start
 				<div className="fixed bottom-0 right-0">
 					<BottomControls />
 				</div>
-			)}
+				// kilocode_change end
+			}
 		</Tab>
 	)
 }

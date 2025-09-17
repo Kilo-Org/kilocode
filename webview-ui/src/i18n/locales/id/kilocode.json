@@ -13,6 +13,11 @@
 		"addCredit": "Tambah Kredit",
 		"lowBalance": "Saldo Kilo Code kamu rendah"
 	},
+	"pagination": {
+		"previous": "Sebelumnya",
+		"next": "Selanjutnya",
+		"page": "Halaman {{page}} / {{count}}"
+	},
 	"pricing": {
 		"costUnknown": "biaya tidak diketahui",
 		"costUnknownDescription": "Penyedia API tidak memberikan data biaya atau permintaan dibatalkan.",

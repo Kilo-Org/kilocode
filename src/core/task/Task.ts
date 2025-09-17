@@ -1878,7 +1878,11 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				let inputTokens = 0
 				let outputTokens = 0
 				let totalCost: number | undefined
-				let usageMissing = false // kilocode_change
+
+				// kilocode_change start
+				let usageMissing = false
+				const apiRequestStartTime = performance.now()
+				// kilocode_change end
 
 				// We can't use `api_req_finished` anymore since it's a unique case
 				// where it could come after a streaming message (i.e. in the middle
@@ -2147,6 +2151,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 											tokens.cacheWrite,
 											tokens.cacheRead,
 										),
+									completionTime: performance.now() - apiRequestStartTime, // kilocode_change
 								})
 							}
 						}

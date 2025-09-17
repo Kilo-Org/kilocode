@@ -230,7 +230,8 @@ describe("mergeExtensionState", () => {
 			mcpEnabled: false,
 			enableMcpServerCreation: false,
 			clineMessages: [],
-			taskHistory: [],
+			taskHistoryFullLength: 0, // kilocode_change
+			taskHistoryVersion: 0, // kilocode_change
 			shouldShowAnnouncement: false,
 			enableCheckpoints: true,
 			writeDelayMs: 1000,

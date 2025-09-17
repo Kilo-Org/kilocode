@@ -13,6 +13,11 @@
 		"addCredit": "クレジットを追加",
 		"lowBalance": "Kilo Codeの残高が少なくなっています"
 	},
+	"pagination": {
+		"previous": "前へ",
+		"next": "次へ",
+		"page": "ページ {{page}} / {{count}}"
+	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 {{model}}のアルファ期間が終了しました！続行するには別のモデルに変更してください。",
 		"notAllowedForTeam": "⚠️ あなたの組織は{{model}}モデルの使用を許可していません。続行するには別のモデルに変更してください。",

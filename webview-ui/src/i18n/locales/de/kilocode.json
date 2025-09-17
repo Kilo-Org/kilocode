@@ -13,6 +13,11 @@
 		"addCredit": "Guthaben hinzufügen",
 		"lowBalance": "Ihr Kilo Code Guthaben ist niedrig"
 	},
+	"pagination": {
+		"previous": "Zurück",
+		"next": "Weiter",
+		"page": "Seite {{page}} / {{count}}"
+	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 Die Alpha-Phase für {{model}} ist beendet! Wechsle zu einem anderen Modell, um fortzufahren.",
 		"notAllowedForTeam": "⚠️ Deine Organisation erlaubt die Nutzung des {{model}} Modells nicht. Wechsle zu einem anderen Modell, um fortzufahren.",
