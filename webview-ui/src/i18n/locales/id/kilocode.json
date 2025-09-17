@@ -197,7 +197,6 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"autoTrigger": "Pemicu Otomatis",
 			"triggers": "Pemicu",
 			"keybindingDescription": "Fitur Autocomplete dapat dipicu oleh perintah. Anda dapat mengonfigurasi <DocsLink>Pintasan Keyboard di sini</DocsLink>.",
 			"enableAutoTrigger": {

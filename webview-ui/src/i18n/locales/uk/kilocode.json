@@ -204,7 +204,6 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"autoTrigger": "Автоматичний Запуск",
 			"triggers": "Тригери",
 			"keybindingDescription": "Функції Autocomplete можуть бути запущені командами. Ти можеш налаштувати <DocsLink>Гарячі Клавіші тут</DocsLink>.",
 			"enableAutoTrigger": {

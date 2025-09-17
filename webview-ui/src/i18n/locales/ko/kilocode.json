@@ -204,7 +204,6 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"autoTrigger": "자동 트리거",
 			"triggers": "트리거",
 			"keybindingDescription": "Autocomplete 기능은 명령으로 트리거할 수 있습니다. <DocsLink>키보드 단축키를 여기서</DocsLink> 구성할 수 있습니다.",
 			"enableAutoTrigger": {

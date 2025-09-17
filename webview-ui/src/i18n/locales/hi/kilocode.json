@@ -197,7 +197,6 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"autoTrigger": "ऑटो ट्रिगर",
 			"triggers": "ट्रिगर्स",
 			"keybindingDescription": "Autocomplete सुविधाओं को कमांड द्वारा ट्रिगर किया जा सकता है। आप <DocsLink>कीबोर्ड शॉर्टकट यहाँ</DocsLink> कॉन्फ़िगर कर सकते हैं।",
 			"enableAutoTrigger": {

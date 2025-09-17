@@ -204,7 +204,6 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"autoTrigger": "การเรียกใช้อัตโนมัติ",
 			"triggers": "ตัวเรียกใช้",
 			"keybindingDescription": "ฟีเจอร์ Autocomplete สามารถเรียกใช้ได้ด้วยคำสั่ง คุณสามารถกำหนดค่า <DocsLink>แป้นพิมพ์ลัดได้ที่นี่</DocsLink>",
 			"enableAutoTrigger": {

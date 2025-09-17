@@ -196,7 +196,6 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"autoTrigger": "التشغيل التلقائي",
 			"triggers": "المشغلات",
 			"keybindingDescription": "يمكن تشغيل ميزات الإكمال التلقائي بواسطة الأوامر. يمكنك تكوين <DocsLink>اختصارات لوحة المفاتيح هنا</DocsLink>.",
 			"enableAutoTrigger": {
