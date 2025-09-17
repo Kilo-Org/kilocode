@@ -173,4 +173,232 @@ describe("CerebrasHandler", () => {
 			// Test fallback token estimation logic
 		})
 	})
+
+	describe("fetchWithRetry", () => {
+		it("should handle successful response without retries", async () => {
+			const mockResponse = {
+				ok: true,
+				status: 200,
+				json: () => Promise.resolve({ choices: [{ message: { content: "Success response" } }] }),
+			}
+			vi.mocked(fetch).mockResolvedValueOnce(mockResponse as any)
+
+			const result = await handler.completePrompt("Test prompt")
+			expect(result).toBe("Success response")
+			expect(fetch).toHaveBeenCalledTimes(1)
+		})
+
+		it("should retry once on rate limit error and then succeed", async () => {
+			const rateLimitError = {
+				ok: false,
+				status: 429,
+				headers: new Headers({ "x-ratelimit-reset-tokens-minute": "1" }),
+				text: vi.fn().mockResolvedValue('{"error": {"message": "Rate limit exceeded"}}'),
+			}
+			const mockResponse = {
+				ok: true,
+				status: 200,
+				json: () => Promise.resolve({ choices: [{ message: { content: "Retry success" } }] }),
+			}
+
+			vi.mocked(fetch)
+				.mockResolvedValueOnce(rateLimitError as any)
+				.mockResolvedValueOnce(mockResponse as any)
+
+			// Enable fake timers
+			vi.useFakeTimers()
+
+			const promise = handler.completePrompt("Test prompt")
+
+			// Advance timers to allow retry to complete
+			await vi.advanceTimersByTimeAsync(2000) // 1秒 + 1秒
+
+			const result = await promise
+			expect(result).toBe("Retry success")
+			expect(fetch).toHaveBeenCalledTimes(2)
+
+			// Restore timers
+			vi.useRealTimers()
+		})
+
+		it("should retry multiple times on consecutive rate limit errors and then succeed", async () => {
+			const rateLimitError = {
+				ok: false,
+				status: 429,
+				headers: new Headers({ "x-ratelimit-reset-tokens-minute": "2" }),
+				text: vi.fn().mockResolvedValue('{"error": {"message": "Rate limit exceeded"}}'),
+			}
+			const mockResponse = {
+				ok: true,
+				status: 200,
+				json: () => Promise.resolve({ choices: [{ message: { content: "Multiple retry success" } }] }),
+			}
+
+			vi.mocked(fetch)
+				.mockResolvedValueOnce(rateLimitError as any)
+				.mockResolvedValueOnce(rateLimitError as any)
+				.mockResolvedValueOnce(rateLimitError as any)
+				.mockResolvedValueOnce(mockResponse as any)
+
+			vi.useFakeTimers()
+
+			const promise = handler.completePrompt("Test prompt")
+
+			// Advance timers for each retry
+			await vi.advanceTimersByTimeAsync(3000) // First retry: 2秒 + 1秒
+			await vi.advanceTimersByTimeAsync(3000) // Second retry: 2秒 + 1秒
+			await vi.advanceTimersByTimeAsync(3000) // Third retry: 2秒 + 1秒
+
+			const result = await promise
+			expect(result).toBe("Multiple retry success")
+			expect(fetch).toHaveBeenCalledTimes(4)
+
+			// Restore timers
+			vi.useRealTimers()
+		})
+
+		it("should throw error after maximum retries on rate limit errors", async () => {
+			const rateLimitError = {
+				ok: false,
+				status: 429,
+				headers: new Headers({ "x-ratelimit-reset-tokens-minute": "1" }),
+				text: vi.fn().mockResolvedValue('{"error": {"message": "Rate limit exceeded"}}'),
+			}
+
+			// Mock 5 consecutive rate limit errors
+			vi.mocked(fetch)
+				.mockResolvedValueOnce(rateLimitError as any)
+				.mockResolvedValueOnce(rateLimitError as any)
+				.mockResolvedValueOnce(rateLimitError as any)
+				.mockResolvedValueOnce(rateLimitError as any)
+				.mockResolvedValueOnce(rateLimitError as any)
+
+			vi.useFakeTimers()
+
+			const promise = handler.completePrompt("Test prompt")
+			// Attach catch immediately to avoid Node's temporary unhandled rejection warning
+			promise.catch(() => {})
+
+			// Advance timers for each retry attempt
+			for (let i = 0; i < 4; i++) {
+				await vi.advanceTimersByTimeAsync(2000) // 1秒 + 1秒
+			}
+
+			await expect(promise).rejects.toThrow(/rateLimitExceeded|completionError/)
+			expect(fetch).toHaveBeenCalledTimes(5)
+
+			// Restore timers
+			vi.useRealTimers()
+		}, 30000)
+
+		it("should correctly parse x-ratelimit-reset-tokens-minute header and wait appropriate time", async () => {
+			const rateLimitError = {
+				ok: false,
+				status: 429,
+				headers: new Headers({ "x-ratelimit-reset-tokens-minute": "3" }),
+				text: vi.fn().mockResolvedValue('{"error": {"message": "Rate limit exceeded"}}'),
+			}
+			const mockResponse = {
+				ok: true,
+				status: 200,
+				json: () => Promise.resolve({ choices: [{ message: { content: "Header parse success" } }] }),
+			}
+
+			vi.mocked(fetch)
+				.mockResolvedValueOnce(rateLimitError as any)
+				.mockResolvedValueOnce(mockResponse as any)
+
+			vi.useFakeTimers()
+
+			const promise = handler.completePrompt("Test prompt")
+
+			// Advance by the expected wait time (3秒 + 1秒)
+			await vi.advanceTimersByTimeAsync(4000)
+
+			const result = await promise
+			expect(result).toBe("Header parse success")
+			expect(fetch).toHaveBeenCalledTimes(2)
+
+			// Restore timers
+			vi.useRealTimers()
+		})
+
+		it("should use custom maxRetries and retryDelay parameters", async () => {
+			const customHandler = new CerebrasHandler({
+				...mockOptions,
+				modelMaxRetries: 3,
+				modelRetryDelay: 500,
+			})
+
+			const rateLimitError = {
+				ok: false,
+				status: 429,
+				headers: new Headers({ "x-ratelimit-reset-tokens-minute": "1" }),
+				text: vi.fn().mockResolvedValue('{"error": {"message": "Rate limit exceeded"}}'),
+			}
+			const mockResponse = {
+				ok: true,
+				status: 200,
+				json: () => Promise.resolve({ choices: [{ message: { content: "Custom params success" } }] }),
+			}
+
+			// Mock API to fail 2 times then succeed (should respect custom maxRetries of 3)
+			vi.mocked(fetch)
+				.mockResolvedValueOnce(rateLimitError as any)
+				.mockResolvedValueOnce(rateLimitError as any)
+				.mockResolvedValueOnce(mockResponse as any)
+
+			vi.useFakeTimers()
+
+			const promise = customHandler.completePrompt("Test prompt")
+
+			// Advance timers for retries
+			await vi.advanceTimersByTimeAsync(2000) // 1秒 + 1秒
+			await vi.advanceTimersByTimeAsync(2000) // 1秒 + 1秒
+
+			const result = await promise
+			expect(result).toBe("Custom params success")
+			expect(fetch).toHaveBeenCalledTimes(3)
+
+			// Restore timers
+			vi.useRealTimers()
+		})
+
+		it("should throw error after custom max retries", async () => {
+			const customHandler = new CerebrasHandler({
+				...mockOptions,
+				modelMaxRetries: 2,
+				modelRetryDelay: 500,
+			})
+
+			const rateLimitError = {
+				ok: false,
+				status: 429,
+				headers: new Headers({ "x-ratelimit-reset-tokens-minute": "1" }),
+				text: vi.fn().mockResolvedValue('{"error": {"message": "Rate limit exceeded"}}'),
+			}
+
+			// Mock API to fail 3 times (exceeding custom maxRetries of 2)
+			vi.mocked(fetch)
+				.mockResolvedValueOnce(rateLimitError as any)
+				.mockResolvedValueOnce(rateLimitError as any)
+				.mockResolvedValueOnce(rateLimitError as any)
+
+			vi.useFakeTimers()
+
+			const promise = customHandler.completePrompt("Test prompt")
+			// Attach catch immediately to avoid Node's temporary unhandled rejection warning
+			promise.catch(() => {})
+
+			// Advance timers for retry attempts
+			await vi.advanceTimersByTimeAsync(2000) // 1秒 + 1秒
+			await vi.advanceTimersByTimeAsync(2000) // 1秒 + 1秒
+
+			await expect(promise).rejects.toThrow(/rateLimitExceeded|completionError/)
+			expect(fetch).toHaveBeenCalledTimes(2) // Should stop after 2 retries (3rd attempt)
+
+			// Restore timers
+			vi.useRealTimers()
+		})
+	})
 })

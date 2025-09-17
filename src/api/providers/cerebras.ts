@@ -83,6 +83,8 @@ export class CerebrasHandler extends BaseProvider implements SingleCompletionHan
 	private providerModels: typeof cerebrasModels
 	private defaultProviderModelId: CerebrasModelId
 	private options: ApiHandlerOptions
+	private maxRetries: number
+	private retryDelay: number
 	private lastUsage: { inputTokens: number; outputTokens: number } = { inputTokens: 0, outputTokens: 0 }
 
 	constructor(options: ApiHandlerOptions) {
@@ -91,10 +93,36 @@ export class CerebrasHandler extends BaseProvider implements SingleCompletionHan
 		this.apiKey = options.cerebrasApiKey || ""
 		this.providerModels = cerebrasModels
 		this.defaultProviderModelId = cerebrasDefaultModelId
+		this.maxRetries = options.modelMaxRetries ?? 5
+		this.retryDelay = options.modelRetryDelay ?? 1000
 
 		if (!this.apiKey) {
 			throw new Error("Cerebras API key is required")
 		}
+	}
+
+	/**
+	 * Fetches the API with retry logic for rate limiting.
+	 * @param url - The URL to fetch
+	 * @param options - Fetch options
+	 * @param retryCount - Current retry count (default: 0)
+	 * @returns The fetch response
+	 */
+	private async fetchWithRetry(url: string, options: RequestInit, retryCount = 0): Promise<Response> {
+		const response = await fetch(url, options)
+
+		if (response.status === 429 && retryCount < this.maxRetries - 1) {
+			const resetTime = response.headers.get("x-ratelimit-reset-tokens-minute")
+			const waitTime = resetTime ? parseInt(resetTime, 10) * 1000 + 1000 : this.retryDelay
+
+			// Wait for the specified time before retrying
+			await new Promise((resolve) => setTimeout(resolve, waitTime))
+
+			// Retry the request
+			return this.fetchWithRetry(url, options, retryCount + 1)
+		}
+
+		return response
 	}
 
 	getModel(): { id: CerebrasModelId; info: (typeof cerebrasModels)[CerebrasModelId] } {
@@ -146,7 +174,7 @@ export class CerebrasHandler extends BaseProvider implements SingleCompletionHan
 		}
 
 		try {
-			const response = await fetch(`${CEREBRAS_BASE_URL}/chat/completions`, {
+			const response = await this.fetchWithRetry(`${CEREBRAS_BASE_URL}/chat/completions`, {
 				method: "POST",
 				headers: {
 					...DEFAULT_HEADERS,
@@ -288,7 +316,7 @@ export class CerebrasHandler extends BaseProvider implements SingleCompletionHan
 		}
 
 		try {
-			const response = await fetch(`${CEREBRAS_BASE_URL}/chat/completions`, {
+			const response = await this.fetchWithRetry(`${CEREBRAS_BASE_URL}/chat/completions`, {
 				method: "POST",
 				headers: {
 					...DEFAULT_HEADERS,

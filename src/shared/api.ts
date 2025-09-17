@@ -14,6 +14,16 @@ export type ApiHandlerOptions = Omit<ProviderSettings, "apiProvider"> & {
 	 * Defaults to true; set to false to disable summaries.
 	 */
 	enableGpt5ReasoningSummary?: boolean
+
+	/**
+	 * Maximum number of retries for API requests
+	 */
+	modelMaxRetries?: number
+
+	/**
+	 * Delay between retries in milliseconds
+	 */
+	modelRetryDelay?: number
 }
 
 // RouterName
