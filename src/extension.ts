@@ -43,6 +43,7 @@ import {
 } from "./activate"
 import { initializeI18n } from "./i18n"
 import { registerGhostProvider } from "./services/ghost" // kilocode_change
+import { registerMainThreadForwardingLogger } from "./utils/fowardingLogger" // kilocode_change
 import { registerWelcomeService } from "./services/terminal-welcome" // kilocode_change
 import { getKiloCodeWrapperProperties } from "./core/kilocode/wrapper" // kilocode_change
 
@@ -349,14 +350,20 @@ export async function activate(context: vscode.ExtensionContext) {
 		}),
 	)
 
-	// kilocode_change start
-	const kilocodeWrapperProperties = getKiloCodeWrapperProperties()
-	if (!kilocodeWrapperProperties.kiloCodeWrapped) {
+	// kilocode_change start - Kilo Code specific registrations
+	const { kiloCodeWrapped } = getKiloCodeWrapperProperties()
+	if (!kiloCodeWrapped) {
+		// Only use autocomplete in VS Code
 		registerGhostProvider(context, provider)
+		// Only show the terminal welcome tip in VS Code
 		registerWelcomeService(context)
+	} else {
+		// Only foward logs in Jetbrains
+		registerMainThreadForwardingLogger(context)
 	}
-	// kilocode_change end
 	registerCommitMessageProvider(context, outputChannel) // kilocode_change
+	// kilocode_change end - Kilo Code specific registrations
+
 	registerCodeActions(context)
 	registerTerminalActions(context)
 
