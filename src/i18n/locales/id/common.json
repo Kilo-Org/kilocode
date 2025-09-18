@@ -37,6 +37,7 @@
 		"checkpoint_timeout": "Timeout saat mencoba memulihkan checkpoint.",
 		"checkpoint_failed": "Gagal memulihkan checkpoint.",
 		"git_not_installed": "Git diperlukan untuk fitur checkpoint. Silakan instal Git untuk mengaktifkan checkpoint.",
+		"nested_git_repos_warning": "Checkpoint dinonaktifkan karena repositori git bersarang terdeteksi di: {{path}}. Untuk menggunakan checkpoint, silakan hapus atau pindahkan repositori git bersarang ini.",
 		"no_workspace": "Silakan buka folder proyek terlebih dahulu",
 		"update_support_prompt": "Gagal memperbarui support prompt",
 		"reset_support_prompt": "Gagal mereset support prompt",
@@ -108,6 +109,15 @@
 		"qwenCode": {
 			"oauthLoadFailed": "Gagal memuat kredensial OAuth. Silakan autentikasi terlebih dahulu: {{error}}"
 		},
+		"message": {
+			"no_active_task_to_delete": "Tidak ada tugas aktif untuk menghapus pesan",
+			"invalid_timestamp_for_deletion": "Timestamp pesan tidak valid untuk penghapusan",
+			"cannot_delete_missing_timestamp": "Tidak dapat menghapus pesan: timestamp tidak ada",
+			"cannot_delete_invalid_timestamp": "Tidak dapat menghapus pesan: timestamp tidak valid",
+			"message_not_found": "Pesan dengan timestamp {{messageTs}} tidak ditemukan",
+			"error_deleting_message": "Error menghapus pesan: {{error}}",
+			"error_editing_message": "Error mengedit pesan: {{error}}"
+		},
 		"gemini": {
 			"generate_stream": "Kesalahan aliran konteks pembuatan Gemini: {{error}}",
 			"generate_complete_prompt": "Kesalahan penyelesaian Gemini: {{error}}",
@@ -127,7 +137,12 @@
 		},
 		"api": {
 			"invalidKeyInvalidChars": "Kunci API mengandung karakter tidak valid."
-		}
+		},
+		"manual_url_empty": "Silakan masukkan URL callback yang valid",
+		"manual_url_no_query": "URL callback tidak valid: parameter query hilang",
+		"manual_url_missing_params": "URL callback tidak valid: parameter yang diperlukan hilang (code dan state)",
+		"manual_url_auth_failed": "Autentikasi URL manual gagal",
+		"manual_url_auth_error": "Autentikasi gagal"
 	},
 	"warnings": {
 		"no_terminal_content": "Tidak ada konten terminal yang dipilih",
@@ -212,8 +227,13 @@
 	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "Organisasi kamu memerlukan autentikasi Kilo Code Cloud. Silakan masuk untuk melanjutkan.",
-			"organization_mismatch": "Kamu harus diautentikasi dengan akun Kilo Code Cloud organisasi kamu.",
+			"cloud_auth_required": "Organisasi kamu memerlukan autentikasi Roo Code Cloud. Silakan masuk untuk melanjutkan.",
+			"organization_mismatch": "Kamu harus diautentikasi dengan akun Roo Code Cloud organisasi kamu.",
+			"manual_url_empty": "Silakan masukkan URL callback yang valid",
+			"manual_url_no_query": "URL callback tidak valid: parameter query hilang",
+			"manual_url_missing_params": "URL callback tidak valid: parameter yang diperlukan hilang (code dan state)",
+			"manual_url_auth_failed": "Autentikasi URL manual gagal",
+			"manual_url_auth_error": "Autentikasi gagal",
 			"verification_failed": "Tidak dapat memverifikasi autentikasi organisasi."
 		},
 		"info": {

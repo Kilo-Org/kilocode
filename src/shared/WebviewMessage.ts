@@ -149,6 +149,7 @@ export interface WebviewMessage {
 		| "mcpEnabled"
 		| "enableMcpServerCreation"
 		| "remoteControlEnabled"
+		| "taskSyncEnabled"
 		| "searchCommits"
 		| "alwaysApproveResubmit"
 		| "requestDelaySeconds"
@@ -222,6 +223,7 @@ export interface WebviewMessage {
 		| "cloudButtonClicked"
 		| "rooCloudSignIn"
 		| "rooCloudSignOut"
+		| "rooCloudManualUrl"
 		| "condenseTaskContextRequest"
 		| "requestIndexingStatus"
 		| "startIndexing"
@@ -239,6 +241,7 @@ export interface WebviewMessage {
 		| "fixMermaidSyntax" // kilocode_change
 		| "mermaidFixResponse" // kilocode_change
 		| "openGlobalKeybindings" // kilocode_change
+		| "getKeybindings" // kilocode_change
 		| "openExternal"
 		| "filterMarketplaceItems"
 		| "mcpButtonClicked"
@@ -279,6 +282,8 @@ export interface WebviewMessage {
 		| "queueMessage"
 		| "removeQueuedMessage"
 		| "editQueuedMessage"
+		| "dismissUpsell"
+		| "getDismissedUpsells"
 	text?: string
 	editedMessageContent?: string
 	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "cloud"
@@ -308,6 +313,7 @@ export interface WebviewMessage {
 	filename?: string // kilocode_change
 	ruleType?: string // kilocode_change
 	notificationId?: string // kilocode_change
+	commandIds?: string[] // kilocode_change: For getKeybindings
 	// kilocode_change end
 	serverName?: string
 	toolName?: string
@@ -341,6 +347,8 @@ export interface WebviewMessage {
 	visibility?: ShareVisibility // For share visibility
 	hasContent?: boolean // For checkRulesDirectoryResult
 	checkOnly?: boolean // For deleteCustomMode check
+	upsellId?: string // For dismissUpsell
+	list?: string[] // For dismissedUpsells response
 	codeIndexSettings?: {
 		// Global state settings
 		codebaseIndexEnabled: boolean

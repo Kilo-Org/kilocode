@@ -41,6 +41,7 @@
 		"checkpoint_timeout": "S'ha esgotat el temps en intentar restaurar el punt de control.",
 		"checkpoint_failed": "Ha fallat la restauració del punt de control.",
 		"git_not_installed": "Git és necessari per a la funció de punts de control. Si us plau, instal·la Git per activar els punts de control.",
+		"nested_git_repos_warning": "Els punts de control estan deshabilitats perquè s'ha detectat un repositori git niat a: {{path}}. Per utilitzar punts de control, si us plau elimina o reubica aquest repositori git niat.",
 		"no_workspace": "Si us plau, obre primer una carpeta de projecte",
 		"update_support_prompt": "Ha fallat l'actualització del missatge de suport",
 		"reset_support_prompt": "Ha fallat el restabliment del missatge de suport",
@@ -108,6 +109,15 @@
 			"apiError": "Error de l'API Gemini CLI: {{error}}",
 			"completionError": "Error de compleció de Gemini CLI: {{error}}"
 		},
+		"message": {
+			"no_active_task_to_delete": "No hi ha cap tasca activa de la qual eliminar missatges",
+			"invalid_timestamp_for_deletion": "Marca de temps del missatge no vàlida per a l'eliminació",
+			"cannot_delete_missing_timestamp": "No es pot eliminar el missatge: falta la marca de temps",
+			"cannot_delete_invalid_timestamp": "No es pot eliminar el missatge: marca de temps no vàlida",
+			"message_not_found": "Missatge amb marca de temps {{messageTs}} no trobat",
+			"error_deleting_message": "Error eliminant missatge: {{error}}",
+			"error_editing_message": "Error editant missatge: {{error}}"
+		},
 		"gemini": {
 			"generate_stream": "Error del flux de context de generació de Gemini: {{error}}",
 			"generate_complete_prompt": "Error de finalització de Gemini: {{error}}",
@@ -131,6 +141,11 @@
 		"api": {
 			"invalidKeyInvalidChars": "La clau API conté caràcters no vàlids."
 		},
+		"manual_url_empty": "Si us plau, introdueix una URL de callback vàlida",
+		"manual_url_no_query": "URL de callback no vàlida: falten paràmetres de consulta",
+		"manual_url_missing_params": "URL de callback no vàlida: falten paràmetres requerits (code i state)",
+		"manual_url_auth_failed": "Autenticació manual per URL ha fallat",
+		"manual_url_auth_error": "Autenticació fallida",
 		"mode_import_failed": "Ha fallat la importació del mode: {{error}}"
 	},
 	"warnings": {
@@ -212,8 +227,13 @@
 	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "La teva organització requereix autenticació de Kilo Code Cloud. Si us plau, inicia sessió per continuar.",
-			"organization_mismatch": "Has d'estar autenticat amb el compte de Kilo Code Cloud de la teva organització.",
+			"cloud_auth_required": "La teva organització requereix autenticació de Roo Code Cloud. Si us plau, inicia sessió per continuar.",
+			"organization_mismatch": "Has d'estar autenticat amb el compte de Roo Code Cloud de la teva organització.",
+			"manual_url_empty": "Si us plau, introdueix una URL de callback vàlida",
+			"manual_url_no_query": "URL de callback no vàlida: falten paràmetres de consulta",
+			"manual_url_missing_params": "URL de callback no vàlida: falten paràmetres requerits (code i state)",
+			"manual_url_auth_failed": "Autenticació manual per URL ha fallat",
+			"manual_url_auth_error": "Autenticació fallida",
 			"verification_failed": "No s'ha pogut verificar l'autenticació de l'organització."
 		},
 		"info": {

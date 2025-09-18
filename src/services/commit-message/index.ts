@@ -12,6 +12,7 @@ export function registerCommitMessageProvider(
 	outputChannel: vscode.OutputChannel,
 ): void {
 	const commitProvider = new CommitMessageProvider(context, outputChannel)
+	context.subscriptions.push(commitProvider)
 
 	commitProvider.activate().catch((error) => {
 		outputChannel.appendLine(t("kilocode:commitMessage.activationFailed", { error: error.message }))

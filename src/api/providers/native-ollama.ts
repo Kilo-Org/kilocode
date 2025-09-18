@@ -294,7 +294,7 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 	}
 
 	async fetchModel() {
-		this.models = await getOllamaModels(this.options.ollamaBaseUrl)
+		this.models = await getOllamaModels(this.options.ollamaBaseUrl, this.options.ollamaApiKey)
 		return this.models // kilocode_change
 	}
 

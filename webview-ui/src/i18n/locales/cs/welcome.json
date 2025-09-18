@@ -16,12 +16,8 @@
 	"startRouter": "Doporučujeme použít LLM Router:",
 	"startCustom": "Nebo můžeš přinést svůj vlastní API klíč poskytovatele:",
 	"telemetry": {
-		"title": "Pomoz Vylepšit Kilo Code",
-		"anonymousTelemetry": "Odesílej data o chybách a používání, abys nám pomohl opravit chyby a vylepšit rozšíření. Žádný kód, prompts ani osobní informace se nikdy neodesílají.",
-		"changeSettings": "Toto můžeš vždy změnit v dolní části <settingsLink>nastavení</settingsLink>",
-		"settings": "nastavení",
-		"allow": "Povolit",
-		"deny": "Odmítnout"
+		"helpImprove": "Pomoz vylepšit Kilo Code",
+		"helpImproveMessage": "Kilo Code sbírá data o chybách a používání, aby nám pomohl opravit chyby a vylepšit rozšíření. Tato telemetrie nesbírá kód, prompts ani osobní informace. Můžeš to vypnout v <settingsLink>nastavení</settingsLink>."
 	},
 	"importSettings": "Importovat Nastavení"
 }

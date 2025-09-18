@@ -37,6 +37,7 @@
 		"checkpoint_timeout": "嘗試恢復檢查點時超時。",
 		"checkpoint_failed": "恢復檢查點失敗。",
 		"git_not_installed": "存檔點功能需要 Git。請安裝 Git 以啟用存檔點。",
+		"nested_git_repos_warning": "存檔點已停用，因為在 {{path}} 偵測到巢狀的 git 儲存庫。要使用存檔點，請移除或重新配置此巢狀的 git 儲存庫。",
 		"no_workspace": "請先開啟專案資料夾",
 		"update_support_prompt": "更新支援訊息失敗",
 		"reset_support_prompt": "重設支援訊息失敗",
@@ -107,6 +108,15 @@
 		"qwenCode": {
 			"oauthLoadFailed": "無法載入 OAuth 憑證。請先進行驗證：{{error}}"
 		},
+		"message": {
+			"no_active_task_to_delete": "沒有可刪除訊息的活躍工作",
+			"invalid_timestamp_for_deletion": "刪除操作的訊息時間戳無效",
+			"cannot_delete_missing_timestamp": "無法刪除訊息：缺少時間戳",
+			"cannot_delete_invalid_timestamp": "無法刪除訊息：時間戳無效",
+			"message_not_found": "未找到時間戳為 {{messageTs}} 的訊息",
+			"error_deleting_message": "刪除訊息時出錯：{{error}}",
+			"error_editing_message": "編輯訊息時出錯：{{error}}"
+		},
 		"gemini": {
 			"generate_stream": "Gemini 產生內容串流錯誤：{{error}}",
 			"generate_complete_prompt": "Gemini 完成錯誤：{{error}}",
@@ -127,6 +137,11 @@
 		"api": {
 			"invalidKeyInvalidChars": "API 金鑰包含無效字元。"
 		},
+		"manual_url_empty": "請輸入有效的回呼 URL",
+		"manual_url_no_query": "無效的回呼 URL：缺少查詢參數",
+		"manual_url_missing_params": "無效的回呼 URL：缺少必要參數（code 和 state）",
+		"manual_url_auth_failed": "手動 URL 身份驗證失敗",
+		"manual_url_auth_error": "身份驗證失敗",
 		"mode_import_failed": "匯入模式失敗：{{error}}"
 	},
 	"warnings": {
@@ -212,8 +227,13 @@
 	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "您的組織需要 Kilo Code Cloud 身份驗證。請登入以繼續。",
-			"organization_mismatch": "您必須使用組織的 Kilo Code Cloud 帳戶進行身份驗證。",
+			"cloud_auth_required": "您的組織需要 Roo Code Cloud 身份驗證。請登入以繼續。",
+			"organization_mismatch": "您必須使用組織的 Roo Code Cloud 帳戶進行身份驗證。",
+			"manual_url_empty": "請輸入有效的回呼 URL",
+			"manual_url_no_query": "無效的回呼 URL：缺少查詢參數",
+			"manual_url_missing_params": "無效的回呼 URL：缺少必要參數（code 和 state）",
+			"manual_url_auth_failed": "手動 URL 身份驗證失敗",
+			"manual_url_auth_error": "身份驗證失敗",
 			"verification_failed": "無法驗證組織身份驗證。"
 		},
 		"info": {

@@ -20,20 +20,20 @@ export type ChutesModelId =
 	| "deepseek-ai/DeepSeek-V3-0324"
 	| "Qwen/Qwen3-235B-A22B"
 	| "Qwen/Qwen3-235B-A22B-Instruct-2507"
-	| "Qwen/Qwen3-235B-A22B-Thinking-2507"
-	| "Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8"
-	| "Qwen/Qwen3-Next-80B-A3B-Instruct"
-	| "Qwen/Qwen3-Next-80B-A3B-Thinking"
 	| "Qwen/Qwen3-32B"
 	| "Qwen/Qwen3-30B-A3B"
 	| "Qwen/Qwen3-14B"
 	| "Qwen/Qwen3-8B"
+	| "Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8"
 	| "microsoft/MAI-DS-R1-FP8"
 	| "tngtech/DeepSeek-R1T-Chimera"
 	| "zai-org/GLM-4.5-Air"
 	| "zai-org/GLM-4.5-FP8"
 	| "moonshotai/Kimi-K2-Instruct-75k"
 	| "moonshotai/Kimi-K2-Instruct-0905"
+	| "Qwen/Qwen3-235B-A22B-Thinking-2507"
+	| "Qwen/Qwen3-Next-80B-A3B-Instruct"
+	| "Qwen/Qwen3-Next-80B-A3B-Thinking"
 
 export const chutesDefaultModelId: ChutesModelId = "deepseek-ai/DeepSeek-R1-0528"
 
@@ -182,15 +182,6 @@ export const chutesModels = {
 		outputPrice: 0,
 		description: "DeepSeek V3 (0324) model.",
 	},
-	"Qwen/Qwen3-235B-A22B": {
-		maxTokens: 32768,
-		contextWindow: 40960,
-		supportsImages: false,
-		supportsPromptCache: false,
-		inputPrice: 0,
-		outputPrice: 0,
-		description: "Qwen3 235B A22B model.",
-	},
 	"Qwen/Qwen3-235B-A22B-Instruct-2507": {
 		maxTokens: 32768,
 		contextWindow: 262144,
@@ -199,6 +190,15 @@ export const chutesModels = {
 		inputPrice: 0,
 		outputPrice: 0,
 		description: "Qwen3 235B A22B Instruct 2507 model with 262K context window.",
+	},
+	"Qwen/Qwen3-235B-A22B": {
+		maxTokens: 32768,
+		contextWindow: 40960,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0,
+		outputPrice: 0,
+		description: "Qwen3 235B A22B model.",
 	},
 	"Qwen/Qwen3-32B": {
 		maxTokens: 32768,
@@ -274,6 +274,15 @@ export const chutesModels = {
 		description:
 			"GLM-4.5-FP8 model with 128k token context window, optimized for agent-based applications with MoE architecture.",
 	},
+	"Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8": {
+		maxTokens: 32768,
+		contextWindow: 262144,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0,
+		outputPrice: 0,
+		description: "Qwen3 Coder 480B A35B Instruct FP8 model, optimized for coding tasks.",
+	},
 	"moonshotai/Kimi-K2-Instruct-75k": {
 		maxTokens: 32768,
 		contextWindow: 75000,
@@ -301,31 +310,24 @@ export const chutesModels = {
 		outputPrice: 0.31202496,
 		description: "Qwen3 235B A22B Thinking 2507 model with 262K context window.",
 	},
-	"Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8": {
-		maxTokens: 32768,
-		contextWindow: 262144,
-		supportsImages: false,
-		supportsPromptCache: false,
-		inputPrice: 0,
-		outputPrice: 0,
-		description: "Qwen3 Coder 480B A35B Instruct FP8 model, optimized for coding tasks.",
-	},
 	"Qwen/Qwen3-Next-80B-A3B-Instruct": {
 		maxTokens: 32768,
-		contextWindow: 262144,
+		contextWindow: 131072,
 		supportsImages: false,
 		supportsPromptCache: false,
 		inputPrice: 0,
 		outputPrice: 0,
-		description: "Qwen3 Next 80B A3B Instruct model with 262K context window.",
+		description:
+			"Fast, stable instruction-tuned model optimized for complex tasks, RAG, and tool use without thinking traces.",
 	},
 	"Qwen/Qwen3-Next-80B-A3B-Thinking": {
 		maxTokens: 32768,
-		contextWindow: 262144,
+		contextWindow: 131072,
 		supportsImages: false,
 		supportsPromptCache: false,
 		inputPrice: 0,
 		outputPrice: 0,
-		description: "Qwen3 Next 80B A3B Thinking model with 262K context window.",
+		description:
+			"Reasoning-first model with structured thinking traces for multi-step problems, math proofs, and code synthesis.",
 	},
 } as const satisfies Record<string, ModelInfo>

@@ -5,6 +5,7 @@ import { ClineProvider } from "../../core/webview/ClineProvider"
 
 export const registerGhostProvider = (context: vscode.ExtensionContext, cline: ClineProvider) => {
 	const ghost = GhostProvider.initialize(context, cline)
+	context.subscriptions.push(ghost)
 
 	// Register GhostProvider Commands
 	context.subscriptions.push(

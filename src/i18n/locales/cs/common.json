@@ -42,6 +42,7 @@
 		"checkpoint_timeout": "Vypršel časový limit při pokusu o obnovení checkpointu.",
 		"checkpoint_failed": "Obnovení checkpointu selhalo.",
 		"git_not_installed": "Git je vyžadován pro funkci checkpointů. Prosím nainstaluj Git pro aktivaci checkpointů.",
+		"nested_git_repos_warning": "Varování: Nalezeny vnořené git repozitáře v těchto cestách. To může způsobit neočekávané chování s kontrolními body: {{paths}}",
 		"no_workspace": "Nejprve prosím otevři složku projektu",
 		"update_support_prompt": "Aktualizace support promptu selhala",
 		"reset_support_prompt": "Reset support promptu selhal",
@@ -130,6 +131,20 @@
 		"roo": {
 			"authenticationRequired": "Poskytovatel Roo vyžaduje cloudovou autentizaci. Prosím přihlas se do Roo Code Cloud."
 		},
+		"message": {
+			"no_active_task_to_delete": "Nebyla nalezena aktivní úloha. Nelze smazat zprávy.",
+			"invalid_timestamp_for_deletion": "Pro smazání byl poskytnut neplatný časový údaj.",
+			"cannot_delete_missing_timestamp": "Nelze smazat zprávu: chybí časový údaj.",
+			"cannot_delete_invalid_timestamp": "Nelze smazat zprávu: časový údaj je neplatný.",
+			"message_not_found": "Zpráva nebyla nalezena.",
+			"error_deleting_message": "Chyba při mazání zprávy.",
+			"error_editing_message": "Chyba při úpravě zprávy."
+		},
+		"manual_url_empty": "URL nemůže být prázdné",
+		"manual_url_no_query": "URL musí obsahovat parametry dotazu",
+		"manual_url_missing_params": "URL chybí požadované parametry",
+		"manual_url_auth_failed": "Ověření se nezdařilo",
+		"manual_url_auth_error": "Došlo k chybě ověření",
 		"api": {
 			"invalidKeyInvalidChars": "API klíč obsahuje neplatné znaky."
 		}

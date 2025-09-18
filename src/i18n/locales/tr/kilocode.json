@@ -56,8 +56,8 @@
 		"providerRegistered": "Kilo: Commit mesajı sağlayıcısı kaydedildi"
 	},
 	"checkpoints": {
-		"nestedGitRepos": "İç içe Git depoları bulunan çalışma alanları için kontrol noktaları kullanılamaz.",
-		"protectedPaths": "Korumalı çalışma alanı yolları için kontrol noktaları kullanılamaz.",
+		"nestedGitRepos": "Kontrol noktaları kullanılamaz, çünkü şu konumda iç içe Git deposu tespit edildi: {{path}}. Kontrol noktaları özelliğini kullanmak için iç içe Git depolarını kaldırın veya taşıyın ya da bu uyarıyı gizlemek için ayarlarda kontrol noktalarını devre dışı bırakın.",
+		"protectedPaths": "Kontrol noktaları {{workspaceDir}} içinde kullanılamaz. Kontrol noktaları özelliğini kullanmak için bir alt klasörü çalışma alanı olarak açın ya da bu uyarıyı gizlemek için ayarlarda kontrol noktalarını devre dışı bırakın.",
 		"dismissWarning": "Kapat"
 	},
 	"ghost": {

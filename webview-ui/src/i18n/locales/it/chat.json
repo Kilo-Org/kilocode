@@ -24,7 +24,9 @@
 		"connectToCloudDescription": "Accedi a Kilo Code Cloud per condividere attività",
 		"sharingDisabledByOrganization": "Condivisione disabilitata dall'organizzazione",
 		"shareSuccessOrganization": "Link organizzazione copiato negli appunti",
-		"shareSuccessPublic": "Link pubblico copiato negli appunti"
+		"shareSuccessPublic": "Link pubblico copiato negli appunti",
+		"openInCloud": "Apri attività in Roo Code Cloud",
+		"openInCloudIntro": "Continua a monitorare o interagire con Roo da qualsiasi luogo. Scansiona, clicca o copia per aprire."
 	},
 	"history": {
 		"title": "Cronologia"
@@ -252,12 +254,18 @@
 		"issues": "Sembra che tu stia avendo problemi con Windows PowerShell, consulta questa"
 	},
 	"autoApprove": {
-		"title": "Auto-approvazione:",
-		"none": "Nessuna",
-		"description": "L'auto-approvazione permette a Kilo Code di eseguire azioni senza chiedere permesso. Abilita solo per azioni di cui ti fidi completamente. Configurazione più dettagliata disponibile nelle <settingsLink>Impostazioni</settingsLink>.",
-		"selectOptionsFirst": "Seleziona almeno un'opzione qui sotto per abilitare l'auto-approvazione",
-		"toggleAriaLabel": "Attiva/disattiva approvazione automatica",
-		"disabledAriaLabel": "Approvazione automatica disabilitata - seleziona prima le opzioni"
+		"tooltip": "Gestisci le impostazioni di approvazione automatica",
+		"title": "Approvazione automatica",
+		"all": "Tutti",
+		"none": "Nessuno",
+		"description": "Esegui queste azioni senza chiedere il permesso. Abilita questa opzione solo per le azioni di cui ti fidi completamente.",
+		"selectOptionsFirst": "Seleziona almeno un'opzione qui sotto per abilitare l'approvazione automatica",
+		"toggleAriaLabel": "Attiva/disattiva l'approvazione automatica",
+		"disabledAriaLabel": "Approvazione automatica disabilitata - seleziona prima le opzioni",
+		"triggerLabel_zero": "Nessuna approvazione automatica",
+		"triggerLabel_one": "1 approvato automaticamente",
+		"triggerLabel_other": "{{count}} approvati automaticamente",
+		"triggerLabelAll": "YOLO"
 	},
 	"reasoning": {
 		"thinking": "Sto pensando",
@@ -276,19 +284,12 @@
 	},
 	"announcement": {
 		"title": "🎉 Rilasciato Roo Code {{version}}",
-		"stealthModel": {
-			"feature": "Il modello stealth Sonic ora è <bold>Grok Code Fast</bold>! Questo modello di ragionamento ad alte prestazioni è disponibile come <code>grok-code-fast-1</code> sotto il provider <bold>xAI (Grok)</bold>.",
-			"note": "Come ringraziamento per tutti i feedback utili su Sonic, xAI sta estendendo l'accesso gratuito a <code>grok-code-fast-1</code> per un'altra settimana tramite il provider <bold>Roo Code Cloud</bold>.",
-			"connectButton": "Connetti a Roo Code Cloud",
-			"selectModel": "Visita le <settingsLink>Impostazioni</settingsLink> per aggiornare la configurazione del provider."
-		},
-		"description": "Roo Code {{version}} porta nuove potenti funzionalità e miglioramenti significativi per potenziare il tuo flusso di lavoro di sviluppo.",
-		"whatsNew": "Novità",
-		"feature1": "<bold>Coda Messaggi</bold>: Metti in coda più messaggi mentre Roo sta lavorando, permettendoti di continuare a pianificare il tuo flusso di lavoro senza interruzioni.",
-		"feature2": "<bold>Comandi Slash Personalizzati</bold>: Crea comandi slash personalizzati per accesso rapido a prompt e flussi di lavoro utilizzati frequentemente, con gestione completa dell'interfaccia utente.",
-		"feature3": "<bold>Strumenti Gemini Migliorati</bold>: Nuove capacità di contesto URL e fondamenta di ricerca Google forniscono ai modelli Gemini informazioni web in tempo reale e capacità di ricerca migliorate.",
-		"hideButton": "Nascondi annuncio",
-		"detailsDiscussLinks": "Ottieni maggiori dettagli e partecipa alle discussioni su <discordLink>Discord</discordLink> e <redditLink>Reddit</redditLink> 🚀"
+		"description": "Presentazione di <bold>Roo Code Cloud:</bold> Portare la potenza di Roo oltre l'IDE",
+		"feature1": "<bold>Traccia il progresso delle attività ovunque (Gratuito):</bold> Ricevi aggiornamenti in tempo reale su attività di lunga durata senza rimanere bloccato nel tuo IDE",
+		"feature2": "<bold>Controlla l'estensione Roo da remoto (Pro):</bold> Avvia, ferma e interagisci con le attività da un'interfaccia browser basata su chat.",
+		"learnMore": "Pronto a prendere il controllo? Scopri di più <learnMoreLink>qui</learnMoreLink>.",
+		"visitCloudButton": "Visita Roo Code Cloud",
+		"socialLinks": "Unisciti a noi su <xLink>X</xLink>, <discordLink>Discord</discordLink>, o <redditLink>r/RooCode</redditLink>"
 	},
 	"browser": {
 		"rooWantsToUse": "Kilo Code vuole utilizzare il browser:",

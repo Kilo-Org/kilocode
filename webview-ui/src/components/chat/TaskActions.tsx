@@ -9,6 +9,7 @@ import { useCopyToClipboard } from "@/utils/clipboard"
 import { DeleteTaskDialog } from "../history/DeleteTaskDialog"
 import { IconButton } from "./IconButton"
 // import { ShareButton } from "./ShareButton" // kilocode_change unused
+// import { CloudTaskButton } from "./CloudTaskButton" // kilocode_change: unused
 
 interface TaskActionsProps {
 	item?: HistoryItem
@@ -62,6 +63,7 @@ export const TaskActions = ({ item, buttonsDisabled }: TaskActionsProps) => {
 				</>
 			)}
 			{/* <ShareButton item={item} disabled={false} showLabel={false} /> kilocode_change: unused */}
+			{/* <CloudTaskButton item={item} disabled={buttonsDisabled} />  */}
 		</div>
 	)
 }

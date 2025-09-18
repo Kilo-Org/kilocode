@@ -24,7 +24,9 @@
 		"shareSuccessOrganization": "Odkaz organizace zkopírován do schránky",
 		"shareSuccessPublic": "Veřejný odkaz zkopírován do schránky",
 		"expand": "Rozbalit úkol",
-		"collapse": "Sbalit úkol"
+		"collapse": "Sbalit úkol",
+		"openInCloud": "Otevřít v cloudu",
+		"openInCloudIntro": "Monitoruj a spravuj tento úkol vzdáleně"
 	},
 	"history": {
 		"title": "Historie"
@@ -278,7 +280,13 @@
 		"description": "Automatické schvalování umožňuje Kilo Code provádět akce bez žádání o povolení. Zapni pouze pro akce, kterým plně důvěřuješ. Podrobnější konfigurace je dostupná v <settingsLink>Nastavení</settingsLink>.",
 		"selectOptionsFirst": "Nejprve vyber alespoň jednu možnost níže pro povolení automatického schvalování",
 		"toggleAriaLabel": "Přepnout automatické schvalování",
-		"disabledAriaLabel": "Automatické schvalování zakázáno - nejprve vyber možnosti"
+		"disabledAriaLabel": "Automatické schvalování zakázáno - nejprve vyber možnosti",
+		"tooltip": "Automaticky schválit požadavky na použití nástrojů",
+		"all": "Vše",
+		"triggerLabel_zero": "Automatické schválení: vypnuto",
+		"triggerLabel_one": "Automatické schválení: 1",
+		"triggerLabel_other": "Automatické schválení: {{count}}",
+		"triggerLabelAll": "Automatické schválení: YOLO"
 	},
 	"modeSelector": {
 		"title": "Režimy",
@@ -297,6 +305,9 @@
 		"feature3": "<bold>Podpora souborů Excel a další</bold>: Přidána podpora souborů Excel (.xlsx) a mnoho oprav chyb a vylepšení!",
 		"hideButton": "Skrýt oznámení",
 		"detailsDiscussLinks": "Získej více podrobností a diskutuj na <discordLink>Discord</discordLink> a <redditLink>Reddit</redditLink> 🚀",
+		"learnMore": "Dozvědět se více",
+		"visitCloudButton": "Navštívit Roo Code Cloud",
+		"socialLinks": "Následujte nás",
 		"stealthModel": {
 			"feature": "<bold>Časově omezený ZDARMA stealth model</bold> - Bleskurychle rychlý rozumový model, který vyniká v agentním kódování s kontextovým oknem 262k, dostupný prostřednictvím Roo Code Cloud.",
 			"note": "(Poznámka: prompty a dokončení jsou zaznamenávány tvůrcem modelu za účelem vylepšení modelu)",

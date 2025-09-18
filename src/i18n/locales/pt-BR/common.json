@@ -41,6 +41,7 @@
 		"checkpoint_timeout": "Tempo esgotado ao tentar restaurar o ponto de verificação.",
 		"checkpoint_failed": "Falha ao restaurar o ponto de verificação.",
 		"git_not_installed": "O Git é necessário para o recurso de checkpoints. Por favor, instale o Git para habilitar os checkpoints.",
+		"nested_git_repos_warning": "Os checkpoints estão desabilitados porque um repositório git aninhado foi detectado em: {{path}}. Para usar checkpoints, por favor remova ou realoque este repositório git aninhado.",
 		"no_workspace": "Por favor, abra primeiro uma pasta de projeto",
 		"update_support_prompt": "Falha ao atualizar o prompt de suporte",
 		"reset_support_prompt": "Falha ao redefinir o prompt de suporte",
@@ -109,6 +110,15 @@
 			"apiError": "Erro da API Gemini CLI: {{error}}",
 			"completionError": "Erro de conclusão do Gemini CLI: {{error}}"
 		},
+		"message": {
+			"no_active_task_to_delete": "Nenhuma tarefa ativa para excluir mensagens",
+			"invalid_timestamp_for_deletion": "Timestamp da mensagem inválido para exclusão",
+			"cannot_delete_missing_timestamp": "Não é possível excluir mensagem: timestamp ausente",
+			"cannot_delete_invalid_timestamp": "Não é possível excluir mensagem: timestamp inválido",
+			"message_not_found": "Mensagem com timestamp {{messageTs}} não encontrada",
+			"error_deleting_message": "Erro ao excluir mensagem: {{error}}",
+			"error_editing_message": "Erro ao editar mensagem: {{error}}"
+		},
 		"gemini": {
 			"generate_stream": "Erro de fluxo de contexto de geração do Gemini: {{error}}",
 			"generate_complete_prompt": "Erro de conclusão do Gemini: {{error}}",
@@ -131,7 +141,12 @@
 		},
 		"api": {
 			"invalidKeyInvalidChars": "A chave API contém caracteres inválidos."
-		}
+		},
+		"manual_url_empty": "Por favor, insira uma URL de callback válida",
+		"manual_url_no_query": "URL de callback inválida: parâmetros de consulta ausentes",
+		"manual_url_missing_params": "URL de callback inválida: parâmetros obrigatórios ausentes (code e state)",
+		"manual_url_auth_failed": "Autenticação manual por URL falhou",
+		"manual_url_auth_error": "Falha na autenticação"
 	},
 	"warnings": {
 		"no_terminal_content": "Nenhum conteúdo do terminal selecionado",
@@ -212,8 +227,13 @@
 	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "Sua organização requer autenticação do Kilo Code Cloud. Faça login para continuar.",
-			"organization_mismatch": "Você deve estar autenticado com a conta Kilo Code Cloud da sua organização.",
+			"cloud_auth_required": "Sua organização requer autenticação do Roo Code Cloud. Faça login para continuar.",
+			"organization_mismatch": "Você deve estar autenticado com a conta Roo Code Cloud da sua organização.",
+			"manual_url_empty": "Por favor, insira uma URL de callback válida",
+			"manual_url_no_query": "URL de callback inválida: parâmetros de consulta ausentes",
+			"manual_url_missing_params": "URL de callback inválida: parâmetros obrigatórios ausentes (code e state)",
+			"manual_url_auth_failed": "Autenticação manual por URL falhou",
+			"manual_url_auth_error": "Falha na autenticação",
 			"verification_failed": "Não foi possível verificar a autenticação da organização."
 		},
 		"info": {

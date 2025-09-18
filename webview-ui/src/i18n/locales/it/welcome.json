@@ -16,12 +16,8 @@
 	"startRouter": "Consigliamo di utilizzare un router LLM:",
 	"startCustom": "Oppure puoi utilizzare la tua chiave API:",
 	"telemetry": {
-		"title": "Aiuta a migliorare Kilo Code",
-		"anonymousTelemetry": "Invia dati di errori e utilizzo per aiutarci a correggere bug e migliorare l'estensione. Non viene mai inviato codice, prompts o informazioni personali.",
-		"changeSettings": "Puoi sempre cambiare questo in fondo alle <settingsLink>impostazioni</settingsLink>",
-		"settings": "impostazioni",
-		"allow": "Consenti",
-		"deny": "Nega"
+		"helpImprove": "Aiuta a migliorare Kilo Code",
+		"helpImproveMessage": "Kilo Code raccoglie dati di errori e utilizzo per aiutarci a correggere bug e migliorare l'estensione. Questa telemetria non raccoglie codice, prompts o informazioni personali. Puoi disattivare questo nelle <settingsLink>impostazioni</settingsLink>."
 	},
 	"importSettings": "Importa impostazioni"
 }

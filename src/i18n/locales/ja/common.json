@@ -37,6 +37,7 @@
 		"checkpoint_timeout": "チェックポイントの復元を試みる際にタイムアウトしました。",
 		"checkpoint_failed": "チェックポイントの復元に失敗しました。",
 		"git_not_installed": "チェックポイント機能にはGitが必要です。チェックポイントを有効にするにはGitをインストールしてください。",
+		"nested_git_repos_warning": "{{path}} でネストされたgitリポジトリが検出されたため、チェックポイントが無効になっています。チェックポイントを使用するには、このネストされたgitリポジトリを削除または移動してください。",
 		"no_workspace": "まずプロジェクトフォルダを開いてください",
 		"update_support_prompt": "サポートメッセージの更新に失敗しました",
 		"reset_support_prompt": "サポートメッセージのリセットに失敗しました",
@@ -105,6 +106,15 @@
 			"apiError": "Gemini CLI APIエラー: {{error}}",
 			"completionError": "Gemini CLI補完エラー: {{error}}"
 		},
+		"message": {
+			"no_active_task_to_delete": "メッセージを削除するアクティブなタスクがありません",
+			"invalid_timestamp_for_deletion": "削除用のメッセージタイムスタンプが無効です",
+			"cannot_delete_missing_timestamp": "メッセージを削除できません：タイムスタンプがありません",
+			"cannot_delete_invalid_timestamp": "メッセージを削除できません：タイムスタンプが無効です",
+			"message_not_found": "タイムスタンプ {{messageTs}} のメッセージが見つかりません",
+			"error_deleting_message": "メッセージ削除エラー：{{error}}",
+			"error_editing_message": "メッセージ編集エラー：{{error}}"
+		},
 		"gemini": {
 			"generate_stream": "Gemini 生成コンテキスト ストリーム エラー: {{error}}",
 			"generate_complete_prompt": "Gemini 完了エラー: {{error}}",
@@ -127,7 +137,12 @@
 		},
 		"api": {
 			"invalidKeyInvalidChars": "APIキーに無効な文字が含まれています。"
-		}
+		},
+		"manual_url_empty": "有効なコールバック URL を入力してください",
+		"manual_url_no_query": "無効なコールバック URL：クエリパラメータがありません",
+		"manual_url_missing_params": "無効なコールバック URL：必要なパラメータ（code と state）がありません",
+		"manual_url_auth_failed": "手動 URL 認証が失敗しました",
+		"manual_url_auth_error": "認証に失敗しました"
 	},
 	"warnings": {
 		"no_terminal_content": "選択されたターミナルコンテンツがありません",
@@ -212,8 +227,13 @@
 	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "あなたの組織では Kilo Code Cloud 認証が必要です。続行するにはサインインしてください。",
-			"organization_mismatch": "組織の Kilo Code Cloud アカウントで認証する必要があります。",
+			"cloud_auth_required": "あなたの組織では Roo Code Cloud 認証が必要です。続行するにはサインインしてください。",
+			"organization_mismatch": "組織の Roo Code Cloud アカウントで認証する必要があります。",
+			"manual_url_empty": "有効なコールバック URL を入力してください",
+			"manual_url_no_query": "無効なコールバック URL：クエリパラメータがありません",
+			"manual_url_missing_params": "無効なコールバック URL：必要なパラメータ（code と state）がありません",
+			"manual_url_auth_failed": "手動 URL 認証が失敗しました",
+			"manual_url_auth_error": "認証に失敗しました",
 			"verification_failed": "組織認証の確認ができませんでした。"
 		},
 		"info": {

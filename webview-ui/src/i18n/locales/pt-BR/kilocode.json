@@ -204,7 +204,6 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"autoTrigger": "Ativação Automática",
 			"triggers": "Gatilhos",
 			"keybindingDescription": "As funcionalidades do Autocomplete podem ser ativadas por comandos. Você pode configurar os <DocsLink>Atalhos de Teclado aqui</DocsLink>.",
 			"enableAutoTrigger": {
@@ -216,11 +215,11 @@
 				"description": "O atraso em segundos antes do Kilo Code ativar o Autocomplete depois que você parar de digitar. Um atraso menor significa sugestões mais rápidas, mas pode ser mais intensivo em recursos."
 			},
 			"enableQuickInlineTaskKeybinding": {
-				"label": "Tarefa Rápida",
+				"label": "Tarefa Rápida ({{keybinding}})",
 				"description": "Precisa apenas de uma mudança rápida? Selecione algum código (ou não!) e pressione Cmd+I. Descreva seu objetivo em português simples (\"criar um componente React com essas props\", \"adicionar tratamento de erro a esta função\"), e obtenha múltiplas sugestões prontas para uso diretamente no seu editor. <DocsLink>Ver atalho</DocsLink>"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Autocomplete Manual",
+				"label": "Preenchimento Automático Manual ({{keybinding}})",
 				"description": "Precisa de uma correção rápida, completação ou refatoração? O Kilo usará o contexto ao redor para oferecer melhorias imediatas, mantendo você no fluxo. <DocsLink>Ver atalho</DocsLink>"
 			},
 			"enableCustomProvider": {
@@ -232,7 +231,8 @@
 				"label": "Configuração da API",
 				"current": "Usar configuração da API atualmente selecionada",
 				"description": "Selecione uma configuração da API para usar nos prompts do Autocomplete, ou apenas use a que está atualmente selecionada"
-			}
+			},
+			"keybindingNotFound": "não encontrado"
 		}
 	},
 	"virtualProvider": {

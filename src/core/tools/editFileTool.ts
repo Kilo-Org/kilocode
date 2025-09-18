@@ -193,6 +193,9 @@ export async function editFileTool(
 		pushToolResult(message)
 
 		await cline.diffViewProvider.reset()
+
+		// Process any queued messages after file edit completes
+		cline.processQueuedMessages()
 	} catch (error) {
 		TelemetryService.instance.captureException(error, { context: "editFileTool" })
 		await handleError("editing file with Morph", error as Error)

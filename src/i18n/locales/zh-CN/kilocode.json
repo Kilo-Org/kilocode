@@ -17,7 +17,7 @@
 		"maxCompletionTokens": "已达到最大完成 Token 数量。"
 	},
 	"checkpoints": {
-		"nestedGitRepos": "存档点功能不可用，因为工作区中检测到嵌套的 Git 仓库。请移除或重新定位嵌套的 Git 仓库以使用存档点功能，或在设置中禁用存档点以消除此警告。",
+		"nestedGitRepos": "存档点功能不可用，因为在 {{path}} 检测到嵌套的 Git 仓库。请移除或重新定位嵌套的 Git 仓库以使用存档点功能，或在设置中禁用存档点以消除此警告。",
 		"protectedPaths": "存档点功能在 {{workspaceDir}} 中不可用。请将子文件夹作为工作区打开以使用存档点功能，或在设置中禁用存档点以消除此警告。",
 		"dismissWarning": "忽略"
 	},

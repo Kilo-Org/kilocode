@@ -162,6 +162,7 @@ export type UserFeatures = z.infer<typeof userFeaturesSchema>
 
 export const userSettingsConfigSchema = z.object({
 	extensionBridgeEnabled: z.boolean().optional(),
+	taskSyncEnabled: z.boolean().optional(),
 })
 
 export type UserSettingsConfig = z.infer<typeof userSettingsConfigSchema>
@@ -301,6 +302,14 @@ export interface SettingsService {
 	 * @returns Promise that resolves to true if successful, false otherwise
 	 */
 	updateUserSettings(settings: Partial<UserSettingsConfig>): Promise<boolean>
+
+	/**
+	 * Determines if task sync/recording is enabled based on organization and user settings
+	 * Organization settings take precedence over user settings.
+	 * User settings default to true if unspecified.
+	 * @returns true if task sync is enabled, false otherwise
+	 */
+	isTaskSyncEnabled(): boolean
 
 	/**
 	 * Dispose of the settings service and clean up resources

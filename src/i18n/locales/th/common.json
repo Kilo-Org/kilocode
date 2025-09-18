@@ -42,6 +42,7 @@
 		"checkpoint_timeout": "หมดเวลาเมื่อพยายามกู้คืน checkpoint",
 		"checkpoint_failed": "ล้มเหลวในการกู้คืน checkpoint",
 		"git_not_installed": "ต้องใช้ Git สำหรับฟีเจอร์ checkpoint กรุณาติดตั้ง Git เพื่อเปิดใช้งาน checkpoint",
+		"nested_git_repos_warning": "คำเตือน: พบ git repositories ที่ซ้อนกันในเส้นทางเหล่านี้ อาจทำให้เกิดพฤติกรรมที่ไม่คาดคิดกับเชคพอยท์: {{paths}}",
 		"no_workspace": "กรุณาเปิดโฟลเดอร์โปรเจ็กต์ก่อน",
 		"update_support_prompt": "ล้มเหลวในการอัปเดต support prompt",
 		"reset_support_prompt": "ล้มเหลวในการรีเซ็ต support prompt",
@@ -130,6 +131,20 @@
 		"roo": {
 			"authenticationRequired": "ผู้ให้บริการ Roo ต้องการการยืนยันตัวตนบนคลาวด์ กรุณาเข้าสู่ระบบ Roo Code Cloud"
 		},
+		"message": {
+			"no_active_task_to_delete": "ไม่พบงานที่ใช้งานอยู่ ไม่สามารถลบข้อความได้",
+			"invalid_timestamp_for_deletion": "ระบุ timestamp ที่ไม่ถูกต้องสำหรับการลบ",
+			"cannot_delete_missing_timestamp": "ไม่สามารถลบข้อความได้: ไม่มี timestamp",
+			"cannot_delete_invalid_timestamp": "ไม่สามารถลบข้อความได้: timestamp ไม่ถูกต้อง",
+			"message_not_found": "ไม่พบข้อความ",
+			"error_deleting_message": "เกิดข้อผิดพลาดในการลบข้อความ",
+			"error_editing_message": "เกิดข้อผิดพลาดในการแก้ไขข้อความ"
+		},
+		"manual_url_empty": "URL ไม่สามารถเป็นค่าว่างได้",
+		"manual_url_no_query": "URL ต้องมีพารามิเตอร์ query",
+		"manual_url_missing_params": "URL ขาดพารามิเตอร์ที่จำเป็น",
+		"manual_url_auth_failed": "การยืนยันตัวตนล้มเหลว",
+		"manual_url_auth_error": "เกิดข้อผิดพลาดในการยืนยันตัวตน",
 		"api": {
 			"invalidKeyInvalidChars": "API key มีตัวอักษรที่ไม่ถูกต้อง"
 		}

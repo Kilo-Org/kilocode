@@ -197,7 +197,6 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"autoTrigger": "Activació Automàtica",
 			"triggers": "Activadors",
 			"keybindingDescription": "Les funcionalitats d'Autocomplete es poden activar mitjançant ordres. Pots configurar les <DocsLink>Dreceres de Teclat aquí</DocsLink>.",
 			"enableAutoTrigger": {
@@ -209,11 +208,11 @@
 				"description": "El retard en segons abans que Kilo Code activi Autocomplete després que deixis d'escriure. Un retard més curt significa suggeriments més ràpids, però pot ser més intensiu en recursos."
 			},
 			"enableQuickInlineTaskKeybinding": {
-				"label": "Tasca Ràpida",
+				"label": "Tasca ràpida ({{keybinding}})",
 				"description": "Només necessites un canvi ràpid? Selecciona codi (o no!) i prem Cmd+I. Descriu el teu objectiu en català simple (\"crear un component React amb aquestes props\", \"afegir gestió d'errors a aquesta funció\"), i obtén múltiples suggeriments llestos per usar directament al teu editor. <DocsLink>Veure drecera</DocsLink>"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Autocomplete Manual",
+				"label": "Autocompleció Manual ({{keybinding}})",
 				"description": "Necessites una correcció ràpida, completació o refactorització? Kilo utilitzarà el context circumdant per oferir millores immediates, mantenint-te en el flux. <DocsLink>Veure drecera</DocsLink>"
 			},
 			"enableCustomProvider": {
@@ -225,7 +224,8 @@
 				"label": "Configuració d'API",
 				"current": "Usar configuració d'API actualment seleccionada",
 				"description": "Selecciona una configuració d'API per usar als prompts d'Autocomplete, o simplement usa la que està actualment seleccionada"
-			}
+			},
+			"keybindingNotFound": "no trobat"
 		}
 	},
 	"virtualProvider": {

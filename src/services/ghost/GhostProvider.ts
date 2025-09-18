@@ -18,7 +18,7 @@ import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManag
 import { GhostContext } from "./GhostContext"
 import { TelemetryService } from "@roo-code/telemetry"
 import { ClineProvider } from "../../core/webview/ClineProvider"
-import { GhostCursorAnimation } from "./GhostCursorAnimation"
+import { GhostGutterAnimation } from "./GhostGutterAnimation"
 import { GhostCursor } from "./GhostCursor"
 
 export class GhostProvider {
@@ -35,7 +35,7 @@ export class GhostProvider {
 	private settings: GhostServiceSettings | null = null
 	private ghostContext: GhostContext
 	private cursor: GhostCursor
-	private cursorAnimation: GhostCursorAnimation
+	private cursorAnimation: GhostGutterAnimation
 
 	private enabled: boolean = true
 	private taskId: string | null = null
@@ -68,7 +68,7 @@ export class GhostProvider {
 		this.model = new GhostModel()
 		this.ghostContext = new GhostContext(this.documentStore)
 		this.cursor = new GhostCursor()
-		this.cursorAnimation = new GhostCursorAnimation(context)
+		this.cursorAnimation = new GhostGutterAnimation(context)
 
 		// Register the providers
 		this.codeActionProvider = new GhostCodeActionProvider()
@@ -111,7 +111,7 @@ export class GhostProvider {
 			return
 		}
 		await ContextProxy.instance?.setValues?.({ ghostServiceSettings: this.settings })
-		await this.cline.postStateToWebview
+		await this.cline.postStateToWebview()
 	}
 
 	public async load() {
@@ -599,17 +599,12 @@ export class GhostProvider {
 		}
 
 		this.statusBar?.update({
-			enabled: true,
+			enabled: this.settings?.enableAutoTrigger,
 			model: this.getCurrentModelName(),
 			hasValidToken: this.hasValidApiToken(),
 			totalSessionCost: this.sessionCost,
 			lastCompletionCost: this.lastCompletionCost,
 		})
-	}
-
-	private disposeStatusBar() {
-		this.statusBar?.dispose()
-		this.statusBar = null
 	}
 
 	public async showIncompatibilityExtensionPopup() {
@@ -716,5 +711,21 @@ export class GhostProvider {
 
 		// Trigger code suggestion automatically
 		await this.codeSuggestion()
+	}
+
+	/**
+	 * Dispose of all resources used by the GhostProvider
+	 */
+	public dispose(): void {
+		this.clearAutoTriggerTimer()
+		this.cancelRequest()
+
+		this.suggestions.clear()
+		this.decorations.clearAll()
+
+		this.statusBar?.dispose()
+		this.cursorAnimation.dispose()
+
+		GhostProvider.instance = null // Reset singleton
 	}
 }

@@ -37,6 +37,7 @@
 		"checkpoint_timeout": "Se agotó el tiempo al intentar restaurar el punto de control.",
 		"checkpoint_failed": "Error al restaurar el punto de control.",
 		"git_not_installed": "Git es necesario para la función de puntos de control. Por favor, instala Git para activar los puntos de control.",
+		"nested_git_repos_warning": "Los puntos de control están deshabilitados porque se detectó un repositorio git anidado en: {{path}}. Para usar puntos de control, por favor elimina o reubica este repositorio git anidado.",
 		"no_workspace": "Por favor, abre primero una carpeta de proyecto",
 		"update_support_prompt": "Error al actualizar el mensaje de soporte",
 		"reset_support_prompt": "Error al restablecer el mensaje de soporte",
@@ -105,6 +106,15 @@
 			"apiError": "Error de API de Gemini CLI: {{error}}",
 			"completionError": "Error de completado de Gemini CLI: {{error}}"
 		},
+		"message": {
+			"no_active_task_to_delete": "No hay tarea activa de la cual eliminar mensajes",
+			"invalid_timestamp_for_deletion": "Marca de tiempo del mensaje no válida para eliminación",
+			"cannot_delete_missing_timestamp": "No se puede eliminar el mensaje: falta marca de tiempo",
+			"cannot_delete_invalid_timestamp": "No se puede eliminar el mensaje: marca de tiempo no válida",
+			"message_not_found": "Mensaje con marca de tiempo {{messageTs}} no encontrado",
+			"error_deleting_message": "Error eliminando mensaje: {{error}}",
+			"error_editing_message": "Error editando mensaje: {{error}}"
+		},
 		"gemini": {
 			"generate_stream": "Error del stream de contexto de generación de Gemini: {{error}}",
 			"generate_complete_prompt": "Error de finalización de Gemini: {{error}}",
@@ -127,7 +137,12 @@
 		},
 		"api": {
 			"invalidKeyInvalidChars": "La clave API contiene caracteres inválidos."
-		}
+		},
+		"manual_url_empty": "Por favor, introduce una URL de callback válida",
+		"manual_url_no_query": "URL de callback inválida: faltan parámetros de consulta",
+		"manual_url_missing_params": "URL de callback inválida: faltan parámetros requeridos (code y state)",
+		"manual_url_auth_failed": "Autenticación manual por URL falló",
+		"manual_url_auth_error": "Error de autenticación"
 	},
 	"warnings": {
 		"no_terminal_content": "No hay contenido de terminal seleccionado",

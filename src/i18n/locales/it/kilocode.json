@@ -17,7 +17,7 @@
 		"maxCompletionTokens": "È stato raggiunto il numero massimo di token di completamento."
 	},
 	"checkpoints": {
-		"nestedGitRepos": "I checkpoint non sono disponibili perché sono stati rilevati repository Git annidati nel workspace. Rimuovi o sposta i repository Git annidati per utilizzare la funzione checkpoint oppure disabilita i checkpoint nelle impostazioni per sopprimere questo avviso.",
+		"nestedGitRepos": "I checkpoint non sono disponibili perché è stato rilevato un repository Git annidato in: {{path}}. Rimuovi o sposta i repository Git annidati per utilizzare la funzione checkpoint oppure disabilita i checkpoint nelle impostazioni per sopprimere questo avviso.",
 		"protectedPaths": "I checkpoint non sono disponibili in {{workspaceDir}}. Apri una sottocartella come workspace per utilizzare la funzione checkpoint oppure disabilita i checkpoint nelle impostazioni per sopprimere questo avviso.",
 		"dismissWarning": "Ignora"
 	},
