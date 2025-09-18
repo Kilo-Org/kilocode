@@ -52,4 +52,3 @@ plugins
 ### Generated build artifacts ###
 gradle.properties
 src/main/resources/META-INF/plugin.xml
-platform.zip

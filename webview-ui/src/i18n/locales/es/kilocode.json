@@ -197,11 +197,10 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"autoTrigger": "Activación Automática",
 			"triggers": "Activadores",
 			"keybindingDescription": "Las funciones de Autocomplete pueden activarse mediante comandos. Puedes configurar los <DocsLink>Atajos de Teclado aquí</DocsLink>.",
 			"enableAutoTrigger": {
-				"label": "Habilitar Autocomplete",
+				"label": "Pausar para Completar",
 				"description": "Cuando está habilitado, Kilo Code activará automáticamente Autocomplete cuando dejes de escribir. Esto puede ser útil para correcciones rápidas y sugerencias."
 			},
 			"autoTriggerDelay": {
@@ -209,23 +208,24 @@
 				"description": "El retraso en segundos antes de que Kilo Code active Autocomplete después de que dejes de escribir. Un retraso más corto significa sugerencias más rápidas, pero puede ser más intensivo en recursos."
 			},
 			"enableQuickInlineTaskKeybinding": {
-				"label": "Tarea Rápida",
-				"description": "¿Solo necesitas un cambio rápido? Selecciona algo de código (¡o no!) y presiona Cmd+I. Describe tu objetivo en español simple (\"crear un componente React con estas props\", \"agregar manejo de errores a esta función\"), y obtén múltiples sugerencias listas para usar directamente en tu editor. <DocsLink>Ver atajo</DocsLink>"
+				"label": "Tarea rápida ({{keybinding}})",
+				"description": "¿Solo necesitas un cambio rápido? Selecciona algo de código (¡o no!) y presiona Cmd+I. Describe tu objetivo en español simple (\"crear un componente React con estas props\", \"agregar manejo de errores a esta función\"), y obtén múltiples sugerencias listas para usar directamente en tu editor. <DocsLink>Editar atajo</DocsLink>"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Autocomplete Manual",
-				"description": "¿Necesitas una corrección rápida, completado o refactorización? Kilo usará el contexto circundante para ofrecer mejoras inmediatas, manteniéndote en el flujo. <DocsLink>Ver atajo</DocsLink>"
+				"label": "Autocompletado Manual ({{keybinding}})",
+				"description": "¿Necesitas una corrección rápida, completado o refactorización? Kilo usará el contexto circundante para ofrecer mejoras inmediatas, manteniéndote en el flujo. <DocsLink>Editar atajo</DocsLink>"
 			},
 			"enableCustomProvider": {
 				"label": "Usar proveedor personalizado",
-				"description": "Autocomplete usa tu credencial de KiloCode / OpenRouter / Mistral para usar el modelo Codestral por defecto"
+				"description": "Autocomplete usa tu credencial de Kilo Code / OpenRouter / Mistral para usar el modelo Codestral por defecto"
 			},
 			"provider": "Proveedor",
 			"apiConfigId": {
 				"label": "Configuración de API",
 				"current": "Usar configuración de API actualmente seleccionada",
 				"description": "Selecciona una configuración de API para usar en los prompts de Autocomplete, o simplemente usa la que esté actualmente seleccionada"
-			}
+			},
+			"keybindingNotFound": "no encontrado"
 		}
 	},
 	"virtualProvider": {

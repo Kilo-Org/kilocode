@@ -3211,6 +3211,17 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
+		case "getKeybindings": {
+			try {
+				const { getKeybindingsForCommands } = await import("../../utils/keybindings")
+				const keybindings = await getKeybindingsForCommands(message.commandIds ?? [])
+
+				await provider.postMessageToWebview({ type: "keybindingsResponse", keybindings })
+			} catch (error) {
+				await provider.postMessageToWebview({ type: "keybindingsResponse", keybindings: {} })
+			}
+			break
+		}
 		case "openCommandFile": {
 			try {
 				if (message.text) {

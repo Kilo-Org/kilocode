@@ -197,7 +197,6 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"autoTrigger": "ऑटो ट्रिगर",
 			"triggers": "ट्रिगर्स",
 			"keybindingDescription": "Autocomplete सुविधाओं को कमांड द्वारा ट्रिगर किया जा सकता है। आप <DocsLink>कीबोर्ड शॉर्टकट यहाँ</DocsLink> कॉन्फ़िगर कर सकते हैं।",
 			"enableAutoTrigger": {
@@ -209,11 +208,11 @@
 				"description": "आपके टाइपिंग बंद करने के बाद Kilo Code के Autocomplete ट्रिगर करने से पहले सेकंड में देरी। कम देरी का मतलब तेज़ सुझाव है, लेकिन अधिक संसाधन-गहन हो सकता है।"
 			},
 			"enableQuickInlineTaskKeybinding": {
-				"label": "त्वरित कार्य",
+				"label": "त्वरित कार्य ({{keybinding}})",
 				"description": "केवल एक त्वरित बदलाव चाहिए? कुछ कोड चुनें (या न चुनें!) और Cmd+I दबाएं। अपना लक्ष्य सरल हिंदी में बताएं (\"इन props के साथ React कंपोनेंट बनाएं\", \"इस फ़ंक्शन में एरर हैंडलिंग जोड़ें\"), और अपने एडिटर में सीधे कई तैयार-से-उपयोग सुझाव प्राप्त करें। <DocsLink>शॉर्टकट देखें</DocsLink>"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "मैनुअल Autocomplete",
+				"label": "मैनुअल ऑटोकंप्लीट ({{keybinding}})",
 				"description": "त्वरित सुधार, पूर्णता, या रिफैक्टरिंग चाहिए? Kilo आसपास के संदर्भ का उपयोग करके तत्काल सुधार प्रदान करेगा, आपको प्रवाह में रखते हुए। <DocsLink>शॉर्टकट देखें</DocsLink>"
 			},
 			"enableCustomProvider": {
@@ -225,7 +224,8 @@
 				"label": "API कॉन्फ़िगरेशन",
 				"current": "वर्तमान में चयनित API कॉन्फ़िगरेशन का उपयोग करें",
 				"description": "Autocomplete प्रॉम्प्ट के लिए उपयोग करने हेतु API कॉन्फ़िगरेशन चुनें, या बस वर्तमान में चयनित का उपयोग करें"
-			}
+			},
+			"keybindingNotFound": "नहीं मिला"
 		}
 	},
 	"virtualProvider": {

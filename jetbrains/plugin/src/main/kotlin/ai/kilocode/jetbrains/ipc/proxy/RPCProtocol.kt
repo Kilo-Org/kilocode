@@ -555,7 +555,7 @@ class RPCProtocol(
         args: List<Any?>,
         usesCancellationToken: Boolean
     ) {
-        LOG.info("receiveRequest:$req.$rpcId.$method()")
+        // LOG.info("receiveRequest:$req.$rpcId.$method()") // Removed: too noisy
         logger?.logIncoming(
             msgLength,
             req,

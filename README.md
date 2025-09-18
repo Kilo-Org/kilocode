@@ -59,3 +59,186 @@ Kilo Code is a direct fork from Roo Code, and also includes the following featur
 ## Extension Development
 
 For details on building and developing the extension, see [DEVELOPMENT.md](/DEVELOPMENT.md)
+
+## Contributors
+
+Thanks to all the contributors who help make Kilo Code better!
+
+<table>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/mrubens">
+        <img src="https://avatars.githubusercontent.com/u/2600?v=4?size=100" width="100" height="100" alt="mrubens" style="border-radius: 50%;" />
+        <br />
+        <sub><b>mrubens</b></sub>
+      </a>
+    </td>    <td align="center">
+      <a href="https://github.com/chrarnoldus">
+        <img src="https://avatars.githubusercontent.com/u/12196001?v=4?size=100" width="100" height="100" alt="chrarnoldus" style="border-radius: 50%;" />
+        <br />
+        <sub><b>chrarnoldus</b></sub>
+      </a>
+    </td>    <td align="center">
+      <a href="https://github.com/saoudrizwan">
+        <img src="https://avatars.githubusercontent.com/u/7799382?v=4?size=100" width="100" height="100" alt="saoudrizwan" style="border-radius: 50%;" />
+        <br />
+        <sub><b>saoudrizwan</b></sub>
+      </a>
+    </td>    <td align="center">
+      <a href="https://github.com/cte">
+        <img src="https://avatars.githubusercontent.com/u/16332?v=4?size=100" width="100" height="100" alt="cte" style="border-radius: 50%;" />
+        <br />
+        <sub><b>cte</b></sub>
+      </a>
+    </td>    <td align="center">
+      <a href="https://github.com/kevinvandijk">
+        <img src="https://avatars.githubusercontent.com/u/223256?v=4?size=100" width="100" height="100" alt="kevinvandijk" style="border-radius: 50%;" />
+        <br />
+        <sub><b>kevinvandijk</b></sub>
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/daniel-lxs">
+        <img src="https://avatars.githubusercontent.com/u/57051444?v=4?size=100" width="100" height="100" alt="daniel-lxs" style="border-radius: 50%;" />
+        <br />
+        <sub><b>daniel-lxs</b></sub>
+      </a>
+    </td>    <td align="center">
+      <a href="https://github.com/hannesrudolph">
+        <img src="https://avatars.githubusercontent.com/u/49103247?v=4?size=100" width="100" height="100" alt="hannesrudolph" style="border-radius: 50%;" />
+        <br />
+        <sub><b>hannesrudolph</b></sub>
+      </a>
+    </td>    <td align="center">
+      <a href="https://github.com/samhvw8">
+        <img src="https://avatars.githubusercontent.com/u/12538214?v=4?size=100" width="100" height="100" alt="samhvw8" style="border-radius: 50%;" />
+        <br />
+        <sub><b>samhvw8</b></sub>
+      </a>
+    </td>    <td align="center">
+      <a href="https://github.com/hassoncs">
+        <img src="https://avatars.githubusercontent.com/u/5104925?v=4?size=100" width="100" height="100" alt="hassoncs" style="border-radius: 50%;" />
+        <br />
+        <sub><b>hassoncs</b></sub>
+      </a>
+    </td>    <td align="center">
+      <a href="https://github.com/olearycrew">
+        <img src="https://avatars.githubusercontent.com/u/6044920?v=4?size=100" width="100" height="100" alt="olearycrew" style="border-radius: 50%;" />
+        <br />
+        <sub><b>olearycrew</b></sub>
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/catrielmuller">
+        <img src="https://avatars.githubusercontent.com/u/2272323?v=4?size=100" width="100" height="100" alt="catrielmuller" style="border-radius: 50%;" />
+        <br />
+        <sub><b>catrielmuller</b></sub>
+      </a>
+    </td>    <td align="center">
+      <a href="https://github.com/markijbema">
+        <img src="https://avatars.githubusercontent.com/u/624143?v=4?size=100" width="100" height="100" alt="markijbema" style="border-radius: 50%;" />
+        <br />
+        <sub><b>markijbema</b></sub>
+      </a>
+    </td>    <td align="center">
+      <a href="https://github.com/R00-B0T">
+        <img src="https://avatars.githubusercontent.com/u/110429663?v=4?size=100" width="100" height="100" alt="R00-B0T" style="border-radius: 50%;" />
+        <br />
+        <sub><b>R00-B0T</b></sub>
+      </a>
+    </td>    <td align="center">
+      <a href="https://github.com/KJ7LNW">
+        <img src="https://avatars.githubusercontent.com/u/93454819?v=4?size=100" width="100" height="100" alt="KJ7LNW" style="border-radius: 50%;" />
+        <br />
+        <sub><b>KJ7LNW</b></sub>
+      </a>
+    </td>    <td align="center">
+      <a href="https://github.com/PyGuy2">
+        <img src="https://avatars.githubusercontent.com/u/11974189?v=4?size=100" width="100" height="100" alt="PyGuy2" style="border-radius: 50%;" />
+        <br />
+        <sub><b>PyGuy2</b></sub>
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/a8trejo">
+        <img src="https://avatars.githubusercontent.com/u/62401433?v=4?size=100" width="100" height="100" alt="a8trejo" style="border-radius: 50%;" />
+        <br />
+        <sub><b>a8trejo</b></sub>
+      </a>
+    </td>    <td align="center">
+      <a href="https://github.com/MuriloFP">
+        <img src="https://avatars.githubusercontent.com/u/50873657?v=4?size=100" width="100" height="100" alt="MuriloFP" style="border-radius: 50%;" />
+        <br />
+        <sub><b>MuriloFP</b></sub>
+      </a>
+    </td>    <td align="center">
+      <a href="https://github.com/ColemanRoo">
+        <img src="https://avatars.githubusercontent.com/u/117104599?v=4?size=100" width="100" height="100" alt="ColemanRoo" style="border-radius: 50%;" />
+        <br />
+        <sub><b>ColemanRoo</b></sub>
+      </a>
+    </td>    <td align="center">
+      <a href="https://github.com/HadesArchitect">
+        <img src="https://avatars.githubusercontent.com/u/1742301?v=4?size=100" width="100" height="100" alt="HadesArchitect" style="border-radius: 50%;" />
+        <br />
+        <sub><b>HadesArchitect</b></sub>
+      </a>
+    </td>    <td align="center">
+      <a href="https://github.com/canrobins13">
+        <img src="https://avatars.githubusercontent.com/u/20544372?v=4?size=100" width="100" height="100" alt="canrobins13" style="border-radius: 50%;" />
+        <br />
+        <sub><b>canrobins13</b></sub>
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/stea9499">
+        <img src="https://avatars.githubusercontent.com/u/4163795?v=4?size=100" width="100" height="100" alt="stea9499" style="border-radius: 50%;" />
+        <br />
+        <sub><b>stea9499</b></sub>
+      </a>
+    </td>    <td align="center">
+      <a href="https://github.com/jr">
+        <img src="https://avatars.githubusercontent.com/u/5629?v=4?size=100" width="100" height="100" alt="jr" style="border-radius: 50%;" />
+        <br />
+        <sub><b>jr</b></sub>
+      </a>
+    </td>    <td align="center">
+      <a href="https://github.com/drakonen">
+        <img src="https://avatars.githubusercontent.com/u/172944?v=4?size=100" width="100" height="100" alt="drakonen" style="border-radius: 50%;" />
+        <br />
+        <sub><b>drakonen</b></sub>
+      </a>
+    </td>    <td align="center">
+      <a href="https://github.com/NyxJae">
+        <img src="https://avatars.githubusercontent.com/u/52313587?v=4?size=100" width="100" height="100" alt="NyxJae" style="border-radius: 50%;" />
+        <br />
+        <sub><b>NyxJae</b></sub>
+      </a>
+    </td>    <td align="center">
+      <a href="https://github.com/beatlevic">
+        <img src="https://avatars.githubusercontent.com/u/90617?v=4?size=100" width="100" height="100" alt="beatlevic" style="border-radius: 50%;" />
+        <br />
+        <sub><b>beatlevic</b></sub>
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/joemanley201">
+        <img src="https://avatars.githubusercontent.com/u/8299960?v=4?size=100" width="100" height="100" alt="joemanley201" style="border-radius: 50%;" />
+        <br />
+        <sub><b>joemanley201</b></sub>
+      </a>
+    </td>
+  </tr>
+</table>
+
+<!-- END CONTRIBUTORS SECTION -->
