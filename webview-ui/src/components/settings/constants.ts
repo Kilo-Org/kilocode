@@ -13,6 +13,7 @@ import {
 	// kilocode_change end
 	mistralModels,
 	openAiNativeModels,
+	ovhCloudAiEndpointsModels,
 	qwenCodeModels,
 	vertexModels,
 	xaiModels,
@@ -40,6 +41,7 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	// kilocode_change end
 	mistral: mistralModels,
 	"openai-native": openAiNativeModels,
+	ovhcloud: ovhCloudAiEndpointsModels,
 	"qwen-code": qwenCodeModels,
 	vertex: vertexModels,
 	xai: xaiModels,
@@ -76,6 +78,7 @@ export const PROVIDERS = [
 	{ value: "mistral", label: "Mistral" },
 	{ value: "lmstudio", label: "LM Studio" },
 	{ value: "ollama", label: "Ollama" },
+	{ value: "ovhcloud", label: "OVHcloud AI Endpoints" },
 	{ value: "unbound", label: "Unbound" },
 	{ value: "requesty", label: "Requesty" },
 	{ value: "human-relay", label: "Human Relay" },
