@@ -28,7 +28,6 @@
 	"pricing": {
 		"costUnknown": "cost unknown",
 		"costUnknownDescription": "The API Provider did not provide any cost data or the request was canceled.",
-		"freeModelsDescription": "Free models may have rate limits. Use the link below to optimize your free model usage!",
 		"freeModelsLink": "Discover free and budget model options",
 		"openRouterMarkup": "The Kilo Code provider includes all of the OpenRouter models, with zero markup and 0% commission!",
 		"switchToKiloCode": "Switch to Kilo Code"
@@ -80,6 +79,12 @@
 				"outputPrice": "Cost per million tokens for the completion.",
 				"cacheReadPrice": "Cost per million tokens for reading from the cache.",
 				"cacheWritePrice": "Cost per million tokens for writing to the cache."
+			},
+			"recommendedSettings": "Kilo Code has the following recommendations to improve the experience using this model:",
+			"applyRecommendedSettings": "Apply Recommended Settings",
+			"recommendations": {
+				"disableDiff": "Disable editing through diffs.",
+				"disableTodoList": "Disable todo list tool."
 			}
 		},
 		"contextManagement": {

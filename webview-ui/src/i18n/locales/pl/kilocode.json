@@ -21,7 +21,6 @@
 	"pricing": {
 		"costUnknown": "koszt nieznany",
 		"costUnknownDescription": "Dostawca API nie podał żadnych danych o kosztach lub żądanie zostało anulowane.",
-		"freeModelsDescription": "Darmowe modele mogą mieć limity użycia. Użyj poniższego linku, aby zoptymalizować wykorzystanie darmowych modeli!",
 		"freeModelsLink": "Odkryj opcje darmowych modeli i modeli budżetowych",
 		"openRouterMarkup": "Dostawca Kilo Code zawiera wszystkie modele OpenRouter, bez narzutu i z 0% prowizji!",
 		"switchToKiloCode": "Przełącz na Kilo Code"

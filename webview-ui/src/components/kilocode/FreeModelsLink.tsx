@@ -36,16 +36,6 @@ export const OpenRouterMarkupInfoView = ({
 	)
 }
 
-export const FreeModelsInfoView = ({ origin, modelId }: { origin: "chat" | "settings"; modelId?: string }) => {
-	const { t } = useAppTranslation()
-	return (
-		<WarningBox>
-			<div>{t("kilocode:pricing.freeModelsDescription")}</div>
-			<FreeModelsLink className="mt-3 w-full" origin={origin} modelId={modelId} />
-		</WarningBox>
-	)
-}
-
 export const FreeModelsLink = ({
 	className,
 	origin,

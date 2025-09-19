@@ -9,7 +9,7 @@ export const usePreferredModels = (models: Record<string, ModelInfo> | null) => 
 		const restModelIds = []
 		// first add the preferred models
 		for (const [key, model] of Object.entries(models)) {
-			if (Number.isInteger(model.preferredIndex)) {
+			if (Number.isInteger(model.kiloCode?.preferredIndex)) {
 				preferredModelIds.push(key)
 			}
 		}
@@ -17,7 +17,7 @@ export const usePreferredModels = (models: Record<string, ModelInfo> | null) => 
 		preferredModelIds.sort((a, b) => {
 			const modelA = models[a]
 			const modelB = models[b]
-			return (modelA.preferredIndex ?? 0) - (modelB.preferredIndex ?? 0)
+			return (modelA.kiloCode?.preferredIndex ?? 0) - (modelB.kiloCode?.preferredIndex ?? 0)
 		})
 
 		// then add the rest

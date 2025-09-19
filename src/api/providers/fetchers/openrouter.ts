@@ -8,6 +8,7 @@ import {
 	OPEN_ROUTER_REASONING_BUDGET_MODELS,
 	OPEN_ROUTER_REQUIRED_REASONING_BUDGET_MODELS,
 	anthropicModels,
+	kiloCodeModelMetaDataSchema,
 } from "@roo-code/types"
 
 import type { ApiHandlerOptions } from "../../../shared/api"
@@ -36,7 +37,7 @@ const modelRouterBaseModelSchema = z.object({
 	description: z.string().optional(),
 	context_length: z.number(),
 	max_completion_tokens: z.number().nullish(),
-	preferredIndex: z.number().nullish(), // kilocode_change
+	kiloCode: kiloCodeModelMetaDataSchema.optional(), // kilocode_change
 	pricing: openRouterPricingSchema.optional(),
 })
 
@@ -239,7 +240,7 @@ export const parseOpenRouterModel = ({
 		supportedParameters: supportedParameters ? supportedParameters.filter(isModelParameter) : undefined,
 		// kilocode_change start
 		displayName,
-		preferredIndex: model.preferredIndex,
+		kiloCode: model.kiloCode,
 		// kilocode_change end
 	}
 
