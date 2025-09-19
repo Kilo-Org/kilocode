@@ -62,3 +62,7 @@ deps/vscode/*
 
 # Qdrant
 qdrant_storage/
+
+# allow multiple local clones with different workspaces with different colors
+# to make it easier to work on features in parallel
+*.code-workspace
