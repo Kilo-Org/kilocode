@@ -57,6 +57,7 @@ export class MistralEmbedder implements IEmbedder {
 				stack: error instanceof Error ? error.stack : undefined,
 				location: "MistralEmbedder:createEmbeddings",
 			})
+			console.error("Mistral embedder error in createEmbeddings:", error)
 			throw error
 		}
 	}
@@ -76,6 +77,7 @@ export class MistralEmbedder implements IEmbedder {
 				stack: error instanceof Error ? error.stack : undefined,
 				location: "MistralEmbedder:validateConfiguration",
 			})
+			console.error("Mistral embedder error in validateConfiguration:", error)
 			throw error
 		}
 	}
