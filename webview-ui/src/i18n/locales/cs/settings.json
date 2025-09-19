@@ -128,7 +128,9 @@
 			"ollamaBaseUrlRequired": "Základní URL Ollama je povinné",
 			"baseUrlRequired": "Základní URL je povinné",
 			"modelDimensionMinValue": "Dimenze modelu musí být větší než 0"
-		}
+		},
+		"cancelling": "Probíhá rušení...",
+		"cancelIndexingButton": "Zrušit indexování"
 	},
 	"autoApproval": {
 		"title": "Automatické schválení",

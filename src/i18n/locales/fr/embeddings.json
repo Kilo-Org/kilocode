@@ -61,6 +61,7 @@
 		"fileWatcherStopped": "Surveillant de fichiers arrêté.",
 		"failedDuringInitialScan": "Échec lors du scan initial : {{errorMessage}}",
 		"unknownError": "Erreur inconnue",
-		"indexingRequiresWorkspace": "L'indexation nécessite l'ouverture d'un dossier workspace"
+		"indexingRequiresWorkspace": "L'indexation nécessite l'ouverture d'un dossier workspace",
+		"indexingCancelled": "Indexation annulée"
 	}
 }

@@ -128,7 +128,9 @@
 			"ollamaBaseUrlRequired": "رابط Ollama الأساسي مطلوب",
 			"baseUrlRequired": "الرابط الأساسي مطلوب",
 			"modelDimensionMinValue": "بُعد النموذج يجب أن يكون أكبر من 0"
-		}
+		},
+		"cancelling": "جارٍ الإلغاء...",
+		"cancelIndexingButton": "إلغاء الفهرسة"
 	},
 	"autoApproval": {
 		"title": "الموافقة التلقائية",

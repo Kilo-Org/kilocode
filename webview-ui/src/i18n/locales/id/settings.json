@@ -128,7 +128,9 @@
 		"searchMinScoreResetTooltip": "Reset ke nilai default (0.4)",
 		"searchMaxResultsLabel": "Hasil Pencarian Maksimum",
 		"searchMaxResultsDescription": "Jumlah maksimum hasil pencarian yang dikembalikan saat melakukan query indeks basis kode. Nilai yang lebih tinggi memberikan lebih banyak konteks tetapi mungkin menyertakan hasil yang kurang relevan.",
-		"resetToDefault": "Reset ke default"
+		"resetToDefault": "Reset ke default",
+		"cancelling": "Membatalkan...",
+		"cancelIndexingButton": "Batalkan pengindeksan"
 	},
 	"autoApprove": {
 		"description": "Izinkan Kilo Code untuk secara otomatis melakukan operasi tanpa memerlukan persetujuan. Aktifkan pengaturan ini hanya jika kamu sepenuhnya mempercayai AI dan memahami risiko keamanan yang terkait.",

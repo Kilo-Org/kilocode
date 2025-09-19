@@ -61,6 +61,7 @@
 		"fileWatcherStopped": "ファイルウォッチャーが停止されました。",
 		"failedDuringInitialScan": "初期スキャン中に失敗しました：{{errorMessage}}",
 		"unknownError": "不明なエラー",
-		"indexingRequiresWorkspace": "インデックス作成には、開かれたワークスペースフォルダーが必要です"
+		"indexingRequiresWorkspace": "インデックス作成には、開かれたワークスペースフォルダーが必要です",
+		"indexingCancelled": "インデックス作成をキャンセルしました"
 	}
 }

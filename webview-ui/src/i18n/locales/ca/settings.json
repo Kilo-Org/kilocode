@@ -128,7 +128,9 @@
 		"searchMinScoreResetTooltip": "Restablir al valor per defecte (0.4)",
 		"searchMaxResultsLabel": "Màxim de resultats de cerca",
 		"searchMaxResultsDescription": "Nombre màxim de resultats de cerca a retornar quan es consulta l'índex de la base de codi. Els valors més alts proporcionen més context però poden incloure resultats menys rellevants.",
-		"resetToDefault": "Restablir al valor per defecte"
+		"resetToDefault": "Restablir al valor per defecte",
+		"cancelling": "S'està cancel·lant...",
+		"cancelIndexingButton": "Cancel·la la indexació"
 	},
 	"autoApprove": {
 		"description": "Permet que Kilo Code realitzi operacions automàticament sense requerir aprovació. Activeu aquesta configuració només si confieu plenament en la IA i enteneu els riscos de seguretat associats.",
