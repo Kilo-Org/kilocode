@@ -902,6 +902,10 @@
 		"taskTimeline": {
 			"label": "Pokaż oś czasu zadania",
 			"description": "Wyświetlaj wizualną oś czasu wiadomości zadania, oznaczoną kolorami według typu, co pozwala na szybki przegląd postępu zadania i przewijanie do określonych punktów w historii zadania."
+		},
+		"showTimestamps": {
+			"label": "Pokaż znaczniki czasowe zdarzeń",
+			"description": "Wyświetl znaczniki czasowe dostosowane do lokalizacji obok powiadomień zadań i żądań API."
 		}
 	},
 	"includeMaxOutputTokens": "Uwzględnij maksymalne tokeny wyjściowe",

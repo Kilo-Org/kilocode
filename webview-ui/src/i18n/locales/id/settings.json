@@ -923,6 +923,10 @@
 		"taskTimeline": {
 			"label": "Tampilkan linimasa tugas",
 			"description": "Tampilkan timeline visual dari pesan-pesan tugas, diwarnai berdasarkan jenisnya, memungkinkan Anda untuk melihat kemajuan tugas dengan cepat dan menggulir kembali ke titik-titik tertentu dalam riwayat tugas."
+		},
+		"showTimestamps": {
+			"label": "Tampilkan cap waktu kejadian",
+			"description": "Tampilkan cap waktu yang sesuai lokal di samping notifikasi Tugas dan Permintaan API."
 		}
 	},
 	"includeMaxOutputTokens": "Sertakan token output maksimum",

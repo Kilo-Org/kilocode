@@ -897,6 +897,10 @@
 		"taskTimeline": {
 			"label": "Aufgabenzeitplan anzeigen",
 			"description": "Zeigt eine visuelle Zeitleiste der Aufgabennachrichten an, farblich nach Typ gekennzeichnet, sodass du den Fortschritt der Aufgabe schnell überblicken und zu bestimmten Punkten in der Aufgabenhistorie zurückspringen kannst."
+		},
+		"showTimestamps": {
+			"label": "Ereignis-Zeitstempel anzeigen",
+			"description": "Lokalisierte Zeitstempel neben Aufgaben- und API-Anforderungsbenachrichtigungen anzeigen."
 		}
 	},
 	"includeMaxOutputTokens": "Maximale Ausgabe-Tokens einbeziehen",
