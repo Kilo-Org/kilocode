@@ -71,6 +71,7 @@ export class ProfileValidator {
 			case "chutes":
 			case "fireworks":
 			case "featherless":
+			case "ovhcloud":
 				return profile.apiModelId
 			case "litellm":
 				return profile.litellmModelId
