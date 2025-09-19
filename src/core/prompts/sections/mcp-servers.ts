@@ -17,7 +17,7 @@ export async function getMcpServersSection(
 					.filter((server) => server.status === "connected")
 					.map((server) => {
 						const tools = server.tools
-							?.filter((tool) => tool.enabledForPrompt !== false)
+							?.filter((tool) => tool.alwaysAllow || tool.enabledForPrompt !== false)
 							?.map((tool) => {
 								const schemaStr = tool.inputSchema
 									? `    Input Schema:
