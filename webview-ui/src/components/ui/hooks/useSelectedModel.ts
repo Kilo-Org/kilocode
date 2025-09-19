@@ -61,6 +61,8 @@ import {
 	vercelAiGatewayDefaultModelId,
 	BEDROCK_CLAUDE_SONNET_4_MODEL_ID,
 	deepInfraDefaultModelId,
+	ovhCloudAiEndpointsModels,
+	ovhCloudAiEndpointsDefaultModelId,
 } from "@roo-code/types"
 
 import type { ModelRecord, RouterModels } from "@roo/api"
@@ -425,6 +427,11 @@ function getSelectedModel({
 		case "vercel-ai-gateway": {
 			const id = apiConfiguration.vercelAiGatewayModelId ?? vercelAiGatewayDefaultModelId
 			const info = routerModels["vercel-ai-gateway"]?.[id]
+			return { id, info }
+		}
+		case "ovhcloud": {
+			const id = apiConfiguration.apiModelId ?? ovhCloudAiEndpointsDefaultModelId
+			const info = ovhCloudAiEndpointsModels[id as keyof typeof ovhCloudAiEndpointsModels]
 			return { id, info }
 		}
 		// case "anthropic":

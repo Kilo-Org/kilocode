@@ -195,6 +195,7 @@ describe("ProfileValidator", () => {
 			"sambanova",
 			"fireworks",
 			"featherless",
+			"ovhcloud",
 		]
 
 		apiModelProviders.forEach((provider) => {
