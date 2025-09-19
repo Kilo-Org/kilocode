@@ -1,0 +1,16 @@
+{
+	"title": "Moln",
+	"profilePicture": "Profilbild",
+	"logOut": "Logga ut",
+	"testApiAuthentication": "Testa API-autentisering",
+	"signIn": "Anslut till Kilo Code Cloud",
+	"connect": "Anslut nu",
+	"cloudBenefitsTitle": "Anslut till Kilo Code Cloud",
+	"cloudBenefitWalkaway": "Följ och styr uppgifter var som helst med Kilo Remote Control",
+	"cloudBenefitSharing": "Dela uppgifter med andra",
+	"cloudBenefitHistory": "Kom åt din uppgiftshistorik",
+	"cloudBenefitMetrics": "Få en helhetsbild av din tokenförbrukning",
+	"visitCloudWebsite": "Besök Kilo Code Cloud",
+	"remoteControl": "Kilo Remote Control",
+	"remoteControlDescription": "Möjliggör att följa och interagera med uppgifter i denna arbetsyta via Kilo Code Cloud"
+}
